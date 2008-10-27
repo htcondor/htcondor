@@ -20,7 +20,7 @@
 
 #define _CONDOR_ALLOW_OPEN
 #include "condor_common.h"
-#include "stork-mm.h"
+#include "stork-lm.h"
 #include "basename.h"
 #include "condor_debug.h"
 #include "condor_config.h"
@@ -28,16 +28,16 @@
 // globus-url-copy requires any url specifying a directory must end with /.
 #define IS_DIRECTORY(_url)  ( (_url)[(strlen(_url) - 1)] == '/' )
 
-// Stork interface object to new "matchmaker maker" for SC2005 demo.
+// Stork interface object to new "lease manager maker" for SC2005 demo.
 
 // Instantiate some templates
-template class list<DCMatchMakerLease*>;
-template class list<const DCMatchMakerLease*>;
+template class list<DCLeaseManagerLease*>;
+template class list<const DCLeaseManagerLease*>;
 template class HashTable<MyString, StorkMatchStatsEntry *>;
 #if defined( USING_ORDERED_SET )
-  template class OrderedSet<StorkMatchEntry*>;
+  template class OrderedSet<StorkLeaseEntry*>;
 #endif
-template class Set<StorkMatchEntry*>;
+template class Set<StorkLeaseEntry*>;
 
 
 StorkMatchStatsEntry::StorkMatchStatsEntry(void)
@@ -50,7 +50,7 @@ StorkMatchStatsEntry::StorkMatchStatsEntry(void)
 }
 
 void
-StorkMatchEntry::initialize(void)
+StorkLeaseEntry::initialize(void)
 {
 	Url = NULL;
 	Lease = NULL;
@@ -61,12 +61,12 @@ StorkMatchEntry::initialize(void)
 }
 
 
-StorkMatchEntry::StorkMatchEntry(void)
+StorkLeaseEntry::StorkLeaseEntry(void)
 {
 	initialize();
 }
 
-StorkMatchEntry::StorkMatchEntry(DCMatchMakerLease * maker_lease)
+StorkLeaseEntry::StorkLeaseEntry(DCLeaseManagerLease * maker_lease)
 {
 	initialize();
 	
@@ -78,7 +78,7 @@ StorkMatchEntry::StorkMatchEntry(DCMatchMakerLease * maker_lease)
 	classad::ClassAd *ad = Lease->LeaseAd();
 	ASSERT(ad);
 	string dest;
-	char *attr_name = param("STORK_MM_DEST_ATTRNAME");
+	char *attr_name = param("STORK_LM_DEST_ATTRNAME");
 	if ( !attr_name ) {
 		attr_name = strdup("URL");  // default
 	}
@@ -97,7 +97,7 @@ StorkMatchEntry::StorkMatchEntry(DCMatchMakerLease * maker_lease)
 
 }
 
-StorkMatchEntry::StorkMatchEntry(const char* path)
+StorkLeaseEntry::StorkLeaseEntry(const char* path)
 {
 	initialize();
 
@@ -109,7 +109,7 @@ StorkMatchEntry::StorkMatchEntry(const char* path)
 }
 
 
-StorkMatchEntry::~StorkMatchEntry(void)
+StorkLeaseEntry::~StorkLeaseEntry(void)
 {
 	if ( Url ) free(Url);
 	if ( Lease ) delete Lease;
@@ -118,7 +118,7 @@ StorkMatchEntry::~StorkMatchEntry(void)
 
 
 bool
-StorkMatchEntry::ReleaseLeaseWhenDone(void)
+StorkLeaseEntry::ReleaseLeaseWhenDone(void)
 {
 	ASSERT(Lease);
 	return Lease->ReleaseLeaseWhenDone();
@@ -126,7 +126,7 @@ StorkMatchEntry::ReleaseLeaseWhenDone(void)
 
 
 int
-StorkMatchEntry::operator< (const StorkMatchEntry& E2)
+StorkLeaseEntry::operator< (const StorkLeaseEntry& E2)
 {
 	time_t comp1, comp2;
 	static bool check_config = true;
@@ -139,7 +139,7 @@ StorkMatchEntry::operator< (const StorkMatchEntry& E2)
 	}
 
 	if ( check_config ) {
-		want_rr = param_boolean("STORK_MM_WANT_RR",true);
+		want_rr = param_boolean("STORK_LM_WANT_RR",true);
 		check_config = false;
 	}
 
@@ -173,7 +173,7 @@ StorkMatchEntry::operator< (const StorkMatchEntry& E2)
 
 
 int
-StorkMatchEntry::operator== (const StorkMatchEntry& E2)
+StorkLeaseEntry::operator== (const StorkLeaseEntry& E2)
 {
 	// If both entries have a lease id, that must be equal
 
@@ -204,7 +204,7 @@ StorkMatchEntry::operator== (const StorkMatchEntry& E2)
 	}
 
 	// If made it here, something is wrong!
-	EXCEPT("StorkMatchEntry operator== : Internal inconsistancy!");
+	EXCEPT("StorkLeaseEntry operator== : Internal inconsistancy!");
 	return 0; // will never get here, just to make compiler happy
 }
 
@@ -212,13 +212,13 @@ StorkMatchEntry::operator== (const StorkMatchEntry& E2)
 
 
 // Constructor
-StorkMatchMaker::StorkMatchMaker(void)
+StorkLeaseManager::StorkLeaseManager(void)
 {
 	tid = -1;
 	tid_interval = -1;
 
-	mm_name = param("STORK_MM_NAME");
-	mm_pool = param("STORK_MM_POOL");
+	lm_name = param("STORK_LM_NAME");
+	lm_pool = param("STORK_LM_POOL");
 
 	matchStats = new HashTable<MyString,StorkMatchStatsEntry*>(200,MyStringHash,rejectDuplicateKeys);
 	SetTimers();
@@ -226,9 +226,9 @@ StorkMatchMaker::StorkMatchMaker(void)
 
 
 // Destructor.
-StorkMatchMaker::~StorkMatchMaker(void)
+StorkLeaseManager::~StorkLeaseManager(void)
 {
-	StorkMatchEntry* match;
+	StorkLeaseEntry* match;
 
 	idleMatches.StartIterations();
 	while ( idleMatches.Iterate(match) ) {
@@ -248,15 +248,15 @@ StorkMatchMaker::~StorkMatchMaker(void)
 		delete match;
 	}
 
-	if (mm_name) free(mm_name);
-	if (mm_pool) free(mm_pool);
+	if (lm_name) free(lm_name);
+	if (lm_pool) free(lm_pool);
 }
 
 
 bool
-StorkMatchMaker::areMatchesAvailable(void)
+StorkLeaseManager::areMatchesAvailable(void)
 {
-	getMatchesFromMatchmaker();
+	getMatchesFromLeaseManager();
 
 	if ( idleMatches.Count() == 0 )  {
 		return false;
@@ -266,28 +266,28 @@ StorkMatchMaker::areMatchesAvailable(void)
 }
 
 
-// Grab matches from the matchmaker
+// Grab matches from the lease manager
 bool
-StorkMatchMaker::getMatchesFromMatchmaker(void)
+StorkLeaseManager::getMatchesFromLeaseManager(void)
 {
-	StorkMatchEntry* match;
+	StorkLeaseEntry* match;
 
-		// Grab some matches from the matchmaker if we don't have
+		// Grab some matches from the lease manager if we don't have
 		// any locally cached.
 	if ( idleMatches.Count() == 0 )
 	{
-		list<DCMatchMakerLease *> leases;
+		list<DCLeaseManagerLease *> leases;
 
 		// Match ClassAd
 		classad::ClassAd	match_ad;
 
-		int num = param_integer("STORK_MM_MATCHES_PER_REQUEST",10,1);
+		int num = param_integer("STORK_LM_MATCHES_PER_REQUEST",10,1);
 		match_ad.InsertAttr( "RequestCount", num );
 
-		int duration = param_integer("STORM_MM_MATCH_DURATION",1800,1);
+		int duration = param_integer("STORM_LM_MATCH_DURATION",1800,1);
 		match_ad.InsertAttr( "LeaseDuration", duration );
 
-		char *req = param("STORK_MM_REQUIREMENTS");
+		char *req = param("STORK_LM_REQUIREMENTS");
 		classad::ExprTree	*req_expr = NULL;
 		if ( req ) {
 			string					req_str = req;
@@ -309,7 +309,7 @@ StorkMatchMaker::getMatchesFromMatchmaker(void)
 		match_ad.InsertAttr( "Name", name );
 		free( name );
 
-		char	*tmp = param( "STORK_MM_EXPRS" );
+		char	*tmp = param( "STORK_LM_EXPRS" );
 		if( tmp ) {
 			StringList	reqdExprs;
 			reqdExprs.initializeFromString (tmp);	
@@ -319,7 +319,7 @@ StorkMatchMaker::getMatchesFromMatchmaker(void)
 				reqdExprs.rewind();
 				while( ( tmp = reqdExprs.next()) ) {
 					char	pname[64];
-					snprintf( pname, sizeof( pname ), "STORK_MM_%s", tmp );
+					snprintf( pname, sizeof( pname ), "STORK_LM_%s", tmp );
 					char	*expr;
 					expr = param( pname );
 					if ( !expr ) {
@@ -340,27 +340,27 @@ StorkMatchMaker::getMatchesFromMatchmaker(void)
 		dprintf( D_FULLDEBUG, "MatchAd=%s\n", adbuffer.c_str() );
 
 			// After all that, go get the stinkin' matches
-		DCMatchMaker		dcmm( mm_name,mm_pool );
-		bool result = dcmm.getMatches( match_ad, leases );
+		DCLeaseManager		dclm( lm_name,lm_pool );
+		bool result = dclm.getLeases( match_ad, leases );
 
 		if ( !result ) {
-			dprintf(D_ALWAYS,"ERROR getmatches() failed, num=%d\n", num);
+			dprintf(D_ALWAYS,"ERROR getLeases() failed, num=%d\n", num);
 			return false;
 		}
 
 			// For all matches we get back, add to our idle set
 		int count = 0;
-		for ( list<DCMatchMakerLease *>::iterator iter=leases.begin();
+		for ( list<DCLeaseManagerLease *>::iterator iter=leases.begin();
 			  iter != leases.end();
 			  iter++ )
 		{
 			count++;
-			match = new StorkMatchEntry( *iter );
+			match = new StorkLeaseEntry( *iter );
 			addToIdleSet(match);
 		// dprintf(D_FULLDEBUG,"TODD - idle add %p ptr=%p cp=%p\n",match->Lease,match,match->CompletePath);
 		}
 		dprintf(D_ALWAYS,
-			"MM: Requested %d matches from matchmaker, got %d back\n",
+			"LM: Requested %d matches from LeaseManager, got %d back\n",
 			num, count);
 	}
 
@@ -369,14 +369,14 @@ StorkMatchMaker::getMatchesFromMatchmaker(void)
 
 
 
-// Get a dynamic transfer destination from the matchmaker by protocol.
-StorkMatchEntry *
-StorkMatchMaker::getTransferDestination(const char *protocol)
+// Get a dynamic transfer destination from the lease manager by protocol.
+StorkLeaseEntry *
+StorkLeaseManager::getTransferDestination(const char *protocol)
 {
 	(void) protocol;
-	StorkMatchEntry* match;
+	StorkLeaseEntry* match;
 
-	getMatchesFromMatchmaker();
+	getMatchesFromLeaseManager();
 
 		// Now if we have any idle matches, just give the first one.
 	idleMatches.StartIterations();
@@ -398,10 +398,10 @@ StorkMatchMaker::getTransferDestination(const char *protocol)
 }
 
 const char *
-StorkMatchMaker::
+StorkLeaseManager::
 getTransferDirectory(const char *protocol)
 {
-	StorkMatchEntry* match = getTransferDestination(protocol);
+	StorkLeaseEntry* match = getTransferDestination(protocol);
 	if (match == NULL) {
 		return NULL;
 	}
@@ -424,10 +424,10 @@ getTransferDirectory(const char *protocol)
 
 // WARNING:  This method not yet tested!
 const char *
-StorkMatchMaker::
+StorkLeaseManager::
 getTransferFile(const char *protocol)
 {
-	StorkMatchEntry* match = getTransferDestination(protocol);
+	StorkLeaseEntry* match = getTransferDestination(protocol);
 	if (match == NULL) {
 		return NULL;
 	}
@@ -446,13 +446,13 @@ getTransferFile(const char *protocol)
 }
 
 
-// Return a dynamic transfer destination to the matchmaker.
+// Return a dynamic transfer destination to the lease manager.
 bool
-StorkMatchMaker::returnTransferDestination(const char * path,
+StorkLeaseManager::returnTransferDestination(const char * path,
 										   bool successful_transfer)
 {
 	bool ret_val;
-	StorkMatchEntry match(path);
+	StorkLeaseEntry match(path);
 
 		// just move it from the busy set to the idle set
 	ret_val =  fromBusyToIdle( &match );
@@ -476,10 +476,10 @@ StorkMatchMaker::returnTransferDestination(const char * path,
 }
 
 
-// Inform the matchmaker that a dynamic transfer destination has
+// Inform the lease manager that a dynamic transfer destination has
 // failed.
 bool
-StorkMatchMaker::failTransferDestination(const char * path)
+StorkLeaseManager::failTransferDestination(const char * path)
 {
 		// Remove this destination from BOTH busy and idle lists.
 		// By doing so, we let the lease on this destination simply
@@ -488,12 +488,12 @@ StorkMatchMaker::failTransferDestination(const char * path)
 	ASSERT(path);
 
 	// Only fail transfer destinations if enabled.
-	if (! param_boolean("STORK_MM_XFER_FAIL_ENABLE", true) ) {
+	if (! param_boolean("STORK_LM_XFER_FAIL_ENABLE", true) ) {
 		return returnTransferDestination(path,false);
 	}
 		// Create entry on *dirname* since we assume that all
 		// transfers to this destination will fail if this one did.
-	StorkMatchEntry match;
+	StorkLeaseEntry match;
 	match.Url = condor_url_dirname( path );
 	
 		// Call in a while loop, since we have multiple matches to this destination
@@ -506,9 +506,9 @@ StorkMatchMaker::failTransferDestination(const char * path)
 }
 
 bool
-StorkMatchMaker::destroyFromBusy(StorkMatchEntry*  match)
+StorkLeaseManager::destroyFromBusy(StorkLeaseEntry*  match)
 {
-	StorkMatchEntry* temp;
+	StorkLeaseEntry* temp;
 
 	busyMatches.StartIterations();
 	while (busyMatches.Iterate(temp)) {
@@ -531,9 +531,9 @@ StorkMatchMaker::destroyFromBusy(StorkMatchEntry*  match)
 }
 
 bool
-StorkMatchMaker::destroyFromIdle(StorkMatchEntry*  match)
+StorkLeaseManager::destroyFromIdle(StorkLeaseEntry*  match)
 {
-	StorkMatchEntry* temp;
+	StorkLeaseEntry* temp;
 
 	idleMatches.StartIterations();
 	while (idleMatches.Iterate(temp)) {
@@ -556,7 +556,7 @@ StorkMatchMaker::destroyFromIdle(StorkMatchEntry*  match)
 }
 
 bool
-StorkMatchMaker::addToBusySet(StorkMatchEntry* match)
+StorkLeaseManager::addToBusySet(StorkLeaseEntry* match)
 {
 	match->IdleExpiration_time = 0;
 	ASSERT(match->Lease);
@@ -565,9 +565,9 @@ StorkMatchMaker::addToBusySet(StorkMatchEntry* match)
 }
 
 bool
-StorkMatchMaker::addToIdleSet(StorkMatchEntry* match)
+StorkLeaseManager::addToIdleSet(StorkLeaseEntry* match)
 {
-	int n = param_integer("STORK_MM_MATCH_IDLE_TIME", 5 * 60, 0);
+	int n = param_integer("STORK_LM_MATCH_IDLE_TIME", 5 * 60, 0);
 
 	match->IdleExpiration_time = time(NULL) + n;
 	ASSERT(match->Lease);
@@ -576,10 +576,10 @@ StorkMatchMaker::addToIdleSet(StorkMatchEntry* match)
 }
 
 bool
-StorkMatchMaker::fromBusyToIdle(StorkMatchEntry* match)
+StorkLeaseManager::fromBusyToIdle(StorkLeaseEntry* match)
 {
-	StorkMatchEntry* full_match = NULL;
-	StorkMatchEntry* temp;
+	StorkLeaseEntry* full_match = NULL;
+	StorkLeaseEntry* temp;
 
 	if (match->Lease) {
 		full_match = match;
@@ -597,7 +597,7 @@ StorkMatchMaker::fromBusyToIdle(StorkMatchEntry* match)
 		}
 		if ( !full_match ) {
 			dprintf( D_FULLDEBUG,
-					 "StorkMatchEntry fromBusyToIdle: Can't find match %s!\n",
+					 "StorkLeaseEntry fromBusyToIdle: Can't find match %s!\n",
 					 match->GetUrl() );
 			return false;
 		}
@@ -605,7 +605,7 @@ StorkMatchMaker::fromBusyToIdle(StorkMatchEntry* match)
 
 	if ( full_match->Lease ) {
 		if ( full_match->ReleaseLeaseWhenDone() ) {
-			// drop this match on the floor, since the matchmaker asked us
+			// drop this match on the floor, since the lease manager asked us
 			// to stop using it as soon as the current transfer completed
 			delete full_match;
 			full_match = NULL;
@@ -619,10 +619,10 @@ StorkMatchMaker::fromBusyToIdle(StorkMatchEntry* match)
 }
 
 void
-StorkMatchMaker::SetTimers(void)
+StorkLeaseManager::SetTimers(void)
 {
 #ifndef TEST_VERSION
-	int interval = param_integer("STORK_MM_INTERVAL",30);
+	int interval = param_integer("STORK_LM_INTERVAL",30);
 
 	if ( interval == tid_interval  && tid != -1 ) {
 		// we are already done, since we already
@@ -640,19 +640,19 @@ StorkMatchMaker::SetTimers(void)
 
 	// Create a new timer the correct interval
 	tid = daemonCore->Register_Timer(interval,interval,
-		(TimerHandlercpp)&StorkMatchMaker::timeout,
-		"StorkMatchMaker::timeout", this);
+		(TimerHandlercpp)&StorkLeaseManager::timeout,
+		"StorkLeaseManager::timeout", this);
 	tid_interval = interval;
 #endif
 }
 
 void
-StorkMatchMaker::timeout(void)
+StorkLeaseManager::timeout(void)
 {
 	time_t now = time(NULL);
-	int near_future = param_integer("STORK_MM_LEASE_REFRESH_PADDING",5*60,30);
-	StorkMatchEntry* match;
-	Set<StorkMatchEntry*> to_release, to_renew;
+	int near_future = param_integer("STORK_LM_LEASE_REFRESH_PADDING",5*60,30);
+	StorkLeaseEntry* match;
+	Set<StorkLeaseEntry*> to_release, to_renew;
 	bool result;
 
 
@@ -686,19 +686,19 @@ StorkMatchMaker::timeout(void)
 		break;
 #endif
 	}
-	// Now actually connect to the matchmaker if we have leases to release.
+	// Now actually connect to the lease manager if we have leases to release.
 	if ( to_release.Count() ) {
 			// create list of lease ads to release
-		list<const DCMatchMakerLease*> leases;
+		list<const DCLeaseManagerLease*> leases;
 		to_release.StartIterations();
 		while ( to_release.Iterate(match) ) {
 			ASSERT(match->Lease);
 			leases.push_back(match->Lease);
 		}
-			// send our list to the matchmaker
-		DCMatchMaker		dcmm( mm_name,mm_pool );
-		result = dcmm.releaseLeases(leases);
-		dprintf(D_ALWAYS,"MM: %s release %d leases\n",
+			// send our list to the lease manager
+		DCLeaseManager		dclm( lm_name,lm_pool );
+		result = dclm.releaseLeases(leases);
+		dprintf(D_ALWAYS,"LM: %s release %d leases\n",
 						result ? "Successful" : "Failed to ",
 						to_release.Count());
 			// deallocate memory
@@ -731,25 +731,25 @@ StorkMatchMaker::timeout(void)
 		break;
 #endif
 	}
-	// Now actually connect to the matchmaker if we have leases to renew.
+	// Now actually connect to the lease manager if we have leases to renew.
 	if ( to_renew.Count() ) {
 			// create list of lease ads
-		list<const DCMatchMakerLease*> input_leases;
-		list<DCMatchMakerLease*> output_leases;
+		list<const DCLeaseManagerLease*> input_leases;
+		list<DCLeaseManagerLease*> output_leases;
 		to_renew.StartIterations();
 		while ( to_renew.Iterate(match) ) {
 			ASSERT(match->Lease);
 			input_leases.push_back(match->Lease);
 		}
-			// send our list to the matchmaker
-		DCMatchMaker		dcmm( mm_name,mm_pool );
-		result = dcmm.renewLeases(input_leases,output_leases);
-		dprintf(D_ALWAYS,"MM: %s renew %d leases\n",
+			// send our list to the lease manager
+		DCLeaseManager		dclm( lm_name,lm_pool );
+		result = dclm.renewLeases(input_leases,output_leases);
+		dprintf(D_ALWAYS,"LM: %s renew %d leases\n",
 						result ? "Successful" : "Failed to ",
 						to_renew.Count());
 			// update the expiration counters for all renewed leases
 		if ( result ) {
-			for ( list<DCMatchMakerLease *>::iterator iter=output_leases.begin();
+			for ( list<DCLeaseManagerLease *>::iterator iter=output_leases.begin();
 				  iter != output_leases.end();
 				  iter++ )
 			{
@@ -765,7 +765,7 @@ StorkMatchMaker::timeout(void)
 				}
 				ASSERT(found);	// an Id in our output list better be found in our input list!
 			}
-			DCMatchMakerLease_FreeList( output_leases );
+			DCLeaseManagerLease_FreeList( output_leases );
 		}
 			// now put em all back onto the busy set, refreshed or not.
 		to_renew.StartIterations();

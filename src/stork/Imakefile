@@ -80,7 +80,7 @@ SERVER_OBJS  = \
 	dap_scheduler.o \
 	dap_logger.o \
 	dap_classad_reader.o \
-	stork-mm.o \
+	stork-lm.o \
 	$(STORK_UTIL)
 SERVER_LIBS = \
 	$(DAEMONCORE_LIB) \
@@ -317,15 +317,15 @@ static_library($(CLIENT_LIB),lib)
 
 #if 1 /* Nick added this */
 TEST_LIB = $(STD_LIBS) $(NEW_CLASSADS_LINK) $(CLASSAD_CONVERSION_LIBDEFS)
-tests: stork-mm-test stork-mm-test2
-c_plus_target( stork-mm-test,stork-mm-test.o stork-mm-nodc.o,$(TEST_LIB) )
-template_inst( stork-mm-test.C, stork-mm-test.o )
-stork-mm-nodc.o: stork-mm.C
-	$(CPlusPlus) $(INST_C_PLUS_FLAGS) -DTEST_VERSION -c stork-mm.C -o stork-mm-nodc.o
+tests: stork-lm-test stork-lm-test2
+c_plus_target( stork-lm-test,stork-lm-test.o stork-lm-nodc.o,$(TEST_LIB) )
+template_inst( stork-lm-test.C, stork-lm-test.o )
+stork-lm-nodc.o: stork-lm.C
+	$(CPlusPlus) $(INST_C_PLUS_FLAGS) -DTEST_VERSION -c stork-lm.C -o stork-lm-nodc.o
 
-c_plus_target( stork-mm-test2, stork-mm-test2.o,
+c_plus_target( stork-lm-test2, stork-lm-test2.o,
 	 stork-mm.o $(DAEMONCORE_LIB) $(TEST_LIB) )
-template_inst( stork-mm-test2.C, stork-mm-test2.o )
+template_inst( stork-lm-test2.C, stork-lm-test2.o )
 #endif /* Nick */
 
 XCOMM Uncomment to build contrib modules as part of default build

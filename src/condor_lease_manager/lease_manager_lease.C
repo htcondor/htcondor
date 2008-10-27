@@ -17,36 +17,56 @@
  *
  ***************************************************************/
 
-#ifndef __MATCH_MAKER_LEASE_H__
-#define __MATCH_MAKER_LEASE_H__
-
 #include <list>
 #include <string>
+#include "lease_manager_lease.h"
 using namespace std;
 
-class MatchMakerLease
+LeaseManagerLease::LeaseManagerLease( void )
 {
-  public:
-	MatchMakerLease( void );
-	MatchMakerLease( const string &lease_id,
-					int duration = -1,
-					bool rel = true );
-	~MatchMakerLease( void );
+	m_duration = 0;
+}
 
-	void setLeaseId( const string & );
-	void setLeaseDuration( int );
-	void setReleaseWhenDone( bool );
+LeaseManagerLease::LeaseManagerLease(
+	const string		&lease_id,
+	int					lease_duration,
+	bool				release_when_done )
+{
+	setLeaseId( lease_id );
+	setLeaseDuration( lease_duration );
+	m_release_when_done = release_when_done ;
+}
 
-	const string &getLeaseId( void ) const { return m_id; };
-	int getDuration( void ) const { return m_duration; };
-	int getReleaseWhenDone( void ) const { return m_release_when_done; };
+LeaseManagerLease::~LeaseManagerLease( void )
+{
+}
 
-  private:
-	string		m_id;
-	int			m_duration;
-	bool		m_release_when_done;
-};
+void
+LeaseManagerLease::setLeaseId(
+	const string		&lease_id )
+{
+	m_id = lease_id;
+}
 
-void MatchMakerLease_FreeList( list<MatchMakerLease *> &lease_list );
+void
+LeaseManagerLease::setLeaseDuration(
+	int					duration )
+{
+	m_duration = duration;
+}
 
-#endif//__MATCH_MAKER_LEASE_H__
+void
+LeaseManagerLease::setReleaseWhenDone(
+	bool				rel )
+{
+	m_release_when_done = rel;
+}
+
+void LeaseManagerLease_FreeList( list<LeaseManagerLease *> &lease_list )
+{
+	for( list<LeaseManagerLease *>::iterator iter = lease_list.begin();
+		 iter != lease_list.end();
+		 iter++ ) {
+		delete *iter;
+	}
+}

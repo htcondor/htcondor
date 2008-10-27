@@ -17,8 +17,8 @@
  *
  ***************************************************************/
 
-#ifndef _STORK_MM_
-#define _STORK_MM_
+#ifndef _STORK_LM_
+#define _STORK_LM_
 
 /* #define TEST_VERSION 1 */
 
@@ -26,7 +26,7 @@
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #endif
 
-#include "dc_match_maker.h"
+#include "dc_lease_manager.h"
 #include "MyString.h"
 #include "HashTable.h"
 
@@ -38,30 +38,30 @@
 # include "Set.h"
 #endif
 
-class StorkMatchMaker; // forward reference
+class StorkLeaseManager; // forward reference
 
-class StorkMatchEntry {
-	friend class StorkMatchMaker;
+class StorkLeaseEntry {
+	friend class StorkLeaseManager;
 	public:
-		StorkMatchEntry();
-		StorkMatchEntry(DCMatchMakerLease * maker_lease);
-		StorkMatchEntry(const char* url);
-		~StorkMatchEntry();
+		StorkLeaseEntry();
+		StorkLeaseEntry(DCLeaseManagerLease * maker_lease);
+		StorkLeaseEntry(const char* url);
+		~StorkLeaseEntry();
 
 		const char* GetUrl() { return Url; };
 
 		bool ReleaseLeaseWhenDone();
 		time_t GetExpirationTime() {return Expiration_time; };
 		
-		int operator< (const StorkMatchEntry& E2);
-		int operator== (const StorkMatchEntry& E2);
+		int operator< (const StorkLeaseEntry& E2);
+		int operator== (const StorkLeaseEntry& E2);
 
 	protected:
 		void initialize();
 		time_t Expiration_time;
 		time_t IdleExpiration_time;
 		char *Url;
-		DCMatchMakerLease* Lease;
+		DCLeaseManagerLease* Lease;
 		MyString *CompletePath;
 		unsigned int num_matched;
 
@@ -80,22 +80,22 @@ class StorkMatchStatsEntry {
 };
 
 
-// Stork interface object to new "matchmaker maker" for SC2005 demo.
-class StorkMatchMaker 
+// Stork interface object to new "leasemanager maker" for SC2005 demo.
+class StorkLeaseManager 
 #ifndef TEST_VERSION
 	: public Service
 #endif
 {
 	public:
 		// Constructor.  For now, I'll assume there are no args to the
-		// constructor.  Perhaps later we'll decide to specify a matchmaker to
+		// constructor.  Perhaps later we'll decide to specify a leasemanager to
 		// connect to.  Stork calls the constructor at daemon startup time.
-		StorkMatchMaker(void);
+		StorkLeaseManager(void);
 
 		// Destructor.  Stork calls the destructor at daemon shutdown time.
-		~StorkMatchMaker(void);
+		~StorkLeaseManager(void);
 
-		// Get a dynamic transfer destination from the matchmaker by protocol,
+		// Get a dynamic transfer destination from the leasemanager by protocol,
 		// e.g. "gsiftp", "http", "file", etc.  This method returns a
 		// destination URL of the format "proto://host/dir/".  This means a
 		// transfer directory has been created on the destination host.
@@ -105,7 +105,7 @@ class StorkMatchMaker
 		const char * getTransferDirectory(const char *protocol);
 
 		// WARNING:  This method not yet tested!
-		// Get a dynamic transfer destination from the matchmaker by protocol,
+		// Get a dynamic transfer destination from the leasemanager by protocol,
 		// e.g. "gsiftp", "http", "file", etc.  This method returns a
 		// destination URL of the format "proto://host/dir/file".  This means a
 		// transfer directory has been created on the destination host.
@@ -114,13 +114,13 @@ class StorkMatchMaker
 		// Return NULL if there are no destinations available.
 		const char * getTransferFile(const char *protocol); // NOT TESTED!
 
-		// Return a dynamic transfer destination to the matchmaker.  Stork
+		// Return a dynamic transfer destination to the leasemanager.  Stork
 		// calls this method when it is no longer using the transfer
-		// destination.  Matchmaker returns false upon error.
+		// destination.  LeaseManager returns false upon error.
 		bool returnTransferDestination(const char * url, bool successful_transfer = true);
 
-		// Inform the matchmaker that a dynamic transfer destination has
-		// failed.  Matchmaker returns false upon error.
+		// Inform the leasemanager that a dynamic transfer destination has
+		// failed.  LeaseManager returns false upon error.
 		bool failTransferDestination(const char * url);
 
 		// Returns false if no matches are avail, else true
@@ -130,33 +130,33 @@ class StorkMatchMaker
 		bool getStatsTotal();
 
 	protected:
-		bool getMatchesFromMatchmaker();
-		StorkMatchEntry * getTransferDestination(const char *protocol);
-		bool destroyFromBusy(StorkMatchEntry * match);
-		bool destroyFromIdle(StorkMatchEntry * match);
-		bool addToBusySet(StorkMatchEntry * match);
-		bool addToIdleSet(StorkMatchEntry * match);
-		bool fromBusyToIdle(StorkMatchEntry * match);
+		bool getMatchesFromLeaseManager();
+		StorkLeaseEntry * getTransferDestination(const char *protocol);
+		bool destroyFromBusy(StorkLeaseEntry * match);
+		bool destroyFromIdle(StorkLeaseEntry * match);
+		bool addToBusySet(StorkLeaseEntry * match);
+		bool addToIdleSet(StorkLeaseEntry * match);
+		bool fromBusyToIdle(StorkLeaseEntry * match);
 		void SetTimers();
 		void timeout();
 
 	private:
 #if defined( USING_ORDERED_SET )
-		OrderedSet<StorkMatchEntry*> busyMatches;
-		OrderedSet<StorkMatchEntry*> idleMatches;
+		OrderedSet<StorkLeaseEntry*> busyMatches;
+		OrderedSet<StorkLeaseEntry*> idleMatches;
 #else
-		Set<StorkMatchEntry*> busyMatches;
-		Set<StorkMatchEntry*> idleMatches;
+		Set<StorkLeaseEntry*> busyMatches;
+		Set<StorkLeaseEntry*> idleMatches;
 #endif
-		char *mm_name;
-		char *mm_pool;
+		char *lm_name;
+		char *lm_pool;
 		int tid, tid_interval;
 		//HashTable<MyString, StorkMatchStatsEntry*> matchStats(200,MyStringHash,rejectDuplicateKeys);
 		HashTable<MyString, StorkMatchStatsEntry*> *matchStats;
 		StorkMatchStatsEntry totalStats;
 		bool want_rr;	// order the set for round-robin matches
 
-}; // class StorkMatchMaker
+}; // class StorkLeaseManager
 
-#endif // _STORK_MM_
+#endif // _STORK_LM_
 

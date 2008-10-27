@@ -153,7 +153,7 @@ void parse_arguments(int argc, char **argv)
 	  "==============================================================\n");
 }
 
-#include "stork-mm.h"
+#include "stork-lm.h"
 
 /* ============================================================================
  * initializations for the reqex_daemon

@@ -39,7 +39,7 @@ static const char* daemon_names[] = {
 	"stork",
 	"quill",
 	"transferd",
-	"match_maker"
+	"lease_manager"
 };
 
 extern "C" {

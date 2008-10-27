@@ -38,7 +38,7 @@
 #include "dap_utility.h"
 #include "dap_error.h"
 #include "dap_scheduler.h"
-#include "stork-mm.h"
+#include "stork-lm.h"
 
 #ifndef WANT_CLASSAD_NAMESPACE
 #define WANT_CLASSAD_NAMESPACE
@@ -63,7 +63,7 @@ MyString historyfilename;
 char *Cred_tmp_dir = NULL;			// temporary credential storage directory
 char *Module_dir = NULL;			// Module directory (DAP Catalog)
 char *Log_dir = NULL;				// LOG directory
-StorkMatchMaker					*Matchmaker = NULL;
+StorkLeaseManager					*LeaseManager = NULL;
 
 int  transfer_dap_reaper_id, reserve_dap_reaper_id, release_dap_reaper_id;
 int  requestpath_dap_reaper_id;
@@ -351,13 +351,13 @@ dynamicOK(classad::ClassAd *job_ad, time_t now)
 	}
 	
 	if (is_dynamic) {
-		ret_value = Matchmaker->areMatchesAvailable();
+		ret_value = LeaseManager->areMatchesAvailable();
 	} else {
 		ret_value = true;
 	}
 
 	if ( ret_value == false ) {
-		// if the matchmaker gave us nothing, don't bother it for another
+		// if the lease manager gave us nothing, don't bother it for another
 		// several 2 minutes.
 		keep_giving_false_until = now + 120;
 	}
@@ -484,15 +484,15 @@ dprintf(D_ALWAYS, "DEBUG: dest_file: '%s'\n", dest_file);
 					prev_dest_transfer_url
 				) && prev_dest_transfer_url.length() > 0)
 		{
-			// Re-use previous destination URL from matchmaker.
+			// Re-use previous destination URL from lease manager.
 			dest_url = prev_dest_transfer_url;
 
 		} else {
-			// This job needs a dynamic transfer URL from the Stork Matchmaker
+			// This job needs a dynamic transfer URL from the Stork LeaseManager
 			// Lite.
 			std::string dest_transfer_url;
 			const char *tmp =
-				Matchmaker->getTransferDirectory(dest_protocol);
+				LeaseManager->getTransferDirectory(dest_protocol);
 			if (tmp == NULL) {
 				// No dynamic destination URLs are available for this protocol.
 				write_collection_log(dapcollection, dap_id,
@@ -507,7 +507,7 @@ dprintf(D_ALWAYS, "DEBUG: dest_file: '%s'\n", dest_file);
 			} else {
 				dest_transfer_url = tmp;
 
-				// required by matchmaker lite interface
+				// required by lease manager lite interface
 				free( const_cast<char*>(tmp) );
 			}
 				
@@ -519,7 +519,7 @@ dprintf(D_ALWAYS, "DEBUG: dest_file: '%s'\n", dest_file);
 			dprintf(D_FULLDEBUG, "matched source URL %s to dynamic URL %s\n",
 					src_url, dest_transfer_url.c_str() );
 
-			// Update destination URL to that from matchmaker.
+			// Update destination URL to that from lease manager.
 			dest_url = dest_transfer_url;
 		}
 	}
@@ -1375,7 +1375,7 @@ regular_check_for_requests_in_process(void)
 							
 
                             // If this job has a dynamic transfer destination,
-                            // return this to the matchmaker.
+                            // return this to the lease manager.
                             std::string dest_transfer_url;
                             if  (   job_ad->EvaluateAttrString(
                                         "dest_transfer_url",
@@ -1385,9 +1385,9 @@ regular_check_for_requests_in_process(void)
                             {
                                 dprintf(D_FULLDEBUG,
                                     "returning dynamic transfer destination"
-                                    " %s to matchmaker\n",
+                                    " %s to lease manager\n",
                                     dest_transfer_url.c_str() );
-                                Matchmaker->returnTransferDestination(
+                                LeaseManager->returnTransferDestination(
                                         dest_transfer_url.c_str() );
                             }
 
@@ -1686,12 +1686,13 @@ initializations(void)
 		//initialize dapcollection
 	initialize_dapcollection();
 
-		// instantiate matchmaker
-	dprintf(D_FULLDEBUG, "Creating new matchmaker object\n");
-	Matchmaker = new StorkMatchMaker();
-	dprintf(D_FULLDEBUG, "Done creating new matchmaker object\n");
-	dprintf(D_FULLDEBUG, "It's %p, size %d\n", Matchmaker, sizeof(*Matchmaker));
-	ASSERT(Matchmaker);
+		// instantiate lease manager
+	dprintf(D_FULLDEBUG, "Creating new lease manager object\n");
+	LeaseManager = new StorkLeaseManager();
+	dprintf(D_FULLDEBUG, "Done creating new lease manager object\n");
+	dprintf(D_FULLDEBUG, "It's %p, size %d\n",
+			LeaseManager, sizeof(*LeaseManager) );
+	ASSERT(LeaseManager);
 
 		//init history file name
 	historyfilename.sprintf( "%s.history", logfilename);
@@ -1733,7 +1734,7 @@ clean_job_queue(void)
 }
 
 /* ============================================================================
- * Return dynamic destination matches to matchmaker.
+ * Return dynamic destination matches to lease manager.
  * ==========================================================================*/
 void
 returnDynamicMatches(void)
@@ -1758,7 +1759,7 @@ returnDynamicMatches(void)
 	query.ToFirst();
 
     dprintf(D_FULLDEBUG,
-            "returning dynamic transfer destinations to matchmaker\n");
+            "returning dynamic transfer destinations to lease manager\n");
 	if ( query.Current(key) ){
 		do{
 			job_ad = dapcollection->GetClassAd(key);
@@ -1769,7 +1770,7 @@ returnDynamicMatches(void)
 			}
 
             // If this job has a dynamic transfer destination, return this to
-            // the matchmaker.
+            // the lease manager.
             std::string dest_transfer_url;
             if  (   job_ad->EvaluateAttrString(
                         "dest_transfer_url",
@@ -1778,8 +1779,8 @@ returnDynamicMatches(void)
                 )
             {
                 dprintf(D_FULLDEBUG, "returning dynamic transfer destination "
-                        "%s to matchmaker\n", dest_transfer_url.c_str() );
-                Matchmaker->returnTransferDestination(
+                        "%s to lease manager\n", dest_transfer_url.c_str() );
+                LeaseManager->returnTransferDestination(
                         dest_transfer_url.c_str() );
             }
 		} while (query.Next(key));
@@ -1789,19 +1790,19 @@ returnDynamicMatches(void)
 }
 
 /* ============================================================================
- * Terminate matchmaker interface
+ * Terminate lease manager interface
  * ==========================================================================*/
 void
-terminateMatchmaker(void)
+terminateLeaseManager(void)
 {
-	if ( Matchmaker ) {
+	if ( LeaseManager ) {
 
-        // Return all active matches from matchmaker.
+        // Return all active matches from lease manager.
         returnDynamicMatches();
 
-		dprintf(D_FULLDEBUG, "Deleting matchmaker interface\n");
-		delete Matchmaker;
-		Matchmaker = NULL;
+		dprintf(D_FULLDEBUG, "Deleting lease manager interface\n");
+		delete LeaseManager;
+		LeaseManager = NULL;
 	}
 }
 
@@ -1811,8 +1812,8 @@ terminateMatchmaker(void)
 int
 terminate(terminate_t terminate_type)
 {
-	if ( Matchmaker ) {
-		terminateMatchmaker();
+	if ( LeaseManager ) {
+		terminateLeaseManager();
     }
 
 	if (terminate_type != TERMINATE_FAST) {
@@ -2379,7 +2380,7 @@ remove_requests_from_queue(ReliSock * sock)
 					pid, dap_id, strerror(errno) );
 			}
             // If this job has a dynamic transfer destination, return this to
-            // the matchmaker.
+            // the lease manager.
             std::string dest_transfer_url;
             if  ( job_ad->EvaluateAttrString(
 					  "dest_transfer_url",
@@ -2388,8 +2389,8 @@ remove_requests_from_queue(ReliSock * sock)
                 )
 			{
                 dprintf(D_FULLDEBUG, "returning dynamic transfer destination "
-                        "%s to matchmaker\n", dest_transfer_url.c_str() );
-                Matchmaker->returnTransferDestination(
+                        "%s to lease manager\n", dest_transfer_url.c_str() );
+                LeaseManager->returnTransferDestination(
                         dest_transfer_url.c_str() );
             }
 		}
@@ -2582,15 +2583,15 @@ dap_reaper(std::string modify_s, int pid,int exit_status)
 
 
 		// If completing a transfer to a dynamic destination, return the
-		// dynamic destination to the matchmaker.
+		// dynamic destination to the lease manager.
 		if (!strcmp(dap_type, "transfer")){
 			getValue(job_ad, "dest_transfer_url", unstripped);
 			char dest_transfer_url[MAXSTR];
 			strncpy(dest_transfer_url, strip_str(unstripped), MAXSTR);
 			if (strlen(dest_transfer_url) > 0 ) {
 				dprintf(D_FULLDEBUG, "successful transfer to dynamic URL %s, "
-						"returning to matchmaker\n", dest_transfer_url);
-				Matchmaker->returnTransferDestination(dest_transfer_url);
+						"returning to lease manager\n", dest_transfer_url);
+				LeaseManager->returnTransferDestination(dest_transfer_url);
 				// Dynamic transfers to globus multi file xfers need to clean
 				// up the rewritten multi file URL list.
 				const char *dynamic_multi_file_xfer_file =
@@ -2673,7 +2674,7 @@ dap_reaper(std::string modify_s, int pid,int exit_status)
 			next_action = "Max retry limit reached.";
 
 			// If completing a transfer to a dynamic destination, notify the
-			// matchmaker that this destination failed.
+			// lease manager that this destination failed.
 			if ( !strcmp(dap_type, "transfer") ) {
 				getValue(job_ad, "dest_transfer_url", unstripped);
 				char dest_transfer_url[MAXSTR];
@@ -2681,9 +2682,9 @@ dap_reaper(std::string modify_s, int pid,int exit_status)
 				if (strlen(dest_transfer_url) > 0 ) {
 					dprintf( D_FULLDEBUG,
 							 "failed transfer to dynamic URL %s, "
-							 "returning to matchmaker\n",
+							 "returning to lease manager\n",
 							 dest_transfer_url );
-					Matchmaker->failTransferDestination( dest_transfer_url );
+					LeaseManager->failTransferDestination( dest_transfer_url );
 				}
 			}
 		}

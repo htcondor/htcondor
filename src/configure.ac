@@ -2910,18 +2910,18 @@ AC_ARG_ENABLE([stork],
 AS_IF([test "x$enable_stork" = xyes],
   [AC_DEFINE([WANT_STORK], [1], [Define if enabling Stork])])
 
-# NRL: Similar logic for the lease-based match maker
-AC_ARG_ENABLE([matchmake],
-  AC_HELP_STRING([--enable-matchmaker],
-    [enable lease-based matchmaker functionality (default: platform dependent)]),
+# NRL: Similar logic for the lease manager
+AC_ARG_ENABLE([lease-manager],
+  AC_HELP_STRING([--enable-lease-manager],
+    [enable lease manager functionality (default: platform dependent)]),
   [],
   [if test "$_cv_has_classads" = "yes" -a "$cv_ext_classads" = "yes" ; then
-    enable_matchmaker=yes;
+    enable_lease_manager=yes;
    else
-    enable_matchmaker=no;
+    enable_lease_manager=no;
    fi])
-AS_IF([test "$enable_matchmaker" = "yes"],
-  [AC_DEFINE([WANT_MATCHMAKER], [1],[Define if enabling leasing match maker])])
+AS_IF([test "$enable_lease_manager" = "yes"],
+  [AC_DEFINE([WANT_LEASE_MANAGER], [1],[Define if enabling lease manager])])
 
 
 ############################################################

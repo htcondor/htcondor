@@ -47,7 +47,7 @@ static const Lookup adtypes [] =
 	{ DBMSD_ADTYPE,			DBMSD_AD, },
 	{ TT_ADTYPE,			TT_AD, },
 	{ XFER_SERVICE_ADTYPE,	XFER_SERVICE_AD, },
-	{ MATCH_MAKER_ADTYPE,	MATCH_MAKER_AD, },
+	{ LEASE_MANAGER_ADTYPE,	LEASE_MANAGER_AD, },
 	{ (const char *) 0,		NO_AD, },
 };
 

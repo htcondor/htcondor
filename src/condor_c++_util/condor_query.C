@@ -187,11 +187,11 @@ CondorQuery (AdTypes qType)
 		command = QUERY_XFER_SERVICE_ADS;
 		break;
 
-	  case MATCH_MAKER_AD:
+	  case LEASE_MANAGER_AD:
 		query.setNumStringCats (0);
 		query.setNumIntegerCats(0);
 		query.setNumFloatCats  (0);
-		command = QUERY_MATCH_MAKER_ADS;
+		command = QUERY_LEASE_MANAGER_ADS;
 		break;
 
 	  case CREDD_AD:
@@ -428,8 +428,8 @@ fetchAds (ClassAdList &adList, const char *poolName, CondorError* errstack)
 		queryAd.SetTargetTypeName (XFER_SERVICE_ADTYPE);
 		break;
 
-	  case MATCH_MAKER_AD:
-		queryAd.SetTargetTypeName (MATCH_MAKER_ADTYPE);
+	  case LEASE_MANAGER_AD:
+		queryAd.SetTargetTypeName (LEASE_MANAGER_ADTYPE);
 		break;
 
 	  case ANY_AD:

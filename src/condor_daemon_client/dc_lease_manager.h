@@ -20,8 +20,8 @@
   * RIGHT.
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
-#ifndef _CONDOR_DC_MATCH_MAKER_H
-#define _CONDOR_DC_MATCH_MAKER_H
+#ifndef _CONDOR_DC_LEASE_MANAGER_H
+#define _CONDOR_DC_LEASE_MANAGER_H
 
 #include <list>
 #include <string>
@@ -33,11 +33,11 @@
 #include "classad/classad_distribution.h"
 using namespace std;
 
-#include "dc_match_maker_lease.h"
+#include "dc_lease_manager_lease.h"
 
-/** The subclass of the Daemon object for talking to a match maker daemon
+/** The subclass of the Daemon object for talking to a lease manager daemon
 */
-class DCMatchMaker : public Daemon
+class DCLeaseManager : public Daemon
 {
   public:
 
@@ -46,10 +46,10 @@ class DCMatchMaker : public Daemon
 		              if you want local  
 		  @param pool The name of the pool, NULL if you want local
 		*/
-	DCMatchMaker( const char* const name = NULL, const char* pool = NULL );
+	DCLeaseManager( const char* const name = NULL, const char* pool = NULL );
 
 		/// Destructor.
-	~DCMatchMaker( );
+	~DCLeaseManager( );
 
 
 		/** Get lease(s) which to match the requirements passed in
@@ -62,10 +62,10 @@ class DCMatchMaker : public Daemon
 			The list pointers should be delete()ed when no longer used
 			@return true on success, false on invalid input (NULL)
 		*/
-	bool getMatches( const char *requestor_name,
-					 int num, int duration,
-					 const char* requirements, const char *rank,
-					 list< DCMatchMakerLease *> &leases );
+	bool getLeases( const char *requestor_name,
+					int num, int duration,
+					const char* requirements, const char *rank,
+					list< DCLeaseManagerLease *> &leases );
 
 
 		/** Get lease(s) which to match the requirements passed in
@@ -74,8 +74,8 @@ class DCMatchMaker : public Daemon
 			The list pointers should be delete()ed when no longer used
 			@return true on success, false on invalid input (NULL)
 		*/
-	bool getMatches( const classad::ClassAd &ad,
-					 list< DCMatchMakerLease *> &leases );
+	bool getLeases( const classad::ClassAd &ad,
+					list< DCLeaseManagerLease *> &leases );
 
 
 		/** Renew the leases specified
@@ -84,33 +84,33 @@ class DCMatchMaker : public Daemon
 			@param out_leases STL list of renewed leases
 			The list pointers should be delete()ed when no longer used
 		*/
-	bool renewLeases( list< const DCMatchMakerLease *> &leases,
-					  list< DCMatchMakerLease *> &out_leases );
+	bool renewLeases( list< const DCLeaseManagerLease *> &leases,
+					  list< DCLeaseManagerLease *> &out_leases );
 
 
 		/** Release the leases specified
 			@param leases STL list of lease information on leases to release
 			@return true on success, false on invalid input (NULL)
 		*/
-	bool releaseLeases( list <const DCMatchMakerLease *> &leases );
+	bool releaseLeases( list <const DCLeaseManagerLease *> &leases );
 
 
  private:
 
 		// I can't be copied (yet)
-	DCMatchMaker( const DCMatchMaker& );
-	DCMatchMaker& operator = ( const DCMatchMaker& );
+	DCLeaseManager( const DCLeaseManager& );
+	DCLeaseManager& operator = ( const DCLeaseManager& );
 
 	// Helper methods to get/send leases
 	bool SendLeases(
-		Stream							*stream,
-		list< const DCMatchMakerLease *> &l_list
+		Stream								*stream,
+		list< const DCLeaseManagerLease *> &l_list
 		);
 	bool GetLeases(
-		Stream							*stream,
-		std::list< DCMatchMakerLease *>	&l_list
+		Stream								*stream,
+		std::list< DCLeaseManagerLease *>	&l_list
 		);
 
 };
 
-#endif /* _CONDOR_DC_MATCH_MAKER_H */
+#endif /* _CONDOR_DC_LEASE_MANAGER_H */

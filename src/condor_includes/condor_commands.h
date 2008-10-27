@@ -275,9 +275,9 @@ const int UPDATE_XFER_SERVICE_AD	= 60;
 const int QUERY_XFER_SERVICE_ADS	= 61;
 const int INVALIDATE_XFER_SERVICE_ADS  = 62;
 
-const int UPDATE_MATCH_MAKER_AD	= 63;
-const int QUERY_MATCH_MAKER_ADS	= 64;
-const int INVALIDATE_MATCH_MAKER_ADS  = 65;
+const int UPDATE_LEASE_MANAGER_AD		= 63;
+const int QUERY_LEASE_MANAGER_ADS		= 64;
+const int INVALIDATE_LEASE_MANAGER_ADS  = 65;
 
 const int QUERY_GENERIC_ADS = QUERY_ANY_ADS;	// == 48
 
@@ -393,6 +393,14 @@ const int QUERY_GENERIC_ADS = QUERY_ANY_ADS;	// == 48
 /* files are being read from the transferd's storage */
 #define TRANSFERD_READ_FILES	(TRANSFERD_BASE+3)
 
+/*
+*** Commands used by the new lease manager daemon
+*/
+#define LEASE_MANAGER_BASE			75000
+#define LEASE_MANAGER_GET_LEASES	(LEASE_MANAGER_BASE+0)
+#define LEASE_MANAGER_RENEW_LEASE	(LEASE_MANAGER_BASE+1)
+#define LEASE_MANAGER_RELEASE_LEASE	(LEASE_MANAGER_BASE+2)
+
 
 /*
 *** Commands used by the stork daemon
@@ -414,14 +422,6 @@ const int QUERY_GENERIC_ADS = QUERY_ANY_ADS;	// == 48
 #define CREDD_GET_PASSWD (CREDD_BASE+99)	// used by the Win32 credd only
 #define CREDD_NOP (CREDD_BASE+100)			// used by the Win32 credd only
 
-
-/*
-*** Commands used by the new matchmaker daemon
-*/
-#define MATCHMAKER_BASE				74000
-#define MATCHMAKER_GET_MATCH		(MATCHMAKER_BASE+0)
-#define MATCHMAKER_RENEW_LEASE		(MATCHMAKER_BASE+1)
-#define MATCHMAKER_RELEASE_LEASE	(MATCHMAKER_BASE+2)
 
 /*
 *** Replies used in various stages of various protocols

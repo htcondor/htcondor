@@ -30,14 +30,14 @@
 #include "classad/classad_distribution.h"
 using namespace std;
 
-#include "match_maker_resources.h"
-#include "match_maker_lease.h"
+#include "lease_manager_resources.h"
+#include "lease_manager_lease.h"
 #include "debug_timer_dprintf.h"
 
 // Set to zero to disable 2-way match making (needs classads >= 0.9.8-b3)
 #define TWO_WAY_MATCHING	1
 
-MatchMakerResources::MatchMakerResources( void )
+LeaseManagerResources::LeaseManagerResources( void )
 {
 	m_lease_id_number = time( NULL );
 	m_default_max_lease_duration = 60;
@@ -51,11 +51,11 @@ MatchMakerResources::MatchMakerResources( void )
 	m_stats.m_num_busy_leases = 0;
 }
 
-MatchMakerResources::~MatchMakerResources( void )
+LeaseManagerResources::~LeaseManagerResources( void )
 {
-	map<string, MatchMakerLeaseEnt*, less<string> >::iterator iter;
+	map<string, LeaseManagerLeaseEnt*, less<string> >::iterator iter;
 	for( iter = m_used_leases.begin(); iter != m_used_leases.end(); iter++ ) {
-		MatchMakerLeaseEnt	*lease_ent = iter->second;
+		LeaseManagerLeaseEnt	*lease_ent = iter->second;
 		delete lease_ent;
 		m_used_leases.erase( iter->first );
 	}
@@ -65,7 +65,7 @@ MatchMakerResources::~MatchMakerResources( void )
 }
 
 int
-MatchMakerResources::setCollectionLog( const char *f )
+LeaseManagerResources::setCollectionLog( const char *f )
 {
 	if ( f ) {
 		if ( m_collection_log && strcmp( f, m_collection_log ) ) {
@@ -81,31 +81,31 @@ MatchMakerResources::setCollectionLog( const char *f )
 }
 
 void
-MatchMakerResources::setAdDebug( bool enable )
+LeaseManagerResources::setAdDebug( bool enable )
 {
 	m_enable_ad_debug = enable;
 }
 
 void
-MatchMakerResources::setDefaultMaxLeaseDuration( int def )
+LeaseManagerResources::setDefaultMaxLeaseDuration( int def )
 {
 	m_default_max_lease_duration = def;
 }
 
 void
-MatchMakerResources::setMaxLeaseDuration( int max )
+LeaseManagerResources::setMaxLeaseDuration( int max )
 {
 	m_max_lease_duration = max;
 }
 
 void
-MatchMakerResources::setMaxLeaseTotalDuration( int max )
+LeaseManagerResources::setMaxLeaseTotalDuration( int max )
 {
 	m_max_lease_total = max;
 }
 
 int
-MatchMakerResources::init( void )
+LeaseManagerResources::init( void )
 {
 	// Initialize the classad collection
 	if ( m_collection_log ) {
@@ -165,7 +165,7 @@ MatchMakerResources::init( void )
 }
 
 int
-MatchMakerResources::restoreLeases( void )
+LeaseManagerResources::restoreLeases( void )
 {
 
 	// Now, build the "used leases" map
@@ -256,7 +256,7 @@ MatchMakerResources::restoreLeases( void )
 			int		expiration_time = start_time + duration;
 
 			// Create a lease entry for it
-			MatchMakerLeaseEnt	*lease_ent = new MatchMakerLeaseEnt;
+			LeaseManagerLeaseEnt	*lease_ent = new LeaseManagerLeaseEnt;
 			lease_ent->m_lease_ad = ad;
 			lease_ent->m_lease_number = lease_number;
 			lease_ent->m_leases_ad = leases_ad;
@@ -299,7 +299,7 @@ MatchMakerResources::restoreLeases( void )
 }
 
 int
-MatchMakerResources::shutdownFast( void )
+LeaseManagerResources::shutdownFast( void )
 {
 	dprintf( D_FULLDEBUG, "Truncating classad collection\n" );
 	m_collection.TruncateLog( );
@@ -307,7 +307,7 @@ MatchMakerResources::shutdownFast( void )
 }
 
 int
-MatchMakerResources::shutdownGraceful( void )
+LeaseManagerResources::shutdownGraceful( void )
 {
 	dprintf( D_FULLDEBUG, "Truncating classad collection\n" );
 	m_collection.TruncateLog( );
@@ -316,7 +316,7 @@ MatchMakerResources::shutdownGraceful( void )
 
 // Set the ClassAd for the query
 bool
-MatchMakerResources::QuerySetAd( const classad::ClassAd &ad )
+LeaseManagerResources::QuerySetAd( const classad::ClassAd &ad )
 {
 	classad::ClassAdUnParser	unparser;
 
@@ -364,7 +364,7 @@ MatchMakerResources::QuerySetAd( const classad::ClassAd &ad )
 
 // Start query with specifying an ad
 bool
-MatchMakerResources::QueryStart( const classad::ClassAd &ad )
+LeaseManagerResources::QueryStart( const classad::ClassAd &ad )
 {
 	// Set the ad
 	if ( !QuerySetAd( ad ) ) {
@@ -378,7 +378,7 @@ MatchMakerResources::QueryStart( const classad::ClassAd &ad )
 
 // Start query with ad previsouly set by QuerySetAd()
 bool
-MatchMakerResources::QueryStart( void )
+LeaseManagerResources::QueryStart( void )
 {
 # if TWO_WAY_MATCHING
 	return m_search_query.Query( m_resources_view, &m_search_query_ad, true );
@@ -392,23 +392,23 @@ MatchMakerResources::QueryStart( void )
 
 // Get the current query ad
 classad::ClassAd *
-MatchMakerResources::QueryCurrent( void )
+LeaseManagerResources::QueryCurrent( void )
 {
 	return QueryCurrent( m_search_query, m_search_query_key );
 }
 
 // Go to the next ad in the query
 bool
-MatchMakerResources::QueryNext( void )
+LeaseManagerResources::QueryNext( void )
 {
 	return QueryNext( m_search_query, m_search_query_key );
 }
 
 int
-MatchMakerResources::GetLeases( classad::ClassAd &resource_ad,
-								classad::ClassAd &request_ad,
-								int target_count,
-								list<classad::ClassAd *> &leases )
+LeaseManagerResources::GetLeases( classad::ClassAd &resource_ad,
+								  classad::ClassAd &request_ad,
+								  int target_count,
+								  list<classad::ClassAd *> &leases )
 {
 	string	resource_name;
 	if ( !resource_ad.EvaluateAttrString( "Name", resource_name ) ) {
@@ -537,7 +537,7 @@ MatchMakerResources::GetLeases( classad::ClassAd &resource_ad,
 		leases.push_back( lease_ad );
 
 		// Finally, add the leaesid to the map
-		MatchMakerLeaseEnt	*lease_ent = new MatchMakerLeaseEnt;
+		LeaseManagerLeaseEnt	*lease_ent = new LeaseManagerLeaseEnt;
 		lease_ent->m_lease_ad = ad;
 		lease_ent->m_lease_number = lease_number;
 		lease_ent->m_leases_ad = leases_ad;
@@ -580,18 +580,18 @@ MatchMakerResources::GetLeases( classad::ClassAd &resource_ad,
 
 // Public method to renew a list of leases
 int
-MatchMakerResources::RenewLeases( list<const MatchMakerLease *> &requests,
-								 list<MatchMakerLease *> &leases )
+LeaseManagerResources::RenewLeases( list<const LeaseManagerLease *> &requests,
+									list<LeaseManagerLease *> &leases )
 {
 	time_t	now = time( NULL );
 
 	// Walk through the whole list...
-	for ( list <const MatchMakerLease *>::iterator iter = requests.begin();
+	for ( list <const LeaseManagerLease *>::iterator iter = requests.begin();
 		  iter != requests.end();
 		  iter++ )
 	{
-		const MatchMakerLease *request = *iter;
-		MatchMakerLeaseEnt	*lease_ent = FindLease( *request );
+		const LeaseManagerLease *request = *iter;
+		LeaseManagerLeaseEnt	*lease_ent = FindLease( *request );
 		if ( ! lease_ent ) {
 			dprintf( D_ALWAYS,
 					 "renew: Can't find matching lease ad for %s!\n",
@@ -643,8 +643,8 @@ MatchMakerResources::RenewLeases( list<const MatchMakerLease *> &requests,
 
 		// Renew the lease
 		lease_ent->m_expiration = (int) now + duration;
-		MatchMakerLease	*new_lease =
-			new MatchMakerLease( request->getLeaseId(), duration, release );
+		LeaseManagerLease	*new_lease =
+			new LeaseManagerLease( request->getLeaseId(), duration, release );
 		leases.push_back( new_lease );
 
 		dprintf( D_FULLDEBUG, "Renewed lease %s for %ds\n",
@@ -656,18 +656,19 @@ MatchMakerResources::RenewLeases( list<const MatchMakerLease *> &requests,
 
 // Public method to release a list of leases
 int
-MatchMakerResources::ReleaseLeases( list<const MatchMakerLease *> &requests )
+LeaseManagerResources::ReleaseLeases(
+	list<const LeaseManagerLease *> &requests )
 {
 
 	// Walk through the whole list...
 	int		count = 0;
 	int		status = 0;
-	for ( list <const MatchMakerLease *>::iterator iter = requests.begin();
+	for ( list <const LeaseManagerLease *>::iterator iter = requests.begin();
 		  iter != requests.end();
 		  iter++ )
 	{
-		const MatchMakerLease *request = *iter;
-		MatchMakerLeaseEnt	*lease_ent = FindLease( *request );
+		const LeaseManagerLease *request = *iter;
+		LeaseManagerLeaseEnt	*lease_ent = FindLease( *request );
 		if ( ! lease_ent ) {
 			dprintf( D_ALWAYS,
 					 "release: Can't find matching lease ad!\n" );
@@ -689,7 +690,7 @@ MatchMakerResources::ReleaseLeases( list<const MatchMakerLease *> &requests )
 
 // Public method for adding (or replacing) a resource
 int
-MatchMakerResources::AddResource( classad::ClassAd *new_res_ad )
+LeaseManagerResources::AddResource( classad::ClassAd *new_res_ad )
 {
 	// Extract info from the resource ad
 	int			max_leases;
@@ -821,7 +822,7 @@ MatchMakerResources::AddResource( classad::ClassAd *new_res_ad )
 }
 
 int
-MatchMakerResources::SetLeaseStates(
+LeaseManagerResources::SetLeaseStates(
 	const string		&resource_name,
 	int					max_resource_leases,
 	classad::ClassAd	&leases_ad,
@@ -931,9 +932,9 @@ MatchMakerResources::SetLeaseStates(
 
 // Public method to gather statistics
 int
-MatchMakerResources::GetStats( MatchMakerStats & stats )
+LeaseManagerResources::GetStats( LeaseManagerStats & stats )
 {
-	stats.m_num_resources    = m_stats.m_num_resources;
+	stats.m_num_resources     = m_stats.m_num_resources;
 	stats.m_num_lease_records = m_stats.m_num_lease_records;
 	stats.m_num_valid_leases  = m_stats.m_num_valid_leases;
 	stats.m_num_busy_leases   = m_stats.m_num_busy_leases;
@@ -943,7 +944,7 @@ MatchMakerResources::GetStats( MatchMakerStats & stats )
 
 // Public method to prune resource (expire, etc)
 int
-MatchMakerResources::PruneResources( void )
+LeaseManagerResources::PruneResources( void )
 {
 	int status = ExpireLeases( );
 
@@ -957,7 +958,7 @@ MatchMakerResources::PruneResources( void )
 
 // Public method to mark all resources as invalie
 int
-MatchMakerResources::StartExpire( void )
+LeaseManagerResources::StartExpire( void )
 {
     const classad::View *view = m_collection.GetView( m_resources_view );
 
@@ -985,7 +986,7 @@ MatchMakerResources::StartExpire( void )
 
 // Internal method to find & terminate expired leases
 int
-MatchMakerResources::ExpireLeases( void )
+LeaseManagerResources::ExpireLeases( void )
 {
 
 	int		num_expired = 0;
@@ -994,9 +995,9 @@ MatchMakerResources::ExpireLeases( void )
 	dprintf( D_FULLDEBUG, "Expiring old leases @ %ld\n", now );
 
 	DebugTimerDprintf	timer;
-	map<string, MatchMakerLeaseEnt*, less<string> >::iterator iter;
+	map<string, LeaseManagerLeaseEnt*, less<string> >::iterator iter;
 	for( iter = m_used_leases.begin(); iter != m_used_leases.end(); iter++ ) {
-		MatchMakerLeaseEnt	*lease_ent = iter->second;
+		LeaseManagerLeaseEnt	*lease_ent = iter->second;
 
 		num_examined++;
 		if ( lease_ent->m_expiration < now ) {
@@ -1018,7 +1019,7 @@ MatchMakerResources::ExpireLeases( void )
 
 // Public method to mark all resources
 int
-MatchMakerResources::PruneExpired( void )
+LeaseManagerResources::PruneExpired( void )
 {
 	int		zeroed_count = 0;
 	int		pruned_count = 0;
@@ -1122,7 +1123,7 @@ MatchMakerResources::PruneExpired( void )
 
 // Internal method to terminate a lease
 bool
-MatchMakerResources::TerminateLease( MatchMakerLeaseEnt	&lease )
+LeaseManagerResources::TerminateLease( LeaseManagerLeaseEnt	&lease )
 {
 	dprintf( D_FULLDEBUG, "Terminating lease @ %p/%p/%p\n",
 			 &lease, lease.m_lease_ad, lease.m_leases_ad );
@@ -1180,7 +1181,7 @@ MatchMakerResources::TerminateLease( MatchMakerLeaseEnt	&lease )
 
 // Internal query methods
 bool
-MatchMakerResources::QueryStart(
+LeaseManagerResources::QueryStart(
 	classad::LocalCollectionQuery	&query,
 	classad::ViewName				&view,
 	const string					&expr_str )
@@ -1209,8 +1210,8 @@ MatchMakerResources::QueryStart(
 }
 
 classad::ClassAd *
-MatchMakerResources::QueryCurrent( classad::LocalCollectionQuery &query,
-								  string						&key )
+LeaseManagerResources::QueryCurrent( classad::LocalCollectionQuery	&query,
+									 string							&key )
 {
 	// Get the current query key
 	if ( !query.Current( key ) ) {
@@ -1220,8 +1221,8 @@ MatchMakerResources::QueryCurrent( classad::LocalCollectionQuery &query,
 }
 
 bool
-MatchMakerResources::QueryNext( classad::LocalCollectionQuery	&query,
-							   string							&key)
+LeaseManagerResources::QueryNext( classad::LocalCollectionQuery	&query,
+								  string						&key)
 {
 	return query.Next( key );
 }
@@ -1229,11 +1230,11 @@ MatchMakerResources::QueryNext( classad::LocalCollectionQuery	&query,
 
 // Internal method to find a lease ad (and matching resource ad)
 // that matches a lease ad (probably from an external source)
-MatchMakerLeaseEnt *
-MatchMakerResources::FindLease( const MatchMakerLease &in_lease )
+LeaseManagerLeaseEnt *
+LeaseManagerResources::FindLease( const LeaseManagerLease &in_lease )
 {
 
-	map<string, MatchMakerLeaseEnt*, less<string> >::iterator iter;
+	map<string, LeaseManagerLeaseEnt*, less<string> >::iterator iter;
 	iter = m_used_leases.find( in_lease.getLeaseId() );
 	if ( iter != m_used_leases.end() ) {
 		return m_used_leases[ in_lease.getLeaseId() ];
@@ -1242,16 +1243,16 @@ MatchMakerResources::FindLease( const MatchMakerLease &in_lease )
 }
 
 int
-MatchMakerResources::GetLeaseDuration( const classad::ClassAd &resource_ad,
-									   const MatchMakerLease &request )
+LeaseManagerResources::GetLeaseDuration( const classad::ClassAd &resource_ad,
+										 const LeaseManagerLease &request )
 {
 	int	requested_duration = request.getDuration( );
 	return GetLeaseDuration( resource_ad, requested_duration );
 }
 
 int
-MatchMakerResources::GetLeaseDuration( const classad::ClassAd &resource_ad,
-									   const classad::ClassAd &request_ad )
+LeaseManagerResources::GetLeaseDuration( const classad::ClassAd &resource_ad,
+										 const classad::ClassAd &request_ad )
 {
 	int	requested_duration = -1;
 	request_ad.EvaluateAttrInt( "LeaseDuration", requested_duration );
@@ -1260,8 +1261,8 @@ MatchMakerResources::GetLeaseDuration( const classad::ClassAd &resource_ad,
 }
 
 int
-MatchMakerResources::GetLeaseDuration( const classad::ClassAd &resource_ad,
-									   int requested_duration )
+LeaseManagerResources::GetLeaseDuration( const classad::ClassAd &resource_ad,
+										 int requested_duration )
 {
 	int	resource_max_duration = -1;
 	resource_ad.EvaluateAttrInt( "MaxLeaseDuration", resource_max_duration );
@@ -1289,29 +1290,29 @@ MatchMakerResources::GetLeaseDuration( const classad::ClassAd &resource_ad,
 
 
 classad::ClassAd *
-MatchMakerResources::GetResourceAd( const string &name )
+LeaseManagerResources::GetResourceAd( const string &name )
 {
 	string	key = "Resources/" + name;
 	return m_collection.GetClassAd( key );
 }
 
 bool
-MatchMakerResources::InsertResourceAd( const string &name,
-									   classad::ClassAd *ad )
+LeaseManagerResources::InsertResourceAd( const string &name,
+										 classad::ClassAd *ad )
 {
 	string	key = "Resources/" + name;
 	return m_collection.AddClassAd( key, ad );
 }
 
 bool
-MatchMakerResources::RemoveResourceAd( const string &name )
+LeaseManagerResources::RemoveResourceAd( const string &name )
 {
 	string	key = "Resources/" + name;
 	return m_collection.RemoveClassAd( key );
 }
 
 bool
-MatchMakerResources::UpdateResourceAd( const string &name,
+LeaseManagerResources::UpdateResourceAd( const string &name,
 									   const classad::ClassAd &delta )
 {
 	// Make a copy of the ad, and create a "updates" ad
@@ -1320,8 +1321,8 @@ MatchMakerResources::UpdateResourceAd( const string &name,
 }
 
 bool
-MatchMakerResources::UpdateResourceAd( const string &name,
-									  classad::ClassAd *delta )
+LeaseManagerResources::UpdateResourceAd( const string &name,
+										 classad::ClassAd *delta )
 {
 	string	key = "Resources/" + name;
 
@@ -1337,15 +1338,15 @@ MatchMakerResources::UpdateResourceAd( const string &name,
 }
 
 classad::ClassAd *
-MatchMakerResources::GetLeasesAd( const string &name )
+LeaseManagerResources::GetLeasesAd( const string &name )
 {
 	string	key = "Leases/" + name;
 	return m_collection.GetClassAd( key );
 }
 
 bool
-MatchMakerResources::InsertLeasesAd( const string &name,
-									 classad::ClassAd *ad )
+LeaseManagerResources::InsertLeasesAd( const string &name,
+									   classad::ClassAd *ad )
 									
 {
 	string	key = "Leases/" + name;
@@ -1353,15 +1354,15 @@ MatchMakerResources::InsertLeasesAd( const string &name,
 }
 
 bool
-MatchMakerResources::RemoveLeasesAd( const string &name )
+LeaseManagerResources::RemoveLeasesAd( const string &name )
 {
 	string	key = "Leases/" + name;
 	return m_collection.RemoveClassAd( key );
 }
 
 bool
-MatchMakerResources::UpdateLeasesAd( const string &name,
-									 const classad::ClassAd &delta )
+LeaseManagerResources::UpdateLeasesAd( const string &name,
+									   const classad::ClassAd &delta )
 {
 	// Make a copy of the ad, and create a "updates" ad
 	classad::ClassAd	*copy = new classad::ClassAd( delta );
@@ -1369,8 +1370,8 @@ MatchMakerResources::UpdateLeasesAd( const string &name,
 }
 
 bool
-MatchMakerResources::UpdateLeasesAd( const string &name,
-									classad::ClassAd *delta )
+LeaseManagerResources::UpdateLeasesAd( const string &name,
+									   classad::ClassAd *delta )
 {
 	string	key = "Leases/" + name;
 
@@ -1386,9 +1387,9 @@ MatchMakerResources::UpdateLeasesAd( const string &name,
 }
 
 bool
-MatchMakerResources::UpdateLeaseAd( const string &resource,
-									int lease_number,
-									const classad::ClassAd &delta )
+LeaseManagerResources::UpdateLeaseAd( const string &resource,
+									  int lease_number,
+									  const classad::ClassAd &delta )
 {
 	// Make a copy of the ad, and create a "updates" ad
 	classad::ClassAd	*copy = new classad::ClassAd( delta );
@@ -1396,9 +1397,9 @@ MatchMakerResources::UpdateLeaseAd( const string &resource,
 }
 
 bool
-MatchMakerResources::UpdateLeaseAd( const string &resource,
-									int lease_number,
-									classad::ClassAd *delta )
+LeaseManagerResources::UpdateLeaseAd( const string &resource,
+									  int lease_number,
+									  classad::ClassAd *delta )
 {
 	string	key = "Leases/" + resource;
 

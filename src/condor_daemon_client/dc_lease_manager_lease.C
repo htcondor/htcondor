@@ -30,7 +30,7 @@
 #include "condor_attributes.h"
 
 #include "daemon.h"
-#include "dc_match_maker.h"
+#include "dc_lease_manager.h"
 
 #define WANT_CLASSAD_NAMESPACE
 #include "classad/classad_distribution.h"
@@ -39,9 +39,9 @@ using namespace std;
 
 #include <stdio.h>
 
-// *** DCMatchMakerLease (class to hold lease information) class methods ***
+// *** DCLeaseManagerLease (class to hold lease information) class methods ***
 
-DCMatchMakerLease::DCMatchMakerLease( time_t now )
+DCLeaseManagerLease::DCLeaseManagerLease( time_t now )
 {
 	m_lease_ad = NULL;
 	m_lease_duration = 0;
@@ -49,8 +49,8 @@ DCMatchMakerLease::DCMatchMakerLease( time_t now )
 	setLeaseStart( now );
 }
 
-DCMatchMakerLease::DCMatchMakerLease( const DCMatchMakerLease &lease,
-									  time_t now )
+DCLeaseManagerLease::DCLeaseManagerLease( const DCLeaseManagerLease &lease,
+										  time_t now )
 {
 	if ( lease.LeaseAd( ) ) {
 		this->m_lease_ad = new classad::ClassAd( *(lease.LeaseAd( )) );
@@ -63,7 +63,7 @@ DCMatchMakerLease::DCMatchMakerLease( const DCMatchMakerLease &lease,
 	setLeaseStart( now );
 }
 
-DCMatchMakerLease::DCMatchMakerLease(
+DCLeaseManagerLease::DCLeaseManagerLease(
 	classad::ClassAd		*ad,
 	time_t					now
 	)
@@ -72,7 +72,7 @@ DCMatchMakerLease::DCMatchMakerLease(
 	initFromClassAd( ad, now );
 }
 
-DCMatchMakerLease::DCMatchMakerLease(
+DCLeaseManagerLease::DCLeaseManagerLease(
 const classad::ClassAd	&ad,
 	time_t				now
 	)
@@ -81,7 +81,7 @@ const classad::ClassAd	&ad,
 	initFromClassAd( ad, now );
 }
 
-DCMatchMakerLease::DCMatchMakerLease(
+DCLeaseManagerLease::DCLeaseManagerLease(
 	const string		&lease_id,
 	int					lease_duration,
 	bool				release_when_done,
@@ -94,7 +94,7 @@ DCMatchMakerLease::DCMatchMakerLease(
 	setLeaseStart( now );
 }
 
-DCMatchMakerLease::~DCMatchMakerLease( void )
+DCLeaseManagerLease::~DCLeaseManagerLease( void )
 {
 	if ( m_lease_ad ) {
 		delete m_lease_ad;
@@ -102,7 +102,7 @@ DCMatchMakerLease::~DCMatchMakerLease( void )
 }
 
 int
-DCMatchMakerLease::setLeaseStart( time_t now )
+DCLeaseManagerLease::setLeaseStart( time_t now )
 {
 	if ( !now ) {
 		now = time( NULL );
@@ -112,7 +112,7 @@ DCMatchMakerLease::setLeaseStart( time_t now )
 }
 
 int
-DCMatchMakerLease::initFromClassAd(
+DCLeaseManagerLease::initFromClassAd(
 	const classad::ClassAd	&ad,
 	time_t					now
 	)
@@ -121,7 +121,7 @@ DCMatchMakerLease::initFromClassAd(
 }
 
 int
-DCMatchMakerLease::initFromClassAd(
+DCLeaseManagerLease::initFromClassAd(
 	classad::ClassAd	*ad,
 	time_t				now
 	)
@@ -154,7 +154,7 @@ DCMatchMakerLease::initFromClassAd(
 }
 
 int
-DCMatchMakerLease::copyUpdates( const DCMatchMakerLease &lease )
+DCLeaseManagerLease::copyUpdates( const DCLeaseManagerLease &lease )
 {
 
 	// Don't touch the lease ID
@@ -185,7 +185,7 @@ DCMatchMakerLease::copyUpdates( const DCMatchMakerLease &lease )
 }
 
 int
-DCMatchMakerLease::setLeaseId(
+DCLeaseManagerLease::setLeaseId(
 	const string		&lease_id )
 {
 	this->m_lease_id = lease_id;
@@ -193,41 +193,41 @@ DCMatchMakerLease::setLeaseId(
 }
 
 int
-DCMatchMakerLease::setLeaseDuration(
+DCLeaseManagerLease::setLeaseDuration(
 	int					duration )
 {
 	this->m_lease_duration = duration;
 	return 0;
 }
 
-// *** DCMatchMakerLease list helper functions
+// *** DCLeaseManagerLease list helper functions
 
 void
-DCMatchMakerLease_FreeList( list<DCMatchMakerLease *> &lease_list )
+DCLeaseManagerLease_FreeList( list<DCLeaseManagerLease *> &lease_list )
 {
 	while( lease_list.size() ) {
-		DCMatchMakerLease *lease = *(lease_list.begin( ));
+		DCLeaseManagerLease *lease = *(lease_list.begin( ));
 		delete lease;
 		lease_list.pop_front( );
 	}
 }
 
 int
-DCMatchMakerLease_RemoveLeases(
-	list<DCMatchMakerLease *>				&lease_list,
-	const list<const DCMatchMakerLease *>	&remove_list
+DCLeaseManagerLease_RemoveLeases(
+	list<DCLeaseManagerLease *>				&lease_list,
+	const list<const DCLeaseManagerLease *>	&remove_list
 	)
 {
 	int		errors = 0;
 
-	list<const DCMatchMakerLease *>::const_iterator iter;
+	list<const DCLeaseManagerLease *>::const_iterator iter;
 	for( iter = remove_list.begin( ); iter != remove_list.end( ); iter++ ) {
-		const DCMatchMakerLease	*remove = *iter;
+		const DCLeaseManagerLease	*remove = *iter;
 		bool matched = false;
-		for( list<DCMatchMakerLease *>::iterator iter2 = lease_list.begin();
+		for( list<DCLeaseManagerLease *>::iterator iter2 = lease_list.begin();
 			 iter2 != lease_list.end();
 			 iter2++ ) {
-			DCMatchMakerLease	*lease = *iter2;
+			DCLeaseManagerLease	*lease = *iter2;
 			if ( remove->LeaseId() == lease->LeaseId() ) {
 				matched = true;
 				lease_list.erase( iter2 );	// Note: invalidates iter
@@ -243,21 +243,21 @@ DCMatchMakerLease_RemoveLeases(
 }
 
 int
-DCMatchMakerLease_UpdateLeases(
-	list<DCMatchMakerLease *>				&lease_list,
-	const list<const DCMatchMakerLease *>	&update_list
+DCLeaseManagerLease_UpdateLeases(
+	list<DCLeaseManagerLease *>				&lease_list,
+	const list<const DCLeaseManagerLease *>	&update_list
 	)
 {
 	int		errors = 0;
 
-	list<const DCMatchMakerLease *>::const_iterator iter;
+	list<const DCLeaseManagerLease *>::const_iterator iter;
 	for( iter = update_list.begin( ); iter != update_list.end( ); iter++ ) {
-		const DCMatchMakerLease	*update = *iter;
+		const DCLeaseManagerLease	*update = *iter;
 		bool matched = false;
-		for( list<DCMatchMakerLease *>::iterator iter2 = lease_list.begin();
+		for( list<DCLeaseManagerLease *>::iterator iter2 = lease_list.begin();
 			 iter2 != lease_list.end();
 			 iter2++ ) {
-			DCMatchMakerLease	*lease = *iter2;
+			DCLeaseManagerLease	*lease = *iter2;
 			if ( update->LeaseId() == lease->LeaseId() ) {
 				matched = true;
 				lease->copyUpdates( *update );
@@ -272,35 +272,35 @@ DCMatchMakerLease_UpdateLeases(
 }
 
 int
-DCMatchMakerLease_MarkLeases(
-	list<DCMatchMakerLease *>		&lease_list,
+DCLeaseManagerLease_MarkLeases(
+	list<DCLeaseManagerLease *>		&lease_list,
 	bool							mark
 	)
 {
-	for( list<DCMatchMakerLease *>::iterator iter = lease_list.begin();
+	for( list<DCLeaseManagerLease *>::iterator iter = lease_list.begin();
 		 iter != lease_list.end();
 		 iter++ ) {
-		DCMatchMakerLease	*lease = *iter;
+		DCLeaseManagerLease	*lease = *iter;
 		lease->setMark( mark );
 	}
 	return 0;
 }
 
 int
-DCMatchMakerLease_RemoveMarkedLeases(
-	list<DCMatchMakerLease *>		&lease_list,
+DCLeaseManagerLease_RemoveMarkedLeases(
+	list<DCLeaseManagerLease *>		&lease_list,
 	bool							mark
 	)
 {
-	list<const DCMatchMakerLease *> remove_list;
-	list<const DCMatchMakerLease *> const_list =
-		*DCMatchMakerLease_GetConstList( &lease_list );
-	DCMatchMakerLease_GetMarkedLeases( const_list, mark, remove_list );
+	list<const DCLeaseManagerLease *> remove_list;
+	list<const DCLeaseManagerLease *> const_list =
+		*DCLeaseManagerLease_GetConstList( &lease_list );
+	DCLeaseManagerLease_GetMarkedLeases( const_list, mark, remove_list );
 
-	for( list<const DCMatchMakerLease *>::iterator iter = remove_list.begin();
+	for( list<const DCLeaseManagerLease *>::iterator iter = remove_list.begin();
 		 iter != remove_list.end();
 		 iter++ ) {
-		DCMatchMakerLease *lease = const_cast<DCMatchMakerLease*>( *iter );
+		DCLeaseManagerLease *lease = const_cast<DCLeaseManagerLease*>( *iter );
 		lease_list.remove( lease );
 		delete lease;
 	}
@@ -309,17 +309,17 @@ DCMatchMakerLease_RemoveMarkedLeases(
 }
 
 int
-DCMatchMakerLease_CountMarkedLeases(
-	const list<const DCMatchMakerLease *> &lease_list,
+DCLeaseManagerLease_CountMarkedLeases(
+	const list<const DCLeaseManagerLease *> &lease_list,
 	bool							mark
 	)
 {
 	int		count = 0;
-	list<const DCMatchMakerLease *>::const_iterator iter;
+	list<const DCLeaseManagerLease *>::const_iterator iter;
 	for( iter = lease_list.begin();
 		 iter != lease_list.end();
 		 iter++ ) {
-		const DCMatchMakerLease	*lease = *iter;
+		const DCLeaseManagerLease	*lease = *iter;
 		if ( mark == lease->getMark( ) ) {
 			count++;
 		}
@@ -328,18 +328,18 @@ DCMatchMakerLease_CountMarkedLeases(
 }
 
 int
-DCMatchMakerLease_GetMarkedLeases(
-	const list<const DCMatchMakerLease *>	&lease_list,
+DCLeaseManagerLease_GetMarkedLeases(
+	const list<const DCLeaseManagerLease *>	&lease_list,
 	bool									mark,
-	list<const DCMatchMakerLease *>			&marked_lease_list
+	list<const DCLeaseManagerLease *>			&marked_lease_list
 	)
 {
 	int		count = 0;
-	list<const DCMatchMakerLease *>::const_iterator iter;
+	list<const DCLeaseManagerLease *>::const_iterator iter;
 	for( iter  = lease_list.begin();
 		 iter != lease_list.end();
 		 iter ++ ) {
-		const DCMatchMakerLease	*lease = *iter;
+		const DCLeaseManagerLease	*lease = *iter;
 		if ( lease->getMark() == mark ) {
 			marked_lease_list.push_back( lease );
 			count++;
@@ -348,12 +348,12 @@ DCMatchMakerLease_GetMarkedLeases(
 	return count;
 }
 
-list<const DCMatchMakerLease *> *
-DCMatchMakerLease_GetConstList(
-	list<DCMatchMakerLease *>		*non_const_list
+list<const DCLeaseManagerLease *> *
+DCLeaseManagerLease_GetConstList(
+	list<DCLeaseManagerLease *>		*non_const_list
 	)
 {
-	list<const DCMatchMakerLease *> *const_list =
-		(list<const DCMatchMakerLease *>*) non_const_list;
+	list<const DCLeaseManagerLease *> *const_list =
+		(list<const DCLeaseManagerLease *>*) non_const_list;
 	return const_list;
 }

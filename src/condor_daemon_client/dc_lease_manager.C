@@ -30,8 +30,8 @@
 #include "condor_attributes.h"
 
 #include "daemon.h"
-#include "dc_match_maker.h"
-#include "dc_match_maker_lease.h"
+#include "dc_lease_manager.h"
+#include "dc_lease_manager_lease.h"
 
 #define WANT_CLASSAD_NAMESPACE
 #include "classad/classad_distribution.h"
@@ -39,25 +39,25 @@
 using namespace std;
 
 
-DCMatchMaker::DCMatchMaker( const char* daemon_name, const char *pool_name )
-		: Daemon( DT_MATCHMAKER, daemon_name, pool_name )
+DCLeaseManager::DCLeaseManager(const char* daemon_name, const char *pool_name)
+		: Daemon( DT_LEASE_MANAGER, daemon_name, pool_name )
 {
 }
 
 
-DCMatchMaker::~DCMatchMaker( void )
+DCLeaseManager::~DCLeaseManager( void )
 {
 }
 
 
 bool
-DCMatchMaker::getMatches( const classad::ClassAd &request_ad,
-						  list< DCMatchMakerLease *> &leases )
+DCLeaseManager::getLeases( const classad::ClassAd &request_ad,
+						   list< DCLeaseManagerLease *> &leases )
 {
 		// Create the ReliSock
 	CondorError errstack;
 	ReliSock *rsock = (ReliSock *)startCommand(
-			MATCHMAKER_GET_MATCH, Stream::reli_sock, 20 );
+		LEASE_MANAGER_GET_LEASES, Stream::reli_sock, 20 );
 	if ( ! rsock ) {
 		return false;
 	}
@@ -95,7 +95,7 @@ DCMatchMaker::getMatches( const classad::ClassAd &request_ad,
 			delete ad;
 			return false;
 		}
-		DCMatchMakerLease *lease = new DCMatchMakerLease( ad );
+		DCLeaseManagerLease *lease = new DCLeaseManagerLease( ad );
 		leases.push_back( lease );
 	}
 
@@ -105,12 +105,12 @@ DCMatchMaker::getMatches( const classad::ClassAd &request_ad,
 }
 
 bool
-DCMatchMaker::getMatches( const char *requestor_name,
-						 int number_requested,
-						 int duration,
-						 const char *requirements,
-						 const char *rank,
-						 list< DCMatchMakerLease *> &leases )
+DCLeaseManager::getLeases( const char *requestor_name,
+						   int number_requested,
+						   int duration,
+						   const char *requirements,
+						   const char *rank,
+						   list< DCLeaseManagerLease *> &leases )
 {
 	if ( ( ! requestor_name ) ||
 		 ( number_requested < 0 ) ||
@@ -131,17 +131,17 @@ DCMatchMaker::getMatches( const char *requestor_name,
 		ad.InsertAttr( "Rank", rank );
 	}
 
-	return getMatches( ad, leases );
+	return getLeases( ad, leases );
 }
 
 bool
-DCMatchMaker::renewLeases(
-	list< const DCMatchMakerLease *> &leases,
-	list< DCMatchMakerLease *> &out_leases )
+DCLeaseManager::renewLeases(
+	list< const DCLeaseManagerLease *> &leases,
+	list< DCLeaseManagerLease *> &out_leases )
 {
 		// Create the ReliSock
 	ReliSock *rsock = (ReliSock *)startCommand(
-			MATCHMAKER_RENEW_LEASE, Stream::reli_sock, 20 );
+		LEASE_MANAGER_RENEW_LEASE, Stream::reli_sock, 20 );
 	if ( ! rsock ) {
 		return false;
 	}
@@ -178,12 +178,12 @@ DCMatchMaker::renewLeases(
 }
 
 bool
-DCMatchMaker::releaseLeases(
-	list< const DCMatchMakerLease *> &leases )
+DCLeaseManager::releaseLeases(
+	list< const DCLeaseManagerLease *> &leases )
 {
 		// Create the ReliSock
 	ReliSock *rsock = (ReliSock *)startCommand(
-			MATCHMAKER_RELEASE_LEASE, Stream::reli_sock, 20 );
+		LEASE_MANAGER_RELEASE_LEASE, Stream::reli_sock, 20 );
 	if ( ! rsock ) {
 		return false;
 	}
@@ -210,17 +210,17 @@ DCMatchMaker::releaseLeases(
 }
 
 bool
-DCMatchMaker::SendLeases(
+DCLeaseManager::SendLeases(
 	Stream								*stream,
-	list< const DCMatchMakerLease *>	&l_list )
+	list< const DCLeaseManagerLease *>	&l_list )
 {
 	if ( !stream->put( l_list.size() ) ) {
 		return false;
 	}
 
-	list <const DCMatchMakerLease *>::iterator iter;
+	list <const DCLeaseManagerLease *>::iterator iter;
 	for( iter = l_list.begin(); iter != l_list.end(); iter++ ) {
-		const DCMatchMakerLease	*lease = *iter;
+		const DCLeaseManagerLease	*lease = *iter;
 		const char	*lease_id_str = lease->LeaseId().c_str();
 		if ( !stream->put( lease_id_str ) ||
 			 !stream->put( lease->LeaseDuration() ) ||
@@ -232,9 +232,9 @@ DCMatchMaker::SendLeases(
 }
 
 bool
-DCMatchMaker::GetLeases(
+DCLeaseManager::GetLeases(
 	Stream							*stream,
-	std::list< DCMatchMakerLease *>	&l_list )
+	std::list< DCLeaseManagerLease *>	&l_list )
 {
 	int		num_leases;
 	if ( !stream->get( num_leases ) ) {
@@ -248,7 +248,7 @@ DCMatchMaker::GetLeases(
 		if ( !stream->get( lease_id_cstr ) ||
 			 !stream->get( lease_duration ) ||
 			 !stream->get( release_when_done ) ) {
-			DCMatchMakerLease_FreeList( l_list );
+			DCLeaseManagerLease_FreeList( l_list );
 			if ( lease_id_cstr ) {
 				free( lease_id_cstr );
 			}
@@ -256,10 +256,10 @@ DCMatchMaker::GetLeases(
 		}
 		string	lease_id( lease_id_cstr );
 		free( lease_id_cstr );
-		DCMatchMakerLease	*lease =
-			new DCMatchMakerLease( lease_id,
-								   lease_duration,
-								   (bool) release_when_done );
+		DCLeaseManagerLease	*lease =
+			new DCLeaseManagerLease( lease_id,
+									 lease_duration,
+									 (bool) release_when_done );
 		l_list.push_back( lease );
 	}
 	return true;

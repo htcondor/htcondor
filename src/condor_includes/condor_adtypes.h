@@ -20,34 +20,34 @@
 #ifndef __CONDOR_ADTYPES_H__
 #define __CONDOR_ADTYPES_H__
 
-#define QUILL_ADTYPE		"Database"
-#define DATABASE_ADTYPE		"Database"
-#define DBMSD_ADTYPE		"DbmsDaemon"
-#define TT_ADTYPE			"TTProcess"
-#define STARTD_ADTYPE		"Machine"
-#define STARTD_PVT_ADTYPE	"MachinePrivate"
-#define SCHEDD_ADTYPE		"Scheduler"
-#define MASTER_ADTYPE		"DaemonMaster"
-#define CKPT_SRVR_ADTYPE	"CkptServer"
-#define JOB_ADTYPE			"Job"
-#define QUERY_ADTYPE		"Query"
-#define COLLECTOR_ADTYPE	"Collector"
-#define CKPT_FILE_ADTYPE	"CkptFile"
-#define USERAUTH_ADTYPE		"Authentication"
-#define LICENSE_ADTYPE		"License"
-#define STORAGE_ADTYPE		"Storage"
-#define NEGOTIATOR_ADTYPE	"Negotiator"
-#define HAD_ADTYPE			"HAD"
-#define XFER_SERVICE_ADTYPE	"XferService"
-#define MATCH_MAKER_ADTYPE	"MatchMaker"
-#define CREDD_ADTYPE		"CredD"
-#define ANY_ADTYPE			"Any"
-#define GENERIC_ADTYPE		"Generic"
-#define SUBMITTER_ADTYPE	"Submitter"
-#define COMMAND_ADTYPE		"Command"
-#define REPLY_ADTYPE		"Reply"
-#define GATEWAY_ADTYPE		"Gateway"
-#define CLUSTER_ADTYPE		"Cluster"
+#define QUILL_ADTYPE			"Database"
+#define DATABASE_ADTYPE			"Database"
+#define DBMSD_ADTYPE			"DbmsDaemon"
+#define TT_ADTYPE				"TTProcess"
+#define STARTD_ADTYPE			"Machine"
+#define STARTD_PVT_ADTYPE		"MachinePrivate"
+#define SCHEDD_ADTYPE			"Scheduler"
+#define MASTER_ADTYPE			"DaemonMaster"
+#define CKPT_SRVR_ADTYPE		"CkptServer"
+#define JOB_ADTYPE				"Job"
+#define QUERY_ADTYPE			"Query"
+#define COLLECTOR_ADTYPE		"Collector"
+#define CKPT_FILE_ADTYPE		"CkptFile"
+#define USERAUTH_ADTYPE			"Authentication"
+#define LICENSE_ADTYPE			"License"
+#define STORAGE_ADTYPE			"Storage"
+#define NEGOTIATOR_ADTYPE		"Negotiator"
+#define HAD_ADTYPE				"HAD"
+#define XFER_SERVICE_ADTYPE		"XferService"
+#define LEASE_MANAGER_ADTYPE	"LeaseManager"
+#define CREDD_ADTYPE			"CredD"
+#define ANY_ADTYPE				"Any"
+#define GENERIC_ADTYPE			"Generic"
+#define SUBMITTER_ADTYPE		"Submitter"
+#define COMMAND_ADTYPE			"Command"
+#define REPLY_ADTYPE			"Reply"
+#define GATEWAY_ADTYPE			"Gateway"
+#define CLUSTER_ADTYPE			"Cluster"
 
 // Enumerated list of ad types (for the query object)
 enum AdTypes
@@ -75,7 +75,7 @@ enum AdTypes
 	DBMSD_AD,
 	TT_AD,
 	XFER_SERVICE_AD,
-	MATCH_MAKER_AD,
+	LEASE_MANAGER_AD,
 
 	// This should *ALWAYS* be at the end of this list
 	NUM_AD_TYPES,

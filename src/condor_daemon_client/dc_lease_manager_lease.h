@@ -20,8 +20,8 @@
   * RIGHT.
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
-#ifndef _CONDOR_DC_MATCH_MAKER_LEASE_H
-#define _CONDOR_DC_MATCH_MAKER_LEASE_H
+#ifndef _CONDOR_DC_LEASE_MANAGER_LEASE_H
+#define _CONDOR_DC_LEASE_MANAGER_LEASE_H
 
 #include <list>
 #include <string>
@@ -35,24 +35,24 @@
 using namespace std;
 
 
-class DCMatchMakerLease {
+class DCLeaseManagerLease {
   public:
 
 	// Constructors / destructors
-	DCMatchMakerLease( time_t now = 0 );
-	DCMatchMakerLease( const DCMatchMakerLease &, time_t now = 0 );
-	DCMatchMakerLease( classad::ClassAd *, time_t now = 0 );
-	DCMatchMakerLease( const classad::ClassAd &, time_t now = 0 );
-	DCMatchMakerLease( const string &lease_id,
-					  int lease_duration = 0,
-					  bool release_when_done = true,
-					  time_t now = 0 );
-	~DCMatchMakerLease( void );
+	DCLeaseManagerLease( time_t now = 0 );
+	DCLeaseManagerLease( const DCLeaseManagerLease &, time_t now = 0 );
+	DCLeaseManagerLease( classad::ClassAd *, time_t now = 0 );
+	DCLeaseManagerLease( const classad::ClassAd &, time_t now = 0 );
+	DCLeaseManagerLease( const string &lease_id,
+						 int lease_duration = 0,
+						 bool release_when_done = true,
+						 time_t now = 0 );
+	~DCLeaseManagerLease( void );
 
 	// Various initialization methods
 	int initFromClassAd( classad::ClassAd *ad, time_t now = 0 );
 	int initFromClassAd( const classad::ClassAd	&ad, time_t now = 0 );
-	int copyUpdates( const DCMatchMakerLease & );
+	int copyUpdates( const DCLeaseManagerLease & );
 
 	// Accessors
 	const string &LeaseId( void ) const
@@ -98,43 +98,43 @@ class DCMatchMakerLease {
 
 // Free a list of leases
 void
-DCMatchMakerLease_FreeList(
-	list<DCMatchMakerLease *>		&lease_list
+DCLeaseManagerLease_FreeList(
+	list<DCLeaseManagerLease *>		&lease_list
 	);
 int
-DCMatchMakerLease_RemoveLeases(
-	list<DCMatchMakerLease *>		&lease_list,
-	const list<const DCMatchMakerLease *> &remove_list
+DCLeaseManagerLease_RemoveLeases(
+	list<DCLeaseManagerLease *>				&lease_list,
+	const list<const DCLeaseManagerLease *> &remove_list
 	);
 int
-DCMatchMakerLease_UpdateLeases(
-	list<DCMatchMakerLease *>		&lease_list,
-	const list<const DCMatchMakerLease *> &update_list
+DCLeaseManagerLease_UpdateLeases(
+	list<DCLeaseManagerLease *>		&lease_list,
+	const list<const DCLeaseManagerLease *> &update_list
 	);
 int
-DCMatchMakerLease_MarkLeases(
-	list<DCMatchMakerLease *>		&lease_list,
+DCLeaseManagerLease_MarkLeases(
+	list<DCLeaseManagerLease *>		&lease_list,
 	bool							mark
 	);
 int
-DCMatchMakerLease_RemoveMarkedLeases(
-	list<DCMatchMakerLease *>		&lease_list,
+DCLeaseManagerLease_RemoveMarkedLeases(
+	list<DCLeaseManagerLease *>		&lease_list,
 	bool							mark
 	);
 int
-DCMatchMakerLease_GetMarkedLeases(
-	const list<const DCMatchMakerLease *> &lease_list,
-	bool								mark,
-	list<const DCMatchMakerLease *> 	&marked_lease_list
+DCLeaseManagerLease_GetMarkedLeases(
+	const list<const DCLeaseManagerLease *> &lease_list,
+	bool									mark,
+	list<const DCLeaseManagerLease *>	 	&marked_lease_list
 	);
 int
-DCMatchMakerLease_CountMarkedLeases(
-	const list<const DCMatchMakerLease *> &lease_list,
-	bool							mark
+DCLeaseManagerLease_CountMarkedLeases(
+	const list<const DCLeaseManagerLease *> &lease_list,
+	bool									mark
 	);
-list<const DCMatchMakerLease *> *
-DCMatchMakerLease_GetConstList(
-	list<DCMatchMakerLease *>		*non_const_list
+list<const DCLeaseManagerLease *> *
+DCLeaseManagerLease_GetConstList(
+	list<DCLeaseManagerLease *>		*non_const_list
 	);
 
-#endif /* _CONDOR_DC_MATCH_MAKER_LEASE_H */
+#endif /* _CONDOR_DC_LEASE_MANAGER_LEASE_H */

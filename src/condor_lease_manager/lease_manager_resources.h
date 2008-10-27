@@ -17,8 +17,8 @@
  *
  ***************************************************************/
 
-#ifndef __MATCH_MAKER_RESOURCES_H__
-#define __MATCH_MAKER_RESOURCES_H__
+#ifndef __LEASE_MANAGER_RESOURCES_H__
+#define __LEASE_MANAGER_RESOURCES_H__
 
 #include <list>
 #include <map>
@@ -31,10 +31,10 @@
 #endif
 #include "classad/classad_distribution.h"
 
-#include "match_maker_lease.h"
+#include "lease_manager_lease.h"
 
 // Map leaseId's to the lease ClassAd -- for internal use only
-struct MatchMakerLeaseEnt
+struct LeaseManagerLeaseEnt
 {
 	classad::ClassAd	*m_lease_ad;
 	int					m_lease_number;
@@ -44,7 +44,7 @@ struct MatchMakerLeaseEnt
 };
 
 // Statistics
-struct MatchMakerStats
+struct LeaseManagerStats
 {
 	int			m_num_resources;
 	int			m_num_lease_records;
@@ -52,13 +52,13 @@ struct MatchMakerStats
 	int			m_num_busy_leases;
 };
 
-class MatchMakerResources
+class LeaseManagerResources
 {
 
 
   public:
-	MatchMakerResources( void );
-	~MatchMakerResources( void );
+	LeaseManagerResources( void );
+	~LeaseManagerResources( void );
 
 	int init( void );
 	int setCollectionLog( const char *file );
@@ -92,11 +92,11 @@ class MatchMakerResources
 		list<classad::ClassAd *>	&leases
 		);
 	int RenewLeases(
-		list<const MatchMakerLease *> &requests,
-		list<MatchMakerLease *> &leases
+		list<const LeaseManagerLease *> &requests,
+		list<LeaseManagerLease *> &leases
 		);
 	int ReleaseLeases(
-		list<const MatchMakerLease *> &requests
+		list<const LeaseManagerLease *> &requests
 		);
 
 	// Resource operations
@@ -114,7 +114,7 @@ class MatchMakerResources
 		);
 
 	int GetStats(
-		MatchMakerStats				&stats
+		LeaseManagerStats			&stats
 		);
 
 	// Set various parameters
@@ -134,8 +134,8 @@ class MatchMakerResources
   private:
 
 	// Private methods
-	MatchMakerLeaseEnt *FindLease (
-		const MatchMakerLease		&in_lease_ad
+	LeaseManagerLeaseEnt *FindLease (
+		const LeaseManagerLease		&in_lease_ad
 		);
 
 	// Resource ad maniuplation
@@ -186,7 +186,7 @@ class MatchMakerResources
 		int							&lease_count
 		);
 	bool TerminateLease(
-		MatchMakerLeaseEnt			&lease
+		LeaseManagerLeaseEnt		&lease
 		);
 	int ExpireLeases(
 		void
@@ -204,7 +204,7 @@ class MatchMakerResources
 
 	int GetLeaseDuration(
 		const classad::ClassAd		&resource_ad,
-		const MatchMakerLease		&request
+		const LeaseManagerLease		&request
 		);
 	int GetLeaseDuration(
 		const classad::ClassAd		&resource_ad,
@@ -247,16 +247,16 @@ class MatchMakerResources
 	classad::ClassAdCollection		m_lease_ad_collection;
 	classad::LocalCollectionQuery	m_expiration_query;
 
-    map<string, MatchMakerLeaseEnt*, less<string> > m_used_leases;
+    map<string, LeaseManagerLeaseEnt*, less<string> > m_used_leases;
 	int								m_default_max_lease_duration;
 	int								m_max_lease_duration;
 	int								m_max_lease_total;
 	int								m_lease_id_number;
 
 	// Match statistics
-	MatchMakerStats					m_stats;
+	LeaseManagerStats				m_stats;
 	bool							m_enable_ad_debug;
 };
 
 
-#endif	//__MATCH_MAKER_RESOURCES_H__
+#endif	//__LEASE_MANAGER_RESOURCES_H__

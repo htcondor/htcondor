@@ -17,8 +17,8 @@
  *
  ***************************************************************/
 
-#ifndef __MATCH_MAKER_H__
-#define __MATCH_MAKER_H__
+#ifndef __LEASE_MANAGER_H__
+#define __LEASE_MANAGER_H__
 
 using namespace std;
 
@@ -28,7 +28,7 @@ using namespace std;
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "dc_collector.h"
 
-#include "match_maker_resources.h"
+#include "lease_manager_resources.h"
 
 #ifndef WANT_CLASSAD_NAMESPACE
 # define WANT_CLASSAD_NAMESPACE
@@ -36,16 +36,16 @@ using namespace std;
 #include "classad/classad_distribution.h"
 
 
-class MatchMakerIntervalTimer;
+class LeaseManagerIntervalTimer;
 
-class MatchMaker : public Service
+class LeaseManager : public Service
 {
-	friend class MatchMakerIntervalTimer;
+	friend class LeaseManagerIntervalTimer;
 
   public:
 	// ctor/dtor
-	MatchMaker( void );
-	~MatchMaker( void );
+	LeaseManager( void );
+	~LeaseManager( void );
 	int init( void );
 	int config( void );
 	int shutdownFast(void);
@@ -58,7 +58,7 @@ class MatchMaker : public Service
 
   private:
 	// Command handlers
-	int commandHandler_GetMatch(int command, Stream *stream);
+	int commandHandler_GetLeases(int command, Stream *stream);
 	int commandHandler_RenewLease(int command, Stream *stream);
 	int commandHandler_ReleaseLease(int command, Stream *stream);
 
@@ -73,15 +73,15 @@ class MatchMaker : public Service
 	// Send an ad list to a stream
 	bool SendLeases(
 		Stream							*stream,
-		list<const MatchMakerLease *>	&lease_list
+		list<const LeaseManagerLease *>	&lease_list
 		);
 	bool GetLeases(
 		Stream							*stream,
-		list<MatchMakerLease *>			&lease_list
+		list<LeaseManagerLease *>		&lease_list
 		);
 
 	CollectorList*				 m_collectorList;
-	MatchMakerResources			 m_resources;
+	LeaseManagerResources		 m_resources;
 	ClassAd						 m_publicAd;
 
 	// Details on how to query the collector
@@ -89,9 +89,9 @@ class MatchMaker : public Service
 	string						 m_queryAdtypeStr;
 	string						 m_queryConstraints;
 
-	MatchMakerIntervalTimer		*m_GetAdsTimer;
-	MatchMakerIntervalTimer		*m_UpdateTimer;
-	MatchMakerIntervalTimer		*m_PruneTimer;
+	LeaseManagerIntervalTimer	*m_GetAdsTimer;
+	LeaseManagerIntervalTimer	*m_UpdateTimer;
+	LeaseManagerIntervalTimer	*m_PruneTimer;
 	int							 m_TimerId_GetAds;
 	int							 m_Interval_GetAds;
 	int							 m_TimerId_Update;
@@ -102,4 +102,4 @@ class MatchMaker : public Service
 
 
 
-#endif//__MATCH_MAKER_H__
+#endif//__LEASE_MANAGER_H__

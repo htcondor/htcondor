@@ -23,7 +23,7 @@
 #include "condor_debug.h"
 #include "subsystem_info.h"
 
-#include "match_maker.h"
+#include "lease_manager.h"
 
 /* Using daemoncore, you get the benefits of a logging system with dprintf
 	and you can read config files automatically. To start testing
@@ -37,8 +37,8 @@
 //-------------------------------------------------------------
 
 // about self
-DECL_SUBSYSTEM("MatchMaker", SUBSYSTEM_TYPE_DAEMON);	// used by Daemon Core
-MatchMaker	*match_maker;
+DECL_SUBSYSTEM("LeaseManager", SUBSYSTEM_TYPE_DAEMON);	// used by Daemon Core
+LeaseManager	*lease_manager;
 
 //-------------------------------------------------------------
 int
@@ -46,8 +46,8 @@ main_init(int /*argc*/, char */*argv*/[])
 {
 	dprintf(D_ALWAYS, "main_init() called\n");
 
-	match_maker = new MatchMaker;
-	match_maker->init( );
+	lease_manager = new LeaseManager;
+	lease_manager->init( );
 
 
 	return TRUE;
@@ -58,7 +58,7 @@ int
 main_config( bool /*is_full*/ )
 {
 	dprintf(D_ALWAYS, "main_config() called\n");
-	match_maker->config( );
+	lease_manager->config( );
 	return TRUE;
 }
 
@@ -67,8 +67,8 @@ int
 main_shutdown_fast(void)
 {
 	dprintf(D_ALWAYS, "main_shutdown_fast() called\n");
-	match_maker->shutdownFast();
-	delete match_maker;
+	lease_manager->shutdownFast();
+	delete lease_manager;
 	DC_Exit(0);
 	return TRUE;	// to satisfy c++
 }
@@ -78,8 +78,8 @@ int
 main_shutdown_graceful(void)
 {
 	dprintf(D_ALWAYS, "main_shutdown_graceful() called\n");
-	match_maker->shutdownGraceful();
-	delete match_maker;
+	lease_manager->shutdownGraceful();
+	delete lease_manager;
 	DC_Exit(0);
 	return TRUE;	// to satisfy c++
 }
