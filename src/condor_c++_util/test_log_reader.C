@@ -48,6 +48,7 @@ struct Options
 	bool			missedCheck;
 	bool			exitAfterInit;
 	int				maxExec;
+	bool			exit;
 	int				sleep;
 	int				term;
 	int				verbosity;
@@ -122,6 +123,7 @@ CheckArgs(int argc, const char **argv, Options &opts)
 		"  --rotation|-r <n>: enable rotation handling, set max #\n"
 		"  --no-rotation: disable rotation handling\n"
 		"  --sleep <number>: how many seconds to sleep between events\n"
+		"  --exit|x: Exit when no event available\n"
 		"  --no-term: No limit on terminte events\n"
 		"  --term <number>: number of terminate events to exit after\n"
 		"  --usage|--help|-h: print this message and exit\n"
@@ -135,6 +137,7 @@ CheckArgs(int argc, const char **argv, Options &opts)
 	opts.readPersist = false;
 	opts.writePersist = false;
 	opts.maxExec = 0;
+	opts.exit = false;
 	opts.sleep = 5;
 	opts.term = 1;
 	opts.verbosity = 1;
@@ -181,7 +184,6 @@ CheckArgs(int argc, const char **argv, Options &opts)
 				}
 				opts.readPersist = true;
 				opts.writePersist = true;
-				index = arg.ConsumeOpt( );
 			} else {
 				fprintf(stderr, "Value needed for %s\n", arg.ArgStr() );
 				printf("%s", usage);
@@ -202,6 +204,8 @@ CheckArgs(int argc, const char **argv, Options &opts)
 			opts.readPersist = true;
 			opts.writePersist = true;
 
+		} else if ( arg.Match("exit") ) {
+			opts.exit = true;
 
 		} else if ( arg.Match( 'r', "rotation") ) {
 			if ( arg.getOpt( opts.max_rotations ) ) {
@@ -330,8 +334,8 @@ ReadEvents(Options &opts)
 	signal( SIGQUIT, handle_sig );
 	signal( SIGINT, handle_sig );
 
-	int		executeEventCount = 0;
-	int		terminatedEventCount = 0;
+	int		execEventCount = 0;
+	int		termEventCount = 0;
 	bool	done = (opts.term == 0);
 	bool	missedLast = false;
 	int		prevCluster=999, prevProc=999, prevSubproc=999;
@@ -391,7 +395,7 @@ ReadEvents(Options &opts)
 					printf(" (execute)\n");
 				}
 				if ( opts.maxExec != 0 &&
-						++executeEventCount > opts.maxExec ) {
+						++execEventCount > opts.maxExec ) {
 					if ( opts.verbosity >= VERB_ERROR ) {
 						fprintf(stderr, "Maximum number of execute "
 								"events (%d) exceeded\n", opts.maxExec);
@@ -406,7 +410,7 @@ ReadEvents(Options &opts)
 				if ( opts.verbosity >= VERB_ALL ) {
 					printf(" (terminated)\n");
 				}
-				if ( opts.term > 0 && ++terminatedEventCount >= opts.term ) {
+				if ( (opts.term > 0) && (++termEventCount >= opts.term) ) {
 					if ( opts.verbosity >= VERB_ALL ) {
 						printf( "Reached terminated event limit (%d); %s\n",
 								opts.term, "exiting" );
@@ -448,7 +452,12 @@ ReadEvents(Options &opts)
 			}
 
 		} else if ( outcome == ULOG_NO_EVENT ) {
-			sleep(opts.sleep);
+			if ( opts.exit ) {
+				done = true;
+			}
+			else {
+				sleep(opts.sleep);
+			}
 			missedLast = false;
 
 		} else if ( outcome == ULOG_MISSED_EVENT ) {
