@@ -269,6 +269,8 @@ public:
 		// schedd requesting this claim
 	int requestClaimSockClosed(Stream *s);
 
+	void setResource( Resource* _rip ) { c_rip = _rip; };
+
 private:
 	Resource	*c_rip;
 	Client 		*c_client;
