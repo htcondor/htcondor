@@ -223,7 +223,7 @@ bool Set<KeyType>::RemoveElem(const SetElem<KeyType>* N) {
     else Head=N->Next;
     if (N->Next) N->Next->Prev=N->Prev;
   }
-  delete N;
+  delete const_cast<SetElem<KeyType>*>(N);
   return true;
 }
 
