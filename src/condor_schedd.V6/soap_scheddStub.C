@@ -82,15 +82,10 @@ verify(DCpermission perm,
 	ASSERT(soap);
 
 
-	if (daemonCore->Verify(perm,
+	if (daemonCore->Verify("SOAP",perm,
 				&soap->peer,
 				soap->user ? (char*)soap->user : NULL) != USER_AUTH_SUCCESS)
 	{
-		dprintf(D_FULLDEBUG,
-				"SOAP call rejected, no permission for user %s/%s\n",
-				soap->user ? (char*)soap->user : "NULL",
-				sin_to_string(&soap->peer));
-
 		status.code = FAIL;
 		status.message = "Permission denied";
 

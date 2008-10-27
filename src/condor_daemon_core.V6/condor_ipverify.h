@@ -95,10 +95,13 @@ public:
 		refused.
 		@param perm		   Not_Yet_Ducumented
 		@param sockaddr_in Not_Yet_Ducumented
+		@param user        NULL or "" or fully qualified username
+		@param allow_reasy NULL or buffer to write explanation into
+		@param deny_reason NULL or buffer to write explanation into
 		@return USER_AUTH_SUCCESS -- if success, USER_AUTH_FAILURE -- if failer
                 USER_ID_REQUIRED -- if user id is required but the caller did not pass in
 	*/
-	int Verify( DCpermission perm, const struct sockaddr_in *sin, const char * user = NULL );
+	int Verify( DCpermission perm, const struct sockaddr_in *sin, const char * user, MyString *allow_reason, MyString *deny_reason );
 
 	/** Dynamically opens a hole in the authorization settings for the
 	    given (user, IP) at the given perm level.
