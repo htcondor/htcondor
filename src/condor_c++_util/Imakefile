@@ -1,7 +1,7 @@
 #if HAVE_EXT_CLASSADS
 #define New_classads_includes	-I$(NEW_CLASSADS_INC) -I../classad_analysis
 #define New_classads_obj	credential.o X509credential.o classad_oldnew.o newclassad_stream.o
-#define New_classads_dc_obj	dc_credd.o dc_match_maker.o dc_match_maker_lease.o
+#define New_classads_dc_obj	dc_credd.o dc_lease_manager.o dc_lease_manager_lease.o
 #define New_classads_lib	-L$(NEW_CLASSADS_LIB) -lclassad_ns
 #else
 #define New_classads_includes
