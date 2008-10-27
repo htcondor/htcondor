@@ -203,6 +203,9 @@ bool
 UserLog::Configure( void )
 {
 	m_global_path = param( "EVENT_LOG" );
+	if ( NULL == m_global_path ) {
+		return true;
+	}
 	m_rotation_lock_path = param( "EVENT_ROTATION_LOCK" );
 	if ( NULL == m_rotation_lock_path ) {
 		int len = strlen(m_global_path) + 6;
