@@ -35,6 +35,7 @@
 #include "vm_univ_utils.h"
 #include "vm_gahp_server.h"
 #include "vm_gahp_request.h"
+#include "setenv.h"
 
 VMGahpServer::VMGahpServer(const char *vmgahpserver,
                            const char *vmtype,

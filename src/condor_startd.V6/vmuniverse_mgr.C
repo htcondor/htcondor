@@ -35,6 +35,7 @@
 #include "vmuniverse_mgr.h"
 #include "condor_vm_universe_types.h"
 #include "vm_univ_utils.h"
+#include "setenv.h"
 
 static unsigned long get_image_size(procInfo& pi)
 {
