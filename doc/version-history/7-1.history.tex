@@ -40,6 +40,9 @@ for more details on how this ``local name'' will be used in the
 configuration, and 3.9.2 ``DaemonCore and Command-Line Arguments'' for
 more details on the command line parameter itself.
 
+\item It is now possible to have multiple rotations of the ``event
+  log'' file, such as ``EventLog'', ``EventLog.1'', ``EventLog.2'', ...
+
 \end{itemize}
 
 \noindent Configuration Variable Additions and Changes:
@@ -49,6 +52,24 @@ more details on the command line parameter itself.
 \item Local versions of configuration parameters can now be specified
   via the use of the ``-local-name'' command line parameters (see the
   above ``New Features'' entry).
+
+\item A new configuration parameter
+  \MacroNI{EVENT\_LOG\_MAX\_ROTATIONS} has been added to allow
+  multiple rotations of the event log file.
+  See \pageref{param:EventLogMaxRotations} for details.
+
+\item A new configuration parameter
+  \MacroNI{EVENT\_LOG\_ROTATION\_LOCK} has been added to allow
+  allow configuration of an alternate file for Condor to use while
+  rotating event log files.
+  See \pageref{param:EventLogRotationLock} for details.
+
+\item The configuration parameter \MacroNI{MAX\_EVENT\_LOG} has been
+  renamed to \MacroNI{EVENT\_LOG\_MAX\_SIZE}.  For backward
+  compatibility, if \MacroNI{EVENT\_LOG\_MAX\_SIZE} is not defined,
+  Condor will also try \MacroNI{MAX\_EVENT\_LOG}.
+  See \pageref{param:EventLogMaxSize} for details.
+
 
 \end{itemize}
 
