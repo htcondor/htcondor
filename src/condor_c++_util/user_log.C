@@ -206,7 +206,7 @@ UserLog::Configure( void )
 	if ( NULL == m_global_path ) {
 		return true;
 	}
-	m_rotation_lock_path = param( "EVENT_ROTATION_LOCK" );
+	m_rotation_lock_path = param( "EVENT_LOG_ROTATION_LOCK" );
 	if ( NULL == m_rotation_lock_path ) {
 		int len = strlen(m_global_path) + 6;
 		char *tmp = (char*) malloc(len);
@@ -228,8 +228,11 @@ UserLog::Configure( void )
 	m_global_use_xml = param_boolean( "EVENT_LOG_USE_XML", false );
 	m_global_count_events = param_boolean( "EVENT_LOG_COUNT_EVENTS", false );
 	m_enable_locking = param_boolean( "ENABLE_USERLOG_LOCKING", true );
-	m_global_max_filesize = param_integer( "MAX_EVENT_LOG", 1000000 );
-	m_global_max_rotations = param_integer( "MAX_EVENT_LOG_ROTATIONS", 1 );
+	m_global_max_rotations = param_integer( "EVENT_LOG_MAX_ROTATIONS", 1 );
+	m_global_max_filesize = param_integer( "EVENT_LOG_MAX_SIZE", 0 );
+	if ( 0 == m_global_max_filesize ) {
+		m_global_max_filesize = param_integer( "MAX_EVENT_LOG", 1000000 );
+	}
 
 	return true;
 }
