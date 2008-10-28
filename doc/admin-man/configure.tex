@@ -1479,23 +1479,46 @@ but across all users and user's jobs.
   There is no default value for this variable,
   so no event log will be written, if not defined.
 
-\item[\Macro{MAX\_EVENT\_LOG}] \label{param:MaxEventLog}
+\item[\Macro{EVENT\_LOG\_MAX\_SIZE}] \label{param:EventLogMaxSize}
   Controls the maximum length in bytes to which the event log
   will be allowed to grow. The log file will grow to the specified length,
   then be saved to a file with the suffix .old.
   The .old  files are overwritten each time the log is saved.
   A value of 0 specifies that the file may grow without bounds.
-  The default is 1 Mbyte.
-  
+  The default is 1 Mbyte.  For backwards compatibility,
+  \MacroNI{MAX\_EVENT\_LOG} will be used if
+  \MacroNI{EVENT\_LOG\_MAX\_SIZE} is not defined.
+  If \MacroNI{EVENT\_LOG} is not defined, this parameter has no affect.
+
+\item[\Macro{EVENT\_LOG\_MAX\_ROTATIONS}] \label{param:EventLogMaxRotations}
+  Controls the maximum number of rotations of the event log that
+  will be stored.  If this value is 1 (the default), the event log
+  will be rotated to a ``.old'' file as described above.  However, if
+  this is greater than 1, then multiple rotation files will be stores,
+  up to \MacroNI{EVENT\_LOG\_MAX\_ROTATIONS} of them.  These files
+  will be named, instead of the ``.old'' suffix, ``.1'', ``.2'', with
+  the ``.1'' being the most recent rotation.  This is an integer
+  parameter with a default value of 1.
+  If \MacroNI{EVENT\_LOG} is not defined, this parameter has no affect.
+
+\item[\Macro{EVENT\_LOG\_ROTATION\_LOCK}] \label{param:EventLogRotationLock}
+  Controls the lock file that will be used to ensure that, when
+  rotating files, the rotation is done by a single process.  This is a
+  string parameter; it's default value is the file path of the
+  event log itself, with a ``.lock'' appended.
+  If \MacroNI{EVENT\_LOG} is not defined, this parameter has no affect.
+
 \item[\Macro{EVENT\_LOG\_USE\_XML}] \label{param:EventLogUseXML}
   A boolean value that defaults to \Expr{False}.
   When \Expr{True}, events are logged in XML format.
+  If \MacroNI{EVENT\_LOG} is not defined, this parameter has no affect.
 
 \item[\Macro{EVENT\_LOG\_JOB\_AD\_INFORMATION\_ATTRS}]
   \label{param:EventLogJobAdInformationAttrs}
   A comma-separated list of job ClassAd attributes,
   whose evaluated values form a new event, the JobAdInformationEvent.
   This new event is placed in the event log in addition to each logged event.
+  If \MacroNI{EVENT\_LOG} is not defined, this parameter has no affect.
 
 \end{description}
 
