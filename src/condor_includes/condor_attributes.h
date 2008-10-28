@@ -279,6 +279,8 @@ extern const char * ATTR_JOB_WALL_CLOCK_CKPT;
 extern const char * ATTR_JOB_QUEUE_BIRTHDATE;
 extern const char * ATTR_JOB_VM_TYPE;
 extern const char * ATTR_JOB_VM_MEMORY;
+extern const char * ATTR_JOB_VM_VCPUS;
+extern const char * ATTR_JOB_VM_MACADDR;
 extern const char * ATTR_JOB_VM_CHECKPOINT;
 extern const char * ATTR_JOB_VM_NETWORKING;
 extern const char * ATTR_JOB_VM_NETWORKING_TYPE;

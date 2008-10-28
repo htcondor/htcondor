@@ -69,6 +69,7 @@ CLEAN :
 	-@erase "$(INTDIR)\condor_q.obj"
 	-@erase "$(INTDIR)\condor_query.obj"
 	-@erase "$(INTDIR)\condor_state.obj"
+	-@erase "$(INTDIR)\condor_threads.obj"
 	-@erase "$(INTDIR)\condor_url.obj"
 	-@erase "$(INTDIR)\condor_user_policy.obj"
 	-@erase "$(INTDIR)\condor_ver_info.obj"
@@ -223,6 +224,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\classad_namedlist.obj" \
 	"$(INTDIR)\classad_visa.obj" \
 	"$(INTDIR)\command_strings.obj" \
+	"$(INTDIR)\ConcurrencyLimitUtils.obj" \
 	"$(INTDIR)\condor_arglist.obj" \
 	"$(INTDIR)\condor_attributes.obj" \
 	"..\Debug\condor_common.obj" \
@@ -239,6 +241,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\condor_q.obj" \
 	"$(INTDIR)\condor_query.obj" \
 	"$(INTDIR)\condor_state.obj" \
+	"$(INTDIR)\condor_threads.obj" \
 	"$(INTDIR)\condor_url.obj" \
 	"$(INTDIR)\condor_user_policy.obj" \
 	"$(INTDIR)\condor_ver_info.obj" \
@@ -411,6 +414,7 @@ CLEAN :
 	-@erase "$(INTDIR)\condor_q.obj"
 	-@erase "$(INTDIR)\condor_query.obj"
 	-@erase "$(INTDIR)\condor_state.obj"
+	-@erase "$(INTDIR)\condor_threads.obj"
 	-@erase "$(INTDIR)\condor_url.obj"
 	-@erase "$(INTDIR)\condor_user_policy.obj"
 	-@erase "$(INTDIR)\condor_ver_info.obj"
@@ -564,6 +568,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\classad_namedlist.obj" \
 	"$(INTDIR)\classad_visa.obj" \
 	"$(INTDIR)\command_strings.obj" \
+	"$(INTDIR)\ConcurrencyLimitUtils.obj" \
 	"$(INTDIR)\condor_arglist.obj" \
 	"$(INTDIR)\condor_attributes.obj" \
 	"..\Release\condor_common.obj" \
@@ -580,6 +585,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\condor_q.obj" \
 	"$(INTDIR)\condor_query.obj" \
 	"$(INTDIR)\condor_state.obj" \
+	"$(INTDIR)\condor_threads.obj" \
 	"$(INTDIR)\condor_url.obj" \
 	"$(INTDIR)\condor_user_policy.obj" \
 	"$(INTDIR)\condor_ver_info.obj" \
@@ -967,6 +973,12 @@ SOURCE="..\src\condor_c++_util\condor_query.C"
 SOURCE="..\src\condor_c++_util\condor_state.C"
 
 "$(INTDIR)\condor_state.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE="..\src\condor_c++_util\condor_threads.C"
+
+"$(INTDIR)\condor_threads.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 

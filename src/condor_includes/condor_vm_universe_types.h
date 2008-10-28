@@ -32,8 +32,8 @@
 
 /* Running modes for VM GAHP Server */
 #define VMGAHP_TEST_MODE 0
-#define VMGAHP_IO_MODE 1
-#define VMGAHP_WORKER_MODE 2
+#define VMGAHP_IO_MODE 1		/* Deprecated */
+#define VMGAHP_WORKER_MODE 2	/* Deprecated */
 #define VMGAHP_STANDALONE_MODE 3
 #define VMGAHP_KILL_MODE 4
 #define VMGAHP_MODE_MAX 5

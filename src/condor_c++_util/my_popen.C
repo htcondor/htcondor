@@ -24,6 +24,9 @@
 #include "condor_arglist.h"
 #include "my_popen.h"
 #include "sig_install.h"
+#include "env.h"
+#include "../condor_privsep/condor_privsep.h"
+#include "../condor_privsep/privsep_fork_exec.h"
 
 #ifdef WIN32
 typedef HANDLE child_handle_t;
@@ -270,8 +273,11 @@ my_system(const char *cmd)
 static int	READ_END = 0;
 static int	WRITE_END = 1;
 
-extern "C" FILE *
-my_popenv( char *const args[], const char * mode, int want_stderr )
+static FILE *
+my_popenv_impl( char *const args[],
+                const char * mode,
+                int want_stderr,
+                uid_t privsep_uid )
 {
 	int	pipe_d[2];
 	int	parent_reads;
@@ -288,6 +294,19 @@ my_popenv( char *const args[], const char * mode, int want_stderr )
 		dprintf(D_ALWAYS, "my_popenv: Failed to create the pipe, "
 				"errno=%d (%s)\n", errno, strerror(errno));
 		return NULL;
+	}
+
+		/* Prepare for PrivSep if needed */
+	PrivSepForkExec psforkexec;
+	if ( privsep_uid != (uid_t)-1 ) {
+		if (!psforkexec.init()) {
+			dprintf(D_ALWAYS,
+			        "my_popenv failure on %s\n",
+			        args[0]);
+			close(pipe_d[0]);
+			close(pipe_d[1]);
+			return NULL;
+		}
 	}
 
 		/* Create a new process */
@@ -355,7 +374,15 @@ my_popenv( char *const args[], const char * mode, int want_stderr )
 		sigfillset(&sigs);
 		sigprocmask(SIG_UNBLOCK, &sigs, NULL);
 
-		execvp(args[0], args);
+			/* handle PrivSep if needed */
+		MyString cmd = args[0];
+		if ( privsep_uid != (uid_t)-1 ) {
+			ArgList al;
+			psforkexec.in_child(cmd, al);
+			args = al.GetStringArray();			
+		}
+
+		execvp(cmd.Value(), args);
 		_exit( ENOEXEC );		/* This isn't safe ... */
 	}
 
@@ -368,17 +395,72 @@ my_popenv( char *const args[], const char * mode, int want_stderr )
 		retp = fdopen(pipe_d[WRITE_END],mode);
 	}
 	add_child(retp, pid);
+
+		/* handle PrivSep if needed */
+	if ( privsep_uid != (uid_t)-1 ) {
+		FILE* fp = psforkexec.parent_begin();
+		privsep_exec_set_uid(fp, privsep_uid);
+		privsep_exec_set_path(fp, args[0]);
+		ArgList al;
+		for (char* const* arg = args; *arg != NULL; arg++) {
+			al.AppendArg(*arg);
+		}
+		privsep_exec_set_args(fp, al);
+		Env env;
+		env.MergeFrom(environ);
+		privsep_exec_set_env(fp, env);
+		privsep_exec_set_iwd(fp, ".");
+		if (parent_reads) {
+			privsep_exec_set_inherit_fd(fp, 1);
+			if (want_stderr) {
+				privsep_exec_set_inherit_fd(fp, 2);
+			}
+		}
+		else {
+			privsep_exec_set_inherit_fd(fp, 0);
+		}
+		if (!psforkexec.parent_end()) {
+			dprintf(D_ALWAYS,
+			        "my_popenv failure on %s\n",
+			        args[0]);
+			fclose(retp);
+		}
+	}
+
 	return retp;
 }
 
-FILE *
-my_popen(ArgList &args, const char *mode, int want_stderr)
+extern "C" FILE *
+my_popenv( char *const args[],
+           const char * mode,
+           int want_stderr )
+{
+	return my_popenv_impl(args, mode, want_stderr, (uid_t)-1);
+}
+
+static FILE *
+my_popen_impl(ArgList &args,
+              const char *mode,
+              int want_stderr,
+              uid_t privsep_uid)
 {
 	char **string_array = args.GetStringArray();
-	FILE *fp = my_popenv(string_array, mode, want_stderr);
+	FILE *fp = my_popenv_impl(string_array, mode, want_stderr, privsep_uid);
 	deleteStringArray(string_array);
 
 	return fp;
+}
+
+FILE*
+my_popen(ArgList &args, const char *mode, int want_stderr)
+{
+	return my_popen_impl(args, mode, want_stderr, (uid_t)-1);
+}
+
+FILE*
+privsep_popen(ArgList &args, const char *mode, int want_stderr, uid_t uid)
+{
+	return my_popen_impl(args, mode, want_stderr, uid);
 }
 
 extern "C" int
