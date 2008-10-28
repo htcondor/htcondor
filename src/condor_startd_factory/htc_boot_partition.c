@@ -17,6 +17,14 @@
  *
  ***************************************************************/
 
+/* Here is an example of how to compile this file:
+
+gcc xxx.c -w -Wall -g -m64 -pthread -I/bgsys/drivers/ppcfloor/include -L/bgsys/drivers/ppcfloor/lib64 -lbgpbridge -Wl,--rpath /bgsys/drivers/ppcfloor/lib64 -pthread -o xxx.c
+
+*/
+
+
+
 #include "rm_api.h"
 
 int
