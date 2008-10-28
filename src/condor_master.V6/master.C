@@ -108,6 +108,7 @@ int		check_new_exec_interval;
 int		preen_interval;
 int		new_bin_delay;
 char	*MasterName = NULL;
+char	*exit_program = NULL;
 
 int		master_backoff_constant = 9;
 int		master_backoff_ceiling = 3600;
@@ -345,6 +346,9 @@ main_init( int argc, char* argv[] )
 	daemonCore->Register_Command( CHILD_OFF_FAST, "CHILD_OFF_FAST",
 								  (CommandHandler)admin_command_handler, 
 								  "admin_command_handler", 0, ADMINISTRATOR );
+	daemonCore->Register_Command( SET_SHUTDOWN_PROGRAM, "SET_SHUTDOWN_PROGRAM",
+								  (CommandHandler)admin_command_handler, 
+								  "admin_command_handler", 0, ADMINISTRATOR );
 	// Command handler for stashing the pool password
 	daemonCore->Register_Command( STORE_POOL_CRED, "STORE_POOL_CRED",
 								(CommandHandler)&store_pool_cred_handler,
@@ -416,6 +420,9 @@ admin_command_handler( Service*, int cmd, Stream* stream )
 	case MASTER_OFF_FAST:
 		daemonCore->Send_Signal( daemonCore->getpid(), SIGQUIT );
 		return TRUE;
+
+	case SET_SHUTDOWN_PROGRAM:
+		return handle_shutdown_program( cmd, stream );
 
 			// These commands are special, since they all need to read
 			// off the subsystem before they know what to do.  So, we
@@ -572,6 +579,38 @@ handle_subsys_command( int cmd, Stream* stream )
 		EXCEPT( "Unknown command (%d) in handle_subsys_command", cmd );
 	}
 	return FALSE;
+}
+
+
+int
+handle_shutdown_program( int cmd, Stream* stream )
+{
+	if ( cmd != SET_SHUTDOWN_PROGRAM ) {
+		EXCEPT( "Unknown command (%d) in handle_shutdown_program", cmd );
+	}
+
+	char	*name = NULL;
+	stream->decode();
+	if( ! stream->code(name) ) {
+		dprintf( D_ALWAYS, "Can't read program name\n" );
+		if ( name ) {
+			free( name );
+		}
+		return FALSE;
+	}
+
+	// Can we find it in the configuration?
+	MyString	pname;
+	pname =  "master_shutdown_";
+	pname += name;
+	char	*executable = param( pname.GetCStr() );
+	if ( NULL == executable ) {
+		dprintf( "No shutdown program defined for '%s'\n", name );
+		return FALSE;
+	}
+
+	// 
+
 }
 
 void

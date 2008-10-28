@@ -1735,8 +1735,11 @@ class DaemonCore : public Service
     @param status The return status upon exit.  The value you would normally
            pass to the regular <tt>exit()</tt> function if you weren't using
            Daemon Core.
+    @param exec_prog Optional program to exec() instead of permforming
+		   a normal "exit".  If the exec() fails, the normal exit() will
+		   occur.
 */
-extern void DC_Exit( int status );  
+extern void DC_Exit( int status, const char *exec_prog = NULL );
 
 /** Call this function (inside your main_pre_dc_init() function) to
     bypass the authorization initialization in daemoncore.  This is for
