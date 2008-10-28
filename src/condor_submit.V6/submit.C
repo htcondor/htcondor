@@ -4573,7 +4573,7 @@ SetUserLog()
 			free(ulog_entry);
 
 			// check that the log is a valid path
-			FILE* test = safe_fopen_wrapper(ulog.Value(), "a+");
+			FILE* test = safe_fopen_wrapper(ulog.Value(), "a+", 0664);
 			if (!test) {
 				fprintf(stderr,
 					"\nWARNING: Invalid log file: \"%s\" (%s)\n", ulog.Value(),
