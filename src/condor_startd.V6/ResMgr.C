@@ -45,10 +45,16 @@ ResMgr::ResMgr()
 	m_hook_mgr = NULL;
 #endif
 
-#if HAVE_HIBERNATE
+#if HAVE_HIBERNATION
+	m_netif = NetworkAdapterBase::createNetworkAdapter(
+		daemonCore->InfoCommandSinfulString (), false );
+	m_hibernation_manager = new HibernationManager( );
+	m_hibernation_manager->addInterface( *m_netif );
 	m_hibernate_tid = -1;
-	m_recovery_tid = -1;
-#endif /* HAVE_HIBERNATE */
+	NetworkAdapterBase	*primary = m_hibernation_manager->getNetworkAdapter();
+	dprintf( D_FULLDEBUG, "Using network interface %s for hibernation\n",
+			 primary->interfaceName() );
+#endif
 
 	id_disp = NULL;
 
@@ -81,10 +87,9 @@ ResMgr::~ResMgr()
 	}
 #endif
 
-#if HAVE_HIBERNATE
+#if HAVE_HIBERNATION
 	cancelHibernateTimer();
-	cancelRecoveryTimer();
-#endif /* HAVE_HIBERNATE */
+#endif /* HAVE_HIBERNATION */
 
 	if( resources ) {
 		for( i = 0; i < nresources; i++ ) {
@@ -139,9 +144,9 @@ ResMgr::init_config_classad( void )
 #if HAVE_JOB_HOOKS
 	configInsert( config_classad, ATTR_FETCH_WORK_DELAY, false );
 #endif /* HAVE_JOB_HOOKS */
-#if HAVE_HIBERNATE
+#if HAVE_HIBERNATION
 	configInsert( config_classad, "HIBERNATE", false );
-#endif /* HAVE_HIBERNATE */
+#endif /* HAVE_HIBERNATION */
 
 		// Next, try the IS_OWNER expression.  If it's not there, give
 		// them a resonable default, instead of leaving it undefined. 
@@ -422,9 +427,9 @@ ResMgr::reconfig_resources( void )
 	m_hook_mgr->reconfig();
 #endif
 
-#if HAVE_HIBERNATE
+#if HAVE_HIBERNATION
 	updateHibernateConfiguration();
-#endif /* HAVE_HIBERNATE */
+#endif /* HAVE_HIBERNATION */
 
 		// Tell each resource to reconfig itself.
 	walk(&Resource::reconfig);
@@ -1563,24 +1568,24 @@ ResMgr::compute( amask_t how_much )
 	}
 
 		// Now that everything has actually been computed, we can
-		// refresh our internal classad with all the current values of
+		// refresh our interval classad with all the current values of
 		// everything so that when we evaluate our state or any other
 		// expressions, we've got accurate data to evaluate.
 	walk( &Resource::refresh_classad, how_much );
 
-		// Now that we have an updated internal classad for each
+		// Now that we have an updated interval classad for each
 		// resource, we can "compute" anything where we need to 
 		// evaluate classad expressions to get the answer.
 	walk( &Resource::compute, A_EVALUATED );
 
-		// Next, we can publish any results from that to our internal
+		// Next, we can publish any results from that to our interval
 		// classads to make sure those are still up-to-date
 	walk( &Resource::refresh_classad, A_EVALUATED );
 
-		// Finally, now that all the internal classads are up to date
+		// Finally, now that all the interval classads are up to date
 		// with all the attributes they could possibly have, we can
 		// publish the cross-slot attributes desired from
-		// STARTD_SLOT_ATTRS into each slots's internal ClassAd.
+		// STARTD_SLOT_ATTRS into each slots's interval ClassAd.
 	walk( &Resource::refresh_classad, A_SHARED_SLOT );
 
 		// Now that we're done, we can display all the values.
@@ -1600,6 +1605,11 @@ ResMgr::publish( ClassAd* cp, amask_t how_much )
 
 	starter_mgr.publish( cp, how_much );
 	m_vmuniverse_mgr.publish(cp, how_much);
+
+#if HAVE_HIBERNATION
+    m_hibernation_manager->publish( *cp );
+#endif
+
 }
 
 
@@ -1777,9 +1787,9 @@ ResMgr::reset_timers( void )
 								 update_interval );
 	}
 
-#if HAVE_HIBERNATE
+#if HAVE_HIBERNATION
 	resetHibernateTimer();
-#endif /* HAVE_HIBERNATE */
+#endif /* HAVE_HIBERNATION */
 
 }
 
@@ -1948,86 +1958,128 @@ ResMgr::processAllocList( void )
 }
 
 
-#if HAVE_HIBERNATE
+#if HAVE_HIBERNATION
 
-HibernationManager const& ResMgr::getHibernationManager() const {
-	return m_hibernation_manager;
+HibernationManager const& ResMgr::getHibernationManager(void) const
+{
+	return *m_hibernation_manager;
 }
 
 
 void ResMgr::updateHibernateConfiguration() {
-	m_hibernation_manager.update();
-	if ( -1 == m_recovery_tid ) { 
-			// We only want to (re)start the hibernation timer if
-			// we have not just come back from hibernation and someone
-			// issued a condor_reconfig, etc.: in which case we 
-			// let doHibernateRecovery() restart the hibernation timer
-		if ( m_hibernation_manager.wantsHibernate() ) {
-			if ( -1 == m_hibernate_tid ) {
-				startHibernateTimer();
-			}
-		} else {
-			if ( -1 != m_hibernate_tid ) {
-				cancelHibernateTimer();
-			}
+	m_hibernation_manager->update();
+	if ( m_hibernation_manager->wantsHibernate() ) {
+		if ( -1 == m_hibernate_tid ) {
+			startHibernateTimer();
 		}
-	}
-}
-
-
-int 
-ResMgr::allHibernating() {
-		// fail if there is no resource or if we are
-		// configured not to hibernate
-	if(    !resources
-		|| !m_hibernation_manager.wantsHibernate() ) {
-		return 0;
-	}
-		// The following may evaluate to true even if there
-		// is a claim on one or more of the resources, so we
-		// don't bother checking for claims first. 
-		// 
-		// We take largest value as the representative 
-		// hibernation level for this machine
-	int max = 0;
-	for( int i = 0; i < nresources; i++ ) {
-		int rval = resources[i]->evaluateHibernate();
-		if( 0 == rval ) {
-			return 0;
-		}
-		max = max( max, rval );
-	}
-	return max;
-}
-
-
-void 
-ResMgr::checkHibernate() {	
-		// If all resources have gone unused for some time	
-		// then put the machine to sleep
-	int level = allHibernating();
-	if( level > 0 ) {
-		if( m_hibernation_manager.canHibernate() ) {
-			dprintf ( D_ALWAYS, "ResMgr: This machine is about to enter hibernation\n" );
-			//
-			// Hibernate the machine and start a recovery timer.  This will
-			// cancel checks for hibernation for about about an hour after 
-			// it is set, and resume them once it has finished.
-			//
-			startRecoveryTimer();
-			m_hibernation_manager.doHibernate( level );
-		} else {
-			dprintf ( D_ALWAYS, "ResMgr: ERROR: Ignoring "
-				"HIBERNATE: Machine does not support any "
-				"sleep states.\n" );
+	} else {
+		if ( -1 != m_hibernate_tid ) {
+			cancelHibernateTimer();
 		}
 	}
 }
 
 
 int
-ResMgr::startHibernateTimer() {
-	int interval = m_hibernation_manager.getHibernateCheckInterval();
+ResMgr::allHibernating( MyString &target ) const
+{
+    	// fail if there is no resource or if we are
+		// configured not to hibernate
+	if (   !resources  ||  !m_hibernation_manager->wantsHibernate()  ) {
+		dprintf( D_FULLDEBUG, "allHibernating: doesn't want hibernate\n" );
+		return 0;
+	}
+
+		// The following may evaluate to true even if there
+		// is a claim on one or more of the resources, so we
+		// don't bother checking for claims first. 
+		// 
+		// We take largest value as the representative 
+		// hibernation level for this machine
+	target = "";
+	int level = 0;
+	for( int i = 0; i < nresources; i++ ) {
+
+		MyString	str;
+		if ( !resources[i]->evaluateHibernate(str) ) {
+			return 0;
+		}
+
+		int tmp = m_hibernation_manager->stringToSleepState( str.Value() );
+		dprintf( D_FULLDEBUG, "allHibernating: resource #%d: '%s' = %d\n",
+				 i, str.Value(), tmp );
+		if ( tmp > level ) {
+			target = str;
+			level = tmp;
+		}
+	}
+	return level;
+}
+
+
+void 
+ResMgr::checkHibernate( void )
+{
+
+		// If all resources have gone unused for some time	
+		// then put the machine to sleep
+	MyString	target;
+	int level = allHibernating( target );
+	if( level > 0 ) {
+
+        if( !m_hibernation_manager->canHibernate() ) {
+            dprintf ( D_ALWAYS, "ResMgr: ERROR: Ignoring "
+                "HIBERNATE: Machine does not support any "
+                "sleep states.\n" );
+            return;
+        }
+
+        if( !m_hibernation_manager->canWake() ) {
+			NetworkAdapterBase	*netif =
+				m_hibernation_manager->getNetworkAdapter();
+            dprintf ( D_ALWAYS, "ResMgr: ERROR: Ignoring "
+					  "HIBERNATE: Machine cannot be woken by its "
+					  "public network adapter (%s).\n",
+					  netif->interfaceName() );
+            return;
+		}        
+
+		dprintf ( D_ALWAYS, "ResMgr: This machine is about to "
+        		"enter hibernation\n" );
+
+        //
+		// Set the hibernation state, shutdown the machine's slot 
+	    // and hibernate the machine. We turn off the local slots
+	    // so the StartD will remove any jobs that are currently 
+	    // running as well as stop accepting new ones, since--on 
+	    // Windows anyway--there is the possibility that a job
+	    // may be matched to this machine between the time it
+	    // is told hibernate and the time it actually does.
+		//
+	    // Setting the state here also ensures the Green Computing
+	    // plug-in will know the this ad belongs to it when the
+	    // Collector invalidates it.
+	    //
+		if ( disableResources( target ) ) {
+			m_hibernation_manager->switchToTargetState( );
+		}
+#     if !defined( WIN32 )
+		sleep(10);
+        m_hibernation_manager->setTargetState ( HibernatorBase::NONE );
+        for ( int i = 0; i < nresources; ++i ) {
+            resources[i]->enable();
+            resources[i]->update();
+	    }
+		
+#     endif
+    }
+}
+
+
+int
+ResMgr::startHibernateTimer( void )
+{
+	int interval = m_hibernation_manager->getCheckInterval();
 	m_hibernate_tid = daemonCore->Register_Timer( 
 		interval, interval,
 		(TimerHandlercpp)&ResMgr::checkHibernate,
@@ -2041,20 +2093,22 @@ ResMgr::startHibernateTimer() {
 
 
 void
-ResMgr::resetHibernateTimer() {
-	if ( m_hibernation_manager.wantsHibernate() ) {
+ResMgr::resetHibernateTimer( void )
+{
+	if ( m_hibernation_manager->wantsHibernate() ) {
 		if( m_hibernate_tid != -1 ) {
-			int internal = m_hibernation_manager.getHibernateCheckInterval();
+			int interval = m_hibernation_manager->getCheckInterval();
 			daemonCore->Reset_Timer( 
 				m_hibernate_tid, 
-				internal, internal );
+				interval, interval );
 		}
 	}
 }
 
 
 void
-ResMgr::cancelHibernateTimer() {
+ResMgr::cancelHibernateTimer( void )
+{
 	int rval;
 	if( m_hibernate_tid != -1 ) {
 		rval = daemonCore->Cancel_Timer( m_hibernate_tid );
@@ -2070,46 +2124,7 @@ ResMgr::cancelHibernateTimer() {
 }
 
 
-void ResMgr::doHibernateRecovery() {
-	dprintf ( D_FULLDEBUG, "ResMgr: Restarting hibernation timer\n" );
-		// The recovery time is up, restart the hibernation timer
-	cancelRecoveryTimer();		
-	startHibernateTimer();
-}
-
-
-int
-ResMgr::startRecoveryTimer() {
-	cancelHibernateTimer();
-	int interval = ( 1 * HOUR );
-	m_recovery_tid = daemonCore->Register_Timer( 
-		interval, (TimerHandlercpp)&ResMgr::doHibernateRecovery,
-		"ResMgr::startRecoveryTimer()", this );
-	if( m_recovery_tid < 0 ) {
-		EXCEPT( "Can't register hibernation recovery timer" );
-	}
-	dprintf( D_FULLDEBUG, "Started hibernation recovery timer.\n" );
-	return TRUE;
-}
-
-
-void
-ResMgr::cancelRecoveryTimer() {
-	int rval;
-	if( m_recovery_tid != -1 ) {
-		rval = daemonCore->Cancel_Timer( m_recovery_tid );
-		if( rval < 0 ) {
-			dprintf( D_ALWAYS, "Failed to cancel hibernation recovery timer (%d): "
-				"daemonCore error\n", m_recovery_tid );
-		} else {
-			dprintf( D_FULLDEBUG, "Canceled hibernation recovery timer (%d)\n",
-				m_hibernate_tid );
-		}
-		m_recovery_tid = -1;
-	}
-}
-
-#endif /* HAVE_HIBERNATE */
+#endif /* HAVE_HIBERNATION */
 
 
 void
@@ -2269,3 +2284,43 @@ ResMgr::FillExecuteDirsList( class StringList *list )
 		}
 	}
 }
+
+#if HAVE_HIBERNATION
+
+int
+ResMgr::disableResources( const MyString &state_str )
+{
+
+    int i; /* stupid VC6 */
+
+	/* set the sleep state so the plugin will pickup on the
+	fact that we are sleeping */
+	m_hibernation_manager->setTargetState ( state_str.Value() );
+
+    /* disable all resource on this machine */
+    for ( i = 0; i < nresources; ++i ) {
+        resources[i]->disable();
+	}
+
+    /* update the CM */
+    bool ok = true;
+    for ( i = 0; i < nresources && ok; ++i ) {
+        ok = resources[i]->update_with_ack();
+	}
+
+    /* if any of the updates failed, then renable all the
+    resources and try again later (next time HIBERNATE evaluates
+    to an value>0) */
+    if ( !ok ) {
+        m_hibernation_manager->setTargetState (
+            HibernatorBase::NONE );
+        for ( i = 0; i < nresources; ++i ) {
+            resources[i]->enable();
+            resources[i]->update();
+	    }
+    }
+
+    return ok;
+}
+
+#endif

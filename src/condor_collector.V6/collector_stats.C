@@ -315,7 +315,7 @@ CollectorClassStats::CollectorClassStats ( const char *class_name,
 CollectorClassStats::~CollectorClassStats ( void )
 {
 	if ( className ) {
-		free( const_cast<char*>(className) );
+		free( const_cast<char *>(className) );
 		className = NULL;
 	}
 }

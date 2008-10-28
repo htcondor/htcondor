@@ -36,6 +36,7 @@
 #include "strupr.h"
 #include "condor_netdb.h"
 #include "file_sql.h"
+#include "file_lock.h"
 
 #if HAVE_DLOPEN
 #include "MasterPlugin.h"

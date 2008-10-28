@@ -171,6 +171,7 @@ const struct Translation DCTranslation[] = {
 
 const struct Translation CollectorTranslation[] = {
 	{ "UPDATE_STARTD_AD", UPDATE_STARTD_AD },
+    { "UPDATE_STARTD_AD_WITH_ACK", UPDATE_STARTD_AD_WITH_ACK },
 	{ "UPDATE_SCHEDD_AD", UPDATE_SCHEDD_AD },
 	{ "UPDATE_MASTER_AD", UPDATE_MASTER_AD },
 	{ "UPDATE_GATEWAY_AD", UPDATE_GATEWAY_AD },

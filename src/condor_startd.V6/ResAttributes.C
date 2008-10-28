@@ -35,10 +35,8 @@ MachAttributes::MachAttributes()
 	m_opsys = NULL;
 	m_uid_domain = NULL;
 	m_filesystem_domain = NULL;
-	m_subnet = NULL;
 	m_idle_interval = -1;
 	m_ckptpltfrm = NULL;
-    m_hardware_address = NULL;
 
 		// Number of CPUs.  Since this is used heavily by the ResMgr
 		// instantiation and initialization, we need to have a real
@@ -96,9 +94,7 @@ MachAttributes::~MachAttributes()
 	if( m_opsys ) free( m_opsys );
 	if( m_uid_domain ) free( m_uid_domain );
 	if( m_filesystem_domain ) free( m_filesystem_domain );
-	if( m_subnet ) free( m_subnet );
 	if( m_ckptpltfrm ) free( m_ckptpltfrm );
-    if( m_hardware_address ) free( m_hardware_address );
 }
 
 
@@ -145,14 +141,6 @@ MachAttributes::compute( amask_t how_much )
 		m_filesystem_domain = param( "FILESYSTEM_DOMAIN" );
 		dprintf( D_FULLDEBUG, "%s = \"%s\"\n", ATTR_FILE_SYSTEM_DOMAIN,
 				 m_filesystem_domain );
-
-			// Subnet name
-		if( m_subnet ) {
-			free( m_subnet );
-		}
-		m_subnet = calc_subnet_name();
-		dprintf( D_FULLDEBUG, "%s = \"%s\"\n", ATTR_SUBNET,
-				 m_subnet );
 
 		m_idle_interval = param_integer( "IDLE_INTERVAL", -1 );
 
@@ -236,17 +224,7 @@ MachAttributes::publish( ClassAd* cp, amask_t how_much)
 				 sinful );
 		cp->Insert( line );
 
-        if (NULL == m_hardware_address) {
-            m_hardware_address = 
-                string_to_hardware_address(sinful);
-        }
-        if (NULL != m_hardware_address) {
-            sprintf( line, "%s = \"%s\"", ATTR_HARDWARE_ADDRESS,
-                m_hardware_address );
-            cp->Insert( line );
-        }
-
-		sprintf( line, "%s = \"%s\"", ATTR_ARCH, m_arch );
+        sprintf( line, "%s = \"%s\"", ATTR_ARCH, m_arch );
 		cp->Insert( line );
 
 		sprintf( line, "%s = \"%s\"", ATTR_OPSYS, m_opsys );
@@ -257,9 +235,6 @@ MachAttributes::publish( ClassAd* cp, amask_t how_much)
 
 		sprintf( line, "%s = \"%s\"", ATTR_FILE_SYSTEM_DOMAIN, 
 				 m_filesystem_domain );
-		cp->Insert( line );
-
-		sprintf( line, "%s = \"%s\"", ATTR_SUBNET, m_subnet );
 		cp->Insert( line );
 
 		sprintf( line, "%s = TRUE", ATTR_HAS_IO_PROXY );
@@ -322,7 +297,7 @@ MachAttributes::publish( ClassAd* cp, amask_t how_much)
 		if ( m_mips > 0 ) {
 			sprintf( line, "%s=%d", ATTR_MIPS, m_mips );
 			cp->Insert( line );
-		}
+		}		
 	}
 
 		// We don't want this inserted into the public ad automatically

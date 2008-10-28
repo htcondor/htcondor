@@ -164,7 +164,7 @@ Reqexp::~Reqexp()
 bool
 Reqexp::restore()
 {
-	if( rip->isSuspendedForCOD() ) {
+    if( rip->isSuspendedForCOD() ) {
 		if( rstate != COD_REQ ) {
 			rstate = COD_REQ;
 			publish( rip->r_classad, A_PUBLIC );

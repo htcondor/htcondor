@@ -2188,5 +2188,3 @@ command_classad_handler( Service*, int dc_cmd, Stream* s )
 	free( cmd_str );
 	return rval;
 }
-
-

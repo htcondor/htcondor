@@ -34,6 +34,7 @@
 #include "schedd_v7_utils.h"
 #include "util_lib_proto.h"
 #include "my_popen.h"
+#include "file_lock.h"
 
 template class HashTable<std::string,RoutedJob *>;
 template class HashTable<std::string,JobRoute *>;
@@ -170,7 +171,7 @@ JobRouter::GetInstanceLock() {
 	m_router_lock = lock;
 	m_router_lock_fname = lock_fullname;
 
-	lock->set_blocking(FALSE);
+	lock->setBlocking(FALSE);
 	if(!lock->obtain(WRITE_LOCK)) {
 		EXCEPT("Failed to get lock on %s.\n",lock_fullname.c_str());
 	}

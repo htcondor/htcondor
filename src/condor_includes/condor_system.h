@@ -2,13 +2,13 @@
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -81,7 +81,6 @@
 ** Files that need to be fixed on all (or nearly all) platforms 
 **********************************************************************/
 #include "condor_fix_access.h"
-#include "file_lock.h"
 #include "condor_fix_assert.h"
 
 #if defined(WIN32)
@@ -205,51 +204,23 @@ typedef fd_set *SELECT_FDSET_PTR;
 
 /* Pull in some required types */
 #if defined( HAVE_SYS_TYPES_H )
-# include <sys/types.h>
+#  include <sys/types.h>
 #endif
 #if defined( HAVE_STDINT_H )
-# include <stdint.h>
-#endif
-#if defined( HAVE_INTTYPES_H )
-# define __STDC_FORMAT_MACROS
-# include <inttypes.h>
+#  include <stdint.h>
 #endif
 
 /* Define _O_BINARY, etc. if they're not defined as zero */
 #ifndef _O_BINARY
- #define _O_BINARY		0x0
+#  define _O_BINARY		0x0
 #endif
 #ifndef _O_SEQUENTIAL
- #define _O_SEQUENTIAL	0x0
+#  define _O_SEQUENTIAL	0x0
 #endif
 #ifndef O_LARGEFILE
- #define O_LARGEFILE	0x0
+#  define O_LARGEFILE	0x0
 #endif
 
-/* If no inttypes, try to define our own (make a guess) */
-/* The win 32 include file defines the win32 versions */
-#if !defined( PRId64 )
-# define PRId64 "lld"
-#endif
-#if !defined( PRIi64 )
-# define PRIi64 "lli"
-#endif
-#if !defined( PRIu64 )
-# define PRIu64 "llu"
-#endif
-
-// Define a 'filesize_t' type and FILESIZE_T_FORMAT printf format string
-#if defined HAVE_INT64_T
-  typedef int64_t filesize_t;
-# define FILESIZE_T_FORMAT "%" PRId64
-
-#elif defined HAVE___INT64_T
-  typedef __int64 filesize_t;
-# define FILESIZE_T_FORMAT "%" PRId64
-
-#else
-  typedef long filesize_t;
-# define FILESIZE_T_FORMAT "%l"
-#endif
+#include "condor_sys_formats.h"
 
 #endif /* CONDOR_SYSTEM_H */

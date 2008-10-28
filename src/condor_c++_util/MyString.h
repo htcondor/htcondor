@@ -21,6 +21,8 @@
 #ifndef _MyString_H_
 #define _MyString_H_
 
+#include "condor_header_features.h"
+#include <string.h>
 #include <stdarg.h>
 
 /** The MyString class is a C++ representation of a string. It was

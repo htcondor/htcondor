@@ -103,3 +103,75 @@ SimpleArg::Match( const char short_arg, const char *long_arg ) const
 		return false;
 	}
 }
+
+int
+SimpleArg::ConsumeOpt( bool consume )
+{
+	if ( consume ) {
+		m_index++;
+	}
+	return m_index;
+}
+
+// String option operations
+bool
+SimpleArg::getOpt( const char *&opt, bool consume )
+{
+	if ( !isOptStr() ) {
+		return false;
+	}
+	opt = m_opt;
+	ConsumeOpt( consume );
+	return true;
+}
+
+// Integer option operations
+bool
+SimpleArg::isOptInt( void ) const
+{
+	if ( !m_opt ) {
+		return false;
+	}
+	return ( isdigit(*m_opt) || ( (*m_opt == '-') && isdigit(*m_opt+1) )  );
+}
+bool
+SimpleArg::getOpt( int &opt, bool consume )
+{
+	if ( !isOptInt() ) {
+		return false;
+	}
+	opt = atoi( m_opt );
+	ConsumeOpt( consume );
+	return true;
+}
+
+// Integer option operations
+bool
+SimpleArg::getOpt( double &opt, bool consume )
+{
+	if ( !isOptDouble() ) {
+		return false;
+	}
+	opt = atof( m_opt );
+	ConsumeOpt( consume );
+	return true;
+}
+
+// Boolean option operations
+bool
+SimpleArg::isOptBool( void ) const
+{
+	int c = toupper(*m_opt);
+	return ( c=='T' || c=='F' || c=='Y' || c=='N' );
+};
+bool
+SimpleArg::getOpt( bool &opt, bool consume )
+{
+	if ( !isOptBool() ) {
+		return false;
+	}
+	int c = toupper(*m_opt);
+	opt = ( c=='T' || c=='Y' );
+	ConsumeOpt( consume );
+	return true;
+}
