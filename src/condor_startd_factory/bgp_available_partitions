@@ -21,6 +21,13 @@ my $mmcs_c_cmd = "/home/condor/libexec/bgd_list_partitions";
 # discovery phase, the hash entries will be in different states.
 my @g_parts = 
 (
+	#{
+		# "R00-M0-N00" =>
+		# 	{
+		# 		"State" => "GENERATED",
+		# 		"Size" => 32
+		# 	}
+	#},
 	{
 		"R00-M0-N01" =>
 			{
