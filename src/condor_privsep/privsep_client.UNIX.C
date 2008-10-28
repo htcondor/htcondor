@@ -170,7 +170,7 @@ privsep_get_switchboard_response(FILE* err_fp)
 	//
 	if (err.Length() != 0) {
 		dprintf(D_ALWAYS,
-		        "privsep_get_switchboard_response: error received: %s\n",
+		        "privsep_get_switchboard_response: error received: %s",
 			err.Value());
 		return false;
 	}
