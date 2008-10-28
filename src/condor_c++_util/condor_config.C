@@ -600,6 +600,9 @@ real_config(char* host, int wantsQuiet, bool wantExtraInfo)
 		}
 	}
 
+	dprintf( D_CONFIG, "config: using subsystem '%s', local '%s'\n",
+			 mySubSystem->getName(), mySubSystem->getLocalName("") );
+
 		/*
 		  N.B. if we are using the yellow pages, system calls which are
 		  not supported by either remote system calls or file descriptor
@@ -1344,6 +1347,7 @@ param( const char *name )
 {
 	char		*val = NULL;
 	MyString	 param_name;
+	MyString	 prefix;
 
 	// Try in order to find the parameter
 	// As we walk through, any value (including empty string) will
@@ -1354,35 +1358,45 @@ param( const char *name )
 	// 1. "subsys.local.name"
 	const char	*local = mySubSystem->getLocalName();
 	if (  (NULL == val) && local ) {
-		param_name = mySubSystem->getName();
-		param_name += ".";
-		param_name += local;
-		param_name += ".";
-		param_name += name;
+		prefix = mySubSystem->getName();
+		prefix += ".";
+		prefix += local;
+		prefix += ".";
+		param_name = prefix + name;
 		val = lookup_macro( param_name.GetCStr(), ConfigTab, TABLESIZE );
 	}
 	// 2. "local.name"
 	if (  (NULL == val) && local ) {
-		param_name = local;
-		param_name += ".";
-		param_name += name;
+		prefix = local;
+		prefix += ".";
+		param_name = prefix + name;
 		val = lookup_macro( param_name.GetCStr(), ConfigTab, TABLESIZE );
 	}
 	// 3. "subsys.name"
 	if ( NULL == val ) {
-		param_name = mySubSystem->getName();
-		param_name += ".";
-		param_name += name;
+		prefix = mySubSystem->getName();
+		prefix += ".";
+		param_name = prefix + name;
 		val = lookup_macro( param_name.GetCStr(), ConfigTab, TABLESIZE );
 	}
 	// 4. "name"
 	if ( NULL == val ) {
+		prefix = "";
+		param_name = name;
 		val = lookup_macro( name, ConfigTab, TABLESIZE );
 	}
 
 	// Still nothing (or empty)?  Give up.
 	if ( (NULL == val) || (*val=='\0') ) {
 		return NULL;
+	}
+
+	if ( prefix != "" ) {
+		dprintf( D_CONFIG, "Config '%s': using prefix '%s' ==> '%s'\n",
+				 name, prefix.GetCStr(), val );
+	}
+	else {
+		dprintf( D_CONFIG, "Config '%s': no prefix ==> '%s'\n", name, val );
 	}
 
 	// Ok, now expand it out...
