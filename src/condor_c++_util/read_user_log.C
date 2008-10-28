@@ -951,7 +951,7 @@ ReadUserLog::readEventOld( ULogEvent *& event )
 	{
 		dprintf( D_FULLDEBUG,
 				 "ReadUserLog: invalid m_fp, or ftell() failed\n" );
-		if ( m_lock->isUnlocked() ) {
+		if ( m_lock->isLocked() ) {
 			m_lock->release();
 		}
 		return ULOG_UNK_ERROR;
@@ -975,7 +975,7 @@ ReadUserLog::readEventOld( ULogEvent *& event )
 		if( feof( m_fp ) ) {
 			event = NULL;  // To prevent FMR: Free memory read
 			clearerr( m_fp );
-			if( m_lock->isUnlocked() ) {
+			if( m_lock->isLocked() ) {
 				m_lock->release();
 			}
 			return ULOG_NO_EVENT;
@@ -989,7 +989,7 @@ ReadUserLog::readEventOld( ULogEvent *& event )
 	if (!event) 
 	{
 		dprintf( D_FULLDEBUG, "ReadUserLog: unable to instantiate event\n" );
-		if ( m_lock->isUnlocked()) {
+		if ( m_lock->isLocked()) {
 			m_lock->release();
 		}
 		return ULOG_UNK_ERROR;
@@ -1015,7 +1015,7 @@ ReadUserLog::readEventOld( ULogEvent *& event )
 		// NOTE: this code is important, so don't remove or "fix"
 		// it unless you *really* know what you're doing and test it
 		// extermely well
-		if( m_lock->isUnlocked() ) {
+		if( m_lock->isLocked() ) {
 			m_lock->release();
 		}
 		sleep( 1 );
@@ -1024,7 +1024,7 @@ ReadUserLog::readEventOld( ULogEvent *& event )
 		}                             
 		if( fseek( m_fp, filepos, SEEK_SET)) {
 			dprintf( D_ALWAYS, "fseek() failed in %s:%d", __FILE__, __LINE__ );
-			if ( m_lock->isUnlocked() ) {
+			if ( m_lock->isLocked() ) {
 				m_lock->release();
 			}
 			return ULOG_UNK_ERROR;
@@ -1035,7 +1035,7 @@ ReadUserLog::readEventOld( ULogEvent *& event )
 			if (fseek (m_fp, filepos, SEEK_SET))
 			{
 				dprintf(D_ALWAYS, "fseek() failed in ReadUserLog::readEvent");
-				if ( m_lock->isUnlocked() ) {
+				if ( m_lock->isLocked() ) {
 					m_lock->release();
 				}
 				return ULOG_UNK_ERROR;
@@ -1058,7 +1058,7 @@ ReadUserLog::readEventOld( ULogEvent *& event )
 					if( !event ) { 
 						dprintf( D_FULLDEBUG, "ReadUserLog: unable to "
 								 "instantiate event\n" );
-						if( m_lock->isUnlocked() ) {
+						if( m_lock->isLocked() ) {
 							m_lock->release();
 						}
 						return ULOG_UNK_ERROR;
@@ -1075,7 +1075,7 @@ ReadUserLog::readEventOld( ULogEvent *& event )
 				delete event;
 				event = NULL;  // To prevent FMR: Free memory read
 				synchronize ();
-				if (m_lock->isUnlocked()) {
+				if (m_lock->isLocked()) {
 					m_lock->release();
 				}
 				return ULOG_RD_ERROR;
@@ -1085,7 +1085,7 @@ ReadUserLog::readEventOld( ULogEvent *& event )
 				// finally got the event successfully --
 				// synchronize the log
 				if( synchronize() ) {
-					if( m_lock->isUnlocked() ) {
+					if( m_lock->isLocked() ) {
 						m_lock->release();
 					}
 					return ULOG_OK;
@@ -1100,7 +1100,7 @@ ReadUserLog::readEventOld( ULogEvent *& event )
 					delete event;
 					event = NULL;  // To prevent FMR: Free memory read
 					clearerr( m_fp );
-					if( m_lock->isUnlocked() ) {
+					if( m_lock->isLocked() ) {
 						m_lock->release();
 					}
 					return ULOG_NO_EVENT;
@@ -1115,7 +1115,7 @@ ReadUserLog::readEventOld( ULogEvent *& event )
 			if (fseek (m_fp, filepos, SEEK_SET))
 			{
 				dprintf(D_ALWAYS, "fseek() failed in ReadUserLog::readEvent");
-				if (m_lock->isUnlocked()) {
+				if (m_lock->isLocked()) {
 					m_lock->release();
 				}
 				return ULOG_UNK_ERROR;
@@ -1123,7 +1123,7 @@ ReadUserLog::readEventOld( ULogEvent *& event )
 			clearerr (m_fp);
 			delete event;
 			event = NULL;  // To prevent FMR: Free memory read
-			if (m_lock->isUnlocked()) {
+			if (m_lock->isLocked()) {
 				m_lock->release();
 			}
 			return ULOG_NO_EVENT;
@@ -1134,7 +1134,7 @@ ReadUserLog::readEventOld( ULogEvent *& event )
 		// got the event successfully -- synchronize the log
 		if (synchronize ())
 		{
-			if (m_lock->isUnlocked()) {
+			if (m_lock->isLocked()) {
 				m_lock->release();
 			}
 			return ULOG_OK;
@@ -1149,7 +1149,7 @@ ReadUserLog::readEventOld( ULogEvent *& event )
 			delete event;
 			event = NULL;  // To prevent FMR: Free memory read
 			clearerr (m_fp);
-			if (m_lock->isUnlocked() ) {
+			if (m_lock->isLocked() ) {
 				m_lock->release();
 			}
 			return ULOG_NO_EVENT;
@@ -1157,7 +1157,7 @@ ReadUserLog::readEventOld( ULogEvent *& event )
 	}
 
 	// will not reach here
-	if (m_lock->isUnlocked()) {
+	if (m_lock->isLocked()) {
 		m_lock->release();
 	}
 
