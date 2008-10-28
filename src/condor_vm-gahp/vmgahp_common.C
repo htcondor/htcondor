@@ -522,12 +522,16 @@ int systemCommand( ArgList &args, bool is_root, StringList *cmd_out )
 	}else {
 		prev = set_user_priv();
 	}
+#if !defined(WIN32)
 	if ( privsep_enabled() && (job_user_uid != get_condor_uid())) {
 		fp = privsep_popen(args, "r", 0, job_user_uid);
 	}
 	else {
 		fp = my_popen( args, "r", 0 );
 	}
+#else
+	fp = my_popen( args, "r", 0 );
+#endif
 	if ( fp == NULL ) {
 		MyString args_string;
 		args.GetArgsStringForDisplay( &args_string, 0 );
