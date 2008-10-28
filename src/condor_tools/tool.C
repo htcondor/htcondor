@@ -68,6 +68,7 @@ bool peaceful_shutdown = false;
 bool full = false;
 bool all = false;
 char* subsys = NULL;
+char* exec_program = NULL;
 int takes_subsys = 0;
 int cmd_set = 0;
 char *subsys_arg = NULL;
@@ -399,9 +400,8 @@ main( int argc, char *argv[] )
 	} else if ( !strncmp_auto( cmd_str, "_squawk" ) ) {
 		cmd = SQUAWK;
 		takes_subsys = 1;
-	} else if ( !strncmp_auto( cmd_str, "_shutdown_program" ) ) {
+	} else if ( !strncmp_auto( cmd_str, "_set_shutdown" ) ) {
 		cmd = SET_SHUTDOWN_PROGRAM;
-		takes_name = true;
 	} else {
 		fprintf( stderr, "ERROR: unknown command %s\n", MyName );
 		usage( "condor" );
@@ -507,6 +507,22 @@ main( int argc, char *argv[] )
 		case 'd':
 			Termlog = 1;
 			dprintf_config ("TOOL");
+			break;
+		case 'e':
+			if ( cmd != SET_SHUTDOWN_PROGRAM ) {
+				fprintf( stderr,
+						 "ERROR: \"-exec\" is not valid with %s\n", MyName );
+				usage( NULL );
+				break;
+			}
+			tmp++;
+			if( ! (tmp && *tmp) ) {
+				fprintf( stderr, 
+						 "ERROR: \"-exec\" requires another argument\n" ); 
+				usage( NULL );
+				break;
+			}
+			exec_program = tmp;
 			break;
 		case 'g':
 			fast = false;
@@ -959,6 +975,10 @@ computeRealAction( void )
 	case VACATE_CLAIM:
 	case PCKPT_JOB:
 		dt = real_dt = DT_STARTD;
+		break;
+
+	case SET_SHUTDOWN_PROGRAM:
+		real_dt = DT_MASTER;
 		break;
 
 	case SQUAWK:
