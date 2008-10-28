@@ -30,6 +30,7 @@
 #include "vmgahp_error_codes.h"
 #include "condor_vm_universe_types.h"
 #include "vmware_type.h"
+#include "../condor_privsep/condor_privsep.h"
 
 #define VMWARE_TMP_FILE "vmware_status.condor"
 #define VMWARE_TMP_TEMPLATE		"vmXXXXXX"
@@ -45,7 +46,10 @@
 #define VMWARE_MONOLITHICSPARSE_VMDK_DESCRIPTOR_SIZE	800
 
 #define VMWARE_SNAPSHOT_PARENTFILE_HINT "parentFileNameHint"
-	
+
+extern uid_t job_user_uid;
+extern MyString workingdir;
+
 // "parent_filenames" will have basenames for parent files
 static void
 change_monolithicSparse_snapshot_vmdk_file(const char* file, bool use_fullpath, const char* dirpath, StringList &parent_filenames)
@@ -1038,6 +1042,16 @@ VMwareType::Start()
 			vmprintf(D_ALWAYS, "Failed to restart with checkpointed files\n");
 			vmprintf(D_ALWAYS, "So, we will try to create a new configuration file\n");
 
+			if (privsep_enabled()) {
+				if (!privsep_chown_dir(get_condor_uid(),
+				                       job_user_uid,
+				                       workingdir.Value()))
+				{
+					m_result_msg = VMGAHP_ERR_CRITICAL;
+					return false;
+				}
+			}
+
 			deleteNonTransferredFiles();
 			m_configfile = "";
 			m_restart_with_ckpt = false;
@@ -1049,6 +1063,16 @@ VMwareType::Start()
 
 			// Succeeded to create a configuration file
 			// Keep going..
+		}
+	}
+
+	if (privsep_enabled()) {
+		if (!privsep_chown_dir(job_user_uid,
+		                       get_condor_uid(),
+		                       workingdir.Value()))
+		{
+			m_result_msg = VMGAHP_ERR_CRITICAL;
+			return false;
 		}
 	}
 
@@ -1138,6 +1162,16 @@ bool
 VMwareType::Shutdown()
 {
 	vmprintf(D_FULLDEBUG, "Inside VMwareType::Shutdown\n");
+
+	if (privsep_enabled()) {
+		if (!privsep_chown_dir(get_condor_uid(),
+		                       job_user_uid,
+		                       workingdir.Value()))
+		{
+			m_result_msg = VMGAHP_ERR_CRITICAL;
+			return false;
+		}
+	}
 
 	if( (m_scriptname.Length() == 0) ||
 			(m_configfile.Length() == 0)) {
