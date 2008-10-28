@@ -24,6 +24,7 @@
 #include "dc_collector.h"
 #include "get_daemon_name.h"
 #include "condor_config.h"
+#include "subsystem_info.h"
 
 #define WANT_CLASSAD_NAMESPACE
 #include "classad/classad_distribution.h"
@@ -34,7 +35,7 @@ using namespace std;
 #include "newclassad_stream.h"
 
 #include "OrderedSet.h"
-#include "stork-mm.h"
+#include "stork-lm.h"
 #include <list>
 
 typedef pair<time_t, const char *> Dest;
@@ -54,7 +55,7 @@ class StorkMatchTest: public Service
 	// Timer handlers
 	int timerHandler( void );
 
-	StorkMatchMaker			*mm;
+	StorkLeaseManager			*mm;
 	multimap<time_t, const char *, less<time_t> >dests;
 	unsigned	target;
 	//list<Dest *>			dests;
@@ -82,7 +83,7 @@ StorkMatchTest::init( void )
 	config( true );
 
 	// Create teh match maker object
-	mm = new StorkMatchMaker();
+	mm = new StorkLeaseManager();
 	dprintf( D_FULLDEBUG, "mm size %d @ %p\n", sizeof(*mm), mm );
 
 	TimerId = daemonCore->Register_Timer(
@@ -97,7 +98,7 @@ StorkMatchTest::init( void )
 }
 
 int
-StorkMatchTest::config( bool init )
+StorkMatchTest::config( bool /*init*/ )
 {
 	return 0;
 }
@@ -136,7 +137,7 @@ StorkMatchTest::timerHandler ( void )
 						 tmp->second );
 			}
 		}
-		free( (void*) tmp->second );
+		free( const_cast<char *>(tmp->second) );
 		dests.erase( tmp );
 	}
 
@@ -182,7 +183,7 @@ StorkMatchTest::stop ( void )
 			dprintf( D_ALWAYS, "Return of xfer %s failed\n",
 					 tmp->second );
 		}
-		free( (void*) tmp->second );
+		free( const_cast<char *>(tmp->second) );
 		dests.erase( tmp );
 	}
 
@@ -194,13 +195,13 @@ StorkMatchTest::stop ( void )
 //-------------------------------------------------------------
 
 // about self
-char* mySubSystem = "StorkMatchTest";		// used by Daemon Core
+DECL_SUBSYSTEM( "StorkMatchTest", SUBSYSTEM_TYPE_TOOL);
 
 StorkMatchTest	smt;
 
 //-------------------------------------------------------------
 
-int main_init(int argc, char *argv[])
+int main_init(int /*argc*/, char * /*argv*/ [])
 {
 	DebugFlags = D_FULLDEBUG | D_ALWAYS;
 	dprintf(D_ALWAYS, "main_init() called\n");
@@ -214,7 +215,7 @@ int main_init(int argc, char *argv[])
 //-------------------------------------------------------------
 
 int 
-main_config( bool is_full )
+main_config( bool /*is_full*/ )
 {
 	dprintf(D_ALWAYS, "main_config() called\n");
 	smt.config( true );
@@ -223,7 +224,7 @@ main_config( bool is_full )
 
 //-------------------------------------------------------------
 
-int main_shutdown_fast()
+int main_shutdown_fast(void)
 {
 	dprintf(D_ALWAYS, "main_shutdown_fast() called\n");
 	smt.stop( );
@@ -233,7 +234,7 @@ int main_shutdown_fast()
 
 //-------------------------------------------------------------
 
-int main_shutdown_graceful()
+int main_shutdown_graceful(void)
 {
 	dprintf(D_ALWAYS, "main_shutdown_graceful() called\n");
 	smt.stop( );
@@ -244,13 +245,13 @@ int main_shutdown_graceful()
 //-------------------------------------------------------------
 
 void
-main_pre_dc_init( int argc, char* argv[] )
+main_pre_dc_init( int /*argc*/, char* /*argv*/ [] )
 {
 		// dprintf isn't safe yet...
 }
 
 
 void
-main_pre_command_sock_init( )
+main_pre_command_sock_init(void )
 {
 }

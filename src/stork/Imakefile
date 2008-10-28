@@ -324,7 +324,7 @@ stork-lm-nodc.o: stork-lm.C
 	$(CPlusPlus) $(INST_C_PLUS_FLAGS) -DTEST_VERSION -c stork-lm.C -o stork-lm-nodc.o
 
 c_plus_target( stork-lm-test2, stork-lm-test2.o,
-	 stork-mm.o $(DAEMONCORE_LIB) $(TEST_LIB) )
+	 stork-lm.o $(DAEMONCORE_LIB) $(TEST_LIB) )
 template_inst( stork-lm-test2.C, stork-lm-test2.o )
 #endif /* Nick */
 

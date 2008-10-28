@@ -20,17 +20,17 @@
 #define _CONDOR_ALLOW_OPEN
 #include "condor_common.h"
 #include "Set.h"
-#include "stork-mm.h"
-#include "dc_match_maker_lease.h"
+#include "stork-lm.h"
+#include "dc_lease_manager_lease.h"
 #include "condor_config.h"
 
-list<DCMatchMakerLease*>mylist;
+list<DCLeaseManagerLease*>mylist;
 int main ( int argc, char **argv )
 {
 	(void) argc;
 	(void) argv;
 
-	DCMatchMakerLease	l;
+	DCLeaseManagerLease	l;
 	mylist.push_back( &l );
 	mylist.remove( &l);
 
@@ -38,7 +38,7 @@ int main ( int argc, char **argv )
 	Termlog = 1;
 	dprintf_config("TOOL");
 
-	StorkMatchMaker	mm;
+	StorkLeaseManager	mm;
 	printf( "mm size %d @ %p\n", sizeof(mm), &mm );
 	const char *result = NULL;
 	result = mm.getTransferDirectory(NULL);
