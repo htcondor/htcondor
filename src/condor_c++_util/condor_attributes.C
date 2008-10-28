@@ -802,3 +802,6 @@ const char *ATTR_AMAZON_INSTANCE_TYPE = "AmazonInstanceType";
 //************* End of changes for Amamzon Jobs *****************//
 
 
+//************* Added for Lease Manager *******************//
+const char *ATTR_LEASE_MANAGER_IP_ADDR = "LeaseManagerIpAddr";
+//************* End of Lease Manager    *******************//

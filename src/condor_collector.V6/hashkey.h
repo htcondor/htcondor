@@ -61,6 +61,8 @@ bool makeCollectorAdHashKey (AdNameHashKey &, ClassAd *, sockaddr_in *);
 bool makeStorageAdHashKey (AdNameHashKey &, ClassAd *, sockaddr_in *);
 bool makeNegotiatorAdHashKey (AdNameHashKey &, ClassAd *, sockaddr_in *);
 bool makeHadAdHashKey (AdNameHashKey &, ClassAd *, sockaddr_in *);
+bool makeXferServiceAdHashKey (AdNameHashKey &, ClassAd *, sockaddr_in *);
+bool makeLeaseManagerAdHashKey (AdNameHashKey &, ClassAd *, sockaddr_in *);
 bool makeGenericAdHashKey (AdNameHashKey &, ClassAd *, sockaddr_in *);
 
 // utility function:  parse the string <aaa.bbb.ccc.ddd:pppp>

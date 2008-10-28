@@ -17,35 +17,74 @@
  *
  ***************************************************************/
 
+#ifndef __CONDOR_ADTYPES_H__
+#define __CONDOR_ADTYPES_H__
 
- 
+#define QUILL_ADTYPE			"Database"
+#define DATABASE_ADTYPE			"Database"
+#define DBMSD_ADTYPE			"DbmsDaemon"
+#define TT_ADTYPE				"TTProcess"
+#define STARTD_ADTYPE			"Machine"
+#define STARTD_PVT_ADTYPE		"MachinePrivate"
+#define SCHEDD_ADTYPE			"Scheduler"
+#define MASTER_ADTYPE			"DaemonMaster"
+#define CKPT_SRVR_ADTYPE		"CkptServer"
+#define JOB_ADTYPE				"Job"
+#define QUERY_ADTYPE			"Query"
+#define COLLECTOR_ADTYPE		"Collector"
+#define CKPT_FILE_ADTYPE		"CkptFile"
+#define USERAUTH_ADTYPE			"Authentication"
+#define LICENSE_ADTYPE			"License"
+#define STORAGE_ADTYPE			"Storage"
+#define NEGOTIATOR_ADTYPE		"Negotiator"
+#define HAD_ADTYPE				"HAD"
+#define XFER_SERVICE_ADTYPE		"XferService"
+#define LEASE_MANAGER_ADTYPE	"LeaseManager"
+#define CREDD_ADTYPE			"CredD"
+#define ANY_ADTYPE				"Any"
+#define GENERIC_ADTYPE			"Generic"
+#define SUBMITTER_ADTYPE		"Submitter"
+#define COMMAND_ADTYPE			"Command"
+#define REPLY_ADTYPE			"Reply"
+#define GATEWAY_ADTYPE			"Gateway"
+#define CLUSTER_ADTYPE			"Cluster"
 
-#ifndef __CONDOR_ADTYPES__
-#define __CONDOR_ADTYPES__
+// Enumerated list of ad types (for the query object)
+enum AdTypes
+{
+	NO_AD = -1,
+	QUILL_AD,
+	STARTD_AD,
+	SCHEDD_AD,
+	MASTER_AD,
+	GATEWAY_AD,
+	CKPT_SRVR_AD,
+	STARTD_PVT_AD,
+	SUBMITTOR_AD,
+	COLLECTOR_AD,
+	LICENSE_AD,
+	STORAGE_AD,
+	ANY_AD,
+	BOGUS_AD,		// placeholder: NUM_AD_TYPES used wrongly to be here
+	CLUSTER_AD,
+	NEGOTIATOR_AD,
+	HAD_AD,
+	GENERIC_AD,
+	CREDD_AD,
+	DATABASE_AD,
+	DBMSD_AD,
+	TT_AD,
+	XFER_SERVICE_AD,
+	LEASE_MANAGER_AD,
 
-#define QUILL_ADTYPE		"Database"
-#define DATABASE_ADTYPE		"Database"
-#define DBMSD_ADTYPE		"DbmsDaemon"
-#define TT_ADTYPE		"TTProcess"
-#define STARTD_ADTYPE		"Machine"
-#define SCHEDD_ADTYPE		"Scheduler"
-#define MASTER_ADTYPE		"DaemonMaster"
-#define CKPT_SRVR_ADTYPE	"CkptServer"
-#define JOB_ADTYPE		"Job"
-#define QUERY_ADTYPE		"Query"
-#define COLLECTOR_ADTYPE	"Collector"
-#define CKPT_FILE_ADTYPE	"CkptFile"
-#define USERAUTH_ADTYPE		"Authentication"
-#define LICENSE_ADTYPE		"License"
-#define STORAGE_ADTYPE		"Storage"
-#define NEGOTIATOR_ADTYPE	"Negotiator"
-#define HAD_ADTYPE		"HAD"
-#define CREDD_ADTYPE		"CredD"
-#define ANY_ADTYPE		"Any"
-#define SUBMITTER_ADTYPE	"Submitter"
-#define COMMAND_ADTYPE		"Command"
-#define REPLY_ADTYPE		"Reply"
+	// This should *ALWAYS* be at the end of this list
+	NUM_AD_TYPES,
+};
 
-#endif
+AdTypes
+AdTypeFromString(const char* adtype_string) ;
 
+const char*
+AdTypeToString( AdTypes type );
 
+#endif // __CONDOR_ADTYPES_H__

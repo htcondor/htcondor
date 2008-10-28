@@ -33,6 +33,7 @@
 #include "vmgahp.h"
 #include "vmgahp_error_codes.h"
 #include "condor_vm_universe_types.h"
+#include "../condor_privsep/condor_privsep.h"
 
 MyString caller_name;
 MyString job_user_name;
@@ -521,7 +522,16 @@ int systemCommand( ArgList &args, bool is_root, StringList *cmd_out )
 	}else {
 		prev = set_user_priv();
 	}
+#if !defined(WIN32)
+	if ( privsep_enabled() && (job_user_uid != get_condor_uid())) {
+		fp = privsep_popen(args, "r", 0, job_user_uid);
+	}
+	else {
+		fp = my_popen( args, "r", 0 );
+	}
+#else
 	fp = my_popen( args, "r", 0 );
+#endif
 	if ( fp == NULL ) {
 		MyString args_string;
 		args.GetArgsStringForDisplay( &args_string, 0 );
@@ -544,7 +554,9 @@ int systemCommand( ArgList &args, bool is_root, StringList *cmd_out )
 	if( result != 0 ) {
 		MyString args_string;
 		args.GetArgsStringForDisplay(&args_string,0);
-		vmprintf(D_ALWAYS, "Command returned non-zero: %s\n", args_string.Value());
+		vmprintf(D_ALWAYS,
+		         "Command returned non-zero: %s\n",
+		         args_string.Value());
 	}
 	return result;
 }

@@ -1592,11 +1592,11 @@ int main( int argc, char** argv )
 
 		// call config so we can call param.  
 	if ( mySubSystem->isType(SUBSYSTEM_TYPE_SHADOW) ) {
-			// Try to minimize shadow footprint by not loading
-			// the "extra" info from the config file
-			config( wantsQuiet, false, false );
+		// Try to minimize shadow footprint by not loading
+		// the "extra" info from the config file
+		config( wantsQuiet, false, false );
 	} else {
-			config( wantsQuiet, false, true );
+		config( wantsQuiet, false, true );
 	}
 
 

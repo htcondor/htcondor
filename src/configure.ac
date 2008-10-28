@@ -2123,11 +2123,11 @@ AS_IF([test "x$enable_netman" = xyes],
 
 AC_ARG_ENABLE([nest],
   AC_HELP_STRING([--enable-nest],
-    [enable Nest functionality (default: no)]),
+    [enable NeST functionality (default: no)]),
   [],
   [enable_nest=no])
 AS_IF([test "x$enable_nest" = xyes],
-  [AC_DEFINE([WANT_NEST], [1], [Define if enabling Nest])])
+  [AC_DEFINE([WANT_NEST], [1], [Define if enabling NeST])])
 
 AC_ARG_ENABLE([quill],
   AC_HELP_STRING([--enable-quill],
@@ -2180,17 +2180,21 @@ fi
 # checks for libraries
 ############################################################
 
-# The DRMAA C library needs to be compiled with pthreads in mind if
-# pthreads are available. This machinery ends up defining HAS_PTHREADS
-# In the build system which is then used to add the correct threading
-# flags to the compile line for drmaa code.
-AC_CHECK_LIB([pthread], [pthread_create],
-  [ac_pthreads=yes
-   AC_DEFINE([HAVE_PTHREADS],[1],[Define if pthreads are available])],
-  [ac_pthreads=no])
-
-# Check if this system support Thread Local Storage class.
-AX_TLS
+# Currently in Condor, threading in daemon core on Unix requires
+# both pthreads and thread local storage.  HACK: for right now
+# we know that only Linux meets that requirement, and furthermore
+# that TLS exists but is broken on ia64 (the compiler blows up).  So for now
+# we only want pthreads defined on Linux that is not ia64.  Once we 
+# remove the requirement on TLS in the code, we can safely remove 
+# this hack.
+if test $os = "Linux" && test $arch != "ia64"; then
+	AC_CHECK_LIB([pthread], [pthread_create],
+  		[ac_pthreads=yes
+   		AC_DEFINE([HAVE_PTHREADS],[1],[Define if pthreads are available])],
+  		[ac_pthreads=no])
+	# Check if this system support Thread Local Storage class.
+	AX_TLS
+fi
 
 
 ############################################################
@@ -2945,6 +2949,20 @@ AC_ARG_ENABLE([stork],
    fi])
 AS_IF([test "x$enable_stork" = xyes],
   [AC_DEFINE([WANT_STORK], [1], [Define if enabling Stork])])
+
+# NRL: Similar logic for the lease manager
+AC_ARG_ENABLE([lease-manager],
+  AC_HELP_STRING([--enable-lease-manager],
+    [enable lease manager functionality (default: platform dependent)]),
+  [],
+  [if test "$_cv_has_classads" = "yes" -a "$cv_ext_classads" = "yes" ; then
+    enable_lease_manager=yes;
+   else
+    enable_lease_manager=no;
+   fi])
+AS_IF([test "$enable_lease_manager" = "yes"],
+  [AC_DEFINE([WANT_LEASE_MANAGER], [1],[Define if enabling lease manager])])
+
 
 ############################################################
 # Configure-generated output

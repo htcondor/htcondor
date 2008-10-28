@@ -45,7 +45,8 @@ getPPStyleStr ()
     	case PP_STARTD_COD:		return "COD";
 		case PP_STARTD_STATE:	return "State";
 		case PP_STORAGE_NORMAL:	return "Storage";
-		case PP_ANY_NORMAL:	return "Any";
+		case PP_GENERIC_NORMAL:	return "Generic";
+		case PP_ANY_NORMAL:		return "Any";
     	case PP_VERBOSE:		return "Verbose";
     	case PP_XML:		    return "XML";
     	case PP_CUSTOM:			return "Custom";
@@ -63,7 +64,7 @@ setPPstyle (ppOption pps, int i, char *argv)
     static char *setArg = NULL;
 
 	if (argv == NULL) {
-		printf ("Set by arg %d (%-10s), PrettyPrint style = %s\n", 
+		printf ("Set by arg %d (%-10s), PrettyPrint style = %s\n",
 				setBy, setArg, getPPStyleStr());
 		return;
 	}
@@ -120,10 +121,10 @@ setType (char *dtype, int i, char *argv)
 				setBy, setArg, getTypeStr());
 		return;
 	}
-		 
+
 	// if the type has already been set, and is trying to be reset by default
 	// rules, override the default  (i.e., don't make a change)
-	if (setBy != 0 && i == 0) 
+	if (setBy != 0 && i == 0)
 		return;
 
     if (setArg == NULL) {
@@ -163,12 +164,12 @@ setType (char *dtype, int i, char *argv)
         } else
         if (strcmp (dtype, "STORAGE") == 0) {
             type = STORAGE_AD;
-        } else
-        if (strcmp(dtype, "ANY") == 0) {
-            type = ANY_AD;
 		} else
 		if (strcmp(dtype, "GENERIC") == 0) {
 			type = GENERIC_AD;
+        } else
+        if (strcmp(dtype, "ANY") == 0) {
+            type = ANY_AD;
         } else {
             fprintf (stderr, "Error:  Unknown entity type: %s\n", dtype);
             exit (1);
@@ -188,13 +189,12 @@ getModeStr()
 	switch (mode)
 	{
 		case MODE_NOTSET:				return "Not set";
-		case MODE_GENERIC:				return "Generic";
 		case MODE_STARTD_NORMAL:		return "Normal (Startd)";
 		case MODE_STARTD_AVAIL:			return "Available (Startd)";
 		case MODE_STARTD_RUN:			return "Run (Startd)";
 		case MODE_STARTD_COD:			return "COD (Startd)";
 #ifdef WANT_QUILL
-		case MODE_QUILL_NORMAL:		return "Normal (Quill)";
+		case MODE_QUILL_NORMAL:			return "Normal (Quill)";
 #endif /* WANT_QUILL */
 
 		case MODE_SCHEDD_NORMAL:		return "Normal (Schedd)";
@@ -203,9 +203,11 @@ getModeStr()
 		case MODE_CKPT_SRVR_NORMAL:		return "Normal (CkptSrvr)";
 		case MODE_COLLECTOR_NORMAL:		return "Normal (Collector)";
 	    case MODE_NEGOTIATOR_NORMAL:	return "Normal (Negotiator)";
-		case MODE_STORAGE_NORMAL:			return "Normal (Storage)";
+		case MODE_STORAGE_NORMAL:		return "Normal (Storage)";
+		case MODE_GENERIC_NORMAL:		return "Normal (Generic)";
+		case MODE_OTHER:				return "Generic";
 		case MODE_ANY_NORMAL:			return "Normal (Any)";
-		default:				return "<Unknown!>";
+		default:						return "<Unknown!>";
 	}
 	// should never get here
 	exit (1);
@@ -293,12 +295,17 @@ setMode (Mode mod, int i, char *argv)
 			setPPstyle (PP_STORAGE_NORMAL, i, argv);
 			break;
 
+		  case MODE_GENERIC_NORMAL:
+			setType ("GENERIC", i, argv);
+			setPPstyle (PP_GENERIC_NORMAL, i, argv);
+			break;
+
 		  case MODE_ANY_NORMAL:
 			setType ("ANY", i, argv);
 			setPPstyle (PP_ANY_NORMAL, i, argv);
 			break;
 
-		  case MODE_GENERIC:
+		  case MODE_OTHER:
 			setType ("GENERIC", i, argv);
 			setPPstyle (PP_GENERIC, i, argv);
 			break;

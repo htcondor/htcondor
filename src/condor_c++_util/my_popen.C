@@ -28,6 +28,8 @@
 #include "../condor_privsep/condor_privsep.h"
 #include "../condor_privsep/privsep_fork_exec.h"
 
+extern char** environ;
+
 #ifdef WIN32
 typedef HANDLE child_handle_t;
 #define INVALID_CHILD_HANDLE INVALID_HANDLE_VALUE;
@@ -424,6 +426,7 @@ my_popenv_impl( char *const args[],
 			        "my_popenv failure on %s\n",
 			        args[0]);
 			fclose(retp);
+			return NULL;
 		}
 	}
 

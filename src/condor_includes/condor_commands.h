@@ -276,6 +276,16 @@ const int INVALIDATE_ADS_GENERIC = 59;
 
 const int UPDATE_STARTD_AD_WITH_ACK = 60;
 
+const int UPDATE_XFER_SERVICE_AD		= 61;
+const int QUERY_XFER_SERVICE_ADS		= 62;
+const int INVALIDATE_XFER_SERVICE_ADS	= 63;
+
+const int UPDATE_LEASE_MANAGER_AD		= 64;
+const int QUERY_LEASE_MANAGER_ADS		= 65;
+const int INVALIDATE_LEASE_MANAGER_ADS  = 66;
+
+const int QUERY_GENERIC_ADS = QUERY_ANY_ADS;	// == 48
+
 /*
 *** Daemon Core Signals
 */
@@ -387,6 +397,14 @@ const int UPDATE_STARTD_AD_WITH_ACK = 60;
 #define TRANSFERD_WRITE_FILES	(TRANSFERD_BASE+2)
 /* files are being read from the transferd's storage */
 #define TRANSFERD_READ_FILES	(TRANSFERD_BASE+3)
+
+/*
+*** Commands used by the new lease manager daemon
+*/
+#define LEASE_MANAGER_BASE			75000
+#define LEASE_MANAGER_GET_LEASES	(LEASE_MANAGER_BASE+0)
+#define LEASE_MANAGER_RENEW_LEASE	(LEASE_MANAGER_BASE+1)
+#define LEASE_MANAGER_RELEASE_LEASE	(LEASE_MANAGER_BASE+2)
 
 
 /*

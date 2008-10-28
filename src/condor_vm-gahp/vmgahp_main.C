@@ -28,6 +28,7 @@
 #include "vmware_type.h"
 #include "xen_type.h"
 #include "subsystem_info.h"
+#include "../condor_privsep/condor_privsep.h"
 
 const char *vmgahp_version = "$VMGahpVersion " CONDOR_VMGAHP_VERSION " May 1 2007 Condor\\ VMGAHP $";
 
@@ -124,19 +125,13 @@ main_shutdown_graceful()
 }
 
 void 
-main_pre_dc_init(int argc, char* argv[]) 
+init_uids() 
 {
 #if !defined(WIN32)
-	bool SwitchUid = false;
+	bool SwitchUid = can_switch_ids() || privsep_enabled();
 
 	caller_uid = getuid();
 	caller_gid = getgid();
-
-	uid_t caller_euid = geteuid();
-	uid_t caller_egid = getegid();
-
-
-	SwitchUid = can_switch_ids();
 
 	// Set user uid/gid
 	MyString user_uid;
@@ -214,6 +209,11 @@ main_pre_dc_init(int argc, char* argv[])
 }
 
 void 
+main_pre_dc_init(int, char*[])
+{
+}
+
+void 
 main_pre_command_sock_init()
 {
 }
@@ -233,6 +233,8 @@ usage( char *name)
 
 int main_init(int argc, char *argv[])
 {
+	init_uids();
+
 	MyString vmtype;
 	MyString matchstring;
 

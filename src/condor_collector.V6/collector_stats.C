@@ -571,7 +571,7 @@ CollectorDaemonStatsList::updateStats( const char *class_name,
 
 // Publish statistics into our ClassAd
 int 
-CollectorDaemonStatsList::publish( ClassAd */*ad*/ )
+CollectorDaemonStatsList::publish( ClassAd * /*ad*/ )
 {
 	return 0;
 }
