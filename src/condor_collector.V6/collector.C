@@ -1163,6 +1163,7 @@ void CollectorDaemon::Config()
     // set the appropriate parameters in the collector engine
     collector.setClientTimeout( ClientTimeout );
     collector.scheduleHousekeeper( ClassadLifetime );
+	offline_plugin_.configure();
 
     // if we're not the View Collector, let's set something up to forward
     // all of our ads to the view collector.

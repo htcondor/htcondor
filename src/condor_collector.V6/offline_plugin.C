@@ -51,7 +51,7 @@ OfflineCollectorPlugin::OfflineCollectorPlugin (void) throw ()
 	m_persistent_store = NULL;
 
     /* configure the plug-in for first use */
-    configure ();
+    //configure ();
 }
 
 OfflineCollectorPlugin::~OfflineCollectorPlugin (void )
