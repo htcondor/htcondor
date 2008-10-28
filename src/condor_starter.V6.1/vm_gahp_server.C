@@ -37,6 +37,8 @@
 #include "vm_gahp_request.h"
 #include "setenv.h"
 
+extern CStarter* Starter;
+
 VMGahpServer::VMGahpServer(const char *vmgahpserver,
                            const char *vmtype,
                            ClassAd* job_ad) :
@@ -295,7 +297,22 @@ VMGahpServer::startUp(Env *job_env, const char *workingdir, int nice_inc, Family
 		// Condor runs as root
 		vmgahp_user_uid = get_user_uid();
 		vmgahp_user_gid = get_user_gid();
-	}else {
+	}
+	else if (Starter->condorPrivSepHelper() != NULL) {
+		vmgahp_user_uid = Starter->condorPrivSepHelper()->get_uid();
+		char* user_name;
+		if (!pcache()->get_user_name(vmgahp_user_uid, user_name)) {
+			EXCEPT("unable to get user name for UID %u", vmgahp_user_uid);
+		}
+		if (!pcache()->get_user_ids(user_name,
+		                            vmgahp_user_uid,
+		                            vmgahp_user_gid))
+		{
+			EXCEPT("unable to get GID for UID %u", vmgahp_user_uid);
+		}
+		free(user_name);
+	}
+	else {
 		// vmgahp may have setuid-root (e.g. vmgahp for Xen)
 		vmgahp_user_uid = get_condor_uid();
 		vmgahp_user_gid = get_condor_gid();
