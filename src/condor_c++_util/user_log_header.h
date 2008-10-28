@@ -1,0 +1,138 @@
+/***************************************************************
+ *
+ * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * University of Wisconsin-Madison, WI.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License"); you
+ * may not use this file except in compliance with the License.  You may
+ * obtain a copy of the License at
+ * 
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ ***************************************************************/
+
+
+#ifndef _USER_LOG_HEADER_H
+#define _USER_LOG_HEADER_H
+
+#include "condor_common.h"
+#include <time.h>
+#include "MyString.h"
+#include "read_user_log_state.h"
+
+// User log header info
+
+// Simple class to extract info from a log file header event
+class UserLogHeader
+{
+public:
+	UserLogHeader( void );
+	UserLogHeader( const ULogEvent *event );
+	UserLogHeader( const UserLogHeader & );
+	~UserLogHeader( void ) { };
+
+	// Valid?
+	bool IsValid( void ) const { return m_valid; };
+
+	// Get/set methods
+	void getId( MyString &id ) const
+		{ id = m_id; };
+	const MyString &getId( void ) const
+		{ return m_id; };
+	void setId( const MyString &id )
+		{ m_id = id; };
+
+	int getSequence( void ) const
+		{ return m_sequence; };
+	int setSequence( int sequence )
+		{ return m_sequence = sequence; };
+	int incSequence( void )
+		{ return ++m_sequence; };
+
+	time_t getCtime( void ) const
+		{ return m_ctime; };
+	time_t setCtime( time_t ctime )
+		{ return m_ctime = ctime; };
+
+	filesize_t getSize( void ) const
+		{ return m_size; };
+	filesize_t setSize( filesize_t size )
+		{ return m_size = size; };
+
+	int64_t getNumEvents( void ) const
+		{ return m_num_events; };
+	int64_t setNumEvents( int64_t num_events )
+		{ return m_num_events = num_events; };
+
+	filesize_t getFileOffset( void ) const
+		{ return m_file_offset; };
+	filesize_t setFileOffset( filesize_t file_offset )
+		{ return m_file_offset = file_offset; };
+	filesize_t addFileOffset( filesize_t add )
+		{ return m_file_offset += add; };
+
+	int64_t getEventOffset( void ) const
+		{ return m_event_offset; };
+	int64_t setEventOffset( int64_t event_offset )
+		{ return m_event_offset = event_offset; };
+	int64_t addEventOffset( int64_t num_events )
+		{ return m_event_offset += num_events; };
+	
+	// Extract data from an event
+	int ExtractEvent( const ULogEvent *);
+
+protected:
+	MyString	m_id;
+	int			m_sequence;
+	time_t		m_ctime;
+	filesize_t	m_size;				// Size of this file
+	int64_t		m_num_events;		// # events in this file
+	filesize_t	m_file_offset;		// Offset in the "big file"
+	int64_t		m_event_offset;		// Event offset in the "big file"
+
+	bool		m_valid;
+};
+
+
+// Simple class to extract info from a log file header event
+class ReadUserLogHeader : public UserLogHeader
+{
+public:
+	ReadUserLogHeader( void )
+		{ m_valid = false; };
+	ReadUserLogHeader( const ULogEvent *event )
+		{ m_valid = false; ExtractEvent( event ); };
+	~ReadUserLogHeader( void ) { };
+
+	// Read the header from a file
+	int Read( ReadUserLog &reader );
+
+private:
+};
+
+// Simple class to extract info from a log file header event
+class WriteUserLogHeader : public UserLogHeader
+{
+public:
+	WriteUserLogHeader( void )
+		{ };
+	WriteUserLogHeader( const UserLogHeader &other )
+		: UserLogHeader( other )
+		{ };
+	~WriteUserLogHeader( void )
+		{ };
+
+	// Read the header from a file
+	int Write( UserLog &writer, FILE *fp = NULL );
+	bool GenerateEvent( GenericEvent &event );
+
+private:
+};
+
+#endif

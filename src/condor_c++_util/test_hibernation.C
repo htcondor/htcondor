@@ -173,11 +173,11 @@ CheckArgs(int argc, const char **argv, Options &opts)
 		}
 
 		if ( arg.Match( 'd', "debug") ) {
-			if ( arg.HasOpt() ) {
-				set_debug_flags( const_cast<char *>(arg.Opt()) );
+			if ( arg.hasOpt() ) {
+				set_debug_flags( const_cast<char *>(arg.getOpt()) );
 				index = arg.ConsumeOpt( );
 			} else {
-				fprintf(stderr, "Value needed for %s argument\n", arg.Arg() );
+				fprintf(stderr, "Value needed for %s\n", arg.Arg() );
 				printf("%s", usage);
 				return true;
 			}
@@ -192,11 +192,8 @@ CheckArgs(int argc, const char **argv, Options &opts)
 			opts.m_verbosity++;
 
 		} else if ( arg.Match("verbosity") ) {
-			if ( arg.OptIsNumber() ) {
-				opts.m_verbosity = atoi(argv[index]);
-				index = arg.ConsumeOpt( );
-			} else {
-				fprintf(stderr, "Value needed for %s argument\n", arg.Arg() );
+			if ( ! arg.getOpt(opts.m_verbosity) ) {
+				fprintf(stderr, "Value needed for %s\n", arg.Arg() );
 				printf("%s", usage);
 				return true;
 			}
@@ -207,15 +204,15 @@ CheckArgs(int argc, const char **argv, Options &opts)
 
 		} else if ( !arg.ArgIsOpt()  &&  (fixed == 0)  &&  arg.isOptInt() ) {
 			fixed++;
-			opts.m_address = arg.getOptStr();
+			opts.m_address = arg.getOpt();
 
 		} else if ( !arg.ArgIsOpt()  &&  (fixed == 0) ) {
-			opts.m_if_name = arg.getOptStr();
+			opts.m_if_name = arg.getOpt();
 			fixed++;
 
 		} else if ( !arg.ArgIsOpt() && (fixed == 1) ) {
 			fixed++;
-			const char *s = arg.getOptStr();
+			const char *s = arg.getOpt();
 			opts.m_state = HibernatorBase::stringToSleepState( s );
 			if ( opts.m_state == HibernatorBase::NONE ) {
 				fprintf( stderr, "Unknown state '%s'\n", s );

@@ -42,6 +42,7 @@
 #include "condor_environ.h"
 #include "store_cred.h"
 #include "setenv.h"
+#include "file_lock.h"
 
 #if HAVE_DLOPEN
 #include "MasterPlugin.h"
@@ -856,7 +857,7 @@ lock_or_except( const char* file_name )
 	// This must be a global so that it doesn't go out of scope
 	// cause the destructor releases the lock.
 	MasterLock = new FileLock( MasterLockFD, NULL, file_name );
-	MasterLock->set_blocking( FALSE );
+	MasterLock->setBlocking( FALSE );
 	if( !MasterLock->obtain(WRITE_LOCK) ) {
 		EXCEPT( "Can't get lock on \"%s\"", file_name );
 	}

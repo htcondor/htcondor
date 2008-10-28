@@ -34,6 +34,7 @@
 #include "setenv.h"
 #include "time_offset.h"
 #include "subsystem_info.h"
+#include "file_lock.h"
 #include "exit.h"
 
 #if HAVE_EXT_GCB
@@ -515,7 +516,7 @@ dc_touch_lock_files(Service *)
 	// FileLock Object.
 	p = set_condor_priv();
 
-	FileLock::update_all_lock_timestamps();
+	FileLock::updateAllLockTimestamps();
 
 	set_priv(p);
 

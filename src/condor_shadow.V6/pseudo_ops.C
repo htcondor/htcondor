@@ -1557,7 +1557,6 @@ display_ip_addr( unsigned int addr )
   condor_starter.  This is the new version which passes a STARUP_INFO
   structure rather than a PROC structure.
 */
-char * find_env( const char * name, const char * env );
 char *strdup( const char *);
 char *Strdup( const char *str)
 {

@@ -1219,6 +1219,14 @@ SOURCE="..\src\condor_c++_util\user_log.C"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\user_log.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\user_log_header.C"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\user_log.c++.h"
 # End Source File
 # Begin Source File

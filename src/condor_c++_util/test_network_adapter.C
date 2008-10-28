@@ -154,8 +154,8 @@ CheckArgs(int argc, const char **argv, Options &opts)
 		}
 
 		if ( arg.Match( 'd', "debug") ) {
-			if ( arg.HasOpt() ) {
-				set_debug_flags( const_cast<char *>(arg.Opt()) );
+			if ( arg.hasOpt() ) {
+				set_debug_flags( const_cast<char *>(arg.getOpt()) );
 				index = arg.ConsumeOpt( );
 			} else {
 				fprintf(stderr, "Value needed for %s argument\n", arg.Arg() );
@@ -173,10 +173,7 @@ CheckArgs(int argc, const char **argv, Options &opts)
 			opts.m_verbosity++;
 
 		} else if ( arg.Match("verbosity") ) {
-			if ( arg.OptIsNumber() ) {
-				opts.m_verbosity = arg.getOptInt( );
-				index = arg.ConsumeOpt( );
-			} else {
+			if ( arg.getOpt(opts.m_verbosity) ) {
 				fprintf(stderr, "Value needed for %s argument\n", arg.Arg() );
 				printf("%s", usage);
 				return true;
@@ -187,15 +184,15 @@ CheckArgs(int argc, const char **argv, Options &opts)
 			return true;
 
 		} else if ( !arg.ArgIsOpt()  &&  (optno == 0)  &&  arg.isOptInt() ) {
-			opts.m_address = arg.getOptStr();
+			opts.m_address = arg.getOpt();
 			optno++;
 
 		} else if ( !arg.ArgIsOpt()  &&  (optno == 0) ) {
-			opts.m_if_name = arg.getOptStr();
+			opts.m_if_name = arg.getOpt();
 			optno++;
 
 		} else if ( !arg.ArgIsOpt()  &&  (optno == 1)  &&  arg.isOptBool() ) {
-			opts.m_is_primary = arg.getOptBool();
+			arg.getOpt(opts.m_is_primary, false);
 			optno++;
 
 		} else {

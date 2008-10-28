@@ -48,6 +48,7 @@ struct Options
 	bool			missedCheck;
 	bool			exitAfterInit;
 	int				maxExec;
+	bool			exit;
 	int				sleep;
 	int				term;
 	int				verbosity;
@@ -109,18 +110,21 @@ CheckArgs(int argc, const char **argv, Options &opts)
 
 	const char *	usage =
 		"Usage: test_log_reader [options] <filename>\n"
-		"  --debug <level>: debug level (e.g., D_FULLDEBUG)\n"
-		"  --maxexec <number>: maximum number of execute events to read\n"
-		"  --misscheck: Enable missed event checking "
+		"  --debug|-d <level>: debug level (e.g., D_FULLDEBUG)\n"
+		"  --max-exec <number>: maximum number of execute events to read\n"
+		"  --miss-check: Enable missed event checking "
 		"(valid only with test writer)\n"
-		"  --persist <filename>: file to persist to/from (implies -rotation)\n"
-		"  --persist-dump: dump the persistent file state after reading it\n"
+		"  --persist|-p <filename>: file to persist to/from "
+		"(implies --rotation)\n"
+		"  --dump-state: dump the persisted reader state after reading it\n"
 		"  --ro|--rw|--wo: Set persitent state to "
 		"read-only/read-write/write-only\n"
 		"  --init-only: exit after initialization\n"
-		"  --rotation <n>: enable rotation handling, set max #\n"
+		"  --rotation|-r <n>: enable rotation handling, set max #\n"
 		"  --no-rotation: disable rotation handling\n"
 		"  --sleep <number>: how many seconds to sleep between events\n"
+		"  --exit|x: Exit when no event available\n"
+		"  --no-term: No limit on terminte events\n"
 		"  --term <number>: number of terminate events to exit after\n"
 		"  --usage|--help|-h: print this message and exit\n"
 		"  -v: Increase verbosity level by 1\n"
@@ -133,6 +137,7 @@ CheckArgs(int argc, const char **argv, Options &opts)
 	opts.readPersist = false;
 	opts.writePersist = false;
 	opts.maxExec = 0;
+	opts.exit = false;
 	opts.sleep = 5;
 	opts.term = 1;
 	opts.verbosity = 1;
@@ -150,44 +155,42 @@ CheckArgs(int argc, const char **argv, Options &opts)
 			status = STATUS_ERROR;
 		}
 
-		if ( arg.Match("debug") ) {
-			if ( arg.HasOpt() ) {
-				set_debug_flags( const_cast<char *>(arg.Opt()) );
+		if ( arg.Match('d', "debug") ) {
+			if ( arg.hasOpt() ) {
+				set_debug_flags( const_cast<char *>(arg.getOpt()) );
 				index = arg.ConsumeOpt( );
 			} else {
-				fprintf(stderr, "Value needed for --debug argument\n");
+				fprintf(stderr, "Value needed for %s\n", arg.ArgStr() );
 				printf("%s", usage);
 				status = STATUS_ERROR;
 			}
 
-		} else if ( arg.Match("maxexec") ) {
-			if ( arg.OptIsNumber() ) {
-				opts.maxExec = atoi(argv[index]);
-				index = arg.ConsumeOpt( );
-			} else {
-				fprintf(stderr, "Value needed for --maxexec argument\n");
+		} else if ( arg.Match("max-exec") ) {
+			if ( !arg.getOpt( opts.maxExec ) ) {
+				fprintf(stderr, "Value needed for %s\n", arg.ArgStr() );
 				printf("%s", usage);
 				status = STATUS_ERROR;
 			}
 
-		} else if ( arg.Match("misscheck") ) {
+		} else if ( arg.Match("miss-check") ) {
 			opts.missedCheck = true;
 
-		} else if ( arg.Match("persist") ) {
-			if ( arg.HasOpt() ) {
-				opts.persistFile = argv[index];
+		} else if ( arg.Match('p', "persist") ) {
+			if ( arg.hasOpt() ) {
+				arg.getOpt( opts.persistFile );
 				opts.rotation = true;
-				opts.max_rotations = 0;
+				if ( opts.max_rotations == 0 ) {
+					opts.max_rotations = 1;
+				}
 				opts.readPersist = true;
 				opts.writePersist = true;
-				index = arg.ConsumeOpt( );
 			} else {
-				fprintf(stderr, "Value needed for --persist argument\n");
+				fprintf(stderr, "Value needed for %s\n", arg.ArgStr() );
 				printf("%s", usage);
 				status = STATUS_ERROR;
 			}
 
-		} else if ( arg.Match("persist-dump") ) {
+		} else if ( arg.Match("dump-state") ) {
 			opts.dumpState = true;
 
 		} else if ( arg.Match("init-only") ) {
@@ -201,35 +204,32 @@ CheckArgs(int argc, const char **argv, Options &opts)
 			opts.readPersist = true;
 			opts.writePersist = true;
 
+		} else if ( arg.Match("exit") ) {
+			opts.exit = true;
 
-		} else if ( arg.Match("rotation") ) {
-			if ( arg.OptIsNumber() ) {
-				opts.max_rotations = atoi(argv[index]);
+		} else if ( arg.Match( 'r', "rotation") ) {
+			if ( arg.getOpt( opts.max_rotations ) ) {
 				opts.rotation = opts.max_rotations > 0;
-				index = arg.ConsumeOpt( );
 			} else {
-				fprintf(stderr, "Value needed for --rotation argument\n");
+				fprintf(stderr, "Value needed for %s\n", arg.ArgStr() );
 			}
 
 		} else if ( arg.Match("no-rotation") ) {
 			opts.rotation = false;
 
 		} else if ( arg.Match("sleep") ) {
-			if ( arg.OptIsNumber() ) {
-				opts.sleep = atoi(argv[index]);
-				index = arg.ConsumeOpt( );
-			} else {
-				fprintf(stderr, "Value needed for --sleep argument\n");
+			if ( !arg.getOpt( opts.sleep ) ) {
+				fprintf(stderr, "Value needed for %s\n", arg.ArgStr() );
 				printf("%s", usage);
 				status = STATUS_ERROR;
 			}
 
+		} else if ( arg.Match("no-term") ) {
+			opts.term = -1;
+
 		} else if ( arg.Match("term") ) {
-			if ( arg.OptIsNumber() ) {
-				opts.term = atoi(argv[index]);
-				index = arg.ConsumeOpt( );
-			} else {
-				fprintf(stderr, "Value needed for --term argument\n");
+			if ( !arg.getOpt( opts.term ) ) {
+				fprintf(stderr, "Value needed for %s\n", arg.ArgStr() );
 				printf("%s", usage);
 				status = STATUS_ERROR;
 			}
@@ -244,11 +244,8 @@ CheckArgs(int argc, const char **argv, Options &opts)
 			opts.verbosity++;
 
 		} else if ( arg.Match("verbosity") ) {
-			if ( arg.OptIsNumber() ) {
-				opts.verbosity = atoi(argv[index]);
-				index = arg.ConsumeOpt( );
-			} else {
-				fprintf(stderr, "Value needed for --verbosity argument\n");
+			if ( !arg.getOpt( opts.verbosity ) ) {
+				fprintf(stderr, "Value needed for %s\n", arg.ArgStr() );
 				printf("%s", usage);
 				status = STATUS_ERROR;
 			}
@@ -337,8 +334,8 @@ ReadEvents(Options &opts)
 	signal( SIGQUIT, handle_sig );
 	signal( SIGINT, handle_sig );
 
-	int		executeEventCount = 0;
-	int		terminatedEventCount = 0;
+	int		execEventCount = 0;
+	int		termEventCount = 0;
 	bool	done = (opts.term == 0);
 	bool	missedLast = false;
 	int		prevCluster=999, prevProc=999, prevSubproc=999;
@@ -398,7 +395,7 @@ ReadEvents(Options &opts)
 					printf(" (execute)\n");
 				}
 				if ( opts.maxExec != 0 &&
-						++executeEventCount > opts.maxExec ) {
+						++execEventCount > opts.maxExec ) {
 					if ( opts.verbosity >= VERB_ERROR ) {
 						fprintf(stderr, "Maximum number of execute "
 								"events (%d) exceeded\n", opts.maxExec);
@@ -413,7 +410,7 @@ ReadEvents(Options &opts)
 				if ( opts.verbosity >= VERB_ALL ) {
 					printf(" (terminated)\n");
 				}
-				if ( opts.term > 0 && ++terminatedEventCount >= opts.term ) {
+				if ( (opts.term > 0) && (++termEventCount >= opts.term) ) {
 					if ( opts.verbosity >= VERB_ALL ) {
 						printf( "Reached terminated event limit (%d); %s\n",
 								opts.term, "exiting" );
@@ -455,7 +452,12 @@ ReadEvents(Options &opts)
 			}
 
 		} else if ( outcome == ULOG_NO_EVENT ) {
-			sleep(opts.sleep);
+			if ( opts.exit ) {
+				done = true;
+			}
+			else {
+				sleep(opts.sleep);
+			}
 			missedLast = false;
 
 		} else if ( outcome == ULOG_MISSED_EVENT ) {

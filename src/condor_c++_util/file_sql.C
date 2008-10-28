@@ -26,6 +26,7 @@
 #include "file_sql.h"
 #include "truncate.h"
 #include "subsystem_info.h"
+#include "file_lock.h"
 
 #include <sys/stat.h>
 

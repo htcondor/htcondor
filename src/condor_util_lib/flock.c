@@ -61,7 +61,7 @@ flock( int fd, int op )
 	f.l_start = 0;			/* flock only supports locking whole files */
 	f.l_len = 0;
 	f.l_whence = SEEK_SET;
-	f.l_pid = 0;
+	f.l_pid = getpid();
 
 	if( op & LOCK_SH ) {			/* shared */
 		f.l_type = F_RDLCK;
