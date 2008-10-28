@@ -300,23 +300,18 @@ ReadMultipleUserLogs::LogGrew(LogFileEntry &log)
 	    return false;
 	}
 
-    int fd = log.readUserLog.getfd();
-    ASSERT( fd != -1 );
-    struct stat buf;
-    
-    if( fstat( fd, &buf ) == -1 ) {
-		dprintf( D_ALWAYS, "ReadMultipleUserLogs error: can't stat "
-					"condor log (%s): %s\n",
-					  log.strFilename.GetCStr(), strerror( errno ) );
+	ReadUserLog::FileStatus fs = log.readUserLog.CheckFileStatus( );
+
+	if ( ReadUserLog::LOG_STATUS_ERROR == fs ) {
+		dprintf( D_FULLDEBUG,
+				 "ReadMultipleUserLogs error: can't stat "
+				 "condor log (%s): %s\n",
+				 log.strFilename.GetCStr(), strerror( errno ) );
 		return false;
 	}
-    
-    int oldSize = log.logSize;
-    log.logSize = buf.st_size;
-    
-    bool grew = (buf.st_size > oldSize);
+	bool grew = ( fs != ReadUserLog::LOG_STATUS_NOCHANGE );
     dprintf( D_FULLDEBUG, "ReadMultipleUserLogs: %s\n",
-				  grew ? "log GREW!" : "no log growth..." );
+			 grew ? "log GREW!" : "no log growth..." );
 
 	return grew;
 }

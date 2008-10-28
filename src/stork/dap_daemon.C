@@ -25,6 +25,7 @@
  * March 2000
  * ==========================================================================*/
 
+#define _CONDOR_ALLOW_OPEN
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_daemon_core.h"
@@ -41,9 +42,19 @@ char * xmllogfilename = NULL;
 char * userlogfilename = NULL;
 char * clientagenthost = NULL;
 
-extern int  transfer_dap_reaper_id, reserve_dap_reaper_id, release_dap_reaper_id;
-extern int  requestpath_dap_reaper_id;
+// Timers
+int IdleJobMonitorInterval;
+int IdleJobMonitorTid;
+int HungJobMonitorInterval;
+int HungJobMonitorTid;
+int RescheduledJobMonitorInterval;
+int RescheduledJobMonitorTid;
+int LowWaterTid;
 
+extern int  transfer_dap_reaper_id, reserve_dap_reaper_id;
+extern int  release_dap_reaper_id;
+extern int  requestpath_dap_reaper_id;
+extern int  low_water_reaper_id;
 
 
 /* ==========================================================================
@@ -53,14 +64,14 @@ void Usage()
   fprintf(stderr,
 	  "==============================================================\n");
   fprintf(stderr,"USAGE: stork_server\n"); 
-  fprintf(stderr,"          [ -t           ] // output to stdin\n");
-  fprintf(stderr,"          [ -p           ] // port on which to run Stork Server\n");
-  fprintf(stderr,"          [ -help        ] // stork help screen\n");
-  fprintf(stderr,"          [ -Config      ] // stork config file\n");
-  fprintf(stderr,"          [ -Serverlog   ] // stork server log in ClassAds\n");
-  fprintf(stderr,"          [ -Xmllog      ] // stork server log in XML format\n");
-  fprintf(stderr,"          [ -Userlog     ] // stork userlog in XMLformat\n");
-  fprintf(stderr,"          [ -Clientagent ] // host where client agent is running\n");
+  fprintf(stderr,"   [ -t           ] // output to stdin\n");
+  fprintf(stderr,"   [ -p           ] // port on which to run Stork Server\n");
+  fprintf(stderr,"   [ -help        ] // stork help screen\n");
+  fprintf(stderr,"   [ -Config      ] // stork config file\n");
+  fprintf(stderr,"   [ -Serverlog   ] // stork server log in ClassAds\n");
+  fprintf(stderr,"   [ -Xmllog      ] // stork server log in XML format\n");
+  fprintf(stderr,"   [ -Userlog     ] // stork userlog in XMLformat\n");
+  fprintf(stderr,"   [ -Clientagent ] // host where client agent is running\n");
   fprintf(stderr,
 	  "==============================================================\n");
   exit (1);
@@ -142,65 +153,118 @@ void parse_arguments(int argc, char **argv)
 	  "==============================================================\n");
 }
 
+#include "stork-lm.h"
 
 /* ============================================================================
  * initializations for the reqex_daemon
  * ==========================================================================*/
 int main_init(int argc, char **argv)
 {
-  parse_arguments(argc, argv);
+	parse_arguments(argc, argv);
 
-  //register timers (start_time,period,....)
-  /*  daemonCore->Register_Timer(0,
-			     (TimerHandler)initializations,
-			     "initializations");*/
+	//register timers (start_time,period,....)
+	/*  daemonCore->Register_Timer(0,
+		(TimerHandler)initializations,
+		"initializations");*/
 
+	IdleJobMonitorInterval =
+		param_integer(
+			"STORK_IDLE_JOB_MONITOR",
+			STORK_IDLE_JOB_MONITOR_DEFAULT,
+			STORK_IDLE_JOB_MONITOR_MIN);
+	IdleJobMonitorTid = 
+		daemonCore->Register_Timer(
+			1,							// deltawhen
+			IdleJobMonitorInterval,		// period
+			(TimerHandler)call_main,	// event
+			"call_main");				// description
+
+	daemonCore->Register_Command(STORK_SUBMIT, "STORK_SUBMIT",
+								 (CommandHandler)&handle_stork_submit,
+								 "handle_stork_submit", NULL,WRITE);
+
+	daemonCore->Register_Command(STORK_STATUS, "STORK_STATUS",
+								 (CommandHandler)&handle_stork_status,
+								 "handle_stork_status", NULL,WRITE);
+
+
+	daemonCore->Register_Command(STORK_LIST, "STORK_LIST",
+								 (CommandHandler)&handle_stork_list,
+								 "handle_stork_list", NULL,WRITE);
+
+	daemonCore->Register_Command(STORK_REMOVE, "STORK_REMOVE",
+								 (CommandHandler)&handle_stork_remove,
+								 "handle_stork_remove", NULL,WRITE);
   
+	HungJobMonitorInterval =
+		param_integer(
+			"STORK_HUNG_JOB_MONITOR",
+			STORK_HUNG_JOB_MONITOR_DEFAULT,
+			STORK_HUNG_JOB_MONITOR_MIN);
+	HungJobMonitorTid = 
+		daemonCore->Register_Timer(
+			4,							// deltawhen
+			HungJobMonitorInterval,		// period
+			(TimerHandler)regular_check_for_requests_in_process,
+			"check_for_requests_in_process");
 
-   daemonCore->Register_Timer(1, 1,
-			     (TimerHandler)call_main,
-			     "call_main");
+	// SC05 Hackery
+#if SC2005_DEMO
+	LowWaterTid =
+		daemonCore->Register_Timer(
+			1,							// deltawhen
+			60,		// period
+			(TimerHandler) low_water_timer,
+			"low_water_timer");
+#endif
 
-  daemonCore->Register_Command(STORK_SUBMIT, "STORK_SUBMIT",
-			       (CommandHandler)&handle_stork_submit,
-			       "handle_stork_submit", NULL,WRITE);
+	RescheduledJobMonitorInterval =
+		param_integer(
+			"STORK_RESCHEDULED_JOB_MONITOR",
+			STORK_RESCHEDULED_JOB_MONITOR_DEFAULT,
+			STORK_RESCHEDULED_JOB_MONITOR_MIN);
+	RescheduledJobMonitorTid = 
+		daemonCore->Register_Timer(
+			7,							// deltawhen
+			RescheduledJobMonitorInterval,	// period
+			(TimerHandler)regular_check_for_rescheduled_requests,
+			"regular_check_for_rescheduled_requests");
 
-  daemonCore->Register_Command(STORK_STATUS, "STORK_STATUS",
-                               (CommandHandler)&handle_stork_status,
-                               "handle_stork_status", NULL,WRITE);
+	//register reaper functions
+	transfer_dap_reaper_id =
+		daemonCore->Register_Reaper("transfer_dap_reaper",
+									(ReaperHandler)transfer_dap_reaper,
+									"reaper for transfer DaP");
 
+	reserve_dap_reaper_id =
+		daemonCore->Register_Reaper("reserve_dap_reaper",
+									(ReaperHandler)reserve_dap_reaper,
+									"reaper for reserve DaP");
 
-  daemonCore->Register_Command(STORK_LIST, "STORK_LIST",
-                               (CommandHandler)&handle_stork_list,
-                               "handle_stork_list", NULL,WRITE);
+	release_dap_reaper_id =
+		daemonCore->Register_Reaper("release_dap_reaper",
+									(ReaperHandler)release_dap_reaper,
+									"reaper for release DaP");
 
-  daemonCore->Register_Command(STORK_REMOVE, "STORK_REMOVE",
-                               (CommandHandler)&handle_stork_remove,
-                               "handle_stork_remove", NULL,WRITE);
-  
-  daemonCore->Register_Timer(300, 300,
-			     (TimerHandler)regular_check_for_requests_in_process,
-			     "check_for_requests_in_process");
-  daemonCore->Register_Timer(5, 5,
-			     (TimerHandler)regular_check_for_rescheduled_requests,
-			     "regular_check_for_rescheduled_requests");
-  
+	requestpath_dap_reaper_id =
+		daemonCore->Register_Reaper("requestpath_dap_reaper",
+									(ReaperHandler)requestpath_dap_reaper,
+									"reaper for requestpath DaP");
 
-  //register reaper functions
-  transfer_dap_reaper_id = daemonCore->Register_Reaper("transfer_dap_reaper",(ReaperHandler)transfer_dap_reaper, "reaper for transfer DaP");
+	// SC05 Hackery
+#if SC2005_DEMO
+	low_water_reaper_id =
+		daemonCore->Register_Reaper("low_water_reaper",
+									(ReaperHandler)low_water_reaper,
+									"reaper for low_water");
+#endif
 
-  reserve_dap_reaper_id = daemonCore->Register_Reaper("reserve_dap_reaper",(ReaperHandler)reserve_dap_reaper, "reaper for reserve DaP");
+	if (!initializations()) {
+		DC_Exit (1);
+		return FALSE;
+	}
 
-  release_dap_reaper_id = daemonCore->Register_Reaper("release_dap_reaper",(ReaperHandler)release_dap_reaper, "reaper for release DaP");
-
-  requestpath_dap_reaper_id = daemonCore->Register_Reaper("requestpath_dap_reaper",(ReaperHandler)requestpath_dap_reaper, "reaper for requestpath DaP");
-
-  if (!initializations()) {
-    DC_Exit (1);
-    return FALSE;
-  }
-
-  return TRUE;
+	return TRUE;
 }
 
 /* ============================================================================
@@ -208,20 +272,22 @@ int main_init(int argc, char **argv)
  * ==========================================================================*/
 int main_config(bool v)
 {
-  dprintf(D_ALWAYS,"RECONFIGURING ......\n");
-  read_config_file();
-  return TRUE;
+	(void) v;
+	dprintf(D_ALWAYS,"RECONFIGURING ......\n");
+	read_config_file();
+	return TRUE;
 }
 
 /* ============================================================================
  * shutdown reqex_daemon fast
  * ==========================================================================*/
-int main_shutdown_fast()
+int main_shutdown_fast(void)
 {
-  dprintf(D_ALWAYS,"SHUTDOWN FAST ....\n");
+	dprintf(D_ALWAYS,"SHUTDOWN FAST ....\n");
+	terminate(TERMINATE_FAST);
   
-  DC_Exit(0);
-  return TRUE;	// to satisfy c++
+	DC_Exit(0);
+	return TRUE;	// to satisfy c++
 }
 
 /* ============================================================================
@@ -229,74 +295,86 @@ int main_shutdown_fast()
  * ==========================================================================*/
 int main_shutdown_graceful()
 {
-  dprintf(D_ALWAYS,"SHUTDOWN GRACEFULLY ....\n");
+	dprintf(D_ALWAYS,"SHUTDOWN GRACEFULLY ....\n");
+	terminate(TERMINATE_GRACEFUL);
 
-  DC_Exit(0);
-  return TRUE;	// to satisfy c++
+	DC_Exit(0);
+	return TRUE;	// to satisfy c++
 }
 
 
-void main_pre_dc_init(int argc, char **argv) {
+void main_pre_dc_init(int argc, char **argv)
+{
+	(void) argc;
+	(void) argv;
+}
 
+int
+handle_stork_submit_more(Service *, Stream *s)
+{
+	return write_requests_to_file((ReliSock*)s);
 }
 
 int 
-handle_stork_submit(Service *, int command, Stream *s) {
-  dprintf (D_COMMAND, "handle_stork_submit\n");
-  if (s->type( ) != Stream::reli_sock ) {
-    dprintf (D_ALWAYS, "ERROR: Socket not of type reli_sock!\n");
-    return FALSE;
-  }
-  
-  return write_requests_to_file ((ReliSock*)s);
+handle_stork_submit(Service *, int command, Stream *s)
+{
+	dprintf (D_COMMAND, "handle_stork_submit (%d)\n", command);
+	if (s->type( ) != Stream::reli_sock ) {
+		dprintf (D_ALWAYS, "ERROR: Socket not of type reli_sock!\n");
+		return FALSE;
+	}
+	int rc = write_requests_to_file ((ReliSock*)s);
+	if(rc == KEEP_STREAM) {
+		daemonCore->Register_Socket(s,
+									"STORK_SUBMIT",
+									(SocketHandler)&handle_stork_submit_more,
+									"handle_stork_submit", NULL, WRITE);
+
+	}
+	return rc;
 }
 
 
 void
-main_pre_command_sock_init( )
+main_pre_command_sock_init( void )
 {
 }
 
 
 int
-handle_stork_list(Service *, int command, Stream *s) {
-  dprintf (D_COMMAND, "handle_stork_list\n");
-  if (s->type( ) != Stream::reli_sock ) {
-    dprintf (D_ALWAYS, "ERROR: Socket not of type reli_sock!\n");
-    return FALSE;
-  }
+handle_stork_list(Service *, int command, Stream *s)
+{
+	dprintf (D_COMMAND, "handle_stork_list (%d)\n", command);
+	if (s->type( ) != Stream::reli_sock ) {
+		dprintf (D_ALWAYS, "ERROR: Socket not of type reli_sock!\n");
+		return FALSE;
+	}
 
-  return list_queue((ReliSock*)s);
+	return list_queue((ReliSock*)s);
 }
 
 
 int
-handle_stork_remove(Service *, int command, Stream *s) {
-  dprintf (D_COMMAND, "handle_stork_remove\n");
-  if (s->type( ) != Stream::reli_sock ) {
-    dprintf (D_ALWAYS, "ERROR: Socket not of type reli_sock!\n");
-    return FALSE;
-  }
+handle_stork_remove(Service *, int command, Stream *s)
+{
+	dprintf (D_COMMAND, "handle_stork_remove (%d)\n", command );
+	if (s->type( ) != Stream::reli_sock ) {
+		dprintf (D_ALWAYS, "ERROR: Socket not of type reli_sock!\n");
+		return FALSE;
+	}
 
-  return remove_requests_from_queue ((ReliSock*)s);
+	return remove_requests_from_queue ((ReliSock*)s);
 }
 
 
 int
-handle_stork_status(Service *, int command, Stream *s) {
-  dprintf (D_COMMAND, "handle_stork_status\n");
-  if (s->type( ) != Stream::reli_sock ) {
-    dprintf (D_ALWAYS, "ERROR: Socket not of type reli_sock!\n");
-    return FALSE;
-  }
+handle_stork_status(Service *, int command, Stream *s)
+{
+	dprintf (D_COMMAND, "handle_stork_status (%d)\n", command );
+	if (s->type( ) != Stream::reli_sock ) {
+		dprintf (D_ALWAYS, "ERROR: Socket not of type reli_sock!\n");
+		return FALSE;
+	}
 
-  return send_dap_status_to_client((ReliSock*)s);
+	return send_dap_status_to_client((ReliSock*)s);
 }
-
-
-
-
-
-
-
-

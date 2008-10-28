@@ -141,10 +141,6 @@ char *prt_fds(int maxfd, fd_set *fds);
 // @ret: NULL if failed; non-NULL if succeed
 struct sockaddr_in *getSockAddr(int sockfd);
 
-/* Using a string of the form "<xx.xx.xx.xx:pppp>" return a 
-the hardware adapter asociated with it */
-char* string_to_hardware_address(const char *sinful);
-
 #if defined(__cplusplus)
 }
 #endif

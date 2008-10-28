@@ -112,6 +112,7 @@ const char *ATTR_BUFFER_BLOCKS_USED	 = "BufferBlocksUsed";
 const char *ATTR_BUFFER_PREFETCH_SIZE	 = "BufferPrefetchSize";
 const char *ATTR_BYTES_SENT				 = "BytesSent";
 const char *ATTR_BYTES_RECVD				 = "BytesRecvd";
+const char *ATTR_CAN_HIBERNATE           = "CanHibernate";
 const char *ATTR_CAPABILITY				 = "Capability";
 const char *ATTR_CKPT_SERVER				 = "CkptServer";
 const char *ATTR_COD_CLAIMS               = "CODClaims";
@@ -249,6 +250,8 @@ const char *ATTR_HAS_SOAP_API            = "HasSOAPInterface";
 const char *ATTR_HAS_VM                   = "HasVM";
 const char *ATTR_HAS_WIN_RUN_AS_OWNER     = "HasWindowsRunAsOwner";
 const char *ATTR_HELD_JOBS				 = "HeldJobs";
+const char *ATTR_HIBERNATION_LEVEL        = "HibernationLevel";
+const char *ATTR_HIBERNATION_STATE        = "HibernationState";
 const char *ATTR_HOLD_KILL_SIG            = "HoldKillSig";
 const char *ATTR_HOOK_KEYWORD             = "HookKeyword";
 const char *ATTR_IDLE_JOBS                = "IdleJobs";
@@ -257,6 +260,11 @@ const char *ATTR_INTERACTIVE			 = "Interactive";
 const char *ATTR_IS_DAEMON_CORE           = "IsDaemonCore";
 const char *ATTR_IS_OWNER                 = "IsOwner";
 const char *ATTR_IS_QUEUE_SUPER_USER      = "IsQueueSuperUser";
+const char *ATTR_IS_WAKEABLE              = "IsWakeAble";
+const char *ATTR_IS_WAKE_SUPPORTED        = "IsWakeOnLanSupported";
+const char *ATTR_WAKE_SUPPORTED_FLAGS     = "WakeOnLanSupportedFlags";
+const char *ATTR_IS_WAKE_ENABLED          = "IsWakeOnLanEnabled";
+const char *ATTR_WAKE_ENABLED_FLAGS       = "WakeOnLanEnabledFlags";
 const char *ATTR_INACTIVE                 = "Inactive";
 const char *ATTR_JAR_FILES                = "JarFiles";
 const char *ATTR_JAVA_MFLOPS              = "JavaMFlops";
@@ -336,6 +344,8 @@ const char *ATTR_JOB_VM_CHECKPOINT			= "JobVMCheckpoint";
 const char *ATTR_JOB_VM_NETWORKING			= "JobVMNetworking";
 const char *ATTR_JOB_VM_NETWORKING_TYPE		= "JobVMNetworkingType";
 const char *ATTR_JOB_VM_HARDWARE_VT			= "JobVMHardwareVT";
+const char * ATTR_JOB_VM_VCPUS = "JobVM_VCPUS";
+const char * ATTR_JOB_VM_MACADDR = "JobVM_MACADDR";
 // End VM universe
 const char *ATTR_KEYBOARD_IDLE            = "KeyboardIdle";
 const char *ATTR_KEYSTORE_FILE            = "KeystoreFile";
@@ -373,6 +383,7 @@ const char *ATTR_LOCAL_CREDD              = "LocalCredd";
 const char *ATTR_LOCAL_FILES		= "LocalFiles";
 const char *ATTR_LOAD_AVG                 = "LoadAvg";
 const char *ATTR_MACHINE                  = "Machine";
+const char *ATTR_MACHINE_COUNT            = "MachineCount";
 const char *ATTR_MASTER_IP_ADDR			 = "MasterIpAddr";
 const char *ATTR_MAX_HOSTS				 = "MaxHosts";
 const char *ATTR_MAX_JOB_RETIREMENT_TIME  = "MaxJobRetirementTime";
@@ -427,6 +438,7 @@ const char *ATTR_NUM_SHADOW_EXCEPTIONS = "NumShadowExceptions";
 const char *ATTR_NUM_SHADOW_STARTS	 = "NumShadowStarts";
 const char *ATTR_NUM_SYSTEM_HOLDS		 = "NumSystemHolds";
 const char *ATTR_NUM_USERS                = "NumUsers";
+const char *ATTR_OFFLINE                  ="Offline";
 const char *ATTR_OPSYS                    = "OpSys";
 const char *ATTR_ORIG_MAX_HOSTS			 = "OrigMaxHosts";
 const char *ATTR_OWNER                    = "Owner"; 
@@ -481,6 +493,8 @@ const char *ATTR_SCHEDD_NAME				 = "ScheddName";
 const char *ATTR_SCHEDULER				 = "Scheduler";
 const char *ATTR_SHADOW_WAIT_FOR_DEBUG    = "ShadowWaitForDebug";
 const char *ATTR_SLOT_ID				 = "SlotID";
+const char *ATTR_SLOT_PARTITIONABLE		= "PartitionableSlot";
+const char *ATTR_SLOT_DYNAMIC          = "DynamicSlot";
 const char *ATTR_SOURCE					 = "Source";
 const char *ATTR_STAGE_IN_START           = "StageInStart";
 const char *ATTR_STAGE_IN_FINISH          = "StageInFinish";
@@ -696,6 +710,8 @@ const char *ATTR_CHECKPOINT_PLATFORM			= "CheckpointPlatform";
 const char *ATTR_LAST_CHECKPOINT_PLATFORM	= "LastCheckpointPlatform";
 const char *ATTR_IS_VALID_CHECKPOINT_PLATFORM  = "IsValidCheckpointPlatform";
 
+const char *ATTR_WITHIN_RESOURCE_LIMITS  = "WithinResourceLimits";
+
 const char *ATTR_HAD_IS_ACTIVE = "HadIsActive";
 const char *ATTR_HAD_LIST      = "HadList";
 const char *ATTR_HAD_INDEX     = "HadIndex";
@@ -751,7 +767,12 @@ const char *ATTR_VM_GUEST_IP = "VM_Guest_IP";
 const char *ATTR_VM_GUEST_MEM = "VM_Guest_Mem";
 const char *ATTR_VM_CKPT_MAC = "VM_CkptMac";
 const char *ATTR_VM_CKPT_IP = "VM_CkptIP";
+
 // End VM universe
+
+const char *ATTR_REQUEST_CPUS = "RequestCpus";
+const char *ATTR_REQUEST_MEMORY = "RequestMemory";
+const char *ATTR_REQUEST_DISK = "RequestDisk";
 
 // Valid settings for ATTR_JOB_MANAGED.
 	// Managed by an external process (gridmanager)
@@ -781,3 +802,6 @@ const char *ATTR_AMAZON_INSTANCE_TYPE = "AmazonInstanceType";
 //************* End of changes for Amamzon Jobs *****************//
 
 
+//************* Added for Lease Manager *******************//
+const char *ATTR_LEASE_MANAGER_IP_ADDR = "LeaseManagerIpAddr";
+//************* End of Lease Manager    *******************//

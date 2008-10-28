@@ -2,13 +2,13 @@
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -50,7 +50,7 @@ static void purgeHashTable (CollectorHashTable &);
 int 	engine_clientTimeoutHandler (Service *);
 int 	engine_housekeepingHandler  (Service *);
 
-CollectorEngine::CollectorEngine (CollectorStats *stats ) : 
+CollectorEngine::CollectorEngine (CollectorStats *stats ) :
 	StartdAds     (GREATER_TABLE_SIZE, &adNameHashFunction),
 	StartdPrivateAds(GREATER_TABLE_SIZE, &adNameHashFunction),
 
@@ -63,11 +63,13 @@ CollectorEngine::CollectorEngine (CollectorStats *stats ) :
 	LicenseAds    (GREATER_TABLE_SIZE, &adNameHashFunction),
 	MasterAds     (GREATER_TABLE_SIZE, &adNameHashFunction),
 	StorageAds    (GREATER_TABLE_SIZE, &adNameHashFunction),
+	XferServiceAds(GREATER_TABLE_SIZE, &adNameHashFunction),
 	CkptServerAds (LESSER_TABLE_SIZE , &adNameHashFunction),
 	GatewayAds    (LESSER_TABLE_SIZE , &adNameHashFunction),
 	CollectorAds  (LESSER_TABLE_SIZE , &adNameHashFunction),
 	NegotiatorAds (LESSER_TABLE_SIZE , &adNameHashFunction),
 	HadAds        (LESSER_TABLE_SIZE , &adNameHashFunction),
+	LeaseManagerAds(LESSER_TABLE_SIZE , &adNameHashFunction),
 	GenericAds    (LESSER_TABLE_SIZE , &stringHashFunction)
 {
 	clientTimeout = 20;
@@ -97,6 +99,8 @@ CollectorEngine::
 	killHashTable (GatewayAds);
 	killHashTable (NegotiatorAds);
 	killHashTable (HadAds);
+	killHashTable (XferServiceAds);
+	killHashTable (LeaseManagerAds);
 	GenericAds.walk(killGenericHashTable);
 
 	if(m_collector_requirements) {
@@ -150,7 +154,7 @@ scheduleHousekeeper (int timeout)
 	}
 
 	// reset for new timer
-	if (timeout < 0) 
+	if (timeout < 0)
 		return 0;
 
 	// set to new timeout interval
@@ -176,7 +180,7 @@ int CollectorEngine::
 invokeHousekeeper (AdTypes adtype)
 {
 	time_t now;
-   
+
 	(void) time (&now);
 	if (now == (time_t) -1)
 	{
@@ -186,12 +190,12 @@ invokeHousekeeper (AdTypes adtype)
 
 	switch (adtype)
 	{
-		case STARTD_AD: 
+		case STARTD_AD:
 			cleanHashTable (StartdAds, now, makeStartdAdHashKey);
 			break;
 
 #ifdef WANT_QUILL
-		case QUILL_AD: 
+		case QUILL_AD:
 			cleanHashTable (QuillAds, now, makeQuillAdHashKey);
 			break;
 #endif /* WANT_QUILL */
@@ -226,14 +230,23 @@ invokeHousekeeper (AdTypes adtype)
 
 		case HAD_AD:
 			cleanHashTable (HadAds, now, makeHadAdHashKey);
-			break;			
+			break;
 
-	        case GENERIC_AD:
+		case GENERIC_AD:
 			CollectorHashTable *cht;
 			GenericAds.startIterations();
 			while (GenericAds.iterate(cht)) {
 				cleanHashTable (*cht, now, makeGenericAdHashKey);
 			}
+			break;
+
+		case XFER_SERVICE_AD:
+			cleanHashTable (XferServiceAds, now, makeXferServiceAdHashKey);
+			break;
+
+		case LEASE_MANAGER_AD:
+			cleanHashTable (LeaseManagerAds, now, makeLeaseManagerAdHashKey);
+			break;
 
 		default:
 			return 0;
@@ -329,6 +342,14 @@ walkHashTable (AdTypes adType, int (*scanFunction)(ClassAd *))
 		table = &HadAds;
 		break;
 
+	  case XFER_SERVICE_AD:
+		table = &XferServiceAds;
+		break;
+
+	  case LEASE_MANAGER_AD:
+		table = &LeaseManagerAds;
+		break;
+
 	  case ANY_AD:
 		return
 			StorageAds.walk(scanFunction) &&
@@ -343,9 +364,11 @@ walkHashTable (AdTypes adType, int (*scanFunction)(ClassAd *))
 			QuillAds.walk(scanFunction) &&
 #endif
 			HadAds.walk(scanFunction) &&
+
+			XferServiceAds.walk(scanFunction) &&
+			LeaseManagerAds.walk(scanFunction) &&
+
 			walkGenericTables(scanFunction);
-
-
 	  default:
 		dprintf (D_ALWAYS, "Unknown type %d\n", adType);
 		return 0;
@@ -543,6 +566,7 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 	switch (command)
 	{
 	  case UPDATE_STARTD_AD:
+	  case UPDATE_STARTD_AD_WITH_ACK:
 		if ( repeatStartdAds > 0 ) {
 			clientAdToRepeat = new ClassAd(*clientAd);
 		}
@@ -583,8 +607,8 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 								  from );
 		}
 
-		// create fake duplicates of this ad, each with a different name, if 
-		// we are told to do so.  this feature exists for developer 
+		// create fake duplicates of this ad, each with a different name, if
+		// we are told to do so.  this feature exists for developer
 		// scalability testing.
 		if ( repeatStartdAds > 0 && clientAdToRepeat ) {
 			ClassAd *fakeAd;
@@ -752,6 +776,7 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 		retVal=updateClassAd (HadAds, "HadAd  ", "HAD",
 							  clientAd, hk, hashString, insert, from );
 		break;
+
 	  case UPDATE_AD_GENERIC:
 	  {
 		  const char *type_str = clientAd->GetMyTypeName();
@@ -781,7 +806,39 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 					 hk, hashString, insert, from);
 		  break;
 	  }
-		  
+
+	  case UPDATE_XFER_SERVICE_AD:
+		if (!makeXferServiceAdHashKey (hk, clientAd, from))
+		{
+			dprintf (D_ALWAYS, "Could not make hashkey --- ignoring ad\n");
+			insert = -3;
+			retVal = 0;
+			break;
+		}
+		hashString.Build( hk );
+		retVal=updateClassAd (XferServiceAds, "XferServiceAd  ",
+							  "XferService",
+							  clientAd, hk, hashString, insert, from );
+		break;
+
+	  case UPDATE_LEASE_MANAGER_AD:
+		if (!makeLeaseManagerAdHashKey (hk, clientAd, from))
+		{
+			dprintf (D_ALWAYS, "Could not make hashkey --- ignoring ad\n");
+			insert = -3;
+			retVal = 0;
+			break;
+		}
+		hashString.Build( hk );
+			// first, purge all the existing LeaseManager ads, since we
+			// want to enforce that *ONLY* 1 manager is in the
+			// collector any given time.
+		purgeHashTable( LeaseManagerAds );
+		retVal=updateClassAd (LeaseManagerAds, "LeaseManagerAd  ",
+							  "LeaseManager",
+							  clientAd, hk, hashString, insert, from );
+		break;
+
 
 	  case QUERY_STARTD_ADS:
 	  case QUERY_SCHEDD_ADS:
@@ -793,6 +850,8 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 	  case QUERY_COLLECTOR_ADS:
   	  case QUERY_NEGOTIATOR_ADS:
   	  case QUERY_HAD_ADS:
+  	  case QUERY_XFER_SERVICE_ADS:
+  	  case QUERY_LEASE_MANAGER_ADS:
 	  case INVALIDATE_STARTD_ADS:
 	  case INVALIDATE_SCHEDD_ADS:
 	  case INVALIDATE_MASTER_ADS:
@@ -802,6 +861,8 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 	  case INVALIDATE_COLLECTOR_ADS:
 	  case INVALIDATE_NEGOTIATOR_ADS:
 	  case INVALIDATE_HAD_ADS:
+	  case INVALIDATE_XFER_SERVICE_ADS:
+	  case INVALIDATE_LEASE_MANAGER_ADS:
 		// these are not implemented in the engine, but we allow another
 		// daemon to detect that these commands have been given
 	    insert = -2;
@@ -887,6 +948,16 @@ lookup (AdTypes adType, AdNameHashKey &hk)
 				return 0;
 			break;
 
+		case XFER_SERVICE_AD:
+			if (XferServiceAds.lookup (hk, val) == -1)
+				return 0;
+			break;
+
+		case LEASE_MANAGER_AD:
+			if (LeaseManagerAds.lookup (hk, val) == -1)
+				return 0;
+			break;
+
 		default:
 			val = 0;
 	}
@@ -938,6 +1009,12 @@ remove (AdTypes adType, AdNameHashKey &hk)
 		case HAD_AD:
 			return !HadAds.remove (hk);
 
+		case XFER_SERVICE_AD:
+			return !XferServiceAds.remove (hk);
+
+		case LEASE_MANAGER_AD:
+			return !LeaseManagerAds.remove (hk);
+
 		default:
 			return 0;
 	}
@@ -945,14 +1022,14 @@ remove (AdTypes adType, AdNameHashKey &hk)
 	
 				
 ClassAd * CollectorEngine::
-updateClassAd (CollectorHashTable &hashTable, 
+updateClassAd (CollectorHashTable &hashTable,
 			   const char *adType,
 			   const char *label,
-			   ClassAd *ad, 
+			   ClassAd *ad,
 			   AdNameHashKey &hk,
 			   const MyString &hashString,
 			   int  &insert,
-			   const sockaddr_in *from )
+			   const sockaddr_in * /*from*/ )
 {
 	ClassAd		*old_ad, *new_ad;
 	MyString	buf;
@@ -1006,16 +1083,64 @@ updateClassAd (CollectorHashTable &hashTable,
 	}
 }
 
-int 
+#if 0
+void
+CollectorEngine::updateAd ( ClassAd *ad ) {
+
+
+
+    updateClassAd ( StartdAds)
+
+    const char      *label = "Start";
+    AdNameHashKey   hashKey;
+    MyString	    key;
+    ClassAd		    *old_ad;
+    time_t		    now;
+
+    /* get the current time */
+    time ( &now );
+
+    if ( (time_t) -1 == now ) {
+        EXCEPT ("Error reading system time!");
+    }
+
+    buf.sprintf( "%s = %d", ATTR_LAST_HEARD_FROM, (int) now );
+	ad->Insert ( buf.GetCStr () );
+
+    /* update statistics */
+    collectorStats->update ( label, NULL, ad );
+
+    /* make a hash key for the ad */
+    if ( !makeStartdAdHashKey ( hashKey, (ClassAd*) &ad, NULL ) ) {
+
+        dprintf (
+            D_FULLDEBUG,
+            "OfflineCollectorPlugin::update: "
+            "failed to hash class ad. Ignoring.\n" );
+
+        return;
+
+    }
+
+    /* store it the ad */
+    hashKey.sprint ( key );
+    if ( -1 == StartdAds.insert ( key, ad ) ) {
+        EXCEPT ( "Error inserting ad (out of memory)" );
+	}
+
+}
+#endif
+
+int
 CollectorEngine::
 housekeeper()
 {
 	time_t now;
-   
+
 	(void) time (&now);
 	if (now == (time_t) -1)
 	{
-		dprintf (D_ALWAYS, 
+		dprintf (D_ALWAYS,
 				 "Housekeeper:  Error in reading system time --- aborting\n");
 		return FALSE;
 	}
@@ -1060,6 +1185,12 @@ housekeeper()
 	dprintf (D_ALWAYS, "\tCleaning HadAds ...\n");
 	cleanHashTable (HadAds, now, makeHadAdHashKey);
 
+	dprintf (D_ALWAYS, "\tCleaning XferServiceAds ...\n");
+	cleanHashTable (XferServiceAds, now, makeXferServiceAdHashKey);
+
+	dprintf (D_ALWAYS, "\tCleaning LeaseManagerAds ...\n");
+	cleanHashTable (LeaseManagerAds, now, makeLeaseManagerAdHashKey);
+
 	dprintf (D_ALWAYS, "\tCleaning Generic Ads ...\n");
 	CollectorHashTable *cht;
 	GenericAds.startIterations();
@@ -1075,7 +1206,7 @@ housekeeper()
 }
 
 void CollectorEngine::
-cleanHashTable (CollectorHashTable &hashTable, time_t now, 
+cleanHashTable (CollectorHashTable &hashTable, time_t now,
 				bool (*makeKey) (AdNameHashKey &, ClassAd *, sockaddr_in *) )
 {
 	ClassAd  *ad;

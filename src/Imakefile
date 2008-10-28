@@ -1,4 +1,4 @@
-#define AllFiles etc include src lib libexec bin sbin sql man 
+#define AllFiles etc include src lib libexec bin sbin sql man
 
 #if NEEDS_KBDD
 #   define KbddProgs kbdd
@@ -57,6 +57,12 @@
 #define TTProgs
 #endif
 
+#if WANT_LEASE_MANAGER
+# define LeaseManagerProgs condor_lease_manager
+#else
+# define LeaseManagerProgs
+#endif
+
 #if HAVE_EXT_OPENSSL && HAVE_EXT_GSOAP
 #define EC2 amazon
 #else
@@ -75,10 +81,12 @@
 		scripts startd.V6 StdUnvProgs submit.V6 status.V6 \
 		tools KbddProgs collector.V6 dagman userlog Eventd \
 		gridmanager starter.V6.1 shadow.V6.1 dcskel c-gahp had \
-		CreddProgs StorkProgs \
+		CreddProgs StorkProgs LeaseManagerProgs \
 		TTProgs DeploymentTools \
 		eventd.V2 transferd procd privsep vm-gahp EC2 \
-		EC2 JobRouterProgs GlobusGahps startd_factory
+		JobRouterProgs GlobusGahps \
+		EC2 JobRouterProgs GlobusGahps startd_factory \
+		power
 
 #define Libraries \
 		util_lib daemon_core.V6 daemon_client classad c++_util	\
@@ -221,6 +229,7 @@ condor_object_target(procapi)
 condor_object_target(sysapi)
 condor_object_target(unit_tests)
 condor_object_target(tools)
+condor_object_target(power)
 condor_object_target(examples)
 #if WANT_NETMAN
 condor_object_target(eventd)
@@ -291,6 +300,10 @@ condor_object_target(amazon)
 
 #if HAVE_EXT_DRMAA
 condor_object_target(drmaa)
+#endif
+
+#if WANT_LEASE_MANAGER
+condor_object_target(lease_manager)
 #endif
 
 #if WANT_CLASSAD_ANALYSIS

@@ -2,13 +2,13 @@
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -39,30 +39,30 @@ template <class KeyType> class Set {
 public:
 
   Set();                           // Constructor - makes an empty set
-  ~Set();                          // Destructor - frees all the memory
+  virtual ~Set();                          // Destructor - frees all the memory
 
-  int Count();                     // Returns the number of elements in the set
-  int Exist(const KeyType& Key);   // Returns 1 if Key is in the set, 0 otherwise
-  void Add(const KeyType& Key);    // Add Key to the set (in the beginning)
-  void Remove(const KeyType& Key); // Remove Key from the set
-  void Clear();
+  virtual int Count();                     // Returns the number of elements in the set
+  virtual int Exist(const KeyType& Key);   // Returns 1 if Key is in the set, 0 otherwise
+  virtual void Add(const KeyType& Key);    // Add Key to the set (in the beginning)
+  virtual bool Remove(const KeyType& Key); // Remove Key from the set, true if found
+  virtual void Clear();
 
-  void StartIterations();          // Start iterating through the set
-  bool Iterate(KeyType& Key);      // get next key
-  void RemoveLast();               // remove the last element iterated
-  void Insert(const KeyType& Key); // Insert before current node
+  virtual void StartIterations();          // Start iterating through the set
+  virtual bool Iterate(KeyType& Key);      // get next key
+  virtual void RemoveLast();               // remove the last element iterated
+  virtual void Insert(const KeyType& Key); // Insert before current node
 
   void operator=(Set<KeyType>& S);
 
-private:
-  
+protected:
+ 
   int Len;
-  
+ 
   SetElem<KeyType>* Head;
   SetElem<KeyType>* Curr;
 
-  SetElem<KeyType>* Find(const KeyType& Key);
-  void RemoveElem(const SetElem<KeyType>* N);
+  virtual SetElem<KeyType>* Find(const KeyType& Key);
+  virtual bool RemoveElem(const SetElem<KeyType>* N);
 
 };
 
@@ -74,7 +74,7 @@ public:
   SetElem<KeyType>* Next;
   SetElem<KeyType>* Prev;
 };
-  
+ 
 //-------------------------------------------------------
 // Implemenatation
 //-------------------------------------------------------
@@ -88,18 +88,18 @@ void Set<KeyType>::operator=(Set<KeyType>& S) {
 }
 
 // Constructor
-template <class KeyType> 
+template <class KeyType>
 Set<KeyType>::Set() {
   Len=0;
   Head=Curr=NULL;
 }
 
 // Number of elements
-template <class KeyType> 
-int Set<KeyType>::Count() { 
-  return Len; 
+template <class KeyType>
+int Set<KeyType>::Count() {
+  return Len;
 }
-  
+ 
 // Remove all elements
 template <class KeyType>
 void Set<KeyType>::Clear() {
@@ -115,13 +115,13 @@ void Set<KeyType>::Clear() {
 }
 
 // 0=Not in set, 1=is in the set
-template <class KeyType> 
-int Set<KeyType>::Exist(const KeyType& Key) { 
-  return(Find(Key) ? 1 : 0); 
+template <class KeyType>
+int Set<KeyType>::Exist(const KeyType& Key) {
+  return(Find(Key) ? 1 : 0);
 }
-  
+ 
 // Add to set
-template <class KeyType> 
+template <class KeyType>
 void Set<KeyType>::Add(const KeyType& Key) {
   if (Find(Key)) return;
   SetElem<KeyType>* N=new SetElem<KeyType>();
@@ -134,14 +134,14 @@ void Set<KeyType>::Add(const KeyType& Key) {
 }
 
 // Insert
-template <class KeyType> 
+template <class KeyType>
 void Set<KeyType>::Insert(const KeyType& Key) {
   if (Curr==Head || Head==NULL) Add(Key);
 
   // Find previous element
   SetElem<KeyType>* Prev;
   if (Curr) {
-    Prev=Curr->Prev;  
+    Prev=Curr->Prev; 
   }
   else {
     Prev=Head;
@@ -160,16 +160,16 @@ void Set<KeyType>::Insert(const KeyType& Key) {
 
 // Remove from Set
 template <class KeyType>
-void Set<KeyType>::Remove(const KeyType& Key) {
-  RemoveElem(Find(Key)); 
+bool Set<KeyType>::Remove(const KeyType& Key) {
+  return RemoveElem(Find(Key));
 }
 
-// Start iterations 
+// Start iterations
 template <class KeyType>
-void Set<KeyType>::StartIterations() { 
-  Curr=NULL; 
+void Set<KeyType>::StartIterations() {
+  Curr=NULL;
 }
-  
+ 
 // Return: 0=No more elements, 1=elem key in Key
 template <class KeyType>
 bool Set<KeyType>::Iterate(KeyType& Key) {
@@ -182,8 +182,10 @@ bool Set<KeyType>::Iterate(KeyType& Key) {
 
 // Remove the last elememnt iterated
 template <class KeyType>
-void Set<KeyType>::RemoveLast() { 
-  if (Curr) RemoveElem(Curr->Prev); 
+void Set<KeyType>::RemoveLast() {
+  if (Curr) {
+		RemoveElem(Curr);
+  }
 }
 
 // Destructor
@@ -196,7 +198,7 @@ Set<KeyType>::~Set() {
     N=M;
   }
 }
-  
+ 
 // Find the element of a key
 template <class KeyType>
 SetElem<KeyType>* Set<KeyType>::Find(const KeyType& Key) {
@@ -210,17 +212,19 @@ SetElem<KeyType>* Set<KeyType>::Find(const KeyType& Key) {
 
 // Remove an element
 template <class KeyType>
-void Set<KeyType>::RemoveElem(const SetElem<KeyType>* N) {
-  if (!N) return;
+bool Set<KeyType>::RemoveElem(const SetElem<KeyType>* N) {
+  if (!N) return false;
   Len--;
   if (Len==0)
-    Head=NULL;
+    Curr=Head=NULL;
   else {
+	if (Curr == N) Curr=Curr->Prev;
     if (N->Prev) N->Prev->Next=N->Next;
     else Head=N->Next;
     if (N->Next) N->Next->Prev=N->Prev;
   }
-  delete N;
+  delete const_cast<SetElem<KeyType>*>(N);
+  return true;
 }
 
 #endif

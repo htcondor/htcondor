@@ -28,27 +28,28 @@
 #define _CONDOR_RESMGR_H
 
 #include "simplelist.h"
-#include "extArray.h"
 #include "condor_classad_namedlist.h"
+
+#include "IdDispenser.h"
 
 #include "Resource.h"
 #include "claim.h"
 #include "starter_mgr.h"
 #include "vmuniverse_mgr.h"
 
-#if HAVE_HIBERNATE
-#include "power_hibernation_manager.h"
-#endif /* HAVE_HIBERNATE */
+#if HAVE_HIBERNATION
+#  include "hibernation_manager.h"
+#endif
 
 #if HAVE_JOB_HOOKS
-#include "StartdHookMgr.h"
+#  include "StartdHookMgr.h"
 #endif /* HAVE_JOB_HOOKS */
 
 #if HAVE_BACKFILL
-#include "backfill_mgr.h"
-#if HAVE_BOINC
-#include "boinc_mgr.h"
-#endif /* HAVE_BOINC */
+#  include "backfill_mgr.h"
+#  if HAVE_BOINC
+#     include "boinc_mgr.h"
+#  endif /* HAVE_BOINC */
 #endif /* HAVE_BACKFILL */
 
 
@@ -58,16 +59,6 @@ typedef void (Resource::*ResourceMaskMember)(amask_t);
 typedef void (Resource::*VoidResourceMember)();
 typedef int (*ComparisonFunc)(const void *, const void *);
 
-
-class IdDispenser
-{
-public:
-	IdDispenser( int size, int seed );
-	int		next( void );
-	void	insert( int id );
-private:
-	ExtArray<bool> free_ids;
-};
 
 class ResMgr : public Service
 {
@@ -173,6 +164,9 @@ public:
 
 	void		init_config_classad( void );
 
+	void		addResource( Resource* );
+	bool		removeResource( Resource* );
+
 	void		deleteResource( Resource* );
 
 	void		makeAdList( ClassAdList* );   // Make a list of the
@@ -195,14 +189,21 @@ public:
 	void startdHookMgrDone();
 #endif /* HAVE_JOB_HOOKS */
 
-#if HAVE_HIBERNATE
+#if HAVE_HIBERNATION
 	HibernationManager const& getHibernationManager () const;
-	void updateHibernateConfiguration();
-#endif /* HAVE_HIBERNATE */
+	void updateHibernateConfiguration ();
+    int disableResources ( const MyString &state );
+#endif /* HAVE_HIBERNATION */
 
 	time_t	now( void ) { return cur_time; };
 
 	void FillExecuteDirsList( class StringList *list );
+
+	int nextId( void ) { return id_disp->next(); };
+
+		// Builds a CpuAttributes object to represent the slot
+		// described by the given machine type.
+	CpuAttributes*	buildSlot( int slot_id, StringList* list, int type, bool except = false );
 
 private:
 
@@ -211,9 +212,6 @@ private:
 
 	IdDispenser* id_disp;
 	bool 		is_shutting_down;
-
-		// Current slot type we're parsing. 
-	int			m_current_slot_type;		
 
 	int		num_updates;
 	int		up_tid;		// DaemonCore timer id for update timer
@@ -234,10 +232,6 @@ private:
 	// List of Supplemental ClassAds to publish
 	NamedClassAdList				extra_ads;
 
-		// Builds a CpuAttributes object to represent the slot
-		// described by the given machine type.
-	CpuAttributes*	buildSlot( int slot_id, int type, bool except = false );
-
 		// Look up the configured value for the execute directory
 		// for a given slot.  Also get a unique identifier for the
 		// disk partition containing the execute directory.
@@ -245,7 +239,7 @@ private:
 
 	    // Returns the fraction represented by the given fraction or
 		// percent string.
-	float		parse_value( const char*, bool except = false );
+	float		parse_value( const char*, int type, bool except = false );
 
 		// All the logic of computing an integer number of cpus or
 		// physical memory out of a fractional share.   
@@ -313,19 +307,16 @@ private:
 	bool m_startd_hook_shutdown_pending;
 #endif /* HAVE_JOB_HOOKS */
 
-#if HAVE_HIBERNATE
-	HibernationManager	m_hibernation_manager;
+#if HAVE_HIBERNATION
+	NetworkAdapterBase  *m_netif;
+	HibernationManager	*m_hibernation_manager;
 	int					m_hibernate_tid;
-	int					m_recovery_tid;
-	void checkHibernate() /* const -- should be */;
-	int	 allHibernating() /* const -- should be */;
+	void checkHibernate(void);
+	int	 allHibernating( MyString &state_str ) const;
 	int  startHibernateTimer();
 	void resetHibernateTimer();
 	void cancelHibernateTimer();
-	void doHibernateRecovery();
-	int  startRecoveryTimer();
-	void cancelRecoveryTimer();
-#endif /* HAVE_HIBERNATE */
+#endif /* HAVE_HIBERNATION */
 
 };
 

@@ -52,6 +52,7 @@ extern const char * ATTR_BUFFER_BLOCKS_USED;
 extern const char * ATTR_BUFFER_PREFETCH_SIZE;
 extern const char * ATTR_BYTES_SENT;
 extern const char * ATTR_BYTES_RECVD;
+extern const char * ATTR_CAN_HIBERNATE;
 extern const char * ATTR_CAPABILITY;
 extern const char * ATTR_CKPT_SERVER;
 extern const char * ATTR_COD_CLAIMS;
@@ -189,6 +190,8 @@ extern const char * ATTR_HAS_SOAP_API;
 extern const char * ATTR_HAS_WIN_RUN_AS_OWNER;
 extern const char * ATTR_HAS_VM;
 extern const char * ATTR_HELD_JOBS;
+extern const char * ATTR_HIBERNATION_LEVEL;
+extern const char * ATTR_HIBERNATION_STATE;
 extern const char * ATTR_HOLD_KILL_SIG;
 extern const char * ATTR_HOOK_KEYWORD;
 extern const char * ATTR_IDLE_JOBS;
@@ -197,6 +200,11 @@ extern const char * ATTR_INTERACTIVE;
 extern const char * ATTR_IS_DAEMON_CORE;
 extern const char * ATTR_IS_OWNER;
 extern const char * ATTR_IS_QUEUE_SUPER_USER;
+extern const char * ATTR_IS_WAKE_SUPPORTED;
+extern const char * ATTR_WAKE_SUPPORTED_FLAGS;
+extern const char * ATTR_IS_WAKE_ENABLED;
+extern const char * ATTR_WAKE_ENABLED_FLAGS;
+extern const char * ATTR_IS_WAKEABLE;
 extern const char * ATTR_INACTIVE;
 extern const char * ATTR_JAR_FILES;
 extern const char * ATTR_JAVA_MFLOPS;
@@ -271,6 +279,8 @@ extern const char * ATTR_JOB_WALL_CLOCK_CKPT;
 extern const char * ATTR_JOB_QUEUE_BIRTHDATE;
 extern const char * ATTR_JOB_VM_TYPE;
 extern const char * ATTR_JOB_VM_MEMORY;
+extern const char * ATTR_JOB_VM_VCPUS;
+extern const char * ATTR_JOB_VM_MACADDR;
 extern const char * ATTR_JOB_VM_CHECKPOINT;
 extern const char * ATTR_JOB_VM_NETWORKING;
 extern const char * ATTR_JOB_VM_NETWORKING_TYPE;
@@ -311,6 +321,7 @@ extern const char * ATTR_LOCAL_CREDD;
 extern const char * ATTR_LOCAL_FILES;
 extern const char * ATTR_LOAD_AVG;
 extern const char * ATTR_MACHINE;
+extern const char * ATTR_MACHINE_COUNT;
 extern const char * ATTR_MASTER_IP_ADDR;
 extern const char * ATTR_MAX_HOSTS;
 extern const char * ATTR_MAX_JOB_RETIREMENT_TIME;
@@ -365,6 +376,7 @@ extern const char * ATTR_NUM_SHADOW_EXCEPTIONS;
 extern const char * ATTR_NUM_SHADOW_STARTS;
 extern const char * ATTR_NUM_SYSTEM_HOLDS;
 extern const char * ATTR_NUM_USERS;
+extern const char * ATTR_OFFLINE;
 extern const char * ATTR_OPSYS;
 extern const char * ATTR_ORIG_MAX_HOSTS;
 extern const char * ATTR_OWNER;
@@ -420,6 +432,8 @@ extern const char * ATTR_SCHEDD_NAME;
 extern const char * ATTR_SCHEDULER;
 extern const char * ATTR_SHADOW_WAIT_FOR_DEBUG;
 extern const char * ATTR_SLOT_ID;
+extern const char * ATTR_SLOT_PARTITIONABLE;
+extern const char * ATTR_SLOT_DYNAMIC;
 extern const char * ATTR_SOURCE;
 extern const char * ATTR_STAGE_IN_START;
 extern const char * ATTR_STAGE_IN_FINISH;
@@ -633,6 +647,8 @@ extern const char * ATTR_CHECKPOINT_PLATFORM;
 extern const char * ATTR_LAST_CHECKPOINT_PLATFORM;
 extern const char * ATTR_IS_VALID_CHECKPOINT_PLATFORM;
 
+extern const char * ATTR_WITHIN_RESOURCE_LIMITS;
+
 extern const char * ATTR_HAD_IS_ACTIVE;
 extern const char * ATTR_HAD_LIST;
 extern const char * ATTR_HAD_INDEX;
@@ -690,6 +706,10 @@ extern const char *ATTR_AMAZON_INSTANCE_TYPE;
 //************* End of changes for Amamzon Jobs *****************//
 
 
+extern const char *ATTR_REQUEST_CPUS;
+extern const char *ATTR_REQUEST_MEMORY;
+extern const char *ATTR_REQUEST_DISK;
+
 // This is a record of the job exit status from a standard universe job exit
 // via waitpid. It is in the job ad to implement the terminate_pending
 // feature. It has to be here because of rampant global variable usage in the
@@ -697,6 +717,9 @@ extern const char *ATTR_AMAZON_INSTANCE_TYPE;
 // put this value in the job ad.
 extern const char * ATTR_WAITPID_STATUS;
 extern const char * ATTR_TERMINATION_REASON;
+
+// Lease Manager
+extern const char *ATTR_LEASE_MANAGER_IP_ADDR;
 
 // Valid settings for ATTR_JOB_MANAGED.
 	// Managed by an external process (gridmanager)

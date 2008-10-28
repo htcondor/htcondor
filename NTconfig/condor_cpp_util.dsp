@@ -329,6 +329,14 @@ SOURCE="..\src\condor_c++_util\condor_state.C"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\condor_threads.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\condor_threads.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\condor_url.C"
 # End Source File
 # Begin Source File
@@ -654,6 +662,30 @@ SOURCE="..\src\condor_c++_util\HashTable.h"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\hibernation_manager.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\hibernation_manager.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\hibernator.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\hibernator.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\hibernator.WINDOWS.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\hibernator.WINDOWS.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\historysnapshot.C"
 # End Source File
 # Begin Source File
@@ -723,6 +755,14 @@ SOURCE=..\src\condor_includes\linebuffer.h
 # Begin Source File
 
 SOURCE="..\src\condor_c++_util\list.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\load_dll.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\load_dll.h"
 # End Source File
 # Begin Source File
 
@@ -819,6 +859,22 @@ SOURCE="..\src\condor_c++_util\net_string_list.h"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\network_adapter.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\network_adapter.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\network_adapter.WINDOWS.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\network_adapter.WINDOWS.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\ntsysinfo.C"
 # End Source File
 # Begin Source File
@@ -840,22 +896,6 @@ SOURCE="..\src\condor_c++_util\pgsqldatabase.C"
 # Begin Source File
 
 SOURCE="..\src\condor_c++_util\pgsqldatabase.h"
-# End Source File
-# Begin Source File
-
-SOURCE="..\src\condor_c++_util\power_hibernation_manager.C"
-# End Source File
-# Begin Source File
-
-SOURCE="..\src\condor_c++_util\power_hibernation_manager.h"
-# End Source File
-# Begin Source File
-
-SOURCE="..\src\condor_c++_util\power_hibernator.C"
-# End Source File
-# Begin Source File
-
-SOURCE="..\src\condor_c++_util\power_hibernator.h"
 # End Source File
 # Begin Source File
 
@@ -999,6 +1039,14 @@ SOURCE="..\src\condor_c++_util\setenv.h"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\setup_api_dll.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\setup_api_dll.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\sig_name.C"
 # End Source File
 # Begin Source File
@@ -1103,6 +1151,10 @@ SOURCE="..\src\condor_c++_util\system_info.WINDOWS.h"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\threads_implementation.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\time_offset.C"
 # End Source File
 # Begin Source File
@@ -1139,6 +1191,14 @@ SOURCE="..\src\condor_c++_util\translation_utils.h"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\udp_waker.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\udp_waker.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\uids.C"
 # End Source File
 # Begin Source File
@@ -1159,6 +1219,14 @@ SOURCE="..\src\condor_c++_util\user_log.C"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\user_log.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\user_log_header.C"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\user_log.c++.h"
 # End Source File
 # Begin Source File
@@ -1176,6 +1244,14 @@ SOURCE="..\src\condor_c++_util\vm_univ_utils.C"
 # Begin Source File
 
 SOURCE="..\src\condor_c++_util\vm_univ_utils.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\waker.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\waker.h"
 # End Source File
 # Begin Source File
 

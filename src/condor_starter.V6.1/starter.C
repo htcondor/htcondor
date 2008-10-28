@@ -739,10 +739,18 @@ CStarter::jobEnvironmentReady( void )
 		//
 		// Now that we are done preparing the job's environment,
 		// change the sandbox ownership to the user before spawning
-		// any job processes.
+		// any job processes. VM universe jobs are special-cased
+		// here: chowning of the sandbox occurs in the VMGahp after
+		// it has had a chance to operate on the VM description
+		// file(s)
 		//
 	if (m_privsep_helper != NULL) {
-		m_privsep_helper->chown_sandbox_to_user();
+		int univ;
+		if (!jic->jobClassAd()->LookupInteger(ATTR_JOB_UNIVERSE, univ) ||
+		    (univ != CONDOR_UNIVERSE_VM))
+		{
+			m_privsep_helper->chown_sandbox_to_user();
+		}
 	}
 
 		//
@@ -1327,9 +1335,21 @@ CStarter::PeriodicCkpt( void )
 	m_job_list.Rewind();
 	while ((job = m_job_list.Next()) != NULL) {
 		if( job->Ckpt() ) {
+
+			CondorPrivSepHelper* cpsh = condorPrivSepHelper();
+			if (cpsh != NULL) {
+				cpsh->chown_sandbox_to_condor();
+			}
+
+			bool transfer_ok = jic->uploadWorkingFiles();
+
+			if (cpsh != NULL) {
+				cpsh->chown_sandbox_to_user();
+			}
+
 			// checkpoint files are successfully generated
 			// We need to upload those files by using condor file transfer.
-			if( jic->uploadWorkingFiles() == false ) {
+			if( transfer_ok == false ) {
 				// Failed to transfer ckpt files
 				// What should we do?
 				// For now, do nothing.
@@ -1441,9 +1461,14 @@ bool
 CStarter::allJobsDone( void )
 {
 		// now that all user processes are complete, change the
-		// sandbox ownership back over to condor
+		// sandbox ownership back over to condor. if this is a VM
+		// universe job, this chown will have already been
+		// performed by the VMGahp, since it does some post-
+		// processing on files in the sandbox
 	if (m_privsep_helper != NULL) {
-		m_privsep_helper->chown_sandbox_to_condor();
+		if (jobUniverse != CONDOR_UNIVERSE_VM) {
+			m_privsep_helper->chown_sandbox_to_condor();
+		}
 	}
 
 		// No more jobs, notify our JobInfoCommunicator.

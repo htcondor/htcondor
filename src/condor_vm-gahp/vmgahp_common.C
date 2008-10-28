@@ -33,14 +33,8 @@
 #include "vmgahp.h"
 #include "vmgahp_error_codes.h"
 #include "condor_vm_universe_types.h"
+#include "../condor_privsep/condor_privsep.h"
 
-#define VMCONFIGVARSIZE	128
-static BUCKET *VMConfigVars[VMCONFIGVARSIZE];
-static StringList allConfigParams;
-static StringList forcedConfigParams;
-
-bool SetUid = false;
-bool needchown = false;
 MyString caller_name;
 MyString job_user_name;
 
@@ -136,11 +130,11 @@ check_vm_read_access_file(const char *file, bool is_root /*false*/)
 
 	priv_state priv = PRIV_UNKNOWN;
 	if( is_root ) {
-		priv = vmgahp_set_root_priv();
+		priv = set_root_priv();
 	}
 	int ret = access(file, R_OK);
 	if( is_root ) {
-		vmgahp_set_priv(priv);
+		set_priv(priv);
 	}
 
 	if( ret < 0 ) {
@@ -159,11 +153,11 @@ check_vm_write_access_file(const char *file, bool is_root /*false*/)
 
 	priv_state priv = PRIV_UNKNOWN;
 	if( is_root ) {
-		priv = vmgahp_set_root_priv();
+		priv = set_root_priv();
 	}
 	int ret = access(file, W_OK);
 	if( is_root ) {
-		vmgahp_set_priv(priv);
+		set_priv(priv);
 	}
 
 	if( ret < 0 ) {
@@ -182,11 +176,11 @@ check_vm_execute_file(const char *file, bool is_root /*false*/)
 
 	priv_state priv = PRIV_UNKNOWN;
 	if( is_root ) {
-		priv = vmgahp_set_root_priv();
+		priv = set_root_priv();
 	}
 	int ret = access(file, X_OK);
 	if( is_root ) {
-		vmgahp_set_priv(priv);
+		set_priv(priv);
 	}
 
 	if( ret < 0 ) {
@@ -196,410 +190,53 @@ check_vm_execute_file(const char *file, bool is_root /*false*/)
 	return true;
 }
 
-char *
-vmgahp_param(const char* name)
-{
-	if( !name ) {
-		return NULL;
-	}
-
-	char *pval = lookup_macro(name, VMConfigVars, VMCONFIGVARSIZE);
-
-	if( !pval ) {
-		// It means the value isn't in vmgahp config file
-		return NULL;
-	}
-
-	pval = expand_macro(pval, VMConfigVars, VMCONFIGVARSIZE);
-
-	if( !pval ) {
-		vmprintf( D_ALWAYS, "\nERROR: Failed to expand macros in: %s\n", name );
-		DC_Exit(1);
-	}
-
-	return pval;
-}
-
-int
-vmgahp_param_integer( const char* name, int default_value, int min_value, int max_value )
-{
-	int result;
-	int long_result;
-	char *string = NULL;
-	char *endptr = NULL;
-
-	string = vmgahp_param( name );
-	if( !string ) {
-		vmprintf( D_FULLDEBUG, "%s is undefined, using default value of %d\n",
-				 name, default_value );
-		return default_value;
-	}
-
-	long_result = (int)strtol(string,&endptr,10);
-	result = long_result;
-
-	if( endptr && (endptr != string)) {
-		while( isspace(*endptr) ) {
-			endptr++;
-		}
-	}
-	bool valid = ( endptr && endptr != string && *endptr == '\0');
-
-	if( !valid ) {
-		vmprintf(D_ALWAYS, "%s in the condor configuration is not "
-				"an integer (%s).  Please set it to an integer in the "
-				"range %d to %d (default %d).\n",
-		        name, string, min_value, max_value, default_value );
-	}
-	else if( (long)result != long_result ) {
-		vmprintf(D_ALWAYS, "%s in the condor configuration is "
-				"out of bounds for an integer (%s).  Please set it to "
-				"an integer in the range %d to %d (default %d).\n",
-		        name, string, min_value, max_value, default_value );
-	}
-	else if( result < min_value ) {
-		vmprintf(D_ALWAYS, "%s in the condor configuration is too low (%s)."
-		        " Please set it to an integer in the range %d to %d"
-		        " (default %d).\n",
-		        name, string, min_value, max_value, default_value );
-	}
-	else if( result > max_value ) {
-		vmprintf(D_ALWAYS, "%s in the condor configuration is too high (%s)."
-		        " Please set it to an integer in the range %d to %d"
-		        " (default %d).\n",
-		        name, string, min_value, max_value, default_value );
-	}
-	free( string );
-	return result;
-}
-
 bool
-vmgahp_param_boolean( const char* name, const bool default_value )
+write_local_settings_from_file(FILE* out_fp,
+                               const char* param_name,
+                               const char* start_mark,
+                               const char* end_mark)
 {
-	bool result;
-	char *string = NULL;
-
-	string = vmgahp_param( name );
-	if( !string ) {
-		vmprintf( D_FULLDEBUG, "%s is undefined, using default value of %s\n",
-				 name, default_value ? "True" : "False" );
-		return default_value;
-	}
-
-	switch ( string[0] ) {
-		case 'T':
-		case 't':
-		case '1':
-			result = true;
-			break;
-		case 'F':
-		case 'f':
-		case '0':
-			result = false;
-			break;
-		default:
-		    vmprintf( D_ALWAYS, "WARNING: %s not a boolean (\"%s\"), using "
-					 "default value of %s\n", name, string,
-					 default_value ? "True" : "False" );
-			result = default_value;
-			break;
-	}
-
-	free( string );
-	return result;
-}
-
-bool
-write_specific_vm_params_to_file(const char *prefix, FILE *file) 
-{
-	if( !file ) {
-		return false;
-	}
-
-	int prefix_length = 0;
-	if( prefix ) {
-		prefix_length = strlen(prefix);
-	}
-
-	char *tmp = NULL;
-	allConfigParams.rewind();
-	while( (tmp = allConfigParams.next()) ) {
-		if( !prefix_length ) {
-			if( fprintf(file, "%s\n", tmp) < 0 ) {
-				return false;
-			}
-			continue;
-		}
-		if( (int)strlen(tmp) <= prefix_length ) {
-			continue;
-		}
-
-		if( !strncasecmp(tmp, prefix, prefix_length) ) {
-			MyString tmp_name;
-			MyString tmp_value;
-			parse_param_string(tmp, tmp_name, tmp_value, false);
-
-			tmp_name.strlwr();
-
-			const char* name = tmp_name.Value();
-			name += prefix_length; 
-
-			if( fprintf(file, "%s=%s\n", name, tmp_value.Value()) < 0 ) {
-				return false;
-			}
-		}
-	}
-	return true;
-}
-
-bool
-write_forced_vm_params_to_file(FILE *file, const char* startmark, const char* endmark)
-{
-	if( !file ) {
-		return false;
-	}
-
-	if( forcedConfigParams.isEmpty() ) {
+	char* tmp = param(param_name);
+	if (tmp == NULL) {
 		return true;
 	}
-
-	if( startmark ) {
-		if( fprintf(file, "%s\n", startmark) < 0 ) {
+	MyString local_settings_file = tmp;
+	free(tmp);
+	if (start_mark != NULL) {
+		if (fprintf(out_fp, "%s\n", start_mark) < 0) {
+			vmprintf(D_ALWAYS,
+			         "fprintf error writing start marker: %s\n",
+			         strerror(errno));
 			return false;
 		}
 	}
-
-	char *tmp = NULL;
-	forcedConfigParams.rewind();
-	while( (tmp = forcedConfigParams.next()) ) {
-		if( fprintf(file, "%s\n", tmp) < 0 ) {
-			return false;
-		}
-	}
-
-	if( endmark ) {
-		if( fprintf(file, "%s\n", endmark) < 0 ) {
-			return false;
-		}
-	}
-
-	return true;
-}
-
-int 
-read_vmgahp_configfile( const char *config )
-{
-	FILE *fp = NULL;
-
-	if((fp=safe_fopen_wrapper(config, "r")) == NULL ) {
-		vmprintf(D_ALWAYS, "\nERROR: Failed to open vmgahp config file (%s)\n",
-				strerror(errno));
-		DC_Exit(1);
-	}
-
-#define isop(c)     ((c) == '=')
-
-	char *ptr = NULL, *name = NULL, *value = NULL;
-	int LineNo = 0;
-	MyString tmp_value;
-	for(;;) {
-		name = getline(fp);
-		LineNo++;
-		
-		if( name == NULL ) {
-			break;
-		}
-
-		/* Skip over comments */
-		if( *name == '#' || blankline(name) ) {
-			continue;
-		}
-
-		/* * check whether this parameter should be forced into 
-		 * a vm config file */
-		if( *name == '+' ) {
-			name++;
-			forcedConfigParams.append(name);
-			continue;
-		}else {
-			allConfigParams.append(name);
-		}
-
-		/* Separate out the parameter name */
-		ptr = name;
-		while( *ptr ) {
-			if( isspace(*ptr) || isop(*ptr) ) {
-				break;
-			} else {
-				ptr++;
-			}
-		}
-
-		if( !*ptr ) {
-			(void)fclose( fp );
-			return( -1 );
-		}
-
-		if( isop(*ptr) ) {
-			*ptr++ = '\0';
-		} else {
-			*ptr++ = '\0';
-			while( *ptr && !isop(*ptr) ) {
-				ptr++;
-			}
-
-			if( !*ptr ) {
-				(void)fclose( fp );
-				return( -1 );
-			}
-			ptr += 1;
-		}
-
-		/* Skip to next non-space character */
-		while( *ptr && isspace(*ptr) ) {
-			ptr++;
-		}
-
-		value = ptr;
-		if( value[0] == '\0' ) {
-			continue;
-		}
-		tmp_value = value;
-		tmp_value.trim();
-		if( tmp_value.IsEmpty() ) {
-			continue;
-		}
-
-		if( (name != NULL) && (name[0] != '\0') ) {
-			char *name_str = NULL;
-			MyString finalname;
-
-			// First, try to use macro in vmgahp config
-			/* Expand references to other parameters */
-			name = expand_macro( name, VMConfigVars, VMCONFIGVARSIZE );
-			if( name == NULL ) {
-				(void)fclose( fp );
-				vmprintf( D_ALWAYS, "\nERROR: Failed to expand macros in vmgahp "
-						"config: %s\n", name );
-				return( -1 );
-			}
-
-			// Second, try to use macro in Condor config
-			name_str = macro_expand( name );
-			if( name_str == NULL ) {
-				(void)fclose( fp );
-				vmprintf( D_ALWAYS, "\nERROR: Failed to expand macros in Condor "
-						"config: %s\n", name );
-				free(name);
-				return( -1 );
-			}
-			free(name);
-
-			finalname = name_str;
-			free(name_str);
-
-			// First check if this parameter is already in Condor config
-			char *exist = param(finalname.GetCStr());
-			bool is_in_condorconfig = false;
-			if( exist && (exist[0] != '\0') ) {
-				is_in_condorconfig = true;
-			}
-			if( exist ) {
-				free(exist);
-			}
-
-			if( is_in_condorconfig ) {
-				// There exists a parameter with the same name 
-				// in Condor configurations
-				// We will not overwrite it. 
-				// So just add this parameter to vmgahp configurations.
-				insert(finalname.GetCStr(), tmp_value.GetCStr(), VMConfigVars, VMCONFIGVARSIZE);
-			}else {
-				MyString realvalue;
-				// This parameter is not in Condor config file
-				// So first, we will add this parameter to Condor configurations
-				config_insert(finalname.GetCStr(), tmp_value.GetCStr());
-
-				// Try to get this param again from Condor configurations
-				exist = param(finalname.GetCStr());
-				if( !exist ) {
-					// Impossible
-					(void)fclose( fp );
-					vmprintf( D_ALWAYS, "\nERROR: Failed to get %s in Condor config\n",
-							finalname.Value() );
-					return( -1 );
-				}
-				realvalue = exist;
-				free(exist);
-
-				insert(finalname.GetCStr(), realvalue.GetCStr(), 
-						VMConfigVars, VMCONFIGVARSIZE);
-	
-				// Here, we reset value for this parameter to "" in Condor config
-				config_insert(finalname.GetCStr(), "");
-			}
-		}
-	}
-
-	fclose(fp);
-	return 0;
-}
-
-bool check_vmgahp_config_permission(const char* configfile, const char* vmtype)
-{
-	if( !configfile || !vmtype ) {
+	FILE* in_fp = safe_fopen_wrapper(local_settings_file.Value(), "r");
+	if (in_fp == NULL) {
+		vmprintf(D_ALWAYS,
+		         "fopen error on %s: %s\n",
+		         local_settings_file.Value(),
+		         strerror(errno));
 		return false;
 	}
-
-#if !defined(WIN32)
-	// check permission of config file
-	struct stat cbuf;
-	if( stat(configfile, &cbuf ) < 0 ) {
-		vmprintf(D_ALWAYS, "\nERROR: Failed to access vmgahp config file(%s:%s)\n", 
-				configfile, strerror(errno));
-		return false;
-	}
-
-	// Other writable bit
-	if( cbuf.st_mode & S_IWOTH ) {
-		vmprintf(D_ALWAYS, "\nFile Permission Error: "
-				"other writable bit is not allowed for \"%s\" "
-				"due to security issues\n", configfile);
-		return false;
-	}
-
-	if( strcasecmp(vmtype, CONDOR_VM_UNIVERSE_XEN) == 0 ) {
-		if( cbuf.st_uid != ROOT_UID	) {
-			vmprintf(D_ALWAYS, "\nFile Permission Error: " 
-					"owner of \"%s\" must be root, "
-					"because vmgahp has root privilege.\n", configfile);
-			return false;
-		}
-	}else {
-		if( isSetUidRoot() ) {
-			if( cbuf.st_uid != ROOT_UID	) {
-				vmprintf(D_ALWAYS, "\nFile Permission Error: " 
-						"owner of \"%s\" must be root, "
-						"because vmgahp has setuid-root\n", configfile);
-				return false;
-			}
-		}
-
-		// Other readable bit
-		if( !(cbuf.st_mode & S_IROTH) ) {
-			vmprintf(D_ALWAYS, "\nFile Permission Error: "
-					"\"%s\" must be readable by anybody, because vmgahp program "
-					"will be executed with user permission.\n", configfile);
+	MyString line;
+	while (line.readLine(in_fp)) {
+		if (fputs(line.Value(), out_fp) == EOF) {
+			vmprintf(D_ALWAYS,
+			         "fputs error copying local settings: %s\n",
+			         strerror(errno));
+			fclose(in_fp);
 			return false;
 		}
 	}
-#endif
-
-	// Can read vmgahp config file?
-	if( check_vm_read_access_file(configfile) == false ) {
-		return false;
+	fclose(in_fp);
+	if (end_mark != NULL) {
+		if (fprintf(out_fp, "%s\n", end_mark) == EOF) {
+			vmprintf(D_ALWAYS,
+			         "fputs error writing end marker: %s\n",
+			         strerror(errno));
+			return false;
+		}
 	}
-
 	return true;
 }
 
@@ -781,11 +418,7 @@ void vmprintf( int flags, const char *fmt, ... )
 			daemonCore->Reset_Timer(vmgahp_stderr_tid, 0, 2);
 		}
 	}else {
-		if( vmgahp_mode == VMGAHP_WORKER_MODE ) {
-			dprintf(flags, "Worker[%d]: %s", (int)mypid, output.Value());
-		}else {
-			dprintf(flags, "VMGAHP[%d]: %s", (int)mypid, output.Value());
-		}
+		dprintf(flags, "VMGAHP[%d]: %s", (int)mypid, output.Value());
 	}
 	oriDebugFlags = saved_flags;
 }
@@ -871,99 +504,59 @@ get_job_user_name(void)
 	return job_user_name.Value();
 }
 
-bool isSetUidRoot(void)
-{
-	return SetUid;
-}
-
-bool needChown(void)
-{
-	return needchown;
-}
-
 bool canSwitchUid(void)
 {
 	return can_switch_ids();
 }
 
-static char* get_priv_state_name(priv_state s)
-{
-	switch(s) {
-		case PRIV_UNKNOWN:
-			return "PRIV_UNKNOWN";
-			break;
-		case PRIV_ROOT:
-			return "PRIV_ROOT";
-			break;
-		case PRIV_CONDOR: 
-			return "PRIV_CONDOR";
-			break;
-		case PRIV_USER:
-			return "PRIV_USER";
-			break;
-		case PRIV_USER_FINAL:
-			return "PRIV_USER_FINAL";
-			break;
-		case PRIV_FILE_OWNER:
-			return "PRIV_FILE_OWNER";
-			break;
-		default:
-			return "UNKNOWN_PRIV";
-			break;
-	}
-	return "";
-}
-
-static void 
-_priv_debug_log(priv_state prev, priv_state new_priv, char file[], int line)
-{
-#if !defined(WIN32)
-	if( prev == new_priv ) {
-		return;
-	}
-
-	vmprintf(D_PRIV, "%s --> %s at %s:%d "
-			"(uid/gid=%d/%d,euid/egid=%d/%d)\n", 
-			get_priv_state_name(prev), get_priv_state_name(new_priv),
-			file, line, (int)getuid(), (int)getgid(), 
-			(int)geteuid(), (int)getegid());
-#endif
-}
-
-
-priv_state 
-_vmgahp_set_priv(priv_state s, char file[], int line, int dologging)
-{
-	// We use daemonCore uid switch.
-	priv_state PrevPrivState = get_priv();
-	_set_priv(s, file, line, dologging);
-	priv_state CurrentPrivState = get_priv();
-
-	if(dologging) {
-		_priv_debug_log(PrevPrivState, CurrentPrivState, file, line);
-	}
-
-	return PrevPrivState;
-}
-
-int
-systemCommand(ArgList &args, bool is_root)
+int systemCommand( ArgList &args, bool is_root, StringList *cmd_out )
 {
 	int result = 0;
+	FILE *fp = NULL;
+	MyString line;
+	char buff[1024];
 
 	priv_state prev = PRIV_UNKNOWN;
 	if( is_root ) {
-		prev = vmgahp_set_root_priv();
+		prev = set_root_priv();
 	}else {
-		prev = vmgahp_set_user_priv();
+		prev = set_user_priv();
 	}
-	result = my_system(args);
-	vmgahp_set_priv(prev);
+#if !defined(WIN32)
+	if ( privsep_enabled() && (job_user_uid != get_condor_uid())) {
+		fp = privsep_popen(args, "r", 0, job_user_uid);
+	}
+	else {
+		fp = my_popen( args, "r", 0 );
+	}
+#else
+	fp = my_popen( args, "r", 0 );
+#endif
+	if ( fp == NULL ) {
+		MyString args_string;
+		args.GetArgsStringForDisplay( &args_string, 0 );
+		vmprintf( D_ALWAYS, "Failed to execute command: %s\n",
+				  args_string.Value() );
+		return -1;
+	}
+	set_priv( prev );
+
+	while ( cmd_out && fgets( buff, sizeof(buff), fp ) != NULL ) {
+		line += buff;
+		if ( line.chomp() ) {
+			cmd_out->append( line.Value() );
+			line = "";
+		}
+	}
+
+	result = my_pclose( fp );
 
 	if( result != 0 ) {
 		MyString args_string;
 		args.GetArgsStringForDisplay(&args_string,0);
-		vmprintf(D_ALWAYS, "Failed to execute my_system: %s\n", args_string.Value());
+		vmprintf(D_ALWAYS,
+		         "Command returned non-zero: %s\n",
+		         args_string.Value());
 	}
 	return result;
 }

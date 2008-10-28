@@ -45,10 +45,16 @@ ResMgr::ResMgr()
 	m_hook_mgr = NULL;
 #endif
 
-#if HAVE_HIBERNATE
+#if HAVE_HIBERNATION
+	m_netif = NetworkAdapterBase::createNetworkAdapter(
+		daemonCore->InfoCommandSinfulString (), false );
+	m_hibernation_manager = new HibernationManager( );
+	m_hibernation_manager->addInterface( *m_netif );
 	m_hibernate_tid = -1;
-	m_recovery_tid = -1;
-#endif /* HAVE_HIBERNATE */
+	NetworkAdapterBase	*primary = m_hibernation_manager->getNetworkAdapter();
+	dprintf( D_FULLDEBUG, "Using network interface %s for hibernation\n",
+			 primary->interfaceName() );
+#endif
 
 	id_disp = NULL;
 
@@ -81,10 +87,9 @@ ResMgr::~ResMgr()
 	}
 #endif
 
-#if HAVE_HIBERNATE
+#if HAVE_HIBERNATION
 	cancelHibernateTimer();
-	cancelRecoveryTimer();
-#endif /* HAVE_HIBERNATE */
+#endif /* HAVE_HIBERNATION */
 
 	if( resources ) {
 		for( i = 0; i < nresources; i++ ) {
@@ -139,9 +144,9 @@ ResMgr::init_config_classad( void )
 #if HAVE_JOB_HOOKS
 	configInsert( config_classad, ATTR_FETCH_WORK_DELAY, false );
 #endif /* HAVE_JOB_HOOKS */
-#if HAVE_HIBERNATE
+#if HAVE_HIBERNATION
 	configInsert( config_classad, "HIBERNATE", false );
-#endif /* HAVE_HIBERNATE */
+#endif /* HAVE_HIBERNATION */
 
 		// Next, try the IS_OWNER expression.  If it's not there, give
 		// them a resonable default, instead of leaving it undefined. 
@@ -334,7 +339,7 @@ ResMgr::backfillConfig()
 void
 ResMgr::init_resources( void )
 {
-	int i;
+	int i, num_res;
 	CpuAttributes** new_cpu_attrs;
 
 		// These things can only be set once, at startup, so they
@@ -361,9 +366,9 @@ ResMgr::init_resources( void )
 	initTypes( 1 );
 
 		// First, see how many slots of each type are specified.
-	nresources = countTypes( &type_nums, true );
+	num_res = countTypes( &type_nums, true );
 
-	if( ! nresources ) {
+	if( ! num_res ) {
 			// We're not configured to advertise any nodes.
 		resources = NULL;
 		id_disp = new IdDispenser( num_cpus(), 1 );
@@ -373,16 +378,15 @@ ResMgr::init_resources( void )
 		// See if the config file allows for a valid set of
 		// CpuAttributes objects.  Since this is the startup-code
 		// we'll let it EXCEPT() if there is an error.
-	new_cpu_attrs = buildCpuAttrs( nresources, type_nums, true );
+	new_cpu_attrs = buildCpuAttrs( num_res, type_nums, true );
 	if( ! new_cpu_attrs ) {
 		EXCEPT( "buildCpuAttrs() failed and should have already EXCEPT'ed" );
 	}
 
 		// Now, we can finally allocate our resources array, and
 		// populate it.  
-	resources = new Resource*[nresources];
-	for( i=0; i<nresources; i++ ) {
-		resources[i] = new Resource( new_cpu_attrs[i], i+1 );
+	for( i=0; i<num_res; i++ ) {
+		addResource( new Resource( new_cpu_attrs[i], i+1 ) );
 	}
 
 		// We can now seed our IdDispenser with the right slot id. 
@@ -423,9 +427,9 @@ ResMgr::reconfig_resources( void )
 	m_hook_mgr->reconfig();
 #endif
 
-#if HAVE_HIBERNATE
+#if HAVE_HIBERNATION
 	updateHibernateConfiguration();
-#endif /* HAVE_HIBERNATE */
+#endif /* HAVE_HIBERNATION */
 
 		// Tell each resource to reconfig itself.
 	walk(&Resource::reconfig);
@@ -565,9 +569,8 @@ ResMgr::buildCpuAttrs( int total, int* type_num_array, bool except )
 	num = 0;
 	for( i=0; i<max_types; i++ ) {
 		if( type_num_array[i] ) {
-			m_current_slot_type = i;
 			for( j=0; j<type_num_array[i]; j++ ) {
-				cap = buildSlot( num+1, i, except );
+				cap = buildSlot( num+1, type_strings[i], i, except );
 				if( avail.decrement(cap) ) {
 					cap_array[num] = cap;
 					num++;
@@ -749,9 +752,8 @@ ResMgr::typeNumCmp( int* a, int* b )
 
 
 CpuAttributes*
-ResMgr::buildSlot( int slot_id, int type, bool except )
+ResMgr::buildSlot( int slot_id, StringList* list, int type, bool except )
 {
-	StringList* list = type_strings[type];
 	char *attr, *val;
 	int cpus=0, ram=0;
 	float disk=0, swap=0, share;
@@ -774,10 +776,10 @@ ResMgr::buildSlot( int slot_id, int type, bool except )
 				// percentage or fraction for all attributes.
 				// For example "1/4" or "25%".  So, we can just parse
 				// it as a percentage and use that for everything.
-			default_share = parse_value( attr, except );
+			default_share = parse_value( attr, type, except );
 			if( default_share <= 0 && !IS_AUTO_SHARE(default_share) ) {
 				dprintf( D_ALWAYS, "ERROR: Bad description of slot type %d: ",
-						 m_current_slot_type );
+						 type );
 				dprintf( D_ALWAYS | D_NOHEADER,  "\"%s\" is invalid.\n", attr );
 				dprintf( D_ALWAYS | D_NOHEADER, 
 						 "\tYou must specify a percentage (like \"25%%\"), " );
@@ -804,14 +806,14 @@ ResMgr::buildSlot( int slot_id, int type, bool except )
 		if( ! val[1] ) {
 			dprintf( D_ALWAYS, 
 					 "Can't parse attribute \"%s\" in description of slot type %d\n",
-					 attr, m_current_slot_type );
+					 attr, type );
 			if( except ) {
 				DC_Exit( 4 );
 			} else {	
 				return NULL;
 			}
 		}
-		share = parse_value( &val[1], except );
+		share = parse_value( &val[1], type, except );
 		if( ! share ) {
 				// Invalid share.
 		}
@@ -832,7 +834,7 @@ ResMgr::buildSlot( int slot_id, int type, bool except )
 			} else {
 				dprintf( D_ALWAYS,
 						 "You must specify a percent or fraction for swap in slot type %d\n", 
-						 m_current_slot_type ); 
+						 type ); 
 				if( except ) {
 					DC_Exit( 4 );
 				} else {	
@@ -846,7 +848,7 @@ ResMgr::buildSlot( int slot_id, int type, bool except )
 			} else {
 				dprintf( D_ALWAYS, 
 						 "You must specify a percent or fraction for disk in slot type %d\n", 
-						m_current_slot_type ); 
+						type ); 
 				if( except ) {
 					DC_Exit( 4 );
 				} else {	
@@ -856,7 +858,7 @@ ResMgr::buildSlot( int slot_id, int type, bool except )
 			break;
 		default:
 			dprintf( D_ALWAYS, "Unknown attribute \"%s\" in slot type %d\n", 
-					 attr, m_current_slot_type );
+					 attr, type );
 			if( except ) {
 				DC_Exit( 4 );
 			} else {	
@@ -934,7 +936,7 @@ ResMgr::GetConfigExecuteDir( int slot_id, MyString *execute_dir, MyString *parti
    value, not a fraction.
 */
 float
-ResMgr::parse_value( const char* str, bool except )
+ResMgr::parse_value( const char* str, int type, bool except )
 {
 	char *tmp, *foo = strdup( str );
 	float val;
@@ -953,7 +955,7 @@ ResMgr::parse_value( const char* str, bool except )
 		*tmp = '\0';
 		if( ! tmp[1] ) {
 			dprintf( D_ALWAYS, "Can't parse attribute \"%s\" in description of slot type %d\n",
-					 foo, m_current_slot_type );
+					 foo, type );
 			if( except ) {
 				DC_Exit( 4 );
 			} else {	
@@ -1566,24 +1568,24 @@ ResMgr::compute( amask_t how_much )
 	}
 
 		// Now that everything has actually been computed, we can
-		// refresh our internal classad with all the current values of
+		// refresh our interval classad with all the current values of
 		// everything so that when we evaluate our state or any other
 		// expressions, we've got accurate data to evaluate.
 	walk( &Resource::refresh_classad, how_much );
 
-		// Now that we have an updated internal classad for each
+		// Now that we have an updated interval classad for each
 		// resource, we can "compute" anything where we need to 
 		// evaluate classad expressions to get the answer.
 	walk( &Resource::compute, A_EVALUATED );
 
-		// Next, we can publish any results from that to our internal
+		// Next, we can publish any results from that to our interval
 		// classads to make sure those are still up-to-date
 	walk( &Resource::refresh_classad, A_EVALUATED );
 
-		// Finally, now that all the internal classads are up to date
+		// Finally, now that all the interval classads are up to date
 		// with all the attributes they could possibly have, we can
 		// publish the cross-slot attributes desired from
-		// STARTD_SLOT_ATTRS into each slots's internal ClassAd.
+		// STARTD_SLOT_ATTRS into each slots's interval ClassAd.
 	walk( &Resource::refresh_classad, A_SHARED_SLOT );
 
 		// Now that we're done, we can display all the values.
@@ -1603,6 +1605,11 @@ ResMgr::publish( ClassAd* cp, amask_t how_much )
 
 	starter_mgr.publish( cp, how_much );
 	m_vmuniverse_mgr.publish(cp, how_much);
+
+#if HAVE_HIBERNATION
+    m_hibernation_manager->publish( *cp );
+#endif
+
 }
 
 
@@ -1780,33 +1787,51 @@ ResMgr::reset_timers( void )
 								 update_interval );
 	}
 
-#if HAVE_HIBERNATE
+#if HAVE_HIBERNATION
 	resetHibernateTimer();
-#endif /* HAVE_HIBERNATE */
+#endif /* HAVE_HIBERNATION */
 
 }
 
 
 void
-ResMgr::deleteResource( Resource* rip )
+ResMgr::addResource( Resource *rip )
 {
-		// First, find the rip in the resources array:
-	int i, j, dead = -1;
+	Resource** new_resources = NULL;
+
+	if( !rip ) {
+		EXCEPT("Error: attempt to add a NULL resource\n");
+	}
+
+	new_resources = new Resource*[nresources + 1];
+	if( !new_resources ) {
+		EXCEPT("Failed to allocate memory for new resource\n");
+	}
+
+		// Copy over the old Resource pointers.  If nresources is 0
+		// (b/c we used to be configured to have no slots), this won't
+		// copy anything (and won't seg fault).
+	memcpy( (void*)new_resources, (void*)resources, 
+			(sizeof(Resource*)*nresources) );
+
+	new_resources[nresources] = rip;
+
+
+	if( resources ) {
+		delete [] resources;
+	}
+
+	resources = new_resources;
+	nresources++;
+}
+
+
+bool
+ResMgr::removeResource( Resource* rip )
+{
+	int i, j;
 	Resource** new_resources = NULL;
 	Resource* rip2;
-
-	for( i = 0; i < nresources; i++ ) {
-		if( resources[i] == rip ) {
-			dead = i;
-			break;
-		}
-	}
-	if( dead < 0 ) {
-			// Didn't find it.  This is where we'll hit if resources
-			// is NULL.  We should never get here, anyway (we'll never
-			// call deleteResource() if we don't have any resources. 
-		EXCEPT( "ResMgr::deleteResource() failed: couldn't find resource" );
-	}
 
 	if( nresources > 1 ) {
 			// There are still more resources after this one is
@@ -1815,10 +1840,14 @@ ResMgr::deleteResource( Resource* rip )
 		new_resources = new Resource* [ nresources - 1 ];
 		j = 0;
 		for( i = 0; i < nresources; i++ ) {
-			if( i == dead ) {
-				continue;
-			} 
-			new_resources[j++] = resources[i];
+			if( resources[i] != rip ) {
+				new_resources[j++] = resources[i];
+			}
+		}
+
+		if ( j == nresources ) { // j == i would work too
+				// The resource was not found, which should never happen
+			return false;
 		}
 	} 
 
@@ -1839,7 +1868,11 @@ ResMgr::deleteResource( Resource* rip )
 	nresources--;
 	
 		// Return this Resource's ID to the dispenser.
-	id_disp->insert( rip->r_id );
+		// If it is a dynamic slot it's reusing its partitionable
+		// parent's id, so we don't want to free the id.
+	if( Resource::DYNAMIC_SLOT != rip->get_feature() ) {
+		id_disp->insert( rip->r_id );
+	}
 
 		// Tell the collector this Resource is gone.
 	rip->final_update();
@@ -1849,6 +1882,20 @@ ResMgr::deleteResource( Resource* rip )
 
 		// At last, we can delete the object itself.
 	delete rip;
+
+	return true;
+}
+
+
+void
+ResMgr::deleteResource( Resource* rip )
+{
+	if( ! removeResource( rip ) ) {
+			// Didn't find it.  This is where we'll hit if resources
+			// is NULL.  We should never get here, anyway (we'll never
+			// call deleteResource() if we don't have any resources. 
+		EXCEPT( "ResMgr::deleteResource() failed: couldn't find resource" );
+	}
 
 		// Now that a Resource is gone, see if we're done deleting
 		// Resources and see if we should allocate any. 
@@ -1894,31 +1941,15 @@ ResMgr::processAllocList( void )
 	}
 
 		// We're done destroying, and there's something to allocate.  
-	int i, new_size, new_num = alloc_list.Number();
-	new_size = nresources + new_num;
-	Resource** new_resources = new Resource* [ new_size ];
-	CpuAttributes* cap;
-
-		// Copy over the old Resource pointers.  If nresources is 0
-		// (b/c we used to be configured to have no slots), this won't
-		// copy anything (and won't seg fault).
-	memcpy( (void*)new_resources, (void*)resources, 
-			(sizeof(Resource*)*nresources) );
 
 		// Create the new Resource objects.
+	CpuAttributes* cap;
 	alloc_list.Rewind();
-	for( i=nresources; i<new_size; i++ ) {
-		alloc_list.Next(cap);
-		new_resources[i] = new Resource( cap, id_disp->next() );
+	while( alloc_list.Next(cap) ) {
+		addResource( new Resource( cap, nextId() ) );
 		alloc_list.DeleteCurrent();
 	}	
 
-		// Switch over to new_resources:
-	if( resources ) {
-		delete [] resources;
-	}
-	resources = new_resources;
-	nresources = new_size;
 	delete [] type_nums;
 	type_nums = new_type_nums;
 	new_type_nums = NULL;
@@ -1927,86 +1958,128 @@ ResMgr::processAllocList( void )
 }
 
 
-#if HAVE_HIBERNATE
+#if HAVE_HIBERNATION
 
-HibernationManager const& ResMgr::getHibernationManager() const {
-	return m_hibernation_manager;
+HibernationManager const& ResMgr::getHibernationManager(void) const
+{
+	return *m_hibernation_manager;
 }
 
 
 void ResMgr::updateHibernateConfiguration() {
-	m_hibernation_manager.update();
-	if ( -1 == m_recovery_tid ) { 
-			// We only want to (re)start the hibernation timer if
-			// we have not just come back from hibernation and someone
-			// issued a condor_reconfig, etc.: in which case we 
-			// let doHibernateRecovery() restart the hibernation timer
-		if ( m_hibernation_manager.wantsHibernate() ) {
-			if ( -1 == m_hibernate_tid ) {
-				startHibernateTimer();
-			}
-		} else {
-			if ( -1 != m_hibernate_tid ) {
-				cancelHibernateTimer();
-			}
+	m_hibernation_manager->update();
+	if ( m_hibernation_manager->wantsHibernate() ) {
+		if ( -1 == m_hibernate_tid ) {
+			startHibernateTimer();
 		}
-	}
-}
-
-
-int 
-ResMgr::allHibernating() {
-		// fail if there is no resource or if we are
-		// configured not to hibernate
-	if(    !resources
-		|| !m_hibernation_manager.wantsHibernate() ) {
-		return 0;
-	}
-		// The following may evaluate to true even if there
-		// is a claim on one or more of the resources, so we
-		// don't bother checking for claims first. 
-		// 
-		// We take largest value as the representative 
-		// hibernation level for this machine
-	int max = 0;
-	for( int i = 0; i < nresources; i++ ) {
-		int rval = resources[i]->evaluateHibernate();
-		if( 0 == rval ) {
-			return 0;
-		}
-		max = max( max, rval );
-	}
-	return max;
-}
-
-
-void 
-ResMgr::checkHibernate() {	
-		// If all resources have gone unused for some time	
-		// then put the machine to sleep
-	int level = allHibernating();
-	if( level > 0 ) {
-		if( m_hibernation_manager.canHibernate() ) {
-			dprintf ( D_ALWAYS, "ResMgr: This machine is about to enter hibernation\n" );
-			//
-			// Hibernate the machine and start a recovery timer.  This will
-			// cancel checks for hibernation for about about an hour after 
-			// it is set, and resume them once it has finished.
-			//
-			startRecoveryTimer();
-			m_hibernation_manager.doHibernate( level );
-		} else {
-			dprintf ( D_ALWAYS, "ResMgr: ERROR: Ignoring "
-				"HIBERNATE: Machine does not support any "
-				"sleep states.\n" );
+	} else {
+		if ( -1 != m_hibernate_tid ) {
+			cancelHibernateTimer();
 		}
 	}
 }
 
 
 int
-ResMgr::startHibernateTimer() {
-	int interval = m_hibernation_manager.getHibernateCheckInterval();
+ResMgr::allHibernating( MyString &target ) const
+{
+    	// fail if there is no resource or if we are
+		// configured not to hibernate
+	if (   !resources  ||  !m_hibernation_manager->wantsHibernate()  ) {
+		dprintf( D_FULLDEBUG, "allHibernating: doesn't want hibernate\n" );
+		return 0;
+	}
+
+		// The following may evaluate to true even if there
+		// is a claim on one or more of the resources, so we
+		// don't bother checking for claims first. 
+		// 
+		// We take largest value as the representative 
+		// hibernation level for this machine
+	target = "";
+	int level = 0;
+	for( int i = 0; i < nresources; i++ ) {
+
+		MyString	str;
+		if ( !resources[i]->evaluateHibernate(str) ) {
+			return 0;
+		}
+
+		int tmp = m_hibernation_manager->stringToSleepState( str.Value() );
+		dprintf( D_FULLDEBUG, "allHibernating: resource #%d: '%s' = %d\n",
+				 i, str.Value(), tmp );
+		if ( tmp > level ) {
+			target = str;
+			level = tmp;
+		}
+	}
+	return level;
+}
+
+
+void 
+ResMgr::checkHibernate( void )
+{
+
+		// If all resources have gone unused for some time	
+		// then put the machine to sleep
+	MyString	target;
+	int level = allHibernating( target );
+	if( level > 0 ) {
+
+        if( !m_hibernation_manager->canHibernate() ) {
+            dprintf ( D_ALWAYS, "ResMgr: ERROR: Ignoring "
+                "HIBERNATE: Machine does not support any "
+                "sleep states.\n" );
+            return;
+        }
+
+        if( !m_hibernation_manager->canWake() ) {
+			NetworkAdapterBase	*netif =
+				m_hibernation_manager->getNetworkAdapter();
+            dprintf ( D_ALWAYS, "ResMgr: ERROR: Ignoring "
+					  "HIBERNATE: Machine cannot be woken by its "
+					  "public network adapter (%s).\n",
+					  netif->interfaceName() );
+            return;
+		}        
+
+		dprintf ( D_ALWAYS, "ResMgr: This machine is about to "
+        		"enter hibernation\n" );
+
+        //
+		// Set the hibernation state, shutdown the machine's slot 
+	    // and hibernate the machine. We turn off the local slots
+	    // so the StartD will remove any jobs that are currently 
+	    // running as well as stop accepting new ones, since--on 
+	    // Windows anyway--there is the possibility that a job
+	    // may be matched to this machine between the time it
+	    // is told hibernate and the time it actually does.
+		//
+	    // Setting the state here also ensures the Green Computing
+	    // plug-in will know the this ad belongs to it when the
+	    // Collector invalidates it.
+	    //
+		if ( disableResources( target ) ) {
+			m_hibernation_manager->switchToTargetState( );
+		}
+#     if !defined( WIN32 )
+		sleep(10);
+        m_hibernation_manager->setTargetState ( HibernatorBase::NONE );
+        for ( int i = 0; i < nresources; ++i ) {
+            resources[i]->enable();
+            resources[i]->update();
+	    }
+		
+#     endif
+    }
+}
+
+
+int
+ResMgr::startHibernateTimer( void )
+{
+	int interval = m_hibernation_manager->getCheckInterval();
 	m_hibernate_tid = daemonCore->Register_Timer( 
 		interval, interval,
 		(TimerHandlercpp)&ResMgr::checkHibernate,
@@ -2020,20 +2093,22 @@ ResMgr::startHibernateTimer() {
 
 
 void
-ResMgr::resetHibernateTimer() {
-	if ( m_hibernation_manager.wantsHibernate() ) {
+ResMgr::resetHibernateTimer( void )
+{
+	if ( m_hibernation_manager->wantsHibernate() ) {
 		if( m_hibernate_tid != -1 ) {
-			int internal = m_hibernation_manager.getHibernateCheckInterval();
+			int interval = m_hibernation_manager->getCheckInterval();
 			daemonCore->Reset_Timer( 
 				m_hibernate_tid, 
-				internal, internal );
+				interval, interval );
 		}
 	}
 }
 
 
 void
-ResMgr::cancelHibernateTimer() {
+ResMgr::cancelHibernateTimer( void )
+{
 	int rval;
 	if( m_hibernate_tid != -1 ) {
 		rval = daemonCore->Cancel_Timer( m_hibernate_tid );
@@ -2049,46 +2124,7 @@ ResMgr::cancelHibernateTimer() {
 }
 
 
-void ResMgr::doHibernateRecovery() {
-	dprintf ( D_FULLDEBUG, "ResMgr: Restarting hibernation timer\n" );
-		// The recovery time is up, restart the hibernation timer
-	cancelRecoveryTimer();		
-	startHibernateTimer();
-}
-
-
-int
-ResMgr::startRecoveryTimer() {
-	cancelHibernateTimer();
-	int interval = ( 1 * HOUR );
-	m_recovery_tid = daemonCore->Register_Timer( 
-		interval, (TimerHandlercpp)&ResMgr::doHibernateRecovery,
-		"ResMgr::startRecoveryTimer()", this );
-	if( m_recovery_tid < 0 ) {
-		EXCEPT( "Can't register hibernation recovery timer" );
-	}
-	dprintf( D_FULLDEBUG, "Started hibernation recovery timer.\n" );
-	return TRUE;
-}
-
-
-void
-ResMgr::cancelRecoveryTimer() {
-	int rval;
-	if( m_recovery_tid != -1 ) {
-		rval = daemonCore->Cancel_Timer( m_recovery_tid );
-		if( rval < 0 ) {
-			dprintf( D_ALWAYS, "Failed to cancel hibernation recovery timer (%d): "
-				"daemonCore error\n", m_recovery_tid );
-		} else {
-			dprintf( D_FULLDEBUG, "Canceled hibernation recovery timer (%d)\n",
-				m_hibernate_tid );
-		}
-		m_recovery_tid = -1;
-	}
-}
-
-#endif /* HAVE_HIBERNATE */
+#endif /* HAVE_HIBERNATION */
 
 
 void
@@ -2235,44 +2271,6 @@ newCODClaimCmp( const void* a, const void* b )
 }
 
 
-
-
-
-
-IdDispenser::IdDispenser( int size, int seed ) :
-	free_ids(size+2)
-{
-	int i;
-	free_ids.setFiller(true);
-	free_ids.fill(true);
-	for( i=0; i<seed; i++ ) {
-		free_ids[i] = false;
-	}
-}
-
-
-int
-IdDispenser::next( void )
-{
-	int i;
-	for( i=1 ; ; i++ ) {
-		if( free_ids[i] ) {
-			free_ids[i] = false;
-			return i;
-		}
-	}
-}
-
-
-void
-IdDispenser::insert( int id )
-{
-	if( free_ids[id] ) {
-		EXCEPT( "IdDispenser::insert: %d is already free", id );
-	}
-	free_ids[id] = true;
-}
-
 void
 ResMgr::FillExecuteDirsList( class StringList *list )
 {
@@ -2286,3 +2284,43 @@ ResMgr::FillExecuteDirsList( class StringList *list )
 		}
 	}
 }
+
+#if HAVE_HIBERNATION
+
+int
+ResMgr::disableResources( const MyString &state_str )
+{
+
+    int i; /* stupid VC6 */
+
+	/* set the sleep state so the plugin will pickup on the
+	fact that we are sleeping */
+	m_hibernation_manager->setTargetState ( state_str.Value() );
+
+    /* disable all resource on this machine */
+    for ( i = 0; i < nresources; ++i ) {
+        resources[i]->disable();
+	}
+
+    /* update the CM */
+    bool ok = true;
+    for ( i = 0; i < nresources && ok; ++i ) {
+        ok = resources[i]->update_with_ack();
+	}
+
+    /* if any of the updates failed, then renable all the
+    resources and try again later (next time HIBERNATE evaluates
+    to an value>0) */
+    if ( !ok ) {
+        m_hibernation_manager->setTargetState (
+            HibernatorBase::NONE );
+        for ( i = 0; i < nresources; ++i ) {
+            resources[i]->enable();
+            resources[i]->update();
+	    }
+    }
+
+    return ok;
+}
+
+#endif

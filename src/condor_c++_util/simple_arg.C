@@ -35,6 +35,7 @@ SimpleArg::SimpleArg( const char **argv, int argc, int index )
 	m_error = false;
 	m_is_opt = false;
 
+	// Define it as an 'option' if it starts with a '-'
 	if ( m_arg[0] == '-' ) {
 		m_is_opt = true;
 
@@ -47,16 +48,23 @@ SimpleArg::SimpleArg( const char **argv, int argc, int index )
 		else {
 			m_error = true;
 		}
-	}
-	else {
-		m_is_opt = false;
+
+		// Option is the next argument if it exists
+		// point m_opt at it
+		if ( index+1 < argc ) {
+			m_opt = argv[index+1];
+		}
+		else {
+			m_opt = NULL;
+		}
+
 	}
 
-	if ( index+1 < argc ) {
-		m_opt = argv[index+1];
-	}
+	// No '-'?  Not an option
 	else {
-		m_opt = NULL;
+		// point m_opt at current argument
+		m_is_opt = false;
+		m_opt = m_arg;
 	}
 }
 
@@ -94,4 +102,76 @@ SimpleArg::Match( const char short_arg, const char *long_arg ) const
 	else {
 		return false;
 	}
+}
+
+int
+SimpleArg::ConsumeOpt( bool consume )
+{
+	if ( consume ) {
+		m_index++;
+	}
+	return m_index;
+}
+
+// String option operations
+bool
+SimpleArg::getOpt( const char *&opt, bool consume )
+{
+	if ( !isOptStr() ) {
+		return false;
+	}
+	opt = m_opt;
+	ConsumeOpt( consume );
+	return true;
+}
+
+// Integer option operations
+bool
+SimpleArg::isOptInt( void ) const
+{
+	if ( !m_opt ) {
+		return false;
+	}
+	return ( isdigit(*m_opt) || ( (*m_opt == '-') && isdigit(*m_opt+1) )  );
+}
+bool
+SimpleArg::getOpt( int &opt, bool consume )
+{
+	if ( !isOptInt() ) {
+		return false;
+	}
+	opt = atoi( m_opt );
+	ConsumeOpt( consume );
+	return true;
+}
+
+// Integer option operations
+bool
+SimpleArg::getOpt( double &opt, bool consume )
+{
+	if ( !isOptDouble() ) {
+		return false;
+	}
+	opt = atof( m_opt );
+	ConsumeOpt( consume );
+	return true;
+}
+
+// Boolean option operations
+bool
+SimpleArg::isOptBool( void ) const
+{
+	int c = toupper(*m_opt);
+	return ( c=='T' || c=='F' || c=='Y' || c=='N' );
+};
+bool
+SimpleArg::getOpt( bool &opt, bool consume )
+{
+	if ( !isOptBool() ) {
+		return false;
+	}
+	int c = toupper(*m_opt);
+	opt = ( c=='T' || c=='Y' );
+	ConsumeOpt( consume );
+	return true;
 }

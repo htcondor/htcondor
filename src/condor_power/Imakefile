@@ -1,0 +1,13 @@
+NAME = condor_power
+all_target($(NAME))
+
+CFLAGS = $(STD_C_FLAGS) $(CLIPPED)
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(CLIPPED) 
+LIB = $(STD_LIBS)
+
+OBJ = power.o
+
+public_c_plus_target($(NAME),bin,$(OBJ),$(LIB))
+
+html:
+testbin:: all

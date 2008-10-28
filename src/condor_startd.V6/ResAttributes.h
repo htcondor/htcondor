@@ -110,7 +110,6 @@ public:
 	float		condor_load()	{ return m_condor_load; };
 	time_t		keyboard_idle() { return m_idle; };
 	time_t		console_idle()	{ return m_console_idle; };
-	char*		subnet()		{ return m_subnet; };
 
 private:
 		// Dynamic info
@@ -135,10 +134,8 @@ private:
 	char*			m_opsys;
 	char*			m_uid_domain;
 	char*			m_filesystem_domain;
-	char*			m_subnet;
 	int				m_idle_interval; 	// for D_IDLE dprintf messages
 	char*			m_ckptpltfrm;
-	char*			m_hardware_address;
 
 #if defined ( WIN32 )
 	int				m_got_windows_version_info;
@@ -182,9 +179,14 @@ public:
 	void dprintf( int, char*, ... );
 	void show_totals( int );
 
+	float get_disk() { return c_disk; }
 	float get_disk_fraction() { return c_disk_fraction; }
+	unsigned long get_total_disk() { return c_total_disk; }
 	char const *executeDir() { return c_execute_dir.Value(); }
 	char const *executePartitionID() { return c_execute_partition_id.Value(); }
+
+	CpuAttributes& operator+=( CpuAttributes& rhs);
+	CpuAttributes& operator-=( CpuAttributes& rhs);
 
 private:
 	Resource*	 	rip;

@@ -34,6 +34,7 @@
 #include "setenv.h"
 #include "time_offset.h"
 #include "subsystem_info.h"
+#include "file_lock.h"
 #include "exit.h"
 
 #if HAVE_EXT_GCB
@@ -515,7 +516,7 @@ dc_touch_lock_files(Service *)
 	// FileLock Object.
 	p = set_condor_priv();
 
-	FileLock::update_all_lock_timestamps();
+	FileLock::updateAllLockTimestamps();
 
 	set_priv(p);
 
@@ -1582,11 +1583,11 @@ int main( int argc, char** argv )
 
 		// call config so we can call param.  
 	if ( mySubSystem->isType(SUBSYSTEM_TYPE_SHADOW) ) {
-			// Try to minimize shadow footprint by not loading
-			// the "extra" info from the config file
-			config( wantsQuiet, false, false );
+		// Try to minimize shadow footprint by not loading
+		// the "extra" info from the config file
+		config( wantsQuiet, false, false );
 	} else {
-			config( wantsQuiet, false, true );
+		config( wantsQuiet, false, true );
 	}
 
 
@@ -1852,6 +1853,11 @@ int main( int argc, char** argv )
 		 fcntl(daemonCore->async_pipe[0],F_SETFL,O_NONBLOCK) == -1 ||
 		 fcntl(daemonCore->async_pipe[1],F_SETFL,O_NONBLOCK) == -1 ) {
 			EXCEPT("Failed to create async pipe");
+	}
+#else
+	if ( daemonCore->async_pipe[1].connect_socketpair(daemonCore->async_pipe[0])==false )
+	{
+		EXCEPT("Failed to create async pipe socket pair");
 	}
 #endif
 

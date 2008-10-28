@@ -87,7 +87,7 @@ CC_LINK = CPlusLinker
 endif
 
 
-STATIC	= -static
+STATIC	= -static 
 STAR	= *
 
 PLATFORM_LDFLAGS = PlatformLdFlags
@@ -277,6 +277,10 @@ QUILL_INC = -I$(POSTGRESQL_INC)
 QUILL_FLAGS = -DWANT_QUILL 
 #endif
 
+#ifdef WANT_LEASE_MANAGER
+LEASE_MANAGER_FLAGS = -DWANT_LEASE_MANAGER
+#endif
+
 
 #if HAVE_EXT_GCB
 #  if ! HAVE_GNU_LD
@@ -294,6 +298,13 @@ DAEMONCORE_WRAP_LDFLAGS = -Wl,--wrap,exit
  end of externals-specific settings and flags
 ********************************************/
 
+#if HAVE_PTHREADS
+PTHREAD_LIB = -lpthread
+#if HAVE_GNU_LD
+PTHREAD_FLAG = -pthread
+#endif
+#endif
+
 VENDOR_C_FLAGS = -I. -I.. -I../.. -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) \
 		 -I$(C_PLUS_INCLUDE) -I$(DAEMONCLIENT_INCLUDE) \
 		 -I$(DAEMONCORE_INCLUDE) \
@@ -301,6 +312,8 @@ VENDOR_C_FLAGS = -I. -I.. -I../.. -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) \
 		 -D$(OS_FLAG)=$(OS_FLAG) $(SITE_C_FLAGS) \
 		 $(SECURITY_FLAGS) $(NETMAN_FLAGS) \
 		 $(QUILL_FLAGS) $(TT_FLAGS) $(GCB_FLAGS) \
+		 $(PTHREAD_FLAG) \
+		 $(LEASE_MANAGER_FLAGS) \
 		 $(CONFIGURE_CFLAGS) $(CONFIGURE_CPPFLAGS)
 
 
@@ -369,7 +382,7 @@ PRIVSEP_CLIENT_LIB = ../condor_privsep/privsep_client.a
 
 /* common ld flags which should be first in the list */
 COM_LDFLAGS_F = $(GCC_RDYNAMIC_FLAG) $(GCC_STACK_PROTECTOR) $(GCC_HASH_STYLE_FLAG) -lm \
-                $(LDFLAGS) $(CONFIGURE_LIBS) $(CONFIGURE_LDFLAGS)
+                $(LDFLAGS) $(CONFIGURE_LIBS) $(CONFIGURE_LDFLAGS) $(PTHREAD_LIB)
 
 /* common ld flags which should be last in the list */
 COM_LDFLAGS_L = 

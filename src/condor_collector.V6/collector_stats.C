@@ -315,7 +315,7 @@ CollectorClassStats::CollectorClassStats ( const char *class_name,
 CollectorClassStats::~CollectorClassStats ( void )
 {
 	if ( className ) {
-		free( (void *)className );
+		free( const_cast<char *>(className) );
 		className = NULL;
 	}
 }
@@ -571,7 +571,7 @@ CollectorDaemonStatsList::updateStats( const char *class_name,
 
 // Publish statistics into our ClassAd
 int 
-CollectorDaemonStatsList::publish( ClassAd *ad )
+CollectorDaemonStatsList::publish( ClassAd * /*ad*/ )
 {
 	return 0;
 }

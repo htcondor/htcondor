@@ -258,6 +258,10 @@ SOURCE=..\src\condor_util_lib\ltrunc.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_util_lib\mark_thread.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_util_lib\match_prefix.c
 # End Source File
 # Begin Source File

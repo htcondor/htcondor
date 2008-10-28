@@ -702,6 +702,15 @@ if test $JOB_HOOKS != no; then
   AC_DEFINE([HAVE_JOB_HOOKS], [1], [Define to 1 to support invoking hooks throughout the workflow of a job])
 fi
 
+AC_ARG_ENABLE(hibernation,
+  [AS_HELP_STRING([--enable-hibernation],
+     [Support for Condor-controlled hibernation])],
+  [HIBERNATION=$enableval],
+  [HIBERNATION=yes])
+if test $HIBERNATION != no; then
+  AC_DEFINE([HAVE_HIBERNATION], [1], [Define to 1 to support Condor-controlled hibernation])
+fi
+
 
 ############################################################
 # checks for programs
@@ -2114,11 +2123,11 @@ AS_IF([test "x$enable_netman" = xyes],
 
 AC_ARG_ENABLE([nest],
   AC_HELP_STRING([--enable-nest],
-    [enable Nest functionality (default: no)]),
+    [enable NeST functionality (default: no)]),
   [],
   [enable_nest=no])
 AS_IF([test "x$enable_nest" = xyes],
-  [AC_DEFINE([WANT_NEST], [1], [Define if enabling Nest])])
+  [AC_DEFINE([WANT_NEST], [1], [Define if enabling NeST])])
 
 AC_ARG_ENABLE([quill],
   AC_HELP_STRING([--enable-quill],
@@ -2171,28 +2180,47 @@ fi
 # checks for libraries
 ############################################################
 
-# The DRMAA C library needs to be compiled with pthreads in mind if
-# pthreads are available. This machinery ends up defining HAS_PTHREADS
-# In the build system which is then used to add the correct threading
-# flags to the compile line for drmaa code.
-AC_CHECK_LIB([pthread], [pthread_create],
-  [ac_pthreads=yes
-   AC_DEFINE([HAS_PTHREADS],[1],[Define if pthreads are available])],
-  [ac_pthreads=no])
+# Currently in Condor, threading in daemon core on Unix requires
+# both pthreads and thread local storage.  HACK: for right now
+# we know that only Linux meets that requirement, and furthermore
+# that TLS exists but is broken on ia64 (the compiler blows up).  So for now
+# we only want pthreads defined on Linux that is not ia64.  Once we 
+# remove the requirement on TLS in the code, we can safely remove 
+# this hack.
+if test $os = "Linux" && test $arch != "ia64"; then
+	AC_CHECK_LIB([pthread], [pthread_create],
+  		[ac_pthreads=yes
+   		AC_DEFINE([HAVE_PTHREADS],[1],[Define if pthreads are available])],
+  		[ac_pthreads=no])
+	# Check if this system support Thread Local Storage class.
+	AX_TLS
+fi
 
 
 ############################################################
 # checks for header files
 ############################################################
 
+AC_CHECK_HEADERS([net/if.h],[],[],[
+#include<netinet/in.h>])
 AC_CHECK_HEADERS([sys/types.h])
 AC_CHECK_HEADERS([sys/param.h])
 AC_CHECK_HEADERS([stdint.h])
 AC_CHECK_HEADERS([inttypes.h])
+AC_CHECK_HEADERS([os_types.h])
 AC_CHECK_HEADERS([sys/personality.h])
 AC_CHECK_HEADERS([linux/personality.h])
 AC_CHECK_HEADERS([linux/magic.h])
 AC_CHECK_HEADERS([linux/nfsd/const.h])
+AC_CHECK_HEADERS([linux/sockios.h])
+AC_CHECK_HEADERS([linux/types.h])
+AC_CHECK_HEADERS([linux/ethtool.h],[],[],[
+#if HAVE_OS_TYPES_H
+# include <os_types.h>
+#endif
+#if HAVE_LINUX_TYPES_H
+# include <linux/types.h>
+#endif])
 AC_CHECK_HEADERS([sys/statfs.h])
 AC_CHECK_HEADERS([sys/statvfs.h])
 AC_CHECK_HEADERS([sys/vfs.h])
@@ -2226,6 +2254,12 @@ AC_CHECK_TYPES([id_t])
 AC_CHECK_FUNCS([strsignal				\
 		strcasestr				\
 		lstat					\
+		lstat					\
+		lstat64					\
+		fstat64					\
+		_stati64				\
+		_lstati64				\
+		_fstati64				\
 		stat64					\
 		lstat64					\
 		fstat64					\
@@ -2371,6 +2405,12 @@ if test "$ac_cv_func_statfs" = yes ; then
       AC_MSG_RESULT(unknown)
       AC_MSG_ERROR([unable to determine number of arguments to statfs()])])])
 fi dnl test "$ac_cv_func_statfs" = yes
+
+# Do we have the "ethtool" and similar declarations?
+AC_CHECK_DECLS([SIOCETHTOOL,SIOCGIFCONF],,, [[#include <linux/sockios.h>]])
+
+# Does net/if.h define struct ifreq ?
+AC_CHECK_TYPES([struct ifreq,struct ifconf],[],[],[#include <net/if.h>])
 
 # we don't actually want to add -lgen to our link line, but we do want
 # HAVE_LIBGEN defined correctly for our test suite builds...
@@ -2909,6 +2949,20 @@ AC_ARG_ENABLE([stork],
    fi])
 AS_IF([test "x$enable_stork" = xyes],
   [AC_DEFINE([WANT_STORK], [1], [Define if enabling Stork])])
+
+# NRL: Similar logic for the lease manager
+AC_ARG_ENABLE([lease-manager],
+  AC_HELP_STRING([--enable-lease-manager],
+    [enable lease manager functionality (default: platform dependent)]),
+  [],
+  [if test "$_cv_has_classads" = "yes" -a "$cv_ext_classads" = "yes" ; then
+    enable_lease_manager=yes;
+   else
+    enable_lease_manager=no;
+   fi])
+AS_IF([test "$enable_lease_manager" = "yes"],
+  [AC_DEFINE([WANT_LEASE_MANAGER], [1],[Define if enabling lease manager])])
+
 
 ############################################################
 # Configure-generated output

@@ -41,6 +41,7 @@ public:
 		RESET_FILE, RESET_FULL, RESET_INIT,
 	};
 
+	ReadUserLogState( void );
 	ReadUserLogState( const char *path,
 					  int max_rotations,
 					  int recent_thresh );
@@ -56,10 +57,12 @@ public:
 	bool InitializeError( void ) const { return m_init_error; };
 
 	// Accessors
-	const char *BasePath( void ) const { return m_base_path; };
+	const char *BasePath( void ) const { return m_base_path.GetCStr(); };
 	const char *CurPath( void ) const { return m_cur_path.GetCStr( ); };
 	int Rotation( void ) const { return m_cur_rot; };
 	filesize_t Offset( void ) const { return m_offset; };
+	filesize_t LogPosition( void ) const { return m_log_position; };
+	filesize_t LogRecordNo( void ) const { return m_log_record; };
 	bool IsValid( void ) const { return (m_cur_rot >= 0); };
 
 	// Get/set maximum rotations
@@ -97,6 +100,10 @@ public:
 	//  NOTE: *Assumes* that this FD points to CurPath()!!
 	int StatFile( int fd );
 
+	// Has the log file grown?
+	ReadUserLog::FileStatus CheckFileStatus( int fd = -1 );
+
+	// Get / set the log file type
 	// Method to generate log path
 	bool GeneratePath( int rotation, MyString &path,
 					   bool initializing = false ) const;
@@ -132,30 +139,42 @@ public:
 	void GetState( const ReadUserLog::FileState &state,
 				   MyString &str, const char *label = NULL ) const;
 
+	// ********************************************************************
 	// This is the file state buffer that we generate for the init/get/set
 	// methods
-#define FILESTATE_VERSION		102
-	struct FileState {
-		char			signature[64];		// File state signature
-		int				version;			// Version #
-		char			path[512];			// The log's path
-		char			uniq_id[128];		// File's uniq identifier
-		int				sequence;			// File's sequence number
-		int				rotation;			// 0 == the "current" file
-		int				max_rotations;		// Max rotation level
-		UserLogType		log_type;			// The log's type
-		StatStructInode	inode;				// The log's inode #
-		time_t			ctime;				// The log's creation time
-		union {								// Make these things 8 bytes
-			char		bytes[8];
-			filesize_t	asint;
-		}				size, offset;		// log's size and our offset
-		time_t			update_time;		// Time of last struct update
+	// ********************************************************************
+#define FILESTATE_VERSION		103
+
+	// Make things 8 bytes
+	union FileStateI64_t {
+		char		bytes[8];
+		int64_t		asint;
 	};
-	// "Public" file state
+
+	// The structure itself
+	struct FileState {
+		char			m_signature[64];	// File state signature
+		int				m_version;			// Version #
+		char			m_path[512];		// The log's path
+		char			m_uniq_id[128];		// File's uniq identifier
+		int				m_sequence;			// File's sequence number
+		int				m_rotation;			// 0 == the "current" file
+		int				m_max_rotations;	// Max rotation level
+		UserLogType		m_log_type;			// The log's type
+		StatStructInode	m_inode;			// The log's inode #
+		time_t			m_ctime;			// The log's creation time
+		FileStateI64_t	m_size;				// The log's size (bytes)
+		FileStateI64_t	m_offset;			// Our offset in current log
+		FileStateI64_t	m_log_offset;		// Offset of this log file in whole
+		FileStateI64_t	m_log_position;		// Our position in the whole log
+		FileStateI64_t	m_log_record;		// Cur record # in the whole log
+		time_t			m_update_time;		// Time of last struct update
+	};
+
+	// "Public" view of the file state
 	typedef union {
 		FileState	actual_state;
-		char						filler [2048];
+		char		filler [2048];
 	} FileStatePub;
 		
 
@@ -175,15 +194,21 @@ private:
 	bool			m_init_error;		// Error initializing?
 	bool			m_initialized;		// Initialized OK?
 
-	char			*m_base_path;		// The log's base path
+	MyString		m_base_path;		// The log's base path
 	MyString		m_cur_path;			// The current (reading) log's path
 	int				m_cur_rot;			// Current file rotation number
 	MyString		m_uniq_id;			// File's uniq identifier
 	int				m_sequence;			// File's sequence number
 
 	StatStructType	m_stat_buf;			// file stat data
+	filesize_t		m_status_size;		// Size at last status check
+
 	bool			m_stat_valid;		// Stat buffer valid?
 	time_t			m_update_time;		// Time of last stat
+
+	filesize_t		m_log_offset;		// Offset of this log file in whole
+	filesize_t		m_log_position;		// Our position in the whole log
+	filesize_t		m_log_record;		// Current record # in the whole log
 
 	UserLogType		m_log_type;			// Type of this log
 	filesize_t		m_offset;			// Our current offset

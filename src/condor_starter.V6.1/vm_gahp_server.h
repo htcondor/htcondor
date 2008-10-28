@@ -35,8 +35,9 @@
 class VMGahpRequest;
 class VMGahpServer : public Service {
 	public:
-		VMGahpServer(const char *vmgahpserver, const char* vmgahpconfig, 
-				const char *vmtype, ClassAd* job_ad);
+		VMGahpServer(const char *vmgahpserver,
+		             const char *vmtype,
+		             ClassAd* job_ad);
 		virtual ~VMGahpServer();
 
 		bool startUp(Env *job_env, const char* job_iwd, int nice_inc, 

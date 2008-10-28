@@ -91,8 +91,10 @@ PowerEventHander(DWORD eventType, LPVOID eventData) {
 	// Events here are sometimes requests so we can return NO_ERROR 
 	// to grant the request and an error code to deny the request
 	// 
-	DWORD status = NO_ERROR;	
-	
+	DWORD       status          = NO_ERROR;
+    daemon      *startd         = daemons.FindDaemon ( DT_STARTD );
+	static bool auto_resumed    = false;
+
 	switch( eventType ) {
 	case PBT_APMQUERYSUSPEND:
 		//
@@ -122,6 +124,15 @@ PowerEventHander(DWORD eventType, LPVOID eventData) {
 		// 
 		dprintf( D_ALWAYS, "PowerEventHander: "
 			"Waking machine (APM)\n" );
+
+        /* alert the StartD of the wake event */
+        if ( !auto_resumed && startd ) {
+            startd->Stop();
+            startd->Start();
+        }
+
+        auto_resumed = false;
+
 		break;
 		
 	case PBT_APMRESUMEAUTOMATIC:
@@ -136,6 +147,15 @@ PowerEventHander(DWORD eventType, LPVOID eventData) {
 		//
 		dprintf( D_ALWAYS, "PowerEventHander: Waking machine to "
 			"handle an event (Automatic)\n" );
+
+        /* alert the StartD of the wake event */
+        if ( startd ) {
+            startd->Stop();
+            startd->Start();
+        }
+
+        auto_resumed = true;
+
 		break;
 		
 	case PBT_APMRESUMECRITICAL:
@@ -148,6 +168,13 @@ PowerEventHander(DWORD eventType, LPVOID eventData) {
 		// 
 		dprintf( D_ALWAYS, "PowerEventHander: Resuming machine after "
 			"a critical suspension (possible battery failure?)\n" );
+
+        /* alert the StartD of the wake event */
+        if ( startd ) {
+            startd->Stop();
+            startd->Start();
+        }
+
 		break;
 		
 	default:

@@ -17,8 +17,6 @@
  *
  ***************************************************************/
 
-
-
 #include "condor_common.h"
 #include "condor_debug.h"
 #include <stdarg.h>
@@ -43,15 +41,9 @@ ReadUserLogState::ReadUserLogState(
 	m_max_rotations = max_rotations;
 	m_recent_thresh = recent_thresh;
 	if ( path ) {
-		int		len = strlen( path );
-
-		m_base_path = new char[len+1];
-		strcpy(m_base_path, path );
-		m_initialized = true;	
+		m_base_path = path;
 	}
-	else {
-		m_base_path = NULL;
-	}
+	m_initialized = true;
 }
 
 ReadUserLogState::ReadUserLogState(
@@ -64,6 +56,11 @@ ReadUserLogState::ReadUserLogState(
 	// Sets m_initialized and m_init_error as appropriate
 	SetState( state );
 }
+ReadUserLogState::ReadUserLogState( void )
+{
+	Reset( RESET_INIT );
+}
+
 
 ReadUserLogState::~ReadUserLogState( void )
 {
@@ -77,15 +74,12 @@ ReadUserLogState::Reset( ResetType type )
 	if ( RESET_INIT == type ) {
 		m_initialized = false;
 		m_init_error = false;
-		m_base_path = NULL;
+		m_base_path = "";
 	}
 
 	// Full reset: Free up memory
 	else if ( RESET_FULL == type ) {
-		if ( m_base_path ) {
-			delete [] m_base_path;
-			m_base_path = NULL;
-		}
+		m_base_path = "";
 	}
 
 	// Always: Reset everything else
@@ -94,6 +88,8 @@ ReadUserLogState::Reset( ResetType type )
 	m_uniq_id = "";
 
 	memset( &m_stat_buf, 0, sizeof(m_stat_buf) );
+	m_status_size = -1;
+
 	m_stat_valid = false;
 	m_update_time = 0;
 
@@ -168,7 +164,7 @@ ReadUserLogState::GeneratePath( int rotation, MyString &path,
 	}
 
 	// No base path set???  Nothing we can do here.
-	if ( ! m_base_path ) {
+	if ( !m_base_path.Length() ) {
 		path = "";
 		return false;
 	}
@@ -207,9 +203,9 @@ ReadUserLogState::StatFile( StatStructType &statbuf ) const
 int
 ReadUserLogState::StatFile( const char *path, StatStructType &statbuf ) const
 {
-	StatWrapper	statwrap( path );
-	if ( statwrap.GetStatus( )  ) {
-		return statwrap.GetStatus( );
+	StatWrapper	statwrap;
+	if ( statwrap.Stat( path, StatWrapper::STATOP_STAT ) ) {
+		return statwrap.GetRc( );
 	}
 
 	statwrap.GetBuf( statbuf );
@@ -364,6 +360,40 @@ ReadUserLogState::SetScoreFactor( enum ScoreFactors which, int factor )
 	}
 }
 
+ReadUserLog::FileStatus
+ReadUserLogState::CheckFileStatus( int fd )
+{
+	StatWrapper	sb;
+
+	if ( fd >= 0 ) {
+		sb.Stat( fd );
+	}
+
+	if ( m_cur_path.Length() && !sb.IsBufValid() ) {
+		sb.Stat( m_cur_path.GetCStr() );
+	}
+
+	if ( sb.GetRc() ) {
+		dprintf( D_FULLDEBUG, "StatFile: errno = %d\n", sb.GetErrno() );
+		return ReadUserLog::LOG_STATUS_ERROR;
+	}
+
+	filesize_t				size = sb.GetBuf()->st_size;
+	ReadUserLog::FileStatus status;
+
+	if ( (m_status_size < 0) || (size > m_status_size) ) {
+		status = ReadUserLog::LOG_STATUS_GROWN;
+	}
+	else if ( size == m_status_size ) {
+		status = ReadUserLog::LOG_STATUS_NOCHANGE;
+	}
+	else {
+		status = ReadUserLog::LOG_STATUS_SHRUNK;
+	}
+	m_status_size = size;
+	return status;
+}
+
 int
 ReadUserLogState::CompareUniqId( const MyString &id ) const
 {
@@ -387,13 +417,13 @@ ReadUserLogState::InitState( ReadUserLog::FileState &state )
 	ReadUserLogState::FileState	*istate = GetFileState( state );
 
 	memset( istate, 0, sizeof(ReadUserLogState::FileStatePub) );
-	istate->log_type = LOG_TYPE_UNKNOWN;
+	istate->m_log_type = LOG_TYPE_UNKNOWN;
 
-	strncpy( istate->signature,
+	strncpy( istate->m_signature,
 			 FileStateSignature,
-			 sizeof(istate->signature) );
-	istate->signature[sizeof(istate->signature) - 1] = '\0';
-	istate->version = FILESTATE_VERSION;
+			 sizeof(istate->m_signature) );
+	istate->m_signature[sizeof(istate->m_signature) - 1] = '\0';
+	istate->m_version = FILESTATE_VERSION;
 
 	return true;
 }
@@ -417,44 +447,48 @@ ReadUserLogState::GetState( ReadUserLog::FileState &state ) const
 	ReadUserLogState::FileState *istate = GetFileState( state );
 
 	// Verify that the signature and version matches
-	if ( strcmp( istate->signature, FileStateSignature ) ) {
+	if ( strcmp( istate->m_signature, FileStateSignature ) ) {
 		return false;
 	}
-	if ( istate->version != FILESTATE_VERSION ) {
+	if ( istate->m_version != FILESTATE_VERSION ) {
 		return false;
 	}
 
 	// The paths shouldn't change... copy them only the first time
-	if( !strlen( istate->path ) ) {
-		int size = sizeof(istate->path) - 1;
-		strncpy( istate->path, m_base_path, size );
-		istate->path[size] = '\0';
+	if( !strlen( istate->m_path ) ) {
+		int	size = sizeof(istate->m_path) - 1;
+		strncpy( istate->m_path, m_base_path.GetCStr(), size );
+		istate->m_path[size] = '\0';
 	}
 
 	// The signature is set in the InitFileState()
 	// method, so we don't need to do it here
 
-	istate->rotation = m_cur_rot;
+	istate->m_rotation = m_cur_rot;
 
-	istate->log_type = m_log_type;
+	istate->m_log_type = m_log_type;
 
 	if( m_uniq_id.GetCStr() ) {
-		strncpy( istate->uniq_id,
+		strncpy( istate->m_uniq_id,
 				 m_uniq_id.GetCStr(),
-				 sizeof(istate->uniq_id) );
-		istate->uniq_id[sizeof(istate->uniq_id) - 1] = '\0';
+				 sizeof(istate->m_uniq_id) );
+		istate->m_uniq_id[sizeof(istate->m_uniq_id) - 1] = '\0';
 	}
 	else {
-		memset( istate->uniq_id, 0, sizeof(istate->uniq_id) );
+		memset( istate->m_uniq_id, 0, sizeof(istate->m_uniq_id) );
 	}
-	istate->sequence = m_sequence;
-	istate->max_rotations = m_max_rotations;
+	istate->m_sequence      = m_sequence;
+	istate->m_max_rotations = m_max_rotations;
 
-	istate->inode = m_stat_buf.st_ino;
-	istate->ctime = m_stat_buf.st_ctime;
-	istate->size.asint = m_stat_buf.st_size;
+	istate->m_inode         = m_stat_buf.st_ino;
+	istate->m_ctime         = m_stat_buf.st_ctime;
+	istate->m_size.asint    = m_stat_buf.st_size;
 
-	istate->offset.asint = m_offset;
+	istate->m_offset.asint  = m_offset;
+
+	istate->m_log_offset.asint   = m_log_offset;
+	istate->m_log_position.asint = m_log_position;
+	istate->m_log_record.asint   = m_log_record;
 
 	return true;
 }
@@ -465,33 +499,35 @@ ReadUserLogState::SetState( const ReadUserLog::FileState &state )
 	const ReadUserLogState::FileState *istate = GetFileStateConst( state );
 
 	// Verify that the signature matches
-	if ( strcmp( istate->signature, FileStateSignature ) ) {
+	if ( strcmp( istate->m_signature, FileStateSignature ) ) {
 		m_init_error = true;
 		return false;
 	}
-	if ( istate->version != FILESTATE_VERSION ) {
+	if ( istate->m_version != FILESTATE_VERSION ) {
 		m_init_error = true;
 		return false;
 	}
 
-	int len = strlen( istate->path );
-	m_base_path = new char[ len+1 ];
-	strcpy( m_base_path, istate->path );
+	m_base_path = istate->m_path;
 
 	// Set the rotation & path
-	m_max_rotations = istate->max_rotations;
-	Rotation( istate->rotation, false, true );
+	m_max_rotations = istate->m_max_rotations;
+	Rotation( istate->m_rotation, false, true );
 
-	m_log_type = istate->log_type;
-	m_uniq_id = istate->uniq_id;
-	m_sequence = istate->sequence;
+	m_log_type = istate->m_log_type;
+	m_uniq_id = istate->m_uniq_id;
+	m_sequence = istate->m_sequence;
 
-	m_stat_buf.st_ino = istate->inode;
-	m_stat_buf.st_ctime = istate->ctime;
-	m_stat_buf.st_size = istate->size.asint;
+	m_stat_buf.st_ino = istate->m_inode;
+	m_stat_buf.st_ctime = istate->m_ctime;
+	m_stat_buf.st_size = istate->m_size.asint;
 	m_stat_valid = true;
 
-	m_offset = istate->offset.asint;
+	m_offset = istate->m_offset.asint;
+
+	m_log_offset   = istate->m_log_offset.asint;
+	m_log_position = istate->m_log_position.asint;
+	m_log_record   = istate->m_log_record.asint;
 
 	m_initialized = true;
 
@@ -515,7 +551,7 @@ ReadUserLogState::GetState( MyString &str, const char *label ) const
 		"  UniqId = %s, seq = %d\n"
 		"  rotation = %d; max = %d; offset = %ld; type = %d\n"
 		"  inode = %u; ctime = %d; size = %ld\n",
-		m_base_path, m_cur_path.GetCStr(),
+		m_base_path.GetCStr(), m_cur_path.GetCStr(),
 		m_uniq_id.GetCStr() ? m_uniq_id.GetCStr() : "", m_sequence,
 		m_cur_rot, m_max_rotations, (long) m_offset, m_log_type,
 		(unsigned)m_stat_buf.st_ino, (int)m_stat_buf.st_ctime,
@@ -545,7 +581,7 @@ ReadUserLogState::GetState(
   ) const
 {
 	const ReadUserLogState::FileState *istate = GetFileStateConst( state );
-	if ( ( !istate ) || ( !istate->version ) ) {
+	if ( ( !istate ) || ( !istate->m_version ) ) {
 		if ( label ) {
 			str.sprintf( "%s: no state", label );
 		}
@@ -565,10 +601,10 @@ ReadUserLogState::GetState(
 		"  UniqId = %s, seq = %d\n"
 		"  rotation = %d; max = %d; offset = "FILESIZE_T_FORMAT"; type = %d\n"
 		"  inode = %u; ctime = %ld; size = "FILESIZE_T_FORMAT"\n",
-		istate->signature, istate->version, istate->update_time,
-		istate->path,
-		istate->uniq_id, istate->sequence,
-		istate->rotation, istate->max_rotations,
-		istate->offset.asint, istate->log_type,
-		(unsigned)istate->inode, istate->ctime, istate->size.asint );
+		istate->m_signature, istate->m_version, istate->m_update_time,
+		istate->m_path,
+		istate->m_uniq_id, istate->m_sequence,
+		istate->m_rotation, istate->m_max_rotations,
+		istate->m_offset.asint, istate->m_log_type,
+		(unsigned)istate->m_inode, istate->m_ctime, istate->m_size.asint );
 }

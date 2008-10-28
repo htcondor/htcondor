@@ -1,8 +1,8 @@
 #if HAVE_EXT_CLASSADS
-#define New_classads_includes	-I$(NEW_CLASSADS_INC)
-#define New_classads_obj		credential.o X509credential.o
-#define New_classads_dc_obj		dc_credd.o
-#define New_classads_lib		-L$(NEW_CLASSADS_LIB) -lclassad_ns
+#define New_classads_includes	-I$(NEW_CLASSADS_INC) -I../classad_analysis
+#define New_classads_obj	credential.o X509credential.o classad_oldnew.o newclassad_stream.o
+#define New_classads_dc_obj	dc_credd.o dc_lease_manager.o dc_lease_manager_lease.o
+#define New_classads_lib	-L$(NEW_CLASSADS_LIB) -lclassad_ns
 #else
 #define New_classads_includes
 #define New_classads_obj
@@ -45,7 +45,7 @@ URL_OBJ = url_condor.o cbstp_url.o file_url.o http_url.o filter_url.o \
 	mailto_url.o cfilter_url.o ftp_url.o include_urls.o mkargv.o MapFile.o
 
 API_OBJ = generic_query.o condor_query.o condor_q.o ad_printmask.o \
-	condor_event.o user_log.o \
+	condor_event.o user_log.o user_log_header.o \
 	read_user_log.o read_user_log_state.o \
 	strnewp.o stat_wrapper.o stat_wrapper_internal.o \
 	read_multiple_logs.o CondorError.o check_events.o tmp_dir.o
@@ -60,6 +60,13 @@ DH_OBJ = condor_dh.o
 SETEUID_OBJ = ../condor_util_lib/seteuid.o
 #else
 SETEUID_OBJ = 
+#endif
+
+HIBERNATION_OBJS = hibernation_manager.o hibernator.o network_adapter.o \
+	udp_waker.o waker.o
+#if IS_LINUX
+HIBERNATION_OBJS += hibernator.linux.o \
+	network_adapter.unix.o network_adapter.linux.o
 #endif
 
 #if !HAVE_SETEGID
@@ -125,6 +132,7 @@ CONLIBAPI_OBJ = \
 	condor_event.o \
 	file_sql.o \
 	misc_utils.o \
+	user_log_header.o \
 	user_log.o \
 	read_user_log.o \
 	read_user_log_state.o \
@@ -178,10 +186,11 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o selector.o \
 	email.o env.o c++_util_instantiate.o \
 	string_list.o net_string_list.o condor_event.o $(URL_OBJ) \
 	get_daemon_name.o \
-	user_log.o \
+	user_log.o user_log_header.o \
 	read_user_log.o read_user_log_state.o \
 	config.o condor_config.o \
-	stringSpace.o condor_state.o \
+	stringSpace.o condor_state.o condor_adtypes.o \
+	simple_arg.o \
 	$(API_OBJ) $(DAEMON_CLIENT_OBJ) \
 	classad_hashtable.o classad_log.o log_transaction.o log.o \
 	classad_collection.o usagemon.o print_wrapped_text.o \
@@ -189,6 +198,7 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o selector.o \
 	ClassAdReevaluator.o \
 	linebuffer.o cron.o cronmgr.o cronjob.o cronjob_classad.o \
 	distribution.o \
+	debug_timer.o \
 	condor_attributes.o condor_environ.o \
 	get_full_hostname.o format_time.o renice_self.o condor_version.o \
 	limit.o my_subsystem.o access.o subsystem_info.o \
@@ -215,7 +225,9 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o selector.o \
 	$(PLUGIN_OBJ) \
 	forkwork.o filename_tools_cpp.o condor_getcwd.o \
 	set_user_priv_from_ad.o hook_utils.o classad_visa.o \
+	$(HIBERNATION_OBJS) \
 	ConcurrencyLimitUtils.o \
+	condor_threads.o \
 	simple_arg.o
 
 library_target(cplus_lib.a,$(OBJ))
@@ -264,6 +276,8 @@ c_plus_target(test_log_reader,test_log_reader.o,$(LIB))
 c_plus_target(test_write_term,test_write_term.o,$(LIB))
 c_plus_target(test_prioritysimplelist,test_prioritysimplelist.o,)
 c_plus_target(test_binarysearch,test_binarysearch.o,)
+c_plus_target(test_network_adapter,test_network_adapter.o,$(LIB))
+c_plus_target(test_hibernation,test_hibernation.o,$(LIB))
 
 c_plus_target(cat_url,cat_url.o,liburl.a)
 c_plus_target(access.t,access.t.o,$(LIB))
@@ -284,10 +298,12 @@ all-tests: access.t killfamily.t test_locks my_hostname.t
 USERLOG_TESTS = test_log_reader test_log_writer
 USERLOG_LIBAPI_TESTS = $(addsuffix _api, $(USERLOG_TESTS) )
 
-userlog-tests: $(USERLOG_TESTS) $(USERLOG_LIBAPI_TESTS)
+userlog-tests: all $(USERLOG_TESTS) $(USERLOG_LIBAPI_TESTS)
 
-test_log_reader: $(LIB) Makefile $(LIBCONDORAPI)
-test_log_writer: $(LIB) Makefile $(LIBCONDORAPI)
+test_log_reader: all $(LIB) Makefile $(LIBCONDORAPI)
+test_log_writer: all $(LIB) Makefile $(LIBCONDORAPI)
+
+green-tests: all test_network_adapter test_hibernation
 
 $(USERLOG_LIBAPI_TESTS): %_api : %.o $(LIBCONDORAPI) Makefile
 	$(CPlusPlus) $< -L. -Wl,-Bstatic -lcondorapi -Wl,-Bdynamic -ldl -o $@
@@ -327,3 +343,11 @@ condor_version.o: condor_version.C
 	$(CPlusPlus) $(C_PLUS_FLAGS) -c -DPLATFORM=$(PLATFORM) condor_version.C
 
 testbin:: all
+
+help:
+	@echo "Known targets:"
+	@echo "  all:           build all main targets"
+	@echo "  release:       all + populate ../release_dir"
+	@echo "  testbin:"
+	@echo "  userlog-tests: all + userlog tests"
+	@echo "  green-tests:   all + green computing tests"

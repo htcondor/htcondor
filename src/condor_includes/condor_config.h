@@ -102,6 +102,11 @@ class ParamValue {
 	char* param_or_except( const char *name );
     int param_integer( const char *name, int default_value,
 					   int min_value = INT_MIN, int max_value = INT_MAX );
+	// Alternate param_integer():
+	bool param_integer( const char *name, int &value,
+						bool use_default, int default_value,
+						bool check_ranges = true,
+						int min_value = INT_MIN, int max_value = INT_MAX );
     double param_double( const char *name, double default_value,
 					   double min_value = DBL_MIN, double max_value = DBL_MAX );
 	bool param_boolean( const char *name, const bool default_value, bool do_log = true );
@@ -119,7 +124,7 @@ extern "C" {
 	void condor_net_remap_config( bool force_param=false );
 	int param_integer_c( const char *name, int default_value,
 					   int min_value, int max_value);
-    int  param_boolean_int( const char *name, int default_value );  
+    int  param_boolean_int( const char *name, int default_value );
 	int  set_persistent_config(char *admin, char *config);
 	int  set_runtime_config(char *admin, char *config);
 	/** Expand parameter references of the form "left$(middle)right".  

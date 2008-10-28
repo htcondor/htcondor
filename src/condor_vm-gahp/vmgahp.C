@@ -106,8 +106,6 @@ unsigned __stdcall pipe_forward_thread(void *)
 VMGahp::VMGahp(VMGahpConfig* config, const char* iwd)
 	: m_pending_req_table(20, &hashFuncInt)
 {
-	m_stdout_pipe = -1;
-	m_stderr_pipe = -1;
 	m_async_mode = true;
 	m_new_results_signaled = false;
 	m_jobAd = NULL;
@@ -117,8 +115,8 @@ VMGahp::VMGahp(VMGahpConfig* config, const char* iwd)
 
 	m_max_vm_id = 0;
 
-	m_flush_request_tid = -1;
 	m_need_output_for_quit = false;
+	vmprintf(D_FULLDEBUG, "Constructed VMGahp\n");
 }
 
 VMGahp::~VMGahp()
@@ -130,192 +128,6 @@ VMGahp::~VMGahp()
 	if( m_jobAd ) {
 		delete m_jobAd;
 	}
-}
-
-void
-VMGahp::startWorker()
-{
-	if( vmgahp_mode != VMGAHP_IO_MODE ) {
-		return;
-	}
-
-	// Find the location of this vmgahp server from condor config
-	MyString vmgahp_server;
-	char *vmgahpserver = param("VM_GAHP_SERVER");
-	if( !vmgahpserver || (access(vmgahpserver,X_OK) < 0 ) ) { 
-		vmprintf(D_ALWAYS, "vmgahp server cannot be found/exectued\n");
-		DC_Exit(1);
-	}
-	vmgahp_server = vmgahpserver;
-	free(vmgahpserver);
-
-	// vm gahp configuration file
-	MyString vmgahp_config;
-	vmgahp_config = m_gahp_config->m_configfile;
-	
-	// vm_type
-	MyString vm_type;
-	vm_type = m_gahp_config->m_vm_type;
-
-	// To avoid deadlock, the pipe for writing request to worker 
-	// is non-blocking mode.
-	if (!daemonCore->Create_Pipe (m_worker.m_stdin_pipefds,
-				true,	// read end registerable
-				false,	// write end not registerable
-				false,	// read end blocking
-				true	// write end non-blocking
-				) ) {
-		vmprintf(D_ALWAYS, "unable to create a pipe to stdin of VMGahp worker\n");
-		DC_Exit(1);
-	}
-	if (!daemonCore->Create_Pipe (m_worker.m_stdout_pipefds,
-				true,	// read end registerable
-				false,	// write end not registerable
-				false,	// read end blocking
-				false	// write end blocking
-				) ) {
-		vmprintf(D_ALWAYS, "unable to create a pipe to stdout of VMGahp worker\n");
-		DC_Exit(1);
-	}
-
-	// The pipe for debug messages or errors from worker 
-	// is always non-blocking mode
-	if (!daemonCore->Create_Pipe (m_worker.m_stderr_pipefds,
-				true,	// read end registerable
-				false,	// write end not registerable
-				true,	// read end non-blocking
-				true	// write end non-blocking
-				) ) {
-		vmprintf(D_ALWAYS, "unable to create a pipe to stderr of VMGahp worker\n");
-		DC_Exit(1);
-	}
-
-	m_worker.m_request_buffer.setPipeEnd(m_worker.m_stdin_pipefds[1]);
-	m_worker.m_result_buffer.setPipeEnd(m_worker.m_stdout_pipefds[0]);
-	m_worker.m_stderr_buffer.setPipeEnd(m_worker.m_stderr_pipefds[0]);
-
-	(void)daemonCore->Register_Pipe (m_worker.m_result_buffer.getPipeEnd(),
-			"Worker result pipe",
-			(PipeHandlercpp)&VMGahp::workerResultHandler,
-			"VMGahp::workerResultHandler",
-			this);
-
-	(void)daemonCore->Register_Pipe (m_worker.m_stderr_buffer.getPipeEnd(),
-			"Worker stderr pipe",
-			(PipeHandlercpp)&VMGahp::workerStderrHandler,
-			"VMGahp::workerStderrHandler",
-			this);
-
-	// Register the reaper for the child process
-	int reaper_id =
-		daemonCore->Register_Reaper(
-				"workerReaper",
-				(ReaperHandlercpp)&VMGahp::workerReaper,
-				"workerReaper",
-				this);
-
-	m_flush_request_tid = 
-		daemonCore->Register_Timer(1,
-				1,
-				(TimerHandlercpp)&VMGahp::flushPendingRequests,
-				"VMGahp::flushPendingRequests",
-				this);
-	if( m_flush_request_tid == -1 ) {
-		vmprintf( D_ALWAYS, "cannot register timer for request to worker\n");
-		DC_Exit(1);
-	}
-
-	Env job_env;
-
-#if !defined(WIN32)
-	// set CONDOR_IDS environment
-	const char *envName = EnvGetName(ENV_UG_IDS);
-
-	if( envName ) {
-		MyString env_string;
-		env_string.sprintf("%d.%d", (int)get_condor_uid(), (int)get_condor_gid());
-		job_env.SetEnv(envName, env_string.Value());
-	}
-
-	if( get_job_user_uid() > 0 ) {
-		MyString tmp_str;
-		tmp_str.sprintf("%d", (int)get_job_user_uid());
-		job_env.SetEnv("VMGAHP_USER_UID", tmp_str.Value());
-
-		if( get_job_user_gid() > 0 ) {
-			tmp_str.sprintf("%d", (int)get_job_user_gid());
-			job_env.SetEnv("VMGAHP_USER_GID", tmp_str.Value());
-		}
-	}
-#endif
-
-	// Set vmgahp env
-	job_env.SetEnv("VMGAHP_CONFIG", vmgahp_config.Value());
-	job_env.SetEnv("VMGAHP_VMTYPE", vm_type.Value());
-	job_env.SetEnv("VMGAHP_WORKING_DIR", m_workingdir.Value());
-
-	// Grab the full environment back out of the Env object
-	if(DebugFlags & D_FULLDEBUG) {
-		MyString env_str;
-		job_env.getDelimitedStringForDisplay(&env_str);
-		vmprintf(D_FULLDEBUG, "Worker Env = %s\n", env_str.Value());
-	}
-
-	int io_redirect[3];
-	io_redirect[0] = m_worker.m_stdin_pipefds[0];
-	io_redirect[1] = m_worker.m_stdout_pipefds[1];
-	io_redirect[2] = m_worker.m_stderr_pipefds[1];
-
-	ArgList args;
-	args.AppendArg(vmgahp_server.Value());
-	args.AppendArg("-f");
-	args.AppendArg("-t");
-	args.AppendArg("-M");
-	args.AppendArg(VMGAHP_WORKER_MODE);
-
-	MyString args_string;
-	args.GetArgsStringForDisplay(&args_string);
-
-	vmprintf( D_ALWAYS, "Starting worker : %s\n",args_string.Value());
-
-	priv_state vmgahp_priv = PRIV_UNKNOWN;
-#if !defined(WIN32)
-	if( get_caller_uid() == ROOT_UID ) {
-		vmgahp_priv = PRIV_ROOT;
-	}
-#endif
-
-	m_worker.m_pid = daemonCore->Create_Process(
-			vmgahp_server.Value(),	//Name of executable
-			args,	//Args
-			vmgahp_priv, 	//Priv state
-			reaper_id, 		//id for our registered reaper
-			FALSE, 		//do not want a command port
-			&job_env, 	//env
-			NULL,		//cwd
-			NULL,		 //family_info
-			NULL, 		//network sockets to inherit
-			io_redirect	//redirect stdin/out/err
-			);
-
-	//NOTE: Create_Process() saves the errno for us if it is an
-	//"interesting" error.
-	char const *create_process_error = NULL;
-	if(m_worker.m_pid == FALSE && errno) { 
-		create_process_error = strerror(errno);
-	}
-
-	daemonCore->Close_Pipe(io_redirect[0]);
-	daemonCore->Close_Pipe(io_redirect[1]);
-	daemonCore->Close_Pipe(io_redirect[2]);
-
-	if( m_worker.m_pid == FALSE ) {
-		m_worker.m_pid = 0;
-		vmprintf(D_ALWAYS, "Failed to start worker : %s\n",create_process_error);
-		DC_Exit(1);
-	}
-
-	vmprintf(D_ALWAYS, "Worker pid=%d\n", m_worker.m_pid);
 }
 
 void
@@ -412,12 +224,6 @@ VMGahp::cleanUp()
 	}
 
 	// Cancel registered timers
-	if( m_flush_request_tid != -1 ) {
-		if( daemonCore ) {
-			daemonCore->Cancel_Timer(m_flush_request_tid);
-		}
-		m_flush_request_tid = -1;
-	}
 	if( vmgahp_stderr_tid != -1 ) {
 		if( daemonCore ) {
 			daemonCore->Cancel_Timer(vmgahp_stderr_tid);
@@ -429,31 +235,8 @@ VMGahp::cleanUp()
 	vmgahp_stderr_pipe = -1;
 	vmgahp_stderr_buffer.setPipeEnd(-1);
 
-	if( m_worker.m_pid > 0 ) {
-		// close all pipes for worker
-		if( daemonCore ) {
-			int pipe_end = m_worker.m_request_buffer.getPipeEnd();
-			if( pipe_end > 0 ) {
-				daemonCore->Close_Pipe(pipe_end);
-			}
-			pipe_end = m_worker.m_result_buffer.getPipeEnd();
-			if( pipe_end > 0 ) {
-				daemonCore->Close_Pipe(pipe_end);
-			}
-			pipe_end = m_worker.m_stderr_buffer.getPipeEnd();
-			if( pipe_end > 0 ) {
-				daemonCore->Close_Pipe(pipe_end);
-			}
-		}
-		m_worker.m_request_buffer.setPipeEnd(-1);
-		m_worker.m_result_buffer.setPipeEnd(-1);
-		m_worker.m_stderr_buffer.setPipeEnd(-1);
-	}
-
-	if( vmgahp_mode != VMGAHP_WORKER_MODE ) {
-		// kill all processes such as worker and existing VMs
-		killAllProcess();
-	}
+	// kill all processes such as worker and existing VMs
+	killAllProcess();
 
 	if( m_need_output_for_quit ) {
 		returnOutputSuccess();
@@ -535,21 +318,6 @@ VMGahp::movePendingReqToResultList(VMRequest *req)
 		return;
 	}
 	m_result_list.append(make_result_line(req));
-	removePendingRequest(req);
-}
-
-void
-VMGahp::movePendingReqToOutputStream(VMRequest *req)
-{
-	if(!req) {
-		return;
-	}
-	MyString output = make_result_line(req);
-	output += "\n";
-
-	write_to_daemoncore_pipe(vmgahp_stdout_pipe, 
-			output.Value(), output.Length());
-
 	removePendingRequest(req);
 }
 
@@ -638,9 +406,6 @@ VMGahp::waitForCommand()
 
 				// Everything is Ok. Now we got vmClassAd
 				returnOutputSuccess();
-				if( vmgahp_mode == VMGAHP_IO_MODE ) {
-					sendClassAdToWorker();
-				}
 			}else {
 				if( !m_jobAd->Insert(command) ) {
 					vmprintf(D_ALWAYS, "Failed to insert \"%s\" into classAd, " 
@@ -653,26 +418,17 @@ VMGahp::waitForCommand()
 				new_req = preExecuteCommand(command, &args);
 
 				if( new_req != NULL ) {
-					if( vmgahp_mode == VMGAHP_IO_MODE ) {
-						// Send a new request to Worker
-						sendRequestToWorker(command);
-					}else {
-						// Execute the new request
-						executeCommand(new_req);
-						if(new_req->m_has_result) {
-							if( vmgahp_mode == VMGAHP_WORKER_MODE ) {
-								movePendingReqToOutputStream(new_req);
-							}else {
-								movePendingReqToResultList(new_req);
-								if (m_async_mode) {
-									if (!m_new_results_signaled) {
-										write_to_daemoncore_pipe("R\n");
-									}
-									// So that we only do it once
-									m_new_results_signaled = true;    
-								} 
+					// Execute the new request
+					executeCommand(new_req);
+					if(new_req->m_has_result) {
+						movePendingReqToResultList(new_req);
+						if (m_async_mode) {
+							if (!m_new_results_signaled) {
+								write_to_daemoncore_pipe("R\n");
 							}
-						}
+							// So that we only do it once
+							m_new_results_signaled = true;    
+						} 
 					}
 				}
 			}else {
@@ -787,10 +543,6 @@ VMGahp::returnOutput(const char **results, const int count)
 void
 VMGahp::returnOutputSuccess(void) 
 {
-	// In worker mode, we don't need to send this output to IO server
-	if( vmgahp_mode == VMGAHP_WORKER_MODE ) {
-		return;
-	}
 	const char* result[] = {VMGAHP_RESULT_SUCCESS};
 	returnOutput(result,1);
 }
@@ -798,10 +550,6 @@ VMGahp::returnOutputSuccess(void)
 void
 VMGahp::returnOutputError(void) 
 {
-	// In worker mode, we don't need to send this output to IO server
-	if( vmgahp_mode == VMGAHP_WORKER_MODE ) {
-		return;
-	}
 	const char* result[] = {VMGAHP_RESULT_ERROR};
 	returnOutput(result,1);
 }
@@ -822,29 +570,7 @@ VMGahp::preExecuteCommand(const char* cmd, Gahp_Args *args)
 		m_async_mode = false;
 		returnOutputSuccess();
 	} else if(strcasecmp(command, VMGAHP_COMMAND_QUIT) == 0 ) {
-		if( vmgahp_mode != VMGAHP_IO_MODE) {
-			executeQuit();
-		}else {
-			m_need_output_for_quit = true;
-
-			daemonCore->Register_Timer( QUIT_FAST_TIME, 0,
-				(TimerHandlercpp)&VMGahp::quitFast,
-				"VMGahp::quitFast",
-				this);
-
-			vmprintf( D_FULLDEBUG, "Started timer to call quitFast "
-								"in %d seconds\n", QUIT_FAST_TIME);
-
-			if( Termlog && (vmgahp_stderr_pipe != -1 ) ) {
-				daemonCore->Cancel_Timer(vmgahp_stderr_tid);
-				vmgahp_stderr_tid = -1;
-				vmgahp_stderr_pipe = -1;
-				vmgahp_stderr_buffer.setPipeEnd(-1);
-			}
-
-			// In IO mode, QUIT command will be relayed to Worker
-			sendRequestToWorker(command);
-		}
+		executeQuit();
 	} else if(strcasecmp(command, VMGAHP_COMMAND_VERSION) == 0 ) {
 		executeVersion();
 	} else if(strcasecmp(command, VMGAHP_COMMAND_COMMANDS) == 0 ) {
@@ -883,7 +609,7 @@ VMGahp::executeCommand(VMRequest *req)
 {
 	char *command = req->m_args.argv[0];
 
-	priv_state priv = vmgahp_set_user_priv();
+	priv_state priv = set_user_priv();
 
 	if(strcasecmp(command, VMGAHP_COMMAND_VM_START) == 0 ) {
 		executeStart(req);
@@ -905,7 +631,7 @@ VMGahp::executeCommand(VMRequest *req)
 		vmprintf(D_ALWAYS, "Unknown command(%s)\n", command);
 	}
 
-	vmgahp_set_priv(priv);
+	set_priv(priv);
 }
 
 void
@@ -1018,11 +744,6 @@ VMGahp::executeStop(VMRequest *req)
 {
 	// Expecting: VMGAHP_COMMAND_VM_STOP <req_id> <vmid>
 	int vm_id = strtol(req->m_args.argv[2],(char **)NULL, 10);
-	if( vm_id <= 0 ) {
-		vmprintf(D_ALWAYS, "Invalid vmid(%s) in VM_STOP command\n", 
-					req->m_args.argv[2]);
-		return;
-	}
 
 	MyString err_message;
 	VMType *vm = findVM(vm_id);
@@ -1059,11 +780,6 @@ VMGahp::executeSuspend(VMRequest *req)
 {
 	// Expecting: VMGAHP_COMMAND_VM_SUSPEND <req_id> <vmid>
 	int vm_id = strtol(req->m_args.argv[2],(char **)NULL, 10);
-	if( vm_id <= 0 ) {
-		vmprintf(D_ALWAYS, "Invalid vmid(%s) in VM_SUSPEND command\n", 
-				req->m_args.argv[2]);
-		return;
-	}
 
 	MyString err_message;
 	VMType *vm = findVM(vm_id);
@@ -1098,11 +814,6 @@ VMGahp::executeSoftSuspend(VMRequest *req)
 {
 	// Expecting: VMGAHP_COMMAND_VM_SOFT_SUSPEND <req_id> <vmid>
 	int vm_id = strtol(req->m_args.argv[2],(char **)NULL, 10);
-	if( vm_id <= 0 ) {
-		vmprintf(D_ALWAYS, "Invalid vmid(%s) in VM_SOFT_SUSPEND command\n", 
-				req->m_args.argv[2]);
-		return;
-	}
 
 	MyString err_message;
 	VMType *vm = findVM(vm_id);
@@ -1138,11 +849,6 @@ VMGahp::executeResume(VMRequest *req)
 {
 	// Expecting: VMGAHP_COMMAND_VM_RESUME <req_id> <vmid>
 	int vm_id = strtol(req->m_args.argv[2],(char **)NULL, 10);
-	if( vm_id <= 0 ) {
-		vmprintf(D_ALWAYS, "Invalid vmid(%s) in VM_RESUME command\n", 
-				req->m_args.argv[2]);
-		return;
-	}
 
 	MyString err_message;
 	VMType *vm = findVM(vm_id);
@@ -1178,11 +884,6 @@ VMGahp::executeCheckpoint(VMRequest *req)
 {
 	// Expecting: VMGAHP_COMMAND_VM_CHECKPOINT <req_id> <vmid>
 	int vm_id = strtol(req->m_args.argv[2],(char **)NULL, 10);
-	if( vm_id <= 0 ) {
-		vmprintf(D_ALWAYS, "Invalid vmid(%s) in VM_CHECKPOINT command\n", 
-				req->m_args.argv[2]);
-		return;
-	}
 
 	MyString err_message;
 	VMType *vm = findVM(vm_id);
@@ -1218,11 +919,6 @@ VMGahp::executeStatus(VMRequest *req)
 {
 	// Expecting: VMGAHP_COMMAND_VM_STATUS <req_id> <vmid>
 	int vm_id = strtol(req->m_args.argv[2],(char **)NULL, 10);
-	if( vm_id <= 0 ) {
-		vmprintf(D_ALWAYS, "Invalid vmid(%s) in VM_STATUS command\n", 
-				req->m_args.argv[2]);
-		return;
-	}
 
 	VMType *vm = findVM(vm_id);
 
@@ -1257,11 +953,6 @@ VMGahp::executeGetpid(VMRequest *req)
 {
 	// Expecting: VMGAHP_COMMAND_VM_GETPID <req_id> <vmid>
 	int vm_id = strtol(req->m_args.argv[2],(char **)NULL, 10);
-	if( vm_id <= 0 ) {
-		vmprintf(D_ALWAYS, "Invalid vmid(%s) in VM_GETPID command\n", 
-				req->m_args.argv[2]);
-		return;
-	}
 
 	MyString err_message;
 	VMType *vm = findVM(vm_id);
@@ -1327,6 +1018,7 @@ VMGahp::executeSupportVMS(void)
 		i++;
 	}
 
+	vmprintf(D_FULLDEBUG, "Execute commands: %s\n", result.Value());
 	write_to_daemoncore_pipe("%s\n", result.Value());
 }
 
@@ -1338,20 +1030,6 @@ VMGahp::executeResults(void)
 	// Print each result line
 	printAllReqsWithResult();
 	m_new_results_signaled = false;
-}
-
-int
-VMGahp::flushPendingRequests()
-{
-	m_worker.m_request_buffer.Write();
-
-	if( m_worker.m_request_buffer.IsError() ) { 
-		vmprintf( D_ALWAYS, "VM GAHP Worker request buffer error, exiting...\n"); 
-		cleanUp(); 
-		DC_Exit(1); 
-	} 
-
-	return TRUE;
 }
 
 const char*
@@ -1388,138 +1066,6 @@ VMGahp::make_result_line(VMRequest *req)
 	return res_str.Value();
 }
 
-void
-VMGahp::sendRequestToWorker(const char* command)
-{
-	if( m_flush_request_tid == -1 ) {
-		return;
-	}
-	MyString strRequest = command;
-	strRequest += "\r\n";
-
-	m_worker.m_request_buffer.Write(strRequest.Value());
-
-	daemonCore->Reset_Timer(m_flush_request_tid, 0, 1);
-}
-
-void 
-VMGahp::sendClassAdToWorker()
-{
-	vmprintf (D_FULLDEBUG, "Sending Job ClassAd to worker\n");
-
-	if( !m_jobAd ) {
-		return;
-	}
-
-	sendRequestToWorker(VMGAHP_COMMAND_CLASSAD);
-	sleep(1);
-
-	ExprTree *expr = NULL;
-	MyString vmAttr;
-	m_jobAd->ResetExpr();
-	while( (expr = m_jobAd->NextExpr()) != NULL ) {
-		expr->PrintToStr(vmAttr);
-		sendRequestToWorker(vmAttr.Value());
-	}
-
-	sendRequestToWorker(VMGAHP_COMMAND_CLASSAD_END);
-
-	// give some time to worker
-	sleep(1);
-}
-
-int
-VMGahp::workerResultHandler() 
-{
-	MyString* line = NULL;
-	int req_id = 0;
-	MyString reqid_str;
-	while ((line = m_worker.m_result_buffer.GetNextLine()) != NULL) {
-
-		vmprintf (D_FULLDEBUG, "Worker[%d]: Result \"%s\"\n", 
-				m_worker.m_pid, line->Value());
-
-		// Validate result string
-		if( validate_vmgahp_result_string(line->Value()) == false ) {
-			delete line;
-			line = NULL;
-			continue;
-		}
-
-		// Add this to the list
-		m_result_list.append(line->Value());
-	
-		// Remove req from pending table
-		reqid_str = parse_result_string(line->Value(), 1);
-		req_id = atoi(reqid_str.Value());
-		removePendingRequest(req_id);
-
-		if (m_async_mode) {
-			if (!m_new_results_signaled) {
-				write_to_daemoncore_pipe("R\n");
-			}
-			m_new_results_signaled = true;	// So that we only do it once
-		}
-
-		delete line;
-		line = NULL;
-	}
-
-	if (m_worker.m_result_buffer.IsError() || m_worker.m_result_buffer.IsEOF()) {
-		vmprintf(D_ALWAYS, "VM GAHP Worker result buffer closed, exiting...\n");
-		cleanUp();
-		DC_Exit(0);
-	}
-
-	return TRUE;
-}
-
-int
-VMGahp::workerStderrHandler() 
-{
-	if( m_worker.m_stderr_buffer.getPipeEnd() == -1 ) {
-		return FALSE;
-	}
-
-	MyString* line = NULL;
-	while ((line = m_worker.m_stderr_buffer.GetNextLine()) != NULL) {
-		vmprintf(D_ALWAYS, "Worker[%d]: %s\n", m_worker.m_pid, line->Value());
-		delete line;
-	}
-
-	if (m_worker.m_stderr_buffer.IsError() || m_worker.m_stderr_buffer.IsEOF()) {
-		vmprintf(D_ALWAYS, "VM GAHP Worker stderr buffer closed, exiting...\n");
-		cleanUp();
-		DC_Exit(0);
-	}
-
-	return TRUE;
-}
-
-int
-VMGahp::workerReaper(int pid, int exit_status)
-{
-	if( WIFSIGNALED(exit_status) ) {
-		vmprintf( D_ALWAYS, "Worker exited, pid=%d, signal=%d\n", pid,
-				WTERMSIG(exit_status) );
-	} else {
-		vmprintf( D_ALWAYS, "Worker exited, pid=%d, status=%d\n", pid,
-				WEXITSTATUS(exit_status) );
-	}
-
-	if( m_need_output_for_quit ) {
-		returnOutputSuccess();
-		sleep(2);
-	}
-	m_need_output_for_quit = false;
-
-	// Our worker exited (presumably b/c we got a QUIT command)
-	// If we're in this function there shouldn't be much cleanup to be done
-	// except the command queue
-	DC_Exit(0);
-	return TRUE;
-}
-
 int
 VMGahp::quitFast()
 {
@@ -1531,18 +1077,6 @@ VMGahp::quitFast()
 void
 VMGahp::killAllProcess()
 {
-	static bool sent_signal = false;
-
-	// To make sure that worker exits
-	if( m_worker.m_pid > 0 ) {
-		if( !sent_signal ) {
-			priv_state priv = vmgahp_set_root_priv();
-			daemonCore->Send_Signal(m_worker.m_pid, SIGKILL);
-			vmgahp_set_priv(priv);
-			sent_signal = true;
-		}
-	}
-
 	if( !m_jobAd ) {
 		// Virtual machine is absolutely not created.
 		return;
@@ -1551,26 +1085,26 @@ VMGahp::killAllProcess()
 #if defined(LINUX)
 	if( strcasecmp(m_gahp_config->m_vm_type.Value(), 
 				CONDOR_VM_UNIVERSE_XEN ) == 0 ) {
-		priv_state priv = vmgahp_set_root_priv();
+		priv_state priv = set_root_priv();
 		if( m_jobAd && XenType::checkXenParams(m_gahp_config) ) {
 			MyString vmname;
 			if( VMType::createVMName(m_jobAd, vmname) ) {
 				XenType::killVMFast(m_gahp_config->m_vm_script.Value(), 
-						vmname.Value(), m_gahp_config->m_controller.Value());
+						vmname.Value());
 				vmprintf( D_FULLDEBUG, "killVMFast is called\n");
 			}
 		}
-		vmgahp_set_priv(priv);
+		set_priv(priv);
 	}else
 #endif
 	if( strcasecmp(m_gahp_config->m_vm_type.Value(), 
 				CONDOR_VM_UNIVERSE_VMWARE ) == 0 ) {
-		priv_state priv = vmgahp_set_user_priv();
+		priv_state priv = set_user_priv();
 		if( VMwareType::checkVMwareParams(m_gahp_config) ) {
 			VMwareType::killVMFast(m_gahp_config->m_prog_for_script.Value(), 
 					m_gahp_config->m_vm_script.Value(), m_workingdir.GetCStr());
 			vmprintf( D_FULLDEBUG, "killVMFast is called\n");
 		}
-		vmgahp_set_priv(priv);
+		set_priv(priv);
 	}
 }

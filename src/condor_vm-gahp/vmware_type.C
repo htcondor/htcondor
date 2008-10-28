@@ -30,6 +30,7 @@
 #include "vmgahp_error_codes.h"
 #include "condor_vm_universe_types.h"
 #include "vmware_type.h"
+#include "../condor_privsep/condor_privsep.h"
 
 #define VMWARE_TMP_FILE "vmware_status.condor"
 #define VMWARE_TMP_TEMPLATE		"vmXXXXXX"
@@ -37,14 +38,18 @@
 #define VMWARE_VMX_FILE_PERM	0770
 #define VMWARE_VMDK_FILE_PERM	0660
 
-#define VMWARE_VM_CONFIG_LOCAL_PARAMS_START "### Start local parameters ###"
-#define VMWARE_VM_CONFIG_LOCAL_PARAMS_END "### End local parameters ###"
+#define VMWARE_LOCAL_SETTINGS_PARAM "VMWARE_LOCAL_SETTINGS_FILE"
+#define VMWARE_LOCAL_SETTINGS_START_MARKER "### Start local parameters ###"
+#define VMWARE_LOCAL_SETTINGS_END_MARKER "### End local parameters ###"
 
 #define VMWARE_MONOLITHICSPARSE_VMDK_SEEK_BYTE	512
 #define VMWARE_MONOLITHICSPARSE_VMDK_DESCRIPTOR_SIZE	800
 
 #define VMWARE_SNAPSHOT_PARENTFILE_HINT "parentFileNameHint"
-	
+
+extern uid_t job_user_uid;
+extern MyString workingdir;
+
 // "parent_filenames" will have basenames for parent files
 static void
 change_monolithicSparse_snapshot_vmdk_file(const char* file, bool use_fullpath, const char* dirpath, StringList &parent_filenames)
@@ -222,7 +227,6 @@ change_snapshot_vmdk_file(const char* file, bool use_fullpath, const char* dirpa
 	while( fgets(linebuf, 2048, fp) ) {
 		total_read += strlen(linebuf);
 		one_line = linebuf;
-		one_line.chomp();
 		one_line.trim();
 
 		if( one_line.Length() == 0 ) {
@@ -330,7 +334,6 @@ static void change_snapshot_vmsd_file(const char *file, StringList *parent_filen
 
 	while( fgets(linebuf, 2048, fp) ) {
 		one_line = linebuf;
-		one_line.chomp();
 		one_line.trim();
 
 		if( one_line.Length() == 0 ) {
@@ -472,7 +475,6 @@ VMwareType::adjustConfigDiskPath()
 
 	while( fgets(linebuf, 2048, fp) ) {
 		one_line = linebuf;
-		one_line.chomp();
 		one_line.trim();
 
 		if( one_line.Length() == 0 || one_line[0] == '#' ) {
@@ -611,13 +613,17 @@ VMwareType::adjustCkptConfig(const char* vmconfig)
 
 		// remove local parameters between VMWARE_VM_CONFIG_LOCAL_PARAMS_START 
 		// and VMWARE_VM_CONFIG_LOCAL_PARAMS_END
-		if( !strncasecmp(one_line.Value(), VMWARE_VM_CONFIG_LOCAL_PARAMS_START,
-					strlen(VMWARE_VM_CONFIG_LOCAL_PARAMS_START)) ) {
+		if( !strncasecmp(one_line.Value(),
+		                 VMWARE_LOCAL_SETTINGS_START_MARKER,
+		                 strlen(VMWARE_LOCAL_SETTINGS_START_MARKER)) )
+		{
 			in_local_param = true;
 			continue;
 		}
-		if( !strncasecmp(one_line.Value(), VMWARE_VM_CONFIG_LOCAL_PARAMS_END,
-					strlen(VMWARE_VM_CONFIG_LOCAL_PARAMS_END)) ) {
+		if( !strncasecmp(one_line.Value(),
+		                 VMWARE_LOCAL_SETTINGS_END_MARKER,
+		                 strlen(VMWARE_LOCAL_SETTINGS_END_MARKER)) )
+		{
 			in_local_param = false;
 			continue;
 		}
@@ -640,12 +646,12 @@ VMwareType::adjustCkptConfig(const char* vmconfig)
 
 				tmp_string.sprintf("VMWARE_%s_NETWORKING_TYPE", tmp_string2.Value());
 
-				char *net_type = vmgahp_param(tmp_string.Value());
+				char *net_type = param(tmp_string.Value());
 				if( net_type ) {
 					networking_type = delete_quotation_marks(net_type);
 					free(net_type);
 				}else {
-					net_type = vmgahp_param("VMWARE_NETWORKING_TYPE");
+					net_type = param("VMWARE_NETWORKING_TYPE");
 					if( net_type ) {
 						networking_type = delete_quotation_marks(net_type);
 						free(net_type);
@@ -687,14 +693,17 @@ VMwareType::adjustCkptConfig(const char* vmconfig)
 	}
 
 	// Insert local parameters
-	if( write_forced_vm_params_to_file(fp,
-			VMWARE_VM_CONFIG_LOCAL_PARAMS_START, 
-			VMWARE_VM_CONFIG_LOCAL_PARAMS_END) == false ) {
-		vmprintf(D_ALWAYS, "failed to fprintf in adjustCkptConfig (%s:%s)\n",
-				vmconfig, strerror(errno));
+	if (!write_local_settings_from_file(fp,
+	                                    VMWARE_LOCAL_SETTINGS_PARAM,
+	                                    VMWARE_LOCAL_SETTINGS_START_MARKER,
+	                                    VMWARE_LOCAL_SETTINGS_END_MARKER))
+	{
+		vmprintf(D_ALWAYS,
+		         "failed to add local settings in adjustCkptConfig\n");
 		fclose(fp);
 		return false;
 	}
+
 	fclose(fp);
 
 	// change permission
@@ -737,7 +746,6 @@ VMwareType::readVMXfile(const char *filename, const char *dirpath)
 	// We will find cdrom devices first.
 	while( fgets(linebuf, 2048, fp) ) {
 		MyString one_line(linebuf);
-		one_line.chomp();
 		one_line.trim();
 
 		LineNo++;
@@ -1034,6 +1042,18 @@ VMwareType::Start()
 			vmprintf(D_ALWAYS, "Failed to restart with checkpointed files\n");
 			vmprintf(D_ALWAYS, "So, we will try to create a new configuration file\n");
 
+#if !defined(WIN32)
+			if (privsep_enabled()) {
+				if (!privsep_chown_dir(get_condor_uid(),
+				                       job_user_uid,
+				                       workingdir.Value()))
+				{
+					m_result_msg = VMGAHP_ERR_CRITICAL;
+					return false;
+				}
+			}
+#endif
+
 			deleteNonTransferredFiles();
 			m_configfile = "";
 			m_restart_with_ckpt = false;
@@ -1048,6 +1068,18 @@ VMwareType::Start()
 		}
 	}
 
+#if !defined(WIN32)
+	if (privsep_enabled()) {
+		if (!privsep_chown_dir(job_user_uid,
+		                       get_condor_uid(),
+		                       workingdir.Value()))
+		{
+			m_result_msg = VMGAHP_ERR_CRITICAL;
+			return false;
+		}
+	}
+#endif
+
 	if( m_need_snapshot ) {
 		if( Snapshot() == false ) {
 			Unregister();
@@ -1055,22 +1087,16 @@ VMwareType::Start()
 		}
 	}
 
-	MyString tmpfilename;
-	tmpfilename.sprintf("%s%c%s", m_workingpath.Value(), 
-			DIR_DELIM_CHAR, VMWARE_TMP_FILE);
-	unlink(tmpfilename.Value());
+	StringList cmd_out;
 
 	ArgList systemcmd;
 	systemcmd.AppendArg(m_prog_for_script);
 	systemcmd.AppendArg(m_scriptname);
 	systemcmd.AppendArg("start");
 	systemcmd.AppendArg(m_configfile);
-	systemcmd.AppendArg(tmpfilename);
 
-	int result = systemCommand(systemcmd, false);
+	int result = systemCommand(systemcmd, false, &cmd_out);
 	if( result != 0 ) {
-		unlink(tmpfilename.Value());
-
 		Unregister();
 		m_result_msg = VMGAHP_ERR_CRITICAL;
 		return false;
@@ -1078,19 +1104,10 @@ VMwareType::Start()
 
 	// Got Pid result
 	m_vm_pid = 0;
-	FILE *file = NULL;
-	char buffer[1024];
-	file = safe_fopen_wrapper(tmpfilename.Value(), "r");
-	if( (file != NULL) && (fgets(buffer, sizeof(buffer), file) != NULL)) {
-		fclose(file);
-		unlink(tmpfilename.Value());
-
-		MyString tmp_pid;
-		tmp_pid = buffer;
-		tmp_pid.chomp();
-		tmp_pid.trim();
-
-		m_vm_pid = (int)strtol(tmp_pid.Value(), (char **)NULL, 10);
+	cmd_out.rewind();
+	const char *pid_line = cmd_out.next();
+	if ( pid_line ) {
+		m_vm_pid = (int)strtol(pid_line, (char **)NULL, 10);
 		if( m_vm_pid <= 0 ) {
 			m_vm_pid = 0;
 		}
@@ -1150,6 +1167,18 @@ VMwareType::Shutdown()
 {
 	vmprintf(D_FULLDEBUG, "Inside VMwareType::Shutdown\n");
 
+#if !defined(WIN32)
+	if (privsep_enabled()) {
+		if (!privsep_chown_dir(get_condor_uid(),
+		                       job_user_uid,
+		                       workingdir.Value()))
+		{
+			m_result_msg = VMGAHP_ERR_CRITICAL;
+			return false;
+		}
+	}
+#endif
+
 	if( (m_scriptname.Length() == 0) ||
 			(m_configfile.Length() == 0)) {
 		m_result_msg = VMGAHP_ERR_INTERNAL;
@@ -1164,7 +1193,9 @@ VMwareType::Shutdown()
 				// used basename because all parent disk files 
 				// were transferred. So we need to replace 
 				// the path with the path on submit machine.
+				priv_state old_priv = set_user_priv();
 				adjustConfigDiskPath();
+				set_priv( old_priv );
 			}
 			Unregister();
 
@@ -1364,51 +1395,28 @@ VMwareType::Resume()
 		return false;
 	}
 
-	if( m_is_checkpointed ) {
-		if( m_is_chowned ) {
-			// Because files in the working directory were 
-			// chowned to a caller uid.
-			// we need to restore ownership of files 
-			// from caller uid to a job user.
-			chownWorkingFiles(get_job_user_uid());
-		}
-		m_is_checkpointed = false;
-	}
+	m_is_checkpointed = false;
 
-	MyString tmpfilename;
-	tmpfilename.sprintf("%s%c%s", m_workingpath.Value(), 
-			DIR_DELIM_CHAR, VMWARE_TMP_FILE);
-	unlink(tmpfilename.Value());
+	StringList cmd_out;
 
 	ArgList systemcmd;
 	systemcmd.AppendArg(m_prog_for_script);
 	systemcmd.AppendArg(m_scriptname);
 	systemcmd.AppendArg("resume");
 	systemcmd.AppendArg(m_configfile);
-	systemcmd.AppendArg(tmpfilename);
 
-	int result = systemCommand(systemcmd, false);
+	int result = systemCommand(systemcmd, false, &cmd_out);
 	if( result != 0 ) {
-		unlink(tmpfilename.Value());
 		m_result_msg = VMGAHP_ERR_CRITICAL;
 		return false;
 	}
 
 	// Got Pid result
 	m_vm_pid = 0;
-	FILE *file = NULL;
-	char buffer[1024];
-	file = safe_fopen_wrapper(tmpfilename.Value(), "r");
-	if( (file != NULL) && (fgets(buffer, sizeof(buffer), file) != NULL)) {
-		fclose(file);
-		unlink(tmpfilename.Value());
-
-		MyString tmp_pid;
-		tmp_pid = buffer;
-		tmp_pid.chomp();
-		tmp_pid.trim();
-
-		m_vm_pid = (int)strtol(tmp_pid.Value(), (char **)NULL, 10);
+	cmd_out.rewind();
+	const char *pid_line = cmd_out.next();
+	if ( pid_line ) {
+		m_vm_pid = (int)strtol(pid_line, (char **)NULL, 10);
 		if( m_vm_pid <= 0 ) {
 			m_vm_pid = 0;
 		}
@@ -1454,10 +1462,7 @@ VMwareType::Status()
 		return true;
 	}
 
-	MyString tmpfilename;
-	tmpfilename.sprintf("%s%c%s", m_workingpath.Value(), 
-			DIR_DELIM_CHAR, VMWARE_TMP_FILE);
-	unlink(tmpfilename.Value());
+	StringList cmd_out;
 
 	ArgList systemcmd;
 	systemcmd.AppendArg(m_prog_for_script);
@@ -1468,34 +1473,24 @@ VMwareType::Status()
 		systemcmd.AppendArg("status");
 	}
 	systemcmd.AppendArg(m_configfile);
-	systemcmd.AppendArg(tmpfilename);
 
-	int result = systemCommand(systemcmd, false);
+	int result = systemCommand(systemcmd, false, &cmd_out);
 	if( result != 0 ) {
 		m_result_msg = VMGAHP_ERR_CRITICAL;
-		unlink(tmpfilename.Value());
 		return false;
 	}
 
 	// Got result
-	FILE *file = NULL;
-	char buffer[1024];
-	file = safe_fopen_wrapper(tmpfilename.Value(), "r");
-	if( !file ) {
-		m_result_msg = VMGAHP_ERR_CRITICAL;
-		unlink(tmpfilename.Value());
-		return false;
-	}
-
+	const char *next_line;
 	MyString one_line;
 	MyString name;
 	MyString value;
 
 	MyString vm_status;
 	int vm_pid = 0;
-	while( fgets(buffer, sizeof(buffer), file) != NULL ) {
-		one_line = buffer;
-		one_line.chomp();
+	cmd_out.rewind();
+	while( (next_line = cmd_out.next()) != NULL ) {
+		one_line = next_line;
 		one_line.trim();
 
 		if( one_line.Length() == 0 ) {
@@ -1534,8 +1529,6 @@ VMwareType::Status()
 			}
 		}
 	}
-	fclose(file);
-	unlink(tmpfilename.Value());
 
 	if( !vm_status.Length() ) {
 		m_result_msg = VMGAHP_ERR_CRITICAL;
@@ -1637,37 +1630,24 @@ VMwareType::getPIDofVM(int &vm_pid)
 		return false;
 	}
 
-	MyString tmpfilename;
-	tmpfilename.sprintf("%s%c%s", m_workingpath.Value(), 
-			DIR_DELIM_CHAR, VMWARE_TMP_FILE);
-	unlink(tmpfilename.Value());
+	StringList cmd_out;
 
 	ArgList systemcmd;
 	systemcmd.AppendArg(m_prog_for_script);
 	systemcmd.AppendArg(m_scriptname);
 	systemcmd.AppendArg("getpid");
 	systemcmd.AppendArg(m_configfile);
-	systemcmd.AppendArg(tmpfilename);
 
-	int result = systemCommand(systemcmd, false);
+	int result = systemCommand(systemcmd, false, &cmd_out);
 	if( result != 0 ) {
 		return false;
 	}
 
 	// Got Pid result
-	FILE *file = NULL;
-	char buffer[1024];
-	file = safe_fopen_wrapper(tmpfilename.Value(), "r");
-	if( (file != NULL) && (fgets(buffer, sizeof(buffer), file) != NULL)) {
-		fclose(file);
-		unlink(tmpfilename.Value());
-
-		MyString tmp_pid;
-		tmp_pid = buffer;
-		tmp_pid.chomp();
-		tmp_pid.trim();
-
-		vm_pid = (int)strtol(tmp_pid.Value(), (char **)NULL, 10);
+	cmd_out.rewind();
+	const char *pid_line = cmd_out.next();
+	if ( pid_line ) {
+		vm_pid = (int)strtol(pid_line, (char **)NULL, 10);
 		if( vm_pid <= 0 ) {
 			vm_pid = 0;
 		}
@@ -1821,12 +1801,12 @@ VMwareType::CreateConfigFile()
 
 		tmp_string.sprintf("VMWARE_%s_NETWORKING_TYPE", tmp_string2.Value());
 
-		char *net_type = vmgahp_param(tmp_string.Value());
+		char *net_type = param(tmp_string.Value());
 		if( net_type ) {
 			networking_type = delete_quotation_marks(net_type);
 			free(net_type);
 		}else {
-			net_type = vmgahp_param("VMWARE_NETWORKING_TYPE");
+			net_type = param("VMWARE_NETWORKING_TYPE");
 			if( net_type ) {
 				networking_type = delete_quotation_marks(net_type);
 				free(net_type);
@@ -1875,12 +1855,13 @@ VMwareType::CreateConfigFile()
 		}
 	}
 
-	if( write_forced_vm_params_to_file(config_fp,
-			VMWARE_VM_CONFIG_LOCAL_PARAMS_START, 
-			VMWARE_VM_CONFIG_LOCAL_PARAMS_END) == false ) {
-		vmprintf(D_ALWAYS, "failed to fprintf in CreateConfigFile(%s:%s)\n",
-				tmp_config_name.Value(), strerror(errno));
-
+	if (!write_local_settings_from_file(config_fp,
+	                                    VMWARE_LOCAL_SETTINGS_PARAM,
+	                                    VMWARE_LOCAL_SETTINGS_START_MARKER,
+	                                    VMWARE_LOCAL_SETTINGS_END_MARKER))
+	{
+		vmprintf(D_ALWAYS,
+		         "failed to add local settings in CreateConfigFile\n");
 		fclose(config_fp);
 		unlink(tmp_config_name.Value());
 		m_result_msg = VMGAHP_ERR_INTERNAL;
@@ -1955,14 +1936,6 @@ VMwareType::createCkptFiles()
 			}
 		}
 
-		if( m_is_chowned ) {
-			// Because files in the working directory were 
-			// chowned to the user, we need to change ownership of 
-			// files from a job user to caller uid.
-			// So caller (aka Condor) can access these files.
-			chownWorkingFiles(get_caller_uid());
-		}
-
 		// checkpoint succeeds
 		m_is_checkpointed = true;
 		return true;
@@ -1982,10 +1955,10 @@ VMwareType::checkVMwareParams(VMGahpConfig* config)
 	}
 
 	// find perl program
-	config_value = vmgahp_param("VMWARE_PERL");
+	config_value = param("VMWARE_PERL");
 	if( !config_value ) {
-		vmprintf(D_ALWAYS, "\nERROR: You should define 'VMWARE_PERL' "
-				"in \"%s\"\n", config->m_configfile.Value());
+		vmprintf(D_ALWAYS,
+		         "\nERROR: 'VMWARE_PERL' not in configuration\n");
 		return false;
 	}
 	fixedvalue = delete_quotation_marks(config_value);
@@ -1993,11 +1966,10 @@ VMwareType::checkVMwareParams(VMGahpConfig* config)
 	config->m_prog_for_script = fixedvalue;
 
 	// find script program for VMware
-	config_value = vmgahp_param("VMWARE_SCRIPT");
+	config_value = param("VMWARE_SCRIPT");
 	if( !config_value ) {
-		vmprintf(D_ALWAYS, "\nERROR: You should define 'VMWARE_SCRIPT' for "
-				"the script program for VMware in \"%s\"\n", 
-				config->m_configfile.Value());
+		vmprintf(D_ALWAYS,
+		         "\nERROR: 'VMWARE_SCRIPT' not in configuration\n");
 		return false;
 	}
 	fixedvalue = delete_quotation_marks(config_value);
@@ -2010,15 +1982,6 @@ VMwareType::checkVMwareParams(VMGahpConfig* config)
 				"program for VMware:(%s:%s)\n", fixedvalue.Value(),
 				strerror(errno));
 		return false;
-	}
-
-	if( isSetUidRoot() ) {
-		// owner must be root
-		if( sbuf.st_uid != ROOT_UID ) {
-			vmprintf(D_ALWAYS, "\nFile Permission Error: "
-					"owner of \"%s\" must be root\n", fixedvalue.Value());
-			return false;
-		}
 	}
 
 	// Other writable bit
