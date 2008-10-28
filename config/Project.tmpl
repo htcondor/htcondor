@@ -87,7 +87,7 @@ CC_LINK = CPlusLinker
 endif
 
 
-STATIC	= -static
+STATIC	= -static 
 STAR	= *
 
 PLATFORM_LDFLAGS = PlatformLdFlags
@@ -296,6 +296,9 @@ DAEMONCORE_WRAP_LDFLAGS = -Wl,--wrap,exit
 
 #if HAVE_PTHREADS
 PTHREAD_LIB = -lpthread
+#if HAVE_GNU_LD
+PTHREAD_FLAG = -pthread
+#endif
 #endif
 
 VENDOR_C_FLAGS = -I. -I.. -I../.. -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) \
@@ -305,7 +308,7 @@ VENDOR_C_FLAGS = -I. -I.. -I../.. -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) \
 		 -D$(OS_FLAG)=$(OS_FLAG) $(SITE_C_FLAGS) \
 		 $(SECURITY_FLAGS) $(NETMAN_FLAGS) \
 		 $(QUILL_FLAGS) $(TT_FLAGS) $(GCB_FLAGS) \
-		 $(CONFIGURE_CFLAGS) $(CONFIGURE_CPPFLAGS)
+		 $(CONFIGURE_CFLAGS) $(CONFIGURE_CPPFLAGS) $(PTHREAD_FLAG)
 
 
 /* This flag is a bad idea since when this stuff eventually goes truly obselete
@@ -366,14 +369,14 @@ CPLUS_LIB = ../condor_c++_util/cplus_lib.a
 PROCAPI_LIB = ../condor_procapi/libprocapi.a
 SYSAPI_LIB = ../condor_sysapi/libsysapi.a
 ACCT_LIB    = ../condor_accountant.V6/libacct.a
-DAEMONCORE_LIB = ../condor_daemon_core.V6/daemon_core.a $(COREDUMPER_LINK_LIB) $(DAEMONCORE_WRAP_LDFLAGS) $(PTHREAD_LIB)
+DAEMONCORE_LIB = ../condor_daemon_core.V6/daemon_core.a $(COREDUMPER_LINK_LIB) $(DAEMONCORE_WRAP_LDFLAGS)
 PROCD_CLIENT_LIB = ../condor_procd/procd_client.a
 PRIVSEP_CLIENT_LIB = ../condor_privsep/privsep_client.a
 
 
 /* common ld flags which should be first in the list */
 COM_LDFLAGS_F = $(GCC_RDYNAMIC_FLAG) $(GCC_STACK_PROTECTOR) $(GCC_HASH_STYLE_FLAG) -lm \
-                $(LDFLAGS) $(CONFIGURE_LIBS) $(CONFIGURE_LDFLAGS)
+                $(LDFLAGS) $(CONFIGURE_LIBS) $(CONFIGURE_LDFLAGS) $(PTHREAD_LIB)
 
 /* common ld flags which should be last in the list */
 COM_LDFLAGS_L = 
