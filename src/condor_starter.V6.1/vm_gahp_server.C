@@ -1492,6 +1492,11 @@ VMGahpServer::killVM(void)
 		tmp_str.sprintf("%d", (int)get_condor_uid());
 		SetEnv("VMGAHP_USER_UID", tmp_str.Value());
 	}
+	else if (Starter->condorPrivSepHelper() != NULL) {
+		MyString tmp_str;
+		tmp_str.sprintf("%d", (int)Starter->condorPrivSepHelper()->get_uid());
+		SetEnv("VMGAHP_USER_UID", tmp_str.Value());
+	}
 #endif
 
 	priv_state oldpriv; 

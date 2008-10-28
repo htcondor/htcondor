@@ -522,7 +522,7 @@ int systemCommand( ArgList &args, bool is_root, StringList *cmd_out )
 	}else {
 		prev = set_user_priv();
 	}
-	if ( !is_root && privsep_enabled() && (job_user_uid != get_condor_uid())) {
+	if ( privsep_enabled() && (job_user_uid != get_condor_uid())) {
 		fp = privsep_popen(args, "r", 0, job_user_uid);
 	}
 	else {
