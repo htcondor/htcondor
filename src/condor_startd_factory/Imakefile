@@ -21,6 +21,9 @@ public_copy_target(bgp_boot_partition,libexec,bgp_boot_partition,EXECUTABLE_MODE
 public_copy_target(bgp_shutdown_partition,libexec,bgp_shutdown_partition,EXECUTABLE_MODE)
 public_copy_target(bgp_back_partition,libexec,bgp_back_partition,EXECUTABLE_MODE)
 
+public_copy_target(htc_list_partitions.c,libexec,htc_list_partitions.c,TEXT_MODE)
+public_copy_target(htc_tool.c,libexec,htc_tool.c,TEXT_MODE)
+
 html:
 release:: all
 stripped:: all
