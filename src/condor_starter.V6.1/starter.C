@@ -1335,9 +1335,21 @@ CStarter::PeriodicCkpt( void )
 	m_job_list.Rewind();
 	while ((job = m_job_list.Next()) != NULL) {
 		if( job->Ckpt() ) {
+
+			CondorPrivSepHelper* cpsh = condorPrivSepHelper();
+			if (cpsh != NULL) {
+				cpsh->chown_sandbox_to_condor();
+			}
+
+			bool transfer_ok = jic->uploadWorkingFiles();
+
+			if (cpsh != NULL) {
+				cpsh->chown_sandbox_to_user();
+			}
+
 			// checkpoint files are successfully generated
 			// We need to upload those files by using condor file transfer.
-			if( jic->uploadWorkingFiles() == false ) {
+			if( transfer_ok == false ) {
 				// Failed to transfer ckpt files
 				// What should we do?
 				// For now, do nothing.
