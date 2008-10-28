@@ -254,4 +254,8 @@ same max($list5), 5
 same anycompare("<", $list5, 3), true
 same allcompare("<", $list5, 3), false
 
+same ifThenElse(1+1==2, 3, 4), 3
+same ifThenElse(1+1==3,3,4), 4
+same ifThenElse(ERROR,3,4), ERROR
+same ifThenElse(UNDEFINED,3,4), UNDEFINED
 

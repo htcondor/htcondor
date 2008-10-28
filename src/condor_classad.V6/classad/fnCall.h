@@ -190,6 +190,8 @@ class FunctionCall : public ExprTree
 	// math (floor, ceil, round)
 	static bool doMath(const char*,const ArgumentList&,EvalState&,Value&);
 	static bool random(const char*,const ArgumentList&,EvalState&,Value&);
+
+	static bool ifThenElse( const char* name,const ArgumentList &argList,EvalState &state,Value &result );
 	
  	//static bool doReal(const char*,const ArgumentList&,EvalState&,Value&);
 };

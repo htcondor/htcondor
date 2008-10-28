@@ -152,6 +152,9 @@ FunctionCall( )
 		functionTable["round"		] =	(void*)doMath;
         functionTable["random"      ] = (void*)random;
 
+			// misc
+		functionTable["ifThenElse"  ] = (void*)ifThenElse;
+
 		initialized = true;
 	}
 }
@@ -2125,6 +2128,80 @@ random( const char*,const ArgumentList &argList,EvalState &state,
     } else {
         result.SetErrorValue();
     }
+
+    return true;
+}
+
+bool FunctionCall::
+ifThenElse( const char* name,const ArgumentList &argList,EvalState &state,
+	Value &result )
+{
+	Value	arg1;
+	bool    arg1_bool = false;;
+
+		// takes exactly three arguments
+	if( argList.size() != 3 ) {
+		result.SetErrorValue( );
+		return( true );
+	}
+	if( !argList[0]->Evaluate( state, arg1 ) ) {
+		result.SetErrorValue( );
+		return( false );
+	}
+
+	switch( arg1.GetType() ) {
+	case Value::BOOLEAN_VALUE:
+		if( !arg1.IsBooleanValue(arg1_bool) ) {
+			result.SetErrorValue();
+			return( false );
+		}
+		break;
+	case Value::INTEGER_VALUE: {
+		int intval;
+		if( !arg1.IsIntegerValue(intval) ) {
+			result.SetErrorValue();
+			return( false );
+		}
+		arg1_bool = intval != 0;
+		break;
+	}
+	case Value::REAL_VALUE: {
+		int realval;
+		if( !arg1.IsIntegerValue(realval) ) {
+			result.SetErrorValue();
+			return( false );
+		}
+		arg1_bool = realval != 0.0;
+		break;
+	}
+
+	case Value::UNDEFINED_VALUE:
+		result.SetUndefinedValue();
+		return( true );
+
+	case Value::ERROR_VALUE:
+	case Value::CLASSAD_VALUE:
+	case Value::LIST_VALUE:
+	case Value::STRING_VALUE:
+	case Value::ABSOLUTE_TIME_VALUE:
+	case Value::RELATIVE_TIME_VALUE:
+	case Value::NULL_VALUE:
+		result.SetErrorValue();
+		return( true );
+	}
+
+	if( arg1_bool ) {
+		if( !argList[1]->Evaluate( state, result ) ) {
+			result.SetErrorValue( );
+			return( false );
+		}
+	}
+	else {
+		if( !argList[2]->Evaluate( state, result ) ) {
+			result.SetErrorValue( );
+			return( false );
+		}
+	}
 
     return true;
 }
