@@ -180,6 +180,20 @@ CondorQuery (AdTypes qType)
 		command = QUERY_STORAGE_ADS;
 		break;
 
+	  case XFER_SERVICE_AD:
+		query.setNumStringCats (0);
+		query.setNumIntegerCats(0);
+		query.setNumFloatCats  (0);
+		command = QUERY_XFER_SERVICE_ADS;
+		break;
+
+	  case LEASE_MANAGER_AD:
+		query.setNumStringCats (0);
+		query.setNumIntegerCats(0);
+		query.setNumFloatCats  (0);
+		command = QUERY_LEASE_MANAGER_ADS;
+		break;
+
 	  case CREDD_AD:
 		query.setNumStringCats (0);
 		query.setNumIntegerCats(0);
@@ -191,7 +205,7 @@ CondorQuery (AdTypes qType)
 		query.setNumStringCats (0);
 		query.setNumIntegerCats(0);
 		query.setNumFloatCats  (0);
-		command = QUERY_ANY_ADS;
+		command = QUERY_GENERIC_ADS;
 		break;
 
 	  case ANY_AD:
@@ -405,7 +419,17 @@ fetchAds (ClassAdList &adList, const char *poolName, CondorError* errstack)
 		break;
 
 	  case GENERIC_AD:
-		queryAd.SetTargetTypeName (genericQueryType);
+		  // For now, at least, there is no separate QUERY_GENERIC_ADS
+		  // command, so send the ANY_ADTYPE
+		queryAd.SetTargetTypeName (ANY_ADTYPE);
+		break;
+
+	  case XFER_SERVICE_AD:
+		queryAd.SetTargetTypeName (XFER_SERVICE_ADTYPE);
+		break;
+
+	  case LEASE_MANAGER_AD:
+		queryAd.SetTargetTypeName (LEASE_MANAGER_ADTYPE);
 		break;
 
 	  case ANY_AD:
@@ -526,6 +550,9 @@ getQueryAd (ClassAd &queryAd)
 		break;
 
 	  case GENERIC_AD:
+		queryAd.SetTargetTypeName (GENERIC_ADTYPE);
+
+	  case ANY_AD:
 		queryAd.SetTargetTypeName (genericQueryType);
 
 	  default:

@@ -2123,11 +2123,11 @@ AS_IF([test "x$enable_netman" = xyes],
 
 AC_ARG_ENABLE([nest],
   AC_HELP_STRING([--enable-nest],
-    [enable Nest functionality (default: no)]),
+    [enable NeST functionality (default: no)]),
   [],
   [enable_nest=no])
 AS_IF([test "x$enable_nest" = xyes],
-  [AC_DEFINE([WANT_NEST], [1], [Define if enabling Nest])])
+  [AC_DEFINE([WANT_NEST], [1], [Define if enabling NeST])])
 
 AC_ARG_ENABLE([quill],
   AC_HELP_STRING([--enable-quill],
@@ -2949,6 +2949,20 @@ AC_ARG_ENABLE([stork],
    fi])
 AS_IF([test "x$enable_stork" = xyes],
   [AC_DEFINE([WANT_STORK], [1], [Define if enabling Stork])])
+
+# NRL: Similar logic for the lease manager
+AC_ARG_ENABLE([lease-manager],
+  AC_HELP_STRING([--enable-lease-manager],
+    [enable lease manager functionality (default: platform dependent)]),
+  [],
+  [if test "$_cv_has_classads" = "yes" -a "$cv_ext_classads" = "yes" ; then
+    enable_lease_manager=yes;
+   else
+    enable_lease_manager=no;
+   fi])
+AS_IF([test "$enable_lease_manager" = "yes"],
+  [AC_DEFINE([WANT_LEASE_MANAGER], [1],[Define if enabling lease manager])])
+
 
 ############################################################
 # Configure-generated output

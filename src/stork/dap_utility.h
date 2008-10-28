@@ -20,10 +20,31 @@
 #ifndef _DAP_UTILITY_H
 #define  _DAP_UTILITY_H
 
-#include <stdio.h>
-#include <string.h>
+#include "condor_common.h"
+#include "string"
 
-void parse_url(char *url, char *protocol, char *host, char *filename);
+
+#if 0
+void parse_url( const std::string &url,
+				std::string &protocol,
+				std::string &host,
+				std::string &filename);
+#endif
+void parse_url(const std::string &url,
+			   char *protocol, char *host, char *filename);
+void parse_url(const char *url,
+			   char *protocol, char *host, char *filename);
 char *strip_str(char *str);
+
+// Create a predictable unique path, given a directory, basename, job id, and
+// pid.  The return value points to a statically allocated string.  This
+// function is not reentrant.
+const char *
+job_filepath(
+		const char *basename,
+		const char *suffix,
+		const char *dap_id,
+		pid_t pid
+);
 
 #endif

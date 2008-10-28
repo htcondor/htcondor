@@ -26,6 +26,7 @@
 #include "env.h"
 #include "setenv.h"
 #include <unistd.h>
+#include "my_hostname.h"
 #include <string>
 
 #include "globus_ftp_client.h"
@@ -151,6 +152,59 @@ int transfer_globus_url_copy(char *src_url, char *dest_url,
   
 }
 
+const char *
+unique_filepath(const char *directory)
+{
+	static char path[_POSIX_PATH_MAX];
+	static int unique = 0;
+	static time_t curr = 0;
+
+	if (unique) {
+		unique++;
+	} else {
+		unique = 1;
+		curr = time(NULL);
+	}
+
+	sprintf(path, "%s/file-%u-%d-%d-%d", directory, my_ip_addr(), getpid(),
+			(int)curr, unique);
+	return path;
+}
+
+// For multi-file transfers using a dynamic transfer destination, the list
+// specifying the file transfer source-destination pairs must be rewritten:
+// all destination URLs must be rewritten with the dynamic destination.
+bool
+translate_file(
+	const char *multi_file_xfer_file,	// original static dest url file
+	const char *dynamic_multi_file_xfer_file,	// new dynamic dest url file
+	const char *dynamic_destination		// dynamic dest url to use
+)
+{
+	char src[MAXSTR], dest[MAXSTR];
+	FILE *static_urls = fopen(multi_file_xfer_file, "r");
+	if (! static_urls) {
+		fprintf(stderr, "open static URL specification file %s for read: %s\n",
+				multi_file_xfer_file, strerror(errno) );
+		return false;
+	}
+	FILE *dynamic_urls = fopen(dynamic_multi_file_xfer_file, "w");
+	if (! dynamic_urls) {
+		fprintf(stderr,"open dynamic URL specification file %s for write: %s\n",
+				dynamic_multi_file_xfer_file, strerror(errno) );
+		fclose(static_urls);
+		return false;
+	}
+
+	while (fscanf(static_urls, " %s %s ", src, dest) != EOF) {
+		fprintf(dynamic_urls, "%s %s\n",
+				src, unique_filepath(dynamic_destination) );
+	}
+	fclose(static_urls);
+	fclose(dynamic_urls);
+	return true;
+}
+
 /* ========================================================================== */
 int main(int argc, char *argv[])
 {
@@ -162,6 +216,10 @@ int main(int argc, char *argv[])
   int status;
   struct stat filestat;
   int i;
+  bool multi_file_xfer = false;
+  char * multi_file_xfer_file = NULL;
+  const char *dynamic_multi_file_xfer_file = NULL;
+  bool dynamic_file_xfer = false;
   
   if (argc < 3){
     fprintf(stderr, "==============================================================\n");
@@ -213,6 +271,27 @@ int main(int argc, char *argv[])
   strncpy(arguments, "", MAXSTR);
   
   for(i=3;i<argc;i++) {
+	if (! strcmp( argv[i], "-dynamic") ) {
+		// FIXME: Find a better IPC to communicate this.
+		// intercept special "-dynamic" option, not for globus-url-copy
+
+		// WARNING: the "-dynamic option must appear before any "-f" option to
+		// specify a multiple transfer file list.
+		dynamic_file_xfer = true;
+		continue;	// Do not pass this option to globus-url-copy
+	} else if (! strcmp( argv[i], "-f") ) {
+		multi_file_xfer = true;
+	} else if (multi_file_xfer == true && ! multi_file_xfer_file) {
+		multi_file_xfer_file = argv[i];
+		if (dynamic_file_xfer) {
+			// For dynamic transfer destinations, the multi file transfer list
+			// specification file needs to be rewritten.  Ugh.
+			dynamic_multi_file_xfer_file =
+				job_filepath("", "urls",
+						getenv("STORK_JOBID"), getpid() );
+			argv[i] = (char *)dynamic_multi_file_xfer_file;
+		}
+	}
     size_t len = strlen(arguments);
     if(len) {
       strncpy(arguments+len, " ", MAXSTR-len);
@@ -220,12 +299,33 @@ int main(int argc, char *argv[])
     }
     strncpy(arguments+len, argv[i], MAXSTR-len); 
   }
+  if (multi_file_xfer == true && ! multi_file_xfer_file) {
+    fprintf(stderr, "command \"%s\": no multiple transfer file found\n",
+		arguments);
+    return DAP_ERROR;
+  }
   
-  parse_url(src_url, src_protocol, src_host, src_file);
-  parse_url(dest_url, dest_protocol, dest_host, dest_file);
+  // Horrid hack to enable multi-file xfers.  If "-f" option appears as an
+  // argument, then remove src_url, dest_url.
+  if (multi_file_xfer) {
+	  if (dynamic_multi_file_xfer_file) {
+		  if (! translate_file(multi_file_xfer_file,
+					  dynamic_multi_file_xfer_file, dest_url) ) {
+			return DAP_ERROR;
+		  }
+	  }
+      fprintf(stdout,
+              "Multi-file transferring from: %s to: %s with arguments: %s\n", 
+          src_url, dest_url, arguments);
+      strcpy(src_url, "");
+      strcpy(dest_url, "");
+  } else {
+      parse_url(src_url, src_protocol, src_host, src_file);
+      parse_url(dest_url, dest_protocol, dest_host, dest_file);
 
-  fprintf(stdout, "Transfering from: %s to: %s with arguments: %s\n", 
-	  src_url, dest_url, arguments);
+      fprintf(stdout, "Transfering from: %s to: %s with arguments: %s\n", 
+          src_url, dest_url, arguments);
+  }
 
   status = transfer_globus_url_copy(src_url, dest_url, arguments, error_str); 
   
@@ -247,6 +347,11 @@ int main(int argc, char *argv[])
   }
   //--
 
+    if ( multi_file_xfer ) {
+		fprintf(stdout, "skipping file size check for multi-file xfer\n");
+        fprintf(stderr, "SUCCESS!\n");
+        return DAP_SUCCESS;
+    }
 
   /*
   //return without double checking success by comparing src and dest file sizes

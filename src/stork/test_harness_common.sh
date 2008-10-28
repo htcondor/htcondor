@@ -40,10 +40,11 @@ VALGRIND_OPTS="$VALGRIND_OPTS --time-stamp=yes"
 #VALGRIND_OPTS="$VALGRIND_OPTS --show-below-main=yes"
 VALGRIND_OPTS="$VALGRIND_OPTS --num-callers=60"
 VALGRIND_LEAK_OPTS="$VALGRIND_LEAK_OPTS --leak-check=yes"
+VALGRIND_LEAK_OPTS="$VALGRIND_LEAK_OPTS --show-reachable=yes"	#too noisy
+VALGRIND_LEAK_OPTS="$VALGRIND_LEAK_OPTS --freelist-vol=5000000"
 #VALGRIND_OPTS="$VALGRIND_OPTS --gen-suppressions=yes" # blocking promtp to tty
 VALGRIND_LEAK_SUPPRESS=vg_leak.supp
 VALGRIND_OPTS="$VALGRIND_OPTS --suppressions=$VALGRIND_LEAK_SUPPRESS"
-#VALGRIND_LEAK_OPTS="$VALGRIND_LEAK_OPTS --show-reachable=yes"	#too noisy
 #VALGRINDCMD="$VALGRIND $VALGRIND_OPTS"
 
 #CREDD_HOST=localhost	# CredD host

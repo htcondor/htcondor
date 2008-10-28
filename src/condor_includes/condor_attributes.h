@@ -718,6 +718,9 @@ extern const char *ATTR_REQUEST_DISK;
 extern const char * ATTR_WAITPID_STATUS;
 extern const char * ATTR_TERMINATION_REASON;
 
+// Lease Manager
+extern const char *ATTR_LEASE_MANAGER_IP_ADDR;
+
 // Valid settings for ATTR_JOB_MANAGED.
 	// Managed by an external process (gridmanager)
 extern const char * MANAGED_EXTERNAL;
