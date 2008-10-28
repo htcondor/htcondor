@@ -105,7 +105,6 @@ main (int argc, char *argv[])
 		fprintf (stderr, "Error:  Out of memory\n");
 		exit (1);
 	}
-	printf( "Type = %d\n", type );
 
 	// set pretty print style implied by the type of entity being queried
 	// but do it with default priority, so that explicitly requested options
