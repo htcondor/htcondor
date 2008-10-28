@@ -86,7 +86,7 @@ CC_LINK = CPlusLinker
 endif
 
 
-STATIC	= -static
+STATIC	= -static 
 STAR	= *
 
 PLATFORM_LDFLAGS = PlatformLdFlags
@@ -290,6 +290,9 @@ DAEMONCORE_WRAP_LDFLAGS = -Wl,--wrap,exit
 
 #if HAVE_PTHREADS
 PTHREAD_LIB = -lpthread
+#if HAVE_GNU_LD
+PTHREAD_FLAG = -pthread
+#endif
 #endif
 
 VENDOR_C_FLAGS = -I. -I.. -I../.. -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) \
@@ -300,7 +303,7 @@ VENDOR_C_FLAGS = -I. -I.. -I../.. -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) \
 		 $(SECURITY_FLAGS) $(NETMAN_FLAGS) \
 		 $(QUILL_FLAGS) $(TT_FLAGS) $(GCB_FLAGS) \
 		 $(LEASE_MANAGER_FLAGS) \
-		 $(CONFIGURE_CFLAGS) $(CONFIGURE_CPPFLAGS)
+		 $(CONFIGURE_CFLAGS) $(CONFIGURE_CPPFLAGS) $(PTHREAD_FLAG)
 
 
 /* This flag is a bad idea since when this stuff eventually goes truly obselete
@@ -359,7 +362,7 @@ PRIVSEP_CLIENT_LIB = ../condor_privsep/privsep_client.a
 
 /* common ld flags which should be first in the list */
 COM_LDFLAGS_F = $(GCC_RDYNAMIC_FLAG) $(GCC_STACK_PROTECTOR) $(GCC_HASH_STYLE_FLAG) -lm \
-                $(LDFLAGS) $(CONFIGURE_LIBS) $(CONFIGURE_LDFLAGS)
+                $(LDFLAGS) $(CONFIGURE_LIBS) $(CONFIGURE_LDFLAGS) $(PTHREAD_LIB)
 
 /* common ld flags which should be last in the list */
 COM_LDFLAGS_L = 
