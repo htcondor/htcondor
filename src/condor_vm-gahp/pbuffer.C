@@ -54,7 +54,7 @@ PBuffer::GetNextLine () {
 		error = true;
 		return NULL;
 	}
-
+	//	vmprintf(D_ALWAYS, "Reading next line from pipe\n");
 	if (readahead_length == 0) {
 		// our readahead buffer is spent; read a new one in
 		readahead_length = daemonCore->Read_Pipe(pipe_end, readahead_buffer, 

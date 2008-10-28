@@ -40,6 +40,21 @@ public:
 	const char *Opt( void ) const { return m_opt; };
 	bool OptIsNumber( void ) const { return m_opt && isdigit(*m_opt); };
 
+	bool isOptStr( void ) const { return m_opt != NULL; };
+	const char *getOptStr( void ) const { return m_opt; };
+
+	bool isOptInt( void ) const { return m_opt && isdigit(*m_opt); };
+	int getOptInt( void ) const { return m_opt && atoi(m_opt); };
+
+	bool isOptBool( void ) const {
+		int c = toupper(*m_opt);
+		return ( c=='T' || c=='F' || c=='Y' || c=='N' );
+	};
+	int getOptBool( void ) const {
+		int c = toupper(*m_opt);
+		return ( c=='T' || c=='Y' );
+	};
+
 	int ConsumeOpt( void ) { return ++m_index; };
 	int Index( void ) const { return m_index; };
 

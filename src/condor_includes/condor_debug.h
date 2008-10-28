@@ -65,7 +65,7 @@
 #define D_KEYBOARD		(1<<22)
 #define D_PROCFAMILY	(1<<23)
 #define D_IDLE			(1<<24)
-#define D_MATCH			(1<<25)
+#define D_THREADS		(1<<25)
 #define D_ACCOUNTANT	(1<<26)
 #define D_FAILURE	(1<<27)
 /* 

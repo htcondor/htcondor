@@ -27,10 +27,10 @@ NULL=nul
 
 !IF  "$(CFG)" == "condor_cpp_util - Win32 Debug"
 
-OUTDIR=.\..\Debug
-INTDIR=.\..\Debug
+OUTDIR=..\Debug
+INTDIR=..\Debug
 # Begin Custom Macros
-OutDir=.\..\Debug
+OutDir=..\Debug
 # End Custom Macros
 
 ALL : "$(OUTDIR)\condor_cpp_util.lib"
@@ -66,6 +66,7 @@ CLEAN :
 	-@erase "$(INTDIR)\condor_q.obj"
 	-@erase "$(INTDIR)\condor_query.obj"
 	-@erase "$(INTDIR)\condor_state.obj"
+	-@erase "$(INTDIR)\condor_threads.obj"
 	-@erase "$(INTDIR)\condor_url.obj"
 	-@erase "$(INTDIR)\condor_user_policy.obj"
 	-@erase "$(INTDIR)\condor_ver_info.obj"
@@ -246,6 +247,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\classad_namedlist.obj" \
 	"$(INTDIR)\classad_visa.obj" \
 	"$(INTDIR)\command_strings.obj" \
+	"$(INTDIR)\ConcurrencyLimitUtils.obj" \
 	"$(INTDIR)\condor_arglist.obj" \
 	"$(INTDIR)\condor_attributes.obj" \
 	"..\Debug\condor_common.obj" \
@@ -262,6 +264,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\condor_q.obj" \
 	"$(INTDIR)\condor_query.obj" \
 	"$(INTDIR)\condor_state.obj" \
+	"$(INTDIR)\condor_threads.obj" \
 	"$(INTDIR)\condor_url.obj" \
 	"$(INTDIR)\condor_user_policy.obj" \
 	"$(INTDIR)\condor_ver_info.obj" \
@@ -378,8 +381,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\utc_time.obj" \
 	"$(INTDIR)\vm_univ_utils.obj" \
 	"$(INTDIR)\which.obj" \
-	"$(INTDIR)\windows_firewall.obj" \
-	"$(INTDIR)\ConcurrencyLimitUtils.obj"
+	"$(INTDIR)\windows_firewall.obj"
 
 "$(OUTDIR)\condor_cpp_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -388,10 +390,10 @@ LIB32_OBJS= \
 
 !ELSEIF  "$(CFG)" == "condor_cpp_util - Win32 Release"
 
-OUTDIR=.\..\Release
-INTDIR=.\..\Release
+OUTDIR=..\Release
+INTDIR=..\Release
 # Begin Custom Macros
-OutDir=.\..\Release
+OutDir=..\Release
 # End Custom Macros
 
 ALL : "$(OUTDIR)\condor_cpp_util.lib"
@@ -427,6 +429,7 @@ CLEAN :
 	-@erase "$(INTDIR)\condor_q.obj"
 	-@erase "$(INTDIR)\condor_query.obj"
 	-@erase "$(INTDIR)\condor_state.obj"
+	-@erase "$(INTDIR)\condor_threads.obj"
 	-@erase "$(INTDIR)\condor_url.obj"
 	-@erase "$(INTDIR)\condor_user_policy.obj"
 	-@erase "$(INTDIR)\condor_ver_info.obj"
@@ -606,6 +609,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\classad_namedlist.obj" \
 	"$(INTDIR)\classad_visa.obj" \
 	"$(INTDIR)\command_strings.obj" \
+	"$(INTDIR)\ConcurrencyLimitUtils.obj" \
 	"$(INTDIR)\condor_arglist.obj" \
 	"$(INTDIR)\condor_attributes.obj" \
 	"..\Release\condor_common.obj" \
@@ -622,6 +626,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\condor_q.obj" \
 	"$(INTDIR)\condor_query.obj" \
 	"$(INTDIR)\condor_state.obj" \
+	"$(INTDIR)\condor_threads.obj" \
 	"$(INTDIR)\condor_url.obj" \
 	"$(INTDIR)\condor_user_policy.obj" \
 	"$(INTDIR)\condor_ver_info.obj" \
@@ -738,8 +743,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\utc_time.obj" \
 	"$(INTDIR)\vm_univ_utils.obj" \
 	"$(INTDIR)\which.obj" \
-	"$(INTDIR)\windows_firewall.obj" \
-	"$(INTDIR)\ConcurrencyLimitUtils.obj"
+	"$(INTDIR)\windows_firewall.obj"
 
 "$(OUTDIR)\condor_cpp_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -972,6 +976,12 @@ SOURCE="..\src\condor_c++_util\condor_query.C"
 SOURCE="..\src\condor_c++_util\condor_state.C"
 
 "$(INTDIR)\condor_state.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE="..\src\condor_c++_util\condor_threads.C"
+
+"$(INTDIR)\condor_threads.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 

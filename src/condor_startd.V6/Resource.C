@@ -32,7 +32,7 @@
 
 extern FILESQL *FILEObj;
 
-Resource::Resource( CpuAttributes* cap, int rid )
+Resource::Resource( CpuAttributes* cap, int rid, Resource* _parent )
 {
 	MyString tmp;
 	char* tmpName;
@@ -41,12 +41,37 @@ Resource::Resource( CpuAttributes* cap, int rid )
 	r_id = rid;
 	char* name_prefix = param( "STARTD_RESOURCE_PREFIX" );
 	if( name_prefix ) {
-		tmp.sprintf( "%s%d", name_prefix, rid );
+		tmp = name_prefix;
 		free( name_prefix );
 	} else { 
-		tmp.sprintf( "slot%d", rid );
+		tmp = "slot";
+	}
+	if( _parent ) {
+		r_sub_id = _parent->m_id_dispenser->next();
+		tmp.sprintf_cat( "%d.%d", r_id, r_sub_id );
+	} else {
+		tmp.sprintf_cat( "%d", r_id );
 	}
 	r_id_str = strdup( tmp.Value() );
+
+		// we need this before we can call type()...
+	r_attr = cap;
+	r_attr->attach( this );
+
+	m_id_dispenser = NULL;
+
+		// we need this before we instantiate the Reqexp object...
+	tmp.sprintf( "SLOT_TYPE_%d_PARTITIONABLE", type() );
+	if( param_boolean( tmp.GetCStr(), false ) ) {
+		set_feature( PARTITIONABLE_SLOT );
+
+		m_id_dispenser = new IdDispenser( 3, 1 );
+	} else {
+		set_feature( STANDARD_SLOT );
+	}
+
+		// This must happen before creating the Reqexp
+	set_parent( _parent );
 
 	prevLHF = 0;
 	r_classad = NULL;
@@ -69,9 +94,6 @@ Resource::Resource( CpuAttributes* cap, int rid )
 	} else {
 		r_name = strdup( tmpName );
 	}
-
-	r_attr = cap;
-	r_attr->attach( this );
 
 	update_tid = -1;
 
@@ -140,6 +162,19 @@ Resource::~Resource()
 	}
 #endif /* HAVE_JOB_HOOKS */
 
+		// If we have a parent, return our resources to it
+	if( m_parent ) {
+		*(m_parent->r_attr) += *(r_attr);
+		m_parent->m_id_dispenser->insert( r_sub_id );
+		m_parent->update();
+		m_parent = NULL;
+	}
+
+	if( m_id_dispenser ) {
+		delete m_id_dispenser;
+		m_id_dispenser = NULL;
+	}
+
 	delete r_state;
 	delete r_classad;
 	delete r_cur;		
@@ -155,6 +190,21 @@ Resource::~Resource()
 	delete r_load_queue;
 	free( r_name );
 	free( r_id_str );
+}
+
+
+void
+Resource::set_parent( Resource* rip )
+{
+	m_parent = rip;
+
+		// If we have a parent, we consume its resources
+	if( m_parent ) {
+		*(m_parent->r_attr) -= *(r_attr);
+
+			// If we have a parent, we are dynamic
+		set_feature( DYNAMIC_SLOT );
+	}
 }
 
 
@@ -1070,28 +1120,19 @@ int
 Resource::wants_pckpt( void )
 {
 	int want_pckpt; 
-	bool unknown = true;
 
 	if( (r_cur->universe() != CONDOR_UNIVERSE_STANDARD) && 
 			(r_cur->universe() != CONDOR_UNIVERSE_VM)) {
 		return FALSE;
 	}
 
-	if( r_cur->universe() == CONDOR_UNIVERSE_VM ) {
-		if( r_classad->EvalBool("PERIODIC_CHECKPOINT_VM",
-					r_cur->ad(),
-					want_pckpt) ) {  
-			unknown = false;
-		}
+	if( r_classad->EvalBool( "PERIODIC_CHECKPOINT",
+				r_cur->ad(),
+				want_pckpt ) == 0) { 
+		// Default to no, if not defined.
+		want_pckpt = 0;
 	}
-	if( unknown ) {
-		if( r_classad->EvalBool( "PERIODIC_CHECKPOINT",
-					r_cur->ad(),
-					want_pckpt ) == 0) { 
-			// Default to no, if not defined.
-			want_pckpt = 0;
-		}
-	}
+
 	return want_pckpt;
 }
 
@@ -1462,6 +1503,15 @@ Resource::publish( ClassAd* cap, amask_t mask )
 		cap->Assign(ATTR_SLOT_ID, r_id);
 		if (param_boolean("ALLOW_VM_CRUFT", true)) {
 			cap->Assign(ATTR_VIRTUAL_MACHINE_ID, r_id);
+		}
+
+		switch (get_feature()) {
+		case PARTITIONABLE_SLOT:
+			cap->AssignExpr(ATTR_SLOT_PARTITIONABLE, "TRUE");
+			break;
+		case DYNAMIC_SLOT:
+			cap->AssignExpr(ATTR_SLOT_DYNAMIC, "TRUE");
+			break;
 		}
 	}		
 

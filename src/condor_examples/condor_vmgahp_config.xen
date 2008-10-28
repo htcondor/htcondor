@@ -73,23 +73,6 @@ VM_NETWORKING_TYPE = nat
 ##
 #######################################################################
 
-##  This required parameter specifies if the Xen hypervisor is
-##  controlled by the xm or virsh program. xm is part of the Xen
-##  distribution while virsh is part of the libvirt library. These
-##  controllers both provide the same functionality with respect to the Xen
-##  hypervisor, but with different configurations. Differences are: xm
-##  requires the XEN_IMAGE_IO_TYPE config option used, nat and bridge
-##  networking must be configured within Xen's xend-config.sxp file, and
-##  networking parameters must be specified with the XEN_VIF_PARAMETER
-##  config option; while, the virsh option uses the XEN_BRIDGE_SCRIPT option
-##  to setup a bridged network and does not need a XEN_IMAGE_IO_TYPE or
-##  XEN_VIF_PARAMETER.
-##
-##  XEN_CONTROLLER = <xm | virsh>
-##
-#XEN_CONTROLLER = virsh
-XEN_CONTROLLER = xm
-
 ##
 ##  Where is the Condor script program to control Xen? (Required)
 ##
@@ -128,39 +111,6 @@ XEN_BOOTLOADER = /usr/bin/pygrub
 #######################################################################
 
 ##
-##  This parameter is used only for xm.
-##
-##  Values in this parameter are the same to that of "vif" parameter in 
-##  Xen virtual machine(vm) config file.
-##  For example, if you want to use "vif = [ 'script=vif-nat' ]" 
-##  in Xen vm config file, you need to define 
-##  "XEN_VIF_PARAMETER = [ 'script=vif-nat' ]".
-##  Then, the VM-GAHP will insert "vif = [ 'script=vif-nat' ]" 
-##  into Xen vm config file, 
-##  If you don't define anything, 
-##  "vif = ['']" will be used for Xen vm config file.
-##
-##  NOTICE: When you use Xen checkpoint, you need to make sure that 
-##  all machines in a shared file system use the same vif parameter.
-##
-## Examples
-## (e.g.) XEN_VIF_PARAMETER = [ 'script=vif-nat' ]
-## (e.g.) XEN_VIF_PARAMETER = [ 'script=vif-bridge, bridge=xen-br0' ]
-##
-##  If multiple networking types are defined, you may specify different vif parameters
-##  for each networking type.
-##
-## Examples
-## (e.g.) XEN_NAT_VIF_PARAMETER = [ 'script=vif-nat' ]
-## (e.g.) XEN_BRIDGE_VIF_PARAMETER = [ 'script=vif-bridge, bridge=xen-br0' ]
-## 
-##  If there is no parameter for specific networking type, XEN_VIF_PARAMETER is used.
-##
-#XEN_NAT_VIF_PARAMETER = ['']
-#XEN_BRIDGE_VIF_PARAMETER = ['']
-XEN_VIF_PARAMETER = ['']
-
-##
 ##  This parameter is used only for virsh.
 ##
 ##  A string specifying a script and its arguments that will be run to
@@ -171,34 +121,3 @@ XEN_VIF_PARAMETER = ['']
 ## Example 
 ##  XEN_BRIDGE_SCRIPT = vif-bridge bridge=xenbr0 
 XEN_BRIDGE_SCRIPT = vif-bridge bridge=xenbr0 
-
-
-#######################################################################
-## Disk IO type for Xen domainU
-#######################################################################
-##
-##  This parameter is used only for xm.
-##
-##  You can define which file IO device needs to be used for Xen domainU.
-##  Default is to use loopback device for Xen domainU disk files.
-##  (e.g.) To use loopback device, use "XEN_IMAGE_IO_TYPE = file:"
-##  (e.g.) To use tap:aio device, use "XEN_IMAGE_IO_TYPE = tap:aio:"
-## 
-##  NOTICE: When you use Xen checkpoint, you need to make sure that 
-##  all machines in a shared file system use the same file IO type.
-XEN_IMAGE_IO_TYPE = file:
-
-
-#######################################################################
-##
-##	Other parameters to be inserted into a virtual machine config file 
-##
-#######################################################################
-
-##
-##  If you want to insert some parameters into a virtual machine config file
-##  you need to define those parameters with leading "+"
-##  (e.g.) +vcpus = 1
-##
-##  The above example will insert "vcpu = 1" into a virtual machine config file
-#+vcpus=1

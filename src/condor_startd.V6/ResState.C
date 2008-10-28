@@ -357,6 +357,10 @@ ResState::eval( void )
 		break;	// case preempting_state:
 
 	case unclaimed_state:
+		if( Resource::DYNAMIC_SLOT == rip->get_feature() ) {
+			return change( delete_state );
+		}
+
 		// See if we should be owner or unclaimed
 		if( rip->eval_is_owner() ) {
 			dprintf( D_ALWAYS, "State change: IS_OWNER is TRUE\n" );
@@ -747,7 +751,11 @@ ResState::enter_action( State s, Activity a,
 		break; 	// preempting_state
 
 	case delete_state:
-		resmgr->deleteResource( rip );
+		if ( Resource::DYNAMIC_SLOT == rip->get_feature() ) {
+			resmgr->removeResource( rip );
+		} else {
+			resmgr->deleteResource( rip );
+		}
 		return TRUE;
 		break;
 

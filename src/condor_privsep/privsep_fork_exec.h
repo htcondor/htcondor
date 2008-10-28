@@ -17,39 +17,27 @@
  *
  ***************************************************************/
 
-/* 
-    This file defines the Reqexp class.  A Reqexp object contains
-    methods and data to manipulate the requirements expression of a
-    given resource.
+#ifndef _PRIVSEP_FORK_EXEC
+#define _PRIVSEP_FORK_EXEC
 
-   	Written 9/29/97 by Derek Wright <wright@cs.wisc.edu>
-*/
+#include <stdio.h>
 
-#ifndef _REQEXP_H
-#define _REQEXP_H
+class ArgList;
 
-enum reqexp_state { UNAVAIL_REQ, ORIG_REQ, COD_REQ };
+class PrivSepForkExec {
 
-class Reqexp
-{
 public:
-	Reqexp( Resource* rip );
-	~Reqexp();
-
-	bool	restore();		// Restore the original requirements
-	void	unavail();		// Set requirements to False
-
-	void 	publish( ClassAd*, amask_t );
-	void	compute( amask_t );
-	void	dprintf( int, char* ... );
-
+	PrivSepForkExec();
+	~PrivSepForkExec();
+	bool init();
+	bool in_child(MyString&, ArgList&);
+	FILE* parent_begin();
+	bool parent_end();
 private:
-	Resource*		rip;
-	char* 			origreqexp;
-	char* 			origstart;
-	char*			m_origvalidckptpltfrm;
-	char*			m_within_resource_limits_expr;
-	reqexp_state	rstate;
+	FILE* m_in_fp;
+	FILE* m_err_fp;
+	int m_child_in_fd;
+	int m_child_err_fd;
 };
 
-#endif /* _REQEXP_H */
+#endif

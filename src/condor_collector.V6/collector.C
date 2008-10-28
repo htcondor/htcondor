@@ -44,6 +44,7 @@
 #include "condor_adtypes.h"
 #include "condor_universe.h"
 #include "my_hostname.h"
+#include "condor_threads.h"
 
 #include "collector.h"
 
@@ -265,7 +266,10 @@ int CollectorDaemon::receive_query_cedar(Service* s,
 
 	sock->decode();
 	sock->timeout(ClientTimeout);
-    if( !cad.initFromStream(*sock) || !sock->eom() )
+	bool ep = CondorThreads::enable_parallel(true);
+	bool res = !cad.initFromStream(*sock) || !sock->eom();
+	CondorThreads::enable_parallel(ep);
+    if( res )
     {
         dprintf(D_ALWAYS,"Failed to receive query on TCP: aborting\n");
         return FALSE;

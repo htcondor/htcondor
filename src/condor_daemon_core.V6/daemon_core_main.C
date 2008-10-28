@@ -1853,6 +1853,11 @@ int main( int argc, char** argv )
 		 fcntl(daemonCore->async_pipe[1],F_SETFL,O_NONBLOCK) == -1 ) {
 			EXCEPT("Failed to create async pipe");
 	}
+#else
+	if ( daemonCore->async_pipe[1].connect_socketpair(daemonCore->async_pipe[0])==false )
+	{
+		EXCEPT("Failed to create async pipe socket pair");
+	}
 #endif
 
 #if HAVE_EXT_GCB

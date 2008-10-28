@@ -336,6 +336,8 @@ const char *ATTR_JOB_VM_CHECKPOINT			= "JobVMCheckpoint";
 const char *ATTR_JOB_VM_NETWORKING			= "JobVMNetworking";
 const char *ATTR_JOB_VM_NETWORKING_TYPE		= "JobVMNetworkingType";
 const char *ATTR_JOB_VM_HARDWARE_VT			= "JobVMHardwareVT";
+const char * ATTR_JOB_VM_VCPUS = "JobVM_VCPUS";
+const char * ATTR_JOB_VM_MACADDR = "JobVM_MACADDR";
 // End VM universe
 const char *ATTR_KEYBOARD_IDLE            = "KeyboardIdle";
 const char *ATTR_KEYSTORE_FILE            = "KeystoreFile";
@@ -373,6 +375,7 @@ const char *ATTR_LOCAL_CREDD              = "LocalCredd";
 const char *ATTR_LOCAL_FILES		= "LocalFiles";
 const char *ATTR_LOAD_AVG                 = "LoadAvg";
 const char *ATTR_MACHINE                  = "Machine";
+const char *ATTR_MACHINE_COUNT            = "MachineCount";
 const char *ATTR_MASTER_IP_ADDR			 = "MasterIpAddr";
 const char *ATTR_MAX_HOSTS				 = "MaxHosts";
 const char *ATTR_MAX_JOB_RETIREMENT_TIME  = "MaxJobRetirementTime";
@@ -481,6 +484,8 @@ const char *ATTR_SCHEDD_NAME				 = "ScheddName";
 const char *ATTR_SCHEDULER				 = "Scheduler";
 const char *ATTR_SHADOW_WAIT_FOR_DEBUG    = "ShadowWaitForDebug";
 const char *ATTR_SLOT_ID				 = "SlotID";
+const char *ATTR_SLOT_PARTITIONABLE		= "PartitionableSlot";
+const char *ATTR_SLOT_DYNAMIC          = "DynamicSlot";
 const char *ATTR_SOURCE					 = "Source";
 const char *ATTR_STAGE_IN_START           = "StageInStart";
 const char *ATTR_STAGE_IN_FINISH          = "StageInFinish";
@@ -696,6 +701,8 @@ const char *ATTR_CHECKPOINT_PLATFORM			= "CheckpointPlatform";
 const char *ATTR_LAST_CHECKPOINT_PLATFORM	= "LastCheckpointPlatform";
 const char *ATTR_IS_VALID_CHECKPOINT_PLATFORM  = "IsValidCheckpointPlatform";
 
+const char *ATTR_WITHIN_RESOURCE_LIMITS  = "WithinResourceLimits";
+
 const char *ATTR_HAD_IS_ACTIVE = "HadIsActive";
 const char *ATTR_HAD_LIST      = "HadList";
 const char *ATTR_HAD_INDEX     = "HadIndex";
@@ -751,7 +758,12 @@ const char *ATTR_VM_GUEST_IP = "VM_Guest_IP";
 const char *ATTR_VM_GUEST_MEM = "VM_Guest_Mem";
 const char *ATTR_VM_CKPT_MAC = "VM_CkptMac";
 const char *ATTR_VM_CKPT_IP = "VM_CkptIP";
+
 // End VM universe
+
+const char *ATTR_REQUEST_CPUS = "RequestCpus";
+const char *ATTR_REQUEST_MEMORY = "RequestMemory";
+const char *ATTR_REQUEST_DISK = "RequestDisk";
 
 // Valid settings for ATTR_JOB_MANAGED.
 	// Managed by an external process (gridmanager)
