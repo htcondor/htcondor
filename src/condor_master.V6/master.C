@@ -108,7 +108,7 @@ int		check_new_exec_interval;
 int		preen_interval;
 int		new_bin_delay;
 char	*MasterName = NULL;
-char	*exit_program = NULL;
+char	*shutdown_program = NULL;
 
 int		master_backoff_constant = 9;
 int		master_backoff_ceiling = 3600;
@@ -180,7 +180,7 @@ master_exit(int retval)
 	}
 #endif
 
-	DC_Exit(retval);
+	DC_Exit(retval, shutdown_program );
 	return 1;	// just to satisfy vc++
 }
 
@@ -603,14 +603,29 @@ handle_shutdown_program( int cmd, Stream* stream )
 	MyString	pname;
 	pname =  "master_shutdown_";
 	pname += name;
-	char	*executable = param( pname.GetCStr() );
-	if ( NULL == executable ) {
-		dprintf( "No shutdown program defined for '%s'\n", name );
+	char	*path = param( pname.GetCStr() );
+	if ( NULL == path ) {
+		dprintf( D_ALWAYS, "No shutdown program defined for '%s'\n", name );
 		return FALSE;
 	}
 
-	// 
+	// Try to access() it
+	priv_state	priv = set_root_priv();
+	int status = access( path, S_IXUSR );
+	if ( status ) {
+		dprintf( D_ALWAYS,
+				 "WARNING: no execute access to shutdown program (%s)"
+				 ": %d/%s\n", path, errno, strerror(errno) );
+	}
+	set_priv( priv );
 
+	// OK, let's run with that
+	if ( shutdown_program ) {
+		free( shutdown_program );
+	}
+	shutdown_program = path;
+	dprintf( D_FULLDEBUG,
+			 "Shutdown program path set to %s\n", shutdown_program );
 }
 
 void

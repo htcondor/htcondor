@@ -323,6 +323,7 @@ main( int argc, char *argv[] )
 	char *cmd_str, **tmp;
 	int size;
 	int rc;
+	bool takes_name = false;
 
 #ifndef WIN32
 	// Ignore SIGPIPE so if we cannot connect to a daemon we do not
@@ -398,6 +399,9 @@ main( int argc, char *argv[] )
 	} else if ( !strncmp_auto( cmd_str, "_squawk" ) ) {
 		cmd = SQUAWK;
 		takes_subsys = 1;
+	} else if ( !strncmp_auto( cmd_str, "_shutdown_program" ) ) {
+		cmd = SET_SHUTDOWN_PROGRAM;
+		takes_name = true;
 	} else {
 		fprintf( stderr, "ERROR: unknown command %s\n", MyName );
 		usage( "condor" );
