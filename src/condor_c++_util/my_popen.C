@@ -424,6 +424,7 @@ my_popenv_impl( char *const args[],
 			        "my_popenv failure on %s\n",
 			        args[0]);
 			fclose(retp);
+			return NULL;
 		}
 	}
 
