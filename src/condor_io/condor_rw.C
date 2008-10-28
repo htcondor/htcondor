@@ -26,6 +26,7 @@
 #include "condor_debug.h"
 #include "internet.h"
 #include "selector.h"
+#include "condor_threads.h"
 
 /*
  * Returns true if the given error number indicates
@@ -139,8 +140,11 @@ condor_read( SOCKET fd, char *buf, int sz, int timeout, int flags )
 				return -1;
 			}
 		}
-
+		
+		start_thread_safe("recv");
 		nro = recv(fd, &buf[nr], sz - nr, flags);
+		stop_thread_safe("recv");
+
 		if( nro <= 0 ) {
 
 				// If timeout > 0, and we made it here, then
@@ -158,7 +162,7 @@ condor_read( SOCKET fd, char *buf, int sz, int timeout, int flags )
 						 sz,
 						 sock_peer_to_string(fd, sinbuf, sizeof(sinbuf), "unknown source") );
 				return -2;
-	}
+			}
 
 			int the_error;
 #ifdef WIN32
@@ -332,8 +336,9 @@ condor_write( SOCKET fd, char *buf, int sz, int timeout, int flags )
 				}
 			}
 		}
-		
+		start_thread_safe("send");
 		nwo = send(fd, &buf[nw], sz - nw, flags);
+		stop_thread_safe("send");		
 
 		if( nwo <= 0 ) {
 			int the_error;

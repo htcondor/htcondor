@@ -35,9 +35,12 @@
 #include "vm_univ_utils.h"
 #include "vm_gahp_server.h"
 #include "vm_gahp_request.h"
+#include "setenv.h"
 
-VMGahpServer::VMGahpServer(const char *vmgahpserver, const char *vmgahpconfig, 
-		const char *vmtype, ClassAd* job_ad) : m_request_table(20, &hashFuncInt)
+VMGahpServer::VMGahpServer(const char *vmgahpserver,
+                           const char *vmtype,
+                           ClassAd* job_ad) :
+	m_request_table(20, &hashFuncInt)
 {
 	m_is_initialized = false;
 	m_is_cleanuped = false;
@@ -61,7 +64,6 @@ VMGahpServer::VMGahpServer(const char *vmgahpserver, const char *vmgahpconfig,
 
 	m_vm_type = vmtype;
 	m_vmgahp_server = vmgahpserver;
-	m_vmgahp_config = vmgahpconfig;
 	m_job_ad = job_ad;
 
 	char *gahp_log_file = param("VM_GAHP_LOG");
@@ -278,7 +280,7 @@ VMGahpServer::startUp(Env *job_env, const char *workingdir, int nice_inc, Family
 		vmgahp_args.AppendArg("-t");
 	}
 	vmgahp_args.AppendArg("-M");
-	vmgahp_args.AppendArg(VMGAHP_IO_MODE);
+	vmgahp_args.AppendArg(VMGAHP_STANDALONE_MODE);
 
 	MyString args_string;
 	vmgahp_args.GetArgsStringForDisplay(&args_string, 1);
@@ -288,36 +290,15 @@ VMGahpServer::startUp(Env *job_env, const char *workingdir, int nice_inc, Family
 #if !defined(WIN32)
 	uid_t vmgahp_user_uid = (uid_t) -1;
 	gid_t vmgahp_user_gid = (gid_t) -1;
-	uid_t vmgahp_condor_uid = (uid_t) -1;
-	gid_t vmgahp_condor_gid = (gid_t) -1;
 
 	if( can_switch_ids() ) {
 		// Condor runs as root
 		vmgahp_user_uid = get_user_uid();
 		vmgahp_user_gid = get_user_gid();
-		vmgahp_condor_uid = get_user_uid();
-		vmgahp_condor_gid = get_user_gid();
 	}else {
 		// vmgahp may have setuid-root (e.g. vmgahp for Xen)
 		vmgahp_user_uid = get_condor_uid();
 		vmgahp_user_gid = get_condor_gid();
-		vmgahp_condor_uid = get_condor_uid();
-		vmgahp_condor_gid = get_condor_gid();
-	}
-
-	// Setup vmgahp condor uid/gid
-	if( vmgahp_condor_uid > 0 ) {
-		if( vmgahp_condor_gid <= 0 ) {
-			vmgahp_condor_gid = vmgahp_condor_uid;
-		}
-
-		// CONDOR_IDS is set for setuid-root vmgahp
-		MyString tmp_str;
-		const char *envName = EnvGetName(ENV_UG_IDS);
-		if( envName ) {
-			tmp_str.sprintf("%d.%d", (int)vmgahp_condor_uid, (int)vmgahp_condor_gid);
-			job_env->SetEnv(envName, tmp_str.Value());
-		}
 	}
 
 	// Setup vmgahp user uid/gid
@@ -334,8 +315,6 @@ VMGahpServer::startUp(Env *job_env, const char *workingdir, int nice_inc, Family
 	}
 #endif
 
-	// Set vmgahp env
-	job_env->SetEnv("VMGAHP_CONFIG", m_vmgahp_config.Value());
 	job_env->SetEnv("VMGAHP_VMTYPE", m_vm_type.Value());
 	job_env->SetEnv("VMGAHP_WORKING_DIR", workingdir);
 
@@ -346,11 +325,7 @@ VMGahpServer::startUp(Env *job_env, const char *workingdir, int nice_inc, Family
 		dprintf(D_FULLDEBUG, "Env = %s\n", env_str.Value());
 	}
 
-	priv_state vmgahp_priv = PRIV_USER_FINAL;
-	if( strcasecmp(m_vm_type.Value(), CONDOR_VM_UNIVERSE_XEN ) == MATCH ) {
-		// Xen requires root privilege
-		vmgahp_priv = PRIV_ROOT;
-	}
+	priv_state vmgahp_priv = PRIV_ROOT;
 #if defined(WIN32)
 	// TODO.. 
 	// Currently vmgahp for VMware VM universe can't run as user on Windows.
@@ -1369,11 +1344,9 @@ VMGahpServer::publishVMClassAd(const char *workingdir)
 
 	// Send Working directory
 	MyString vmAttr;
-	vmAttr.sprintf("VM_WORKING_DIR = \"%s\"\r\n", workingdir);
+	vmAttr.sprintf("VM_WORKING_DIR = \"%s\"", workingdir);
 
-	if( daemonCore->Write_Pipe(m_vmgahp_writefd,
-				vmAttr.Value(),vmAttr.Length()) <= 0 ) {
-		dprintf( D_ALWAYS, "VMGAHP write line(%s) Error\n", vmAttr.Value());
+	if ( write_line( vmAttr.Value() ) == false ) {
 		return false;
 	}
 
@@ -1416,10 +1389,7 @@ VMGahpServer::publishVMClassAd(const char *workingdir)
 			continue;
 		}
 
-		vmAttr += "\r\n";
-		if( daemonCore->Write_Pipe(m_vmgahp_writefd,
-					vmAttr.Value(),vmAttr.Length()) <= 0 ) {
-			dprintf( D_ALWAYS, "VMGAHP write line(%s) Error\n", vmAttr.Value());
+		if ( write_line( vmAttr.Value() ) == false ) {
 			return false;
 		}
 		total_len += vmAttr.Length();
@@ -1456,8 +1426,7 @@ VMGahpServer::publishVMClassAd(const char *workingdir)
 void
 VMGahpServer::killVM(void)
 {
-	if( m_vm_type.IsEmpty() || m_vmgahp_server.IsEmpty() || 
-			m_vmgahp_config.IsEmpty() ) {
+	if( m_vm_type.IsEmpty() || m_vmgahp_server.IsEmpty() ) {
 		return;
 	}
 
@@ -1486,7 +1455,7 @@ VMGahpServer::killVM(void)
 
 	// vmgahp is daemonCore, so we need to add -f -t options of daemonCore.
 	// Then, try to execute vmgahp with 
-	// "gahpconfig <gahpconfigfile> vmtype <vmtype> match <string>"
+	// vmtype <vmtype> match <string>"
 	ArgList systemcmd;
 	systemcmd.AppendArg(m_vmgahp_server);
 	systemcmd.AppendArg("-f");
@@ -1495,32 +1464,16 @@ VMGahpServer::killVM(void)
 	}
 	systemcmd.AppendArg("-M");
 	systemcmd.AppendArg(VMGAHP_KILL_MODE);
-	systemcmd.AppendArg("gahpconfig");
-	systemcmd.AppendArg(m_vmgahp_config);
 	systemcmd.AppendArg("vmtype");
 	systemcmd.AppendArg(m_vm_type);
 	systemcmd.AppendArg("match");
 	systemcmd.AppendArg(matchstring);
 
 #if !defined(WIN32)
-	MyString oldValue;
-	const char *envName = NULL;
-
-	if( !can_switch_ids() && has_root_setuid(m_vmgahp_server.Value()) ) {
-		// Condor runs as user and vmgahp has setuid-root
-		// We need to set CONDOR_IDS environment
-		envName = EnvGetName(ENV_UG_IDS);
-		if( envName ) {
-			MyString tmp_str;
-			tmp_str.sprintf("%d.%d", (int)get_condor_uid(), (int)get_condor_gid());
-			set_temporary_env(envName, tmp_str.Value(), &oldValue);
-		}
-	}
-
 	if( can_switch_ids() ) {
 		MyString tmp_str;
 		tmp_str.sprintf("%d", (int)get_condor_uid());
-		set_temporary_env("VMGAHP_USER_UID", tmp_str.Value(), &oldValue);
+		SetEnv("VMGAHP_USER_UID", tmp_str.Value());
 	}
 #endif
 
@@ -1532,12 +1485,6 @@ VMGahpServer::killVM(void)
 	}
 	int ret = my_system(systemcmd);
 	set_priv(oldpriv);
-
-#if !defined(WIN32)
-	if( envName ) {
-		set_temporary_env(envName, oldValue.GetCStr(), NULL);
-	}
-#endif
 
 	if( ret == 0 ) {
 		dprintf( D_FULLDEBUG, "VMGahpServer::killVM() is called with "

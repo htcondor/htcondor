@@ -132,7 +132,6 @@ class VMProc : public OsProc
 
 		MyString m_vm_type;
 		MyString m_vmgahp_server;
-		MyString m_vmgahp_config;
 
 		bool m_vm_checkpoint;
 		bool m_is_vacate_ckpt;

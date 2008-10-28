@@ -36,21 +36,26 @@ public:
 	bool Match( const char *long_arg ) const;
 	bool Match( const char short_arg, const char *long_arg ) const;
 
+	// options: generic
 	bool hasOpt( void ) const { return m_opt != NULL; };
-
 	const char *getOpt( void ) const { return m_opt; };
 
+	// option: string operations
 	bool isOptStr( void ) const { return m_opt != NULL; };
 	bool getOpt( const char *&, bool consume = true );
 
+	// option: bool operations
 	bool isOptInt( void ) const;
 	bool getOpt( int &, bool consume = true );
 
+	// Operations on doubles
 	bool isOptDouble( void ) const { return isOptInt(); };
 	bool getOpt( double &, bool consume = true );
 
 	bool isOptBool( void ) const;
 	bool getOpt( bool &, bool consume = true );
+	const char *boolStr( bool value ) const
+		{ return value ? "True" : "False"; };
 
 	int ConsumeOpt( bool consume = true );
 	int Index( void ) const { return m_index; };

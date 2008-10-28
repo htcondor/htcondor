@@ -62,7 +62,7 @@ Claim::Claim( Resource* res_ip, ClaimType claim_type, int lease_duration )
 	c_global_job_id = NULL;
 	c_job_start = -1;
 	c_last_pckpt = -1;
-	c_rip = res_ip;
+	setResource( res_ip );
 	c_type = claim_type;
 	c_cod_keyword = NULL;
 	c_has_job_ad = 0;

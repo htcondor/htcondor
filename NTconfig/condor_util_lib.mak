@@ -70,6 +70,7 @@ CLEAN :
 	-@erase "$(INTDIR)\internet.obj"
 	-@erase "$(INTDIR)\lock_file.WIN32.obj"
 	-@erase "$(INTDIR)\ltrunc.obj"
+	-@erase "$(INTDIR)\mark_thread.obj"
 	-@erase "$(INTDIR)\match_prefix.obj"
 	-@erase "$(INTDIR)\mkargv.obj"
 	-@erase "$(INTDIR)\my_getopt.obj"
@@ -167,6 +168,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\internet.obj" \
 	"$(INTDIR)\lock_file.WIN32.obj" \
 	"$(INTDIR)\ltrunc.obj" \
+	"$(INTDIR)\mark_thread.obj" \
 	"$(INTDIR)\match_prefix.obj" \
 	"$(INTDIR)\mkargv.obj" \
 	"$(INTDIR)\my_getopt.obj" \
@@ -178,9 +180,9 @@ LIB32_OBJS= \
 	"$(INTDIR)\signames.obj" \
 	"$(INTDIR)\stat.WINDOWS.obj" \
 	"$(INTDIR)\strcmp_until.obj" \
+	"$(INTDIR)\string_funcs.obj" \
 	"$(INTDIR)\truncate.WIN32.obj" \
-	"$(INTDIR)\win32_posix.obj" \
-	"$(INTDIR)\string_funcs.obj"
+	"$(INTDIR)\win32_posix.obj"
 
 "..\src\condor_util_lib\condor_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -232,6 +234,7 @@ CLEAN :
 	-@erase "$(INTDIR)\internet.obj"
 	-@erase "$(INTDIR)\lock_file.WIN32.obj"
 	-@erase "$(INTDIR)\ltrunc.obj"
+	-@erase "$(INTDIR)\mark_thread.obj"
 	-@erase "$(INTDIR)\match_prefix.obj"
 	-@erase "$(INTDIR)\mkargv.obj"
 	-@erase "$(INTDIR)\my_getopt.obj"
@@ -328,6 +331,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\internet.obj" \
 	"$(INTDIR)\lock_file.WIN32.obj" \
 	"$(INTDIR)\ltrunc.obj" \
+	"$(INTDIR)\mark_thread.obj" \
 	"$(INTDIR)\match_prefix.obj" \
 	"$(INTDIR)\mkargv.obj" \
 	"$(INTDIR)\my_getopt.obj" \
@@ -339,9 +343,9 @@ LIB32_OBJS= \
 	"$(INTDIR)\signames.obj" \
 	"$(INTDIR)\stat.WINDOWS.obj" \
 	"$(INTDIR)\strcmp_until.obj" \
+	"$(INTDIR)\string_funcs.obj" \
 	"$(INTDIR)\truncate.WIN32.obj" \
-	"$(INTDIR)\win32_posix.obj" \
-	"$(INTDIR)\string_funcs.obj"
+	"$(INTDIR)\win32_posix.obj"
 
 "..\src\condor_util_lib\condor_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -622,6 +626,12 @@ SOURCE=..\src\condor_util_lib\lock_file.WIN32.c
 SOURCE=..\src\condor_util_lib\ltrunc.c
 
 "$(INTDIR)\ltrunc.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common_c.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE=..\src\condor_util_lib\mark_thread.c
+
+"$(INTDIR)\mark_thread.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common_c.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
