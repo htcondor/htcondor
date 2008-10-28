@@ -1042,6 +1042,7 @@ VMwareType::Start()
 			vmprintf(D_ALWAYS, "Failed to restart with checkpointed files\n");
 			vmprintf(D_ALWAYS, "So, we will try to create a new configuration file\n");
 
+#if !defined(WIN32)
 			if (privsep_enabled()) {
 				if (!privsep_chown_dir(get_condor_uid(),
 				                       job_user_uid,
@@ -1051,6 +1052,7 @@ VMwareType::Start()
 					return false;
 				}
 			}
+#endif
 
 			deleteNonTransferredFiles();
 			m_configfile = "";
@@ -1066,6 +1068,7 @@ VMwareType::Start()
 		}
 	}
 
+#if !defined(WIN32)
 	if (privsep_enabled()) {
 		if (!privsep_chown_dir(job_user_uid,
 		                       get_condor_uid(),
@@ -1075,6 +1078,7 @@ VMwareType::Start()
 			return false;
 		}
 	}
+#endif
 
 	if( m_need_snapshot ) {
 		if( Snapshot() == false ) {
@@ -1163,6 +1167,7 @@ VMwareType::Shutdown()
 {
 	vmprintf(D_FULLDEBUG, "Inside VMwareType::Shutdown\n");
 
+#if !defined(WIN32)
 	if (privsep_enabled()) {
 		if (!privsep_chown_dir(get_condor_uid(),
 		                       job_user_uid,
@@ -1172,6 +1177,7 @@ VMwareType::Shutdown()
 			return false;
 		}
 	}
+#endif
 
 	if( (m_scriptname.Length() == 0) ||
 			(m_configfile.Length() == 0)) {
