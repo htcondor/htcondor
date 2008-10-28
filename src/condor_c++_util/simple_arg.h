@@ -44,14 +44,15 @@ public:
 	bool isOptStr( void ) const { return m_opt != NULL; };
 	bool getOpt( const char *&, bool consume = true );
 
-	// option: bool operations
+	// option: int operations
 	bool isOptInt( void ) const;
 	bool getOpt( int &, bool consume = true );
 
-	// Operations on doubles
+	// option: doubles
 	bool isOptDouble( void ) const { return isOptInt(); };
 	bool getOpt( double &, bool consume = true );
 
+	// option: bool operations
 	bool isOptBool( void ) const;
 	bool getOpt( bool &, bool consume = true );
 	const char *boolStr( bool value ) const
