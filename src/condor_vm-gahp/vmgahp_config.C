@@ -83,10 +83,13 @@ VMGahpConfig::init(const char* vmtype)
 	free(config_value);
 
 	// Read VM_MAX_MEMORY
-	int tmp_config_value = param_integer("VM_MAX_MEMORY", 0);
+	int tmp_config_value = param_integer("VM_MEMORY", 0);
+	if( tmp_config_value <= 0 ) {
+		tmp_config_value = param_integer("VM_MAX_MEMORY", 0);
+	}
 	if( tmp_config_value <= 0 ) {
 		vmprintf( D_ALWAYS,
-		          "\nERROR: 'VM_MAX_MEMORY' is not defined "
+		          "\nERROR: 'VM_MEMORY' is not defined "
 		              "in configuration\n");
 		return false;
 	}
