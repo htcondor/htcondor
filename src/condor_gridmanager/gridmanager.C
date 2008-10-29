@@ -42,7 +42,6 @@
 
 #include "nordugridjob.h"
 #include "unicorejob.h"
-#include "mirrorjob.h"
 #include "condorjob.h"
 #include "gt4job.h"
 #include "infnbatchjob.h"
@@ -363,14 +362,6 @@ Init()
 	new_type->ReconfigFunc = UnicoreJobReconfig;
 	new_type->AdMatchFunc = UnicoreJobAdMatch;
 	new_type->CreateFunc = UnicoreJobCreate;
-	jobTypes.Append( new_type );
-
-	new_type = new JobType;
-	new_type->Name = strdup( "Mirror" );
-	new_type->InitFunc = MirrorJobInit;
-	new_type->ReconfigFunc = MirrorJobReconfig;
-	new_type->AdMatchFunc = MirrorJobAdMatch;
-	new_type->CreateFunc = MirrorJobCreate;
 	jobTypes.Append( new_type );
 
 	new_type = new JobType;
