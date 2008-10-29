@@ -2279,7 +2279,9 @@ AC_CHECK_FUNCS([strsignal				\
 		setlinebuf				\
 		snprintf				\
 		setenv					\
-		unsetenv					\
+		unsetenv				\
+		execl					\
+		access					\
 		vasprintf				\
 		clearenv])
 AC_CHECK_FUNC(crypt, ,AC_CHECK_LIB(crypt,crypt))

@@ -89,6 +89,7 @@ int		agent_starter(ReliSock *);
 int		handle_agent_fetch_log(ReliSock *);
 int		admin_command_handler(Service *, int, Stream *);
 int		handle_subsys_command(int, Stream *);
+int     handle_shutdown_program( int cmd, Stream* stream );
 void	time_skip_handler(void * /*data*/, int delta);
 void	restart_everyone();
 
@@ -108,6 +109,7 @@ int		check_new_exec_interval;
 int		preen_interval;
 int		new_bin_delay;
 char	*MasterName = NULL;
+char	*shutdown_program = NULL;
 
 int		master_backoff_constant = 9;
 int		master_backoff_ceiling = 3600;
@@ -179,7 +181,7 @@ master_exit(int retval)
 	}
 #endif
 
-	DC_Exit(retval);
+	DC_Exit(retval, shutdown_program );
 	return 1;	// just to satisfy vc++
 }
 
@@ -266,7 +268,7 @@ main_init( int argc, char* argv[] )
         // relative time. This means that we don't have to update
         // the time each time we restart the daemon.
 		MyString runfor_env;
-		runfor_env.sprintf("%s=%d", EnvGetName(ENV_DAEMON_DEATHTIME),
+		runfor_env.sprintf("%s=%ld", EnvGetName(ENV_DAEMON_DEATHTIME),
 						   time(NULL) + (runfor * 60));
 		SetEnv(runfor_env.Value());
     }
@@ -345,6 +347,9 @@ main_init( int argc, char* argv[] )
 	daemonCore->Register_Command( CHILD_OFF_FAST, "CHILD_OFF_FAST",
 								  (CommandHandler)admin_command_handler, 
 								  "admin_command_handler", 0, ADMINISTRATOR );
+	daemonCore->Register_Command( SET_SHUTDOWN_PROGRAM, "SET_SHUTDOWN_PROGRAM",
+								  (CommandHandler)admin_command_handler, 
+								  "admin_command_handler", 0, ADMINISTRATOR );
 	// Command handler for stashing the pool password
 	daemonCore->Register_Command( STORE_POOL_CRED, "STORE_POOL_CRED",
 								(CommandHandler)&store_pool_cred_handler,
@@ -416,6 +421,9 @@ admin_command_handler( Service*, int cmd, Stream* stream )
 	case MASTER_OFF_FAST:
 		daemonCore->Send_Signal( daemonCore->getpid(), SIGQUIT );
 		return TRUE;
+
+	case SET_SHUTDOWN_PROGRAM:
+		return handle_shutdown_program( cmd, stream );
 
 			// These commands are special, since they all need to read
 			// off the subsystem before they know what to do.  So, we
@@ -572,6 +580,56 @@ handle_subsys_command( int cmd, Stream* stream )
 		EXCEPT( "Unknown command (%d) in handle_subsys_command", cmd );
 	}
 	return FALSE;
+}
+
+
+int
+handle_shutdown_program( int cmd, Stream* stream )
+{
+	if ( cmd != SET_SHUTDOWN_PROGRAM ) {
+		EXCEPT( "Unknown command (%d) in handle_shutdown_program", cmd );
+	}
+
+	char	*name = NULL;
+	stream->decode();
+	if( ! stream->code(name) ) {
+		dprintf( D_ALWAYS, "Can't read program name\n" );
+		if ( name ) {
+			free( name );
+		}
+		return FALSE;
+	}
+
+	// Can we find it in the configuration?
+	MyString	pname;
+	pname =  "master_shutdown_";
+	pname += name;
+	char	*path = param( pname.GetCStr() );
+	if ( NULL == path ) {
+		dprintf( D_ALWAYS, "No shutdown program defined for '%s'\n", name );
+		return FALSE;
+	}
+
+	// Try to access() it
+# if defined(HAVE_ACCESS)
+	priv_state	priv = set_root_priv();
+	int status = access( path, X_OK );
+	if ( status ) {
+		dprintf( D_ALWAYS,
+				 "WARNING: no execute access to shutdown program (%s)"
+				 ": %d/%s\n", path, errno, strerror(errno) );
+	}
+	set_priv( priv );
+# endif
+
+	// OK, let's run with that
+	if ( shutdown_program ) {
+		free( shutdown_program );
+	}
+	shutdown_program = path;
+	dprintf( D_FULLDEBUG,
+			 "Shutdown program path set to %s\n", shutdown_program );
+	return TRUE;
 }
 
 void

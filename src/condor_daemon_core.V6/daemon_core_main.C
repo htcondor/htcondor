@@ -229,7 +229,7 @@ clean_files()
 // All daemons call this function when they want daemonCore to really
 // exit.  Put any daemon-wide shutdown code in here.   
 void
-DC_Exit( int status )
+DC_Exit( int status, const char *shutdown_program )
 {
 		// First, delete any files we might have created, like the
 		// address file or the pid file.
@@ -275,6 +275,18 @@ DC_Exit( int status )
 		  to know from the config file, so it's ok that we already
 		  cleared out our config hashtable, too.  Derek 2004-11-23
 		*/
+	if ( shutdown_program ) {
+#     if (HAVE_EXECL)
+		dprintf( D_ALWAYS, "**** %s (%s_%s) EXITING BY EXECING %s\n",
+				 myName, myDistro->Get(), mySubSystem->getName(),
+				 shutdown_program );
+		int exec_status = execl( shutdown_program, shutdown_program, NULL );
+		dprintf( D_ALWAYS, "**** execl() FAILED %d %d %s\n",
+				 exec_status, errno, strerror(errno) );
+#     else
+		dprintf( D_ALWAYS, "**** execl() not available on this system\n" );
+#     endif
+	}
 	dprintf( D_ALWAYS, "**** %s (%s_%s) EXITING WITH STATUS %d\n",
 			 myName, myDistro->Get(), mySubSystem->getName(), exit_status );
 
