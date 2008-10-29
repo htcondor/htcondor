@@ -42,6 +42,7 @@ import org.w3c.dom.Element;
 import org.globus.exec.client.GramJob;
 import org.globus.wsrf.container.ServiceContainer;
 import org.globus.exec.utils.client.ManagedJobClientHelper;
+import org.globus.exec.utils.NotificationUtil;
 
 import org.globus.axis.message.addressing.EndpointReferenceType;
 
@@ -118,7 +119,7 @@ public class CallbackSink
 		securityDescriptor.setDefaultAuthMethods(authMethod);
 
 		List topicPath = new LinkedList(); 	
-		topicPath.add(ManagedJobConstants.RP_STATE);
+		topicPath.add(ManagedJobConstants.STATE_CHANGE_INFORMATION_TOPIC_QNAME);
 		notificationConsumerEPR = 
 			notificationConsumerManager.createNotificationConsumer(
 															topicPath,
@@ -229,10 +230,8 @@ public class CallbackSink
 		try {
             jobContact = ManagedJobClientHelper.getHandle( producer );
 
-			StateChangeNotificationMessageType changeNotification =
-                (StateChangeNotificationMessageType)ObjectDeserializer.toObject(
-                    (Element) message,
-                    StateChangeNotificationMessageType.class);
+            StateChangeNotificationMessageType changeNotification =
+                NotificationUtil.getStateChangeNotification(message);
             StateEnumeration state = changeNotification.getState();
             jobState = state.getValue();
 			if (state.equals (StateEnumeration.Failed)) {
@@ -245,8 +244,8 @@ public class CallbackSink
             }
         }
         catch (Exception e) {
-            // TODO Print out the exception
             System.err.println( "Exception while processing callback" );
+            e.printStackTrace(System.err);
             return;
 		}
 
