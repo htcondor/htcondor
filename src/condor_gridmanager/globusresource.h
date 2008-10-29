@@ -59,6 +59,8 @@ class GlobusResource : public BaseResource
 	static GlobusResource *FindOrCreateResource( const char *resource_name,
 												 const char *proxy_subject );
 
+	const char *GetHashName();
+
 	static void setGahpCallTimeout( int new_timeout )
 		{ gahpCallTimeout = new_timeout; }
 

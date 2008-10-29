@@ -32,6 +32,8 @@
 int BaseResource::probeInterval = 300;	// default value
 int BaseResource::probeDelay = 15;		// default value
 
+SimpleList<BaseResource *> BaseResource::m_allResources;
+
 BaseResource::BaseResource( const char *resource_name )
 {
 	resourceName = strdup( resource_name );
@@ -57,10 +59,13 @@ BaseResource::BaseResource( const char *resource_name )
 	updateLeasesActive = false;
 	leaseAttrsSynched = false;
 	updateLeasesCmdActive = false;
+
+	m_allResources.Append( this );
 }
 
 BaseResource::~BaseResource()
 {
+	m_allResources.Delete( this );
 	if ( deleteMeTid != TIMER_UNSET ) {
 		daemonCore->Cancel_Timer( deleteMeTid );
 	}
@@ -172,6 +177,19 @@ int BaseResource::DeleteMe()
 		// DO NOT REFERENCE ANY MEMBER VARIABLES BELOW HERE!!!!!!!
 	}
 	return TRUE;
+}
+
+void BaseResource::PublishResourceAd( ClassAd *resource_ad )
+{
+	resource_ad->Assign( ATTR_NAME, resourceName );
+	resource_ad->Assign( "HashName", GetHashName() );
+	resource_ad->Assign( "NumJobs", registeredJobs.Number() );
+	resource_ad->Assign( "JobLimit", jobLimit );
+	resource_ad->Assign( "SubmitLimit", submitLimit );
+	resource_ad->Assign( "SubmitsInProgress", submitsInProgress.Number() );
+	resource_ad->Assign( "SubmitsQueued", submitsQueued.Number() );
+	resource_ad->Assign( "SubmitsAllowed", submitsAllowed.Number() );
+	resource_ad->Assign( "SubmitsWanted", submitsWanted.Number() );
 }
 
 void BaseResource::RegisterJob( BaseJob *job )

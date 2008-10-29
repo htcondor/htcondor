@@ -238,9 +238,14 @@ const char *GT4Resource::HashName( const char *resource_name,
 {
 	static MyString hash_name;
 
-	hash_name.sprintf( "%s#%s", resource_name, proxy_subject );
+	hash_name.sprintf( "gt4 %s#%s", resource_name, proxy_subject );
 
 	return hash_name.Value();
+}
+
+const char *GT4Resource::GetHashName()
+{
+	return HashName( resourceName, proxySubject );
 }
 
 void GT4Resource::UnregisterJob( GT4Job *job )

@@ -40,6 +40,10 @@ class BaseResource
 
 	char *ResourceName();
 
+	virtual const char *GetHashName() = 0;
+
+	virtual void PublishResourceAd( ClassAd *resource_ad );
+
 	virtual void RegisterJob( BaseJob *job );
 	virtual void UnregisterJob( BaseJob *job );
 	bool IsEmpty();
@@ -58,6 +62,8 @@ class BaseResource
 
 	static void setProbeDelay( int new_delay )
 		{ probeDelay = new_delay; }
+
+	static SimpleList<BaseResource *> m_allResources;
 
  protected:
 	int DeleteMe();

@@ -45,6 +45,8 @@ class NordugridResource : public BaseResource
 	static NordugridResource *FindOrCreateResource( const char *resource_name,
 													const char *proxy_subject );
 
+	const char *GetHashName();
+
 	char *proxySubject;
 	GahpClient *gahp;
 

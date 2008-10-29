@@ -208,9 +208,14 @@ const char *GlobusResource::HashName( const char *resource_name,
 {
 	static MyString hash_name;
 
-	hash_name.sprintf( "%s#%s", resource_name, proxy_subject );
+	hash_name.sprintf( "gt2 %s#%s", resource_name, proxy_subject );
 
 	return hash_name.Value();
+}
+
+const char *GlobusResource::GetHashName()
+{
+	return HashName( resourceName, proxySubject );
 }
 
 void GlobusResource::UnregisterJob( GlobusJob *job )

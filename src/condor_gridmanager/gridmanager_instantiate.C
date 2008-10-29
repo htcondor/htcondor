@@ -44,8 +44,6 @@
 #include "creamjob.h"
 #include "creamresource.h"
 
-template class List<NordugridJob>;
-template class Item<NordugridJob>;
 template class HashTable<HashKey, NordugridResource *>;
 template class HashTable<HashKey, AmazonResource *>;		// added by fangcao
 template class HashBucket<HashKey, NordugridResource *>;
@@ -68,6 +66,7 @@ template class List<BaseJob>;
 template class Item<BaseJob>;
 template class HashTable<HashKey, BaseJob *>;
 template class HashBucket<HashKey, BaseJob *>;
+template class SimpleList<BaseResource *>;
 
 template class HashTable<HashKey, CondorResource *>;
 template class HashBucket<HashKey, CondorResource *>;

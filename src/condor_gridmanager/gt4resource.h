@@ -43,6 +43,7 @@ class GT4Resource : public BaseResource
 	bool Init();
 	const char *ResourceType();
 	void Reconfig();
+	const char *GetHashName();
 	void UnregisterJob( GT4Job *job );
 
 	void registerDelegationURI( const char *deleg_uri, Proxy *job_proxy );
