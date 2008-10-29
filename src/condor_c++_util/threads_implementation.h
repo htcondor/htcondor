@@ -30,10 +30,12 @@
 	typedef void ThreadStartFunc_t;
 #else
 	typedef void* ThreadStartFunc_t;
-	#ifdef HAVE_PTHREADS
+	#ifdef HAVE_PTHREAD_H
 		#include <pthread.h>
 	#else
-		typedef int pthread_t;
+		typedef long unsigned int pthread_t;
+	#endif
+	#ifndef HAVE_PTHREADS
 		pthread_t pthread_self() { return 1; }
 	#endif
 #endif
