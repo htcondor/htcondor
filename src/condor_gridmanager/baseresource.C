@@ -186,6 +186,7 @@ void BaseResource::PublishResourceAd( ClassAd *resource_ad )
 	buff.sprintf( "%s %s", ResourceType(), resourceName );
 	resource_ad->Assign( ATTR_NAME, buff.Value() );
 	resource_ad->Assign( "HashName", GetHashName() );
+	resource_ad->Assign( ATTR_SCHEDD_NAME, ScheddObj->name() );
 	resource_ad->Assign( ATTR_OWNER, myUserName );
 	resource_ad->Assign( "NumJobs", registeredJobs.Number() );
 	resource_ad->Assign( "JobLimit", jobLimit );
