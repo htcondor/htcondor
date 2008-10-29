@@ -332,6 +332,28 @@ makeHadAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in * /*from*/)
 	return adLookup( "HAD", ad, ATTR_NAME, NULL, hk.name );
 }
 
+bool
+makeGridAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in *from)
+{
+    // get the name of the and the machine name
+    if ( !adLookup( "GRID", ad, ATTR_NAME, ATTR_MACHINE, hk.name ) ) {
+        return false;
+    }
+    
+    // get the name of the schedd asociated with it
+    MyString tmp;
+    if ( adLookup( "GRID", ad, ATTR_SCHEDD_NAME, NULL, tmp, false ) ) {
+        hk.name += tmp;
+    }
+    
+    // get the IP and port of the schedd 
+    if ( !getIpAddr( "GRID", ad, ATTR_SCHEDD_IP_ADDR, NULL, hk.ip_addr ) ) {
+        return false;
+	}
+
+    return true;
+}
+
 // for anything that sends its updates via UPDATE_AD_GENERIC, this
 // needs to provide a key that will uniquely identify each entity
 // with respect to all entities of that type

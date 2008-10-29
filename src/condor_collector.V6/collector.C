@@ -465,6 +465,11 @@ CollectorDaemon::receive_query_public( int command )
 		dprintf (D_FULLDEBUG,"Got QUERY_ANY_ADS\n");
 		whichAds = ANY_AD;
 		break;
+      
+      case QUERY_GRID_ADS:
+        dprintf (D_FULLDEBUG,"Got QUERY_GRID_ADS\n");
+        whichAds = GRID_AD;
+		break;
 
 	  default:
 		dprintf(D_ALWAYS,
@@ -572,6 +577,11 @@ int CollectorDaemon::receive_invalidation(Service* /*s*/,
 	  case INVALIDATE_ADS_GENERIC:
 		dprintf(D_ALWAYS, "Got INVALIDATE_ADS_GENERIC\n");
 		whichAds = GENERIC_AD;
+		break;
+
+      case INVALIDATE_GRID_ADS:
+        dprintf(D_ALWAYS, "Got INVALIDATE_GRID_ADS\n");
+        whichAds = GRID_AD;
 		break;
 
 	  default:
@@ -867,6 +877,7 @@ CollectorDaemon::sockCacheHandler( Service*, Stream* sock )
 	case UPDATE_LICENSE_AD:
 	case UPDATE_STORAGE_AD:
 	case UPDATE_AD_GENERIC:
+    case UPDATE_GRID_AD:
 		return receive_update( NULL, cmd, sock );
 		break;
 
@@ -889,6 +900,7 @@ CollectorDaemon::sockCacheHandler( Service*, Stream* sock )
 	case INVALIDATE_LEASE_MANAGER_ADS:
 	case INVALIDATE_LICENSE_ADS:
 	case INVALIDATE_STORAGE_ADS:
+    case INVALIDATE_GRID_ADS:
 		return receive_invalidation( NULL, cmd, sock );
 		break;
 

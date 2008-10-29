@@ -74,6 +74,41 @@ const char *StartdFloatKeywords [] =
 	""		// add null string to avoid compiler error
 };
 
+// for getJobStatusString (see condor_util_lib/proc.c)
+const char *GridManagerStringKeywords [] = 
+{
+    ATTR_GRID_RESOURCE
+    // ATTR_GRID_RESOURCE_TYPE
+};
+
+const char *GridManagerIntegerKeywords [] = 
+{
+    /* BCB
+    ATTR_GRID_RESOURCE_DOWN,
+    ATTR_GRID_RESOURCE_LAST_HEARD_FROM,
+    ATTR_GRID_JOB_LIMITS,
+    ATTR_GRID_JOBS_QUEUED_UNDER_LIMIT,
+    ATTR_GRID_JOBS_UNEXPANDED,
+    ATTR_GRID_JOBS_IDLE,
+    ATTR_GRID_JOBS_RUNNING,
+    ATTR_GRID_JOBS_REMOVED,
+    ATTR_GRID_JOBS_COMPLETED,
+    ATTR_GRID_JOBS_HELD,
+    ATTR_GRID_JOBS_SUBMISSION_ERROR,
+    ATTR_GRID_SUBMIT_LIMITS,
+    ATTR_GRID_SUBMITS_IN_PROGRESS,
+    ATTR_GRID_SUBMITS_QUEUED,
+    ATTR_GRID_SUBMITS_ALLOWED,
+    ATTR_GRID_SUBMITS_WANTED
+    */
+    ""
+};
+
+const char *GridManagerFloatKeywords [] =
+{
+    ""		// add null string to avoid compiler error
+};
+
 // normal ctor
 CondorQuery::
 CondorQuery (AdTypes qType)
@@ -129,6 +164,16 @@ CondorQuery (AdTypes qType)
 		query.setStringKwList  ((char **)ScheddStringKeywords);
 		query.setFloatKwList   ((char **)ScheddFloatKeywords);
 		command = QUERY_SUBMITTOR_ADS;
+		break;
+
+      case GRID_AD:
+        query.setNumStringCats (GRID_STRING_THRESHOLD);
+		query.setNumIntegerCats(GRID_INT_THRESHOLD);
+		query.setNumFloatCats  (GRID_FLOAT_THRESHOLD);
+		query.setIntegerKwList ((char **)GridManagerIntegerKeywords);
+		query.setStringKwList  ((char **)GridManagerStringKeywords);
+		query.setFloatKwList   ((char **)GridManagerFloatKeywords);
+		command = QUERY_GRID_ADS;
 		break;
 
 	  case LICENSE_AD:
@@ -448,6 +493,10 @@ fetchAds (ClassAdList &adList, const char *poolName, CondorError* errstack)
 		queryAd.SetTargetTypeName (TT_ADTYPE);
 		break;
 
+      case GRID_AD:
+        queryAd.SetTargetTypeName (GRID_ADTYPE);
+        break;
+
 	  default:
 		return Q_INVALID_QUERY;
 	}
@@ -548,6 +597,10 @@ getQueryAd (ClassAd &queryAd)
 	  case NEGOTIATOR_AD:
 		queryAd.SetTargetTypeName (NEGOTIATOR_ADTYPE);
 		break;
+
+      case GRID_AD:
+        queryAd.SetTargetTypeName (GRID_ADTYPE);
+        break;
 
 	  case GENERIC_AD:
 		queryAd.SetTargetTypeName (GENERIC_ADTYPE);

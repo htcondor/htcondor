@@ -28,6 +28,7 @@
 #include "list.h"
 #include "daemon.h"
 #include "dc_schedd.h"
+#include "dc_collector.h"
 
 #include "basejob.h"
 
@@ -42,6 +43,7 @@
 
 extern char *ScheddAddr;
 extern DCSchedd *ScheddObj;
+extern DCCollector *CollectorObj;
 extern char *ScheddJobConstraint;
 extern char *GridmanagerScratchDir;
 extern char *myUserName;

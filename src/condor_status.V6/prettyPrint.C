@@ -48,6 +48,7 @@ void printCollectorNormal (ClassAd *);
 void printCkptSrvrNormal(ClassAd *);
 void printStorageNormal(ClassAd *);
 void printNegotiatorNormal (ClassAd *);
+void printGridNormal(ClassAd *);
 void printAnyNormal(ClassAd *);
 void printServer 		(ClassAd *);
 void printRun    		(ClassAd *);
@@ -135,6 +136,10 @@ prettyPrint (ClassAdList &adList, TrackTotals *totals)
 
 			  case PP_STORAGE_NORMAL:
 				printStorageNormal(ad);
+				break;
+
+			  case PP_GRID_NORMAL:
+				printGridNormal(ad);
 				break;
 
 			  case PP_GENERIC_NORMAL:
@@ -661,6 +666,32 @@ printStorageNormal(ClassAd *ad)
 		}
 
 		alpm.display (stdout, ad);
+	}
+}
+
+void
+printGridNormal(ClassAd *ad)
+{
+    static bool first = true;
+	static AttrListPrintMask alpm;
+
+    if (ad)
+    {
+        // print header if necessary
+        if (first)
+        {
+            printf ("\nFAKE HEADER FOR GRID ADS\n\n");
+
+            /* BCB: what should the format be?!?
+            
+            alpm.registerFormat("%-30.30s ", ATTR_NAME, "[??????????????????]");
+            alpm.registerFormat("%9d ", ATTR_DISK, "[?????]");
+            alpm.registerFormat("%-11s\n", ATTR_SUBNET, "[?????]\n");
+            */
+            first = false;
+        }
+        
+        alpm.display (stdout, ad);
 	}
 }
 

@@ -271,6 +271,10 @@ const int INVALIDATE_HAD_ADS = 57;
 const int UPDATE_AD_GENERIC = 58;
 const int INVALIDATE_ADS_GENERIC = 59;
 
+const int UPDATE_GRID_AD 	= 70;
+const int QUERY_GRID_ADS	= 71;
+const int INVALIDATE_GRID_ADS = 72;
+
 const int UPDATE_STARTD_AD_WITH_ACK = 60;
 
 const int UPDATE_XFER_SERVICE_AD		= 61;

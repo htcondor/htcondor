@@ -113,6 +113,7 @@ char *ScheddAddr = NULL;
 char *ScheddJobConstraint = NULL;
 char *GridmanagerScratchDir = NULL;
 DCSchedd *ScheddObj = NULL;
+DCCollector *CollectorObj = NULL;
 
 bool firstScheddContact = true;
 int scheddFailureCount = 0;
@@ -303,7 +304,15 @@ Init()
 		}
 	}
 
-	// read config file
+    if ( NULL == CollectorObj ) {
+        CollectorObj = new DCCollector ();
+        ASSERT ( CollectorObj );
+        if ( false == CollectorObj->locate () ) {
+            EXCEPT( "Failed to locate collector: %s", CollectorObj->error () );
+        }
+    }
+
+    // read config file
 	// initialize variables
 
 	if ( GridmanagerScratchDir == NULL ) {

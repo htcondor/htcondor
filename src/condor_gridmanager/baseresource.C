@@ -168,15 +168,83 @@ char *BaseResource::ResourceName()
 	return resourceName;
 }
 
+/*
+bool BaseResource::ResourceDown () 
+{
+    return resourceDown;
+}
+
+time_t BaseResource::LastStatusChange () 
+{
+    return lastStatusChange;
+}
+
+int BaseResource::SubmitsInProgress () 
+{
+    return submitsInProgress.Length();
+}
+
+int BaseResource::SubmitsQueued () 
+{
+    return submitsQueued.Length();
+}
+
+int BaseResource::SubmitsAllowed () 
+{
+    return submitsAllowed.Length();
+}
+
+int BaseResource::SubmitsWanted () 
+{
+    return submitsWanted.Length();
+}
+*/
+
 int BaseResource::DeleteMe()
 {
 	deleteMeTid = TIMER_UNSET;
 
 	if ( IsEmpty() ) {
+        
+        /* Tell the Collector that we're gone and self destruct */
+        InvalidateResource ();
+
 		delete this;
 		// DO NOT REFERENCE ANY MEMBER VARIABLES BELOW HERE!!!!!!!
+
 	}
+
 	return TRUE;
+}
+
+void BaseResource::InvalidateResource ()
+{
+    ClassAd ad;
+    
+    /* Set the correct types */
+    ad.SetMyTypeName ( QUERY_ADTYPE );
+    ad.SetTargetTypeName ( GRID_ADTYPE );
+    
+    /* We only want to invalidate this resource. Using our
+       BCB: HASH STRING?.... should be unique... */
+    MyString line;
+    line.sprintf( "%s = %s == \"%s\"", ATTR_REQUIREMENTS,
+        ATTR_SCHEDD_IP_ADDR,
+        daemonCore->InfoCommandSinfulString () );
+    ad.Insert ( line.Value () );
+    
+    daemonCore->sendUpdates( INVALIDATE_GRID_ADS, &ad, NULL, false );
+}
+
+void BaseResource::UpdateResource ()
+{
+    ClassAd *cad = NULL;
+
+    /* populate class ad with the relevant resource information */
+    /* BCB: POPULATE CLASS AD */
+
+    /* Update the the Collector as to this resource's state */
+    CollectorObj->sendUpdate ( UPDATE_GRID_AD, cad, NULL, true );
 }
 
 void BaseResource::PublishResourceAd( ClassAd *resource_ad )
@@ -473,6 +541,9 @@ void BaseResource::DoPing( time_t& ping_delay, bool& ping_complete,
 	ping_delay = 0;
 	ping_complete = true;
 	ping_succeeded = true;
+    
+    /* Update the the Collector as to this resource's state */
+    UpdateResource ();
 }
 
 int BaseResource::UpdateLeases()

@@ -146,6 +146,9 @@ main (int argc, char *argv[])
 		setPPstyle(PP_NEGOTIATOR_NORMAL, 0, DEFAULT);
 		break;
 
+      case GRID_AD:
+        setPPstyle(PP_GRID_NORMAL, 0, DEFAULT);
+
 	  case GENERIC_AD:
 		setPPstyle(PP_GENERIC, 0, DEFAULT);
 		break;
@@ -383,6 +386,7 @@ usage ()
 		"\t-license\t\tDisplay attributes of licenses\n"
 		"\t-master\t\t\tDisplay daemon master attributes\n"
 		"\t-pool <name>\t\tGet information from collector <name>\n"
+        "\t-grid\t\tDisplay grid resources\n"
 		"\t-run\t\t\tSame as -claimed [deprecated]\n"
 #ifdef WANT_QUILL
 		"\t-quill\t\t\tDisplay attributes of quills\n"
@@ -549,6 +553,9 @@ firstPass (int argc, char *argv[])
 		} else
 		if (matchPrefix (argv[i], "-schedd", 3)) {
 			setMode (MODE_SCHEDD_NORMAL, i, argv[i]);
+		} else
+		if (matchPrefix (argv[i], "-grid", 2)) {
+			setMode (MODE_GRID_NORMAL, i, argv[i]);
 		} else
 		if (matchPrefix (argv[i], "-subsystem", 5)) {
 			i++;
@@ -755,6 +762,7 @@ secondPass (int argc, char *argv[])
 			  case MODE_GENERIC_NORMAL:
 			  case MODE_STARTD_AVAIL:
 			  case MODE_OTHER:
+			  case MODE_GRID_NORMAL:
 				sprintf(buffer,"(TARGET.%s==\"%s\") || (TARGET.%s==\"%s\")",
 						ATTR_NAME, daemonname, ATTR_MACHINE, daemonname );
 				if (diagnose) {
