@@ -70,7 +70,6 @@ public class CallbackSink
 
     private String callbackId;
     private int requestId;
-    private HashMap notificationProducers  = new HashMap();
     private GahpInterface gahp;
     private boolean isInitialized = false;
 	private NotificationConsumerManager notificationConsumerManager;
@@ -158,46 +157,12 @@ public class CallbackSink
 		GramJobUtils.setDefaultJobAttributes (jobPort, 
 											  GSIUtils.getCredential (gahp));
 		SubscribeResponse response = jobPort.subscribe (request);
-
-        EndpointReferenceType notificationProducerEPR = 
-            response.getSubscriptionReference();
-
-        synchronized( notificationProducers ) {
-            notificationProducers.put (jobId, notificationProducerEPR);
-        }
 	}
 
 
 	public void removeJobListener (String jobContact) {
-        EndpointReferenceType notificationProducerEPR;
-
-        synchronized( notificationProducers ) {
-            notificationProducerEPR = (EndpointReferenceType)notificationProducers.remove (jobContact);
-        }
-
-        if ( notificationProducerEPR == null ) {
-            // We don't have a notification EPR for this job contact.
-            // There's no work to do, so return immediately.
-            return;
-        }
-
-        // Now we destroy the notification producer on the server
-// JEF The notificatoin producer is not automatically destroyed by the
-//   server. There's some additional code cleanup we can do.
-/*
-        try {
-            SubscriptionManager subscriptionPort
-                = new WSBaseNotificationServiceAddressingLocator().
-                getSubscriptionManagerPort(notificationProducerEPR);
-
-            GramJobUtils.setDefaultAttributes((Stub)subscriptionPort,
-                                              GSIUtils.getCredential(gahp));
-
-            subscriptionPort.destroy(new Destroy());
-        }
-        catch ( Exception e ) {
-        }
-*/
+        // TODO Eliminate this function?
+        return;
 	}
 
     
@@ -207,10 +172,6 @@ public class CallbackSink
                                                     notificationConsumerEPR);
 
             this.notificationConsumerManager.stopListening();
-
-            // TODO should we try to destroy all of the subscription
-            //   objects on the servers here?
-			notificationProducers.clear();
         }
         catch (Exception e) {
             e.printStackTrace(System.err);
