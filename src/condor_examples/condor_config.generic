@@ -2090,9 +2090,6 @@ DBMSD_LOG = $(LOG)/DbmsdLog
 ## Where is the Condor VM-GAHP installed? (Required)
 #VM_GAHP_SERVER = $(SBIN)/condor_vm-gahp
 
-## Where is the configuration file for the Condor VM-GAHP? (Required)
-#VM_GAHP_CONFIG = /full/path/to/condor_vmgahp_config.vmware
-
 ## If the VM-GAHP is to have its own log, define 
 ## the location of log file.
 ## Like the Gridmanager and C-GAHP, the VM-GAHP is run as the User, 
@@ -2116,20 +2113,32 @@ MAX_VM_GAHP_LOG	= 1000000
 ## The two options are vmware and xen.  (Required)
 #VM_TYPE = vmware
 
-## How much memory can be used for the VM universe? (Optional)
-## If you don't define this parameter, the value will be 
-## obtained from the VM-GAHP
-##
-## If the defined value is larger than VM_MAX_MEMORY defined 
-## in the VM-GAHP configuration file, 
-## VM_MAX_MEMORY will be used instead of this value.
-## If the defined  value is smaller than VM_MAX_MEMORY defined 
-## in VM-GAHP configuration file, this value will be used.
+## Which version of the above virtual machine program is installed? (Required)
+## This is advertised in the machine ad.
+#VM_VERSION = server1.0
+
+## How much memory can be used for the VM universe? (Required)
+## This value is the maximum amount of memory that can be used by the 
+## virtual machine program.
 #VM_MEMORY = 128
 
 ## Want to support networking for VM universe?
 ## Default value is FALSE
 #VM_NETWORKING = FALSE
+
+## What kind of networking types are supported?
+##
+## If you set VM_NETWORKING to TRUE, you must define this parameter.
+## VM_NETWORKING_TYPE = nat
+## VM_NETWORKING_TYPE = bridge
+## VM_NETWORKING_TYPE = nat, bridge
+##
+## If multiple networking types are defined, you may define 
+## VM_NETWORKING_DEFAULT_TYPE for default networking type. 
+## Otherwise, nat is used for default networking type.
+## VM_NETWORKING_DEFAULT_TYPE = nat
+#VM_NETWORKING_DEFAULT_TYPE = nat
+#VM_NETWORKING_TYPE = nat
 
 ## In default, the number of possible virtual machines is same as
 ## NUM_CPUS.
@@ -2190,3 +2199,80 @@ MAX_VM_GAHP_LOG	= 1000000
 ## If Condor runs as root and "ALWAYS_VM_UNIV_USE_NOBODY" is set to TRUE, 
 ## all VM universe jobs will run as a user defined in "VM_UNIV_NOBODY_USER".
 #ALWAYS_VM_UNIV_USE_NOBODY = FALSE
+
+##--------------------------------------------------------------------
+##  VM Universe Parameters Specific to VMware
+##--------------------------------------------------------------------
+
+## Where is perl program? (Required)
+VMWARE_PERL = perl
+
+## Where is the Condor script program to control VMware? (Required)
+VMWARE_SCRIPT = $(SBIN)/condor_vm_vmware.pl
+
+## Networking parameters for VMware
+##
+## What kind of VMware networking is used?
+##
+## If multiple networking types are defined, you may specify different
+## parameters for each networking type.
+##
+## Examples
+## (e.g.) VMWARE_NAT_NETWORKING_TYPE = nat
+## (e.g.) VMWARE_BRIDGE_NETWORKING_TYPE = bridged
+## 
+##  If there is no parameter for specific networking type, VMWARE_NETWORKING_TYPE is used.
+##
+#VMWARE_NAT_NETWORKING_TYPE = nat
+#VMWARE_BRIDGE_NETWORKING_TYPE = bridged
+VMWARE_NETWORKING_TYPE = nat
+
+## The contents of this file will be inserted into the .vmx file of
+## the VMware virtual machine before Condor starts it.
+#VMWARE_LOCAL_SETTINGS_FILE = /path/to/file
+
+##--------------------------------------------------------------------
+##  VM Universe Parameters Specific to Xen
+##--------------------------------------------------------------------
+
+##  Where is the Condor script program to control Xen? (Required)
+XEN_SCRIPT = $(SBIN)/condor_vm_xen.sh
+
+##  Where is the default kernel image for Xen domainU? (Required)
+##
+##  This kernel image will be used when a job submission user doesn't
+##  define a kernel image explicitly. 
+##  If a job submission user defines its own kernel image in the submit
+##  description file, it will be used instead of this default kernel.
+##  (e.g.) XEN_DEFAULT_KERNEL = /boot/vmlinuz-2.6.16-xen
+#XEN_DEFAULT_KERNEL = /full/path/to/<kernel-image-file>
+
+##  Where is the default initrd image for Xen domainU? (Optional)
+##
+##  The complete path and image file name for the initrd image, if
+##  needed for the default kernel image. 
+##  (e.g.) XEN_DEFAULT_INITRD = /boot/initrd-2.6.16-xen0.img
+#XEN_DEFAULT_INITRD = /full/path/to/<initrd-image-file>
+
+##  Where is bootloader for Xen domainU? (Required)
+##
+##  The bootloader will be used in the case that a kernel image includes
+##  a disk image
+#XEN_BOOTLOADER = /usr/bin/pygrub
+
+## Networking parameters for Xen
+##
+## This parameter is used only for virsh.
+##
+## A string specifying a script and its arguments that will be run to
+## setup a bridging network interface for guests. The interface should
+## provide direct access to the host system's LAN, i.e. not be NAT'd on the
+## host. 
+##
+## Example 
+##  XEN_BRIDGE_SCRIPT = vif-bridge bridge=xenbr0 
+#XEN_BRIDGE_SCRIPT = vif-bridge bridge=xenbr0 
+
+## The contents of this file will be added to the Xen virtual machine
+## description that Condor writes.
+#XEN_LOCAL_SETTINGS_FILE = /path/to/file
