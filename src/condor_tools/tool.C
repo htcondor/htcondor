@@ -67,8 +67,8 @@ bool fast = false;
 bool peaceful_shutdown = false;
 bool full = false;
 bool all = false;
-char* subsys = NULL;
-char* exec_program = NULL;
+const char* subsys = NULL;
+const char* exec_program = NULL;
 int takes_subsys = 0;
 int cmd_set = 0;
 char *subsys_arg = NULL;
@@ -203,11 +203,13 @@ usage( char *str )
 				 str );
 		break;
 	case PCKPT_JOB:
-		fprintf( stderr, "  %s %s\n  %s%s\n  %s%s\n", str, 
-				 "causes the condor_startd to perform a periodic", 
-				 "checkpoint on running jobs on specific machines.",
-				 "The jobs continue to run once ", 
-				 "they are done checkpointing." );
+		fprintf( stderr,
+				 "  %s\n"
+				 "  causes the condor_startd to perform a periodic"
+				 "checkpoint on running jobs on specific machines.\n"
+				 "  The jobs continue to run once "
+				 "they are done checkpointing.\n",
+				 str);
 		break;
 	case SQUAWK:
 		fprintf( stderr, "  %s\n"
@@ -292,6 +294,8 @@ cmdToStr( int c )
 		return "Full-Reconfig";
 	case SQUAWK:
 		return "Squawk";
+	case SET_SHUTDOWN_PROGRAM:
+		return "Set-Shutdown-Program";
 	}
 	fprintf( stderr, "Unknown Command (%d) in cmdToStr()\n", c );
 	exit(1);
@@ -324,7 +328,6 @@ main( int argc, char *argv[] )
 	char *cmd_str, **tmp;
 	int size;
 	int rc;
-	bool takes_name = false;
 
 #ifndef WIN32
 	// Ignore SIGPIPE so if we cannot connect to a daemon we do not
@@ -410,6 +413,7 @@ main( int argc, char *argv[] )
 		// First, deal with options (begin with '-')
 	tmp = argv;
 	for( tmp++; *tmp; tmp++ ) {
+		printf ("'%s'\n", *tmp );
 		if( (*tmp)[0] != '-' ) {
 				// If it doesn't start with '-', skip it
 			continue;
@@ -509,6 +513,11 @@ main( int argc, char *argv[] )
 			dprintf_config ("TOOL");
 			break;
 		case 'e':
+			if ( strcmp( *tmp, "-exec" ) ) {
+				fprintf( stderr, "Unknown option '%s'\n", *tmp );
+				usage( NULL );
+				break;
+			}
 			if ( cmd != SET_SHUTDOWN_PROGRAM ) {
 				fprintf( stderr,
 						 "ERROR: \"-exec\" is not valid with %s\n", MyName );
@@ -522,7 +531,8 @@ main( int argc, char *argv[] )
 				usage( NULL );
 				break;
 			}
-			exec_program = tmp;
+			exec_program = *tmp;
+			printf( "Set exec to %s\n", exec_program );
 			break;
 		case 'g':
 			fast = false;
@@ -719,8 +729,14 @@ main( int argc, char *argv[] )
 		if( dt == DT_ANY && subsys_arg ) {
 			subsys = subsys_arg; 
 		} else { 
-			subsys = (char*)daemonString( dt );
+			subsys = daemonString( dt );
 		}
+	}
+
+	// For SET_SHUTDOWN_PROGRAM, we require -exec
+	if (  (SET_SHUTDOWN_PROGRAM == cmd) && (NULL == exec_program) ) {
+		fprintf( stderr, "ERROR: \"-exec\" required for %s\n", MyName );
+		usage( NULL );
 	}
 
 
@@ -776,7 +792,8 @@ main( int argc, char *argv[] )
 }
 
 int
-doCommands(int argc,char *argv[],char *MyName) {
+doCommands(int /*argc*/,char * argv[],char *MyName)
+{
 	StringList names;
 	StringList addrs;
 	DaemonList daemons;
@@ -829,6 +846,12 @@ doCommands(int argc,char *argv[],char *MyName) {
 			case 's':
 				if( (*argv)[2] == 'u' ) {
 						// this is -subsys, skip the next one.
+					argv++;
+				}
+				break;
+			case 'e':
+				if( (*argv)[2] == 'x' ) {
+						// this is -exec, skip the next one.
 					argv++;
 				}
 				break;
@@ -1302,7 +1325,7 @@ doCommand( Daemon* d )
 		if( !d->startCommand( my_cmd, &sock, 0, &errstack) ) {
 			fprintf( stderr, "ERROR\n%s\n", errstack.getFullText(true) );
 		}
-		if( !sock.code(subsys) || !sock.eom() ) {
+		if( !sock.code( const_cast<char *>(subsys) ) || !sock.eom() ) {
 			fprintf( stderr, "Can't send %s command to %s\n",
 						cmdToStr(my_cmd), d->idStr() );
 			return;
@@ -1315,9 +1338,9 @@ doCommand( Daemon* d )
 		if( !d->startCommand(my_cmd, &sock, 0, &errstack) ) {
 			fprintf( stderr, "ERROR\n%s\n", errstack.getFullText(true) );
 		}
-		if( !sock.code(subsys) || !sock.eom() ) {
+		if( !sock.code( const_cast<char *>(subsys) ) || !sock.eom() ) {
 			fprintf( stderr, "Can't send %s command to %s\n",
-						cmdToStr(my_cmd), d->idStr() );
+					 cmdToStr(my_cmd), d->idStr() );
 			return;
 		} else {
 			done = true;
@@ -1365,6 +1388,19 @@ doCommand( Daemon* d )
 			// if -full is used, we need to send a different command.
 		if( full ) {
 			my_cmd = DC_RECONFIG_FULL;
+		}
+		break;
+
+	case SET_SHUTDOWN_PROGRAM:
+		if( !d->startCommand(my_cmd, &sock, 0, &errstack) ) {
+			fprintf( stderr, "ERROR\n%s\n", errstack.getFullText(true) );
+		}
+		if( !sock.code( const_cast<char *>(exec_program) ) || !sock.eom() ) {
+			fprintf( stderr, "Can't send %s command to %s\n",
+					 cmdToStr(my_cmd), d->idStr() );
+			return;
+		} else {
+			done = true;
 		}
 		break;
 

@@ -89,6 +89,7 @@ int		agent_starter(ReliSock *);
 int		handle_agent_fetch_log(ReliSock *);
 int		admin_command_handler(Service *, int, Stream *);
 int		handle_subsys_command(int, Stream *);
+int     handle_shutdown_program( int cmd, Stream* stream );
 void	time_skip_handler(void * /*data*/, int delta);
 void	restart_everyone();
 
@@ -267,7 +268,7 @@ main_init( int argc, char* argv[] )
         // relative time. This means that we don't have to update
         // the time each time we restart the daemon.
 		MyString runfor_env;
-		runfor_env.sprintf("%s=%d", EnvGetName(ENV_DAEMON_DEATHTIME),
+		runfor_env.sprintf("%s=%ld", EnvGetName(ENV_DAEMON_DEATHTIME),
 						   time(NULL) + (runfor * 60));
 		SetEnv(runfor_env.Value());
     }
@@ -610,14 +611,16 @@ handle_shutdown_program( int cmd, Stream* stream )
 	}
 
 	// Try to access() it
+# if defined(HAVE_ACCESS)
 	priv_state	priv = set_root_priv();
-	int status = access( path, S_IXUSR );
+	int status = access( path, X_OK );
 	if ( status ) {
 		dprintf( D_ALWAYS,
 				 "WARNING: no execute access to shutdown program (%s)"
 				 ": %d/%s\n", path, errno, strerror(errno) );
 	}
 	set_priv( priv );
+# endif
 
 	// OK, let's run with that
 	if ( shutdown_program ) {
@@ -626,6 +629,7 @@ handle_shutdown_program( int cmd, Stream* stream )
 	shutdown_program = path;
 	dprintf( D_FULLDEBUG,
 			 "Shutdown program path set to %s\n", shutdown_program );
+	return TRUE;
 }
 
 void

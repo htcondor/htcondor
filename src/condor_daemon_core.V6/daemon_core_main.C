@@ -276,13 +276,16 @@ DC_Exit( int status, const char *shutdown_program )
 		  cleared out our config hashtable, too.  Derek 2004-11-23
 		*/
 	if ( shutdown_program ) {
+#     if (HAVE_EXECL)
 		dprintf( D_ALWAYS, "**** %s (%s_%s) EXITING BY EXECING %s\n",
 				 myName, myDistro->Get(), mySubSystem->getName(),
 				 shutdown_program );
-		int status = execl( shutdown_program, shutdown_program, NULL );
-		dprintf( D_ALWAYS, "**** EXEC FAILED: %d %s\n",
-				 errno, strerror(errno) );
-		exec( program );
+		int exec_status = execl( shutdown_program, shutdown_program, NULL );
+		dprintf( D_ALWAYS, "**** execl() FAILED %d %d %s\n",
+				 exec_status, errno, strerror(errno) );
+#     else
+		dprintf( D_ALWAYS, "**** execl() not available on this system\n" );
+#     endif
 	}
 	dprintf( D_ALWAYS, "**** %s (%s_%s) EXITING WITH STATUS %d\n",
 			 myName, myDistro->Get(), mySubSystem->getName(), exit_status );
