@@ -20,6 +20,19 @@
 
 
 ##################################################
+# Run in a specified directory?
+##################################################
+if [ "$1" != "" ] ; then
+    if [ -d $1 ] ; then
+	echo "Running in $1"
+	cd $1
+	shift
+    else
+	echo "$1 is not a directory"
+    fi
+fi
+
+##################################################
 # Determine operating system flavors
 ##################################################
 
