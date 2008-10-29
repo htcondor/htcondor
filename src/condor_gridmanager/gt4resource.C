@@ -248,6 +248,13 @@ const char *GT4Resource::GetHashName()
 	return HashName( resourceName, proxySubject );
 }
 
+void GT4Resource::PublishResourceAd( ClassAd *resource_ad )
+{
+	BaseResource::PublishResourceAd( resource_ad );
+
+	resource_ad->Assign( ATTR_X509_USER_PROXY_SUBJECT, proxySubject );
+}
+
 void GT4Resource::UnregisterJob( GT4Job *job )
 {
 	if ( job->delegatedCredentialURI != NULL ) {

@@ -46,6 +46,8 @@ class GT4Resource : public BaseResource
 	const char *GetHashName();
 	void UnregisterJob( GT4Job *job );
 
+	void PublishResourceAd( ClassAd *resource_ad );
+
 	void registerDelegationURI( const char *deleg_uri, Proxy *job_proxy );
 	const char *getDelegationURI( Proxy *job_proxy );
 	const char *getDelegationError( Proxy *job_proxy );

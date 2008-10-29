@@ -47,6 +47,8 @@ class CreamResource : public BaseResource
 
 	const char *GetHashName();
 
+	void PublishResourceAd( ClassAd *resource_ad );
+
 	void registerDelegationURI( const char *deleg_uri, Proxy *job_proxy );
 	const char *getDelegationURI( Proxy *job_proxy );
 	const char *getDelegationError( Proxy *job_proxy );

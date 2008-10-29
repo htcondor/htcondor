@@ -61,6 +61,8 @@ class GlobusResource : public BaseResource
 
 	const char *GetHashName();
 
+	void PublishResourceAd( ClassAd *resource_ad );
+
 	static void setGahpCallTimeout( int new_timeout )
 		{ gahpCallTimeout = new_timeout; }
 

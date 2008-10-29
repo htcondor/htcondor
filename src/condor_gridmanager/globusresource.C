@@ -218,6 +218,16 @@ const char *GlobusResource::GetHashName()
 	return HashName( resourceName, proxySubject );
 }
 
+void GlobusResource::PublishResourceAd( ClassAd *resource_ad )
+{
+	BaseResource::PublishResourceAd( resource_ad );
+
+	resource_ad->Assign( ATTR_X509_USER_PROXY_SUBJECT, proxySubject );
+	resource_ad->Assign( "JobmanagerLimit", jmLimit );
+	resource_ad->Assign( "JobmanagersAllowed", jmsAllowed.Number() );
+	resource_ad->Assign( "JobmanagersWanted", jmsWanted.Number() );
+}
+
 void GlobusResource::UnregisterJob( GlobusJob *job )
 {
 	JMComplete( job );

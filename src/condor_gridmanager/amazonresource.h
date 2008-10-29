@@ -60,6 +60,8 @@ public:
 
 	const char *GetHashName();
 
+	void PublishResourceAd( ClassAd *resource_ad );
+
 private:
 	void DoPing(time_t & ping_delay, 
 				bool & ping_complete, 

@@ -299,6 +299,13 @@ const char *CreamResource::GetHashName()
 	return HashName( resourceName, proxySubject );
 }
 
+void CreamResource::PublishResourceAd( ClassAd *resource_ad )
+{
+	BaseResource::PublishResourceAd( resource_ad );
+
+	resource_ad->Assign( ATTR_X509_USER_PROXY_SUBJECT, proxySubject );
+}
+
 void CreamResource::registerDelegationURI( const char *deleg_uri,
 										 Proxy *job_proxy )
 {

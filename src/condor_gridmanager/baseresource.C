@@ -181,8 +181,12 @@ int BaseResource::DeleteMe()
 
 void BaseResource::PublishResourceAd( ClassAd *resource_ad )
 {
-	resource_ad->Assign( ATTR_NAME, resourceName );
+	MyString buff;
+
+	buff.sprintf( "%s %s", ResourceType(), resourceName );
+	resource_ad->Assign( ATTR_NAME, buff.Value() );
 	resource_ad->Assign( "HashName", GetHashName() );
+	resource_ad->Assign( ATTR_OWNER, myUserName );
 	resource_ad->Assign( "NumJobs", registeredJobs.Number() );
 	resource_ad->Assign( "JobLimit", jobLimit );
 	resource_ad->Assign( "SubmitLimit", submitLimit );
@@ -190,6 +194,30 @@ void BaseResource::PublishResourceAd( ClassAd *resource_ad )
 	resource_ad->Assign( "SubmitsQueued", submitsQueued.Number() );
 	resource_ad->Assign( "SubmitsAllowed", submitsAllowed.Number() );
 	resource_ad->Assign( "SubmitsWanted", submitsWanted.Number() );
+	if ( resourceDown ) {
+		resource_ad->Assign( ATTR_GRID_RESOURCE_UNAVAILABLE_TIME,
+							 (int)lastStatusChange );
+	}
+
+	int num_idle = 0;
+	int num_running = 0;
+	BaseJob *job;
+	registeredJobs.Rewind();
+	while ( registeredJobs.Next( job ) ) {
+		switch ( job->condorState ) {
+		case IDLE:
+			num_idle++;
+			break;
+		case RUNNING:
+			num_running++;
+			break;
+		default:
+			break;
+		}
+	}
+
+	resource_ad->Assign( ATTR_RUNNING_JOBS, num_running );
+	resource_ad->Assign( ATTR_IDLE_JOBS, num_idle );
 }
 
 void BaseResource::RegisterJob( BaseJob *job )

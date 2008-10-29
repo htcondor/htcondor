@@ -112,6 +112,13 @@ const char *NordugridResource::GetHashName()
 	return HashName( resourceName, proxySubject );
 }
 
+void NordugridResource::PublishResourceAd( ClassAd *resource_ad )
+{
+	BaseResource::PublishResourceAd( resource_ad );
+
+	resource_ad->Assign( ATTR_X509_USER_PROXY_SUBJECT, proxySubject );
+}
+
 void NordugridResource::DoPing( time_t& ping_delay, bool& ping_complete,
 								bool& ping_succeeded )
 {
