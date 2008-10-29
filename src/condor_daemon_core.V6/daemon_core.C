@@ -2800,6 +2800,10 @@ void DaemonCore::Driver()
 
 		if ( selector.failed() ) {
 			// not just interrupted by a signal...
+				dprintf(D_ALWAYS,"Socket Table:\n");
+        		DumpSocketTable( D_ALWAYS );
+				dprintf(D_ALWAYS,"State of selector:\n");
+				selector.display();
 				EXCEPT("DaemonCore: select() returned an unexpected error: %d (%s)",tmpErrno,strerror(tmpErrno));
 		}
 #else
