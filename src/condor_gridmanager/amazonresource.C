@@ -93,6 +93,8 @@ AmazonResource::AmazonResource( const char *resource_name,
 
 AmazonResource::~AmazonResource()
 {
+	ResourcesByName.remove( HashKey( HashName( resourceName, m_public_key_file,
+											   m_private_key_file ) ) );
 	if ( gahp ) delete gahp;
 	if (m_public_key_file) free(m_public_key_file);
 	if (m_private_key_file) free(m_private_key_file);
