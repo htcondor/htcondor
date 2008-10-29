@@ -312,7 +312,6 @@ VENDOR_C_FLAGS = -I. -I.. -I../.. -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) \
 		 -D$(OS_FLAG)=$(OS_FLAG) $(SITE_C_FLAGS) \
 		 $(SECURITY_FLAGS) $(NETMAN_FLAGS) \
 		 $(QUILL_FLAGS) $(TT_FLAGS) $(GCB_FLAGS) \
-		 $(PTHREAD_FLAG) \
 		 $(LEASE_MANAGER_FLAGS) \
 		 $(CONFIGURE_CFLAGS) $(CONFIGURE_CPPFLAGS)
 
@@ -342,7 +341,7 @@ GPP_ARCH_FLAGS =
 GPP_SHARED_FLAGS = -fno-implicit-templates $(GPP_VERS_FLAGS) $(GPP_ARCH_FLAGS)
 
 /* Flags shared between C and C++ compilers */
-SHARED_COMPILER_FLAGS = $(VENDOR_C_FLAGS) $(COMP_DEBUG_FLAGS) $(CC_PIC_FLAG) PlatformFlags $(CCOMPILER_ID) $(GSOAP_FLAGS) $(PCRE_FLAGS) $(COREDUMPER_FLAGS)
+SHARED_COMPILER_FLAGS = $(VENDOR_C_FLAGS) $(COMP_DEBUG_FLAGS) $(CC_PIC_FLAG) PlatformFlags $(CCOMPILER_ID) $(GSOAP_FLAGS) $(PCRE_FLAGS) $(COREDUMPER_FLAGS) $(PTHREAD_FLAG)
 
 /* We use separate flag definitions for the C compiler and the C++ compiler.
 	These are the flags actually passed to the respective compilers. 
@@ -382,14 +381,14 @@ PRIVSEP_CLIENT_LIB = ../condor_privsep/privsep_client.a
 
 /* common ld flags which should be first in the list */
 COM_LDFLAGS_F = $(GCC_RDYNAMIC_FLAG) $(GCC_STACK_PROTECTOR) $(GCC_HASH_STYLE_FLAG) -lm \
-                $(LDFLAGS) $(CONFIGURE_LIBS) $(CONFIGURE_LDFLAGS) $(PTHREAD_LIB)
+                $(LDFLAGS) $(CONFIGURE_LIBS) $(CONFIGURE_LDFLAGS)
 
 /* common ld flags which should be last in the list */
 COM_LDFLAGS_L = 
 
 /* The various lists of needed ldflags for differing contexts */
 NOWRAP_LDFLAGS = $(COM_LDFLAGS_F) $(PLATFORM_LDFLAGS) $(COM_LDFLAGS_L)
-ALL_LDFLAGS = $(NOWRAP_LDFLAGS) $(WRAP_LDFLAGS)
+ALL_LDFLAGS = $(NOWRAP_LDFLAGS) $(WRAP_LDFLAGS) $(PTHREAD_LIB)
 TEST_LDFLAGS = $(COM_LDFLAGS_F) $(TEST_PLATFORM_LDFLAGS) $(COM_LDFLAGS_L)
 PURIFY_LDFLAGS = $(COM_LDFLAGS_F) $(PURIFY_PLATFORM_LDFLAGS) $(COM_LDFLAGS_L) $(WRAP_LDFLAGS)
 
