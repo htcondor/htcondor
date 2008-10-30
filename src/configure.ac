@@ -2217,7 +2217,13 @@ AC_CHECK_HEADERS([linux/ethtool.h],[],[],[
 AC_CHECK_HEADERS([sys/statfs.h])
 AC_CHECK_HEADERS([sys/statvfs.h])
 AC_CHECK_HEADERS([sys/vfs.h])
-AC_CHECK_HEADERS([sys/mount.h])
+AC_CHECK_HEADERS([sys/mount.h],[],[],[
+#if HAVE_SYS_TYPES_H
+# include <sys/types.h>
+#endif
+#if HAVE_SYS_PARAM_H
+# include <sys/param.h>
+#endif])
 AC_CHECK_HEADERS([ustat.h])
 AC_CHECK_HEADERS([dlfcn.h])
 AC_CHECK_HEADERS([valgrind.h])
