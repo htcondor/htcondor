@@ -219,9 +219,6 @@ int ZZZ_always_increase() {
 
 static int _condor_exit_with_exec = 0;
 
-THREAD_LOCAL_STORAGE void **DaemonCore::curr_dataptr;
-THREAD_LOCAL_STORAGE void **DaemonCore::curr_regdataptr;
-
 #ifdef HAVE_EXT_GSOAP
 extern int soap_serve(struct soap*);
 #endif
@@ -1234,13 +1231,8 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 
 	// Find empty slot, set to be i.
 	for (i=0;i <= nSock; i++) {
-		if ( (*sockTable)[i].iosock == NULL ) {
+		if ( (*sockTable)[i].iosock == NULL ) 
 			break;
-		}
-		if ( (*sockTable)[i].remove_asap && (*sockTable)[i].servicing_tid==0 ) {
-			(*sockTable)[i].iosock = NULL;
-			break;
-		}
 	}
 
 	// Make certain that entry i is empty.
@@ -1301,8 +1293,6 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 	}
 
 	// Found a blank entry at index i. Now add in the new data.
-	(*sockTable)[i].servicing_tid = 0;
-	(*sockTable)[i].remove_asap = false;
 	(*sockTable)[i].call_handler = false;
 	(*sockTable)[i].iosock = (Sock *)iosock;
 	switch ( iosock->type() ) {
@@ -1419,21 +1409,15 @@ int DaemonCore::Cancel_Socket( Stream* insock)
 	dprintf(D_DAEMONCORE,"Cancel_Socket: cancelled socket %d <%s> %p\n",
 			i,(*sockTable)[i].iosock_descrip, (*sockTable)[i].iosock );
 
-	if ((*sockTable)[i].servicing_tid == 0 ||
-		(*sockTable)[i].servicing_tid == CondorThreads::get_handle()->get_tid())
-	{
-		// Remove entry; mark it is available for next add via iosock=NULL
-		(*sockTable)[i].iosock = NULL;
-		free_descrip( (*sockTable)[i].iosock_descrip );
-		(*sockTable)[i].iosock_descrip = NULL;
-		free_descrip( (*sockTable)[i].handler_descrip );
-		(*sockTable)[i].handler_descrip = NULL;
-		// If we just removed the last entry in the table, we can decrement nSock
-		if ( i == nSock - 1 ) {
-			nSock--;            
-		}
-	} else {
-		(*sockTable)[i].remove_asap = true;
+	// Remove entry; mark it is available for next add via iosock=NULL
+	(*sockTable)[i].iosock = NULL;
+	free_descrip( (*sockTable)[i].iosock_descrip );
+	(*sockTable)[i].iosock_descrip = NULL;
+	free_descrip( (*sockTable)[i].handler_descrip );
+	(*sockTable)[i].handler_descrip = NULL;
+	// If we just removed the last entry in the table, we can decrement nSock
+	if ( i == nSock - 1 ) {
+		nSock--;            
 	}
 	
 
@@ -2523,11 +2507,6 @@ void
 DaemonCore::Wake_up_select()
 {
 
-	// no need to wake up select again if we already did so
-	if ( async_pipe_empty == false ) {
-		return;
-	}
-
 	// no need to wake up select if we are the only thread
 	if ( CondorThreads::pool_size() == 0 ) {
 		return;
@@ -2688,10 +2667,7 @@ void DaemonCore::Driver()
 		selector.reset();
 		min_connect_timeout = 0;
 		for (i = 0; i < nSock; i++) {
-				// if a valid entry not already being serviced, add to select
-			if ( (*sockTable)[i].iosock && 
-				 (*sockTable)[i].servicing_tid==0 &&
-				 (*sockTable)[i].remove_asap == false ) {	
+			if ( (*sockTable)[i].iosock ) {	// if a valid entry....
 					// Setup our fdsets
 				if ( (*sockTable)[i].is_connect_pending ) {
 						// we want to be woken when a non-blocking
@@ -2720,10 +2696,7 @@ void DaemonCore::Driver()
 						// to read.
 					selector.add_fd( (*sockTable)[i].iosock->get_file_desc(), Selector::IO_READ );
 				}
-            } else {
-				dprintf(D_ALWAYS,"\n\n\n TODD FIXME SKIPPING %d  st=%d ra=%s\n\n\n",i,
-					(*sockTable)[i].servicing_tid,(*sockTable)[i].remove_asap ? "true" : "false");
-			}
+            }
 		}
 
 
@@ -3099,8 +3072,6 @@ struct CallSocketHandler_args {
 void
 DaemonCore::CallSocketHandler( int &i, bool default_to_HandleCommand )
 {
-	bool set_service_tid = false;
-
 	// Queue up the parameters and add to our thread pool.
 	struct CallSocketHandler_args *args;
 	args = new struct CallSocketHandler_args;
@@ -3125,17 +3096,10 @@ DaemonCore::CallSocketHandler( int &i, bool default_to_HandleCommand )
 				// no need to add to work pool if we fail to accept
 				return;
 		}
-	} else {
-		if (insock->type() == Stream::reli_sock ) {
-			set_service_tid = true;
-		}
 	}
 	args->i = i;
 	args->default_to_HandleCommand = default_to_HandleCommand;
-	int newtid = CondorThreads::pool_add(DaemonCore::CallSocketHandler_worker_demarshall,args);
-	if ( set_service_tid ) {
-		(*sockTable)[i].servicing_tid = newtid;
-	}
+	CondorThreads::pool_add(DaemonCore::CallSocketHandler_worker_demarshall,args);
 }
 
 void
@@ -3214,10 +3178,6 @@ DaemonCore::CallSocketHandler_worker( int i, bool default_to_HandleCommand, Stre
 		delete (*sockTable)[i].iosock;
 			// cancel the socket handler
 		Cancel_Socket( (*sockTable)[i].iosock );
-	} else {
-		(*sockTable)[i].servicing_tid = 0;
-		// need to potentially add this sock to select
-		daemonCore->Wake_up_select();	
 	}
 }
 
@@ -3345,13 +3305,6 @@ int DaemonCore::HandleReqSocketHandler(Stream *stream)
 	timeout_tid = (int *) GetDataPtr();
 	ASSERT(timeout_tid);
 
-dprintf(D_ALWAYS,"\n\nTODD FIX ME timeout tid=%d\n\n", *timeout_tid);
-if ( *timeout_tid < 0 || *timeout_tid > 1000) { 
-	int foo;
-	DumpSocketTable( D_ALWAYS );
-	foo =5;
-}
-
 	Cancel_Timer(*timeout_tid);
 	delete timeout_tid;	// was allocated in HandleReq() with new
 
@@ -3441,7 +3394,6 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 				// return KEEP_STEAM cuz insock is a listen socket
 				return KEEP_STREAM;
 			}
-
 				// we have just accepted a socket.  if there is nothing available yet
 				// to read on this socket, we don't want to block here, so instead
 				// register it.  Also set a timer just in case nothing ever arrives, so 

@@ -1464,8 +1464,6 @@ class DaemonCore : public Service
         void*           data_ptr;
 		bool			is_connect_pending;
 		bool			call_handler;
-		int				servicing_tid;	// tid servicing this socket
-		bool			remove_asap;	// remove when being_serviced==false
     };
     void              DumpSocketTable(int, const char* = NULL);
     int               maxSocket;  // number of socket handlers to start with
@@ -1666,12 +1664,10 @@ class DaemonCore : public Service
 	int GetRegisteredSocketIndex( Stream *sock );
 
     // these need to be in thread local storage someday
-    static THREAD_LOCAL_STORAGE void **curr_dataptr;
-    static THREAD_LOCAL_STORAGE void **curr_regdataptr;
-	// end of thread local storage
-
+    void **curr_dataptr;
+    void **curr_regdataptr;
     int inServiceCommandSocket_flag;
-    
+    // end of thread local storage
         
 #ifndef WIN32
     static char **ParseArgsString(const char *env);
