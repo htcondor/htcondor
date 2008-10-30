@@ -193,6 +193,8 @@ class FunctionCall : public ExprTree
 
 	static bool ifThenElse( const char* name,const ArgumentList &argList,EvalState &state,Value &result );
 	
+	static bool interval( const char* name,const ArgumentList &argList,EvalState &state,Value &result );
+
  	//static bool doReal(const char*,const ArgumentList&,EvalState&,Value&);
 };
 

@@ -152,8 +152,9 @@ FunctionCall( )
 		functionTable["round"		] =	(void*)doMath;
         functionTable["random"      ] = (void*)random;
 
-			// misc
+			// for compatibility with old classads:
 		functionTable["ifThenElse"  ] = (void*)ifThenElse;
+		functionTable["interval" ] = (void*)interval;
 
 		initialized = true;
 	}
@@ -2202,6 +2203,47 @@ ifThenElse( const char* name,const ArgumentList &argList,EvalState &state,
 			return( false );
 		}
 	}
+
+    return true;
+}
+
+bool FunctionCall::
+interval( const char* name,const ArgumentList &argList,EvalState &state,
+	Value &result )
+{
+	Value	arg,intarg;
+	int tot_secs;
+
+		// takes exactly one argument
+	if( argList.size() != 1 ) {
+		result.SetErrorValue( );
+		return( true );
+	}
+	if( !argList[0]->Evaluate( state, arg ) ) {
+		result.SetErrorValue( );
+		return( false );
+	}
+	if( !convertValueToIntegerValue(arg,intarg) ) {
+		result.SetErrorValue( );
+		return( true );
+	}
+
+	if( !intarg.IsIntegerValue(tot_secs) ) {
+		result.SetErrorValue( );
+		return( true );
+	}
+
+	int days,hours,min,secs;
+	days = tot_secs / (3600*24);
+	tot_secs %= (3600*24);
+	hours = tot_secs / 3600;
+	tot_secs %= 3600;
+	min = tot_secs / 60;
+	secs = tot_secs % 60;
+
+	char strval[25];
+	sprintf(strval,"%3d+%02d:%02d:%02d", days, hours, min, secs );
+	result.SetStringValue(strval);
 
     return true;
 }
