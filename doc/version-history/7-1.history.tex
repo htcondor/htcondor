@@ -20,7 +20,27 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item The owner of the log file for the \Condor{vm-gahp}
+has changed to the \Login{condor} user.
+In Condor 7.1.2 and previous versions, it was owned by the
+user that the VM is started under.
+Therefore, the owner of and permissions on an existing log file
+are likely to be incorrect.
+%Condor issues an error if the \Condor{gridmanager} is unable
+%to read and write the existing file.
+To correct the problem, an administrator may modify file
+permissions such that the \Login{condor} user may read and
+write the log file.
+Alternatively, an administrator may delete the file, and
+Condor will create a new file with the expected owner and
+permissions.
+In addition, the definition for \Macro{VM\_GAHP\_LOG}
+in the \File{condor\_config.generic} file has changed for
+Condor 7.1.3.
+
+\item The VM universe no longer supports the use of the \SubmitCmd{xm}
+command for running Xen virtual machines. The \SubmitCmd{virsh} tool
+should be used instead.
 
 \end{itemize}
 
@@ -51,6 +71,11 @@ DAGs) to \Condor{dagman}.
 \item It is now possible to have multiple rotations of the ``event
   log'' file, such as ``EventLog'', ``EventLog.1'', ``EventLog.2'', ...
 
+\item The VM universe can now run VMware virtual machines on machines using
+privilege separation without requiring the \Condor{vm-gahp} binary to be
+setuid root. Runnin the \Condor{vm-gahp} as setuid root is no longer
+supported for VMware or Xen.
+
 \end{itemize}
 
 \noindent Configuration Variable Additions and Changes:
@@ -78,6 +103,29 @@ DAGs) to \Condor{dagman}.
   Condor will also try \MacroNI{MAX\_EVENT\_LOG}.
   See \pageref{param:EventLogMaxSize} for details.
 
+\item The \Condor{vm-gahp} no longer requires its own configuration
+file. It now uses the normal Condor configuration file. Parameters
+that used to reside in the \Condor{vm-gahp}'s file should now be placed
+in the Condor configuration file.
+
+\item The following VM universe-related configuration parameters have
+been removed:
+  \begin{itemize}
+  \item \MacroNI{VM\_MAX\_MEMORY}
+  \item \MacroNI{XEN\_CONTROLLER}
+  \item \MacroNI{XEN\_VIF\_PARAMETER}
+  \item \MacroNI{XEN\_NAT\_VIF\_PARAMETER}
+  \item \MacroNI{XEN\_BRIDGE\_VIF\_PARAMETER}
+  \item \MacroNI{XEN\_IMAGE\_IO\_TYPE}
+  \end{itemize}
+
+\item New configuration paramters
+\MacroNI{VMWARE\_LOCAL\_SETTINGS\_FILE}
+and \MacroNI{XEN\_LOCAL\_SETTINGS\_FILE} have been added. They allow
+a machine administrator to add settings to the virtual machine
+configuration files written by Condor for VMware and Xen.
+See \pageref{param:VMwareLocalSettingsFile} and
+\pageref{param:XenLocalSettingsFile} for details.
 
 \end{itemize}
 
