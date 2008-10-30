@@ -44,6 +44,7 @@
 #include "condor_uid.h"
 #include "basename.h"
 #include "file_lock.h"
+#include "condor_threads.h"
 #if HAVE_BACKTRACE
 #include "execinfo.h"
 #endif
@@ -66,7 +67,6 @@ static struct saved_dprintf* saved_list_tail = NULL;
 
 extern	DLL_IMPORT_MAGIC int		errno;
 extern	int		DebugFlags;
-THREAD_LOCAL_STORAGE int CurrentTid;
 
 /*
    This is a global flag that tells us if we've successfully ran
@@ -112,7 +112,7 @@ int		LockFd = -1;
 
 static	int DprintfBroken = 0;
 static	int DebugUnlockBroken = 0;
-#if !defined(WIN32) && defined(HAVE_PTHREADS)
+#if !defined(WIN32) && defined(HAS_PTHREADS)
 #include <pthread.h>
 static pthread_mutex_t _condor_dprintf_critsec = PTHREAD_MUTEX_INITIALIZER;
 #endif
@@ -162,12 +162,6 @@ _condor_dprintf_va( int flags, const char* fmt, va_list args )
 #ifdef va_copy
 	va_list copyargs;
 #endif
-	static int first_time = 1;
-
-	if ( first_time ) {
-		first_time = 0;
-		CurrentTid = 0;
-	}
 
 		/* DebugFP should be static initialized to stderr,
 	 	   but stderr is not a constant on all systems. */
@@ -205,7 +199,7 @@ _condor_dprintf_va( int flags, const char* fmt, va_list args )
 		InitializeCriticalSection(_condor_dprintf_critsec);
 	}
 	EnterCriticalSection(_condor_dprintf_critsec);
-#elif defined(HAVE_PTHREADS)
+#elif defined(HAS_PTHREADS)
 	pthread_mutex_lock(&_condor_dprintf_critsec);
 #endif
 
@@ -295,12 +289,10 @@ _condor_dprintf_va( int flags, const char* fmt, va_list args )
 						fprintf( DebugFP, "(pid:%d) ", my_pid );
 					}
 
-#ifdef HAVE_TLS
 					/* include tid if we are configured to use a thread pool */
-					if ( CurrentTid > 0 ) {
-						fprintf(DebugFP, "(tid:%d) ", CurrentTid );
+					if ( CondorThreads_pool_size() > 0 ) {
+						fprintf(DebugFP, "(tid:%d) ", CondorThreads_gettid());
 					}
-#endif  /* TODO --- if no TLS do something else */
 
 					if( DebugId ) {
 						(*DebugId)( DebugFP );
@@ -347,7 +339,7 @@ _condor_dprintf_va( int flags, const char* fmt, va_list args )
 
 #ifdef WIN32
 	LeaveCriticalSection(_condor_dprintf_critsec);
-#elif defined(HAVE_PTHREADS)
+#elif defined(HAS_PTHREADS)
 	pthread_mutex_unlock(&_condor_dprintf_critsec);
 #endif
 
