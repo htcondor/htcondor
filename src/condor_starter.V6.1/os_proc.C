@@ -582,10 +582,15 @@ OsProc::JobExit( void )
     HANDLE user_token = priv_state_get_handle ();
     ASSERT ( user_token );
     
-    /* at this point we can revoke the user's access to
-    the visible desktop */
-    int RevokeDesktopAccess ( HANDLE ); // prototype
-    RevokeDesktopAccess ( user_token );
+    // Check USE_VISIBLE_DESKTOP in condor_config.  If set to TRUE,
+    // then removed our users priveleges from the visible desktop.
+    char *use_visible = param("USE_VISIBLE_DESKTOP");    
+	if (use_visible && (*use_visible=='T' || *use_visible=='t') ) {        
+        /* at this point we can revoke the user's access to
+        the visible desktop */
+        int RevokeDesktopAccess ( HANDLE ); // prototype
+        RevokeDesktopAccess ( user_token );
+    }
 
     set_priv ( old );
 
