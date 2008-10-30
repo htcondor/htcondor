@@ -7002,13 +7002,6 @@ They specify items related to the \Condor{vm-gahp}.
   The complete path and file name of the \Condor{vm-gahp}.
   There is no default value for this required configuration variable.
 
-\item[\Macro{VM\_GAHP\_CONFIG}]
-  \label{param:VMGAHPConfig}
-  The complete path and file name of a separate and required
-  Condor configuration file containing settings specific
-  to the execution of either a VMware or Xen virtual machine.
-  There is no default value for this required configuration variable.
-
 \item[\Macro{VM\_GAHP\_LOG}]
   \label{param:VMGAHPLog}
   The complete path and file name of the \Condor{vm-gahp} log.
@@ -7028,13 +7021,19 @@ They specify items related to the \Condor{vm-gahp}.
   It will be the value \verb@xen@ or \verb@vmware@.
   There is no default value for this required configuration variable.
 
+\item[\Macro{VM\_VERSION}]
+  \label{param:VMVersion}
+  Specifies the version of supported virtual machine software
+  defined by \MacroNI{VM\_TYPE}.  
+  There is no default value for this required configuration variable.
+  This configuration variable does not currently alter the behavior of
+  the \Condor{vm-gahp}; instead, it is used in \Condor{status} when
+  printing VM-capable hosts and slots.
+
 \item[\Macro{VM\_MEMORY}]
   \label{param:VMMaxMemory}
   An integer to specify the maximum amount of memory in Mbytes
   that will be allowed to the virtual machine program.
-  The amount of memory allowed will be the smaller of this
-  variable and the value set by \MacroNI{VM\_MAX\_MEMORY}, as defined within
-  the separate configuration file used by the \Condor{vm-gahp}.
 
 \item[\Macro{VM\_MAX\_NUMBER}]
   \label{param:VMMaxNumber}
@@ -7084,73 +7083,11 @@ They specify items related to the \Condor{vm-gahp}.
   A boolean value that defaults to \Expr{False}.
   When \Expr{True}, all vm universe jobs (independent of their
   UID domain) will run as the user defined in \MacroNI{VM\_UNIV\_NOBODY\_USER}.
-\end{description}
 
-The following configuration variable may be specified in both
-the Condor configuration file and in the separate
-virtual machine-specific configuration file used by the \Condor{vm-gahp}.
-Please note that this machine-specific configuration file 
-used by the \Condor{vm-gahp} does not inherit configuration
-from Condor.  Therefore, definitions may not utilize the values
-of configuration variables set outside this file.
-For example,
-a setting of \File{\$(BIN)/condor\_vm\_vmware.pl} for
-\Macro{VMWARE\_PERL} cannot work,
-as \MacroUNI{BIN} is defined within Condor's configuration,
-and not in the machine-specific configuration file
-used by the \Condor{vm-gahp}.
-Instead, \MacroNI{BIN} must be redefined,
-or a full path must be used in every case.
-
-\begin{description}
 \item[\Macro{VM\_NETWORKING}]
   \label{param:VMNetworking}
   A boolean variable describing if networking is supported.
   When not defined, the default value is \Expr{False}.
-  When defined in both configuration files,
-  the value used is a logical AND of both values,
-  implying that the value will only be \Expr{True} when
-  both files define \MacroNI{VM\_NETWORKING} to be \Expr{True}.
-\end{description}
-
-The following configuration variables are not specific to either the VMware
-or the Xen virtual machine software, but will appear in the
-virtual machine-specific configuration file used by the \Condor{vm-gahp}.
-Please note that this machine-specific configuration file 
-used by the \Condor{vm-gahp} does not inherit configuration
-from Condor.  Therefore, definitions may not utilize the values
-of configuration variables set outside this file.
-For example,
-a setting of \File{\$(BIN)/condor\_vm\_vmware.pl} for
-\Macro{VMWARE\_PERL} cannot work,
-as \MacroUNI{BIN} is defined within Condor's configuration,
-and not in the machine-specific configuration file
-used by the \Condor{vm-gahp}.
-Instead, \MacroNI{BIN} must be redefined,
-or a full path must be used in every case.
-
-\begin{description}
-
-\item[\Macro{VM\_TYPE}]
-  \label{param:VMType}
-  Specifies the type of supported virtual machine software.
-  It will be the value \verb@xen@ or \verb@vmware@.
-  There is no default value for this required configuration variable.
-
-\item[\Macro{VM\_VERSION}]
-  \label{param:VMVersion}
-  Specifies the version of supported virtual machine software
-  defined by \MacroNI{VM\_TYPE}.  
-  There is no default value for this required configuration variable.
-  This configuration variable does not currently alter the behavior of
-  the \Condor{vm-gahp}; instead, it is used in \Condor{status} when
-  printing VM-capable hosts and slots.
-
-\item[\Macro{VM\_MAX\_MEMORY}]
-  \label{param:VMMaxMemory}
-  An integer to specify the maximum amount of memory in Mbytes
-  that may be used by the supported virtual machine program.
-  There is no default value for this required configuration variable.
 
 \item[\Macro{VM\_NETWORKING\_TYPE}]
   \label{param:VMNetworkingType}
@@ -7175,25 +7112,10 @@ or a full path must be used in every case.
   Where multiple networking types are given in \MacroNI{VM\_NETWORKING\_TYPE},
   and this variable is \emph{not} defined, a default of \Expr{nat}
   is used.
-
 \end{description}
 
 The following configuration variables are specific to the VMware
-virtual machine software.  They are specified within the separate configuration
-file read by the \Condor{vm-gahp} and allow the \Condor{vm-gahp} to
-correctly interface with the VMware software.
-Please note that this machine-specific configuration file 
-used by the \Condor{vm-gahp} does not inherit configuration
-from Condor.  Therefore, definitions may not utilize the values
-of configuration variables set outside this file.
-For example,
-a setting of \File{\$(BIN)/condor\_vm\_vmware.pl} for
-\Macro{VMWARE\_PERL} cannot work,
-as \MacroUNI{BIN} is defined within Condor's configuration,
-and not in the machine-specific configuration file
-used by the \Condor{vm-gahp}.
-Instead, \MacroNI{BIN} must be redefined,
-or a full path must be used in every case.
+virtual machine software.
 
 \begin{description}
 \item[\Macro{VMWARE\_PERL}]
@@ -7227,24 +7149,16 @@ or a full path must be used in every case.
   If bridge networking is used, this variable's definition takes
   precedence over one defined by \MacroNI{VMWARE\_NETWORKING\_TYPE}.
 
+\item[\Macro{VMWARE\_LOCAL\_SETTINGS\_FILE}]
+  \label{param:VMwareLocalSettingsFile}
+  The complete path and file name to a file, whose contents will be
+  inserted into the VMware description file (i.e., the .vmx file) before
+  Condor starts the virtual machine. This parameter is optional.
+
 \end{description}
 
 The following configuration variables are specific to the Xen
-virtual machine software.  They are specified within the separate configuration
-file read by the \Condor{vm-gahp} and allow the \Condor{vm-gahp} to
-correctly interface with the Xen software.
-Please note that this machine-specific configuration file 
-used by the \Condor{vm-gahp} does not inherit configuration
-from Condor.  Therefore, definitions may not utilize the values
-of configuration variables set outside this file.
-For example,
-a setting of \File{\$(BIN)/condor\_vm\_vmware.pl} for
-\Macro{VMWARE\_PERL} cannot work,
-as \MacroUNI{BIN} is defined within Condor's configuration,
-and not in the machine-specific configuration file
-used by the \Condor{vm-gahp}.
-Instead, \MacroNI{BIN} must be redefined,
-or a full path must be used in every case.
+virtual machine software.
 
 \begin{description}
 
@@ -7274,58 +7188,6 @@ or a full path must be used in every case.
   A required full path and executable for the Xen bootloader,
   if the kernel image includes a disk image.
 
-\item[\Macro{XEN\_CONTROLLER}]
-  \label{param:XenController}
-  A required variable that will be set to either
-  \Expr{xm} or \Expr{virsh},
-  specifying whether the Xen hypervisor is 
-  controlled by the \Prog{xm} or \Prog{virsh} program.
-  \Prog{xm} is part of the Xen distribution,
-  while \Prog{virsh} is part of the libvirt library.
-  These controllers both provide the same functionality 
-  with respect to the Xen hypervisor, but with different configurations.
-  The differences are: \Prog{xm}
-  requires the \MacroNI{XEN\_IMAGE\_IO\_TYPE} configuration variable
-  to be defined; 
-  while, \Prog{virsh} uses the \MacroNI{XEN\_BRIDGE\_SCRIPT} 
-  configuration variable to set up a bridged network,
-  does not need the \MacroNI{XEN\_IMAGE\_IO\_TYPE} configuration variable,
-  and the configuration variable
-  \MacroNI{XEN\_VIF\_PARAMETER} is irrelevant.
-
-\item[\Macro{XEN\_VIF\_PARAMETER}]
-  \label{param:XenVIFParameter}
-  An optional string used in networking that the \Condor{vm-gahp}
-  inserts into the Xen configuration file for a vif parameter.
-  If a default value is needed, the inserted string will be
-  \begin{verbatim}
-  vif = ['']
-  \end{verbatim}
-
-\item[\Macro{XEN\_NAT\_VIF\_PARAMETER}]
-  \label{param:XenNatVIFParameter}
-  An optional string used in networking that the \Condor{vm-gahp}
-  inserts into the Xen configuration file for a vif parameter.
-  If nat networking is used, this variable's definition takes
-  precedence over one defined by \MacroNI{XEN\_VIF\_PARAMETER}.
-
-\item[\Macro{XEN\_BRIDGE\_VIF\_PARAMETER}]
-  \label{param:XenBridgeVIFParameter}
-  An optional string used in networking that the \Condor{vm-gahp}
-  inserts into the Xen configuration file for a vif parameter.
-  If bridge networking is used, this variable's definition takes
-  precedence over one defined by \MacroNI{XEN\_VIF\_PARAMETER}.
-
-\item[\Macro{XEN\_IMAGE\_IO\_TYPE}]
-  \label{param:XenImageIOType}
-  An optional string that defines a file I/O device.
-  For Xen checkpoints, all machines with a shared file system must
-  use the same file I/O type.
-  When not defined, the default value uses a loopback device:
-  \begin{verbatim}
-  XEN_IMAGE_IO_TYPE = file:
-  \end{verbatim}
-
 \item[\Macro{XEN\_BRIDGE\_SCRIPT}]
   \label{param:XenBridgeScript}
   A path, file name, and command-line arguments to specify a script
@@ -7336,6 +7198,12 @@ or a full path must be used in every case.
   \begin{verbatim}
   XEN_BRIDGE_SCRIPT = vif-bridge bridge=xenbr0
   \end{verbatim}
+
+\item[\Macro{XEN\_LOCAL\_SETTINGS\_FILE}]
+  \label{param:XenLocalSettingsFile}
+  A complete path and file name. The file's contents will be included in
+  the Xen configuration file that Condor writes to run the virtual machine.
+  This parameter is optional.
 
 % \item[\Macro{XEN\_VT\_KERNEL}]
 %   \label{param:XenVTKernel}
