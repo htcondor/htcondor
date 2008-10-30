@@ -69,14 +69,14 @@ void _mark_thread_safe(int start_or_stop, int dologging, const char* descrip,
 	func = itoa(GetCurrentThreadId(), &buf[4], 10 );	
 #endif
 
-	if ( dologging && (DebugFlags & D_FULLDEBUG)) {
+	if ( dologging ) {
 		dprintf(D_THREADS,"Entering thread safe %s [%s] in %s:%d %s()\n",
 				mode, descrip, condor_basename(file), line, func);
 	}
 
 	(*callback)();
 
-	if ( dologging && (DebugFlags & D_FULLDEBUG)) {
+	if ( dologging ) {
 		dprintf(D_THREADS,"Leaving thread safe %s [%s] in %s:%d %s()\n",
 				mode, descrip, condor_basename(file), line, func);
 	}

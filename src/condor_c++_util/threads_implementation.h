@@ -81,7 +81,6 @@ public:
 	/****** DATA MEMBERS *******/
 	pthread_mutex_t big_lock;	// big lock protecting condor code
 	pthread_mutex_t get_handle_lock;	// lock protecting method get_handle()
-	pthread_mutex_t set_status_lock;	// lock protecting set_status() shared data
 	HashTable<ThreadInfo,WorkerThreadPtr_t> hashThreadToWorker;
 	HashTable<int,WorkerThreadPtr_t> hashTidToWorker;
 		// Members dealing with our work pool

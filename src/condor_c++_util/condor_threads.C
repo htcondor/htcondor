@@ -292,6 +292,26 @@ WorkerThread::get_status_string(thread_status_t s)
 	}
 }
 
+void
+WorkerThread::set_status(thread_status_t newstatus)
+{
+		// THREAD_COMPLETED is a terminal state; don't allow any changes
+	if ( status_ == THREAD_COMPLETED  ) {		
+		return;
+	}
+
+		// don't log a message unless we are actually changing state
+	if ( status_ == newstatus ) {
+		return;
+	}
+
+	dprintf(D_THREADS,"Thread %s tid=%d status change from %s to %s\n",
+		get_name(), get_tid(), get_status_string(get_status()),
+		get_status_string(newstatus));
+
+	status_ = newstatus;
+
+}
 
 /**********************************************************************/
 
@@ -319,95 +339,6 @@ ThreadImplementation::get_main_thread_ptr()
 #ifndef WIN32
 	#include <pthread.h>
 #endif
-
-void
-WorkerThread::set_status(thread_status_t newstatus)
-{
-	static int previous_ready_tid = 0;
-	static char previous_ready_message[200];
-
-		// THREAD_COMPLETED is a terminal state; don't allow any changes
-	if ( status_ == THREAD_COMPLETED  ) {		
-		return;
-	}
-
-		// don't log a message unless we are actually changing state
-	if ( status_ == newstatus ) {
-		return;
-	}
-
-	int mytid = get_tid();
-	thread_status_t currentstatus = status_;
-
-		// change the state.
-	status_ = newstatus;
-
-		// don't bother with all the below code to dprintf a state change
-		// if we aren't running with threads enabled.
-	if ( !TI ) {
-		return;
-	}
-
-#if 0
-	dprintf(D_THREADS,
-		"Thread %d (%s) status change from %s to %s\n",mytid,get_name(),
-		get_status_string(currentstatus),get_status_string(newstatus));
-#endif
-
-#if 1
-
-		/* Print out a thread status change message to the log, BUT surpress
-		   printing out anything if the SAME thread is going from 
-		   RUNNING->READY->RUNNING.  To do this we save RUNNING->READY messages
-		   into and only print them if we see the tid change.
-		   This is common if there is only one thread
-		   ready to run and it calls functions that are marked parallel safe.
-		*/
-
-
-
-		// grab mutex to protect static variables previous_ready_*
-	pthread_mutex_lock(&(TI->set_status_lock));
-
-
-	if ( (currentstatus == THREAD_RUNNING && newstatus == THREAD_READY))
-	{
-		snprintf(previous_ready_message,sizeof(previous_ready_message),
-			"Thread %d (%s) status change from %s to %s\n",mytid,get_name(),
-			get_status_string(currentstatus),get_status_string(newstatus));
-		previous_ready_tid = mytid;
-	} 
-	else 
-	if ( currentstatus == THREAD_READY && newstatus == THREAD_RUNNING ) 
-	{
-			if ( (mytid != previous_ready_tid)) {
-				if ( previous_ready_tid ) {
-					dprintf(D_THREADS,"%s\n",previous_ready_message);		
-				}
-				dprintf(D_THREADS,
-						"Thread %d (%s) status change from %s to %s\n",mytid,get_name(),
-						get_status_string(currentstatus),get_status_string(newstatus));
-			}
-			previous_ready_tid = 0;
-	}
-	else 
-	{
-			if ( previous_ready_tid ) {
-				dprintf(D_THREADS,"%s\n",previous_ready_message);		
-			}
-			previous_ready_tid = 0;
-			dprintf(D_THREADS,
-						"Thread %d (%s) status change from %s to %s\n",mytid,get_name(),
-						get_status_string(currentstatus),get_status_string(newstatus));
-	}
-
-
-	pthread_mutex_unlock(&(TI->set_status_lock));
-
-#endif
-
-}
-
 
 unsigned int
 ThreadImplementation::hashFuncThreadInfo(const ThreadInfo & mythread)
@@ -622,7 +553,6 @@ ThreadImplementation::ThreadImplementation()
 	next_tid_ = 0;
 	pthread_mutex_init(&big_lock,NULL);
 	pthread_mutex_init(&get_handle_lock,NULL);
-	pthread_mutex_init(&set_status_lock,NULL);
 	pthread_cond_init(&work_queue_cond,NULL);
 	pthread_cond_init(&workers_avail_cond,NULL);	
 }
@@ -630,8 +560,6 @@ ThreadImplementation::ThreadImplementation()
 ThreadImplementation::~ThreadImplementation()
 {
 	pthread_mutex_destroy(&big_lock);
-	pthread_mutex_destroy(&get_handle_lock);
-	pthread_mutex_destroy(&set_status_lock);
 	// TODO pthread_cond_destroy ....
 }
 
@@ -771,18 +699,6 @@ ThreadImplementation::remove_tid(int tid)
 #else	// ifdef HAS_PTHREADS
 
 /* Stubs for systems that do not have pthreads */
-
-void
-WorkerThread::set_status(thread_status_t newstatus)
-{
-		// THREAD_COMPLETED is a terminal state; don't allow any changes
-	if ( status_ == THREAD_COMPLETED  ) {		
-		return;
-	}
-
-		// change the state.
-	status_ = newstatus;
-}
 
 unsigned int
 ThreadImplementation::hashFuncThreadInfo(const ThreadInfo & /*mythread*/)
