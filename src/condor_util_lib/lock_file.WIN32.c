@@ -69,6 +69,4 @@ lock_file(int fd, LOCK_TYPE type, int do_block)
 	if ( result < 0 && ( errno != EACCES && errno != EDEADLOCK ) ) {
 		EXCEPT("Programmer error in lock_file()");
 	}
-
-	return result;
 }
