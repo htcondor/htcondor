@@ -211,9 +211,9 @@ pthread_cond_signal (pthread_cond_t *cv)
 
 #ifndef WIN32
 	// explicit template instantiation
-	template class HashTable<ThreadInfo,WorkerThreadPtr_t>;
-	template class HashTable<int,WorkerThreadPtr_t>;
-	template class Queue<WorkerThreadPtr_t>;
+	template HashTable<ThreadInfo,WorkerThreadPtr_t>;
+	template HashTable<int,WorkerThreadPtr_t>;
+	template Queue<WorkerThreadPtr_t>;
 #endif
 
 static ThreadImplementation* TI = NULL;
