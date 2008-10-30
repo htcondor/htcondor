@@ -569,9 +569,7 @@ ThreadImplementation::get_handle(int tid)
 	return worker;
 }
 
-extern "C" {
-	extern THREAD_LOCAL_STORAGE int CurrentTid;
-}
+extern THREAD_LOCAL_STORAGE int CurrentTid;
 
 ThreadStartFunc_t
 ThreadImplementation::threadStart(void *)
