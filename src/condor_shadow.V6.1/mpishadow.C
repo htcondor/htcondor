@@ -186,7 +186,7 @@ MPIShadow::getResources( void )
     char *claim_id = NULL;
     MpiResource *rr;
 	int job_cluster;
-	char buf[128];
+	char buf[_POSIX_PATH_MAX];
 
     int numProcs=0;    // the # of procs to come
     int numInProc=0;   // the # in a particular proc.
