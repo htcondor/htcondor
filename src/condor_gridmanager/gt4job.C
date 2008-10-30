@@ -1363,6 +1363,13 @@ void GT4Job::UpdateGlobusState( const MyString &new_state,
 
 	allow_transition = AllowTransition( new_state, globusState );
 
+		// We want to call SetRemoteJobStatus() even if the status
+		// hasn't changed, so that BaseJob will know that we got a
+		// status update.
+	if ( allow_transition || new_state == globusState ) {
+		SetRemoteJobStatus( globusState.Value() );
+	}
+
 	if ( allow_transition ) {
 		// where to put logging of events: here or in EvaluateState?
 		dprintf(D_FULLDEBUG, "(%d.%d) globus state change: %s -> %s\n",
@@ -1422,8 +1429,6 @@ void GT4Job::UpdateGlobusState( const MyString &new_state,
 		globusState = new_state;
 		globusStateFaultString = new_fault;
 		enteredCurrentGlobusState = time(NULL);
-
-		SetRemoteJobStatus( globusState.Value() );
 
 		requestScheddUpdate( this );
 

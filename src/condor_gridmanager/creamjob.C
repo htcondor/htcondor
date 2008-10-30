@@ -831,7 +831,7 @@ int CreamJob::doEvaluateState()
 					break;
 				}
 
-				SetRemoteJobState( status, exit_code, fault );
+				NewCreamState( status, exit_code, fault );
 				if ( status ) {
 					free( status );
 				}
@@ -1212,12 +1212,14 @@ void CreamJob::SetRemoteJobId( const char *job_id )
 	BaseJob::SetRemoteJobId( full_job_id.Value() );
 }
 
-void CreamJob::SetRemoteJobState( const char *new_state, int exit_code,
-								  const char *failure_reason )
+void CreamJob::NewCreamState( const char *new_state, int exit_code,
+							  const char *failure_reason )
 {
 	MyString new_state_str = new_state;
 
 		// TODO verify that the string is a valid state name
+
+	SetRemoteJobStatus( new_state );
 
 	if ( new_state_str != remoteState ) {
 		dprintf( D_FULLDEBUG, "(%d.%d) cream state change: %s -> %s\n",

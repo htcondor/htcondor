@@ -52,8 +52,8 @@ class CreamJob : public BaseJob
 
 	void Reconfig();
 	int doEvaluateState();
-	void SetRemoteJobState( const char *new_state, int exit_code,
-							const char *failure_reason );
+	void NewCreamState( const char *new_state, int exit_code,
+						const char *failure_reason );
 	BaseResource *GetResource();
 	void SetRemoteJobId( const char *job_id );
 

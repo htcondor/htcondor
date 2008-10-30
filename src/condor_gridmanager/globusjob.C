@@ -2614,6 +2614,15 @@ void GlobusJob::UpdateGlobusState( int new_state, int new_error_code )
 
 	allow_transition = AllowTransition( new_state, globusState );
 
+		// We want to call SetRemoteJobStatus() even if the status
+		// hasn't changed, so that BaseJob will know that we got a
+		// status update.
+	if ( ( allow_transition || new_state == globusState ) &&
+		 new_state != GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED ) {
+
+		SetRemoteJobStatus( GlobusJobStatusName( new_state ) );
+	}
+
 	if ( allow_transition ) {
 		// where to put logging of events: here or in EvaluateState?
 		dprintf(D_FULLDEBUG, "(%d.%d) globus state change: %s -> %s\n",
@@ -2653,6 +2662,7 @@ void GlobusJob::UpdateGlobusState( int new_state, int new_error_code )
 					WriteGridSubmitEventToUserLog( jobAd );
 					submitLogged = true;
 				}
+
 				jobAd->LookupInteger( ATTR_NUM_GLOBUS_SUBMITS,
 									  num_globus_submits );
 				num_globus_submits++;
@@ -2669,7 +2679,6 @@ void GlobusJob::UpdateGlobusState( int new_state, int new_error_code )
 			globusStateBeforeFailure = globusState;
 		} else {
 			jobAd->Assign( ATTR_GLOBUS_STATUS, new_state );
-			SetRemoteJobStatus( GlobusJobStatusName( new_state ) );
 		}
 
 		globusState = new_state;
