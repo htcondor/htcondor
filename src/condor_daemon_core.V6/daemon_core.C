@@ -1434,9 +1434,9 @@ int DaemonCore::Cancel_Socket( Stream* insock)
 		}
 	} else {
 		(*sockTable)[i].remove_asap = true;
-		EXCEPT(" TODD FIX ME!! ");
 	}
 	
+
 	DumpSocketTable(D_FULLDEBUG | D_DAEMONCORE);
 
 	// If we are a worker thread, wake up select in the main thread
@@ -2720,7 +2720,10 @@ void DaemonCore::Driver()
 						// to read.
 					selector.add_fd( (*sockTable)[i].iosock->get_file_desc(), Selector::IO_READ );
 				}
-            }
+            } else {
+				dprintf(D_ALWAYS,"\n\n\n TODD FIXME SKIPPING %d  st=%d ra=%s\n\n\n",i,
+					(*sockTable)[i].servicing_tid,(*sockTable)[i].remove_asap ? "true" : "false");
+			}
 		}
 
 
@@ -2829,10 +2832,7 @@ void DaemonCore::Driver()
 
 			// scan through the socket table to find which ones select() set
 			for(i = 0; i < nSock; i++) {
-				if ( (*sockTable)[i].iosock && 
-					 (*sockTable)[i].servicing_tid==0 &&
-					 (*sockTable)[i].remove_asap == false ) 
-				{	// if a valid entry...
+				if ( (*sockTable)[i].iosock ) {	// if a valid entry...
 					// figure out if we should call a handler.  to do this,
 					// if the socket was doing a connect(), we check the
 					// writefds and excepfds.  otherwise, check readfds.
@@ -3170,7 +3170,7 @@ DaemonCore::CallSocketHandler_worker( int i, bool default_to_HandleCommand, Stre
 					(*sockTable)[i].handler_descrip,
 					(*sockTable)[i].iosock_descrip);
 			handlerName = strdup((*sockTable)[i].handler_descrip);
-			dprintf(D_COMMAND, "Calling Handler <%s> (%d)\n", handlerName,i);
+			dprintf(D_COMMAND, "Calling Handler <%s>\n", handlerName);
 		}
 
 		// Update curr_dataptr for GetDataPtr()
@@ -3215,17 +3215,9 @@ DaemonCore::CallSocketHandler_worker( int i, bool default_to_HandleCommand, Stre
 			// cancel the socket handler
 		Cancel_Socket( (*sockTable)[i].iosock );
 	} else {
-			// in this case, we are keeping the socket around.
-			// so if this tid has it marked as being serviced,
-			// reset the servicing_tid to 0 to signify we done operating
-			// with the socket for the moment.
-		if ( (*sockTable)[i].servicing_tid  &&
-			 (*sockTable)[i].servicing_tid == CondorThreads::get_handle()->get_tid() ) 
-		{
-			(*sockTable)[i].servicing_tid = 0;
-			// need to potentially add this sock to select
-			daemonCore->Wake_up_select();	
-		}
+		(*sockTable)[i].servicing_tid = 0;
+		// need to potentially add this sock to select
+		daemonCore->Wake_up_select();	
 	}
 }
 
@@ -3352,6 +3344,13 @@ int DaemonCore::HandleReqSocketHandler(Stream *stream)
 
 	timeout_tid = (int *) GetDataPtr();
 	ASSERT(timeout_tid);
+
+dprintf(D_ALWAYS,"\n\nTODD FIX ME timeout tid=%d\n\n", *timeout_tid);
+if ( *timeout_tid < 0 || *timeout_tid > 1000) { 
+	int foo;
+	DumpSocketTable( D_ALWAYS );
+	foo =5;
+}
 
 	Cancel_Timer(*timeout_tid);
 	delete timeout_tid;	// was allocated in HandleReq() with new
