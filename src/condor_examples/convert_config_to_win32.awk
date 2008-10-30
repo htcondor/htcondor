@@ -134,10 +134,9 @@ BEGIN {
 	next
 }
 /^#VMWARE_LOCAL_SETTINGS_FILE/ {
-	print "VMWARE_LOCAL_SETTINGS_FILE = $(RELEASE_DIR)/condor_config.vmgahp"
+	print "VMWARE_LOCAL_SETTINGS_FILE = $(RELEASE_DIR)/condor_vmware_local_settings"
 	next
 }
-
 
 # Set it up so we can change the VMWARE_SCRIPT option if we choose to
 # do so in the installer
@@ -156,6 +155,9 @@ BEGIN {
 	print "VM_NETWORKING_DEFAULT_TYPE = nat"
 	next
 }
+
+# We use the equals sign so that it will not match the names above
+# and trash the resulting configuration file
 /^#VM_NETWORKING =/ {
 	print "VM_NETWORKING = FALSE"
 	next

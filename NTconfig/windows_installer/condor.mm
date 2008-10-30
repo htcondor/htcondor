@@ -265,7 +265,7 @@
 
 ;--- If using VM Universe, copy the default VMX configuration ---------------
 <$Component "CondorVMUniverse" Create="Y" Directory_="[INSTALLDIR]" Condition=^USEVMUNIVERSE = "Y"^>
-	<$Files '<$ImageRootDirectory>\etc\condor_config.vmgahp' KeyFile="*">
+	<$Files '<$ImageRootDirectory>\etc\condor_vmware_local_settings' KeyFile="*">
 <$/Component>
 
 ;--- Copy cygwin1.dll if we find one (to avoid version conflicts) -----------
