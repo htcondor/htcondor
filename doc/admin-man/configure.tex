@@ -2665,6 +2665,21 @@ These macros control the \Condor{master}.
   fast shutdown procedure before the \Condor{master} kills them
   outright.  It is defined in seconds and defaults to 300 (5 minutes).
 
+\item[\Macro{MASTER\_SHUTDOWN\_$<$Name$>$}]
+  \label{param:MasterShutdownProgram} This macro is used to specify a
+  full path to a program that the master will execute (via the UNIX
+  ``execl()'' call, or the similar Win32 ``\_execl()'' call) instead of
+  the normal call to exit().  Multiple of these may be configured
+  (with different $<$name$>$'s).  These macros have no affect on a
+  \Condor{master} unless the \Condor{set\_shutdown} is run.  The name
+  passed to \Condor{set\_shutdown} much match one of these
+  \MacroNI{MASTER\_SHUTDOWN\_$<$Name$>$} macros; if not, the
+  \Condor{master} will log an error and ignore the command.  If a
+  match is found, the \Condor{master} will attempt to verify the
+  program, and will then store off that path.  When the
+  \Condor{Master} shuts down, the program is then executed as
+  described above.
+
 \item[\Macro{MASTER\_BACKOFF\_CONSTANT} and
   \Macro{MASTER\_<name>\_BACKOFF\_CONSTANT}]
   \label{param:MasterBackoffConstant}
