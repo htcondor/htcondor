@@ -26,18 +26,6 @@
 #ifndef _THREADS_IMPLEMENTATION_H
 #define _THREADS_IMPLEMENTATION_H
 
-#ifdef WIN32
-	typedef void ThreadStartFunc_t;
-#else
-	typedef void* ThreadStartFunc_t;
-	#ifdef HAS_PTHREADS
-		#include <pthread.h>
-	#else
-		typedef int pthread_t;
-		pthread_t pthread_self() { return 1; }
-	#endif
-#endif
-		
 
 // Thin wrapper around pthread_t that defines an operator== for use by
 // our hashtable template.
@@ -72,7 +60,7 @@ public:
 	int pool_size() { return num_threads_; }
 
 	/****** HELPER METHODS *********/
-	static ThreadStartFunc_t threadStart(void *);
+	static void threadStart(void *);
 	static unsigned int hashFuncThreadInfo(const ThreadInfo & mythread);
 	static const WorkerThreadPtr_t get_main_thread_ptr();
 	void remove_tid(int tid);

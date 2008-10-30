@@ -52,7 +52,7 @@ typedef counted_ptr<WorkerThread> WorkerThreadPtr_t;
 
 class WorkerThread
 {
-	friend class ThreadImplementation;
+	friend ThreadImplementation;
 public:
 	~WorkerThread();
 		
@@ -73,9 +73,6 @@ public:
 	const condor_thread_func_t get_routine() const {return routine_;}
 	void* get_arg() const {return arg_;}
 	int get_tid() const {return tid_;}
-
-	int operator== (const WorkerThread& r) {return tid_ == r.tid_; }
-	int operator< (const WorkerThread& r) {return tid_ < r.tid_; }
 
 private:
 	// Ctors are private since only the ThreadImplementation class
@@ -114,8 +111,6 @@ class EnableParallel
 public:
 	EnableParallel(bool flag) { oldflag = CondorThreads::enable_parallel(flag); }
 	~EnableParallel() { CondorThreads::enable_parallel(oldflag); }
-	int operator< (const EnableParallel& r) { return this < &r; }
-	int operator== (const EnableParallel& r) { return this == &r; }
 private:
 	bool oldflag;
 
