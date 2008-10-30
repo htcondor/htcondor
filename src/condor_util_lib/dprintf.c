@@ -111,10 +111,6 @@ int		LockFd = -1;
 
 static	int DprintfBroken = 0;
 static	int DebugUnlockBroken = 0;
-#if !defined(WIN32) && defined(HAS_PTHREADS)
-#include <pthread.h>
-static pthread_mutex_t _condor_dprintf_critsec = PTHREAD_MUTEX_INITIALIZER;
-#endif
 #ifdef WIN32
 static CRITICAL_SECTION	*_condor_dprintf_critsec = NULL;
 static int lock_or_mutex_file(int fd, LOCK_TYPE type, int do_block);
@@ -188,18 +184,21 @@ _condor_dprintf_va( int flags, const char* fmt, va_list args )
 		return;
 	}
 
-	/* We want dprintf to be thread safe.  For now, we achieve this
-	 * with fairly coarse-grained mutex.
-	 */
 #ifdef WIN32
+
+	// DaemonCore Create_Thread creates a real kernel thread on Win32,
+	// and dprintf is not thread-safe.  So, until such time that
+	// dprint is made thread safe, on Win32 we restrict access to one
+	// thread at a time via a critical section.  NOTE: we must enter
+	// the critical section _after_ we test DprintfBroken above,
+	// otherwise we could hang forever if _condor_dprintf_exit() is
+	// called and an EXCEPT handler tries to use dprintf.
 	if ( _condor_dprintf_critsec == NULL ) {
 		_condor_dprintf_critsec = 
 			(CRITICAL_SECTION *)malloc(sizeof(CRITICAL_SECTION));
 		InitializeCriticalSection(_condor_dprintf_critsec);
 	}
 	EnterCriticalSection(_condor_dprintf_critsec);
-#elif defined(HAS_PTHREADS)
-	pthread_mutex_lock(&_condor_dprintf_critsec);
 #endif
 
 #if !defined(WIN32) /* signals and umasks don't exist in WIN32 */
@@ -333,8 +332,6 @@ _condor_dprintf_va( int flags, const char* fmt, va_list args )
 
 #ifdef WIN32
 	LeaveCriticalSection(_condor_dprintf_critsec);
-#elif defined(HAS_PTHREADS)
-	pthread_mutex_unlock(&_condor_dprintf_critsec);
 #endif
 
 }
