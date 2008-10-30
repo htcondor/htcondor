@@ -35,9 +35,9 @@
 	we need on Windows if we are not linked w/ some Win32 pthread library
 */
 
-#if defined(WIN32) && !defined(HAVE_PTHREADS)
+#if defined(WIN32) && !defined(HAS_PTHREADS)
 
-#define HAVE_PTHREADS 1
+#define HAS_PTHREADS 1
 typedef CRITICAL_SECTION pthread_mutex_t;
 typedef DWORD pthread_t;
 typedef void pthread_mutexattr_t;
@@ -314,7 +314,7 @@ ThreadImplementation::get_main_thread_ptr()
 }
 
 // The rest of the ThreadImplementaion class needs pthreads.
-#ifdef HAVE_PTHREADS
+#ifdef HAS_PTHREADS
 
 #ifndef WIN32
 	#include <pthread.h>
@@ -457,21 +457,6 @@ ThreadImplementation::yield()
 	return 0;
 }
 
-/*static*/ void
-ThreadImplementation::mutex_handle_lock()
-{
-	// TODO --- add some sort of reference counting on this mutex
-	if ( TI ) 
-		pthread_mutex_lock(&(TI->get_handle_lock));	
-}
-
-/*static*/ void
-ThreadImplementation::mutex_handle_unlock()
-{
-	// TODO --- add some sort of reference counting on this mutex
-	if ( TI ) 
-		pthread_mutex_unlock(&(TI->get_handle_lock));	
-}
 
 int
 ThreadImplementation::pool_add(condor_thread_func_t routine, void *arg)
@@ -488,14 +473,14 @@ ThreadImplementation::pool_add(condor_thread_func_t routine, void *arg)
 	WorkerThreadPtr_t newthread = WorkerThread::create("FOO",routine,arg);
 
 	// Generate a tid (task id) not currently in use.
-	mutex_handle_lock();
+	pthread_mutex_lock(&(TI->get_handle_lock));	
 	do {
 		next_tid_++;
 		if ( next_tid_ == 1 ) next_tid_++;	// tid 1 is for main thread
 		if ( next_tid_ == INT_MAX ) next_tid_ = 2;	// we wrapped!
 	} while ( hashTidToWorker.exists(next_tid_) == 0 );	
 	int mytid = next_tid_;
-	mutex_handle_unlock();
+	pthread_mutex_unlock(&(TI->get_handle_lock));
 	
 	newthread->tid_ = mytid;
 
@@ -517,6 +502,7 @@ ThreadImplementation::pool_add(condor_thread_func_t routine, void *arg)
 	return mytid;
 }
 
+
 const WorkerThreadPtr_t 
 ThreadImplementation::get_handle(int tid)
 {
@@ -531,20 +517,15 @@ ThreadImplementation::get_handle(int tid)
 		return get_main_thread_ptr();
 	}
 
-	if ( tid < 0 ) {
-		tid = 0;
-	}
-
 	WorkerThreadPtr_t worker;
 
-	mutex_handle_lock();
+	pthread_mutex_lock(&(TI->get_handle_lock));
 
 	if ( tid ) {
 		TI->hashTidToWorker.lookup(tid,worker);
 	} else {
 		ThreadInfo ti( pthread_self() );
 		TI->hashThreadToWorker.lookup(ti,worker);
-
 		if ( worker.is_null() ) {
 			// not in our table; if this is the first time we are being
 			// called, it would be from pool_init, thus we have 
@@ -564,12 +545,10 @@ ThreadImplementation::get_handle(int tid)
 		}
 	}
 
-	mutex_handle_unlock();
+	pthread_mutex_unlock(&(TI->get_handle_lock));
 
 	return worker;
 }
-
-extern THREAD_LOCAL_STORAGE int CurrentTid;
 
 ThreadStartFunc_t
 ThreadImplementation::threadStart(void *)
@@ -591,21 +570,16 @@ ThreadImplementation::threadStart(void *)
 		// grab next work item
 		TI->work_queue.dequeue(item);
 
-#ifdef HAVE_TLS
-		CurrentTid = item->get_tid();
-#endif
-
-		mutex_handle_lock();
+		pthread_mutex_lock(&(TI->get_handle_lock));
 		// map this thread to this work unit 
 		if ( TI->hashThreadToWorker.insert(ti,item) < 0 ) {
 			// Insert failed; this thread must already be in the
 			// hashtable.  This should never happen!
 			EXCEPT("Threading data structures inconsistent!");
 		}		
-		mutex_handle_unlock();
-
 		// update status for this work unit
 		item->set_status( WorkerThread::THREAD_RUNNING );
+		pthread_mutex_unlock(&(TI->get_handle_lock));
 
 		// update our count of how many threads are busy
 		(TI->num_threads_busy_)++;
@@ -623,19 +597,20 @@ ThreadImplementation::threadStart(void *)
 		}
 		(TI->num_threads_busy_)--;
 
+		pthread_mutex_lock(&(TI->get_handle_lock));
 
-		mutex_handle_lock();
+		// update status
+		item->set_status( WorkerThread::THREAD_COMPLETED );
+
 		// this thread is done w/ this work item, unmap it.
 		if ( TI->hashThreadToWorker.remove(ti) < 0 ) {
 			// Removal failed because we didn't find this thread
 			// in our hashtable. This should never happen!
 			EXCEPT("Threading data structures inconsistent!");
-		}		
-		mutex_handle_unlock();
+		}
+		
+		pthread_mutex_unlock(&(TI->get_handle_lock));
 
-
-		// update status
-		item->set_status( WorkerThread::THREAD_COMPLETED );
 	}
 }
 
@@ -691,15 +666,9 @@ ThreadImplementation::pool_init()
 #ifdef WIN32
 		_beginthread(ThreadImplementation::threadStart,0,NULL);
 #else
-		// TODO --- set thread signal mask
-		pthread_t notUsed;
-		int result = pthread_create(&notUsed,NULL,ThreadImplementation::threadStart,NULL);
+		int result = pthread_create(NULL,NULL,ThreadImplementation::threadStart,NULL);
 		ASSERT( result == 0 );
 #endif
-	}
-
-	if ( num_threads_ > 0 ) {
-		CurrentTid = 1;
 	}
 
 	return num_threads_;
@@ -794,12 +763,12 @@ ThreadImplementation::remove_tid(int tid)
 		return;
 	}
 
-	mutex_handle_lock();
+	pthread_mutex_lock(&(TI->get_handle_lock));	
 	hashTidToWorker.remove(tid);
-	mutex_handle_unlock();
+	pthread_mutex_unlock(&(TI->get_handle_lock));
 }
 
-#else	// ifdef HAVE_PTHREADS
+#else	// ifdef HAS_PTHREADS
 
 /* Stubs for systems that do not have pthreads */
 
@@ -867,7 +836,7 @@ void ThreadImplementation::remove_tid(int)
 	return;
 }
 
-#endif	// ifdef else HAVE_PTHREADS
+#endif	// ifdef else HAS_PTHREADS
 
 /**********************************************************************/
 

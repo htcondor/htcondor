@@ -37,8 +37,8 @@ void _mark_thread_safe(int start_or_stop, int dologging, const char* descrip,
 					   const char* func, const char* file, int line);
 
 	/* couple of simple C wrappers for use by dprintf... */
-int CondorThreads_pool_size(void);
-int CondorThreads_gettid(void);
+int CondorThreads_pool_size();
+int CondorThreads_gettid();
 
 END_C_DECLS
 #ifdef __cplusplus

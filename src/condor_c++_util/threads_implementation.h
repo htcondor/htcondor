@@ -30,7 +30,7 @@
 	typedef void ThreadStartFunc_t;
 #else
 	typedef void* ThreadStartFunc_t;
-	#ifdef HAVE_PTHREADS
+	#ifdef HAS_PTHREADS
 		#include <pthread.h>
 	#else
 		typedef int pthread_t;
@@ -76,8 +76,7 @@ public:
 	static unsigned int hashFuncThreadInfo(const ThreadInfo & mythread);
 	static const WorkerThreadPtr_t get_main_thread_ptr();
 	void remove_tid(int tid);
-	static void mutex_handle_lock();
-	static void mutex_handle_unlock();
+
 
 	/****** DATA MEMBERS *******/
 	pthread_mutex_t big_lock;	// big lock protecting condor code
