@@ -91,7 +91,9 @@ int CollectorDaemon::UpdateTimerId;
 ClassAd *CollectorDaemon::query_any_result;
 ClassAd CollectorDaemon::query_any_request;
 
+#if defined ( HAVE_HIBERNATION )
 OfflineCollectorPlugin CollectorDaemon::offline_plugin_;
+#endif
 
 //---------------------------------------------------------
 
@@ -266,6 +268,7 @@ void CollectorDaemon::Init()
 		(CommandHandler)receive_update_expect_ack,
 		"receive_update_expect_ack",NULL,ADVERTISE_STARTD_PERM);
 
+#if defined ( HAVE_HIBERNATION )
     // add all persisted ads back into the collector's store
     // process the given command
     int     insert = -3;
@@ -289,6 +292,7 @@ void CollectorDaemon::Init()
 	    }
 
     }      
+#endif
 
 	// ClassAd evaluations use this function to resolve names
 	// ClassAdLookupRegister( process_global_query, this );
@@ -584,8 +588,10 @@ int CollectorDaemon::receive_invalidation(Service* /*s*/,
 	if (command == INVALIDATE_STARTD_ADS)
 		process_invalidation (STARTD_PVT_AD, cad, sock);
 
+#if defined ( HAVE_HIBERNATION )
     /* let the off-line plug-in invalidate the given ad */
     offline_plugin_.invalidate ( command, cad );
+#endif
 
 #if HAVE_DLOPEN
 	CollectorPluginManager::Invalidate(command, cad);
@@ -652,8 +658,10 @@ int CollectorDaemon::receive_update(Service* /*s*/, int command, Stream* sock)
 		}
 	}
 
+#if defined ( HAVE_HIBERNATION )
 	/* let the off-line plug-in have at it */
 	offline_plugin_.update ( command, *ad );
+#endif
 
 #if HAVE_DLOPEN
 	CollectorPluginManager::Update(command, *cad);
@@ -772,8 +780,10 @@ int CollectorDaemon::receive_update_expect_ack( Service* /*s*/,
         
     }
 
+#if defined ( HAVE_HIBERNATION )
     /* let the off-line plug-in have at it */
     offline_plugin_.update ( command, *cad );
+#endif
 
 #if HAVE_DLOPEN
     CollectorPluginManager::Update ( command, *cad );
@@ -1205,7 +1215,10 @@ void CollectorDaemon::Config()
     // set the appropriate parameters in the collector engine
     collector.setClientTimeout( ClientTimeout );
     collector.scheduleHousekeeper( ClassadLifetime );
-	offline_plugin_.configure();
+
+#if defined ( HAVE_HIBERNATION )
+    offline_plugin_.configure();
+#endif
 
     // if we're not the View Collector, let's set something up to forward
     // all of our ads to the view collector.

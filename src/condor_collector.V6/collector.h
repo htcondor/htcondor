@@ -137,7 +137,9 @@ protected:
 
 private:
 
+#if defined ( HAVE_HIBERNATION )
     static OfflineCollectorPlugin offline_plugin_;
+#endif
 
 };
 
