@@ -2186,11 +2186,8 @@ fi
 # flags to the compile line for drmaa code.
 AC_CHECK_LIB([pthread], [pthread_create],
   [ac_pthreads=yes
-   AC_DEFINE([HAVE_PTHREADS],[1],[Define if pthreads are available])],
+   AC_DEFINE([HAS_PTHREADS],[1],[Define if pthreads are available])],
   [ac_pthreads=no])
-
-# Check if this system support Thread Local Storage class.
-AX_TLS
 
 
 ############################################################

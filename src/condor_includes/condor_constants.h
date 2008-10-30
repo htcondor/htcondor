@@ -99,19 +99,12 @@ static const char NiceUserName[] = "nice-user";
 /* This is a compiler-specific type-modifer to request
  * a variable be stored as thread-local-storage.
  */
-#if defined(WIN32)
-	/* We know Windows has TLS */
-	#define HAVE_TLS 1
-	#define THREAD_LOCAL_STORAGE __declspec( thread ) 
-#elif defined(HAVE_TLS) && defined(HAVE_PTHREADS)
-	/* In this case, configure tells us we have TLS and PTHREADS */
-	#define THREAD_LOCAL_STORAGE TLS
+#ifdef WIN32
+#define THREAD_LOCAL_STORAGE __declspec( thread ) 
+#elif __GNUC__
+#define THREAD_LOCAL_STORAGE __thread
 #else
-	/* In this case, we are missing either TLS or PTHREADS */
-	#define THREAD_LOCAL_STORAGE /* Blank */
-	#ifdef HAVE_TLS		/* TLS w/o PTHREADS is dead to us */
-		#undef HAVE_TLS
-	#endif
+#define THREAD_LOCAL_STORAGE /* Dunno */
 #endif
 
 /* Max space needed to hold an IP string, as
