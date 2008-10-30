@@ -49,7 +49,9 @@ ResMgr::ResMgr()
 	m_netif = NetworkAdapterBase::createNetworkAdapter(
 		daemonCore->InfoCommandSinfulString (), false );
 	m_hibernation_manager = new HibernationManager( );
-	m_hibernation_manager->addInterface( *m_netif );
+	if ( m_netif ) {
+		m_hibernation_manager->addInterface( *m_netif );
+	}
 	m_hibernate_tid = -1;
 	NetworkAdapterBase	*primary = m_hibernation_manager->getNetworkAdapter();
 	if ( NULL == primary ) {
