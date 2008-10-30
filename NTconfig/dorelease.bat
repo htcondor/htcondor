@@ -45,7 +45,6 @@ copy ..\src\condor_chirp\chirp\doc\Condor %1\src\chirp\README
 
 echo. & echo Copying example configurations...
 copy ..\src\condor_examples\condor_config.* %1\etc
-copy ..\src\condor_examples\condor_vmgahp_config.vmware %1\etc
 
 echo. & echo Copying example submit files...
 copy installer\examples\*.* %1\examples

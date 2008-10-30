@@ -114,24 +114,58 @@ BEGIN {
 	next
 }
 
-# Make it so we can fill in the VM GAHP options if we choose to in the
-# installer. 
-/^#VM_GAHP_CONFIG/ {
-	print "#VM_GAHP_CONFIG = $(RELEASE_DIR)/condor_vmgahp_config.vmware"
-	print "VM_GAHP_CONFIG ="
-	next
-}
+# Make it so we can fill in the VM GAHP options if we choose 
+# to in the installer. 
 /^#VM_TYPE/ {
-	print "#VM_TYPE = vmware"
 	print "VM_TYPE ="
 	next
 }
-/^#VM_NETWORKING/ {
-	print "VM_NETWORKING = FALSE"
+/^#VM_VERSION/ {
+	print "#VM_VERSION = server1.0"
+	print "VM_VERSION ="
 	next
 }
 /^#VM_MAX_NUMBER/ {
 	print "VM_MAX_NUMBER = $(NUM_CPUS)"
+	next
+}
+/^#VM_MEMORY/ {
+	print "VM_MEMORY = 128"
+	next
+}
+/^#VMWARE_LOCAL_SETTINGS_FILE/ {
+	print "VMWARE_LOCAL_SETTINGS_FILE = $(RELEASE_DIR)/condor_config.vmgahp"
+	next
+}
+
+
+# Set it up so we can change the VMWARE_SCRIPT option if we choose to
+# do so in the installer
+#/^VMWARE_SCRIPT/ {
+#	printf "VMWARE_SCRIPT = $(BIN)/condor_vm_vmware.pl\n"
+#	next
+#}
+
+# Change the configuration such that we can modify the VMware 
+# networking types
+/^#VM_NETWORKING_TYPE/ {
+	print "VM_NETWORKING_TYPE = nat"
+	next
+}
+/^#VM_NETWORKING_DEFAULT_TYPE/ {
+	print "VM_NETWORKING_DEFAULT_TYPE = nat"
+	next
+}
+/^#VM_NETWORKING =/ {
+	print "VM_NETWORKING = FALSE"
+	next
+}
+/^#VMWARE_NAT_NETWORKING_TYPE/ {
+	printf "VMWARE_NAT_NETWORKING_TYPE = nat\n"
+	next
+}
+/^#VMWARE_BRIDGE_NETWORKING_TYPE/ {
+	printf "VMWARE_BRIDGE_NETWORKING_TYPE = bridged\n"
 	next
 }
 
