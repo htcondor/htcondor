@@ -2092,19 +2092,12 @@ DBMSD_LOG = $(LOG)/DbmsdLog
 
 ## If the VM-GAHP is to have its own log, define 
 ## the location of log file.
-## Like the Gridmanager and C-GAHP, the VM-GAHP is run as the User, 
-## not a Condor daemon, so all users must have write permssion 
-## to the directory used for the log file. Our suggestion is to create 
-## a directory called VMGahpLogs in $(LOG) with 
-## UNIX permissions 1777 (just like /tmp )
-## Another option is to use /tmp as the location of the VM-GAHP log.
 ##
 ## Optionally, if you do NOT define VM_GAHP_LOG, logs of VM-GAHP will 
 ## be stored in the starter's log file. 
 ## However, on Windows machine you must always define VM_GAHP_LOG. 
 #
-#VM_GAHP_LOG	= $(LOG)/VMGahpLogs/VMGahpLog.$(USERNAME)
-VM_GAHP_LOG	= /tmp/VMGAHPLog.$(USERNAME)
+VM_GAHP_LOG	= $(LOG)/VMGahpLog
 MAX_VM_GAHP_LOG	= 1000000
 #VM_GAHP_DEBUG = D_FULLDEBUG
 
