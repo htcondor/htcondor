@@ -87,7 +87,8 @@ WindowsNetworkAdapter::initialize (void) {
 
     PIP_ADAPTER_INFO    adapters    = NULL,
                         current     = NULL;
-	DWORD               error       = 0;
+	DWORD               error       = 0,
+                        supports    = 0;
 	ULONG               size;
     LPCSTR              other       = NULL;
     unsigned int        i           = 0;
@@ -117,6 +118,10 @@ WindowsNetworkAdapter::initialize (void) {
 
         } else {
 
+            /* reset any bits set from a previous initialization */
+            wolResetSupportBits ();
+            wolEnableSupportBit ();
+
             /* got it, lets run through them and the one we 
             are interested in */
             current = adapters;
@@ -129,6 +134,9 @@ WindowsNetworkAdapter::initialize (void) {
                 if ( MATCH == strcmp ( _ip_address, ip ) ||
                      MATCH == strcmp ( _description, description ) ) {
                     
+                    /* we do exist! */
+                    _exists = true;
+
                     /* record the adpater GUID */
                     strncpy (
                         _adapter_name, 
@@ -139,9 +147,16 @@ WindowsNetworkAdapter::initialize (void) {
                     capabilities */ 
                     power_data = getPowerData ();
                     if ( power_data ) {
-                        _wake_able = power_data->PD_Capabilities 
-                            & WAKE_FROM_ANY_SUPPORTED; // 0xF0;
 
+                        /* shorten the variable we need to use */
+                        supports = power_data->PD_Capabilities;
+                        
+                        /* do we support waking from any state? */
+                        if ( supports & WAKE_FROM_ANY_SUPPORTED ) {
+                            wolEnableSupportBit ( WOL_MAGIC );
+                            wolEnableEnableBit ( WOL_MAGIC );
+                        }
+                        
                         LocalFree ( power_data );
                     }
 
@@ -198,11 +213,6 @@ WindowsNetworkAdapter::ipAddress (void) const {
 const char*
 WindowsNetworkAdapter::subnet (void) const {
     return _subnet;
-}
-
-bool
-WindowsNetworkAdapter::wakeAble (void) const {
-    return _wake_able;
 }
 
 bool

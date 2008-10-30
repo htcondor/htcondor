@@ -81,12 +81,6 @@ public:
 	*/
 	const char *interfaceName( void ) const { return _adapter_name; };
 
-    /** Returns the adapter's hardware address
-		@return a string representation of the addapter's hardware
-        address
-	*/
-	bool wakeAble (void) const;
-
     /** Checks that the adapter actually exists
         @returns true if the adapter exists on the machine;
         otherwise, false.
@@ -122,8 +116,7 @@ private:
          _hardware_address[32],
          _subnet[IP_STRING_BUF_SIZE],
          _adapter_name[MAX_ADAPTER_NAME_LENGTH + 4];
-    bool _wake_able,
-         _exists;
+    bool _exists;
 
     /**	Some registry values require some preprocessing before they can
 		be queried, so we allow a user to specify a function to handle
