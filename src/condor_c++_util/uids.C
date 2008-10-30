@@ -32,18 +32,10 @@
 /* See condor_uid.h for description. */
 static char* CondorUserName = NULL;
 static const char* RealUserName = NULL;
+THREAD_LOCAL_STORAGE static priv_state CurrentPrivState = PRIV_UNKNOWN;
 static int SwitchIds = TRUE;
 static int UserIdsInited = FALSE;
 static int OwnerIdsInited = FALSE;
-/*
-   On Unix, the current uid is process wide.  On Win32, it is specific to each
-   thread.  So on Win32 only, priv_state is TLS.
-*/
-#ifdef WIN32
-THREAD_LOCAL_STORAGE static priv_state CurrentPrivState = PRIV_UNKNOWN;
-#else
-static priv_state CurrentPrivState = PRIV_UNKNOWN;
-#endif
 
 #if !defined(WIN32)
 /*
