@@ -2232,7 +2232,6 @@ AC_CHECK_HEADERS([resolv.h],[],[],[
 #include<sys/types.h>
 #include<netinet/in.h>
 #include<arpa/nameser.h>])
-AC_CHECK_HEADERS([pthread.h])
 
 
 ############################################################

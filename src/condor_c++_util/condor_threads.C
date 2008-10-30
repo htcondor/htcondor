@@ -220,6 +220,12 @@ static ThreadImplementation* TI = NULL;
 
 /**********************************************************************/
 
+bool operator== (const ThreadInfo &lhs, const ThreadInfo &rhs)
+{
+	return ( pthread_equal(lhs.get_pthread(),rhs.get_pthread()) ? true : false );
+}
+
+/**********************************************************************/
 
 // WorkerThread ctor
 WorkerThread::WorkerThread()
@@ -307,26 +313,12 @@ ThreadImplementation::get_main_thread_ptr()
 	return main_thread_ptr;
 }
 
-#ifndef HAVE_PTHREADS
-
-bool operator== (const ThreadInfo &lhs, const ThreadInfo &rhs)
-{
-	return ( &lhs == &rhs ? true : false );
-}
-
-#endif
-
 // The rest of the ThreadImplementaion class needs pthreads.
 #ifdef HAVE_PTHREADS
 
 #ifndef WIN32
 	#include <pthread.h>
 #endif
-
-bool operator== (const ThreadInfo &lhs, const ThreadInfo &rhs)
-{
-	return ( pthread_equal(lhs.get_pthread(),rhs.get_pthread()) ? true : false );
-}
 
 void
 WorkerThread::set_status(thread_status_t newstatus)
