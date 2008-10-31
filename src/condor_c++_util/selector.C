@@ -421,20 +421,24 @@ display_fd_set( char *msg, fd_set *set, int max, bool try_dup )
 	for( i=0; i<=max; i++ ) {
 		if( FD_ISSET(i,set) ) {
 			dprintf( D_ALWAYS | D_NOHEADER, "%d", i );
+
+#         if defined( UNIX )
+			if( try_dup ) {
+				int newfd = dup( i );
+				if ( newfd >= 0 ) {
+					close( newfd );
+				}
+				else if ( EBADF == errno ) {
+					dprintf( D_ALWAYS | D_NOHEADER, "<EBADF> " );
+				}
+				else {
+					dprintf( D_ALWAYS | D_NOHEADER, "<%d> ", errno );
+				}
+			}
+#	     endif
+
+			dprintf( D_ALWAYS | D_NOHEADER, " " );
 		}
-		if( try_dup ) {
-			int newfd = dup( i );
-			if ( newfd >= 0 ) {
-				close( newfd );
-			}
-			else if ( EBADF == errno ) {
-				dprintf( D_ALWAYS | D_NOHEADER, "<EBADF> " );
-			}
-			else {
-				dprintf( D_ALWAYS | D_NOHEADER, "<%d> ", errno );
-			}
-		}
-		dprintf( D_ALWAYS | D_NOHEADER, " " );
 	}
 	dprintf( D_ALWAYS | D_NOHEADER, "}\n" );
 }
