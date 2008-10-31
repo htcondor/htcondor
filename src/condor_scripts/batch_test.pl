@@ -866,7 +866,7 @@ sub CreateLocalConfig
 	print FIX "NEGOTIATOR_DEBUG        = D_MATCH\n";
 	print FIX "MAX_NEGOTIATOR_MATCH_LOG = $logsize\n";
 
-	print FIX "MAX_SCHEDD_LOG          = 2500000\n";
+	print FIX "MAX_SCHEDD_LOG          = 50000000\n";
 	print FIX "SCHEDD_DEBUG            = D_COMMAND\n";
 
 	print FIX "MAX_SHADOW_LOG          = $logsize\n";
