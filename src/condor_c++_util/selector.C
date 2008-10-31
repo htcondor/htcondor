@@ -25,8 +25,6 @@
 #include "selector.h"
 
 
-void display_fd_set( char *msg, fd_set *set, int max );
-
 int Selector::_fd_select_size = -1;
 
 fd_set *Selector::cached_read_fds = NULL;
@@ -104,6 +102,7 @@ void
 Selector::reset()
 {
 	_select_retval = -2;
+	_select_errno = 0;
 	state = VIRGIN;
 	timeout_wanted = FALSE;
 	max_fd = -1;
@@ -268,6 +267,7 @@ Selector::execute()
 	_select_retval = nfds;
 
 	if( nfds < 0 ) {
+		_select_errno = errno;
 #if !defined(WIN32)
 		if( errno == EINTR ) {
 			state = SIGNALLED;
@@ -277,6 +277,7 @@ Selector::execute()
 		state = FAILED;
 		return;
 	}
+	_select_errno = 0;
 
 	if( nfds == 0 ) {
 		state = TIMED_OUT;
@@ -290,6 +291,12 @@ int
 Selector::select_retval()
 {
 	return _select_retval;
+}
+
+int
+Selector::select_errno()
+{
+	return _select_errno;
 }
 
 BOOLEAN
@@ -383,9 +390,10 @@ Selector::display()
 	dprintf( D_ALWAYS, "max_fd = %d\n", max_fd );
 
 	dprintf( D_ALWAYS, "Selection FD's\n" );
-	display_fd_set( "\tRead", save_read_fds, max_fd );
-	display_fd_set( "\tWrite", save_write_fds, max_fd );
-	display_fd_set( "\tExcept", save_except_fds, max_fd );
+	bool try_dup = ( (FAILED == state) &&  (EBADF == _select_errno) );
+	display_fd_set( "\tRead", save_read_fds, max_fd, try_dup );
+	display_fd_set( "\tWrite", save_write_fds, max_fd, try_dup );
+	display_fd_set( "\tExcept", save_except_fds, max_fd, try_dup );
 
 	if( state == FDS_READY ) {
 		dprintf( D_ALWAYS, "Ready FD's\n" );
@@ -405,15 +413,28 @@ Selector::display()
 }
 
 void
-display_fd_set( char *msg, fd_set *set, int max )
+display_fd_set( char *msg, fd_set *set, int max, bool try_dup )
 {
 	int		i;
 
 	dprintf( D_ALWAYS, "%s {", msg );
 	for( i=0; i<=max; i++ ) {
 		if( FD_ISSET(i,set) ) {
-			dprintf( D_ALWAYS | D_NOHEADER, "%d ", i );
+			dprintf( D_ALWAYS | D_NOHEADER, "%d", i );
 		}
+		if( try_dup ) {
+			int newfd = dup( i );
+			if ( newfd >= 0 ) {
+				close( newfd );
+			}
+			else if ( EBADF == errno ) {
+				dprintf( D_ALWAYS | D_NOHEADER, "<EBADF> " );
+			}
+			else {
+				dprintf( D_ALWAYS | D_NOHEADER, "<%d> ", errno );
+			}
+		}
+		dprintf( D_ALWAYS | D_NOHEADER, " " );
 	}
 	dprintf( D_ALWAYS | D_NOHEADER, "}\n" );
 }

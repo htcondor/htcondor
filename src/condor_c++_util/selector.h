@@ -45,6 +45,7 @@ public:
 	void unset_timeout();
 	void execute();
 	int select_retval();
+	int select_errno();
 	BOOLEAN	has_ready();
 	BOOLEAN	timed_out();
 	BOOLEAN	signalled();
@@ -66,6 +67,9 @@ private:
 	struct timeval	timeout;
 	SELECTOR_STATE	state;
 	int		_select_retval;
+	int		_select_errno;
 };
+
+void display_fd_set( char *msg, fd_set *set, int max, bool try_dup = false);
 
 #endif
