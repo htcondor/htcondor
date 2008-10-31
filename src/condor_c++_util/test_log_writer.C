@@ -25,6 +25,7 @@
 #include "condor_debug.h"
 #include "subsystem_info.h"
 #include "condor_random_num.h"
+#include "condor_string.h"
 #include "simple_arg.h"
 #include <stdio.h>
 #include <unistd.h>
@@ -69,6 +70,7 @@ public:
 		m_eventp = NULL;
 		m_name = NULL;
 		m_note = NULL;
+		m_is_large = false;
 	}
 	~EventInfo( void ) {
 		Reset( );
@@ -700,8 +702,8 @@ EventInfo::GenEventSubmit( void )
 		// Note: the line below is designed specifically to work with
 		// Kent's dummy stork_submit script for testing DAGs with
 		// DATA nodes.
-	e->submitEventLogNotes = strdup(m_opts->submitNote);
-	e->submitEventUserNotes = strdup("User info");
+	e->submitEventLogNotes  = strnewp(m_opts->submitNote);
+	e->submitEventUserNotes = strnewp("User info");
 
 	return SetEvent( e );
 }
