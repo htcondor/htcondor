@@ -255,6 +255,7 @@ UserLog::Reset( void )
 	m_global_lock = NULL;
 
 	m_rotation_lock = NULL;
+	m_rotation_lock_fd = 0;
 	m_rotation_lock_path = NULL;
 
 	m_use_xml = XML_USERLOG_DEFAULT;
