@@ -144,12 +144,16 @@ Selector::fd_select_size()
 	return _fd_select_size;
 }
 
+/*
+ * Returns a newly-allocated null-terminated string describing the fd
+ * (filename or pipe/socket info).  Currently only implemented on Linux,
+ * implemented via /proc/.
+ */
 char* 
 describe_fd(int fd) {
 #if defined(LINUX)
 #define PROC_BUFSIZE 32
 #define LINK_BUFSIZE 256
-
   char proc_buf[PROC_BUFSIZE];
   char link_buf[LINK_BUFSIZE];
   ssize_t end;
@@ -188,9 +192,17 @@ Selector::add_fd( int fd, IO_FUNC interest )
 	}
 #endif
 
-	char *fd_description = describe_fd(fd);
+	char *fd_description = "";
+
+	if(DebugFlags & D_FULLDEBUG) {
+	  fd_description = describe_fd(fd);
+	}
+
 	dprintf(D_FULLDEBUG, "selector 0x%lX adding fd %d (%s)\n", (unsigned long)this, fd, fd_description);
-	free(fd_description);
+
+	if (DebugFlags & D_FULLDEBUG) {
+	  free(fd_description);
+	}
 
 	switch( interest ) {
 
