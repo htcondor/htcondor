@@ -56,20 +56,20 @@ CONDOR_DEFINE_GUID(CONDOR_GUID_NDIS_LAN_CLASS, 0xad498944, 0x762f,
  ***************************************************************/
 
 WindowsNetworkAdapter::WindowsNetworkAdapter (void) throw () 
-: _wake_able ( false ), _exists ( false ) {
+: _exists ( false ) {
     strncpy ( _ip_address, my_ip_string (), IP_STRING_BUF_SIZE );
     initialize ();
 }
 
 WindowsNetworkAdapter::WindowsNetworkAdapter ( LPCSTR ip_addr,
 											   unsigned int /*ip*/) throw ()
-: _wake_able ( false ), _exists ( false ) {
+: _exists ( false ) {
     strncpy ( _ip_address, ip_addr, IP_STRING_BUF_SIZE );
     initialize (); 
 }
 
 WindowsNetworkAdapter::WindowsNetworkAdapter ( LPCSTR description ) throw ()
-: _wake_able ( false ), _exists ( false ) {
+: _exists ( false ) {
     strncpy ( _description, description,
         MAX_ADAPTER_DESCRIPTION_LENGTH + 4 );
     initialize ();
@@ -120,7 +120,7 @@ WindowsNetworkAdapter::initialize (void) {
 
             /* reset any bits set from a previous initialization */
             wolResetSupportBits ();
-            wolEnableSupportBit ();
+            // wolEnableSupportBit (); NRL disabled this
 
             /* got it, lets run through them and the one we 
             are interested in */
@@ -133,7 +133,7 @@ WindowsNetworkAdapter::initialize (void) {
 
                 if ( MATCH == strcmp ( _ip_address, ip ) ||
                      MATCH == strcmp ( _description, description ) ) {
-                    
+
                     /* we do exist! */
                     _exists = true;
 
@@ -156,7 +156,7 @@ WindowsNetworkAdapter::initialize (void) {
                             wolEnableSupportBit ( WOL_MAGIC );
                             wolEnableEnableBit ( WOL_MAGIC );
                         }
-                        
+
                         LocalFree ( power_data );
                     }
 

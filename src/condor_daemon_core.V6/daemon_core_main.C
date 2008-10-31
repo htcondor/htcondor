@@ -283,7 +283,7 @@ DC_Exit( int status, const char *shutdown_program )
 		int exec_status = execl( shutdown_program, shutdown_program, NULL );
 		dprintf( D_ALWAYS, "**** execl() FAILED %d %d %s\n",
 				 exec_status, errno, strerror(errno) );
-#     elif (HAVE__EXECL)	// Win32
+#     elif defined(WIN32)
 		dprintf( D_ALWAYS, "**** %s (%s_%s) EXECING SHUTDOWN PROGRAM %s\n",
 				 myName, myDistro->Get(), mySubSystem->getName(),
 				 shutdown_program );
