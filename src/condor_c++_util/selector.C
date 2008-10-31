@@ -422,8 +422,8 @@ display_fd_set( char *msg, fd_set *set, int max, bool try_dup )
 		if( FD_ISSET(i,set) ) {
 			dprintf( D_ALWAYS | D_NOHEADER, "%d", i );
 
-#         if defined( UNIX )
 			if( try_dup ) {
+#			  if defined( UNIX )
 				int newfd = dup( i );
 				if ( newfd >= 0 ) {
 					close( newfd );
@@ -434,8 +434,8 @@ display_fd_set( char *msg, fd_set *set, int max, bool try_dup )
 				else {
 					dprintf( D_ALWAYS | D_NOHEADER, "<%d> ", errno );
 				}
+#			  endif
 			}
-#	     endif
 
 			dprintf( D_ALWAYS | D_NOHEADER, " " );
 		}
