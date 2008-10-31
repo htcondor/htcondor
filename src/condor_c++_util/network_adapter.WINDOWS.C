@@ -58,21 +58,21 @@ CONDOR_DEFINE_GUID(CONDOR_GUID_NDIS_LAN_CLASS, 0xad498944, 0x762f,
 WindowsNetworkAdapter::WindowsNetworkAdapter (void) throw () 
 : _exists ( false ) {
     strncpy ( _ip_address, my_ip_string (), IP_STRING_BUF_SIZE );
-    initialize ();
+    _description[0] = '\0';
 }
 
 WindowsNetworkAdapter::WindowsNetworkAdapter ( LPCSTR ip_addr,
 											   unsigned int /*ip*/) throw ()
 : _exists ( false ) {
     strncpy ( _ip_address, ip_addr, IP_STRING_BUF_SIZE );
-    initialize (); 
+    _description[0] = '\0';
 }
 
 WindowsNetworkAdapter::WindowsNetworkAdapter ( LPCSTR description ) throw ()
 : _exists ( false ) {
     strncpy ( _description, description,
         MAX_ADAPTER_DESCRIPTION_LENGTH + 4 );
-    initialize ();
+    _ip_address[0] = '\0';
 }
 
 WindowsNetworkAdapter::~WindowsNetworkAdapter (void) throw () {
@@ -89,8 +89,10 @@ WindowsNetworkAdapter::initialize (void) {
                         current     = NULL;
 	DWORD               error       = 0,
                         supports    = 0;
+    UINT                length      = 0;
 	ULONG               size;
     LPCSTR              other       = NULL;
+    LPSTR               offset      = _hardware_address;
     unsigned int        i           = 0;
     PCM_POWER_DATA      power_data  = NULL;
     bool                ok          = false;
@@ -118,15 +120,29 @@ WindowsNetworkAdapter::initialize (void) {
 
         } else {
 
+            /* initialize the Setup DLL */
+            if ( !_setup_dll.load () ) {
+                
+                dprintf ( 
+                    D_FULLDEBUG, 
+                    "WindowsNetworkAdapter::initialize: "
+                    "Failed to load setup.dll which is required to "
+                    "gather power information for network "
+                    "adapters.\n" );
+
+                __leave;
+
+            }
+
             /* reset any bits set from a previous initialization */
             wolResetSupportBits ();
-            // wolEnableSupportBit (); NRL disabled this
+            wolResetEnableBits ();
 
             /* got it, lets run through them and the one we 
             are interested in */
             current = adapters;
 
-	        while ( current ) {
+            while ( current ) {
                 
                 char *ip = current->IpAddressList.IpAddress.String,
                      *description = current->Description;
@@ -153,11 +169,18 @@ WindowsNetworkAdapter::initialize (void) {
                         
                         /* do we support waking from any state? */
                         if ( supports & WAKE_FROM_ANY_SUPPORTED ) {
+
+                            dprintf ( 
+                                D_FULLDEBUG, 
+                                "WOL_MAGIC enabled\n" );
+
                             wolEnableSupportBit ( WOL_MAGIC );
                             wolEnableEnableBit ( WOL_MAGIC );
                         }
 
                         LocalFree ( power_data );
+                        power_data = NULL;
+
                     }
 
                     /* copy over the adapter's subnet */
@@ -168,24 +191,33 @@ WindowsNetworkAdapter::initialize (void) {
 
                     /* finally, format the hardware address in the 
                     format our tools expect */
-                    for ( i = 0; i < current->AddressLength; ++i ) {
-                        printf ( "%.2X%c", current->Address[i], 
-				        i == current->AddressLength - 1 ? '\0' : ':' );
+                    length = current->AddressLength;
+                    for ( i = 0; i < length; ++i ) {
+                        sprintf ( offset, "%.2X%c", 
+                            current->Address[i], 
+				            i == length - 1 ? '\0' : ':' );
+                        offset += 3;
                     }
+
+                    dprintf ( 
+                        D_FULLDEBUG,
+                        "Hardware address: '%s'\n",
+                        _hardware_address );
+
+                    /* if we got here, then the world is a happy place */
+                    ok = true;
 
                     /* we found the one we want, so bail out early */
                     __leave;
 
-                }
+                } 
 
                 /* move on to the next one */
                 current = current->Next;
+
             }
 
-        } 
-
-        /* if we got here, then the world is a happy place */
-        ok = true;
+        }       
 
     }
     __finally {
@@ -428,7 +460,7 @@ WindowsNetworkAdapter::getRegistryProperty (
 
                 }
 
-                //dprintf ( D_FULLDEBUG, "DevicePath: %s\n", pdidd->DevicePath );
+                //dprintf ( D_FULLDEBUG, "DeviceName: %s\n", _adapter_name );
 
                 got_registry_property = SetupApiDLL::SetupDiGetDeviceRegistryProperty (
                     device_information,

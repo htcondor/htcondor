@@ -67,6 +67,12 @@ NetworkAdapterBase::createNetworkAdapter ( const char *sinful_or_name,
 
 	// Try to initialize it; delete it if it fails
 	if ( !adapter->doInitialize( ) ) {
+
+        dprintf ( 
+            D_FULLDEBUG, 
+            "doInitialize() failed for %s\n",
+            sinful_or_name );
+
 		delete adapter;
 		return NULL;
 	}
