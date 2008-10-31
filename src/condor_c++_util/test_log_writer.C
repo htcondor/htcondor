@@ -218,7 +218,7 @@ CheckArgs(int argc, const char **argv, Options &opts)
 		"  -n|--num-procs <number>: Number of procs (default = 10)\n"
 		"\n"
 		"  --generic <string>: Write generic event\n"
-		"  --persist <file>: persist writer state to file (for jobid gen)\n"
+		"  -p|--persist <file>: persist writer state to file (for jobid gen)\n"
 		"  --sleep <number>: how many seconds to sleep between events\n"
 		"  --no-sleep: Don't sleep at all between events\n"
 		"  --stork: simulate Stork (-1 for proc and subproc)\n"
@@ -323,7 +323,7 @@ CheckArgs(int argc, const char **argv, Options &opts)
 				status = true;
 			}
 
-		} else if ( arg.Match("persist") ) {
+		} else if ( arg.Match( 'p', "persist") ) {
 			if ( !arg.getOpt(opts.persistFile) ) {
 				fprintf(stderr, "Value needed for '%s'\n", arg.Arg() );
 				printf("%s", usage);
