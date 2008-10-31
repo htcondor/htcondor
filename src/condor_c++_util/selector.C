@@ -115,6 +115,8 @@ Selector::reset()
 	memset( save_write_fds, 0, fd_set_size * sizeof(fd_set) );
 	memset( save_except_fds, 0, fd_set_size * sizeof(fd_set) );
 #endif
+
+	dprintf(D_FULLDEBUG, "selector 0x%lX resetting\n", (unsigned long)this);
 }
 
 int
@@ -142,10 +144,37 @@ Selector::fd_select_size()
 	return _fd_select_size;
 }
 
+char* 
+describe_fd(int fd) {
+#if defined(LINUX)
+#define PROC_BUFSIZE 32
+#define LINK_BUFSIZE 256
+
+  char proc_buf[PROC_BUFSIZE];
+  char link_buf[LINK_BUFSIZE];
+  ssize_t end;
+  
+  memset(link_buf, '\0', LINK_BUFSIZE);
+
+  snprintf(proc_buf, PROC_BUFSIZE, "/proc/self/fd/%d", fd);
+  end = readlink(proc_buf, link_buf, LINK_BUFSIZE);
+
+  if (end == -1) { 
+    goto cleanup; 
+  }
+
+  link_buf[end] = '\0';
+  return strdup(link_buf);
+ cleanup:
+#endif
+  return strdup("");
+}
+
 void
 Selector::add_fd( int fd, IO_FUNC interest )
 {
 	// update max_fd (the highest valid index in fd_set's array) and also
+        
 	// make sure we're not overflowing our fd_set
 	// On Windows, we have to check the individual fd_set to see if it's
 	// full.
@@ -158,6 +187,10 @@ Selector::add_fd( int fd, IO_FUNC interest )
 				fd, _fd_select_size-1 );
 	}
 #endif
+
+	char *fd_description = describe_fd(fd);
+	dprintf(D_FULLDEBUG, "selector 0x%lX adding fd %d (%s)\n", (unsigned long)this, fd, fd_description);
+	free(fd_description);
 
 	switch( interest ) {
 
@@ -200,6 +233,8 @@ Selector::delete_fd( int fd, IO_FUNC interest )
 				fd, _fd_select_size-1 );
 	}
 #endif
+
+	dprintf(D_FULLDEBUG, "selector 0x%lX deleting fd %d\n", (unsigned long)this, fd);
 
 	switch( interest ) {
 
