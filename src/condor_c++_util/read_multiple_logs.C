@@ -776,6 +776,19 @@ MultiLogFiles::getJobLogsFromSubmitFiles(const MyString &strDagFileName,
 						(!stricmp(word, "subdag") &&
 						stricmp(jobKeyword.Value(), "data")) ) {
 
+				if ( !stricmp(word, "subdag") &&
+							stricmp(jobKeyword.Value(), "data") ) {
+			   			// Get INLINE or EXTERNAL
+               	const char *inlineOrExt = tokens.next();
+                	if ( strcasecmp( inlineOrExt, "EXTERNAL" ) ) {
+						MyString result = MyString("ERROR: only SUBDAG ") +
+									"EXTERNAL is supported at this time " +
+									"(line <" + logicalLine + ">)";
+                    	dprintf(D_ALWAYS, "%s\n", result.Value());
+                    	return result;
+                	}
+				}
+
 					// Get the node submit file name.
 				const char *nodeName = tokens.next();
 				const char *submitFile = tokens.next();

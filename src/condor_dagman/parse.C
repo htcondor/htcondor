@@ -50,10 +50,16 @@ static bool _useDagDir = false;
 static int _thisDagNum = -1;
 static bool _mungeNames = true;
 
-static bool parse_node( Dag *dag, Job::job_type_t nodeType,
+static bool parse_subdag( Dag *dag, Job::job_type_t nodeType,
 						const char* nodeTypeKeyword,
 						const char* dagFile, int lineNum,
 						const char *directory);
+
+static bool parse_node( Dag *dag, Job::job_type_t nodeType,
+						const char* nodeTypeKeyword,
+						const char* dagFile, int lineNum,
+						const char *directory, const char *inlineOrExt,
+						const char *submitOrDagFile);
 
 static bool parse_script(const char *endline, Dag *dag, 
 		const char *filename, int lineNumber);
@@ -188,7 +194,8 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 		//
 		if(strcasecmp(token, "JOB") == 0) {
 			parsed_line_successfully = parse_node( dag, Job::TYPE_CONDOR, token,
-					   filename, lineNumber, tmpDirectory.Value() );
+					   filename, lineNumber, tmpDirectory.Value(), "",
+					   "submitfile" );
 		}
 
 		// Handle a Stork job spec
@@ -196,7 +203,8 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 		//
 		else if	(strcasecmp(token, "DAP") == 0) {	// DEPRECATED!
 			parsed_line_successfully = parse_node( dag, Job::TYPE_STORK, token,
-					   filename, lineNumber, tmpDirectory.Value() );
+					   filename, lineNumber, tmpDirectory.Value(), "",
+					   "submitfile" );
 			debug_printf( DEBUG_QUIET, "%s (line %d): "
 				"Warning: the DAP token is deprecated and may be unsupported "
 				"in a future release.  Use the DATA token\n",
@@ -205,12 +213,13 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 
 		else if	(strcasecmp(token, "DATA") == 0) {
 			parsed_line_successfully = parse_node( dag, Job::TYPE_STORK, token,
-					   filename, lineNumber, tmpDirectory.Value() );
+					   filename, lineNumber, tmpDirectory.Value(), "",
+					   "submitfile");
 		}
 
 		else if	(strcasecmp(token, "SUBDAG") == 0) {
-			parsed_line_successfully = parse_node( dag, Job::TYPE_CONDOR, token,
-					   filename, lineNumber, tmpDirectory.Value() );
+			parsed_line_successfully = parse_subdag( dag, Job::TYPE_CONDOR,
+						token, filename, lineNumber, tmpDirectory.Value() );
 		}
 
 		// Handle a SCRIPT spec
@@ -322,10 +331,25 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 	return true;
 }
 
+static bool 
+parse_subdag( Dag *dag, Job::job_type_t nodeType, const char* nodeTypeKeyword,
+			const char* dagFile, int lineNum, const char *directory )
+{
+	const char *inlineOrExt = strtok( NULL, DELIMITERS );
+	if ( !strcasecmp( inlineOrExt, "EXTERNAL" ) ) {
+		return parse_node( dag, nodeType, nodeTypeKeyword, dagFile, lineNum,
+					directory, " EXTERNAL", "dagfile" );
+	} else {
+		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): only SUBDAG "
+					"EXTERNAL is supported at this time\n", dagFile, lineNum);
+		return false;
+	}
+}
 
 static bool 
 parse_node( Dag *dag, Job::job_type_t nodeType, const char* nodeTypeKeyword,
-			const char* dagFile, int lineNum, const char *directory )
+			const char* dagFile, int lineNum, const char *directory,
+			const char *inlineOrExt, const char *submitOrDagFile)
 {
 	MyString example;
 	MyString whynot;
@@ -333,8 +357,9 @@ parse_node( Dag *dag, Job::job_type_t nodeType, const char* nodeTypeKeyword,
 	Dag *tmp = NULL;
 
 	MyString expectedSyntax;
-	expectedSyntax.sprintf( "Expected syntax: %s nodename submitfile "
-				"[DIR directory] [DONE]", nodeTypeKeyword );
+	expectedSyntax.sprintf( "Expected syntax: %s%s nodename %s "
+				"[DIR directory] [DONE]", nodeTypeKeyword, inlineOrExt,
+				submitOrDagFile );
 
 		// If this is a DAP/DATA node, make sure we have a Stork log
 		// file specified.

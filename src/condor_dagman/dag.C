@@ -1730,7 +1730,7 @@ void Dag::WriteRescue (const char * rescue_file, const char * datafile)
 			// Print the JOB/DATA line.
 		const char *keyword = "";
         if( job->JobType() == Job::TYPE_CONDOR ) {
-			keyword = job->GetDagFile() ? "SUBDAG" : "JOB";
+			keyword = job->GetDagFile() ? "SUBDAG EXTERNAL" : "JOB";
         } else if( job->JobType() == Job::TYPE_STORK ) {
 			keyword = "DATA";
         } else {
