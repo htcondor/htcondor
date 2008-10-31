@@ -175,6 +175,8 @@ class FunctionCall : public ExprTree
 	// pattern matching
 	static bool matchPattern(const char*,const ArgumentList&,EvalState&,
 							 Value&);
+	static bool substPattern( const char*,const ArgumentList &argList,EvalState &state,	Value &result );
+
 	static bool matchPatternMember(const char*,const ArgumentList &argList,EvalState &state,
                               Value &result);
 

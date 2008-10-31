@@ -260,3 +260,8 @@ same ifThenElse(ERROR,3,4), ERROR
 same ifThenElse(UNDEFINED,3,4), UNDEFINED
 
 same interval(3600*24*4 + 3600*3 + 60*2 + 1), "  4+03:02:01"
+
+same regexps("[abc]*([def]*)[ghi]*","aaaabbbbcccccdddeeefffggghhhiii","\\1"), "dddeeefff"
+same regexps("[abc]*([def]*)[ghi]*","abcdefghi","\\0"), "abcdefghi"
+same regexps("[abc]*([def]*)[ghi]*","abcdefghi","\\2"), error
+same regexps("[abc]*([def]*)[ghi]*","NO","\\0"), ""

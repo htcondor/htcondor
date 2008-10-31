@@ -135,6 +135,7 @@ FunctionCall( )
 #if defined USE_POSIX_REGEX || defined USE_PCRE
 		functionTable["regexp"		] =	(void*)matchPattern;
         functionTable["regexpmember"] =	(void*)matchPatternMember;
+		functionTable["regexps"     ] = (void*)substPattern;
 #endif
 
 			// conversion functions
@@ -2250,8 +2251,72 @@ interval( const char* name,const ArgumentList &argList,EvalState &state,
 
 #if defined USE_POSIX_REGEX || defined USE_PCRE
 static bool regexp_helper(const char *pattern, const char *target,
+                          const char *replace,
                           bool have_options, string options_string,
                           Value &result);
+
+bool FunctionCall::
+substPattern( const char*,const ArgumentList &argList,EvalState &state,
+	Value &result )
+{
+    bool        have_options;
+	Value 		arg0, arg1, arg2, arg3;
+	const char	*pattern=NULL, *target=NULL, *replace=NULL;
+    string      options_string;
+
+		// need three or four arguments: pattern, string, replace, optional settings
+	if( argList.size() != 3 && argList.size() != 4) {
+		result.SetErrorValue( );
+		return( true );
+	}
+    if (argList.size() == 3) {
+        have_options = false;
+    } else {
+        have_options = true;
+    }
+
+		// Evaluate args
+	if( !argList[0]->Evaluate( state, arg0 ) || 
+		!argList[1]->Evaluate( state, arg1 ) ||
+		!argList[2]->Evaluate( state, arg2 ) ) {
+		result.SetErrorValue( );
+		return( false );
+	}
+    if( have_options && !argList[3]->Evaluate( state, arg3 ) ) {
+		result.SetErrorValue( );
+		return( false );
+    }
+
+		// if any arg is error, the result is error
+	if( arg0.IsErrorValue( ) || arg1.IsErrorValue( ) || arg2.IsErrorValue() ) {
+		result.SetErrorValue( );
+		return( true );
+	}
+    if( have_options && arg3.IsErrorValue( ) ) {
+        result.SetErrorValue( );
+        return( true );
+    }
+
+		// if any arg is undefined, the result is undefined
+	if( arg0.IsUndefinedValue( ) || arg1.IsUndefinedValue( ) || arg2.IsUndefinedValue() ) {
+		result.SetUndefinedValue( );
+		return( true );
+	}
+    if( have_options && arg3.IsUndefinedValue( ) ) {
+		result.SetUndefinedValue( );
+		return( true );
+    } else if ( have_options && !arg3.IsStringValue( options_string ) ) {
+        result.SetErrorValue( );
+        return( true );
+    }
+
+		// if either argument is not a string, the result is an error
+	if( !arg0.IsStringValue( pattern ) || !arg1.IsStringValue( target ) || !arg2.IsStringValue( replace ) ) {
+		result.SetErrorValue( );
+		return( true );
+	}
+    return regexp_helper(pattern, target, replace, have_options, options_string, result);
+}
 
 bool FunctionCall::
 matchPattern( const char*,const ArgumentList &argList,EvalState &state,
@@ -2312,7 +2377,7 @@ matchPattern( const char*,const ArgumentList &argList,EvalState &state,
 		result.SetErrorValue( );
 		return( true );
 	}
-    return regexp_helper(pattern, target, have_options, options_string, result);
+    return regexp_helper(pattern, target, NULL, have_options, options_string, result);
 }
 
 bool FunctionCall::
@@ -2393,7 +2458,7 @@ matchPatternMember( const char*,const ArgumentList &argList,EvalState &state,
                 return true;
             } else {
                 bool have_match;
-                bool success = regexp_helper(pattern, target, have_options, options_string, have_match_value);
+                bool success = regexp_helper(pattern, target, NULL, have_options, options_string, have_match_value);
                 if (!success) {
                     result.SetErrorValue();
                     return true;
@@ -2416,6 +2481,7 @@ matchPatternMember( const char*,const ArgumentList &argList,EvalState &state,
 static bool regexp_helper(
     const char *pattern,
     const char *target,
+	const char *replace,
     bool       have_options,
     string     options_string,
     Value      &result)
@@ -2426,7 +2492,14 @@ static bool regexp_helper(
 #if defined (USE_POSIX_REGEX)
 	regex_t		re;
 
-    options = REG_EXTENDED | REG_NOSUB;
+	const int MAX_REGEX_GROUPS=11;
+	regmatch_t pmatch[MAX_REGEX_GROUPS];
+	size_t      nmatch = MAX_REGEX_GROUPS;
+
+    options = REG_EXTENDED;
+	if( !replace ) {
+		options |= REG_NOSUB;
+	}
     if( have_options ){
         // We look for the options we understand, and ignore
         // any others that we might find, hopefully allowing
@@ -2444,10 +2517,63 @@ static bool regexp_helper(
 	}
 
 		// test the match
-	status = regexec( &re, target, (size_t)0, NULL, 0 );
+	status = regexec( &re, target, nmatch, pmatch, 0 );
 
 		// dispose memory created by regcomp()
 	regfree( &re );
+
+	if( status == 0 && replace ) {
+		string group_buffers[MAX_REGEX_GROUPS];
+		char const *groups[MAX_REGEX_GROUPS];
+		int ngroups = MAX_REGEX_GROUPS;
+		int i;
+
+		for(i=0;i<MAX_REGEX_GROUPS;i++) {
+			regoff_t rm_so = pmatch[i].rm_so;
+			regoff_t rm_eo = pmatch[i].rm_eo;
+			if( rm_so >= 0 ) {
+				group_buffers[i].append(target,rm_so,rm_eo-rm_so);
+				groups[i] = group_buffers[i].c_str();
+			}
+			else {
+				groups[i] = NULL;
+			}
+		}
+
+		string output;
+		bool replace_success = true;
+
+		while (*replace) {
+			if (*replace == '\\') {
+				if (isdigit(replace[1])) {
+					int offset = replace[1] - '0';
+					replace++;
+					if( offset >= ngroups || !groups[offset] ) {
+						replace_success = false;
+						break;
+					}
+					output += groups[offset];
+				} else {
+					output += '\\';
+				}
+			} else {
+				output += *replace;
+			}
+			replace++;
+		}
+
+		if( replace_success ) {
+			result.SetStringValue( output );
+		}
+		else {
+			result.SetErrorValue( );
+		}
+		return( true );
+	}
+	else if( status == REG_NOMATCH && replace ) {
+		result.SetStringValue( "" );
+		return( true );
+	}
 
 		// check for success/failure
 	if( status == 0 ) {
@@ -2491,8 +2617,14 @@ static bool regexp_helper(
 			// error in pattern
 		result.SetErrorValue( );
     } else {
+		int group_count;
+		pcre_fullinfo(re, NULL, PCRE_INFO_CAPTURECOUNT, &group_count);
+		int oveccount = 3 * (group_count + 1); // +1 for the string itself
+		int * ovector = (int *) malloc(oveccount * sizeof(int));
+
+
         status = pcre_exec(re, NULL, target, strlen(target),
-                           0, 0, NULL, 0);
+                           0, 0, ovector, oveccount);
         if (status >= 0) {
             result.SetBooleanValue( true );
         } else {
@@ -2500,6 +2632,51 @@ static bool regexp_helper(
         }
 
 		pcre_free(re);
+
+		if( replace && status<0 ) {
+			result.SetStringValue( "" );
+		}
+		else if( replace ) {
+
+			const char **groups = NULL;
+			string output;
+			int ngroups = status;
+			bool replace_success = true;
+
+			if( pcre_get_substring_list(target,ovector,ngroups,&groups)!=0 ) {
+				result.SetErrorValue( );
+				replace_success = false;
+			}
+			else while (*replace) {
+				if (*replace == '\\') {
+					if (isdigit(replace[1])) {
+						int offset = replace[1] - '0';
+						replace++;
+						if( offset >= ngroups ) {
+							replace_success = false;
+							break;
+						}
+						output += groups[offset];
+					} else {
+						output += '\\';
+					}
+				} else {
+					output += *replace;
+				}
+				replace++;
+			}
+
+			pcre_free_substring_list( groups );
+
+			if( replace_success ) {
+				result.SetStringValue( output );
+			}
+			else {
+				result.SetErrorValue( );
+			}
+		}
+
+		free( ovector );
     }
     return true;
 #endif
