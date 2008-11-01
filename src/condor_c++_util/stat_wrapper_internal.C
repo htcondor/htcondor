@@ -92,7 +92,9 @@ StatWrapperIntPath::SetPath( const char *path )
 		m_path = NULL;
 	}
 	if ( path ) {
-		m_path = strdup( path );
+		if ( !m_path ) {
+			m_path = strdup( path );
+		}
 		m_valid = true;
 	} else {
 		m_valid = false;
