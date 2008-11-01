@@ -192,16 +192,15 @@ Selector::add_fd( int fd, IO_FUNC interest )
 	}
 #endif
 
-	char *fd_description = "";
 
 	if(DebugFlags & D_FULLDEBUG) {
-	  fd_description = describe_fd(fd);
-	}
+		char *fd_description = "";
+		fd_description = describe_fd(fd);
 
-	dprintf(D_FULLDEBUG, "selector 0x%lX adding fd %d (%s)\n", (unsigned long)this, fd, fd_description);
+		dprintf(D_FULLDEBUG, "selector %p adding fd %d (%s)\n",
+				this, fd, fd_description);
 
-	if (DebugFlags & D_FULLDEBUG) {
-	  free(fd_description);
+		free(fd_description);
 	}
 
 	switch( interest ) {
