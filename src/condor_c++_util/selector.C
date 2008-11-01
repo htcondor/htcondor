@@ -194,8 +194,7 @@ Selector::add_fd( int fd, IO_FUNC interest )
 
 
 	if(DebugFlags & D_FULLDEBUG) {
-		char *fd_description = "";
-		fd_description = describe_fd(fd);
+		char *fd_description = describe_fd(fd);
 
 		dprintf(D_FULLDEBUG, "selector %p adding fd %d (%s)\n",
 				this, fd, fd_description);
