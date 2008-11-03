@@ -81,7 +81,7 @@ VOID StopService()
 	}
 }
 
-#if HAVE_HIBERNATE
+#if HAVE_HIBERNATION
 
 // Handles any power state change notifications
 DWORD 
@@ -185,7 +185,7 @@ PowerEventHander(DWORD eventType, LPVOID eventData) {
 	
 }
 
-#endif /* HAVE_HIBERNATE */
+#endif /* HAVE_HIBERNATION */
 
 // This function consolidates the activities of 
 // updating the service status with
@@ -214,14 +214,14 @@ BOOL SendStatusToSCM (DWORD dwCurrentState,
 			// SERVICE_ACCEPT_PAUSE_CONTINUE |
 			SERVICE_ACCEPT_SHUTDOWN;
 
-#if HAVE_HIBERNATE
+#if HAVE_HIBERNATION
 		//
 		// Service will be notified when the computer's 
 		// power status has changed. 
 		//
 		serviceStatus.dwControlsAccepted |= 
 			SERVICE_ACCEPT_POWEREVENT;
-#endif /* HAVE_HIBERNATE */
+#endif /* HAVE_HIBERNATION */
 	
 	}
 
@@ -253,7 +253,7 @@ BOOL SendStatusToSCM (DWORD dwCurrentState,
 
 // Dispatches events received from the service 
 // control manager
-#if HAVE_HIBERNATE
+#if HAVE_HIBERNATION
 
 DWORD WINAPI 
 ServiceCtrlHandler (
@@ -270,7 +270,7 @@ ServiceCtrlHandler (
 	DWORD  controlCode  // requested control code
 	) {
 
-#endif /* HAVE_HIBERNATE */
+#endif /* HAVE_HIBERNATION */
 	
 	DWORD currentState = SERVICE_RUNNING;
 	BOOL success;
@@ -293,11 +293,11 @@ ServiceCtrlHandler (
 			// Stop the service
 			line_where_service_stopped = __LINE__;
 			StopService();
-#if HAVE_HIBERNATE
+#if HAVE_HIBERNATION
 			return NO_ERROR;
 #else
 			return;
-#endif /* HAVE_HIBERNATE */
+#endif /* HAVE_HIBERNATION */
 
 		// Pause the service- a NOOP for now
 		case SERVICE_CONTROL_PAUSE:
@@ -320,13 +320,13 @@ ServiceCtrlHandler (
 		case SERVICE_CONTROL_SHUTDOWN:
 			daemonCore->Send_Signal( daemonCore->getpid(), SIGQUIT );
 			line_where_service_stopped = __LINE__;
-#if HAVE_HIBERNATE
+#if HAVE_HIBERNATION
 			return NO_ERROR;
 #else
 			return;
-#endif /* HAVE_HIBERNATE */
+#endif /* HAVE_HIBERNATION */
 
-#if HAVE_HIBERNATE
+#if HAVE_HIBERNATION
 
 		// Handle any power events
 		case SERVICE_CONTROL_POWEREVENT:
@@ -334,7 +334,7 @@ ServiceCtrlHandler (
 			return PowerEventHander ( eventType, eventData );			
 			break;
 
-#endif /* HAVE_HIBERNATE */
+#endif /* HAVE_HIBERNATION */
 
 		default:
 			line_where_service_stopped = __LINE__;
@@ -343,9 +343,9 @@ ServiceCtrlHandler (
 	//line_where_service_stopped = __LINE__;
 	SendStatusToSCM(currentState, NO_ERROR,
 		0, 0, 0);
-#if HAVE_HIBERNATE
+#if HAVE_HIBERNATION
 	return NO_ERROR;
-#endif /* HAVE_HIBERNATE */
+#endif /* HAVE_HIBERNATION */
 
 }
 
@@ -376,7 +376,7 @@ VOID ServiceMain(DWORD argc, LPTSTR *argv)
 	BOOL success;
 
 	// immediately call Registration function
-#if HAVE_HIBERNATE
+#if HAVE_HIBERNATION
 	serviceStatusHandle =
 		RegisterServiceCtrlHandlerEx(		
 		SERVICE_NAME,		
@@ -387,7 +387,7 @@ VOID ServiceMain(DWORD argc, LPTSTR *argv)
 		RegisterServiceCtrlHandler(		
 		SERVICE_NAME,		
 		(LPHANDLER_FUNCTION) ServiceCtrlHandler);
-#endif HAVE_HIBERNATE
+#endif /* HAVE_HIBERNATION */
 	if (!serviceStatusHandle)
 	{
 		terminate(GetLastError());
