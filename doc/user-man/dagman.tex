@@ -217,6 +217,24 @@ SUBDAG is run in its own instance of \Condor{dagman}.
 For more information, see section~\ref{sec:DAGsinDAGs}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{SPLICE}
+
+\index{DAGMan!SPLICE}
+
+The \Arg{SPLICE} keyword creates a named instance of a DAG as specified
+in another file as an entity which may have \Arg{PARENT} and \Arg{CHILD}
+dependencies associated with other splice names or node names in the
+including DAG file.
+The syntax for \Arg{SPLICE} is
+
+\Opt{SPLICE} \Arg{SpliceName} \Arg{DagFileName}
+
+After parsing incorporates a splice,
+all nodes within the spice become nodes within the including DAG.
+For detailed information about splices, see 
+section~\ref{sec:DAGSplicing}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{dagman:DATA}DATA}
 
 The \Arg{DATA} key word specifies a job to be managed by the Stork data
@@ -712,24 +730,6 @@ for this DAG.
 
 For more information about how \Condor{dagman} configuration files work,
 see section~\ref{sec:DAGConfig}.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{SPLICE}
-
-\index{DAGMan!SPLICE}
-
-The \Arg{SPLICE} keyword creates a named instance of a DAG as specified
-in another file as an entity which may have \Arg{PARENT} and \Arg{CHILD}
-dependencies associated with other splice names or node names in the
-including DAG file.
-The syntax for \Arg{SPLICE} is
-
-\Opt{SPLICE} \Arg{SpliceName} \Arg{DagFileName}
-
-After parsing incorporates a splice,
-all nodes within the spice become nodes within the including DAG.
-For detailed information about splices, see 
-section~\ref{sec:DAGSplicing}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Submit Description File}
