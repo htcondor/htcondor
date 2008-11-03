@@ -71,10 +71,20 @@ DAGs) to \Condor{dagman}.
 \item It is now possible to have multiple rotations of the ``event
   log'' file, such as ``EventLog'', ``EventLog.1'', ``EventLog.2'', ...
 
+<<<<<<< HEAD:doc/version-history/7-1.history.tex
 \item The VM universe can now run VMware virtual machines on machines using
 privilege separation without requiring the \Condor{vm-gahp} binary to be
 setuid root. Runnin the \Condor{vm-gahp} as setuid root is no longer
 supported for VMware or Xen.
+=======
+\item Condor now supports the ability for the \Condor{master} to run a
+  program as it shuts down.  This can be particularly useful for doing
+  a graceful shutdown followed, by, say, a reboot.  This is
+  accomplished through the new See the new
+  \MacroNI{MASTER\_SHUTDOWN\_$<$Name$>$} macro family (see
+  \pageref{param:MasterShutdownProgram}) and \Condor{set\_shutdown}
+  program.
+>>>>>>> Documented the MASTER_SHUTDOWN_<name> and condor_shutdown_master:doc/version-history/7-1.history.tex
 
 \end{itemize}
 
@@ -103,6 +113,7 @@ supported for VMware or Xen.
   Condor will also try \MacroNI{MAX\_EVENT\_LOG}.
   See \pageref{param:EventLogMaxSize} for details.
 
+<<<<<<< HEAD:doc/version-history/7-1.history.tex
 \item The \Condor{vm-gahp} no longer requires its own configuration
 file. It now uses the normal Condor configuration file. Parameters
 that used to reside in the \Condor{vm-gahp}'s file should now be placed
@@ -126,6 +137,14 @@ a machine administrator to add settings to the virtual machine
 configuration files written by Condor for VMware and Xen.
 See \pageref{param:VMwareLocalSettingsFile} and
 \pageref{param:XenLocalSettingsFile} for details.
+=======
+\item The configuration parameter family
+  \MacroNI{MASTER\_SHUTDOWN\_$<$Name$>$} can be used in conjunction
+  with \Condor{set\_shutdown} to cause the \Condor{master} to execute
+  a specified program as it shuts down.  See
+  \pageref{param:MasterShutdownProgram} and \Condor{set\_shutdown}
+  manual page for more details.
+>>>>>>> Documented the MASTER_SHUTDOWN_<name> and condor_shutdown_master:doc/version-history/7-1.history.tex
 
 \end{itemize}
 

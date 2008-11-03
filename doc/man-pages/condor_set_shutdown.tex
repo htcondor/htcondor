@@ -1,5 +1,5 @@
-\begin{ManPage}{\label{man-condor-set-shutdown}\Condor{off}}{1}
-{Shutdown Condor daemons}
+\begin{ManPage}{\label{man-condor-set-shutdown}\Condor{set\_shutdown}}{1}
+{Set program to execute upon \Condor{master} shutdown}
 \Synopsis \SynProg{\Condor{set\_shutdown}}
 \ToolArgsBase
 
@@ -7,21 +7,19 @@
 \oOptnm{-exec}
 \ToolDebugOption
 \ToolArgsLocate
-\ToolArgsAffect
 
 \SynProg{\Condor{set\_shutdown}}
 \oOptnm{-exec}
 \ToolDebugOption
 \ToolWhere
-\ToolArgsAffect
 
 \index{Condor commands!condor\_set\_shutdown}
-\index{condor\_off command}
+\index{condor\_set\_shutdown command}
 
 \Description 
 
 \Condor{set\_shutdown} sets a program (typically a script) to execute
-when the master shuts down.  The \OptArg{-exec}{$<$name$>$} paramter
+when the master shuts down.  The \OptArg{-exec}{$<$name$>$} parameter
 is required, and specifies the program to run.  This name must match a
 \MacroNI{MASTER\_SHUTDOWN\_$<$name$>$} in the \Condor{master}'s
 configuration, otherwise the master will log an error and ignore the
@@ -39,7 +37,6 @@ for further explanation.
 	program to execute}
 	\ToolDebugDesc
 	\ToolArgsLocateDesc
-	\ToolArgsAffectDesc
 \end{Options}
 
 \ExitStatus
@@ -51,7 +48,7 @@ success, and it will exit with the value 1 (one) upon failure.
 To have all master's run ``/bin/reboot'' on shutdown, configure the
 master with:
 \begin{verbatim}
-MASTER_SHUTDOWN_REBOOT = /bin/reboot
+MASTER_SHUTDOWN_REBOOT = /sbin/reboot
 \end{verbatim}
 and then run
 \begin{verbatim}
