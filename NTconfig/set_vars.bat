@@ -80,7 +80,7 @@ if exist BUILD-ID. (
 echo Using build-id: %BID% & echo.
 popd
 
-set CONDOR_INCLUDE=/I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /I "..\src\condor_daemon_client" /I "..\src\condor_daemon_core.V6" /I "..\src\condor_schedd.V6" /GR /DHAVE_HIBERNATION=1 /DHAVE_JOB_HOOKS /DBUILDID=%BID%
+set CONDOR_INCLUDE=/I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /I "..\src\condor_daemon_client" /I "..\src\condor_daemon_core.V6" /I "..\src\condor_schedd.V6" /GR /DHAVE_HIBERNATION=0 /DHAVE_JOB_HOOKS /DBUILDID=%BID%
 set CONDOR_LIB=Crypt32.lib mpr.lib psapi.lib mswsock.lib netapi32.lib imagehlp.lib advapi32.lib ws2_32.lib user32.lib oleaut32.lib ole32.lib powrprof.lib iphlpapi.lib userenv.lib
 set CONDOR_LIBPATH=
 
