@@ -17,15 +17,12 @@
  *
  ***************************************************************/
 
-
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <pthread.h>
 #include <unistd.h>
 #include <string.h>
-#include "glite/ce/cream-client-api-c/CreamProxy.h"
-#include "glite/ce/cream-client-api-c/creamApiLogger.h"
 #include <string>
 #include <iostream>
 #include <vector>
@@ -33,15 +30,16 @@
 #include <ctime>
 #include <queue>
 #include <map>
+#include "glite/ce/cream-client-api-c/CreamProxyFactory.h"
+#include "glite/ce/cream-client-api-c/JobDescriptionWrapper.h"
+#include "glite/ce/cream-client-api-c/creamApiLogger.h"
 
 using namespace std;
+using namespace glite::ce::cream_client_api::soap_proxy;
 
 #define WORKER 6 // Worker threads
 
-// Shortcuts
-#define CREAMPROXY glite::ce::cream_client_api::soap_proxy::CreamProxy
-#define CREAM_SERVICE "/ce-cream/services/CREAM"
-#define CREAM_DELG_SERVICE "/ce-cream/services/CREAMDelegation"
+#define DEFAULT_TIMEOUT 60
 
 // Macro for handling commands 
 #define HANDLE( x ) \
@@ -60,13 +58,43 @@ if (strcasecmp(#x, input_line[0]) == 0) \
 { \
  gahp_printf("E\n"); \
  free_args(input_line); \
-}	
+}
+
+static void
+check_for_factory_error(AbsCreamProxy* cp)
+{
+	if (cp == NULL) {
+		throw runtime_error("CreamProxyFactory failed to make a cream proxy");
+	}
+}
+
+static void
+check_result_wrapper(ResultWrapper& rw)
+{
+	list<pair<JobIdWrapper, string> > job_list;
+	rw.getNotExistingJobs(job_list);
+	if (!job_list.empty()) {
+		throw runtime_error("job does not exist");
+	}
+	rw.getNotMatchingStatusJobs(job_list);
+	if (!job_list.empty()) {
+		throw runtime_error("job status does not match");
+	}
+	rw.getNotMatchingDateJobs(job_list);
+	if (!job_list.empty()) {
+		throw runtime_error("job date does not match");
+	}
+	rw.getNotMatchingProxyDelegationIdJobs(job_list);
+	if (!job_list.empty()) {
+		throw runtime_error("job proxy delegation ID does not match");
+	}
+	rw.getNotMatchingLeaseIdJobs(job_list);
+	if (!job_list.empty()) {
+		throw runtime_error("job lease ID does not match");
+	}
+}
 
 void free_args( char ** );
-
-struct WorkerData {
-	CREAMPROXY *creamProxy;
-};
 
 struct Request {
 	Request() { input_line = NULL; }
@@ -74,7 +102,7 @@ struct Request {
 
 	char **input_line;
 	string proxy;
-	int (*handler)(WorkerData *, Request *);
+	int (*handler)(Request *);
 };
 
 static char *commands_list =
@@ -128,21 +156,21 @@ bool results_pending = false; // Default, asynchronous mode is off
 pthread_mutex_t outputLock = PTHREAD_MUTEX_INITIALIZER;
 char *response_prefix = NULL; 
 
-int thread_cream_delegate( WorkerData *wd, Request *req );
-int thread_cream_job_register( WorkerData *wd, Request *req );
-int thread_cream_job_start( WorkerData *wd, Request *req );
-int thread_cream_job_purge( WorkerData *wd, Request *req );
-int thread_cream_job_cancel( WorkerData *wd, Request *req );
-int thread_cream_job_suspend( WorkerData *wd, Request *req );
-int thread_cream_job_resume( WorkerData *wd, Request *req );
-int thread_cream_job_lease( WorkerData *wd, Request *req );
-int thread_cream_job_status( WorkerData *wd, Request *req );
-int thread_cream_job_info( WorkerData *wd, Request *req );
-int thread_cream_job_list( WorkerData *wd, Request *req );
-int thread_cream_ping( WorkerData *wd, Request *req );
-int thread_cream_does_accept_job_submissions( WorkerData *wd, Request *req );
-int thread_cream_proxy_renew( WorkerData *wd, Request *req );
-int thread_cream_get_CEMon_url( WorkerData *wd, Request *req );
+int thread_cream_delegate( Request *req );
+int thread_cream_job_register( Request *req );
+int thread_cream_job_start( Request *req );
+int thread_cream_job_purge( Request *req );
+int thread_cream_job_cancel( Request *req );
+int thread_cream_job_suspend( Request *req );
+int thread_cream_job_resume( Request *req );
+int thread_cream_job_lease( Request *req );
+int thread_cream_job_status( Request *req );
+int thread_cream_job_info( Request *req );
+int thread_cream_job_list( Request *req );
+int thread_cream_ping( Request *req );
+int thread_cream_does_accept_job_submissions( Request *req );
+int thread_cream_proxy_renew( Request *req );
+int thread_cream_get_CEMon_url( Request *req );
 
 /* =========================================================================
    GAHP_PRINTF: prints to stdout. If response prefix is specified, prints it as well 
@@ -262,7 +290,7 @@ void free_args( char **input_line )
 }
 
 void enqueue_request( char **input_line,
-					  int(* handler)(WorkerData *, Request *) )
+					  int(* handler)(Request *) )
 {
 	Request *req = new Request();
 	req->input_line = input_line;
@@ -316,9 +344,13 @@ int handle_initialize_from_file(char **input_line)
 	active_proxy = cert;
 
 	try {
-			// Check whether CreamProxy likes the proxy
-		CREAMPROXY cream_proxy( false );
-		cream_proxy.Authenticate(active_proxy.c_str()); 
+			// Check whether CreamProxy likes the proxy (we only use
+			// setCredential() for this - we DON'T want to execute())
+		AbsCreamProxy* cp =
+			CreamProxyFactory::make_CreamProxyDelegate("XXX", DEFAULT_TIMEOUT);
+		check_for_factory_error(cp);
+		cp->setCredential(cert);
+		delete cp;
 	} catch(std::exception& ex) {
 		gahp_printf("E\n");
 		free_args(input_line);
@@ -351,7 +383,7 @@ int handle_cream_delegate( char **input_line )
 	return 0;
 }
 
-int thread_cream_delegate( WorkerData *wd, Request *req )
+int thread_cream_delegate( Request *req )
 {
 	char *reqid, *delgservice, *delgid;
 	string result_line;
@@ -361,8 +393,15 @@ int thread_cream_delegate( WorkerData *wd, Request *req )
 	process_string_arg( req->input_line[3], &delgservice);
 
 	try {
-		wd->creamProxy->Delegate(delgid, delgservice, req->proxy.c_str());
-	}  catch(std::exception& ex) {
+		AbsCreamProxy* cp =
+			CreamProxyFactory::make_CreamProxyDelegate(delgid,
+			                                           DEFAULT_TIMEOUT);
+		check_for_factory_error(cp);
+		cp->setCredential(req->proxy.c_str());
+		cp->execute(delgservice);
+		delete cp;
+	}
+	catch(std::exception& ex) {
 		
 		result_line = (string)reqid + " CREAM_Delegate\\ Error\\ " + escape_spaces(ex.what());
 		enqueue_result(result_line);
@@ -397,14 +436,26 @@ int handle_cream_job_register( char **input_line )
 	return 0;
 }
 
-int thread_cream_job_register( WorkerData *wd, Request *req )
+int thread_cream_job_register( Request *req )
 {
+    // FIXME: We currently ignore the given lease_time, and do not
+	// specify a lease for the job. We need to figure out how to
+	// specify lease times in the new API
+
+	// FIXME: The new API does not allow for the proxy to be
+	// delegated as part of the JobRegister operation. As such,
+	// the delgservice parameter is no longer needed and delgid
+	// must not be an empty string. The GridManager already obeys
+	// this new model, but we should still modify the stubs in
+	// gahp-client.C to reflect this change
+
+	// FIXME: The new API returns a lot more information about
+	// the job than just its ID and upload URL. Should we make
+	// more of this available via our GAHP protocol?
+
 	char *reqid, *service, *delgservice, *delgid, *jdl;
 	string result_line;
 	int lease_time = 0;
-	
-	std::vector<std::string> uploadURL_and_jobID;
-	std::string JDLBuffer, JDLBufferTemp;
 	
 	process_string_arg( req->input_line[1], &reqid );
 	process_string_arg( req->input_line[2], &service );
@@ -413,22 +464,43 @@ int thread_cream_job_register( WorkerData *wd, Request *req )
 	process_string_arg( req->input_line[5], &jdl );
 	process_int_arg( req->input_line[6], &lease_time );
 	
+	AbsCreamProxy::RegisterArrayResult resp;
 	try {
-		
-		string delgID = delgid;
-
-		wd->creamProxy->Register(service, delgservice, delgID, jdl, active_proxy,
-							   uploadURL_and_jobID, lease_time, false); // No auto start
-		
-	} catch(std::exception& ex) {
+		JobDescriptionWrapper jdw(jdl,
+		                          delgid,
+		                          "",     // delegation proxy
+		                          "",     // lease id
+		                          false,  // autostart
+		                          "JDI"); // job description ID
+		AbsCreamProxy::RegisterArrayRequest reqs;
+		reqs.push_back(&jdw);
+		AbsCreamProxy* cp =
+			CreamProxyFactory::make_CreamProxyRegister(&reqs,
+			                                           &resp,
+			                                           DEFAULT_TIMEOUT);
+		check_for_factory_error(cp);
+		cp->setCredential(req->proxy.c_str());
+		cp->execute(service);
+		delete cp;
+		if (resp["JDI"].get<0>() != JobIdWrapper::OK) {
+			throw runtime_error(resp["JDI"].get<2>());
+		}
+	}
+	catch(std::exception& ex) {
 		
 		result_line = (string)reqid + " CREAM_Job_Register\\ Error\\ "+ escape_spaces(ex.what());
 		enqueue_result(result_line);
 		
 		return 1;
 	}
-	
-	result_line = (string)reqid + " NULL " + uploadURL_and_jobID[1] + sp + uploadURL_and_jobID[0];
+
+	map<string, string> props;
+	resp["JDI"].get<1>().getProperties(props);
+	result_line = (string)reqid +
+	              " NULL " +
+	              props["CREAMInputSandboxURI"] +
+	              sp +
+				  resp["JDI"].get<1>().getCreamJobID();
 	enqueue_result(result_line);
 	
 	return 0;
@@ -451,7 +523,7 @@ int handle_cream_job_start( char **input_line )
 	return 0;
 }
 
-int thread_cream_job_start( WorkerData *wd, Request *req )
+int thread_cream_job_start( Request *req )
 {
 	char *reqid, *service, *jobid;
 	string result_line;
@@ -461,8 +533,28 @@ int thread_cream_job_start( WorkerData *wd, Request *req )
 	process_string_arg( req->input_line[3], &jobid );
 	
 	try {
-		wd->creamProxy->Start( service, jobid );
-	} catch(std::exception& ex) {
+		JobIdWrapper jiw(jobid, service, vector<JobPropertyWrapper>());
+		vector<JobIdWrapper> jv;
+		jv.push_back(jiw);
+		vector<string> sv;
+		JobFilterWrapper jfw(jv,
+		                     sv,  // status contraint: none 
+		                     -1,  // from date: none 
+		                     -1,  // to date: none
+		                     "",  // delegation ID constraint: none
+		                     ""); // lease ID constraint: none
+		ResultWrapper rw;
+		AbsCreamProxy* cp =
+			CreamProxyFactory::make_CreamProxyStart(&jfw,
+			                                        &rw,
+			                                        DEFAULT_TIMEOUT);
+		check_for_factory_error(cp);
+		cp->setCredential(req->proxy.c_str());
+		cp->execute(service);
+		delete cp;
+		check_result_wrapper(rw);
+	}
+	catch(std::exception& ex) {
 		
 		result_line = (string)reqid + " CREAM_Job_Start\\ Error\\" + escape_spaces(ex.what());
 		enqueue_result(result_line);
@@ -503,8 +595,13 @@ int handle_cream_job_purge( char **input_line )
 	return 0;
 }
 
-int thread_cream_job_purge( WorkerData *wd, Request *req )
+int thread_cream_job_purge( Request *req )
 {
+	// FIXME: It doesn't appear that the new API supports
+	// operating on all jobs. It also doesn't look like the
+	// GridManager uses this capability. We should disable
+	// the syntax for asking for operating on all jobs
+
 	char *reqid, *service, *jobnum_str, *jobid;
 	string result_line;
 	
@@ -513,19 +610,36 @@ int thread_cream_job_purge( WorkerData *wd, Request *req )
 	process_string_arg( req->input_line[3], &jobnum_str );
 	
 	try {
-		std::vector<std::string> jobs;
-		
-			// if jobnum_str is NULL, purge ALL available jobs
-		if ( jobnum_str != NULL ) {
-			int jobnum = atoi( jobnum_str );
-			for ( int i = 0; i < jobnum; i++) {
-				process_string_arg( req->input_line[i+4], &jobid );
-				jobs.push_back(jobid);
-			}
+		if (jobnum_str == NULL) {
+			throw runtime_error("purge of all jobs not supported");
 		}
-		
-		wd->creamProxy->Purge( service, jobs );
-	} catch(std::exception& ex) {
+		vector<JobIdWrapper> jv;
+		int jobnum = atoi( jobnum_str );
+		for ( int i = 0; i < jobnum; i++) {
+			process_string_arg( req->input_line[i+4], &jobid );
+			jv.push_back(JobIdWrapper(jobid,
+			                          service,
+			                          vector<JobPropertyWrapper>()));
+		}
+		vector<string> sv;
+		JobFilterWrapper jfw(jv,
+		                     sv,  // status contraint: none 
+		                     -1,  // from date: none 
+		                     -1,  // to date: none
+		                     "",  // delegation ID constraint: none
+		                     ""); // lease ID constraint: none
+		ResultWrapper rw;
+		AbsCreamProxy* cp =
+			CreamProxyFactory::make_CreamProxyPurge(&jfw,
+			                                        &rw,
+			                                        DEFAULT_TIMEOUT);
+		check_for_factory_error(cp);
+		cp->setCredential(req->proxy.c_str());
+		cp->execute(service);
+		delete cp;
+		check_result_wrapper(rw);
+	}
+	catch(std::exception& ex) {
 		
 		result_line = (string)reqid + " CREAM_Job_Purge\\ Error\\" + escape_spaces(ex.what());
 		enqueue_result(result_line);
@@ -566,8 +680,13 @@ int handle_cream_job_cancel( char **input_line )
 	return 0;
 }
 
-int thread_cream_job_cancel( WorkerData *wd, Request *req )
+int thread_cream_job_cancel( Request *req )
 {
+	// FIXME: It doesn't appear that the new API supports
+	// operating on all jobs. It also doesn't look like the
+	// GridManager uses this capability. We should disable
+	// the syntax for asking for operating on all jobs
+
 	char *reqid, *service, *jobnum_str, *jobid;
 	string result_line;
 	
@@ -576,19 +695,36 @@ int thread_cream_job_cancel( WorkerData *wd, Request *req )
 	process_string_arg( req->input_line[3], &jobnum_str );
 	
 	try {
-		std::vector<std::string> jobs;
-		
-			// if jobnum_str is NULL, cancel ALL available jobs
-		if ( jobnum_str != NULL ) {
-			int jobnum = atoi( jobnum_str );
-			for ( int i = 0; i < jobnum; i++) {
-				process_string_arg( req->input_line[i+4], &jobid );
-				jobs.push_back(jobid);
-			}
+		if (jobnum_str == NULL) {
+			throw runtime_error("cancel of all jobs not supported");
 		}
-		
-		wd->creamProxy->Cancel( service, jobs );
-	} catch(std::exception& ex) {
+		vector<JobIdWrapper> jv;
+		int jobnum = atoi( jobnum_str );
+		for ( int i = 0; i < jobnum; i++) {
+			process_string_arg( req->input_line[i+4], &jobid );
+			jv.push_back(JobIdWrapper(jobid,
+			                          service,
+			                          vector<JobPropertyWrapper>()));
+		}
+		vector<string> sv;
+		JobFilterWrapper jfw(jv,
+		                     sv,  // status contraint: none 
+		                     -1,  // from date: none 
+		                     -1,  // to date: none
+		                     "",  // delegation ID constraint: none
+		                     ""); // lease ID constraint: none
+		ResultWrapper rw;
+		AbsCreamProxy* cp =
+			CreamProxyFactory::make_CreamProxyCancel(&jfw,
+			                                         &rw,
+			                                         DEFAULT_TIMEOUT);
+		check_for_factory_error(cp);
+		cp->setCredential(req->proxy.c_str());
+		cp->execute(service);
+		delete cp;
+		check_result_wrapper(rw);
+	}
+	catch(std::exception& ex) {
 		
 		result_line = (string)reqid + " CREAM_Job_Cancel\\ Error\\" + escape_spaces(ex.what());
 		enqueue_result(result_line);
@@ -628,8 +764,13 @@ int handle_cream_job_suspend( char **input_line )
 	return 0;
 }
 
-int thread_cream_job_suspend( WorkerData *wd, Request *req )
+int thread_cream_job_suspend( Request *req )
 {
+	// FIXME: It doesn't appear that the new API supports
+	// operating on all jobs. It also doesn't look like the
+	// GridManager uses this capability. We should disable
+	// the syntax for asking for operating on all jobs
+
 	char *reqid, *service, *jobnum_str, *jobid;
 	string result_line;
 	
@@ -638,19 +779,36 @@ int thread_cream_job_suspend( WorkerData *wd, Request *req )
 	process_string_arg( req->input_line[3], &jobnum_str );
 	
 	try {
-		std::vector<std::string> jobs;
-		
-			// if jobnum_str is NULL, suspend ALL available jobs
-		if ( jobnum_str != NULL ) {
-			int jobnum = atoi( jobnum_str );
-			for ( int i = 0; i < jobnum; i++) {
-				process_string_arg( req->input_line[i+4], &jobid );
-				jobs.push_back(jobid);
-			}
+		if (jobnum_str == NULL) {
+			throw runtime_error("suspend of all jobs not supported");
 		}
-		
-		wd->creamProxy->Suspend( service, jobs );
-	} catch(std::exception& ex) {
+		vector<JobIdWrapper> jv;
+		int jobnum = atoi( jobnum_str );
+		for ( int i = 0; i < jobnum; i++) {
+			process_string_arg( req->input_line[i+4], &jobid );
+			jv.push_back(JobIdWrapper(jobid,
+			                          service,
+			                          vector<JobPropertyWrapper>()));
+		}
+		vector<string> sv;
+		JobFilterWrapper jfw(jv,
+		                     sv,  // status contraint: none 
+		                     -1,  // from date: none 
+		                     -1,  // to date: none
+		                     "",  // delegation ID constraint: none
+		                     ""); // lease ID constraint: none
+		ResultWrapper rw;
+		AbsCreamProxy* cp =
+			CreamProxyFactory::make_CreamProxySuspend(&jfw,
+			                                          &rw,
+			                                          DEFAULT_TIMEOUT);
+		check_for_factory_error(cp);
+		cp->setCredential(req->proxy.c_str());
+		cp->execute(service);
+		delete cp;
+		check_result_wrapper(rw);
+	}
+	catch(std::exception& ex) {
 		
 		result_line = (string)reqid + " CREAM_Job_Suspend\\ Error\\" + escape_spaces(ex.what());
 		enqueue_result(result_line);
@@ -690,8 +848,13 @@ int handle_cream_job_resume( char **input_line )
 	return 0;
 }
 
-int thread_cream_job_resume( WorkerData *wd, Request *req )
+int thread_cream_job_resume( Request *req )
 {
+	// FIXME: It doesn't appear that the new API supports
+	// operating on all jobs. It also doesn't look like the
+	// GridManager uses this capability. We should disable
+	// the syntax for asking for operating on all jobs
+
 	char *reqid, *service, *jobnum_str, *jobid;
 	string result_line;
 	
@@ -700,19 +863,36 @@ int thread_cream_job_resume( WorkerData *wd, Request *req )
 	process_string_arg( req->input_line[3], &jobnum_str );
 	
 	try {
-		std::vector<std::string> jobs;
-		
-			// if jobnum_str is NULL, resume ALL available jobs
-		if ( jobnum_str != NULL ) {
-			int jobnum = atoi( jobnum_str );
-			for ( int i = 0; i < jobnum; i++) {
-				process_string_arg( req->input_line[i+4], &jobid );
-				jobs.push_back(jobid);
-			}
+		if (jobnum_str == NULL) {
+			throw runtime_error("resume of all jobs not supported");
 		}
-		
-		wd->creamProxy->Resume( service, jobs );
-	} catch(std::exception& ex) {
+		vector<JobIdWrapper> jv;
+		int jobnum = atoi( jobnum_str );
+		for ( int i = 0; i < jobnum; i++) {
+			process_string_arg( req->input_line[i+4], &jobid );
+			jv.push_back(JobIdWrapper(jobid,
+			                          service,
+			                          vector<JobPropertyWrapper>()));
+		}
+		vector<string> sv;
+		JobFilterWrapper jfw(jv,
+		                     sv,  // status contraint: none 
+		                     -1,  // from date: none 
+		                     -1,  // to date: none
+		                     "",  // delegation ID constraint: none
+		                     ""); // lease ID constraint: none
+		ResultWrapper rw;
+		AbsCreamProxy* cp =
+			CreamProxyFactory::make_CreamProxyResume(&jfw,
+			                                         &rw,
+			                                         DEFAULT_TIMEOUT);
+		check_for_factory_error(cp);
+		cp->setCredential(req->proxy.c_str());
+		cp->execute(service);
+		delete cp;
+		check_result_wrapper(rw);
+	}
+	catch(std::exception& ex) {
 		
 		result_line = (string)reqid + " CREAM_Job_Resume\\ Error\\" + escape_spaces(ex.what());
 		enqueue_result(result_line);
@@ -752,8 +932,12 @@ int handle_cream_job_lease( char **input_line )
 	return 0;
 }
 
-int thread_cream_job_lease( WorkerData *wd, Request *req )
+int thread_cream_job_lease( Request *req )
 {
+	// FIXME: The new API does not appear to have an interface
+	// for managing lease times. This command is currently
+	// stubbed out: we always return success
+
 	char *reqid, *service, *jobnum_str, *jobid, *lease_incr;
 	string result_line;
 	
@@ -763,22 +947,8 @@ int thread_cream_job_lease( WorkerData *wd, Request *req )
 	process_string_arg( req->input_line[4], &jobnum_str );
 	
 	try {
-		std::vector<std::string> jobs;
-		
-			// if jobnum_str is NULL, Lease ALL available jobs
-		if ( jobnum_str != NULL ) {
-			int jobnum = atoi( jobnum_str );
-			for ( int i = 0; i < jobnum; i++) {
-				process_string_arg( req->input_line[i+5], &jobid );
-				jobs.push_back(jobid);
-			}
-		}
-		
-		map<string, time_t> lease_times;
-
-		wd->creamProxy->Lease( service, jobs, atoi(lease_incr), lease_times );
-		
-	} catch(std::exception& ex) {
+	}
+	catch(std::exception& ex) {
 		
 		result_line = (string)reqid + " CREAM_Job_Lease\\ Error\\" + escape_spaces(ex.what());
 		enqueue_result(result_line);
@@ -818,32 +988,57 @@ int handle_cream_job_status( char **input_line )
 	return 0;
 }
 
-int thread_cream_job_status( WorkerData *wd, Request *req )
+int thread_cream_job_status( Request *req )
 {
+	// FIXME: The new API does not appear to have an interface
+	// for managing lease times. This command is currently
+	// stubbed out: we always return success
+
 	char *reqid, *service, *jobnum_str, *jobid;
 	string result_line, temp;
-	std::vector<glite::ce::cream_client_api::soap_proxy::Status> job_info;
 	
 	process_string_arg( req->input_line[1], &reqid );
 	process_string_arg( req->input_line[2], &service );
 	process_string_arg( req->input_line[3], &jobnum_str );
 	
+	AbsCreamProxy::StatusArrayResult sar;
 	try {
-		std::vector<std::string> jobs;
-		
-			// if jobnum_str is NULL, query ALL available jobs
-		if ( jobnum_str != NULL ) {
-			int jobnum = atoi( jobnum_str );
-			for ( int i = 0; i < jobnum; i++) {
-				process_string_arg( req->input_line[i+4], &jobid );
-				jobs.push_back(jobid);
+		if (jobnum_str == NULL) {
+			throw runtime_error("status of all jobs not supported");
+		}
+		vector<JobIdWrapper> jv;
+		int jobnum = atoi( jobnum_str );
+		for ( int i = 0; i < jobnum; i++) {
+			process_string_arg( req->input_line[i+4], &jobid );
+			jv.push_back(JobIdWrapper(jobid,
+			                          service,
+			                          vector<JobPropertyWrapper>()));
+		}
+		vector<string> sv;
+		JobFilterWrapper jfw(jv,
+		                     sv,  // status contraint: none 
+		                     -1,  // from date: none 
+		                     -1,  // to date: none
+		                     "",  // delegation ID constraint: none
+		                     ""); // lease ID constraint: none
+		AbsCreamProxy* cp =
+			CreamProxyFactory::make_CreamProxyStatus(&jfw,
+			                                         &sar,
+			                                         DEFAULT_TIMEOUT);
+		check_for_factory_error(cp);
+		cp->setCredential(req->proxy.c_str());
+		cp->execute(service);
+		delete cp;
+		for (AbsCreamProxy::StatusArrayResult::iterator i = sar.begin();
+		     i != sar.end();
+		     i++)
+		{
+			if (i->second.get<0>() != JobStatusWrapper::OK) {
+				throw runtime_error(i->second.get<2>());
 			}
 		}
-		
-		std::vector<std::string> status_filter; // for now, no filter
-
-		wd->creamProxy->Status( service, jobs, status_filter, job_info, -1, -1 );
-	} catch(std::exception& ex) {
+	}
+	catch(std::exception& ex) {
 		
 		result_line = (string)reqid + " CREAM_Job_Status\\ Error\\" + escape_spaces(ex.what());
 		enqueue_result(result_line);
@@ -851,28 +1046,34 @@ int thread_cream_job_status( WorkerData *wd, Request *req )
 		return 1;
 	}
 	
-	std::vector<glite::ce::cream_client_api::soap_proxy::Status>::const_iterator jobStatusIt;
-	
 	result_line = (string)reqid + " NULL";
 	
 	int cnt = 0;
 	char *failure_reason = NULL;
 	string exit_code;
 
-	for (jobStatusIt = job_info.begin(); jobStatusIt != job_info.end(); ++jobStatusIt) {
-
-		if (((*jobStatusIt).getExitCode()).size() == 0) 
+	for (AbsCreamProxy::StatusArrayResult::iterator i = sar.begin();
+	     i != sar.end();
+	     i++)
+	{
+		if (i->second.get<1>().getExitCode().size() == 0) 
 			exit_code = "NULL";
 		else
-			exit_code = (*jobStatusIt).getExitCode();
-		
-		temp +=  sp + (*jobStatusIt).getJobID() + sp + (*jobStatusIt).getStatusName() + sp + exit_code;
+			exit_code = i->second.get<1>().getExitCode();
 
-		if (((*jobStatusIt).getFailureReason()).size() == 0) 
+		temp += sp +
+		        i->second.get<1>().getCreamJobID() +
+		        sp +
+		        i->second.get<1>().getStatusName() +
+		        sp +
+		        exit_code;
+
+		if (i->second.get<1>().getFailureReason().size() == 0) {
 			temp += " NULL";
-
+		}
 		else {
-			failure_reason = escape_spaces(((*jobStatusIt).getFailureReason()).c_str());
+			failure_reason =
+				escape_spaces(i->second.get<1>().getFailureReason().c_str());
 			temp += sp + failure_reason;
 			free(failure_reason);
 		}
@@ -916,32 +1117,57 @@ int handle_cream_job_info( char **input_line )
 	return 0;
 }
 
-int thread_cream_job_info( WorkerData *wd, Request *req )
+int thread_cream_job_info( Request *req )
 {
+	// FIXME: The new API does not appear to have an interface
+	// for managing lease times. This command is currently
+	// stubbed out: we always return success
+
 	char *reqid, *service, *jobnum_str, *jobid;
 	string result_line;
-	std::vector<glite::ce::cream_client_api::soap_proxy::JobInfo> job_info;
 	
 	process_string_arg( req->input_line[1], &reqid );
 	process_string_arg( req->input_line[2], &service );
 	process_string_arg( req->input_line[3], &jobnum_str );
 	
+	AbsCreamProxy::InfoArrayResult iar;
 	try {
-		std::vector<std::string> jobs;
-		
-			// if jobnum_str is NULL, query ALL available jobs
-		if ( jobnum_str != NULL ) {
-			int jobnum = atoi( jobnum_str );
-			for ( int i = 0; i < jobnum; i++) {
-				process_string_arg( req->input_line[i+4], &jobid );
-				jobs.push_back(jobid);
+		if (jobnum_str == NULL) {
+			throw runtime_error("info of all jobs not supported");
+		}
+		vector<JobIdWrapper> jv;
+		int jobnum = atoi( jobnum_str );
+		for ( int i = 0; i < jobnum; i++) {
+			process_string_arg( req->input_line[i+4], &jobid );
+			jv.push_back(JobIdWrapper(jobid,
+			                          service,
+			                          vector<JobPropertyWrapper>()));
+		}
+		vector<string> sv;
+		JobFilterWrapper jfw(jv,
+		                     sv,  // status contraint: none 
+		                     -1,  // from date: none 
+		                     -1,  // to date: none
+		                     "",  // delegation ID constraint: none
+		                     ""); // lease ID constraint: none
+		AbsCreamProxy* cp =
+			CreamProxyFactory::make_CreamProxyInfo(&jfw,
+			                                       &iar,
+			                                       DEFAULT_TIMEOUT);
+		check_for_factory_error(cp);
+		cp->setCredential(req->proxy.c_str());
+		cp->execute(service);
+		delete cp;
+		for (AbsCreamProxy::InfoArrayResult::iterator i = iar.begin();
+		     i != iar.end();
+		     i++)
+		{
+			if (i->second.get<0>() != JobInfoWrapper::OK) {
+				throw runtime_error(i->second.get<2>());
 			}
 		}
-		
-		std::vector<std::string> status_filter; // for now, no filter
-
-		wd->creamProxy->Info( service, jobs, status_filter, job_info, -1, -1 );
-	} catch(std::exception& ex) {
+	}
+	catch(std::exception& ex) {
 		
 		result_line = (string)reqid + " CREAM_Job_Info\\ Error\\" + escape_spaces(ex.what());
 		enqueue_result(result_line);
@@ -949,12 +1175,6 @@ int thread_cream_job_info( WorkerData *wd, Request *req )
 		return 1;
 	}
 	
-	std::vector<glite::ce::cream_client_api::soap_proxy::JobInfo>::const_iterator jobStatusIt;
-	
-	for (jobStatusIt = job_info.begin(); jobStatusIt != job_info.end(); ++jobStatusIt) {
-		(*jobStatusIt).print(2);
-	}
-
 		// TODO What aren't we returning anything!!!!?????
 	
 	return 0;
@@ -978,18 +1198,25 @@ int handle_cream_job_list( char ** input_line )
 	return 0;
 }
 
-int thread_cream_job_list( WorkerData *wd, Request *req )
+int thread_cream_job_list( Request *req )
 {
 	char *reqid, *service;
-	std::vector<std::string> jobs;	
 	string result_line, temp;
 
 	process_string_arg( req->input_line[1], &reqid );
 	process_string_arg( req->input_line[2], &service );
-	
+
+	vector<JobIdWrapper> jv;
 	try {
-		wd->creamProxy->List( service, jobs );
-	} catch(std::exception& ex) {
+		AbsCreamProxy* cp =
+			CreamProxyFactory::make_CreamProxyList(&jv,
+			                                       DEFAULT_TIMEOUT);
+		check_for_factory_error(cp);
+		cp->setCredential(req->proxy.c_str());
+		cp->execute(service);
+		delete cp;
+	}
+	catch(std::exception& ex) {
 
 		result_line = (string)reqid + " CREAM_Job_List\\ Error\\ " + escape_spaces(ex.what());
 		enqueue_result(result_line);
@@ -997,13 +1224,14 @@ int thread_cream_job_list( WorkerData *wd, Request *req )
 		return 1;
 	}
 	
-	std::vector<std::string>::const_iterator jobIt;
-
 	result_line = (string)reqid + " NULL";
 	
 	int cnt = 0;
-	for (jobIt = jobs.begin(); jobIt != jobs.end(); ++jobIt) {
-		temp += sp + *jobIt;
+	for (vector<JobIdWrapper>::iterator i = jv.begin();
+	     i != jv.end();
+	     i++)
+	{
+		temp += sp + i->getCreamJobID();
 		cnt++;
 	}
 	
@@ -1035,27 +1263,35 @@ int handle_cream_ping( char **input_line )
 	return 0;
 }
 
-int thread_cream_ping( WorkerData *wd, Request *req )
+int thread_cream_ping( Request *req )
 {
+	// FIXME: The new API does not have a ping command. We use
+	// the "service info" command to detect whether CREAM is up
+
 	char *reqid, *service;
 	bool ret;
 	
 	process_string_arg( req->input_line[1], &reqid );
 	process_string_arg( req->input_line[2], &service );
 	
+	ServiceInfoWrapper siw;
 	try {
-		ret = wd->creamProxy->Ping(service);
-	} catch(std::exception& ex) {
+		AbsCreamProxy* cp =
+			CreamProxyFactory::make_CreamProxyServiceInfo(&siw,
+			                                              DEFAULT_TIMEOUT);
+		check_for_factory_error(cp);
+		cp->setCredential(req->proxy.c_str());
+		cp->execute(service);
+		delete cp;
+	}
+	catch(std::exception& ex) {
 		
 		enqueue_result((string)reqid + " " + escape_spaces(ex.what()));
 		
 		return 1;
 	}
 	
-	if (ret) 
-		enqueue_result((string)reqid + " NULL true"); // Service is available
-	else 
-		enqueue_result((string)reqid + " NULL false"); // Service is not available
+	enqueue_result((string)reqid + " NULL true"); // Service is available
 	
 	return 0;
 }
@@ -1078,28 +1314,37 @@ int handle_cream_does_accept_job_submissions( char **input_line )
 	return 0;
 }
 
-int thread_cream_does_accept_job_submissions( WorkerData *wd, Request *req )
+int thread_cream_does_accept_job_submissions( Request *req )
 {
 	char *reqid, *service;
 	bool ret;
 	
 	process_string_arg( req->input_line[1], &reqid );
 	process_string_arg( req->input_line[2], &service );
-	
+
+	ServiceInfoWrapper siw;
 	try {
-		ret = wd->creamProxy->DoesAcceptJobSubmissions(service);
-	} catch(std::exception& ex) {
+		AbsCreamProxy* cp =
+			CreamProxyFactory::make_CreamProxyServiceInfo(&siw,
+			                                              DEFAULT_TIMEOUT);
+		check_for_factory_error(cp);
+		cp->setCredential(req->proxy.c_str());
+		cp->execute(service);
+		delete cp;
+	}
+	catch(std::exception& ex) {
 		
 		enqueue_result((string)reqid + " " + escape_spaces(ex.what()));
 		
 		return 1;
 	}
 	
-	if (ret)
-		enqueue_result((string)reqid + " NULL true"); // Accepts job submissions
-	
-	else 
-		enqueue_result((string)reqid + " NULL false"); // Does not accept job submissions
+	if (siw.getAcceptJobSubmission()) {
+		enqueue_result((string)reqid + " NULL true");
+	}
+	else {
+		enqueue_result((string)reqid + " NULL false");
+	}
 	
 	return 0;
 }
@@ -1127,8 +1372,13 @@ int handle_cream_proxy_renew( char **input_line )
 	return 0;
 }
 
-int thread_cream_proxy_renew( WorkerData *wd, Request *req )
+int thread_cream_proxy_renew( Request *req )
 {
+	// FIXME: In the new API, the CREAM URL is no longer needed -
+	// only the URL to the delegation service. Also, a list of
+	// job IDs is no longer needed. The renewal simply happens
+	// for the given delegation ID.
+
 	int jobnum;
 	char *reqid, *service, *delgservice, *delgid, *jobid;
 	string result_line;
@@ -1140,17 +1390,15 @@ int thread_cream_proxy_renew( WorkerData *wd, Request *req )
 	process_int_arg( req->input_line[5], &jobnum );
 	
 	try {
-		std::vector<std::string> jobs;
-		
-		for ( int i = 0; i < jobnum; i++ ) {
-			process_string_arg( req->input_line[i+6], &jobid );
-			
-			jobs.push_back(jobid);
-		}
-		
-		wd->creamProxy->renewProxy( delgid, service, delgservice,
-								   req->proxy.c_str(), jobs);
-	}  catch(std::exception& ex) {
+		AbsCreamProxy* cp =
+			CreamProxyFactory::make_CreamProxy_ProxyRenew(delgid,
+			                                              DEFAULT_TIMEOUT);
+		check_for_factory_error(cp);
+		cp->setCredential(req->proxy.c_str());
+		cp->execute(delgservice);
+		delete cp;
+	}
+	catch(std::exception& ex) {
 		
 		result_line = (string)reqid + " CREAM_Proxy_Renew\\ Error\\" + escape_spaces(ex.what());
 		enqueue_result(result_line);
@@ -1183,17 +1431,25 @@ int handle_cream_get_CEMon_url( char **input_line )
 	return 0;
 }
 
-int thread_cream_get_CEMon_url( WorkerData *wd, Request *req )
+int thread_cream_get_CEMon_url( Request *req )
 {
 	char *reqid, *service;
-	string CEMon, result_line;
+	string result_line;
 	
 	process_string_arg( req->input_line[1], &reqid );
 	process_string_arg( req->input_line[2], &service );
 	
+	ServiceInfoWrapper siw;
 	try {
-		wd->creamProxy->GetCEMonURL( service, CEMon );
-	} catch(std::exception& ex) {
+		AbsCreamProxy* cp =
+			CreamProxyFactory::make_CreamProxyServiceInfo(&siw,
+			                                              DEFAULT_TIMEOUT);
+		check_for_factory_error(cp);
+		cp->setCredential(req->proxy.c_str());
+		cp->execute(service);
+		delete cp;
+	}
+	catch(std::exception& ex) {
 		
 		result_line = (string)reqid + " CREAM_Get_CEMon_URL\\ Error\\" + escape_spaces(ex.what());
 		enqueue_result(result_line);
@@ -1201,7 +1457,7 @@ int thread_cream_get_CEMon_url( WorkerData *wd, Request *req )
 		return 1;
 	}
 	
-	result_line = (string)reqid + " NULL " + CEMon;
+	result_line = (string)reqid + " NULL " + siw.getCEMonURL();
 	enqueue_result(result_line);
 	
 	return 0;
@@ -1369,9 +1625,13 @@ int handle_cache_proxy_from_file( char **input_line)
 	}
 
 	try {
-			// Check whether CreamProxy likes the proxy
-		CREAMPROXY cream_proxy( false );
-		cream_proxy.Authenticate( filename ); 
+			// Check whether CreamProxy likes the proxy (we only use
+			// setCredential() for this - we DON'T want to execute())
+		AbsCreamProxy* cp =
+			CreamProxyFactory::make_CreamProxyDelegate("XXX", DEFAULT_TIMEOUT);
+		check_for_factory_error(cp);
+		cp->setCredential(filename);
+		delete cp;
 	} catch ( std::exception& ex ) {
 		gahp_printf("E\n");
 		free_args( input_line );
@@ -1571,11 +1831,7 @@ void process_request( char **input_line )
 
 void *worker_main(void *ignored)
 {
-	CREAMPROXY cream_proxy( false );
-	WorkerData wd;
 	Request *req;
-
-	wd.creamProxy = &cream_proxy;
 
 	while ( 1 ) {
 		pthread_mutex_lock( &requestQueueLock );
@@ -1587,9 +1843,7 @@ void *worker_main(void *ignored)
 		pthread_mutex_unlock( &requestQueueLock );
 
 		try {
-			cream_proxy.Authenticate( req->proxy );
-
-			req->handler( &wd, req );
+			req->handler( req );
 		} catch ( std::exception& ex ) {
 			enqueue_result( (string)req->input_line[0] + " " +
 							escape_spaces( ex.what() ) );
