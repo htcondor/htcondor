@@ -91,7 +91,7 @@ int CollectorDaemon::UpdateTimerId;
 ClassAd *CollectorDaemon::query_any_result;
 ClassAd CollectorDaemon::query_any_request;
 
-#if defined ( HAVE_HIBERNATION )
+#if ( HAVE_HIBERNATION )
 OfflineCollectorPlugin CollectorDaemon::offline_plugin_;
 #endif
 
@@ -268,7 +268,7 @@ void CollectorDaemon::Init()
 		(CommandHandler)receive_update_expect_ack,
 		"receive_update_expect_ack",NULL,ADVERTISE_STARTD_PERM);
 
-#if defined ( HAVE_HIBERNATION )
+#if ( HAVE_HIBERNATION )
     // add all persisted ads back into the collector's store
     // process the given command
     int     insert = -3;
@@ -278,7 +278,7 @@ void CollectorDaemon::Init()
 	    if ( !collector.collect ( UPDATE_STARTD_AD, &cad, NULL, insert ) ) {
 		    
             if ( -3 == insert ) {
-			    
+
                 /* this happens when we get a classad for which a hash 
                 key could not been made. This occurs when certain 
                 attributes are needed for the particular catagory the
@@ -291,7 +291,7 @@ void CollectorDaemon::Init()
 
 	    }
 
-    }      
+    }
 #endif
 
 	// ClassAd evaluations use this function to resolve names
@@ -588,7 +588,7 @@ int CollectorDaemon::receive_invalidation(Service* /*s*/,
 	if (command == INVALIDATE_STARTD_ADS)
 		process_invalidation (STARTD_PVT_AD, cad, sock);
 
-#if defined ( HAVE_HIBERNATION )
+#if ( HAVE_HIBERNATION )
     /* let the off-line plug-in invalidate the given ad */
     offline_plugin_.invalidate ( command, cad );
 #endif
@@ -658,7 +658,7 @@ int CollectorDaemon::receive_update(Service* /*s*/, int command, Stream* sock)
 		}
 	}
 
-#if defined ( HAVE_HIBERNATION )
+#if ( HAVE_HIBERNATION )
 	/* let the off-line plug-in have at it */
 	offline_plugin_.update ( command, *ad );
 #endif
@@ -780,7 +780,7 @@ int CollectorDaemon::receive_update_expect_ack( Service* /*s*/,
         
     }
 
-#if defined ( HAVE_HIBERNATION )
+#if ( HAVE_HIBERNATION )
     /* let the off-line plug-in have at it */
     offline_plugin_.update ( command, *cad );
 #endif
@@ -1216,7 +1216,7 @@ void CollectorDaemon::Config()
     collector.setClientTimeout( ClientTimeout );
     collector.scheduleHousekeeper( ClassadLifetime );
 
-#if defined ( HAVE_HIBERNATION )
+#if ( HAVE_HIBERNATION )
     offline_plugin_.configure();
 #endif
 
