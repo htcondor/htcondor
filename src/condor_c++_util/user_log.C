@@ -143,6 +143,7 @@ UserLog::initialize( const char *file, int c, int p, int s, const char *gjid)
 
 	if ( m_write_user_log &&
 		 !openFile(file, true, m_enable_locking, true, m_lock, m_fp) ) {
+		dprintf(D_ALWAYS, "UserLog::initialize: failed to open file\n");
 		return false;
 	}
 
@@ -157,7 +158,7 @@ UserLog::initialize( const char *owner, const char *domain, const char *file,
 
 	uninit_user_ids();
 	if (!  init_user_ids(owner, domain) ) {
-		dprintf(D_ALWAYS, "init_user_ids() failed!\n");
+		dprintf(D_ALWAYS, "UserLog::initialize: init_user_ids() failed!\n");
 		return false;
 	}
 
@@ -342,6 +343,7 @@ UserLog::openFile(
 # else
 	// Windows (Visual C++)
 	const char *fmode = append ? "a+tc" : "w+tc";
+	fp = safe_fopen_wrapper( file, mode );
 	if( NULL == fp ) {
 		dprintf( D_ALWAYS, "UserLog::initialize: "
 				 "safe_fopen_wrapper(\"%s\",%s) failed - errno %d (%s)\n", 
