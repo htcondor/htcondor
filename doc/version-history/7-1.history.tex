@@ -63,17 +63,18 @@ more details on the command line parameter itself.
 % PR 947
 \item \Condor{submit\_dag} is now automatically run recursively on
 nested DAGs (unless the new \Opt{-no\_recurse} option is specified).
+See \pageref{dagman:NestedRecursion} for details.
 
 % PR 947
-\item Added the new \MacroNI{SUBDAG} keyword (for specifying nested
-DAGs) to \Condor{dagman}.
+\item Added the new \MacroNI{SUBDAG EXTERNAL} keyword (for specifying nested
+DAGs) to \Condor{dagman}.  See \pageref{dagman:SUBDAG} for details.
 
 \item It is now possible to have multiple rotations of the ``event
   log'' file, such as ``EventLog'', ``EventLog.1'', ``EventLog.2'', ...
 
 \item The VM universe can now run VMware virtual machines on machines using
 privilege separation without requiring the \Condor{vm-gahp} binary to be
-setuid root. Runnin the \Condor{vm-gahp} as setuid root is no longer
+setuid root. Running the \Condor{vm-gahp} as setuid root is no longer
 supported for VMware or Xen.
 
 \end{itemize}
@@ -119,7 +120,7 @@ been removed:
   \item \MacroNI{XEN\_IMAGE\_IO\_TYPE}
   \end{itemize}
 
-\item New configuration paramters
+\item New configuration parameters
 \MacroNI{VMWARE\_LOCAL\_SETTINGS\_FILE}
 and \MacroNI{XEN\_LOCAL\_SETTINGS\_FILE} have been added. They allow
 a machine administrator to add settings to the virtual machine

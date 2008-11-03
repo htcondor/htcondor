@@ -23,6 +23,8 @@
 \oOptArg{-autorescue}{0|1}
 \oOptArg{-dorescuefrom}{number}
 \oOpt{-allowversionmismatch}
+\oOpt{-no\_recurse}
+\oOpt{-update\_submit}
 \Arg{DAGInputFile1}
 \oArg{{DAGInputFile2} \Dots {DAGInputFileN} }
 
@@ -53,7 +55,7 @@ description.
      "new-style" rescue DAG mode (see section~\ref{sec:DAGRescueNew})
      is in effect, and any "new-style" rescue DAGs exist, the \Opt{-force} flag
      will cause them to be renamed, and the original DAG will be run.
-     If "old-style" rescue DAG mode (see section~\ref{sec:DAGRescueOld}
+     If "old-style" rescue DAG mode (see section~\ref{sec:DAGRescueOld})
      is in effect, any existing "old-style" rescue DAGs will be deleted,
      and the original DAG will be run.}
   \OptItem{\OptArg{-maxidle}{NumberOfJobs}}{Sets the maximum number of idle
@@ -179,6 +181,21 @@ description.
      \Condor{submit\_dag} and \Condor{dagman}).  WARNING!  This option
      should be used only if absolutely necessary.  Allowing version
      mismatches can cause subtle problems when running DAGs.
+  }
+  \OptItem{\Opt{-no\_recurse}}{This optional argument causes
+     \Condor{submit\_dag} to \emph{not} run itself recursively on
+     nested DAGs (the default is that recursion is enabled).  (DAG
+     nodes specified with the \MacroNI{SUBDAG EXTERNAL} keyword or
+     with submit file names ending in \File{.condor.sub} are
+     considered nested DAGs, and, by default, \Condor{submit\_dag}
+     \emph{-no\_submit -update\_submit} is run on the corresponding
+     DAG files.)
+  }
+  \OptItem{\Opt{-update\_submit}}{This optional argument causes an existing
+     \File{.condor.sub} file to not be treated as an error; rather, the
+     \File{.condor.sub} file will be overwritten, but the existing values
+     of \Opt{-maxjobs}, \Opt{-maxidle}, \Opt{-maxpre}, and \Opt{-maxpost}
+     will be preserved.
   }
   \end{Options}
 

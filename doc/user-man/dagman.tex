@@ -199,6 +199,24 @@ used to restart and complete a DAG without re-executing
 completed nodes.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{dagman:SUBDAG}SUBDAG}
+
+The \Arg{SUBDAG} keyword specifies a special case of a \Opt{JOB}
+node, where the job is a DAG.
+
+\Opt{SUBDAG} \Opt{EXTERNAL} \Arg{JobName} \Arg{DagFileName}
+\oOptArg{DIR}{directory} \oOpt{DONE}
+
+A \Opt{SUBDAG} node is essentially the same as a "normal" node, except
+that the nested DAG file is specified instead of the Condor submit file.
+("SUBDAG EXTERNAL A foo.dag" is functionally equivalent to
+"JOB A foo.dag.condor.sub", but SUBDAG EXTERNAL is now the preferred
+syntax for specifying such a node.)  "EXTERNAL" means that the
+SUBDAG is run in its own instance of \Condor{dagman}.
+
+For more information, see section~\ref{sec:DAGsinDAGs}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{dagman:DATA}DATA}
 
 The \Arg{DATA} key word specifies a job to be managed by the Stork data
@@ -1136,12 +1154,17 @@ listed is used.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{DAGMan!DAGs within DAGs}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:NestedBasics}Basics}
+
 The organization and dependencies of the jobs within a DAG
 are the keys to its utility.
 There are cases when a DAG is easier to visualize and 
 construct hierarchically,
-as when a node within a DAG is also a DAG.
-Condor DAGMan handles this situation with grace.
+in other words when a node within a DAG is also a DAG.
+Condor DAGMan handles this situation quite easily.
+(Note that DAGs can be nested to any depth.)
+
 Since more than one DAG is being discussed, 
 terminology is introduced to clarify which DAG is which. 
 Reuse the example diamond-shaped DAG as given in 
@@ -1151,13 +1174,7 @@ will itself be a DAG.
 The DAG of node B is called the inner DAG,
 and the diamond-shaped DAG is called the outer DAG.
 
-To make DAGs within DAGs,
-the essential element is getting the name of the submit description
-file for the inner DAG correct within the outer DAG's input
-file.
-
 Work on the inner DAG first.
-The goal is to generate a Condor submit description file for this inner DAG.
 Here is a very simple linear DAG input file used as
 an example of the inner DAG.
 \begin{verbatim}
@@ -1170,17 +1187,23 @@ an example of the inner DAG.
     PARENT Y CHILD Z
 \end{verbatim}
 
-Use \Condor{submit\_dag} to create a submit description file for this
-inner dag:
-\begin{verbatim}
-   condor_submit_dag -no_submit inner.dag
-\end{verbatim}
-The resulting file will be named \File{inner.dag.condor.sub}.
-This file will be needed in the DAG input file of the outer DAG.
-The naming of the file is the name of the DAG input file
-(\File{inner.dag}) with the suffix \File{.condor.sub}.
+The Condor submit file corresponding to this DAG will be named
+\File{inner.dag.condor.sub}.  (The DAGMan submit file is always
+named \File{<DAG file name>.condor.sub}.)
 
 A simple example of a DAG input file for the outer DAG is
+\begin{verbatim}
+# File name: diamond.dag
+#
+    JOB  A  A.submit 
+    SUBDAG EXTERNAL  B  inner.dag
+    JOB  C  C.submit	
+    JOB  D  D.submit
+    PARENT A CHILD B C
+    PARENT B C CHILD D
+\end{verbatim}
+
+This is equivalent, but the version above is now preferred:
 \begin{verbatim}
 # File name: diamond.dag
 #
@@ -1192,19 +1215,89 @@ A simple example of a DAG input file for the outer DAG is
     PARENT B C CHILD D
 \end{verbatim}
 
-The outer DAG is then submitted as before, with
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{dagman:NestedRecursion}\Condor{submit\_dag} recursion}
+
+The outer DAG is then submitted as before, with the command
 \begin{verbatim}
    condor_submit_dag diamond.dag
 \end{verbatim}
 
-More than one level of nested DAGs is supported.
+In Condor 7.1.4 and later, when you run \Condor{submit\_dag} on
+the outer DAG file, \emph{condor\_submit\_dag -no\_submit -update\_submit} is
+automatically run on the inner DAG file before the outer DAG is
+actually run.  (If you want to disable this feature, you can do
+so by passing the \Opt{-no\_recurse} command-line flag to
+\Condor{submit\_dag}.)
 
-One item to get right:
-to locate the log files used in ordering the DAG,
-DAGMan either needs a completely flat directory structure
-(\emph{all} files for outer and inner DAGs within the same directory),
-or
-it needs full path names to all log files.
+The following command-line flags are passed to the lower-level
+\Condor{submit\_dag}:
+\begin{itemize}
+\item \Opt{-verbose}
+\item \Opt{-force}
+\item \Opt{-notification}
+\item \Opt{-dagman}
+\item \Opt{-debug}
+\item \Opt{-usedagdir}
+\item \Opt{-outfile\_dir}
+\item \Opt{-oldrescue}
+\item \Opt{-autorescue}
+\item \Opt{-dorescuefrom}
+\item \Opt{-allowversionmismatch}
+\end{itemize}
+
+The following command-line flags are preserved in existing lower-level
+DAG submit files (if any exist):
+\begin{itemize}
+\item \Opt{-maxjobs}
+\item \Opt{-maxidle}
+\item \Opt{-maxpre}
+\item \Opt{-maxpost}
+\end{itemize}
+
+Note that the \Opt{-force} option will cause existing DAG submit files to
+be overwritten without preserving any existing values.
+
+Because of the automatic recursion in \Condor{submit\_dag},
+normally you only need to run \Condor{submit\_dag} on your
+outermost DAG.  But you can manually run \Condor{submit\_dag} on an
+inner DAG or DAGs to set \Opt{-maxjobs} or other values.  For instance,
+using the example in the previous section, you could do the
+following:
+
+\begin{verbatim}
+  condor_submit_dag -no_submit -maxjobs 1 inner.dag
+  condor_submit_dag diamond.dag
+\end{verbatim}
+
+This would set maxjobs to 1 for the inner DAG, and then run the
+entire workflow.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{dagman:NestedRescue}Nested DAGs and rescue DAGs}
+
+When using nested DAGs, it is strongly recommended that you use
+"new-style" rescue DAGs (this is the default).  Using "new-style"
+rescue DAGs will automatically run the proper rescue DAG(s) if
+there is a failure in your workflow.  For example, if one of the
+nodes in \File{inner.dag} fails, this will produce a rescue
+DAG for inner.dag (\File{inner.dag.rescue.001}, etc.).  Then,
+since \File{inner.dag} failed, node B of \File{diamond.dag} will fail,
+producing a rescue DAG for \File{diamond.dag}
+(\File{diamond.dag.rescue.001}, etc.).  If you re-run
+\emph{condor\_submit\_dag diamond.dag} the most recent outer rescue
+DAG will be run, and this will re-run the inner DAG, which will
+actually run the most recent inner rescue DAG.  If you use
+"old-style" rescue DAGs, you would have to either rename the 
+inner rescue DAG or run it manually.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{dagman:NestedFilePaths}File paths in nested DAGs}
+
+Remember that, unless you use the DIR keyword in your outer DAG,
+the inner DAG will be submitted from the directory in which you
+run the outer DAG.  Therefore, all paths in the inner DAG file
+(to submit files, etc.) must be specified accordingly.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:MultipleDAGs}Single Submission of Multiple, Independent DAGs}
@@ -1311,7 +1404,7 @@ simple Condor submit description file:
   log          = submit.log
   notification = NEVER
   queue
-# END SUBMIT FILE submit.condor
+  # END SUBMIT FILE submit.condor
 \end{verbatim}
 
 This first simple example splices a diamond-shaped DAG in
