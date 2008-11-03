@@ -386,6 +386,10 @@ specifies a failure condition specific to the type of job.  Routed
 jobs that are removed (e.g. by \Attr{PeriodicRemove}) are considered
 to be failures.
 
+\item[TargetUniverse] This is an integer specifying the desired
+universe for the routed copy of the job.  The default is 9, which
+means the grid universe.
+
 \item[UseSharedX509UserProxy] If this (New ClassAds) expression
 evaluates to true, then the value of \Attr{SharedX509UserProxy} will
 be used as the x509 user proxy for the routed job.  NOTE: if the \Condor{job\_router} daemon
