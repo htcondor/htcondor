@@ -343,7 +343,7 @@ UserLog::openFile(
 # else
 	// Windows (Visual C++)
 	const char *fmode = append ? "a+tc" : "w+tc";
-	fp = safe_fopen_wrapper( file, mode );
+	fp = safe_fopen_wrapper( file, fmode );
 	if( NULL == fp ) {
 		dprintf( D_ALWAYS, "UserLog::initialize: "
 				 "safe_fopen_wrapper(\"%s\",%s) failed - errno %d (%s)\n", 
