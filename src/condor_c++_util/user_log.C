@@ -819,7 +819,8 @@ bool
 UserLog::writeEvent ( ULogEvent *event, ClassAd *param_jobad )
 {
 	// the the log is not initialized, don't bother --- just return OK
-	if (!m_fp && !m_global_fp) {
+	if ( !m_fp && !m_global_fp ) {
+		dprintf( D_FULLDEBUG, "UserLog: not initialized @ writeEvent()\n" );
 		return true;
 	}
 	
@@ -828,10 +829,16 @@ UserLog::writeEvent ( ULogEvent *event, ClassAd *param_jobad )
 		return false;
 	}
 	if (m_fp) {
-		if (!m_lock) return false;
+		if (!m_lock) {
+			dprintf( D_ALWAYS, "UserLog: No user log lock!\n" );
+			return false;
+		}
 	}
 	if (m_global_fp) {
-		if (!m_global_lock) return false;
+		if (!m_global_lock) {
+			dprintf( D_ALWAYS, "UserLog: No global event log lock!\n" );
+			return false;
+		}
 	}
 
 	// fill in event context
@@ -841,10 +848,11 @@ UserLog::writeEvent ( ULogEvent *event, ClassAd *param_jobad )
 	event->setGlobalJobId(m_gjid);
 	
 	// write global event
-	if ( m_write_global_log &&
-		 m_global_fp && 
-		 (doWriteEvent(event, true, false, param_jobad) == false)  ) {
-		return false;
+	if ( m_write_global_log && m_global_fp ) {
+		if ( ! doWriteEvent(event, true, false, param_jobad)  ) {
+			dprintf( D_ALWAYS, "UserLog: global doWriteEvent()!\n" );
+			return false;
+		}
 	}
 
 	char *attrsToWrite = param("EVENT_LOG_JOB_AD_INFORMATION_ATTRS");
@@ -905,10 +913,11 @@ UserLog::writeEvent ( ULogEvent *event, ClassAd *param_jobad )
 	}
 		
 	// write ulog event
-	if ( m_write_user_log && 
-		 m_fp &&
-		 ( doWriteEvent(event, false, false, param_jobad) == false ) ) {
-		return false;
+	if ( m_write_user_log && m_fp ) {
+		if ( ! doWriteEvent(event, false, false, param_jobad) ) {
+			dprintf( D_ALWAYS, "UserLog: user doWriteEvent()!\n" );
+			return false;
+		}
 	}
 
 	return true;
