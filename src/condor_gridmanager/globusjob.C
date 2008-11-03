@@ -2704,6 +2704,8 @@ void GlobusJob::GramCallback( int new_state, int new_error_code )
 		callbackGlobusStateErrorCode = new_error_code;
 
 		SetEvaluateState();
+	} else if ( new_state == globusState ) {
+		SetRemoteJobStatus( GlobusJobStatusName( globusState ) );
 	}
 }
 

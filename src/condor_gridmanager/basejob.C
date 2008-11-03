@@ -37,6 +37,8 @@
 
 int BaseJob::periodicPolicyEvalTid = TIMER_UNSET;
 
+int BaseJob::m_checkRemoteStatusTid = TIMER_UNSET;
+
 HashTable<PROC_ID, BaseJob *> BaseJob::JobsByProcId( HASH_TABLE_SIZE,
 													 hashFuncPROC_ID );
 HashTable<HashKey, BaseJob *> BaseJob::JobsByRemoteId( HASH_TABLE_SIZE,
@@ -58,6 +60,11 @@ void BaseJob::BaseJobReconfig()
 							"EvalAllPeriodicJobExprs", (Service*)NULL );
 	}
 
+	if ( m_checkRemoteStatusTid == TIMER_UNSET ) {
+		m_checkRemoteStatusTid = daemonCore->Register_Timer( 5, 60,
+							(TimerHandler)&BaseJob::CheckAllRemoteStatus,
+							"BaseJob::CheckAllRemoteStatus", (Service*)NULL );
+	}
 }
 
 BaseJob::BaseJob( ClassAd *classad )
@@ -74,6 +81,9 @@ BaseJob::BaseJob( ClassAd *classad )
 	holdLogged = false;
 
 	exitStatusKnown = false;
+
+	m_lastRemoteStatusUpdate = 0;
+	m_currentStatusUnknown = false;
 
 	deleteFromGridmanager = false;
 	deleteFromSchedd = false;
@@ -107,6 +117,9 @@ BaseJob::BaseJob( ClassAd *classad )
 	jobLeaseSentExpiredTid = TIMER_UNSET;
 	jobLeaseReceivedExpiredTid = TIMER_UNSET;
 	SetJobLeaseTimers();
+
+	jobAd->LookupInteger( "LastRemoteStatusUpdate", m_lastRemoteStatusUpdate );
+	jobAd->LookupBool( "CurrentStatusUnknown", m_currentStatusUnknown );
 
 	int tmp_int;
 	if ( jobAd->LookupInteger( ATTR_GRID_RESOURCE_UNAVAILABLE_TIME,
@@ -409,10 +422,22 @@ void BaseJob::SetRemoteJobId( const char *job_id )
 	if ( !old_job_id.IsEmpty() ) {
 		JobsByRemoteId.remove( HashKey( old_job_id.Value() ) );
 		jobAd->AssignExpr( ATTR_GRID_JOB_ID, "Undefined" );
+	} else {
+		//  old job id was NULL
+		m_lastRemoteStatusUpdate = time(NULL);
+		jobAd->Assign( "LastRemoteStatusUpdate", m_lastRemoteStatusUpdate );
+dprintf(D_FULLDEBUG,"JEF: SetRemoteJobId(%d.%d, NULL->blah): LastRemoteStatusUpdate=%d\n",procID.cluster,procID.proc,m_lastRemoteStatusUpdate);
 	}
 	if ( !new_job_id.IsEmpty() ) {
 		JobsByRemoteId.insert( HashKey( new_job_id.Value() ), this );
 		jobAd->Assign( ATTR_GRID_JOB_ID, new_job_id.Value() );
+	} else {
+		// new job id is NULL
+		m_lastRemoteStatusUpdate = 0;
+		jobAd->Assign( "LastRemoteStatusUpdate", 0 );
+		m_currentStatusUnknown = false;
+		jobAd->Assign( "CurrentStatusUnknown", false );
+dprintf(D_FULLDEBUG,"JEF: SetRemoteJobId(%d.%d, blah->NULL): LastRemoteStatusUpdate=%d\n",procID.cluster,procID.proc,m_lastRemoteStatusUpdate);
 	}
 	requestScheddUpdate( this );
 }
@@ -421,6 +446,21 @@ void BaseJob::SetRemoteJobStatus( const char *job_status )
 {
 	MyString old_job_status;
 	MyString new_job_status;
+
+	if ( job_status ) {
+		m_lastRemoteStatusUpdate = time(NULL);
+		jobAd->Assign( "LastRemoteStatusUpdate", m_lastRemoteStatusUpdate );
+		// TODO Trigger a schedd update here?
+dprintf(D_FULLDEBUG,"JEF: SetRemoteJobStatus(%d.%d): LastRemoteStatusUpdate=%d\n",procID.cluster,procID.proc,m_lastRemoteStatusUpdate);
+		if ( m_currentStatusUnknown == true ) {
+dprintf(D_FULLDEBUG,"      Clearing unknown status\n");
+			m_currentStatusUnknown = false;
+			jobAd->Assign( "CurrentStatusUnknown", false );
+			requestScheddUpdate( this );
+			WriteJobStatusKnownEventToUserLog( jobAd );
+		}
+	}
+
 	jobAd->LookupString( ATTR_GRID_JOB_STATUS, old_job_status );
 	if ( job_status != NULL && job_status[0] != '\0' ) {
 		new_job_status = job_status;
@@ -794,6 +834,46 @@ int BaseJob::EvalOnExitJobExpr()
 	}
 
 	return 0;
+}
+
+int BaseJob::CheckAllRemoteStatus( Service * )
+{
+	BaseJob *curr_job;
+
+	dprintf( D_FULLDEBUG, "Evaluating staleness of remote job statuses.\n" );
+
+		// TODO Reset timer based on shortest time that a job status could
+		//   become stale?
+	JobsByProcId.startIterations();
+	while ( JobsByProcId.iterate( curr_job ) != 0  ) {
+		curr_job->CheckRemoteStatus();
+	}
+
+	return 0;
+}
+
+void BaseJob::CheckRemoteStatus()
+{
+	MyString job_id;
+//	const int stale_limit = 15*60;
+const int stale_limit = 2*60;
+
+dprintf(D_FULLDEBUG,"JEF: CheckRemoteStatus(%d.%d)\n",procID.cluster,procID.proc);
+		// TODO return time that this job status could become stale?
+		// TODO compute stale_limit from job's poll interval?
+		// TODO make stale_limit configurable?
+	if ( m_lastRemoteStatusUpdate == 0 || m_currentStatusUnknown == true ) {
+dprintf(D_FULLDEBUG,"      skipping: lastUpdate=%d, statusUnknown=%s\n",m_lastRemoteStatusUpdate,m_currentStatusUnknown?"true":"false");
+		return;
+	}
+dprintf(D_FULLDEBUG,"      now=%d, lastUpdate=%d, limit=%d\n",time(NULL),m_lastRemoteStatusUpdate,stale_limit);
+	if ( time(NULL) > m_lastRemoteStatusUpdate + stale_limit ) {
+		m_currentStatusUnknown = true;
+		jobAd->Assign( "CurrentStatusUnknown", true );
+		requestScheddUpdate( this );
+		WriteJobStatusUnknownEventToUserLog( jobAd );
+dprintf(D_FULLDEBUG,"      setting status to unknown\n");
+	}
 }
 
 /*Before evaluating user policy expressions, temporarily update
@@ -1452,6 +1532,70 @@ WriteGridSubmitEventToUserLog( ClassAd *job_ad )
 	if ( !rc ) {
 		dprintf( D_ALWAYS,
 				 "(%d.%d) Unable to log ULOG_GRID_SUBMIT event\n",
+				 cluster, proc );
+		return false;
+	}
+
+	return true;
+}
+
+bool
+WriteJobStatusUnknownEventToUserLog( ClassAd *job_ad )
+{
+	int cluster, proc;
+	UserLog *ulog = InitializeUserLog( job_ad );
+	if ( ulog == NULL ) {
+		// User doesn't want a log
+		return true;
+	}
+
+	job_ad->LookupInteger( ATTR_CLUSTER_ID, cluster );
+	job_ad->LookupInteger( ATTR_PROC_ID, proc );
+
+	dprintf( D_FULLDEBUG, 
+			 "(%d.%d) Writing job status unknown record to user logfile\n",
+			 cluster, proc );
+
+	JobStatusUnknownEvent event;
+
+	int rc = ulog->writeEvent( &event, job_ad );
+	delete ulog;
+
+	if ( !rc ) {
+		dprintf( D_ALWAYS,
+				 "(%d.%d) Unable to log ULOG_JOB_STATUS_UNKNOWN event\n",
+				 cluster, proc );
+		return false;
+	}
+
+	return true;
+}
+
+bool
+WriteJobStatusKnownEventToUserLog( ClassAd *job_ad )
+{
+	int cluster, proc;
+	UserLog *ulog = InitializeUserLog( job_ad );
+	if ( ulog == NULL ) {
+		// User doesn't want a log
+		return true;
+	}
+
+	job_ad->LookupInteger( ATTR_CLUSTER_ID, cluster );
+	job_ad->LookupInteger( ATTR_PROC_ID, proc );
+
+	dprintf( D_FULLDEBUG, 
+			 "(%d.%d) Writing job status known record to user logfile\n",
+			 cluster, proc );
+
+	JobStatusKnownEvent event;
+
+	int rc = ulog->writeEvent( &event, job_ad );
+	delete ulog;
+
+	if ( !rc ) {
+		dprintf( D_ALWAYS,
+				 "(%d.%d) Unable to log ULOG_JOB_STATUS_KNOWN event\n",
 				 cluster, proc );
 		return false;
 	}

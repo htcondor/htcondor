@@ -77,7 +77,9 @@ enum ULogEventNumber {
 	/** Grid Resource Up          */  ULOG_GRID_RESOURCE_UP         = 25,
 	/** Grid Resource Down        */  ULOG_GRID_RESOURCE_DOWN       = 26,
 	/** Job Submitted remotely    */  ULOG_GRID_SUBMIT 	    	    = 27,
-	/** Report job ad information */  ULOG_JOB_AD_INFORMATION		= 28
+	/** Report job ad information */  ULOG_JOB_AD_INFORMATION		= 28,
+	/** Job Status Unknown        */  ULOG_JOB_STATUS_UNKNOWN       = 29,
+	/** Job Status Known          */  ULOG_JOB_STATUS_KNOWN         = 30
 };
 
 /// For printing the enum value.  cout << ULogEventNumberNames[eventNumber];
@@ -1672,6 +1674,77 @@ class JobAdInformationEvent : public ULogEvent
 
   protected:
 	  ClassAd *jobad;
+};
+
+//----------------------------------------------------------------------------
+/** Framework for a JobStatusUnknown object.  Occurs when the remote
+    status of a grid job hasn't been updated for a long period of time.
+*/
+class JobStatusUnknownEvent : public ULogEvent
+{
+  public:
+    ///
+    JobStatusUnknownEvent();
+    ///
+    ~JobStatusUnknownEvent();
+
+    /** Read the body of the next JobStatusUnknown event.
+        @param file the non-NULL readable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int readEvent (FILE *);
+
+    /** Write the body of the next JobStatusUnknown event.
+        @param file the non-NULL writable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int writeEvent (FILE *);
+
+	/** Return a ClassAd representation of this JobStatusUnknownEvent.
+		@return NULL for failure, the ClassAd pointer otherwise
+	*/
+	virtual ClassAd* toClassAd();
+
+	/** Initialize from this ClassAd.
+		@param a pointer to the ClassAd to initialize from
+	*/
+	virtual void initFromClassAd(ClassAd* ad);
+};
+
+//----------------------------------------------------------------------------
+/** Framework for a JobStatusKnown object.  Occurs when the remote
+    status of a grid job is updated after a long period of time (and a
+	JobStatusUnknownEvent was previously triggered).
+*/
+class JobStatusKnownEvent : public ULogEvent
+{
+  public:
+    ///
+    JobStatusKnownEvent();
+    ///
+    ~JobStatusKnownEvent();
+
+    /** Read the body of the next JobStatusKnown event.
+        @param file the non-NULL readable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int readEvent (FILE *);
+
+    /** Write the body of the next JobStatusKnown event.
+        @param file the non-NULL writable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int writeEvent (FILE *);
+
+	/** Return a ClassAd representation of this JobStatusKnownEvent.
+		@return NULL for failure, the ClassAd pointer otherwise
+	*/
+	virtual ClassAd* toClassAd();
+
+	/** Initialize from this ClassAd.
+		@param a pointer to the ClassAd to initialize from
+	*/
+	virtual void initFromClassAd(ClassAd* ad);
 };
 
 
