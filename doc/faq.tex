@@ -533,12 +533,12 @@ add a parameter to their configuration files like so:
 HAS_MY_SOFTWARE = True
 \end{verbatim}
 
-And then, if there are already STARTD\_EXPRS defined in that file, add
-HAS\_MY\_SOFTWARE to them, or, if not, add the line:
+And then, if there are already \MacroNI{STARTD\_ATTRS} defined in that file, add
+\MacroNI{HAS\_MY\_SOFTWARE} to them, or, if not, add the line:
 
 \footnotesize
 \begin{verbatim}
-STARTD_EXPRS = HAS_MY_SOFTWARE, $(STARTD_EXPRS)
+STARTD_ATTRS = HAS_MY_SOFTWARE, $(STARTD_ATTRS)
 \end{verbatim}
 \normalsize
 
