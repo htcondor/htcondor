@@ -1316,6 +1316,7 @@ case "$_cv_opsys-$_cv_opsys_vers-$_cv_arch-$_cv_linux_distro-$_cv_libc_major-$_c
   LINUX-*-ALPHA-* | \
   LINUX-*-*-DEBIAN40-* | \
   LINUX-*-IA64-* | \
+  SOLARIS-* | \
   LINUX-*-CONDOR_PPC-* ) _cv_clipped_default=yes ;;
   * ) _cv_clipped_default=no ;;
 esac
