@@ -335,21 +335,24 @@ makeHadAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in * /*from*/)
 bool
 makeGridAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in *from)
 {
-    // get the name of the and the machine name
-    if ( !adLookup( "GRID", ad, ATTR_NAME, ATTR_MACHINE, hk.name ) ) {
+    MyString tmp;
+    
+    // get the hash name of the the resource
+    if ( !adLookup( "GRID", ad, "HashName", NULL, hk.name ) ) {
         return false;
     }
     
-    // get the name of the schedd asociated with it
-    MyString tmp;
-    if ( adLookup( "GRID", ad, ATTR_SCHEDD_NAME, NULL, tmp, false ) ) {
-        hk.name += tmp;
+    // get the name of the schedd asociated with the resource
+    if ( !adLookup( "GRID", ad, ATTR_SCHEDD_NAME, NULL, tmp ) ) {
+        return false;
     }
+    hk.name += tmp;
     
-    // get the IP and port of the schedd 
-    if ( !getIpAddr( "GRID", ad, ATTR_SCHEDD_IP_ADDR, NULL, hk.ip_addr ) ) {
+    // get the owner associated with the resource
+    if ( !adLookup( "GRID", ad, ATTR_OWNER, NULL, tmp ) ) {
         return false;
 	}
+    hk.name += tmp;
 
     return true;
 }
