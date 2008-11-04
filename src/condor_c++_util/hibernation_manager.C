@@ -203,7 +203,9 @@ HibernationManager::canWake (void) const
 {
     bool can = false;
 
-	can = m_primary_adapter->exists()  &&  m_primary_adapter->isWakeable();
+	can = (  ( NULL != m_primary_adapter       ) && 
+			 ( m_primary_adapter->exists()     ) &&
+			 ( m_primary_adapter->isWakeable() )  );
     return can;
 }
 

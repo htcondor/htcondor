@@ -2181,21 +2181,14 @@ fi
 # checks for libraries
 ############################################################
 
-# Currently in Condor, threading in daemon core on Unix requires
-# both pthreads and thread local storage.  HACK: for right now
-# we know that only Linux meets that requirement, and furthermore
-# that TLS exists but is broken on ia64 (the compiler blows up).  So for now
-# we only want pthreads defined on Linux that is not ia64.  Once we 
-# remove the requirement on TLS in the code, we can safely remove 
-# this hack.
-if test $os = "Linux" && test $arch != "ia64"; then
-	AC_CHECK_LIB([pthread], [pthread_create],
-  		[ac_pthreads=yes
-   		AC_DEFINE([HAVE_PTHREADS],[1],[Define if pthreads are available])],
-  		[ac_pthreads=no])
-	# Check if this system support Thread Local Storage class.
-	AX_TLS
-fi
+# The DRMAA C library needs to be compiled with pthreads in mind if
+# pthreads are available. This machinery ends up defining HAS_PTHREADS
+# In the build system which is then used to add the correct threading
+# flags to the compile line for drmaa code.
+AC_CHECK_LIB([pthread], [pthread_create],
+  [ac_pthreads=yes
+   AC_DEFINE([HAS_PTHREADS],[1],[Define if pthreads are available])],
+  [ac_pthreads=no])
 
 
 ############################################################
@@ -2225,7 +2218,13 @@ AC_CHECK_HEADERS([linux/ethtool.h],[],[],[
 AC_CHECK_HEADERS([sys/statfs.h])
 AC_CHECK_HEADERS([sys/statvfs.h])
 AC_CHECK_HEADERS([sys/vfs.h])
-AC_CHECK_HEADERS([sys/mount.h])
+AC_CHECK_HEADERS([sys/mount.h],[],[],[
+#if HAVE_SYS_TYPES_H
+# include <sys/types.h>
+#endif
+#if HAVE_SYS_PARAM_H
+# include <sys/param.h>
+#endif])
 AC_CHECK_HEADERS([ustat.h])
 AC_CHECK_HEADERS([dlfcn.h])
 AC_CHECK_HEADERS([valgrind.h])
@@ -2280,7 +2279,9 @@ AC_CHECK_FUNCS([strsignal				\
 		setlinebuf				\
 		snprintf				\
 		setenv					\
-		unsetenv					\
+		unsetenv				\
+		execl					\
+		access					\
 		vasprintf				\
 		clearenv])
 AC_CHECK_FUNC(crypt, ,AC_CHECK_LIB(crypt,crypt))

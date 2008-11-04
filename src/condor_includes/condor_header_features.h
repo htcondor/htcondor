@@ -34,14 +34,6 @@
 #define DLL_IMPORT_MAGIC  /* a no-op on Unix */
 #endif
 
-/* The handy __FUNCTION__ macro is gcc specific; give
- * other platforms something to use.
- */
-#ifndef __GNUC__
-#define __FUNCTION__ "UNKNOWN"
-#endif
-
-
 #ifndef CHECK_PRINTF_FORMAT
 /*
 Check printf-style format arguments at compile time.

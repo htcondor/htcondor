@@ -143,6 +143,7 @@ UserLog::initialize( const char *file, int c, int p, int s, const char *gjid)
 
 	if ( m_write_user_log &&
 		 !openFile(file, true, m_enable_locking, true, m_lock, m_fp) ) {
+		dprintf(D_ALWAYS, "UserLog::initialize: failed to open file\n");
 		return false;
 	}
 
@@ -157,7 +158,7 @@ UserLog::initialize( const char *owner, const char *domain, const char *file,
 
 	uninit_user_ids();
 	if (!  init_user_ids(owner, domain) ) {
-		dprintf(D_ALWAYS, "init_user_ids() failed!\n");
+		dprintf(D_ALWAYS, "UserLog::initialize: init_user_ids() failed!\n");
 		return false;
 	}
 
@@ -255,6 +256,7 @@ UserLog::Reset( void )
 	m_global_lock = NULL;
 
 	m_rotation_lock = NULL;
+	m_rotation_lock_fd = 0;
 	m_rotation_lock_path = NULL;
 
 	m_use_xml = XML_USERLOG_DEFAULT;
@@ -341,6 +343,7 @@ UserLog::openFile(
 # else
 	// Windows (Visual C++)
 	const char *fmode = append ? "a+tc" : "w+tc";
+	fp = safe_fopen_wrapper( file, fmode );
 	if( NULL == fp ) {
 		dprintf( D_ALWAYS, "UserLog::initialize: "
 				 "safe_fopen_wrapper(\"%s\",%s) failed - errno %d (%s)\n", 
@@ -818,7 +821,8 @@ bool
 UserLog::writeEvent ( ULogEvent *event, ClassAd *param_jobad )
 {
 	// the the log is not initialized, don't bother --- just return OK
-	if (!m_fp && !m_global_fp) {
+	if ( !m_fp && !m_global_fp ) {
+		dprintf( D_FULLDEBUG, "UserLog: not initialized @ writeEvent()\n" );
 		return true;
 	}
 	
@@ -827,10 +831,16 @@ UserLog::writeEvent ( ULogEvent *event, ClassAd *param_jobad )
 		return false;
 	}
 	if (m_fp) {
-		if (!m_lock) return false;
+		if (!m_lock) {
+			dprintf( D_ALWAYS, "UserLog: No user log lock!\n" );
+			return false;
+		}
 	}
 	if (m_global_fp) {
-		if (!m_global_lock) return false;
+		if (!m_global_lock) {
+			dprintf( D_ALWAYS, "UserLog: No global event log lock!\n" );
+			return false;
+		}
 	}
 
 	// fill in event context
@@ -840,10 +850,11 @@ UserLog::writeEvent ( ULogEvent *event, ClassAd *param_jobad )
 	event->setGlobalJobId(m_gjid);
 	
 	// write global event
-	if ( m_write_global_log &&
-		 m_global_fp && 
-		 (doWriteEvent(event, true, false, param_jobad) == false)  ) {
-		return false;
+	if ( m_write_global_log && m_global_fp ) {
+		if ( ! doWriteEvent(event, true, false, param_jobad)  ) {
+			dprintf( D_ALWAYS, "UserLog: global doWriteEvent()!\n" );
+			return false;
+		}
 	}
 
 	char *attrsToWrite = param("EVENT_LOG_JOB_AD_INFORMATION_ATTRS");
@@ -904,10 +915,11 @@ UserLog::writeEvent ( ULogEvent *event, ClassAd *param_jobad )
 	}
 		
 	// write ulog event
-	if ( m_write_user_log && 
-		 m_fp &&
-		 ( doWriteEvent(event, false, false, param_jobad) == false ) ) {
-		return false;
+	if ( m_write_user_log && m_fp ) {
+		if ( ! doWriteEvent(event, false, false, param_jobad) ) {
+			dprintf( D_ALWAYS, "UserLog: user doWriteEvent()!\n" );
+			return false;
+		}
 	}
 
 	return true;

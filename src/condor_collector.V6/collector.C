@@ -44,7 +44,6 @@
 #include "condor_adtypes.h"
 #include "condor_universe.h"
 #include "my_hostname.h"
-#include "condor_threads.h"
 
 #include "collector.h"
 
@@ -92,7 +91,9 @@ int CollectorDaemon::UpdateTimerId;
 ClassAd *CollectorDaemon::query_any_result;
 ClassAd CollectorDaemon::query_any_request;
 
+#if ( HAVE_HIBERNATION )
 OfflineCollectorPlugin CollectorDaemon::offline_plugin_;
+#endif
 
 //---------------------------------------------------------
 
@@ -267,6 +268,7 @@ void CollectorDaemon::Init()
 		(CommandHandler)receive_update_expect_ack,
 		"receive_update_expect_ack",NULL,ADVERTISE_STARTD_PERM);
 
+#if ( HAVE_HIBERNATION )
     // add all persisted ads back into the collector's store
     // process the given command
     int     insert = -3;
@@ -276,7 +278,7 @@ void CollectorDaemon::Init()
 	    if ( !collector.collect ( UPDATE_STARTD_AD, &cad, NULL, insert ) ) {
 		    
             if ( -3 == insert ) {
-			    
+
                 /* this happens when we get a classad for which a hash 
                 key could not been made. This occurs when certain 
                 attributes are needed for the particular catagory the
@@ -289,7 +291,8 @@ void CollectorDaemon::Init()
 
 	    }
 
-    }      
+    }
+#endif
 
 	// ClassAd evaluations use this function to resolve names
 	// ClassAdLookupRegister( process_global_query, this );
@@ -305,10 +308,7 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 
 	sock->decode();
 	sock->timeout(ClientTimeout);
-	bool ep = CondorThreads::enable_parallel(true);
-	bool res = !cad.initFromStream(*sock) || !sock->eom();
-	CondorThreads::enable_parallel(ep);
-    if( res )
+    if( !cad.initFromStream(*sock) || !sock->eom() )
     {
         dprintf(D_ALWAYS,"Failed to receive query on TCP: aborting\n");
         return FALSE;
@@ -588,8 +588,10 @@ int CollectorDaemon::receive_invalidation(Service* /*s*/,
 	if (command == INVALIDATE_STARTD_ADS)
 		process_invalidation (STARTD_PVT_AD, cad, sock);
 
+#if ( HAVE_HIBERNATION )
     /* let the off-line plug-in invalidate the given ad */
     offline_plugin_.invalidate ( command, cad );
+#endif
 
 #if HAVE_DLOPEN
 	CollectorPluginManager::Invalidate(command, cad);
@@ -656,8 +658,10 @@ int CollectorDaemon::receive_update(Service* /*s*/, int command, Stream* sock)
 		}
 	}
 
+#if ( HAVE_HIBERNATION )
 	/* let the off-line plug-in have at it */
 	offline_plugin_.update ( command, *ad );
+#endif
 
 #if HAVE_DLOPEN
 	CollectorPluginManager::Update(command, *cad);
@@ -776,8 +780,10 @@ int CollectorDaemon::receive_update_expect_ack( Service* /*s*/,
         
     }
 
+#if ( HAVE_HIBERNATION )
     /* let the off-line plug-in have at it */
     offline_plugin_.update ( command, *cad );
+#endif
 
 #if HAVE_DLOPEN
     CollectorPluginManager::Update ( command, *cad );
@@ -1209,7 +1215,10 @@ void CollectorDaemon::Config()
     // set the appropriate parameters in the collector engine
     collector.setClientTimeout( ClientTimeout );
     collector.scheduleHousekeeper( ClassadLifetime );
-	offline_plugin_.configure();
+
+#if ( HAVE_HIBERNATION )
+    offline_plugin_.configure();
+#endif
 
     // if we're not the View Collector, let's set something up to forward
     // all of our ads to the view collector.

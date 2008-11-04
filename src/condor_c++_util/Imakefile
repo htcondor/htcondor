@@ -227,7 +227,6 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o selector.o \
 	set_user_priv_from_ad.o hook_utils.o classad_visa.o \
 	$(HIBERNATION_OBJS) \
 	ConcurrencyLimitUtils.o \
-	condor_threads.o \
 	simple_arg.o
 
 library_target(cplus_lib.a,$(OBJ))

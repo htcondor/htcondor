@@ -263,9 +263,9 @@
 ;--- Add the files (components generated) -----------------------------------
 <$Files '<$ImageRootDirectory>\*.*' SubDir='TREE' DestDir='INSTALLDIR'>
 
-;--- If using VM Universe, copy the default configuration -------------------
+;--- If using VM Universe, copy the default VMX configuration ---------------
 <$Component "CondorVMUniverse" Create="Y" Directory_="[INSTALLDIR]" Condition=^USEVMUNIVERSE = "Y"^>
-	<$Files '<$ImageRootDirectory>\etc\condor_vmgahp_config.vmware' KeyFile="*">
+	<$Files '<$ImageRootDirectory>\etc\condor_vmware_local_settings' KeyFile="*">
 <$/Component>
 
 ;--- Copy cygwin1.dll if we find one (to avoid version conflicts) -----------

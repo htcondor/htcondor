@@ -58,7 +58,7 @@
 #endif
 
 #if WANT_LEASE_MANAGER
-# define LeaseManagerProgs condor_lease_manager
+# define LeaseManagerProgs lease_manager
 #else
 # define LeaseManagerProgs
 #endif
@@ -254,6 +254,10 @@ condor_object_target(status.V6)
 condor_object_target(dagman)
 condor_object_target(userlog)
 
+#if WANT_LEASE_MANAGER
+condor_object_target(lease_manager)
+#endif
+
 #if NEEDS_KBDD
    condor_object_target(kbdd)
 #endif
@@ -302,10 +306,6 @@ condor_object_target(amazon)
 condor_object_target(drmaa)
 #endif
 
-#if WANT_LEASE_MANAGER
-condor_object_target(lease_manager)
-#endif
-
 #if WANT_CLASSAD_ANALYSIS
 object_target(ClassAdAnalysis,classad_analysis)
 #endif
@@ -321,6 +321,7 @@ object_dir_target(condor_sdk)
 #if WANT_STORK
 object_target(Stork,stork)
 #endif
+
 
 #if HAVE_EXT_GLOBUS
 object_target(GT2_GAHP,gt2_gahp)
@@ -391,6 +392,10 @@ pure_target(condor_startd.V6,condor_startd.pure)
 pure_target(condor_gridmanager,condor_gridmanager.pure)
 pure_target(condor_schedd.V6,condor_schedd.pure)
 pure_target(condor_master.V6,condor_master.pure)
+
+#if WANT_LEASE_MANAGER
+pure_target(condor_lease_manager,condor_lease_manager.pure)
+#endif
 
 pure_target(condor_shadow.V6,condor_shadow.std.pure)
 pure_target(condor_starter.V5,condor_starter.std.pure)

@@ -2673,7 +2673,8 @@ Scheduler::WriteAbortToUserLog( PROC_ID job_id )
 		// regardless of the return value.
 	free( reason );
 
-	int status = ULog->writeEvent(&event, GetJobAd(job_id.cluster,job_id.proc));
+	bool status =
+		ULog->writeEvent(&event, GetJobAd(job_id.cluster,job_id.proc));
 	delete ULog;
 
 	if (!status) {
@@ -2723,7 +2724,8 @@ Scheduler::WriteHoldToUserLog( PROC_ID job_id )
 		event.setReasonSubCode(hold_reason_subcode);
 	}
 
-	int status = ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
+	bool status =
+		ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
 	delete ULog;
 
 	if (!status) {
@@ -2754,7 +2756,8 @@ Scheduler::WriteReleaseToUserLog( PROC_ID job_id )
 		// regardless of the return value.
 	free( reason );
 
-	int status = ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
+	bool status =
+		ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
 	delete ULog;
 
 	if (!status) {
@@ -2785,7 +2788,8 @@ Scheduler::WriteExecuteToUserLog( PROC_ID job_id, const char* sinful )
 
 	ExecuteEvent event;
 	strcpy( event.executeHost, host );
-	int status = ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
+	bool status =
+		ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
 	delete ULog;
 	
 	if (!status) {
@@ -2807,7 +2811,8 @@ Scheduler::WriteEvictToUserLog( PROC_ID job_id, bool checkpointed )
 	}
 	JobEvictedEvent event;
 	event.checkpointed = checkpointed;
-	int status = ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
+	bool status =
+		ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
 	delete ULog;
 	if (!status) {
 		dprintf( D_ALWAYS,
@@ -2850,7 +2855,7 @@ Scheduler::WriteTerminateToUserLog( PROC_ID job_id, int status )
 		event.normal = false;
 		event.signalNumber = WTERMSIG(status);
 	}
-	int rval = ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
+	bool rval = ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
 	delete ULog;
 
 	if (!rval) {
@@ -2892,7 +2897,7 @@ Scheduler::WriteRequeueToUserLog( PROC_ID job_id, int status, const char * reaso
 	if(reason) {
 		event.setReason(reason);
 	}
-	int rval = ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
+	bool rval = ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
 	delete ULog;
 
 	if (!rval) {

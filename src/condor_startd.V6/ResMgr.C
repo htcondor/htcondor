@@ -49,11 +49,19 @@ ResMgr::ResMgr()
 	m_netif = NetworkAdapterBase::createNetworkAdapter(
 		daemonCore->InfoCommandSinfulString (), false );
 	m_hibernation_manager = new HibernationManager( );
-	m_hibernation_manager->addInterface( *m_netif );
+	if ( m_netif ) {
+		m_hibernation_manager->addInterface( *m_netif );
+	}
 	m_hibernate_tid = -1;
 	NetworkAdapterBase	*primary = m_hibernation_manager->getNetworkAdapter();
-	dprintf( D_FULLDEBUG, "Using network interface %s for hibernation\n",
-			 primary->interfaceName() );
+	if ( NULL == primary ) {
+		dprintf( D_FULLDEBUG,
+				 "No usable network interface: hibernation disabled\n" );
+	}
+	else {
+		dprintf( D_FULLDEBUG, "Using network interface %s for hibernation\n",
+				 primary->interfaceName() );
+	}
 #endif
 
 	id_disp = NULL;

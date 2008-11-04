@@ -67,7 +67,7 @@ public:
 	const char* hardwareAddress (void) const;
 
     /** Returns the adapter's IP address as a string
-		@return the adapter's's IP address
+		@return the adapter's IP address
 	*/
 	virtual unsigned ipAddress (void) const;
 
@@ -80,12 +80,6 @@ public:
 		@return a string with the logical name
 	*/
 	const char *interfaceName( void ) const { return _adapter_name; };
-
-    /** Returns the adapter's hardware address
-		@return a string representation of the addapter's hardware
-        address
-	*/
-	bool wakeAble (void) const;
 
     /** Checks that the adapter actually exists
         @returns true if the adapter exists on the machine;
@@ -117,13 +111,13 @@ public:
 private:
 
     /** Data members */
-    CHAR _ip_address[IP_STRING_BUF_SIZE],
-         _description[MAX_ADAPTER_DESCRIPTION_LENGTH + 4],
-         _hardware_address[32],
-         _subnet[IP_STRING_BUF_SIZE],
-         _adapter_name[MAX_ADAPTER_NAME_LENGTH + 4];
-    bool _wake_able,
-         _exists;
+    CHAR        _ip_address[IP_STRING_BUF_SIZE],
+                _description[MAX_ADAPTER_DESCRIPTION_LENGTH + 4],
+                _hardware_address[32],
+                _subnet[IP_STRING_BUF_SIZE],
+                _adapter_name[MAX_ADAPTER_NAME_LENGTH + 4];
+    bool        _exists;
+    SetupApiDLL _setup_dll;
 
     /**	Some registry values require some preprocessing before they can
 		be queried, so we allow a user to specify a function to handle
