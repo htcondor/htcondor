@@ -118,8 +118,8 @@ BaseJob::BaseJob( ClassAd *classad )
 	jobLeaseReceivedExpiredTid = TIMER_UNSET;
 	SetJobLeaseTimers();
 
-	jobAd->LookupInteger( "LastRemoteStatusUpdate", m_lastRemoteStatusUpdate );
-	jobAd->LookupBool( "CurrentStatusUnknown", m_currentStatusUnknown );
+	jobAd->LookupInteger( ATTR_LAST_REMOTE_STATUS_UPDATE, m_lastRemoteStatusUpdate );
+	jobAd->LookupBool( ATTR_CURRENT_STATUS_UNKNOWN, m_currentStatusUnknown );
 
 	int tmp_int;
 	if ( jobAd->LookupInteger( ATTR_GRID_RESOURCE_UNAVAILABLE_TIME,
@@ -425,7 +425,7 @@ void BaseJob::SetRemoteJobId( const char *job_id )
 	} else {
 		//  old job id was NULL
 		m_lastRemoteStatusUpdate = time(NULL);
-		jobAd->Assign( "LastRemoteStatusUpdate", m_lastRemoteStatusUpdate );
+		jobAd->Assign( ATTR_LAST_REMOTE_STATUS_UPDATE, m_lastRemoteStatusUpdate );
 	}
 	if ( !new_job_id.IsEmpty() ) {
 		JobsByRemoteId.insert( HashKey( new_job_id.Value() ), this );
@@ -433,9 +433,9 @@ void BaseJob::SetRemoteJobId( const char *job_id )
 	} else {
 		// new job id is NULL
 		m_lastRemoteStatusUpdate = 0;
-		jobAd->Assign( "LastRemoteStatusUpdate", 0 );
+		jobAd->Assign( ATTR_LAST_REMOTE_STATUS_UPDATE, 0 );
 		m_currentStatusUnknown = false;
-		jobAd->Assign( "CurrentStatusUnknown", false );
+		jobAd->Assign( ATTR_CURRENT_STATUS_UNKNOWN, false );
 	}
 	requestScheddUpdate( this );
 }
@@ -447,11 +447,11 @@ void BaseJob::SetRemoteJobStatus( const char *job_status )
 
 	if ( job_status ) {
 		m_lastRemoteStatusUpdate = time(NULL);
-		jobAd->Assign( "LastRemoteStatusUpdate", m_lastRemoteStatusUpdate );
+		jobAd->Assign( ATTR_LAST_REMOTE_STATUS_UPDATE, m_lastRemoteStatusUpdate );
 		requestScheddUpdate( this );
 		if ( m_currentStatusUnknown == true ) {
 			m_currentStatusUnknown = false;
-			jobAd->Assign( "CurrentStatusUnknown", false );
+			jobAd->Assign( ATTR_CURRENT_STATUS_UNKNOWN, false );
 			WriteJobStatusKnownEventToUserLog( jobAd );
 		}
 	}
@@ -860,7 +860,7 @@ void BaseJob::CheckRemoteStatus()
 	}
 	if ( time(NULL) > m_lastRemoteStatusUpdate + stale_limit ) {
 		m_currentStatusUnknown = true;
-		jobAd->Assign( "CurrentStatusUnknown", true );
+		jobAd->Assign( ATTR_CURRENT_STATUS_UNKNOWN, true );
 		requestScheddUpdate( this );
 		WriteJobStatusUnknownEventToUserLog( jobAd );
 	}
