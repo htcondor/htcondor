@@ -2173,8 +2173,11 @@ AC_ARG_ENABLE([kbdd],
     [enable KBDD functionality (default: platform dependent)]),
   [],
   [case "$_cv_opsys" in
-    AIX | HPUX | LINUX | SOLARIS )
+    AIX | HPUX | SOLARIS )
       enable_kbdd=no
+    ;;
+    LINUX )
+      enable_kbdd=yes
     ;;
     * ) # Who had this turned on? No .cf files on 1/6/8 used it. -matt
       enable_kbdd=no
