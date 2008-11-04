@@ -23,7 +23,7 @@ The details of each version are described below.
 \item The owner of the log file for the \Condor{vm-gahp}
 has changed to the \Login{condor} user.
 In Condor 7.1.2 and previous versions, it was owned by the
-user that the VM is started under.
+user that the virtual machine is started under.
 Therefore, the owner of and permissions on an existing log file
 are likely to be incorrect.
 %Condor issues an error if the \Condor{gridmanager} is unable
@@ -38,7 +38,8 @@ In addition, the definition for \Macro{VM\_GAHP\_LOG}
 in the \File{condor\_config.generic} file has changed for
 Condor 7.1.3.
 
-\item The VM universe no longer supports the use of the \SubmitCmd{xm}
+\item The \SubmitCmd{vm} universe no longer supports the use of 
+the \SubmitCmd{xm}
 command for running Xen virtual machines. The \SubmitCmd{virsh} tool
 should be used instead.
 
@@ -49,16 +50,16 @@ should be used instead.
 
 \begin{itemize}
 
-\item You can now specify ``local'' entries in your condor\_config file
-by pre-pending a local name and a period to the normal name.  The
-local settings take precedence over the regular settings.  This
-``local'' name can be specified on the command line to all daemons via
-the new ``-local-name'' command line parameter. 
+\item Local entries in the configuration file may now be specified
+by pre-pending a local name and a period to the normal name.
+Local settings take precedence over the other settings.
+The local name can be specified on the command line to all daemons via
+the new \Opt{-local-name} command line option. 
 
-See section 3.3 ``Configuration'' under ``Configuration File Macros''
-for more details on how this ``local name'' will be used in the
-configuration, and 3.9.2 ``DaemonCore and Command-Line Arguments'' for
-more details on the command line parameter itself.
+See section~\ref{sec:Config-File-Macros} 
+for more details on how the local name will be used in the configuration,
+and section~\ref{sec:DaemonCore-Arguments} 
+for more details on the command line parameters.
 
 % PR 947
 \item \Condor{submit\_dag} is now automatically run recursively on
