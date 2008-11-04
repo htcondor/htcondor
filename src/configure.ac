@@ -1801,11 +1801,33 @@ if test "$ac_purify" = "purify"; then
    fi
 fi
 
-AC_PATH_PROG(ac_vmware,vmware,no,[$PATH])
-if test $ac_vmware = "no"; then
-  AC_MSG_WARN( [vmware not found] )
+# Allow the user to specify a directory where vmware is to be found.
+# This logic is a little scary since vm_arg can be "no", "yes", or a path.
+AC_ARG_WITH(vmware,
+ AC_HELP_STRING([--with-vmware=DIR],
+  [full path to directory where the vmware program is located]),
+ [vm_arg=$withval],
+ [vm_arg=$PATH])
+
+# Depending what the user told us, we will modify vm_path.
+if test $vm_arg = "no"; then
+ # we don't even check for VMware so assign the makefile var to nothing.
+ ac_vmware=""
 else
+ # Here we check for it with $PATH or with what the user told us where to find
+ # it.
+ if test $vm_arg = "yes"; then
+  vm_path=$PATH
+ else
+  vm_path=$vm_arg
+ fi
+ # now find the vmware program, if applicable.
+ AC_PATH_PROG(ac_vmware,vmware,no,[$vm_path])
+ if test $ac_vmware = "no"; then
+  ac_vmware=""
+ else
   AC_DEFINE([HAVE_VMWARE],[1],[Define if vmware is available])
+ fi
 fi
 AC_SUBST(VMWARE,$ac_vmware)
 
