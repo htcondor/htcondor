@@ -426,7 +426,6 @@ void BaseJob::SetRemoteJobId( const char *job_id )
 		//  old job id was NULL
 		m_lastRemoteStatusUpdate = time(NULL);
 		jobAd->Assign( "LastRemoteStatusUpdate", m_lastRemoteStatusUpdate );
-dprintf(D_FULLDEBUG,"JEF: SetRemoteJobId(%d.%d, NULL->blah): LastRemoteStatusUpdate=%d\n",procID.cluster,procID.proc,m_lastRemoteStatusUpdate);
 	}
 	if ( !new_job_id.IsEmpty() ) {
 		JobsByRemoteId.insert( HashKey( new_job_id.Value() ), this );
@@ -437,7 +436,6 @@ dprintf(D_FULLDEBUG,"JEF: SetRemoteJobId(%d.%d, NULL->blah): LastRemoteStatusUpd
 		jobAd->Assign( "LastRemoteStatusUpdate", 0 );
 		m_currentStatusUnknown = false;
 		jobAd->Assign( "CurrentStatusUnknown", false );
-dprintf(D_FULLDEBUG,"JEF: SetRemoteJobId(%d.%d, blah->NULL): LastRemoteStatusUpdate=%d\n",procID.cluster,procID.proc,m_lastRemoteStatusUpdate);
 	}
 	requestScheddUpdate( this );
 }
@@ -450,13 +448,10 @@ void BaseJob::SetRemoteJobStatus( const char *job_status )
 	if ( job_status ) {
 		m_lastRemoteStatusUpdate = time(NULL);
 		jobAd->Assign( "LastRemoteStatusUpdate", m_lastRemoteStatusUpdate );
-		// TODO Trigger a schedd update here?
-dprintf(D_FULLDEBUG,"JEF: SetRemoteJobStatus(%d.%d): LastRemoteStatusUpdate=%d\n",procID.cluster,procID.proc,m_lastRemoteStatusUpdate);
+		requestScheddUpdate( this );
 		if ( m_currentStatusUnknown == true ) {
-dprintf(D_FULLDEBUG,"      Clearing unknown status\n");
 			m_currentStatusUnknown = false;
 			jobAd->Assign( "CurrentStatusUnknown", false );
-			requestScheddUpdate( this );
 			WriteJobStatusKnownEventToUserLog( jobAd );
 		}
 	}
@@ -855,24 +850,19 @@ int BaseJob::CheckAllRemoteStatus( Service * )
 void BaseJob::CheckRemoteStatus()
 {
 	MyString job_id;
-//	const int stale_limit = 15*60;
-const int stale_limit = 2*60;
+	const int stale_limit = 15*60;
 
-dprintf(D_FULLDEBUG,"JEF: CheckRemoteStatus(%d.%d)\n",procID.cluster,procID.proc);
 		// TODO return time that this job status could become stale?
 		// TODO compute stale_limit from job's poll interval?
 		// TODO make stale_limit configurable?
 	if ( m_lastRemoteStatusUpdate == 0 || m_currentStatusUnknown == true ) {
-dprintf(D_FULLDEBUG,"      skipping: lastUpdate=%d, statusUnknown=%s\n",m_lastRemoteStatusUpdate,m_currentStatusUnknown?"true":"false");
 		return;
 	}
-dprintf(D_FULLDEBUG,"      now=%d, lastUpdate=%d, limit=%d\n",time(NULL),m_lastRemoteStatusUpdate,stale_limit);
 	if ( time(NULL) > m_lastRemoteStatusUpdate + stale_limit ) {
 		m_currentStatusUnknown = true;
 		jobAd->Assign( "CurrentStatusUnknown", true );
 		requestScheddUpdate( this );
 		WriteJobStatusUnknownEventToUserLog( jobAd );
-dprintf(D_FULLDEBUG,"      setting status to unknown\n");
 	}
 }
 
