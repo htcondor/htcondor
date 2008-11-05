@@ -4972,6 +4972,7 @@ These settings affect the \Condor{starter}.
         exec $*:q
 \end{verbatim}
 
+%$ <make emacs parsing happy
 
   For Windows machines, the wrapper will either be
   a batch script (with a file extension of \File{.bat} or \File{.cmd})
@@ -6246,7 +6247,7 @@ in the example configuration is \File{\MacroUNI{SBIN}/nordugrid\_gahp}.
 
 \end{description}
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:JobRouter-Config-File-Entries}\condor{job\_router}
 Configuration File Entries}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -6257,6 +6258,125 @@ These macros affect the \Condor{job\_router}.
 \Todo
 %\begin{description}
 %\end{description}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:LeaseManager-Config-File-Entries}\condor{lease\_manager}
+Configuration File Entries}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%$
+
+\index{configuration!condor\_lease\_manager configuration variables}
+These macros affect the \Condor{lease\_manager}.
+
+\Note
+The \Condor{lease\_manager} expects to use the ``subsystem.parameter''
+configuration syntax.  This allows for multiple instances of the
+\Condor{lease\_manager} to be configured easily via the
+``subsystem.local.parameter'' syntax.
+
+\begin{description}
+
+
+\item[\Macro{LeaseManager.GETADS\_INTERVAL}]
+  \label{param:LeaseManager.GetAdsInterval}
+
+  This controls the frequency with which the \Condor{lease\_manager}
+  pulls relevant resource ClassAds from the \Condor{collector}.  This
+  is an integer parameter (in units of seconds), with a default value
+  of 60 seconds, and a minimum value of 2 seconds.
+
+
+\item[\Macro{LeaseManager.UPDATE\_INTERVAL}]
+  \label{param:LeaseManager.UpdateInterval}
+
+  This controls the frequency with which the \Condor{lease\_manager}
+  sends it's ClassAds to the \Condor{collector}.  This is an integer
+  parameter (in units of seconds), with a default value of 60 seconds,
+  and a minimum value of 5 seconds.
+
+
+\item[\Macro{LeaseManager.PRUNE\_INTERVAL}]
+  \label{param:LeaseManager.PruneInterval}
+
+  This controls the frequency with which the \Condor{lease\_manager}
+  ``prunes'' it's leases.  This involves checking all leases to see if
+  they have expired.  This is an integer
+  parameter (in units of seconds), with a default value of 60 seconds,
+  and no minimum value.
+
+
+\item[\Macro{LeaseManager.DEBUG\_ADS}]
+  \label{param:LeaseManager.DebugAds}
+
+  This is a boolean parameter that can be used to enable extra
+  debugging information about the resource ClassAds that it retrieves
+  from the \Condor{collector} and search ClassAds that it sends to the
+  \Condor{collector}.  This parameter defaults to false.
+
+
+\item[\Macro{LeaseManager.MAX\_LEASE\_DURATION}]
+  \label{param:LeaseManager.MaxLeaseDuration}
+
+  This parameter controls the maximum duration of a lease.  This can
+  be used to provide a hard limit on lease durations.  Normally, the
+  \Condor{lease\_manager} honors the ``MaxLeaseDuration'' attribute
+  from the resource ClassAd.  If this parameter is set, it will limit
+  the effective maximum duration for all resources to this value.
+  This is an integer parameter in units of seconds, with a default
+  value of 1800 seconds.
+
+  \Note
+  Lease(s) can be renewed, and, thus, can be extended beyond this
+  limit.  To provide a limit of the total duration of a lease, use the
+  \MacroNI{LeaseManager.MAX\_TOTAL\_LEASE\_DURATION} (see below).
+
+
+\item[\Macro{LeaseManager.MAX\_TOTAL\_LEASE\_DURATION}]
+  \label{param:LeaseManager.MaxTotalLeaseDuration}
+
+  This parameter is used to limit the TOTAL duration of leases, over
+  all it's renewals.  This is an integer parameter in units of
+  seconds, with a default value of 3600 seconds.
+
+
+\item[\Macro{LeaseManager.DEFAULT\_MAX\_LEASE\_DURATION}]
+  \label{param:LeaseManager.DefaultMaxLeaseDuration}
+
+  As described above, the \Condor{lease\_manager} will use the
+  ``MaxLeaseDuration'' attribute of the resource ClassAd to limit the
+  lease duration.  If this attribute is not present in a resource
+  ClassAd, then this parameter is used.  This is an integer
+  parameter in units of seconds with a default value of 60 seconds.
+
+
+\item[\Macro{LeaseManager.CLASSAD\_LOG}]
+  \label{param:LeaseManager.ClassadLog}
+
+  This parameter controls where the \Condor{lease\_manager} persists
+  it's state information.  This parameter has no default value, and
+  must contain a valid full file path.
+
+
+\item[\Macro{LeaseManager.QUERY\_ADTYPE}]
+  \label{param:LeaseManager.QueryAdtype}
+
+  This parameter controls the type of the query in the ClassAd sent to
+  the \Condor{collector}, which will control the types of ClassAds
+  returned by the \Condor{collector}.  This parameter must be a valid
+  ClassAd type name, with a default value of ``Any''.
+
+
+\item[\Macro{LeaseManager.QUERY\_CONSTRAINTS}]
+  \label{param:LeaseManager.QueryConstraints}
+
+  This parameter controls the constraint in the query sent to the
+  \Condor{collector}, and can be used to further constrain the types
+  of ClassAds from the \Condor{collector}.  This parameter can be any
+  valid ClassAd expression, and has no default value (no constraints).
+
+
+\end{description}
+
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
