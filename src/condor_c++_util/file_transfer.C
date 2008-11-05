@@ -1800,14 +1800,21 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 			peer_ip_str = ((Sock *)s)->get_sinful_peer();
 		}
 
-		error_buf.sprintf("%s failed to receive file(s) from %s",
+		MyString download_error_buf;
+		download_error_buf.sprintf("%s failed to receive file(s) from %s",
 						  mySubSystem->getName(),peer_ip_str);
-		dprintf(D_ALWAYS,"DoDownload: %s; %s\n",
-				error_buf.Value(),upload_error_buf.Value());
+		error_buf.sprintf("%s; %s",
+						  upload_error_buf.Value(),
+						  download_error_buf.Value());
+		dprintf(D_ALWAYS,"DoDownload: %s\n",error_buf.Value());
 
 		download_success = false;
 		SendTransferAck(s,download_success,upload_try_again,upload_hold_code,
-						upload_hold_subcode,error_buf.Value());
+						upload_hold_subcode,download_error_buf.Value());
+
+			// store full-duplex error description, because only our side
+			// of the story was stored in above call to SendTransferAck
+		Info.error_desc = error_buf.Value();
 
 		dprintf( D_FULLDEBUG, "DoDownload: exiting with upload errors\n" );
 		return_and_resetpriv( -1 );

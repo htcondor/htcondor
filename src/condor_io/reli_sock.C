@@ -27,6 +27,7 @@
 #include "condor_socket_types.h"
 #include "condor_md.h"
 #include "stat_wrapper.h"
+#include "stat_info.h"
 #include "selector.h"
 
 #ifdef WIN32
@@ -678,14 +679,36 @@ ReliSock::put_file( filesize_t *size, int fd )
 	filesize_t	total = 0;
 
 
-	StatWrapper	filestat( fd );
-	if ( filestat.GetRc() ) {
-		int		staterr = filestat.GetErrno( );
+	StatInfo filestat( fd );
+	if ( filestat.Error() ) {
+		int		staterr = filestat.Errno( );
 		dprintf(D_ALWAYS, "ReliSock: put_file: StatBuf failed: %d %s\n",
 				staterr, strerror( staterr ) );
 		return -1;
 	}
-	filesize = filestat.GetBuf( )->st_size;
+
+	if ( filestat.IsDirectory() ) {
+		dprintf(D_ALWAYS,
+				"ReliSock: put_file: Failed because directories are not supported.\n" );
+			// Give the receiver an empty file so that this message is
+			// complete.  The receiver _must_ detect failure through
+			// some additional communication that is not part of
+			// the put_file() message.
+
+		int rc = put_empty_file( size );
+		if(rc < 0) {
+			return rc;
+		}
+
+#ifdef EISDIR
+		errno = EISDIR;
+#else
+		errno = EINVAL;
+#endif
+		return PUT_FILE_OPEN_FAILED;
+	}
+
+	filesize = filestat.GetFileSize( );
 	dprintf( D_FULLDEBUG, "put_file: Found file size %lld\n", filesize );
 
 	// Send the file size to the reciever
