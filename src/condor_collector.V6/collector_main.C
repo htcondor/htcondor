@@ -77,6 +77,9 @@ int main_config( bool is_full )
 int main_shutdown_fast()
 {
 	Daemon->Exit();
+#if HAVE_DLOPEN
+	CollectorPluginManager::Shutdown();
+#endif
 	DC_Exit(0);
 	return TRUE;	// to satisfy c++
 }
@@ -86,6 +89,9 @@ int main_shutdown_fast()
 int main_shutdown_graceful()
 {
 	Daemon->Shutdown();
+#if HAVE_DLOPEN
+	CollectorPluginManager::Shutdown();
+#endif
 	DC_Exit(0);
 	return TRUE;	// to satisfy c++
 }

@@ -12,6 +12,12 @@ struct ExampleCollectorPlugin : public CollectorPlugin
 	}
 
 	void
+	shutdown()
+	{
+		printf("Shutdown\n");
+	}
+
+	void
 	update(int command, const ClassAd &ad)
 	{
 		printf("Update\n");

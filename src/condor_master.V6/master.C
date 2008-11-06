@@ -181,6 +181,10 @@ master_exit(int retval)
 	}
 #endif
 
+#if HAVE_DLOPEN
+	MasterPluginManager::Shutdown();
+#endif
+
 	DC_Exit(retval, shutdown_program );
 	return 1;	// just to satisfy vc++
 }

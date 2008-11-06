@@ -56,6 +56,8 @@ class StartdPlugin
 
 	virtual void initialize() = 0;
 
+	virtual void shutdown() = 0;
+
 	virtual void update(const ClassAd *publicAd, const ClassAd *privateAd) = 0;
 
 	virtual void invalidate(const ClassAd *ad) = 0;
@@ -66,6 +68,8 @@ class StartdPluginManager : public PluginManager<StartdPlugin>
 {
   public:
 	static void Initialize();
+
+	static void Shutdown();
 
 	static void Update(const ClassAd *publicAd, const ClassAd *privateAd);
 

@@ -26,6 +26,12 @@ struct ExampleMasterPlugin : public MasterPlugin
 		printf("Init\n");
 	}
 
+	void
+	shutdown()
+	{
+		printf("Shutdown\n");
+	}
+
 	void update(const ClassAd *ad)
 	{
 		printf("update(%s)\n", ad ? "Ad" : "(NULL)");

@@ -35,6 +35,17 @@ StartdPluginManager::Initialize()
 }
 
 void
+StartdPluginManager::Shutdown()
+{
+	StartdPlugin *plugin;
+	SimpleList<StartdPlugin *> plugins = getPlugins();
+	plugins.Rewind();
+	while (plugins.Next(plugin)) {
+		plugin->shutdown();
+	}
+}
+
+void
 StartdPluginManager::Update(const ClassAd *publicAd, const ClassAd *privateAd)
 {
 	StartdPlugin *plugin;

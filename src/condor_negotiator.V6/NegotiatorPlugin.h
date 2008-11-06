@@ -57,6 +57,8 @@ class NegotiatorPlugin
 
 	virtual void initialize() = 0;
 
+	virtual void shutdown() = 0;
+
 		/**
 		 * Receive the ClassAd sent to the Collector.
 		 */
@@ -68,6 +70,7 @@ class NegotiatorPluginManager : public PluginManager<NegotiatorPlugin>
 {
   public:
 	static void Initialize();
+	static void Shutdown();
 	static void Update(const ClassAd &);
 };
 

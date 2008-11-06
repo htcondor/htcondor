@@ -56,6 +56,8 @@ class ScheddPlugin
 
 	virtual void initialize() = 0;
 
+	virtual void shutdown() = 0;
+
 	virtual void update(int cmd, const ClassAd *ad) = 0;
 };
 
@@ -64,6 +66,8 @@ class ScheddPluginManager : public PluginManager<ScheddPlugin>
 {
   public:
 	static void Initialize();
+
+	static void Shutdown();
 
 	static void Update(int cmd, const ClassAd *ad);
 };

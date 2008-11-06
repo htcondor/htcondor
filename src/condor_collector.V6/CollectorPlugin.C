@@ -36,6 +36,17 @@ CollectorPluginManager::Initialize()
 }
 
 void
+CollectorPluginManager::Shutdown()
+{
+	CollectorPlugin *plugin;
+	SimpleList<CollectorPlugin *> plugins = getPlugins();
+	plugins.Rewind();
+	while (plugins.Next(plugin)) {
+		plugin->shutdown();
+	}
+}
+
+void
 CollectorPluginManager::Update(int command, const ClassAd &ad)
 {
 	CollectorPlugin *plugin;

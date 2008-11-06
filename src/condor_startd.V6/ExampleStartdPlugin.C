@@ -26,6 +26,12 @@ struct ExampleStartdPlugin : public StartdPlugin
 		printf("Init\n");
 	}
 
+	void
+	shutdown()
+	{
+		printf("Shutdown\n");
+	}
+
 	void update(const ClassAd *publicAd, const ClassAd *privateAd)
 	{
 		printf("update(%s, %s)\n",
