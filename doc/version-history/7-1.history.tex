@@ -92,6 +92,9 @@ supported for VMware or Xen.
   persisted to disk by the \Condor{lease\_manager}.  The documentation
   on this new daemon will be forthcoming.
 
+\item VM universe now works with privilege separation (PrivSep)
+for VMware jobs. Xen is still not supported in PrivSep mode.
+
 \end{itemize}
 
 \noindent Configuration Variable Additions and Changes:
@@ -158,6 +161,16 @@ supported for VMware or Xen.
 \item Fixed a bug where if log line caching was enabled in \Condor{dagman}
 and \Condor{dagman} failed during the recovery process, the cache would
 stay active. Now the cache is disabled in all cases at the end of recovery.
+
+\item Fixed a couple of bugs relevant only to the \Macro{GLEXEC\_STARTER}
+mode of operation. One bug would result in the \Macro{SPOOL} directory being
+deleted if local universe jobs (which are not supported in
+\MacroNI{GLEXEC\_STARTER} mode) were submitted. The other bug prevented
+COD jobs from running. Niether of these are problems for the newer
+recommended \Macro{GLEXEC\_JOB} mode.
+
+\item Fixed a bug that could cause the \Condor{procd} to crash, depending
+on the timing of its process snapshots.
 
 \end{itemize}
 
