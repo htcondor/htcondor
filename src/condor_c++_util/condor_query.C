@@ -77,31 +77,23 @@ const char *StartdFloatKeywords [] =
 // for getJobStatusString (see condor_util_lib/proc.c)
 const char *GridManagerStringKeywords [] = 
 {
-    ATTR_GRID_RESOURCE
+    ATTR_NAME,
+    "HashName",
+    ATTR_SCHEDD_NAME,
+    ATTR_OWNER,
+    
     // ATTR_GRID_RESOURCE_TYPE
 };
 
 const char *GridManagerIntegerKeywords [] = 
 {
-    /* BCB
-    ATTR_GRID_RESOURCE_DOWN,
-    ATTR_GRID_RESOURCE_LAST_HEARD_FROM,
-    ATTR_GRID_JOB_LIMITS,
-    ATTR_GRID_JOBS_QUEUED_UNDER_LIMIT,
-    ATTR_GRID_JOBS_UNEXPANDED,
-    ATTR_GRID_JOBS_IDLE,
-    ATTR_GRID_JOBS_RUNNING,
-    ATTR_GRID_JOBS_REMOVED,
-    ATTR_GRID_JOBS_COMPLETED,
-    ATTR_GRID_JOBS_HELD,
-    ATTR_GRID_JOBS_SUBMISSION_ERROR,
-    ATTR_GRID_SUBMIT_LIMITS,
-    ATTR_GRID_SUBMITS_IN_PROGRESS,
-    ATTR_GRID_SUBMITS_QUEUED,
-    ATTR_GRID_SUBMITS_ALLOWED,
-    ATTR_GRID_SUBMITS_WANTED
-    */
-    ""
+    "NumJobs",
+    "JobLimit",
+    "SubmitLimit",
+    "SubmitsInProgress",
+    "SubmitsQueued",
+    "SubmitsAllowed",
+    "SubmitsWanted"
 };
 
 const char *GridManagerFloatKeywords [] =

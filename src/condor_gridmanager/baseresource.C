@@ -168,38 +168,6 @@ char *BaseResource::ResourceName()
 	return resourceName;
 }
 
-/*
-bool BaseResource::ResourceDown () 
-{
-    return resourceDown;
-}
-
-time_t BaseResource::LastStatusChange () 
-{
-    return lastStatusChange;
-}
-
-int BaseResource::SubmitsInProgress () 
-{
-    return submitsInProgress.Length();
-}
-
-int BaseResource::SubmitsQueued () 
-{
-    return submitsQueued.Length();
-}
-
-int BaseResource::SubmitsAllowed () 
-{
-    return submitsAllowed.Length();
-}
-
-int BaseResource::SubmitsWanted () 
-{
-    return submitsWanted.Length();
-}
-*/
-
 int BaseResource::DeleteMe()
 {
 	deleteMeTid = TIMER_UNSET;
@@ -217,34 +185,61 @@ int BaseResource::DeleteMe()
 	return TRUE;
 }
 
-void BaseResource::InvalidateResource ()
+bool BaseResource::InvalidateResource ()
 {
     ClassAd ad;
     
     /* Set the correct types */
-    ad.SetMyTypeName ( QUERY_ADTYPE );
-    ad.SetTargetTypeName ( GRID_ADTYPE );
-    
-    /* We only want to invalidate this resource. Using our
-       BCB: HASH STRING?.... should be unique... */
+    ad.SetMyTypeName ( GRID_ADTYPE );
+
+    /* We only want to invalidate this resource. Using the tuple
+       (HashName,SchedName,Owner) as unique id. */
     MyString line;
-    line.sprintf( "%s = %s == \"%s\"", ATTR_REQUIREMENTS,
-        ATTR_SCHEDD_IP_ADDR,
-        daemonCore->InfoCommandSinfulString () );
-    ad.Insert ( line.Value () );
+    line.sprintf ( 
+        "((%s =?= \"%s\") && (%s =?= \"%s\") && "
+		 "(%s =?= \"%s\") && (%s =?= \"%s\"))",
+        "HashName", GetHashName (),
+        ATTR_SCHEDD_NAME, ScheddObj->name (),
+		ATTR_SCHEDD_IP_ADDR, ScheddObj->addr (),
+        ATTR_OWNER, myUserName );
+    ad.Assign ( ATTR_REQUIREMENTS, line );
+
+    dprintf (
+        D_FULLDEBUG,
+        "BaseResource::InvalidateResource: \n%s\n",
+        line );
     
-    daemonCore->sendUpdates( INVALIDATE_GRID_ADS, &ad, NULL, false );
+    return CollectorObj->sendUpdate ( 
+        INVALIDATE_GRID_ADS, 
+        &ad, 
+        NULL, 
+        true );
+
 }
 
-void BaseResource::UpdateResource ()
+bool BaseResource::UpdateResource ()
 {
-    ClassAd *cad = NULL;
+    ClassAd ad;
+
+	/* Set the correct types */
+    ad.SetMyTypeName ( GRID_ADTYPE );
 
     /* populate class ad with the relevant resource information */
-    /* BCB: POPULATE CLASS AD */
+    PublishResourceAd ( &ad );
+
+    MyString tmp;
+    ad.sPrint ( tmp );
+    dprintf (
+        D_FULLDEBUG,
+        "BaseResource::UpdateResource: \n%s\n",
+        tmp );
 
     /* Update the the Collector as to this resource's state */
-    CollectorObj->sendUpdate ( UPDATE_GRID_AD, cad, NULL, true );
+    return CollectorObj->sendUpdate ( 
+        UPDATE_GRID_AD, 
+        &ad, 
+        NULL, 
+        true );
 }
 
 void BaseResource::PublishResourceAd( ClassAd *resource_ad )
@@ -255,6 +250,7 @@ void BaseResource::PublishResourceAd( ClassAd *resource_ad )
 	resource_ad->Assign( ATTR_NAME, buff.Value() );
 	resource_ad->Assign( "HashName", GetHashName() );
 	resource_ad->Assign( ATTR_SCHEDD_NAME, ScheddObj->name() );
+    resource_ad->Assign( ATTR_SCHEDD_IP_ADDR, ScheddObj->addr() );
 	resource_ad->Assign( ATTR_OWNER, myUserName );
 	resource_ad->Assign( "NumJobs", registeredJobs.Number() );
 	resource_ad->Assign( "JobLimit", jobLimit );
@@ -541,9 +537,6 @@ void BaseResource::DoPing( time_t& ping_delay, bool& ping_complete,
 	ping_delay = 0;
 	ping_complete = true;
 	ping_succeeded = true;
-    
-    /* Update the the Collector as to this resource's state */
-    UpdateResource ();
 }
 
 int BaseResource::UpdateLeases()
@@ -566,6 +559,9 @@ dprintf(D_FULLDEBUG,"    UpdateLeases: last update too recent, delaying\n");
 	}
 
 	daemonCore->Reset_Timer( updateLeasesTimerId, TIMER_NEVER );
+
+    /* Update the the Collector as to this resource's state */
+    UpdateResource ();
 
 	if ( updateLeasesActive == false ) {
 		BaseJob *curr_job;

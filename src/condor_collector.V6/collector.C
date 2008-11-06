@@ -161,6 +161,8 @@ void CollectorDaemon::Init()
 		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
 	daemonCore->Register_Command(QUERY_ANY_ADS,"QUERY_ANY_ADS",
 		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
+    daemonCore->Register_Command(QUERY_GRID_ADS,"QUERY_GRID_ADS",
+		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
 	
 		// // // // // // // // // // // // // // // // // // // // //
 		// WARNING!!!! If you add other invalidate commands here, you
@@ -211,6 +213,9 @@ void CollectorDaemon::Init()
 	daemonCore->Register_Command(INVALIDATE_LEASE_MANAGER_ADS,
 		"INVALIDATE_LEASE_MANAGER_ADS", (CommandHandler)receive_invalidation,
 		"receive_invalidation",NULL,DAEMON);
+    daemonCore->Register_Command(INVALIDATE_GRID_ADS,
+        "INVALIDATE_GRID_ADS", (CommandHandler)receive_invalidation,
+		"receive_invalidation",NULL,DAEMON);
 
 		// // // // // // // // // // // // // // // // // // // // //
 		// WARNING!!!! If you add other update commands here, you
@@ -250,8 +255,9 @@ void CollectorDaemon::Init()
 	daemonCore->Register_Command(UPDATE_LEASE_MANAGER_AD,"UPDATE_LEASE_MANAGER_AD",
 		(CommandHandler)receive_update,"receive_update",NULL,DAEMON);
 	daemonCore->Register_Command(UPDATE_AD_GENERIC, "UPDATE_AD_GENERIC",
-				     (CommandHandler)receive_update,
-				     "receive_update", NULL, DAEMON);
+		(CommandHandler)receive_update,"receive_update", NULL, DAEMON);
+    daemonCore->Register_Command(UPDATE_GRID_AD,"UPDATE_GRID_AD",
+		(CommandHandler)receive_update,"receive_update",NULL,DAEMON);
 
         // // // // // // // // // // // // // // // // // // // // //
         // WARNING!!!! If you add other update commands here, you

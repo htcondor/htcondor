@@ -791,13 +791,13 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 	  case UPDATE_GRID_AD:
 		if (!makeGridAdHashKey(hk, clientAd, from))
 		{
-					dprintf (D_ALWAYS, "Could not make hashkey --- ignoring ad\n");
+			dprintf (D_ALWAYS, "Could not make hashkey --- ignoring ad\n");
 			insert = -3;
 			retVal = 0;
 			break;
 		}
 		hashString.Build( hk );
-		retVal=updateClassAd (StorageAds, "GridAd  ", "Grid",
+		retVal=updateClassAd (GridAds, "GridAd  ", "Grid",
 							  clientAd, hk, hashString, insert, from );
           break;
 

@@ -57,8 +57,8 @@ class BaseResource
 	void CancelSubmit( BaseJob *job );
 	void AlreadySubmitted( BaseJob *job );
 
-    void InvalidateResource();
-    void UpdateResource();
+    bool InvalidateResource();
+    bool UpdateResource();
 
 	static void setProbeInterval( int new_interval )
 		{ probeInterval = new_interval; }

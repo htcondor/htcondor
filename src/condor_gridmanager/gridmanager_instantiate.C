@@ -37,7 +37,7 @@
 #include "gt4resource.h"
 #include "infnbatchjob.h"
 #include "mirrorjob.h"
-#include "mirrorresource.h"
+
 #include "nordugridjob.h"
 #include "nordugridresource.h"
 #include "unicorejob.h"
@@ -100,11 +100,6 @@ template class Item<GT4Job>;
 
 template class HashTable<HashKey, CreamResource *>;
 template class HashBucket<HashKey, CreamResource *>;
-
-template class HashTable<HashKey, MirrorJob *>;
-template class HashBucket<HashKey, MirrorJob *>;
-template class HashTable<HashKey, MirrorResource *>;
-template class HashBucket<HashKey, MirrorResource *>;
 
 template class HashTable<HashKey, UnicoreJob *>;
 template class HashBucket<HashKey, UnicoreJob *>;

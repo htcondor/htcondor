@@ -338,21 +338,27 @@ makeGridAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in *from)
     MyString tmp;
     
     // get the hash name of the the resource
-    if ( !adLookup( "GRID", ad, "HashName", NULL, hk.name ) ) {
+    if ( !adLookup( "Grid", ad, "HashName", NULL, hk.name ) ) {
         return false;
     }
-    
-    // get the name of the schedd asociated with the resource
-    if ( !adLookup( "GRID", ad, ATTR_SCHEDD_NAME, NULL, tmp ) ) {
-        return false;
-    }
-    hk.name += tmp;
     
     // get the owner associated with the resource
-    if ( !adLookup( "GRID", ad, ATTR_OWNER, NULL, tmp ) ) {
+    if ( !adLookup( "Grid", ad, ATTR_OWNER, NULL, tmp ) ) {
         return false;
 	}
     hk.name += tmp;
+
+    // get the schedd associated with the resource if we can
+    // (this _may_ be undefined when running two instances or
+    // Condor on one machine).
+    if ( adLookup( "Grid", ad, ATTR_SCHEDD_NAME, NULL, tmp ) ) {
+        hk.name += tmp;
+    } else {
+        if ( !adLookup ( "Grid", ad, ATTR_SCHEDD_IP_ADDR, NULL, 
+						 hk.ip_addr ) ) {
+            return false;
+        }
+    }
 
     return true;
 }

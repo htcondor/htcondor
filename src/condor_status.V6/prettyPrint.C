@@ -1,4 +1,4 @@
-/***************************************************************
+Type = 1/***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
@@ -46,10 +46,10 @@ void printScheddSubmittors(ClassAd *);
 void printMasterNormal 	(ClassAd *);
 void printCollectorNormal (ClassAd *);
 void printCkptSrvrNormal(ClassAd *);
-void printStorageNormal(ClassAd *);
+void printStorageNormal (ClassAd *);
 void printNegotiatorNormal (ClassAd *);
-void printGridNormal(ClassAd *);
-void printAnyNormal(ClassAd *);
+void printGridNormal 	(ClassAd *);
+void printAnyNormal 	(ClassAd *);
 void printServer 		(ClassAd *);
 void printRun    		(ClassAd *);
 void printCOD    		(ClassAd *);
@@ -118,9 +118,9 @@ prettyPrint (ClassAdList &adList, TrackTotals *totals)
 				break;
 
 			  case PP_XML:
-				  printXML (ad, (classad_index == 0),
-							(classad_index == last_classad_index));
-				  break;
+				printXML (ad, (classad_index == 0),
+					(classad_index == last_classad_index));
+				break;
 
 			  case PP_MASTER_NORMAL:
 				printMasterNormal(ad);
@@ -680,14 +680,22 @@ printGridNormal(ClassAd *ad)
         // print header if necessary
         if (first)
         {
-            printf ("\nFAKE HEADER FOR GRID ADS\n\n");
+            printf ("\n%-20.20s %-13.13s %-13.13s %-13.13s %-13.13s\n\n",
+				ATTR_NAME, 
+				"Job Limit", "Jobs", 
+				"Submit Limit", "In Progress" );
+			
+			alpm.registerFormat("%-20.20s ", ATTR_NAME, 
+				"[??????????????????]" );
+			alpm.registerFormat ( "%-13d ", "JobLimit",
+				"[???????????] " );
+			alpm.registerFormat ( "%-13d ", "NumJobs",
+				"[???????????] " );
+			alpm.registerFormat ( "%-13d ", "SubmitLimit",
+				"[???????????] " );
+			alpm.registerFormat ( "%-13d ", "SubmitsInProgress",
+				"[???????????] " );
 
-            /* BCB: what should the format be?!?
-            
-            alpm.registerFormat("%-30.30s ", ATTR_NAME, "[??????????????????]");
-            alpm.registerFormat("%9d ", ATTR_DISK, "[?????]");
-            alpm.registerFormat("%-11s\n", ATTR_SUBNET, "[?????]\n");
-            */
             first = false;
         }
         

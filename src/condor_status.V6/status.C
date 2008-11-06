@@ -177,6 +177,7 @@ main (int argc, char *argv[])
 	  case MODE_STORAGE_NORMAL:
 	  case MODE_GENERIC_NORMAL:
 	  case MODE_ANY_NORMAL:
+	  case MODE_GRID_NORMAL:
 		break;
 
 	  case MODE_OTHER:
@@ -299,6 +300,7 @@ main (int argc, char *argv[])
 		case MODE_GENERIC_NORMAL:
 		case MODE_ANY_NORMAL:
 		case MODE_OTHER:
+        case MODE_GRID_NORMAL:
 				// These have to go to the collector, anyway.
 			break;
 		default:
@@ -386,7 +388,7 @@ usage ()
 		"\t-license\t\tDisplay attributes of licenses\n"
 		"\t-master\t\t\tDisplay daemon master attributes\n"
 		"\t-pool <name>\t\tGet information from collector <name>\n"
-        "\t-grid\t\tDisplay grid resources\n"
+        "\t-grid\t\t\tDisplay grid resources\n"
 		"\t-run\t\t\tSame as -claimed [deprecated]\n"
 #ifdef WANT_QUILL
 		"\t-quill\t\t\tDisplay attributes of quills\n"
@@ -394,8 +396,8 @@ usage ()
 		"\t-schedd\t\t\tDisplay attributes of schedds\n"
 		"\t-server\t\t\tDisplay important attributes of resources\n"
 		"\t-startd\t\t\tDisplay resource attributes\n"
-		"\t-generic\t\t\tDisplay attributes of 'generic' ads\n"
-		"\t-subsystem <type>\t\tDisplay classads of the given type\n"
+		"\t-generic\t\tDisplay attributes of 'generic' ads\n"
+		"\t-subsystem <type>\tDisplay classads of the given type\n"
 		"\t-negotiator\t\tDisplay negotiator attributes\n"
 		"\t-storage\t\tDisplay network storage resources\n"
 		"\t-any\t\t\tDisplay any resources\n"
@@ -763,7 +765,7 @@ secondPass (int argc, char *argv[])
 			  case MODE_STARTD_AVAIL:
 			  case MODE_OTHER:
 			  case MODE_GRID_NORMAL:
-				sprintf(buffer,"(TARGET.%s==\"%s\") || (TARGET.%s==\"%s\")",
+			  	sprintf(buffer,"(TARGET.%s==\"%s\") || (TARGET.%s==\"%s\")",
 						ATTR_NAME, daemonname, ATTR_MACHINE, daemonname );
 				if (diagnose) {
 					printf ("[%s]\n", buffer);
