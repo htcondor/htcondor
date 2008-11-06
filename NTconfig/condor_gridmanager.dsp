@@ -204,22 +204,6 @@ SOURCE=..\src\condor_gridmanager\infnbatchjob.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_gridmanager\mirrorjob.C
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_gridmanager\mirrorjob.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_gridmanager\mirrorresource.C
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_gridmanager\mirrorresource.h
-# End Source File
-# Begin Source File
-
 SOURCE=..\src\condor_gridmanager\nordugridjob.C
 # End Source File
 # Begin Source File
