@@ -230,8 +230,8 @@ UserLog::Configure( void )
 	m_global_count_events = param_boolean( "EVENT_LOG_COUNT_EVENTS", false );
 	m_enable_locking = param_boolean( "ENABLE_USERLOG_LOCKING", true );
 	m_global_max_rotations = param_integer( "EVENT_LOG_MAX_ROTATIONS", 1 );
-	m_global_max_filesize = param_integer( "EVENT_LOG_MAX_SIZE", 0 );
-	if ( 0 == m_global_max_filesize ) {
+	m_global_max_filesize = param_integer( "EVENT_LOG_MAX_SIZE", -1 );
+	if ( m_global_max_filesize < 0 ) {
 		m_global_max_filesize = param_integer( "MAX_EVENT_LOG", 1000000 );
 	}
 
@@ -439,6 +439,11 @@ UserLog::checkGlobalLogRotation( void )
 		 m_global_lock->isFakeLock() ||
 		 m_global_lock->isUnlocked() ) {
 		dprintf( D_ALWAYS, "checking for event log rotation, but no lock\n" );
+	}
+
+	// Don't rotate if max size is zero -- that means never rotate
+	if ( 0 == m_global_max_filesize ) {
+		return false;
 	}
 
 	// Check the size of the log file
