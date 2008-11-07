@@ -6268,68 +6268,62 @@ Configuration File Entries}
 \index{configuration!condor\_lease\_manager configuration variables}
 These macros affect the \Condor{lease\_manager}.
 
-\Note
-The \Condor{lease\_manager} expects to use the ``subsystem.parameter''
-configuration syntax.  This allows for multiple instances of the
-\Condor{lease\_manager} to be configured easily via the
-``subsystem.local.parameter'' syntax.
+The \Condor{lease\_manager} expects to use the syntax
+\begin{verbatim}
+ <subsystem name>.<parameter name>
+\end{verbatim}
+in configuration.
+This allows multiple instances of the
+\Condor{lease\_manager} to be easily configured using the synax
+\begin{verbatim}
+ <subsystem name>.<local name>.<parameter name>
+\end{verbatim}
 
 \begin{description}
 
-
 \item[\Macro{LeaseManager.GETADS\_INTERVAL}]
   \label{param:LeaseManager.GetAdsInterval}
-
-  This controls the frequency with which the \Condor{lease\_manager}
-  pulls relevant resource ClassAds from the \Condor{collector}.  This
-  is an integer parameter (in units of seconds), with a default value
-  of 60 seconds, and a minimum value of 2 seconds.
+  An integer value, given in seconds, that controls the frequency
+  with which the \Condor{lease\_manager}
+  pulls relevant resource ClassAds from the \Condor{collector}.
+  The default value is 60 seconds, with a minimum value of 2 seconds.
 
 
 \item[\Macro{LeaseManager.UPDATE\_INTERVAL}]
   \label{param:LeaseManager.UpdateInterval}
-
-  This controls the frequency with which the \Condor{lease\_manager}
-  sends it's ClassAds to the \Condor{collector}.  This is an integer
-  parameter (in units of seconds), with a default value of 60 seconds,
-  and a minimum value of 5 seconds.
-
+  An integer value, given in seconds, that controls the frequency
+  with which the \Condor{lease\_manager}
+  sends its ClassAds to the \Condor{collector}.
+  The default value is 60 seconds, with a minimum value of 5 seconds.
 
 \item[\Macro{LeaseManager.PRUNE\_INTERVAL}]
   \label{param:LeaseManager.PruneInterval}
-
-  This controls the frequency with which the \Condor{lease\_manager}
-  ``prunes'' it's leases.  This involves checking all leases to see if
-  they have expired.  This is an integer
-  parameter (in units of seconds), with a default value of 60 seconds,
-  and no minimum value.
-
+  An integer value, given in seconds, that controls the frequency
+  with which the \Condor{lease\_manager} \Term{prunes} its leases.
+  This involves checking all leases to see if they have expired.
+  The default value is 60 seconds, with no minimum value.
 
 \item[\Macro{LeaseManager.DEBUG\_ADS}]
   \label{param:LeaseManager.DebugAds}
-
-  This is a boolean parameter that can be used to enable extra
+  A boolean value that defaults to \Expr{False}.
+  When \Expr{True}, it enables extra
   debugging information about the resource ClassAds that it retrieves
-  from the \Condor{collector} and search ClassAds that it sends to the
-  \Condor{collector}.  This parameter defaults to false.
-
+  from the \Condor{collector} and about the search ClassAds that it sends
+  to the \Condor{collector}.
 
 \item[\Macro{LeaseManager.MAX\_LEASE\_DURATION}]
   \label{param:LeaseManager.MaxLeaseDuration}
-
-  This parameter controls the maximum duration of a lease.  This can
+  An integer value representing seconds which determines 
+  the maximum duration of a lease.  This can
   be used to provide a hard limit on lease durations.  Normally, the
-  \Condor{lease\_manager} honors the ``MaxLeaseDuration'' attribute
-  from the resource ClassAd.  If this parameter is set, it will limit
-  the effective maximum duration for all resources to this value.
-  This is an integer parameter in units of seconds, with a default
-  value of 1800 seconds.
+  \Condor{lease\_manager} honors the \Attr{MaxLeaseDuration} attribute
+  from the resource ClassAd.  If this configuration variable is defined,
+  it limits the effective maximum duration for all resources to this value.
+  The default value is 1800 seconds.
 
-  \Note
-  Lease(s) can be renewed, and, thus, can be extended beyond this
-  limit.  To provide a limit of the total duration of a lease, use the
-  \MacroNI{LeaseManager.MAX\_TOTAL\_LEASE\_DURATION} (see below).
-
+  Note that lease(s) can be renewed, and thus can be extended beyond this
+  limit.  To provide a limit on the total duration of a lease, use 
+  \MacroNI{LeaseManager.MAX\_TOTAL\_LEASE\_DURATION}.
 
 \item[\Macro{LeaseManager.MAX\_TOTAL\_LEASE\_DURATION}]
   \label{param:LeaseManager.MaxTotalLeaseDuration}
