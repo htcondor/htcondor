@@ -190,6 +190,10 @@ servers to be lost.
 
 \item Fixed a file descriptor leak in the \Condor{vm-gahp}.
 
+\item Jobs now go on hold with a clear hold reason if a path to a
+directory is put in the transfer files list.  Previously, the attempt
+to run the job would simply fail and return to the idle state.
+
 \end{itemize}
 
 \noindent Known Bugs:
