@@ -1484,11 +1484,14 @@ but across all users and user's jobs.
   will be allowed to grow. The log file will grow to the specified length,
   then be saved to a file with the suffix .old.
   The .old  files are overwritten each time the log is saved.
-  A value of 0 specifies that the file may grow without bounds.
-  The default is 1 Mbyte.  For backwards compatibility,
-  \MacroNI{MAX\_EVENT\_LOG} will be used if
+  A value of 0 specifies that the file may grow without bounds (and
+  disables rotation).   The default is 1 Mbyte.
+  For backwards compatibility, \MacroNI{MAX\_EVENT\_LOG} will be used if
   \MacroNI{EVENT\_LOG\_MAX\_SIZE} is not defined.
   If \MacroNI{EVENT\_LOG} is not defined, this parameter has no affect.
+
+\item[\Macro{MAX\_EVENT\_LOG}] \label{param:MaxEventLog}
+  See \MacroNI{EVENT\_LOG\_MAX\_SIZE}.
 
 \item[\Macro{EVENT\_LOG\_MAX\_ROTATIONS}] \label{param:EventLogMaxRotations}
   Controls the maximum number of rotations of the event log that
@@ -1499,14 +1502,18 @@ but across all users and user's jobs.
   will be named, instead of the ``.old'' suffix, ``.1'', ``.2'', with
   the ``.1'' being the most recent rotation.  This is an integer
   parameter with a default value of 1.
-  If \MacroNI{EVENT\_LOG} is not defined, this parameter has no affect.
+  If \MacroNI{EVENT\_LOG} is not defined, or if
+  \MacroNI{EVENT\_LOG\_MAX\_SIZE} has a value of 0 (which disables
+  event log rotation), this parameter has no affect.
 
 \item[\Macro{EVENT\_LOG\_ROTATION\_LOCK}] \label{param:EventLogRotationLock}
   Controls the lock file that will be used to ensure that, when
   rotating files, the rotation is done by a single process.  This is a
   string parameter; it's default value is the file path of the
   event log itself, with a ``.lock'' appended.
-  If \MacroNI{EVENT\_LOG} is not defined, this parameter has no affect.
+  If \MacroNI{EVENT\_LOG} is not defined, or if
+  \MacroNI{EVENT\_LOG\_MAX\_SIZE} has a value of 0 (which disables
+  event log rotation), this parameter has no affect.
 
 \item[\Macro{EVENT\_LOG\_USE\_XML}] \label{param:EventLogUseXML}
   A boolean value that defaults to \Expr{False}.
