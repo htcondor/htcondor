@@ -116,7 +116,7 @@ Selector::reset()
 	memset( save_except_fds, 0, fd_set_size * sizeof(fd_set) );
 #endif
 
-	dprintf(D_FULLDEBUG, "selector 0x%lX resetting\n", (unsigned long)this);
+	dprintf(D_FULLDEBUG, "selector %p resetting\n", this);
 }
 
 int
@@ -244,7 +244,7 @@ Selector::delete_fd( int fd, IO_FUNC interest )
 	}
 #endif
 
-	dprintf(D_FULLDEBUG, "selector 0x%lX deleting fd %d\n", (unsigned long)this, fd);
+	dprintf(D_FULLDEBUG, "selector %p deleting fd %d\n", this, fd);
 
 	switch( interest ) {
 
