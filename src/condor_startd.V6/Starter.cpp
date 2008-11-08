@@ -33,6 +33,7 @@
 #include "setenv.h"
 #include "my_popen.h"
 #include "basename.h"
+#include "dc_starter.h"
 
 #if defined(LINUX)
 #include "glexec_starter.h"
@@ -94,6 +95,8 @@ Starter::initRunData( void )
 	s_is_boinc = false;
 #endif /* HAVE_BOINC */
 	s_job_update_sock = NULL;
+
+	m_hold_job_cb = NULL;
 }
 
 
@@ -110,6 +113,11 @@ Starter::~Starter()
 	if( s_job_update_sock ) {
 		daemonCore->Cancel_Socket( s_job_update_sock );
 		delete s_job_update_sock;
+	}
+
+	if( m_hold_job_cb ) {
+		m_hold_job_cb->cancelCallback();
+		m_hold_job_cb = NULL;
 	}
 }
 
@@ -1246,3 +1254,38 @@ Starter::sigkillStarter( void )
 	return true;
 }
 
+bool
+Starter::holdJob(char const *hold_reason,int hold_code,int hold_subcode)
+{
+	if( !s_is_dc ) {
+		return false;  // this starter does not support putting jobs on hold
+	}
+	if( m_hold_job_cb ) {
+		dprintf(D_ALWAYS,"holdJob() called when operation already in progress (starter pid %d).\n", s_pid);
+		return true;
+	}
+
+	classy_counted_ptr<DCStarter> starter = new DCStarter(getIpAddr());
+	classy_counted_ptr<StarterHoldJobMsg> msg = new StarterHoldJobMsg(hold_reason,hold_code,hold_subcode);
+
+	m_hold_job_cb = new DCMsgCallback( (DCMsgCallback::CppFunction)&Starter::holdJobCallback, this );
+
+	msg->setCallback( m_hold_job_cb );
+
+	starter->sendMsg(msg.get());
+
+	return true;
+}
+
+void
+Starter::holdJobCallback(DCMsgCallback *cb)
+{
+	ASSERT( m_hold_job_cb == cb );
+	m_hold_job_cb = NULL;
+
+	ASSERT( cb->getMessage() );
+	if( cb->getMessage()->deliveryStatus() != DCMsg::DELIVERY_SUCCEEDED ) {
+		dprintf(D_ALWAYS,"Failed to hold job (starter pid %d), so killing it.\n", s_pid);
+		killSoft();
+	}
+}

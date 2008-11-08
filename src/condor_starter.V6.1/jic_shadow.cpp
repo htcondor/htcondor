@@ -680,10 +680,12 @@ JICShadow::notifyJobExit( int exit_status, int reason, UserProc*
 		ad_to_send = NULL;
 	}
 			
-	if( REMOTE_CONDOR_job_exit(exit_status, reason, ad_to_send) < 0 ) {    
-		dprintf( D_ALWAYS, "Failed to send job exit status to shadow\n" );
-		job_cleanup_disconnected = true;
-		return false;
+	if( !had_hold ) {
+		if( REMOTE_CONDOR_job_exit(exit_status, reason, ad_to_send) < 0 ) {    
+			dprintf( D_ALWAYS, "Failed to send job exit status to shadow\n" );
+			job_cleanup_disconnected = true;
+			return false;
+		}
 	}
 
 	return true;
@@ -732,6 +734,12 @@ JICShadow::notifyStarterError( const char* err_msg, bool critical, int hold_reas
 	return true;
 }
 
+bool
+JICShadow::holdJob( const char* hold_reason, int hold_reason_code, int hold_reason_subcode )
+{
+	gotHold();
+	return notifyStarterError( hold_reason, true, hold_reason_code, hold_reason_subcode );
+}
 
 bool
 JICShadow::registerStarterInfo( void )

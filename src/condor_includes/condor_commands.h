@@ -37,7 +37,7 @@
 #define CA_AUTH_CMD_BASE	1000
 // beware, QMGMT_CMD is 1111, so we don't want to use 1100...
 #define CA_CMD_BASE			1200
-#define ALT_STARTER_BASE 	70
+#define STARTER_COMMANDS_BASE 1500
 
 /*
 **	In the following definitions 'FRGN' does not
@@ -285,6 +285,13 @@ const int QUERY_LEASE_MANAGER_ADS		= 65;
 const int INVALIDATE_LEASE_MANAGER_ADS  = 66;
 
 const int QUERY_GENERIC_ADS = QUERY_ANY_ADS;	// == 48
+
+
+/*
+*** Commands to the starter
+*/
+
+#define STARTER_HOLD_JOB    (STARTER_COMMANDS_BASE+0)
 
 /*
 *** Daemon Core Signals

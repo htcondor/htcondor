@@ -25,6 +25,7 @@
 #include "vm_common.h"
 #include "VMRegister.h"
 #include "file_sql.h"
+#include "condor_holdcodes.h"
 
 #if HAVE_DLOPEN
 #include "StartdPlugin.h"
@@ -1129,6 +1130,48 @@ Resource::eval_and_update( void )
 	update();
 
 	return TRUE;
+}
+
+void
+Resource::hold_job( )
+{
+	MyString hold_reason;
+	int hold_subcode = 0;
+
+	r_classad->EvalString("WANT_HOLD_REASON",r_cur->ad(),hold_reason);
+	if( hold_reason.IsEmpty() ) {
+		ExprTree *want_hold_expr;
+		MyString want_hold_str;
+
+		want_hold_expr = r_classad->Lookup("WANT_HOLD");
+		if( want_hold_expr ) {
+			want_hold_expr->PrintToStr(want_hold_str);
+		}
+
+		hold_reason = "The startd put this job on hold.  (At preemption time, WANT_HOLD evaluated to true: ";
+		hold_reason += want_hold_str;
+		hold_reason += ")";
+	}
+
+	r_classad->EvalInteger("WANT_HOLD_SUBCODE",r_cur->ad(),hold_subcode);
+
+	r_cur->starterHoldJob(hold_reason.Value(),CONDOR_HOLD_CODE_StartdHeldJob,hold_subcode);
+}
+
+int
+Resource::wants_hold( void )
+{
+	int want_hold = eval_expr("WANT_HOLD",false,false);
+
+	if( want_hold == -1 ) {
+		want_hold = 0;
+		dprintf(D_ALWAYS,"State change: WANT_HOLD is undefined --> FALSE.\n");
+	}
+	else {
+		dprintf( D_ALWAYS, "State change: WANT_HOLD is %s\n",
+				 want_hold ? "TRUE" : "FALSE" );
+	}
+	return want_hold;
 }
 
 

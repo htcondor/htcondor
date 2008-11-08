@@ -597,3 +597,11 @@ DCMsgCallback::cancelMessage()
 		m_msg->cancelMessage();
 	}
 }
+
+void
+DCMsgCallback::cancelCallback()
+{
+	m_fn_cpp = NULL;
+	m_service = NULL;
+	m_misc_data = NULL;
+}

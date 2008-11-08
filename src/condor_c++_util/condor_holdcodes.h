@@ -102,4 +102,6 @@ const int CONDOR_HOLD_CODE_HookPrepareJobFailure = 19;
 #endif /* HAVE_JOB_HOOKS */
 
 const int CONDOR_HOLD_CODE_MissedDeferredExecutionTime = 20;
+
+const int CONDOR_HOLD_CODE_StartdHeldJob = 21;
 #endif

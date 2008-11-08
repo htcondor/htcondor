@@ -51,7 +51,7 @@ desired), and send it, using Daemon::sendMsg().  Example:
 	// If we need to be called back after successful/failed delivery,
 	// register a callback function.
 	msg->setCallback( new DCMsgCallback(
-	    DCMsgCallback::CppFunction)&MyClass::MyCallbackFunction,
+	    (DCMsgCallback::CppFunction)&MyClass::MyCallbackFunction,
 	    this ) );
 
 
@@ -359,6 +359,13 @@ class DCMsgCallback: public ClassyCountedPtr {
 		   will be set to DELIVERY_CANCELED.
 		*/
 	void cancelMessage();
+
+		/* When message finishes (or is canceled), do not call
+		   the callback function.  If the class object to which
+		   the callback function belongs is being deleted, this
+		   method should be called.
+		*/
+	void cancelCallback();
 
 	friend class DCMsg;
  private:

@@ -132,6 +132,12 @@ ResMgr::init_config_classad( void )
 	configInsert( config_classad, "KILL", true );
 	configInsert( config_classad, "WANT_SUSPEND", true );
 	configInsert( config_classad, "WANT_VACATE", true );
+	if( !configInsert( config_classad, "WANT_HOLD", false ) ) {
+			// default's to false if undefined
+		config_classad->AssignExpr("WANT_HOLD","False");
+	}
+	configInsert( config_classad, "WANT_HOLD_REASON", false );
+	configInsert( config_classad, "WANT_HOLD_SUBCODE", false );
 	configInsert( config_classad, "CLAIM_WORKLIFE", false );
 	configInsert( config_classad, ATTR_MAX_JOB_RETIREMENT_TIME, false );
 

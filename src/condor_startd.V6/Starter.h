@@ -66,7 +66,9 @@ public:
 	bool	killSoft( void );
 	bool	suspend( void );
 	bool	resume( void );
-	
+
+	bool    holdJob(char const *hold_reason,int hold_code,int hold_subcode);
+
 		// Send SIGKILL to starter + process group (called by our kill
 		// timer if we've been hardkilling too long).
 	bool	sigkillStarter( void );
@@ -93,6 +95,8 @@ public:
 	char*	getIpAddr( void );
 
 	int receiveJobClassAdUpdate( Stream *stream );
+
+	void holdJobCallback(DCMsgCallback *cb);
 
 private:
 
@@ -150,6 +154,7 @@ private:
 	int             s_reaper_id;
 	ReliSock*       s_job_update_sock;
 	MyString        s_execute_dir;
+	DCMsgCallback*  m_hold_job_cb;
 };
 
 #endif /* _CONDOR_STARTD_STARTER_H */

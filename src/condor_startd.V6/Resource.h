@@ -54,6 +54,9 @@ public:
 		// Quickly kill starter but keep claim
 	int		deactivate_claim_forcibly( void );
 
+		// Tell the starter to put the job on hold
+	void hold_job();
+
 		// True if no more jobs will be accepted on the current claim.
 	bool curClaimIsClosing();
 
@@ -167,6 +170,7 @@ public:
 									    // with Requirements = False.
 
  		// Helper functions to evaluate resource expressions
+	int     wants_hold( void );         // Default's to FALSE on undefined
 	int		wants_vacate( void );		// EXCEPT's on undefined
 	int		wants_suspend( void );		// EXCEPT's on undefined
 	int		wants_pckpt( void );		// Defaults to FALSE on undefined

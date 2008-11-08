@@ -94,6 +94,7 @@ public:
 	virtual bool Remove( void );
 
 		/** Call Hold() on all elements in m_job_list */
+	int remoteHoldCommand( int cmd, Stream* s );
 	virtual int RemoteHold(int);
 	virtual bool Hold( void );
 

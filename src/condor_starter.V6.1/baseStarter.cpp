@@ -184,6 +184,11 @@ CStarter::Init( JobInfoCommunicator* my_jic, const char* original_cwd,
 						  "DELEGATE_GSI_CRED_STARTER",
 						  (CommandHandlercpp)&CStarter::updateX509Proxy,
 						  "CStarter::updateX509Proxy", this, WRITE );
+	daemonCore->
+		Register_Command( STARTER_HOLD_JOB,
+						  "STARTER_HOLD_JOB",
+						  (CommandHandlercpp)&CStarter::remoteHoldCommand,
+						  "CStarter::remoteHoldCommand", this, DAEMON );
 
 	sysapi_set_resource_limits();
 
@@ -479,6 +484,60 @@ CStarter::RemoteHold( int )
 	if( jic ) {
 		jic->gotHold();
 	}
+		//
+		// If this method returns true, that means there were no
+		// jobs running. We'll send out a little debug message 
+		// and let ourselves know that all the jobs are done
+		// Note that this used to be in the Hold() call but
+		// this causes problems if the Hold is coming from ourself
+		// For instance, if the OnExitHold evaluates to true for
+		// a local universe job
+		//
+	if ( this->Hold( ) ) {
+		dprintf( D_FULLDEBUG, "Got Hold when no jobs running\n" );
+		this->allJobsDone();
+		return ( true );
+	}	
+	return ( false );
+}
+
+/**
+ * Hold Job Command (sent by startd)
+ * Unlike the DC signal, this includes a hold reason and hold code.
+ * Also unlike the DC signal, this _puts_ the job on hold, rather than
+ * just passively informing the JIC of the hold.
+ * 
+ * @param command (not used)
+ * @return true if ????, otherwise false
+ */ 
+int 
+CStarter::remoteHoldCommand( int /*cmd*/, Stream* s )
+{
+	MyString hold_reason;
+	int hold_code;
+	int hold_subcode;
+
+	s->decode();
+	if( !s->get(hold_reason) ||
+		!s->get(hold_code) ||
+		!s->get(hold_subcode) ||
+		!s->end_of_message() )
+	{
+		dprintf(D_ALWAYS,"Failed to read message from %s in CStarter::remoteHoldCommand()\n", s->peer_description());
+		return FALSE;
+	}
+
+		// Put the job on hold on the remote side.
+	if( jic ) {
+		jic->holdJob(hold_reason.Value(),hold_code,hold_subcode);
+	}
+
+	int reply = 1;
+	s->encode();
+	if( !s->put(reply) || !s->end_of_message()) {
+		dprintf(D_ALWAYS,"Failed to send response to startd in CStarter::remoteHoldCommand()\n");
+	}
+
 		//
 		// If this method returns true, that means there were no
 		// jobs running. We'll send out a little debug message 

@@ -733,7 +733,10 @@ ResState::enter_action( State s, Activity a,
 
 		case vacating_act:
 			if( rip->claimIsActive() ) {
-				if( ! rip->r_cur->starterKillSoft() ) {
+				if( rip->preemptWasTrue() && rip->wants_hold() ) {
+					rip->hold_job();
+				}
+				else if( ! rip->r_cur->starterKillSoft() ) {
 					rip->r_cur->starterKillPg( SIGKILL );
 					dprintf( D_ALWAYS,
 							 "State change: Error sending signals to starter\n" );

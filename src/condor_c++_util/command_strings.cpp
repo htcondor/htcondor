@@ -224,6 +224,7 @@ const struct Translation CollectorTranslation[] = {
 	{ "QUERY_STORAGE_ADS", QUERY_STORAGE_ADS },
 	{ "INVALIDATE_STORAGE_ADS", INVALIDATE_STORAGE_ADS },
 	{ "QUERY_ANY_ADS", QUERY_ANY_ADS },
+	{ "STARTER_HOLD_JOB", STARTER_HOLD_JOB },
 	{ NULL, 0 }
 };
 

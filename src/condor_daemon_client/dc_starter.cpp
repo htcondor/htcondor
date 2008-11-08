@@ -206,3 +206,39 @@ DCStarter::delegateX509Proxy( const char * filename, char const *sec_session_id)
 		"as an error.\n", reply);
 	return XUS_Error;
 }
+
+StarterHoldJobMsg::StarterHoldJobMsg( char const *hold_reason, int hold_code, int hold_subcode ):
+	DCMsg(STARTER_HOLD_JOB),
+	m_hold_reason(hold_reason),
+	m_hold_code(hold_code),
+	m_hold_subcode(hold_subcode)
+{
+}
+
+bool
+StarterHoldJobMsg::writeMsg( DCMessenger * /*messenger*/, Sock *sock )
+{
+		// send hold job command to starter
+	return
+		sock->put(m_hold_reason) &&
+		sock->put(m_hold_code) &&
+		sock->put(m_hold_subcode);
+}
+
+DCMsg::MessageClosureEnum
+StarterHoldJobMsg::messageSent( DCMessenger *messenger, Sock *sock )
+{
+		// now wait for reply
+	messenger->startReceiveMsg(this,sock);
+	return MESSAGE_CONTINUING;
+}
+
+bool
+StarterHoldJobMsg::readMsg( DCMessenger * /*messenger*/, Sock *sock )
+{
+		// read reply from starter
+	int success=0;
+	sock->get(success);
+
+	return success!=0;
+}

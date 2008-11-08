@@ -85,4 +85,18 @@ public:
 
 };
 
+class StarterHoldJobMsg: public DCMsg {
+public:
+	StarterHoldJobMsg( char const *hold_reason, int hold_code, int hold_subcode );
+
+	bool writeMsg( DCMessenger *messenger, Sock *sock );
+	bool readMsg( DCMessenger *messenger, Sock *sock );
+	MessageClosureEnum messageSent( DCMessenger *messenger, Sock *sock );
+
+private:
+	MyString m_hold_reason;
+	int m_hold_code;
+	int m_hold_subcode;
+};
+
 #endif /* _CONDOR_DC_STARTER_H */

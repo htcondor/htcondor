@@ -603,8 +603,7 @@ pseudo_ulog( ClassAd *ad )
 
 		if(err->isCriticalError()) {
 			CriticalErrorBuf.sprintf(
-			  "Error from %s on %s: %s",
-			  err->getDaemonName(),
+			  "Error from %s: %s",
 			  err->getExecuteHost(),
 			  err->getErrorText());
 
