@@ -28,10 +28,6 @@
 #include "condor_md.h"
 #include "selector.h"
 
-#ifdef WIN32
-#include <mswsock.h>	// For TransmitFile()
-#endif
-
 #define NORMAL_HEADER_SIZE 5
 #define MAX_HEADER_SIZE MAC_SIZE + NORMAL_HEADER_SIZE
 
