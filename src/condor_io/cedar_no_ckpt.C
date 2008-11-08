@@ -38,6 +38,9 @@
 #include "condor_auth_x509.h"
 #include "condor_config.h"
 
+#ifdef WIN32
+#include <mswsock.h>	// For TransmitFile()
+#endif
 
 const unsigned int PUT_FILE_EOM_NUM = 666;
 
