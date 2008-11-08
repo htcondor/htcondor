@@ -34,6 +34,17 @@ NegotiatorPluginManager::Initialize()
 }
 
 void
+NegotiatorPluginManager::Shutdown()
+{
+	NegotiatorPlugin *plugin;
+	SimpleList<NegotiatorPlugin *> plugins = getPlugins();
+	plugins.Rewind();
+	while (plugins.Next(plugin)) {
+		plugin->shutdown();
+	}
+}
+
+void
 NegotiatorPluginManager::Update(const ClassAd &ad)
 {
 	NegotiatorPlugin *plugin;

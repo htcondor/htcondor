@@ -1980,6 +1980,7 @@ MyString *GT4Job::buildSubmitRSL()
 		// if we created one
 	if ( create_remote_iwd ) {
 		*rsl += "<fileCleanUp>";
+		*rsl += "<maxAttempts>5</maxAttempts>";
 		*rsl += "<transferCredentialEndpoint>";
 		*rsl += delegation_epr;
 		*rsl += "</transferCredentialEndpoint>";

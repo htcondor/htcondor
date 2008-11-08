@@ -21,6 +21,10 @@
 #include "subsystem_info.h"
 #include "matchmaker.h"
 
+#if HAVE_DLOPEN
+#include "NegotiatorPlugin.h"
+#endif
+
 // for daemon core
 DECL_SUBSYSTEM( "NEGOTIATOR", SUBSYSTEM_TYPE_NEGOTIATOR );
 
@@ -37,6 +41,9 @@ int main_init (int, char *[])
 int main_shutdown_graceful()
 {
 	matchMaker.invalidateNegotiatorAd();
+#if HAVE_DLOPEN
+	NegotiatorPluginManager::Shutdown();
+#endif
 	DC_Exit(0);
 	return 0;
 }
@@ -44,6 +51,9 @@ int main_shutdown_graceful()
 
 int main_shutdown_fast()
 {
+#if HAVE_DLOPEN
+	NegotiatorPluginManager::Shutdown();
+#endif
 	DC_Exit(0);
 	return 0;
 }

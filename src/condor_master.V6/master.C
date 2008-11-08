@@ -142,7 +142,7 @@ char	*default_daemon_list[] = {
 char	default_dc_daemon_list[] =
 "MASTER, STARTD, SCHEDD, KBDD, COLLECTOR, NEGOTIATOR, EVENTD, "
 "VIEW_SERVER, CONDOR_VIEW, VIEW_COLLECTOR, HAWKEYE, CREDD, HAD, "
-"DBMSD, QUILL, JOB_ROUTER";
+"DBMSD, QUILL, JOB_ROUTER, LEASEMANAGER";
 
 // create an object of class daemons.
 class Daemons daemons;
@@ -179,6 +179,10 @@ master_exit(int retval)
 	if ( NT_ServiceFlag == TRUE ) {
 		terminate(retval);
 	}
+#endif
+
+#if HAVE_DLOPEN
+	MasterPluginManager::Shutdown();
 #endif
 
 	DC_Exit(retval, shutdown_program );

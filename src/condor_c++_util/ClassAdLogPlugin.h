@@ -54,6 +54,7 @@ class ClassAdLogPlugin
 	virtual ~ClassAdLogPlugin();
 
 	virtual void initialize() = 0;
+	virtual void shutdown() = 0;
 
 	virtual void newClassAd(const char *key) = 0;
 	virtual void destroyClassAd(const char *key) = 0;
@@ -69,6 +70,7 @@ class ClassAdLogPluginManager : public PluginManager<ClassAdLogPlugin>
 {
   public:
 	static void Initialize();
+	static void Shutdown();
 	static void NewClassAd(const char *key);
 	static void DestroyClassAd(const char *key);
 	static void SetAttribute(const char *key,

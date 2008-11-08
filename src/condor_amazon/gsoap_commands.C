@@ -469,7 +469,7 @@ AmazonVMStart::gsoapRequest(void)
 		char *readbuffer = (char*)malloc(file_size);
 		ASSERT(readbuffer);
 
-		int ret = read(fd, readbuffer, file_size);
+		int ret = full_read(fd, readbuffer, file_size);
 		close(fd);
 
 		if( ret != file_size ) {

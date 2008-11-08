@@ -12,6 +12,12 @@ struct ExampleNegotiatorPlugin : public NegotiatorPlugin
 	}
 
 	void
+	shutdown()
+	{
+		printf("Shutdown\n");
+	}
+
+	void
 	update(const ClassAd &ad)
 	{
 		printf("Update\n");

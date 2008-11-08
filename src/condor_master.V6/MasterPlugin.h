@@ -45,7 +45,7 @@ class MasterPlugin
     /**
      * The default constructor registers the plug-in with
      * MasterPluginManager::registerPlugin
-     * 
+     *
      * All plugins should subclass MasterPlugin and provide a
      * statically initialized instance of itself, so that it will be
      * registered when its object file is loaded
@@ -56,6 +56,8 @@ class MasterPlugin
 
 	virtual void initialize() = 0;
 
+	virtual void shutdown() = 0;
+
 	virtual void update(const ClassAd *ad) = 0;
 };
 
@@ -64,6 +66,8 @@ class MasterPluginManager : public PluginManager<MasterPlugin>
 {
   public:
 	static void Initialize();
+
+	static void Shutdown();
 
 	static void Update(const ClassAd *ad);
 };
