@@ -4881,8 +4881,9 @@ void DaemonCore::Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocki
 	}
 }
 
-int DaemonCore::Shutdown_Fast(pid_t pid)
+int DaemonCore::Shutdown_Fast(pid_t pid, bool want_core )
 {
+	(void) want_core;		// For windoze
 
 	dprintf(D_PROCFAMILY,"called DaemonCore::Shutdown_Fast(%d)\n",
 		pid);
@@ -4948,7 +4949,7 @@ int DaemonCore::Shutdown_Fast(pid_t pid)
 	return ret_value;
 #else
 	priv_state priv = set_root_priv();
-	int status = kill(pid, SIGKILL);
+	int status = kill(pid, want_core ? SIGABRT : SIGKILL );
 	set_priv(priv);
 	return (status >= 0);		// return 1 if kill succeeds, 0 otherwise
 #endif
@@ -8529,7 +8530,8 @@ int DaemonCore::HungChildTimeout()
 		hung_child_pid);
 
 	// and hardkill the bastard!
-	Shutdown_Fast(hung_child_pid);
+	bool want_core = param_boolean( "NOT_RESPONDING_WANT_CORE", false );
+	Shutdown_Fast(hung_child_pid, want_core );
 
 	return TRUE;
 }
