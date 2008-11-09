@@ -912,7 +912,7 @@ class DaemonCore : public Service
         @param pid Not_Yet_Documented
         @return Not_Yet_Documented
     */
-    int Shutdown_Fast(pid_t pid);
+    int Shutdown_Fast(pid_t pid, bool want_core = false );
 
     /** Not_Yet_Documented
         @param pid Not_Yet_Documented
