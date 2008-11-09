@@ -811,6 +811,9 @@ sub CreateConfig
 		} elsif($line =~ /^HOSTALLOW_WRITE\s*=.*/) {            
 			debug( "Matching <<$line>>\n");            
 			print NEWFIG "HOSTALLOW_WRITE = *\n";
+		} elsif($line =~ /NOT_RESPONDING_WANT_CORE\s*=.*/) {
+			debug( "Matching <<$line>>\n");            
+			print NEWFIG "NOT_RESPONDING_WANT_CORE = True\n";
 		} else {            
 			print NEWFIG "$line\n";        
 		}    
