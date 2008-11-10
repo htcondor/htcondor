@@ -43,6 +43,10 @@ the \SubmitCmd{xm}
 command for running Xen virtual machines. The \SubmitCmd{virsh} tool
 should be used instead.
 
+\item Condor no longer supports the standard universe feature in its
+ports to Solaris. We may resurrect this feature in the future if demand
+for it on this port grows again to sufficient levels.
+
 \end{itemize}
 
 
@@ -91,6 +95,21 @@ supported for VMware or Xen.
   Condor's ClassAd mechanism.  These resources and leases are
   persisted to disk by the \Condor{lease\_manager}.  The documentation
   on this new daemon will be forthcoming.
+
+\item VM universe now works with privilege separation (PrivSep)
+for VMware jobs. Xen is still not supported in PrivSep mode.
+
+\item Added the \Arg{DIR} directive for the \MacroNI{SPLICE} keyword in
+the DAGMan language.
+Please read section~\ref{sec:DAGSplicing} on page \pageref{sec:DAGSplicing} for
+more information.
+
+\item For gt4 type grid jobs (i.e. WS GRAM), include a request to retry
+failed attempts at file clean-up in the RSL job description.
+
+\item Improved the scalability of some algorithms used by the
+\Condor{schedd} and \Condor{negotiator} when dealing with large
+numbers of startds.
 
 \end{itemize}
 
@@ -160,6 +179,25 @@ supported for VMware or Xen.
 and \Condor{dagman} failed during the recovery process, the cache would
 stay active. Now the cache is disabled in all cases at the end of recovery.
 
+\item Fixed a couple of bugs relevant only to the \Macro{GLEXEC\_STARTER}
+mode of operation. One bug would result in the \Macro{SPOOL} directory being
+deleted if local universe jobs (which are not supported in
+\MacroNI{GLEXEC\_STARTER} mode) were submitted. The other bug prevented
+COD jobs from running. Niether of these are problems for the newer
+recommended \Macro{GLEXEC\_JOB} mode.
+
+\item Fixed a bug that could cause the \Condor{procd} to crash, depending
+on the timing of its process snapshots.
+
+\item Fixed a bug that caused job status notifications from WS GRAM 4.2
+servers to be lost.
+
+\item Fixed a file descriptor leak in the \Condor{vm-gahp}.
+
+\item Jobs now go on hold with a clear hold reason if a path to a
+directory is put in the transfer files list.  Previously, the attempt
+to run the job would simply fail and return to the idle state.
+
 \end{itemize}
 
 \noindent Known Bugs:
@@ -212,29 +250,30 @@ stay active. Now the cache is disabled in all cases at the end of recovery.
 \begin{itemize}
 
 \item Added a new mechanism termed \Term{Concurrency Limits}.  This
-	mechanism allows the Condor pool administrator to define an arbitrary
-	number of consumable resources in the configuration file of the
-	matchmaker.  The availability of these consumable resources will be taken
-	into account during the matchmaking process.  Individual jobs can specify
-	how many of each type of consumable resource is required.  
-	Typical applications of Concurrency Limits could include management of
-	software licenses, database connections, or any other consumable resource
-	that is external to Condor.  NOTE: Documentation still being written on
-	this feature.
+mechanism allows the Condor pool administrator to define an arbitrary
+number of consumable resources in the configuration file of the
+matchmaker.  The availability of these consumable resources will be taken
+into account during the matchmaking process.  Individual jobs can specify
+how many of each type of consumable resource is required.  
+Typical applications of Concurrency Limits could include management of
+software licenses, database connections, or any other consumable resource
+that is external to Condor.  NOTE: Documentation still being written on
+this feature.
+See section~\ref{sec:Concurrency-Limits}) for documentation.
 
 \item Added support for Condor to manage serial high throughput computing
-	workloads on the IBM Blue Gene supercomputer.  The IBM Blue Gene/P is now
-	a supported platform.
+workloads on the IBM Blue Gene supercomputer.  The IBM Blue Gene/P is now
+a supported platform.
 
 \item Extended Job Hooks (see section~\ref{sec:job-hooks}) to allow for
-	alternate transformation and/or monitoring engines for the Job Router (see
-	section~\ref{sec:JobRouter}.  Routing is still controlled by the Job
-	Router, but if Job Router Hooks are configured, then external programs or
-	scripts can be used to transform and monitor the job instead of Condor's
-	internal engine.
+alternate transformation and/or monitoring engines for the Job Router (see
+section~\ref{sec:JobRouter}.  Routing is still controlled by the Job
+Router, but if Job Router Hooks are configured, then external programs or
+scripts can be used to transform and monitor the job instead of Condor's
+internal engine.
 
 \item Added support for the new protocol for WS GRAM introduced in Globus
-4.2. For each WS GRAM resource, Condor automatically determines whether it's
+4.2. For each WS GRAM resource, Condor automatically determines whether it is
 speaking the 4.0 or 4.2 version of the protocol and responds appropriately.
 When setting \SubmitCmd{grid\_resource} in the submit file, use
 \SubmitCmd{gt4} for both WS GRAM 4.0 and 4.2.
@@ -261,7 +300,7 @@ This permits a Condor version mismatch between
 \Condor{submit\_dag} and \Condor{dagman}).
 
 \item Streamlined the protocol between submit and execute machines; in some
-	instances less messages will be exchanged over the network.
+instances, fewer messages will be exchanged over the network.
 
 \item When network requests are denied because of the authorization
 policy, Condor now logs an explanation in the daemon log that denied
@@ -310,15 +349,15 @@ execute machines on a network with 0.1 second round trip times.  See
 details.
 
 \item Added configuration entry \Macro{GLEXEC\_JOB} which replaces the
-	functionality previously encapsulated in \Macro{GLEXEC\_STARTER}.  Using
-	\Macro{GLEXEC\_JOB} enables privilege separation in Condor via glexec in a
-	manner much more consistent with how Condor's own privilege separation
-	mechanism works.  Specifically, the user identity switching will now occur
-	between the \Condor{starter} and the actual user job.
+functionality previously encapsulated in \Macro{GLEXEC\_STARTER}.  Using
+\Macro{GLEXEC\_JOB} enables privilege separation in Condor via glexec in a
+manner much more consistent with how Condor's own privilege separation
+mechanism works.  Specifically, the user identity switching will now occur
+between the \Condor{starter} and the actual user job.
 
 \item Added configuration parameter \Macro{AMAZON\_GAHP\_WORKER\_MAX\_NUM}
-	to specify a ceiling on the number of threads spawned on the submit
-	machine to support jobs running on Amazon EC2.  Defaults to 5.
+to specify a ceiling on the number of threads spawned on the submit
+machine to support jobs running on Amazon EC2.  Defaults to 5.
 
 \end{itemize}
 
@@ -342,14 +381,14 @@ consuming a lot of cpu time after rare types of communication failures
 during security negotiation.
 
 \item Fixed a bug from Condor version 7.1.2 that in rare cases could cause
-	Condor to fail to recognize when a call to exec() fails on Unix
-	platforms.
+Condor to fail to recognize when a call to exec() fails on Unix
+platforms.
 
 \item Fixed problems with configuration parameter
-	\Macro{JOB\_INHERITS\_STARTER\_ENVIRONMENT} when using PrivSep.
+\Macro{JOB\_INHERITS\_STARTER\_ENVIRONMENT} when using PrivSep.
 
 \item Improved the deletion of Amazon EC2 jobs when the server is
-	unreachable.
+unreachable.
 
 \item Fixed problems with Condor parallel universe jobs when recovering from
 	a reboot of the submit machine.
@@ -875,4 +914,3 @@ fatal error (it is now a warning).
   attribute \AdAttr{OpSys}.
 
 \end{itemize}
-

@@ -1484,11 +1484,14 @@ but across all users and user's jobs.
   will be allowed to grow. The log file will grow to the specified length,
   then be saved to a file with the suffix .old.
   The .old  files are overwritten each time the log is saved.
-  A value of 0 specifies that the file may grow without bounds.
-  The default is 1 Mbyte.  For backwards compatibility,
-  \MacroNI{MAX\_EVENT\_LOG} will be used if
+  A value of 0 specifies that the file may grow without bounds (and
+  disables rotation).   The default is 1 Mbyte.
+  For backwards compatibility, \MacroNI{MAX\_EVENT\_LOG} will be used if
   \MacroNI{EVENT\_LOG\_MAX\_SIZE} is not defined.
   If \MacroNI{EVENT\_LOG} is not defined, this parameter has no affect.
+
+\item[\Macro{MAX\_EVENT\_LOG}] \label{param:MaxEventLog}
+  See \MacroNI{EVENT\_LOG\_MAX\_SIZE}.
 
 \item[\Macro{EVENT\_LOG\_MAX\_ROTATIONS}] \label{param:EventLogMaxRotations}
   Controls the maximum number of rotations of the event log that
@@ -1499,14 +1502,18 @@ but across all users and user's jobs.
   will be named, instead of the ``.old'' suffix, ``.1'', ``.2'', with
   the ``.1'' being the most recent rotation.  This is an integer
   parameter with a default value of 1.
-  If \MacroNI{EVENT\_LOG} is not defined, this parameter has no affect.
+  If \MacroNI{EVENT\_LOG} is not defined, or if
+  \MacroNI{EVENT\_LOG\_MAX\_SIZE} has a value of 0 (which disables
+  event log rotation), this parameter has no affect.
 
 \item[\Macro{EVENT\_LOG\_ROTATION\_LOCK}] \label{param:EventLogRotationLock}
   Controls the lock file that will be used to ensure that, when
   rotating files, the rotation is done by a single process.  This is a
   string parameter; it's default value is the file path of the
   event log itself, with a ``.lock'' appended.
-  If \MacroNI{EVENT\_LOG} is not defined, this parameter has no affect.
+  If \MacroNI{EVENT\_LOG} is not defined, or if
+  \MacroNI{EVENT\_LOG\_MAX\_SIZE} has a value of 0 (which disables
+  event log rotation), this parameter has no affect.
 
 \item[\Macro{EVENT\_LOG\_USE\_XML}] \label{param:EventLogUseXML}
   A boolean value that defaults to \Expr{False}.
@@ -4421,6 +4428,13 @@ is configured by \Macro{SCHEDD\_INTERVAL} (default 300 seconds).
   Once a request times out, the \Condor{schedd} will simply begin the process
   of finding a machine for the job all over again.
 
+  Normally, it is not a good idea to set this to be very small (e.g. a
+  few minutes).  Doing so can lead to failure to preempt, because the
+  preempting job will spend a significant fraction of its time waiting
+  to be rematched.  During that time, it would miss out on any
+  opportunity to run if the job it is trying to preempt gets out of
+  the way.
+
 \item[\Macro{SHADOW\_SIZE\_ESTIMATE}] \label{param:ShadowSizeEstimate}
   This macro sets the estimated virtual memory size of each
   \Condor{shadow} process.  Specified in kilobytes.  The default
@@ -6268,68 +6282,62 @@ Configuration File Entries}
 \index{configuration!condor\_lease\_manager configuration variables}
 These macros affect the \Condor{lease\_manager}.
 
-\Note
-The \Condor{lease\_manager} expects to use the ``subsystem.parameter''
-configuration syntax.  This allows for multiple instances of the
-\Condor{lease\_manager} to be configured easily via the
-``subsystem.local.parameter'' syntax.
+The \Condor{lease\_manager} expects to use the syntax
+\begin{verbatim}
+ <subsystem name>.<parameter name>
+\end{verbatim}
+in configuration.
+This allows multiple instances of the
+\Condor{lease\_manager} to be easily configured using the synax
+\begin{verbatim}
+ <subsystem name>.<local name>.<parameter name>
+\end{verbatim}
 
 \begin{description}
 
-
 \item[\Macro{LeaseManager.GETADS\_INTERVAL}]
   \label{param:LeaseManager.GetAdsInterval}
-
-  This controls the frequency with which the \Condor{lease\_manager}
-  pulls relevant resource ClassAds from the \Condor{collector}.  This
-  is an integer parameter (in units of seconds), with a default value
-  of 60 seconds, and a minimum value of 2 seconds.
+  An integer value, given in seconds, that controls the frequency
+  with which the \Condor{lease\_manager}
+  pulls relevant resource ClassAds from the \Condor{collector}.
+  The default value is 60 seconds, with a minimum value of 2 seconds.
 
 
 \item[\Macro{LeaseManager.UPDATE\_INTERVAL}]
   \label{param:LeaseManager.UpdateInterval}
-
-  This controls the frequency with which the \Condor{lease\_manager}
-  sends it's ClassAds to the \Condor{collector}.  This is an integer
-  parameter (in units of seconds), with a default value of 60 seconds,
-  and a minimum value of 5 seconds.
-
+  An integer value, given in seconds, that controls the frequency
+  with which the \Condor{lease\_manager}
+  sends its ClassAds to the \Condor{collector}.
+  The default value is 60 seconds, with a minimum value of 5 seconds.
 
 \item[\Macro{LeaseManager.PRUNE\_INTERVAL}]
   \label{param:LeaseManager.PruneInterval}
-
-  This controls the frequency with which the \Condor{lease\_manager}
-  ``prunes'' it's leases.  This involves checking all leases to see if
-  they have expired.  This is an integer
-  parameter (in units of seconds), with a default value of 60 seconds,
-  and no minimum value.
-
+  An integer value, given in seconds, that controls the frequency
+  with which the \Condor{lease\_manager} \Term{prunes} its leases.
+  This involves checking all leases to see if they have expired.
+  The default value is 60 seconds, with no minimum value.
 
 \item[\Macro{LeaseManager.DEBUG\_ADS}]
   \label{param:LeaseManager.DebugAds}
-
-  This is a boolean parameter that can be used to enable extra
+  A boolean value that defaults to \Expr{False}.
+  When \Expr{True}, it enables extra
   debugging information about the resource ClassAds that it retrieves
-  from the \Condor{collector} and search ClassAds that it sends to the
-  \Condor{collector}.  This parameter defaults to false.
-
+  from the \Condor{collector} and about the search ClassAds that it sends
+  to the \Condor{collector}.
 
 \item[\Macro{LeaseManager.MAX\_LEASE\_DURATION}]
   \label{param:LeaseManager.MaxLeaseDuration}
-
-  This parameter controls the maximum duration of a lease.  This can
+  An integer value representing seconds which determines 
+  the maximum duration of a lease.  This can
   be used to provide a hard limit on lease durations.  Normally, the
-  \Condor{lease\_manager} honors the ``MaxLeaseDuration'' attribute
-  from the resource ClassAd.  If this parameter is set, it will limit
-  the effective maximum duration for all resources to this value.
-  This is an integer parameter in units of seconds, with a default
-  value of 1800 seconds.
+  \Condor{lease\_manager} honors the \Attr{MaxLeaseDuration} attribute
+  from the resource ClassAd.  If this configuration variable is defined,
+  it limits the effective maximum duration for all resources to this value.
+  The default value is 1800 seconds.
 
-  \Note
-  Lease(s) can be renewed, and, thus, can be extended beyond this
-  limit.  To provide a limit of the total duration of a lease, use the
-  \MacroNI{LeaseManager.MAX\_TOTAL\_LEASE\_DURATION} (see below).
-
+  Note that lease(s) can be renewed, and thus can be extended beyond this
+  limit.  To provide a limit on the total duration of a lease, use 
+  \MacroNI{LeaseManager.MAX\_TOTAL\_LEASE\_DURATION}.
 
 \item[\Macro{LeaseManager.MAX\_TOTAL\_LEASE\_DURATION}]
   \label{param:LeaseManager.MaxTotalLeaseDuration}
