@@ -315,15 +315,15 @@ ClassAd, so this information can be used in job scheduling decisions.
 To do this, add the following configuration to each machine:
 \begin{verbatim}
   CkptServer = "$(CKPT_SERVER_HOST)"
-  STARTD_EXPRS = $(STARTD_EXPRS), CkptServer
+  STARTD_ATTRS = $(STARTD_ATTRS), CkptServer
 \end{verbatim}
 For convenience, we suggest that you set these parameters in the
 global config file.  Note that this example assumes that
-\Macro{STARTD\_EXPRS} is defined previously in your configuration.  If
+\Macro{STARTD\_ATTRS} is defined previously in your configuration.  If
 not, then you should use the following configuration instead:
 \begin{verbatim}
   CkptServer = "$(CKPT_SERVER_HOST)"
-  STARTD_EXPRS = CkptServer
+  STARTD_ATTRS = CkptServer
 \end{verbatim}
 Now, all machine ClassAds will include a \AdAttr{CkptServer}
 attribute, which is the name of the checkpoint server closest to this
