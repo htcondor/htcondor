@@ -1972,6 +1972,17 @@ to the execute machine.
 \begin{description} 
 
 %%%%%%%%%%%%%%%%%%%
+%% concurrency_limits
+%%%%%%%%%%%%%%%%%%%
+\item[concurrency\_limits = $<$string-list$>$]
+\index{submit commands!concurrency\_limits}
+A list of resources that this job needs.
+The resources are presumed to have concurrency limits placed upon them,
+thereby limiting the number of concurrent jobs in execution which
+need the named resource.
+Commas and space characters delimit the items in the list.
+
+%%%%%%%%%%%%%%%%%%%
 %% copy_to_spool 
 %%%%%%%%%%%%%%%%%%%
 
