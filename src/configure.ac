@@ -45,6 +45,16 @@ AC_PROG_PERL_VERSION([5.005_03], [],
 
 AC_MSG_NOTICE([verifying build environment ])
 
+# Find RPM, if we have it; this variable is only used for querying the
+# release of an RPM-based system
+AC_PATH_PROG(ac_rpmquery,rpm,no,[$PATH])
+
+if test "x$ac_rpmquery" == "xno" ; then
+   RPMQUERY=/bin/false
+else
+   RPMQUERY=$ac_rpmquery
+fi
+
 # first, if we notice we're being run at UW-Madison CS on a
 # CSL-supported machine, and the PATH doesn't include
 # /p/condor/workspaces/build/bin before /s/std/bin, print an error
@@ -215,64 +225,74 @@ elif test $os = "Linux" ; then
        _cv_linux_distro="GENTOO_UNKNOWN"
        ;;
     esac
-  elif test -f "/etc/redhat-release" ; then
-    _rh_vers=`cat /etc/redhat-release|$PERL -ne '/.* (.*) \(.*\)/;print $1;'`
-    case "$_rh_vers" in
-     "7.2" )
-       _cv_linux_distro="RH72"
-       ;;
-     "2.1AW" )
-       _cv_linux_distro="RH72"
-       ;;
-     "8.0" )
-       _cv_linux_distro="RH80"
-       ;;
-     "9" )
-       _cv_linux_distro="RH9"
-       ;;
-     "3" )
-       _cv_linux_distro="RHEL3"
-       ;;
-     "5" )
-       _cv_linux_distro="RHEL5"
-	   # Hack hack hack
-	   # We should just switch on the code name in parens
-	   # I don't have time to look them all up
-	   if grep -q ^Fedora /etc/redhat-release
-	   then
-	   		_cv_linux_distro="FC5"
-	   fi
-       ;;
-     "5.1" )
-       _cv_linux_distro="RHEL5"
-      ;;
-     "5.2" )
-       _cv_linux_distro="RHEL5"
-       ;;
-     "4.2" )
-       _cv_linux_distro="CENTOS42"
-      ;;
-     "4.3" )
-       _cv_linux_distro="CENTOS43"
-       ;;
-     "4.4" )
-       _cv_linux_distro="CENTOS44"
-       ;;
-     "4.5" )
-       _cv_linux_distro="CENTOS45"
-       ;;
-     "7" )
-       _cv_linux_distro="F7"
-       ;;
-     "8" )
-       _cv_linux_distro="F8"
-       ;;
+  elif test -f "/etc/fedora-release"  ; then
+    # do this BEFORE checking for redhat-release, because
+    # redhat-release is a symlink to fedora-release on F systems
+    _fedora_rel=`cat /etc/fedora-release|$PERL -ne '/.* (.*) \((.*)\)/;print $2;'`
+    case "$_fedora_rel" in
+     # Handle FC cases explicitly
+     "Yarrow" )
+        _cv_linux_distro="FC1"
+	;;
+     "Tettnang" )
+        _cv_linux_distro="FC2"
+	;;
+     "Heidelberg" )
+        _cv_linux_distro="FC3"
+	;;
+     "Stentz" )
+        _cv_linux_distro="FC4"
+	;;
+     "Bordeaux" )
+        _cv_linux_distro="FC5"
+	;;
+     "Zod" )
+        _cv_linux_distro="FC6"
+	;;
+     # Handle post-FC releases more robustly
      * )
-       AC_MSG_WARN([Condor is not yet ported to redhat version $_rh_vers])
-       AC_MSG_WARN([You may have trouble building and/or packaging Condor])
-       _cv_linux_distro="RH_UNKNOWN"
-       ;;
+        _cv_linux_distro=`$RPMQUERY -q --queryformat "F%{VERSION}" fedora-release`
+	;;
     esac
+  elif test -f "/etc/redhat-release" ; then
+    # Non-Fedora Red Hat or Red Hat derivative -- either RHEL or CentOS
+    
+    if (rpm -q centos-release 2>&1 > /dev/null) ; then
+       # CentOS
+       _cv_linux_distro=`$RPMQUERY -q --queryformat "CENTOS%{VERSION}%{RELEASE}" centos-release | tr -d .`
+    else
+       # Red Hat Linux or RHEL; handle RHL first before presuming RHEL
+
+       if (grep -q "Red Hat Linux" /etc/redhat-release) ; then
+         _rh_vers=`cat /etc/redhat-release|$PERL -ne '/.* (.*) \(.*\)/;print $1;'`
+       	  case "$_rh_vers" in
+    	   "7.2" )
+	     _cv_linux_distro="RH72"
+       	     ;;
+	   "2.1AW" )
+       	     _cv_linux_distro="RH72"
+ 	     ;;
+           "8.0" )
+             _cv_linux_distro="RH80"
+             ;;
+           "9" )
+             _cv_linux_distro="RH9"
+             ;;
+	   * )
+       	     AC_MSG_WARN([Condor is not ported to Red Hat Linux version $_rh_vers])
+	     AC_MSG_WARN([You may have trouble building and/or packaging Condor])
+ 	     _cv_linux_distro="RHL_UNKNOWN"
+             ;;
+          esac
+       elif (grep -q "Red Hat Enterprise Linux" /etc/redhat-release) ; then
+         # RHEL
+	 _cv_linux_distro=`$RPMQUERY -q --queryformat "RHEL%{VERSION}" redhat-release`
+       else
+          $_rh_release=`cat /etc/redhat-release`
+          AC_MSG_WARN([You may have trouble building and/or packaging Condor on $_rh_release])
+          _cv_linux_distro=`$RPMQUERY -q --queryformat "RH_UNK_%{VERSION}%{RELEASE}" redhat-release | tr -d .`
+       fi
+    fi
   elif test -f "/etc/SuSE-release" ; then
     _suse_vers=`cat /etc/SuSE-release | grep VERSION | $AWK '{print $3}'`
     case "$_suse_vers" in
@@ -2173,11 +2193,8 @@ AC_ARG_ENABLE([kbdd],
     [enable KBDD functionality (default: platform dependent)]),
   [],
   [case "$_cv_opsys" in
-    AIX | HPUX | SOLARIS )
+    AIX | HPUX | SOLARIS | LINUX )
       enable_kbdd=no
-    ;;
-    LINUX )
-      enable_kbdd=yes
     ;;
     * ) # Who had this turned on? No .cf files on 1/6/8 used it. -matt
       enable_kbdd=no
