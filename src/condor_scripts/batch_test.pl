@@ -77,6 +77,7 @@ $timestamp = 0;
 $kindwait = 1; # run tests one at a time
 $repeat = 1; # run test/s repeatedly
 $cleanupcondor = 0;
+$want_core_dumps = 1;
 $nightly;
 $testpersonalcondorlocation = "$BaseDir/TestingPersonalCondor";
 $wintestpersonalcondorlocation = "";
@@ -124,6 +125,8 @@ CleanFromPath(".");
 # yet add in base dir of all tests and compiler directories
 $ENV{PATH} = $ENV{PATH} . ":" . $BaseDir;
 
+DebugOff();
+
 #
 # the args:
 # -d[irectory <dir>: just test this directory
@@ -153,61 +156,79 @@ while( $_ = shift( @ARGV ) ) {
 	    print "-a[again]: how many times do we run each test?\n";
 	    print "-p[pretest]: get are environment set but run no tests\n";
 	    print "-c[cleanup]: stop condor when test(s) finish.  Not used on windows atm.\n";
+	    print "--[no-]core: enable/disable core dumping <enabled>\n";
+	    print "--[no-]debug: enable/disable test debugging <disabled>\n";
 	    exit(0);
         }
-        if( /-d.*/ ) {
+        if( /--debug/ ) {
+		DebugOn();
+                next SWITCH;
+        }
+        if( /--no-debug/ ) {
+		DebugOff();
+                next SWITCH;
+        }
+        if( /--core/ ) {
+		$want_core_dumps = 1;
+                next SWITCH;
+        }
+        if( /--no-core/ ) {
+		$want_core_dumps = 0;
+                next SWITCH;
+        }
+        if( /^-d.*/ ) {
                 push(@compilers, shift(@ARGV));
                 next SWITCH;
         }
-        if( /-f.*/ ) {
+        if( /^-f.*/ ) {
                 $testfile = shift(@ARGV);
                 next SWITCH;
         }
-        if( /-s.*/ ) {
+        if( /^-s.*/ ) {
                 $skipfile = shift(@ARGV);
                 next SWITCH;
         }
-        if( /-r.*/ ) { #retirement timeout
+        if( /^-r.*/ ) { #retirement timeout
                 $test_retirement = shift(@ARGV);
                 next SWITCH;
         }
-        if( /-k.*/ ) {
+        if( /^-k.*/ ) {
                 $kindwait = 1;
                 next SWITCH;
         }
-        if( /-a.*/ ) {
+        if( /^-a.*/ ) {
                 $repeat = shift(@ARGV);
                 next SWITCH;
         }
-        if( /-b.*/ ) {
+        if( /^-b.*/ ) {
 				# start with fresh environment
                 $wantcurrentdaemons = 0;
                 next SWITCH;
         }
-        if( /-p.*/ ) {
+        if( /^-p.*/ ) {
 				# start with fresh environment
                 $wantcurrentdaemons = 0;
 				$pretestsetuponly = 1;
                 next SWITCH;
         }
-        if( /-t.*/ ) {
+        if( /^-t.*/ ) {
                 push(@testlist, shift(@ARGV));
                 next SWITCH;
         }
-        if( /-xml.*/ ) {
+        if( /^-xml.*/ ) {
                 $isXML = 1;
                 print "xml output format selected\n";
                 next SWITCH;
         }
-        if( /-q.*/ ) {
+        if( /^-q.*/ ) {
                 $hush = 1;
                 next SWITCH;
         }
-        if( /-m.*/ ) {
+        if( /^-m.*/ ) {
                 $timestamp = 1;
                 next SWITCH;
         }
-        if( /-c.*/ ) {
+        if( /^-c.*/ ) {
                 # This is not used on windows systems at the moment.
                 $cleanupcondor = 1;
                 push (@extracondorargs, "-pidfile $condorpidfile");
@@ -221,8 +242,6 @@ while( $_ = shift( @ARGV ) ) {
 
 # take a momment to get a personal condor running if it is not configured
 # and running already
-
-DebugOff();
 
 my $iswindows =  0;
 my $awkscript = "";
@@ -805,14 +824,20 @@ sub CreateConfig
 			} else {
 				print NEWFIG "LOCAL_CONFIG_FILE = $testpersonalcondorlocation/condor_config.local\n";        
 			}
-		} elsif($line =~ /^CONDOR_HOST\s*=.*/) {            
-			debug( "Matching <<$line>>\n");            
+		} elsif($line =~ /^CONDOR_HOST\s*=.*/) {
+			debug( "Matching <<$line>>\n");
 			print NEWFIG "CONDOR_HOST = $currenthost\n";
-		} elsif($line =~ /^HOSTALLOW_WRITE\s*=.*/) {            
-			debug( "Matching <<$line>>\n");            
+		} elsif($line =~ /^HOSTALLOW_WRITE\s*=.*/) {
+			debug( "Matching <<$line>>\n");
 			print NEWFIG "HOSTALLOW_WRITE = *\n";
-		} else {            
-			print NEWFIG "$line\n";        
+		} elsif($line =~ /NOT_RESPONDING_WANT_CORE\s*=.*/ and $want_core_dumps ) {
+			debug( "Matching <<$line>>\n");
+			print NEWFIG "NOT_RESPONDING_WANT_CORE = True\n";
+		} elsif($line =~ /CREATE_CORE_FILES\s*=.*/ and $want_core_dumps ) {
+			debug( "Matching <<$line>>\n");
+			print NEWFIG "CREATE_CORE_FILES = True\n";
+		} else {
+			print NEWFIG "$line\n";
 		}    
 	}    
 	close( OLDFIG );    
