@@ -403,7 +403,7 @@ int thread_cream_delegate( Request *req )
 	}
 	catch(std::exception& ex) {
 		
-		result_line = (string)reqid + " CREAM_Delegate\\ Error\\ " + escape_spaces(ex.what());
+		result_line = (string)reqid + " CREAM_Delegate\\ Error:\\ " + escape_spaces(ex.what());
 		enqueue_result(result_line);
 
 		return 1;
@@ -488,7 +488,7 @@ int thread_cream_job_register( Request *req )
 	}
 	catch(std::exception& ex) {
 		
-		result_line = (string)reqid + " CREAM_Job_Register\\ Error\\ "+ escape_spaces(ex.what());
+		result_line = (string)reqid + " CREAM_Job_Register\\ Error:\\ "+ escape_spaces(ex.what());
 		enqueue_result(result_line);
 		
 		return 1;
@@ -556,7 +556,7 @@ int thread_cream_job_start( Request *req )
 	}
 	catch(std::exception& ex) {
 		
-		result_line = (string)reqid + " CREAM_Job_Start\\ Error\\" + escape_spaces(ex.what());
+		result_line = (string)reqid + " CREAM_Job_Start\\ Error:\\ " + escape_spaces(ex.what());
 		enqueue_result(result_line);
 		
 		return 1;
@@ -641,7 +641,7 @@ int thread_cream_job_purge( Request *req )
 	}
 	catch(std::exception& ex) {
 		
-		result_line = (string)reqid + " CREAM_Job_Purge\\ Error\\" + escape_spaces(ex.what());
+		result_line = (string)reqid + " CREAM_Job_Purge\\ Error:\\ " + escape_spaces(ex.what());
 		enqueue_result(result_line);
 		
 		return 1;
@@ -726,7 +726,7 @@ int thread_cream_job_cancel( Request *req )
 	}
 	catch(std::exception& ex) {
 		
-		result_line = (string)reqid + " CREAM_Job_Cancel\\ Error\\" + escape_spaces(ex.what());
+		result_line = (string)reqid + " CREAM_Job_Cancel\\ Error:\\ " + escape_spaces(ex.what());
 		enqueue_result(result_line);
 		
 		return 1;
@@ -810,7 +810,7 @@ int thread_cream_job_suspend( Request *req )
 	}
 	catch(std::exception& ex) {
 		
-		result_line = (string)reqid + " CREAM_Job_Suspend\\ Error\\" + escape_spaces(ex.what());
+		result_line = (string)reqid + " CREAM_Job_Suspend\\ Error:\\ " + escape_spaces(ex.what());
 		enqueue_result(result_line);
 		
 		return 1;
@@ -894,7 +894,7 @@ int thread_cream_job_resume( Request *req )
 	}
 	catch(std::exception& ex) {
 		
-		result_line = (string)reqid + " CREAM_Job_Resume\\ Error\\" + escape_spaces(ex.what());
+		result_line = (string)reqid + " CREAM_Job_Resume\\ Error:\\ " + escape_spaces(ex.what());
 		enqueue_result(result_line);
 		
 		return 1;
@@ -950,7 +950,7 @@ int thread_cream_job_lease( Request *req )
 	}
 	catch(std::exception& ex) {
 		
-		result_line = (string)reqid + " CREAM_Job_Lease\\ Error\\" + escape_spaces(ex.what());
+		result_line = (string)reqid + " CREAM_Job_Lease\\ Error:\\ " + escape_spaces(ex.what());
 		enqueue_result(result_line);
 		
 		return 1;
@@ -1040,7 +1040,7 @@ int thread_cream_job_status( Request *req )
 	}
 	catch(std::exception& ex) {
 		
-		result_line = (string)reqid + " CREAM_Job_Status\\ Error\\" + escape_spaces(ex.what());
+		result_line = (string)reqid + " CREAM_Job_Status\\ Error:\\ " + escape_spaces(ex.what());
 		enqueue_result(result_line);
 
 		return 1;
@@ -1169,7 +1169,7 @@ int thread_cream_job_info( Request *req )
 	}
 	catch(std::exception& ex) {
 		
-		result_line = (string)reqid + " CREAM_Job_Info\\ Error\\" + escape_spaces(ex.what());
+		result_line = (string)reqid + " CREAM_Job_Info\\ Error:\\ " + escape_spaces(ex.what());
 		enqueue_result(result_line);
 		
 		return 1;
@@ -1218,7 +1218,7 @@ int thread_cream_job_list( Request *req )
 	}
 	catch(std::exception& ex) {
 
-		result_line = (string)reqid + " CREAM_Job_List\\ Error\\ " + escape_spaces(ex.what());
+		result_line = (string)reqid + " CREAM_Job_List\\ Error:\\ " + escape_spaces(ex.what());
 		enqueue_result(result_line);
 				
 		return 1;
@@ -1400,7 +1400,7 @@ int thread_cream_proxy_renew( Request *req )
 	}
 	catch(std::exception& ex) {
 		
-		result_line = (string)reqid + " CREAM_Proxy_Renew\\ Error\\" + escape_spaces(ex.what());
+		result_line = (string)reqid + " CREAM_Proxy_Renew\\ Error:\\ " + escape_spaces(ex.what());
 		enqueue_result(result_line);
 		
 		return 1;
@@ -1451,7 +1451,7 @@ int thread_cream_get_CEMon_url( Request *req )
 	}
 	catch(std::exception& ex) {
 		
-		result_line = (string)reqid + " CREAM_Get_CEMon_URL\\ Error\\" + escape_spaces(ex.what());
+		result_line = (string)reqid + " CREAM_Get_CEMon_URL\\ Error:\\ " + escape_spaces(ex.what());
 		enqueue_result(result_line);
 		
 		return 1;
