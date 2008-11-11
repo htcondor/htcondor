@@ -1774,6 +1774,23 @@ which use DaemonCore).
   alive and well
   message from the \Condor{schedd} before killing it.
 
+\item[\Macro{NOT\_RESPONDING\_WANT\_CORE}]
+  \label{param:NotRespondingWantCore}
+  A boolean parameter with a default value of false.
+  This parameter is for debugging purposes on UNIX systems, and
+  controls the behavior of the parent process when it determines that
+  a child process is not responding (see
+  \pageref{param:NotRespondingTimeout}).
+  If \MacroNI{NOT\_RESPONDING\_WANT\_CORE} is true, the parent 
+  will send a SIGABRT instead of SIGKILL to the child process.
+  If the child process is configured with
+  \MacroNI{CREATE\_CORE\_FILES} enabled, the child process will then
+  generate a core dump.
+  See \MacroNI{NOT\_RESPONDING\_TIMEOUT} on page
+  \pageref{param:NotRespondingTimeout}, and 
+  \MacroNI{CREATE\_CORE\_FILES} on page
+  \pageref{param:CreateCoreFiles} for related details.
+
 \item[\Macro{LOCK\_FILE\_UPDATE\_INTERVAL}] \label{param:LockFileUpdateInterval}
   An integer value representing seconds,
   controlling how often valid lock files should have their on disk

@@ -111,6 +111,27 @@ failed attempts at file clean-up in the RSL job description.
 \Condor{schedd} and \Condor{negotiator} when dealing with large
 numbers of startds.
 
+\item Added the ability for the \Condor{master} (actually, any
+  DaemonCore process with children) to kill child
+  processes that have quit responding SIGABRT instead of SIGKILL.
+  This is for debugging purposes on UNIX systems, and is controlled by
+  the new \MacroNI{NOT\_RESPONDING\_WANT\_CORE} configuration
+  parameter.  If the child process is configured with
+  \MacroNI{CREATE\_CORE\_FILES} enabled, the child process will then
+  generate a core dump.
+  This feature is currently implemented only on UNIX systems.
+
+  See
+  \MacroNI{NOT\_RESPONDING\_WANT\_CORE}
+  on page \pageref{param:NotRespondingWantCore},
+  \MacroNI{NOT\_RESPONDING\_TIMEOUT}
+  on page\pageref{param:NotRespondingTimeout},
+  and
+  \MacroNI{CREATE\_CORE\_FILES}
+  on page \pageref{param:CreateCoreFiles}
+  for more details.
+
+
 \end{itemize}
 
 \noindent Configuration Variable Additions and Changes:
@@ -168,6 +189,14 @@ numbers of startds.
   a specified program as it shuts down.  See
   \pageref{param:MasterShutdownProgram} and \Condor{set\_shutdown}
   manual page for more details.
+
+\item The configuration parameter
+  \MacroNI{NOT\_RESPONDING\_WANT\_CORE} controls the type of signal
+  sent to child processes that DaemonCore has determined are no longer
+  responding.  See the above discussion of the addition of this
+  feature and \MacroNI{NOT\_RESPONDING\_WANT\_CORE} on page
+  \pageref{param:NotRespondingWantCore} for details.
+
 
 \end{itemize}
 
