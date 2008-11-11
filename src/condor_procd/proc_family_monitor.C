@@ -801,12 +801,24 @@ ProcFamilyMonitor::delete_unwatched_families(Tree<ProcFamily*>* tree)
 	}
 	ProcFamilyMember* member;
 	int ret = m_member_table.lookup(watcher_pid, member);
-	if ((ret != -1) && (member->get_proc_info()->birthday <=
-	                    tree->get_data()->get_root_birthday()))
-	{
-		// this family's watcher is still around; do nothing
-		//
-		return;
+	if (ret != -1) {
+		if (member->get_proc_info()->birthday <=
+	            tree->get_data()->get_root_birthday())
+		{
+			// this family's watcher is still around; do nothing
+			//
+			return;
+		}
+		dprintf(D_ALWAYS,
+		        "watcher %u found with later birthdate ("
+		            PROCAPI_BIRTHDAY_FORMAT
+		            ") than watched process %u ("
+		            PROCAPI_BIRTHDAY_FORMAT
+		            ")\n",
+		        watcher_pid,
+		        member->get_proc_info()->birthday,
+		        tree->get_data()->get_root_pid(),
+		        tree->get_data()->get_root_birthday());
 	}
 
 	// it looks like the watcher has exited; if this family is the
