@@ -21,8 +21,6 @@
 use CondorTest;
 use CondorPersonal;
 
-CondorPersonal::DebugOff();
-Condor::DebugOff();
 
 $cmd_template = "cmd_chirp_get-set_par.template";
 $testname = 'cmd_chirp_get-set_par - Simple parallel job';

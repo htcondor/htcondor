@@ -21,8 +21,6 @@
 use CondorTest;
 use CondorPersonal;
 
-CondorPersonal::DebugOff();
-Condor::DebugOff();
 
 $param_template = "x_param.protocol-krb.template";
 $testname = 'lib_auth_protocol-krb - Security Protocol Kerberos Authentication Test';

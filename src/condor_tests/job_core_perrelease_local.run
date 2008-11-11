@@ -21,8 +21,6 @@
 use CondorTest;
 use CondorPersonal;
 
-CondorPersonal::DebugOff();
-Condor::DebugOff();
 
 $testname = 'Condor PERIODIC_RELEASE policy test - local U';
 $corename = "job_core_perrelease_local";
@@ -30,7 +28,6 @@ $corename = "job_core_perrelease_local";
 # where am I running
 $currenthost = CondorTest::getFqdnHost();
 CondorTest::fullchomp($currenthost);
-CondorPersonal::DebugOff();
 
 system("date");
 

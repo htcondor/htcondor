@@ -21,8 +21,6 @@
 use CondorTest;
 use CondorPersonal;
 
-CondorPersonal::DebugOff();
-Condor::DebugOff();
 
 $cmd_template = "cmd_q_multi.template";
 $testname = 'cmd_q_shows-name - Simple condor_ -name test';

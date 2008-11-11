@@ -22,8 +22,6 @@ use CondorTest;
 use CondorPersonal;
 use Cwd;
 
-CondorPersonal::DebugOff();
-Condor::DebugOff();
 
 $myparamname = "x_param.protocol-pw";
 $postsrc_template = "x_secpw_configpostsrc.template";

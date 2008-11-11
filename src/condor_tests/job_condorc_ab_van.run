@@ -21,8 +21,6 @@
 use CondorTest;
 use CondorPersonal;
 
-CondorPersonal::DebugOff();
-Condor::DebugOff();
 
 $cmd_template = "job_condorc_ab_van.template";
 $testname = 'job_condorc_ab_van - Simple Condor-C A&B with Vanilla job';
@@ -31,7 +29,6 @@ $corename = "job_condorc_ab_van";
 # where am I running
 $currenthost = CondorTest::getFqdnHost();
 CondorTest::fullchomp($currenthost);
-CondorPersonal::DebugOff();
 
 system("date");
 

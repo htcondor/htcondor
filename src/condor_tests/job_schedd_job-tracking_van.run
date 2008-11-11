@@ -22,47 +22,7 @@ use CondorTest;
 use Cwd;
 use Sys::Hostname;
 
-Condor::DebugOff();
-
-$cmd = 'job_schedd_job-tracking_van.cmd';
-$testname = ' Is Schedd Loosing jobs - scheduler U';
-
-$success = sub
-{
-    my %args = @_;
-	my $cluster = $args{"cluster"};
-	$donecount += 1;
-	if( $donecount == $submitcount )
-	{
-		system("date");
-		print "All jobs done now!\n";
-	}
-	else
-	{
-		my $left = $submitcount - $donecount;
-		my $res = $left % 50;
-		if( $res == 0 )
-		{
-			print "$donecount of $submitcount have completed\n";
-		}
-	}
-};
-
-#
-#	Use the fact we know we are queueing 400 jobs to hold off setting the timer 
-# 	till all jobs are submitted.
-#
-
-$submit = sub
-{
-    my %args = @_;
-	my $cluster = $args{"cluster"};
-	$submitcount += 1;
-
-	if( $submitcount == 400 )
-	{
-		system("date");
-		Condor::debug( "Good it is all submitted and we'll start the timer....\n");
+CondorTest::debug( "Good it is all submitted and we'll start the timer....\n",1);
 		CondorTest::RegisterTimed($testname, $timed, 360);
 	}
 };

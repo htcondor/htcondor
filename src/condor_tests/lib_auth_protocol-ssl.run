@@ -22,8 +22,6 @@ use CondorTest;
 use CondorPersonal;
 use Cwd;
 
-CondorPersonal::DebugOff();
-Condor::DebugOff();
 
 my $topleveldir = getcwd();
 my $name4test = `whoami`;

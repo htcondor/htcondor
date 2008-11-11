@@ -21,8 +21,6 @@
 use CondorTest;
 use CondorPersonal;
 
-CondorPersonal::DebugOff();
-Condor::DebugOff();
 
 $param_template = "x_param.protocol-allowdeny-ctb.template";
 $testname = 'lib_auth_allowdeny-ctb - Security Protocol CLAIMTOBE Authentication Test';

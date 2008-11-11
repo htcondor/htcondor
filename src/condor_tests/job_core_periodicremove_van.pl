@@ -20,7 +20,6 @@
 
 use CondorTest;
 
-Condor::DebugOff();
 
 #$cmd = 'job_condorc_ab_van.cmd';
 $cmd = $ARGV[0];

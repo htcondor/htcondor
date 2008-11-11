@@ -19,11 +19,18 @@
 ##**************************************************************
 
 
-my $changethis = $ARGV[0];
-my $replacewith = $ARGV[1];
-my $fileselection = $ARGV[2];
+#use Condor;
 
-print "replace <$changethis> with <$replacewith> in these files <$fileselection>\n";
+#Condor::DebugOn();
+#Condor::DebugLevel(1);
+#Condor::debug("Basic Test\n",1);
+#Condor::debug("Basic Test level 2\n",2);
+#exit(0);
+
+#./process file lo hi
+#my $file = $ARGV[0];
+#my $lo = $ARGV[1];
+#my $hi = $ARGV[2];
 
 #my $dbtimelog = "x_strip.log";
 #print "Trying to open logfile... $dbtimelog\n";
@@ -36,36 +43,52 @@ print "replace <$changethis> with <$replacewith> in these files <$fileselection>
 #select(STDOUT);
  ##$| = 1;
 
-open(TESTS,"ls $fileselection | ");
-while(<TESTS>)
-{
-	print "$_";
-	chomp();
-	$file = $_;
-	#print "Currently scanning $file for name $strippattern\n";
+#$newfile = $file . ".new";
+#open(TAR,"<$file") or die "Can't open $file:$!\n";
+#open(HERE,">$newfile") or die "Can't open $newfile:$!\n";
+#my $line = "";
+#while(<TAR>) {
+	#chomp();
+	#$line = $_;
+	#if($line =~ /^(\s*)#(\s*debug\s*\(.*)\)\s*;.*$/){
+		#print HERE "$1 $2,$hi);\n";
+	#} elsif($line =~ /^(\s*\s*debug\s*\(.*)\)\s*;.*$/){
+		#print HERE "$1,$lo);\n";
+	#} else {
+		#print HERE "$line\n";
+	#}
+#}
+#close(TAR);
+#close(HERE);
+
+my $targetdir = '.';
+print "Directory to change is $targetdir\n";
+opendir DH, $targetdir or die "Can not open $dir:$!\n";
+foreach $file (readdir DH)
+{	
+	my $line = "";
+	next if $file =~ /^\.\.?$/;
+	next if $file eq $dbtimelog;
+	next if $file eq "x_striplines.pl";
+	next if $file eq "x_globaledit.pl";
+	print "Currently scanning $file for name DebugOff()\n";
 	open(FILE,"<$file") || die "Can not open $file for reading: $!\n";
 	open(NEW,">$file.tmp") || die "Can not open Temp file: $!\n";
-	print "$file opened OK!\n";
+	#print "$file opened OK!\n";
 	while(<FILE>)	
 	{		
-		chomp();
 		$line = $_;
-		if($line =~ /^(.*)$changethis(.*)$/) {
-			# do nothing
-			$newline = $1 . $replacewith . $2;
-			#print " in $file found $line\n";
-			#print "change to: $newline\n";
-			print NEW "$newline\n";
-		} elsif($line =~ /^;(.*)$/) {
-			print NEW "$1\n";
+		if($line =~ /^.*print.*$/) {
+			print NEW "$_";
+		} elsif($line =~ /.*::DebugOff\(\).*$/) {
+			# do nothing ie strip out
+			print "strip in $file found $line\n"
 		} else {
-			print NEW "$line\n";
+			print NEW "$_";
 		}
 	}	
 	close(FILE);
 	close(NEW);
 	system("mv $file.tmp $file");
-}
-close(TESTS);
 
-exit;
+}

@@ -125,8 +125,6 @@ CleanFromPath(".");
 # yet add in base dir of all tests and compiler directories
 $ENV{PATH} = $ENV{PATH} . ":" . $BaseDir;
 
-DebugOff();
-
 #
 # the args:
 # -d[irectory <dir>: just test this directory
@@ -295,8 +293,8 @@ if(!($wantcurrentdaemons)) {
 		if($iswindows == 1) {
 			$mcmd = "$wininstalldir/bin/condor_master.exe -f &";
 			$mcmd =~ s/\\/\//g;
-			debug( "Starting master like this:\n");
-			debug( "\"$mcmd\"\n");
+			debug( "Starting master like this:\n",2);
+			debug( "\"$mcmd\"\n",2);
 			system("$mcmd");
 		} else {
 			system("$installdir/sbin/condor_master @extracondorargs -f &");
@@ -309,9 +307,9 @@ if(!($wantcurrentdaemons)) {
 }
 
 @myfig = `condor_config_val -config`;
-debug("Current config settings are:\n");
+debug("Current config settings are:\n",2);
 foreach $fig (@myfig) {
-	debug("$fig\n");
+	debug("$fig\n",2);
 }
 
 if($pretestsetuponly == 1) {
@@ -481,11 +479,11 @@ foreach $compiler (@compilers)
 
 		# allow multiple runs easily
 		my $repeatcounter = 0;
-		debug("Want $repeat runs of each test\n");
+		debug("Want $repeat runs of each test\n",2);
 		while($repeatcounter < $repeat) {
 
 	        $pid = fork();
-			debug( "forking for $test_program pid returned is $pid\n");
+			debug( "forking for $test_program pid returned is $pid\n",2);
 	        die "error calling fork(): $!\n" unless defined $pid;
 
 			# two modes 
@@ -495,7 +493,7 @@ foreach $compiler (@compilers)
 			if( defined $kindwait ) {
 				if( $pid > 0 ) {
 	            	$test{$pid} = "$test_program";
-					debug( "Started test: $test_program/$pid\n");
+					debug( "Started test: $test_program/$pid\n",2);
 
 					# Wait for job before starting the next one
 
@@ -506,17 +504,17 @@ foreach $compiler (@compilers)
 
 	        			# if there are no more children, we're done
 	        			last if $child == -1;
-						debug( "informed $child gone yeilding test $test{$child}\n");
+						debug( "informed $child gone yeilding test $test{$child}\n",2);
 		
 						# ignore spurious children
 						if(! defined $test{$child}) {
-							debug("Can't find jobname for child? <ignore>\n");
+							debug("Can't find jobname for child? <ignore>\n",2);
 							next;
 						}
 
 						#finally
 	        			($test_name) = $test{$child} =~ /(.*)\.run$/;
-						debug( "Done Waiting on test($test_name)\n");
+						debug( "Done Waiting on test($test_name)\n",2);
 
 	        			# record the child's return status
 	        			$status = $?;
@@ -530,7 +528,7 @@ foreach $compiler (@compilers)
 			} else {
 				if( $pid > 0 ) {
 	            	$test{$pid} = "$test_program";
-					debug( "Started test: $test_program/$pid\n");
+					debug( "Started test: $test_program/$pid\n",2);
 	            	sleep 1;
 					next;
 				} else { # child
@@ -558,10 +556,10 @@ foreach $compiler (@compilers)
         	# record the child's return status
         	$status = $?;
 
-			debug( "informed $child gone yeilding test $test{$child}\n");
+			debug( "informed $child gone yeilding test $test{$child}\n",2);
 	
 			if(! defined $test{$child}) {
-				debug("Can't find jobname for child?<ignore>\n");
+				debug("Can't find jobname for child?<ignore>\n",2);
 				next;
 			}
 
@@ -690,10 +688,10 @@ sub IsThisWindows
 sub IsPersonalTestDirThere
 {
 	if( -d $testpersonalcondorlocation ) {
-		debug( "Test Personal Condor Directory Established prior\n");
+		debug( "Test Personal Condor Directory Established prior\n",2);
 		return(0)
 	} else {
-		debug( "Test Personal Condor Directory being Established now\n");
+		debug( "Test Personal Condor Directory being Established now\n",2);
 		system("mkdir -p $testpersonalcondorlocation");
 		return(0)
 	}
@@ -711,16 +709,16 @@ sub IsPersonalTestDirSetup
 sub WhereIsInstallDir
 {
 	$top = getcwd();
-	debug( "getcwd says \"$top\"\n");
+	debug( "getcwd says \"$top\"\n",2);
 	$crunched = `cygpath -w $top`;
 	chomp($crunched);
-	debug( "cygpath changed it to: \"$crunched\"\n");
+	debug( "cygpath changed it to: \"$crunched\"\n",2);
 	$ppwwdd = `pwd`;
-	debug( "pwd says: $ppwwdd\n");
+	debug( "pwd says: $ppwwdd\n",2);
 
 	$tmp = CondorTest::Which("condor_master");
 	chomp($tmp);
-	debug( "Install Directory \"$tmp\"\n");
+	debug( "Install Directory \"$tmp\"\n",2);
 	if($iswindows == 0) {
 		if($tmp =~ /^(.*)\/sbin\/condor_master\s*$/) {
 			$installdir = $1;
@@ -770,7 +768,7 @@ sub CreateConfig
 	$currenthost = CondorTest::getFqdnHost();
 	chomp($currenthost);
 
-	debug( "Set RELEASE_DIR and LOCAL_DIR\n");    
+	debug( "Set RELEASE_DIR and LOCAL_DIR\n",2);
 
 	# Windows needs config file preparation, wrapper scripts etc
 	if($iswindows == 1) {
@@ -785,7 +783,7 @@ sub CreateConfig
 
 		# create config file with todd's awk script
 		$configcmd = "gawk -f $awkscript $genericconfig";
-		debug("awk cmd is $configcmd\n");
+		debug("awk cmd is $configcmd\n",2);
 
 		open( OLDFIG, " $configcmd 2>&1 |")
 			|| die "Can't run script file\"$configcmd\": $!\n";    
@@ -802,14 +800,14 @@ sub CreateConfig
 		chomp;        
 		$line = $_;        
 		if($line =~ /^RELEASE_DIR\s*=.*/) {            
-			debug( "Matching <<$line>>\n");            
+			debug( "Matching <<$line>>\n",2);
 			if($iswindows == 1) {
 				print NEWFIG "RELEASE_DIR = $wininstalldir\n";        
 			} else {
 				print NEWFIG "RELEASE_DIR = $installdir\n";        
 			}
 		} elsif($line =~ /^LOCAL_DIR\s*=.*/) {            
-			debug( "Matching <<$line>>\n");            
+			debug( "Matching <<$line>>\n",2);
 			if($iswindows == 1) {
 				$newloc = $wintestpersonalcondorlocation . "/local";
 				print NEWFIG "LOCAL_DIR = $newloc\n";
@@ -817,7 +815,7 @@ sub CreateConfig
 				print NEWFIG "LOCAL_DIR = $localdir\n";        
 			}
 		} elsif($line =~ /^LOCAL_CONFIG_FILE\s*=.*/) {            
-			debug( "Matching <<$line>>\n");            
+			debug( "Matching <<$line>>\n",2);
 			if($iswindows == 1) {
 				$newloc = $wintestpersonalcondorlocation . "/condor_config.local";
 				print NEWFIG "LOCAL_CONFIG_FILE = $newloc\n";
@@ -825,16 +823,16 @@ sub CreateConfig
 				print NEWFIG "LOCAL_CONFIG_FILE = $testpersonalcondorlocation/condor_config.local\n";        
 			}
 		} elsif($line =~ /^CONDOR_HOST\s*=.*/) {
-			debug( "Matching <<$line>>\n");
+			debug( "Matching <<$line>>\n",2);
 			print NEWFIG "CONDOR_HOST = $currenthost\n";
 		} elsif($line =~ /^HOSTALLOW_WRITE\s*=.*/) {
-			debug( "Matching <<$line>>\n");
+			debug( "Matching <<$line>>\n",2);
 			print NEWFIG "HOSTALLOW_WRITE = *\n";
 		} elsif($line =~ /NOT_RESPONDING_WANT_CORE\s*=.*/ and $want_core_dumps ) {
-			debug( "Matching <<$line>>\n");
+			debug( "Matching <<$line>>\n",2);
 			print NEWFIG "NOT_RESPONDING_WANT_CORE = True\n";
 		} elsif($line =~ /CREATE_CORE_FILES\s*=.*/ and $want_core_dumps ) {
-			debug( "Matching <<$line>>\n");
+			debug( "Matching <<$line>>\n",2);
 			print NEWFIG "CREATE_CORE_FILES = True\n";
 		} else {
 			print NEWFIG "$line\n";
@@ -846,14 +844,14 @@ sub CreateConfig
 
 sub CreateLocalConfig
 {
-	debug( "Modifying local config file\n");
+	debug( "Modifying local config file\n",2);
 
 	# make sure ports for Personal Condor are valid, we'll use address
 	# files and port = 0 for dynamic ports...
 	if($iswindows == 1) {
 		# create config file with todd's awk script
 		$configcmd = "gawk -f $awkscript $genericlocalconfig";
-		debug("gawk cmd is $configcmd\n");
+		debug("gawk cmd is $configcmd\n",2);
 
 		open( ORIG, " $configcmd 2>&1 |")
 			|| die "Can't run script file\"$configcmd\": $!\n";    
@@ -956,7 +954,7 @@ sub CreateLocalConfig
     # if nothing is found, explain that, otherwise see if they just want to
     # accept what I found.
 
-	debug ("Setting JAVA=$jvm");
+	debug ("Setting JAVA=$jvm",2);
 
     # Now that we have an executable JVM, see if it is a Sun jvm because that
     # JVM it supports the -Xmx argument then, which is used to specify the
@@ -1055,13 +1053,13 @@ sub IsPersonalRunning
     while(<CONFIG>) {
         CondorTest::fullchomp($_);
         $line = $_;
-        debug ("--$line--\n");
+        debug ("--$line--\n",2);
 
 
-		debug("Looking to match \"$pathtoconfig\"\n");
+		debug("Looking to match \"$pathtoconfig\"\n",2);
         if( $line =~ /^.*($pathtoconfig).*$/ ) {
             $matchedconfig = $1;
-            debug ("Matched! $1\n");
+            debug ("Matched! $1\n",2);
 			last;
         }
     }
@@ -1080,10 +1078,10 @@ sub IsPersonalRunning
         $line = $_;
 		if($line =~ /^(.*master_address)$/) {
 			if(-f $1) {
-				debug("Master running\n");
+				debug("Master running\n",2);
 				return(1);
 			} else {
-				debug("Master not running\n");
+				debug("Master not running\n",2);
 				return(0);
 			}
 		}
@@ -1109,12 +1107,12 @@ sub IsRunningYet
 		$masteradr = `condor_config_val MASTER_ADDRESS_FILE`;
 		$masteradr =~ s/\012+$//;
 		$masteradr =~ s/\015+$//;
-		debug( "MASTER_ADDRESS_FILE is <<<<<$masteradr>>>>>\n");
-    	debug( "We are waiting for the file to exist\n");
+		debug( "MASTER_ADDRESS_FILE is <<<<<$masteradr>>>>>\n",2);
+    	debug( "We are waiting for the file to exist\n",2);
     	# Where is the master address file? wait for it to exist
     	$havemasteraddr = "no";
     	while($havemasteraddr ne "yes") {
-        	debug( "Looking for $masteradr\n");
+        	debug( "Looking for $masteradr\n",2);
         	if( -f $masteradr ) {
             	print "Found it!!!! master address file \n";
             	$havemasteraddr = "yes";
@@ -1131,12 +1129,12 @@ sub IsRunningYet
 		$collectoradr = `condor_config_val COLLECTOR_ADDRESS_FILE`;
 		$collectoradr =~ s/\012+$//;
 		$collectoradr =~ s/\015+$//;
-		debug( "COLLECTOR_ADDRESS_FILE is <<<<<$collectoradr>>>>>\n");
-    	debug( "We are waiting for the file to exist\n");
+		debug( "COLLECTOR_ADDRESS_FILE is <<<<<$collectoradr>>>>>\n",2);
+    	debug( "We are waiting for the file to exist\n",2);
     	# Where is the collector address file? wait for it to exist
     	$havecollectoraddr = "no";
     	while($havecollectoraddr ne "yes") {
-        	debug( "Looking for $collectoradr\n");
+        	debug( "Looking for $collectoradr\n",2);
         	if( -f $collectoradr ) {
             	print "Found it!!!! collector address file\n";
             	$havecollectoraddr = "yes";
@@ -1153,12 +1151,12 @@ sub IsRunningYet
 		$negotiatoradr = `condor_config_val NEGOTIATOR_ADDRESS_FILE`;
 		$negotiatoradr =~ s/\012+$//;
 		$negotiatoradr =~ s/\015+$//;
-		debug( "NEGOTIATOR_ADDRESS_FILE is <<<<<$negotiatoradr>>>>>\n");
-    	debug( "We are waiting for the file to exist\n");
+		debug( "NEGOTIATOR_ADDRESS_FILE is <<<<<$negotiatoradr>>>>>\n",2);
+    	debug( "We are waiting for the file to exist\n",2);
     	# Where is the negotiator address file? wait for it to exist
     	$havenegotiatoraddr = "no";
     	while($havenegotiatoraddr ne "yes") {
-        	debug( "Looking for $negotiatoradr\n");
+        	debug( "Looking for $negotiatoradr\n",2);
         	if( -f $negotiatoradr ) {
             	print "Found it!!!! negotiator address file\n";
             	$havenegotiatoraddr = "yes";
@@ -1175,12 +1173,12 @@ sub IsRunningYet
 		$startdadr = `condor_config_val STARTD_ADDRESS_FILE`;
 		$startdadr =~ s/\012+$//;
 		$startdadr =~ s/\015+$//;
-		debug( "STARTD_ADDRESS_FILE is <<<<<$startdadr>>>>>\n");
-    	debug( "We are waiting for the file to exist\n");
+		debug( "STARTD_ADDRESS_FILE is <<<<<$startdadr>>>>>\n",2);
+    	debug( "We are waiting for the file to exist\n",2);
     	# Where is the startd address file? wait for it to exist
     	$havestartdaddr = "no";
     	while($havestartdaddr ne "yes") {
-        	debug( "Looking for $startdadr\n");
+        	debug( "Looking for $startdadr\n",2);
         	if( -f $startdadr ) {
             	print "Found it!!!! startd address file\n";
             	$havestartdaddr = "yes";
@@ -1197,12 +1195,12 @@ sub IsRunningYet
 		$scheddadr = `condor_config_val SCHEDD_ADDRESS_FILE`;
 		$scheddadr =~ s/\012+$//;
 		$scheddadr =~ s/\015+$//;
-		debug( "SCHEDD_ADDRESS_FILE is <<<<<$scheddadr>>>>>\n");
-    	debug( "We are waiting for the file to exist\n");
+		debug( "SCHEDD_ADDRESS_FILE is <<<<<$scheddadr>>>>>\n",2);
+    	debug( "We are waiting for the file to exist\n",2);
     	# Where is the schedd address file? wait for it to exist
     	$havescheddaddr = "no";
     	while($havescheddaddr ne "yes") {
-        	debug( "Looking for $scheddadr\n");
+        	debug( "Looking for $scheddadr\n",2);
         	if( -f $scheddadr ) {
             	print "Found it!!!! schedd address file\n";
             	$havescheddaddr = "yes";
@@ -1288,7 +1286,7 @@ sub DoChild
 	my $res;
  	eval {
             alarm($test_retirement);
-			debug( "Child Starting:perl $test_program > $test_program.out\n");
+			debug( "Child Starting:perl $test_program > $test_program.out\n",2);
 			CoreCheck("shush");
 			CoreClear();
 			$res = system("perl $test_program > $test_program.out 2>&1");
@@ -1365,20 +1363,22 @@ sub DoChild
 		exit(0);
 }
 
+# Call down to Condor Perl Module for now
+
 sub debug
 {
-	my $string = shift;
-	print( "DEBUG ", timestamp(), ": $string" ) if $DEBUG;
+    my $string = shift;
+	my $level = shift;
+	my $newstring = "BT:$string";
+	Condor::debug($string,$level);
 }
 
 sub DebugOn
 {
-	$DEBUG = 1;
 }
 
 sub DebugOff
 {
-	$DEBUG = 0;
 }
 
 sub timestamp {

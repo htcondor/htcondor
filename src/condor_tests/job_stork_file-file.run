@@ -22,8 +22,6 @@ use CondorTest;
 use CondorPersonal;
 use Cwd;
 
-CondorPersonal::DebugOff();
-Condor::DebugOff();
 
 $testname = 'job_stork_file-file - Simple stork job';
 $corename = "job_stork_file-file";

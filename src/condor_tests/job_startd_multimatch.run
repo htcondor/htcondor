@@ -21,8 +21,6 @@
 use CondorTest;
 use CondorPersonal;
 
-CondorPersonal::DebugOff();
-Condor::DebugOff();
 
 $cmd_template = "job_startd_multimatch.template";
 $testname = 'job_startd_multimatch - Startd Multimatch job';

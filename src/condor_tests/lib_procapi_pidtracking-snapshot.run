@@ -20,8 +20,6 @@
 
 use CondorTest;
 
-Condor::DebugOff();
-
 $cmd = 'lib_procapi_pidtracking-snapshot.cmd';
 $testname = 'We cleanup correctly after our kids. - vanilla U';
 $datafile = "lib_procapi_pidtracking-snapshot.data";
@@ -30,7 +28,7 @@ $worked = "yes";
 
 $execute = sub
 {
-	Condor::debug( "Goood, job is running so we'll start the timer....\n");
+	CondorTest::debug( "Goood, job is running so we'll start the timer....\n",1);
 	CondorTest::RegisterTimed($testname, $timed, 300); # give it 5 minutes
 };
 
@@ -55,10 +53,10 @@ $ExitSuccess = sub {
 		$line = $_;
 		if( $line =~ /\s*Relationship:\s*(\d+)\s*created\s*(\d+).*$/ )
 		{
-			Condor::debug( "Process $1 created $2\n");
+			CondorTest::debug( "Process $1 created $2\n",1);
 			push @pids, $2;
 		}
-		Condor::debug( "$line\n");
+		CondorTest::debug( "$line\n",1);
 	}
 	close(PIN);
 	open(PIN, "<$kiddatafile") or die "Could not open data file '$kiddatafile': $?";
@@ -68,10 +66,10 @@ $ExitSuccess = sub {
 		$line = $_;
 		if( $line =~ /\s*Relationship:\s*(\d+)\s*child\s+created\s*(\d+).*$/ )
 		{
-			Condor::debug( "Process $1 created $2\n");
+			CondorTest::debug( "Process $1 created $2\n",1);
 			push @kidpids, $2;
 		}
-		Condor::debug( "$line\n");
+		CondorTest::debug( "$line\n",1);
 	}
 	close(PIN);
 
@@ -111,7 +109,7 @@ $ExitSuccess = sub {
 			if($pidline =~ /\s*(\d+)\s*.*$/ )
 			{
 				$thispid = $1;
-				Condor::debug("Checking againt list of removed pids --$thispid--\n");
+				CondorTest::debug("Checking againt list of removed pids --$thispid--\n",1);
 				foreach my $pidcheck (@pids)
 				{
 					if($thispid eq $pidcheck)
@@ -137,7 +135,7 @@ $ExitSuccess = sub {
 			if($pidline =~ /\s*[A-Za-z]+\s*(\d+).*$/ )
 			{
 				$thispid = $1;
-				Condor::debug("Checking againt list of removed pids --$thispid--\n");
+				CondorTest::debug("Checking againt list of removed pids --$thispid--\n",1);
 				foreach my $pidcheck (@pids)
 				{
 					if($thispid eq $pidcheck)

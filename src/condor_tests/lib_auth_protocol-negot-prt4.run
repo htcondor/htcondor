@@ -21,8 +21,6 @@
 use CondorTest;
 use CondorPersonal;
 
-CondorPersonal::DebugOff();
-Condor::DebugOff();
 
 $param_template = "x_param.protocol-negot.template";
 $testname = 'lib_auth_protocol-negot-prt4 - Security Protocol Negotiation Test';

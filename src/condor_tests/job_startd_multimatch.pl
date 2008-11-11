@@ -20,7 +20,6 @@
 
 use CondorTest;
 
-Condor::DebugOff();
 
 $cmd = $ARGV[0];
 $jobcount = $ARGV[1];

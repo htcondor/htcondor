@@ -20,7 +20,6 @@
 
 use CondorTest;
 
-Condor::DebugOff();
 
 $cmd = 'x_cmdstartonhold.cmd';
 

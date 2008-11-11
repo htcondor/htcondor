@@ -20,7 +20,6 @@
 
 use CondorTest;
 
-Condor::DebugOff();
 
 $cmd      = 'job_quill_basic.cmd';
 $testname = 'Verify same data from schedd and rdbms';

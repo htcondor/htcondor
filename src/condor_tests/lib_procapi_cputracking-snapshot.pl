@@ -20,8 +20,6 @@
 
 use CondorTest;
 
-Condor::DebugOff();
-
 #$cmd = 'lib_procapi_cputracking-snapshot.cmd';
 $cmd = $ARGV[0];
 
@@ -31,7 +29,7 @@ $worked = "yes";
 
 $execute = sub
 {
-	Condor::debug( "Goood, job is running so we'll start the timer....\n");
+	CondorTest::debug( "Goood, job is running so we'll start the timer....\n",1);
 };
 
 $timed = sub
@@ -55,11 +53,11 @@ $ExitSuccess = sub {
 		$line = $_;
 		if( $line =~ /^\s*done\s+<(\d+\.?\d*)>\s*$/ )
 		{
-			Condor::debug( "usage $1\n");
+			CoondorTest::debug( "usage $1\n",1);
 			$counter = $counter + 1;
 			$total = $total + $1;
 		}
-		Condor::debug( "$line\n");
+		CondorTest::debug( "$line\n",1);
 	}
 	close(PIN);
 

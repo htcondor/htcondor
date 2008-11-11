@@ -23,8 +23,6 @@ use CondorPersonal;
 use Cwd;
 use x_hadutilities;
 
-CondorPersonal::DebugOff();
-Condor::DebugOff();
 
 my $testName     = 'job_replication_basic - ' . 
 				   'Testing HAD and replication functionality';
@@ -1321,7 +1319,6 @@ sub RaiseMachines
                                   "$masterSinfulString\' -subsystem had", \@adarray, 2);
         CondorTest::runCondorTool("condor_on -addr \'" .
                                   "$masterSinfulString\' -subsystem replication", \@adarray, 2);
-        Condor::DebugOff();
 
 		&LogControl($logsDirectory, &FormatTime($time) .
                 	": instance #$configurationFiles[$hadIndex] going up");

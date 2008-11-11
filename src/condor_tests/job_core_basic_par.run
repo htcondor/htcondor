@@ -21,8 +21,6 @@
 use CondorTest;
 use CondorPersonal;
 
-CondorPersonal::DebugOff();
-Condor::DebugOff();
 
 $cmd_template = "job_core_basic_par.template";
 $testname = 'job_core_basic_par - Simple parallel job';

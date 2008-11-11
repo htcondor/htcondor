@@ -23,8 +23,6 @@ use CondorPersonal;
 use Cwd;
 use x_hadutilities;
 
-CondorPersonal::DebugOff();
-Condor::DebugOff();
 
 my $testName     = 'job_had_basic - Testing HAD functionality';
 my $coreName     = 'job_had_basic';

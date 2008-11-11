@@ -22,7 +22,6 @@ use CondorTest;
 use CondorPersonal;
 
 CondorPersonal::DebugOn();
-Condor::DebugOff();
 
 $cmd_template = "job_core_gcbbasic.template";
 $testname = 'job_core_gcbbasic - gcb smoke test';

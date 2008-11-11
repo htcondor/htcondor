@@ -20,7 +20,6 @@
 
 use CondorTest;
 
-Condor::DebugOff();
 
 $cmd = 'job_core_gcbbasic.cmd';
 

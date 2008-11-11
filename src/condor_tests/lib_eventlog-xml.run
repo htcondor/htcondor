@@ -21,8 +21,6 @@
 use CondorTest;
 use CondorPersonal;
 
-CondorPersonal::DebugOff();
-Condor::DebugOff();
 
 $cmd_template = "lib_eventlog.template";
 $testname = 'lib_eventlog - test dropping of events AND job ad attributes into event log' ;
