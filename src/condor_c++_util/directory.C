@@ -1096,7 +1096,7 @@ static bool recursive_chown_impl_fast(const char * path,
 	StatInfo si(path);
 	if(si.Error() != SIGood) {
 		if(si.Error() == SINoFile) {
-			dprintf(D_ALWAYS, "Attempting to chown '%s', "
+			dprintf(D_FULLDEBUG, "Attempting to chown '%s', "
 				"but it doesn't appear to exist.\n", path); 
 		} else {
 			dprintf(D_ALWAYS, "Attempting to chown '%s', "
