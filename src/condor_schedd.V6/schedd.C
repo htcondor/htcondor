@@ -2553,7 +2553,7 @@ jobIsFinished( int cluster, int proc, void* )
 				if( ! recursive_chown(sandbox.Value(), src_uid,
 									  dst_uid, dst_gid, true) )
 				{
-					dprintf( D_ALWAYS, "(%d.%d) Failed to chown %s from "
+					dprintf( D_FULLDEBUG, "(%d.%d) Failed to chown %s from "
 							 "%d to %d.%d.  User may run into permissions "
 							 "problems when fetching sandbox.\n", 
 							 cluster, proc, sandbox.Value(),
