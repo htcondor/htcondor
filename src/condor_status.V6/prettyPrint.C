@@ -1,4 +1,4 @@
-Type = 1/***************************************************************
+/***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
