@@ -1162,7 +1162,7 @@ static bool recursive_chown_impl(const char * path,
 	*/
 
 	// Still no luck.
-	dprintf(D_ALWAYS, "Error: Unable to chown '%s' from %d to %d.%d\n",
+	dprintf(D_FULLDEBUG, "Error: Unable to chown '%s' from %d to %d.%d\n",
 		path, (int)src_uid, (int)dst_uid, (int)dst_gid);
 	return false;
 }
