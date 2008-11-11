@@ -88,6 +88,7 @@ public_link_target(sbin,condor,condor_reconfig)
 public_link_target(sbin,condor,condor_reconfig_schedd)
 public_link_target(sbin,condor,condor_reschedule)
 public_link_target(sbin,condor,condor_master_off)
+public_link_target(sbin,condor,condor_set_shutdown)
 
 public_link_target(bin,condor,condor_checkpoint)
 public_link_target(bin,condor,condor_vacate)

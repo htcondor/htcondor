@@ -181,7 +181,7 @@ class FakeFileLock : public FileLockBase
 {
   public:
 	FakeFileLock( void ) : FileLockBase( ) { };
-	FakeFileLock( const char* path ) : FileLockBase( ) { };
+	FakeFileLock( const char* /*path*/ ) : FileLockBase( ) { };
 	~FakeFileLock( void ) { };
 
 		// Is a fake lock

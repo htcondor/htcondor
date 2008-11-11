@@ -35,6 +35,17 @@ ClassAdLogPluginManager::Initialize()
 }
 
 void
+ClassAdLogPluginManager::Shutdown()
+{
+	ClassAdLogPlugin *plugin;
+	SimpleList<ClassAdLogPlugin *> plugins = getPlugins();
+	plugins.Rewind();
+	while (plugins.Next(plugin)) {
+		plugin->shutdown();
+	}
+}
+
+void
 ClassAdLogPluginManager::NewClassAd(const char *key)
 {
 	ClassAdLogPlugin *plugin;

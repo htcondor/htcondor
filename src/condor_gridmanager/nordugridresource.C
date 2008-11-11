@@ -87,6 +87,7 @@ NordugridResource::NordugridResource( const char *resource_name,
 
 NordugridResource::~NordugridResource()
 {
+	ResourcesByName.remove( HashKey( HashName( resourceName, proxySubject ) ) );
 	if ( proxySubject ) {
 		free( proxySubject );
 	}

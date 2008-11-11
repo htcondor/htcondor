@@ -26,6 +26,12 @@ struct ExampleScheddPlugin : public ScheddPlugin
 		printf("Init\n");
 	}
 
+	void
+	shutdown()
+	{
+		printf("Shutdown\n");
+	}
+
 	void update(int cmd, const ClassAd *ad)
 	{
 		printf("update(%d, %s)\n", cmd, ad ? "Ad" : "(NULL)");

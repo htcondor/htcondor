@@ -67,9 +67,9 @@
 
 int GrantDesktopAccess(HANDLE hToken)
    {
-        HDESK               hdesk;
-        HWINSTA             hwinsta;
-        PSID                psid;
+        HDESK   hdesk   = NULL;
+        HWINSTA hwinsta = NULL;
+        PSID    psid    = NULL;
 
         // 
         // obtain a handle to the interactive windowstation
@@ -137,9 +137,9 @@ int GrantDesktopAccess(HANDLE hToken)
 
 int RevokeDesktopAccess(HANDLE hToken)
 {
-    HDESK               hdesk;
-    HWINSTA             hwinsta;
-    PSID                psid;
+    HDESK   hdesk   = NULL;;
+    HWINSTA hwinsta = NULL;
+    PSID    psid    = NULL;
 
     // 
     // obtain a handle to the interactive windowstation
@@ -572,21 +572,20 @@ static  BOOL AddTheAceWindowStation(HWINSTA hwinsta, PSID psid)
 
    static  BOOL RemoveTheAceWindowStation(HWINSTA hwinsta, PSID psid)
    {
-       ACCESS_ALLOWED_ACE   *pace;
+       ACCESS_ALLOWED_ACE   *pace     = NULL;
        ACL_SIZE_INFORMATION aclSizeInfo;
        BOOL                 bDaclExist;
        BOOL                 bDaclPresent;
-       BOOL                 bSuccess  = FALSE; // assume function will
-       //fail
+       BOOL                 bSuccess  = FALSE; // assume function will fail
        DWORD                dwNewAclSize;
        DWORD                dwSidSize = 0;
        DWORD                dwSdSizeNeeded;
-       PACL                 pacl;
-       PACL                 pNewAcl;
+       PACL                 pacl      = NULL;
+       PACL                 pNewAcl   = NULL;
        PSECURITY_DESCRIPTOR psd       = NULL;
        PSECURITY_DESCRIPTOR psdNew    = NULL;
-       PVOID                pTempAce;
-       PACCESS_ALLOWED_ACE   pTempAceAllowed;
+       PVOID                pTempAce  = NULL;
+       PACCESS_ALLOWED_ACE  pTempAceAllowed = NULL;
        SECURITY_INFORMATION si        = DACL_SECURITY_INFORMATION;
        unsigned int         i;
 
@@ -999,17 +998,16 @@ static  BOOL AddTheAceDesktop(HDESK hdesk, PSID psid)
        ACL_SIZE_INFORMATION aclSizeInfo;
        BOOL                 bDaclExist;
        BOOL                 bDaclPresent;
-       BOOL                 bSuccess  = FALSE; // assume function will
-       // fail
+       BOOL                 bSuccess  = FALSE; // assume function will fail
        DWORD                dwNewAclSize;
        DWORD                dwSidSize = 0;
        DWORD                dwSdSizeNeeded;
-       PACL                 pacl;
-       PACL                 pNewAcl;
+       PACL                 pacl      = NULL;
+       PACL                 pNewAcl   = NULL;
        PSECURITY_DESCRIPTOR psd       = NULL;
        PSECURITY_DESCRIPTOR psdNew    = NULL;
-       PVOID                pTempAce;
-       PACCESS_ALLOWED_ACE   pTempAceAllowed;
+       PVOID                pTempAce  = NULL;
+       PACCESS_ALLOWED_ACE  pTempAceAllowed = NULL;
        SECURITY_INFORMATION si        = DACL_SECURITY_INFORMATION;
        unsigned int         i;
 

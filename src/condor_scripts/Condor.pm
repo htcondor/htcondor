@@ -204,12 +204,18 @@ sub TestSubmit
     my $cmd_file = shift || croak "missing submit file argument";
 	my $submitOutput = "";
 
+    my $debug_arg = "";
+
+    if( $DEBUG ) {
+	$debug_arg = "-debug";
+    }
+
     # reset global state
     # Reset();
 	# Reset done in CondorTest.pm prior to submit
 
     # submit the file
-    runCommand( "$CONDOR_SUBMIT $cmd_file > $cmd_file.out 2>&1" )
+    runCommand( "$CONDOR_SUBMIT $debug_arg $cmd_file > $cmd_file.out 2>&1" )
 	|| return 0;
 
 	$submit_time = time; # time reference for time callback

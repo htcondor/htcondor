@@ -1,0 +1,57 @@
+So, the C program needs to do this, specified by command line argument.
+All output is to stdout. This is ultimately going to be called by the perl
+scripts invoked by condor_startd_factory. (I'm currently multitasking. :( So
+hopefully this will be what I need and I didn't forget anything.)
+
+================================================
+--partition-ids-info R00-M0-N00 R00-M0-N01 R00-M0-N02 ...
+================================================
+
+Output is in this specific format, one for each partition id. Each aggregate
+of inforamtion is separated by a --- at the end of the aggregate.
+
+1. An unknown/invalid partition name results in this:
+Partition: R01-M0-N02
+State: INVALID
+
+2. A valid but not generated partition name results in this:
+Partition: R01-M0-N02
+State: NOT_GENERATED
+
+3. A generated partition name results in this:
+Partition: R01-M0-N02
+State: GENERATED
+Size: <however big it is, 32, 64, 128, etc>
+
+4. A generated and booted partition name results in this:
+Partition: R01-M0-N02
+State: BOOTED
+Size: <however big it is, 32, 64, 128, etc>
+Kind: SMP
+
+================================================
+--boot-partition R01-M0-N02 --type SMP
+================================================
+
+Boot the partition, returning OK on a line by itself or multiple lines
+of error and then NOT_OK on a line by itself. This operation blocks until
+it completes. 
+If in error, the stdout must contain:
+Error: <description>
+
+================================================
+--free-partition R01-M0-N02
+================================================
+
+Shut down the booted partition and wait until it completes. Return OK on
+a line by itself, or multiple error lines and NOT_OK on a line by itself.
+If in error, the stdout must contain:
+Error: <description>
+
+Later we can add the generate/destroy functions of needed.
+
+Thank you.
+
+Later,
+-pete
+

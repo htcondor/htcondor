@@ -255,6 +255,13 @@ doRecursion( SubmitDagOptions &opts )
 
 			} else if ( first && !strcasecmp( first, "SUBDAG" ) ) {
 
+				const char *inlineOrExt = tokens.next();
+				if ( strcasecmp( inlineOrExt, "EXTERNAL" ) ) {
+					fprintf( stderr, "ERROR: only SUBDAG EXTERNAL is supported "
+								"at this time (line: <%s>)\n", dagLine );
+					return 1;
+				}
+
 					// Get the nested DAG file and directory from the DAG
 					// file line.
 				const char *nestedDagFile;

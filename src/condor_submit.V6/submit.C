@@ -4573,14 +4573,16 @@ SetUserLog()
 			free(ulog_entry);
 
 			// check that the log is a valid path
-			FILE* test = safe_fopen_wrapper(ulog.Value(), "a+");
-			if (!test) {
-				fprintf(stderr,
-					"\nWARNING: Invalid log file: \"%s\" (%s)\n", ulog.Value(),
-					strerror(errno));
-				exit( 1 );
-			} else {
-				fclose(test);
+			if ( !DisableFileChecks ) {
+				FILE* test = safe_fopen_wrapper(ulog.Value(), "a+", 0664);
+				if (!test) {
+					fprintf(stderr,
+						"\nERROR: Invalid log file: \"%s\" (%s)\n", ulog.Value(),
+						strerror(errno));
+					exit( 1 );
+				} else {
+					fclose(test);
+				}
 			}
 
 			// Check that the log file isn't on NFS
@@ -5151,12 +5153,14 @@ SetGlobusParams()
 	//
 	if ( (tmp = condor_param( AmazonPublicKey, ATTR_AMAZON_PUBLIC_KEY )) ) {
 		// check public key file can be opened
-		if( ( fp=safe_fopen_wrapper(full_path(tmp),"r") ) == NULL ) {
-			fprintf( stderr, "\nERROR: Failed to open public key file %s (%s)\n", 
+		if ( !DisableFileChecks ) {
+			if( ( fp=safe_fopen_wrapper(full_path(tmp),"r") ) == NULL ) {
+				fprintf( stderr, "\nERROR: Failed to open public key file %s (%s)\n", 
 							 full_path(tmp), strerror(errno));
-			exit(1);
+				exit(1);
+			}
+			fclose(fp);
 		}
-		fclose(fp);
 		buffer.sprintf( "%s = \"%s\"", ATTR_AMAZON_PUBLIC_KEY, full_path(tmp) );
 		InsertJobExpr( buffer.Value() );
 		free( tmp );
@@ -5168,12 +5172,14 @@ SetGlobusParams()
 	
 	if ( (tmp = condor_param( AmazonPrivateKey, ATTR_AMAZON_PRIVATE_KEY )) ) {
 		// check private key file can be opened
-		if( ( fp=safe_fopen_wrapper(full_path(tmp),"r") ) == NULL ) {
-			fprintf( stderr, "\nERROR: Failed to open private key file %s (%s)\n", 
+		if ( !DisableFileChecks ) {
+			if( ( fp=safe_fopen_wrapper(full_path(tmp),"r") ) == NULL ) {
+				fprintf( stderr, "\nERROR: Failed to open private key file %s (%s)\n", 
 							 full_path(tmp), strerror(errno));
-			exit(1);
+				exit(1);
+			}
+			fclose(fp);
 		}
-		fclose(fp);
 		buffer.sprintf( "%s = \"%s\"", ATTR_AMAZON_PRIVATE_KEY, full_path(tmp) );
 		InsertJobExpr( buffer.Value() );
 		free( tmp );
@@ -5230,12 +5236,14 @@ SetGlobusParams()
 	// AmazonUserDataFile is not a necessary parameter
 	if( (tmp = condor_param( AmazonUserDataFile, ATTR_AMAZON_USER_DATA_FILE )) ) {
 		// check user data file can be opened
-		if( ( fp=safe_fopen_wrapper(full_path(tmp),"r") ) == NULL ) {
-			fprintf( stderr, "\nERROR: Failed to open user data file %s (%s)\n", 
-							 full_path(tmp), strerror(errno));
-			exit(1);
+		if ( !DisableFileChecks ) {
+			if( ( fp=safe_fopen_wrapper(full_path(tmp),"r") ) == NULL ) {
+				fprintf( stderr, "\nERROR: Failed to open user data file %s (%s)\n", 
+								 full_path(tmp), strerror(errno));
+				exit(1);
+			}
+			fclose(fp);
 		}
-		fclose(fp);
 		buffer.sprintf( "%s = \"%s\"", ATTR_AMAZON_USER_DATA_FILE, 
 				full_path(tmp) );
 		free( tmp );
@@ -6516,7 +6524,7 @@ check_open( const char *name, int flags )
 		delete list;
 	}
 
-	if ( !DumpClassAdToFile ) {
+	if ( !DisableFileChecks ) {
 			if( (fd=safe_open_wrapper(strPathname.Value(),flags | O_LARGEFILE,0664)) < 0 ) {
 			fprintf( stderr, "\nERROR: Can't open \"%s\"  with flags 0%o (%s)\n",
 					 strPathname.Value(), flags, strerror( errno ) );

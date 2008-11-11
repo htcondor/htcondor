@@ -35,6 +35,17 @@ ScheddPluginManager::Initialize()
 }
 
 void
+ScheddPluginManager::Shutdown()
+{
+	ScheddPlugin *plugin;
+	SimpleList<ScheddPlugin *> plugins = getPlugins();
+	plugins.Rewind();
+	while (plugins.Next(plugin)) {
+		plugin->shutdown();
+	}
+}
+
+void
 ScheddPluginManager::Update(int cmd, const ClassAd *ad)
 {
 	ScheddPlugin *plugin;

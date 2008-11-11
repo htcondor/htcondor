@@ -45,6 +45,16 @@ AC_PROG_PERL_VERSION([5.005_03], [],
 
 AC_MSG_NOTICE([verifying build environment ])
 
+# Find RPM, if we have it; this variable is only used for querying the
+# release of an RPM-based system
+AC_PATH_PROG(ac_rpmquery,rpm,no,[$PATH])
+
+if test "x$ac_rpmquery" == "xno" ; then
+   RPMQUERY=/bin/false
+else
+   RPMQUERY=$ac_rpmquery
+fi
+
 # first, if we notice we're being run at UW-Madison CS on a
 # CSL-supported machine, and the PATH doesn't include
 # /p/condor/workspaces/build/bin before /s/std/bin, print an error
@@ -215,64 +225,74 @@ elif test $os = "Linux" ; then
        _cv_linux_distro="GENTOO_UNKNOWN"
        ;;
     esac
-  elif test -f "/etc/redhat-release" ; then
-    _rh_vers=`cat /etc/redhat-release|$PERL -ne '/.* (.*) \(.*\)/;print $1;'`
-    case "$_rh_vers" in
-     "7.2" )
-       _cv_linux_distro="RH72"
-       ;;
-     "2.1AW" )
-       _cv_linux_distro="RH72"
-       ;;
-     "8.0" )
-       _cv_linux_distro="RH80"
-       ;;
-     "9" )
-       _cv_linux_distro="RH9"
-       ;;
-     "3" )
-       _cv_linux_distro="RHEL3"
-       ;;
-     "5" )
-       _cv_linux_distro="RHEL5"
-	   # Hack hack hack
-	   # We should just switch on the code name in parens
-	   # I don't have time to look them all up
-	   if grep -q ^Fedora /etc/redhat-release
-	   then
-	   		_cv_linux_distro="FC5"
-	   fi
-       ;;
-     "5.1" )
-       _cv_linux_distro="RHEL5"
-      ;;
-     "5.2" )
-       _cv_linux_distro="RHEL5"
-       ;;
-     "4.2" )
-       _cv_linux_distro="CENTOS42"
-      ;;
-     "4.3" )
-       _cv_linux_distro="CENTOS43"
-       ;;
-     "4.4" )
-       _cv_linux_distro="CENTOS44"
-       ;;
-     "4.5" )
-       _cv_linux_distro="CENTOS45"
-       ;;
-     "7" )
-       _cv_linux_distro="F7"
-       ;;
-     "8" )
-       _cv_linux_distro="F8"
-       ;;
+  elif test -f "/etc/fedora-release"  ; then
+    # do this BEFORE checking for redhat-release, because
+    # redhat-release is a symlink to fedora-release on F systems
+    _fedora_rel=`cat /etc/fedora-release|$PERL -ne '/.* (.*) \((.*)\)/;print $2;'`
+    case "$_fedora_rel" in
+     # Handle FC cases explicitly
+     "Yarrow" )
+        _cv_linux_distro="FC1"
+	;;
+     "Tettnang" )
+        _cv_linux_distro="FC2"
+	;;
+     "Heidelberg" )
+        _cv_linux_distro="FC3"
+	;;
+     "Stentz" )
+        _cv_linux_distro="FC4"
+	;;
+     "Bordeaux" )
+        _cv_linux_distro="FC5"
+	;;
+     "Zod" )
+        _cv_linux_distro="FC6"
+	;;
+     # Handle post-FC releases more robustly
      * )
-       AC_MSG_WARN([Condor is not yet ported to redhat version $_rh_vers])
-       AC_MSG_WARN([You may have trouble building and/or packaging Condor])
-       _cv_linux_distro="RH_UNKNOWN"
-       ;;
+        _cv_linux_distro=`$RPMQUERY -q --queryformat "F%{VERSION}" fedora-release`
+	;;
     esac
+  elif test -f "/etc/redhat-release" ; then
+    # Non-Fedora Red Hat or Red Hat derivative -- either RHEL or CentOS
+    
+    if (rpm -q centos-release 2>&1 > /dev/null) ; then
+       # CentOS
+       _cv_linux_distro=`$RPMQUERY -q --queryformat "CENTOS%{VERSION}%{RELEASE}" centos-release | tr -d .`
+    else
+       # Red Hat Linux or RHEL; handle RHL first before presuming RHEL
+
+       if (grep -q "Red Hat Linux" /etc/redhat-release) ; then
+         _rh_vers=`cat /etc/redhat-release|$PERL -ne '/.* (.*) \(.*\)/;print $1;'`
+       	  case "$_rh_vers" in
+    	   "7.2" )
+	     _cv_linux_distro="RH72"
+       	     ;;
+	   "2.1AW" )
+       	     _cv_linux_distro="RH72"
+ 	     ;;
+           "8.0" )
+             _cv_linux_distro="RH80"
+             ;;
+           "9" )
+             _cv_linux_distro="RH9"
+             ;;
+	   * )
+       	     AC_MSG_WARN([Condor is not ported to Red Hat Linux version $_rh_vers])
+	     AC_MSG_WARN([You may have trouble building and/or packaging Condor])
+ 	     _cv_linux_distro="RHL_UNKNOWN"
+             ;;
+          esac
+       elif (grep -q "Red Hat Enterprise Linux" /etc/redhat-release) ; then
+         # RHEL
+	 _cv_linux_distro=RHEL`$RPMQUERY -q --queryformat "%{VERSION}" redhat-release | tr -d \[[A-Za-z]] `
+       else
+          $_rh_release=`cat /etc/redhat-release`
+          AC_MSG_WARN([You may have trouble building and/or packaging Condor on $_rh_release])
+          _cv_linux_distro=`$RPMQUERY -q --queryformat "RH_UNK_%{VERSION}%{RELEASE}" redhat-release | tr -d .`
+       fi
+    fi
   elif test -f "/etc/SuSE-release" ; then
     _suse_vers=`cat /etc/SuSE-release | grep VERSION | $AWK '{print $3}'`
     case "$_suse_vers" in
@@ -1316,6 +1336,7 @@ case "$_cv_opsys-$_cv_opsys_vers-$_cv_arch-$_cv_linux_distro-$_cv_libc_major-$_c
   LINUX-*-ALPHA-* | \
   LINUX-*-*-DEBIAN40-* | \
   LINUX-*-IA64-* | \
+  SOLARIS-* | \
   LINUX-*-CONDOR_PPC-* ) _cv_clipped_default=yes ;;
   * ) _cv_clipped_default=no ;;
 esac
@@ -2046,11 +2067,33 @@ if test "$ac_purify" = "purify"; then
    fi
 fi
 
-AC_PATH_PROG(ac_vmware,vmware,no,[$PATH])
-if test $ac_vmware = "no"; then
-  AC_MSG_WARN( [vmware not found] )
+# Allow the user to specify a directory where vmware is to be found.
+# This logic is a little scary since vm_arg can be "no", "yes", or a path.
+AC_ARG_WITH(vmware,
+ AC_HELP_STRING([--with-vmware=DIR],
+  [full path to directory where the vmware program is located]),
+ [vm_arg=$withval],
+ [vm_arg=$PATH])
+
+# Depending what the user told us, we will modify vm_path.
+if test $vm_arg = "no"; then
+ # we don't even check for VMware so assign the makefile var to nothing.
+ ac_vmware=""
 else
+ # Here we check for it with $PATH or with what the user told us where to find
+ # it.
+ if test $vm_arg = "yes"; then
+  vm_path=$PATH
+ else
+  vm_path=$vm_arg
+ fi
+ # now find the vmware program, if applicable.
+ AC_PATH_PROG(ac_vmware,vmware,no,[$vm_path])
+ if test $ac_vmware = "no"; then
+  ac_vmware=""
+ else
   AC_DEFINE([HAVE_VMWARE],[1],[Define if vmware is available])
+ fi
 fi
 AC_SUBST(VMWARE,$ac_vmware)
 
@@ -2150,7 +2193,7 @@ AC_ARG_ENABLE([kbdd],
     [enable KBDD functionality (default: platform dependent)]),
   [],
   [case "$_cv_opsys" in
-    AIX | HPUX | LINUX | SOLARIS )
+    AIX | HPUX | SOLARIS | LINUX )
       enable_kbdd=no
     ;;
     * ) # Who had this turned on? No .cf files on 1/6/8 used it. -matt
@@ -2180,21 +2223,14 @@ fi
 # checks for libraries
 ############################################################
 
-# Currently in Condor, threading in daemon core on Unix requires
-# both pthreads and thread local storage.  HACK: for right now
-# we know that only Linux meets that requirement, and furthermore
-# that TLS exists but is broken on ia64 (the compiler blows up).  So for now
-# we only want pthreads defined on Linux that is not ia64.  Once we 
-# remove the requirement on TLS in the code, we can safely remove 
-# this hack.
-if test $os = "Linux" && test $arch != "ia64"; then
-	AC_CHECK_LIB([pthread], [pthread_create],
-  		[ac_pthreads=yes
-   		AC_DEFINE([HAVE_PTHREADS],[1],[Define if pthreads are available])],
-  		[ac_pthreads=no])
-	# Check if this system support Thread Local Storage class.
-	AX_TLS
-fi
+# The DRMAA C library needs to be compiled with pthreads in mind if
+# pthreads are available. This machinery ends up defining HAS_PTHREADS
+# In the build system which is then used to add the correct threading
+# flags to the compile line for drmaa code.
+AC_CHECK_LIB([pthread], [pthread_create],
+  [ac_pthreads=yes
+   AC_DEFINE([HAS_PTHREADS],[1],[Define if pthreads are available])],
+  [ac_pthreads=no])
 
 
 ############################################################
@@ -2224,7 +2260,13 @@ AC_CHECK_HEADERS([linux/ethtool.h],[],[],[
 AC_CHECK_HEADERS([sys/statfs.h])
 AC_CHECK_HEADERS([sys/statvfs.h])
 AC_CHECK_HEADERS([sys/vfs.h])
-AC_CHECK_HEADERS([sys/mount.h])
+AC_CHECK_HEADERS([sys/mount.h],[],[],[
+#if HAVE_SYS_TYPES_H
+# include <sys/types.h>
+#endif
+#if HAVE_SYS_PARAM_H
+# include <sys/param.h>
+#endif])
 AC_CHECK_HEADERS([ustat.h])
 AC_CHECK_HEADERS([dlfcn.h])
 AC_CHECK_HEADERS([valgrind.h])
@@ -2279,7 +2321,9 @@ AC_CHECK_FUNCS([strsignal				\
 		setlinebuf				\
 		snprintf				\
 		setenv					\
-		unsetenv					\
+		unsetenv				\
+		execl					\
+		access					\
 		vasprintf				\
 		clearenv])
 AC_CHECK_FUNC(crypt, ,AC_CHECK_LIB(crypt,crypt))

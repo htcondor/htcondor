@@ -25,6 +25,7 @@
 #include "condor_debug.h"
 #include "subsystem_info.h"
 #include "condor_random_num.h"
+#include "condor_string.h"
 #include "simple_arg.h"
 #include <stdio.h>
 #include <unistd.h>
@@ -69,6 +70,7 @@ public:
 		m_eventp = NULL;
 		m_name = NULL;
 		m_note = NULL;
+		m_is_large = false;
 	}
 	~EventInfo( void ) {
 		Reset( );
@@ -218,7 +220,7 @@ CheckArgs(int argc, const char **argv, Options &opts)
 		"  -n|--num-procs <number>: Number of procs (default = 10)\n"
 		"\n"
 		"  --generic <string>: Write generic event\n"
-		"  --persist <file>: persist writer state to file (for jobid gen)\n"
+		"  -p|--persist <file>: persist writer state to file (for jobid gen)\n"
 		"  --sleep <number>: how many seconds to sleep between events\n"
 		"  --no-sleep: Don't sleep at all between events\n"
 		"  --stork: simulate Stork (-1 for proc and subproc)\n"
@@ -263,7 +265,7 @@ CheckArgs(int argc, const char **argv, Options &opts)
 
 		if ( arg.Match( "cluster") ) {
 			if ( ! arg.getOpt(opts.cluster) ) {
-				fprintf(stderr, "Value needed for --cluster argument\n");
+				fprintf(stderr, "Value needed for '%s'\n", arg.Arg() );
 				printf("%s", usage);
 				status = true;
 			}
@@ -273,7 +275,7 @@ CheckArgs(int argc, const char **argv, Options &opts)
 				set_debug_flags( const_cast<char *>(arg.getOpt()) );
 				index = arg.ConsumeOpt( );
 			} else {
-				fprintf(stderr, "Value needed for --debug argument\n");
+				fprintf(stderr, "Value needed for '%s'\n", arg.Arg() );
 				printf("%s", usage);
 				status = true;
 			}
@@ -290,42 +292,42 @@ CheckArgs(int argc, const char **argv, Options &opts)
 							&opts.cluster, &opts.proc, &opts.subproc );
 				}
 			} else {
-				fprintf(stderr, "Value needed for --jobid argument\n");
+				fprintf(stderr, "Value needed for '%s'\n", arg.Arg() );
 				printf("%s", usage);
 				status = true;
 			}
 
 		} else if ( arg.Match("generic") ) {
 			if ( !arg.getOpt(opts.genericEventStr) ) {
-				fprintf(stderr, "Value needed for --generic argument\n");
+				fprintf(stderr, "Value needed for '%s'\n", arg.Arg() );
 				printf("%s", usage);
 				status = true;
 			}
 
 		} else if ( arg.Match('n', "num-exec") ) {
 			if ( ! arg.getOpt(opts.numExec) ) {
-				fprintf(stderr, "Value needed for --num-exec argument\n");
+				fprintf(stderr, "Value needed for '%s'\n", arg.Arg() );
 				printf("%s", usage);
 				status = true;
 			}
 
 		} else if ( arg.Match("num-procs") ) {
 			if ( ! arg.getOpt(opts.numProcs) ) {
-				fprintf(stderr, "Value needed for --num-procs argument\n");
+				fprintf(stderr, "Value needed for '%s'\n", arg.Arg() );
 				printf("%s", usage);
 				status = true;
 			}
 
 		} else if ( arg.Match("proc") ) {
 			if ( ! arg.getOpt(opts.proc) ) {
-				fprintf(stderr, "Value needed for --proc argument\n");
+				fprintf(stderr, "Value needed for '%s'\n", arg.Arg() );
 				printf("%s", usage);
 				status = true;
 			}
 
-		} else if ( arg.Match("persist") ) {
+		} else if ( arg.Match( 'p', "persist") ) {
 			if ( !arg.getOpt(opts.persistFile) ) {
-				fprintf(stderr, "Value needed for --persist argument\n");
+				fprintf(stderr, "Value needed for '%s'\n", arg.Arg() );
 				printf("%s", usage);
 				status = true;
 			}
@@ -337,7 +339,7 @@ CheckArgs(int argc, const char **argv, Options &opts)
 				opts.sleep_useconds =
 					(int) (1e6 * ( sec - opts.sleep_seconds ) );
 			} else {
-				fprintf(stderr, "Value needed for --sleep argument\n");
+				fprintf(stderr, "Value needed for '%s'\n", arg.Arg() );
 				printf("%s", usage);
 				status = true;
 			}
@@ -351,22 +353,21 @@ CheckArgs(int argc, const char **argv, Options &opts)
 
 		} else if ( arg.Match("subproc") ) {
 			if ( arg.getOpt(opts.subproc) ) {
-				fprintf(stderr, "Value needed for --subproc argument\n");
+				fprintf(stderr, "Value needed for '%s'\n", arg.Arg() );
 				printf("%s", usage);
 				status = true;
 			}
 
 		} else if ( arg.Match('f', "fork") ) {
 			if ( !arg.getOpt(opts.num_forks) ) {
-				fprintf(stderr, "Value needed for --fork argument\n");
+				fprintf(stderr, "Value needed for '%s'\n", arg.Arg() );
 				printf("%s", usage);
 				status = true;
 			}
 
 		} else if ( arg.Match("fork-cluster-step") ) {
 			if ( !arg.getOpt(opts.fork_cluster_step) ) {
-				fprintf(stderr,
-						"Value needed for --fork-cluster-step argument\n");
+				fprintf(stderr, "Value needed for '%s'\n", arg.Arg() );
 				printf("%s", usage);
 				status = true;
 			}
@@ -376,14 +377,14 @@ CheckArgs(int argc, const char **argv, Options &opts)
 			if ( arg.getOpt(percent) ) {
 				opts.randomProb = percent / 100.0;
 			} else {
-				fprintf(stderr, "Value needed for --random argument\n");
+				fprintf(stderr, "Value needed for '%s'\n", arg.Arg() );
 				printf("%s", usage);
 				status = true;
 			}
 
 		} else if ( arg.Match("submit_note") ) {
 			if ( !arg.getOpt(opts.submitNote) ) {
-				fprintf(stderr, "Value needed for --submit_note argument\n");
+				fprintf(stderr, "Value needed for '%s'\n", arg.Arg() );
 				printf("%s", usage);
 				status = true;
 			}
@@ -394,7 +395,7 @@ CheckArgs(int argc, const char **argv, Options &opts)
 
 		} else if ( arg.Match("verbosity") ) {
 			if ( !arg.getOpt(opts.verbosity) ) {
-				fprintf(stderr, "Value needed for --verbosity argument\n");
+				fprintf(stderr, "Value needed for '%s'\n", arg.Arg() );
 				printf("%s", usage);
 				status = true;
 			}
@@ -410,10 +411,10 @@ CheckArgs(int argc, const char **argv, Options &opts)
 			opts.isXml = true;
 
 		} else if ( !arg.ArgIsOpt() ) {
-			opts.logFile = arg.ArgStr();
+			arg.getOpt( opts.logFile, false );
 
 		} else {
-			fprintf(stderr, "Unrecognized argument: <%s>\n", arg.ArgStr() );
+			fprintf(stderr, "Unrecognized argument: '%s'\n", arg.Arg() );
 			printf("%s", usage);
 			status = true;
 		}
@@ -701,8 +702,8 @@ EventInfo::GenEventSubmit( void )
 		// Note: the line below is designed specifically to work with
 		// Kent's dummy stork_submit script for testing DAGs with
 		// DATA nodes.
-	e->submitEventLogNotes = strdup(m_opts->submitNote);
-	e->submitEventUserNotes = strdup("User info");
+	e->submitEventLogNotes  = strnewp(m_opts->submitNote);
+	e->submitEventUserNotes = strnewp("User info");
 
 	return SetEvent( e );
 }

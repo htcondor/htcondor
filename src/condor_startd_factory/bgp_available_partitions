@@ -14,13 +14,20 @@ use IPC::Open3; # stdin & stdout/err of a process
 
 my $cst_cmd = "/home/condor/bin/condor_status";
 my $mmcs_cmd = "/bgsys/drivers/ppcfloor/bin/mmcs_db_console";
-my $mmcs_c_cmd = "/home/condor/libexec/bgd_list_partitions";
+my $mmcs_c_cmd = "/home/condor/libexec/htc_list_partitions";
 
 # initial configuration of partitions, assume all are not generated, 
 # then fill in the hashes with what I find via various sources. After the
 # discovery phase, the hash entries will be in different states.
 my @g_parts = 
 (
+	#{
+		# "R00-M0-N00" =>
+		# 	{
+		# 		"State" => "GENERATED",
+		# 		"Size" => 32
+		# 	}
+	#},
 	{
 		"R00-M0-N01" =>
 			{

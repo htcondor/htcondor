@@ -160,14 +160,14 @@ CheckArgs(int argc, const char **argv, Options &opts)
 				set_debug_flags( const_cast<char *>(arg.getOpt()) );
 				index = arg.ConsumeOpt( );
 			} else {
-				fprintf(stderr, "Value needed for %s\n", arg.ArgStr() );
+				fprintf(stderr, "Value needed for '%s'\n", arg.Arg() );
 				printf("%s", usage);
 				status = STATUS_ERROR;
 			}
 
 		} else if ( arg.Match("max-exec") ) {
 			if ( !arg.getOpt( opts.maxExec ) ) {
-				fprintf(stderr, "Value needed for %s\n", arg.ArgStr() );
+				fprintf(stderr, "Value needed for '%s'\n", arg.Arg() );
 				printf("%s", usage);
 				status = STATUS_ERROR;
 			}
@@ -185,7 +185,7 @@ CheckArgs(int argc, const char **argv, Options &opts)
 				opts.readPersist = true;
 				opts.writePersist = true;
 			} else {
-				fprintf(stderr, "Value needed for %s\n", arg.ArgStr() );
+				fprintf(stderr, "Value needed for '%s'\n", arg.Arg() );
 				printf("%s", usage);
 				status = STATUS_ERROR;
 			}
@@ -211,7 +211,7 @@ CheckArgs(int argc, const char **argv, Options &opts)
 			if ( arg.getOpt( opts.max_rotations ) ) {
 				opts.rotation = opts.max_rotations > 0;
 			} else {
-				fprintf(stderr, "Value needed for %s\n", arg.ArgStr() );
+				fprintf(stderr, "Value needed for '%s'\n", arg.Arg() );
 			}
 
 		} else if ( arg.Match("no-rotation") ) {
@@ -219,7 +219,7 @@ CheckArgs(int argc, const char **argv, Options &opts)
 
 		} else if ( arg.Match("sleep") ) {
 			if ( !arg.getOpt( opts.sleep ) ) {
-				fprintf(stderr, "Value needed for %s\n", arg.ArgStr() );
+				fprintf(stderr, "Value needed for '%s'\n", arg.Arg() );
 				printf("%s", usage);
 				status = STATUS_ERROR;
 			}
@@ -229,7 +229,7 @@ CheckArgs(int argc, const char **argv, Options &opts)
 
 		} else if ( arg.Match("term") ) {
 			if ( !arg.getOpt( opts.term ) ) {
-				fprintf(stderr, "Value needed for %s\n", arg.ArgStr() );
+				fprintf(stderr, "Value needed for '%s'\n", arg.Arg() );
 				printf("%s", usage);
 				status = STATUS_ERROR;
 			}
@@ -245,7 +245,7 @@ CheckArgs(int argc, const char **argv, Options &opts)
 
 		} else if ( arg.Match("verbosity") ) {
 			if ( !arg.getOpt( opts.verbosity ) ) {
-				fprintf(stderr, "Value needed for %s\n", arg.ArgStr() );
+				fprintf(stderr, "Value needed for '%s'\n", arg.Arg() );
 				printf("%s", usage);
 				status = STATUS_ERROR;
 			}
@@ -259,10 +259,10 @@ CheckArgs(int argc, const char **argv, Options &opts)
 			opts.writePersist = true;
 
 		} else if ( !arg.ArgIsOpt() ) {
-			opts.logFile = arg.ArgStr();
+			opts.logFile = arg.Arg();
 
 		} else {
-			fprintf(stderr, "Unrecognized argument: <%s>\n", arg.ArgStr() );
+			fprintf(stderr, "Unrecognized argument: '%s'\n", arg.Arg() );
 			printf("%s", usage);
 			status = STATUS_ERROR;
 		}

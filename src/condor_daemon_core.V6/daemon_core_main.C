@@ -229,7 +229,7 @@ clean_files()
 // All daemons call this function when they want daemonCore to really
 // exit.  Put any daemon-wide shutdown code in here.   
 void
-DC_Exit( int status )
+DC_Exit( int status, const char *shutdown_program )
 {
 		// First, delete any files we might have created, like the
 		// address file or the pid file.
@@ -257,6 +257,7 @@ DC_Exit( int status )
 	}
 
 		// Now, delete the daemonCore object, since we allocated it. 
+	unsigned long	pid = daemonCore->getpid( );
 	delete daemonCore;
 	daemonCore = NULL;
 
@@ -275,8 +276,31 @@ DC_Exit( int status )
 		  to know from the config file, so it's ok that we already
 		  cleared out our config hashtable, too.  Derek 2004-11-23
 		*/
-	dprintf( D_ALWAYS, "**** %s (%s_%s) EXITING WITH STATUS %d\n",
-			 myName, myDistro->Get(), mySubSystem->getName(), exit_status );
+	if ( shutdown_program ) {
+#     if (HAVE_EXECL)
+		dprintf( D_ALWAYS, "**** %s (%s_%s) pid %lu EXITING BY EXECING %s\n",
+				 myName, myDistro->Get(), mySubSystem->getName(), pid,
+				 shutdown_program );
+		int exec_status = execl( shutdown_program, shutdown_program, NULL );
+		dprintf( D_ALWAYS, "**** execl() FAILED %d %d %s\n",
+				 exec_status, errno, strerror(errno) );
+#     elif defined(WIN32)
+		dprintf( D_ALWAYS,
+				 "**** %s (%s_%s) pid %lu EXECING SHUTDOWN PROGRAM %s\n",
+				 myName, myDistro->Get(), mySubSystem->getName(), pid,
+				 shutdown_program );
+		int exec_status = execl( shutdown_program, shutdown_program, NULL );
+		if ( exec_status ) {
+			dprintf( D_ALWAYS, "**** _execl() FAILED %d %d %s\n",
+					 exec_status, errno, strerror(errno) );
+		}
+#     else
+		dprintf( D_ALWAYS, "**** execl() not available on this system\n" );
+#     endif
+	}
+	dprintf( D_ALWAYS, "**** %s (%s_%s) pid %lu EXITING WITH STATUS %d\n",
+			 myName, myDistro->Get(), mySubSystem->getName(), pid,
+			 exit_status );
 
 		// Finally, exit with the appropriate status.
 	exit( exit_status );
@@ -1853,11 +1877,6 @@ int main( int argc, char** argv )
 		 fcntl(daemonCore->async_pipe[0],F_SETFL,O_NONBLOCK) == -1 ||
 		 fcntl(daemonCore->async_pipe[1],F_SETFL,O_NONBLOCK) == -1 ) {
 			EXCEPT("Failed to create async pipe");
-	}
-#else
-	if ( daemonCore->async_pipe[1].connect_socketpair(daemonCore->async_pipe[0])==false )
-	{
-		EXCEPT("Failed to create async pipe socket pair");
 	}
 #endif
 

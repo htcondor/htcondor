@@ -58,7 +58,7 @@
 #endif
 
 #if WANT_LEASE_MANAGER
-# define LeaseManagerProgs condor_lease_manager
+# define LeaseManagerProgs lease_manager
 #else
 # define LeaseManagerProgs
 #endif
@@ -105,6 +105,8 @@
 	static_dir/libexec static_dir/libexec/glite \
 	static_dir/etc static_dir/etc/examples static_dir/include \
 	static_dir/src static_dir/src/chirp static_dir/src/drmaa \
+	static_dir/src/startd_factory \
+	static_dir/src/startd_factory/BlueGeneP \
 	static_dir/man static_dir/man/man1 \
 	static_dir/lib/webservice \
 	static_dir/sql \
@@ -122,6 +124,8 @@
 	release_dir/libexec release_dir/libexec/glite \
 	release_dir/include release_dir/src release_dir/src/chirp \
 	release_dir/src/drmaa \
+	release_dir/src/startd_factory \
+	release_dir/src/startd_factory/BlueGeneP \
 	release_dir/man release_dir/man/man1 pure_bin \
 	release_dir/lib/webservice \
 	release_dir/etc release_dir/etc/examples \
@@ -130,6 +134,8 @@
 	strip_dir/libexec strip_dir/libexec/glite \
 	strip_dir/etc strip_dir/etc/examples strip_dir/include \
 	strip_dir/src strip_dir/src/chirp strip_dir/src/drmaa \
+	strip_dir/src/startd_factory \
+	strip_dir/src/startd_factory/BlueGeneP \
 	strip_dir/man strip_dir/man/man1 \
 	strip_dir/lib/webservice \
 	strip_dir/sql \
@@ -160,6 +166,8 @@ simple_dir_target(release_dir/include)
 simple_dir_target(release_dir/src)
 simple_dir_target(release_dir/src/chirp)
 simple_dir_target(release_dir/src/drmaa)
+simple_dir_target(release_dir/src/startd_factory)
+simple_dir_target(release_dir/src/startd_factory/BlueGeneP)
 simple_dir_target(release_dir/man)
 simple_dir_target(release_dir/man/man1)
 simple_dir_target(release_dir/lib/webservice)
@@ -179,6 +187,8 @@ simple_dir_target(strip_dir/include)
 simple_dir_target(strip_dir/src)
 simple_dir_target(strip_dir/src/chirp)
 simple_dir_target(strip_dir/src/drmaa)
+simple_dir_target(strip_dir/src/startd_factory)
+simple_dir_target(strip_dir/src/startd_factory/BlueGeneP)
 simple_dir_target(strip_dir/man)
 simple_dir_target(strip_dir/man/man1)
 simple_dir_target(strip_dir/lib/webservice)
@@ -207,6 +217,8 @@ simple_dir_target(static_dir/include)
 simple_dir_target(static_dir/src)
 simple_dir_target(static_dir/src/chirp)
 simple_dir_target(static_dir/src/drmaa)
+simple_dir_target(static_dir/src/startd_factory)
+simple_dir_target(static_dir/src/startd_factory/BlueGeneP)
 simple_dir_target(static_dir/man)
 simple_dir_target(static_dir/man/man1)
 simple_dir_target(static_dir/lib/webservice)
@@ -253,6 +265,10 @@ condor_object_target(had)
 condor_object_target(status.V6)
 condor_object_target(dagman)
 condor_object_target(userlog)
+
+#if WANT_LEASE_MANAGER
+condor_object_target(lease_manager)
+#endif
 
 #if NEEDS_KBDD
    condor_object_target(kbdd)
@@ -302,10 +318,6 @@ condor_object_target(amazon)
 condor_object_target(drmaa)
 #endif
 
-#if WANT_LEASE_MANAGER
-condor_object_target(lease_manager)
-#endif
-
 #if WANT_CLASSAD_ANALYSIS
 object_target(ClassAdAnalysis,classad_analysis)
 #endif
@@ -321,6 +333,7 @@ object_dir_target(condor_sdk)
 #if WANT_STORK
 object_target(Stork,stork)
 #endif
+
 
 #if HAVE_EXT_GLOBUS
 object_target(GT2_GAHP,gt2_gahp)
@@ -391,6 +404,10 @@ pure_target(condor_startd.V6,condor_startd.pure)
 pure_target(condor_gridmanager,condor_gridmanager.pure)
 pure_target(condor_schedd.V6,condor_schedd.pure)
 pure_target(condor_master.V6,condor_master.pure)
+
+#if WANT_LEASE_MANAGER
+pure_target(condor_lease_manager,condor_lease_manager.pure)
+#endif
 
 pure_target(condor_shadow.V6,condor_shadow.std.pure)
 pure_target(condor_starter.V5,condor_starter.std.pure)

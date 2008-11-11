@@ -87,6 +87,7 @@
 
 #if HAVE_DLOPEN
 #include "ScheddPlugin.h"
+#include "ClassAdLogPlugin.h"
 #endif
 
 #define DEFAULT_SHADOW_SIZE 125
@@ -2552,7 +2553,7 @@ jobIsFinished( int cluster, int proc, void* )
 				if( ! recursive_chown(sandbox.Value(), src_uid,
 									  dst_uid, dst_gid, true) )
 				{
-					dprintf( D_ALWAYS, "(%d.%d) Failed to chown %s from "
+					dprintf( D_FULLDEBUG, "(%d.%d) Failed to chown %s from "
 							 "%d to %d.%d.  User may run into permissions "
 							 "problems when fetching sandbox.\n", 
 							 cluster, proc, sandbox.Value(),
@@ -2673,7 +2674,8 @@ Scheduler::WriteAbortToUserLog( PROC_ID job_id )
 		// regardless of the return value.
 	free( reason );
 
-	int status = ULog->writeEvent(&event, GetJobAd(job_id.cluster,job_id.proc));
+	bool status =
+		ULog->writeEvent(&event, GetJobAd(job_id.cluster,job_id.proc));
 	delete ULog;
 
 	if (!status) {
@@ -2723,7 +2725,8 @@ Scheduler::WriteHoldToUserLog( PROC_ID job_id )
 		event.setReasonSubCode(hold_reason_subcode);
 	}
 
-	int status = ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
+	bool status =
+		ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
 	delete ULog;
 
 	if (!status) {
@@ -2754,7 +2757,8 @@ Scheduler::WriteReleaseToUserLog( PROC_ID job_id )
 		// regardless of the return value.
 	free( reason );
 
-	int status = ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
+	bool status =
+		ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
 	delete ULog;
 
 	if (!status) {
@@ -2785,7 +2789,8 @@ Scheduler::WriteExecuteToUserLog( PROC_ID job_id, const char* sinful )
 
 	ExecuteEvent event;
 	strcpy( event.executeHost, host );
-	int status = ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
+	bool status =
+		ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
 	delete ULog;
 	
 	if (!status) {
@@ -2807,7 +2812,8 @@ Scheduler::WriteEvictToUserLog( PROC_ID job_id, bool checkpointed )
 	}
 	JobEvictedEvent event;
 	event.checkpointed = checkpointed;
-	int status = ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
+	bool status =
+		ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
 	delete ULog;
 	if (!status) {
 		dprintf( D_ALWAYS,
@@ -2850,7 +2856,7 @@ Scheduler::WriteTerminateToUserLog( PROC_ID job_id, int status )
 		event.normal = false;
 		event.signalNumber = WTERMSIG(status);
 	}
-	int rval = ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
+	bool rval = ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
 	delete ULog;
 
 	if (!rval) {
@@ -2892,7 +2898,7 @@ Scheduler::WriteRequeueToUserLog( PROC_ID job_id, int status, const char * reaso
 	if(reason) {
 		event.setReason(reason);
 	}
-	int rval = ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
+	bool rval = ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
 	delete ULog;
 
 	if (!rval) {
@@ -10869,6 +10875,11 @@ Scheduler::shutdown_fast()
 	dprintf( D_FULLDEBUG, "Canceled/Closed %d socket(s) at shutdown\n",
 			 num_closed ); 
 
+#if HAVE_DLOPEN
+	ScheddPluginManager::Shutdown();
+	ClassAdLogPluginManager::Shutdown();
+#endif
+
 	dprintf( D_ALWAYS, "All shadows have been killed, exiting.\n" );
 	DC_Exit(0);
 }
@@ -10904,6 +10915,11 @@ Scheduler::schedd_exit()
 	shadowCommandssock = NULL;
 	dprintf( D_FULLDEBUG, "Canceled/Closed %d socket(s) at shutdown\n",
 			 num_closed ); 
+
+#if HAVE_DLOPEN
+	ScheddPluginManager::Shutdown();
+	ClassAdLogPluginManager::Shutdown();
+#endif
 
 	dprintf( D_ALWAYS, "All shadows are gone, exiting.\n" );
 	DC_Exit(0);

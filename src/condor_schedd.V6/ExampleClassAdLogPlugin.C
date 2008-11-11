@@ -27,6 +27,12 @@ struct ExampleClassAdLogPlugin : public ClassAdLogPlugin
 	}
 
 	void
+	shutdown()
+	{
+		printf("Shutdown\n");
+	}
+
+	void
 	newClassAd(const char *key)
 	{
 		printf("newClassAd: %s\n", key);

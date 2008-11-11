@@ -912,7 +912,7 @@ class DaemonCore : public Service
         @param pid Not_Yet_Documented
         @return Not_Yet_Documented
     */
-    int Shutdown_Fast(pid_t pid);
+    int Shutdown_Fast(pid_t pid, bool want_core = false );
 
     /** Not_Yet_Documented
         @param pid Not_Yet_Documented
@@ -1309,8 +1309,6 @@ class DaemonCore : public Service
 		*/
 	bool wantsRestart( void );
 
-	void Wake_up_select();
-
   private:      
 
 	bool m_wants_dc_udp; // do we want a udp comment socket at all?
@@ -1322,8 +1320,8 @@ class DaemonCore : public Service
 	void InitDCCommandSocket( int command_port );  // called in main()
 
     int HandleSigCommand(int command, Stream* stream);
-    int HandleReq(int socki, Stream* accepted_sock=NULL);
-	int HandleReq(Stream *insock, Stream* accepted_sock=NULL);
+    int HandleReq(int socki);
+	int HandleReq(Stream *insock);
 	int HandleReqSocketTimerHandler();
 	int HandleReqSocketHandler(Stream *stream);
     int HandleSig(int command, int sig);
@@ -1464,8 +1462,6 @@ class DaemonCore : public Service
         void*           data_ptr;
 		bool			is_connect_pending;
 		bool			call_handler;
-		int				servicing_tid;	// tid servicing this socket
-		bool			remove_asap;	// remove when being_serviced==false
     };
     void              DumpSocketTable(int, const char* = NULL);
     int               maxSocket;  // number of socket handlers to start with
@@ -1613,13 +1609,9 @@ class DaemonCore : public Service
     int SetFDInheritFlag(int fd, int flag);
 #endif
 
-	// Setup an async_pipe, used to wake up select from another thread.
-	// Implemented on Unix via a pipe, on Win32 via a pair of connected tcp sockets.
 #ifndef WIN32
     int async_pipe[2];  // 0 for reading, 1 for writing
     volatile int async_sigs_unblocked;
-#else
-	ReliSock async_pipe[2];  // 0 for reading, 1 for writing
 #endif
 	volatile bool async_pipe_empty;
 
@@ -1658,14 +1650,15 @@ class DaemonCore : public Service
 		// On return, i may be modified so that when incremented,
 		// it will index the next registered socket.
 	void CallSocketHandler( int &i, bool default_to_HandleCommand );
-	static void CallSocketHandler_worker_demarshall(void *args);
-	void CallSocketHandler_worker( int i, bool default_to_HandleCommand, Stream* asock );
-	
 
 		// Returns index of registered socket or -1 if not found.
 	int GetRegisteredSocketIndex( Stream *sock );
 
+    // these need to be in thread local storage someday
+    void **curr_dataptr;
+    void **curr_regdataptr;
     int inServiceCommandSocket_flag;
+    // end of thread local storage
         
 #ifndef WIN32
     static char **ParseArgsString(const char *env);
@@ -1735,8 +1728,11 @@ class DaemonCore : public Service
     @param status The return status upon exit.  The value you would normally
            pass to the regular <tt>exit()</tt> function if you weren't using
            Daemon Core.
+    @param shutdown_program Optional program to exec() instead of permforming
+		   a normal "exit".  If the exec() fails, the normal exit() will
+		   occur.
 */
-extern void DC_Exit( int status );  
+extern void DC_Exit( int status, const char *shutdown_program = NULL );
 
 /** Call this function (inside your main_pre_dc_init() function) to
     bypass the authorization initialization in daemoncore.  This is for

@@ -42,6 +42,7 @@ import org.w3c.dom.Element;
 import org.globus.exec.client.GramJob;
 import org.globus.wsrf.container.ServiceContainer;
 import org.globus.exec.utils.client.ManagedJobClientHelper;
+import org.globus.exec.utils.NotificationUtil;
 
 import org.globus.axis.message.addressing.EndpointReferenceType;
 
@@ -69,7 +70,6 @@ public class CallbackSink
 
     private String callbackId;
     private int requestId;
-    private HashMap notificationProducers  = new HashMap();
     private GahpInterface gahp;
     private boolean isInitialized = false;
 	private NotificationConsumerManager notificationConsumerManager;
@@ -118,7 +118,7 @@ public class CallbackSink
 		securityDescriptor.setDefaultAuthMethods(authMethod);
 
 		List topicPath = new LinkedList(); 	
-		topicPath.add(ManagedJobConstants.RP_STATE);
+		topicPath.add(ManagedJobConstants.STATE_CHANGE_INFORMATION_TOPIC_QNAME);
 		notificationConsumerEPR = 
 			notificationConsumerManager.createNotificationConsumer(
 															topicPath,
@@ -157,46 +157,12 @@ public class CallbackSink
 		GramJobUtils.setDefaultJobAttributes (jobPort, 
 											  GSIUtils.getCredential (gahp));
 		SubscribeResponse response = jobPort.subscribe (request);
-
-        EndpointReferenceType notificationProducerEPR = 
-            response.getSubscriptionReference();
-
-        synchronized( notificationProducers ) {
-            notificationProducers.put (jobId, notificationProducerEPR);
-        }
 	}
 
 
 	public void removeJobListener (String jobContact) {
-        EndpointReferenceType notificationProducerEPR;
-
-        synchronized( notificationProducers ) {
-            notificationProducerEPR = (EndpointReferenceType)notificationProducers.remove (jobContact);
-        }
-
-        if ( notificationProducerEPR == null ) {
-            // We don't have a notification EPR for this job contact.
-            // There's no work to do, so return immediately.
-            return;
-        }
-
-        // Now we destroy the notification producer on the server
-// JEF The notificatoin producer is not automatically destroyed by the
-//   server. There's some additional code cleanup we can do.
-/*
-        try {
-            SubscriptionManager subscriptionPort
-                = new WSBaseNotificationServiceAddressingLocator().
-                getSubscriptionManagerPort(notificationProducerEPR);
-
-            GramJobUtils.setDefaultAttributes((Stub)subscriptionPort,
-                                              GSIUtils.getCredential(gahp));
-
-            subscriptionPort.destroy(new Destroy());
-        }
-        catch ( Exception e ) {
-        }
-*/
+        // TODO Eliminate this function?
+        return;
 	}
 
     
@@ -206,10 +172,6 @@ public class CallbackSink
                                                     notificationConsumerEPR);
 
             this.notificationConsumerManager.stopListening();
-
-            // TODO should we try to destroy all of the subscription
-            //   objects on the servers here?
-			notificationProducers.clear();
         }
         catch (Exception e) {
             e.printStackTrace(System.err);
@@ -229,10 +191,8 @@ public class CallbackSink
 		try {
             jobContact = ManagedJobClientHelper.getHandle( producer );
 
-			StateChangeNotificationMessageType changeNotification =
-                (StateChangeNotificationMessageType)ObjectDeserializer.toObject(
-                    (Element) message,
-                    StateChangeNotificationMessageType.class);
+            StateChangeNotificationMessageType changeNotification =
+                NotificationUtil.getStateChangeNotification(message);
             StateEnumeration state = changeNotification.getState();
             jobState = state.getValue();
 			if (state.equals (StateEnumeration.Failed)) {
@@ -245,8 +205,8 @@ public class CallbackSink
             }
         }
         catch (Exception e) {
-            // TODO Print out the exception
             System.err.println( "Exception while processing callback" );
+            e.printStackTrace(System.err);
             return;
 		}
 
