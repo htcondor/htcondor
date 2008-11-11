@@ -43,6 +43,8 @@
 #select(STDOUT);
  ##$| = 1;
 
+############################################################################
+
 #$newfile = $file . ".new";
 #open(TAR,"<$file") or die "Can't open $file:$!\n";
 #open(HERE,">$newfile") or die "Can't open $newfile:$!\n";
@@ -60,6 +62,10 @@
 #}
 #close(TAR);
 #close(HERE);
+
+
+
+############################################################################
 
 my $targetdir = '.';
 print "Directory to change is $targetdir\n";
@@ -90,5 +96,38 @@ foreach $file (readdir DH)
 	close(FILE);
 	close(NEW);
 	system("mv $file.tmp $file");
+}
+exit(0);
 
+############################################################################
+
+my $targetdir = '.';
+print "Directory to change is $targetdir\n";
+opendir DH, $targetdir or die "Can not open $dir:$!\n";
+foreach $file (readdir DH)
+{	
+	my $line = "";
+	next if $file =~ /^\.\.?$/;
+	next if $file eq $dbtimelog;
+	next if $file eq "x_striplines.pl";
+	next if $file eq "x_globaledit.pl";
+	print "Currently scanning $file for name DebugOff()\n";
+	open(FILE,"<$file") || die "Can not open $file for reading: $!\n";
+	open(NEW,">$file.tmp") || die "Can not open Temp file: $!\n";
+	#print "$file opened OK!\n";
+	while(<FILE>)	
+	{		
+		$line = $_;
+		if($line =~ /^.*print.*$/) {
+			print NEW "$_";
+		} elsif($line =~ /.*::DebugOff\(\).*$/) {
+			# do nothing ie strip out
+			print "strip in $file found $line\n"
+		} else {
+			print NEW "$_";
+		}
+	}	
+	close(FILE);
+	close(NEW);
+	system("mv $file.tmp $file");
 }
