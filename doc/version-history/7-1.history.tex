@@ -204,6 +204,12 @@ numbers of startds.
 
 \begin{itemize}
 
+\item When using \Macro{USE\_VISIBLE\_DESKTOP} the user's (slot or owner)
+access-control entry removed from the Desktop's access-control list.  This
+fixes the previous behavior were users were added and never removed, 
+resulting in an overflow in access-control list, which can only contain 
+a fixed number of access-control entries.
+
 \item Fixed a bug where if log line caching was enabled in \Condor{dagman}
 and \Condor{dagman} failed during the recovery process, the cache would
 stay active. Now the cache is disabled in all cases at the end of recovery.
@@ -233,7 +239,12 @@ to run the job would simply fail and return to the idle state.
 
 \begin{itemize}
 
-\item None.
+\item When fixing the \Macro{USE\_VISIBLE\_DESKTOP} bug, a new one was
+inadvertently introduced.  The bug manifests irrespective of the definition
+of \Macro{USE\_VISIBLE\_DESKTOP}: the new code attempts to remove the current 
+user's access-control entry from the Desktop's access-control list even when
+it was not added by Condor.  This has the effect of inhibiting the creation
+of new process for the logged on user.
 
 \end{itemize}
 
