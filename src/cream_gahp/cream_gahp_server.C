@@ -498,9 +498,9 @@ int thread_cream_job_register( Request *req )
 	resp["JDI"].get<1>().getProperties(props);
 	result_line = (string)reqid +
 	              " NULL " +
-	              props["CREAMInputSandboxURI"] +
+	              resp["JDI"].get<1>().getCreamJobID() +
 	              sp +
-				  resp["JDI"].get<1>().getCreamJobID();
+	              props["CREAMInputSandboxURI"];
 	enqueue_result(result_line);
 	
 	return 0;
