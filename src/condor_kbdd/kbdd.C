@@ -31,7 +31,7 @@
 #include <rpc/types.h>
 #include <X11/Xlib.h>
 
-DECL_SUBSYSTEM( "KBDD" );
+DECL_SUBSYSTEM( "KBDD", SUBSYSTEM_TYPE_DAEMON );
 XInterface *xinter;
 
 

@@ -47,6 +47,8 @@ BEGIN
     $vacates = 0;
     %test;
 	%machine_ads;
+
+    Condor::DebugOn();
 }
 
 sub Reset

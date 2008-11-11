@@ -166,7 +166,7 @@ const struct Translation DCTranslation[] = {
 	{ "LEASE_MANAGER_GET_LEASES", LEASE_MANAGER_GET_LEASES },
 	{ "LEASE_MANAGER_RENEW_LEASE", LEASE_MANAGER_RENEW_LEASE },
 	{ "LEASE_MANAGER_RELEASE_LEASE", LEASE_MANAGER_RELEASE_LEASE },
-	{ "NULL", 0 }
+	{ NULL, 0 }
 };
 
 const struct Translation CollectorTranslation[] = {
