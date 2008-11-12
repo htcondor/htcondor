@@ -305,10 +305,14 @@ Init()
 	}
 
     if ( NULL == CollectorObj ) {
-        CollectorObj = new DCCollector ();
-        ASSERT ( CollectorObj );
+        CollectorObj = new DCCollector ();        
         if ( false == CollectorObj->locate () ) {
-            EXCEPT( "Failed to locate collector: %s", CollectorObj->error () );
+            dprintf ( 
+				D_ALWAYS, 
+				"Failed to locate collector: %s", 
+				CollectorObj->error () );
+			delete CollectorObj;
+			CollectorObj = NULL;
         }
     }
 

@@ -209,11 +209,18 @@ bool BaseResource::InvalidateResource ()
         "BaseResource::InvalidateResource: \n%s\n",
         line );
     
-    return CollectorObj->sendUpdate ( 
-        INVALIDATE_GRID_ADS, 
-        &ad, 
-        NULL, 
-        true );
+    bool ok = false;
+	
+	/* invalidate the resource ad */
+	if ( CollectorObj ) {
+		ok = CollectorObj->sendUpdate ( 
+			INVALIDATE_GRID_ADS, 
+			&ad, 
+			NULL, 
+			true );
+	}
+
+	return ok;
 
 }
 
@@ -234,12 +241,18 @@ bool BaseResource::UpdateResource ()
         "BaseResource::UpdateResource: \n%s\n",
         tmp );
 
-    /* Update the the Collector as to this resource's state */
-    return CollectorObj->sendUpdate ( 
-        UPDATE_GRID_AD, 
-        &ad, 
-        NULL, 
-        true );
+    bool ok = false;
+	
+	/* Update the the Collector as to this resource's state */
+    if ( CollectorObj ) {
+		ok = CollectorObj->sendUpdate ( 
+			UPDATE_GRID_AD, 
+			&ad, 
+			NULL, 
+			true );
+	}
+	
+	return ok;
 }
 
 void BaseResource::PublishResourceAd( ClassAd *resource_ad )
