@@ -297,12 +297,7 @@ Selector::execute()
 	struct timeval	*tp;
 
 	if( DebugFlags & D_FULLDEBUG && DebugFlags & D_NETWORK ) {
-		dprintf(D_FULLDEBUG, "Selector::execute(): fd=%d\n", read_fds);
-		dprintf(D_FULLDEBUG, "Selector::execute(): fd=%d\n", write_fds);
-		dprintf(D_FULLDEBUG, "Selector::execute(): fd=%d\n", except_fds);
-		dprintf(D_FULLDEBUG, "Selector::execute(): fd=%d\n", save_read_fds);
-		dprintf(D_FULLDEBUG, "Selector::execute(): fd=%d\n", save_write_fds);
-		dprintf(D_FULLDEBUG, "Selector::execute(): fd=%d\n", save_except_fds);
+		display ();
 	}
 
 	memcpy( read_fds, save_read_fds, fd_set_size * sizeof(fd_set) );
