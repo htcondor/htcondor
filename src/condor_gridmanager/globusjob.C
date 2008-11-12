@@ -660,6 +660,9 @@ GlobusJob::GlobusJob( ClassAd *classad )
 		}
 	}
 
+	m_lightWeightJob = false;
+	jobAd->LookupBool( "LightWeightJob", m_lightWeightJob );
+
 	// In GM_HOLD, we assme HoldReason to be set only if we set it, so make
 	// sure it's unset when we start.
 	if ( jobAd->LookupString( ATTR_HOLD_REASON, NULL, 0 ) != 0 ) {
@@ -912,6 +915,17 @@ int GlobusJob::doEvaluateState()
 			gahp->setMode( GahpClient::results_only );
 		} else {
 			gahp->setMode( GahpClient::normal );
+		}
+	}
+
+		// Special light-weight job semantics for BNL
+	if ( condorState == REMOVED && m_lightWeightJob ) {
+		if ( resourceDown && jobContact ) {
+			dprintf( D_ALWAYS, "(%d.%d) Immediately removing light-weight "
+					 "job whose resource is down.\n", procID.cluster,
+					 procID.proc );
+			SetRemoteJobId( NULL );
+			gmState = GM_CLEAR_REQUEST;
 		}
 	}
 
