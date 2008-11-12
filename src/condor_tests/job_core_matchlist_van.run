@@ -31,7 +31,7 @@ my $nextlmn1 = "";
 $ExitSuccess = sub {
 	my %args = @_;
 	my $cluster = $args{"cluster"};
-	print "Saw job exit!<<$counter>>\n";
+	CondorTest::debug("Saw job exit!<<$counter>>\n",1);
 	$counter -= 1;
 	if( $counter == 0 )
 	{
@@ -41,7 +41,7 @@ $ExitSuccess = sub {
 		$status = CondorTest::runCondorTool($cmd,\@adarray,2);
 		if(!$status)
 		{
-			print "Test failure due to Condor Tool Failure<$cmd>\n";
+			CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 			exit(1)
 		}
 	}
@@ -50,19 +50,19 @@ $ExitSuccess = sub {
 $evicted = sub {
 	my %args = @_;
 	my $cluster = $args{"cluster"};
-	print "Saw job evicted!<<$counter>>\n";
+	CondorTest::debug("Saw job evicted!<<$counter>>\n",1);
 	$counter -= 1;
-	print "counter now $counter\n";
+	CondorTest::debug("counter now $counter\n",1);
 	if( $counter == 0 )
 	{
-		print "Counter 0 so removing cluster\n";
+		CondorTest::debug("Counter 0 so removing cluster\n",1);
 		my @adarray;
 		my $status = 1;
 		my $cmd = "condor_rm $cluster";
 		$status = CondorTest::runCondorTool($cmd,\@adarray,2);
 		if(!$status)
 		{
-			print "Test failure due to Condor Tool Failure<$cmd>\n";
+			CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 			exit(1)
 		}
 	}
@@ -73,7 +73,7 @@ $execute = sub
 	my %args = @_;
 	my $cluster = $args{"cluster"};
 
-	print "Saw job executing! Crunching ads\n";
+	CondorTest::debug("Saw job executing! Crunching ads\n",1);
 	my $lmn0 = "";
 	my $remote = "";
 	# get host for test via RemoteHost from job ad
@@ -83,7 +83,7 @@ $execute = sub
 	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
 	if(!$status)
 	{
-		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 		exit(1)
 	}
 	foreach $line (@adarray)
@@ -93,31 +93,31 @@ $execute = sub
 		$line = $_;
 		if( $line =~ /^RemoteHost.*/ )
 		{
-			print "$line\n";
+			CondorTest::debug("$line\n",1);
 		}
 		elsif( $line =~ /^\s*LastMatchName0\s*=\s*\"([@\.a-zA-Z_0-9]+)\"\s*$/ )
 		{
-			print "Setting lmn0 to be $1\n";
+			CondorTest::debug("Setting lmn0 to be $1\n",1);
 			$lmn0 = $1;
-			print "$line\n";
-			print "LastMatchName0 is <<<< $lmn0 >>>>\n";
+			CondorTest::debug("$line\n",1);
+			CondorTest::debug("LastMatchName0 is <<<< $lmn0 >>>>\n",1);
 		}
 		elsif( $line =~ /^\s*LastMatchName1\s*=\s*\"([@\.a-zA-Z_0-9]+)\"\s*$/ )
 		{
-			print "Setting lmn1 to be $1\n";
+			CondorTest::debug("Setting lmn1 to be $1\n",1);
 			$lmn1 = $1;
-			print "$line\n";
-			print "Last Match 1 <<<< $lmn1 >>>>\n";
+			CondorTest::debug("$line\n",1);
+			CondorTest::debug("Last Match 1 <<<< $lmn1 >>>>\n",1);
 		}
 		elsif( $line =~ /LastMatchName.*/ )
 		{
-			print "LM: $line\n";
+			CondorTest::debug("LM: $line\n",1);
 		}
 		elsif( $line =~ /^\s*MATCH_name\s*=\s*\"([@\.a-zA-Z_0-9]+)\"\s*$/ )
 		{
 			$remote = $1;
-			print "$line\n";
-			print "Setting Remote as <<<< $remote >>>>\n";
+			CondorTest::debug("$line\n",1);
+			CondorTest::debug("Setting Remote as <<<< $remote >>>>\n",1);
 		}
 		#else
 		#{
@@ -126,15 +126,15 @@ $execute = sub
 	}
 	if( ($nextlmn1 ne "") && ($lmn1 ne "") && ($lmn1 ne $nextlmn1) )
 	{
-		print "rotating failed.... $lmn1 ne $nextlmn1\n";
+		CondorTest::debug("rotating failed.... $lmn1 ne $nextlmn1\n",1);
 	}
 	if( $lmn0 ne $remote )
 	{
-		print "$lmn0 = lmn0\n";
-		print "$remote = remote\n";
-		print "LastMatchName out of sync with current Match\n";
+		CondorTest::debug("$lmn0 = lmn0\n",1);
+		CondorTest::debug("$remote = remote\n",1);
+		CondorTest::debug("LastMatchName out of sync with current Match\n",1);
 	}
-	print "Setting nextlmn1 to be lmn0($lmn0)\n";
+	CondorTest::debug("Setting nextlmn1 to be lmn0($lmn0)\n",1);
 	$nextlmn1 = $lmn0;
 };
 
@@ -142,7 +142,7 @@ $aborted = sub
 {
 	if($counter == 0)
 	{
-		print "Abort expected after job removal!\n";
+		CondorTest::debug("Abort expected after job removal!\n",1);
 	}
 	else
 	{
@@ -159,7 +159,7 @@ CondorTest::RegisterExecute($testname, $execute);
 CondorTest::RegisterExitedSuccess( $testname, $ExitSuccess );
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	print "$testname: SUCCESS\n";
+	CondorTest::debug("$testname: SUCCESS\n",1);
 	exit(0);
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";

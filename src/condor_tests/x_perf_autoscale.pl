@@ -38,7 +38,7 @@ my $percentmoretime = 0;
 
 #system("ls;pwd");
 
-print "Doing $percentmore percent more jobs this run\n";
+CondorTest::debug("Doing $percentmore percent more jobs this run\n",1);
 sleep 3;
 
 my $line = "";
@@ -79,10 +79,10 @@ $ExitSuccess = sub
 	my %info = @_;
 
 	$completedgood += 1;
-	print "Completed count: $completedgood\n";
+	CondorTest::debug("Completed count: $completedgood\n",1);
 	if( $completedgood == $thisrunjobs )
 	{
-		print "Completed Done Count: $completedgood\n";
+		CondorTest::debug("Completed Done Count: $completedgood\n",1);
 		$stoptime = time();
 		my $duration = ($stoptime - $starttime);
 		my $unittime = ($duration)/($thisrunjobs);
@@ -90,7 +90,7 @@ $ExitSuccess = sub
 		{
 			$percentmoretime = (($duration - $lastduration) / $lastduration) * 100;
 		}
-		print "Completed time per test: $unittime\n";
+		CondorTest::debug("Completed time per test: $unittime\n",1);
 		print NEWDATAOUT "Scaling($thisrunjobs) Duration($duration) UnitTime($unittime) JobIncrease($percentmorejobs) TimeIncrease($percentmoretime)\n";
 		close(NEWDATAOUT);
 		system("mv $datafile.new $datafile");
@@ -101,7 +101,7 @@ $ExitSuccess = sub
 CondorTest::RegisterExitedSuccess( $testname, $ExitSuccess );
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	print "$testname: SUCCESS\n";
+	CondorTest::debug("$testname: SUCCESS\n",1);
 	exit(0);
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";

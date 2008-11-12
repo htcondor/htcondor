@@ -42,7 +42,7 @@ while(<OLDOUT>)
 		if($count > $limit)
 		{
 			#print "$count exceeds $limit\n";
-			print	"$count";
+			CondorTest::debug("$count",1);
 			exit($count);
 		}
 	}
@@ -54,5 +54,5 @@ while(<OLDOUT>)
 }
 
 close(OLDOUT);
-print "$count";
+CondorTest::debug("$count",1);
 exit(0);

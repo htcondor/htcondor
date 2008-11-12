@@ -61,25 +61,25 @@ $executed = sub
 {
 	my %info = @_;
 
-	print "Good. We need the dag to run<$info{cluster}>\n";
+	CondorTest::debug("Good. We need the dag to run<$info{cluster}>\n",1);
 };
 
 $submitted = sub
 {
-	print "submitted: This test will see submit, executing and successful completion\n";
+	CondorTest::debug("submitted: This test will see submit, executing and successful completion\n",1);
 };
 
 $success = sub
 {
-	print "executed successfully\n";
-	print "Verifying output\n";
+	CondorTest::debug("executed successfully\n",1);
+	CondorTest::debug("Verifying output\n",1);
 	$diditpass = 1;
 	foreach $name (@outfiles) {
 		$line = "";
 		$passed = 0;
 		$canopen = open(OUT,"<$name.out");
 		if( ! (defined $canopen)) {
-			print "Can not open outfile<$name.out>:$!\n";
+			CondorTest::debug("Can not open outfile<$name.out>:$!\n",1);
 			$diditpass = 0;
 		}
 		while(<OUT>) {
@@ -87,14 +87,14 @@ $success = sub
 			$line = $_;
 			if( $line =~ /^OK.*$/ ) {
 				$passed = 1;
-				print "$name.out: $line\n";
+				CondorTest::debug("$name.out: $line\n",1);
 			}
 		}
 		close(OUT);
 		if($passed == 1 ) {
 			;
 		} else {
-			print "failed $name.out: $line\n";
+			CondorTest::debug("failed $name.out: $line\n",1);
 			$diditpass = 0;
 		}
 	}
@@ -115,7 +115,7 @@ CondorTest::RegisterHold( $testname, $held );
 CondorTest::RegisterSubmit( $testname, $submitted );
 
 if( CondorTest::RunDagTest($testname, $cmd, 0, $dagman_args) ) {
-	print "$testname: SUCCESS\n";
+	CondorTest::debug("$testname: SUCCESS\n",1);
 	exit(0);
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";

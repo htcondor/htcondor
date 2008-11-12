@@ -46,7 +46,7 @@ $aborted = sub {
 	$cluster = $info{"cluster"};
 	$job = $info{"job"};
 
-	print "Good, job - $cluster $job - aborted after Hold state reached\n";
+	CondorTest::debug("Good, job - $cluster $job - aborted after Hold state reached\n",1);
 };
 
 $held = sub {
@@ -56,15 +56,15 @@ $held = sub {
 	$job = $info{"job"};
 
 	my $fulljob = "$cluster"."."."$job";
-	print "Good, good run of job - $fulljob - should be in queue on hold now\n";
-	print "Removing $fulljob\n";
+	CondorTest::debug("Good, good run of job - $fulljob - should be in queue on hold now\n",1);
+	CondorTest::debug("Removing $fulljob\n",1);
 	my @adarray;
 	my $status = 1;
 	my $cmd = "condor_rm $cluster";
 	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
 	if(!$status)
 	{
-		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 		exit(1)
 	}
 	my @nadarray;
@@ -73,7 +73,7 @@ $held = sub {
 	$status = CondorTest::runCondorTool($cmd,\@nadarray,2);
 	if(!$status)
 	{
-		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 		exit(1)
 	}
 };
@@ -83,7 +83,7 @@ $executed = sub
 	%info = @_;
 	$cluster = $info{"cluster"};
 
-	print "Good. for on_exit_hold cluster $cluster must run first\n";
+	CondorTest::debug("Good. for on_exit_hold cluster $cluster must run first\n",1);
 };
 
 $success = sub
@@ -99,9 +99,9 @@ $submitted = sub
 	my %info = @_;
 	my $cluster = $info{"cluster"};
 
-	print "submitted: \n";
+	CondorTest::debug("submitted: \n",1);
 	{
-		print "good job $job expected submitted.\n";
+		CondorTest::debug("good job $job expected submitted.\n",1);
 	}
 };
 
@@ -113,7 +113,7 @@ CondorTest::RegisterHold( $testname, $held );
 CondorTest::RegisterSubmit( $testname, $submitted );
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	print "$testname: SUCCESS\n";
+	CondorTest::debug("$testname: SUCCESS\n",1);
 	exit(0);
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";

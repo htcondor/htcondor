@@ -30,7 +30,7 @@ $died = sub {
 	if($expectedsig != $gotsig) {
 		die "Expecting program to have died by sig $expected but it was $gotsig.\n";
 	} else {
-		print "Good, signal $gotsig came through fine.\n";
+		CondorTest::debug("Good, signal $gotsig came through fine.\n",1);
 	}
 };
 
@@ -47,7 +47,7 @@ CondorTest::RegisterExitedSuccess( $testname, $success );
 CondorTest::RegisterAbort( $testname, sub{} ); # ignore aborts
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	print "$testname: SUCCESS\n";
+	CondorTest::debug("$testname: SUCCESS\n",1);
 	exit(0);
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";

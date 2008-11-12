@@ -23,6 +23,6 @@ use CondorTest;
 while( <> )
 {
 	CondorTest::fullchomp($_);
-	print "$_\n";
+	CondorTest::debug("$_\n",1);
 }
 

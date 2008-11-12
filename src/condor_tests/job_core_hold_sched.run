@@ -39,13 +39,13 @@ $abnormal = sub {
 $aborted = sub {
 	my %info = @_;
 	my $done;
-	print "Abort event expected as we clear job\n";
+	CondorTest::debug("Abort event expected as we clear job\n",1);
 };
 
 $held = sub {
 	my %info = @_;
 	my $done;
-	print "Held event expected\n";
+	CondorTest::debug("Held event expected\n",1);
 	my $cluster = $info{"cluster"};
 	die "We don't hit Hold state for job started in hold!\n";
 };
@@ -67,7 +67,7 @@ $submitted = sub
 	my $qstat = CondorTest::getJobStatus($cluster);
 	while($qstat == -1)
 	{
-		print "Job status unknown - wait a bit\n";
+		CondorTest::debug("Job status unknown - wait a bit\n",1);
 		sleep 2;
 		$qstat = CondorTest::getJobStatus($cluster);
 	}
@@ -77,14 +77,14 @@ $submitted = sub
 	}
 	else
 	{
-		print "good, cluster $cluster is on hold\n";
+		CondorTest::debug("good, cluster $cluster is on hold\n",1);
 		my @adarray;
 		my $status = 1;
 		my $cmd = "condor_rm $cluster";
 		$status = CondorTest::runCondorTool($cmd,\@adarray,2);
 		if(!$status)
 		{
-			print "Test failure due to Condor Tool Failure<$cmd>\n";
+			CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 			exit(1)
 		}
 	}
@@ -98,7 +98,7 @@ CondorTest::RegisterHold( $testname, $held );
 CondorTest::RegisterSubmit( $testname, $submitted );
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	print "$testname: SUCCESS\n";
+	CondorTest::debug("$testname: SUCCESS\n",1);
 	exit(0);
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";

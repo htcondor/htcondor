@@ -25,7 +25,7 @@ use Cwd;
 
 
 my $LogFile = "sdmkdag.log";
-print "Build log will be in ---$LogFile---\n";
+CondorTest::debug("Build log will be in ---$LogFile---\n",1);
 open(OLDOUT, ">&STDOUT");
 open(OLDERR, ">&STDERR");
 open(STDOUT, ">$LogFile") or die "Could not open $LogFile: $!\n";
@@ -38,25 +38,25 @@ my $cmd = $ARGV[1];
 #$testname = 'Condor submit dag - stork transfer test';
 my $testname =  $ARGV[2];
 my $timerlength = $ARGV[3];
-print "Timer passed in is <<$timerlength>>\n";
+CondorTest::debug("Timer passed in is <<$timerlength>>\n",1);
 foreach my $arg  (@ARGV)
 {
-	print "$arg ";
+	CondorTest::debug("$arg ",1);
 }
-print "\n";
+CondorTest::debug("\n",1);
 #$dagman_args = "-v -storklog `condor_config_val LOG`/Stork.user_log";
 $dagman_args = "-v ";
 
 chdir("$dir");
 
 my $loc = getcwd();
-print "Currently in $loc\n";
+CondorTest::debug("Currently in $loc\n",1);
 
 $timed = sub
 {
 	my $left = $submitcount - $donecount;
 	system("date");
-	print "Expected break-out!!!!!\n";
+	CondorTest::debug("Expected break-out!!!!!\n",1);
 	exit(1);
 };
 
@@ -67,17 +67,17 @@ $executed = sub
 			# set a timer on a dag run
 			CondorTest::RegisterTimed($testname, $timed, $timerlength);
 		}
-        print "Good. We need the dag to run\n";
+        CondorTest::debug("Good. We need the dag to run\n",1);
 };
 
 $submitted = sub
 {
-        print "submitted: This test will see submit, executing and successful completion\n";
+        CondorTest::debug("submitted: This test will see submit, executing and successful completion\n",1);
 };
 
 $success = sub
 {
-        print "executed successfully\n";
+        CondorTest::debug("executed successfully\n",1);
 };
 
 CondorTest::RegisterExitedSuccess( $testname, $success);
@@ -85,7 +85,7 @@ CondorTest::RegisterExecute($testname, $executed);
 CondorTest::RegisterSubmit( $testname, $submitted );
 
 if( CondorTest::RunDagTest($testname, $cmd, 0, $dagman_args) ) {
-        print "$testname: SUCCESS\n";
+        CondorTest::debug("$testname: SUCCESS\n",1);
         exit(0);
 } else {
         die "$testname: CondorTest::RunTest() failed\n";

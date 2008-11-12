@@ -35,13 +35,13 @@ my $cluster;
 
 $abnormal = sub {
 
-	print "Want to see only submit and abort events for periodic remove test\n";
+	CondorTest::debug("Want to see only submit and abort events for periodic remove test\n",1);
 	exit(1);
 };
 
 $aborted = sub {
-	print "Abort event expected from expected condor_rm used to remove the requeueing job\n";
-	print "Policy test worked.\n";
+	CondorTest::debug("Abort event expected from expected condor_rm used to remove the requeueing job\n",1);
+	CondorTest::debug("Policy test worked.\n",1);
 };
 
 $held = sub {
@@ -53,7 +53,7 @@ $executed = sub
 {
 	%args = @_;
 	$cluster = $args{"cluster"};
-	print "Good. for on_exit_remove cluster $cluster must run first\n";
+	CondorTest::debug("Good. for on_exit_remove cluster $cluster must run first\n",1);
 };
 
 $evicted = sub
@@ -61,14 +61,14 @@ $evicted = sub
 	my %args = @_;
 	my $cluster = $args{"cluster"};
 
-	print "Good a requeue.....after eviction....\n";
+	CondorTest::debug("Good a requeue.....after eviction....\n",1);
 	my @adarray;
 	my $status = 1;
 	my $cmd = "condor_rm $cluster";
 	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
 	if(!$status)
 	{
-		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 		exit(0)
 	}
 };
@@ -80,7 +80,7 @@ CondorTest::RegisterAbort( $testname, $aborted );
 CondorTest::RegisterHold( $testname, $held );
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	print "$testname: SUCCESS\n";
+	CondorTest::debug("$testname: SUCCESS\n",1);
 	exit(0);
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";

@@ -29,7 +29,7 @@ $testname = 'Does copytospool work - vanilla U';
 $aborted = sub {
 	my %info = @_;
 	my $done;
-	print "Abort event expected as we clear job\n";
+	CondorTest::debug("Abort event expected as we clear job\n",1);
 };
 
 $submitted = sub {
@@ -39,21 +39,21 @@ $submitted = sub {
 	my $spool = `condor_config_val SPOOL`;
 	CondorTest::fullchomp($spool);
 
-	print "Checking spool dir --$spool--\n";
-	print "Executable is $program\n";
-	print "Transfer job worked..... need to check spool file.\n";
+	CondorTest::debug("Checking spool dir --$spool--\n",1);
+	CondorTest::debug("Executable is $program\n",1);
+	CondorTest::debug("Transfer job worked..... need to check spool file.\n",1);
 
-	print "MD5 of $program is needed first\n";
+	CondorTest::debug("MD5 of $program is needed first\n",1);
 
 	open(DATA,"<$program") || die "Can't open input file $!\n";
 	my $datamd5 = Digest::MD5->new;
 	$datamd5->addfile(DATA);
 	close(DATA);
 	my $hexexemd5 = $datamd5->hexdigest;
-	print "executable md5: $hexexemd5\n";
+	CondorTest::debug("executable md5: $hexexemd5\n",1);
 
 	my $spoolfile = $spool . "/cluster$cluster" . ".ickpt.subproc0";
-	print "Spool file should be $spoolfile\n";
+	CondorTest::debug("Spool file should be $spoolfile\n",1);
 	#system("ls $spool");
 
 	open(DATA,"<$spoolfile") || die "Can't open input file $!\n";
@@ -61,9 +61,9 @@ $submitted = sub {
 	$sdatamd5->addfile(DATA);
 	close(DATA);
 	my $shexexemd5 = $sdatamd5->hexdigest;
-	print "spooled executable md5: $shexexemd5\n";
+	CondorTest::debug("spooled executable md5: $shexexemd5\n",1);
 
-	print "OK remove the job!\n";
+	CondorTest::debug("OK remove the job!\n",1);
 
 	if( $hexexemd5 != $shexexemd5 )
 	{
@@ -75,7 +75,7 @@ $submitted = sub {
 	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
 	if(!$status)
 	{
-		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 		exit(1)
 	}
 
@@ -85,7 +85,7 @@ CondorTest::RegisterAbort( $testname, $aborted );
 CondorTest::RegisterSubmit($testname, $submitted);
 
 if(CondorTest::RunTest($testname, $cmd, 0)) {
-	print "$testname: SUCCESS\n";
+	CondorTest::debug("$testname: SUCCESS\n",1);
 	exit(0);
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";

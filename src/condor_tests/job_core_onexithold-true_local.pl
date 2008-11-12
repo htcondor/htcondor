@@ -50,7 +50,7 @@ $executed = sub {
 	%info = @_;
 	$cluster = $info{"cluster"};
 	$job = $info{"job"};
-	print "Good - Job $cluster.$job began execution.\n";
+	CondorTest::debug("Good - Job $cluster.$job began execution.\n",1);
 };
 
 ##
@@ -67,13 +67,13 @@ $aborted = sub {
 	## Make sure this was meant to happen
 	## 
 	if ( $aborting ) {
-		print "Good - Job $cluster.$job is being removed after being held.\n";
-		print "Policy Test Completed\n";
+		CondorTest::debug("Good - Job $cluster.$job is being removed after being held.\n",1);
+		CondorTest::debug("Policy Test Completed\n",1);
 	##
 	## Bad mojo!
 	##
 	} else {
-		print "Bad - Job $cluster.$job received an unexpected abort event.\n";
+		CondorTest::debug("Bad - Job $cluster.$job received an unexpected abort event.\n",1);
 		exit(1);
 	}
 };
@@ -88,7 +88,7 @@ $held = sub {
 	$cluster = $info{"cluster"};
 	$job = $info{"job"};
 
-	print "Good - Job $cluster.$job went on hold after executing.\n";
+	CondorTest::debug("Good - Job $cluster.$job went on hold after executing.\n",1);
 
 	##
 	## Remove the job
@@ -101,7 +101,7 @@ $held = sub {
 	my $cmd = "condor_rm $cluster";
 	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
 	if ( !$status ) {
-		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 		return(1)
 	}
 };
@@ -115,7 +115,7 @@ $success = sub {
 	$cluster = $info{"cluster"};
 	$job = $info{"job"};
 	
-	print "Bad - Job $job.$cluster finished execution but didn't go on hold.\n";
+	CondorTest::debug("Bad - Job $job.$cluster finished execution but didn't go on hold.\n",1);
 	exit(1);
 };
 
@@ -125,7 +125,7 @@ CondorTest::RegisterAbort( $testname, $aborted );
 CondorTest::RegisterHold( $testname, $held );
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	print "$testname: SUCCESS\n";
+	CondorTest::debug("$testname: SUCCESS\n",1);
 	exit(0);
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";

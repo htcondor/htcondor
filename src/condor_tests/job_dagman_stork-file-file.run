@@ -27,7 +27,7 @@ $testname = 'job_dagman_stork-file-file - Simple dagman/stork job';
 $corename = "job_dagman_stork-file-file";
 $topdir = getcwd();
 
-print "Working Directory is $topdir\n";
+CondorTest::debug("Working Directory is $topdir\n",1);
 
 # where am I running
 $currenthost = CondorTest::getFqdnHost();
@@ -50,15 +50,15 @@ $mycorenm = $corename . ".cmd";
 $mycorenmout = $corename . ".cmd.out";
 $mycorenmlog = $corename . ".log";
 
-print "Master PID is $mypid\n";
-print "Master PID submit file is $mysubmitnm\n";
+CondorTest::debug("Master PID is $mypid\n",1);
+CondorTest::debug("Master PID submit file is $mysubmitnm\n",1);
 
 my $configloc = CondorPersonal::StartCondor("x_param.storksrvr" ,"local");
 my @local = split /\+/, $configloc;
 my $locconfig = shift @local;
 my $locport = shift @local;
 
-print "---local config is $locconfig and local port is $locport---\n";
+CondorTest::debug("---local config is $locconfig and local port is $locport---\n",1);
 
 # find out the directory and cp stork submit file there and 
 # build dag file there to submit from there and preserve all logs etc.
@@ -67,7 +67,7 @@ my $personaldir = "";
 if($locconfig =~ /(.*)\/condor_config/)
 {
 	$personaldir = $1;
-	print "Personal Condor and Dag runtime directory is $personaldir\n";
+	CondorTest::debug("Personal Condor and Dag runtime directory is $personaldir\n",1);
 }
 
 
@@ -94,29 +94,29 @@ system("./x_create_md5data.pl --megs=10 --filenm=$storkdatafile");
 my $src_url = $topdir . "/$storkdatafile";
 my $dest_url = "/tmp/$storkdatafile";
 
-print "Transfer $src_url to $dest_url\n";
-print "Callling ./x_makestorkdag.pl\n";
+CondorTest::debug("Transfer $src_url to $dest_url\n",1);
+CondorTest::debug("Callling ./x_makestorkdag.pl\n",1);
 
 #my $makeresult = system("./x_makestorkdag.pl --root=$personaldir --dag=dag1 --dagnm=dag1.dag --src_url=/dev/null --dest_url=/dev/null");
 my $makeresult = system("./x_makestorkdag.pl --root=$personaldir --dag=dag1 --dagnm=dag1.dag --src_url=$src_url --dest_url=$dest_url");
 
-print "make dag result is <<$makeresult>>\n";
+CondorTest::debug("make dag result is <<$makeresult>>\n",1);
 
 $cmd = "$dagnm";
 $testname = 'Condor submit dag - stork transfer test';
 #$dagman_args = "-v -storklog `condor_config_val LOG`/Stork.user_log";
 $dagman_args = "-v ";
 
-print "Callling ./x_runstorkdag.pl\n";
+CondorTest::debug("Callling ./x_runstorkdag.pl\n",1);
 $now = getcwd();
-print "Calling from here<<$now>>\n";
+CondorTest::debug("Calling from here<<$now>>\n",1);
 
 my $run_result = system("./x_runstorkdag.pl $personaldir/dag1 dag1.dag \"$testname\" 0");
  
-print "run dag result is <<$run_result>>\n";
+CondorTest::debug("run dag result is <<$run_result>>\n",1);
 
 my $data_result = system("./x_test_md5data.pl --oldfile=$src_url --newfile=$dest_url");
-print "Result of crafted Stork job is  $data_result\n";
+CondorTest::debug("Result of crafted Stork job is  $data_result\n",1);
 
 system("rm -f $dest_url*");
 system("cp job_stork_file-file.stork* $mysaveme");
@@ -142,7 +142,7 @@ my $cmd = "condor_off -fast -master";
 $status = CondorTest::runCondorTool($cmd,\@adarray,2);
 if(!$status)
 {
-	print "Test failure due to Condor Tool Failure<$cmd>\n";
+	CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 	exit(1)
 }
 
@@ -151,18 +151,18 @@ system("date");
 if( $run_result != 0 )
 {
 	# actual test failed but we allowed cleanup
-	print "Stork - Dagman run test failed!\n";
+	CondorTest::debug("Stork - Dagman run test failed!\n",1);
 	exit(1);
 }
 
 if( $data_result != 0 )
 {
 	# actual test failed but we allowed cleanup
-	print "Stork - Dagman run test worked BUT data check failed!\n";
+	CondorTest::debug("Stork - Dagman run test worked BUT data check failed!\n",1);
 	exit(1);
 }
 else
 {
-	print "Stork test SUCCESS!\n";
+	CondorTest::debug("Stork test SUCCESS!\n",1);
 }
 

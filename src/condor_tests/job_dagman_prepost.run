@@ -29,11 +29,11 @@ $serversubFile = "job_dagman_prepost-srvr.cmd";
 my $pid = $$;
 system("mkdir $pid");
 my $curcwd = getcwd();
-print "current directory is $curcwd\n";
+CondorTest::debug("current directory is $curcwd\n",1);
 
 my $socketname = "prepostsock";
 my $newsocketname = $curcwd . "/" . $pid . "/prepostsock";
-print "current directory is $newsocketname\n";
+CondorTest::debug("current directory is $newsocketname\n",1);
 
 # start a server for this test
 
@@ -53,7 +53,7 @@ unless ($pid)
 # now make sure each place using socket refers to pid specific directory!
 foreach $name (@filestoedit)
 {
-	print "Correcting socket name in $name\n";
+	CondorTest::debug("Correcting socket name in $name\n",1);
 	open(FF,"<$name.template") || die "Failed to open $name.template: $!\n";
 	open(NEWFF,">$name.pl") || die "Failed to open $name.pl: $!\n";
 	my $line = "";
@@ -63,8 +63,8 @@ foreach $name (@filestoedit)
 		$line = $_;
 		if( $line =~ /(^\s*.*)$socketname(.*$)/)
 		{
-			print "Found ---$1$socketname$2---\n";
-			print "replacing with $1$newsocketname$2\n";
+			CondorTest::debug("Found ---$1$socketname$2---\n",1);
+			CondorTest::debug("replacing with $1$newsocketname$2\n",1);
 			print NEWFF "$1$newsocketname$2\n";
 		}
 		else
@@ -110,12 +110,12 @@ $held = sub
 
 $executed = sub
 {
-	print "Good. We need the dag to run\n";
+	CondorTest::debug("Good. We need the dag to run\n",1);
 };
 
 $submitted = sub
 {
-	print "submitted: This test will see submit, executing and successful completion\n";
+	CondorTest::debug("submitted: This test will see submit, executing and successful completion\n",1);
 };
 
 $success = sub
@@ -124,14 +124,14 @@ $success = sub
 	my $postcounter = 0;
 	my $precounter = 0;
 	my $line = "";
-	print "executed successfully\n";
+	CondorTest::debug("executed successfully\n",1);
 	open(FLOW,"./x_dagman_readprepostlog.pl $flowlog PREPOST 20 20 | ") || die "Can not open flowlog: $!\n";
 	while(<FLOW>)
 	{
 		my $ret;
 		CondorTest::fullchomp($_);
 		$ret = $_;
-		print "$ret\n";
+		CondorTest::debug("$ret\n",1);
 		if( $ret ne "0" )
 		{
 			# shutdown the server we started
@@ -151,7 +151,7 @@ CondorTest::RegisterHold( $testname, $held );
 CondorTest::RegisterSubmit( $testname, $submitted );
 
 if( CondorTest::RunDagTest($testname, $cmd, 0, $dagman_args) ) {
-	print "$testname: SUCCESS\n";
+	CondorTest::debug("$testname: SUCCESS\n",1);
 	exit(0);
 } else {
 	# shutdown the server we started

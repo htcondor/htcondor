@@ -35,7 +35,7 @@ $execute = sub
 $timed = sub
 {
         system("date");
-        print "lib_procapi_cpuutracking-snapshot HUNG !!!!!!!!!!!!!!!!!!\n";
+        CondorTest::debug("lib_procapi_cpuutracking-snapshot HUNG !!!!!!!!!!!!!!!!!!\n",1);
         exit(1);
 };
 
@@ -62,10 +62,10 @@ $ExitSuccess = sub {
 	close(PIN);
 
 	if($counter != 7) {
-		print "WARNING: expecting 7 data values and got $counter\n";
+		CondorTest::debug("WARNING: expecting 7 data values and got $counter\n",1);
 	}
 
-	print "Total usage reported by children is  $total\n";
+	CondorTest::debug("Total usage reported by children is  $total\n",1);
 
 	my @adarray;
 	my $spoolloc;
@@ -74,7 +74,7 @@ $ExitSuccess = sub {
 	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
 	if(!$status)
 	{
-		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 		exit(1)
 	}
 
@@ -84,7 +84,7 @@ $ExitSuccess = sub {
 		$spoolloc = $line;
 	}
 
-	print "Spool directory is \"$spoolloc\"\n";
+	CondorTest::debug("\n",1);
 
 	#my $historyfile = $spoolloc . "/history";
 	my $historyfile = `condor_config_val HISTORY`;
@@ -92,20 +92,20 @@ $ExitSuccess = sub {
 	my $remcpu = 0.0;
 	my $remwallclock = 0.0;
 
-	print "Spool history file is \"$historyfile\"\n";
+	CondorTest::debug("\n",1);
 
 	# look for RemoteWallClockTime and RemoteUserCpu and comparee
 	# them to our calculated results
 
 	system("cat lib_procapi_cputracking-snapshot.data.log");
 
-	print "Possibly waiting on history file \"$historyfile\":";
+	CondorTest::debug(":",1);
 	# make sure history file has been written yet
 	while(!(-f $historyfile)) {
-		print ".";
+		CondorTest::debug(".",1);
 		sleep 3;
 	}
-	print "\n";
+	CondorTest::debug("\n",1);
 
 	# let history file get finished before getting upset about missing values
 	my $trys = 4;
@@ -135,7 +135,7 @@ $ExitSuccess = sub {
 		open(HIST,"<$historyfile") || die "Could not open historyfile:($historyfile) : !$\n";
 		while(<HIST>) {
 			$line  = $_;
-			print "ERROR: RUCpu missing: $line";
+			CondorTest::debug("ERROR: RUCpu missing: $line",1);
 		}
 		close(HIST);
 		die "Failed to find RemoteUserCpu valaid value\n";
@@ -145,7 +145,7 @@ $ExitSuccess = sub {
 	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
 	if(!$status)
 	{
-		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 		exit(1)
 	}
 
@@ -157,11 +157,11 @@ $ExitSuccess = sub {
 	$low = $total - (2 + (2 * $snapshot));
 	# so what range do we insist on for the test to pass???
 	if($low > $remcpu) {
-		print "Failed: Tasks totaled to $total subtract snapshot interval(($snapshot * 2) + 2)\n";
+		CondorTest::debug("Failed: Tasks totaled to $total subtract snapshot interval(($snapshot * 2) + 2)\n",1);
 		die "We wanted $remcpu in the range of  $low to $total\n";
 	} else {
-		print "Good: Tasks totaled to $total subtract snapshot interval(($snapshot * 2) + 2)\n";
-		print "This Reported $remcpu which is in range of $low to $total\n";
+		CondorTest::debug("Good: Tasks totaled to $total subtract snapshot interval(($snapshot * 2) + 2)\n",1);
+		CondorTest::debug("This Reported $remcpu which is in range of $low to $total\n",1);
 		exit(0);
 	}
 
@@ -171,7 +171,7 @@ CondorTest::RegisterExitedSuccess( $testname, $ExitSuccess );
 CondorTest::RegisterExecute($testname, $execute);
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	print "$testname: SUCCESS\n";
+	CondorTest::debug("$testname: SUCCESS\n",1);
 	exit(0);
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";

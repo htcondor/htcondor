@@ -31,7 +31,7 @@ sub RUNNING{2};
 my $alreadydone=0;
 
 $abort = sub {
-	print "Job is gone now, cool.\n";
+	CondorTest::debug("Job is gone now, cool.\n",1);
 };
 
 $submit = sub
@@ -41,49 +41,49 @@ $submit = sub
 	my $header = 0;
 	my $reason = 0;
 
-	print "Good. Cluster $cluster is supposed to be held.....\n";
-	print "Releasing cluster $cluster\n";
+	CondorTest::debug("Good. Cluster $cluster is supposed to be held.....\n",1);
+	CondorTest::debug("Releasing cluster $cluster\n",1);
 	my @adarray;
 	my $status = 1;
 	my $cmd = "condor_q -hold $cluster";
 	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
 	if(!$status)
 	{
-		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 		exit(1)
 	}
 	foreach my $line (@adarray)
 	{
-		print "$line\n";
+		CondorTest::debug("$line\n",1);
 		if( $line =~ /.*HOLD_REASON.*/ )
 		{
-			print "Got HOLD_REASON header line.......\n";
+			CondorTest::debug("Got HOLD_REASON header line.......\n",1);
 			$header = 1;
 		}
 		if( $line =~ /.*submitted on hold.*/ )
 		{
-			print "Yup reason is submitted on hold.......\n";
+			CondorTest::debug("Yup reason is submitted on hold.......\n",1);
 			$reason = 1;
 		}
 	}
 
 	if( $reason == 1 & $header == 1 )
 	{
-		print "Good. Cluster $cluster needs to be released.....\n";
-		print "Releasing cluster $cluster\n";
+		CondorTest::debug("Good. Cluster $cluster needs to be released.....\n",1);
+		CondorTest::debug("Releasing cluster $cluster\n",1);
 		my @adarray;
 		my $status = 1;
 		my $cmd = "condor_release $cluster";
 		$status = CondorTest::runCondorTool($cmd,\@adarray,2);
 		if(!$status)
 		{
-			print "Test failure due to Condor Tool Failure<$cmd>\n";
+			CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 			exit(1)
 		}
 	}
 	else
 	{
-		print "Test failed because HOLD header and expected reason were not found\n";
+		CondorTest::debug("Test failed because HOLD header and expected reason were not found\n",1);
 		exit(1);
 	}
 
@@ -94,14 +94,14 @@ $release = sub
 	my %args = @_;
 	my $cluster = $args{"cluster"};
 
-	print "Good hold and release both worked! removing job\n";
+	CondorTest::debug("Good hold and release both worked! removing job\n",1);
 	my @adarray;
 	my $status = 1;
 	my $cmd = "condor_rm $cluster";
 	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
 	if(!$status)
 	{
-		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 		exit(1)
 	}
 };
@@ -117,7 +117,7 @@ CondorTest::RegisterRelease($testname, $release);
 CondorTest::RegisterExitedSuccess($testname, $success);
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	print "$testname: SUCCESS\n";
+	CondorTest::debug("$testname: SUCCESS\n",1);
 	exit(0);
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";

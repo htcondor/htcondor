@@ -48,7 +48,7 @@ if(! -f "$topDirectory/$testingSystemConfigName")
 	exit 1;
 }
 
-print "Working directory is $topDirectory\n";
+CondorTest::debug("Working directory is $topDirectory\n",1);
 
 # Operating system environment variables of the test
 my $currentHost = CondorTest::getFqdnHost();
@@ -356,7 +356,7 @@ while($time - $startTimer <= $configurationTable{RUN_TIME})
 
 &MoveAllToSaveDirectory();
 
-print "$coreName test SUCCESS!\n";
+CondorTest::debug("$coreName test SUCCESS!\n",1);
 ### End of main ###
 
 ### Checkers ###
@@ -1315,7 +1315,7 @@ sub RaiseMachines
 #        	split(/\+/, $configurationFileAndCollectorPort);
 		my $condorLogsDirectory = "$topDirectory/$pId/" . $pId . "_instance" .
 								  $hadIndex . "/log";
-		print "$condorLogsDirectory\n";
+		CondorTest::debug("$condorLogsDirectory\n",1);
         my $masterSinfulString =
             &GetAddress("$condorLogsDirectory/\.master_address");
 

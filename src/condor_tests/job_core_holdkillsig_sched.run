@@ -33,31 +33,31 @@ sub RUNNING{2};
 $abnormal = sub {
 	my %info = @_;
 
-	print "keys:".join(" ",keys %info)."\n";
+	CondorTest::debug("\n",1);
 	my $gotsig   = $info{"signal"};
 	my $outfile = $info{"log"};
 	my $killsig = $info{"hold_kill_sig"};
-	print "Want to see $killsig in this file $outfile\n";
+	CondorTest::debug("Want to see $killsig in this file $outfile\n",1);
 };
 
 $aborted = sub {
 	my %info = @_;
 	my $done;
-	print "Abort event expected\n";
+	CondorTest::debug("Abort event expected\n",1);
 
-	print "keys:".join(" ",keys %info)."\n";
+	CondorTest::debug("\n",1);
 	my $gotsig   = $info{"signal"};
 	my $outfile = $info{"output"};
 	my $killsig = $info{"hold_kill_sig"};
-	print "Want to see $killsig in this file $outfile\n";
+	CondorTest::debug("Want to see $killsig in this file $outfile\n",1);
 	open( FILE, "<$outfile" ) || die "error opening $file: $!\n";
 	while(<FILE>)
 	{
 		CondorTest::fullchomp($_);
-		print "Found $_\n";
+		CondorTest::debug("Found $_\n",1);
 		if($_ eq $killsig)
 		{
-			print "Good\n";
+			CondorTest::debug("Good\n",1);
 			return;
 		}
 		else
@@ -70,7 +70,7 @@ $aborted = sub {
 $held = sub {
 	my %info = @_;
 	my $done;
-	print "Held event expected\n";
+	CondorTest::debug("Held event expected\n",1);
 	my $cluster = $info{"cluster"};
 
 	my @adarray;
@@ -79,7 +79,7 @@ $held = sub {
 	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
 	if(!$status)
 	{
-		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 		exit(t)
 	}
 	sleep 5;
@@ -96,7 +96,7 @@ $executed = sub
 	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
 	if(!$status)
 	{
-		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 		exit(1)
 	}
 	sleep 5;
@@ -108,7 +108,7 @@ CondorTest::RegisterAbort( $testname, $aborted );
 CondorTest::RegisterHold( $testname, $held );
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	print "$testname: SUCCESS\n";
+	CondorTest::debug("$testname: SUCCESS\n",1);
 	exit(0);
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";

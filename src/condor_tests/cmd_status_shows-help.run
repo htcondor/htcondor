@@ -55,8 +55,8 @@ $mycorenm = $corename . ".cmd";
 $mycorenmout = $corename . ".cmd.out";
 $mycorenmlog = $corename . ".log";
 
-print "Master PID is $mypid\n";
-print "Master PID submit file is $mysubmitnm\n";
+CondorTest::debug("Master PID is $mypid\n",1);
+CondorTest::debug("Master PID submit file is $mysubmitnm\n",1);
 
 my $version = "local";
 # get a local scheduler running (side a)
@@ -65,13 +65,13 @@ my @local = split /\+/, $configloc;
 my $locconfig = shift @local;
 my $locport = shift @local;
 
-print "---local config is $locconfig and local port is $locport---\n";
+CondorTest::debug("---local config is $locconfig and local port is $locport---\n",1);
 
 $primarycollector = $primarycollector . ":" . $locport;
 
-print "Primary collector for other nodes <<$primarycollector>>\n";
+CondorTest::debug("Primary collector for other nodes <<$primarycollector>>\n",1);
 
-print "Looking at new pool<condor_status>\n";
+CondorTest::debug("Looking at new pool<condor_status>\n",1);
 
 my $count = 0;
 my $nattempts = 1;
@@ -85,19 +85,19 @@ while($count < $nattempts) {
 	$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2,"usage");
     if(!$cmdstatus)
     {
-        print "Test failure due to Condor Tool Failure<$cmd>\n";
+        CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
         exit(1)
     }
 
-	print "Looking at condor_status -help \n";
+	CondorTest::debug("Looking at condor_status -help \n",1);
 
 	# looking for.....  <Usage: condor_status>
 	foreach $line (@adarray) {
 		if($line =~ /^\s*Usage:\s+condor_status.*$/) {
-			print "found usage: $line\n";
+			CondorTest::debug("found usage: $line\n",1);
 			$done = 1;
 		} else {
-			print "usage: $line\n";
+			CondorTest::debug("usage: $line\n",1);
 		}
 	}
 
@@ -107,7 +107,7 @@ while($count < $nattempts) {
 
 
 
-print "Saving things and cleaning up....\n";
+CondorTest::debug("Saving things and cleaning up....\n",1);
 
 system("cp *cmd_status_shows-help* $mysaveme");
 
@@ -135,7 +135,7 @@ $cmd = "condor_off -fast -master";
 $status = CondorTest::runCondorTool($cmd,\@adarray,2);
 if(!$status)
 {
-	print "Test failure due to Condor Tool Failure<$cmd>\n";
+	CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 	exit(1)
 }
 
@@ -147,6 +147,6 @@ if( $done == 0 )
 	exit(1);
 }
 
-print "cmd_status_shows-help SUCCESS\n";
+CondorTest::debug("cmd_status_shows-help SUCCESS\n",1);
 system("date");
 exit(0);

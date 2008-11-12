@@ -68,7 +68,7 @@ $submitted = sub {
 	$cluster = $info{"cluster"};
 	$job = $info{"job"};
 	
-	print "Good - Job $cluster.$job was submitted!\n";
+	CondorTest::debug("Good - Job $cluster.$job was submitted!\n",1);
 };	
 
 ##
@@ -82,7 +82,7 @@ $executed = sub {
 	$cluster = $info{"cluster"};
 	$job = $info{"job"};
 	
-	print "Bad - Job $cluster.$job started executing! This should never happen!\n";
+	CondorTest::debug("Bad - Job $cluster.$job started executing! This should never happen!\n",1);
 	exit(1);
 };
 
@@ -100,7 +100,7 @@ $held = sub {
 	## Make sure the hold command was ours
 	##
 	if ( ! $HOLD ) {
-		print "Bad - Job $cluster.$job was put on hold but not by us!\n";
+		CondorTest::debug("Bad - Job $cluster.$job was put on hold but not by us!\n",1);
 		exit(1);
 	}
 	
@@ -108,7 +108,7 @@ $held = sub {
 	## Is there a way to check to see if the starter actually 
 	## exited??
 	##
-	print "Good - Job $cluster.$job was put on hold!\n";
+	CondorTest::debug("Good - Job $cluster.$job was put on hold!\n",1);
 	
 	##
 	## Now we need to remove it
@@ -128,12 +128,12 @@ $aborted = sub {
 	## Make sure the remove command was ours
 	##
 	if ( ! $REMOVE ) {
-		print "Bad - Job $cluster.$job was removed but not by us!\n";
+		CondorTest::debug("Bad - Job $cluster.$job was removed but not by us!\n",1);
 		exit(1);
 	}
 	
-	print "Good - Job $cluster.$job was aborted and removed from the queue.\n";
-	print "Policy Test Completed\n";
+	CondorTest::debug("Good - Job $cluster.$job was aborted and removed from the queue.\n",1);
+	CondorTest::debug("Policy Test Completed\n",1);
 };
 
 ##
@@ -152,7 +152,7 @@ $timed = sub {
 	## Ignore multiple call backs
 	##
 	if ( ! $REMOVE ) {
-		print "Removing Job $cluster.$job...\n";
+		CondorTest::debug("Removing Job $cluster.$job...\n",1);
 		
 		##
 		## Do the deed!
@@ -163,7 +163,7 @@ $timed = sub {
 		my $cmd = "condor_rm $cluster.$job";
 		$status = CondorTest::runCondorTool($cmd,\@adarray,2);
 		if ( !$status ) {
-			print "Test failure due to Condor Tool Failure<$cmd>\n";
+			CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 			exit(1);
 		}
 	}
@@ -205,7 +205,7 @@ CondorTest::RegisterAbort( $testname, $aborted );
 CondorTest::RegisterTimed($testname, $timed, 30);
 	
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	print "$testname: SUCCESS\n";
+	CondorTest::debug("$testname: SUCCESS\n",1);
 	exit(0);
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";

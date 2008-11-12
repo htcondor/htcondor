@@ -50,8 +50,8 @@ $mycorenm = $corename . ".cmd";
 $mycorenmout = $corename . ".cmd.out";
 $mycorenmlog = $corename . ".log";
 
-print "Master PID is $mypid\n";
-print "Master PID submit file is $mysubmitnm\n";
+CondorTest::debug("Master PID is $mypid\n",1);
+CondorTest::debug("Master PID submit file is $mysubmitnm\n",1);
 
 my $version = "local";
 # get a local scheduler running (side a)
@@ -60,11 +60,11 @@ my @local = split /\+/, $configloc;
 my $locconfig = shift @local;
 my $locport = shift @local;
 
-print "---local config is $locconfig and local port is $locport---\n";
+CondorTest::debug("---local config is $locconfig and local port is $locport---\n",1);
 
 $primarycollector = $primarycollector . ":" . $locport;
 
-print "Primary collector for other nodes <<$primarycollector>>\n";
+CondorTest::debug("Primary collector for other nodes <<$primarycollector>>\n",1);
 
 $saveconfig = $ENV{CONDOR_CONFIG};
 $ENV{CONDOR_CONFIG} = $locconfig;
@@ -95,7 +95,7 @@ my @scheddone = split /\+/, $configscheddone;
 my $scheddoneconfig = shift @scheddone;
 my $scheddoneport = shift @scheddone;
 
-print "---scheddone config is $scheddoneconfig and scheddone port is $scheddoneport---\n";
+CondorTest::debug("---scheddone config is $scheddoneconfig and scheddone port is $scheddoneport---\n",1);
 
 my $bail = 0;
 
@@ -104,7 +104,7 @@ $ENV{CONDOR_CONFIG} = $scheddoneconfig;
 
 my $forever = CondorTest::verbose_system("./x_cmdrunforever.pl");
 if($forever != 0) {
-	print "Bailing because running job failed to submit\n";
+	CondorTest::debug("Bailing because running job failed to submit\n",1);
 	$bail = 1;
 }
 
@@ -115,7 +115,7 @@ my $holdone;
 if($bail != 1) {
 	my $holdone = CondorTest::verbose_system("./x_cmdstartonhold.pl");
 	if($holdone != 0) {
-		print "Bailing because running job failed to submit\n";
+		CondorTest::debug("Bailing because running job failed to submit\n",1);
 		$bail = 1;
 	}
 }
@@ -125,7 +125,7 @@ my @adarray;
 my $sched1 = "master_local_schd" . "@" . $currenthost;;
 my $sched2 = "master_scheddone_schd" . "@" . $currenthost;;
 
-print "Looking for sched1($sched1) and sched2($sched2)\n";
+CondorTest::debug("Looking for sched1($sched1) and sched2($sched2)\n",1);
 
 # allow time for all the nodes to update the collector
 # by allowing N attempts
@@ -137,33 +137,33 @@ my $found1 = 0;
 if($bail != 1) {
 	my @schedds = ( $sched1, $sched2 );
 	foreach $schedd (@schedds) {
-		print "Looking for condor_q -name $schedd\n";
+		CondorTest::debug("Looking for condor_q -name $schedd\n",1);
 		while($count < $nattempts) {
 			$found1 = 0;
 			my $cmd = "condor_q -name $schedd";
 			$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
 	    	if(!$cmdstatus)
 	    	{
-	        	print "Test failure due to Condor Tool Failure<$cmd>\n";
+	        	CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 	        	exit(1)
 	    	}
 
-			print "Looking for schedd($schedd)\n";
+			CondorTest::debug("Looking for schedd($schedd)\n",1);
 
 			foreach $line (@adarray) {
 				if($line =~ /^.*($schedd).*$/) {
-					print "found $schedd: $line\n";
+					CondorTest::debug("found $schedd: $line\n",1);
 					$found1 = 1;
 				} else {
-					print "skip: $line\n";
+					CondorTest::debug("skip: $line\n",1);
 				}
 			}
 			if($found1 == 1){
-				print "Happy and quitting\n";
+				CondorTest::debug("Happy and quitting\n",1);
 				$done = 1;
 				last;
 			} else {
-				print "Unhappy: <$found1> \n";
+				CondorTest::debug("Unhappy: <$found1> \n",1);
 			}
 
 			$count = $count + 1;
@@ -202,7 +202,7 @@ my $cmd = "condor_rm -all";
 $status = CondorTest::runCondorTool($cmd,\@adarray,2);
 if(!$status)
 {
-	print "Test failure due to Condor Tool Failure<$cmd>\n";
+	CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 	exit(1)
 }
 
@@ -211,7 +211,7 @@ $cmd = "condor_off -fast -master";
 $status = CondorTest::runCondorTool($cmd,\@adarray,2);
 if(!$status)
 {
-	print "Test failure due to Condor Tool Failure<$cmd>\n";
+	CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 	exit(1)
 }
 
@@ -222,7 +222,7 @@ $cmd = "condor_rm -all";
 $status = CondorTest::runCondorTool($cmd,\@adarray,2);
 if(!$status)
 {
-	print "Test failure due to Condor Tool Failure<$cmd>\n";
+	CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 	exit(1)
 }
 
@@ -231,7 +231,7 @@ $cmd = "condor_off -fast -master";
 $status = CondorTest::runCondorTool($cmd,\@adarray,2);
 if(!$status)
 {
-	print "Test failure due to Condor Tool Failure<$cmd>\n";
+	CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 	exit(1)
 }
 system("date");
@@ -242,6 +242,6 @@ if( $done == 0 )
 	exit(1);
 }
 
-print "cmd_q_shows-name SUCCESS\n";
+CondorTest::debug("cmd_q_shows-name SUCCESS\n",1);
 system("date");
 exit(0);

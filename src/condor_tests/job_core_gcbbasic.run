@@ -52,7 +52,7 @@ $mycorenmout = $corename . ".cmd.out";
 $mycorenmlog = $corename . ".log";
 
 int "Master PID is $mypid\n";
-print "Master PID submit file is $mysubmitnm\n";
+CondorTest::debug("Master PID submit file is $mysubmitnm\n",1);
 
 # eventually we want to look for clues as to where the
 # gcb collect is that we wish to join to dropped as a hint by platform_pre
@@ -74,28 +74,28 @@ my @local = split /\+/, $configloc;
 my $locconfig = shift @local;
 my $locport = shift @local;
 
-print "---local config is $locconfig and local port is $locport---\n";
+CondorTest::debug("---local config is $locconfig and local port is $locport---\n",1);
 
 $primarycollector = $primarycollector . ":" . $locport;
 
 $ENV{CONDOR_CONFIG} = $locconfig;
 
 # there is only a master and a schedd here as we
-print "Primary collector for other nodes <<$primarycollector>>\n";
+CondorTest::debug("Primary collector for other nodes <<$primarycollector>>\n",1);
 
-print "sleeping 15\n";
+CondorTest::debug("sleeping 15\n",1);
 sleep(20);
-print "Done sleeping\n";
+CondorTest::debug("Done sleeping\n",1);
 
 system("condor_status");
 
-print "sleeping 15\n";
+CondorTest::debug("sleeping 15\n",1);
 sleep(20);
-print "Done sleeping\n";
+CondorTest::debug("Done sleeping\n",1);
 
 my $forever = CondorTest::verbose_system("./job_core_gcbbasic.pl");
 if($forever != 0) {
-	print "Bailing because running job failed to submit\n";
+	CondorTest::debug("Bailing because running job failed to submit\n",1);
 	$bail = 1;
 }
 
@@ -135,7 +135,7 @@ $cmd = "condor_off -fast -master";
 $status = CondorTest::runCondorTool($cmd,\@adarray,2);
 if(!$status)
 {
-	print "Test failure due to Condor Tool Failure<$cmd>\n";
+	CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 	exit(1)
 }
 
@@ -145,6 +145,6 @@ if( $bail == 1 )
 	exit(1);
 }
 
-print "job_core_gcbbasic SUCCESS\n";
+CondorTest::debug("job_core_gcbbasic SUCCESS\n",1);
 system("date");
 exit(0);

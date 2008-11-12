@@ -75,8 +75,8 @@ $mycorenm = $corename . ".cmd";
 $mycorenmout = $corename . ".cmd.out";
 $mycorenmlog = $corename . ".log";
 
-print "Master PID is $mypid\n";
-print "Master PID submit file is $mysubmitnm\n";
+CondorTest::debug("Master PID is $mypid\n",1);
+CondorTest::debug("Master PID submit file is $mysubmitnm\n",1);
 
 # Edit submit file to submit to scheduler at securitypool (side b) schedd.
 my $line;
@@ -88,12 +88,12 @@ while(<TPLATE>)
 	$line = $_;
 	if( $line =~ /^\s*secprepostsrc\s*=\s*.*$/ )
 	{
-		print "Setting up for $mytestnegotiation\n";
+		CondorTest::debug("Setting up for $mytestnegotiation\n",1);
 		print CSUB "secprepostsrc = $mytestnegotiation\n";
 	}
 	else
 	{
-		print "template: $line\n";
+		CondorTest::debug("template: $line\n",1);
 		print CSUB "$line\n";
 	}
 }
@@ -102,13 +102,13 @@ close(CSUB);
 sleep 10;
 
 my $configtemplate = $mycustomconfig . ".template";
-print "\n\n";
-print "***********************************************\n";
-print "***********************************************\n";
-print "***   Test X509_USER_PROXY dies 8/10/2007   ***\n";
-print "***********************************************\n";
-print "***********************************************\n";
-print "\n\n";
+CondorTest::debug("\n\n",1);
+CondorTest::debug("***********************************************\n",1);
+CondorTest::debug("***********************************************\n",1);
+CondorTest::debug("***   Test X509_USER_PROXY dies 8/10/2007   ***\n",1);
+CondorTest::debug("***********************************************\n",1);
+CondorTest::debug("***********************************************\n",1);
+CondorTest::debug("\n\n",1);
 open(CONFIG,">$mycustomconfig") || die "Can't open new postconfig file $mycustomconfig: $!\n";
 open(CONFIGTPLATE,"<$configtemplate") || die "Can't open postconfig template $configtemplate: $!\n";
 while(<CONFIGTPLATE>)
@@ -135,12 +135,12 @@ while(<CONFIGTPLATE>)
 		$tmp = $pidleveldir . $1;
 		print CONFIG "X509_CERT_DIR = $tmp\n";
 		$ENV{X509_CERT_DIR} = $tmp;
-		print "Set $ENV{X509_CERT_DIR} into the environment\n"
+		CondorTest::debug("Set $ENV{X509_CERT_DIR} into the environment\n",1);
 	} elsif($line =~ /^X509_USER_PROXY\s*=\s*XXXXX(\/.*)$/) {
 		$tmp = $pidleveldir . $1;
 		print CONFIG "X509_USER_PROXY = $tmp\n";
 		$ENV{X509_USER_PROXY} = $tmp;
-		print "Set $ENV{X509_USER_PROXY} into the environment\n"
+		CondorTest::debug("Set $ENV{X509_USER_PROXY} into the environment\n",1);
 	} else {
 		print CONFIG "$line\n";
 	}
@@ -154,14 +154,14 @@ my @securitypool = split /\+/, $configsec;
 my $secconfig = shift @securitypool;
 my $secport = shift @securitypool;
 
-print "---security config is $secconfig and securitypool port is $secport---\n";
+CondorTest::debug("---security config is $secconfig and securitypool port is $secport---\n",1);
 	
 
 $ENV{CONDOR_CONFIG} = $secconfig;
 # submit into local schedd (side a)
 
 my $result = system("./x_lib_auth_protocol.pl $mypid \"protocol\" $mytestnegotiation_result $mycmdfile");
-print "Result of crafted lib_auth_protocol job is  $result\n";
+CondorTest::debug("Result of crafted lib_auth_protocol job is  $result\n",1);
 
 system("cp *$corename* $mysaveme");
 	
@@ -186,13 +186,13 @@ my $cmd = "condor_off -fast -master";
 $status = CondorTest::runCondorTool($cmd,\@adarray,2);
 if(!$status)
 {
-	print "Test failure due to Condor Tool Failure<$cmd>\n";
+	CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 	exit(1)
 }
 
 if(!$status)
 {
-	print "Test failure due to Condor Tool Failure<$cmd>\n";
+	CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 	exit(1)
 }
 

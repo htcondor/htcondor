@@ -33,7 +33,7 @@ $submit = sub {
 	$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
 	if(!$cmdstatus)
 	{
-		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 		exit(1)
 	}
 
@@ -46,9 +46,9 @@ $submit = sub {
 		$submitline = $_;
 		if($submitline =~ /^.*cluster\s+(\d+).*$/) {
 			$cluster = $1;
-			print "Found my cluster which is $cluster!\n";
+			CondorTest::debug("Found my cluster which is $cluster!\n",1);
 		}
-		print "$_\n";
+		CondorTest::debug("$_\n",1);
 	}
 
 	$cmd = "condor_rm $cluster";
@@ -58,12 +58,12 @@ $submit = sub {
 		if($line =~ /^\s*$/) {
 				#print "Blank Line\n";
 		} elsif($line =~ /^\s*<.*$/) {
-				print "XML<<	$line	>>\n";
+				CondorTest::debug("XML<<	$line	>>\n",1);
 		} elsif($line =~ /^.*Submitter:.*$/) {
 				#print "Submit line\n";
 		} else {
-			print "Lines must be blank or start with <\n";
-			print "<<<$line>>>\n";
+			CondorTest::debug("Lines must be blank or start with <\n",1);
+			CondorTest::debug("<<<$line>>>\n",1);
 			$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,8);
 			exit(1)
 		}
@@ -74,7 +74,7 @@ $submit = sub {
 };
 
 $aborted = sub {
-	print "If all is good we abort our own job.......\n";
+	CondorTest::debug("If all is good we abort our own job.......\n",1);
 	exit(0);
 };
 
@@ -92,7 +92,7 @@ CondorTest::RegisterSubmit($testname, $submit);
 CondorTest::RegisterExitedSuccess( $testname, $ExitSuccess );
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	print "$testname: SUCCESS\n";
+	CondorTest::debug("$testname: SUCCESS\n",1);
 	exit(0);
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";

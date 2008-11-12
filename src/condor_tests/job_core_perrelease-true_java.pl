@@ -26,7 +26,7 @@ $testname = 'Condor submit with for periodic release test - java U';
 $aborted = sub {
 	my %info = @_;
 	my $done;
-	print "Abort event not expected!\n";
+	CondorTest::debug("Abort event not expected!\n",1);
 	die "Want to see only submit, release and successful completion events for periodic release test\n";
 };
 
@@ -42,24 +42,24 @@ $executed = sub
 	my %args = @_;
 	my $cluster = $args{"cluster"};
 
-	print "Periodic Hold should see and execute, followed by a release and then we reschedule the job\n";
+	CondorTest::debug("Periodic Hold should see and execute, followed by a release and then we reschedule the job\n",1);
 };
 
 $success = sub
 {
-	print "Success: ok\n";
+	CondorTest::debug("Success: ok\n",1);
 };
 
 $release = sub
 {
-	print "Release expected.........\n";
+	CondorTest::debug("Release expected.........\n",1);
 	my @adarray;
 	my $status = 1;
 	my $cmd = "condor_reschedule";
 	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
 	if(!$status)
 	{
-		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 		exit(1)
 	}
 };
@@ -70,7 +70,7 @@ CondorTest::RegisterRelease( $testname, $release );
 CondorTest::RegisterHold( $testname, $held );
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	print "$testname: SUCCESS\n";
+	CondorTest::debug("$testname: SUCCESS\n",1);
 	exit(0);
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";

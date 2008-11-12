@@ -40,9 +40,9 @@ my $expectedres = $ARGV[2];
 my $submitfile = $ARGV[3];
 $cmd = $submitfile;
 
-print "Submit file is $cmd\n";
+CondorTest::debug("Submit file is $cmd\n",1);
 
-print "Handed args from main test loop.....<<<<<<<<<<<<<<<<<<<<<<$piddir/$subdir/$expectedres>>>>>>>>>>>>>>\n";
+CondorTest::debug("Handed args from main test loop.....<<<<<<<<<<<<<<<<<<<<<<$piddir/$subdir/$expectedres>>>>>>>>>>>>>>\n",1);
 $abnormal = sub {
 	my %info = @_;
 
@@ -77,16 +77,16 @@ $executed = sub
 	my $cmd = "condor_q -debug";
 	$status = CondorTest::runCondorTool($cmd,\@adarray,2,"Security");
 	if(!$status) {
-		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 		exit(1);
 	} else {
 		foreach $line (@adarray) {
 			if( $line =~ /.*Authentication was a Success.*/ ) {
-				print "SWEET: client got Authentication as expected\n";
+				CondorTest::debug("SWEET: client got Authentication as expected\n",1);
 				return(0);
 			}
 		}
-		print "Bad: client did not get Authentication as expected\n";
+		CondorTest::debug("Bad: client did not get Authentication as expected\n",1);
 		exit(1)
 	}
 };
@@ -96,23 +96,23 @@ $submitted = sub
 	my %info = @_;
 	my $cluster = $info{"cluster"};
 
-	print "submitted: \n";
+	CondorTest::debug("submitted: \n",1);
 	{
-		print "Check authenticated user....\n";
+		CondorTest::debug("Check authenticated user....\n",1);
 	}
 	my @adarray;
 	my $status = 1;
 	my $cmd = "condor_q -l $cluster";
 	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
 	if(!$status) {
-		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 		exit(1);
 	} else {
 		foreach $line (@adarray) {
 			if( $line =~ /^Owner\s*=\s*(.*)\s*.*/ ) {
-				print "Owner is $1\n";
+				CondorTest::debug("Owner is $1\n",1);
 			} elsif ( $line =~ /^User\s*=\s*(.*)\s*.*/ ) {
-				print "User is $1\n";
+				CondorTest::debug("User is $1\n",1);
 			}
 		}
 	}
@@ -125,7 +125,7 @@ $success = sub
 
 	my $stat = PersonalSearchLog( $piddir, $subdir, "Authentication was a Success", "SchedLog");
 	if( $stat == 0 ) {
-		print "Good completion!!!\n";
+		CondorTest::debug("Good completion!!!\n",1);
 	} else {
 		die "Expected match for Authentication is a Success and could not find it in SchedLog\n";
 	}
@@ -140,11 +140,11 @@ sub PersonalSearchLog
 	my $logname = shift;
 
 	my $logloc = $pid . "/" . $pid . $personal . "/log/" . $logname;
-	print "Search this log <$logloc> for <$searchfor>\n";
+	CondorTest::debug("Search this log <$logloc> for <$searchfor>\n",1);
 	open(LOG,"<$logloc") || die "Can not open logfile<$logloc>: $!\n";
 	while(<LOG>) {
 		if( $_ =~ /$searchfor/) {
-			print "FOUND IT! $_";
+			CondorTest::debug("FOUND IT! $_",1);
 			return(0);
 		}
 	}
@@ -159,7 +159,7 @@ CondorTest::RegisterHold( $testname, $held );
 CondorTest::RegisterSubmit( $testname, $submitted );
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	print "$testname: SUCCESS\n";
+	CondorTest::debug("$testname: SUCCESS\n",1);
 	exit(0);
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";

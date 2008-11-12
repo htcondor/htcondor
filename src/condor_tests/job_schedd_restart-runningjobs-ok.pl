@@ -43,22 +43,22 @@ $executed = sub
 	$count = $count + 1;
 	if($count == 10) {
 
-		print "submitted\n";
-		print "Collecting queue details on $cluster\n";
+		CondorTest::debug("submitted\n",1);
+		CondorTest::debug("Collecting queue details on $cluster\n",1);
 		my @adarray;
 		my $status = 1;
 		my $cmd = "condor_q $cluster";
 		$status = CondorTest::runCondorTool($cmd,\@adarray,2);
 		if(!$status)
 		{
-			print "Test failure due to Condor Tool Failure<$cmd>\n";
+			CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 			exit(1)
 		}
 
 		open(BEFORE,">$beforequeue") || die "Could not ope file for before stats $!\n";
 		foreach my $line (@adarray)
 		{
-			print "$line\n";
+			CondorTest::debug("$line\n",1);
 			print BEFORE "$line\n";
 		}
 		close(BEFORE);
@@ -66,39 +66,39 @@ $executed = sub
 		$status = CondorTest::changeDaemonState( "schedd", "off", 9 );
 		if(!$status)
 		{
-			print "Test failure: could not turn scheduler off!\n";
+			CondorTest::debug("Test failure: could not turn scheduler off!\n",1);
 			exit(1)
 		}
 
 		$status = CondorTest::changeDaemonState( "startd", "off", 9 );
 		if(!$status)
 		{
-			print "Test failure: could not turn scheduler off!\n";
+			CondorTest::debug("Test failure: could not turn scheduler off!\n",1);
 			exit(1)
 		}
 
 		$status = CondorTest::changeDaemonState( "schedd", "on", 9 );
 		if(!$status)
 		{
-			print "Test failure: could not turn scheduler on!\n";
+			CondorTest::debug("Test failure: could not turn scheduler on!\n",1);
 			exit(1)
 		}
 
-		print "Collecting queue details on $cluster\n";
+		CondorTest::debug("Collecting queue details on $cluster\n",1);
 		my @fdarray;
 		my $status = 1;
 		my $cmd = "condor_q $cluster";
 		$status = CondorTest::runCondorTool($cmd,\@fdarray,2);
 		if(!$status)
 		{
-			print "Test failure due to Condor Tool Failure<$cmd>\n";
+			CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 			exit(1)
 		}
 
 		open(AFTER,">$afterqueue") || die "Could not ope file for before stats $!\n";
 		foreach my $line (@fdarray)
 		{
-			print "$line\n";
+			CondorTest::debug("$line\n",1);
 			print AFTER "$line\n";
 		}
 		close(AFTER);
@@ -126,10 +126,10 @@ $executed = sub
 			} 
 			#handle job line
 			elsif($after =~ /^(\d+\.\d+\s+[\w\-]+\s+\d+\/\d+\s+\d+:\d+\s+\d+\+\d+:\d+:\d+)\s+([HRI]+)\s+(\d+\s+\d+\.\d+\s+.*)$/) {
-				print "AF:$1 $2 $3\n";
+				CondorTest::debug("AF:$1 $2 $3\n",1);
 				$afterstate = $2;
 				if($before =~ /^(\d+\.\d+\s+[\w\-]+\s+\d+\/\d+\s+\d+:\d+\s+\d+\+\d+:\d+:\d+)\s+([HRI]+)\s+(\d+\s+\d+\.\d+\s+.*)$/) {
-					print "BF:$1 $2 $3\n";
+					CondorTest::debug("BF:$1 $2 $3\n",1);
 					$beforestate = $2;
 				} else {
 					die "jobs in after restart of schedd do not parse\n";
@@ -137,8 +137,8 @@ $executed = sub
 				if($afterstate ne $beforestate) {
 					if(($af1 ne $bf1) || ($af3 ne $bf3)) {
 						# want the state only to be different was R and now should be I
-						print "Before:$before(State:$beforestate)\n";
-						print "After:$after(State:$afterstate)\n";
+						CondorTest::debug("Before:$before(State:$beforestate)\n",1);
+						CondorTest::debug("After:$after(State:$afterstate)\n",1);
 						die "Job queue was not maintained!\n";
 					} else {
 						if(($beforestate ne "R") || ($afterstate ne "I")) {
@@ -147,8 +147,8 @@ $executed = sub
 						return(0);
 					}
 				} else {
-					print "Before:$before(State:$beforestate)\n";
-					print "After:$after(State:$afterstate)\n";
+					CondorTest::debug("Before:$before(State:$beforestate)\n",1);
+					CondorTest::debug("After:$after(State:$afterstate)\n",1);
 					die "Job queue was not maintained! Suspect job shows as running\n";
 				}
 			}
@@ -166,7 +166,7 @@ $executed = sub
 CondorTest::RegisterExecute( $testname, $executed );
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	print "$testname: SUCCESS\n";
+	CondorTest::debug("$testname: SUCCESS\n",1);
 	exit(0);
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";

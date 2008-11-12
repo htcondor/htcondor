@@ -53,7 +53,7 @@ $ExitSuccess = sub {
 
 	# see if they match
 	foreach my $key (keys %env_reqd) {
-		print "Matching $key...\n";
+		CondorTest::debug("Matching $key...\n",1);
 		if(not exists $env_found{$key}) {
 			die "Variable $key wasn't passed along";
 		}
@@ -88,10 +88,10 @@ $ENV{UPREPEND} = "v_";
 $ENV{CONDORPATH} = "/usr/local/condor-build/bin:/usr/local/gcc296:/usr/local/gnu/bin:/usr/local/bin:.:/opt/SUNWspro/bin:/usr/ccs/bin:/usr/ucb:/usr/local/sbin:/bin:/sbin:/usr/bin:/usr/sbin:/usr/ucb";
 $ENV{GSISSHFLAGS} = "--with-tcp-wrappers";
 
-print "join(` `,keys %ENV)";
+CondorTest::debug("join(` `,keys %ENV)",1);
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	print "$testname: SUCCESS\n";
+	CondorTest::debug("$testname: SUCCESS\n",1);
 	exit(0);
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";

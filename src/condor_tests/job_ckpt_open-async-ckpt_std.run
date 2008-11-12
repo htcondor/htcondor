@@ -30,7 +30,7 @@ CondorTest::RegisterExitedSuccess( $testname,
 				   \&CondorTest::DefaultOutputTest );
 
 if( CondorTest::RunTest($testname, $cmd, 1) ) {
-    print "$testname: SUCCESS\n";
+    CondorTest::debug("$testname: SUCCESS\n",1);
     exit(0);
 } else {
     die "$testname: CondorTest::RunTest() failed\n";

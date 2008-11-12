@@ -44,15 +44,15 @@ $aborted = sub {
 	my $gotsig   = $info{"signal"};
 	my $outfile = $info{"output"};
 	my $killsig = $info{"kill_sig"};
-	print "Want to see $killsig in this file $outfile\n";
+	CondorTest::debug("Want to see $killsig in this file $outfile\n",1);
 	open( FILE, "<$outfile" ) || die "error opening $file: $!\n";
 	while(<FILE>)
 	{
 		CondorTest::fullchomp($_);
-		print "Found $_\n";
+		CondorTest::debug("Found $_\n",1);
 		if($_ eq $killsig)
 		{
-			print "Good\n";
+			CondorTest::debug("Good\n",1);
 			return;
 		}
 		else
@@ -73,7 +73,7 @@ $executed = sub
 	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
 	if(!$status)
 	{
-		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 		exit(1)
 	}
 };
@@ -83,7 +83,7 @@ CondorTest::RegisterExitedAbnormal( $testname, $abnormal );
 CondorTest::RegisterAbort         ( $testname, $aborted );
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	print "$testname: SUCCESS\n";
+	CondorTest::debug("$testname: SUCCESS\n",1);
 	exit(0);
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";

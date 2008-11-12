@@ -41,7 +41,7 @@ $executed = sub
 	%info = @_;
 	$cluster = $info{"cluster"};
 
-	print "Good. for leave_in_queue cluster $cluster must run first\n";
+	CondorTest::debug("Good. for leave_in_queue cluster $cluster must run first\n",1);
 };
 
 $success = sub
@@ -58,25 +58,25 @@ $success = sub
 		my $status = 1;
 		$status = CondorTest::runCondorTool($cmd,\@adarray,2);
 		if(!$status) {
-			print "Test failure due to Condor Tool Failure<$cmd>\n";
+			CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 			exit(1)
 		}
 		foreach my $line (@adarray) {
-			print "$line\n";
+			CondorTest::debug("$line\n",1);
 			if($line =~ /^\s*([\w\-\.]+)\s+ClusterId\s*=\s*$cluster\s*Status\s*=\s*(\d+)\s*.*$/) {
-				print "Following Line shows it is still in the queue...\n";
-				print "$line\n";
+				CondorTest::debug("Following Line shows it is still in the queue...\n",1);
+				CondorTest::debug("$line\n",1);
 				if($2 != COMPLETED) {
 					$retrycount = $retrycount +1;
 					if($retrycount == 4) {
-						print "Can not find the cluster completed in the queue\n";
+						CondorTest::debug("Can not find the cluster completed in the queue\n",1);
 						last;
 					} else {
 						sleep((10 * $retrycount));
 						next;
 					}
 				}
-				print "Found the cluster completed in the queue\n";
+				CondorTest::debug("Found the cluster completed in the queue\n",1);
 				$done = 1;
 				$return = 0;
 				last;
@@ -88,7 +88,7 @@ $success = sub
 		$return = 1;
 	}
 
-	print "job should be done AND left in the queue!!\n";
+	CondorTest::debug("job should be done AND left in the queue!!\n",1);
 	my @bdarray;
 	my @cdarray;
 	my $status = 1;
@@ -96,14 +96,14 @@ $success = sub
 	$status = CondorTest::runCondorTool($cmd,\@bdarray,2);
 	if(!$status)
 	{
-		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 		exit(1)
 	}
 	$cmd = "condor_rm -forcex $cluster";
 	$status = CondorTest::runCondorTool($cmd,\@cdarray,2);
 	if(!$status)
 	{
-		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 		exit(1)
 	}
 	exit($return);
@@ -114,9 +114,9 @@ $submitted = sub
 	my %info = @_;
 	my $cluster = $info{"cluster"};
 
-	print "submitted: \n";
+	CondorTest::debug("submitted: \n",1);
 	{
-		print "good job $cluster expected submitted.\n";
+		CondorTest::debug("good job $cluster expected submitted.\n",1);
 	}
 };
 
@@ -125,7 +125,7 @@ CondorTest::RegisterExitedSuccess( $testname, $success );
 CondorTest::RegisterSubmit( $testname, $submitted );
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	print "$testname: SUCCESS\n";
+	CondorTest::debug("$testname: SUCCESS\n",1);
 	exit(0);
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";

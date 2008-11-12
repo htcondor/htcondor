@@ -29,22 +29,22 @@ my %args;
 my $cluster;
 
 $aborted = sub {
-	print "Abort event expected from periodic_remove policy evaluating to true\n";
-	print "Policy test worked.\n";
+	CondorTest::debug("Abort event expected from periodic_remove policy evaluating to true\n",1);
+	CondorTest::debug("Policy test worked.\n",1);
 };
 
 $executed = sub
 {
 	%args = @_;
 	$cluster = $args{"cluster"};
-	print "Good. for on_exit_remove cluster $cluster must run first\n";
+	CondorTest::debug("Good. for on_exit_remove cluster $cluster must run first\n",1);
 };
 
 CondorTest::RegisterExecute($testname, $executed);
 CondorTest::RegisterAbort( $testname, $aborted );
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	print "$testname: SUCCESS\n";
+	CondorTest::debug("$testname: SUCCESS\n",1);
 	exit(0);
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";

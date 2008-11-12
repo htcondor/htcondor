@@ -86,7 +86,7 @@ $executed = sub {
 	%info = @_;
 	$cluster = $info{"cluster"};
 	$job = $info{"job"};
-	print "Bad - Job $cluster.$job began execution when it should ".
+	CondorTest::debug("Bad - Job $cluster.$job began execution when it should ",1);
 		  "have been on hold.\n";
 	exit(1);
 };
@@ -106,7 +106,7 @@ $submit = sub {
 	my $qstat = CondorTest::getJobStatus($cluster);
 	my $sleepTime = 2;
 	while ( $qstat == -1 ) {
-		print "Job status unknown - checking in $sleepTime seconds...\n";
+		CondorTest::debug("Job status unknown - checking in $sleepTime seconds...\n",1);
 		sleep($sleepTime);
 		$qstat = CondorTest::getJobStatus($cluster);
 	} # WHILE
@@ -115,14 +115,14 @@ $submit = sub {
 	## Check to make sure that it's on hold
 	## 
 	if ( $qstat == HELD) {
-		print "Good - Job $cluster.$job went on hold as soon as it ".
+		CondorTest::debug("Good - Job $cluster.$job went on hold as soon as it ",1);
 			  "was submitted.\n";
 		$gotHold = 1;
 	##
 	## The job didn't go on hold, so we need to abort
 	##
 	} else {
-		print "Bad - Job $cluster.$job failed to go on hold.\n";
+		CondorTest::debug("Bad - Job $cluster.$job failed to go on hold.\n",1);
 		exit(1);
 	}
 };
@@ -135,7 +135,7 @@ $success = sub {
 	%info = @_;
 	$cluster = $info{"cluster"};
 	$job = $info{"job"};
-	print "Bad - Job $cluster.$job completed its execution when it should ".
+	CondorTest::debug("Bad - Job $cluster.$job completed its execution when it should ",1);
 		  "have been on hold.\n";
 	exit(1);
 };
@@ -156,7 +156,7 @@ $timed = sub {
 	$cluster = $info{"cluster"};
 	$job = $info{"job"};
 	
-	print "Good - Job $cluster.$job was never released from being held.\n";
+	CondorTest::debug("Good - Job $cluster.$job was never released from being held.\n",1);
 	$aborting = 1;
 
 	##
@@ -167,7 +167,7 @@ $timed = sub {
 	my $cmd = "condor_rm $cluster";
 	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
 	if (!$status) {
-		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 		return(1)
 	}
 };
@@ -186,13 +186,13 @@ $abort = sub {
 	## Make sure this was meant to happen
 	## 
 	if ( $aborting ) {
-		print "Good - Job $cluster.$job is being removed after being held.\n";
-		print "Policy Test Completed\n";
+		CondorTest::debug("Good - Job $cluster.$job is being removed after being held.\n",1);
+		CondorTest::debug("Policy Test Completed\n",1);
 	##
 	## Bad mojo!
 	##
 	} else {
-		print "Bad - Job $cluster.$job received an unexpected abort event.\n";
+		CondorTest::debug("Bad - Job $cluster.$job received an unexpected abort event.\n",1);
 		exit(1);
 	}
 };
@@ -212,7 +212,7 @@ CondorTest::RegisterExitedSuccess( $testname, $success );
 CondorTest::RegisterTimed($testname, $timed, 60);
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	print "$testname: SUCCESS\n";
+	CondorTest::debug("$testname: SUCCESS\n",1);
 	exit(0);
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";

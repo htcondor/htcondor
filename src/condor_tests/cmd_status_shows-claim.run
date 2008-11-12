@@ -55,8 +55,8 @@ $mycorenm = $corename . ".cmd";
 $mycorenmout = $corename . ".cmd.out";
 $mycorenmlog = $corename . ".log";
 
-print "Master PID is $mypid\n";
-print "Master PID submit file is $mysubmitnm\n";
+CondorTest::debug("Master PID is $mypid\n",1);
+CondorTest::debug("Master PID submit file is $mysubmitnm\n",1);
 
 my $version = "local";
 # get a local scheduler running (side a)
@@ -65,16 +65,16 @@ my @local = split /\+/, $configloc;
 my $locconfig = shift @local;
 my $locport = shift @local;
 
-print "---local config is $locconfig and local port is $locport---\n";
+CondorTest::debug("---local config is $locconfig and local port is $locport---\n",1);
 
 $primarycollector = $primarycollector . ":" . $locport;
 
-print "Primary collector for other nodes <<$primarycollector>>\n";
+CondorTest::debug("Primary collector for other nodes <<$primarycollector>>\n",1);
 
 
 $saveconfig = $ENV{CONDOR_CONFIG};
 $ENV{CONDOR_CONFIG} = $locconfig;
-print "New collector is this:\n";
+CondorTest::debug("New collector is this:\n",1);
 system("condor_config_val COLLECTOR_HOST");
 $ENV{CONDOR_CONFIG} = $saveconfig;
 
@@ -100,7 +100,7 @@ my @scheddone = split /\+/, $configscheddone;
 my $scheddoneconfig = shift @scheddone;
 my $scheddoneport = shift @scheddone;
 
-print "---scheddone config is $scheddoneconfig and scheddone port is $scheddoneport---\n";
+CondorTest::debug("---scheddone config is $scheddoneconfig and scheddone port is $scheddoneport---\n",1);
 
 my $bail = 0;
 
@@ -112,24 +112,24 @@ my $cmd = "condor_submit ./x_cmdrunforever.cmd2";
 $cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
 if(!$cmdstatus)
 {
-	print "Test failure due to Condor Tool Failure<$cmd>\n";
+	CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 	exit(1)
 }
 
 my $qstat = CondorTest::getJobStatus(1.1);
-print "remote cluster 1.1 status is $qstat\n";
+CondorTest::debug("remote cluster 1.1 status is $qstat\n",1);
 while($qstat != RUNNING)
 {
-	print "remote Job status 1.1 not RUNNING - wait a bit\n";
+	CondorTest::debug("remote Job status 1.1 not RUNNING - wait a bit\n",1);
 	sleep 4;
 	$qstat = CondorTest::getJobStatus(1.1);
 }
 
 $qstat = CondorTest::getJobStatus(1.0);
-print "remote cluster 1.0 status is $qstat\n";
+CondorTest::debug("remote cluster 1.0 status is $qstat\n",1);
 while($qstat != RUNNING)
 {
-	print "remote Job status 1.0 not RUNNING - wait a bit\n";
+	CondorTest::debug("remote Job status 1.0 not RUNNING - wait a bit\n",1);
 	sleep 4;
 	$qstat = CondorTest::getJobStatus(1.0);
 }
@@ -145,24 +145,24 @@ my $cmd = "condor_submit ./x_cmdrunforever.cmd2";
 $cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
 if(!$cmdstatus)
 {
-	print "Test failure due to Condor Tool Failure<$cmd>\n";
+	CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 	exit(1)
 }
 
 my $qstat = CondorTest::getJobStatus(1.1);
-print "local cluster 1.1 status is $qstat\n";
+CondorTest::debug("local cluster 1.1 status is $qstat\n",1);
 while($qstat != RUNNING)
 {
-	print "local Job status 1.1 not RUNNING - wait a bit\n";
+	CondorTest::debug("local Job status 1.1 not RUNNING - wait a bit\n",1);
 	sleep 4;
 	$qstat = CondorTest::getJobStatus(1.1);
 }
 
 $qstat = CondorTest::getJobStatus(1.0);
-print "local cluster 1.0 status is $qstat\n";
+CondorTest::debug("local cluster 1.0 status is $qstat\n",1);
 while($qstat != RUNNING)
 {
-	print "local Job status 1.0 not RUNNING - wait a bit\n";
+	CondorTest::debug("local Job status 1.0 not RUNNING - wait a bit\n",1);
 	sleep 4;
 	$qstat = CondorTest::getJobStatus(1.0);
 }
@@ -189,7 +189,7 @@ my $cmd = "";
 
 
 if($bail != 1) {
-	print "Looking at new pool<condor_status>\n";
+	CondorTest::debug("Looking at new pool<condor_status>\n",1);
 	while($count < $nattempts) {
 	my $masterlocal = 0;
 	my $mastersched = 0;
@@ -198,18 +198,18 @@ if($bail != 1) {
 		$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
     	if(!$cmdstatus)
     	{
-        	print "Test failure due to Condor Tool Failure<$cmd>\n";
+        	CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
         	exit(1)
     	}
 
-		print "Looking at condor_status \n";
+		CondorTest::debug("Looking at condor_status \n",1);
 
 		foreach $line (@adarray) {
 			if($line =~ /^.*master_loc.*$/) {
-				print "found masterLocal: $line\n";
+				CondorTest::debug("found masterLocal: $line\n",1);
 				$masterlocal = $masterlocal + 1;;
 			} elsif($line =~ /^.*master_sch.*$/) {
-				print "found master_schedd: $line\n";
+				CondorTest::debug("found master_schedd: $line\n",1);
 				$mastersched = $mastersched + 1;;
 			} else {
 				#print "$line\n";
@@ -218,11 +218,11 @@ if($bail != 1) {
 
 		if(($masterlocal == 2) && ($mastersched == 4)) {
 			$bail = 1;
-			print "Found expected number of startds(6)\n";
-			print "Found 2 on local collector and 4 on alternate node in pool\n";
+			CondorTest::debug("Found expected number of startds(6)\n",1);
+			CondorTest::debug("Found 2 on local collector and 4 on alternate node in pool\n",1);
 			last;
 		} else {
-			print "Keep going masterlocal is $masterlocal and mastersched is $mastersched\n";
+			CondorTest::debug("Keep going masterlocal is $masterlocal and mastersched is $mastersched\n",1);
 		}
 
 		$count = $count + 1;
@@ -242,11 +242,11 @@ if($bail == 1) {
 
 	while($count < $nattempts) {
 		$cmd = "condor_status -claimed -format \"%s\\n\" name";
-		print "Looking for exactly 4 claimed slots\n";
+		CondorTest::debug("Looking for exactly 4 claimed slots\n",1);
 		$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
     	if(!$cmdstatus)
     	{
-        	print "Test failure due to Condor Tool Failure<$cmd>\n";
+        	CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
         	exit(1)
     	}
 	
@@ -257,18 +257,18 @@ if($bail == 1) {
 			if($line =~ /^\s*slot(\d+)@master.*@.*$/) {
 				#print "found claimed slot: $line\n";
 				$numclaimed = $numclaimed + 1;;
-				print "found claimed slot: $numclaimed of 4\n";
+				CondorTest::debug("found claimed slot: $numclaimed of 4\n",1);
 			} else {
 				#print "skip: $line\n";
 			}
 		}
 
 		if($numclaimed == 4) {
-			print "Condor_status -claimed found the expected 4 slots\n";
+			CondorTest::debug("Condor_status -claimed found the expected 4 slots\n",1);
 			$done = 1;
 			last;
 		} else {
-			print "Condor_status -claimed found incorrect claimed slot count<$numclaimed>\n";
+			CondorTest::debug("Condor_status -claimed found incorrect claimed slot count<$numclaimed>\n",1);
 		}
 
 		$count = $count + 1;
@@ -277,7 +277,7 @@ if($bail == 1) {
 }
 
 
-print "Saving things and cleaning up....\n";
+CondorTest::debug("Saving things and cleaning up....\n",1);
 
 system("cp *cmd_status_shows-claimed* $mysaveme");
 
@@ -304,7 +304,7 @@ my $cmd = "condor_rm -all";
 $status = CondorTest::runCondorTool($cmd,\@adarray,2);
 if(!$status)
 {
-	print "Test failure due to Condor Tool Failure<$cmd>\n";
+	CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 	exit(1)
 }
 
@@ -314,7 +314,7 @@ $cmd = "condor_off -fast -master";
 $status = CondorTest::runCondorTool($cmd,\@adarray,2);
 if(!$status)
 {
-	print "Test failure due to Condor Tool Failure<$cmd>\n";
+	CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 	exit(1)
 }
 
@@ -325,7 +325,7 @@ $cmd = "condor_rm -all";
 $status = CondorTest::runCondorTool($cmd,\@adarray,2);
 if(!$status)
 {
-	print "Test failure due to Condor Tool Failure<$cmd>\n";
+	CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 	exit(1)
 }
 
@@ -335,7 +335,7 @@ $cmd = "condor_off -fast -master";
 $status = CondorTest::runCondorTool($cmd,\@adarray,2);
 if(!$status)
 {
-	print "Test failure due to Condor Tool Failure<$cmd>\n";
+	CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 	exit(1)
 }
 
@@ -347,6 +347,6 @@ if( $done == 0 )
 	exit(1);
 }
 
-print "cmd_status_shows-claimed SUCCESS\n";
+CondorTest::debug("cmd_status_shows-claimed SUCCESS\n",1);
 system("date");
 exit(0);

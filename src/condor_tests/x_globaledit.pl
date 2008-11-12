@@ -67,35 +67,47 @@
 
 ############################################################################
 
-my $targetdir = '.';
-print "Directory to change is $targetdir\n";
-opendir DH, $targetdir or die "Can not open $dir:$!\n";
-foreach $file (readdir DH)
+foreach $file (@ARGV)
 {	
+	$foundcondortest = 0;
 	my $line = "";
 	next if $file =~ /^\.\.?$/;
 	next if $file eq $dbtimelog;
 	next if $file eq "x_striplines.pl";
 	next if $file eq "x_globaledit.pl";
-	print "Currently scanning $file for name DebugOff()\n";
+	print "Currently scanning $file for CondorTest and prints\n";
 	open(FILE,"<$file") || die "Can not open $file for reading: $!\n";
 	open(NEW,">$file.tmp") || die "Can not open Temp file: $!\n";
-	#print "$file opened OK!\n";
+	print "$file opened OK!\n";
 	while(<FILE>)	
 	{		
+		chomp();
 		$line = $_;
-		if($line =~ /^.*print.*$/) {
-			print NEW "$_";
+		if($line =~ /^\s*print\s+\w+\s+\".*\".*$/) {
+			# do nothing if going to a file
+			print NEW "$line\n";
+		} elsif($line =~ /^\s*use\s+CondorTest.*$/) {
+			print "File uses CondorTest!\n";
+			$foundcondortest = 1;
+			print NEW "$line\n";
+		} elsif($line =~ /^(\s*)print\s+.*(\".*\").*$/) {
+			#print NEW "$_";
+			if($foundcondortest == 1) {
+				print NEW "$1CondorTest::debug($2,1);\n";
+			} else {
+				print NEW "$line\n";
+			}
 		} elsif($line =~ /.*::DebugOff\(\).*$/) {
 			# do nothing ie strip out
 			print "strip in $file found $line\n"
 		} else {
-			print NEW "$_";
+			print NEW "$line\n";
 		}
 	}	
 	close(FILE);
 	close(NEW);
-	system("mv $file.tmp $file");
+	system("cp $file.tmp $file");
+	system("chmod 755 $file");
 }
 exit(0);
 

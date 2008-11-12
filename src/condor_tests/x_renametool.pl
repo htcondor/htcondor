@@ -35,7 +35,7 @@ my $new_name = $ARGV[1];
  #$| = 1;
 
 my $targetdir = '.';
-print "Directory to change is $targetdir\n";
+CondorTest::debug("Directory to change is $targetdir\n",1);
 opendir DH, $targetdir or die "Can not open $dir:$!\n";
 foreach $file (readdir DH)
 {	

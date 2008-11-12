@@ -60,11 +60,11 @@ my @parallel = split /\+/, $configrem;
 my $parallelconfig = shift @parallel;
 my $parallelport = shift @parallel;
 
-print "---Parallel config is $parallelconfig and remote port is $parallelport---\n";
+CondorTest::debug("---Parallel config is $parallelconfig and remote port is $parallelport---\n",1);
 
 $ENV{CONDOR_CONFIG} = $parallelconfig;
 
-print "Set config to $parallelconfig\n";
+CondorTest::debug("Set config to $parallelconfig\n",1);
 
 #print "Looking for schedd for Basic Parallel Test\n";
 system("condor_status -pool $currenthost:$parallelport -schedd -format '%s\n' Name");
@@ -73,7 +73,7 @@ system("condor_status -pool $currenthost:$parallelport -schedd -format '%s\n' Na
 $condorchirp = `which condor_chirp`;
 chomp($condorchirp);
 
-print "Testing this condor_chirp:$condorchirp\n";
+CondorTest::debug("Testing this condor_chirp:$condorchirp\n",1);
 
 # Edit submit file to submit to scheduler at remote (side b) schedd.
 my $line;
@@ -127,7 +127,7 @@ system("./x_chirpio_mkdata.pl --message='Testing message'");
 system("rm -rf ALLDONE WRITEDONE");
 
 my $result = CondorPersonal::PersonalSystem("./cmd_chirp_get-set_par.pl $mysubmitnm");
-print "Result of chirp paarallel  job is  $result\n";
+CondorTest::debug("Result of chirp paarallel  job is  $result\n",1);
 
 
 system("cp *cmd_chirp_get-set_par* $mysaveme");
@@ -158,7 +158,7 @@ my $cmd = "condor_off -fast -master";
 $status = CondorTest::runCondorTool($cmd,\@adarray,2);
 if(!$status)
 {
-	print "Test failure due to Condor Tool Failure<$cmd>\n";
+	CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 	exit(1)
 }
 

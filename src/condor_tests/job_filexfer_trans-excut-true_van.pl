@@ -34,7 +34,7 @@ $execute = sub {
 	my %args = @_;
 	my $cluster = $args{"cluster"};
 
-	print "Running $cluster\n";
+	CondorTest::debug("Running $cluster\n",1);
 
 };
 
@@ -47,7 +47,7 @@ $hold = sub
 	my %args = @_;
 	my $cluster = $args{"cluster"};
 
-	print "Good. Cluster $cluster is supposed to be held.....\n";
+	CondorTest::debug("Good. Cluster $cluster is supposed to be held.....\n",1);
 };
 
 $release = sub
@@ -64,27 +64,27 @@ $success = sub
 
 $wanterror = sub
 {
-	print "Base file transfer job, submit supposed to fail...error 1 ..!\n";
+	CondorTest::debug("Base file transfer job, submit supposed to fail...error 1 ..!\n",1);
 	my %args = @_;
 	my $errmsg = $args{"ErrorMessage"};
 
     if($errmsg =~ /^.*died abnormally.*$/) {
-        print "BAD. Submit died was to fail but with error 1\n";
-        print "$testname: Failure\n";
+        CondorTest::debug("BAD. Submit died was to fail but with error 1\n",1);
+        CondorTest::debug("$testname: Failure\n",1);
         exit(1);
     } elsif($errmsg =~ /^.*\(\s*returned\s*(\d+)\s*\).*$/) {
         if($1 == 1) {
-            print "Good. Job was not to submit with File Transfer off and input files requested\n";
-            print "$testname: SUCCESS\n";
+            CondorTest::debug("Good. Job was not to submit with File Transfer off and input files requested\n",1);
+            CondorTest::debug("$testname: SUCCESS\n",1);
             exit(0);
         } else {
-            print "BAD. Submit was to fail but with error 1 not <<$1>>\n";
-            print "$testname: Failure\n";
+            CondorTest::debug("BAD. Submit was to fail but with error 1 not <<$1>>\n",1);
+            CondorTest::debug("$testname: Failure\n",1);
             exit(1);
         }
     } else {
-            print "BAD. Submit failure mode unexpected....\n";
-            print "$testname: Failure\n";
+            CondorTest::debug("BAD. Submit failure mode unexpected....\n",1);
+            CondorTest::debug("$testname: Failure\n",1);
             exit(1);
     }
 };
@@ -111,7 +111,7 @@ CondorTest::RegisterExitedSuccess($testname, $success);
 CondorTest::RegisterTimed($testname, $timed, 3600);
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	print "$testname: SUCCESS\n";
+	CondorTest::debug("$testname: SUCCESS\n",1);
 	exit(0);
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";

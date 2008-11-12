@@ -497,7 +497,7 @@ sub CompareText
 	debug("\$\$aref[0] = $$aref[0]\n",4);
 
 	debug("skiplines = \"@skiplines\"\n",4);
-	debug("grep returns ", grep( /^$linenum$/, @skiplines ), "\n",4);
+	print "grep returns ", grep( /^$linenum$/, @skiplines ), "\n";
 
 	next if grep /^$linenum$/, @skiplines;
 

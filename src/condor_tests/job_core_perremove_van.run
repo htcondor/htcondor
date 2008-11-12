@@ -27,12 +27,12 @@ my $willstatus = CondorTest::verbose_system("./job_core_perremove-true_van.pl");
 
 if($nostatus != 0)
 {
-	print "PERIODIC_REMOVE: failed no trigger test\n";
+	CondorTest::debug("PERIODIC_REMOVE: failed no trigger test\n",1);
 }
 
 if($willstatus != 0)
 {
-	print "PERIODIC_REMOVE: failed trigger test\n";
+	CondorTest::debug("PERIODIC_REMOVE: failed trigger test\n",1);
 }
 
 if(($willstatus != 0) || ($nostatus != 0))

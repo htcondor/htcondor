@@ -34,12 +34,12 @@ $execute = sub {
 	my %args = @_;
 	my $cluster = $args{"cluster"};
 
-	print "Running $cluster\n";
+	CondorTest::debug("Running $cluster\n",1);
 
 };
 
 $abort = sub {
-	print "Job is gone now, cool.\n";
+	CondorTest::debug("Job is gone now, cool.\n",1);
 };
 
 $hold = sub
@@ -47,7 +47,7 @@ $hold = sub
 	my %args = @_;
 	my $cluster = $args{"cluster"};
 
-	print "Good. Cluster $cluster is supposed to be held.....\n";
+	CondorTest::debug("Good. Cluster $cluster is supposed to be held.....\n",1);
 };
 
 $release = sub
@@ -59,7 +59,7 @@ $release = sub
 
 $success = sub
 {
-	print "Base file transfer job!\n";
+	CondorTest::debug("Base file transfer job!\n",1);
 };
 
 $timed = sub
@@ -71,7 +71,7 @@ $timed = sub
 # easy cleanup
 
 my $job = $$;
-print "Process Id for this script is  $job\n";
+CondorTest::debug("Process Id for this script is  $job\n",1);
 my $basefile = "submit_filetrans_input" . "$job";
 my $in = "$basefile".".txt";
 my $ina = "$basefile"."a.txt";
@@ -95,12 +95,12 @@ open(NEWCMD,">$cmd.new") || die "Can not open command file: $!\n";
 while(<CMD>)
 {
 	CondorTest::fullchomp($_);
-	print "$_\n";
+	CondorTest::debug("$_\n",1);
 	$line = $_;
 	if( $line =~ /^\s*input\s*=\s*job_\d+_dir\/([a-zA-Z_]+)\d*\.txt\s*$/)
 	{
 		my $input = "$1"."$job".".txt";
-		print "Input file was $1\n";
+		CondorTest::debug("Input file was $1\n",1);
 		print NEWCMD "input = $inputdir/$input\n"
 	}
 	elsif( $line =~ /^\s*transfer_input_files\s*=\s*.*$/ )
@@ -130,7 +130,7 @@ CondorTest::RegisterExitedSuccess($testname, $success);
 #CondorTest::RegisterTimed($testname, $timed, 3600);
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	print "$testname: SUCCESS\n";
+	CondorTest::debug("$testname: SUCCESS\n",1);
 	exit(0);
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";

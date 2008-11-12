@@ -50,17 +50,17 @@ $held = sub
 
 $executed = sub
 {
-	print "Good. We need the dag to run\n";
+	CondorTest::debug("Good. We need the dag to run\n",1);
 };
 
 $submitted = sub
 {
-	print "submitted: This test will see submit, executing and successful completion\n";
+	CondorTest::debug("submitted: This test will see submit, executing and successful completion\n",1);
 };
 
 $success = sub
 {
-	print "executed successfully\n";
+	CondorTest::debug("executed successfully\n",1);
 	my $result = `./x_read_joblog.exe $joblog MAXJOBS $maxjobs`;
 	if( $result != 0)
 	{
@@ -76,7 +76,7 @@ CondorTest::RegisterHold( $testname, $held );
 CondorTest::RegisterSubmit( $testname, $submitted );
 
 if( CondorTest::RunDagTest($testname, $cmd, 0, $dagman_args) ) {
-	print "$testname: SUCCESS\n";
+	CondorTest::debug("$testname: SUCCESS\n",1);
 	exit(0);
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";

@@ -84,15 +84,15 @@ my @multimatch = split /\+/, $configrem;
 my $multimatchconfig = shift @multimatch;
 my $multimatchport = shift @multimatch;
 
-print "---Startd Multimatch config is $multimatchconfig and remote port is $multimatchport---\n";
+CondorTest::debug("---Startd Multimatch config is $multimatchconfig and remote port is $multimatchport---\n",1);
 
 
 $ENV{CONDOR_CONFIG} = $multimatchconfig;
 
-print "Set config to $multimatchconfig\n";
+CondorTest::debug("Set config to $multimatchconfig\n",1);
 
 my $result = system("./job_startd_multimatch.pl $mysubmitnm $jobcount $interval");
-print "Result of basic startd_multimatch  job is  $result\n";
+CondorTest::debug("Result of basic startd_multimatch  job is  $result\n",1);
 
 exit(1);
 
@@ -124,7 +124,7 @@ my $cmd = "condor_off -fast -master";
 $status = CondorTest::runCondorTool($cmd,\@adarray,2);
 if(!$status)
 {
-	print "Test failure due to Condor Tool Failure<$cmd>\n";
+	CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 	exit(1)
 }
 

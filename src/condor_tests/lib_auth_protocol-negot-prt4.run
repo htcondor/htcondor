@@ -60,11 +60,11 @@ while(<DF>) {
 		#exit(0);
 	#}
 	$myvariation = $myvariation + 1;
-	print "Condor for this run in $mypid\n";
+	CondorTest::debug("Condor for this run in $mypid\n",1);
 	system("date");
 	$line = $_;
 	if($line =~ /^(x_secneg.*_secprepostsrc)\s(.*)$/ ) {
-		print "Negotiation is $1 and Expected result $2\n";
+		CondorTest::debug("Negotiation is $1 and Expected result $2\n",1);
 		$mytestnegotiation = $1;
 		$mytestnegotiation_result = $2;
 	}
@@ -79,8 +79,8 @@ while(<DF>) {
 	$mycorenmout = $corename . ".cmd.out";
 	$mycorenmlog = $corename . ".log";
 
-	print "Master PID is $mypid\n";
-	print "Master PID submit file is $mysubmitnm\n";
+	CondorTest::debug("Master PID is $mypid\n",1);
+	CondorTest::debug("Master PID submit file is $mysubmitnm\n",1);
 
 	# Edit submit file to submit to scheduler at securitypool (side b) schedd.
 	my $line;
@@ -92,7 +92,7 @@ while(<DF>) {
 		$line = $_;
 		if( $line =~ /^\s*secprepostsrc\s*=\s*.*$/ )
 		{
-			print "Setting up for $mytestnegotiation\n";
+			CondorTest::debug("Setting up for $mytestnegotiation\n",1);
 			print CSUB "secprepostsrc = $mytestnegotiation\n";
 		}
 		else
@@ -108,18 +108,18 @@ while(<DF>) {
 	my $secconfig = shift @securitypool;
 	my $secport = shift @securitypool;
 
-	print "---security config is $secconfig and securitypool port is $secport---\n";
+	CondorTest::debug("---security config is $secconfig and securitypool port is $secport---\n",1);
 	
 
 	$ENV{CONDOR_CONFIG} = $secconfig;
 	# submit into local schedd (side a)
 
 	my $result = system("./lib_auth_protocol-negot-prt4.pl $mypid $label $mytestnegotiation_result");
-	print "Result of crafted lib_auth_protocol-negot job is  $result\n";
+	CondorTest::debug("Result of crafted lib_auth_protocol-negot job is  $result\n",1);
 
 	if($result != 0) {
 		$mynumberoferrors = $mynumberoferrors + 1;
-		print "ERRORS detected: $mynumberoferrors of $mynumberoftests failed\n";
+		CondorTest::debug("ERRORS detected: $mynumberoferrors of $mynumberoftests failed\n",1);
 	}
 
 	system("cp *$corename* $mysaveme");
@@ -145,13 +145,13 @@ while(<DF>) {
 	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
 	if(!$status)
 	{
-		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 		exit(1)
 	}
 
 	if(!$status)
 	{
-		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 		exit(1)
 	}
 }
@@ -161,7 +161,7 @@ system("date");
 if( $mynumberoferrors != 0 )
 {
 	# actual test failed but we allowed cleanup
-	print "$mynumberoferrors of $numberoftests FAILED!\n";
+	CondorTest::debug("$mynumberoferrors of $numberoftests FAILED!\n",1);
 	exit(1);
 }
 

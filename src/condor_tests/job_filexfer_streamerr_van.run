@@ -35,7 +35,7 @@ $aborted = sub
 {
 	my %info = @_;
 	my $done;
-	print "Abort event expected as we clear job\n";
+	CondorTest::debug("Abort event expected as we clear job\n",1);
 };
 
 $timed = sub
@@ -55,14 +55,14 @@ $execute = sub
 	sleep(60);
 	if( -f $name )
 	{
-		print "YEAH!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n";
+		CondorTest::debug("YEAH!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n",1);
 	}
 	else
 	{
 		$job = "bad";
 	}
 
-	print "OK remove the job!\n";
+	CondorTest::debug("OK remove the job!\n",1);
 	my @adarray;
 	my $status = 1;
 	my $cmd = "condor_rm $cluster";
@@ -75,7 +75,7 @@ $execute = sub
 
 	if(!$status)
 	{
-		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 		exit(0)
 	}
 };
@@ -96,7 +96,7 @@ CondorTest::RegisterSubmit( $testname, $submitted );
 my $path = $ENV{"PATH"};
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	print "$testname: SUCCESS\n";
+	CondorTest::debug("$testname: SUCCESS\n",1);
 	exit(0);
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";

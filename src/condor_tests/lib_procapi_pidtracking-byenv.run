@@ -49,7 +49,7 @@ $execute = sub
 $timed = sub
 {
         system("date");
-        print "lib_procapi_pidtracking-byenv HUNG !!!!!!!!!!!!!!!!!!\n";
+        CondorTest::debug("lib_procapi_pidtracking-byenv HUNG !!!!!!!!!!!!!!!!!!\n",1);
         exit(1);
 };
 
@@ -98,12 +98,12 @@ $ExitSuccess = sub {
 		$linesoftext = $outputlines;
 		if($linesoftext == 0)
 		{
-			print "Wrong ps options!\n";
+			CondorTest::debug("Wrong ps options!\n",1);
 			$pscmd = "ps -ax";
 		}
 		else
 		{
-			print "Ps delivered $linesoftext too check!\n";
+			CondorTest::debug("Ps delivered $linesoftext too check!\n",1);
 		}
 	}
 
@@ -123,7 +123,7 @@ $ExitSuccess = sub {
 				{
 					if($thispid eq $pidcheck)
 					{
-						print "Test fails because pid $pidcheck should have been removed\n";
+						CondorTest::debug("Test fails because pid $pidcheck should have been removed\n",1);
 						$worked = "no";
 						system("kill -9 $pidcheck");
 					}
@@ -132,7 +132,7 @@ $ExitSuccess = sub {
 				{
 					if($thispid eq $pidcheck)
 					{
-						print "Test fails because pid $pidcheck should have been removed\n";
+						CondorTest::debug("Test fails because pid $pidcheck should have been removed\n",1);
 						$worked = "no";
 						system("kill -9 $pidcheck");
 					}
@@ -149,7 +149,7 @@ $ExitSuccess = sub {
 				{
 					if($thispid eq $pidcheck)
 					{
-						print "Test fails because pid $pidcheck should have been removed\n";
+						CondorTest::debug("Test fails because pid $pidcheck should have been removed\n",1);
 						$worked = "no";
 						system("kill -9 $pidcheck");
 					}
@@ -158,7 +158,7 @@ $ExitSuccess = sub {
 				{
 					if($thispid eq $pidcheck)
 					{
-						print "Test fails because pid $pidcheck should have been removed\n";
+						CondorTest::debug("Test fails because pid $pidcheck should have been removed\n",1);
 						$worked = "no";
 						system("kill -9 $pidcheck");
 					}
@@ -171,12 +171,12 @@ $ExitSuccess = sub {
 
 	if($worked eq "no")
 	{
-		print "Test failed......\n";
+		CondorTest::debug("Test failed......\n",1);
 		exit(1);
 	}
 	else
 	{
-		print "Test Worked......\n";
+		CondorTest::debug("Test Worked......\n",1);
 	}
 
 
@@ -209,7 +209,7 @@ CondorTest::RegisterExecute($testname, $execute);
 #empty local environment and add only a few things that way......
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	print "$testname: SUCCESS\n";
+	CondorTest::debug("$testname: SUCCESS\n",1);
 	exit(0);
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";

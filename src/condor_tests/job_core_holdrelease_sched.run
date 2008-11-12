@@ -44,21 +44,21 @@ $execute = sub {
 		#CondorTest::RegisterTimed($testname, $timed, 600);
 	}
 	
-	print "Putting cluster $cluster on hold\n";
+	CondorTest::debug("Putting cluster $cluster on hold\n",1);
 	my @adarray;
 	my $status = 1;
 	my $cmd = "condor_hold $cluster";
 	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
 	if($status == 0)
 	{
-		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 		exit(1)
 	}
 
 };
 
 $abort = sub {
-	print "Job is gone now, cool.\n";
+	CondorTest::debug("Job is gone now, cool.\n",1);
 };
 
 $hold = sub
@@ -66,15 +66,15 @@ $hold = sub
 	my %args = @_;
 	my $cluster = $args{"cluster"};
 
-	print "Good. Cluster $cluster is supposed to be held.....\n";
-	print "Releasing cluster $cluster\n";
+	CondorTest::debug("Good. Cluster $cluster is supposed to be held.....\n",1);
+	CondorTest::debug("Releasing cluster $cluster\n",1);
 	my @adarray;
 	my $status = 1;
 	my $cmd = "condor_release $cluster";
 	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
 	if($status == 0)
 	{
-		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 		exit(1)
 	}
 	# must reschedule to get released job out of Inactive and into Running
@@ -82,7 +82,7 @@ $hold = sub
 	$stat = CondorTest::runCondorTool($cmd,\@adarray,2);
 	if($stat == 0)
 	{
-		print "Test failed - could not reschedule\n";
+		CondorTest::debug("Test failed - could not reschedule\n",1);
 		exit(1);
 	}
 };
@@ -92,12 +92,12 @@ $release = sub
 	my %args = @_;
 	my $cluster = $args{"cluster"};
 
-	print "Good hold and release both worked! removing job\n";
+	CondorTest::debug("Good hold and release both worked! removing job\n",1);
 	$cmd = "condor_rm $cluster";
 	$stat = CondorTest::runCondorTool($cmd,\@adarray,2);
 	if($stat == 0)
 	{
-		print "Test worked but runCondorTool $cmd failed\n";
+		CondorTest::debug("Test worked but runCondorTool $cmd failed\n",1);
 		exit(0);
 	}
 };
@@ -119,7 +119,7 @@ CondorTest::RegisterRelease($testname, $release);
 CondorTest::RegisterExitedSuccess($testname, $success);
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	print "$testname: SUCCESS\n";
+	CondorTest::debug("$testname: SUCCESS\n",1);
 	exit(0);
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";

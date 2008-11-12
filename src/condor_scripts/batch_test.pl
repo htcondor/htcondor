@@ -58,7 +58,10 @@ use FileHandle;
 use POSIX "sys_wait_h";
 use Cwd;
 use CondorTest;
+#use CondorPersonal;	
 
+Condor::DebugOn();
+Condor::DebugLevel(2);
 
 #my $LogFile = "batch_test.log";
 #open(OLDOUT, ">&STDOUT");

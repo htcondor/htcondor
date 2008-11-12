@@ -43,7 +43,7 @@ my @personal = split /\+/, $configrem;
 my $personalconfig = shift @personal;
 my $personalport = shift @personal;
 
-print "---personal config is $personalconfig and personal port is $personalport---\n";
+CondorTest::debug("---personal config is $personalconfig and personal port is $personalport---\n",1);
 
 
 #Run in this newly created pool
@@ -67,7 +67,7 @@ my $cmd = "condor_off -fast -master";
 $status = CondorTest::runCondorTool($cmd,\@adarray,2);
 if(!$status)
 {
-    print "Test failure due to Condor Tool Failure<$cmd>\n";
+    CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
     exit(1)
 }
 

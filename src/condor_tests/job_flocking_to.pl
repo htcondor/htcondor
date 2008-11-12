@@ -28,7 +28,7 @@ $submitted = sub
 {
 	my %info = @_;
 	my $name = $info{"error"};
-	print "Flocking job submitted\n";
+	CondorTest::debug("Flocking job submitted\n",1);
 };
 
 $aborted = sub 
@@ -53,7 +53,7 @@ $execute = sub
 
 $ExitSuccess = sub {
 	my %info = @_;
-	print "Flocking job completed without error\n";
+	CondorTest::debug("Flocking job completed without error\n",1);
 };
 
 
@@ -65,7 +65,7 @@ CondorTest::RegisterSubmit( $testname, $submitted );
 
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	print "$testname: SUCCESS\n";
+	CondorTest::debug("$testname: SUCCESS\n",1);
 	exit(0);
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";

@@ -35,7 +35,7 @@ $submit = sub {
 	$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
 	if(!$cmdstatus)
 	{
-		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 		exit(1)
 	}
 
@@ -46,18 +46,18 @@ $submit = sub {
 	while(<CMD>) {
 		chomp($_);
 		$submitline = $_;
-		print "Scraping cluster from submit file\n";
-		print "hmmmm<$submitline>\n";
+		CondorTest::debug("Scraping cluster from submit file\n",1);
+		CondorTest::debug("hmmmm<$submitline>\n",1);
 		if($submitline =~ /^.*cluster\s+(\d+).*$/) {
 			$cluster = $1;
-			print "Found my cluster which is $cluster!\n";
+			CondorTest::debug("Found my cluster which is $cluster!\n",1);
 		}
 	}
 
 	$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
 	if(!$cmdstatus)
 	{
-		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 		exit(1)
 	}
 
@@ -65,13 +65,13 @@ $submit = sub {
 
 	foreach $line (@adarray) {
 		chomp($line);
-		print "$line\n";
+		CondorTest::debug("$line\n",1);
 		if($line =~ /^\s*([\w\-]+)\s+ClusterId\s+=\s+$clusters.*$/) {
-				print "Bingo: found <$line> shows I am $1\n";
+				CondorTest::debug("Bingo: found <$line> shows I am $1\n",1);
 				$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,8);
 				return(0);
 		} else {
-			print "<<<$line>>>\n";
+			CondorTest::debug("<<<$line>>>\n",1);
 		}
 	}
 
@@ -80,7 +80,7 @@ $submit = sub {
 };
 
 $aborted = sub {
-	print "If all is good we abort our own job.......\n";
+	CondorTest::debug("If all is good we abort our own job.......\n",1);
 	exit(0);
 };
 
@@ -93,7 +93,7 @@ CondorTest::RegisterSubmit($testname, $submit);
 CondorTest::RegisterExitedSuccess( $testname, $ExitSuccess );
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	print "$testname: SUCCESS\n";
+	CondorTest::debug("$testname: SUCCESS\n",1);
 	exit(0);
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";

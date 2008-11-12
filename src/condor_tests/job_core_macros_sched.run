@@ -65,16 +65,16 @@ $success = sub
 
 	chdir;
 	$home = getcwd;
-	print "My home is $home\n";
-	print "My host is $host\n";
+	CondorTest::debug("My home is $home\n",1);
+	CondorTest::debug("My host is $host\n",1);
 	chdir($workdir);
 	load_up_lines();
 	foreach my $item ( @lines )
 	{
-		print "ARG -$item-\n";
+		CondorTest::debug("ARG -$item-\n",1);
 	}
 	$random = $lines[5];
-	print "RANDOM is $random\n";
+	CondorTest::debug("RANDOM is $random\n",1);
 
 	if( $random < 2 )
 	{
@@ -92,7 +92,7 @@ CondorTest::RegisterExitedSuccess( $testname, $success );
 
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	print "$testname: SUCCESS\n";
+	CondorTest::debug("$testname: SUCCESS\n",1);
 	exit(0);
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";

@@ -33,12 +33,12 @@ CondorTest::MergeOutputFiles(\%listoftests);
 
 if($nostatus != 0)
 {
-	print "ON_EXIT_REMOVE: failed no trigger test\n";
+	CondorTest::debug("ON_EXIT_REMOVE: failed no trigger test\n",1);
 }
 
 if($willstatus != 0)
 {
-	print "ON_EXIT_REMOVE: failed trigger test\n";
+	CondorTest::debug("ON_EXIT_REMOVE: failed trigger test\n",1);
 }
 
 if(($willstatus != 0) || ($nostatus != 0))

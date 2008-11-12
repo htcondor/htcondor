@@ -28,7 +28,7 @@ $testname = 'Syscall Test';
 CondorTest::RegisterExitedSuccess( $testname, sub { return 1 } );
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
-    print "$testname: SUCCESS\n";
+    CondorTest::debug("$testname: SUCCESS\n",1);
     exit(0);
 } else {
     die "$testname: CondorTest::RunTest() failed\n";

@@ -39,7 +39,7 @@ $executed = sub
 	%info = @_;
 	$cluster = $info{"cluster"};
 
-	print "Good. for on_exit_hold cluster $cluster must run first\n";
+	CondorTest::debug("Good. for on_exit_hold cluster $cluster must run first\n",1);
 };
 
 $success = sub
@@ -48,14 +48,14 @@ $success = sub
 	my $cluster = $info{"cluster"};
 	my $job = $info{"job"};
 
-	print "Good, good job - $job - should complete trivially\n";
+	CondorTest::debug("Good, good job - $job - should complete trivially\n",1);
 };
 
 CondorTest::RegisterExecute($testname, $executed);
 CondorTest::RegisterExitedSuccess( $testname, $success );
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	print "$testname: SUCCESS\n";
+	CondorTest::debug("$testname: SUCCESS\n",1);
 	exit(0);
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";
