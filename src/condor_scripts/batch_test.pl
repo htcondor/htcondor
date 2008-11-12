@@ -482,11 +482,15 @@ foreach $compiler (@compilers)
 
 		# allow multiple runs easily
 		my $repeatcounter = 0;
-		debug("Want $repeat runs of each test\n",2);
+		if( $hush == 0 ) {
+			debug("Want $repeat runs of each test\n",3);
+		}
 		while($repeatcounter < $repeat) {
 
 	        $pid = fork();
-			debug( "forking for $test_program pid returned is $pid\n",2);
+			if( $hush == 0 ) {
+				debug( "forking for $test_program pid returned is $pid\n",3);
+			}
 	        die "error calling fork(): $!\n" unless defined $pid;
 
 			# two modes 
@@ -517,7 +521,7 @@ foreach $compiler (@compilers)
 
 						#finally
 	        			($test_name) = $test{$child} =~ /(.*)\.run$/;
-						debug( "Done Waiting on test($test_name)\n",2);
+						debug( "Done Waiting on test($test_name)\n",3);
 
 	        			# record the child's return status
 	        			$status = $?;
@@ -531,7 +535,9 @@ foreach $compiler (@compilers)
 			} else {
 				if( $pid > 0 ) {
 	            	$test{$pid} = "$test_program";
-					debug( "Started test: $test_program/$pid\n",2);
+					if( $hush == 0 ) {
+						debug( "Started test: $test_program/$pid\n",3);
+					}
 	            	sleep 1;
 					next;
 				} else { # child
@@ -1289,7 +1295,9 @@ sub DoChild
 	my $res;
  	eval {
             alarm($test_retirement);
-			debug( "Child Starting:perl $test_program > $test_program.out\n",2);
+			if( $hush == 0 ) {
+				debug( "Child Starting:perl $test_program > $test_program.out\n",3);
+			}
 			CoreCheck("shush");
 			CoreClear();
 			$res = system("perl $test_program > $test_program.out 2>&1");
@@ -1373,7 +1381,7 @@ sub debug
     my $string = shift;
 	my $level = shift;
 	my $newstring = "BT:$string";
-	Condor::debug($string,$level);
+	Condor::debug($newstring,$level);
 }
 
 sub DebugOn
