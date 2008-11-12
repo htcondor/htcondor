@@ -87,6 +87,7 @@
 
 #if HAVE_DLOPEN
 #include "ScheddPlugin.h"
+#include "ClassAdLogPlugin.h"
 #endif
 
 #define DEFAULT_SHADOW_SIZE 125
@@ -2552,7 +2553,7 @@ jobIsFinished( int cluster, int proc, void* )
 				if( ! recursive_chown(sandbox.Value(), src_uid,
 									  dst_uid, dst_gid, true) )
 				{
-					dprintf( D_ALWAYS, "(%d.%d) Failed to chown %s from "
+					dprintf( D_FULLDEBUG, "(%d.%d) Failed to chown %s from "
 							 "%d to %d.%d.  User may run into permissions "
 							 "problems when fetching sandbox.\n", 
 							 cluster, proc, sandbox.Value(),
@@ -10874,6 +10875,11 @@ Scheduler::shutdown_fast()
 	dprintf( D_FULLDEBUG, "Canceled/Closed %d socket(s) at shutdown\n",
 			 num_closed ); 
 
+#if HAVE_DLOPEN
+	ScheddPluginManager::Shutdown();
+	ClassAdLogPluginManager::Shutdown();
+#endif
+
 	dprintf( D_ALWAYS, "All shadows have been killed, exiting.\n" );
 	DC_Exit(0);
 }
@@ -10909,6 +10915,11 @@ Scheduler::schedd_exit()
 	shadowCommandssock = NULL;
 	dprintf( D_FULLDEBUG, "Canceled/Closed %d socket(s) at shutdown\n",
 			 num_closed ); 
+
+#if HAVE_DLOPEN
+	ScheddPluginManager::Shutdown();
+	ClassAdLogPluginManager::Shutdown();
+#endif
 
 	dprintf( D_ALWAYS, "All shadows are gone, exiting.\n" );
 	DC_Exit(0);

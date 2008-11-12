@@ -257,6 +257,7 @@ DC_Exit( int status, const char *shutdown_program )
 	}
 
 		// Now, delete the daemonCore object, since we allocated it. 
+	unsigned long	pid = daemonCore->getpid( );
 	delete daemonCore;
 	daemonCore = NULL;
 
@@ -277,15 +278,16 @@ DC_Exit( int status, const char *shutdown_program )
 		*/
 	if ( shutdown_program ) {
 #     if (HAVE_EXECL)
-		dprintf( D_ALWAYS, "**** %s (%s_%s) EXITING BY EXECING %s\n",
-				 myName, myDistro->Get(), mySubSystem->getName(),
+		dprintf( D_ALWAYS, "**** %s (%s_%s) pid %lu EXITING BY EXECING %s\n",
+				 myName, myDistro->Get(), mySubSystem->getName(), pid,
 				 shutdown_program );
 		int exec_status = execl( shutdown_program, shutdown_program, NULL );
 		dprintf( D_ALWAYS, "**** execl() FAILED %d %d %s\n",
 				 exec_status, errno, strerror(errno) );
 #     elif defined(WIN32)
-		dprintf( D_ALWAYS, "**** %s (%s_%s) EXECING SHUTDOWN PROGRAM %s\n",
-				 myName, myDistro->Get(), mySubSystem->getName(),
+		dprintf( D_ALWAYS,
+				 "**** %s (%s_%s) pid %lu EXECING SHUTDOWN PROGRAM %s\n",
+				 myName, myDistro->Get(), mySubSystem->getName(), pid,
 				 shutdown_program );
 		int exec_status = execl( shutdown_program, shutdown_program, NULL );
 		if ( exec_status ) {
@@ -296,8 +298,9 @@ DC_Exit( int status, const char *shutdown_program )
 		dprintf( D_ALWAYS, "**** execl() not available on this system\n" );
 #     endif
 	}
-	dprintf( D_ALWAYS, "**** %s (%s_%s) EXITING WITH STATUS %d\n",
-			 myName, myDistro->Get(), mySubSystem->getName(), exit_status );
+	dprintf( D_ALWAYS, "**** %s (%s_%s) pid %lu EXITING WITH STATUS %d\n",
+			 myName, myDistro->Get(), mySubSystem->getName(), pid,
+			 exit_status );
 
 		// Finally, exit with the appropriate status.
 	exit( exit_status );

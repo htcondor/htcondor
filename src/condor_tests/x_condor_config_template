@@ -729,6 +729,12 @@ RESERVED_DISK		= 5
 #HIGHPORT = 9700 
 #LOWPORT = 9600
 
+##  If a daemon doens't respond for too long, do you want go generate
+##  a core file?  This bascially controls the type of the signal
+##  sent to the child process, and mostly affects the Condor Master
+NOT_RESPONDING_WANT_CORE	= True
+
+
 ######################################################################
 ##  Daemon-specific settings:
 ######################################################################

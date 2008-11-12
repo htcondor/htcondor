@@ -57,6 +57,8 @@ class CollectorPlugin
 
 	virtual void initialize() = 0;
 
+	virtual void shutdown() = 0;
+
 		/**
 		 * Receive a ClassAd sent as part of an UPDATE_ command,
 		 * command int is provided.
@@ -75,6 +77,7 @@ class CollectorPluginManager : public PluginManager<CollectorPlugin>
 {
   public:
 	static void Initialize();
+	static void Shutdown();
 	static void Update(int command, const ClassAd &);
 	static void Invalidate(int command, const ClassAd &);
 	

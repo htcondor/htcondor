@@ -4,6 +4,7 @@ all_target( $(NAME) )
 CFLAGS = $(STD_C_FLAGS)
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
 LIB = $(DAEMONCORE_LIB) $(STD_LIBS) $(CONFIGURE_GSOAP_LDFLAGS)
+PUBLIC_INSTALL_DIR = src/startd_factory/BlueGeneP
 
 soapobjs(startd_factory)
 
@@ -21,8 +22,8 @@ public_copy_target(bgp_boot_partition,libexec,bgp_boot_partition,EXECUTABLE_MODE
 public_copy_target(bgp_shutdown_partition,libexec,bgp_shutdown_partition,EXECUTABLE_MODE)
 public_copy_target(bgp_back_partition,libexec,bgp_back_partition,EXECUTABLE_MODE)
 
-public_copy_target(htc_list_partitions.c,libexec,htc_list_partitions.c,TEXT_MODE)
-public_copy_target(htc_tool.c,libexec,htc_tool.c,TEXT_MODE)
+public_copy_target(htc_list_partitions.c,$(PUBLIC_INSTALL_DIR),htc_list_partitions.c,TEXT_MODE)
+public_copy_target(htc_tool.c,$(PUBLIC_INSTALL_DIR),htc_tool.c,TEXT_MODE)
 
 html:
 release:: all

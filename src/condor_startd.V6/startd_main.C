@@ -621,6 +621,10 @@ startd_exit()
 	systray_notifier.notifyCondorOff();
 #endif
 
+#if HAVE_DLOPEN
+	StartdPluginManager::Shutdown();
+#endif
+
 	dprintf( D_ALWAYS, "All resources are free, exiting.\n" );
 	DC_Exit(0);
 }

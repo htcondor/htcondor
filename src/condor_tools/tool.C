@@ -413,7 +413,6 @@ main( int argc, char *argv[] )
 		// First, deal with options (begin with '-')
 	tmp = argv;
 	for( tmp++; *tmp; tmp++ ) {
-		printf ("'%s'\n", *tmp );
 		if( (*tmp)[0] != '-' ) {
 				// If it doesn't start with '-', skip it
 			continue;

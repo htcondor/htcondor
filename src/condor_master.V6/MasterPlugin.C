@@ -35,6 +35,17 @@ MasterPluginManager::Initialize()
 }
 
 void
+MasterPluginManager::Shutdown()
+{
+	MasterPlugin *plugin;
+	SimpleList<MasterPlugin *> plugins = getPlugins();
+	plugins.Rewind();
+	while (plugins.Next(plugin)) {
+		plugin->shutdown();
+	}
+}
+
+void
 MasterPluginManager::Update(const ClassAd *ad)
 {
 	MasterPlugin *plugin;
