@@ -1180,7 +1180,7 @@ sub debug
     my $string = shift;
 	my $level = shift;
 	my $newstring = "CT:$string";
-	Condor::debug($string,$level);
+	Condor::debug($newstring,$level);
 }
 
 1;

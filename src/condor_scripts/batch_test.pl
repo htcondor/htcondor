@@ -61,7 +61,7 @@ use CondorTest;
 #use CondorPersonal;	
 
 Condor::DebugOn();
-Condor::DebugLevel(2);
+Condor::DebugLevel(1);
 
 #my $LogFile = "batch_test.log";
 #open(OLDOUT, ">&STDOUT");
