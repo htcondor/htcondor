@@ -158,7 +158,10 @@ void ExceptionHandler::GenerateExceptionReport(
 		return;    
 	}    
 	ImagehlpStackWalk( pCtx );
-    _SymCleanup( GetCurrentProcess() );    _tprintf( _T("\n") );
+    _SymCleanup( GetCurrentProcess() );    
+	// Just to make sure we didn't get cut off whilst dumping a core
+	// file, we print a footer that should allways appear.
+	_tprintf( _T("\n//=====================================================\n") );
 }
 //======================================================================
 // Given an exception code, returns a pointer to a static string with a 
