@@ -137,6 +137,18 @@ numbers of startds.
   on page \pageref{param:CreateCoreFiles}
   for more details.
 
+\item Condor can now be configured to keep a backup of the job queue
+  log on a local filesystem in case \Condor{schedd} operations
+  involving writes, flushes, or syncs to the job queue log fail.  This
+  is most likely to happen when the job queue log is stored on a
+  network filesystem like NFS. Such a backup enables an administrator
+  to see that a job failed to submit, but does not perform any
+  automatic recovery.  See below for the these configuration parameters.
+
+\item Added preliminary support for ``Green Computing''.  This is
+  supported only on Linux and Windows.
+  See section~\ref{sec:power-man} on page~\pageref{sec:power-man} on
+  ``Power Management'' for more details.
 
 \end{itemize}
 
@@ -203,34 +215,25 @@ numbers of startds.
   feature and \MacroNI{NOT\_RESPONDING\_WANT\_CORE} on page
   \pageref{param:NotRespondingWantCore} for details.
 
-\item Condor can now be configured to keep a backup of the job queue
-  log on a local filesystem in case \Condor{schedd} operations
-  involving writes, flushes, or syncs to the job queue log fail.  This
-  is most likely to happen when the job queue log is stored on a
-  network filesystem like NFS. Such a backup enables an administrator
-  to see that a job failed to submit, but does not perform any
-  automatic recovery.  This feature adds the following configuration
-  parameters:
-  \begin{enumerate}
-  \item The configuration parameter \Macro{LOCAL\_QUEUE\_BACKUP\_DIR}
-    should be set to the pathname of a directory that is writable by
-    the Condor user and is located on a non-network filesystem.
-  \item The configuration parameter
-    \Macro{LOCAL\_XACT\_BACKUP\_FILTER} controls whether or not the
-    \Condor{schedd} will attempt to keep backups of transactions that
-    were not written the job queue log.  If it is set to to
-    \Macro{FAILED}, the \Condor{schedd} will attempt to keep a backup
-    of the transation in the local queue backup directory (defined
-    above) only if operations fail on the job queue log.  If it is set
-    to none \Macro{NONE}, no backups should be performed even in the
-    event of failure.  If it is set to \Macro{ALL}, then at all
-    transactions should be backed up.  (The \Macro{ALL} option will
-    create quite a large number of files and slow the \Condor{schedd}
-    substantially; it is only likely to be useful for users who are
-    developing or debugging Condor.)
+\item The configuration parameter \Macro{LOCAL\_QUEUE\_BACKUP\_DIR}
+  should be set to the pathname of a directory that is writable by
+  the Condor user and is located on a non-network filesystem.
+  This is part of the ``Job Queue Backup'' feature, above.
 
-  \end{enumerate}
-
+\item The configuration parameter
+  \Macro{LOCAL\_XACT\_BACKUP\_FILTER} controls whether or not the
+  \Condor{schedd} will attempt to keep backups of transactions that
+  were not written the job queue log.  If it is set to to
+  \Macro{FAILED}, the \Condor{schedd} will attempt to keep a backup
+  of the transation in the local queue backup directory (defined
+  above) only if operations fail on the job queue log.  If it is set
+  to none \Macro{NONE}, no backups should be performed even in the
+  event of failure.  If it is set to \Macro{ALL}, then at all
+  transactions should be backed up.  (The \Macro{ALL} option will
+  create quite a large number of files and slow the \Condor{schedd}
+  substantially; it is only likely to be useful for users who are
+  developing or debugging Condor.)
+  This is part of the ``Job Queue Backup'' feature, above.
 
 \end{itemize}
 
