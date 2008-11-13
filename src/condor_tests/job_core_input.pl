@@ -25,6 +25,6 @@ use CondorTest;
 while( <> )
 {
 	CondorTest::fullchomp($_);
-	CondorTest::debug("$_\n",1);
+	print "$_\n";
 }
 

@@ -53,15 +53,15 @@ close(OLDOUT);
 
 if( $pre != $precount )
 {
-	CondorTest::debug("$precount",1);
+	print "$precount";
 	exit(1)
 }
 
 if( $post != $postcount )
 {
-	CondorTest::debug("$postcount",1);
+	print "$postcount";
 	exit(1)
 }
 
-CondorTest::debug("0",1);
+print "0";
 exit(0);

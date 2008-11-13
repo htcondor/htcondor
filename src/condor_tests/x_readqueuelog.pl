@@ -46,11 +46,11 @@ close(OLDOUT);
 
 if($count != $limit)
 {
-	CondorTest::debug("$count",1);
+	print "$count";
 }
 else
 {
-	CondorTest::debug("0\n",1);
+	print "0\n";
 }
 
 exit(0);

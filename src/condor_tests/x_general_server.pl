@@ -26,6 +26,8 @@ my $SockAddr = $ARGV[0];
 my $LogFile = $ARGV[1];
 my $raw = $ARGV[2];
 
+print "general server log file is $LogFile\n";
+
 open(OLDOUT, ">&STDOUT");
 open(OLDERR, ">&STDERR");
 open(STDOUT, ">$LogFile") or die "Could not open $LogFile: $!";

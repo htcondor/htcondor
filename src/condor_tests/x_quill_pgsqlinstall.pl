@@ -268,17 +268,17 @@ $command = Expect->spawn("$prefix/bin/createuser quillreader --port $startpostma
 unless($command->expect(10,"Enter password for new user: ")) {
 	die "Quillreader Password request never happened\n";
 }
-CondorTest::debug("condor4me#\n",1);
+print $command "condor4me#\n";
 
 unless($command->expect(10,"Enter it again: ")) {
 	die "Password confirmation never happened\n";
 }
-CondorTest::debug("condor4me#\n",1);
+print $command "condor4me#\n";
 
 #unless($command->expect(10,"Shall the new role be allowed to create more new roles? (y/n)")) {
 	#die "Password request never happened\n";
 #}
-CondorTest::debug("n\n",1);
+print $command "n\n";
 $command->soft_close();
 
 CondorTest::debug("Create quillwriter\n",1);
@@ -288,17 +288,17 @@ $command->log_stdout(0);
 unless($command->expect(10,"Enter password for new user: ")) {
 	die "Quillwriter Password request never happened\n";
 }
-CondorTest::debug("condor4me#\n",1);
+print $command "condor4me#\n";
 
 unless($command->expect(10,"Enter it again: ")) {
 	die "Password confirmation never happened\n";
 }
-CondorTest::debug("condor4me#\n",1);
+print $command "condor4me#\n";
 
 #unless($command->expect(10,"Shall the new role be allowed to create more new roles? (y/n)")) {
 	#die "Password request never happened\n";
 #}
-CondorTest::debug("n\n",1);
+print $command "n\n";
 $command->soft_close();
 
 #save PGPASS date for Condor to grab......
@@ -323,17 +323,17 @@ $command->log_stdout(0);
 unless($command->expect(10,"test=>")) {
 	die "Expected psql prompt for test db\n";
 }
-CondorTest::debug("\\i $testsrc/../condor_tt/common_createddl.sql\n",1);
+print $command "\\i $testsrc/../condor_tt/common_createddl.sql\n";
 
 unless($command->expect(180,"test=>")) {
 	die "Prompt after attempted install of common schema failed\n";
 }
-CondorTest::debug("\\i $testsrc/../condor_tt/pgsql_createddl.sql\n",1);
+print $command "\\i $testsrc/../condor_tt/pgsql_createddl.sql\n";
 
 unless($command->expect(180,"test=>")) {
 	die "Prompt after attempted install of postgress schema failed\n";
 }
-CondorTest::debug("\quit\n",1);
+print $command "\quit\n";
 $command->soft_close();
 
 CondorTest::debug("Postgress built and set up: ",1);

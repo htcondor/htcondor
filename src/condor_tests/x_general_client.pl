@@ -28,6 +28,8 @@ my $MAXLEN = 1024;
 my $comchan = $ARGV[0];
 my $newmsg = $ARGV[1];
 
+print "$comchan for mesg $newmsg\n";
+
 my $client = IO::Socket::UNIX->new(Peer => "$comchan",
 								Type  => SOCK_DGRAM,
 								Timeout => 10)
