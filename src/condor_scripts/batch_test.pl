@@ -60,6 +60,24 @@ use Cwd;
 use CondorTest;
 #use CondorPersonal;	
 
+#################################################################
+#
+# Debug messages get time stamped. These will start showing up
+# at DEBUGLEVEL = 1.
+# 
+# level 1 - historic test output
+# level 2 - batch_test.pl output
+# level 4 - debug statements from CondorTest.pm
+# level 5 - debug statements from Condor.pm
+#
+# There is no reason not to have debug always on the the level
+# pretty completely controls it. All DebugOff calls
+# have been removed.
+#
+# CondorPersonal.pm has a similar but separate mechanism.
+#
+#################################################################
+
 Condor::DebugOn();
 Condor::DebugLevel(1);
 
