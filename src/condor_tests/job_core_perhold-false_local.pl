@@ -43,7 +43,7 @@ $executed = sub {
 	%info = @_;
 	$cluster = $info{"cluster"};
 	$job = $info{"job"};
-	print "Good - Job $cluster.$job began execution.\n";
+	CondorTest::debug("Good - Job $cluster.$job began execution.\n",1);
 };
 
 ##
@@ -55,7 +55,7 @@ $held = sub {
 	%info = @_;
 	$cluster = $info{"cluster"};
 	$job = $info{"job"};
-	print "Bad - Job $cluster.$job should not be on hold.\n";
+	CondorTest::debug("Bad - Job $cluster.$job should not be on hold.\n",1);
 	exit(1);
 };
 
@@ -76,8 +76,8 @@ $success = sub {
 		&$held( %info ) if defined $held;
 		return;
 	}
-	print "Good - Job $cluster.$job finished executing and exited.\n";
-	print "Policy Test Completed\n";
+	CondorTest::debug("Good - Job $cluster.$job finished executing and exited.\n",1);
+	CondorTest::debug("Policy Test Completed\n",1);
 };
 
 CondorTest::RegisterExecute($testname, $executed);
@@ -85,7 +85,7 @@ CondorTest::RegisterExitedSuccess( $testname, $success );
 CondorTest::RegisterHold( $testname, $held );
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	print "$testname: SUCCESS\n";
+	CondorTest::debug("$testname: SUCCESS\n",1);
 	exit(0);
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";

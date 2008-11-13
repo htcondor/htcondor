@@ -23,8 +23,6 @@ use CondorPersonal;
 use Cwd;
 use x_hadutilities;
 
-CondorPersonal::DebugOff();
-Condor::DebugOff();
 
 my $testName     = 'job_had_basic - Testing HAD functionality';
 my $coreName     = 'job_had_basic';
@@ -50,7 +48,7 @@ if(! -f "$topDirectory/$testingSystemConfigName")
 	exit 1;
 }
 
-print "Working directory is $topDirectory\n";
+CondorTest::debug("Working directory is $topDirectory\n",1);
 
 # Operating system environment variables of the test
 my $currentHost = CondorTest::getFqdnHost();
@@ -352,7 +350,7 @@ while($time - $startTimer <= $configurationTable{RUN_TIME})
 
 &MoveAllToSaveDirectory();
 
-print "$coreName test SUCCESS!\n";
+CondorTest::debug("$coreName test SUCCESS!\n",1);
 ### End of main ###
 
 ### Checkers ###
@@ -1201,7 +1199,7 @@ sub RaiseMachines
 				$hadsStatus[$hadIndex] eq RAISED ||
 				$hadRaiseTimers[$hadIndex] >= $time;
 		
-		print "Raise hadindex <<$hadIndex>>\n";
+		CondorTest::debug("Raise hadindex <<$hadIndex>>\n",1);
 		# Restart condor instance
 #		my $localConfigFile = &GetCondorLocalConfigurationFile();
 		my $localPostSourceFile = "$topDirectory/$localPostSourceName";

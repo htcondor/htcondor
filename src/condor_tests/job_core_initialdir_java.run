@@ -35,12 +35,12 @@ $ExitSuccess = sub
 	my %info = @_;
 
 	my $goal = "";
-	print "Looking for $goal\n";
+	CondorTest::debug("Looking for $goal\n",1);
 #	# Pull out requested environment values
 	my $logs   = $info{"log"};
-	print "Log is $logs\n";
+	CondorTest::debug("Log is $logs\n",1);
 	my $initialdir = $info{"initialdir"};
-	print "initialdir is $initialdir\n";
+	CondorTest::debug("initialdir is $initialdir\n",1);
 	$goal = "$initialdir" . "/" . "$logs";
 	if( ! -s $goal )
 	{
@@ -54,7 +54,7 @@ $ExitSuccess = sub
 CondorTest::RegisterExitedSuccess( $testname, $ExitSuccess );
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	print "$testname: SUCCESS\n";
+	CondorTest::debug("$testname: SUCCESS\n",1);
 	exit(0);
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";

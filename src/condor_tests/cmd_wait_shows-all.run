@@ -28,14 +28,14 @@ my $pid = $$;
 system("rm -rf $pid");
 system("mkdir $pid");
 my $curcwd = getcwd();
-print "current directory is $curcwd\n";
+CondorTest::debug("current directory is $curcwd\n",1);
 
 my $socketname = "cmd_wait";
 my $resultfile = $curcwd . "/" . $pid . "/results";
 my $flowlog = $curcwd . "/" . $pid . "/cmd_wait_shows.log";
 my $writelog = "./x_write_joblog_events.exe";
 
-print "Result File is $resultfile\n";
+CondorTest::debug("Result File is $resultfile\n",1);
 
 system("chmod -R 777 .");
 
@@ -64,18 +64,18 @@ system("$writelog $flowlog execute 6");
 system("$writelog $flowlog terminated 6");
 
 while(!(-f $resultfile)) {
-	print "Waiting for $resultfile to exist\n";
+	CondorTest::debug("Waiting for $resultfile to exist\n",1);
 	sleep(2);
 }
 
-print "$resultfile exits!\n";
+CondorTest::debug("$resultfile exits!\n",1);
 
 while( (-s $resultfile) == 0 ) {
-	print "Waiting for results\n";
+	CondorTest::debug("Waiting for results\n",1);
 	sleep(2);
 }
 
-print "$resultfile not empty!\n";
+CondorTest::debug("$resultfile not empty!\n",1);
 
 open(RES,"<$resultfile") || die "Can not open <$resultfile>:$!\n";
 $line = "";
@@ -83,7 +83,7 @@ while(<RES>) {
 	$line = $_;
 	if($line =~ /^Exit\s+(\d+)\s+Signal\s+\d+$/) {
 		if($1 == 0) {
-			print "Exit status of 0, expected. Good!\n";
+			CondorTest::debug("Exit status of 0, expected. Good!\n",1);
 			exit(0);
 		} else {
 			exit(1);

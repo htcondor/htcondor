@@ -52,7 +52,7 @@ $ExitSuccess = sub
 
 	# Pull out requested environment values
 	my $args   = $info{"arguments"};
-	print "Args passed in are $args\n";
+	CondorTest::debug("Args passed in are $args\n",1);
 	if(!defined($args)) {
 	}
 };
@@ -60,7 +60,7 @@ $ExitSuccess = sub
 CondorTest::RegisterExitedSuccess( $testname, $ExitSuccess );
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
-    print "$testname: SUCCESS\n";
+    CondorTest::debug("$testname: SUCCESS\n",1);
     exit(0);
 } else {
     die "$testname: CondorTest::RunTest() failed\n";

@@ -20,7 +20,6 @@
 
 use CondorTest;
 
-Condor::DebugOff();
 
 $cmd      = 'job_quill_basic.cmd';
 $testname = 'Verify same data from schedd and rdbms';
@@ -56,7 +55,7 @@ sub compare_3arrays_byrows
 	$href = shift;
 	$delayedfail = 0;
 
-	print "Make sure they all have the same number of entries\n";
+	CondorTest::debug("Make sure they all have the same number of entries\n",1);
 
 	my $count1, $count2, $count3;
 
@@ -65,9 +64,9 @@ sub compare_3arrays_byrows
 	$count3 = $#{$harray3};
 
 	if ( ($count1 == $count2) && ($count1 == $count3)) {
-		print "Good the sizes<<$count1>> match up!!!!\n";
+		CondorTest::debug("Good the sizes<<$count1>> match up!!!!\n",1);
 	} else {
-		print "Compare failed because $count1, $count2 and $count3 are not the same\n";
+		CondorTest::debug("Compare failed because $count1, $count2 and $count3 are not the same\n",1);
 		$delayedfail = 1;
 		#return(1);
 	}
@@ -94,7 +93,7 @@ sub compare_3arrays_byrows
 			if((${$harray1}[$location] eq ${$harray2}[$location]) && (${$harray1}[$location] eq ${$harray3}[$location])) {
 				#print "Good match:${$harray1}[$location] at entry $location\n";
 			} else {
-				print "Match FAIL position <<$location>>: 1: ${$harray1}[$location] 2: ${$harray2}[$location] 3: ${$harray3}[$location]\n";
+				CondorTest::debug("Match FAIL position <<$location>>: 1: ${$harray1}[$location] 2: ${$harray2}[$location] 3: ${$harray3}[$location]\n",1);
 				return(1);
 			}
 		}
@@ -124,7 +123,7 @@ sub compare_2arrays_byrows
 	$href = shift;
 	$delayedfail = 0;
 
-	print "Make sure they all have the same number of entries\n";
+	CondorTest::debug("Make sure they all have the same number of entries\n",1);
 
 	my $count1, $count2;
 
@@ -132,18 +131,18 @@ sub compare_2arrays_byrows
 	$count2 = $#{$harray2};
 
 	if($count1 == $count2){
-		print "Good the sizes<<$count1>> match up!!!!\n";
+		CondorTest::debug("Good the sizes<<$count1>> match up!!!!\n",1);
 	} else {
-		print "Compare failed because $count1 and $count2 are not the same\n";
+		CondorTest::debug("Compare failed because $count1 and $count2 are not the same\n",1);
 		$delayedfail = 1;
 		#return(1);
 	}
 
 	$current = "";
 
-	print "Skip items follow:\n";
+	CondorTest::debug("Skip items follow:\n",1);
 	while (($key, $value) = each %{$href}) {
-		print "$key => $value\n";
+		CondorTest::debug("$key => $value\n",1);
 	}
 
 	while( $location < ($count1 + 1)) {
@@ -154,18 +153,18 @@ sub compare_2arrays_byrows
 		#print "Current<<$current>> Thiskey<<$thiskey>>\n";
 		#print "${$href}{$thiskey}\n";
 		if($current =~ /^.*Submitter.*$/) {
-			print "Skip Submitter entry\n";
-			print "${$harray1}[$location] vs ${$harray2}[$location]\n";
+			CondorTest::debug("Skip Submitter entry\n",1);
+			CondorTest::debug("${$harray1}[$location] vs ${$harray2}[$location]\n",1);
 		} elsif( exists ${$href}{$thiskey}) {
-			print "Skip compare of -$thiskey-\n";
-			print "${$harray1}[$location] vs ${$harray2}[$location]\n";
+			CondorTest::debug("Skip compare of -$thiskey-\n",1);
+			CondorTest::debug("${$harray1}[$location] vs ${$harray2}[$location]\n",1);
 		} else {
 			if(${$harray1}[$location] eq ${$harray2}[$location]){
 				#print "Good match:${$harray1}[$location] at entry $location\n";
 			} else {
-				print "Match FAIL position <<$location>>\n";
-				print "    schedd: ${$harray1}[$location]\n";
-				print "    rdbms : ${$harray2}[$location]\n";
+				CondorTest::debug("Match FAIL position <<$location>>\n",1);
+				CondorTest::debug("    schedd: ${$harray1}[$location]\n",1);
+				CondorTest::debug("    rdbms : ${$harray2}[$location]\n",1);
 				return(1);
 			}
 		}
@@ -175,7 +174,7 @@ sub compare_2arrays_byrows
 	}
 
 	if($delayedfail == 1) {
-		print "delayfail set so really failing\n";
+		CondorTest::debug("delayfail set so really failing\n",1);
 		return(1);
 	}
 	return(0);
@@ -185,7 +184,7 @@ $abort = sub
 {
 	if($aborthandled eq "no") {
 		$aborthandled = "yes";
-		print "Jobs Cleared out\n";
+		CondorTest::debug("Jobs Cleared out\n",1);
 	}
 };
 
@@ -193,7 +192,7 @@ $success = sub
 {
 	if($successhandled eq "no") {
 		$successhandled = "yes";
-		print "Jobs done\n";
+		CondorTest::debug("Jobs done\n",1);
 	}
 };
 
@@ -201,7 +200,7 @@ $release = sub
 {
 	if($releasehandled eq "no") {
 		$releasehandled = "yes";
-		print "Jobs running\n";
+		CondorTest::debug("Jobs running\n",1);
 	}
 
 };
@@ -219,17 +218,17 @@ $submitted = sub
 
 	sleep(60); # database settling time
 
-		print "75 submitted: <<<";
+		CondorTest::debug("75 submitted: <<<",1);
 		system("date");
-		print ">>>\n";
-		print "Collecting queue details from schedd\n";
+		CondorTest::debug(">>>\n",1);
+		CondorTest::debug("Collecting queue details from schedd\n",1);
 		my @adarray;
 		my $adstatus = 1;
 		my $adcmd = "condor_q -long  -direct schedd $cluster";
 		$adstatus = CondorTest::runCondorTool($adcmd,\@adarray,2);
 		if(!$adstatus)
 		{
-			print "Test failure due to Condor Tool Failure<$adcmd>\n";
+			CondorTest::debug("Test failure due to Condor Tool Failure<$adcmd>\n",1);
 			exit(1)
 		}
 
@@ -237,14 +236,14 @@ $submitted = sub
 		#{
 			#print "$line\n";
 		#}
-		print "Collecting queue details from rdbms\n";
+		CondorTest::debug("Collecting queue details from rdbms\n",1);
 		my @bdarray;
 		my $bdstatus = 1;
 		my $bdcmd = "condor_q -long  -direct rdbms $cluster";
 		$bdstatus = CondorTest::runCondorTool($bdcmd,\@bdarray,2);
 		if(!$bdstatus)
 		{
-			print "Test failure due to Condor Tool Failure<$bdcmd>\n";
+			CondorTest::debug("Test failure due to Condor Tool Failure<$bdcmd>\n",1);
 			exit(1)
 		}
 
@@ -253,8 +252,8 @@ $submitted = sub
 			#print "$line\n";
 		#}
 		$startrow = CondorTest::find_pattern_in_array("MyType", \@adarray);
-		print "Start row returned is $startrow\n";
-		print "Size of array is $#adarray\n";
+		CondorTest::debug("Start row returned is $startrow\n",1);
+		CondorTest::debug("Size of array is $#adarray\n",1);
 		%skip = ("Submitter", 1, "LocalSysCpu", 1, "LocalUserCpu", 1,
 					"Rank", 1, "RemoteSysCpu", 1, "RemoteWallClockTime", 1,
 					"ServerTime", 1, "RemoteUserCpu", 1, "Environment", 1);
@@ -263,7 +262,7 @@ $submitted = sub
 		@rdbmsads = sort(@bdarray);
 		$scheddout = "job_quill_basic.schedd_ads";
 		$rdbsout = "job_quill_basic.rdbms_ads";
-		print "Done sorting arrays\n";
+		CondorTest::debug("Done sorting arrays\n",1);
 		open(SCHEDD,">>$scheddout") or die "Can not open $scheddout:$!\n";
 		open(RDBS,">>$rdbsout") or die "Can not open $rdbsout:$!\n";
 		foreach $ad (@scheddads) {
@@ -282,7 +281,7 @@ $submitted = sub
 		if( $result != 0 ) {
 			die "Ads from all three sources were not the same!!!\n";
 		}
-		print "$testname: SUCCESS\n";
+		CondorTest::debug("$testname: SUCCESS\n",1);
 		exit(0);
 	}
 
@@ -294,7 +293,7 @@ CondorTest::RegisterRelease( $testname, $release );
 CondorTest::RegisterSubmit( $testname, $submitted );
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	print "$testname: SUCCESS\n";
+	CondorTest::debug("$testname: SUCCESS\n",1);
 	exit(0);
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";

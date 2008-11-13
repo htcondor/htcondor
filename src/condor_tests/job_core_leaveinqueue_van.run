@@ -33,12 +33,12 @@ CondorTest::MergeOutputFiles(\%listoftests);
 
 if($nostatus != 0)
 {
-	print "LEAVE_IN_QUEUE: failed no trigger test\n";
+	CondorTest::debug("LEAVE_IN_QUEUE: failed no trigger test\n",1);
 }
 
 if($willstatus != 0)
 {
-	print "LEAVE_IN_QUEUE: failed trigger test\n";
+	CondorTest::debug("LEAVE_IN_QUEUE: failed trigger test\n",1);
 }
 
 if(($willstatus != 0) || ($nostatus != 0))

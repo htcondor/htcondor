@@ -92,7 +92,7 @@ $submitted = sub {
 	$cluster = $info{"cluster"};
 	$job = $info{"job"};
 	
-	print "Good - Job $cluster.$job was submitted!\n";
+	CondorTest::debug("Good - Job $cluster.$job was submitted!\n",1);
 };	
 
 ##
@@ -114,10 +114,10 @@ $executed = sub {
 	my @result;
 	my $q_cmd = "_CONDOR_TOOL_DEBUG=D_ALL condor_q $cluster.$job -debug -format %d DeferralTime";
 	if ( ! CondorTest::runCondorTool($q_cmd, \@result, 3) ) {
-		print "ERROR: Unable to get DeferralTime due to Condor Tool Failure<$q_cmd>\n";
+		CondorTest::debug("ERROR: Unable to get DeferralTime due to Condor Tool Failure<$q_cmd>\n",1);
 	    exit(1);
 	}
-    print "Stderr with debug info for condor_q follows\n";
+    CondorTest::debug("Stderr with debug info for condor_q follows\n",1);
     system("cat runCTool$$");
 
 	$DEFERRAL_TIME = "@result";	
@@ -125,7 +125,7 @@ $executed = sub {
 	## We're screwed if we can't get out the time
 	##
 	if ( $DEFERRAL_TIME < 0 || !$DEFERRAL_TIME ) {
-		print "Bad - Unable to get DeferralTime for Job $cluster.$job!\n";
+		CondorTest::debug("Bad - Unable to get DeferralTime for Job $cluster.$job!\n",1);
 		exit(1);
 	}
 	
@@ -134,7 +134,7 @@ $executed = sub {
 	## Make sure that we haven't run more then we were suppose to
 	##
 	if ( ++$run_ctr > $max_run_ctr ) {
-		print "Bad - Job $cluster.$job has been executed $run_ctr times!\n";
+		CondorTest::debug("Bad - Job $cluster.$job has been executed $run_ctr times!\n",1);
 		my @result;
 		CondorTest::runCondorTool("condor_rm $cluster.$job", \@result, 3);
 		exit(1);
@@ -153,7 +153,7 @@ $executed = sub {
 		} elsif ( $run_ctr == 3 ) {
 			$suffix = "rd";
 		}
-		print "Good - Job $cluster.$job began execution for the ".
+		CondorTest::debug("Good - Job $cluster.$job began execution for the ",1);
 			  "$run_ctr$suffix time.\n";
 	}
 };
@@ -179,13 +179,13 @@ $evicted = sub {
 	## actual time spent executing
 	##
 	if ( $DEFERRAL_TIME <= 0 ) {
-		print "Bad - Job $cluster.$job was requeued but we don't have a ".
+		CondorTest::debug("Bad - Job $cluster.$job was requeued but we don't have a ",1);
 			  "DeferralTime from when it started executing!\n";
 		exit(1);
 	}
 	
-	print "\tEVICTION_TIME: $evictionTime\n";
-	print "\tDEFERRAL_TIME: $DEFERRAL_TIME\n";
+	CondorTest::debug("\tEVICTION_TIME: $evictionTime\n",1);
+	CondorTest::debug("\tDEFERRAL_TIME: $DEFERRAL_TIME\n",1);
 	
 	##
 	## If the job didn't execute for long enough, that means something
@@ -193,7 +193,7 @@ $evicted = sub {
 	##
 	my $sleep = $evictionTime - $DEFERRAL_TIME;
 	if ( $sleep < $SLEEP_TIME ) {
-		print "Bad - Job $cluster.$job only ran for $sleep seconds. ".
+		CondorTest::debug("Bad - Job $cluster.$job only ran for $sleep seconds. ",1);
 			  "Should have been $SLEEP_TIME seconds!\n";
 		exit(1);
 	}
@@ -203,22 +203,22 @@ $evicted = sub {
 	## sure that we are really being scheduled at proper intervals of time
 	##
 	if ( $LAST_DEFERRAL_TIME > 0 ) {
-		print "\tLAST_DEFFERAL_TIME: $LAST_DEFERRAL_TIME\n";
+		CondorTest::debug("\tLAST_DEFFERAL_TIME: $LAST_DEFERRAL_TIME\n",1);
 		##
 		## The difference between the two times is not exact.
 		## This is bad mojo
 		## 
 		my $diff = $DEFERRAL_TIME - $LAST_DEFERRAL_TIME;
-		print "\tDIFFERENCE: $diff\n";
+		CondorTest::debug("\tDIFFERENCE: $diff\n",1);
 		if ( $diff < $DEFERRAL_DIFFERENCE ) {
-			print "Bad - Job $cluster.$job was scheduled to run $diff seconds after ".
+			CondorTest::debug("Bad - Job $cluster.$job was scheduled to run $diff seconds after ",1);
 				  "the last execution. It should be $DEFERRAL_DIFFERENCE seconds!\n";
 			exit(1);
 		}	
 	}
 	$LAST_DEFERRAL_TIME = $DEFERRAL_TIME;
 	
-	print "Good - Job $cluster.$job was requeued after being evicted.\n";
+	CondorTest::debug("Good - Job $cluster.$job was requeued after being evicted.\n",1);
 };
 
 ##
@@ -245,7 +245,7 @@ $success = sub {
 		my @result;
 		my $h_cmd = "condor_history -l $cluster.$job";
 		if ( ! CondorTest::runCondorTool($h_cmd, \@result, 3) ) {
-			print "ERROR: Unable to get JobRunCount due to Condor Tool Failure<$h_cmd>\n";
+			CondorTest::debug("ERROR: Unable to get JobRunCount due to Condor Tool Failure<$h_cmd>\n",1);
 			exit(1);
 		}
 		my $temp = "@result";
@@ -253,28 +253,28 @@ $success = sub {
 			$h_runcount = $1;
 		}
 		if ( $h_runcount < 0 ) { 
-			print "$h_cmd\n";
-			print "+-----------------------------------------------+\n";
-			print "$temp\n";
-			print "+-----------------------------------------------+\n\n";
+			CondorTest::debug("$h_cmd\n",1);
+			CondorTest::debug("+-----------------------------------------------+\n",1);
+			CondorTest::debug("$temp\n",1);
+			CondorTest::debug("+-----------------------------------------------+\n\n",1);
 			
 			##
 			## Check if the job is still in the queue?
 			##
 			$h_cmd = "condor_q";
 			if ( ! CondorTest::runCondorTool($h_cmd, \@result, 3) ) {
-				print "ERROR: Unable get job queue information<$h_cmd>\n";
+				CondorTest::debug("ERROR: Unable get job queue information<$h_cmd>\n",1);
 				exit(1);
 			}
-			print "$h_cmd\n";
-			print "+-----------------------------------------------+\n";
-			print "@result\n";
-			print "+-----------------------------------------------+\n";
+			CondorTest::debug("$h_cmd\n",1);
+			CondorTest::debug("+-----------------------------------------------+\n",1);
+			CondorTest::debug("@result\n",1);
+			CondorTest::debug("+-----------------------------------------------+\n",1);
 			sleep(10);
 		}
 	} # WHILE
 	if ($h_runcount == -1) { 
-		print "Bad - Unable to get JobRunCount for Job $cluster.$job!\n";
+		CondorTest::debug("Bad - Unable to get JobRunCount for Job $cluster.$job!\n",1);
 		exit(1);
 	}
 	
@@ -282,13 +282,13 @@ $success = sub {
 	## Make sure what we have and what the job's ad has is the same
 	##
 	if ( $run_ctr != $h_runcount ) {
-		print "Bad - Job $cluster.$job finished execution but its NumJobStarts ".
+		CondorTest::debug("Bad - Job $cluster.$job finished execution but its NumJobStarts ",1);
 			  "is $h_runcount. It should be $run_ctr!\n";
 		exit(1);
 	}
 			
-	print "Good - Job $cluster.$job finished execution.\n";
-	print "Policy Test Completed\n";
+	CondorTest::debug("Good - Job $cluster.$job finished execution.\n",1);
+	CondorTest::debug("Policy Test Completed\n",1);
 };
 
 ##
@@ -301,7 +301,7 @@ $held = sub {
 	$cluster = $info{"cluster"};
 	$job = $info{"job"};
 
-	print "Bad - Job $cluster.$job went on hold.\n";
+	CondorTest::debug("Bad - Job $cluster.$job went on hold.\n",1);
 	exit(1);
 };
 
@@ -337,7 +337,7 @@ CondorTest::RegisterEvictedWithRequeue($testname, $evicted);
 CondorTest::RegisterHold( $testname, $held );
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	print "$testname: SUCCESS\n";
+	CondorTest::debug("$testname: SUCCESS\n",1);
 	exit(0);
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";

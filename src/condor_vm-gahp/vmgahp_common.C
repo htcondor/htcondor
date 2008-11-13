@@ -509,7 +509,8 @@ bool canSwitchUid(void)
 	return can_switch_ids();
 }
 
-int systemCommand( ArgList &args, bool is_root, StringList *cmd_out )
+int systemCommand( ArgList &args, bool is_root, StringList *cmd_out,
+				   int want_stderr )
 {
 	int result = 0;
 	FILE *fp = NULL;
@@ -524,13 +525,13 @@ int systemCommand( ArgList &args, bool is_root, StringList *cmd_out )
 	}
 #if !defined(WIN32)
 	if ( privsep_enabled() && (job_user_uid != get_condor_uid())) {
-		fp = privsep_popen(args, "r", 0, job_user_uid);
+		fp = privsep_popen(args, "r", want_stderr, job_user_uid);
 	}
 	else {
-		fp = my_popen( args, "r", 0 );
+		fp = my_popen( args, "r", want_stderr );
 	}
 #else
-	fp = my_popen( args, "r", 0 );
+	fp = my_popen( args, "r", want_stderr );
 #endif
 	if ( fp == NULL ) {
 		MyString args_string;

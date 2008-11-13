@@ -32,7 +32,7 @@ chomp($whoami);
 
 $submit = sub {
 	my %info = @_;
-	print "Good we need to run to see it\n";
+	CondorTest::debug("Good we need to run to see it\n",1);
 
 	my $foundcluster = 0;
 	my $foundanalyze = 0;
@@ -41,7 +41,7 @@ $submit = sub {
 	$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
 	if(!$cmdstatus)
 	{
-		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 		exit(1)
 	}
 
@@ -54,22 +54,22 @@ $submit = sub {
 		$submitline = $_;
 		if($submitline =~ /^.*cluster\s+(\d+).*$/) {
 			$cluster = $1;
-			print "Found my cluster which is $cluster!\n";
+			CondorTest::debug("Found my cluster which is $cluster!\n",1);
 		}
-		print "$_\n";
+		CondorTest::debug("$_\n",1);
 	}
 
 	foreach $line (@adarray) {
 		chomp($line);
 		if($line =~ /^\s*(\d+)\.(\d+):\s*Run\s+analysis\s+summary\.\s+.*$/) {
-				print "Score!!!!! found cluster $cluster\n";
-				print "$line\n";
+				CondorTest::debug("Score!!!!! found cluster $cluster\n",1);
+				CondorTest::debug("$line\n",1);
 				$foundcluster = 1;
 		}
 		if($line =~ /^\s*The\s+Requirements\s+expression\s+for\s+your\s+job\s+is:\s*.*$/) {
-				print "Score!!!!! found -better-analyze\n";
-				print "$line\n";
-				print "condor_q -better-analyse prints Requirements like this\n";
+				CondorTest::debug("Score!!!!! found -better-analyze\n",1);
+				CondorTest::debug("$line\n",1);
+				CondorTest::debug("condor_q -better-analyse prints Requirements like this\n",1);
 				$foundanalyze = 1;
 		}
 	}
@@ -81,7 +81,7 @@ $submit = sub {
 };
 
 $aborted = sub {
-	print "If all is good we abort our own job.......\n";
+	CondorTest::debug("If all is good we abort our own job.......\n",1);
 	exit(0);
 };
 
@@ -100,7 +100,7 @@ CondorTest::RegisterAbort($testname, $aborted);
 CondorTest::RegisterExitedSuccess( $testname, $ExitSuccess );
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	print "$testname: SUCCESS\n";
+	CondorTest::debug("$testname: SUCCESS\n",1);
 	exit(0);
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";

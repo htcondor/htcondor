@@ -50,8 +50,8 @@ $mycorenmlog = $corename . ".log";
 $mycorenmerr = $corename . ".err";
 $mycorenmout = $corename . ".out";
 
-print "Master PID is $mypid\n";
-print "Master PID submit file is $mysubmitnm\n";
+CondorTest::debug("Master PID is $mypid\n",1);
+CondorTest::debug("Master PID submit file is $mysubmitnm\n",1);
 
 # get a remote scheduler running (side b)
 my $configrem = CondorPersonal::StartCondor("x_param.scheddrestart" ,"scheddrestart");
@@ -59,14 +59,14 @@ my @parallel = split /\+/, $configrem;
 my $parallelconfig = shift @parallel;
 my $parallelport = shift @parallel;
 
-print "---Parallel config is $parallelconfig and remote port is $parallelport---\n";
+CondorTest::debug("---Parallel config is $parallelconfig and remote port is $parallelport---\n",1);
 
 $ENV{CONDOR_CONFIG} = $parallelconfig;
 
-print "Set config to $parallelconfig\n";
+CondorTest::debug("Set config to $parallelconfig\n",1);
 
 my $result = system("./job_schedd_restart-runningjobs-ok.pl $mysubmitnm");
-print "Result of job_schedd_restart-runningjobs-ok job is  $result\n";
+CondorTest::debug("Result of job_schedd_restart-runningjobs-ok job is  $result\n",1);
 
 
 system("cp *schedd_restart-runningjobs-ok* $mysaveme");
@@ -97,7 +97,7 @@ my $cmd = "condor_off -fast -master";
 $status = CondorTest::runCondorTool($cmd,\@adarray,2);
 if(!$status)
 {
-	print "Test failure due to Condor Tool Failure<$cmd>\n";
+	CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 	exit(1)
 }
 

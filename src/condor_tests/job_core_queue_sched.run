@@ -30,18 +30,18 @@ $queuelog = "submit_queue_scheduler_log.log";
 my $pid = $$;
 system("mkdir $pid");
 my $curcwd = getcwd();
-print "current directory is $curcwd\n";
+CondorTest::debug("current directory is $curcwd\n",1);
 
 my $socketname = "/tmp/queuetest";
 my $newsocketname = $curcwd . "/" . $pid . "/queuetest";
-print "current directory is $newsocketname\n";
+CondorTest::debug("current directory is $newsocketname\n",1);
 @filestoedit = qw/job_core_queue.pl/;
 @filestochmod = qw/job_core_queue.pl/;
 
 # now make sure each place using socket refers to pid specific directory!
 foreach $name (@filestoedit)
 {
-	print "Correcting socket name in $name\n";
+	CondorTest::debug("Correcting socket name in $name\n",1);
 	open(FF,"<$name") || die "Failed to open $name: $!\n";
 	open(NEWFF,">$name.new") || die "Failed to open $name.new: $!\n";
 	my $line = "";
@@ -51,8 +51,8 @@ foreach $name (@filestoedit)
 		$line = $_;
 		if( $line =~ /(^\s*.*)$socketname(.*$)/)
 		{
-			print "Found ---$1$socketname$2---\n";
-			print "replacing with $1$newsocketname$2\n";
+			CondorTest::debug("Found ---$1$socketname$2---\n",1);
+			CondorTest::debug("replacing with $1$newsocketname$2\n",1);
 			print NEWFF "$1$newsocketname$2\n";
 		}
 		else
@@ -119,7 +119,7 @@ $success = sub
 			my $ret;
 			CondorTest::fullchomp($_);
 			$ret = $_;
-			print "$ret\n";
+			CondorTest::debug("$ret\n",1);
 			if( $ret ne "0" )
 			{
 				die "failed to run exact number of pre/post scripts\n";
@@ -153,7 +153,7 @@ CondorTest::RegisterSubmit( $testname, $submit );
 
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	print "$testname: SUCCESS\n";
+	CondorTest::debug("$testname: SUCCESS\n",1);
 	exit(0);
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";

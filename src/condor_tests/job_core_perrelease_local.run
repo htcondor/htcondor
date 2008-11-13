@@ -21,8 +21,6 @@
 use CondorTest;
 use CondorPersonal;
 
-CondorPersonal::DebugOff();
-Condor::DebugOff();
 
 $testname = 'Condor PERIODIC_RELEASE policy test - local U';
 $corename = "job_core_perrelease_local";
@@ -30,7 +28,6 @@ $corename = "job_core_perrelease_local";
 # where am I running
 $currenthost = CondorTest::getFqdnHost();
 CondorTest::fullchomp($currenthost);
-CondorPersonal::DebugOff();
 
 system("date");
 
@@ -47,7 +44,7 @@ my @personal = split /\+/, $configrem;
 my $personalconfig = shift @personal;
 my $personalport = shift @personal;
 
-print "---personal config is $personalconfig and personal port is $personalport---\n";
+CondorTest::debug("---personal config is $personalconfig and personal port is $personalport---\n",1);
 
 #Run in this newly created pool
 $ENV{CONDOR_CONFIG} = $personalconfig;
@@ -63,12 +60,12 @@ CondorTest::MergeOutputFiles(\%listoftests);
 
 if($nostatus != 0)
 {
-	print "PERIODIC_RELEASE: failed no trigger test\n";
+	CondorTest::debug("PERIODIC_RELEASE: failed no trigger test\n",1);
 }
 
 if($willstatus != 0)
 {
-	print "PERIODIC_RELEASE: failed trigger test\n";
+	CondorTest::debug("PERIODIC_RELEASE: failed trigger test\n",1);
 }
 
 system("cp job_core_perrelease-false_local* job_core_perrelease-true_local* job_core_perrelease_local.* $mysaveme");
@@ -79,7 +76,7 @@ my $cmd = "condor_off -fast -master";
 $status = CondorTest::runCondorTool($cmd,\@adarray,2);
 if(!$status)
 {
-	print "Test failure due to Condor Tool Failure<$cmd>\n";
+	CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 	exit(1)
 }
 if(($willstatus != 0) || ($nostatus != 0))

@@ -27,17 +27,17 @@ my $teststatus = CondorTest::verbose_system("./job_filexfer_base-input4_van.pl")
 
 if($sanestatus != 0)
 {
-        print "job_filexfer_base-input4_van failed sanity submittest\n";
+        CondorTest::debug("job_filexfer_base-input4_van failed sanity submittest\n",1);
 }
 
 if($teststatus != 0)
 {
-        print "job_filexfer_base-input4_van failed actual test\n";
+        CondorTest::debug("job_filexfer_base-input4_van failed actual test\n",1);
 }
 
 if(($teststatus == 0) && ($sanestatus == 0))
 {
-        print "Passed job_filexfer_base-input4_van\n";
+        CondorTest::debug("Passed job_filexfer_base-input4_van\n",1);
 } else {
 		die "Failed job_filexfer_base-input4_van\n";
 }

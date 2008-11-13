@@ -44,7 +44,7 @@ $abnormal = sub {
 	my %info = @_;
 	my $cluster = $info{"cluster"};
 	my $job = $info{"job"};
-	print "Bad - Job $cluster.$job reported an abnormal event.\n";
+	CondorTest::debug("Bad - Job $cluster.$job reported an abnormal event.\n",1);
 	exit(1);
 };
 
@@ -57,8 +57,8 @@ $aborted = sub {
 	my %info = @_;
 	my $cluster = $info{"cluster"};
 	my $job = $info{"job"};
-	print "Good - Job $cluster.$job was removed from the queue\n";
-	print "Policy Test Completed\n";
+	CondorTest::debug("Good - Job $cluster.$job was removed from the queue\n",1);
+	CondorTest::debug("Policy Test Completed\n",1);
 };
 
 ##
@@ -78,7 +78,7 @@ $executed = sub {
 	my %info = @_;
 	my $cluster = $info{"cluster"};
 	my $job = $info{"job"};
-	print "Good - Job $cluster.$job began execution.\n";
+	CondorTest::debug("Good - Job $cluster.$job began execution.\n",1);
 };
 
 ##
@@ -91,7 +91,7 @@ $evicted = sub {
 	my $cluster = $info{"cluster"};
 	my $job = $info{"job"};
 
-	print "Good - Job $cluster.$job was requeued after being evicted.\n";
+	CondorTest::debug("Good - Job $cluster.$job was requeued after being evicted.\n",1);
 
 	##
 	## Make sure that we remove the job
@@ -100,7 +100,7 @@ $evicted = sub {
 	my $status = 1;
 	my $cmd = "condor_rm $cluster";
 	if ( ! CondorTest::runCondorTool($cmd,\@adarray,2) ) {
-		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 		exit(0)
 	}
 };
@@ -112,7 +112,7 @@ CondorTest::RegisterAbort( $testname, $aborted );
 CondorTest::RegisterHold( $testname, $held );
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	print "$testname: SUCCESS\n";
+	CondorTest::debug("$testname: SUCCESS\n",1);
 	exit(0);
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";

@@ -21,8 +21,6 @@
 use CondorTest;
 use CondorPersonal;
 
-CondorPersonal::DebugOff();
-Condor::DebugOff();
 
 $cmd_template = "lib_eventlog.template";
 $testname = 'lib_eventlog - test dropping of events AND job ad attributes into event log' ;
@@ -64,11 +62,11 @@ my @parallel = split /\+/, $configrem;
 my $parallelconfig = shift @parallel;
 my $parallelport = shift @parallel;
 
-print "--- eventlog config is $parallelconfig and the port is $parallelport---\n";
+CondorTest::debug("--- eventlog config is $parallelconfig and the port is $parallelport---\n",1);
 
 $ENV{CONDOR_CONFIG} = $parallelconfig;
 
-print "Set config to $parallelconfig\n";
+CondorTest::debug("Set config to $parallelconfig\n",1);
 
 
 #print "Looking for schedd for Basic Parallel Test\n";
@@ -111,14 +109,14 @@ close(CSUB);
 
 
 my $result = system("./lib_eventlog.pl $mysubmitnm");
-print "Result of basic eventlog  test is  $result\n";
+CondorTest::debug("Result of basic eventlog  test is  $result\n",1);
 
 if( $result == 0 ) {
 	# well did we get out the results into the log we wanted?
 	# determine where the log went
 	# run log reader and compare with expected values.
 
-	print "Checking Results!!!\n";
+	CondorTest::debug("Checking Results!!!\n",1);
 	my $elog = `condor_config_val EVENT_LOG`;
 	chomp($elog);
 	my $expected = "x_lib_eventlog.expected";
@@ -137,14 +135,14 @@ if( $result == 0 ) {
 	foreach $line (@got) {
 		my $desired = shift(@want);
 		if($desired ne $line) {
-			print "Result Mismatch!:$desired ne $line!!!!\n";
+			CondorTest::debug("Result Mismatch!:$desired ne $line!!!!\n",1);
 			$result = 1;
 			last;
 		} else {
 			#print "Result Match!:$desired eq $line!!!!\n";
 		}
 	}
-	print "Results all Match! Test is a success.\n";
+	CondorTest::debug("Results all Match! Test is a success.\n",1);
 }
 
 system("cp *lib_eventlog* $mysaveme");
@@ -175,7 +173,7 @@ my $cmd = "condor_off -fast -master";
 $status = CondorTest::runCondorTool($cmd,\@adarray,2);
 if(!$status)
 {
-	print "Test failure due to Condor Tool Failure<$cmd>\n";
+	CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 	exit(1)
 }
 

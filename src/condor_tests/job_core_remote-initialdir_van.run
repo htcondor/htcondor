@@ -29,14 +29,14 @@ $ExitSuccess = sub
 	my %info = @_;
 
 	my $outfile   = $info{"output"};
-	print "Examining $outfile\n";
+	CondorTest::debug("Examining $outfile\n",1);
 	open( output_fd, "<$outfile" );
 	my $output;
 	$output = <output_fd>;
 	close( output_fd );
 	CondorTest::fullchomp($output);
 
-	print "Output from pwd: $output\n";
+	CondorTest::debug("Output from pwd: $output\n",1);
 	if( $output ne "/tmp" ) {
 		die "Expected remote initialdir to be /tmp\n";
 	}
@@ -46,7 +46,7 @@ $ExitSuccess = sub
 CondorTest::RegisterExitedSuccess( $testname, $ExitSuccess );
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	print "$testname: SUCCESS\n";
+	CondorTest::debug("$testname: SUCCESS\n",1);
 	exit(0);
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";

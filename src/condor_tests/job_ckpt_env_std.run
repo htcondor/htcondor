@@ -78,8 +78,8 @@ $OutputCheck = sub
 	$count = 0;
 	foreach $line (@present) {
 		if ($existence{$line} != 1) {
-			print "FAILURE: Did not find expected line:\n";
-			print "$line\n";
+			CondorTest::debug("FAILURE: Did not find expected line:\n",1);
+			CondorTest::debug("$line\n",1);
 		} else {
 			$count++;
 		}
@@ -91,7 +91,7 @@ $OutputCheck = sub
 		return;
 	}
 
-	print "FAILURE : Expected " . scalar(@present) . " certain output lines " .
+	CondorTest::debug(" certain output lines ",1);
 		"to be present, but only saw $count of them.\n";
     die "$testname: CondorTest::RunTest() failed\n";
 };
@@ -99,7 +99,7 @@ $OutputCheck = sub
 CondorTest::RegisterExitedSuccess( $testname, $OutputCheck );
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
-    print "$testname: SUCCESS\n";
+    CondorTest::debug("$testname: SUCCESS\n",1);
     exit(0);
 } else {
     die "$testname: CondorTest::RunTest() failed\n";

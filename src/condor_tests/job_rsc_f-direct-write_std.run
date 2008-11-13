@@ -35,7 +35,7 @@ $OutputTest = sub {
 	open( OUTPUT, "<$output" ) || die "Can't open $output: $!\n";
 
 	$line = <OUTPUT>;
-	print "Checking Line: $line";
+	CondorTest::debug("Checking Line: $line",1);
 	if ($line !~ /Will open direct access file for reading/)
 	{
 		close OUTPUT;
@@ -43,7 +43,7 @@ $OutputTest = sub {
 	}
 
 	$line = <OUTPUT>;
-	print "Checking Line: $line";
+	CondorTest::debug("Checking Line: $line",1);
 	if ((not $line =~ /T,?\s*T,?\s*T/) && 
 		(not $line =~ /3\s*\*\s*T/))
 	{
@@ -57,7 +57,7 @@ $OutputTest = sub {
 CondorTest::RegisterExitedSuccess( $testname, $OutputTest );
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	print "$testname: SUCCESS\n";
+	CondorTest::debug("$testname: SUCCESS\n",1);
 	exit(0);
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";

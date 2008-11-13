@@ -33,12 +33,12 @@ CondorTest::MergeOutputFiles(\%listoftests);
 
 if($nostatus != 0)
 {
-	print "PERIODIC_RELEASE: failed no trigger test\n";
+	CondorTest::debug("PERIODIC_RELEASE: failed no trigger test\n",1);
 }
 
 if($willstatus != 0)
 {
-	print "PERIODIC_RELEASE: failed trigger test\n";
+	CondorTest::debug("PERIODIC_RELEASE: failed trigger test\n",1);
 }
 
 if(($willstatus != 0) || ($nostatus != 0))

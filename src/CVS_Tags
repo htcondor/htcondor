@@ -1,5 +1,10 @@
 11/05/2008 V7_2-branch
   Branch for 7.1.4 and 7.2 series, based from the master.
+11/11/2008 V7_1_4
+   The offical tag for 7.1.4, from the V7_1_4-branch.
+   Version string: $CondorVersion: 7.1.4 Nov 10 2008 BuildID: 113473 $
+   Original build tag: BUILD-V7_1_4-branch-2008-11-10
+
 11/07/2008 V7_1_4-branch
   Branch for the 7.1.4 release, based from V7_2-branch.
 

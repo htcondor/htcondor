@@ -270,10 +270,10 @@ for ( $ctr = 0, $cnt = scalar(@deltas); $ctr < $cnt; $ctr++ ) {
 		my $reportTime  = "@output";
 		chomp($reportTime);
 		
-		print "\n-----------------------------------------\n";
-		print "\texecute:  $executeTime\n";
-		print "\treport:   $reportTime\n";
-		print "\texpected: $expectedTime\n\n";
+		CondorTest::debug("\n-----------------------------------------\n",1);
+		CondorTest::debug("\texecute:  $executeTime\n",1);
+		CondorTest::debug("\treport:   $reportTime\n",1);
+		CondorTest::debug("\texpected: $expectedTime\n\n",1);
 		
 		##
 		## If this job wasn't suppose to fail, make sure we ran
@@ -324,7 +324,7 @@ for ( $ctr = 0, $cnt = scalar(@deltas); $ctr < $cnt; $ctr++ ) {
 				return (0);
 			}
 			
-			print "Good - Job $cluster.$job executed successfully!\n";
+			CondorTest::debug("Good - Job $cluster.$job executed successfully!\n",1);
 			
 		##
 		## The job was suppose to fail and never run
@@ -360,7 +360,7 @@ for ( $ctr = 0, $cnt = scalar(@deltas); $ctr < $cnt; $ctr++ ) {
 			return (0);
 		}
 		
-		print "Good - Job $cluster.$job failed to run when it was suppose to!\n";
+		CondorTest::debug("Good - Job $cluster.$job failed to run when it was suppose to!\n",1);
 		
 		##
 		## Remove the job
@@ -373,7 +373,7 @@ for ( $ctr = 0, $cnt = scalar(@deltas); $ctr < $cnt; $ctr++ ) {
 		my $cmd = "condor_rm $cluster";
 		$status = CondorTest::runCondorTool($cmd,\@adarray,2);
 		if ( !$status ) {
-			print "ERROR: Test failure due to Condor Tool Failure<$cmd>\n";
+			CondorTest::debug("ERROR: Test failure due to Condor Tool Failure<$cmd>\n",1);
 			return(0);
 		}
 		return (1);
@@ -393,12 +393,12 @@ for ( $ctr = 0, $cnt = scalar(@deltas); $ctr < $cnt; $ctr++ ) {
 		## Make sure this was meant to happen
 		## 
 		if ( $ABORTING ) {
-			print "Good - Job $cluster.$job is being removed after being held.\n";
+			CondorTest::debug("Good - Job $cluster.$job is being removed after being held.\n",1);
 		##
 		## Bad mojo!
 		##
 		} else {
-			print "Bad - Job $cluster.$job received an unexpected abort event.\n";
+			CondorTest::debug("Bad - Job $cluster.$job received an unexpected abort event.\n",1);
 			exit(1);
 		}
 	};
@@ -412,7 +412,7 @@ for ( $ctr = 0, $cnt = scalar(@deltas); $ctr < $cnt; $ctr++ ) {
 		$cluster = $info{"cluster"};
 		$job = $info{"job"};
 	
-		print "Good - Job $cluster.$job was submitted!\n";
+		CondorTest::debug("Good - Job $cluster.$job was submitted!\n",1);
 		
 		##
 		## To help improve the chances of our job running, we're going 
@@ -423,16 +423,16 @@ for ( $ctr = 0, $cnt = scalar(@deltas); $ctr < $cnt; $ctr++ ) {
 		my $cmd = "condor_reschedule";
 		$status = CondorTest::runCondorTool($cmd, \@adarray, 2);
 		if ( !$status ) {
-			print "Test failure due to Condor Tool Failure <$cmd>\n";
+			CondorTest::debug("Test failure due to Condor Tool Failure <$cmd>\n",1);
 			exit(1);
 		}
 		my $cmd = "condor_q -anal";
 		$status = CondorTest::runCondorTool($cmd, \@adarray, 2);
 		if ( !$status ) {
-			print "Test failure due to Condor Tool Failure <$cmd>\n";
+			CondorTest::debug("Test failure due to Condor Tool Failure <$cmd>\n",1);
 			exit(1);
 		}
-		print "Output from condor_q:\n".join("\n", @adarray)."\n";
+		CondorTest::debug("\n",1);
 	};
 		
 	##
@@ -443,7 +443,7 @@ for ( $ctr = 0, $cnt = scalar(@deltas); $ctr < $cnt; $ctr++ ) {
 		$cluster = $info{"cluster"};
 		$job = $info{"job"};
 		
-		print "Bad - Job $cluster.$job never began execution! Removing...\n";
+		CondorTest::debug("Bad - Job $cluster.$job never began execution! Removing...\n",1);
 		
 		##
 		## Remove the job from the queue
@@ -453,7 +453,7 @@ for ( $ctr = 0, $cnt = scalar(@deltas); $ctr < $cnt; $ctr++ ) {
 		my $cmd = "condor_rm $cluster";
 		$status = CondorTest::runCondorTool($cmd, \@adarray, 2);
 		if ( !$status ) {
-			print "Test failure due to Condor Tool Failure <$cmd>\n";
+			CondorTest::debug("Test failure due to Condor Tool Failure <$cmd>\n",1);
 			exit(1);
 		}
 		return (0);
@@ -482,10 +482,10 @@ for ( $ctr = 0, $cnt = scalar(@deltas); $ctr < $cnt; $ctr++ ) {
 	$ABORTING = 0;
 	if( CondorTest::RunTest( $test, $cmdFile, 0)) {
 		if ($testFailure) {
-			print "$test: CondorTest::RunTest() failed - $testFailure\n";
+			CondorTest::debug("$test: CondorTest::RunTest() failed - $testFailure\n",1);
 			$success = 0;
 		} else {
-			print "$test: SUCCESS\n";
+			CondorTest::debug("$test: SUCCESS\n",1);
 		}
 	} else {
 		die "$testname: CondorTest::RunTest() failed\n";

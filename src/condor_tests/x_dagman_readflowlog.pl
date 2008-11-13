@@ -42,7 +42,7 @@ while(<OLDOUT>)
 		if($count > $limit)
 		{
 			#print "$count exceeds $limit\n";
-			print	"$count";
+			print "$count";
 			exit($count);
 		}
 	}

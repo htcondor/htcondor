@@ -54,12 +54,12 @@ $CheckCoreFiles = sub {
 	$listoftests{"extensions"} = [ ".cmd", ".cmd.out", ".err", ".out", ".log"];
 	CondorTest::MergeOutputFiles(\%listoftests);
 
-    print "Checking for $core...";
+    CondorTest::debug("Checking for $core...",1);
     if( $core ne "" && (-e $core) ) {
-	print "yes.\n";
+	CondorTest::debug("yes.\n",1);
 	$core_file_found = 1;
     } else {
-	print "no.\n";
+	CondorTest::debug("no.\n",1);
     }
 
     if( $wants_core{$handle} ) {
@@ -84,19 +84,19 @@ CondorTest::RegisterExitedAbnormal( $handle2, $CheckCoreFiles );
 CondorTest::RegisterExitedAbnormal( $handle3, $CheckCoreFiles );
 
 if( CondorTest::RunTest($handle1, $cmd1, 0) ) {
-    print "$handle1: SUCCESS\n";
+    CondorTest::debug("$handle1: SUCCESS\n",1);
 } else {
     die "$handle1: CondorTest::RunTest() failed\n";
 }
 
 if( CondorTest::RunTest($handle2, $cmd2, 0) ) {
-    print "$handle2: SUCCESS\n";
+    CondorTest::debug("$handle2: SUCCESS\n",1);
 } else {
     die "$handle2: CondorTest::RunTest() failed\n";
 }
 
 if( CondorTest::RunTest($handle3, $cmd3, 0) ) {
-    print "$handle3: SUCCESS\n";
+    CondorTest::debug("$handle3: SUCCESS\n",1);
 } else {
     die "$handle3: CondorTest::RunTest() failed\n";
 }

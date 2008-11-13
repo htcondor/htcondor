@@ -26,7 +26,7 @@ $cmd = 'job_filexfer_md5-remote_java.cmd';
 $testname = 'Do file transfers with md5 - java U';
 
 $success = sub {
-	print "Transfer job worked..... need to chack data file.\n";
+	CondorTest::debug("Transfer job worked..... need to chack data file.\n",1);
 	$stats = CondorTest::verbose_system("job_filexfer_md5-testdata.pl -m=200");
 	if($stats != 0)
 	{
@@ -36,17 +36,17 @@ $success = sub {
 
 if( ! -e "data")
 {
-	print "Making data file\n";
+	CondorTest::debug("Making data file\n",1);
 	$stats = CondorTest::verbose_system("job_filexfer_md5-createdata.pl -m=200");
 }
 else
 {
-	print "Data file already exists....skipping generation\n";
+	CondorTest::debug("Data file already exists....skipping generation\n",1);
 }
 
 CondorTest::RegisterExitedSuccess($testname, $success);
 if(CondorTest::RunTest($testname, $cmd, 0)) {
-	print "$testname: SUCCESS\n";
+	CondorTest::debug("$testname: SUCCESS\n",1);
 	exit(0);
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";

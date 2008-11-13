@@ -50,8 +50,8 @@ $mycorenmlog = $corename . ".log";
 $mycorenmerr = $corename . ".err";
 $mycorenmout = $corename . ".out";
 
-print "Master PID is $mypid\n";
-print "Master PID submit file is $mysubmitnm\n";
+CondorTest::debug("Master PID is $mypid\n",1);
+CondorTest::debug("Master PID submit file is $mysubmitnm\n",1);
 
 # get a remote scheduler running (side b)
 my $configrem = CondorPersonal::StartCondor("x_param.basicparallel-security" ,"parallel");
@@ -59,13 +59,13 @@ my @parallel = split /\+/, $configrem;
 my $parallelconfig = shift @parallel;
 my $parallelport = shift @parallel;
 
-print "---Parallel config is $parallelconfig and remote port is $parallelport---\n";
+CondorTest::debug("---Parallel config is $parallelconfig and remote port is $parallelport---\n",1);
 
 $ENV{CONDOR_CONFIG} = $parallelconfig;
 
-print "Set config to $parallelconfig\n";
+CondorTest::debug("Set config to $parallelconfig\n",1);
 
-print "Looking for schedd for Basic Parallel Test\n";
+CondorTest::debug("Looking for schedd for Basic Parallel Test\n",1);
 system("condor_status -pool $currenthost:$parallelport -schedd -format '%s\n' Name");
 
 # Edit submit file to submit to scheduler at remote (side b) schedd.
@@ -79,24 +79,24 @@ while(<TPLATE>)
 	if( $line =~ /^\s*log\s*= .*$/)
 	{
 		my $lognm = $mysubmitnmlog;
-		print "New log name: $lognm\n";
+		CondorTest::debug("New log name: $lognm\n",1);
 		print CSUB "log = $lognm\n";
 	}
 	elsif( $line =~ /^\s*output\s*= .*$/)
 	{
 		my $outputnm = $mysubmitnmout;
-		print "New out name: $outputnm\n";
+		CondorTest::debug("New out name: $outputnm\n",1);
 		print CSUB "output = $outputnm\n";
 	}
 	elsif( $line =~ /^\s*error\s*= .*$/)
 	{
 		my $errornm = $mysubmitnmerr;
-		print "New error name: $errornm\n";
+		CondorTest::debug("New error name: $errornm\n",1);
 		print CSUB "error = $errornm\n";
 	}
 	else
 	{
-		print "template: $line\n";
+		CondorTest::debug("template: $line\n",1);
 		print CSUB "$line\n";
 	}
 }
@@ -104,7 +104,7 @@ close(TPLATE);
 close(CSUB);
 
 my $result = system("./job_core_basic_par.pl $mysubmitnm");
-print "Result of basic paarallel  job is  $result\n";
+CondorTest::debug("Result of basic paarallel  job is  $result\n",1);
 
 
 system("cp *job_core_basic-security_par* $mysaveme");
@@ -135,7 +135,7 @@ my $cmd = "condor_off -fast -master";
 $status = CondorTest::runCondorTool($cmd,\@adarray,2);
 if(!$status)
 {
-	print "Test failure due to Condor Tool Failure<$cmd>\n";
+	CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 	exit(1)
 }
 

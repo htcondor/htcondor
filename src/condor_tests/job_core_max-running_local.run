@@ -72,7 +72,7 @@ $successCallback = sub {
 	my $reportTime = "@output";
 	CondorTest::fullchomp($reportTime);
 	
-	print "JOB:         $cluster.$job\n".
+	CondorTest::debug("JOB:         $cluster.$job\n",1);
 		  "OUTFILE:     $outfile\n".
 		  "REPORT TIME: $reportTime\n".
 	      "LAST TIME:   $LAST_RUN_TIME\n".
@@ -107,14 +107,14 @@ if (CondorTest::RunTest( $testname, $cmdfile, 0)) {
 	## Check if there was a failure
 	##
 	if ( $testFailure ) {
-		print "$testname: FAILED - $testFailure\n";
+		CondorTest::debug("$testname: FAILED - $testFailure\n",1);
 		$success = 0;
 	}
 ##
 ## For some reason it failed to run!
 ##
 } else {
-	print "$testname: CondorTest::RunTest() failed to run\n";
+	CondorTest::debug("$testname: CondorTest::RunTest() failed to run\n",1);
 	$success = 0;
 }	
 
@@ -122,7 +122,7 @@ if (CondorTest::RunTest( $testname, $cmdfile, 0)) {
 ## Print success message
 ##
 if ( $success ) {
-	print "$testname: SUCCESS\n";
+	CondorTest::debug("$testname: SUCCESS\n",1);
 }
 	
 ## 

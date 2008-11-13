@@ -26,20 +26,20 @@ $testname = 'LIGO Chkpt Test';
 
 $tarres = system("tar -zxvf x_job_ligo_x86-64-chkpttst.tar.gz");
 
-print "Extract LIGO test files\n";
-print "Condor compile LIGO application\n";
+CondorTest::debug("Extract LIGO test files\n",1);
+CondorTest::debug("Condor compile LIGO application\n",1);
 $condorize = system("./build.condor.sh");
 if( !(-s "ring")) {
 	die "LIGO app not built\n";
 }
 
 $hey = system("./ligo_medium_setup.sh");
-print "Medium set up done, now configuring to run Ring\n";
+CondorTest::debug("Medium set up done, now configuring to run Ring\n",1);
 
 $ExitSuccess = sub {
 	if( (-s "L1-RING-793420200-2176.xml") &&  (-s "L1-RINGBANK-793420200-2176.xml") ) {
 		system("ls -l *.xml");
-		print "Good! These files should be current and non-zero\n";
+		CondorTest::debug("Good! These files should be current and non-zero\n",1);
 		system("cat job_ligo_x86-64-chkpttst.err");
 		return(0);
 	} else { 
@@ -52,7 +52,7 @@ $ExitSuccess = sub {
 CondorTest::RegisterExitedSuccess( $testname, $ExitSuccess );
 
 if( CondorTest::RunTest($testname, $cmd, 1) ) {
-    print "$testname: SUCCESS\n";
+    CondorTest::debug("$testname: SUCCESS\n",1);
     exit(0);
 } else {
     die "$testname: CondorTest::RunTest() failed\n";

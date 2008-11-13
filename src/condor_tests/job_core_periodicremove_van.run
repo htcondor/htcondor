@@ -21,8 +21,6 @@
 use CondorTest;
 use CondorPersonal;
 
-CondorPersonal::DebugOff();
-Condor::DebugOff();
 
 $cmd_template = "job_core_periodicremove_van.template";
 $testname = 'job_core_periodicremove_van - Test periodicremove / wallclockcheckpoint';
@@ -31,7 +29,6 @@ $corename = "job_core_periodicremove_van";
 # where am I running
 $currenthost = CondorTest::getFqdnHost();
 CondorTest::fullchomp($currenthost);
-CondorPersonal::DebugOff();
 
 system("date");
 
@@ -50,8 +47,8 @@ $mycorenm = $corename . ".cmd";
 $mycorenmout = $corename . ".cmd.out";
 $mycorenmlog = $corename . ".log";
 
-print "Master PID is $mypid\n";
-print "Master PID submit file is $mysubmitnm\n";
+CondorTest::debug("Master PID is $mypid\n",1);
+CondorTest::debug("Master PID submit file is $mysubmitnm\n",1);
 
 # get a local scheduler running with controlled intervals
 my $configloc = CondorPersonal::StartCondor("x_param.periodicremove" ,"periodocrm");
@@ -59,14 +56,14 @@ my @local = split /\+/, $configloc;
 my $locconfig = shift @local;
 my $locport = shift @local;
 
-print "---local config is $locconfig and local port is $locport---\n";
+CondorTest::debug("---local config is $locconfig and local port is $locport---\n",1);
 
 $ENV{CONDOR_CONFIG} = $locconfig;
 # submit into local schedd 
 
 
 my $result = system("./job_core_periodicremove_van.pl $mycorenm");
-print "Result of crafted periodic remove job is  $result\n";
+CondorTest::debug("Result of crafted periodic remove job is  $result\n",1);
 
 system("cp *periodicremove* $mysaveme");
 
@@ -91,7 +88,7 @@ my $cmd = "condor_off -fast -master";
 $status = CondorTest::runCondorTool($cmd,\@adarray,2);
 if(!$status)
 {
-	print "Test failure due to Condor Tool Failure<$cmd>\n";
+	CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 	exit(1)
 }
 

@@ -22,14 +22,12 @@ use CondorTest;
 use CondorPersonal;
 use Cwd;
 
-CondorPersonal::DebugOff();
-Condor::DebugOff();
 
 $testname = 'job_stork_file-file - Simple stork job';
 $corename = "job_stork_file-file";
 $topdir = getcwd();
 
-print "Working Directory is $topdir\n";
+CondorTest::debug("Working Directory is $topdir\n",1);
 
 # where am I running
 $currenthost = CondorTest::getFqdnHost();
@@ -52,15 +50,15 @@ $mycorenm = $corename . ".cmd";
 $mycorenmout = $corename . ".cmd.out";
 $mycorenmlog = $corename . ".log";
 
-print "Master PID is $mypid\n";
-print "Master PID submit file is $mysubmitnm\n";
+CondorTest::debug("Master PID is $mypid\n",1);
+CondorTest::debug("Master PID submit file is $mysubmitnm\n",1);
 
 my $configloc = CondorPersonal::StartCondor("x_param.storksrvr" ,"local");
 my @local = split /\+/, $configloc;
 my $locconfig = shift @local;
 my $locport = shift @local;
 
-print "---local config is $locconfig and local port is $locport---\n";
+CondorTest::debug("---local config is $locconfig and local port is $locport---\n",1);
 
 $ENV{CONDOR_CONFIG} = $locconfig;
 # submit into stork personal condor
@@ -73,11 +71,11 @@ if( ! -e "job_stork_file-file.in" )
 	system("date > job_stork_file-file.in");
 }
 
-print "Have generated data and md5 checksum in $storkdatafile\n";
+CondorTest::debug("Have generated data and md5 checksum in $storkdatafile\n",1);
 my $src_url = $topdir . "/$storkdatafile";
 my $dest_url = "/tmp/$storkdatafile";
 
-print "Transfer $src_url to $dest_url\n";
+CondorTest::debug("Transfer $src_url to $dest_url\n",1);
 
 my $storksubmitfile = "job_stork_file-file.stork" . $mypid;
 
@@ -114,7 +112,7 @@ while(<PULL>)
 	$line = $_;
 	if($line =~ /assigned\s*id\s*:\s*(\d+)/)
 	{
-		print "<<<$line>>>\n";
+		CondorTest::debug("<<<$line>>>\n",1);
 		$jobid = $1;
 	}
 }
@@ -141,7 +139,7 @@ while( $timecnt < $timeout )
 		$line = $_;
 		if($line =~ /status\s*=\s*"(\w+)"/)
 		{
-			print "<<<$line>>>\n";
+			CondorTest::debug("<<<$line>>>\n",1);
 			$jobstatus = $1;
 			last; # done with scanning status
 		}
@@ -149,26 +147,26 @@ while( $timecnt < $timeout )
 	close(PULLL);
 	if($jobstatus =~ /request_completed/)
 	{
-		print "Good file has transfered, check md5 next\n";
+		CondorTest::debug("Good file has transfered, check md5 next\n",1);
 		last;
 	}
 	$timecnt += 20;
 	sleep(20);
 }
 
-print "Done checking status\n";
+CondorTest::debug("Done checking status\n",1);
 
 my $result = 0;
 
 if($jobstatus ne "request_completed")
 {
-	print "Stork file transfer never completed!\n";
+	CondorTest::debug("Stork file transfer never completed!\n",1);
 	$result = 1;
 }
 else
 {
 	$result = system("./x_test_md5data.pl --oldfile=$src_url --newfile=$dest_url");
-	print "Result of crafted Stork job is  $result\n";
+	CondorTest::debug("Result of crafted Stork job is  $result\n",1);
 }
 
 system("rm -f $dest_url*");
@@ -196,7 +194,7 @@ my $cmd = "condor_off -fast -master";
 $status = CondorTest::runCondorTool($cmd,\@adarray,2);
 if(!$status)
 {
-	print "Test failure due to Condor Tool Failure<$cmd>\n";
+	CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 	exit(1)
 }
 
@@ -205,11 +203,11 @@ system("date");
 if( $result != 0 )
 {
 	# actual test failed but we allowed cleanup
-	print "Stork test failed!\n";
+	CondorTest::debug("Stork test failed!\n",1);
 	exit(1);
 }
 else
 {
-	print "Stork test SUCCESS!\n";
+	CondorTest::debug("Stork test SUCCESS!\n",1);
 }
 

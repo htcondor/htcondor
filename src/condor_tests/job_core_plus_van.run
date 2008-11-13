@@ -57,14 +57,14 @@ $submit = sub
 	}
 
 	system("condor_config_val -config");
-	print "Checking Job Ads for $cluster\n";
+	CondorTest::debug("Checking Job Ads for $cluster\n",1);
 	my @adarray;
 	my $status = 1;
 	my $cmd = "condor_q -l $cluster";
 	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
 	if(!$status)
 	{
-		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 		exit(1)
 	}
 	foreach $name (@adarray)
@@ -73,31 +73,31 @@ $submit = sub
 
 		if( $name =~ /^foo\s*=\s*"(.*)"\s*$/)
 		{
-			print "************** $1 ************\n";
+			CondorTest::debug("************** $1 ************\n",1);
 			$foundcount += 1;
 		}
 		elsif( $name =~ /^bar\s*=\s*"(.*)"\s*$/)
 		{
-			print "************** $1 ************\n";
+			CondorTest::debug("************** $1 ************\n",1);
 			$foundcount += 1;
 		}
 		elsif( $name =~ /^last\s*=\s*"(.*)"\s*$/)
 		{
-			print "************** $1 ************\n";
+			CondorTest::debug("************** $1 ************\n",1);
 			$foundcount += 1;
 		}
 		elsif( $name =~ /^done\s*=\s*(.*)\s*$/)
 		{
-			print "************** $1 ************\n";
+			CondorTest::debug("************** $1 ************\n",1);
 			$foundcount += 1;
 		}
 	}
 	$status = CondorTest::runCondorTool("condor_rm $cluster",\@adarray,2);
-	print "Expect to see 4 attributes {foo,bar,last and done}\n";
+	CondorTest::debug("Expect to see 4 attributes {foo,bar,last and done}\n",1);
 	die "Missed some attributes" unless $foundcount == 4;
 	if(!$status)
 	{
-		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 		exit(1)
 	}
 	exit(0);
@@ -108,7 +108,7 @@ CondorTest::RegisterExitedFailure( $testname, $died );
 CondorTest::RegisterExitedSuccess( $testname, $success );
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	print "$testname: SUCCESS\n";
+	CondorTest::debug("$testname: SUCCESS\n",1);
 	exit(0);
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";

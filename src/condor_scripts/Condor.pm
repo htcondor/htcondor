@@ -49,6 +49,7 @@ BEGIN
     $CONDOR_RM = 'condor_rm';
 
     $DEBUG = 0;
+	$DEBUGLEVEL = 1; # turn on lowest level output
     $cluster = 0;
     $num_active_jobs = 0;
     $saw_submit = 0;
@@ -170,7 +171,7 @@ sub SubmitDagman
 	if( /\d+ job\(s\) submitted to cluster (\d+)./ )
 	{
 	    $cluster = $1;
-		debug("Cluster is $cluster\n");
+		debug("Cluster is $cluster\n",5);
 	    last;
 	}
     }
@@ -284,7 +285,7 @@ sub TestSubmitDagman
 	if( /\d+ job\(s\) submitted to cluster (\d+)./ )
 	{
 	    $cluster = $1;
-		debug("Cluster is $cluster\n");
+		debug("Cluster is $cluster\n",5);
 	    last;
 	}
     }
@@ -326,7 +327,7 @@ sub runCommand
     my $command_string = shift;
     my ($command) = split /\s+/, $command_string;
     
-    debug( "running $command_string\n" );
+    debug( "running $command_string\n" ,5);
     $retval = system( $command_string );
 
     # did command die abormally?
@@ -338,7 +339,7 @@ sub runCommand
 		$info{'ErrorMessage'} = "error: $command died abnormally";
 		if (defined $WantErrorCallback )
 		{
-			#debug("Calling error callback!!!!!! at @ $WantErrorCallback\n");
+			debug("Calling error callback!!!!!! at @ $WantErrorCallback\n",6);
 			&$WantErrorCallback( %info )
 		}
 		DumpFailedCommand($command_string);
@@ -354,7 +355,7 @@ sub runCommand
 		$info{'ErrorMessage'} = "error: $command failed (returned $exitval)";
 		if (defined $WantErrorCallback )
 		{
-			#debug("Calling error callback!!!!!! at @ $WantErrorCallback\n");
+			debug("Calling error callback!!!!!! at @ $WantErrorCallback\n",6);
 			&$WantErrorCallback( %info )
 		}
 		DumpFailedCommand($command_string);
@@ -538,7 +539,7 @@ sub Monitor
     my %info;
 	my $timestamp = 0;
 
-    debug( "Entering Monitor\n" );
+    debug( "Entering Monitor\n" ,5);
 
 # commented out until we can do it right -- pfc
 
@@ -548,7 +549,7 @@ sub Monitor
 #    # if we're the parent, return
 #    return if $pid;
  
-#    debug( "In Monitor child\n" );
+    debug( "In Monitor child\n" ,6);
 
 	my $reallog = "";
 
@@ -595,7 +596,7 @@ sub Monitor
 	{
 #	    debug( "num_active_jobs = $num_active_jobs -- monitor exiting\n" );
 #	    exit 0;
-	    debug( "num_active_jobs = $num_active_jobs -- monitor returning\n" );
+	    debug( "num_active_jobs = $num_active_jobs -- monitor returning\n" ,5);
 	    return 1;
 	}
 
@@ -629,7 +630,7 @@ sub Monitor
 	# if this line is for another cluster, ignore
 	if ( $line =~ /^\d+\s+\(0*(\d+)\./ && $1 != $cluster )
 	{
-#	    debug( "log line for cluster $1, not $cluster -- ignoring...\n" );
+	    debug( "log line for cluster $1, not $cluster -- ignoring...\n" ,6);
 	    next LINE;
 	}
 	
@@ -639,7 +640,7 @@ sub Monitor
 	    $info{'cluster'} = $1;
 	    $info{'job'} = $2;
 
-	    debug( "Saw job evicted\n" );
+	    debug( "Saw job evicted\n" ,5);
 
 	    # execute callback if one is registered
 	    &$EvictedCallback( %info )
@@ -664,7 +665,7 @@ sub Monitor
 
 	    if( $line =~ /^\s+\(0\) Job was not checkpointed\./ )
 	    {
-		debug( "job was evicted without ckpt\n" );
+		debug( "job was evicted without ckpt\n" ,5);
 		# execute callback if one is registered
 		&$EvictedWithoutCheckpointCallback( %info )
 		    if defined $EvictedWithoutCheckpointCallback;
@@ -672,14 +673,14 @@ sub Monitor
 	    }
 	    elsif( $line =~ /^\s+\(1\) Job was checkpointed\./ )
 	    {
-		debug( "job was evicted with ckpt\n" );
+		debug( "job was evicted with ckpt\n" ,5);
 		# execute callback if one is registered
 		&$EvictedWithCheckpointCallback( %info )
 		    if defined $EvictedWithCheckpointCallback;
 	    }
 	    elsif( $line =~ /^\s+\(0\) Job terminated and was requeued.*$/ )
 	    {
-		debug( "job was evicted and requeued\n" );
+		debug( "job was evicted and requeued\n" ,5);
 		# execute callback if one is registered
 		&$EvictedWithRequeueCallback( %info )
 		    if defined $EvictedWithRequeueCallback;
@@ -688,7 +689,7 @@ sub Monitor
 	    {
 		debug( "parse error on line $linenum of $info{'log'}:\n" .
 		       "   no checkpoint message found after eviction: " .
-		       "continuing...\n" );
+		       "continuing...\n" ,5);
 		# re-parse line so we don't miss whatever it said
 		goto PARSE;
 	    }
@@ -701,7 +702,7 @@ sub Monitor
 	    $info{'cluster'} = $1;
 	    $info{'job'} = $2;
 
-	    debug( "Saw job terminated\n" );
+	    debug( "Saw job terminated\n" ,5);
 
 	    # decrement # of queued jobs so we will know when to exit monitor
 	    $num_active_jobs--;
@@ -743,11 +744,11 @@ sub Monitor
 	    # abnormal termination
 	    elsif( $line =~ /^\s+\(0\) Abnormal termination \(signal (\d+)\)/ )
 	    {
-		debug( "Loading $1 as info{'signal'}\n" );
+		debug( "Loading $1 as info{'signal'}\n" ,5);
 		$info{'signal'} = $1;
 		print "keys:".join(" ",keys %info)."\n";
 
-		debug( "checking for core file...\n" );
+		debug( "checking for core file...\n" ,5);
 
 		# read next line to find core file
 		$line = <SUBMIT_LOG>;
@@ -769,7 +770,7 @@ sub Monitor
 		}
 		elsif( $line =~ /^\s+\(0\) No core file/ )
 		{
-		    debug( "no core file found\n" );
+		    debug( "no core file found\n" ,5);
 		    # not sure what to do here with $info{'core'}...
 		}
 		else
@@ -786,7 +787,7 @@ sub Monitor
 	    {
 		debug( "parse error on line $linenum of $info{'log'}:\n" .
 		       "   no termination status message found after " .
-		       "termination: continuing...\n" );
+		       "termination: continuing...\n" ,5);
 		# re-parse line so we don't miss whatever it said
 		goto PARSE;
 	    }
@@ -799,7 +800,7 @@ sub Monitor
 	    $info{'cluster'} = $1;
 	    $info{'job'} = $2;
 
-	    debug( "Saw Shadow Exception\n" );
+	    debug( "Saw Shadow Exception\n" ,5);
 
 		if(! defined $ShadowCallback)
 		{
@@ -842,7 +843,7 @@ sub Monitor
 	    $info{'host'} = $3;
 	    $info{'sinful'} = "<$3:$4>";
 	    
-	    debug( "Saw job executing\n" );
+	    debug( "Saw job executing\n" ,5);
 
 	    # execute callback if one is registered
 	    &$ExecuteCallback( %info )
@@ -860,7 +861,7 @@ sub Monitor
 	    $info{'host'} = $3;
 	    $info{'sinful'} = "<$3:$4>";
 
-	    debug( "Saw job submitted\n" );
+	    debug( "Saw job submitted\n" ,5);
 	    $submit_info{'cluster'} = $1; # squirrel it away for TimedWait
 
 	    # mark that we've seen a submit so we can start watching # of jobs
@@ -881,7 +882,7 @@ sub Monitor
 	    $info{'cluster'} = $1;
 	    $info{'job'} = $2;
 
-	    debug( "Saw job abort cluster $1 job $2\n" );
+	    debug( "Saw job abort cluster $1 job $2\n" ,5);
 
 	    # decrement # of queued jobs so we will know when to exit monitor
 	    $num_active_jobs--;
@@ -915,7 +916,7 @@ sub Monitor
 
 		$info{'holdreason'} = $line;
 
-	    debug( "Saw job held\n" );
+	    debug( "Saw job held\n" ,5);
 
 	    
 	    # execute callback if one is registered
@@ -931,7 +932,7 @@ sub Monitor
 	    $info{'host'} = $3;
 	    $info{'sinful'} = "<$3:$4>";
 	    
-	    debug( "Saw job released\n" );
+	    debug( "Saw job released\n" ,5);
 
 	    
 	    # execute callback if one is registered
@@ -961,20 +962,57 @@ sub CheckTimedCallback
 
 	$timestamp = time; #get current time
 	$diff = $timestamp - $timer_time;
-	#debug("Delta for timer is $diff\n");
+	debug("Delta for timer is $diff\n",6);
 	if( $diff >= $TimedCallbackWait)
 	{
 		#call timed callback
-		debug("Called timed callback!!!!!!-- $cluster --\n");
+		debug("Called timed callback!!!!!!-- $cluster --\n",5);
 		&$TimedCallback( %info )
 			if defined $TimedCallback;
 	}
 }
 
+################################################################################
+#
+# debug( string, level )
+#
+# If a level is passed in then the printing varies by current level
+# otherwise we react only to dubug on or off at the momment.
+#
+# Predefined levels:
+#		5  Condor.pm
+#		4  CondorTest.pm
+#		3  CondorPersonal.pm
+#		2  batch_test.pl
+#		1  all existing prints being converted
+#
+################################################################################
+
 sub debug
 {
     my $string = shift;
-    print( "DEBUG ", timestamp(), ": $string" ) if $DEBUG;
+	my $level = shift;
+	if(!(defined $level)) {
+    	print( "", timestamp(), ": $string" ) if $DEBUG;
+	} elsif($level <= $DEBUGLEVEL) {
+    	print( "", timestamp(), ": $string" ) if $DEBUG;
+	}
+}
+
+sub DebugLevel
+{
+	my $newlevel = shift;
+	$DEBUGLEVEL = $newlevel;
+}
+
+sub DebugOn
+{
+    $DEBUG = 1;
+}
+
+sub DebugOff
+{
+    $DEBUG = 0;
 }
 
 sub ParseSubmitFile
@@ -988,7 +1026,7 @@ sub ParseSubmitFile
 	return 0;
     }
     
-    debug( "reading submit file...\n" );
+    debug( "reading submit file...\n" ,5);
     while( <SUBMIT_FILE> )
     {
 	fullchomp($_);	# do a windows strip, fine for linux
@@ -1024,32 +1062,22 @@ sub ParseSubmitFile
 	    if( $value =~ /(.*)\$ENV\((.*)\)(.*)/ )
 	    {
 			my $envlookup = $ENV{$2};
-	    	#debug( "Found $envlookup in environment \n");
+	    	debug( "Found $envlookup in environment \n",6);
 			$value = $1.$envlookup.$3;
 	    }
 
-	    debug( "$variable = $value\n" );
+	    debug( "$variable = $value\n" ,5);
 	    
 	    # save the variable/value pair
 	    $submit_info{$variable} = $value;
 	}
 	else
 	{
-#	    debug( "line $line of $submit_file not a variable assignment... " .
-#		   "skipping\n" );
+	    debug( "line $line of $submit_file not a variable assignment... " .
+		   "skipping\n" ,6);
 	}
     }
     return 1;
-}
-
-sub DebugOn
-{
-    $DEBUG = 1;
-}
-
-sub DebugOff
-{
-    $DEBUG = 0;
 }
 
 sub timestamp {

@@ -43,7 +43,7 @@ $ENV{CONDOR_CONFIG} = $configfile;
 
 while( $currenttestcount <= $maxjobs)
 {
-	print "Test $currenttestcount -- & lastduration --$lastduration--";
+	CondorTest::debug("Test $currenttestcount -- & lastduration --$lastduration--",1);
 	my $nostatus = CondorTest::verbose_system("$testfile $currenttestcount $incrementjobs $lastduration $datafile $cmdfile $testname");
 	ReadLastStats();
 	$lastduration = $statshash{"duration"};
@@ -56,13 +56,13 @@ my $cmd = "condor_off -fast -master";
 $status = CondorTest::runCondorTool($cmd,\@adarray,2);
 if(!$status)
 {
-	print "Test failure due to Condor Tool Failure<$cmd>\n";
+	CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 	return(1)
 }
 
 if($nostatus != 0)
 {
-	print "scaling test failed at $currenttestcount\n";
+	CondorTest::debug("scaling test failed at $currenttestcount\n",1);
 }
 
 sub ReadLastStats
@@ -80,14 +80,14 @@ sub ReadLastStats
 		$line = $_;
 		if( $line =~ /^\s*Scaling\((\d+)\)\s+Duration\((\d+)\)\s+UnitTime\((\d*\.*\d*)\).*/ )
 		{
-			print "$line highlights scaling  $1 duration $2 UnitTime $3\n";
+			CondorTest::debug("$line highlights scaling  $1 duration $2 UnitTime $3\n",1);
 			$statshash{"scaling"} = $1;
 			$statshash{"duration"} = $2;
 			$statshash{"unittime"} = $3;
 		}
 		else
 		{
-			print "Mismatch $line\n";
+			CondorTest::debug("Mismatch $line\n",1);
 		}
 	}
 }

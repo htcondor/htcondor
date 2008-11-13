@@ -99,7 +99,7 @@ $ExitSuccess = sub {
 	}
 	my $i;
 	for($i = 0; $i < scalar(@args_reqd); $i++) {
-		print "Checking $args_reqd[$i]...\n";
+		CondorTest::debug("Checking $args_reqd[$i]...\n",1);
 		if($args_reqd[$i] ne $args_found[$i]) 
 		{
 			$adjust = exceptadjust($args_reqd[$i]); # translate escapes
@@ -116,7 +116,7 @@ $ExitSuccess = sub {
 CondorTest::RegisterExitedSuccess( $testname, $ExitSuccess );
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	print "$testname: SUCCESS\n";
+	CondorTest::debug("$testname: SUCCESS\n",1);
 	exit(0);
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";

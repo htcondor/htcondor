@@ -20,8 +20,6 @@
 
 use CondorTest;
 
-Condor::DebugOff();
-
 $cmd = 'lib_procapi_pidtracking-byenv.cmd';
 $testname = 'We cleanup correctly after our kids. - vanilla U';
 $datafile = "lib_procapi_pidtracking-byenv.data";
@@ -44,14 +42,14 @@ $worked = "yes";
 
 $execute = sub
 {
-	Condor::debug( "Goood, job is running so we'll start the timer....\n");
+	CondorTest::debug( "Goood, job is running so we'll start the timer....\n",1);
 	CondorTest::RegisterTimed($testname, $timed, 300); # give it 5 minutes
 };
 
 $timed = sub
 {
         system("date");
-        print "lib_procapi_pidtracking-byenv HUNG !!!!!!!!!!!!!!!!!!\n";
+        CondorTest::debug("lib_procapi_pidtracking-byenv HUNG !!!!!!!!!!!!!!!!!!\n",1);
         exit(1);
 };
 
@@ -69,10 +67,10 @@ $ExitSuccess = sub {
 		$line = $_;
 		if( $line =~ /\s*Relationship:\s*(\d+)\s*created\s*(\d+).*$/ )
 		{
-			Condor::debug( "Process $1 created $2\n");
+			CondorTest::debug( "Process $1 created $2\n",1);
 			push @pids, $2;
 		}
-		Condor::debug( "$line\n");
+		CondorTest::debug( "$line\n",1);
 	}
 	close(PIN);
 	open(PIN, "<$kiddatafile") or die "Could not open data file '$kiddatafile': $?";
@@ -82,10 +80,10 @@ $ExitSuccess = sub {
 		$line = $_;
 		if( $line =~ /\s*Relationship:\s*(\d+)\s*child\s+created\s*(\d+).*$/ )
 		{
-			Condor::debug( "Process $1 created $2\n");
+			CondorTest::debug( "Process $1 created $2\n",1);
 			push @kidpids, $2;
 		}
-		Condor::debug( "$line\n");
+		CondorTest::debug( "$line\n",1);
 	}
 	close(PIN);
 	my $pscmd = "ps -ef";
@@ -100,12 +98,12 @@ $ExitSuccess = sub {
 		$linesoftext = $outputlines;
 		if($linesoftext == 0)
 		{
-			print "Wrong ps options!\n";
+			CondorTest::debug("Wrong ps options!\n",1);
 			$pscmd = "ps -ax";
 		}
 		else
 		{
-			print "Ps delivered $linesoftext too check!\n";
+			CondorTest::debug("Ps delivered $linesoftext too check!\n",1);
 		}
 	}
 
@@ -120,12 +118,12 @@ $ExitSuccess = sub {
 			if($pidline =~ /\s*(\d+)\s*.*$/ )
 			{
 				$thispid = $1;
-				Condor::debug( "Checking againt list of removed pids --$thispid--\n");
+				CondorTest::debug( "Checking againt list of removed pids --$thispid--\n",1);
 				foreach my $pidcheck (@pids)
 				{
 					if($thispid eq $pidcheck)
 					{
-						print "Test fails because pid $pidcheck should have been removed\n";
+						CondorTest::debug("Test fails because pid $pidcheck should have been removed\n",1);
 						$worked = "no";
 						system("kill -9 $pidcheck");
 					}
@@ -134,7 +132,7 @@ $ExitSuccess = sub {
 				{
 					if($thispid eq $pidcheck)
 					{
-						print "Test fails because pid $pidcheck should have been removed\n";
+						CondorTest::debug("Test fails because pid $pidcheck should have been removed\n",1);
 						$worked = "no";
 						system("kill -9 $pidcheck");
 					}
@@ -146,12 +144,12 @@ $ExitSuccess = sub {
 			if($pidline =~ /\s*[A-Za-z]+\s*(\d+).*$/ )
 			{
 				$thispid = $1;
-				Condor::debug( "Checking againt list of removed pids --$thispid--\n");
+				CondorTest::debug( "Checking againt list of removed pids --$thispid--\n",1);
 				foreach my $pidcheck (@pids)
 				{
 					if($thispid eq $pidcheck)
 					{
-						print "Test fails because pid $pidcheck should have been removed\n";
+						CondorTest::debug("Test fails because pid $pidcheck should have been removed\n",1);
 						$worked = "no";
 						system("kill -9 $pidcheck");
 					}
@@ -160,7 +158,7 @@ $ExitSuccess = sub {
 				{
 					if($thispid eq $pidcheck)
 					{
-						print "Test fails because pid $pidcheck should have been removed\n";
+						CondorTest::debug("Test fails because pid $pidcheck should have been removed\n",1);
 						$worked = "no";
 						system("kill -9 $pidcheck");
 					}
@@ -173,12 +171,12 @@ $ExitSuccess = sub {
 
 	if($worked eq "no")
 	{
-		print "Test failed......\n";
+		CondorTest::debug("Test failed......\n",1);
 		exit(1);
 	}
 	else
 	{
-		print "Test Worked......\n";
+		CondorTest::debug("Test Worked......\n",1);
 	}
 
 
@@ -211,7 +209,7 @@ CondorTest::RegisterExecute($testname, $execute);
 #empty local environment and add only a few things that way......
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	print "$testname: SUCCESS\n";
+	CondorTest::debug("$testname: SUCCESS\n",1);
 	exit(0);
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";

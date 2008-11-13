@@ -109,5 +109,5 @@ CondorTest::RegisterExitedFailure( $testname,
 
 # fortran can return success or failure, we don't check the return value.
 CondorTest::RunTest($testname, $cmd, 0);
-print "$testname: SUCCESS\n";
+CondorTest::debug("$testname: SUCCESS\n",1);
 exit(0);

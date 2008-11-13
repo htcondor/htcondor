@@ -31,7 +31,7 @@ $execute = sub {
 };
 
 $abort = sub {
-	print "Job aborted, cool.\n";
+	CondorTest::debug("Job aborted, cool.\n",1);
 	my $corefile = $info{'core'};
 	if( $corefile == undef )
 	{
@@ -39,8 +39,8 @@ $abort = sub {
 	}
 	else
 	{
-		print "Corefile is called ---$corefile---\n";
-		print "-now finish test for coresize = limits-\n";
+		CondorTest::debug("Corefile is called ---$corefile---\n",1);
+		CondorTest::debug("-now finish test for coresize = limits-\n",1);
 	}
 };
 
@@ -53,7 +53,7 @@ CondorTest::RegisterExecute($testname, $execute);
 CondorTest::RegisterAbort($testname, $abort);
 CondorTest::RegisterExitedAbnormal($testname, $abort);
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	print "$testname: SUCCESS\n";
+	CondorTest::debug("$testname: SUCCESS\n",1);
 	exit(0);
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";

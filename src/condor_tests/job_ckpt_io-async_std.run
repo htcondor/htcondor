@@ -40,8 +40,8 @@ sub OutputTest
 	# there should be two lines in the output, a string of numbers and
 	# a normal end of job line after it.
 	if (scalar(@lines) != 2) {
-		print "STDOUT doesn't match expected output. Wrong line count:\n";
-		print "$_\n" foreach @lines;
+		CondorTest::debug("STDOUT doesn't match expected output. Wrong line count:\n",1);
+		CondorTest::debug("$_\n",1);
 		die "Aborting test.";
 	}
 
@@ -56,25 +56,25 @@ sub OutputTest
 		{
 			# coerce the string $number into a real number....
 			if ($number != $cnt) {
-				print "STDOUT doesn't match expected output. " .
+				CondorTest::debug("STDOUT doesn't match expected output. ",1);
 					"Numbers aren't contiguous:\n";
-				print "$_\n" foreach @lines;
+				CondorTest::debug("$_\n",1);
 				die "Aborting test.";
 			}
 			$cnt++;
 		}
 
 	} else {
-		print "STDOUT doesn't match expected output. First line not numbers:\n";
-		print "$_\n" foreach @lines;
+		CondorTest::debug("STDOUT doesn't match expected output. First line not numbers:\n",1);
+		CondorTest::debug("$_\n",1);
 		die "Aborting test.";
 	}
 
 	# second line should be this exact string.
 	if ($lines[1] ne "Normal End Of Job") {
-		print "STDOUT doesn't match expected output. " .
+		CondorTest::debug("STDOUT doesn't match expected output. ",1);
 			"Second line not sentinel:\n";
-		print "$_\n" foreach @lines;
+		CondorTest::debug("$_\n",1);
 		die "Aborting test.";
 	}
 
@@ -84,7 +84,7 @@ sub OutputTest
 CondorTest::RegisterExitedSuccess( $testname, \&OutputTest );
 
 if( CondorTest::RunTest($testname, $cmd, 1) ) {
-    print "$testname: SUCCESS\n";
+    CondorTest::debug("$testname: SUCCESS\n",1);
     exit(0);
 } else {
     die "$testname: CondorTest::RunTest() failed\n";

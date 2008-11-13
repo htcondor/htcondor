@@ -21,8 +21,6 @@
 use CondorTest;
 use CondorPersonal;
 
-CondorPersonal::DebugOff();
-Condor::DebugOff();
 
 $cmd_template = "job_core_basic_par.template";
 $testname = 'job_core_basic_par - Simple parallel job';
@@ -62,11 +60,11 @@ my @parallel = split /\+/, $configrem;
 my $parallelconfig = shift @parallel;
 my $parallelport = shift @parallel;
 
-print "---Parallel config is $parallelconfig and remote port is $parallelport---\n";
+CondorTest::debug("---Parallel config is $parallelconfig and remote port is $parallelport---\n",1);
 
 $ENV{CONDOR_CONFIG} = $parallelconfig;
 
-print "Set config to $parallelconfig\n";
+CondorTest::debug("Set config to $parallelconfig\n",1);
 
 #print "Looking for schedd for Basic Parallel Test\n";
 system("condor_status -pool $currenthost:$parallelport -schedd -format '%s\n' Name");
@@ -114,7 +112,7 @@ close(CSUB);
 
 
 my $result = CondorPersonal::PersonalSystem("./job_core_basic_par.pl $mysubmitnm");
-print "Result of basic paarallel  job is  $result\n";
+CondorTest::debug("Result of basic paarallel  job is  $result\n",1);
 
 
 system("cp *job_core_basic_par* $mysaveme");
@@ -145,7 +143,7 @@ my $cmd = "condor_off -fast -master";
 $status = CondorTest::runCondorTool($cmd,\@adarray,2);
 if(!$status)
 {
-	print "Test failure due to Condor Tool Failure<$cmd>\n";
+	CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 	exit(1)
 }
 

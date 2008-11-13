@@ -208,7 +208,7 @@ sub RemoveTimed
 
     $test{$handle}{"RegisterTimed"} = undef;
     $test{$handle}{"RegisterTimedWait"} = undef;
-    Condor::debug( "Remove timer.......\n");
+    debug( "Remove timer.......\n",4);
     Condor::RemoveTimed( );
 }
 
@@ -219,16 +219,16 @@ sub DefaultOutputTest
     croak "default_output_test called but no \@expected_output defined"
 	unless defined @expected_output;
 
-    Condor::debug( "\$info{'output'} = $info{'output'}\n" );
+    debug( "\$info{'output'} = $info{'output'}\n" ,4);
 
 	my $output = "";
 	my $error = "";
 	my $initialdir = $info{'initialdir'};
 	if($initialdir ne "") {
-		Condor::debug( "Testing with initialdir = $initialdir\n" );
+		debug( "Testing with initialdir = $initialdir\n" ,4);
 		$output = $initialdir . "/" . $info{'output'};
 		$error = $initialdir . "/" . $info{'error'};
-		Condor::debug( "$output is now being tested.....\n" );
+		debug( "$output is now being tested.....\n" ,4);
 	} else {
 		$output = $info{'output'};
 		$error = $info{'error'};
@@ -348,7 +348,7 @@ sub CheckTimedRegistrations
 
     if( defined $test{$handle}{"RegisterTimed"} )
     {
-		Condor::debug( "Found a timer to regsiter.......\n");
+		debug( "Found a timer to regsiter.......\n",4);
 		Condor::RegisterTimed( $test{$handle}{"RegisterTimed"} , $test{$handle}{"RegisterTimedWait"});
     }
 }
@@ -483,7 +483,7 @@ sub CompareText
     my @skiplines = @_;
     my $linenum = 0;
 
-	Condor::debug("DEBUG opening file $file to compare to array of expected results\n");
+	debug("opening file $file to compare to array of expected results\n",4);
     open( FILE, "<$file" ) || die "error opening $file: $!\n";
     
     while( <FILE> )
@@ -492,12 +492,12 @@ sub CompareText
 	$line = $_;
 	$linenum++;
 
-	Condor::debug("DEBUG: linenum $linenum\n");
-	Condor::debug("DEBUG: \$line: $line\n");
-	Condor::debug("DEBUG: \$\$aref[0] = $$aref[0]\n");
+	debug("linenum $linenum\n",4);
+	debug("\$line: $line\n",4);
+	debug("\$\$aref[0] = $$aref[0]\n",4);
 
-	Condor::debug("DEBUG: skiplines = \"@skiplines\"\n");
-	Condor::debug("DEBUG: grep returns ", grep( /^$linenum$/, @skiplines ), "\n");
+	debug("skiplines = \"@skiplines\"\n",4);
+	print "grep returns ", grep( /^$linenum$/, @skiplines ), "\n";
 
 	next if grep /^$linenum$/, @skiplines;
 
@@ -508,7 +508,7 @@ sub CompareText
 	}
 	fullchomp($expectline);
 
-	Condor::debug("DEBUG: \$expectline: $expectline\n");
+	debug("\$expectline: $expectline\n",4);
 
 	# if they match, go on
 	next if $expectline eq $line;
@@ -536,7 +536,7 @@ sub CompareText
 	croak "invalid skipline argument ($num)" if $num < 1;
     }
     
-	Condor::debug("DEBUG: CompareText successful\n");
+	debug("CompareText successful\n",4);
     return 1;
 }
 
@@ -642,11 +642,11 @@ sub ParseMachineAds
 		return 0;
     }
     
-    #Condor::debug( "reading machine ads from $machine...\n" );
+    debug( "reading machine ads from $machine...\n" ,5);
     while( <PULL> )
     {
 	fullchomp($_);
-#	Condor::debug("Raw AD is $_\n");
+	debug("Raw AD is $_\n",5);
 	$line++;
 
 	# skip comments & blank lines
@@ -678,19 +678,19 @@ sub ParseMachineAds
 	    if( $value =~ /(.*)\$ENV\((.*)\)(.*)/ )
 	    {
 			my $envlookup = $ENV{$2};
-	    	#Condor::debug( "Found $envlookup in environment \n");
+	    	debug( "Found $envlookup in environment \n",5);
 			$value = $1.$envlookup.$3;
 	    }
 
-	    #Condor::debug( "$variable = $value\n" );
+	    debug( "$variable = $value\n" ,5);
 	    
 	    # save the variable/value pair
 	    $machine_ads{$variable} = $value;
 	}
 	else
 	{
-#	    Condor::debug( "line $line of $submit_file not a variable assignment... " .
-#		   "skipping\n" );
+	    debug( "line $line of $submit_file not a variable assignment... " .
+		   "skipping\n" ,5);
 	}
     }
 	close(PULL);
@@ -810,17 +810,17 @@ sub runCondorTool
 	while( $count < $attempts) {
 		@{$arrayref} = (); #empty return array...
 		my @tmparray;
-		Condor::debug( "Try command <$cmd>\n");
+		debug( "Try command <$cmd>\n",4);
 		open(PULL, "$cmd 2>$catch |");
 		while(<PULL>)
 		{
 			fullchomp($_);
-			Condor::debug( "Process: $_\n");
+			debug( "Process: $_\n",4);
 			push @tmparray, $_; # push @{$arrayref}, $_;
 		}
 		close(PULL);
 		$status = $? >> 8;
-		Condor::debug("Status is $status after command\n");
+		debug("Status is $status after command\n",4);
 		if(( $status != 0 ) && ($attempts == ($count + 1)))
 		{
 				print "runCondorTool: $cmd timestamp $start_time failed!\n";
@@ -867,13 +867,13 @@ sub runCondorTool
 			}
 			my $current_time = time;
 			$delta_time = $current_time - $start_time;
-			Condor::debug("runCondorTool: its been $delta_time since call\n");
+			debug("runCondorTool: its been $delta_time since call\n",4);
 			return(1);
 		}
 		$count = $count + 1;
 		sleep((10*$count));
 	}
-	Condor::debug( "runCondorTool: $cmd worked!\n");
+	debug( "runCondorTool: $cmd worked!\n",4);
 
 	return(0);
 }
@@ -1035,11 +1035,11 @@ sub find_pattern_in_array
     $harray = shift;
     $place = 0;
 
-    Condor::debug( "Looking for <<$pattern>> size <<$#{$harray}>>\n");
+    debug( "Looking for <<$pattern>> size <<$#{$harray}>>\n",4);
     foreach $member (@{$harray}) {
-        #Condor::debug( "consider $member\n");
+        debug( "consider $member\n",5);
         if($member =~ /.*$pattern.*/) {
-            Condor::debug( "Found <<$member>> line $place\n");
+            debug( "Found <<$member>> line $place\n",4);
             return($place);
         } else {
             $place = $place + 1;
@@ -1064,7 +1064,7 @@ sub compare_arrays
     $numargs = shift;
     %lookup = ();
     $counter = 0;
-    Condor::debug( "Check $numargs starting row $startrow end row $endrow\n");
+    debug( "Check $numargs starting row $startrow end row $endrow\n",4);
     while($counter < $numargs) {
         $href = shift;
         my $thisrow = 0;
@@ -1075,11 +1075,11 @@ sub compare_arrays
                     $lookup{$item} = 1;
                 } else {
                     $lookup{$item} = $lookup{$item} + 1;
-                    Condor::debug( "Set at:<$lookup{$item}:$item>\n");
+                    debug( "Set at:<$lookup{$item}:$item>\n",4);
                 }
-                #Condor::debug( "Store: $item\n");
+                debug( "Store: $item\n",5);
             } else {
-                Condor::debug( "Skip: $item\n");
+                debug( "Skip: $item\n",4);
             }
             $thisrow = $thisrow + 1;
         }
@@ -1087,7 +1087,7 @@ sub compare_arrays
     }
     #loaded up..... now look!
     foreach $key (keys %lookup) {
-        Condor::debug( " $key equals $lookup{$key}\n");
+        debug( " $key equals $lookup{$key}\n",4);
 		if($lookup{$key} != $numargs) {
 			print "Arrays are not the same! key <$key> is $lookup{$key} and not $numargs\n";
 			return(1);
@@ -1171,6 +1171,16 @@ sub getFqdnHost
 {
 	my $host = hostfqdn();
 	return($host);
+}
+
+# Call down to Condor Perl Module for now
+
+sub debug
+{
+    my $string = shift;
+	my $level = shift;
+	my $newstring = "CT:$string";
+	Condor::debug($newstring,$level);
 }
 
 1;

@@ -23,8 +23,6 @@ use CondorPersonal;
 use Cwd;
 use x_hadutilities;
 
-CondorPersonal::DebugOff();
-Condor::DebugOff();
 
 my $testName     = 'job_replication_basic - ' . 
 				   'Testing HAD and replication functionality';
@@ -50,7 +48,7 @@ if(! -f "$topDirectory/$testingSystemConfigName")
 	exit 1;
 }
 
-print "Working directory is $topDirectory\n";
+CondorTest::debug("Working directory is $topDirectory\n",1);
 
 # Operating system environment variables of the test
 my $currentHost = CondorTest::getFqdnHost();
@@ -346,7 +344,7 @@ while($time - $startTimer <= $configurationTable{RUN_TIME})
 
 &MoveAllToSaveDirectory();
 
-print "$coreName test SUCCESS!\n";
+CondorTest::debug("$coreName test SUCCESS!\n",1);
 ### End of main ###
 
 ### Checkers ###
@@ -1307,7 +1305,7 @@ sub RaiseMachines
 #        	split(/\+/, $configurationFileAndCollectorPort);
 		my $condorLogsDirectory = "$topDirectory/$pId/" . $pId . "_instance" .
                                   $hadIndex . "/log";
-        print "$condorLogsDirectory\n";
+        CondorTest::debug("$condorLogsDirectory\n",1);
         my $masterSinfulString =
             &GetAddress("$condorLogsDirectory/\.master_address");
 
@@ -1321,7 +1319,6 @@ sub RaiseMachines
                                   "$masterSinfulString\' -subsystem had", \@adarray, 2);
         CondorTest::runCondorTool("condor_on -addr \'" .
                                   "$masterSinfulString\' -subsystem replication", \@adarray, 2);
-        Condor::DebugOff();
 
 		&LogControl($logsDirectory, &FormatTime($time) .
                 	": instance #$configurationFiles[$hadIndex] going up");

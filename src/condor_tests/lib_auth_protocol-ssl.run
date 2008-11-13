@@ -22,12 +22,10 @@ use CondorTest;
 use CondorPersonal;
 use Cwd;
 
-CondorPersonal::DebugOff();
-Condor::DebugOff();
 
 my $topleveldir = getcwd();
 my $name4test = `whoami`;
-print "Adjusting mapfile for <$name4test>\n";
+CondorTest::debug("Adjusting mapfile for <$name4test>\n",1);
 
 $param_template = "x_param.protocol-ssl.template";
 $testname = 'lib_auth_protocol-ssl - Security Protocol SSL Authentication Test';
@@ -76,7 +74,7 @@ while(<OLD>) {
 	$line = $_;
 	if($line =~ /^SSL\s+(.*)\s+USER$/ ) {
 		print NEW "SSL $1 $name4test\n";
-		print "SSL $1 $name4test\n";
+		CondorTest::debug("SSL $1 $name4test\n",1);
 	} else {
 		print NEW;
 	}
@@ -98,8 +96,8 @@ $mycorenm = $corename . ".cmd";
 $mycorenmout = $corename . ".cmd.out";
 $mycorenmlog = $corename . ".log";
 
-print "Master PID is $mypid\n";
-print "Master PID submit file is $mysubmitnm\n";
+CondorTest::debug("Master PID is $mypid\n",1);
+CondorTest::debug("Master PID submit file is $mysubmitnm\n",1);
 
 # Edit submit file to submit to scheduler at securitypool (side b) schedd.
 my $line;
@@ -111,12 +109,12 @@ while(<TPLATE>)
 	$line = $_;
 	if( $line =~ /^\s*secprepostsrc\s*=\s*.*$/ )
 	{
-		print "Setting up for $mytestnegotiation\n";
+		CondorTest::debug("Setting up for $mytestnegotiation\n",1);
 		print CSUB "secprepostsrc = $mytestnegotiation\n";
 	}
 	else
 	{
-		print "template: $line\n";
+		CondorTest::debug("template: $line\n",1);
 		print CSUB "$line\n";
 	}
 }
@@ -172,14 +170,14 @@ my @securitypool = split /\+/, $configsec;
 my $secconfig = shift @securitypool;
 my $secport = shift @securitypool;
 
-print "---security config is $secconfig and securitypool port is $secport---\n";
+CondorTest::debug("---security config is $secconfig and securitypool port is $secport---\n",1);
 	
 
 $ENV{CONDOR_CONFIG} = $secconfig;
 # submit into local schedd (side a)
 
 my $result = system("./x_lib_auth_protocol.pl $mypid \"protocol\" $mytestnegotiation_result $mycmdfile");
-print "Result of crafted lib_auth_protocol job is  $result\n";
+CondorTest::debug("Result of crafted lib_auth_protocol job is  $result\n",1);
 
 system("cp *$corename* $mysaveme");
 	
@@ -204,13 +202,13 @@ my $cmd = "condor_off -fast -master";
 $status = CondorTest::runCondorTool($cmd,\@adarray,2);
 if(!$status)
 {
-	print "Test failure due to Condor Tool Failure<$cmd>\n";
+	CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 	exit(1)
 }
 
 if(!$status)
 {
-	print "Test failure due to Condor Tool Failure<$cmd>\n";
+	CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 	exit(1)
 }
 

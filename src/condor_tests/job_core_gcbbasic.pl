@@ -20,11 +20,10 @@
 
 use CondorTest;
 
-Condor::DebugOff();
 
 $cmd = 'job_core_gcbbasic.cmd';
 
-print "Submit file for this test is $cmd\n";
+CondorTest::debug("Submit file for this test is $cmd\n",1);
 
 $testname = 'Basic GCB smoke test';
 
@@ -51,7 +50,7 @@ $executed = sub
 
 $success = sub
 {
-	print "Success: ok\n";
+	CondorTest::debug("Success: ok\n",1);
 };
 
 $release = sub
@@ -63,7 +62,7 @@ CondorTest::RegisterExitedSuccess( $testname, $success);
 CondorTest::RegisterExecute($testname, $executed);
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	print "$testname: SUCCESS\n";
+	CondorTest::debug("$testname: SUCCESS\n",1);
 	exit(0);
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";

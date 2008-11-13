@@ -34,12 +34,12 @@ $execute = sub {
 	my %args = @_;
 	my $cluster = $args{"cluster"};
 
-	print "Running $cluster\n";
+	CondorTest::debug("Running $cluster\n",1);
 
 };
 
 $abort = sub {
-	print "Job is gone now, cool.\n";
+	CondorTest::debug("Job is gone now, cool.\n",1);
 };
 
 $hold = sub
@@ -47,7 +47,7 @@ $hold = sub
 	my %args = @_;
 	my $cluster = $args{"cluster"};
 
-	print "Good. Cluster $cluster is supposed to be held.....\n";
+	CondorTest::debug("Good. Cluster $cluster is supposed to be held.....\n",1);
 };
 
 $release = sub
@@ -59,7 +59,7 @@ $release = sub
 
 $success = sub
 {
-	print "Base file transfer job!\n";
+	CondorTest::debug("Base file transfer job!\n",1);
 };
 
 $timed = sub
@@ -79,7 +79,7 @@ CondorTest::RegisterExitedSuccess($testname, $success);
 #CondorTest::RegisterTimed($testname, $timed, 3600);
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	print "$testname: SUCCESS\n";
+	CondorTest::debug("$testname: SUCCESS\n",1);
 	system("rm -rf ../ftjob");
 	exit(0);
 } else {

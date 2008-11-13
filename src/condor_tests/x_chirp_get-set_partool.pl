@@ -29,16 +29,16 @@ $waitmax = 40;
 
 if($node eq "0") {
 	sleep(90);
-	print "Node 0 done sleeping\n";
+	CondorTest::debug("Node 0 done sleeping\n",1);
 } elsif($node eq "1") {
 	#verbose_system("condor_chirp set_job_attr SETTEST true");
-	print "Try  condor_chirp set_job_attr SETTEST true\n";
+	CondorTest::debug("Try  condor_chirp set_job_attr SETTEST true\n",1);
 	my @adarray;
 	my $status = 1;
 	my $cmd = "$condorchirp set_job_attr SETTEST true";
 	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
 	if(!$status) {
-		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 		exit(1);
 	}
 } elsif($node eq "2") {
@@ -59,30 +59,30 @@ printf "system(%s) returned %#04x: ", @args, $rc;
 
 	if ($rc == 0) 
 	{
-		print "ran with normal exit\n";
+		CondorTest::debug("ran with normal exit\n",1);
 		return $rc;
 	}
 	elsif ($rc == 0xff00) 
 	{
-		print "command failed: $!\n";
+		CondorTest::debug("command failed: $!\n",1);
 		return $rc;
 	}
 	elsif (($rc & 0xff) == 0) 
 	{
 		$rc >>= 8;
-		print "ran with non-zero exit status $rc\n";
+		CondorTest::debug("ran with non-zero exit status $rc\n",1);
 		return $rc;
 	}
 	else 
 	{
-		print "ran with ";
+		CondorTest::debug("ran with ",1);
 		if ($rc &   0x80) 
 		{
 			$rc &= ~0x80;
-			print "coredump from ";
+			CondorTest::debug("coredump from ",1);
 			return $rc;
 		}
-		print "signal $rc\n"
+		CondorTest::debug("signal $rc\n",1);
 	}
 }
 

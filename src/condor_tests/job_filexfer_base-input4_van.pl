@@ -48,25 +48,25 @@ $wanterror = sub
 	my $cluster = $args{"cluster"};
 	my $errmsg = $args{"ErrorMessage"};
 
-	print "Submit error message:<<$errmsg>>\n";
+	CondorTest::debug("Submit error message:<<$errmsg>>\n",1);
 
 	if($errmsg =~ /^.*died abnormally.*$/) {
-		print "BAD. Submit died was to fail but with error 1\n";
-		print "$testname: Failure\n";
+		CondorTest::debug("BAD. Submit died was to fail but with error 1\n",1);
+		CondorTest::debug("$testname: Failure\n",1);
 		exit(1);
 	} elsif($errmsg =~ /^.*\(\s*returned\s*(\d+)\s*\).*$/) {
 		if($1 == 1) {
-			print "Good. Job was not to submit with File Transfer off and input files requested\n";
-			print "$testname: SUCCESS\n";
+			CondorTest::debug("Good. Job was not to submit with File Transfer off and input files requested\n",1);
+			CondorTest::debug("$testname: SUCCESS\n",1);
 			exit(0);
 		} else {
-			print "BAD. Submit was to fail but with error 1 not <<$1>>\n";
-			print "$testname: Failure\n";
+			CondorTest::debug("BAD. Submit was to fail but with error 1 not <<$1>>\n",1);
+			CondorTest::debug("$testname: Failure\n",1);
 			exit(1);
 		}
 	} else {
-			print "BAD. Submit failure mode unexpected....\n";
-			print "$testname: Failure\n";
+			CondorTest::debug("BAD. Submit failure mode unexpected....\n",1);
+			CondorTest::debug("$testname: Failure\n",1);
 			exit(1);
 	}
 };
@@ -86,7 +86,7 @@ $timed = sub
 # easy cleanup
 
 my $job = $$;
-print "Process Id for this script is  $job\n";
+CondorTest::debug("Process Id for this script is  $job\n",1);
 my $basefile = "submit_filetrans_input" . "$job";
 my $in = "$basefile".".txt";
 my $ina = "$basefile"."a.txt";
@@ -110,12 +110,12 @@ open(NEWCMD,">$cmd.new") || die "Can not open command file: $!\n";
 while(<CMD>)
 {
 	CondorTest::fullchomp($_);
-	print "$_\n";
+	CondorTest::debug("$_\n",1);
 	$line = $_;
 	if( $line =~ /^\s*input\s*=\s*job_\d+_dir\/([a-zA-Z_]+)\d*\.txt\s*$/)
 	{
 		my $input = "$1"."$job".".txt";
-		print "Input file was $1\n";
+		CondorTest::debug("Input file was $1\n",1);
 		print NEWCMD "input = $inputdir/$input\n"
 	}
 	elsif( $line =~ /^\s*transfer_input_files\s*=\s*.*$/ )
@@ -143,7 +143,7 @@ CondorTest::RegisterExitedSuccess($testname, $success);
 #CondorTest::RegisterTimed($testname, $timed, 3600);
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	print "$testname: SUCCESS\n";
+	CondorTest::debug("$testname: SUCCESS\n",1);
 	exit(0);
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";

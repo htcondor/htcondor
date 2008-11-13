@@ -86,13 +86,13 @@ $executed = sub {
 	$job = $info{"job"};
 	
 	if ( $gotHold ) {
-		print "Good - Job $cluster.$job and began execution ".
+		CondorTest::debug("Good - Job $cluster.$job and began execution ",1);
 			  "after being held.\n";
 	##
 	## We never were on hold!
 	##
 	} else {
-		print "Bad - Job $cluster.$job began execution without ever ".
+		CondorTest::debug("Bad - Job $cluster.$job began execution without ever ",1);
 			  "being put on hold.\n";
 		exit(1);
 	}
@@ -106,8 +106,8 @@ $success = sub {
 	%info = @_;
 	$cluster = $info{"cluster"};
 	$job = $info{"job"};
-	print "Good - Job $cluster.$job finished execution.\n";
-	print "Policy Test Completed\n";
+	CondorTest::debug("Good - Job $cluster.$job finished execution.\n",1);
+	CondorTest::debug("Policy Test Completed\n",1);
 };
 
 ##
@@ -125,7 +125,7 @@ $submit = sub {
 	my $qstat = CondorTest::getJobStatus($cluster);
 	my $sleepTime = 2;
 	while ( $qstat == -1 ) {
-		print "Job status unknown - checking in $sleepTime seconds...\n";
+		CondorTest::debug("Job status unknown - checking in $sleepTime seconds...\n",1);
 		sleep($sleepTime);
 		$qstat = CondorTest::getJobStatus($cluster);
 	} # WHILE
@@ -134,14 +134,14 @@ $submit = sub {
 	## Check to make sure that it's on hold
 	## 
 	if ( $qstat == HELD) {
-		print "Good - Job $cluster.$job went on hold as soon as it ".
+		CondorTest::debug("Good - Job $cluster.$job went on hold as soon as it ",1);
 			  "was submitted.\n";
 		$gotHold = 1;
 	##
 	## The job didn't go on hold, so we need to abort
 	##
 	} else {
-		print "Bad - Job $cluster.$job failed to go on hold.\n";
+		CondorTest::debug("Bad - Job $cluster.$job failed to go on hold.\n",1);
 		exit(1);
 	}
 
@@ -161,7 +161,7 @@ $timed = sub {
 	$cluster = $info{"cluster"};
 	$job = $info{"job"};
 	
-	print "Bad - Job $cluster.$job hit our timer!.\n";
+	CondorTest::debug("Bad - Job $cluster.$job hit our timer!.\n",1);
 
 	##
 	## Go ahead and remove the job from the queue now
@@ -171,7 +171,7 @@ $timed = sub {
 	my $cmd = "condor_rm $cluster";
 	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
 	if (!$status) {
-		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 		return(1)
 	}
 	exit(1);
@@ -193,9 +193,9 @@ $release = sub {
 	## job was put on hold before it was released
 	##
 	if ( $gotHold ){
-		print "Good - Job $cluster.$job was released after being put on hold.\n";
+		CondorTest::debug("Good - Job $cluster.$job was released after being put on hold.\n",1);
 	} else {
-		print "Bad - Job $cluster.$job received a release event without ever ".
+		CondorTest::debug("Bad - Job $cluster.$job received a release event without ever ",1);
 			  "being put on hold.\n";
 		exit(1);
 	}
@@ -209,11 +209,11 @@ $release = sub {
 	my $cmd = "_CONDOR_TOOL_DEBUG=D_ALL condor_reschedule -d";
 	$status = CondorTest::runCondorTool($cmd,\@adarray,2, 1, 1);
 	if (!$status) {
-		print "Test failure due to Condor Tool Failure<$cmd>\n";
+		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 		exit(1);
 	}
 
-	print "Stderr with debug info for condor_reschedule follows\n";
+	CondorTest::debug("Stderr with debug info for condor_reschedule follows\n",1);
 	system("cat runCTool$$");
 };
 
@@ -232,7 +232,7 @@ CondorTest::RegisterTimed($testname, $timed, 600);
 CondorTest::RegisterTimed($testname, $timed, 90);
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	print "$testname: SUCCESS\n";
+	CondorTest::debug("$testname: SUCCESS\n",1);
 	exit(0);
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";
