@@ -65,6 +65,12 @@ for more details on how the local name will be used in the configuration,
 and section~\ref{sec:DaemonCore-Arguments} 
 for more details on the command line parameters.
 
+\item Dynamic Startd Provisioning: New configuration options allow for slots
+	to be broken into job-sized pieces. While this feature is still under
+	ongoing development, we felt that what we had so far, although not yet
+	fulfilling our complete vision, is useful enough in its present form to
+	bring value to some installations.
+
 % PR 947
 \item \Condor{submit\_dag} is now automatically run recursively on
 nested DAGs (unless the new \Opt{-no\_recurse} option is specified).
@@ -260,6 +266,11 @@ servers to be lost.
 \item Jobs now go on hold with a clear hold reason if a path to a
 directory is put in the transfer files list.  Previously, the attempt
 to run the job would simply fail and return to the idle state.
+
+\item If \Macro{MAX\_EVENT\_LOG} set to 0, then let event log grow without 
+  bounds.  Previously this behavior was broken, and setting
+  \Macro{MAX\_EVENT\_LOG} to 0 resulted in the log rotating with every
+  event.  Now it works as documented.
 
 \end{itemize}
 
