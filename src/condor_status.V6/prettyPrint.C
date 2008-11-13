@@ -682,14 +682,14 @@ printGridNormal(ClassAd *ad)
         {
             printf ("\n%-20.20s %-13.13s %-13.13s %-13.13s %-13.13s\n\n",
 				ATTR_NAME, 
-				"Job Limit", "Jobs", 
+				"Job Limit", "Running", 
 				"Submit Limit", "In Progress" );
 			
 			alpm.registerFormat("%-20.20s ", ATTR_NAME, 
 				"[??????????????????]" );
 			alpm.registerFormat ( "%-13d ", "JobLimit",
 				"[???????????] " );
-			alpm.registerFormat ( "%-13d ", "NumJobs",
+			alpm.registerFormat ( "%-13d ", ATTR_RUNNING_JOBS,
 				"[???????????] " );
 			alpm.registerFormat ( "%-13d ", "SubmitLimit",
 				"[???????????] " );

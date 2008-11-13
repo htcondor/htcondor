@@ -60,6 +60,16 @@ BaseResource::BaseResource( const char *resource_name )
 	leaseAttrsSynched = false;
 	updateLeasesCmdActive = false;
 
+	_updateCollectorTimerId = daemonCore->Register_Timer ( 
+		0,
+		(TimerHandlercpp)&BaseResource::UpdateCollector,
+		"BaseResource::UpdateCollector",
+		(Service*)this );
+	_lastCollectorUpdate = 0;
+	_firstCollectorUpdate = true;
+	_collectorUpdateInterval = param_integer ( 
+		"GRIDMANAGER_COLLECTOR_UPDATE_INTERVAL", 5*60 );
+
 	m_allResources.Append( this );
 }
 
@@ -72,6 +82,9 @@ BaseResource::~BaseResource()
  	daemonCore->Cancel_Timer( pingTimerId );
 	if ( updateLeasesTimerId != TIMER_UNSET ) {
 		daemonCore->Cancel_Timer( updateLeasesTimerId );
+	}
+	if ( _updateCollectorTimerId != TIMER_UNSET ) {
+		daemonCore->Cancel_Timer ( _updateCollectorTimerId );
 	}
 	if ( resourceName != NULL ) {
 		free( resourceName );
@@ -161,6 +174,10 @@ void BaseResource::Reconfig()
 		submitsInProgress.Append( queued_job );
 		queued_job->SetEvaluateState();
 	}
+
+	_collectorUpdateInterval = param_integer ( 
+		"GRIDMANAGER_COLLECTOR_UPDATE_INTERVAL", 5*60 );
+
 }
 
 char *BaseResource::ResourceName()
@@ -175,7 +192,7 @@ int BaseResource::DeleteMe()
 	if ( IsEmpty() ) {
         
         /* Tell the Collector that we're gone and self destruct */
-        InvalidateResource ();
+        Invalidate ();
 
 		delete this;
 		// DO NOT REFERENCE ANY MEMBER VARIABLES BELOW HERE!!!!!!!
@@ -185,8 +202,8 @@ int BaseResource::DeleteMe()
 	return TRUE;
 }
 
-bool BaseResource::InvalidateResource ()
-{
+bool BaseResource::Invalidate () {
+
     ClassAd ad;
     
     /* Set the correct types */
@@ -224,8 +241,8 @@ bool BaseResource::InvalidateResource ()
 
 }
 
-bool BaseResource::UpdateResource ()
-{
+bool BaseResource::SendUpdate () {
+
     ClassAd ad;
 
 	/* Set the correct types */
@@ -253,6 +270,39 @@ bool BaseResource::UpdateResource ()
 	}
 	
 	return ok;
+}
+
+int BaseResource::UpdateCollector () {
+
+	/* avoid updating the collector too often, except on the 
+	first update */
+	if ( !_firstCollectorUpdate ) {
+		int delay = ( _lastCollectorUpdate + 
+			_collectorUpdateInterval ) - time ( NULL );
+		if ( delay > 0 ) {
+			daemonCore->Reset_Timer ( _updateCollectorTimerId, delay );
+			return TRUE;
+		}
+	} else {
+		_firstCollectorUpdate = false;
+	}
+
+	/* Update the the Collector as to this resource's state */
+    if ( !SendUpdate () && CollectorObj ) {
+		dprintf (
+			D_FULLDEBUG,
+			"BaseResource::UpdateCollector: Updating Collector(s) "
+			"failed.\n" );
+	}
+
+	/* reset the timer to fire again at the defined interval */
+	daemonCore->Reset_Timer ( 
+		_updateCollectorTimerId, 
+		_collectorUpdateInterval );
+	_lastCollectorUpdate = time ( NULL );
+
+	return TRUE;
+
 }
 
 void BaseResource::PublishResourceAd( ClassAd *resource_ad )
@@ -573,10 +623,7 @@ dprintf(D_FULLDEBUG,"    UpdateLeases: last update too recent, delaying\n");
 
 	daemonCore->Reset_Timer( updateLeasesTimerId, TIMER_NEVER );
 
-    /* Update the the Collector as to this resource's state */
-    UpdateResource ();
-
-	if ( updateLeasesActive == false ) {
+    if ( updateLeasesActive == false ) {
 		BaseJob *curr_job;
 dprintf(D_FULLDEBUG,"    UpdateLeases: calc'ing new leases\n");
 		registeredJobs.Rewind();
