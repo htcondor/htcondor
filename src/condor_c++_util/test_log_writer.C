@@ -272,7 +272,7 @@ CheckArgs(int argc, const char **argv, Options &opts)
 
 		} else if ( arg.Match('d', "debug") ) {
 			if ( arg.hasOpt() ) {
-				set_debug_flags( const_cast<char *>(arg.getOpt()) );
+				set_debug_flags( arg.getOpt() );
 				index = arg.ConsumeOpt( );
 			} else {
 				fprintf(stderr, "Value needed for '%s'\n", arg.Arg() );

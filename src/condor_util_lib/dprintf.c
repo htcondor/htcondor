@@ -887,7 +887,7 @@ _condor_dprintf_exit( int error_code, const char* msg )
   the code in both places. -Derek Wright 9/29/99
 */
 void
-set_debug_flags( char *strflags )
+set_debug_flags( const char *strflags )
 {
 	_condor_set_debug_flags( strflags );
 }
