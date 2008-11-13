@@ -122,6 +122,27 @@ my $version = ""; # remote, middle, ....... for naming schedd "schedd . pid . ve
 my $mastername = ""; # master_$verison
 my $iswindows = IsThisWindows();
 
+#################################################################
+#
+# Debug messages get time stamped. These will start showing up
+# at DEBUGLEVEL = 3 with some rather verbous at 4.
+# 
+# For a single test which uses this module simply
+# CondorPersonal::DebugOn();
+# CondorPersonal::DebugLevel(3);
+# .... some time later .....
+# CondorPersonal::DebugLevel(2);
+#
+# There is no reason not to have debug always on the the level
+# pretty completely controls it. All DebugOff calls
+# have been removed.
+#
+# This is a similar debug setup as the rest of the test
+# suite but I did not want to require the other condor
+# modules for this one.
+#
+#################################################################
+
 BEGIN
 {
     %personal_condor_params;
@@ -136,8 +157,8 @@ BEGIN
 	$personal_universe = "";
 	$personal_startup_wait = "true";
 	$portchanges = "dynamic";
-	$DEBUG = 0;
-	$DEBUGLEVEL = 0;
+	$DEBUG = 1;
+	$DEBUGLEVEL = 2;
 	$collector_port = "0";
 	$personal_config_file = "";
 	$condordomain = "";
