@@ -54,17 +54,10 @@ int allAmazonCommands(StringList &output);
 bool executeIOCheckFunc(const char* cmd, char **argv, int argc);
 bool executeWorkerFunc(const char* cmd, char **argv, int argc, MyString &output_string);
 
-void set_working_dir(const char*);
-const char* get_working_dir(void);
-void set_amazon_lib_path(const char*);
-const char* get_amazon_lib_path(void);
-
 int parse_gahp_command (const char* raw, Gahp_Args* args);
 
 bool check_read_access_file(const char *file);
 bool check_create_file(const char *file);
-
-bool find_amazon_lib(MyString &lib_name);
 
 int get_int (const char *, int *);
 int get_ulong (const char *, unsigned long *);
