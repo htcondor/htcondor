@@ -716,6 +716,9 @@ drop_core_in_log( void )
 			SetEnv( "_NT_SYMBOL_PATH", binpath );
 			free(binpath);
 		}
+
+		// give the handler our pid
+		g_ExceptionHandler.SetPID ( daemonCore->getpid () );
 	}
 #endif
 	free(ptmp);

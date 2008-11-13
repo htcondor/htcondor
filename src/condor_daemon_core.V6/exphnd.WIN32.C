@@ -30,6 +30,7 @@
 TCHAR ExceptionHandler::m_szLogFileName[MAX_PATH];
 LPTOP_LEVEL_EXCEPTION_FILTER ExceptionHandler::m_previousFilter;
 HANDLE ExceptionHandler::m_hReportFile;
+pid_t ExceptionHandler::m_pid = -1;
 ExceptionHandler::SYMINITIALIZEPROC ExceptionHandler::_SymInitialize = 0;
 ExceptionHandler::SYMCLEANUPPROC ExceptionHandler::_SymCleanup = 0;
 ExceptionHandler::STACKWALKPROC ExceptionHandler::_StackWalk = 0;
@@ -87,6 +88,13 @@ void ExceptionHandler::SetLogFileName( PTSTR pszLogFileName ){
     _tcscpy( m_szLogFileName, pszLogFileName );
 }
 
+//==============================================================
+// Lets user change the pid of the process we are dumping for
+//==============================================================
+void ExceptionHandler::SetPID( pid_t pid ){
+    m_pid = pid;
+}
+
 //===========================================================
 // Entry point where control comes on an unhandled exception 
 //===========================================================
@@ -120,7 +128,9 @@ void ExceptionHandler::GenerateExceptionReport(
 	// Start out with a banner
     _tprintf( _T("//=====================================================\n") );
     PEXCEPTION_RECORD pExceptionRecord = pExceptionInfo->ExceptionRecord;
-    // First print information about the type of fault
+	// First print the pid of the process
+	_tprintf(   _T("PID: %d\n"), m_pid );
+    // Now print information about the type of fault
     _tprintf(   _T("Exception code: %08X %s\n"),
                 pExceptionRecord->ExceptionCode,
                 GetExceptionString(pExceptionRecord->ExceptionCode) );
