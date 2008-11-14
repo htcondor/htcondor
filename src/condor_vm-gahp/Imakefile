@@ -17,7 +17,7 @@ VM_GAHP_SERVER_OBJ = vmgahp_main.o pbuffer.o vm_request.o vm_type.o vmgahp.o vmg
 VM_GAHP_SERVER_OBJ = vmgahp_main.o pbuffer.o vm_request.o vm_type.o vmgahp.o vmgahp_config.o vmgahp_common.o vmware_type.o vmgahp_instantiate.o $(SOAP_OBJS)
 #endif
 
-template_inst( vmgahp_instantiate.C, vmgahp_instantiate.o )
+template_inst( vmgahp_instantiate.cpp, vmgahp_instantiate.o )
 
 public_c_plus_target($(VM_GAHP_SERVER),sbin,$(VM_GAHP_SERVER_OBJ),$(LIB))
 public_copy_target(condor_vm_xen.sh,sbin,condor_vm_xen.sh,EXECUTABLE_MODE)

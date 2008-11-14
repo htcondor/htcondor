@@ -71,7 +71,7 @@ CLEAN :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
 
 CPP=cl.exe
-CPP_PROJ=/nologo /MT /W3 /GX /Z7 /O1 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP $(CONDOR_INCLUDE) /c 
+CPP_PROJ=/nologo /MT /W3 /GX /Z7 /O1 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_DEFINES) $(CONDOR_CPPARGS) /c 
 
 .c{$(INTDIR)}.obj::
    $(CPP) @<<
@@ -181,7 +181,7 @@ CLEAN :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
 
 CPP=cl.exe
-CPP_PROJ=/nologo /MTd /W3 /Gm /Gi /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /GZ /TP $(CONDOR_INCLUDE) /c 
+CPP_PROJ=/nologo /MTd /W3 /Gm /Gi /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /GZ /TP $(CONDOR_INCLUDE) $(CONDOR_DEFINES) $(CONDOR_CPPARGS) /c 
 
 .c{$(INTDIR)}.obj::
    $(CPP) @<<
@@ -261,29 +261,29 @@ LINK32_OBJS= \
 
 "condor_procapi - Win32 Release" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_procapi.mak" CFG="condor_procapi - Win32 Release" 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_procapi.mak CFG="condor_procapi - Win32 Release" 
    cd "."
 
 "condor_procapi - Win32 ReleaseCLEAN" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_procapi.mak" CFG="condor_procapi - Win32 Release" RECURSE=1 CLEAN 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_procapi.mak CFG="condor_procapi - Win32 Release" RECURSE=1 CLEAN 
    cd "."
 
 !ELSEIF  "$(CFG)" == "condor_procd - Win32 Debug"
 
 "condor_procapi - Win32 Debug" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_procapi.mak" CFG="condor_procapi - Win32 Debug" 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_procapi.mak CFG="condor_procapi - Win32 Debug" 
    cd "."
 
 "condor_procapi - Win32 DebugCLEAN" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_procapi.mak" CFG="condor_procapi - Win32 Debug" RECURSE=1 CLEAN 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_procapi.mak CFG="condor_procapi - Win32 Debug" RECURSE=1 CLEAN 
    cd "."
 
 !ENDIF 
 
-SOURCE="..\src\condor_c++_util\condor_open.C"
+SOURCE="..\src\condor_c++_util\condor_open.cpp"
 
 "$(INTDIR)\condor_open.obj" : $(SOURCE) "$(INTDIR)"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
@@ -295,79 +295,79 @@ SOURCE=..\src\condor_util_lib\condor_pidenvid.c
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
-SOURCE=..\src\condor_procd\dprintf_lite.C
+SOURCE=..\src\condor_procd\dprintf_lite.cpp
 
 "$(INTDIR)\dprintf_lite.obj" : $(SOURCE) "$(INTDIR)"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
-SOURCE=..\src\condor_procd\local_server.WINDOWS.C
+SOURCE=..\src\condor_procd\local_server.WINDOWS.cpp
 
 "$(INTDIR)\local_server.WINDOWS.obj" : $(SOURCE) "$(INTDIR)"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
-SOURCE=..\src\condor_procd\login_tracker.C
+SOURCE=..\src\condor_procd\login_tracker.cpp
 
 "$(INTDIR)\login_tracker.obj" : $(SOURCE) "$(INTDIR)"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
-SOURCE="..\src\condor_c++_util\ntsysinfo.C"
+SOURCE="..\src\condor_c++_util\ntsysinfo.cpp"
 
 "$(INTDIR)\ntsysinfo.obj" : $(SOURCE) "$(INTDIR)"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
-SOURCE=..\src\condor_procd\parent_tracker.C
+SOURCE=..\src\condor_procd\parent_tracker.cpp
 
 "$(INTDIR)\parent_tracker.obj" : $(SOURCE) "$(INTDIR)"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
-SOURCE=..\src\condor_procd\proc_family.C
+SOURCE=..\src\condor_procd\proc_family.cpp
 
 "$(INTDIR)\proc_family.obj" : $(SOURCE) "$(INTDIR)"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
-SOURCE=..\src\condor_procd\proc_family_member.C
+SOURCE=..\src\condor_procd\proc_family_member.cpp
 
 "$(INTDIR)\proc_family_member.obj" : $(SOURCE) "$(INTDIR)"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
-SOURCE=..\src\condor_procd\proc_family_monitor.C
+SOURCE=..\src\condor_procd\proc_family_monitor.cpp
 
 "$(INTDIR)\proc_family_monitor.obj" : $(SOURCE) "$(INTDIR)"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
-SOURCE=..\src\condor_procd\proc_family_server.C
+SOURCE=..\src\condor_procd\proc_family_server.cpp
 
 "$(INTDIR)\proc_family_server.obj" : $(SOURCE) "$(INTDIR)"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
-SOURCE=..\src\condor_procd\proc_family_tracker.C
+SOURCE=..\src\condor_procd\proc_family_tracker.cpp
 
 "$(INTDIR)\proc_family_tracker.obj" : $(SOURCE) "$(INTDIR)"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
-SOURCE=..\src\condor_procd\procd_common.C
+SOURCE=..\src\condor_procd\procd_common.cpp
 
 "$(INTDIR)\procd_common.obj" : $(SOURCE) "$(INTDIR)"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
-SOURCE=..\src\condor_procd\procd_main.C
+SOURCE=..\src\condor_procd\procd_main.cpp
 
 "$(INTDIR)\procd_main.obj" : $(SOURCE) "$(INTDIR)"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
-SOURCE="..\src\condor_c++_util\process_control.WINDOWS.C"
+SOURCE="..\src\condor_c++_util\process_control.WINDOWS.cpp"
 
 "$(INTDIR)\process_control.WINDOWS.obj" : $(SOURCE) "$(INTDIR)"
 	$(CPP) $(CPP_PROJ) $(SOURCE)

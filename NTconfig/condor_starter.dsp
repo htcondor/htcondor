@@ -42,7 +42,7 @@ RSC=rc.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /Gm /GX /Zi /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /YX /FD /c
-# ADD CPP /nologo /MTd /W3 /Gm /Gi /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"..\Debug\condor_common.pch" /Yu"condor_common.h" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c
+# ADD CPP /nologo /MTd /W3 /Gm /Gi /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"..\Debug\condor_common.pch" /Yu"condor_common.h" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_DEFINES) $(CONDOR_CPPARGS) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c
 # ADD BASE RSC /l 0x409 /d "_DEBUG"
 # ADD RSC /l 0x409 /d "_DEBUG"
 BSC32=bscmake.exe
@@ -69,7 +69,7 @@ LINK32=link.exe
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MDd /W3 /GX /Z7 /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"..\src\condor_c++_util/condor_common.pch" /Yu"condor_common.h" /FD /TP /c
 # SUBTRACT BASE CPP /Fr
-# ADD CPP /nologo /MT /W3 /GX /Z7 /O1 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"..\Release\condor_common.pch" /Yu"condor_common.h" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c
+# ADD CPP /nologo /MT /W3 /GX /Z7 /O1 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"..\Release\condor_common.pch" /Yu"condor_common.h" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_DEFINES) $(CONDOR_CPPARGS) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c
 # ADD BASE RSC /l 0x409 /d "_DEBUG"
 # ADD RSC /l 0x409 /d "NDEBUG"
 BSC32=bscmake.exe
@@ -92,11 +92,11 @@ SOURCE=..\src\condor_starter.V6.1\condor_privsep_helper.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_starter.V6.1\condor_privsep_helper.WINDOWS.C
+SOURCE=..\src\condor_starter.V6.1\condor_privsep_helper.WINDOWS.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_starter.V6.1\io_proxy.C
+SOURCE=..\src\condor_starter.V6.1\io_proxy.cpp
 # End Source File
 # Begin Source File
 
@@ -104,7 +104,7 @@ SOURCE=..\src\condor_starter.V6.1\io_proxy.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_starter.V6.1\io_proxy_handler.C
+SOURCE=..\src\condor_starter.V6.1\io_proxy_handler.cpp
 # End Source File
 # Begin Source File
 
@@ -112,7 +112,7 @@ SOURCE=..\src\condor_starter.V6.1\io_proxy_handler.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_starter.V6.1\java_detect.C
+SOURCE=..\src\condor_starter.V6.1\java_detect.cpp
 # End Source File
 # Begin Source File
 
@@ -120,7 +120,7 @@ SOURCE=..\src\condor_starter.V6.1\java_detect.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_starter.V6.1\java_proc.C
+SOURCE=..\src\condor_starter.V6.1\java_proc.cpp
 # End Source File
 # Begin Source File
 
@@ -128,7 +128,7 @@ SOURCE=..\src\condor_starter.V6.1\java_proc.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_starter.V6.1\jic_local.C
+SOURCE=..\src\condor_starter.V6.1\jic_local.cpp
 # End Source File
 # Begin Source File
 
@@ -136,7 +136,7 @@ SOURCE=..\src\condor_starter.V6.1\jic_local.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_starter.V6.1\jic_local_config.C
+SOURCE=..\src\condor_starter.V6.1\jic_local_config.cpp
 # End Source File
 # Begin Source File
 
@@ -144,7 +144,7 @@ SOURCE=..\src\condor_starter.V6.1\jic_local_config.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_starter.V6.1\jic_local_file.C
+SOURCE=..\src\condor_starter.V6.1\jic_local_file.cpp
 # End Source File
 # Begin Source File
 
@@ -152,7 +152,7 @@ SOURCE=..\src\condor_starter.V6.1\jic_local_file.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_starter.V6.1\jic_local_schedd.C
+SOURCE=..\src\condor_starter.V6.1\jic_local_schedd.cpp
 # End Source File
 # Begin Source File
 
@@ -160,7 +160,7 @@ SOURCE=..\src\condor_starter.V6.1\jic_local_schedd.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_starter.V6.1\jic_shadow.C
+SOURCE=..\src\condor_starter.V6.1\jic_shadow.cpp
 # End Source File
 # Begin Source File
 
@@ -168,7 +168,7 @@ SOURCE=..\src\condor_starter.V6.1\jic_shadow.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_starter.V6.1\job_info_communicator.C
+SOURCE=..\src\condor_starter.V6.1\job_info_communicator.cpp
 # End Source File
 # Begin Source File
 
@@ -176,7 +176,7 @@ SOURCE=..\src\condor_starter.V6.1\job_info_communicator.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_starter.V6.1\local_user_log.C
+SOURCE=..\src\condor_starter.V6.1\local_user_log.cpp
 # End Source File
 # Begin Source File
 
@@ -184,7 +184,7 @@ SOURCE=..\src\condor_starter.V6.1\local_user_log.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_starter.V6.1\mpi_comrade_proc.C
+SOURCE=..\src\condor_starter.V6.1\mpi_comrade_proc.cpp
 # End Source File
 # Begin Source File
 
@@ -192,7 +192,7 @@ SOURCE=..\src\condor_starter.V6.1\mpi_comrade_proc.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_starter.V6.1\mpi_master_proc.C
+SOURCE=..\src\condor_starter.V6.1\mpi_master_proc.cpp
 # End Source File
 # Begin Source File
 
@@ -200,11 +200,11 @@ SOURCE=..\src\condor_starter.V6.1\mpi_master_proc.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_starter.V6.1\NTsenders.C
+SOURCE=..\src\condor_starter.V6.1\NTsenders.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_starter.V6.1\os_proc.C
+SOURCE=..\src\condor_starter.V6.1\os_proc.cpp
 # End Source File
 # Begin Source File
 
@@ -212,7 +212,7 @@ SOURCE=..\src\condor_starter.V6.1\os_proc.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_starter.V6.1\parallel_proc.C
+SOURCE=..\src\condor_starter.V6.1\parallel_proc.cpp
 # End Source File
 # Begin Source File
 
@@ -220,7 +220,7 @@ SOURCE=..\src\condor_starter.V6.1\parallel_proc.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_starter.V6.1\script_proc.C
+SOURCE=..\src\condor_starter.V6.1\script_proc.cpp
 # End Source File
 # Begin Source File
 
@@ -228,7 +228,7 @@ SOURCE=..\src\condor_starter.V6.1\script_proc.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_starter.V6.1\soap_starterC.C
+SOURCE=..\src\condor_starter.V6.1\soap_starterC.cpp
 # SUBTRACT CPP /YX /Yc /Yu
 # End Source File
 # Begin Source File
@@ -237,12 +237,12 @@ SOURCE=..\src\condor_starter.V6.1\soap_starterH.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_starter.V6.1\soap_starterServer.C
+SOURCE=..\src\condor_starter.V6.1\soap_starterServer.cpp
 # SUBTRACT CPP /YX /Yc /Yu
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_starter.V6.1\soap_starterStub.C
+SOURCE=..\src\condor_starter.V6.1\soap_starterStub.cpp
 # SUBTRACT CPP /YX /Yc /Yu
 # End Source File
 # Begin Source File
@@ -255,7 +255,7 @@ SOURCE=..\src\condor_starter.V6.1\starter.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_starter.V6.1\starter_class.C
+SOURCE=..\src\condor_starter.V6.1\baseStarter.cpp
 # End Source File
 # Begin Source File
 
@@ -263,7 +263,7 @@ SOURCE=..\src\condor_starter.V6.1\starter_privsep_helper.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_starter.V6.1\starter_user_policy.C
+SOURCE=..\src\condor_starter.V6.1\starter_user_policy.cpp
 # End Source File
 # Begin Source File
 
@@ -271,11 +271,11 @@ SOURCE=..\src\condor_starter.V6.1\starter_user_policy.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_starter.V6.1\starter_v61_main.C
+SOURCE=..\src\condor_starter.V6.1\starter_v61_main.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_starter.V6.1\StarterHookMgr.C
+SOURCE=..\src\condor_starter.V6.1\StarterHookMgr.cpp
 # End Source File
 # Begin Source File
 
@@ -283,7 +283,7 @@ SOURCE=..\src\condor_starter.V6.1\StarterHookMgr.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_starter.V6.1\stream_handler.C
+SOURCE=..\src\condor_starter.V6.1\stream_handler.cpp
 # SUBTRACT CPP /YX /Yc /Yu
 # End Source File
 # Begin Source File
@@ -292,7 +292,7 @@ SOURCE=..\src\condor_starter.V6.1\stream_handler.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_starter.V6.1\tool_daemon_proc.C
+SOURCE=..\src\condor_starter.V6.1\tool_daemon_proc.cpp
 # End Source File
 # Begin Source File
 
@@ -300,7 +300,7 @@ SOURCE=..\src\condor_starter.V6.1\tool_daemon_proc.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_starter.V6.1\user_proc.C
+SOURCE=..\src\condor_starter.V6.1\user_proc.cpp
 # End Source File
 # Begin Source File
 
@@ -308,7 +308,7 @@ SOURCE=..\src\condor_starter.V6.1\user_proc.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_starter.V6.1\vanilla_proc.C
+SOURCE=..\src\condor_starter.V6.1\vanilla_proc.cpp
 # End Source File
 # Begin Source File
 
@@ -316,7 +316,7 @@ SOURCE=..\src\condor_starter.V6.1\vanilla_proc.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_starter.V6.1\vm_gahp_request.C
+SOURCE=..\src\condor_starter.V6.1\vm_gahp_request.cpp
 # End Source File
 # Begin Source File
 
@@ -324,7 +324,7 @@ SOURCE=..\src\condor_starter.V6.1\vm_gahp_request.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_starter.V6.1\vm_gahp_server.C
+SOURCE=..\src\condor_starter.V6.1\vm_gahp_server.cpp
 # End Source File
 # Begin Source File
 
@@ -332,7 +332,7 @@ SOURCE=..\src\condor_starter.V6.1\vm_gahp_server.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_starter.V6.1\vm_proc.C
+SOURCE=..\src\condor_starter.V6.1\vm_proc.cpp
 # End Source File
 # Begin Source File
 

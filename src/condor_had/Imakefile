@@ -17,14 +17,14 @@ gen_soapfiles(had,condorHad)
 REPLICATION_NAME = condor_replication
 all_target($(REPLICATION_NAME))
 
-REPLICATION_OBJ = AbstractReplicatorStateMachine.o ReplicatorStateMachine.o Version.o Utils.o Replication.o FilesOperations.o
+REPLICATION_OBJ = AbstractReplicatorStateMachine.o ReplicatorStateMachine.o HAD_Version.o Utils.o Replication.o FilesOperations.o $(SOAP_OBJS)
 
 public_c_plus_target($(REPLICATION_NAME),sbin,$(REPLICATION_OBJ),$(LIB))
 
 TRANSFERER_NAME = condor_transferer
 all_target($(TRANSFERER_NAME))
 
-TRANSFERER_OBJ =  BaseReplicaTransferer.o UploadReplicaTransferer.o DownloadReplicaTransferer.o Utils.o Transferer.o FilesOperations.o
+TRANSFERER_OBJ =  BaseReplicaTransferer.o UploadReplicaTransferer.o DownloadReplicaTransferer.o Utils.o Transferer.o FilesOperations.o $(SOAP_OBJS)
 
 public_c_plus_target($(TRANSFERER_NAME),bin,$(TRANSFERER_OBJ),$(LIB))
 

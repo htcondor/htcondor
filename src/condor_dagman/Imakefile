@@ -17,7 +17,7 @@ TOOL_LIB = $(STD_LIBS) New_classads_lib
 
 soapobjs(dagman)
 
-OBJ = dagman_main.o submit.o dag.o job.o util.o parse.o debug.o \
+OBJ = dagman_main.o dagman_submit.o dag.o job.o dagman_util.o parse.o debug.o \
 	script.o scriptQ.o dagman_instantiate.o dagman_commands.o \
 	dagman_multi_dag.o throttle_by_category.o $(SOAP_OBJS)
 

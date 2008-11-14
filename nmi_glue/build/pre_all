@@ -83,7 +83,7 @@ my $result = "results.tar.gz";
 
 print "Figuring out Condor version\n";
 chdir( "$CommonDir" ) || die "Can't chdir($CommonDir): $!\n";
-my $vers_src="$SrcDir/condor_c++_util/condor_version.C";
+my $vers_src="$SrcDir/condor_c++_util/condor_version.cpp";
 my $vers_file="CONDOR-VERSION";
 my $buildid_file="BUILD-ID";
 my $majorv;

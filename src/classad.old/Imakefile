@@ -23,7 +23,7 @@ pure_c_plus_target(test.pure,test.o,libclassad.a $(CUTIL_LIB))
 testbin_target(test_classads,755)
 
 shared:
-	gcc -fPIC -shared -o libshared.so shared.C
+	gcc -fPIC -shared -o libshared.so shared.cpp
 
 clean::
 	rm -f *.o libclassad.a

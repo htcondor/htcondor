@@ -39,6 +39,8 @@
 /* Default build target - must be first target */
 all_target()
 
+soapobjs(stork)
+
 /* Common build flags. */
 NEW_CLASSADS_LINK =  -L$(NEW_CLASSADS_LIB) -lclassad_ns
 #if !IS_GLIBC20 && !IS_GLIBC21
@@ -75,6 +77,7 @@ library_target($(STORK_UTIL),$(UTIL_LIB_OBJS))
 
 /* server daemon */
 SERVER_OBJS  = \
+	$(SOAP_OBJS) \
 	dap_server.o \
 	dap_daemon.o \
 	dap_scheduler.o \
@@ -208,14 +211,14 @@ SRB_LIBS = \
 XCOMM SRB objects need additional C_FLAGS
 /* FIXME: dap_url.o should be moved into libstorkutil.a, without SRB dependency
  */
-dap_url.o: dap_url.C
+dap_url.o: dap_url.cpp
 	$(CPlusPlus) $(C_PLUS_FLAGS) $(SRB_CFLAGS) -c $<
 dap_srb_util.o: dap_srb_util.c
 	$(CC) $(CFLAGS) $(SRB_CFLAGS) $(CPPFLAGS) -c $<
 /* Ugh, we use the Make default rule to build *.c files, so add restate this
  * rule with $(SRB_CFLAGS)
  */
-dap_transfer_srb.o: dap_transfer_srb.C
+dap_transfer_srb.o: dap_transfer_srb.cpp
 	$(CPlusPlus) $(C_PLUS_FLAGS) $(SRB_CFLAGS) -c $<
 /* The SRB external is only needed for this Stork contrib module */
 ext_target(EXT_SRB_VERSION,$(EXT_TRIGGER)/$(EXT_GLOBUS_VERSION))
@@ -258,20 +261,20 @@ NEST_LIBS = \
 	$(NEST_LIB)/libnest-client.a \
 	$(STD_LIBS)
 NEST_COPY = $(MODULE)transfer.nest
-dap_transfer_nest.o: dap_transfer_nest.C
+dap_transfer_nest.o: dap_transfer_nest.cpp
 	$(CPlusPlus) $(C_PLUS_FLAGS) $(NEST_CFLAGS) -c $<
 NEST_COPY_OBJS = \
 	dap_transfer_nest.o \
 	$(STORK_UTIL)
 stork_contrib_module_target($(NEST_COPY),$(NEST_COPY_OBJS),$(NEST_LIBS))
 NEST_RESERVE = reserve.nest
-dap_reserve_nest.o: dap_reserve_nest.C
+dap_reserve_nest.o: dap_reserve_nest.cpp
 	$(CPlusPlus) $(C_PLUS_FLAGS) $(NEST_CFLAGS) -c $<
 NEST_RESERVE_OBJS = \
 	dap_reserve_nest.o 
 stork_contrib_module_target($(NEST_RESERVE),$(NEST_RESERVE_OBJS),$(NEST_LIBS))
 NEST_RELEASE = release.nest
-dap_release_nest.o: dap_release_nest.C
+dap_release_nest.o: dap_release_nest.cpp
 	$(CPlusPlus) $(C_PLUS_FLAGS) $(NEST_CFLAGS) -c $<
 NEST_RELEASE_OBJS = \
 	dap_release_nest.o
@@ -315,17 +318,19 @@ strip_library($(CLIENT_LIB),lib)
 static_library($(CLIENT_LIB),lib)
 #endif /* WANT_STORK_API */
 
+gen_soapfiles(stork,condorStork)
+
 #if 1 /* Nick added this */
 TEST_LIB = $(STD_LIBS) $(NEW_CLASSADS_LINK) $(CLASSAD_CONVERSION_LIBDEFS)
 tests: stork-lm-test stork-lm-test2
 c_plus_target( stork-lm-test,stork-lm-test.o stork-lm-nodc.o,$(TEST_LIB) )
-template_inst( stork-lm-test.C, stork-lm-test.o )
-stork-lm-nodc.o: stork-lm.C
-	$(CPlusPlus) $(INST_C_PLUS_FLAGS) -DTEST_VERSION -c stork-lm.C -o stork-lm-nodc.o
+template_inst( stork-lm-test.cpp, stork-lm-test.o )
+stork-lm-nodc.o: stork-lm.cpp
+	$(CPlusPlus) $(INST_C_PLUS_FLAGS) -DTEST_VERSION -c stork-lm.cpp -o stork-lm-nodc.o
 
 c_plus_target( stork-lm-test2, stork-lm-test2.o,
 	 stork-lm.o $(DAEMONCORE_LIB) $(TEST_LIB) )
-template_inst( stork-lm-test2.C, stork-lm-test2.o )
+template_inst( stork-lm-test2.cpp, stork-lm-test2.o )
 #endif /* Nick */
 
 XCOMM Uncomment to build contrib modules as part of default build

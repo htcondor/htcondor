@@ -11,10 +11,10 @@ soapobjs(master)
 PLUGIN_OBJ = MasterPlugin.o
 #endif
 
-%-plugin.so: %.C
+%-plugin.so: %.cpp
 	$(CPlusPlus) $(C_PLUS_FLAGS) -shared -fPIC $< -o $@
 
-OBJ = master.o daemon.o $(SOAP_OBJS) $(PLUGIN_OBJ)
+OBJ = master.o masterDaemon.o $(SOAP_OBJS) $(PLUGIN_OBJ)
 
 public_c_plus_target($(NAME),sbin,$(OBJ),$(LIB))
 

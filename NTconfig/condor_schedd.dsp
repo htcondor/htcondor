@@ -42,7 +42,7 @@ RSC=rc.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /Gm /GX /Zi /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /YX /FD /c
-# ADD CPP /nologo /MTd /W3 /Gm /Gi /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"..\Debug\condor_common.pch" /Yu"condor_common.h" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c
+# ADD CPP /nologo /MTd /W3 /Gm /Gi /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"..\Debug\condor_common.pch" /Yu"condor_common.h" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_DEFINES) $(CONDOR_CPPARGS) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c
 # ADD BASE RSC /l 0x409 /d "_DEBUG"
 # ADD RSC /l 0x409 /d "_DEBUG"
 BSC32=bscmake.exe
@@ -69,7 +69,7 @@ LINK32=link.exe
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MDd /W3 /GX /Z7 /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"..\src\condor_c++_util/condor_common.pch" /Yu"condor_common.h" /FD /TP /c
 # SUBTRACT BASE CPP /Fr
-# ADD CPP /nologo /MT /W3 /GX /Z7 /O1 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"..\Release\condor_common.pch" /Yu"condor_common.h" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c
+# ADD CPP /nologo /MT /W3 /GX /Z7 /O1 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"..\Release\condor_common.pch" /Yu"condor_common.h" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_DEFINES) $(CONDOR_CPPARGS) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c
 # ADD BASE RSC /l 0x409 /d "_DEBUG"
 # ADD RSC /l 0x409 /d "NDEBUG"
 BSC32=bscmake.exe
@@ -88,7 +88,7 @@ LINK32=link.exe
 # Name "condor_schedd - Win32 Release"
 # Begin Source File
 
-SOURCE=..\src\condor_schedd.V6\autocluster.C
+SOURCE=..\src\condor_schedd.V6\autocluster.cpp
 # End Source File
 # Begin Source File
 
@@ -96,7 +96,7 @@ SOURCE=..\src\condor_schedd.V6\autocluster.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_schedd.V6\dedicated_scheduler.C
+SOURCE=..\src\condor_schedd.V6\dedicated_scheduler.cpp
 # End Source File
 # Begin Source File
 
@@ -104,7 +104,7 @@ SOURCE=..\src\condor_schedd.V6\dedicated_scheduler.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_schedd.V6\grid_universe.C
+SOURCE=..\src\condor_schedd.V6\grid_universe.cpp
 # End Source File
 # Begin Source File
 
@@ -112,7 +112,7 @@ SOURCE=..\src\condor_schedd.V6\grid_universe.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_schedd.V6\loose_file_transfer.C
+SOURCE=..\src\condor_schedd.V6\loose_file_transfer.cpp
 # End Source File
 # Begin Source File
 
@@ -124,7 +124,7 @@ SOURCE=..\src\condor_schedd.V6\prio_rec.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_schedd.V6\qmgmt.C
+SOURCE=..\src\condor_schedd.V6\qmgmt.cpp
 # End Source File
 # Begin Source File
 
@@ -132,7 +132,7 @@ SOURCE=..\src\condor_schedd.V6\qmgmt.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_schedd.V6\qmgmt_common.C
+SOURCE=..\src\condor_schedd.V6\qmgmt_common.cpp
 # End Source File
 # Begin Source File
 
@@ -140,15 +140,15 @@ SOURCE=..\src\condor_schedd.V6\qmgmt_constants.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_schedd.V6\qmgmt_receivers.C
+SOURCE=..\src\condor_schedd.V6\qmgmt_receivers.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_schedd.V6\schedd.C
+SOURCE=..\src\condor_schedd.V6\schedd.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_schedd.V6\schedd_api.C
+SOURCE=..\src\condor_schedd.V6\schedd_api.cpp
 # End Source File
 # Begin Source File
 
@@ -156,7 +156,7 @@ SOURCE=..\src\condor_schedd.V6\schedd_api.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_schedd.V6\schedd_cronjob.C
+SOURCE=..\src\condor_schedd.V6\schedd_cronjob.cpp
 # End Source File
 # Begin Source File
 
@@ -164,7 +164,7 @@ SOURCE=..\src\condor_schedd.V6\schedd_cronjob.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_schedd.V6\schedd_cronmgr.C
+SOURCE=..\src\condor_schedd.V6\schedd_cronmgr.cpp
 # End Source File
 # Begin Source File
 
@@ -172,11 +172,11 @@ SOURCE=..\src\condor_schedd.V6\schedd_cronmgr.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_schedd.V6\schedd_main.C
+SOURCE=..\src\condor_schedd.V6\schedd_main.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_schedd.V6\schedd_td.C
+SOURCE=..\src\condor_schedd.V6\schedd_td.cpp
 # End Source File
 # Begin Source File
 
@@ -184,7 +184,7 @@ SOURCE=..\src\condor_schedd.V6\scheduler.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_schedd.V6\shadow_mgr.C
+SOURCE=..\src\condor_schedd.V6\shadow_mgr.cpp
 # End Source File
 # Begin Source File
 
@@ -192,7 +192,7 @@ SOURCE=..\src\condor_schedd.V6\shadow_mgr.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_schedd.V6\soap_scheddC.C
+SOURCE=..\src\condor_schedd.V6\soap_scheddC.cpp
 # SUBTRACT CPP /YX /Yc /Yu
 # End Source File
 # Begin Source File
@@ -201,12 +201,12 @@ SOURCE=..\src\condor_schedd.V6\soap_scheddH.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_schedd.V6\soap_scheddServer.C
+SOURCE=..\src\condor_schedd.V6\soap_scheddServer.cpp
 # SUBTRACT CPP /YX /Yc /Yu
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_schedd.V6\soap_scheddStub.C
+SOURCE=..\src\condor_schedd.V6\soap_scheddStub.cpp
 # End Source File
 # Begin Source File
 
@@ -214,7 +214,7 @@ SOURCE=..\src\condor_schedd.V6\soap_scheddStub.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_schedd.V6\tdman.C
+SOURCE=..\src\condor_schedd.V6\tdman.cpp
 # End Source File
 # Begin Source File
 
@@ -222,7 +222,7 @@ SOURCE=..\src\condor_schedd.V6\tdman.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_schedd.V6\transfer_queue.C
+SOURCE=..\src\condor_schedd.V6\transfer_queue.cpp
 # End Source File
 # Begin Source File
 

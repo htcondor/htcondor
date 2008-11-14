@@ -42,7 +42,7 @@ RSC=rc.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /YX /FD /c
-# ADD CPP /nologo /MT /W3 /GX /Z7 /O1 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /FD /TP $(CONDOR_INCLUDE) /c
+# ADD CPP /nologo /MT /W3 /GX /Z7 /O1 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_DEFINES) $(CONDOR_CPPARGS) /c
 # SUBTRACT CPP /YX /Yc /Yu
 # ADD BASE RSC /l 0x409 /d "NDEBUG"
 # ADD RSC /l 0x409 /d "NDEBUG"
@@ -67,7 +67,7 @@ LINK32=link.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /YX /FD /GZ /c
-# ADD CPP /nologo /MTd /W3 /Gm /Gi /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /FD /GZ /TP $(CONDOR_INCLUDE) /c
+# ADD CPP /nologo /MTd /W3 /Gm /Gi /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /FD /GZ /TP $(CONDOR_INCLUDE) $(CONDOR_DEFINES) $(CONDOR_CPPARGS) /c
 # SUBTRACT CPP /YX /Yc /Yu
 # ADD BASE RSC /l 0x409 /d "_DEBUG"
 # ADD RSC /l 0x409 /d "_DEBUG"
@@ -86,7 +86,7 @@ LINK32=link.exe
 # Name "condor_procd - Win32 Debug"
 # Begin Source File
 
-SOURCE="..\src\condor_c++_util\condor_open.C"
+SOURCE="..\src\condor_c++_util\condor_open.cpp"
 # End Source File
 # Begin Source File
 
@@ -94,7 +94,7 @@ SOURCE=..\src\condor_util_lib\condor_pidenvid.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_procd\dprintf_lite.C
+SOURCE=..\src\condor_procd\dprintf_lite.cpp
 # End Source File
 # Begin Source File
 
@@ -110,11 +110,11 @@ SOURCE=..\src\condor_procd\local_server.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_procd\local_server.WINDOWS.C
+SOURCE=..\src\condor_procd\local_server.WINDOWS.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_procd\login_tracker.C
+SOURCE=..\src\condor_procd\login_tracker.cpp
 # End Source File
 # Begin Source File
 
@@ -122,11 +122,11 @@ SOURCE=..\src\condor_procd\login_tracker.h
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\condor_c++_util\ntsysinfo.C"
+SOURCE="..\src\condor_c++_util\ntsysinfo.cpp"
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_procd\parent_tracker.C
+SOURCE=..\src\condor_procd\parent_tracker.cpp
 # End Source File
 # Begin Source File
 
@@ -138,7 +138,7 @@ SOURCE=..\src\condor_procd\pid_tracker.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_procd\proc_family.C
+SOURCE=..\src\condor_procd\proc_family.cpp
 # End Source File
 # Begin Source File
 
@@ -150,7 +150,7 @@ SOURCE=..\src\condor_procd\proc_family_io.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_procd\proc_family_member.C
+SOURCE=..\src\condor_procd\proc_family_member.cpp
 # End Source File
 # Begin Source File
 
@@ -158,7 +158,7 @@ SOURCE=..\src\condor_procd\proc_family_member.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_procd\proc_family_monitor.C
+SOURCE=..\src\condor_procd\proc_family_monitor.cpp
 # End Source File
 # Begin Source File
 
@@ -166,7 +166,7 @@ SOURCE=..\src\condor_procd\proc_family_monitor.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_procd\proc_family_server.C
+SOURCE=..\src\condor_procd\proc_family_server.cpp
 # End Source File
 # Begin Source File
 
@@ -174,7 +174,7 @@ SOURCE=..\src\condor_procd\proc_family_server.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_procd\proc_family_tracker.C
+SOURCE=..\src\condor_procd\proc_family_tracker.cpp
 # End Source File
 # Begin Source File
 
@@ -182,7 +182,7 @@ SOURCE=..\src\condor_procd\proc_family_tracker.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_procd\procd_common.C
+SOURCE=..\src\condor_procd\procd_common.cpp
 # End Source File
 # Begin Source File
 
@@ -190,11 +190,11 @@ SOURCE=..\src\condor_procd\procd_common.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_procd\procd_main.C
+SOURCE=..\src\condor_procd\procd_main.cpp
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\condor_c++_util\process_control.WINDOWS.C"
+SOURCE="..\src\condor_c++_util\process_control.WINDOWS.cpp"
 # End Source File
 # Begin Source File
 

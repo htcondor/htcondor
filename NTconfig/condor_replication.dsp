@@ -44,7 +44,7 @@ RSC=rc.exe
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MDd /W3 /GX /Z7 /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"..\src\condor_c++_util/condor_common.pch" /Yu"condor_common.h" /FD /TP /c
 # SUBTRACT BASE CPP /Fr
-# ADD CPP /nologo /MT /W3 /GX /Z7 /O1 /I "../condor_includes" /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"..\Release\condor_common.pch" /Yu"condor_common.h" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c
+# ADD CPP /nologo /MT /W3 /GX /Z7 /O1 /I "../condor_includes" /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"..\Release\condor_common.pch" /Yu"condor_common.h" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_DEFINES) $(CONDOR_CPPARGS) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c
 # ADD BASE RSC /l 0x409 /d "_DEBUG"
 # ADD RSC /l 0x409 /d "NDEBUG"
 BSC32=bscmake.exe
@@ -69,7 +69,7 @@ LINK32=link.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /Gm /GX /Zi /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /YX /FD /c
-# ADD CPP /nologo /MTd /W3 /Gm /Gi /GX /ZI /Od /I "../condor_includes" /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"..\Debug\condor_common.pch" /Yu"condor_common.h" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c
+# ADD CPP /nologo /MTd /W3 /Gm /Gi /GX /ZI /Od /I "../condor_includes" /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"..\Debug\condor_common.pch" /Yu"condor_common.h" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_DEFINES) $(CONDOR_CPPARGS) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c
 # ADD BASE RSC /l 0x409 /d "_DEBUG"
 # ADD RSC /l 0x409 /d "_DEBUG"
 BSC32=bscmake.exe
@@ -88,7 +88,7 @@ LINK32=link.exe
 # Name "condor_replication - Win32 Debug"
 # Begin Source File
 
-SOURCE=..\src\condor_had\AbstractReplicatorStateMachine.C
+SOURCE=..\src\condor_had\AbstractReplicatorStateMachine.cpp
 # SUBTRACT CPP /YX /Yc /Yu
 # End Source File
 # Begin Source File
@@ -97,7 +97,7 @@ SOURCE=..\src\condor_had\AbstractReplicatorStateMachine.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_had\FilesOperations.C
+SOURCE=..\src\condor_had\FilesOperations.cpp
 # SUBTRACT CPP /YX /Yc /Yu
 # End Source File
 # Begin Source File
@@ -106,11 +106,11 @@ SOURCE=..\src\condor_had\FilesOperations.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_had\had_Version.C
+SOURCE=..\src\condor_had\HAD_Version.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_had\Replication.C
+SOURCE=..\src\condor_had\Replication.cpp
 # End Source File
 # Begin Source File
 
@@ -118,7 +118,7 @@ SOURCE=..\src\condor_had\ReplicatorState.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_had\ReplicatorStateMachine.C
+SOURCE=..\src\condor_had\ReplicatorStateMachine.cpp
 # SUBTRACT CPP /YX /Yc /Yu
 # End Source File
 # Begin Source File
@@ -127,7 +127,7 @@ SOURCE=..\src\condor_had\ReplicatorStateMachine.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_had\soap_replicationC.C
+SOURCE=..\src\condor_had\soap_replicationC.cpp
 # SUBTRACT CPP /YX /Yc /Yu
 # End Source File
 # Begin Source File
@@ -136,12 +136,12 @@ SOURCE=..\src\condor_had\soap_replicationH.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_had\soap_replicationServer.C
+SOURCE=..\src\condor_had\soap_replicationServer.cpp
 # SUBTRACT CPP /YX /Yc /Yu
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_had\soap_replicationStub.C
+SOURCE=..\src\condor_had\soap_replicationStub.cpp
 # SUBTRACT CPP /YX /Yc /Yu
 # End Source File
 # Begin Source File
@@ -150,7 +150,7 @@ SOURCE=..\src\condor_had\soap_replicationStub.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_had\Utils.C
+SOURCE=..\src\condor_had\Utils.cpp
 # SUBTRACT CPP /YX /Yc /Yu
 # End Source File
 # Begin Source File

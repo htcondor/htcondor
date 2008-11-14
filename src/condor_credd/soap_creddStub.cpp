@@ -18,5 +18,5 @@
  ***************************************************************/
 
 #include "condorCredd.nsmap"
-   
+
 #include "soap_daemon_core.cpp"

@@ -42,7 +42,7 @@ RSC=rc.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /Gm /GX /Zi /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /YX /FD /c
-# ADD CPP /nologo /MTd /W3 /Gm /Gi /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"..\Debug\condor_common.pch" /Yu"condor_common.h" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c
+# ADD CPP /nologo /MTd /W3 /Gm /Gi /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"..\Debug\condor_common.pch" /Yu"condor_common.h" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_DEFINES) $(CONDOR_CPPARGS) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c
 # ADD BASE RSC /l 0x409 /d "_DEBUG"
 # ADD RSC /l 0x409 /d "_DEBUG"
 BSC32=bscmake.exe
@@ -69,7 +69,7 @@ LINK32=link.exe
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MDd /W3 /GX /Z7 /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"..\src\condor_c++_util/condor_common.pch" /Yu"condor_common.h" /FD /TP /c
 # SUBTRACT BASE CPP /Fr
-# ADD CPP /nologo /MT /W3 /GX /Z7 /O1 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"..\Release\condor_common.pch" /Yu"condor_common.h" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c
+# ADD CPP /nologo /MT /W3 /GX /Z7 /O1 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"..\Release\condor_common.pch" /Yu"condor_common.h" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_DEFINES) $(CONDOR_CPPARGS) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c
 # ADD BASE RSC /l 0x409 /d "_DEBUG"
 # ADD RSC /l 0x409 /d "NDEBUG"
 BSC32=bscmake.exe
@@ -88,7 +88,7 @@ LINK32=link.exe
 # Name "condor_shadow - Win32 Release"
 # Begin Source File
 
-SOURCE=..\src\condor_shadow.V6.1\baseshadow.C
+SOURCE=..\src\condor_shadow.V6.1\baseshadow.cpp
 # End Source File
 # Begin Source File
 
@@ -96,7 +96,7 @@ SOURCE=..\src\condor_shadow.V6.1\baseshadow.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_shadow.V6.1\mpiresource.C
+SOURCE=..\src\condor_shadow.V6.1\mpiresource.cpp
 # End Source File
 # Begin Source File
 
@@ -104,7 +104,7 @@ SOURCE=..\src\condor_shadow.V6.1\mpiresource.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_shadow.V6.1\mpishadow.C
+SOURCE=..\src\condor_shadow.V6.1\mpishadow.cpp
 # End Source File
 # Begin Source File
 
@@ -112,11 +112,11 @@ SOURCE=..\src\condor_shadow.V6.1\mpishadow.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_shadow.V6.1\NTreceivers.C
+SOURCE=..\src\condor_shadow.V6.1\NTreceivers.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_shadow.V6.1\parallelshadow.C
+SOURCE=..\src\condor_shadow.V6.1\parallelshadow.cpp
 # End Source File
 # Begin Source File
 
@@ -124,7 +124,7 @@ SOURCE=..\src\condor_shadow.V6.1\parallelshadow.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_shadow.V6.1\pseudo_ops.C
+SOURCE=..\src\condor_shadow.V6.1\pseudo_ops.cpp
 # End Source File
 # Begin Source File
 
@@ -132,7 +132,7 @@ SOURCE=..\src\condor_shadow.V6.1\pseudo_ops.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_shadow.V6.1\remoteresource.C
+SOURCE=..\src\condor_shadow.V6.1\remoteresource.cpp
 # End Source File
 # Begin Source File
 
@@ -140,7 +140,7 @@ SOURCE=..\src\condor_shadow.V6.1\remoteresource.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_shadow.V6.1\shadow.C
+SOURCE=..\src\condor_shadow.V6.1\shadow.cpp
 # End Source File
 # Begin Source File
 
@@ -148,7 +148,7 @@ SOURCE=..\src\condor_shadow.V6.1\shadow.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_shadow.V6.1\shadow_user_policy.C
+SOURCE=..\src\condor_shadow.V6.1\shadow_user_policy.cpp
 # End Source File
 # Begin Source File
 
@@ -156,11 +156,11 @@ SOURCE=..\src\condor_shadow.V6.1\shadow_user_policy.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_shadow.V6.1\shadow_v61_main.C
+SOURCE=..\src\condor_shadow.V6.1\shadow_v61_main.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_shadow.V6.1\soap_shadowC.C
+SOURCE=..\src\condor_shadow.V6.1\soap_shadowC.cpp
 # SUBTRACT CPP /YX /Yc /Yu
 # End Source File
 # Begin Source File
@@ -169,12 +169,12 @@ SOURCE=..\src\condor_shadow.V6.1\soap_shadowH.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_shadow.V6.1\soap_shadowServer.C
+SOURCE=..\src\condor_shadow.V6.1\soap_shadowServer.cpp
 # SUBTRACT CPP /YX /Yc /Yu
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_shadow.V6.1\soap_shadowStub.C
+SOURCE=..\src\condor_shadow.V6.1\soap_shadowStub.cpp
 # SUBTRACT CPP /YX /Yc /Yu
 # End Source File
 # Begin Source File

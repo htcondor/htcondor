@@ -42,7 +42,7 @@ RSC=rc.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /YX /FD /c
-# ADD CPP /nologo /MT /W3 /GX /Z7 /O1 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"..\Release\condor_common.pch" /Yu"condor_common.h" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c
+# ADD CPP /nologo /MT /W3 /GX /Z7 /O1 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"..\Release\condor_common.pch" /Yu"condor_common.h" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_DEFINES) $(CONDOR_CPPARGS) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c
 # ADD BASE RSC /l 0x409 /d "NDEBUG"
 # ADD RSC /l 0x409 /d "NDEBUG"
 BSC32=bscmake.exe
@@ -66,7 +66,7 @@ LINK32=link.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /YX /FD /GZ /c
-# ADD CPP /nologo /MTd /W3 /Gm /Gi /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"..\Debug\condor_common.pch" /Yu"condor_common.h" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c
+# ADD CPP /nologo /MTd /W3 /Gm /Gi /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"..\Debug\condor_common.pch" /Yu"condor_common.h" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_DEFINES) $(CONDOR_CPPARGS) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c
 # ADD BASE RSC /l 0x409 /d "_DEBUG"
 # ADD RSC /l 0x409 /d "_DEBUG"
 BSC32=bscmake.exe
@@ -85,7 +85,7 @@ LINK32=link.exe
 # Name "condor_transferer - Win32 Debug"
 # Begin Source File
 
-SOURCE=..\src\condor_had\BaseReplicaTransferer.C
+SOURCE=..\src\condor_had\BaseReplicaTransferer.cpp
 # SUBTRACT CPP /YX /Yc /Yu
 # End Source File
 # Begin Source File
@@ -94,7 +94,7 @@ SOURCE=..\src\condor_had\BaseReplicaTransferer.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_had\DownloadReplicaTransferer.C
+SOURCE=..\src\condor_had\DownloadReplicaTransferer.cpp
 # SUBTRACT CPP /YX /Yc /Yu
 # End Source File
 # Begin Source File
@@ -103,7 +103,7 @@ SOURCE=..\src\condor_had\DownloadReplicaTransferer.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_had\FilesOperations.C
+SOURCE=..\src\condor_had\FilesOperations.cpp
 # SUBTRACT CPP /YX /Yc /Yu
 # End Source File
 # Begin Source File
@@ -112,7 +112,7 @@ SOURCE=..\src\condor_had\FilesOperations.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_had\soap_transfererC.C
+SOURCE=..\src\condor_had\soap_transfererC.cpp
 # SUBTRACT CPP /YX /Yc /Yu
 # End Source File
 # Begin Source File
@@ -121,12 +121,12 @@ SOURCE=..\src\condor_had\soap_transfererH.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_had\soap_transfererServer.C
+SOURCE=..\src\condor_had\soap_transfererServer.cpp
 # SUBTRACT CPP /YX /Yc /Yu
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_had\soap_transfererStub.C
+SOURCE=..\src\condor_had\soap_transfererStub.cpp
 
 !IF  "$(CFG)" == "condor_transferer - Win32 Release"
 
@@ -143,12 +143,12 @@ SOURCE=..\src\condor_had\soap_transfererStub.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_had\Transferer.C
+SOURCE=..\src\condor_had\Transferer.cpp
 # SUBTRACT CPP /YX /Yc /Yu
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_had\UploadReplicaTransferer.C
+SOURCE=..\src\condor_had\UploadReplicaTransferer.cpp
 # SUBTRACT CPP /YX /Yc /Yu
 # End Source File
 # Begin Source File
@@ -157,7 +157,7 @@ SOURCE=..\src\condor_had\UploadReplicaTransferer.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_had\Utils.C
+SOURCE=..\src\condor_had\Utils.cpp
 # SUBTRACT CPP /YX /Yc /Yu
 # End Source File
 # Begin Source File

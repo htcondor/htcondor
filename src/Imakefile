@@ -10,7 +10,7 @@
 #   define standalone
 #endif
 
-#define StdUnvProgs shadow.V6 starter.V5 
+#define StdUnvProgs shadow.std starter.std 
 #define StdUnvLibs ckpt syscall_lib
 
 #if HAVE_EXT_CLASSADS && HAVE_EXT_GLOBUS
@@ -20,7 +20,7 @@
 #endif
 
 #if HAVE_EXT_CLASSADS && WANT_QUILL
-#define JobRouterProgs schedd.V7
+#define JobRouterProgs job_router
 #else
 #define JobRouterProgs
 #endif
@@ -76,7 +76,7 @@
 #endif
 
 #define Programs \
-		procapi sysapi unit_tests accountant.V6 ckpt_server \
+		procapi sysapi unit_tests ckpt_server \
 		master.V6 negotiator.V6 schedd.V6 prio q.V6 rm.V6 \
 		scripts startd.V6 StdUnvProgs submit.V6 status.V6 \
 		tools KbddProgs collector.V6 dagman userlog Eventd \
@@ -89,11 +89,11 @@
 		power
 
 #define Libraries \
-		util_lib daemon_core.V6 daemon_client classad c++_util	\
+		util_lib daemon_core.V6 daemon_client target-classad.old c++_util	\
 		condor_procapi/libprocapi.a condor_sysapi/libsysapi.a	\
 		io condor_ckpt_server/ckpt_server_api.a			\
 		condor_schedd.V6/libqmgmt.a				\
-		condor_accountant.V6/libacct.a StdUnvLibs NetmanLibs	\
+		StdUnvLibs NetmanLibs	\
 		condor_procd/procd_client.a \
 		condor_privsep/privsep_client.a LibQuill \
 		chirp AnalysisLibs
@@ -246,12 +246,11 @@ condor_object_target(examples)
 #if WANT_NETMAN
 condor_object_target(eventd)
 #endif
-condor_object_target(accountant.V6)
 condor_object_target(ckpt_server)
 
-condor_object_target(shadow.V6)
+condor_object_target(shadow.std)
 condor_object_target(transferd)
-condor_object_target(starter.V5)
+condor_object_target(starter.std)
 
 #ifdef WANT_QUILL
 condor_object_target(quill)
@@ -288,7 +287,7 @@ condor_object_target(syscall_lib)
 condor_object_target(netman)
 #endif
 condor_object_target(io)
-condor_object_target(classad)
+object_target(target-classad.old,classad.old)
 condor_object_target(daemon_core.V6)
 condor_object_target(daemon_client)
 condor_object_target(prio)
@@ -299,7 +298,7 @@ condor_object_target(gridmanager)
 	condor_object_target(credd)
 #endif
 #if HAVE_EXT_CLASSADS
-	condor_object_target(schedd.V7)
+	condor_object_target(job_router)
 #endif
 condor_object_target(starter.V6.1)
 condor_object_target(shadow.V6.1)
@@ -349,7 +348,6 @@ single_target(condor_procd,procd_client.a)
 single_target(condor_privsep,privsep_client.a)
 single_target(condor_sysapi,libsysapi.a)
 single_target(condor_schedd.V6,libqmgmt.a)
-single_target(condor_accountant.V6,libacct.a)
 single_target(condor_ckpt_server,ckpt_server_api.a)
 single_target(condor_quill,libquill.a)
 
@@ -410,7 +408,7 @@ pure_target(condor_lease_manager,condor_lease_manager.pure)
 #endif
 
 pure_target(condor_shadow.V6,condor_shadow.std.pure)
-pure_target(condor_starter.V5,condor_starter.std.pure)
+pure_target(condor_starter.std,condor_starter.std.pure)
 
 pure_target(condor_shadow.V6.1,condor_shadow.pure)
 pure_target(condor_starter.V6.1,condor_starter.pure)

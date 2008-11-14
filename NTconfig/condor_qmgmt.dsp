@@ -41,7 +41,7 @@ RSC=rc.exe
 # PROP Intermediate_Dir "..\Debug"
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /GX /Z7 /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /YX /FD /c
-# ADD CPP /nologo /MTd /W3 /Gm /Gi /GX /ZI /Od $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /Fp"..\Debug\condor_common.pch" /Yu"condor_common.h" /FD /TP /c
+# ADD CPP /nologo /MTd /W3 /Gm /Gi /GX /ZI /Od $(CONDOR_INCLUDE) $(CONDOR_DEFINES) $(CONDOR_CPPARGS) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /Fp"..\Debug\condor_common.pch" /Yu"condor_common.h" /FD /TP /c
 # ADD BASE RSC /l 0x409
 # ADD RSC /l 0x409
 BSC32=bscmake.exe
@@ -65,7 +65,7 @@ LIB32=link.exe -lib
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MDd /W3 /GX /Z7 /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /Fp"..\src\condor_c++_util/condor_common.pch" /Yu"condor_common.h" /FD /TP /c
 # SUBTRACT BASE CPP /Fr
-# ADD CPP /nologo /MT /W3 /GX /Z7 /O1 $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /Fp"..\Release\condor_common.pch" /Yu"condor_common.h" /FD /TP /c
+# ADD CPP /nologo /MT /W3 /GX /Z7 /O1 $(CONDOR_INCLUDE) $(CONDOR_DEFINES) $(CONDOR_CPPARGS) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /Fp"..\Release\condor_common.pch" /Yu"condor_common.h" /FD /TP /c
 # ADD BASE RSC /l 0x409
 # ADD RSC /l 0x409
 BSC32=bscmake.exe
@@ -87,7 +87,7 @@ SOURCE=..\src\condor_includes\condor_qmgr.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_schedd.V6\qmgmt_common.C
+SOURCE=..\src\condor_schedd.V6\qmgmt_common.cpp
 # End Source File
 # Begin Source File
 
@@ -95,7 +95,7 @@ SOURCE=..\src\condor_schedd.V6\qmgmt_constants.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_schedd.V6\qmgmt_send_stubs.C
+SOURCE=..\src\condor_schedd.V6\qmgmt_send_stubs.cpp
 # End Source File
 # Begin Source File
 
@@ -103,7 +103,7 @@ SOURCE=..\src\condor_schedd.V6\qmgr.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_schedd.V6\qmgr_job_updater.C
+SOURCE=..\src\condor_schedd.V6\qmgr_job_updater.cpp
 # End Source File
 # Begin Source File
 
@@ -111,7 +111,7 @@ SOURCE=..\src\condor_schedd.V6\qmgr_job_updater.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_schedd.V6\qmgr_lib_support.C
+SOURCE=..\src\condor_schedd.V6\qmgr_lib_support.cpp
 # End Source File
 # End Target
 # End Project

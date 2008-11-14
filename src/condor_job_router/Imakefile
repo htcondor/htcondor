@@ -22,7 +22,7 @@ soapobjs(job_router)
 
 OBJ = classad_newold.o submit_job.o VanillaToGrid.o JobRouter.o JobLogReader.o Scheduler.o schedd_main.o schedd_v7_utils.o set_user_from_ad.o $(QUILL_OBJS) $(SOAP_OBJS) $(JOB_HOOKS_OBJS)
 
-template_inst( JobRouter.C, JobRouter.o )
+template_inst( JobRouter.cpp, JobRouter.o )
 
 c_plus_target($(VANILLATOGRID),$(VANILLATOGRID_OBJS),$(VANILLATOGRID_LIB))
 public_c_plus_target($(NAME),libexec,$(OBJ),$(LIB))

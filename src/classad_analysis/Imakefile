@@ -20,8 +20,8 @@ all_target(libanalysis.a libconversion.a)
 library_target(libanalysis.a, $(ANA_OBJ))
 library_target(libconversion.a, $(CONV_OBJ))
 library_target(libgangmatch.a, $(GM_OBJ))
-template_inst(analysis_instantiate.C,analysis_instantiate.o)
-template_inst(gang_instantiate.C,gang_instantiate.o)
+template_inst(analysis_instantiate.cpp,analysis_instantiate.o)
+template_inst(gang_instantiate.cpp,gang_instantiate.o)
 
 release:: all
 static:: all

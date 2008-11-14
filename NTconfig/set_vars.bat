@@ -80,7 +80,9 @@ if exist BUILD-ID. (
 echo Using build-id: %BID% & echo.
 popd
 
-set CONDOR_INCLUDE=/I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /I "..\src\condor_daemon_client" /I "..\src\condor_daemon_core.V6" /I "..\src\condor_schedd.V6" /GR /DHAVE_HIBERNATION=1 /DHAVE_JOB_HOOKS /DBUILDID=%BID%
+set CONDOR_DEFINES=/DHAVE_HIBERNATION=1 /DHAVE_BACKFILL=1 /DHAVE_BOINC=1 /DHAVE_JOB_HOOKS=1 /DBUILDID=%BID%
+set CONDOR_CPPARGS=/GR
+set CONDOR_INCLUDE=/I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /I "..\src\condor_daemon_client" /I "..\src\condor_daemon_core.V6" /I "..\src\condor_schedd.V6" 
 set CONDOR_LIB=Crypt32.lib mpr.lib psapi.lib mswsock.lib netapi32.lib imagehlp.lib advapi32.lib ws2_32.lib user32.lib oleaut32.lib ole32.lib powrprof.lib iphlpapi.lib userenv.lib
 set CONDOR_LIBPATH=
 
@@ -94,7 +96,7 @@ REM Some have been defined, but are not in use yet.
 REM ======================================================================
 
 REM ** GSOAP
-set CONDOR_GSOAP_INCLUDE=/I %EXT_INSTALL%\%EXT_GSOAP_VERSION%\src /DHAVE_BACKFILL=1 /DHAVE_BOINC=1 /DWITH_OPENSSL=1 /DCOMPILE_SOAP_SSL=1 /DHAVE_EXT_GSOAP=1
+set CONDOR_GSOAP_INCLUDE=/I %EXT_INSTALL%\%EXT_GSOAP_VERSION%\src /DWITH_OPENSSL=1 /DCOMPILE_SOAP_SSL=1 /DHAVE_EXT_GSOAP=1
 set CONDOR_GSOAP_LIB=
 set CONDOR_GSOAP_LIBPATH=
 
@@ -104,18 +106,18 @@ set CONDOR_GLOBUS_LIB=
 set CONDOR_GLOBUS_LIBPATH=
 
 REM ** OPENSSL
-set CONDOR_OPENSSL_INCLUDE=/I %EXT_INSTALL%\%EXT_OPENSSL_VERSION%\inc32 /D HAVE_EXT_OPENSSL
+set CONDOR_OPENSSL_INCLUDE=/I %EXT_INSTALL%\%EXT_OPENSSL_VERSION%\inc32 /DHAVE_EXT_OPENSSL=1
 set CONDOR_OPENSSL_LIB=libeay32.lib ssleay32.lib
 set CONDOR_OPENSSL_LIBPATH=/LIBPATH:%EXT_INSTALL%\%EXT_OPENSSL_VERSION%\out32dll
 rem set CONDOR_OPENSSL_LIBPATH=/LIBPATH:%EXT_INSTALL%\%EXT_OPENSSL_VERSION%\out32dll /NODEFAULTLIB:LIBCMT.LIB
 
 REM ** POSTGRESQL
-set CONDOR_POSTGRESQL_INCLUDE=/I %EXT_INSTALL%\%EXT_POSTGRESQL_VERSION%\inc32 /D WANT_QUILL
+set CONDOR_POSTGRESQL_INCLUDE=/I %EXT_INSTALL%\%EXT_POSTGRESQL_VERSION%\inc32 /DWANT_QUILL=1
 set CONDOR_POSTGRESQL_LIB=libpqdll.lib
 set CONDOR_POSTGRESQL_LIBPATH=/LIBPATH:%EXT_INSTALL%\%EXT_POSTGRESQL_VERSION%\out32dll
 
 REM ** KERBEROS
-set CONDOR_KERB_INCLUDE=/I %EXT_INSTALL%\%EXT_KERBEROS_VERSION%\include /D HAVE_EXT_KRB5
+set CONDOR_KERB_INCLUDE=/I %EXT_INSTALL%\%EXT_KERBEROS_VERSION%\include /DHAVE_EXT_KRB5=1
 set CONDOR_KERB_LIB=comerr32.lib gssapi32.lib k5sprt32.lib krb5_32.lib xpprof32.lib
 set CONDOR_KERB_LIBPATH=/LIBPATH:%EXT_INSTALL%\%EXT_KERBEROS_VERSION%\lib
 

@@ -91,7 +91,7 @@ SOURCE="..\src\condor_c++_util\dc_stub.C"
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_classad\test_classads.C
+SOURCE=..\src\classad.old\test_classads.C
 # End Source File
 # End Target
 # End Project

@@ -9,7 +9,7 @@ CFLAGS = $(STD_C_FLAGS)
 PLUGIN_OBJ = StartdPlugin.o
 #endif
 
-%-plugin.so: %.C
+%-plugin.so: %.cpp
 	$(CPlusPlus) $(C_PLUS_FLAGS) -shared -fPIC $< -o $@
 
 #if IS_DARWIN
@@ -46,7 +46,7 @@ OBJ = IdDispenser.o \
 	$(PLUGIN_OBJ) \
 	$(BACKFILL_OBJS) $(GLEXEC_OBJ) $(JOB_HOOKS_OBJS) $(SOAP_OBJS)
 
-template_inst( startd_instantiate.C, startd_instantiate.o )
+template_inst( startd_instantiate.cpp, startd_instantiate.o )
 
 public_c_plus_target($(NAME),sbin,$(OBJ),$(LIB))
 
