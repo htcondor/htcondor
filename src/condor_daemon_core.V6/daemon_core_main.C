@@ -676,9 +676,6 @@ install_core_dump_handler()
 void
 drop_core_in_log( void )
 {
-	// Try to log the fact that an exception has been raised
-	dprintf ( D_ALWAYS, "Dropping a core file." );
-
 	// chdir to the LOG directory so that if we dump a core
 	// it will go there.
 	// and on Win32, tell our ExceptionHandler class to drop

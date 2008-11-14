@@ -101,6 +101,7 @@ void ExceptionHandler::SetPID( pid_t pid ){
 LONG WINAPI ExceptionHandler::MSJUnhandledExceptionFilter(
                                              PEXCEPTION_POINTERS pExceptionInfo )
 {    
+	dprintf ( D_ALWAYS, "Intercepting an unhandled exception.\n" );	
 	m_hReportFile = CreateFile( m_szLogFileName,
                                 GENERIC_WRITE,
 								0,
@@ -109,6 +110,7 @@ LONG WINAPI ExceptionHandler::MSJUnhandledExceptionFilter(
                                 FILE_FLAG_WRITE_THROUGH,
                                 0 );    
 	if ( m_hReportFile )    {
+		dprintf ( D_ALWAYS, "Dropping a core file.\n" );
         // SetFilePointer( m_hReportFile, 0, 0, FILE_END );
         GenerateExceptionReport( pExceptionInfo );
         CloseHandle( m_hReportFile );        
