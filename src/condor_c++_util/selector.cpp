@@ -296,10 +296,6 @@ Selector::execute()
 	int		nfds;
 	struct timeval	*tp;
 
-	if( DebugFlags & D_FULLDEBUG && DebugFlags & D_NETWORK ) {
-		display ();
-	}
-
 	memcpy( read_fds, save_read_fds, fd_set_size * sizeof(fd_set) );
 	memcpy( write_fds, save_write_fds, fd_set_size * sizeof(fd_set) );
 	memcpy( except_fds, save_except_fds, fd_set_size * sizeof(fd_set) );
