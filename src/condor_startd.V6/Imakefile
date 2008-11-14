@@ -10,7 +10,7 @@ PLUGIN_OBJ = StartdPlugin.o
 #endif
 
 %-plugin.so: %.C
-   $(CPlusPlus) $(C_PLUS_FLAGS) -shared -fPIC $< -o $@
+	$(CPlusPlus) $(C_PLUS_FLAGS) -shared -fPIC $< -o $@
 
 #if IS_DARWIN
 LDFLAGS = -framework IOKit -framework Carbon
