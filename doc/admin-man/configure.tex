@@ -223,53 +223,63 @@ and the prefix of \MacroNI{MASTER.} causes this configuration
 to be specific to the \Condor{master} daemon.
 
 % the local functionality added in 7.1.4
-This has been further expanded (in Condor 7.1.4) to allow for the
-specification of a ``local'' name on the command line (via the
-``-local-name $<$name$>$'' command-line parameter).  This allows for
-multiple instances of a daemon to be run by the same \Condor{master},
-each with it's own local configuration parameters.
-
-The following order is used to look up a parameter named $<$parameter name$>$:
-
-1. $<$subsystem name$>$.$<$local name$>$.$<$parameter name$>$
-
-2. $<$local name$>$.$<$parameter name$>$
-
-3. $<$subsystem name$>$.$<$parameter name$>$
-
-4. $<$parameter name$>$
-
-If this local name is not specified on the command line, steps 1
-and 2 above are skipped.  As soon as the first match is found, the
-search is completed, and the corresponding value is used.
-
-As an example, let's configure a \Condor{master} to run 2
-\Condor{schedd}'s.  First, let's define things in the master to
-accommodate this.
-
+This syntax has been further expanded to allow for the
+specification of a local name on the command line 
+using the command line option
 \begin{verbatim}
-  XYZZY            = $(SCHEDD)
-  XYZZY_ARGS       = -local-name xyzzy
-  DAEMON_LIST      = $(DAEMON_LIST) XYZZY
-  DC_DAEMON_LIST   = $(DC_DAEMON_LIST) XYZZY
-  XYZZY_LOG        = $(LOG)/SchedLog.xyzzy
+  -local-name <local-name>
+\end{verbatim}
+This allows multiple instances of a daemon to be run 
+by the same \Condor{master} daemon,
+each instance with its own local configuration variable.
+
+The ordering used to look up a variable, called \verb@<parameter name>@:
+
+\begin{enumerate}
+\item \verb@<subsystem name>.<local name>.<parameter name>@
+
+\item \verb@<local name>.<parameter name>@
+
+\item \verb@<subsystem name>.<parameter name>@
+
+\item \verb@<parameter name>@
+\end{enumerate}
+
+If this local name is not specified on the command line, 
+numbers 1 and 2 are skipped.
+As soon as the first match is found, the search is completed,
+and the corresponding value is used.
+
+This example configures a \Condor{master} to run 2 \Condor{schedd}
+daemons.  The \Condor{master} daemon needs the configuration:
+\begin{verbatim}
+  XYZZY           = $(SCHEDD)
+  XYZZY_ARGS      = -local-name xyzzy
+  DAEMON_LIST     = $(DAEMON_LIST) XYZZY
+  DC_DAEMON_LIST  = $(DC_DAEMON_LIST) XYZZY
+  XYZZY_LOG       = $(LOG)/SchedLog.xyzzy
 \end{verbatim}
 
-Now, when the \Condor{master} starts up daemons, it'll start up an
-extra \Condor{schedd}, the second being passed ``-local-name xyzzy''
+Using this example configuration, the \Condor{master} starts up a
+second \Condor{schedd} daemon, 
+where this second \Condor{schedd} daemon is passed 
+\OptArg{-local-name}{xyzzy}
 on the command line.
 
-Note that, by default, \MacroNI{DC\_DAEMON\_LIST} isn't
-defined in the configuration file, so you can't just append to it as
-in this example; you must uncomment the ``original'' version of it in
-the configuration file, and then append to it as above (or just add
-the ``SCHEDD2'' to it's definition).
+Note that by default, the configuration variable \MacroNI{DC\_DAEMON\_LIST}
+is not defined in the configuration file.
+If not defined, then define it by using the value
+included as a comment in the default configuration,
+together with the above redefinition.
+Alternatively, modify the original definition by adding
+the additional daemon's local name
+(\Attr{XYZZY} in this example) to the list.
 
-Next, let's configure the ``xyzzy'' \Condor{schedd}:
-This schedd will share all parameters with the ``main'' schedd, except
-for those specified separately (thus, it'll pick up
-\MacroNI{MAX\_JOBS\_RUNNING}
-and all other parameters not explicitly specified).
+Continuing the example,
+configure the \Condor{schedd} daemon named \Attr{xyzzy}.
+This \Condor{schedd} daemon will share all configuration variable
+definitions with the other \Condor{schedd} daemon,
+except for those specified separately.
 
 \begin{verbatim}
   SCHEDD.XYZZY.SCHEDD_NAME = XYZZY
@@ -277,20 +287,21 @@ and all other parameters not explicitly specified).
   SCHEDD.XYZZY.SPOOL       = $(SPOOL).XYZZY
 \end{verbatim}
 
-Note that the above \MacroNI{SCHEDD\_NAME} and \MacroNI{SPOOL} are
-specific to the \Condor{schedd} (as opposed to a different daemon
-(i.e. \Condor{startd}).  Other Condor daemons will
-have different requirements as to which parameters would need to be
-specified individually.  The above is just an example for a schedd,
-and more local configuration can, and likely would, be specified.
+Note that the example \MacroNI{SCHEDD\_NAME} and \MacroNI{SPOOL} are
+specific to the \Condor{schedd} daemon, as opposed to a different daemon
+such as the \Condor{startd}.
+Other Condor daemons using this feature will
+have different requirements for which parameters need to be
+specified individually.  This example works for the \Condor{schedd},
+and more local configuration can, and likely would be specified.
 
-Also note that each daemon's log macro (in this case,
-\MacroNI{SCHEDD\_LOG}) needs to be specified individually,
-and in two places -- one for the \Condor{master}'s use, and the other
-for the daemon itself.  Also note that, in the above example, the
-new \Condor{schedd} (named ``XYZZY'') log macro
+Also note that each daemon's log file must be specified individually,
+and in two places: one specification is for use by the \Condor{master},
+and the other is for use by the daemon itself.
+In the example,
+the \Attr{XYZZY} \Condor{schedd} configuration variable
 \MacroNI{SCHEDD.XYZZY.SCHEDD\_LOG} definition references the
-\Condor{master}'s \MacroNI{XYZZY\_LOG}.
+\Condor{master} daemon's \MacroNI{XYZZY\_LOG}.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -2692,7 +2703,7 @@ These macros control the \Condor{master}.
 \item[\Macro{MASTER\_SHUTDOWN\_$<$Name$>$}]
   \label{param:MasterShutdownProgram} This macro is used to specify a
   full path to a program that the master will execute (via the UNIX
-  ``execl()'' call, or the similar Win32 ``\_execl()'' call) instead of
+  ``exe cl()'' call, or the similar Win32 ``\_exe cl()'' call) instead of
   the normal call to exit().  Multiple of these may be configured
   (with different $<$name$>$'s).  These macros have no affect on a
   \Condor{master} unless the \Condor{set\_shutdown} is run.  The name
@@ -4180,9 +4191,9 @@ This macro can be used to override the default search used by
 Condor on Linux to detect the hibernation method to use.  The default
 behavior is to try:
 \begin{itemize}
-\item Detect and use the pm-utils command line tools ``pm-utils''
+\item Detect and use the pm-UTIL command line tools ``pm-UTIL''
 \item Detect and use the /sys/power virtual files ``/sys''
-\item Detect and use the /proc/acpi virtual files ``/proc''
+\item Detect and use the /proc/ACPI virtual files ``/proc''
 \end{itemize}
 To override this behavior and force the use of a particular method,
 set \MacroNI{LINUX\_HIBERNATION\_METHOD} to one of the above names
@@ -4448,7 +4459,7 @@ is configured by \Macro{SCHEDD\_INTERVAL} (default 300 seconds).
   Normally, it is not a good idea to set this to be very small (e.g. a
   few minutes).  Doing so can lead to failure to preempt, because the
   preempting job will spend a significant fraction of its time waiting
-  to be rematched.  During that time, it would miss out on any
+  to be re-matched.  During that time, it would miss out on any
   opportunity to run if the job it is trying to preempt gets out of
   the way.
 
@@ -6305,7 +6316,7 @@ The \Condor{lease\_manager} expects to use the syntax
 \end{verbatim}
 in configuration.
 This allows multiple instances of the
-\Condor{lease\_manager} to be easily configured using the synax
+\Condor{lease\_manager} to be easily configured using the syntax
 \begin{verbatim}
  <subsystem name>.<local name>.<parameter name>
 \end{verbatim}
@@ -6972,7 +6983,7 @@ the key may be compromised by attack.
 \item[\Macro{SEC\_INVALIDATE\_SESSIONS\_VIA\_TCP}]
 \label{param:SecInvalidateSessionsViaTcp} Use TCP (if True) or UDP (if False)
 for responding to attempts to use an invalid security session.  This happens,
-for example, if a daemon restarts and receives incomming commands from
+for example, if a daemon restarts and receives incoming commands from
 other daemons that are still using a previously established security session.
 The default is True.
 
