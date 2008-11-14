@@ -6211,6 +6211,16 @@ in the example configuration is \File{\MacroUNI{LIB}/glite}.
 The necessary Glite software is included with Condor,
 and is required for pbs and lsf jobs.
 
+\item[\Macro{AMAZON\_EC2\_URL}]
+\label{param:AmazonEC2URL}
+The URL Condor should use when contacting the Amazon EC2 service.
+The default value is \MacroNI{https://ec2.amazonaws.com/}.
+
+\item[\Macro{AMAZON\_HTTP\_PROXY}]
+\label{param:AmazonHttpProxy}
+The http proxy that Condor should use when contacting the Amazon EC2
+service. The default is to not use a proxy.
+
 \item[\Macro{CONDOR\_GAHP}]
 \label{param:CondorGAHP} The complete path and file name of the
 Condor GAHP executable.
