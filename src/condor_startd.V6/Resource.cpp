@@ -978,7 +978,7 @@ Resource::publish_for_update ( ClassAd *public_ad ,ClassAd *private_ad )
         MergeClassAds( public_ad, host_classad, true);
     }
 
-    this->publish( private_ad, A_PRIVATE | A_ALL );
+    this->publish_private( private_ad );
 
     // log classad into sql log so that it can be updated to DB
     if (FILEObj) {
@@ -1648,30 +1648,6 @@ Resource::publish( ClassAd* cap, amask_t mask )
 		}
 	}
 
-		// Things you only need in private ads
-	if( IS_PRIVATE(mask) && IS_UPDATE(mask) ) {
-			// Add currently useful ClaimId.  If r_pre exists, we
-			// need to advertise it's ClaimId.  Otherwise, we
-			// should get the ClaimId from r_cur.
-			// CRUFT: This shouldn't still be called ATTR_CAPABILITY
-			// in the ClassAd, but for backwards compatibility it is.
-			// As of 7.1.3, the negotiator accepts ATTR_CLAIM_ID
-			// ATTR_CAPABILITY, so once we no longer care about
-			// compatibility with negotiators older than that,
-			// we can ditch ATTR_CAPABILITY and switch the following
-			// over to ATTR_CLAIM_ID.  That will slightly simplify
-			// claimid-specific logic elsewhere, such as the private
-			// attributes in ClassAds.
-		if( r_pre_pre ) {
-			cap->Assign( ATTR_CAPABILITY, r_pre_pre->id() );
-		}
-		else if( r_pre ) {
-			cap->Assign( ATTR_CAPABILITY, r_pre->id() );
-		} else if( r_cur ) {
-			cap->Assign( ATTR_CAPABILITY, r_cur->id() );
-		}		
-	}
-
 		// Put in cpu-specific attributes
 	r_attr->publish( cap, mask );
 
@@ -1750,6 +1726,48 @@ Resource::publish( ClassAd* cap, amask_t mask )
 	if( IS_PUBLIC(mask) && IS_SHARED_SLOT(mask) ) {
 		resmgr->publishSlotAttrs( cap );
 	}
+}
+
+void
+Resource::publish_private( ClassAd *ad )
+{
+		// Needed by the collector to correctly respond to queries
+		// for private ads.  As of 7.2.0, the 
+	ad->SetMyTypeName( STARTD_ADTYPE );
+
+		// For backward compatibility with pre 7.2.0 collectors, send
+		// name and IP address in private ad (needed to match up the
+		// private ad with the public ad in the negotiator).
+		// As of 7.2.0, the collector automatically propagates this
+		// info from the public ad to the private ad.  Also as of
+		// 7.2.0, the negotiator doesn't even care about STARTD_IP_ADDR.
+		// It looks at MY_ADDRESS instead, which is propagated to
+		// the private ad by the collector (and which is also inserted
+		// by the startd before sending this ad for compatibility with
+		// older collectors).
+
+	ad->Assign(ATTR_STARTD_IP_ADDR, daemonCore->InfoCommandSinfulString() );
+	ad->Assign(ATTR_NAME, r_name );
+
+		// Add ClaimId.  If r_pre exists, we need to advertise it's
+		// ClaimId.  Otherwise, we should get the ClaimId from r_cur.
+		// CRUFT: This shouldn't still be called ATTR_CAPABILITY in
+		// the ClassAd, but for backwards compatibility it is.  As of
+		// 7.1.3, the negotiator accepts ATTR_CLAIM_ID or
+		// ATTR_CAPABILITY, so once we no longer care about
+		// compatibility with negotiators older than that, we can
+		// ditch ATTR_CAPABILITY and switch the following over to
+		// ATTR_CLAIM_ID.  That will slightly simplify
+		// claimid-specific logic elsewhere, such as the private
+		// attributes in ClassAds.
+	if( r_pre_pre ) {
+		ad->Assign( ATTR_CAPABILITY, r_pre_pre->id() );
+	}
+	else if( r_pre ) {
+		ad->Assign( ATTR_CAPABILITY, r_pre->id() );
+	} else if( r_cur ) {
+		ad->Assign( ATTR_CAPABILITY, r_cur->id() );
+	}		
 }
 
 void

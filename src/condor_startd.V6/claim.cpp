@@ -157,11 +157,6 @@ Claim::publish( ClassAd* cad, amask_t how_much )
 	char* tmp;
 	char *remoteUser;
 
-	if( IS_PRIVATE(how_much) ) {
-			// None of this belongs in private ads
-		return;
-	}
-
 		/*
 		  NOTE: currently, we publish all of the following regardless
 		  of the mask (e.g. UPDATE vs. TIMEOUT).  Given the bug with
@@ -261,11 +256,6 @@ Claim::publishPreemptingClaim( ClassAd* cad, amask_t how_much )
 	MyString line;
 	char* tmp;
 	char *remoteUser;
-
-	if( IS_PRIVATE(how_much) ) {
-			// None of this belongs in private ads
-		return;
-	}
 
 	if( c_client && c_client->user() ) {
 		line.sprintf( "%s = %f", ATTR_PREEMPTING_RANK, c_rank );

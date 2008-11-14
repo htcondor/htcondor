@@ -600,6 +600,22 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 				break;
 			}
 
+				// Fix up some stuff in the private ad that we depend on.
+				// We started doing this in 7.2.0, so once we no longer
+				// care about compatibility with stuff from before then,
+				// the startd could stop bothering to send these attributes.
+
+				// Queries of private ads depend on the following:
+			pvtAd->SetMyTypeName( STARTD_ADTYPE );
+
+				// Negotiator matches up private ad with public ad by
+				// using the following.
+			if( retVal ) {
+				pvtAd->CopyAttribute( ATTR_MY_ADDRESS, retVal );
+				pvtAd->CopyAttribute( ATTR_NAME, retVal );
+			}
+
+
 			// insert the private ad into its hashtable --- use the same
 			// hash key as the public ad
 			(void) updateClassAd (StartdPrivateAds, "StartdPvtAd  ",
