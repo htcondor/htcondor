@@ -180,7 +180,7 @@ LINK32_OBJS= \
 
 
 !IF "$(CFG)" == "condor_kbdd_dll - Win32 Debug" || "$(CFG)" == "condor_kbdd_dll - Win32 Release"
-SOURCE="..\src\condor_kbdd\NT-kbdd-dll.C"
+SOURCE="..\src\condor_kbdd\NT-kbdd-dll.cpp"
 
 "$(INTDIR)\NT-kbdd-dll.obj" : $(SOURCE) "$(INTDIR)"
 	$(CPP) $(CPP_PROJ) $(SOURCE)

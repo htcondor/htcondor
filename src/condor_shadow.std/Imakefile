@@ -19,8 +19,8 @@ import_objs(../condor_syscall_lib,receivers.o)
 import_objs(../condor_syscall_lib,extern_path.o)
 import_objs(../condor_util_lib,getmnt.o)
 
-DEPEND_SRC = job_report.C log_events.C ops.C pseudo_ops.C shadow.C \
-shadow_common.C
+DEPEND_SRC = job_report.cpp log_events.cpp ops.cpp pseudo_ops.cpp shadow.cpp \
+shadow_common.cpp
 
 depend_source_target($(DEPEND_SRC))
 

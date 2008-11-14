@@ -28,7 +28,7 @@ PORTABLE_OBJ = $(CLASS_LIB_OBJ) signals.o \
 
 NON_PORTABLE_OBJ = NON_POSIX.o analyze_core.o
 
-OBJ = starter.o $(PORTABLE_OBJ) $(NON_PORTABLE_OBJ) $(REMOTE_SYSCALL_OBJ)
+OBJ = starter_main.o $(PORTABLE_OBJ) $(NON_PORTABLE_OBJ) $(REMOTE_SYSCALL_OBJ)
 
 public_c_plus_target($(NAME),sbin,$(OBJ),$(LIB))
 

@@ -65,7 +65,7 @@ compiled with CC.  Go figure.
 	which ends up being used in the condor_common.h header file. -psilord */
 #define NO_CONDOR_COMMON
 #include "../../condor_c++_util/memory_file.h"
-#include "../../condor_c++_util/memory_file.C"
+#include "../../condor_c++_util/memory_file.cpp"
 
 void use(char *program)
 {

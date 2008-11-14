@@ -25,7 +25,7 @@ soapobjs(starter)
 
 # this can (and will have to) be made better, but
 # it will suffice for now:
-OBJ = starter_v61_main.o starter.o NTsenders.o user_proc.o \
+OBJ = starter_v61_main.o baseStarter.o NTsenders.o user_proc.o \
 	os_proc.o vanilla_proc.o mpi_master_proc.o mpi_comrade_proc.o \
 	script_proc.o parallel_proc.o \
 	starter_v61_instantiate.o io_proxy.o io_proxy_handler.o \

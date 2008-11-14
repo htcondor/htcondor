@@ -13,7 +13,7 @@ ENGINE_OBJ = hashkey.o collector_engine.o
 # define PluginObj
 #endif
 
-%-plugin.so: %.C
+%-plugin.so: %.cpp
 	$(CPlusPlus) $(C_PLUS_FLAGS) -shared $< -o $@
 
 soapobjs(collector)

@@ -42,7 +42,7 @@ RSC=rc.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /Gm /GX /Zi /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /YX /FD /c
-# ADD CPP /nologo /MTd /W3 /Gm /Gi /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"..\Debug\condor_common.pch" /Yu"condor_common.h" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c
+# ADD CPP /nologo /MTd /W3 /Gm /Gi /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"..\Debug\condor_common.pch" /Yu"condor_common.h" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_DEFINES) $(CONDOR_CPPARGS) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c
 # ADD BASE RSC /l 0x409 /d "_DEBUG"
 # ADD RSC /l 0x409 /d "_DEBUG"
 BSC32=bscmake.exe
@@ -69,7 +69,7 @@ LINK32=link.exe
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MDd /W3 /GX /Z7 /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"..\src\condor_c++_util/condor_common.pch" /Yu"condor_common.h" /FD /TP /c
 # SUBTRACT BASE CPP /Fr
-# ADD CPP /nologo /MT /W3 /GX /Z7 /O1 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"..\Release\condor_common.pch" /Yu"condor_common.h" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c
+# ADD CPP /nologo /MT /W3 /GX /Z7 /O1 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"..\Release\condor_common.pch" /Yu"condor_common.h" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_DEFINES) $(CONDOR_CPPARGS) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c
 # ADD BASE RSC /l 0x409 /d "_DEBUG"
 # ADD RSC /l 0x409 /d "NDEBUG"
 BSC32=bscmake.exe
@@ -87,7 +87,7 @@ LINK32=link.exe
 # Name "condor_startd - Win32 Release"
 # Begin Source File
 
-SOURCE=..\src\condor_startd.V6\AvailStats.C
+SOURCE=..\src\condor_startd.V6\AvailStats.cpp
 # End Source File
 # Begin Source File
 
@@ -95,7 +95,7 @@ SOURCE=..\src\condor_startd.V6\AvailStats.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_startd.V6\backfill_mgr.C
+SOURCE=..\src\condor_startd.V6\backfill_mgr.cpp
 # End Source File
 # Begin Source File
 
@@ -103,7 +103,7 @@ SOURCE=..\src\condor_startd.V6\backfill_mgr.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_startd.V6\boinc_mgr.C
+SOURCE=..\src\condor_startd.V6\boinc_mgr.cpp
 # End Source File
 # Begin Source File
 
@@ -111,7 +111,7 @@ SOURCE=..\src\condor_startd.V6\boinc_mgr.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_startd.V6\claim.C
+SOURCE=..\src\condor_startd.V6\claim.cpp
 # End Source File
 # Begin Source File
 
@@ -119,7 +119,7 @@ SOURCE=..\src\condor_startd.V6\claim.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_startd.V6\cod_mgr.C
+SOURCE=..\src\condor_startd.V6\cod_mgr.cpp
 # End Source File
 # Begin Source File
 
@@ -127,7 +127,7 @@ SOURCE=..\src\condor_startd.V6\cod_mgr.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_startd.V6\command.C
+SOURCE=..\src\condor_startd.V6\command.cpp
 # End Source File
 # Begin Source File
 
@@ -147,7 +147,7 @@ SOURCE=..\src\condor_startd.V6\CondorSystrayNotifier.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_startd.V6\IdDispenser.C
+SOURCE=..\src\condor_startd.V6\IdDispenser.cpp
 # End Source File
 # Begin Source File
 
@@ -155,7 +155,7 @@ SOURCE=..\src\condor_startd.V6\IdDispenser.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_startd.V6\LoadQueue.C
+SOURCE=..\src\condor_startd.V6\LoadQueue.cpp
 # End Source File
 # Begin Source File
 
@@ -163,7 +163,7 @@ SOURCE=..\src\condor_startd.V6\LoadQueue.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_startd.V6\Reqexp.C
+SOURCE=..\src\condor_startd.V6\Reqexp.cpp
 # End Source File
 # Begin Source File
 
@@ -171,7 +171,7 @@ SOURCE=..\src\condor_startd.V6\Reqexp.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_startd.V6\ResAttributes.C
+SOURCE=..\src\condor_startd.V6\ResAttributes.cpp
 # End Source File
 # Begin Source File
 
@@ -179,7 +179,7 @@ SOURCE=..\src\condor_startd.V6\ResAttributes.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_startd.V6\ResMgr.C
+SOURCE=..\src\condor_startd.V6\ResMgr.cpp
 # End Source File
 # Begin Source File
 
@@ -187,7 +187,7 @@ SOURCE=..\src\condor_startd.V6\ResMgr.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_startd.V6\Resource.C
+SOURCE=..\src\condor_startd.V6\Resource.cpp
 # End Source File
 # Begin Source File
 
@@ -195,7 +195,7 @@ SOURCE=..\src\condor_startd.V6\Resource.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_startd.V6\ResState.C
+SOURCE=..\src\condor_startd.V6\ResState.cpp
 # End Source File
 # Begin Source File
 
@@ -203,7 +203,7 @@ SOURCE=..\src\condor_startd.V6\ResState.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_startd.V6\soap_startdC.C
+SOURCE=..\src\condor_startd.V6\soap_startdC.cpp
 # SUBTRACT CPP /YX /Yc /Yu
 # End Source File
 # Begin Source File
@@ -212,12 +212,12 @@ SOURCE=..\src\condor_startd.V6\soap_startdH.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_startd.V6\soap_startdServer.C
+SOURCE=..\src\condor_startd.V6\soap_startdServer.cpp
 # SUBTRACT CPP /YX /Yc /Yu
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_startd.V6\soap_startdStub.C
+SOURCE=..\src\condor_startd.V6\soap_startdStub.cpp
 # SUBTRACT CPP /YX /Yc /Yu
 # End Source File
 # Begin Source File
@@ -230,7 +230,7 @@ SOURCE=..\src\condor_startd.V6\startd.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_startd.V6\startd_cronjob.C
+SOURCE=..\src\condor_startd.V6\startd_cronjob.cpp
 # End Source File
 # Begin Source File
 
@@ -238,7 +238,7 @@ SOURCE=..\src\condor_startd.V6\startd_cronjob.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_startd.V6\startd_cronmgr.C
+SOURCE=..\src\condor_startd.V6\startd_cronmgr.cpp
 # End Source File
 # Begin Source File
 
@@ -246,11 +246,11 @@ SOURCE=..\src\condor_startd.V6\startd_cronmgr.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_startd.V6\startd_main.C
+SOURCE=..\src\condor_startd.V6\startd_main.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_startd.V6\StartdHookMgr.C
+SOURCE=..\src\condor_startd.V6\StartdHookMgr.cpp
 # End Source File
 # Begin Source File
 
@@ -258,7 +258,7 @@ SOURCE=..\src\condor_startd.V6\StartdHookMgr.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_startd.V6\Starter.C
+SOURCE=..\src\condor_startd.V6\Starter.cpp
 # End Source File
 # Begin Source File
 
@@ -266,7 +266,7 @@ SOURCE=..\src\condor_startd.V6\Starter.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_startd.V6\starter_mgr.C
+SOURCE=..\src\condor_startd.V6\starter_mgr.cpp
 # End Source File
 # Begin Source File
 
@@ -274,7 +274,7 @@ SOURCE=..\src\condor_startd.V6\starter_mgr.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_startd.V6\util.C
+SOURCE=..\src\condor_startd.V6\util.cpp
 # End Source File
 # Begin Source File
 
@@ -282,7 +282,7 @@ SOURCE=..\src\condor_startd.V6\util.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_startd.V6\vm_common.C
+SOURCE=..\src\condor_startd.V6\vm_common.cpp
 # End Source File
 # Begin Source File
 
@@ -290,7 +290,7 @@ SOURCE=..\src\condor_startd.V6\vm_common.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_startd.V6\VMMachine.C
+SOURCE=..\src\condor_startd.V6\VMMachine.cpp
 # End Source File
 # Begin Source File
 
@@ -298,7 +298,7 @@ SOURCE=..\src\condor_startd.V6\VMMachine.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_startd.V6\VMManager.C
+SOURCE=..\src\condor_startd.V6\VMManager.cpp
 # End Source File
 # Begin Source File
 
@@ -306,7 +306,7 @@ SOURCE=..\src\condor_startd.V6\VMManager.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_startd.V6\VMRegister.C
+SOURCE=..\src\condor_startd.V6\VMRegister.cpp
 # End Source File
 # Begin Source File
 
@@ -314,7 +314,7 @@ SOURCE=..\src\condor_startd.V6\VMRegister.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_startd.V6\vmuniverse_mgr.C
+SOURCE=..\src\condor_startd.V6\vmuniverse_mgr.cpp
 # End Source File
 # Begin Source File
 

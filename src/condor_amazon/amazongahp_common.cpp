@@ -24,8 +24,6 @@
 #include "amazongahp_common.h"
 #include "amazonCommands.h"
 
-static MyString working_dir;
-static MyString amazon_lib_path;
 static MyString amazon_proxy_host;
 static int amazon_proxy_port;
 
@@ -86,48 +84,6 @@ bool set_gahp_log_file(const char* logfile)
 	//DebugLock = ;
 	return true;
 }
-
-#if 0
-void vmprintf( int flags, const char *fmt, ... )
-{
-	if( !fmt ) {
-		return;
-	}
-
-	if( Termlog ) {
-		if( !(flags & vmprintf_debug_level) ) {
-			return;
-		}
-	}
-
-	MyString output;
-	va_list args;
-	va_start(args, fmt);
-	output.vsprintf(fmt, args);
-	va_end(args);
-	if( output.IsEmpty() ) {
-		return;
-	}
-
-	if( Termlog ) {
-		time_t clock_now;
-		struct tm *tm;
-		memset((void*)&clock_now, 0, sizeof(time_t));
-		(void)time( &clock_now );
-		tm = localtime(&clock_now);
-
-		fprintf(gahp_log_file, "%d/%d %02d:%02d:%02d ",
-				tm->tm_mon + 1, tm->tm_mday, tm->tm_hour,
-				tm->tm_min, tm->tm_sec );
-
-		fprintf(gahp_log_file, "[pid:%ld] %s", (long)getpid(), output.Value());
-		fflush(gahp_log_file);
-	}else {
-		dprintf(flags, "%s", output.Value());
-	}
-	return;
-}
-#endif
 
 void set_amazon_proxy_server(const char* url) 
 {
@@ -255,30 +211,6 @@ executeWorkerFunc(const char* cmd, char **argv, int argc, MyString &output_strin
 	return false;
 }
 
-void
-set_working_dir(const char* w_dir)
-{
-	working_dir = w_dir;
-}
-
-const char*
-get_working_dir(void)
-{
-	return working_dir.Value();
-}
-
-void
-set_amazon_lib_path(const char* path)
-{
-	amazon_lib_path = path;
-}
-
-const char*
-get_amazon_lib_path(void)
-{
-	return amazon_lib_path.Value();
-}
-
 int
 parse_gahp_command (const char* raw, Gahp_Args* args) {
 
@@ -365,33 +297,6 @@ check_create_file(const char *file)
 	}
 
 	fclose(fp);
-	return true;
-}
-
-bool
-find_amazon_lib(MyString &lib_path)
-{
-#ifndef AMAZON_GSOAP_ENABLED
-	MyString tmp_lib_path;
-	MyString tmp_lib_prog;
-	char * lib_path_ptr = param("AMAZON_EC2_LIB");
-	if( !lib_path_ptr ) {
-		dprintf(D_ALWAYS, "Can't find \"AMAZON_EC2_LIB\" in Condor config file\n");
-		return false;
-	}
-
-	tmp_lib_path = lib_path_ptr;
-	free (lib_path_ptr);
-
-	tmp_lib_prog.sprintf("%s%c%s", tmp_lib_path.Value(), DIR_DELIM_CHAR, AMAZON_SCRIPT_NAME);
-
-	if( check_read_access_file(tmp_lib_prog.Value()) == false ) {
-		dprintf(D_ALWAYS, "Can't read amazon library path(%s)\n", tmp_lib_path.Value());
-		return false;
-	}
-
-	lib_path = tmp_lib_path;
-#endif
 	return true;
 }
 

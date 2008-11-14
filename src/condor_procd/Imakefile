@@ -25,7 +25,7 @@ PROCD_OBJ=procd_main.o procd_common.o \
 #if IS_LINUX
 PROCD_OBJ+= group_tracker.o gid_pool.o
 #endif
-template_inst(procd_instantiate.C,procd_instantiate.o)
+template_inst(procd_instantiate.cpp,procd_instantiate.o)
 public_c_plus_nowrap_target(condor_procd,sbin,$(PROCD_OBJ),$(PROCAPI_LIB))
 
 LIB_OBJ=proc_family_client.o proc_family_io.o local_client.UNIX.o \

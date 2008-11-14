@@ -71,9 +71,9 @@ stripped:: all
 static:: all
 testbin:: all
 
-/* reli_sock_no_auth.o: reli_sock.C */
+/* reli_sock_no_auth.o: reli_sock.cpp */
 /* $(CPlusPlus) $(C_PLUS_FLAGS) -DNO_AUTHENTICATION \ */
-/* -c reli_sock.C -o reli_sock_no_auth.o */
+/* -c reli_sock.cpp -o reli_sock_no_auth.o */
 
 /* IMPORT_LINKS = ../../config/import_links */
 /* import_objs(../condor_c++_util,MyString.o) */

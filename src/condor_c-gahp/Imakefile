@@ -19,7 +19,7 @@ public_c_plus_target($(WORKER_THREAD),sbin,$(WORKER_THREAD_OBJ),$(LIB))
 c_plus_target(AvailStats.t,AvailStats.o AvailStats.t.o startd_instantiate.o,$(LIB))
 
 
-IO_THREAD_OBJ = PipeBuffer.o io_loop.o cgahp_common.o
+IO_THREAD_OBJ = PipeBuffer.o io_loop.o cgahp_common.o $(SOAP_OBJS)
 
 public_c_plus_target($(IO_THREAD),sbin,$(IO_THREAD_OBJ),$(LIB))
 

@@ -25,7 +25,10 @@
 #define OBJECT_MODE		0644
 #define TEXT_MODE		OBJECT_MODE
 
-.SUFFIXES: .C
+.SUFFIXES: .C .cpp
+
+.cpp.o:
+	$(CPlusPlus) $(C_PLUS_FLAGS) -c $< -o $@
 
 .C.o:
 	$(CPlusPlus) $(C_PLUS_FLAGS) -c $< -o $@
@@ -41,6 +44,9 @@
 	-fstack-protect, so we turn that off on some platforms. */
 %-pic.o: %.c
 	$(CC) $(CC_PIC_FLAGS) $(STD_C_FLAGS) $(GCC_NO_STACK_PROTECTOR) -c $< -o $@
+
+%-pic.o: %.cpp
+	$(CPlusPlus) $(CC_PIC_FLAGS) $(C_PLUS_FLAGS) $(GCC_NO_STACK_PROTECTOR) -c $< -o $@
 
 %-pic.o: %.C
 	$(CPlusPlus) $(CC_PIC_FLAGS) $(C_PLUS_FLAGS) $(GCC_NO_STACK_PROTECTOR) -c $< -o $@
@@ -340,7 +346,7 @@ XCOMM End translation of func(jar_target)
 */
 #define soapobjs(daemon) @@\
 SOAP_OBJS = Concat(soapname(daemon),C).o Concat(soapname(daemon),Server).o Concat(soapname(daemon),Stub).o @@\
-SOAP_SRC = Concat(soapname(daemon),C).C Concat(soapname(daemon),Server).C Concat(soapname(daemon),H).h Concat(soapname(daemon),Stub).h
+SOAP_SRC = Concat(soapname(daemon),C).cpp Concat(soapname(daemon),Server).cpp Concat(soapname(daemon),H).h Concat(soapname(daemon),Stub).h
 
 /* given a daemon name, and a service, use the soap compiler to produce a 
 	set of interface files in a temporary directory and then copy the files
@@ -350,8 +356,6 @@ SOAP_SRC = Concat(soapname(daemon),C).C Concat(soapname(daemon),Server).C Concat
 #define gen_soapfiles(daemon,service) @@\
 soapfiles:: gsoapname(daemon).h @@\
 	$(SOAPCPP2) -I ../condor_daemon_core.V6 -S -L -x -p soapname(daemon) gsoapname(daemon).h @@\
-	mv Concat(soapname(daemon),C).cpp Concat(soapname(daemon),C).C @@\
-	mv Concat(soapname(daemon),Server).cpp Concat(soapname(daemon),Server).C @@\
 	touch soapfiles @@\
 	@@\
 release_copy_target(service.wsdl,lib/webservice,service.wsdl,TEXT_MODE) @@\
@@ -359,8 +363,8 @@ strip_copy_target(service.wsdl,lib/webservice,service.wsdl,TEXT_MODE) @@\
 static_copy_target(service.wsdl,lib/webservice,service.wsdl,TEXT_MODE) @@\
 	@@\
 clean:: @@\
-	/bin/rm -f service.nsmap Concat(soapname(daemon),H).h Concat(soapname(daemon),Stub).h service.wsdl Concat(soapname(daemon),C).C Concat(soapname(daemon),Server).C soapfiles @@\
-XCOMM Specifically add a dependancy from the generated .C files to the @@\
+	/bin/rm -f service.nsmap Concat(soapname(daemon),H).h Concat(soapname(daemon),Stub).h service.wsdl Concat(soapname(daemon),C).cpp Concat(soapname(daemon),Server).cpp soapfiles @@\
+XCOMM Specifically add a dependancy from the generated .cpp files to the @@\
 XCOMM .o files. Otherwise, the suffix rules do not get the dependencies @@\
 XCOMM right. @@\
 $(SOAP_OBJS): $(SOAP_SRC) @@\

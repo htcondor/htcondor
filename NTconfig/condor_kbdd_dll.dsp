@@ -93,7 +93,7 @@ LINK32=link.exe
 # Name "condor_kbdd_dll - Win32 Release"
 # Begin Source File
 
-SOURCE="..\src\condor_kbdd\NT-kbdd-dll.C"
+SOURCE="..\src\condor_kbdd\NT-kbdd-dll.cpp"
 # End Source File
 # End Target
 # End Project

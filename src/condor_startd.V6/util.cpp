@@ -353,6 +353,12 @@ caInsert( ClassAd* target, ClassAd* source, const char* attr,
 
 	tree = source->Lookup( attr );
 	if( !tree ) {
+		MyString attrname;
+		if( prefix ) {
+			attrname = prefix;
+		}
+		attrname += attr;
+		target->Delete(attrname.Value());
 		return false;
 	}
 	if( prefix ) {

@@ -129,19 +129,19 @@ SRC = \
 	receivers.epilogue \
 	receivers.prologue \
 	remote_startup.c \
-	remote_syscall.C \
+	remote_syscall.cpp \
 	senders.epilogue \
 	senders.prologue \
 	switches.prologue \
 	switches.epilogue \
-	switches.special.C \
+	switches.special.cpp \
 	syscall.tmpl \
-	syscall_connect.C \
+	syscall_connect.cpp \
 	syscall_numbers.c \
 	xfer_file.c \
 	file_stream.c \
-        ios_stub.C \
-        ios_msg.C
+        ios_stub.cpp \
+        ios_msg.cpp
 
 URL_OBJ = url_condor.o include_urls.o cbstp_url.o file_url.o http_url.o \
 	cfilter_url.o filter_url.o mailto_url.o ftp_url.o
@@ -235,7 +235,7 @@ tmp_dir:
 clean::
 	/bin/rm -rf tmp_dir
 
-stubs: switches.C senders.C receivers.C
+stubs: switches.cpp senders.cpp receivers.cpp
 
 testbin:: all
 
@@ -486,20 +486,20 @@ STUB_GEN_FLAGS = $(STUB_GEN_PLATFORM) $(DL_EXTRACT) -D$(OS) -D$(ARCH) \
 	-D$(DIST_FLAG) $(SAVE_SIGSTATE) $(FILE_TABLE) $(REMOTE_SYSCALLS) $(CLIP) \
 	$(HAS_64BIT_SYSCALLS) $(HAS_64BIT_STRUCTS)
 
-switches.C: syscall.tmpl switches.prologue stub_gen switches.epilogue
+switches.cpp: syscall.tmpl switches.prologue stub_gen switches.epilogue
 	$(CPP) -DSWITCH $(STUB_GEN_FLAGS) -I../condor_includes syscall.tmpl | \
 	./stub_gen -mode switches  -p switches.prologue -e switches.epilogue \
-	> switches.C
+	> switches.cpp
 
-senders.C: syscall.tmpl stub_gen senders.prologue senders.epilogue
+senders.cpp: syscall.tmpl stub_gen senders.prologue senders.epilogue
 	$(CPP) -DSENDER $(STUB_GEN_FLAGS) -I../condor_includes syscall.tmpl | \
 	./stub_gen -mode senders -p senders.prologue -e senders.epilogue \
-	$(STUB_CLUMP_SIZE) > senders.C
+	$(STUB_CLUMP_SIZE) > senders.cpp
 
-receivers.C: syscall.tmpl stub_gen receivers.prologue receivers.epilogue pseudo_ops.h
+receivers.cpp: syscall.tmpl stub_gen receivers.prologue receivers.epilogue pseudo_ops.h
 	$(CPP) -DRECEIVER $(STUB_GEN_FLAGS) -I../condor_includes syscall.tmpl | \
 	./stub_gen -mode receivers -p receivers.prologue \
-	-e receivers.epilogue -n syscheck $(STUB_CLUMP_SIZE) > receivers.C
+	-e receivers.epilogue -n syscheck $(STUB_CLUMP_SIZE) > receivers.cpp
 
 syscall-list: syscall.tmpl stub_gen libcondorsyscall.a
 	$(CPP) -DSWITCH $(STUB_GEN_FLAGS) -I../condor_includes syscall.tmpl | \
@@ -509,7 +509,7 @@ clean::
 	rm -f syscall-list
 
 clean::
-	rm -f lex.yy.c y.tab.c y.tab.h switches.C senders.C receivers.C *.o
+	rm -f lex.yy.c y.tab.c y.tab.h switches.cpp senders.cpp receivers.cpp *.o
 
 /*depend_target($(SRC)) */
 
@@ -522,7 +522,7 @@ import_objs(../condor_ckpt,$(CKPT_OBJ))
 import_objs(../condor_ckpt,$(COMPRESS_OBJ))
 import_objs(../h,syscall_numbers.c)
 import_objs(../condor_util_lib,stub_gen)
-import_objs(../condor_shadow.V6,pseudo_ops.h)
+import_objs(../condor_shadow.std,pseudo_ops.h)
 import_objs(../condor_ckpt,libcondorc++support.a)
 #ifdef DOES_CHECKPOINTING
 XCOMM Always needed for the file table compressed files feature.
@@ -533,29 +533,29 @@ XCOMM to link against libcondorapi.a, which lives in the same place.
 all_symlink_target($(ZLIB_LIB)/libz.a,libcondor_z.a)
 #endif
 
-authentication.o: ../condor_io/authentication.C
+authentication.o: ../condor_io/authentication.cpp
 	$(CPlusPlus) $(C_PLUS_FLAGS) -I../condor_io \
-		-DSKIP_AUTHENTICATION -c ../condor_io/authentication.C
+		-DSKIP_AUTHENTICATION -c ../condor_io/authentication.cpp
 
-condor_md.o: ../condor_c++_util/condor_md.C
+condor_md.o: ../condor_c++_util/condor_md.cpp
 	$(CPlusPlus) $(C_PLUS_FLAGS) -I../condor_c++_util \
-	        -DSKIP_AUTHENTICATION -c ../condor_c++_util/condor_md.C
+	        -DSKIP_AUTHENTICATION -c ../condor_c++_util/condor_md.cpp
 
-condor_crypt_3des.o: ../condor_io/condor_crypt_3des.C
+condor_crypt_3des.o: ../condor_io/condor_crypt_3des.cpp
 	$(CPlusPlus) $(C_PLUS_FLAGS) -I../condor_io \
-		-DSKIP_AUTHENTICATION -c ../condor_io/condor_crypt_3des.C
+		-DSKIP_AUTHENTICATION -c ../condor_io/condor_crypt_3des.cpp
 
-condor_crypt_blowfish.o: ../condor_io/condor_crypt_blowfish.C
+condor_crypt_blowfish.o: ../condor_io/condor_crypt_blowfish.cpp
 	$(CPlusPlus) $(C_PLUS_FLAGS) -I../condor_io \
-		-DSKIP_AUTHENTICATION -c ../condor_io/condor_crypt_blowfish.C
+		-DSKIP_AUTHENTICATION -c ../condor_io/condor_crypt_blowfish.cpp
 
-CryptKey.o: ../condor_io/CryptKey.C
+CryptKey.o: ../condor_io/CryptKey.cpp
 	$(CPlusPlus) $(C_PLUS_FLAGS) -I../condor_io \
-		-DSKIP_AUTHENTICATION -c ../condor_io/CryptKey.C
+		-DSKIP_AUTHENTICATION -c ../condor_io/CryptKey.cpp
 
-condor_crypt.o: ../condor_io/condor_crypt.C
+condor_crypt.o: ../condor_io/condor_crypt.cpp
 	$(CPlusPlus) $(C_PLUS_FLAGS) -I../condor_io \
-		-DSKIP_AUTHENTICATION -c ../condor_io/condor_crypt.C
+		-DSKIP_AUTHENTICATION -c ../condor_io/condor_crypt.cpp
 
 #ifdef DOES_COMPRESS_CKPT
 $(COMPRESS_LIB) : $(SYSCALL_LIB) $(COMPRESS_OBJ)
@@ -576,7 +576,7 @@ clean::
 html:
 
 DEPEND_SRC = C_getenv.c extern_path.c file_stream.c getcwd.c remote_startup.c \
-remote_syscall.C switches.special.C syscall_connect.C xfer_file.c
+remote_syscall.cpp switches.special.cpp syscall_connect.cpp xfer_file.c
 
 depend_source_target($(DEPEND_SRC))
 

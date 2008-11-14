@@ -32,169 +32,7 @@
 #include "amazongahp_common.h"
 #include "amazonCommands.h"
 
-#define PERL_SCRIPT_SUCCESS_TAG "#SUCCESS"
-#define PERL_SCRIPT_ERROR_TAG "#ERROR"
-#define PERL_SCRIPT_ERROR_CODE "#ECODE"
 #define NULLSTRING "NULL"
-
-static bool
-systemCommand(ArgList &args, StringList &output, MyString &error_code)
-{
-	output.clearAll();
-	error_code = "";
-
-	FILE *fp = NULL;
-	fp = my_popen(args, "r", FALSE);
-
-	if( !fp ) {
-		MyString args_string;
-		args.GetArgsStringForDisplay(&args_string,0);
-		dprintf(D_ALWAYS, "Failed to execute my_popen: %s\n", args_string.Value());
-		return false;
-	}
-
-	bool read_something = false;
-	char buf[2048];
-	bool has_error = false;
-	MyString one_line;
-	MyString tmp_error_code;
-
-	while( fgets(buf, 2048, fp) ) {
-		one_line = buf;
-		one_line.chomp();
-		one_line.trim();
-
-		if( one_line.IsEmpty() ) {
-			continue;
-		}
-
-		read_something = true;
-		dprintf(D_FULLDEBUG, "systemCommand got : %s\n", one_line.Value());
-
-		// find error line
-		if( !strcmp(one_line.Value(), PERL_SCRIPT_ERROR_TAG) ) {
-			has_error = true;
-			break;
-		}
-
-		// find error code if available
-		if( !strncmp(one_line.Value(), PERL_SCRIPT_ERROR_CODE, 
-					strlen(PERL_SCRIPT_ERROR_CODE)) ) {
-			// Found error code
-			MyString name;
-			MyString value;
-			parse_param_string(one_line.Value(), name, value, true);
-			tmp_error_code = value;
-			continue;
-		}
-
-		output.append(one_line.Value());
-	}
-	my_pclose(fp);
-
-	error_code = tmp_error_code;
-
-	if( has_error ) {
-		return false;
-	}
-
-	if( !read_something ) {
-		MyString args_string;
-		args.GetArgsStringForDisplay(&args_string,0);
-		dprintf(D_ALWAYS, "Error: '%s' did not produce any valid output\n", args_string.Value());
-		return false;
-	}
-
-	// Check if the last line is not PERL_SCRIPT_SUCCESS_TAG
-	if( strcmp(one_line.Value(), PERL_SCRIPT_SUCCESS_TAG) ) {
-		return false;
-	}
-
-	// delete the last line
-	output.remove(one_line.Value());
-
-	return true;
-}
-
-/*
-   The one line format for status should be like 
-   INSTANCEID=i-21789a48,AMIID=ami-2bb65342,STATUS=running,PRIVATEDNS=domU-12-31-36-00-2D-63.z-1.compute-1.internal,PUBLICDNS=ec2-72-44-51-9.z-1.compute-1.amazonaws.com,KEYNAME=gsg-keypair,GROUP=mytestgroup
-   STATUS must be one of "pending", "running", "shutting-down", "terminated"
-   PRIVATEDNS and PUBLICDNS may be empty until the instance enters a running state
-*/
-static bool parseAmazonStatusResult( const char* result_line, AmazonStatusResult &output) 
-{
-	output.clearAll();
-
-	if( !result_line ) {
-		return false;
-	}
-
-	dprintf(D_FULLDEBUG, "get status: %s\n", result_line);
-
-	StringList result_string(result_line, ",");
-	if( result_string.isEmpty() ) {
-		dprintf(D_ALWAYS, "Invalid status format(%s)\n", result_line);
-		return false;
-	}
-
-	result_string.rewind();
-	char *field = NULL;
-	MyString one_field;
-	MyString name;
-	MyString value;
-
-	while( (field = result_string.next() ) != NULL ) {
-		one_field = field;
-		if( one_field.Length() == 0 ) {
-			continue;
-		}
-
-		parse_param_string(one_field.Value(), name, value, true);
-		if( !name.Length() || !value.Length() ) {
-			continue;
-		}
-
-		if( !strcasecmp(name.Value(), "INSTANCEID") ) {
-			output.instance_id = value;
-			continue;
-		}
-		if( !strcasecmp(name.Value(), "AMIID") ) {
-			output.ami_id = value;
-			continue;
-		}
-		if( !strcasecmp(name.Value(), "STATUS") ) {
-			output.status = value;
-			continue;
-		}
-		if( !strcasecmp(name.Value(), "PRIVATEDNS") ) {
-			output.private_dns = value;
-			continue;
-		}
-		if( !strcasecmp(name.Value(), "PUBLICDNS") ) {
-			output.public_dns = value;
-			continue;
-		}
-		if( !strcasecmp(name.Value(), "KEYNAME") ) {
-			output.keyname = value;
-			continue;
-		}
-
-		// It is possible that there are multiple groups
-		if( !strcasecmp(name.Value(), "GROUP") ) {
-			output.groupnames.append(value.Value());
-			continue;
-		}
-	}
-
-	if( output.status.IsEmpty() ) {
-		dprintf(D_ALWAYS, "Failed to get valid status\n");
-		return false;
-	}
-
-	return true;
-}
-
 
 // Format is "<instance_id> <status> <ami_id> <public_dns> <private_dns> <keypairname> <group> <group> <group> ...
 static void create_status_output(AmazonStatusResult *status, StringList &output)
@@ -251,7 +89,7 @@ AmazonStatusResult::clearAll()
 	instancetype = "";
 }
 
-AmazonRequest::AmazonRequest(const char* lib_path)
+AmazonRequest::AmazonRequest()
 {
 	// For gsoap
 	m_soap = NULL;
@@ -305,7 +143,7 @@ AmazonRequest::HandleError()
 }
 
 /// Amazon VMStart
-AmazonVMStart::AmazonVMStart(const char* lib_path) : AmazonRequest(lib_path) 
+AmazonVMStart::AmazonVMStart()
 {
 	m_request_name = AMAZON_COMMAND_VM_START;
 	base64_userdata = NULL;
@@ -343,7 +181,7 @@ bool AmazonVMStart::workerFunction(char **argv, int argc, MyString &result_strin
 		return FALSE;
 	}
 	
-	AmazonVMStart request(get_amazon_lib_path());
+	AmazonVMStart request;
 
 	request.accesskeyfile = argv[2];
 	request.secretkeyfile = argv[3];
@@ -390,7 +228,7 @@ bool AmazonVMStart::workerFunction(char **argv, int argc, MyString &result_strin
 }
 
 /// Amazon VMStop
-AmazonVMStop::AmazonVMStop(const char* lib_path) : AmazonRequest(lib_path) 
+AmazonVMStop::AmazonVMStop()
 {
 	m_request_name = AMAZON_COMMAND_VM_STOP;
 }
@@ -419,7 +257,7 @@ bool AmazonVMStop::workerFunction(char **argv, int argc, MyString &result_string
 		return FALSE;
 	}
 	
-	AmazonVMStop request(get_amazon_lib_path());
+	AmazonVMStop request;
 
 	request.accesskeyfile = argv[2];
 	request.secretkeyfile = argv[3];
@@ -451,7 +289,7 @@ AmazonVMStop::HandleError()
 }
 
 /// Amazon VMStatus
-AmazonVMStatus::AmazonVMStatus(const char* lib_path) : AmazonRequest(lib_path)
+AmazonVMStatus::AmazonVMStatus()
 {
 	m_request_name = AMAZON_COMMAND_VM_STATUS;
 }
@@ -482,7 +320,7 @@ bool AmazonVMStatus::workerFunction(char **argv, int argc, MyString &result_stri
 		return FALSE;
 	}
 
-	AmazonVMStatus request(get_amazon_lib_path());
+	AmazonVMStatus request;
 
 	request.accesskeyfile = argv[2];
 	request.secretkeyfile = argv[3];
@@ -516,7 +354,7 @@ AmazonVMStatus::HandleError()
 }
 
 /// Amazon VMStatusAll
-AmazonVMStatusAll::AmazonVMStatusAll(const char* lib_path) : AmazonRequest(lib_path)
+AmazonVMStatusAll::AmazonVMStatusAll()
 {
 	m_request_name = AMAZON_COMMAND_VM_STATUS_ALL;
 	status_results = NULL;
@@ -549,7 +387,7 @@ bool AmazonVMStatusAll::workerFunction(char **argv, int argc, MyString &result_s
 		return FALSE;
 	}
 
-	AmazonVMStatusAll request(get_amazon_lib_path());
+	AmazonVMStatusAll request;
 
 	request.accesskeyfile = argv[2];
 	request.secretkeyfile = argv[3];
@@ -583,7 +421,7 @@ bool AmazonVMStatusAll::workerFunction(char **argv, int argc, MyString &result_s
 }
 
 /// Amazon VMRunningKeypair
-AmazonVMRunningKeypair::AmazonVMRunningKeypair(const char* lib_path) : AmazonVMStatusAll(lib_path)
+AmazonVMRunningKeypair::AmazonVMRunningKeypair()
 {
 	m_request_name = AMAZON_COMMAND_VM_RUNNING_KEYPAIR;
 }
@@ -609,7 +447,7 @@ bool AmazonVMRunningKeypair::workerFunction(char **argv, int argc, MyString &res
 		return FALSE;
 	}
 
-	AmazonVMRunningKeypair request(get_amazon_lib_path());
+	AmazonVMRunningKeypair request;
 
 	request.accesskeyfile = argv[2];
 	request.secretkeyfile = argv[3];
@@ -646,7 +484,7 @@ bool AmazonVMRunningKeypair::workerFunction(char **argv, int argc, MyString &res
 }
 
 /// Amazon AmazonVMCreateKeypair
-AmazonVMCreateKeypair::AmazonVMCreateKeypair(const char* lib_path) : AmazonRequest(lib_path) 
+AmazonVMCreateKeypair::AmazonVMCreateKeypair()
 {
 	m_request_name = AMAZON_COMMAND_VM_CREATE_KEYPAIR;
 	has_outputfile = false;
@@ -670,7 +508,7 @@ bool AmazonVMCreateKeypair::workerFunction(char **argv, int argc, MyString &resu
 		return FALSE;
 	}
 
-	AmazonVMCreateKeypair request(get_amazon_lib_path());
+	AmazonVMCreateKeypair request;
 
 	request.accesskeyfile = argv[2];
 	request.secretkeyfile = argv[3];
@@ -691,7 +529,7 @@ bool AmazonVMCreateKeypair::workerFunction(char **argv, int argc, MyString &resu
 }
 
 /// Amazon VMDestroyKeypair
-AmazonVMDestroyKeypair::AmazonVMDestroyKeypair(const char* lib_path) : AmazonRequest(lib_path) 
+AmazonVMDestroyKeypair::AmazonVMDestroyKeypair()
 {
 	m_request_name = AMAZON_COMMAND_VM_DESTROY_KEYPAIR;
 }
@@ -714,7 +552,7 @@ bool AmazonVMDestroyKeypair::workerFunction(char **argv, int argc, MyString &res
 		return FALSE;
 	}
 
-	AmazonVMDestroyKeypair request(get_amazon_lib_path());
+	AmazonVMDestroyKeypair request;
 
 	request.accesskeyfile = argv[2];
 	request.secretkeyfile = argv[3];
@@ -746,7 +584,7 @@ AmazonVMDestroyKeypair::HandleError()
 }
 
 /// Amazon VMKeypairNames
-AmazonVMKeypairNames::AmazonVMKeypairNames(const char* lib_path) : AmazonRequest(lib_path) 
+AmazonVMKeypairNames::AmazonVMKeypairNames()
 {
 	m_request_name = AMAZON_COMMAND_VM_KEYPAIR_NAMES;
 }
@@ -769,7 +607,7 @@ bool AmazonVMKeypairNames::workerFunction(char **argv, int argc, MyString &resul
 		return FALSE;
 	}
 
-	AmazonVMKeypairNames request(get_amazon_lib_path());
+	AmazonVMKeypairNames request;
 
 	request.accesskeyfile = argv[2];
 	request.secretkeyfile = argv[3];

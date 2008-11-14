@@ -42,7 +42,7 @@ RSC=rc.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /Gm /GX /Zi /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /YX /FD /c
-# ADD CPP /nologo /MTd /W3 /Gm /Gi /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"..\Debug\condor_common.pch" /Yu"condor_common.h" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c
+# ADD CPP /nologo /MTd /W3 /Gm /Gi /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"..\Debug\condor_common.pch" /Yu"condor_common.h" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_DEFINES) $(CONDOR_CPPARGS) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c
 # ADD BASE RSC /l 0x409 /d "_DEBUG"
 # ADD RSC /l 0x409 /d "_DEBUG"
 BSC32=bscmake.exe
@@ -69,7 +69,7 @@ LINK32=link.exe
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MDd /W3 /GX /Z7 /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"..\src\condor_c++_util/condor_common.pch" /Yu"condor_common.h" /FD /TP /c
 # SUBTRACT BASE CPP /Fr
-# ADD CPP /nologo /MT /W3 /GX /Z7 /O1 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"..\Release\condor_common.pch" /Yu"condor_common.h" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c
+# ADD CPP /nologo /MT /W3 /GX /Z7 /O1 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"..\Release\condor_common.pch" /Yu"condor_common.h" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_DEFINES) $(CONDOR_CPPARGS) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c
 # ADD BASE RSC /l 0x409 /d "_DEBUG"
 # ADD RSC /l 0x409 /d "NDEBUG"
 BSC32=bscmake.exe
@@ -92,7 +92,7 @@ SOURCE="..\src\condor_vm-gahp\gsoap_vmgahp.h"
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\condor_vm-gahp\pbuffer.C"
+SOURCE="..\src\condor_vm-gahp\pbuffer.cpp"
 # End Source File
 # Begin Source File
 
@@ -100,7 +100,7 @@ SOURCE="..\src\condor_vm-gahp\pbuffer.h"
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\condor_vm-gahp\soap_vmgahpC.C"
+SOURCE="..\src\condor_vm-gahp\soap_vmgahpC.cpp"
 # SUBTRACT CPP /YX /Yc /Yu
 # End Source File
 # Begin Source File
@@ -109,12 +109,12 @@ SOURCE="..\src\condor_vm-gahp\soap_vmgahpH.h"
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\condor_vm-gahp\soap_vmgahpServer.C"
+SOURCE="..\src\condor_vm-gahp\soap_vmgahpServer.cpp"
 # SUBTRACT CPP /YX /Yc /Yu
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\condor_vm-gahp\soap_vmgahpStub.C"
+SOURCE="..\src\condor_vm-gahp\soap_vmgahpStub.cpp"
 
 !IF  "$(CFG)" == "condor_vmgahp - Win32 Debug"
 
@@ -131,7 +131,7 @@ SOURCE="..\src\condor_vm-gahp\soap_vmgahpStub.h"
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\condor_vm-gahp\vm_request.C"
+SOURCE="..\src\condor_vm-gahp\vm_request.cpp"
 # End Source File
 # Begin Source File
 
@@ -139,7 +139,7 @@ SOURCE="..\src\condor_vm-gahp\vm_request.h"
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\condor_vm-gahp\vm_type.C"
+SOURCE="..\src\condor_vm-gahp\vm_type.cpp"
 # End Source File
 # Begin Source File
 
@@ -147,7 +147,7 @@ SOURCE="..\src\condor_vm-gahp\vm_type.h"
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\condor_vm-gahp\vmgahp.C"
+SOURCE="..\src\condor_vm-gahp\vmgahp.cpp"
 # End Source File
 # Begin Source File
 
@@ -155,7 +155,7 @@ SOURCE="..\src\condor_vm-gahp\vmgahp.h"
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\condor_vm-gahp\vmgahp_common.C"
+SOURCE="..\src\condor_vm-gahp\vmgahp_common.cpp"
 # End Source File
 # Begin Source File
 
@@ -163,7 +163,7 @@ SOURCE="..\src\condor_vm-gahp\vmgahp_common.h"
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\condor_vm-gahp\vmgahp_config.C"
+SOURCE="..\src\condor_vm-gahp\vmgahp_config.cpp"
 # End Source File
 # Begin Source File
 
@@ -175,15 +175,15 @@ SOURCE="..\src\condor_vm-gahp\vmgahp_error_codes.h"
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\condor_vm-gahp\vmgahp_instantiate.C"
+SOURCE="..\src\condor_vm-gahp\vmgahp_instantiate.cpp"
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\condor_vm-gahp\vmgahp_main.C"
+SOURCE="..\src\condor_vm-gahp\vmgahp_main.cpp"
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\condor_vm-gahp\vmware_type.C"
+SOURCE="..\src\condor_vm-gahp\vmware_type.cpp"
 # End Source File
 # Begin Source File
 

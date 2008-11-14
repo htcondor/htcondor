@@ -15,7 +15,7 @@ soapobjs(schedd)
 #if HAVE_DLOPEN
 ScheddPluginObj = ScheddPlugin.o
 
-%-plugin.so: %.C
+%-plugin.so: %.cpp
 	$(CPlusPlus) $(C_PLUS_FLAGS) -shared $< -o $@
 #endif
 
@@ -32,11 +32,11 @@ OBJ = schedd.o schedd_main.o schedd_td.o tdman.o $(QMGMT_OBJ) \
 	$(SOAP_OBJS2)
 
 #ifdef HAVE_EXT_GSOAP
-schedd_api.C: soap_scheddH.h ../condor_c++_util/soap_helpers.cpp
+schedd_api.cpp: soap_scheddH.h ../condor_c++_util/soap_helpers.cpp
 
-soap_scheddStub.C: ../condor_c++_util/soap_helpers.cpp
+soap_scheddStub.cpp: ../condor_c++_util/soap_helpers.cpp
 
-schedd_instantiate.C: soap_scheddH.h
+schedd_instantiate.cpp: soap_scheddH.h
 #endif
 
 $(QMGMT_LIB) : libqmgmt.a

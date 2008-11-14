@@ -42,7 +42,7 @@ RSC=rc.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /Gm /GX /Zi /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /YX /FD /c
-# ADD CPP /nologo /MTd /W3 /Gm /Gi /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"..\Debug\condor_common.pch" /Yu"condor_common.h" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c
+# ADD CPP /nologo /MTd /W3 /Gm /Gi /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"..\Debug\condor_common.pch" /Yu"condor_common.h" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_DEFINES) $(CONDOR_CPPARGS) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c
 # ADD BASE RSC /l 0x409 /d "_DEBUG"
 # ADD RSC /l 0x409 /d "_DEBUG"
 BSC32=bscmake.exe
@@ -69,7 +69,7 @@ LINK32=link.exe
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MDd /W3 /GX /Z7 /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"..\src\condor_c++_util/condor_common.pch" /Yu"condor_common.h" /FD /TP /c
 # SUBTRACT BASE CPP /Fr
-# ADD CPP /nologo /MT /W3 /GX /Z7 /O1 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"..\Release\condor_common.pch" /Yu"condor_common.h" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c
+# ADD CPP /nologo /MT /W3 /GX /Z7 /O1 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"..\Release\condor_common.pch" /Yu"condor_common.h" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_DEFINES) $(CONDOR_CPPARGS) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c
 # ADD BASE RSC /l 0x409 /d "_DEBUG"
 # ADD RSC /l 0x409 /d "NDEBUG"
 BSC32=bscmake.exe
@@ -88,7 +88,7 @@ LINK32=link.exe
 # Name "condor_dagman - Win32 Release"
 # Begin Source File
 
-SOURCE=..\src\condor_dagman\dag.C
+SOURCE=..\src\condor_dagman\dag.cpp
 # End Source File
 # Begin Source File
 
@@ -96,7 +96,7 @@ SOURCE=..\src\condor_dagman\dag.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_dagman\dagman_commands.C
+SOURCE=..\src\condor_dagman\dagman_commands.cpp
 # End Source File
 # Begin Source File
 
@@ -104,15 +104,15 @@ SOURCE=..\src\condor_dagman\dagman_commands.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_dagman\dagman_instantiate.C
+SOURCE=..\src\condor_dagman\dagman_instantiate.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_dagman\dagman_main.C
+SOURCE=..\src\condor_dagman\dagman_main.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_dagman\dagman_multi_dag.C
+SOURCE=..\src\condor_dagman\dagman_multi_dag.cpp
 # End Source File
 # Begin Source File
 
@@ -120,15 +120,15 @@ SOURCE=..\src\condor_dagman\dagman_multi_dag.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_dagman\dagman_submit.C
+SOURCE=..\src\condor_dagman\dagman_submit.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_dagman\dagman_util.C
+SOURCE=..\src\condor_dagman\dagman_util.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_dagman\debug.C
+SOURCE=..\src\condor_dagman\debug.cpp
 # End Source File
 # Begin Source File
 
@@ -136,7 +136,7 @@ SOURCE=..\src\condor_dagman\debug.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_dagman\job.C
+SOURCE=..\src\condor_dagman\job.cpp
 # End Source File
 # Begin Source File
 
@@ -144,7 +144,7 @@ SOURCE=..\src\condor_dagman\job.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_dagman\parse.C
+SOURCE=..\src\condor_dagman\parse.cpp
 # End Source File
 # Begin Source File
 
@@ -152,7 +152,7 @@ SOURCE=..\src\condor_dagman\parse.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_dagman\script.C
+SOURCE=..\src\condor_dagman\script.cpp
 # End Source File
 # Begin Source File
 
@@ -160,7 +160,7 @@ SOURCE=..\src\condor_dagman\script.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_dagman\scriptQ.C
+SOURCE=..\src\condor_dagman\scriptQ.cpp
 # End Source File
 # Begin Source File
 
@@ -168,7 +168,7 @@ SOURCE=..\src\condor_dagman\scriptQ.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_dagman\soap_dagmanC.C
+SOURCE=..\src\condor_dagman\soap_dagmanC.cpp
 # SUBTRACT CPP /YX /Yc /Yu
 # End Source File
 # Begin Source File
@@ -177,12 +177,12 @@ SOURCE=..\src\condor_dagman\soap_dagmanH.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_dagman\soap_dagmanServer.C
+SOURCE=..\src\condor_dagman\soap_dagmanServer.cpp
 # SUBTRACT CPP /YX /Yc /Yu
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_dagman\soap_dagmanStub.C
+SOURCE=..\src\condor_dagman\soap_dagmanStub.cpp
 # SUBTRACT CPP /YX /Yc /Yu
 # End Source File
 # Begin Source File
@@ -195,7 +195,7 @@ SOURCE=..\src\condor_dagman\submit.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_dagman\throttle_by_category.C
+SOURCE=..\src\condor_dagman\throttle_by_category.cpp
 # End Source File
 # Begin Source File
 

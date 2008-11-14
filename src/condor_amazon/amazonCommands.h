@@ -62,7 +62,7 @@
 
 class AmazonRequest {
 	public:
-		AmazonRequest(const char* lib_path);
+		AmazonRequest();
 		virtual ~AmazonRequest();
 
 		// Access key or User certificate
@@ -79,9 +79,6 @@ class AmazonRequest {
 		const char* getErrorStr(void) { return m_error_msg.GetCStr(); }
 
 	protected:
-		MyString m_amazon_lib_prog;
-		MyString m_amazon_lib_path;
-
 		// Request Name
 		MyString m_request_name;
 
@@ -103,7 +100,7 @@ class AmazonRequest {
 
 class AmazonVMStart : public AmazonRequest {
 	public:
-		AmazonVMStart(const char* lib_path);
+		AmazonVMStart();
 		virtual ~AmazonVMStart();
 
 		static bool ioCheck(char **argv, int argc);
@@ -136,7 +133,7 @@ class AmazonVMStart : public AmazonRequest {
 
 class AmazonVMStop : public AmazonRequest {
 	public:
-		AmazonVMStop(const char* lib_path);
+		AmazonVMStop();
 		virtual ~AmazonVMStop();
 
 		static bool ioCheck(char **argv, int argc);
@@ -173,7 +170,7 @@ class AmazonStatusResult {
 
 class AmazonVMStatus : public AmazonRequest {
 	public:
-		AmazonVMStatus(const char* lib_path);
+		AmazonVMStatus();
 		virtual ~AmazonVMStatus();
 
 		static bool ioCheck(char **argv, int argc);
@@ -197,7 +194,7 @@ class AmazonVMStatus : public AmazonRequest {
 
 class AmazonVMStatusAll : public AmazonRequest {
 	public:
-		AmazonVMStatusAll(const char* lib_path);
+		AmazonVMStatusAll();
 		virtual ~AmazonVMStatusAll();
 
 		static bool ioCheck(char **argv, int argc);
@@ -224,7 +221,7 @@ class AmazonVMStatusAll : public AmazonRequest {
 
 class AmazonVMRunningKeypair : public AmazonVMStatusAll {
 	public:
-		AmazonVMRunningKeypair(const char* lib_path);
+		AmazonVMRunningKeypair();
 		virtual ~AmazonVMRunningKeypair();
 
 		static bool ioCheck(char **argv, int argc);
@@ -235,7 +232,7 @@ class AmazonVMRunningKeypair : public AmazonVMStatusAll {
 
 class AmazonVMCreateKeypair : public AmazonRequest {
 	public:
-		AmazonVMCreateKeypair(const char* lib_path);
+		AmazonVMCreateKeypair();
 		virtual ~AmazonVMCreateKeypair();
 
 		static bool ioCheck(char **argv, int argc);
@@ -255,7 +252,7 @@ class AmazonVMCreateKeypair : public AmazonRequest {
 
 class AmazonVMDestroyKeypair : public AmazonRequest {
 	public:
-		AmazonVMDestroyKeypair(const char* lib_path);
+		AmazonVMDestroyKeypair();
 		virtual ~AmazonVMDestroyKeypair();
 
 		static bool ioCheck(char **argv, int argc);
@@ -274,7 +271,7 @@ class AmazonVMDestroyKeypair : public AmazonRequest {
 
 class AmazonVMKeypairNames : public AmazonRequest {
 	public:
-		AmazonVMKeypairNames(const char* lib_path);
+		AmazonVMKeypairNames();
 		virtual ~AmazonVMKeypairNames();
 
 		static bool ioCheck(char **argv, int argc);

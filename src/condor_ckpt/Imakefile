@@ -243,8 +243,8 @@ clean::
 #ifdef DOES_COMPRESS_CKPT
 malloc-condor.o : malloc-condor.c malloc.c
 	$(CC) -O2 -g -DMORECORE=condor_morecore -DHAVE_MMAP=0 -Dmalloc_getpagesize=8192 -c malloc-condor.c
-zimage.o : image.C
-	$(CPlusPlus) $(C_PLUS_FLAGS) $(COMPRESS_FLAGS) -o zimage.o -c image.C
+zimage.o : image.cpp
+	$(CPlusPlus) $(C_PLUS_FLAGS) $(COMPRESS_FLAGS) -o zimage.o -c image.cpp
 #if IS_SUN4X_SOLARIS
 #if IS_SOLARIS29
 /* hwmuldiv.o replaces _rem.o, _div.o, and umultiply.o in solaris 2.9 */

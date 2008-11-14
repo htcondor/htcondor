@@ -288,22 +288,6 @@ main( int argc, char ** const argv )
 		dprintf(D_ALWAYS, "Using ec2 url = %s\n", get_ec2_url());
 	}
 
-	// Save current working dir
-	char tmpCwd[_POSIX_PATH_MAX];
-	if( !getcwd(tmpCwd, _POSIX_PATH_MAX) ) {
-		dprintf(D_ALWAYS, "Failed to getcwd\n");
-		exit(1);
-	}
-	set_working_dir(tmpCwd);
-
-	/*
-	// Find the name of amazon library (e.g. perl script)
-	MyString tmp_string;
-	if( find_amazon_lib(tmp_string) == false ) {
-		exit(1);
-	}
-	*/
-
 	// Register all amazon commands
 	if( registerAllAmazonCommands() == false ) {
 		dprintf(D_ALWAYS, "Can't register Amazon Commands\n");

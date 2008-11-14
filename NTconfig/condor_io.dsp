@@ -41,7 +41,7 @@ RSC=rc.exe
 # PROP Intermediate_Dir "..\Debug"
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /GX /Z7 /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /YX /FD /c
-# ADD CPP /nologo /MTd /W3 /Gm /Gi /GX /Zi /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /Fp"..\Debug\condor_common.pch" /Yu"condor_common.h" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c
+# ADD CPP /nologo /MTd /W3 /Gm /Gi /GX /Zi /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /Fp"..\Debug\condor_common.pch" /Yu"condor_common.h" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_DEFINES) $(CONDOR_CPPARGS) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c
 # ADD BASE RSC /l 0x409
 # ADD RSC /l 0x409
 BSC32=bscmake.exe
@@ -65,7 +65,7 @@ LIB32=link.exe -lib
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MDd /W3 /GX /Z7 /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /Fp"..\src\condor_c++_util/condor_common.pch" /Yu"condor_common.h" /FD /TP /c
 # SUBTRACT BASE CPP /Fr
-# ADD CPP /nologo /MT /W3 /GX /Z7 /O1 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /Fp"..\Release\condor_common.pch" /Yu"condor_common.h" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c
+# ADD CPP /nologo /MT /W3 /GX /Z7 /O1 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /Fp"..\Release\condor_common.pch" /Yu"condor_common.h" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_DEFINES) $(CONDOR_CPPARGS) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c
 # ADD BASE RSC /l 0x409
 # ADD RSC /l 0x409
 BSC32=bscmake.exe
@@ -83,7 +83,7 @@ LIB32=link.exe -lib
 # Name "condor_io - Win32 Release"
 # Begin Source File
 
-SOURCE=..\src\condor_io\authentication.C
+SOURCE=..\src\condor_io\authentication.cpp
 # End Source File
 # Begin Source File
 
@@ -91,7 +91,7 @@ SOURCE=..\src\condor_includes\authentication.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_io\buffers.C
+SOURCE=..\src\condor_io\buffers.cpp
 # End Source File
 # Begin Source File
 
@@ -99,11 +99,11 @@ SOURCE=..\src\condor_includes\buffers.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_io\cedar_no_ckpt.C
+SOURCE=..\src\condor_io\cedar_no_ckpt.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_io\condor_auth.C
+SOURCE=..\src\condor_io\condor_auth.cpp
 # End Source File
 # Begin Source File
 
@@ -111,11 +111,11 @@ SOURCE=..\src\condor_includes\condor_auth.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_io\condor_auth_anonymous.C
+SOURCE=..\src\condor_io\condor_auth_anonymous.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_io\condor_auth_claim.C
+SOURCE=..\src\condor_io\condor_auth_claim.cpp
 # End Source File
 # Begin Source File
 
@@ -123,12 +123,12 @@ SOURCE=..\src\condor_includes\condor_auth_claim.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_io\condor_auth_kerberos.C
+SOURCE=..\src\condor_io\condor_auth_kerberos.cpp
 # SUBTRACT CPP /YX /Yc /Yu
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_io\condor_auth_passwd.C
+SOURCE=..\src\condor_io\condor_auth_passwd.cpp
 # End Source File
 # Begin Source File
 
@@ -136,7 +136,7 @@ SOURCE=..\src\condor_includes\condor_auth_passwd.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_io\condor_auth_ssl.C
+SOURCE=..\src\condor_io\condor_auth_ssl.cpp
 # End Source File
 # Begin Source File
 
@@ -144,7 +144,7 @@ SOURCE=..\src\condor_includes\condor_auth_ssl.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_io\condor_auth_sspi.C
+SOURCE=..\src\condor_io\condor_auth_sspi.cpp
 # End Source File
 # Begin Source File
 
@@ -152,7 +152,7 @@ SOURCE=..\src\condor_includes\condor_auth_sspi.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_io\condor_crypt.C
+SOURCE=..\src\condor_io\condor_crypt.cpp
 # End Source File
 # Begin Source File
 
@@ -160,12 +160,12 @@ SOURCE=..\src\condor_includes\condor_crypt.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_io\condor_crypt_3des.C
+SOURCE=..\src\condor_io\condor_crypt_3des.cpp
 # ADD CPP /Yu
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_io\condor_crypt_blowfish.C
+SOURCE=..\src\condor_io\condor_crypt_blowfish.cpp
 # SUBTRACT CPP /YX /Yc /Yu
 # End Source File
 # Begin Source File
@@ -174,7 +174,7 @@ SOURCE=..\src\condor_includes\condor_io.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_daemon_core.V6\condor_ipverify.C
+SOURCE=..\src\condor_daemon_core.V6\condor_ipverify.cpp
 # End Source File
 # Begin Source File
 
@@ -182,7 +182,7 @@ SOURCE=..\src\condor_daemon_core.V6\condor_ipverify.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_io\condor_rw.C
+SOURCE=..\src\condor_io\condor_rw.cpp
 # End Source File
 # Begin Source File
 
@@ -190,11 +190,11 @@ SOURCE=..\src\condor_io\condor_rw.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_io\condor_secman.C
+SOURCE=..\src\condor_io\condor_secman.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_io\CryptKey.C
+SOURCE=..\src\condor_io\CryptKey.cpp
 # End Source File
 # Begin Source File
 
@@ -202,7 +202,7 @@ SOURCE=..\src\condor_includes\CryptKey.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_io\errno_num.C
+SOURCE=..\src\condor_io\errno_num.cpp
 # End Source File
 # Begin Source File
 
@@ -210,7 +210,7 @@ SOURCE=..\src\condor_io\open_flags.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_io\reli_sock.C
+SOURCE=..\src\condor_io\reli_sock.cpp
 # End Source File
 # Begin Source File
 
@@ -218,7 +218,7 @@ SOURCE=..\src\condor_includes\reli_sock.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_io\safe_sock.C
+SOURCE=..\src\condor_io\safe_sock.cpp
 # End Source File
 # Begin Source File
 
@@ -226,7 +226,7 @@ SOURCE=..\src\condor_includes\safe_sock.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_io\SafeMsg.C
+SOURCE=..\src\condor_io\SafeMsg.cpp
 # End Source File
 # Begin Source File
 
@@ -234,7 +234,7 @@ SOURCE=..\src\condor_includes\SafeMsg.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_io\sock.C
+SOURCE=..\src\condor_io\sock.cpp
 # End Source File
 # Begin Source File
 
@@ -242,7 +242,7 @@ SOURCE=..\src\condor_includes\sock.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_io\sockCache.C
+SOURCE=..\src\condor_io\sockCache.cpp
 # End Source File
 # Begin Source File
 
@@ -250,7 +250,7 @@ SOURCE=..\src\condor_includes\sockCache.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_io\stream.C
+SOURCE=..\src\condor_io\stream.cpp
 # End Source File
 # Begin Source File
 

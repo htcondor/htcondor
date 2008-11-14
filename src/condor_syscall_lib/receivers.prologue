@@ -27,7 +27,7 @@
 #include "condor_mmap.h"
 #include "startup.h"
 #include "pseudo_ops.h"
-#include "../condor_shadow.V6/job_report.h"
+#include "../condor_shadow.std/job_report.h"
 
 	/*
 	Have assert() really call EXCEPT instead of doing a sigabrt 

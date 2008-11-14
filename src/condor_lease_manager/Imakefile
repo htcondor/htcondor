@@ -2,6 +2,8 @@ NAME = condor_lease_manager
 all_target( $(NAME) )
 TESTS =  	condor_lease_manager_test
 
+soapobjs(matchmaker)
+
 CLASSAD_ANALYSIS = ../classad_analysis
 CLASSAD_CONVERSION = $(CLASSAD_CONVERSION)
 CLASSAD_CONVERSION_INC = -I$(CLASSAD_ANALYSIS)
@@ -15,6 +17,7 @@ C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(SC_DEMO_FLAGS)
 INST_C_PLUS_FLAGS = $(STD_C_FLAGS) $(GPP_VERS_FLAGS) $(SC_DEMO_FLAGS)
 CFLAGS  = $(STD_C_FLAGS) $(SC_DEMO_FLAGS)
 
+
 CFLAGS = $(STD_C_FLAGS)
 LIB = $(DAEMONCORE_LIB) $(STD_LIBS) $(NEW_CLASSAD_LIBDEFS) \
 	$(CONFIGURE_GSOAP_LDFLAGS) \
@@ -25,12 +28,11 @@ TEST_LIB =  $(STD_LIBS) $(NEW_CLASSAD_LIBDEFS) \
 OBJ =	lease_manager_main.o		\
 	lease_manager.o			\
 	lease_manager_resources.o		\
-	lease_manager_lease.o
+	lease_manager_lease.o $(SOAP_OBJS)
 
 c_plus_target($(NAME),$(OBJ),$(LIB))
-template_inst( lease_manager.C, lease_manager.o )
-template_inst( lease_manager_resources.C, lease_manager_resources.o )
-soapobjs(matchMaker)
+template_inst( lease_manager.cpp, lease_manager.o )
+template_inst( lease_manager_resources.cpp, lease_manager_resources.o )
 
 release_target($(NAME),sbin,EXECUTABLE_MODE)
 strip_target($(NAME),sbin,EXECUTABLE_MODE)
@@ -39,7 +41,7 @@ pure_c_plus_target($(NAME).pure,$(OBJ),$(LIB))
 purecov_c_plus_target($(NAME).pc,$(OBJ),$(LIB))
 
 c_plus_target( condor_lease_manager_test,lease_manager_test.o,$(TEST_LIB) )
-template_inst( lease_manager_test.C, lease_manager_test.o )
+template_inst( lease_manager_test.cpp, lease_manager_test.o )
 
 
 html:
@@ -49,3 +51,5 @@ tests: $(TESTS)
 testbin:: all
 
 -include Makelocal.i
+
+gen_soapfiles(matchmaker,condorMatchmaker)

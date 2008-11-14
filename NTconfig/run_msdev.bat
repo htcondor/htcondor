@@ -4,9 +4,6 @@ REM Prepare to build Condor.
 REM Keep all environment changes local to this script
 setlocal
 
-call dorenames.bat > NUL
-if not errorlevel 2 call dorenames.bat > NUL
-
 REM This fixes the wierdness in condor_cpp_util.dsp
 awk "{ gsub(/\.\\\.\.\\Debug/, \"..\\Debug\") } { gsub(/\.\\\.\.\\Release/, \"..\\Release\") } { print }" condor_cpp_util.dsp > ~temp.dsp
 del condor_cpp_util.dsp

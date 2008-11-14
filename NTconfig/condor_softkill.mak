@@ -187,7 +187,7 @@ LINK32_OBJS= \
 
 
 !IF "$(CFG)" == "condor_softkill - Win32 Release" || "$(CFG)" == "condor_softkill - Win32 Debug"
-SOURCE=..\src\condor_daemon_core.V6\condor_softkill.C
+SOURCE=..\src\condor_daemon_core.V6\condor_softkill.cpp
 
 !IF  "$(CFG)" == "condor_softkill - Win32 Release"
 

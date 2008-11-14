@@ -42,7 +42,7 @@ RSC=rc.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /Gm /GX /Zi /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /YX /FD /c
-# ADD CPP /nologo /MTd /W3 /Gm /Gi /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"..\Debug\condor_common.pch" /Yu"condor_common.h" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c
+# ADD CPP /nologo /MTd /W3 /Gm /Gi /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"..\Debug\condor_common.pch" /Yu"condor_common.h" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_DEFINES) $(CONDOR_CPPARGS) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c
 # ADD BASE RSC /l 0x409 /d "_DEBUG"
 # ADD RSC /l 0x409 /d "_DEBUG"
 BSC32=bscmake.exe
@@ -69,7 +69,7 @@ LINK32=link.exe
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MDd /W3 /GX /Z7 /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"..\src\condor_c++_util/condor_common.pch" /Yu"condor_common.h" /FD /TP /c
 # SUBTRACT BASE CPP /Fr
-# ADD CPP /nologo /MT /W3 /GX /Z7 /O1 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"..\Release\condor_common.pch" /Yu"condor_common.h" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c
+# ADD CPP /nologo /MT /W3 /GX /Z7 /O1 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"..\Release\condor_common.pch" /Yu"condor_common.h" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_DEFINES) $(CONDOR_CPPARGS) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c
 # ADD BASE RSC /l 0x409 /d "_DEBUG"
 # ADD RSC /l 0x409 /d "NDEBUG"
 BSC32=bscmake.exe
@@ -88,7 +88,7 @@ LINK32=link.exe
 # Name "condor_cgahp_worker - Win32 Release"
 # Begin Source File
 
-SOURCE="..\src\condor_c-gahp\cgahp_common.C"
+SOURCE="..\src\condor_c-gahp\cgahp_common.cpp"
 # End Source File
 # Begin Source File
 
@@ -100,7 +100,7 @@ SOURCE="..\src\condor_c-gahp\gsoap_cgahp_worker.h"
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\condor_c-gahp\PipeBuffer.C"
+SOURCE="..\src\condor_c-gahp\PipeBuffer.cpp"
 # End Source File
 # Begin Source File
 
@@ -108,7 +108,7 @@ SOURCE="..\src\condor_c-gahp\PipeBuffer.h"
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\condor_c-gahp\schedd_client.C"
+SOURCE="..\src\condor_c-gahp\schedd_client.cpp"
 # End Source File
 # Begin Source File
 
@@ -116,11 +116,11 @@ SOURCE="..\src\condor_c-gahp\schedd_client.h"
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\condor_c-gahp\schedd_client_main.C"
+SOURCE="..\src\condor_c-gahp\schedd_client_main.cpp"
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\condor_c-gahp\SchedDCommands.C"
+SOURCE="..\src\condor_c-gahp\SchedDCommands.cpp"
 # SUBTRACT CPP /YX /Yc /Yu
 # End Source File
 # Begin Source File
@@ -129,7 +129,7 @@ SOURCE="..\src\condor_c-gahp\SchedDCommands.h"
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\condor_c-gahp\soap_cgahp_workerC.C"
+SOURCE="..\src\condor_c-gahp\soap_cgahp_workerC.cpp"
 # SUBTRACT CPP /YX /Yc /Yu
 # End Source File
 # Begin Source File
@@ -138,12 +138,12 @@ SOURCE="..\src\condor_c-gahp\soap_cgahp_workerH.h"
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\condor_c-gahp\soap_cgahp_workerServer.C"
+SOURCE="..\src\condor_c-gahp\soap_cgahp_workerServer.cpp"
 # SUBTRACT CPP /YX /Yc /Yu
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\condor_c-gahp\soap_cgahp_workerStub.C"
+SOURCE="..\src\condor_c-gahp\soap_cgahp_workerStub.cpp"
 # SUBTRACT CPP /YX /Yc /Yu
 # End Source File
 # Begin Source File

@@ -42,7 +42,7 @@ RSC=rc.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /Gm /GX /Zi /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /YX /FD /c
-# ADD CPP /nologo /MTd /W3 /Gm /Gi /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"..\Debug\condor_common.pch" /Yu"condor_common.h" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c
+# ADD CPP /nologo /MTd /W3 /Gm /Gi /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"..\Debug\condor_common.pch" /Yu"condor_common.h" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_DEFINES) $(CONDOR_CPPARGS) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c
 # ADD BASE RSC /l 0x409 /d "_DEBUG"
 # ADD RSC /l 0x409 /d "_DEBUG"
 BSC32=bscmake.exe
@@ -68,7 +68,7 @@ LINK32=link.exe
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MDd /W3 /GX /Z7 /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"..\src\condor_c++_util/condor_common.pch" /Yu"condor_common.h" /FD /TP /c
 # SUBTRACT BASE CPP /Fr
-# ADD CPP /nologo /MT /W3 /GX /Z7 /O1 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"..\Release\condor_common.pch" /Yu"condor_common.h" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c
+# ADD CPP /nologo /MT /W3 /GX /Z7 /O1 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"..\Release\condor_common.pch" /Yu"condor_common.h" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_DEFINES) $(CONDOR_CPPARGS) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c
 # ADD BASE RSC /l 0x409 /d "_DEBUG"
 # ADD RSC /l 0x409 /d "NDEBUG"
 BSC32=bscmake.exe
@@ -86,15 +86,15 @@ LINK32=link.exe
 # Name "condor_dbmsd - Win32 Release"
 # Begin Source File
 
-SOURCE="..\src\condor_tt\condor_ttdb.C"
+SOURCE="..\src\condor_tt\condor_ttdb.cpp"
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\condor_dbmsd\dbmsd_main.C"
+SOURCE="..\src\condor_dbmsd\dbmsd_main.cpp"
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\condor_dbmsd\DBMSManager.C"
+SOURCE="..\src\condor_dbmsd\DBMSManager.cpp"
 # End Source File
 # Begin Source File
 
@@ -106,7 +106,7 @@ SOURCE="..\src\condor_dbmsd\gsoap_dbmsd.h"
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\condor_dbmsd\ManagedDatabase.C"
+SOURCE="..\src\condor_dbmsd\ManagedDatabase.cpp"
 # End Source File
 # Begin Source File
 
@@ -114,7 +114,7 @@ SOURCE="..\src\condor_dbmsd\ManagedDatabase.h"
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_dbmsd\soap_dbmsdC.C
+SOURCE=..\src\condor_dbmsd\soap_dbmsdC.cpp
 # SUBTRACT CPP /YX /Yc /Yu
 # End Source File
 # Begin Source File
@@ -123,12 +123,12 @@ SOURCE=..\src\condor_dbmsd\soap_dbmsdH.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_dbmsd\soap_dbmsdServer.C
+SOURCE=..\src\condor_dbmsd\soap_dbmsdServer.cpp
 # SUBTRACT CPP /YX /Yc /Yu
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\condor_dbmsd\soap_dbmsdStub.C"
+SOURCE="..\src\condor_dbmsd\soap_dbmsdStub.cpp"
 # End Source File
 # Begin Source File
 

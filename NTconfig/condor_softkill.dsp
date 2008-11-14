@@ -91,7 +91,7 @@ LINK32=link.exe
 # Name "condor_softkill - Win32 Debug"
 # Begin Source File
 
-SOURCE=..\src\condor_daemon_core.V6\condor_softkill.C
+SOURCE=..\src\condor_daemon_core.V6\condor_softkill.cpp
 # End Source File
 # Begin Source File
 

@@ -25,9 +25,6 @@ NULL=
 NULL=nul
 !ENDIF 
 
-CPP=cl.exe
-RSC=rc.exe
-
 !IF  "$(CFG)" == "condor_startd - Win32 Debug"
 
 OUTDIR=.\..\Debug
@@ -90,7 +87,40 @@ CLEAN :
 "$(OUTDIR)" :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
 
-CPP_PROJ=/nologo /MTd /W3 /Gm /Gi /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"$(INTDIR)\condor_common.pch" /Yu"condor_common.h" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c 
+CPP=cl.exe
+CPP_PROJ=/nologo /MTd /W3 /Gm /Gi /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"$(INTDIR)\condor_common.pch" /Yu"condor_common.h" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_DEFINES) $(CONDOR_CPPARGS) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c 
+
+.c{$(INTDIR)}.obj::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cpp{$(INTDIR)}.obj::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cxx{$(INTDIR)}.obj::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.c{$(INTDIR)}.sbr::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cpp{$(INTDIR)}.sbr::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cxx{$(INTDIR)}.sbr::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+RSC=rc.exe
 BSC32=bscmake.exe
 BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_startd.bsc" 
 BSC32_SBRS= \
@@ -105,6 +135,7 @@ LINK32_OBJS= \
 	"$(INTDIR)\cod_mgr.obj" \
 	"$(INTDIR)\command.obj" \
 	"$(INTDIR)\CondorSystrayNotifier.obj" \
+	"$(INTDIR)\IdDispenser.obj" \
 	"$(INTDIR)\LoadQueue.obj" \
 	"$(INTDIR)\Reqexp.obj" \
 	"$(INTDIR)\ResAttributes.obj" \
@@ -126,7 +157,6 @@ LINK32_OBJS= \
 	"$(INTDIR)\VMManager.obj" \
 	"$(INTDIR)\VMRegister.obj" \
 	"$(INTDIR)\vmuniverse_mgr.obj" \
-	"$(INTDIR)\IdDispenser.obj" \
 	"..\src\condor_util_lib\condor_util.lib" \
 	"$(OUTDIR)\condor_cpp_util.lib" \
 	"$(OUTDIR)\condor_classad.lib" \
@@ -201,59 +231,8 @@ CLEAN :
 "$(OUTDIR)" :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
 
-CPP_PROJ=/nologo /MT /W3 /GX /Z7 /O1 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"$(INTDIR)\condor_common.pch" /Yu"condor_common.h" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c 
-BSC32=bscmake.exe
-BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_startd.bsc" 
-BSC32_SBRS= \
-	
-LINK32=link.exe
-LINK32_FLAGS=../Release/condor_common.obj ../Release/condor_common_c.obj pdh.lib $(CONDOR_LIB) $(CONDOR_LIBPATH) $(CONDOR_GSOAP_LIB) $(CONDOR_GSOAP_LIBPATH) $(CONDOR_KERB_LIB) $(CONDOR_KERB_LIBPATH) $(CONDOR_PCRE_LIB) $(CONDOR_PCRE_LIBPATH) $(CONDOR_GLOBUS_LIB) $(CONDOR_GLOBUS_LIBPATH) $(CONDOR_OPENSSL_LIB) $(CONDOR_POSTGRESQL_LIB) $(CONDOR_OPENSSL_LIBPATH) $(CONDOR_POSTGRESQL_LIBPATH) /nologo /subsystem:console /pdb:none /map:"$(INTDIR)\condor_startd.map" /debug /machine:I386 /out:"$(OUTDIR)\condor_startd.exe" /SWAPRUN:NET 
-LINK32_OBJS= \
-	"$(INTDIR)\AvailStats.obj" \
-	"$(INTDIR)\backfill_mgr.obj" \
-	"$(INTDIR)\boinc_mgr.obj" \
-	"$(INTDIR)\claim.obj" \
-	"$(INTDIR)\cod_mgr.obj" \
-	"$(INTDIR)\command.obj" \
-	"$(INTDIR)\CondorSystrayNotifier.obj" \
-	"$(INTDIR)\LoadQueue.obj" \
-	"$(INTDIR)\Reqexp.obj" \
-	"$(INTDIR)\ResAttributes.obj" \
-	"$(INTDIR)\ResMgr.obj" \
-	"$(INTDIR)\Resource.obj" \
-	"$(INTDIR)\ResState.obj" \
-	"$(INTDIR)\soap_startdC.obj" \
-	"$(INTDIR)\soap_startdServer.obj" \
-	"$(INTDIR)\soap_startdStub.obj" \
-	"$(INTDIR)\startd_cronjob.obj" \
-	"$(INTDIR)\startd_cronmgr.obj" \
-	"$(INTDIR)\startd_main.obj" \
-	"$(INTDIR)\StartdHookMgr.obj" \
-	"$(INTDIR)\Starter.obj" \
-	"$(INTDIR)\starter_mgr.obj" \
-	"$(INTDIR)\util.obj" \
-	"$(INTDIR)\vm_common.obj" \
-	"$(INTDIR)\VMMachine.obj" \
-	"$(INTDIR)\VMManager.obj" \
-	"$(INTDIR)\VMRegister.obj" \
-	"$(INTDIR)\vmuniverse_mgr.obj" \
-	"$(INTDIR)\IdDispenser.obj" \
-	"..\src\condor_util_lib\condor_util.lib" \
-	"$(OUTDIR)\condor_cpp_util.lib" \
-	"$(OUTDIR)\condor_classad.lib" \
-	"$(OUTDIR)\condor_io.lib" \
-	"$(OUTDIR)\condor_daemon_core.lib" \
-	"$(OUTDIR)\condor_procapi.lib" \
-	"$(OUTDIR)\condor_sysapi.lib" \
-	"$(OUTDIR)\condor_procd_client.lib" \
-	"$(OUTDIR)\condor_privsep_client.lib"
-
-"$(OUTDIR)\condor_startd.exe" : "$(OUTDIR)" $(DEF_FILE) $(LINK32_OBJS)
-    $(LINK32) @<<
-  $(LINK32_FLAGS) $(LINK32_OBJS)
-<<
-
-!ENDIF 
+CPP=cl.exe
+CPP_PROJ=/nologo /MT /W3 /GX /Z7 /O1 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"$(INTDIR)\condor_common.pch" /Yu"condor_common.h" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_DEFINES) $(CONDOR_CPPARGS) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c 
 
 .c{$(INTDIR)}.obj::
    $(CPP) @<<
@@ -284,6 +263,60 @@ LINK32_OBJS= \
    $(CPP) @<<
    $(CPP_PROJ) $< 
 <<
+
+RSC=rc.exe
+BSC32=bscmake.exe
+BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_startd.bsc" 
+BSC32_SBRS= \
+	
+LINK32=link.exe
+LINK32_FLAGS=../Release/condor_common.obj ../Release/condor_common_c.obj pdh.lib $(CONDOR_LIB) $(CONDOR_LIBPATH) $(CONDOR_GSOAP_LIB) $(CONDOR_GSOAP_LIBPATH) $(CONDOR_KERB_LIB) $(CONDOR_KERB_LIBPATH) $(CONDOR_PCRE_LIB) $(CONDOR_PCRE_LIBPATH) $(CONDOR_GLOBUS_LIB) $(CONDOR_GLOBUS_LIBPATH) $(CONDOR_OPENSSL_LIB) $(CONDOR_POSTGRESQL_LIB) $(CONDOR_OPENSSL_LIBPATH) $(CONDOR_POSTGRESQL_LIBPATH) /nologo /subsystem:console /pdb:none /map:"$(INTDIR)\condor_startd.map" /debug /machine:I386 /out:"$(OUTDIR)\condor_startd.exe" /SWAPRUN:NET 
+LINK32_OBJS= \
+	"$(INTDIR)\AvailStats.obj" \
+	"$(INTDIR)\backfill_mgr.obj" \
+	"$(INTDIR)\boinc_mgr.obj" \
+	"$(INTDIR)\claim.obj" \
+	"$(INTDIR)\cod_mgr.obj" \
+	"$(INTDIR)\command.obj" \
+	"$(INTDIR)\CondorSystrayNotifier.obj" \
+	"$(INTDIR)\IdDispenser.obj" \
+	"$(INTDIR)\LoadQueue.obj" \
+	"$(INTDIR)\Reqexp.obj" \
+	"$(INTDIR)\ResAttributes.obj" \
+	"$(INTDIR)\ResMgr.obj" \
+	"$(INTDIR)\Resource.obj" \
+	"$(INTDIR)\ResState.obj" \
+	"$(INTDIR)\soap_startdC.obj" \
+	"$(INTDIR)\soap_startdServer.obj" \
+	"$(INTDIR)\soap_startdStub.obj" \
+	"$(INTDIR)\startd_cronjob.obj" \
+	"$(INTDIR)\startd_cronmgr.obj" \
+	"$(INTDIR)\startd_main.obj" \
+	"$(INTDIR)\StartdHookMgr.obj" \
+	"$(INTDIR)\Starter.obj" \
+	"$(INTDIR)\starter_mgr.obj" \
+	"$(INTDIR)\util.obj" \
+	"$(INTDIR)\vm_common.obj" \
+	"$(INTDIR)\VMMachine.obj" \
+	"$(INTDIR)\VMManager.obj" \
+	"$(INTDIR)\VMRegister.obj" \
+	"$(INTDIR)\vmuniverse_mgr.obj" \
+	"..\src\condor_util_lib\condor_util.lib" \
+	"$(OUTDIR)\condor_cpp_util.lib" \
+	"$(OUTDIR)\condor_classad.lib" \
+	"$(OUTDIR)\condor_io.lib" \
+	"$(OUTDIR)\condor_daemon_core.lib" \
+	"$(OUTDIR)\condor_procapi.lib" \
+	"$(OUTDIR)\condor_sysapi.lib" \
+	"$(OUTDIR)\condor_procd_client.lib" \
+	"$(OUTDIR)\condor_privsep_client.lib"
+
+"$(OUTDIR)\condor_startd.exe" : "$(OUTDIR)" $(DEF_FILE) $(LINK32_OBJS)
+    $(LINK32) @<<
+  $(LINK32_FLAGS) $(LINK32_OBJS)
+<<
+
+!ENDIF 
 
 
 !IF "$(NO_EXTERNAL_DEPS)" != "1"
@@ -531,37 +564,37 @@ LINK32_OBJS= \
 
 !ENDIF 
 
-SOURCE=..\src\condor_startd.V6\AvailStats.C
+SOURCE=..\src\condor_startd.V6\AvailStats.cpp
 
 "$(INTDIR)\AvailStats.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
-SOURCE=..\src\condor_startd.V6\backfill_mgr.C
+SOURCE=..\src\condor_startd.V6\backfill_mgr.cpp
 
 "$(INTDIR)\backfill_mgr.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
-SOURCE=..\src\condor_startd.V6\boinc_mgr.C
+SOURCE=..\src\condor_startd.V6\boinc_mgr.cpp
 
 "$(INTDIR)\boinc_mgr.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
-SOURCE=..\src\condor_startd.V6\claim.C
+SOURCE=..\src\condor_startd.V6\claim.cpp
 
 "$(INTDIR)\claim.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
-SOURCE=..\src\condor_startd.V6\cod_mgr.C
+SOURCE=..\src\condor_startd.V6\cod_mgr.cpp
 
 "$(INTDIR)\cod_mgr.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
-SOURCE=..\src\condor_startd.V6\command.C
+SOURCE=..\src\condor_startd.V6\command.cpp
 
 "$(INTDIR)\command.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
@@ -573,53 +606,53 @@ SOURCE=..\src\condor_startd.V6\CondorSystrayNotifier.cpp
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
-SOURCE=..\src\condor_startd.V6\IdDispenser.C
+SOURCE=..\src\condor_startd.V6\IdDispenser.cpp
 
 "$(INTDIR)\IdDispenser.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
-SOURCE=..\src\condor_startd.V6\LoadQueue.C
+SOURCE=..\src\condor_startd.V6\LoadQueue.cpp
 
 "$(INTDIR)\LoadQueue.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
-SOURCE=..\src\condor_startd.V6\Reqexp.C
+SOURCE=..\src\condor_startd.V6\Reqexp.cpp
 
 "$(INTDIR)\Reqexp.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
-SOURCE=..\src\condor_startd.V6\ResAttributes.C
+SOURCE=..\src\condor_startd.V6\ResAttributes.cpp
 
 "$(INTDIR)\ResAttributes.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
-SOURCE=..\src\condor_startd.V6\ResMgr.C
+SOURCE=..\src\condor_startd.V6\ResMgr.cpp
 
 "$(INTDIR)\ResMgr.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
-SOURCE=..\src\condor_startd.V6\Resource.C
+SOURCE=..\src\condor_startd.V6\Resource.cpp
 
 "$(INTDIR)\Resource.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
-SOURCE=..\src\condor_startd.V6\ResState.C
+SOURCE=..\src\condor_startd.V6\ResState.cpp
 
 "$(INTDIR)\ResState.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
-SOURCE=..\src\condor_startd.V6\soap_startdC.C
+SOURCE=..\src\condor_startd.V6\soap_startdC.cpp
 
 !IF  "$(CFG)" == "condor_startd - Win32 Debug"
 
-CPP_SWITCHES=/nologo /MTd /W3 /Gm /Gi /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c 
+CPP_SWITCHES=/nologo /MTd /W3 /Gm /Gi /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_DEFINES) $(CONDOR_CPPARGS) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c 
 
 "$(INTDIR)\soap_startdC.obj" : $(SOURCE) "$(INTDIR)"
 	$(CPP) @<<
@@ -629,7 +662,7 @@ CPP_SWITCHES=/nologo /MTd /W3 /Gm /Gi /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_CO
 
 !ELSEIF  "$(CFG)" == "condor_startd - Win32 Release"
 
-CPP_SWITCHES=/nologo /MT /W3 /GX /Z7 /O1 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c 
+CPP_SWITCHES=/nologo /MT /W3 /GX /Z7 /O1 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_DEFINES) $(CONDOR_CPPARGS) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c 
 
 "$(INTDIR)\soap_startdC.obj" : $(SOURCE) "$(INTDIR)"
 	$(CPP) @<<
@@ -639,11 +672,11 @@ CPP_SWITCHES=/nologo /MT /W3 /GX /Z7 /O1 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D
 
 !ENDIF 
 
-SOURCE=..\src\condor_startd.V6\soap_startdServer.C
+SOURCE=..\src\condor_startd.V6\soap_startdServer.cpp
 
 !IF  "$(CFG)" == "condor_startd - Win32 Debug"
 
-CPP_SWITCHES=/nologo /MTd /W3 /Gm /Gi /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c 
+CPP_SWITCHES=/nologo /MTd /W3 /Gm /Gi /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_DEFINES) $(CONDOR_CPPARGS) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c 
 
 "$(INTDIR)\soap_startdServer.obj" : $(SOURCE) "$(INTDIR)"
 	$(CPP) @<<
@@ -653,7 +686,7 @@ CPP_SWITCHES=/nologo /MTd /W3 /Gm /Gi /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_CO
 
 !ELSEIF  "$(CFG)" == "condor_startd - Win32 Release"
 
-CPP_SWITCHES=/nologo /MT /W3 /GX /Z7 /O1 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c 
+CPP_SWITCHES=/nologo /MT /W3 /GX /Z7 /O1 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_DEFINES) $(CONDOR_CPPARGS) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c 
 
 "$(INTDIR)\soap_startdServer.obj" : $(SOURCE) "$(INTDIR)"
 	$(CPP) @<<
@@ -663,11 +696,11 @@ CPP_SWITCHES=/nologo /MT /W3 /GX /Z7 /O1 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D
 
 !ENDIF 
 
-SOURCE=..\src\condor_startd.V6\soap_startdStub.C
+SOURCE=..\src\condor_startd.V6\soap_startdStub.cpp
 
 !IF  "$(CFG)" == "condor_startd - Win32 Debug"
 
-CPP_SWITCHES=/nologo /MTd /W3 /Gm /Gi /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c 
+CPP_SWITCHES=/nologo /MTd /W3 /Gm /Gi /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_DEFINES) $(CONDOR_CPPARGS) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c 
 
 "$(INTDIR)\soap_startdStub.obj" : $(SOURCE) "$(INTDIR)"
 	$(CPP) @<<
@@ -677,7 +710,7 @@ CPP_SWITCHES=/nologo /MTd /W3 /Gm /Gi /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_CO
 
 !ELSEIF  "$(CFG)" == "condor_startd - Win32 Release"
 
-CPP_SWITCHES=/nologo /MT /W3 /GX /Z7 /O1 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c 
+CPP_SWITCHES=/nologo /MT /W3 /GX /Z7 /O1 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP $(CONDOR_INCLUDE) $(CONDOR_DEFINES) $(CONDOR_CPPARGS) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_GLOBUS_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE) /c 
 
 "$(INTDIR)\soap_startdStub.obj" : $(SOURCE) "$(INTDIR)"
 	$(CPP) @<<
@@ -687,73 +720,73 @@ CPP_SWITCHES=/nologo /MT /W3 /GX /Z7 /O1 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D
 
 !ENDIF 
 
-SOURCE=..\src\condor_startd.V6\startd_cronjob.C
+SOURCE=..\src\condor_startd.V6\startd_cronjob.cpp
 
 "$(INTDIR)\startd_cronjob.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
-SOURCE=..\src\condor_startd.V6\startd_cronmgr.C
+SOURCE=..\src\condor_startd.V6\startd_cronmgr.cpp
 
 "$(INTDIR)\startd_cronmgr.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
-SOURCE=..\src\condor_startd.V6\startd_main.C
+SOURCE=..\src\condor_startd.V6\startd_main.cpp
 
 "$(INTDIR)\startd_main.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
-SOURCE=..\src\condor_startd.V6\StartdHookMgr.C
+SOURCE=..\src\condor_startd.V6\StartdHookMgr.cpp
 
 "$(INTDIR)\StartdHookMgr.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
-SOURCE=..\src\condor_startd.V6\Starter.C
+SOURCE=..\src\condor_startd.V6\Starter.cpp
 
 "$(INTDIR)\Starter.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
-SOURCE=..\src\condor_startd.V6\starter_mgr.C
+SOURCE=..\src\condor_startd.V6\starter_mgr.cpp
 
 "$(INTDIR)\starter_mgr.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
-SOURCE=..\src\condor_startd.V6\util.C
+SOURCE=..\src\condor_startd.V6\util.cpp
 
 "$(INTDIR)\util.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
-SOURCE=..\src\condor_startd.V6\vm_common.C
+SOURCE=..\src\condor_startd.V6\vm_common.cpp
 
 "$(INTDIR)\vm_common.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
-SOURCE=..\src\condor_startd.V6\VMMachine.C
+SOURCE=..\src\condor_startd.V6\VMMachine.cpp
 
 "$(INTDIR)\VMMachine.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
-SOURCE=..\src\condor_startd.V6\VMManager.C
+SOURCE=..\src\condor_startd.V6\VMManager.cpp
 
 "$(INTDIR)\VMManager.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
-SOURCE=..\src\condor_startd.V6\VMRegister.C
+SOURCE=..\src\condor_startd.V6\VMRegister.cpp
 
 "$(INTDIR)\VMRegister.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
-SOURCE=..\src\condor_startd.V6\vmuniverse_mgr.C
+SOURCE=..\src\condor_startd.V6\vmuniverse_mgr.cpp
 
 "$(INTDIR)\vmuniverse_mgr.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)

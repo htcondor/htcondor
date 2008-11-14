@@ -41,7 +41,7 @@ stripped:: all
 static:: all
 
 #if HAVE_EXT_GSOAP
-soap_core.C:: ../condor_includes/stdsoap2.h
+soap_core.cpp:: ../condor_includes/stdsoap2.h
 ../condor_includes/stdsoap2.h:
 	cp $(GSOAP_DIR)/include/stdsoap2.h ../condor_includes/
 	patch -p0 -d ../condor_includes < stdsoap2.h.patch
