@@ -329,7 +329,7 @@ WindowsFirewallHelper::removeByBasename( const char *name ) {
 		fwApp = (INetFwAuthorizedApplication*)v.byref;
 
 		fwApp->get_ProcessImageFileName(&str);
-		printf("Result is %lS\n", str);
+		// printf("Result is %lS\n", str);
 
 		len = wcslen(str);
 		tmp = (char*) malloc(len+1 * sizeof(char));
