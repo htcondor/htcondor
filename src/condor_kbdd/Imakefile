@@ -1,6 +1,8 @@
 NAME = condor_kbdd
 all_target($(NAME))
 
+soapobjs(kbdd)
+
 CFLAGS = $(STD_C_FLAGS)
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
 LIB = $(DAEMONCORE_LIB) $(STD_LIBS) $(CONFIGURE_GSOAP_LDFLAGS)
@@ -14,7 +16,7 @@ LDFLAGS = -lX11 -ldnet_stub
 LDFLAGS = -lX11
 #endif
 
-OBJ = kbdd.o XInterface.o
+OBJ = kbdd.o XInterface.o $(SOAP_OBJS)
 
 /*
   NOTE: because of the static hackery below for DUX5, we can't use a
@@ -73,3 +75,5 @@ static_target($(NAME),$(OBJ),$(LIB),sbin)
 
 html:
 testbin:: all
+
+gen_soapfiles(kbdd,condorKbdd)
