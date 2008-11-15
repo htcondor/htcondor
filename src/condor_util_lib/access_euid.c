@@ -18,6 +18,7 @@
  ***************************************************************/
 
 
+#define _FILE_OFFSET_BITS 64
 #include "condor_common.h"
 #include "condor_debug.h"
 
