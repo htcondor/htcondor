@@ -2282,7 +2282,7 @@ XEN_SCRIPT = $(SBIN)/condor_vm_xen.sh
 ##--------------------------------------------------------------------
 ##  condor_lease_manager lease manager daemon
 ##--------------------------------------------------------------------
-##  Where is the CredD binary installed?
+##  Where is the LeaseManager binary installed?
 LeaseManager			= $(SBIN)/condor_lease_manager
 
 # Turn on the lease manager
@@ -2294,7 +2294,7 @@ LeaseManger_ADDRESS_FILE	= $(LOG)/.lease_manager_address
 ## LeaseManager startup arguments
 #LeaseManager_ARGS		= -local-name generic
 
-## CredD daemon debugging log
+## LeaseManager daemon debugging log
 LeaseManager_LOG		= $(LOG)/LeaseManagerLog
 LeaseManager_DEBUG		= D_FULLDEBUG
 MAX_LeaseManager_LOG		= 1000000
