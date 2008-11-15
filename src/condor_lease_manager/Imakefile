@@ -2,7 +2,7 @@ NAME = condor_lease_manager
 all_target( $(NAME) )
 TESTS =  	condor_lease_manager_test
 
-soapobjs(matchmaker)
+soapobjs(leaseManager)
 
 CLASSAD_ANALYSIS = ../classad_analysis
 CLASSAD_CONVERSION = $(CLASSAD_CONVERSION)
@@ -52,4 +52,4 @@ testbin:: all
 
 -include Makelocal.i
 
-gen_soapfiles(matchmaker,condorMatchmaker)
+gen_soapfiles(leaseManager,condorLeaseManager)

@@ -17,9 +17,6 @@
  *
  ***************************************************************/
 
-//gsoap condor service name: condorMatchmaker
-//gsoap condor service style: rpc
-//gsoap condor service encoding: encoded
-//gsoap condor service namespace: urn:condor
+#include "condorLeaseManager.nsmap"
 
-#import "gsoap_daemon_core.h"
+#include "soap_daemon_core.cpp"
