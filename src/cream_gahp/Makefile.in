@@ -19,7 +19,7 @@
 
 CC = @CC@
 
-GlobusFlavor = gcc32pthr
+GlobusFlavor = gcc32dbgpthr
 
 CREAM_PATH = @cream@
 BUILD_STATIC = @build_static@
@@ -29,7 +29,23 @@ CREAM_LIB_PATH = $(CREAM_PATH)/lib
 CREAM_LIBS = $(CREAM_LIB_PATH)/libglite_ce_cream_client_soap.a \
 	$(CREAM_LIB_PATH)/libglite_ce_cream_client_util.a \
 	$(CREAM_LIB_PATH)/libglite_security_gsoap_plugin_276b_gcc32dbgpthr.a \
-	$(CREAM_LIB_PATH)/libvomsapi_gcc32dbgpthr.a \
+	$(CREAM_LIB_PATH)/libglobus_gss_assist_$(GlobusFlavor).a \
+	$(CREAM_LIB_PATH)/libglobus_gssapi_gsi_$(GlobusFlavor).a \
+	$(CREAM_LIB_PATH)/libglobus_gsi_proxy_core_$(GlobusFlavor).a \
+	$(CREAM_LIB_PATH)/libglobus_gsi_credential_$(GlobusFlavor).a \
+	$(CREAM_LIB_PATH)/libglobus_gsi_callback_$(GlobusFlavor).a \
+	$(CREAM_LIB_PATH)/libglobus_gsi_sysconfig_$(GlobusFlavor).a \
+	$(CREAM_LIB_PATH)/libglobus_oldgaa_$(GlobusFlavor).a \
+	$(CREAM_LIB_PATH)/libglobus_gsi_cert_utils_$(GlobusFlavor).a \
+	$(CREAM_LIB_PATH)/libglobus_openssl_$(GlobusFlavor).a \
+	$(CREAM_LIB_PATH)/libglobus_openssl_error_$(GlobusFlavor).a \
+	$(CREAM_LIB_PATH)/libglobus_proxy_ssl_$(GlobusFlavor).a \
+	$(CREAM_LIB_PATH)/libglobus_callout_$(GlobusFlavor).a \
+	$(CREAM_LIB_PATH)/libglobus_common_$(GlobusFlavor).a \
+	$(CREAM_LIB_PATH)/libltdl_$(GlobusFlavor).a \
+	$(CREAM_LIB_PATH)/libvomsapi_$(GlobusFlavor).a \
+	$(CREAM_LIB_PATH)/libglobus_gss_assist_$(GlobusFlavor).a \
+	$(CREAM_LIB_PATH)/libglobus_callout_$(GlobusFlavor).a \
 	$(CREAM_LIB_PATH)/liblog4cpp.a \
 	$(CREAM_LIB_PATH)/libgridsite.a \
 	$(CREAM_LIB_PATH)/libares.a \
@@ -41,23 +57,8 @@ CFLAGS = -g -I$(CREAM_INCLUDE_PATH)/$(GlobusFlavor) -I$(CREAM_INCLUDE_PATH) @DEF
 
 PRE_CREAM_LIBS = @PRE_CREAM_LIBS@
 POST_CREAM_LIBS = @POST_CREAM_LIBS@ \
-	$(CREAM_LIB_PATH)/libglobus_gss_assist_$(GlobusFlavor).a \
-	$(CREAM_LIB_PATH)/libglobus_gssapi_gsi_$(GlobusFlavor).a \
-	$(CREAM_LIB_PATH)/libglobus_gsi_proxy_core_$(GlobusFlavor).a \
-	$(CREAM_LIB_PATH)/libglobus_gsi_credential_$(GlobusFlavor).a \
-	$(CREAM_LIB_PATH)/libglobus_gsi_callback_$(GlobusFlavor).a \
-	$(CREAM_LIB_PATH)/libssl_$(GlobusFlavor).a \
-	$(CREAM_LIB_PATH)/libglobus_gsi_sysconfig_$(GlobusFlavor).a \
-	$(CREAM_LIB_PATH)/libglobus_oldgaa_$(GlobusFlavor).a \
-	$(CREAM_LIB_PATH)/libglobus_gsi_cert_utils_$(GlobusFlavor).a \
-	$(CREAM_LIB_PATH)/libglobus_openssl_$(GlobusFlavor).a \
-	$(CREAM_LIB_PATH)/libglobus_openssl_error_$(GlobusFlavor).a \
-	$(CREAM_LIB_PATH)/libglobus_proxy_ssl_$(GlobusFlavor).a \
-	$(CREAM_LIB_PATH)/libglobus_callout_$(GlobusFlavor).a \
-	$(CREAM_LIB_PATH)/libglobus_common_$(GlobusFlavor).a \
-	$(CREAM_LIB_PATH)/libltdl_$(GlobusFlavor).a \
-	$(CREAM_LIB_PATH)/libssl_$(GlobusFlavor).a \
-	$(CREAM_LIB_PATH)/libcrypto_$(GlobusFlavor).a \
+	-lssl \
+	-lcrypto \
 	/usr/lib/libxml2.a -lz -lm -lpthread
 
 ifeq ($(BUILD_STATIC), YES)
