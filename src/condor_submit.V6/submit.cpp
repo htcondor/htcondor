@@ -1595,8 +1595,9 @@ SetUniverse()
 		// get a default universe from the config file
 		univ = param("DEFAULT_UNIVERSE");
 		if( !univ ) {
-			// if nothing else, it must be a standard universe
-			univ = strdup("standard");
+			// if nothing else, it must be a vanilla universe
+			//  *changed from "standard" for 7.2.0*
+			univ = strdup("vanilla");
 		}
 	}
 
@@ -1857,36 +1858,27 @@ SetUniverse()
 	};
 
 
+	if( univ && stricmp(univ,"standard") == MATCH ) {
 #if defined( CLIPPED )
-		// If we got this far, we must be a standard job.  Since we're
-		// clipped, that can't possibly work, so warn the user at
-		// submit time.  -Derek Wright 6/11/99
-	fprintf( stderr, 
-			 "\nERROR: You are trying to submit a \"%s\" job to Condor.\n",
-			 univ );
-	fprintf( stderr, 
-			 "This version of Condor only supports \"vanilla\" jobs, which\n"
-			 "perform no checkpointing or remote system calls.  See the\n"
-			 "Condor manual for details "
-			 "(http://www.cs.wisc.edu/condor/manual).\n\n" );
-	DoCleanup(0,0,NULL);
-	exit( 1 );
-#endif
-
-	if(stricmp(univ,"standard")) {
-		fprintf( stderr, "\nERROR: I don't know about the '%s' universe.\n",univ);
+		fprintf( stderr, 
+				 "\nERROR: You are trying to submit a \"%s\" job to Condor. "
+				 "However, this build of Condor does not support the Standard "
+				 "Universe.\n",
+				 univ );
 		DoCleanup(0,0,NULL);
 		exit( 1 );
-	}
-
-	JobUniverse = CONDOR_UNIVERSE_STANDARD;
-	buffer.sprintf( "%s = %d", ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_STANDARD);
-	InsertJobExpr (buffer);
-	if ( univ ) {
+#else
+		JobUniverse = CONDOR_UNIVERSE_STANDARD;
+		buffer.sprintf( "%s = %d", ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_STANDARD);
+		InsertJobExpr (buffer);
 		free(univ);
-	}
-	
-	
+		return;
+#endif
+	};
+
+	fprintf( stderr, "\nERROR: I don't know about the '%s' universe.\n",univ);
+	DoCleanup(0,0,NULL);
+	exit( 1 );
 
 	return;
 }
