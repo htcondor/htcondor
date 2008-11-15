@@ -78,6 +78,7 @@
 #include "../condor_schedd.V6/scheduler.h"
 #include "condor_holdcodes.h"
 #include "condor_url.h"
+#include "condor_version.h"
 
 #include "list.h"
 #include "condor_vm_universe_types.h"
@@ -1862,9 +1863,9 @@ SetUniverse()
 #if defined( CLIPPED )
 		fprintf( stderr, 
 				 "\nERROR: You are trying to submit a \"%s\" job to Condor. "
-				 "However, this build of Condor does not support the Standard "
-				 "Universe.\n",
-				 univ );
+				 "However, this installation of Condor does not support the "
+				 "Standard Universe.\n%s\n%s\n",
+				 univ, CondorVersion(), CondorPlatform() );
 		DoCleanup(0,0,NULL);
 		exit( 1 );
 #else
