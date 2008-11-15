@@ -175,7 +175,7 @@ NEGOTIATOR    = $(SBIN)/condor_negotiator
 ## and another query arrives, the main process will handle this query.
 ## Fork workers are available for UNIX systems only, and this setting
 ## is ingored in all others (Windows).
-COLLECTOR_QUERY_WORKERS	= 16
+COLLECTOR_QUERY_WORKERS	= 2
 
 
 ##--------------------------------------------------------------------
