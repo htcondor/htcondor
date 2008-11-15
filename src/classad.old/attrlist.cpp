@@ -2885,3 +2885,32 @@ AttrList::IsValidAttrName(const char *name) {
 
 	return true;
 }
+
+void
+AttrList::CopyAttribute(char const *target_attr, AttrList *source_ad )
+{
+	CopyAttribute(target_attr,target_attr,source_ad);
+}
+
+void
+AttrList::CopyAttribute(char const *target_attr, char const *source_attr, AttrList *source_ad )
+{
+	ASSERT( target_attr );
+	ASSERT( source_attr );
+	if( !source_ad ) {
+		source_ad = this;
+	}
+
+	ExprTree *e = source_ad->Lookup(source_attr);
+	if (e && e->MyType() == LX_ASSIGN && e->RArg()) {
+		ExprTree *lhs = new Variable(strnewp(target_attr));
+		ExprTree *rhs = e->RArg()->DeepCopy();
+		ASSERT( lhs && rhs );
+		ExprTree *assign = new AssignOp(lhs,rhs);
+		ASSERT( assign );
+
+		this->Insert(assign);
+	} else {
+		this->Delete(target_attr);
+	}
+}

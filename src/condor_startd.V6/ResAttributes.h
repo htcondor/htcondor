@@ -34,7 +34,7 @@ class ClassAd;
 typedef int amask_t;
 
 const amask_t A_PUBLIC	= 1;
-const amask_t A_PRIVATE	= 2;
+// no longer used: A_PRIVATE = 2
 const amask_t A_STATIC	= 4;
 const amask_t A_TIMEOUT	= 8;
 const amask_t A_UPDATE	= 16;
@@ -58,7 +58,6 @@ const amask_t A_ALL	= (A_UPDATE | A_TIMEOUT | A_STATIC | A_SHARED | A_SUMMED);
 const amask_t A_ALL_PUB	= (A_PUBLIC | A_ALL | A_EVALUATED | A_SHARED_SLOT);
 
 #define IS_PUBLIC(mask)		((mask) & A_PUBLIC)
-#define IS_PRIVATE(mask)	((mask) & A_PRIVATE)
 #define IS_STATIC(mask)		((mask) & A_STATIC)
 #define IS_TIMEOUT(mask)	((mask) & A_TIMEOUT)
 #define IS_UPDATE(mask)		((mask) & A_UPDATE)

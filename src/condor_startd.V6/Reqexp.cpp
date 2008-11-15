@@ -211,11 +211,6 @@ Reqexp::publish( ClassAd* ca, amask_t how_much )
 {
 	MyString tmp;
 
-	if( IS_PRIVATE(how_much) ) {
-			// Nothing to publish for private ads
-		return;
-	}
-
 	switch( rstate ) {
 	case ORIG_REQ:
 		ca->Insert( origstart );

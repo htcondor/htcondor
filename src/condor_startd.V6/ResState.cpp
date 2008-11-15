@@ -50,11 +50,6 @@ ResState::publish( ClassAd* cp, amask_t how_much )
 {
 	char tmp[80];
 
-	if( IS_PRIVATE(how_much) ) {
-			// Nothing to publish for private ads
-		return;
-	}
-
 	sprintf( tmp, "%s=\"%s\"", ATTR_STATE, state_to_string(r_state) );
 	cp->InsertOrUpdate( tmp );
 

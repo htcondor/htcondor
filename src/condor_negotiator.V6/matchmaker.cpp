@@ -1740,10 +1740,7 @@ Matchmaker::MakeClaimIdHash(ClassAdList &startdPvtAdList, ClaimIdHash &claimIds)
 		if( !ad->LookupString(ATTR_NAME, name) ) {
 			continue;
 		}
-			// As of 7.1.3, we look up MY_ADDRESS first and STARTD_IP_ADDR
-			// second.  Eventually, STARTD_IP_ADDR may be phased out.
-		if( !ad->LookupString(ATTR_MY_ADDRESS, ip_addr) &&
-			!ad->LookupString(ATTR_STARTD_IP_ADDR, ip_addr) )
+		if( !ad->LookupString(ATTR_MY_ADDRESS, ip_addr) )
 		{
 			continue;
 		}

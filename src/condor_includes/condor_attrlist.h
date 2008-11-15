@@ -166,6 +166,17 @@ class AttrList : public AttrListAbstract
 		int Assign(char const *variable,double value);
 		int Assign(char const *variable,bool value);
 
+			// Copy value of source_attr in source_ad to target_attr
+			// in this ad.  If source_ad is NULL, it defaults to this ad.
+			// If source_attr is undefined, target_attr is deleted, if
+			// it exists.
+		void CopyAttribute(char const *target_attr, char const *source_attr, AttrList *source_ad=NULL );
+
+			// Copy value of source_attr in source_ad to an attribute
+			// of the same name in this ad.  Shortcut for
+			// CopyAttribute(target_attr,target_attr,source_ad).
+		void CopyAttribute(char const *target_attr, AttrList *source_ad );
+
 			// Escape double quotes in a value so that it can be
 			// safely turned into a ClassAd string by putting double
 			// quotes around it.  This function does _not_ add the

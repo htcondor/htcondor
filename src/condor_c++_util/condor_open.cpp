@@ -28,6 +28,7 @@
 	 */
 #define _CONDOR_ALLOW_OPEN 1
 #define _CONDOR_ALLOW_FOPEN 1
+#define _FILE_OFFSET_BITS 64
 #include "condor_common.h"
 #include "condor_open.h"
 #include "condor_debug.h"

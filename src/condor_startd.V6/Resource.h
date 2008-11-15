@@ -96,6 +96,7 @@ public:
 		// Methods for computing and publishing resource attributes 
 	void	compute( amask_t mask);
 	void	publish( ClassAd*, amask_t );
+	void    publish_private( ClassAd *ad );
     void	publishDeathTime( ClassAd* cap );
 	void	publishSlotAttrs( ClassAd* );
 	void	refreshSlotAttrs( void );
