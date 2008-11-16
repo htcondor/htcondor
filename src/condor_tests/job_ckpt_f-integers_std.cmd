@@ -4,6 +4,7 @@
 ##
 ####################
 
+universe	= standard
 executable      = job_ckpt_f-integers_std.cndr.exe.$$(OPSYS).$$(ARCH)
 error           = job_ckpt_f-integers_std.err
 output          = job_ckpt_f-integers_std.out
