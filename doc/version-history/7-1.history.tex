@@ -241,6 +241,16 @@ numbers of startds.
 
 \begin{itemize}
 
+\item In some rare cases, the \Condor{startd} failed to fully preempt jobs.
+The job itself was killed, but the \Condor{starter} process watching over
+it would not be killed.  The slot would then stay in the Preempting state
+indefinitely.
+
+\item \Condor{q} performed poorly when querying a remote pool, using
+\Opt{-pool}.  It was using an older latency-bound protocol even when
+the remote \Condor{schedd} was new enough to use the improved protocol
+that first appeared in version 6.9.3.
+
 \item When using \Macro{USE\_VISIBLE\_DESKTOP} the user's (slot or owner)
 access-control entry removed from the Desktop's access-control list.  This
 fixes the previous behavior were users were added and never removed, 
