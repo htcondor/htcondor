@@ -23,7 +23,7 @@
 #include "stringSpace.h"
 #include "condor_debug.h"
 
-
+template class HashTable<YourSensitiveString,int>;
 
 StringSpace::
 StringSpace (int initial_size)
