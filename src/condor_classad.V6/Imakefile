@@ -78,12 +78,6 @@ library_target(libclassad.a,$(OBJ))
 release:: all
 
 /* template instantiations go in here */
-template_inst( instantiations.cpp, instantiations.o ) 	/* main classad insts */
-template_inst( test_instantiations.cpp, test_instantiations.o ) /* test program insts */
-template_inst( coll-comm-inst.cpp, coll-comm-inst.o ) 	/* common collection  */
-template_inst( coll-serv-inst.cpp, coll-serv-inst.o ) 	/* collection server  */
-template_inst( coll-client-inst.cpp,coll-client-inst.o) 	/* collection client*/
-template_inst( exp-inst.cpp, exp-inst.o )					/* experimental */
 
 /* Standalone distribution of classads/collections */
 DIST_VERSION = 1.0

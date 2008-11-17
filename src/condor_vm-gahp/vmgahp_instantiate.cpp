@@ -26,6 +26,3 @@ class VMRequest;
 class VMType;
 class XenDisk;
 
-template class HashTable<int,VMRequest*>;
-template class SimpleList<VMType*>;
-template class SimpleList<XenDisk*>;

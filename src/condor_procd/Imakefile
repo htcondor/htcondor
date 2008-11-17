@@ -19,13 +19,12 @@ PROCD_OBJ=procd_main.o procd_common.o \
           proc_family_monitor.o proc_family.o proc_family_member.o \
           proc_family_tracker.o parent_tracker.o login_tracker.o \
           glexec_kill.o \
-          procd_instantiate.o \
+           \
           dprintf_lite.o \
           $(IMPORT_OBJ)
 #if IS_LINUX
 PROCD_OBJ+= group_tracker.o gid_pool.o
 #endif
-template_inst(procd_instantiate.cpp,procd_instantiate.o)
 public_c_plus_nowrap_target(condor_procd,sbin,$(PROCD_OBJ),$(PROCAPI_LIB))
 
 LIB_OBJ=proc_family_client.o proc_family_io.o local_client.UNIX.o \

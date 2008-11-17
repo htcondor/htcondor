@@ -25,7 +25,6 @@
 #include "classad_merge.h"
 
 // Instantiate the Named Class Ad list
-template class SimpleList<NamedClassAd*>;
 
 
 // Named classAds

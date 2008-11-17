@@ -4,7 +4,7 @@ C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
 CFLAGS = $(STD_C_FLAGS)
 LIB = $(STD_LIBS)
 
-OBJ = procapi.o procapi_instantiate.o processid.o procapi_killfamily.o
+OBJ = procapi.o  processid.o procapi_killfamily.o
 
 TEST_OBJS = procapi_t.o procapi_getproc_t.o \
 	procapi_fork_t.o procapi_perm_t.o \

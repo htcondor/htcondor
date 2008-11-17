@@ -32,23 +32,13 @@ class Claim;
 class VMMachine;
 class VMStarterInfo;
 
-template class ExtArray<bool>;
-template class SimpleList<Claim*>;
-template class SimpleList<Starter*>;
-template class SimpleList<Resource*>;
-template class SimpleList<CpuAttributes*>;
-template class SimpleList<VMMachine*>;
-template class SimpleList<VMStarterInfo*>;
-template class HashTable<MyString,AvailDiskPartition>;
 
 
 #if HAVE_BACKFILL
 class BackfillSlot;
-template class ExtArray<BackfillSlot*>;
 #endif /* HAVE_BACKFILL */
 
 
 #if HAVE_JOB_HOOKS
-template class HashTable<MyString,char**>;
 #endif /* HAVE_JOB_HOOKS */
 

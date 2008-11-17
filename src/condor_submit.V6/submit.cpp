@@ -100,8 +100,6 @@ HashTable<MyString,int> CheckFilesWrite( 577, hashFunction );
 HashTable<MyString,int> ClusterAdAttrs( 31, hashFunction );
 
 // Explicit template instantiation
-template class HashTable<AttrKey, MyString>;
-template class HashBucket<AttrKey, MyString>;
 
 /* For daemonCore, etc. */
 DECL_SUBSYSTEM( "SUBMIT", SUBSYSTEM_TYPE_SUBMIT );
@@ -520,8 +518,6 @@ ExtArray <ClassAd*> JobAdsArray(100);
 int JobAdsArrayLen = 0;
 
 // explicit template instantiations
-template class ExtArray<SubmitRec>;
-template class ExtArray<ClassAd*>;
 
 MyString 
 condor_param_mystring( const char * name, const char * alt_name )

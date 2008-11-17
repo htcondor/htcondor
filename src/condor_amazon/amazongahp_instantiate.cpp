@@ -25,7 +25,3 @@ class AmazonGahpCommand;
 class Worker;
 class Request;
 
-template class SimpleList<AmazonGahpCommand*>;
-template class SimpleList<Request*>;
-template class HashTable<int,Worker*>;
-template class HashTable<int,Request*>;

@@ -168,8 +168,6 @@ struct OrphanCallback_t {
 	int errorcode;
 };
 
-template class List<OrphanCallback_t>;
-template class Item<OrphanCallback_t>;
 
 HashTable <HashKey, GlobusJob *> JobsByContact( HASH_TABLE_SIZE,
 												hashFunction );

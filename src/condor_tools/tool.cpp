@@ -74,8 +74,6 @@ int cmd_set = 0;
 char *subsys_arg = NULL;
 bool IgnoreMissingDaemon = false;
 
-template class HashBucket<MyString, bool>;
-template class HashTable<MyString, bool>;
 HashTable<MyString, bool> addresses_sent( 100, MyStringHash );
 
 

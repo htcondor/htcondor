@@ -39,8 +39,6 @@
 
 #include "dc_match_maker.h"
 
-template class list<DCMatchMakerLease*>;
-template class list<const DCMatchMakerLease*>;
 
 const int dflag = D_ALWAYS | D_NOHEADER | D_FULLDEBUG;
 

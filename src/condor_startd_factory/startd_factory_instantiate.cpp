@@ -25,6 +25,3 @@
 #include "condor_partition.h"
 #include "condor_workload.h"
 
-template class ExtArray<Partition>;
-template class ExtArray<Workload>;
-template class HashTable<MyString, bool>;

@@ -331,7 +331,7 @@ GPP_ARCH_FLAGS = -DTARGET_OS_MAC=1 -DTARGET_CPU_PPC=1
 GPP_ARCH_FLAGS =
 #endif
 
-GPP_SHARED_FLAGS = -fno-implicit-templates $(GPP_VERS_FLAGS) $(GPP_ARCH_FLAGS)
+GPP_SHARED_FLAGS = $(GPP_VERS_FLAGS) $(GPP_ARCH_FLAGS)
 
 /* Flags shared between C and C++ compilers */
 SHARED_COMPILER_FLAGS = $(VENDOR_C_FLAGS) $(COMP_DEBUG_FLAGS) $(CC_PIC_FLAG) PlatformFlags $(CCOMPILER_ID) $(GSOAP_FLAGS) $(PCRE_FLAGS) $(COREDUMPER_FLAGS)
@@ -341,14 +341,6 @@ SHARED_COMPILER_FLAGS = $(VENDOR_C_FLAGS) $(COMP_DEBUG_FLAGS) $(CC_PIC_FLAG) Pla
 	Don't forget to mix in flags specific to one compiler or the other. */
 STD_C_FLAGS = $(SHARED_COMPILER_FLAGS) $(GCC_DEBUG_FLAGS) PlatformGccFlags
 STD_C_PLUS_FLAGS = $(SHARED_COMPILER_FLAGS) $(GPP_DEBUG_FLAGS) $(GPP_SHARED_FLAGS) PlatformGppFlags 
-
-/* We basically want INST_C_PLUS_FLAGS to be equal to STD_C_PLUS_FLAGS,
-	but make sure there isn't -fno-implicit-templates in it
-	since we want any templates which need to be created to be created in 
-	template instantiation files. */
-/* XXX Uh, the comment doesn't match this code (and I think it should--psilord)
-	figure out why. */
-INST_C_PLUS_FLAGS = $(STD_C_FLAGS) $(GPP_VERS_FLAGS) PlatformGppFlags
 
 TESTSUITE_FLAGS_GCC =  $(STD_C_FLAGS)
 TESTSUITE_FLAGS_GPP = $(STD_C_PLUS_FLAGS)

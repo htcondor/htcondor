@@ -26,7 +26,6 @@
 #include "forkwork.h"
 
 // Instantiate the list of Cron Jobs
-template class SimpleList<ForkWorker *>;
 
 // Fork worker class constructor
 ForkWorker::ForkWorker( void )

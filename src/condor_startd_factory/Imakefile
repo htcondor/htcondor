@@ -9,7 +9,7 @@ PUBLIC_INSTALL_DIR = src/startd_factory/BlueGeneP
 soapobjs(startd_factory)
 
 OBJ = startd_factory_main.o startd_factory.o partition.o partition_mgr.o \
-	startd_factory_instantiate.o workload.o workload_mgr.o \
+	workload.o workload_mgr.o \
 	$(SOAP_OBJS)
 
 public_c_plus_target($(NAME),sbin,$(OBJ),$(LIB))

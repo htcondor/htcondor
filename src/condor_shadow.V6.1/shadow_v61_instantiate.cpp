@@ -25,8 +25,6 @@
 #include "HashTable.h"
 
 // for the MPIShadow, a list of remote resource classes....
-template class ExtArray<MpiResource *>;
 
 // for the file transfer object.
-template class HashBucket<MyString, FileTransfer *>;
 

@@ -46,7 +46,6 @@
 #define MAX_CRED_DATA_SIZE 100000
 #define DEF_CRED_CHECK_INTERVAL		60	/* seconds */
 
-template class SimpleList<CredentialWrapper*>;
 
 SimpleList <CredentialWrapper*> credentials;
 

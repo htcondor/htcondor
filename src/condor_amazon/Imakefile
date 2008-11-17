@@ -11,9 +11,8 @@ LIB = $(STD_LIBS) $(CONFIGURE_GSOAP_LDFLAGS) $(OPENSSL_LIB) -lpthread
 
 SOAP_CLIENT_OBJ = gsoap_commands.o dom.o wsseapi.o smdevp.o soapC.o soapClient.o
 
-AMAZON_GAHP_OBJ = PipeBuffer_no_dc.o io_loop_pthread.o amazongahp_common.o request.o amazonCommands.o amazongahp_instantiate.o amazon_io_checkfn.o ../condor_util_lib/my_getopt.o $(SOAP_CLIENT_OBJ) 
+AMAZON_GAHP_OBJ = PipeBuffer_no_dc.o io_loop_pthread.o amazongahp_common.o request.o amazonCommands.o  amazon_io_checkfn.o ../condor_util_lib/my_getopt.o $(SOAP_CLIENT_OBJ) 
 
-template_inst( amazongahp_instantiate.cpp, amazongahp_instantiate.o )
 
 public_c_plus_target($(AMAZON_GAHP),sbin,$(AMAZON_GAHP_OBJ),$(LIB))
 

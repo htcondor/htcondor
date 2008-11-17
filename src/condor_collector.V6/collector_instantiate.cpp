@@ -27,16 +27,6 @@
 #include "CollectorPlugin.h"
 #endif
 
-template class HashTable<MyString,ClassAd*>;
-template class HashTable<MyString, GeneralRecord*>;
-template class HashBucket<MyString, GeneralRecord*>;
-template class ExtArray<fpos_t*>;
-template class ExtArray<ExtArray<fpos_t*>*>;
-template class ExtArray<ExtArray<int>*>;
-template class List<ClassAd>;
-template class Item<ClassAd>; 
 
 #if HAVE_DLOPEN
-template class PluginManager<CollectorPlugin>;
-template class SimpleList<CollectorPlugin *>;
 #endif

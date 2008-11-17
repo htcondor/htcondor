@@ -28,11 +28,3 @@
 
 extern bool operator==(const struct in_addr a, const struct in_addr b);
 
-template class HashTable<pid_t, DaemonCore::PidEntry*>;
-template class ExtArray<DaemonCore::SockEnt>;
-template class ExtArray<DaemonCore::PipeEnt>;
-template class Queue<DaemonCore::WaitpidEntry>;
-template class Queue<ServiceData*>;
-template class List<DaemonCore::TimeSkipWatcher>;
-template class Item<DaemonCore::TimeSkipWatcher>;
-template class SimpleList<HookClient*>;

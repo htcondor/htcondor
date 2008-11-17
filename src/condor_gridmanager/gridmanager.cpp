@@ -93,12 +93,6 @@ HashTable <PROC_ID, JobStatusRequest> pendingJobStatus( HASH_TABLE_SIZE,
 HashTable <PROC_ID, JobStatusRequest> completedJobStatus( HASH_TABLE_SIZE,
 														  hashFuncPROC_ID );
 
-template class HashTable<PROC_ID, VacateRequest>;
-template class HashBucket<PROC_ID, VacateRequest>;
-template class HashTable<PROC_ID, JobStatusRequest>;
-template class HashBucket<PROC_ID, JobStatusRequest>;
-template class List<JobType>;
-template class Item<JobType>;
 
 SimpleList<int> scheddUpdateNotifications;
 

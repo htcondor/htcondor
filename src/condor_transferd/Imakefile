@@ -14,10 +14,9 @@ OBJ =	td_main.o \
 		td_write_files.o \
 		td_read_files.o \
 		td_active.o \
-		td_instantiate.o \
+		 \
 		$(SOAP_OBJS)
 
-template_inst(td_instantiate.cpp,td_instantiate.o)
 
 public_c_plus_target($(NAME),sbin,$(OBJ),$(LIB))
 

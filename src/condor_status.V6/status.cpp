@@ -61,7 +61,6 @@ char 		*target = NULL;
 ClassAd		*targetAd = NULL;
 
 // instantiate templates
-template class ExtArray<ExprTree*>;
 
 // function declarations
 void usage 		();

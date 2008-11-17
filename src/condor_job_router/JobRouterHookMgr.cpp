@@ -27,7 +27,6 @@
 
 extern JobRouter* job_router;
 
-template class SimpleList<HOOK_RUN_INFO*>;
 SimpleList<HOOK_RUN_INFO*> JobRouterHookMgr::m_job_hook_list;
 
 

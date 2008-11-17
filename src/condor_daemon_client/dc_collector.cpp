@@ -31,7 +31,6 @@
 #include "daemon_core_sock_adapter.h"
 
 // Instantiate things
-template class ExtArray<DCCollectorAdSeq *>;
 
 DCCollector::DCCollector( const char* dcName, UpdateType uType ) 
 	: Daemon( DT_COLLECTOR, dcName, NULL )

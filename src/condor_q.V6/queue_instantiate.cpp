@@ -30,6 +30,3 @@ typedef struct {
 	char * string;
 } clusterProcString;
 
-template class ExtArray <clusterProcString *>;
-template class HashTable<MyString, ClassAd*>;
-template class HashBucket<MyString, ClassAd*>;

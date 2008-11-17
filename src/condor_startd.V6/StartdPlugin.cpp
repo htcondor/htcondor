@@ -79,5 +79,3 @@ StartdPlugin::StartdPlugin()
 StartdPlugin::~StartdPlugin() { }
 
 
-template class PluginManager<StartdPlugin>;
-template class SimpleList<StartdPlugin *>;

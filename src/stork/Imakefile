@@ -57,7 +57,7 @@ SC2005_DEFS		= -DSC2005_DEMO
 
 STORK_DEFS			= $(LARGEFILE_DEFS) $(SC2005_DEFS)
 STORK_INCLUDES		= -I$(NEW_CLASSADS_INC) $(CLASSAD_CONV_INC)
-STORK_FLAGS			= $(STORK_DEFS) $(STORK_INCLUDES) -fimplicit-templates
+STORK_FLAGS			= $(STORK_DEFS) $(STORK_INCLUDES)
 C_PLUS_FLAGS		= $(STD_C_PLUS_FLAGS) $(STORK_FLAGS)
 CFLAGS				= $(STD_C_FLAGS) $(STORK_FLAGS)
 INST_C_PLUS_FLAGS	= $(STD_C_FLAGS) $(GPP_VERS_FLAGS) $(STORK_FLAGS)
@@ -324,13 +324,11 @@ gen_soapfiles(stork,condorStork)
 TEST_LIB = $(STD_LIBS) $(NEW_CLASSADS_LINK) $(CLASSAD_CONVERSION_LIBDEFS)
 tests: stork-lm-test stork-lm-test2
 c_plus_target( stork-lm-test,stork-lm-test.o stork-lm-nodc.o,$(TEST_LIB) )
-template_inst( stork-lm-test.cpp, stork-lm-test.o )
 stork-lm-nodc.o: stork-lm.cpp
 	$(CPlusPlus) $(INST_C_PLUS_FLAGS) -DTEST_VERSION -c stork-lm.cpp -o stork-lm-nodc.o
 
 c_plus_target( stork-lm-test2, stork-lm-test2.o,
 	 stork-lm.o $(DAEMONCORE_LIB) $(TEST_LIB) )
-template_inst( stork-lm-test2.cpp, stork-lm-test2.o )
 #endif /* Nick */
 
 XCOMM Uncomment to build contrib modules as part of default build

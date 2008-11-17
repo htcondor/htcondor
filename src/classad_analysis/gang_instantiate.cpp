@@ -23,21 +23,3 @@
 #include "gmr.h"
 #include "gangster.h"
 
-template class classad_hash_map<std::string, AttrNode*, classad::StringCaseIgnHash, classad::CaseIgnEqStr>;
-template class classad_hash_map<std::string, AttrNode*, classad::StringCaseIgnHash, classad::CaseIgnEqStr>::const_iterator;
-template class classad_hash_map<std::string, ExtAttrNode*, classad::StringCaseIgnHash, classad::CaseIgnEqStr>;
-template class classad_hash_map<std::string, ExtAttrNode*, classad::StringCaseIgnHash, classad::CaseIgnEqStr>::const_iterator;
-template class classad_hash_map<std::string, PortNode*, classad::StringCaseIgnHash, classad::CaseIgnEqStr>;
-template class std::vector<ExtAttrNode*>;
-template class std::set<ExtAttrNode*>;
-template class std::vector<classad::ClassAd*>;
-template class std::vector<PortNode*>;
-template class std::vector<GMR::Port>;
-template class std::map<int,GMR*>;
-template class std::vector<Gangster::Dock>;
-template class std::vector<MatchEdge*>;
-template class std::vector<MatchPath*>;
-template class std::vector<std::vector<ExtAttrNode*>*>;
-template class std::set<std::string,classad::CaseIgnLTStr>;
-template class std::multimap<int,classad::ClassAd*>;
-template class std::map<const classad::ClassAd*,std::set<std::string,classad::CaseIgnLTStr> >;

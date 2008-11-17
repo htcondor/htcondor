@@ -82,14 +82,6 @@ struct HostStatistics {
 };
 
 // explicit template instantiation
-template class HashTable<HashKey, ExecuteEvent *>;
-template class HashBucket<HashKey, ExecuteEvent *>;
-template class HashTable<HashKey, CheckpointedEvent *>;
-template class HashBucket<HashKey, CheckpointedEvent *>;
-template class HashTable<HashKey, JobStatistics *>;
-template class HashBucket<HashKey, JobStatistics *>;
-template class HashTable<HashKey, HostStatistics *>;
-template class HashBucket<HashKey, HostStatistics *>;
 
 HashTable<HashKey, JobStatistics *> Stats(1024, hashFunction);
 HashTable<HashKey, HostStatistics *> HStats(1024, hashFunction);
