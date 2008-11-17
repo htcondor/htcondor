@@ -22,4 +22,3 @@
 #include "procapi.h"
 #include "HashTable.h"
 
-template class HashTable<pid_t, procHashNode *>;

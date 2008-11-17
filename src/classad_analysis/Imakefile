@@ -5,11 +5,11 @@ CFLAGS = -Wall $(STD_C_FLAGS) -I$(NEW_CLASSADS_INC)
 INST_C_PLUS_FLAGS = $(STD_C_FLAGS) $(GPP_VERS_FLAGS) -I$(NEW_CLASSADS_INC)
 
 ANA_OBJ = analysis.o boolExpr.o condition.o multiProfile.o profile.o \
-	resourceGroup.o analysis_instantiate.o boolValue.o explain.o interval.o \
+	resourceGroup.o  boolValue.o explain.o interval.o \
 
-CONV_OBJ = conversion.o analysis_instantiate.o
+CONV_OBJ = conversion.o 
 
-GM_OBJ = portGraph.o gmr.o gangster.o gang_instantiate.o
+GM_OBJ = portGraph.o gmr.o gangster.o 
 
 LIB = $(STD_LIBS) -L$(NEW_CLASSADS_LIB) -lclassad_ns
 
@@ -20,8 +20,6 @@ all_target(libanalysis.a libconversion.a)
 library_target(libanalysis.a, $(ANA_OBJ))
 library_target(libconversion.a, $(CONV_OBJ))
 library_target(libgangmatch.a, $(GM_OBJ))
-template_inst(analysis_instantiate.cpp,analysis_instantiate.o)
-template_inst(gang_instantiate.cpp,gang_instantiate.o)
 
 release:: all
 static:: all

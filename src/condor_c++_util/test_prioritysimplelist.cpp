@@ -22,9 +22,6 @@
 #include <stdio.h>
 #include "prioritysimplelist.h"
 
-template class SimpleList<int>;
-template class PrioritySimpleList<int>;
-template class BinarySearch<int>;
 
 void
 PrintList( SimpleList<int> &sl )

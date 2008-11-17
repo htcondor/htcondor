@@ -31,27 +31,5 @@
 #include "boolValue.h"
 #include "explain.h"
 
-template class List< classad::ClassAd >;
-template class List< MultiProfile >;
-template class List< Condition >;
-template class List< Profile >;
-template class List< HyperRect >;
-template class List< BoolVector >;
-template class Stack< Condition >;
-template class Stack< Profile >;
-template class List< AnnotatedBoolVector >;
-template class List< AttributeExplain >;
-template class List< std::string >;
-template class List< Interval >;
-template class ExtArray< BoolValue >;
-template class ExtArray< ValueRange * >;
-template class ExtArray< HyperRect * >;
-template class ExtArray< std::string >;
-template class List< ExtArray< BoolValue > >;
-template class List< ExtArray< ValueRange * > >;
-template class List< MultiIndexedInterval >;
-template class List< ExtArray< HyperRect * > >;
-template class List< IndexSet >;
 //The following is also defined in c++ utils instantiate
 //template class SimpleList< int >;
-template class std::set< std::string, classad::CaseIgnLTStr >;

@@ -31,10 +31,6 @@
 
 // gcc compilation pecularities demand explicit declaration of template classes
 // and functions instantiation
-template class Item<Version>;
-template class List<Version>;
-template class Item<AbstractReplicatorStateMachine::ProcessMetadata>;
-template class List<AbstractReplicatorStateMachine::ProcessMetadata>;
 template void utilClearList<AbstractReplicatorStateMachine::ProcessMetadata>
 				( List<AbstractReplicatorStateMachine::ProcessMetadata>& );
 template void utilClearList<Version>( List<Version>& );

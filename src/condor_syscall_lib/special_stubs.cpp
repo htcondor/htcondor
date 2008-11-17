@@ -236,7 +236,6 @@ GCB_local_bind(int fd, struct sockaddr *my_addr, socklen_t addrlen)
 #endif /* HAVE_EXT_GCB */
 
 /* For MyString */
-template class SimpleList<int>; 
 int vprintf_length(const char *format, va_list args) { return 0; }
 
 

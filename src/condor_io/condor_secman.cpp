@@ -44,8 +44,6 @@
 
 extern bool global_dc_get_cookie(int &len, unsigned char* &data);
 
-template class HashTable<MyString, classy_counted_ptr<SecManStartCommand> >;
-template class SimpleList<classy_counted_ptr<SecManStartCommand> >;
 
 void SecMan::key_printf(int debug_levels, KeyInfo *k) {
 	if (param_boolean("SEC_DEBUG_PRINT_KEYS", false)) {

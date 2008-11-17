@@ -31,7 +31,6 @@
  * External global variables
  ***************************************************************/
 
-template class ExtArray<NetworkAdapterBase *>;
 
 /***************************************************************
  * HibernationManager class

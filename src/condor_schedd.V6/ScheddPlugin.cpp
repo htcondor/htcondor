@@ -68,5 +68,3 @@ ScheddPlugin::ScheddPlugin()
 ScheddPlugin::~ScheddPlugin() { }
 
 
-template class PluginManager<ScheddPlugin>;
-template class SimpleList<ScheddPlugin *>;

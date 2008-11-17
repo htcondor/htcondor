@@ -36,8 +36,6 @@ extern DLL_IMPORT_MAGIC char **environ;
 
 #ifndef WIN32
 
-template class HashTable<HashKey, char *>;
-template class HashBucket<HashKey, char *>;
 
 HashTable <HashKey, char *> EnvVars( HASH_TABLE_SIZE, hashFunction );
 

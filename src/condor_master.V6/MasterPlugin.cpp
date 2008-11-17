@@ -68,5 +68,3 @@ MasterPlugin::MasterPlugin()
 MasterPlugin::~MasterPlugin() { }
 
 
-template class PluginManager<MasterPlugin>;
-template class SimpleList<MasterPlugin *>;

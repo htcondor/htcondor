@@ -23,7 +23,6 @@
 #include "stringSpace.h"
 #include "condor_debug.h"
 
-template class HashTable<YourSensitiveString,int>;
 
 
 StringSpace::

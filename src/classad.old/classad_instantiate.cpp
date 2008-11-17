@@ -24,14 +24,3 @@
 #include "YourString.h"
 #include "HashTable.h"
 
-template class List<Formatter>;
-template class Item<Formatter>;
-template class ListCache<ClassAd>;
-template class ListCacheEntry<ClassAd>;
-template class List<ListCacheEntry<ClassAd> >;
-template class Item<ListCacheEntry<ClassAd> >;
-template class ListIterator<ListCacheEntry<ClassAd> >;
-template class List<ExprTree>;
-template class Item<ExprTree>;
-template class ListIterator<ExprTree>;
-template class HashTable<YourString, AttrListElem *>;

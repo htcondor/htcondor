@@ -1874,7 +1874,6 @@ public:
 };
 
 #include "extArray.h"
-template class ExtArray<RuntimeConfigItem>;
 
 static ExtArray<RuntimeConfigItem> rArray;
 

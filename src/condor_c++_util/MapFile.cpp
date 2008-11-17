@@ -22,8 +22,6 @@
 #include "MapFile.h"
 
 
-template class ExtArray<MapFile::UserMapEntry>;
-template class ExtArray<MapFile::CanonicalMapEntry>;
 
 MapFile::MapFile()
 {

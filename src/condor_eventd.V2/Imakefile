@@ -9,7 +9,7 @@ soapobjs(Eventd)
 
 OBJ = 	admin_event_main.o 			\
 		admin_event.o 				\
-		Eventd_instantiate.o		\
+				\
 		$(SOAP_OBJS)
 
 c_plus_target($(NAME),$(OBJ),$(LIB))

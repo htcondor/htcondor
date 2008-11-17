@@ -105,7 +105,6 @@ CLASSAD_OBJ = \
 	../classad.old/attrlist.o \
 	../classad.old/buildtable.o \
 	../classad.old/classad.o \
-	../classad.old/classad_instantiate.o \
 	../classad.old/classifiedjobs.o \
 	../classad.old/environment.o \
 	../classad.old/evaluateOperators.o \
@@ -165,7 +164,7 @@ CONLIBAPI_OBJ = \
 	my_distribution.o \
 	$(CLASSAD_OBJ) \
 	../condor_util_lib/get_random_num.o \
-	c++_util_instantiate.o \
+	\
 	libcondorapi_stubs.o \
 	$(SETEUID_OBJ) \
 	$(SETEGID_OBJ) \
@@ -183,7 +182,7 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o selector.o \
 	alarm.o user_job_policy.o classad_support.o \
 	directory.o stat_info.o stat_wrapper.o stat_wrapper_internal.o \
 	my_hostname.o file_lock.o sig_name.o \
-	email.o env.o c++_util_instantiate.o \
+	email.o env.o \
 	string_list.o net_string_list.o condor_event.o $(URL_OBJ) \
 	get_daemon_name.o \
 	user_log.o user_log_header.o \
@@ -253,7 +252,6 @@ c_plus_target(test_spawn,test_spawn.o,$(LIB))
 c_plus_target(test_tree,test_tree.o,$(LIB))
 c_plus_target(test_ClassAdReevaluator,ClassAdReevaluatorTest.o,$(LIB))
 
-template_inst(test_stringSpace,test_stringSpace.o)
 
 
 /* this needs to be built more like a user would use the library, so it */

@@ -213,7 +213,6 @@ static	ExprTree	*preemptPrioCondition;
 static	ExprTree	*preemptionReq;
 static  ExtArray<PrioEntry> prioTable;
 #ifndef WIN32
-template class ExtArray<PrioEntry>;
 #endif
 	
 const int SHORT_BUFFER_SIZE = 8192;

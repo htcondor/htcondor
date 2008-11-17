@@ -16,7 +16,7 @@ WORKER_THREAD_OBJ = PipeBuffer.o schedd_client.o schedd_client_main.o SchedDComm
 
 public_c_plus_target($(WORKER_THREAD),sbin,$(WORKER_THREAD_OBJ),$(LIB))
 
-c_plus_target(AvailStats.t,AvailStats.o AvailStats.t.o startd_instantiate.o,$(LIB))
+c_plus_target(AvailStats.t,AvailStats.o AvailStats.t.o ,$(LIB))
 
 
 IO_THREAD_OBJ = PipeBuffer.o io_loop.o cgahp_common.o $(SOAP_OBJS)

@@ -22,5 +22,4 @@
 #include "MyString.h"
 #include "counted_ptr.h"
 
-template class HashTable<MyString, counted_ptr<HashTable<MyString, MyString> > >;
 

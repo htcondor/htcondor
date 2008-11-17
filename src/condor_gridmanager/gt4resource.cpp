@@ -31,8 +31,6 @@
 #define DEFAULT_MAX_SUBMITTED_JOBS_PER_RESOURCE		100
 #define DEFAULT_MAX_WS_DESTROYS_PER_RESOURCE		5
 
-template class List<GT4ProxyDelegation>;
-template class Item<GT4ProxyDelegation>;
 
 int GT4Resource::gahpCallTimeout = 300;	// default value
 

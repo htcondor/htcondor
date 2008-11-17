@@ -292,17 +292,6 @@ XCOMM End translation of func(c_plus_target_complex)
 
 
 /*
-** Build a template instantiation object
-*/
-#ifndef template_inst
-#define template_inst(srcfile,objfile)               @@\
-XCOMM Begin translation of func(template_inst) @@\
-objfile: srcfile                                        @@\
-	 $(CPlusPlus) $(INST_C_PLUS_FLAGS) -c srcfile -o objfile @@\
-XCOMM End translation of func(template_inst)
-#endif /* template_inst_obj */
-
-/*
 ** Build a Java class from a .java file.
 **
 */

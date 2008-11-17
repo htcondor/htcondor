@@ -9,7 +9,7 @@ C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(TT_INC) $(CONFIGURE_POSTGRESQL_CFLAGS)
 LDFLAGS = $(STD_LDFLAGS) $(LIBCRYPT)
 LIB = $(DAEMONCORE_LIB) $(STD_LIBS) $(TT_LIB) $(CONFIGURE_GSOAP_LDFLAGS) $(CONFIGURE_POSTGRESQL_LDFLAGS) ../condor_quill/libquill.a
 
-OBJ = tt_main.o ttmanager.o jobqueuecollection.o jobqueuedbmanager.o condor_ttdb.o tt_instantiate.o $(SOAP_OBJS)
+OBJ = tt_main.o ttmanager.o jobqueuecollection.o jobqueuedbmanager.o condor_ttdb.o  $(SOAP_OBJS)
 
 public_c_plus_target($(NAME),sbin,$(OBJ),$(LIB))
 

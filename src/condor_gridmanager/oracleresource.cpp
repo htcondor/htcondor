@@ -29,15 +29,9 @@
 #define MIN_PROBE_JOBS_INTERVAL		2
 #define MAX_PROBE_JOBS_INTERVAL		10
 
-template class List<OciSession>;
-template class Item<OciSession>;
-template class HashTable<HashKey, OciSession *>;
-template class HashBucket<HashKey, OciSession *>;
 
 #define HASH_TABLE_SIZE			500
 
-template class HashTable<HashKey, OciServer *>;
-template class HashBucket<HashKey, OciServer *>;
 
 HashTable <HashKey, OciServer *> ServersByName( HASH_TABLE_SIZE,
 												hashFunction );

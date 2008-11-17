@@ -10,7 +10,7 @@ OBJ = FTEST_string_to_sin.o FTEST_sin_to_string.o FTEST_getHostFromAddr.o \
 	  FTEST_string_to_hostname.o FTEST_string_to_ip.o OTEST_HashTable.o
 
 UNIT_TEST_DEPENDENCY_OBJ = emit.o function_test_driver.o unit_tests.o \
-	unit_test_utils.o unit_test_instantiate.o
+	unit_test_utils.o 
 
 c_plus_target(condor_unit_tests,$(UNIT_TEST_DEPENDENCY_OBJ) $(OBJ),$(LIB))
 

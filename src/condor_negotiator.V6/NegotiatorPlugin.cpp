@@ -66,5 +66,3 @@ NegotiatorPlugin::NegotiatorPlugin()
 
 NegotiatorPlugin::~NegotiatorPlugin() { }
 
-template class PluginManager<NegotiatorPlugin>;
-template class SimpleList<NegotiatorPlugin *>;

@@ -30,8 +30,6 @@ using namespace std;
 BEGIN_NAMESPACE( classad )
 
 //-------------common collection templates-------------
-template class vector<string>;
-template class list< pair<string,ClassAd*> >;	// query result
 
 END_NAMESPACE
 

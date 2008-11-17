@@ -33,8 +33,6 @@
 #endif
 
 // explicitly instantiate the HashTable template
-template class HashTable<HashKey, ClassAd*>;
-template class HashBucket<HashKey,ClassAd*>;
 
 /***** Prevent calling free multiple times in this code *****/
 /* This fixes bugs where we would segfault when reading in

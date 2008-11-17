@@ -19,10 +19,6 @@
 
 
 #include "drone_tree.h"
-template class HashTable<int, DroneTree::DroneEntry*>;
 
 #include "proc_reference_tree.h"
 #include <map>
-template class set<pid_t>;
-template class HashTable<pid_t, Tree<ProcReferenceTree::Family*>*>;
-template class map<pid_t, Tree<ProcReferenceTree::Family*>*>;

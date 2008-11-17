@@ -89,8 +89,6 @@ extern NameTable PvmMsgNames;
 extern int shadow_tid;
 
 	// instantiate template
-template class List<UserProc>;
-template class Item<UserProc>;
 
 	// Prototypes of local interest only
 int update_one( UserProc *proc );

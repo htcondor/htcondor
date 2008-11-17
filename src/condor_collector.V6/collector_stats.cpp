@@ -54,8 +54,6 @@ bool operator== (const StatsHashKey &lhs, const StatsHashKey &rhs)
 }
 
 // Instantiate things
-template class ExtArray<CollectorClassStats *>;
-template class HashTable <StatsHashKey, CollectorBaseStats *>;
 
 
 // ************************************

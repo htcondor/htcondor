@@ -22,5 +22,3 @@
 #include "HashTable.h"
 #include "tree.h"
 #include "proc_family_member.h"
-template class HashTable<pid_t, Tree<ProcFamily*>*>;
-template class HashTable<pid_t, ProcFamilyMember*>;

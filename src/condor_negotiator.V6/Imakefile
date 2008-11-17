@@ -14,7 +14,7 @@ PLUGIN_OBJ = NegotiatorPlugin.o
 	$(CPlusPlus) $(C_PLUS_FLAGS) -shared $< -o $@
 #endif
 
-OBJ = Accountant.o matchmaker.o main.o matchmaker_instantiate.o $(SOAP_OBJS) $(PLUGIN_OBJ)
+OBJ = Accountant.o matchmaker.o main.o  $(SOAP_OBJS) $(PLUGIN_OBJ)
 
 public_c_plus_target($(NAME),sbin,$(OBJ),$(LIB))
 

@@ -28,10 +28,8 @@
 #include "string_list.h"
 
 #ifndef WIN32
-template class  HashTable<MyString,ClassTotal*>;
 #endif
 
-template class  HashBucket<MyString,ClassTotal*>;
 
 TrackTotals::
 TrackTotals (ppOption m) : allTotals(16, MyStringHash)

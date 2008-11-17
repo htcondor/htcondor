@@ -26,7 +26,6 @@
 #include "dc_collector.h"
 #include "internet.h"
 
-template class SimpleList<DCCollector *>;
 
 DaemonList::DaemonList()
 {

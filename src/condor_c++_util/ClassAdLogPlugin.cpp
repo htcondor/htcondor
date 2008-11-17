@@ -104,5 +104,3 @@ ClassAdLogPlugin::ClassAdLogPlugin()
 ClassAdLogPlugin::~ClassAdLogPlugin() { }
 
 
-template class PluginManager<ClassAdLogPlugin>;
-template class SimpleList<ClassAdLogPlugin *>;

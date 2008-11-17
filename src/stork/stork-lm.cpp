@@ -31,13 +31,9 @@
 // Stork interface object to new "lease manager maker" for SC2005 demo.
 
 // Instantiate some templates
-template class list<DCLeaseManagerLease*>;
-template class list<const DCLeaseManagerLease*>;
-template class HashTable<MyString, StorkMatchStatsEntry *>;
 #if defined( USING_ORDERED_SET )
   template class OrderedSet<StorkLeaseEntry*>;
 #endif
-template class Set<StorkLeaseEntry*>;
 
 
 StorkMatchStatsEntry::StorkMatchStatsEntry(void)

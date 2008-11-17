@@ -55,14 +55,12 @@ bool useXMLClassads = false;
 char *proxySubjectName = NULL;
 
 // Queue for pending commands to schedd
-template class SimpleList<SchedDRequest*>;
 SimpleList <SchedDRequest*> command_queue;
 
 // Buffer for reading requests from the IO thread
 PipeBuffer request_buffer;
 
 
-template class SimpleList <MyString*>;
 
 // Queue for command results to be written to our output pipe.
 SimpleList<MyString *> results_queue;

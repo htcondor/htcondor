@@ -42,15 +42,12 @@
 
 // Globals
 
-template class HashBucket<HashKey, int>;
-template class HashTable<HashKey, int>;
 
 double priority = 0.00001;
 const char *pool = NULL;
 struct 	PrioEntry { MyString name; float prio; };
 static  ExtArray<PrioEntry> prioTable;
 #ifndef WIN32
-template class ExtArray<PrioEntry>;
 #endif
 ExprTree *rankCondStd;// no preemption or machine rank-preemption 
 							  // i.e., (Rank > CurrentRank)

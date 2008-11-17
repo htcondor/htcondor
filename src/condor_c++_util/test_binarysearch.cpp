@@ -22,8 +22,6 @@
 #include <stdio.h>
 #include "binary_search.h"
 
-template class BinarySearch<int>;
-template class BinarySearch<float>;
 
 int		debug = 0;
 const int maxPrint = 10;

@@ -98,7 +98,7 @@ public_c_plus_target(condor_stats,bin,stats.o,$(LIB))
 
 c_plus_target(test_calc,test_calc.o,$(LIB))
 
-c_plus_target(condor_test_auth,test_auth.o,../condor_daemon_core.V6/condor_ipverify.o ../condor_daemon_core.V6/daemon_core_instantiate.o $(LIB))
+c_plus_target(condor_test_auth,test_auth.o,../condor_daemon_core.V6/condor_ipverify.o $(LIB))
 
 testbin_target(condor_test_auth,755)
 

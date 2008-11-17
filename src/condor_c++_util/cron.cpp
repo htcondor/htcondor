@@ -27,7 +27,6 @@
 #include "condor_cron.h"
 
 // Instantiate the list of Cron Jobs
-template class SimpleList<CronJobBase*>;
 
 // Basic constructor
 CondorCron::CondorCron( )
