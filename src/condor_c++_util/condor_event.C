@@ -79,6 +79,8 @@ const char * ULogEventNumberNames[] = {
 	"ULOG_JOB_AD_INFORMATION",		// Job Ad information update
 	"ULOG_JOB_STATUS_UNKNOWN",		// Job status unknown
 	"ULOG_JOB_STATUS_KNOWN",		// Job status known
+	"ULOG_JOB_STAGE_IN",			// Job staging in input files
+	"ULOG_JOB_STAGE_OUT",			// Job staging out output files
 };
 
 const char * ULogEventOutcomeNames[] = {
@@ -5209,7 +5211,6 @@ initFromClassAd(ClassAd* ad)
 	ULogEvent::initFromClassAd(ad);
 }
 
-
 // ----- the JobStatusKnownEvent class
 JobStatusKnownEvent::
 JobStatusKnownEvent()
@@ -5252,6 +5253,103 @@ toClassAd()
 }
 
 void JobStatusKnownEvent::
+initFromClassAd(ClassAd* ad)
+{
+	ULogEvent::initFromClassAd(ad);
+}
+
+
+
+// ----- the JobStageInEvent class
+JobStageInEvent::
+JobStageInEvent()
+{	
+	eventNumber = ULOG_JOB_STAGE_IN;
+}
+
+JobStageInEvent::
+~JobStageInEvent()
+{
+}
+
+int JobStageInEvent::
+writeEvent (FILE *file)
+{
+	int retval = fprintf (file, "Job is performing stage-in of input files\n");
+	if (retval < 0)
+	{
+		return 0;
+	}
+	
+	return (1);
+}
+
+int JobStageInEvent::
+readEvent (FILE *file)
+{
+	int retval = fscanf (file, "Job is performing stage-in of input files\n");
+    if (retval != 0)
+    {
+		return 0;
+    }
+	return 1;
+}
+
+ClassAd* JobStageInEvent::
+toClassAd()
+{
+	return ULogEvent::toClassAd();
+}
+
+void JobStageInEvent::
+initFromClassAd(ClassAd* ad)
+{
+	ULogEvent::initFromClassAd(ad);
+}
+
+
+// ----- the JobStageOutEvent class
+JobStageOutEvent::
+JobStageOutEvent()
+{	
+	eventNumber = ULOG_JOB_STAGE_OUT;
+}
+
+JobStageOutEvent::
+~JobStageOutEvent()
+{
+}
+
+int JobStageOutEvent::
+writeEvent (FILE *file)
+{
+	int retval = fprintf (file, "Job is performing stage-out of output files\n");
+	if (retval < 0)
+	{
+		return 0;
+	}
+	
+	return (1);
+}
+
+int JobStageOutEvent::
+readEvent (FILE *file)
+{
+	int retval = fscanf (file, "Job is performing stage-out of output files\n");
+    if (retval != 0)
+    {
+		return 0;
+    }
+	return 1;
+}
+
+ClassAd* JobStageOutEvent::
+toClassAd()
+{
+	return ULogEvent::toClassAd();
+}
+
+void JobStageOutEvent::
 initFromClassAd(ClassAd* ad)
 {
 	ULogEvent::initFromClassAd(ad);

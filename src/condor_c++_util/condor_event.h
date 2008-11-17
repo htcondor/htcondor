@@ -79,7 +79,9 @@ enum ULogEventNumber {
 	/** Job Submitted remotely    */  ULOG_GRID_SUBMIT 	    	    = 27,
 	/** Report job ad information */  ULOG_JOB_AD_INFORMATION		= 28,
 	/** Job Status Unknown        */  ULOG_JOB_STATUS_UNKNOWN       = 29,
-	/** Job Status Known          */  ULOG_JOB_STATUS_KNOWN         = 30
+	/** Job Status Known          */  ULOG_JOB_STATUS_KNOWN         = 30,
+	/** Job performing stage-in   */  ULOG_JOB_STAGE_IN				= 31,
+	/** Job performing stage-out  */  ULOG_JOB_STAGE_OUT			= 32
 };
 
 /// For printing the enum value.  cout << ULogEventNumberNames[eventNumber];
@@ -1737,6 +1739,76 @@ class JobStatusKnownEvent : public ULogEvent
     virtual int writeEvent (FILE *);
 
 	/** Return a ClassAd representation of this JobStatusKnownEvent.
+		@return NULL for failure, the ClassAd pointer otherwise
+	*/
+	virtual ClassAd* toClassAd();
+
+	/** Initialize from this ClassAd.
+		@param a pointer to the ClassAd to initialize from
+	*/
+	virtual void initFromClassAd(ClassAd* ad);
+};
+
+//----------------------------------------------------------------------------
+/** Framework for a JobStageInEvent object.  
+ 	Not yet used.
+*/
+class JobStageInEvent : public ULogEvent
+{
+  public:
+    ///
+    JobStageInEvent();
+    ///
+    ~JobStageInEvent();
+
+    /** Read the body of the next JobStageInEvent event.
+        @param file the non-NULL readable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int readEvent (FILE *);
+
+    /** Write the body of the next JobStageInEvent event.
+        @param file the non-NULL writable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int writeEvent (FILE *);
+
+	/** Return a ClassAd representation of this JobStageInEvent.
+		@return NULL for failure, the ClassAd pointer otherwise
+	*/
+	virtual ClassAd* toClassAd();
+
+	/** Initialize from this ClassAd.
+		@param a pointer to the ClassAd to initialize from
+	*/
+	virtual void initFromClassAd(ClassAd* ad);
+};
+
+//----------------------------------------------------------------------------
+/** Framework for a JobStageOutEvent object.  
+	Not yet used.
+*/
+class JobStageOutEvent : public ULogEvent
+{
+  public:
+    ///
+    JobStageOutEvent();
+    ///
+    ~JobStageOutEvent();
+
+    /** Read the body of the next JobStageOutEvent event.
+        @param file the non-NULL readable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int readEvent (FILE *);
+
+    /** Write the body of the next JobStageOutEvent event.
+        @param file the non-NULL writable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int writeEvent (FILE *);
+
+	/** Return a ClassAd representation of this JobStageOutEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
 	*/
 	virtual ClassAd* toClassAd();
