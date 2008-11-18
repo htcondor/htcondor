@@ -28,7 +28,7 @@ classad_reevaluate(ClassAd *ad, const ClassAd *context)
 {
 	StringList *reevaluate_attrs;
 	MyString stmp;
-	char *ptmp, *atmp, *ntmp;
+	char *ptmp, *atmp, *ntmp = NULL;
 	ExprTree *etmp;
 	int itmp;
 	float ftmp;
