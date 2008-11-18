@@ -73,7 +73,7 @@ classad_reevaluate(ClassAd *ad, const ClassAd *context)
 			if (!ad->EvalString(stmp.GetCStr(), context, &ntmp)) {
 				dprintf(D_ALWAYS,
 						"classad_reevaluate: Failed to evaluate %s as a String\n",
-						ptmp);
+						stmp.GetCStr());
 
 				goto FAIL;
 			}
@@ -97,7 +97,7 @@ classad_reevaluate(ClassAd *ad, const ClassAd *context)
 			if (!ad->EvalInteger(stmp.GetCStr(), context, itmp)) {
 				dprintf(D_ALWAYS,
 						"classad_reevaluate: Failed to evaluate %s as an Integer\n",
-						ptmp);
+						stmp.GetCStr());
 
 				goto FAIL;
 			}
@@ -119,7 +119,7 @@ classad_reevaluate(ClassAd *ad, const ClassAd *context)
 			if (!ad->EvalFloat(stmp.GetCStr(), context, ftmp)) {
 				dprintf(D_ALWAYS,
 						"classad_reevaluate: Failed to evaluate %s as a Float\n",
-						ptmp);
+						stmp.GetCStr());
 
 				goto FAIL;
 			}
@@ -141,7 +141,7 @@ classad_reevaluate(ClassAd *ad, const ClassAd *context)
 			if (!ad->EvalBool(stmp.GetCStr(), context, itmp)) {
 				dprintf(D_ALWAYS,
 						"classad_reevaluate: Failed to evaluate %s as a Bool\n",
-						ptmp);
+						stmp.GetCStr());
 
 				goto FAIL;
 			}
