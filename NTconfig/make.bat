@@ -41,6 +41,9 @@ REM Copy any .dll files created by the externals in debug and release
 call copy_external_dlls.bat
 if %ERRORLEVEL% NEQ 0 goto failure
 
+REM Copy config.h
+call make_config.bat
+
 if defined INCLUDE goto :check_sdk
 call VCVARS32.BAT
 if defined INCLUDE goto :check_sdk
