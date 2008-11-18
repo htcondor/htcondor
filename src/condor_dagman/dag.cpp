@@ -123,7 +123,13 @@ Dag::Dag( /* const */ StringList &dagFiles,
 		PrintDagFiles( dagFiles );
 
 		FindLogFiles( dagFiles, _useDagDir );
-		ASSERT( TotalLogFileCount() > 0 ) ;
+		if ( TotalLogFileCount() < 1 ) {
+			const char *tail = (_dagFiles.number() > 1) ? "these DAGs" :
+						"this DAG";
+			debug_error( 1, DEBUG_QUIET,
+						"ERROR: no log files found for the node "
+						"jobs of %s\n", tail );
+		}
 	}
 
  	_readyQ = new PrioritySimpleList<Job*>;

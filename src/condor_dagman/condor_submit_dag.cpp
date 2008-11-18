@@ -523,6 +523,12 @@ checkLogFiles( SubmitDagOptions &opts )
 						"this shouldn't be a fatal error\n" );
 			return 1;
 		}
+	} else if ( (condorLogFiles.number() + storkLogFiles.number()) < 1 ) {
+		const char *tail = (opts.dagFiles.number() > 1) ? "these DAGs" :
+					"this DAG";
+		fprintf( stderr, "ERROR: no log files found for the node "
+					"jobs of %s\n", tail );
+		return 1;
 	}
 
 	if (LogFileNfsError(condorLogFiles, storkLogFiles)) {
