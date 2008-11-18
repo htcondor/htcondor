@@ -143,9 +143,9 @@ public:
 	bool SetState( const ReadUserLog::FileState &state );
 
 	// Debugging: Get file state into a formated string
-	void GetState( MyString &str, const char *label = NULL ) const;
-	void GetState( const ReadUserLog::FileState &state,
-				   MyString &str, const char *label = NULL ) const;
+	void GetStateString( MyString &str, const char *label = NULL ) const;
+	void GetStateString( const ReadUserLog::FileState &state,
+						 MyString &str, const char *label = NULL ) const;
 
 	// ********************************************************************
 	// This is the file state buffer that we generate for the init/get/set

@@ -532,14 +532,14 @@ ReadUserLogState::SetState( const ReadUserLog::FileState &state )
 	m_initialized = true;
 
 	MyString	str;
-	GetState( str, "Restored reader state" );
+	GetStateString( str, "Restored reader state" );
 	dprintf( D_FULLDEBUG, str.GetCStr() );
 
 	return true;
 }
 
 void
-ReadUserLogState::GetState( MyString &str, const char *label ) const
+ReadUserLogState::GetStateString( MyString &str, const char *label ) const
 {
 	str = "";
 	if ( NULL != label ) {
@@ -574,7 +574,7 @@ ReadUserLogState::GetFileState( ReadUserLog::FileState &state )
 }
 
 void
-ReadUserLogState::GetState(
+ReadUserLogState::GetStateString(
 	const ReadUserLog::FileState	&state,
 	MyString						&str,
 	const char						*label
@@ -598,11 +598,13 @@ ReadUserLogState::GetState(
 	str.sprintf_cat (
 		"  signature = '%s'; version = %d; update = %ld\n"
 		"  base path = '%s'\n"
+		"  cur path = '%s'\n"
 		"  UniqId = %s, seq = %d\n"
 		"  rotation = %d; max = %d; offset = "FILESIZE_T_FORMAT"; type = %d\n"
 		"  inode = %u; ctime = %ld; size = "FILESIZE_T_FORMAT"\n",
 		istate->m_signature, istate->m_version, istate->m_update_time,
 		istate->m_base_path,
+		CurPath(state),
 		istate->m_uniq_id, istate->m_sequence,
 		istate->m_rotation, istate->m_max_rotations,
 		istate->m_offset.asint, istate->m_log_type,

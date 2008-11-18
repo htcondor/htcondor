@@ -26,8 +26,6 @@
 /* Since this is a Condor API header file, we want to minimize our
    reliance on other Condor files to ease distribution.  -Jim B. */
 #include "condor_event.h"
-#include "MyString.h"
-#include "user_log_config.h"
 #include "condor_sys_formats.h"
 
 #if HAVE_SYS_TYPES_H
@@ -35,7 +33,6 @@
 #endif
 
 /* Predeclare some classes */
-class MyString;
 class FileLockBase;
 class FileLock;
 class UserLog;
@@ -315,88 +312,6 @@ class ReadUserLog
 		@return true on success
 	 */
 	bool SetFileState( const ReadUserLog::FileState &state );
-
-	/** For debugging; this is used to dump the current file state
-		@param string to write the state info into
-		@param label to put at the header of the string
-	 */
-	void FormatFileState( MyString &str, const char *label = NULL ) const;
-	void FormatFileState( const ReadUserLog::FileState &state,
-						  MyString &str, const char *label = NULL ) const;
-
-	/** Get specific pieces of data about the current file state:
-		Get base file path from current state.
-		@return string with the base path
-	 */
-	const char *FileStateGetBasePath( void ) const;
-
-	/** Get specific pieces of data about the current file state:
-		Get base file path from passed in state.
-		@return string with the base path
-	 */
-	const char *FileStateGetBasePath( const ReadUserLog::FileState & ) const;
-	
-	/** Get specific pieces of data about the current file state:
-		Get current file path from current state.
-		@return string with the current path
-	 */
-	const char *FileStateGetCurrentPath( void ) const;
-
-	/** Get specific pieces of data about the current file state:
-		Get current file path from passed in state.
-		@return string with the current path
-	 */
-	const char *FileStateGetCurrentPath( const ReadUserLog::FileState & )const;
-	
-	/** Get specific pieces of data about the current file state:
-		Get current file rotation # from current state.
-		@return the current file rotation number
-	 */
-	int FileStateGetRotation( void ) const;
-
-	/** Get specific pieces of data about the current file state:
-		Get current file rotation number from passed in state.
-		@return the current file rotation number
-	 */
-	int FileStateGetRotation( const ReadUserLog::FileState & ) const;
-
-	/** Get specific pieces of data about the current file state:
-		Get current file offset current state.
-		@return the current file offset
-	 */
-	filesize_t FileStateGetOffset( void ) const;
-
-	/** Get specific pieces of data about the current file state:
-		Get current file offset from passed in state.
-		@return the current file offset
-	 */
-	filesize_t FileStateGetOffset( const ReadUserLog::FileState & ) const;
-
-	/** Get specific pieces of data about the current file state:
-		Get current global log position
-		@return the global log position
-	 */
-	filesize_t FileStateGetGlobalPosition( void ) const;
-
-	/** Get specific pieces of data about the current file state:
-		Get current file offset from passed in state.
-		@return the current file offset TODO
-	 */
-	filesize_t FileStateGetGlobalPosition( const ReadUserLog::FileState & )
-		const;
-
-	/** Get specific pieces of data about the current file state:
-		Get current file file offset current state.
-		@return the current file offset TODO
-	 */
-	filesize_t FileStateGetGlobalRecordNo( void ) const;
-
-	/** Get specific pieces of data about the current file state:
-		Get current file offset from passed in state.
-		@return the current file offset TODO
-	 */
-	filesize_t FileStateGetGlobalRecordNo( const ReadUserLog::FileState & )
-		const;
 	
   private:
 

@@ -14,8 +14,6 @@
 PLUGIN_OBJ = ClassAdLogPlugin.o LoadPlugins.o
 #endif
 
-USERLOG_CONFIG_H = user_log_config.h
-
 #if HAVE_CC_SHARED_FLAG
 LIBCONDORAPI = libcondorapi.a libcondorapi.so
 TEST_LIBCONDORAPI = test_libcondorapi test_libcondorapi_shared
@@ -24,9 +22,7 @@ LIBCONDORAPI = libcondorapi.a
 TEST_LIBCONDORAPI = test_libcondorapi
 #endif
 
-all_target( $(USERLOG_CONFIG_H) \
-	    cplus_lib.a liburl.a \
-	    $(LIBCONDORAPI) $(TEST_LIBCONDORAPI) )
+all_target( cplus_lib.a liburl.a $(LIBCONDORAPI) $(TEST_LIBCONDORAPI) )
 
 testbin_target(test_libcondorapi,755)
 testbin_target(test_condor.log,644)
@@ -257,12 +253,6 @@ c_plus_target(test_tree,test_tree.o,$(LIB))
 c_plus_target(test_ClassAdReevaluator,ClassAdReevaluatorTest.o,$(LIB))
 
 
-$(USERLOG_CONFIG_H) : ../config.h gen_userlog_config
-	./gen_userlog_config ../config.h $(USERLOG_CONFIG_H)
-
-clean::
-	rm $(USERLOG_CONFIG_H)
-
 /* this needs to be built more like a user would use the library, so it */
 /* can't have all of our usual cflags... */
 test_libcondorapi.o: test_libcondorapi.cpp
@@ -278,12 +268,16 @@ c_plus_target(test_check_events,test_check_events.o,$(LIB) New_classads_lib)
 c_plus_target(test_multi_log,test_multi_log.o,$(LIB) New_classads_lib)
 c_plus_target(test_log_writer,test_log_writer.o,$(LIB))
 c_plus_target(test_stat_wrapper,test_stat_wrapper.o,$(LIB))
-c_plus_target(test_log_reader,test_log_reader.o,$(LIB))
 c_plus_target(test_write_term,test_write_term.o,$(LIB))
 c_plus_target(test_prioritysimplelist,test_prioritysimplelist.o,)
 c_plus_target(test_binarysearch,test_binarysearch.o,)
 c_plus_target(test_network_adapter,test_network_adapter.o,$(LIB))
 c_plus_target(test_hibernation,test_hibernation.o,$(LIB))
+
+c_plus_target(test_log_reader,test_log_reader.o,$(LIB))
+test_log_reader.o : test_log_reader.cpp
+	$(CPlusPlus) $(C_PLUS_FLAGS) -DENABLE_STATE_DUMP -c $< -o $@
+
 
 c_plus_target(cat_url,cat_url.o,liburl.a)
 c_plus_target(access.t,access.t.o,$(LIB))
@@ -341,9 +335,6 @@ libcondorapi-release:: $(RELEASE_DIR)/include/condor_event.h
 
 public_copy_target(condor_holdcodes.h,include,condor_holdcodes.h,TEXT_MODE)
 public_copy_target(../condor_includes/condor_constants.h,include,condor_constants.h,TEXT_MODE)
-
-public_copy_target(user_log_config.h,include,user_log_config.h,TEXT_MODE)
-libcondorapi-release:: $(RELEASE_DIR)/include/user_log_config.h
 
 public_copy_target(read_user_log.h,include,read_user_log.h,TEXT_MODE)
 libcondorapi-release:: $(RELEASE_DIR)/include/read_user_log.h

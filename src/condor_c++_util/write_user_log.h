@@ -31,7 +31,6 @@
 #endif
 #include "condor_event.h"
 #include "MyString.h"
-#include "user_log_config.h"
 #include "condor_sys_formats.h"
 
 #define XML_USERLOG_DEFAULT 0
