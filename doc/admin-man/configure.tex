@@ -295,7 +295,7 @@ have different requirements for which parameters need to be
 specified individually.  This example works for the \Condor{schedd},
 and more local configuration can, and likely would be specified.
 
-Also note that each daemon's log file must be specified individually,
+also note that each daemon's log file must be specified individually,
 and in two places: one specification is for use by the \Condor{master},
 and the other is for use by the daemon itself.
 In the example,
@@ -430,6 +430,7 @@ the library routine which parses the configuration files.
   \item \verb@QUILL@
   \item \verb@DBMSD@
   \item \verb@JOB_ROUTER@
+  \item \verb@LEASEMANAGER@
     \label{list:subsystem names}
   \end{itemize}
 
@@ -6363,57 +6364,48 @@ This allows multiple instances of the
   it limits the effective maximum duration for all resources to this value.
   The default value is 1800 seconds.
 
-  Note that lease(s) can be renewed, and thus can be extended beyond this
+  Note that leases can be renewed, and thus can be extended beyond this
   limit.  To provide a limit on the total duration of a lease, use 
   \MacroNI{LeaseManager.MAX\_TOTAL\_LEASE\_DURATION}.
 
 \item[\Macro{LeaseManager.MAX\_TOTAL\_LEASE\_DURATION}]
   \label{param:LeaseManager.MaxTotalLeaseDuration}
-
-  This parameter is used to limit the TOTAL duration of leases, over
-  all it's renewals.  This is an integer parameter in units of
-  seconds, with a default value of 3600 seconds.
-
+  An integer value representing seconds used to limit
+  the \emph{total} duration of leases, over
+  all its renewals.  
+  The default value is 3600 seconds.
 
 \item[\Macro{LeaseManager.DEFAULT\_MAX\_LEASE\_DURATION}]
   \label{param:LeaseManager.DefaultMaxLeaseDuration}
-
-  As described above, the \Condor{lease\_manager} will use the
-  ``MaxLeaseDuration'' attribute of the resource ClassAd to limit the
+  The \Condor{lease\_manager} uses the
+  \Attr{MaxLeaseDuration} attribute from the resource ClassAd to limit the
   lease duration.  If this attribute is not present in a resource
-  ClassAd, then this parameter is used.  This is an integer
-  parameter in units of seconds with a default value of 60 seconds.
-
+  ClassAd, then this configuration variable is used instead.
+  This integer value is given in units of seconds,
+  with a default value of 60 seconds.
 
 \item[\Macro{LeaseManager.CLASSAD\_LOG}]
   \label{param:LeaseManager.ClassadLog}
-
-  This parameter controls where the \Condor{lease\_manager} persists
-  it's state information.  This parameter has no default value, and
-  must contain a valid full file path.
-
+  This variable defines a full path and file name to the location
+  where the \Condor{lease\_manager} keeps persistent state information.
+  This variable has no default value.
 
 \item[\Macro{LeaseManager.QUERY\_ADTYPE}]
   \label{param:LeaseManager.QueryAdtype}
-
   This parameter controls the type of the query in the ClassAd sent to
   the \Condor{collector}, which will control the types of ClassAds
   returned by the \Condor{collector}.  This parameter must be a valid
-  ClassAd type name, with a default value of ``Any''.
-
+  ClassAd type name, with a default value of \AdStr{Any}.
 
 \item[\Macro{LeaseManager.QUERY\_CONSTRAINTS}]
   \label{param:LeaseManager.QueryConstraints}
-
-  This parameter controls the constraint in the query sent to the
-  \Condor{collector}, and can be used to further constrain the types
-  of ClassAds from the \Condor{collector}.  This parameter can be any
-  valid ClassAd expression, and has no default value (no constraints).
-
+  A ClassAd expression that controls the constraint in the query sent to the
+  \Condor{collector}.
+  It is used to further constrain the types
+  of ClassAds from the \Condor{collector}.
+  There is no default value, resulting in no constraints being placed on query.
 
 \end{description}
-
-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:GridMonitor-Config-File-Entries}grid\_monitor
