@@ -18,8 +18,6 @@
  ***************************************************************/
 
 
- 
-
 #ifndef __CONDOR_API__
 #define __CONDOR_API__
 
@@ -28,6 +26,7 @@
 #include "ad_printmask.h"
 
 #include "condor_event.h"
-#include "user_log.c++.h"
+#include "read_user_log.h"
+#include "write_user_log.h"
 
 #endif//__CONDOR_API__

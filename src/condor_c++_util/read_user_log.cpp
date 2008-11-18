@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2008, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -20,7 +20,7 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include <stdarg.h>
-#include "user_log.c++.h"
+#include "read_user_log.h"
 #include <time.h>
 #include "MyString.h"
 #include "condor_uid.h"
@@ -1341,6 +1341,80 @@ ReadUserLog::FormatFileState( const ReadUserLog::FileState &state,
 							  MyString &str, const char *label ) const
 {
 	m_state->GetState( state, str, label );
+}
+
+const char *
+ReadUserLog::FileStateGetBasePath( void ) const
+{
+	return m_state->BasePath( );
+}
+
+const char *
+ReadUserLog::FileStateGetBasePath( const ReadUserLog::FileState &state ) const
+{
+	return m_state->BasePath( state );
+}
+
+const char *
+ReadUserLog::FileStateGetCurrentPath( void ) const
+{
+	return m_state->CurPath( );
+}
+
+const char *
+ReadUserLog::FileStateGetCurrentPath(const ReadUserLog::FileState &state) const
+{
+	return m_state->CurPath( state );
+}
+
+int
+ReadUserLog::FileStateGetRotation( void ) const
+{
+	return m_state->Rotation( );
+}
+
+int
+ReadUserLog::FileStateGetRotation(const ReadUserLog::FileState &state) const
+{
+	return m_state->Rotation( state );
+}
+
+filesize_t
+ReadUserLog::FileStateGetOffset( void ) const
+{
+	return m_state->Offset( );
+}
+
+filesize_t
+ReadUserLog::FileStateGetOffset(const ReadUserLog::FileState &state) const
+{
+	return m_state->Offset( state );
+}
+
+filesize_t
+ReadUserLog::FileStateGetGlobalPosition( void ) const
+{
+	return m_state->LogPosition( );
+}
+
+filesize_t
+ReadUserLog::FileStateGetGlobalPosition(const ReadUserLog::FileState &state)
+	const
+{
+	return m_state->LogPosition( state );
+}
+
+filesize_t
+ReadUserLog::FileStateGetGlobalRecordNo( void ) const
+{
+	return m_state->LogRecordNo( );
+}
+
+filesize_t
+ReadUserLog::FileStateGetGlobalRecordNo( const ReadUserLog::FileState &state )
+	const
+{
+	return m_state->LogRecordNo( state );
 }
 
 

@@ -20,7 +20,7 @@
 
 #include "condor_common.h"
 #include "condor_distribution.h"
-#include "user_log.c++.h"
+#include "write_user_log.h"
 #include "condor_config.h"
 #include "condor_debug.h"
 #include "subsystem_info.h"

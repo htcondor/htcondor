@@ -125,7 +125,7 @@ class FileLockBase
 	// is only recorded into this list if it has a non-null filename
 	// pointer associated with it.
 	// WARNING: I could not use a structure like the HashTable here
-	// because this file is included with user_log.c++.h and
+	// because this file is included with {read,write}_user_log.h and
 	// distributed with libcondorapi. Using HashTable would have
 	// caused many dependancies to be brought in header file-wise and
 	// things will get very ugly.

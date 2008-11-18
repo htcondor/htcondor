@@ -65,6 +65,14 @@ public:
 	filesize_t LogRecordNo( void ) const { return m_log_record; };
 	bool IsValid( void ) const { return (m_cur_rot >= 0); };
 
+	// Accessors for a "file state"
+	const char *BasePath( const ReadUserLog::FileState &state ) const;
+	const char *CurPath( const ReadUserLog::FileState &state ) const;
+	int Rotation( const ReadUserLog::FileState &state ) const;
+	filesize_t Offset( const ReadUserLog::FileState &state ) const;
+	filesize_t LogPosition( const ReadUserLog::FileState &state ) const;
+	filesize_t LogRecordNo( const ReadUserLog::FileState &state ) const;
+
 	// Get/set maximum rotations
 	int MaxRotations( void ) { return m_max_rotations; }
 	int MaxRotations( int max_rotations ) {
@@ -155,7 +163,7 @@ public:
 	struct FileState {
 		char			m_signature[64];	// File state signature
 		int				m_version;			// Version #
-		char			m_path[512];		// The log's path
+		char			m_base_path[512];	// The log's base path
 		char			m_uniq_id[128];		// File's uniq identifier
 		int				m_sequence;			// File's sequence number
 		int				m_rotation;			// 0 == the "current" file

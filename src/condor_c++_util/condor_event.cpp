@@ -22,7 +22,7 @@
 #include <string.h>
 #include <errno.h>
 #include "condor_event.h"
-#include "user_log.c++.h"
+#include "write_user_log.h"
 #include "condor_string.h"
 #include "condor_classad.h"
 #include "iso_dates.h"

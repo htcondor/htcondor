@@ -27,7 +27,7 @@
 #include <stdio.h>
 #include <time.h>
 #include <assert.h>
-#include "user_log.c++.h"
+#include "read_user_log.h"
 
 int main( int argc, char** argv )
 {

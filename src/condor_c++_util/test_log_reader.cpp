@@ -19,7 +19,7 @@
 
 
 #include "condor_common.h"
-#include "user_log.c++.h"
+#include "read_user_log.h"
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "condor_distribution.h"
@@ -28,7 +28,7 @@
 #include "simple_arg.h"
 #include <stdio.h>
 
-static const char *	VERSION = "0.9.3";
+static const char *	VERSION = "0.9.4";
 
 DECL_SUBSYSTEM( "TEST_LOG_READER", SUBSYSTEM_TYPE_TOOL );
 

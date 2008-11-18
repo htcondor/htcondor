@@ -14,6 +14,8 @@
 PLUGIN_OBJ = ClassAdLogPlugin.o LoadPlugins.o
 #endif
 
+USERLOG_CONFIG_H = user_log_config.h
+
 #if HAVE_CC_SHARED_FLAG
 LIBCONDORAPI = libcondorapi.a libcondorapi.so
 TEST_LIBCONDORAPI = test_libcondorapi test_libcondorapi_shared
@@ -22,7 +24,9 @@ LIBCONDORAPI = libcondorapi.a
 TEST_LIBCONDORAPI = test_libcondorapi
 #endif
 
-all_target(cplus_lib.a liburl.a $(LIBCONDORAPI) $(TEST_LIBCONDORAPI))
+all_target( $(USERLOG_CONFIG_H) \
+	    cplus_lib.a liburl.a \
+	    $(LIBCONDORAPI) $(TEST_LIBCONDORAPI) )
 
 testbin_target(test_libcondorapi,755)
 testbin_target(test_condor.log,644)
@@ -253,6 +257,11 @@ c_plus_target(test_tree,test_tree.o,$(LIB))
 c_plus_target(test_ClassAdReevaluator,ClassAdReevaluatorTest.o,$(LIB))
 
 
+$(USERLOG_CONFIG_H) : ../config.h gen_userlog_config
+	./gen_userlog_config ../config.h $(USERLOG_CONFIG_H)
+
+clean::
+	rm $(USERLOG_CONFIG_H)
 
 /* this needs to be built more like a user would use the library, so it */
 /* can't have all of our usual cflags... */
@@ -333,8 +342,14 @@ libcondorapi-release:: $(RELEASE_DIR)/include/condor_event.h
 public_copy_target(condor_holdcodes.h,include,condor_holdcodes.h,TEXT_MODE)
 public_copy_target(../condor_includes/condor_constants.h,include,condor_constants.h,TEXT_MODE)
 
-foo.o: user_log.h
-test.o: user_log.h
+public_copy_target(user_log_config.h,include,user_log_config.h,TEXT_MODE)
+libcondorapi-release:: $(RELEASE_DIR)/include/user_log_config.h
+
+public_copy_target(read_user_log.h,include,read_user_log.h,TEXT_MODE)
+libcondorapi-release:: $(RELEASE_DIR)/include/read_user_log.h
+
+public_copy_target(write_user_log.h,include,write_user_log.h,TEXT_MODE)
+libcondorapi-release:: $(RELEASE_DIR)/include/write_user_log.h
 
 condor_version.o: condor_version.cpp
 	$(CPlusPlus) $(C_PLUS_FLAGS) -c -DPLATFORM=$(PLATFORM) condor_version.cpp

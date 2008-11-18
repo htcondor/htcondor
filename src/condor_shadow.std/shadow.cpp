@@ -116,7 +116,7 @@ extern int do_REMOTE_syscall5(int);
 char *strcpy();
 #endif
 
-#include "user_log.c++.h"
+#include "write_user_log.h"
 UserLog ULog;
 
 char * My_Filesystem_Domain;

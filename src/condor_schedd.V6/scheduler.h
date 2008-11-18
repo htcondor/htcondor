@@ -41,7 +41,7 @@
 #include "list.h"
 #include "classad_hashtable.h"	// for HashKey class
 #include "Queue.h"
-#include "user_log.c++.h"
+#include "write_user_log.h"
 #include "autocluster.h"
 #include "shadow_mgr.h"
 #include "enum_utils.h"

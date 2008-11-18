@@ -21,7 +21,8 @@
 #include "condor_debug.h"
 #include "util_lib_proto.h"
 #include <stdarg.h>
-#include "user_log.c++.h"
+#include "write_user_log.h"
+#include "read_user_log.h"
 #include <time.h>
 #include "condor_uid.h"
 #include "condor_xml_classads.h"

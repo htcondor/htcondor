@@ -28,7 +28,7 @@
 // events in different files that occurred in the same second. 
 
 #include "condor_common.h"
-#include "user_log.c++.h"
+#include "read_user_log.h"
 #include "MyString.h"
 #include "string_list.h"
 #include "HashTable.h"

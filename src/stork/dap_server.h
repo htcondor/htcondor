@@ -24,7 +24,7 @@
 #include "condor_daemon_core.h"
 #include "condor_string.h"
 #include "condor_debug.h"
-#include "user_log.c++.h"
+#include "write_user_log.h"
 #include "dap_constants.h"
 #include "sock.h"
 

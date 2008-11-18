@@ -25,7 +25,7 @@
 #include "condor_daemon_core.h"
 #include "condor_classad.h"
 #include "shadow_user_policy.h"
-#include "user_log.c++.h"
+#include "write_user_log.h"
 #include "exit.h"
 #include "internet.h"
 #include "qmgr_job_updater.h"

@@ -30,7 +30,7 @@
 #include "basename.h"
 #include "condor_getcwd.h"
 #include <time.h>
-#include "user_log.c++.h"
+#include "read_user_log.h"
 #include "condor_classad.h"
 #include "condor_attributes.h"
 #include "condor_adtypes.h"
