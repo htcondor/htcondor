@@ -34,6 +34,9 @@ REM Copy any .dll files created by the externals in debug and release
 call copy_external_dlls.bat
 if %ERRORLEVEL% NEQ 0 goto extfail
 
+REM Copy config.h
+call make_config.bat
+
 REM Deal with gsoap
 nmake /f gsoap.mak
 
