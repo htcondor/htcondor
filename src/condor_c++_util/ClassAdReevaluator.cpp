@@ -50,6 +50,7 @@ classad_reevaluate(ClassAd *ad, const ClassAd *context)
 	}
 
 	free(ptmp);
+	ptmp = NULL;
 
 	reevaluate_attrs->rewind();
 	while (NULL != (atmp = reevaluate_attrs->next())) {
@@ -91,6 +92,7 @@ classad_reevaluate(ClassAd *ad, const ClassAd *context)
 					atmp, ntmp);
 
 			free(ntmp);
+			ntmp = NULL;
 
 			break;
 		case LX_INTEGER:
