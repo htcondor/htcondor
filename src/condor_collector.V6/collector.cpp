@@ -687,6 +687,10 @@ int CollectorDaemon::receive_update_expect_ack( Service* /*s*/,
 												Stream *stream )
 {
 
+    if ( NULL == stream ) {
+        return FALSE;
+    }
+
     Sock        *socket = (Sock*) stream;
     ClassAd     *updateAd = new ClassAd;
     const int   timeout = 5;
@@ -722,30 +726,30 @@ int CollectorDaemon::receive_update_expect_ack( Service* /*s*/,
     if ( !cad ) {
 
         /* attempting to "collect" a QUERY or INVALIDATE command?!? */
-		if ( -2 == insert ) {
+        if ( -2 == insert ) {
 
-			dprintf (
+	        dprintf (
                 D_ALWAYS,
                 "receive_update_expect_ack: "
                 "Got QUERY or INVALIDATE command (%d); these are "
                 "not supported.\n",
-				command );
+                command );
 
-		}
+        }
 
         /* this happens when we get a classad for which a hash key 
         could not been made. This occurs when certain attributes are 
         needed for the particular catagory the ad is destined for, 
         but they are not present in the ad. */
-		if ( -3 == insert ) {
+	    if ( -3 == insert ) {
 			
-			dprintf (
+	        dprintf (
                 D_ALWAYS,
                 "receive_update_expect_ack: "
-				"Received malformed ad from command (%d).\n",
-				command );
+		        "Received malformed ad from command (%d).\n",
+                command );
 
-		}
+	    }
 
     } else {
 
