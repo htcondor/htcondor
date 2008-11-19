@@ -152,6 +152,7 @@ XenType::Start()
 		// TODO Should we grab more than just the first line?
 		cmd_out.rewind();
 		m_result_msg = cmd_out.next();
+		vmprintf(D_ALWAYS, "ERROR: %s\n", m_result_msg.GetCStr());
 		return false;
 	}
 
@@ -507,6 +508,7 @@ XenType::Status()
 		// TODO Should we grab more than just the first line?
 		cmd_out.rewind();
 		m_result_msg = cmd_out.next();
+		vmprintf(D_ALWAYS, "ERROR: %s\n", m_result_msg.GetCStr());
 		return false;
 	}
 
