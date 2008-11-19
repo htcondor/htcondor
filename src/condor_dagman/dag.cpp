@@ -40,7 +40,7 @@
 #include "util.h"
 #include "dagman_main.h"
 #include "dagman_multi_dag.h"
-
+#include "write_user_log.h"
 #include "simplelist.h"
 #include "condor_string.h"  /* for strnewp() */
 #include "string_list.h"

@@ -26,7 +26,7 @@
 #	include "condor_fdset.h"
 #endif
 
-#include "user_log.c++.h"
+#include "write_user_log.h"
 #include "proc.h"
 #include "condor_debug.h"
 #include "condor_classad.h"

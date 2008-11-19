@@ -23,7 +23,7 @@
 #include <time.h>
 #include <netdb.h>
 #include <sys/socket.h>
-#include "user_log.c++.h"
+#include "read_user_log.h"
 
 struct hostent *NameEnt;
 /*

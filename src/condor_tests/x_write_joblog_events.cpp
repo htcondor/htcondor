@@ -25,7 +25,7 @@
 #include <unistd.h>
 #include <netdb.h>
 #include <sys/socket.h>
-#include "user_log.c++.h"
+#include "write_user_log.h"
 #include <sys/types.h>
 
 struct hostent *NameEnt;

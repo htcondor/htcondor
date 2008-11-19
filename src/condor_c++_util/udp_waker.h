@@ -48,13 +48,13 @@ public:
     /** @name detect_port Used to make the initialization find
         the WOL port automatically.
         */
-	static const int detect_port  /* = -1 */,
+    static const int detect_port  /* = -1 */,
                      default_port /* =  9 */;
 
 	//@}
 
     /** @name Instantiation and Initialization.
-		*/
+     */
 	//@{
 
     /** Constructor
@@ -62,9 +62,9 @@ public:
 	    The subnet is of the form: x.x.x.x
 	    The port can be one of 0, 7, or 9
         */
-	UdpWakeOnLanWaker (
-        char const *mac,
-		char const *subnet,
+    UdpWakeOnLanWaker (
+	char const *mac,
+	char const *subnet,
         unsigned short port = default_port ) throw ();
 
     /** Constructor
@@ -92,7 +92,7 @@ public:
     /** Send the magic WOL packet.
         @return true if it was succesful; otherwise, false.
     */
-	bool doWake () const;
+    bool doWake () const;
 	
     //@}
 
@@ -108,27 +108,27 @@ protected:
     bool initializeBroadcastAddress ();
 
     /* Print the system-specific socket error */
-	void printLastSocketError () const;
+    void printLastSocketError () const;
 
-	/* The WOL packet consists of 6 times 0xFF followed by
-	   the hardware address repeated 16 times. The largest
+    /* The WOL packet consists of 6 times 0xFF followed by
+       the hardware address repeated 16 times. The largest
        subnet is '255.255.255.255' plus the NULL character. */
-	enum {
+    enum {
         RAW_MAC_ADDRESS_LENGTH    = 6,
-		STRING_MAC_ADDRESS_LENGTH = 3*RAW_MAC_ADDRESS_LENGTH,
-        WOL_PACKET_LENGTH         = 17*RAW_MAC_ADDRESS_LENGTH,
+        STRING_MAC_ADDRESS_LENGTH = 3*RAW_MAC_ADDRESS_LENGTH,
+	    WOL_PACKET_LENGTH         = 17*RAW_MAC_ADDRESS_LENGTH,
         MAX_IP_ADDRESS_LENGTH     = 16
-	};
+    };
 
 private:
 
-	char		    m_mac[STRING_MAC_ADDRESS_LENGTH];
+    char            m_mac[STRING_MAC_ADDRESS_LENGTH];
     char            m_subnet[MAX_IP_ADDRESS_LENGTH];
     char            m_public_ip[MAX_IP_ADDRESS_LENGTH];
     unsigned char   m_raw_mac[RAW_MAC_ADDRESS_LENGTH];
-	sockaddr_in     m_broadcast;
-    unsigned short	m_port;
-	unsigned char	m_packet[WOL_PACKET_LENGTH];
+    sockaddr_in     m_broadcast;
+    unsigned short  m_port;
+    unsigned char   m_packet[WOL_PACKET_LENGTH];
     bool            m_can_wake;
 
 };

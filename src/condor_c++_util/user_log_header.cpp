@@ -19,7 +19,8 @@
 
 #include "condor_common.h"
 #include "condor_debug.h"
-#include "user_log.c++.h"
+#include "read_user_log.h"
+#include "write_user_log.h"
 #include <time.h>
 #include "MyString.h"
 #include "condor_config.h"

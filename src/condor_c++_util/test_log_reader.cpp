@@ -17,9 +17,11 @@
  *
  ***************************************************************/
 
-
 #include "condor_common.h"
-#include "user_log.c++.h"
+#include "read_user_log.h"
+#if ENABLE_STATE_DUMP
+#  include "read_user_log_state.h"
+#endif
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "condor_distribution.h"
@@ -28,7 +30,7 @@
 #include "simple_arg.h"
 #include <stdio.h>
 
-static const char *	VERSION = "0.9.3";
+static const char *	VERSION = "0.9.5";
 
 DECL_SUBSYSTEM( "TEST_LOG_READER", SUBSYSTEM_TYPE_TOOL );
 
@@ -116,7 +118,9 @@ CheckArgs(int argc, const char **argv, Options &opts)
 		"(valid only with test writer)\n"
 		"  --persist|-p <filename>: file to persist to/from "
 		"(implies --rotation)\n"
+#     if ENABLE_STATE_DUMP
 		"  --dump-state: dump the persisted reader state after reading it\n"
+#     endif
 		"  --ro|--rw|--wo: Set persitent state to "
 		"read-only/read-write/write-only\n"
 		"  --init-only: exit after initialization\n"
@@ -190,8 +194,10 @@ CheckArgs(int argc, const char **argv, Options &opts)
 				status = STATUS_ERROR;
 			}
 
+#     if ENABLE_STATE_DUMP
 		} else if ( arg.Match("dump-state") ) {
 			opts.dumpState = true;
+#     endif
 
 		} else if ( arg.Match("init-only") ) {
 			opts.exitAfterInit = true;
@@ -304,14 +310,17 @@ ReadEvents(Options &opts)
 			printf( "Initialized log reader from state %s\n",
 					opts.persistFile );
 		}
-		if ( opts.dumpState ) {
-			MyString	str;
-			log.FormatFileState( state, str, "Restore File State (raw)" );
-			puts( str.GetCStr() );
 
-			log.FormatFileState( str, "Restore File State" );
-			puts( str.GetCStr() );	
+#     if ENABLE_STATE_DUMP
+		if ( opts.dumpState ) {
+			ReadUserLogState	rstate(state, 60);
+			MyString			str;
+
+			rstate.GetStateString( state, str, "Restore File State" );
+			puts( str.GetCStr() );
 		}
+#     endif
+
 	}
 
 	// If, after the above, the reader isn't initialized, do so now
@@ -475,15 +484,16 @@ ReadEvents(Options &opts)
 	}
 
 	log.GetFileState( state );
+#  if ENABLE_STATE_DUMP
 	if ( opts.dumpState ) {
-		MyString	str;
+		ReadUserLogState	rstate(state, 60);
+		MyString			str;
 
-		log.FormatFileState( state, str, "Final File State (raw)" );
-		puts( str.GetCStr() );
-
-		log.FormatFileState( str, "Final File State" );
+		rstate.GetStateString( state, str, "Final File State" );
 		puts( str.GetCStr() );
 	}
+#  endif
+
 	if ( opts.writePersist ) {
 		fputs( "\nStoring final state...", stdout );
 		int	fd = safe_open_wrapper( opts.persistFile,
@@ -512,3 +522,4 @@ const char *timestr( struct tm &tm )
 	}
 	return tbuf;
 }
+

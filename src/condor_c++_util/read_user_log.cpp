@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2008, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -20,7 +20,7 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include <stdarg.h>
-#include "user_log.c++.h"
+#include "read_user_log.h"
 #include <time.h>
 #include "MyString.h"
 #include "condor_uid.h"
@@ -1318,29 +1318,6 @@ ReadUserLog::releaseResources( void )
 
 	delete m_lock;
 	m_lock = NULL;
-}
-
-void
-ReadUserLog::FormatFileState( MyString &str, const char *label ) const
-{
-	if ( ! m_state ) {
-		if ( label ) {
-			str.sprintf( "%s: no state", label );
-		}
-		else {
-			str = "no state\n";
-		}
-		return;
-	}
-
-	m_state->GetState( str, label );
-}
-
-void
-ReadUserLog::FormatFileState( const ReadUserLog::FileState &state,
-							  MyString &str, const char *label ) const
-{
-	m_state->GetState( state, str, label );
 }
 
 

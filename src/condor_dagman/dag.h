@@ -25,7 +25,6 @@
 #include "list.h"
 #include "job.h"
 #include "scriptQ.h"
-#include "user_log.c++.h"          /* from condor_c++_util/ directory */
 #include "condor_constants.h"      /* from condor_includes/ directory */
 #include "HashTable.h"
 #include "extArray.h"

@@ -20,7 +20,7 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include <stdarg.h>
-#include "user_log.c++.h"
+#include "read_user_log.h"
 #include <time.h>
 #include "MyString.h"
 #include "condor_uid.h"
@@ -455,10 +455,10 @@ ReadUserLogState::GetState( ReadUserLog::FileState &state ) const
 	}
 
 	// The paths shouldn't change... copy them only the first time
-	if( !strlen( istate->m_path ) ) {
-		int	size = sizeof(istate->m_path) - 1;
-		strncpy( istate->m_path, m_base_path.GetCStr(), size );
-		istate->m_path[size] = '\0';
+	if( !strlen( istate->m_base_path ) ) {
+		int	size = sizeof(istate->m_base_path) - 1;
+		strncpy( istate->m_base_path, m_base_path.GetCStr(), size );
+		istate->m_base_path[size] = '\0';
 	}
 
 	// The signature is set in the InitFileState()
@@ -508,7 +508,7 @@ ReadUserLogState::SetState( const ReadUserLog::FileState &state )
 		return false;
 	}
 
-	m_base_path = istate->m_path;
+	m_base_path = istate->m_base_path;
 
 	// Set the rotation & path
 	m_max_rotations = istate->m_max_rotations;
@@ -532,14 +532,14 @@ ReadUserLogState::SetState( const ReadUserLog::FileState &state )
 	m_initialized = true;
 
 	MyString	str;
-	GetState( str, "Restored reader state" );
+	GetStateString( str, "Restored reader state" );
 	dprintf( D_FULLDEBUG, str.GetCStr() );
 
 	return true;
 }
 
 void
-ReadUserLogState::GetState( MyString &str, const char *label ) const
+ReadUserLogState::GetStateString( MyString &str, const char *label ) const
 {
 	str = "";
 	if ( NULL != label ) {
@@ -574,7 +574,7 @@ ReadUserLogState::GetFileState( ReadUserLog::FileState &state )
 }
 
 void
-ReadUserLogState::GetState(
+ReadUserLogState::GetStateString(
 	const ReadUserLog::FileState	&state,
 	MyString						&str,
 	const char						*label
@@ -597,14 +597,79 @@ ReadUserLogState::GetState(
 	}
 	str.sprintf_cat (
 		"  signature = '%s'; version = %d; update = %ld\n"
-		"  path = '%s'\n"
+		"  base path = '%s'\n"
+		"  cur path = '%s'\n"
 		"  UniqId = %s, seq = %d\n"
 		"  rotation = %d; max = %d; offset = "FILESIZE_T_FORMAT"; type = %d\n"
 		"  inode = %u; ctime = %ld; size = "FILESIZE_T_FORMAT"\n",
 		istate->m_signature, istate->m_version, istate->m_update_time,
-		istate->m_path,
+		istate->m_base_path,
+		CurPath(state),
 		istate->m_uniq_id, istate->m_sequence,
 		istate->m_rotation, istate->m_max_rotations,
 		istate->m_offset.asint, istate->m_log_type,
 		(unsigned)istate->m_inode, istate->m_ctime, istate->m_size.asint );
+}
+
+// Get state information back from a "file state" structure
+const char *
+ReadUserLogState::BasePath( const ReadUserLog::FileState &state ) const
+{
+	const ReadUserLogState::FileState *istate = GetFileStateConst( state );
+	if ( ( !istate ) || ( !istate->m_version ) ) {
+		return NULL;
+	}
+	return istate->m_base_path;
+}
+
+const char *
+ReadUserLogState::CurPath( const ReadUserLog::FileState &state ) const
+{
+	const ReadUserLogState::FileState *istate = GetFileStateConst( state );
+	if ( ( !istate ) || ( !istate->m_version ) ) {
+		return NULL;
+	}
+
+	static MyString	path;
+	if ( !GeneratePath( istate->m_rotation, path, true ) ) {
+		return NULL;
+	}
+	return path.GetCStr();
+}
+
+int
+ReadUserLogState::Rotation( const ReadUserLog::FileState &state ) const
+{
+	const ReadUserLogState::FileState *istate = GetFileStateConst( state );
+	if ( ( !istate ) || ( !istate->m_version ) ) {
+		return -1;
+	}
+	return istate->m_rotation;
+}
+filesize_t
+ReadUserLogState::Offset( const ReadUserLog::FileState &state ) const
+{
+	const ReadUserLogState::FileState *istate = GetFileStateConst( state );
+	if ( ( !istate ) || ( !istate->m_version ) ) {
+		return -1;
+	}
+	return (filesize_t) istate->m_offset.asint;
+}
+filesize_t
+ReadUserLogState::LogPosition( const ReadUserLog::FileState &state ) const
+{
+	const ReadUserLogState::FileState *istate = GetFileStateConst( state );
+	if ( ( !istate ) || ( !istate->m_version ) ) {
+		return -1;
+	}
+	return (filesize_t) istate->m_log_position.asint;
+}
+filesize_t
+ReadUserLogState::LogRecordNo( const ReadUserLog::FileState &state ) const
+{
+	const ReadUserLogState::FileState *istate = GetFileStateConst( state );
+	if ( ( !istate ) || ( !istate->m_version ) ) {
+		return -1;
+	}
+	return (filesize_t) istate->m_log_record.asint;
 }

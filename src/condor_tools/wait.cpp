@@ -24,7 +24,7 @@
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "condor_distribution.h"
-#include "user_log.c++.h"
+#include "read_user_log.h"
 #include "HashTable.h"
 
 /*

@@ -361,6 +361,7 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 	curr_regdataptr = NULL;
 
 	send_child_alive_timer = -1;
+	m_want_send_child_alive = true;
 
 #ifdef WIN32
 	dcmainThreadId = ::GetCurrentThreadId();
@@ -2391,7 +2392,7 @@ DaemonCore::reconfig(void) {
 
 	// Setup a timer to send child keepalives to our parent, if we have
 	// a daemon core parent.
-	if ( ppid ) {
+	if ( ppid && m_want_send_child_alive ) {
 		MyString buf;
 		buf.sprintf("%s_NOT_RESPONDING_TIMEOUT",mySubSystem->getName());
 		max_hang_time = param_integer(buf.Value(),-1);

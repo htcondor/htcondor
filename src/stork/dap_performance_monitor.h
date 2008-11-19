@@ -23,7 +23,7 @@
 #include "condor_common.h"
 #include "condor_string.h"
 #include "condor_debug.h"
-#include "user_log.c++.h"
+#include "read_user_log.h"
 #include "condor_classad.h"
 
 #endif

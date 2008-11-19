@@ -77,7 +77,7 @@ private:
 	bool findCkptConfigAndSuspendFile(MyString &config, MyString &suspendfile);
 	bool checkCkptSuspendFile(const char* file);
 	bool ResumeFromSoftSuspend(void);
-	bool CreateXenVMCofigFile(const char* filename);
+	bool CreateXenVMConfigFile(const char* filename);
 	bool CreateVirshConfigFile(const char* filename);
 
 	SimpleList<XenDisk*> m_disk_list;

@@ -14,7 +14,8 @@
   */
   //@{
     //@Include: condor_event.h
-    //@Include: user_log.c++.h
+    //@Include: write_user_log.h
+    //@Include: read_user_log.h
   //@}
 
   /** @name Directory API

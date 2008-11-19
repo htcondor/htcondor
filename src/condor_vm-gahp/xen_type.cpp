@@ -152,6 +152,7 @@ XenType::Start()
 		// TODO Should we grab more than just the first line?
 		cmd_out.rewind();
 		m_result_msg = cmd_out.next();
+		vmprintf(D_ALWAYS, "ERROR: %s\n", m_result_msg.GetCStr());
 		return false;
 	}
 
@@ -501,9 +502,13 @@ XenType::Status()
 	}
 	systemcmd.AppendArg(m_configfile);
 
-	int result = systemCommand(systemcmd, true);
+	int result = systemCommand(systemcmd, true, &cmd_out);
 	if( result != 0 ) {
-		m_result_msg = VMGAHP_ERR_CRITICAL;
+		// Read error output
+		// TODO Should we grab more than just the first line?
+		cmd_out.rewind();
+		m_result_msg = cmd_out.next();
+		vmprintf(D_ALWAYS, "ERROR: %s\n", m_result_msg.GetCStr());
 		return false;
 	}
 
@@ -837,7 +842,7 @@ virshwriteerror:
 }
 
 bool
-XenType::CreateXenVMCofigFile(const char* filename)
+XenType::CreateXenVMConfigFile(const char* filename)
 {
 	if( !filename ) {
 		return false;
@@ -1037,7 +1042,7 @@ XenType::CreateConfigFile()
 	tmp_config_name.sprintf("%s%c%s",m_workingpath.Value(), 
 			DIR_DELIM_CHAR, XEN_CONFIG_FILE_NAME);
 
-	if( CreateXenVMCofigFile(tmp_config_name.Value()) 
+	if( CreateXenVMConfigFile(tmp_config_name.Value()) 
 			== false ) {
 		m_result_msg = VMGAHP_ERR_CRITICAL;
 		return false;

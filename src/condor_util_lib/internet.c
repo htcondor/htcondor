@@ -360,7 +360,7 @@ is_ipaddr_implementation(const char *inbuf, struct in_addr *sin_addr, struct in_
 
 	// strip off any trailing wild card or '.'
 	if ( buf[len-1] == '*' || buf[len-1] == '.' ) {
-		if ( buf[len-2] == '.' )
+		if ( len>1 && buf[len-2] == '.' )
 			buf[len-2] = '\0';
 		else
 			buf[len-1] = '\0';

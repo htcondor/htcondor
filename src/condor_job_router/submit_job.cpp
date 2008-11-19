@@ -28,7 +28,7 @@
 #include "classad_newold.h"
 #include "condor_uid.h"
 #include "condor_event.h"
-#include "user_log.c++.h"
+#include "write_user_log.h"
 #include "condor_email.h"
 #include "condor_arglist.h"
 #include "format_time.h"

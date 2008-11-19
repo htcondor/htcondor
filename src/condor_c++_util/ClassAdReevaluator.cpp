@@ -28,7 +28,7 @@ classad_reevaluate(ClassAd *ad, const ClassAd *context)
 {
 	StringList *reevaluate_attrs;
 	MyString stmp;
-	char *ptmp, *atmp, *ntmp;
+	char *ptmp, *atmp, *ntmp = NULL;
 	ExprTree *etmp;
 	int itmp;
 	float ftmp;
@@ -50,6 +50,7 @@ classad_reevaluate(ClassAd *ad, const ClassAd *context)
 	}
 
 	free(ptmp);
+	ptmp = NULL;
 
 	reevaluate_attrs->rewind();
 	while (NULL != (atmp = reevaluate_attrs->next())) {
@@ -73,7 +74,7 @@ classad_reevaluate(ClassAd *ad, const ClassAd *context)
 			if (!ad->EvalString(stmp.GetCStr(), context, &ntmp)) {
 				dprintf(D_ALWAYS,
 						"classad_reevaluate: Failed to evaluate %s as a String\n",
-						ptmp);
+						stmp.GetCStr());
 
 				goto FAIL;
 			}
@@ -91,13 +92,14 @@ classad_reevaluate(ClassAd *ad, const ClassAd *context)
 					atmp, ntmp);
 
 			free(ntmp);
+			ntmp = NULL;
 
 			break;
 		case LX_INTEGER:
 			if (!ad->EvalInteger(stmp.GetCStr(), context, itmp)) {
 				dprintf(D_ALWAYS,
 						"classad_reevaluate: Failed to evaluate %s as an Integer\n",
-						ptmp);
+						stmp.GetCStr());
 
 				goto FAIL;
 			}
@@ -119,7 +121,7 @@ classad_reevaluate(ClassAd *ad, const ClassAd *context)
 			if (!ad->EvalFloat(stmp.GetCStr(), context, ftmp)) {
 				dprintf(D_ALWAYS,
 						"classad_reevaluate: Failed to evaluate %s as a Float\n",
-						ptmp);
+						stmp.GetCStr());
 
 				goto FAIL;
 			}
@@ -141,7 +143,7 @@ classad_reevaluate(ClassAd *ad, const ClassAd *context)
 			if (!ad->EvalBool(stmp.GetCStr(), context, itmp)) {
 				dprintf(D_ALWAYS,
 						"classad_reevaluate: Failed to evaluate %s as a Bool\n",
-						ptmp);
+						stmp.GetCStr());
 
 				goto FAIL;
 			}

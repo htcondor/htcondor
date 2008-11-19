@@ -1309,6 +1309,15 @@ class DaemonCore : public Service
 		*/
 	bool wantsRestart( void );
 
+		/**
+		   Set whether this daemon should should send CHILDALIVE commands
+		   to its daemoncore parent. Must be called from
+		   main_pre_command_sock_init() to have any effect. The default
+		   is to send CHILDALIVEs.
+		*/
+	void WantSendChildAlive( bool send_alive )
+		{ m_want_send_child_alive = send_alive; }
+
   private:      
 
 	bool m_wants_dc_udp; // do we want a udp comment socket at all?
@@ -1639,6 +1648,7 @@ class DaemonCore : public Service
     int SendAliveToParent();
     unsigned int max_hang_time;
     int send_child_alive_timer;
+	bool m_want_send_child_alive;
 
 	// misc helper functions
 	void CheckPrivState( void );

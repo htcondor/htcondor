@@ -19,7 +19,7 @@
 
 
 #include "condor_common.h"
-#include "user_log.c++.h"
+#include "read_user_log.h"
 #include "format_time.h"
 #include "classad_hashtable.h"
 #include "internet.h"

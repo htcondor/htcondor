@@ -17,8 +17,8 @@
  *
  ***************************************************************/
 
-#ifndef _CONFIG_H_
-#define _CONFIG_H_
+#ifndef _WINDOWS_CONFIG_H_
+#define _WINDOWS_CONFIG_H_
 
 /* For all features supported under Windows explicitly set the inclusion
    macro to 1 (true) */
@@ -31,4 +31,4 @@
 #define WANT_QUILL 1
 #define HAVE_EXT_KRB5 1
 
-#endif /* _CONFIG_H_ */
+#endif /* _WINDOWS_CONFIG_H_ */

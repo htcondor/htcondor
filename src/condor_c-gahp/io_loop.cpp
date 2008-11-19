@@ -770,6 +770,7 @@ main_pre_dc_init( int, char*[] )
 void
 main_pre_command_sock_init( )
 {
+	daemonCore->WantSendChildAlive( false );
 }
 
 // This function is called by dprintf - always display our pid in our

@@ -29,7 +29,7 @@
 #include "dap_logger.h"
 #include "dap_error.h"
 #include "dap_server_interface.h"
-#include "user_log.c++.h"
+#include "write_user_log.h"
 #include "condor_netdb.h"
 
 extern char *clientagenthost;

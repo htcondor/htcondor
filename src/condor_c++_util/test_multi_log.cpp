@@ -25,7 +25,7 @@
 #include <string>
 #include <time.h>
 #include <assert.h>
-#include "user_log.c++.h"
+#include "write_user_log.h"
 #include "string_list.h"
 #include "read_multiple_logs.h"
 
