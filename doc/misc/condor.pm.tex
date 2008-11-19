@@ -193,7 +193,11 @@ Some of these subroutines take other subroutines as arguments.
   to be used as a callback when a system call invoked using \Code{runCommand}
   experiences an error.
 
-%  \item [\Code{runCommand(string)}]
+  \item [\Code{runCommand(string)}]
+  \Code{string} identifies a syscall that is invoked.
+  If the syscall exits abnormally or exits with an error, the callback
+  registered with \Procedure{RegisterWantError} is called, and
+  an error message is issued.
 
   \item [\Code{RegisterTimed(sub, seconds)}]
   Register a subroutine (called \Code{sub})
