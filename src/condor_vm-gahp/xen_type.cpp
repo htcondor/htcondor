@@ -840,7 +840,7 @@ virshwriteerror:
 }
 
 bool
-XenType::CreateXenVMCofigFile(const char* filename)
+XenType::CreateXenVMConfigFile(const char* filename)
 {
 	if( !filename ) {
 		return false;
@@ -1040,7 +1040,7 @@ XenType::CreateConfigFile()
 	tmp_config_name.sprintf("%s%c%s",m_workingpath.Value(), 
 			DIR_DELIM_CHAR, XEN_CONFIG_FILE_NAME);
 
-	if( CreateXenVMCofigFile(tmp_config_name.Value()) 
+	if( CreateXenVMConfigFile(tmp_config_name.Value()) 
 			== false ) {
 		m_result_msg = VMGAHP_ERR_CRITICAL;
 		return false;
