@@ -2578,7 +2578,11 @@ main(int argc, char **argv)
 	/* Here we are not going to run multi-threaded; instead, we will register
 	 * a callback when there is activity on stdin
 	 */
-	globus_module_activate(GLOBUS_IO_MODULE);
+	err = globus_module_activate(GLOBUS_IO_MODULE);
+	if ( err != GLOBUS_SUCCESS ) {
+		printf("ERROR %d Failed to activate Globus IO Module\n",result);
+		_exit(1);
+	}
 	err = (int)globus_io_file_posix_convert(STDIN_FILENO,NULL,(globus_io_handle_t *)&stdin_handle);
 	if ( err != GLOBUS_SUCCESS ) {
 		printf("ERROR %d Failed to get globus_io handle to stdin\n",result);
