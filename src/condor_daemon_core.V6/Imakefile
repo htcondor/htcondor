@@ -12,12 +12,6 @@ FIX_BROKEN_GCC =
 #endif
 #endif
 
-#if HAS_PURIFY
-PURIFY_FLAG = -DHAS_PURIFY
-#else
-PURIFY_FLAG =
-#endif
-
 #if HAVE_EXT_GSOAP
 GSOAP_OBJS = soap_core.o httpget.o
 #endif

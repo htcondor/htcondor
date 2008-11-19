@@ -94,9 +94,6 @@ picobjs = $(patsubst %.o,%-pic.o,$(1))
 #define junkdir(daemon)Concat3(junk,_,daemon)
 #define soapname(daemon)Concat(soap_,daemon)
 #define gsoapname(daemon)Concat(gsoap_,daemon)
-#define purifyname(program)Concat(program,.pure)
-#define purecovname(program)Concat(program,.pc)
-#define quantifyname(program)Concat(program,.quantify)
 
 /*
 ** Set up to make all the objects in a particular directory.
@@ -853,9 +850,6 @@ c_plus_target(program,objlist,libs) @@\
 release_target(program,dir,EXECUTABLE_MODE) @@\
 strip_target(program,dir,EXECUTABLE_MODE) @@\
 static_target(program,objlist,libs,dir) @@\
-pure_c_plus_target(purifyname(program),objlist,libs) @@\
-purecov_c_plus_target(purecovname(program),objlist,libs) @@\
-quantify_c_plus_target(quantifyname(program),objlist,libs) @@\
 XCOMM End translation of func(c_plus_public_target)
 #endif /* public_c_plus_target */
 
@@ -1113,114 +1107,6 @@ XCOMM NULL BODY									@@\
 XCOMM End translation of func(static_both_tarball)
 #endif /* HAS_STATIC */
 #endif /* static_both_tarball */
-
-/***********************************************************************
-** PureSoftware targets
-**
-** These rules are used for creating special debugging binaries built
-** for either purify, purecoverage, or both.
-***********************************************************************/
-
-#if HAS_PURIFY
-
-#ifndef pure_c_plus_target
-#define	pure_c_plus_target(program,objlist,libs)	@@\
-XCOMM Begin translation of func(pure_c_plus_target)	@@\
-program: $(filter DEP_FILTER,objlist libs)					@@\
-	purify -g++=yes -inuse-at-exit=yes -chain-length=50 -cache-dir=$(PURE_CACHE_DIR) purecov -g++=yes $(CC_LINK) $(C_PLUS_FLAGS) -o program objlist libs $(PURIFY_LDFLAGS)	@@\
-clean::							@@\
-	rm -f program objlist		@@\
-XCOMM End translation of func(pure_c_plus_target)
-#endif /* pure_c_plus_target */
-
-#ifndef purify_c_plus_target
-#define	purify_c_plus_target(program,objlist,libs)	@@\
-XCOMM Begin translation of func(purify_c_plus_target)	@@\
-program: $(filter DEP_FILTER,objlist libs)					@@\
-	purify -g++=yes -inuse-at-exit=yes -chain-length=50 PureCollector $(CC_LINK) $(C_PLUS_FLAGS) -o program objlist libs $(PURIFY_LDFLAGS)	@@\
-clean::							@@\
-	rm -f program objlist		@@\
-XCOMM End translation of func(purify_c_plus_target)
-#endif /* purify_c_plus_target */
-
-
-#ifndef purecov_c_plus_target
-#define	purecov_c_plus_target(program,objlist,libs)	@@\
-XCOMM Begin translation of func(purecov_c_plus_target)	@@\
-program: $(filter DEP_FILTER,objlist libs)					@@\
-	purecov -g++=yes -cache-dir=$(PURE_CACHE_DIR) $(CC_LINK) $(C_PLUS_FLAGS) -o program objlist libs $(PURIFY_LDFLAGS)	@@\
-clean:: 						@@\
-	rm -f program objlist		@@\
-XCOMM End translation of func(purecov_c_plus_target)
-#endif /* purecov_c_plus_target */
-
-
-#ifndef quantify_c_plus_target
-#define	quantify_c_plus_target(program,objlist,libs)	@@\
-XCOMM Begin translation of func(quantify_c_plus_target)	@@\
-program: $(filter DEP_FILTER,objlist libs)						@@\
-	quantify -g++=yes -cache-dir=$(PURE_CACHE_DIR) $(CC_LINK) $(C_PLUS_FLAGS) -o program objlist libs $(PURIFY_LDFLAGS)     @@\
-clean::		 						@@\
-	rm -f program objlist			@@\
-XCOMM End translation of func(quantify_c_plus_target)
-#endif /* quantify_c_plus_target */
-
-
-#ifndef pure_target
-#define	pure_target(dir,program)				@@\
-XCOMM Begin translation of func(pure_target)	@@\
-$(PURE_DIR)/program: $(PURE_DIR) dir/program		@@\
-	cp dir/program $(PURE_DIR)/program		@@\
-dir/program: dir						@@\
-	cd dir; $(MAKE) program					@@\
-pure:: $(PURE_DIR)/program				@@\
-XCOMM End translation of func(pure_target)
-#endif /* pure_target */
-
-
-#else
-
-#ifndef pure_target
-#define	pure_target(dir,program)			/* NULL MACRO */ @@\
-XCOMM Begin translation of func(pure_target) @@\
-XCOMM NULL BODY! @@\
-XCOMM End translation of func(pure_target)
-#endif /* pure_target */
-
-
-#ifndef pure_c_plus_target
-#define	pure_c_plus_target(program,objlist,libs)	/* NULL MACRO */ @@\
-XCOMM Begin translation of func(pure_c_plus_target) @@\
-XCOMM NULL BODY! @@\
-XCOMM End translation of func(pure_c_plus_target)
-#endif /* pure_c_plus_target */
-
-
-#ifndef purify_c_plus_target
-#define	purify_c_plus_target(program,objlist,libs)	/* NULL MACRO */ @@\
-XCOMM Begin translation of func(purify_c_plus_target) @@\
-XCOMM NULL BODY! @@\
-XCOMM End translation of func(purify_c_plus_target)
-#endif /* purify_c_plus_target */
-
-
-#ifndef purecov_c_plus_target
-#define	purecov_c_plus_target(program,objlist,libs)	/* NULL MACRO */ @@\
-XCOMM Begin translation of func(purecov_c_plus_target) @@\
-XCOMM NULL BODY! @@\
-XCOMM End translation of func(purecov_c_plus_target)
-#endif /* purecov_c_plus_target */
-
-
-#ifndef quantify_c_plus_target
-#define	quantify_c_plus_target(program,objlist,libs) /* NULL MACRO */ @@\
-XCOMM Begin translation of func(quantify_c_plus_target) @@\
-XCOMM NULL BODY! @@\
-XCOMM End translation of func(quantify_c_plus_target)
-#endif /* quantify_c_plus_target */
-
-#endif	/* HAS_PURIFY */
-
 
 /***********************************************************************
 ** condor_compile rules

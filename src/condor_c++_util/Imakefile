@@ -283,12 +283,12 @@ c_plus_target(cat_url,cat_url.o,liburl.a)
 c_plus_target(access.t,access.t.o,$(LIB))
 c_plus_target(Queue.t,Queue.t.o,$(LIB))
 c_plus_target(killfamily.t,killfamily.t.o,$(LIB))
-pure_c_plus_target(killfamily.t.pure,killfamily.t.o,$(LIB))
-purecov_c_plus_target(killfamily.t.pc,killfamily.t.o,$(LIB))
+
+
 
 c_plus_target(my_hostname.t,my_hostname.t.o,$(LIB))
-pure_c_plus_target(my_hostname.t.pure,my_hostname.t.o,$(LIB))
-purecov_c_plus_target(my_hostname.t.pc,my_hostname.t.o,$(LIB))
+
+
 
 html_target( documentation )
 
