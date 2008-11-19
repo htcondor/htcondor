@@ -501,9 +501,12 @@ XenType::Status()
 	}
 	systemcmd.AppendArg(m_configfile);
 
-	int result = systemCommand(systemcmd, true);
+	int result = systemCommand(systemcmd, true, &cmd_out);
 	if( result != 0 ) {
-		m_result_msg = VMGAHP_ERR_CRITICAL;
+		// Read error output
+		// TODO Should we grab more than just the first line?
+		cmd_out.rewind();
+		m_result_msg = cmd_out.next();
 		return false;
 	}
 
