@@ -460,6 +460,8 @@ user_arg_t *malloc_user_arg()
 	user_arg->fd = -1;
 	user_arg->cred = NULL;
 	user_arg->op_attr = NULL;
+
+	return user_arg;
 }
 
 void free_user_arg( user_arg_t *user_arg )
