@@ -262,6 +262,7 @@ int handle_async_mode_off(char **);
 int handle_response_prefix(char **);
 int handle_refresh_proxy_from_file(char **);
 
+int main_activate_globus();
 void main_deactivate_globus();
 
 void gahp_sem_init( gahp_semaphore *, int initial_value);
