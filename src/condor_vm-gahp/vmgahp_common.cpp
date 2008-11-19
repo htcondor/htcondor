@@ -516,6 +516,7 @@ int systemCommand( ArgList &args, bool is_root, StringList *cmd_out,
 	FILE *fp = NULL;
 	MyString line;
 	char buff[1024];
+	StringList *my_cmd_out = cmd_out;
 
 	priv_state prev = PRIV_UNKNOWN;
 	if( is_root ) {
@@ -542,10 +543,14 @@ int systemCommand( ArgList &args, bool is_root, StringList *cmd_out,
 		return -1;
 	}
 
-	while ( cmd_out && fgets( buff, sizeof(buff), fp ) != NULL ) {
+	if ( my_cmd_out == NULL ) {
+		my_cmd_out = new StringList();
+	}
+
+	while ( fgets( buff, sizeof(buff), fp ) != NULL ) {
 		line += buff;
 		if ( line.chomp() ) {
-			cmd_out->append( line.Value() );
+			my_cmd_out->append( line.Value() );
 			line = "";
 		}
 	}
@@ -558,6 +563,14 @@ int systemCommand( ArgList &args, bool is_root, StringList *cmd_out,
 		vmprintf(D_ALWAYS,
 		         "Command returned non-zero: %s\n",
 		         args_string.Value());
+		my_cmd_out->rewind();
+		const char *next_line;
+		while ( (next_line = my_cmd_out->next()) ) {
+			vmprintf( D_ALWAYS, "  %s\n", next_line );
+		}
+	}
+	if ( cmd_out == NULL ) {
+		delete my_cmd_out;
 	}
 	return result;
 }

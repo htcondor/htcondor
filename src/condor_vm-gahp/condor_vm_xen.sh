@@ -95,8 +95,6 @@ start() {
 		echo "$XM create $XEN_CONFIG_FILE error" 1>&2
 		cat "$XM_ERROR_OUTPUT" 1>&2
 
-		cat "$XM_ERROR_OUTPUT"
-
 		return 1
 	fi
 }
