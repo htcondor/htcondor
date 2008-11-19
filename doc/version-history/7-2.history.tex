@@ -67,6 +67,11 @@ to the collector (in the ``private'' ad that is not user-visible).
 This fix reduces startd-generated UDP traffic and memory usage by
 about 20\% in the \Condor{collector} and \Condor{negotiator}.
 
+\item \Condor{master} was not preserving argv[0] when restarting
+itself.  In some cases, this confused external utilities that monitor
+the \Condor{master} process by looking at the output of 'ps' or
+something similar.
+
 \end{itemize}
 
 \noindent Known Bugs:
