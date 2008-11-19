@@ -58,7 +58,7 @@ use FileHandle;
 use POSIX "sys_wait_h";
 use Cwd;
 use CondorTest;
-#use CondorPersonal;	
+use Time::Local;
 
 #################################################################
 #
@@ -112,6 +112,13 @@ $targetconfig = $testpersonalcondorlocation . "/condor_config";
 $targetconfiglocal = $testpersonalcondorlocation . "/condor_config.local";
 $condorpidfile = "/tmp/condor.pid.$$";
 @extracondorargs;
+
+# we want to process and track the collection of cores
+$coredir = "$BaseDir/Cores";
+if(!(-d $coredir)) {
+	print "Creating collection directory for cores\n";
+	system("mkdir -p $coredir");
+}
 @corefiles = ();
 $logdir = "";
 
@@ -125,8 +132,6 @@ $testdirrunning;
 $configmain;
 $configlocal;
 $iswindows = 0;
-@corefiles = ();
-$logdir = "";
 
 $wantcurrentdaemons = 1; # dont set up a new testing pool in condor_tests/TestingPersonalCondor
 $pretestsetuponly = 0; # only get the personal condor in place
@@ -1309,15 +1314,20 @@ sub DoChild
 {
 	my $test_program = shift;
 	my $test_retirement = shift;
+	my $test_starttime = time();
+	debug( "Test start @ $test_starttime \n",2);
+	sleep(3);
+	# add test core file
+	system("touch ./TestingPersonalCondor/local/log/core.schedd");
 
+	my $corecount = 0;
 	my $res;
  	eval {
             alarm($test_retirement);
 			if( $hush == 0 ) {
 				debug( "Child Starting:perl $test_program > $test_program.out\n",3);
 			}
-			CoreCheck("shush");
-			CoreClear();
+			#CoreCheck($test_starttime);
 			$res = system("perl $test_program > $test_program.out 2>&1");
 
 			# if not build and test move key files to saveme/pid directory
@@ -1368,13 +1378,11 @@ sub DoChild
 
 			if($res != 0) { 
 				#print "Perl test($test_program) returned <<$res>>!!! \n"; 
-				CoreClear();
 				exit(1); 
 			}
-			my $corecount = CoreCheck();
-			CoreClear();
+			#$corecount = CoreCheck($test_starttime);
 			if($corecount != 0) {
-				print "-Core(s) found- ";
+				print "-Core/ERROR found- ";
 				exit(1);
 			}
 			exit(0);
@@ -1427,32 +1435,155 @@ sub safe_copy {
 }
 
 sub CoreCheck {
-	$quiet = shift;
+	$teststart = shift;
 	my $count = 0;
-	$cmd = "condor_config_val log";
-	$log = `$cmd`;
-	CondorTest::fullchomp($log);
-	$logdir = $log;
-	#print "Log directory is <$log>\n";
-	opendir LD, $log or die "Can not open log directory<$log>:$!\n";
-	@corefiles = ();
-	foreach $file (readdir LD) {
-		if( $file =~ /^core.*$/) {
-			$count += 1;
-			push (@corefiles, $file);
-			if( ! defined $quiet ) {
-				print " core($$): $file ";
+	my $scancount = 0;
+	@files = `ls $BaseDir/*/*/log/*`;
+	foreach $perp (@files) {
+		chomp($perp);
+		if(-f $perp) {
+			$filechange = GetFileChangeTime($perp);	# returns stime stamp
+			# has file been created or changed since test started
+			if( $filechange > $teststart ) {
+				#print "TS: $teststart FC: $filechange\n";
+				debug("FOI: newer $perp\n",2);
+				$filechange = GetFileTime($perp); # returns printable string
+				if($perp =~ /^.*\/(core.*)$/) {
+					$newname = MoveCoreFile($perp,$coredir);
+					AddFileTrace($perp,$filechange,$newname);
+					$count += 1;
+				} else {
+					$scancount = ScanForERROR($perp,$teststart);
+					$count += $scancount;
+				}
 			}
+		} else {
+			#print "Not File: $perp\n";
 		}
 	}
 	return($count);
 }
 
-sub CoreClear {
-	#print "Clearing core files.......\n";
-	foreach $core (@corefiles) {
-		system("mv $logdir/$core $logdir/$$.$core");
-		#print "Found core: $core\n";
+sub ScanForERROR
+{
+	my $daemonlog = shift;
+	my $test_start = shift;
+	my $count = 0;
+	open(MDL,"<$daemonlog") or die "Can not open daemon log<$daemonlog>:$!\n";
+	my $line = "";
+	while(<MDL>) {
+		chomp();
+		$line = $_;
+		if($line =~ /^\s*(\d+\/\d+\s+\d+:\d+:\d+)\s+.*ERROR.*/){
+			debug("$line TStamp $1\n",3);
+			if(CheckTriggerTime($test_start, $1)) {
+				$count += 1;
+				AddFileTrace($daemonlog, $1, $line);
+			} else {
+				debug( "IGNORE: error before test started\n",3);
+			}
+		}
 	}
-	return(0);
+	close(MDL);
+	return($count);
 }
+
+sub CheckTriggerTime
+{	
+	$teststartstamp = shift;
+	$timestring = shift;
+	$tsmon = 0;
+
+	my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime();
+
+	if($timestring =~ /^(\d+)\/(\d+)\s+(\d+):(\d+):(\d+)$/) {
+		$tsmon = $1 - 1;
+		my $timeloc = timelocal($5,$4,$3,$mday,$tsmon,$year,0,0,$isdst);
+		#print "timestamp from test start is $teststartstamp\n";
+		#print "timestamp fromlocaltime is $timeloc \n";
+		if($timeloc > $teststartstamp) {
+			return(1);
+		}
+	}
+}
+
+sub GetFileChangeTime
+{
+	$file = shift;
+	($dev, $ino, $mode, $nlink, $uid, $gid, $rdev, $size, $atime, $mtime, $ctime, $blksize, $blocks) = stat($file);
+
+	return($ctime);
+}
+
+sub GetFileTime
+{
+	$file = shift;
+	($dev, $ino, $mode, $nlink, $uid, $gid, $rdev, $size, $atime, $mtime, $ctime, $blksize, $blocks) = stat($file);
+
+	my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime($ctime);
+
+	$mon = $mon + 1;
+	$year = $year + 1900;
+
+	return("$mon/$mday $hour:$min:$sec");
+}
+
+sub AddFileTrace
+{
+	$file = shift;
+	$time = shift;
+	$entry = shift;
+
+	my $tracefile = $coredir . "/core_error_trace";
+	my $newtracefile = $coredir . "/core_error_trace.new";
+
+	# make sure the trace file exists
+	if(!(-f $tracefile)) {
+		open(TF,">$tracefile") or die "Can not create ERROR/CORE trace file<$tracefile>:$!\n";
+		print TF "Tracking file for core files and ERROR prints in daemonlogs\n";
+		close(TF);
+	}
+	open(TF,"<$tracefile") or die "Can not create ERROR/CORE trace file<$tracefile>:$!\n";
+	open(NTF,">$newtracefile") or die "Can not create ERROR/CORE trace file<$newtracefile>:$!\n";
+	while(<TF>) {
+		print NTF "$_";
+	}
+	close(TF);
+	$buildentry = "$time	$file	$entry\n";
+	print NTF "$buildentry";
+	close(NTF);
+	system("mv $newtracefile $tracefile");
+
+}
+
+sub MoveCoreFile
+{
+	my $oldname = shift;
+	my $targetdir = shift;
+	my $newname = "";
+	# get number for core file rename into trace dir
+	$entries = CountFileTrace();
+	if($oldname =~ /^.*\/(core.*)\s*.*$/) {
+		$newname = $coredir . "/" . $1 . "_$entries";
+		system("cp $oldname $newname");
+		system("rm $oldname");
+		return($newname);
+	} else {
+		print "Only move core files<$oldname>\n";
+		return("badmoverequest");
+	}
+}
+
+sub CountFileTrace
+{
+	my $tracefile = $coredir . "/core_error_trace";
+	my $count = 0;
+
+	open(CT,"<$tracefile") or die "Can not count<$tracefile>:$!\n";
+	while(<CT>) {
+		$count += 1;
+	}
+	close(CT);
+	return($count);
+}
+

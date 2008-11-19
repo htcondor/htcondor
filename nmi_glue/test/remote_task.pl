@@ -196,21 +196,6 @@ sub wanted {
 find(\&wanted, ".");
 
 ######################################################################
-# tar up any saveme directories pull full dir
-######################################################################
-
-$saveme = $testname . ".saveme";
-if( -d $saveme ) {
-	$tarfile = $testname . ".saveme.tar.gz";
-	system("tar -zcvf $tarfile $saveme");
-	print "Contents of SAVEME tar follows.....\n";
-	system("tar -ztvf $tarfile $saveme");
-	system("rm -rf $saveme");
-}
-
-
-
-######################################################################
 # print output from .run script to stdout of this task, and final exit
 ######################################################################
 
