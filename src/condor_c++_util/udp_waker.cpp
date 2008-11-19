@@ -49,20 +49,21 @@ UdpWakeOnLanWaker::default_port = 9;
 
 UdpWakeOnLanWaker::UdpWakeOnLanWaker (
     char const     *mac,
-	char const     *subnet,
-	unsigned short port ) throw ()
-		: m_port ( port )
+    char const     *subnet,
+    unsigned short port ) throw ()
+: WakerBase (), m_port ( port )
 {
 
-    strncpy ( m_mac, mac, STRING_MAC_ADDRESS_LENGTH );
-    strncpy ( m_subnet, subnet, MAX_IP_ADDRESS_LENGTH );
-    strncpy ( m_public_ip, my_ip_string (), MAX_IP_ADDRESS_LENGTH );
+    strncpy ( m_mac, mac, STRING_MAC_ADDRESS_LENGTH-1 );
+    strncpy ( m_subnet, subnet, MAX_IP_ADDRESS_LENGTH-1 );
+    strncpy ( m_public_ip, my_ip_string (), MAX_IP_ADDRESS_LENGTH-1 );
     m_can_wake = initialize ();	
 
 }
 
 UdpWakeOnLanWaker::UdpWakeOnLanWaker (
     ClassAd *ad ) throw()
+: WakerBase ()
 {
 
     int     found   = 0;
@@ -95,7 +96,7 @@ UdpWakeOnLanWaker::UdpWakeOnLanWaker (
     found = ad->LookupString (
         ATTR_PUBLIC_NETWORK_IP_ADDR,
         sinful,
-        MAX_IP_ADDRESS_LENGTH );
+        MAX_IP_ADDRESS_LENGTH+9 );
 
     if ( !found ) {
 
@@ -111,13 +112,13 @@ UdpWakeOnLanWaker::UdpWakeOnLanWaker (
     start = sinful + 1;
     end = strchr ( sinful, ':' );
     *end = '\0';
-    strcpy ( m_public_ip, start );
+    strncpy ( m_public_ip, start, MAX_IP_ADDRESS_LENGTH-1 );
 
     /* retrieve the subnet from the ad */
     found = ad->LookupString (
         ATTR_SUBNET,
         m_subnet,
-        MAX_IP_ADDRESS_LENGTH );
+        MAX_IP_ADDRESS_LENGTH-1 );
 
     if ( !found ) {
 
