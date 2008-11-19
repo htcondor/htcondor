@@ -93,8 +93,6 @@ start() {
 
 	if [ $RESULT != 0 ]; then
 		echo "$XM create $XEN_CONFIG_FILE error" 1>&2
-		cat "$XM_ERROR_OUTPUT" 1>&2
-
 		cat "$XM_ERROR_OUTPUT"
 
 		return 1
@@ -307,7 +305,7 @@ status() {
 	find_domain_name "$XEN_CONFIG_FILE"
 
 	if [ -z "$DOMAINNAME" ]; then
-		echo "Can't find domain name in $XEN_CONFIG_FILE" 1>&2
+		echo "Can't find domain name in $XEN_CONFIG_FILE"
 		return 1
 	fi
 
@@ -316,7 +314,7 @@ status() {
 
 	if [ $RESULT != 0 ]; then
 		echo "XM list error" 1>&2
-		cat "$XM_ERROR_OUTPUT" 1>&2
+		cat "$XM_ERROR_OUTPUT"
 		return 1
 	fi
 
