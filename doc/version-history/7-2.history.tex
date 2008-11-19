@@ -53,6 +53,11 @@ The details of each version are described below.
 \item Fixed a bug that caused \Condor{dagman} to stay in the Condor
 queue if it was accidentally submitted with an empty DAG file.
 
+\item Removed some redundant information in the startd advertisements
+to the collector (in the ``private'' ad that is not user-visible).
+This fix reduces startd-generated UDP traffic and memory usage by
+about 20\% in the \Condor{collector} and \Condor{negotiator}.
+
 \end{itemize}
 
 \noindent Known Bugs:
