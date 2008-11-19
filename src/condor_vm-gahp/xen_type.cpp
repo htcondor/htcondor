@@ -146,7 +146,7 @@ XenType::Start()
 	systemcmd.AppendArg("start");
 	systemcmd.AppendArg(m_configfile);
 
-	int result = systemCommand(systemcmd, true, &cmd_out, 1);
+	int result = systemCommand(systemcmd, true, &cmd_out);
 	if( result != 0 ) {
 		// Read error output
 		// TODO Should we grab more than just the first line?
@@ -501,7 +501,7 @@ XenType::Status()
 	}
 	systemcmd.AppendArg(m_configfile);
 
-	int result = systemCommand(systemcmd, true, &cmd_out, 1);
+	int result = systemCommand(systemcmd, true, &cmd_out);
 	if( result != 0 ) {
 		// Read error output
 		// TODO Should we grab more than just the first line?
