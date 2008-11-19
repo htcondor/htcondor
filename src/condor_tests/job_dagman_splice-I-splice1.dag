@@ -1,0 +1,18 @@
+JOB  A job_dagman_splice-I.cmd
+VARS A job="$(JOB)"
+
+JOB  B job_dagman_splice-I.cmd
+VARS B job="$(JOB)"
+
+JOB  C job_dagman_splice-I.cmd
+VARS C job="$(JOB)"
+
+JOB  D job_dagman_splice-I.cmd
+VARS D job="$(JOB)"
+
+PARENT A CHILD B
+PARENT C CHILD D
+
+# This will be a disjoint set in this dag, however in the toplevel, it shall
+# be a part of the parent/child relationship.
+SPLICE S1 job_dagman_splice-I-splice2.dag

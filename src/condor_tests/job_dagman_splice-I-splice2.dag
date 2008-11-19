@@ -1,0 +1,17 @@
+JOB  A job_dagman_splice-I.cmd
+VARS A job="$(JOB)"
+
+JOB  B job_dagman_splice-I.cmd
+VARS B job="$(JOB)"
+
+JOB  C job_dagman_splice-I.cmd
+VARS C job="$(JOB)"
+
+JOB  D job_dagman_splice-I.cmd
+VARS D job="$(JOB)"
+
+PARENT A CHILD B C
+PARENT B C  CHILD D
+
+# Bring in a disjoint set
+SPLICE S1 job_dagman_splice-I-splice3.dag
