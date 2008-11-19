@@ -533,6 +533,7 @@ int systemCommand( ArgList &args, bool is_root, StringList *cmd_out,
 #else
 	fp = my_popen( args, "r", want_stderr );
 #endif
+	set_priv( prev );
 	if ( fp == NULL ) {
 		MyString args_string;
 		args.GetArgsStringForDisplay( &args_string, 0 );
@@ -540,7 +541,6 @@ int systemCommand( ArgList &args, bool is_root, StringList *cmd_out,
 				  args_string.Value() );
 		return -1;
 	}
-	set_priv( prev );
 
 	while ( cmd_out && fgets( buff, sizeof(buff), fp ) != NULL ) {
 		line += buff;
