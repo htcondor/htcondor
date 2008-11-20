@@ -220,6 +220,14 @@ TESTCLASS(job_dagman_splice-K,full)
 TESTCLASS(job_dagman_splice-K,quicknolink)
 TESTCLASS(job_dagman_splice-K,btdebug)
 
+DESC(job_dagman_splice-L,"Simple Dagman Splice L")
+RUN(job_dagman_splice-L)
+TESTCLASS(job_dagman_splice-L,core)
+TESTCLASS(job_dagman_splice-L,quick)
+TESTCLASS(job_dagman_splice-L,full)
+TESTCLASS(job_dagman_splice-L,quicknolink)
+TESTCLASS(job_dagman_splice-L,btdebug)
+
 /* vmuniverse smoke test in larg repository */
 
 #if defined(HAVE_VMWARE) && defined(HAVE_CONDOR_TEST_LRG)
