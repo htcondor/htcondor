@@ -16,6 +16,16 @@ As usual, only bug fixes (and potentially, ports to new platforms)
 will be provided in future 7.0.x releases.
 New features will be added in the 7.1.x development series.
 
+On backwards compatibility:
+we believe that Condor 7.0.x and 6.8.x are wire-compatible, 
+and can be freely mixed between computers in a Condor pool. 
+However, we do not regularly test this compatibility and cannot guarantee it, 
+so we recommend using a single release of Condor when possible. 
+Please note that although you can mix Condor 7.0.x and 6.8.x in a pool, 
+you cannot mix them on a single computer. 
+That is, a \Condor{master} daemon running 6.8.x cannot run Condor daemons 
+from version 7.0.x, or vice-versa.
+
 The details of each version are described below.
 
 
