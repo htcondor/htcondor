@@ -1105,11 +1105,13 @@ VMwareType::Start()
 	// Got Pid result
 	m_vm_pid = 0;
 	cmd_out.rewind();
-	const char *pid_line = cmd_out.next();
-	if ( pid_line ) {
-		m_vm_pid = (int)strtol(pid_line, (char **)NULL, 10);
-		if( m_vm_pid <= 0 ) {
-			m_vm_pid = 0;
+	const char *pid_line;
+	while ( (pid_line = cmd_out.next()) ) {
+		if ( sscanf( pid_line, "PID=%d", &m_vm_pid ) == 1 ) {
+			if ( m_vm_pid <= 0 ) {
+				m_vm_pid = 0;
+			}
+			break;
 		}
 	}
 
@@ -1414,11 +1416,13 @@ VMwareType::Resume()
 	// Got Pid result
 	m_vm_pid = 0;
 	cmd_out.rewind();
-	const char *pid_line = cmd_out.next();
-	if ( pid_line ) {
-		m_vm_pid = (int)strtol(pid_line, (char **)NULL, 10);
-		if( m_vm_pid <= 0 ) {
-			m_vm_pid = 0;
+	const char *pid_line;
+	while ( (pid_line = cmd_out.next()) ) {
+		if ( sscanf( pid_line, "PID=%d", &m_vm_pid ) == 1 ) {
+			if ( m_vm_pid <= 0 ) {
+				m_vm_pid = 0;
+			}
+			break;
 		}
 	}
 
@@ -1645,13 +1649,14 @@ VMwareType::getPIDofVM(int &vm_pid)
 
 	// Got Pid result
 	cmd_out.rewind();
-	const char *pid_line = cmd_out.next();
-	if ( pid_line ) {
-		vm_pid = (int)strtol(pid_line, (char **)NULL, 10);
-		if( vm_pid <= 0 ) {
-			vm_pid = 0;
+	const char *pid_line;
+	while ( (pid_line = cmd_out.next()) ) {
+		if ( sscanf( pid_line, "PID=%d", &m_vm_pid ) == 1 ) {
+			if ( m_vm_pid <= 0 ) {
+				m_vm_pid = 0;
+			}
+			return true;
 		}
-		return true;
 	}
 	return false;
 }
@@ -2026,16 +2031,9 @@ VMwareType::testVMware(VMGahpConfig* config)
 	systemcmd.AppendArg(config->m_vm_script);
 	systemcmd.AppendArg("check");
 
-	StringList output;
-
-	int result = systemCommand(systemcmd, false, &output, 1);
+	int result = systemCommand(systemcmd, false);
 	if( result != 0 ) {
-		dprintf( D_ALWAYS, "VMware script check failed:\n" );
-		const char *line;
-		output.rewind();
-		while ( (line = output.next()) ) {
-			dprintf( D_ALWAYS, "  %s\n", line );
-		}
+		vmprintf( D_ALWAYS, "VMware script check failed:\n" );
 		return false;
 	}
 

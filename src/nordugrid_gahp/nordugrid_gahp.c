@@ -262,6 +262,7 @@ int handle_async_mode_off(char **);
 int handle_response_prefix(char **);
 int handle_refresh_proxy_from_file(char **);
 
+int main_activate_globus();
 void main_deactivate_globus();
 
 void gahp_sem_init( gahp_semaphore *, int initial_value);
@@ -460,6 +461,8 @@ user_arg_t *malloc_user_arg()
 	user_arg->fd = -1;
 	user_arg->cred = NULL;
 	user_arg->op_attr = NULL;
+
+	return user_arg;
 }
 
 void free_user_arg( user_arg_t *user_arg )
@@ -2578,7 +2581,11 @@ main(int argc, char **argv)
 	/* Here we are not going to run multi-threaded; instead, we will register
 	 * a callback when there is activity on stdin
 	 */
-	globus_module_activate(GLOBUS_IO_MODULE);
+	err = globus_module_activate(GLOBUS_IO_MODULE);
+	if ( err != GLOBUS_SUCCESS ) {
+		printf("ERROR %d Failed to activate Globus IO Module\n",result);
+		_exit(1);
+	}
 	err = (int)globus_io_file_posix_convert(STDIN_FILENO,NULL,(globus_io_handle_t *)&stdin_handle);
 	if ( err != GLOBUS_SUCCESS ) {
 		printf("ERROR %d Failed to get globus_io handle to stdin\n",result);

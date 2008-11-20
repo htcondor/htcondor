@@ -60,6 +60,7 @@ extern void		tail_log( FILE*, char*, int );
 extern int		run_preen(Service*);
 
 extern FILESQL *FILEObj;
+extern char *_condor_myServiceName;
 
 int		hourly_housekeeping(void);
 
@@ -1812,10 +1813,10 @@ Daemons::ExecMaster()
 {
 	if( MasterName ) {
 		(void)execl(daemon_ptr[master]->process_name, 
-					"condor_master", "-f", "-n", MasterName, 0);
+					_condor_myServiceName, "-f", "-n", MasterName, 0);
 	} else {
 		(void)execl(daemon_ptr[master]->process_name, 
-					"condor_master", "-f", 0);
+					_condor_myServiceName, "-f", 0);
 	}
 }
 

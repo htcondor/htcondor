@@ -152,7 +152,6 @@ XenType::Start()
 		// TODO Should we grab more than just the first line?
 		cmd_out.rewind();
 		m_result_msg = cmd_out.next();
-		vmprintf(D_ALWAYS, "ERROR: %s\n", m_result_msg.GetCStr());
 		return false;
 	}
 
@@ -508,7 +507,6 @@ XenType::Status()
 		// TODO Should we grab more than just the first line?
 		cmd_out.rewind();
 		m_result_msg = cmd_out.next();
-		vmprintf(D_ALWAYS, "ERROR: %s\n", m_result_msg.GetCStr());
 		return false;
 	}
 
@@ -1427,16 +1425,9 @@ XenType::testXen(VMGahpConfig* config)
 	systemcmd.AppendArg(config->m_vm_script);
 	systemcmd.AppendArg("check");
 
-	StringList output;
-
-	int result = systemCommand(systemcmd, true, &output, 1);
+	int result = systemCommand(systemcmd, true);
 	if( result != 0 ) {
-		dprintf( D_ALWAYS, "Xen script check failed:\n" );
-		const char *line;
-		output.rewind();
-		while ( (line = output.next()) ) {
-			dprintf( D_ALWAYS, "  %s\n", line );
-		}
+		vmprintf( D_ALWAYS, "Xen script check failed:\n" );
 		return false;
 	}
 

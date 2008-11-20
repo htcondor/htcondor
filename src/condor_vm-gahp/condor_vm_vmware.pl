@@ -307,7 +307,7 @@ sub pidofvm
 
 	# Get pid of main process of this VM
 	my $vmpid = getvmpid($vmconfig);
-	print OUTPUT "$vmpid\n";
+	print OUTPUT "PID=$vmpid\n";
 }
 
 sub getvminfo
@@ -419,7 +419,7 @@ sub start
 
 	# Get pid of main process of this VM
 	my $vmpid = getvmpid($vmconfig);
-	print OUTPUT "$vmpid\n";
+	print OUTPUT "PID=$vmpid\n";
 }
 
 sub stop
