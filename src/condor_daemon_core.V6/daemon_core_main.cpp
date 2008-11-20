@@ -81,6 +81,10 @@ char*	pidFile = NULL;
 char*	addrFile = NULL;
 static	char*	logAppend = NULL;
 
+int condor_main_argc;
+char **condor_main_argv;
+time_t daemon_stop_time;
+
 /* ODBC object */
 //extern ODBC *DBObj;
 
@@ -1321,6 +1325,12 @@ int main( int argc, char** argv )
 	int		i;
 	int		wantsKill = FALSE, wantsQuiet = FALSE;
 
+	condor_main_argc = argc;
+	condor_main_argv = (char **)malloc((argc+1)*sizeof(char *));
+	for(i=0;i<argc;i++) {
+		condor_main_argv[i] = strdup(argv[i]);
+	}
+	condor_main_argv[i] = NULL;
 
 #ifndef WIN32
 		// Set a umask value so we get reasonable permissions on the
@@ -1914,10 +1924,14 @@ int main( int argc, char** argv )
 
 		//if specified on command line, set timer to gracefully exit
 	if ( runfor ) {
+		daemon_stop_time = time(NULL)+runfor*60;
 		daemonCore->Register_Timer( runfor * 60, 0, 
 				(TimerHandler)handle_dc_sigterm, "handle_dc_sigterm" );
 		dprintf(D_ALWAYS,"Registered Timer for graceful shutdown in %d minutes\n",
 				runfor );
+	}
+	else {
+		daemon_stop_time = 0;
 	}
 
 #ifndef WIN32
