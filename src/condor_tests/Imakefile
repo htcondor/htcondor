@@ -43,6 +43,7 @@ BUILD_DEP($(CC),x_return-n,c,x_waste_second.o)
 BUILD($(CC),x_dumpcore,c)
 BUILD($(CC),x_trapsig,c)
 BUILD($(CC),x_tightloop,c)
+BUILD($(CC),x_killppid,c)
 
 /************************************************************************
    Rules for all the single-compiler (or no compiler) tests

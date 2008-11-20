@@ -909,7 +909,7 @@ sub CreateLocalConfig
 
 	# ADD size for log files and debug level
 	# default settings are in condor_config, set here to override 
-	print FIX "ALL_DEBUG               = D_FULLDEBUG D_NETWORK\n";
+	print FIX "ALL_DEBUG               = D_FULLDEBUG\n";
 
 	print FIX "MAX_COLLECTOR_LOG       = $logsize\n";
 	print FIX "COLLECTOR_DEBUG         = \n";
@@ -1315,10 +1315,10 @@ sub DoChild
 	my $test_program = shift;
 	my $test_retirement = shift;
 	my $test_starttime = time();
+	CoreCheck($test_starttime);
 	debug( "Test start @ $test_starttime \n",2);
 	sleep(3);
 	# add test core file
-	system("touch ./TestingPersonalCondor/local/log/core.schedd");
 
 	my $corecount = 0;
 	my $res;
@@ -1380,9 +1380,9 @@ sub DoChild
 				#print "Perl test($test_program) returned <<$res>>!!! \n"; 
 				exit(1); 
 			}
-			#$corecount = CoreCheck($test_starttime);
+			$corecount = CoreCheck($test_starttime);
 			if($corecount != 0) {
-				print "-Core/ERROR found- ";
+				print "\n ************ -Core/ERROR found- *************\n";
 				exit(1);
 			}
 			exit(0);
@@ -1551,6 +1551,7 @@ sub AddFileTrace
 	close(TF);
 	$buildentry = "$time	$file	$entry\n";
 	print NTF "$buildentry";
+	debug("\n$buildentry",1);
 	close(NTF);
 	system("mv $newtracefile $tracefile");
 
@@ -1565,8 +1566,8 @@ sub MoveCoreFile
 	$entries = CountFileTrace();
 	if($oldname =~ /^.*\/(core.*)\s*.*$/) {
 		$newname = $coredir . "/" . $1 . "_$entries";
-		system("cp $oldname $newname");
-		system("rm $oldname");
+		system("mv $oldname $newname");
+		#system("rm $oldname");
 		return($newname);
 	} else {
 		print "Only move core files<$oldname>\n";
