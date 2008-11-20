@@ -202,10 +202,11 @@ Some of these subroutines take other subroutines as arguments.
   \item [\Code{RegisterTimed(sub, seconds)}]
   Register a subroutine (called \Code{sub})
   to be called back at a delay of \Code{seconds} time from
-  this registration time.
+  this registration time.  Only one callback may be registered,
+  as subsequent calls modify the timer only.
 
-  \item [\Code{RemoveTimed(sub)}]
-  Remove the timed callback called \Code{sub}.
+  \item [\Code{RemoveTimed()}]
+  Remove the single, timed callback registered with \Procedure{RegisterTimed}.
 
 \end{description}
 
@@ -287,7 +288,7 @@ to vacate any machine that the job runs on. The termination
 handler then prints out a summary of what has happened.
 
 
-A second example Perl script facilitates the metascheduling of
+A second example Perl script facilitates the meta-scheduling of
 two of Condor jobs.
 It submits a second job if the first job successfully completes.
 
