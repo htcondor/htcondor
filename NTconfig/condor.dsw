@@ -155,6 +155,9 @@ Package=<4>
     Begin Project Dependency
     Project_Dep_Name condor_power
     End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_api_util
+    End Project Dependency
 }}}
 
 ###############################################################################
@@ -190,6 +193,24 @@ Package=<4>
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name condor_sysapi
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_util_lib
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "condor_api_util"=.\condor_api_util.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name condor_cpp_util
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name condor_util_lib

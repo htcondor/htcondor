@@ -20,6 +20,7 @@ if not exist %1\etc\NUL mkdir %1\etc
 if not exist %1\sql\NUL mkdir %1\sql
 if not exist %1\src\NUL mkdir %1\src
 if not exist %1\src\chirp\NUL mkdir %1\src\chirp
+if not exist %1\src\userlog\NUL mkdir %1\src\userlog
 if not exist %1\examples\NUL mkdir %1\examples
 if not exist %1\examples\cpusoak\NUL mkdir %1\examples\cpusoak
 if not exist %1\examples\printname\NUL mkdir %1\examples\printname
@@ -43,15 +44,20 @@ copy ..\src\condor_chirp\PROTOCOL %1\src\chirp
 copy ..\src\condor_chirp\chirp\LICENSE %1\src\chirp
 copy ..\src\condor_chirp\chirp\doc\Condor %1\src\chirp\README
 
+echo. & echo Copying user log library...
+copy "..\src\condor_c++_util\write_user_log.h" %1\src\userlog
+copy "..\src\condor_c++_util\read_user_log.h" %1\src\userlog
+copy ..\Release\condor_api.lib %1\src\userlog
+
 echo. & echo Copying example configurations...
 copy ..\src\condor_examples\condor_config.* %1\etc
 copy ..\src\condor_examples\condor_vmware_local_settings %1\etc
 
 echo. & echo Copying example submit files...
-copy installer\examples\*.* %1\examples
-copy installer\examples\cpusoak\*.* %1\examples\cpusoak
-copy installer\examples\printname\*.* %1\examples\printname
-copy installer\examples\rc5\*.* %1\examples\rc5
+copy windows_installer\examples\*.* %1\examples
+copy windows_installer\examples\cpusoak\*.* %1\examples\cpusoak
+copy windows_installer\examples\printname\*.* %1\examples\printname
+copy windows_installer\examples\rc5\*.* %1\examples\rc5
 
 echo. & echo Copying SQL files...
 copy ..\src\condor_tt\*.sql %1\sql

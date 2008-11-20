@@ -62,7 +62,12 @@ main(int, char* argv[])
 	//
 	Env env;
 	char* env_buf = read_env(sock_fd);
-	env.MergeFrom(env_buf);
+	MyString merge_err;
+	if (!env.MergeFromV2Raw(env_buf, &merge_err)) {
+		err.sprintf("Env::MergeFromV2Raw error: %s", merge_err.Value());
+		write(sock_fd, err.Value(), err.Length() + 1);
+		exit(1);
+	}
 	env.MergeFrom(environ);
 	delete[] env_buf;
 

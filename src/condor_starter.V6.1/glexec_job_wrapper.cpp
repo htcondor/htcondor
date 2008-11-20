@@ -74,7 +74,11 @@ main(int argc, char* argv[])
 	//
 	Env env;
 	char* env_buf = read_env();
-	env.MergeFrom(env_buf);
+	MyString merge_err;
+	if (!env.MergeFromV2Raw(env_buf, &merge_err)) {
+		err.sprintf("Env::MergeFromV2Raw error: %s", merge_err.Value());
+		fatal_error();
+	}
 	env.MergeFrom(environ);
 	delete[] env_buf;
 

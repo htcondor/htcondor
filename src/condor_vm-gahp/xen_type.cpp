@@ -149,9 +149,9 @@ XenType::Start()
 	int result = systemCommand(systemcmd, true, &cmd_out);
 	if( result != 0 ) {
 		// Read error output
-		// TODO Should we grab more than just the first line?
-		cmd_out.rewind();
-		m_result_msg = cmd_out.next();
+		char *temp = cmd_out.print_to_delimed_string("/");
+		m_result_msg = temp;
+		free( temp );
 		return false;
 	}
 
@@ -381,15 +381,20 @@ XenType::Suspend()
 	makeNameofSuspendfile(tmpfilename);
 	unlink(tmpfilename.Value());
 
+	StringList cmd_out;
+
 	ArgList systemcmd;
 	systemcmd.AppendArg(m_scriptname);
 	systemcmd.AppendArg("suspend");
 	systemcmd.AppendArg(m_configfile);
 	systemcmd.AppendArg(tmpfilename);
 
-	int result = systemCommand(systemcmd, true);
+	int result = systemCommand(systemcmd, true, &cmd_out);
 	if( result != 0 ) {
-		m_result_msg = VMGAHP_ERR_CRITICAL;
+		// Read error output
+		char *temp = cmd_out.print_to_delimed_string("/");
+		m_result_msg = temp;
+		free( temp );
 		unlink(tmpfilename.Value());
 		return false;
 	}
@@ -434,14 +439,19 @@ XenType::Resume()
 		return false;
 	}
 
+	StringList cmd_out;
+
 	ArgList systemcmd;
 	systemcmd.AppendArg(m_scriptname);
 	systemcmd.AppendArg("resume");
 	systemcmd.AppendArg(m_suspendfile);
 
-	int result = systemCommand(systemcmd, true);
+	int result = systemCommand(systemcmd, true, &cmd_out);
 	if( result != 0 ) {
-		m_result_msg = VMGAHP_ERR_CRITICAL;
+		// Read error output
+		char *temp = cmd_out.print_to_delimed_string("/");
+		m_result_msg = temp;
+		free( temp );
 		return false;
 	}
 
@@ -505,8 +515,9 @@ XenType::Status()
 	if( result != 0 ) {
 		// Read error output
 		// TODO Should we grab more than just the first line?
-		cmd_out.rewind();
-		m_result_msg = cmd_out.next();
+		char *temp = cmd_out.print_to_delimed_string("/");
+		m_result_msg = temp;
+		free( temp );
 		return false;
 	}
 
