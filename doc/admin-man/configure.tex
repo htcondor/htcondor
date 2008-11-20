@@ -223,53 +223,63 @@ and the prefix of \MacroNI{MASTER.} causes this configuration
 to be specific to the \Condor{master} daemon.
 
 % the local functionality added in 7.1.4
-This has been further expanded (in Condor 7.1.4) to allow for the
-specification of a ``local'' name on the command line (via the
-``-local-name $<$name$>$'' command-line parameter).  This allows for
-multiple instances of a daemon to be run by the same \Condor{master},
-each with it's own local configuration parameters.
-
-The following order is used to look up a parameter named $<$parameter name$>$:
-
-1. $<$subsystem name$>$.$<$local name$>$.$<$parameter name$>$
-
-2. $<$local name$>$.$<$parameter name$>$
-
-3. $<$subsystem name$>$.$<$parameter name$>$
-
-4. $<$parameter name$>$
-
-If this local name is not specified on the command line, steps 1
-and 2 above are skipped.  As soon as the first match is found, the
-search is completed, and the corresponding value is used.
-
-As an example, let's configure a \Condor{master} to run 2
-\Condor{schedd}'s.  First, let's define things in the master to
-accommodate this.
-
+This syntax has been further expanded to allow for the
+specification of a local name on the command line 
+using the command line option
 \begin{verbatim}
-  XYZZY            = $(SCHEDD)
-  XYZZY_ARGS       = -local-name xyzzy
-  DAEMON_LIST      = $(DAEMON_LIST) XYZZY
-  DC_DAEMON_LIST   = $(DC_DAEMON_LIST) XYZZY
-  XYZZY_LOG        = $(LOG)/SchedLog.xyzzy
+  -local-name <local-name>
+\end{verbatim}
+This allows multiple instances of a daemon to be run 
+by the same \Condor{master} daemon,
+each instance with its own local configuration variable.
+
+The ordering used to look up a variable, called \verb@<parameter name>@:
+
+\begin{enumerate}
+\item \verb@<subsystem name>.<local name>.<parameter name>@
+
+\item \verb@<local name>.<parameter name>@
+
+\item \verb@<subsystem name>.<parameter name>@
+
+\item \verb@<parameter name>@
+\end{enumerate}
+
+If this local name is not specified on the command line, 
+numbers 1 and 2 are skipped.
+As soon as the first match is found, the search is completed,
+and the corresponding value is used.
+
+This example configures a \Condor{master} to run 2 \Condor{schedd}
+daemons.  The \Condor{master} daemon needs the configuration:
+\begin{verbatim}
+  XYZZY           = $(SCHEDD)
+  XYZZY_ARGS      = -local-name xyzzy
+  DAEMON_LIST     = $(DAEMON_LIST) XYZZY
+  DC_DAEMON_LIST  = $(DC_DAEMON_LIST) XYZZY
+  XYZZY_LOG       = $(LOG)/SchedLog.xyzzy
 \end{verbatim}
 
-Now, when the \Condor{master} starts up daemons, it'll start up an
-extra \Condor{schedd}, the second being passed ``-local-name xyzzy''
+Using this example configuration, the \Condor{master} starts up a
+second \Condor{schedd} daemon, 
+where this second \Condor{schedd} daemon is passed 
+\OptArg{-local-name}{xyzzy}
 on the command line.
 
-Note that, by default, \MacroNI{DC\_DAEMON\_LIST} isn't
-defined in the configuration file, so you can't just append to it as
-in this example; you must uncomment the ``original'' version of it in
-the configuration file, and then append to it as above (or just add
-the ``SCHEDD2'' to it's definition).
+Note that by default, the configuration variable \MacroNI{DC\_DAEMON\_LIST}
+is not defined in the configuration file.
+If not defined, then define it by using the value
+included as a comment in the default configuration,
+together with the above redefinition.
+Alternatively, modify the original definition by adding
+the additional daemon's local name
+(\Attr{XYZZY} in this example) to the list.
 
-Next, let's configure the ``xyzzy'' \Condor{schedd}:
-This schedd will share all parameters with the ``main'' schedd, except
-for those specified separately (thus, it'll pick up
-\MacroNI{MAX\_JOBS\_RUNNING}
-and all other parameters not explicitly specified).
+Continuing the example,
+configure the \Condor{schedd} daemon named \Attr{xyzzy}.
+This \Condor{schedd} daemon will share all configuration variable
+definitions with the other \Condor{schedd} daemon,
+except for those specified separately.
 
 \begin{verbatim}
   SCHEDD.XYZZY.SCHEDD_NAME = XYZZY
@@ -277,20 +287,21 @@ and all other parameters not explicitly specified).
   SCHEDD.XYZZY.SPOOL       = $(SPOOL).XYZZY
 \end{verbatim}
 
-Note that the above \MacroNI{SCHEDD\_NAME} and \MacroNI{SPOOL} are
-specific to the \Condor{schedd} (as opposed to a different daemon
-(i.e. \Condor{startd}).  Other Condor daemons will
-have different requirements as to which parameters would need to be
-specified individually.  The above is just an example for a schedd,
-and more local configuration can, and likely would, be specified.
+Note that the example \MacroNI{SCHEDD\_NAME} and \MacroNI{SPOOL} are
+specific to the \Condor{schedd} daemon, as opposed to a different daemon
+such as the \Condor{startd}.
+Other Condor daemons using this feature will
+have different requirements for which parameters need to be
+specified individually.  This example works for the \Condor{schedd},
+and more local configuration can, and likely would be specified.
 
-Also note that each daemon's log macro (in this case,
-\MacroNI{SCHEDD\_LOG}) needs to be specified individually,
-and in two places -- one for the \Condor{master}'s use, and the other
-for the daemon itself.  Also note that, in the above example, the
-new \Condor{schedd} (named ``XYZZY'') log macro
+also note that each daemon's log file must be specified individually,
+and in two places: one specification is for use by the \Condor{master},
+and the other is for use by the daemon itself.
+In the example,
+the \Attr{XYZZY} \Condor{schedd} configuration variable
 \MacroNI{SCHEDD.XYZZY.SCHEDD\_LOG} definition references the
-\Condor{master}'s \MacroNI{XYZZY\_LOG}.
+\Condor{master} daemon's \MacroNI{XYZZY\_LOG}.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -419,6 +430,7 @@ the library routine which parses the configuration files.
   \item \verb@QUILL@
   \item \verb@DBMSD@
   \item \verb@JOB_ROUTER@
+  \item \verb@LEASEMANAGER@
     \label{list:subsystem names}
   \end{itemize}
 
@@ -1774,6 +1786,23 @@ which use DaemonCore).
   alive and well
   message from the \Condor{schedd} before killing it.
 
+\item[\Macro{NOT\_RESPONDING\_WANT\_CORE}]
+  \label{param:NotRespondingWantCore}
+  A boolean parameter with a default value of false.
+  This parameter is for debugging purposes on UNIX systems, and
+  controls the behavior of the parent process when it determines that
+  a child process is not responding (see
+  \pageref{param:NotRespondingTimeout}).
+  If \MacroNI{NOT\_RESPONDING\_WANT\_CORE} is true, the parent 
+  will send a SIGABRT instead of SIGKILL to the child process.
+  If the child process is configured with
+  \MacroNI{CREATE\_CORE\_FILES} enabled, the child process will then
+  generate a core dump.
+  See \MacroNI{NOT\_RESPONDING\_TIMEOUT} on page
+  \pageref{param:NotRespondingTimeout}, and 
+  \MacroNI{CREATE\_CORE\_FILES} on page
+  \pageref{param:CreateCoreFiles} for related details.
+
 \item[\Macro{LOCK\_FILE\_UPDATE\_INTERVAL}] \label{param:LockFileUpdateInterval}
   An integer value representing seconds,
   controlling how often valid lock files should have their on disk
@@ -2675,7 +2704,7 @@ These macros control the \Condor{master}.
 \item[\Macro{MASTER\_SHUTDOWN\_$<$Name$>$}]
   \label{param:MasterShutdownProgram} This macro is used to specify a
   full path to a program that the master will execute (via the UNIX
-  ``execl()'' call, or the similar Win32 ``\_execl()'' call) instead of
+  ``exe cl()'' call, or the similar Win32 ``\_exe cl()'' call) instead of
   the normal call to exit().  Multiple of these may be configured
   (with different $<$name$>$'s).  These macros have no affect on a
   \Condor{master} unless the \Condor{set\_shutdown} is run.  The name
@@ -4163,9 +4192,9 @@ This macro can be used to override the default search used by
 Condor on Linux to detect the hibernation method to use.  The default
 behavior is to try:
 \begin{itemize}
-\item Detect and use the pm-utils command line tools ``pm-utils''
+\item Detect and use the pm-UTIL command line tools ``pm-UTIL''
 \item Detect and use the /sys/power virtual files ``/sys''
-\item Detect and use the /proc/acpi virtual files ``/proc''
+\item Detect and use the /proc/ACPI virtual files ``/proc''
 \end{itemize}
 To override this behavior and force the use of a particular method,
 set \MacroNI{LINUX\_HIBERNATION\_METHOD} to one of the above names
@@ -4431,7 +4460,7 @@ is configured by \Macro{SCHEDD\_INTERVAL} (default 300 seconds).
   Normally, it is not a good idea to set this to be very small (e.g. a
   few minutes).  Doing so can lead to failure to preempt, because the
   preempting job will spend a significant fraction of its time waiting
-  to be rematched.  During that time, it would miss out on any
+  to be re-matched.  During that time, it would miss out on any
   opportunity to run if the job it is trying to preempt gets out of
   the way.
 
@@ -6298,7 +6327,7 @@ The \Condor{lease\_manager} expects to use the syntax
 \end{verbatim}
 in configuration.
 This allows multiple instances of the
-\Condor{lease\_manager} to be easily configured using the synax
+\Condor{lease\_manager} to be easily configured using the syntax
 \begin{verbatim}
  <subsystem name>.<local name>.<parameter name>
 \end{verbatim}
@@ -6345,57 +6374,48 @@ This allows multiple instances of the
   it limits the effective maximum duration for all resources to this value.
   The default value is 1800 seconds.
 
-  Note that lease(s) can be renewed, and thus can be extended beyond this
+  Note that leases can be renewed, and thus can be extended beyond this
   limit.  To provide a limit on the total duration of a lease, use 
   \MacroNI{LeaseManager.MAX\_TOTAL\_LEASE\_DURATION}.
 
 \item[\Macro{LeaseManager.MAX\_TOTAL\_LEASE\_DURATION}]
   \label{param:LeaseManager.MaxTotalLeaseDuration}
-
-  This parameter is used to limit the TOTAL duration of leases, over
-  all it's renewals.  This is an integer parameter in units of
-  seconds, with a default value of 3600 seconds.
-
+  An integer value representing seconds used to limit
+  the \emph{total} duration of leases, over
+  all its renewals.  
+  The default value is 3600 seconds.
 
 \item[\Macro{LeaseManager.DEFAULT\_MAX\_LEASE\_DURATION}]
   \label{param:LeaseManager.DefaultMaxLeaseDuration}
-
-  As described above, the \Condor{lease\_manager} will use the
-  ``MaxLeaseDuration'' attribute of the resource ClassAd to limit the
+  The \Condor{lease\_manager} uses the
+  \Attr{MaxLeaseDuration} attribute from the resource ClassAd to limit the
   lease duration.  If this attribute is not present in a resource
-  ClassAd, then this parameter is used.  This is an integer
-  parameter in units of seconds with a default value of 60 seconds.
-
+  ClassAd, then this configuration variable is used instead.
+  This integer value is given in units of seconds,
+  with a default value of 60 seconds.
 
 \item[\Macro{LeaseManager.CLASSAD\_LOG}]
   \label{param:LeaseManager.ClassadLog}
-
-  This parameter controls where the \Condor{lease\_manager} persists
-  it's state information.  This parameter has no default value, and
-  must contain a valid full file path.
-
+  This variable defines a full path and file name to the location
+  where the \Condor{lease\_manager} keeps persistent state information.
+  This variable has no default value.
 
 \item[\Macro{LeaseManager.QUERY\_ADTYPE}]
   \label{param:LeaseManager.QueryAdtype}
-
   This parameter controls the type of the query in the ClassAd sent to
   the \Condor{collector}, which will control the types of ClassAds
   returned by the \Condor{collector}.  This parameter must be a valid
-  ClassAd type name, with a default value of ``Any''.
-
+  ClassAd type name, with a default value of \AdStr{Any}.
 
 \item[\Macro{LeaseManager.QUERY\_CONSTRAINTS}]
   \label{param:LeaseManager.QueryConstraints}
-
-  This parameter controls the constraint in the query sent to the
-  \Condor{collector}, and can be used to further constrain the types
-  of ClassAds from the \Condor{collector}.  This parameter can be any
-  valid ClassAd expression, and has no default value (no constraints).
-
+  A ClassAd expression that controls the constraint in the query sent to the
+  \Condor{collector}.
+  It is used to further constrain the types
+  of ClassAds from the \Condor{collector}.
+  There is no default value, resulting in no constraints being placed on query.
 
 \end{description}
-
-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:GridMonitor-Config-File-Entries}grid\_monitor
@@ -6965,7 +6985,7 @@ the key may be compromised by attack.
 \item[\Macro{SEC\_INVALIDATE\_SESSIONS\_VIA\_TCP}]
 \label{param:SecInvalidateSessionsViaTcp} Use TCP (if True) or UDP (if False)
 for responding to attempts to use an invalid security session.  This happens,
-for example, if a daemon restarts and receives incomming commands from
+for example, if a daemon restarts and receives incoming commands from
 other daemons that are still using a previously established security session.
 The default is True.
 
