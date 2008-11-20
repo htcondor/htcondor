@@ -994,15 +994,19 @@ VMwareType::Snapshot()
 		return false;
 	}
 
+	StringList cmd_out;
+
 	ArgList systemcmd;
 	systemcmd.AppendArg(m_prog_for_script);
 	systemcmd.AppendArg(m_scriptname);
 	systemcmd.AppendArg("snapshot");
 	systemcmd.AppendArg(m_configfile);
 
-	int result = systemCommand(systemcmd, false);
+	int result = systemCommand(systemcmd, false, &cmd_out);
 	if( result != 0 ) {
-		m_result_msg = VMGAHP_ERR_CRITICAL;
+		char *temp = cmd_out.print_to_delimed_string("/");
+		m_result_msg = temp;
+		free( temp );
 		return false;
 	}
 
@@ -1098,7 +1102,9 @@ VMwareType::Start()
 	int result = systemCommand(systemcmd, false, &cmd_out);
 	if( result != 0 ) {
 		Unregister();
-		m_result_msg = VMGAHP_ERR_CRITICAL;
+		char *temp = cmd_out.print_to_delimed_string("/");
+		m_result_msg = temp;
+		free( temp );
 		return false;
 	}
 
@@ -1356,15 +1362,19 @@ VMwareType::Suspend()
 	// If a VM is soft suspended, resume it first.
 	ResumeFromSoftSuspend();
 
+	StringList cmd_out;
+
 	ArgList systemcmd;
 	systemcmd.AppendArg(m_prog_for_script);
 	systemcmd.AppendArg(m_scriptname);
 	systemcmd.AppendArg("suspend");
 	systemcmd.AppendArg(m_configfile);
 
-	int result = systemCommand(systemcmd, false);
+	int result = systemCommand(systemcmd, false, &cmd_out);
 	if( result != 0 ) {
-		m_result_msg = VMGAHP_ERR_CRITICAL;
+		char *temp = cmd_out.print_to_delimed_string("/");
+		m_result_msg = temp;
+		free( temp );
 		return false;
 	}
 
@@ -1409,7 +1419,9 @@ VMwareType::Resume()
 
 	int result = systemCommand(systemcmd, false, &cmd_out);
 	if( result != 0 ) {
-		m_result_msg = VMGAHP_ERR_CRITICAL;
+		char *temp = cmd_out.print_to_delimed_string("/");
+		m_result_msg = temp;
+		free( temp );
 		return false;
 	}
 
@@ -1480,7 +1492,9 @@ VMwareType::Status()
 
 	int result = systemCommand(systemcmd, false, &cmd_out);
 	if( result != 0 ) {
-		m_result_msg = VMGAHP_ERR_CRITICAL;
+		char *temp = cmd_out.print_to_delimed_string("/");
+		m_result_msg = temp;
+		free( temp );
 		return false;
 	}
 
