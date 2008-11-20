@@ -6586,8 +6586,7 @@ int DaemonCore::Create_Process(
 			// and finally, get it all back as a NULL delimited string.
 			// remember to deallocate this with delete [] since it will
 			// be allocated on the heap with new [].
-		newenv = job_environ.getNullDelimitedString();
-
+		newenv = job_environ.getWindowsEnvironmentString();
 	}
 	// end of dealing with the environment....
 

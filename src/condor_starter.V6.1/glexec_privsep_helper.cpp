@@ -279,14 +279,17 @@ GLExecPrivSepHelper::feed_wrapper(int pid,
 		env_to_send.MergeFrom(environ);
 	}
 	env_to_send.MergeFrom(env);
-	char* env_buf = env_to_send.getNullDelimitedString();
-	int env_len = 1;
-	char* ptr = env_buf;
-	while (*ptr != '\0') {
-		int len = strlen(ptr) + 1;
-		env_len += len;
-		ptr += len;
+	MyString env_str;
+	MyString merge_err;
+	if (!env_to_send.getDelimitedStringV2Raw(&env_str, &merge_err)) {
+		dprintf(D_ALWAYS,
+		        "GLEXEC: Env::getDelimitedStringV2Raw error: %s\n",
+		        merge_err.Value());
+		close(sock_fds[0]);
+		return FALSE;
 	}
+	const char* env_buf = env_str.Value();
+	int env_len = env_str.Length() + 1;
 	errno = 0;
 	if (full_write(sock_fds[0], &env_len, sizeof(env_len)) != sizeof(env_len)) {
 		dprintf(D_ALWAYS,
