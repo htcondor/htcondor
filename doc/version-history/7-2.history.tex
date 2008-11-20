@@ -72,6 +72,9 @@ itself.  In some cases, this confused external utilities that monitor
 the \Condor{master} process by looking at the output of 'ps' or
 something similar.
 
+\item \Condor{master} was also not preserving other command-line options
+when restarting itself, most notably, \Opt{-pid} and \Opt{-runfor}.
+
 \end{itemize}
 
 \noindent Known Bugs:
