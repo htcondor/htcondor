@@ -6,8 +6,16 @@
 
 Condor jobs may be submitted to Amazon's Elastic Compute Cloud (EC2)
 service.
+EC2 is an on-line commercial service that allows you to rent computers
+by the hour to run computational applications.
+EC2 runs virtual machine images that have been uploaded to Amazon's
+online storage service (S3).
 See the Amazon EC2 webpage at \URL{http://aws.amazon.com/ec2} for more
 information about EC2.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Amazon-submit}Amazon EC2 Job Submision}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Condor jobs are submitted to EC2
 using the \SubmitCmd{grid} universe and the
@@ -16,6 +24,61 @@ into the submit description file.
 \begin{verbatim}
 grid_resource = amazon
 \end{verbatim}
+
+Since the job is a virtual machine image, most of the submit file
+attributes specifying input or output files aren't applicable. The
+\SubmitCmd{executable} attribute is still required, but its value is
+ignored. You can use it to identify different jobs in the output of
+\Condor{q}.
+
+The VM image for the job must already reside in Amazon's storage
+service (S3) and be registered with EC2. In the submit file, you
+must provide the identifier for the image using the
+\SubmitCmd{amazon\_ami\_id} attribute.
+
+You must also provide the files containing the X509 certificate and
+private key used to authenticate you with the EC2 service:
+
+\begin{verbatim}
+amazon_public_key = /path/to/x509/cert
+amazon_private_key = /path/to/private/key
+\end{verbatim}
+
+Condor and EC2 can create an ssh keypair to allow you to securely log
+into the virtual machine once it's running. If you set
+\SubmitCmd{amazon\_keypair\_file} in the submit file, Condor will write
+an ssh private key into the indicated file. The key can be used to log
+into the virtual machine. Note that you'll also need to modify the firewall
+rules for the job to all incoming ssh connections.
+
+EC2 uses a firewall to restrict network access to the virtual machine
+instances it runs. By default, no incoming connections are allowed.
+You can define sets of firewall rules and give them names. EC2 calls
+these security groups. You can then tell Condor what set of security
+groups should be applied to each VM using the
+\SubmitCmd{amazon\_security\_groups} attribute. If you don't provide
+this attribute, Condor uses the security group \SubmitCmd{default}.
+
+EC2 offers several hardware configurations for instances to run on, with
+varying prices. You can select which configuration to use with the
+\SubmitCmd{amazon\_instance\_type} attribute. The default value is
+\SubmitCmd{m1.small}.
+% Other values: m1.large m1.xlarge c1.medium c1.xlarge
+
+Each virtual machine instance can be given up 16kB of unique data, 
+accessible by the instance by connecting to a well-known address. This
+makes it easy for many instances to share the same VM image but perform
+different work. This data can be specified to Condor in one of two ways.
+First, the data can be provided directly in the submit file using the
+\SubmitCmd{amazon\_user\_data} attribute. Second, the data can be
+stored in a file, and the filename specified with the
+\SubmitCmd{amazon\_user\_data\_file} attribute. The second option allows
+you to use binary data. Condor performs the base64 encoding that EC2
+expects on the data.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Amazon-config}Amazon EC2 Configuration Parameters}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 The amazon grid type requires several parameters to be set in the Condor
 configuration file:
@@ -27,3 +90,9 @@ AMAZON_GAHP_LOG=/tmp/AmazonGahpLog.$(USERNAME)
 \end{verbatim}
 \normalsize
 
+You can alter the URL used by Condor to contact the EC2 service using
+the \Macro{AMAZON\_EC2\_URL} parameter. The default value is
+\Macro{https://ec2.amazonaws.com/}.
+
+If you need to use an HTTP proxy to reach EC2, you tell Condor to use it
+via the \Macro{AMAZON\_HTTP\_PROXY} paramater.

@@ -65,6 +65,12 @@ for more details on how the local name will be used in the configuration,
 and section~\ref{sec:DaemonCore-Arguments} 
 for more details on the command line parameters.
 
+\item Dynamic Startd Provisioning: New configuration options allow for slots
+	to be broken into job-sized pieces. While this feature is still under
+	ongoing development, we felt that what we had so far, although not yet
+	fulfilling our complete vision, is useful enough in its present form to
+	bring value to some installations.
+
 % PR 947
 \item \Condor{submit\_dag} is now automatically run recursively on
 nested DAGs (unless the new \Opt{-no\_recurse} option is specified).
@@ -110,6 +116,39 @@ failed attempts at file clean-up in the RSL job description.
 \item Improved the scalability of some algorithms used by the
 \Condor{schedd} and \Condor{negotiator} when dealing with large
 numbers of startds.
+
+\item Added the ability for the \Condor{master} (actually, any
+  DaemonCore process with children) to kill child
+  processes that have quit responding SIGABRT instead of SIGKILL.
+  This is for debugging purposes on UNIX systems, and is controlled by
+  the new \MacroNI{NOT\_RESPONDING\_WANT\_CORE} configuration
+  parameter.  If the child process is configured with
+  \MacroNI{CREATE\_CORE\_FILES} enabled, the child process will then
+  generate a core dump.
+  This feature is currently implemented only on UNIX systems.
+
+  See
+  \MacroNI{NOT\_RESPONDING\_WANT\_CORE}
+  on page \pageref{param:NotRespondingWantCore},
+  \MacroNI{NOT\_RESPONDING\_TIMEOUT}
+  on page\pageref{param:NotRespondingTimeout},
+  and
+  \MacroNI{CREATE\_CORE\_FILES}
+  on page \pageref{param:CreateCoreFiles}
+  for more details.
+
+\item Condor can now be configured to keep a backup of the job queue
+  log on a local filesystem in case \Condor{schedd} operations
+  involving writes, flushes, or syncs to the job queue log fail.  This
+  is most likely to happen when the job queue log is stored on a
+  network filesystem like NFS. Such a backup enables an administrator
+  to see that a job failed to submit, but does not perform any
+  automatic recovery.  See below for the these configuration parameters.
+
+\item Added preliminary support for ``Green Computing''.  This is
+  supported only on Linux and Windows.
+  See section~\ref{sec:power-man} on page~\pageref{sec:power-man} on
+  ``Power Management'' for more details.
 
 \end{itemize}
 
@@ -169,11 +208,54 @@ numbers of startds.
   \pageref{param:MasterShutdownProgram} and \Condor{set\_shutdown}
   manual page for more details.
 
+\item The configuration parameter
+  \MacroNI{NOT\_RESPONDING\_WANT\_CORE} controls the type of signal
+  sent to child processes that DaemonCore has determined are no longer
+  responding.  See the above discussion of the addition of this
+  feature and \MacroNI{NOT\_RESPONDING\_WANT\_CORE} on page
+  \pageref{param:NotRespondingWantCore} for details.
+
+\item The configuration parameter \Macro{LOCAL\_QUEUE\_BACKUP\_DIR}
+  should be set to the pathname of a directory that is writable by
+  the Condor user and is located on a non-network filesystem.
+  This is part of the ``Job Queue Backup'' feature, above.
+
+\item The configuration parameter
+  \Macro{LOCAL\_XACT\_BACKUP\_FILTER} controls whether or not the
+  \Condor{schedd} will attempt to keep backups of transactions that
+  were not written the job queue log.  If it is set to to
+  \Macro{FAILED}, the \Condor{schedd} will attempt to keep a backup
+  of the transation in the local queue backup directory (defined
+  above) only if operations fail on the job queue log.  If it is set
+  to none \Macro{NONE}, no backups should be performed even in the
+  event of failure.  If it is set to \Macro{ALL}, then at all
+  transactions should be backed up.  (The \Macro{ALL} option will
+  create quite a large number of files and slow the \Condor{schedd}
+  substantially; it is only likely to be useful for users who are
+  developing or debugging Condor.)
+  This is part of the ``Job Queue Backup'' feature, above.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item In some rare cases, the \Condor{startd} failed to fully preempt jobs.
+The job itself was killed, but the \Condor{starter} process watching over
+it would not be killed.  The slot would then stay in the Preempting state
+indefinitely.
+
+\item \Condor{q} performed poorly when querying a remote pool, using
+\Opt{-pool}.  It was using an older latency-bound protocol even when
+the remote \Condor{schedd} was new enough to use the improved protocol
+that first appeared in version 6.9.3.
+
+\item When using \Macro{USE\_VISIBLE\_DESKTOP} the user's (slot or owner)
+access-control entry removed from the Desktop's access-control list.  This
+fixes the previous behavior were users were added and never removed, 
+resulting in an overflow in access-control list, which can only contain 
+a fixed number of access-control entries.
 
 \item Fixed a bug where if log line caching was enabled in \Condor{dagman}
 and \Condor{dagman} failed during the recovery process, the cache would
@@ -198,13 +280,23 @@ servers to be lost.
 directory is put in the transfer files list.  Previously, the attempt
 to run the job would simply fail and return to the idle state.
 
+\item If \Macro{MAX\_EVENT\_LOG} set to 0, then let event log grow without 
+  bounds.  Previously this behavior was broken, and setting
+  \Macro{MAX\_EVENT\_LOG} to 0 resulted in the log rotating with every
+  event.  Now it works as documented.
+
 \end{itemize}
 
 \noindent Known Bugs:
 
 \begin{itemize}
 
-\item None.
+\item When fixing the \Macro{USE\_VISIBLE\_DESKTOP} bug, a new one was
+inadvertently introduced.  The bug manifests irrespective of the definition
+of \Macro{USE\_VISIBLE\_DESKTOP}: the new code attempts to remove the current 
+user's access-control entry from the Desktop's access-control list even when
+it was not added by Condor.  This has the effect of inhibiting the creation
+of new process for the logged on user.
 
 \end{itemize}
 
@@ -212,7 +304,11 @@ to run the job would simply fail and return to the idle state.
 
 \begin{itemize}
 
-\item None.
+\item The extra space character injected into the names of Condor
+daemons and programs has been removed.
+
+\item Previously undocumented Condor Perl module subroutines have
+been documented.
 
 \end{itemize}
 

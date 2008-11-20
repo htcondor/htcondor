@@ -9,6 +9,16 @@ Here is a list of changes to note and be aware of.
 
 \begin{itemize}
 
+\item 
+We believe that Condor 7.0.x and 6.8.x are wire-compatible,
+and can be freely mixed between computers in a Condor pool. 
+However, we do not regularly test this compatibility and cannot guarantee it, 
+so we recommend using a single release of Condor when possible. 
+Please note that although you can mix Condor 7.0.x and 6.8.x in a pool, 
+you cannot mix them on a single computer. 
+That is, a \Condor{master} daemon running 6.8.x cannot run Condor daemons 
+from version 7.0.x, or vice-versa.
+
 \item When upgrading from 6.6.x 6.7.x,
   jobs that rely on the environment variable \Env{CONDOR\_SCRATCH\_DIR}
   need to be changed to use \Env{\_CONDOR\_SCRATCH\_DIR}.
