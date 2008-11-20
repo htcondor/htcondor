@@ -78,7 +78,7 @@ public:
 		are responsible to release the memory allocated by this function 
 		with free() */
 	char* print_to_string(void);
-	char* print_to_delimed_string(void);
+	char* print_to_delimed_string(const char *delim = NULL);
 
 protected:
     const char * contains_withwildcard(const char *string, bool anycase, StringList *matches=NULL);

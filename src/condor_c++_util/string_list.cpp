@@ -400,54 +400,19 @@ the internals of the string list. */
 char*
 StringList::print_to_string(void)
 {
-	char *tmp;
-	int num, i;
-	int sum = 0;
-
-	strings.Rewind();
-	num = strings.Number();
-
-	/* no string at all if there isn't anything in it */
-	if(num == 0)
-	{
-		return NULL;
-	}
-
-	for (i = 0; i < num; i++)
-	{
-		sum += strlen(strings.Next());
-	}
-
-	/* get memory for all of the strings, plus the ',' character between them
-		and one more for the \0 */
-	tmp = (char*)calloc(sum + num + 1, 1);
-	if (tmp == NULL)
-	{
-		EXCEPT("Out of memory in StringList::print_to_string");
-	}
-	tmp[0] = '\0';
-
-	strings.Rewind();
-	for (i = 0; i < num; i++)
-	{
-		strcat(tmp, strings.Next());
-		
-		/* add commas until the last attr entry in the list */
-		if (i < (num - 1))
-		{
-			strcat(tmp, ",");
-		}
-	}
-
-	return tmp;
+	return print_to_delimed_string(",");
 }
 
 char *
-StringList::print_to_delimed_string(void) {
+StringList::print_to_delimed_string(const char *delim) {
 
 	char *tmp;
 	int num, i;
 	int sum = 0;
+
+	if ( delim == NULL ) {
+		delim = delimiters;
+	}
 
 	strings.Rewind();
 	num = strings.Number();
@@ -465,7 +430,7 @@ StringList::print_to_delimed_string(void) {
 
 	/* get memory for all of the strings, plus the delimiter characters between them
 		and one more for the \0 */
-	tmp = (char*)calloc(sum + strlen(delimiters) * num, 1);
+	tmp = (char*)calloc(sum + strlen(delim) * (num - 1) + 1, 1);
 	if (tmp == NULL)
 	{
 		EXCEPT("Out of memory in StringList::print_to_string");
@@ -477,10 +442,10 @@ StringList::print_to_delimed_string(void) {
 	{
 		strcat(tmp, strings.Next());
 		
-		/* add commas until the last attr entry in the list */
+		/* add delimiters until the last attr entry in the list */
 		if (i < (num - 1))
 		{
-			strcat(tmp, delimiters);
+			strcat(tmp, delim);
 		}
 	}
 
