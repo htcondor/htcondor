@@ -754,11 +754,21 @@ init_daemon_list()
 	StringList daemon_names, dc_daemon_names;
 
 	char* dc_daemon_list = param("DC_DAEMON_LIST");
-	if( dc_daemon_list ) {
+	if( !dc_daemon_list ) {
+		dc_daemon_names.initializeFromString(default_dc_daemon_list);
+	}
+	else {
 		dc_daemon_names.initializeFromString(dc_daemon_list);
 		free(dc_daemon_list);
-	} else {
-		dc_daemon_names.initializeFromString(default_dc_daemon_list);
+
+		StringList default_list(default_dc_daemon_list);
+		default_list.rewind();
+		char *default_entry;
+		while( (default_entry=default_list.next()) ) {
+			if( !dc_daemon_names.contains_anycase(default_entry) ) {
+				dprintf(D_ALWAYS,"WARNING: expected to find %s in DC_DAEMON_LIST, but it is not there.  Unless you know what you are doing, it is best to leave DC_DAEMON_LIST undefined so that the default settings are used.\n",default_entry);
+			}
+		}
 	}
 		// Tolerate a trailing comma in the list
 	dc_daemon_names.remove( "" );
