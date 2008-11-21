@@ -60,7 +60,9 @@ extern void		tail_log( FILE*, char*, int );
 extern int		run_preen(Service*);
 
 extern FILESQL *FILEObj;
-extern char *_condor_myServiceName;
+extern int condor_main_argc;
+extern char **condor_main_argv;
+extern time_t daemon_stop_time;
 
 int		hourly_housekeeping(void);
 
@@ -1811,13 +1813,46 @@ Daemons::CleanupBeforeRestart()
 void
 Daemons::ExecMaster()
 {
-	if( MasterName ) {
-		(void)execl(daemon_ptr[master]->process_name, 
-					_condor_myServiceName, "-f", "-n", MasterName, 0);
-	} else {
-		(void)execl(daemon_ptr[master]->process_name, 
-					_condor_myServiceName, "-f", 0);
+	int i=0,j;
+	char **argv = (char **)malloc((condor_main_argc+2)*sizeof(char *));
+
+	ASSERT( condor_main_argc>0 );
+	argv[i++] = condor_main_argv[0];
+
+		// insert "-f" argument so that new master does not fork
+	argv[i++] = "-f";
+	for(j=1;j<condor_main_argc;j++) {
+		size_t len = strlen(condor_main_argv[j]);
+		if( strncmp(condor_main_argv[j],"-foreground",len)==0 ) {
+			i--; // do not need to insert -f, because it is already there
+			break;
+		}
 	}
+
+		// preserve all additional arguments (e.g. -n, -pid, ...)
+		// except for "-background"
+	for(j=1;j<condor_main_argc;j++) {
+		size_t len = strlen(condor_main_argv[j]);
+		if( strncmp(condor_main_argv[j],"-background",len)!=0 ) {
+			argv[i++] = condor_main_argv[j];
+		}
+
+		if( daemon_stop_time && strncmp(condor_main_argv[j],"-runfor",len)==0 && j+1<condor_main_argc ) {
+				// adjust "runfor" time (minutes)
+			j++;
+
+			int runfor = (daemon_stop_time-time(NULL))/60;
+			if( runfor <= 0 ) {
+				runfor = 1; // minimum 1
+			}
+			MyString runfor_str;
+			runfor_str.sprintf("%d",runfor);
+			argv[i++] = strdup(runfor_str.Value());
+		}
+	}
+	argv[i++] = NULL;
+
+	(void)execv(daemon_ptr[master]->process_name, argv);
 }
 
 // Function that actually does the restart of the master.

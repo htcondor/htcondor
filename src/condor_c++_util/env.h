@@ -172,8 +172,7 @@ class Env {
 	void getDelimitedStringForDisplay(MyString *result) const;
 
 		// Caller should delete the string.
-		// Caller should delete string.
-	char *getNullDelimitedString() const;
+	char *getWindowsEnvironmentString() const;
 
 		// Returns a null-terminated array of strings.
 		// Caller should delete it (e.g. with deleteStringArray()).

@@ -1,0 +1,5 @@
+JOB  A job_dagman_splice-K.cmd
+VARS A job="$(JOB)"
+
+SPLICE S2 job_dagman_splice-K-splice2.dag
+

@@ -686,36 +686,97 @@ Env::getDelimitedStringV1Raw(MyString *result,MyString *error_msg,char delim) co
 	return true;
 }
 
-char *
-Env::getNullDelimitedString() const
+struct windows_env_sort_entry {
+	MyString var_name_upr;
+	MyString env_str;
+};
+
+static int
+windows_env_sorter(const void* p1, const void* p2)
 {
-	MyString var, val;
-	char *output, *output_pos;
+	windows_env_sort_entry* e1 = *(windows_env_sort_entry**)(p1);
+	windows_env_sort_entry* e2 = *(windows_env_sort_entry**)(p2);
+	return strcmp(e1->var_name_upr.Value(), e2->var_name_upr.Value());
+}
+
+char *
+Env::getWindowsEnvironmentString() const
+{
+	// this returns an environment string in the format needed
+	// for passing to the Windows CreateProcess function. this
+	// means it is null-delimited, null-terminated, and sorted
+	// (igoring case - all variable names must be converted to
+	// uppercase before comparing)
+
+	int i;
+
+	// allocate the array of pointers to use for sorting the
+	// variable names
+	//
+	int num_vars = _envTable->getNumElements();
+	windows_env_sort_entry** sort_array =
+		new windows_env_sort_entry*[num_vars];
+	ASSERT(sort_array != NULL);
+
+	// iterate through the hash table to:
+	//   - get the length of the string that we'll be returning
+	//   - populate the sort array
+	//
 	size_t length = 1; // reserve one space for final null
-
+	i = 0;
+	MyString var, val;
 	_envTable->startIterations();
 	while( _envTable->iterate( var, val ) ) {
+
 		// reserve space for "var=val" plus null
+		//
 		length += var.Length() + val.Length() + 2;
-	}
 
-	output = new char[length];
-	ASSERT( output );
-	output_pos = output;
-
-	_envTable->startIterations();
-	while( _envTable->iterate( var, val ) ) {
-		if(val == NO_ENVIRONMENT_VALUE) {
-			strcpy(output_pos,var.Value());
-			output_pos += var.Length();
+		// allocate strupr'ed copy of the variable name
+		// for sorting, and the full "var=val" string that
+		// will appear in the env block we return
+		//
+		sort_array[i] = new windows_env_sort_entry;
+		ASSERT(sort_array[i] != NULL);
+		sort_array[i]->var_name_upr = var;
+		sort_array[i]->var_name_upr.upper_case();
+		if (val == NO_ENVIRONMENT_VALUE) {
+			sort_array[i]->env_str = var.Value();
 		}
 		else {
-			sprintf(output_pos,"%s=%s",var.Value(),val.Value());
-			output_pos += var.Length() + val.Length() + 2;
+			sort_array[i]->env_str.sprintf("%s=%s",
+			                               var.Value(),
+			                               val.Value());
 		}
+		i++;
 	}
 
-	*output_pos = '\0'; //append the final null
+	// now sort on the variable names
+	//
+	qsort(sort_array,
+	      num_vars,
+	      sizeof(windows_env_sort_entry*),
+	      windows_env_sorter);
+
+	// allocate the output string
+	//
+	char* output = new char[length];
+	ASSERT(output != NULL);
+
+	// now write out the environment block, cleaning up allocated
+	// memory in the process
+	//
+	char* output_pos = output;
+	for (i = 0; i < num_vars; i++) {
+		memcpy(output_pos,
+		       sort_array[i]->env_str.Value(),
+		       sort_array[i]->env_str.Length() + 1);
+		output_pos += sort_array[i]->env_str.Length() + 1;
+		delete sort_array[i];
+	}
+	delete[] sort_array;
+	*output_pos = '\0';
+
 	return output;
 }
 

@@ -1,0 +1,19 @@
+JOB  A job_dagman_splice-L.cmd
+VARS A job="$(JOB)"
+
+JOB  B job_dagman_splice-L.cmd
+VARS B job="$(JOB)"
+
+SPLICE SD1_S1 job_dagman_splice-L-subdir1/job_dagman_splice-L-splice.dag
+SPLICE SD1_S2 job_dagman_splice-L-subdir1/job_dagman_splice-L-splice.dag
+SPLICE SD2_S1 job_dagman_splice-L-subdir2/job_dagman_splice-L-splice.dag
+SPLICE SD2_S2 job_dagman_splice-L-subdir2/job_dagman_splice-L-splice.dag
+
+# The nodes of splice 
+PARENT A CHILD SD1_S1
+PARENT SD1_S1 CHILD SD1_S2
+PARENT SD1_S2 CHILD SD2_S1
+PARENT SD2_S1 CHILD SD2_S2
+PARENT SD2_S2 CHILD B
+
+DOT job_dagman_splice-L.dot

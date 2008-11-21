@@ -198,18 +198,37 @@ TESTCLASS(job_dagman_splice-I,full)
 TESTCLASS(job_dagman_splice-I,quicknolink)
 TESTCLASS(job_dagman_splice-I,btdebug)
 
-# This test is commented out until we fix Condor.pm to allow multiple
-# dag files to be submitted with condor_submit_dag in TestSubmitDagman
-#
-# DESC(job_dagman_splice-J,"Simple Dagman Splice J")
-# RUN(job_dagman_splice-J)
-# TESTCLASS(job_dagman_splice-J,core)
-# TESTCLASS(job_dagman_splice-J,quick)
-# TESTCLASS(job_dagman_splice-J,full)
-# TESTCLASS(job_dagman_splice-J,quicknolink)
-# TESTCLASS(job_dagman_splice-J,btdebug)
+/*	This test is commented out until we fix Condor.pm to allow multiple
+	dag files to be submitted with condor_submit_dag in TestSubmitDagman
+*/
 
-# vmuniverse smoke test in larg repository
+/*
+DESC(job_dagman_splice-J,"Simple Dagman Splice J")
+RUN(job_dagman_splice-J)
+TESTCLASS(job_dagman_splice-J,core)
+TESTCLASS(job_dagman_splice-J,quick)
+TESTCLASS(job_dagman_splice-J,full)
+TESTCLASS(job_dagman_splice-J,quicknolink)
+TESTCLASS(job_dagman_splice-J,btdebug)
+*/
+
+DESC(job_dagman_splice-K,"Simple Dagman Splice K")
+RUN(job_dagman_splice-K)
+TESTCLASS(job_dagman_splice-K,core)
+TESTCLASS(job_dagman_splice-K,quick)
+TESTCLASS(job_dagman_splice-K,full)
+TESTCLASS(job_dagman_splice-K,quicknolink)
+TESTCLASS(job_dagman_splice-K,btdebug)
+
+DESC(job_dagman_splice-L,"Simple Dagman Splice L")
+RUN(job_dagman_splice-L)
+TESTCLASS(job_dagman_splice-L,core)
+TESTCLASS(job_dagman_splice-L,quick)
+TESTCLASS(job_dagman_splice-L,full)
+TESTCLASS(job_dagman_splice-L,quicknolink)
+TESTCLASS(job_dagman_splice-L,btdebug)
+
+/* vmuniverse smoke test in larg repository */
 
 #if defined(HAVE_VMWARE) && defined(HAVE_CONDOR_TEST_LRG)
 DESC(job_vmu_basic,"VM Universe smoke test")

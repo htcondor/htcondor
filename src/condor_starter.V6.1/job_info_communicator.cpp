@@ -710,7 +710,11 @@ JobInfoCommunicator::checkForStarterDebugging( void )
 		dprintf( D_ALWAYS, "Job requested starter should wait for "
 				 "debugger with %s=%d, going into infinite loop\n",
 				 ATTR_STARTER_WAIT_FOR_DEBUG, starter_should_wait );
-		while( starter_should_wait );
+		while( 1 ) {
+			if ( !starter_should_wait ) {
+				break;
+			}
+		}
 	}
 
 		// Also, if the starter has D_JOB turned on, we want to dump
