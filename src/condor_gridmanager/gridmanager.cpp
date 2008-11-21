@@ -411,16 +411,16 @@ Register()
 {
 	daemonCore->Register_Signal( GRIDMAN_ADD_JOBS, "AddJobs",
 								 (SignalHandler)&ADD_JOBS_signalHandler,
-								 "ADD_JOBS_signalHandler", NULL, WRITE );
+								 "ADD_JOBS_signalHandler", NULL );
 
 	daemonCore->Register_Signal( GRIDMAN_REMOVE_JOBS, "RemoveJobs",
 								 (SignalHandler)&REMOVE_JOBS_signalHandler,
-								 "REMOVE_JOBS_signalHandler", NULL, WRITE );
+								 "REMOVE_JOBS_signalHandler", NULL );
 
 /*
 	daemonCore->Register_Signal( GRIDMAN_CHECK_LEASES, "CheckLeases",
 								 (SignalHandler)&CHECK_LEASES_signalHandler,
-								 "CHECK_LEASES_signalHandler", NULL, WRITE );
+								 "CHECK_LEASES_signalHandler", NULL );
 */
 	daemonCore->Register_Timer( 60, 60, (TimerHandler)&CHECK_LEASES_signalHandler,
 								"CHECK_LEASES_signalHandler", NULL );

@@ -34,8 +34,6 @@ PermString( DCpermission perm )
         return "DAEMON";
 	case NEGOTIATOR:
 		return "NEGOTIATOR";
-	case IMMEDIATE_FAMILY:
-		return "IMMEDIATE_FAMILY";
 	case ADMINISTRATOR:
 		return "ADMINISTRATOR";
 	case OWNER:

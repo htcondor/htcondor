@@ -36,7 +36,6 @@ typedef enum {
   /** Able to read data */                   READ = 1,
   /** Able to modify data (submit jobs) */   WRITE = 2,
   /** From the negotiator */                 NEGOTIATOR = 3,
-  /** Not yet implemented, do NOT use */     IMMEDIATE_FAMILY = 4,
   /** Administrative cmds (on, off, etc) */  ADMINISTRATOR = 5,
   /** The machine owner (vacate) */          OWNER = 6,
   /** Changing config settings remotely */   CONFIG_PERM = 7,

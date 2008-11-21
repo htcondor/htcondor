@@ -154,7 +154,7 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 		// register SIGUSR1 (condor_rm) for shutdown...
 	daemonCore->Register_Signal( SIGUSR1, "SIGUSR1", 
 		(SignalHandlercpp)&BaseShadow::handleJobRemoval, "HandleJobRemoval", 
-		this, IMMEDIATE_FAMILY);
+		this);
 
 	// handle system calls with Owner's privilege
 // XXX this belong here?  We'll see...

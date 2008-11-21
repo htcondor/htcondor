@@ -652,11 +652,6 @@ IpVerify::Verify( DCpermission perm, const struct sockaddr_in *sin, const char *
 		return USER_AUTH_SUCCESS;
 		break;
 
-	case IMMEDIATE_FAMILY:
-		// TODO!!!  Implement IMMEDIATE_FAMILY someday!
-		return TRUE;
-		break;
-
 	default:
 		break;
 	}

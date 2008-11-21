@@ -1913,11 +1913,11 @@ int main( int argc, char** argv )
 
 	daemonCore->Register_Signal( DC_SERVICEWAITPIDS, "DC_SERVICEWAITPIDS",
 								(SignalHandlercpp)&DaemonCore::HandleDC_SERVICEWAITPIDS,
-								"HandleDC_SERVICEWAITPIDS()",daemonCore,IMMEDIATE_FAMILY);
+								"HandleDC_SERVICEWAITPIDS()",daemonCore);
 #ifndef WIN32
 	daemonCore->Register_Signal( SIGCHLD, "SIGCHLD",
 								 (SignalHandlercpp)&DaemonCore::HandleDC_SIGCHLD,
-								 "HandleDC_SIGCHLD()",daemonCore,IMMEDIATE_FAMILY);
+								 "HandleDC_SIGCHLD()",daemonCore);
 #endif
 
 		// Install DaemonCore timers common to all daemons.

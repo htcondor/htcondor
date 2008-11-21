@@ -439,15 +439,13 @@ class DaemonCore : public Service
         @param handler          Not_Yet_Documented
         @param handler_descrip  Not_Yet_Documented
         @param s                Not_Yet_Documented
-        @param perm             Not_Yet_Documented
         @return Not_Yet_Documented
     */
     int Register_Signal (int             sig,
                          char *          sig_descrip,
                          SignalHandler   handler, 
                          char *          handler_descrip,
-                         Service*        s                = NULL,
-                         DCpermission    perm             = ALLOW);
+                         Service*        s                = NULL);
     
     /** Not_Yet_Documented
         @param sig              Not_Yet_Documented
@@ -455,15 +453,13 @@ class DaemonCore : public Service
         @param handlercpp       Not_Yet_Documented
         @param handler_descrip  Not_Yet_Documented
         @param s                Not_Yet_Documented
-        @param perm             Not_Yet_Documented
         @return Not_Yet_Documented
     */
     int Register_Signal (int                 sig,
                          char *              sig_descript,
                          SignalHandlercpp    handlercpp, 
                          char *              handler_descrip,
-                         Service*            s,
-                         DCpermission        perm = ALLOW);
+                         Service*            s);
     
     /** Not_Yet_Documented
         @param sig Not_Yet_Documented
@@ -1358,7 +1354,6 @@ class DaemonCore : public Service
                         SignalHandlercpp handlercpp,
                         char *handler_descrip,
                         Service* s, 
-                        DCpermission perm,
                         int is_cpp);
 
     int Register_Socket(Stream* iosock,
@@ -1442,7 +1437,6 @@ class DaemonCore : public Service
         SignalHandler   handler;
         SignalHandlercpp    handlercpp;
         int             is_cpp;
-        DCpermission    perm;
         Service*        service; 
         int             is_blocked;
         // Note: is_pending must be volatile because it could be set inside

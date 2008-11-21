@@ -590,19 +590,19 @@ int	DaemonCore::Register_Command(int command, char *com_descrip,
 
 int	DaemonCore::Register_Signal(int sig, char* sig_descrip,
 				SignalHandler handler, char* handler_descrip,
-				Service* s, DCpermission perm)
+				Service* s)
 {
 	return( Register_Signal(sig, sig_descrip, handler,
 							(SignalHandlercpp)NULL, handler_descrip, s,
-							perm, FALSE) );
+							FALSE) );
 }
 
 int	DaemonCore::Register_Signal(int sig, char *sig_descrip,
 				SignalHandlercpp handlercpp, char* handler_descrip,
-				Service* s, DCpermission perm)
+				Service* s)
 {
 	return( Register_Signal(sig, sig_descrip, NULL, handlercpp,
-							handler_descrip, s, perm, TRUE) );
+							handler_descrip, s, TRUE) );
 }
 
 int DaemonCore::RegisteredSocketCount()
@@ -1058,7 +1058,7 @@ PidEnvID* DaemonCore::InfoEnvironmentID(PidEnvID *penvid, int pid)
 
 int DaemonCore::Register_Signal(int sig, char* sig_descrip, 
 				SignalHandler handler, SignalHandlercpp handlercpp, 
-				char* handler_descrip, Service* s,	DCpermission perm, 
+				char* handler_descrip, Service* s, 
 				int is_cpp)
 {
     int     i;		// hash value
@@ -1123,7 +1123,6 @@ int DaemonCore::Register_Signal(int sig, char* sig_descrip,
 	sigTable[i].handler = handler;
 	sigTable[i].handlercpp = handlercpp;
 	sigTable[i].is_cpp = is_cpp;
-	sigTable[i].perm = perm;
 	sigTable[i].service = s;
 	sigTable[i].is_blocked = FALSE;
 	sigTable[i].is_pending = FALSE;
@@ -7814,18 +7813,13 @@ DaemonCore::InitDCCommandSocket( int command_port )
 		// register the command handler to take care of signals
 	daemonCore->Register_Command( DC_RAISESIGNAL, "DC_RAISESIGNAL",
 				(CommandHandlercpp)&DaemonCore::HandleSigCommand,
-				"HandleSigCommand()", daemonCore, IMMEDIATE_FAMILY );
-
-		// this handler receives process exit info
-	daemonCore->Register_Command( DC_PROCESSEXIT,"DC_PROCESSEXIT",
-				(CommandHandlercpp)&DaemonCore::HandleProcessExitCommand,
-				"HandleProcessExitCommand()", daemonCore, IMMEDIATE_FAMILY );
+				"HandleSigCommand()", daemonCore, DAEMON );
 
 		// this handler receives keepalive pings from our children, so
 		// we can detect if any of our kids are hung.
 	daemonCore->Register_Command( DC_CHILDALIVE,"DC_CHILDALIVE",
 				(CommandHandlercpp)&DaemonCore::HandleChildAliveCommand,
-				"HandleChildAliveCommand", daemonCore, IMMEDIATE_FAMILY,
+				"HandleChildAliveCommand", daemonCore, DAEMON,
 				D_FULLDEBUG );
 }
 
@@ -8195,30 +8189,6 @@ DaemonCore::WatchPid(PidEntry *pidentry)
 
 #endif  // of WIN32
 
-
-int DaemonCore::HandleProcessExitCommand(int command, Stream* stream)
-{
-	unsigned int pid = 0;
-	int result = TRUE;
-
-	assert( command == DC_PROCESSEXIT );
-
-	// We have been sent a DC_PROCESSEXIT command
-
-	// read the pid from the socket
-	if (!stream->code(pid))
-		result = FALSE;
-
-	// do the eom
-	if ( !stream->end_of_message() )
-		result = FALSE;
-
-	if ( result == FALSE )
-		return FALSE;
-
-	// and call HandleProcessExit to call the reaper
-	return( HandleProcessExit(pid,0) );
-}
 
 void
 DaemonCore::CallReaper(int reaper_id, char const *whatexited, pid_t pid, int exit_status)
@@ -9024,7 +8994,7 @@ DaemonCore::CheckConfigAttrSecurity( const char* attr, Sock* sock )
 	for( i=0; i<LAST_PERM; i++ ) {
 
 			// skip permission levels we know we don't want to trust
-		if( i == ALLOW || i == IMMEDIATE_FAMILY ) {
+		if( i == ALLOW ) {
 			continue;
 		}
 
@@ -9101,7 +9071,7 @@ DaemonCore::InitSettableAttrsLists( void )
 		// there, we just check for "SETTABLE_ATTRS_<PERM-LEVEL>".
 	for( i=0; i<LAST_PERM; i++ ) {
 			// skip permission levels we know we don't want to trust
-		if( i == ALLOW || i == IMMEDIATE_FAMILY ) {
+		if( i == ALLOW ) {
 			continue;
 		}
 		if( InitSettableAttrsList(mySubSystem->getName(), i) ) {
