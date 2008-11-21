@@ -1846,8 +1846,7 @@ GRIDMANAGER_JOB_PROBE_INTERVAL = 300
 ## As of this writing Amazon EC2 has a hard limit of 20 concurrently
 ## running instances, so a limit of 20 is imposed so the GridManager
 ## does not waste its time sending requests that will be rejected.
-#GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE = 20
-
+GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE_AMAZON = 20
 
 ##
 ##--------------------------------------------------------------------
