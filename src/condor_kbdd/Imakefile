@@ -13,7 +13,7 @@ XCOMM link with the DecNet stub library to avoid undefined symbols.
 #if IS_DUX5
 LDFLAGS = -lX11 -ldnet_stub
 #else
-LDFLAGS = -lX11
+LDFLAGS = -L/usr/X11R6/lib -L/usr/X11R6/lib64 -lX11
 #endif
 
 OBJ = kbdd.o XInterface.o $(SOAP_OBJS)

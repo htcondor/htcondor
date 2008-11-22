@@ -47,7 +47,7 @@ start() {
 
 stop() {
     echo -n $"Stopping Condor daemons: "
-    killproc -p $pidfile -d 3 $prog
+    killproc -p $pidfile -d 5 $prog -QUIT
     RETVAL=$?
     echo
     [ $RETVAL -eq 0 ] && rm -f $lockfile

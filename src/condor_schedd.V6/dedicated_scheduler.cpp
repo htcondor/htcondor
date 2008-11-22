@@ -720,7 +720,7 @@ DedicatedScheduler::initialize( void )
 		Register_Command( GIVE_MATCHES, "GIVE_MATCHES", 
 						  (CommandHandlercpp)&DedicatedScheduler::giveMatches,
 						  "DedicatedScheduler::giveMatches", this, 
-						  IMMEDIATE_FAMILY );
+						  DAEMON );
 
 	return TRUE;
 }

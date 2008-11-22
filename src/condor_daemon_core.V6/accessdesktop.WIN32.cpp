@@ -35,6 +35,8 @@
 
 #define GENERIC_ACCESS (GENERIC_READ  | GENERIC_WRITE |  GENERIC_EXECUTE | GENERIC_ALL)
 
+static bool addedAnAceToTheDesktop = false;
+static bool addedAnAceToTheWindowStation = false;
 
    BOOL ObtainSid(
         HANDLE hToken,           // handle to an process access token
@@ -179,16 +181,22 @@ int RevokeDesktopAccess(HANDLE hToken)
         return RTN_ERROR;
 
     // 
-    // add the user to interactive windowstation
+    // only remove the user from the interactive windowstation
+	// if we added them ourselves
     // 
-    if (!RemoveTheAceWindowStation(hwinsta, psid))
-        return RTN_ERROR;
+    if (addedAnAceToTheWindowStation) {
+		if (!RemoveTheAceWindowStation(hwinsta, psid))
+			return RTN_ERROR;
+	}
 
     // 
-    // add user to "default" desktop
+    // only remove the user from the "default" desktop 
+	// if we added them ourselves
     // 
-    if (!RemoveTheAceDesktop(hdesk, psid))
-        return RTN_ERROR;
+    if (addedAnAceToTheDesktop) {
+		if (!RemoveTheAceDesktop(hdesk, psid))
+			return RTN_ERROR;
+	}
 
     // 
     // free the buffer for the logon sid
@@ -332,8 +340,9 @@ static  BOOL AddTheAceWindowStation(HWINSTA hwinsta, PSID psid)
         PACCESS_ALLOWED_ACE  pTempAceAllowed;
         SECURITY_INFORMATION si        = DACL_SECURITY_INFORMATION;
         unsigned int         i;
-
-        __try
+		addedAnAceToTheWindowStation   = false;
+		
+		__try
              {
              // 
              // obtain the dacl for the windowstation
@@ -461,7 +470,7 @@ static  BOOL AddTheAceWindowStation(HWINSTA hwinsta, PSID psid)
                             // compare SIDs, if equal, then it already
                             // exists and we can return "success"
                             if (!EqualSid(psid, &pTempAceAllowed->SidStart)) {
-                                bSuccess = TRUE;
+								bSuccess = TRUE;
                                 __leave;
                             }
 
@@ -546,7 +555,8 @@ static  BOOL AddTheAceWindowStation(HWINSTA hwinsta, PSID psid)
 
          // 
          // indicate success
-         // 
+         //
+		 addedAnAceToTheWindowStation = true;
          bSuccess = TRUE;
              }
         __finally
@@ -792,6 +802,7 @@ static  BOOL AddTheAceDesktop(HDESK hdesk, PSID psid)
         PACCESS_ALLOWED_ACE   pTempAceAllowed;
         SECURITY_INFORMATION si        = DACL_SECURITY_INFORMATION;
         unsigned int         i;
+		addedAnAceToTheDesktop		   = false;
 
         __try
              {
@@ -925,7 +936,7 @@ static  BOOL AddTheAceDesktop(HDESK hdesk, PSID psid)
                             // compare SIDs, if equal, then it already
                             // exists and we can return "success"
                             if (!EqualSid(psid, &pTempAceAllowed->SidStart)) {
-                                bSuccess = TRUE;
+								bSuccess = TRUE;
                                 __leave;
                             }
 
@@ -972,7 +983,8 @@ static  BOOL AddTheAceDesktop(HDESK hdesk, PSID psid)
 
              // 
              // indicate success
-             // 
+             //
+			 addedAnAceToTheDesktop = true;
              bSuccess = TRUE;
              }
         __finally

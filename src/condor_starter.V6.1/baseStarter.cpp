@@ -139,25 +139,25 @@ CStarter::Init( JobInfoCommunicator* my_jic, const char* original_cwd,
 		//
 	daemonCore->Register_Signal(DC_SIGSUSPEND, "DC_SIGSUSPEND", 
 		(SignalHandlercpp)&CStarter::RemoteSuspend, "RemoteSuspend",
-		this, IMMEDIATE_FAMILY);
+		this);
 	daemonCore->Register_Signal(DC_SIGCONTINUE, "DC_SIGCONTINUE",
 		(SignalHandlercpp)&CStarter::RemoteContinue, "RemoteContinue",
-		this, IMMEDIATE_FAMILY);
+		this);
 	daemonCore->Register_Signal(DC_SIGHARDKILL, "DC_SIGHARDKILL",
 		(SignalHandlercpp)&CStarter::RemoteShutdownFast, "RemoteShutdownFast",
-		this, IMMEDIATE_FAMILY);
+		this);
 	daemonCore->Register_Signal(DC_SIGSOFTKILL, "DC_SIGSOFTKILL",
 		(SignalHandlercpp)&CStarter::RemoteShutdownGraceful, "RemoteShutdownGraceful",
-		this, IMMEDIATE_FAMILY);
+		this);
 	daemonCore->Register_Signal(DC_SIGPCKPT, "DC_SIGPCKPT",
 		(SignalHandlercpp)&CStarter::RemotePeriodicCkpt, "RemotePeriodicCkpt",
-		this, IMMEDIATE_FAMILY);
+		this);
 	daemonCore->Register_Signal(DC_SIGREMOVE, "DC_SIGREMOVE",
 		(SignalHandlercpp)&CStarter::RemoteRemove, "RemoteRemove",
-		this, IMMEDIATE_FAMILY);
+		this);
 	daemonCore->Register_Signal(DC_SIGHOLD, "DC_SIGHOLD",
 		(SignalHandlercpp)&CStarter::RemoteHold, "RemoteHold",
-		this, IMMEDIATE_FAMILY);
+		this);
 	daemonCore->Register_Reaper("Reaper", (ReaperHandlercpp)&CStarter::Reaper,
 		"Reaper", this);
 
