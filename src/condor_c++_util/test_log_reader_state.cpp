@@ -119,6 +119,7 @@ public:
 	Options( void );
 	~Options( void ) { };
 
+
 	int handleOpt( SimpleArg &arg, int & );
 	int handleFixed( SimpleArg &arg, int & );
 
@@ -132,6 +133,7 @@ public:
 	const char *getUsage( void ) const { return m_usage; };
 	void dumpWhichList( void ) const;
 	const WhichData *lookupWhich( Which which ) const;
+	bool isValueOk( void ) const { return m_num_values >= 1; };
 
 private:
 	enum { ST_FILE, ST_CMD, ST_WHICH, ST_VALUES, ST_NONE } m_state;
@@ -236,8 +238,10 @@ CheckArgs(int argc, const char **argv, Options &opts)
 		}
 
 		if ( status > 0 ) {
-			fprintf( stderr, "Warning: ignoring parameter %s\n", arg.Arg() );
-			fprintf( stderr, "use -h for help\n" );
+			fprintf( stderr,
+					 "Warning: ignoring parameter %s\n"
+					 "  use -h for help\n",
+					 arg.Arg() );
 		}
 		else if ( arg.ArgIsOpt() ) {
 			status = opts.handleOpt( arg, index );
@@ -247,6 +251,34 @@ CheckArgs(int argc, const char **argv, Options &opts)
 		}
 	}
 
+	if ( NULL == opts.getFile() ) {
+		fprintf( stderr,
+				 "No state file specified\n"
+				 "  use -h for help\n" );
+		status = -1;
+	}
+	else if ( CMD_NONE == opts.getCommand() ) {
+		fprintf( stderr,
+				 "No command specified\n"
+				 "  use -h for help\n" );
+		status = -1;
+	}
+	else if ( CMD_VERIFY == opts.getCommand() ) {
+		if ( NULL == opts.getWhich() ||
+			 WHICH_NONE == opts.getWhich()->m_which ) {
+			fprintf( stderr,
+					 "Verify: no field name specified\n"
+					 "  use -h for help\n" );
+			status = -1;
+		}
+		else if ( ! opts.isValueOk() ) {
+			fprintf( stderr,
+					 "Verify: no value (or range) specified\n"
+					 "  use -h for help\n" );
+			status = -1;
+		}
+
+	}
 	return status;
 }
 

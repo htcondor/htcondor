@@ -306,6 +306,9 @@ userlog-tests: all $(USERLOG_TESTS) $(USERLOG_LIBAPI_TESTS)
 test_log_reader: all $(LIB) Makefile $(LIBCONDORAPI)
 test_log_reader_state: all $(LIB) Makefile $(LIBCONDORAPI)
 test_log_writer: all $(LIB) Makefile $(LIBCONDORAPI)
+testbin_target(test_log_reader,755) 
+testbin_target(test_log_reader_state,755) 
+testbin_target(test_log_writer,755) 
 
 green-tests: all test_network_adapter test_hibernation
 
