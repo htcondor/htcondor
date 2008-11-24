@@ -107,7 +107,7 @@ static const WhichData whichList[] =
 union IntVal { filesize_t asFsize; int asInt; time_t asTime; };
 struct Value
 {
-	struct { IntVal minVal; IntVal maxVal; } asIntRange;
+	struct { IntVal minVal; IntVal maxVal; } asRange;
 	IntVal			 asInt;
 	StatStructInode	 asInode;
 	const char		*asStr;
@@ -126,6 +126,7 @@ public:
 	Command getCommand( void ) const { return m_command; };
 	const WhichData *getWhich( void ) const { return m_which; };
 	Value getValue( void ) const { return m_value; };
+	bool isValueRange( void ) const { return m_value_is_range; };
 	int getVerbose( void ) const { return m_verbose; };
 	bool getNumeric( void ) const { return m_numeric; };
 	const char *getUsage( void ) const { return m_usage; };
@@ -138,6 +139,7 @@ private:
 	Command			 m_command;
 	const WhichData	*m_which;
 	Value			 m_value;
+	bool			 m_value_is_range;
 	int				 m_num_values;
 	int				 m_verbose;
 	bool			 m_numeric;
@@ -159,8 +161,8 @@ DumpState(const Options &opts, const ReadUserLog::FileState &state,
 int
 VerifyState(const Options &opts, const ReadUserLog::FileState &state );
 
-const char *timestr( struct tm &tm );
-const char *timestr( time_t t );
+const char *timestr( struct tm &tm, char *buf = NULL, int bufsize = 0 );
+const char *timestr( time_t t, char *buf = NULL, int bufsize = 0 );
 const char *chomptime( char *buf );
 
 // Simple term signal handler
@@ -273,14 +275,14 @@ ReadState(const Options &opts, ReadUserLog::FileState &state )
 
 
 int
-DumpState( const Options &opts, const ReadUserLog::FileState &state,
+DumpState( const Options &opts, 
+		   const ReadUserLog::FileState &state,
 		   const WhichData *wdata )
 {
 	ReadUserLogState	rstate( state, 60 );
 	const ReadUserLogState::FileState	*istate =
 		ReadUserLogState::GetFileStateConst( state );
 
-	MyString	str;
 	if ( NULL == wdata ) {
 		wdata = opts.getWhich( );
 	}
@@ -392,27 +394,254 @@ DumpState( const Options &opts, const ReadUserLog::FileState &state,
 	return 0;
 }
 
+bool
+Compare( const Options &opts, const char *val )
+{
+	bool	ok;
+
+	ok = ( strcasecmp( val, opts.getValue().asStr ) == 0 );
+	if ( !ok && opts.getVerbose() ) {
+		printf( "  %s: '%s' != '%s'\n",
+				opts.getWhich()->m_name, val, opts.getValue().asStr );
+	}
+	return ok;
+}
+
+bool
+Compare( const Options &opts, int val )
+{
+	bool	ok;
+
+	if ( opts.isValueRange() ) {
+		ok = (  ( val >= opts.getValue().asRange.minVal.asInt ) &&
+				( val <= opts.getValue().asRange.maxVal.asInt )  );
+		
+		if ( !ok && opts.getVerbose() ) {
+			printf( "  %s: %d not in %d - %d\n",
+					opts.getWhich()->m_name,
+					val,
+					opts.getValue().asRange.minVal.asInt,
+					opts.getValue().asRange.maxVal.asInt );
+		}
+	}
+	else {
+		ok = ( val == opts.getValue().asInt.asInt );
+		if ( !ok && opts.getVerbose() ) {
+			printf( "  %s: %d != %d\n",
+					opts.getWhich()->m_name,
+					val,
+					opts.getValue().asInt.asInt );
+		}
+	}
+
+	return ok;
+}
+
+bool
+Compare( const Options &opts, filesize_t val )
+{
+	bool	ok;
+
+	if ( opts.isValueRange() ) {
+		ok = (  ( val >= opts.getValue().asRange.minVal.asFsize ) &&
+				( val <= opts.getValue().asRange.maxVal.asFsize )  );
+		
+		if ( !ok && opts.getVerbose() ) {
+			printf( "  %s: " FILESIZE_T_FORMAT 
+					"not in " FILESIZE_T_FORMAT " - " FILESIZE_T_FORMAT "\n",
+					opts.getWhich()->m_name,
+					val,
+					opts.getValue().asRange.minVal.asFsize,
+					opts.getValue().asRange.maxVal.asFsize );
+		}
+	}
+	else {
+		ok = ( val == opts.getValue().asInt.asInt );
+		if ( !ok && opts.getVerbose() ) {
+			printf( "  %s: " FILESIZE_T_FORMAT " != " FILESIZE_T_FORMAT "\n",
+					opts.getWhich()->m_name,
+					val,
+					opts.getValue().asInt.asFsize );
+		}
+	}
+
+	return ok;
+}
+
+bool
+Compare( const Options &opts, time_t val )
+{
+	bool	ok;
+	char	b1[64], b2[64], b3[64];
+
+	if ( opts.isValueRange() ) {
+		ok = (  ( val >= opts.getValue().asRange.minVal.asTime ) &&
+				( val <= opts.getValue().asRange.maxVal.asTime )  );
+		
+		if ( !ok && opts.getVerbose() ) {
+			if ( opts.getNumeric() ) {
+				printf( "  %s: %lu not in %lu - %lu\n",
+						opts.getWhich()->m_name,
+						(unsigned long)val,
+						(unsigned long)opts.getValue().asRange.minVal.asTime,
+						(unsigned long)opts.getValue().asRange.maxVal.asTime );
+			}
+			else {
+				printf( "  %s: %s not in %s - %s\n",
+						opts.getWhich()->m_name,
+						timestr( val, b1, sizeof(b1) ),
+						timestr( opts.getValue().asRange.minVal.asTime,
+								 b2, sizeof(b2) ),
+						timestr( opts.getValue().asRange.maxVal.asTime,
+								 b3, sizeof(b3) ) );
+			}
+		}
+	}
+	else {
+		ok = ( val == opts.getValue().asInt.asTime );
+		if ( !ok && opts.getVerbose() ) {
+			if ( opts.getNumeric() ) {
+				printf( "  %s: %lu != %lu\n",
+						opts.getWhich()->m_name,
+						(unsigned long) val,
+						(unsigned long) opts.getValue().asInt.asTime );
+			}
+			else {
+				printf( "  %s: %s != %s\n",
+						opts.getWhich()->m_name,
+						timestr( val, b1, sizeof(b1) ),
+						timestr( opts.getValue().asRange.minVal.asTime,
+								 b2, sizeof(b2) ) );
+			}
+		}
+	}
+
+	return ok;
+}
+
+bool
+Compare( const Options &opts, StatStructInode val )
+{
+	bool	ok;
+
+	ok = val == opts.getValue().asInode;
+	if ( !ok && opts.getVerbose() ) {
+			printf( "  %s: %lu != %lu\n",
+					opts.getWhich()->m_name,
+					(unsigned long) val,
+					(unsigned long) opts.getValue().asInode );
+	}
+
+	return ok;
+}
+
 int
 VerifyState(const Options &opts, const ReadUserLog::FileState &state )
 {
+	ReadUserLogState	rstate( state, 60 );
+	const ReadUserLogState::FileState	*istate =
+		ReadUserLogState::GetFileStateConst( state );
+
+	const WhichData	*wdata = opts.getWhich( );
+	if ( wdata == NULL ) {
+		fprintf( stderr, "Verify: no which!\n" );
+		return -1;
+	}
+
+	bool	ok;
+	switch( wdata->m_which )
+	{
+	case WHICH_SIGNATURE:
+		ok = Compare( opts, istate->m_signature );
+		break;
+
+	case WHICH_VERSION:
+		ok = Compare( opts, istate->m_version );
+		break;
+
+	case WHICH_UPDATE_TIME:
+		ok = Compare( opts, istate->m_update_time );
+		break;
+
+	case WHICH_BASE_PATH:
+		ok = Compare( opts, istate->m_base_path );
+		break;
+
+	case WHICH_CUR_PATH:
+		ok = Compare( opts, rstate.CurPath(state) );
+		break;
+
+	case WHICH_UNIQ_ID:
+		ok = Compare( opts, istate->m_uniq_id );
+		break;
+
+	case WHICH_SEQUENCE:
+		ok = Compare( opts, istate->m_sequence );
+		break;
+
+	case WHICH_MAX_ROTATION:
+		ok = Compare( opts, istate->m_max_rotations );
+		break;
+
+	case WHICH_ROTATION:
+		ok = Compare( opts, istate->m_rotation );
+		break;
+
+	case WHICH_OFFSET:
+		ok = Compare( opts, istate->m_offset.asint );
+		break;
+
+	case WHICH_GLOBAL_POSITION:
+		ok = Compare( opts, istate->m_log_position.asint );
+		break;
+
+	case WHICH_GLOBAL_RECORD_NUM:
+		ok = Compare( opts, istate->m_log_record.asint );
+		break;
+
+	case WHICH_INODE:
+		ok = Compare( opts, istate->m_inode );
+		break;
+
+	case WHICH_CTIME:
+		ok = Compare( opts, istate->m_ctime );
+		break;
+
+	case WHICH_SIZE:
+		ok = Compare( opts, istate->m_size.asint );
+		break;
+		
+	default:
+		return -1;
+	}
+	return ok ? 0 : 1;
 }
 
 const char *
-timestr( time_t t )
+timestr( time_t t, char *buf, int bufsize )
 {
-	static char	tbuf[64];
+	static char	sbuf[64];
+	if ( NULL == buf ) {
+		buf = sbuf;
+		bufsize = sizeof(sbuf);
+	}
 	
-	strncpy( tbuf, ctime(&t), sizeof(tbuf) );
-	return chomptime( tbuf );
+	strncpy( buf, ctime(&t), bufsize );
+	return chomptime( buf );
 }
 
 const char *
-timestr( struct tm &tm )
+timestr( struct tm &tm, char *buf, int bufsize )
 {
-	static char	tbuf[64];
-	strncpy( tbuf, asctime( &tm ), sizeof(tbuf) );
-	tbuf[sizeof(tbuf)-1] = '\0';
-	return chomptime( tbuf );
+	static char	sbuf[64];
+	if ( NULL == buf ) {
+		buf = sbuf;
+		bufsize = sizeof(sbuf);
+	}
+
+	strncpy( buf, asctime( &tm ), bufsize );
+	buf[bufsize-1] = '\0';
+	return chomptime( buf );
 }
 
 const char *
@@ -433,6 +662,7 @@ Options::Options( void )
 	m_command = CMD_NONE;
 	m_which = NULL;
 	memset( &m_value, 0, sizeof(m_value) );
+	m_value_is_range = false;
 	m_num_values = 0;
 	m_verbose = VERB_NONE;
 	m_numeric = false;
@@ -625,11 +855,12 @@ Options::parseValue( const SimpleArg &arg )
 		int		i = atoi(s);
 		if ( 0 == m_num_values ) {
 			m_value.asInt.asInt = i;
-			m_value.asIntRange.minVal.asInt = i;
-			m_value.asIntRange.maxVal.asInt = i;
+			m_value.asRange.minVal.asInt = i;
+			m_value.asRange.maxVal.asInt = i;
 		}
 		else {
-			m_value.asIntRange.maxVal.asInt = i;
+			m_value.asRange.maxVal.asInt = i;
+			m_value_is_range = true;
 		}
 		return true;
 	}
@@ -637,11 +868,12 @@ Options::parseValue( const SimpleArg &arg )
 		filesize_t		i = (filesize_t) atol(s);
 		if ( 0 == m_num_values ) {
 			m_value.asInt.asFsize = i;
-			m_value.asIntRange.minVal.asFsize = i;
-			m_value.asIntRange.maxVal.asFsize = i;
+			m_value.asRange.minVal.asFsize = i;
+			m_value.asRange.maxVal.asFsize = i;
 		}
 		else {
-			m_value.asIntRange.maxVal.asFsize = i;
+			m_value.asRange.maxVal.asFsize = i;
+			m_value_is_range = true;
 		}
 		return true;
 	}
@@ -649,11 +881,12 @@ Options::parseValue( const SimpleArg &arg )
 		time_t		i = (time_t) atol(s);
 		if ( 0 == m_num_values ) {
 			m_value.asInt.asTime = i;
-			m_value.asIntRange.minVal.asTime = i;
-			m_value.asIntRange.maxVal.asTime = i;
+			m_value.asRange.minVal.asTime = i;
+			m_value.asRange.maxVal.asTime = i;
 		}
 		else {
-			m_value.asIntRange.maxVal.asTime = i;
+			m_value.asRange.maxVal.asTime = i;
+			m_value_is_range = true;
 		}
 		return true;
 	}
