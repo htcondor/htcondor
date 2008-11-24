@@ -1068,10 +1068,10 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 			ABORT;
 		}
 
-		if( req_classad->EvalInteger( ATTR_REQUEST_CPUS, mach_classad, cpus ) || 
-			(cpus = 1) ) { // reasonable default, for sure
-			type.sprintf_cat( "cpus=%d ", cpus );
+		if( !req_classad->EvalInteger( ATTR_REQUEST_CPUS, mach_classad, cpus ) ) {
+			cpus = 1; // reasonable default, for sure
 		}
+		type.sprintf_cat( "cpus=%d ", cpus );
 
 		if( req_classad->EvalInteger( ATTR_REQUEST_MEMORY, mach_classad, memory ) ) {
 			type.sprintf_cat( "memory=%d ", memory );
