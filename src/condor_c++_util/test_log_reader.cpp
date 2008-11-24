@@ -2,13 +2,13 @@
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -91,7 +91,7 @@ main(int argc, const char **argv)
 	Options	opts;
 
 	Status tmpStatus = CheckArgs(argc, argv, opts);
-	
+
 	if ( tmpStatus == STATUS_OK ) {
 		result = ReadEvents(opts);
 	} else if ( tmpStatus == STATUS_ERROR ) {
@@ -389,7 +389,7 @@ ReadEvents(Options &opts)
 				else if ( (!missedLast) && isPrevCluster && (!isPrevProc) ) {
 					printf( "\n** Undetected missed event **\n" );
 					global_done = true;
-					
+
 				}
 			}
 			prevCluster = event->cluster;

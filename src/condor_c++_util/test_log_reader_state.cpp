@@ -2,13 +2,13 @@
  *
  * Copyright (C) 1990-2008, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -46,25 +46,25 @@ enum Command
 	CMD_LIST,
 	CMD_VERIFY
 };
-enum Which
+enum Field
 {
-	WHICH_NONE,
-	WHICH_SIGNATURE,
-	WHICH_VERSION,
-	WHICH_UPDATE_TIME,
-	WHICH_BASE_PATH,
-	WHICH_CUR_PATH,
-	WHICH_UNIQ_ID,
-	WHICH_SEQUENCE,
-	WHICH_MAX_ROTATION,
-	WHICH_ROTATION,
-	WHICH_OFFSET,
-	WHICH_GLOBAL_POSITION,
-	WHICH_GLOBAL_RECORD_NUM,
-	WHICH_INODE,
-	WHICH_CTIME,
-	WHICH_SIZE,
-	WHICH_ALL,
+	FIELD_NONE,
+	FIELD_SIGNATURE,
+	FIELD_VERSION,
+	FIELD_UPDATE_TIME,
+	FIELD_BASE_PATH,
+	FIELD_CUR_PATH,
+	FIELD_UNIQ_ID,
+	FIELD_SEQUENCE,
+	FIELD_MAX_ROTATION,
+	FIELD_ROTATION,
+	FIELD_OFFSET,
+	FIELD_GLOBAL_POSITION,
+	FIELD_GLOBAL_RECORD_NUM,
+	FIELD_INODE,
+	FIELD_CTIME,
+	FIELD_SIZE,
+	FIELD_ALL,
 };
 enum DataType
 {
@@ -76,33 +76,33 @@ enum DataType
 	TYPE_NONE,
 };
 
-struct WhichData
+struct FieldData
 {
-	Which		 m_which;
+	Field		 m_field;
 	DataType	 m_type;
 	int			 m_max_values;
 	char		*m_name;
 };
-static const WhichData whichList[] =
+static const FieldData fieldList[] =
 {
-	{ WHICH_SIGNATURE,			TYPE_STRING,	1,  "signature" },
-	{ WHICH_VERSION,			TYPE_INT,		2,  "version" },
-	{ WHICH_UPDATE_TIME,		TYPE_TIME,		2,  "update-time" },
-	{ WHICH_BASE_PATH,			TYPE_STRING,	1,  "base-path" },
-	{ WHICH_CUR_PATH,			TYPE_STRING,	1,  "path" },
-	{ WHICH_UNIQ_ID,			TYPE_STRING,	1,  "uniq" },
-	{ WHICH_SEQUENCE,			TYPE_INT,		2,  "sequence" },
-	{ WHICH_MAX_ROTATION,		TYPE_INT,		2,  "max-rotation" },
-	{ WHICH_ROTATION,			TYPE_INT,		2,  "rotation" },
-	{ WHICH_OFFSET,				TYPE_FSIZE,		2,  "offset" },
-	{ WHICH_GLOBAL_POSITION,	TYPE_FSIZE,		2,  "global-position" },
-	{ WHICH_GLOBAL_RECORD_NUM,	TYPE_FSIZE,		2,  "global-record" },
-	{ WHICH_INODE,				TYPE_INODE,		1,  "inode" },
-	{ WHICH_CTIME,				TYPE_TIME,		2,  "ctime" },
-	{ WHICH_SIZE,				TYPE_FSIZE,		2,  "size" },
-	{ WHICH_ALL,				TYPE_NONE,		0,  "all" },
-	{ WHICH_NONE,				TYPE_NONE,		-1, NULL, },
-};		  
+	{ FIELD_SIGNATURE,			TYPE_STRING,	1,  "signature" },
+	{ FIELD_VERSION,			TYPE_INT,		2,  "version" },
+	{ FIELD_UPDATE_TIME,		TYPE_TIME,		2,  "update-time" },
+	{ FIELD_BASE_PATH,			TYPE_STRING,	1,  "base-path" },
+	{ FIELD_CUR_PATH,			TYPE_STRING,	1,  "path" },
+	{ FIELD_UNIQ_ID,			TYPE_STRING,	1,  "uniq" },
+	{ FIELD_SEQUENCE,			TYPE_INT,		2,  "sequence" },
+	{ FIELD_MAX_ROTATION,		TYPE_INT,		2,  "max-rotation" },
+	{ FIELD_ROTATION,			TYPE_INT,		2,  "rotation" },
+	{ FIELD_OFFSET,				TYPE_FSIZE,		2,  "offset" },
+	{ FIELD_GLOBAL_POSITION,	TYPE_FSIZE,		2,  "global-position" },
+	{ FIELD_GLOBAL_RECORD_NUM,	TYPE_FSIZE,		2,  "global-record" },
+	{ FIELD_INODE,				TYPE_INODE,		1,  "inode" },
+	{ FIELD_CTIME,				TYPE_TIME,		2,  "ctime" },
+	{ FIELD_SIZE,				TYPE_FSIZE,		2,  "size" },
+	{ FIELD_ALL,				TYPE_NONE,		0,  "all" },
+	{ FIELD_NONE,				TYPE_NONE,		-1, NULL, },
+};
 
 union IntVal { filesize_t asFsize; int asInt; time_t asTime; };
 struct Value
@@ -125,21 +125,21 @@ public:
 
 	const char *getFile( void ) const { return m_file; };
 	Command getCommand( void ) const { return m_command; };
-	const WhichData *getWhich( void ) const { return m_which; };
+	const FieldData *getField( void ) const { return m_field; };
 	Value getValue( void ) const { return m_value; };
 	bool isValueRange( void ) const { return m_value_is_range; };
 	int getVerbose( void ) const { return m_verbose; };
 	bool getNumeric( void ) const { return m_numeric; };
 	const char *getUsage( void ) const { return m_usage; };
-	void dumpWhichList( void ) const;
-	const WhichData *lookupWhich( Which which ) const;
+	void dumpFieldList( void ) const;
+	const FieldData *lookupField( Field field ) const;
 	bool isValueOk( void ) const { return m_num_values >= 1; };
 
 private:
-	enum { ST_FILE, ST_CMD, ST_WHICH, ST_VALUES, ST_NONE } m_state;
+	enum { ST_FILE, ST_CMD, ST_FIELD, ST_VALUES, ST_NONE } m_state;
 	const char		*m_file;
 	Command			 m_command;
-	const WhichData	*m_which;
+	const FieldData	*m_field;
 	Value			 m_value;
 	bool			 m_value_is_range;
 	int				 m_num_values;
@@ -148,8 +148,8 @@ private:
 	const char		*m_usage;
 
 	bool lookupCommand( const SimpleArg & );
-	const WhichData *lookupWhich( const char *arg ) const;
-	const WhichData *lookupWhich( const SimpleArg &arg ) const;
+	const FieldData *lookupField( const char *arg ) const;
+	const FieldData *lookupField( const SimpleArg &arg ) const;
 	bool parseValue( const SimpleArg &arg );
 };
 
@@ -159,7 +159,7 @@ int
 ReadState(const Options &opts, ReadUserLog::FileState &state );
 int
 DumpState(const Options &opts, const ReadUserLog::FileState &state,
-		  const WhichData *wdata = NULL );
+		  const FieldData *wdata = NULL );
 int
 VerifyState(const Options &opts, const ReadUserLog::FileState &state );
 
@@ -193,7 +193,7 @@ main(int argc, const char **argv)
 		fprintf( stderr, "CheckArgs() failed\n" );
 		exit( 1 );
 	}
-	
+
 	ReadUserLog::FileState	state;
 	if ( ReadState( opts, state ) < 0 ) {
 		fprintf( stderr, "ReadState() failed\n" );
@@ -207,7 +207,7 @@ main(int argc, const char **argv)
 		status = -1;
 		break;
 	case CMD_LIST:
-		opts.dumpWhichList( );
+		opts.dumpFieldList( );
 		break;
 	case CMD_DUMP:
 		status = DumpState( opts, state );
@@ -264,8 +264,8 @@ CheckArgs(int argc, const char **argv, Options &opts)
 		status = -1;
 	}
 	else if ( CMD_VERIFY == opts.getCommand() ) {
-		if ( NULL == opts.getWhich() ||
-			 WHICH_NONE == opts.getWhich()->m_which ) {
+		if ( NULL == opts.getField() ||
+			 FIELD_NONE == opts.getField()->m_field ) {
 			fprintf( stderr,
 					 "Verify: no field name specified\n"
 					 "  use -h for help\n" );
@@ -307,87 +307,87 @@ ReadState(const Options &opts, ReadUserLog::FileState &state )
 
 
 int
-DumpState( const Options &opts, 
+DumpState( const Options &opts,
 		   const ReadUserLog::FileState &state,
-		   const WhichData *wdata )
+		   const FieldData *wdata )
 {
 	ReadUserLogState	rstate( state, 60 );
 	const ReadUserLogState::FileState	*istate =
 		ReadUserLogState::GetFileStateConst( state );
 
 	if ( NULL == wdata ) {
-		wdata = opts.getWhich( );
+		wdata = opts.getField( );
 	}
 
-	switch( wdata->m_which )
+	switch( wdata->m_field )
 	{
-	case WHICH_NONE:
+	case FIELD_NONE:
 		return -1;
 		break;
 
-	case WHICH_SIGNATURE:
+	case FIELD_SIGNATURE:
 		printf( "  %s: '%s'\n", wdata->m_name, istate->m_signature );
 		break;
 
-	case WHICH_VERSION:
+	case FIELD_VERSION:
 		printf( "  %s: %d\n", wdata->m_name, istate->m_version );
 		break;
 
-	case WHICH_UPDATE_TIME:
+	case FIELD_UPDATE_TIME:
 		if ( opts.getNumeric() ) {
 			printf( "  %s: %lu\n", wdata->m_name,
 					(long unsigned) istate->m_update_time );
 		} else {
-			printf( "  %s: '%s'\n", wdata->m_name, 
+			printf( "  %s: '%s'\n", wdata->m_name,
 					timestr(istate->m_update_time) );
 		}
 		break;
 
-	case WHICH_BASE_PATH:
+	case FIELD_BASE_PATH:
 		printf( "  %s: '%s'\n", wdata->m_name, istate->m_base_path );
 		break;
 
-	case WHICH_CUR_PATH:
+	case FIELD_CUR_PATH:
 		printf( "  %s: '%s'\n", wdata->m_name, rstate.CurPath(state) );
 		break;
 
-	case WHICH_UNIQ_ID:
+	case FIELD_UNIQ_ID:
 		printf( "  %s: '%s'\n", wdata->m_name, istate->m_uniq_id );
 		break;
 
-	case WHICH_SEQUENCE:
+	case FIELD_SEQUENCE:
 		printf( "  %s: %d\n", wdata->m_name, istate->m_sequence );
 		break;
 
-	case WHICH_MAX_ROTATION:
+	case FIELD_MAX_ROTATION:
 		printf( "  %s: %d\n", wdata->m_name, istate->m_max_rotations );
 		break;
 
-	case WHICH_ROTATION:
+	case FIELD_ROTATION:
 		printf( "  %s: %d\n", wdata->m_name, istate->m_rotation );
 		break;
 
-	case WHICH_OFFSET:
+	case FIELD_OFFSET:
 		printf( "  %s: " FILESIZE_T_FORMAT "\n",
 				wdata->m_name, istate->m_offset.asint );
 		break;
 
-	case WHICH_GLOBAL_POSITION:
+	case FIELD_GLOBAL_POSITION:
 		printf( "  %s: " FILESIZE_T_FORMAT "\n",
 				wdata->m_name, istate->m_log_position.asint );
 		break;
 
-	case WHICH_GLOBAL_RECORD_NUM:
+	case FIELD_GLOBAL_RECORD_NUM:
 		printf( "  %s: " FILESIZE_T_FORMAT "\n",
 				wdata->m_name, istate->m_log_record.asint );
 		break;
 
-	case WHICH_INODE:
+	case FIELD_INODE:
 		printf( "  %s: %lu\n", wdata->m_name,
 				(long unsigned) istate->m_inode );
 		break;
 
-	case WHICH_CTIME:
+	case FIELD_CTIME:
 		if ( opts.getNumeric() ) {
 			printf( "  %s: %lu\n", wdata->m_name,
 					(long unsigned) istate->m_ctime );
@@ -397,29 +397,29 @@ DumpState( const Options &opts,
 		}
 		break;
 
-	case WHICH_SIZE:
+	case FIELD_SIZE:
 		printf( "  %s: " FILESIZE_T_FORMAT "\n",
 				wdata->m_name, istate->m_size.asint );
 		break;
 
-	case WHICH_ALL:
-		DumpState( opts, state, opts.lookupWhich(WHICH_SIGNATURE) );
-		DumpState( opts, state, opts.lookupWhich(WHICH_VERSION) );
-		DumpState( opts, state, opts.lookupWhich(WHICH_UPDATE_TIME) );
-		DumpState( opts, state, opts.lookupWhich(WHICH_BASE_PATH) );
-		DumpState( opts, state, opts.lookupWhich(WHICH_CUR_PATH) );
-		DumpState( opts, state, opts.lookupWhich(WHICH_UNIQ_ID) );
-		DumpState( opts, state, opts.lookupWhich(WHICH_SEQUENCE) );
-		DumpState( opts, state, opts.lookupWhich(WHICH_MAX_ROTATION) );
-		DumpState( opts, state, opts.lookupWhich(WHICH_ROTATION) );
-		DumpState( opts, state, opts.lookupWhich(WHICH_OFFSET) );
-		DumpState( opts, state, opts.lookupWhich(WHICH_GLOBAL_POSITION) );
-		DumpState( opts, state, opts.lookupWhich(WHICH_GLOBAL_RECORD_NUM) );
-		DumpState( opts, state, opts.lookupWhich(WHICH_INODE) );
-		DumpState( opts, state, opts.lookupWhich(WHICH_CTIME) );
-		DumpState( opts, state, opts.lookupWhich(WHICH_SIZE) );
+	case FIELD_ALL:
+		DumpState( opts, state, opts.lookupField(FIELD_SIGNATURE) );
+		DumpState( opts, state, opts.lookupField(FIELD_VERSION) );
+		DumpState( opts, state, opts.lookupField(FIELD_UPDATE_TIME) );
+		DumpState( opts, state, opts.lookupField(FIELD_BASE_PATH) );
+		DumpState( opts, state, opts.lookupField(FIELD_CUR_PATH) );
+		DumpState( opts, state, opts.lookupField(FIELD_UNIQ_ID) );
+		DumpState( opts, state, opts.lookupField(FIELD_SEQUENCE) );
+		DumpState( opts, state, opts.lookupField(FIELD_MAX_ROTATION) );
+		DumpState( opts, state, opts.lookupField(FIELD_ROTATION) );
+		DumpState( opts, state, opts.lookupField(FIELD_OFFSET) );
+		DumpState( opts, state, opts.lookupField(FIELD_GLOBAL_POSITION) );
+		DumpState( opts, state, opts.lookupField(FIELD_GLOBAL_RECORD_NUM) );
+		DumpState( opts, state, opts.lookupField(FIELD_INODE) );
+		DumpState( opts, state, opts.lookupField(FIELD_CTIME) );
+		DumpState( opts, state, opts.lookupField(FIELD_SIZE) );
 		break;
-		
+
 	default:
 		return -1;
 	}
@@ -434,7 +434,7 @@ Compare( const Options &opts, const char *val )
 	ok = ( strcasecmp( val, opts.getValue().asStr ) == 0 );
 	if ( !ok && opts.getVerbose() ) {
 		printf( "  %s: '%s' != '%s'\n",
-				opts.getWhich()->m_name, val, opts.getValue().asStr );
+				opts.getField()->m_name, val, opts.getValue().asStr );
 	}
 	return ok;
 }
@@ -447,10 +447,10 @@ Compare( const Options &opts, int val )
 	if ( opts.isValueRange() ) {
 		ok = (  ( val >= opts.getValue().asRange.minVal.asInt ) &&
 				( val <= opts.getValue().asRange.maxVal.asInt )  );
-		
+
 		if ( !ok && opts.getVerbose() ) {
 			printf( "  %s: %d not in %d - %d\n",
-					opts.getWhich()->m_name,
+					opts.getField()->m_name,
 					val,
 					opts.getValue().asRange.minVal.asInt,
 					opts.getValue().asRange.maxVal.asInt );
@@ -460,7 +460,7 @@ Compare( const Options &opts, int val )
 		ok = ( val == opts.getValue().asInt.asInt );
 		if ( !ok && opts.getVerbose() ) {
 			printf( "  %s: %d != %d\n",
-					opts.getWhich()->m_name,
+					opts.getField()->m_name,
 					val,
 					opts.getValue().asInt.asInt );
 		}
@@ -477,11 +477,11 @@ Compare( const Options &opts, filesize_t val )
 	if ( opts.isValueRange() ) {
 		ok = (  ( val >= opts.getValue().asRange.minVal.asFsize ) &&
 				( val <= opts.getValue().asRange.maxVal.asFsize )  );
-		
+
 		if ( !ok && opts.getVerbose() ) {
-			printf( "  %s: " FILESIZE_T_FORMAT 
+			printf( "  %s: " FILESIZE_T_FORMAT
 					"not in " FILESIZE_T_FORMAT " - " FILESIZE_T_FORMAT "\n",
-					opts.getWhich()->m_name,
+					opts.getField()->m_name,
 					val,
 					opts.getValue().asRange.minVal.asFsize,
 					opts.getValue().asRange.maxVal.asFsize );
@@ -491,7 +491,7 @@ Compare( const Options &opts, filesize_t val )
 		ok = ( val == opts.getValue().asInt.asInt );
 		if ( !ok && opts.getVerbose() ) {
 			printf( "  %s: " FILESIZE_T_FORMAT " != " FILESIZE_T_FORMAT "\n",
-					opts.getWhich()->m_name,
+					opts.getField()->m_name,
 					val,
 					opts.getValue().asInt.asFsize );
 		}
@@ -509,18 +509,18 @@ Compare( const Options &opts, time_t val )
 	if ( opts.isValueRange() ) {
 		ok = (  ( val >= opts.getValue().asRange.minVal.asTime ) &&
 				( val <= opts.getValue().asRange.maxVal.asTime )  );
-		
+
 		if ( !ok && opts.getVerbose() ) {
 			if ( opts.getNumeric() ) {
 				printf( "  %s: %lu not in %lu - %lu\n",
-						opts.getWhich()->m_name,
+						opts.getField()->m_name,
 						(unsigned long)val,
 						(unsigned long)opts.getValue().asRange.minVal.asTime,
 						(unsigned long)opts.getValue().asRange.maxVal.asTime );
 			}
 			else {
 				printf( "  %s: %s not in %s - %s\n",
-						opts.getWhich()->m_name,
+						opts.getField()->m_name,
 						timestr( val, b1, sizeof(b1) ),
 						timestr( opts.getValue().asRange.minVal.asTime,
 								 b2, sizeof(b2) ),
@@ -534,13 +534,13 @@ Compare( const Options &opts, time_t val )
 		if ( !ok && opts.getVerbose() ) {
 			if ( opts.getNumeric() ) {
 				printf( "  %s: %lu != %lu\n",
-						opts.getWhich()->m_name,
+						opts.getField()->m_name,
 						(unsigned long) val,
 						(unsigned long) opts.getValue().asInt.asTime );
 			}
 			else {
 				printf( "  %s: %s != %s\n",
-						opts.getWhich()->m_name,
+						opts.getField()->m_name,
 						timestr( val, b1, sizeof(b1) ),
 						timestr( opts.getValue().asRange.minVal.asTime,
 								 b2, sizeof(b2) ) );
@@ -559,7 +559,7 @@ Compare( const Options &opts, StatStructInode val )
 	ok = val == opts.getValue().asInode;
 	if ( !ok && opts.getVerbose() ) {
 			printf( "  %s: %lu != %lu\n",
-					opts.getWhich()->m_name,
+					opts.getField()->m_name,
 					(unsigned long) val,
 					(unsigned long) opts.getValue().asInode );
 	}
@@ -574,75 +574,75 @@ VerifyState(const Options &opts, const ReadUserLog::FileState &state )
 	const ReadUserLogState::FileState	*istate =
 		ReadUserLogState::GetFileStateConst( state );
 
-	const WhichData	*wdata = opts.getWhich( );
+	const FieldData	*wdata = opts.getField( );
 	if ( wdata == NULL ) {
-		fprintf( stderr, "Verify: no which!\n" );
+		fprintf( stderr, "Verify: no field!\n" );
 		return -1;
 	}
 
 	bool	ok;
-	switch( wdata->m_which )
+	switch( wdata->m_field )
 	{
-	case WHICH_SIGNATURE:
+	case FIELD_SIGNATURE:
 		ok = Compare( opts, istate->m_signature );
 		break;
 
-	case WHICH_VERSION:
+	case FIELD_VERSION:
 		ok = Compare( opts, istate->m_version );
 		break;
 
-	case WHICH_UPDATE_TIME:
+	case FIELD_UPDATE_TIME:
 		ok = Compare( opts, istate->m_update_time );
 		break;
 
-	case WHICH_BASE_PATH:
+	case FIELD_BASE_PATH:
 		ok = Compare( opts, istate->m_base_path );
 		break;
 
-	case WHICH_CUR_PATH:
+	case FIELD_CUR_PATH:
 		ok = Compare( opts, rstate.CurPath(state) );
 		break;
 
-	case WHICH_UNIQ_ID:
+	case FIELD_UNIQ_ID:
 		ok = Compare( opts, istate->m_uniq_id );
 		break;
 
-	case WHICH_SEQUENCE:
+	case FIELD_SEQUENCE:
 		ok = Compare( opts, istate->m_sequence );
 		break;
 
-	case WHICH_MAX_ROTATION:
+	case FIELD_MAX_ROTATION:
 		ok = Compare( opts, istate->m_max_rotations );
 		break;
 
-	case WHICH_ROTATION:
+	case FIELD_ROTATION:
 		ok = Compare( opts, istate->m_rotation );
 		break;
 
-	case WHICH_OFFSET:
+	case FIELD_OFFSET:
 		ok = Compare( opts, istate->m_offset.asint );
 		break;
 
-	case WHICH_GLOBAL_POSITION:
+	case FIELD_GLOBAL_POSITION:
 		ok = Compare( opts, istate->m_log_position.asint );
 		break;
 
-	case WHICH_GLOBAL_RECORD_NUM:
+	case FIELD_GLOBAL_RECORD_NUM:
 		ok = Compare( opts, istate->m_log_record.asint );
 		break;
 
-	case WHICH_INODE:
+	case FIELD_INODE:
 		ok = Compare( opts, istate->m_inode );
 		break;
 
-	case WHICH_CTIME:
+	case FIELD_CTIME:
 		ok = Compare( opts, istate->m_ctime );
 		break;
 
-	case WHICH_SIZE:
+	case FIELD_SIZE:
 		ok = Compare( opts, istate->m_size.asint );
 		break;
-		
+
 	default:
 		return -1;
 	}
@@ -657,7 +657,7 @@ timestr( time_t t, char *buf, int bufsize )
 		buf = sbuf;
 		bufsize = sizeof(sbuf);
 	}
-	
+
 	strncpy( buf, ctime(&t), bufsize );
 	return chomptime( buf );
 }
@@ -692,15 +692,15 @@ Options::Options( void )
 	m_state = ST_FILE;
 	m_file = NULL;
 	m_command = CMD_NONE;
-	m_which = NULL;
+	m_field = NULL;
 	memset( &m_value, 0, sizeof(m_value) );
 	m_value_is_range = false;
 	m_num_values = 0;
 	m_verbose = VERB_NONE;
 	m_numeric = false;
-	m_usage = 
+	m_usage =
 		"Usage: test_log_reader_state "
-		"[options] <filename> <operation [operands]>\n"
+		"[options] <filename> <command> [field-name [value/min [max-value]]]\n"
 		"  commands: dump verify list\n"
 		"    dump/any: dump [what]\n"
 		"    verify/numeric: what min max\n"
@@ -750,7 +750,7 @@ Options::handleOpt( SimpleArg &arg, int &index )
 		return -1;
 	}
 	return 0;
-}	
+}
 
 int
 Options::handleFixed( SimpleArg &arg, int & /*index*/ )
@@ -772,34 +772,34 @@ Options::handleFixed( SimpleArg &arg, int & /*index*/ )
 			return 1;
 		}
 		else if ( CMD_DUMP == m_command ) {
-			m_which = lookupWhich( "all" );
-			if ( NULL == m_which ) {
+			m_field = lookupField( "all" );
+			if ( NULL == m_field ) {
 				assert( 0 );
 			}
 		}
-		m_state = ST_WHICH;
+		m_state = ST_FIELD;
 	}
-	else if ( ST_WHICH == m_state ) {
-		m_which = lookupWhich( arg );
-		if ( NULL == m_which ) {
-			fprintf(stderr, "Invalid which '%s'\n", arg.Arg() );
+	else if ( ST_FIELD == m_state ) {
+		m_field = lookupField( arg );
+		if ( NULL == m_field ) {
+			fprintf(stderr, "Invalid field '%s'\n", arg.Arg() );
 			printf("%s", m_usage);
 			m_state = ST_NONE;
 			return -1;
 		}
 
-		if ( 0 == m_which->m_max_values ) {
+		if ( 0 == m_field->m_max_values ) {
 			m_state = ST_NONE;
 			return 1;
 		}
 		m_state = ST_VALUES;
 	}
 	else if (  ( ST_VALUES == m_state ) &&
-			   ( m_which ) &&
-			   ( m_num_values < m_which->m_max_values ) ) {
+			   ( m_field ) &&
+			   ( m_num_values < m_field->m_max_values ) ) {
 		if ( !parseValue( arg ) ) {
 			fprintf(stderr, "Invalid value for %s: '%s'\n",
-					m_which->m_name, arg.Arg() );
+					m_field->m_name, arg.Arg() );
 			return -1;
 		}
 		m_num_values++;
@@ -837,53 +837,53 @@ Options::lookupCommand( const SimpleArg &arg )
 }
 
 void
-Options::dumpWhichList( void ) const
+Options::dumpFieldList( void ) const
 {
-	const WhichData	*which = &whichList[0];
-	for( which = &whichList[0]; which->m_which != WHICH_NONE; which++ ) {
-		printf( "  %s\n", which->m_name );
+	const FieldData	*field = &fieldList[0];
+	for( field = &fieldList[0]; field->m_field != FIELD_NONE; field++ ) {
+		printf( "  %s\n", field->m_name );
 	}
 }
 
-const WhichData *
-Options::lookupWhich( Which arg ) const
+const FieldData *
+Options::lookupField( Field arg ) const
 {
-	const WhichData	*which;
-	for( which = &whichList[0]; which->m_which != WHICH_NONE; which++ ) {
-		if ( which->m_which == arg ) {
-			return which;
+	const FieldData	*field;
+	for( field = &fieldList[0]; field->m_field != FIELD_NONE; field++ ) {
+		if ( field->m_field == arg ) {
+			return field;
 		}
 	}
 	return NULL;
 }
 
-const WhichData *
-Options::lookupWhich( const char *arg ) const
+const FieldData *
+Options::lookupField( const char *arg ) const
 {
-	const WhichData	*which;
-	for( which = &whichList[0]; which->m_which != WHICH_NONE; which++ ) {
-		if ( 0 == strcasecmp( arg, which->m_name ) ) {
-			return which;
+	const FieldData	*field;
+	for( field = &fieldList[0]; field->m_field != FIELD_NONE; field++ ) {
+		if ( 0 == strcasecmp( arg, field->m_name ) ) {
+			return field;
 		}
 	}
 	return NULL;
 }
 
-const WhichData *
-Options::lookupWhich( const SimpleArg &arg ) const
+const FieldData *
+Options::lookupField( const SimpleArg &arg ) const
 {
-	return lookupWhich( arg.Arg() );
+	return lookupField( arg.Arg() );
 }
 
 bool
 Options::parseValue( const SimpleArg &arg )
 {
 	const char *s = arg.Arg( );
-	if ( TYPE_STRING == m_which->m_type ) {
+	if ( TYPE_STRING == m_field->m_type ) {
 		m_value.asStr = s;
 		return true;
 	}
-	if ( ( TYPE_INT == m_which->m_type ) && ( isdigit(*s) ) ) {
+	if ( ( TYPE_INT == m_field->m_type ) && ( isdigit(*s) ) ) {
 		int		i = atoi(s);
 		if ( 0 == m_num_values ) {
 			m_value.asInt.asInt = i;
@@ -896,7 +896,7 @@ Options::parseValue( const SimpleArg &arg )
 		}
 		return true;
 	}
-	if ( ( TYPE_FSIZE == m_which->m_type ) && ( isdigit(*s) ) ) {
+	if ( ( TYPE_FSIZE == m_field->m_type ) && ( isdigit(*s) ) ) {
 		filesize_t		i = (filesize_t) atol(s);
 		if ( 0 == m_num_values ) {
 			m_value.asInt.asFsize = i;
@@ -909,7 +909,7 @@ Options::parseValue( const SimpleArg &arg )
 		}
 		return true;
 	}
-	if ( ( TYPE_TIME == m_which->m_type ) && ( isdigit(*s) ) ) {
+	if ( ( TYPE_TIME == m_field->m_type ) && ( isdigit(*s) ) ) {
 		time_t		i = (time_t) atol(s);
 		if ( 0 == m_num_values ) {
 			m_value.asInt.asTime = i;
@@ -922,7 +922,7 @@ Options::parseValue( const SimpleArg &arg )
 		}
 		return true;
 	}
-	if ( ( TYPE_INODE == m_which->m_type ) && ( isdigit(*s) ) ) {
+	if ( ( TYPE_INODE == m_field->m_type ) && ( isdigit(*s) ) ) {
 		m_value.asInode = (StatStructInode) atol(s);
 		return true;
 	}
