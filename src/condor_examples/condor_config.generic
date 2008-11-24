@@ -540,6 +540,14 @@ MASTER_DEBUG		=
 MAX_JOB_ROUTER_LOG      = 1000000
 JOB_ROUTER_DEBUG        =
 
+# High Availability Logs
+MAX_HAD_LOG		= 1000000
+HAD_DEBUG		=
+MAX_REPLICATION_LOG	= 1000000
+REPLICATION_DEBUG	=
+MAX_TRANSFERER_LOG	= 1000000
+TRANSFERER_DEBUG	=
+
 
 ## The daemons touch their log file periodically, even when they have
 ## nothing to write. When a daemon starts up, it prints the last time
@@ -883,6 +891,10 @@ SHADOW_LOG	= $(LOG)/ShadowLog
 STARTD_LOG	= $(LOG)/StartLog
 STARTER_LOG	= $(LOG)/StarterLog
 JOB_ROUTER_LOG  = $(LOG)/JobRouterLog
+# High Availability Logs
+HAD_LOG		= $(LOG)/HADLog
+REPLICATION_LOG	= $(LOG)/ReplicationLog
+TRANSFERER_LOG	= $(LOG)/TransfererLog
 
 ##  Lock files
 SHADOW_LOCK	= $(LOCK)/ShadowLock
@@ -1846,8 +1858,7 @@ GRIDMANAGER_JOB_PROBE_INTERVAL = 300
 ## As of this writing Amazon EC2 has a hard limit of 20 concurrently
 ## running instances, so a limit of 20 is imposed so the GridManager
 ## does not waste its time sending requests that will be rejected.
-#GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE = 20
-
+GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE_AMAZON = 20
 
 ##
 ##--------------------------------------------------------------------

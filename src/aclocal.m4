@@ -477,7 +477,7 @@ AC_DEFUN([CONDOR_SET_ANALYZE],
  if test "x$[ac_condor_analyze_[$1]]" = "x"; then
    if test ! "x$ac_condor_analyze" = "x" ; then
      AC_MSG_WARN([no condor_analyze.$1 found, using $ac_condor_analyze])
-     AC_SUBST([condor_analyze_[$1]],$ac_condor_analyze)
+     AC_SUBST([condor_analyze_$1],$ac_condor_analyze)
    else
      if test "$2" = "fatal" ; then 
        AC_MSG_ERROR([neither condor_analyze.$1 nor condor_analyze found])
@@ -486,7 +486,7 @@ AC_DEFUN([CONDOR_SET_ANALYZE],
      fi
    fi
  else 
-   AC_SUBST([condor_analyze_[$1]],$[ac_condor_analyze_[$1]])
+   AC_SUBST([condor_analyze_$1],$[ac_condor_analyze_$1])
  fi
 ])
 

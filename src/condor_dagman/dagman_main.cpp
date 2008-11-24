@@ -443,14 +443,12 @@ int main_init (int argc, char ** const argv) {
 	// The DCpermission (last parm) should probably be PARENT, if it existed
     daemonCore->Register_Signal( SIGUSR1, "SIGUSR1",
                                  (SignalHandler) main_shutdown_remove,
-                                 "main_shutdown_remove", NULL,
-                                 IMMEDIATE_FAMILY);
+                                 "main_shutdown_remove", NULL);
 
 /****** FOR TESTING *******
     daemonCore->Register_Signal( SIGUSR2, "SIGUSR2",
                                  (SignalHandler) main_testing_stub,
-                                 "main_testing_stub", NULL,
-                                 IMMEDIATE_FAMILY );
+                                 "main_testing_stub", NULL);
 ****** FOR TESTING ********/
     debug_progname = condor_basename(argv[0]);
     debug_level = DEBUG_NORMAL;  // Default debug level is normal output
