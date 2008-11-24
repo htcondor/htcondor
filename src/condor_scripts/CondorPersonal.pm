@@ -104,6 +104,30 @@ use Net::Domain qw(hostfqdn);
 #	If "daemonwait" is set to false, we will only wait for the address files to exist and not
 #	require inter-daemon communication.
 
+#	Notes from efforts 11/24/2008
+#	The recent adding of tracking of core files and ERROR statements in daemon
+#	logs shows (since the negotiation tests never shut down generating a ongoing
+# 	stream of ERROR statements making other good tests fail) that we need a better
+#	and surer KILL for personal condors. if condor_off -master fails then we 
+# 	leave loos personal condors around which could cause other tests to fail.
+#	We are going to collect the PIDs of the daemons for a personal condor just
+#	after they start and before they have a chance to rotate and write a file PIDS
+#	in the log directory we will kill later.
+
+%daemon_logs =
+(
+	"COLLECTOR" => "CollectorLog",
+	"NEGOTIATOR" => "NegotiatorLog",
+	"MASTER" => "MasterLog",
+	"STARTD" => "StartLog",
+	"SCHEDD" => "SchedLog",
+	"collector" => "CollectorLog",
+	"negotiator" => "NegotiatorLog",
+	"master" => "MasterLog",
+	"startd" => "StartLog",
+	"schedd" => "SchedLog",
+);
+
 require 5.0;
 use Carp;
 use Cwd;
@@ -1115,6 +1139,18 @@ sub IsPersonalRunning
 	close(MADDR);
 }
 
+#################################################################
+#
+# IsRunningYet
+#
+#	We want to do out best to be sure the personal is fully running
+#	before going on to start a test against it. And this is also
+#	a great time to harvest the PIDS of the daemons to allow a more
+#	sure kill then condor_off can do in circumstances like
+#	screwed up authentication tests
+#
+#################################################################
+
 sub IsRunningYet
 {
 	$maxattempts = 9;
@@ -1328,9 +1364,98 @@ sub IsRunningYet
 			}
 		}
 	}
+	debug("In IsRunningYet calling CollectDaemonPids\n",3);
+	CollectDaemonPids();
 	debug("Leaving IsRunningYet\n",3);
 
 	return(1);
+}
+
+#################################################################
+#
+# CollectDaemonPids
+#
+# 	Open each known daemon's log and extract its PID
+# 	and collect them all in a file called PIDS in the
+#	log directory.
+#
+#################################################################
+
+sub CollectDaemonPids
+{
+	$daemonlist = `condor_config_val daemon_list`;
+	$daemonlist =~ s/\s*//g;
+	@daemons = split /,/, $daemonlist;
+	my $savedir = getcwd();
+	$logdir = `condor_config_val log`;
+	$logdir =~ s/\012+$//;
+	$logdir =~ s/\015+$//;
+
+
+
+	#print "logs are here:$logdir\n";
+	$pidfile = $logdir . "/PIDS";
+	open(PD,">$pidfile") or die "Can not create<$pidfile>:$!\n";
+
+	my $logfile = "";
+	my $line = "";
+	foreach $one (@daemons) {
+		#print "Checking logs for daemon <$one>\n";
+		$logfile = $logdir . "/" . $daemon_logs{"$one"};
+		#print "Look in $logfile for pid\n";
+		open(TA,"<$logfile") or die "Can not open <$logfile>:$!\n";
+		while(<TA>) {
+			chomp();
+			$line = $_;
+			if($line =~ /^.*PID\s+=\s+(\d+).*$/) {
+				print PD "$1\n";
+			}
+		}
+		close(TA);
+	}
+	close(PD);
+}
+
+#################################################################
+#
+# KillDaemonPids
+#
+#	Find the log directory via the config file passed in. Then
+#	open the PIDS fill and kill every pid in it for a sure kill.
+#
+#################################################################
+
+sub KillDaemonPids
+{
+	my $desiredconfig = shift;
+	my $oldconfig = $ENV{CONDOR_CONFIG};
+	$ENV{CONDOR_CONFIG} = $desiredconfig;
+	my $logdir = `condor_config_val log`;
+	$logdir =~ s/\012+$//;
+	$logdir =~ s/\015+$//;
+	my $cnt = 0;
+
+	#print "logs are here:$logdir\n";
+	$pidfile = $logdir . "/PIDS";
+	debug("Asked to kill <$oldconfig>\n",1);
+	#system("cat $pidfile");
+	#debug("END pids for <$oldconfig>\n",1);
+	$thispid = 0;
+	open(PD,"<$pidfile") or die "Can not open<$pidfile>:$!\n";
+	while(<PD>) {
+		chomp();
+		$thispid = $_;
+		$cnt = kill 9, $thispid;
+		if($cnt == 0) {
+			debug("Failed to kill PID <$thispid>\n",1);
+		} else {
+			debug("Kill PID <$thispid>\n",3);
+		}
+	}
+	close(PD);
+
+	# reset config to whatever it was.
+	$ENV{CONDOR_CONFIG} = $oldconfig;
 }
 
 #################################################################

@@ -357,6 +357,7 @@ while($time - $startTimer <= $configurationTable{RUN_TIME})
 &MoveAllToSaveDirectory();
 
 CondorTest::debug("$coreName test SUCCESS!\n",1);
+#CondorPersonal::KillDaemonPids($remconfig);
 ### End of main ###
 
 ### Checkers ###
