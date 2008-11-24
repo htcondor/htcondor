@@ -540,6 +540,14 @@ MASTER_DEBUG		=
 MAX_JOB_ROUTER_LOG      = 1000000
 JOB_ROUTER_DEBUG        =
 
+# High Availability Logs
+MAX_HAD_LOG		= 1000000
+HAD_DEBUG		=
+MAX_REPLICATION_LOG	= 1000000
+REPLICATION_DEBUG	=
+MAX_TRANSFERER_LOG	= 1000000
+TRANSFERER_DEBUG	=
+
 
 ## The daemons touch their log file periodically, even when they have
 ## nothing to write. When a daemon starts up, it prints the last time
@@ -883,6 +891,10 @@ SHADOW_LOG	= $(LOG)/ShadowLog
 STARTD_LOG	= $(LOG)/StartLog
 STARTER_LOG	= $(LOG)/StarterLog
 JOB_ROUTER_LOG  = $(LOG)/JobRouterLog
+# High Availability Logs
+HAD_LOG		= $(LOG)/HADLog
+REPLICATION_LOG	= $(LOG)/ReplicationLog
+TRANSFERER_LOG	= $(LOG)/TransfererLog
 
 ##  Lock files
 SHADOW_LOCK	= $(LOCK)/ShadowLock
