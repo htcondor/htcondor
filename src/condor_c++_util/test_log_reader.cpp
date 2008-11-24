@@ -183,9 +183,6 @@ CheckArgs(int argc, const char **argv, Options &opts)
 			if ( arg.hasOpt() ) {
 				arg.getOpt( opts.persistFile );
 				opts.rotation = true;
-				if ( opts.max_rotations == 0 ) {
-					opts.max_rotations = 1;
-				}
 				opts.readPersist = true;
 				opts.writePersist = true;
 			} else {
@@ -303,7 +300,15 @@ ReadEvents(Options &opts)
 				return STATUS_ERROR;
 			}
 			close( fd );
-			if ( !log.initialize( state, opts.max_rotations ) ) {
+
+			bool istatus;
+			if ( opts.max_rotations ) {
+				istatus = log.initialize( state, opts.max_rotations );
+			}
+			else {
+				istatus = log.initialize( state );
+			}
+			if ( ! istatus ) {
 				fprintf( stderr, "Failed to initialize from state\n" );
 				return STATUS_ERROR;
 			}

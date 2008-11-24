@@ -266,6 +266,7 @@ c_plus_nowrap_target(test_libcondorapi_shared,test_libcondorapi.o,libcondorapi.s
 
 c_plus_target(test_check_events,test_check_events.o,$(LIB) New_classads_lib)
 c_plus_target(test_multi_log,test_multi_log.o,$(LIB) New_classads_lib)
+c_plus_target(test_log_reader_state,test_log_reader_state.o,$(LIB))
 c_plus_target(test_log_writer,test_log_writer.o,$(LIB))
 c_plus_target(test_stat_wrapper,test_stat_wrapper.o,$(LIB))
 c_plus_target(test_write_term,test_write_term.o,$(LIB))
@@ -274,6 +275,7 @@ c_plus_target(test_binarysearch,test_binarysearch.o,)
 c_plus_target(test_network_adapter,test_network_adapter.o,$(LIB))
 c_plus_target(test_hibernation,test_hibernation.o,$(LIB))
 
+# Build the log reader test with ENABLE_STATE_DUMP turned on
 c_plus_target(test_log_reader,test_log_reader.o,$(LIB))
 test_log_reader.o : test_log_reader.cpp
 	$(CPlusPlus) $(C_PLUS_FLAGS) -DENABLE_STATE_DUMP -c $< -o $@
@@ -295,12 +297,14 @@ html_target( documentation )
 all-tests: access.t killfamily.t test_locks my_hostname.t
 
 /* User log testing */
-USERLOG_TESTS = test_log_reader test_log_writer
+USERLOG_TEST_NAMES = reader reader_state writer
+USERLOG_TESTS = $(addprefix test_log_, $(USERLOG_TEST_NAMES) ) 
 USERLOG_LIBAPI_TESTS = $(addsuffix _api, $(USERLOG_TESTS) )
 
 userlog-tests: all $(USERLOG_TESTS) $(USERLOG_LIBAPI_TESTS)
 
 test_log_reader: all $(LIB) Makefile $(LIBCONDORAPI)
+test_log_reader_state: all $(LIB) Makefile $(LIBCONDORAPI)
 test_log_writer: all $(LIB) Makefile $(LIBCONDORAPI)
 
 green-tests: all test_network_adapter test_hibernation
