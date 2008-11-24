@@ -175,7 +175,7 @@ GLExecPrivSepHelper::create_process(const char* path,
 	// make a copy of std FDs so we're not messing w/ our caller's
 	// memory
 	int std_fds[3] = {-1, -1, -1};
-	if (std_fds != NULL) {
+	if (orig_std_fds != NULL) {
 		memcpy(std_fds, orig_std_fds, 3 * sizeof(int));
 	}
 
