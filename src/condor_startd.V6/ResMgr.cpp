@@ -1855,6 +1855,7 @@ ResMgr::removeResource( Resource* rip )
 
 		if ( j == nresources ) { // j == i would work too
 				// The resource was not found, which should never happen
+			delete [] new_resources;
 			return false;
 		}
 	} 
