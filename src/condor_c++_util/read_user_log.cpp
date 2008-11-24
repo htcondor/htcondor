@@ -248,6 +248,9 @@ ReadUserLog::InternalInitialize( const ReadUserLog::FileState &state,
 	if ( set_rotations ) {
 		m_state->MaxRotations( max_rotations );
 	}
+	else {
+		max_rotations = m_state->MaxRotations( );
+	}
 
 	m_match = new ReadUserLogMatch( m_state );
 	return InternalInitialize( max_rotations, false, true, true );
@@ -490,6 +493,8 @@ ReadUserLog::OpenLogFile( bool do_seek, bool read_header )
 			  ( header_reader.Read( log_reader ) == ULOG_OK )  ) {
 			m_state->UniqId( header_reader.getId() );
 			m_state->Sequence( header_reader.getSequence() );
+			m_state->LogPosition( header_reader.getFileOffset() );
+			m_state->LogRecordNo( header_reader.getEventOffset() );
 			dprintf( D_FULLDEBUG,
 					 "%s: Set UniqId to '%s', sequence to %d\n",
 					 m_state->CurPath(),

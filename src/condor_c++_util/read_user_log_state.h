@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2008, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -61,23 +61,20 @@ public:
 	const char *CurPath( void ) const { return m_cur_path.GetCStr( ); };
 	int Rotation( void ) const { return m_cur_rot; };
 	filesize_t Offset( void ) const { return m_offset; };
-	filesize_t LogPosition( void ) const { return m_log_position; };
-	filesize_t LogRecordNo( void ) const { return m_log_record; };
 	bool IsValid( void ) const { return (m_cur_rot >= 0); };
 
 	// Accessors for a "file state"
 	const char *BasePath( const ReadUserLog::FileState &state ) const;
 	const char *CurPath( const ReadUserLog::FileState &state ) const;
 	int Rotation( const ReadUserLog::FileState &state ) const;
-	filesize_t Offset( const ReadUserLog::FileState &state ) const;
 	filesize_t LogPosition( const ReadUserLog::FileState &state ) const;
 	filesize_t LogRecordNo( const ReadUserLog::FileState &state ) const;
+	filesize_t Offset( const ReadUserLog::FileState &state ) const;
 
 	// Get/set maximum rotations
 	int MaxRotations( void ) { return m_max_rotations; }
-	int MaxRotations( int max_rotations ) {
-		return m_max_rotations = max_rotations;
-	}
+	int MaxRotations( int max_rotations )
+		{ Update(); return m_max_rotations = max_rotations; }
 
 	// Set methods
 	int Rotation( int rotation, bool store_stat = false,
@@ -85,10 +82,10 @@ public:
 	int Rotation( int rotation, StatStructType &statbuf,
 				  bool initializing = false );
 	filesize_t Offset( filesize_t offset )
-		{ return m_offset = offset; };
+		{ Update(); return m_offset = offset; };
 
 	// Get / set the uniq identifier
-	void UniqId( const MyString &id ) { m_uniq_id = id; };
+	void UniqId( const MyString &id ) { Update(); m_uniq_id = id; };
 	const char *UniqId( void ) const { return m_uniq_id.GetCStr(); };
 	bool ValidUniqId( void ) const { return ( m_uniq_id.Length() != 0 ); };
 
@@ -96,17 +93,28 @@ public:
 	void Sequence( int seq ) { m_sequence = seq; };
 	int Sequence( void ) const { return m_sequence; };
 
+	// Get/set global fields
+	filesize_t LogPosition( void ) const { return m_log_position; };
+	filesize_t LogPosition( filesize_t pos )
+		{ Update(); return m_log_position = pos; };
+	filesize_t LogRecordNo( void ) const { return m_log_record; };
+	filesize_t LogRecordNo( filesize_t num )
+		{ Update(); return m_log_record = num; };
+
 	// Compare the ID to the one stored
 	// 0==one (or both) are empty, 1=same, -1=different
 	int CompareUniqId( const MyString &id ) const;
 
 	// Get updated stat of the file
 	int StatFile( void );
-	int SecondsSinceUpdate( void ) const;
+	int SecondsSinceStat( void ) const;
 
 	// Special method to stat the current file from an open FD to it
 	//  NOTE: *Assumes* that this FD points to CurPath()!!
 	int StatFile( int fd );
+
+	// Update the time
+	void Update( void ) { m_update_time = time(NULL); };
 
 	// Has the log file grown?
 	ReadUserLog::FileStatus CheckFileStatus( int fd = -1 );
@@ -122,7 +130,7 @@ public:
 	int ScoreFile( const StatStructType &statbuf, int rot = -1 ) const;
 
 	UserLogType LogType( void ) const { return m_log_type; };
-	UserLogType LogType( UserLogType t ) { return m_log_type = t; };
+	UserLogType LogType( UserLogType t ) { Update(); return m_log_type = t; };
 	bool IsLogType( UserLogType t ) const { return m_log_type == t; };
 
 	// Set the score factors
@@ -142,10 +150,16 @@ public:
 	bool GetState( ReadUserLog::FileState &state ) const;
 	bool SetState( const ReadUserLog::FileState &state );
 
-	// Debugging: Get file state into a formated string
+	// *** Testing API ***
+	// Get file state into a formated string
 	void GetStateString( MyString &str, const char *label = NULL ) const;
 	void GetStateString( const ReadUserLog::FileState &state,
 						 MyString &str, const char *label = NULL ) const;
+
+	// Get the file state
+	static const ReadUserLogState::FileState *
+		GetFileStateConst( const ReadUserLog::FileState &state );
+
 
 	// ********************************************************************
 	// This is the file state buffer that we generate for the init/get/set
@@ -173,7 +187,7 @@ public:
 		time_t			m_ctime;			// The log's creation time
 		FileStateI64_t	m_size;				// The log's size (bytes)
 		FileStateI64_t	m_offset;			// Our offset in current log
-		FileStateI64_t	m_log_offset;		// Offset of this log file in whole
+		FileStateI64_t	m_log_offset;		// UNUSED
 		FileStateI64_t	m_log_position;		// Our position in the whole log
 		FileStateI64_t	m_log_record;		// Cur record # in the whole log
 		time_t			m_update_time;		// Time of last struct update
@@ -193,8 +207,6 @@ private:
 	int StatFile( const char *path, StatStructType &statbuf ) const;
 
 	// Get the "internal" state pointer from the application file state
-	static const ReadUserLogState::FileState *
-		GetFileStateConst( const ReadUserLog::FileState &state );
 	static ReadUserLogState::FileState *
 		GetFileState( ReadUserLog::FileState &state );
 
@@ -207,14 +219,14 @@ private:
 	int				m_cur_rot;			// Current file rotation number
 	MyString		m_uniq_id;			// File's uniq identifier
 	int				m_sequence;			// File's sequence number
+	time_t			m_update_time;		// Time of last data update
 
 	StatStructType	m_stat_buf;			// file stat data
 	filesize_t		m_status_size;		// Size at last status check
 
 	bool			m_stat_valid;		// Stat buffer valid?
-	time_t			m_update_time;		// Time of last stat
+	time_t			m_stat_time;		// Time of last stat
 
-	filesize_t		m_log_offset;		// Offset of this log file in whole
 	filesize_t		m_log_position;		// Our position in the whole log
 	filesize_t		m_log_record;		// Current record # in the whole log
 
