@@ -49,6 +49,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item \Macro{USE\_VISIBLE\_DESKTOP} now works as expected: the current user
+is given privileged access to the visible desktop for the duration of a
+job.  If the user did not start with these extended permissions, then they
+are removed when the job terminates.
+
 % PR 952
 \item Fixed a bug that caused \Condor{dagman} to stay in the Condor
 queue if it was accidentally submitted with an empty DAG file.
