@@ -967,6 +967,7 @@ ResMgr::parse_value( const char* str, int type, bool except )
 			if( except ) {
 				DC_Exit( 4 );
 			} else {	
+				free( foo );
 				return 0;
 			}
 		}
