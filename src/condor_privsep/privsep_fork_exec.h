@@ -30,7 +30,7 @@ public:
 	PrivSepForkExec();
 	~PrivSepForkExec();
 	bool init();
-	bool in_child(MyString&, ArgList&);
+	void in_child(MyString&, ArgList&);
 	FILE* parent_begin();
 	bool parent_end();
 private:
