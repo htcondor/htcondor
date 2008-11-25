@@ -1446,7 +1446,7 @@ char *CreamJob::buildSubmitAd()
 		// TODO This needs to be extracted from the VOMS extension in the
 		//   job's credential.
 //	buf.sprintf("%s = \"%s\"", ATTR_VIR_ORG, "");
-	buf.sprintf("%s = \"%s\"", ATTR_VIR_ORG, "infngrid");
+	buf.sprintf("%s = \"%s\"", ATTR_VIR_ORG, "ignored");
 	submitAd.Insert(buf.Value());
 	
 		//BATCHSYSTEM
