@@ -27,12 +27,12 @@
 
 class ClaimIdParser {
  public:
-	ClaimIdParser() {
-		m_suppress_session = false;
+	ClaimIdParser():
+		m_suppress_session(false) {
 	}
-	ClaimIdParser(char const *claim_id) {
-		m_claim_id = claim_id;
-		m_suppress_session = false;
+	ClaimIdParser(char const *claim_id):
+		m_claim_id(claim_id),
+		m_suppress_session(false) {
 	}
 	void setClaimId(char const *claim_id) {
 		m_claim_id = claim_id;

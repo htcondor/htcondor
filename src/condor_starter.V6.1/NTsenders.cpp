@@ -966,7 +966,7 @@ int REMOTE_CONDOR_get_sec_session_info(
 	MyString &filetrans_session_info,
 	MyString &filetrans_session_key)
 {
-	int	rval;
+	int	rval=-1;
 	condor_errno_t	terrno;
 
 	CurrentSysCall = CONDOR_get_sec_session_info;
