@@ -178,8 +178,7 @@ CollectorList::create( const char * pool )
 		}
 	} else {
 			// Otherwise, just return an empty list
-		dprintf( D_ALWAYS, "ERROR: Unable to find collector info in "
-				 "configuration file!!!\n" );
+		dprintf( D_ALWAYS, "Warning: Collector information was not found in the configuration file. ClassAds will not be sent to the collector and this daemon will not join a larger Condor pool.\n");
 	}
 	if( collector_name_param ) {
 		free( collector_name_param );
