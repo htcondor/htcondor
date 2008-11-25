@@ -73,7 +73,7 @@ PrivSepForkExec::parent_end()
 	return ret;
 }
 
-bool
+void
 PrivSepForkExec::in_child(MyString& cmd, ArgList& args)
 {
 	close(fileno(m_in_fp));

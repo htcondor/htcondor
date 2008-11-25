@@ -973,6 +973,7 @@ ResMgr::parse_value( const char* str, int type, bool except )
 			if( except ) {
 				DC_Exit( 4 );
 			} else {	
+				free( foo );
 				return 0;
 			}
 		}
@@ -1861,6 +1862,7 @@ ResMgr::removeResource( Resource* rip )
 
 		if ( j == nresources ) { // j == i would work too
 				// The resource was not found, which should never happen
+			delete [] new_resources;
 			return false;
 		}
 	} 
