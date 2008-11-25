@@ -90,11 +90,13 @@ supported for VMware or Xen.
 
 \item Condor now supports the ability for the \Condor{master} to run a
   program as it shuts down.  This can be particularly useful for doing
-  a graceful shutdown followed, by, say, a reboot.  This is
-  accomplished through the new See the new
-  \MacroNI{MASTER\_SHUTDOWN\_$<$Name$>$} macro family (see
-  \pageref{param:MasterShutdownProgram}) and \Condor{set\_shutdown}
-  program.
+  a graceful shutdown, followed by, a reboot.  This is
+  accomplished through the new 
+  \MacroNI{MASTER\_SHUTDOWN\_$<$Name$>$} configuration variable.
+  The configuration variable \MacroNI{MASTER\_SHUTDOWN\_$<$Name$>$}
+  is defined on page \pageref{param:MasterShutdownProgram}),
+  and the manual page for \Condor{set\_shutdown}
+  is on page~\pageref{man-condor-set-shutdown}.
 
 \item The \Condor{lease\_manager} is a new daemon.  It
   provides a mechanism for managing leases to resources described by
