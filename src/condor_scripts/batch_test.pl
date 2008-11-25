@@ -1438,27 +1438,33 @@ sub CoreCheck {
 	$teststart = shift;
 	my $count = 0;
 	my $scancount = 0;
-	@files = `ls $BaseDir/*/*/log/*`;
-	foreach $perp (@files) {
-		chomp($perp);
-		if(-f $perp) {
-			$filechange = GetFileChangeTime($perp);	# returns stime stamp
-			# has file been created or changed since test started
-			if( $filechange > $teststart ) {
-				#print "TS: $teststart FC: $filechange\n";
-				debug("FOI: newer $perp\n",2);
-				$filechange = GetFileTime($perp); # returns printable string
-				if($perp =~ /^.*\/(core.*)$/) {
-					$newname = MoveCoreFile($perp,$coredir);
-					AddFileTrace($perp,$filechange,$newname);
-					$count += 1;
-				} else {
-					$scancount = ScanForERROR($perp,$teststart);
-					$count += $scancount;
+	my $fullpath = "";
+	@logdirs = `find . -name log -type d -print`;
+	foreach $tardir (@logdirs) {
+		chomp($tardir);
+		@files = `ls $tardir`;
+		foreach $perp (@files) {
+			chomp($perp);
+			$fullpath = $tardir . "/" . $perp;
+			if(-f $fullpath) {
+				$filechange = GetFileChangeTime($fullpath);	# returns stime stamp
+				# has file been created or changed since test started
+				if( $filechange > $teststart ) {
+					#print "TS: $teststart FC: $filechange\n";
+					debug("FOI: newer $fullpath\n",2);
+					$filechange = GetFileTime($fullpath); # returns printable string
+					if($fullpath =~ /^.*\/(core.*)$/) {
+						$newname = MoveCoreFile($fullpath,$coredir);
+						AddFileTrace($fullpath,$filechange,$newname);
+						$count += 1;
+					} else {
+						$scancount = ScanForERROR($fullpath,$teststart);
+						$count += $scancount;
+					}
 				}
+			} else {
+				#print "Not File: $fullpath\n";
 			}
-		} else {
-			#print "Not File: $perp\n";
 		}
 	}
 	return($count);
@@ -1474,7 +1480,7 @@ sub ScanForERROR
 	while(<MDL>) {
 		chomp();
 		$line = $_;
-		if($line =~ /^\s*(\d+\/\d+\s+\d+:\d+:\d+)\s+.*ERROR.*/){
+		if($line =~ /^\s*(\d+\/\d+\s+\d+:\d+:\d+)\s+.*\s+ERROR.*/){
 			debug("$line TStamp $1\n",3);
 			if(CheckTriggerTime($test_start, $1)) {
 				$count += 1;
