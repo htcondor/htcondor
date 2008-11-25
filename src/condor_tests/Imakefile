@@ -1530,6 +1530,27 @@ TESTCLASS(job_dagman_xmluncomlog,quick)
 TESTCLASS(job_dagman_xmluncomlog,full)
 TESTCLASS(job_dagman_xmluncomlog,quicknolink)
 
+DESC(job_dagman_abort-A,"Test ABORT-DAG-ON")
+RUN(job_dagman_abort-A)
+TESTCLASS(job_dagman_abort-A,dagman)
+TESTCLASS(job_dagman_abort-A,quick)
+TESTCLASS(job_dagman_abort-A,full)
+TESTCLASS(job_dagman_abort-A,quicknolink)
+
+DESC(job_dagman_parallel-A,"Test DAGMan handling nodes w/ multiple jobs")
+RUN(job_dagman_parallel-A)
+TESTCLASS(job_dagman_parallel-A,dagman)
+TESTCLASS(job_dagman_parallel-A,quick)
+TESTCLASS(job_dagman_parallel-A,full)
+TESTCLASS(job_dagman_parallel-A,quicknolink)
+
+DESC(job_dagman_subdag-A,"Test condor_submit_dag recursion on nested DAGs, SUBDAG EXTERNAL keyword")
+RUN(job_dagman_subdag-A)
+TESTCLASS(job_dagman_subdag-A,dagman)
+TESTCLASS(job_dagman_subdag-A,quick)
+TESTCLASS(job_dagman_subdag-A,full)
+TESTCLASS(job_dagman_subdag-A,quicknolink)
+
 /* Sample performance tests */
 
 /*
