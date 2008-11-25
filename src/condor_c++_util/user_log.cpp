@@ -230,10 +230,15 @@ UserLog::Configure( void )
 	m_global_use_xml = param_boolean( "EVENT_LOG_USE_XML", false );
 	m_global_count_events = param_boolean( "EVENT_LOG_COUNT_EVENTS", false );
 	m_enable_locking = param_boolean( "ENABLE_USERLOG_LOCKING", true );
-	m_global_max_rotations = param_integer( "EVENT_LOG_MAX_ROTATIONS", 1 );
-	m_global_max_filesize = param_integer( "EVENT_LOG_MAX_SIZE", -1 );
-	if ( m_global_max_filesize < 0 ) {
-		m_global_max_filesize = param_integer( "MAX_EVENT_LOG", 1000000 );
+	m_global_max_rotations = param_integer( "EVENT_LOG_MAX_ROTATIONS", 1, 0 );
+	if ( m_global_max_rotations == 0 ) {
+		m_global_max_filesize = -1;
+	}
+	else {
+		m_global_max_filesize = param_integer( "EVENT_LOG_MAX_SIZE", -1 );
+		if ( m_global_max_filesize < 0 ) {
+			m_global_max_filesize = param_integer( "MAX_EVENT_LOG", 1000000 );
+		}
 	}
 
 	return true;
