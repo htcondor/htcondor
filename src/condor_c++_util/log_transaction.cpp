@@ -516,7 +516,7 @@ Transaction::Commit(FILE* fp, void *data_structure, bool nondurable)
 	    }
 	    
 	    const char* made_backup = "";
-	    const char* backup_loc = "";
+		MyString backup_loc;
 
 	    if (bi.filt != BF_NONE && bi.success && fps[1].why == WHY_OK) {
 	      made_backup = "failed transaction logged to ";
@@ -527,7 +527,7 @@ Transaction::Commit(FILE* fp, void *data_structure, bool nondurable)
 	    
 	    cleanup_backup_info(&bi);
 	    
-	    EXCEPT("Failed to write real job queue log: %s failed (errno %d); %s%s", why, fps[0].err, made_backup, backup_loc);
+	    EXCEPT("Failed to write real job queue log: %s failed (errno %d); %s%s", why, fps[0].err, made_backup, backup_loc.Value());
 	  }
 	  
 	  cleanup_backup_info(&bi);

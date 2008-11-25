@@ -1068,10 +1068,10 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 			ABORT;
 		}
 
-		if( req_classad->EvalInteger( ATTR_REQUEST_CPUS, mach_classad, cpus ) || 
-			(cpus = 1) ) { // reasonable default, for sure
-			type.sprintf_cat( "cpus=%d ", cpus );
+		if( !req_classad->EvalInteger( ATTR_REQUEST_CPUS, mach_classad, cpus ) ) {
+			cpus = 1; // reasonable default, for sure
 		}
+		type.sprintf_cat( "cpus=%d ", cpus );
 
 		if( req_classad->EvalInteger( ATTR_REQUEST_MEMORY, mach_classad, memory ) ) {
 			type.sprintf_cat( "memory=%d ", memory );
@@ -1085,7 +1085,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 
 		if( req_classad->EvalInteger( ATTR_REQUEST_DISK, mach_classad, disk ) ) {
 			type.sprintf_cat( "disk=%d%%",
-							  max((int) ((disk / (float) rip->r_attr->get_total_disk()) * 100), 1) );
+							  max((int) ceilf((disk / (float) rip->r_attr->get_total_disk()) * 100), 1) );
 		} else {
 				// some disk size must be available else we cannot
 				// match, plus a job ad without ATTR_DISK is sketchy

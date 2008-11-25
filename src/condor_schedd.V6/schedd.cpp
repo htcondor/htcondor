@@ -7888,6 +7888,9 @@ Scheduler::display_shadow_recs()
 {
 	struct shadow_rec *r;
 
+	if( !(DebugFlags & D_FULLDEBUG) ) {
+		return; // avoid needless work below
+	}
 
 	dprintf( D_FULLDEBUG, "\n");
 	dprintf( D_FULLDEBUG, "..................\n" );

@@ -1,0 +1,17 @@
+# BEGIN
+JOB  A job_dagman_splice-M-sd1.cmd
+VARS A job="$(JOB)"
+
+JOB  B job_dagman_splice-M-sd1.cmd
+VARS B job="$(JOB)"
+
+JOB  C job_dagman_splice-M-sd1.cmd
+VARS C job="$(JOB)"
+
+JOB  D job_dagman_splice-M-sd1.cmd
+VARS D job="$(JOB)"
+
+PARENT A CHILD B C
+PARENT B C CHILD D
+
+# END
