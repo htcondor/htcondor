@@ -124,6 +124,13 @@ private:
 // **********************************
 // ReadUserLog class methods
 // **********************************
+ReadUserLog::ReadUserLog ( bool isEventLog )
+{
+	clear();
+	if ( isEventLog ) {
+		initialize( );
+	}
+}
 
 ReadUserLog::ReadUserLog (const char * filename)
 {
@@ -162,6 +169,19 @@ ReadUserLog::ReadUserLog ( FILE *fp, bool is_xml )
 // ***************************************
 // * Initializers which take a file name
 // ***************************************
+
+
+// Initialize to read the global event log
+bool
+ReadUserLog::initialize( void )
+{
+	char	*path = param( "EVENT_LOG" );
+	if ( NULL == path ) {
+		return false;
+	}
+	int max_rotations = param_integer( "EVENT_LOG_MAX_ROTATIONS", 1, 0 );
+	return initialize( path, max_rotations, true );
+}
 
 // Default initializer
 bool

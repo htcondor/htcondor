@@ -49,6 +49,7 @@ struct Options
 	bool			dumpState;
 	bool			missedCheck;
 	bool			exitAfterInit;
+	bool			isEventLog;
 	int				maxExec;
 	bool			exit;
 	int				sleep;
@@ -128,6 +129,7 @@ CheckArgs(int argc, const char **argv, Options &opts)
 		"  --no-rotation: disable rotation handling\n"
 		"  --sleep <number>: how many seconds to sleep between events\n"
 		"  --exit|x: Exit when no event available\n"
+		"  --eventlog|e: Setup to read the EventLog\n"
 		"  --no-term: No limit on terminte events\n"
 		"  --term <number>: number of terminate events to exit after\n"
 		"  --usage|--help|-h: print this message and exit\n"
@@ -141,6 +143,7 @@ CheckArgs(int argc, const char **argv, Options &opts)
 	opts.readPersist = false;
 	opts.writePersist = false;
 	opts.maxExec = 0;
+	opts.isEventLog = false;
 	opts.exit = false;
 	opts.sleep = 5;
 	opts.term = 1;
@@ -178,6 +181,9 @@ CheckArgs(int argc, const char **argv, Options &opts)
 
 		} else if ( arg.Match("miss-check") ) {
 			opts.missedCheck = true;
+
+		} else if ( arg.Match('e', "eventlog") ) {
+			opts.isEventLog = true;
 
 		} else if ( arg.Match('p', "persist") ) {
 			if ( arg.hasOpt() ) {
@@ -271,7 +277,10 @@ CheckArgs(int argc, const char **argv, Options &opts)
 		}
 	}
 
-	if ( status == STATUS_OK && !opts.readPersist && opts.logFile == NULL ) {
+	if ( status == STATUS_OK &&
+		 !opts.readPersist &&
+		 !opts.isEventLog &&
+		 opts.logFile == NULL ) {
 		fprintf(stderr, "Log file must be specified if not restoring state\n");
 		printf("%s", usage);
 		status = STATUS_ERROR;
@@ -330,11 +339,19 @@ ReadEvents(Options &opts)
 
 	// If, after the above, the reader isn't initialized, do so now
 	if ( !log.isInitialized() ) {
-		if ( !log.initialize( opts.logFile,
-							  opts.max_rotations,
-							  opts.rotation) ) {
-			fprintf( stderr, "Failed to initialize with file\n" );
-			return STATUS_ERROR;
+		if ( opts.isEventLog ) {
+			if ( !log.initialize( ) ) {
+				fprintf( stderr, "Failed to initialize with EventLog\n" );
+				return STATUS_ERROR;
+			}
+		}
+		else {
+			if ( !log.initialize( opts.logFile,
+								  opts.max_rotations,
+								  opts.rotation) ) {
+				fprintf( stderr, "Failed to initialize with file\n" );
+				return STATUS_ERROR;
+			}
 		}
 	}
 
