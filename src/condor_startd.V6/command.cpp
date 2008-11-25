@@ -1085,7 +1085,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 
 		if( req_classad->EvalInteger( ATTR_REQUEST_DISK, mach_classad, disk ) ) {
 			type.sprintf_cat( "disk=%d%%",
-							  max((int) ((disk / (float) rip->r_attr->get_total_disk()) * 100), 1) );
+							  max((int) ceilf((disk / (float) rip->r_attr->get_total_disk()) * 100), 1) );
 		} else {
 				// some disk size must be available else we cannot
 				// match, plus a job ad without ATTR_DISK is sketchy
