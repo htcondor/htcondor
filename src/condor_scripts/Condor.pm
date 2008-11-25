@@ -263,21 +263,35 @@ sub TestSubmitDagman
 {
     my $cmd_file = shift || croak "missing Dag file argument";
 	my $cmd_args = shift || croak "missing Dagman Args";
+	my $argisrefarray = ref $cmd_file;
+	my $outfile = $cmd_file;
 
+	print "ref said type is <<$argisrefarray>>\n";
     # reset global state
     # Reset();
 	# Reset done in CondorTest.pm prior to submit
 
     # submit the file
-    runCommand( "$CONDOR_SUBMIT_DAG $cmd_args -f -notification never $cmd_file > $cmd_file.out 2>&1" )
-	|| return 0;
+	if($argisrefarray eq "ARRAY") {
+		$cmdfiles = "";
+		$outfile = ${$cmd_file}[0];
+		foreach $ddd (@{$cmd_file}){
+			$cmdfiles = $cmdfiles . " $ddd";
+		}
+		print "Multiple Dag Files: <$cmdfiles>\n";
+    	runCommand( "$CONDOR_SUBMIT_DAG $cmd_args -f -notification never $cmdfiles > $outfile.out 2>&1" )
+			|| return 0;
+	} else {
+    	runCommand( "$CONDOR_SUBMIT_DAG $cmd_args -f -notification never $cmd_file > $outfile.out 2>&1" )
+			|| return 0;
+	}
 
 	$submit_time = time; # time reference for time callback
 
     # snarf the cluster id from condor_submit's output
-    unless( open( SUBMIT, "<$cmd_file.out" ) )
+    unless( open( SUBMIT, "<$outfile.out" ) )
     {
-	warn "error opening \"$cmd_file.out\": $!\n";
+	warn "error opening \"$outfile.out\": $!\n";
 	return 0;
     }
     while( <SUBMIT> )
@@ -299,7 +313,7 @@ sub TestSubmitDagman
     }
     
     # snarf info from the submit file and save for future reference
-	my $dagsubmitfile = $cmd_file  . ".condor.sub";
+	my $dagsubmitfile = $outfile  . ".condor.sub";
     unless( ParseSubmitFile( $dagsubmitfile ) )
     {
 	print "error: couldn't correctly parse submit file $dagsubmitfile\n";
