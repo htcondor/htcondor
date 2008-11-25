@@ -1,0 +1,112 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+use CondorTest;
+use CondorPersonal;
+
+
+# truly const variables in perl
+sub IDLE{1};
+sub HELD{5};
+sub RUNNING{2};
+
+$testname = 'job_amazon_basic';
+$corename = "job_amazon_basic";
+
+# where am I running
+$currenthost = `hostname`;
+chomp($currenthost);
+$primarycollector = $currenthost;
+my @adarray;
+
+CondorTest::fullchomp($currenthost);
+
+system("date");
+
+$mypid = CondorPersonal::SaveMeSetup($corename);
+$mysaveme = $corename . ".saveme";
+
+if($mypid == 0) {
+	die "Saveme setup for test failed\n";
+}
+
+$submit_file = $corename . ".cmd";
+
+CondorTest::debug("Master PID is $mypid\n",1);
+CondorTest::debug("Master PID submit file is $submit_file\n",1);
+
+$ec2_sim = "../testbin_dir/ec2-sim";
+if ( ! -x $ec2_sim ) {
+	die("$ec2_sim isn't executable!\n");
+}
+# JEF: start ec2-sim
+$ec2_sim_pid = fork();
+if ( $ec2_sim_pid == 0 ) {
+	# Child
+	exec( "$ec2_sim >ec2_sim.out 2>&1" ) or die "Failed to exec $ec2_sim\n";
+}
+
+# get a local scheduler running (side a)
+my $configloc = CondorPersonal::StartCondor("x_param.amazon", "amazon");
+my @local = split /\+/, $configloc;
+my $locconfig = shift @local;
+my $locport = shift @local;
+
+CondorTest::debug("---local config is $locconfig and local port is $locport---\n",1);
+
+$ENV{CONDOR_CONFIG} = $locconfig;
+
+if($done != 0) {
+	CondorTest::debug("We failed already, allow cleanup\n",1);
+} else {
+	$test_cmd = "./job_amazon_basic.pl $submit_file";
+	CondorTest::debug("About to run Amazon EC2 basic test: $test_cmd\n",1);
+	system("date");
+
+	$done = system("$test_cmd");
+}
+
+kill 15, $ec2_sim_pid;
+# JEF: checkout ec2-sim output "ec2_sim.out"
+
+CondorTest::debug("Saving things and cleaning up.... done with return $done\n",1);
+
+system("cp *job_amazon_basic* *ec2_sim* $mysaveme");
+
+$cmd = "condor_off -fast -master";
+$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+if(!$status)
+{
+	CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
+	exit(1)
+}
+
+system("date");
+
+if( $done != 0 )
+{
+	CondorTest::debug("job_vmu_basic FAILED\n",1);
+	# actual test failed but we allowed cleanup
+	exit(1);
+}
+
+CondorTest::debug("job_vmu_basic SUCCESS\n",1);
+system("date");
+exit(0);
