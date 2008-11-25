@@ -1408,7 +1408,15 @@ sub CollectDaemonPids
 			chomp();
 			$line = $_;
 			if($line =~ /^.*PID\s+=\s+(\d+).*$/) {
-				print PD "$1\n";
+				# at kill time we will suggest with signal 15
+				# that the master and friends go away before
+				# we get blunt. This will help us know which
+				# pid is the master.
+				if(($one eq "MASTER")or($one eq "master")) {
+					print PD "$1 MASTER\n";
+				} else {
+					print PD "$1\n";
+				}
 			}
 		}
 		close(TA);
@@ -1433,6 +1441,7 @@ sub KillDaemonPids
 	my $logdir = `condor_config_val log`;
 	$logdir =~ s/\012+$//;
 	$logdir =~ s/\015+$//;
+	my $masterpid = 0;
 	my $cnt = 0;
 
 	#print "logs are here:$logdir\n";
@@ -1441,18 +1450,40 @@ sub KillDaemonPids
 	#system("cat $pidfile");
 	#debug("END pids for <$oldconfig>\n",1);
 	$thispid = 0;
+	# first find the master and use a kill 15
 	open(PD,"<$pidfile") or die "Can not open<$pidfile>:$!\n";
 	while(<PD>) {
 		chomp();
 		$thispid = $_;
-		$cnt = kill 9, $thispid;
-		if($cnt == 0) {
-			debug("Failed to kill PID <$thispid>\n",1);
-		} else {
-			debug("Kill PID <$thispid>\n",3);
+		if($thispid =~ /^.*(\d+)\s+MASTER.*$/) {
+			$masterpid = $1;
+			debug("Gentle kill for master <$thispid>\n",1);
+			$cnt = kill 3, $masterpid;
+			last;
 		}
 	}
 	close(PD);
+	# give iot a little time for a shutdown
+	sleep(5);
+	# did it work.... is process still around?
+	$cnt = kill 0, $masterpid;
+	if($cnt == 0) {
+		debug("Gentle kill for master <$thispid> worked!\n",1);
+	} else {
+		# hmm bullets are placed in heads here.
+		open(PD,"<$pidfile") or die "Can not open<$pidfile>:$!\n";
+		while(<PD>) {
+			chomp();
+			$thispid = $_;
+			$cnt = kill 9, $thispid;
+			if($cnt == 0) {
+				debug("Failed to kill PID <$thispid>\n",1);
+			} else {
+				debug("Kill PID <$thispid>\n",3);
+			}
+		}
+		close(PD);
+	}
 
 	# reset config to whatever it was.
 	$ENV{CONDOR_CONFIG} = $oldconfig;
