@@ -29,8 +29,9 @@
 #include "simple_arg.h"
 #include <stdio.h>
 #include <unistd.h>
+#include <math.h>
 
-static const char *	VERSION = "0.9.3";
+static const char *	VERSION = "0.9.5";
 DECL_SUBSYSTEM( "TEST_LOG_WRITER", SUBSYSTEM_TYPE_TOOL );
 
 enum Status { STATUS_OK, STATUS_CANCEL, STATUS_ERROR };
@@ -265,8 +266,8 @@ CheckArgs(int argc, const char **argv, Options &opts)
 	opts.num_forks			= 0;
 	opts.fork_cluster_step	= 1000;
 
-	for ( int index = 1; index < argc; ++index ) {
-		SimpleArg	arg( argv, argc, index );
+	for ( int argno = 1; argno < argc; ++argno ) {
+		SimpleArg	arg( argv, argc, argno );
 
 		if ( arg.Error() ) {
 			printf("%s", usage);
@@ -283,7 +284,7 @@ CheckArgs(int argc, const char **argv, Options &opts)
 		} else if ( arg.Match('d', "debug") ) {
 			if ( arg.hasOpt() ) {
 				set_debug_flags( const_cast<char *>(arg.getOpt()) );
-				index = arg.ConsumeOpt( );
+				argno = arg.ConsumeOpt( );
 			} else {
 				fprintf(stderr, "Value needed for '%s'\n", arg.Arg() );
 				printf("%s", usage);
@@ -293,7 +294,7 @@ CheckArgs(int argc, const char **argv, Options &opts)
 		} else if ( arg.Match('j', "jobid") ) {
 			if ( arg.hasOpt() ) {
 				const char *opt = arg.getOpt();
-				index = arg.ConsumeOpt( );
+				argno = arg.ConsumeOpt( );
 				if ( *opt == '.' ) {
 					sscanf( opt, ".%d.%d", &opts.proc, &opts.subproc );
 				}
@@ -510,20 +511,22 @@ void handle_sigchild(int /*sig*/ )
 }
 
 bool
-ForkJobs( const Options &opts )
+ForkJobs( const Options & /*opts*/ )
 {
 	fprintf( stderr, "--fork: Not implemented\n" );
 	return true;
 
+#if 0
 	signal( SIGCHLD, handle_sigchild );
 	for( int num = 0;  num < opts.num_forks;  num++ ) {
 		// TODO
 	}
+#endif
 }
 
 bool
-WriteEvents(Options &opts, int cluster, int proc, int subproc,
-			int &events, int &sequence )
+WriteEvents( Options &opts, int cluster, int proc, int subproc,
+			 int &events, int &sequence )
 {
 	bool		error = false;
 	EventInfo	event( opts, cluster, proc, subproc );
@@ -532,13 +535,13 @@ WriteEvents(Options &opts, int cluster, int proc, int subproc,
 	signal( SIGQUIT, handle_sig );
 	signal( SIGINT, handle_sig );
 
-	UserLog	log("owner", opts.logFile, cluster, proc, subproc, opts.isXml);
+	UserLog	writer("owner", opts.logFile, cluster, proc, subproc, opts.isXml);
 
 		//
 		// Write the submit event.
 		//
 	event.GenEventSubmit( );
-	error = event.WriteEvent( log );
+	error = event.WriteEvent( writer );
 	event.Reset( );
 	if ( !error ) {
 		events++;
@@ -549,7 +552,7 @@ WriteEvents(Options &opts, int cluster, int proc, int subproc,
 		//
 	if ( opts.genericEventStr ) {
 		event.GenEventGeneric( );
-		if ( event.WriteEvent( log ) ) {
+		if ( event.WriteEvent( writer ) ) {
 			error = true;
 		}
 		else {
@@ -571,7 +574,7 @@ WriteEvents(Options &opts, int cluster, int proc, int subproc,
 		}
 
 		event.GenEvent( );
-		if ( event.WriteEvent( log ) ) {
+		if ( event.WriteEvent( writer ) ) {
 			error = true;
 		}
 		else {
@@ -591,13 +594,13 @@ WriteEvents(Options &opts, int cluster, int proc, int subproc,
 		// Write the terminated event.
 		//
 	event.GenEventTerminate( );
-	if ( event.WriteEvent( log ) ) {
+	if ( event.WriteEvent( writer ) ) {
 		error = true;
 	}
 	else {
 		events++;
 	}
-	sequence = log.getGlobalSequence( );
+	sequence = writer.getGlobalSequence( );
 
 	return error;
 }

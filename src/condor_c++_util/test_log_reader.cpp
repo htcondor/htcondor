@@ -154,8 +154,8 @@ CheckArgs(int argc, const char **argv, Options &opts)
 	opts.dumpState = false;
 	opts.missedCheck = false;
 
-	for ( int index = 1; index < argc; ++index ) {
-		SimpleArg	arg( argv, argc, index );
+	for ( int argno = 1; argno < argc; ++argno ) {
+		SimpleArg	arg( argv, argc, argno );
 
 		if ( arg.Error() ) {
 			printf("%s", usage);
@@ -165,7 +165,7 @@ CheckArgs(int argc, const char **argv, Options &opts)
 		if ( arg.Match('d', "debug") ) {
 			if ( arg.hasOpt() ) {
 				set_debug_flags( const_cast<char *>(arg.getOpt()) );
-				index = arg.ConsumeOpt( );
+				argno = arg.ConsumeOpt( );
 			} else {
 				fprintf(stderr, "Value needed for '%s'\n", arg.Arg() );
 				printf("%s", usage);
@@ -298,7 +298,7 @@ ReadEvents(Options &opts)
 	ReadUserLog::FileState	state;
 	ReadUserLog::InitFileState( state );
 
-	ReadUserLog	log;
+	ReadUserLog	reader;
 
 	// Initialize the reader from the persisted state
 	if ( opts.readPersist ) {
@@ -312,10 +312,10 @@ ReadEvents(Options &opts)
 
 			bool istatus;
 			if ( opts.max_rotations ) {
-				istatus = log.initialize( state, opts.max_rotations );
+				istatus = reader.initialize( state, opts.max_rotations );
 			}
 			else {
-				istatus = log.initialize( state );
+				istatus = reader.initialize( state );
 			}
 			if ( ! istatus ) {
 				fprintf( stderr, "Failed to initialize from state\n" );
@@ -338,17 +338,17 @@ ReadEvents(Options &opts)
 	}
 
 	// If, after the above, the reader isn't initialized, do so now
-	if ( !log.isInitialized() ) {
+	if ( !reader.isInitialized() ) {
 		if ( opts.isEventLog ) {
-			if ( !log.initialize( ) ) {
+			if ( !reader.initialize( ) ) {
 				fprintf( stderr, "Failed to initialize with EventLog\n" );
 				return STATUS_ERROR;
 			}
 		}
 		else {
-			if ( !log.initialize( opts.logFile,
-								  opts.max_rotations,
-								  opts.rotation) ) {
+			if ( !reader.initialize( opts.logFile,
+									 opts.max_rotations,
+									 opts.rotation) ) {
 				fprintf( stderr, "Failed to initialize with file\n" );
 				return STATUS_ERROR;
 			}
@@ -374,7 +374,7 @@ ReadEvents(Options &opts)
 	while ( !done && !global_done ) {
 		ULogEvent	*event = NULL;
 
-		ULogEventOutcome	outcome = log.readEvent(event);
+		ULogEventOutcome	outcome = reader.readEvent(event);
 		if ( outcome == ULOG_OK ) {
 			if ( opts.verbosity >= VERB_ALL ) {
 				printf( "Got an event from %d.%d.%d @ %s",
@@ -383,7 +383,7 @@ ReadEvents(Options &opts)
 			}
 
 			// Store off the persisted state
-			if ( opts.writePersist && log.GetFileState( state ) ) {
+			if ( opts.writePersist && reader.GetFileState( state ) ) {
 				int	fd = safe_open_wrapper( opts.persistFile,
 											O_WRONLY|O_CREAT,
 											S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP );
@@ -505,7 +505,7 @@ ReadEvents(Options &opts)
 		delete event;
 	}
 
-	log.GetFileState( state );
+	reader.GetFileState( state );
 #  if ENABLE_STATE_DUMP
 	if ( opts.dumpState ) {
 		ReadUserLogState	rstate(state, 60);
@@ -534,10 +534,10 @@ ReadEvents(Options &opts)
 	return result;
 }
 
-const char *timestr( struct tm &tm )
+const char *timestr( struct tm &t )
 {
 	static char	tbuf[64];
-	strncpy( tbuf, asctime( &tm ), sizeof(tbuf) );
+	strncpy( tbuf, asctime( &t ), sizeof(tbuf) );
 	tbuf[sizeof(tbuf)-1] = '\0';
 	if ( strlen(tbuf) ) {
 		tbuf[strlen(tbuf)-1] = '\0';

@@ -230,8 +230,8 @@ CheckArgs(int argc, const char **argv, Options &opts)
 {
 	int		status = 0;
 
-	for ( int index = 1;  index < argc && status >= 0;  index++ ) {
-		SimpleArg	arg( argv, argc, index );
+	for ( int argno = 1;  argno < argc && status >= 0;  argno++ ) {
+		SimpleArg	arg( argv, argc, argno );
 
 		if ( arg.Error() ) {
 			fprintf( stderr, "Failed parsing '%s'\n", arg.Arg() );
@@ -245,10 +245,10 @@ CheckArgs(int argc, const char **argv, Options &opts)
 					 arg.Arg() );
 		}
 		else if ( arg.ArgIsOpt() ) {
-			status = opts.handleOpt( arg, index );
+			status = opts.handleOpt( arg, argno );
 		}
 		else {
-			status = opts.handleFixed( arg, index );
+			status = opts.handleFixed( arg, argno );
 		}
 	}
 
@@ -664,7 +664,7 @@ timestr( time_t t, char *buf, int bufsize )
 }
 
 const char *
-timestr( struct tm &tm, char *buf, int bufsize )
+timestr( struct tm &t, char *buf, int bufsize )
 {
 	static char	sbuf[64];
 	if ( NULL == buf ) {
@@ -672,7 +672,7 @@ timestr( struct tm &tm, char *buf, int bufsize )
 		bufsize = sizeof(sbuf);
 	}
 
-	strncpy( buf, asctime( &tm ), bufsize );
+	strncpy( buf, asctime( &t ), bufsize );
 	buf[bufsize-1] = '\0';
 	return chomptime( buf );
 }
@@ -716,7 +716,7 @@ Options::Options( void )
 }
 
 int
-Options::handleOpt( SimpleArg &arg, int &index )
+Options::handleOpt( SimpleArg &arg, int &argno )
 {
 	if ( arg.Match('n', "numeric") ) {
 		m_numeric = true;
@@ -724,7 +724,7 @@ Options::handleOpt( SimpleArg &arg, int &index )
 	} else if ( arg.Match('d', "debug") ) {
 		if ( arg.hasOpt() ) {
 			set_debug_flags( const_cast<char *>(arg.getOpt()) );
-			index = arg.ConsumeOpt( );
+			argno = arg.ConsumeOpt( );
 		} else {
 			fprintf(stderr, "Value needed for '%s'\n", arg.Arg() );
 			printf("%s", m_usage);
@@ -754,7 +754,7 @@ Options::handleOpt( SimpleArg &arg, int &index )
 }
 
 int
-Options::handleFixed( SimpleArg &arg, int & /*index*/ )
+Options::handleFixed( SimpleArg &arg, int & /*argno*/ )
 {
 	if ( ST_CMD == m_state ) {
 		if ( !lookupCommand( arg ) ) {
