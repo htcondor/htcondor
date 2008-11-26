@@ -294,6 +294,10 @@ void ConvertDefaultIPToSocketIP(char const *attr_name,char const *old_expr_strin
 {
 	*new_expr_string = NULL;
 
+    if(!is_sender_ip_attr(attr_name)) {
+		return;
+	}
+
 	/*
 	  Woe is us. If GCB is enabled, we should *NOT* be re-writing IP
 	  addresses in the ClassAds we send out. :(  We already go
@@ -307,58 +311,58 @@ void ConvertDefaultIPToSocketIP(char const *attr_name,char const *old_expr_strin
 	  param_boolean() to get it to shut up, even if NET_REMAP_ENABLE
 	  isn't defined in the config file, since otherwise, this would
 	  completely FILL a log file at D_CONFIG or D_ALL, since we hit
-	  this for *every* attribute in every ClassAd that's sent.
+	  this for *every* potentially rewritten attribute in every ClassAd
+	  that's sent.
 	*/
 	if (param_boolean("NET_REMAP_ENABLE", false, false)) {
 		return;
 	}
 
-    if(is_sender_ip_attr(attr_name)) {
-        char const *my_default_ip = my_ip_string();
-        char const *my_sock_ip = s.sender_ip_str();
-        if(!my_default_ip || !my_sock_ip) {
-            return;
-        }
-        if(strcmp(my_default_ip,my_sock_ip) == 0) {
-            return;
-        }
-        if(strcmp(my_sock_ip,"127.0.0.1") == 0) {
+
+	char const *my_default_ip = my_ip_string();
+	char const *my_sock_ip = s.sender_ip_str();
+	if(!my_default_ip || !my_sock_ip) {
+		return;
+	}
+	if(strcmp(my_default_ip,my_sock_ip) == 0) {
+		return;
+	}
+	if(strcmp(my_sock_ip,"127.0.0.1") == 0) {
             // We assume this is the loop-back interface, so we must
 			// be talking to another daemon on the same machine as us.
 			// We don't want to replace the default IP with this one,
 			// since nobody outside of this machine will be able to
 			// contact us on that IP.
-            return;
-        }
+		return;
+	}
 
-        char const *ref = strstr(old_expr_string,my_default_ip);
-		if(ref) {
-				// the match must not be followed by any trailing digits
-				// GOOD: <MMM.MMM.M.M:port>   (where M is a matching digit)
-				// BAD:  <MMM.MMM.M.MN:port>  (where N is a non-matching digit)
-			if( isdigit(ref[strlen(my_default_ip)]) ) {
-				ref = NULL;
-			}
+	char const *ref = strstr(old_expr_string,my_default_ip);
+	if(ref) {
+			// the match must not be followed by any trailing digits
+			// GOOD: <MMM.MMM.M.M:port>   (where M is a matching digit)
+			// BAD:  <MMM.MMM.M.MN:port>  (where N is a non-matching digit)
+		if( isdigit(ref[strlen(my_default_ip)]) ) {
+			ref = NULL;
 		}
-        if(ref) {
+	}
+	if(ref) {
             // Replace the default IP address with the one I am actually using.
 
-			int pos = ref-old_expr_string; // position of the reference
-			int my_default_ip_len = strlen(my_default_ip);
-			int my_sock_ip_len = strlen(my_sock_ip);
+		int pos = ref-old_expr_string; // position of the reference
+		int my_default_ip_len = strlen(my_default_ip);
+		int my_sock_ip_len = strlen(my_sock_ip);
 
-			*new_expr_string = (char *)malloc(strlen(old_expr_string) + my_sock_ip_len - my_default_ip_len + 1);
-			ASSERT(*new_expr_string);
+		*new_expr_string = (char *)malloc(strlen(old_expr_string) + my_sock_ip_len - my_default_ip_len + 1);
+		ASSERT(*new_expr_string);
 
-			strncpy(*new_expr_string, old_expr_string,pos);
-			strcpy(*new_expr_string+pos, my_sock_ip);
-			strcpy(*new_expr_string+pos+my_sock_ip_len, old_expr_string+pos+my_default_ip_len);
+		strncpy(*new_expr_string, old_expr_string,pos);
+		strcpy(*new_expr_string+pos, my_sock_ip);
+		strcpy(*new_expr_string+pos+my_sock_ip_len, old_expr_string+pos+my_default_ip_len);
 
-            dprintf(D_NETWORK,"Replaced default IP %s with connection IP %s "
-                    "in outgoing ClassAd attribute %s.\n",
-                    my_default_ip,my_sock_ip,attr_name);
-        }
-    }
+		dprintf(D_NETWORK,"Replaced default IP %s with connection IP %s "
+				"in outgoing ClassAd attribute %s.\n",
+				my_default_ip,my_sock_ip,attr_name);
+	}
 }
 
 void ConvertDefaultIPToSocketIP(char const *attr_name,char **expr_string,Stream& s)

@@ -687,12 +687,10 @@ Stream::prepare_crypto_for_secret_is_noop()
 {
 	CondorVersionInfo const *peer_ver = get_peer_version();
 	if( !peer_ver || peer_ver->built_since_version(7,1,3) ) {
-		if( param_boolean("ENCRYPT_SECRETS",true) ) {
-			if( !get_encryption() ) {
-				if( crypto_ ) {
-						// do turn on encryption before sending secret
-					return false;
-				}
+		if( !get_encryption() ) {
+			if( crypto_ ) {
+					// do turn on encryption before sending secret
+				return false;
 			}
 		}
 	}
