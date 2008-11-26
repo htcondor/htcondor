@@ -75,6 +75,10 @@ something similar.
 \item \Condor{master} was also not preserving other command-line options
 when restarting itself, most notably, \Opt{-pid} and \Opt{-runfor}.
 
+\item With \MacroNI{NEGOTIATOR\_CONSIDER\_PREEMPTION} set to false, jobs
+would not be matched to slots in the backfill state.  Now, slots doing
+backfill are included in the matchmaking process.
+
 \end{itemize}
 
 \noindent Known Bugs:
