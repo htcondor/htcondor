@@ -1327,7 +1327,6 @@ sub DoChild
 			if( $hush == 0 ) {
 				debug( "Child Starting:perl $test_program > $test_program.out\n",3);
 			}
-			#CoreCheck($test_starttime);
 			$res = system("perl $test_program > $test_program.out 2>&1");
 
 			# if not build and test move key files to saveme/pid directory
