@@ -441,7 +441,9 @@ CheckArgs(int argc, const char **argv, Options &opts)
 			}
 
 		} else if ( arg.Match('v') ) {
-			((int)opts.verbosity)++;
+			int		v = (int) opts.verbosity;
+			v++;
+			opts.verbosity = (Verbosity) v;
 
 		} else if ( arg.Match('q', "quiet" ) ) {
 			opts.verbosity = VERB_NONE;
