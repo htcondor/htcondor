@@ -1455,13 +1455,13 @@ trimStartdAds(ClassAdList &startdAds)
 	int removed = 0;
 	ClassAd *ad = NULL;
 	char curState[80];
-	char *unclaimed = state_to_string(unclaimed_state);
-	char const *owner_state_str = state_to_string(owner_state);
-	ASSERT(unclaimed);
+	char const *claimed_state_str = state_to_string(claimed_state);
+	char const *preempting_state_str = state_to_string(preempting_state);
+	ASSERT(claimed_state_str && preempting_state_str);
 
 		// If we are not considering preemption, we can save time
 		// (and also make the spinning pie algorithm more correct) by
-		// getting rid of ads that are not in the Unclaimed state.
+		// getting rid of ads that are in claimed or preempting state.
 	
 	if ( ConsiderPreemption ) {
 			// we need to keep all the ads.
@@ -1471,7 +1471,9 @@ trimStartdAds(ClassAdList &startdAds)
 	startdAds.Open();
 	while( (ad=startdAds.Next()) ) {
 		if(ad->LookupString(ATTR_STATE, curState, sizeof(curState))) {
-			if ( strcmp(curState,unclaimed) && strcmp(curState,owner_state_str) ) {
+			if ( strcmp(curState,claimed_state_str)==0
+			     || strcmp(curState,preempting_state_str)==0)
+			{
 				startdAds.Delete(ad);
 				removed++;
 			}
