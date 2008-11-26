@@ -346,7 +346,7 @@ CheckArgs(int argc, const char **argv, Options &opts)
 		} else if ( arg.Match("sleep") ) {
 			double	sec;
 			if ( arg.getOpt(sec) ) {
-				opts.sleep_seconds  = (int) trunc( sec );
+				opts.sleep_seconds  = (int) floor( sec );
 				opts.sleep_useconds =
 					(int) (1e6 * ( sec - opts.sleep_seconds ) );
 			} else {
