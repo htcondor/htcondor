@@ -73,7 +73,7 @@ while(<OLD>) {
 	chomp;
 	$line = $_;
 	if($line =~ /^SSL\s+(.*)\s+USER$/ ) {
-		print NEW "SSL $1 $name4test\n";
+		print NEW "SSL $1 $name4test";
 		CondorTest::debug("SSL $1 $name4test\n",1);
 	} else {
 		print NEW;
