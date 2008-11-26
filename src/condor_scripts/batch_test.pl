@@ -877,6 +877,7 @@ sub CreateConfig
 sub CreateLocalConfig
 {
 	debug( "Modifying local config file\n",2);
+	my $logsize = 50000000;
 
 	# make sure ports for Personal Condor are valid, we'll use address
 	# files and port = 0 for dynamic ports...

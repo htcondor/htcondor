@@ -1383,7 +1383,7 @@ sub IsRunningYet
 
 sub CollectDaemonPids
 {
-	$daemonlist = `condor_config_val daemon_list`;
+	#$daemonlist = `condor_config_val daemon_list`;
 	$daemonlist =~ s/\s*//g;
 	@daemons = split /,/, $daemonlist;
 	my $savedir = getcwd();
@@ -1399,28 +1399,25 @@ sub CollectDaemonPids
 
 	my $logfile = "";
 	my $line = "";
-	foreach $one (@daemons) {
-		#print "Checking logs for daemon <$one>\n";
-		$logfile = $logdir . "/" . $daemon_logs{"$one"};
-		#print "Look in $logfile for pid\n";
-		open(TA,"<$logfile") or die "Can not open <$logfile>:$!\n";
-		while(<TA>) {
-			chomp();
-			$line = $_;
-			if($line =~ /^.*PID\s+=\s+(\d+).*$/) {
-				# at kill time we will suggest with signal 15
-				# that the master and friends go away before
-				# we get blunt. This will help us know which
-				# pid is the master.
-				if(($one eq "MASTER")or($one eq "master")) {
-					print PD "$1 MASTER\n";
-				} else {
-					print PD "$1\n";
-				}
-			}
+	#print "Checking logs for daemon <$one>\n";
+	$logfile = $logdir . "/MasterLog";
+	#print "Look in $logfile for pid\n";
+	open(TA,"<$logfile") or die "Can not open <$logfile>:$!\n";
+	while(<TA>) {
+		chomp();
+		$line = $_;
+		if($line =~ /^.*PID\s+=\s+(\d+).*$/) {
+			# at kill time we will suggest with signal 3
+			# that the master and friends go away before
+			# we get blunt. This will help us know which
+			# pid is the master.
+			print PD "$1 MASTER\n";
+		} elsif($line =~ /^.*Started DaemonCore process\s\"(.*)\",\s+pid\s+and\s+pgroup\s+=\s+(\d+).*$/) {
+			print "Saving PID for $1 as $2\n";
+			print PD "$2\n";
 		}
-		close(TA);
 	}
+	close(TA);
 	close(PD);
 }
 
@@ -1476,8 +1473,10 @@ sub KillDaemonPids
 			$thispid = $_;
 			if($thispid =~ /^(\d+)\s+MASTER.*$/) {
 				$thispid = $1;
+				debug("Kill MASTER PID <$thispid:$1>\n",3);
 				$cnt = kill 15, $thispid;
 			} else {
+				debug("Kill non-MASTER PID <$thispid>\n",3);
 				$cnt = kill 15, $thispid;
 			}
 			if($cnt == 0) {
