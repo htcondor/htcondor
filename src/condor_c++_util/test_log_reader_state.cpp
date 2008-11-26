@@ -134,9 +134,10 @@ public:
 	void dumpFieldList( void ) const;
 	const FieldData *lookupField( Field field ) const;
 	bool isValueOk( void ) const { return m_num_values >= 1; };
+	bool needStateFile( void ) const { return m_command != CMD_LIST; };
 
 private:
-	enum { ST_FILE, ST_CMD, ST_FIELD, ST_VALUES, ST_NONE } m_state;
+	enum { ST_CMD, ST_FILE, ST_FIELD, ST_VALUES, ST_NONE } m_state;
 	const char		*m_file;
 	Command			 m_command;
 	const FieldData	*m_field;
@@ -195,7 +196,7 @@ main(int argc, const char **argv)
 	}
 
 	ReadUserLog::FileState	state;
-	if ( ReadState( opts, state ) < 0 ) {
+	if ( opts.needStateFile() && ( ReadState( opts, state ) < 0 )  ) {
 		fprintf( stderr, "ReadState() failed\n" );
 		exit( 1 );
 	}
@@ -251,7 +252,7 @@ CheckArgs(int argc, const char **argv, Options &opts)
 		}
 	}
 
-	if ( NULL == opts.getFile() ) {
+	if ( ( opts.needStateFile() ) && ( NULL == opts.getFile() ) ) {
 		fprintf( stderr,
 				 "No state file specified\n"
 				 "  use -h for help\n" );
@@ -427,7 +428,7 @@ DumpState( const Options &opts,
 }
 
 bool
-Compare( const Options &opts, const char *val )
+CompareStr( const Options &opts, const char *val )
 {
 	bool	ok;
 
@@ -440,7 +441,7 @@ Compare( const Options &opts, const char *val )
 }
 
 bool
-Compare( const Options &opts, int val )
+CompareInt( const Options &opts, int val )
 {
 	bool	ok;
 
@@ -470,7 +471,7 @@ Compare( const Options &opts, int val )
 }
 
 bool
-Compare( const Options &opts, filesize_t val )
+CompareFsize( const Options &opts, filesize_t val )
 {
 	bool	ok;
 
@@ -501,7 +502,7 @@ Compare( const Options &opts, filesize_t val )
 }
 
 bool
-Compare( const Options &opts, time_t val )
+CompareTime( const Options &opts, time_t val )
 {
 	bool	ok;
 	char	b1[64], b2[64], b3[64];
@@ -552,7 +553,7 @@ Compare( const Options &opts, time_t val )
 }
 
 bool
-Compare( const Options &opts, StatStructInode val )
+CompareInode( const Options &opts, StatStructInode val )
 {
 	bool	ok;
 
@@ -584,63 +585,63 @@ VerifyState(const Options &opts, const ReadUserLog::FileState &state )
 	switch( wdata->m_field )
 	{
 	case FIELD_SIGNATURE:
-		ok = Compare( opts, istate->m_signature );
+		ok = CompareStr( opts, istate->m_signature );
 		break;
 
 	case FIELD_VERSION:
-		ok = Compare( opts, istate->m_version );
+		ok = CompareInt( opts, istate->m_version );
 		break;
 
 	case FIELD_UPDATE_TIME:
-		ok = Compare( opts, istate->m_update_time );
+		ok = CompareTime( opts, istate->m_update_time );
 		break;
 
 	case FIELD_BASE_PATH:
-		ok = Compare( opts, istate->m_base_path );
+		ok = CompareStr( opts, istate->m_base_path );
 		break;
 
 	case FIELD_CUR_PATH:
-		ok = Compare( opts, rstate.CurPath(state) );
+		ok = CompareStr( opts, rstate.CurPath(state) );
 		break;
 
 	case FIELD_UNIQ_ID:
-		ok = Compare( opts, istate->m_uniq_id );
+		ok = CompareStr( opts, istate->m_uniq_id );
 		break;
 
 	case FIELD_SEQUENCE:
-		ok = Compare( opts, istate->m_sequence );
+		ok = CompareInt( opts, istate->m_sequence );
 		break;
 
 	case FIELD_MAX_ROTATION:
-		ok = Compare( opts, istate->m_max_rotations );
+		ok = CompareInt( opts, istate->m_max_rotations );
 		break;
 
 	case FIELD_ROTATION:
-		ok = Compare( opts, istate->m_rotation );
+		ok = CompareInt( opts, istate->m_rotation );
 		break;
 
 	case FIELD_OFFSET:
-		ok = Compare( opts, istate->m_offset.asint );
+		ok = CompareFsize( opts, istate->m_offset.asint );
 		break;
 
 	case FIELD_GLOBAL_POSITION:
-		ok = Compare( opts, istate->m_log_position.asint );
+		ok = CompareFsize( opts, istate->m_log_position.asint );
 		break;
 
 	case FIELD_GLOBAL_RECORD_NUM:
-		ok = Compare( opts, istate->m_log_record.asint );
+		ok = CompareFsize( opts, istate->m_log_record.asint );
 		break;
 
 	case FIELD_INODE:
-		ok = Compare( opts, istate->m_inode );
+		ok = CompareInode( opts, istate->m_inode );
 		break;
 
 	case FIELD_CTIME:
-		ok = Compare( opts, istate->m_ctime );
+		ok = CompareTime( opts, istate->m_ctime );
 		break;
 
 	case FIELD_SIZE:
-		ok = Compare( opts, istate->m_size.asint );
+		ok = CompareFsize( opts, istate->m_size.asint );
 		break;
 
 	default:
@@ -689,7 +690,7 @@ chomptime( char *buf )
 
 Options::Options( void )
 {
-	m_state = ST_FILE;
+	m_state = ST_CMD;
 	m_file = NULL;
 	m_command = CMD_NONE;
 	m_field = NULL;
@@ -700,7 +701,7 @@ Options::Options( void )
 	m_numeric = false;
 	m_usage =
 		"Usage: test_log_reader_state "
-		"[options] <filename> <command> [field-name [value/min [max-value]]]\n"
+		"[options] <command> [filename [field-name [value/min [max-value]]]]\n"
 		"  commands: dump verify list\n"
 		"    dump/any: dump [what]\n"
 		"    verify/numeric: what min max\n"
@@ -755,12 +756,7 @@ Options::handleOpt( SimpleArg &arg, int &index )
 int
 Options::handleFixed( SimpleArg &arg, int & /*index*/ )
 {
-	if ( ST_FILE == m_state ) {
-		m_file = arg.Arg();
-		m_state = ST_CMD;
-		return 0;
-	}
-	else if ( ST_CMD == m_state ) {
+	if ( ST_CMD == m_state ) {
 		if ( !lookupCommand( arg ) ) {
 			fprintf(stderr, "Invalid command '%s'\n", arg.Arg() );
 			printf("%s", m_usage);
@@ -777,6 +773,10 @@ Options::handleFixed( SimpleArg &arg, int & /*index*/ )
 				assert( 0 );
 			}
 		}
+		m_state = ST_FILE;
+	}
+	else if ( ST_FILE == m_state ) {
+		m_file = arg.Arg();
 		m_state = ST_FIELD;
 	}
 	else if ( ST_FIELD == m_state ) {
