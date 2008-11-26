@@ -312,7 +312,7 @@ testbin_target(test_log_writer,755)
 
 green-tests: all test_network_adapter test_hibernation
 
-$(USERLOG_LIBAPI_TESTS): %_api : %.o $(LIBCONDORAPI) Makefile
+%_api : %.o $(LIBCONDORAPI) Makefile
 	$(CPlusPlus) $< -L. -Wl,-Bstatic -lcondorapi -Wl,-Bdynamic -ldl -o $@
 
 
