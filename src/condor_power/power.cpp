@@ -220,8 +220,6 @@ main ( int argc, char *argv[] ) {
             empty       = 0;
     bool    sent_wake   = false;
 
-    my_ip_string ();
-
     /* retrieve the program's name */
     name = strrchr ( argv[0], DIR_DELIM_CHAR );
     program_name = !name ? argv[0] : name + 1;
