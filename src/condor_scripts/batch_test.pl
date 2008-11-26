@@ -1479,7 +1479,8 @@ sub ScanForERROR
 	while(<MDL>) {
 		chomp();
 		$line = $_;
-		if($line =~ /^\s*(\d+\/\d+\s+\d+:\d+:\d+)\s+.*\s+ERROR.*/){
+		# ERROR preceeded by white space and trailed by white space, :, ; or -
+		if($line =~ /^\s*(\d+\/\d+\s+\d+:\d+:\d+)\s+.*\s+ERROR[\s;:\-].*/){
 			debug("$line TStamp $1\n",3);
 			if(CheckTriggerTime($test_start, $1)) {
 				$count += 1;
