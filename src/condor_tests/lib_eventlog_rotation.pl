@@ -100,7 +100,7 @@ my @tests =
      },
 
      {
-	 name		=> "old_rotations",
+	 name		=> "w_old_rotations",
 	 config		=> {
 	     "EVENT_LOG"		=> "EventLog",
 	     "EVENT_LOG_COUNT_EVENTS"	=> "TRUE",
@@ -117,7 +117,7 @@ my @tests =
      },
 
      {
-	 name		=> "2_rotations",
+	 name		=> "w_2_rotations",
 	 config		=> {
 	     "EVENT_LOG"		=> "EventLog",
 	     "EVENT_LOG_COUNT_EVENTS"	=> "TRUE",
@@ -134,7 +134,7 @@ my @tests =
      },
 
      {
-	 name		=> "5_rotations",
+	 name		=> "w_5_rotations",
 	 config		=> {
 	     "EVENT_LOG"		=> "EventLog",
 	     "EVENT_LOG_COUNT_EVENTS"	=> "TRUE",
@@ -151,7 +151,7 @@ my @tests =
      },
 
      {	
-	 name		=> "20_rotations",
+	 name		=> "w_20_rotations",
 	 config		=> {
 	     "EVENT_LOG"		=> "EventLog",
 	     "EVENT_LOG_COUNT_EVENTS"	=> "TRUE",
