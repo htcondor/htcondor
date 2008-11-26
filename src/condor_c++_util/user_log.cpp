@@ -178,9 +178,9 @@ UserLog::initialize( const char *owner, const char *domain, const char *file,
 bool
 UserLog::initialize( int c, int p, int s, const char *gjid )
 {
-	cluster = c;
-	proc = p;
-	subproc = s;
+	m_cluster = c;
+	m_proc = p;
+	m_subproc = s;
 
 	Configure( );
 
@@ -246,9 +246,9 @@ UserLog::Configure( void )
 void
 UserLog::Reset( void )
 {
-	cluster = -1;
-	proc = -1;
-	subproc = -1;
+	m_cluster = -1;
+	m_proc = -1;
+	m_subproc = -1;
 
 	m_write_user_log = true;
 	m_path = NULL;
@@ -414,7 +414,7 @@ UserLog::initializeGlobalLog( UserLogHeader &header )
 		writer.addEventOffset( writer.getNumEvents() );
 		writer.setNumEvents( 0 );
 
-		writer.incSequence( );
+		m_global_sequence = writer.incSequence( );
 
 		ret_val = writer.Write( *this );
 
@@ -854,9 +854,9 @@ UserLog::writeEvent ( ULogEvent *event, ClassAd *param_jobad )
 	}
 
 	// fill in event context
-	event->cluster = cluster;
-	event->proc = proc;
-	event->subproc = subproc;
+	event->cluster = m_cluster;
+	event->proc = m_proc;
+	event->subproc = m_subproc;
 	event->setGlobalJobId(m_gjid);
 	
 	// write global event
@@ -912,9 +912,9 @@ UserLog::writeEvent ( ULogEvent *event, ClassAd *param_jobad )
 			JobAdInformationEvent info_event;
 			eventAd->Assign("EventTypeNumber",info_event.eventNumber);
 			info_event.initFromClassAd(eventAd);
-			info_event.cluster = cluster;
-			info_event.proc = proc;
-			info_event.subproc = subproc;
+			info_event.cluster = m_cluster;
+			info_event.proc = m_proc;
+			info_event.subproc = m_subproc;
 			doWriteEvent(&info_event, true, false, param_jobad);
 			delete eventAd;
 		}

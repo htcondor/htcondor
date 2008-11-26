@@ -35,7 +35,7 @@ DECL_SUBSYSTEM( "TEST_LOG_WRITER", SUBSYSTEM_TYPE_TOOL );
 
 enum Status { STATUS_OK, STATUS_CANCEL, STATUS_ERROR };
 
-enum Verbosity { VERB_NONE = 0, VERB_ERROR, VERB_WARNING, VERB_ALL };
+enum Verbosity{ VERB_NONE = 0, VERB_ERROR, VERB_WARNING, VERB_INFO, VERB_ALL };
 
 struct Options
 {
@@ -51,7 +51,7 @@ struct Options
 	double			randomProb;		// Probability of 'random' events
 	bool			stork;
 	const char *	submitNote;
-	int				verbosity;
+	Verbosity		verbosity;
 	const char *	genericEventStr;
 	const char *    persistFile;
 
@@ -146,7 +146,8 @@ bool // false == okay, true == error
 ForkJobs( const Options &opts );
 
 bool // false == okay, true == error
-WriteEvents(Options &opts, int cluster, int proc, int subproc );
+WriteEvents(Options &opts, int cluster, int proc, int subproc,
+			int &num, int &sequence );
 
 static const char *timestr( void );
 static unsigned randint( unsigned maxval );
@@ -181,13 +182,16 @@ main(int argc, const char **argv)
 		exit( 1 );
 	}
 
+	int		num_events = 0;
+	int		sequence = 0;
 	if ( opts.num_forks ) {
 		error = ForkJobs( opts );
 	}
 	else {
 		int		max_proc = opts.proc + opts.numProcs - 1;
 		for( int proc = opts.proc; proc <= max_proc; proc++ ) {
-			error = WriteEvents(opts, opts.cluster, proc, 0 );
+			error = WriteEvents(opts, opts.cluster, proc, 0,
+								num_events, sequence );
 			if ( error || global_done ) {
 				break;
 			}
@@ -196,6 +200,10 @@ main(int argc, const char **argv)
 
 	if ( error  &&  (opts.verbosity >= VERB_ERROR) ) {
 		fprintf(stderr, "test_log_writer FAILED\n");
+	}
+	else if ( opts.verbosity >= VERB_INFO ) {
+		printf( "wrote %d events\n", num_events );
+		printf( "global sequence %d\n", sequence );
 	}
 
 	return (int) error;
@@ -228,8 +236,10 @@ CheckArgs(int argc, const char **argv, Options &opts)
 		"  --submit_note <string>: submit event note\n"
 		"\n"
 		"  -d|--debug <level>: debug level (e.g., D_FULLDEBUG)\n"
+		"  -q|quiet: quiet all messages\n"
 		"  -v: increase verbose level by 1\n"
-		"  --verbosity <number>: set verbosity level (default is 1)\n"
+		"  --verbosity <number|name>: set verbosity level (default is 1)\n"
+		"    names: NONE ERROR WARNING INFO ERROR\n"
 		"  --version: print the version number and compile date\n"
 		"  -h|--usage: print this message and exit\n"
 		"\n"
@@ -249,7 +259,7 @@ CheckArgs(int argc, const char **argv, Options &opts)
 	opts.stork				= false;
 	opts.randomProb			= 0.0;
 	opts.submitNote			= "";
-	opts.verbosity			= 1;
+	opts.verbosity			= VERB_ERROR;
 	opts.genericEventStr	= NULL;
 	opts.persistFile		= NULL;
 	opts.num_forks			= 0;
@@ -394,14 +404,46 @@ CheckArgs(int argc, const char **argv, Options &opts)
 			status = STATUS_CANCEL;
 
 		} else if ( arg.Match("verbosity") ) {
-			if ( !arg.getOpt(opts.verbosity) ) {
+			if ( arg.isOptInt() ) {
+				int		verb;
+				arg.getOpt(verb);
+				opts.verbosity = (Verbosity) verb;
+			}
+			else if ( arg.hasOpt() ) {
+				const char	*s;
+				arg.getOpt( s );
+				if ( !strcasecmp(s, "NONE" ) ) {
+					opts.verbosity = VERB_NONE;
+				}
+				else if ( !strcasecmp(s, "ERROR" ) ) {
+					opts.verbosity = VERB_ERROR;
+				}
+				else if ( !strcasecmp(s, "WARNING" ) ) {
+					opts.verbosity = VERB_WARNING;
+				}
+				else if ( !strcasecmp(s, "INFO" ) ) {
+					opts.verbosity = VERB_INFO;
+				}
+				else if ( !strcasecmp(s, "ALL" ) ) {
+					opts.verbosity = VERB_ALL;
+				}
+				else {
+					fprintf(stderr, "Unknown %s '%s'\n", arg.Arg(), s );
+					printf("%s", usage);
+					status = true;
+				}
+			}
+			else {
 				fprintf(stderr, "Value needed for '%s'\n", arg.Arg() );
 				printf("%s", usage);
 				status = true;
 			}
 
 		} else if ( arg.Match('v') ) {
-			opts.verbosity++;
+			((int)opts.verbosity)++;
+
+		} else if ( arg.Match('q', "quiet" ) ) {
+			opts.verbosity = VERB_NONE;
 
 		} else if ( arg.Match("version") ) {
 			printf("test_log_writer: %s, %s\n", VERSION, __DATE__);
@@ -480,9 +522,10 @@ ForkJobs( const Options &opts )
 }
 
 bool
-WriteEvents(Options &opts, int cluster, int proc, int subproc )
+WriteEvents(Options &opts, int cluster, int proc, int subproc,
+			int &events, int &sequence )
 {
-	bool		result = false;
+	bool		error = false;
 	EventInfo	event( opts, cluster, proc, subproc );
 
 	signal( SIGTERM, handle_sig );
@@ -495,8 +538,11 @@ WriteEvents(Options &opts, int cluster, int proc, int subproc )
 		// Write the submit event.
 		//
 	event.GenEventSubmit( );
-	result = event.WriteEvent( log );
+	error = event.WriteEvent( log );
 	event.Reset( );
+	if ( !error ) {
+		events++;
+	}
 
 		//
 		// Write a single generic event
@@ -504,7 +550,10 @@ WriteEvents(Options &opts, int cluster, int proc, int subproc )
 	if ( opts.genericEventStr ) {
 		event.GenEventGeneric( );
 		if ( event.WriteEvent( log ) ) {
-			result = true;
+			error = true;
+		}
+		else {
+			events++;
 		}
 		event.Reset( );
 	}
@@ -523,7 +572,10 @@ WriteEvents(Options &opts, int cluster, int proc, int subproc )
 
 		event.GenEvent( );
 		if ( event.WriteEvent( log ) ) {
-			result = true;
+			error = true;
+		}
+		else {
+			events++;
 		}
 		event.Reset( );
 
@@ -540,10 +592,14 @@ WriteEvents(Options &opts, int cluster, int proc, int subproc )
 		//
 	event.GenEventTerminate( );
 	if ( event.WriteEvent( log ) ) {
-		result = true;
+		error = true;
 	}
+	else {
+		events++;
+	}
+	sequence = log.getGlobalSequence( );
 
-	return result;
+	return error;
 }
 
 static const char *

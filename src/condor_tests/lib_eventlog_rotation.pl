@@ -240,6 +240,7 @@ if ( -d $dir ) {
     die "Test directory $dir already exists! (try --force?)";
 }
 mkdir( $dir ) or die "Can't create directory $dir";
+print "writing to $dir\n" if ( $settings{verbose} );
 
 my $config = "$dir/condor_config";
 open( CONFIG, ">$config" ) or die "Can't write to config file $config";
@@ -261,39 +262,46 @@ foreach my $param ( keys(%{$test->{config}}) ) {
 close( CONFIG );
 $ENV{"CONDOR_CONFIG"} = $config;
 
+# Basic calculations
+my $default_max_size = 1000000;
+my $max_size = $default_max_size;
+my $max_rotations = 1;
+if ( exists $test->{config}{"EVENT_LOG_MAX_SIZE"} ) {
+    $max_size = $test->{config}{"EVENT_LOG_MAX_SIZE"};
+}
+elsif ( exists $test->{config}{"MAX_EVENT_LOG"} ) {
+    $max_size = $test->{config}{"MAX_EVENT_LOG"};
+}
+if ( exists $test->{config}{"EVENT_LOG_MAX_ROTATIONS"} ) {
+    $max_rotations = $test->{config}{"EVENT_LOG_MAX_ROTATIONS"};
+}
+elsif ( $max_size == 0 ) {
+    $max_rotations = 0;
+    $max_size = $default_max_size;
+}
+my $total_files = $max_rotations + 1;
+my $total_loops = $test->{loops};
+my $loop_events =
+    int(1.25 * $total_files * $max_size / ($event_size * $total_loops) );
+
+# Calculate num exec / procs
 if ( !exists $test->{writer}{"--num-exec"} ) {
-    my $default_max_size = 1000000;
-    my $max_size = $default_max_size;
-    my $max_rotations = 1;
-    my $loops = $test->{loops};
-    if ( exists $test->{config}{"EVENT_LOG_MAX_SIZE"} ) {
-	$max_size = $test->{config}{"EVENT_LOG_MAX_SIZE"};
-    }
-    elsif ( exists $test->{config}{"MAX_EVENT_LOG"} ) {
-	$max_size = $test->{config}{"MAX_EVENT_LOG"};
-    }
-    if ( exists $test->{config}{"EVENT_LOG_MAX_ROTATIONS"} ) {
-	$max_rotations = $test->{config}{"EVENT_LOG_MAX_ROTATIONS"};
-    }
-    elsif ( $max_size == 0 ) {
-	$max_rotations = 0;
-	$max_size = $default_max_size;
-    }
-    my $num_files = $max_rotations + 1;
-    my $num_events =
-	int(1.25 * $num_files * $max_size / ($event_size * $loops) );
 
     my $num_procs = 1;
     if ( exists( $test->{writer}{"--num-procs"} ) ) {
 	$num_procs = $test->{writer}{"--num-procs"};
     }
-
-    $test->{writer}{"--num-exec"} = int( $num_events / $num_procs );
-    $test->{writer}{"--num-procs"} = $num_procs;
+    else {
+	$test->{writer}{"--num-procs"} = $num_procs;
+    }
+    $test->{writer}{"--num-exec"} = int( $loop_events / $num_procs );
 }
 if ( !exists $test->{writer}{"--sleep"} ) {
     $test->{writer}{"--no-sleep"} = undef;
 }
+
+my $loop_files	= int( $total_files / $total_loops );
+my $total_events = $loop_events * $total_loops;
 
 my @writer_args = ( $programs{writer} );
 foreach my $t ( keys(%{$test->{writer}}) ) {
@@ -305,6 +313,8 @@ foreach my $t ( keys(%{$test->{writer}}) ) {
 	}
     }
 }
+push( @writer_args, "--verbosity" );
+push( @writer_args, "INFO" );
 if ( exists $test->{writer}{file} ) {
     push( @writer_args, $test->{writer}{file} )
 }
@@ -312,12 +322,58 @@ else {
     push( @writer_args, "/dev/null" )
 }
 
+
 system("date");
+my $errors = 0;
+my $sequence = 0;
+my $num_events;
 foreach my $loop ( 1 .. $test->{loops} ) {
     print join( " ", @writer_args ) . "\n";
+
+    my $events = 0;
     if ( ! $settings{test} ) {
-	system( @writer_args );
+	my $prev_sequence = $sequence;
+	my $cmd = join(" ", @writer_args );
+	open( WRITER, "$cmd|" ) or die "Can't run $cmd";
+	while( <WRITER> ) {
+	    print if ( $settings{verbose} );
+	    chomp;
+	    if ( /wrote (\d+) events/ ) {
+		$events = $1;
+	    }
+	    elsif ( /global sequence (\d+)/ ) {
+		$sequence = $1;
+	    }
+	}
+	close( WRITER );
+	$num_events += $events;
+	my $files = $sequence - $prev_sequence;
+	if ( $events < $loop_events ) {
+	    printf( STDERR
+		    "WARNING: too few events written in loop: %d < %d\n",
+		    $events, $loop_events );
+	    $errors++;
+	}
+	if ( $files < $loop_files ) {
+	    printf( STDERR
+		    "WARNING: too few files written in loop: %d < %d\n",
+		    $files, $loop_files );
+	    $errors++;
+	}
     }
 }
 
-exit(0);
+if ( $num_events < $total_events ) {
+    printf( STDERR
+	    "WARNING: too few events written: %d < %d\n",
+	    $num_events, $total_events );
+    $errors++;
+}
+if ( $sequence < $total_files ) {
+    printf( STDERR
+	    "WARNING: too few files written: %d < %d\n",
+	    $sequence, $total_files );
+    $errors++;
+}
+
+exit( $errors == 0 ? 0 : 1 );
