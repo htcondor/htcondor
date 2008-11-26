@@ -1446,19 +1446,17 @@ sub KillDaemonPids
 
 	#print "logs are here:$logdir\n";
 	$pidfile = $logdir . "/PIDS";
-	debug("Asked to kill <$oldconfig>\n",1);
-	#system("cat $pidfile");
-	#debug("END pids for <$oldconfig>\n",1);
+	debug("Asked to kill <$oldconfig>\n",3);
 	$thispid = 0;
-	# first find the master and use a kill 15
+	# first find the master and use a kill 3(fast kill)
 	open(PD,"<$pidfile") or die "Can not open<$pidfile>:$!\n";
 	while(<PD>) {
 		chomp();
 		$thispid = $_;
-		if($thispid =~ /^.*(\d+)\s+MASTER.*$/) {
+		if($thispid =~ /^(\d+)\s+MASTER.*$/) {
 			$masterpid = $1;
-			debug("Gentle kill for master <$thispid>\n",1);
 			$cnt = kill 3, $masterpid;
+			debug("Gentle kill for master <$masterpid><$thispid($cnt)>\n",3);
 			last;
 		}
 	}
@@ -1468,18 +1466,24 @@ sub KillDaemonPids
 	# did it work.... is process still around?
 	$cnt = kill 0, $masterpid;
 	if($cnt == 0) {
-		debug("Gentle kill for master <$thispid> worked!\n",1);
+		debug("Gentle kill for master <$thispid> worked!\n",3);
 	} else {
 		# hmm bullets are placed in heads here.
+		debug("Gentle kill for master <$thispid><$cnt> failed!\n",3);
 		open(PD,"<$pidfile") or die "Can not open<$pidfile>:$!\n";
 		while(<PD>) {
 			chomp();
 			$thispid = $_;
-			$cnt = kill 9, $thispid;
-			if($cnt == 0) {
-				debug("Failed to kill PID <$thispid>\n",1);
+			if($thispid =~ /^(\d+)\s+MASTER.*$/) {
+				$thispid = $1;
+				$cnt = kill 15, $thispid;
 			} else {
-				debug("Kill PID <$thispid>\n",3);
+				$cnt = kill 15, $thispid;
+			}
+			if($cnt == 0) {
+				debug("Failed to kill PID <$thispid>\n",3);
+			} else {
+				debug("Killed PID <$thispid>\n",3);
 			}
 		}
 		close(PD);
