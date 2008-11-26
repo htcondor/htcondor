@@ -22,6 +22,7 @@
 #include "debug_timer.h"
 
 DebugTimerBase::DebugTimerBase( bool start )
+ : on(false), t1(0), t2(0)
 {
 	if ( start ) {
 		Start( );
