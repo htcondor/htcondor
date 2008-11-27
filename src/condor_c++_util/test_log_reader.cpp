@@ -2,13 +2,13 @@
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -49,6 +49,7 @@ struct Options
 	bool			dumpState;
 	bool			missedCheck;
 	bool			exitAfterInit;
+	bool			isEventLog;
 	int				maxExec;
 	bool			exit;
 	int				sleep;
@@ -91,7 +92,7 @@ main(int argc, const char **argv)
 	Options	opts;
 
 	Status tmpStatus = CheckArgs(argc, argv, opts);
-	
+
 	if ( tmpStatus == STATUS_OK ) {
 		result = ReadEvents(opts);
 	} else if ( tmpStatus == STATUS_ERROR ) {
@@ -128,6 +129,7 @@ CheckArgs(int argc, const char **argv, Options &opts)
 		"  --no-rotation: disable rotation handling\n"
 		"  --sleep <number>: how many seconds to sleep between events\n"
 		"  --exit|x: Exit when no event available\n"
+		"  --eventlog|e: Setup to read the EventLog\n"
 		"  --no-term: No limit on terminte events\n"
 		"  --term <number>: number of terminate events to exit after\n"
 		"  --usage|--help|-h: print this message and exit\n"
@@ -141,6 +143,7 @@ CheckArgs(int argc, const char **argv, Options &opts)
 	opts.readPersist = false;
 	opts.writePersist = false;
 	opts.maxExec = 0;
+	opts.isEventLog = false;
 	opts.exit = false;
 	opts.sleep = 5;
 	opts.term = 1;
@@ -151,8 +154,8 @@ CheckArgs(int argc, const char **argv, Options &opts)
 	opts.dumpState = false;
 	opts.missedCheck = false;
 
-	for ( int index = 1; index < argc; ++index ) {
-		SimpleArg	arg( argv, argc, index );
+	for ( int argno = 1; argno < argc; ++argno ) {
+		SimpleArg	arg( argv, argc, argno );
 
 		if ( arg.Error() ) {
 			printf("%s", usage);
@@ -161,8 +164,8 @@ CheckArgs(int argc, const char **argv, Options &opts)
 
 		if ( arg.Match('d', "debug") ) {
 			if ( arg.hasOpt() ) {
-				set_debug_flags( arg.getOpt() );
-				index = arg.ConsumeOpt( );
+				set_debug_flags( const_cast<char *>(arg.getOpt()) );
+				argno = arg.ConsumeOpt( );
 			} else {
 				fprintf(stderr, "Value needed for '%s'\n", arg.Arg() );
 				printf("%s", usage);
@@ -179,13 +182,13 @@ CheckArgs(int argc, const char **argv, Options &opts)
 		} else if ( arg.Match("miss-check") ) {
 			opts.missedCheck = true;
 
+		} else if ( arg.Match('e', "eventlog") ) {
+			opts.isEventLog = true;
+
 		} else if ( arg.Match('p', "persist") ) {
 			if ( arg.hasOpt() ) {
 				arg.getOpt( opts.persistFile );
 				opts.rotation = true;
-				if ( opts.max_rotations == 0 ) {
-					opts.max_rotations = 1;
-				}
 				opts.readPersist = true;
 				opts.writePersist = true;
 			} else {
@@ -274,7 +277,10 @@ CheckArgs(int argc, const char **argv, Options &opts)
 		}
 	}
 
-	if ( status == STATUS_OK && !opts.readPersist && opts.logFile == NULL ) {
+	if ( status == STATUS_OK &&
+		 !opts.readPersist &&
+		 !opts.isEventLog &&
+		 opts.logFile == NULL ) {
 		fprintf(stderr, "Log file must be specified if not restoring state\n");
 		printf("%s", usage);
 		status = STATUS_ERROR;
@@ -292,7 +298,7 @@ ReadEvents(Options &opts)
 	ReadUserLog::FileState	state;
 	ReadUserLog::InitFileState( state );
 
-	ReadUserLog	log;
+	ReadUserLog	reader;
 
 	// Initialize the reader from the persisted state
 	if ( opts.readPersist ) {
@@ -303,7 +309,15 @@ ReadEvents(Options &opts)
 				return STATUS_ERROR;
 			}
 			close( fd );
-			if ( !log.initialize( state, opts.max_rotations ) ) {
+
+			bool istatus;
+			if ( opts.max_rotations ) {
+				istatus = reader.initialize( state, opts.max_rotations );
+			}
+			else {
+				istatus = reader.initialize( state );
+			}
+			if ( ! istatus ) {
 				fprintf( stderr, "Failed to initialize from state\n" );
 				return STATUS_ERROR;
 			}
@@ -324,12 +338,20 @@ ReadEvents(Options &opts)
 	}
 
 	// If, after the above, the reader isn't initialized, do so now
-	if ( !log.isInitialized() ) {
-		if ( !log.initialize( opts.logFile,
-							  opts.max_rotations,
-							  opts.rotation) ) {
-			fprintf( stderr, "Failed to initialize with file\n" );
-			return STATUS_ERROR;
+	if ( !reader.isInitialized() ) {
+		if ( opts.isEventLog ) {
+			if ( !reader.initialize( ) ) {
+				fprintf( stderr, "Failed to initialize with EventLog\n" );
+				return STATUS_ERROR;
+			}
+		}
+		else {
+			if ( !reader.initialize( opts.logFile,
+									 opts.max_rotations,
+									 opts.rotation) ) {
+				fprintf( stderr, "Failed to initialize with file\n" );
+				return STATUS_ERROR;
+			}
 		}
 	}
 
@@ -352,7 +374,7 @@ ReadEvents(Options &opts)
 	while ( !done && !global_done ) {
 		ULogEvent	*event = NULL;
 
-		ULogEventOutcome	outcome = log.readEvent(event);
+		ULogEventOutcome	outcome = reader.readEvent(event);
 		if ( outcome == ULOG_OK ) {
 			if ( opts.verbosity >= VERB_ALL ) {
 				printf( "Got an event from %d.%d.%d @ %s",
@@ -361,7 +383,7 @@ ReadEvents(Options &opts)
 			}
 
 			// Store off the persisted state
-			if ( opts.writePersist && log.GetFileState( state ) ) {
+			if ( opts.writePersist && reader.GetFileState( state ) ) {
 				int	fd = safe_open_wrapper( opts.persistFile,
 											O_WRONLY|O_CREAT,
 											S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP );
@@ -384,7 +406,7 @@ ReadEvents(Options &opts)
 				else if ( (!missedLast) && isPrevCluster && (!isPrevProc) ) {
 					printf( "\n** Undetected missed event **\n" );
 					global_done = true;
-					
+
 				}
 			}
 			prevCluster = event->cluster;
@@ -483,7 +505,7 @@ ReadEvents(Options &opts)
 		delete event;
 	}
 
-	log.GetFileState( state );
+	reader.GetFileState( state );
 #  if ENABLE_STATE_DUMP
 	if ( opts.dumpState ) {
 		ReadUserLogState	rstate(state, 60);
@@ -512,10 +534,10 @@ ReadEvents(Options &opts)
 	return result;
 }
 
-const char *timestr( struct tm &tm )
+const char *timestr( struct tm &t )
 {
 	static char	tbuf[64];
-	strncpy( tbuf, asctime( &tm ), sizeof(tbuf) );
+	strncpy( tbuf, asctime( &t ), sizeof(tbuf) );
 	tbuf[sizeof(tbuf)-1] = '\0';
 	if ( strlen(tbuf) ) {
 		tbuf[strlen(tbuf)-1] = '\0';

@@ -1248,8 +1248,15 @@ SegMap::Read( int fd, ssize_t pos )
 	RAW_ADDR	saved_core_loc = core_loc;
 	
 	if( pos != file_loc ) {
-		dprintf( D_ALWAYS, "Checkpoint sequence error (%d != %lld)\n", pos,
-				 file_loc );
+		/* I haven't the time to fix up our dprintf implementation in 
+			the checkpointing library to handle >32bit quantities. */
+		if (pos > UINT_MAX) {
+			dprintf( D_ALWAYS, "Checkpoint sequence error at a position "
+				"greater than UINT_MAX. Sorry.\n");
+		} else {
+			dprintf( D_ALWAYS, "Checkpoint sequence error (%d != %u)\n", 
+				pos, (unsigned int)file_loc );
+		}
 		Suicide();
 	}
 
@@ -1432,8 +1439,15 @@ ssize_t
 SegMap::Write( int fd, ssize_t pos )
 {
 	if( pos != file_loc ) {
-		dprintf( D_ALWAYS, "Checkpoint sequence error (%d != %lld)\n",
-				 pos, file_loc );
+		/* I haven't the time to fix up our dprintf implementation in
+			the checkpointing library to handle >32bit quantities. */
+		if (pos > UINT_MAX) {
+			dprintf( D_ALWAYS, "Checkpoint sequence error at a position "
+				"greater than UINT_MAX. Sorry.\n");
+		} else {
+			dprintf( D_ALWAYS, "Checkpoint sequence error (%d != %u)\n", 
+				pos, (unsigned int)file_loc );
+		}
 		Suicide();
 	}
 #if defined(COMPRESS_CKPT)

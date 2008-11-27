@@ -1,0 +1,17 @@
+# BEGIN
+JOB  A  a_submit.cmd
+VARS A job="$(JOB)"
+
+JOB  B  a_submit.cmd
+VARS B job="$(JOB)"
+
+JOB  C  a_submit.cmd
+VARS C job="$(JOB)"
+
+JOB  D  a_submit.cmd
+VARS D job="$(JOB)"
+
+PARENT A CHILD B C
+PARENT B C CHILD D
+
+# END

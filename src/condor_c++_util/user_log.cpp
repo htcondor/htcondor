@@ -178,9 +178,9 @@ UserLog::initialize( const char *owner, const char *domain, const char *file,
 bool
 UserLog::initialize( int c, int p, int s, const char *gjid )
 {
-	cluster = c;
-	proc = p;
-	subproc = s;
+	m_cluster = c;
+	m_proc = p;
+	m_subproc = s;
 
 	Configure( );
 
@@ -230,10 +230,14 @@ UserLog::Configure( void )
 	m_global_use_xml = param_boolean( "EVENT_LOG_USE_XML", false );
 	m_global_count_events = param_boolean( "EVENT_LOG_COUNT_EVENTS", false );
 	m_enable_locking = param_boolean( "ENABLE_USERLOG_LOCKING", true );
-	m_global_max_rotations = param_integer( "EVENT_LOG_MAX_ROTATIONS", 1 );
+	m_global_max_rotations = param_integer( "EVENT_LOG_MAX_ROTATIONS", 1, 0 );
+
 	m_global_max_filesize = param_integer( "EVENT_LOG_MAX_SIZE", -1 );
 	if ( m_global_max_filesize < 0 ) {
-		m_global_max_filesize = param_integer( "MAX_EVENT_LOG", 1000000 );
+		m_global_max_filesize = param_integer( "MAX_EVENT_LOG", 1000000, 0 );
+	}
+	if ( m_global_max_filesize == 0 ) {
+		m_global_max_rotations = 0;
 	}
 
 	return true;
@@ -242,9 +246,9 @@ UserLog::Configure( void )
 void
 UserLog::Reset( void )
 {
-	cluster = -1;
-	proc = -1;
-	subproc = -1;
+	m_cluster = -1;
+	m_proc = -1;
+	m_subproc = -1;
 
 	m_write_user_log = true;
 	m_path = NULL;
@@ -410,7 +414,7 @@ UserLog::initializeGlobalLog( UserLogHeader &header )
 		writer.addEventOffset( writer.getNumEvents() );
 		writer.setNumEvents( 0 );
 
-		writer.incSequence( );
+		m_global_sequence = writer.incSequence( );
 
 		ret_val = writer.Write( *this );
 
@@ -442,8 +446,8 @@ UserLog::checkGlobalLogRotation( void )
 		dprintf( D_ALWAYS, "checking for event log rotation, but no lock\n" );
 	}
 
-	// Don't rotate if max size is zero -- that means never rotate
-	if ( 0 == m_global_max_filesize ) {
+	// Don't rotate if max rotations is set to zero
+	if ( 0 == m_global_max_rotations ) {
 		return false;
 	}
 
@@ -850,9 +854,9 @@ UserLog::writeEvent ( ULogEvent *event, ClassAd *param_jobad )
 	}
 
 	// fill in event context
-	event->cluster = cluster;
-	event->proc = proc;
-	event->subproc = subproc;
+	event->cluster = m_cluster;
+	event->proc = m_proc;
+	event->subproc = m_subproc;
 	event->setGlobalJobId(m_gjid);
 	
 	// write global event
@@ -908,9 +912,9 @@ UserLog::writeEvent ( ULogEvent *event, ClassAd *param_jobad )
 			JobAdInformationEvent info_event;
 			eventAd->Assign("EventTypeNumber",info_event.eventNumber);
 			info_event.initFromClassAd(eventAd);
-			info_event.cluster = cluster;
-			info_event.proc = proc;
-			info_event.subproc = subproc;
+			info_event.cluster = m_cluster;
+			info_event.proc = m_proc;
+			info_event.subproc = m_subproc;
 			doWriteEvent(&info_event, true, false, param_jobad);
 			delete eventAd;
 		}
