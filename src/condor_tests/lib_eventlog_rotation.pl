@@ -376,4 +376,20 @@ if ( $sequence < $total_files ) {
     $errors++;
 }
 
+if ( $errors ) {
+    my $cmd;
+    print "\nls:\n";
+    $cmd = "/bin/ls -l $dir";
+    system( $cmd );
+    print "\nwc:\n";
+    $cmd = "wc $dir/*";
+    system( $cmd );
+    print "\nhead:\n";
+    $cmd = "head -2 $dir/EventLog*";
+    system( $cmd );
+    print "\nconfig:\n";
+    $cmd = "cat $config";
+    system( $cmd );
+}
+
 exit( $errors == 0 ? 0 : 1 );
