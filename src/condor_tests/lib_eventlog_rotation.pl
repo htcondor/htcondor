@@ -347,7 +347,7 @@ foreach my $loop ( 1 .. $test->{loops} ) {
 	}
 	close( WRITER );
 	$num_events += $events;
-	my $files = $sequence - $prev_sequence;
+	my $files = 1 + $sequence - $prev_sequence;
 	if ( $events < $loop_events ) {
 	    printf( STDERR
 		    "WARNING: too few events written in loop: %d < %d\n",
@@ -369,7 +369,7 @@ if ( $num_events < $total_events ) {
 	    $num_events, $total_events );
     $errors++;
 }
-if ( $sequence < $total_files ) {
+if ( ($sequence+1) < $total_files ) {
     printf( STDERR
 	    "WARNING: too few files written: %d < %d\n",
 	    $sequence, $total_files );
