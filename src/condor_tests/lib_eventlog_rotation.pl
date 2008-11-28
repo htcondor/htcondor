@@ -315,6 +315,8 @@ foreach my $t ( keys(%{$test->{writer}}) ) {
 }
 push( @writer_args, "--verbosity" );
 push( @writer_args, "INFO" );
+push( @writer_args, "--debug" );
+push( @writer_args, "D_FULLDEBUG" );
 if ( exists $test->{writer}{file} ) {
     push( @writer_args, $test->{writer}{file} )
 }
@@ -347,7 +349,7 @@ foreach my $loop ( 1 .. $test->{loops} ) {
 	}
 	close( WRITER );
 	$num_events += $events;
-	my $files = $sequence - $prev_sequence;
+	my $files = 1 + $sequence - $prev_sequence;
 	if ( $events < $loop_events ) {
 	    printf( STDERR
 		    "WARNING: too few events written in loop: %d < %d\n",
@@ -369,11 +371,27 @@ if ( $num_events < $total_events ) {
 	    $num_events, $total_events );
     $errors++;
 }
-if ( $sequence < $total_files ) {
+if ( ($sequence+1) < $total_files ) {
     printf( STDERR
 	    "WARNING: too few files written: %d < %d\n",
-	    $sequence, $total_files );
+	    ($sequence+1), $total_files );
     $errors++;
+}
+
+if ( $errors ) {
+    my $cmd;
+    print "\nls:\n";
+    $cmd = "/bin/ls -l $dir";
+    system( $cmd );
+    print "\nwc:\n";
+    $cmd = "wc $dir/*";
+    system( $cmd );
+    print "\nhead:\n";
+    $cmd = "head -2 $dir/EventLog*";
+    system( $cmd );
+    print "\nconfig:\n";
+    $cmd = "cat $config";
+    system( $cmd );
 }
 
 exit( $errors == 0 ? 0 : 1 );

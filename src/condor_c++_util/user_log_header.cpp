@@ -103,6 +103,39 @@ UserLogHeader::ExtractEvent( const ULogEvent *event )
 	}
 }
 
+// dprintf() metchod
+void
+UserLogHeader::dprintf( int level, const char *label ) const
+{
+	if ( NULL == label ) {
+		label = "";
+	}
+	if ( m_valid ) {
+		::dprintf( level,
+				   "%s header:"
+				   " id=%s"
+				   " seq=%d"
+				   " ctime=%lu"
+				   " size="FILESIZE_T_FORMAT
+				   " num=%"PRIi64
+				   " file_offset="FILESIZE_T_FORMAT
+				   " event_offset=%" PRIi64
+				   "\n",
+				   label,
+				   m_id.GetCStr(),
+				   m_sequence,
+				   (unsigned long) m_ctime,
+				   m_size,
+				   m_num_events,
+				   m_file_offset,
+				   m_event_offset );
+	}
+	else {
+		::dprintf( level, "%s header: not valid\n", label );
+	}
+			   
+}
+
 //
 // ReadUserLogHeader methods
 //
@@ -224,7 +257,7 @@ WriteUserLogHeader::GenerateEvent( GenericEvent &event )
 			  getNumEvents(),
 			  getFileOffset(),
 			  getEventOffset() );
-	dprintf( D_FULLDEBUG, "Generated log header: '%s'\n", event.info );
+	::dprintf( D_FULLDEBUG, "Generated log header: '%s'\n", event.info );
 	int		len = strlen( event.info );
 	while( len < 256 ) {
 		strcat( event.info, " " );
