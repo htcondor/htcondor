@@ -96,6 +96,8 @@ my $BaseDir = getcwd();
 $hush = 0;
 $timestamp = 0;
 $kindwait = 1; # run tests one at a time
+$groupsize = 0; # run tests in group for more throughput
+$currentgroup = 0;
 $repeat = 1; # run test/s repeatedly
 $cleanupcondor = 0;
 $want_core_dumps = 1;
@@ -176,6 +178,7 @@ while( $_ = shift( @ARGV ) ) {
 	    print "-q[uiet]: hush\n";
 	    print "-m[arktime]: time stamp\n";
 	    print "-k[ind]: be kind and submit slowly\n";
+	    print "-e[venly]: <group size>: run a group of tests\n";
 	    print "-b[buildandtest]: set up a personal condor and generic configs\n";
 	    print "-a[again]: how many times do we run each test?\n";
 	    print "-p[pretest]: get are environment set but run no tests\n";
@@ -218,6 +221,11 @@ while( $_ = shift( @ARGV ) ) {
         }
         if( /^-k.*/ ) {
                 $kindwait = 1;
+                next SWITCH;
+        }
+        if( /^-e.*/ ) {
+                $groupsize = shift(@ARGV);
+                $kindwait = 0;
                 next SWITCH;
         }
         if( /^-a.*/ ) {
@@ -350,19 +358,20 @@ print "Ready for Testing\n";
 # line, we just use that.  otherwise, we search for all subdirectories
 # in the current directory that might be compiler subdirs...
 if( ! @compilers ) {
+	@compilers = ("g77", "gcc", "g++", ".");
     # find all compiler subdirectories in the test directory
-    opendir( TEST_DIR, $test_dir ) || die "error opening \"$test_dir\": $!\n";
-    @compilers = grep -d, readdir( TEST_DIR );
+    #opendir( TEST_DIR, $test_dir ) || die "error opening \"$test_dir\": $!\n";
+    #@compilers = grep -d, readdir( TEST_DIR );
     # filter out . and ..
-    @compilers = grep !/^\.\.?$/, @compilers;
+    #@compilers = grep !/^\.\.?$/, @compilers;
 	# if the tests have run before we have pid labeled directories and 
 	# test.saveme directories which should be ignored.
-	@compilers = grep !/^.*saveme.*$/, @compilers;
-	@compilers = grep !/^\d+$/, @compilers;
+	#@compilers = grep !/^.*saveme.*$/, @compilers;
+	#@compilers = grep !/^\d+$/, @compilers;
     # get rid of CVS entry for testing - won't hurt to leave it in.
-    @compilers = grep !/CVS/, @compilers;
-    closedir TEST_DIR;
-    die "error: no compiler subdirectories found\n" unless @compilers;
+    #@compilers = grep !/CVS/, @compilers;
+    #closedir TEST_DIR;
+    #die "error: no compiler subdirectories found\n" unless @compilers;
 }
 
 if($timestamp == 1) {
@@ -497,9 +506,10 @@ foreach $compiler (@compilers)
 	}
     foreach $test_program (@{$test_suite{"$compiler"}})
     {
-		if(($hush == 0) && (! defined $kindwait)) { 
-        	print ".";
+		if(($hush == 0) && ($kindwait == 0)) { 
+        	#print ".";
 		}
+		debug("Want to test $test_program\n",2);
 
         next if $skip_hash{$compiler}->{$test_program};
 
@@ -510,6 +520,9 @@ foreach $compiler (@compilers)
 		}
 		while($repeatcounter < $repeat) {
 
+			debug( "About to fork test<$currentgroup>\n",2);
+			$currentgroup += 1;
+			debug( "About to fork test new size<$currentgroup>\n",2);
 	        $pid = fork();
 			if( $hush == 0 ) {
 				debug( "forking for $test_program pid returned is $pid\n",3);
@@ -520,7 +533,8 @@ foreach $compiler (@compilers)
 			#		kindwait = resolve each test after the fork
 			#		else:	   fork them all and then wait for all
 
-			if( defined $kindwait ) {
+			if( $kindwait == 1 ) {
+			#*****************************************************************
 				if( $pid > 0 ) {
 	            	$test{$pid} = "$test_program";
 					debug( "Started test: $test_program/$pid\n",2);
@@ -555,19 +569,61 @@ foreach $compiler (@compilers)
 	        		# if we're the child, start test program
 					DoChild($test_program, $test_retirement);
 				}
+			#*****************************************************************
 			} else {
 				if( $pid > 0 ) {
 	            	$test{$pid} = "$test_program";
 					if( $hush == 0 ) {
-						debug( "Started test: $test_program/$pid\n",3);
+						debug( "Started test: $test_program/$pid\n",2);
 					}
+					# are we submitting all the tests for a compiler and then
+					# waiting for them all? Or are we submitting a bunch and waiting
+					# for them before submitting some more.
+					if($groupsize != 0) {
+						debug( "current group: $currentgroup Limit: $groupsize\n",2);
+						if($currentgroup == $groupsize) {
+							debug( "wait for batch\n",2);
+    						while( $child = wait() ) {
+        						# if there are no more children, we're done
+        						last if $child == -1;
+							
+        						# record the child's return status
+        						$status = $?;
+
+								debug( "informed $child gone yeilding test $test{$child}\n",2);
+	
+								if(! defined $test{$child}) {
+									debug("Can't find jobname for child?<ignore>\n",2);
+									next;
+								}
+
+								debug( "wait returned test<$currentgroup>\n",2);
+								$currentgroup -= 1;
+								debug( "wait returned test new size<$currentgroup>\n",2);
+
+        						($test_name) = $test{$child} =~ /(.*)\.run$/;
+
+								StartTestOutput($compiler,$test_name);
+
+								CompleteTestOutput($compiler,$test_name,$child,$status);
+    						} # end while
+							#next;
+						} else {
+							# batch size not met yet
+							debug( "batch size not met yet\n",2);
+	            			sleep 1;
+							#next;
+						}
+					} else {
 	            	sleep 1;
-					next;
+					#next;
+					}
 				} else { # child
 	        		# if we're the child, start test program
 					DoChild($test_program, $test_retirement);
 				}
 			}
+			#*****************************************************************
 
 			$repeatcounter = $repeatcounter + 1;
 		}
@@ -580,7 +636,7 @@ foreach $compiler (@compilers)
 
 	# complete the tests when batching them up
 
-	if(! (defined $kindwait)) {
+	if($kindwait == 0) {
     	while( $child = wait() ) {
         	# if there are no more children, we're done
         	last if $child == -1;
