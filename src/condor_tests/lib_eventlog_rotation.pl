@@ -315,6 +315,8 @@ foreach my $t ( keys(%{$test->{writer}}) ) {
 }
 push( @writer_args, "--verbosity" );
 push( @writer_args, "INFO" );
+push( @writer_args, "--debug" );
+push( @writer_args, "D_FULLDEBUG" );
 if ( exists $test->{writer}{file} ) {
     push( @writer_args, $test->{writer}{file} )
 }
@@ -372,7 +374,7 @@ if ( $num_events < $total_events ) {
 if ( ($sequence+1) < $total_files ) {
     printf( STDERR
 	    "WARNING: too few files written: %d < %d\n",
-	    $sequence, $total_files );
+	    ($sequence+1), $total_files );
     $errors++;
 }
 

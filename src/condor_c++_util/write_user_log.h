@@ -178,8 +178,6 @@ class UserLog {
 	///
     void Reset( void );
 
-	bool initializeGlobalLog( UserLogHeader & );
-
 	// Write header event to global file
 	bool writeHeaderEvent ( const UserLogHeader &header );
 
@@ -201,6 +199,7 @@ class UserLog {
 	bool checkGlobalLogRotation(void);
 	long getGlobalLogSize( void ) const;
 	bool globalLogRotated( ReadUserLogHeader &reader );
+	bool initializeGlobalLog(const UserLogHeader &header );
 	int doRotation( const char *path, FILE *&fp,
 					MyString &rotated, int max_rotations );
 

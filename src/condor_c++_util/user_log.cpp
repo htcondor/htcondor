@@ -371,7 +371,7 @@ UserLog::openFile(
 
 
 bool
-UserLog::initializeGlobalLog( UserLogHeader &header )
+UserLog::initializeGlobalLog( const UserLogHeader &header )
 {
 	bool ret_val = true;
 
@@ -521,7 +521,14 @@ UserLog::checkGlobalLogRotation( void )
 	}
 	else {
 		ReadUserLog	log_reader( fp, m_global_use_xml );
-		reader.Read( log_reader );
+		if ( reader.Read( log_reader ) != ULOG_OK ) {
+			dprintf( D_ALWAYS,
+					 "UserLog: Error reading header of (\"%s\")\n", 
+					 m_global_path );
+		}
+		else {
+			reader.dprintf( D_FULLDEBUG, m_global_path );
+		} 
 
 		if ( m_global_count_events ) {
 			int		events = 0;
@@ -609,6 +616,7 @@ UserLog::checkGlobalLogRotation( void )
 			 num_rotations, elapsed, rps );
 # endif
 
+	// OK, *I* did the rotation, initialize the header of the file, too
 	globalLogRotated( reader );
 
 	// Finally, release the rotation lock
