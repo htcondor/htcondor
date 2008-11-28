@@ -179,6 +179,8 @@ sub usage( )
 	"  -h|--help     this help\n";
 }
 
+sub ReadFiles( $$ );
+
 my %settings =
 (
  verbose	=> 0,
@@ -327,54 +329,62 @@ else {
 
 system("date");
 my $errors = 0;
-my $sequence = 0;
-my $num_events;
+my %totals = ( sequence => 0, num_events => 0, );
 foreach my $loop ( 1 .. $test->{loops} ) {
     print join( " ", @writer_args ) . "\n";
 
-    my $events = 0;
     if ( ! $settings{test} ) {
-	my $prev_sequence = $sequence;
 	my $cmd = join(" ", @writer_args );
+
+	# writer output this loop
+	my %loop = ( events => 0, sequence => 0, max_rot => 0, );
 	open( WRITER, "$cmd|" ) or die "Can't run $cmd";
 	while( <WRITER> ) {
 	    print if ( $settings{verbose} );
 	    chomp;
 	    if ( /wrote (\d+) events/ ) {
-		$events = $1;
+		$loop{num_events} = $1;
 	    }
 	    elsif ( /global sequence (\d+)/ ) {
-		$sequence = $1;
+		$loop{sequence} = $1;
 	    }
 	}
 	close( WRITER );
-	$num_events += $events;
-	my $files = 1 + $sequence - $prev_sequence;
-	if ( $events < $loop_events ) {
+	$totals{num_events} += $loop{events};
+	$loop{seq_files} = 1 + $loop{sequence} - $totals{sequence};
+	$totals{sequence} = $loop{sequence};
+	
+	my %actual = ( sequence => 0, num_files => 0, num_events => 0, );
+	my @files = ReadFiles( $dir, \%actual );
+
+	if ( $loop{num_events} < $loop_events ) {
 	    printf( STDERR
 		    "WARNING: too few events written in loop: %d < %d\n",
-		    $events, $loop_events );
+		    $loop{num_events}, $loop_events );
 	    $errors++;
 	}
-	if ( $files < $loop_files ) {
+	if ( $loop{seq_files} < $loop_files ) {
 	    printf( STDERR
-		    "WARNING: too few files written in loop: %d < %d\n",
-		    $files, $loop_files );
+		    "WARNING: too few files sequenced in loop: %d < %d\n",
+		    $loop{seq_files}, $loop_files );
 	    $errors++;
 	}
+	$totals{num_events} += $loop{num_events};
     }
 }
 
-if ( $num_events < $total_events ) {
+# Final read
+if ( $totals{num_events} < $total_events ) {
     printf( STDERR
 	    "WARNING: too few events written: %d < %d\n",
-	    $num_events, $total_events );
+	    $totals{num_events}, $total_events );
     $errors++;
 }
-if ( ($sequence+1) < $total_files ) {
+$totals{seq_files} = $totals{sequence} + 1;
+if ( $totals{seq_files} < $total_files ) {
     printf( STDERR
 	    "WARNING: too few files written: %d < %d\n",
-	    ($sequence+1), $total_files );
+	    $totals{seq_files}, $total_files );
     $errors++;
 }
 
@@ -395,3 +405,92 @@ if ( $errors ) {
 }
 
 exit( $errors == 0 ? 0 : 1 );
+
+sub ReadFiles( $$ )
+{
+    my $dir = shift;
+    my $actual = shift;
+
+    my @header_fields = qw( ctime id sequence size events offset event_off );
+
+    my @files;
+    opendir( DIR, $dir ) or die "Can't read directory $dir";
+    while( my $t = readdir( DIR ) ) {
+	if ( $t =~ /^EventLog(\.old|\.\d+)*$/ ) {
+	    $actual->{num_files}++;
+	    my $ext = $1;
+	    my $rot = 0;
+	    if ( defined $ext  and  $ext eq ".old" ) {
+		$rot = 1;
+	    }
+	    elsif ( defined $ext  and  $ext =~ /\.(\d+)/ ) {
+		$rot = $1;
+	    }
+	    else {
+		$rot = 0;
+	    }
+	    $files[$rot] = { name => $t, ext => $ext, num_events => 0 };
+	    my $f = $files[$rot];
+	    my$file = "$dir/$t";
+	    open( FILE, $file ) or die "Can't read $file";
+	    while( <FILE> ) {
+		chomp;
+		if ( $f->{num_events} == 0  and  /^008 / ) {
+		    $f->{header} = $_;
+		    $f->{fields} = { };
+		    foreach my $field ( split() ) {
+			if ( $field =~ /(\w+)=(.*)/ ) {
+			    $f->{fields}{$1} = $2;
+			}
+		    }
+		    foreach my $fn ( @header_fields ) {
+			if ( not exists $f->{fields}{$fn} ) {
+			    print STDERR
+				"WARNING: header in file $t missing $fn\n";
+			    $errors++;
+			    $f->{fields}{$fn} = 0;
+			}
+		    }
+		}
+		if ( $_ eq "..." ) {
+		    $f->{num_events}++;
+		    $actual->{num_events}++;
+		}
+	    }
+	    close( FILE );
+	}
+    }
+    closedir( DIR );
+
+    foreach my $n ( 0 .. $#files ) {
+	if ( ! defined $files[$n] ) {
+	    print STDERR "WARNING: EventLog file #$n is missing\n";
+	    $errors++;
+	    next;
+	}
+	my $f = $files[$n];
+	my $t = $f->{name};
+	if ( not exists $f->{header} ) {
+	    print STDERR "WARNING: no header in file $t\n";
+	    $errors++;
+	}
+	elsif ( $n != $#files ) {
+	    if ( $f->{fields}{sequence} == 0 ) {
+		printf STDERR
+		    "WARNING: sequence # for file $t (#$n) is zero\n";
+		$errors++;
+	    }
+	    if ( $f->{fields}{offset} == 0 ) {
+		printf STDERR
+		    "WARNING: offset for file $t (#$n) is zero\n";
+		$errors++;
+	    }
+	    if ( $f->{fields}{event_off} == 0 ) {
+		printf STDERR
+		    "WARNING: event offset # for file $t (#$n) is zero\n";
+		$errors++;
+	    }
+	}
+    }
+    return @files;
+}

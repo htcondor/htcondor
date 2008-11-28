@@ -523,7 +523,7 @@ UserLog::checkGlobalLogRotation( void )
 		ReadUserLog	log_reader( fp, m_global_use_xml );
 		if ( reader.Read( log_reader ) != ULOG_OK ) {
 			dprintf( D_ALWAYS,
-					 "UserLog: Error reading header of (\"%s\")\n", 
+					 "UserLog: Error reading header of \"%s\"\n", 
 					 m_global_path );
 		}
 		else {
