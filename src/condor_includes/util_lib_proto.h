@@ -38,7 +38,6 @@ extern "C" {
 int blankline ( char *str );
 char * gen_exec_name ( int cluster, int proc, int subproc );
 
-int condor_hash ( register char *string, register int size );
 char * getline ( FILE *fp );
 
 char* getExecPath( void );

@@ -1347,8 +1347,7 @@ char *
 param( const char *name )
 {
 	char		*val = NULL;
-	MyString	 param_name;
-	MyString	 prefix;
+	char param_name[MAX_PARAM_LEN];
 
 	// Try in order to find the parameter
 	// As we walk through, any value (including empty string) will
@@ -1359,32 +1358,38 @@ param( const char *name )
 	// 1. "subsys.local.name"
 	const char	*local = mySubSystem->getLocalName();
 	if (  (NULL == val) && local ) {
-		prefix = mySubSystem->getName();
-		prefix += ".";
-		prefix += local;
-		prefix += ".";
-		param_name = prefix + name;
-		val = lookup_macro( param_name.GetCStr(), ConfigTab, TABLESIZE );
+		snprintf(param_name,MAX_PARAM_LEN,"%s.%s.%s",
+				 mySubSystem->getName(),
+				 local,
+				 name);
+		param_name[MAX_PARAM_LEN-1]='\0';
+		strlwr(param_name);
+		val = lookup_macro_lower( param_name, ConfigTab, TABLESIZE );
 	}
 	// 2. "local.name"
 	if (  (NULL == val) && local ) {
-		prefix = local;
-		prefix += ".";
-		param_name = prefix + name;
-		val = lookup_macro( param_name.GetCStr(), ConfigTab, TABLESIZE );
+		snprintf(param_name,MAX_PARAM_LEN,"%s.%s",
+				 local,
+				 name);
+		param_name[MAX_PARAM_LEN-1]='\0';
+		strlwr(param_name);
+		val = lookup_macro_lower( param_name, ConfigTab, TABLESIZE );
 	}
 	// 3. "subsys.name"
 	if ( NULL == val ) {
-		prefix = mySubSystem->getName();
-		prefix += ".";
-		param_name = prefix + name;
-		val = lookup_macro( param_name.GetCStr(), ConfigTab, TABLESIZE );
+		snprintf(param_name,MAX_PARAM_LEN,"%s.%s",
+				 mySubSystem->getName(),
+				 name);
+		param_name[MAX_PARAM_LEN-1]='\0';
+		strlwr(param_name);
+		val = lookup_macro_lower( param_name, ConfigTab, TABLESIZE );
 	}
 	// 4. "name"
 	if ( NULL == val ) {
-		prefix = "";
-		param_name = name;
-		val = lookup_macro( name, ConfigTab, TABLESIZE );
+		snprintf(param_name,MAX_PARAM_LEN,"%s",name);
+		param_name[MAX_PARAM_LEN-1]='\0';
+		strlwr(param_name);
+		val = lookup_macro_lower( param_name, ConfigTab, TABLESIZE );
 	}
 
 	// Still nothing (or empty)?  Give up.
@@ -1392,12 +1397,15 @@ param( const char *name )
 		return NULL;
 	}
 
-	if ( prefix != "" ) {
-		dprintf( D_CONFIG, "Config '%s': using prefix '%s' ==> '%s'\n",
-				 name, prefix.GetCStr(), val );
-	}
-	else {
-		dprintf( D_CONFIG, "Config '%s': no prefix ==> '%s'\n", name, val );
+	if( DebugFlags & D_CONFIG ) {
+		if( strlen(name) < strlen(param_name) ) {
+			param_name[strlen(param_name)-strlen(name)] = '\0';
+			dprintf( D_CONFIG, "Config '%s': using prefix '%s' ==> '%s'\n",
+					 name, param_name, val );
+		}
+		else {
+			dprintf( D_CONFIG, "Config '%s': no prefix ==> '%s'\n", name, val );
+		}
 	}
 
 	// Ok, now expand it out...

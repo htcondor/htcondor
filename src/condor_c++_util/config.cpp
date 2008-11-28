@@ -318,7 +318,6 @@ Read_config( const char* config_source, BUCKET** table,
 				  table.  Everything now behaves like macros used to
 				  Derek Wright <wright@cs.wisc.edu> 4/11/00
 				*/
-			strlwr( name );
 
 			/* Put the value in the Configuration Table */
 			insert( name, value, table, table_size );
@@ -368,7 +367,7 @@ Read_config( const char* config_source, BUCKET** table,
 ** 0 <= value < size 
 */
 int
-condor_hash( register char *string, register int size )
+condor_hash( register const char *string, register int size )
 {
 	register unsigned int		answer;
 
@@ -392,10 +391,11 @@ insert( const char *name, const char *value, BUCKET **table, int table_size )
 	register BUCKET	*ptr;
 	int		loc;
 	BUCKET	*bucket;
-	char	tmp_name[ 1024 ];
+	char	tmp_name[ MAX_PARAM_LEN ];
 
 		/* Make sure not already in hash table */
-	strcpy( tmp_name, name );
+	snprintf( tmp_name, MAX_PARAM_LEN, "%s", name);
+	tmp_name[MAX_PARAM_LEN-1] = '\0';
 	strlwr( tmp_name );
 	loc = condor_hash( tmp_name, table_size );
 	for( ptr=table[loc]; ptr; ptr=ptr->next ) {
@@ -423,10 +423,11 @@ set_macro_used ( const char *name, int used, BUCKET *table[], int table_size )
 {
 	register BUCKET	*ptr;
 	int		loc;
-	char	tmp_name[ 1024 ];
+	char	tmp_name[ MAX_PARAM_LEN ];
 	
 	/* find the macro in the hash table */
-	strcpy( tmp_name, name );
+	snprintf( tmp_name, MAX_PARAM_LEN, "%s", name);
+	tmp_name[MAX_PARAM_LEN-1] = '\0';
 	strlwr( tmp_name );
 	loc = condor_hash( tmp_name, table_size );
 	for( ptr=table[loc]; ptr; ptr=ptr->next ) {
@@ -454,8 +455,8 @@ getline_implementation( FILE *fp, int requested_bufsize )
 {
 	static char	*buf = NULL;
 	static unsigned int buflen = 0;
-	char	*read_ptr;		// Pointer to read into next read
-	char	*parse_ptr;		// Pointer to where to start parsing from
+	char	*end_ptr;		// Pointer to read into next read
+	char    *line_ptr;
 
 	if( feof(fp) ) {
 			// We're at the end of the file, clean up our buffers and
@@ -468,24 +469,24 @@ getline_implementation( FILE *fp, int requested_bufsize )
 		return NULL;
 	}
 
-	if ( buflen != (unsigned int)requested_bufsize ) {
+	if ( buflen < (unsigned int)requested_bufsize ) {
 		if ( buf ) free(buf);
 		buf = (char *)malloc(requested_bufsize);
 		buflen = requested_bufsize;
 	}
 	buf[0] = '\0';
-	read_ptr = buf;
-	parse_ptr = buf;
+	end_ptr = buf;
+	line_ptr = buf;
 
 	// Loop 'til we're done reading a whole line, including continutations
 	for(;;) {
-		int		len = buflen - (read_ptr - buf);
+		int		len = buflen - (end_ptr - buf);
 		if( len <= 5 ) {
 			// we need a larger buffer -- grow buffer by 4kbytes
 			char *newbuf = (char *)realloc(buf, 4096 + buflen);
 			if ( newbuf ) {
-				read_ptr = (read_ptr - buf) + newbuf;
-				parse_ptr = (parse_ptr - buf) + newbuf;
+				end_ptr = (end_ptr - buf) + newbuf;
+				line_ptr = (line_ptr - buf) + newbuf;
 				buf = newbuf;	// note: realloc() freed our old buf if needed
 				buflen += 4096;
 				len += 4096;
@@ -495,7 +496,7 @@ getline_implementation( FILE *fp, int requested_bufsize )
 			}
 		}
 
-		if( fgets(read_ptr,len,fp) == NULL ) {
+		if( fgets(end_ptr,len,fp) == NULL ) {
 			if( buf[0] == '\0' ) {
 				return NULL;
 			} else {
@@ -504,34 +505,45 @@ getline_implementation( FILE *fp, int requested_bufsize )
 		}
 
 		// See if fgets read an entire line, or simply ran out of buffer space
-		if ( *read_ptr == '\0' ) {
+		if ( *end_ptr == '\0' ) {
 			continue;
 		}
-		if( strrchr(read_ptr, '\n') == NULL ) {
+
+		end_ptr += strlen(end_ptr);
+		if( end_ptr[-1] != '\n' ) {
 			// if we made it here, fgets() ran out of buffer space.
 			// move our read_ptr pointer forward so we concatenate the
 			// rest on after we realloc our buffer above.
-			read_ptr += strlen(read_ptr);
 			continue;	// since we are not finished reading this line
 		}
 
 		ConfigLineNo++;
 
-			/* See if a continuation is indicated */
-		char	*ptr;			// Temp pointer
-		ptr = ltrunc( parse_ptr );
-		if( ptr != parse_ptr ) {
-			(void)memmove( parse_ptr, ptr, strlen(ptr)+1 );
+			// Instead of calling ltrim() below, we do it inline,
+			// taking advantage of end_ptr to avoid overhead.
+
+			// trim whitespace from the end
+		while( end_ptr>line_ptr && isspace( end_ptr[-1] ) ) {
+			*(--end_ptr) = '\0';
+		}	
+
+			// trim whitespace from the beginning of the line
+		char	*ptr = line_ptr;
+		while( isspace(*ptr) ) {
+			ptr++;
+		}
+		if( ptr != line_ptr ) {
+			(void)memmove( line_ptr, ptr, end_ptr-ptr+1 );
+			end_ptr = (end_ptr - ptr) + line_ptr;
 		}
 
-		ptr = (char *) strrchr( parse_ptr, '\\' );
-		if( ptr == NULL )
-			return buf;
-		if( *(ptr+1) != '\0' )
-			return buf;
-
+		if( end_ptr > buf && end_ptr[-1] == '\\' ) {
 			/* Ok read the continuation and concatenate it on */
-		parse_ptr = read_ptr = ptr;
+			*(--end_ptr) = '\0';
+			line_ptr = end_ptr;
+			continue;
+		}
+		return buf;
 	}
 }
 
@@ -866,7 +878,6 @@ get_var( register char *value, register char **leftp,
 {
 	char *left, *left_end, *name, *right;
 	char *tvalue;
-	int selflen = (self) ? strlen(self) : 0;
 
 	tvalue = value + search_pos;
 	left = value;
@@ -956,8 +967,7 @@ tryagain:
 					// between these two pointers gives us the length of the
 					// identifier.
 					int namelen = value-name;
-					if( !self || ( namelen == selflen &&
-								   strincmp( name, self, namelen ) == MATCH ) ) {
+					if( !self || ( strincmp( name, self, namelen ) == MATCH && self[namelen] == '\0' ) ) {
 							// $(DOLLAR) has special meaning; it is
 							// set to "$" and is _not_ recursively
 							// expanded.  To implement this, we have
@@ -999,30 +1009,39 @@ tryagain:
 	return( 1 );
 }
 
+#if defined(__cplusplus)
+}
+
 /*
 ** Return the value associated with the named parameter.  Return NULL
 ** if the given parameter is not defined.
 */
 char *
-lookup_macro( const char *name, BUCKET **table, int table_size )
+lookup_macro_lower( const char *name, BUCKET **table, int table_size )
 {
 	int				loc;
 	register BUCKET	*ptr;
-	char			tmp_name[ 1024 ];
 
-	tmp_name[1023] = '\0';
-	strncpy( tmp_name, name, 1023 );
-	strlwr( tmp_name );
-	loc = condor_hash( tmp_name, table_size );
+	loc = condor_hash( name, table_size );
 	for( ptr=table[loc]; ptr; ptr=ptr->next ) {
-		if( !strcmp(tmp_name,ptr->name) ) {
+		if( !strcmp(name,ptr->name) ) {
 			ptr->used = 1;
 			return ptr->value;
 		}
 	}
 	return NULL;
 }
+char *
+lookup_macro( const char *name, BUCKET **table, int table_size )
+{
+	char			tmp_name[ MAX_PARAM_LEN ];
 
-#if defined(__cplusplus)
+		// snprintf() is faster than strncpy() for large target buffers,
+		// because strncpy() nulls out rest of buffer
+	snprintf(tmp_name,MAX_PARAM_LEN,"%s",name);
+	tmp_name[MAX_PARAM_LEN-1] = '\0';
+	strlwr( tmp_name );
+	return lookup_macro_lower(tmp_name,table,table_size);
 }
+
 #endif
