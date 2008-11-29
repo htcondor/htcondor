@@ -71,7 +71,7 @@ UserLogHeader::ExtractEvent( const ULogEvent *event )
 		dprintf( D_ALWAYS, "Can't pointer cast generic event!\n" );
 		return ULOG_UNK_ERROR;
 	} else {
-		char		*id;
+		char		 id[256];
 		const char	*format;
 		int			 ctime;
 
@@ -79,24 +79,20 @@ UserLogHeader::ExtractEvent( const ULogEvent *event )
 						format = 
 						"Global JobLog: "
 						"ctime=%d "
-						"id=%as "
+						"id=%255s "
 						"sequence=%d "
 						"size="FILESIZE_T_FORMAT" "
 						"events=%"PRId64" "
 						"offset="FILESIZE_T_FORMAT" "
 						"event_off=%"PRId64" ",
 						&ctime,
-						&id,
+						id,
 						&m_sequence,
 						&m_size,
 						&m_num_events,
 						&m_file_offset,
 						&m_event_offset );
 		if ( n >= 3 ) {
-			if ( id ) {
-				m_id = id;
-				free( id );
-			}
 			m_ctime = ctime;
 			m_valid = true;
 			return ULOG_OK;
