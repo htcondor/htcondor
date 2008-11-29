@@ -71,10 +71,12 @@ UserLogHeader::ExtractEvent( const ULogEvent *event )
 		dprintf( D_ALWAYS, "Can't pointer cast generic event!\n" );
 		return ULOG_UNK_ERROR;
 	} else {
-		char	*id;
-		int		ctime;
+		char		*id;
+		const char	*format;
+		int			 ctime;
 
 		int n = sscanf( generic->info,
+						format = 
 						"Global JobLog: "
 						"ctime=%d "
 						"id=%as "
@@ -100,8 +102,9 @@ UserLogHeader::ExtractEvent( const ULogEvent *event )
 			return ULOG_OK;
 		}
 		::dprintf( D_FULLDEBUG,
-				   "UserLogHeader::ExtractEvent(): failed to parse '%s'\n",
-				   generic->info );
+				   "UserLogHeader::ExtractEvent(): failed to parse '%s'"
+				   "using format '%s' -> %d\n",
+				   generic->info, format, n );
 		return ULOG_NO_EVENT;
 	}
 }

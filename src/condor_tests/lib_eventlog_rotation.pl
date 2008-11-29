@@ -421,6 +421,22 @@ foreach my $loop ( 1 .. $test->{loops} ) {
 	    }
 	}
 	close( WRITER );
+	my $failed = 0;
+	if ( $? & 127 ) {
+	    printf "ERROR: writer exited from signal %d\n", ($? & 127);
+	    $failed = 1;
+	}
+	if ( $? & 128 ) {
+	    print "ERROR: writer dumped core\n";
+	    $failed = 1;
+	}
+	if ( $? >> 8 ) {
+	    printf "ERROR: writer exited with status %d\n", ($? >> 8);
+	    $failed = 1;
+	}
+	if ( ! $failed ) {
+	    print "writer process exited normally\n";
+	}
 
 	my @files = ReadFiles( $dir, \%new );
 
