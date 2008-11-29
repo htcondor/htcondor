@@ -177,6 +177,7 @@ sub usage( )
 	"  -n|--no-exec  no execute / test mode\n" .
 	"  -d|--debug    enable D_FULLDEBUG debugging\n" .
 	"  -v|--verbose  increase verbose level\n" .
+	"  -q|--quiet    cancel debug & verbose\n" .
 	"  -h|--help     this help\n";
 }
 
@@ -207,6 +208,10 @@ foreach my $arg ( @ARGV ) {
     }
     elsif ( $arg eq "-d"  or  $arg eq "--debug" ) {
 	$settings{debug} = 1;
+    }
+    elsif ( $arg eq "-q"  or  $arg eq "--quiet" ) {
+	$settings{verbose} = 0;
+	$settings{debug} = 0;
     }
     elsif ( $arg eq "-h"  or  $arg eq "--help" ) {
 	usage( );
@@ -601,6 +606,12 @@ sub ReadFiles( $$ )
     }
     closedir( DIR );
 
+    my $events_counted = 
+	( exists $test->{config}{EVENT_LOG_COUNT_EVENTS} and
+	  $test->{config}{EVENT_LOG_COUNT_EVENTS} eq "TRUE" );
+    #print "Events are ", $events_counted ? "" : "not ", "counted\n";
+
+
     my $min_sequence = 9999999;
     my $min_event_off = 99999999;
     foreach my $n ( 0 .. $#files ) {
@@ -615,33 +626,65 @@ sub ReadFiles( $$ )
 	    print STDERR "ERROR: no header in file $t\n";
 	    $errors++;
 	}
-	elsif ( $n != $#files ) {
-	    if ( $f->{fields}{sequence} == 0 ) {
-		printf STDERR
-		    "ERROR: sequence # for file $t (#$n) is zero\n";
-		$errors++;
-	    }
+	my $seq = $f->{fields}{sequence};
+
+	# The sequence on all but the first (chronologically) file
+	# should never be one
+	if (  ( $n != $#files ) and ( $seq == 1 )  ) {
+	    print STDERR
+		"ERROR: sequence # for file $t (#$n) is $seq\n";
+	    $errors++;
+	}
+	# but the sequence # should *never* be zero
+	elsif ( $seq == 0 ) {
+	    print STDERR
+		"ERROR: sequence # for file $t (#$n) is zero\n";
+	    $errors++;
+	}
+	if ( $seq > 1 ) {
 	    if ( $f->{fields}{offset} == 0 ) {
-		printf STDERR
-		    "ERROR: offset for file $t (#$n) is zero\n";
+		print STDERR
+		    "ERROR: offset for file $t (#$n / seq $seq) is zero\n";
+		$errors++;
+	    }
+	    if ( $events_counted  and  $f->{fields}{event_off} == 0 ) {
+		print STDERR
+		    "ERROR: event offset for file $t ".
+		    "(#$n / seq $seq) is zero\n";
 		$errors++;
 	    }
 	}
-	elsif ( ! $n ) {
-	    if ( $f->{fields}{event_off} == 0 ) {
-		printf STDERR
-		    "ERROR: event offset for file $t (#$n) is zero\n";
-		$errors++;
-	    }
+	if ( $seq > $new->{sequence} ) {
+	    $new->{sequence} = $seq;
 	}
-	if ( $f->{fields}{sequence} > $new->{sequence} ) {
-	    $new->{sequence} = $f->{fields}{sequence};
-	}
-	if ( $f->{fields}{sequence} < $min_sequence ) {
-	    $min_sequence = $f->{fields}{sequence};
+	if ( $seq < $min_sequence ) {
+	    $min_sequence = $seq;
 	}
 	if ( $f->{fields}{event_off} < $min_event_off ) {
 	    $min_event_off = $f->{fields}{event_off};
+	}
+	if ( $events_counted ) {
+	    if ( $n  and  $f->{fields}->{events} == 0 ) {
+		print STDERR
+		    "ERROR: # events for file $t (#$n / seq $seq) is zero\n";
+		$errors++;
+	    }
+	}
+	else {
+	    if ( $f->{fields}->{events} != 0 ) {
+		printf( STDERR
+			"ERROR: event count for file $t ".
+			"(#$n / seq $seq) is non-zero (%d)\n",
+			$f->{fields}->{events} );
+		$errors++;
+	    }
+	    if ( $f->{fields}->{event_off} != 0 ) {
+		printf( STDERR
+			"ERROR: event offset for file $t ".
+			"(#$n / seq $seq) is non-zero (%d)\n",
+			$f->{fields}->{event_off} );
+		$errors++;
+	    }
 	}
 
 	if ( $n  and  ( $f->{file_size} > $expect{maxs}{file_size} ) ) {
