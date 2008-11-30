@@ -72,11 +72,12 @@ UserLogHeader::ExtractEvent( const ULogEvent *event )
 		return ULOG_UNK_ERROR;
 	} else {
 		char		 id[256];
-		const char	*format;
 		int			 ctime;
 
+		::dprintf( D_FULLDEBUG,
+				   "UserLogHeader::ExtractEvent(): parsing header '%s'\n",
+				   generic->info );
 		int n = sscanf( generic->info,
-						format = 
 						"Global JobLog: "
 						"ctime=%d "
 						"id=%255s "
@@ -95,12 +96,13 @@ UserLogHeader::ExtractEvent( const ULogEvent *event )
 		if ( n >= 3 ) {
 			m_ctime = ctime;
 			m_valid = true;
+			::dprintf( D_FULLDEBUG,
+					   "UserLogHeader::ExtractEvent(): parsed OK\n" );
 			return ULOG_OK;
 		}
 		::dprintf( D_FULLDEBUG,
-				   "UserLogHeader::ExtractEvent(): failed to parse '%s'"
-				   "using format '%s' -> %d\n",
-				   generic->info, format, n );
+				   "UserLogHeader::ExtractEvent(): can't parse '%s': %d\n",
+				   generic->info, n );
 		return ULOG_NO_EVENT;
 	}
 }
@@ -194,6 +196,8 @@ WriteUserLogHeader::Write( UserLog &writer, FILE *fp )
 bool
 WriteUserLogHeader::GenerateEvent( GenericEvent &event )
 {
+	::dprintf( D_FULLDEBUG,
+			   "WriteUserLogHeader::GenerateEvent()\n" );
 	snprintf( event.info, sizeof(event.info),
 			  "Global JobLog: "
 			  "ctime=%d "
