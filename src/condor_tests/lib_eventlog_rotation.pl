@@ -424,17 +424,20 @@ foreach my $loop ( 1 .. $test->{loops} ) {
 	my $failed = 0;
 	if ( $? & 127 ) {
 	    printf "ERROR: writer exited from signal %d\n", ($? & 127);
+	    $errors++;
 	    $failed = 1;
 	}
 	if ( $? & 128 ) {
 	    print "ERROR: writer dumped core\n";
+	    $errors++;
 	    $failed = 1;
 	}
 	if ( $? >> 8 ) {
 	    printf "ERROR: writer exited with status %d\n", ($? >> 8);
+	    $errors++;
 	    $failed = 1;
 	}
-	if ( ! $failed ) {
+	if ( ! $failed and $settings{verbose}) {
 	    print "writer process exited normally\n";
 	}
 
