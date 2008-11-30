@@ -95,6 +95,7 @@ UserLogHeader::ExtractEvent( const ULogEvent *event )
 						&m_event_offset );
 		if ( n >= 3 ) {
 			m_ctime = ctime;
+			m_id = id;
 			m_valid = true;
 			::dprintf( D_FULLDEBUG,
 					   "UserLogHeader::ExtractEvent(): parsed OK\n" );
@@ -107,7 +108,7 @@ UserLogHeader::ExtractEvent( const ULogEvent *event )
 	}
 }
 
-// dprintf() metchod
+// dprintf() method
 void
 UserLogHeader::dprintf( int level, const char *label ) const
 {
@@ -115,6 +116,10 @@ UserLogHeader::dprintf( int level, const char *label ) const
 		label = "";
 	}
 	if ( m_valid ) {
+		const char *id = m_id.GetCStr();
+		if ( NULL == id ) {
+			id = "";
+		}
 		::dprintf( level,
 				   "%s header:"
 				   " id=%s"
@@ -126,7 +131,7 @@ UserLogHeader::dprintf( int level, const char *label ) const
 				   " event_offset=%" PRIi64
 				   "\n",
 				   label,
-				   m_id.GetCStr(),
+				   id,
 				   m_sequence,
 				   (unsigned long) m_ctime,
 				   m_size,
