@@ -185,8 +185,8 @@ sub ReadFiles( $$ );
 
 my %settings =
 (
- verbose	=> 1,	# TODO: should be zero
- debug		=> 1,	# TODO: should be zero
+ verbose	=> 0,
+ debug		=> 0,
  execute	=> 1,
  force		=> 0,
  );
