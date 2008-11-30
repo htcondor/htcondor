@@ -2,13 +2,13 @@
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -70,39 +70,36 @@ UserLogHeader::ExtractEvent( const ULogEvent *event )
 	if ( ! generic ) {
 		dprintf( D_ALWAYS, "Can't pointer cast generic event!\n" );
 		return ULOG_UNK_ERROR;
-	} else {
-		char		 id[256];
-		int			 ctime;
+	} 
 
+	char		 id[256];
+	int			 ctime;
+
+	int n = sscanf( generic->info,
+					"Global JobLog: "
+					"ctime=%d "
+					"id=%255s "
+					"sequence=%d "
+					"size="FILESIZE_T_FORMAT" "
+					"events=%"PRId64" "
+					"offset="FILESIZE_T_FORMAT" "
+					"event_off=%"PRId64" ",
+					&ctime,
+					id,
+					&m_sequence,
+					&m_size,
+					&m_num_events,
+					&m_file_offset,
+					&m_event_offset );
+	if ( n >= 3 ) {
+		m_ctime = ctime;
+		m_id = id;
+		m_valid = true;
+		return ULOG_OK;
+	}
+	else {
 		::dprintf( D_FULLDEBUG,
-				   "UserLogHeader::ExtractEvent(): parsing header '%s'\n",
-				   generic->info );
-		int n = sscanf( generic->info,
-						"Global JobLog: "
-						"ctime=%d "
-						"id=%255s "
-						"sequence=%d "
-						"size="FILESIZE_T_FORMAT" "
-						"events=%"PRId64" "
-						"offset="FILESIZE_T_FORMAT" "
-						"event_off=%"PRId64" ",
-						&ctime,
-						id,
-						&m_sequence,
-						&m_size,
-						&m_num_events,
-						&m_file_offset,
-						&m_event_offset );
-		if ( n >= 3 ) {
-			m_ctime = ctime;
-			m_id = id;
-			m_valid = true;
-			::dprintf( D_FULLDEBUG,
-					   "UserLogHeader::ExtractEvent(): parsed OK\n" );
-			return ULOG_OK;
-		}
-		::dprintf( D_FULLDEBUG,
-				   "UserLogHeader::ExtractEvent(): can't parse '%s': %d\n",
+				   "UserLogHeader::ExtractEvent(): can't parse '%s' => %d\n",
 				   generic->info, n );
 		return ULOG_NO_EVENT;
 	}
@@ -201,8 +198,6 @@ WriteUserLogHeader::Write( UserLog &writer, FILE *fp )
 bool
 WriteUserLogHeader::GenerateEvent( GenericEvent &event )
 {
-	::dprintf( D_FULLDEBUG,
-			   "WriteUserLogHeader::GenerateEvent()\n" );
 	snprintf( event.info, sizeof(event.info),
 			  "Global JobLog: "
 			  "ctime=%d "
