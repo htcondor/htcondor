@@ -93,7 +93,7 @@ dnl
 # turned on all the time or it will tie this file to CSL machines.
 # Instead the CSL's autotool install should be updated to handle the
 # non-standard location of libtool.
-ACLOCAL_AMFLAGS = -I /s/libtool/share/aclocal
+#ACLOCAL_AMFLAGS = -I /s/libtool/share/aclocal
 
 if ENABLE_EXPLICIT_TEMPLATES
   _libclassad_la_SOURCES = instantiations.cpp
