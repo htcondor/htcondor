@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2008, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -21,11 +21,6 @@
 #include <string>
 #include "lease_manager_lease.h"
 using namespace std;
-
-LeaseManagerLease::LeaseManagerLease( void )
-{
-	m_duration = 0;
-}
 
 LeaseManagerLease::LeaseManagerLease(
 	const string		&lease_id,

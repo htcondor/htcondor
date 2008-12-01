@@ -642,8 +642,8 @@ LeaseManager::GetLeases(
 		free( lease_id_cstr );
 		LeaseManagerLease	*lease =
 			new LeaseManagerLease( lease_id,
-								lease_duration,
-								(bool) release_when_done );
+								   lease_duration,
+								   (bool) release_when_done );
 		ASSERT( lease );
 		l_list.push_back( lease );
 	}
