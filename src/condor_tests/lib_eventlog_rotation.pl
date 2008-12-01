@@ -177,6 +177,7 @@ sub usage( )
 	"  -n|--no-exec  no execute / test mode\n" .
 	"  -d|--debug    enable D_FULLDEBUG debugging\n" .
 	"  -v|--verbose  increase verbose level\n" .
+	"  --vg-writer   run writer under valgrind\n" .
 	"  -q|--quiet    cancel debug & verbose\n" .
 	"  -h|--help     this help\n";
 }
@@ -185,10 +186,11 @@ sub ReadFiles( $$ );
 
 my %settings =
 (
- verbose	=> 0,
- debug		=> 0,
- execute	=> 1,
- force		=> 0,
+ verbose		=> 0,
+ debug			=> 0,
+ execute		=> 1,
+ force			=> 0,
+ valgrind_writer	=> 0,
  );
 foreach my $arg ( @ARGV ) {
     if ( $arg eq "-f"  or  $arg eq "--force" ) {
@@ -202,6 +204,9 @@ foreach my $arg ( @ARGV ) {
     }
     elsif ( $arg eq "-n"  or  $arg eq "--no-exec" ) {
 	$settings{execute} = 0;
+    }
+    elsif ( $arg eq "-n"  or  $arg eq "--vg-writer" ) {
+	$settings{valgrind_writer} = 1;
     }
     elsif ( $arg eq "-v"  or  $arg eq "--verbose" ) {
 	$settings{verbose}++;
@@ -368,6 +373,9 @@ else {
     push( @writer_args, "/dev/null" )
 }
 
+my @valgrind = ( "valgrind", "--tool=memcheck", "--num-callers=24",
+		 "-v", "-v", "--leak-check=full",
+		 "--log-file=$dir/valgrind-writer.out" );
 
 system("date");
 my $errors = 0;
@@ -392,15 +400,19 @@ foreach my $k ( keys(%totals) ) {
 }
 
 foreach my $loop ( 1 .. $test->{loops} ) {
-    print join( " ", @writer_args ) . "\n";
 
     foreach my $k ( keys(%{$expect{loop_mins}}) ) {
 	$expect{cur_mins}{$k} += $expect{loop_mins}{$k};
     }
 
-    if ( $settings{execute} ) {
-	my $cmd = join(" ", @writer_args );
+    my $cmd = "";
+    if ( $settings{valgrind_writer} ) {
+	$cmd .= join( " ", @valgrind ) . " ";
+    }
+    $cmd .= join(" ", @writer_args );
+    print "$cmd\n";
 
+    if ( $settings{execute} ) {
 	# writer output from this loop
 	my %new;
 	for my $k ( keys(%totals) ) {
@@ -498,6 +510,10 @@ foreach my $loop ( 1 .. $test->{loops} ) {
 	    $previous{$k} = $new{$k};
 	}
     }
+}
+
+if ( ! $settings{execute} ) {
+    exit( 0 );
 }
 
 # Final writer output checks
