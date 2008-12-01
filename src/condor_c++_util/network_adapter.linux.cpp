@@ -269,6 +269,7 @@ LinuxNetworkAdapter::detectWOL ( void )
 	int sock = socket(AF_INET, SOCK_DGRAM, 0);
 	if (sock < 0) {
 		dprintf( D_ALWAYS, "Cannot get control socket for WOL detection\n" );
+		return false;
 	}
 
 	// Fill in the WOL request and the ioctl request
