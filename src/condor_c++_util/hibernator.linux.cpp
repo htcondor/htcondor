@@ -145,6 +145,10 @@ LinuxHibernator::LinuxHibernator ( void ) throw ()
 
 LinuxHibernator::~LinuxHibernator ( void) throw ()
 {
+	if ( m_real_hibernator ) {
+		delete m_real_hibernator;
+		m_real_hibernator = NULL;
+	}
 }
 
 const char *

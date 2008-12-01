@@ -88,6 +88,7 @@ main(int argc, const char **argv)
 	if ( !net->getInitStatus() ) {
 		printf( "Initialization of adaptor with address %s failed\n",
 				opts.m_address );
+		delete net;
 		exit(1);
 	}
 
@@ -95,6 +96,7 @@ main(int argc, const char **argv)
 	if ( !net->exists() ) {
 		printf( "Adaptor with address %s not found\n",
 				opts.m_address );
+		delete net;
 		exit(1);
 	}
 
@@ -142,6 +144,7 @@ main(int argc, const char **argv)
 		fprintf(stderr, "test_hibernation FAILED\n");
 	}
 
+	delete net;
 	return status;
 }
 
