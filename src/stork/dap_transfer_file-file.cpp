@@ -143,7 +143,7 @@ int main(int argc, char *argv[])
   char src_protocol[MAXSTR], src_host[MAXSTR], src_file[MAXSTR];
   char dest_protocol[MAXSTR], dest_host[MAXSTR], dest_file[MAXSTR];
   char src_url[MAXSTR], dest_url[MAXSTR];
-  int status;
+  int status = 0;
 
   if (argc < 3){
     fprintf(stderr, "==============================================================\n");
