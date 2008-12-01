@@ -1,4 +1,4 @@
-AMAZON_GAHP = amazon-gahp
+AMAZON_GAHP = amazon_gahp
 
 PROGRAMS = $(AMAZON_GAHP)
 
