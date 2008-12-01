@@ -24,7 +24,7 @@ $cmd = 'job_dagman_splice-A.dag';
 $testname = 'Condor submit dag - basic splice test - scheduler U';
 $dagman_args = "-verbose";
 
-@outfiles = ("A", "B");
+@outfiles = ("A_A", "A_B");
 
 my $killedchosen = 0;
 

@@ -25,24 +25,24 @@ $testname = 'Condor submit dag - basic splice test - scheduler U';
 $dagman_args = "-verbose";
 
 @outfiles = (
-				"A",
-				"B",
-				"job_dagman_splice-L-subdir1/SD1_S1+A",
-				"job_dagman_splice-L-subdir1/SD1_S1+B",
-				"job_dagman_splice-L-subdir1/SD1_S1+C",
-				"job_dagman_splice-L-subdir1/SD1_S1+D",
-				"job_dagman_splice-L-subdir1/SD1_S2+A",
-				"job_dagman_splice-L-subdir1/SD1_S2+B",
-				"job_dagman_splice-L-subdir1/SD1_S2+C",
-				"job_dagman_splice-L-subdir1/SD1_S2+D",
-				"job_dagman_splice-L-subdir2/SD2_S1+A",
-				"job_dagman_splice-L-subdir2/SD2_S1+B",
-				"job_dagman_splice-L-subdir2/SD2_S1+C",
-				"job_dagman_splice-L-subdir2/SD2_S1+D",
-				"job_dagman_splice-L-subdir2/SD2_S2+A",
-				"job_dagman_splice-L-subdir2/SD2_S2+B",
-				"job_dagman_splice-L-subdir2/SD2_S2+C",
-				"job_dagman_splice-L-subdir2/SD2_S2+D"
+		"L_A",
+		"L_B",
+		"job_dagman_splice-L-subdir1/L_SD1_S1+A",
+		"job_dagman_splice-L-subdir1/L_SD1_S1+B",
+		"job_dagman_splice-L-subdir1/L_SD1_S1+C",
+		"job_dagman_splice-L-subdir1/L_SD1_S1+D",
+		"job_dagman_splice-L-subdir1/L_SD1_S2+A",
+		"job_dagman_splice-L-subdir1/L_SD1_S2+B",
+		"job_dagman_splice-L-subdir1/L_SD1_S2+C",
+		"job_dagman_splice-L-subdir1/L_SD1_S2+D",
+		"job_dagman_splice-L-subdir2/L_SD2_S1+A",
+		"job_dagman_splice-L-subdir2/L_SD2_S1+B",
+		"job_dagman_splice-L-subdir2/L_SD2_S1+C",
+		"job_dagman_splice-L-subdir2/L_SD2_S1+D",
+		"job_dagman_splice-L-subdir2/L_SD2_S2+A",
+		"job_dagman_splice-L-subdir2/L_SD2_S2+B",
+		"job_dagman_splice-L-subdir2/L_SD2_S2+C",
+		"job_dagman_splice-L-subdir2/L_SD2_S2+D"
 			);
 
 my $killedchosen = 0;

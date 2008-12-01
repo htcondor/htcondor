@@ -1,19 +1,19 @@
-JOB  A job_dagman_splice-O.cmd
-VARS A job="$(JOB)"
+JOB  O_A job_dagman_splice-O.cmd
+VARS O_A job="$(JOB)"
 
-JOB  B job_dagman_splice-O.cmd
-VARS B job="$(JOB)"
+JOB  O_B job_dagman_splice-O.cmd
+VARS O_B job="$(JOB)"
 
-SPLICE SD1_S1 job_dagman_splice-O-splice.dag DIR job_dagman_splice-O-subdir1
-SPLICE SD1_S2 job_dagman_splice-O-splice.dag DIR job_dagman_splice-O-subdir1
-SPLICE SD2_S1 job_dagman_splice-O-splice.dag DIR job_dagman_splice-O-subdir2
-SPLICE SD2_S2 job_dagman_splice-O-splice.dag DIR job_dagman_splice-O-subdir2
+SPLICE O_SD1_S1 job_dagman_splice-O-splice.dag DIR job_dagman_splice-O-subdir1
+SPLICE O_SD1_S2 job_dagman_splice-O-splice.dag DIR job_dagman_splice-O-subdir1
+SPLICE O_SD2_S1 job_dagman_splice-O-splice.dag DIR job_dagman_splice-O-subdir2
+SPLICE O_SD2_S2 job_dagman_splice-O-splice.dag DIR job_dagman_splice-O-subdir2
 
 # The nodes of splice 
-PARENT A CHILD SD1_S1
-PARENT SD1_S1 CHILD SD1_S2
-PARENT SD1_S2 CHILD SD2_S1
-PARENT SD2_S1 CHILD SD2_S2
-PARENT SD2_S2 CHILD B
+PARENT O_A CHILD O_SD1_S1
+PARENT O_SD1_S1 CHILD O_SD1_S2
+PARENT O_SD1_S2 CHILD O_SD2_S1
+PARENT O_SD2_S1 CHILD O_SD2_S2
+PARENT O_SD2_S2 CHILD O_B
 
 DOT job_dagman_splice-O.dot

@@ -24,10 +24,24 @@ $cmd = 'job_dagman_splice-H.dag';
 $testname = 'Condor submit dag - basic splice test - scheduler U';
 $dagman_args = "-verbose";
 
-@outfiles = ("S1+A", "S1+B",
-             "S1+S2+A", "S1+S2+B", "S1+S2+C", "S1+S2+D",
-             "S1+S2+S3+A", "S1+S2+S3+B", "S1+S2+S3+C", "S1+S2+S3+D", "S1+S2+S3+E",
-             "S1+S2+S3+F", "S1+S2+S3+G", "S1+S2+S3+H", "S1+S2+S3+I",
+@outfiles = (
+"H_A",
+"H_B",
+"H_S1+A",
+"H_S1+B",
+"H_S1+S2+A",
+"H_S1+S2+B",
+"H_S1+S2+C",
+"H_S1+S2+D",
+"H_S1+S2+S3+A",
+"H_S1+S2+S3+B",
+"H_S1+S2+S3+C",
+"H_S1+S2+S3+D",
+"H_S1+S2+S3+E",
+"H_S1+S2+S3+F",
+"H_S1+S2+S3+G",
+"H_S1+S2+S3+H",
+"H_S1+S2+S3+I",
 			);
 
 my $killedchosen = 0;

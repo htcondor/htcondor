@@ -1,19 +1,22 @@
-JOB A job_dagman_splice-B.cmd
-VARS A outfilename="$(JOB)"
-JOB B job_dagman_splice-B.cmd
-VARS B outfilename="$(JOB)"
-JOB C job_dagman_splice-B.cmd
-VARS C outfilename="$(JOB)"
-JOB D job_dagman_splice-B.cmd
-VARS D outfilename="$(JOB)"
+JOB	 B_A job_dagman_splice-B.cmd
+VARS B_A job="$(JOB)"
 
-PARENT A CHILD B
-PARENT B CHILD C
-PARENT C CHILD D
+JOB  B_B job_dagman_splice-B.cmd
+VARS B_B job="$(JOB)"
 
-# This stuff is disjoint with the baove and each other.
-SPLICE S1 job_dagman_splice-B-splice1.dag
-SPLICE S2 job_dagman_splice-B-splice2.dag
-SPLICE S3 job_dagman_splice-B-splice3.dag
+JOB  B_C job_dagman_splice-B.cmd
+VARS B_C job="$(JOB)"
+
+JOB  B_D job_dagman_splice-B.cmd
+VARS B_D job="$(JOB)"
+
+PARENT B_A CHILD B_B
+PARENT B_B CHILD B_C
+PARENT B_C CHILD B_D
+
+# This stuff is disjoint with the above and each other.
+SPLICE B_S1 job_dagman_splice-B-splice1.dag
+SPLICE B_S2 job_dagman_splice-B-splice2.dag
+SPLICE B_S3 job_dagman_splice-B-splice3.dag
 
 DOT job_dagman_splice-B.dot
