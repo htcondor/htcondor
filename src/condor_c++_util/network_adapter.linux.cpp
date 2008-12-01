@@ -62,11 +62,15 @@ LinuxNetworkAdapter::LinuxNetworkAdapter ( const char */*ip_string*/,
 										   unsigned int ip_addr ) throw ()
 		: UnixNetworkAdapter( ip_addr )
 {
+	m_wol_support_mask = 0;
+	m_wol_enable_mask = 0;
 }
 
 LinuxNetworkAdapter::LinuxNetworkAdapter ( const char *name ) throw()
 		: UnixNetworkAdapter( name )
 {
+	m_wol_support_mask = 0;
+	m_wol_enable_mask = 0;
 }
 
 /// Destructor
