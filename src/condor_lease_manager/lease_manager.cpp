@@ -637,6 +637,9 @@ LeaseManager::GetLeases(
 			 !stream->get( lease_duration ) ||
 			 !stream->get( release_when_done ) ) {
 			LeaseManagerLease_FreeList( l_list );
+			if ( lease_id_cstr ) {
+				free( lease_id_cstr );
+			}
 			return false;
 		}
 		string	lease_id( lease_id_cstr );
