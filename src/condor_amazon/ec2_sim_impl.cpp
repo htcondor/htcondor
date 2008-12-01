@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#include "stdsoap2.h"
+
 #include <iostream>
 #include <vector>
 #include <sstream>
@@ -76,6 +78,7 @@ __ec2__CreateKeyPair(struct soap *soap,
 	for (int i = 0; i < key_pairs.size(); i++) { // XXX: use iterator
 		if (request->keyName == key_pairs[i]->keyName) {
 			cout << "Found '" << request->keyName << "'" << endl;
+			cout << "Return Failure: key already exists" << endl;
 
 			return soap_receiver_fault_subcode(soap,
 											   "ec2:Client.InvalidKeyPair.Duplicate",
@@ -95,7 +98,7 @@ __ec2__CreateKeyPair(struct soap *soap,
 	response->keyFingerprint = keyPair->keyFingerprint;
 	response->keyMaterial = "FAKE-MATERIAL";
 
-	cout << "Done: CreateKeyPair(" << keyPair->keyName << ")" << endl;
+	cout << "Return Success" << endl;
 
 	return SOAP_OK;
 }
@@ -105,6 +108,8 @@ __ec2__DeleteKeyPair(struct soap *soap,
 					 ec2__DeleteKeyPairType *request,
 					 ec2__DeleteKeyPairResponseType *response)
 {
+	cout << "DeleteKeyPair(" << request->keyName << ")" << endl;
+
 	response->return_ = false;
 
 	for (vector<ec2__DescribeKeyPairsResponseItemType *>::iterator i = key_pairs.begin();
@@ -112,6 +117,8 @@ __ec2__DeleteKeyPair(struct soap *soap,
 		 i++) {
 		if (request->keyName == (*i)->keyName) {
 			key_pairs.erase(i);
+
+			cout << "Return Success" << endl;
 
 			return SOAP_OK;
 		}
@@ -125,6 +132,7 @@ __ec2__DeleteKeyPair(struct soap *soap,
 //									   "ec2:Client.InvalidKeyPair.NotFound",
 //									   "Specified key pair name does not exist.",
 //									   NULL);
+	cout << "Return Success" << endl;
 	response->return_ = true;
 	return SOAP_OK;
 }
@@ -134,7 +142,14 @@ __ec2__DescribeInstances(struct soap *soap,
 						 ec2__DescribeInstancesType *request,
 						 ec2__DescribeInstancesResponseType *response)
 {
-	cout << "DescribeInstances(...)" << endl;
+	std::string tmp;
+	for ( int i = 0; i < request->instancesSet->item.size(); i++ ) {
+		if ( i > 0 ) {
+			tmp += ",";
+		}
+		tmp += request->instancesSet->item[i]->instanceId;
+	}
+	cout << "DescribeInstances(" << tmp << ")" << endl;
 
 	response->reservationSet = soap_new_ec2__ReservationSetType(soap, -1);
 
@@ -171,6 +186,7 @@ __ec2__DescribeInstances(struct soap *soap,
 				}
 			}
 			if (!found) {
+				cout << "Return Failure: invalid instance id" << endl;
 				return soap_receiver_fault_subcode(soap,
 												   "ec2:Client.InvalidInstanceId.NotFound",
 												   "Specified instanceId does not exist.",
@@ -179,6 +195,7 @@ __ec2__DescribeInstances(struct soap *soap,
 		}
 	}
 
+	cout << "Return Success" << endl;
 	return SOAP_OK;
 }
 
@@ -213,6 +230,7 @@ __ec2__DescribeKeyPairs(struct soap *soap,
 				}
 			}
 			if (!found) {
+				cout << "Return Failure: invalid keypair name" << endl;
 				return soap_receiver_fault_subcode(soap,
 												   "ec2:Client.InvalidKeyPair.NotFound",
 												   "Specified key pair name does not exist.",
@@ -221,7 +239,7 @@ __ec2__DescribeKeyPairs(struct soap *soap,
 		}
 	}
 
-	cout << "Done: DescribeKeyPairs(...)" << endl;
+	cout << "Return Success" << endl;
 
 	return SOAP_OK;
 }
@@ -231,6 +249,8 @@ __ec2__RunInstances(struct soap *soap,
 					ec2__RunInstancesType *request,
 					ec2__ReservationInfoType *response)
 {
+	cout << "RunInstances(" << request->imageId << ")" << endl;
+
 	ostringstream tmp;
 
 	ec2__ReservationInfoType *reservation = new ec2__ReservationInfoType();
@@ -266,6 +286,9 @@ __ec2__RunInstances(struct soap *soap,
 
 	reservations.push_back(reservation);
 
+	cout << "Creating instance " << item->instanceId << endl;
+	cout << "Return Success" << endl;
+
 	return SOAP_OK;
 }
 
@@ -274,7 +297,14 @@ __ec2__TerminateInstances(struct soap *soap,
 						  ec2__TerminateInstancesType *request,
 						  ec2__TerminateInstancesResponseType *response)
 {
-	cout << "TerminateInstances(...)" << endl;
+	std::string tmp;
+	for ( int i = 0; i < request->instancesSet->item.size(); i++ ) {
+		if ( i > 0 ) {
+			tmp += ",";
+		}
+		tmp += request->instancesSet->item[i]->instanceId;
+	}
+	cout << "TerminateInstances(" << tmp << ")" << endl;
 
 	response->instancesSet = soap_new_ec2__TerminateInstancesResponseInfoType(soap, -1);
 
@@ -312,6 +342,7 @@ __ec2__TerminateInstances(struct soap *soap,
 				}
 			}
 			if (!found) { // XXX: Is this what EC2 does?
+				cout << "Return Failure: invalid instance id" << endl;
 				return soap_receiver_fault_subcode(soap,
 												   "ec2:Client.InvalidInstanceId.NotFound",
 												   "Specified instanceId does not exist.",
@@ -319,6 +350,8 @@ __ec2__TerminateInstances(struct soap *soap,
 			}
 		}
 	}
+
+	cout << "Return Success" << endl;
 
 	return SOAP_OK;
 }

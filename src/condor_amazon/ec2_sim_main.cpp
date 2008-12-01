@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
+#include "stdsoap2.h"
+
 #include <iostream>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-
-#include <stdsoap2.h>
 
 #include "soapH.h"
 #include "AmazonEC2Binding.nsmap"
@@ -31,35 +31,35 @@ using namespace std;
 int
 main(int argc, char **argv)
 {
-   struct soap *soap;
+	struct soap *soap;
 
-   srand(0);
+	srand(0);
 
-   soap = soap_new();
+	soap = soap_new();
 
-   if (-1 == soap_bind(soap, NULL, PORT, 5)) {
-	   soap_print_fault(soap, stderr);
-	   return 1;
-   } else {
-	   while (1) {
-		   if (-1 == soap_accept(soap)) {
-			   soap_print_fault(soap, stderr);
-			   return 2;
-		   }
+	if (-1 == soap_bind(soap, NULL, PORT, 5)) {
+		soap_print_fault(soap, stderr);
+		return 1;
+	} else {
+		while (1) {
+			if (-1 == soap_accept(soap)) {
+				soap_print_fault(soap, stderr);
+				return 2;
+			}
 
-		   cout << "connection from " << inet_ntoa(soap->peer.sin_addr) << ":" << soap->peer.sin_port << endl;
+			cout << "connection from " << inet_ntoa(soap->peer.sin_addr) << ":" << soap->peer.sin_port << endl;
 
-		   if (SOAP_OK != soap_serve(soap)) {
-			   soap_print_fault(soap, stderr);
-		   }
+			if (SOAP_OK != soap_serve(soap)) {
+				soap_print_fault(soap, stderr);
+			}
 
-		   cout << "done" << endl;
+			cout << "done" << endl;
 
-		   soap_destroy(soap);
-		   soap_end(soap);
-	   }
-   }
-   soap_done(soap);
+			soap_destroy(soap);
+			soap_end(soap);
+		}
+	}
+	soap_done(soap);
 
-   return 0;
+	return 0;
 }
