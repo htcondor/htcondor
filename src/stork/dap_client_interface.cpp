@@ -236,7 +236,11 @@ stork_submit (
 	
 	int _cred_size = cred_size;		//de-const
 
-	sock->code (&_cred_size);
+	if ( !sock->code (&_cred_size) ) {
+		_error_reason = strdup("Client send error");
+		if (cleanup_sock) delete sock;
+		return FALSE;
+	}
 	if (cred_size) {
 		char * _cred = strdup (cred);  
 		sock->code_bytes (_cred, cred_size);
