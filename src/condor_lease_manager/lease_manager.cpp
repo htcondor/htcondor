@@ -540,6 +540,7 @@ LeaseManager::initPublicAd( void )
 			EXCEPT( "default_daemon_name() returned NULL" );
 		}
 		m_publicAd.Assign( ATTR_NAME, defaultName );
+		free( const_cast<char *>(defaultName) );
 	}
 
 	m_publicAd.Assign( ATTR_LEASE_MANAGER_IP_ADDR,
