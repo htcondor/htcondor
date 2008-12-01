@@ -207,6 +207,9 @@ LinuxHibernator::initStates( void )
 			m_real_hibernator = lh;
 			dprintf( D_FULLDEBUG,
 					 "hibernator: '%s' detected\n", name );
+			if ( method ) {
+				free( const_cast<char *>(method) );
+			}
 			return;
 		}
 
@@ -218,6 +221,7 @@ LinuxHibernator::initStates( void )
 						 "hibernator: '%s' not detected;"
 						 " hibernation disabled\n",
 						 name );
+				free( const_cast<char *>(method) );
 				return;
 			}
 			dprintf( D_FULLDEBUG,
@@ -226,6 +230,7 @@ LinuxHibernator::initStates( void )
 	}
 	if ( method ) {
 		dprintf( D_ALWAYS, "hibernator: '%s' not detected\n", method );
+		free( const_cast<char *>(method) );
 	}
 	dprintf( D_ALWAYS,
 			 "No hibernation methods detected; hibernation disabled\n" );
