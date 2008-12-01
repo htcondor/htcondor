@@ -45,6 +45,8 @@ LeaseManagerResources::LeaseManagerResources( void )
 	m_max_lease_total = 3600;
 	m_collection_log = NULL;
 
+	m_enable_ad_debug = false;
+
 	m_stats.m_num_resources = 0;
 	m_stats.m_num_lease_records = 0;
 	m_stats.m_num_valid_leases = 0;
