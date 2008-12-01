@@ -439,7 +439,7 @@ class ReadUserLog
 	/** Close the log file between operations
 		@return true:success, false:failure
 	 */
-	bool CloseLogFile( );
+	bool CloseLogFile( bool force = false );
 
 
 	/** Class private data
