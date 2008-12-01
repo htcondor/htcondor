@@ -174,7 +174,7 @@ LinuxHibernator::initStates( void )
 	}
 
 	// Do we have "pm-utils" installed?
-	char	methods[128] = "";
+	MyString	methods;
 	for ( int type = 0;  type < 3;  type++ ) {
 		BaseLinuxHibernator	*lh = NULL;
 		if      ( 0 == type ) {
@@ -189,10 +189,10 @@ LinuxHibernator::initStates( void )
 		ASSERT( lh != NULL );
 
 		const char *name = lh->getName();
-		if ( methods[0] != '\0' ) {
-			strcat( methods, "," );
+		if ( methods.Length() ) {
+			methods += ",";
 		}
-		strcat( methods, name );
+		methods += name;
 
 		// If method name specified, does this one match?
 		if ( ! lh->nameMatch(method) ) {
@@ -229,6 +229,9 @@ LinuxHibernator::initStates( void )
 	}
 	dprintf( D_ALWAYS,
 			 "No hibernation methods detected; hibernation disabled\n" );
+	dprintf( D_FULLDEBUG,
+			 "  methods tried: %s\n",
+			 methods.Length() ? methods.GetCStr() : "<NONE>" );
 }
 
 HibernatorBase::SLEEP_STATE
