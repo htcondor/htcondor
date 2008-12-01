@@ -381,7 +381,7 @@ ReadUserLog::CloseLogFile( bool force )
 {
 
 	// Remove any locks
-	if ( m_lock->isLocked() ) {
+	if ( m_lock  &&  m_lock->isLocked() ) {
 		m_lock->release();
 		m_lock_rot = -1;
 	}
