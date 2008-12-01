@@ -466,7 +466,7 @@ dprintf(D_ALWAYS, "DEBUG: dest_host: '%s'\n", dest_host);
 dprintf(D_ALWAYS, "DEBUG: dest_file: '%s'\n", dest_file);
 #endif
 
-	strcpy(unstripped, src_url);
+	strncpy(unstripped, src_url, MAXSTR);
 	strncpy(src_url, strip_str(unstripped), MAXSTR);
 
 	// For dynamic destinations ...
