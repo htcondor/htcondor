@@ -2115,9 +2115,9 @@ AC_SUBST(JAR,$ac_jar)
 
 AC_ARG_ENABLE([rpm],
   AC_HELP_STRING([--enable-rpm],
-    [determine if we try to make rpms (default: yes)]),
+    [determine if we try to make rpms (default: no)]),
   [],
-  [enable_rpm=yes])
+  [enable_rpm=no])
 # there might be two kinds of rpm on a machine, 'rpm' and 'rpmbuild'
 # use the latter if we have it.
 if test "x$_cv_linux_distro" = "xSLES9"; then
