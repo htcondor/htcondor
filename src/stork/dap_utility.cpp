@@ -56,8 +56,8 @@ void parse_url( const std::string &url,
 	host = "";
 	filename = "";
   
-	strcpy(unstripped, url.c_str() );
-	strcpy(temp_url, strip_str(unstripped));
+	strncpy(unstripped, url.c_str(), MAXSTR );
+	strncpy(temp_url, strip_str(unstripped), MAXSTR);
 
 	//get protocola
 	if (strcmp(temp_url,"")) {
