@@ -41,72 +41,6 @@ parse_url(const std::string &url, char *protocol, char *host, char *filename)
 	parse_url( url.c_str(), protocol, host, filename );
 }
 
-#if 0
-void parse_url( const std::string &url,
-				std::string &protocol,
-				std::string &host,
-				std::string &filename)
-{
-	char temp_url[MAXSTR];
-	char unstripped[MAXSTR];
-	char *p;
-  
-	//initialize
-	protocol = "";
-	host = "";
-	filename = "";
-  
-	strncpy(unstripped, url.c_str(), MAXSTR );
-	strncpy(temp_url, strip_str(unstripped), MAXSTR);
-
-	//get protocola
-	if (strcmp(temp_url,"")) {
-		protocol = strtok(temp_url, "://");
-	}
-	else {
-		protocol = "";       
-		printf("Error in parsing URL %s\n", url);
-		return;
-	}
-
-	//if protocol == file
-	if (!strcmp(protocol.c_str(), "file")){
-		strcpy(host, "localhost");
-	}
-	else { //get the hostname
-		p = strtok(NULL, "/");
-		if (p != NULL){
-			host = p;                 
-		}
-		else {
-			host = "";
-		}
-	}
-
-	// Get rest of the filename
-	//  Prepend "/" to filename, if (protocol != nest or file)
-	p = strtok(NULL,"");
-
-	if (p != NULL){
-		if ( strcmp(protocol.c_str(), "nest") &&
-			 strcmp(protocol.c_str(), "file") ) {
-			filename = "/" + p;
-			//strcat(strcpy(filename, "/"), p);   //get file name
-		}
-		else {
-			filename = p;
-		}
-	}
-	else {
-		filename = "";
-	}
-
-	//printf("protocol:%s\n",protocol);
-	//printf("host:%s\n",host);
-	//printf("filename:%s\n",filename);
-}
-#endif
-
 void parse_url(const char *url, char *protocol, char *host, char *filename)
 {
   char temp_url[MAXSTR];
@@ -118,8 +52,8 @@ void parse_url(const char *url, char *protocol, char *host, char *filename)
   strcpy(host, "");
   strcpy(filename, "");
   
-  strcpy(unstripped, url);
-  strcpy(temp_url, strip_str(unstripped));
+  strncpy(unstripped, url, MAXSTR-1 );
+  strncpy(temp_url, strip_str(unstripped), MAXSTR-1 );
 
   //get protocola
   if (strcmp(temp_url,"")) {
