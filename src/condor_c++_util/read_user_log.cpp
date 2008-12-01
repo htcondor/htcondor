@@ -2,13 +2,13 @@
  *
  * Copyright (C) 1990-2008, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -151,11 +151,7 @@ ReadUserLog::ReadUserLog ( FILE *fp, bool is_xml )
 	}
 	m_fp = fp;
 	m_fd = fileno( fp );
-	m_never_close_fp = true;
-	m_close_file = false;
-	m_handle_rot = false;
 
-	m_lock_enable = false;
 	m_lock = new FakeFileLock( );
 
 	m_state = new ReadUserLogState( );
@@ -381,17 +377,17 @@ ReadUserLog::CheckFileStatus( void )
 }
 
 bool
-ReadUserLog::CloseLogFile( void )
+ReadUserLog::CloseLogFile( bool force )
 {
 
 	// Remove any locks
-	if ( m_lock->isLocked() ) {
+	if ( m_lock  &&  m_lock->isLocked() ) {
 		m_lock->release();
 		m_lock_rot = -1;
 	}
 
 	// Close the file pointer
-    if ( m_fp && !m_never_close_fp ) {
+    if ( m_fp && (!m_never_close_fp || force) ) {
 		fclose( m_fp );
 		m_fp = NULL;
 		m_fd = -1;
@@ -841,9 +837,12 @@ ReadUserLog::readEvent (ULogEvent *& event, bool store_state )
 
 			bool found = FindPrevFile( m_state->Rotation() - 1, 1, true );
 			dprintf( D_FULLDEBUG,
-					 "readEvent: checking for previous file (%d): %s\n",
+					 "readEvent: checking for previous file (# %d): %s\n",
 					 m_state->Rotation(), found ? "Found" : "Not found" );
-			if ( !found ) {
+			if ( found ) {
+				CloseLogFile( true );
+			}
+			else {
 				try_again = false;
 			}
 		}
@@ -1310,6 +1309,13 @@ ReadUserLog::clear( void )
 	m_fp = NULL;
 	m_lock = NULL;
 	m_lock_rot = -1;
+
+	m_never_close_fp = true;
+	m_close_file = false;
+	m_handle_rot = false;
+	m_lock_enable = false;
+	m_max_rotations = 0;
+	m_read_header = false;
 }
 
 void

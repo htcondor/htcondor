@@ -1,14 +1,14 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2008, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -70,40 +70,42 @@ UserLogHeader::ExtractEvent( const ULogEvent *event )
 	if ( ! generic ) {
 		dprintf( D_ALWAYS, "Can't pointer cast generic event!\n" );
 		return ULOG_UNK_ERROR;
-	} else {
-		char	*id;
-		int		ctime;
+	} 
 
-		int n = sscanf( generic->info,
-						"Global JobLog: "
-						"ctime=%d "
-						"id=%as "
-						"sequence=%d "
-						"size="FILESIZE_T_FORMAT" "
-						"events=%"PRId64" "
-						"offset="FILESIZE_T_FORMAT" "
-						"event_off=%"PRId64" ",
-						&ctime,
-						&id,
-						&m_sequence,
-						&m_size,
-						&m_num_events,
-						&m_file_offset,
-						&m_event_offset );
-		if ( n >= 3 ) {
-			if ( id ) {
-				m_id = id;
-				free( id );
-			}
-			m_ctime = ctime;
-			m_valid = true;
-			return ULOG_OK;
-		}
+	char		 id[256];
+	int			 ctime;
+
+	int n = sscanf( generic->info,
+					"Global JobLog: "
+					"ctime=%d "
+					"id=%255s "
+					"sequence=%d "
+					"size="FILESIZE_T_FORMAT" "
+					"events=%"PRId64" "
+					"offset="FILESIZE_T_FORMAT" "
+					"event_off=%"PRId64" ",
+					&ctime,
+					id,
+					&m_sequence,
+					&m_size,
+					&m_num_events,
+					&m_file_offset,
+					&m_event_offset );
+	if ( n >= 3 ) {
+		m_ctime = ctime;
+		m_id = id;
+		m_valid = true;
+		return ULOG_OK;
+	}
+	else {
+		::dprintf( D_FULLDEBUG,
+				   "UserLogHeader::ExtractEvent(): can't parse '%s' => %d\n",
+				   generic->info, n );
 		return ULOG_NO_EVENT;
 	}
 }
 
-// dprintf() metchod
+// dprintf() method
 void
 UserLogHeader::dprintf( int level, const char *label ) const
 {
@@ -111,6 +113,10 @@ UserLogHeader::dprintf( int level, const char *label ) const
 		label = "";
 	}
 	if ( m_valid ) {
+		const char *id = m_id.GetCStr();
+		if ( NULL == id ) {
+			id = "";
+		}
 		::dprintf( level,
 				   "%s header:"
 				   " id=%s"
@@ -122,7 +128,7 @@ UserLogHeader::dprintf( int level, const char *label ) const
 				   " event_offset=%" PRIi64
 				   "\n",
 				   label,
-				   m_id.GetCStr(),
+				   id,
 				   m_sequence,
 				   (unsigned long) m_ctime,
 				   m_size,
@@ -135,6 +141,7 @@ UserLogHeader::dprintf( int level, const char *label ) const
 	}
 			   
 }
+
 
 //
 // ReadUserLogHeader methods
@@ -149,76 +156,26 @@ ReadUserLogHeader::Read(
 	ULogEventOutcome	outcome = reader.readEvent( event );
 
 	if ( ULOG_OK != outcome ) {
+		::dprintf( D_FULLDEBUG,
+				   "ReadUserLogHeader::Read(): readEvent() failed\n" );
 		return outcome;
 	}
 	if ( ULOG_GENERIC != event->eventNumber ) {
+		::dprintf( D_FULLDEBUG,
+				   "ReadUserLogHeader::Read(): event #%d should be %d\n",
+				   event->eventNumber, ULOG_GENERIC );
 		return ULOG_NO_EVENT;
 	}
 
 	int rval = ExtractEvent( event );
 	delete event;
 
+	if ( rval != ULOG_OK) {
+		::dprintf( D_FULLDEBUG,
+				   "ReadUserLogHeader::Read(): failed to extract event\n" );
+	}
 	return rval;
 }
-
-// Simplified read interface
-#if 0
-int
-ReadUserLogHeader::Read(
-	const char			*path )
-{
-	return Read( 0, path, NULL );
-}
-
-// Read the header from a file
-int
-ReadUserLogHeader::Read(
-	int						 rot,
-	const char				*path,
-	const ReadUserLogState	*state )
-{
-	// Here, we have an indeterminate result
-	// Read the file's header info
-
-	// If no path provided, generate one
-	MyString temp_path;
-	if ( ( NULL == path ) && state ) {
-		state->GeneratePath( rot, temp_path );
-		path = temp_path.GetCStr( );
-	}
-
-	// Finally, no path -- give up
-	if ( !path ) {
-		return ULOG_RD_ERROR;
-	}
-
-	// We'll instantiate a new log reader to do this for us
-	// Note: we disable rotation for this one, so we won't recurse infinitely
-	ReadUserLog			 reader;
-
-	// Initialize the reader
-	if ( !reader.initialize( path, false, false ) ) {
-		return ULOG_RD_ERROR;
-	}
-
-	// Now, read the event itself
-	ULogEvent			*event;
-	ULogEventOutcome	outcome;
-	outcome = reader.readEvent( event );
-	if ( ULOG_RD_ERROR == outcome ) {
-		return outcome;
-	}
-	else if ( ULOG_OK != outcome ) {
-		return outcome;
-	}
-
-	// Finally, if it's a generic event, let's see if we can parse it
-	int status = ExtractEvent( event );
-	delete event;
-
-	return status;
-}
-#endif
 
 
 //

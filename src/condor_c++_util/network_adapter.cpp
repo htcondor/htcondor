@@ -40,6 +40,8 @@ NetworkAdapterBase::NetworkAdapterBase (void) throw ()
 {
 	wolResetSupportBits( );
 	wolResetEnableBits( );
+	m_initialization_status = false;
+	m_is_primary = false;
 }
 
 NetworkAdapterBase::~NetworkAdapterBase (void) throw ()

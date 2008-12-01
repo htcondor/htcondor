@@ -27,7 +27,6 @@ using namespace std;
 class LeaseManagerLease
 {
   public:
-	LeaseManagerLease( void );
 	LeaseManagerLease( const string &lease_id,
 					   int duration = -1,
 					   bool rel = true );

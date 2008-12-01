@@ -143,7 +143,7 @@ int main(int argc, char *argv[])
   char src_protocol[MAXSTR], src_host[MAXSTR], src_file[MAXSTR];
   char dest_protocol[MAXSTR], dest_host[MAXSTR], dest_file[MAXSTR];
   char src_url[MAXSTR], dest_url[MAXSTR];
-  int status;
+  int status = 0;
 
   if (argc < 3){
     fprintf(stderr, "==============================================================\n");
@@ -152,8 +152,8 @@ int main(int argc, char *argv[])
     exit(-1);
   }
 
-  strncpy(src_url, argv[1], MAXSTR);
-  strncpy(dest_url, argv[2], MAXSTR);
+  strncpy(src_url, argv[1], MAXSTR-1);
+  strncpy(dest_url, argv[2], MAXSTR-1);
  
   parse_url(src_url, src_protocol, src_host, src_file);
   parse_url(dest_url, dest_protocol, dest_host, dest_file);

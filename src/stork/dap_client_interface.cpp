@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2008, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -236,7 +236,11 @@ stork_submit (
 	
 	int _cred_size = cred_size;		//de-const
 
-	sock->code (&_cred_size);
+	if ( !sock->code (&_cred_size) ) {
+		_error_reason = strdup("Client send error");
+		if (cleanup_sock) delete sock;
+		return FALSE;
+	}
 	if (cred_size) {
 		char * _cred = strdup (cred);  
 		sock->code_bytes (_cred, cred_size);
@@ -405,7 +409,7 @@ stork_list (
 	}
 	sock->decode();
 
-	int rc;
+	int rc = 0;
 	if (!sock->code(rc)) {
 		_error_reason = strdup ("Client recv error");
 		delete sock;

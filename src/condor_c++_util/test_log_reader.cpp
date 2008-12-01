@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2008, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -128,7 +128,7 @@ CheckArgs(int argc, const char **argv, Options &opts)
 		"  --rotation|-r <n>: enable rotation handling, set max #\n"
 		"  --no-rotation: disable rotation handling\n"
 		"  --sleep <number>: how many seconds to sleep between events\n"
-		"  --exit|x: Exit when no event available\n"
+		"  --exit|-x: Exit when no event available\n"
 		"  --eventlog|e: Setup to read the EventLog\n"
 		"  --no-term: No limit on terminte events\n"
 		"  --term <number>: number of terminate events to exit after\n"
@@ -213,7 +213,7 @@ CheckArgs(int argc, const char **argv, Options &opts)
 			opts.readPersist = true;
 			opts.writePersist = true;
 
-		} else if ( arg.Match("exit") ) {
+		} else if ( arg.Match( 'x', "exit") ) {
 			opts.exit = true;
 
 		} else if ( arg.Match( 'r', "rotation") ) {

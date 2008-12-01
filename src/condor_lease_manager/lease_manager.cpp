@@ -540,6 +540,7 @@ LeaseManager::initPublicAd( void )
 			EXCEPT( "default_daemon_name() returned NULL" );
 		}
 		m_publicAd.Assign( ATTR_NAME, defaultName );
+		free( const_cast<char *>(defaultName) );
 	}
 
 	m_publicAd.Assign( ATTR_LEASE_MANAGER_IP_ADDR,
@@ -636,14 +637,17 @@ LeaseManager::GetLeases(
 			 !stream->get( lease_duration ) ||
 			 !stream->get( release_when_done ) ) {
 			LeaseManagerLease_FreeList( l_list );
+			if ( lease_id_cstr ) {
+				free( lease_id_cstr );
+			}
 			return false;
 		}
 		string	lease_id( lease_id_cstr );
 		free( lease_id_cstr );
 		LeaseManagerLease	*lease =
 			new LeaseManagerLease( lease_id,
-								lease_duration,
-								(bool) release_when_done );
+								   lease_duration,
+								   (bool) release_when_done );
 		ASSERT( lease );
 		l_list.push_back( lease );
 	}
