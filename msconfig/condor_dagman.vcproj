@@ -208,7 +208,7 @@
 	</References>
 	<Files>
 		<File
-			RelativePath="..\src\condor_dagman\dag.C"
+			RelativePath="..\src\condor_dagman\dag.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -234,7 +234,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_dagman\dagman_commands.C"
+			RelativePath="..\src\condor_dagman\dagman_commands.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -260,7 +260,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_dagman\dagman_instantiate.C"
+			RelativePath="..\src\condor_dagman\dagman_instantiate.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -282,7 +282,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_dagman\dagman_main.C"
+			RelativePath="..\src\condor_dagman\dagman_main.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -304,7 +304,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_dagman\dagman_multi_dag.C"
+			RelativePath="..\src\condor_dagman\dagman_multi_dag.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -330,7 +330,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_dagman\dagman_submit.C"
+			RelativePath="..\src\condor_dagman\dagman_submit.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -352,7 +352,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_dagman\dagman_util.C"
+			RelativePath="..\src\condor_dagman\dagman_util.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -374,7 +374,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_dagman\debug.C"
+			RelativePath="..\src\condor_dagman\debug.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -400,7 +400,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_dagman\job.C"
+			RelativePath="..\src\condor_dagman\job.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -426,7 +426,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_dagman\parse.C"
+			RelativePath="..\src\condor_dagman\parse.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -452,7 +452,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_dagman\script.C"
+			RelativePath="..\src\condor_dagman\script.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -478,7 +478,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_dagman\scriptQ.C"
+			RelativePath="..\src\condor_dagman\scriptQ.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -504,7 +504,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_dagman\soap_dagmanC.C"
+			RelativePath="..\src\condor_dagman\soap_dagmanC.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -532,7 +532,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_dagman\soap_dagmanServer.C"
+			RelativePath="..\src\condor_dagman\soap_dagmanServer.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -556,7 +556,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_dagman\soap_dagmanStub.C"
+			RelativePath="..\src\condor_dagman\soap_dagmanStub.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -588,7 +588,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_dagman\throttle_by_category.C"
+			RelativePath="..\src\condor_dagman\throttle_by_category.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"

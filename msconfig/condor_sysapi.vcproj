@@ -302,7 +302,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_sysapi\idle_time.C"
+			RelativePath="..\src\condor_sysapi\idle_time.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -310,6 +310,7 @@
 				<Tool
 					Name="VCCLCompilerTool"
 					PreprocessorDefinitions=""
+					PrecompiledHeaderFile="..\Release\condor_common.pch"
 				/>
 			</FileConfiguration>
 			<FileConfiguration
@@ -422,7 +423,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_sysapi\partition_id.C"
+			RelativePath="..\src\condor_sysapi\partition_id.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -430,6 +431,7 @@
 				<Tool
 					Name="VCCLCompilerTool"
 					PreprocessorDefinitions=""
+					PrecompiledHeaderFile="..\Release\condor_common.pch"
 				/>
 			</FileConfiguration>
 			<FileConfiguration
@@ -462,7 +464,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_sysapi\reconfig.C"
+			RelativePath="..\src\condor_sysapi\reconfig.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -470,6 +472,7 @@
 				<Tool
 					Name="VCCLCompilerTool"
 					PreprocessorDefinitions=""
+					PrecompiledHeaderFile="..\Release\condor_common.pch"
 				/>
 			</FileConfiguration>
 			<FileConfiguration

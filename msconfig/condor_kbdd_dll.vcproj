@@ -205,7 +205,7 @@
 	</References>
 	<Files>
 		<File
-			RelativePath="..\src\condor_kbdd\NT-kbdd-dll.C"
+			RelativePath="..\src\condor_kbdd\NT-kbdd-dll.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"

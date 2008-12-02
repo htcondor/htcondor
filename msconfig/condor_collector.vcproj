@@ -206,7 +206,7 @@
 	</References>
 	<Files>
 		<File
-			RelativePath="..\src\condor_collector.V6\collector.C"
+			RelativePath="..\src\condor_collector.V6\collector.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -232,7 +232,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_collector.V6\collector_engine.C"
+			RelativePath="..\src\condor_collector.V6\collector_engine.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -258,7 +258,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_collector.V6\collector_main.C"
+			RelativePath="..\src\condor_collector.V6\collector_main.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -280,7 +280,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_collector.V6\collector_stats.C"
+			RelativePath="..\src\condor_collector.V6\collector_stats.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -310,7 +310,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_collector.V6\hashkey.C"
+			RelativePath="..\src\condor_collector.V6\hashkey.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -340,7 +340,15 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_collector.V6\soap_collectorC.C"
+			RelativePath="..\src\condor_collector.V6\offline_plugin.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_collector.V6\offline_plugin.h"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_collector.V6\soap_collectorC.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -368,7 +376,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_collector.V6\soap_collectorServer.C"
+			RelativePath="..\src\condor_collector.V6\soap_collectorServer.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -392,7 +400,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_collector.V6\soap_collectorStub.C"
+			RelativePath="..\src\condor_collector.V6\soap_collectorStub.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -418,7 +426,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_status.V6\totals.C"
+			RelativePath="..\src\condor_status.V6\totals.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -440,7 +448,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_collector.V6\view_server.C"
+			RelativePath="..\src\condor_collector.V6\view_server.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"

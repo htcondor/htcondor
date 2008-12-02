@@ -209,7 +209,7 @@
 	</References>
 	<Files>
 		<File
-			RelativePath="..\src\condor_daemon_core.V6\condor_softkill.C"
+			RelativePath="..\src\condor_daemon_core.V6\condor_softkill.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"

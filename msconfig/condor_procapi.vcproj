@@ -169,7 +169,7 @@
 	</References>
 	<Files>
 		<File
-			RelativePath="..\src\condor_procapi\procapi.C"
+			RelativePath="..\src\condor_procapi\procapi.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -195,7 +195,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_procapi\procapi_killfamily.C"
+			RelativePath="..\src\condor_procapi\procapi_killfamily.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -217,7 +217,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_procapi\processid.C"
+			RelativePath="..\src\condor_procapi\processid.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"

@@ -210,29 +210,7 @@
 	</References>
 	<Files>
 		<File
-			RelativePath="..\src\condor_master.V6\daemon_master.C"
-			>
-			<FileConfiguration
-				Name="Debug|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Release|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-		</File>
-		<File
-			RelativePath="..\src\condor_master.V6\master.C"
+			RelativePath="..\src\condor_master.V6\master.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -258,7 +236,11 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_master.V6\service.WIN32.C"
+			RelativePath="..\src\condor_master.V6\masterDaemon.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_master.V6\service.WIN32.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -280,7 +262,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_master.V6\soap_masterC.C"
+			RelativePath="..\src\condor_master.V6\soap_masterC.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -308,7 +290,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_master.V6\soap_masterServer.C"
+			RelativePath="..\src\condor_master.V6\soap_masterServer.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -332,7 +314,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_master.V6\soap_masterStub.C"
+			RelativePath="..\src\condor_master.V6\soap_masterStub.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"

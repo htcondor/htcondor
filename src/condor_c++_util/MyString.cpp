@@ -586,7 +586,9 @@ MyString::sprintf(const char *format,...)
 void
 MyString::lower_case(void)
 {
-	::strlwr(Data);
+	if (Data != NULL) {
+		::strlwr(Data);
+	}
 	return;
 }
 
@@ -594,7 +596,9 @@ MyString::lower_case(void)
 void
 MyString::strlwr(void)
 {
-	::strlwr(Data);
+	if (Data != NULL) {
+		::strlwr(Data);
+	}
 	return;
 }
 
@@ -602,7 +606,9 @@ MyString::strlwr(void)
 void
 MyString::upper_case(void)
 {
-	::strupr(Data);
+	if (Data != NULL) {
+		::strupr(Data);
+	}
 	return;
 }
 
@@ -610,7 +616,9 @@ MyString::upper_case(void)
 void
 MyString::strupr(void)
 {
-	::strupr(Data);
+	if (Data != NULL) {
+		::strupr(Data);
+	}
 	return;
 }
 

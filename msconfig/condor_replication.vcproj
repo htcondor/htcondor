@@ -208,7 +208,7 @@
 	</References>
 	<Files>
 		<File
-			RelativePath="..\src\condor_had\AbstractReplicatorStateMachine.C"
+			RelativePath="..\src\condor_had\AbstractReplicatorStateMachine.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -238,7 +238,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_had\FilesOperations.C"
+			RelativePath="..\src\condor_had\FilesOperations.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -268,7 +268,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_had\had_Version.C"
+			RelativePath="..\src\condor_had\had_Version.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -292,7 +292,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_had\Replication.C"
+			RelativePath="..\src\condor_had\Replication.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -320,7 +320,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_had\ReplicatorStateMachine.C"
+			RelativePath="..\src\condor_had\ReplicatorStateMachine.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -350,7 +350,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_had\soap_replicationC.C"
+			RelativePath="..\src\condor_had\soap_replicationC.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -380,7 +380,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_had\soap_replicationServer.C"
+			RelativePath="..\src\condor_had\soap_replicationServer.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -406,7 +406,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_had\soap_replicationStub.C"
+			RelativePath="..\src\condor_had\soap_replicationStub.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -436,7 +436,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_had\Utils.C"
+			RelativePath="..\src\condor_had\Utils.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"

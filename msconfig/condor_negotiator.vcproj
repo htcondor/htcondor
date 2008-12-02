@@ -206,7 +206,11 @@
 	</References>
 	<Files>
 		<File
-			RelativePath="..\src\condor_negotiator.V6\main.C"
+			RelativePath="..\src\condor_negotiator.V6\Accountant.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_negotiator.V6\main.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -228,7 +232,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_negotiator.V6\matchmaker.C"
+			RelativePath="..\src\condor_negotiator.V6\matchmaker.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -254,7 +258,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_negotiator.V6\soap_negotiatorC.C"
+			RelativePath="..\src\condor_negotiator.V6\soap_negotiatorC.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -282,7 +286,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_negotiator.V6\soap_negotiatorServer.C"
+			RelativePath="..\src\condor_negotiator.V6\soap_negotiatorServer.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -306,7 +310,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_negotiator.V6\soap_negotiatorStub.C"
+			RelativePath="..\src\condor_negotiator.V6\soap_negotiatorStub.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"

@@ -1,12 +1,12 @@
-JOB  A job_dagman_splice-I.cmd
-VARS A job="$(JOB)"
+JOB  I_A job_dagman_splice-I.cmd
+VARS I_A job="$(JOB)"
 
-JOB  B job_dagman_splice-I.cmd
-VARS B job="$(JOB)"
+JOB  I_B job_dagman_splice-I.cmd
+VARS I_B job="$(JOB)"
 
-SPLICE S1 job_dagman_splice-I-splice1.dag
+SPLICE I_S1 job_dagman_splice-I-splice1.dag
 
-PARENT A CHILD S1
-PARENT S1 CHILD B
+PARENT I_A CHILD I_S1
+PARENT I_S1 CHILD I_B
 
 DOT job_dagman_splice-I.dot

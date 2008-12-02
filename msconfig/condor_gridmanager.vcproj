@@ -207,7 +207,7 @@
 	</References>
 	<Files>
 		<File
-			RelativePath="..\src\condor_gridmanager\amazonjob.C"
+			RelativePath="..\src\condor_gridmanager\amazonjob.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -223,7 +223,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_gridmanager\amazonresource.C"
+			RelativePath="..\src\condor_gridmanager\amazonresource.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -239,7 +239,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_gridmanager\basejob.C"
+			RelativePath="..\src\condor_gridmanager\basejob.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -265,7 +265,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_gridmanager\baseresource.C"
+			RelativePath="..\src\condor_gridmanager\baseresource.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -291,7 +291,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_gridmanager\condorjob.C"
+			RelativePath="..\src\condor_gridmanager\condorjob.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -317,7 +317,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_gridmanager\condorresource.C"
+			RelativePath="..\src\condor_gridmanager\condorresource.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -343,7 +343,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_gridmanager\gahp-client.C"
+			RelativePath="..\src\condor_gridmanager\gahp-client.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -369,7 +369,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_gridmanager\globusjob.C"
+			RelativePath="..\src\condor_gridmanager\globusjob.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -395,7 +395,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_gridmanager\globusresource.C"
+			RelativePath="..\src\condor_gridmanager\globusresource.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -421,7 +421,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_gridmanager\gridftpmanager.C"
+			RelativePath="..\src\condor_gridmanager\gridftpmanager.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -447,7 +447,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_gridmanager\gridmanager.C"
+			RelativePath="..\src\condor_gridmanager\gridmanager.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -473,7 +473,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_gridmanager\gridmanager_main.C"
+			RelativePath="..\src\condor_gridmanager\gridmanager_main.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -495,7 +495,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_gridmanager\gt4job.C"
+			RelativePath="..\src\condor_gridmanager\gt4job.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -521,7 +521,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_gridmanager\gt4resource.C"
+			RelativePath="..\src\condor_gridmanager\gt4resource.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -547,7 +547,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_gridmanager\infnbatchjob.C"
+			RelativePath="..\src\condor_gridmanager\infnbatchjob.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -573,7 +573,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_gridmanager\mirrorjob.C"
+			RelativePath="..\src\condor_gridmanager\mirrorjob.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -599,7 +599,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_gridmanager\mirrorresource.C"
+			RelativePath="..\src\condor_gridmanager\mirrorresource.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -625,7 +625,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_gridmanager\nordugridjob.C"
+			RelativePath="..\src\condor_gridmanager\nordugridjob.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -651,7 +651,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_gridmanager\nordugridresource.C"
+			RelativePath="..\src\condor_gridmanager\nordugridresource.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -677,7 +677,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_gridmanager\proxymanager.C"
+			RelativePath="..\src\condor_gridmanager\proxymanager.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -703,7 +703,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_gridmanager\soap_gridmanagerC.C"
+			RelativePath="..\src\condor_gridmanager\soap_gridmanagerC.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -731,7 +731,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_gridmanager\soap_gridmanagerServer.C"
+			RelativePath="..\src\condor_gridmanager\soap_gridmanagerServer.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -755,7 +755,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_gridmanager\soap_gridmanagerStub.C"
+			RelativePath="..\src\condor_gridmanager\soap_gridmanagerStub.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -783,7 +783,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_gridmanager\unicorejob.C"
+			RelativePath="..\src\condor_gridmanager\unicorejob.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"

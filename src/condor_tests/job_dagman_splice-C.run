@@ -25,8 +25,16 @@ $testname = 'Condor submit dag - basic splice test - scheduler U';
 $dagman_args = "-verbose";
 
 @outfiles = (
-				"S1+A", "S1+B", "S1+C", "S1+D", "S1+E",
-				"S1+F", "S1+G", "S1+H", "S1+I",
+	"C_A",
+	"C_S1+A",
+	"C_S1+B",
+	"C_S1+C",
+	"C_S1+D",
+	"C_S1+E",
+	"C_S1+F",
+	"C_S1+G",
+	"C_S1+H",
+	"C_S1+I",
 			);
 
 my $killedchosen = 0;

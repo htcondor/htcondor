@@ -1,14 +1,50 @@
-@echo off
-setlocal
-if exist %1 goto process1
+@echo off & setlocal
+REM ======================================================================
+REM 
+REM  Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+REM  University of Wisconsin-Madison, WI.
+REM  
+REM  Licensed under the Apache License, Version 2.0 (the "License"); you
+REM  may not use this file except in compliance with the License.  You may
+REM  obtain a copy of the License at
+REM  
+REM     http://www.apache.org/licenses/LICENSE-2.0
+REM  
+REM  Unless required by applicable law or agreed to in writing, software
+REM  distributed under the License is distributed on an "AS IS" BASIS,
+REM  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+REM  See the License for the specific language governing permissions and
+REM  limitations under the License.
+REM 
+REM ======================================================================
+
+REM ======================================================================
+REM ======================================================================
+REM Main entry point
+REM ======================================================================
+REM ======================================================================
+
+REM We want to be able to make the release exit with an exit code instead
+REM of setting ERRORLEVEL, if, say, we're calling the bat file from Perl,
+REM which doesn't understand ERRORLEVEL.
+set INTERACTIVE=/b
+if "%1" == "/exit" ( 
+    set INTERACTIVE=
+    shift
+)
+
+REM Check if the output directory exists
+if exist %1 goto continue1
 echo Error - directory %1 does not exist
-echo Usage: dorelease.bat path_to_release_subdirectory
+echo Usage: dorelease.bat "<release_path>"
 goto end
-:process1
-if exist ..\Release goto process2
+:continue1
+REM Check if the build exists
+if exist ..\Release goto continue2
 echo Compile a Release Build of Condor first.
 goto end
-:process2
+:continue2
+
 REM Set up environment
 call set_vars.bat
 
@@ -20,7 +56,9 @@ if not exist %1\etc\NUL mkdir %1\etc
 if not exist %1\sql\NUL mkdir %1\sql
 if not exist %1\src\NUL mkdir %1\src
 if not exist %1\src\chirp\NUL mkdir %1\src\chirp
-if not exist %1\profiles\NUL mkdir %1\profiles
+if not exist %1\src\drmaa\NUL mkdir %1\src\drmaa
+if not exist %1\src\userlog\NUL mkdir %1\src\userlog
+if not exist %1\include\NUL mkdir %1\include
 if not exist %1\examples\NUL mkdir %1\examples
 if not exist %1\examples\cpusoak\NUL mkdir %1\examples\cpusoak
 if not exist %1\examples\printname\NUL mkdir %1\examples\printname
@@ -31,7 +69,6 @@ copy ..\Release\*.exe %1\bin
 copy ..\Release\*.dll %1\bin
 copy msvcrt.dll %1\bin
 copy msvcirt.dll %1\bin
-copy pdh.dll %1\bin
 copy ..\src\condor_vm-gahp\condor_vm_vmware.pl %1\bin
 copy ..\src\condor_vm-gahp\*.dll %1\bin
 copy ..\src\condor_vm-gahp\mkisofs.exe %1\bin
@@ -45,9 +82,14 @@ copy ..\src\condor_chirp\PROTOCOL %1\src\chirp
 copy ..\src\condor_chirp\chirp\LICENSE %1\src\chirp
 copy ..\src\condor_chirp\chirp\doc\Condor %1\src\chirp\README
 
+echo. & echo Copying user log library...
+copy "..\src\condor_c++_util\write_user_log.h" %1\src\userlog
+copy "..\src\condor_c++_util\read_user_log.h" %1\src\userlog
+copy ..\Release\condor_api_lib.lib %1\src\userlog\condorapi.lib
+
 echo. & echo Copying example configurations...
 copy ..\src\condor_examples\condor_config.* %1\etc
-copy ..\src\condor_examples\condor_vmgahp_config.vmware %1\etc
+copy ..\src\condor_examples\condor_vmware_local_settings %1\etc
 
 echo. & echo Copying example submit files...
 copy installer\examples\*.* %1\examples
@@ -81,13 +123,12 @@ copy condor.exe condor_reconfig.exe
 copy condor.exe condor_reschedule.exe
 copy condor.exe condor_vacate.exe
 copy condor_cod.exe condor_cod_request.exe
+popd
 
 echo. & echo Copying DRMAA files...
-cd ..
-if not exist include\NUL mkdir include
-copy %EXT_INSTALL%\%EXT_DRMAA_VERSION%\include\* include
-copy %EXT_INSTALL%\%EXT_DRMAA_VERSION%\lib\* lib
-if not exist src\drmaa\NUL mkdir src\drmaa
-copy %EXT_INSTALL%\%EXT_DRMAA_VERSION%\src\* src\drmaa
-popd
+copy %EXT_INSTALL%\%EXT_DRMAA_VERSION%\include\* %1\include
+copy %EXT_INSTALL%\%EXT_DRMAA_VERSION%\lib\* %1\lib
+copy %EXT_INSTALL%\%EXT_DRMAA_VERSION%\src\* %1\src\drmaa
+
 :end
+exit %INTERACTIVE% 0

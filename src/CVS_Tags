@@ -1,5 +1,10 @@
 11/05/2008 V7_2-branch
   Branch for 7.1.4 and 7.2 series, based from the master.
+12/01/2008 V7_2-nmi_build_tags-branch
+  Branch for Bill's testing of updates to nmi_condor_sumbit that will
+  allow us to submit builds with doc and externals on different branchs
+  than CONDOR_SRC.  Based from V7_2-branch.
+
 11/11/2008 V7_1_4
    The offical tag for 7.1.4, from the V7_1_4-branch.
    Version string: $CondorVersion: 7.1.4 Nov 10 2008 BuildID: 113473 $

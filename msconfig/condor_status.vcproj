@@ -206,7 +206,7 @@
 	</References>
 	<Files>
 		<File
-			RelativePath="..\src\condor_c++_util\dc_stub.C"
+			RelativePath="..\src\condor_c++_util\dc_stub.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -228,7 +228,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_status.V6\prettyPrint.C"
+			RelativePath="..\src\condor_status.V6\prettyPrint.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -250,7 +250,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_status.V6\setflags.C"
+			RelativePath="..\src\condor_status.V6\setflags.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -272,7 +272,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_status.V6\status.C"
+			RelativePath="..\src\condor_status.V6\status.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -298,7 +298,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_status.V6\totals.C"
+			RelativePath="..\src\condor_status.V6\totals.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"

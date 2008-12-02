@@ -43,7 +43,7 @@
 				AdditionalOptions="$(CONDOR_DEFINE) $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE)"
 				Optimization="0"
 				AdditionalIncludeDirectories="..\src\condor_tt"
-				PreprocessorDefinitions="WIN32;_DEBUG"
+				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE"
 				MinimalRebuild="true"
 				RuntimeLibrary="1"
 				UsePrecompiledHeader="2"
@@ -171,7 +171,7 @@
 	</References>
 	<Files>
 		<File
-			RelativePath="..\src\condor_c++_util\access.C"
+			RelativePath="..\src\condor_c++_util\access.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -199,7 +199,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\ad_printmask.C"
+			RelativePath="..\src\condor_c++_util\ad_printmask.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -227,7 +227,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\build_job_env.C"
+			RelativePath="..\src\condor_c++_util\build_job_env.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -255,7 +255,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\check_events.C"
+			RelativePath="..\src\condor_c++_util\check_events.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -283,7 +283,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\classad_collection.C"
+			RelativePath="..\src\condor_c++_util\classad_collection.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -311,7 +311,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\classad_command_util.C"
+			RelativePath="..\src\condor_c++_util\classad_command_util.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -339,7 +339,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\classad_hashtable.C"
+			RelativePath="..\src\condor_c++_util\classad_hashtable.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -367,7 +367,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\classad_helpers.C"
+			RelativePath="..\src\condor_c++_util\classad_helpers.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -395,7 +395,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\classad_log.C"
+			RelativePath="..\src\condor_c++_util\classad_log.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -423,7 +423,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\classad_merge.C"
+			RelativePath="..\src\condor_c++_util\classad_merge.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -451,7 +451,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\classad_namedlist.C"
+			RelativePath="..\src\condor_c++_util\classad_namedlist.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -475,7 +475,15 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\command_strings.C"
+			RelativePath="..\src\condor_c++_util\classad_visa.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\classad_visa.h"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\command_strings.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -503,7 +511,15 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\condor_arglist.C"
+			RelativePath="..\src\condor_c++_util\ConcurrencyLimitUtils.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\ConcurrencyLimitUtils.h"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\condor_arglist.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -531,7 +547,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\condor_attributes.C"
+			RelativePath="..\src\condor_c++_util\condor_attributes.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -555,7 +571,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\condor_common.C"
+			RelativePath="..\src\condor_c++_util\condor_common.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -585,7 +601,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\condor_config.C"
+			RelativePath="..\src\condor_c++_util\condor_config.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -625,7 +641,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\condor_crontab.C"
+			RelativePath="..\src\condor_c++_util\condor_crontab.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -661,7 +677,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\condor_environ.C"
+			RelativePath="..\src\condor_c++_util\condor_environ.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -689,7 +705,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\condor_event.C"
+			RelativePath="..\src\condor_c++_util\condor_event.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -717,7 +733,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\condor_ftp.C"
+			RelativePath="..\src\condor_c++_util\condor_ftp.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -741,7 +757,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\condor_getcwd.C"
+			RelativePath="..\src\condor_c++_util\condor_getcwd.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -769,7 +785,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\condor_id.C"
+			RelativePath="..\src\condor_c++_util\condor_id.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -797,7 +813,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\condor_md.C"
+			RelativePath="..\src\condor_c++_util\condor_md.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -821,7 +837,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\condor_open.C"
+			RelativePath="..\src\condor_c++_util\condor_open.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -851,7 +867,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\condor_parameters.C"
+			RelativePath="..\src\condor_c++_util\condor_parameters.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -875,7 +891,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\condor_q.C"
+			RelativePath="..\src\condor_c++_util\condor_q.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -903,7 +919,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\condor_query.C"
+			RelativePath="..\src\condor_c++_util\condor_query.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -931,7 +947,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\condor_state.C"
+			RelativePath="..\src\condor_c++_util\condor_state.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -955,7 +971,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\condor_url.C"
+			RelativePath="..\src\condor_c++_util\condor_url.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -983,7 +999,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\condor_user_policy.C"
+			RelativePath="..\src\condor_c++_util\condor_user_policy.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -1011,7 +1027,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\condor_ver_info.C"
+			RelativePath="..\src\condor_c++_util\condor_ver_info.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -1039,7 +1055,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\condor_version.C"
+			RelativePath="..\src\condor_c++_util\condor_version.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -1065,7 +1081,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\CondorError.C"
+			RelativePath="..\src\condor_c++_util\CondorError.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -1093,7 +1109,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\config.C"
+			RelativePath="..\src\condor_c++_util\config.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -1117,7 +1133,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\cron.C"
+			RelativePath="..\src\condor_c++_util\cron.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -1141,7 +1157,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\cronjob.C"
+			RelativePath="..\src\condor_c++_util\cronjob.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -1165,7 +1181,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\cronjob_classad.C"
+			RelativePath="..\src\condor_c++_util\cronjob_classad.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -1189,7 +1205,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\cronmgr.C"
+			RelativePath="..\src\condor_c++_util\cronmgr.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -1213,7 +1229,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_daemon_client\daemon.C"
+			RelativePath="..\src\condor_daemon_client\daemon.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -1241,7 +1257,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_daemon_client\daemon_list.C"
+			RelativePath="..\src\condor_daemon_client\daemon_list.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -1269,7 +1285,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_daemon_client\daemon_types.C"
+			RelativePath="..\src\condor_daemon_client\daemon_types.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -1297,7 +1313,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\date_util.C"
+			RelativePath="..\src\condor_c++_util\date_util.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -1325,7 +1341,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\dbms_utils.C"
+			RelativePath="..\src\condor_c++_util\dbms_utils.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -1353,7 +1369,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_daemon_client\dc_collector.C"
+			RelativePath="..\src\condor_daemon_client\dc_collector.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -1381,7 +1397,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_daemon_client\dc_message.C"
+			RelativePath="..\src\condor_daemon_client\dc_message.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -1409,7 +1425,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_daemon_client\dc_schedd.C"
+			RelativePath="..\src\condor_daemon_client\dc_schedd.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -1437,7 +1453,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_daemon_client\dc_shadow.C"
+			RelativePath="..\src\condor_daemon_client\dc_shadow.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -1465,7 +1481,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_daemon_client\dc_startd.C"
+			RelativePath="..\src\condor_daemon_client\dc_startd.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -1493,7 +1509,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_daemon_client\dc_starter.C"
+			RelativePath="..\src\condor_daemon_client\dc_starter.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -1521,7 +1537,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_daemon_client\dc_transfer_queue.C"
+			RelativePath="..\src\condor_daemon_client\dc_transfer_queue.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -1549,7 +1565,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_daemon_client\dc_transferd.C"
+			RelativePath="..\src\condor_daemon_client\dc_transferd.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -1577,7 +1593,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\directory.C"
+			RelativePath="..\src\condor_c++_util\directory.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -1605,7 +1621,15 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\distribution.C"
+			RelativePath="..\src\condor_c++_util\directory.WINDOWS.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\directory.WINDOWS.h"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\distribution.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -1629,7 +1653,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\domain_tools.C"
+			RelativePath="..\src\condor_c++_util\domain_tools.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -1657,7 +1681,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\dynuser.C"
+			RelativePath="..\src\condor_c++_util\dynuser.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -1685,31 +1709,11 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\email_cpp.C"
+			RelativePath="..\src\condor_c++_util\email_cpp.cpp"
 			>
-			<FileConfiguration
-				Name="Debug|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					AdditionalIncludeDirectories=""
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Release|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					AdditionalIncludeDirectories=""
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\enum_utils.C"
+			RelativePath="..\src\condor_c++_util\enum_utils.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -1737,7 +1741,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\env.C"
+			RelativePath="..\src\condor_c++_util\env.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -1765,7 +1769,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\error_utils.C"
+			RelativePath="..\src\condor_c++_util\error_utils.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -1793,7 +1797,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\extra_param_info.C"
+			RelativePath="..\src\condor_c++_util\extra_param_info.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -1821,7 +1825,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\file_lock.C"
+			RelativePath="..\src\condor_c++_util\file_lock.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -1845,7 +1849,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\file_sql.C"
+			RelativePath="..\src\condor_c++_util\file_sql.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -1873,7 +1877,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\file_transfer.C"
+			RelativePath="..\src\condor_c++_util\file_transfer.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -1901,7 +1905,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\file_transfer_db.C"
+			RelativePath="..\src\condor_c++_util\file_transfer_db.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -1929,7 +1933,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\file_xml.C"
+			RelativePath="..\src\condor_c++_util\file_xml.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -1957,7 +1961,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\filename_tools_cpp.C"
+			RelativePath="..\src\condor_c++_util\filename_tools_cpp.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -1981,7 +1985,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\forkwork.C"
+			RelativePath="..\src\condor_c++_util\forkwork.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -2009,7 +2013,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\format_time.C"
+			RelativePath="..\src\condor_c++_util\format_time.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -2037,7 +2041,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\gahp_common.C"
+			RelativePath="..\src\condor_c++_util\gahp_common.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -2065,7 +2069,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\generic_query.C"
+			RelativePath="..\src\condor_c++_util\generic_query.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -2093,7 +2097,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\get_daemon_name.C"
+			RelativePath="..\src\condor_c++_util\get_daemon_name.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -2121,7 +2125,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\get_full_hostname.C"
+			RelativePath="..\src\condor_c++_util\get_full_hostname.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -2145,35 +2149,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\get_mysubsystem.C"
-			>
-			<FileConfiguration
-				Name="Debug|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					AdditionalIncludeDirectories=""
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Release|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					AdditionalIncludeDirectories=""
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-		</File>
-		<File
-			RelativePath="..\src\condor_c++_util\get_mysubsystem.h"
-			>
-		</File>
-		<File
-			RelativePath="..\src\condor_c++_util\HashTable.C"
+			RelativePath="..\src\condor_c++_util\HashTable.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -2201,7 +2177,31 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\historysnapshot.C"
+			RelativePath="..\src\condor_c++_util\hibernation_manager.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\hibernation_manager.h"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\hibernator.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\hibernator.h"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\hibernator.WINDOWS.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\hibernator.WINDOWS.h"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\historysnapshot.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -2229,7 +2229,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\hook_utils.C"
+			RelativePath="..\src\condor_c++_util\hook_utils.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -2257,7 +2257,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\iso_dates.C"
+			RelativePath="..\src\condor_c++_util\iso_dates.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -2285,7 +2285,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\java_config.C"
+			RelativePath="..\src\condor_c++_util\java_config.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -2313,7 +2313,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\job_lease.C"
+			RelativePath="..\src\condor_c++_util\job_lease.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -2341,7 +2341,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\jobqueuesnapshot.C"
+			RelativePath="..\src\condor_c++_util\jobqueuesnapshot.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -2369,7 +2369,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\KeyCache.C"
+			RelativePath="..\src\condor_c++_util\KeyCache.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -2393,7 +2393,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\killfamily.C"
+			RelativePath="..\src\condor_c++_util\killfamily.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -2421,7 +2421,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\linebuffer.C"
+			RelativePath="..\src\condor_c++_util\linebuffer.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -2453,7 +2453,15 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\log.C"
+			RelativePath="..\src\condor_c++_util\load_dll.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\load_dll.h"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\log.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -2481,7 +2489,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\log_transaction.C"
+			RelativePath="..\src\condor_c++_util\log_transaction.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -2509,7 +2517,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\lsa_mgr.C"
+			RelativePath="..\src\condor_c++_util\lsa_mgr.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -2537,7 +2545,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\MapFile.C"
+			RelativePath="..\src\condor_c++_util\MapFile.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -2565,7 +2573,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\metric_units.C"
+			RelativePath="..\src\condor_c++_util\metric_units.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -2593,7 +2601,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\misc_utils.C"
+			RelativePath="..\src\condor_c++_util\misc_utils.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -2617,7 +2625,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\my_distribution.C"
+			RelativePath="..\src\condor_c++_util\my_distribution.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -2641,7 +2649,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\my_dynuser.C"
+			RelativePath="..\src\condor_c++_util\my_dynuser.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -2665,7 +2673,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\my_hostname.C"
+			RelativePath="..\src\condor_c++_util\my_hostname.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -2689,7 +2697,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\my_popen.C"
+			RelativePath="..\src\condor_c++_util\my_popen.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -2717,7 +2725,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\my_subsystem.C"
+			RelativePath="..\src\condor_c++_util\my_subsystem.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -2743,7 +2751,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\my_username.C"
+			RelativePath="..\src\condor_c++_util\my_username.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -2771,7 +2779,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\MyString.C"
+			RelativePath="..\src\condor_c++_util\MyString.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -2799,7 +2807,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\net_string_list.C"
+			RelativePath="..\src\condor_c++_util\net_string_list.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -2827,7 +2835,23 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\ntsysinfo.C"
+			RelativePath="..\src\condor_c++_util\network_adapter.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\network_adapter.h"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\network_adapter.WINDOWS.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\network_adapter.WINDOWS.h"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\ntsysinfo.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -2855,7 +2879,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\perm.C"
+			RelativePath="..\src\condor_c++_util\perm.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -2883,7 +2907,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\pgsqldatabase.C"
+			RelativePath="..\src\condor_c++_util\pgsqldatabase.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -2911,63 +2935,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\power_hibernation_manager.C"
-			>
-			<FileConfiguration
-				Name="Debug|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					AdditionalIncludeDirectories=""
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Release|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					AdditionalIncludeDirectories=""
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-		</File>
-		<File
-			RelativePath="..\src\condor_c++_util\power_hibernation_manager.h"
-			>
-		</File>
-		<File
-			RelativePath="..\src\condor_c++_util\power_hibernator.C"
-			>
-			<FileConfiguration
-				Name="Debug|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					AdditionalIncludeDirectories=""
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Release|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					AdditionalIncludeDirectories=""
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-		</File>
-		<File
-			RelativePath="..\src\condor_c++_util\power_hibernator.h"
-			>
-		</File>
-		<File
-			RelativePath="..\src\condor_c++_util\print_wrapped_text.C"
+			RelativePath="..\src\condor_c++_util\print_wrapped_text.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -2999,7 +2967,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\proc_family_direct.C"
+			RelativePath="..\src\condor_c++_util\proc_family_direct.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -3027,7 +2995,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\proc_family_interface.C"
+			RelativePath="..\src\condor_c++_util\proc_family_interface.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -3055,7 +3023,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\proc_family_proxy.C"
+			RelativePath="..\src\condor_c++_util\proc_family_proxy.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -3083,7 +3051,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\proc_id.C"
+			RelativePath="..\src\condor_c++_util\proc_id.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -3107,7 +3075,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\procd_config.C"
+			RelativePath="..\src\condor_c++_util\procd_config.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -3123,7 +3091,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\process_control.WINDOWS.C"
+			RelativePath="..\src\condor_c++_util\process_control.WINDOWS.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -3151,19 +3119,11 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\profile_helpers.WINDOWS.C"
+			RelativePath="..\src\condor_c++_util\profile.WINDOWS.cpp"
 			>
-			<FileConfiguration
-				Name="Release|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					CompileAs="2"
-				/>
-			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\profile_helpers.WINDOWS.h"
+			RelativePath="..\src\condor_c++_util\profile.WINDOWS.h"
 			>
 		</File>
 		<File
@@ -3175,7 +3135,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\read_multiple_logs.C"
+			RelativePath="..\src\condor_c++_util\read_multiple_logs.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -3203,7 +3163,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\read_user_log.C"
+			RelativePath="..\src\condor_c++_util\read_user_log.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -3227,7 +3187,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\read_user_log_state.C"
+			RelativePath="..\src\condor_c++_util\read_user_log_state.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -3255,7 +3215,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\Regex.C"
+			RelativePath="..\src\condor_c++_util\Regex.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -3279,7 +3239,23 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\selector.C"
+			RelativePath="..\src\condor_c++_util\remote_close.WINDOWS.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\remote_close.WINDOWS.h"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\security.WINDOWS.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\security.WINDOWS.h"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\selector.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -3311,7 +3287,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\set_user_priv_from_ad.C"
+			RelativePath="..\src\condor_c++_util\set_user_priv_from_ad.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -3339,7 +3315,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\setenv.C"
+			RelativePath="..\src\condor_c++_util\setenv.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -3367,7 +3343,15 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\sig_name.C"
+			RelativePath="..\src\condor_c++_util\setup_api_dll.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\setup_api_dll.h"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\sig_name.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -3399,7 +3383,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\sqlquery.C"
+			RelativePath="..\src\condor_c++_util\sqlquery.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -3427,7 +3411,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\stat_info.C"
+			RelativePath="..\src\condor_c++_util\stat_info.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -3455,7 +3439,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\stat_wrapper.C"
+			RelativePath="..\src\condor_c++_util\stat_wrapper.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -3483,7 +3467,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\stat_wrapper_internal.C"
+			RelativePath="..\src\condor_c++_util\stat_wrapper_internal.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -3511,7 +3495,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\status_string.C"
+			RelativePath="..\src\condor_c++_util\status_string.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -3539,7 +3523,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\store_cred.C"
+			RelativePath="..\src\condor_c++_util\store_cred.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -3567,7 +3551,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\string_conversion.WINDOWS.C"
+			RelativePath="..\src\condor_c++_util\string_conversion.WINDOWS.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -3583,7 +3567,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\string_list.C"
+			RelativePath="..\src\condor_c++_util\string_list.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -3611,7 +3595,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\stringSpace.C"
+			RelativePath="..\src\condor_c++_util\stringSpace.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -3639,7 +3623,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\strnewp.C"
+			RelativePath="..\src\condor_c++_util\strnewp.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -3663,7 +3647,15 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\system_info.WINDOWS.C"
+			RelativePath="..\src\condor_c++_util\subsystem_info.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\subsystem_info.h"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\system_info.WINDOWS.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -3679,7 +3671,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\time_offset.C"
+			RelativePath="..\src\condor_c++_util\time_offset.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -3707,7 +3699,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\tmp_dir.C"
+			RelativePath="..\src\condor_c++_util\tmp_dir.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -3735,7 +3727,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\token_cache.C"
+			RelativePath="..\src\condor_c++_util\token_cache.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -3763,7 +3755,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\transfer_request.C"
+			RelativePath="..\src\condor_c++_util\transfer_request.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -3787,7 +3779,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\translation_utils.C"
+			RelativePath="..\src\condor_c++_util\translation_utils.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -3815,7 +3807,15 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\uids.C"
+			RelativePath="..\src\condor_c++_util\udp_waker.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\udp_waker.h"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\uids.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -3839,7 +3839,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\usagemon.C"
+			RelativePath="..\src\condor_c++_util\usagemon.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -3863,7 +3863,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\user_job_policy.C"
+			RelativePath="..\src\condor_c++_util\user_job_policy.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -3891,7 +3891,11 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\user_log.C"
+			RelativePath="..\src\condor_c++_util\user_log.c++.h"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\user_log.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -3915,11 +3919,15 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\user_log.c++.h"
+			RelativePath="..\src\condor_c++_util\user_log_header.cpp"
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\utc_time.C"
+			RelativePath="..\src\condor_c++_util\user_log_header.h"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\utc_time.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -3947,7 +3955,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\vm_univ_utils.C"
+			RelativePath="..\src\condor_c++_util\vm_univ_utils.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -3975,7 +3983,15 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\which.C"
+			RelativePath="..\src\condor_c++_util\waker.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\waker.h"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\which.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -4003,7 +4019,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\windows_firewall.C"
+			RelativePath="..\src\condor_c++_util\windows_firewall.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"

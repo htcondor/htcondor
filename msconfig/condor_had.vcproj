@@ -206,7 +206,7 @@
 	</References>
 	<Files>
 		<File
-			RelativePath="..\src\condor_had\HAD.C"
+			RelativePath="..\src\condor_had\HAD.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -228,31 +228,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_had\soap_hadC.C"
-			>
-			<FileConfiguration
-				Name="Release|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					UsePrecompiledHeader="0"
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Debug|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					UsePrecompiledHeader="0"
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-		</File>
-		<File
-			RelativePath="..\src\condor_had\soap_hadServer.C"
+			RelativePath="..\src\condor_had\soap_hadC.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -276,7 +252,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_had\soap_hadStub.C"
+			RelativePath="..\src\condor_had\soap_hadServer.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -300,7 +276,31 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_had\StateMachine.C"
+			RelativePath="..\src\condor_had\soap_hadStub.cpp"
+			>
+			<FileConfiguration
+				Name="Release|Win32"
+				>
+				<Tool
+					Name="VCCLCompilerTool"
+					PreprocessorDefinitions=""
+					UsePrecompiledHeader="0"
+					CompileAs="2"
+				/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32"
+				>
+				<Tool
+					Name="VCCLCompilerTool"
+					PreprocessorDefinitions=""
+					UsePrecompiledHeader="0"
+					CompileAs="2"
+				/>
+			</FileConfiguration>
+		</File>
+		<File
+			RelativePath="..\src\condor_had\StateMachine.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -328,7 +328,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_had\Utils.C"
+			RelativePath="..\src\condor_had\Utils.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"

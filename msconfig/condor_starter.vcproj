@@ -206,7 +206,19 @@
 	</References>
 	<Files>
 		<File
-			RelativePath="..\src\condor_starter.V6.1\io_proxy.C"
+			RelativePath="..\src\condor_starter.V6.1\baseStarter.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_starter.V6.1\condor_privsep_helper.h"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_starter.V6.1\condor_privsep_helper.WINDOWS.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_starter.V6.1\io_proxy.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -232,7 +244,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_starter.V6.1\io_proxy_handler.C"
+			RelativePath="..\src\condor_starter.V6.1\io_proxy_handler.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -258,7 +270,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_starter.V6.1\java_detect.C"
+			RelativePath="..\src\condor_starter.V6.1\java_detect.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -284,7 +296,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_starter.V6.1\java_proc.C"
+			RelativePath="..\src\condor_starter.V6.1\java_proc.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -310,7 +322,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_starter.V6.1\jic_local.C"
+			RelativePath="..\src\condor_starter.V6.1\jic_local.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -336,7 +348,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_starter.V6.1\jic_local_config.C"
+			RelativePath="..\src\condor_starter.V6.1\jic_local_config.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -362,7 +374,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_starter.V6.1\jic_local_file.C"
+			RelativePath="..\src\condor_starter.V6.1\jic_local_file.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -388,7 +400,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_starter.V6.1\jic_local_schedd.C"
+			RelativePath="..\src\condor_starter.V6.1\jic_local_schedd.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -414,7 +426,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_starter.V6.1\jic_shadow.C"
+			RelativePath="..\src\condor_starter.V6.1\jic_shadow.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -440,7 +452,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_starter.V6.1\job_info_communicator.C"
+			RelativePath="..\src\condor_starter.V6.1\job_info_communicator.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -466,7 +478,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_starter.V6.1\local_user_log.C"
+			RelativePath="..\src\condor_starter.V6.1\local_user_log.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -492,7 +504,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_starter.V6.1\mpi_comrade_proc.C"
+			RelativePath="..\src\condor_starter.V6.1\mpi_comrade_proc.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -518,7 +530,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_starter.V6.1\mpi_master_proc.C"
+			RelativePath="..\src\condor_starter.V6.1\mpi_master_proc.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -544,7 +556,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_starter.V6.1\NTsenders.C"
+			RelativePath="..\src\condor_starter.V6.1\NTsenders.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -566,7 +578,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_starter.V6.1\os_proc.C"
+			RelativePath="..\src\condor_starter.V6.1\os_proc.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -592,7 +604,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_starter.V6.1\parallel_proc.C"
+			RelativePath="..\src\condor_starter.V6.1\parallel_proc.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -618,7 +630,11 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_starter.V6.1\script_proc.C"
+			RelativePath="..\src\condor_starter.V6.1\privsep_helper.h"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_starter.V6.1\script_proc.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -644,7 +660,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_starter.V6.1\soap_starterC.C"
+			RelativePath="..\src\condor_starter.V6.1\soap_starterC.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -672,7 +688,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_starter.V6.1\soap_starterServer.C"
+			RelativePath="..\src\condor_starter.V6.1\soap_starterServer.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -696,7 +712,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_starter.V6.1\soap_starterStub.C"
+			RelativePath="..\src\condor_starter.V6.1\soap_starterStub.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -728,55 +744,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_starter.V6.1\starter_class.C"
-			>
-			<FileConfiguration
-				Name="Debug|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Release|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-		</File>
-		<File
-			RelativePath="..\src\condor_starter.V6.1\starter_privsep_helper.h"
-			>
-		</File>
-		<File
-			RelativePath="..\src\condor_starter.V6.1\starter_privsep_helper.WINDOWS.C"
-			>
-			<FileConfiguration
-				Name="Debug|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Release|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-		</File>
-		<File
-			RelativePath="..\src\condor_starter.V6.1\starter_user_policy.C"
+			RelativePath="..\src\condor_starter.V6.1\starter_user_policy.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -802,7 +770,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_starter.V6.1\starter_v61_main.C"
+			RelativePath="..\src\condor_starter.V6.1\starter_v61_main.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -824,7 +792,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_starter.V6.1\StarterHookMgr.C"
+			RelativePath="..\src\condor_starter.V6.1\StarterHookMgr.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -850,7 +818,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_starter.V6.1\stream_handler.C"
+			RelativePath="..\src\condor_starter.V6.1\stream_handler.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -878,7 +846,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_starter.V6.1\tool_daemon_proc.C"
+			RelativePath="..\src\condor_starter.V6.1\tool_daemon_proc.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -904,7 +872,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_starter.V6.1\user_proc.C"
+			RelativePath="..\src\condor_starter.V6.1\user_proc.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -930,7 +898,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_starter.V6.1\vanilla_proc.C"
+			RelativePath="..\src\condor_starter.V6.1\vanilla_proc.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -956,7 +924,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_starter.V6.1\vm_gahp_request.C"
+			RelativePath="..\src\condor_starter.V6.1\vm_gahp_request.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -982,7 +950,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_starter.V6.1\vm_gahp_server.C"
+			RelativePath="..\src\condor_starter.V6.1\vm_gahp_server.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -1008,7 +976,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_starter.V6.1\vm_proc.C"
+			RelativePath="..\src\condor_starter.V6.1\vm_proc.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
