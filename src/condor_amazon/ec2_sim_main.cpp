@@ -28,10 +28,33 @@
 
 using namespace std;
 
+int PrintLeakSummary();
+
+void
+sigterm_hdlr( int sig )
+{
+	int rc;
+	cout << "SIGTERM received, exiting" << endl;
+	rc = PrintLeakSummary();
+	exit( rc );
+}
+
 int
 main(int argc, char **argv)
 {
 	struct soap *soap;
+
+	struct sigaction sa;
+	sa.sa_handler = sigterm_hdlr;
+	sigemptyset( &sa.sa_mask );
+	sa.sa_flags = 0;
+
+	int rc = sigaction( SIGTERM, &sa, NULL );
+	if ( rc != 0 ) {
+		fprintf( stderr, "sigaction() failed: errno=%d (%s)\n",
+				 errno, strerror(errno) );
+		exit( 1 );
+	}
 
 	srand(0);
 

@@ -42,6 +42,27 @@ static vector<class ec2__DescribeKeyPairsResponseItemType *> key_pairs;
 static vector<class ec2__ReservationInfoType *> reservations;
 static int s_id;
 
+int
+PrintLeakSummary()
+{
+	int i;
+	int rc = 0;
+	for ( i = 0; i < key_pairs.size(); i++ ) {
+		rc = 1;
+		cout << "Leaked KeyPair " << key_pairs[i]->keyName << endl;
+	}
+	for ( i = 0; i < reservations.size(); i++ ) {
+		if ( reservations[i]->instancesSet->item[0]->instanceState->code != 48 ) {
+			rc = 1;
+			cout << "Leaked Instance " << reservations[i]->instancesSet->item[0]->instanceId << endl;
+		}
+	}
+	if ( rc == 0 ) {
+		cout << "No leaked resources" << endl;
+	}
+	return rc;
+}
+
 /*
  * A dead simple way of advancing an instances through states
  */
