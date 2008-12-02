@@ -206,7 +206,7 @@
 	</References>
 	<Files>
 		<File
-			RelativePath="..\src\condor_tools\config_val.C"
+			RelativePath="..\src\condor_tools\config_val.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -228,7 +228,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\dc_stub.C"
+			RelativePath="..\src\condor_c++_util\dc_stub.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"

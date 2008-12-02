@@ -173,7 +173,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_schedd.V6\qmgmt_common.C"
+			RelativePath="..\src\condor_schedd.V6\qmgmt_common.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -199,7 +199,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_schedd.V6\qmgmt_send_stubs.C"
+			RelativePath="..\src\condor_schedd.V6\qmgmt_send_stubs.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -225,7 +225,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_schedd.V6\qmgr_job_updater.C"
+			RelativePath="..\src\condor_schedd.V6\qmgr_job_updater.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -251,7 +251,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_schedd.V6\qmgr_lib_support.C"
+			RelativePath="..\src\condor_schedd.V6\qmgr_lib_support.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"

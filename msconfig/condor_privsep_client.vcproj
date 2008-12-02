@@ -175,7 +175,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_privsep\privsep_client.WINDOWS.C"
+			RelativePath="..\src\condor_privsep\privsep_client.WINDOWS.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"

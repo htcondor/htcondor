@@ -31,5 +31,6 @@
 #define WITH_OPENSSL 1
 #define WANT_QUILL 1
 #define HAVE_EXT_KRB5 1
+#define HAVE_SNPRINTF 1
 
 #endif /* _WINDOWS_CONFIG_H_ */

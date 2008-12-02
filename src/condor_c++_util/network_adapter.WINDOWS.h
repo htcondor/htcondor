@@ -33,7 +33,7 @@
  * WindowsNetworkAdapter class
  ***************************************************************/
 
-class WindowsNetworkAdapter : NetworkAdapterBase
+class WindowsNetworkAdapter : public NetworkAdapterBase
 {
 
 public:

@@ -182,7 +182,7 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o selector.o \
 	alarm.o user_job_policy.o classad_support.o \
 	directory.o stat_info.o stat_wrapper.o stat_wrapper_internal.o \
 	my_hostname.o file_lock.o sig_name.o \
-	email.o env.o \
+	email_cpp.o env.o \
 	string_list.o net_string_list.o condor_event.o $(URL_OBJ) \
 	get_daemon_name.o \
 	user_log.o user_log_header.o \

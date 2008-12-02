@@ -269,7 +269,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_util_lib\condor_common_c.C"
+			RelativePath="..\src\condor_util_lib\condor_common_c.c"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -1129,6 +1129,10 @@
 					UsePrecompiledHeader="0"
 				/>
 			</FileConfiguration>
+		</File>
+		<File
+			RelativePath="..\src\condor_util_lib\string_funcs.c"
+			>
 		</File>
 		<File
 			RelativePath="..\src\h\syscall_numbers.tmpl"

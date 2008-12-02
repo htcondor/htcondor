@@ -169,7 +169,7 @@
 	</References>
 	<Files>
 		<File
-			RelativePath="..\src\condor_io\authentication.C"
+			RelativePath="..\src\condor_io\authentication.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -195,7 +195,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_io\buffers.C"
+			RelativePath="..\src\condor_io\buffers.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -221,7 +221,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_io\cedar_no_ckpt.C"
+			RelativePath="..\src\condor_io\cedar_no_ckpt.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -243,7 +243,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_io\condor_auth.C"
+			RelativePath="..\src\condor_io\condor_auth.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -269,7 +269,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_io\condor_auth_anonymous.C"
+			RelativePath="..\src\condor_io\condor_auth_anonymous.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -291,7 +291,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_io\condor_auth_claim.C"
+			RelativePath="..\src\condor_io\condor_auth_claim.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -317,7 +317,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_io\condor_auth_kerberos.C"
+			RelativePath="..\src\condor_io\condor_auth_kerberos.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -341,7 +341,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_io\condor_auth_passwd.C"
+			RelativePath="..\src\condor_io\condor_auth_passwd.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -367,7 +367,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_io\condor_auth_ssl.C"
+			RelativePath="..\src\condor_io\condor_auth_ssl.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -393,7 +393,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_io\condor_auth_sspi.C"
+			RelativePath="..\src\condor_io\condor_auth_sspi.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -419,7 +419,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_io\condor_crypt.C"
+			RelativePath="..\src\condor_io\condor_crypt.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -445,7 +445,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_io\condor_crypt_3des.C"
+			RelativePath="..\src\condor_io\condor_crypt_3des.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -467,7 +467,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_io\condor_crypt_blowfish.C"
+			RelativePath="..\src\condor_io\condor_crypt_blowfish.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -495,7 +495,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_daemon_core.V6\condor_ipverify.C"
+			RelativePath="..\src\condor_daemon_core.V6\condor_ipverify.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -521,7 +521,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_io\condor_rw.C"
+			RelativePath="..\src\condor_io\condor_rw.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -547,7 +547,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_io\condor_secman.C"
+			RelativePath="..\src\condor_io\condor_secman.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -569,7 +569,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_io\CryptKey.C"
+			RelativePath="..\src\condor_io\CryptKey.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -595,7 +595,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_io\errno_num.C"
+			RelativePath="..\src\condor_io\errno_num.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -639,7 +639,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_io\reli_sock.C"
+			RelativePath="..\src\condor_io\reli_sock.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -665,7 +665,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_io\safe_sock.C"
+			RelativePath="..\src\condor_io\safe_sock.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -691,7 +691,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_io\SafeMsg.C"
+			RelativePath="..\src\condor_io\SafeMsg.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -717,7 +717,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_io\sock.C"
+			RelativePath="..\src\condor_io\sock.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -743,7 +743,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_io\sockCache.C"
+			RelativePath="..\src\condor_io\sockCache.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -769,7 +769,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_io\stream.C"
+			RelativePath="..\src\condor_io\stream.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"

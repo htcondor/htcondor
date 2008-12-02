@@ -989,7 +989,7 @@ int CollectorDaemon::invalidation_scanFunc (ClassAd *cad)
 {
 	static char buffer[64];
 	
-	sprintf( buffer, "%s = -1", ATTR_LAST_HEARD_FROM );
+	sprintf( buffer, "%s = 0", ATTR_LAST_HEARD_FROM );
 
     if ((*cad) >= (*__query__))
     {

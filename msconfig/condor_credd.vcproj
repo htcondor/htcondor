@@ -206,7 +206,7 @@
 	</References>
 	<Files>
 		<File
-			RelativePath="..\src\condor_credd\soap_creddC.C"
+			RelativePath="..\src\condor_credd\soap_creddC.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -230,7 +230,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_credd\soap_creddServer.C"
+			RelativePath="..\src\condor_credd\soap_creddServer.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -254,7 +254,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_credd\soap_creddStub.C"
+			RelativePath="..\src\condor_credd\soap_creddStub.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -278,7 +278,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_credd\win_credd.C"
+			RelativePath="..\src\condor_credd\win_credd.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"

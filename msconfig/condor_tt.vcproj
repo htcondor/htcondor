@@ -206,7 +206,7 @@
 	</References>
 	<Files>
 		<File
-			RelativePath="..\src\condor_tt\condor_ttdb.C"
+			RelativePath="..\src\condor_tt\condor_ttdb.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -228,7 +228,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_tt\jobqueuecollection.C"
+			RelativePath="..\src\condor_tt\jobqueuecollection.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -250,7 +250,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_tt\jobqueuedbmanager.C"
+			RelativePath="..\src\condor_tt\jobqueuedbmanager.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -272,7 +272,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_tt\tt_main.C"
+			RelativePath="..\src\condor_tt\tt_main.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -294,7 +294,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_tt\ttmanager.C"
+			RelativePath="..\src\condor_tt\ttmanager.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"

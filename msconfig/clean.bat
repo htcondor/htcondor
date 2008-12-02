@@ -24,7 +24,7 @@ REM Usage: clean [type], where type can be: release, debug or externals
 REM ======================================================================
 
 REM Configure the environment
-call set_vars.bat
+REM call set_vars.bat
 
 REM Determine which build to clean
 set CONFIGURATION=Release
@@ -47,13 +47,10 @@ REM ======================================================================
 REM Cleans out the contents of a build directory
 REM ======================================================================
 
-echo Cleaning the "%CONFIGURATION%" build and logs. & echo.
+echo Cleaning the "%CONFIGURATION%" build and logs.
 
-REM Do the actual cleaning
-msbuild condor.sln /t:Clean /p:Configuration=%CONFIGURATION%
-
-REM Remove any residual log files
-rm -rf ..\%CONFIGURATION%\BuildLogs\*
+REM Do the actual cleaning and remove any residual log files
+rm -rf ..\%CONFIGURATION%
 
 REM Return to caller
 goto :EOF
