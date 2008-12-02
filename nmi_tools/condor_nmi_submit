@@ -1255,7 +1255,7 @@ sub generateBuildFetchFiles
 
 		if(defined $opt_src_tag) {
 			$srctag = "origin\/" . $opt_src_tag;
-			$othertag = $opt_other_tag;
+			$othertag = "origin\/" . $opt_other_tag;
 		} else {
 			$srctag = $othertag = $tag;
 		}
