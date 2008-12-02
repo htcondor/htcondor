@@ -182,7 +182,8 @@ sub usage( )
 	"  -h|--help     this help\n";
 }
 
-sub ReadFiles( $$ );
+sub ReadEventlogs( $$ );
+sub ProcessEventlogs( $$ );
 
 my %settings =
 (
@@ -399,116 +400,40 @@ foreach my $k ( keys(%totals) ) {
     $previous{$k} = 0;
 }
 
-foreach my $loop ( 1 .. $test->{loops} ) {
-
+foreach my $loop ( 1 .. $test->{loops} )
+{
     foreach my $k ( keys(%{$expect{loop_mins}}) ) {
 	$expect{cur_mins}{$k} += $expect{loop_mins}{$k};
     }
 
-    my $cmd = "";
-    if ( $settings{valgrind_writer} ) {
-	$cmd .= join( " ", @valgrind ) . " ";
+    # writer output from this loop
+    my %new;
+    for my $k ( keys(%totals) ) {
+	$new{$k} = 0;
     }
-    $cmd .= join(" ", @writer_args );
-    print "$cmd\n";
 
-    if ( $settings{execute} ) {
-	# writer output from this loop
-	my %new;
-	for my $k ( keys(%totals) ) {
-	    $new{$k} = 0;
-	}
+    # Run the writer
+    my ($run, $failed) = RunWriter( \%new, \%previous, \%totals, \$errors );
+    if ( ! $run ) {
+	next;
+    }
+    if ( $failed ) {
+	print STDERR "writer failed: aborting test\n";
+	last;
+    }
 
-	open( WRITER, "$cmd|" ) or die "Can't run $cmd";
-	while( <WRITER> ) {
-	    print if ( $settings{verbose} );
-	    chomp;
-	    if ( /wrote (\d+) events/ ) {
-		$new{writer_events} = $1;
-	    }
-	    elsif ( /global sequence (\d+)/ ) {
-		$new{writer_sequence} = $1;
-		$new{writer_files} = $1 - $previous{writer_sequence};
-		$totals{writer_sequence} = 0;	# special case
-	    }
-	}
-	close( WRITER );
-	my $failed = 0;
-	if ( $? & 127 ) {
-	    printf "ERROR: writer exited from signal %d\n", ($? & 127);
-	    $errors++;
-	    $failed = 1;
-	}
-	if ( $? & 128 ) {
-	    print "ERROR: writer dumped core\n";
-	    $errors++;
-	    $failed = 1;
-	}
-	if ( $? >> 8 ) {
-	    printf "ERROR: writer exited with status %d\n", ($? >> 8);
-	    $errors++;
-	    $failed = 1;
-	}
-	if ( ! $failed and $settings{verbose}) {
-	    print "writer process exited normally\n";
-	}
+    my @files = ReadEventlogs( $dir, \%new );
+    ProcessEventlogs( \@files, \%new );
 
-	my @files = ReadFiles( $dir, \%new );
+    my %diff;
+    foreach my $k ( keys(%previous) ) {
+	$diff{$k} = $new{$k} - $previous{$k};
+	$totals{$k} += $new{$k};
+    }
+    $errors += CheckWriterOutput( \@files, $loop, \%new, \%diff );
 
-	my %diff;
-	foreach my $k ( keys(%previous) ) {
-	    $diff{$k} = $new{$k} - $previous{$k};
-	    $totals{$k} += $new{$k};
-	}
-
-	if ( $new{writer_events} < $expect{loop_mins}{num_events} ) {
-	    printf( STDERR
-		    "ERROR: loop %d: writer wrote too few events: %d < %d\n",
-		    $loop,
-		    $new{writer_events}, $expect{loop_mins}{num_events} );
-	    $errors++;
-	}
-	if ( $new{writer_sequence} < $expect{cur_mins}{sequence} ) {
-	    printf( STDERR
-		    "ERROR: loop %d: writer sequence too low: %d < %d\n",
-		    $loop,
-		    $new{writer_sequence}, $expect{cur_mins}{sequence} );
-	    $errors++;
-	}
-
-	if ( scalar(@files) < $expect{cur_mins}{num_files} ) {
-	    printf( STDERR
-		    "ERROR: loop %d: too few actual files: %d < %d\n",
-		    $loop, scalar(@files), $expect{cur_mins}{num_files} );
-	}
-	if ( ! $new{events_lost} ) {
-	    if ( $diff{num_events} < $expect{loop_mins}{num_events} ) {
-		printf( STDERR
-			"ERROR: loop %d: too few actual events: %d < %d\n",
-			$loop, 
-			$diff{num_events}, $expect{loop_mins}{num_events} );
-		$errors++;
-	    }
-	}
-	if ( $new{sequence} < $expect{cur_mins}{sequence} ) {
-	    printf( STDERR
-		    "ERROR: loop %d: actual sequence too low: %d < %d\n",
-		    $loop,
-		    $new{sequence}, $expect{cur_mins}{sequence});
-	    $errors++;
-	}
-
-	if ( $new{file_size} > $expect{maxs}{total_size} ) {
-	    printf( STDERR
-		    "ERROR: loop %d: total file size too high: %d > %d\n",
-		    $loop,
-		    $new{total_size}, $expect{maxs}{total_size});
-	    $errors++;
-	}
-
-	foreach my $k ( keys(%previous) ) {
-	    $previous{$k} = $new{$k};
-	}
+    foreach my $k ( keys(%previous) ) {
+	$previous{$k} = $new{$k};
     }
 }
 
@@ -536,7 +461,8 @@ my %final;
 foreach my $k ( keys(%totals) ) {
     $final{$k} = 0;
 }
-my @files = ReadFiles( $dir, \%final );
+my @files = ReadEventlogs( $dir, \%final );
+ProcessEventlogs( \@files, \%final );
 if ( scalar(@files) < $expect{final_mins}{num_files} ) {
     printf( STDERR
 	    "ERROR: final: too few actual files: %d < %d\n",
@@ -583,7 +509,131 @@ if ( $errors  or  $settings{verbose}   or  $settings{debug} ) {
 
 exit( $errors == 0 ? 0 : 1 );
 
-sub ReadFiles( $$ )
+
+# #######################################
+# Run the writer
+# #######################################
+sub RunWriter( $$$$ )
+{
+    my $new = shift;
+    my $previous = shift;
+    my $totals = shift;
+    my $errors = shift;
+
+    my $cmd = "";
+    if ( $settings{valgrind_writer} ) {
+	$cmd .= join( " ", @valgrind ) . " ";
+    }
+    $cmd .= join(" ", @writer_args );
+    print "$cmd\n";
+
+    if ( ! $settings{execute} ) {
+	return ( 0, 0 );
+    }
+
+    open( WRITER, "$cmd|" ) or die "Can't run $cmd";
+    while( <WRITER> ) {
+	print if ( $settings{verbose} );
+	chomp;
+	if ( /wrote (\d+) events/ ) {
+	    $new->{writer_events} = $1;
+	}
+	elsif ( /global sequence (\d+)/ ) {
+	    $new->{writer_sequence} = $1;
+	    $new->{writer_files} = $1 - $previous->{writer_sequence};
+	    $totals->{writer_sequence} = 0;	# special case
+	}
+    }
+    close( WRITER );
+
+    my $failed = 0;
+    if ( $? & 127 ) {
+	printf "ERROR: writer exited from signal %d\n", ($? & 127);
+	$$errors++;
+	$failed = 1;
+    }
+    if ( $? & 128 ) {
+	print "ERROR: writer dumped core\n";
+	$$errors++;
+	$failed = 1;
+    }
+    if ( $? >> 8 ) {
+	printf "ERROR: writer exited with status %d\n", ($? >> 8);
+	$$errors++;
+	$failed = 1;
+    }
+    if ( ! $failed and $settings{verbose}) {
+	print "writer process exited normally\n";
+    }
+
+    return ( 1, $failed );
+}
+
+# #######################################
+# Check the writer's output
+# #######################################
+sub CheckWriterOutput( $$$$ )
+{
+    my $files = shift;
+    my $loop  = shift;
+    my $new   = shift;
+    my $diff  = shift;
+
+    my $errors = 0;
+
+    if ( $new->{writer_events} < $expect{loop_mins}{num_events} ) {
+	printf( STDERR
+		"ERROR: loop %d: writer wrote too few events: %d < %d\n",
+		$loop,
+		$new->{writer_events}, $expect{loop_mins}{num_events} );
+	$errors++;
+    }
+    if ( $new->{writer_sequence} < $expect{cur_mins}{sequence} ) {
+	printf( STDERR
+		"ERROR: loop %d: writer sequence too low: %d < %d\n",
+		$loop,
+		$new->{writer_sequence}, $expect{cur_mins}{sequence} );
+	$errors++;
+    }
+
+    my $nfiles = scalar(@{$files});
+    if ( $nfiles < $expect{cur_mins}{num_files} ) {
+	printf( STDERR
+		"ERROR: loop %d: too few actual files: %d < %d\n",
+		$loop, $nfiles, $expect{cur_mins}{num_files} );
+    }
+    if ( ! $new->{events_lost} ) {
+	if ( $diff->{num_events} < $expect{loop_mins}{num_events} ) {
+	    printf( STDERR
+		    "ERROR: loop %d: too few actual events: %d < %d\n",
+		    $loop, 
+		    $diff->{num_events}, $expect{loop_mins}{num_events} );
+	    $errors++;
+	}
+    }
+    if ( $new->{sequence} < $expect{cur_mins}{sequence} ) {
+	printf( STDERR
+		"ERROR: loop %d: actual sequence too low: %d < %d\n",
+		$loop,
+		$new->{sequence}, $expect{cur_mins}{sequence});
+	$errors++;
+    }
+
+    if ( $new->{file_size} > $expect{maxs}{total_size} ) {
+	printf( STDERR
+		"ERROR: loop %d: total file size too high: %d > %d\n",
+		$loop,
+		$new->{total_size}, $expect{maxs}{total_size});
+	$errors++;
+    }
+
+    return $errors;
+}
+
+# #######################################
+# Read the eventlog files
+# #######################################
+sub ReadEventlogs( $$ )
 {
     my $dir = shift;
     my $new = shift;
@@ -640,22 +690,31 @@ sub ReadFiles( $$ )
 	}
     }
     closedir( DIR );
+    return @files;
+}
+
+# #######################################
+# Read the eventlog files, process them
+# #######################################
+sub ProcessEventlogs( $$ )
+{
+    my $files = shift;
+    my $new = shift;
 
     my $events_counted = 
 	( exists $test->{config}{EVENT_LOG_COUNT_EVENTS} and
 	  $test->{config}{EVENT_LOG_COUNT_EVENTS} eq "TRUE" );
-    #print "Events are ", $events_counted ? "" : "not ", "counted\n";
-
 
     my $min_sequence = 9999999;
     my $min_event_off = 99999999;
-    foreach my $n ( 0 .. $#files ) {
-	if ( ! defined $files[$n] ) {
+    my $maxfile = $#{@{$files}};
+    foreach my $n ( 0 .. $maxfile ) {
+	if ( ! defined ${@{$files}}[$n] ) {
 	    print STDERR "ERROR: EventLog file #$n is missing\n";
 	    $errors++;
 	    next;
 	}
-	my $f = $files[$n];
+	my $f = ${@{$files}}[$n];
 	my $t = $f->{name};
 	if ( not exists $f->{header} ) {
 	    print STDERR "ERROR: no header in file $t\n";
@@ -665,7 +724,7 @@ sub ReadFiles( $$ )
 
 	# The sequence on all but the first (chronologically) file
 	# should never be one
-	if (  ( $n != $#files ) and ( $seq == 1 )  ) {
+	if (  ( $n != $maxfile ) and ( $seq == 1 )  ) {
 	    print STDERR
 		"ERROR: sequence # for file $t (#$n) is $seq\n";
 	    $errors++;
@@ -730,6 +789,7 @@ sub ReadFiles( $$ )
 	}
 
     }
+
     if ( $min_sequence > 0 ) {
 	$new->{events_lost} = 1;
 	if ( $min_event_off > 0 ) {
@@ -739,5 +799,4 @@ sub ReadFiles( $$ )
 	    $new->{num_events_lost} = -1;
 	}
     }
-    return @files;
 }
