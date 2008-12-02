@@ -91,12 +91,13 @@ use vars qw/ $opt_build $opt_test
     $opt_help $opt_debug $opt_notify $opt_notify_fail_only $opt_platforms $opt_nmi_glue 
     $opt_workspace $opt_git
     $opt_tag $opt_module $opt_nmiconf $opt_desc $opt_append
-    $opt_submit_xtests $opt_configure
+    $opt_submit_xtests $opt_configure $opt_src_tag $opt_other_tag
     $opt_nightly $opt_externals $opt_without_tests
     $opt_clear_externals_cache $opt_use_externals_cache
     $opt_externals_only $opt_release_only $opt_version_buildid
+	$opt_skip_doc $opt_sha1
     $opt_buildid $opt_test_src $opt_test_timeout $opt_test_args
-    $opt_input_platform $opt_skip_doc $opt_sha1
+    $opt_input_platform
     /;
 
 sub TRUE { 1; };
@@ -274,7 +275,7 @@ foreach $tag (sort keys %tags ) {
     }
 
     getSubmitInfo( $tag );
-    $cmdfile = createSubmitFiles( $tag );
+    $cmdfile = createSubmitFiles( $tag, $opt_src_tag, $opt_other_tag );
     submitRun( $cmdfile, $tag );
 }
 
@@ -391,6 +392,8 @@ sub parseOptions
            'append=s'      => \$opt_append,
            'submit-xtests!' => \$opt_submit_xtests,
 		   'configure=s' => \$opt_configure,
+		   'src-tag=s' => \$opt_src_tag,
+		   'other-tag=s' => \$opt_other_tag,
 # build-specific options
            'nightly'       => \$opt_nightly,
            'externals=s'   => \$opt_externals,
@@ -402,14 +405,14 @@ sub parseOptions
            'externals-only' => \$opt_externals_only,
 			'release-only' => \$opt_release_only,
            'version-buildid=s' => \$opt_version_buildid,
+		   'skip-doc' => \$opt_skip_doc,
+		   'sha1=s' => \$opt_sha1,
 # test-specific options
            'buildid=i'     => \$opt_buildid,
            'test-src=s'    => \$opt_test_src,
            'test-timeout=i' => \$opt_test_timeout,
            'test-args=s'   => \$opt_test_args,
            'input-platform=s' => \$opt_input_platform,
-		   'skip-doc' => \$opt_skip_doc,
-		   'sha1=s' => \$opt_sha1,
     );
 
     if( !$rc ) {
@@ -509,17 +512,27 @@ sub parseOptions
 		$notify_fail_only = 1;
 	}
 
+	if ( defined $opt_tag ) {
+		if((defined $opt_src_tag) or (defined $opt_other_tag)) {
+			print "ERROR: Either build from same branch in all repositories\n";
+			print "or you use a unique branch for source with another for all\n";
+			print "the other repositories\n";
+			print "Either --tag=AAAAA Or --src-tag=BBBBB --other-tag=CCCCC\n";
+	    	printUsage( 1 );
+		}
+	}
+
     if ( defined $opt_tag && defined $opt_module ) {
         $tags{"$opt_tag"} = $opt_module;
-    }
-    elsif ( defined $opt_nightly ) {
+    } elsif ( defined $opt_src_tag && defined $opt_other_tag ) {
+	    print "You requested a split fetch from two branches\n";
+        $tags{"$opt_other_tag"} = "split_fetch";
+    } elsif ( defined $opt_nightly ) {
         print "You specified --nightly, will fetch tags\n";
-    }
-    elsif ( defined $opt_workspace ) {
+    } elsif ( defined $opt_workspace ) {
 		print "Working from local workspace $opt_workspace\n";
 		$src_workspace = File::Spec->rel2abs($opt_workspace);
-    }
-    else {
+    } else {
         print "You need to define either --tag and --module, ";
         print "or use --nightly, or use --workspace\n";
         printUsage( 1 );
@@ -624,6 +637,9 @@ Where [options] can be any of:
 --append=string    <arbitrary text to be appended to the NMI submit file>
 --submit-xtests    <should this run submit the cross-platform tests defined
                     in the submit_info file?>
+--src-tag          <source only tag to use/ someone's branch>
+--other-tag        <tag to use for other repositories. Must be used with
+					--src-tag>
 
 Where [build-options] can be any of:
 --nightly          <Default for builds: pulls the nightly tags file from 
@@ -646,7 +662,9 @@ Where [build-options] can be any of:
                   on all platforms. Do NOT use this option if you want to
                   submit test runs based on this build.
 --version-buildid=string <Build RunId to use in the version string>
- 
+--sha1            Place the sha1 into the database as the product_version.
+--skip-doc        Exactly what it says. Can't use it till we can implement
+                  a way for make public to not fail with no manual.
 Where [test-options] can be any of:
 --buildid=string   <Build RunId to test>
 --test-src=string  <Custom source tarball for building tests with>
@@ -821,7 +839,9 @@ sub printSubmitInfo
 
 sub createSubmitFiles
 {
-    my ( $tag ) = @_;
+    my ( $tag, $srctag, $othertag ) = @_;
+
+	print "createSubmitFiles: $tag, $srctag, $othertag\n";
 
     my $cmdfile = "cmdfile";
     if( defined $tag ) {
@@ -844,9 +864,9 @@ sub createSubmitFiles
 
     # define inputs
     if( $runtype eq "build" ) {
-        @fetch_files = generateBuildFetchFiles( $tag, $module );
+        @fetch_files = generateBuildFetchFiles( $tag, $module, $opt_src_tag, $opt_other_tag );
     } else {
-        @fetch_files = generateTestFetchFiles( $tag, $module );
+        @fetch_files = generateTestFetchFiles( $tag, $module, $opt_src_tag, $opt_other_tag );
     }
     print CMDFILE "inputs = " . join(', ', @fetch_files) . "\n";
 
@@ -945,20 +965,39 @@ sub writeCommonInfo
 
     my $desc;
     my $vers_string;
+    my @vers;
 
-    if( defined $tag ) {
-        my @vers;
-        ($desc, @vers) = parseTag( $tag );
-        $vers_string = join( ',', @vers );
+    if( defined $opt_src_tag &&  defined $opt_other_tag ) {
+		if(defined $opt_desc) {
+			# --desc overrides --tag value starting the description
+			$desc = $opt_desc;
+		} else {
+        	($desc, @vers) = parseTag( $tag );
+        	$vers_string = join( ',', @vers );
+		}
+    } elsif( defined $tag ) {
+		if(defined $opt_desc) {
+			# --desc overrides --tag value starting the description
+			$desc = $opt_desc;
+		} else {
+        	($desc, @vers) = parseTag( $tag );
+        	$vers_string = join( ',', @vers );
+		}
     } elsif( defined $src_workspace ) {
         $desc = 'workspace';
+    	if ( defined $opt_desc ) {
+        	$desc = $desc . ": $opt_desc";
+    	}
     } else {
         $desc = 'unknown';
+    	if ( defined $opt_desc ) {
+        	$desc = $desc . ": $opt_desc";
+    	}
     }
 
-    if ( defined $opt_desc ) {
-        $desc = $desc . ": $opt_desc";
-    }
+    #if ( defined $opt_desc ) {
+        #$desc = $desc . ": $opt_desc";
+    #}
 
     print $fh "description = $desc\n";
     print $fh "project = condor\n";
@@ -1206,15 +1245,25 @@ sub generateTestFetchFiles
 
 sub generateBuildFetchFiles
 {
-    my( $tag, $module ) = @_;
+    my( $tag, $module) = @_;
     my @fetch_files;
+	my $srctag = "";
+	my $othertag = "";
 
-    @fetch_files = generateSharedFetchFiles( $tag );
 
-    if( defined $tag ) {
-        my $srcfile = "source-$tag.src";
+    if( (defined $tag ) ||(defined $opt_src_tag)) {
+
+		if(defined $opt_src_tag) {
+			$srctag = "origin\/" . $opt_src_tag;
+			$othertag = $opt_other_tag;
+		} else {
+			$srctag = $othertag = $tag;
+		}
+
+    	@fetch_files = generateSharedFetchFiles( $srctag );
+        my $srcfile = "source-$srctag.src";
 		$srcfile =~ s,/,,g;
-        makeFetchFileVCS( $srcfile, TRUE, SRC, $module, $tag );
+        makeFetchFileVCS( $srcfile, TRUE, SRC, $module, $srctag );
         push( @fetch_files, $srcfile );
 
 		# This is a bit of a hack, if we are using git then we need to
@@ -1222,28 +1271,27 @@ sub generateBuildFetchFiles
 		# repositories than the source. Ideally, this would only be
 		# visible at the makeFetchFileVCS level.
 		if( defined $opt_git ) {
-	    	my $extfile = "externals-$tag.src";
+	    	my $extfile = "externals-$othertag.src";
 	    	$extfile =~ s,/,,g;
-	    	makeFetchFileVCS( $extfile, TRUE, EXT, $module, $tag );
+	    	makeFetchFileVCS( $extfile, TRUE, EXT, $module, $othertag );
 	    	push( @fetch_files, $extfile );
 	
-	    	my $docfile = "manual-$tag.src";
+	    	my $docfile = "manual-$othertag.src";
 	    	$docfile =~ s,/,,g;
-	    	makeFetchFileVCS( $docfile, TRUE, DOC, $module, $tag );
+	    	makeFetchFileVCS( $docfile, TRUE, DOC, $module, $othertag );
 	    	push( @fetch_files, $docfile );
 
-	    	my $test_cnffile = "confidential-$tag.src";
+	    	my $test_cnffile = "confidential-$othertag.src";
 	    	$test_cnffile =~ s,/,,g;
-	    	makeFetchFileVCS( $test_cnffile, TRUE, TST_CNF, $module, $tag );
+	    	makeFetchFileVCS( $test_cnffile, TRUE, TST_CNF, $module, $othertag );
 	    	push( @fetch_files, $test_cnffile );
 
-	    	my $test_cnffile = "largetests-$tag.src";
+	    	my $test_cnffile = "largetests-$othertag.src";
 	    	$test_cnffile =~ s,/,,g;
-	    	makeFetchFileVCS( $test_cnffile, TRUE, TST_LRG, $module, $tag );
+	    	makeFetchFileVCS( $test_cnffile, TRUE, TST_LRG, $module, $othertag );
 	    	push( @fetch_files, $test_cnffile );
 		}
-    }
-    elsif( defined $src_workspace ) {
+    } elsif( defined $src_workspace ) {
         # TODO: There is a race condition if the user also specified
         # --nmi-glue and this directory ($src_workspace) contains
         # an nmi_glue directory.  At the moment parseOptions warns
@@ -1252,10 +1300,10 @@ sub generateBuildFetchFiles
         # $src_workspace/nmi_glue exists, somehow pass makeFetchFileSCP
         # a "don't copy this particular subdirectory" option.
         my $srcfile = "source-workspace.src";
+    	@fetch_files = generateSharedFetchFiles( $tag );
         makeFetchFileSCP( $srcfile, $src_workspace, "recursive" );
         push( @fetch_files, $srcfile );
-    }
-    else {
+    } else {
         die "Internal consistancy error: build lacks a --tag/--nightly or a --workspace.";
     }
 
