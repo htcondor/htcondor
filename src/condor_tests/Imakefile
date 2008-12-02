@@ -264,6 +264,14 @@ TESTCLASS(job_vmu_basic,quicknolink)
 TESTCLASS(job_vmu_basic,btdebug)
 #endif 
 
+/* We're not building OpenSSL on HPUX */
+#if !defined( IS_HPUX11 )
+DESC(job_amazon_basic,"Amazon EC2 test")
+RUN(job_amazon_basic)
+TESTCLASS(job_amazon_basic,quick)
+TESTCLASS(job_amazon_basic,full)
+#endif 
+
 DESC(job_flocking_to,"Simple flocking test")
 RUN(job_flocking_to)
 TESTCLASS(job_flocking_to,core)
