@@ -44,9 +44,8 @@ my @tests =
 	     #"MAX_EVENT_LOG"		=> 1000000,
 	 },
 	 loops				=> 1,
+	 size_mult			=> 1.25,
 	 writer => {
-	 },
-	 reader => {
 	 },
      },
      {
@@ -60,9 +59,8 @@ my @tests =
 	     #"MAX_EVENT_LOG"		=> 0,
 	 },
 	 loops				=> 1,
+	 size_mult			=> 1.25,
 	 writer => {
-	 },
-	 reader => {
 	 },
      },
 
@@ -77,9 +75,8 @@ my @tests =
 	     #"MAX_EVENT_LOG"		=> 0,
 	 },
 	 loops				=> 1,
+	 size_mult			=> 1.25,
 	 writer => {
-	 },
-	 reader => {
 	 },
      },
      {
@@ -93,9 +90,8 @@ my @tests =
 	     "MAX_EVENT_LOG"		=> 0,
 	 },
 	 loops				=> 1,
+	 size_mult			=> 1.25,
 	 writer => {
-	 },
-	 reader => {
 	 },
      },
 
@@ -110,9 +106,8 @@ my @tests =
 	     #"MAX_EVENT_LOG"		=> -1,
 	 },
 	 loops				=> 1,
+	 size_mult			=> 1.25,
 	 writer => {
-	 },
-	 reader => {
 	 },
      },
 
@@ -127,9 +122,8 @@ my @tests =
 	     #"MAX_EVENT_LOG"		=> -1,
 	 },
 	 loops				=> 1,
+	 size_mult			=> 1.25,
 	 writer => {
-	 },
-	 reader => {
 	 },
      },
 
@@ -144,9 +138,8 @@ my @tests =
 	     #"MAX_EVENT_LOG"		=> -1,
 	 },
 	 loops				=> 1,
+	 size_mult			=> 1.25,
 	 writer => {
-	 },
-	 reader => {
 	 },
      },
 
@@ -161,11 +154,83 @@ my @tests =
 	     #"MAX_EVENT_LOG"		=> -1,
 	 },
 	 loops				=> 1,
+	 size_mult			=> 1.25,
+	 writer => {
+	 },
+     },
+
+     {
+	 name		=> "reader_simple",
+	 config		=> {
+	     "EVENT_LOG"		=> "EventLog",
+	     "EVENT_LOG_COUNT_EVENTS"	=> "TRUE",
+	     "ENABLE_USERLOG_LOCKING"	=> "TRUE",
+	     "EVENT_LOG_MAX_ROTATIONS"	=> 0,
+	     #"EVENT_LOG_MAX_SIZE"	=> 10000,
+	     #"MAX_EVENT_LOG"		=> -1,
+	 },
+	 loops				=> 1,
+	 size_mult			=> 0.1,
 	 writer => {
 	 },
 	 reader => {
+	     persist			=> 1,
 	 },
-     }
+     },
+
+     {
+	 name		=> "reader_old_rotations",
+	 config		=> {
+	     "EVENT_LOG"		=> "EventLog",
+	     "EVENT_LOG_COUNT_EVENTS"	=> "TRUE",
+	     "ENABLE_USERLOG_LOCKING"	=> "TRUE",
+	     "EVENT_LOG_MAX_ROTATIONS"	=> 1,
+	     "EVENT_LOG_MAX_SIZE"	=> 10000,
+	 },
+	 loops				=> 1,
+	 size_mult			=> 0.95,
+	 writer => {
+	 },
+	 reader => {
+	     persist			=> 1,
+	 },
+     },
+
+     {
+	 name		=> "reader_2_rotations",
+	 config		=> {
+	     "EVENT_LOG"		=> "EventLog",
+	     "EVENT_LOG_COUNT_EVENTS"	=> "TRUE",
+	     "ENABLE_USERLOG_LOCKING"	=> "TRUE",
+	     "EVENT_LOG_MAX_ROTATIONS"	=> 2,
+	     "EVENT_LOG_MAX_SIZE"	=> 10000,
+	 },
+	 loops				=> 1,
+	 size_mult			=> 0.95,
+	 writer => {
+	 },
+	 reader => {
+	     persist			=> 1,
+	 },
+     },
+
+     {
+	 name		=> "reader_20_rotations",
+	 config		=> {
+	     "EVENT_LOG"		=> "EventLog",
+	     "EVENT_LOG_COUNT_EVENTS"	=> "TRUE",
+	     "ENABLE_USERLOG_LOCKING"	=> "TRUE",
+	     "EVENT_LOG_MAX_ROTATIONS"	=> 20,
+	     "EVENT_LOG_MAX_SIZE"	=> 10000,
+	 },
+	 loops				=> 1,
+	 size_mult			=> 0.98,
+	 writer => {
+	 },
+	 reader => {
+	     persist			=> 1,
+	 },
+     },
 );
 
 sub usage( )
@@ -176,14 +241,20 @@ sub usage( )
 	"  -f|--force    force overwrite of test directory\n" .
 	"  -n|--no-exec  no execute / test mode\n" .
 	"  -d|--debug    enable D_FULLDEBUG debugging\n" .
+	"  --loops=<n>   Override # of loops in test\n" .
 	"  -v|--verbose  increase verbose level\n" .
 	"  --vg-writer   run writer under valgrind\n" .
+	"  --vg-reader   run reader under valgrind\n" .
 	"  -q|--quiet    cancel debug & verbose\n" .
 	"  -h|--help     this help\n";
 }
 
+sub RunWriter( $$$$ );
+sub RunReader( $$ );
 sub ReadEventlogs( $$ );
 sub ProcessEventlogs( $$ );
+sub CheckWriterOutput( $$$$ );
+sub CheckReaderOutput( $$$$ );
 
 my %settings =
 (
@@ -192,6 +263,7 @@ my %settings =
  execute		=> 1,
  force			=> 0,
  valgrind_writer	=> 0,
+ valgrind_reader	=> 0,
  );
 foreach my $arg ( @ARGV ) {
     if ( $arg eq "-f"  or  $arg eq "--force" ) {
@@ -206,8 +278,14 @@ foreach my $arg ( @ARGV ) {
     elsif ( $arg eq "-n"  or  $arg eq "--no-exec" ) {
 	$settings{execute} = 0;
     }
-    elsif ( $arg eq "-n"  or  $arg eq "--vg-writer" ) {
+    elsif ( $arg eq "--vg-writer" ) {
 	$settings{valgrind_writer} = 1;
+    }
+    elsif ( $arg eq "--vg-reader" ) {
+	$settings{valgrind_reader} = 1;
+    }
+    elsif ( $arg =~ /^--loops=(\d+)$/ ) {
+	$settings{loops} = $1;
     }
     elsif ( $arg eq "-v"  or  $arg eq "--verbose" ) {
 	$settings{verbose}++;
@@ -224,7 +302,13 @@ foreach my $arg ( @ARGV ) {
 	exit(0);
     }
     elsif ( !($arg =~ /^-/)  and !exists($settings{name}) ) {
-	$settings{name} = $arg;
+	if ( $arg =~ /(\w+?)(?:_(\d+)_loops)/ ) {
+	    $settings{name} = $1;
+	    $settings{loops} = $2;
+	}
+	else {
+	    $settings{name} = $arg;
+	}
     }
     else {
 	print STDERR "Unknown argument $arg\n";
@@ -247,10 +331,14 @@ foreach my $t ( @tests )
 }
 
 if ( ! defined($test) ) {
-    die "Unknown test name: $test";
+    die "Unknown test name: $settings{name}";
 }
 
-my $dir = getcwd() . "/test-eventlog_rotation-" . $settings{name};
+my $dir = "test-eventlog_rotation-" . $settings{name};
+if ( exists $settings{loops} ) {
+    $dir .= "_".$settings{loops}."_loops";
+}
+my $fulldir = getcwd() . "/$dir";
 if ( -d $dir  and  $settings{force} ) {
     system( "/bin/rm", "-fr", $dir );
 }
@@ -260,7 +348,7 @@ if ( -d $dir ) {
 mkdir( $dir ) or die "Can't create directory $dir";
 print "writing to $dir\n" if ( $settings{verbose} );
 
-my $config = "$dir/condor_config";
+my $config = "$fulldir/condor_config";
 open( CONFIG, ">$config" ) or die "Can't write to config file $config";
 foreach my $param ( keys(%{$test->{config}}) ) {
     my $value = $test->{config}{$param};
@@ -271,7 +359,7 @@ foreach my $param ( keys(%{$test->{config}}) ) {
 	print CONFIG "$param = FALSE\n";
     }
     elsif ( $param eq "EVENT_LOG" ) {
-	print CONFIG "$param = $dir/$value\n";
+	print CONFIG "$param = $fulldir/$value\n";
     }
     else {
 	print CONFIG "$param = $value\n";
@@ -298,14 +386,38 @@ elsif ( $max_size == 0 ) {
     $max_size = $default_max_size;
 }
 my $total_files = $max_rotations + 1;
-my $total_loops = $test->{loops};
-my $loop_events =
-    int(1.25 * $total_files * $max_size / ($event_size * $total_loops) );
+my $total_loops;
+if ( exists $settings{loops} ) {
+    $total_loops = $settings{loops};
+    $test->{loops} = $settings{loops};
+}
+elsif ( exists $test->{loops} ) {
+    $total_loops = $test->{loops};
+}
+else {
+    $total_loops = 1;
+    $test->{loops} = 1;
+}
+my $total_events;
+my $loop_events;
+if ( exists $test->{loop_events} ) {
+    $loop_events = $test->{loop_events};
+    $total_events = $loop_events * $total_loops;
+}
+elsif ( exists $test->{events} ) {
+    $loop_events = int($test->{events} / $total_loops);
+    $total_events = $test->{events}
+}
+else {
+    my $mult = ( exists $test->{size_mult} ) ? $test->{size_mult} : 1.25;
+    $loop_events = 
+	int($mult * $total_files * $max_size / ($event_size * $total_loops) );
+    $total_events = $loop_events * $total_loops;
+}
 
 
 # Calculate num exec / procs
 if ( !exists $test->{writer}{"--num-exec"} ) {
-
     my $num_procs = 1;
     if ( exists( $test->{writer}{"--num-procs"} ) ) {
 	$num_procs = $test->{writer}{"--num-procs"};
@@ -325,12 +437,12 @@ my %expect = (
 	      final_mins => {
 		  num_files	=> $total_files,
 		  sequence	=> $total_files,
-		  num_events	=> $loop_events * $total_loops,
+		  num_events	=> $total_events,
 		  file_size	=> $max_size,
 	      },
 	      maxs => {
-		  file_size	=> $max_size + 256,
-		  total_size	=> ($max_size + 256) * $total_files,
+		  file_size	=> $max_size + 512,
+		  total_size	=> ($max_size + 512) * $total_files,
 	      },
 	      loop_mins => {
 		  num_files	=> int($total_files / $total_loops),
@@ -347,6 +459,7 @@ my %expect = (
 	      );
 
 
+# Generate the writer command line
 my @writer_args = ( $programs{writer} );
 foreach my $t ( keys(%{$test->{writer}}) ) {
     if ( $t =~ /^-/ ) {
@@ -360,7 +473,7 @@ foreach my $t ( keys(%{$test->{writer}}) ) {
 
 push( @writer_args, "--verbosity" );
 push( @writer_args, "INFO" );
-foreach my $n ( 1 .. $settings{verbose} ) {
+foreach my $n ( 2 .. $settings{verbose} ) {
     push( @writer_args, "-v" );
 }
 if ( $settings{debug} ) {
@@ -374,11 +487,40 @@ else {
     push( @writer_args, "/dev/null" )
 }
 
+
+# Generate the reader command line
+my @reader_args;
+if ( exists $test->{reader} ) {
+    push( @reader_args, $programs{reader} );
+    foreach my $t ( keys(%{$test->{reader}}) ) {
+	if ( $t =~ /^-/ ) {
+	    my $value = $test->{writer}{$t};
+	    push( @reader_args, $t );
+	    if ( defined($value) ) {
+		push( @reader_args, $test->{reader}{$t} );
+	    }
+	}
+    }
+    push( @reader_args, "--verbosity" );
+    push( @reader_args, "ALL" );
+    if ( $settings{debug} ) {
+	push( @reader_args, "--debug" );
+	push( @reader_args, "D_FULLDEBUG" );
+    }
+    push( @reader_args, "--eventlog" );
+    push( @reader_args, "--exit" );
+    push( @reader_args, "--no-term" );
+}
+
+
 my @valgrind = ( "valgrind", "--tool=memcheck", "--num-callers=24",
 		 "-v", "-v", "--leak-check=full",
 		 "--log-file=$dir/valgrind-writer.out" );
 
 system("date");
+if ( $settings{verbose} ) {
+    print "Using directory $dir\n";
+}
 my $errors = 0;
 
 # Total writer out
@@ -413,11 +555,13 @@ foreach my $loop ( 1 .. $test->{loops} )
     }
 
     # Run the writer
-    my ($run, $failed) = RunWriter( \%new, \%previous, \%totals, \$errors );
+    my $run;
+    my $werrors += RunWriter( \%new, \%previous, \%totals, \$run );
+    $errors += $werrors;
     if ( ! $run ) {
 	next;
     }
-    if ( $failed ) {
+    if ( $werrors ) {
 	print STDERR "writer failed: aborting test\n";
 	last;
     }
@@ -432,9 +576,17 @@ foreach my $loop ( 1 .. $test->{loops} )
     }
     $errors += CheckWriterOutput( \@files, $loop, \%new, \%diff );
 
+    # Run the reader
+    $errors += RunReader( \%new, \$run );
+    if ( $run ) {
+	$errors += CheckReaderOutput( \@files, $loop, \%new, \%diff );
+    }
+
     foreach my $k ( keys(%previous) ) {
 	$previous{$k} = $new{$k};
     }
+
+    
 }
 
 if ( ! $settings{execute} ) {
@@ -491,7 +643,7 @@ if ( $final{file_size} > $expect{maxs}{total_size} ) {
 }
 
 
-if ( $errors  or  $settings{verbose}   or  $settings{debug} ) {
+if ( $errors  or  ($settings{verbose} > 1)  or  $settings{debug} ) {
     my $cmd;
     print "\nls:\n";
     $cmd = "/bin/ls -l $dir";
@@ -518,22 +670,26 @@ sub RunWriter( $$$$ )
     my $new = shift;
     my $previous = shift;
     my $totals = shift;
-    my $errors = shift;
+    my $run = shift;
+
+    my $errors = 0;
 
     my $cmd = "";
     if ( $settings{valgrind_writer} ) {
 	$cmd .= join( " ", @valgrind ) . " ";
     }
     $cmd .= join(" ", @writer_args );
-    print "$cmd\n";
+    print "$cmd\n" if ( $settings{verbose} );
 
     if ( ! $settings{execute} ) {
-	return ( 0, 0 );
+	$$run = 0;
+	return 0;
     }
 
+    $$run = 1;
     open( WRITER, "$cmd|" ) or die "Can't run $cmd";
     while( <WRITER> ) {
-	print if ( $settings{verbose} );
+	print if ( $settings{verbose} > 1 );
 	chomp;
 	if ( /wrote (\d+) events/ ) {
 	    $new->{writer_events} = $1;
@@ -546,28 +702,93 @@ sub RunWriter( $$$$ )
     }
     close( WRITER );
 
-    my $failed = 0;
     if ( $? & 127 ) {
 	printf "ERROR: writer exited from signal %d\n", ($? & 127);
-	$$errors++;
-	$failed = 1;
+	$errors++;
     }
     if ( $? & 128 ) {
 	print "ERROR: writer dumped core\n";
-	$$errors++;
-	$failed = 1;
+	$errors++;
     }
     if ( $? >> 8 ) {
 	printf "ERROR: writer exited with status %d\n", ($? >> 8);
-	$$errors++;
-	$failed = 1;
+	$errors++;
     }
-    if ( ! $failed and $settings{verbose}) {
+    if ( ! $errors and $settings{verbose}) {
 	print "writer process exited normally\n";
     }
 
-    return ( 1, $failed );
+    return $errors;
 }
+
+
+
+# #######################################
+# Run the reader
+# #######################################
+sub RunReader( $$ )
+{
+    my $new = shift;
+    my $run = shift;
+
+    my $errors = 0;
+    if ( scalar(@reader_args) == 0 ) {
+	$$run = 0;
+	return 0;
+    }
+
+    my $cmd = "";
+    if ( $settings{valgrind_reader} ) {
+	$cmd .= join( " ", @valgrind ) . " ";
+    }
+    $cmd .= join(" ", @reader_args );
+    print "$cmd\n" if ( $settings{verbose} );
+
+    if ( ! $settings{execute} ) {
+	$$run = 0;
+	return 0;
+    }
+
+    $$run = 1;
+    $new->{reader_files} = 0;
+    $new->{reader_events} = 0;
+    $new->{reader_sequence} = [ ];
+
+    open( READER, "$cmd|" ) or die "Can't run $cmd";
+    while( <READER> ) {
+	print if ( $settings{verbose} > 1 );
+	chomp;
+	if ( /^Read (\d+) events/ ) {
+	    $new->{reader_events} = $1;
+	}
+	elsif ( /Global JobLog:.*sequence=(\d+)/ ) {
+	    push( @{$new->{reader_sequence}}, $1 );
+	    $new->{reader_files}++;
+	}
+
+    }
+    close( READER );
+
+    if ( $? & 127 ) {
+	printf "ERROR: reader exited from signal %d\n", ($? & 127);
+	$errors++;
+    }
+    if ( $? & 128 ) {
+	print "ERROR: reader dumped core\n";
+	$errors++;
+    }
+    if ( $? >> 8 ) {
+	printf "ERROR: reader exited with status %d\n", ($? >> 8);
+	$errors++;
+    }
+    if ( ! $errors and $settings{verbose}) {
+	print "reader process exited normally\n";
+    }
+
+    return $errors;
+}
+
+
 
 # #######################################
 # Check the writer's output
@@ -629,6 +850,66 @@ sub CheckWriterOutput( $$$$ )
 
     return $errors;
 }
+
+
+# #######################################
+# Check the writer's output
+# #######################################
+sub CheckReaderOutput( $$$$ )
+{
+    my $files = shift;
+    my $loop  = shift;
+    my $new   = shift;
+    my $diff  = shift;
+
+    my $errors = 0;
+    
+    if ( $new->{reader_events} < $new->{writer_events} ) {
+	printf( STDERR
+		"ERROR: loop %d: reader found fewer events than writer wrote".
+		": %d < %d\n",
+		$loop,
+		$new->{reader_events}, $new->{writer_events} );
+	$errors++;
+    }
+
+    my $nseq = $#{@{$new->{reader_sequence}}};
+    my $rseq = -1;
+    if ( $nseq >= 0 ) {
+	$rseq = @{$new->{reader_sequence}}[$nseq];
+    }
+ 
+   if ( $nseq < 0 ) {
+	printf( STDERR
+		"ERROR: loop %d: no reader sequence\n",
+		$loop );
+	$errors++;
+    }
+    elsif ( $rseq < $new->{writer_sequence} ) {
+	printf( STDERR
+		"ERROR: loop %d: reader sequence too low: %d < %d\n",
+		$loop,
+		$rseq, $new->{writer_sequence} );
+	$errors++;
+    }
+    elsif ( ($nseq+1) < $expect{loop_mins}{sequence} ) {
+	printf( STDERR
+		"ERROR: loop %d: reader too few sequences: %d < %d\n",
+		$loop,
+		$nseq+1, $expect{loop_mins}{sequence} );
+	$errors++;
+    }
+
+    if ( $new->{reader_files} < $new->{writer_files} ) {
+	printf( STDERR
+		"ERROR: loop %d: reader found too few files: %d < %d\n",
+		$loop,
+		$new->{reader_files}, $new->{writer_files} );
+    }
+
+    return $errors;
+}
+
 
 # #######################################
 # Read the eventlog files
