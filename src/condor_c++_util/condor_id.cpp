@@ -48,10 +48,10 @@ CondorID::SetFromString( const char* s )
 
 
 int
-CondorID::ServiceDataCompare( ServiceData* lhs, ServiceData* rhs )
+CondorID::ServiceDataCompare( const ServiceData* rhs ) const
 {
-	CondorID* id_lhs = (CondorID*)lhs;
-	CondorID* id_rhs = (CondorID*)rhs;
+	CondorID const* id_lhs = (CondorID const*)this;
+	CondorID const* id_rhs = (CondorID const*)rhs;
 	if( id_lhs && ! id_rhs ) {
 		return -1;
 	}
@@ -62,4 +62,30 @@ CondorID::ServiceDataCompare( ServiceData* lhs, ServiceData* rhs )
 		return -1;
 	}
 	return id_lhs->Compare( *id_rhs );
+}
+
+static unsigned int reverse_bits(unsigned int x) {
+	//http://www-graphics.stanford.edu/~seander/bithacks.html#BitReverseObvious
+	unsigned int y = x;
+	unsigned int high_zeros=sizeof(x)*8-1;
+	for(x >>= 1; x; x >>= 1) {
+		y <<= 1;
+		y |= x&1;
+		high_zeros--;
+	}
+	y <<= high_zeros;
+	return y;
+}
+
+unsigned int
+CondorID::HashFn() const
+{
+		// Put the most variable (low) bits of _cluster and _proc
+		// at opposite ends of the hash integer so they are unlikely
+		// to overlap.  Put the low bits of _subproc near the center.
+	unsigned int a = _cluster;
+	unsigned int b = _proc;
+	unsigned int c = _subproc;
+	c = (c<<16) + (c>>(sizeof(unsigned int)*8-16));
+	return a + reverse_bits(b) + c;
 }

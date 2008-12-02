@@ -25,9 +25,9 @@
 #include "self_draining_queue.h"
 
 
-SelfDrainingQueue::SelfDrainingQueue( const char* queue_name, int per,
-									  ServiceDataCompare fn_ptr )
-	: queue( 32, fn_ptr )
+SelfDrainingQueue::SelfDrainingQueue( const char* queue_name, int per )
+	: queue( 32, NULL ),
+	  m_hash( SelfDrainingHashItem::HashFn )
 {
 	if( queue_name ) {
 		name = strdup( queue_name );
@@ -40,7 +40,6 @@ SelfDrainingQueue::SelfDrainingQueue( const char* queue_name, int per,
 
 	handler_fn = NULL;
 	handlercpp_fn = NULL;
-	this->compare_fn = fn_ptr;
 	service_ptr = NULL;
 
 	this->period = per;
@@ -97,14 +96,6 @@ SelfDrainingQueue::registerHandlercpp( ServiceDataHandlercpp
 
 
 bool
-SelfDrainingQueue::registerCompareFunc( ServiceDataCompare compare_reg_fn )
-{
-	this->compare_fn = compare_reg_fn;
-	return true;
-}
-
-
-bool
 SelfDrainingQueue::setPeriod( int new_period )
 {
 	if( period == new_period ) {
@@ -129,11 +120,8 @@ bool
 SelfDrainingQueue::enqueue( ServiceData* data, bool allow_dups )
 {
 	if( ! allow_dups ) {
-		if( ! compare_fn ) {
-			EXCEPT( "SelfDrainingQueue::enqueue() called with allow_dups == "
-					"FALSE but no comparision function registered!" );
-		}
-		if( queue.IsMember(data) ) {
+		SelfDrainingHashItem hash_item(data);
+		if( m_hash.insert(hash_item,true) == -1 ) {
 			dprintf( D_FULLDEBUG, "SelfDrainingQueue::enqueue() "
 					 "refusing duplicate data\n" );
 			return false;
@@ -145,19 +133,6 @@ SelfDrainingQueue::enqueue( ServiceData* data, bool allow_dups )
 			 name, queue.Length() );
 	registerTimer();
 	return true;
-}
-
-
-bool
-SelfDrainingQueue::isMember( ServiceData* data )
-{
-	if( ! compare_fn ) { 
-			// this is a programmer error!
-		EXCEPT( "SelfDrainingQueue[%s]::isMember() called without "
-				"comparison function registered", name );
-	}
-	if( ! data ) { return false; }
-	return queue.IsMember( data );
 }
 
 
@@ -179,6 +154,10 @@ SelfDrainingQueue::timerHandler( void )
 		return TRUE;
 	}
 	queue.dequeue(d);
+
+	SelfDrainingHashItem hash_item(d);
+	m_hash.remove(hash_item);
+
 	if( handler_fn ) {
 		handler_fn( d );
 	} else if( handlercpp_fn && service_ptr ) {
@@ -254,4 +233,10 @@ SelfDrainingQueue::resetTimer( void )
 	daemonCore->Reset_Timer( tid, period, 0 );
 	dprintf( D_FULLDEBUG, "Reset timer for SelfDrainingQueue %s, "
 			 "period: %d (id: %d)\n", name, period, tid );
+}
+
+unsigned int
+SelfDrainingHashItem::HashFn(SelfDrainingHashItem const &item)
+{
+	return item.m_service->HashFn();
 }
