@@ -1,4 +1,5 @@
-executable           	= /bin/false
+executable           	= ./x_dagman_retry-monitor.pl
+arguments		= 5
 universe             	= scheduler
 log			= job_dagman_abort-A-node.log
 notification         	= NEVER
