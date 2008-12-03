@@ -1276,7 +1276,7 @@ char *CreamJob::buildSubmitAd()
 	const char *ATTR_STD_ERROR = "StdError";
 	const char *ATTR_INPUT_SB = "InputSandbox";
 	const char *ATTR_OUTPUT_SB = "OutputSandbox";
-	const char *ATTR_OUTPUT_SB_BASE_DEST_URI = "OutputSandboxBaseDestURI";
+	const char *ATTR_OUTPUT_SB_DEST_URI = "OutputSandboxDestURI";
 	const char *ATTR_VIR_ORG = "VirtualOrganization";
 	const char *ATTR_BATCH_SYSTEM = "BatchSystem";
 	const char *ATTR_QUEUE_NAME = "QueueName";
@@ -1290,6 +1290,7 @@ char *CreamJob::buildSubmitAd()
 	MyString gridftp_url = "";
 	StringList isb;
 	StringList osb;
+	StringList osb_url;
 	bool result;
 
 		// Once we add streaming support, remove this
@@ -1402,43 +1403,79 @@ char *CreamJob::buildSubmitAd()
 
 		//TRANSFER OUTPUT FILES: handle absolute ?
 	if (jobAd->LookupString(ATTR_TRANSFER_OUTPUT_FILES, tmp_str)) {
-		StringList strlist(tmp_str.Value());
-		strlist.rewind();
-		
-		for (int i = 0; i < strlist.number(); i++) {
-			osb.insert(strlist.next());
+		char *filename;
+		char *remaps = NULL;
+		MyString new_name;
+		jobAd->LookupString( ATTR_TRANSFER_OUTPUT_REMAPS, &remaps );
+
+		StringList output_files(tmp_str.Value());
+		output_files.rewind();
+		while ( (filename = output_files.next()) != NULL ) {
+
+			osb.insert( filename );
+
+			if ( remaps && filename_remap_find( remaps, filename,
+												new_name ) ) {
+				buf.sprintf( "%s%s%s", gridftp_url.Value(),
+							 new_name[0] == '/' ? "" : iwd_str.Value(),
+							 new_name.Value() );
+			} else {
+				buf.sprintf( "%s%s%s", gridftp_url.Value(),
+							 iwd_str.Value(),
+							 condor_basename( filename ) );
+			}
+			osb_url.insert( buf.Value() );
 		}
+
+		free( remaps );
 	}
 	
 		//STDOUTPUT TODO: handle absolute ?
 	if (jobAd->LookupString(ATTR_JOB_OUTPUT, tmp_str)) {
-		buf.sprintf("%s = \"%s\"", ATTR_STD_OUTPUT, tmp_str.Value());
-		submitAd.Insert(buf.Value());
 
 		result = true;
 		jobAd->LookupBool(ATTR_TRANSFER_OUTPUT, result);
+
 		if (result) {
-			osb.insert(tmp_str.Value());
+			buf.sprintf("%s = \"%s\"", ATTR_STD_OUTPUT,
+						condor_basename(tmp_str.Value()));
+			submitAd.Insert(buf.Value());
+
+			osb.insert(condor_basename(tmp_str.Value()));
+
+			buf.sprintf("%s%s%s", gridftp_url.Value(),
+						tmp_str[0] == '/' ? "" : iwd_str.Value(),
+						tmp_str.Value());
+
+			osb_url.insert(buf.Value());
+		} else {
+			buf.sprintf("%s = \"%s\"", ATTR_STD_OUTPUT, tmp_str.Value());
+			submitAd.Insert(buf.Value());
 		}
 	}
 
 		//STDERROR TODO: handle absolute ?
 	if (jobAd->LookupString(ATTR_JOB_ERROR, tmp_str)) {
-		buf.sprintf("%s = \"%s\"", ATTR_STD_ERROR, tmp_str.Value());
-		submitAd.Insert(buf.Value());
-		
+
 		result = true;
 		jobAd->LookupBool(ATTR_TRANSFER_ERROR, result);
-		if (result) {
-			osb.insert(tmp_str.Value());
-		}
-	}
 
-		//OUTPUTSANDBOXBASEDESTURI
-	if (osb.number() > 0) {
-		tmp_str = gridftp_url + iwd_str;
-		buf.sprintf("%s = \"%s\"", ATTR_OUTPUT_SB_BASE_DEST_URI, tmp_str.Value());
-		submitAd.Insert(buf.Value());
+		if (result) {
+			buf.sprintf("%s = \"%s\"", ATTR_STD_ERROR,
+						condor_basename(tmp_str.Value()));
+			submitAd.Insert(buf.Value());
+
+			osb.insert(condor_basename(tmp_str.Value()));
+
+			buf.sprintf("%s%s%s", gridftp_url.Value(),
+						tmp_str[0] == '/' ? "" : iwd_str.Value(),
+						tmp_str.Value());
+
+			osb_url.insert(buf.Value());
+		} else {
+			buf.sprintf("%s = \"%s\"", ATTR_STD_ERROR, tmp_str.Value());
+			submitAd.Insert(buf.Value());
+		}
 	}
 
 		//VIRTUALORGANISATION. CREAM requires this attribute, but it doesn't
@@ -1446,7 +1483,7 @@ char *CreamJob::buildSubmitAd()
 		// TODO This needs to be extracted from the VOMS extension in the
 		//   job's credential.
 //	buf.sprintf("%s = \"%s\"", ATTR_VIR_ORG, "");
-	buf.sprintf("%s = \"%s\"", ATTR_VIR_ORG, "infngrid");
+	buf.sprintf("%s = \"%s\"", ATTR_VIR_ORG, "ignored");
 	submitAd.Insert(buf.Value());
 	
 		//BATCHSYSTEM
@@ -1494,6 +1531,22 @@ char *CreamJob::buildSubmitAd()
 				buf.sprintf_cat("\"%s\"", osb.next());
 			else
 				buf.sprintf_cat(",\"%s\"", osb.next());
+		}
+		buf.sprintf_cat("}; ]");
+
+		int insert_pos = strrchr( ad_string.Value(), ']' ) - ad_string.Value();
+		ad_string.replaceString( "]", buf.Value(), insert_pos );
+	}
+
+		//OUTPUT SANDBOX DEST URI
+	if (osb_url.number() > 0) {
+		buf.sprintf("%s = {", ATTR_OUTPUT_SB_DEST_URI);
+		osb_url.rewind();
+		for (int i = 0; i < osb_url.number(); i++) {
+			if (i == 0)
+				buf.sprintf_cat("\"%s\"", osb_url.next());
+			else
+				buf.sprintf_cat(",\"%s\"", osb_url.next());
 		}
 		buf.sprintf_cat("}; ]");
 
