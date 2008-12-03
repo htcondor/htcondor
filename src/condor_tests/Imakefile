@@ -528,14 +528,12 @@ TESTCLASS(cmd_q_shows-analyze,quick)
 TESTCLASS(cmd_q_shows-analyze,full)
 TESTCLASS(cmd_q_shows-analyze,quicknolink)
 
-#if defined(HAVE_EXT_CLASSADS)
 DESC(cmd_q_shows-better-analyze,"Condor_q shows better-analyze")
 RUN(cmd_q_shows-better-analyze)
 TESTCLASS(cmd_q_shows-better-analyze,core)
 TESTCLASS(cmd_q_shows-better-analyze,quick)
 TESTCLASS(cmd_q_shows-better-analyze,full)
 TESTCLASS(cmd_q_shows-better-analyze,quicknolink)
-#endif
 
 DESC(cmd_q_shows-xml,"Condor_q shows xml")
 RUN(cmd_q_shows-xml)
