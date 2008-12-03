@@ -4046,6 +4046,14 @@
 			RelativePath="..\src\condor_c++_util\windows_firewall.h"
 			>
 		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\dc_service.h"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\dc_service.cpp"
+			>
+		</File>
 	</Files>
 	<Globals>
 	</Globals>
