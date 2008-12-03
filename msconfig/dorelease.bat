@@ -101,14 +101,13 @@ echo. & echo Copying SQL files...
 copy ..\src\condor_tt\*.sql %1\sql
 
 echo. & echo Copying WSDL files...
-pushd .
-cd ..\src
+pushd ..\src
 for /R %%f in (*.wsdl) do copy %%f %1\lib\webservice
 popd
 
 echo. & echo Copying symbol files...
 for %%f in (master startd quill dbmsd had credd schedd collector negotiator shadow starter) do (
-    copy /v ..\Release\condor_%%f.pdb %1\bin
+    copy ..\Release\condor_%%f.pdb %1\bin
 )
 
 echo. & echo Making some aliases...
@@ -116,19 +115,22 @@ pushd %1\bin
 copy condor_rm.exe condor_hold.exe
 copy condor_rm.exe condor_release.exe
 copy condor_rm.exe condor_vacate_job.exe
-copy condor.exe condor_off.exe
 copy condor.exe condor_on.exe
+copy condor.exe condor_off.exe
+copy condor.exe condor_vacate.exe
 copy condor.exe condor_restart.exe
 copy condor.exe condor_reconfig.exe
 copy condor.exe condor_reschedule.exe
-copy condor.exe condor_vacate.exe
+copy condor.exe condor_set_shutdown.exe
 copy condor_cod.exe condor_cod_request.exe
 popd
 
 echo. & echo Copying DRMAA files...
-copy %EXT_INSTALL%\%EXT_DRMAA_VERSION%\include\* %1\include
-copy %EXT_INSTALL%\%EXT_DRMAA_VERSION%\lib\* %1\lib
-copy %EXT_INSTALL%\%EXT_DRMAA_VERSION%\src\* %1\src\drmaa
+pushd %EXT_INSTALL%\%EXT_DRMAA_VERSION%
+copy include\*.* %1\include
+copy lib\*.* %1\lib
+copy src\*.* %1\src\drmaa
+popd
 
 :end
 exit %INTERACTIVE% 0
