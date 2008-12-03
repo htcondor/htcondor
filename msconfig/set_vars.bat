@@ -168,8 +168,8 @@ set CONDOR_PCRE_LIB=libpcre.lib
 set CONDOR_PCRE_LIBPATH=/LIBPATH:%EXT_INSTALL%\%EXT_PCRE_VERSION%\lib
 
 REM Dump the Windows build environment at this point
-echo ----------------------- WIN ENV DUMP ----------------------
-set
-echo ----------------------- WIN ENV DUMP ----------------------
+REM echo ----------------------- WIN ENV DUMP ----------------------
+REM set
+REM echo ----------------------- WIN ENV DUMP ----------------------
 
 exit /B 0

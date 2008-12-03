@@ -79,9 +79,10 @@ license:
 	perl txt2rtf.pl --font="Courier New" --points=7 $(BASE)\\src\\condor_release\\LICENSE-2.0.txt > license.rtf
 
 clean:
-	echo $(SHELL)
 	rm -rf out
 	rm -rf *.exe *.obj
 	rm -f condor.ver
 	rm -f license.rtf
 	rm -f $(CONDORRELEASEDIR)\\*.msi
+	rm -f $(CONDORRELEASEDIR)\\*.zip
+
