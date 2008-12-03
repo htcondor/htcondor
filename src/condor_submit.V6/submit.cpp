@@ -1416,11 +1416,21 @@ void
 SetExecutable()
 {
 	bool	transfer_it = true;
+	bool	ignore_it = false;
 	char	*ename = NULL;
 	char	*copySpool = NULL;
 	char	*macro_value = NULL;
 	MyString	full_ename;
 	MyString buffer;
+
+	// In vm universe and ec2 grid jobs, 'Executable' parameter is not
+	// a real file but just the name of job.
+	if ( JobUniverse == CONDOR_UNIVERSE_VM ||
+		 ( JobUniverse == CONDOR_UNIVERSE_GRID &&
+		   JobGridType != NULL &&
+		   stricmp( JobGridType, "amazon" ) == MATCH ) ) {
+		ignore_it = true;
+	}
 
 	ename = condor_param( Executable, ATTR_JOB_CMD );
 	if( ename == NULL ) {
@@ -1439,9 +1449,7 @@ SetExecutable()
 		free( macro_value );
 	}
 
-	// In vm universe, 'Executable' parameter is not a real file 
-	// but just the name of job.
-	if ( JobUniverse == CONDOR_UNIVERSE_VM) {
+	if ( ignore_it ) {
 		if( transfer_it == true ) {
 			buffer.sprintf( "%s = FALSE", ATTR_TRANSFER_EXECUTABLE );
 			InsertJobExpr( buffer );
@@ -1456,7 +1464,7 @@ SetExecutable()
 	} else {
 		full_ename = ename;
 	}
-	if ( JobUniverse != CONDOR_UNIVERSE_VM) {
+	if ( !ignore_it ) {
 		check_and_universalize_path(full_ename, Executable);
 	}
 
@@ -1503,8 +1511,8 @@ SetExecutable()
 		exit( 1 );
 	}
 
-	// In vm universe, there is no executable file.
-	if ( JobUniverse == CONDOR_UNIVERSE_VM) {
+	// In vm universe and ec2, there is no executable file.
+	if ( !ignore_it ) {
 		copySpool = (char *)strdup("FALSE");
 	}else {
 		copySpool = condor_param( CopyToSpool, "CopyToSpool" );
@@ -1535,8 +1543,7 @@ SetExecutable()
 	if ( !strstr(ename,"$$") && transfer_it && !DumpClassAdToFile ) {
 
 		StatInfo si(ename);
-		if ( SINoFile == si.Error () && 
-		     CONDOR_UNIVERSE_VM != JobUniverse ) {
+		if ( SINoFile == si.Error () ) {
 		  fprintf ( stderr, 
 			    "\nERROR: Executable file %s does not exist\n",
 			    ename );
