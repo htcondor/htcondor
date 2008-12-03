@@ -17,6 +17,7 @@
  *
  ***************************************************************/
 
+#include "condor_common.h"
 #include "dc_service.h"
 
 ServiceData::~ServiceData() {
