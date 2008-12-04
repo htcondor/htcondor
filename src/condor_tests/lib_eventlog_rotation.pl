@@ -174,7 +174,6 @@ my @tests =
 	 writer => {
 	 },
 	 reader => {
-	     persist			=> 1,
 	 },
      },
 
@@ -243,24 +242,27 @@ sub usage( )
 	"  -d|--debug    enable D_FULLDEBUG debugging\n" .
 	"  --loops=<n>   Override # of loops in test\n" .
 	"  -v|--verbose  increase verbose level\n" .
+	"  -s|--stop     stop after errors\n" .
 	"  --vg-writer   run writer under valgrind\n" .
 	"  --vg-reader   run reader under valgrind\n" .
 	"  -q|--quiet    cancel debug & verbose\n" .
 	"  -h|--help     this help\n";
 }
 
-sub RunWriter( $$$$ );
-sub RunReader( $$ );
+sub RunWriter( $$$$$ );
+sub RunReader( $$$ );
 sub ReadEventlogs( $$ );
 sub ProcessEventlogs( $$ );
 sub CheckWriterOutput( $$$$ );
 sub CheckReaderOutput( $$$$ );
+sub GatherData( $ );
 
 my %settings =
 (
  verbose		=> 0,
  debug			=> 0,
  execute		=> 1,
+ stop			=> 0,
  force			=> 0,
  valgrind_writer	=> 0,
  valgrind_reader	=> 0,
@@ -277,6 +279,9 @@ foreach my $arg ( @ARGV ) {
     }
     elsif ( $arg eq "-n"  or  $arg eq "--no-exec" ) {
 	$settings{execute} = 0;
+    }
+    elsif ( $arg eq "-s"  or  $arg eq "--stop" ) {
+	$settings{stop} = 1;
     }
     elsif ( $arg eq "--vg-writer" ) {
 	$settings{valgrind_writer} = 1;
@@ -365,6 +370,9 @@ foreach my $param ( keys(%{$test->{config}}) ) {
 	print CONFIG "$param = $value\n";
     }
 }
+print CONFIG "TEST_LOG_READER_STATE_LOG = $fulldir/state.log\n";
+print CONFIG "TEST_LOG_READER_LOG = $fulldir/reader.log\n";
+print CONFIG "TEST_LOG_WRITER_LOG = $fulldir/writer.log\n";
 close( CONFIG );
 $ENV{"CONDOR_CONFIG"} = $config;
 
@@ -406,11 +414,11 @@ if ( exists $test->{loop_events} ) {
 }
 elsif ( exists $test->{events} ) {
     $loop_events = int($test->{events} / $total_loops);
-    $total_events = $test->{events}
+    $total_events = $test->{events};
 }
 else {
     my $mult = ( exists $test->{size_mult} ) ? $test->{size_mult} : 1.25;
-    $loop_events = 
+    $loop_events =
 	int($mult * $total_files * $max_size / ($event_size * $total_loops) );
     $total_events = $loop_events * $total_loops;
 }
@@ -510,6 +518,11 @@ if ( exists $test->{reader} ) {
     push( @reader_args, "--eventlog" );
     push( @reader_args, "--exit" );
     push( @reader_args, "--no-term" );
+
+    if ( exists $test->{reader}{persist} ) {
+	push( @reader_args, "--persist" );
+	push( @reader_args, "$dir/reader.state" );
+    }
 }
 
 
@@ -556,7 +569,7 @@ foreach my $loop ( 1 .. $test->{loops} )
 
     # Run the writer
     my $run;
-    my $werrors += RunWriter( \%new, \%previous, \%totals, \$run );
+    my $werrors += RunWriter( $loop, \%new, \%previous, \%totals, \$run );
     $errors += $werrors;
     if ( ! $run ) {
 	next;
@@ -577,16 +590,21 @@ foreach my $loop ( 1 .. $test->{loops} )
     $errors += CheckWriterOutput( \@files, $loop, \%new, \%diff );
 
     # Run the reader
-    $errors += RunReader( \%new, \$run );
+    $errors += RunReader( $loop, \%new, \$run );
     if ( $run ) {
 	$errors += CheckReaderOutput( \@files, $loop, \%new, \%diff );
+    }
+
+    if ( $errors  or  $settings{verbose}  or  $settings{debug} ) {
+	GatherData( sprintf("$dir/loop-%02d.txt",$loop) );
     }
 
     foreach my $k ( keys(%previous) ) {
 	$previous{$k} = $new{$k};
     }
-
-    
+    if ( $errors  and  $settings{stop} ) {
+	last;
+    }
 }
 
 if ( ! $settings{execute} ) {
@@ -644,19 +662,56 @@ if ( $final{file_size} > $expect{maxs}{total_size} ) {
 
 
 if ( $errors  or  ($settings{verbose} > 1)  or  $settings{debug} ) {
+    GatherData( "/dev/stdout" );
+}
+
+sub GatherData( $ )
+{
+    my $f = shift;
+    open( OUT, ">$f" );
+
     my $cmd;
-    print "\nls:\n";
+
+    print OUT "\nls:\n";
     $cmd = "/bin/ls -l $dir";
-    system( $cmd );
-    print "\nwc:\n";
-    $cmd = "wc $dir/*";
-    system( $cmd );
-    print "\nhead:\n";
-    $cmd = "head -2 $dir/EventLog*";
-    system( $cmd );
-    print "\nconfig:\n";
+    if ( open( CMD, "$cmd |" ) ) {
+	while( <CMD> ) {
+	    print OUT;
+	}
+    }
+    close( CMD );
+
+    print OUT "\nwc:\n";
+    $cmd = "wc $dir/EventLog*";
+    if ( open( CMD, "$cmd |" ) ) {
+	while( <CMD> ) {
+	    print OUT;
+	}
+    }
+    close( CMD );
+
+    print OUT "\nhead:\n";
+    $cmd = "head -1 $dir/EventLog*";
+    if ( open( CMD, "$cmd |" ) ) {
+	while( <CMD> ) {
+	    print OUT;
+	}
+    }
+    close( CMD );
+
+    print OUT "\nconfig:\n";
     $cmd = "cat $config";
-    system( $cmd );
+    if ( open( CMD, "$cmd |" ) ) {
+	while( <CMD> ) {
+	    print OUT;
+	}
+    }
+    close( CMD );
+
+    print OUT "\ndirectory:\n";
+    print OUT "$dir\n";
+
+    close( OUT );
 }
 
 exit( $errors == 0 ? 0 : 1 );
@@ -665,8 +720,9 @@ exit( $errors == 0 ? 0 : 1 );
 # #######################################
 # Run the writer
 # #######################################
-sub RunWriter( $$$$ )
+sub RunWriter( $$$$$ )
 {
+    my $loop = shift;
     my $new = shift;
     my $previous = shift;
     my $totals = shift;
@@ -687,9 +743,12 @@ sub RunWriter( $$$$ )
     }
 
     $$run = 1;
-    open( WRITER, "$cmd|" ) or die "Can't run $cmd";
+    my $out = sprintf( "%s/writer-%02d.out", $dir, $loop );
+    open( WRITER, "$cmd 2>&1 |" ) or die "Can't run $cmd";
+    open( OUT, ">$out" );
     while( <WRITER> ) {
 	print if ( $settings{verbose} > 1 );
+	print OUT;
 	chomp;
 	if ( /wrote (\d+) events/ ) {
 	    $new->{writer_events} = $1;
@@ -701,6 +760,7 @@ sub RunWriter( $$$$ )
 	}
     }
     close( WRITER );
+    close( OUT );
 
     if ( $? & 127 ) {
 	printf "ERROR: writer exited from signal %d\n", ($? & 127);
@@ -726,8 +786,9 @@ sub RunWriter( $$$$ )
 # #######################################
 # Run the reader
 # #######################################
-sub RunReader( $$ )
+sub RunReader( $$$ )
 {
+    my $loop = shift;
     my $new = shift;
     my $run = shift;
 
@@ -754,9 +815,12 @@ sub RunReader( $$ )
     $new->{reader_events} = 0;
     $new->{reader_sequence} = [ ];
 
-    open( READER, "$cmd|" ) or die "Can't run $cmd";
+    my $out = sprintf( "%s/reader-%02d.out", $dir, $loop );
+    open( OUT, ">$out" );
+    open( READER, "$cmd 2>&1 |" ) or die "Can't run $cmd";
     while( <READER> ) {
 	print if ( $settings{verbose} > 1 );
+	print OUT;
 	chomp;
 	if ( /^Read (\d+) events/ ) {
 	    $new->{reader_events} = $1;
@@ -768,6 +832,7 @@ sub RunReader( $$ )
 
     }
     close( READER );
+    close( OUT );
 
     if ( $? & 127 ) {
 	printf "ERROR: reader exited from signal %d\n", ($? & 127);
@@ -784,6 +849,33 @@ sub RunReader( $$ )
     if ( ! $errors and $settings{verbose}) {
 	print "reader process exited normally\n";
     }
+
+    if ( -f "$dir/reader.state" ) {
+	my $state = sprintf( "%s/reader.state", $dir );
+	my $copy = sprintf( "%s/reader-%02d.state", $dir, $loop );
+	my @cmd = ( "/bin/cp", $state, $copy );
+	system( @cmd );
+
+	@cmd = ( $programs{reader_state}, "dump", $state );
+	my $out = sprintf( "%s/reader-%02d.dump", $dir, $loop );
+
+	if ( !open( OUT, ">$out" ) ) {
+	    print STDERR "Can't dump state to $out\n";
+	    return $errors;
+	}
+	my $cmd = join( " ", @cmd );
+	if ( ! open( DUMP, "$cmd|" ) ) {
+	    print STDERR "Can't get dump state of $state\n";
+	    return $errors;
+	}
+
+	while( <DUMP> ) {
+	    print OUT;
+	}
+	close( DUMP );
+	close( OUT );
+    }
+
 
     return $errors;
 }
@@ -827,7 +919,7 @@ sub CheckWriterOutput( $$$$ )
 	if ( $diff->{num_events} < $expect{loop_mins}{num_events} ) {
 	    printf( STDERR
 		    "ERROR: loop %d: too few actual events: %d < %d\n",
-		    $loop, 
+		    $loop,
 		    $diff->{num_events}, $expect{loop_mins}{num_events} );
 	    $errors++;
 	}
@@ -863,7 +955,7 @@ sub CheckReaderOutput( $$$$ )
     my $diff  = shift;
 
     my $errors = 0;
-    
+
     if ( $new->{reader_events} < $new->{writer_events} ) {
 	printf( STDERR
 		"ERROR: loop %d: reader found fewer events than writer wrote".
@@ -878,7 +970,7 @@ sub CheckReaderOutput( $$$$ )
     if ( $nseq >= 0 ) {
 	$rseq = @{$new->{reader_sequence}}[$nseq];
     }
- 
+
    if ( $nseq < 0 ) {
 	printf( STDERR
 		"ERROR: loop %d: no reader sequence\n",
@@ -982,7 +1074,7 @@ sub ProcessEventlogs( $$ )
     my $files = shift;
     my $new = shift;
 
-    my $events_counted = 
+    my $events_counted =
 	( exists $test->{config}{EVENT_LOG_COUNT_EVENTS} and
 	  $test->{config}{EVENT_LOG_COUNT_EVENTS} eq "TRUE" );
 
