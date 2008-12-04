@@ -2702,20 +2702,25 @@ These macros control the \Condor{master}.
   outright.  It is defined in seconds and defaults to 300 (5 minutes).
 
 \item[\Macro{MASTER\_SHUTDOWN\_$<$Name$>$}]
-  \label{param:MasterShutdownProgram} This macro is used to specify a
-  full path to a program that the master will execute (via the UNIX
-  ``exe cl()'' call, or the similar Win32 ``\_exe cl()'' call) instead of
-  the normal call to exit().  Multiple of these may be configured
-  (with different $<$name$>$'s).  These macros have no affect on a
-  \Condor{master} unless the \Condor{set\_shutdown} is run.  The name
-  passed to \Condor{set\_shutdown} much match one of these
+  \label{param:MasterShutdownProgram} A full path and file name of
+  a program that the \Condor{master} is to execute
+  via the Unix \Procedure{execl} call, 
+  or the similar Win32 \Procedure{\_execl} call,
+  instead of the normal call to \Procedure{exit}.
+  Multiple programs to execute may be defined with multiple entries,
+  each with a unique \MacroNI{Name}.
+  These macros have no affect on a
+  \Condor{master} unless \Condor{set\_shutdown} is run.  
+  The \MacroNI{Name} specified as an argument to the \Condor{set\_shutdown}
+  program must match the \MacroNI{Name} portion of one of these
   \MacroNI{MASTER\_SHUTDOWN\_$<$Name$>$} macros; if not, the
   \Condor{master} will log an error and ignore the command.  If a
   match is found, the \Condor{master} will attempt to verify the
-  program, and will then store off that path.  When the
-  \Condor{Master} shuts down, the program is then executed as
+  program, and it will store the path and program name.  When the
+  \Condor{master} shuts down, the program is then executed as
   described above.
-  See the man page for \Condor{set\_shutdown} for details on the use
+  The manual page for \Condor{set\_shutdown} on
+  page~\pageref{man-condor-set-shutdown} contains details on the use
   of this program.
 
 \item[\Macro{MASTER\_BACKOFF\_CONSTANT} and
@@ -3512,6 +3517,11 @@ search for the corresponding attribute names using ``slot'', instead.
   The format of this entry can be somewhat complex, so please refer to
   section~\ref{sec:SMP-Divide} on page~\pageref{sec:SMP-Divide} for
   details on the different possibilities.
+
+\item[\Macro{SLOT\_TYPE\_<N>\_PARTITIONABLE}]
+\label{param:SlotTypeNPartitionable}
+  A boolean variable that defaults to \Expr{False}.
+  When \Expr{True}, blah, blah, blah.
 
 \item[\Macro{NUM\_SLOTS\_TYPE\_<N>}]
 \label{param:NumSlotsTypeN}
@@ -6000,6 +6010,12 @@ on Windows.
 Configuration File Macros}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
  
+\index{Condor daemon!condor\_credd@\Condor{credd}}
+\index{daemon!condor\_credd@\Condor{credd}}
+\index{condor\_credd daemon}
+\index{configuration!condor\_credd configuration variables}
+These macros affect the \Condor{credd}.
+
 \begin{description}
 
 \item[\Macro{CREDD\_HOST}]\label{param:CreddHost}

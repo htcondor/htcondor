@@ -129,9 +129,9 @@ are not escaped with backslashes, as required in the old syntax.  Any
 literal double-quotes within the string must be escaped by repeating
 them.
 
-\item Use whitespace (e.g. spaces or tabs) to separate arguments.
+\item Use white space (e.g. spaces or tabs) to separate arguments.
 
-\item To put any whitespace in an argument, you must surround the
+\item To put any white space in an argument, you must surround the
 space and as much of the surrounding argument as you like with
 single-quotes.
 
@@ -189,9 +189,9 @@ must be escaped by repeating the double quote mark.
 <name>=<value>
 \end{verbatim}
 
-\item Use whitespace (space or tab characters) to separate environment entries.
+\item Use white space (space or tab characters) to separate environment entries.
 
-\item To put any whitespace in an environment entry, surround
+\item To put any white space in an environment entry, surround
 the space and as much of the surrounding entry as desired with
 single quote marks.
 
@@ -225,7 +225,7 @@ vertical bar (\Bar).  There is no way to insert a literal semicolon
 under Unix or a literal vertical bar under Windows.  Note that spaces
 are accepted, but rarely desired, characters within parameter names
 and values, because they are treated as literal characters, not
-separators or ignored whitespace.  Place spaces within the parameter
+separators or ignored white space.  Place spaces within the parameter
 list only if required.
 
 A Unix example:
@@ -675,7 +675,7 @@ This command is ignored if the job ClassAd attribute
 The default value is \Expr{True} in the grid
 universe and \Expr{False} otherwise.
 This command must be used in conjunction with 
-\SubmitCmd{ouput}, otherwise \File{stdout} will
+\SubmitCmd{output}, otherwise \File{stdout} will
 sent to \File{/dev/null} on Unix machines and
 ignored on Windows machines.
 
@@ -2498,6 +2498,18 @@ The syntax appears as:
 \begin{verbatim} 
 $$([ClassAd expression])
 \end{verbatim}
+An example of a job that uses this syntax may be one that
+wants to know how much memory it can use. 
+The application cannot detect this itself, as it would potentially use
+all of the memory on a multi-slot machine.
+So the job determines the memory per slot, 
+reducing it by 10\Percent\
+to account for miscellaneous overhead,
+and passes this as a command line argument to the application.
+In the submit description file will be
+\begin{verbatim} 
+arguments=--memory $$([TARGET.Memory * 0.9])
+\end{verbatim}
 
 \index{\$\$!as literal characters in a submit description file}
 To insert two dollar sign characters (\verb@$$@) as literals
@@ -2736,7 +2748,7 @@ by user root (UID = 0) or by a user whose default group is group wheel
 (GID = 0). Jobs submitted by user root or a user with a default group of
 wheel will appear to sit forever in the queue in an idle state. 
 
-\item All pathnames specified in the submit description file must be
+\item All path names specified in the submit description file must be
 less than 256 characters in length, and command line arguments must be
 less than 4096 characters in length; otherwise, \Condor{submit} gives a
 warning message but the jobs will not execute properly. 
