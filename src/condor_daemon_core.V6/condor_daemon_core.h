@@ -904,6 +904,10 @@ class DaemonCore : public Service
     */
     int Is_Pid_Alive (pid_t pid);
 
+		// returns true if we have called waitpid but
+		// have still queued the call to the reaper
+	bool ProcessExitedButNotReaped(pid_t pid);
+
     /** Not_Yet_Documented
         @param pid Not_Yet_Documented
         @return Not_Yet_Documented

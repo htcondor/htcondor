@@ -547,62 +547,62 @@ ReadUserLog::determineLogType( void )
 	m_state->Offset( filepos );
 
 	char afterangle;
+	if ( fseek( m_fp, 0, SEEK_SET ) < 0 ) {
+		dprintf(D_ALWAYS,
+				"fseek(0) failed in ReadUserLog::determineLogType\n");
+		Unlock( false );
+		return false;
+	}
 	int scanf_result = fscanf(m_fp, " <%c", &afterangle);
-	if( scanf_result == EOF ) {
-		// Format is unknown.
-		m_state->LogType( ReadUserLogState::LOG_TYPE_UNKNOWN );
 
-	} else if( scanf_result > 0 ) {
-
+	if( scanf_result > 0 ) {
 		m_state->LogType( ReadUserLogState::LOG_TYPE_XML );
 
-		if( !skipXMLHeader(afterangle, filepos) ) {
-			m_state->LogType( ReadUserLogState::LOG_TYPE_UNKNOWN );
-			Unlock( false );
-		    return false;
-		}
-
-	} else {
-		// the first non whitespace char is not <, so this doesn't look like
-		// XML; go back to the beginning and take another look
-		if( fseek( m_fp, filepos, SEEK_SET) )	{
-			dprintf(D_ALWAYS, "fseek failed in ReadUserLog::determineLogType");
-			Unlock( false );
-			return false;
-		}
-
-		int nothing;
-		if( fscanf( m_fp, " %d", &nothing) > 0 ) {
-
-			setIsOldLog(true);
-
-			if( fseek( m_fp, filepos, SEEK_SET) )	{
-				dprintf(D_ALWAYS,
-						"fseek failed in ReadUserLog::determineLogType");
+		// If we're at the start of the file, skip the header
+		if ( filepos == 0 ) {
+			if( !skipXMLHeader(afterangle, filepos) ) {
+				m_state->LogType( ReadUserLogState::LOG_TYPE_UNKNOWN );
 				Unlock( false );
 				return false;
 			}
-		} else {
-			// what sort of log is this!
-			dprintf(D_ALWAYS, "Error, apparently invalid user log file\n");
-			if( fseek( m_fp, filepos, SEEK_SET) )	{
-				dprintf(D_ALWAYS,
-						"fseek failed in ReadUserLog::determineLogType");
-				Unlock( false );
-				return false;
-			}
-			Unlock( false );
-			return false;
 		}
+
+		// File type set, we're all done.
+		Unlock( false );
+		return true;
+	}
+
+	// the first non whitespace char is not <, so this doesn't look like
+	// XML; go back to the beginning and take another look
+	int nothing;
+	if( fseek( m_fp, 0, SEEK_SET) )	{
+		dprintf(D_ALWAYS,
+				"fseek failed in ReadUserLog::determineLogType");
+		Unlock( false );
+		return false;
+	}
+	if( fscanf( m_fp, " %d", &nothing ) > 0 ) {
+		setIsOldLog(true);
+	}
+	else {
+		// what sort of log is this???
+		dprintf(D_ALWAYS, "Error, apparently invalid user log file\n");
+		m_state->LogType( ReadUserLogState::LOG_TYPE_UNKNOWN );
+	}
+
+	if( fseek( m_fp, filepos, SEEK_SET ) ) {
+		dprintf( D_ALWAYS,
+				 "fseek failed in ReadUserLog::determineLogType");
+		Unlock( false );
+		return false;
 	}
 
 	Unlock( false );
-
 	return true;
 }
 
-bool ReadUserLog::
-skipXMLHeader(char afterangle, long filepos)
+bool
+ReadUserLog::skipXMLHeader(char afterangle, long filepos)
 {
 	// now figure out if there is a header, and if so, advance _fp past
 	// it - this is really ugly

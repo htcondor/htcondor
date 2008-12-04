@@ -404,6 +404,8 @@ UserLog::initializeGlobalLog( const UserLogHeader &header )
 		// Generate a header event
 		WriteUserLogHeader writer( header );
 
+		m_global_sequence = writer.incSequence( );
+
 		MyString file_id;
 		GenerateGlobalId( file_id );
 		writer.setId( file_id );
@@ -414,9 +416,11 @@ UserLog::initializeGlobalLog( const UserLogHeader &header )
 		writer.addEventOffset( writer.getNumEvents() );
 		writer.setNumEvents( 0 );
 
-		m_global_sequence = writer.incSequence( );
-
 		ret_val = writer.Write( *this );
+
+		MyString	s;
+		s.sprintf( "initializeGlobalLog: header: %s", m_global_path );
+		writer.dprint( D_FULLDEBUG, s );
 
 		// TODO: we should should add the number of events in the
 		// previous file to the "first event number" of this one.
@@ -527,8 +531,10 @@ UserLog::checkGlobalLogRotation( void )
 					 m_global_path );
 		}
 		else {
-			reader.dprintf( D_FULLDEBUG, m_global_path );
-		} 
+			MyString	s;
+			s.sprintf( "read %s header:", m_global_path );
+			reader.dprint( D_FULLDEBUG, s );
+		}
 
 		if ( m_global_count_events ) {
 			int		events = 0;
@@ -571,6 +577,10 @@ UserLog::checkGlobalLogRotation( void )
 	}
 	WriteUserLogHeader	writer( reader );
 
+	MyString	s;
+	s.sprintf( "checkGlobalLogRotation(): %s", m_global_path );
+	writer.dprint( D_FULLDEBUG, s );
+
 	// And write the updated header
 # if ROTATION_TRACE
 	UtcTime	now( true );
@@ -581,6 +591,10 @@ UserLog::checkGlobalLogRotation( void )
 		rewind( header_fp );
 		writer.Write( *this, header_fp );
 		fclose( header_fp );
+
+		MyString	tmps;
+		tmps.sprintf( "UserLog: Wrote header to %s", m_global_path );
+		writer.dprint( D_FULLDEBUG, tmps );
 	}
 	if ( fake_lock ) {
 		delete fake_lock;
@@ -895,13 +909,16 @@ UserLog::writeEvent ( ULogEvent *event, ClassAd *param_jobad )
 					switch (result.type) {
 					case LX_BOOL:
 					case LX_INTEGER:
-						eventAd->Assign(((Variable*)tree->LArg())->Name(),result.i);
+						eventAd->Assign( ((Variable*)tree->LArg())->Name(),
+										 result.i);
 						break;
 					case LX_FLOAT:
-						eventAd->Assign(((Variable*)tree->LArg())->Name(),result.f);
+						eventAd->Assign( ((Variable*)tree->LArg())->Name(),
+										 result.f);
 						break;
 					case LX_STRING:
-						eventAd->Assign(((Variable*)tree->LArg())->Name(),result.s);
+						eventAd->Assign( ((Variable*)tree->LArg())->Name(),
+										 result.s);
 						break;
 					default:
 						break;
@@ -910,9 +927,10 @@ UserLog::writeEvent ( ULogEvent *event, ClassAd *param_jobad )
 			}
 		}
 		
-		// The EventTypeNumber will get overwritten to be a JobAdInformationEvent,
-		// so preserve the event that triggered us to write out the info in 
-		// another attribute name called TriggerEventTypeNumber.
+		// The EventTypeNumber will get overwritten to be a
+		// JobAdInformationEvent, so preserve the event that triggered
+		// us to write out the info in another attribute name called
+		// TriggerEventTypeNumber.
 		if ( eventAd  ) {			
 			eventAd->Assign("TriggerEventTypeNumber",event->eventNumber);
 			eventAd->Assign("TriggerEventTypeName",event->eventName());

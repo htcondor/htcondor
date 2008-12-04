@@ -4587,10 +4587,20 @@ bool DCSignalMsg::codeMsg( DCMessenger *, Sock *sock )
 
 void DCSignalMsg::reportFailure( DCMessenger * )
 {
+	char const *status;
+	if( daemonCore->ProcessExitedButNotReaped(thePid()) ) {
+		status = "exited but not reaped";
+	}
+	else if( daemonCore->Is_Pid_Alive(thePid()) ) {
+		status = "still alive";
+	}
+	else {
+		status = "no longer exists";
+	}
+
 	dprintf(D_ALWAYS,
 			"Send_Signal: ERROR sending signal %d (%s) to pid %d (%s)\n",
-			theSignal(),signalName(),thePid(),
-			daemonCore->Is_Pid_Alive(thePid()) ? "still alive" : "no longer exists");
+			theSignal(),signalName(),thePid(),status);
 }
 
 void DCSignalMsg::reportSuccess( DCMessenger * )
@@ -4694,6 +4704,12 @@ void DaemonCore::Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocki
 		}
 	}
 
+	if( ProcessExitedButNotReaped(pid) ) {
+		msg->deliveryStatus( DCMsg::DELIVERY_FAILED );
+		dprintf(D_ALWAYS,"Send_Signal: attempt to send signal %d to process %d, which has exited but not yet been reaped.\n",sig,pid);
+		return;
+	}
+
 	// if we're using priv sep, we may not have permission to send signals
 	// to our child processes; ask the ProcD to do it for us
 	//
@@ -4792,6 +4808,8 @@ void DaemonCore::Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocki
 				}
 				else if( target_has_dcpm == TRUE ) {
 						// kill() failed.  Fall back on a UDP message.
+					dprintf(D_ALWAYS,"Send_Signal error: kill(%d,%d) failed: errno=%d %s\n",
+							pid,sig,errno,strerror(errno));
 					break;
 				}
 				return;
@@ -8458,9 +8476,7 @@ int DaemonCore::HungChildTimeout()
 	// is currently no timer set.
 	pidentry->hung_tid = -1;
 
-	WaitpidEntry wp;
-	wp.child_pid = hung_child_pid;
-	if( WaitpidQueue.IsMember( wp ) ) {
+	if( ProcessExitedButNotReaped( hung_child_pid ) ) {
 			// This process has exited, but we have not gotten around to
 			// reaping it yet.  Do nothing.
 		dprintf(D_FULLDEBUG,"Canceling hung child timer for pid %d, because it has exited but has not been reaped yet.\n",hung_child_pid);
@@ -8838,6 +8854,21 @@ InitCommandSockets(int port, ReliSock *rsock, SafeSock *ssock, bool fatal)
 }
 
 
+bool DaemonCore::ProcessExitedButNotReaped(pid_t pid)
+{
+
+#ifndef WIN32
+	WaitpidEntry wait_entry;
+	wait_entry.child_pid = pid;
+
+	if(WaitpidQueue.IsMember(wait_entry)) {
+		return true;
+	}
+#endif
+
+	return false;
+}
+
 /**  Is_Pid_Alive() returns TRUE is pid lives, FALSE is that pid has exited.
      By Alive, (at least on UNIX), we mean either the process is still running,
      or the process is no longer running but we've called wait() so it no
@@ -8855,10 +8886,7 @@ int DaemonCore::Is_Pid_Alive(pid_t pid)
 	// maybe in our Queue of pids we've called wait() on but haven't
 	// reaped...
 
-	WaitpidEntry wait_entry;
-	wait_entry.child_pid = pid;
-
-	if(WaitpidQueue.IsMember(wait_entry)) {
+	if( ProcessExitedButNotReaped(pid) ) {
 		status = TRUE;
 		return status;
 	}
