@@ -669,6 +669,8 @@ sub GatherData( $ )
     my $f = shift;
     open( OUT, ">$f" );
 
+    print OUT "\n\n** Total: $errors errors detected **\n";
+
     my $cmd;
 
     print OUT "\nls:\n";
@@ -916,6 +918,7 @@ sub CheckValgrind( $$ )
     if ( $settings{verbose} ) {
 	print "Reading valgrind output $full\n";
     }
+    my $dumped = 0;
     while( <VG> ) {
 	if ( /ERROR SUMMARY: (\d+)/ ) {
 	    my $e = int($1);
@@ -923,7 +926,11 @@ sub CheckValgrind( $$ )
 		 $errors++;
 	     }
 	    if ( $settings{verbose}  or  $e ) {
-		print;
+		if ( !$dumped ) {
+		    print "$full:\n";
+		    $dumped++;
+		}
+		print "  $_";
 	    }
 	}
 	elsif ( /LEAK SUMMARY:/ ) {
@@ -941,8 +948,12 @@ sub CheckValgrind( $$ )
 		}
 	    }
 	    if ( $settings{verbose}  or  $leaks ) {
+		if ( !$dumped ) {
+		    print "$full:\n";
+		    $dumped++;
+		}
 		foreach $_ ( @lines ) {
-		    print;
+		    print "  $_";
 		}
 	    }
 	}
