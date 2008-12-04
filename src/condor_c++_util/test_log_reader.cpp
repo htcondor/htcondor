@@ -36,7 +36,7 @@ DECL_SUBSYSTEM( "TEST_LOG_READER", SUBSYSTEM_TYPE_TOOL );
 
 enum Status { STATUS_OK, STATUS_CANCEL, STATUS_ERROR };
 
-enum Verbosity { VERB_NONE = 0, VERB_ERROR, VERB_WARNING, VERB_ALL };
+enum Verbosity{ VERB_NONE = 0, VERB_ERROR, VERB_WARNING, VERB_INFO, VERB_ALL };
 
 struct Options
 {
@@ -54,14 +54,14 @@ struct Options
 	bool			exit;
 	int				sleep;
 	int				term;
-	int				verbosity;
+	Verbosity		verbosity;
 };
 
 Status
 CheckArgs(int argc, const char **argv, Options &opts);
 
 int // 0 == okay, 1 == error
-ReadEvents(Options &opts);
+ReadEvents( Options &opts, int &numEvents );
 
 const char *timestr( struct tm &tm );
 
@@ -88,15 +88,19 @@ main(int argc, const char **argv)
 	dprintf_config("TEST_LOG_READER");
 
 	int		result = 0;
+	int		events = 0;
 
 	Options	opts;
-
 	Status tmpStatus = CheckArgs(argc, argv, opts);
 
 	if ( tmpStatus == STATUS_OK ) {
-		result = ReadEvents(opts);
+		result = ReadEvents(opts, events);
 	} else if ( tmpStatus == STATUS_ERROR ) {
 		result = 1;
+	}
+
+	if ( opts.verbosity >= VERB_INFO ) {
+		printf( "Read %d events\n", events );
 	}
 
 	if ( result != 0 && opts.verbosity >= VERB_ERROR ) {
@@ -117,8 +121,7 @@ CheckArgs(int argc, const char **argv, Options &opts)
 		"  --max-exec <number>: maximum number of execute events to read\n"
 		"  --miss-check: Enable missed event checking "
 		"(valid only with test writer)\n"
-		"  --persist|-p <filename>: file to persist to/from "
-		"(implies --rotation)\n"
+		"  --persist|-p <filename>: file to persist to/from\n"
 #     if ENABLE_STATE_DUMP
 		"  --dump-state: dump the persisted reader state after reading it\n"
 #     endif
@@ -129,12 +132,13 @@ CheckArgs(int argc, const char **argv, Options &opts)
 		"  --no-rotation: disable rotation handling\n"
 		"  --sleep <number>: how many seconds to sleep between events\n"
 		"  --exit|-x: Exit when no event available\n"
-		"  --eventlog|e: Setup to read the EventLog\n"
+		"  --eventlog|-e: Setup to read the EventLog\n"
 		"  --no-term: No limit on terminte events\n"
 		"  --term <number>: number of terminate events to exit after\n"
 		"  --usage|--help|-h: print this message and exit\n"
 		"  -v: Increase verbosity level by 1\n"
-		"  --verbosity <number>: set verbosity level (default is 1)\n"
+		"  --verbosity <number|name>: set verbosity level (default is ERROR)\n"
+		"    names: NONE=0 ERROR WARNING INFO ERROR\n"
 		"  --version: print the version number and compile date\n"
 		"  <filename>: the log file to read\n";
 
@@ -147,7 +151,7 @@ CheckArgs(int argc, const char **argv, Options &opts)
 	opts.exit = false;
 	opts.sleep = 5;
 	opts.term = 1;
-	opts.verbosity = 1;
+	opts.verbosity = VERB_ERROR;
 	opts.rotation = false;
 	opts.max_rotations = 0;
 	opts.exitAfterInit = false;
@@ -188,7 +192,6 @@ CheckArgs(int argc, const char **argv, Options &opts)
 		} else if ( arg.Match('p', "persist") ) {
 			if ( arg.hasOpt() ) {
 				arg.getOpt( opts.persistFile );
-				opts.rotation = true;
 				opts.readPersist = true;
 				opts.writePersist = true;
 			} else {
@@ -250,10 +253,40 @@ CheckArgs(int argc, const char **argv, Options &opts)
 			status = STATUS_CANCEL;
 
 		} else if ( arg.Match('v') ) {
-			opts.verbosity++;
+			int		v = (int) opts.verbosity;
+			opts.verbosity = (Verbosity) (v + 1);
 
 		} else if ( arg.Match("verbosity") ) {
-			if ( !arg.getOpt( opts.verbosity ) ) {
+			if ( arg.isOptInt() ) {
+				int		verb;
+				arg.getOpt(verb);
+				opts.verbosity = (Verbosity) verb;
+			}
+			else if ( arg.hasOpt() ) {
+				const char	*s;
+				arg.getOpt( s );
+				if ( !strcasecmp(s, "NONE" ) ) {
+					opts.verbosity = VERB_NONE;
+				}
+				else if ( !strcasecmp(s, "ERROR" ) ) {
+					opts.verbosity = VERB_ERROR;
+				}
+				else if ( !strcasecmp(s, "WARNING" ) ) {
+					opts.verbosity = VERB_WARNING;
+				}
+				else if ( !strcasecmp(s, "INFO" ) ) {
+					opts.verbosity = VERB_INFO;
+				}
+				else if ( !strcasecmp(s, "ALL" ) ) {
+					opts.verbosity = VERB_ALL;
+				}
+				else {
+					fprintf(stderr, "Unknown %s '%s'\n", arg.Arg(), s );
+					printf("%s", usage);
+					status = STATUS_ERROR;
+				}
+			}
+			else {
 				fprintf(stderr, "Value needed for '%s'\n", arg.Arg() );
 				printf("%s", usage);
 				status = STATUS_ERROR;
@@ -290,9 +323,12 @@ CheckArgs(int argc, const char **argv, Options &opts)
 }
 
 int
-ReadEvents(Options &opts)
+ReadEvents(Options &opts, int &numEvents)
 {
 	int		result = 0;
+
+	// No events yet!
+	numEvents = 0;
 
 	// Create & initialize the state
 	ReadUserLog::FileState	state;
@@ -371,6 +407,7 @@ ReadEvents(Options &opts)
 	bool	missedLast = false;
 	int		prevCluster=999, prevProc=999, prevSubproc=999;
 
+
 	while ( !done && !global_done ) {
 		ULogEvent	*event = NULL;
 
@@ -413,6 +450,7 @@ ReadEvents(Options &opts)
 			prevProc = event->proc;
 			prevSubproc = event->subproc;
 
+			numEvents++;
 			switch ( event->eventNumber ) {
 			case ULOG_SUBMIT:
 				if ( opts.verbosity >= VERB_ALL ) {

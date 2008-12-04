@@ -169,7 +169,7 @@
 	</References>
 	<Files>
 		<File
-			RelativePath="..\src\condor_classad\ast.C"
+			RelativePath="..\src\classad.old\ast.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -191,7 +191,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_classad\astbase.C"
+			RelativePath="..\src\classad.old\astbase.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -213,7 +213,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_classad\attrlist.C"
+			RelativePath="..\src\classad.old\attrlist.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -235,7 +235,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_classad\buildtable.C"
+			RelativePath="..\src\classad.old\buildtable.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -257,7 +257,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_classad\classad.C"
+			RelativePath="..\src\classad.old\classad.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -279,7 +279,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_classad\classad_list.C"
+			RelativePath="..\src\classad.old\classad_list.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -301,7 +301,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_classad\classad_util.C"
+			RelativePath="..\src\classad.old\classad_util.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -323,7 +323,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_classad\classifiedjobs.C"
+			RelativePath="..\src\classad.old\classifiedjobs.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -411,7 +411,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_classad\environment.C"
+			RelativePath="..\src\classad.old\environment.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -433,7 +433,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_classad\evaluateOperators.C"
+			RelativePath="..\src\classad.old\evaluateOperators.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -455,7 +455,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_classad\new_classads.C"
+			RelativePath="..\src\classad.old\new_classads.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -477,7 +477,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_classad\operators.C"
+			RelativePath="..\src\classad.old\operators.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -499,33 +499,11 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_classad\operators.h"
+			RelativePath="..\src\classad.old\operators.h"
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_classad\parser.C"
-			>
-			<FileConfiguration
-				Name="Release|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Debug|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-		</File>
-		<File
-			RelativePath="..\src\condor_classad\registration.C"
+			RelativePath="..\src\classad.old\parser.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -547,7 +525,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_classad\scanner.C"
+			RelativePath="..\src\classad.old\registration.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -569,7 +547,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_classad\value.C"
+			RelativePath="..\src\classad.old\scanner.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -591,11 +569,33 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_classad\value.h"
+			RelativePath="..\src\classad.old\value.cpp"
+			>
+			<FileConfiguration
+				Name="Release|Win32"
+				>
+				<Tool
+					Name="VCCLCompilerTool"
+					PreprocessorDefinitions=""
+					CompileAs="2"
+				/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32"
+				>
+				<Tool
+					Name="VCCLCompilerTool"
+					PreprocessorDefinitions=""
+					CompileAs="2"
+				/>
+			</FileConfiguration>
+		</File>
+		<File
+			RelativePath="..\src\classad.old\value.h"
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_classad\xml_classads.C"
+			RelativePath="..\src\classad.old\xml_classads.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"

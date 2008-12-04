@@ -203,7 +203,7 @@
 	</References>
 	<Files>
 		<File
-			RelativePath="..\src\condor_c++_util\condor_open.C"
+			RelativePath="..\src\condor_c++_util\condor_open.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -247,7 +247,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_procd\dprintf_lite.C"
+			RelativePath="..\src\condor_procd\dprintf_lite.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -281,7 +281,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_procd\local_server.WINDOWS.C"
+			RelativePath="..\src\condor_procd\local_server.WINDOWS.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -303,7 +303,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_procd\login_tracker.C"
+			RelativePath="..\src\condor_procd\login_tracker.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -329,7 +329,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\ntsysinfo.C"
+			RelativePath="..\src\condor_c++_util\ntsysinfo.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -351,7 +351,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_procd\parent_tracker.C"
+			RelativePath="..\src\condor_procd\parent_tracker.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -381,7 +381,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_procd\proc_family.C"
+			RelativePath="..\src\condor_procd\proc_family.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -411,7 +411,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_procd\proc_family_member.C"
+			RelativePath="..\src\condor_procd\proc_family_member.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -437,7 +437,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_procd\proc_family_monitor.C"
+			RelativePath="..\src\condor_procd\proc_family_monitor.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -463,7 +463,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_procd\proc_family_server.C"
+			RelativePath="..\src\condor_procd\proc_family_server.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -489,7 +489,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_procd\proc_family_tracker.C"
+			RelativePath="..\src\condor_procd\proc_family_tracker.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -515,7 +515,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_procd\procd_common.C"
+			RelativePath="..\src\condor_procd\procd_common.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -541,7 +541,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_procd\procd_main.C"
+			RelativePath="..\src\condor_procd\procd_main.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -563,7 +563,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\process_control.WINDOWS.C"
+			RelativePath="..\src\condor_c++_util\process_control.WINDOWS.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"

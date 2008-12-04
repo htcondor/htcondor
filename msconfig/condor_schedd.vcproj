@@ -208,7 +208,7 @@
 	</References>
 	<Files>
 		<File
-			RelativePath="..\src\condor_schedd.V6\autocluster.C"
+			RelativePath="..\src\condor_schedd.V6\autocluster.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -234,7 +234,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_schedd.V6\dedicated_scheduler.C"
+			RelativePath="..\src\condor_schedd.V6\dedicated_scheduler.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -260,7 +260,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_schedd.V6\grid_universe.C"
+			RelativePath="..\src\condor_schedd.V6\grid_universe.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -286,7 +286,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_schedd.V6\loose_file_transfer.C"
+			RelativePath="..\src\condor_schedd.V6\loose_file_transfer.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -316,7 +316,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_schedd.V6\qmgmt.C"
+			RelativePath="..\src\condor_schedd.V6\qmgmt.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -342,7 +342,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_schedd.V6\qmgmt_common.C"
+			RelativePath="..\src\condor_schedd.V6\qmgmt_common.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -368,7 +368,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_schedd.V6\qmgmt_receivers.C"
+			RelativePath="..\src\condor_schedd.V6\qmgmt_receivers.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -390,7 +390,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_schedd.V6\schedd.C"
+			RelativePath="..\src\condor_schedd.V6\schedd.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -412,7 +412,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_schedd.V6\schedd_api.C"
+			RelativePath="..\src\condor_schedd.V6\schedd_api.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -438,7 +438,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_schedd.V6\schedd_cronjob.C"
+			RelativePath="..\src\condor_schedd.V6\schedd_cronjob.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -464,7 +464,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_schedd.V6\schedd_cronmgr.C"
+			RelativePath="..\src\condor_schedd.V6\schedd_cronmgr.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -490,7 +490,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_schedd.V6\schedd_main.C"
+			RelativePath="..\src\condor_schedd.V6\schedd_main.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -512,7 +512,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_schedd.V6\schedd_td.C"
+			RelativePath="..\src\condor_schedd.V6\schedd_td.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -538,7 +538,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_schedd.V6\shadow_mgr.C"
+			RelativePath="..\src\condor_schedd.V6\shadow_mgr.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -564,7 +564,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_schedd.V6\soap_scheddC.C"
+			RelativePath="..\src\condor_schedd.V6\soap_scheddC.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -592,7 +592,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_schedd.V6\soap_scheddServer.C"
+			RelativePath="..\src\condor_schedd.V6\soap_scheddServer.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -616,7 +616,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_schedd.V6\soap_scheddStub.C"
+			RelativePath="..\src\condor_schedd.V6\soap_scheddStub.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -642,7 +642,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_schedd.V6\tdman.C"
+			RelativePath="..\src\condor_schedd.V6\tdman.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -668,7 +668,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_schedd.V6\transfer_queue.C"
+			RelativePath="..\src\condor_schedd.V6\transfer_queue.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"

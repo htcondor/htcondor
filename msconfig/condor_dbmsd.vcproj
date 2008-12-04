@@ -206,7 +206,7 @@
 	</References>
 	<Files>
 		<File
-			RelativePath="..\src\condor_tt\condor_ttdb.C"
+			RelativePath="..\src\condor_tt\condor_ttdb.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -228,7 +228,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_dbmsd\dbmsd_main.C"
+			RelativePath="..\src\condor_dbmsd\dbmsd_main.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -250,7 +250,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_dbmsd\DBMSManager.C"
+			RelativePath="..\src\condor_dbmsd\DBMSManager.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -280,7 +280,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_dbmsd\ManagedDatabase.C"
+			RelativePath="..\src\condor_dbmsd\ManagedDatabase.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -306,7 +306,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_dbmsd\soap_dbmsdC.C"
+			RelativePath="..\src\condor_dbmsd\soap_dbmsdC.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -334,7 +334,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_dbmsd\soap_dbmsdServer.C"
+			RelativePath="..\src\condor_dbmsd\soap_dbmsdServer.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -358,7 +358,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_dbmsd\soap_dbmsdStub.C"
+			RelativePath="..\src\condor_dbmsd\soap_dbmsdStub.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"

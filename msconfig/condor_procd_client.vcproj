@@ -175,7 +175,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_procd\local_client.WINDOWS.C"
+			RelativePath="..\src\condor_procd\local_client.WINDOWS.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -197,7 +197,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_procd\proc_family_client.C"
+			RelativePath="..\src\condor_procd\proc_family_client.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -223,7 +223,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_procd\proc_family_io.C"
+			RelativePath="..\src\condor_procd\proc_family_io.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"

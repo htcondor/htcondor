@@ -210,7 +210,7 @@
 	</References>
 	<Files>
 		<File
-			RelativePath="..\src\condor_startd.V6\AvailStats.C"
+			RelativePath="..\src\condor_startd.V6\AvailStats.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -236,7 +236,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_startd.V6\backfill_mgr.C"
+			RelativePath="..\src\condor_startd.V6\backfill_mgr.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -262,7 +262,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_startd.V6\boinc_mgr.C"
+			RelativePath="..\src\condor_startd.V6\boinc_mgr.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -288,7 +288,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_startd.V6\claim.C"
+			RelativePath="..\src\condor_startd.V6\claim.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -314,7 +314,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_startd.V6\cod_mgr.C"
+			RelativePath="..\src\condor_startd.V6\cod_mgr.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -340,7 +340,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_startd.V6\command.C"
+			RelativePath="..\src\condor_startd.V6\command.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -394,7 +394,15 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_startd.V6\LoadQueue.C"
+			RelativePath="..\src\condor_startd.V6\IdDispenser.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_startd.V6\IdDispenser.h"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_startd.V6\LoadQueue.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -420,33 +428,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_startd.V6\mds.C"
-			>
-			<FileConfiguration
-				Name="Debug|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Release|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-		</File>
-		<File
-			RelativePath="..\src\condor_startd.V6\mds.h"
-			>
-		</File>
-		<File
-			RelativePath="..\src\condor_startd.V6\Reqexp.C"
+			RelativePath="..\src\condor_startd.V6\Reqexp.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -472,7 +454,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_startd.V6\ResAttributes.C"
+			RelativePath="..\src\condor_startd.V6\ResAttributes.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -498,7 +480,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_startd.V6\ResMgr.C"
+			RelativePath="..\src\condor_startd.V6\ResMgr.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -524,7 +506,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_startd.V6\Resource.C"
+			RelativePath="..\src\condor_startd.V6\Resource.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -550,7 +532,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_startd.V6\ResState.C"
+			RelativePath="..\src\condor_startd.V6\ResState.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -576,7 +558,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_startd.V6\soap_startdC.C"
+			RelativePath="..\src\condor_startd.V6\soap_startdC.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -604,7 +586,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_startd.V6\soap_startdServer.C"
+			RelativePath="..\src\condor_startd.V6\soap_startdServer.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -628,7 +610,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_startd.V6\soap_startdStub.C"
+			RelativePath="..\src\condor_startd.V6\soap_startdStub.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -660,7 +642,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_startd.V6\startd_cronjob.C"
+			RelativePath="..\src\condor_startd.V6\startd_cronjob.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -686,7 +668,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_startd.V6\startd_cronmgr.C"
+			RelativePath="..\src\condor_startd.V6\startd_cronmgr.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -712,7 +694,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_startd.V6\startd_main.C"
+			RelativePath="..\src\condor_startd.V6\startd_main.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -734,7 +716,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_startd.V6\StartdHookMgr.C"
+			RelativePath="..\src\condor_startd.V6\StartdHookMgr.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -760,7 +742,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_startd.V6\Starter.C"
+			RelativePath="..\src\condor_startd.V6\Starter.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -786,7 +768,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_startd.V6\starter_mgr.C"
+			RelativePath="..\src\condor_startd.V6\starter_mgr.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -812,7 +794,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_startd.V6\util.C"
+			RelativePath="..\src\condor_startd.V6\util.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -838,7 +820,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_startd.V6\vm_common.C"
+			RelativePath="..\src\condor_startd.V6\vm_common.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -864,7 +846,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_startd.V6\VMMachine.C"
+			RelativePath="..\src\condor_startd.V6\VMMachine.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -890,7 +872,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_startd.V6\VMManager.C"
+			RelativePath="..\src\condor_startd.V6\VMManager.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -916,7 +898,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_startd.V6\VMRegister.C"
+			RelativePath="..\src\condor_startd.V6\VMRegister.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -942,7 +924,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_startd.V6\vmuniverse_mgr.C"
+			RelativePath="..\src\condor_startd.V6\vmuniverse_mgr.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
