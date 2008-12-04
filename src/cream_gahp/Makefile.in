@@ -85,7 +85,7 @@ cream_gahp.static: cream_gahp_server.o
 .c.o:
 	$(CC) $(CFLAGS) -c $<
 
-.C.o:
+.cpp.o:
 	g++ $(CFLAGS) -c $<
 
 install: $(GAHPS)
