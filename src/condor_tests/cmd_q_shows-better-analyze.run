@@ -24,6 +24,8 @@ $cmd = 'cmd_q_shows-better-analyze.cmd';
 $cmdout = $cmd . ".out";
 $testname = 'cmd_q_shows-better-analyze  ';
 
+$test_failed = 0;
+
 $whoami = `whoami`;
 chomp($whoami);
 
@@ -32,11 +34,13 @@ chomp($whoami);
 
 $submit = sub {
 	my %info = @_;
-	CondorTest::debug("Good we need to run to see it\n",1);
+
+	my $cluster = $info{'cluster'};;
+	CondorTest::debug("Job submitted, cluster is $cluster\n",1);
 
 	my $foundcluster = 0;
 	my $foundanalyze = 0;
-	my $cmd = "condor_q -better-analyze";
+	my $cmd = "condor_q -better-analyze $cluster";
 
 	$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
 	if(!$cmdstatus)
@@ -45,59 +49,54 @@ $submit = sub {
 		exit(1)
 	}
 
-	my $submitline = "";
-	my $cluster = "";
-
-	open(CMD, "<$cmdout") || die "Can not find better-analyze output:$!\n";;
-	while(<CMD>) {
-		chomp($_);
-		$submitline = $_;
-		if($submitline =~ /^.*cluster\s+(\d+).*$/) {
-			$cluster = $1;
-			CondorTest::debug("Found my cluster which is $cluster!\n",1);
-		}
-		CondorTest::debug("$_\n",1);
-	}
+	CondorTest::debug("Examining condor_q -better-analyze output...\n",1);
 
 	foreach $line (@adarray) {
 		chomp($line);
 		if($line =~ /^\s*(\d+)\.(\d+):\s*Run\s+analysis\s+summary\.\s+.*$/) {
-				CondorTest::debug("Score!!!!! found cluster $cluster\n",1);
-				CondorTest::debug("$line\n",1);
+				CondorTest::debug("Score!!!!! found cluster $cluster:\n",1);
+				CondorTest::debug("  $line\n",1);
 				$foundcluster = 1;
 		}
 		if($line =~ /^\s*The\s+Requirements\s+expression\s+for\s+your\s+job\s+is:\s*.*$/) {
-				CondorTest::debug("Score!!!!! found -better-analyze\n",1);
-				CondorTest::debug("$line\n",1);
-				CondorTest::debug("condor_q -better-analyse prints Requirements like this\n",1);
+				CondorTest::debug("Score!!!!! found -better-analyze output:\n",1);
+				CondorTest::debug("  $line\n",1);
 				$foundanalyze = 1;
 		}
 	}
-	if(($foundcluster) && ($foundanalyze)) {
-		$cmd = "condor_rm $cluster";
-		$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
-	}
 
+	$cmd = "condor_rm $cluster";
+	$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
+
+	if( !$foundcluster | !$foundanalyze ) {
+		CondorTest::debug("Failed to find expected output from condor_q -better-analyze\n",1);
+		$test_failed = 1;
+	}
 };
 
 $aborted = sub {
-	CondorTest::debug("If all is good we abort our own job.......\n",1);
-	exit(0);
+	CondorTest::debug("Job aborted\n",1);
+	if ( $test_failed ) {
+		CondorTest::debug("Test Failed!\n",1);
+	} else {
+		CondorTest::debug("Test Succeeded!\n",1);
+	}
+	exit($test_failed);
 };
 
-$ExitSuccess = sub {
-	my %info = @_;
+$exited = sub {
+	CondorTest::debug("Our job shouldn't have run, failing...\n",1);
+	exit(1);
 };
 
 $timed = sub
 {
-    die "Job should have ended by now. condor_q -sub $whoami broken!\n";
+    die "Job should have ended by now. condor_q -better-analyze broken!\n";
 };
 
 CondorTest::RegisterSubmit( $testname, $submit );
 CondorTest::RegisterAbort($testname, $aborted);
-#CondorTest::RegisterExecute($testname, $execute);
-CondorTest::RegisterExitedSuccess( $testname, $ExitSuccess );
+CondorTest::RegisterExited( $testname, $exited );
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
 	CondorTest::debug("$testname: SUCCESS\n",1);
