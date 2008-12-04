@@ -38,6 +38,48 @@ $submit = sub {
 	my $cluster = $info{'cluster'};;
 	CondorTest::debug("Job submitted, cluster is $cluster\n",1);
 
+	my $foundnegotiator = 0;
+	my $foundstartd = 0;
+	my $wait_time = 0;
+	my $wait_max = 60;
+	my $wait_interval = 5;
+
+	CondorTest::debug("Checking for negotiator and startd ads\n",1);
+
+	# Wait for the negotiator and startd to advertise themselves
+	while ( ( !$foundnegotiator || !$foundstartd ) && $wait_time < $wait_max ) {
+		if ( !$foundnegotiator ) {
+			open(CS, "condor_status -negotiator -format 'here' Name |") || die "Can't run condor_status\n";
+			while ( <CS> ) {
+				if ( /here/ ) {
+					$foundnegotiator = 1;
+				}
+			}
+			close( CS );
+		}
+
+		if ( !$foundstartd ) {
+			open(CS, "condor_status -format 'here' Name |") || die "Can't run condor_status\n";
+			while ( <CS> ) {
+				if ( /here/ ) {
+					$foundstartd = 1;
+				}
+			}
+			close( CS );
+		}
+
+		if ( $foundnegotiator && $foundstartd ) {
+			last;
+		}
+
+		sleep $wait_interval;
+		$wait_time += $wait_interval;
+	}
+
+	if ( !$foundnegotiator || !$foundstartd ) {
+		CondorTest::debug("Negotiator or startd still missing after $wait_max seconds of waiting!\n",1);
+	}
+
 	my $foundcluster = 0;
 	my $foundanalyze = 0;
 	my $cmd = "condor_q -better-analyze $cluster";
