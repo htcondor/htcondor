@@ -134,7 +134,7 @@ REM /D_CONST_RETURN
 set CONDOR_CPPARGS=/GR
 set CONDOR_DEFINE=/DHAVE_CONFIG_H /DBUILDID=%BID% %CONDOR_CPPARGS% %CONDOR_NOWARN%
 set CONDOR_INCLUDE=/I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /I "..\src\condor_daemon_client" /I "..\src\condor_daemon_core.V6" /I "..\src\condor_schedd.V6"
-set CONDOR_LIB=crypt32.lib mpr.lib psapi.lib mswsock.lib netapi32.lib imagehlp.lib advapi32.lib ws2_32.lib user32.lib oleaut32.lib ole32.lib powrprof.lib iphlpapi.lib userenv.lib
+set CONDOR_LIB=crypt32.lib mpr.lib psapi.lib mswsock.lib netapi32.lib imagehlp.lib advapi32.lib ws2_32.lib powrprof.lib iphlpapi.lib userenv.lib
 set CONDOR_LIBPATH=
 
 REM ======================================================================
@@ -168,8 +168,8 @@ set CONDOR_PCRE_LIB=libpcre.lib
 set CONDOR_PCRE_LIBPATH=/LIBPATH:%EXT_INSTALL%\%EXT_PCRE_VERSION%\lib
 
 REM Dump the Windows build environment at this point
-echo ----------------------- WIN ENV DUMP ----------------------
-set
-echo ----------------------- WIN ENV DUMP ----------------------
+REM echo ----------------------- WIN ENV DUMP ----------------------
+REM set
+REM echo ----------------------- WIN ENV DUMP ----------------------
 
 exit /B 0
