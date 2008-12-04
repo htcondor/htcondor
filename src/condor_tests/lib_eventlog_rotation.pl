@@ -527,8 +527,7 @@ if ( exists $test->{reader} ) {
 
 
 my @valgrind = ( "valgrind", "--tool=memcheck", "--num-callers=24",
-		 "-v", "-v", "--leak-check=full",
-		 "--log-file=$dir/valgrind-writer.out" );
+		 "-v", "-v", "--leak-check=full" );
 
 system("date");
 if ( $settings{verbose} ) {
@@ -731,8 +730,11 @@ sub RunWriter( $$$$$ )
     my $errors = 0;
 
     my $cmd = "";
+    my $vg_out = sprintf( "valgrind-writer-%02d.out", $loop );
+    my $vg_full = "$dir/$vg_out";
     if ( $settings{valgrind_writer} ) {
 	$cmd .= join( " ", @valgrind ) . " ";
+	$cmd .= " --log-file=$vg_full ";
     }
     $cmd .= join(" ", @writer_args );
     print "$cmd\n" if ( $settings{verbose} );
@@ -778,6 +780,9 @@ sub RunWriter( $$$$$ )
 	print "writer process exited normally\n";
     }
 
+    if ( $settings{valgrind_writer} ) {
+	$errors += CheckValgrind( $vg_out );
+    }
     return $errors;
 }
 
@@ -799,8 +804,11 @@ sub RunReader( $$$ )
     }
 
     my $cmd = "";
+    my $vg_out = sprintf( "valgrind-reader-%02d.out", $loop );
+    my $vg_full = "$dir/$vg_out";
     if ( $settings{valgrind_reader} ) {
 	$cmd .= join( " ", @valgrind ) . " ";
+	$cmd .= " --log-file=$vg_full ";
     }
     $cmd .= join(" ", @reader_args );
     print "$cmd\n" if ( $settings{verbose} );
@@ -876,10 +884,73 @@ sub RunReader( $$$ )
 	close( OUT );
     }
 
-
+    if ( $settings{valgrind_reader} ) {
+	$errors += CheckValgrind( $vg_out );
+    }
     return $errors;
 }
 
+sub CheckValgrind( $$ )
+{
+    my $errors = 0;
+    my $file = shift;
+
+    my $full;
+    opendir( DIR, $dir ) or die "Can't opendir $dir";
+    while( my $f = readdir(DIR) ) {
+	if ( index( $f, $file ) >= 0 ) {
+	    $full = "$dir/$f";
+	    last;
+	}
+    }
+    closedir( DIR );
+    if ( !defined $full ) {
+	print STDERR "Can't find valgrind log for $file";
+	return 1;
+    }
+
+    if ( ! open( VG, $full ) ) {
+	print STDERR "Can't read valgrind output $full\n";
+	return 1;
+    }
+    if ( $settings{verbose} ) {
+	print "Reading valgrind output $full\n";
+    }
+    while( <VG> ) {
+	if ( /ERROR SUMMARY: (\d+)/ ) {
+	    my $e = int($1);
+	     if ( $e ) {
+		 $errors++;
+	     }
+	    if ( $settings{verbose}  or  $e ) {
+		print;
+	    }
+	}
+	elsif ( /LEAK SUMMARY:/ ) {
+	    my @lines = ( $_ );
+	    my $leaks = 0;
+	    while( <VG> ) {
+		if ( /blocks\.$/ ) {
+		    push( @lines, $_ );
+		}
+		if ( /lost: (\d+)/ ) {
+		    if ( int($1) > 0 ) {
+			$leaks++;
+			$errors++;
+		    }
+		}
+	    }
+	    if ( $settings{verbose}  or  $leaks ) {
+		foreach $_ ( @lines ) {
+		    print;
+		}
+	    }
+	}
+
+    }
+    close( VG );
+    return $errors;
+}
 
 
 # #######################################
