@@ -2817,7 +2817,14 @@ if test $HAVE_ORACLE_OCI = yes; then
 fi
 
 # Figure out which postgresql we need.
-CHECK_EXTERNAL([postgresql], [8.2.3], [soft],
+
+if test "x$_cv_sysname" = "xhp_ux113" ; then
+  pgsql_ver="8.3.0";
+else
+  pgsql_ver="8.0.2";
+fi
+
+CHECK_EXTERNAL([postgresql], [$pgsql_ver], [soft],
                [use PostgreSQL (provides Quill and other support)],
                MF_LIB_CHECK([postgresql], [[pq PQconnectdb]], [postgresql]))
 AC_MSG_CHECKING([postgresql])
