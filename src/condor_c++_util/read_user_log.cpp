@@ -176,7 +176,9 @@ ReadUserLog::initialize( void )
 		return false;
 	}
 	int max_rotations = param_integer( "EVENT_LOG_MAX_ROTATIONS", 1, 0 );
-	return initialize( path, max_rotations, true );
+	bool status = initialize( path, max_rotations, true );
+	free( path );
+	return status;
 }
 
 // Default initializer

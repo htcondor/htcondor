@@ -273,22 +273,23 @@ sysapi_translate_opsys( char *sysname, char *release, char *version )
 	else if( !strcmp(sysname, "SunOS") 
 		|| !strcmp(sysname, "solaris" ) ) //LDAP entry
 	{
-		
-		if ( !strcmp(release, "2.9") //LDAP entry
-			|| !strcmp(release, "5.9")
-		)
+		if ( !strcmp(release, "2.10") //LDAP entry
+			|| !strcmp(release, "5.10") )
+		{
+			sprintf( tmp, "SOLARIS210" );
+		}
+		else if ( !strcmp(release, "2.9") //LDAP entry
+			|| !strcmp(release, "5.9") )
 		{
 			sprintf( tmp, "SOLARIS29" );
 		} 
 		else if ( !strcmp(release, "2.8") //LDAP entry
-			|| !strcmp(release, "5.8")
-		)
+			|| !strcmp(release, "5.8") )
 		{
 			sprintf( tmp, "SOLARIS28" );
 		} 
 		else if ( !strcmp(release, "2.7") //LDAP entry
-			|| !strcmp(release, "5.7")
-		)
+			|| !strcmp(release, "5.7") )
 		{
 			sprintf( tmp, "SOLARIS27" );
 		} 

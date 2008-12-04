@@ -20,10 +20,15 @@
 #ifndef CONDOR_SYS_SOLARIS_H
 #define CONDOR_SYS_SOLARIS_H
 
+/* This allows things like gethostname()'s definition to be brought in */
+#ifndef __EXTENSIONS__
 #define __EXTENSIONS__
+#endif
 
 #if defined(Solaris26) || defined(Solaris27) || defined(Solaris28) || defined(Solaris29)
+#ifndef _LARGEFILE64_SOURCE
 #	define _LARGEFILE64_SOURCE
+#endif
 #endif
 
 #include "condor_fix_sys_utsname.h"
@@ -40,7 +45,6 @@
 /* These are all functions that unistd.h is supposed to prototype that
    for whatever reason, are not defined on Solaris. */
 BEGIN_C_DECLS
-int gethostname( char *, int );
 long gethostid(void);
 int getpagesize(void);
 int getdtablesize(void);
