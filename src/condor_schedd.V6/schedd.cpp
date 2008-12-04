@@ -346,8 +346,7 @@ static const int USER_HASH_SIZE = 100;
 
 Scheduler::Scheduler() :
 	GridJobOwners(USER_HASH_SIZE, UserIdentity::HashFcn, updateDuplicateKeys),
-	job_is_finished_queue( "job_is_finished_queue", 1,
-						   &CondorID::ServiceDataCompare )
+	job_is_finished_queue( "job_is_finished_queue", 1 )
 {
 	m_ad = NULL;
 	MySockName = NULL;
@@ -12328,15 +12327,18 @@ bool
 Scheduler::enqueueFinishedJob( int cluster, int proc )
 {
 	CondorID* id = new CondorID( cluster, proc, -1 );
-	if( job_is_finished_queue.isMember(id) ) { 
+
+	if( !job_is_finished_queue.enqueue( id, false ) ) {
+			// the only reason the above can fail is because the job
+			// is already in the queue
 		dprintf( D_FULLDEBUG, "enqueueFinishedJob(): job %d.%d already "
 				 "in queue to run jobIsFinished()\n", cluster, proc );
 		delete id;
-		id = NULL;
 		return false;
 	}
+
 	dprintf( D_FULLDEBUG, "Job %d.%d is finished\n", cluster, proc );
-	return job_is_finished_queue.enqueue( id );
+	return true;
 }
 
 // Methods to manipulate the supplemental ClassAd list

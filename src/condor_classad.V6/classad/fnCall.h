@@ -175,6 +175,8 @@ class FunctionCall : public ExprTree
 	// pattern matching
 	static bool matchPattern(const char*,const ArgumentList&,EvalState&,
 							 Value&);
+	static bool substPattern( const char*,const ArgumentList &argList,EvalState &state,	Value &result );
+
 	static bool matchPatternMember(const char*,const ArgumentList &argList,EvalState &state,
                               Value &result);
 
@@ -190,7 +192,11 @@ class FunctionCall : public ExprTree
 	// math (floor, ceil, round)
 	static bool doMath(const char*,const ArgumentList&,EvalState&,Value&);
 	static bool random(const char*,const ArgumentList&,EvalState&,Value&);
+
+	static bool ifThenElse( const char* name,const ArgumentList &argList,EvalState &state,Value &result );
 	
+	static bool interval( const char* name,const ArgumentList &argList,EvalState &state,Value &result );
+
  	//static bool doReal(const char*,const ArgumentList&,EvalState&,Value&);
 };
 

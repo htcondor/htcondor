@@ -33,10 +33,6 @@ REM from Perl, which doesn't understand ERRORLEVEL.
 set INTERACTIVE=/b
 IF "%1" == "/exit" set INTERACTIVE=
 
-REM Rename source files so the the object file names will collide
-call :FIX_SOURCE_NAMES
-if %ERRORLEVEL% NEQ 0 goto :FAIL
-
 call :GENERATE_SYSCALL_NUMBERS
 if %ERRORLEVEL% NEQ 0 goto :FAIL
 
@@ -48,9 +44,12 @@ REM Copy any .dll files created by the externals in debug and release
 call copy_external_dlls.bat
 if %ERRORLEVEL% NEQ 0 goto :FAIL
 
-REM Copy any .dll files created by the externals in debug and release
 call :DETERMINE_CONFIGRATION
 if %ERRORLEVEL% NEQ 0 goto :FAIL
+
+REM Put our config.h file in the right place
+call configure.bat
+if %ERRORLEVEL% NEQ 0 goto :CONFIG_FAIL
 
 REM Make gsoap stubs, etc.
 call :MAKE_GSOAP
@@ -86,18 +85,12 @@ exit %INTERACTIVE% 1
 :EXTERNALS_FAIL
 echo *** Failed to build externals ***
 exit %INTERACTIVE% 1
+:CONFIG_FALL
+echo *** Failed to make config.h ***
+exit %INTERACTIVE% 1
 :GSOAP_FAIL
 echo *** gsoap stub generator failed ***
 exit %INTERACTIVE% 1
-
-REM ======================================================================
-:FIX_SOURCE_NAMES
-REM ======================================================================
-REM Rename source files so the the object file names will collide
-REM ======================================================================
-call dorenames.bat >NUL
-if not errorlevel 2 call dorenames.bat >NUL
-exit /b 0
 
 REM ======================================================================
 :GENERATE_SYSCALL_NUMBERS
@@ -150,7 +143,8 @@ REM ======================================================================
 REM Build condor (build order is now preserved in project)
 REM ======================================================================
 echo Building Condor...
-msbuild condor.sln /nologo /t:condor /p:Configuration=%CONFIGURATION%
+set
+msbuild condor.sln /nologo /t:condor /p:Configuration=%CONFIGURATION%;VCBuildUseEnvironment="true"
 REM devenv condor.sln /useenv /build "%CONFIGURATION%"
 if %ERRORLEVEL% NEQ 0 exit /b 1
 exit /b 0

@@ -169,7 +169,7 @@
 	</References>
 	<Files>
 		<File
-			RelativePath="..\src\condor_daemon_core.V6\accessdesktop.WIN32.C"
+			RelativePath="..\src\condor_daemon_core.V6\accessdesktop.WIN32.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -195,7 +195,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_daemon_core.V6\condor_lock.C"
+			RelativePath="..\src\condor_daemon_core.V6\condor_lock.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -221,7 +221,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_daemon_core.V6\condor_lock_base.C"
+			RelativePath="..\src\condor_daemon_core.V6\condor_lock_base.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -247,7 +247,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_daemon_core.V6\condor_lock_file.C"
+			RelativePath="..\src\condor_daemon_core.V6\condor_lock_file.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -273,7 +273,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_daemon_core.V6\condor_lock_implementation.C"
+			RelativePath="..\src\condor_daemon_core.V6\condor_lock_implementation.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -303,7 +303,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_daemon_core.V6\daemon_core.C"
+			RelativePath="..\src\condor_daemon_core.V6\daemon_core.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -325,7 +325,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_daemon_core.V6\daemon_core_main.C"
+			RelativePath="..\src\condor_daemon_core.V6\daemon_core_main.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -347,7 +347,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_daemon_core.V6\datathread.C"
+			RelativePath="..\src\condor_daemon_core.V6\datathread.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -369,7 +369,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_daemon_core.V6\exphnd.WIN32.C"
+			RelativePath="..\src\condor_daemon_core.V6\exphnd.WIN32.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -395,7 +395,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_daemon_core.V6\HookClient.C"
+			RelativePath="..\src\condor_daemon_core.V6\HookClient.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -421,7 +421,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_daemon_core.V6\HookClientMgr.C"
+			RelativePath="..\src\condor_daemon_core.V6\HookClientMgr.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -447,7 +447,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_daemon_core.V6\httpget.C"
+			RelativePath="..\src\condor_daemon_core.V6\httpget.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -473,7 +473,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_daemon_core.V6\pipe.WIN32.C"
+			RelativePath="..\src\condor_daemon_core.V6\pipe.WIN32.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -499,7 +499,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_daemon_core.V6\self_draining_queue.C"
+			RelativePath="..\src\condor_daemon_core.V6\self_draining_queue.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -525,7 +525,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_daemon_core.V6\self_monitor.C"
+			RelativePath="..\src\condor_daemon_core.V6\self_monitor.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -551,7 +551,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_daemon_core.V6\soap_core.C"
+			RelativePath="..\src\condor_daemon_core.V6\soap_core.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -599,7 +599,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_daemon_core.V6\timer_manager.C"
+			RelativePath="..\src\condor_daemon_core.V6\timer_manager.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"

@@ -26,234 +26,234 @@ DAEMONS = collector dagman gridmanager master negotiator had credd \
 
 all : $(DAEMONS)
 
-gridmanager : $(SRCDIR)\condor_$@\soap_$@Stub.C \
+gridmanager : $(SRCDIR)\condor_$@\soap_$@Stub.cpp \
 			$(SRCDIR)\condor_$@\gsoap_$@.h
 	-2mkdir $(TEMPDIR)
 	cd $(SRCDIR)\condor_$@
 	$(SOAPCPP) $(SOAPCPPFLAGS) -p soap_$@ -d $(TEMPDIR) gsoap_$@.h
-	copy /Y $(TEMPDIR)\soap_$@C.cpp      .\*.C
-	copy /Y $(TEMPDIR)\soap_$@Server.cpp .\*.C
+	copy /Y $(TEMPDIR)\soap_$@C.cpp      .
+	copy /Y $(TEMPDIR)\soap_$@Server.cpp .
 	copy /Y $(TEMPDIR)\condor$@.nsmap    .
 	copy /Y $(TEMPDIR)\soap_$@H.h        .
 	copy /Y $(TEMPDIR)\soap_$@Stub.h     .
 	copy /Y $(TEMPDIR)\condor$@.wsdl     .
 	rd /q /s $(TEMPDIR) > NUL 2>&1
 
-dagman : $(SRCDIR)\condor_$@\soap_$@Stub.C \
+dagman : $(SRCDIR)\condor_$@\soap_$@Stub.cpp \
 			$(SRCDIR)\condor_$@\gsoap_$@.h
 	-2mkdir $(TEMPDIR)
 	cd $(SRCDIR)\condor_$@
 	$(SOAPCPP) $(SOAPCPPFLAGS) -p soap_$@ -d $(TEMPDIR) gsoap_$@.h
-	copy /Y $(TEMPDIR)\soap_$@C.cpp      .\*.C
-	copy /Y $(TEMPDIR)\soap_$@Server.cpp .\*.C
+	copy /Y $(TEMPDIR)\soap_$@C.cpp      .
+	copy /Y $(TEMPDIR)\soap_$@Server.cpp .
 	copy /Y $(TEMPDIR)\condor$@.nsmap    .
 	copy /Y $(TEMPDIR)\soap_$@H.h        .
 	copy /Y $(TEMPDIR)\soap_$@Stub.h     .
 	copy /Y $(TEMPDIR)\condor$@.wsdl     .
 	rd /q /s $(TEMPDIR) > NUL 2>&1
 
-starter : $(SRCDIR)\condor_$@.V6.1\soap_$@Stub.C \
+starter : $(SRCDIR)\condor_$@.V6.1\soap_$@Stub.cpp \
 			$(SRCDIR)\condor_$@.V6.1\gsoap_$@.h
 	-2mkdir $(TEMPDIR)
 	cd $(SRCDIR)\condor_$@.V6.1
 	$(SOAPCPP) $(SOAPCPPFLAGS) -p soap_$@ -d $(TEMPDIR) gsoap_$@.h
-	copy /Y $(TEMPDIR)\soap_$@C.cpp      .\*.C
-	copy /Y $(TEMPDIR)\soap_$@Server.cpp .\*.C
+	copy /Y $(TEMPDIR)\soap_$@C.cpp      .
+	copy /Y $(TEMPDIR)\soap_$@Server.cpp .
 	copy /Y $(TEMPDIR)\condor$@.nsmap    .
 	copy /Y $(TEMPDIR)\soap_$@H.h        .
 	copy /Y $(TEMPDIR)\soap_$@Stub.h     .
 	copy /Y $(TEMPDIR)\condor$@.wsdl     .
 	rd /q /s $(TEMPDIR) > NUL 2>&1
 
-shadow : $(SRCDIR)\condor_$@.V6.1\soap_$@Stub.C \
+shadow : $(SRCDIR)\condor_$@.V6.1\soap_$@Stub.cpp \
 			$(SRCDIR)\condor_$@.V6.1\gsoap_$@.h
 	-2mkdir $(TEMPDIR)
 	cd $(SRCDIR)\condor_$@.V6.1
 	$(SOAPCPP) $(SOAPCPPFLAGS) -p soap_$@ -d $(TEMPDIR) gsoap_$@.h
-	copy /Y $(TEMPDIR)\soap_$@C.cpp      .\*.C
-	copy /Y $(TEMPDIR)\soap_$@Server.cpp .\*.C
+	copy /Y $(TEMPDIR)\soap_$@C.cpp      .
+	copy /Y $(TEMPDIR)\soap_$@Server.cpp .
 	copy /Y $(TEMPDIR)\condor$@.nsmap    .
 	copy /Y $(TEMPDIR)\soap_$@H.h        .
 	copy /Y $(TEMPDIR)\soap_$@Stub.h     .
 	copy /Y $(TEMPDIR)\condor$@.wsdl     .
 	rd /q /s $(TEMPDIR) > NUL 2>&1
 
-startd : $(SRCDIR)\condor_$@.V6\soap_$@Stub.C \
+startd : $(SRCDIR)\condor_$@.V6\soap_$@Stub.cpp \
 			$(SRCDIR)\condor_$@.V6\gsoap_$@.h
 	-2mkdir $(TEMPDIR)
 	cd $(SRCDIR)\condor_$@.V6
 	$(SOAPCPP) $(SOAPCPPFLAGS) -p soap_$@ -d $(TEMPDIR) gsoap_$@.h
-	copy /Y $(TEMPDIR)\soap_$@C.cpp      .\*.C
-	copy /Y $(TEMPDIR)\soap_$@Server.cpp .\*.C
+	copy /Y $(TEMPDIR)\soap_$@C.cpp      .
+	copy /Y $(TEMPDIR)\soap_$@Server.cpp .
 	copy /Y $(TEMPDIR)\condor$@.nsmap    .
 	copy /Y $(TEMPDIR)\soap_$@H.h        .
 	copy /Y $(TEMPDIR)\soap_$@Stub.h     .
 	copy /Y $(TEMPDIR)\condor$@.wsdl     .
 	rd /q /s $(TEMPDIR) > NUL 2>&1
 
-collector : $(SRCDIR)\condor_$@.V6\soap_$@Stub.C \
+collector : $(SRCDIR)\condor_$@.V6\soap_$@Stub.cpp \
 			$(SRCDIR)\condor_$@.V6\gsoap_$@.h
 	-2mkdir $(TEMPDIR)
 	cd $(SRCDIR)\condor_$@.V6
 	$(SOAPCPP) $(SOAPCPPFLAGS) -p soap_$@ -d $(TEMPDIR) gsoap_$@.h
-	copy /Y $(TEMPDIR)\soap_$@C.cpp      .\*.C
-	copy /Y $(TEMPDIR)\soap_$@Server.cpp .\*.C
+	copy /Y $(TEMPDIR)\soap_$@C.cpp      .
+	copy /Y $(TEMPDIR)\soap_$@Server.cpp .
 	copy /Y $(TEMPDIR)\condor$@.nsmap    .
 	copy /Y $(TEMPDIR)\soap_$@H.h        .
 	copy /Y $(TEMPDIR)\soap_$@Stub.h     .
 	copy /Y $(TEMPDIR)\condor$@.wsdl     .
 	rd /q /s $(TEMPDIR) > NUL 2>&1
 
-schedd : $(SRCDIR)\condor_$@.V6\soap_$@Stub.C \
+schedd : $(SRCDIR)\condor_$@.V6\soap_$@Stub.cpp \
 			$(SRCDIR)\condor_$@.V6\gsoap_$@.h
 	-2mkdir $(TEMPDIR)
 	cd $(SRCDIR)\condor_$@.V6
 	$(SOAPCPP) $(SOAPCPPFLAGS) -p soap_$@ -d $(TEMPDIR) gsoap_$@.h
-	copy /Y $(TEMPDIR)\soap_$@C.cpp      .\*.C
-	copy /Y $(TEMPDIR)\soap_$@Server.cpp .\*.C
+	copy /Y $(TEMPDIR)\soap_$@C.cpp      .
+	copy /Y $(TEMPDIR)\soap_$@Server.cpp .
 	copy /Y $(TEMPDIR)\condor$@.nsmap    .
 	copy /Y $(TEMPDIR)\soap_$@H.h        .
 	copy /Y $(TEMPDIR)\soap_$@Stub.h     .
 	copy /Y $(TEMPDIR)\condor$@.wsdl     .
 	rd /q /s $(TEMPDIR) > NUL 2>&1
 
-negotiator : $(SRCDIR)\condor_$@.V6\soap_$@Stub.C \
+negotiator : $(SRCDIR)\condor_$@.V6\soap_$@Stub.cpp \
 			$(SRCDIR)\condor_$@.V6\gsoap_$@.h
 	-2mkdir $(TEMPDIR)
 	cd $(SRCDIR)\condor_$@.V6
 	$(SOAPCPP) $(SOAPCPPFLAGS) -p soap_$@ -d $(TEMPDIR) gsoap_$@.h
-	copy /Y $(TEMPDIR)\soap_$@C.cpp      .\*.C
-	copy /Y $(TEMPDIR)\soap_$@Server.cpp .\*.C
+	copy /Y $(TEMPDIR)\soap_$@C.cpp      .
+	copy /Y $(TEMPDIR)\soap_$@Server.cpp .
 	copy /Y $(TEMPDIR)\condor$@.nsmap    .
 	copy /Y $(TEMPDIR)\soap_$@H.h        .
 	copy /Y $(TEMPDIR)\soap_$@Stub.h     .
 	copy /Y $(TEMPDIR)\condor$@.wsdl     .
 	rd /q /s $(TEMPDIR) > NUL 2>&1
 
-master : $(SRCDIR)\condor_$@.V6\soap_$@Stub.C \
+master : $(SRCDIR)\condor_$@.V6\soap_$@Stub.cpp \
 			$(SRCDIR)\condor_$@.V6\gsoap_$@.h
 	-2mkdir $(TEMPDIR)
 	cd $(SRCDIR)\condor_$@.V6
 	$(SOAPCPP) $(SOAPCPPFLAGS) -p soap_$@ -d $(TEMPDIR) gsoap_$@.h
-	copy /Y $(TEMPDIR)\soap_$@C.cpp      .\*.C
-	copy /Y $(TEMPDIR)\soap_$@Server.cpp .\*.C
+	copy /Y $(TEMPDIR)\soap_$@C.cpp      .
+	copy /Y $(TEMPDIR)\soap_$@Server.cpp .
 	copy /Y $(TEMPDIR)\condor$@.nsmap    .
 	copy /Y $(TEMPDIR)\soap_$@H.h        .
 	copy /Y $(TEMPDIR)\soap_$@Stub.h     .
 	copy /Y $(TEMPDIR)\condor$@.wsdl     .
 	rd /q /s $(TEMPDIR) > NUL 2>&1
 
-cgahp : $(SRCDIR)\condor_c-gahp\soap_$@Stub.C \
+cgahp : $(SRCDIR)\condor_c-gahp\soap_$@Stub.cpp \
 			$(SRCDIR)\condor_c-gahp\gsoap_$@.h
 	-2mkdir $(TEMPDIR)
 	cd $(SRCDIR)\condor_c-gahp
 	$(SOAPCPP) $(SOAPCPPFLAGS) -p soap_$@ -d $(TEMPDIR) gsoap_$@.h
-	copy /Y $(TEMPDIR)\soap_$@C.cpp      .\*.C
-	copy /Y $(TEMPDIR)\soap_$@Server.cpp .\*.C
+	copy /Y $(TEMPDIR)\soap_$@C.cpp      .
+	copy /Y $(TEMPDIR)\soap_$@Server.cpp .
 	copy /Y $(TEMPDIR)\condor$@.nsmap    .
 	copy /Y $(TEMPDIR)\soap_$@H.h        .
 	copy /Y $(TEMPDIR)\soap_$@Stub.h     .
 	copy /Y $(TEMPDIR)\condor$@.wsdl     .
 	rd /q /s $(TEMPDIR) > NUL 2>&1
 
-cgahp_worker : $(SRCDIR)\condor_c-gahp\soap_$@Stub.C \
+cgahp_worker : $(SRCDIR)\condor_c-gahp\soap_$@Stub.cpp \
 			$(SRCDIR)\condor_c-gahp\gsoap_$@.h
 	-2mkdir $(TEMPDIR)
 	cd $(SRCDIR)\condor_c-gahp
 	$(SOAPCPP) $(SOAPCPPFLAGS) -p soap_$@ -d $(TEMPDIR) gsoap_$@.h
-	copy /Y $(TEMPDIR)\soap_$@C.cpp      .\*.C
-	copy /Y $(TEMPDIR)\soap_$@Server.cpp .\*.C
+	copy /Y $(TEMPDIR)\soap_$@C.cpp      .
+	copy /Y $(TEMPDIR)\soap_$@Server.cpp .
 	copy /Y $(TEMPDIR)\condor$@.nsmap    .
 	copy /Y $(TEMPDIR)\soap_$@H.h        .
 	copy /Y $(TEMPDIR)\soap_$@Stub.h     .
 	copy /Y $(TEMPDIR)\condor$@.wsdl     .
 	rd /q /s $(TEMPDIR) > NUL 2>&1
 
-quill : $(SRCDIR)\condor_$@\soap_$@Stub.C \
+quill : $(SRCDIR)\condor_$@\soap_$@Stub.cpp \
 			$(SRCDIR)\condor_$@\gsoap_$@.h
 	-2mkdir $(TEMPDIR)
 	cd $(SRCDIR)\condor_$@
 	$(SOAPCPP) $(SOAPCPPFLAGS) -p soap_$@ -d $(TEMPDIR) gsoap_$@.h
-	copy /Y $(TEMPDIR)\soap_$@C.cpp      .\*.C
-	copy /Y $(TEMPDIR)\soap_$@Server.cpp .\*.C
+	copy /Y $(TEMPDIR)\soap_$@C.cpp      .
+	copy /Y $(TEMPDIR)\soap_$@Server.cpp .
 	copy /Y $(TEMPDIR)\condor$@.nsmap    .
 	copy /Y $(TEMPDIR)\soap_$@H.h        .
 	copy /Y $(TEMPDIR)\soap_$@Stub.h     .
 	copy /Y $(TEMPDIR)\condor$@.wsdl     .
 	rd /q /s $(TEMPDIR) > NUL 2>&1
 
-credd : $(SRCDIR)\condor_$@\soap_$@Stub.C \
+credd : $(SRCDIR)\condor_$@\soap_$@Stub.cpp \
 			$(SRCDIR)\condor_$@\gsoap_$@.h
 	-2mkdir $(TEMPDIR)
 	cd $(SRCDIR)\condor_$@
 	$(SOAPCPP) $(SOAPCPPFLAGS) -p soap_$@ -d $(TEMPDIR) gsoap_$@.h
-	copy /Y $(TEMPDIR)\soap_$@C.cpp      .\*.C
-	copy /Y $(TEMPDIR)\soap_$@Server.cpp .\*.C
+	copy /Y $(TEMPDIR)\soap_$@C.cpp      .
+	copy /Y $(TEMPDIR)\soap_$@Server.cpp .
 	copy /Y $(TEMPDIR)\condor$@.nsmap    .
 	copy /Y $(TEMPDIR)\soap_$@H.h        .
 	copy /Y $(TEMPDIR)\soap_$@Stub.h     .
 	copy /Y $(TEMPDIR)\condor$@.wsdl     .
 	rd /q /s $(TEMPDIR) > NUL 2>&1
 
-had : $(SRCDIR)\condor_$@\soap_$@Stub.C \
+had : $(SRCDIR)\condor_$@\soap_$@Stub.cpp \
 			$(SRCDIR)\condor_$@\gsoap_$@.h
 	-2mkdir $(TEMPDIR)
 	cd $(SRCDIR)\condor_$@
 	$(SOAPCPP) $(SOAPCPPFLAGS) -p soap_$@ -d $(TEMPDIR) gsoap_$@.h
-	copy /Y $(TEMPDIR)\soap_$@C.cpp      .\*.C
-	copy /Y $(TEMPDIR)\soap_$@Server.cpp .\*.C
+	copy /Y $(TEMPDIR)\soap_$@C.cpp      .
+	copy /Y $(TEMPDIR)\soap_$@Server.cpp .
 	copy /Y $(TEMPDIR)\condor$@.nsmap    .
 	copy /Y $(TEMPDIR)\soap_$@H.h        .
 	copy /Y $(TEMPDIR)\soap_$@Stub.h     .
 	copy /Y $(TEMPDIR)\condor$@.wsdl     .
 	rd /q /s $(TEMPDIR) > NUL 2>&1
 
-replication : $(SRCDIR)\condor_had\soap_$@Stub.C \
+replication : $(SRCDIR)\condor_had\soap_$@Stub.cpp \
 			$(SRCDIR)\condor_had\gsoap_$@.h
 	-2mkdir $(TEMPDIR)
 	cd $(SRCDIR)\condor_had
 	$(SOAPCPP) $(SOAPCPPFLAGS) -p soap_$@ -d $(TEMPDIR) gsoap_$@.h
-	copy /Y $(TEMPDIR)\soap_$@C.cpp      .\*.C
-	copy /Y $(TEMPDIR)\soap_$@Server.cpp .\*.C
+	copy /Y $(TEMPDIR)\soap_$@C.cpp      .
+	copy /Y $(TEMPDIR)\soap_$@Server.cpp .
 	copy /Y $(TEMPDIR)\condor$@.nsmap    .
 	copy /Y $(TEMPDIR)\soap_$@H.h        .
 	copy /Y $(TEMPDIR)\soap_$@Stub.h     .
 	copy /Y $(TEMPDIR)\condor$@.wsdl     .
 	rd /q /s $(TEMPDIR) > NUL 2>&1
 
-transferer : $(SRCDIR)\condor_had\soap_$@Stub.C \
+transferer : $(SRCDIR)\condor_had\soap_$@Stub.cpp \
 			$(SRCDIR)\condor_had\gsoap_$@.h
 	-2mkdir $(TEMPDIR)
 	cd $(SRCDIR)\condor_had
 	$(SOAPCPP) $(SOAPCPPFLAGS) -p soap_$@ -d $(TEMPDIR) gsoap_$@.h
-	copy /Y $(TEMPDIR)\soap_$@C.cpp      .\*.C
-	copy /Y $(TEMPDIR)\soap_$@Server.cpp .\*.C
+	copy /Y $(TEMPDIR)\soap_$@C.cpp      .
+	copy /Y $(TEMPDIR)\soap_$@Server.cpp .
 	copy /Y $(TEMPDIR)\condor$@.nsmap    .
 	copy /Y $(TEMPDIR)\soap_$@H.h        .
 	copy /Y $(TEMPDIR)\soap_$@Stub.h     .
 	copy /Y $(TEMPDIR)\condor$@.wsdl     .
 	rd /q /s $(TEMPDIR) > NUL 2>&1
 
-vmgahp : $(SRCDIR)\condor_vm-gahp\soap_$@Stub.C \
+vmgahp : $(SRCDIR)\condor_vm-gahp\soap_$@Stub.cpp \
 			$(SRCDIR)\condor_vm-gahp\gsoap_$@.h
 	-2mkdir $(TEMPDIR)
 	cd $(SRCDIR)\condor_vm-gahp
 	$(SOAPCPP) $(SOAPCPPFLAGS) -p soap_$@ -d $(TEMPDIR) gsoap_$@.h
-	copy /Y $(TEMPDIR)\soap_$@C.cpp      .\*.C
-	copy /Y $(TEMPDIR)\soap_$@Server.cpp .\*.C
+	copy /Y $(TEMPDIR)\soap_$@C.cpp      .
+	copy /Y $(TEMPDIR)\soap_$@Server.cpp .
 	copy /Y $(TEMPDIR)\condor$@.nsmap    .
 	copy /Y $(TEMPDIR)\soap_$@H.h        .
 	copy /Y $(TEMPDIR)\soap_$@Stub.h     .
 	copy /Y $(TEMPDIR)\condor$@.wsdl     .
 	rd /q /s $(TEMPDIR) > NUL 2>&1
 
-dbmsd : $(SRCDIR)\condor_dbmsd\soap_$@Stub.C \
+dbmsd : $(SRCDIR)\condor_dbmsd\soap_$@Stub.cpp \
 			$(SRCDIR)\condor_dbmsd\gsoap_$@.h
 	-2mkdir $(TEMPDIR)
 	cd $(SRCDIR)\condor_dbmsd
 	$(SOAPCPP) $(SOAPCPPFLAGS) -p soap_$@ -d $(TEMPDIR) gsoap_$@.h
-	copy /Y $(TEMPDIR)\soap_$@C.cpp      .\*.C
-	copy /Y $(TEMPDIR)\soap_$@Server.cpp .\*.C
+	copy /Y $(TEMPDIR)\soap_$@C.cpp      .
+	copy /Y $(TEMPDIR)\soap_$@Server.cpp .
 	copy /Y $(TEMPDIR)\condor$@.nsmap    .
 	copy /Y $(TEMPDIR)\soap_$@H.h        .
 	copy /Y $(TEMPDIR)\soap_$@Stub.h     .

@@ -30,7 +30,6 @@
     #include <slist>
   #else
     #include <string>
-    #error AHHHH
     #include <ext/hash_map>
     #include <ext/slist>
     using namespace __gnu_cxx;

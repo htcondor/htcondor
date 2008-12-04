@@ -169,7 +169,7 @@
 	</References>
 	<Files>
 		<File
-			RelativePath="..\src\condor_quill\classadlogentry.C"
+			RelativePath="..\src\condor_quill\classadlogentry.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -195,7 +195,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_quill\classadlogparser.C"
+			RelativePath="..\src\condor_quill\classadlogparser.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -221,7 +221,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_quill\prober.C"
+			RelativePath="..\src\condor_quill\prober.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -247,7 +247,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_quill\soap_quillC.C"
+			RelativePath="..\src\condor_quill\soap_quillC.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -275,7 +275,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_quill\soap_quillServer.C"
+			RelativePath="..\src\condor_quill\soap_quillServer.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -299,7 +299,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_quill\soap_quillStub.C"
+			RelativePath="..\src\condor_quill\soap_quillStub.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"

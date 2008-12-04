@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2008, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -75,6 +75,14 @@ ReadUserLogState::Reset( ResetType type )
 		m_initialized = false;
 		m_init_error = false;
 		m_base_path = "";
+		m_max_rotations = 0;
+
+		m_recent_thresh = 0;
+		m_score_fact_ctime = 0;
+		m_score_fact_inode = 0;
+		m_score_fact_same_size = 0;
+		m_score_fact_grown = 0;
+		m_score_fact_shrunk = 0;
 	}
 
 	// Full reset: Free up memory
@@ -86,12 +94,16 @@ ReadUserLogState::Reset( ResetType type )
 	m_cur_path = "";
 	m_cur_rot = -1;
 	m_uniq_id = "";
+	m_sequence = 0;
 
 	memset( &m_stat_buf, 0, sizeof(m_stat_buf) );
 	m_status_size = -1;
 
 	m_stat_valid = false;
-	m_update_time = 0;
+	m_stat_time = 0;
+
+	m_log_position = 0;
+	m_log_record = 0;
 
 	m_offset = 0;
 	m_log_type = LOG_TYPE_UNKNOWN;
@@ -123,7 +135,8 @@ ReadUserLogState::Rotation( int rotation, bool store_stat, bool initializing )
 }
 
 int
-ReadUserLogState::Rotation( int rotation, StatStructType &statbuf,
+ReadUserLogState::Rotation( int rotation,
+							StatStructType &statbuf,
 							bool initializing ) 
 {
 	// If we're not initializing and we're not initialized, something is wrong
@@ -145,12 +158,14 @@ ReadUserLogState::Rotation( int rotation, StatStructType &statbuf,
 	GeneratePath( rotation, m_cur_path, initializing );
 	m_cur_rot = rotation;
 	m_log_type = LOG_TYPE_UNKNOWN;
+	Update();
 
 	return StatFile( statbuf );
 }
 
 bool
-ReadUserLogState::GeneratePath( int rotation, MyString &path,
+ReadUserLogState::GeneratePath( int rotation,
+								MyString &path,
 								bool initializing ) const
 {
 	// If we're not initializing and we're not initialized, something is wrong
@@ -188,8 +203,9 @@ ReadUserLogState::StatFile( void )
 {
 	int status = StatFile( CurPath(), m_stat_buf );
 	if ( 0 == status ) {
-		m_update_time = time( NULL );
+		m_stat_time = time( NULL );
 		m_stat_valid = true;
+		Update();
 	}
 	return status;
 }
@@ -225,17 +241,18 @@ ReadUserLogState::StatFile( int fd )
 	}
 
 	statwrap.GetBuf( m_stat_buf );
-	m_update_time = time( NULL );
+	m_stat_time = time( NULL );
 	m_stat_valid = true;
+	Update();
 
 	return 0;
 }
 
 int
-ReadUserLogState::SecondsSinceUpdate( void ) const
+ReadUserLogState::SecondsSinceStat( void ) const
 {
 	time_t	now = time( NULL );
-	return (int) (now - m_update_time);
+	return (int) (now - m_stat_time);
 }
 
 // Score a file based on it's rotation #
@@ -358,6 +375,7 @@ ReadUserLogState::SetScoreFactor( enum ScoreFactors which, int factor )
 		// Ignore
 		break;
 	}
+	Update();
 }
 
 ReadUserLog::FileStatus
@@ -391,6 +409,7 @@ ReadUserLogState::CheckFileStatus( int fd )
 		status = ReadUserLog::LOG_STATUS_SHRUNK;
 	}
 	m_status_size = size;
+	Update();
 	return status;
 }
 
@@ -486,9 +505,10 @@ ReadUserLogState::GetState( ReadUserLog::FileState &state ) const
 
 	istate->m_offset.asint  = m_offset;
 
-	istate->m_log_offset.asint   = m_log_offset;
 	istate->m_log_position.asint = m_log_position;
 	istate->m_log_record.asint   = m_log_record;
+
+	istate->m_update_time = m_update_time;
 
 	return true;
 }
@@ -515,21 +535,22 @@ ReadUserLogState::SetState( const ReadUserLog::FileState &state )
 	Rotation( istate->m_rotation, false, true );
 
 	m_log_type = istate->m_log_type;
-	m_uniq_id = istate->m_uniq_id;
+	m_uniq_id  = istate->m_uniq_id;
 	m_sequence = istate->m_sequence;
 
-	m_stat_buf.st_ino = istate->m_inode;
+	m_stat_buf.st_ino   = istate->m_inode;
 	m_stat_buf.st_ctime = istate->m_ctime;
-	m_stat_buf.st_size = istate->m_size.asint;
+	m_stat_buf.st_size  = istate->m_size.asint;
 	m_stat_valid = true;
 
 	m_offset = istate->m_offset.asint;
 
-	m_log_offset   = istate->m_log_offset.asint;
 	m_log_position = istate->m_log_position.asint;
 	m_log_record   = istate->m_log_record.asint;
 
-	m_initialized = true;
+	m_update_time  = istate->m_update_time;
+
+	m_initialized  = true;
 
 	MyString	str;
 	GetStateString( str, "Restored reader state" );

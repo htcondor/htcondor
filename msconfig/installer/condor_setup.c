@@ -97,7 +97,6 @@ bool append_option(const char *attribute, const char *val);
 bool set_option(const char *attribute, const char *val);
 bool set_int_option(const char *attribute, const int val);
 bool setup_config_file(void) { Config_file = "condor_config"; return true; };
-bool setup_vmgahp_config_file(void) { Config_file = "condor_vmgahp_config.vmware"; return true; }
 bool open_log_file(void) { return ( NULL != ( LogFileHandle = fopen(LogFileName, "w") ) ); }
 bool close_log_file(void) { if ( NULL != LogFileHandle ) { fclose(LogFileHandle); LogFileHandle = NULL; } return true; }
 bool isempty(const char * a) { return ((a == NULL) || (a[0] == '\0')); }
@@ -145,7 +144,6 @@ int WINAPI WinMain( HINSTANCE hInstance,
   
   /* the following options go in the vmgahp config file */
   if ( 'Y' == Opt.enablevmuniverse ) {
-    setup_vmgahp_config_file();
     set_vmgahpoptions ();
   }
   
@@ -221,7 +219,7 @@ set_vmgahpoptions() {
 	}
 
 	if ( Opt.vmmemory ) {
-		set_option("VM_MAX_MEMORY", Opt.vmmemory);
+		set_option("VM_MEMORY", Opt.vmmemory);
 	}
 
 	set_option("VM_NETWORKING", "TRUE");
@@ -332,7 +330,6 @@ void
 set_vmuniverse() {
 	if ( Opt.enablevmuniverse == 'Y' ) {
 		set_option("VM_GAHP_SERVER", "$(BIN)/condor_vm-gahp.exe");
-		set_option("VM_GAHP_CONFIG", "$(RELEASE_DIR)/condor_vmgahp_config.vmware");
 		set_option("VM_TYPE", "vmware");
 	}
 

@@ -80,7 +80,7 @@ release:: all
 /* template instantiations go in here */
 
 /* Standalone distribution of classads/collections */
-DIST_VERSION = 1.0
+DIST_VERSION = 1.0.1
 DISTRIBUTION_DIR = classads-$(DIST_VERSION)
 
 DIST_FILES = 								\

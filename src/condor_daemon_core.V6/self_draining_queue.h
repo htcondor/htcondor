@@ -43,12 +43,24 @@
 */
 
 
+class SelfDrainingHashItem {
+	ServiceData *m_service;
+
+ public:
+	SelfDrainingHashItem() {}
+	SelfDrainingHashItem(ServiceData *service):
+		m_service(service) {}
+
+	bool operator == (const SelfDrainingHashItem &other) const {
+		return m_service->ServiceDataCompare(other.m_service)==0;
+	}
+	static unsigned int HashFn(SelfDrainingHashItem const &);
+};
 
 class SelfDrainingQueue : public Service
 {
 public:
-	SelfDrainingQueue( const char* name = NULL, int period = 0,
-					   ServiceDataCompare compare_fn = NULL );
+	SelfDrainingQueue( const char* name = NULL, int period = 0 );
 	~SelfDrainingQueue();
 
 
@@ -56,20 +68,18 @@ public:
 	bool registerHandler( ServiceDataHandler handler_fn );
 	bool registerHandlercpp( ServiceDataHandlercpp handlercpp_fn, 
 							 Service* service_ptr );
-	bool registerCompareFunc( ServiceDataCompare compare_fn );
 	bool setPeriod( int new_period );
 
 
 		/// Main public interface
 	bool enqueue( ServiceData* data, bool allow_dups = true );
-	bool isMember( ServiceData* data );
 
 
 private:
 	Queue<ServiceData*> queue;
+	HashTable<SelfDrainingHashItem,bool> m_hash;
 	ServiceDataHandler handler_fn;
 	ServiceDataHandlercpp handlercpp_fn;
-	ServiceDataCompare compare_fn;
 
 	Service* service_ptr;
 	int tid;

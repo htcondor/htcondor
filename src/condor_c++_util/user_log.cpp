@@ -2,13 +2,13 @@
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -178,9 +178,9 @@ UserLog::initialize( const char *owner, const char *domain, const char *file,
 bool
 UserLog::initialize( int c, int p, int s, const char *gjid )
 {
-	cluster = c;
-	proc = p;
-	subproc = s;
+	m_cluster = c;
+	m_proc = p;
+	m_subproc = s;
 
 	Configure( );
 
@@ -230,10 +230,14 @@ UserLog::Configure( void )
 	m_global_use_xml = param_boolean( "EVENT_LOG_USE_XML", false );
 	m_global_count_events = param_boolean( "EVENT_LOG_COUNT_EVENTS", false );
 	m_enable_locking = param_boolean( "ENABLE_USERLOG_LOCKING", true );
-	m_global_max_rotations = param_integer( "EVENT_LOG_MAX_ROTATIONS", 1 );
+	m_global_max_rotations = param_integer( "EVENT_LOG_MAX_ROTATIONS", 1, 0 );
+
 	m_global_max_filesize = param_integer( "EVENT_LOG_MAX_SIZE", -1 );
 	if ( m_global_max_filesize < 0 ) {
-		m_global_max_filesize = param_integer( "MAX_EVENT_LOG", 1000000 );
+		m_global_max_filesize = param_integer( "MAX_EVENT_LOG", 1000000, 0 );
+	}
+	if ( m_global_max_filesize == 0 ) {
+		m_global_max_rotations = 0;
 	}
 
 	return true;
@@ -242,9 +246,9 @@ UserLog::Configure( void )
 void
 UserLog::Reset( void )
 {
-	cluster = -1;
-	proc = -1;
-	subproc = -1;
+	m_cluster = -1;
+	m_proc = -1;
+	m_subproc = -1;
 
 	m_write_user_log = true;
 	m_path = NULL;
@@ -367,7 +371,7 @@ UserLog::openFile(
 
 
 bool
-UserLog::initializeGlobalLog( UserLogHeader &header )
+UserLog::initializeGlobalLog( const UserLogHeader &header )
 {
 	bool ret_val = true;
 
@@ -400,6 +404,8 @@ UserLog::initializeGlobalLog( UserLogHeader &header )
 		// Generate a header event
 		WriteUserLogHeader writer( header );
 
+		m_global_sequence = writer.incSequence( );
+
 		MyString file_id;
 		GenerateGlobalId( file_id );
 		writer.setId( file_id );
@@ -410,9 +416,11 @@ UserLog::initializeGlobalLog( UserLogHeader &header )
 		writer.addEventOffset( writer.getNumEvents() );
 		writer.setNumEvents( 0 );
 
-		writer.incSequence( );
-
 		ret_val = writer.Write( *this );
+
+		MyString	s;
+		s.sprintf( "initializeGlobalLog: header: %s", m_global_path );
+		writer.dprint( D_FULLDEBUG, s );
 
 		// TODO: we should should add the number of events in the
 		// previous file to the "first event number" of this one.
@@ -442,8 +450,8 @@ UserLog::checkGlobalLogRotation( void )
 		dprintf( D_ALWAYS, "checking for event log rotation, but no lock\n" );
 	}
 
-	// Don't rotate if max size is zero -- that means never rotate
-	if ( 0 == m_global_max_filesize ) {
+	// Don't rotate if max rotations is set to zero
+	if ( 0 == m_global_max_rotations ) {
 		return false;
 	}
 
@@ -517,7 +525,16 @@ UserLog::checkGlobalLogRotation( void )
 	}
 	else {
 		ReadUserLog	log_reader( fp, m_global_use_xml );
-		reader.Read( log_reader );
+		if ( reader.Read( log_reader ) != ULOG_OK ) {
+			dprintf( D_ALWAYS,
+					 "UserLog: Error reading header of \"%s\"\n", 
+					 m_global_path );
+		}
+		else {
+			MyString	s;
+			s.sprintf( "read %s header:", m_global_path );
+			reader.dprint( D_FULLDEBUG, s );
+		}
 
 		if ( m_global_count_events ) {
 			int		events = 0;
@@ -560,6 +577,10 @@ UserLog::checkGlobalLogRotation( void )
 	}
 	WriteUserLogHeader	writer( reader );
 
+	MyString	s;
+	s.sprintf( "checkGlobalLogRotation(): %s", m_global_path );
+	writer.dprint( D_FULLDEBUG, s );
+
 	// And write the updated header
 # if ROTATION_TRACE
 	UtcTime	now( true );
@@ -570,6 +591,10 @@ UserLog::checkGlobalLogRotation( void )
 		rewind( header_fp );
 		writer.Write( *this, header_fp );
 		fclose( header_fp );
+
+		MyString	tmps;
+		tmps.sprintf( "UserLog: Wrote header to %s", m_global_path );
+		writer.dprint( D_FULLDEBUG, tmps );
 	}
 	if ( fake_lock ) {
 		delete fake_lock;
@@ -605,6 +630,7 @@ UserLog::checkGlobalLogRotation( void )
 			 num_rotations, elapsed, rps );
 # endif
 
+	// OK, *I* did the rotation, initialize the header of the file, too
 	globalLogRotated( reader );
 
 	// Finally, release the rotation lock
@@ -850,9 +876,9 @@ UserLog::writeEvent ( ULogEvent *event, ClassAd *param_jobad )
 	}
 
 	// fill in event context
-	event->cluster = cluster;
-	event->proc = proc;
-	event->subproc = subproc;
+	event->cluster = m_cluster;
+	event->proc = m_proc;
+	event->subproc = m_subproc;
 	event->setGlobalJobId(m_gjid);
 	
 	// write global event
@@ -883,13 +909,16 @@ UserLog::writeEvent ( ULogEvent *event, ClassAd *param_jobad )
 					switch (result.type) {
 					case LX_BOOL:
 					case LX_INTEGER:
-						eventAd->Assign(((Variable*)tree->LArg())->Name(),result.i);
+						eventAd->Assign( ((Variable*)tree->LArg())->Name(),
+										 result.i);
 						break;
 					case LX_FLOAT:
-						eventAd->Assign(((Variable*)tree->LArg())->Name(),result.f);
+						eventAd->Assign( ((Variable*)tree->LArg())->Name(),
+										 result.f);
 						break;
 					case LX_STRING:
-						eventAd->Assign(((Variable*)tree->LArg())->Name(),result.s);
+						eventAd->Assign( ((Variable*)tree->LArg())->Name(),
+										 result.s);
 						break;
 					default:
 						break;
@@ -898,9 +927,10 @@ UserLog::writeEvent ( ULogEvent *event, ClassAd *param_jobad )
 			}
 		}
 		
-		// The EventTypeNumber will get overwritten to be a JobAdInformationEvent,
-		// so preserve the event that triggered us to write out the info in 
-		// another attribute name called TriggerEventTypeNumber.
+		// The EventTypeNumber will get overwritten to be a
+		// JobAdInformationEvent, so preserve the event that triggered
+		// us to write out the info in another attribute name called
+		// TriggerEventTypeNumber.
 		if ( eventAd  ) {			
 			eventAd->Assign("TriggerEventTypeNumber",event->eventNumber);
 			eventAd->Assign("TriggerEventTypeName",event->eventName());
@@ -908,9 +938,9 @@ UserLog::writeEvent ( ULogEvent *event, ClassAd *param_jobad )
 			JobAdInformationEvent info_event;
 			eventAd->Assign("EventTypeNumber",info_event.eventNumber);
 			info_event.initFromClassAd(eventAd);
-			info_event.cluster = cluster;
-			info_event.proc = proc;
-			info_event.subproc = subproc;
+			info_event.cluster = m_cluster;
+			info_event.proc = m_proc;
+			info_event.subproc = m_subproc;
 			doWriteEvent(&info_event, true, false, param_jobad);
 			delete eventAd;
 		}

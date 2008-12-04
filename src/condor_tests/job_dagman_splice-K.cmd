@@ -1,6 +1,6 @@
 executable   = /bin/echo
 arguments    = OK
-universe     = vanilla
+universe     = scheduler
 output       = $(job).out
 error        = $(job).err
 log          = submit-K.log

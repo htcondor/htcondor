@@ -1,0 +1,18 @@
+JOB  A job_dagman_splice-O-subdir1.cmd
+VARS A job="$(JOB)"
+
+JOB  B job_dagman_splice-O-subdir1.cmd
+VARS B job="$(JOB)"
+
+SPLICE A_S1 splice.dag DIR a
+SPLICE A_S2 splice.dag DIR a
+SPLICE B_S1 splice.dag DIR b
+SPLICE B_S2 splice.dag DIR b
+
+# The nodes of splice 
+PARENT A CHILD A_S1
+PARENT A_S1 CHILD A_S2
+PARENT A_S2 CHILD B_S1
+PARENT B_S1 CHILD B_S2
+PARENT B_S2 CHILD B
+

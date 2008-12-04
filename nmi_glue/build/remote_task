@@ -30,18 +30,18 @@
 use Cwd;
 my $BaseDir = getcwd();
 my $SrcDir = "$BaseDir/src";
-my $NTconfigDir = "$BaseDir/NTconfig";
+my $msconfigDir = "$BaseDir/msconfig";
 my $PublicDir = "$BaseDir/public";
 
 # WINDOWS SPECIFIC ENV...
 if ($ENV{NMI_PLATFORM} =~ /winnt/) {
     $BaseDir =~ s/\//\\/g;
     $SrcDir = "$BaseDir\\src";
-    $NTconfigDir = "$BaseDir\\NTconfig";
+    $msconfigDir = "$BaseDir\\msconfig";
     $PublicDir = "$BaseDir\\public";
     $ENV{USERPROFILE} = "c:\\temp";
     $ENV{TMP} = "c:\\temp";
-    $ENV{PATH} .= ";$NTconfigDir";
+    $ENV{PATH} .= ";$msconfigDir";
 }
 
 # autoflush our STDOUT
@@ -76,12 +76,12 @@ print "------------------------- ENV DUMP ------------------------\n";
 
 
 if ($taskname eq "win_make") {
-    chdir("$NTconfigDir") || c_die("Can't chdir($NTconfigDir): $!\n");
+    chdir("$msconfigDir") || c_die("Can't chdir($msconfigDir): $!\n");
     system("make.bat /exit");
 }
 elsif ($taskname eq "win_release") {
     mkdir("$PublicDir", 0777) || c_die ("Can't mkdir($PublicDir): $!\n");
-    chdir("$NTconfigDir") || c_die("Can't chdir($NTconfigDir): $!\n");
+    chdir("$msconfigDir") || c_die("Can't chdir($msconfigDir): $!\n");
     system("dorelease $PublicDir");
 }
 else {

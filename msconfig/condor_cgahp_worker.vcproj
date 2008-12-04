@@ -207,7 +207,7 @@
 	</References>
 	<Files>
 		<File
-			RelativePath="..\src\condor_c-gahp\cgahp_common.C"
+			RelativePath="..\src\condor_c-gahp\cgahp_common.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -237,7 +237,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c-gahp\PipeBuffer.C"
+			RelativePath="..\src\condor_c-gahp\PipeBuffer.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -263,7 +263,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c-gahp\schedd_client.C"
+			RelativePath="..\src\condor_c-gahp\schedd_client.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -289,7 +289,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c-gahp\schedd_client_main.C"
+			RelativePath="..\src\condor_c-gahp\schedd_client_main.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -311,7 +311,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_c-gahp\SchedDCommands.C"
+			RelativePath="..\src\condor_c-gahp\SchedDCommands.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -339,7 +339,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c-gahp\soap_cgahp_workerC.C"
+			RelativePath="..\src\condor_c-gahp\soap_cgahp_workerC.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -367,7 +367,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c-gahp\soap_cgahp_workerServer.C"
+			RelativePath="..\src\condor_c-gahp\soap_cgahp_workerServer.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -391,7 +391,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_c-gahp\soap_cgahp_workerStub.C"
+			RelativePath="..\src\condor_c-gahp\soap_cgahp_workerStub.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"

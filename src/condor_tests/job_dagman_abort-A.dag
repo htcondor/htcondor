@@ -1,0 +1,13 @@
+Job A job_dagman_abort-A-node-succeed.cmd
+Vars A nodename = "$(JOB)"
+Job B job_dagman_abort-A-node-succeed.cmd
+Vars B nodename = "$(JOB)"
+Job C job_dagman_abort-A-node-fail.cmd
+Vars C nodename = "$(JOB)"
+Job D job_dagman_abort-A-node-fail.cmd
+Vars D nodename = "$(JOB)"
+
+Abort-dag-on C 5 return 0
+
+PARENT A CHILD B C
+PARENT B C CHILD D

@@ -9,10 +9,10 @@ REM Returns 0 on success, 1 on failure.
 REM Assume success...
 set RET_CODE=0
 
-REM Make certain we start out in the NTconfig subdir
+REM Make certain we start out in the msconfig subdir
 if %0==%~n0 goto good
 if %0==%~n0.bat goto good
-echo You must be in the NTconfig subdirectory
+echo You must be in the msconfig subdirectory
 set RET_CODE=1
 goto finish
 

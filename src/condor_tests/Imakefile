@@ -244,6 +244,14 @@ TESTCLASS(job_dagman_splice-N,full)
 TESTCLASS(job_dagman_splice-N,quicknolink)
 TESTCLASS(job_dagman_splice-N,btdebug)
 
+DESC(job_dagman_splice-O,"Simple Dagman Splice O")
+RUN(job_dagman_splice-O)
+TESTCLASS(job_dagman_splice-O,core)
+TESTCLASS(job_dagman_splice-O,quick)
+TESTCLASS(job_dagman_splice-O,full)
+TESTCLASS(job_dagman_splice-O,quicknolink)
+TESTCLASS(job_dagman_splice-O,btdebug)
+
 /* vmuniverse smoke test in larg repository */
 
 #if defined(HAVE_VMWARE) && defined(HAVE_CONDOR_TEST_LRG)
@@ -254,6 +262,14 @@ TESTCLASS(job_vmu_basic,quick)
 TESTCLASS(job_vmu_basic,full)
 TESTCLASS(job_vmu_basic,quicknolink)
 TESTCLASS(job_vmu_basic,btdebug)
+#endif 
+
+/* We're not building OpenSSL on HPUX */
+#if !defined( IS_HPUX11 )
+DESC(job_amazon_basic,"Amazon EC2 test")
+RUN(job_amazon_basic)
+TESTCLASS(job_amazon_basic,quick)
+TESTCLASS(job_amazon_basic,full)
 #endif 
 
 DESC(job_flocking_to,"Simple flocking test")
@@ -520,14 +536,12 @@ TESTCLASS(cmd_q_shows-analyze,quick)
 TESTCLASS(cmd_q_shows-analyze,full)
 TESTCLASS(cmd_q_shows-analyze,quicknolink)
 
-#if defined(HAVE_EXT_CLASSADS)
 DESC(cmd_q_shows-better-analyze,"Condor_q shows better-analyze")
 RUN(cmd_q_shows-better-analyze)
 TESTCLASS(cmd_q_shows-better-analyze,core)
 TESTCLASS(cmd_q_shows-better-analyze,quick)
 TESTCLASS(cmd_q_shows-better-analyze,full)
 TESTCLASS(cmd_q_shows-better-analyze,quicknolink)
-#endif
 
 DESC(cmd_q_shows-xml,"Condor_q shows xml")
 RUN(cmd_q_shows-xml)
@@ -571,6 +585,121 @@ DEPS(lib_eventlog-xml,x_read_joblog.exe)
 TESTCLASS(lib_eventlog-xml,core)
 TESTCLASS(lib_eventlog-xml,quick)
 TESTCLASS(lib_eventlog-xml,full)
+
+/* EventLog Rotation tests */
+DESC(lib_eventlog_rotation-defaults,"Event Log Rotation: Default settings")
+RUN(lib_eventlog_rotation-defaults)
+TESTCLASS(lib_eventlog_rotation-defaults,core)
+TESTCLASS(lib_eventlog_rotation-defaults,quick)
+TESTCLASS(lib_eventlog_rotation-defaults,full)
+
+DESC(lib_eventlog_rotation-no_rotations_1,"Event Log Rotation: no rotations/1")
+RUN(lib_eventlog_rotation-no_rotations_1)
+TESTCLASS(lib_eventlog_rotation-no_rotations_1,core)
+TESTCLASS(lib_eventlog_rotation-no_rotations_1,quick)
+TESTCLASS(lib_eventlog_rotation-no_rotations_1,full)
+
+DESC(lib_eventlog_rotation-no_rotations_2,"Event Log Rotation: no rotations/2")
+RUN(lib_eventlog_rotation-no_rotations_2)
+TESTCLASS(lib_eventlog_rotation-no_rotations_2,core)
+TESTCLASS(lib_eventlog_rotation-no_rotations_2,quick)
+TESTCLASS(lib_eventlog_rotation-no_rotations_2,full)
+
+DESC(lib_eventlog_rotation-no_rotations_3,"Event Log Rotation: no rotations/3")
+RUN(lib_eventlog_rotation-no_rotations_3)
+TESTCLASS(lib_eventlog_rotation-no_rotations_3,core)
+TESTCLASS(lib_eventlog_rotation-no_rotations_3,quick)
+TESTCLASS(lib_eventlog_rotation-no_rotations_3,full)
+
+DESC(lib_eventlog_rotation-w_old_rotations,"Event Log Rotation: old rotations")
+RUN(lib_eventlog_rotation-w_old_rotations)
+TESTCLASS(lib_eventlog_rotation-w_old_rotations,core)
+TESTCLASS(lib_eventlog_rotation-w_old_rotations,quick)
+TESTCLASS(lib_eventlog_rotation-w_old_rotations,full)
+
+DESC(lib_eventlog_rotation-w_old_rotations_2_loops,"Event Log Rotation: old rotations / 2 loops")
+RUN(lib_eventlog_rotation-w_old_rotations_2_loops)
+TESTCLASS(lib_eventlog_rotation-w_old_rotations_2_loops,core)
+TESTCLASS(lib_eventlog_rotation-w_old_rotations_2_loops,quick)
+TESTCLASS(lib_eventlog_rotation-w_old_rotations_2_loops,full)
+
+DESC(lib_eventlog_rotation-w_2_rotations,"Event Log Rotation: 2 rotations")
+RUN(lib_eventlog_rotation-w_2_rotations)
+TESTCLASS(lib_eventlog_rotation-w_2_rotations,core)
+TESTCLASS(lib_eventlog_rotation-w_2_rotations,quick)
+TESTCLASS(lib_eventlog_rotation-w_2_rotations,full)
+
+DESC(lib_eventlog_rotation-w_2_rotations_2_loops,"Event Log Rotation: 2 rotations / 2 loops")
+RUN(lib_eventlog_rotation-w_2_rotations_2_loops)
+TESTCLASS(lib_eventlog_rotation-w_2_rotations_2_loops,core)
+TESTCLASS(lib_eventlog_rotation-w_2_rotations_2_loops,quick)
+TESTCLASS(lib_eventlog_rotation-w_2_rotations_2_loops,full)
+
+DESC(lib_eventlog_rotation-w_5_rotations,"Event Log Rotation: 5 rotations")
+RUN(lib_eventlog_rotation-w_5_rotations)
+TESTCLASS(lib_eventlog_rotation-w_5_rotations,core)
+TESTCLASS(lib_eventlog_rotation-w_5_rotations,quick)
+TESTCLASS(lib_eventlog_rotation-w_5_rotations,full)
+
+DESC(lib_eventlog_rotation-w_20_rotations,"Event Log Rotation: 20 rotations")
+RUN(lib_eventlog_rotation-w_20_rotations)
+TESTCLASS(lib_eventlog_rotation-w_20_rotations,core)
+TESTCLASS(lib_eventlog_rotation-w_20_rotations,quick)
+TESTCLASS(lib_eventlog_rotation-w_20_rotations,full)
+
+DESC(lib_eventlog_rotation-w_20_rotations_2_loops,"Event Log Rotation: 20 rotations / 2 loops")
+RUN(lib_eventlog_rotation-w_20_rotations_2_loops)
+TESTCLASS(lib_eventlog_rotation-w_20_rotations_2_loops,core)
+TESTCLASS(lib_eventlog_rotation-w_20_rotations_2_loops,quick)
+TESTCLASS(lib_eventlog_rotation-w_20_rotations_2_loops,full)
+
+DESC(lib_eventlog_rotation-w_20_rotations_20_loops,"Event Log Rotation: 20 rotations / 20 loops")
+RUN(lib_eventlog_rotation-w_20_rotations_20_loops)
+TESTCLASS(lib_eventlog_rotation-w_20_rotations_20_loops,core)
+TESTCLASS(lib_eventlog_rotation-w_20_rotations_20_loops,quick)
+TESTCLASS(lib_eventlog_rotation-w_20_rotations_20_loops,full)
+
+DESC(lib_eventlog_rotation-reader_simple,"Event Log Rotation: reader")
+RUN(lib_eventlog_rotation-reader_simple)
+TESTCLASS(lib_eventlog_rotation-reader_simple,core)
+TESTCLASS(lib_eventlog_rotation-reader_simple,quick)
+TESTCLASS(lib_eventlog_rotation-reader_simple,full)
+
+DESC(lib_eventlog_rotation-reader_old_rotations,"Event Log Rotation: reader, old rotations")
+RUN(lib_eventlog_rotation-reader_old_rotations)
+TESTCLASS(lib_eventlog_rotation-reader_old_rotations,core)
+TESTCLASS(lib_eventlog_rotation-reader_old_rotations,quick)
+TESTCLASS(lib_eventlog_rotation-reader_old_rotations,full)
+
+DESC(lib_eventlog_rotation-reader_2_rotations,"Event Log Rotation: reader, 2 rotations")
+RUN(lib_eventlog_rotation-reader_2_rotations)
+TESTCLASS(lib_eventlog_rotation-reader_2_rotations,core)
+TESTCLASS(lib_eventlog_rotation-reader_2_rotations,quick)
+TESTCLASS(lib_eventlog_rotation-reader_2_rotations,full)
+
+DESC(lib_eventlog_rotation-reader_2_rotations_2_loops,"Event Log Rotation: reader, 2 rotations / 2 loops")
+RUN(lib_eventlog_rotation-reader_2_rotations_2_loops)
+TESTCLASS(lib_eventlog_rotation-reader_2_rotations_2_loops,core)
+TESTCLASS(lib_eventlog_rotation-reader_2_rotations_2_loops,quick)
+TESTCLASS(lib_eventlog_rotation-reader_2_rotations_2_loops,full)
+
+DESC(lib_eventlog_rotation-reader_20_rotations,"Event Log Rotation: reader, 20 rotations")
+RUN(lib_eventlog_rotation-reader_20_rotations)
+TESTCLASS(lib_eventlog_rotation-reader_20_rotations,core)
+TESTCLASS(lib_eventlog_rotation-reader_20_rotations,quick)
+TESTCLASS(lib_eventlog_rotation-reader_20_rotations,full)
+
+DESC(lib_eventlog_rotation-reader_20_rotations_2_loops,"Event Log Rotation: reader, 20 rotations / 2 loops")
+RUN(lib_eventlog_rotation-reader_20_rotations_2_loops)
+TESTCLASS(lib_eventlog_rotation-reader_20_rotations_2_loops,core)
+TESTCLASS(lib_eventlog_rotation-reader_20_rotations_2_loops,quick)
+TESTCLASS(lib_eventlog_rotation-reader_20_rotations_2_loops,full)
+
+DESC(lib_eventlog_rotation-reader_20_rotations_20_loops,"Event Log Rotation: reader, 20 rotations / 20 loops")
+RUN(lib_eventlog_rotation-reader_20_rotations_20_loops)
+TESTCLASS(lib_eventlog_rotation-reader_20_rotations_20_loops,core)
+TESTCLASS(lib_eventlog_rotation-reader_20_rotations_20_loops,quick)
+TESTCLASS(lib_eventlog_rotation-reader_20_rotations_20_loops,full)
 
 #if defined(IS_IA64_LINUX_RHEL3) || defined(IS_CONDOR_PPC_LINUX_SLES9) || defined(IS_PPC_OSX_10_4) || defined(IS_CONDOR_PPC_LINUX_YD50) || defined(IS_X86_64_LINUX_RHEL5)  || defined(IS_X86_64_LINUX_RHEL3) || defined(IS_I386_CONDOR_FREEBSD) || defined(IS_I386_OSX_10_4) || defined(IS_I386_LINUX_RHEL5) || defined(IS_I386_LINUX_RHEL51)
 DESC(job_quill_basic,"Basic Quill Test")
@@ -1529,6 +1658,27 @@ TESTCLASS(job_dagman_xmluncomlog,dagman)
 TESTCLASS(job_dagman_xmluncomlog,quick)
 TESTCLASS(job_dagman_xmluncomlog,full)
 TESTCLASS(job_dagman_xmluncomlog,quicknolink)
+
+DESC(job_dagman_abort-A,"Test ABORT-DAG-ON")
+RUN(job_dagman_abort-A)
+TESTCLASS(job_dagman_abort-A,dagman)
+TESTCLASS(job_dagman_abort-A,quick)
+TESTCLASS(job_dagman_abort-A,full)
+TESTCLASS(job_dagman_abort-A,quicknolink)
+
+DESC(job_dagman_parallel-A,"Test DAGMan handling nodes w/ multiple jobs")
+RUN(job_dagman_parallel-A)
+TESTCLASS(job_dagman_parallel-A,dagman)
+TESTCLASS(job_dagman_parallel-A,quick)
+TESTCLASS(job_dagman_parallel-A,full)
+TESTCLASS(job_dagman_parallel-A,quicknolink)
+
+DESC(job_dagman_subdag-A,"Test condor_submit_dag recursion on nested DAGs, SUBDAG EXTERNAL keyword")
+RUN(job_dagman_subdag-A)
+TESTCLASS(job_dagman_subdag-A,dagman)
+TESTCLASS(job_dagman_subdag-A,quick)
+TESTCLASS(job_dagman_subdag-A,full)
+TESTCLASS(job_dagman_subdag-A,quicknolink)
 
 /* Sample performance tests */
 

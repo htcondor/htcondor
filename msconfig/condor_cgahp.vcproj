@@ -206,7 +206,7 @@
 	</References>
 	<Files>
 		<File
-			RelativePath="..\src\condor_c-gahp\cgahp_common.C"
+			RelativePath="..\src\condor_c-gahp\cgahp_common.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -236,7 +236,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c-gahp\io_loop.C"
+			RelativePath="..\src\condor_c-gahp\io_loop.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -262,7 +262,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c-gahp\PipeBuffer.C"
+			RelativePath="..\src\condor_c-gahp\PipeBuffer.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -288,7 +288,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c-gahp\soap_cgahpC.C"
+			RelativePath="..\src\condor_c-gahp\soap_cgahpC.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -316,7 +316,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c-gahp\soap_cgahpServer.C"
+			RelativePath="..\src\condor_c-gahp\soap_cgahpServer.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -340,7 +340,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_c-gahp\soap_cgahpStub.C"
+			RelativePath="..\src\condor_c-gahp\soap_cgahpStub.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"

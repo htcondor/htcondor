@@ -124,7 +124,7 @@ BUILDING CONDOR ON WIN32
 
     + "src" - contains the source code (can be shared across Win32 and Unix)
     + "config" - contains files to build Condor source on Unix
-    + "NTconfig" - contains files to build Condor source on Win32
+    + "msconfig" - contains files to build Condor source on Win32
 	+ "externals" - contains source files to external packages that
 		Condor requires, such as OpenSSL, gSoap, etc; these external
 		packages will be built as part of the Condor build process.
@@ -142,7 +142,7 @@ BUILDING CONDOR ON WIN32
 	prepares the command line build environment for you. You do not need
 	Windows XP SP2 to build Condor, though 2000 or XP is recommended.
 
-	+ Look at .\NTConfig\set_env.bat line 28 (the set PATH= statement),
+	+ Look at .\msConfig\set_env.bat line 28 (the set PATH= statement),
 	and make sure that the right directory name is specified for the
 	Platform SDK.
 
@@ -156,7 +156,7 @@ BUILDING CONDOR ON WIN32
 	environment.  If you want to simply build Condor from the
 	command-line, just do the following commands:
     
-		 cd NTconfig
+		 cd msconfig
 		 make
 
 	If you want to do a GUI build, do the following steps instead:
@@ -177,8 +177,8 @@ BUILDING CONDOR ON WIN32
 
 5. Once you have built a release release of Condor via step 4,
 	either via the command-line make.bat script or via VisualStudio, now
-	from the command prompt, cd back into the NTconfig subdirectory.
-	From a command prompt in the NTconfig directory, run:
+	from the command prompt, cd back into the msconfig subdirectory.
+	From a command prompt in the msconfig directory, run:
 
     	dorelease <path-to-final-release-subdirectory> 
 
@@ -190,7 +190,7 @@ BUILDING CONDOR ON WIN32
 	-- you can delete these if you do not desire to debug the resulting
 	daemons. So if you do
 
-		cd NTconfig
+		cd msconfig
 		dorelease c:\condor
 
 	then everything needed for Condor will end up in c:\condor\bin. 

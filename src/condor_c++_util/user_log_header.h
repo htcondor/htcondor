@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2008, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -86,6 +86,11 @@ public:
 	
 	// Extract data from an event
 	int ExtractEvent( const ULogEvent *);
+
+	// Debug
+	void sprint_cat( MyString &s ) const;
+	void dprint( int level, MyString &buf ) const;
+	void dprint( int level, const char *label ) const;
 
 protected:
 	MyString	m_id;

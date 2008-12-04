@@ -182,7 +182,7 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o selector.o \
 	alarm.o user_job_policy.o classad_support.o \
 	directory.o stat_info.o stat_wrapper.o stat_wrapper_internal.o \
 	my_hostname.o file_lock.o sig_name.o \
-	email.o env.o \
+	email_cpp.o env.o \
 	string_list.o net_string_list.o condor_event.o $(URL_OBJ) \
 	get_daemon_name.o \
 	user_log.o user_log_header.o \
@@ -226,7 +226,8 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o selector.o \
 	set_user_priv_from_ad.o hook_utils.o classad_visa.o \
 	$(HIBERNATION_OBJS) \
 	ConcurrencyLimitUtils.o \
-	simple_arg.o
+	simple_arg.o \
+	dc_service.o
 
 library_target(cplus_lib.a,$(OBJ))
 library_target(liburl.a,$(URL_OBJ))
@@ -266,17 +267,12 @@ c_plus_nowrap_target(test_libcondorapi_shared,test_libcondorapi.o,libcondorapi.s
 
 c_plus_target(test_check_events,test_check_events.o,$(LIB) New_classads_lib)
 c_plus_target(test_multi_log,test_multi_log.o,$(LIB) New_classads_lib)
-c_plus_target(test_log_writer,test_log_writer.o,$(LIB))
 c_plus_target(test_stat_wrapper,test_stat_wrapper.o,$(LIB))
 c_plus_target(test_write_term,test_write_term.o,$(LIB))
 c_plus_target(test_prioritysimplelist,test_prioritysimplelist.o,)
 c_plus_target(test_binarysearch,test_binarysearch.o,)
 c_plus_target(test_network_adapter,test_network_adapter.o,$(LIB))
 c_plus_target(test_hibernation,test_hibernation.o,$(LIB))
-
-c_plus_target(test_log_reader,test_log_reader.o,$(LIB))
-test_log_reader.o : test_log_reader.cpp
-	$(CPlusPlus) $(C_PLUS_FLAGS) -DENABLE_STATE_DUMP -c $< -o $@
 
 
 c_plus_target(cat_url,cat_url.o,liburl.a)
@@ -295,17 +291,34 @@ html_target( documentation )
 all-tests: access.t killfamily.t test_locks my_hostname.t
 
 /* User log testing */
-USERLOG_TESTS = test_log_reader test_log_writer
+USERLOG_TEST_NAMES = reader reader_state writer
+USERLOG_TESTS = $(addprefix test_log_, $(USERLOG_TEST_NAMES) ) 
 USERLOG_LIBAPI_TESTS = $(addsuffix _api, $(USERLOG_TESTS) )
 
 userlog-tests: all $(USERLOG_TESTS) $(USERLOG_LIBAPI_TESTS)
 
+/* Build the log reader test with ENABLE_STATE_DUMP turned on */
+c_plus_target(test_log_reader,test_log_reader.o,$(LIB))
+c_plus_target(test_log_reader_state,test_log_reader_state.o,$(LIB))
+c_plus_target(test_log_writer,test_log_writer.o,$(LIB))
+test_log_reader.o : test_log_reader.cpp
+	$(CPlusPlus) $(C_PLUS_FLAGS) -DENABLE_STATE_DUMP -c $< -o $@
+
+/* This seems to confuse the gmake on AIX, and I really only need
+   the extra dependancies for my interactive builds on Linux */
+#if IS_LINUX
 test_log_reader: all $(LIB) Makefile $(LIBCONDORAPI)
+test_log_reader_state: all $(LIB) Makefile $(LIBCONDORAPI)
 test_log_writer: all $(LIB) Makefile $(LIBCONDORAPI)
+#endif
+
+testbin_target(test_log_reader,755) 
+testbin_target(test_log_reader_state,755) 
+testbin_target(test_log_writer,755) 
 
 green-tests: all test_network_adapter test_hibernation
 
-$(USERLOG_LIBAPI_TESTS): %_api : %.o $(LIBCONDORAPI) Makefile
+%_api : %.o $(LIBCONDORAPI) Makefile
 	$(CPlusPlus) $< -L. -Wl,-Bstatic -lcondorapi -Wl,-Bdynamic -ldl -o $@
 
 

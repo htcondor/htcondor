@@ -206,7 +206,7 @@
 	</References>
 	<Files>
 		<File
-			RelativePath="..\src\condor_c++_util\dc_stub.C"
+			RelativePath="..\src\condor_c++_util\dc_stub.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -230,7 +230,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\ntsysinfo.C"
+			RelativePath="..\src\condor_c++_util\ntsysinfo.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -254,7 +254,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_procapi\testprocapi.C"
+			RelativePath="..\src\condor_procapi\testprocapi.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"

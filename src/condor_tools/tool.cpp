@@ -217,7 +217,7 @@ usage( char *str )
 	default:
 		fprintf( stderr, "  Valid commands are:\n%s%s",
 				 "\toff, on, restart, reconfig, reschedule, ",
-				 "vacate, checkpoint\n\n" );
+				 "vacate, checkpoint, set_shutdown\n\n" );
 		fprintf( stderr, "  Use \"%s [command] -help\" for more information %s\n", 
 				 str, "on a given command." );
 		break;

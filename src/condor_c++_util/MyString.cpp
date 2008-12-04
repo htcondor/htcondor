@@ -183,12 +183,13 @@ MyString::reserve( const int sz )
 	}
     buf[0] = '\0';
     if (Data) {
-      strncpy( buf, Data, sz); 
+      // Only copy over existing data into the new buffer.
+      strncpy( buf, Data, Len ); 
 	  // Make sure it's NULL terminated. strncpy won't make sure of it.
-	  buf[sz] = '\0'; 
+	  buf[Len] = '\0'; 
       delete [] Data;
     }
-    Len = strlen( buf );
+    // Len will be the same, since we didn't add new text
     capacity = sz;
     Data = buf;
     return true;
@@ -586,7 +587,9 @@ MyString::sprintf(const char *format,...)
 void
 MyString::lower_case(void)
 {
-	::strlwr(Data);
+	if (Data != NULL) {
+		::strlwr(Data);
+	}
 	return;
 }
 
@@ -594,7 +597,9 @@ MyString::lower_case(void)
 void
 MyString::strlwr(void)
 {
-	::strlwr(Data);
+	if (Data != NULL) {
+		::strlwr(Data);
+	}
 	return;
 }
 
@@ -602,7 +607,9 @@ MyString::strlwr(void)
 void
 MyString::upper_case(void)
 {
-	::strupr(Data);
+	if (Data != NULL) {
+		::strupr(Data);
+	}
 	return;
 }
 
@@ -610,7 +617,9 @@ MyString::upper_case(void)
 void
 MyString::strupr(void)
 {
-	::strupr(Data);
+	if (Data != NULL) {
+		::strupr(Data);
+	}
 	return;
 }
 

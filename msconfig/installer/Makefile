@@ -73,16 +73,16 @@ config_file:
 	cmd /c copy /Y condor_set_acls.exe $(CONDORRELEASEDIR)
 	cmd /c copy /Y condor_config.local $(CONDORRELEASEDIR)
 	cmd /c awk -f $(BASE)\\src\\condor_examples\\convert_config_to_win32.awk $(BASE)\\src\\condor_examples\\condor_config.generic > $(CONDORRELEASEDIR)\\condor_config
-	cmd /c awk -f $(BASE)\\src\\condor_examples\\convert_vmgahp_config_to_win32.awk $(BASE)\\src\\condor_examples\\condor_vmgahp_config.vmware > $(CONDORRELEASEDIR)\\etc\\condor_vmgahp_config.vmware
 
 # generate an RTF version of the License file, since MSI won't take plain text
 license:
-	perl txt2rtf.pl --font="Courier New" --points=7.5 $(BASE)\\src\\condor_release\\LICENSE-2.0.txt > license.rtf
+	perl txt2rtf.pl --font="Courier New" --points=7 $(BASE)\\src\\condor_release\\LICENSE-2.0.txt > license.rtf
 
 clean:
-	echo $(SHELL)
 	rm -rf out
 	rm -rf *.exe *.obj
 	rm -f condor.ver
 	rm -f license.rtf
 	rm -f $(CONDORRELEASEDIR)\\*.msi
+	rm -f $(CONDORRELEASEDIR)\\*.zip
+

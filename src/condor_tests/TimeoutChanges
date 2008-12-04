@@ -1,3 +1,5 @@
 job_quill_basic 35
 lib_auth_protocol-negot 30
 lib_auth_protocol-negot-prt2 30
+job_dagman_splice-N 40
+job_dagman_splice-O 40

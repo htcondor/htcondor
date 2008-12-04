@@ -37,8 +37,8 @@
 #     perl: all perl/lib/$(PERL_ARCHNAME)/ClassAd.so
 #
 #     perl/lib/$(PERL_ARCHNAME)/ClassAd.so: $(LIB_OBJ) ClassAd.swg
-#   	swig -v -Wall -c++ -perl -proxy -o classad_wrap.C ClassAd.swg
-#     	g++ -fno-implicit-templates -g -DCLASSAD_DISTRIBUTION -I$(PERL_ARCHLIB)/CORE -c classad_wrap.C
+#   	swig -v -Wall -c++ -perl -proxy -o classad_wrap.cpp ClassAd.swg
+#     	g++ -fno-implicit-templates -g -DCLASSAD_DISTRIBUTION -I$(PERL_ARCHLIB)/CORE -c classad_wrap.cpp
 #     	g++ -shared $(LIB_OBJ) classad_wrap.o -o ClassAd.so
 #     	mkdir -p perl/lib/ClassAd
 #     	mv ClassAd.so ClassAd.pm perl/lib/
@@ -71,13 +71,13 @@ endif])
 
 
 dnl Define all the flavors of a program (given: $1). Optionally, add
-dnl extra source files (given: $2), if $1.C isn't enough. Also, it 
+dnl extra source files (given: $2), if $1.cpp isn't enough. Also, it 
 dnl became useful to pass in the libname for extra_tests, so $3 is
 dnl added to CXXFLAGS and $4 is added to CXXFLAGS for the
 dnl ENABLE_NAMESPACE case
 define([MF_DEFINE_PROGRAM],
   [# BEGIN MF_DEFINE_PROGRAM($1,$2,$3)
-$1_SOURCES = $1.C $2
+$1_SOURCES = $1.cpp $2
 $1_CXXFLAGS = $3
 $1_LDADD = libclassad.la
 MF_IF_NAMESPACE([$1_ns_SOURCES = $($1_SOURCES)
@@ -96,7 +96,7 @@ dnl
 #ACLOCAL_AMFLAGS = -I /s/libtool/share/aclocal
 
 if ENABLE_EXPLICIT_TEMPLATES
-  _libclassad_la_SOURCES = instantiations.C
+  _libclassad_la_SOURCES = instantiations.cpp
 endif
 
 NAMESPACE = -DWANT_CLASSAD_NAMESPACE=1
@@ -146,11 +146,11 @@ check_PROGRAMS =							\
 	$(TESTS)
 
 libclassad_la_SOURCES = \
-	attrrefs.C classad.C collection.C collectionBase.C debug.C	\
-	exprList.C exprTree.C fnCall.C indexfile.C lexer.C		\
-	lexerSource.C literals.C matchClassad.C operators.C query.C	\
-	sink.C source.C transaction.C util.C value.C view.C xmlLexer.C	\
-	xmlSink.C xmlSource.C cclassad.C $(_libclassad_la_SOURCES)
+	attrrefs.cpp classad.cpp collection.cpp collectionBase.cpp debug.cpp	\
+	exprList.cpp exprTree.cpp fnCall.cpp indexfile.cpp lexer.cpp		\
+	lexerSource.cpp literals.cpp matchClassad.cpp operators.cpp query.cpp	\
+	sink.cpp source.cpp transaction.cpp util.cpp value.cpp view.cpp xmlLexer.cpp	\
+	xmlSink.cpp xmlSource.cpp cclassad.cpp $(_libclassad_la_SOURCES)
 
 MF_IF_NAMESPACE([libclassad_ns_la_SOURCES = $(libclassad_la_SOURCES)
    libclassad_ns_la_CXXFLAGS = $(NAMESPACE)])
@@ -160,7 +160,7 @@ MF_DEFINE_PROGRAM([cxi])
 MF_DEFINE_PROGRAM([classad_version])
 
 if ENABLE_EXPLICIT_TEMPLATES
-  _classad_functional_tester_SOURCES = test_instantiations.C
+  _classad_functional_tester_SOURCES = test_instantiations.cpp
 endif
 
 MF_DEFINE_PROGRAM([classad_functional_tester],
@@ -186,10 +186,10 @@ extra_tests_DEPENDENCIES = shared.so
 MF_IF_NAMESPACE([extra_tests_ns_DEPENDENCIES = shared_ns.so])
 
 shared.so:
-	$(CXXCOMPILE) -fPIC -shared -o shared.so shared.C -L.libs -lclassad
+	$(CXXCOMPILE) -fPIC -shared -o shared.so shared.cpp -L.libs -lclassad
 
 shared_ns.so:
-	$(CXXCOMPILE) $(NAMESPACE) -fPIC -shared -o shared_ns.so shared.C -L.libs -lclassad_ns
+	$(CXXCOMPILE) $(NAMESPACE) -fPIC -shared -o shared_ns.so shared.cpp -L.libs -lclassad_ns
 endif
 
 Makefile.am: Makefile.am.m4

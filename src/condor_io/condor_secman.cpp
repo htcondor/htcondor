@@ -2789,6 +2789,7 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 		duration = expiration_time ? expiration_time - time(NULL) : 0;
 		if( duration < 0 ) {
 			dprintf(D_SECURITY,"SECMAN: failed to create non-negotiated security session %s because duration = %d\n",sesid,duration);
+			delete keyinfo;
 			return false;
 		}
 	}
@@ -2804,6 +2805,7 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 	if( !session_cache->insert(key) ) {
 		dprintf(D_SECURITY, "SECMAN: failed to create session %s.\n",
 				sesid);
+		delete keyinfo;
 		return false;
 	}
 
@@ -2819,6 +2821,7 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 		policy.dPrint(D_SECURITY);
 	}
 
+	delete keyinfo;
 	return true;
 }
 

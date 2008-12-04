@@ -145,6 +145,10 @@ LinuxHibernator::LinuxHibernator ( void ) throw ()
 
 LinuxHibernator::~LinuxHibernator ( void) throw ()
 {
+	if ( m_real_hibernator ) {
+		delete m_real_hibernator;
+		m_real_hibernator = NULL;
+	}
 }
 
 const char *
@@ -174,7 +178,7 @@ LinuxHibernator::initStates( void )
 	}
 
 	// Do we have "pm-utils" installed?
-	char	methods[128] = "";
+	MyString	methods;
 	for ( int type = 0;  type < 3;  type++ ) {
 		BaseLinuxHibernator	*lh = NULL;
 		if      ( 0 == type ) {
@@ -189,10 +193,10 @@ LinuxHibernator::initStates( void )
 		ASSERT( lh != NULL );
 
 		const char *name = lh->getName();
-		if ( methods[0] != '\0' ) {
-			strcat( methods, "," );
+		if ( methods.Length() ) {
+			methods += ",";
 		}
-		strcat( methods, name );
+		methods += name;
 
 		// If method name specified, does this one match?
 		if ( ! lh->nameMatch(method) ) {
@@ -207,6 +211,9 @@ LinuxHibernator::initStates( void )
 			m_real_hibernator = lh;
 			dprintf( D_FULLDEBUG,
 					 "hibernator: '%s' detected\n", name );
+			if ( method ) {
+				free( const_cast<char *>(method) );
+			}
 			return;
 		}
 
@@ -218,6 +225,7 @@ LinuxHibernator::initStates( void )
 						 "hibernator: '%s' not detected;"
 						 " hibernation disabled\n",
 						 name );
+				free( const_cast<char *>(method) );
 				return;
 			}
 			dprintf( D_FULLDEBUG,
@@ -226,9 +234,13 @@ LinuxHibernator::initStates( void )
 	}
 	if ( method ) {
 		dprintf( D_ALWAYS, "hibernator: '%s' not detected\n", method );
+		free( const_cast<char *>(method) );
 	}
 	dprintf( D_ALWAYS,
 			 "No hibernation methods detected; hibernation disabled\n" );
+	dprintf( D_FULLDEBUG,
+			 "  methods tried: %s\n",
+			 methods.Length() ? methods.GetCStr() : "<NONE>" );
 }
 
 HibernatorBase::SLEEP_STATE

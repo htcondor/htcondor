@@ -2115,9 +2115,9 @@ AC_SUBST(JAR,$ac_jar)
 
 AC_ARG_ENABLE([rpm],
   AC_HELP_STRING([--enable-rpm],
-    [determine if we try to make rpms (default: yes)]),
+    [determine if we try to make rpms (default: no)]),
   [],
-  [enable_rpm=yes])
+  [enable_rpm=no])
 # there might be two kinds of rpm on a machine, 'rpm' and 'rpmbuild'
 # use the latter if we have it.
 if test "x$_cv_linux_distro" = "xSLES9"; then
@@ -2222,15 +2222,6 @@ fi
 ############################################################
 # checks for libraries
 ############################################################
-
-# The DRMAA C library needs to be compiled with pthreads in mind if
-# pthreads are available. This machinery ends up defining HAS_PTHREADS
-# In the build system which is then used to add the correct threading
-# flags to the compile line for drmaa code.
-AC_CHECK_LIB([pthread], [pthread_create],
-  [ac_pthreads=yes
-   AC_DEFINE([HAS_PTHREADS],[1],[Define if pthreads are available])],
-  [ac_pthreads=no])
 
 
 ############################################################
@@ -2737,15 +2728,9 @@ if test x$_cv_sysname != "xppc_aix52" -a x$_cv_linux_distro != "xRH72" -a  x$_cv
   fi
 fi
 
-if test "x$_cv_linux_distro" = "xRHEL5" ; then
 CHECK_EXTERNAL([krb5], [1.4.3-p0], [soft],
                [use krb5 (provides Kerberos support)],
                MF_LIB_CHECK([krb5], [[krb5 krb5_free_principal]]))
-else
-CHECK_EXTERNAL([krb5], [1.4.3], [soft],
-               [use krb5 (provides Kerberos support)],
-               MF_LIB_CHECK([krb5], [[krb5 krb5_free_principal]]))
-fi
 
 # CHECK_EXTERNAL([openssl],[0.9.8h],[soft])
 CHECK_EXTERNAL([openssl], [0.9.8h], [soft],
@@ -2780,7 +2765,7 @@ CHECK_EXTERNAL([zlib], [1.2.3], [$_cv_zlib_requirement],
                [use zlib (provides compression support)],
                MF_LIB_CHECK([zlib], [[z deflate]]))
 
-CHECK_EXTERNAL([classads], [1.0rc5], [soft],
+CHECK_EXTERNAL([classads], [1.0.1], [soft],
                [use new ClassAds (provides -better-analyze and more)],
 	       # This REALLY should test for headers, like most checks...
                MF_LIB_CHECK([classads], [[classad cclassad_create]]))	       
@@ -2833,13 +2818,7 @@ fi
 
 # Figure out which postgresql we need.
 
-if test "x$_cv_sysname" = "xhp_ux113" ; then
-  pgsql_ver="8.3.0";
-else
-  pgsql_ver="8.0.2";
-fi
-
-CHECK_EXTERNAL([postgresql], [$pgsql_ver], [soft],
+CHECK_EXTERNAL([postgresql], [8.2.3], [soft],
                [use PostgreSQL (provides Quill and other support)],
                MF_LIB_CHECK([postgresql], [[pq PQconnectdb]], [postgresql]))
 AC_MSG_CHECKING([postgresql])

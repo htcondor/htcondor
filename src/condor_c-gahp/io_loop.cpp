@@ -308,8 +308,8 @@ main_init( int argc, char ** const argv )
 
 
 		if (workers[i].pid > 0) {
-			close (workers[i].request_pipe[0]);
-			close (workers[i].result_pipe[1]);
+			daemonCore->Close_Pipe(workers[i].request_pipe[0]);
+			daemonCore->Close_Pipe(workers[i].result_pipe[1]);
 		}
 	}
 			

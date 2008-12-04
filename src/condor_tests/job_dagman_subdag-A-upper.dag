@@ -1,0 +1,9 @@
+Job A job_dagman_subdag-A-upper-node.cmd
+Vars A nodename = "$(JOB)"
+Job B job_dagman_subdag-A-lower1.dag.condor.sub
+Subdag external C job_dagman_subdag-A-lower2.dag
+Job D job_dagman_subdag-A-upper-node.cmd
+Vars D nodename = "$(JOB)"
+
+PARENT A CHILD B C
+PARENT B C CHILD D

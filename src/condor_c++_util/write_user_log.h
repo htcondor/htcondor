@@ -170,12 +170,13 @@ class UserLog {
 						   FILE *fp,
 						   bool is_header_event = true );
 
+	/** APIs for testing */
+	int getGlobalSequence( void ) const { return m_global_sequence; };
+
   private:
 
 	///
     void Reset( void );
-
-	bool initializeGlobalLog( UserLogHeader & );
 
 	// Write header event to global file
 	bool writeHeaderEvent ( const UserLogHeader &header );
@@ -198,18 +199,19 @@ class UserLog {
 	bool checkGlobalLogRotation(void);
 	long getGlobalLogSize( void ) const;
 	bool globalLogRotated( ReadUserLogHeader &reader );
+	bool initializeGlobalLog(const UserLogHeader &header );
 	int doRotation( const char *path, FILE *&fp,
 					MyString &rotated, int max_rotations );
 
     
     /// Deprecated.  condorID cluster of the next event.
-    int         cluster;
+    int         m_cluster;
 
     /// Deprecated.  condorID proc of the next event.
-    int         proc;
+    int         m_proc;
 
     /// Deprecated.  condorID subproc of the next event.
-    int         subproc;
+    int         m_subproc;
 
 	/** Write to the user log? */		 bool		m_write_user_log;
     /** Copy of path to the log file */  char     * m_path;

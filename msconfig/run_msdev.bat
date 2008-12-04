@@ -24,16 +24,21 @@ REM Main entry point
 REM ======================================================================
 REM ======================================================================
 
-REM Rename source files so the the object file names will collide
-call :FIX_SOURCE_NAMES
+REM Generate the syscall header
+call :GENERATE_SYSCALL_NUMBERS
 if %ERRORLEVEL% NEQ 0 goto :FAIL
 
-call :GENRATE_SYSCALL_NUMBERS
-if %ERRORLEVEL% NEQ 0 goto :FAIL
+REM Create the log directories
+call :CREATE_BUILD_DIR
+if %ERRORLEVEL% NEQ 0 goto :EXTERNALS_FAIL
 
 REM Build the externals
 call :BUILD_EXTERNALS
 if %ERRORLEVEL% NEQ 0 goto :EXTERNALS_FAIL
+
+REM Put our config.h file in the right place
+call configure.bat
+if %ERRORLEVEL% NEQ 0 goto :CONFIG_FAIL
 
 REM Make gsoap stubs, etc.
 call :MAKE_GSOAP
@@ -67,6 +72,9 @@ exit /b 1
 :EXTERNALS_FAIL
 echo *** Failed to build externals ***
 exit /b 1
+:CONFIG_FAIL
+echo *** Failed to make config.h ***
+exit /b 1
 :GSOAP_FAIL
 echo *** gsoap stub generator failed ***
 exit /b 1
@@ -75,16 +83,7 @@ echo *** Visual Studio IDE launch failed ***
 exit /b 1
 
 REM ======================================================================
-:FIX_SOURCE_NAMES
-REM ======================================================================
-REM Rename source files so the the object file names will collide
-REM ======================================================================
-call dorenames.bat >NUL
-if not errorlevel 2 call dorenames.bat >NUL
-exit /b 0
-
-REM ======================================================================
-:GENRATE_SYSCALL_NUMBERS
+:GENERATE_SYSCALL_NUMBERS
 REM ======================================================================
 REM Although we have it as a rule in the .dsp files, somehow our prebuild 
 REM rule for syscall_numbers.h gets lost into the translation to .mak files, 
@@ -94,14 +93,31 @@ if not exist ..\src\h\syscall_numbers.h awk -f ..\src\h\awk_prog.include_file ..
 exit /b 0
 
 REM ======================================================================
+:CREATE_BUILD_DIR
+REM ======================================================================
+REM Create the log directory
+REM ======================================================================
+if not exist ..\Release\NUL mkdir ..\Release
+if not exist ..\Release\BuildLogs\NUL (
+    echo Creating Release log directory
+    mkdir ..\Release\BuildLogs
+)
+exit /b 0
+
+REM ======================================================================
 :BUILD_EXTERNALS
 REM ======================================================================
 REM Build the externals and copy any .dll files created by the externals 
 REM in debug and release
 REM ======================================================================
-call make_win32_externals.bat
+if exist ..\Release\BuildLogs\externals.build.log (
+    echo Removing old externals build log
+    rm -f ..\Release\BuildLogs\externals.build.log
+)
+echo Building externals (see externals.build.log for details)
+call make_win32_externals.bat >..\Release\BuildLogs\externals.build.log 2>&1
 if %ERRORLEVEL% NEQ 0 exit /b 1
-call copy_external_dlls.bat
+call copy_external_dlls.bat >NUL 2>NUL
 if %ERRORLEVEL% NEQ 0 exit /b 1
 exit /b 0
 
@@ -110,13 +126,9 @@ REM ======================================================================
 REM ======================================================================
 REM Make gsoap stubs, etc.
 REM ======================================================================
-if not exist ..\Release\NUL mkdir ..\Release
-if exist ..\Release\BuildLogs\NUL (
+if exist ..\Release\BuildLogs\gsoap.build.log (
     echo Removing old gsoap build log
     rm -f ..\Release\BuildLogs\gsoap.build.log
-) else (
-    echo Creating Release log directory
-    mkdir ..\Release\BuildLogs
 )
 echo Building gsoap stubs (see gsoap.build.log for details)
 nmake /NOLOGO /f gsoap.mak >..\Release\BuildLogs\gsoap.build.log 2>&1

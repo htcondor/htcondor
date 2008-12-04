@@ -104,7 +104,7 @@ bool
 getOldClassAdNoTypes( Stream *sock, classad::ClassAd& ad )
 {
 	classad::ClassAdParser	parser;
-	int 					numExprs;
+	int 					numExprs = 0; // Initialization clears Coverity warning
 	string					buffer;
 	char					*tmp;
 	classad::ClassAd		*upd=NULL;

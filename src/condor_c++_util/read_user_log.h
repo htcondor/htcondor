@@ -111,8 +111,9 @@ class ReadUserLog
 	};
 
     /** Default constructor.
+        @param isEventLog setup reader to read the global event log?
 	*/
-    ReadUserLog(void) { clear(); }
+    ReadUserLog( bool isEventLog = false );
 
     /** Constructor for a limited functionality reader
 		- No rotation handling
@@ -139,6 +140,12 @@ class ReadUserLog
 	*/
     bool isInitialized( void ) const { return m_initialized; };
 
+
+    /** Initialize to read the EventLog file.  This function will return
+		false if it can't open the event log (among other problems).
+        @return true for success
+    */
+    bool initialize ( void );
 
     /** Initialize the log file.  This function will return false
         if it can't open the log file (among other problems).
@@ -432,7 +439,7 @@ class ReadUserLog
 	/** Close the log file between operations
 		@return true:success, false:failure
 	 */
-	bool CloseLogFile( );
+	bool CloseLogFile( bool force = false );
 
 
 	/** Class private data

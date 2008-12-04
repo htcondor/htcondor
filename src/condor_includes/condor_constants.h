@@ -127,4 +127,6 @@ static const size_t IP_STRING_BUF_SIZE = 16;
 // years of careful research, I am told...
 #define DEFAULT_CEDAR_TIMEOUT 20
 
+#define MAX_PARAM_LEN 1024
+
 #endif /* CONDOR_CONSTANTS_H */

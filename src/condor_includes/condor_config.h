@@ -114,6 +114,19 @@ class ParamValue {
 	bool param_get_location(const char *parameter, MyString &filename,
 							int &line_number);
 
+	/** Look up a value by the name 'name' from the table 'table' which is table_size big.
+	
+	Values should have been inserted with insert() (above).
+	Treats name case insensitively.  Returns NULL if the name isn't in the
+	table.  On success returns a pointer to the associated value.  The
+	value is owned by the table; do not free it.
+	*/
+	char * lookup_macro ( const char *name, BUCKET *table[], int table_size );
+
+	/*This is a faster version of lookup_macro that assumes the param name
+	  has already been converted to the canonical lowercase form.*/
+	char * lookup_macro_lower( const char *name, BUCKET **table, int table_size );
+
 /* here we provide C linkage to C++ defined functions. This seems a bit
 	odd since if a .c file includes this, these prototypes technically don't
 	exist.... */
@@ -237,15 +250,6 @@ BEGIN_C_DECLS
 	/** Sets the whether or not a macro has actually been used
 	*/
 	void set_macro_used ( const char *name, int used, BUCKET *table[], int table_size );
-
-	/** Look up a value by the name 'name' from the table 'table' which is table_size big.
-	
-	Values should have been inserted with insert() (above).
-	Treats name case insensitively.  Returns NULL if the name isn't in the
-	table.  On success returns a pointer to the associated value.  The
-	value is owned by the table; do not free it.
-	*/
-	char * lookup_macro ( const char *name, BUCKET *table[], int table_size );
 
 	/*
 	As expand_macro() (above), but assumes the table 'ConfigTab' which is

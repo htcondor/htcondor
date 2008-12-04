@@ -2,13 +2,13 @@
  *
  * Copyright (C) 1990-2008, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -124,6 +124,13 @@ private:
 // **********************************
 // ReadUserLog class methods
 // **********************************
+ReadUserLog::ReadUserLog ( bool isEventLog )
+{
+	clear();
+	if ( isEventLog ) {
+		initialize( );
+	}
+}
 
 ReadUserLog::ReadUserLog (const char * filename)
 {
@@ -144,11 +151,7 @@ ReadUserLog::ReadUserLog ( FILE *fp, bool is_xml )
 	}
 	m_fp = fp;
 	m_fd = fileno( fp );
-	m_never_close_fp = true;
-	m_close_file = false;
-	m_handle_rot = false;
 
-	m_lock_enable = false;
 	m_lock = new FakeFileLock( );
 
 	m_state = new ReadUserLogState( );
@@ -162,6 +165,19 @@ ReadUserLog::ReadUserLog ( FILE *fp, bool is_xml )
 // ***************************************
 // * Initializers which take a file name
 // ***************************************
+
+
+// Initialize to read the global event log
+bool
+ReadUserLog::initialize( void )
+{
+	char	*path = param( "EVENT_LOG" );
+	if ( NULL == path ) {
+		return false;
+	}
+	int max_rotations = param_integer( "EVENT_LOG_MAX_ROTATIONS", 1, 0 );
+	return initialize( path, max_rotations, true );
+}
 
 // Default initializer
 bool
@@ -247,6 +263,9 @@ ReadUserLog::InternalInitialize( const ReadUserLog::FileState &state,
 	// If max rotations specified, store it away
 	if ( set_rotations ) {
 		m_state->MaxRotations( max_rotations );
+	}
+	else {
+		max_rotations = m_state->MaxRotations( );
 	}
 
 	m_match = new ReadUserLogMatch( m_state );
@@ -358,17 +377,17 @@ ReadUserLog::CheckFileStatus( void )
 }
 
 bool
-ReadUserLog::CloseLogFile( void )
+ReadUserLog::CloseLogFile( bool force )
 {
 
 	// Remove any locks
-	if ( m_lock->isLocked() ) {
+	if ( m_lock  &&  m_lock->isLocked() ) {
 		m_lock->release();
 		m_lock_rot = -1;
 	}
 
 	// Close the file pointer
-    if ( m_fp && !m_never_close_fp ) {
+    if ( m_fp && (!m_never_close_fp || force) ) {
 		fclose( m_fp );
 		m_fp = NULL;
 		m_fd = -1;
@@ -490,6 +509,8 @@ ReadUserLog::OpenLogFile( bool do_seek, bool read_header )
 			  ( header_reader.Read( log_reader ) == ULOG_OK )  ) {
 			m_state->UniqId( header_reader.getId() );
 			m_state->Sequence( header_reader.getSequence() );
+			m_state->LogPosition( header_reader.getFileOffset() );
+			m_state->LogRecordNo( header_reader.getEventOffset() );
 			dprintf( D_FULLDEBUG,
 					 "%s: Set UniqId to '%s', sequence to %d\n",
 					 m_state->CurPath(),
@@ -526,62 +547,62 @@ ReadUserLog::determineLogType( void )
 	m_state->Offset( filepos );
 
 	char afterangle;
+	if ( fseek( m_fp, 0, SEEK_SET ) < 0 ) {
+		dprintf(D_ALWAYS,
+				"fseek(0) failed in ReadUserLog::determineLogType\n");
+		Unlock( false );
+		return false;
+	}
 	int scanf_result = fscanf(m_fp, " <%c", &afterangle);
-	if( scanf_result == EOF ) {
-		// Format is unknown.
-		m_state->LogType( ReadUserLogState::LOG_TYPE_UNKNOWN );
 
-	} else if( scanf_result > 0 ) {
-
+	if( scanf_result > 0 ) {
 		m_state->LogType( ReadUserLogState::LOG_TYPE_XML );
 
-		if( !skipXMLHeader(afterangle, filepos) ) {
-			m_state->LogType( ReadUserLogState::LOG_TYPE_UNKNOWN );
-			Unlock( false );
-		    return false;
-		}
-
-	} else {
-		// the first non whitespace char is not <, so this doesn't look like
-		// XML; go back to the beginning and take another look
-		if( fseek( m_fp, filepos, SEEK_SET) )	{
-			dprintf(D_ALWAYS, "fseek failed in ReadUserLog::determineLogType");
-			Unlock( false );
-			return false;
-		}
-
-		int nothing;
-		if( fscanf( m_fp, " %d", &nothing) > 0 ) {
-
-			setIsOldLog(true);
-
-			if( fseek( m_fp, filepos, SEEK_SET) )	{
-				dprintf(D_ALWAYS,
-						"fseek failed in ReadUserLog::determineLogType");
+		// If we're at the start of the file, skip the header
+		if ( filepos == 0 ) {
+			if( !skipXMLHeader(afterangle, filepos) ) {
+				m_state->LogType( ReadUserLogState::LOG_TYPE_UNKNOWN );
 				Unlock( false );
 				return false;
 			}
-		} else {
-			// what sort of log is this!
-			dprintf(D_ALWAYS, "Error, apparently invalid user log file\n");
-			if( fseek( m_fp, filepos, SEEK_SET) )	{
-				dprintf(D_ALWAYS,
-						"fseek failed in ReadUserLog::determineLogType");
-				Unlock( false );
-				return false;
-			}
-			Unlock( false );
-			return false;
 		}
+
+		// File type set, we're all done.
+		Unlock( false );
+		return true;
+	}
+
+	// the first non whitespace char is not <, so this doesn't look like
+	// XML; go back to the beginning and take another look
+	int nothing;
+	if( fseek( m_fp, 0, SEEK_SET) )	{
+		dprintf(D_ALWAYS,
+				"fseek failed in ReadUserLog::determineLogType");
+		Unlock( false );
+		return false;
+	}
+	if( fscanf( m_fp, " %d", &nothing ) > 0 ) {
+		setIsOldLog(true);
+	}
+	else {
+		// what sort of log is this???
+		dprintf(D_ALWAYS, "Error, apparently invalid user log file\n");
+		m_state->LogType( ReadUserLogState::LOG_TYPE_UNKNOWN );
+	}
+
+	if( fseek( m_fp, filepos, SEEK_SET ) ) {
+		dprintf( D_ALWAYS,
+				 "fseek failed in ReadUserLog::determineLogType");
+		Unlock( false );
+		return false;
 	}
 
 	Unlock( false );
-
 	return true;
 }
 
-bool ReadUserLog::
-skipXMLHeader(char afterangle, long filepos)
+bool
+ReadUserLog::skipXMLHeader(char afterangle, long filepos)
 {
 	// now figure out if there is a header, and if so, advance _fp past
 	// it - this is really ugly
@@ -816,9 +837,12 @@ ReadUserLog::readEvent (ULogEvent *& event, bool store_state )
 
 			bool found = FindPrevFile( m_state->Rotation() - 1, 1, true );
 			dprintf( D_FULLDEBUG,
-					 "readEvent: checking for previous file (%d): %s\n",
+					 "readEvent: checking for previous file (# %d): %s\n",
 					 m_state->Rotation(), found ? "Found" : "Not found" );
-			if ( !found ) {
+			if ( found ) {
+				CloseLogFile( true );
+			}
+			else {
 				try_again = false;
 			}
 		}
@@ -1285,6 +1309,13 @@ ReadUserLog::clear( void )
 	m_fp = NULL;
 	m_lock = NULL;
 	m_lock_rot = -1;
+
+	m_never_close_fp = true;
+	m_close_file = false;
+	m_handle_rot = false;
+	m_lock_enable = false;
+	m_max_rotations = 0;
+	m_read_header = false;
 }
 
 void
