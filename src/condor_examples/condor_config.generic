@@ -1839,8 +1839,8 @@ NORDUGRID_GAHP = $(SBIN)/nordugrid_gahp
 ## EC2: Universe = Grid, Grid_Resource = Amazon
 ##
 
-## The location of the amazon-gahp programs, required
-AMAZON_GAHP = $(SBIN)/amazon-gahp
+## The location of the amazon_gahp program, required
+AMAZON_GAHP = $(SBIN)/amazon_gahp
 
 ## Location of log files, useful for debugging, must be in
 ## a directory writable by any user, such as /tmp

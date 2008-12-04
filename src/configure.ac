@@ -2223,15 +2223,6 @@ fi
 # checks for libraries
 ############################################################
 
-# The DRMAA C library needs to be compiled with pthreads in mind if
-# pthreads are available. This machinery ends up defining HAS_PTHREADS
-# In the build system which is then used to add the correct threading
-# flags to the compile line for drmaa code.
-AC_CHECK_LIB([pthread], [pthread_create],
-  [ac_pthreads=yes
-   AC_DEFINE([HAS_PTHREADS],[1],[Define if pthreads are available])],
-  [ac_pthreads=no])
-
 
 ############################################################
 # checks for header files

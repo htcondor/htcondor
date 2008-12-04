@@ -7,7 +7,7 @@ Vars C nodename = "$(JOB)"
 Job D job_dagman_abort-A-node-fail.cmd
 Vars D nodename = "$(JOB)"
 
-Abort-dag-on C 1 return 0
+Abort-dag-on C 5 return 0
 
 PARENT A CHILD B C
 PARENT B C CHILD D
