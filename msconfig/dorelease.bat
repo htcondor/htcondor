@@ -85,7 +85,7 @@ copy ..\src\condor_chirp\chirp\doc\Condor %1\src\chirp\README
 echo. & echo Copying user log library...
 copy "..\src\condor_c++_util\write_user_log.h" %1\src\userlog
 copy "..\src\condor_c++_util\read_user_log.h" %1\src\userlog
-copy ..\Release\condor_api_lib.lib %1\src\userlog\condorapi.lib
+copy ..\Release\condor_api.lib %1\src\userlog
 
 echo. & echo Copying example configurations...
 copy ..\src\condor_examples\condor_config.* %1\etc
@@ -117,10 +117,10 @@ copy condor_rm.exe condor_release.exe
 copy condor_rm.exe condor_vacate_job.exe
 copy condor.exe condor_on.exe
 copy condor.exe condor_off.exe
-copy condor.exe condor_vacate.exe
 copy condor.exe condor_restart.exe
 copy condor.exe condor_reconfig.exe
 copy condor.exe condor_reschedule.exe
+copy condor.exe condor_vacate.exe
 copy condor.exe condor_set_shutdown.exe
 copy condor_cod.exe condor_cod_request.exe
 popd

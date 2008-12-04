@@ -64,6 +64,22 @@
 	<References>
 	</References>
 	<Files>
+		<File
+			RelativePath="..\src\CODING_GUIDELINES"
+			>
+		</File>
+		<File
+			RelativePath="..\LICENSE-2.0.txt"
+			>
+		</File>
+		<File
+			RelativePath="..\NOTICE.txt"
+			>
+		</File>
+		<File
+			RelativePath="..\src\README.building"
+			>
+		</File>
 	</Files>
 	<Globals>
 	</Globals>
