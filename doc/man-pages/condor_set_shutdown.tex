@@ -1,15 +1,15 @@
 \begin{ManPage}{\label{man-condor-set-shutdown}\Condor{set\_shutdown}}{1}
-{Set program to execute upon \Condor{master} shutdown}
+{Set a program to execute upon \Condor{master} shut down}
 \Synopsis \SynProg{\Condor{set\_shutdown}}
 \ToolArgsBase
 
 \SynProg{\Condor{set\_shutdown}}
-\oOptnm{-exec}
+\OptArg{-exec}{programname} 
 \ToolDebugOption
 \ToolArgsLocate
 
 \SynProg{\Condor{set\_shutdown}}
-\oOptnm{-exec}
+\OptArg{-exec}{programname} 
 \ToolDebugOption
 \ToolWhere
 
@@ -19,24 +19,26 @@
 \Description 
 
 \Condor{set\_shutdown} sets a program (typically a script) to execute
-when the master shuts down.  The \OptArg{-exec}{$<$name$>$} parameter
-is required, and specifies the program to run.  This name must match a
-\MacroNI{MASTER\_SHUTDOWN\_$<$name$>$} in the \Condor{master}'s
-configuration, otherwise the master will log an error and ignore the
+when the \Condor{master} daemon shuts down.
+The \OptArg{-exec}{programname} argument is required,
+and specifies the program to run.  
+The string \Arg{programname} must match the
+string that defines \MacroNI{Name} in the configuration variable
+\MacroNI{MASTER\_SHUTDOWN\_$<$Name$>$} in the \Condor{master} daemon's
+configuration. 
+If it does not match, the \Condor{master} will log an error and ignore the
 request.
 
-For security purposes (authentication and authorization),
-this command requires an administrator's level of access.
+For purposes of authentication and authorization,
+this command requires the \DCPerm{ADMINISTRATOR} access level.
 See
 section~\ref{sec:Config-Security} on page~\pageref{sec:Config-Security}
 for further explanation.
 
 \begin{Options}
-	\ToolArgsBaseDesc
-	\OptItem{\Opt{-exec $<$name$>$}}{Specify the name of the
-	program to execute}
-	\ToolDebugDesc
-	\ToolArgsLocateDesc
+  \ToolArgsBaseDesc
+  \ToolDebugDesc
+  \ToolArgsLocateDesc
 \end{Options}
 
 \ExitStatus
@@ -45,15 +47,19 @@ success, and it will exit with the value 1 (one) upon failure.
 
 
 \Examples
-To have all master's run ``/bin/reboot'' on shutdown, configure the
-master with:
+To have all \Condor{master} daemons run the program
+\Prog{/bin/reboot} upon shut down, configure the \Condor{master} 
+to contain a definition similar to:
 \begin{verbatim}
 MASTER_SHUTDOWN_REBOOT = /sbin/reboot
 \end{verbatim}
-and then run
+where \MacroNI{REBOOT} is an invented name for this program that
+the \Condor{master} will execute.
+On the command line, run
 \begin{verbatim}
 % condor_set_shutdown -exec reboot -all
 % condor_off -graceful -all
 \end{verbatim}
+where the string \verb@reboot@ matches the invented name.
 
 \end{ManPage}
