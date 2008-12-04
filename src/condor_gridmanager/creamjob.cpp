@@ -103,6 +103,8 @@ const char *ATTR_CREAM_DELEGATION_URI = "CreamDelegationUri";
 
 #define DEFAULT_LEASE_DURATION	6*60*60 //6 hr
 
+#define CLEANUP_DELAY	5
+
 // TODO: Let the maximum submit attempts be set in the job ad or, better yet,
 // evalute PeriodicHold expression in job ad.
 #define MAX_SUBMIT_ATTEMPTS	1
@@ -917,26 +919,21 @@ int CreamJob::doEvaluateState()
 						// unhandled error
 					LOG_CREAM_ERROR( "cream_job_cancel()", rc );
 					gahpErrorString = gahp->getErrorString();
-					gmState = GM_CLEANUP;
-//					gmState = GM_CLEAR_REQUEST;
+					gmState = GM_CLEAR_REQUEST;
 					break;
 				}
-					/*			
-							myResource->CancelSubmit( this );
-							SetRemoteJobId( NULL );
-					*/
 			}
-			if ( condorState == REMOVED ) {
-				gmState = GM_CLEANUP;
-//				gmState = GM_DELETE;
-			} else {
-				gmState = GM_CLEAR_REQUEST;
-			}
+			gmState = GM_CLEANUP;
 			} break;
 		case GM_CLEANUP: {
 				// Cleanup the job at cream server
-				// Need to sleep since cream doesn't allow immediate purging of cancelled jobs
-			sleep(5);
+				// Need to wait since cream doesn't allow immediate
+				// purging of cancelled jobs
+			if ( now < enteredCurrentGmState + CLEANUP_DELAY ) {
+				daemonCore->Reset_Timer( evaluateStateTid,
+										 enteredCurrentGmState + CLEANUP_DELAY - now );
+				break;
+			}
 			CHECK_PROXY;
 			rc = gahp->cream_job_purge( resourceManagerString, remoteJobId );
 			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
