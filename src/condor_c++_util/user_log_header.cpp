@@ -70,7 +70,18 @@ UserLogHeader::ExtractEvent( const ULogEvent *event )
 	if ( ! generic ) {
 		dprintf( D_ALWAYS, "Can't pointer cast generic event!\n" );
 		return ULOG_UNK_ERROR;
-	} 
+	}
+	{
+		char	buf[1024];
+		memset( buf, 0, sizeof(buf) );
+		strncpy( buf, generic->info, sizeof(buf)-1 );
+		int size = strlen( buf );
+		while( isspace(buf[size-1]) )
+			buf[--size] = '\0';
+		::dprintf( D_FULLDEBUG,
+				   "UserLogHeader::ExtractEvent(): parsing '%s'\n",
+				   buf );
+	}
 
 	char		 id[256];
 	int			 ctime;
@@ -95,6 +106,10 @@ UserLogHeader::ExtractEvent( const ULogEvent *event )
 		m_ctime = ctime;
 		m_id = id;
 		m_valid = true;
+
+		if ( DebugFlags & D_FULLDEBUG ) {
+			dprint( D_FULLDEBUG, "UserLogHeader::ExtractEvent(): parsed ->" );
+		}
 		return ULOG_OK;
 	}
 	else {
@@ -105,41 +120,62 @@ UserLogHeader::ExtractEvent( const ULogEvent *event )
 	}
 }
 
-// dprintf() method
+// sprintf() method
 void
-UserLogHeader::dprintf( int level, const char *label ) const
+UserLogHeader::sprint_cat( MyString &buf ) const
 {
+	if ( m_valid ) {
+		const char	*id = "";
+		if ( m_id.Length() ) {
+			id = m_id.GetCStr();
+		}
+		buf.sprintf_cat( "id=%s"
+						 " seq=%d"
+						 " ctime=%lu"
+						 " size="FILESIZE_T_FORMAT
+						 " num=%"PRIi64
+						 " file_offset="FILESIZE_T_FORMAT
+						 " event_offset=%" PRIi64,
+						 id,
+						 m_sequence,
+						 (unsigned long) m_ctime,
+						 m_size,
+						 m_num_events,
+						 m_file_offset,
+						 m_event_offset );
+	}
+	else {
+		buf += "invalid";
+	}
+}
+
+// dprint() method
+void
+UserLogHeader::dprint( int level, MyString &buf ) const
+{
+	if ( 0 == ( level & DebugFlags ) ) {
+		return;
+	}
+
+	sprint_cat( buf );
+	::dprintf( level, "%s\n", buf.GetCStr() );
+}
+
+// dprint() method
+void
+UserLogHeader::dprint( int level, const char *label ) const
+{
+	if ( 0 == ( level & DebugFlags ) ) {
+		return;
+	}
+
 	if ( NULL == label ) {
 		label = "";
 	}
-	if ( m_valid ) {
-		const char *id = m_id.GetCStr();
-		if ( NULL == id ) {
-			id = "";
-		}
-		::dprintf( level,
-				   "%s header:"
-				   " id=%s"
-				   " seq=%d"
-				   " ctime=%lu"
-				   " size="FILESIZE_T_FORMAT
-				   " num=%"PRIi64
-				   " file_offset="FILESIZE_T_FORMAT
-				   " event_offset=%" PRIi64
-				   "\n",
-				   label,
-				   id,
-				   m_sequence,
-				   (unsigned long) m_ctime,
-				   m_size,
-				   m_num_events,
-				   m_file_offset,
-				   m_event_offset );
-	}
-	else {
-		::dprintf( level, "%s header: not valid\n", label );
-	}
-			   
+
+	MyString	buf;
+	buf.sprintf( "%s header:", label );
+	this->dprint( level, buf );
 }
 
 
