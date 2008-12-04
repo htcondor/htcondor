@@ -1512,7 +1512,7 @@ SetExecutable()
 	}
 
 	// In vm universe and ec2, there is no executable file.
-	if ( !ignore_it ) {
+	if ( ignore_it ) {
 		copySpool = (char *)strdup("FALSE");
 	}else {
 		copySpool = condor_param( CopyToSpool, "CopyToSpool" );
