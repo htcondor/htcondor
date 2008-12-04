@@ -893,6 +893,7 @@ int CreamJob::doEvaluateState()
 				if ( remoteJobId != NULL ) {
 					SetRemoteJobId( NULL );
 					remoteState = CREAM_JOB_STATE_UNSET;
+					SetRemoteJobStatus( NULL );
 					requestScheddUpdate( this );
 				}
 				gmState = GM_CLEAR_REQUEST;
@@ -953,6 +954,7 @@ int CreamJob::doEvaluateState()
 			SetRemoteJobId( NULL );
 			myResource->CancelSubmit( this );
 			remoteState = CREAM_JOB_STATE_UNSET;
+			SetRemoteJobStatus( NULL );
 			requestScheddUpdate( this );
 
 			if ( condorState == REMOVED ) {
@@ -982,6 +984,7 @@ int CreamJob::doEvaluateState()
 			SetRemoteJobId( NULL );
 			myResource->CancelSubmit( this );
 			remoteState = CREAM_JOB_STATE_UNSET;
+			SetRemoteJobStatus( NULL );
 			requestScheddUpdate( this );
 
 			if ( condorState == REMOVED ) {
@@ -1039,6 +1042,7 @@ int CreamJob::doEvaluateState()
 			}
 			remoteState = CREAM_JOB_STATE_UNSET;
 			remoteStateFaultString = "";
+			SetRemoteJobStatus( NULL );
 			gahpErrorString = "";
 			errorString = "";
 			jmLifetime = 0;
@@ -1254,6 +1258,7 @@ void CreamJob::NewCreamState( const char *new_state, int exit_code,
 
 		remoteState = new_state_str;
 		enteredCurrentRemoteState = time(NULL);
+		SetRemoteJobStatus( remoteState.Value() );
 
 		// TODO handle jobs that exit via a signal
 		if ( remoteState == CREAM_JOB_STATE_DONE_OK ) {
