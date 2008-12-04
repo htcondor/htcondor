@@ -274,7 +274,7 @@ foreach $tag (sort keys %tags ) {
         $tag = undef;
     }
 
-    getSubmitInfo( $tag );
+    getSubmitInfo( $tag, $opt_src_tag );
     $cmdfile = createSubmitFiles( $tag, $opt_src_tag, $opt_other_tag );
     submitRun( $cmdfile, $tag );
 }
@@ -709,7 +709,7 @@ sub getNightlyTags
 
 sub getSubmitInfo
 {
-    my( $tag ) = @_;
+    my( $tag, $src_tag ) = @_;
 
     my $submit_info_path;
     if( defined $opt_nmi_glue ) {
@@ -721,8 +721,14 @@ sub getSubmitInfo
         # check it out is hopeless.
     }
     else {
-        checkoutSubmitInfo( $tag ) ||
-	    die "$tag does not contain $submit_info!\n";
+		if(defined $src_tag) {
+			my $realtag = "origin\/" . $src_tag;
+        	checkoutSubmitInfo( $realtag ) ||
+	    		die "$tag does not contain $submit_info!\n";
+		} else {
+        	checkoutSubmitInfo( $tag ) ||
+	    		die "$tag does not contain $submit_info!\n";
+		}
         $submit_info_path = $submit_info;
     }
 
