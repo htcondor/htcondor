@@ -802,6 +802,7 @@ void writeSubmitFile(/* const */ SubmitDagOptions &opts)
 
     fprintf(pSubFile, "universe\t= scheduler\n");
     fprintf(pSubFile, "executable\t= %s\n", opts.strDagmanPath.Value());
+    fprintf(pSubFile, "copy_to_spool\t= True\n");
 	fprintf(pSubFile, "getenv\t\t= True\n");
 	fprintf(pSubFile, "output\t\t= %s\n", opts.strLibOut.Value());
     fprintf(pSubFile, "error\t\t= %s\n", opts.strLibErr.Value());
