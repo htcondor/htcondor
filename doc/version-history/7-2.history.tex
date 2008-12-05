@@ -79,6 +79,11 @@ when restarting itself, most notably, \Opt{-pid} and \Opt{-runfor}.
 would not be matched to slots in the backfill state.  Now, slots doing
 backfill are included in the matchmaking process.
 
+% PR 959
+\item \Condor{submit\_dag} now generates a \File{.condor.sub} file with
+\MacroNI{copy\_to\_spool} set to true (to ease version upgrades while
+large DAGs are running).
+
 \end{itemize}
 
 \noindent Known Bugs:
