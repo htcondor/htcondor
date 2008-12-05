@@ -656,7 +656,7 @@ if ( $cleanupcondor )
    else
    {
       $pid=`cat $condorpidfile`;
-      system("kill $pid");
+      system("kill -QUIT $pid");
       system("rm -f $condorpidfile");
    }
 }
