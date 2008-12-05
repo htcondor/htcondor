@@ -1136,6 +1136,11 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 
 		resmgr->addResource( new_rip );
 
+			// XXX: This is overkill, but the best way, right now, to
+			// get many of the new_rip's attributes calculated.
+		resmgr->compute( A_ALL );
+		resmgr->compute( A_TIMEOUT | A_UPDATE );
+
 			// Now we continue on with the newly spawned Resource
 			// getting claimed
 		rip = new_rip;

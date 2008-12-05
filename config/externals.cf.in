@@ -124,8 +124,10 @@ SOAPCPP2 = $(GSOAP_DIR)/bin/soapcpp2
 WSDL2H = $(GSOAP_DIR)/bin/wsdl2h
 #if HAVE_EXT_OPENSSL
 GSOAP_LIB = $(GSOAP_DIR)/lib/libgsoapssl++.a $(ZLIB_LIB)/libz.a
+GSOAP_NOSSL_LIB = $(GSOAP_DIR)/lib/libgsoap++.a $(ZLIB_LIB)/libz.a
 #else
 GSOAP_LIB = $(GSOAP_DIR)/lib/libgsoap++.a $(ZLIB_LIB)/libz.a
+GSOAP_NOSSL_LIB = $(GSOAP_DIR)/lib/libgsoap++.a $(ZLIB_LIB)/libz.a
 #endif
 #endif
 

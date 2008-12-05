@@ -195,7 +195,7 @@ QueryResult CondorQuery::addConstraint (const int, const float)
 QueryResult CondorQuery::addORConstraint (const char *)
 { return (QueryResult)not_impl();}
 
-QueryResult CondorQuery::CondorQuery::addANDConstraint (const char *)
+QueryResult CondorQuery::addANDConstraint (const char *)
 { return (QueryResult)not_impl();}
 
 QueryResult CondorQuery::fetchAds (ClassAdList &, const char [], CondorError* )
@@ -239,8 +239,10 @@ Regex::~Regex() {not_impl();}
 bool Regex::compile(MyString const& , char const** , int* , int ) {not_impl();return false;}
 bool Regex::match(MyString const& , ExtArray<MyString>* ) {not_impl();return false;}
 
+#ifndef WIN32
 bool privsep_enabled() { return false; }
 int privsep_open(uid_t, gid_t, const char*, int, mode_t) { not_impl(); return 0;}
+#endif
 
 // GCB me harder
 BEGIN_C_DECLS

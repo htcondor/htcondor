@@ -239,8 +239,8 @@ CheckArgs(int argc, const char **argv, Options &opts)
 		"  -d|--debug <level>: debug level (e.g., D_FULLDEBUG)\n"
 		"  -q|quiet: quiet all messages\n"
 		"  -v: increase verbose level by 1\n"
-		"  --verbosity <number|name>: set verbosity level (default is 1)\n"
-		"    names: NONE ERROR WARNING INFO ERROR\n"
+		"  --verbosity <number|name>: set verbosity level (default is ERROR)\n"
+		"    names: NONE=0 ERROR WARNING INFO ERROR\n"
 		"  --version: print the version number and compile date\n"
 		"  -h|--usage: print this message and exit\n"
 		"\n"
@@ -442,8 +442,7 @@ CheckArgs(int argc, const char **argv, Options &opts)
 
 		} else if ( arg.Match('v') ) {
 			int		v = (int) opts.verbosity;
-			v++;
-			opts.verbosity = (Verbosity) v;
+			opts.verbosity = (Verbosity) (v + 1);
 
 		} else if ( arg.Match('q', "quiet" ) ) {
 			opts.verbosity = VERB_NONE;

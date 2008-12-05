@@ -271,10 +271,11 @@ AmazonVMKeypairNames::gsoapRequest(void)
 	}
 
 	ec2__DescribeKeyPairsType request;
+	ec2__DescribeKeyPairsInfoType request_keyset;
 	ec2__DescribeKeyPairsResponseType response;
 
 	// Want info on all keys...
-	request.keySet = NULL;
+	request.keySet = &request_keyset;
 
 	int code = -1;		
 	amazon_gahp_release_big_mutex();
@@ -285,10 +286,10 @@ AmazonVMKeypairNames::gsoapRequest(void)
 					&response);
 	amazon_gahp_grab_big_mutex();
 	if ( !code ) {
-		if( response.keySet && response.keySet->item ) {
+		if( response.keySet && response.keySet->item.size() != 0 ) {
 			int i = 0;
-			for (i = 0; i < response.keySet->__sizeitem; i++) {
-				keynames.append(response.keySet->item[i]->keyName);
+			for (i = 0; i < response.keySet->item.size(); i++) {
+				keynames.append(response.keySet->item[i]->keyName.c_str());
 			}
 		}
 		return true;
@@ -337,7 +338,7 @@ AmazonVMCreateKeypair::gsoapRequest(void)
 	ec2__CreateKeyPairType request;
 	ec2__CreateKeyPairResponseType response;
 
-	request.keyName = (char *)keyname.GetCStr();
+	request.keyName = keyname.GetCStr();
 
 	int code = -1;
 	amazon_gahp_release_big_mutex();
@@ -348,7 +349,7 @@ AmazonVMCreateKeypair::gsoapRequest(void)
 					&response);
 	amazon_gahp_grab_big_mutex();
 	if ( !code ) {
-		if( has_outputfile && response.keyMaterial ) {
+		if( has_outputfile ) {
 
 			FILE *fp = NULL;
 			fp = safe_fopen_wrapper(outputfile.Value(), "w");
@@ -360,7 +361,7 @@ AmazonVMCreateKeypair::gsoapRequest(void)
 				return false;
 			}
 
-			fprintf(fp,"%s", response.keyMaterial);
+			fprintf(fp,"%s", response.keyMaterial.c_str());
 			fclose(fp);
 		}
 		return true;
@@ -396,7 +397,7 @@ AmazonVMDestroyKeypair::gsoapRequest(void)
 	ec2__DeleteKeyPairType request;
 	ec2__DeleteKeyPairResponseType response;
 
-	request.keyName = (char *) keyname.GetCStr();
+	request.keyName = keyname.GetCStr();
 
 	int code = -1;
 	amazon_gahp_release_big_mutex();
@@ -493,8 +494,10 @@ AmazonVMStart::gsoapRequest(void)
 	ec2__RunInstancesType request;
 	ec2__ReservationInfoType response;
 
+	std::string request_keyname;
+
 	// image id
-	request.imageId = (char *)ami_id.GetCStr();
+	request.imageId = ami_id.GetCStr();
 	// min Count
 	request.minCount = 1;
 	// max Count
@@ -502,24 +505,19 @@ AmazonVMStart::gsoapRequest(void)
 
 	// Keypair
 	if( keypair.IsEmpty() == false ) {
-		request.keyName = (char *)keypair.GetCStr();
+		request_keyname = keypair.GetCStr();
+		request.keyName = &request_keyname;
 	}else {
 		request.keyName = NULL;
 	}
 
 	// groupSet
 	ec2__GroupSetType groupSet;
-	ec2__GroupItemType **groupItems = NULL;
 
 	if( groupnames.isEmpty() == false ) {
 		int group_nums = groupnames.number();
 
-		groupItems = (ec2__GroupItemType **)soap_malloc(m_soap, 
-				sizeof(ec2__GroupItemType *)*group_nums);
-		ASSERT(groupItems);
-
-		int i=0;
-		char *one_group = NULL;
+		const char *one_group = NULL;
 		groupnames.rewind();
 	
 		ec2__GroupItemType *one_group_item = NULL;
@@ -528,14 +526,8 @@ AmazonVMStart::gsoapRequest(void)
 			ASSERT(one_group_item);
 
 			one_group_item->groupId = one_group; 
-			groupItems[i++] = one_group_item;
+			groupSet.item.push_back( one_group_item );
 		}
-
-		groupSet.__sizeitem = group_nums;
-		groupSet.item = groupItems;
-	}else {
-		groupSet.__sizeitem = 0;
-		groupSet.item = NULL;
 	}
 	request.groupSet = &groupSet;
 
@@ -562,7 +554,7 @@ AmazonVMStart::gsoapRequest(void)
 
 	// instanceType
 	if( instance_type.IsEmpty() == false ) {
-		request.instanceType = (char *) instance_type.GetCStr();
+		request.instanceType = instance_type.GetCStr();
 	}else {
 		request.instanceType = "m1.small";
 	}
@@ -576,8 +568,8 @@ AmazonVMStart::gsoapRequest(void)
 					&response);
 	amazon_gahp_grab_big_mutex();
 	if ( !code ) {
-		if( response.instancesSet && response.instancesSet->item ) {
-			instance_id = response.instancesSet->item[0]->instanceId;
+		if( response.instancesSet && response.instancesSet->item.size() != 0 ) {
+			instance_id = response.instancesSet->item[0]->instanceId.c_str();
 			return true;
 		}
 	}else {
@@ -613,12 +605,9 @@ AmazonVMStop::gsoapRequest(void)
 	ec2__TerminateInstancesInfoType instanceSet;
 
 	ec2__TerminateInstancesItemType item;
-	item.instanceId = (char *) instance_id.GetCStr();
+	item.instanceId = instance_id.GetCStr();
 
-	ec2__TerminateInstancesItemType *itemptr = &item;
-
-	instanceSet.__sizeitem = 1;
-	instanceSet.item = &itemptr;
+	instanceSet.item.push_back( &item );
 
 	request.instancesSet = &instanceSet;
 
@@ -665,12 +654,9 @@ AmazonVMStatus::gsoapRequest(void)
 	ec2__DescribeInstancesInfoType instancesSet;
 	ec2__DescribeInstancesItemType item;
 
-	item.instanceId = (char *) instance_id.GetCStr();
+	item.instanceId = instance_id.GetCStr();
 
-	ec2__DescribeInstancesItemType *itemptr = &item;
-
-	instancesSet.__sizeitem = 1;
-	instancesSet.item = &itemptr;
+	instancesSet.item.push_back( &item );
 
 	// Show a specific running instance
 	request.instancesSet = &instancesSet;
@@ -684,49 +670,50 @@ AmazonVMStatus::gsoapRequest(void)
 					&response);
 	amazon_gahp_grab_big_mutex();
 	if ( !code ) {
-		if( response.reservationSet && response.reservationSet->item ) {
-			int total_nums = response.reservationSet->__sizeitem;
+		if( response.reservationSet && response.reservationSet->item.size() != 0 ) {
+			int total_nums = response.reservationSet->item.size();
 
 			int i = 0;
 			for (i = 0; i < total_nums; i++) {
 				ec2__RunningInstancesSetType* _instancesSet = 
 					response.reservationSet->item[i]->instancesSet;
 
-				if( !_instancesSet ) {
+				if( !_instancesSet || _instancesSet->item.size() == 0 ) {
 					continue;
 				}
 
-				ec2__RunningInstancesItemType **instance = 
-					_instancesSet->item;
+				ec2__RunningInstancesItemType *instance = 
+					_instancesSet->item[0];
 
-				if( !instance || !(*instance)->instanceId ) {
+				if( !instance ) {
 					continue;
 				}
 
-				if( !(*instance)->instanceState || 
-						!(*instance)->instanceState->name) {
+				if( !instance->instanceState ) {
 					dprintf(D_ALWAYS, "Failed to get valid status\n");
 					continue;
 				}
 
-				if( !strcmp((*instance)->instanceId, instance_id.Value()) ) {
+				if( !strcmp(instance->instanceId.c_str(), instance_id.Value()) ) {
 
-					status_result.status = (*instance)->instanceState->name;
-					status_result.instance_id = (*instance)->instanceId;
-					status_result.ami_id = (*instance)->imageId;
-					status_result.public_dns = (*instance)->dnsName;
-					status_result.private_dns = (*instance)->privateDnsName;
-					status_result.keyname = (*instance)->keyName;
-					status_result.instancetype = (*instance)->instanceType;
+					status_result.status = instance->instanceState->name.c_str();
+					status_result.instance_id = instance->instanceId.c_str();
+					status_result.ami_id = instance->imageId.c_str();
+					status_result.public_dns = instance->dnsName.c_str();
+					status_result.private_dns = instance->privateDnsName.c_str();
+					if ( instance->keyName ) {
+						status_result.keyname = instance->keyName->c_str();
+					}
+					status_result.instancetype = instance->instanceType.c_str();
 
 					// Set group names
 					ec2__GroupSetType* groupSet =
 						response.reservationSet->item[i]->groupSet;
 
-					if( groupSet && groupSet->item ) {
+					if( groupSet ) {
 						int j = 0;
-						for( j = 0; j < groupSet->__sizeitem; j++ ) {
-							status_result.groupnames.append(groupSet->item[j]->groupId);
+						for( j = 0; j < groupSet->item.size(); j++ ) {
+							status_result.groupnames.append(groupSet->item[j]->groupId.c_str());
 						}
 					}
 
@@ -761,9 +748,6 @@ AmazonVMStatusAll::gsoapRequest(void)
 
 	ec2__DescribeInstancesInfoType instancesSet;
 
-	instancesSet.__sizeitem = 0;
-	instancesSet.item = NULL;
-
 	// Show a specific running instance
 	request.instancesSet = &instancesSet;
 
@@ -776,8 +760,8 @@ AmazonVMStatusAll::gsoapRequest(void)
 					&response);
 	amazon_gahp_grab_big_mutex();
 	if ( !code ) {
-		if( response.reservationSet && response.reservationSet->item ) {
-			int total_nums = response.reservationSet->__sizeitem;
+		if( response.reservationSet ) {
+			int total_nums = response.reservationSet->item.size();
 
 			status_num = 0;
 			status_results = new AmazonStatusResult[total_nums];
@@ -788,48 +772,49 @@ AmazonVMStatusAll::gsoapRequest(void)
 				ec2__RunningInstancesSetType* _instancesSet = 
 					response.reservationSet->item[i]->instancesSet;
 
-				if( !_instancesSet ) {
+				if( !_instancesSet || _instancesSet->item.size() == 0 ) {
 					continue;
 				}
 
-				ec2__RunningInstancesItemType **instance = 
-					_instancesSet->item;
+				ec2__RunningInstancesItemType *instance = 
+					_instancesSet->item[0];
 
-				if( !instance || !(*instance)->instanceId ) {
+				if( !instance ) {
 					continue;
 				}
 
-				if( !(*instance)->instanceState || 
-						!(*instance)->instanceState->name) {
+				if( !instance->instanceState ) {
 					dprintf(D_ALWAYS, "Failed to get valid status\n");
 					continue;
 				}
 
 				status_results[status_num].status = 
-					(*instance)->instanceState->name;
+					instance->instanceState->name.c_str();
 
 				status_results[status_num].instance_id =
-				   	(*instance)->instanceId;
+				   	instance->instanceId.c_str();
 				status_results[status_num].ami_id = 
-					(*instance)->imageId;
+					instance->imageId.c_str();
 				status_results[status_num].public_dns =
-					(*instance)->dnsName;
+					instance->dnsName.c_str();
 				status_results[status_num].private_dns =
-					(*instance)->privateDnsName;
-				status_results[status_num].keyname =
-					(*instance)->keyName;
+					instance->privateDnsName.c_str();
+				if ( instance->keyName ) {
+					status_results[status_num].keyname =
+						instance->keyName->c_str();
+				}
 				status_results[status_num].instancetype =
-					(*instance)->instanceType;
+					instance->instanceType.c_str();
 
 				// Set group names
 				ec2__GroupSetType* groupSet =
 					response.reservationSet->item[i]->groupSet;
 
-				if( groupSet && groupSet->item ) {
+				if( groupSet ) {
 					int j = 0;
-					for( j = 0; j < groupSet->__sizeitem; j++ ) {
+					for( j = 0; j < groupSet->item.size(); j++ ) {
 						status_results[status_num].groupnames.append(
-								groupSet->item[j]->groupId);
+								groupSet->item[j]->groupId.c_str());
 					}
 				}
 

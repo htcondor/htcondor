@@ -88,7 +88,9 @@ public:
 	int ExtractEvent( const ULogEvent *);
 
 	// Debug
-	void dprintf( int level, const char *label ) const;
+	void sprint_cat( MyString &s ) const;
+	void dprint( int level, MyString &buf ) const;
+	void dprint( int level, const char *label ) const;
 
 protected:
 	MyString	m_id;
