@@ -18,7 +18,7 @@ EC2_SIM_OBJ = ec2_sim_main.o ec2_sim_impl.o soapC.o soapServer.o
 
 public_c_plus_target($(AMAZON_GAHP),sbin,$(AMAZON_GAHP_OBJ),$(LIB))
 
-c_plus_nowrap_target($(EC2_SIM),$(EC2_SIM_OBJ),$(GSOAP_DIR)/lib/libgsoap++.a)
+c_plus_nowrap_target($(EC2_SIM),$(EC2_SIM_OBJ),$(CONFIGURE_GSOAP_LDFLAGS) $(GSOAP_NOSSL_LIB))
 
 testbin_target($(EC2_SIM),755)
 
