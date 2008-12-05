@@ -5307,6 +5307,28 @@ SetGlobusParams()
 		DoCleanup( 0, 0, NULL );
 		exit(1);
 	}
+
+	// CREAM clients support an alternate representation for resources:
+	//   host.edu:8443/cream-batchname-queuename
+	// Transform this representation into our regular form:
+	//   host.edu:8443 batchname queuename
+	if ( JobGridType != NULL && stricmp (JobGridType, "cream") == MATCH ) {
+		tmp = condor_param( GridResource, ATTR_GRID_RESOURCE );
+		MyString resource = tmp;
+		free( tmp );
+
+		int pos = resource.FindChar( ' ', 0 );
+		if ( pos >= 0 && resource.FindChar( ' ', pos + 1 ) < 0 &&
+			 ( pos = resource.find( "/cream-" ) ) >= 0 ) {
+			// We found the shortened form
+			resource.replaceString( "/cream-", " ", pos );
+			resource.replaceString( "-", " ", pos );
+
+			buffer.sprintf( "%s = \"%s\"", ATTR_GRID_RESOURCE,
+							resource.Value() );
+			InsertJobExpr( buffer );
+		}
+	}
 }
 
 void
