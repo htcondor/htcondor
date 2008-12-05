@@ -981,6 +981,8 @@ sub writeCommonInfo
         	($desc, @vers) = parseTag( $tag );
         	$vers_string = join( ',', @vers );
 		}
+		$tag = "origin\/" . $opt_src_tag;
+		print "****** split fetch tag now <$tag> ******\n";
     } elsif( defined $tag ) {
 		if(defined $opt_desc) {
 			# --desc overrides --tag value starting the description
@@ -1049,6 +1051,7 @@ sub writeCommonInfo
 
     # print the tag and module in the cmdfile as the user variables
     if( defined $tag ) {
+		print "****** print tag and module<$tag><$module> ******\n";
         print $fh "tag = $tag\n";
         print $fh "module = $module\n";
     }
