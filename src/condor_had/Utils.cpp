@@ -284,7 +284,7 @@ utilSafeGetFile( ReliSock& socket, const MyString& filePath )
 {
 	REPLICATION_ASSERT( filePath != "" );
 	filesize_t  bytes      = 0;
-	char*       md      = (char *) malloc( ( MAC_SIZE + 1 ) * sizeof( char ) );
+	char*       md      = NULL;
 
 	dprintf( D_ALWAYS, "utilSafeGetFile %s started\n", filePath.GetCStr( ) );	
 	socket.decode( );
@@ -299,7 +299,6 @@ utilSafeGetFile( ReliSock& socket, const MyString& filePath )
 		
 		return false;
     }
-	md[MAC_SIZE] = '\0';
 	dprintf( D_ALWAYS, "utilSafeGetFile MAC received %s\n", md );
 	ifstream file( filePath.GetCStr( ) );
 
