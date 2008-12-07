@@ -147,10 +147,10 @@ AbstractReplicatorStateMachine::reinitialize()
         utilCrucialError( utilNoParameterError("HAD_CONNECTION_TIMEOUT",
 										       "HAD").GetCStr( ) );
     }
-    buffer = param( "RELEASE_DIR" );
+    buffer = param( "BIN" );
 
     if( buffer ) {
-        m_releaseDirectoryPath.sprintf( "%s/bin", buffer );
+        m_releaseDirectoryPath.sprintf( "%s", buffer );
 
         free( buffer );
     } else {
