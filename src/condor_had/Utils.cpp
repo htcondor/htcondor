@@ -241,30 +241,27 @@ utilSafePutFile( ReliSock& socket, const MyString& filePath )
 	// initializing MD5 structures
     MD5_Init( & md5Context );
 
-	char* md     = ( char *) malloc( ( MAC_SIZE + 1 ) * sizeof( char ) );
-	char* buffer = ( char *) malloc( ( FILE_CHUNK_SIZE + 1 ) * sizeof( char ) );
+	char* md     = ( char *) malloc( ( MAC_SIZE ) * sizeof( char ) );
+	char* buffer = ( char *) malloc( ( FILE_CHUNK_SIZE ) * sizeof( char ) );
 
 	while( file.good() ) {
 		// reading next chunk of file
 		file.read( buffer, FILE_CHUNK_SIZE );
 		bytesRead = file.gcount();
-		buffer[bytesRead] = '\0';
 		// generating MAC gradually, chunk by chunk
 		MD5_Update( & md5Context, buffer, bytesRead );
-		//dprintf( D_ALWAYS, "utilSafePutFile buffer read %s\n", buffer );
 
 		bytesTotal += bytesRead;
 	}
 	MD5_Final( (unsigned char*) md, & md5Context );
-	md[MAC_SIZE] = '\0';
 	free( buffer );
 
-	dprintf( D_ALWAYS, "utilSafePutFile MAC created %s with "
-                       "actual length %d, total bytes read %d\n",
-           md, strlen( md ), bytesRead );
+	dprintf( D_ALWAYS,
+			 "utilSafePutFile MAC created, total bytes read %d\n",
+			 bytesRead );
 	socket.encode( );
     
-	if(	! socket.code( md ) ||
+	if(	! socket.code_bytes( md, MAC_SIZE ) ||
         socket.put_file( &bytes, filePath.GetCStr( ) ) < 0  ||
 	    ! socket.eom( ) ) {
         dprintf( D_ALWAYS,
@@ -284,12 +281,12 @@ utilSafeGetFile( ReliSock& socket, const MyString& filePath )
 {
 	REPLICATION_ASSERT( filePath != "" );
 	filesize_t  bytes      = 0;
-	char*       md      = NULL;
+	char*       md      = ( char *) malloc( ( MAC_SIZE ) * sizeof( char ) );
 
 	dprintf( D_ALWAYS, "utilSafeGetFile %s started\n", filePath.GetCStr( ) );	
 	socket.decode( );
 
-    if( ! socket.code( md ) ||
+    if( ! socket.code_bytes( md, MAC_SIZE ) ||
 	    socket.get_file( &bytes, filePath.GetCStr( ), true ) < 0 ||
 	    ! socket.eom( ) ) {
         dprintf( D_ALWAYS, "utilSafeGetFile unable to get file %s, MAC or the "
@@ -299,7 +296,7 @@ utilSafeGetFile( ReliSock& socket, const MyString& filePath )
 		
 		return false;
     }
-	dprintf( D_ALWAYS, "utilSafeGetFile MAC received %s\n", md );
+	dprintf( D_ALWAYS, "utilSafeGetFile MAC received\n" );
 	ifstream file( filePath.GetCStr( ) );
 
     if( file.fail( ) ){
@@ -312,8 +309,8 @@ utilSafeGetFile( ReliSock& socket, const MyString& filePath )
 	int bytesTotal = 0;
 	int bytesRead  = 0;
 
-	char* buffer  = (char *) malloc( ( FILE_CHUNK_SIZE + 1 ) * sizeof( char ) );
-	char* localMd = (char *) malloc( ( MAC_SIZE + 1 ) * sizeof( char ) );
+	char* buffer  = (char *) malloc( ( FILE_CHUNK_SIZE ) * sizeof( char ) );
+	char* localMd = (char *) malloc( ( MAC_SIZE ) * sizeof( char ) );
 	
     MD5_CTX  md5Context;
 	// initializing MD5 structures
@@ -323,22 +320,19 @@ utilSafeGetFile( ReliSock& socket, const MyString& filePath )
 		// reading next chunk of file
 		file.read( buffer, FILE_CHUNK_SIZE );
 		bytesRead = file.gcount();
-		buffer[bytesRead] = '\0';
 		// generating MAC gradually, chunk by chunk
 		MD5_Update( & md5Context, buffer, bytesRead );
 
-		// dprintf( D_ALWAYS, "utilSafePutFile buffer read %s\n", buffer );
 		bytesTotal += bytesRead;
 	}
 	// generating MAC
 	MD5_Final( (unsigned char*) localMd, & md5Context );
-	localMd[MAC_SIZE] = '\0';
 	free( buffer );
 
-	if( strcmp(md, localMd) ) {
+	if( memcmp(md, localMd, MAC_SIZE) ) {
 		dprintf( D_ALWAYS, "utilSafeGetFile %s received with errors: "
-						   "local MAC - %s, remote MAC - %s\n",
-                 filePath.GetCStr( ), localMd, md );
+						   "local MAC does not match remote MAC\n",
+                 filePath.GetCStr( ) );
 		free( localMd );
 		free( md );
 
