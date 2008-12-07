@@ -164,7 +164,10 @@ AbstractReplicatorStateMachine::reinitialize()
         m_versionFilePath += "/";
         m_versionFilePath += VERSION_FILE_NAME;
         
-        buffer = param( "NEGOTIATOR_STATE_FILE" );
+        buffer = param( "STATE_FILE" );
+        if ( !buffer ) {
+            buffer = param( "NEGOTIATOR_STATE_FILE" );
+        }
     
         if( buffer ) {
             m_stateFilePath = buffer;
