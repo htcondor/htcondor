@@ -258,7 +258,7 @@ utilSafePutFile( ReliSock& socket, const MyString& filePath )
 
 	dprintf( D_ALWAYS,
 			 "utilSafePutFile MAC created, total bytes read %d\n",
-			 bytesRead );
+			 bytesTotal );
 	socket.encode( );
     
 	if(	! socket.code_bytes( md, MAC_SIZE ) ||
