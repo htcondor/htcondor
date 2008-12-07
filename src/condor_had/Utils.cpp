@@ -306,7 +306,6 @@ utilSafeGetFile( ReliSock& socket, const MyString& filePath )
 
         return false;
     }
-	int bytesTotal = 0;
 	int bytesRead  = 0;
 
 	char* buffer  = (char *) malloc( ( FILE_CHUNK_SIZE ) * sizeof( char ) );
@@ -322,8 +321,6 @@ utilSafeGetFile( ReliSock& socket, const MyString& filePath )
 		bytesRead = file.gcount();
 		// generating MAC gradually, chunk by chunk
 		MD5_Update( & md5Context, buffer, bytesRead );
-
-		bytesTotal += bytesRead;
 	}
 	// generating MAC
 	MD5_Final( (unsigned char*) localMd, & md5Context );
