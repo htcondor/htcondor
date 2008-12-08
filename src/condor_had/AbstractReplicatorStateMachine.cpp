@@ -147,10 +147,10 @@ AbstractReplicatorStateMachine::reinitialize()
         utilCrucialError( utilNoParameterError("HAD_CONNECTION_TIMEOUT",
 										       "HAD").GetCStr( ) );
     }
-    buffer = param( "RELEASE_DIR" );
+    buffer = param( "BIN" );
 
     if( buffer ) {
-        m_releaseDirectoryPath.sprintf( "%s/bin", buffer );
+        m_releaseDirectoryPath.sprintf( "%s", buffer );
 
         free( buffer );
     } else {
@@ -164,7 +164,10 @@ AbstractReplicatorStateMachine::reinitialize()
         m_versionFilePath += "/";
         m_versionFilePath += VERSION_FILE_NAME;
         
-        buffer = param( "NEGOTIATOR_STATE_FILE" );
+        buffer = param( "STATE_FILE" );
+        if ( !buffer ) {
+            buffer = param( "NEGOTIATOR_STATE_FILE" );
+        }
     
         if( buffer ) {
             m_stateFilePath = buffer;
@@ -317,17 +320,6 @@ AbstractReplicatorStateMachine::download( const char* daemonSinfulString )
 
     executable.sprintf( "%s/condor_transferer",
                                 m_releaseDirectoryPath.GetCStr( ) );
-# if 0
-    MyString processArguments;
-    processArguments.sprintf( "%s -f down %s %s 1 %s",
-                              executable.GetCStr( ),
-                              daemonSinfulString,
-                              m_versionFilePath.GetCStr( ),
-                              m_stateFilePath.GetCStr( ) );
-    dprintf( D_FULLDEBUG, "AbstractReplicatorStateMachine::download creating "
-                          "downloading condor_transferer process: \n \"%s\"\n",
-			 processArguments.GetCStr( ) );
-# else
 	ArgList  processArguments;
 	processArguments.AppendArg( executable.GetCStr() );
 	processArguments.AppendArg( "-f" );
@@ -336,7 +328,6 @@ AbstractReplicatorStateMachine::download( const char* daemonSinfulString )
 	processArguments.AppendArg( m_versionFilePath.GetCStr() );
 	processArguments.AppendArg( "1" );
 	processArguments.AppendArg( m_stateFilePath.GetCStr() );
-
 	// Get arguments from this ArgList object for descriptional purposes.
 	MyString	s;
 	processArguments.GetArgsStringForDisplay( &s );
@@ -344,7 +335,6 @@ AbstractReplicatorStateMachine::download( const char* daemonSinfulString )
 			 "AbstractReplicatorStateMachine::download creating "
 			 "downloading condor_transferer process: \n \"%s\"\n",
 			 s.GetCStr( ) );
-# endif
     // PRIV_USER_FINAL privilege is necessary here to create a user process,
     // after setting it to PRIV_UNKNOWN, the transferer process failed to
     // create when the pool was started with real uid of 'root'
@@ -398,18 +388,6 @@ AbstractReplicatorStateMachine::upload( const char* daemonSinfulString )
     executable.sprintf( "%s/condor_transferer",
                                 m_releaseDirectoryPath.GetCStr( ) );
 
-# if 0
-    MyString processArguments;
-    processArguments.sprintf( "%s -f up %s %s 1 %s",
-							  executable.GetCStr( ),
-                              daemonSinfulString,
-                              m_versionFilePath.GetCStr( ),
-                              m_stateFilePath.GetCStr( ) );
-    dprintf( D_FULLDEBUG,
-			 "AbstractReplicatorStateMachine::upload creating uploading "
-			 "condor_transferer process:\n\"%s\"\n",
-			 processArguments.GetCStr( ) );
-# else
 	ArgList  processArguments;
 	processArguments.AppendArg( executable.GetCStr() );
 	processArguments.AppendArg( "-f" );
@@ -426,7 +404,6 @@ AbstractReplicatorStateMachine::upload( const char* daemonSinfulString )
 			 "AbstractReplicatorStateMachine::upload creating "
 			 "uploading condor_transferer process: \n \"%s\"\n",
 			 s.GetCStr( ) );
-# endif
 
 	// PRIV_USER_FINAL privilege is necessary here to create a user process,
 	// after setting it to PRIV_UNKNOWN, the transferer process failed to
