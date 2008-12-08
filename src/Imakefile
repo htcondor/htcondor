@@ -63,7 +63,7 @@
 # define LeaseManagerProgs
 #endif
 
-#if HAVE_EXT_OPENSSL && HAVE_EXT_GSOAP
+#if HAVE_EXT_OPENSSL && HAVE_EXT_GSOAP && !IS_AIX
 #define EC2 amazon
 #else
 #define EC2
