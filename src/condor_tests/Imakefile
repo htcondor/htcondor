@@ -265,7 +265,8 @@ TESTCLASS(job_vmu_basic,btdebug)
 #endif 
 
 /* We're not building OpenSSL on HPUX */
-#if !defined( IS_HPUX11 )
+/* The threads in amazon_gahp are causing problems on AIX */
+#if !defined( IS_HPUX11 ) && !defined( IS_AIX )
 DESC(job_amazon_basic,"Amazon EC2 test")
 RUN(job_amazon_basic)
 TESTCLASS(job_amazon_basic,quick)
