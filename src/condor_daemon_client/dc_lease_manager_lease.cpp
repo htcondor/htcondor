@@ -201,6 +201,70 @@ DCLeaseManagerLease::setLeaseDuration(
 	return 0;
 }
 
+union
+{
+	struct
+	{
+		char	m_lease_id[256];
+		char	m_lease_ad[2048];
+		int		m_lease_duration;
+		int		m_lease_time;
+		bool	m_release_lease_when_done;
+		bool	m_mark;
+	} 		m_fields;
+	char	m_static[4096];
+} LeaseIoBuf;
+
+bool
+DCLeaseManagerLease::fwrite( FILE *fp ) const
+{
+	classad::ClassAdUnParser	unparser;
+	LeaseIoBuf					buf;
+	string						str;
+
+	memset( &buf, 0, sizeof(buf) );
+
+	strncpy( buf.m_fields.m_lease_id,
+			 this->m_lease_id,
+			 sizeof(buf.m_fields.m_lease_id)-1 );
+
+	unparser.Unparse( str, this->m_lease_ad );
+	strncpy( buf.m_fields.m_lease_ad, str, sizeof(buf.m_fields.m_lease_ad)-1 );
+
+	buf.m_fields.m_lease_duration			= this->m_lease_duration;
+	buf.m_fields.m_lease_time				= this->m_lease_time;
+	buf.m_fields.m_release_lease_when_done	= this->m_release_lease_when_done;
+	buf.m_fields.m_mark						= this->m_mark;
+
+	return ( ::fwrite( buf, sizeof(buf), 1, fp ) == 1 );
+}
+
+bool
+DCLeaseManagerLease::fread( FILE *fp )
+{
+	classad::ClassAdParser	parser;
+	LeaseIoBuf				buf;
+	string					str;
+
+	if ( fread( buf, sizeof(buf), 1, fp ) != 1 ) {
+		return false;
+	}
+
+	this->m_lease_id = buf.m_fields.m_lease_id;
+	this->m_lease_ad = parser.Parse( buf.m_fields.m_lease_ad, true );
+	if ( NULL == this->m_lease_ad ) {
+		return false;
+	}
+
+	this->m_lease_duration			= buf.m_fields.m_lease_duration;
+	this->m_lease_time				= buf.m_fields.m_lease_time;
+	this->m_release_lease_when_done	= buf.m_fields.m_release_lease_when_done;
+	this->m_mark					= buf.m_fields.m_mark;
+
+	return true;
+}
+
+
 // *** DCLeaseManagerLease list helper functions
 
 void

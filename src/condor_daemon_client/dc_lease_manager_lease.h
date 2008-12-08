@@ -24,6 +24,7 @@
 #include "condor_common.h"
 #include "stream.h"
 #include "daemon.h"
+#include <stdio.h>
 
 
 #define WANT_CLASSAD_NAMESPACE
@@ -83,13 +84,17 @@ class DCLeaseManagerLease {
 	bool LeaseExpired( time_t now = 0 ) const
 		{ return ( LeaseRemaining(now) > 0 ); };
 
+	// Read/write leases from/to a stdio file
+	bool fwrite( FILE *fp ) const;
+	bool fread(  FILE *fp );
+
   private:
 	classad::ClassAd	*m_lease_ad;
-	string				m_lease_id;
-	int					m_lease_duration;
-	int					m_lease_time;
-	bool				m_release_lease_when_done;
-	bool				m_mark;
+	string				 m_lease_id;
+	int					 m_lease_duration;
+	int					 m_lease_time;
+	bool				 m_release_lease_when_done;
+	bool				 m_mark;
 };
 
 // Free a list of leases
