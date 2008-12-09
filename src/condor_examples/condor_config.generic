@@ -21,11 +21,6 @@
 ##  various settings in here and possible ways to configure your
 ##  pool. 
 ##
-##  If you are installing Condor as root and then handing over the
-##  administration of this file to a person you do not trust with
-##  root access, please read the Installation chapter paying careful
-##  note to the condor_config.root entries.
-##
 ##  Unless otherwise specified, settings that are commented out show
 ##  the defaults that are used if you don't define a value.  Settings
 ##  that are defined here MUST BE DEFINED since they have no default
@@ -231,10 +226,9 @@ HOSTALLOW_NEGOTIATOR = $(CONDOR_HOST)
 HOSTALLOW_NEGOTIATOR_SCHEDD = $(CONDOR_HOST), $(FLOCK_NEGOTIATOR_HOSTS)
 
 ##  Config access.  Machines listed here can use the condor_config_val
-##  tool to modify all daemon configurations except those specified in
-##  the condor_config.root file.  This level of host-wide access
-##  should only be granted with extreme caution.  By default, config
-##  access is denied from all hosts.
+##  tool to modify all daemon configurations.  This level of host-wide
+##  access should only be granted with extreme caution.  By default,
+##  config access is denied from all hosts.
 #HOSTALLOW_CONFIG = trusted-host.your.domain
 
 ##  Flocking Configs.  These are the real things that Condor looks at,
