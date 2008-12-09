@@ -26,7 +26,6 @@
 /* Since this is a Condor API header file, we want to minimize our
    reliance on other Condor files to ease distribution.  -Jim B. */
 #include "condor_event.h"
-#include "condor_sys_formats.h"
 
 #if HAVE_SYS_TYPES_H
 #  include <sys/types.h>
