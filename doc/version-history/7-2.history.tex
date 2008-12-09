@@ -49,6 +49,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item \Security A flaw was found that could allow unauthenticated users to
+cause condor daemons to shut down and for running jobs to be removed from
+the queue.
+
 % PR 952
 \item Fixed a bug that caused \Condor{dagman} to stay in the Condor
 queue if it was accidentally submitted with an empty DAG file.
@@ -83,6 +87,14 @@ backfill are included in the matchmaking process.
 \item \Condor{submit\_dag} now generates a \File{.condor.sub} file with
 \MacroNI{copy\_to\_spool} set to true (to ease version upgrades while
 large DAGs are running).
+
+\item \Condor{job\_router} did not work when managing jobs from
+multiple users when read access to the \Condor{schedd} required
+authentication.  The \Condor{job\_router} was also not able to use
+authentication methods other than FS.  Now it can use any
+authentication method as long as the resulting identity is listed in
+\MacroNI{QUEUE\_SUPER\_USERS} or the \Condor{job\_router} and
+\Condor{schedd} are running in personal-condor (non-root) mode.
 
 \end{itemize}
 
