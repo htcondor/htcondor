@@ -282,6 +282,10 @@ ReadUserLog::InternalInitialize ( int max_rotations,
 								  bool enable_header_read,
 								  bool force_disable_locking )
 {
+	if ( m_initialized ) {
+		return false;
+	}
+
 	m_handle_rot = ( max_rotations > 0 );
 	m_max_rotations = max_rotations;
 	m_read_header = enable_header_read;
