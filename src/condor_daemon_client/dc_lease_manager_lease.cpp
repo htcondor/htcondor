@@ -2,13 +2,13 @@
  *
  * Copyright (C) 1990-2008, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -43,6 +43,7 @@ DCLeaseManagerLease::DCLeaseManagerLease( time_t now )
 	m_lease_duration = 0;
 	m_release_lease_when_done = true;
 	m_mark = false;
+	m_dead = false;
 	setLeaseStart( now );
 }
 
@@ -50,14 +51,15 @@ DCLeaseManagerLease::DCLeaseManagerLease( const DCLeaseManagerLease &lease,
 										  time_t now )
 {
 	m_mark = false;
-	if ( lease.LeaseAd( ) ) {
-		this->m_lease_ad = new classad::ClassAd( *(lease.LeaseAd( )) );
+	m_dead = false;
+	if ( lease.leaseAd( ) ) {
+		this->m_lease_ad = new classad::ClassAd( *(lease.leaseAd( )) );
 	} else {
 		this->m_lease_ad = NULL;
 	}
-	setLeaseId( lease.LeaseId() );
-	setLeaseDuration( lease.LeaseDuration( ) );
-	this->m_release_lease_when_done = lease.ReleaseLeaseWhenDone( );
+	setLeaseId( lease.leaseId() );
+	setLeaseDuration( lease.leaseDuration( ) );
+	this->m_release_lease_when_done = lease.releaseLeaseWhenDone( );
 	setLeaseStart( now );
 }
 
@@ -67,6 +69,7 @@ DCLeaseManagerLease::DCLeaseManagerLease(
 	)
 {
 	m_mark = false;
+	m_dead = false;
 	m_lease_ad = NULL;
 	initFromClassAd( ad, now );
 }
@@ -77,6 +80,7 @@ const classad::ClassAd	&ad,
 	)
 {
 	m_mark = false;
+	m_dead = false;
 	m_lease_ad = NULL;
 	initFromClassAd( ad, now );
 }
@@ -88,6 +92,7 @@ DCLeaseManagerLease::DCLeaseManagerLease(
 	time_t				now )
 {
 	m_mark = false;
+	m_dead = false;
 	this->m_lease_ad = NULL;
 	setLeaseId( lease_id );
 	setLeaseDuration( lease_duration );
@@ -161,17 +166,18 @@ DCLeaseManagerLease::copyUpdates( const DCLeaseManagerLease &lease )
 	// Don't touch the lease ID
 
 	// Copy other attributes
-	setLeaseDuration( lease.LeaseDuration( ) );
-	this->m_release_lease_when_done = lease.ReleaseLeaseWhenDone( );
-	setLeaseStart( lease.LeaseTime() );
+	setLeaseDuration( lease.leaseDuration( ) );
+	this->m_release_lease_when_done = lease.releaseLeaseWhenDone( );
+	setLeaseStart( lease.leaseTime() );
 	setMark( lease.getMark() );
+	setDead( lease.isDead() );
 
 	// If there's an ad in the lease to copy, free the old one & copy
-	if ( lease.LeaseAd( ) ) {
+	if ( lease.leaseAd( ) ) {
 		if ( this->m_lease_ad ) {
 			delete m_lease_ad;
 		}
-		this->m_lease_ad = new classad::ClassAd( *(lease.LeaseAd( )) );
+		this->m_lease_ad = new classad::ClassAd( *(lease.leaseAd( )) );
 	}
 	// Otherwise, if there is an old ad, update it
 	else if ( this->m_lease_ad ) {
@@ -201,7 +207,7 @@ DCLeaseManagerLease::setLeaseDuration(
 	return 0;
 }
 
-union
+union LeaseIoBuf
 {
 	struct
 	{
@@ -211,9 +217,10 @@ union
 		int		m_lease_time;
 		bool	m_release_lease_when_done;
 		bool	m_mark;
+		bool	m_dead;
 	} 		m_fields;
 	char	m_static[4096];
-} LeaseIoBuf;
+};
 
 bool
 DCLeaseManagerLease::fwrite( FILE *fp ) const
@@ -225,18 +232,21 @@ DCLeaseManagerLease::fwrite( FILE *fp ) const
 	memset( &buf, 0, sizeof(buf) );
 
 	strncpy( buf.m_fields.m_lease_id,
-			 this->m_lease_id,
+			 this->m_lease_id.c_str(),
 			 sizeof(buf.m_fields.m_lease_id)-1 );
 
 	unparser.Unparse( str, this->m_lease_ad );
-	strncpy( buf.m_fields.m_lease_ad, str, sizeof(buf.m_fields.m_lease_ad)-1 );
+	strncpy( buf.m_fields.m_lease_ad,
+			 str.c_str(),
+			 sizeof(buf.m_fields.m_lease_ad)-1 );
 
 	buf.m_fields.m_lease_duration			= this->m_lease_duration;
 	buf.m_fields.m_lease_time				= this->m_lease_time;
 	buf.m_fields.m_release_lease_when_done	= this->m_release_lease_when_done;
 	buf.m_fields.m_mark						= this->m_mark;
+	buf.m_fields.m_dead						= this->m_dead;
 
-	return ( ::fwrite( buf, sizeof(buf), 1, fp ) == 1 );
+	return ( ::fwrite( &buf, sizeof(buf), 1, fp ) == 1 );
 }
 
 bool
@@ -246,12 +256,12 @@ DCLeaseManagerLease::fread( FILE *fp )
 	LeaseIoBuf				buf;
 	string					str;
 
-	if ( fread( buf, sizeof(buf), 1, fp ) != 1 ) {
+	if ( ::fread( &buf, sizeof(buf), 1, fp ) != 1 ) {
 		return false;
 	}
 
 	this->m_lease_id = buf.m_fields.m_lease_id;
-	this->m_lease_ad = parser.Parse( buf.m_fields.m_lease_ad, true );
+	this->m_lease_ad = parser.ParseClassAd( buf.m_fields.m_lease_ad, true );
 	if ( NULL == this->m_lease_ad ) {
 		return false;
 	}
@@ -260,6 +270,7 @@ DCLeaseManagerLease::fread( FILE *fp )
 	this->m_lease_time				= buf.m_fields.m_lease_time;
 	this->m_release_lease_when_done	= buf.m_fields.m_release_lease_when_done;
 	this->m_mark					= buf.m_fields.m_mark;
+	this->m_dead					= buf.m_fields.m_dead;
 
 	return true;
 }
@@ -267,18 +278,55 @@ DCLeaseManagerLease::fread( FILE *fp )
 
 // *** DCLeaseManagerLease list helper functions
 
-void
-DCLeaseManagerLease_FreeList( list<DCLeaseManagerLease *> &lease_list )
+int
+DCLeaseManagerLease_freeList( list<DCLeaseManagerLease *> &lease_list )
 {
+	int		count = 0;
 	while( lease_list.size() ) {
 		DCLeaseManagerLease *lease = *(lease_list.begin( ));
 		delete lease;
 		lease_list.pop_front( );
+		count++;
 	}
+	return count;
 }
 
 int
-DCLeaseManagerLease_RemoveLeases(
+DCLeaseManagerLease_copyList(
+	const list<const DCLeaseManagerLease *>	&source_list,
+	list<const DCLeaseManagerLease *>		&dest_list )
+{
+	int		count = 0;
+
+	list<const DCLeaseManagerLease *>::const_iterator iter;
+	for( iter = source_list.begin(); iter != source_list.end(); iter++ ) {
+		const DCLeaseManagerLease *lease = *iter;
+		dest_list.push_back( lease );
+		count++;
+	}
+
+	return count;
+}
+
+int
+DCLeaseManagerLease_copyList(
+	const list<DCLeaseManagerLease *>	&source_list,
+	list<DCLeaseManagerLease *>			&dest_list )
+{
+	int		count = 0;
+
+	list<DCLeaseManagerLease *>::const_iterator iter;
+	for( iter = source_list.begin(); iter != source_list.end(); iter++ ) {
+		DCLeaseManagerLease *lease = *iter;
+		dest_list.push_back( lease );
+		count++;
+	}
+
+	return count;
+}
+
+int
+DCLeaseManagerLease_removeLeases(
 	list<DCLeaseManagerLease *>				&lease_list,
 	const list<const DCLeaseManagerLease *>	&remove_list
 	)
@@ -293,7 +341,7 @@ DCLeaseManagerLease_RemoveLeases(
 			 iter2 != lease_list.end();
 			 iter2++ ) {
 			DCLeaseManagerLease	*lease = *iter2;
-			if ( remove->LeaseId() == lease->LeaseId() ) {
+			if ( remove->leaseId() == lease->leaseId() ) {
 				matched = true;
 				lease_list.erase( iter2 );	// Note: invalidates iter
 				delete lease;
@@ -308,7 +356,7 @@ DCLeaseManagerLease_RemoveLeases(
 }
 
 int
-DCLeaseManagerLease_UpdateLeases(
+DCLeaseManagerLease_updateLeases(
 	list<DCLeaseManagerLease *>				&lease_list,
 	const list<const DCLeaseManagerLease *>	&update_list
 	)
@@ -323,7 +371,7 @@ DCLeaseManagerLease_UpdateLeases(
 			 iter2 != lease_list.end();
 			 iter2++ ) {
 			DCLeaseManagerLease	*lease = *iter2;
-			if ( update->LeaseId() == lease->LeaseId() ) {
+			if ( update->idMatch(*lease) ) {
 				matched = true;
 				lease->copyUpdates( *update );
 				break;
@@ -337,7 +385,7 @@ DCLeaseManagerLease_UpdateLeases(
 }
 
 int
-DCLeaseManagerLease_MarkLeases(
+DCLeaseManagerLease_markLeases(
 	list<DCLeaseManagerLease *>		&lease_list,
 	bool							mark
 	)
@@ -352,19 +400,18 @@ DCLeaseManagerLease_MarkLeases(
 }
 
 int
-DCLeaseManagerLease_RemoveMarkedLeases(
+DCLeaseManagerLease_removeMarkedLeases(
 	list<DCLeaseManagerLease *>		&lease_list,
 	bool							mark
 	)
 {
 	list<const DCLeaseManagerLease *> remove_list;
 	list<const DCLeaseManagerLease *> const_list =
-		*DCLeaseManagerLease_GetConstList( &lease_list );
-	DCLeaseManagerLease_GetMarkedLeases( const_list, mark, remove_list );
+		DCLeaseManagerLease_getConstList( lease_list );
+	DCLeaseManagerLease_getMarkedLeases( const_list, mark, remove_list );
 
-	for( list<const DCLeaseManagerLease *>::iterator iter = remove_list.begin();
-		 iter != remove_list.end();
-		 iter++ ) {
+	list<const DCLeaseManagerLease *>::iterator iter;
+	for( iter = remove_list.begin(); iter != remove_list.end(); iter++ ) {
 		DCLeaseManagerLease *lease = const_cast<DCLeaseManagerLease*>( *iter );
 		lease_list.remove( lease );
 		delete lease;
@@ -374,7 +421,7 @@ DCLeaseManagerLease_RemoveMarkedLeases(
 }
 
 int
-DCLeaseManagerLease_CountMarkedLeases(
+DCLeaseManagerLease_countMarkedLeases(
 	const list<const DCLeaseManagerLease *> &lease_list,
 	bool							mark
 	)
@@ -393,7 +440,7 @@ DCLeaseManagerLease_CountMarkedLeases(
 }
 
 int
-DCLeaseManagerLease_GetMarkedLeases(
+DCLeaseManagerLease_getMarkedLeases(
 	const list<const DCLeaseManagerLease *>	&lease_list,
 	bool									mark,
 	list<const DCLeaseManagerLease *>			&marked_lease_list
@@ -413,12 +460,55 @@ DCLeaseManagerLease_GetMarkedLeases(
 	return count;
 }
 
-list<const DCLeaseManagerLease *> *
-DCLeaseManagerLease_GetConstList(
-	list<DCLeaseManagerLease *>		*non_const_list
+list<const DCLeaseManagerLease *> &
+DCLeaseManagerLease_getConstList(
+	const list<DCLeaseManagerLease *>	&non_const_list
 	)
 {
-	list<const DCLeaseManagerLease *> *const_list =
-		(list<const DCLeaseManagerLease *>*) non_const_list;
-	return const_list;
+	typedef list<DCLeaseManagerLease *>			LeaseList;
+	typedef list<const DCLeaseManagerLease *>	ConstList;
+
+	const ConstList *const_list = (const ConstList *) &non_const_list;
+	return *(const_cast<ConstList *>(const_list));
+}
+
+int
+DCLeaseManagerLease_fwriteList(
+	const list<const DCLeaseManagerLease *>	&lease_list,
+	FILE									*fp
+	)
+{
+	int		count = 0;
+	list<const DCLeaseManagerLease *>::const_iterator iter;
+	for( iter  = lease_list.begin();
+		 iter != lease_list.end();
+		 iter ++ ) {
+		const DCLeaseManagerLease	*lease = *iter;
+		if ( ! lease->fwrite( fp ) ) {
+			break;
+		}
+		count++;
+	}
+	return count;
+}
+
+int
+DCLeaseManagerLease_freadList(
+	list<DCLeaseManagerLease *>		&lease_list,
+	FILE							*fp
+	)
+{
+	int		count = 0;
+	while( 1 ) {
+		DCLeaseManagerLease	*lease = new DCLeaseManagerLease( );
+		if ( lease->fread( fp ) ) {
+			lease_list.push_back( lease );
+			count++;
+		}
+		else {
+			delete lease;
+			break;
+		}
+	}
+	return count;
 }

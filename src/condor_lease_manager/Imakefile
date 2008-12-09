@@ -1,6 +1,6 @@
 NAME = condor_lease_manager
 all_target( $(NAME) )
-TESTS =  	condor_lease_manager_test condor_lease_manager_test2
+TESTS =  	condor_lease_manager_test condor_lease_manager_tester
 
 soapobjs(leaseManager)
 
@@ -37,7 +37,7 @@ strip_target($(NAME),sbin,EXECUTABLE_MODE)
 static_target($(NAME),$(OBJ),$(LIB),$(STATIC_DIR)/sbin)
 
 c_plus_target( condor_lease_manager_test,lease_manager_test.o,$(TEST_LIB) )
-c_plus_target( condor_lease_manager_test2,lease_manager_test2.o,$(TEST_LIB) )
+c_plus_target( condor_lease_manager_tester,lease_manager_tester.o,$(TEST_LIB) )
 
 
 html:
@@ -45,7 +45,7 @@ html:
 tests: $(TESTS)
 
 testbin:: all
-testbin_target(condor_lease_manager_test2,755)
+testbin_target(condor_lease_manager_tester,755)
 
 -include Makelocal.i
 

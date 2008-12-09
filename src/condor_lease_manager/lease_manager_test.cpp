@@ -49,21 +49,21 @@ void show_leases( const char *label, list< const DCLeaseManagerLease *> &leases 
 		 iter != leases.end( );
 		 iter++ ) {
 		const DCLeaseManagerLease	*lease = *iter;
-		classad::ClassAd		*ad = lease->LeaseAd( );
+		classad::ClassAd			*ad = lease->leaseAd( );
 		string	name;
 		ad->EvaluateAttrString( "ResourceName", name );
 		printf( "  Resource=%s, LeaseID=%s, duration=%d, rlwd=%d\n",
 				name.c_str(),
-				lease->LeaseId().c_str(),
-				lease->LeaseDuration(),
-				lease->ReleaseLeaseWhenDone() );
+				lease->leaseId().c_str(),
+				lease->leaseDuration(),
+				lease->releaseLeaseWhenDone() );
 	}
 }
 
 // Show leases -- const list version
 void show_leases( const char *label, list< DCLeaseManagerLease *> &leases )
 {
-	show_leases( label, *DCLeaseManagerLease_GetConstList(&leases) );
+	show_leases( label, DCLeaseManagerLease_getConstList(leases) );
 }
 
 int min_lease_duration( list< DCLeaseManagerLease *> &leases )
@@ -73,8 +73,8 @@ int min_lease_duration( list< DCLeaseManagerLease *> &leases )
 		 iter != leases.end( );
 		 iter++ ) {
 		DCLeaseManagerLease	*lease = *iter;
-		if ( lease->LeaseDuration() < min_duration ) {
-			min_duration = lease->LeaseDuration();
+		if ( lease->leaseDuration() < min_duration ) {
+			min_duration = lease->leaseDuration();
 		}
 	}
 	return min_duration;
@@ -201,7 +201,7 @@ int main( int argc, char* argv[] )
 		printf( "Match Ad=%s\n", adbuffer.c_str() );
 	}
 
-	list< DCLeaseManagerLease *> leases;
+	list<DCLeaseManagerLease *> leases;
 
 	DCLeaseManager	*lm = new DCLeaseManager( );
 
@@ -227,14 +227,14 @@ int main( int argc, char* argv[] )
 
 		// Go through the list of leases, release RLWD ones, renew the others
 		list<DCLeaseManagerLease *> renew_list;
-		list<const DCLeaseManagerLease *> release_list;
+		list<DCLeaseManagerLease *> release_list;
 		for( list< DCLeaseManagerLease *>::iterator iter = leases.begin( );
 			 iter != leases.end( );
 			 iter++ ) {
 			DCLeaseManagerLease	*lease = *iter;
-			if ( lease->ReleaseLeaseWhenDone() ) {
+			if ( lease->releaseLeaseWhenDone() ) {
 				release_list.push_back( lease );
-			} else if ( lease->LeaseRemaining( now ) < 60 ) {
+			} else if ( lease->secondsRemaining( now ) < 60 ) {
 				if ( random() % 5 ) {
 					renew_list.push_back( lease );
 				} else {
@@ -252,7 +252,9 @@ int main( int argc, char* argv[] )
 			} else {
 				dump( "release", release_list.size(), t1 );
 			}
-			DCLeaseManagerLease_RemoveLeases( leases, release_list );
+			DCLeaseManagerLease_removeLeases(
+				leases,
+				DCLeaseManagerLease_getConstList(release_list ) );
 		}
 
 		// Renew leases
@@ -261,38 +263,39 @@ int main( int argc, char* argv[] )
 			list<DCLeaseManagerLease *> renewed_list;
 
 			// Mark all of the leases to renew as false, all others as true
-			DCLeaseManagerLease_MarkLeases( leases, true );
-			DCLeaseManagerLease_MarkLeases( renew_list, false );
+			DCLeaseManagerLease_markLeases( leases, true );
+			DCLeaseManagerLease_markLeases( renew_list, false );
 
 			// Now, do the renew
 			double	t1 = dtime();
-			if ( !lm->renewLeases(*DCLeaseManagerLease_GetConstList(&renew_list),
+			if ( !lm->renewLeases(DCLeaseManagerLease_getConstList(renew_list),
 								  renewed_list ) ) {
 				printf( "Renew failed!!!\n" );
 			} else {
 				dump( "renew", renew_list.size(), t1 );
 
 				// Mark all renewed leass as true
-				DCLeaseManagerLease_MarkLeases( renewed_list, true );
+				DCLeaseManagerLease_markLeases( renewed_list, true );
 
 				// Update the renewed leases
-				DCLeaseManagerLease_UpdateLeases(
-					leases, *DCLeaseManagerLease_GetConstList(&renewed_list) );
+				DCLeaseManagerLease_updateLeases(
+					leases,
+					DCLeaseManagerLease_getConstList(renewed_list) );
 
 				// Remove the leases that are still marked as false
 				list<const DCLeaseManagerLease *> remove_list;
-				int count = DCLeaseManagerLease_GetMarkedLeases(
-					*DCLeaseManagerLease_GetConstList( &leases ),
+				int count = DCLeaseManagerLease_getMarkedLeases(
+					DCLeaseManagerLease_getConstList( leases ),
 					false, remove_list );
 				if ( count ) {
 					show_leases( "non-renewed", remove_list );
 					printf( "Removing the %d marked leases\n", count );
-					DCLeaseManagerLease_RemoveLeases( leases, remove_list );
+					DCLeaseManagerLease_removeLeases( leases, remove_list );
 				}
 			}
 
 			// Finally, remove the renewed leases themselves
-			DCLeaseManagerLease_FreeList( renewed_list );
+			DCLeaseManagerLease_freeList( renewed_list );
 		}
 
 		// Get more leases
@@ -319,7 +322,7 @@ int main( int argc, char* argv[] )
 	if ( leases.size() ) {
 		printf( "Releasing leases\n" );
 		double	t1 = dtime();
-		if ( !lm->releaseLeases( *DCLeaseManagerLease_GetConstList(&leases))) {
+		if ( !lm->releaseLeases( leases ) ) {
 			fprintf( stderr, "release failed\n" );
 		}
 		dump( "release", leases.size(), t1 );
