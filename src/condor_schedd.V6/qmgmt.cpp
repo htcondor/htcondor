@@ -79,6 +79,11 @@ extern  void    cleanup_ckpt_files(int, int, const char*);
 extern	bool	service_this_universe(int, ClassAd *);
 static QmgmtPeer *Q_SOCK = NULL;
 
+// Hash table with an entry for every job owner that
+// has existed in the queue since this schedd has been
+// running.  Used by SuperUserAllowedToSetOwnerTo().
+static HashTable<MyString,int> owner_history(MyStringHash);
+
 int		do_Q_request(ReliSock *,bool &may_fork);
 void	FindPrioJob(PROC_ID &);
 
@@ -113,6 +118,7 @@ const char HeaderKey[] = "0.0";
 
 static ForkWork forker;
 
+static void AddOwnerHistory(const MyString &user);
 static void AppendHistory(ClassAd*);
 static void MaybeRotateHistory(int size_to_append);
 static void RemoveExtraHistoryFiles(void);
@@ -762,6 +768,9 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 				continue;
 			}
 
+				// initialize our list of job owners
+			AddOwnerHistory( owner );
+
 			if (!ad->LookupInteger(ATTR_CLUSTER_ID, cluster)) {
 				dprintf(D_ALWAYS,
 						"Job %s has no %s attribute.  Removing....\n",
@@ -976,6 +985,28 @@ isQueueSuperUser( const char* user )
 			return true;
 		}
 	}
+	return false;
+}
+
+static void
+AddOwnerHistory(const MyString &user) {
+	owner_history.insert(user,1);
+}
+
+static bool
+SuperUserAllowedToSetOwnerTo(const MyString &user) {
+		// To avoid giving the queue super user (e.g. condor)
+		// the ability to run as innocent people who have never
+		// even run a job, only allow them to set the owner
+		// attribute of a job to a value we have seen before.
+		// The JobRouter depends on this when it is running as
+		// root/condor.
+
+	int junk = 0;
+	if( owner_history.lookup(user,junk) != -1 ) {
+		return true;
+	}
+	dprintf(D_FULLDEBUG,"Queue super user not allowed to set owner to %s, because this instance of the schedd has never seen that user submit any jobs.\n",user.Value());
 	return false;
 }
 
@@ -1711,7 +1742,6 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 //	LogSetAttribute	*log;
 	char			key[PROC_ID_STR_BUFLEN];
 	ClassAd			*ad = NULL;
-	MyString		alternate_attrname_buf;
 	MyString		new_value;
 
 	// Only an authenticated user or the schedd itself can set an attribute.
@@ -1759,18 +1789,20 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 
 	// check for security violations.
 	// first, make certain ATTR_OWNER can only be set to who they really are.
-	if (Q_SOCK && stricmp(attr_name, ATTR_OWNER) == 0) 
+	if (stricmp(attr_name, ATTR_OWNER) == 0) 
 	{
-		const char* sock_owner = Q_SOCK->getOwner();
-		if ( sock_owner ) {
-			alternate_attrname_buf.sprintf( "\"%s\"", sock_owner );
+		const char* sock_owner = Q_SOCK ? Q_SOCK->getOwner() : "";
+		if( !sock_owner ) {
+			sock_owner = "";
 		}
+
 		if ( stricmp(attr_value,"UNDEFINED")==0 ) {
 				// If the user set the owner to be undefined, then
 				// just fill in the value of Owner with the owner name
 				// of the authenticated socket.
-			if ( sock_owner ) {
-				attr_value  = alternate_attrname_buf.Value();
+			if ( sock_owner && *sock_owner ) {
+				new_value.sprintf("\"%s\"",sock_owner);
+				attr_value  = new_value.Value();
 			} else {
 				// socket not authenticated and Owner is UNDEFINED.
 #if !defined(WIN32)
@@ -1782,27 +1814,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 
 			}
 		}
-		if (!qmgmt_all_users_trusted && 
-#if defined(WIN32)
-			(stricmp(attr_value, alternate_attrname_buf.Value()) != 0)) {
-#else
-			(strcmp(attr_value, alternate_attrname_buf.Value()) != 0)) {
-				errno = EACCES;
-#endif
-				dprintf(D_ALWAYS, "SetAttribute security violation: "
-					"setting owner to %s when active owner is %s\n",
-					attr_value, alternate_attrname_buf.Value());
-				return -1;
-		}
-	}
 
-	if (stricmp(attr_name, ATTR_OWNER) == 0) {
-			// If we got this far, we're allowing the given value for
-			// ATTR_OWNER to be set.  However, now, we should try to
-			// insert a value for ATTR_USER, too, so that's always in
-			// the job queue.
-		int nice_user = 0;
-		MyString user;
 			// We can't just use attr_value, since it contains '"'
 			// marks.  Carefully remove them here.
 		MyString owner_buf;
@@ -1815,11 +1827,40 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			}
 			owner = owner_buf.Value();
 		}
+
+
+		if (!qmgmt_all_users_trusted
+#if defined(WIN32)
+			&& (stricmp(owner,sock_owner) != 0)
+#else
+			&& (strcmp(owner,sock_owner) != 0)
+#endif
+			&& (!isQueueSuperUser(sock_owner) || !SuperUserAllowedToSetOwnerTo(owner)) ) {
+#ifndef WIN32
+				errno = EACCES;
+#endif
+				dprintf(D_ALWAYS, "SetAttribute security violation: "
+					"setting owner to %s when active owner is \"%s\"\n",
+					attr_value, sock_owner);
+				return -1;
+		}
+
+
+			// If we got this far, we're allowing the given value for
+			// ATTR_OWNER to be set.  However, now, we should try to
+			// insert a value for ATTR_USER, too, so that's always in
+			// the job queue.
+		int nice_user = 0;
+		MyString user;
+
 		GetAttributeInt( cluster_id, proc_id, ATTR_NICE_USER,
 						 &nice_user );
 		user.sprintf( "\"%s%s@%s\"", (nice_user) ? "nice-user." : "",
 				 owner, scheduler.uidDomain() );
 		SetAttribute( cluster_id, proc_id, ATTR_USER, user.Value() );
+
+			// Also update the owner history hash table
+		AddOwnerHistory(owner);
 	}
 	else if (stricmp(attr_name, ATTR_CLUSTER_ID) == 0) {
 		if (atoi(attr_value) != cluster_id) {
