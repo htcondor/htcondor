@@ -254,7 +254,7 @@ TESTCLASS(job_dagman_splice-O,full)
 TESTCLASS(job_dagman_splice-O,quicknolink)
 TESTCLASS(job_dagman_splice-O,btdebug)
 
-/* vmuniverse smoke test in larg repository */
+/* vmuniverse tests in larg repository */
 
 #if defined(HAVE_VMWARE) && defined(HAVE_CONDOR_TEST_LRG)
 DESC(job_vmu_basic,"VM Universe smoke test")
@@ -264,6 +264,27 @@ TESTCLASS(job_vmu_basic,quick)
 TESTCLASS(job_vmu_basic,full)
 TESTCLASS(job_vmu_basic,quicknolink)
 TESTCLASS(job_vmu_basic,btdebug)
+DESC(job_vmu_cdrom,"VM Universe CD-ROM test")
+RUN(job_vmu_cdrom)
+TESTCLASS(job_vmu_cdrom,core)
+TESTCLASS(job_vmu_cdrom,quick)
+TESTCLASS(job_vmu_cdrom,full)
+TESTCLASS(job_vmu_cdrom,quicknolink)
+TESTCLASS(job_vmu_cdrom,btdebug)
+DESC(job_vmu_network,"VM Universe networking test")
+RUN(job_vmu_network)
+TESTCLASS(job_vmu_network,core)
+TESTCLASS(job_vmu_network,quick)
+TESTCLASS(job_vmu_network,full)
+TESTCLASS(job_vmu_network,quicknolink)
+TESTCLASS(job_vmu_network,btdebug)
+DESC(job_vmu_ckpt,"VM Universe checkpoint test")
+RUN(job_vmu_ckpt)
+TESTCLASS(job_vmu_ckpt,core)
+TESTCLASS(job_vmu_ckpt,quick)
+TESTCLASS(job_vmu_ckpt,full)
+TESTCLASS(job_vmu_ckpt,quicknolink)
+TESTCLASS(job_vmu_ckpt,btdebug)
 #endif 
 
 /* We're not building OpenSSL on HPUX */
