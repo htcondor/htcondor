@@ -86,6 +86,7 @@ class VMGahpServer : public Service {
 		int pipe_ready();
 		int err_pipe_ready();
 		int poll();
+		int poll_now();
 		void poll_real_soon();
 
 		int new_reqid(void);
@@ -122,7 +123,7 @@ class VMGahpServer : public Service {
 
 		unsigned int m_pollInterval;
 		int m_poll_tid;
-		bool m_poll_pending;
+		int m_poll_real_soon_tid;
 		int m_stderr_tid;
 
 		int m_next_reqid;

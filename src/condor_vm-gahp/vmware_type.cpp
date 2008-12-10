@@ -1806,9 +1806,6 @@ VMwareType::CreateConfigFile()
 	tmp_line.sprintf("displayName = \"%s\"", m_vm_name.Value());
 	m_configVars.append(tmp_line.Value());
 
-	// disable floppy
-	m_configVars.append("floppy0.present = \"FALSE\"");
-
 	// Add networking parameters to m_configVars
 	if( m_vm_networking ) {
 		MyString networking_type;

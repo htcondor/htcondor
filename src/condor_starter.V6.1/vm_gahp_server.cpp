@@ -56,7 +56,7 @@ VMGahpServer::VMGahpServer(const char *vmgahpserver,
 
 	m_pollInterval = 5;
 	m_poll_tid = -1;
-	m_poll_pending = false;
+	m_poll_real_soon_tid = -1;
 	m_stderr_tid = -1;
 
 	m_next_reqid = 1;
@@ -130,7 +130,12 @@ VMGahpServer::cleanup(void)
 		}
 		m_poll_tid = -1;
 	}
-	m_poll_pending = false;
+	if(m_poll_real_soon_tid != -1) {
+		if( daemonCore ) {
+			daemonCore->Cancel_Timer(m_poll_real_soon_tid);
+		}
+		m_poll_real_soon_tid = -1;
+	}
 
 	// Stop stderr timer
 	if( m_stderr_tid != -1 ) {
@@ -1016,14 +1021,18 @@ VMGahpServer::poll_real_soon()
 
 	// Poll for results asap via a timer, unless a request
 	// to poll for results is already pending
-	if( !m_poll_pending) {
-		int tid = daemonCore->Register_Timer(0,
-				(TimerHandlercpp)&VMGahpServer::poll,
+	if( m_poll_real_soon_tid == -1) {
+		m_poll_real_soon_tid = daemonCore->Register_Timer(0,
+				(TimerHandlercpp)&VMGahpServer::poll_now,
 				"VMGhapServer::poll from poll_real_soon", this);
-		if( tid != -1 ) {
-			m_poll_pending = true;
-		}
 	}
+}
+
+int
+VMGahpServer::poll_now()
+{
+	m_poll_real_soon_tid = -1;
+	return poll();
 }
 
 int
@@ -1038,10 +1047,6 @@ VMGahpServer::poll()
 	if( m_is_initialized == false ) {
 		return 0;
 	}
-
-	// We must set m_poll_pending to false before returning from this
-	// function!!
-	m_poll_pending = false;
 
 	// First, send the RESULTS comand to the vmgahp server
 	if( write_line("RESULTS") == false) {
