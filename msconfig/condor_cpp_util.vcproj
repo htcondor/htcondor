@@ -119,7 +119,7 @@
 				Optimization="1"
 				InlineFunctionExpansion="1"
 				AdditionalIncludeDirectories="..\src\condor_tt"
-				PreprocessorDefinitions="WIN32;NDEBUG"
+				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE"
 				StringPooling="true"
 				RuntimeLibrary="0"
 				EnableFunctionLevelLinking="true"
@@ -1450,6 +1450,14 @@
 		</File>
 		<File
 			RelativePath="..\src\condor_daemon_client\dc_schedd.h"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\dc_service.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\dc_service.h"
 			>
 		</File>
 		<File
