@@ -85,6 +85,8 @@ BUILD_DEP_LIB($(CPlusPlus),x_read_joblog,C,,../release_dir/lib/libcondorapi.a)
 BUILD_DEP_LIB($(CPlusPlus),x_write_joblog,C,,../release_dir/lib/libcondorapi.a)
 BUILD_DEP_LIB($(CPlusPlus),x_write_joblog_events,C,,../release_dir/lib/libcondorapi.a)
 
+BUILD_DEP_LIB($(CPlusPlus),lib_eventlog_reader_bad,C,,../release_dir/lib/libcondorapi.a)
+
 /* BUG: We seem to consistently loose track of one pid on AIX
 	so we will turn this test off until this gets fixed.....
 	GNATS entry #558 for core condor software / proapi
@@ -586,6 +588,16 @@ DEPS(lib_eventlog-xml,x_read_joblog.exe)
 TESTCLASS(lib_eventlog-xml,core)
 TESTCLASS(lib_eventlog-xml,quick)
 TESTCLASS(lib_eventlog-xml,full)
+
+/* Test to verify that re-initialization of the eventlog does not cause
+   seg faults */
+DESC(lib_eventlog_reader_bad,"Test re-initialization of eventlog");
+RUN(lib_eventlog_reader_bad)
+DEPS(lib_eventlog_reader_bad,lib_eventlog_reader_bad.exe)
+DEPS(lib_eventlog_reader_bad,lib_eventlog_reader_bad.exe)
+TESTCLASS(lib_eventlog_reader_bad,lib)
+TESTCLASS(lib_eventlog_reader_bad,quick)
+TESTCLASS(lib_eventlog_reader_bad,full)
 
 /* EventLog Rotation tests */
 DESC(lib_eventlog_rotation-defaults,"Event Log Rotation: Default settings")
