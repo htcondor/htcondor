@@ -24,7 +24,8 @@
 #include "soapH.h"
 #include "AmazonEC2Binding.nsmap"
 
-#define PORT 1980
+//#define PORT 1980
+#define PORT 0
 
 using namespace std;
 
@@ -60,10 +61,21 @@ main(int argc, char **argv)
 
 	soap = soap_new();
 
-	if (-1 == soap_bind(soap, NULL, PORT, 5)) {
+	int fd = soap_bind(soap, NULL, PORT, 5);
+	if (-1 == fd) {
 		soap_print_fault(soap, stderr);
 		return 1;
 	} else {
+		socklen_t sock_name_len = sizeof( struct sockaddr_in );
+		struct sockaddr_in sock_name;
+		rc = getsockname( fd, (struct sockaddr *)&sock_name, &sock_name_len );
+		if ( rc < 0 ) {
+			cerr << "getsockname() failed, errno=" << errno << "("
+				 << strerror( errno ) << ")" << endl;
+			return 1;
+		}
+		cout << "Listening on port " << ntohs(sock_name.sin_port) << endl;
+
 		while (1) {
 			if (-1 == soap_accept(soap)) {
 				soap_print_fault(soap, stderr);
