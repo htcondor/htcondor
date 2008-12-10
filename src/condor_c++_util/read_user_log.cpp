@@ -196,6 +196,10 @@ ReadUserLog::initialize( const char *filename,
 						 int max_rotations,
 						 bool check_for_old )
 {
+	if ( m_initialized ) {
+		return false;
+	}
+
 	bool handle_rotation = ( max_rotations > 0 );
 	m_state = new ReadUserLogState( filename, max_rotations,
 									SCORE_RECENT_THRESH );
@@ -257,6 +261,10 @@ ReadUserLog::InternalInitialize( const ReadUserLog::FileState &state,
 								 bool set_rotations,
 								 int max_rotations )
 {
+	if ( m_initialized ) {
+		return false;
+	}
+
 	m_state = new ReadUserLogState( state, SCORE_RECENT_THRESH );
 	if ( ! m_state->Initialized() ) {
 		return false;
@@ -1214,12 +1222,18 @@ ReadUserLog::UninitFileState( ReadUserLog::FileState &state )
 bool
 ReadUserLog::GetFileState( ReadUserLog::FileState &state ) const
 {
+	if ( !m_initialized ) {
+		return false;
+	}
 	return m_state->GetState( state );
 }
 
 bool
 ReadUserLog::SetFileState( const ReadUserLog::FileState &state )
 {
+	if ( !m_initialized ) {
+		return false;
+	}
 	return m_state->SetState( state );
 }
 
