@@ -51,6 +51,11 @@ REM Put our config.h file in the right place
 call configure.bat
 if %ERRORLEVEL% NEQ 0 goto :CONFIG_FAIL
 
+REM Copy the correct default library vsprops file into place. This 
+REM changes which libraries are inlcuded by default into projects
+call correct_libs.bat noinit >NUL
+if %ERRORLEVEL% NEQ 2 call correct_libs.bat noinit >NUL
+
 REM Make gsoap stubs, etc.
 call :MAKE_GSOAP
 if %ERRORLEVEL% NEQ 0 goto :GSOAP_FAIL
@@ -63,6 +68,10 @@ REM ======================================================================
 REM Launch the Visual Studio IDE
 call :RUN_BUILD
 if %ERRORLEVEL% NEQ 0 goto :FAIL
+
+REM Restore the old libaries for other VS users
+call correct_libs.bat noinit >NUL
+if %ERRORLEVEL% NEQ 1 call correct_libs.bat noinit >NUL
 
 REM We're done, let's get out of here
 echo *** Done. Build is all happy. Congrats! Go drink beer.
@@ -87,6 +96,9 @@ echo *** Failed to build externals ***
 exit %INTERACTIVE% 1
 :CONFIG_FALL
 echo *** Failed to make config.h ***
+exit %INTERACTIVE% 1
+:LIBS_FAIL
+echo *** Failed to put vsprops file in place ***
 exit %INTERACTIVE% 1
 :GSOAP_FAIL
 echo *** gsoap stub generator failed ***
@@ -144,7 +156,7 @@ REM Build condor (build order is now preserved in project)
 REM ======================================================================
 echo Building Condor...
 set
-msbuild condor.sln /nologo /t:condor /p:Configuration=%CONFIGURATION%;VCBuildUseEnvironment="true"
+msbuild condor.sln /nologo /t:condor /p:Configuration=%CONFIGURATION%;VCBuildUseEnvironment="true";AdditionalDependencies=""
 REM devenv condor.sln /useenv /build "%CONFIGURATION%"
 if %ERRORLEVEL% NEQ 0 exit /b 1
 exit /b 0
