@@ -20,40 +20,38 @@ my $datalocation = "/p/condor/public/html/developers/testsuite/";
 my $toollocation = "/p/condor/home/tools/build-test-plots";
 #my $toollocation = ".";
 my $timefiles = "/tmp/btplots/durationfiles";
+my $firstbranch = 1;
 
 GetOptions (
 		'help' => \$help,
 		'start=s' => \$newwd,
 );
 
-$branch1 = "7_0";
-$branch2 = "7_1";
-$tmp_builddata1 = "/tmp/btplots/" . $branch1 . "autobuilds";
-$tmp_builddata2 = "/tmp/btplots/" . $branch2 . "autobuilds";
-$tmp_testdata1 = "/tmp/btplots/" . $branch1 . "autotests";
-$tmp_testdata2 = "/tmp/btplots/" . $branch2 . "autotests";
-
 if( $newwd ) { chdir("$newwd"); }
 if ( $help )    { help() and exit(0); }
 
-$placefile = $datalocation . "V7_0autobuilds.png";
-system("$toollocation/condor_readNMIdb.pl --type=builds --branch=$branch1 -d=2007-12-01");
-system("$toollocation/make-graphs --daily --input $tmp_builddata1 --output $placefile --detail autobuilds");
+@branches = ("V7_2-branch", "trunk");
+#@branches = ("V7_0-branch", "V7_1-trunk", "V7_2-branch", "trunk");
+#@branches = ("trunk");
+foreach $branch (@branches) {
+	print "Anlyze branch $branch\n";
+	$tmp_builddata = "/tmp/btplots/" . $branch . "autobuilds";
+	$tmp_testdata = "/tmp/btplots/" . $branch . "autotests";
+	$buildplacefile = $datalocation . $branch . "autobuilds.png";
+	$testplacefile = $datalocation . $branch . "autotests.png";
+	system("$toollocation/condor_readNMIdb.pl --type=builds --branch=$branch -d=2008-11-7");
+	system("$toollocation/make-graphs --daily --input $tmp_builddata --output $buildplacefile --detail autobuilds");
 
-$placefile = $datalocation . "V7_1autobuilds.png";
-system("$toollocation/condor_readNMIdb.pl --type=builds --branch=$branch2 -d=2007-12-01");
-system("$toollocation/make-graphs --daily --input $tmp_builddata2 --output $placefile --detail autobuilds");
+	system("$toollocation/condor_readNMIdb.pl --type=tests --branch=$branch -d=2008-11-7");
+	system("$toollocation/make-graphs --daily --input $tmp_testdata --output $testplacefile --detail autotests");
 
-$placefile = $datalocation . "V7_0autotests.png";
-system("$toollocation/condor_readNMIdb.pl --type=tests --branch=$branch1 -d=2007-12-01");
-system("$toollocation/make-graphs --daily --input $tmp_testdata1 --output $placefile --detail autotests");
-
-$placefile = $datalocation . "V7_1autotests.png";
-system("$toollocation/condor_readNMIdb.pl --type=tests --branch=$branch2 -d=2007-12-01");
-system("$toollocation/make-graphs --daily --input $tmp_testdata2 --output $placefile --detail autotests");
-
-system("$toollocation/condor_readNMIdb.pl --type=times --date=2007-12-10 --branch=$branch1 --save=$timefiles --new");
-system("$toollocation/condor_readNMIdb.pl --type=times --date=2007-12-10 --branch=$branch2 --save=$timefiles --append");
+	if($firstbranch == 1) {
+		system("$toollocation/condor_readNMIdb.pl --type=times --date=2008-11-7 --branch=$branch --save=$timefiles --new");
+		$firstbranch = 0;
+	} else {
+		system("$toollocation/condor_readNMIdb.pl --type=times --date=2008-11-7 --branch=$branch --save=$timefiles --append");
+	}
+}
 
 # due to the api change and the name use change of platform we
 # must take the newer data and place with the older data

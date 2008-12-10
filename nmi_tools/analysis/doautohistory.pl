@@ -33,70 +33,88 @@ my $infile = "";
 GetOptions (
 		'help' => \$help,
 		'start=s' => \$newwd,
+		'autobuilds' => \$autobuilds,
+		'autotests' => \$autotests,
+		'testsperbuild' => \$testsperbuild,
+		'projecttests' => \$projecttests,
+		'projectbuilds' => \$projectbuilds,
+		'all' => \$all,
 );
 
 if( $newwd ) { chdir("$newwd"); }
 if ( $help )    { help() and exit(0); }
 
 #AUTO BUILDS
-$placefile = $datalocation . "autobuilds.png";
-system("$rundir/condor_readNMIdb.pl --type=builds -d=2005-06-01");
+if(defined $autobuilds || defined $all) {
+	$placefile = $datalocation . "autobuilds.png";
+	system("$rundir/condor_readNMIdb.pl --type=builds -d=2005-06-01");
 
-$outfile = $tmpdir . "autobuilds.merged";
-system("$rundir/mergeruns.pl --type=builds --data=/tmp/btplots/autobuilds --out=$outfile");
+	$outfile = $tmpdir . "autobuilds.merged";
+	system("$rundir/mergeruns.pl --type=builds --data=/tmp/btplots/autobuilds --out=$outfile");
 
-$infile = $tmpdir . "autobuilds.merged";
-$outfile = $tmpdir . "autobuilds.avg";
-system("$rundir/monthaverage.pl  --data=$infile --out=$outfile");
+	$infile = $tmpdir . "autobuilds.merged";
+	$outfile = $tmpdir . "autobuilds.avg";
+	system("$rundir/monthaverage.pl  --data=$infile --out=$outfile");
 
-$infile = $tmpdir . "autobuilds.avg";
-system("$rundir/make-graphs-hist --monthly --input $infile --output $placefile --detail autobuilds");
-
+	$infile = $tmpdir . "autobuilds.avg";
+	system("$rundir/make-graphs-hist --monthly --input $infile --output $placefile --detail autobuilds");
+}
 #AUTO TESTS
-$placefile = $datalocation . "autotests.png";
-system("$rundir/condor_readNMIdb.pl --type=tests -d=2005-06-01");
+if(defined $autotests || defined $all) {
+	$placefile = $datalocation . "autotests.png";
+	system("$rundir/condor_readNMIdb.pl --type=tests -d=2005-06-01");
 
-$outfile = $tmpdir . "autotests.merged";
-system("$rundir/mergeruns.pl --type=tests --data=/tmp/btplots/autotests --out=$outfile");
+	print "merging from /tmp/btplots/autotests to $outfile\n";
+	$outfile = $tmpdir . "autotests.merged";
+	system("$rundir/mergeruns.pl --type=tests --data=/tmp/btplots/autotests --out=$outfile");
 
-$infile = $tmpdir . "autotests.merged";
-$outfile = $tmpdir . "autotests.avg";
-system("$rundir/monthaverage.pl  --data=$infile --out=$outfile");
+	$infile = $tmpdir . "autotests.merged";
+	$outfile = $tmpdir . "autotests.avg";
 
-$infile = $tmpdir . "autotests.avg";
-system("$rundir/make-graphs-hist --monthly --input $infile --output $placefile --detail autotests");
+	print "merged data here $infile averaged data here $outfile\n";
+	system("$rundir/monthaverage.pl  --data=$infile --out=$outfile");
+
+	$infile = $tmpdir . "autotests.avg";
+	system("$rundir/make-graphs-hist --monthly --input $infile --output $placefile --detail autotests");
+}
 
 #TESTS PER BUILD
-$placefile = $datalocation . "testsperbuild.png";
-$avgbuilds = $tmpdir . "autobuilds.avg";
-$avgtests = $tmpdir . "autotests.avg";
-$out = $tmpdir . "testsperbuild.avg";
-system("$rundir/testaverage.pl --builds=$avgbuilds --tests=$avgtests --out=$out");
+if(defined $testsperbuild || defined $all) {
+	$placefile = $datalocation . "testsperbuild.png";
+	$avgbuilds = $tmpdir . "autobuilds.avg";
+	$avgtests = $tmpdir . "autotests.avg";
+	$out = $tmpdir . "testsperbuild.avg";
+	system("$rundir/testaverage.pl --builds=$avgbuilds --tests=$avgtests --out=$out");
 
-$infile = $tmpdir . "testsperbuild.avg";
-system("$rundir/make-graphs-hist --monthly --input $infile --output $placefile --detail testsperplatform");
+	$infile = $tmpdir . "testsperbuild.avg";
+	system("$rundir/make-graphs-hist --monthly --input $infile --output $placefile --detail testsperplatform");
+}
 
 # PROJECT TESTS
-$placefile = $datalocation . "projectautotests.png";
-system("$rundir/condor_readNMIdb.pl --project --type=tests -d=2005-06-01");
+if(defined $projecttests || defined $all) {
+	$placefile = $datalocation . "projectautotests.png";
+	system("$rundir/condor_readNMIdb.pl --project --type=tests -d=2005-06-01");
 
-$infile = "/tmp/btplots/projectautotests";
-$outfile = $tmpdir . "projectautotests.avg";
-system("$rundir/monthaverage.pl  --data=$infile --out=$outfile");
+	$infile = "/tmp/btplots/projectautotests";
+	$outfile = $tmpdir . "projectautotests.avg";
+	system("$rundir/monthaverage.pl  --data=$infile --out=$outfile");
 
-$infile = $tmpdir . "projectautotests.avg";
-system("$rundir/make-graphs-hist --monthly --input $infile --output $placefile --detail autotests");
+	$infile = $tmpdir . "projectautotests.avg";
+	system("$rundir/make-graphs-hist --monthly --input $infile --output $placefile --detail autotests");
+}
 
 #PROJECT BUILDS
-$placefile = $datalocation . "projectautobuilds.png";
-system("$rundir/condor_readNMIdb.pl --project --type=builds -d=2005-06-01");
+if(defined $projectbuilds || defined $all) {
+	$placefile = $datalocation . "projectautobuilds.png";
+	system("$rundir/condor_readNMIdb.pl --project --type=builds -d=2005-06-01");
 
-$infile = "/tmp/btplots/projectautobuilds";
-$outfile = $tmpdir . "projectautobuilds.avg";
-system("$rundir/monthaverage.pl  --data=$infile --out=$outfile");
+	$infile = "/tmp/btplots/projectautobuilds";
+	$outfile = $tmpdir . "projectautobuilds.avg";
+	system("$rundir/monthaverage.pl  --data=$infile --out=$outfile");
 
-$infile = $tmpdir . "projectautobuilds.avg";
-system("$rundir/make-graphs-hist --monthly --input $infile --output $placefile --detail autobuilds");
+	$infile = $tmpdir . "projectautobuilds.avg";
+	system("$rundir/make-graphs-hist --monthly --input $infile --output $placefile --detail autobuilds");
+}
 
 #
 # =================================

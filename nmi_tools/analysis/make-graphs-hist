@@ -160,6 +160,10 @@ sub main {
 		fatal_error("You must specific an --output file.");
 	}
 
+	if($details eq "autotestyear") {
+		$FIRST_DATE = '1 June 2007 00:00:00';
+		$WIDTH = 500;
+	}
 
 	$originaldate = $FIRST_DATE;
 
@@ -390,13 +394,16 @@ sub gnuplot_commands {
 	} elsif($details eq "autobuilds") {
 		$title = "Condor Build Results";
 		$ylabel = "Average Builds per Day";
-		$xtics = "691200";
+		$xtics = "7884000";
 	} elsif($details eq "autotests") {
 		$ylabel = "Average Tests per Day";
-		$xtics = "691200";
+		$xtics = "7884000";
+	} elsif($details eq "autotestyear") {
+		$ylabel = "Average Tests per Day";
+		$xtics = "7884000";
 	} elsif($details eq "testsperplatform") {
 		$ylabel = "Average Tests per Platform";
-		$xtics = "691200";
+		$xtics = "7884000";
 	} elsif($details eq "weeklydownloadlogs") {
 		$ylabel = "Download Results per Week";
 		$title = "Condor Download Plots";
@@ -510,6 +517,8 @@ sub gnuplot_commands {
 	} elsif($details eq "autobuilds") {
 		$myret = $myret . "plot \"$datafile\" using 1:6 with boxes   ls 1 title \"Good Builds\", \"$datafile\" using 1:4 with boxes   ls 2 title \"Failed Builds\", \"$datafile\" using 1:2 with boxes   ls 3 title \"Pending\"\n";
 	} elsif($details eq "autotests") {
+		$myret = $myret . "plot \"$datafile\" using 1:6 with boxes   ls 1 title \"Good Tests\", \"$datafile\" using 1:4 with boxes   ls 2 title \"Failed Tests\", \"$datafile\" using 1:2 with boxes   ls 3 title \"Pending\"\n";
+	} elsif($details eq "autotestyear") {
 		$myret = $myret . "plot \"$datafile\" using 1:6 with boxes   ls 1 title \"Good Tests\", \"$datafile\" using 1:4 with boxes   ls 2 title \"Failed Tests\", \"$datafile\" using 1:2 with boxes   ls 3 title \"Pending\"\n";
 	} elsif($details eq "times") {
 		$myret = $myret . "plot \"$datafile\" using 1:5 with boxes   ls 6 title \"Test Times\", \"$datafile\" using 1:3 with boxes   ls 5 title \"Build Times\", \"$datafile\" using 1:8 with boxes   ls 7 title \"Test Times/10\", \"$datafile\" using 1:6 with boxes   ls 4 title \"Build Times/10\"\n";

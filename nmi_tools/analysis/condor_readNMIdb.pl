@@ -108,11 +108,12 @@ if(!defined($project)) {
 } else {
 	$dropfile = "/tmp/btplots/" . "projectauto" . $type;
 }
-#print "Drop file will be $dropfile\n";
+print "Drop file will be $dropfile\n";
 
 open(DROP,">$dropfile") or die "Unable to open result file $dropfile:$!\n";
 
 FindBuildRuns();
+#SaveRunIds();
 
 if( $type eq "builds") {
 	ShowBuildRuns();
@@ -152,13 +153,13 @@ sub CollectTimeResults
 	#print "Collecting Time Results\n";
 	ShowBuildRuns();
 	foreach $run (@buildruns) {
-		#print "Platforms for $run\n";
+		print "Platforms for $run\n";
 		FindPlatforms($run);
 	}
-	#print "Done looking for platform list\n";
-	#print "save it as we go....\n";
+	print "Done looking for platform list\n";
+	print "save it as we go....\n";
 	if( !$savefile ) {
-		die "--save must be set for collecting image list\n";
+		die "--save must be set for collecting image list<$savefile>\n";
 	}
 	if($newfile) {
 		open(LIST,">$savefile") || die "Failed to start datafile:<$datafile> $!\n";
@@ -168,14 +169,14 @@ sub CollectTimeResults
 		die "Either --new or --append must be set\n";
 	}
 
-	#print "Here are the keys from hash platformlist\n";
+	print "Here are the keys from hash platformlist\n";
 	foreach $key (sort keys %platformlist) {
-		#print "Key-----<$key>\n";
-		my $datafile = "/tmp/btplots/V" . $branch . "-" . $key;
+		print "Key-----<$key>\n";
+		my $datafile = "/tmp/btplots/" . $branch . "-" . $key;
 		print LIST "$datafile\n";
 		open(DATA,">$datafile") || die "Failed to start datafile:<$datafile> $!\n";
 		foreach $run (@buildruns) {
-			#print "Looking at tests for<<$run>>\n";
+			print "Looking at tests for<<$run>>\n";
 			@testruns = ();
 			%platform_btimes = (); # empty it....
 			%platform_ttimes = (); # empty it....
@@ -192,7 +193,6 @@ sub CollectTestResults
 		#print "Looking at tests for<<$run>>\n";
 		@testruns = ();
 		FindTestRuns($run);
-		#ShowTestRuns();
 		FindTestTasks();
 	}
 }
@@ -201,9 +201,9 @@ sub FindPlatforms
 {
 	$runid = shift;
 
-	#print "Platforms for <$runid> are:\n";
+	print "Platforms for <$runid> are:\n";
 	@args = split /:/, $runid;
-	$extraction = $db->prepare("SELECT * FROM Task WHERE  \
+	$extraction = $db->prepare("SELECT platform FROM Task WHERE  \
 			runid = $args[0] \
 			and name =  'platform_job' \
 			");
@@ -215,9 +215,9 @@ sub FindPlatforms
 
 		if( exists $platformlist{$platform}) {
 			# we are good and have this already 
-			#print "Have $platform in lest already\n";
+			#print "Have $platform in list already\n";
 		} else {
-			#print "Add $platform as a platform\n";
+			print "Add $platform as a platform\n";
 			$platformlist{$platform} = 1;
 		}
 	}
@@ -234,7 +234,7 @@ sub FindBuildAndTestTimes
 	my $result = 0;
 	my $extraction;
 
-	#print "FindBuildTimes: runid = $runid\n";
+	print "FindBuildTimes: runid = $runid\n";
 
 	@args = split /:/, $runid;
 	$plotdate = $args[1];
@@ -244,9 +244,9 @@ sub FindBuildAndTestTimes
 		$plotdate = $1 . " " . $months{$2} . " " . $3;
 	}
 
-	#print "FindBuildTasks: args are <$runid,$plotdate>\n";
+	print "FindBuildTasks: args are <$runid,$plotdate>\n";
 	#print "restricting look at platform_job only\n";
-	$extraction = $db->prepare("SELECT * FROM Task WHERE  \
+	$extraction = $db->prepare("SELECT result, name, start, finish, platform FROM Task WHERE  \
 			runid = $args[0] \
 			and name =  'platform_job' \
 			and platform = '$desiredplatform' \
@@ -278,9 +278,9 @@ sub FindBuildAndTestTimes
 	}
 
 	# now find the runids(test runs) which used this build id for data
-	#print "Calling FindTestRuns\n";
+	print "Calling FindTestRuns\n";
 	FindTestRuns($run);
-	#print "Calling FindTestTimes\n";
+	print "Calling FindTestTimes\n";
 	FindTestTimes($desiredplatform);
 
 	# so we now have all the builds in one hash and existent tests in another
@@ -325,11 +325,12 @@ sub GetTaskDuration
 sub FindTestTimes
 {
 	$desiredplatform = shift;
+	print "Find Test Times\n";
 	for $run (@testruns) {
 		@args = split /:/, $run;
 
 		#print "FindTestTimes: runid <<$args[0]>>\n";
-		my $extraction = $db->prepare("SELECT * FROM Task WHERE  \
+		my $extraction = $db->prepare("SELECT runid, platform, start, finish FROM Task WHERE  \
 				runid = $args[0] \
 				and name = 'platform_job' \
 				and platform = '$desiredplatform' \
@@ -366,7 +367,7 @@ sub FindBuildTasks
 
 	#print "FindBuildTasks: args are <$runid,$plotdate>\n";
 	#print "restricting look at platform_job only\n";
-	$extraction = $db->prepare("SELECT * FROM Task WHERE  \
+	$extraction = $db->prepare("SELECT result, name, platform FROM Task WHERE  \
 			runid = $runid \
 			and name =  'platform_job' \
 			");
@@ -420,13 +421,15 @@ sub FindBuildRuns
 	#print "Looking for runs since <$TodayDate>\n";
 	my $extraction;
 	if(!defined($project)) {
-		$extraction = $db->prepare("SELECT * FROM Run WHERE  \
+		$extraction = $db->prepare("SELECT runid, result, project_version, start, \
+				component_version, description FROM Run WHERE  \
 				user = 'cndrauto' \
 				and project = 'condor' \
 				and start >=  '$TodayDate' \
 				and run_type = 'BUILD'");
 	} else {
-		$extraction = $db->prepare("SELECT * FROM Run WHERE  \
+		$extraction = $db->prepare("SELECT runid, result, project_version, start, \
+				component_version, description FROM Run WHERE  \
 				#user = 'cndrauto' \
 				#and project = 'condor' \
 				project = 'condor' \
@@ -457,19 +460,20 @@ sub FindBuildRuns
 			#FindBuildTasks($rid, $plotdateform, "all");
 		}
 		if($branch) {
-			if( $des =~ /^.*$branch-(trunk|branch).*$/ ) {
+			if( $des =~ /^$branch.*$/ ) {
 				print "adding $rid and $plotdateform to array buildruns\n";
 				print "Described as $des\n";
 				push(@buildruns,$rid . ":" . $plotdateform);
 			} else {
-				#print "1: Did not findd <$branch> in <$des>\n";
+				#print "1: Did not find <$branch> in <$des>\n";
 			}
 		} else {
 			if(!defined($project)) {
-				if( $des =~ /^.*(V\d+_\d+-(trunk|branch)).*$/ ) {
+				if( $des =~ /^.*([V]*\d*[_]*\d*[\-]*(trunk|branch)).*$/ ) {
+					#changed to find trunk as a branch 12/08 bt
 					push(@buildruns,$rid . ":" . $plotdateform . ":" . $1);
 				} else {
-					#print "2: Did not find <$branch> in <$des>\n";
+					print "2: Did not find <$branch> in <$des>\n";
 				}
 			} else {
 				# when collecting for project take ALL branches
@@ -485,15 +489,19 @@ sub FindTestRuns
 	my $trid = "";
 	my @args = split /:/, $runid;
 
-	my $extraction = $db->prepare("SELECT * FROM Method_nmi WHERE  \
+	print "******************* FindTestRuns *******************\n";
+	my $extraction = $db->prepare("SELECT runid FROM Method_nmi WHERE  \
 				input_runid = '$args[0]'");
     $extraction->execute();
 	$testruns = ();
+	print "*********************************\n";
 	while( my $sumref = $extraction->fetchrow_hashref() ){
         $trid = $sumref->{'runid'};
 		# if a branch were not called out we pass the branch along.
 		push(@testruns,$trid . ":" . $args[1] . ":" . $args[2]);
+		print "$trid:$args[1]:$args[2]\n";
 	}
+	print "*********************************\n";
 }
 
 sub FindTestTasks
@@ -511,7 +519,10 @@ sub FindTestTasks
 	my $badresult = 0;
 	my $builddate = "";
 	my $platform = "";
+	#my $off = 1;
 
+	print "******************* FindTestTasks *******************\n";
+	print "*********************************\n";
 	foreach $runid (@testruns) {
 
 		my @args = split /:/, $runid;
@@ -525,16 +536,29 @@ sub FindTestTasks
 			die "can not create plot date from starttime!!!!\n";
 		}
 
+		print "************************** Optimized **************************\n";
+		# new more optimized
 		# verify that the user is cndrauto unless another is called out
 		# I for one am known to run entire sets of tests on nightly builds
 		# and we do not want to mix these results.
-		$extraction = $db->prepare("SELECT * FROM Run WHERE  \
-					runid = $args[0] ");
+
+		$extraction = $db->prepare("\
+					SELECT \
+					Task.result AS result, \
+					Task.name AS name, \
+					Task.start AS start, \
+					Task.platform AS platform, \
+					Run.user AS user \
+					FROM Run, Task WHERE  \
+					Run.runid = $args[0] \
+					AND Task.runid = $args[0]");
 
 	    $extraction->execute();
 
 		my $ownref = $extraction->fetchrow_hashref();
 		$testuser = $ownref->{'user'};
+
+		print "Run for user<$testuser>\n";
 
 		# looking at all project use vs nightly use
 		if(!defined($project)) {
@@ -544,14 +568,6 @@ sub FindTestTasks
 			}
 		}
 
-		#print "Find tests for runid $args[0] builddate <<$builddate>>\n";
-		$extraction = $db->prepare("SELECT * FROM Task WHERE  \
-					runid = $args[0] \
-					#and name =  'platform_job' \
-					");
-
-	    $extraction->execute();
-
 		# we really only care about the results for the automatics
 		# null(not defined()) means still in never never land, 0 is good and all else bad.
 		
@@ -559,11 +575,11 @@ sub FindTestTasks
 		$thisgood = 0;
 		$thisbad = 0;
 		$thisnull = 0;
-		while( my $sumref = $extraction->fetchrow_hashref() ){
-			$res = $sumref->{'result'};
-			$name = $sumref->{'name'};
-			$start = $sumref->{'start'};
-			$platform = $sumref->{'platform'};
+		while( my $ownref = $extraction->fetchrow_hashref() ){
+			$res = $ownref->{'result'};
+			$name = $ownref->{'name'};
+			$start = $ownref->{'start'};
+			$platform = $ownref->{'platform'};
 			if(!(exists $metrotask{"$name"})) {
 				#print "TestRun $runid Task $name Time $start Platform $platform<$res>\n";
 				my $value = 1;
@@ -589,10 +605,10 @@ sub FindTestTasks
 				}
 			}
 		}
-
+	
 		# track a few platforms of test count to see effort
 		if( (exists $testtrackingplatforms{"$platform"} ) && ( $testuser eq "cndrauto" )){
-			if( $thisbranch =~ /^.*(V\d+_\d+-(trunk|branch)).*$/) {
+			if( $thisbranch =~ /^.*(([V]*\d*[_]*\d*[\-]*)(trunk|branch)).*$/) {
 				my $sum = $thisnull + $thisgood + $thisbad;
 				if($sum != 0) {
 					print THIST "$plotdateform, $platform, $1, $sum\n";
@@ -609,6 +625,7 @@ sub FindTestTasks
 		$pandbandf = $pandb + $goodresult;
 		 
 	}
+	print "*********************************\n";
 	#print "Runs for tests = <<$#testruns>>\n";
 	# more then 2 platforms
 	if($#testruns > 1) {

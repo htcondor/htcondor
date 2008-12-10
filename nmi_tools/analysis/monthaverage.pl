@@ -30,7 +30,7 @@ if( !$datafile ) {
 }
 
 if( $datafile ) {
-	#print "Merging daily data in <<$datafile>>\n";
+	print "Merging daily data in <<$datafile>>\n";
 }
 
 if( !$outfile ) {

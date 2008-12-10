@@ -31,7 +31,6 @@ my %metrotask = (
     "pre_all" => "1",
     "platform_pre" => "1",
     "platform_post" => "1",
-    "post_all" => "1",
     "platform_job" => "1",
     "common.put" => "1",
     "remote_pre_declare" => "1",
@@ -59,9 +58,6 @@ GetOptions (
 );
 
 my $gid;
-my $DEBUG = 0;
-#DebugOn();
-
 @platformresults;
 @buildresults;
 $histcache = "analysisdata";
@@ -136,15 +132,15 @@ my $histnew = "";
 if((!$singletest) && (!($berror =~ /all/))) {
 	print "Opening build output for RunId <$requestrunid>\n";
 	$builddir = $basedir;;
-	#print "Testing <<$basedir>>\n";
+	print "Testing <<$basedir>>\n";
 	if(!(-d $basedir )) {
-		#print "<<$basedir>> Does not exist\n";
+		print "<<$basedir>> Does not exist\n";
 	}
 	opendir DH, $builddir or die "Can not open Build Results<$builddir>:$!\n";
 	foreach $file (readdir DH) {
 		if($file =~ /platform_post\.(.*).out/) {
 			$platformpost = $builddir . "/" . $file;
-			debug("$platformpost is for platform $1\n");
+			#print "$platformpost is for platform $1\n";
 			$platform = $1;
 			open(FH,"<$platformpost") || die "Unable to scrape<$file> for GID:$!\n";
 			$line = "";
@@ -162,7 +158,6 @@ if((!$singletest) && (!($berror =~ /all/))) {
 			close(FH);
 		} elsif($file =~ /platform_pre\.(.*).out/) {
 			$platform = $1;
-			#print "adding $platform as a build target\n";
 			$BuildTargets{"$platform"} = 1;
 		}
 	}
@@ -174,7 +169,7 @@ if((!$singletest) && (!($berror =~ /all/))) {
 	$histold = $buildtag . "-test_history";
 	$histnew = $buildtag . "-test_history.new";
 } else {
-	#print "$berror = all <all builds failed>\n";
+	print "$berror = all <all builds failed>\n";
 	if(!$branch) {
 		die "Need branch to determine historic platforms for build failures\n";
 	} else {
@@ -189,7 +184,7 @@ FindTestRuns($requestrunid);
 FindTestPlatforms();
 DbDisconnect();
 
-debug("done looking for test runs\n");
+#die "done looking for test runs\n";
 
 if((!$singletest) && (!($berror =~ /all/))) {
 	my $bv = "";
@@ -256,7 +251,7 @@ if($losttests) {
 }
 
 if($perror) {
-	#print "Call CrunchErrors for a platform issue<$perror>\n";
+	print "Call CrunchErrors for a platform issue<$perror>\n";
 	CrunchErrors( "platform", $perror );
 }
 
@@ -306,7 +301,7 @@ sub FindTestPlatforms
 			$TestPlatforms{"$dbplatform"}= 1;
 			$RunPlatforms{"$run"}= $dbplatform;
 			$platformknown = 1;
-			debug("Runid $run is platform <<$dbplatform>>\n");
+			#print "Runid $run is platform <<$dbplatform>>\n";
 		}
 		if($platformknown != 1) {
 			# something failed prior to the platform job
@@ -358,7 +353,6 @@ sub GetPlatformFromRun
 	$plats = "";
 	$pathtorun = "";
 	$pathtorun = FindBuildRunDir($targetrun);
-	debug("Run number $targetrun had path $pathtorun\n");
 	$pathtorun = $pathtorun . "/platform_list";
 	open(PLATFORMLIST,"<$pathtorun") || die "Can not open $pathtorun:$! \n";
 	while(<PLATFORMLIST>) {
@@ -399,7 +393,7 @@ sub FindTestRuns
 			if($user eq "cndrauto") {
 				push(@TestRuns,$run);
 			} else {
-				#print "Skipping test run by $user\n";
+				print "Skipping test run by $user\n";
 			}
 		}
     }
@@ -416,9 +410,9 @@ sub FindBuildRunDir
     while( my $sumref = $extraction->fetchrow_hashref() ){
         $filepath = $sumref->{'filepath'};
         $gid = $sumref->{'gid'};
-        print "<<<$filepath>>><<<$gid>>>\n";
+        #print "<<<$filepath>>><<<$gid>>>\n";
         $url = $filepath . "/" . $gid;
-        print "Runid <$runid> is <$url>\n";
+        #print "Runid <$runid> is <$url>\n";
 		return($url);
     }
 }
@@ -444,7 +438,7 @@ sub CrunchErrors
 	if($tests[0] eq "all") {
 		# all of the expected results for all platforms are being 
 		# assessed to a single party
-		print "All test failure allocated to<<$type>>!!!!\n";
+		#print "All test failure allocated to<<$type>>!!!!\n";
 		foreach $host (@platformresults) {
 			$pexpected = 0;
 			$pgood = 0;
@@ -505,7 +499,7 @@ sub CrunchErrors
 
 			#print "Parsing $test\n";
 			# entire platform or some tests
-			@partial = split /#/, $test;
+			@partial = split /:/, $test;
 			$index = GetPlatformData($partial[0]);
 
 				$p = $platformresults[$index];
@@ -628,7 +622,7 @@ sub PrintResults()
 
 		my $Platformerrors = $p->platform_errs( );
 	#print "Into PrintResults and platform errors currently <<$Platformerrors>>\n";
-		printf "%-29s (%d):   Passed = %d   Failed = %d	",$p->platform(),$p->expected(),
+		printf "%-16s (%d):		Passed = %d	Failed = %d	",$p->platform(),$p->expected(),
 			$p->passed(),$p->failed();
 		if($p->build_errs( ) > 0) {
 			printf " BUILD ";
@@ -683,13 +677,11 @@ sub AddTestGids
 
 	@evalplatforms = split /,/, $platforms;
 	foreach $platform (@evalplatforms) {
-		#print "processing results for $platform\n";
 		if($platform =~ /all/) {
 			LoadAll4BuildResults($platform);
 		} else {
-			@buildblame = split /#/, $platform;
+			@buildblame = split /:/, $platform;
 			$entry = Platform_info->new();
-			#print "Call GetHistExpected($buildblame[0]\n";
 			$expected = GetHistExpected($buildblame[0]);
 			$entry->platform("$buildblame[0]");
 			#print "Crunch errors for \"$buildblame[0] & $buildblame[1]\"\n";
@@ -710,13 +702,10 @@ sub AddTestGids
 			my $blamecode = $buildblame[1];
 			#print "Blame code is $blamecode\n";
 			if($blamecode eq "c") {
-				#print "Add $expected to Condor\n";
 				$entry->condor_errs($expected);
 			} elsif($blamecode eq "p") {
-				#print "Add $expected to Platform\n";
 				$entry->platform_errs($expected);
 			} elsif($blamecode eq "f") {
-				#print "Add $expected to Framework\n";
 				$entry->framework_errs($expected);
 			} else {
 				die "UNKNOWN blame code for build <<$blamecode>>\n";
@@ -789,7 +778,6 @@ sub AnalyseTestRuns
 	my $runnull = 0;
 	my $platform = "";
 	foreach $run (@TestRuns) {
-		#print "getting all Run for $run\n";
 		my $extraction = $db->prepare("SELECT * FROM Run WHERE  \
                 runid = '$run' \
 				and user = 'cndrauto'\
@@ -825,16 +813,15 @@ sub AnalyseTestRuns
         # null(not defined()) means still in never never land, 0 is good and all else bad.
 
 		$platform = "";
-		$foundplatform = 0;
         while( my $sumref = $testextraction->fetchrow_hashref() ){
             $res = $sumref->{'result'};
             $name = $sumref->{'name'};
             $start = $sumref->{'start'};
-            $plat = $sumref->{'platform'};
             if(!(exists $metrotask{"$name"})) {
                 #print "TestRun $runid Task $name Time $start Platform $platform<$res>\n";
+            	$platform = $sumref->{'platform'};
                 if( defined($res)) {
-                    #print "<$res,$name>\n";
+                    #print "<$res>\n";
                     if($res == 0) {
                         #print "GOOD\n";
                         $rungood = $rungood + 1;
@@ -844,21 +831,17 @@ sub AnalyseTestRuns
                         $runbad = $runbad + 1;
                     }
                 } else {
-                    #print "NULL,<$name>\n";
+                    #print "NULL\n";
                     $runnull = $runnull + 1; # pending
                 }
 				$runcount = $runcount + 1;
             } else {
-				#$plat = $sumref->{'platform'};
+				$plat = $sumref->{'platform'};
 				if($platform eq "") {
 					#print "looking for platform: $name & $plat\n";
 				}
-				if($foundplatform == 0) {
-					if( $plat ne "local") {
-							$foundplatform = 1;
-							#print "Setting platform to <<$plat>>\n";
-            			$platform = $plat;
-					}
+				if( $plat ne "local") {
+            		$platform = $plat;
 				}
 			}
 
@@ -868,7 +851,6 @@ sub AnalyseTestRuns
 		$bad = $runbad;
 		# with our now accumulating during test runs we can be partially done
 		# and need to look at the REAL historic expected and use that.
-		#print "About to call <GetHistExpected($platform)>\n";
 		$histexpected = GetHistExpected($platform); # 
 		$expected = $runcount;
 
@@ -952,7 +934,7 @@ sub GetHistExpected {
 		return(0);
 	}
 
-	#print "Want history expected value for << $platform>>\n";
+	#print "Want history expaected value for << $platform>>\n";
 
 	open(OLD,"<$histold") || die "Can not open history file<$histold>:$!\n";
 	while(<OLD>) {
@@ -1159,19 +1141,19 @@ sub SetupAnalysisCache
 	$tag = shift;
 	$CacheDir = getcwd();
 
-	print "working in  $CacheDir looking for <<$histcache>>\n";
-	print "Tag for locating cache <<$tag>>\n";
+	#print "working in  $CacheDir looking for <<$histcache>>\n";
+	#print "Tag for locating cache <<$tag>>\n";
 	if($tag =~ /^BUILD-(V\d_\d).*$/) {
 		$histversion = $1; 
-		print "Found <<$histversion>>\n";
+		#print "Found <<$histversion>>\n";
 	}
 	if(!(-d "$histcache")) {
-		print "Test Cache needs creating<<$histcache>>\n";
+		#print "Test Cache needs creating<<$histcache>>\n";
 		system("mkdir  -p $histcache");
 	}
 	$histcache = $CacheDir . "/" . $histcache . "/" . $histversion;
 	if(!(-d "$histcache")) {
-		print "Test Cache needs creating<<$histcache>>\n";
+		#print "Test Cache needs creating<<$histcache>>\n";
 		system("mkdir -p $histcache");
 	}
 
@@ -1199,25 +1181,4 @@ sub DbConnect
 sub DbDisconnect
 {
     $db->disconnect;
-}
-
-
-sub debug
-{
-    my $string = shift;
-    print( "DEBUG ", timestamp(), ": $string" ) if $DEBUG;
-}
-
-sub DebugOn
-{
-    $DEBUG = 1;
-}
-
-sub DebugOff
-{
-    $DEBUG = 0;
-}
-
-sub timestamp {
-    return scalar localtime();
 }

@@ -95,32 +95,33 @@ while(<DATA>) {
 			#print "Second branch is $9 upping $branches to 2<<$branches>>\n";
 		}
 
-		if(($type eq "tests") && ($8 != 0)) {
-			$previousrate = readratehist();
-			$previousratio = ($previousrate / $8);
-			if(($previousrate != 0) && ($previousratio < .7)) {
-				#print "Ratio <<<$previousratio>>\n";
-				#throw out rates too extreme by normalizing downward.
-				#print "ADJUSTING <<$8>> ratio <<$previousratio>>\n";
-				$t4 = $4 * $previousratio;
-				$t5 = $5 * $previousratio;
-				$t6 = $6 * $previousratio;
-				$t7 = $7 * $previousratio;
-				$t8 = $8 * $previousratio;
-			} else {
-				$t4 = $4;
-				$t5 = $5;
-				$t6 = $6;
-				$t7 = $7;
-				$t8 = $8;
-			}
-		} else {
+		# this was just wrong now and was turned off
+		#if(($type eq "tests") && ($8 != 0)) {
+			#$previousrate = readratehist();
+			#$previousratio = ($previousrate / $8);
+			#if(($previousrate != 0) && ($previousratio < .7)) {
+				##print "Ratio <<<$previousratio>>\n";
+				##throw out rates too extreme by normalizing downward.
+				##print "ADJUSTING <<$8>> ratio <<$previousratio>>\n";
+				#$t4 = $4 * $previousratio;
+				#$t5 = $5 * $previousratio;
+				#$t6 = $6 * $previousratio;
+				#$t7 = $7 * $previousratio;
+				#$t8 = $8 * $previousratio;
+			#} else {
+				#$t4 = $4;
+				#$t5 = $5;
+				#$t6 = $6;
+				#$t7 = $7;
+				#$t8 = $8;
+			#}
+		#} else {
 			$t4 = $4;
 			$t5 = $5;
 			$t6 = $6;
 			$t7 = $7;
 			$t8 = $8;
-		}
+		#}
 		feedratehist($t8);
 
 		if(($1 eq $curday) && ($2 eq $curmonth) && ($3 eq $curyear)) {
