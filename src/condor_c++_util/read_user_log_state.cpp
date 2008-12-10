@@ -475,9 +475,12 @@ ReadUserLogState::GetState( ReadUserLog::FileState &state ) const
 
 	// The paths shouldn't change... copy them only the first time
 	if( !strlen( istate->m_base_path ) ) {
-		int	size = sizeof(istate->m_base_path) - 1;
-		strncpy( istate->m_base_path, m_base_path.GetCStr(), size );
-		istate->m_base_path[size] = '\0';
+		memset( istate->m_base_path, sizeof(istate->m_base_path), 0 );
+		if ( m_base_path.GetCStr() ) {
+			strncpy( istate->m_base_path,
+					 m_base_path.GetCStr(),
+					 sizeof(istate->m_base_path) - 1 );
+		}
 	}
 
 	// The signature is set in the InitFileState()
