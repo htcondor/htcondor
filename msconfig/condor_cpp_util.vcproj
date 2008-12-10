@@ -1453,10 +1453,6 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\dc_service.cpp"
-			>
-		</File>
-		<File
 			RelativePath="..\src\condor_c++_util\dc_service.h"
 			>
 		</File>
