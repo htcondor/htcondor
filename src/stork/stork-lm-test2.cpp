@@ -55,7 +55,7 @@ class StorkMatchTest: public Service
 	// Timer handlers
 	int timerHandler( void );
 
-	StorkLeaseManager			*mm;
+	StorkLeaseManager		*lm;
 	multimap<time_t, const char *, less<time_t> >dests;
 	unsigned	target;
 	//list<Dest *>			dests;
@@ -83,8 +83,8 @@ StorkMatchTest::init( void )
 	config( true );
 
 	// Create teh match maker object
-	mm = new StorkLeaseManager();
-	dprintf( D_FULLDEBUG, "mm size %d @ %p\n", sizeof(*mm), mm );
+	lm = new StorkLeaseManager();
+	dprintf( D_FULLDEBUG, "lm size %d @ %p\n", sizeof(*lm), lm );
 
 	TimerId = daemonCore->Register_Timer(
 		1, 15, (TimerHandlercpp)&StorkMatchTest::timerHandler,
@@ -120,19 +120,19 @@ StorkMatchTest::timerHandler ( void )
 		iter++;
 		if ( random() % 20 ) {
 			//dprintf( D_FULLDEBUG, "Pre return dump #1\n" );
-			//mm->Dump();
+			//lm->Dump();
 			//dprintf( D_FULLDEBUG, "Pre return dump #2\n" );
-			//mm->Dump( false );
+			//lm->Dump( false );
 			dprintf( D_FULLDEBUG, "Returning xfer %s\n", tmp->second );
-			if ( !mm->returnTransferDestination( tmp->second ) ) {
+			if ( !lm->returnTransferDestination( tmp->second ) ) {
 				dprintf( D_ALWAYS, "Return of xfer %s failed\n",
 						 tmp->second );
 			}
 			//dprintf( D_FULLDEBUG, "Post return dump\n" );
-			//mm->Dump();
+			//lm->Dump();
 		} else {
 			dprintf( D_FULLDEBUG, "Failing xfer %s\n", tmp->second );
-			if ( !mm->failTransferDestination( tmp->second ) ) {
+			if ( !lm->failTransferDestination( tmp->second ) ) {
 				dprintf( D_ALWAYS, "Fail of xfer %s failed\n",
 						 tmp->second );
 			}
@@ -146,7 +146,7 @@ StorkMatchTest::timerHandler ( void )
 		if ( 0 == (random()%15) ) {
 			break;
 		}
-		const char	*d = mm->getTransferDirectory( "gsiftp" );
+		const char	*d = lm->getTransferDirectory( "gsiftp" );
 		if ( !d ) {
 			break;
 		}
@@ -162,7 +162,7 @@ StorkMatchTest::timerHandler ( void )
 		dprintf( D_FULLDEBUG, "  %s %ld\n", iter->second, iter->first );
 	}
 
-	//mm->Dump();
+	//lm->Dump();
 
 	dprintf( D_FULLDEBUG, "Timer handler done\n" );
 	return 0;
@@ -179,7 +179,7 @@ StorkMatchTest::stop ( void )
 		tmp = iter;
 		iter++;
 		dprintf( D_FULLDEBUG, "Returning xfer %s\n", tmp->second );
-		if ( !mm->returnTransferDestination( tmp->second ) ) {
+		if ( !lm->returnTransferDestination( tmp->second ) ) {
 			dprintf( D_ALWAYS, "Return of xfer %s failed\n",
 					 tmp->second );
 		}
