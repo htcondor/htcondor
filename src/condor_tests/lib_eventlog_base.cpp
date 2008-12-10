@@ -17,29 +17,25 @@
  *
  ***************************************************************/
 
-#include "condor_common.h"
-#include "read_user_log.h"
-#if ENABLE_STATE_DUMP
-#  include "read_user_log_state.h"
-#endif
-#include "condor_debug.h"
-#include "condor_config.h"
-#include "condor_distribution.h"
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <time.h>
+#include <stdio.h>
 #include "write_user_log.h"
 #include "read_user_log.h"
-#include "subsystem_info.h"
-#include <stdio.h>
-
-DECL_SUBSYSTEM( "BAD_READER", SUBSYSTEM_TYPE_TOOL );
+#include <string.h>
+#include <unistd.h>
+#include <stdlib.h>
 
 int
 WriteStateFile( const ReadUserLog::FileState &state, const char *state_file )
 {
 	int		errors = 0;
 
-	int	fd = safe_open_wrapper( state_file,
-								O_WRONLY|O_CREAT,
-								S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP );
+	int	fd = open( state_file,
+				   O_WRONLY|O_CREAT,
+				   S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP );
 	if ( fd < 0 ) {
 		fprintf( stderr, "ERROR: Failed to open state file %s\n", state_file );
 		return 1;
@@ -76,7 +72,7 @@ ReadEventLog( const char *event_log, int num_events, const char *state_file )
 		errors++;
 	}
 
-	// Now, try to read an event
+	// Now, try to read the events
 	int		num_read = 0;
 	for( int i = 0;  i < num_events;  i++ ) {
 		ULogEvent			*event = NULL;
@@ -89,6 +85,7 @@ ReadEventLog( const char *event_log, int num_events, const char *state_file )
 			num_read++;
 		}
 
+		printf( "Writing to state file %s\n", state_file );
 		reader.GetFileState(state);
 		errors += WriteStateFile( state, state_file );
 	}
@@ -159,19 +156,13 @@ main(int argc, const char **argv)
 	int		e;
 	int		num_events = 0;
 
-	DebugFlags = D_ALWAYS;
-
-	// initialize to read from config file
-	myDistro->Init( argc, argv );
-	config();
-
 	// Dirt simple command line handling
 	if ( argc != 3 ) {
 		fprintf( stderr, "usage: reader <log-file> <state-file>\n" );
 		exit(1);
 	}
-	const char	*state_file = argv[1];
 	const char	*event_file = argv[1];
+	const char	*state_file = argv[2];
 
 	// Create the eventlog file
 	e = WriteEventLog( event_file, num_events );
