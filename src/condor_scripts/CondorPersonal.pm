@@ -1440,6 +1440,7 @@ sub KillDaemonPids
 	$logdir =~ s/\015+$//;
 	my $masterpid = 0;
 	my $cnt = 0;
+	my $iswindows = IsThisWindows();
 
 	#print "logs are here:$logdir\n";
 	$pidfile = $logdir . "/PIDS";
@@ -1452,7 +1453,12 @@ sub KillDaemonPids
 		$thispid = $_;
 		if($thispid =~ /^(\d+)\s+MASTER.*$/) {
 			$masterpid = $1;
-			$cnt = kill 3, $masterpid;
+			if($iswindows == 1) {
+				$cmd = "/usr/bin/kill -f -s 3 $masterpid";
+				system($cmd);
+			} else {
+				$cnt = kill 3, $masterpid;
+			}
 			debug("Gentle kill for master <$masterpid><$thispid($cnt)>\n",3);
 			last;
 		}
@@ -1462,11 +1468,24 @@ sub KillDaemonPids
 	sleep(5);
 	# did it work.... is process still around?
 	$cnt = kill 0, $masterpid;
+	# try a kill again on master and see if no such process
+	if($iswindows == 1) {
+		$cnt = 1;
+		open(KL,"/usr/bin/kill -f -s 15 $masterpid 2>&1 |") 
+			or die "can not grab kill output\n";
+		while(<KL>) {
+			#print "Testing soft kill<$_>\n";
+			if( $_ =~ /^.*couldn\'t\s+open\s+pid\s+.*/ ) {
+				print "Windows soft kill worked\n";
+				$cnt = 0;
+			}
+		}
+	}
 	if($cnt == 0) {
-		debug("Gentle kill for master <$thispid> worked!\n",3);
+		debug("Gentle kill for master <$thispid> worked!\n",1);
 	} else {
 		# hmm bullets are placed in heads here.
-		debug("Gentle kill for master <$thispid><$cnt> failed!\n",3);
+		debug("Gentle kill for master <$thispid><$cnt> failed!\n",1);
 		open(PD,"<$pidfile") or die "Can not open<$pidfile>:$!\n";
 		while(<PD>) {
 			chomp();
@@ -1474,10 +1493,20 @@ sub KillDaemonPids
 			if($thispid =~ /^(\d+)\s+MASTER.*$/) {
 				$thispid = $1;
 				debug("Kill MASTER PID <$thispid:$1>\n",3);
-				$cnt = kill 15, $thispid;
+				if($iswindows == 1) {
+					$cmd = "/usr/bin/kill -f -s 15 $thispid";
+					system($cmd);
+				} else {
+					$cnt = kill 15, $thispid;
+				}
 			} else {
 				debug("Kill non-MASTER PID <$thispid>\n",3);
-				$cnt = kill 15, $thispid;
+				if($iswindows == 1) {
+					$cmd = "kill -f -s 15 $thispid";
+					system($cmd);
+				} else {
+					$cnt = kill 15, $thispid;
+				}
 			}
 			if($cnt == 0) {
 				debug("Failed to kill PID <$thispid>\n",3);
