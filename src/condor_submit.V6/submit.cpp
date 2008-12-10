@@ -7914,6 +7914,13 @@ SetVMParams()
 					vmdks.Value());
 			InsertJobExpr( buffer, false );
 		}
+
+		// look for an nvram file in given directory; if present,
+		// transfer it
+		Directory d(f_dirname.Value());
+		if (d.Find_Named_Entry("nvram")) {
+			transfer_vm_file(d.GetFullPath(), "vmware_nvram");
+		}
 	}
 
 	// Check if a job user defines 'Argument'.
