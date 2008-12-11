@@ -353,7 +353,6 @@ glexec_starter_handle_env(pid_t pid)
 		close(sock_fd);
 		return false;
 	}
-	delete[] env_buf;
 
 	// now send over the FD that the Starter should use for stdin, if any
 	// (we send a flag whether there is an FD to send first)
