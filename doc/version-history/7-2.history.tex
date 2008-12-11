@@ -104,6 +104,21 @@ the configuration variable
 \MacroNI{QUEUE\_SUPER\_USERS} or the \Condor{job\_router} and
 \Condor{schedd} are running as a Personal Condor in non-root mode.
 
+\item Fixed a small memory leak in the \Condor{schedd} when the ``event
+  log'' is enabled.
+
+\item Fixed a bug in the \Condor{schedd} that could cause it to write
+  an incorrect ``Unique ID'' to the event log's header.
+
+\item Fixed a bug in the user log reader API that could cause it in
+  incorrectly return a ULOG\_NO\_EVENT in some rare cases.
+
+\item Fixed a bug in the user log reader API that could cause it to
+  crash if the application attempted to re-initialize the ReadUserLog
+  object.  The code now detects this condition, and returns an error
+  when the application attempts to re-initialization an already
+  initialized ReadUserLog object.
+
 \item Fixed a bug that limited the size of stdin / stdout / stderr
   files in vanilla universe to 2G.
 
