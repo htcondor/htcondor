@@ -3,9 +3,12 @@ all_target($(NAME))
 
 soapobjs(kbdd)
 
-CFLAGS = $(STD_C_FLAGS)
+CFLAGS = $(STD_C_FLAGS) $(CONFIGURE_X11_CFLAGS)
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
-LIB = $(DAEMONCORE_LIB) $(STD_LIBS) $(CONFIGURE_GSOAP_LDFLAGS)
+LIB = $(DAEMONCORE_LIB) $(STD_LIBS) $(CONFIGURE_GSOAP_LDFLAGS)  $(CONFIGURE_X11_LDFLAGS) $(CONFIGURE_X11_LIBS)
+
+XCOMM We do not currently build the kbdd statically under Linux
+XCOMM because libX11.a is linked against pthreads on many distros.
 
 XCOMM On Digital Unix 5.0, if we are linking against libX11.a, we need
 XCOMM -ldnet_stub.  libX11.a has hooks to support DecNet, and we must
@@ -37,7 +40,7 @@ XCOMM platform, we do the ugly hack of using ToUpper to mask the
 XCOMM des_key_sched symbol from a local copy of libX11.a.  So, we
 XCOMM handle statically linking for DUX5 totally seperate. 
 
-condor_kbdd.static: $(OBJ) $(LIB) ./libX11.a
+condor_kbdd.static: $(OBJ) $(LIB) ./libX11.a 
 	$(CC_LINK) $(STATIC)  $(C_PLUS_FLAGS) -o condor_kbdd.static $(OBJ) $(LIB) -lm ./libX11.a -ldnet_stub $(PLATFORM_LDFLAGS) $(SITE_LDFLAGS)  $(DEMANGLE)
 
 ./libX11.a: ToUpper /usr/lib/libX11.a
@@ -66,10 +69,6 @@ $(STATIC_UNSTRIP_DIR)/sbin/condor_kbdd: condor_kbdd.static
 
 clean::
 	rm -f condor_kbdd.static $(OBJ) ./libX11.a ToUpper
-
-#else
-
-static_target($(NAME),$(OBJ),$(LIB),sbin)
 
 #endif
 

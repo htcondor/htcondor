@@ -69,18 +69,20 @@ if ( $ec2_sim_pid == 0 ) {
 	open STDERR, ">ec2_sim.out";
 	exec( "$ec2_sim" ) or die "Failed to exec $ec2_sim\n";
 } elsif ( $ec2_sim_pid > 0 ) {
-	sleep 1;
-	if ( waitpid( $ec2_sim_pid, &POSIX::WNOHANG ) == $ec2_sim_pid ) {
-		die( "$ec2_sim died unexpectedly!\n" );
-	}
-	open EC2_OUT, "<ec2_sim.out" or die ("Failed to open ec2_sim.out\n");
-	while ( <EC2_OUT> ) {
-		if ( s/Listening on port // ) {
-			chomp( $ec2_sim_port = $_ );
-			last;
+	for ( my $i = 0; $i < 5 && $ec2_sim_port == 0; $i++ ) {
+		if ( waitpid( $ec2_sim_pid, &POSIX::WNOHANG ) == $ec2_sim_pid ) {
+			die( "$ec2_sim died unexpectedly!\n" );
 		}
+		open EC2_OUT, "<ec2_sim.out" or die ("Failed to open ec2_sim.out\n");
+		while ( <EC2_OUT> ) {
+			if ( s/Listening on port // ) {
+				chomp( $ec2_sim_port = $_ );
+				last;
+			}
+		}
+		close EC2_OUT;
+		sleep 1;
 	}
-	close EC2_OUT;
 	if ( $ec2_sim_port == 0 ) { die("Failed to find port for $ec2_sim\n"); }
 } else {
 	die( "Failed to fork() to spawn $ec2_sim!\n" );
