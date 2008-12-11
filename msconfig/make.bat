@@ -55,6 +55,7 @@ REM Copy the correct default library vsprops file into place. This
 REM changes which libraries are inlcuded by default into projects
 call correct_libs.bat noinit >NUL
 if %ERRORLEVEL% NEQ 2 call correct_libs.bat noinit >NUL
+set ERRORLEVEL=0
 
 REM Make gsoap stubs, etc.
 call :MAKE_GSOAP
