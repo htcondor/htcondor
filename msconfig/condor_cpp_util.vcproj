@@ -4,7 +4,6 @@
 	Version="9.00"
 	Name="condor_cpp_util"
 	ProjectGUID="{0339DBEE-40FD-4624-A2F6-E49D84303379}"
-	RootNamespace="condor_cpp_util"
 	TargetFrameworkVersion="0"
 	>
 	<Platforms>
@@ -120,7 +119,7 @@
 				Optimization="1"
 				InlineFunctionExpansion="1"
 				AdditionalIncludeDirectories="..\src\condor_tt"
-				PreprocessorDefinitions="WIN32;NDEBUG"
+				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE"
 				StringPooling="true"
 				RuntimeLibrary="0"
 				EnableFunctionLevelLinking="true"
@@ -1451,10 +1450,6 @@
 		</File>
 		<File
 			RelativePath="..\src\condor_daemon_client\dc_schedd.h"
-			>
-		</File>
-		<File
-			RelativePath="..\src\condor_c++_util\dc_service.cpp"
 			>
 		</File>
 		<File

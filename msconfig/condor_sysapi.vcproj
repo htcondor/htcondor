@@ -43,7 +43,7 @@
 				AdditionalOptions="$(CONDOR_DEFINE) $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE)"
 				Optimization="1"
 				InlineFunctionExpansion="1"
-				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS"
+				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE"
 				StringPooling="true"
 				RuntimeLibrary="0"
 				EnableFunctionLevelLinking="true"
@@ -118,7 +118,7 @@
 				Name="VCCLCompilerTool"
 				AdditionalOptions="$(CONDOR_DEFINE) $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE)"
 				Optimization="0"
-				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS"
+				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE"
 				MinimalRebuild="true"
 				RuntimeLibrary="1"
 				UsePrecompiledHeader="2"
@@ -319,6 +319,7 @@
 				<Tool
 					Name="VCCLCompilerTool"
 					PreprocessorDefinitions=""
+					PrecompiledHeaderFile="..\Debug\condor_common.pch"
 				/>
 			</FileConfiguration>
 		</File>
@@ -440,6 +441,7 @@
 				<Tool
 					Name="VCCLCompilerTool"
 					PreprocessorDefinitions=""
+					PrecompiledHeaderFile="..\Debug\condor_common.pch"
 				/>
 			</FileConfiguration>
 		</File>
@@ -481,6 +483,7 @@
 				<Tool
 					Name="VCCLCompilerTool"
 					PreprocessorDefinitions=""
+					PrecompiledHeaderFile="..\Debug\condor_common.pch"
 				/>
 			</FileConfiguration>
 		</File>
