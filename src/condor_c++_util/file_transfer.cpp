@@ -1771,7 +1771,9 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		record.sockp =s;
 		record.transfer_time = start;
 		record.delegation_method_id = delegation_method;
+#ifdef WANT_QUILL
 		file_transfer_db(&record, &jobAd);
+#endif
 	}
 
 	// go back to the state we were in before file transfer
