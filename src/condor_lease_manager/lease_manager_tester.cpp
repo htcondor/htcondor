@@ -176,9 +176,9 @@ Tests::cmdLine( int argc, const char *argv[] )
 		"      --requestor|-r <name>: set requestor name\n"
 		"      --requirements <string>: set requirements\n"
 		"      --set <attr> <value>: set attribute in request least\n"
-		"    RENEW <duration> <lease-id> [lease-id ..]\n"
-		"    DELETE <lease-id> [lease-id ..]\n"
-		"    RELEASE <lease-id> [lease-id ..]\n"
+		"    RENEW <duration> <lease-id> *|[lease-id ..]\n"
+		"    DELETE *|<lease-id> [lease-id ..]\n"
+		"    RELEASE *|<lease-id> [lease-id ..]\n"
 		"    EXPIRE\n"
 		"\n";
 
@@ -459,6 +459,8 @@ Tests::cmdLine( int argc, const char *argv[] )
 int
 Tests::init( void )
 {
+	int		errors = 0;
+
 	m_lm = new DCLeaseManager( m_name, m_pool );
 
 	int status = readLeaseFile( );
@@ -467,31 +469,47 @@ Tests::init( void )
 		return -1;
 	}
 
-	// Find IDs in the list of leases, move to selected list
-	list<const char *>::iterator id_iter;
-	for( id_iter  = m_lease_ids.begin( );
-		 id_iter != m_lease_ids.end( );
-		 id_iter++ ) {
-		const char	*id = *id_iter;
-
+	// If our lease ID list is just a single '*', select them all
+	if ( ( m_lease_ids.size() == 1 )  &&
+		 ( !strcmp(m_lease_ids.front(),"*") )  ) {
 		list<DCLeaseManagerLease *>::iterator lease_iter;
 		bool	found = false;
 		for( lease_iter = m_leases.begin( );
 			 lease_iter != m_leases.end( );
 			 lease_iter++ ) {
 			DCLeaseManagerLease	*lease = *lease_iter;
-			if ( lease->idMatch(id) ) {
-				m_selected_leases.push_back( lease );
-				found = true;
-				break;
-			}
-		}
-		if ( !found ) {
-			fprintf( stderr, "No match for lease ID '%s' found\n", id );
+			m_selected_leases.push_back( lease );
 		}
 	}
 
-	return 0;
+	// Otherwise, walk through them all, find matches
+	else {
+		list<const char *>::iterator id_iter;
+		for( id_iter  = m_lease_ids.begin( );
+			 id_iter != m_lease_ids.end( );
+			 id_iter++ ) {
+			const char	*id = *id_iter;
+
+			list<DCLeaseManagerLease *>::iterator lease_iter;
+			bool	found = false;
+			for( lease_iter = m_leases.begin( );
+				 lease_iter != m_leases.end( );
+				 lease_iter++ ) {
+				DCLeaseManagerLease	*lease = *lease_iter;
+				if ( lease->idMatch(id) ) {
+					m_selected_leases.push_back( lease );
+					found = true;
+					break;
+				}
+			}
+			if ( !found ) {
+				fprintf( stderr, "No match for lease ID '%s' found\n", id );
+				errors++;
+			}
+		}
+	}
+
+	return errors;
 }
 
 int
