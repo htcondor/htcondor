@@ -79,8 +79,8 @@ MachAttributes::MachAttributes()
 		m_got_windows_version_info = 
 			GetVersionEx ( (OSVERSIONINFO*) &m_window_version_info );
 		if ( !m_got_windows_version_info ) {
-			dprintf ( D_ALWAYS, "MachAttributes::publish: failed to "
-				"get Windows version information\n" );
+			dprintf ( D_ALWAYS, "MachAttributes: failed to "
+				"get Windows version information.\n" );
 		}
 	}
 #endif
