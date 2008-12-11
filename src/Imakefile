@@ -84,8 +84,7 @@
 		CreddProgs StorkProgs LeaseManagerProgs \
 		TTProgs DeploymentTools \
 		eventd.V2 transferd procd privsep vm-gahp EC2 \
-		JobRouterProgs GlobusGahps \
-		EC2 JobRouterProgs GlobusGahps startd_factory \
+		JobRouterProgs GlobusGahps startd_factory \
 		power
 
 #define Libraries \
