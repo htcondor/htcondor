@@ -87,10 +87,10 @@ QUILL_OBJS = jobqueuesnapshot.o historysnapshot.o pgsqldatabase.o sqlquery.o $(O
 QUILL_OBJS =
 #endif
 
-#ifdef WANT_TT
+#ifdef WANT_QUILL
 TT_OBJS = pgsqldatabase.o file_sql.o file_transfer_db.o 
 #else
-TT_OBJS =
+TT_OBJS = file_sql.o
 #endif
 
 /* Bring in the old classad library because the user log parsing code

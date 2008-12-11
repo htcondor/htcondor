@@ -18,7 +18,7 @@ C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(QUILL_INC) $(TT_INC) $(CONFIGURE_POSTGRESQL
 LIB = $(STD_LIBS) $(TT_LIB) $(CONFIGURE_POSTGRESQL_LDFLAGS)
 
 LH_OBJ = load_history.o ../condor_tt/condor_ttdb.o \
-../condor_tt/jobqueuecollection.o
+	../condor_tt/jobqueuecollection.o
 
 PROBE_OBJ = probe_process.o ../condor_ckpt/maps.o
 
@@ -53,21 +53,23 @@ public_c_plus_target(condor_version,bin,version.o,$(LIB))
 
 public_c_plus_target(condor_wait,bin,wait.o,$(LIB))
 
-public_c_plus_target(condor_convert_history,sbin,convert_history.o,$(LIB))
 
+#ifdef WANT_QUILL
 /* Notice that this tool has a different link line for QUILL */
 c_plus_target_complex(condor_load_history,$(LH_OBJ),$(C_PLUS_FLAGS),$(ALL_LDFLAGS),$(LIB) $(QUILL_LIB))
 release_target(condor_load_history,bin,EXECUTABLE_MODE)
 strip_target(condor_load_history,bin,EXECUTABLE_MODE)
 static_target(condor_load_history,$(LH_OBJ),$(LIB) $(QUILL_LIB),bin)
 
-
-public_c_plus_target(condor,sbin,tool.o,$(LIB))
-
 c_plus_target_complex(condor_dump_history,dump_history.o,$(C_PLUS_FLAGS),$(ALL_LDFLAGS),$(LIB) $(QUILL_LIB))
 release_target(condor_dump_history,bin,EXECUTABLE_MODE)
 strip_target(condor_dump_history,bin,EXECUTABLE_MODE)
 static_target(condor_dump_history,dump_history.o,$(LIB) $(QUILL_LIB),bin)
+
+public_c_plus_target(condor_convert_history,sbin,convert_history.o,$(LIB))
+#endif
+
+public_c_plus_target(condor,sbin,tool.o,$(LIB))
  
 /* NOTE: we want a real copy, and we need to grab the corresponding
    file from the right directory */ 
@@ -75,7 +77,6 @@ release_copy_target($(RELEASE_DIR)/sbin/condor,bin,condor,EXECUTABLE_MODE)
 strip_copy_target($(STRIP_DIR)/sbin/condor,bin,condor,EXECUTABLE_MODE)
 static_copy_target($(STATIC_DIR)/sbin/condor,bin,condor,EXECUTABLE_MODE)
 /* TODO: this is broken for strip vs. unstrip static. :(  */
-
 
 public_c_plus_target(condor_store_cred,sbin,store_cred_main.o,$(LIB))
 
