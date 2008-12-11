@@ -255,22 +255,14 @@ PCRE_LIB = $(PCRE_DIR)/lib/libpcre.a
 #endif
 #endif
 
-#ifdef WANT_TT
-/*
-TT_LIB = $(POSTGRESQL_LIB)/libpq.a $(ORACLE_HOME)/lib/libocci10.a $(ORACLE_HOME)/lib/libclntst10.a $(ORACLE_HOME)/lib/libnnz10.a -lirc -lpthread
-*/
+#ifdef WANT_QUILL
 #if HAS_EXTERNALS
+/* These variables should be coalesced into something more meaningful */
+QUILL_LIB = $(POSTGRESQL_LIB)/libpq.a 
+QUILL_INC = -I$(POSTGRESQL_INC) 
 POSTGRESQL_LIBS = $(POSTGRESQL_LIB)/libpq.a 
 TT_LIB = $(POSTGRESQL_LIBS) $(ORACLE_LIB)
 TT_INC = -I$(POSTGRESQL_INC) $(ORACLE_INC)
-#endif
-TT_FLAGS = -DWANT_TT  
-#endif
-
-#ifdef WANT_QUILL
-#if HAS_EXTERNALS
-QUILL_LIB = $(POSTGRESQL_LIB)/libpq.a 
-QUILL_INC = -I$(POSTGRESQL_INC) 
 #endif
 QUILL_FLAGS = -DWANT_QUILL 
 #endif

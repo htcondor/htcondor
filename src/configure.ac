@@ -2180,14 +2180,6 @@ AC_ARG_ENABLE([quill],
 AS_IF([test "x$enable_quill" = xyes],
   [AC_DEFINE([WANT_QUILL], [1], [Define if enabling Quill])])
 
-AC_ARG_ENABLE([tt],
-  AC_HELP_STRING([--enable-tt],
-    [enable TT functionality (default: yes)]),
-  [],
-  [enable_tt=yes])
-AS_IF([test "x$enable_tt" = xyes],
-  [AC_DEFINE([WANT_TT], [1], [Define if enabling TT])])
-
 AC_ARG_ENABLE([kbdd],
   AC_HELP_STRING([--enable-kbdd],
     [enable KBDD functionality (default: platform dependent)]),
