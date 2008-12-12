@@ -128,8 +128,9 @@ class ReadUserLog
 
     /** Constructor.
         @param State to restore from
+		@param Read only access to the file (locking disabled)
 	*/
-    ReadUserLog( const FileState &state );
+    ReadUserLog( const FileState &state, bool read_only = false );
                                       
     /** Destructor.
 	*/
@@ -157,7 +158,8 @@ class ReadUserLog
     */
     bool initialize (const char *filename,
 					 bool handle_rotation = false,
-					 bool check_for_rotated = false );
+					 bool check_for_rotated = false,
+					 bool read_only = false );
 
     /** Initialize the log file.  Similar to above, but takes an integer
 		as it's second parameter. This function will return false
@@ -171,25 +173,31 @@ class ReadUserLog
     */
     bool initialize (const char *filename,
 					 int max_rotation,
-					 bool check_for_rotated = true );
+					 bool check_for_rotated = true,
+					 bool read_only = false );
 
     /** Initialize the log file from a saved state.
 		This function will return false if it can't open the log file
 		 (among other problems).
         @param FileState saved file state
+		@param Read only access to the file (locking disabled)
         @return true for success
     */
-    bool initialize (const ReadUserLog::FileState &state );
+    bool initialize (const ReadUserLog::FileState &state,
+					 bool read_only = false );
 
     /** Initialize the log file from a saved state and set the
 		  rotation parameters
 		This function will return false if it can't open the log file
 		 (among other problems).
         @param FileState saved file state
-        @param  Maximum rotation files
+        @param Maximum rotation files
+		@param Read only access to the file (locking disabled)
         @return true for success
     */
-    bool initialize (const ReadUserLog::FileState &state, int max_rotations );
+    bool initialize (const ReadUserLog::FileState &state,
+					 int max_rotations,
+					 bool read_only = false );
 
     /** Read the next event from the log file.  The event pointer to
         set to point to a newly instatiated ULogEvent object.
@@ -331,7 +339,8 @@ class ReadUserLog
     */
     bool InternalInitialize (const ReadUserLog::FileState &state,
 							 bool set_rotations,
-							 int max_rotations = 0 );
+							 int max_rotations,
+							 bool read_only );
 
     /** Internal initializer.  This function will return false
         if it can't open the log file (among other things).
@@ -345,8 +354,8 @@ class ReadUserLog
     bool InternalInitialize ( int max_rotation,
 							  bool check_for_rotated,
 							  bool restore_position,
-							  bool enable_header_read ,
-							  bool force_disable_locking = false );
+							  bool enable_header_read,
+							  bool read_only );
 
 	/** Initialize rotation parameters
 		@param Max number of rotations to handle (0 = none)
@@ -457,6 +466,7 @@ class ReadUserLog
 	bool				 m_handle_rot;	/** Do we handle file rotation? */
 	int					 m_max_rotations; /** Max rotation number */
 	bool				 m_read_header;	/** Read the file's header? */
+	bool				 m_read_only;	/** Open file read only? */
 
 	bool				 m_lock_enable;	/** Should we lock the file?  */
     FileLockBase		*m_lock;		/** The log file lock         */

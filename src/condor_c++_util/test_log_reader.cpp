@@ -45,7 +45,8 @@ struct Options
 	bool			readPersist;
 	bool			writePersist;
 	bool			rotation;
-	int				max_rotations;
+	int				maxRotations;
+	bool			readOnly;
 	bool			dumpState;
 	bool			missedCheck;
 	bool			exitAfterInit;
@@ -125,7 +126,7 @@ CheckArgs(int argc, const char **argv, Options &opts)
 #     if ENABLE_STATE_DUMP
 		"  --dump-state: dump the persisted reader state after reading it\n"
 #     endif
-		"  --ro|--rw|--wo: Set persitent state to "
+		"  --p-ro|--p-rw|--p-wo: Set persitent state to "
 		"read-only/read-write/write-only\n"
 		"  --init-only: exit after initialization\n"
 		"  --rotation|-r <n>: enable rotation handling, set max #\n"
@@ -133,6 +134,7 @@ CheckArgs(int argc, const char **argv, Options &opts)
 		"  --sleep <number>: how many seconds to sleep between events\n"
 		"  --exit|-x: Exit when no event available\n"
 		"  --eventlog|-e: Setup to read the EventLog\n"
+		"  --ro: Read-only access to log file (disables locking)\n"
 		"  --no-term: No limit on terminte events\n"
 		"  --term <number>: number of terminate events to exit after\n"
 		"  --usage|--help|-h: print this message and exit\n"
@@ -146,6 +148,7 @@ CheckArgs(int argc, const char **argv, Options &opts)
 	opts.persistFile = NULL;
 	opts.readPersist = false;
 	opts.writePersist = false;
+	opts.readOnly = false;
 	opts.maxExec = 0;
 	opts.isEventLog = false;
 	opts.exit = false;
@@ -153,7 +156,7 @@ CheckArgs(int argc, const char **argv, Options &opts)
 	opts.term = 1;
 	opts.verbosity = VERB_ERROR;
 	opts.rotation = false;
-	opts.max_rotations = 0;
+	opts.maxRotations = 0;
 	opts.exitAfterInit = false;
 	opts.dumpState = false;
 	opts.missedCheck = false;
@@ -189,6 +192,9 @@ CheckArgs(int argc, const char **argv, Options &opts)
 		} else if ( arg.Match('e', "eventlog") ) {
 			opts.isEventLog = true;
 
+		} else if ( arg.Match("ro") ) {
+			opts.readOnly = true;
+
 		} else if ( arg.Match('p', "persist") ) {
 			if ( arg.hasOpt() ) {
 				arg.getOpt( opts.persistFile );
@@ -208,11 +214,11 @@ CheckArgs(int argc, const char **argv, Options &opts)
 		} else if ( arg.Match("init-only") ) {
 			opts.exitAfterInit = true;
 
-		} else if ( arg.Match("ro") ) {
+		} else if ( arg.Match("p-ro") ) {
 			opts.readPersist = true;
 			opts.writePersist = false;
 
-		} else if ( arg.Match("rw") ) {
+		} else if ( arg.Match("p-rw") ) {
 			opts.readPersist = true;
 			opts.writePersist = true;
 
@@ -220,8 +226,8 @@ CheckArgs(int argc, const char **argv, Options &opts)
 			opts.exit = true;
 
 		} else if ( arg.Match( 'r', "rotation") ) {
-			if ( arg.getOpt( opts.max_rotations ) ) {
-				opts.rotation = opts.max_rotations > 0;
+			if ( arg.getOpt( opts.maxRotations ) ) {
+				opts.rotation = opts.maxRotations > 0;
 			} else {
 				fprintf(stderr, "Value needed for '%s'\n", arg.Arg() );
 			}
@@ -296,7 +302,7 @@ CheckArgs(int argc, const char **argv, Options &opts)
 			printf("test_log_reader: %s, %s\n", VERSION, __DATE__);
 			status = STATUS_CANCEL;
 
-		} else if ( arg.Match("wo") ) {
+		} else if ( arg.Match("p-wo") ) {
 			opts.readPersist = false;
 			opts.writePersist = true;
 
@@ -347,11 +353,14 @@ ReadEvents(Options &opts, int &numEvents)
 			close( fd );
 
 			bool istatus;
-			if ( opts.max_rotations ) {
-				istatus = reader.initialize( state, opts.max_rotations );
+			if ( opts.maxRotations ) {
+				istatus = reader.initialize( state,
+											 opts.maxRotations,
+											 opts.readOnly );
 			}
 			else {
-				istatus = reader.initialize( state );
+				istatus = reader.initialize( state,
+											 opts.readOnly );
 			}
 			if ( ! istatus ) {
 				fprintf( stderr, "Failed to initialize from state\n" );
@@ -383,8 +392,9 @@ ReadEvents(Options &opts, int &numEvents)
 		}
 		else {
 			if ( !reader.initialize( opts.logFile,
-									 opts.max_rotations,
-									 opts.rotation) ) {
+									 opts.maxRotations,
+									 opts.rotation,
+									 opts.readOnly ) ) {
 				fprintf( stderr, "Failed to initialize with file\n" );
 				return STATUS_ERROR;
 			}
