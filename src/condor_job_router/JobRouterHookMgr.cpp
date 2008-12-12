@@ -597,13 +597,15 @@ StatusClient::hookExited(int exit_status)
 			return;
 		}
 		m_routed_job->dest_ad = new_job_ad;
+		job_router->UpdateJobStatus(m_routed_job);
 	}
 	else
 	{
 		dprintf(D_FULLDEBUG, "StatusClient::hookExited: Hook %s (pid %d) returned no data.\n",
 				m_hook_path, (int)m_pid);
+                job_router->FinishCheckSubmittedJobStatus(m_routed_job);
+
 	}
-	job_router->UpdateJobStatus(m_routed_job);
 }
 
 
