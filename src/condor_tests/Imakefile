@@ -620,11 +620,13 @@ TESTCLASS(lib_eventlog_base,lib)
 TESTCLASS(lib_eventlog_base,quick)
 TESTCLASS(lib_eventlog_base,full)
 
+#if defined(IS_IA64_LINUX_RHEL3) || defined(IS_CONDOR_PPC_LINUX_SLES9) || defined(IS_PPC_OSX_10_4) || defined(IS_CONDOR_PPC_LINUX_YD50) || defined(IS_X86_64_LINUX_RHEL5)  || defined(IS_X86_64_LINUX_RHEL3) || defined(IS_I386_OSX_10_4) || defined(IS_I386_LINUX_RHEL5) || defined(IS_I386_LINUX_RHEL51)
 DESC(lib_eventlog_build,"Test building of eventlog program")
 RUN(lib_eventlog_build)
 TESTCLASS(lib_eventlog_build,lib)
 TESTCLASS(lib_eventlog_build,quick)
 TESTCLASS(lib_eventlog_build,full)
+#endif
 
 /* EventLog Rotation tests */
 DESC(lib_eventlog_rotation-defaults,"Event Log Rotation: Default settings")
