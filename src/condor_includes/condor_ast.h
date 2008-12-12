@@ -92,6 +92,8 @@ class EvalResult
         };
   	LexemeType type;
 
+	bool debug;
+
 	private :
 	void deepcopy(const EvalResult & copyfrom);
 };

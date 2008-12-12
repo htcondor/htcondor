@@ -39,6 +39,7 @@ extern void evalFromEnvironment (const char *, EvalResult *);
 static bool name_in_list(const char *name, StringList &references);
 static void printComparisonOpToStr (char *, ExprTree *, ExprTree *, char *);
 static int calculate_math_op_length(ExprTree *lArg, ExprTree *rArg, int op_length);
+static void dprintResult(ExprTree *tree, EvalResult *result);
 
 bool classad_debug_function_run = 0;
 
@@ -48,6 +49,7 @@ bool classad_debug_function_run = 0;
 EvalResult::EvalResult()
 {
 	type = LX_UNDEFINED;
+	debug = false;
 }
 
 // EvalResult dtor
@@ -62,6 +64,7 @@ void
 EvalResult::deepcopy(const EvalResult & rhs)
 {
 	type = rhs.type;
+	debug = rhs.debug;
 	switch ( type ) {
 		case LX_INTEGER:
 		case LX_BOOL:
@@ -340,11 +343,15 @@ int Variable::_EvalTree(const AttrList* classad, EvalResult* val)
     
     if(!(tmp = classad->Lookup(name)))
     {
-	val->type = LX_UNDEFINED;
+		val->type = LX_UNDEFINED;
+		dprintResult(this, val);
         return TRUE;
     }
 
-    return tmp->EvalTree(classad, val);
+    int result = tmp->EvalTree(classad, val);
+	dprintResult(this, val);
+
+	return result;
 }
 
 int Variable::_EvalTree( const AttrList* my_classad, const AttrList* target_classad, EvalResult* val)
@@ -433,16 +440,25 @@ int Variable::_EvalTreeSimple( const char *adName, const AttrList *my_classad, c
 	if(my_classad)
 	{
 		tmp = my_classad->Lookup(adName);
-		if(tmp) return (tmp->EvalTree(my_classad, target_classad, val));
+		if(tmp) {
+			int result = tmp->EvalTree(my_classad, target_classad, val);
+			dprintResult(this, val);
+			return result;
+		}
 	}
 
 	if(!restrict_search && target_classad)
 	{
 		tmp = target_classad->Lookup(adName);
-		if(tmp) return (tmp->EvalTree(target_classad, my_classad, val));
+		if(tmp) {
+			int result = tmp->EvalTree(target_classad, my_classad, val);
+			dprintResult(this, val);
+			return result;
+		}
 	}
 
     evalFromEnvironment(adName,val);
+	dprintResult(this, val);
 	return TRUE;
 }
 
@@ -1597,6 +1613,10 @@ int Function::_EvalTree(const AttrList *attrlist1, const AttrList *attrlist2, Ev
 	successful_eval = FALSE;
 	result->type = LX_UNDEFINED;
 
+	if ( !strcasecmp(name, "debug") ) {
+		result->debug = true;
+	}
+
 		// treat calls to function IfThenElse() special, because we cannot
 		// evaluate the arguments ahead of time (argument evaluation must
 		// be lazy for IfThenElse).
@@ -1626,6 +1646,7 @@ int Function::_EvalTree(const AttrList *attrlist1, const AttrList *attrlist2, Ev
 
 		i = 0;
 		while (iter.Next(arg)) {
+			evaluated_args[i].debug = result->debug;
 			if ( must_eval_to_strings ) {
 				if (!EvaluateArgumentToString(arg, attrlist1,attrlist2,
 											  &evaluated_args[i++]))
@@ -1712,6 +1733,9 @@ int Function::_EvalTree(const AttrList *attrlist1, const AttrList *attrlist2, Ev
 			successful_eval = FunctionRegexps(number_of_args, evaluated_args, result);
 		} else if (!strcasecmp(name, "formattime")) {
 			successful_eval = FunctionFormatTime(number_of_args, evaluated_args, result);
+		} else if (!strcasecmp(name, "debug")) {
+			*result = evaluated_args[0];
+			successful_eval = true;
 		}
 #ifdef HAVE_DLOPEN
         else {
@@ -1723,6 +1747,14 @@ int Function::_EvalTree(const AttrList *attrlist1, const AttrList *attrlist2, Ev
             successful_eval = false;
         }
 #endif
+
+		dprintResult(this, result);
+
+		if (result->debug) {
+			if (strcasecmp(name, "debug") == 0) {
+				result->debug = false;
+			}
+		  }
 		}	// of if (!done)
 
 		delete [] evaluated_args;
@@ -3336,4 +3368,49 @@ int Function::FunctionFormatTime(
 	}
 
 	return TRUE;
+}
+
+
+void dprintResult(ExprTree *tree, EvalResult *result) {
+	if (result->debug) {
+		char *s = NULL;
+		tree->PrintToNewStr(&s);
+
+		switch ( result->type ) {
+		case LX_INTEGER :
+			dprintf(D_ALWAYS, "Classad debug: %s --> %d\n", s, result->i);
+			break;
+
+		case LX_FLOAT :
+
+			dprintf(D_ALWAYS, "Classad debug: %s --> %f\n", s, result->f);
+			break;
+
+		case LX_STRING :
+
+			dprintf(D_ALWAYS, "Classad debug: %s --> %s\n", s, result->s);
+			break;
+
+		case LX_NULL :
+
+			dprintf(D_ALWAYS, "Classad debug: %s --> NULL\n", s);
+			break;
+
+		case LX_UNDEFINED :
+
+			dprintf(D_ALWAYS, "Classad debug: %s --> UNDEFINED\n", s);
+			break;
+
+		case LX_ERROR :
+
+			dprintf(D_ALWAYS, "Classad debug: %s --> ERROR\n", s);
+			break;
+
+		default :
+
+			dprintf(D_ALWAYS, "Classad debug: %s --> ???\n", s);
+			break;
+		}
+		free(s);
+	}
 }
