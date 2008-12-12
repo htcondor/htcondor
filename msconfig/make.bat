@@ -75,7 +75,7 @@ call correct_libs.bat noinit >NUL
 if %ERRORLEVEL% NEQ 1 call correct_libs.bat noinit >NUL
 
 REM We're done, let's get out of here
-echo. & echo *** Done. Build is all happy. Congrats! Go drink beer.
+echo *** Done. Build is all happy. Congrats! Go drink beer.
 endlocal
 goto :EOF
 
@@ -138,7 +138,7 @@ if /i A%1==Adebug (
     set CONFIGURATION=Debug 
     shift 
 )
-echo. & echo *** %CONFIGURATION% Build & echo.
+echo *** %CONFIGURATION% Build
 exit /b 0
 
 REM ======================================================================
@@ -155,10 +155,9 @@ REM ======================================================================
 REM ======================================================================
 REM Build condor (build order is now preserved in project)
 REM ======================================================================
-echo. & echo *** Current Environment... & echo. 
+echo Building Condor...
 set
-echo. & echo *** Building Condor... & echo.
-msbuild condor.sln /nologo /t:condor /p:Configuration=%CONFIGURATION%;VCBuildUseEnvironment="true" | grep -v "PRJ0018"
-REM PRJ0018 - These errors just tell us that some unused env vars are not set
+msbuild condor.sln /nologo /t:condor /p:Configuration=%CONFIGURATION%;VCBuildUseEnvironment="true";AdditionalDependencies=""
+REM devenv condor.sln /useenv /build "%CONFIGURATION%"
 if %ERRORLEVEL% NEQ 0 exit /b 1
 exit /b 0
