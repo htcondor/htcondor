@@ -4,6 +4,7 @@
 	Version="9.00"
 	Name="condor_cpp_util"
 	ProjectGUID="{0339DBEE-40FD-4624-A2F6-E49D84303379}"
+	RootNamespace="condor_cpp_util"
 	TargetFrameworkVersion="0"
 	>
 	<Platforms>
