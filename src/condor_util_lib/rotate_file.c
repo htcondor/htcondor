@@ -29,7 +29,9 @@ rotate_file(const char *old_filename, const char *new_filename)
 	/* We must use MoveFileEx on NT because rename can not overwrite
 	   an existing file. */
 	if (MoveFileEx(old_filename, new_filename,
-				   MOVEFILE_REPLACE_EXISTING) == 0) {
+				   MOVEFILE_COPY_ALLOWED |
+                   MOVEFILE_REPLACE_EXISTING |
+                   MOVEFILE_WRITE_THROUGH) == 0) {
 		DWORD err = GetLastError();
 		dprintf(D_ALWAYS, "MoveFileEx(%s,%s) failed with error %d\n",
 				old_filename, new_filename, err);
