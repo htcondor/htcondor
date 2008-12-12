@@ -185,16 +185,21 @@ ReadUserLog::initialize( void )
 bool
 ReadUserLog::initialize( const char *filename,
 						 bool handle_rotation,
-						 bool check_for_old )
+						 bool check_for_old,
+						 bool read_only )
 {
-	return initialize( filename, handle_rotation ? 1 : 0, check_for_old );
+	return initialize( filename,
+					   handle_rotation ? 1 : 0,
+					   check_for_old,
+					   read_only );
 }
 
 // Initializer which allows the specifying of the max rotation level
 bool
 ReadUserLog::initialize( const char *filename,
 						 int max_rotations,
-						 bool check_for_old )
+						 bool check_for_old,
+						 bool read_only )
 {
 	if ( m_initialized ) {
 		return false;
@@ -208,8 +213,11 @@ ReadUserLog::initialize( const char *filename,
 	}
 	m_match = new ReadUserLogMatch( m_state );
 
-	if (! InternalInitialize( max_rotations, check_for_old,
-							  false, handle_rotation ) ) {
+	if (! InternalInitialize( max_rotations,
+							  check_for_old,
+							  false,
+							  handle_rotation,
+							  read_only ) ) {
 		return false;
 	}
 
@@ -222,17 +230,19 @@ ReadUserLog::initialize( const char *filename,
 
 // Restore from state, use rotation parameters from state, too.
 bool
-ReadUserLog::initialize( const ReadUserLog::FileState &state )
+ReadUserLog::initialize( const ReadUserLog::FileState &state,
+						 bool read_only )
 {
-	return InternalInitialize( state, false );
+	return InternalInitialize( state, false, 0, read_only );
 }
 
 // Restore from state, setting the rotation parameters
 bool
 ReadUserLog::initialize( const ReadUserLog::FileState &state,
-						 int max_rotations )
+						 int max_rotations,
+						 bool read_only )
 {
-	return InternalInitialize( state, true, max_rotations );
+	return InternalInitialize( state, true, max_rotations, read_only );
 }
 
 // Get / set rotation parameters
@@ -259,7 +269,8 @@ ReadUserLog::initRotParms( int max_rotation )
 bool
 ReadUserLog::InternalInitialize( const ReadUserLog::FileState &state,
 								 bool set_rotations,
-								 int max_rotations )
+								 int max_rotations,
+								 bool read_only )
 {
 	if ( m_initialized ) {
 		return false;
@@ -279,7 +290,7 @@ ReadUserLog::InternalInitialize( const ReadUserLog::FileState &state,
 	}
 
 	m_match = new ReadUserLogMatch( m_state );
-	return InternalInitialize( max_rotations, false, true, true );
+	return InternalInitialize( max_rotations, false, true, true, read_only );
 }
 
 // Internal only initialization
@@ -288,7 +299,7 @@ ReadUserLog::InternalInitialize ( int max_rotations,
 								  bool check_for_rotation,
 								  bool restore,
 								  bool enable_header_read,
-								  bool force_disable_locking )
+								  bool read_only )
 {
 	if ( m_initialized ) {
 		return false;
@@ -298,6 +309,7 @@ ReadUserLog::InternalInitialize ( int max_rotations,
 	m_max_rotations = max_rotations;
 	m_read_header = enable_header_read;
 	m_lock = NULL;
+	m_read_only = read_only;
 
 	// Set the score factor in the file state manager
 	m_state->SetScoreFactor( ReadUserLogState::SCORE_CTIME,
@@ -329,7 +341,7 @@ ReadUserLog::InternalInitialize ( int max_rotations,
 	}
 
 	// Should we be locking?
-	if ( force_disable_locking ) {
+	if ( read_only ) {
 		m_lock_enable = false;
 	} else {
 		m_lock_enable = param_boolean( "ENABLE_USERLOG_LOCKING", true );
@@ -440,7 +452,9 @@ ReadUserLog::OpenLogFile( bool do_seek, bool read_header )
 		m_state->Rotation(-1);
 	}
 
-	m_fd = safe_open_wrapper( m_state->CurPath(), O_RDWR, 0 );
+	m_fd = safe_open_wrapper( m_state->CurPath(),
+							  m_read_only ? O_RDONLY : O_RDWR,
+							  0 );
 	if ( m_fd < 0 ) {
 		return ULOG_RD_ERROR;
 	}
@@ -519,7 +533,7 @@ ReadUserLog::OpenLogFile( bool do_seek, bool read_header )
 		ReadUserLog			log_reader;
 		ReadUserLogHeader	header_reader;
 		if (  ( path ) &&
-			  ( log_reader.initialize( path, false, false ) ) &&
+			  ( log_reader.initialize( path, false, false, true ) ) &&
 			  ( header_reader.Read( log_reader ) == ULOG_OK )  ) {
 			m_state->UniqId( header_reader.getId() );
 			m_state->Sequence( header_reader.getSequence() );
