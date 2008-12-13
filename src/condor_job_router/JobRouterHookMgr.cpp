@@ -653,29 +653,37 @@ ExitClient::hookExited(int exit_status) {
 	}
 	if (m_std_out.Length())
 	{
-		ClassAd old_job_ad;
-		classad::ClassAd new_job_ad;
-		m_std_out.Tokenize();
-		const char* hook_line = NULL;
-		while ((hook_line = m_std_out.GetNextToken("\n", true)))
+		if (0 == WEXITSTATUS(exit_status))
 		{
-			if (!old_job_ad.Insert(hook_line))
+			ClassAd old_job_ad;
+			classad::ClassAd new_job_ad;
+			m_std_out.Tokenize();
+			const char* hook_line = NULL;
+			while ((hook_line = m_std_out.GetNextToken("\n", true)))
 			{
-				dprintf(D_ALWAYS, "ExitClient::hookExited: "
-						"Failed to insert \"%s\" into "
-						"ClassAd, ignoring invalid "
-						"hook output.  Job NOT updated.\n", hook_line);
+				if (!old_job_ad.Insert(hook_line))
+				{
+					dprintf(D_ALWAYS, "ExitClient::hookExited: "
+							"Failed to insert \"%s\" into "
+							"ClassAd, ignoring invalid "
+							"hook output.  Job NOT updated.\n", hook_line);
+					return;
+				}
+			}
+			if (false == old_to_new(old_job_ad, new_job_ad))
+			{
+				dprintf(D_ALWAYS, "ExitClient::hookExited: Failed "
+						"to convert ClassAd, ignoring invalid "
+						"hook output.  Job NOT updated.\n");
 				return;
 			}
+			m_routed_job->src_ad = new_job_ad;
 		}
-		if (false == old_to_new(old_job_ad, new_job_ad))
+		else
 		{
-			dprintf(D_ALWAYS, "ExitClient::hookExited: Failed "
-					"to convert ClassAd, ignoring invalid "
-					"hook output.  Job NOT updated.\n");
-			return;
+			dprintf(D_FULLDEBUG, "ExitClient::hookExited: Hook exited with non-zero"
+					"return code, ignoring hook output.\n");
 		}
-		m_routed_job->src_ad = new_job_ad;
 	}
 
 	// If the exit hook exited with non-zero status, tell the JobRouter to
