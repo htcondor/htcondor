@@ -434,6 +434,9 @@ ReadUserLogState::InitState( ReadUserLog::FileState &state )
 	state.size = sizeof( ReadUserLogState::FileStatePub );
 
 	ReadUserLogState::FileState	*istate = GetFileState( state );
+	if ( !istate ) {
+		return false;
+	}
 
 	memset( istate, 0, sizeof(ReadUserLogState::FileStatePub) );
 	istate->m_log_type = LOG_TYPE_UNKNOWN;
@@ -464,6 +467,9 @@ bool
 ReadUserLogState::GetState( ReadUserLog::FileState &state ) const
 {
 	ReadUserLogState::FileState *istate = GetFileState( state );
+	if ( !istate ) {
+		return false;
+	}
 
 	// Verify that the signature and version matches
 	if ( strcmp( istate->m_signature, FileStateSignature ) ) {
@@ -520,6 +526,9 @@ bool
 ReadUserLogState::SetState( const ReadUserLog::FileState &state )
 {
 	const ReadUserLogState::FileState *istate = GetFileStateConst( state );
+	if ( !istate ) {
+		return false;
+	}
 
 	// Verify that the signature matches
 	if ( strcmp( istate->m_signature, FileStateSignature ) ) {

@@ -124,7 +124,7 @@ class ReadUserLog
     /** Constructor.
         @param filename the file to read from
 	*/
-    ReadUserLog(const char * filename);
+    ReadUserLog(const char * filename, bool read_only = false );
 
     /** Constructor.
         @param State to restore from
