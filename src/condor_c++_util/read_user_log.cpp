@@ -132,12 +132,22 @@ ReadUserLog::ReadUserLog ( bool isEventLog )
 	}
 }
 
-ReadUserLog::ReadUserLog (const char * filename)
+ReadUserLog::ReadUserLog (const char * filename, bool read_only )
 {
 	clear();
 
-    if (!initialize(filename)) {
+    if (!initialize(filename, false, false, read_only )) {
 		dprintf(D_ALWAYS, "Failed to open %s\n", filename);
+    }
+}
+
+// Constructor that takes a state
+ReadUserLog::ReadUserLog (const FileState &state, bool read_only )
+{
+	clear();
+
+    if (!initialize(state, read_only )) {
+		dprintf(D_ALWAYS, "Failed to initialize from state\n");
     }
 }
 
