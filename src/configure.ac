@@ -1919,7 +1919,7 @@ _cv_objcopy_debuglink_flag=""
 if test ! $ac_objcopy = "no"; then
 	AC_MSG_CHECKING([if objcopy supports --add-gnu-debuglink])
 	`$ac_objcopy --help 2>&1 | $GREP add-gnu-debuglink > /dev/null 2>&1`
-	if test $? = 0 -a ! \( "x$_cv_sysname" = "xhp_ux113" \)  ; then
+	if test $? = 0 -a ! \( "x$_cv_sysname" = "xhp_ux113" -o "x$_cv_sysname" = "xsun4x_59" \)  ; then
 		# If this flag exists, then the other ones I need should exist as well.
 		_cv_objcopy_keepdebug_flag="--only-keep-debug"
 		_cv_objcopy_stripunneeded_flag="--strip-unneeded"
