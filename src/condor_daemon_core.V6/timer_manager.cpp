@@ -57,19 +57,19 @@ TimerManager::~TimerManager()
 	CancelAllTimers();
 }
 
-int TimerManager::NewTimer(Service* s, unsigned deltawhen, Event event, char* event_descrip,
+int TimerManager::NewTimer(Service* s, unsigned deltawhen, Event event, const char* event_descrip,
 						   unsigned period, int id)
 {
 	return( NewTimer(s,deltawhen,event,(Eventcpp)NULL,event_descrip,period,NULL,id,0) );
 }
 
-int TimerManager::NewTimer(unsigned deltawhen, Event event, char* event_descrip,
+int TimerManager::NewTimer(unsigned deltawhen, Event event, const char* event_descrip,
 						   unsigned period, int id)
 {
 	return( NewTimer((Service *)NULL,deltawhen,event,(Eventcpp)NULL,event_descrip,period,NULL,id,0) );
 }
 
-int TimerManager::NewTimer(Service* s, unsigned deltawhen, Eventcpp event, char* event_descrip,
+int TimerManager::NewTimer(Service* s, unsigned deltawhen, Eventcpp event, const char* event_descrip,
 						   unsigned period, int id)
 {
 	if ( !s ) {
@@ -79,7 +79,7 @@ int TimerManager::NewTimer(Service* s, unsigned deltawhen, Eventcpp event, char*
 	return( NewTimer(s,deltawhen,(Event)NULL,event,event_descrip,period,NULL,id,1) );
 }
 
-int TimerManager::NewTimer (Service* s,Timeslice timeslice,Eventcpp event,char * event_descrip,int id)
+int TimerManager::NewTimer (Service* s,Timeslice timeslice,Eventcpp event,const char * event_descrip,int id)
 {
 	return NewTimer(s,0,(Event)NULL,event,event_descrip,0,&timeslice,id,1);
 }
@@ -88,7 +88,7 @@ int TimerManager::NewTimer (Service* s,Timeslice timeslice,Eventcpp event,char *
 // Add a new event in the timer list. if period is 0, this event is a one time
 // event instead of periodical
 int TimerManager::NewTimer(Service* s, unsigned deltawhen, Event event, Eventcpp eventcpp,
-		char *event_descrip, unsigned period, Timeslice *timeslice,int id, int is_cpp)
+		const char *event_descrip, unsigned period, Timeslice *timeslice,int id, int is_cpp)
 {
 	Timer*		new_timer;
 	Timer*		timer_ptr;
@@ -515,7 +515,7 @@ TimerManager::Timeout()
 }
 
 
-void TimerManager::DumpTimerList(int flag, char* indent)
+void TimerManager::DumpTimerList(int flag, const char* indent)
 {
 	Timer	*timer_ptr;
 	char	*ptmp;
