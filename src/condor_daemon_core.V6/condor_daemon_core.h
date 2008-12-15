@@ -318,9 +318,9 @@ class DaemonCore : public Service
         @return Not_Yet_Documented
     */
     int Register_Command (int             command,
-                          char *          com_descrip,
+                          const char *    com_descrip,
                           CommandHandler  handler, 
-                          char *          handler_descrip,
+                          const char *    handler_descrip,
                           Service *       s                = NULL,
                           DCpermission    perm             = ALLOW,
                           int             dprintf_flag     = D_COMMAND);
@@ -336,9 +336,9 @@ class DaemonCore : public Service
         @return Not_Yet_Documented
     */
     int Register_Command (int                command,
-                          char *             com_descript,
+                          const char *       com_descript,
                           CommandHandlercpp  handlercpp, 
-                          char *             handler_descrip,
+                          const char *       handler_descrip,
                           Service *          s,
                           DCpermission       perm             = ALLOW,
                           int                dprintf_flag     = D_COMMAND);
@@ -442,9 +442,9 @@ class DaemonCore : public Service
         @return Not_Yet_Documented
     */
     int Register_Signal (int             sig,
-                         char *          sig_descrip,
+                         const char *    sig_descrip,
                          SignalHandler   handler, 
-                         char *          handler_descrip,
+                         const char *    handler_descrip,
                          Service*        s                = NULL);
     
     /** Not_Yet_Documented
@@ -456,9 +456,9 @@ class DaemonCore : public Service
         @return Not_Yet_Documented
     */
     int Register_Signal (int                 sig,
-                         char *              sig_descript,
+                         const char *        sig_descript,
                          SignalHandlercpp    handlercpp, 
-                         char *              handler_descrip,
+                         const char *        handler_descrip,
                          Service*            s);
     
     /** Not_Yet_Documented
@@ -523,9 +523,9 @@ class DaemonCore : public Service
         @param s                Not_Yet_Documented
         @return Not_Yet_Documented
     */
-    int Register_Reaper (char *          reap_descrip,
+    int Register_Reaper (const char *    reap_descrip,
                          ReaperHandler   handler,
-                         char *          handler_descrip,
+                         const char *    handler_descrip,
                          Service*        s = NULL);
     
     /** Not_Yet_Documented
@@ -535,9 +535,9 @@ class DaemonCore : public Service
         @param s                Not_Yet_Documented
         @return Not_Yet_Documented
     */
-     int Register_Reaper (char *            reap_descript,
+     int Register_Reaper (const char *      reap_descript,
                           ReaperHandlercpp  handlercpp, 
-                          char *            handler_descrip,
+                          const char *      handler_descrip,
                           Service*          s);
 
     /** Not_Yet_Documented
@@ -549,9 +549,9 @@ class DaemonCore : public Service
         @return Not_Yet_Documented
     */
     int Reset_Reaper (int              rid,
-                      char *           reap_descrip,
+                      const char *     reap_descrip,
                       ReaperHandler    handler, 
-                      char *           handler_descrip,
+                      const char *     handler_descrip,
                       Service *        s = NULL);
     
     /** Not_Yet_Documented
@@ -563,9 +563,9 @@ class DaemonCore : public Service
         @return Not_Yet_Documented
     */
     int Reset_Reaper (int                    rid,
-                      char *                 reap_descript,
+                      const char *           reap_descript,
                       ReaperHandlercpp       handlercpp, 
-                      char *                 handler_descrip,
+                      const char *           handler_descrip,
                       Service*               s);
 
     /** Not_Yet_Documented
@@ -703,9 +703,9 @@ class DaemonCore : public Service
         @return Not_Yet_Documented
     */
     int Register_Pipe (int		           pipe_end,
-                         char *            pipe_descrip,
+                         const char *      pipe_descrip,
                          PipeHandler       handler,
-                         char *            handler_descrip,
+                         const char *      handler_descrip,
                          Service *         s                = NULL,
                          HandlerType       handler_type     = HANDLE_READ,    
                          DCpermission      perm             = ALLOW);
@@ -720,9 +720,9 @@ class DaemonCore : public Service
         @return Not_Yet_Documented
     */
     int Register_Pipe (int					  pipe_end,
-                         char *               pipe_descrip,
+                         const char *         pipe_descrip,
                          PipeHandlercpp       handlercpp,
-                         char *               handler_descrip,
+                         const char *         handler_descrip,
                          Service*             s,
                          HandlerType          handler_type = HANDLE_READ,    
                          DCpermission         perm = ALLOW);
@@ -806,7 +806,7 @@ class DaemonCore : public Service
     */
     int Register_Timer (unsigned     deltawhen,
                         Event        event,
-                        char *       event_descrip, 
+                        const char * event_descrip, 
                         Service*     s = NULL);
     
     /** Not_Yet_Documented
@@ -820,7 +820,7 @@ class DaemonCore : public Service
     int Register_Timer (unsigned     deltawhen,
                         unsigned     period,
                         Event        event,
-                        char *       event_descrip,
+                        const char * event_descrip,
                         Service*     s = NULL);
 
     /** Not_Yet_Documented
@@ -830,10 +830,10 @@ class DaemonCore : public Service
         @param s               Not_Yet_Documented
         @return Not_Yet_Documented
     */
-    int Register_Timer (unsigned   deltawhen,
-                        Eventcpp   event,
-                        char *     event_descrip,
-                        Service*   s);
+    int Register_Timer (unsigned     deltawhen,
+                        Eventcpp     event,
+                        const char * event_descrip,
+                        Service*     s);
 
     /** Not_Yet_Documented
         @param deltawhen       Not_Yet_Documented
@@ -843,11 +843,11 @@ class DaemonCore : public Service
         @param s               Not_Yet_Documented
         @return Not_Yet_Documented
     */
-    int Register_Timer (unsigned  deltawhen,
-                        unsigned  period,
-                        Eventcpp  event,
-                        char *    event_descrip,
-                        Service * s);
+    int Register_Timer (unsigned     deltawhen,
+                        unsigned     period,
+                        Eventcpp     event,
+                        const char * event_descrip,
+                        Service *    s);
 
     /** 
         @param timeslice       Timeslice object specifying interval parameters
@@ -856,10 +856,10 @@ class DaemonCore : public Service
         @param s               Service object of which function is a member.
         @return                Timer id or -1 on error
     */
-    int Register_Timer (Timeslice timeslice,
-                        Eventcpp   event,
-                        char *     event_descrip,
-                        Service*   s);
+    int Register_Timer (Timeslice    timeslice,
+                        Eventcpp     event,
+                        const char * event_descrip,
+                        Service*     s);
 
     /** Not_Yet_Documented
         @param id The timer's ID
@@ -880,7 +880,7 @@ class DaemonCore : public Service
         @param flag   Not_Yet_Documented
         @param indent Not_Yet_Documented
     */
-    void Dump (int flag, char* indent = NULL );
+    void Dump (int flag, const char* indent = NULL );
 
 
     /** @name Process management.
@@ -1176,9 +1176,9 @@ class DaemonCore : public Service
     void invalidateSessionCache();
 
 	/* manage the secret cookie data */
-	bool set_cookie( int len, unsigned char* data );
+	bool set_cookie( int len, const unsigned char* data );
 	bool get_cookie( int &len, unsigned char* &data );
-	bool cookie_is_valid( unsigned char* data );
+	bool cookie_is_valid( const unsigned char* data );
 
 	/** The peaceful shutdown toggle controls whether graceful shutdown
 	   avoids any hard killing.
@@ -1343,20 +1343,20 @@ class DaemonCore : public Service
     int HandleDC_SIGCHLD(int sig);
 	int HandleDC_SERVICEWAITPIDS(int sig);
  
-    int Register_Command(int command, char *com_descip,
+    int Register_Command(int command, const char *com_descip,
                          CommandHandler handler, 
                          CommandHandlercpp handlercpp,
-                         char *handler_descrip,
+                         const char *handler_descrip,
                          Service* s, 
                          DCpermission perm,
                          int dprintf_flag,
                          int is_cpp);
 
     int Register_Signal(int sig,
-                        char *sig_descip,
+                        const char *sig_descip,
                         SignalHandler handler, 
                         SignalHandlercpp handlercpp,
-                        char *handler_descrip,
+                        const char *handler_descrip,
                         Service* s, 
                         int is_cpp);
 
@@ -1379,20 +1379,20 @@ class DaemonCore : public Service
 	void decrementPendingSockets() { nPendingSockets--; }
 
     int Register_Pipe(int pipefd,
-                        char *pipefd_descrip,
+                        const char *pipefd_descrip,
                         PipeHandler handler, 
                         PipeHandlercpp handlercpp,
-                        char *handler_descrip,
+                        const char *handler_descrip,
                         Service* s, 
 					    HandlerType handler_type, 
 					    DCpermission perm,
                         int is_cpp);
 
     int Register_Reaper(int rid,
-                        char *reap_descip,
+                        const char *reap_descip,
                         ReaperHandler handler, 
                         ReaperHandlercpp handlercpp,
-                        char *handler_descrip,
+                        const char *handler_descrip,
                         Service* s, 
                         int is_cpp);
 
@@ -1596,7 +1596,7 @@ class DaemonCore : public Service
 #endif
             
     static              TimerManager t;
-    void                DumpTimerList(int, char* = NULL);
+    void                DumpTimerList(int, const char* = NULL);
 
 	SecMan	    		*sec_man;
 
@@ -1718,7 +1718,7 @@ class DaemonCore : public Service
 		*/
 	void initCollectorList(void);
 
-	void send_invalidate_session ( char* sinful, char* sessid );
+	void send_invalidate_session ( const char* sinful, const char* sessid );
 
 	bool m_wants_restart;
 	bool m_in_daemon_shutdown;

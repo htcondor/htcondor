@@ -150,6 +150,7 @@ KeyCache::KeyCache(const KeyCache& k) {
 
 KeyCache::~KeyCache() {
 	delete_storage();
+	delete m_index;
 }
 	    
 const KeyCache& KeyCache::operator=(const KeyCache& k) {
