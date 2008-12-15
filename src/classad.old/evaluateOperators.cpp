@@ -42,6 +42,8 @@ _EvalTree( const AttrList *myScope, const AttrList *targetScope, EvalResult *res
 	// translate from the lexer's name for the operation to a reasonable operation name
 	op = LexemeTypeToOpKind( MyType() );
 
+	lArgResult.debug = rArgResult.debug = result->debug;
+
 	// evaluate the left side
 	if( lArg ) lArg->EvalTree( myScope, targetScope, &lArgResult );
     EvalResultToValue( lArgResult, lValue );
