@@ -475,7 +475,7 @@ foreach my $t ( keys(%{$test->{writer}}) ) {
 		my $value = $test->{writer}{$t};
 		push( @writer_args, $t );
 		if ( defined($value) ) {
-			push( @writer_args, $test->{writer}{$t} );
+			push( @writer_args, $value );
 		}
     }
 }
