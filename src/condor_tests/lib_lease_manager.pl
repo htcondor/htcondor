@@ -21,15 +21,22 @@
 use strict;
 use warnings;
 use Cwd;
+use CondorPersonal;
 use CondorTest;
+
+# 'Prototypes'
+sub DaemonWait( $ );
+sub RunTests( $ );
+sub RunTestOp( $$ );
+sub CountLiveLeases( $ );
 
 my $testname = 'lib_lease_manager - runs lease manager tests';
 my $testbin = "../testbin_dir";
-my %programs = ( advertise	=> "./x_advertise.pl",
+my %programs = ( advertise	=> getcwd() . "/x_advertise.pl",
 				 tester => "$testbin/condor_lease_manager_tester",
 				 );
 
-now = time( );
+my $now = time( );
 my %tests =
     (
 
@@ -38,8 +45,8 @@ my %tests =
      {
 		 config =>
 		 {
-			 GETADS_INTERVAL			=> 30,
-			 UPDATE_INTERVAL			=> 120,
+			 GETADS_INTERVAL			=> 10,
+			 UPDATE_INTERVAL			=> 10,
 			 PRUNE_INTERVAL				=> 60,
 			 DEBUG_ADS					=> "TRUE",
 			 MAX_LEASE_DURATION			=> 60,
@@ -48,12 +55,24 @@ my %tests =
 
 			 QUERY_ADTYPE				=> "Any",
 			 CLASSAD_LOG				=> "\$(SPOOL)/LeaseAdLog",
+
+			 ADVERTISER					=> $programs{advertise},
+			 ADVERTISER_LOG				=> "\$(LOG)/AdvertiserLog",
+
+			 LEASEMANAGER				=> "\$(SBIN)/condor_lease_manager",
+			 LEASEMANAGER_LOG			=> "\$(LOG)/LeaseManagerLog",
+			 #LeaseManager_ARGS			=> "-local-name any",
+			 #LeaseManager_ARGS			=> "-f",
+			 LEASEMANAGER_DEBUG			=> "D_FULLDEBUG D_CONFIG",
+			 DAEMON_LIST	=> "MASTER, COLLECTOR, LEASEMANAGER, ADVERTISER",
+			 DC_DAEMON_LIST				=> "+ LEASEMANAGER",
+
 		 },
 		 advertise =>
 		 {
-			 command					=> "UPDATE_GENERIC_AD",
-			 period						=> 60,
-		 }
+			 command					=> "UPDATE_AD_GENERIC",
+			 "--period"					=> 60,
+		 },
 		 resource =>
 		 {
 			 MyType						=> "Generic",
@@ -64,38 +83,89 @@ my %tests =
 			 MaxLeaseDuration			=> 120,
 			 UpdateSequenceNumber		=> 1,
 		 },
-		 client =>
+		 client => { },
+     },
+
+	 # Simple default test --
+	 # idential configuration, just grab one lease & free it
+	 defaults =>
+	 {
+		 config => { },
+		 advertise => { },
+		 resource => { },
+		 advertise => { },
+		 run =>
 		 {
-			 lease_file					=> undef,
+			 loops =>
+			 [
+			  {
+				  op			=> [ "GET", 60, 1 ],
+				  expect		=> 1,
+				  sleep			=> 10,
+			  },
+			  {
+				  op			=> [ "RELEASE", "'*'" ],
+				  expect		=> 0,
+			  }
+			  ],
 		 },
      },
 
-     # Default test -- idential to the "common"
-     defaults =>
+     # Advertise try to grab 2
+	 simple1 =>
      {
-		 config =>
-		 {
+		 config => { },
+		 advertise => {
+			 MaxLeases			=> 1,
 		 },
-		 advertise =>
+		 resource => { },
+		 advertise => { },
+		 run =>
 		 {
-		 },
-		 resource =>
-		 {
-		 },
-		 advertise =>
-		 {
-		 },
-		 passes =>
+			 loops =>
 			 [
 			  {
-				  op			=> [ "GET", 60, 5 ],
-				  expect		=> 5,
-				  sleep			=> 30,
+				  op			=> [ "GET", 60, 2 ],
+				  expect		=> 1,
+				  sleep			=> 10,
 			  },
 			  {
-				  op			=> "RELEASE", "*" ],
+				  op			=> [ "RELEASE", "'*'" ],
+				  expect		=> 0,
 			  }
 			  ],
+		 },
+     },
+
+     # Advertise try to grab 2
+	 simple2 =>
+     {
+		 config => { },
+		 advertise => {
+			 MaxLeases			=> 1,
+		 },
+		 resource => { },
+		 advertise => { },
+		 run =>
+		 {
+			 loops =>
+			 [
+			  {
+				  op			=> [ "GET", 60, 1 ],
+				  expect		=> 1,
+				  sleep			=> 10,
+			  },
+			  {
+				  op			=> [ "GET", 60, 1 ],
+				  expect		=> 1,
+				  sleep			=> 10,
+			  },
+			  {
+				  op			=> [ "RELEASE", "'*'" ],
+				  expect		=> 0,
+			  }
+			  ],
+		 },
      },
 );
 
@@ -129,8 +199,8 @@ foreach my $arg ( @ARGV ) {
 		$settings{force} = 1;
     }
     elsif ( $arg eq "-l"  or  $arg eq "--list" ) {
-		foreach my $test ( @tests ) {
-			print "  " . $test->{name} . "\n";
+		foreach my $test ( sort keys (%tests) ) {
+			print "  " . $test . "\n" if ( $test ne "common" );
 		}
 		exit(0);
     }
@@ -159,6 +229,12 @@ foreach my $arg ( @ARGV ) {
     }
     elsif (  !($arg =~ /^-/)  and  !exists($settings{name})  ) {
 		$settings{name} = $arg;
+		if ( !exists $tests{$settings{name}} ) {
+			print STDERR "Unknown test name: $settings{name}\n";
+			usage( );
+			exit(1);
+		}
+		$settings{test} = $tests{$settings{name}};
     }
     else {
 		print STDERR "Unknown argument $arg\n";
@@ -170,9 +246,6 @@ if ( !exists $settings{name} ) {
     usage( );
     exit(1);
 }
-if ( !exists $tests{$settings{name}} ) {
-    die "Unknown test name: $settings{name}";
-}
 
 sub FillTest($$)
 {
@@ -183,18 +256,17 @@ sub FillTest($$)
 		if (! exists $dest->{$section} ) {
 			$dest->{$section} = {};
 		}
-		foreach my $attr ( keys %{$src->{$section}} ) {
+		foreach my $attr ( keys(%{$src->{$section}})  ) {
 			$dest->{$section}{$attr} = $src->{$section}{$attr};
 		}
     }
 }
 
 
-$settings{test} = \$tests{$settings{name}};
 my %test;
-FillTest( \%test, \$tests{common} );
+FillTest( \%test, $tests{common} );
 FillTest( \%test, $settings{test} );
-
+$test{name} = $settings{name};
 
 my $dir = "test-lease_manager-" . $settings{name};
 my $fulldir = getcwd() . "/$dir";
@@ -207,10 +279,57 @@ if ( -d $dir ) {
 mkdir( $dir ) or die "Can't create directory $dir";
 print "writing to $dir\n" if ( $settings{verbose} );
 
-my $config = "$fulldir/condor_config";
+# Generate the ad to publish
+my $resource = "$fulldir/resource.ad";
+open( AD, ">$resource" ) or
+	die "Can't write to resource ClassAd file $resource";
+foreach my $attr ( keys(%{$test{resource}}) ) {
+    my $value = $test{resource}{$attr};
+    if ( $value eq "TRUE" ) {
+		print AD "$attr = TRUE\n";
+    }
+    elsif ( $value eq "FALSE" ) {
+		print AD "$attr = FALSE\n";
+    }
+	elsif ( $value =~ /^\d+$/ ) {
+		print AD "$attr = $value\n";
+	}
+	elsif ( $value =~ /^\d+\.\d+$/ ) {
+		print AD "$attr = $value\n";
+	}
+    else {
+		print AD "$attr = \"$value\"\n";
+    }
+}
+close( AD );
+
+# Generate the advertiser command line
+my @advertiser_args;
+foreach my $key ( keys(%{$test{advertise}}) ) {
+	my $value = $test{advertise}{$key};
+
+	if ( $key =~ /^-/ ) {
+		push( @advertiser_args, $key );
+		if ( defined($value) ) {
+			push( @advertiser_args, $value );
+		}
+		if ( $settings{valgrind} ) {
+			push( @advertiser_args, "--valgrind" );
+		}
+    }
+}
+push( @advertiser_args, "--delay" );
+push( @advertiser_args, 5 );
+foreach my $n ( 0 .. $settings{verbose} ) {
+	push( @advertiser_args, "-v" );
+}
+push( @advertiser_args, $test{advertise}{command} );
+push( @advertiser_args, $resource );
+
+my $config = "$dir/condor_config.local";
 open( CONFIG, ">$config" ) or die "Can't write to config file $config";
-foreach my $param ( keys(%{$test->{config}}) ) {
-    my $value = $test->{config}{$param};
+foreach my $param ( sort keys(%{$test{config}}) ) {
+    my $value = $test{config}{$param};
     if ( $value eq "TRUE" ) {
 		print CONFIG "$param = TRUE\n";
     }
@@ -221,68 +340,47 @@ foreach my $param ( keys(%{$test->{config}}) ) {
 		print CONFIG "$param = $value\n";
     }
 }
+print CONFIG "ADVERTISER_ARGS = " . join( " ", @advertiser_args ) . "\n";
 close( CONFIG );
-$ENV{"CONDOR_CONFIG"} = $config;
 
-# Generate the advertiser command line
-my @advertiser_args = ( $programs{advertise} );
-foreach my $t ( keys(%{$test->{writer}}) ) {
-    if ( $t =~ /^-/ ) {
-		my $value = $test->{writer}{$t};
-		push( @writer_args, $t );
-		if ( defined($value) ) {
-			push( @writer_args, $test->{writer}{$t} );
-		}
-    }
+if ( not $settings{execute} ) {
+	exit( 0 );
 }
 
-push( @writer_args, "--verbosity" );
-push( @writer_args, "INFO" );
-foreach my $n ( 2 .. $settings{verbose} ) {
-    push( @writer_args, "-v" );
-}
-if ( $settings{debug} ) {
-    push( @writer_args, "--debug" );
-    push( @writer_args, "D_FULLDEBUG" );
-}
-if ( exists $test->{writer}{file} ) {
-    push( @writer_args, $test->{writer}{file} )
+$test{client}->{lease_file} = "$fulldir/leases.state";
+
+# This is all throw-away
+my $main_config = "$fulldir/condor_config";
+system( "cp condor_config.nrl $main_config" );
+
+$ENV{CONDOR_CONFIG} = "$main_config";
+
+my $log = `condor_config_val log`; chomp $log;
+mkdir( $log ) or die "Can't create $log";
+my $spool = `condor_config_val spool`; chomp $spool;
+mkdir( $spool ) or die "Can't create $spool";
+
+system( "condor_master" );
+
+if (! DaemonWait( $test{resource}{MaxLeases} ) ) {
 }
 
+print $test{client}->{lease_file} . "\n";;
+RunTests( \%test );
 
+system( "condor_off -master" );
+# end throw-away code
 
-# Generate the reader command line
-my @reader_args;
-if ( exists $test->{reader} ) {
-    push( @reader_args, $programs{reader} );
-    foreach my $t ( keys(%{$test->{reader}}) ) {
-	if ( $t =~ /^-/ ) {
-	    my $value = $test->{writer}{$t};
-	    push( @reader_args, $t );
-	    if ( defined($value) ) {
-		push( @reader_args, $test->{reader}{$t} );
-	    }
-	}
-    }
-    push( @reader_args, "--verbosity" );
-    push( @reader_args, "ALL" );
-    if ( $settings{debug} ) {
-	push( @reader_args, "--debug" );
-	push( @reader_args, "D_FULLDEBUG" );
-    }
-    push( @reader_args, "--eventlog" );
-    push( @reader_args, "--exit" );
-    push( @reader_args, "--no-term" );
+#CondorTest::debug("About to set up Condor Personal : <<<", 1);
+#system("date");
+#CondorTest::debug(">>>\n", 1);
 
-    if ( exists $test->{reader}{persist} ) {
-	push( @reader_args, "--persist" );
-	push( @reader_args, "$dir/reader.state" );
-    }
-}
+# get a remote scheduler running (side b)
+#my $configrem = CondorPersonal::StartCondor("x_param.wantcore" ,"wantcore");
 
 
 my @valgrind = ( "valgrind", "--tool=memcheck", "--num-callers=24",
-		 "-v", "-v", "--leak-check=full" );
+				 "-v", "-v", "--leak-check=full" );
 
 system("date");
 if ( $settings{verbose} ) {
@@ -290,361 +388,176 @@ if ( $settings{verbose} ) {
 }
 my $errors = 0;
 
-# Total writer out
-my %totals = ( sequence => 0,
-	       num_events => 0,
-	       max_rot => 0,
-	       file_size => 0,
-
-	       events_lost => 0,
-	       num_events_lost => 0,
-
-	       writer_events => 0,
-	       writer_sequence => 0,
-	       );
-
-# Actual from previous loop
-my %previous;
-foreach my $k ( keys(%totals) ) {
-    $previous{$k} = 0;
-}
-
-foreach my $loop ( 1 .. $test->{loops} )
+# Wait for everything to come to life...
+sub DaemonWait( $ )
 {
-    foreach my $k ( keys(%{$expect{loop_mins}}) ) {
-	$expect{cur_mins}{$k} += $expect{loop_mins}{$k};
-    }
+	my $MinResources = shift;
 
-    # writer output from this loop
-    my %new;
-    for my $k ( keys(%totals) ) {
-	$new{$k} = 0;
-    }
+	print "Waiting for all daemons and $MinResources resource to show up\n";
+	sleep( 2 );
 
-    # Run the writer
-    my $run;
-    my $werrors += RunWriter( $loop, \%new, \%previous, \%totals, \$run );
-    $errors += $werrors;
-    if ( ! $run ) {
-	next;
-    }
-    if ( $werrors ) {
-	print STDERR "writer failed: aborting test\n";
-	last;
-    }
+	my $NumResources = 0;
+	my @missing;
+	my %ads;
+	for my $tries ( 0 .. 10 ) {
 
-    my @files = ReadEventlogs( $dir, \%new );
-    ProcessEventlogs( \@files, \%new );
-
-    my %diff;
-    foreach my $k ( keys(%previous) ) {
-	$diff{$k} = $new{$k} - $previous{$k};
-	$totals{$k} += $new{$k};
-    }
-    $errors += CheckWriterOutput( \@files, $loop, \%new, \%diff );
-
-    # Run the reader
-    $errors += RunReader( $loop, \%new, \$run );
-    if ( $run ) {
-	$errors += CheckReaderOutput( \@files, $loop, \%new, \%diff );
-    }
-
-    if ( $errors  or  $settings{verbose}  or  $settings{debug} ) {
-	GatherData( sprintf("$dir/loop-%02d.txt",$loop) );
-    }
-
-    foreach my $k ( keys(%previous) ) {
-	$previous{$k} = $new{$k};
-    }
-    if ( $errors  and  $settings{stop} ) {
-	last;
-    }
+		my %found = ( DaemonMaster=>0, LeaseManager=>0, Generic=>0 );
+		open( STATUS, "condor_status -any -l|" )
+			or die "Can't run condor_status";
+		while( <STATUS> ) {
+			chomp;
+			if ( /^MyType = \"(\w+)\"/ ) {
+				my $MyType = $1;
+				$found{$MyType} = 1;
+				$ads{$MyType} = { MyType => $MyType };
+				while( <STATUS> ) {
+					chomp;
+					if ( /^(\w+) = \"(.*)\"/ ) {
+						$ads{$MyType}{$1} = $2;
+					}
+					elsif ( /^(\w+) = (.*)/ ) {
+						$ads{$MyType}{$1} = $2;
+					}
+					elsif ( $_ eq "" ) {
+						last;
+					}
+				}
+			}
+		}
+		close( STATUS );
+		$#missing = -1;
+		foreach my $d ( keys %found ) {
+			if ( ! $found{$d} ) {
+				push( @missing, $d );
+			}
+		}
+		if ( scalar(@missing) ) {
+			if ( $settings{verbose} > 1 ) {
+				print "missing ads: " . join( " ", @missing ) . "\n";
+			}
+			sleep( 5 );
+		}
+		if ( exists $ads{LeaseManager} ) {
+			$NumResources = $ads{LeaseManager}{NumberResources};
+			if ( $NumResources >= $MinResources ) {
+				return 1;
+			}
+			print "waiting for resources ($NumResources)\n";
+			sleep( 5 );
+		}
+	}
+	if ( scalar(@missing) ) {
+		print STDERR "missing ads: " . join( " ", @missing ) . "\n";
+		return 0;
+	}
+	else {
+		print STDERR
+			"Too few resources found: $NumResources < $MinResources\n";
+		return 0;
+	}
 }
 
-if ( ! $settings{execute} ) {
-    exit( 0 );
-}
-
-# Final writer output checks
-if ( $totals{writer_events} < $expect{final_mins}{num_events} ) {
-    printf( STDERR
-	    "ERROR: final: writer wrote too few events: %d < %d\n",
-	    $totals{writer_events}, $expect{final_mins}{num_events} );
-    $errors++;
-}
-$totals{seq_files} = $totals{sequence} + 1;
-if ( $totals{writer_sequence} < $expect{final_mins}{sequence} ) {
-    printf( STDERR
-	    "ERROR: final: writer sequence too low: %d < %d\n",
-	    $totals{writer_sequence}, $expect{final_mins}{sequence} );
-    $errors++;
-}
-
-# Final counted checks
-my %final;
-foreach my $k ( keys(%totals) ) {
-    $final{$k} = 0;
-}
-my @files = ReadEventlogs( $dir, \%final );
-ProcessEventlogs( \@files, \%final );
-if ( scalar(@files) < $expect{final_mins}{num_files} ) {
-    printf( STDERR
-	    "ERROR: final: too few actual files: %d < %d\n",
-	    scalar(@files), $expect{final_mins}{num_files} );
-}
-if ( ! $final{events_lost} ) {
-    if ( $final{num_events} < $expect{final_mins}{num_events} ) {
-	printf( STDERR
-		"ERROR: final: too few actual events: %d < %d\n",
-		$final{num_events}, $expect{loop_mins}{num_events} );
-	$errors++;
-    }
-}
-if ( $final{sequence} < $expect{final_mins}{sequence} ) {
-    printf( STDERR
-	    "ERROR: final: actual sequence too low: %d < %d\n",
-	    $final{sequence}, $expect{final_mins}{sequence});
-    $errors++;
-}
-
-if ( $final{file_size} > $expect{maxs}{total_size} ) {
-    printf( STDERR
-	    "ERROR: final: total file size too high: %d > %d\n",
-	    $final{total_size}, $expect{maxs}{total_size});
-    $errors++;
-}
-
-
-if ( $errors  or  ($settings{verbose} > 1)  or  $settings{debug} ) {
-    GatherData( "/dev/stdout" );
-}
-
-sub GatherData( $ )
+sub RunTests( $ )
 {
-    my $f = shift;
-    open( OUT, ">$f" );
+	my $test = shift;
 
-    print OUT "\n\n** Total: $errors errors detected **\n";
-
-    my $cmd;
-
-    print OUT "\nls:\n";
-    $cmd = "/bin/ls -l $dir";
-    if ( open( CMD, "$cmd |" ) ) {
-	while( <CMD> ) {
-	    print OUT;
+	my $run = $test->{run};
+	for my $loop ( @{$run->{loops}} ) {
+		my $leases;
+		if ( exists $loop->{op} ) {
+			$leases = RunTestOp( $test, $loop->{op} );
+			if ( ! defined($leases) ) {
+				$errors++;
+				$leases = [];
+			}
+		}
+		if ( exists $loop->{expect} ) {
+			my $count = CountLiveLeases( $leases );
+			if ( $count != $loop->{expect} ) {
+				printf( "ERROR: lease count mis-match: expect %d, found %d\n",
+						$loop->{expect}, $count );
+				$errors++;
+			}
+			else {
+				printf( "Found correct # of leases\n" );
+			}
+		}
+		if ( exists $loop->{sleep} ) {
+			if ( $settings{verbose} ) {
+				printf "Sleeping for %d seconds..\n", $loop->{sleep};
+			}
+			sleep( $loop->{sleep} );
+		}
 	}
-    }
-    close( CMD );
-
-    print OUT "\nwc:\n";
-    $cmd = "wc $dir/EventLog*";
-    if ( open( CMD, "$cmd |" ) ) {
-	while( <CMD> ) {
-	    print OUT;
-	}
-    }
-    close( CMD );
-
-    print OUT "\nhead:\n";
-    $cmd = "head -1 $dir/EventLog*";
-    if ( open( CMD, "$cmd |" ) ) {
-	while( <CMD> ) {
-	    print OUT;
-	}
-    }
-    close( CMD );
-
-    print OUT "\nconfig:\n";
-    $cmd = "cat $config";
-    if ( open( CMD, "$cmd |" ) ) {
-	while( <CMD> ) {
-	    print OUT;
-	}
-    }
-    close( CMD );
-
-    print OUT "\ndirectory:\n";
-    print OUT "$dir\n";
-
-    close( OUT );
 }
 
-exit( $errors == 0 ? 0 : 1 );
-
-
-# #######################################
-# Run the writer
-# #######################################
-sub RunWriter( $$$$$ )
+sub RunTestOp( $$ )
 {
-    my $loop = shift;
-    my $new = shift;
-    my $previous = shift;
-    my $totals = shift;
-    my $run = shift;
+	my $test = shift;
+	my $op = shift;
 
-    my $errors = 0;
-
-    my $cmd = "";
-    my $vg_out = sprintf( "valgrind-writer-%02d.out", $loop );
-    my $vg_full = "$dir/$vg_out";
-    if ( $settings{valgrind_writer} ) {
-	$cmd .= join( " ", @valgrind ) . " ";
-	$cmd .= " --log-file=$vg_full ";
-    }
-    $cmd .= join(" ", @writer_args );
-    print "$cmd\n" if ( $settings{verbose} );
-
-    if ( ! $settings{execute} ) {
-	$$run = 0;
-	return 0;
-    }
-
-    $$run = 1;
-    my $out = sprintf( "%s/writer-%02d.out", $dir, $loop );
-    open( WRITER, "$cmd 2>&1 |" ) or die "Can't run $cmd";
-    open( OUT, ">$out" );
-    while( <WRITER> ) {
-	print if ( $settings{verbose} > 1 );
-	print OUT;
-	chomp;
-	if ( /wrote (\d+) events/ ) {
-	    $new->{writer_events} = $1;
+	my @cmd;
+	push( @cmd, $programs{tester} );
+	push( @cmd, $test->{client}{lease_file} );
+	foreach my $n ( 0 .. $settings{verbose} ) {
+		push( @cmd, "-v" );
 	}
-	elsif ( /global sequence (\d+)/ ) {
-	    $new->{writer_sequence} = $1;
-	    $new->{writer_files} = $1 - $previous->{writer_sequence};
-	    $totals->{writer_sequence} = 0;	# special case
+	foreach my $t ( @{$op} ) {
+		push( @cmd, $t );
 	}
-    }
-    close( WRITER );
-    close( OUT );
+	my $cmdstr = join( " ", @cmd );
+	if ( $settings{verbose} ) {
+		print "Runing: $cmdstr\n";
+	}
 
-    if ( $? & 127 ) {
-	printf "ERROR: writer exited from signal %d\n", ($? & 127);
-	$errors++;
-    }
-    if ( $? & 128 ) {
-	print "ERROR: writer dumped core\n";
-	$errors++;
-    }
-    if ( $? >> 8 ) {
-	printf "ERROR: writer exited with status %d\n", ($? >> 8);
-	$errors++;
-    }
-    if ( ! $errors and $settings{verbose}) {
-	print "writer process exited normally\n";
-    }
+	if ( !open( TESTER, "$cmdstr|" ) ) {
+		print STDERR "Can't run $cmdstr\n";
+		return undef;
+	}
 
-    if ( $settings{valgrind_writer} ) {
-	$errors += CheckValgrind( $vg_out );
-    }
-    return $errors;
+	my @leases;
+	while( <TESTER> ) {
+		chomp;
+		if ( /LEASE (\d+) \{/ ) {
+			my %lease;
+			while( <TESTER> ) {
+				chomp;
+				if (/^\s*\}/ ) {
+					push( @leases, \%lease );
+				}
+				elsif ( /^\s+(\w+)=(.+)/ ) {
+					$lease{$1} = $2;
+				}
+				else {
+					# skip
+				}
+			}
+		}
+	}
+	my $status = close( TESTER );
+	print "tester status: $status\n";
+	if ( ($status>>8) ) {
+		printf STDERR "tester failed: %d\n", ($status >> 8);
+		return undef;
+	}
+	print "found ". scalar(@leases) . " leases\n";
+
+	return \@leases;
 }
 
-
-
-# #######################################
-# Run the reader
-# #######################################
-sub RunReader( $$$ )
+sub CountLiveLeases( $ )
 {
-    my $loop = shift;
-    my $new = shift;
-    my $run = shift;
+	my $leases = shift;
 
-    my $errors = 0;
-    if ( scalar(@reader_args) == 0 ) {
-	$$run = 0;
-	return 0;
-    }
-
-    my $cmd = "";
-    my $vg_out = sprintf( "valgrind-reader-%02d.out", $loop );
-    my $vg_full = "$dir/$vg_out";
-    if ( $settings{valgrind_reader} ) {
-	$cmd .= join( " ", @valgrind ) . " ";
-	$cmd .= " --log-file=$vg_full ";
-    }
-    $cmd .= join(" ", @reader_args );
-    print "$cmd\n" if ( $settings{verbose} );
-
-    if ( ! $settings{execute} ) {
-	$$run = 0;
-	return 0;
-    }
-
-    $$run = 1;
-    $new->{reader_files} = 0;
-    $new->{reader_events} = 0;
-    $new->{reader_sequence} = [ ];
-
-    my $out = sprintf( "%s/reader-%02d.out", $dir, $loop );
-    open( OUT, ">$out" );
-    open( READER, "$cmd 2>&1 |" ) or die "Can't run $cmd";
-    while( <READER> ) {
-	print if ( $settings{verbose} > 1 );
-	print OUT;
-	chomp;
-	if ( /^Read (\d+) events/ ) {
-	    $new->{reader_events} = $1;
+	my $count = 0;
+	foreach my $lease ( @{$leases} ) {
+		if ( ( $lease->{dead}    =~ /true/i ) ||
+			 ( $lease->{expired} =~ /true/i ) ) {
+			next;
+		}
+		$count++;
 	}
-	elsif ( /Global JobLog:.*sequence=(\d+)/ ) {
-	    push( @{$new->{reader_sequence}}, $1 );
-	    $new->{reader_files}++;
-	}
-
-    }
-    close( READER );
-    close( OUT );
-
-    if ( $? & 127 ) {
-	printf "ERROR: reader exited from signal %d\n", ($? & 127);
-	$errors++;
-    }
-    if ( $? & 128 ) {
-	print "ERROR: reader dumped core\n";
-	$errors++;
-    }
-    if ( $? >> 8 ) {
-	printf "ERROR: reader exited with status %d\n", ($? >> 8);
-	$errors++;
-    }
-    if ( ! $errors and $settings{verbose}) {
-	print "reader process exited normally\n";
-    }
-
-    if ( -f "$dir/reader.state" ) {
-	my $state = sprintf( "%s/reader.state", $dir );
-	my $copy = sprintf( "%s/reader-%02d.state", $dir, $loop );
-	my @cmd = ( "/bin/cp", $state, $copy );
-	system( @cmd );
-
-	@cmd = ( $programs{reader_state}, "dump", $state );
-	my $out = sprintf( "%s/reader-%02d.dump", $dir, $loop );
-
-	if ( !open( OUT, ">$out" ) ) {
-	    print STDERR "Can't dump state to $out\n";
-	    return $errors;
-	}
-	my $cmd = join( " ", @cmd );
-	if ( ! open( DUMP, "$cmd|" ) ) {
-	    print STDERR "Can't get dump state of $state\n";
-	    return $errors;
-	}
-
-	while( <DUMP> ) {
-	    print OUT;
-	}
-	close( DUMP );
-	close( OUT );
-    }
-
-    if ( $settings{valgrind_reader} ) {
-	$errors += CheckValgrind( $vg_out );
-    }
-    return $errors;
+	return $count;
 }
 
 sub CheckValgrind( $$ )
@@ -655,361 +568,69 @@ sub CheckValgrind( $$ )
     my $full;
     opendir( DIR, $dir ) or die "Can't opendir $dir";
     while( my $f = readdir(DIR) ) {
-	if ( index( $f, $file ) >= 0 ) {
-	    $full = "$dir/$f";
-	    last;
-	}
+		if ( index( $f, $file ) >= 0 ) {
+			$full = "$dir/$f";
+			last;
+		}
     }
     closedir( DIR );
     if ( !defined $full ) {
-	print STDERR "Can't find valgrind log for $file";
-	return 1;
+		print STDERR "Can't find valgrind log for $file";
+		return 1;
     }
 
     if ( ! open( VG, $full ) ) {
-	print STDERR "Can't read valgrind output $full\n";
-	return 1;
+		print STDERR "Can't read valgrind output $full\n";
+		return 1;
     }
     if ( $settings{verbose} ) {
-	print "Reading valgrind output $full\n";
+		print "Reading valgrind output $full\n";
     }
     my $dumped = 0;
     while( <VG> ) {
-	if ( /ERROR SUMMARY: (\d+)/ ) {
-	    my $e = int($1);
-	     if ( $e ) {
-		 $errors++;
-	     }
-	    if ( $settings{verbose}  or  $e ) {
-		if ( !$dumped ) {
-		    print "$full:\n";
-		    $dumped++;
+		if ( /ERROR SUMMARY: (\d+)/ ) {
+			my $e = int($1);
+			if ( $e ) {
+				$errors++;
+			}
+			if ( $settings{verbose}  or  $e ) {
+				if ( !$dumped ) {
+					print "$full:\n";
+					$dumped++;
+				}
+				print "  $_";
+			}
 		}
-		print "  $_";
-	    }
-	}
-	elsif ( /LEAK SUMMARY:/ ) {
-	    my @lines = ( $_ );
-	    my $leaks = 0;
-	    while( <VG> ) {
-		if ( /blocks\.$/ ) {
-		    push( @lines, $_ );
+		elsif ( /LEAK SUMMARY:/ ) {
+			my @lines = ( $_ );
+			my $leaks = 0;
+			while( <VG> ) {
+				if ( /blocks\.$/ ) {
+					push( @lines, $_ );
+				}
+				if ( /lost: (\d+)/ ) {
+					if ( int($1) > 0 ) {
+						$leaks++;
+						$errors++;
+					}
+				}
+			}
+			if ( $settings{verbose}  or  $leaks ) {
+				if ( !$dumped ) {
+					print "$full:\n";
+					$dumped++;
+				}
+				foreach $_ ( @lines ) {
+					print "  $_";
+				}
+			}
 		}
-		if ( /lost: (\d+)/ ) {
-		    if ( int($1) > 0 ) {
-			$leaks++;
-			$errors++;
-		    }
-		}
-	    }
-	    if ( $settings{verbose}  or  $leaks ) {
-		if ( !$dumped ) {
-		    print "$full:\n";
-		    $dumped++;
-		}
-		foreach $_ ( @lines ) {
-		    print "  $_";
-		}
-	    }
-	}
 
     }
     close( VG );
     return $errors;
 }
 
-
-# #######################################
-# Check the writer's output
-# #######################################
-sub CheckWriterOutput( $$$$ )
-{
-    my $files = shift;
-    my $loop  = shift;
-    my $new   = shift;
-    my $diff  = shift;
-
-    my $errors = 0;
-
-    if ( $new->{writer_events} < $expect{loop_mins}{num_events} ) {
-	printf( STDERR
-		"ERROR: loop %d: writer wrote too few events: %d < %d\n",
-		$loop,
-		$new->{writer_events}, $expect{loop_mins}{num_events} );
-	$errors++;
-    }
-    if ( $new->{writer_sequence} < $expect{cur_mins}{sequence} ) {
-	printf( STDERR
-		"ERROR: loop %d: writer sequence too low: %d < %d\n",
-		$loop,
-		$new->{writer_sequence}, $expect{cur_mins}{sequence} );
-	$errors++;
-    }
-
-    my $nfiles = scalar(@{$files});
-    if ( $nfiles < $expect{cur_mins}{num_files} ) {
-	printf( STDERR
-		"ERROR: loop %d: too few actual files: %d < %d\n",
-		$loop, $nfiles, $expect{cur_mins}{num_files} );
-    }
-    if ( ! $new->{events_lost} ) {
-	if ( $diff->{num_events} < $expect{loop_mins}{num_events} ) {
-	    printf( STDERR
-		    "ERROR: loop %d: too few actual events: %d < %d\n",
-		    $loop,
-		    $diff->{num_events}, $expect{loop_mins}{num_events} );
-	    $errors++;
-	}
-    }
-    if ( $new->{sequence} < $expect{cur_mins}{sequence} ) {
-	printf( STDERR
-		"ERROR: loop %d: actual sequence too low: %d < %d\n",
-		$loop,
-		$new->{sequence}, $expect{cur_mins}{sequence});
-	$errors++;
-    }
-
-    if ( $new->{file_size} > $expect{maxs}{total_size} ) {
-	printf( STDERR
-		"ERROR: loop %d: total file size too high: %d > %d\n",
-		$loop,
-		$new->{total_size}, $expect{maxs}{total_size});
-	$errors++;
-    }
-
-    return $errors;
-}
-
-
-# #######################################
-# Check the writer's output
-# #######################################
-sub CheckReaderOutput( $$$$ )
-{
-    my $files = shift;
-    my $loop  = shift;
-    my $new   = shift;
-    my $diff  = shift;
-
-    my $errors = 0;
-
-    if ( $new->{reader_events} < $new->{writer_events} ) {
-	printf( STDERR
-		"ERROR: loop %d: reader found fewer events than writer wrote".
-		": %d < %d\n",
-		$loop,
-		$new->{reader_events}, $new->{writer_events} );
-	$errors++;
-    }
-
-    my $nseq = $#{@{$new->{reader_sequence}}};
-    my $rseq = -1;
-    if ( $nseq >= 0 ) {
-	$rseq = @{$new->{reader_sequence}}[$nseq];
-    }
-
-   if ( $nseq < 0 ) {
-	printf( STDERR
-		"ERROR: loop %d: no reader sequence\n",
-		$loop );
-	$errors++;
-    }
-    elsif ( $rseq < $new->{writer_sequence} ) {
-	printf( STDERR
-		"ERROR: loop %d: reader sequence too low: %d < %d\n",
-		$loop,
-		$rseq, $new->{writer_sequence} );
-	$errors++;
-    }
-    elsif ( ($nseq+1) < $expect{loop_mins}{sequence} ) {
-	printf( STDERR
-		"ERROR: loop %d: reader too few sequences: %d < %d\n",
-		$loop,
-		$nseq+1, $expect{loop_mins}{sequence} );
-	$errors++;
-    }
-
-    if ( $new->{reader_files} < $new->{writer_files} ) {
-	printf( STDERR
-		"ERROR: loop %d: reader found too few files: %d < %d\n",
-		$loop,
-		$new->{reader_files}, $new->{writer_files} );
-    }
-
-    return $errors;
-}
-
-
-# #######################################
-# Read the eventlog files
-# #######################################
-sub ReadEventlogs( $$ )
-{
-    my $dir = shift;
-    my $new = shift;
-
-    my @header_fields = qw( ctime id sequence size events offset event_off );
-
-    my @files;
-    opendir( DIR, $dir ) or die "Can't read directory $dir";
-    while( my $t = readdir( DIR ) ) {
-	if ( $t =~ /^EventLog(\.old|\.\d+)*$/ ) {
-	    $new->{num_files}++;
-	    my $ext = $1;
-	    my $rot = 0;
-	    if ( defined $ext  and  $ext eq ".old" ) {
-		$rot = 1;
-	    }
-	    elsif ( defined $ext  and  $ext =~ /\.(\d+)/ ) {
-		$rot = $1;
-	    }
-	    else {
-		$rot = 0;
-	    }
-	    $files[$rot] = { name => $t, ext => $ext, num_events => 0 };
-	    my $f = $files[$rot];
-	    my $file = "$dir/$t";
-	    open( FILE, $file ) or die "Can't read $file";
-	    while( <FILE> ) {
-		chomp;
-		if ( $f->{num_events} == 0  and  /^008 / ) {
-		    $f->{header} = $_;
-		    $f->{fields} = { };
-		    foreach my $field ( split() ) {
-			if ( $field =~ /(\w+)=(.*)/ ) {
-			    $f->{fields}{$1} = $2;
-			}
-		    }
-		    foreach my $fn ( @header_fields ) {
-			if ( not exists $f->{fields}{$fn} ) {
-			    print STDERR
-				"ERROR: header in file $t missing $fn\n";
-			    $errors++;
-			    $f->{fields}{$fn} = 0;
-			}
-		    }
-		}
-		if ( $_ eq "..." ) {
-		    $f->{num_events}++;
-		    $new->{num_events}++;
-		}
-	    }
-	    close( FILE );
-	    $f->{file_size} = -s $file;
-	    $new->{total_size} += -s $file;
-	}
-    }
-    closedir( DIR );
-    return @files;
-}
-
-# #######################################
-# Read the eventlog files, process them
-# #######################################
-sub ProcessEventlogs( $$ )
-{
-    my $files = shift;
-    my $new = shift;
-
-    my $events_counted =
-	( exists $test->{config}{EVENT_LOG_COUNT_EVENTS} and
-	  $test->{config}{EVENT_LOG_COUNT_EVENTS} eq "TRUE" );
-
-    my $min_sequence = 9999999;
-    my $min_event_off = 99999999;
-    my $maxfile = $#{@{$files}};
-    foreach my $n ( 0 .. $maxfile ) {
-	if ( ! defined ${@{$files}}[$n] ) {
-	    print STDERR "ERROR: EventLog file #$n is missing\n";
-	    $errors++;
-	    next;
-	}
-	my $f = ${@{$files}}[$n];
-	my $t = $f->{name};
-	if ( not exists $f->{header} ) {
-	    print STDERR "ERROR: no header in file $t\n";
-	    $errors++;
-	}
-	my $seq = $f->{fields}{sequence};
-
-	# The sequence on all but the first (chronologically) file
-	# should never be one
-	if (  ( $n != $maxfile ) and ( $seq == 1 )  ) {
-	    print STDERR
-		"ERROR: sequence # for file $t (#$n) is $seq\n";
-	    $errors++;
-	}
-	# but the sequence # should *never* be zero
-	elsif ( $seq == 0 ) {
-	    print STDERR
-		"ERROR: sequence # for file $t (#$n) is zero\n";
-	    $errors++;
-	}
-	if ( $seq > 1 ) {
-	    if ( $f->{fields}{offset} == 0 ) {
-		print STDERR
-		    "ERROR: offset for file $t (#$n / seq $seq) is zero\n";
-		$errors++;
-	    }
-	    if ( $events_counted  and  $f->{fields}{event_off} == 0 ) {
-		print STDERR
-		    "ERROR: event offset for file $t ".
-		    "(#$n / seq $seq) is zero\n";
-		$errors++;
-	    }
-	}
-	if ( $seq > $new->{sequence} ) {
-	    $new->{sequence} = $seq;
-	}
-	if ( $seq < $min_sequence ) {
-	    $min_sequence = $seq;
-	}
-	if ( $f->{fields}{event_off} < $min_event_off ) {
-	    $min_event_off = $f->{fields}{event_off};
-	}
-	if ( $events_counted ) {
-	    if ( $n  and  $f->{fields}->{events} == 0 ) {
-		print STDERR
-		    "ERROR: # events for file $t (#$n / seq $seq) is zero\n";
-		$errors++;
-	    }
-	}
-	else {
-	    if ( $f->{fields}->{events} != 0 ) {
-		printf( STDERR
-			"ERROR: event count for file $t ".
-			"(#$n / seq $seq) is non-zero (%d)\n",
-			$f->{fields}->{events} );
-		$errors++;
-	    }
-	    if ( $f->{fields}->{event_off} != 0 ) {
-		printf( STDERR
-			"ERROR: event offset for file $t ".
-			"(#$n / seq $seq) is non-zero (%d)\n",
-			$f->{fields}->{event_off} );
-		$errors++;
-	    }
-	}
-
-	if ( $n  and  ( $f->{file_size} > $expect{maxs}{file_size} ) ) {
-	    printf STDERR
-		"ERROR: File $t is over size limit: %d > %d\n",
-		$f->{file_size},  $expect{maxs}{file_size};
-		$errors++;
-	}
-
-    }
-
-    if ( $min_sequence > 0 ) {
-	$new->{events_lost} = 1;
-	if ( $min_event_off > 0 ) {
-	    $new->{num_events_lost} = $min_event_off;
-	}
-	else {
-	    $new->{num_events_lost} = -1;
-	}
-    }
-}
 
 ### Local Variables: ***
 ### mode:perl ***

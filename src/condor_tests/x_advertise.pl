@@ -23,6 +23,11 @@ use warnings;
 use Cwd;
 use File::Temp qw/ tempfile tempdir /;
 
+# open( STDOUT, "> /tmp/x_advertise.log" ) or die "Can't open stdout";
+# open( STDERR, "> &STDOUT" ) or die "Can't open stderr";
+# print STDOUT getcwd() ."\n";
+# print "$0 " . join( " ", @ARGV ) . "\n";;
+
 sub usage( )
 {
     print
@@ -33,8 +38,10 @@ sub usage( )
 	"  --dir <dir>     specify directory to create temp ad files in\n" .
 	"  -k|--keep       Keep temp ad files (for debugging)\n" .
 	"  -f              run in foreground (ignored; $0 always does)\n" .
+	"  -l|--log <file> specify file to log to\n" .
 	"  -n|--no-exec    no execute / test mode\n" .
 	"  -v|--verbose    increase verbose level\n" .
+	"  -t|--test       print to stdout / stderr\n" .
 	"  --valgrind      run test under valgrind\n" .
 	"  -q|--quiet      cancel debug & verbose\n" .
 	"  -h|--help       this help\n";
@@ -46,12 +53,13 @@ my %settings =
  delay			=> 5,
  keep			=> 0,
 
- done			=> 0,			
+ done			=> 0,
 
  valgrind		=> 0,
 
  verbose		=> 0,
  execute		=> 1,
+ test			=> 0,
  );
 my $skip = 0;
 foreach my $argno ( 0 .. $#ARGV ) {
@@ -97,6 +105,9 @@ foreach my $argno ( 0 .. $#ARGV ) {
 		$settings{dir} = $arg1;
 		$skip = 1;
 	}
+	elsif ( $arg eq "--log"  and  defined($arg1)  ) {
+		$settings{log} = $arg1;
+	}
     elsif ( $arg eq "-k"  or  $arg eq "--keep" ) {
 		$settings{keep} = 1;
     }
@@ -109,6 +120,9 @@ foreach my $argno ( 0 .. $#ARGV ) {
     elsif ( $arg eq "-q"  or  $arg eq "--quiet" ) {
 		$settings{verbose} = 0;
 		$settings{debug} = 0;
+    }
+    elsif ( $arg eq "-t"  or  $arg eq "--test" ) {
+		$settings{test} = 1;
     }
     elsif ( $arg eq "-h"  or  $arg eq "--help" ) {
 		usage( );
@@ -138,9 +152,22 @@ if ( !exists $settings{dir} ) {
 		$settings{dir} = $all[0];
 	}
 	else {
-		$settings{dir} = join( "/", @all[0,-1] );
+		pop(@all);
+		$settings{dir} = join( "/", @all );
 	}
 	print "Dir set to " . $settings{dir} . "\n";
+}
+
+# Setup logging
+if ( !exists $settings{log} ) {
+	$settings{log} = `condor_config_val ADVERTISER_LOG`;
+	chomp $settings{log};
+	print "New log: '".$settings{log}."'\n";
+}
+if ( !$settings{test} ) {
+	my $log = $settings{log};
+	open( STDOUT, ">$log" );
+	open( STDERR, ">&STDOUT" );
 }
 
 my @valgrind = ( "valgrind", "--tool=memcheck", "--num-callers=24",
