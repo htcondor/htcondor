@@ -125,11 +125,13 @@ int main( int argc, char *argv[] )
 	ad = new ClassAd(file,"***",eof,error,empty);
 	if(error) {
 		fprintf(stderr,"couldn't parse ClassAd in %s\n",filename);
+		delete ad;
 		return 1;
 	}
 
 	if(empty) {
 		fprintf(stderr,"%s is empty\n",filename);
+		delete ad;
 		return 1;
 	}
 
@@ -191,6 +193,7 @@ int main( int argc, char *argv[] )
 	}
 
 	delete collectors;
+	delete ad;
 
 	return (had_error)?1:0;
 }
