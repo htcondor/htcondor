@@ -24,8 +24,9 @@
 #include "soapH.h"
 #include "AmazonEC2Binding.nsmap"
 
-//#define PORT 1980
-#define PORT 0
+#define DEFAULT_PORT 1980
+
+int port = DEFAULT_PORT;
 
 using namespace std;
 
@@ -57,11 +58,15 @@ main(int argc, char **argv)
 		exit( 1 );
 	}
 
+	if ( argc >= 3 && strcmp( argv[1], "-p" ) == 0 ) {
+		port = atoi( argv[2] );
+	}
+
 	srand(0);
 
 	soap = soap_new();
 
-	int fd = soap_bind(soap, NULL, PORT, 5);
+	int fd = soap_bind(soap, NULL, port, 5);
 	if (-1 == fd) {
 		soap_print_fault(soap, stderr);
 		return 1;

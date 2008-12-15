@@ -67,7 +67,7 @@ if ( $ec2_sim_pid == 0 ) {
 	# its pid.
 	open STDOUT, ">ec2_sim.out";
 	open STDERR, ">ec2_sim.out";
-	exec( "$ec2_sim" ) or die "Failed to exec $ec2_sim\n";
+	exec( "$ec2_sim -p 0" ) or die "Failed to exec $ec2_sim\n";
 } elsif ( $ec2_sim_pid > 0 ) {
 	for ( my $i = 0; $i < 5 && $ec2_sim_port == 0; $i++ ) {
 		if ( waitpid( $ec2_sim_pid, &POSIX::WNOHANG ) == $ec2_sim_pid ) {
