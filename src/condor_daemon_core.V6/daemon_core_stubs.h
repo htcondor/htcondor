@@ -34,19 +34,19 @@
 	DaemonCore* daemonCore = NULL;
 	int DaemonCore::Kill_Thread(int) { return 0; }
 //char * DaemonCore::InfoCommandSinfulString(int) { return NULL; }
-	int DaemonCore::Register_Command(int,char*,CommandHandler,char*,Service*,
-		DCpermission,int) {return 0;}
+	int DaemonCore::Register_Command(int,const char*,CommandHandler,char*,
+		Service*,DCpermission,int) {return 0;}
 	int DaemonCore::Register_Reaper(char*,ReaperHandler,
-		char*,Service*) {return 0;}
+		const char*,Service*) {return 0;}
 	int DaemonCore::Create_Thread(ThreadStartFunc,void*,Stream*,
 		int) {return 0;}
 	int DaemonCore::Suspend_Thread(int) {return 0;}
 	int DaemonCore::Continue_Thread(int) {return 0;}
 //	int DaemonCore::Register_Reaper(int,char*,ReaperHandler,ReaperHandlercpp,
-//		char*,Service*,int) {return 0;}
+//		const char*,Service*,int) {return 0;}
 //	int DaemonCore::Register_Reaper(char*,ReaperHandlercpp,
-//		char*,Service*) {return 0;}
-//	int DaemonCore::Register_Command(int,char*,CommandHandlercpp,char*,Service*,
+//		const char*,Service*) {return 0;}
+//	int DaemonCore::Register_Command(int,const char*,CommandHandlercpp,const char*,Service*,
 //		DCpermission,int) {return 0;}
 /**************************************/
 
