@@ -1433,16 +1433,27 @@ JobRouter::FinalizeJob(RoutedJob *job) {
 }
 
 void
+JobRouter::RerouteJob(RoutedJob *job) {
+	SetJobIdle(job);
+	GracefullyRemoveJob(job);
+}
+
+void
+JobRouter::SetJobIdle(RoutedJob *job) {
+	job->src_ad.InsertAttr(ATTR_JOB_STATUS,IDLE);
+	if(!push_dirty_attributes(job->src_ad,NULL,NULL)) {
+		dprintf(D_ALWAYS,"JobRouter failure (%s): failed to set src job status back to idle\n",job->JobDesc().c_str());
+	}
+}
+
+void
 JobRouter::FinishFinalizeJob(RoutedJob *job) {
 	if(!finalize_job(job->dest_ad,job->dest_proc_id.cluster,job->dest_proc_id.proc,NULL,NULL,job->is_sandboxed)) {
 		dprintf(D_ALWAYS,"JobRouter failure (%s): failed to finalize job\n",job->JobDesc().c_str());
 
 			// Put the src job back in idle state to prevent it from
 			// exiting the queue.
-		job->src_ad.InsertAttr(ATTR_JOB_STATUS,IDLE);
-		if(!push_dirty_attributes(job->src_ad,NULL,NULL)) {
-			dprintf(D_ALWAYS,"JobRouter failure (%s): failed to set src job status back to idle\n",job->JobDesc().c_str());
-		}
+		SetJobIdle(job);
 	}
 	else if(!WriteTerminateEventToUserLog(job->src_ad)) {
 	}
