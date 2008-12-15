@@ -610,7 +610,7 @@ foreach $compiler (@compilers)
 							#next;
 						} else {
 							# batch size not met yet
-							debug( "batch size not met yet\n",2);
+							debug( "batch size not met yet: current group<$currentgroup>\n",2);
 	            			sleep 1;
 							#next;
 						}
@@ -644,6 +644,7 @@ foreach $compiler (@compilers)
         	# record the child's return status
         	$status = $?;
 
+			$currentgroup -= 1;
 			debug( "informed $child gone yeilding test $test{$child}\n",2);
 	
 			if(! defined $test{$child}) {
