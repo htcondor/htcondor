@@ -248,6 +248,7 @@ AmazonRequest::CleanupSoap(void)
 
 	if( m_soap ) {
 		soap_wsse_delete_Security(m_soap);
+		soap_destroy(m_soap);
 		soap_end(m_soap);
 		soap_done(m_soap);
 
