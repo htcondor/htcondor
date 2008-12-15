@@ -1,6 +1,6 @@
 ##
 ## Max Local Universe Job Submission
-## We set the requirements so that only local job is allowed to
+## We set the requirements so that only one local job is allowed to
 ## to run at a time. We pass the perl script the # of seconds it
 ## should sleep after it prints out the time. This way we can check
 ## to make sure that each time is that many seconds after each other
