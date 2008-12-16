@@ -267,6 +267,7 @@ my %test;
 FillTest( \%test, $tests{common} );
 FillTest( \%test, $settings{test} );
 $test{name} = $settings{name};
+my $full_name = "lease_manager-".$settings{name};
 
 my $dir = "test-lease_manager-" . $settings{name};
 my $fulldir = getcwd() . "/$dir";
@@ -349,18 +350,38 @@ if ( not $settings{execute} ) {
 
 $test{client}->{lease_file} = "$fulldir/leases.state";
 
+my $param_file = "$fulldir/params";
+open( PARAMS, ">$param_file" ) or die "can't write to $param_file";
+print PARAMS <<ENDPARAMS;
+ports = dynamic
+condor = nightlies
+condorconfig = condor_config
+condorlocal = condor_config.local
+condordaemons = MASTER,COLLECTOR,LEASEMANAGER,ADVERTISER
+personaldir = $fulldir
+ENDPARAMS
+close(PARAMS);
+
+my $ltime = localtime(); chomp $ltime;
+CondorTest::debug("About to set up Condor Personal : <<<$ltime>>>", 1);
+
+# Fire up my condor
+my $configrem =	CondorPersonal::StartCondor( $param_file, $full_name );
+print "<$configrem>\n";
+exit 1;
+
 # This is all throw-away
-my $main_config = "$fulldir/condor_config";
-system( "cp condor_config.nrl $main_config" );
-
-$ENV{CONDOR_CONFIG} = "$main_config";
-
-my $log = `condor_config_val log`; chomp $log;
-mkdir( $log ) or die "Can't create $log";
-my $spool = `condor_config_val spool`; chomp $spool;
-mkdir( $spool ) or die "Can't create $spool";
-
-system( "condor_master" );
+#my $main_config = "$fulldir/condor_config";
+# system( "cp condor_config.nrl $main_config" );
+# 
+# $ENV{CONDOR_CONFIG} = "$main_config";
+# 
+# my $log = `condor_config_val log`; chomp $log;
+# mkdir( $log ) or die "Can't create $log";
+# my $spool = `condor_config_val spool`; chomp $spool;
+# mkdir( $spool ) or die "Can't create $spool";
+# 
+# system( "condor_master" );
 
 if (! DaemonWait( $test{resource}{MaxLeases} ) ) {
 }
@@ -368,15 +389,8 @@ if (! DaemonWait( $test{resource}{MaxLeases} ) ) {
 print $test{client}->{lease_file} . "\n";;
 RunTests( \%test );
 
-system( "condor_off -master" );
+# system( "condor_off -master" );
 # end throw-away code
-
-#CondorTest::debug("About to set up Condor Personal : <<<", 1);
-#system("date");
-#CondorTest::debug(">>>\n", 1);
-
-# get a remote scheduler running (side b)
-#my $configrem = CondorPersonal::StartCondor("x_param.wantcore" ,"wantcore");
 
 
 my @valgrind = ( "valgrind", "--tool=memcheck", "--num-callers=24",
