@@ -341,6 +341,11 @@ JobRouterHookMgr::hookJobCleanup(RoutedJob* r_job)
 		return 0;
 	}
 
+	if (0 >= r_job->dest_ad.size())
+	{
+		return 0;
+	}
+
 	// Verify the cleanup hook hasn't already been spawned and that
 	// we're not waiting for it to return.
 	std::string key = r_job->dest_key;
@@ -523,6 +528,7 @@ TranslateClient::hookExited(int exit_status)
 				dprintf(D_ALWAYS, "TranslateClient::hookExited: "
 						"Failed to insert \"%s\" into ClassAd, "
 						"ignoring invalid hook output\n", hook_line);
+				job_router->GracefullyRemoveJob(m_routed_job);
 				return;
 			}
 		}
@@ -531,6 +537,7 @@ TranslateClient::hookExited(int exit_status)
 			dprintf(D_ALWAYS, "TranslateClient::hookExited: "
 					"Failed to convert ClassAd, "
 					"ignoring invalid hook output\n");
+			job_router->GracefullyRemoveJob(m_routed_job);
 			return;
 		}
 		m_routed_job->dest_ad = new_job_ad;
@@ -548,6 +555,7 @@ TranslateClient::hookExited(int exit_status)
 					"(pid %d) exited with return status "
 					"%d.  Ignoring output.\n",  m_hook_path,
 					(int)m_pid, (int)WEXITSTATUS(exit_status));
+			job_router->GracefullyRemoveJob(m_routed_job);
 		}
 		return;
 	}
