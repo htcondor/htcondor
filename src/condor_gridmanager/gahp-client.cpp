@@ -5265,7 +5265,7 @@ GahpClient::cream_delegate(const char *delg_service, const char *delg_id)
 
 int 
 GahpClient::cream_job_register(const char *service, const char *delg_service, const char *delg_id, 
-							   const char *jdl, time_t lease_time, char **job_id, char **upload_url)
+							   const char *jdl, const char *lease_id, char **job_id, char **upload_url)
 {
 	static const char* command = "CREAM_JOB_REGISTER";
 
@@ -5279,17 +5279,20 @@ GahpClient::cream_job_register(const char *service, const char *delg_service, co
 	if (!delg_service) delg_service=NULLSTRING;
 	if (!delg_id) delg_id=NULLSTRING;
 	if (!jdl) jdl = NULLSTRING;
+	if (!lease_id) lease_id = "";
 
 	MyString reqline;
 	char *esc1 = strdup( escapeGahpString(service) );
 	char *esc2 = strdup( escapeGahpString(delg_service) );
 	char *esc3 = strdup( escapeGahpString(delg_id) );
 	char *esc4 = strdup( escapeGahpString(jdl) );
-	bool x = reqline.sprintf("%s %s %s %s %d", esc1, esc2, esc3, esc4, lease_time );
+	char *esc5 = strdup( escapeGahpString(lease_id) );
+	bool x = reqline.sprintf("%s %s %s %s %s", esc1, esc2, esc3, esc4, esc5 );
 	free( esc1 );
 	free( esc2 );
 	free( esc3 );
 	free( esc4 );
+	free( esc5 );
 	ASSERT( x == true );
 	const char *buf = reqline.Value();
 	
@@ -5904,9 +5907,9 @@ GahpClient::cream_ping(const char * service)
 }
 
 int
-GahpClient::cream_job_lease(const char *service, const char *job_id, time_t &lease_incr)
+GahpClient::cream_set_lease(const char *service, const char *lease_id, time_t &lease_expiry)
 {
-	static const char* command = "CREAM_JOB_LEASE";
+	static const char* command = "CREAM_SET_LEASE";
 
 		// Check if this command is supported
 	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
@@ -5914,12 +5917,12 @@ GahpClient::cream_job_lease(const char *service, const char *job_id, time_t &lea
 	}
 		// Generate request line
 	if (!service) service=NULLSTRING;
-	if (!job_id) job_id=NULLSTRING;
+	if (!lease_id) lease_id=NULLSTRING;
 	MyString reqline;
 	char *esc1 = strdup( escapeGahpString(service) );
-	char *esc2 = strdup( escapeGahpString(job_id) );
+	char *esc2 = strdup( escapeGahpString(lease_id) );
 	int jobnum = 1;
-	bool x = reqline.sprintf("%s %d %d %s", esc1, lease_incr, jobnum, esc2);
+	bool x = reqline.sprintf("%s %s %d", esc1, esc2, lease_expiry);
 	free( esc1 );
 	free( esc2 );
 	ASSERT( x == true );
@@ -5942,25 +5945,24 @@ GahpClient::cream_job_lease(const char *service, const char *job_id, time_t &lea
 	Gahp_Args* result = get_pending_result(command,buf);
 	if ( result ) {
 		// command completed.
-		if (result->argc > 2) {
-			if( result->argc != 3 + atoi(result->argv[2]) * 2) {
-				EXCEPT("Bad %s Result",command);
+		int rc = 0;
+		if ( result->argc == 2 ) {
+			if ( !strcmp( result->argv[1], NULLSTRING ) ) {
+				EXCEPT( "Bad %s result", command );
 			}
-		}
-		else if (result->argc != 2) {
-			EXCEPT("Bad %s Result",command);
-		}
-		
-		int rc;
-		if (strcmp(result->argv[1], NULLSTRING) == 0) {
+			error_string = result->argv[1];
+			rc = 1;
+		} else if ( result->argc == 3 ) {
+			if ( strcmp( result->argv[1], NULLSTRING ) ) {
+				EXCEPT( "Bad %s result", command );
+			}
+
+			if ( strcasecmp(result->argv[2], NULLSTRING) ) {
+				lease_expiry = atoi( result->argv[2] );
+			}
 			rc = 0;
 		} else {
-			rc = 1;
-			error_string = result->argv[1];
-		}
-		
-		if (rc == 0) {
-			lease_incr = atoi(result->argv[4]);
+			EXCEPT( "Bad %s result", command );
 		}
 			
 		delete result;

@@ -109,6 +109,7 @@ class CreamJob : public BaseJob
 	MyString gahpErrorString;
 
 	char * delegatedCredentialURI;
+	char *leaseId;
 };
 
 #endif

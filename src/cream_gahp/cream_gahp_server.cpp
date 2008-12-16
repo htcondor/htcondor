@@ -110,6 +110,7 @@ static char *commands_list =
 "VERSION "
 "INITIALIZE_FROM_FILE "
 "CREAM_DELEGATE "
+"CREAM_SET_LEASE "
 "CREAM_JOB_REGISTER "
 "CREAM_JOB_START "
 "CREAM_JOB_PURGE "
@@ -163,7 +164,7 @@ int thread_cream_job_purge( Request *req );
 int thread_cream_job_cancel( Request *req );
 int thread_cream_job_suspend( Request *req );
 int thread_cream_job_resume( Request *req );
-int thread_cream_job_lease( Request *req );
+int thread_cream_set_lease( Request *req );
 int thread_cream_job_status( Request *req );
 int thread_cream_job_info( Request *req );
 int thread_cream_job_list( Request *req );
@@ -422,10 +423,7 @@ int thread_cream_delegate( Request *req )
 
 int handle_cream_job_register( char **input_line )
 {
-	int lease_time;
-	if ( count_args( input_line ) != 7 ||
-		 !process_int_arg( input_line[6], &lease_time ) ||
-		 lease_time <= 0 ) {
+	if ( count_args( input_line ) != 7 ) {
 		HANDLE_SYNTAX_ERROR();
 	}
 	
@@ -438,10 +436,6 @@ int handle_cream_job_register( char **input_line )
 
 int thread_cream_job_register( Request *req )
 {
-    // FIXME: We currently ignore the given lease_time, and do not
-	// specify a lease for the job. We need to figure out how to
-	// specify lease times in the new API
-
 	// FIXME: The new API does not allow for the proxy to be
 	// delegated as part of the JobRegister operation. As such,
 	// the delgservice parameter is no longer needed and delgid
@@ -453,25 +447,24 @@ int thread_cream_job_register( Request *req )
 	// the job than just its ID and upload URL. Should we make
 	// more of this available via our GAHP protocol?
 
-	char *reqid, *service, *delgservice, *delgid, *jdl;
+	char *reqid, *service, *delgservice, *delgid, *jdl, *lease_id;
 	string result_line;
-	int lease_time = 0;
 	
 	process_string_arg( req->input_line[1], &reqid );
 	process_string_arg( req->input_line[2], &service );
 	process_string_arg( req->input_line[3], &delgservice );
 	process_string_arg( req->input_line[4], &delgid );
 	process_string_arg( req->input_line[5], &jdl );
-	process_int_arg( req->input_line[6], &lease_time );
+	process_string_arg( req->input_line[6], &lease_id );
 	
 	AbsCreamProxy::RegisterArrayResult resp;
 	try {
 		JobDescriptionWrapper jdw(jdl,
 		                          delgid,
-		                          "",     // delegation proxy
-		                          "",     // lease id
-		                          false,  // autostart
-		                          "JDI"); // job description ID
+		                          "",      // delegation proxy
+		                          lease_id,// lease id
+		                          false,   // autostart
+		                          "JDI");  // job description ID
 		AbsCreamProxy::RegisterArrayRequest reqs;
 		reqs.push_back(&jdw);
 		AbsCreamProxy* cp =
@@ -908,55 +901,68 @@ int thread_cream_job_resume( Request *req )
 
 
 /* =========================================================================
-   CREAM_JOB_LEASE:
+   CREAM_SET_LEASE:
    ========================================================================= */
 
-int handle_cream_job_lease( char **input_line )
+int handle_cream_set_lease( char **input_line )
 {
 	int arg_cnt = count_args( input_line );
-	char *jobnum = NULL;
 
-	if ( arg_cnt < 5 ) {
+	if ( arg_cnt != 5 ) {
 		HANDLE_SYNTAX_ERROR();
 	}
 
-	process_string_arg( input_line[4], &jobnum );
-	if ( jobnum && ( atoi( jobnum ) + 5 != arg_cnt ) ) {
-		HANDLE_SYNTAX_ERROR();
-	}
-
-	enqueue_request( input_line, thread_cream_job_lease );
+	enqueue_request( input_line, thread_cream_set_lease );
 
 	gahp_printf("S\n");
 	
 	return 0;
 }
 
-int thread_cream_job_lease( Request *req )
+int thread_cream_set_lease( Request *req )
 {
 	// FIXME: The new API does not appear to have an interface
 	// for managing lease times. This command is currently
 	// stubbed out: we always return success
 
-	char *reqid, *service, *jobnum_str, *jobid, *lease_incr;
+	char *reqid, *service, *lease_id;
+	int lease_expiry;
 	string result_line;
 	
 	process_string_arg( req->input_line[1], &reqid );
 	process_string_arg( req->input_line[2], &service );
-	process_string_arg( req->input_line[3], &lease_incr );
-	process_string_arg( req->input_line[4], &jobnum_str );
+	process_string_arg( req->input_line[3], &lease_id );
+	process_int_arg( req->input_line[4], &lease_expiry );
 	
 	try {
+		pair<string, time_t> cmd_input;
+		pair<string, time_t> cmd_output;
+		if ( lease_id ) {
+			cmd_input.first = lease_id;
+		} else {
+			cmd_input.first = "";
+		}
+		cmd_input.second = lease_expiry;
+		AbsCreamProxy *cp =
+			CreamProxyFactory::make_CreamProxyLease(cmd_input, &cmd_output,
+													DEFAULT_TIMEOUT);
+		check_for_factory_error(cp);
+		cp->setCredential(req->proxy.c_str());
+		cp->execute(service);
+		delete cp;
+		lease_expiry = cmd_output.second;
 	}
 	catch(std::exception& ex) {
 		
-		result_line = (string)reqid + " CREAM_Job_Lease\\ Error:\\ " + escape_spaces(ex.what());
+		result_line = (string)reqid + " CREAM_Set_Lease\\ Error:\\ " + escape_spaces(ex.what());
 		enqueue_result(result_line);
 		
 		return 1;
 	}
 	
-	result_line = (string)reqid + " NULL"; // todo
+	char buf[100];
+	sprintf( buf, "%d", lease_expiry );
+	result_line = (string)reqid + " NULL " + buf;
 	enqueue_result(result_line);
 	
 	return 0;
@@ -1812,7 +1818,7 @@ void process_request( char **input_line )
 		else HANDLE(cream_job_cancel);
 		else HANDLE(cream_job_resume);
 		else HANDLE(cream_job_list); 
-		else HANDLE(cream_job_lease); 
+		else HANDLE(cream_set_lease); 
 		else HANDLE(cream_delegate);
 		else HANDLE(cream_proxy_renew);
 		else HANDLE(cream_get_CEMon_url);

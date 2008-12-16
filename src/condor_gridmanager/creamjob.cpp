@@ -55,7 +55,8 @@
 #define GM_POLL_JOB_STATE		15
 #define GM_START				16
 #define GM_DELEGATE_PROXY		17
-#define GM_CLEANUP		18
+#define GM_CLEANUP				18
+#define GM_SET_LEASE			19
 
 static const char *GMStateNames[] = {
 	"GM_INIT",
@@ -77,6 +78,7 @@ static const char *GMStateNames[] = {
 	"GM_START",
 	"GM_DELEGATE_PROXY",
 	"GM_CLEANUP",
+	"GM_SET_LEASE",
 };
 
 #define CREAM_JOB_STATE_UNSET			""
@@ -95,6 +97,7 @@ static const char *GMStateNames[] = {
 
 const char *ATTR_CREAM_UPLOAD_URL = "CreamUploadUrl";
 const char *ATTR_CREAM_DELEGATION_URI = "CreamDelegationUri";
+const char *ATTR_CREAM_LEASE_ID = "CreamLeaseId";
 
 // TODO: once we can set the jobmanager's proxy timeout, we should either
 // let this be set in the config file or set it to
@@ -216,6 +219,7 @@ CreamJob::CreamJob( ClassAd *classad )
 	gahp = NULL;
 	delegatedCredentialURI = NULL;
 	gridftpServer = NULL;
+	leaseId = NULL;
 
 	// In GM_HOLD, we assume HoldReason to be set only if we set it, so make
 	// sure it's unset when we start.
@@ -349,6 +353,7 @@ CreamJob::CreamJob( ClassAd *classad )
 
 	if ( job_already_submitted ) {
 		jobAd->LookupString( ATTR_CREAM_UPLOAD_URL, &uploadUrl );
+		jobAd->LookupString( ATTR_CREAM_LEASE_ID, &leaseId );
 	}
 
 	gahpErrorString = "";
@@ -457,6 +462,7 @@ CreamJob::~CreamJob()
 	if ( uploadUrl != NULL ) {
 		free( uploadUrl );
 	}
+	free( leaseId );
 }
 
 void CreamJob::Reconfig()
@@ -575,7 +581,7 @@ int CreamJob::doEvaluateState()
 				break;
 			}
 			if ( delegatedCredentialURI != NULL ) {
-				gmState = GM_SUBMIT;
+				gmState = GM_SET_LEASE;
 				break;
 			}
 			if ( (error_msg = myResource->getDelegationError( jobProxy )) ) {
@@ -589,10 +595,83 @@ int CreamJob::doEvaluateState()
 				break;
 			}
 			delegatedCredentialURI = strdup( deleg_uri );
-			gmState = GM_SUBMIT;
+			gmState = GM_SET_LEASE;
 			
 			jobAd->Assign( ATTR_CREAM_DELEGATION_URI,
 						   delegatedCredentialURI );
+		} break;
+		case GM_SET_LEASE: {
+			// Create a lease id on the cream server for this job
+			if ( condorState == REMOVED || condorState == HELD ) {
+				myResource->CancelSubmit(this);
+				gmState = GM_UNSUBMITTED;
+				break;
+			}
+			if ( leaseId == NULL ) {
+				// Create an ID unique to this job
+
+				// get condor pool name
+				// In case there are multiple collectors, strip out the spaces
+				// If there's no collector, insert a dummy name
+				char* pool_name = param( "COLLECTOR_HOST" );
+				if ( pool_name ) {
+					StringList collectors( pool_name );
+					free( pool_name );
+					pool_name = collectors.print_to_string();
+				} else {
+					pool_name = strdup( "NoPool" );
+				}
+
+				// use "ATTR_GLOBAL_JOB_ID" to get unique global job id
+				MyString job_id;
+				jobAd->LookupString( ATTR_GLOBAL_JOB_ID, job_id );
+
+				MyString buf;
+				buf.sprintf( "Condor_%s_%s", pool_name, job_id.Value() );
+				leaseId = strdup( buf.Value() );
+
+				jobAd->Assign( ATTR_CREAM_LEASE_ID, leaseId );
+
+				free( pool_name );
+			}
+
+			if ( jmLifetime == 0 ) {
+				int new_lease;
+				if ( CalculateJobLease( jobAd, new_lease,
+										DEFAULT_LEASE_DURATION ) == false ) {
+					dprintf( D_ALWAYS, "(%d.%d) No lease for cream job!?\n",
+							 procID.cluster, procID.proc );
+					jmLifetime = now + DEFAULT_LEASE_DURATION;
+				} else {
+					jmLifetime = new_lease;
+				}
+			}
+
+			time_t server_lease = jmLifetime;
+			rc = gahp->cream_set_lease( resourceManagerString,
+										leaseId, server_lease );
+			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+				 rc == GAHPCLIENT_COMMAND_PENDING ) {
+				break;
+			}
+
+			if ( rc != GLOBUS_SUCCESS ) {
+				// Unhandled error
+				LOG_CREAM_ERROR( "cream_set_lease()", rc );
+				gahpErrorString = gahp->getErrorString();
+				myResource->CancelSubmit( this );
+				gmState = GM_HOLD;
+				break;
+			}
+
+			if ( server_lease != jmLifetime ) {
+				dprintf( D_ALWAYS, "(%d.%d) Server changed lease time from %d to %d\n",
+						 procID.cluster, procID.proc, jmLifetime,
+						 server_lease );
+				jmLifetime = server_lease;
+			}
+
+			gmState = GM_SUBMIT;
 		} break;
 		case GM_SUBMIT: {
 			// Start a new cream submission for this job.
@@ -628,24 +707,11 @@ int CreamJob::doEvaluateState()
 					break;
 				}
 				
-				if (jmLifetime == 0) {
-					int new_lease;
-					if (CalculateJobLease(jobAd, new_lease, DEFAULT_LEASE_DURATION) == false) {
-						dprintf( D_ALWAYS, "(%d.%d) No lease for cream job!?\n",
-								 procID.cluster, procID.proc );
-						jmLifetime = now + DEFAULT_LEASE_DURATION;
-					} else {
-						jmLifetime = new_lease;
-					}
-				}
-				
-				time_t new_lifetime = jmLifetime - now;
-				
 				rc = gahp->cream_job_register( 
 										resourceManagerString,
 										myResource->getDelegationService(),
 										delegatedCredentialURI,
-										creamAd, new_lifetime,  
+										creamAd, leaseId,
 										&job_id, &upload_url );
 				
 				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
@@ -782,9 +848,9 @@ int CreamJob::doEvaluateState()
 				gmState = GM_CANCEL;
 			} else {
 				CHECK_PROXY;
-				time_t new_lifetime = jmLifetime - now;
+				time_t server_lease = jmLifetime;
 
-				rc = gahp->cream_job_lease (resourceManagerString, remoteJobId, new_lifetime );
+				rc = gahp->cream_set_lease (resourceManagerString, leaseId, server_lease );
 
 				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
@@ -792,12 +858,12 @@ int CreamJob::doEvaluateState()
 				}
 				if ( rc != GLOBUS_SUCCESS ) {
 					// unhandled error
-					LOG_CREAM_ERROR("cream_job_lease()",rc);
+					LOG_CREAM_ERROR("cream_set_lease()",rc);
 					gahpErrorString = gahp->getErrorString();
 					gmState = GM_CANCEL;
 					break;
 				}
-				jmLifetime = new_lifetime + 3600; //remove 3600 once CREAM is fixed
+				jmLifetime = server_lease;
 
 				UpdateJobLeaseSent( jmLifetime );
 				gmState = GM_SUBMITTED;

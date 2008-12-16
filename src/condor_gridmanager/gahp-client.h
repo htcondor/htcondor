@@ -570,7 +570,7 @@ class GahpClient : public Service {
 		int cream_delegate(const char *delg_service, const char *delg_id);
 		
 		int cream_job_register(const char *service, const char *delg_service, const char *delg_id, 
-							   const char *jdl, time_t lease_time, char **job_id, char **upload_url);
+							   const char *jdl, const char *lease_id, char **job_id, char **upload_url);
 		
 		int cream_job_start(const char *service, const char *job_id);
 		
@@ -589,7 +589,7 @@ class GahpClient : public Service {
 		
 		int cream_ping(const char * service);
 		
-		int cream_job_lease(const char *service, const char *job_id, time_t &lease_incr);
+		int cream_set_lease(const char *service, const char *lease_id, time_t &lease_expiry);
 		
 		//************* Added for Amazon Jobs by fangcao ***************************//
 		
