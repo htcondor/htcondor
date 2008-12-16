@@ -264,7 +264,7 @@ sub StartCondor
 	debug( "StartCondor config_and_port is --$config_and_port--\n",3);
 	CondorPersonal::Reset();
 	debug( "StartCondor config_and_port is --$config_and_port--\n",3);
-	debug( "Personal Condor Started\n",1);
+	debug( "Personal Condor Started\n",3);
 	system("date");
 	return( $config_and_port );
 }
@@ -1138,8 +1138,14 @@ sub IsPersonalRunning
         $line = $_;
         if($line =~ /^(.*master_address)$/) {
             if(-f $1) {
-                debug("Master running\n",3);
-                return(1);
+				if(exists $personal_condor_params{"personaldir"}) {
+					# ignore if we want to fall to same place
+					# and the previous might have been kill badly
+					return(0);
+				} else {
+               		debug("Master running\n",3);
+                	return(1);
+				}
             } else {
                 debug("Master not running\n",3);
                 return(0);
