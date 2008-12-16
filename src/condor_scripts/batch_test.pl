@@ -118,7 +118,7 @@ $condorpidfile = "/tmp/condor.pid.$$";
 # we want to process and track the collection of cores
 $coredir = "$BaseDir/Cores";
 if(!(-d $coredir)) {
-	print "Creating collection directory for cores\n";
+	debug("Creating collection directory for cores\n",2);
 	system("mkdir -p $coredir");
 }
 @corefiles = ();
@@ -249,7 +249,7 @@ while( $_ = shift( @ARGV ) ) {
         }
         if( /^-xml.*/ ) {
                 $isXML = 1;
-                print "xml output format selected\n";
+                debug("xml output format selected\n",2);
                 next SWITCH;
         }
         if( /^-q.*/ ) {
@@ -303,7 +303,7 @@ if(!($wantcurrentdaemons)) {
 
 	$res = IsPersonalTestDirSetup();
 	if($res == 0) {
-		print "Need to set up config files for test condor\n";
+		debug("Need to set up config files for test condor\n",2);
 		CreateConfig();
 		CreateLocalConfig();
 		CreateLocal();
@@ -323,7 +323,7 @@ if(!($wantcurrentdaemons)) {
 	chdir("$BaseDir");
 
 	if($res == 0) {
-		print "Starting Personal Condor\n";
+		debug("Starting Personal Condor\n",2);
 		if($iswindows == 1) {
 			$mcmd = "$wininstalldir/bin/condor_master.exe -f &";
 			$mcmd =~ s/\\/\//g;
@@ -333,7 +333,7 @@ if(!($wantcurrentdaemons)) {
 		} else {
 			system("$installdir/sbin/condor_master @extracondorargs -f &");
 		}
-		print "Done Starting Personal Condor\n";
+		debug("Done Starting Personal Condor\n",2);
 	}
 		
 	IsRunningYet();
@@ -389,7 +389,7 @@ if( @testlist ) {
 
 	foreach $name (@testlist) {
 		if($hush == 0) { 
-			print "Testlist:$name\n";
+			debug("Testlist:$name\n",2);;
 		}
 	}
 
@@ -465,7 +465,7 @@ if( @testlist ) {
 # if we were given a skip file, let's read it in and use it.
 # remove any skipped tests from the test list  
 if( $skipfile ) {
-    print "found a skipfile: $skipfile \n";
+    debug("found a skipfile: $skipfile \n",1);
     open(SKIPFILE, $skipfile) || die "Can't open $skipfile\n";
     while(<SKIPFILE>) {
 	CondorTest::fullchomp($_);
@@ -490,6 +490,12 @@ if ($isXML){
 # Now we'll run each test.
 foreach $compiler (@compilers)
 {
+	# as long as we have tests to start, loop back again and start
+	# another when we are trying to keep N running at once
+	my $testspercompiler = $#{$test_suite{"$compiler"}} + 1;
+	my $currenttest = 0;
+
+	debug("Compiler/Directory <$compiler> has $testspercompiler tests\n",2); 
     if ($isXML){
       system ("mkdir -p $ResultDir/$compiler");
     } 
@@ -504,8 +510,17 @@ foreach $compiler (@compilers)
 	if($hush == 0) { 
     	print "submitting $compiler tests\n";
 	}
+
+	# if batching tests, randomize order
+	if($groupsize > 0) {
+		yates_shuffle(\@{$test_suite{"$compiler"}});
+	}
+
     foreach $test_program (@{$test_suite{"$compiler"}})
     {
+		# doing this next test
+		$currenttest = $currenttest + 1;
+
 		if(($hush == 0) && ($kindwait == 0)) { 
         	#print ".";
 		}
@@ -606,6 +621,10 @@ foreach $compiler (@compilers)
 								StartTestOutput($compiler,$test_name);
 
 								CompleteTestOutput($compiler,$test_name,$child,$status);
+								# if we have more tests fire off another
+								# and don't wait for the last one
+								last if $currenttest < $testspercompiler;
+
     						} # end while
 							#next;
 						} else {
@@ -738,7 +757,7 @@ sub IsThisNightly
 {
 	$mylocation = shift;
 
-	print "IsThisNightly passed <$mylocation>\n";
+	debug("IsThisNightly passed <$mylocation>\n",2);
 	if($mylocation =~ /^.*(\/execute\/).*$/) {
 		print "Nightly testing\n";
 		$configlocal = "../condor_examples/condor_config.local.central.manager";
@@ -765,7 +784,7 @@ sub IsThisNightly
 sub IsThisWindows
 {
 	$path = CondorTest::Which("cygpath");
-	print "Path return from which cygpath: $path\n";
+	debug("Path return from which cygpath: $path\n",2);
 	if($path =~ /^.*\/bin\/cygpath.*$/ ) {
 		print "This IS windows\n";
 		return(1);
@@ -1204,7 +1223,7 @@ sub IsRunningYet
     	while($havemasteraddr ne "yes") {
         	debug( "Looking for $masteradr\n",2);
         	if( -f $masteradr ) {
-            	print "Found it!!!! master address file \n";
+            	debug("Found it!!!! master address file \n",2);
             	$havemasteraddr = "yes";
         	} else {
             	sleep 2;
@@ -1226,7 +1245,7 @@ sub IsRunningYet
     	while($havecollectoraddr ne "yes") {
         	debug( "Looking for $collectoradr\n",2);
         	if( -f $collectoradr ) {
-            	print "Found it!!!! collector address file\n";
+            	debug("Found it!!!! collector address file\n",2);
             	$havecollectoraddr = "yes";
         	} else {
             	sleep 2;
@@ -1248,7 +1267,7 @@ sub IsRunningYet
     	while($havenegotiatoraddr ne "yes") {
         	debug( "Looking for $negotiatoradr\n",2);
         	if( -f $negotiatoradr ) {
-            	print "Found it!!!! negotiator address file\n";
+            	debug("Found it!!!! negotiator address file\n",2);
             	$havenegotiatoraddr = "yes";
         	} else {
             	sleep 2;
@@ -1270,7 +1289,7 @@ sub IsRunningYet
     	while($havestartdaddr ne "yes") {
         	debug( "Looking for $startdadr\n",2);
         	if( -f $startdadr ) {
-            	print "Found it!!!! startd address file\n";
+            	debug("Found it!!!! startd address file\n",2);
             	$havestartdaddr = "yes";
         	} else {
             	sleep 2;
@@ -1292,7 +1311,7 @@ sub IsRunningYet
     	while($havescheddaddr ne "yes") {
         	debug( "Looking for $scheddadr\n",2);
         	if( -f $scheddadr ) {
-            	print "Found it!!!! schedd address file\n";
+            	debug("Found it!!!! schedd address file\n",2);
             	$havescheddaddr = "yes";
         	} else {
             	sleep 2;
@@ -1486,7 +1505,7 @@ sub safe_copy {
         print "Can't copy $src to $dest: $!\n";
         return 0;
     } else {
-        print "Copied $src to $dest\n";
+        debug("Copied $src to $dest\n",2);
         return 1;
     }
 }
@@ -1615,7 +1634,7 @@ sub AddFileTrace
 	close(TF);
 	$buildentry = "$time	$file	$entry\n";
 	print NTF "$buildentry";
-	debug("\n$buildentry",1);
+	debug("\n$buildentry",2);
 	close(NTF);
 	system("mv $newtracefile $tracefile");
 
@@ -1634,7 +1653,7 @@ sub MoveCoreFile
 		#system("rm $oldname");
 		return($newname);
 	} else {
-		print "Only move core files<$oldname>\n";
+		debug("Only move core files<$oldname>\n",2);
 		return("badmoverequest");
 	}
 }
@@ -1652,3 +1671,14 @@ sub CountFileTrace
 	return($count);
 }
 
+# yates_shuffle(\@foo) random shuffle of array
+sub yates_shuffle
+{
+    my $array = shift;
+    my $i;
+    for($i = @$array; --$i; ) {
+        my $j = int rand ($i+1);
+        next if $i == $j;
+        @$array[$i,$j] = @$array[$j,$i];
+    }
+}
