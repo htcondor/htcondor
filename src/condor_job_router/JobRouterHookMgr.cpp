@@ -545,7 +545,7 @@ TranslateClient::hookExited(int exit_status)
 		else
 		{
 			dprintf(D_ALWAYS, "TranslateClient::hookExited: Hook %s "
-					"(pid %s) exited with return status "
+					"(pid %d) exited with return status "
 					"%d.  Ignoring output.\n",  m_hook_path,
 					(int)m_pid, (int)WEXITSTATUS(exit_status));
 		}
