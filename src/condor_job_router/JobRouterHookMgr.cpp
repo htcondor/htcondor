@@ -255,7 +255,7 @@ JobRouterHookMgr::hookUpdateJobInfo(RoutedJob* r_job)
 
 
 int
-JobRouterHookMgr::hookJobExit(RoutedJob* r_job, const char* sandbox)
+JobRouterHookMgr::hookJobExit(RoutedJob* r_job)
 {
 	ClassAd temp_ad;
 	if (NULL == m_hook_job_exit)
@@ -297,9 +297,6 @@ JobRouterHookMgr::hookJobExit(RoutedJob* r_job, const char* sandbox)
 	}
 	temp_ad.sPrint(hook_stdin);
 
-	ArgList args;
-	args.AppendArg(sandbox);
-
 	ExitClient *exit_client = new ExitClient(m_hook_job_exit, r_job);
 	if (NULL == exit_client)
 	{
@@ -310,7 +307,7 @@ JobRouterHookMgr::hookJobExit(RoutedJob* r_job, const char* sandbox)
 	}
 
 	set_user_from_ad(r_job->src_ad);
-	if (0 == spawn(exit_client, &args, &hook_stdin, PRIV_USER_FINAL))
+	if (0 == spawn(exit_client, NULL, &hook_stdin, PRIV_USER_FINAL))
 	{
 		dprintf(D_ALWAYS|D_FAILURE,
 				"ERROR in JobRouterHookMgr::hookJobExit: "
@@ -341,6 +338,11 @@ JobRouterHookMgr::hookJobCleanup(RoutedJob* r_job)
 	{
 		// hook not defined
 		dprintf(D_FULLDEBUG, "HOOK_JOB_CLEANUP not configured.\n");
+		return 0;
+	}
+
+	if (0 >= r_job->dest_ad.size())
+	{
 		return 0;
 	}
 
@@ -513,7 +515,7 @@ TranslateClient::hookExited(int exit_status)
 				"Warning, hook %s (pid %d) printed to stderr: %s\n",
 				m_hook_path, (int)m_pid, m_std_err.Value());
 	}
-	if (m_std_out.Length())
+	if (m_std_out.Length() && 0 == WEXITSTATUS(exit_status))
 	{
 		ClassAd old_job_ad;
 		classad::ClassAd new_job_ad;
@@ -526,6 +528,7 @@ TranslateClient::hookExited(int exit_status)
 				dprintf(D_ALWAYS, "TranslateClient::hookExited: "
 						"Failed to insert \"%s\" into ClassAd, "
 						"ignoring invalid hook output\n", hook_line);
+				job_router->GracefullyRemoveJob(m_routed_job);
 				return;
 			}
 		}
@@ -534,17 +537,29 @@ TranslateClient::hookExited(int exit_status)
 			dprintf(D_ALWAYS, "TranslateClient::hookExited: "
 					"Failed to convert ClassAd, "
 					"ignoring invalid hook output\n");
+			job_router->GracefullyRemoveJob(m_routed_job);
 			return;
 		}
 		m_routed_job->dest_ad = new_job_ad;
-		m_routed_job->is_sandboxed = true;
 	}
 	else
 	{
-		dprintf(D_ALWAYS, "TranslateClient::hookExited: Hook %s (pid %d) returned no data.\n",
-				m_hook_path, (int)m_pid);
+		if (0 == WEXITSTATUS(exit_status))
+		{
+			dprintf(D_ALWAYS, "TranslateClient::hookExited: Hook %s (pid %d) returned no data.\n",
+					m_hook_path, (int)m_pid);
+		}
+		else
+		{
+			dprintf(D_ALWAYS, "TranslateClient::hookExited: Hook %s "
+					"(pid %d) exited with return status "
+					"%d.  Ignoring output.\n",  m_hook_path,
+					(int)m_pid, (int)WEXITSTATUS(exit_status));
+			job_router->GracefullyRemoveJob(m_routed_job);
+		}
 		return;
 	}
+
 	job_router->FinishSubmitJob(m_routed_job);
 }
 
@@ -582,7 +597,7 @@ StatusClient::hookExited(int exit_status)
 				"StatusClient::hookExited: Warning, hook %s (pid %d) printed to stderr: %s\n",
 				m_hook_path, (int)m_pid, m_std_err.Value());
 	}
-	if (m_std_out.Length())
+	if (m_std_out.Length() && 0 == WEXITSTATUS(exit_status))
 	{
 		ClassAd old_job_ad;
 		classad::ClassAd new_job_ad;
@@ -606,15 +621,30 @@ StatusClient::hookExited(int exit_status)
 					"hook output.  Job status NOT updated.\n");
 			return;
 		}
-		m_routed_job->dest_ad = new_job_ad;
+		if (false == m_routed_job->dest_ad.Update(new_job_ad))
+		{
+			dprintf(D_ALWAYS, "StatusClient::hookExited: Failed to "
+					"update routed job status.  Job status "
+					"NOT updated.\n");
+			return;
+		}
 		job_router->UpdateJobStatus(m_routed_job);
 	}
 	else
 	{
-		dprintf(D_FULLDEBUG, "StatusClient::hookExited: Hook %s (pid %d) returned no data.\n",
-				m_hook_path, (int)m_pid);
-                job_router->FinishCheckSubmittedJobStatus(m_routed_job);
-
+		if (0 == WEXITSTATUS(exit_status))
+		{
+			dprintf(D_FULLDEBUG, "StatusClient::hookExited: Hook %s (pid %d) returned no data.\n",
+					m_hook_path, (int)m_pid);
+                	job_router->FinishCheckSubmittedJobStatus(m_routed_job);
+		}
+		else
+		{
+			dprintf(D_FULLDEBUG, "StatusClient::hookExited: Hook %s "
+					"(pid %d) exited with return status %d. "
+					" Ignoring output.\n", m_hook_path, (int)m_pid,
+					(int)WEXITSTATUS(exit_status));
+		}
 	}
 }
 
@@ -677,7 +707,13 @@ ExitClient::hookExited(int exit_status) {
 						"hook output.  Job NOT updated.\n");
 				return;
 			}
-			m_routed_job->src_ad = new_job_ad;
+			if (false == m_routed_job->src_ad.Update(new_job_ad))
+			{
+				dprintf(D_ALWAYS, "ExitClient::hookExited: Failed to "
+						"update source job status.  Job status "
+						"NOT updated.\n");
+				return;
+			}
 		}
 		else
 		{
