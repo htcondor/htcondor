@@ -1495,7 +1495,7 @@ sub KillDaemonPids
 		debug("Gentle kill for master <$thispid> worked!\n",3);
 	} else {
 		# hmm bullets are placed in heads here.
-		debug("Gentle kill for master <$thispid><$cnt> failed!\n",3);
+		debug("Gentle kill for master <$thispid><$cnt> failed!\n",1);
 		open(PD,"<$pidfile") or die "Can not open<$pidfile>:$!\n";
 		while(<PD>) {
 			chomp();
