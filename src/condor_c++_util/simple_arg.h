@@ -38,7 +38,8 @@ public:
 
 	// options: generic
 	bool hasOpt( void ) const { return m_opt != NULL; };
-	const char *getOpt( void ) const { return m_opt; };
+	const char *getOpt( bool consume = true )
+		{ const char *t = m_opt; ConsumeOpt(consume); return t; };
 
 	// option: string operations
 	bool isOptStr( void ) const { return m_opt != NULL; };
@@ -62,6 +63,9 @@ public:
 	int Index( void ) const { return m_index; };
 
 private :
+
+	void Next( void );
+
 	int			 m_index;
 	bool		 m_error;
 	bool		 m_is_opt;
@@ -69,6 +73,9 @@ private :
 	char		 m_short;
 	const char	*m_long;
 	const char	*m_opt;
+
+	int			 m_argc;
+	const char	**m_argv;
 };
 
 #endif // __SIMPLE_ARG_H__

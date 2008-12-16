@@ -38,7 +38,7 @@ class DaemonCoreSockAdapterClass {
 	typedef void (DaemonCore::*CallSocketHandler_fnptr)( Stream *sock, bool default_to_HandleCommand );
     typedef int (DaemonCore::*Register_DataPtr_fnptr)( void *data );
     typedef void *(DaemonCore::*GetDataPtr_fnptr)();
-	typedef int (DaemonCore::*Register_Timer_fnptr)(unsigned deltawhen,Eventcpp event,char * event_descrip,Service* s);
+	typedef int (DaemonCore::*Register_Timer_fnptr)(unsigned deltawhen,Eventcpp event,const char * event_descrip,Service* s);
 	typedef bool (DaemonCore::*TooManyRegisteredSockets_fnptr)(int fd,MyString *msg,int num_fds);
 	typedef void (DaemonCore::*incrementPendingSockets_fnptr)();
 	typedef void (DaemonCore::*decrementPendingSockets_fnptr)();
@@ -118,7 +118,7 @@ class DaemonCoreSockAdapterClass {
 	}
     int Register_Timer (unsigned     deltawhen,
                         Eventcpp        event,
-                        char *       event_descrip, 
+                        const char * event_descrip, 
                         Service*     s = NULL)
 	{
 		ASSERT(m_daemonCore);

@@ -1919,7 +1919,7 @@ _cv_objcopy_debuglink_flag=""
 if test ! $ac_objcopy = "no"; then
 	AC_MSG_CHECKING([if objcopy supports --add-gnu-debuglink])
 	`$ac_objcopy --help 2>&1 | $GREP add-gnu-debuglink > /dev/null 2>&1`
-	if test $? = 0 -a ! \( "x$_cv_sysname" = "xhp_ux113" \)  ; then
+	if test $? = 0 -a ! \( "x$_cv_sysname" = "xhp_ux113" -o "x$_cv_sysname" = "xsun4x_59" \)  ; then
 		# If this flag exists, then the other ones I need should exist as well.
 		_cv_objcopy_keepdebug_flag="--only-keep-debug"
 		_cv_objcopy_stripunneeded_flag="--strip-unneeded"
@@ -2180,28 +2180,34 @@ AC_ARG_ENABLE([quill],
 AS_IF([test "x$enable_quill" = xyes],
   [AC_DEFINE([WANT_QUILL], [1], [Define if enabling Quill])])
 
-AC_ARG_ENABLE([tt],
-  AC_HELP_STRING([--enable-tt],
-    [enable TT functionality (default: yes)]),
-  [],
-  [enable_tt=yes])
-AS_IF([test "x$enable_tt" = xyes],
-  [AC_DEFINE([WANT_TT], [1], [Define if enabling TT])])
+AC_PATH_XTRA
+X_LDFLAGS="$X_LIBS"
+X11_LIBS="$X_PRE_LIBS $X_EXTRA_LIBS -lX11"
 
 AC_ARG_ENABLE([kbdd],
   AC_HELP_STRING([--enable-kbdd],
     [enable KBDD functionality (default: platform dependent)]),
   [],
   [case "$_cv_opsys" in
-    AIX | HPUX | SOLARIS | LINUX )
+    AIX | HPUX | SOLARIS )
       enable_kbdd=no
+    ;;
+    LINUX )
+      enable_kbdd=yes
     ;;
     * ) # Who had this turned on? No .cf files on 1/6/8 used it. -matt
       enable_kbdd=no
     ;;
   esac])
 AS_IF([test "x$enable_kbdd" = xyes],
-  [AC_DEFINE([NEEDS_KBDD], [1], [Define if enabling KBDD])])
+  [AC_DEFINE([NEEDS_KBDD], [1], [Define if enabling KBDD])
+   AC_SUBST(X11_CFLAGS, $X_CFLAGS)
+   AC_SUBST(X11_LDFLAGS, $X_LDFLAGS)
+   AC_SUBST(X11_LIBS, $X11_LIBS)],
+  [AC_SUBST(X11_CFLAGS,"")
+   AC_SUBST(X11_LIBS,"")
+   AC_SUBST(X11_LDFLAGS, "")])
+
 
 # Here we figure out whether or not the circumstances are correct for us
 # to be able to separate the debugging symbols from the executables and
@@ -2722,21 +2728,15 @@ fi
 
 # Build drmaa on any platform with pthreads available, except for the following
 # platforms where the build is known to fail
-if test x$_cv_sysname != "xppc_aix52" -a x$_cv_linux_distro != "xRH72" -a  x$_cv_sysname != "xsun4x_58" -a x$_cv_sysname != "xsun4x_59" -a x$_cv_sysname != "xalpha_dux51" -a x$_cv_sysname != "xhp_ux113" ; then
-  if test x$_cv_sysname = "xppc_macosx" -o $ac_pthreads = "yes"; then
+if test "x$_cv_sysname" != "xppc_aix52" -a "x$_cv_linux_distro" != "xRH72" -a  "x$_cv_sysname" != "xsun4x_58" -a "x$_cv_sysname" != "xsun4x_59" -a "x$_cv_sysname" != "xalpha_dux51" -a "x$_cv_sysname" != "xhp_ux113" ; then
+  if test "x$_cv_sysname" = "xppc_macosx" -o "x$ac_pthreads" = "xyes"; then
    CHECK_EXTERNAL([drmaa],[1.5.1], [soft])
   fi
 fi
 
-if test "x$_cv_linux_distro" = "xRHEL5" ; then
 CHECK_EXTERNAL([krb5], [1.4.3-p0], [soft],
                [use krb5 (provides Kerberos support)],
                MF_LIB_CHECK([krb5], [[krb5 krb5_free_principal]]))
-else
-CHECK_EXTERNAL([krb5], [1.4.3], [soft],
-               [use krb5 (provides Kerberos support)],
-               MF_LIB_CHECK([krb5], [[krb5 krb5_free_principal]]))
-fi
 
 # CHECK_EXTERNAL([openssl],[0.9.8h],[soft])
 CHECK_EXTERNAL([openssl], [0.9.8h], [soft],
@@ -2824,13 +2824,7 @@ fi
 
 # Figure out which postgresql we need.
 
-if test "x$_cv_sysname" = "xhp_ux113" ; then
-  pgsql_ver="8.3.0";
-else
-  pgsql_ver="8.0.2";
-fi
-
-CHECK_EXTERNAL([postgresql], [$pgsql_ver], [soft],
+CHECK_EXTERNAL([postgresql], [8.2.3], [soft],
                [use PostgreSQL (provides Quill and other support)],
                MF_LIB_CHECK([postgresql], [[pq PQconnectdb]], [postgresql]))
 AC_MSG_CHECKING([postgresql])

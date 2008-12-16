@@ -86,6 +86,8 @@ BUILD_DEP_LIB($(CPlusPlus),x_read_joblog,C,,../release_dir/lib/libcondorapi.a)
 BUILD_DEP_LIB($(CPlusPlus),x_write_joblog,C,,../release_dir/lib/libcondorapi.a)
 BUILD_DEP_LIB($(CPlusPlus),x_write_joblog_events,C,,../release_dir/lib/libcondorapi.a)
 
+BUILD_DEP_LIB($(CPlusPlus),lib_eventlog_base,C,,../release_dir/lib/libcondorapi.a)
+
 /* BUG: We seem to consistently loose track of one pid on AIX
 	so we will turn this test off until this gets fixed.....
 	GNATS entry #558 for core condor software / proapi
@@ -253,7 +255,7 @@ TESTCLASS(job_dagman_splice-O,full)
 TESTCLASS(job_dagman_splice-O,quicknolink)
 TESTCLASS(job_dagman_splice-O,btdebug)
 
-/* vmuniverse smoke test in larg repository */
+/* vmuniverse tests in larg repository */
 
 #if defined(HAVE_VMWARE) && defined(HAVE_CONDOR_TEST_LRG)
 DESC(job_vmu_basic,"VM Universe smoke test")
@@ -263,10 +265,32 @@ TESTCLASS(job_vmu_basic,quick)
 TESTCLASS(job_vmu_basic,full)
 TESTCLASS(job_vmu_basic,quicknolink)
 TESTCLASS(job_vmu_basic,btdebug)
+DESC(job_vmu_cdrom,"VM Universe CD-ROM test")
+RUN(job_vmu_cdrom)
+TESTCLASS(job_vmu_cdrom,core)
+TESTCLASS(job_vmu_cdrom,quick)
+TESTCLASS(job_vmu_cdrom,full)
+TESTCLASS(job_vmu_cdrom,quicknolink)
+TESTCLASS(job_vmu_cdrom,btdebug)
+DESC(job_vmu_network,"VM Universe networking test")
+RUN(job_vmu_network)
+TESTCLASS(job_vmu_network,core)
+TESTCLASS(job_vmu_network,quick)
+TESTCLASS(job_vmu_network,full)
+TESTCLASS(job_vmu_network,quicknolink)
+TESTCLASS(job_vmu_network,btdebug)
+DESC(job_vmu_ckpt,"VM Universe checkpoint test")
+RUN(job_vmu_ckpt)
+TESTCLASS(job_vmu_ckpt,core)
+TESTCLASS(job_vmu_ckpt,quick)
+TESTCLASS(job_vmu_ckpt,full)
+TESTCLASS(job_vmu_ckpt,quicknolink)
+TESTCLASS(job_vmu_ckpt,btdebug)
 #endif 
 
 /* We're not building OpenSSL on HPUX */
-#if !defined( IS_HPUX11 )
+/* The threads in amazon_gahp are causing problems on AIX */
+#if !defined( IS_HPUX11 ) && !defined( IS_AIX )
 DESC(job_amazon_basic,"Amazon EC2 test")
 RUN(job_amazon_basic)
 TESTCLASS(job_amazon_basic,quick)
@@ -586,6 +610,24 @@ DEPS(lib_eventlog-xml,x_read_joblog.exe)
 TESTCLASS(lib_eventlog-xml,core)
 TESTCLASS(lib_eventlog-xml,quick)
 TESTCLASS(lib_eventlog-xml,full)
+
+/* Test to verify that re-initialization of the eventlog does not cause
+   seg faults */
+DESC(lib_eventlog_base,"Test re-initialization of eventlog")
+RUN(lib_eventlog_base)
+DEPS(lib_eventlog_base,lib_eventlog_base.exe)
+DEPS(lib_eventlog_base,lib_eventlog_base.exe)
+TESTCLASS(lib_eventlog_base,lib)
+TESTCLASS(lib_eventlog_base,quick)
+TESTCLASS(lib_eventlog_base,full)
+
+#if defined(IS_IA64_LINUX_RHEL3) || defined(IS_CONDOR_PPC_LINUX_SLES9) || defined(IS_PPC_OSX_10_4) || defined(IS_CONDOR_PPC_LINUX_YD50) || defined(IS_X86_64_LINUX_RHEL5)  || defined(IS_X86_64_LINUX_RHEL3) || defined(IS_I386_OSX_10_4) || defined(IS_I386_LINUX_RHEL5) || defined(IS_I386_LINUX_RHEL51)
+DESC(lib_eventlog_build,"Test building of eventlog program")
+RUN(lib_eventlog_build)
+TESTCLASS(lib_eventlog_build,lib)
+TESTCLASS(lib_eventlog_build,quick)
+TESTCLASS(lib_eventlog_build,full)
+#endif
 
 /* EventLog Rotation tests */
 DESC(lib_eventlog_rotation-defaults,"Event Log Rotation: Default settings")
@@ -1771,6 +1813,11 @@ TESTCLASS(job_rsc_binary-io_std,btdebug)
 **TESTCLASS(job_core_coredump_van,framework)
 **TESTCLASS(job_core_coredump_van,quick)
 */
+
+lib_eventlog_build.exe : lib_eventlog_base.cpp
+	$(CPlusPlus) $< -DLIBAPI_ONLY \
+	-I ../release_dir/include ../release_dir/lib/libcondorapi.a \
+	-lc -ldl -o $@
 
 
 /************************************************************************

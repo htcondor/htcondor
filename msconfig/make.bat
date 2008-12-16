@@ -51,6 +51,12 @@ REM Put our config.h file in the right place
 call configure.bat
 if %ERRORLEVEL% NEQ 0 goto :CONFIG_FAIL
 
+REM Copy the correct default library vsprops file into place. This 
+REM changes which libraries are inlcuded by default into projects
+call correct_libs.bat noinit >NUL
+if %ERRORLEVEL% NEQ 2 call correct_libs.bat noinit >NUL
+set ERRORLEVEL=0
+
 REM Make gsoap stubs, etc.
 call :MAKE_GSOAP
 if %ERRORLEVEL% NEQ 0 goto :GSOAP_FAIL
@@ -64,8 +70,18 @@ REM Launch the Visual Studio IDE
 call :RUN_BUILD
 if %ERRORLEVEL% NEQ 0 goto :FAIL
 
+REM Restore the old libaries for other VS users
+call correct_libs.bat noinit >NUL
+if %ERRORLEVEL% NEQ 1 call correct_libs.bat noinit >NUL
+
 REM We're done, let's get out of here
-echo *** Done. Build is all happy. Congrats! Go drink beer.
+echo. & echo *** Done. Build is all happy. Congrats! Go drink beer.
+
+REM Restore the old libaries for other VS users
+call correct_libs.bat noinit >NUL
+if %ERRORLEVEL% NEQ 1 call correct_libs.bat noinit >NUL
+
+REM Clean up the environment.
 endlocal
 goto :EOF
 
@@ -80,13 +96,16 @@ REM ======================================================================
 REM ======================================================================
 REM All the failure calls
 REM ======================================================================
-echo *** Build Stopped. Please fix errors and try again.
+echo. & echo *** Build Stopped. Please fix errors and try again.
 exit %INTERACTIVE% 1
 :EXTERNALS_FAIL
 echo *** Failed to build externals ***
 exit %INTERACTIVE% 1
 :CONFIG_FALL
 echo *** Failed to make config.h ***
+exit %INTERACTIVE% 1
+:LIBS_FAIL
+echo *** Failed to put vsprops file in place ***
 exit %INTERACTIVE% 1
 :GSOAP_FAIL
 echo *** gsoap stub generator failed ***
@@ -125,7 +144,7 @@ if /i A%1==Adebug (
     set CONFIGURATION=Debug 
     shift 
 )
-echo *** %CONFIGURATION% Build
+echo. & echo *** %CONFIGURATION% Build & echo.
 exit /b 0
 
 REM ======================================================================
@@ -142,9 +161,9 @@ REM ======================================================================
 REM ======================================================================
 REM Build condor (build order is now preserved in project)
 REM ======================================================================
-echo Building Condor...
+echo. & echo *** Current Environment... & echo.
 set
+echo. & echo *** Building Condor... & echo.
 msbuild condor.sln /nologo /t:condor /p:Configuration=%CONFIGURATION%;VCBuildUseEnvironment="true"
-REM devenv condor.sln /useenv /build "%CONFIGURATION%"
 if %ERRORLEVEL% NEQ 0 exit /b 1
 exit /b 0

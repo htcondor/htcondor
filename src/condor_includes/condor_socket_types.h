@@ -31,7 +31,7 @@ _all_ the calls and put them in one standard place.
 #if defined(Solaris27) || defined(Solaris28) || defined(Solaris29)
 	#define SOCKET_DATA_TYPE void*
 	#define SOCKET_LENGTH_TYPE unsigned int
-	#define SOCKET_ALTERNATE_LENGTH_TYPE void
+	#define SOCKET_ALTERNATE_LENGTH_TYPE socklen_t
 	#define SOCKET_DATA_CONST const
 	#define SOCKET_MSG_CONST const
 	#define SOCKET_ADDR_TYPE struct sockaddr*

@@ -20,6 +20,18 @@
 ## submitting user. For example,
 ##
 ##   SEC_CLIENT_AUTHENTICATION_METHODS = NTSSPI, PASSWORD
+##
+## And finally, you'll need to enable CONFIG-level access for all
+## machines in the pool so that the pool password can be stored:
+##
+##   ALLOW_CONFIG = Administrator@*
+##   SEC_CONFIG_NEGOTIATION = REQUIRED
+##   SEC_CONFIG_AUTHENTICATION = REQUIRED
+##   SEC_CONFIG_ENCRYPTION = REQUIRED
+##   SEC_CONFIG_INTEGRITY = REQUIRED
+##
+## See the "Executing Jobs as the Submitting User" section of the
+## Condor manual for further details.
 
 ## CREDD_SETTINGS
 

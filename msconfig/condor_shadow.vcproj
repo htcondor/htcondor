@@ -71,10 +71,11 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="../Debug/condor_common.obj ..\Debug\condor_common_c.obj $(CONDOR_LIB) $(CONDOR_LIBPATH) $(CONDOR_GSOAP_LIB) $(CONDOR_GSOAP_LIBPATH) $(CONDOR_KERB_LIB) $(CONDOR_KERB_LIBPATH) $(CONDOR_PCRE_LIB) $(CONDOR_PCRE_LIBPATH) $(CONDOR_GLOBUS_LIB) $(CONDOR_GLOBUS_LIBPATH) $(CONDOR_OPENSSL_LIB) $(CONDOR_POSTGRESQL_LIB) $(CONDOR_OPENSSL_LIBPATH) $(CONDOR_POSTGRESQL_LIBPATH)"
+				AdditionalDependencies="../Debug/condor_common.obj ..\Debug\condor_common_c.obj $(CONDOR_LIB) $(CONDOR_LIBPATH) $(CONDOR_GSOAP_LIB) $(CONDOR_GSOAP_LIBPATH) $(CONDOR_KERB_LIB) $(CONDOR_KERB_LIBPATH) $(CONDOR_PCRE_LIB) $(CONDOR_PCRE_LIBPATH) $(CONDOR_OPENSSL_LIB) $(CONDOR_POSTGRESQL_LIB) $(CONDOR_OPENSSL_LIBPATH) $(CONDOR_POSTGRESQL_LIBPATH)"
 				OutputFile=".\..\Debug/condor_shadow.exe"
 				LinkIncremental="2"
 				SuppressStartupBanner="true"
+				IgnoreDefaultLibraryNames="oleaut32.lib;ole32.lib;gdi32.lib;winspool.lib;comdlg32.lib;shell32.lib;odbc32.lib;odbccp32.lib"
 				GenerateDebugInformation="true"
 				ProgramDatabaseFile=".\..\Debug/condor_shadow.pdb"
 				SubSystem="1"
@@ -169,6 +170,7 @@
 				OutputFile=".\..\Release/condor_shadow.exe"
 				LinkIncremental="2"
 				SuppressStartupBanner="true"
+				IgnoreDefaultLibraryNames="oleaut32.lib;ole32.lib;gdi32.lib;winspool.lib;comdlg32.lib;shell32.lib;odbc32.lib;odbccp32.lib"
 				GenerateDebugInformation="true"
 				GenerateMapFile="true"
 				MapFileName=".\..\Release/condor_shadow.map"

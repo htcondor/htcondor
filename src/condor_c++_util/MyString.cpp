@@ -183,12 +183,13 @@ MyString::reserve( const int sz )
 	}
     buf[0] = '\0';
     if (Data) {
-      strncpy( buf, Data, sz); 
+      // Only copy over existing data into the new buffer.
+      strncpy( buf, Data, Len ); 
 	  // Make sure it's NULL terminated. strncpy won't make sure of it.
-	  buf[sz] = '\0'; 
+	  buf[Len] = '\0'; 
       delete [] Data;
     }
-    Len = strlen( buf );
+    // Len will be the same, since we didn't add new text
     capacity = sz;
     Data = buf;
     return true;

@@ -2,13 +2,13 @@
  *
  * Copyright (C) 1990-2008, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -24,6 +24,7 @@
 #include "condor_common.h"
 #include "stream.h"
 #include "daemon.h"
+#include <stdio.h>
 
 
 #define WANT_CLASSAD_NAMESPACE
@@ -51,16 +52,30 @@ class DCLeaseManagerLease {
 	int copyUpdates( const DCLeaseManagerLease & );
 
 	// Accessors
-	const string &LeaseId( void ) const
+	const string &leaseId( void ) const
 		{ return m_lease_id; };
-	int LeaseDuration( void ) const
+	int leaseDuration( void ) const
 		{ return m_lease_duration; };
-	classad::ClassAd *LeaseAd( void ) const
+	classad::ClassAd *leaseAd( void ) const
 		{ return m_lease_ad; };
-	bool ReleaseLeaseWhenDone( void ) const
+	bool releaseLeaseWhenDone( void ) const
 		{ return m_release_lease_when_done; };
-	int LeaseTime( void ) const
+	int leaseTime( void ) const
 		{ return m_lease_time; };
+
+	// Lease ID matching methods
+	bool idMatch( const char *id ) const
+		{ return m_lease_id == id; };
+	bool idMatch( const string &id ) const
+		{ return m_lease_id == id; };
+	bool idMatch( const DCLeaseManagerLease &other ) const
+		{ return m_lease_id == other.leaseId(); };
+
+	// "Dead" accessors
+	bool isDead( void ) const
+		{ return m_dead; };
+	bool setDead( bool dead )
+		{ return m_dead = dead; };
 
 	// Set methods
 	int setLeaseId( const string & );
@@ -76,61 +91,106 @@ class DCLeaseManagerLease {
 	// Helper methods to help determine how much time is left on a lease
 	time_t getNow( time_t now = 0 ) const
 		{ if ( !now ) { now = time( NULL ); } return now; };
-	int LeaseExpiration( void ) const
+	int leaseExpiration( void ) const
 		{ return m_lease_time + m_lease_duration; };
-	int LeaseRemaining( time_t now = 0 ) const
+	int secondsRemaining( time_t now = 0 ) const
 		{ return getNow( now ) - ( m_lease_time + m_lease_duration ); };
-	bool LeaseExpired( time_t now = 0 ) const
-		{ return ( LeaseRemaining(now) > 0 ); };
+	bool isExpired( time_t now = 0 ) const
+		{ return ( secondsRemaining(now) > 0 ); };
+
+	// Read/write leases from/to a stdio file
+	bool fwrite( FILE *fp ) const;
+	bool fread(  FILE *fp );
 
   private:
 	classad::ClassAd	*m_lease_ad;
-	string				m_lease_id;
-	int					m_lease_duration;
-	int					m_lease_time;
-	bool				m_release_lease_when_done;
-	bool				m_mark;
+	string				 m_lease_id;
+	int					 m_lease_duration;
+	int					 m_lease_time;
+	bool				 m_release_lease_when_done;
+	bool				 m_mark;
+	bool				 m_dead;
 };
 
-// Free a list of leases
-void
-DCLeaseManagerLease_FreeList(
-	list<DCLeaseManagerLease *>		&lease_list
+
+//
+// Helper free functions to manipulate lists of leases
+//
+
+// Copy a list of leases -- returns count
+int
+DCLeaseManagerLease_copyList(
+	const list<const DCLeaseManagerLease *>	&source_list,
+	list<const DCLeaseManagerLease *>		&dest_list
 	);
 int
-DCLeaseManagerLease_RemoveLeases(
+DCLeaseManagerLease_copyList(
+	const list<DCLeaseManagerLease *>		&source_list,
+	list<DCLeaseManagerLease *>				&dest_list
+	);
+
+// Free a list of leases -- returns count
+int
+DCLeaseManagerLease_freeList(
+	list<DCLeaseManagerLease *>				&lease_list
+	);
+
+// Remove leases from a list
+int
+DCLeaseManagerLease_removeLeases(
 	list<DCLeaseManagerLease *>				&lease_list,
 	const list<const DCLeaseManagerLease *> &remove_list
 	);
+
+// Update a list of leases
 int
-DCLeaseManagerLease_UpdateLeases(
-	list<DCLeaseManagerLease *>		&lease_list,
+DCLeaseManagerLease_updateLeases(
+	list<DCLeaseManagerLease *>				&lease_list,
 	const list<const DCLeaseManagerLease *> &update_list
 	);
+
+// Lease mark operations
 int
-DCLeaseManagerLease_MarkLeases(
-	list<DCLeaseManagerLease *>		&lease_list,
-	bool							mark
+DCLeaseManagerLease_markLeases(
+	list<DCLeaseManagerLease *>				&lease_list,
+	bool									mark
 	);
 int
-DCLeaseManagerLease_RemoveMarkedLeases(
-	list<DCLeaseManagerLease *>		&lease_list,
-	bool							mark
+DCLeaseManagerLease_removeMarkedLeases(
+	list<DCLeaseManagerLease *>				&lease_list,
+	bool									mark
 	);
 int
-DCLeaseManagerLease_GetMarkedLeases(
+DCLeaseManagerLease_getMarkedLeases(
 	const list<const DCLeaseManagerLease *> &lease_list,
 	bool									mark,
 	list<const DCLeaseManagerLease *>	 	&marked_lease_list
 	);
 int
-DCLeaseManagerLease_CountMarkedLeases(
+DCLeaseManagerLease_countMarkedLeases(
 	const list<const DCLeaseManagerLease *> &lease_list,
 	bool									mark
 	);
-list<const DCLeaseManagerLease *> *
-DCLeaseManagerLease_GetConstList(
-	list<DCLeaseManagerLease *>		*non_const_list
+
+// Get a 'const' list of leases from a list of leases
+list<const DCLeaseManagerLease *> &
+DCLeaseManagerLease_getConstList(
+	const list<DCLeaseManagerLease *>		&non_const_list
 	);
+
+// Write out a list of leases to a file (returns count)
+int
+DCLeaseManagerLease_fwriteList(
+	const list<const DCLeaseManagerLease *> &lease_list,
+	FILE									*fp
+	);
+
+// Read a list of leases from a file (returns count)
+int
+DCLeaseManagerLease_freadList(
+	list<DCLeaseManagerLease *>				&lease_list,
+	FILE									*fp
+	);
+
 
 #endif /* _CONDOR_DC_LEASE_MANAGER_LEASE_H */

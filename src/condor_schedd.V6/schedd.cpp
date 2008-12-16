@@ -11717,6 +11717,17 @@ fixReasonAttrs( PROC_ID job_id, JobAction action )
 					 ATTR_JOB_STATUS_ON_RELEASE);
 		break;
 
+	case JA_REMOVE_JOBS:
+		moveStrAttr( job_id, ATTR_HOLD_REASON, ATTR_LAST_HOLD_REASON,
+					 false );
+		moveIntAttr( job_id, ATTR_HOLD_REASON_CODE, 
+					 ATTR_LAST_HOLD_REASON_CODE, false );
+		moveIntAttr( job_id, ATTR_HOLD_REASON_SUBCODE, 
+					 ATTR_LAST_HOLD_REASON_SUBCODE, false );
+		DeleteAttribute(job_id.cluster,job_id.proc,
+					 ATTR_JOB_STATUS_ON_RELEASE);
+		break;
+
 	default:
 		return;
 	}
@@ -11828,6 +11839,8 @@ abortJobRaw( int cluster, int proc, const char *reason )
 					 proc );
 		}
 	}
+
+	fixReasonAttrs( job_id, JA_REMOVE_JOBS );
 
 	// Abort the job now
 	abort_job_myself( job_id, JA_REMOVE_JOBS, true, true );

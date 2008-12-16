@@ -1,5 +1,29 @@
-@echo off
-setlocal
+@echo off & setlocal
+REM ======================================================================
+REM
+REM  Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+REM  University of Wisconsin-Madison, WI.
+REM
+REM  Licensed under the Apache License, Version 2.0 (the "License"); you
+REM  may not use this file except in compliance with the License.  You may
+REM  obtain a copy of the License at
+REM
+REM     http://www.apache.org/licenses/LICENSE-2.0
+REM
+REM  Unless required by applicable law or agreed to in writing, software
+REM  distributed under the License is distributed on an "AS IS" BASIS,
+REM  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implie
+REM  See the License for the specific language governing permissions and
+REM  limitations under the License.
+REM
+REM ======================================================================
+
+REM ======================================================================
+REM ======================================================================
+REM Main entry point
+REM ======================================================================
+REM ======================================================================
+
 if exist %1 goto process1
 echo Error - directory "%1" does not exist
 echo Usage: dopackaging.bat path_to_release_subdirectory [output_path]
@@ -10,7 +34,11 @@ rem %~f1 is the canonical (full) path given in %1
 set CONDORRELEASEDIR=%~f1
 
 REM Set and create the ouput directory
-if /i A%2==A ( set CONDOROUTPUTDIR=%cd%\..\public ) else ( set CONDOROUTPUTDIR=%2 )
+if /i A%2==A ( 
+    set CONDOROUTPUTDIR=%cd%\..\public 
+) else ( 
+    set CONDOROUTPUTDIR=%2 
+)
 echo Creating output directory %CONDOROUTPUTDIR%
 mkdir %CONDOROUTPUTDIR%
 
@@ -41,11 +69,7 @@ move /y condor.zip %CONDOROUTPUTDIR%
 REM Rename the zip file to match that of the msi. This assumes
 REM that there is one and only one *.msi file in the destination
 REM subdirectory.  If it isn't, the behaviour is undefined.
+REM (%%~nf expands %1 to a file name with no extension)
 pushd %CONDOROUTPUTDIR%
 for %%f in (*.msi) do move /y condor.zip %%~nf.zip
 popd
-
-REM Old Vista only Version: 
-REM forfiles -p %CONDOROUTPUTDIR% -m *.MSI -c "cmd /c move /y condor.zip @FNAME.zip"
-
-echo Done.

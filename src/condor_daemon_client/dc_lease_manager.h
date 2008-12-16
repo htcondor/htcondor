@@ -2,13 +2,13 @@
  *
  * Copyright (C) 1990-2008, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -40,7 +40,7 @@ class DCLeaseManager : public Daemon
 
 		/** Constructor.  Same as a Daemon object.
 		  @param name The name (or sinful string) of the daemon, NULL
-		              if you want local  
+		              if you want local
 		  @param pool The name of the pool, NULL if you want local
 		*/
 	DCLeaseManager( const char* const name = NULL, const char* pool = NULL );
@@ -89,7 +89,7 @@ class DCLeaseManager : public Daemon
 			@param leases STL list of lease information on leases to release
 			@return true on success, false on invalid input (NULL)
 		*/
-	bool releaseLeases( list <const DCLeaseManagerLease *> &leases );
+	bool releaseLeases( list <DCLeaseManagerLease *> &leases );
 
 
  private:

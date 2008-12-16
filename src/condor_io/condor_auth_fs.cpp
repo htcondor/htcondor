@@ -63,6 +63,14 @@ int Condor_Auth_FS::authenticate(const char * /* remoteHost */, CondorError* err
 			return fail; 
 		}
 
+		// Until session caching supports clients that present
+		// different identities to the same service at different
+		// times, we want condor daemons to always authenticate
+		// as condor priv, rather than as the current euid.
+		// For tools and daemons not started as root, this
+		// is a no-op.
+		priv_state saved_priv = set_condor_priv();
+
 		// try to create the directory the server sent
 		if ( new_dir ) {
 			if (*new_dir) {
@@ -100,6 +108,7 @@ int Condor_Auth_FS::authenticate(const char * /* remoteHost */, CondorError* err
 				}
 				free( new_dir );
 			}
+			set_priv(saved_priv);
 			return fail; 
 		}
 
@@ -114,8 +123,15 @@ int Condor_Auth_FS::authenticate(const char * /* remoteHost */, CondorError* err
 				}
 				free( new_dir );
 			}
+			set_priv(saved_priv);
 			return fail; 
 		}
+
+		if (client_result != -1) {
+			rmdir( new_dir );
+		}
+		set_priv(saved_priv);
+
 		// leave new_dir allocated until after dprintf below
 
 	} else {
@@ -378,10 +394,6 @@ int Condor_Auth_FS::authenticate(const char * /* remoteHost */, CondorError* err
 			(new_dir ? new_dir : "(null)"), (server_result == 0) );
 
 	if ( new_dir ) {
-		// client responsible for removing the dir
-		if (mySock_->isClient() && client_result != -1) {
-			rmdir( new_dir );
-		}
 		free( new_dir );
 	}
 

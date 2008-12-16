@@ -306,7 +306,6 @@ GLExecPrivSepHelper::feed_wrapper(int pid,
 		close(sock_fds[0]);
 		return FALSE;
 	}
-	delete[] env_buf;
 
 	// now send over the FD that the Starter should use for stdin, if any
 	//

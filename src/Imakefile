@@ -63,7 +63,7 @@
 # define LeaseManagerProgs
 #endif
 
-#if HAVE_EXT_OPENSSL && HAVE_EXT_GSOAP
+#if HAVE_EXT_OPENSSL && HAVE_EXT_GSOAP && !IS_AIX
 #define EC2 amazon
 #else
 #define EC2
@@ -84,8 +84,7 @@
 		CreddProgs StorkProgs LeaseManagerProgs \
 		TTProgs DeploymentTools \
 		eventd.V2 transferd procd privsep vm-gahp EC2 \
-		JobRouterProgs GlobusGahps \
-		EC2 JobRouterProgs GlobusGahps startd_factory \
+		JobRouterProgs GlobusGahps startd_factory \
 		power
 
 #define Libraries \
@@ -543,14 +542,18 @@ man_target(condor_compile.1)
 man_target(condor_configure.1)
 man_target(condor_config_bind.1)
 man_target(condor_config_val.1)
+#ifdef WANT_QUILL
 man_target(condor_convert_history.1)
+#endif
 man_target(condor_dagman.1)
 man_target(condor_fetchlog.1)
 man_target(condor_findhost.1)
 man_target(condor_glidein.1)
 man_target(condor_history.1)
 man_target(condor_hold.1)
+#ifdef WANT_QUILL
 man_target(condor_load_history.1)
+#endif
 man_target(condor_master.1)
 man_target(condor_master_off.1)
 man_target(condor_off.1)

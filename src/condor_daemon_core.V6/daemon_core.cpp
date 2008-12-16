@@ -571,8 +571,8 @@ void DaemonCore::Set_Default_Reaper( int reaper_id )
  These methods here just call the actual method implementation with a
  default parameter set.
  ********************************************************/
-int	DaemonCore::Register_Command(int command, char* com_descrip,
-				CommandHandler handler, char* handler_descrip, Service* s,
+int	DaemonCore::Register_Command(int command, const char* com_descrip,
+				CommandHandler handler, const char* handler_descrip, Service* s,
 				DCpermission perm, int dprintf_flag)
 {
 	return( Register_Command(command, com_descrip, handler,
@@ -580,16 +580,16 @@ int	DaemonCore::Register_Command(int command, char* com_descrip,
 							perm, dprintf_flag, FALSE) );
 }
 
-int	DaemonCore::Register_Command(int command, char *com_descrip,
-				CommandHandlercpp handlercpp, char* handler_descrip,
+int	DaemonCore::Register_Command(int command, const char *com_descrip,
+				CommandHandlercpp handlercpp, const char* handler_descrip,
 				Service* s, DCpermission perm, int dprintf_flag)
 {
 	return( Register_Command(command, com_descrip, NULL, handlercpp,
 							handler_descrip, s, perm, dprintf_flag, TRUE) );
 }
 
-int	DaemonCore::Register_Signal(int sig, char* sig_descrip,
-				SignalHandler handler, char* handler_descrip,
+int	DaemonCore::Register_Signal(int sig, const char* sig_descrip,
+				SignalHandler handler, const char* handler_descrip,
 				Service* s)
 {
 	return( Register_Signal(sig, sig_descrip, handler,
@@ -597,8 +597,8 @@ int	DaemonCore::Register_Signal(int sig, char* sig_descrip,
 							FALSE) );
 }
 
-int	DaemonCore::Register_Signal(int sig, char *sig_descrip,
-				SignalHandlercpp handlercpp, char* handler_descrip,
+int	DaemonCore::Register_Signal(int sig, const char *sig_descrip,
+				SignalHandlercpp handlercpp, const char* handler_descrip,
 				Service* s)
 {
 	return( Register_Signal(sig, sig_descrip, NULL, handlercpp,
@@ -717,8 +717,8 @@ int	DaemonCore::Register_Socket(Stream* iosock, const char* iosock_descrip,
 							handler_descrip, s, perm, TRUE) );
 }
 
-int	DaemonCore::Register_Pipe(int pipe_end, char* pipe_descrip,
-				PipeHandler handler, char* handler_descrip,
+int	DaemonCore::Register_Pipe(int pipe_end, const char* pipe_descrip,
+				PipeHandler handler, const char* handler_descrip,
 				Service* s, HandlerType handler_type, DCpermission perm)
 {
 	return( Register_Pipe(pipe_end, pipe_descrip, handler,
@@ -726,69 +726,69 @@ int	DaemonCore::Register_Pipe(int pipe_end, char* pipe_descrip,
 							handler_type, perm, FALSE) );
 }
 
-int	DaemonCore::Register_Pipe(int pipe_end, char* pipe_descrip,
-				PipeHandlercpp handlercpp, char* handler_descrip,
+int	DaemonCore::Register_Pipe(int pipe_end, const char* pipe_descrip,
+				PipeHandlercpp handlercpp, const char* handler_descrip,
 				Service* s, HandlerType handler_type, DCpermission perm)
 {
 	return( Register_Pipe(pipe_end, pipe_descrip, NULL, handlercpp,
 							handler_descrip, s, handler_type, perm, TRUE) );
 }
 
-int	DaemonCore::Register_Reaper(char* reap_descrip, ReaperHandler handler,
-				char* handler_descrip, Service* s)
+int	DaemonCore::Register_Reaper(const char* reap_descrip, ReaperHandler handler,
+				const char* handler_descrip, Service* s)
 {
 	return( Register_Reaper(-1, reap_descrip, handler,
 							(ReaperHandlercpp)NULL, handler_descrip,
 							s, FALSE) );
 }
 
-int	DaemonCore::Register_Reaper(char* reap_descrip,
-				ReaperHandlercpp handlercpp, char* handler_descrip, Service* s)
+int	DaemonCore::Register_Reaper(const char* reap_descrip,
+				ReaperHandlercpp handlercpp, const char* handler_descrip, Service* s)
 {
 	return( Register_Reaper(-1, reap_descrip, NULL, handlercpp,
 							handler_descrip, s, TRUE) );
 }
 
-int	DaemonCore::Reset_Reaper(int rid, char* reap_descrip,
-				ReaperHandler handler, char* handler_descrip, Service* s)
+int	DaemonCore::Reset_Reaper(int rid, const char* reap_descrip,
+				ReaperHandler handler, const char* handler_descrip, Service* s)
 {
 	return( Register_Reaper(rid, reap_descrip, handler,
 							(ReaperHandlercpp)NULL, handler_descrip,
 							s, FALSE) );
 }
 
-int	DaemonCore::Reset_Reaper(int rid, char* reap_descrip,
-				ReaperHandlercpp handlercpp, char* handler_descrip, Service* s)
+int	DaemonCore::Reset_Reaper(int rid, const char* reap_descrip,
+				ReaperHandlercpp handlercpp, const char* handler_descrip, Service* s)
 {
 	return( Register_Reaper(rid, reap_descrip, NULL, handlercpp,
 							handler_descrip, s, TRUE) );
 }
 
 int	DaemonCore::Register_Timer(unsigned deltawhen, Event event,
-				char *event_descrip, Service* s)
+				const char *event_descrip, Service* s)
 {
 	return( t.NewTimer(s, deltawhen, event, event_descrip, 0, -1) );
 }
 
 int	DaemonCore::Register_Timer(unsigned deltawhen, unsigned period,
-				Event event, char *event_descrip, Service* s)
+				Event event, const char *event_descrip, Service* s)
 {
 	return( t.NewTimer(s, deltawhen, event, event_descrip, period, -1) );
 }
 
 int	DaemonCore::Register_Timer(unsigned deltawhen, Eventcpp eventcpp,
-				char *event_descrip, Service* s)
+				const char *event_descrip, Service* s)
 {
 	return( t.NewTimer(s, deltawhen, eventcpp, event_descrip, 0, -1) );
 }
 
 int	DaemonCore::Register_Timer(unsigned deltawhen, unsigned period,
-				Eventcpp event, char *event_descrip, Service* s )
+				Eventcpp event, const char *event_descrip, Service* s )
 {
 	return( t.NewTimer(s, deltawhen, event, event_descrip, period, -1) );
 }
 
-int DaemonCore::Register_Timer (Timeslice timeslice,Eventcpp event,char * event_descrip,Service* s)
+int DaemonCore::Register_Timer (Timeslice timeslice,Eventcpp event,const char * event_descrip,Service* s)
 {
 	return t.NewTimer(s, timeslice, event, event_descrip, -1 );
 }
@@ -806,9 +806,9 @@ int DaemonCore::Reset_Timer( int id, unsigned when, unsigned period )
 /************************************************************************/
 
 
-int DaemonCore::Register_Command(int command, char* command_descrip,
+int DaemonCore::Register_Command(int command, const char* command_descrip,
 				CommandHandler handler, CommandHandlercpp handlercpp,
-				char *handler_descrip, Service* s, DCpermission perm,
+				const char *handler_descrip, Service* s, DCpermission perm,
 				int dprintf_flag, int is_cpp)
 {
     int     i;		// hash value
@@ -1056,9 +1056,9 @@ PidEnvID* DaemonCore::InfoEnvironmentID(PidEnvID *penvid, int pid)
 	return penvid;
 }
 
-int DaemonCore::Register_Signal(int sig, char* sig_descrip, 
+int DaemonCore::Register_Signal(int sig, const char* sig_descrip, 
 				SignalHandler handler, SignalHandlercpp handlercpp, 
-				char* handler_descrip, Service* s, 
+				const char* handler_descrip, Service* s, 
 				int is_cpp)
 {
     int     i;		// hash value
@@ -1608,9 +1608,9 @@ int DaemonCore::Inherit_Pipe(int fd, bool is_write, bool can_register, bool nonb
 	return pipeHandleTableInsert(pipe_handle) + PIPE_INDEX_OFFSET;
 }
 
-int DaemonCore::Register_Pipe(int pipe_end, char* pipe_descrip,
+int DaemonCore::Register_Pipe(int pipe_end, const char* pipe_descrip,
 				PipeHandler handler, PipeHandlercpp handlercpp,
-				char *handler_descrip, Service* s,
+				const char *handler_descrip, Service* s,
 				HandlerType handler_type, DCpermission perm,
 				int is_cpp)
 {
@@ -1988,9 +1988,9 @@ DaemonCore::Close_Stdin_Pipe(int pid) {
 }
 
 
-int DaemonCore::Register_Reaper(int rid, char* reap_descrip,
+int DaemonCore::Register_Reaper(int rid, const char* reap_descrip,
 				ReaperHandler handler, ReaperHandlercpp handlercpp,
-				char *handler_descrip, Service* s, int is_cpp)
+				const char *handler_descrip, Service* s, int is_cpp)
 {
     int     i;
     int     j;
@@ -2083,7 +2083,7 @@ int DaemonCore::Cancel_Reaper( int )
 }
 
 // For debugging purposes
-void DaemonCore::Dump(int flag, char* indent)
+void DaemonCore::Dump(int flag, const char* indent)
 {
 	DumpCommandTable(flag, indent);
 	DumpSigTable(flag, indent);
@@ -9191,7 +9191,7 @@ void DaemonCore :: invalidateSessionCache()
 }
 
 
-bool DaemonCore :: set_cookie( int len, unsigned char* data ) {
+bool DaemonCore :: set_cookie( int len, const unsigned char* data ) {
 	if (_cookie_data) {
 		  // if we have a cookie already, keep it
 		  // around in case some packet that's already
@@ -9236,13 +9236,13 @@ bool DaemonCore :: get_cookie( int &len, unsigned char* &data ) {
 	return true;
 }
 
-bool DaemonCore :: cookie_is_valid( unsigned char* data ) {
+bool DaemonCore :: cookie_is_valid( const unsigned char* data ) {
 
 	if ( data == NULL || _cookie_data == NULL ) {
 		return false;
 	}
 
-	if ( strcmp((char*)_cookie_data, (char*)data) == 0 ) {
+	if ( strcmp((const char*)_cookie_data, (const char*)data) == 0 ) {
 		// we have a match... trust this command.
 		return true;
 	} else if ( _cookie_data_old != NULL ) {
@@ -9251,7 +9251,7 @@ bool DaemonCore :: cookie_is_valid( unsigned char* data ) {
 		// rotated the cookie. So check it with
 		// the old cookie.
 
-		if ( strcmp((char*)_cookie_data_old, (char*)data) == 0 ) {
+		if ( strcmp((const char*)_cookie_data_old, (const char*)data) == 0 ) {
 			return true;
 		} else {
 
@@ -9579,7 +9579,7 @@ DaemonCore::PidEntry::pipeHandler(int pipe_fd) {
 	return TRUE;
 }
 
-void DaemonCore::send_invalidate_session ( char* sinful, char* sessid ) {
+void DaemonCore::send_invalidate_session ( const char* sinful, const char* sessid ) {
 	if ( !sinful ) {
 		dprintf (D_SECURITY, "DC_AUTHENTICATE: couldn't invalidate session %s... don't know who it is from!\n", sessid);
 		return;
