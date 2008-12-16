@@ -64,6 +64,11 @@ A future version of Condor will implement better recognition
 of USB devices,
 such that the kernel patch will also definitively work for USB devices.
 
+Condor additionally has problems running on some older Xen kernels,
+which interact badly with assumptions made by the \Condor{procd}
+daemon. See the FAQ entry in section~\ref{sec:xen-jiffies-bug} for
+details.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:platform-linux-rh9}Red Hat Version 9.x}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

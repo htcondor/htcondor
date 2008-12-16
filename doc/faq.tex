@@ -2048,6 +2048,21 @@ Note that this problem does not manifest itself
 on non-BSD Unix platforms, such as Linux.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:xen-jiffies-bug}Why are there spurious Condor errors on some machines running Xen kernels?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Some older Xen kernels had a problem where the kernel's jiffy counter
+could jump backwards in time. This breaks an assumption made by the
+\Condor{procd}. This problem can only be worked around by upgrading
+the Xen kernel to a version that fixes the issue with the jiffy counter.
+Running Condor on an affected Xen kernel oftens results in failures
+of the following forms in Condor daemon log files:
+\begin{itemize}
+\item \verb@error: parent process's birthday is later than our own@
+\item \verb@ERROR: No family with the given PID is registered@
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Other questions}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
