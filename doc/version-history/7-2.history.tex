@@ -33,6 +33,10 @@ VMware jobs if the path that the \Condor{vm-gahp} uses to refer to the
 VM's VMX file contains a symlink. See the FAQ entry in section~
 \ref{sec:vmware-symlink-bug} for details.
 
+\item The name of the Amazon EC2 GAHP binary has changed from
+\Prog{amazon-gahp} to \Prog{amazon\_gahp}. This makes it consistent
+with the naming of other Condor binaries.
+
 \end{itemize}
 
 
@@ -136,6 +140,24 @@ the configuration variable
 or eviction of a VM unvierse job has been fixed. The error messaage that
 would appear in the \File{StarterLog} file was
 \verb@Write_Pipe: invalid pipe end@.
+
+\item When a held job is removed, the values of the attributes
+\Macro{HoldReason}, \Macro{HoldReasonCode} and \Macro{HoldReasonSubCode}
+are moved to \Macro{LastHoldReason}, \Macro{LastHoldReasonCode} and
+\Macro{LastHoldReasonSubCode}. Before, a hold reason could be lost if a
+removed job was subsequently held.
+
+\item The executable attribute for amazon grid universe jobs no longer
+needs to be a valid file path.
+
+\item Improved error reporting when a Xen or VMware command fails in the
+vm universe.
+
+\item Fixed a bug introduced in Condor 7.1.4 that caused Condor to
+ignore the virtual machine status reported by Xen in the vm universe.
+
+\item Fixed a 20-second delay in the start-up of \Condor{c-gahp} and
+\Condor{vm-gahp}.
 
 \end{itemize}
 
