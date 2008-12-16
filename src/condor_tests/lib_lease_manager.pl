@@ -25,6 +25,9 @@ use CondorPersonal;
 use CondorTest;
 
 # 'Prototypes'
+sub FillTest($$);
+sub WriteConfig( $ );
+sub WriteConfigSection( $$$ );
 sub DaemonWait( $ );
 sub RunTests( $ );
 sub RunTestOp( $$ );
@@ -43,7 +46,7 @@ my %tests =
      # Common to all tests
      common =>
      {
-		 config =>
+		 config_lm =>
 		 {
 			 GETADS_INTERVAL			=> 10,
 			 UPDATE_INTERVAL			=> 10,
@@ -55,6 +58,9 @@ my %tests =
 
 			 QUERY_ADTYPE				=> "Any",
 			 CLASSAD_LOG				=> "\$(SPOOL)/LeaseAdLog",
+		 },
+		 config =>
+		 {
 
 			 ADVERTISER					=> $programs{advertise},
 			 ADVERTISER_LOG				=> "\$(LOG)/AdvertiserLog",
@@ -64,7 +70,6 @@ my %tests =
 			 #LeaseManager_ARGS			=> "-local-name any",
 			 #LeaseManager_ARGS			=> "-f",
 			 LEASEMANAGER_DEBUG			=> "D_FULLDEBUG D_CONFIG",
-			 DAEMON_LIST	=> "MASTER, COLLECTOR, LEASEMANAGER, ADVERTISER",
 			 DC_DAEMON_LIST				=> "+ LEASEMANAGER",
 
 		 },
@@ -91,6 +96,7 @@ my %tests =
 	 defaults =>
 	 {
 		 config => { },
+		 config_lm => { },
 		 advertise => { },
 		 resource => { },
 		 advertise => { },
@@ -115,6 +121,7 @@ my %tests =
 	 simple1 =>
      {
 		 config => { },
+		 config_lm => { },
 		 advertise => {
 			 MaxLeases			=> 1,
 		 },
@@ -141,6 +148,7 @@ my %tests =
 	 simple2 =>
      {
 		 config => { },
+		 config_lm => { },
 		 advertise => {
 			 MaxLeases			=> 1,
 		 },
@@ -172,21 +180,23 @@ my %tests =
 sub usage( )
 {
     print
-	"usage: $0 [options] test-name\n" .
-	"  -l|--list     list names of tests\n" .
-	"  -f|--force    force overwrite of test directory\n" .
-	"  -n|--no-exec  no execute / test mode\n" .
-	"  -d|--debug    enable D_FULLDEBUG debugging\n" .
-	"  -v|--verbose  increase verbose level\n" .
-	"  -s|--stop     stop after errors\n" .
-	"  --valgrind    run test under valgrind\n" .
-	"  -q|--quiet    cancel debug & verbose\n" .
-	"  -h|--help     this help\n";
+		"usage: $0 [options] test-name\n" .
+		"  -l|--list     list names of tests\n" .
+		"  -f|--force    force overwrite of test directory\n" .
+		"  -n|--no-exec  no execute / test mode\n" .
+		"  -N|--no-pid   Don't append PID to test directory\n" .
+		"  -d|--debug    enable D_FULLDEBUG debugging\n" .
+		"  -v|--verbose  increase verbose level\n" .
+		"  -s|--stop     stop after errors\n" .
+		"  --valgrind    run test under valgrind\n" .
+		"  -q|--quiet    cancel debug & verbose\n" .
+		"  -h|--help     this help\n";
 }
 
 
 my %settings =
 (
+ use_pid		=> 1,
  verbose		=> 0,
  debug			=> 0,
  execute		=> 1,
@@ -206,6 +216,9 @@ foreach my $arg ( @ARGV ) {
     }
     elsif ( $arg eq "-n"  or  $arg eq "--no-exec" ) {
 		$settings{execute} = 0;
+    }
+    elsif ( $arg eq "-N"  or  $arg eq "--no-pid" ) {
+		$settings{use_pid} = 0;
     }
     elsif ( $arg eq "-s"  or  $arg eq "--stop" ) {
 		$settings{stop} = 1;
@@ -247,21 +260,7 @@ if ( !exists $settings{name} ) {
     exit(1);
 }
 
-sub FillTest($$)
-{
-	my $dest = shift;
-	my $src  = shift;
-	foreach my $section ( keys %{$src} )
-	{
-		if (! exists $dest->{$section} ) {
-			$dest->{$section} = {};
-		}
-		foreach my $attr ( keys(%{$src->{$section}})  ) {
-			$dest->{$section}{$attr} = $src->{$section}{$attr};
-		}
-    }
-}
-
+#CondorPersonal::DebugLevel(3);
 
 my %test;
 FillTest( \%test, $tests{common} );
@@ -270,6 +269,10 @@ $test{name} = $settings{name};
 my $full_name = "lease_manager-".$settings{name};
 
 my $dir = "test-lease_manager-" . $settings{name};
+if ( $settings{use_pid} ) {
+	$dir .= ".$$";
+}
+
 my $fulldir = getcwd() . "/$dir";
 if ( -d $dir  and  $settings{force} ) {
     system( "/bin/rm", "-fr", $dir );
@@ -327,22 +330,8 @@ foreach my $n ( 0 .. $settings{verbose} ) {
 push( @advertiser_args, $test{advertise}{command} );
 push( @advertiser_args, $resource );
 
-my $config = "$dir/condor_config.local";
-open( CONFIG, ">$config" ) or die "Can't write to config file $config";
-foreach my $param ( sort keys(%{$test{config}}) ) {
-    my $value = $test{config}{$param};
-    if ( $value eq "TRUE" ) {
-		print CONFIG "$param = TRUE\n";
-    }
-    elsif ( $value eq "FALSE" ) {
-		print CONFIG "$param = FALSE\n";
-    }
-    else {
-		print CONFIG "$param = $value\n";
-    }
-}
-print CONFIG "ADVERTISER_ARGS = " . join( " ", @advertiser_args ) . "\n";
-close( CONFIG );
+my $config = "$dir/condor_config.tmp";
+WriteConfig( $config );
 
 if ( not $settings{execute} ) {
 	exit( 0 );
@@ -357,6 +346,7 @@ ports = dynamic
 condor = nightlies
 condorconfig = condor_config
 condorlocal = condor_config.local
+localpostsrc = $config
 condordaemons = MASTER,COLLECTOR,LEASEMANAGER,ADVERTISER
 personaldir = $fulldir
 ENDPARAMS
@@ -368,10 +358,10 @@ CondorTest::debug("About to set up Condor Personal : <<<$ltime>>>", 1);
 # Fire up my condor
 my $configrem =	CondorPersonal::StartCondor( $param_file, $full_name );
 print "<$configrem>\n";
-exit 1;
+
 
 # This is all throw-away
-#my $main_config = "$fulldir/condor_config";
+# my $main_config = "$fulldir/condor_config";
 # system( "cp condor_config.nrl $main_config" );
 # 
 # $ENV{CONDOR_CONFIG} = "$main_config";
@@ -401,6 +391,60 @@ if ( $settings{verbose} ) {
     print "Using directory $dir\n";
 }
 my $errors = 0;
+
+
+sub FillTest($$)
+{
+	my $dest = shift;
+	my $src  = shift;
+	foreach my $section ( keys %{$src} )
+	{
+		if (! exists $dest->{$section} ) {
+			$dest->{$section} = {};
+		}
+		foreach my $attr ( keys(%{$src->{$section}})  ) {
+			$dest->{$section}{$attr} = $src->{$section}{$attr};
+		}
+    }
+}
+
+sub WriteConfig( $ )
+{
+	my $config = shift;
+
+	my $fh;
+	open( $fh, ">$config" ) or die "Can't write to config file $config";
+	print $fh "#\n";
+	print $fh "# auto-generated by lib_lease_manager.pl\n";
+	print $fh "#\n";
+	WriteConfigSection( $fh, "", $test{config} );
+	WriteConfigSection( $fh, "LeaseManager.", $test{config_lm} );
+	print $fh "ADVERTISER_ARGS = " . join( " ", @advertiser_args ) . "\n";
+	print $fh "#\n";
+	print $fh "# End of auto-generated by lib_lease_manager.pl\n";
+	print $fh "#\n";
+	close( $fh );
+}
+
+sub WriteConfigSection( $$$ )
+{
+	my $fh = shift;
+	my $prefix = shift;
+	my $hashref = shift;
+
+	foreach my $param ( sort keys(%{$hashref}) ) {
+		my $value = $hashref->{$param};
+		if ( $value eq "TRUE" ) {
+			print $fh "$prefix$param = TRUE\n";
+		}
+		elsif ( $value eq "FALSE" ) {
+			print $fh "$prefix$param = FALSE\n";
+		}
+		else {
+			print $fh "$prefix$param = $value\n";
+		}
+	}
+}
 
 # Wait for everything to come to life...
 sub DaemonWait( $ )
