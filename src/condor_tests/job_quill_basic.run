@@ -228,15 +228,8 @@ if( -e "$mysubmitnmlog" )
 	system("cp $mysubmitnmlog $mycorenmlog");
 }
 
-my @adarray;
-my $status = 1;
-my $cmd = "condor_off -fast -master";
-$status = CondorTest::runCondorTool($cmd,\@adarray,2);
-if(!$status)
-{
-	CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
-	exit(1)
-}
+CondorPersonal::KillDaemonPids($quillconfig);
+system("date");
 
 if($pcresult == 0) {
 	CondorTest::debug("Setup allowed test which then WORKED!!!......\n",1);
@@ -249,6 +242,5 @@ if($pcresult == 0) {
 	exit(1);
 }
 
-system("date");
-
+CondorTest::debug("job_quill_basic SUCCESS\n",1);
 exit(0);

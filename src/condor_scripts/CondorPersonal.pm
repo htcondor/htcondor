@@ -104,6 +104,30 @@ use Net::Domain qw(hostfqdn);
 #	If "daemonwait" is set to false, we will only wait for the address files to exist and not
 #	require inter-daemon communication.
 
+#	Notes from efforts 11/24/2008
+#	The recent adding of tracking of core files and ERROR statements in daemon
+#	logs shows (since the negotiation tests never shut down generating a ongoing
+# 	stream of ERROR statements making other good tests fail) that we need a better
+#	and surer KILL for personal condors. if condor_off -master fails then we 
+# 	leave loos personal condors around which could cause other tests to fail.
+#	We are going to collect the PIDs of the daemons for a personal condor just
+#	after they start and before they have a chance to rotate and write a file PIDS
+#	in the log directory we will kill later.
+
+%daemon_logs =
+(
+	"COLLECTOR" => "CollectorLog",
+	"NEGOTIATOR" => "NegotiatorLog",
+	"MASTER" => "MasterLog",
+	"STARTD" => "StartLog",
+	"SCHEDD" => "SchedLog",
+	"collector" => "CollectorLog",
+	"negotiator" => "NegotiatorLog",
+	"master" => "MasterLog",
+	"startd" => "StartLog",
+	"schedd" => "SchedLog",
+);
+
 require 5.0;
 use Carp;
 use Cwd;
@@ -197,11 +221,19 @@ sub StartCondor
 
 	$procdaddress = $mpid . $version;
 
-	$personal_config_file = $topleveldir ."/condor_config";
 
 	CondorPersonal::ParsePersonalCondorParams($paramfile);
 
+	if(exists $personal_condor_params{"personaldir"}) {
+		$topleveldir = $personal_condor_params{"personaldir"};
+		debug( "SETTING $topleveldir as topleveldir\n",1);
+		system("mkdir -p $topleveldir");
+	}
+
+	$personal_config_file = $topleveldir ."/condor_config";
+
 	$localdir = CondorPersonal::InstallPersonalCondor();
+
 	if($localdir eq "")
 	{
 		return("Failed to do needed Condor Install\n");
@@ -232,6 +264,8 @@ sub StartCondor
 	debug( "StartCondor config_and_port is --$config_and_port--\n",3);
 	CondorPersonal::Reset();
 	debug( "StartCondor config_and_port is --$config_and_port--\n",3);
+	debug( "Personal Condor Started\n",3);
+	system("date");
 	return( $config_and_port );
 }
 
@@ -767,7 +801,7 @@ sub TunePersonalCondor
 	#print "***************** opening $personal_template as config file template *****************\n";
 	open(TEMPLATE,"<$personal_template")  || die "Can not open template<<$personal_template>>: $!\n";
 	debug( "want to open new config file as $topleveldir/$personal_config\n",3);
-	open(NEW,">$topleveldir/$personal_config") || die "Can not open new config file: $!\n";
+	open(NEW,">$topleveldir/$personal_config") || die "Can not open new config file<$topleveldir/$personal_config>: $!\n";
 	while(<TEMPLATE>)
 	{
 		CondorTest::fullchomp($_);
@@ -1104,8 +1138,14 @@ sub IsPersonalRunning
         $line = $_;
         if($line =~ /^(.*master_address)$/) {
             if(-f $1) {
-                debug("Master running\n",3);
-                return(1);
+				if(exists $personal_condor_params{"personaldir"}) {
+					# ignore if we want to fall to same place
+					# and the previous might have been kill badly
+					return(0);
+				} else {
+               		debug("Master running\n",3);
+                	return(1);
+				}
             } else {
                 debug("Master not running\n",3);
                 return(0);
@@ -1114,6 +1154,18 @@ sub IsPersonalRunning
     }
 	close(MADDR);
 }
+
+#################################################################
+#
+# IsRunningYet
+#
+#	We want to do out best to be sure the personal is fully running
+#	before going on to start a test against it. And this is also
+#	a great time to harvest the PIDS of the daemons to allow a more
+#	sure kill then condor_off can do in circumstances like
+#	screwed up authentication tests
+#
+#################################################################
 
 sub IsRunningYet
 {
@@ -1328,9 +1380,161 @@ sub IsRunningYet
 			}
 		}
 	}
+	debug("In IsRunningYet calling CollectDaemonPids\n",3);
+	CollectDaemonPids();
 	debug("Leaving IsRunningYet\n",3);
 
 	return(1);
+}
+
+#################################################################
+#
+# CollectDaemonPids
+#
+# 	Open each known daemon's log and extract its PID
+# 	and collect them all in a file called PIDS in the
+#	log directory.
+#
+#################################################################
+
+sub CollectDaemonPids
+{
+	#$daemonlist = `condor_config_val daemon_list`;
+	$daemonlist =~ s/\s*//g;
+	@daemons = split /,/, $daemonlist;
+	my $savedir = getcwd();
+	$logdir = `condor_config_val log`;
+	$logdir =~ s/\012+$//;
+	$logdir =~ s/\015+$//;
+
+
+
+	#print "logs are here:$logdir\n";
+	$pidfile = $logdir . "/PIDS";
+	open(PD,">$pidfile") or die "Can not create<$pidfile>:$!\n";
+
+	my $logfile = "";
+	my $line = "";
+	#print "Checking logs for daemon <$one>\n";
+	$logfile = $logdir . "/MasterLog";
+	#print "Look in $logfile for pid\n";
+	open(TA,"<$logfile") or die "Can not open <$logfile>:$!\n";
+	while(<TA>) {
+		chomp();
+		$line = $_;
+		if($line =~ /^.*PID\s+=\s+(\d+).*$/) {
+			# at kill time we will suggest with signal 3
+			# that the master and friends go away before
+			# we get blunt. This will help us know which
+			# pid is the master.
+			print PD "$1 MASTER\n";
+		} elsif($line =~ /^.*Started DaemonCore process\s\"(.*)\",\s+pid\s+and\s+pgroup\s+=\s+(\d+).*$/) {
+			print "Saving PID for $1 as $2\n";
+			print PD "$2\n";
+		}
+	}
+	close(TA);
+	close(PD);
+}
+
+#################################################################
+#
+# KillDaemonPids
+#
+#	Find the log directory via the config file passed in. Then
+#	open the PIDS fill and kill every pid in it for a sure kill.
+#
+#################################################################
+
+sub KillDaemonPids
+{
+	my $desiredconfig = shift;
+	my $oldconfig = $ENV{CONDOR_CONFIG};
+	$ENV{CONDOR_CONFIG} = $desiredconfig;
+	my $logdir = `condor_config_val log`;
+	$logdir =~ s/\012+$//;
+	$logdir =~ s/\015+$//;
+	my $masterpid = 0;
+	my $cnt = 0;
+	my $iswindows = IsThisWindows();
+
+	#print "logs are here:$logdir\n";
+	$pidfile = $logdir . "/PIDS";
+	debug("Asked to kill <$oldconfig>\n",3);
+	$thispid = 0;
+	# first find the master and use a kill 3(fast kill)
+	open(PD,"<$pidfile") or die "Can not open<$pidfile>:$!\n";
+	while(<PD>) {
+		chomp();
+		$thispid = $_;
+		if($thispid =~ /^(\d+)\s+MASTER.*$/) {
+			$masterpid = $1;
+			if($iswindows == 1) {
+				$cmd = "/usr/bin/kill -f -s 3 $masterpid";
+				system($cmd);
+			} else {
+				$cnt = kill 3, $masterpid;
+			}
+			debug("Gentle kill for master <$masterpid><$thispid($cnt)>\n",3);
+			last;
+		}
+	}
+	close(PD);
+	# give iot a little time for a shutdown
+	sleep(5);
+	# did it work.... is process still around?
+	$cnt = kill 0, $masterpid;
+	# try a kill again on master and see if no such process
+	if($iswindows == 1) {
+		$cnt = 1;
+		open(KL,"/usr/bin/kill -f -s 15 $masterpid 2>&1 |") 
+			or die "can not grab kill output\n";
+		while(<KL>) {
+			#print "Testing soft kill<$_>\n";
+			if( $_ =~ /^.*couldn\'t\s+open\s+pid\s+.*/ ) {
+				print "Windows soft kill worked\n";
+				$cnt = 0;
+			}
+		}
+	}
+	if($cnt == 0) {
+		debug("Gentle kill for master <$thispid> worked!\n",3);
+	} else {
+		# hmm bullets are placed in heads here.
+		debug("Gentle kill for master <$thispid><$cnt> failed!\n",1);
+		open(PD,"<$pidfile") or die "Can not open<$pidfile>:$!\n";
+		while(<PD>) {
+			chomp();
+			$thispid = $_;
+			if($thispid =~ /^(\d+)\s+MASTER.*$/) {
+				$thispid = $1;
+				debug("Kill MASTER PID <$thispid:$1>\n",3);
+				if($iswindows == 1) {
+					$cmd = "/usr/bin/kill -f -s 15 $thispid";
+					system($cmd);
+				} else {
+					$cnt = kill 15, $thispid;
+				}
+			} else {
+				debug("Kill non-MASTER PID <$thispid>\n",3);
+				if($iswindows == 1) {
+					$cmd = "kill -f -s 15 $thispid";
+					system($cmd);
+				} else {
+					$cnt = kill 15, $thispid;
+				}
+			}
+			if($cnt == 0) {
+				debug("Failed to kill PID <$thispid>\n",3);
+			} else {
+				debug("Killed PID <$thispid>\n",3);
+			}
+		}
+		close(PD);
+	}
+
+	# reset config to whatever it was.
+	$ENV{CONDOR_CONFIG} = $oldconfig;
 }
 
 #################################################################

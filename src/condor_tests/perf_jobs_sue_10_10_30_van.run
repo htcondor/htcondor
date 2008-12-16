@@ -39,6 +39,10 @@ my %statshash = ();
 ReadLastStats();
 
 my $configfile = CondorPersonal::StartCondor("x_perf_auto_param.sue");
+my @cputrackingpool = split /\+/, $configfile;
+my $secconfig = shift @cputrackingpool;
+my $secport = shift @cputrackingpool;
+
 $ENV{CONDOR_CONFIG} = $configfile;
 
 while( $currenttestcount <= $maxjobs)
@@ -50,20 +54,16 @@ while( $currenttestcount <= $maxjobs)
 	$currenttestcount += $incrementjobs;
 }
 
-my @adarray;
-my $status = 1;
-my $cmd = "condor_off -fast -master";
-$status = CondorTest::runCondorTool($cmd,\@adarray,2);
-if(!$status)
-{
-	CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
-	return(1)
-}
+CondorPersonal::KillDaemonPids($secconfig);
+system("date");
 
 if($nostatus != 0)
 {
 	CondorTest::debug("scaling test failed at $currenttestcount\n",1);
 }
+
+CondorTest::debug(""perf_jobs_sue_10_10_30_van SUCCESS\n",1);
+exit(0);
 
 sub ReadLastStats
 {

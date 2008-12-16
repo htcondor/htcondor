@@ -70,18 +70,12 @@ if($willstatus != 0)
 
 system("cp job_core_perrelease-false_local* job_core_perrelease-true_local* job_core_perrelease_local.* $mysaveme");
 
-my @adarray;
-my $status = 1;
-my $cmd = "condor_off -fast -master";
-$status = CondorTest::runCondorTool($cmd,\@adarray,2);
-if(!$status)
-{
-	CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
-	exit(1)
-}
+CondorPersonal::KillDaemonPids($personalconfig);
+system("date");
+
 if(($willstatus != 0) || ($nostatus != 0))
 {
 	die "Failed one PERIODIC_RELEASE test\n";
 }
-
-
+CondorTest::debug("job_core_perrelease_local SUCCESS\n",1);
+exit(0);

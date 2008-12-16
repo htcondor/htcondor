@@ -190,47 +190,8 @@ if( -e "$mysubmitnmlog" )
 	system("cp $mysubmitnmlog $mycorenmlog");
 }
 
-# still set to local config
-# $ENV{CONDOR_CONFIG} = $locconfig;
-
-my @adarray;
-my $status = 1;
-my $cmd = "condor_rm -all";
-$status = CondorTest::runCondorTool($cmd,\@adarray,2);
-if(!$status)
-{
-	CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
-	exit(1)
-}
-
-$status = 1;
-$cmd = "condor_off -fast -master";
-$status = CondorTest::runCondorTool($cmd,\@adarray,2);
-if(!$status)
-{
-	CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
-	exit(1)
-}
-
-$ENV{CONDOR_CONFIG} = $scheddoneconfig;
-
-$status = 1;
-$cmd = "condor_rm -all";
-$status = CondorTest::runCondorTool($cmd,\@adarray,2);
-if(!$status)
-{
-	CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
-	exit(1)
-}
-
-$status = 1;
-$cmd = "condor_off -fast -master";
-$status = CondorTest::runCondorTool($cmd,\@adarray,2);
-if(!$status)
-{
-	CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
-	exit(1)
-}
+CondorPersonal::KillDaemonPids($locconfig);
+CondorPersonal::KillDaemonPids($scheddoneconfig);
 system("date");
 
 if( $done == 0 )
@@ -240,5 +201,4 @@ if( $done == 0 )
 }
 
 CondorTest::debug("cmd_q_shows-global SUCCESS\n",1);
-system("date");
 exit(0);

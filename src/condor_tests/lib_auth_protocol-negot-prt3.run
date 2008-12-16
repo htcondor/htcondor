@@ -139,21 +139,8 @@ while(<DF>) {
 		system("cp $mysubmitnmlog $mycorenmlog");
 	}
 
-	my @adarray;
-	my $status = 1;
-	my $cmd = "condor_off -fast -master";
-	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
-	if(!$status)
-	{
-		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
-		exit(1)
-	}
-
-	if(!$status)
-	{
-		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
-		exit(1)
-	}
+	CondorPersonal::KillDaemonPids($secconfig);
+	system("date");
 }
 
 system("date");

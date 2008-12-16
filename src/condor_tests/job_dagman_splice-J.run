@@ -20,11 +20,11 @@
 
 use CondorTest;
 
-print "Do not run this test. The Condor modules can't handle it yet " .
-	"because RunDagTest can't take more than one submit file.\n";
-exit 0;
+#print "Do not run this test. The Condor modules can't handle it yet " .
+	#"because RunDagTest can't take more than one submit file.\n";
+#exit 0;
 
-$cmd = "job_dagman_splice-J-zero.dag job_dagman_splice-J-one.dag";
+@dagfiles = ("job_dagman_splice-J-zero.dag" , "job_dagman_splice-J-one.dag");
 $testname = 'Condor submit dag - basic splice test - scheduler U';
 $dagman_args = "-verbose";
 
@@ -140,7 +140,7 @@ CondorTest::RegisterAbort( $testname, $aborted );
 CondorTest::RegisterHold( $testname, $held );
 CondorTest::RegisterSubmit( $testname, $submitted );
 
-if( CondorTest::RunDagTest($testname, $cmd, 0, $dagman_args) ) {
+if( CondorTest::RunDagTest($testname, \@dagfiles, 0, $dagman_args) ) {
 	CondorTest::debug("$testname: SUCCESS\n",1);
 	exit(0);
 } else {
