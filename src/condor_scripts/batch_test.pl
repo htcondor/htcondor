@@ -358,7 +358,7 @@ print "Ready for Testing\n";
 # line, we just use that.  otherwise, we search for all subdirectories
 # in the current directory that might be compiler subdirs...
 if( ! @compilers ) {
-	@compilers = ("g77", "gcc", "g++", ".");
+	@compilers = ("g77", "gcc", "g++");
     # find all compiler subdirectories in the test directory
     #opendir( TEST_DIR, $test_dir ) || die "error opening \"$test_dir\": $!\n";
     #@compilers = grep -d, readdir( TEST_DIR );
@@ -1557,8 +1557,8 @@ sub ScanForERROR
 		chomp();
 		$line = $_;
 		# ERROR preceeded by white space and trailed by white space, :, ; or -
-		if($line =~ /^\s*(\d+\/\d+\s+\d+:\d+:\d+)\s+.*\s+ERROR[\s;:\-].*/){
-			debug("$line TStamp $1\n",3);
+		if($line =~ /^\s*(\d+\/\d+\s+\d+:\d+:\d+)\s+ERROR[\s;:\-].*/){
+			debug("$line TStamp $1\n",1);
 			if(CheckTriggerTime($test_start, $1)) {
 				$count += 1;
 				AddFileTrace($daemonlog, $1, $line);
