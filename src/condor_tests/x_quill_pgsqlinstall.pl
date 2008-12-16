@@ -315,7 +315,7 @@ if($docreatedb != 0) {
 }
 system("date");
 
-$docreatelang = system("$prefix/bin/createlang plpgsql test");
+$docreatelang = system("$prefix/bin/createlang plpgsql");
 if($docreatedb != 0) {
 	die "Failed to create test db\n";
 }
