@@ -1334,6 +1334,33 @@ section~\ref{sec:file-transfer-if-when}, on
 page~\pageref{sec:file-transfer-if-when} for details on the naming
 of the intermediate files.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:vmware-symlink-bug}My VMware jobs are failing and being put on hold.}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Strange behavior has been noted when Condor tries to run a VMware
+job using a path to a VMX file that contains a symlink. An example
+of an error message you might see in such a job's user log would
+be:
+\begin{verbatim}
+Error from starter on master_vmuniverse_strtd@nostos.cs.wisc
+.edu: register(/scratch/gquinn/condor/git/CONDOR_SRC/src/con
+dor_tests/31426/31426vmuniverse/execute/dir_31534/vmN3hylp_c
+ondor.vmx) = 1/Error: Command failed: A file was not found/(
+ERROR) Can't create snapshot for vm(/scratch/gquinn/condor/g
+it/CONDOR_SRC/src/condor_tests/31426/31426vmuniverse/execute
+/dir_31534/vmN3hylp_condor.vmx)
+\end{verbatim}
+To work around this problem:
+\begin{itemize}
+\item If you are using file transfer
+(\SubmitCmd{vmware\_should\_transfer\_files = true}), then ensure that
+the \Macro{EXECUTE} settings on all execute machines do not contain
+symlink path components.
+\item If you are using a shared file system, ensure that the
+\SubmitCmd{vmware\_dir} setting in your submit file does not use
+symlink path name components.
+\end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Condor on Windows}
