@@ -33,7 +33,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item VMware VM universe jobs now have any BIOS settings saved in
+an \File{nvram} file in the \SubmitCmd{vmware\_dir} given in the
+job's submit file transferred to the execute machine so that they
+apply to the job's execution.
 
 \end{itemize}
 
@@ -121,6 +124,11 @@ the configuration variable
 
 \item Fixed a bug that limited the size of stdin / stdout / stderr
   files in vanilla universe to 2G.
+
+\item A bug that could cause the \Condor{starter} to EXCEPT upon completion
+or eviction of a VM unvierse job has been fixed. The error messaage that
+would appear in the \File{StarterLog} file was
+\verb@Write_Pipe: invalid pipe end@.
 
 \end{itemize}
 
