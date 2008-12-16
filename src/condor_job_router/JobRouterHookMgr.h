@@ -55,7 +55,7 @@ public:
 
 	int hookTranslateJob(RoutedJob* r_job, std::string &route_info);
 	int hookUpdateJobInfo(RoutedJob* r_job);
-	int hookJobExit(RoutedJob* r_job, const char* sandbox);
+	int hookJobExit(RoutedJob* r_job);
 	int hookJobCleanup(RoutedJob* r_job);
 
 	static bool checkHookKnown(const char* key, HookType hook);
