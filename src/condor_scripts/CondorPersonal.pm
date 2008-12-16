@@ -221,11 +221,19 @@ sub StartCondor
 
 	$procdaddress = $mpid . $version;
 
-	$personal_config_file = $topleveldir ."/condor_config";
 
 	CondorPersonal::ParsePersonalCondorParams($paramfile);
 
+	if(exists $personal_condor_params{"personaldir"}) {
+		$topleveldir = $personal_condor_params{"personaldir"};
+		debug( "SETTING $topleveldir as topleveldir\n",1);
+		system("mkdir -p $topleveldir");
+	}
+
+	$personal_config_file = $topleveldir ."/condor_config";
+
 	$localdir = CondorPersonal::InstallPersonalCondor();
+
 	if($localdir eq "")
 	{
 		return("Failed to do needed Condor Install\n");
@@ -256,6 +264,8 @@ sub StartCondor
 	debug( "StartCondor config_and_port is --$config_and_port--\n",3);
 	CondorPersonal::Reset();
 	debug( "StartCondor config_and_port is --$config_and_port--\n",3);
+	debug( "Personal Condor Started\n",1);
+	system("date");
 	return( $config_and_port );
 }
 
@@ -791,7 +801,7 @@ sub TunePersonalCondor
 	#print "***************** opening $personal_template as config file template *****************\n";
 	open(TEMPLATE,"<$personal_template")  || die "Can not open template<<$personal_template>>: $!\n";
 	debug( "want to open new config file as $topleveldir/$personal_config\n",3);
-	open(NEW,">$topleveldir/$personal_config") || die "Can not open new config file: $!\n";
+	open(NEW,">$topleveldir/$personal_config") || die "Can not open new config file<$topleveldir/$personal_config>: $!\n";
 	while(<TEMPLATE>)
 	{
 		CondorTest::fullchomp($_);
@@ -1482,10 +1492,10 @@ sub KillDaemonPids
 		}
 	}
 	if($cnt == 0) {
-		debug("Gentle kill for master <$thispid> worked!\n",1);
+		debug("Gentle kill for master <$thispid> worked!\n",3);
 	} else {
 		# hmm bullets are placed in heads here.
-		debug("Gentle kill for master <$thispid><$cnt> failed!\n",1);
+		debug("Gentle kill for master <$thispid><$cnt> failed!\n",3);
 		open(PD,"<$pidfile") or die "Can not open<$pidfile>:$!\n";
 		while(<PD>) {
 			chomp();
