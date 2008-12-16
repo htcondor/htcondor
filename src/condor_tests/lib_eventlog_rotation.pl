@@ -239,6 +239,7 @@ sub usage( )
 		"  -l|--list     list names of tests\n" .
 		"  -f|--force    force overwrite of test directory\n" .
 		"  -n|--no-exec  no execute / test mode\n" .
+		"  -N|--no-pid   Don't append PID to test directory\n" .
 		"  -d|--debug    enable D_FULLDEBUG debugging\n" .
 		"  --loops=<n>   Override # of loops in test\n" .
 		"  -v|--verbose  increase verbose level\n" .
@@ -259,11 +260,12 @@ sub GatherData( $ );
 
 my %settings =
 (
- verbose		=> 0,
- debug			=> 0,
- execute		=> 1,
- stop			=> 0,
- force			=> 0,
+ use_pid			=> 1,
+ verbose			=> 0,
+ debug				=> 0,
+ execute			=> 1,
+ stop				=> 0,
+ force				=> 0,
  valgrind_writer	=> 0,
  valgrind_reader	=> 0,
  );
@@ -279,6 +281,9 @@ foreach my $arg ( @ARGV ) {
     }
     elsif ( $arg eq "-n"  or  $arg eq "--no-exec" ) {
 		$settings{execute} = 0;
+    }
+    elsif ( $arg eq "-N"  or  $arg eq "--no-pid" ) {
+		$settings{use_pid} = 0;
     }
     elsif ( $arg eq "-s"  or  $arg eq "--stop" ) {
 		$settings{stop} = 1;
@@ -342,6 +347,9 @@ if ( ! defined($test) ) {
 my $dir = "test-eventlog_rotation-" . $settings{name};
 if ( exists $settings{loops} ) {
     $dir .= "_".$settings{loops}."_loops";
+}
+if ( $settings{use_pid} ) {
+	$dir .= ".$$";
 }
 my $fulldir = getcwd() . "/$dir";
 if ( -d $dir  and  $settings{force} ) {
