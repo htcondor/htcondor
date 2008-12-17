@@ -922,7 +922,7 @@ sub TunePersonalCondor
 			print NEW "CONDOR_HOST = $condorhost\n";
 		}
 		print NEW "START = TRUE\n";
-		print NEW "RunBenchmarks = FALSE\n";
+		print NEW "RUNBENCHMARKS = FALSE\n";
 		print NEW "JAVA_BENCHMARK_TIME = 0\n";
 		print NEW "SCHEDD_INTERVAL = 5\n";
 		print NEW "UPDATE_INTERVAL = 5\n";
@@ -952,6 +952,7 @@ sub TunePersonalCondor
 		print NEW "UPDATE_INTERVAL = 5\n";
 		print NEW "NEGOTIATOR_INTERVAL = 5\n";
 		print NEW "CONDOR_JOB_POLL_INTERVAL = 5\n";
+		print NEW "RUNBENCHMARKS = false\n";
 	}
 	else
 	{
