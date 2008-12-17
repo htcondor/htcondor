@@ -136,6 +136,7 @@ $configlocal;
 $iswindows = 0;
 
 $wantcurrentdaemons = 1; # dont set up a new testing pool in condor_tests/TestingPersonalCondor
+$wantcorechecks = 1;
 $pretestsetuponly = 0; # only get the personal condor in place
 
 # set up to recover from tests which hang
@@ -185,6 +186,7 @@ while( $_ = shift( @ARGV ) ) {
 	    print "-c[cleanup]: stop condor when test(s) finish.  Not used on windows atm.\n";
 	    print "--[no-]core: enable/disable core dumping <enabled>\n";
 	    print "--[no-]debug: enable/disable test debugging <disabled>\n";
+	    print "--no-error: disable core ERROR checks \n";
 	    exit(0);
         }
         if( /--debug/ ) {
@@ -201,6 +203,10 @@ while( $_ = shift( @ARGV ) ) {
         }
         if( /--no-core/ ) {
 		$want_core_dumps = 0;
+                next SWITCH;
+        }
+        if( /--no-error/ ) {
+		$wantcorechecks = 0;
                 next SWITCH;
         }
         if( /^-d.*/ ) {
@@ -1392,7 +1398,9 @@ sub DoChild
 	my $test_program = shift;
 	my $test_retirement = shift;
 	my $test_starttime = time();
-	CoreCheck($test_starttime);
+	if($wantcorechecks) {
+		CoreCheck($test_starttime);
+	}
 	debug( "Test start @ $test_starttime \n",2);
 	sleep(3);
 	# add test core file
@@ -1456,10 +1464,12 @@ sub DoChild
 				#print "Perl test($test_program) returned <<$res>>!!! \n"; 
 				exit(1); 
 			}
-			$corecount = CoreCheck($test_starttime);
-			if($corecount != 0) {
-				print "\n ************ -Core/ERROR found- *************\n";
-				exit(1);
+			if($wantcorechecks) {
+				$corecount = CoreCheck($test_starttime);
+				if($corecount != 0) {
+					print "\n ************ -Core/ERROR found- *************\n";
+					exit(1);
+				}
 			}
 			exit(0);
 		};
