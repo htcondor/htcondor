@@ -434,12 +434,15 @@ if( @testlist ) {
     # we weren't given any specific tests or a test list, so we need to 
     # find all test programs (all files ending in .run) for each compiler
     foreach $compiler (@compilers) {
-	opendir( COMPILER_DIR, $compiler )
-	    || die "error opening \"$compiler\": $!\n";
-	@{$test_suite{"$compiler"}} = grep /\.run$/, readdir( COMPILER_DIR );
-	closedir COMPILER_DIR;
-	#print "error: no test programs found for $compiler\n" 
-	    #unless @{$test_suite{"$compiler"}};
+		if($compiler eq ".") {
+			$gotdot = 1;
+		}
+		opendir( COMPILER_DIR, $compiler )
+	    	|| die "error opening \"$compiler\": $!\n";
+		@{$test_suite{"$compiler"}} = grep /\.run$/, readdir( COMPILER_DIR );
+		closedir COMPILER_DIR;
+		#print "error: no test programs found for $compiler\n" 
+	    	#unless @{$test_suite{"$compiler"}};
     }
 	# by default look at the current blessed tests in the top
 	# level of the condor_tests directory and run these.
@@ -494,6 +497,13 @@ if ($isXML){
 }
 
 # Now we'll run each test.
+print "Testing: ";
+foreach $compiler (@compilers)
+{
+	print "$compiler ";
+}
+print "\n";
+
 foreach $compiler (@compilers)
 {
 	# as long as we have tests to start, loop back again and start
@@ -717,7 +727,7 @@ for $test_name (@successful_tests)
 close OUTF;
 close SUMOUTF;
 
-open( SUMOUTF, ">>failed_tests_summary" )
+open( SUMOUTF, ">>failed_tests_summary$$" )
     || die "error opening \"failed_tests_summary\": $!\n";
 open( OUTF, ">failed_tests" )
     || die "error opening \"failed_tests\": $!\n";
