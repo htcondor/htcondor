@@ -36,6 +36,7 @@ CondorTest::fullchomp($spool);
 CondorTest::debug("Spool is in --$spool--\n",1);
 
 my $job = $$;
+my $haveseenevict = 0;
 
 my $baseoutfile;
 my $oute;
@@ -84,6 +85,12 @@ $evicted = sub {
 	my %args = @_;
 	my $cluster = $args{"cluster"};
 
+	if($haveseenevict == 0) {
+		$haveseenevict = 1;
+	} else {
+		# have already processed an evict and a removal, do nothing
+		return(0);
+	}
 	sleep(4);
 
 	if(!-f "$oute")
