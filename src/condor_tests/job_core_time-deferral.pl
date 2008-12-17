@@ -99,8 +99,8 @@ my $ABORTING = 0;
 ## This will be a better test when offsets are in place
 ##
 push(@exact,   1);
-push(@deltas,  60);
-push(@windows, 300);
+push(@deltas,  180);
+push(@windows, 600);
 push(@preps,   120);
 push(@fail,    0);
 
@@ -124,7 +124,7 @@ push(@fail,    0);
 ##
 push(@exact,   1);
 push(@deltas,  -120);  # 120 sec = 2 min
-push(@windows, 360); # 180 sec = 3 min
+push(@windows, 720); # 180 sec = 3 min
 push(@preps,   120);
 push(@fail,    0);
 
