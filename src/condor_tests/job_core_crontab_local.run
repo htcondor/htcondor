@@ -53,26 +53,18 @@ $ENV{CONDOR_CONFIG} = $personalconfig;
 ## We need to pass what universe we would like to test
 ##
 my $result = CondorTest::verbose_system("./job_core_crontab.pl local");
-if ( $result != 0 ) {
-	$mybad = 1;
-}
 
 #save key files
 system("cp $corename* $mysaveme");
 
-#kill personal condor
-my @adarray;
-my $status = 1;
-my $cmd = "condor_off -fast -master";
-$status = CondorTest::runCondorTool($cmd,\@adarray,2);
-if(!$status)
+CondorPersonal::KillDaemonPids($personalconfig);
+system("date");
+
+if($result != 0)
 {
-    CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
-    exit(1)
+	# actuaal job failed but we allowed cleanup
+	exit(1);
 }
 
-if($mybad == 1) {
-	die( "$testname FAILED!\n" );
-}
-
+CondorTest::debug("job_core_crontab_local SUCCESS\n",1);
 exit(0);

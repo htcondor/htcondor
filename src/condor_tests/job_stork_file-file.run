@@ -188,26 +188,14 @@ if( -e "$mysubmitnmlog" )
 	system("cp $mysubmitnmlog $mycorenmlog");
 }
 
-my @adarray;
-my $status = 1;
-my $cmd = "condor_off -fast -master";
-$status = CondorTest::runCondorTool($cmd,\@adarray,2);
-if(!$status)
-{
-	CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
-	exit(1)
-}
-
+CondorPersonal::KillDaemonPids($locconfig);
 system("date");
 
-if( $result != 0 )
+if($result != 0)
 {
-	# actual test failed but we allowed cleanup
-	CondorTest::debug("Stork test failed!\n",1);
-	exit(1);
-}
-else
-{
-	CondorTest::debug("Stork test SUCCESS!\n",1);
+    # actuaal job failed but we allowed cleanup
+    exit(1);
 }
 
+CondorTest::debug("job_stork_file-file SUCCESS\n",1);
+exit(0);

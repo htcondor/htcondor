@@ -351,6 +351,18 @@ while($time - $startTimer <= $configurationTable{RUN_TIME})
 &MoveAllToSaveDirectory();
 
 CondorTest::debug("$coreName test SUCCESS!\n",1);
+
+#CondorPersonal::KillDaemonPids($remconfig);
+#CondorPersonal::KillDaemonPids($locconfig);
+#system("date");
+
+#if( $result != 0 )
+#{
+    # actual test failed but we allowed cleanup
+    #exit(1);
+#}
+#exit(0);
+
 ### End of main ###
 
 ### Checkers ###
