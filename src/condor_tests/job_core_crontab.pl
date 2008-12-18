@@ -47,6 +47,7 @@ $testname = "CronTab Testing - $universe";
 $base_name = 'job_core_crontab';
 $base_cmd = $base_name.".cmd";
 
+system("rm -f $base_name.log");
 ##
 ## Counter for the number of times our job ran
 ##

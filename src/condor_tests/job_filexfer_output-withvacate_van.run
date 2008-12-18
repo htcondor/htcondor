@@ -50,6 +50,12 @@ $execute = sub {
 	my %args = @_;
 	my $cluster = $args{"cluster"};
 
+	if($haveseenevict == 0) {
+		$haveseenevict = 1;
+	} else {
+		return(0);
+	}
+
 	$baseoutfile = $spool . "/cluster" . $cluster . ".proc0.subproc0/" . "submit_filetrans_output" . "$job";
 	$oute = "$baseoutfile"."e.txt";
 	$outf = "$baseoutfile"."f.txt";
@@ -85,13 +91,7 @@ $evicted = sub {
 	my %args = @_;
 	my $cluster = $args{"cluster"};
 
-	if($haveseenevict == 0) {
-		$haveseenevict = 1;
-	} else {
-		# have already processed an evict and a removal, do nothing
-		return(0);
-	}
-	sleep(4);
+	sleep(15);
 
 	if(!-f "$oute")
 	{ 

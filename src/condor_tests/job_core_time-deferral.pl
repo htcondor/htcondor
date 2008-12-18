@@ -100,7 +100,7 @@ my $ABORTING = 0;
 ##
 push(@exact,   1);
 push(@deltas,  180);
-push(@windows, 600);
+push(@windows, 180);
 push(@preps,   120);
 push(@fail,    0);
 
@@ -168,6 +168,8 @@ for ( $ctr = 0, $cnt = scalar(@deltas); $ctr < $cnt; $ctr++ ) {
 	my $outFile = $cmdFile.".out";
 	my $errFile = $cmdFile.".err";
 	
+	system("rm -f $logfile");
+
 	##
 	## This variable is used by our callback methods 
 	## to know whether the job did what it was suppose to
@@ -202,6 +204,7 @@ for ( $ctr = 0, $cnt = scalar(@deltas); $ctr < $cnt; $ctr++ ) {
 	print FILE "@lines\n";
 	print FILE "Universe = $universe\n";
 	
+
 	##
 	## We can either be given an exact time to run which will
 	## be based on the submitting machines clock
@@ -248,6 +251,9 @@ for ( $ctr = 0, $cnt = scalar(@deltas); $ctr < $cnt; $ctr++ ) {
 	print FILE "Queue\n";
 	close(FILE);
 	
+	CondorTest::debug("Command file is $cmdFile\n",1);
+	system("cat $cmdFile");
+
 	##
 	## success
 	## Dynamically create our callback function
@@ -543,8 +549,8 @@ sub extractExecuteTime {
 	(undef, undef, undef, undef, undef, $year, undef, undef, $isdst) = localtime(time); 
 	$timestamp = mktime($second, $minute, $hour, $day, $month - 1, $year, 0, 0, $isdst);
     
-    #print "$month/$day/".($year + 1900)." $hour:$minute:$second\n";
-    #print "RUN TIME: $timestamp\n";
+    print "$month/$day/".($year + 1900)." $hour:$minute:$second\n";
+    print "RUN TIME: $timestamp\n";
     return ($timestamp);
 };
 
