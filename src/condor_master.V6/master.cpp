@@ -773,18 +773,22 @@ init_daemon_list()
 			default_list.rewind();
 			char *default_entry;
 			while( (default_entry=default_list.next()) ) {
-			  if( !dc_daemon_names.contains_anycase(default_entry) ) {
-				dprintf(D_ALWAYS,
-						"WARNING: expected to find %s in DC_DAEMON_LIST,"
-						" but it is not there.  Unless you know what you are"
-						" doing, it is best to leave DC_DAEMON_LIST undefined"
-						" so that the default settings are used, or use the"
-						" new 'DC_DAEMON_LIST = +<list>' syntax.\n",
-						default_entry);
+				if( !dc_daemon_names.contains_anycase(default_entry) ) {
+					dprintf(D_ALWAYS,
+							"WARNING: expected to find %s in"
+							" DC_DAEMON_LIST, but it is not there."
+							"  Unless you know what you are doing, it"
+							" is best to leave DC_DAEMON_LIST undefined"
+							" so that the default settings are used,"
+							" or use the new 'DC_DAEMON_LIST ="
+							" +<list>' syntax.\n",
+							default_entry);
+				}
 			}
 		}
 		free(dc_daemon_list);
 	}
+
 		// Tolerate a trailing comma in the list
 	dc_daemon_names.remove( "" );
 
