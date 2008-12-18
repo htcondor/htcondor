@@ -2944,8 +2944,13 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 
     	if( node->JobType() == Job::TYPE_CONDOR ) {
 	  		node->_submitTries++;
+				// Note: assigning the ParentListString() return value
+				// to a variable here, instead of just passing it directly
+				// to condor_submit(), fixes a memory leak(!).
+				// wenger 2008-12-18
+			MyString parents = ParentListString( node );
       		submit_success = condor_submit( dm, cmd_file.Value(), condorID,
-						node->GetJobName(), ParentListString( node ),
+						node->GetJobName(), parents,
 						node->varNamesFromDag, node->varValsFromDag,
 						node->GetDirectory() );
     	} else if( node->JobType() == Job::TYPE_STORK ) {
