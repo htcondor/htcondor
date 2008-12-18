@@ -289,7 +289,7 @@ UserLog::Reset( void )
 	base += utc.microseconds();
 	base += '.';
 
-	m_global_uniq_base = strdup( base.GetCStr( ) );
+	m_global_uniq_base = strdup( base.Value( ) );
 	m_global_sequence = 1;
 }
 
@@ -686,7 +686,7 @@ UserLog::doRotation( const char *path, FILE *&fp,
 			if ( 0 == s.GetRc() ) {
 				MyString old2( path );
 				old2.sprintf_cat(".%d", i );
-				rename( old1.GetCStr(), old2.GetCStr() );
+				rename( old1.Value(), old2.Value() );
 				num_rotations++;
 			}
 		}
@@ -823,7 +823,7 @@ UserLog::doWriteEvent( FILE *fp, ULogEvent *event, bool use_xml )
 			xmlunp.SetUseCompactSpacing(false);
 			xmlunp.SetOutputTargetType(false);
 			xmlunp.Unparse(eventAd, adXML);
-			if (fprintf ( fp, adXML.GetCStr()) < 0) {
+			if (fprintf ( fp, adXML.Value()) < 0) {
 				success = false;
 			} else {
 				success = true;

@@ -127,7 +127,7 @@ UserLogHeader::sprint_cat( MyString &buf ) const
 	if ( m_valid ) {
 		const char	*id = "";
 		if ( m_id.Length() ) {
-			id = m_id.GetCStr();
+			id = m_id.Value();
 		}
 		buf.sprintf_cat( "id=%s"
 						 " seq=%d"
@@ -158,7 +158,7 @@ UserLogHeader::dprint( int level, MyString &buf ) const
 	}
 
 	sprint_cat( buf );
-	::dprintf( level, "%s\n", buf.GetCStr() );
+	::dprintf( level, "%s\n", buf.Value() );
 }
 
 // dprint() method
@@ -244,7 +244,7 @@ WriteUserLogHeader::GenerateEvent( GenericEvent &event )
 			  "offset="FILESIZE_T_FORMAT" "
 			  "event_off=%"PRId64" ",
 			  (int) getCtime(),
-			  getId().GetCStr(),
+			  getId().Value(),
 			  getSequence(),
 			  getSize(),
 			  getNumEvents(),

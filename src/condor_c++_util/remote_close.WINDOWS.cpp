@@ -214,7 +214,7 @@ DWORD RemoteFindAndCloseA ( PCSTR filename, PCSTR filter )  {
             dprintf ( 
                 D_FULLDEBUG, 
                 "RemoteCloseA: Closing handle in process '%s' (%u)", 
-                processName.GetCStr (), 
+                processName.Value (), 
                 h.ProcessID );
 
             last_error = CloseRemoteHandle ( 

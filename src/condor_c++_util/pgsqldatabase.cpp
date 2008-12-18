@@ -745,7 +745,7 @@ PGSQLDatabase::getHistoryHorValue(SQLQuery *queryhor,
 	const char *dataptr = PQgetvalue(historyHorRes, row - historyHorFirstRowIndex, col);
 	if(QUILLPP_HistoryHorIsQuoted[col]) {
 		bufferedResult.sprintf("\"%s\"", dataptr);
-		*value =  bufferedResult.GetCStr();
+		*value =  bufferedResult.Value();
 	} else {
 		*value = dataptr;
 	}
@@ -800,7 +800,7 @@ PGSQLDatabase::getJobQueueProcAds_HorValue(int row, int col)
 
 	if(proc_field_is_quoted[col]) {
 		bufferedResult.sprintf("\"%s\"", dataptr);
-		return bufferedResult.GetCStr();
+		return bufferedResult.Value();
 	} else {
 		return dataptr;
 	}
@@ -823,7 +823,7 @@ PGSQLDatabase::getJobQueueClusterAds_HorValue(int row, int col)
 
 	if(cluster_field_is_quoted[col]) {
 		bufferedResult.sprintf("\"%s\"", dataptr);
-		return bufferedResult.GetCStr();
+		return bufferedResult.Value();
 	} else {
 		return dataptr;
 	}

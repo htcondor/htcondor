@@ -376,7 +376,7 @@ ReadEvents(Options &opts, int &numEvents)
 			MyString			str;
 
 			rstate.GetStateString( state, str, "Restore File State" );
-			puts( str.GetCStr() );
+			puts( str.Value() );
 		}
 #     endif
 
@@ -560,7 +560,7 @@ ReadEvents(Options &opts, int &numEvents)
 		MyString			str;
 
 		rstate.GetStateString( state, str, "Final File State" );
-		puts( str.GetCStr() );
+		puts( str.Value() );
 	}
 #  endif
 

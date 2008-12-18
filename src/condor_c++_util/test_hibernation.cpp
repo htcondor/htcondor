@@ -76,8 +76,8 @@ main(int argc, const char **argv)
 	else {
 		MyString	sinful;
 		sinful.sprintf( "<%s:1234>", opts.m_address );
-		printf( "Creating network adapter object for %s\n", sinful.GetCStr() );
-		net = NetworkAdapterBase::createNetworkAdapter( sinful.GetCStr() );
+		printf( "Creating network adapter object for %s\n", sinful.Value() );
+		net = NetworkAdapterBase::createNetworkAdapter( sinful.Value() );
 	}
 	if ( !net ) {
 		printf( "Error creating adapter\n" );
@@ -113,10 +113,10 @@ main(int argc, const char **argv)
 
 	MyString	tmpstr;
 	net->wakeSupportedString( tmpstr );
-	printf( "wake support flags: %s\n", tmpstr.GetCStr() );
+	printf( "wake support flags: %s\n", tmpstr.Value() );
 
 	net->wakeEnabledString( tmpstr );
-	printf( "wake enable flags: %s\n", tmpstr.GetCStr() );
+	printf( "wake enable flags: %s\n", tmpstr.Value() );
 
 	ClassAd	ad;
 	net->publish( ad );

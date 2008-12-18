@@ -638,7 +638,7 @@ BOOL SystemHandleInformation::GetType( HANDLE h, WORD& type, DWORD processId )
 	if ( !GetTypeToken( h, strType, processId ) )
 		return FALSE;
 
-	return GetTypeFromTypeToken( strType.GetCStr (), type );
+	return GetTypeFromTypeToken( strType.Value (), type );
 }
 
 BOOL SystemHandleInformation::GetTypeFromTypeToken( LPCTSTR typeToken, WORD& type )

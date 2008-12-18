@@ -270,7 +270,7 @@ ReadUserLogState::ScoreFile( int rot ) const
 	if ( !GeneratePath( rot, path ) ) {
 		return -1;
 	}
-	return ScoreFile( path.GetCStr(), rot );
+	return ScoreFile( path.Value(), rot );
 }
 
 int
@@ -340,7 +340,7 @@ ReadUserLogState::ScoreFile( const StatStructType &statbuf, int rot ) const
 
 	if ( DebugFlags & D_FULLDEBUG ) {
 		dprintf( D_FULLDEBUG, "ScoreFile: match list: %s\n",
-				 MatchList.GetCStr() );
+				 MatchList.Value() );
 	}
 
 	// Min score is zero
@@ -388,7 +388,7 @@ ReadUserLogState::CheckFileStatus( int fd )
 	}
 
 	if ( m_cur_path.Length() && !sb.IsBufValid() ) {
-		sb.Stat( m_cur_path.GetCStr() );
+		sb.Stat( m_cur_path.Value() );
 	}
 
 	if ( sb.GetRc() ) {
@@ -482,9 +482,9 @@ ReadUserLogState::GetState( ReadUserLog::FileState &state ) const
 	// The paths shouldn't change... copy them only the first time
 	if( !strlen( istate->m_base_path ) ) {
 		memset( istate->m_base_path, sizeof(istate->m_base_path), 0 );
-		if ( m_base_path.GetCStr() ) {
+		if ( m_base_path.Value() ) {
 			strncpy( istate->m_base_path,
-					 m_base_path.GetCStr(),
+					 m_base_path.Value(),
 					 sizeof(istate->m_base_path) - 1 );
 		}
 	}
@@ -496,9 +496,9 @@ ReadUserLogState::GetState( ReadUserLog::FileState &state ) const
 
 	istate->m_log_type = m_log_type;
 
-	if( m_uniq_id.GetCStr() ) {
+	if( m_uniq_id.Value() ) {
 		strncpy( istate->m_uniq_id,
-				 m_uniq_id.GetCStr(),
+				 m_uniq_id.Value(),
 				 sizeof(istate->m_uniq_id) );
 		istate->m_uniq_id[sizeof(istate->m_uniq_id) - 1] = '\0';
 	}
@@ -566,7 +566,7 @@ ReadUserLogState::SetState( const ReadUserLog::FileState &state )
 
 	MyString	str;
 	GetStateString( str, "Restored reader state" );
-	dprintf( D_FULLDEBUG, str.GetCStr() );
+	dprintf( D_FULLDEBUG, str.Value() );
 
 	return true;
 }
@@ -584,8 +584,8 @@ ReadUserLogState::GetStateString( MyString &str, const char *label ) const
 		"  UniqId = %s, seq = %d\n"
 		"  rotation = %d; max = %d; offset = %ld; type = %d\n"
 		"  inode = %u; ctime = %d; size = %ld\n",
-		m_base_path.GetCStr(), m_cur_path.GetCStr(),
-		m_uniq_id.GetCStr() ? m_uniq_id.GetCStr() : "", m_sequence,
+		m_base_path.Value(), m_cur_path.Value(),
+		m_uniq_id.Value(), m_sequence,
 		m_cur_rot, m_max_rotations, (long) m_offset, m_log_type,
 		(unsigned)m_stat_buf.st_ino, (int)m_stat_buf.st_ctime,
 		(long)m_stat_buf.st_size );
@@ -667,7 +667,7 @@ ReadUserLogState::CurPath( const ReadUserLog::FileState &state ) const
 	if ( !GeneratePath( istate->m_rotation, path, true ) ) {
 		return NULL;
 	}
-	return path.GetCStr();
+	return path.Value();
 }
 
 int

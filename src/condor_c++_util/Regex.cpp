@@ -80,7 +80,7 @@ Regex::compile(const MyString & pattern,
 			   int * erroffset,
 			   int options_param)
 {
-	re = pcre_compile(pattern.GetCStr(), options_param, errptr, erroffset, NULL);
+	re = pcre_compile(pattern.Value(), options_param, errptr, erroffset, NULL);
 
 	return (NULL != re);
 }
@@ -105,7 +105,7 @@ Regex::match(const MyString & string,
 
 	int rc = pcre_exec(re,
 					   NULL,
-					   string.GetCStr(),
+					   string.Value(),
 					   string.Length(),
 					   0, // Index in string from which to start matching
 					   options,

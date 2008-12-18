@@ -217,7 +217,7 @@ StatWrapper::init( void )
 bool
 StatWrapper::SetPath( const MyString &path )
 {
-	return SetPath( path.GetCStr() );
+	return SetPath( path.Value() );
 }
 
 // Set the path(s)

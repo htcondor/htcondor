@@ -277,7 +277,7 @@ ReadMultipleUserLogs::initializeUninitializedLogs()
 	for (int index = 0; index < iLogFileCount; index++) {
 	    LogFileEntry &log = pLogFileEntries[index];
 		if (!log.isInitialized) {
-		    if (log.readUserLog.initialize(log.strFilename.GetCStr())) {
+		    if (log.readUserLog.initialize(log.strFilename.Value())) {
 				log.isInitialized = true;
 				log.isValid = true;
 			    result = true;
@@ -294,7 +294,7 @@ bool
 ReadMultipleUserLogs::LogGrew(LogFileEntry &log)
 {
     dprintf( D_FULLDEBUG, "ReadMultipleUserLogs::LogGrew(%s)\n",
-			log.strFilename.GetCStr());
+			log.strFilename.Value());
 
 	if ( !log.isInitialized || !log.isValid ) {
 	    return false;
@@ -306,7 +306,7 @@ ReadMultipleUserLogs::LogGrew(LogFileEntry &log)
 		dprintf( D_FULLDEBUG,
 				 "ReadMultipleUserLogs error: can't stat "
 				 "condor log (%s): %s\n",
-				 log.strFilename.GetCStr(), strerror( errno ) );
+				 log.strFilename.Value(), strerror( errno ) );
 		return false;
 	}
 	bool grew = ( fs != ReadUserLog::LOG_STATUS_NOCHANGE );

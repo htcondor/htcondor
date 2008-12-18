@@ -144,7 +144,7 @@ NetworkAdapterBase::getWolString(unsigned bits, char *buf, int bufsize) const
 {
 	MyString	s;
 	getWolString( bits, s );
-	strncpy( buf, s.GetCStr(), bufsize );
+	strncpy( buf, s.Value(), bufsize );
 	buf[bufsize-1] = '\0';
 	return buf;
 }
