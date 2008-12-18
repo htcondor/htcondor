@@ -99,6 +99,10 @@ class JobRouter: public Service {
 	// Have the job be rerouted.
 	void RerouteJob(RoutedJob *job);
 
+		// Provide access to the Scheduler, which holds the
+		// ClassAdCollection
+	Scheduler *GetScheduler() { return m_scheduler; }
+
  private:
 	HashTable<std::string,RoutedJob *> m_jobs;  //key="src job id"
 	RoutingTable *m_routes; //key="route name"
