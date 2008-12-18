@@ -250,7 +250,6 @@ write_with_status(LogRecord *log, stream_with_status_t* s)
   }
 
   if (log->Write(s->fp) < 0) {
-    EXCEPT("write failed here!!!");
     s->why = WHY_WRITE;
     s->err = errno;
     return -1;
