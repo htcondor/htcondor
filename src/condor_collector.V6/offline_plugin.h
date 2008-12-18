@@ -31,7 +31,7 @@
  * OfflineCollectorPlugin class
  ***************************************************************/
 
-class OfflineCollectorPlugin {
+class OfflineCollectorPlugin : public Service {
 
 public:
 
@@ -43,7 +43,7 @@ public:
     /** Reconfigures the plug-in (also used in construction, to
         initialize the plug-in) .
         */
-    void configure ();
+    void configure ( int classad_lifetime );
 
     /** Receive a ClassAd sent as part of an UPDATE_ command,
 	    command int is provided.
@@ -69,14 +69,26 @@ public:
         */
     bool enabled () const;
 
+protected:
+
+    /** Called on a timer to update the expiry time for ads we are
+        monitoring.  We don't want them to expire on our watch.
+        */
+    int update_classad_lifetime ();
+
 private:
 
     /** Persistent copies of machine class-ads to allow us
         to wake hibernating machines. */
-    ClassAdCollection   *m_ads;
+    ClassAdCollection   *_ads;
 
     /** Storage destination for persistent ads */
-    char                *m_persistent_store;
+    char                *_persistent_store;
+
+    /** Timer ID and interval for updating all off line ads' 
+        last ping time */
+    int                 _update_classad_lifetime_timer_id;
+    int                 _update_interval;
 
 };
 

@@ -281,12 +281,13 @@ void CollectorDaemon::Init()
 
                 /* this happens when we get a classad for which a hash 
                 key could not been made. This occurs when certain 
-                attributes are needed for the particular catagory the
+                attributes are needed for the particular category the
                 ad is destined for, but they are not present in the 
-                ad. */
+                ad itself. */
 			    dprintf (
                     D_ALWAYS,
 				    "Received malformed ad. Ignoring.\n" );
+
 	        }
 
 	    }
@@ -1221,7 +1222,7 @@ void CollectorDaemon::Config()
     collector.scheduleHousekeeper( ClassadLifetime );
 
 #if ( HAVE_HIBERNATION )
-    offline_plugin_.configure();
+    offline_plugin_.configure ( ClassadLifetime );
 #endif
 
     // if we're not the View Collector, let's set something up to forward

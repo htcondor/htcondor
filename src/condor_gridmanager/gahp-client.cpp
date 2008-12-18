@@ -1211,7 +1211,35 @@ escapeGahpString(const char * input)
 const char *
 GahpClient::getErrorString()
 {
-	return error_string.Value();
+	static MyString output;
+
+	output = "";
+
+	unsigned int i = 0;
+	int input_len = error_string.Length();
+	for (i=0; i < input_len; i++) {
+			// Some error strings may contain characters that are
+			// undesirable. Specifically, when logging, a \n can cause
+			// trouble. More critically, the error_string is often
+			// sent to the Schedd as a HoldReason, where it will be
+			// rejected because attribute values cannot contain a
+			// newline. This became necessary (and obvious) when the
+			// amazon_gahp returned an error message that contained
+			// \n's.
+		switch (error_string[i]) {
+		case '\n':
+			output += "\\n";
+			break;
+		case '\r':
+			output += "\\r";
+			break;
+		default:
+			output += error_string[i];
+			break;
+		}
+	}
+
+	return output.Value();
 }
 
 const char *

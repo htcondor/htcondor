@@ -24,6 +24,7 @@
 #include "status_string.h"
 #include "JobRouter.h"
 #include "set_user_from_ad.h"
+#include "Scheduler.h"
 
 extern JobRouter* job_router;
 
@@ -621,6 +622,27 @@ StatusClient::hookExited(int exit_status)
 					"hook output.  Job status NOT updated.\n");
 			return;
 		}
+
+			// The dest_key (dest_ad) may have changed while we were
+			// running the hook, meaning we'll be out of sync with the
+			// ClassAdCollection. To avoid writing stale data back
+			// into the collection we MUST pull from it before
+			// updating anything.
+		classad::ClassAd *new_dest_ad = job_router->GetScheduler()->GetClassAds()->GetClassAd(m_routed_job->dest_key);
+
+			// It is possible that the dest_key was deleted while we
+			// were away, in which case we cannot update it.
+		if (!new_dest_ad) {
+			dprintf(D_ALWAYS,
+					"StatusClient::hookExited: Failed because ad %s "
+					"disappeared while hook was executing. Nothing "
+					"will be updated.\n",
+					m_routed_job->dest_key.c_str());
+			return;
+		} else {
+			m_routed_job->SetDestJobAd(new_dest_ad);
+		}
+
 		if (false == m_routed_job->dest_ad.Update(new_job_ad))
 		{
 			dprintf(D_ALWAYS, "StatusClient::hookExited: Failed to "
