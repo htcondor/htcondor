@@ -2694,7 +2694,7 @@ AssignExpr(char const *variable,char const *value)
 {
 	MyString buf;
 
-	if (!IsValidAttrName(variable)) {
+	if (!IsValidAttrName(variable) || !IsValidAttrValue(value)) {
 		return FALSE;
 	}
 
@@ -2735,7 +2735,7 @@ Assign(char const *variable, MyString &value)
 int AttrList::
 Assign(char const *variable,char const *value)
 {
-	if (!IsValidAttrName(variable)) {
+	if (!IsValidAttrName(variable) || !IsValidAttrValue(value)) {
 		return FALSE;
 	}
 
@@ -2881,6 +2881,29 @@ AttrList::IsValidAttrName(const char *name) {
 			return false;
 		}
 		name++;
+	}
+
+	return true;
+}
+
+// Determine if a value is valid to be written to the log. The value
+// is a RHS of an expression. According to LogSetAttribute::WriteBody,
+// the only invalid character is a '\n'.
+bool
+AttrList::IsValidAttrValue(const char *value) {
+		// NULL value is not invalid, may translate to UNDEFINED.
+	if (!value) {
+		return true;
+	}
+
+		// According to LogSetAttribute::WriteBody, the only invalid
+		// character for a value is '\n'.
+	while (*value) {
+		if (((*value) == '\n') ||
+			((*value) == '\r')) {
+			return false;
+		}
+		value++;
 	}
 
 	return true;

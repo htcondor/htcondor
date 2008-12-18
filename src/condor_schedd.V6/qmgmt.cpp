@@ -1757,6 +1757,16 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		return -1;
 	}
 
+		// If someone is trying to do something funny with an invalid
+		// attribute value, bail earlyxs
+	if (!AttrList::IsValidAttrValue(attr_value)) {
+		dprintf(D_ALWAYS,
+				"SetAttribute received invalid attribute value '%s' for "
+				"job %d.%d, ignoring\n",
+				attr_value ? attr_value : "(null)", cluster_id, proc_id);
+		return -1;
+	}
+
 	IdToStr(cluster_id,proc_id,key);
 
 	if (JobQueue->LookupClassAd(key, ad)) {
