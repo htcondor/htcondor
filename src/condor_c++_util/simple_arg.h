@@ -38,7 +38,8 @@ public:
 
 	// options: generic
 	bool hasOpt( void ) const { return m_opt != NULL; };
-	const char *getOpt( void ) const { return m_opt; };
+	const char *getOpt( bool consume = true )
+		{ const char *t = m_opt; ConsumeOpt(consume); return t; };
 
 	// option: string operations
 	bool isOptStr( void ) const { return m_opt != NULL; };

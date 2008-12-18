@@ -124,7 +124,7 @@ while($qstat != RUNNING)
 	sleep 4;
 	$qstat = CondorTest::getJobStatus(1.1);
 }
-CondorTest::debug(" ok\n",1);
+CondorTest::debug("have 2 jobs running on scheddone - ok\n",1);
 
 $qstat = CondorTest::getJobStatus(1.0);
 CondorTest::debug("remote cluster 1.0 status is $qstat\n",1);
@@ -169,7 +169,7 @@ while($qstat != RUNNING)
 	sleep 4;
 	$qstat = CondorTest::getJobStatus(1.0);
 }
-CondorTest::debug(" ok\n",1);
+CondorTest::debug("have 2 jobs running on local pool - ok\n",1);
 
 my $cmdstatus;
 my $sched1 = "master_" . $mypid . "local" . "@" . $currenthost;;
@@ -253,7 +253,7 @@ if($bail == 1) {
         	exit(1)
     	}
 	
-		CondorTest::debug("Looking for exactly 2 idle slots\n",1);
+		CondorTest::debug("Looking for at least 2 idle slots\n",1);
 		$numclaimed = 0;
 		foreach $line (@adarray) {
 			if($line =~ /^\s*slot\d+.*Idle.*\s*$/) {
@@ -264,7 +264,9 @@ if($bail == 1) {
 			}
 		}
 
-		if($numclaimed == 2) {
+		# with more tests running we can not assume all 4 jobs
+		# we started are still running so idle can be more then 2 12/15/08
+		if($numclaimed >= 2) {
 			$done = 1;
 			last;
 		}
@@ -293,49 +295,8 @@ if( -e "$mysubmitnmlog" )
 	system("cp $mysubmitnmlog $mycorenmlog");
 }
 
-# still set to local config
- $ENV{CONDOR_CONFIG} = $locconfig;
-
-my $status = 1;
-my $cmd = "condor_rm -all";
-$status = CondorTest::runCondorTool($cmd,\@adarray,2);
-if(!$status)
-{
-	CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
-	exit(1)
-}
-
-sleep(5);
-
-$cmd = "condor_off -fast -master";
-$status = CondorTest::runCondorTool($cmd,\@adarray,2);
-if(!$status)
-{
-	CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
-	exit(1)
-}
-
-$ENV{CONDOR_CONFIG} = $scheddoneconfig;
-
-$status = 1;
-$cmd = "condor_rm -all";
-$status = CondorTest::runCondorTool($cmd,\@adarray,2);
-if(!$status)
-{
-	CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
-	exit(1)
-}
-
-sleep(5);
-
-$cmd = "condor_off -fast -master";
-$status = CondorTest::runCondorTool($cmd,\@adarray,2);
-if(!$status)
-{
-	CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
-	exit(1)
-}
-
+CondorPersonal::KillDaemonPids($locconfig);
+CondorPersonal::KillDaemonPids($scheddoneconfig);
 system("date");
 
 if( $done == 0 )
@@ -344,6 +305,5 @@ if( $done == 0 )
 	exit(1);
 }
 
-CondorTest::debug("cmd_status_shows-constraint SUCCESS\n",1);
-system("date");
+CondorTest::debug("cmd_q_shows-constraint SUCCESS\n",1);
 exit(0);

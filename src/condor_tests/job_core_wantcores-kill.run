@@ -25,9 +25,10 @@ use Cwd;
 
 $topdir = getcwd();
 
-$testname = 'job_core_time-deferral_local - local U time deferral';
-$cmd = "job_core_time-deferral_local.cmd";
-$corename = "job_core_time-deferral_local";
+$cmd_template = "job_core_wantcores.template";
+$testname = 'job_core_wantcores - Simple parallel job';
+$cmd = "job_core_wantcores.cmd";
+$corename = "job_core_wantcores";
 
 # where am I running
 $currenthost = CondorTest::getFqdnHost();
@@ -54,26 +55,61 @@ print "Master PID is $mypid\n";
 #print "Master PID submit file is $mysubmitnm\n";
 
 # Edit template config info for signal and location
+my $figsrc = "x_wantcore_configpostsrc";
+my $figsrctemp = $figsrc . ".template";
+my $signal = "KILL";
+my $line;
+open(CSUB,">$figsrc") || die "Can't open new config info file<$figsrc>: $!\n";
+open(TPLATE,"<$figsrctemp") || die "Can't config info template<$figsrctemp>: $!\n";
+while(<TPLATE>)
+{
+	CondorTest::fullchomp($_);
+	$line = $_;
+	if( $line =~ /^\s*KILLER\s*=\s*(.*)\s*$/)
+	{
+		my $lognm = $mysubmitnmlog;
+		print "killer name is $1\n";
+		print CSUB "KILLER = $topdir/$1\n";
+	}
+	elsif( $line =~ /^\s*KILLER_ARGS\s*= .*$/)
+	{
+		print "Set signal to $signal\n";
+		print CSUB "KILLER_ARGS = $signal\n";
+	}
+	else
+	{
+		print "template: $line\n";
+		print CSUB "$line\n";
+	}
+}
+close(TPLATE);
+close(CSUB);
 
 # get a remote scheduler running (side b)
-my $configrem = CondorPersonal::StartCondor("x_param.timedeferloc" ,"timedeferloc");
-my @timedeferloc = split /\+/, $configrem;
-my $timedeferlocconfig = shift @timedeferloc;
-my $timedeferlocport = shift @timedeferloc;
+my $configrem = CondorPersonal::StartCondor("x_param.wantcore" ,"wantcore");
+my @wantcore = split /\+/, $configrem;
+my $wantcoreconfig = shift @wantcore;
+my $wantcoreport = shift @wantcore;
 my $logdir = "";
 
+if($wantcoreconfig =~ /^(.*)\/condor_config.*$/) {
+	$logdir = $1 . "/log";
+	print "LOGDIR is $logdir\n";
+	system("ls -l $logdir");
+}
 
-CondorTest::debug("---local max-running config is $timedeferlocconfig and remote port is $timedeferlocport---\n",1);
+CondorTest::debug("---Parallel config is $wantcoreconfig and remote port is $wantcoreport---\n",1);
 
-$ENV{CONDOR_CONFIG} = $timedeferlocconfig;
+$ENV{CONDOR_CONFIG} = $wantcoreconfig;
 
-CondorTest::debug("Set config to $timedeferlocconfig\n",1);
+CondorTest::debug("Set config to $wantcoreconfig\n",1);
 
-my $result = CondorPersonal::PersonalSystem("./job_core_time-deferral.pl local");
-CondorTest::debug("Result of max-run_local test  job is  $result\n",1);
+system("ls -l $logdir");
+my $result = CondorPersonal::PersonalSystem("./job_core_wantcores-look.pl $logdir");
+CondorTest::debug("Result of core file test  job is  $result\n",1);
 
 
-system("cp *job_core_time-deferral_local* $mysaveme");
+system("cp *job_core_wantcores* $mysaveme");
 
 if( -e "$mysubmitnm" )
 {
@@ -90,7 +126,7 @@ if( -e "$mysubmitnmlog" )
 	system("cp $mysubmitnmlog $mycorenmlog");
 }
 
-CondorPersonal::KillDaemonPids($timedeferlocconfig);
+CondorPersonal::KillDaemonPids($wantcoreconfig);
 system("date");
 
 if( $result != 0 )
@@ -98,5 +134,5 @@ if( $result != 0 )
 	exit(1);
 }
 
-CondorTest::debug("job_core_time-deferral_local SUCCESS\n",1);
+CondorTest::debug("job_core_wantcores-kill SUCCESS\n",1);
 exit(0);

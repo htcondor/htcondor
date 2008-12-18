@@ -44,94 +44,81 @@ if($mypid == 0) {
 	die "Saveme setup for test failed\n";
 }
 
-	#print "$line\n";
-	$myparamname = $corename . $mypid . ".param";
-	$mysubmitnm = $corename . $mypid . ".cmd";
-	$mysubmitnmout = $corename . $mypid . ".cmd.out";
-	$mysubmitnmlog = $corename . $mypid . ".log";
-	$mysubmitnmout = $corename . $mypid . ".log";
-	$mycorenm = $corename . ".cmd";
-	$mycorenmout = $corename . ".cmd.out";
-	$mycorenmlog = $corename . ".log";
+#print "$line\n";
+$myparamname = $corename . $mypid . ".param";
+$mysubmitnm = $corename . $mypid . ".cmd";
+$mysubmitnmout = $corename . $mypid . ".cmd.out";
+$mysubmitnmlog = $corename . $mypid . ".log";
+$mysubmitnmout = $corename . $mypid . ".log";
+$mycorenm = $corename . ".cmd";
+$mycorenmout = $corename . ".cmd.out";
+$mycorenmlog = $corename . ".log";
 
-	CondorTest::debug("Master PID is $mypid\n",1);
-	CondorTest::debug("Master PID submit file is $mysubmitnm\n",1);
+CondorTest::debug("Master PID is $mypid\n",1);
+CondorTest::debug("Master PID submit file is $mysubmitnm\n",1);
 
-	# Edit submit file to submit to scheduler at securitypool (side b) schedd.
-	my $line;
-	open(CSUB,">$myparamname") || die "Can't open new submit file $myparamname: $!\n";
-	open(TPLATE,"<$param_template") || die "Can't open param template $param_template: $!\n";
-	while(<TPLATE>)
-	{
-		CondorTest::fullchomp($_);
-		$line = $_;
-		if( $line =~ /^\s*secprepostsrc\s*=\s*.*$/ )
-		{
-			CondorTest::debug("Setting up for $mytestnegotiation\n",1);
-			print CSUB "secprepostsrc = $mytestnegotiation\n";
-		}
-		else
-		{
-			CondorTest::debug("template: $line\n",1);
-			print CSUB "$line\n";
-		}
-	}
-	close(TPLATE);
-	close(CSUB);
-	sleep 10;
-
-	my $configsec = CondorPersonal::StartCondor($myparamname ,"allowdeny", $mypid);
-	my @securitypool = split /\+/, $configsec;
-	my $secconfig = shift @securitypool;
-	my $secport = shift @securitypool;
-
-	CondorTest::debug("---security config is $secconfig and securitypool port is $secport---\n",1);
-	
-
-	$ENV{CONDOR_CONFIG} = $secconfig;
-	# submit into local schedd (side a)
-
-	my $result = system("./x_lib_auth_protocol.pl $mypid \"allowdeny\" $mytestnegotiation_result $mycmdfile");
-	CondorTest::debug("Result of crafted lib_auth_allowdeny-ctb job is  $result\n",1);
-
-	system("cp *$corename* $mysaveme");
-	
-	if( -e "$mysubmitnm" )
-	{
-		system("cp $mysubmitnm $mycorenm");
-	}
-
-	if( -e "$mysubmitnmout" )
-	{
-		system("cp $mysubmitnmout $mycorenmout");
-	}
-
-	if( -e "$mysubmitnmlog" )
-	{
-		system("cp $mysubmitnmlog $mycorenmlog");
-	}
-
-	my @adarray;
-	my $status = 1;
-	my $cmd = "condor_off -fast -master";
-	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
-	if(!$status)
-	{
-		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
-		exit(1)
-	}
-
-	if(!$status)
-	{
-		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
-		exit(1)
-	}
-
-system("date");
-
-if( $result != 0 )
+# Edit submit file to submit to scheduler at securitypool (side b) schedd.
+my $line;
+open(CSUB,">$myparamname") || die "Can't open new submit file $myparamname: $!\n";
+open(TPLATE,"<$param_template") || die "Can't open param template $param_template: $!\n";
+while(<TPLATE>)
 {
-	# actual test failed but we allowed cleanup
-	exit(1);
+	CondorTest::fullchomp($_);
+	$line = $_;
+	if( $line =~ /^\s*secprepostsrc\s*=\s*.*$/ )
+	{
+		CondorTest::debug("Setting up for $mytestnegotiation\n",1);
+		print CSUB "secprepostsrc = $mytestnegotiation\n";
+	}
+	else
+	{
+		CondorTest::debug("template: $line\n",1);
+		print CSUB "$line\n";
+	}
+}
+close(TPLATE);
+close(CSUB);
+sleep 10;
+
+my $configsec = CondorPersonal::StartCondor($myparamname ,"allowdeny", $mypid);
+my @securitypool = split /\+/, $configsec;
+my $secconfig = shift @securitypool;
+my $secport = shift @securitypool;
+
+CondorTest::debug("---security config is $secconfig and securitypool port is $secport---\n",1);
+	
+
+$ENV{CONDOR_CONFIG} = $secconfig;
+# submit into local schedd (side a)
+
+my $result = system("./x_lib_auth_protocol.pl $mypid \"allowdeny\" $mytestnegotiation_result $mycmdfile");
+CondorTest::debug("Result of crafted lib_auth_allowdeny-ctb job is  $result\n",1);
+
+system("cp *$corename* $mysaveme");
+	
+if( -e "$mysubmitnm" )
+{
+	system("cp $mysubmitnm $mycorenm");
 }
 
+if( -e "$mysubmitnmout" )
+{
+	system("cp $mysubmitnmout $mycorenmout");
+}
+
+if( -e "$mysubmitnmlog" )
+{
+	system("cp $mysubmitnmlog $mycorenmlog");
+}
+
+CondorPersonal::KillDaemonPids($secconfig);
+system("date");
+
+if($result != 0)
+{
+    # actual job failed but we allowed cleanup
+    exit(1);
+}
+
+CondorTest::debug("lib_auth_allowdeny-ctb SUCCESS\n",1);
+exit(0);

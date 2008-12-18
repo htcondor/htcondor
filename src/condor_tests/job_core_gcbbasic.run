@@ -117,34 +117,13 @@ if( -e "$mysubmitnmlog" )
 	system("cp $mysubmitnmlog $mycorenmlog");
 }
 
-# still set to local config
-# $ENV{CONDOR_CONFIG} = $locconfig;
-
-my @adarray;
-my $status = 1;
-#my $cmd = "condor_rm -all";
-#$status = CondorTest::runCondorTool($cmd,\@adarray,2);
-#if(!$status)
-#{
-	#print "Test failure due to Condor Tool Failure<$cmd>\n";
-	#exit(1)
-#}
-
-$status = 1;
-$cmd = "condor_off -fast -master";
-$status = CondorTest::runCondorTool($cmd,\@adarray,2);
-if(!$status)
-{
-	CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
-	exit(1)
-}
+CondorPersonal::KillDaemonPids($locconfig);
+system("date");
 
 if( $bail == 1 )
 {
-	# actual test failed but we allowed cleanup
-	exit(1);
+    # actual test failed but we allowed cleanup
+    exit(1);
 }
-
 CondorTest::debug("job_core_gcbbasic SUCCESS\n",1);
-system("date");
 exit(0);

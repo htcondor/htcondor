@@ -342,14 +342,14 @@ Tests::cmdLine( int argc, const char *argv[] )
 			status = 1;
 
 		} else if ( (!arg.ArgIsOpt() ) && (NULL == m_lease_file) ) {
-			arg.getOpt( m_lease_file, false );
+			arg.getOpt( m_lease_file, true );
 
 		} else if ( ! arg.ArgIsOpt() ) {
 			switch( m_op ) {
 			case OP_NONE:
 			{
 				const char	*s;
-				arg.getOpt( s );
+				arg.getOpt( s, true );
 				if ( !strcasecmp(s, "GET" ) ) {
 					m_op = OP_GET;
 					m_op_str = "GET";
@@ -404,13 +404,13 @@ Tests::cmdLine( int argc, const char *argv[] )
 				break;
 
 			case OP_GET:
-				if (  !arg.getOpt(m_request_duration) ) {
+				if (  !arg.getOpt(m_request_duration, true) ) {
 					fprintf(stderr, "%s: invalid/missing duration\n",
 							arg.Arg() );
 					printf("%s", usage);
 					status = -1;
 				}
-				else if (  !arg.getOpt(m_request_count) ) {
+				else if (  !arg.getOpt(m_request_count, true) ) {
 					fprintf(stderr, "%s: invalid/missing count\n",
 							arg.Arg() );
 					printf("%s", usage);
@@ -420,7 +420,7 @@ Tests::cmdLine( int argc, const char *argv[] )
 
 			case OP_RENEW:
 			case OP_DELETE:
-				m_lease_ids.push_back( arg.Arg() );
+				m_lease_ids.push_back( arg.getOpt() );
 				break;
 
 			case OP_RELEASE:
@@ -431,7 +431,7 @@ Tests::cmdLine( int argc, const char *argv[] )
 					status = -1;
 				}
 				else {
-					m_lease_ids.push_back( arg.Arg() );
+					m_lease_ids.push_back( arg.getOpt() );
 				}
 				break;
 
@@ -473,7 +473,6 @@ Tests::init( void )
 	if ( ( m_lease_ids.size() == 1 )  &&
 		 ( !strcmp(m_lease_ids.front(),"*") )  ) {
 		list<DCLeaseManagerLease *>::iterator lease_iter;
-		bool	found = false;
 		for( lease_iter = m_leases.begin( );
 			 lease_iter != m_leases.end( );
 			 lease_iter++ ) {
@@ -524,7 +523,9 @@ Tests::readLeaseFile( const char *f )
 	}
 	FILE	*fp = fopen( f, "r+b" );
 	if ( NULL == fp ) {
-		fprintf( stderr, "Failed to open lease file %s\n", f );
+		if ( OP_GET != m_op ) {
+			fprintf( stderr, "Failed to open lease file %s\n", f );
+		}
 		return -1;
 	}
 	int count = DCLeaseManagerLease_freadList( getList(false), fp );
@@ -613,14 +614,21 @@ int
 Tests::doGet( void )
 {
 	// Build the ad
-	m_request_ad.InsertAttr( "Name", m_requestor_name );
+	if ( m_requestor_name ) {
+		m_request_ad.InsertAttr( "Name", m_requestor_name );
+	}
+	m_request_ad.InsertAttr( "RequestCount", m_request_count );
 	m_request_ad.InsertAttr( "LeaseDuration", m_request_duration );
+	if ( m_requirements ) {
+		m_request_ad.InsertAttr( "Requirements", m_requirements );
+	}
 
 	if ( m_verbose >= VERB_ALL ) {
-		printf( "request name: %s\n", m_name );
+		printf( "request name: %s\n", m_name ? m_name : "<NONE>" );
 		printf( "request count: %d\n", m_request_count );
 		printf( "request duration: %d\n", m_request_duration );
-		printf( "request requirements: %s\n", m_requirements );
+		printf( "request requirements: %s\n",
+				m_requirements ? m_requirements : "<NONE>" );
 	}
 
 	bool status = m_lm->getLeases( m_request_ad, getList(false) );
@@ -629,7 +637,7 @@ Tests::doGet( void )
 		return -1;
 	}
 
-	displayLeases( "NEW" );
+	displayLeases( "GET" );
 	return 0;
 }
 
@@ -724,14 +732,23 @@ Tests::displayLeases( const char *label, bool selected_only )
 
 	printf( "%s: %d leases:\n", label, leases.size() );
 
+	int		n = 0;
 	list< const DCLeaseManagerLease *>::iterator iter;
 	for( iter = leases.begin( );  iter != leases.end( );  iter++ ) {
 		const DCLeaseManagerLease	*lease = *iter;
 		classad::ClassAd			*ad = lease->leaseAd( );
 		string	name;
 		ad->EvaluateAttrString( "ResourceName", name );
-		printf( "  Resource=%s LeaseID=%s duration=%d remaining=%d"
-				" expired=%s dead=%s rlwd=%s\n",
+		printf( "  LEASE %d {\n"
+				"    Resource=%s\n"
+				"    LeaseID=%s\n"
+				"    duration=%d\n"
+				"    remaining=%d\n"
+				"    expired=%s\n"
+				"    dead=%s\n"
+				"    rlwd=%s\n"
+				"  }\n",
+				n++,
 				name.c_str(),
 				lease->leaseId().c_str(),
 				lease->leaseDuration(),

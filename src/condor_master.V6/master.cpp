@@ -141,8 +141,8 @@ char	*default_daemon_list[] = {
 // examples in src/condor_examples
 char	default_dc_daemon_list[] =
 "MASTER, STARTD, SCHEDD, KBDD, COLLECTOR, NEGOTIATOR, EVENTD, "
-"VIEW_SERVER, CONDOR_VIEW, VIEW_COLLECTOR, HAWKEYE, CREDD, HAD, "
-"DBMSD, QUILL, JOB_ROUTER, LEASEMANAGER";
+"VIEW_SERVER, CONDOR_VIEW, VIEW_COLLECTOR, CREDD, HAD, "
+"DBMSD, QUILL, JOB_ROUTER";
 
 // create an object of class daemons.
 class Daemons daemons;
@@ -754,21 +754,36 @@ init_daemon_list()
 	StringList daemon_names, dc_daemon_names;
 
 	char* dc_daemon_list = param("DC_DAEMON_LIST");
+
 	if( !dc_daemon_list ) {
 		dc_daemon_names.initializeFromString(default_dc_daemon_list);
 	}
 	else {
-		dc_daemon_names.initializeFromString(dc_daemon_list);
-		free(dc_daemon_list);
+		if ( *dc_daemon_list == '+' ) {
+			MyString	dclist;
+			dclist = default_dc_daemon_list;
+			dclist += ", ";
+			dclist += &dc_daemon_list[1];
+			dc_daemon_names.initializeFromString( dclist.GetCStr() );
+		}
+		else {
+			dc_daemon_names.initializeFromString(dc_daemon_list);
 
-		StringList default_list(default_dc_daemon_list);
-		default_list.rewind();
-		char *default_entry;
-		while( (default_entry=default_list.next()) ) {
-			if( !dc_daemon_names.contains_anycase(default_entry) ) {
-				dprintf(D_ALWAYS,"WARNING: expected to find %s in DC_DAEMON_LIST, but it is not there.  Unless you know what you are doing, it is best to leave DC_DAEMON_LIST undefined so that the default settings are used.\n",default_entry);
+			StringList default_list(default_dc_daemon_list);
+			default_list.rewind();
+			char *default_entry;
+			while( (default_entry=default_list.next()) ) {
+			  if( !dc_daemon_names.contains_anycase(default_entry) ) {
+				dprintf(D_ALWAYS,
+						"WARNING: expected to find %s in DC_DAEMON_LIST,"
+						" but it is not there.  Unless you know what you are"
+						" doing, it is best to leave DC_DAEMON_LIST undefined"
+						" so that the default settings are used, or use the"
+						" new 'DC_DAEMON_LIST = +<list>' syntax.\n",
+						default_entry);
 			}
 		}
+		free(dc_daemon_list);
 	}
 		// Tolerate a trailing comma in the list
 	dc_daemon_names.remove( "" );

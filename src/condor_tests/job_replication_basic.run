@@ -344,7 +344,11 @@ while($time - $startTimer <= $configurationTable{RUN_TIME})
 
 &MoveAllToSaveDirectory();
 
+#CondorPersonal::KillDaemonPids($quillconfig);
+system("date");
+
 CondorTest::debug("$coreName test SUCCESS!\n",1);
+exit(0);
 ### End of main ###
 
 ### Checkers ###

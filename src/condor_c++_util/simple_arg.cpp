@@ -26,7 +26,7 @@
 
 SimpleArg::SimpleArg( const char **argv, int argc, int index )
 {
-	m_index = index + 1;
+	m_index = index;
 	ASSERT( index < argc );
 
 	m_argv = argv;
@@ -40,6 +40,7 @@ SimpleArg::SimpleArg( const char **argv, int argc, int index )
 	// Define it as an 'option' if it starts with a '-'
 	if ( m_arg[0] == '-' ) {
 		m_is_opt = true;
+		m_index++;
 
 		if ( m_arg[1] == '-') {
 			m_long = &m_arg[2];
