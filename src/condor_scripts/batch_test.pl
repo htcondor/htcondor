@@ -91,7 +91,7 @@ Condor::DebugLevel(1);
 
 # configuration options
 $test_dir = ".";            # directory in which to find test programs
-$test_retirement = 1800;	# seconds for an individual test timeout - 30 minutes
+$test_retirement = 3600;	# seconds for an individual test timeout - 30 minutes
 my $BaseDir = getcwd();
 $hush = 0;
 $timestamp = 0;
