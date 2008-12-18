@@ -71,7 +71,7 @@ StorkLeaseEntry::StorkLeaseEntry(DCLeaseManagerLease * maker_lease)
 	Lease = maker_lease;
 
 	// lookup Url here
-	classad::ClassAd *ad = Lease->LeaseAd();
+	classad::ClassAd *ad = Lease->leaseAd();
 	ASSERT(ad);
 	string dest;
 	char *attr_name = param("STORK_LM_DEST_ATTRNAME");
@@ -89,7 +89,7 @@ StorkLeaseEntry::StorkLeaseEntry(DCLeaseManagerLease * maker_lease)
 	ASSERT(Url);
 
 	// setup Expiration_time here
-	Expiration_time = Lease->LeaseExpiration();
+	Expiration_time = Lease->leaseExpiration();
 
 }
 
@@ -117,7 +117,7 @@ bool
 StorkLeaseEntry::ReleaseLeaseWhenDone(void)
 {
 	ASSERT(Lease);
-	return Lease->ReleaseLeaseWhenDone();
+	return Lease->releaseLeaseWhenDone();
 }
 
 
@@ -173,8 +173,8 @@ StorkLeaseEntry::operator== (const StorkLeaseEntry& E2)
 {
 	// If both entries have a lease id, that must be equal
 
-	if (Lease &&  E2.Lease ) {
-		if ( ((Lease->LeaseId())==(E2.Lease->LeaseId())) ) {
+	if ( Lease &&  E2.Lease ) {
+		if ( Lease->idMatch(*E2.Lease) )  {
 			return 1;
 		} else {
 			return 0;
@@ -513,7 +513,7 @@ StorkLeaseManager::destroyFromBusy(StorkLeaseEntry*  match)
 			if ( temp->CompletePath ) {
 				s = temp->CompletePath->GetCStr();
 			} else if ( temp->Lease ) {
-				s = temp->Lease->LeaseId().c_str();
+				s = temp->Lease->leaseId().c_str();
 			} else {
 				s = temp->GetUrl();
 			}
@@ -538,7 +538,7 @@ StorkLeaseManager::destroyFromIdle(StorkLeaseEntry*  match)
 			if ( temp->CompletePath ) {
 				s = temp->CompletePath->GetCStr();
 			} else if ( temp->Lease ) {
-				s = temp->Lease->LeaseId().c_str();
+				s = temp->Lease->leaseId().c_str();
 			} else {
 				s = temp->GetUrl();
 			}
@@ -685,14 +685,14 @@ StorkLeaseManager::timeout(void)
 	// Now actually connect to the lease manager if we have leases to release.
 	if ( to_release.Count() ) {
 			// create list of lease ads to release
-		list<const DCLeaseManagerLease*> leases;
+		list<DCLeaseManagerLease*> leases;
 		to_release.StartIterations();
 		while ( to_release.Iterate(match) ) {
 			ASSERT(match->Lease);
 			leases.push_back(match->Lease);
 		}
 			// send our list to the lease manager
-		DCLeaseManager		dclm( lm_name,lm_pool );
+		DCLeaseManager		dclm( lm_name, lm_pool );
 		result = dclm.releaseLeases(leases);
 		dprintf(D_ALWAYS,"LM: %s release %d leases\n",
 						result ? "Successful" : "Failed to ",
@@ -745,23 +745,25 @@ StorkLeaseManager::timeout(void)
 						to_renew.Count());
 			// update the expiration counters for all renewed leases
 		if ( result ) {
-			for ( list<DCLeaseManagerLease *>::iterator iter=output_leases.begin();
+			list<DCLeaseManagerLease *>::iterator iter;
+			for ( iter  = output_leases.begin();
 				  iter != output_leases.end();
 				  iter++ )
 			{
 				bool found = false;
+				DCLeaseManagerLease *lease = *iter;
 				to_renew.StartIterations();
 				while ( to_renew.Iterate(match) ) {
 					ASSERT(match->Lease);
-					if ( match->Lease->LeaseId() == (*iter)->LeaseId() ) {
-						match->Lease->copyUpdates( **iter );
+					if ( match->Lease->idMatch(*lease) ) {
+						match->Lease->copyUpdates( *lease );
 						found = true;
 						break;
 					}
 				}
 				ASSERT(found);	// an Id in our output list better be found in our input list!
 			}
-			DCLeaseManagerLease_FreeList( output_leases );
+			DCLeaseManagerLease_freeList( output_leases );
 		}
 			// now put em all back onto the busy set, refreshed or not.
 		to_renew.StartIterations();

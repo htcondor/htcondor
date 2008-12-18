@@ -26,6 +26,7 @@
 #include "condor_classad.h"
 #include "condor_commands.h"
 #include "condor_attributes.h"
+#include "condor_daemon_core.h"
 #include "hashkey.h"
 
 #include "offline_plugin.h"
@@ -45,27 +46,26 @@ int __cdecl expiration ( const char *ad, time_t *ttl );
  * OfflineCollectorPlugin [c|d]tors
  ***************************************************************/
 
-OfflineCollectorPlugin::OfflineCollectorPlugin (void) throw ()
+OfflineCollectorPlugin::OfflineCollectorPlugin () throw ()
 {
-	m_ads = NULL;
-	m_persistent_store = NULL;
-
-    /* configure the plug-in for first use */
-    //configure ();
+	_ads = NULL;
+	_persistent_store = NULL;
+    _update_classad_lifetime_timer_id = -1;
+    _update_interval = 0;
 }
 
-OfflineCollectorPlugin::~OfflineCollectorPlugin (void )
+OfflineCollectorPlugin::~OfflineCollectorPlugin ()
 {
 
-    if ( m_ads ) {
-        delete m_ads;
-        m_ads = NULL;
+    if ( _ads ) {
+        delete _ads;
+        _ads = NULL;
     }
 
-    if ( m_persistent_store ) {
+    if ( _persistent_store ) {
         /* was param()'d so we must use free() */
-        free ( m_persistent_store );
-        m_persistent_store = NULL;
+        free ( _persistent_store );
+        _persistent_store = NULL;
     }
 
 }
@@ -75,35 +75,83 @@ OfflineCollectorPlugin::~OfflineCollectorPlugin (void )
  ***************************************************************/
 
 void
-OfflineCollectorPlugin::configure (void )
+OfflineCollectorPlugin::configure ( int class_ad_lifetime )
 {
 
     dprintf (
         D_FULLDEBUG,
-        "In OfflineCollectorPlugin::reconfigure ()\n" );
+        "In OfflineCollectorPlugin::configure ( %d )\n",
+        class_ad_lifetime );
 
-    if ( m_persistent_store ) {
+    if ( _persistent_store ) {
         /* was param()'d so we must use free() */
-        free ( m_persistent_store );
-        m_persistent_store = NULL;
+        free ( _persistent_store );
+        _persistent_store = NULL;
     }
 
-    m_persistent_store = param ( "OFFLINE_ADSFILE" );
+    _persistent_store = param ( 
+        "OFFLINE_ADSFILE" );
 
-    if ( m_persistent_store ) {
+    if ( _persistent_store ) {
 
         dprintf (
             D_ALWAYS,
             "Off-line ad persistent store: %s\n",
-            m_persistent_store );
+            _persistent_store );
 
-        if ( m_ads ) {
-            delete m_ads;
-            m_ads = NULL;
+        if ( _ads ) {
+            delete _ads;
+            _ads = NULL;
         }
 
-        m_ads = new ClassAdCollection ( m_persistent_store );
+        _ads = new ClassAdCollection ( _persistent_store );
+
+        /* cancel any outstanding timers */
+        if ( -1 != _update_classad_lifetime_timer_id ) {
+
+            daemonCore->Cancel_Timer (
+                _update_classad_lifetime_timer_id );
+
+            _update_classad_lifetime_timer_id = -1;
+
+        }
+
+        /* get the update interval and compare it to the half the 
+           classad lifetime.  If our interval is larger, use half 
+           the classad lifetime. */
+        class_ad_lifetime /= 2;
+        _update_interval = param_integer ( 
+            "OFFLINE_CLASSAD_LIFETIME_UPDATE", 
+            300 );
+
+        if ( _update_interval > class_ad_lifetime ) {
+            _update_interval = class_ad_lifetime;
+        }
+
+        if ( _update_interval > 0 ) {
+
+            _update_classad_lifetime_timer_id = 
+                daemonCore->Register_Timer (
+                _update_interval,
+                _update_interval,
+                (TimerHandlercpp) &OfflineCollectorPlugin::update_classad_lifetime,
+                "OfflineCollectorPlugin::update_classad_lifetime",
+                this );
+
+        }
+
+        if ( _update_interval <= 0 || 
+            -1 == _update_classad_lifetime_timer_id ) {
+
+            dprintf (
+                D_ALWAYS,
+                "Failed to start timer to stop offline ads from "
+                "timing out.\n" );
+
+        }
+
     }
+
 }
 
 void
@@ -117,7 +165,7 @@ OfflineCollectorPlugin::update (
         "In OfflineCollectorPlugin::update ()\n" );
 
     /* bail out if the plug-in is not enabled */
-    if ( !enabled ( ) ) {
+    if ( !enabled () ) {
         return;
     }
 
@@ -126,7 +174,10 @@ OfflineCollectorPlugin::update (
          UPDATE_STARTD_AD == command ) {
 
         AdNameHashKey hashKey;
-        if ( !makeStartdAdHashKey(hashKey,const_cast<ClassAd*>(&ad),NULL) ) {
+        if ( !makeStartdAdHashKey (
+            hashKey,
+            const_cast<ClassAd*> ( &ad ),
+            NULL ) ) {
 
             dprintf (
                 D_FULLDEBUG,
@@ -144,16 +195,21 @@ OfflineCollectorPlugin::update (
             &ad,
             offline ) ) {
 
+            /* if we fail, this is not a bad thing, it just means
+               this ad does not concern us */
+
+            /*
             dprintf (
                 D_FULLDEBUG,
                 "OfflineCollectorPlugin::update: "
                 "failed evaluate and determine offline status.\n" );
+            */
 
             return;
 
         }
 
-        m_ads->BeginTransaction ();
+        _ads->BeginTransaction ();
 
         ClassAd *p;
         MyString s;
@@ -165,13 +221,13 @@ OfflineCollectorPlugin::update (
         if ( TRUE == offline ) {
 
             /* don't try to add duplicate ads */
-            if ( m_ads->LookupClassAd ( key, p ) ) {
-                m_ads->AbortTransaction ();
+            if ( _ads->LookupClassAd ( key, p ) ) {
+                _ads->AbortTransaction ();
                 return;
             }
 
             /* try to add the new ad */
-            if ( !m_ads->NewClassAd ( key, const_cast<ClassAd *>(&ad) ) ) {
+            if ( !_ads->NewClassAd ( key, const_cast<ClassAd *>(&ad) ) ) {
 
                 dprintf (
                     D_FULLDEBUG,
@@ -179,22 +235,22 @@ OfflineCollectorPlugin::update (
                     "failed add off-line ad to the persistent "
                     "store.\n" );
 
-                m_ads->AbortTransaction ();
+                _ads->AbortTransaction ();
 
             }
 
         } else {
 
             /* can't remove ads that do not exist */
-            if ( !m_ads->LookupClassAd ( key, p ) ) {
+            if ( !_ads->LookupClassAd ( key, p ) ) {
 
-                m_ads->AbortTransaction ();
+                _ads->AbortTransaction ();
                 return;
 
             }
 
             /* try to remove the ad */
-            if ( !m_ads->DestroyClassAd ( key ) ) {
+            if ( !_ads->DestroyClassAd ( key ) ) {
 
                 dprintf (
                     D_FULLDEBUG,
@@ -202,7 +258,7 @@ OfflineCollectorPlugin::update (
                     "failed remove off-line ad from the persistent "
                     "store.\n" );
 
-                m_ads->AbortTransaction ();
+                _ads->AbortTransaction ();
 
             }
 
@@ -213,8 +269,7 @@ OfflineCollectorPlugin::update (
 }
 
 void
-OfflineCollectorPlugin::invalidate
-(
+OfflineCollectorPlugin::invalidate (
     int             command,
     const ClassAd   &ad )
 {
@@ -234,7 +289,7 @@ OfflineCollectorPlugin::invalidate
         AdNameHashKey hashKey;
         if ( !makeStartdAdHashKey (
             hashKey,
-            const_cast<ClassAd*>(&ad),
+            const_cast<ClassAd*> ( &ad ),
             NULL ) ) {
 
             dprintf (
@@ -246,22 +301,22 @@ OfflineCollectorPlugin::invalidate
 
         }
 
-        m_ads->BeginTransaction ();
+        _ads->BeginTransaction ();
 
         ClassAd *cad;
         MyString key;
         hashKey.sprint ( key );
 
         /* can't remove ads that do not exist */
-        if ( !m_ads->LookupClassAd ( key.GetCStr (), cad ) ) {
+        if ( !_ads->LookupClassAd ( key.GetCStr (), cad ) ) {
 
-            m_ads->AbortTransaction ();
+            _ads->AbortTransaction ();
             return;
 
         }
 
         /* try to remove the ad */
-        if ( !m_ads->DestroyClassAd ( key.GetCStr () ) ) {
+        if ( !_ads->DestroyClassAd ( key.GetCStr () ) ) {
 
             dprintf (
                 D_FULLDEBUG,
@@ -269,36 +324,58 @@ OfflineCollectorPlugin::invalidate
                 "failed remove off-line ad from the persistent "
                 "store.\n" );
 
-            m_ads->AbortTransaction ();
+            _ads->AbortTransaction ();
+
         }
 
-        m_ads->CommitTransaction ();
+        _ads->CommitTransaction ();
 
     }
 
 }
 
 void
-OfflineCollectorPlugin::rewind (void)
+OfflineCollectorPlugin::rewind ()
 {
-	if ( m_ads ) {
-		m_ads->StartIterateAllClassAds ();
+	if ( _ads ) {
+		_ads->StartIterateAllClassAds ();
 	}
 }
 
 bool
 OfflineCollectorPlugin::iterate ( ClassAd &ad )
 {
-	if ( m_ads ) {
+	if ( _ads ) {
 		ClassAd *p = &ad;
-		return m_ads->IterateAllClassAds ( p );
+		return _ads->IterateAllClassAds ( p );
 	}
 	return false;
 }
 
 
 bool
-OfflineCollectorPlugin::enabled (void) const
+OfflineCollectorPlugin::enabled () const
 {
-    return ( (NULL != m_persistent_store) && (NULL != m_ads) );
+    return ( (NULL != _persistent_store) && (NULL != _ads) );
+}
+
+int
+OfflineCollectorPlugin::update_classad_lifetime ()
+{
+    /* get the current time */
+    time_t now;
+    time ( &now );
+    if ( -1 == now ) {
+        EXCEPT ( "OfflineCollectorPlugin::update_classad_lifetime: "
+            "Unable to read system time!" );
+    }
+
+    /* update all off line ads' last ping time */
+    rewind ();
+    ClassAd ad;
+    while ( iterate( ad ) ) {
+        ad.Assign ( ATTR_LAST_HEARD_FROM, (int) now );
+    }
+
+    return TRUE;
 }

@@ -163,7 +163,7 @@ print "About to run batch_test.pl\n";
 # we have our testing personal condor configered from
 # release generic config files.
 
-system("perl ./batch_test.pl -d $compiler -t $testname -b");
+system("perl ./batch_test.pl --no-error -d $compiler -t $testname -b");
 $batchteststatus = $?;
 
 # figure out here if the test passed or failed.  

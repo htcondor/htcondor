@@ -327,7 +327,7 @@ LeaseManager::commandHandler_GetLeases(int command, Stream *stream)
 	classad::PrettyPrint pretty;
 	std::string adbuffer;
 	pretty.Unparse( adbuffer, &request_ad );
-	dprintf( D_FULLDEBUG, "Lease Ad=%s\n", adbuffer.c_str() );
+	dprintf( D_FULLDEBUG, "Lease Request Ad=%s\n", adbuffer.c_str() );
 
 	// Keep running queries 'til we're all matched up
 	dprintf( D_FULLDEBUG, "Trying to lease %d resources\n", request_count );

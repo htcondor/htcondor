@@ -315,6 +315,13 @@ if($docreatedb != 0) {
 }
 system("date");
 
+$docreatelang = system("$prefix/bin/createlang plpgsql");
+if($docreatedb != 0) {
+	die "Failed to create test db\n";
+}
+system("date");
+
+
 CondorTest::debug("Run psql program\n",1);
 $command = Expect->spawn("$prefix/bin/psql test quillwriter --port $startpostmasterport")||
 	die "Could not start program: $!\n";

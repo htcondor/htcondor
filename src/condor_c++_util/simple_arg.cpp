@@ -29,6 +29,8 @@ SimpleArg::SimpleArg( const char **argv, int argc, int index )
 	m_index = index;
 	ASSERT( index < argc );
 
+	m_argv = argv;
+	m_argc = argc;
 	m_arg = argv[index];
 	m_short = '\0';
 	m_long = "";
@@ -38,6 +40,7 @@ SimpleArg::SimpleArg( const char **argv, int argc, int index )
 	// Define it as an 'option' if it starts with a '-'
 	if ( m_arg[0] == '-' ) {
 		m_is_opt = true;
+		m_index++;
 
 		if ( m_arg[1] == '-') {
 			m_long = &m_arg[2];
@@ -65,6 +68,17 @@ SimpleArg::SimpleArg( const char **argv, int argc, int index )
 		// point m_opt at current argument
 		m_is_opt = false;
 		m_opt = m_arg;
+	}
+}
+
+void
+SimpleArg::Next( void )
+{
+	if ( m_index+1 < m_argc ) {
+		m_opt = m_argv[m_index+1];
+	}
+	else {
+		m_opt = NULL;
 	}
 }
 
@@ -108,6 +122,7 @@ int
 SimpleArg::ConsumeOpt( bool consume )
 {
 	if ( consume ) {
+		Next( );
 		m_index++;
 	}
 	return m_index;

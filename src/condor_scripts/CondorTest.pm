@@ -805,7 +805,7 @@ sub runCondorTool
 		system("date");
 	}
 
-	my $attempts = 4;
+	my $attempts = 8;
 	my $count = 0;
 	while( $count < $attempts) {
 		@{$arrayref} = (); #empty return array...
@@ -871,6 +871,7 @@ sub runCondorTool
 			return(1);
 		}
 		$count = $count + 1;
+		debug("runCondorTool: iteration<$count> failed sleep 10 * $count \n",1);
 		sleep((10*$count));
 	}
 	debug( "runCondorTool: $cmd worked!\n",4);

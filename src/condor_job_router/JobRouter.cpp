@@ -1401,14 +1401,7 @@ JobRouter::FinalizeJob(RoutedJob *job) {
 #if HAVE_JOB_HOOKS
 	if (NULL != m_hook_mgr)
 	{
-		// Retrive the IWD, which should be the spool directory
-		std::string spoolDirectory;
-		if (false == job->dest_ad.EvaluateAttrString(ATTR_JOB_IWD, spoolDirectory))
-		{
-			dprintf(D_ALWAYS, "JobRouter Error: Failed to retrieve %s from the routed job\n", ATTR_JOB_IWD);
-			return;
-		}
-		int rval = m_hook_mgr->hookJobExit(job, spoolDirectory.c_str());
+		int rval = m_hook_mgr->hookJobExit(job);
 		switch (rval)
 		{
 			case -1:    // Error
@@ -1433,16 +1426,27 @@ JobRouter::FinalizeJob(RoutedJob *job) {
 }
 
 void
+JobRouter::RerouteJob(RoutedJob *job) {
+	SetJobIdle(job);
+	GracefullyRemoveJob(job);
+}
+
+void
+JobRouter::SetJobIdle(RoutedJob *job) {
+	job->src_ad.InsertAttr(ATTR_JOB_STATUS,IDLE);
+	if(!push_dirty_attributes(job->src_ad,NULL,NULL)) {
+		dprintf(D_ALWAYS,"JobRouter failure (%s): failed to set src job status back to idle\n",job->JobDesc().c_str());
+	}
+}
+
+void
 JobRouter::FinishFinalizeJob(RoutedJob *job) {
 	if(!finalize_job(job->dest_ad,job->dest_proc_id.cluster,job->dest_proc_id.proc,NULL,NULL,job->is_sandboxed)) {
 		dprintf(D_ALWAYS,"JobRouter failure (%s): failed to finalize job\n",job->JobDesc().c_str());
 
 			// Put the src job back in idle state to prevent it from
 			// exiting the queue.
-		job->src_ad.InsertAttr(ATTR_JOB_STATUS,IDLE);
-		if(!push_dirty_attributes(job->src_ad,NULL,NULL)) {
-			dprintf(D_ALWAYS,"JobRouter failure (%s): failed to set src job status back to idle\n",job->JobDesc().c_str());
-		}
+		SetJobIdle(job);
 	}
 	else if(!WriteTerminateEventToUserLog(job->src_ad)) {
 	}

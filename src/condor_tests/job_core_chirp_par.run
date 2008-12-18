@@ -137,20 +137,14 @@ if( -e "$mysubmitnmlog" )
 	system("cp $mysubmitnmlog $mycorenmlog");
 }
 
-if( $result != 0 )
+CondorPersonal::KillDaemonPids($parallelconfig);
+system("date");
+
+if($result != 0)
 {
+	# actuaal job failed but we allowed cleanup
 	exit(1);
 }
 
-my @adarray;
-my $status = 1;
-my $cmd = "condor_off -fast -master";
-$status = CondorTest::runCondorTool($cmd,\@adarray,2);
-if(!$status)
-{
-	CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
-	exit(1)
-}
-
-system("date");
-
+CondorTest::debug("job_core_chirp_par SUCCESS\n",1);
+exit(0);

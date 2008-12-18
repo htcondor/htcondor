@@ -2,13 +2,13 @@
  *
  * Copyright (C) 1990-2008, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -175,7 +175,7 @@ DCLeaseManager::renewLeases(
 
 bool
 DCLeaseManager::releaseLeases(
-	list< const DCLeaseManagerLease *> &leases )
+	list<DCLeaseManagerLease *> &leases )
 {
 		// Create the ReliSock
 	ReliSock *rsock = (ReliSock *)startCommand(
@@ -185,7 +185,7 @@ DCLeaseManager::releaseLeases(
 	}
 
 	// Send the leases
-	if ( !SendLeases( rsock, leases ) ) {
+	if ( !SendLeases( rsock, DCLeaseManagerLease_getConstList(leases)) ) {
 		delete rsock;
 		return false;
 	}
@@ -198,6 +198,13 @@ DCLeaseManager::releaseLeases(
 	if ( !rsock->get( rc ) ) {
 		delete rsock;
 		return false;
+	}
+
+		// Mark leases as dead
+	list <DCLeaseManagerLease *>::iterator iter;
+	for( iter = leases.begin(); iter != leases.end(); iter++ ) {
+		DCLeaseManagerLease	*lease = *iter;
+		lease->setDead( true );
 	}
 
 	rsock->close();
@@ -217,10 +224,10 @@ DCLeaseManager::SendLeases(
 	list <const DCLeaseManagerLease *>::iterator iter;
 	for( iter = l_list.begin(); iter != l_list.end(); iter++ ) {
 		const DCLeaseManagerLease	*lease = *iter;
-		const char	*lease_id_str = lease->LeaseId().c_str();
+		const char	*lease_id_str = lease->leaseId().c_str();
 		if ( !stream->put( lease_id_str ) ||
-			 !stream->put( lease->LeaseDuration() ) ||
-			 !stream->put( lease->ReleaseLeaseWhenDone() )  ) {
+			 !stream->put( lease->leaseDuration() ) ||
+			 !stream->put( lease->releaseLeaseWhenDone() )  ) {
 			return false;
 		}
 	}
@@ -244,7 +251,7 @@ DCLeaseManager::GetLeases(
 		if ( !stream->get( lease_id_cstr ) ||
 			 !stream->get( lease_duration ) ||
 			 !stream->get( release_when_done ) ) {
-			DCLeaseManagerLease_FreeList( l_list );
+			DCLeaseManagerLease_freeList( l_list );
 			if ( lease_id_cstr ) {
 				free( lease_id_cstr );
 			}

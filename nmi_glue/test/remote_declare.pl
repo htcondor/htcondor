@@ -37,7 +37,7 @@ if( -f "$TimeoutFile") {
 	while(<TIMEOUTS>) {
 		chomp($_);
 		$line = $_;
-		if($line =~ /^\s*(\w*)\s+(\d*)\s*$/) {
+		if($line =~ /^\s*([\-\w]*)\s+(\d*)\s*$/) {
 			print "Custom Timeout: $1:$2\n";
 			$CustomTimeouts{"$1"} = $2;
 		}

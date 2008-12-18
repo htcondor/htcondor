@@ -794,7 +794,7 @@ part_send_job(
 		  // Send the capability
 	  ClaimIdParser idp( capability );
 	  dprintf(D_FULLDEBUG, "send capability %s\n", idp.publicClaimId() );
-	  if( !sock->code(capability) ) {
+	  if( !sock->put_secret(capability) ) {
 		  dprintf( D_ALWAYS, "sock->put(\"%s\") failed\n",idp.publicClaimId());
 		  goto returnfailure;
 	  }

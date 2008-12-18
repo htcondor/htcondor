@@ -52,11 +52,12 @@ $submit_file = $corename . ".cmd";
 CondorTest::debug("Master PID is $mypid\n",1);
 CondorTest::debug("Master PID submit file is $submit_file\n",1);
 
+$ec2_sim_port = 0;
 $ec2_sim = "../testbin_dir/ec2_sim";
 if ( ! -x $ec2_sim ) {
 	die("$ec2_sim isn't executable!\n");
 }
-# JEF: start ec2_sim
+# Start ec2_sim
 $ec2_sim_pid = fork();
 if ( $ec2_sim_pid == 0 ) {
 	# Child
@@ -64,22 +65,40 @@ if ( $ec2_sim_pid == 0 ) {
 	# Otherwise, perl will exec /bin/sh and ec2_sim will be a child process.
 	# Later on, we need to send a SIGTERM to ec2_sim, so we need to know
 	# its pid.
-	CondorTest::debug("JEF: Child $$ about to exec ec2_sim\n",1);
 	open STDOUT, ">ec2_sim.out";
 	open STDERR, ">ec2_sim.out";
-	exec( "$ec2_sim" ) or die "Failed to exec $ec2_sim\n";
+	exec( "$ec2_sim -p 0" ) or die "Failed to exec $ec2_sim\n";
 } elsif ( $ec2_sim_pid > 0 ) {
-	sleep 1;
-	CondorTest::debug("JEF: About to wait on child\n",1);
-	if ( waitpid( $ec2_sim_pid, &POSIX::WNOHANG ) == $ec2_sim_pid ) {
-		die( "$ec2_sim died unexpectedly!\n" );
+	for ( my $i = 0; $i < 5 && $ec2_sim_port == 0; $i++ ) {
+		sleep 1;
+		if ( waitpid( $ec2_sim_pid, &POSIX::WNOHANG ) == $ec2_sim_pid ) {
+			die( "$ec2_sim died unexpectedly!\n" );
+		}
+		open EC2_OUT, "<ec2_sim.out" or next;
+		while ( <EC2_OUT> ) {
+			if ( s/Listening on port // ) {
+				chomp( $ec2_sim_port = $_ );
+				last;
+			}
+		}
+		close EC2_OUT;
 	}
-	CondorTest::debug("JEF: Finished waiting on child\n",1);
+	if ( $ec2_sim_port == 0 ) { die("Failed to find port for $ec2_sim\n"); }
 } else {
 	die( "Failed to fork() to spawn $ec2_sim!\n" );
 }
 
-CondorTest::debug("JEF: starting personal condor\n",1);
+CondorTest::debug("Starting personal condor\n",1);
+
+# Modify our config file suffix to include port of ec2_sim
+open(CFGSRC,"<x_amazon_configpostsrc.template") || die "Could not open x_amazon_configpostsrc.template: $!\n";
+open(CFGDST,">x_amazon_configpostsrc") || die "Could not open x_amazon_configpostsrc: $!\n";
+while(<CFGSRC>) {
+	s/xxxxxx/$ec2_sim_port/g;
+	print CFGDST $_;
+}
+close(CFGSRC);
+close(CFGDST);
 
 # get a local scheduler running (side a)
 my $configloc = CondorPersonal::StartCondor("x_param.amazon", "amazon");
@@ -100,9 +119,8 @@ if($done != 0) {
 
 	$done = system("$test_cmd");
 }
-CondorTest::debug("JEF: Done running test\n",1);
 
-CondorTest::debug("JEF: About to kill ec2_sim pid $ec2_sim_pid\n",1);
+CondorTest::debug("Killing ec2_sim pid $ec2_sim_pid\n",1);
 kill 15, $ec2_sim_pid;
 if ( waitpid( $ec2_sim_pid, undef ) != $ec2_sim_pid ) {
 	CondorTest::debug("Failed to reap ec2_sim\n",1);
@@ -110,7 +128,7 @@ if ( waitpid( $ec2_sim_pid, undef ) != $ec2_sim_pid ) {
 	CondorTest::debug("ec2_sim exited with non-zero status $?\n",1);
 	$done = 1;
 }
-# JEF: checkout ec2_sim output "ec2_sim.out"
+# TODO: checkout ec2_sim output "ec2_sim.out"
 
 CondorTest::debug("Saving things and cleaning up.... done with return $done\n",1);
 

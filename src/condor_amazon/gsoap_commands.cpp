@@ -248,6 +248,7 @@ AmazonRequest::CleanupSoap(void)
 
 	if( m_soap ) {
 		soap_wsse_delete_Security(m_soap);
+		soap_destroy(m_soap);
 		soap_end(m_soap);
 		soap_done(m_soap);
 
@@ -467,24 +468,32 @@ AmazonVMStart::gsoapRequest(void)
 		StatWrapper swrap(fd);
 		file_size = swrap.GetBuf()->st_size;
 
-		char *readbuffer = (char*)malloc(file_size);
-		ASSERT(readbuffer);
+		if (file_size <= 0) {
+			dprintf(D_ALWAYS,
+					"WARNING: UserData file, %s, specified and empty\n",
+					user_data_file.Value());
+			base64_userdata = NULL;
+		} else {
+			char *readbuffer = (char*)malloc(file_size);
+			ASSERT(readbuffer);
 
-		int ret = full_read(fd, readbuffer, file_size);
-		close(fd);
+			int ret = full_read(fd, readbuffer, file_size);
+			close(fd);
 
-		if( ret != file_size ) {
-			m_error_msg.sprintf("failed to read(need %d but real read %d) "
-					"in file(%s)", file_size, ret, user_data_file.Value());
-			dprintf(D_ALWAYS, "%s\n", m_error_msg.Value());
+			if( ret != file_size ) {
+				m_error_msg.sprintf("failed to read(need %d but real read %d) "
+									"in file(%s)",
+									file_size, ret, user_data_file.Value());
+				dprintf(D_ALWAYS, "%s\n", m_error_msg.Value());
 
-			free(readbuffer);
-			readbuffer = NULL;
-			return false;
-		}
+				free(readbuffer);
+				readbuffer = NULL;
+				return false;
+			}
 	
-		base64_userdata = base64_encode((unsigned char*)readbuffer, file_size);
-		free(readbuffer);
+			base64_userdata = base64_encode((unsigned char*)readbuffer, file_size);
+			free(readbuffer); readbuffer = NULL;
+		}
 	}else {
 		if( user_data.IsEmpty() == false ) { 
 			base64_userdata = base64_encode((unsigned char*)user_data.GetCStr(), user_data.Length());

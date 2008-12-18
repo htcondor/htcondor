@@ -141,8 +141,8 @@ char	*default_daemon_list[] = {
 // examples in src/condor_examples
 char	default_dc_daemon_list[] =
 "MASTER, STARTD, SCHEDD, KBDD, COLLECTOR, NEGOTIATOR, EVENTD, "
-"VIEW_SERVER, CONDOR_VIEW, VIEW_COLLECTOR, HAWKEYE, CREDD, HAD, "
-"DBMSD, QUILL, JOB_ROUTER, LEASEMANAGER";
+"VIEW_SERVER, CONDOR_VIEW, VIEW_COLLECTOR, CREDD, HAD, "
+"DBMSD, QUILL, JOB_ROUTER";
 
 // create an object of class daemons.
 class Daemons daemons;
@@ -755,7 +755,16 @@ init_daemon_list()
 
 	char* dc_daemon_list = param("DC_DAEMON_LIST");
 	if( dc_daemon_list ) {
-		dc_daemon_names.initializeFromString(dc_daemon_list);
+		if ( *dc_daemon_list == '+' ) {
+			MyString	dclist;
+			dclist = default_dc_daemon_list;
+			dclist += ", ";
+			dclist += &dc_daemon_list[1];
+			dc_daemon_names.initializeFromString( dclist.GetCStr() );
+		}
+		else {
+			dc_daemon_names.initializeFromString(dc_daemon_list);
+		}
 		free(dc_daemon_list);
 	} else {
 		dc_daemon_names.initializeFromString(default_dc_daemon_list);

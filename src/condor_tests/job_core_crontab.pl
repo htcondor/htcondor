@@ -47,6 +47,7 @@ $testname = "CronTab Testing - $universe";
 $base_name = 'job_core_crontab';
 $base_cmd = $base_name.".cmd";
 
+system("rm -f $base_name.log");
 ##
 ## Counter for the number of times our job ran
 ##
@@ -360,7 +361,9 @@ sub extractEvictionTime {
     	## executed by the starter. We always want the last time 
     	## that may be in the logfile
     	##
+		print "Consider eviction: @_";
     	if ( $_ =~ /^004\s+\(.*\)\s+(\d{2})\/(\d{2})\s+(\d{2}):(\d{2}):(\d{2})/ ) {
+			print "Parseing for eviction: @_";
     		$month  = $1;
     		$day    = $2;
     		$hour   = $3;
@@ -378,8 +381,8 @@ sub extractEvictionTime {
 	(undef, undef, undef, undef, undef, $year, undef, undef, $isdst) = localtime(time); 
 	$timestamp = mktime($second, $minute, $hour, $day, $month - 1, $year, 0, 0, $isdst);
 	
-    #print "$month/$day/".($_year + 1900)." $hour:$minute:$second\n";
-    #print "RUN TIME: $timestamp\n";
+    print "$month/$day/".($_year + 1900)." $hour:$minute:$second\n";
+    print "RUN TIME: $timestamp\n";
     return ($timestamp);
 };
 

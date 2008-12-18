@@ -309,6 +309,7 @@ class AttrList : public AttrListAbstract
 		friend	class	ClassAd;
 
 		static bool		IsValidAttrName(const char *);
+		static bool		IsValidAttrValue(const char *);
 
     protected :
 	    AttrListElem**	chainedAttrs;

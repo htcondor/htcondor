@@ -231,37 +231,4 @@ int main(int argc, char **argv)
 }
 
 
-
-
-
-// The following is stolen from condor_submit.V6/submit.C
-// When this gets folded into the schedd.V7 proper, it will be
-// moot since we'll be a full blown DaemonCore daemon.
-
-/************************************
-	The following are dummy stubs for the DaemonCore class to allow
-	tools using DCSchedd to link.  DaemonCore is brought in
-	because of the FileTransfer object.
-	These stub functions will become obsoluete once we start linking
-	in the real DaemonCore library with the tools, -or- once
-	FileTransfer is broken down.
-*************************************/
-#include "condor_daemon_core.h"
-	DaemonCore* daemonCore = NULL;
-	int DaemonCore::Kill_Thread(int) { return 0; }
-//char * DaemonCore::InfoCommandSinfulString(int) { return NULL; }
-	int DaemonCore::Register_Command(int,char*,CommandHandler,char*,Service*,
-		DCpermission,int) {return 0;}
-	int DaemonCore::Register_Reaper(char*,ReaperHandler,
-		char*,Service*) {return 0;}
-	int DaemonCore::Create_Thread(ThreadStartFunc,void*,Stream*,
-		int) {return 0;}
-	int DaemonCore::Suspend_Thread(int) {return 0;}
-	int DaemonCore::Continue_Thread(int) {return 0;}
-//	int DaemonCore::Register_Reaper(int,char*,ReaperHandler,ReaperHandlercpp,
-//		char*,Service*,int) {return 0;}
-//	int DaemonCore::Register_Reaper(char*,ReaperHandlercpp,
-//		char*,Service*) {return 0;}
-//	int DaemonCore::Register_Command(int,char*,CommandHandlercpp,char*,Service*,
-//		DCpermission,int) {return 0;}
-/**************************************/
+#include "daemon_core_stubs.h"

@@ -903,7 +903,7 @@ Daemon::locate( void )
 		rval = getDaemonInfo( "TRANSFERD", ANY_AD );
 		break;
 	case DT_LEASE_MANAGER:
-		rval = getDaemonInfo( "LEASE_MANAGER", LEASE_MANAGER_AD, true );
+		rval = getDaemonInfo( "LEASEMANAGER", LEASE_MANAGER_AD, true );
 		break;
 	default:
 		EXCEPT( "Unknown daemon type (%d) in Daemon::init", (int)_type );

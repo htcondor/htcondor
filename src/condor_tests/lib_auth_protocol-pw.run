@@ -160,19 +160,14 @@ if( -e "$mysubmitnmlog" )
 
 # Turn off condor
 
-my @adarray;
-my $status = 1;
-$status = 1;
-my $cmd = "condor_off -fast -master";
-$status = CondorTest::runCondorTool($cmd,\@adarray,2);
-if(!$status)
+CondorPersonal::KillDaemonPids($secconfig);
+system("date");
+
+if($result != 0)
 {
-	CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
-	exit(1)
+    # actuaal job failed but we allowed cleanup
+    exit(1);
 }
 
-if($result != 0) {
-	exit(1);
-}
-
+CondorTest::debug("lib_auth_protocol-pw SUCCESS\n",1);
 exit(0);
