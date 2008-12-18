@@ -256,7 +256,7 @@ daemons.  The \Condor{master} daemon needs the configuration:
   XYZZY           = $(SCHEDD)
   XYZZY_ARGS      = -local-name xyzzy
   DAEMON_LIST     = $(DAEMON_LIST) XYZZY
-  DC_DAEMON_LIST  = $(DC_DAEMON_LIST) XYZZY
+  DC_DAEMON_LIST  = + XYZZY
   XYZZY_LOG       = $(LOG)/SchedLog.xyzzy
 \end{verbatim}
 
@@ -265,15 +265,6 @@ second \Condor{schedd} daemon,
 where this second \Condor{schedd} daemon is passed 
 \OptArg{-local-name}{xyzzy}
 on the command line.
-
-Note that by default, the configuration variable \MacroNI{DC\_DAEMON\_LIST}
-is not defined in the configuration file.
-If not defined, then define it by using the value
-included as a comment in the default configuration,
-together with the above redefinition.
-Alternatively, modify the original definition by adding
-the additional daemon's local name
-(\Attr{XYZZY} in this example) to the list.
 
 Continuing the example,
 configure the \Condor{schedd} daemon named \Attr{xyzzy}.
@@ -2568,7 +2559,15 @@ These macros control the \Condor{master}.
   appropriate inter-process communication mechanisms.  This list
   currently includes all Condor daemons except the checkpoint server
   by default.
-  
+
+  As of 7.2.1, you can append to the default DC\_DAEMON\_LIST list by
+  specifying a ``+'' as the first character in the DC\_DAEMON\_LIST
+  definition.  For example:
+\begin{verbatim}
+DAEMON_LIST	= NEW_DAEMON
+DC_DAEMON_LIST	= +NEW_DAEMON
+\end{verbatim}
+
 \item[\MacroB{<SUBSYS>}] \label{param:SUBSYS}
   \index{SUBSYS macro@\texttt{<SUBSYS>} macro}
   Once you have defined which

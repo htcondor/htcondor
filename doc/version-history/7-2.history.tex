@@ -41,7 +41,14 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item A new feature has been added to the \Condor{master} that makes
+  it possible to append the DC\_DAEMON\_LIST configuration macro
+  instead of overwriting it.  To take advantage of this, put a '+' as
+  the first character in your DC\_DAEMON\_LIST definition.  For example:
+\begin{verbatim}
+DAEMON_LIST	= NEW_DAEMON
+DC_DAEMON_LIST	= +NEW_DAEMON
+\end{verbatim}
 
 \end{itemize}
 
