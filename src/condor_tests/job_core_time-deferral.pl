@@ -531,7 +531,9 @@ sub extractExecuteTime {
     	## executed by the starter. We always want the last time 
     	## that may be in the logfile
     	##
+		print "consider line: @_";
     	if ( $_ =~ /^001\s+\(.*\)\s+(\d{2})\/(\d{2})\s+(\d{2}):(\d{2}):(\d{2})/ ) {
+			print "Found execution line: @_";
     		$month  = $1;
     		$day    = $2;
     		$hour   = $3;
