@@ -233,7 +233,8 @@ sub usage( )
 		"  -l|--list     list names of tests\n" .
 		"  -f|--force    force overwrite of test directory\n" .
 		"  -n|--no-exec  no execute / test mode\n" .
-		"  -N|--no-pid   Don't append PID to test directory\n" .
+		"  -p|--pid      append PID to test directory\n" .
+		"  -N|--no-pid   do not append PID to test directory\n" .
 		"  -d|--debug    enable D_FULLDEBUG debugging\n" .
 		"  -v|--verbose  increase verbose level\n" .
 		"  -s|--stop     stop after errors\n" .
@@ -245,7 +246,7 @@ sub usage( )
 
 my %settings =
 (
- use_pid		=> 1,
+ use_pid		=> 0,
  verbose		=> 0,
  debug			=> 0,
  execute		=> 1,
@@ -265,6 +266,9 @@ foreach my $arg ( @ARGV ) {
     }
     elsif ( $arg eq "-n"  or  $arg eq "--no-exec" ) {
 		$settings{execute} = 0;
+    }
+    elsif ( $arg eq "-p"  or  $arg eq "--pid" ) {
+		$settings{use_pid} = 1;
     }
     elsif ( $arg eq "-N"  or  $arg eq "--no-pid" ) {
 		$settings{use_pid} = 0;
@@ -416,10 +420,11 @@ print $test{client}->{lease_file} . "\n";;
 RunTests( \%test );
 
 CondorPersonal::KillDaemonPids( $config );
+system( "rm -r ./$$" );
 
 system("date");
 if ( $settings{verbose} ) {
-    print "Using directory $dir\n";
+    print "Used directory $dir\n";
 }
 my $errors = 0;
 
