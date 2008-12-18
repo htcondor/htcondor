@@ -280,11 +280,48 @@ int main (int argc, char **argv)
 		everythingOkay = false;
 	}
 
+	retval = a.reserve(1);
+	if ( retval == true ) {
+		printf("OK: reserve() returned true in line %d.\n", __LINE__);
+	} else {
+		printf("FAILED: reserve() didn't return true in line %d.\n",
+			   __LINE__);
+		everythingOkay = false;
+	}
+	if ( a.Length() == 1 ) {
+		printf("OK: Length() returned 1 in line %d.\n", __LINE__);
+	} else {
+		printf("FAILED: Length() didn't return 1 in line %d.\n",
+			   __LINE__);
+		everythingOkay = false;
+	}
+	if ( !strcmp(a.Value(), "1")) {
+		printf("OK: Value() returned \"1\" in line %d.\n", __LINE__);
+	} else {
+		printf("FAILED: Value() didn't return \"1\" in line %d.\n",
+			   __LINE__);
+		everythingOkay = false;
+	}
+
 	retval = a.reserve(0);
 	if ( retval == true ) {
 		printf("OK: reserve() returned true in line %d.\n", __LINE__);
 	} else {
 		printf("FAILED: reserve() didn't return true in line %d.\n",
+			   __LINE__);
+		everythingOkay = false;
+	}
+	if ( a.Length() == 0 ) {
+		printf("OK: Length() returned 0 in line %d.\n", __LINE__);
+	} else {
+		printf("FAILED: Length() didn't return 0 in line %d.\n",
+			   __LINE__);
+		everythingOkay = false;
+	}
+	if ( !strcmp(a.Value(), "")) {
+		printf("OK: Value() returned \"\" in line %d.\n", __LINE__);
+	} else {
+		printf("FAILED: Value() didn't return \"\" in line %d.\n",
 			   __LINE__);
 		everythingOkay = false;
 	}

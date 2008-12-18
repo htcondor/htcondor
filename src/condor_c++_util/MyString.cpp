@@ -183,11 +183,14 @@ MyString::reserve( const int sz )
 	}
     buf[0] = '\0';
     if (Data) {
+	  // newlen is needed in case we are shortening the string.
+	  int newlen = MIN(sz, Len);
       // Only copy over existing data into the new buffer.
-      strncpy( buf, Data, Len ); 
+      strncpy( buf, Data, newlen ); 
 	  // Make sure it's NULL terminated. strncpy won't make sure of it.
-	  buf[Len] = '\0'; 
+	  buf[newlen] = '\0'; 
       delete [] Data;
+	  Len = newlen;
     }
     // Len will be the same, since we didn't add new text
     capacity = sz;
