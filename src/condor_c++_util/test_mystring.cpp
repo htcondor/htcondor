@@ -109,6 +109,7 @@ int main (int argc, char **argv)
 
 	// ---- Test concatenation.
 	MyString foo;
+	foo = NULL; // test assigning a NULL string
 
 	foo = "blah";
 	if (foo == "blah") {
@@ -119,35 +120,42 @@ int main (int argc, char **argv)
 	}
 
 	foo += "baz";
+	foo += (char *)NULL; // test appending NULL string
+	MyString empty;
+	foo += empty; // test appending empty MyString
 	if (foo == "blahbaz") {
-		printf("OK: foo is blahbaz in line %d.\n", __LINE__);
+		printf("OK: foo is <blahbaz> in line %d.\n", __LINE__);
 	} else {
-		printf("FAILED: foo is not blahbaz in line %d.\n", __LINE__);
+		printf("FAILED: foo is not <blahbaz> in line %d, but is <%s>.\n",
+					__LINE__, foo.Value());
 		everythingOkay = false;
 	}
 
 	foo += '!';
 	if (foo == "blahbaz!") {
-		printf("OK: foo is blahbaz! in line %d.\n", __LINE__);
+		printf("OK: foo is <blahbaz!> in line %d.\n", __LINE__);
 	} else {
-		printf("FAILED: foo is not blahbaz! in line %d.\n", __LINE__);
+		printf("FAILED: foo is not <blahbaz!> in line %d, but is <%s>.\n",
+					__LINE__, foo.Value());
 		everythingOkay = false;
 	}
 
 	MyString foo2("blip!");
 	foo += foo2;
 	if (foo == "blahbaz!blip!") {
-		printf("OK: foo is blahbaz!blip! in line %d.\n", __LINE__);
+		printf("OK: foo is <blahbaz!blip!> in line %d.\n", __LINE__);
 	} else {
-		printf("FAILED: foo is not blahbaz!blip! in line %d.\n", __LINE__);
+		printf("FAILED: foo is not <blahbaz!blip!> in line %d, but is <%s>.\n",
+					__LINE__, foo.Value());
 		everythingOkay = false;
 	}
 
 	if (foo == "blah") {
-		printf("FAILED: foo is blah in line %d.\n", __LINE__);
+		printf("FAILED: foo is <blah> in line %d.\n", __LINE__);
 		everythingOkay = false;
 	} else {
-		printf("OK: foo is not blah in line %d.\n", __LINE__);
+		printf("OK: foo is not <blah> in line %d, but is <%s>.\n", __LINE__,
+					foo.Value());
 	}
 
 	MyString added = MyString("Lance") + MyString(" Armstrong");
@@ -268,6 +276,16 @@ int main (int argc, char **argv)
 		everythingOkay = false;
 	}
 
+	test_sprintf2.sprintf_cat(" Luis Ocana");
+	if ( test_sprintf2 == "sad 5 Luis Ocana" ) {
+		printf("Ok: test_sprintf2 is <sad 5 Luis Ocana> in line %d.\n", __LINE__);
+	} else {
+		printf("FAILED: test_sprintf2 is not <sad 5 Luis Ocana> in line %d, but is <%s>.\n", 
+			   __LINE__, sub.Value());
+		everythingOkay = false;
+	}
+
+
 	// ---- Test invalid arguments
 	MyString a("12345");
 	bool retval;
@@ -280,6 +298,7 @@ int main (int argc, char **argv)
 		everythingOkay = false;
 	}
 
+	// ---- Test *shortening* a string with reserve().
 	retval = a.reserve(1);
 	if ( retval == true ) {
 		printf("OK: reserve() returned true in line %d.\n", __LINE__);
@@ -296,10 +315,10 @@ int main (int argc, char **argv)
 		everythingOkay = false;
 	}
 	if ( !strcmp(a.Value(), "1")) {
-		printf("OK: Value() returned \"1\" in line %d.\n", __LINE__);
+		printf("Ok: a is <1> in line %d.\n", __LINE__);
 	} else {
-		printf("FAILED: Value() didn't return \"1\" in line %d.\n",
-			   __LINE__);
+		printf("FAILED: a is not <1> in line %d, but is <%s>.\n", 
+			   __LINE__, a.Value());
 		everythingOkay = false;
 	}
 
@@ -319,10 +338,10 @@ int main (int argc, char **argv)
 		everythingOkay = false;
 	}
 	if ( !strcmp(a.Value(), "")) {
-		printf("OK: Value() returned \"\" in line %d.\n", __LINE__);
+		printf("OK: a is <> in line %d.\n", __LINE__);
 	} else {
-		printf("FAILED: Value() didn't return \"\" in line %d.\n",
-			   __LINE__);
+		printf("FAILED: a is not <> in line %d, but is <%s>.\n", 
+			   __LINE__, sub.Value());
 		everythingOkay = false;
 	}
 
@@ -610,6 +629,35 @@ int main (int argc, char **argv)
 		printf("Ok: find() worked in line %d.\n", __LINE__);
 	} else {
 	   	printf("FAILED: find() error in line %d.\n", __LINE__);
+		everythingOkay = false;
+	}
+
+
+    // ---- Test append_to_list().
+	MyString list;
+	list.append_to_list("Armstrong");
+	MyString next("Pereiro");
+	list.append_to_list(next);
+	list.append_to_list("Contador", "; ");
+	next = "Sastre";
+	list.append_to_list(next, "; ");
+	if ( list == "Armstrong,Pereiro; Contador; Sastre" ) {
+		printf("Ok: list is <Armstrong,Pereiro; Contador; Sastre> "
+					"in line %d.\n", __LINE__);
+	} else {
+	   	printf("FAILED: list is not <Armstrong,Pereiro; Contador; Sastre> "
+					"in line %d, but is <%s>.\n", __LINE__, list.Value());
+		everythingOkay = false;
+	}
+	
+
+    // ---- Test integer constructor.
+	MyString number(98765);
+	if ( number == "98765" ) {
+		printf("Ok: number is <98765> in line %d.\n", __LINE__);
+	} else {
+		printf("FAILED: number is not <98765> in line %d, but is <%s>.\n", 
+			   __LINE__, sub.Value());
 		everythingOkay = false;
 	}
 

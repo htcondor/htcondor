@@ -41,29 +41,19 @@ MyString::MyString()
 MyString::MyString(int i) 
 {
 	init();
-	const int bufLen = 50;
-    char tmp[bufLen];
-	::snprintf(tmp,bufLen,"%d",i);
-    Len=strlen(tmp);
-	ASSERT(Len < bufLen);
-    Data=new char[Len+1];
-    capacity = Len;
-    strcpy(Data,tmp);
-	return;
+	*this += i;
 };
 
 MyString::MyString(const char* S) 
 {
 	init();
     *this=S; // = operator is overloaded!
-	return;
 };
 
 MyString::MyString(const MyString& S) 
 {
 	init();
     *this=S; // = operator is overloaded!
-	return;
 }
 
 MyString::~MyString() 
@@ -73,7 +63,6 @@ MyString::~MyString()
 	}
 	delete [] tokenBuf;
 	init(); // for safety -- errors if you try to re-use this object
-	return;
 }
 
 /*--------------------------------------------------------------------
@@ -121,48 +110,37 @@ MyString::setChar(int pos, char value)
 MyString& MyString::
 operator=(const MyString& S) 
 {
-    if (!S.Data) {
-		if (Data) {
-			Data[0] = '\0';
-		}
-		Len = 0;
-		return *this;
-    } else if (Data && S.Len <= capacity) {
-		strcpy( Data, S.Data );
-		Len = S.Len;
-		return *this;
-    }
-    if (Data) {
-		delete[] Data;
-	}
-	Len = S.Len;
-	Data = new char[Len+1];
-	strcpy(Data,S.Data);
-	capacity = Len;
+	assign_str(S.Value(), S.Len);
     return *this;
 }
 
 MyString& 
 MyString::operator=( const char *s ) 
 {
-	if( !s || *s == '\0' ) {
+	int s_len = s ? strlen(s) : 0;
+	assign_str(s, s_len);
+    return *this;
+}
+
+void
+MyString::assign_str( const char *s, int s_len ) 
+{
+	if( s_len < 1 ) {
 		if( Data ) {
 			Data[0] = '\0';
 			Len = 0;
 		}
-		return *this;
-	}
-	int s_len = strlen( s );
-    if( s_len > capacity ) {
-		if( Data ) {
-			delete[] Data;
+	} else {
+    	if( s_len > capacity ) {
+			if( Data ) {
+				delete[] Data;
+			}
+			capacity = s_len;
+			Data = new char[capacity+1];
 		}
-		capacity = s_len;
-		Data = new char[capacity+1];
+		strcpy( Data, s );
+		Len = s_len;
 	}
-	strcpy( Data, s );
-	Len = s_len;
-    return *this;
 }
 
 /*--------------------------------------------------------------------
@@ -235,12 +213,7 @@ MyString::reserve_at_least(const int sz)
 MyString& 
 MyString::operator+=(const MyString& S) 
 {
-    if( S.Len + Len > capacity || !Data ) {
-		reserve_at_least( Len + S.Len );
-    }
-    //strcat( Data, S.Value() );
-	strcpy( Data + Len, S.Value());
-	Len += S.Len;
+    append_str( S.Value(), S.Len );
     return *this;
 }
 
@@ -251,14 +224,19 @@ MyString::operator+=(const char *s)
     if( !s || *s == '\0' ) {
 		return *this;
 	}
-    int s_len = strlen( s );
+    append_str( s, strlen( s ) );
+    return *this;
+}
+
+void
+MyString::append_str( const char *s, int s_len )
+{
     if( s_len + Len > capacity || !Data ) {
 		reserve_at_least( Len + s_len );
     }
     //strcat( Data, s );
 	strcpy( Data + Len, s);
 	Len += s_len;
-    return *this;
 }
 
 void
@@ -302,11 +280,7 @@ MyString::operator+=( int i )
 	::snprintf( tmp, bufLen, "%d", i );
     int s_len = strlen( tmp );
 	ASSERT(s_len < bufLen);
-    if( s_len + Len > capacity ) {
-		reserve_at_least( Len + s_len );
-    }
-	strcpy( Data + Len, tmp );
-	Len += s_len;
+	append_str( tmp, s_len );
     return *this;
 }
 
@@ -319,11 +293,7 @@ MyString::operator+=( unsigned int ui )
 	::snprintf( tmp, bufLen, "%u", ui );
 	int s_len = strlen( tmp );
 	ASSERT(s_len < bufLen);
-	if( s_len + Len > capacity ) {
-		reserve_at_least( Len + s_len );
-	}
-	strcpy( Data + Len, tmp );
-	Len += s_len;
+	append_str( tmp, s_len );
 	return *this;
 }
 
@@ -336,11 +306,7 @@ MyString::operator+=( long l )
 	::snprintf( tmp, bufLen, "%ld", l );
 	int s_len = strlen( tmp );
 	ASSERT(s_len < bufLen);
-	if( s_len + Len > capacity ) {
-		reserve_at_least( Len + s_len );
-	}
-	strcpy( Data + Len, tmp );
-	Len += s_len;
+	append_str( tmp, s_len );
 	return *this;
 }
 
@@ -353,11 +319,7 @@ MyString::operator+=( double d )
 	::snprintf( tmp, bufLen, "%f", d );
     int s_len = strlen( tmp );
 	ASSERT(s_len < bufLen);
-    if( s_len + Len > capacity ) {
-		reserve_at_least( Len + s_len );
-    }
-	strcpy( Data + Len, tmp);
-	Len += s_len;
+	append_str( tmp, s_len );
     return *this;
 }
 
