@@ -25,13 +25,14 @@ The details of each version are described below.
 \begin{itemize}
 
 \item A bug in some older Xen kernels can result in Condor errors
-due to a broken assumption in the \Condor{procd} daemon. See the
-FAQ entry in section~ \ref{sec:xen-jiffies-bug} for details.
+due to a broken assumption in the \Condor{procd} daemon.
+See the FAQ entry at section~ \ref{sec:xen-jiffies-bug} for details.
 
 \item A problem has been discovered when using snapshot disks with 
-VMware jobs if the path that the \Condor{vm-gahp} uses to refer to the
-VM's VMX file contains a symlink. See the FAQ entry in section~
-\ref{sec:vmware-symlink-bug} for details.
+\SubmitCmd{vm} universe VMware jobs,
+if the path that the \Condor{vm-gahp} uses to refer to the
+virtual machine's VMX file contains a symbolic link.
+See the FAQ entry at section~ \ref{sec:vmware-symlink-bug} for details.
 
 \item The name of the Amazon EC2 GAHP binary has changed from
 \Prog{amazon-gahp} to \Prog{amazon\_gahp}. This makes it consistent

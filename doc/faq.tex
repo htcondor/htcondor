@@ -379,7 +379,7 @@ configuration file entry \MacroNI{HOSTALLOW\_WRITE} set to the above sentinel
 value. 
 The Condor administrator must alter this value to be the correct domain
 or IP addresses that the administrator desires.
-The wildcard character (\verb@*@) may be used to define this entry,
+The wild card character (\verb@*@) may be used to define this entry,
 but that allows anyone, from anywhere,
 to submit jobs into your pool.
 A better value will be of the form \Expr{*.domainname.com}.
@@ -1335,13 +1335,13 @@ page~\pageref{sec:file-transfer-if-when} for details on the naming
 of the intermediate files.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{\label{sec:vmware-symlink-bug}My VMware jobs are failing and being put on hold.}
+\subsection*{\label{sec:vmware-symlink-bug}Why are my vm universe VMware jobs failing and being put on hold?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Strange behavior has been noted when Condor tries to run a VMware
-job using a path to a VMX file that contains a symlink. An example
-of an error message you might see in such a job's user log would
-be:
+Strange behavior has been noted when Condor tries to run a 
+\SubmitCmd{vm} universe VMware
+job using a path to a VMX file that contains a symbolic link.
+An example of an error message that may appear in such a job's user log:
 \begin{verbatim}
 Error from starter on master_vmuniverse_strtd@nostos.cs.wisc
 .edu: register(/scratch/gquinn/condor/git/CONDOR_SRC/src/con
@@ -1353,13 +1353,16 @@ it/CONDOR_SRC/src/condor_tests/31426/31426vmuniverse/execute
 \end{verbatim}
 To work around this problem:
 \begin{itemize}
-\item If you are using file transfer
-(\SubmitCmd{vmware\_should\_transfer\_files = true}), then ensure that
-the \Macro{EXECUTE} settings on all execute machines do not contain
-symlink path components.
-\item If you are using a shared file system, ensure that the
-\SubmitCmd{vmware\_dir} setting in your submit file does not use
-symlink path name components.
+\item If using file transfer
+(the submit description file contains
+\SubmitCmd{vmware\_should\_transfer\_files = true}),
+then modify any
+configuration variable \Macro{EXECUTE} values on all execute machines,
+such that they do not contain symbolic link path components.
+\item If using a shared file system, ensure that the
+submit description file command
+\SubmitCmd{vmware\_dir} does not use
+symbolic link path name components.
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1885,7 +1888,7 @@ The solution is to properly configure the \Macro{HOSTALLOW\_*} and
 \Macro{HOSTDENY\_*} settings (for host/IP based authentication) or to
 configure strong authentication and set \Macro{ALLOW\_*} and
 \Macro{DENY\_*} as appropriate.
-Host-based authentiation is described in
+Host-based authentication is described in
 section~\ref{sec:Host-Security} on page~\pageref{sec:Host-Security}.
 Information about other forms of authentication is provided in 
 section~\ref{sec:Config-Security} on page~\pageref{sec:Config-Security}.
@@ -1964,10 +1967,10 @@ you used domain names in your \MacroNI{HOSTALLOW\_WRITE} and/or
 but the domain name server (DNS) is not properly configured at your site.
 Without the proper configuration, Condor cannot resolve
 the IP addresses of your machines
-into fully-qualified domain names (an inverse lookup).
+into fully-qualified domain names (an inverse look up).
 If this is the problem, then the solution takes one of two forms:
 \begin{enumerate}
-\item Fix the DNS so that inverse lookups (trying to get the domain name
+\item Fix the DNS so that inverse look ups (trying to get the domain name
    from an IP address) works for your machines.  You can
    either fix the DNS itself,
    or use the \MacroNI{DEFAULT\_DOMAIN\_NAME} setting in your Condor
@@ -2055,7 +2058,7 @@ Some older Xen kernels had a problem where the kernel's jiffy counter
 could jump backwards in time. This breaks an assumption made by the
 \Condor{procd}. This problem can only be worked around by upgrading
 the Xen kernel to a version that fixes the issue with the jiffy counter.
-Running Condor on an affected Xen kernel oftens results in failures
+Running Condor on an affected Xen kernel often results in failures
 of the following forms in Condor daemon log files:
 \begin{itemize}
 \item \verb@error: parent process's birthday is later than our own@
