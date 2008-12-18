@@ -1347,7 +1347,7 @@ sub IsRunningYet
 						print "Found startd running!\n";
         			}
     			}
-				sleep 2;
+				sleep 1;
 			}
 		}
 	}
@@ -1377,7 +1377,7 @@ sub IsRunningYet
 						print "Found schedd running!\n";
         			}
     			}
-				sleep 2;
+				sleep 1;
 			}
 		}
 	}
