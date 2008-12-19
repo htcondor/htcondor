@@ -98,6 +98,8 @@ class LeaseManager : public Service
 	int							 m_Interval_Update;
 	int							 m_TimerId_Prune;
 	int							 m_Interval_Prune;
+
+	bool						 m_enable_ad_debug;
 };
 
 
