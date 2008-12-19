@@ -166,6 +166,10 @@ ignore the virtual machine status reported by Xen in the vm universe.
 \item Fixed a bug introduced in Condor 7.1.4 which could cause any
   Condor daemon crash if D\_ALL is enabled when a reconfig is performed.
 
+\item Fixed a bug introduced in Condor 7.1.4 which caused standard universe
+jobs to fail to start up if security authentication but not encryption was
+enabled between the submit side and the execute side.
+
 \end{itemize}
 
 \noindent Known Bugs:
