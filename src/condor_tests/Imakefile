@@ -1485,6 +1485,8 @@ TESTCLASS(job_core_time-deferral_van,quicknolink)
  These work but always cause a ShadowException
  Commenting out for for now
  Andy - 02.17.06
+ Seem fine now... bt 12.19.08
+*********/
 DESC(job_core_time-deferral-hold_van,"Vanilla: Verify HOLD against deferred execution")
 RUN(job_core_time-deferral-hold_van)
 TESTCLASS(job_core_time-deferral-hold_van,core)
@@ -1498,7 +1500,6 @@ TESTCLASS(job_core_time-deferral-remove_van,core)
 TESTCLASS(job_core_time-deferral-remove_van,quick)
 TESTCLASS(job_core_time-deferral-remove_van,full)
 TESTCLASS(job_core_time-deferral-remove_van,quicknolink)
-*******/
 
 DESC(job_core_crontab_van,"Vanilla: CronTab Scheduling")
 RUN(job_core_crontab_van)
