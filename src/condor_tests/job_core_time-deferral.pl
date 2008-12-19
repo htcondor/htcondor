@@ -167,6 +167,7 @@ for ( $ctr = 0, $cnt = scalar(@deltas); $ctr < $cnt; $ctr++ ) {
 	my $logFile = $cmdFile.".log";
 	my $outFile = $cmdFile.".out";
 	my $errFile = $cmdFile.".err";
+	$cmdFile = $cmdFile . $$;
 	
 	system("rm -f $logfile");
 
