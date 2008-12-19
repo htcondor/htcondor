@@ -25,9 +25,12 @@ use CondorPersonal;
 use CondorTest;
 
 # 'Prototypes'
+sub FillTest($$);
+sub WriteConfig( $ );
+sub WriteConfigSection( $$$ );
 sub DaemonWait( $ );
 sub RunTests( $ );
-sub RunTestOp( $$ );
+sub RunTestOp( $$$ );
 sub CountLiveLeases( $ );
 
 my $testname = 'lib_lease_manager - runs lease manager tests';
@@ -43,7 +46,7 @@ my %tests =
      # Common to all tests
      common =>
      {
-		 config =>
+		 config_lm =>
 		 {
 			 GETADS_INTERVAL			=> 10,
 			 UPDATE_INTERVAL			=> 10,
@@ -55,6 +58,9 @@ my %tests =
 
 			 QUERY_ADTYPE				=> "Any",
 			 CLASSAD_LOG				=> "\$(SPOOL)/LeaseAdLog",
+		 },
+		 config =>
+		 {
 
 			 ADVERTISER					=> $programs{advertise},
 			 ADVERTISER_LOG				=> "\$(LOG)/AdvertiserLog",
@@ -64,9 +70,10 @@ my %tests =
 			 #LeaseManager_ARGS			=> "-local-name any",
 			 #LeaseManager_ARGS			=> "-f",
 			 LEASEMANAGER_DEBUG			=> "D_FULLDEBUG D_CONFIG",
-			 DAEMON_LIST	=> "MASTER, COLLECTOR, LEASEMANAGER, ADVERTISER",
 			 DC_DAEMON_LIST				=> "+ LEASEMANAGER",
 
+			 TOOL_DEBUG					=> "D_FULLDEBUG",
+			 ALL_DEBUG					=> "",
 		 },
 		 advertise =>
 		 {
@@ -91,79 +98,129 @@ my %tests =
 	 defaults =>
 	 {
 		 config => { },
+		 config_lm => { },
 		 advertise => { },
-		 resource => { },
+		 resource => {
+			 MaxLeases => 1,
+		 },
 		 advertise => { },
 		 run =>
 		 {
 			 loops =>
 			 [
-			  {
-				  op			=> [ "GET", 60, 1 ],
-				  expect		=> 1,
-				  sleep			=> 10,
-			  },
-			  {
-				  op			=> [ "RELEASE", "'*'" ],
-				  expect		=> 0,
-			  }
+			  { op => [ "GET", 60, 1 ],   expect => 1, },
+			  { op => [ "RELEASE", "*" ], expect => 0, }
 			  ],
 		 },
      },
 
-     # Advertise try to grab 2
-	 simple1 =>
+     # Advertise 1, try to grab 2
+	 get_rel_1 =>
      {
 		 config => { },
-		 advertise => {
-			 MaxLeases			=> 1,
+		 config_lm => { },
+		 advertise => { },
+		 resource => { 
+			 MaxLeases => 1,
 		 },
-		 resource => { },
 		 advertise => { },
 		 run =>
 		 {
 			 loops =>
 			 [
-			  {
-				  op			=> [ "GET", 60, 2 ],
-				  expect		=> 1,
-				  sleep			=> 10,
-			  },
-			  {
-				  op			=> [ "RELEASE", "'*'" ],
-				  expect		=> 0,
-			  }
+			  { op => [ "GET", 60, 2 ],   expect => 1, },
+			  { op => [ "RELEASE", "*" ], expect => 0, }
 			  ],
 		 },
      },
 
-     # Advertise try to grab 2
-	 simple2 =>
+     # Advertise 1, try to grab 2
+	 get_rel_2 =>
      {
 		 config => { },
-		 advertise => {
-			 MaxLeases			=> 1,
+		 config_lm => { },
+		 advertise => { },
+		 resource => {
+			 MaxLeases => 1,
 		 },
-		 resource => { },
 		 advertise => { },
 		 run =>
 		 {
 			 loops =>
 			 [
-			  {
-				  op			=> [ "GET", 60, 1 ],
-				  expect		=> 1,
-				  sleep			=> 10,
-			  },
-			  {
-				  op			=> [ "GET", 60, 1 ],
-				  expect		=> 1,
-				  sleep			=> 10,
-			  },
-			  {
-				  op			=> [ "RELEASE", "'*'" ],
-				  expect		=> 0,
-			  }
+			  { op => [ "GET", 60, 1 ],   expect => 1, },
+			  { op => [ "GET", 60, 1 ],   expect => 1, },
+			  { op => [ "RELEASE", "*" ], expect => 0, }
+			  ],
+		 },
+     },
+
+     # Advertise 1, try to grab 2
+	 get_rel_3 =>
+     {
+		 config => { },
+		 config_lm => { },
+		 advertise => { },
+		 resource => {
+			 MaxLeases => 2,
+		 },
+		 advertise => { },
+		 run =>
+		 {
+			 loops =>
+			 [
+			  { op => [ "GET", 60, 1 ],   expect => 1, },
+			  { op => [ "GET", 60, 1 ],   expect => 2, },
+			  { op => [ "RELEASE", "*" ], expect => 0, }
+			  ],
+		 },
+     },
+
+     # Advertise 5, try to grab 5, release 2
+	 get_rel_4 =>
+     {
+		 config => { },
+		 config_lm => { },
+		 advertise => { },
+		 resource => {
+			 MaxLeases => 5,
+		 },
+		 advertise => { },
+		 run =>
+		 {
+			 loops =>
+			 [
+			  { op => [ "GET", 60, 5 ], expect => 5, },
+			  { op => [ "RELEASE", "-d", "[0]", "[1]" ], expect => 3, }
+			  ],
+		 },
+     },
+
+     # Advertise 2, try to grab 2, free 1, grab 1
+	 get_rel_5 =>
+     {
+		 config => { },
+		 config_lm => { },
+		 advertise => { },
+		 resource => {
+			 MaxLeases => 5,
+		 },
+		 advertise => { },
+		 run =>
+		 {
+			 loops =>
+			 [
+			  { op => [ "GET", 60, 2 ],					 expect => 2, },
+			  { op => [ "RELEASE", "-d", "[0]" ],		 expect => 1, },
+			  { op => [ "GET", 60, 2 ],					 expect => 3, },
+			  { op => [ "RELEASE", "-d", "[0]", "[1]" ], expect => 1, },
+			  { op => [ "GET", 60, 4 ],					 expect => 5, },
+			  { op => [ "GET", 60, 5 ],					 expect => 5, },
+			  { op => [ "RELEASE", "-d", "[1]" ],		 expect => 4, },
+			  { op => [ "GET", 60, 5 ],					 expect => 5, },
+			  { op => [ "RELEASE", "-d", "[0]", "[1]" ], expect => 3, },
+			  { op => [ "GET", 60, 5 ],					 expect => 5, },
+			  { op => [ "RELEASE", "-d", "*" ],			 expect => 0, },
 			  ],
 		 },
      },
@@ -172,21 +229,24 @@ my %tests =
 sub usage( )
 {
     print
-	"usage: $0 [options] test-name\n" .
-	"  -l|--list     list names of tests\n" .
-	"  -f|--force    force overwrite of test directory\n" .
-	"  -n|--no-exec  no execute / test mode\n" .
-	"  -d|--debug    enable D_FULLDEBUG debugging\n" .
-	"  -v|--verbose  increase verbose level\n" .
-	"  -s|--stop     stop after errors\n" .
-	"  --valgrind    run test under valgrind\n" .
-	"  -q|--quiet    cancel debug & verbose\n" .
-	"  -h|--help     this help\n";
+		"usage: $0 [options] test-name\n" .
+		"  -l|--list     list names of tests\n" .
+		"  -f|--force    force overwrite of test directory\n" .
+		"  -n|--no-exec  no execute / test mode\n" .
+		"  -p|--pid      append PID to test directory\n" .
+		"  -N|--no-pid   do not append PID to test directory\n" .
+		"  -d|--debug    enable D_FULLDEBUG debugging\n" .
+		"  -v|--verbose  increase verbose level\n" .
+		"  -s|--stop     stop after errors\n" .
+		"  --valgrind    run test under valgrind\n" .
+		"  -q|--quiet    cancel debug & verbose\n" .
+		"  -h|--help     this help\n";
 }
 
 
 my %settings =
 (
+ use_pid		=> 0,
  verbose		=> 0,
  debug			=> 0,
  execute		=> 1,
@@ -206,6 +266,12 @@ foreach my $arg ( @ARGV ) {
     }
     elsif ( $arg eq "-n"  or  $arg eq "--no-exec" ) {
 		$settings{execute} = 0;
+    }
+    elsif ( $arg eq "-p"  or  $arg eq "--pid" ) {
+		$settings{use_pid} = 1;
+    }
+    elsif ( $arg eq "-N"  or  $arg eq "--no-pid" ) {
+		$settings{use_pid} = 0;
     }
     elsif ( $arg eq "-s"  or  $arg eq "--stop" ) {
 		$settings{stop} = 1;
@@ -231,7 +297,7 @@ foreach my $arg ( @ARGV ) {
 		$settings{name} = $arg;
 		if ( !exists $tests{$settings{name}} ) {
 			print STDERR "Unknown test name: $settings{name}\n";
-			usage( );
+			print STDERR "  use --list to list tests\n";
 			exit(1);
 		}
 		$settings{test} = $tests{$settings{name}};
@@ -247,21 +313,7 @@ if ( !exists $settings{name} ) {
     exit(1);
 }
 
-sub FillTest($$)
-{
-	my $dest = shift;
-	my $src  = shift;
-	foreach my $section ( keys %{$src} )
-	{
-		if (! exists $dest->{$section} ) {
-			$dest->{$section} = {};
-		}
-		foreach my $attr ( keys(%{$src->{$section}})  ) {
-			$dest->{$section}{$attr} = $src->{$section}{$attr};
-		}
-    }
-}
-
+#CondorPersonal::DebugLevel(3);
 
 my %test;
 FillTest( \%test, $tests{common} );
@@ -270,6 +322,10 @@ $test{name} = $settings{name};
 my $full_name = "lease_manager-".$settings{name};
 
 my $dir = "test-lease_manager-" . $settings{name};
+if ( $settings{use_pid} ) {
+	$dir .= ".$$";
+}
+
 my $fulldir = getcwd() . "/$dir";
 if ( -d $dir  and  $settings{force} ) {
     system( "/bin/rm", "-fr", $dir );
@@ -327,22 +383,8 @@ foreach my $n ( 0 .. $settings{verbose} ) {
 push( @advertiser_args, $test{advertise}{command} );
 push( @advertiser_args, $resource );
 
-my $config = "$dir/condor_config.local";
-open( CONFIG, ">$config" ) or die "Can't write to config file $config";
-foreach my $param ( sort keys(%{$test{config}}) ) {
-    my $value = $test{config}{$param};
-    if ( $value eq "TRUE" ) {
-		print CONFIG "$param = TRUE\n";
-    }
-    elsif ( $value eq "FALSE" ) {
-		print CONFIG "$param = FALSE\n";
-    }
-    else {
-		print CONFIG "$param = $value\n";
-    }
-}
-print CONFIG "ADVERTISER_ARGS = " . join( " ", @advertiser_args ) . "\n";
-close( CONFIG );
+my $config_tmp = "$dir/condor_config.tmp";
+WriteConfig( $config_tmp );
 
 if ( not $settings{execute} ) {
 	exit( 0 );
@@ -357,6 +399,7 @@ ports = dynamic
 condor = nightlies
 condorconfig = condor_config
 condorlocal = condor_config.local
+localpostsrc = $config_tmp
 condordaemons = MASTER,COLLECTOR,LEASEMANAGER,ADVERTISER
 personaldir = $fulldir
 ENDPARAMS
@@ -367,21 +410,8 @@ CondorTest::debug("About to set up Condor Personal : <<<$ltime>>>", 1);
 
 # Fire up my condor
 my $configrem =	CondorPersonal::StartCondor( $param_file, $full_name );
-print "<$configrem>\n";
-exit 1;
-
-# This is all throw-away
-#my $main_config = "$fulldir/condor_config";
-# system( "cp condor_config.nrl $main_config" );
-# 
-# $ENV{CONDOR_CONFIG} = "$main_config";
-# 
-# my $log = `condor_config_val log`; chomp $log;
-# mkdir( $log ) or die "Can't create $log";
-# my $spool = `condor_config_val spool`; chomp $spool;
-# mkdir( $spool ) or die "Can't create $spool";
-# 
-# system( "condor_master" );
+my ($config, $port) = split( /\+/, $configrem );
+$ENV{CONDOR_CONFIG} = $config;
 
 if (! DaemonWait( $test{resource}{MaxLeases} ) ) {
 }
@@ -389,18 +419,68 @@ if (! DaemonWait( $test{resource}{MaxLeases} ) ) {
 print $test{client}->{lease_file} . "\n";;
 RunTests( \%test );
 
-# system( "condor_off -master" );
-# end throw-away code
-
-
-my @valgrind = ( "valgrind", "--tool=memcheck", "--num-callers=24",
-				 "-v", "-v", "--leak-check=full" );
+CondorPersonal::KillDaemonPids( $config );
+system( "rm -r ./$$" );
 
 system("date");
 if ( $settings{verbose} ) {
-    print "Using directory $dir\n";
+    print "Used directory $dir\n";
 }
 my $errors = 0;
+
+
+sub FillTest($$)
+{
+	my $dest = shift;
+	my $src  = shift;
+	foreach my $section ( keys %{$src} )
+	{
+		if (! exists $dest->{$section} ) {
+			$dest->{$section} = {};
+		}
+		foreach my $attr ( keys(%{$src->{$section}})  ) {
+			$dest->{$section}{$attr} = $src->{$section}{$attr};
+		}
+    }
+}
+
+sub WriteConfig( $ )
+{
+	my $config = shift;
+
+	my $fh;
+	open( $fh, ">$config" ) or die "Can't write to config file $config";
+	print $fh "#\n";
+	print $fh "# auto-generated by lib_lease_manager.pl\n";
+	print $fh "#\n";
+	WriteConfigSection( $fh, "", $test{config} );
+	WriteConfigSection( $fh, "LeaseManager.", $test{config_lm} );
+	print $fh "ADVERTISER_ARGS = " . join( " ", @advertiser_args ) . "\n";
+	print $fh "#\n";
+	print $fh "# End of auto-generated by lib_lease_manager.pl\n";
+	print $fh "#\n";
+	close( $fh );
+}
+
+sub WriteConfigSection( $$$ )
+{
+	my $fh = shift;
+	my $prefix = shift;
+	my $hashref = shift;
+
+	foreach my $param ( sort keys(%{$hashref}) ) {
+		my $value = $hashref->{$param};
+		if ( $value eq "TRUE" ) {
+			print $fh "$prefix$param = TRUE\n";
+		}
+		elsif ( $value eq "FALSE" ) {
+			print $fh "$prefix$param = FALSE\n";
+		}
+		else {
+			print $fh "$prefix$param = $value\n";
+		}
+	}
+}
 
 # Wait for everything to come to life...
 sub DaemonWait( $ )
@@ -430,7 +510,9 @@ sub DaemonWait( $ )
 						$ads{$MyType}{$1} = $2;
 					}
 					elsif ( /^(\w+) = (.*)/ ) {
-						$ads{$MyType}{$1} = $2;
+						my $attr = $1;
+						my $value = $2;
+						$ads{$MyType}{$attr} = $value;
 					}
 					elsif ( $_ eq "" ) {
 						last;
@@ -456,7 +538,6 @@ sub DaemonWait( $ )
 			if ( $NumResources >= $MinResources ) {
 				return 1;
 			}
-			print "waiting for resources ($NumResources)\n";
 			sleep( 5 );
 		}
 	}
@@ -475,11 +556,12 @@ sub RunTests( $ )
 {
 	my $test = shift;
 
+	my $leases;
 	my $run = $test->{run};
 	for my $loop ( @{$run->{loops}} ) {
-		my $leases;
+		print "\n";
 		if ( exists $loop->{op} ) {
-			$leases = RunTestOp( $test, $loop->{op} );
+			$leases = RunTestOp( $test, $loop->{op}, $leases );
 			if ( ! defined($leases) ) {
 				$errors++;
 				$leases = [];
@@ -496,29 +578,85 @@ sub RunTests( $ )
 				printf( "Found correct # of leases\n" );
 			}
 		}
+
+		printf "%d leases:\n", scalar(@{$leases});
+		foreach my $n ( 0 .. $#{@{$leases}} ) {
+			my $lease = @{$leases}[$n];
+			if ( $settings{verbose} ) {
+				for my $k ( keys %{$lease} ) {
+					print "$k=".$lease->{$k}." ";
+				}
+				print "\n";
+			}
+			elsif (  (not $lease->{Dead})  and  (not $lease->{Expired}) ) {
+				printf( "Lease %02d: %s %s %ds %ds\n",
+						$n,
+						$lease->{Resource},
+						$lease->{LeaseID},
+						$lease->{Duration},
+						$lease->{Remaining} );
+			}
+		}
 		if ( exists $loop->{sleep} ) {
 			if ( $settings{verbose} ) {
 				printf "Sleeping for %d seconds..\n", $loop->{sleep};
 			}
 			sleep( $loop->{sleep} );
 		}
+		else {
+			#sleep( 1 );
+		}
 	}
 }
 
-sub RunTestOp( $$ )
+sub RunTestOp( $$$ )
 {
 	my $test = shift;
 	my $op = shift;
+	my $leases = shift;
 
 	my @cmd;
+
+	my @valgrind = ( "valgrind", "--tool=memcheck", "--num-callers=24",
+					 "-v", "-v", "--leak-check=full" );
+	if ( $settings{valgrind} ) {
+		for my $t ( @valgrind ) {
+			push( @cmd, $t );
+		}
+		push( @cmd, "--log-file=$fulldir/tester.valgrind" );
+	}
+
 	push( @cmd, $programs{tester} );
 	push( @cmd, $test->{client}{lease_file} );
 	foreach my $n ( 0 .. $settings{verbose} ) {
 		push( @cmd, "-v" );
 	}
+	my @show;
 	foreach my $t ( @{$op} ) {
-		push( @cmd, $t );
+		if ( $t =~ /\[(\d+)\]/ ) {
+			my $n = $1;
+			if ( $n > $#{@{$leases}} ) {
+				print STDERR "ERROR: Lease $n doesn't exist!!!\n";
+				push( @show, "$t=>'NONE'" );
+				$errors++;
+			}
+			else {
+				my $id = @{$leases}[$n]->{LeaseID};
+				push( @cmd, $id );
+				push( @show, "$t=>'$id'" );
+			}
+		}
+		elsif ( $t eq "*" ) {
+			push( @cmd, "'*'" );
+			push( @show, $t );
+		}
+		else {
+			push( @cmd, $t );
+			push( @show, $t );
+		}
 	}
+	print "Command: " . join(" ", @show) . "\n";
+
 	my $cmdstr = join( " ", @cmd );
 	if ( $settings{verbose} ) {
 		print "Runing: $cmdstr\n";
@@ -529,18 +667,23 @@ sub RunTestOp( $$ )
 		return undef;
 	}
 
-	my @leases;
+	my @new_leases;
 	while( <TESTER> ) {
 		chomp;
 		if ( /LEASE (\d+) \{/ ) {
-			my %lease;
+			my $lease = ();
 			while( <TESTER> ) {
 				chomp;
 				if (/^\s*\}/ ) {
-					push( @leases, \%lease );
+					push( @new_leases, $lease );
+					$lease = ();
 				}
 				elsif ( /^\s+(\w+)=(.+)/ ) {
-					$lease{$1} = $2;
+					my $attr = $1;
+					my $value = $2;
+					$value = 1 if ( $value =~ /^TRUE$/i );
+					$value = 0 if ( $value =~ /^FALSE$/i );
+					$lease->{$attr} = $value;
 				}
 				else {
 					# skip
@@ -549,14 +692,13 @@ sub RunTestOp( $$ )
 		}
 	}
 	my $status = close( TESTER );
-	print "tester status: $status\n";
 	if ( ($status>>8) ) {
 		printf STDERR "tester failed: %d\n", ($status >> 8);
 		return undef;
 	}
-	print "found ". scalar(@leases) . " leases\n";
+	print "found ". scalar(@new_leases) . " leases\n";
 
-	return \@leases;
+	return \@new_leases;
 }
 
 sub CountLiveLeases( $ )
@@ -565,10 +707,7 @@ sub CountLiveLeases( $ )
 
 	my $count = 0;
 	foreach my $lease ( @{$leases} ) {
-		if ( ( $lease->{dead}    =~ /true/i ) ||
-			 ( $lease->{expired} =~ /true/i ) ) {
-			next;
-		}
+		next if ( $lease->{Dead} or $lease->{Expired} );
 		$count++;
 	}
 	return $count;
