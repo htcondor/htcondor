@@ -209,7 +209,7 @@ class StringBase : public ExprTree
 	virtual int	    operator ==(ExprTree&);
 
 	virtual void	Display();
-	char*	const	Value();
+	const	char*	Value();
 
 	friend	class	ExprTree;
 
@@ -233,7 +233,7 @@ class ISOTimeBase : public ExprTree
 	virtual int	    operator ==(ExprTree&);
 
 	virtual void	Display();
-	char*	const	Value();
+	const	char*	Value();
 
 	friend	class	ExprTree;
 

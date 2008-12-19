@@ -2100,6 +2100,7 @@ SetImageSize()
 				DoCleanup(0,0,NULL);
 				exit( 1 );
 			}
+			free( tmp );
 		} else {
 			disk_usage = executablesize + TransferInputSize;
 		}

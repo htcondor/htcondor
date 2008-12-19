@@ -47,7 +47,7 @@ findSignal( ClassAd* ad, const char* attr_name )
 	if( ! ad ) {
 		return -1;
 	}
-	char* name = NULL;
+	const char* name = NULL;
 
 	ExprTree *tree, *rhs;
 	tree = ad->Lookup( attr_name );
