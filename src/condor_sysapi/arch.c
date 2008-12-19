@@ -198,8 +198,30 @@ sysapi_translate_arch( char *machine, char *sysname )
 		sprintf( tmp, "INTEL" );
 	} 
 	else if( !strcmp(machine, "i386") ) { //LDAP entry
+/* force INTEL only for now, until I resolve what to do about the mess
+between I386 and X86_64 detection on macosx. */
+#if 0 && defined(Darwin)
+/* According to the web, uname -a (including the uname call) will return
+	i386 ALWAYS, regardless if the OS is actually on an x86_64 machine. So here
+	we use a more platform specific method to determine it */
+#include <sys/sysctl.h>
+		{
+			int ret;
+			int val;
+			size_t len = sizeof(int);
+
+			/* assume x86 */
+			sprintf( tmp, "INTEL" );
+			ret = sysctlbyname("hw.optional.x86_64", &val, &len, NULL, 0);
+			if (ret == 0 && val == 1) {
+				/* but we could be proven wrong */
+				sprintf( tmp, "X86_64" );
+			}
+		}
+#else
 		sprintf( tmp, "INTEL" );
-	} 
+#endif
+	}
 	else if( !strcmp(machine, "ia64") ) {
 		sprintf( tmp, "IA64" );
 	}

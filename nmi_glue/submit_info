@@ -31,6 +31,10 @@
 # x86_rhap_5
 # x86_64_rhap_5
 
+# These platforms are not done being ported
+# x86_macos_10.5
+# x86_64_macos_10.5
+
 # These platforms are in maintenance build only
 # N/A
 
@@ -120,6 +124,11 @@ test_append_prereqs = java-1.5.0_03
 platforms = x86_macos_10.4
 test_append_prereqs = java-1.4.2_09
 ]
+
+#[
+#platforms = x86_64_macos_10.5
+#test_append_prereqs = java-1.5.0_08
+#]
 
 [
 platforms = x86_winnt_5.1

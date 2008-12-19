@@ -37,6 +37,7 @@ CondorTest::debug("Spool is in --$spool--\n",1);
 
 my $job = $$;
 my $haveseenevict = 0;
+my $haveseenrun = 0;
 
 my $baseoutfile;
 my $oute;
@@ -50,8 +51,8 @@ $execute = sub {
 	my %args = @_;
 	my $cluster = $args{"cluster"};
 
-	if($haveseenevict == 0) {
-		$haveseenevict = 1;
+	if($haveseenrun == 0) {
+		$haveseenrun = 1;
 	} else {
 		return(0);
 	}
@@ -91,6 +92,11 @@ $evicted = sub {
 	my %args = @_;
 	my $cluster = $args{"cluster"};
 
+	if($haveseenevict == 0) {
+		$haveseenevict = 1;
+	} else {
+		return(0);
+	}
 	sleep(15);
 
 	if(!-f "$oute")
@@ -150,6 +156,7 @@ $evicted = sub {
 		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 		exit(1)
 	}
+	exit(0);
 };
 
 $success = sub

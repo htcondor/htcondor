@@ -19,14 +19,84 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorPersonal;
+use Cwd;
 
-$testname = 'Condor Job Deferral Test REMOVE - Local Universe';
 
-##
-## We need to pass what universe we would like to test
-##
-my $result = CondorTest::verbose_system("./job_core_time-deferral-remove.pl local");
-if ( $result != 0 ) {
-	die( "$testname FAILED!\n" );
+$topdir = getcwd();
+
+$testname = 'job_core_time-deferral-remove_local - local U time deferral-remove';
+$cmd = "job_core_time-deferral-remove_local.cmd";
+$corename = "job_core_time-deferral-remove_local";
+
+# where am I running
+$currenthost = CondorTest::getFqdnHost();
+CondorTest::fullchomp($currenthost);
+
+system("date");
+
+$mypid = CondorPersonal::SaveMeSetup($corename);
+$mysaveme = $corename . ".saveme";
+
+if($mypid == 0) {
+	die "Saveme setup for test failed\n";
 }
+
+$mysubmitnmlog = $corename . $mypid . ".log" ;
+$mysubmitnmerr = $corename . $mypid . ".err" ;
+$mysubmitnmout = $corename . $mypid . ".out" ;
+
+$mycorenmlog = $corename . ".log";
+$mycorenmerr = $corename . ".err";
+$mycorenmout = $corename . ".out";
+
+print "Master PID is $mypid\n";
+#print "Master PID submit file is $mysubmitnm\n";
+
+# Edit template config info for signal and location
+
+# get a remote scheduler running (side b)
+my $configrem = CondorPersonal::StartCondor("x_param.timedeferloc" ,"timedeferloc");
+my @timedeferloc = split /\+/, $configrem;
+my $timedeferlocconfig = shift @timedeferloc;
+my $timedeferlocport = shift @timedeferloc;
+my $logdir = "";
+
+
+CondorTest::debug("---local job_core_time-deferral-remove local config is $timedeferlocconfig and remote port is $timedeferlocport---\n",1);
+
+$ENV{CONDOR_CONFIG} = $timedeferlocconfig;
+
+CondorTest::debug("Set config to $timedeferlocconfig\n",1);
+
+my $result = CondorPersonal::PersonalSystem("./job_core_time-deferral-remove.pl local");
+CondorTest::debug("Result of job_core_time-deferral-remove.pl local test  job is  $result\n",1);
+
+
+system("cp *job_core_time-deferral-remove_local* $mysaveme");
+
+if( -e "$mysubmitnm" )
+{
+	system("cp $mysubmitnm $mycorenm");
+}
+
+if( -e "$mysubmitnmout" )
+{
+	system("cp $mysubmitnmcmdout $mycorenmcmdout");
+}
+
+if( -e "$mysubmitnmlog" )
+{
+	system("cp $mysubmitnmlog $mycorenmlog");
+}
+
+CondorPersonal::KillDaemonPids($timedeferlocconfig);
+system("date");
+
+if( $result != 0 )
+{
+	exit(1);
+}
+
+CondorTest::debug("job_core_time-deferral-remove_local SUCCESS\n",1);
 exit(0);

@@ -106,6 +106,17 @@ fi
 ############################################################
 # Figure out what platform we're being run on
 ############################################################
+
+# on Darwin on intel, uname will *always* report i386 when in reality it may
+# be an x86_64 machine. Here we determine if sysctl is available, and then
+# later we'll use it to figure out the actual platform.
+AC_PATH_PROG(ac_sysctl,sysctl,no,[$PATH])
+if test "x$ac_sysctl" == "xno" ; then
+   SYSCTL=/bin/false
+else
+   STSCTL=$ac_sysctl
+fi
+
 AC_MSG_NOTICE([determining host platform])
 # these three are just used by configure to specify the settings we
 # actually care about, described below
@@ -397,8 +408,22 @@ elif test $os = "Darwin" ; then
 	## Figure out the architecture
 	##
 	if test "$arch" = "i386"; then
-		_cv_arch="I386"
-		_cv_sysname="i386_macosx"
+		# XXX This test is commented out because the externals aren't
+		# smart enough to figure out what platform they are on and Condor
+		# will fail to compile. So for now we lie and say INTEL. This
+		# could cause problems if a submit machine is x86_64 and the execute
+		# machines are x86 since both will report as INTEL.
+		# ok, test to see if the hw.optional.x86_64 key is present and 1, 
+		# if so, then this machine is actually an x86_64 machine, not an
+		# i386 machine.
+		#`$SYSCTL hw.optional.x86_64 2>&1 | $GREP '1\$' > /dev/null 2>&1`
+		#if test "x$?" = "x1"; then
+		#	_cv_arch="X86_64"
+		#	_cv_sysname="x86_64_macosx"
+		#else
+			_cv_arch="I386"
+			_cv_sysname="i386_macosx"
+		#fi	
 	elif test "$arch" = "Power Macintosh"; then
 		_cv_arch="PPC"
 		_cv_sysname="ppc_macosx"
