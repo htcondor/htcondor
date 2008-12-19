@@ -56,7 +56,7 @@ my $REMOVE = "";
 ## Testing Information
 ##
 $testname = "Job Deferral Testing REMOVE - $universe";
-$base_name = 'job_core_time-deferral-tests';
+$base_name = 'job_core_time-deferral-remove';
 $base_cmd = $base_name.".cmd";
 
 ##
@@ -174,16 +174,14 @@ $timed = sub {
 ## that we were told to test
 ##
 $cmd = $base_name."_".$universe.".cmd";
-open( READ_FILE, "<$base_cmd" ) || die( "Can't open '$base_cmd' for reading!\n" );
 open( WRITE_FILE, ">$cmd" ) || die( "Can't open '$cmd' for writing!\n" );
-while( <READ_FILE> ) {
-	print WRITE_FILE $_;
-} # WHILE
-close( READ_FILE );
 
 ##
 ## Add the universe information closing with the 'Queue' command
 ##
+print WRITE_FILE "Executable   = ./x_time.pl\n";
+print WRITE_FILE "Notification = NEVER\n";
+print WRITE_FILE "DeferralPrep = 600\n";
 print WRITE_FILE "Universe	   = $universe\n";
 print WRITE_FILE "Log		   = $base_name"."_$universe.log\n";
 print WRITE_FILE "Output	   = $base_name"."_$universe.out\n";
@@ -191,6 +189,8 @@ print WRITE_FILE "Error		   = $base_name"."_$universe.err\n";
 print WRITE_FILE "DeferralTime = $deferralTime\n";
 print WRITE_FILE "Queue\n";
 close( WRITE_FILE );
+
+system("cat $cmd");
 
 $mylogfortest = "$base_name"."_$universe.log";
 system("rm -f $mylogfortest");
