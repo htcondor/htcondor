@@ -83,7 +83,6 @@ main(int argc, char* argv[])
 
   void **parameters;
   char *dbconn=NULL;
-  char *completedsince = NULL;
   bool readfromfile = false,remotequill=false;
 
   char *dbIpAddr=NULL, *dbName=NULL,*queryPassword=NULL,*quillName=NULL;
@@ -205,7 +204,6 @@ main(int argc, char* argv[])
   }
   
   
-  if(completedsince) free(completedsince);
   if(parameters) free(parameters);
   if(dbIpAddr) free(dbIpAddr);
   if(dbName) free(dbName);

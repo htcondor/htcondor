@@ -222,14 +222,15 @@ LeaseManager::config( void )
 	tmp = param( "DEBUG_ADS" );
 	if ( tmp ) {
 		if ( ( *tmp == 't' ) || ( *tmp == 'T' ) ) {
-			m_resources.setAdDebug( true );
+			m_enable_ad_debug = true;
 		} else {
-			m_resources.setAdDebug( false );
+			m_enable_ad_debug = false;
 		}
 		free( tmp );
 	} else {
-		m_resources.setAdDebug( false );
+		m_enable_ad_debug = false;
 	}
+	m_resources.setAdDebug( m_enable_ad_debug );
 
 	// Get max lease duration
 	if ( ParamInt( "MAX_LEASE_DURATION", value, -1, 1 ) ) {
@@ -483,6 +484,15 @@ LeaseManager::timerHandler_GetAds ( void )
 	if ( m_queryConstraints.length() ) {
 		query.addANDConstraint( m_queryConstraints.c_str() );
 	}
+
+	if ( m_enable_ad_debug )
+	{
+		ClassAd	qad;
+		query.getQueryAd( qad );
+		dprintf( D_FULLDEBUG, "Query Ad:\n" );
+		qad.dPrint( D_FULLDEBUG );
+	}
+
 	QueryResult result;
 	ClassAdList ads;
 

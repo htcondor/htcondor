@@ -146,7 +146,7 @@ convert_ad_to_adStruct(struct soap *s,
 			strcpy(ad_struct->__ptr[attr_index].value,
 				   ((String *) rhs)->Value());
 		} else {
-			ad_struct->__ptr[attr_index].value = ((String*)rhs)->Value();
+			ad_struct->__ptr[attr_index].value = (char*)((String*)rhs)->Value();
 		}
       //dprintf(D_ALWAYS,"STRINGSPACE|%s|%p\n",ad_struct->__ptr[attr_index].value,ad_struct->__ptr[attr_index].value);
       ad_struct->__ptr[attr_index].type = STRING_ATTR;

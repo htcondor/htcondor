@@ -27,7 +27,7 @@
 //for the collectorlist::create call
 #include "dc_collector.h" 
 
-#include "../condor_quill/classadlogentry.h"
+#include "classadlogentry.h"
 #include "jobqueuecollection.h"
 #include "quill_enums.h"
 

@@ -1111,12 +1111,12 @@ float FloatBase::Value()
 	return value;
 }
 
-char * const StringBase::Value()
+const char * StringBase::Value()
 {
 	return value;
 }
 
-char * const ISOTimeBase::Value()
+const char * ISOTimeBase::Value()
 {
 	return time;
 }

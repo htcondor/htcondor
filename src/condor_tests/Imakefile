@@ -744,6 +744,44 @@ TESTCLASS(lib_eventlog_rotation-reader_20_rotations_20_loops,core)
 TESTCLASS(lib_eventlog_rotation-reader_20_rotations_20_loops,quick)
 TESTCLASS(lib_eventlog_rotation-reader_20_rotations_20_loops,full)
 
+
+/* Lease Manager tests */
+DESC(lib_lease_manager-defaults,"Lease manager: Default settings")
+RUN(lib_lease_manager-defaults)
+TESTCLASS(lib_lease_manager-defaults,core)
+TESTCLASS(lib_lease_manager-defaults,quick)
+TESTCLASS(lib_lease_manager-defaults,full)
+
+DESC(lib_lease_manager-get_rel_1,"Lease manager: get/relesae test #1")
+RUN(lib_lease_manager-get_rel_1)
+TESTCLASS(lib_lease_manager-get_rel_1,core)
+TESTCLASS(lib_lease_manager-get_rel_1,quick)
+TESTCLASS(lib_lease_manager-get_rel_1,full)
+
+DESC(lib_lease_manager-get_rel_2,"Lease manager: get/relesae test #2")
+RUN(lib_lease_manager-get_rel_2)
+TESTCLASS(lib_lease_manager-get_rel_2,core)
+TESTCLASS(lib_lease_manager-get_rel_2,quick)
+TESTCLASS(lib_lease_manager-get_rel_2,full)
+
+DESC(lib_lease_manager-get_rel_3,"Lease manager: get/relesae test #3")
+RUN(lib_lease_manager-get_rel_3)
+TESTCLASS(lib_lease_manager-get_rel_3,core)
+TESTCLASS(lib_lease_manager-get_rel_3,quick)
+TESTCLASS(lib_lease_manager-get_rel_3,full)
+
+DESC(lib_lease_manager-get_rel_4,"Lease manager: get/relesae test #4")
+RUN(lib_lease_manager-get_rel_4)
+TESTCLASS(lib_lease_manager-get_rel_4,core)
+TESTCLASS(lib_lease_manager-get_rel_4,quick)
+TESTCLASS(lib_lease_manager-get_rel_4,full)
+
+DESC(lib_lease_manager-get_rel_5,"Lease manager: get/relesae test #5")
+RUN(lib_lease_manager-get_rel_5)
+TESTCLASS(lib_lease_manager-get_rel_5,core)
+TESTCLASS(lib_lease_manager-get_rel_5,quick)
+TESTCLASS(lib_lease_manager-get_rel_5,full)
+
 #if defined(IS_IA64_LINUX_RHEL3) || defined(IS_CONDOR_PPC_LINUX_SLES9) || defined(IS_PPC_OSX_10_4) || defined(IS_CONDOR_PPC_LINUX_YD50) || defined(IS_X86_64_LINUX_RHEL5)  || defined(IS_X86_64_LINUX_RHEL3) || defined(IS_I386_CONDOR_FREEBSD) || defined(IS_I386_OSX_10_4) || defined(IS_I386_LINUX_RHEL5) || defined(IS_I386_LINUX_RHEL51)
 DESC(job_quill_basic,"Basic Quill Test")
 RUN(job_quill_basic)
