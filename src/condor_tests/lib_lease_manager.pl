@@ -56,7 +56,10 @@ my %tests =
 			 MAX_TOTAL_LEASE_DURATION	=> 120,
 			 DEFAULT_MAX_LEASE_DURATION	=> 60,
 
-			 QUERY_ADTYPE				=> "Any",
+			 QUERY_ADTYPE				=> "Generic",
+			 QUERY_CONSTRAINTS	=> "target.MyType == \"LeaseResource\"",
+			 #QUERY_CONSTRAINTS	=> target.TargetType == "SomeType",
+
 			 CLASSAD_LOG				=> "\$(SPOOL)/LeaseAdLog",
 		 },
 		 config =>
@@ -82,7 +85,7 @@ my %tests =
 		 },
 		 resource =>
 		 {
-			 MyType						=> "Generic",
+			 MyType						=> "LeaseResource",
 			 Name						=> "resource-1",
 			 MaxLeases					=> 1,
 			 DaemonStartTime			=> $now,
@@ -196,7 +199,7 @@ my %tests =
 		 },
      },
 
-     # Advertise 2, try to grab 2, free 1, grab 1
+     # Advertise 5, a lot of gets & releases
 	 get_rel_5 =>
      {
 		 config => { },
@@ -221,6 +224,30 @@ my %tests =
 			  { op => [ "RELEASE", "-d", "[0]", "[1]" ], expect => 3, },
 			  { op => [ "GET", 60, 5 ],					 expect => 5, },
 			  { op => [ "RELEASE", "-d", "*" ],			 expect => 0, },
+			  ],
+		 },
+     },
+
+     # Renew leases
+	 renew_1 =>
+     {
+		 config => { },
+		 config_lm => { },
+		 advertise => { },
+		 resource => {
+			 LeaseDuration		=> 60,
+			 MaxLeaseDuration	=> 240,
+			 MaxLeases			 => 5,
+		 },
+		 advertise => { },
+		 run =>
+		 {
+			 loops =>
+			 [
+			  { op => [ "GET", 60, 5 ],			expect => 5, sleep => 30 },
+			  { op => [ "RENEW", 60, "*" ], 	expect => 5, sleep => 30 },
+			  { op => [ "RENEW", 60, "*" ], 	expect => 5, sleep => 30 },
+			  { op => [ "RENEW", 60, "*" ], 	expect => 5, sleep => 30 },
 			  ],
 		 },
      },
@@ -412,12 +439,16 @@ CondorTest::debug("About to set up Condor Personal : <<<$ltime>>>", 1);
 my $configrem =	CondorPersonal::StartCondor( $param_file, $full_name );
 my ($config, $port) = split( /\+/, $configrem );
 $ENV{CONDOR_CONFIG} = $config;
+print "Condor config: '" . $ENV{CONDOR_CONFIG} . "'\n";
 
 if (! DaemonWait( $test{resource}{MaxLeases} ) ) {
+	print STDERR "Daemons / leases didn't start properly\n";
+	system( 'condor_status -any -l' );
 }
-
-print $test{client}->{lease_file} . "\n";;
-RunTests( \%test );
+else {
+	print $test{client}->{lease_file} . "\n";;
+	RunTests( \%test );
+}
 
 CondorPersonal::KillDaemonPids( $config );
 system( "rm -r ./$$" );
@@ -485,12 +516,12 @@ sub WriteConfigSection( $$$ )
 # Wait for everything to come to life...
 sub DaemonWait( $ )
 {
-	my $MinResources = shift;
+	my $MinLeases = shift;
 
-	print "Waiting for all daemons and $MinResources resource to show up\n";
+	print "Waiting for all daemons and $MinLeases leases to show up\n";
 	sleep( 2 );
 
-	my $NumResources = 0;
+	my $NumLeases = 0;
 	my @missing;
 	my %ads;
 	for my $tries ( 0 .. 10 ) {
@@ -534,8 +565,8 @@ sub DaemonWait( $ )
 			sleep( 5 );
 		}
 		if ( exists $ads{LeaseManager} ) {
-			$NumResources = $ads{LeaseManager}{NumberResources};
-			if ( $NumResources >= $MinResources ) {
+			$NumLeases = $ads{LeaseManager}{NumberValidLeases};
+			if ( $NumLeases >= $MinLeases ) {
 				return 1;
 			}
 			sleep( 5 );
@@ -547,7 +578,7 @@ sub DaemonWait( $ )
 	}
 	else {
 		print STDERR
-			"Too few resources found: $NumResources < $MinResources\n";
+			"Too few leases found: $NumLeases < $MinLeases\n";
 		return 0;
 	}
 }
