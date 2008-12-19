@@ -144,10 +144,12 @@ dprintf_config( const char *subsys )
 
 			// Hold a temporary copy of the old file pointer until
 			// *after* the param -- param can dprintf() in some cases
-			char	*tmp = DebugFile[debug_level];
-			DebugFile[debug_level] = param(pname);
-			if ( tmp ) {
-				free( tmp );
+			{
+				char	*tmp = DebugFile[debug_level];
+				DebugFile[debug_level] = param(pname);
+				if ( tmp ) {
+					free( tmp );
+				}
 			}
 
 			if( debug_level == 0 && DebugFile[0] == NULL ) {
