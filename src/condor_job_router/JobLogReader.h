@@ -20,9 +20,9 @@
 #ifndef _JOBLOGREADER_H_
 #define _JOBLOGREADER_H_
 
-#include "../condor_quill/classadlogentry.h"
-#include "../condor_quill/classadlogparser.h"
-#include "../condor_quill/prober.h"
+#include "classadlogentry.h"
+#include "classadlogparser.h"
+#include "prober.h"
 
 #define WANT_CLASSAD_NAMESPACE
 #undef open

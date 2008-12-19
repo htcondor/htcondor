@@ -1,5 +1,5 @@
 
-all_target(libquill.a)
+all_target()
 
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(QUILL_INC)
 
@@ -7,8 +7,6 @@ LDFLAGS = $(STD_LDFLAGS)
 LIB = $(DAEMONCORE_LIB) $(STD_LIBS) $(QUILL_LIB)
 
 QUILL_LIB_OBJ = classadlogentry.o classadlogparser.o prober.o
-
-library_target(libquill.a,$(QUILL_LIB_OBJ))
 
 release:: all
 stripped:: all

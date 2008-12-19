@@ -41,6 +41,12 @@ C_PLUS_FLAGS =	\
 CFLAGS = $(STD_C_FLAGS) New_classads_includes
 LIB = $(STD_LIBS)
 
+/* This is a seperate job_queue.log parser and a prober for changes object which
+	is used by quill and the job router. Eventually the job_queue.log
+	readers/writers between the schedd and this should be unified into one
+	codebase. */
+JOB_QUEUE_LOG_PARSER_OBJ = classadlogentry.o classadlogparser.o prober.o
+
 URL_OBJ = url_condor.o cbstp_url.o file_url.o http_url.o filter_url.o \
 	mailto_url.o cfilter_url.o ftp_url.o include_urls.o mkargv.o MapFile.o
 
@@ -212,6 +218,7 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o selector.o \
 	condor_parameters.o extra_param_info.o classad_command_util.o \
 	domain_tools.o CondorError.o utc_time.o status_string.o \
 	time_offset.o condor_crontab.o date_util.o condor_user_policy.o \
+	$(JOB_QUEUE_LOG_PARSER_OBJ) \
 	$(QUILL_OBJS) \
 	New_classads_obj setenv.o condor_id.o build_job_env.o job_lease.o \
 	gahp_common.o \
