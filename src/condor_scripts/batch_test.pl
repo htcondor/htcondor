@@ -468,7 +468,11 @@ if( @testlist ) {
 	}
 	close(QUICK);
 	@{$test_suite{"."}} = @toptests;
-	push @compilers, ".";
+	if($gotdot == 1) {
+		#already testing dot
+	} else {
+		push @compilers, ".";
+	}
 }
 
 
