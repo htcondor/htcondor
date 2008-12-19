@@ -261,6 +261,11 @@ int main(int argc, char* argv[])
   FILE* outfile=stdout;
   if (FileName.Length()>0) outfile=safe_fopen_wrapper(FileName.Value(),"w");
 
+  if (outfile == NULL) {
+	fprintf( stderr, "Failed to open file %s\n", FileName.Value() );
+	exit( 1 );
+  }
+
   int LineCount=0;
 
   ReliSock sock;
