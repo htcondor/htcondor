@@ -153,6 +153,8 @@ Init( const char* jobName, const char* directory, const char* cmdFile,
     MyString logFile = MultiLogFiles::loadLogFileNameFromSubFile(_cmdFile, "");
 		// Note: _logFile is needed only for POST script events (as of
 		// 2005-06-23).
+		// This will go away once the lazy log file code is fully
+		// implemented.  wenger 2008-12-19.
     _logFile = strnewp (logFile.Value());
 
 	varNamesFromDag = new List<MyString>;
@@ -716,3 +718,53 @@ Job::SetDagFile(const char *dagFile)
 	delete _dagFile;
 	_dagFile = strnewp( dagFile );
 }
+
+#if LAZY_LOG_FILES
+//---------------------------------------------------------------------------
+bool
+Job::RegisterLogFile( ReadMultipleUserLogs &logReader, bool recovery )
+{
+	bool result = false;
+
+    MyString logFileStr = MultiLogFiles::loadLogFileNameFromSubFile(
+				_cmdFile, _directory );
+	if ( logFileStr == "" ) {
+		debug_printf( DEBUG_QUIET, "ERROR: Unable to get log file from "
+					"submit file %s (node %s)\n", _cmdFile, GetJobName() );
+		result = false;
+	} else {
+		delete [] _logFile; // temporary
+		_logFile = strnewp( logFileStr.Value() );
+		CondorError errstack;
+		result = logReader.registerLogFile( _logFile, recovery, errstack );
+		if ( !result ) {
+			debug_printf( DEBUG_QUIET, "ERROR: Unable to register log "
+						"file for node %s (%s)\n", GetJobName(),
+						errstack.getFullText() );
+		}
+	}
+
+	return result;
+}
+
+//---------------------------------------------------------------------------
+bool
+Job::UnregisterLogFile( ReadMultipleUserLogs &logReader )
+{
+	CondorError errstack;
+	bool result = logReader.unregisterLogFile( _logFile, errstack );
+	if ( !result ) {
+		debug_printf( DEBUG_QUIET, "ERROR: Unable to unregister log "
+					"file for node %s (%s)\n", GetJobName(),
+					errstack.getFullText() );
+	}
+
+#if 0 // uncomment once lazy log file code is fully implemented
+	delete [] _logFile;
+	_logFile = NULL;
+#endif
+
+	return result;
+}
+
+#endif // LAZY_LOG_FILES

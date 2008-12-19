@@ -1148,4 +1148,28 @@ MultiLogFiles::logFileOnNFS(const char *logFilename, bool nfsIsError)
 	return false;
 }
 
+#if LAZY_LOG_FILES
+///////////////////////////////////////////////////////////////////////////////
 
+bool
+ReadMultipleUserLogs::registerLogFile(const char *logfile,
+			bool truncateIfFirst, CondorError &errstack)
+{
+	dprintf(D_ALWAYS, "ReadMultipleUserLogs::registerLogFile(%s, %d)\n",
+				logfile, truncateIfFirst);
+
+	return true;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+bool
+ReadMultipleUserLogs::unregisterLogFile (const char *logfile,
+			CondorError &errstack)
+{
+	dprintf(D_ALWAYS, "ReadMultipleUserLogs::unregisterLogFile(%s)\n",
+				logfile);
+
+	return true;
+}
+#endif // LAZY_LOG_FILES

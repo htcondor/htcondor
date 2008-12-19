@@ -278,6 +278,9 @@ bool Dag::Bootstrap (bool recovery) {
 		jobs.ToBeforeFirst();
 		while( jobs.Next( job ) ) {
 			if( job->GetStatus() == Job::STATUS_POSTRUN ) {
+#if LAZY_LOG_FILES
+				job->RegisterLogFile( _condorLogRdr, _recovery );
+#endif // LAZY_LOG_FILES
 				_postScriptQ->Run( job->_scriptPost );
 			}
 		}
@@ -787,6 +790,10 @@ Dag::RemoveBatchJob(Job *node) {
 void
 Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
 
+#if LAZY_LOG_FILES
+	job->UnregisterLogFile( _condorLogRdr );
+#endif // LAZY_LOG_FILES
+
 	//
 	// Note: structure here should be cleaned up, but I'm leaving it for
 	// now to make sure parallel universe support is complete for 6.7.17.
@@ -833,6 +840,9 @@ Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
 			_postRunNodeCount++;
 
 			if( !recovery ) {
+#if LAZY_LOG_FILES
+				job->RegisterLogFile( _condorLogRdr, _recovery );
+#endif // LAZY_LOG_FILES
 				_postScriptQ->Run( job->_scriptPost );
 			}
 		}
@@ -850,6 +860,10 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 		bool recovery) {
 
 	if( job ) {
+#if LAZY_LOG_FILES
+			job->UnregisterLogFile( _condorLogRdr );
+#endif // LAZY_LOG_FILES
+
 			// Note: "|| recovery" below is somewhat of a "quick and dirty"
 			// fix to Gnats PR 357.  The first part of the assert can fail
 			// in recovery mode because if any retries of a node failed
@@ -2921,6 +2935,10 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 		sleep( 1 );
 	}
 
+#if LAZY_LOG_FILES
+	node->RegisterLogFile( _condorLogRdr, _recovery );
+#endif // LAZY_LOG_FILES
+
 		// Note: we're checking for a missing log file spec here instead of
 		// inside the submit code because we don't want to re-try the submit
 		// if the log file spec is missing in the submit file.  wenger
@@ -3009,6 +3027,10 @@ Dag::ProcessFailedSubmit( Job *node, int max_submit_attempts )
 	_nextSubmitTime = time(NULL) + thisSubmitDelay;
 	_nextSubmitDelay *= 2;
 
+#if LAZY_LOG_FILES
+			node->UnregisterLogFile( _condorLogRdr );
+#endif // LAZY_LOG_FILES
+
 	if ( node->_submitTries >= max_submit_attempts ) {
 			// We're out of submit attempts, treat this as a submit failure.
 
@@ -3036,6 +3058,9 @@ Dag::ProcessFailedSubmit( Job *node, int max_submit_attempts )
 			node->_Status = Job::STATUS_POSTRUN;
 			_postRunNodeCount++;
 			node->_scriptPost->_retValJob = DAG_ERROR_CONDOR_SUBMIT_FAILED;
+#if LAZY_LOG_FILES
+			node->RegisterLogFile( _condorLogRdr, _recovery );
+#endif // LAZY_LOG_FILES
 			_postScriptQ->Run( node->_scriptPost );
 		} else {
 			node->_Status = Job::STATUS_ERROR;

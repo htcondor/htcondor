@@ -33,8 +33,14 @@
 #include "string_list.h"
 #include "HashTable.h"
 #include "condor_id.h"
+#include "CondorError.h"
 #include <iosfwd>
 #include <string>
+
+// This allows us to gradually commit the code before it's fully
+// working without making a branch.  Only commit with this false
+// until the lazy log file code is fully working.  wenger 2008-12-19.
+#define LAZY_LOG_FILES false
 
 class MultiLogFiles
 {
@@ -70,7 +76,7 @@ public:
 
 #ifdef HAVE_EXT_CLASSADS
 	    /** Gets the log files from a Stork submit file.
-		 * @param The submit file line.
+		 * @param The submit file name.
 		 * @param The directory containing the submit file.
 		 * @param Output string list of log file names.
 		 * @return "" if okay, or else an error message.
@@ -206,6 +212,25 @@ public:
 		 	initialized.
 		 */
 	int getInitializedLogCount() const;
+
+#if LAZY_LOG_FILES
+		/** Register the given log file
+			@param the log file to register
+			@param whether to truncate the log file if this is the
+				first time we're seeing it
+			@param a CondorError object to hold any error information
+			@return true if successful, false if failed
+		*/
+	bool registerLogFile(const char *logfile, bool truncateIfFirst,
+				CondorError &errstack);
+
+		/** Unregister the given log file
+			@param the log file to register
+			@param a CondorError object to hold any error information
+			@return true if successful, false if failed
+		*/
+	bool unregisterLogFile (const char *logfile, CondorError &errstack);
+#endif // LAZY_LOG_FILES
 
 protected:
 	friend class CheckEvents;

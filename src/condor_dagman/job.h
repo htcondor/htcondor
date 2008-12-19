@@ -28,6 +28,8 @@
 #include "list.h"
 #include "condor_id.h"
 #include "throttle_by_category.h"
+#include "read_multiple_logs.h"
+#include "CondorError.h"
 
 class ThrottleByCategory;
 
@@ -331,6 +333,23 @@ class Job {
 		return _dagFile;
 	}
 
+#if LAZY_LOG_FILES
+	/** Register this node's Condor or Stork log file with the
+		multiple log reader.
+		@param logReader: the multiple log reader
+		@param recovery: whether we're in recovery mode
+		@return true if successful, false if failed
+	*/
+	bool RegisterLogFile( ReadMultipleUserLogs &logReader, bool recovery );
+
+	/** Unregister this node's Condor or Stork log file with the
+		multiple log reader.
+		@param logReader: the multiple log reader
+		@return true if successful, false if failed
+	*/
+	bool UnregisterLogFile( ReadMultipleUserLogs &logReader );
+#endif // LAZY_LOG_FILES
+
     /** */ CondorID _CondorID;
     /** */ status_t _Status;
 
@@ -456,7 +475,6 @@ private:
 		// This node's category; points to an object "owned" by the
 		// ThrottleByCategory object.
 	ThrottleByCategory::ThrottleInfo *_throttleInfo;
-
 };
 
 /** A wrapper function for Job::Print which allows a NULL job pointer.

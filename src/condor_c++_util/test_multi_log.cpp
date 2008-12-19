@@ -79,6 +79,13 @@ int main(int argc, char **argv)
 		result = 1;
 	}
 
+#if LAZY_LOG_FILES
+	ReadMultipleUserLogs readLogs;
+	CondorError errstack;
+	readLogs.registerLogFile("foo", true, errstack);
+	readLogs.unregisterLogFile("foo", errstack);
+#endif
+
 	if ( result == 0 ) {
 		printf("\nTest succeeded\n");
 		fflush(stdout);
