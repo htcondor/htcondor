@@ -192,6 +192,9 @@ print WRITE_FILE "DeferralTime = $deferralTime\n";
 print WRITE_FILE "Queue\n";
 close( WRITE_FILE );
 
+$mylogfortest = "$base_name"."_$universe.log";
+system("rm -f $mylogfortest");
+
 ##
 ## Setup our testing callbacks
 ##
