@@ -94,7 +94,7 @@ void _condor_dprintf_va ( int flags, const char* fmt, va_list args );
 int _condor_open_lock_file(const char *filename,int flags, mode_t perm);
 void _EXCEPT_ ( const char *fmt, ... ) CHECK_PRINTF_FORMAT(1,2);
 void Suicide(void);
-void set_debug_flags( char *strflags );
+void set_debug_flags( const char *strflags );
 void _condor_fd_panic( int line, char *file );
 void _condor_set_debug_flags( const char *strflags );
 

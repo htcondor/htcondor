@@ -1007,7 +1007,7 @@ bool SetPrivilege(
 
 #ifdef PERM_OBJ_DEBUG
 
-extern void set_debug_flags( char *strflags );
+extern void set_debug_flags( const char *strflags );
 extern "C" FILE	*DebugFP;
 
 // Main method for testing the Perm functions

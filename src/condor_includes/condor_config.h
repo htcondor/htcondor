@@ -254,7 +254,7 @@ BEGIN_C_DECLS
 	char * macro_expand ( const char *name );
 	void init_config ( bool );
 	void clear_config ( void );
-	void set_debug_flags( char * );
+	void set_debug_flags( const char * );
 	void config_insert( const char*, const char* );
 	int  param_boolean_int( const char *name, int default_value );  
 
