@@ -254,12 +254,12 @@ JobQueueSnapshot::getNextClusterAd(char* cluster_id, ClassAd*& ad)
 	
 	for(int i = 1; i < numfields; i++) {
 
-		attr = (char *)jqDB->getJobQueueClusterHorFieldName(i);
+		temp = jqDB->getJobQueueClusterHorFieldName(i);
 		val = jqDB->getJobQueueClusterAds_HorValue(
 				cur_clusterads_hor_index, i); // val
 		if(val) {
-			char* expr = (char*)malloc(strlen(attr) + strlen(val) + 6);
-			sprintf(expr, "%s = %s", attr, val);
+			char* expr = (char*)malloc(strlen(temp) + strlen(val) + 6);
+			sprintf(expr, "%s = %s", temp, val);
 			// add an attribute with a value into ClassAd
 			ad->Insert(expr);
 			free(expr);
