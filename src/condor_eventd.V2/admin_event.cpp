@@ -709,7 +709,7 @@ AdminEvent::th_maintainCheckpoints( void )
 						ad->LookupString( ATTR_REMOTE_USER, remoteuser ); 
 						ad->LookupString( ATTR_JOB_ID, jobid ); 
 						dprintf(D_ALWAYS
-							,"AD CLAIMED different job???-(%s)-<%s-%s-%s>-\n",
+							,"AD CLAIMED different job?-(%s)-<%s-%s-%s>-\n",
 							remoteuser.Value(),name.Value(), state.Value()
 							, jobid.Value());
 					}
