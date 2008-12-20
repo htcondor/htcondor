@@ -91,14 +91,14 @@ JobQueueCollection::~JobQueueCollection()
 	delete[] scheddname;
 }
 
-void JobQueueCollection::setDBObj(JobQueueDatabase *DBObj)
+void JobQueueCollection::setDBObj(JobQueueDatabase *_DBObj)
 {
-	this->DBObj = DBObj;
+	this->DBObj = _DBObj;
 }
 
-void JobQueueCollection::setDBtype(dbtype dt)
+void JobQueueCollection::setDBtype(dbtype _dt)
 {
-	this->dt = dt;
+	this->dt = _dt;
 }
 
 //! find a ProcAd
