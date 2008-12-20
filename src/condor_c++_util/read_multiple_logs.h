@@ -40,7 +40,7 @@
 // This allows us to gradually commit the code before it's fully
 // working without making a branch.  Only commit with this false
 // until the lazy log file code is fully working.  wenger 2008-12-19.
-#define LAZY_LOG_FILES false
+#define LAZY_LOG_FILES 0
 
 class MultiLogFiles
 {
