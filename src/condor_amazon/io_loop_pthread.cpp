@@ -224,7 +224,7 @@ main( int argc, char ** const argv )
 	// get env
 	MyString debug_string = getenv("DebugLevel");
 	if( debug_string.IsEmpty() == false ) {
-		set_debug_flags( (char* )debug_string.GetCStr());
+		set_debug_flags(debug_string.GetCStr());
 	}
 
 	// parse arguments
@@ -249,7 +249,7 @@ main( int argc, char ** const argv )
 				// Debug Level
 				debug_string = my_optarg;
 				if( debug_string.IsEmpty() == false ) {
-					set_debug_flags( (char* )debug_string.GetCStr());
+					set_debug_flags(debug_string.GetCStr());
 				}
 
 				break;
