@@ -509,7 +509,7 @@ AdminEvent::th_DoShutdown_States( void )
 			// how much is running? estimate when to wake up by total image size
 			// and the admin checkpointing capacity. Final check before GO!
 			check_Shutdown(false);
-			FetchAds_ByConstraint((char *)m_shutdownConstraint.Value());
+			FetchAds_ByConstraint(m_shutdownConstraint.Value());
 			m_shutdownMegs = totalRunningJobs();
 			m_mystate = EVENT_EVAL_RESAMPLE;
 			changeState(EVENT_NOW, m_mystate);
