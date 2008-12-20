@@ -150,7 +150,7 @@ void attempt_access_handler(Service *, int  /*i*/, Stream *s)
   	return;
 }	
 
-int attempt_access(char *filename, int mode, int uid, int gid, 
+int attempt_access(const char *filename, int mode, int uid, int gid, 
 	char *scheddAddress )
 {
 	int result;
@@ -169,7 +169,10 @@ int attempt_access(char *filename, int mode, int uid, int gid,
 		return FALSE;
 	}
 
-	result = code_access_request(sock, filename, mode, uid, gid);
+		// NOTE: It is safe to cast away the const on filename. We
+		// know that code_access_request will not write to it while
+		// the sock is in encode mode.
+	result = code_access_request(sock, (char *&)filename, mode, uid, gid);
 
 	if( result == FALSE ) {
 		dprintf(D_ALWAYS, "ATTEMPT_ACCESS: code_access_request failed.\n");
