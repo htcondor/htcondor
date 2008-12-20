@@ -48,12 +48,8 @@
 #endif
 
 #ifdef WANT_QUILL
-#define QuillProgs quill
-#define LibQuill condor_quill/libquill.a 
 #define TTProgs tt dbmsd
 #else
-#define QuillProgs
-#define LibQuill
 #define TTProgs
 #endif
 
@@ -94,7 +90,7 @@
 		condor_schedd.V6/libqmgmt.a				\
 		StdUnvLibs NetmanLibs	\
 		condor_procd/procd_client.a \
-		condor_privsep/privsep_client.a LibQuill \
+		condor_privsep/privsep_client.a \
 		chirp AnalysisLibs
 
 
@@ -348,7 +344,6 @@ single_target(condor_privsep,privsep_client.a)
 single_target(condor_sysapi,libsysapi.a)
 single_target(condor_schedd.V6,libqmgmt.a)
 single_target(condor_ckpt_server,ckpt_server_api.a)
-single_target(condor_quill,libquill.a)
 
 condor_object_target(tests)
 

@@ -340,6 +340,8 @@ class MyString
 private:
 
     void init();
+	void append_str( const char *s, int s_len );
+	void assign_str( const char *s, int s_len );
 
   char* Data;	// array containing the C string of this MyString's value
   char dummy;	// used for '\0' char in operator[] when the index

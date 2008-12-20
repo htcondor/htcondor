@@ -85,7 +85,7 @@ public:
 		bool selected_only = false ) const;
 
 private:
-	void displayLeases( const char *label, bool selected_only = false );
+	void displayLeases( const char *label = NULL, bool selected_only = false );
 	const char *boolStr( bool value ) const;
 
 	Verbosity			 m_verbose;
@@ -113,6 +113,7 @@ private:
 
 	// For release
 	bool				 m_release_expired;
+	bool				 m_release_delete;
 
 	// Lists of leases:
 	//  selected list will *always* be a subset of the main list
@@ -146,6 +147,7 @@ Tests::Tests( void )
 	m_request_duration = 0;
 
 	m_release_expired = false;
+	m_release_delete = false;
 }
 
 Tests::~Tests( void )
@@ -170,7 +172,7 @@ Tests::cmdLine( int argc, const char *argv[] )
 		"    names: NONE=0 ERROR WARNING INFO ERROR\n"
 		"  --version: print the version number and compile date\n"
 		"\n"
-		"  operations: DUMP GET RENEW RELEASE DELETE EXPIRE\n"
+		"  operations: DUMP GET RENEW RELEASE RELEASE DELETE EXPIRE\n"
 		"    DUMP\n"
 		"    GET [options] <duration> <count>:\n"
 		"      --requestor|-r <name>: set requestor name\n"
@@ -178,7 +180,8 @@ Tests::cmdLine( int argc, const char *argv[] )
 		"      --set <attr> <value>: set attribute in request least\n"
 		"    RENEW <duration> <lease-id> *|[lease-id ..]\n"
 		"    DELETE *|<lease-id> [lease-id ..]\n"
-		"    RELEASE *|<lease-id> [lease-id ..]\n"
+		"    RELEASE [options] *|<lease-id> [lease-id ..]\n"
+		"      -d|--delete: delete leases after releasing them\n"
 		"    EXPIRE\n"
 		"\n";
 
@@ -193,7 +196,7 @@ Tests::cmdLine( int argc, const char *argv[] )
 			status = -1;
 		}
 
-		if ( arg.Match('d', "debug") ) {
+		if (  (m_op == OP_NONE)  &&  arg.Match('d', "debug")  ) {
 			if ( arg.hasOpt() ) {
 				set_debug_flags( const_cast<char *>(arg.getOpt()) );
 				argno = arg.ConsumeOpt( );
@@ -291,6 +294,17 @@ Tests::cmdLine( int argc, const char *argv[] )
 				m_release_expired = true;
 			}
 
+		} else if (  (m_op != OP_NONE)  &&  arg.Match( 'd', "delete") ) {
+			if ( m_op != OP_RELEASE ) {
+				fprintf(stderr,
+						"%s only valid for RELEASE operation\n", arg.Arg() );
+				printf("%s", usage);
+				status = -1;
+			}
+			else {
+				m_release_delete = true;
+			}
+
 		} else if ( ( arg.Match("usage") )		||
 					( arg.Match('h') )			||
 					( arg.Match("help") )  )	{
@@ -366,6 +380,7 @@ Tests::cmdLine( int argc, const char *argv[] )
 					m_op = OP_RELEASE;
 					m_op_str = "RELEASE";
 					m_release_expired = false;
+					m_release_delete = false;
 					m_read_required = true;
 					m_write_file = true;
 				}
@@ -397,8 +412,8 @@ Tests::cmdLine( int argc, const char *argv[] )
 
 			case OP_DUMP:
 			case OP_EXPIRE:
-				fprintf(stderr, "%s: no arguments allowed for DUMP\n",
-						arg.Arg() );
+				fprintf(stderr, "%s: no arguments allowed for %s\n",
+						arg.Arg(), m_op_str );
 				printf("%s", usage);
 				status = -1;
 				break;
@@ -425,8 +440,8 @@ Tests::cmdLine( int argc, const char *argv[] )
 
 			case OP_RELEASE:
 				if ( m_release_expired ) {
-					fprintf(stderr, "%s: lease IDs not valid with --expired\n",
-							arg.Arg() );
+					fprintf(stderr, "%s: lease IDs not valid with %s\n",
+							arg.Arg(), m_op_str );
 					printf("%s", usage);
 					status = -1;
 				}
@@ -574,18 +589,23 @@ Tests::runTest( void )
 		break;
 	case OP_GET:
 		status = doGet( );
+		displayLeases( );
 		break;
 	case OP_RENEW:
 		status = doRenew( );
+		displayLeases( );
 		break;
 	case OP_RELEASE:
 		status = doRelease( );
+		displayLeases( );
 		break;
 	case OP_DELETE:
 		status = doDelete( );
+		displayLeases( );
 		break;
 	case OP_EXPIRE:
 		status = doExpire( );
+		displayLeases( );
 		break;
 	default:
 		fprintf( stderr, "OPERATION IS NONE\n" );
@@ -605,8 +625,7 @@ Tests::runTest( void )
 int
 Tests::doDump( void )
 {
-	displayLeases( "DUMP" );
-
+	displayLeases(  );
 	return 0;
 }
 
@@ -631,13 +650,13 @@ Tests::doGet( void )
 				m_requirements ? m_requirements : "<NONE>" );
 	}
 
+	
 	bool status = m_lm->getLeases( m_request_ad, getList(false) );
 	if ( !status ) {
 		fprintf( stderr, "Error getting leases\n" );
 		return -1;
 	}
 
-	displayLeases( "GET" );
 	return 0;
 }
 
@@ -660,7 +679,6 @@ Tests::doRenew( void )
 		getList(false),
 		DCLeaseManagerLease_getConstList(renewed_list) );
 
-	displayLeases( "RENEW" );
 	return 0;
 }
 
@@ -685,7 +703,9 @@ Tests::doRelease( void )
 		fprintf( stderr, "release failed\n" );
 		return -1;
 	}
-	displayLeases( "RELEASE" );
+	if ( m_release_delete ) {
+		return doDelete( );
+	}
 	return 0;
 }
 
@@ -730,7 +750,12 @@ Tests::displayLeases( const char *label, bool selected_only )
 {
 	list<const DCLeaseManagerLease *> &leases = getListConst(selected_only);
 
-	printf( "%s: %d leases:\n", label, leases.size() );
+	if ( label ) {
+		printf( "%s: %d leases:\n", label, leases.size() );
+	}
+	else {
+		printf( "%d leases:\n", leases.size() );
+	}
 
 	int		n = 0;
 	list< const DCLeaseManagerLease *>::iterator iter;
@@ -742,11 +767,11 @@ Tests::displayLeases( const char *label, bool selected_only )
 		printf( "  LEASE %d {\n"
 				"    Resource=%s\n"
 				"    LeaseID=%s\n"
-				"    duration=%d\n"
-				"    remaining=%d\n"
-				"    expired=%s\n"
-				"    dead=%s\n"
-				"    rlwd=%s\n"
+				"    Duration=%d\n"
+				"    Remaining=%d\n"
+				"    Expired=%s\n"
+				"    Dead=%s\n"
+				"    RLWD=%s\n"
 				"  }\n",
 				n++,
 				name.c_str(),

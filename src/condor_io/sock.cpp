@@ -1569,11 +1569,11 @@ char * Sock::serialize() const
 		verstring = peer_version->get_version_string();
 		if( verstring ) {
 			verstring_len = strlen(verstring);
-		}
-			// daemoncore does not like spaces in our serialized string
-		char *s;
-		while( (s=strchr(verstring,' ')) ) {
-			*s = '_';
+				// daemoncore does not like spaces in our serialized string
+			char *s;
+			while( (s=strchr(verstring,' ')) ) {
+				*s = '_';
+			}
 		}
 	}
 

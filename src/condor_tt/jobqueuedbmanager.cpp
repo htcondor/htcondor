@@ -35,8 +35,8 @@
 #include <time.h>
 
 #include "jobqueuedbmanager.h"
-#include "../condor_quill/prober.h"
-#include "../condor_quill/classadlogparser.h"
+#include "prober.h"
+#include "classadlogparser.h"
 #include "jobqueuedatabase.h"
 #include "pgsqldatabase.h"
 #include "jobqueuecollection.h"

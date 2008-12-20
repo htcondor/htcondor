@@ -169,7 +169,7 @@
 	</References>
 	<Files>
 		<File
-			RelativePath="..\src\condor_quill\classadlogentry.cpp"
+			RelativePath="..\src\condor_c++_util\classadlogentry.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -191,37 +191,11 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_quill\classadlogentry.h"
+			RelativePath="..\src\condor_c++_util\classadlogentry.h"
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_quill\classadlogparser.cpp"
-			>
-			<FileConfiguration
-				Name="Release|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Debug|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-		</File>
-		<File
-			RelativePath="..\src\condor_quill\classadlogparser.h"
-			>
-		</File>
-		<File
-			RelativePath="..\src\condor_quill\prober.cpp"
+			RelativePath="..\src\condor_c++_util\classadlogparser.cpp"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
@@ -243,7 +217,33 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_quill\prober.h"
+			RelativePath="..\src\condor_c++_util\classadlogparser.h"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\prober.cpp"
+			>
+			<FileConfiguration
+				Name="Release|Win32"
+				>
+				<Tool
+					Name="VCCLCompilerTool"
+					PreprocessorDefinitions=""
+					CompileAs="2"
+				/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32"
+				>
+				<Tool
+					Name="VCCLCompilerTool"
+					PreprocessorDefinitions=""
+					CompileAs="2"
+				/>
+			</FileConfiguration>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\prober.h"
 			>
 		</File>
 		<File

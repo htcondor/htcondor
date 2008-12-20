@@ -1263,7 +1263,7 @@ ExprTree* AttrList::Lookup(const ExprTree* attr) const
 int AttrList::LookupString (const char *name, char *value) const
 {
 	ExprTree *tree, *rhs;
-	char     *strVal;
+	const char *strVal;
 
 	tree = Lookup (name);
 	if (tree && (rhs=tree->RArg()) && (rhs->MyType() == LX_STRING) &&
@@ -1279,7 +1279,7 @@ int AttrList::LookupString (const char *name, char *value) const
 int AttrList::LookupString (const char *name, char *value, int max_len) const
 {
 	ExprTree *tree, *rhs;
-	char     *strVal;
+	const char *strVal;
 
 	tree = Lookup (name);
 	if (tree && (rhs=tree->RArg()) && (rhs->MyType() == LX_STRING) &&
@@ -1295,7 +1295,7 @@ int AttrList::LookupString (const char *name, char *value, int max_len) const
 int AttrList::LookupString (const char *name, char **value) const
 {
 	ExprTree *tree, *rhs;
-	char     *strVal;
+	const char *strVal;
 
 	tree = Lookup (name);
 	if (tree && (rhs=tree->RArg()) && (rhs->MyType() == LX_STRING) &&
@@ -1335,7 +1335,7 @@ int AttrList::LookupString (const char *name, MyString & value) const
 int AttrList::LookupTime (const char *name, char **value) const
 {
 	ExprTree *tree, *rhs;
-	char     *strVal;
+	const char *strVal;
 
 	tree = Lookup (name);
 	if (tree && (rhs=tree->RArg()) && (rhs->MyType() == LX_TIME) &&
@@ -1359,7 +1359,7 @@ int AttrList::LookupTime (const char *name, char **value) const
 int AttrList::LookupTime(const char *name, struct tm *time, bool *is_utc) const
 {
 	ExprTree *tree, *rhs;
-	char     *strVal;
+	const char *strVal;
 	int      succeeded;
 
 	succeeded = 0;

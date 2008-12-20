@@ -62,20 +62,12 @@ $testname = 'Job Deferral Testing - ';
 ## Universe
 ## 
 my $universe = ($ARGV[0] ? $ARGV[0] : "vanilla");
+$baseCmd = "job_core_deferral" . "_" .$universe; 
 
 ##
 ## Check if we should cleanup afterwards
 ##
 my $cleanup = ($ARGV[1] ? $ARGV[1] : 0);
-
-##
-## Get the base submission file
-## Each test will append different parameters
-##
-$baseCmd = "job_core_time-deferral.cmd";
-open(FILE, $baseCmd) || die("Failed to open base command file '$baseCmd'");
-@lines = <FILE>;
-close(FILE);
 
 ##
 ## If we encounter an abort, and this flag isn't set, then
@@ -167,6 +159,7 @@ for ( $ctr = 0, $cnt = scalar(@deltas); $ctr < $cnt; $ctr++ ) {
 	my $logFile = $cmdFile.".log";
 	my $outFile = $cmdFile.".out";
 	my $errFile = $cmdFile.".err";
+	$cmdFile = $cmdFile . $$;
 	
 	system("rm -f $logfile");
 
@@ -201,7 +194,8 @@ for ( $ctr = 0, $cnt = scalar(@deltas); $ctr < $cnt; $ctr++ ) {
 	## Add the test parameters to a new submit file
 	##
 	open(FILE, "> $cmdFile") || die("Failed to open command file '$cmdFile' for writing");
-	print FILE "@lines\n";
+	print FILE "Executable = ./x_time.pl\n";
+	print FILE "Notification = NEVER\n";
 	print FILE "Universe = $universe\n";
 	
 
@@ -531,9 +525,9 @@ sub extractExecuteTime {
     	## executed by the starter. We always want the last time 
     	## that may be in the logfile
     	##
-		print "consider line: @_";
+		print "consider line: $_";
     	if ( $_ =~ /^001\s+\(.*\)\s+(\d{2})\/(\d{2})\s+(\d{2}):(\d{2}):(\d{2})/ ) {
-			print "Found execution line: @_";
+			print "Found execution line: $_";
     		$month  = $1;
     		$day    = $2;
     		$hour   = $3;

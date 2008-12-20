@@ -141,10 +141,16 @@ dprintf_config( const char *subsys )
 				(void)sprintf(pname, "%s_%s_LOG", subsys,
 							  _condor_DebugFlagNames[debug_level-1]+2);
 			}
-			if( DebugFile[debug_level] ) {
-				free( DebugFile[debug_level] );
+
+			// Hold a temporary copy of the old file pointer until
+			// *after* the param -- param can dprintf() in some cases
+			{
+				char	*tmp = DebugFile[debug_level];
+				DebugFile[debug_level] = param(pname);
+				if ( tmp ) {
+					free( tmp );
+				}
 			}
-			DebugFile[debug_level] = param(pname);
 
 			if( debug_level == 0 && DebugFile[0] == NULL ) {
 				EXCEPT("No '%s' parameter specified.", pname);
