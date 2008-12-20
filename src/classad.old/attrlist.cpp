@@ -1257,7 +1257,7 @@ AttrListElem *AttrList::LookupElem(const char *name) const
 
 ExprTree* AttrList::Lookup(const ExprTree* attr) const
 {
-	return Lookup (((Variable*)attr)->Name());
+	return Lookup (((const Variable*)attr)->Name());
 }
 
 int AttrList::LookupString (const char *name, char *value) const

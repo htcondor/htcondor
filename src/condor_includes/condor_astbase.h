@@ -138,7 +138,7 @@ class VariableBase : public ExprTree
 		virtual int	    operator ==(ExprTree&);
 
 		virtual void	Display();
-		char*	const	Name() { return name; }
+		char*	const	Name() const { return name; }
 		virtual void    GetReferences(const AttrList *base_attrlist,
 									  StringList &internal_references,
 									  StringList &external_references) const;
