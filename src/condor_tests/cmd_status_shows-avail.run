@@ -251,6 +251,7 @@ if($bail == 1) {
     	}
 	
 		# 4 are busy so 2 should be available....
+		# nah sometimes more are available.
 	
 		$numavail = 0;
 		foreach $line (@adarray) {
@@ -265,12 +266,12 @@ if($bail == 1) {
 			}
 		}
 
-		if($numavail == 2) {
+		if($numavail >= 2) {
 			CondorTest::debug("Condor_status -avail found the expected 2 slots\n",1);
 			$done = 1;
 			last;
 		} else {
-			CondorTest::debug("Condor_status -avail found incorrect available slot count<$numavail>\n",1);
+			CondorTest::debug("Condor_status -avail found < 2 available slot count<$numavail>\n",1);
 		}
 
 		$count = $count + 1;
