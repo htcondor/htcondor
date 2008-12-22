@@ -3574,23 +3574,37 @@ static void test_function_formattime(
 			results->AddResult(false);
 		}
 
+		int retry_count = 0;
+		first_retry:
 		if (classad->EvalString("I1", NULL, big_string) && 
 				(strcmp(big_string, i0) == 0)) {
 			printf("Passed: Evaluating formattime(CurrentTime) gives: %s in line %d\n", 
 				   big_string, __LINE__);
 			results->AddResult(true);
 		} else {
+			retry_count++;
+			if (retry_count < 10) {	
+					classad->EvalString("I0", NULL, i0);
+					goto first_retry;
+			}
 			printf("Failed: Evaluating formattime(CurrentTime) gives: %s in line %d\n",
 				   big_string, __LINE__);
 			results->AddResult(false);
 		}
 
+		retry_count = 0;
+		second_retry:
 		if (classad->EvalString("I2", NULL, big_string) && 
 				(strcmp(big_string, i0) == 0)) {
 			printf("Passed: Evaluating formattime(CurrentTime,\"%%c\") gives: %s in line %d\n", 
 				   big_string, __LINE__);
 			results->AddResult(true);
 		} else {
+			retry_count++;
+			if (retry_count < 10) {	
+					classad->EvalString("I0", NULL, i0);
+					goto second_retry;
+			}
 			printf("Failed: Evaluating formattime(CurrentTime,\"%%c\") gives: %s in line %d\n",
 				   big_string, __LINE__);
 			results->AddResult(false);
