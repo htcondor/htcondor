@@ -224,7 +224,7 @@ bool BaseResource::Invalidate () {
     dprintf (
         D_FULLDEBUG,
         "BaseResource::InvalidateResource: \n%s\n",
-        line );
+        line.Value() );
     
     bool ok = false;
 	
@@ -256,7 +256,7 @@ bool BaseResource::SendUpdate () {
     dprintf (
         D_FULLDEBUG,
         "BaseResource::UpdateResource: \n%s\n",
-        tmp );
+        tmp.Value() );
 
     bool ok = false;
 	
