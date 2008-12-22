@@ -39,7 +39,7 @@ if($mypid == 0) {
 }
 
 # get a remote scheduler running (side b)
-my $configrem = CondorPersonal::StartCondor("x_param.locperrelease" ,"perrelease_loc");
+my $configrem = CondorPersonal::StartCondor( "job_core_perrelease_local", "x_param.locperrelease" ,"perrelease_loc");
 my @personal = split /\+/, $configrem;
 my $personalconfig = shift @personal;
 my $personalport = shift @personal;

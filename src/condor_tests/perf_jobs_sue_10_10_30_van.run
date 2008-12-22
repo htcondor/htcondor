@@ -38,7 +38,7 @@ my %statshash = ();
 
 ReadLastStats();
 
-my $configfile = CondorPersonal::StartCondor("x_perf_auto_param.sue");
+my $configfile = CondorPersonal::StartCondor( "perf_jobs_sue_10_10_30_van", "x_perf_auto_param.sue");
 my @cputrackingpool = split /\+/, $configfile;
 my $secconfig = shift @cputrackingpool;
 my $secport = shift @cputrackingpool;

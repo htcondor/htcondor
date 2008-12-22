@@ -55,7 +55,7 @@ $mycorenmout = $corename . ".out";
 #print "Master PID submit file is $mysubmitnm\n";
 
 # get a remote scheduler running (side b)
-my $configrem = CondorPersonal::StartCondor("x_param.chirpparallel" ,"parallel");
+my $configrem = CondorPersonal::StartCondor( "job_core_chirp_par", "x_param.chirpparallel" ,"parallel");
 my @parallel = split /\+/, $configrem;
 my $parallelconfig = shift @parallel;
 my $parallelport = shift @parallel;

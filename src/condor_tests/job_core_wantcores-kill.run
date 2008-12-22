@@ -86,7 +86,7 @@ close(TPLATE);
 close(CSUB);
 
 # get a remote scheduler running (side b)
-my $configrem = CondorPersonal::StartCondor("x_param.wantcore" ,"wantcore");
+my $configrem = CondorPersonal::StartCondor( "job_core_wantcores-kill", "x_param.wantcore" ,"wantcore");
 my @wantcore = split /\+/, $configrem;
 my $wantcoreconfig = shift @wantcore;
 my $wantcoreport = shift @wantcore;

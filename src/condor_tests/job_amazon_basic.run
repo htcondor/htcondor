@@ -101,7 +101,7 @@ close(CFGSRC);
 close(CFGDST);
 
 # get a local scheduler running (side a)
-my $configloc = CondorPersonal::StartCondor("x_param.amazon", "amazon");
+my $configloc = CondorPersonal::StartCondor( "job_amazon_basic", "x_param.amazon", "amazon");
 my @local = split /\+/, $configloc;
 my $locconfig = shift @local;
 my $locport = shift @local;

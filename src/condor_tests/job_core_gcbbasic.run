@@ -69,7 +69,7 @@ while(<TEMPL>) {
 
 my $version = $mypid . "local";
 # get a local scheduler running (side a)
-my $configloc = CondorPersonal::StartCondor("x_param.gcbbasic" ,$version);
+my $configloc = CondorPersonal::StartCondor( "job_core_gcbbasic", "x_param.gcbbasic" ,$version);
 my @local = split /\+/, $configloc;
 my $locconfig = shift @local;
 my $locport = shift @local;
