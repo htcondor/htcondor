@@ -318,6 +318,15 @@ void BaseJob::DoneWithJob()
 void BaseJob::JobHeld( const char *hold_reason, int hold_code,
 					   int hold_sub_code )
 {
+	bool nonessential = false;
+
+	jobAd->LookupBool(ATTR_JOB_NONESSENTIAL,nonessential);
+	if ( nonessential ) {
+		// don't have the gridmanager put a job on  hold if
+		// the job is nonessential.  instead, just remove it.		
+		JobRemoved(hold_reason);
+		return;
+	}
 	if ( condorState != HELD ) {
 			// if the job was in REMOVED state, make certain we return
 			// to the removed state when it is released.
