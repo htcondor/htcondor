@@ -4,6 +4,7 @@
    //
    define("DETAIL_URL", "./Run-condor-details.php?runid=%s&type=%s&user=%s");
    define("CROSS_DETAIL_URL", "./Run-condor-pre-details.php?runid=%s&type=%s&user=%s");
+   define("GITSHA1","http://bonsai.cs.wisc.edu/gitweb/gitweb.cgi?p=CONDOR_SRC.git;a=commit;h=%s");
    
    $result_types = Array( "passed", "pending", "failed", "missing" );
 
@@ -71,6 +72,7 @@
 # for each (branch, type) tuple
 
 $sql = "SELECT description,
+			   project_version,
                convert_tz(start, 'GMT', 'US/Central') as start,
                run_type, 
                runid,
@@ -90,6 +92,7 @@ $results = mysql_query($sql) or die ("Query {$sql} failed : " . mysql_error());
 while ($row = mysql_fetch_array($results)) {
   $runid      = $row["runid"];
   $desc       = $row["description"];
+  $projectversion = $row["project_version"];
   $start      = $row["start"];
   $run_result = $row["result"];
   $pin 		  = $row["archive_results_until"];
@@ -205,10 +208,11 @@ while ($row = mysql_fetch_array($results)) {
 	} else {
 		$archivedstr = "$runid";
 	}
+	$sha1_url = sprintf(GITSHA1, $projectversion);
    
    echo <<<EOF
    <tr>
-      <td>{$desc}<br><font size="-2">$pinstr<font></td>
+      <td>{$desc}<br><font size="-1"><a href="{$sha1_url}">{$projectversion}</a><font><br><font size="-2">$pinstr<font></td>
       <td align="center">{$archivedstr}</td>
       <td align="center">{$start}</td>
 EOF;
