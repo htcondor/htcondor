@@ -53,7 +53,7 @@ CondorTest::debug("Master PID submit file is $mysubmitnm\n",1);
 
 
 # get a remote scheduler running (side c)
-my $configrem = CondorPersonal::StartCondor("x_param.condorcremote" ,"remote");
+my $configrem = CondorPersonal::StartCondor( "job_condorc_abc_van", "x_param.condorcremote" ,"remote");
 my @remote = split /\+/, $configrem;
 my $remconfig = shift @remote;
 my $remport = shift @remote;
@@ -61,7 +61,7 @@ my $remport = shift @remote;
 CondorTest::debug("---Remote config(c) is $remconfig and remote port is $remport---\n",1);
 
 # get a middle scheduler running (side b)
-my $configmid = CondorPersonal::StartCondor("x_param.condorcmiddle" ,"middle");
+my $configmid = CondorPersonal::StartCondor( "job_condorc_abc_van", "x_param.condorcmiddle" ,"middle");
 my @middle = split /\+/, $configmid;
 my $midconfig = shift @middle;
 my $midport = shift @middle;
@@ -118,7 +118,7 @@ close(CSUB);
 sleep 10;
 
 # get a local scheduler running (side a)
-my $configloc = CondorPersonal::StartCondor("x_param.condorclocal" ,"local");
+my $configloc = CondorPersonal::StartCondor( "job_condorc_abc_van", "x_param.condorclocal" ,"local");
 my @local = split /\+/, $configloc;
 my $locconfig = shift @local;
 my $locport = shift @local;

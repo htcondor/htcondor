@@ -59,7 +59,7 @@ if($mypid == 0) {
 	system("cp $mycmdfile $mysubmitnm");
 	system("cp $param_template $myparamname");
 
-	my $configsec = CondorPersonal::StartCondor($myparamname ,"cputracking", $mypid);
+	my $configsec = CondorPersonal::StartCondor( "lib_procapi_cputracking-snapshot", $myparamname ,"cputracking", $mypid);
 	my @cputrackingpool = split /\+/, $configsec;
 	my $secconfig = shift @cputrackingpool;
 	my $secport = shift @cputrackingpool;

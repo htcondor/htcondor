@@ -202,17 +202,20 @@ sub StartCondor
 {
 	my $mpid = "";
 	my $arraysz = scalar(@_);
+	my $testname = shift || die "Missing test name\n";
 	my $paramfile = shift || die "Missing parameter file!\n";
 	$version = shift || die "Missing parameter version!\n";
 	my $config_and_port = "";
 	my $winpath = "";
 
-	if($arraysz == 2) {
+	if($arraysz == 3) {
 		$mpid = $pid; # assign process id
 	} else {
 		$mpid = shift; # assign process id
 	}
 
+	system("mkdir -p $topleveldir");
+	$topleveldir = $topleveldir . "/$testname" . ".saveme";
 	system("mkdir -p $topleveldir");
 	$topleveldir = $topleveldir . "/" . $mpid;
 	system("mkdir -p $topleveldir");

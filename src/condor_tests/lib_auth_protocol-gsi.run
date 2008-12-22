@@ -149,7 +149,7 @@ while(<CONFIGTPLATE>)
 close(CONFIG);
 close(CONFIGTPLATE);
 
-my $configsec = CondorPersonal::StartCondor($myparamname ,"protocol", $mypid);
+my $configsec = CondorPersonal::StartCondor( "lib_auth_protocol-gsi", $myparamname ,"protocol", $mypid);
 my @securitypool = split /\+/, $configsec;
 my $secconfig = shift @securitypool;
 my $secport = shift @securitypool;
