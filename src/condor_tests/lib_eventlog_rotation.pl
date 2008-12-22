@@ -239,7 +239,8 @@ sub usage( )
 		"  -l|--list     list names of tests\n" .
 		"  -f|--force    force overwrite of test directory\n" .
 		"  -n|--no-exec  no execute / test mode\n" .
-		"  -N|--no-pid   Don't append PID to test directory\n" .
+		"  -p|--pid      Append PID to test directory\n" .
+		"  -N|--no-pid   Don't append PID to test directory (default)\n" .
 		"  -d|--debug    enable D_FULLDEBUG debugging\n" .
 		"  --loops=<n>   Override # of loops in test\n" .
 		"  -v|--verbose  increase verbose level\n" .
@@ -260,7 +261,7 @@ sub GatherData( $ );
 
 my %settings =
 (
- use_pid			=> 1,
+ use_pid			=> 0,
  verbose			=> 0,
  debug				=> 0,
  execute			=> 1,
@@ -281,6 +282,9 @@ foreach my $arg ( @ARGV ) {
     }
     elsif ( $arg eq "-n"  or  $arg eq "--no-exec" ) {
 		$settings{execute} = 0;
+    }
+    elsif ( $arg eq "-p"  or  $arg eq "--pid" ) {
+		$settings{use_pid} = 1;
     }
     elsif ( $arg eq "-N"  or  $arg eq "--no-pid" ) {
 		$settings{use_pid} = 0;
@@ -689,7 +693,6 @@ sub GatherData( $ )
 			print OUT;
 		}
     }
-    close( CMD );
 
     print OUT "\nwc:\n";
     $cmd = "wc $dir/EventLog*";
@@ -698,7 +701,6 @@ sub GatherData( $ )
 			print OUT;
 		}
     }
-    close( CMD );
 
     print OUT "\nhead:\n";
     $cmd = "head -1 $dir/EventLog*";
@@ -707,7 +709,6 @@ sub GatherData( $ )
 			print OUT;
 		}
     }
-    close( CMD );
 
     print OUT "\nconfig:\n";
     $cmd = "cat $config";
@@ -716,7 +717,6 @@ sub GatherData( $ )
 			print OUT;
 		}
     }
-    close( CMD );
 
     print OUT "\ndirectory:\n";
     print OUT "$dir\n";

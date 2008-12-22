@@ -29,7 +29,7 @@ else {
     die "$0: invalid .run file name";
 }
 
-my @args = ( "./lib_eventlog_rotation.pl", $name );
+my @args = ( "./lib_eventlog_rotation.pl", $name, "--pid" );
 foreach my $a ( @ARGV ) {
     push( @args, $a );
 }
