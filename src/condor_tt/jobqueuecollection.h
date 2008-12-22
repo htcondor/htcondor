@@ -166,7 +166,7 @@ private:
 	int    	    curProcAdIterateIndex;		//!< current index of ProcAd
 
 	bool   		bChained;			//!< currently following a chain or not?
-	ClassAdBucket 	*pCurBucket;			//!< current ClassAd Bucket pointer
+	ClassAdBucket 	*m_pCurBucket;			//!< current ClassAd Bucket pointer
 
 	ClassAdBucket 	**_ppProcAdBucketList;		//!< ProcAds Bucket List
 	ClassAdBucket 	**_ppClusterAdBucketList;	//!< ClusterAds Bucket List

@@ -48,7 +48,7 @@ JobQueueCollection::JobQueueCollection(int iBucketNum)
 	curClusterAdIterateIndex = 0;
 	curProcAdIterateIndex = 0;
 
-	pCurBucket = NULL;
+	m_pCurBucket = NULL;
 	bChained = false;
 
 	tmp = param( "SCHEDD_NAME" );
@@ -91,14 +91,14 @@ JobQueueCollection::~JobQueueCollection()
 	delete[] scheddname;
 }
 
-void JobQueueCollection::setDBObj(JobQueueDatabase *DBObj)
+void JobQueueCollection::setDBObj(JobQueueDatabase *_DBObj)
 {
-	this->DBObj = DBObj;
+	this->DBObj = _DBObj;
 }
 
-void JobQueueCollection::setDBtype(dbtype dt)
+void JobQueueCollection::setDBtype(dbtype _dt)
 {
-	this->dt = dt;
+	this->dt = _dt;
 }
 
 //! find a ProcAd
@@ -399,7 +399,7 @@ JobQueueCollection::initAllJobAdsIteration()
 {
 	curProcAdIterateIndex = 0; // that of ProcAd List
 	curClusterAdIterateIndex = 0; // that of ClusterAd List
-	pCurBucket = NULL;
+	m_pCurBucket = NULL;
 	bChained = false;
 }
 
@@ -430,20 +430,20 @@ JobQueueCollection::loadNextAd(int& index,
 	}
 		 
 	if (bChained == false) { 
-		pCurBucket = ppBucketList[index++];
+		m_pCurBucket = ppBucketList[index++];
 		
-		while (pCurBucket == NULL) {
+		while (m_pCurBucket == NULL) {
 			if (index == _iBucketSize) {
 				return FALSE;
 			}
-			pCurBucket = ppBucketList[index++];
+			m_pCurBucket = ppBucketList[index++];
 		}
 	} 
 	else { // we are following the chained buckets
-		pCurBucket = pCurBucket->pNext;
+		m_pCurBucket = m_pCurBucket->pNext;
 	}
 		// is there a chaned bucket?
-	if (pCurBucket->pNext != NULL) {
+	if (m_pCurBucket->pNext != NULL) {
 		bChained = true;
 	}
 	else {
@@ -451,9 +451,9 @@ JobQueueCollection::loadNextAd(int& index,
 	}
 
 	// load this class ad
-	errStatus = loadAd(pCurBucket->cid, 
-					   pCurBucket->pid, 
-					   pCurBucket->ad);
+	errStatus = loadAd(m_pCurBucket->cid, 
+					   m_pCurBucket->pid, 
+					   m_pCurBucket->ad);
 
 	return TRUE;
 }

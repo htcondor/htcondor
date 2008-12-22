@@ -260,7 +260,6 @@ TTManager::maintain()
 			// update the currency table
 		MyString	sql_str;
 		time_t clock;
-		int ret_st;
 		const char *scheddname;
 		MyString ts_expr;
 		int bndcnt = 0;

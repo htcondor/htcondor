@@ -683,7 +683,7 @@ QuillErrCode insertHistoryJobCommon(AttrList *ad, JobQueueDatabase* DBObj, dbtyp
 				  sql_stmt.sprintf( 
 								   "UPDATE Jobs_Horizontal_History SET %s = '%s' WHERE scheddname = '%s' and scheddbirthdate = %lu and cluster_id = %d and proc_id = %d", name.Value(), newvalue.Value(), scheddname, (unsigned long)scheddbirthdate, cid, pid);
 			  } else {
-				  data_arr1[0] = (char *)newvalue.Value();
+				  data_arr1[0] = newvalue.Value();
 				  data_typ1[0] = CONDOR_TT_TYPE_STRING;
 
 				  data_arr1[1] = scheddname;
