@@ -661,7 +661,7 @@ GlobusJob::GlobusJob( ClassAd *classad )
 	}
 
 	m_lightWeightJob = false;
-	jobAd->LookupBool( "LightWeightJob", m_lightWeightJob );
+	jobAd->LookupBool( ATTR_JOB_NONESSENTIAL, m_lightWeightJob );
 
 	// In GM_HOLD, we assme HoldReason to be set only if we set it, so make
 	// sure it's unset when we start.

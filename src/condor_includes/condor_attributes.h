@@ -250,6 +250,7 @@ extern const char * ATTR_JOB_LOCAL_USER_CPU;
 extern const char * ATTR_JOB_MANAGED;
 extern const char * ATTR_JOB_MANAGED_MANAGER;
 extern const char * ATTR_JOB_MATCHED;
+extern const char * ATTR_JOB_NONESSENTIAL;
 extern const char * ATTR_JOB_NOOP;
 extern const char * ATTR_JOB_NOOP_EXIT_SIGNAL;
 extern const char * ATTR_JOB_NOOP_EXIT_CODE;
