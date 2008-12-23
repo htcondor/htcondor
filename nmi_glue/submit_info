@@ -125,10 +125,10 @@ platforms = x86_macos_10.4
 test_append_prereqs = java-1.4.2_09
 ]
 
-#[
-#platforms = x86_64_macos_10.5
-#test_append_prereqs = java-1.5.0_08
-#]
+[
+platforms = x86_64_macos_10.5
+test_append_prereqs = java-1.5.0_08
+]
 
 [
 platforms = x86_winnt_5.1
