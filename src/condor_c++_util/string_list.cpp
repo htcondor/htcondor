@@ -24,6 +24,7 @@
 #include "condor_debug.h"
 #include "internet.h"
 #include "string_funcs.h"
+#include "condor_random_num.h"
 
 // initialize the List<char> from the VALID_*_FILES variable in the
 // config file; the files are separated by commas
@@ -478,6 +479,32 @@ StringList::qsort() {
 	}
 
 	::qsort(list, count, sizeof(char *), string_compare);
+
+	for (i = 0, clearAll(); i < count; i++) {
+		strings.Append(list[i]);
+	}
+
+	free(list);
+}
+
+void
+StringList::shuffle() {
+	char *str;
+ 	unsigned int i;
+	unsigned int count = strings.Length();
+	char **list = (char **) calloc(count, sizeof(char *));
+
+	for (i = 0, strings.Rewind(); (str = strings.Next()); i++) {
+		list[i] = strdup(str);
+	}
+
+	for (i = 0; i+1 < count; i++) {
+		unsigned int j = (unsigned int)(i + (get_random_float() * (count-i)));
+		// swap strings at i and j
+		str = list[i];
+		list[i] = list[j];
+		list[j] = str;
+	}
 
 	for (i = 0, clearAll(); i < count; i++) {
 		strings.Append(list[i]);

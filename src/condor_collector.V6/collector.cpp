@@ -51,6 +51,8 @@
 #include "CollectorPlugin.h"
 #endif
 
+#include "ccb_server.h"
+
 //----------------------------------------------------------------
 
 extern "C" char* CondorVersion( void );
@@ -94,6 +96,8 @@ ClassAd CollectorDaemon::query_any_request;
 #if ( HAVE_HIBERNATION )
 OfflineCollectorPlugin CollectorDaemon::offline_plugin_;
 #endif
+
+CCBServer *CollectorDaemon::m_ccb_server;
 
 //---------------------------------------------------------
 
@@ -1315,6 +1319,20 @@ void CollectorDaemon::Config()
 
     size = param_integer ("COLLECTOR_QUERY_WORKERS", 2);
     forkQuery.setMaxWorkers( size );
+
+	bool ccb_server_enabled = param_boolean("ENABLE_CCB_SERVER",true);
+	if( ccb_server_enabled ) {
+		if( !m_ccb_server ) {
+			dprintf(D_ALWAYS, "Enabling CCB Server.\n");
+			m_ccb_server = new CCBServer;
+		}
+		m_ccb_server->InitAndReconfig();
+	}
+	else if( m_ccb_server ) {
+		dprintf(D_ALWAYS, "Disabling CCB Server.\n");
+		delete m_ccb_server;
+		m_ccb_server = NULL;
+	}
 
     return;
 }

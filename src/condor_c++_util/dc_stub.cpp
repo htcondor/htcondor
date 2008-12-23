@@ -22,7 +22,7 @@
    libraries where needed. */
 #include "condor_common.h"
 
-char* global_dc_sinful() { return 0; }
+char const* global_dc_sinful() { return 0; }
 bool global_dc_set_cookie(int, unsigned char*) { return false; }
 bool global_dc_get_cookie(int &, unsigned char* &) { return false; }
 

@@ -738,6 +738,8 @@ extern const char * ATTR_PREV_LAST_HEARD_FROM;
 extern const char *ATTR_TRY_AGAIN;
 extern const char *ATTR_DOWNLOADING;
 extern const char *ATTR_TIMEOUT;
+extern const char *ATTR_CCBID;
+extern const char *ATTR_REQUEST_ID;
 
 // Enumerate the ones that can't be constant strings..
 typedef enum

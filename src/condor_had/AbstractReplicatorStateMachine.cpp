@@ -555,8 +555,8 @@ AbstractReplicatorStateMachine::sendCommand(
         return ;
     }
 
-    char* sinfulString = daemonCore->InfoCommandSinfulString();
-    if(! socket.code( sinfulString )/* || ! socket.eom( )*/) {
+    char const* sinfulString = daemonCore->InfoCommandSinfulString();
+    if(! socket.put( sinfulString )/* || ! socket.eom( )*/) {
         dprintf( D_ALWAYS, "AbstractReplicatorStateMachine::sendCommand "
                             "unable to code the local sinful string or eom%s\n",
                    sinfulString );

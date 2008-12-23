@@ -80,6 +80,7 @@ BOOLEAN is_v3_ckpt( const char *name );
 BOOLEAN cluster_exists( int );
 BOOLEAN proc_exists( int, int );
 BOOLEAN is_myproxy_file( const char *name );
+BOOLEAN is_ccb_file( const char *name );
 
 /*
   Tell folks how to use this program.
@@ -283,6 +284,12 @@ check_spool_dir()
 			continue;
 		}
 
+			// See if it's a CCB server file
+		if ( is_ccb_file( f ) ) {
+			good_file( Spool, f );
+			continue;
+		}
+
 			// We think it's bad.  For now, just append it to a
 			// StringList, instead of actually deleting it.  This way,
 			// if DisconnectQ() fails, we can abort and not actually
@@ -411,6 +418,19 @@ is_myproxy_file( const char *name )
 		return FALSE;
 	}
 	return proc_exists( cluster, proc );
+}
+
+/*
+  Check whether the given file could be a valid MyProxy password file
+  for a queued job.
+*/
+BOOLEAN
+is_ccb_file( const char *name )
+{
+	if( strstr(name,".ccb_reconnect") ) {
+		return TRUE;
+	}
+	return FALSE;
 }
 
 /*

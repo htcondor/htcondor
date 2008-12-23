@@ -92,7 +92,7 @@ public:
 
 	void	printInfo( int debug_level );
 
-	char*	getIpAddr( void );
+	char const*	getIpAddr( void );
 
 	int receiveJobClassAdUpdate( Stream *stream );
 
@@ -155,6 +155,7 @@ private:
 	ReliSock*       s_job_update_sock;
 	MyString        s_execute_dir;
 	DCMsgCallback*  m_hold_job_cb;
+	MyString        m_starter_addr;
 };
 
 #endif /* _CONDOR_STARTD_STARTER_H */

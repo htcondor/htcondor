@@ -44,6 +44,9 @@
 
 extern bool global_dc_get_cookie(int &len, unsigned char* &data);
 
+// special security session "hint" used to specify that a new
+// security session should be used
+char const *USE_TMP_SEC_SESSION = "USE_TMP_SEC_SESSION";
 
 void SecMan::key_printf(int debug_levels, KeyInfo *k) {
 	if (param_boolean("SEC_DEBUG_PRINT_KEYS", false)) {
@@ -342,7 +345,8 @@ SecMan::getSecSetting( const char* fmt, DCpermissionHierarchy const &auth_level,
 
 bool
 SecMan::FillInSecurityPolicyAd( DCpermission auth_level, ClassAd* ad, 
-								bool peer_can_negotiate, bool raw_protocol )
+								bool peer_can_negotiate, bool raw_protocol,
+								bool use_tmp_sec_session )
 {
 	if( ! ad ) {
 		EXCEPT( "SecMan::FillInSecurityPolicyAd called with NULL ad!" );
@@ -509,6 +513,12 @@ SecMan::FillInSecurityPolicyAd( DCpermission auth_level, ClassAd* ad,
 	paramer = SecMan::getSecSetting(fmt, auth_level);
 	if (!paramer) {
 		paramer = SecMan::getSecSetting("SEC_%s_SESSION_DURATION", auth_level);
+	}
+
+	if( use_tmp_sec_session ) {
+		// expire this session soon
+		free(paramer);
+		paramer = strdup("60");
 	}
 
 	if (paramer) {
@@ -800,9 +810,13 @@ class SecManStartCommand: Service, public ClassyCountedPtr {
 		m_misc_data(misc_data),
 		m_nonblocking(nonblocking),
 		m_pending_socket_registered(false),
-		m_sec_man(*sec_man)
+		m_sec_man(*sec_man),
+		m_use_tmp_sec_session(false)
 	{
 		m_sec_session_id_hint = sec_session_id_hint ? sec_session_id_hint : "";
+		if( m_sec_session_id_hint == USE_TMP_SEC_SESSION ) {
+			m_use_tmp_sec_session = true;
+		}
 		m_already_tried_TCP_auth = false;
 		if( !m_errstack ) {
 			m_errstack = &m_internal_errstack;
@@ -892,6 +906,7 @@ class SecManStartCommand: Service, public ClassyCountedPtr {
 	bool m_is_tcp;
 	bool m_have_session;
 	bool m_new_session;
+	bool m_use_tmp_sec_session;
 	bool m_already_logged_startcommand;
 	ClassAd m_auth_info;
 	SecMan::sec_req m_negotiation;
@@ -1099,10 +1114,10 @@ SecManStartCommand::startCommand_inner()
 		return WaitForSocketCallback();
 	}
 	else if( m_is_tcp && !m_sock->is_connected()) {
-		dprintf(D_SECURITY,"SECMAN: TCP connection to %s failed",
+		dprintf(D_SECURITY,"SECMAN: TCP connection to %s failed\n",
 				m_sock->peer_description());
 		m_errstack->pushf("SECMAN", SECMAN_ERR_CONNECT_FAILED,
-		                "TCP connection to %s failed\n",
+		                "TCP connection to %s failed",
 		                m_sock->peer_description());
 
 		return StartCommandFailed;
@@ -1162,7 +1177,7 @@ SecManStartCommand::sendAuthInfo_inner()
 	MyString sid;
 
 	sid = m_sec_session_id_hint;
-	if( sid.Value()[0] && !m_raw_protocol ) {
+	if( sid.Value()[0] && !m_raw_protocol && !m_use_tmp_sec_session ) {
 		m_have_session = m_sec_man.LookupNonExpiredSession(sid.Value(), m_enc_key);
 		if( m_have_session ) {
 			dprintf(D_SECURITY,"Using requested session %s.\n",sid.Value());
@@ -1174,7 +1189,7 @@ SecManStartCommand::sendAuthInfo_inner()
 
 	m_session_key.sprintf ("{%s,<%i>}", m_sock->get_sinful_peer(), m_cmd);
 	bool found_map_ent = false;
-	if( !m_have_session && !m_raw_protocol ) {
+	if( !m_have_session && !m_raw_protocol && !m_use_tmp_sec_session ) {
 		found_map_ent = (m_sec_man.command_map->lookup(m_session_key, sid) == 0);
 	}
 	if (found_map_ent) {
@@ -1209,8 +1224,10 @@ SecManStartCommand::sendAuthInfo_inner()
 
 		m_new_session = false;
 	} else {
-		if( !m_sec_man.FillInSecurityPolicyAd( CLIENT_PERM, &m_auth_info,
-									 m_peer_can_negotiate, m_raw_protocol) ) {
+		if( !m_sec_man.FillInSecurityPolicyAd(
+				CLIENT_PERM, &m_auth_info, m_peer_can_negotiate,
+				m_raw_protocol,	m_use_tmp_sec_session) )
+		{
 				// security policy was invalid.  bummer.
 			dprintf( D_ALWAYS, 
 					 "SECMAN: ERROR: The security policy is invalid.\n" );
@@ -1220,7 +1237,12 @@ SecManStartCommand::sendAuthInfo_inner()
 		}
 
 		if (DebugFlags & D_FULLDEBUG) {
-			dprintf (D_SECURITY, "SECMAN: no cached key for %s.\n", m_session_key.Value());
+			if( m_use_tmp_sec_session ) {
+				dprintf (D_SECURITY, "SECMAN: using temporary security session for %s.\n", m_session_key.Value() );
+			}
+			else {
+				dprintf (D_SECURITY, "SECMAN: no cached key for %s.\n", m_session_key.Value());
+			}
 		}
 
 		// no sessions in udp
@@ -1354,7 +1376,7 @@ SecManStartCommand::sendAuthInfo_inner()
 	m_auth_info.Assign(ATTR_SEC_REMOTE_VERSION,CondorVersion());
 
 	// fill in return address, if we are a daemon
-	char* dcss = global_dc_sinful();
+	char const* dcss = global_dc_sinful();
 	if (dcss) {
 		m_auth_info.Assign(ATTR_SEC_SERVER_COMMAND_SOCK, dcss);
 	}
@@ -1441,7 +1463,7 @@ SecManStartCommand::sendAuthInfo_inner()
 				MyString key_id = m_enc_key->id();
 
 				// stick our command socket sinful string in there
-				char* dcsss = global_dc_sinful();
+				char const* dcsss = global_dc_sinful();
 				if (dcsss) {
 					key_id += ",";
 					key_id += dcsss;
@@ -1471,7 +1493,7 @@ SecManStartCommand::sendAuthInfo_inner()
 				MyString key_id = m_enc_key->id();
 
 					// stick our command socket sinful string in there
-				char* dcsss = global_dc_sinful();
+				char const* dcsss = global_dc_sinful();
 				if (dcsss) {
 					key_id += ",";
 					key_id += dcsss;

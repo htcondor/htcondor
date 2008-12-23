@@ -27,6 +27,7 @@
 #include "condor_socket_types.h"
 #include "condor_md.h"
 #include "selector.h"
+#include "ccb_client.h"
 
 #define NORMAL_HEADER_SIZE 5
 #define MAX_HEADER_SIZE MAC_SIZE + NORMAL_HEADER_SIZE
@@ -770,6 +771,9 @@ int ReliSock::SndMsg::snd_packet( int _sock, int end, int _timeout )
             return FALSE;
         }
         
+	if( end ) {
+		buf.dealloc_buf(); // save space, now that we are done sending
+	}
 	return TRUE;
 }
 
@@ -1072,4 +1076,34 @@ ReliSock::connect_socketpair(ReliSock &sock)
 	}
 
 	return true;
+}
+
+void
+ReliSock::enter_reverse_connecting_state()
+{
+	if( _state == sock_assigned ) {
+		// no need for a socket to be allocated while we are waiting
+		// because this socket will be assigned to a new socket
+		// once we accept a connection from the listen socket
+		this->close();
+	}
+	ASSERT( _state == sock_virgin );
+	_state = sock_reverse_connect_pending;
+}
+
+void
+ReliSock::exit_reverse_connecting_state(ReliSock *sock)
+{
+	ASSERT( _state == sock_reverse_connect_pending );
+	_state = sock_virgin;
+
+	if( sock ) {
+		int assign_rc = assign(sock->get_file_desc());
+		ASSERT( assign_rc );
+		_state = sock->_state;
+		isClient(true);
+		sock->_sock = INVALID_SOCKET;
+		sock->close();
+	}
+	m_ccb_client = NULL;
 }

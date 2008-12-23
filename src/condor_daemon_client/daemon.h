@@ -290,6 +290,27 @@ public:
 	SafeSock* safeSock( int sec = 0, CondorError* errstack = 0,
 	                    bool non_blocking = false );
 
+		/**	Create a new Sock object connected to the daemon.
+		  Callers can optionally specify a timeout to use for the
+		  connect().  If there was a failure in connect(), we delete 
+		  the object and return NULL.
+		  @param sec Number of seconds for the timeout on connect().
+		  @return A new Sock object connected to the daemon.  
+		  */
+	Sock *makeConnectedSocket( Stream::stream_type st = Stream::reli_sock,
+							   int timeout = 0, CondorError* errstack = NULL,
+							   bool non_blocking = false );
+
+		/**	Connects a socket to the daemon.
+		  Callers can optionally specify a timeout to use for the
+		  connect().  If there was a failure in connect(), we delete 
+		  the object and return NULL.
+		  @param sec Number of seconds for the timeout on connect().
+		             (If 0, then uses timeout already set on socket, if any.)
+		  @return true if connection attempt successful
+		  */
+	bool connectSock(Sock *sock, int sec=0, CondorError* errstack=NULL, bool non_blocking=false, bool ignore_timeout_multiplier=false );
+
 public:
 		/** Send the given command to the daemon.  The caller gives
 		  the command they want to send, the type of Sock they
@@ -474,6 +495,8 @@ public:
 		 * @return true if it was able to contact the other Daemon and get range
 		 **/
 	bool getTimeOffsetRange( long &min_range, long &max_range );
+//DAN TESTING: DO NOT COMMIT!!!!!
+friend class Scheduler;
 
 protected:
 	// Data members
@@ -726,7 +749,7 @@ protected:
 };
 
 // Prototype to get sinful string.
-char *global_dc_sinful( void );
+char const *global_dc_sinful( void );
 
 /** Helper to get the *_HOST or *_IP_ADDR param for the appropriate
 	subsystem.  It just returns whatever param() would.  So, if it's

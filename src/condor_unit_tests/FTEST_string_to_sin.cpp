@@ -53,7 +53,7 @@ bool FTEST_string_to_sin(void) {
 static bool test_normal_case() {
 	e.emit_test("Is normal input converted correctly?");
 	struct sockaddr_in sa_in;
-	char* input = strdup("<192.168.0.2:80>");
+	char* input = strdup("<192.168.0.2:80?param1=value1&param2=value2>");
 	int result = string_to_sin(input, &sa_in);
 	e.emit_input_header();
 	e.emit_param("STRING", input);

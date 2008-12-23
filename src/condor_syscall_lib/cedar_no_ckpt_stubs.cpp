@@ -130,3 +130,26 @@ Stream::prepare_crypto_for_secret_is_noop()
 			"called within the Condor syscall library" );
 	return true;
 }
+
+int Sock::reverse_connect(char const *,int,bool)
+{
+	return CEDAR_ENOCCB;
+}
+
+int
+SafeSock::do_reverse_connect(char const *ccb_contact,bool nonblocking)
+{
+	return CEDAR_ENOCCB;
+}
+
+int
+ReliSock::do_reverse_connect(char const *ccb_contact,bool nonblocking)
+{
+	return CEDAR_ENOCCB;
+}
+
+void
+ReliSock::cancel_reverse_connect() {
+	EXCEPT( "ReliSock::cancel_reverse_connect() should never be "
+			"called within the Condor syscall library" );
+}

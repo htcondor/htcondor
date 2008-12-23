@@ -135,6 +135,8 @@ protected:
 	static int sockCacheHandler( Service*, Stream* sock );
 	static int stashSocket( Stream* sock );
 
+	static class CCBServer *m_ccb_server;
+
 private:
 
 #if defined ( HAVE_HIBERNATION )

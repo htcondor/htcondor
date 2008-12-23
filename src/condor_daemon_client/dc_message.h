@@ -185,9 +185,14 @@ public:
 		/* override default debug level (D_ALWAYS|D_FAILURE) */
 	void setFailureDebugLevel(int level) {m_msg_failure_debug_level = level;}
 
+		/* override default debug level (0 --> never) */
+	void setCancelDebugLevel(int level) {m_msg_cancel_debug_level = level;}
+
 	int successDebugLevel() {return m_msg_success_debug_level;}
 
 	int failureDebugLevel() {return m_msg_failure_debug_level;}
+
+	int cancelDebugLevel() {return m_msg_cancel_debug_level;}
 
 		/* add an error message to the error stack */
 	void addError( int code, char const *format, ... );
@@ -215,6 +220,7 @@ private:
 	classy_counted_ptr<DCMsgCallback> m_cb;
 	int m_msg_success_debug_level;
 	int m_msg_failure_debug_level;
+	int m_msg_cancel_debug_level;
 	CondorError m_errstack;
 	DeliveryStatus m_delivery_status;
 	classy_counted_ptr<DCMessenger> m_messenger;
@@ -258,10 +264,8 @@ public:
 
 		// This constructor is intended for use on the receiving end
 		// of a connection, where the peer is represented by an
-		// existing sock, rather than a Daemon object.  This class
-		// assumes ownership of sock and will delete it when the class
-		// is destroyed.
-	DCMessenger( Sock *sock );
+		// existing sock, rather than a Daemon object.
+	DCMessenger( classy_counted_ptr<Sock> sock );
 
 	~DCMessenger();
 
@@ -322,7 +326,7 @@ private:
 	void cancelMessage( classy_counted_ptr<DCMsg> msg );
 
 	classy_counted_ptr<Daemon> m_daemon; // our daemon client object (if any)
-	Sock *m_sock;         // otherwise, we will just have a socket
+	classy_counted_ptr<Sock> m_sock;     // otherwise, we just have a socket
 
 	classy_counted_ptr<DCMsg> m_callback_msg; // The current message waiting for a callback.
 	Sock *m_callback_sock; // The current sock waiting for a callback.
@@ -392,6 +396,19 @@ public:
 
 private:
 	MyString m_str;
+};
+
+class ClassAdMsg: public DCMsg {
+public:
+	ClassAdMsg(int cmd, ClassAd &msg);
+
+	bool writeMsg( DCMessenger *messenger, Sock *sock );
+	bool readMsg( DCMessenger *messenger, Sock *sock );
+
+	ClassAd &getMsgClassAd() { return m_msg; }
+
+private:
+	ClassAd m_msg;
 };
 
 

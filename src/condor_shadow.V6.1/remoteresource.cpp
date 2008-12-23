@@ -1053,6 +1053,16 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 			setResourceState( new_state );
 		}
 	}
+
+	MyString starter_addr;
+	update_ad->LookupString( ATTR_STARTER_IP_ADDR, starter_addr );
+	if( !starter_addr.IsEmpty() ) {
+		// The starter sends updated contact info along with the job
+		// update (useful if CCB info changes).  It's a bit of a hack
+		// to do it through this channel, but better than nothing.
+		setStarterAddress( starter_addr.Value() );
+	}
+
 		// now that we've gotten an update, we should evaluate our
 		// periodic user policy again, since we have new information
 		// and something might now evaluate to true which we should

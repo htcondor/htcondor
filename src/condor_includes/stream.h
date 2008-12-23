@@ -27,6 +27,7 @@
 #include "MyString.h"
 #include "CryptKey.h"                 // KeyInfo
 #include "condor_ver_info.h"
+#include "classy_counted_ptr.h"
 // This #define is a desperate move. GNU g++ seems to choke at runtime on our
 // inline function for eom.  Someday not needed ?
 #define eom end_of_message
@@ -161,7 +162,7 @@ const condor_mode_t NULL_FILE_PERMISSIONS = (condor_mode_t)0;
 	inline int MyObject::get(Stream &s) { s.decode(); return code(s); }
     </pre>
 */
-class Stream {
+class Stream: public ClassyCountedPtr {
 
 public:
 

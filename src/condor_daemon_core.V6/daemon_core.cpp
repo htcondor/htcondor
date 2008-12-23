@@ -253,12 +253,15 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 		(DaemonCoreSockAdapterClass::Register_Socket_fnptr)&DaemonCore::Register_Socket,
 		&DaemonCore::Cancel_Socket,
 		&DaemonCore::CallSocketHandler,
+		&DaemonCore::CallCommandHandler,
 		&DaemonCore::Register_DataPtr,
 		&DaemonCore::GetDataPtr,
 		(DaemonCoreSockAdapterClass::Register_Timer_fnptr)&DaemonCore::Register_Timer,
 		&DaemonCore::TooManyRegisteredSockets,
 		&DaemonCore::incrementPendingSockets,
-		&DaemonCore::decrementPendingSockets);
+		&DaemonCore::decrementPendingSockets,
+		&DaemonCore::publicNetworkIpAddr,
+		&DaemonCore::Register_Command);
 
 	if ( PidSize == 0 )
 		PidSize = DEFAULT_PIDBUCKETS;
@@ -327,6 +330,8 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 #ifdef HAVE_EXT_GSOAP
 	soap_ssl_sock = -1;
 #endif
+
+	m_dirty_sinful = true;
 
 	if(maxPipe == 0)
 		maxPipe = DEFAULT_MAXPIPES;
@@ -422,6 +427,8 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 	m_fake_create_thread = false;
 
 	m_refresh_dns_timer = -1;
+
+	m_ccb_listeners = 0;
 }
 
 // DaemonCore destructor. Delete the all the various handler tables, plus
@@ -429,6 +436,11 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 DaemonCore::~DaemonCore()
 {
 	int		i;
+
+	if( m_ccb_listeners ) {
+		delete m_ccb_listeners;
+		m_ccb_listeners = NULL;
+	}
 
 #ifndef WIN32
 	close(async_pipe[1]);
@@ -902,7 +914,7 @@ int DaemonCore::InfoCommandPort()
 // NOTE: InfoCommandSinfulString always returns a pointer to a _static_ buffer!
 // This means you'd better copy or strdup the result if you expect it to never
 // change on you.  Plus, realize static buffers aren't exactly thread safe!
-char * DaemonCore::InfoCommandSinfulString(int pid)
+char const * DaemonCore::InfoCommandSinfulString(int pid)
 {
 	static char somepid_sinful_string[28];
 
@@ -931,7 +943,7 @@ char * DaemonCore::InfoCommandSinfulString(int pid)
 // NOTE: InfoCommandSinfulStringMyself always returns a pointer to a _static_ buffer!
 // This means you'd better copy or strdup the result if you expect it to never
 // change on you.  Plus, realize static buffers aren't exactly thread safe!
-char *
+char const *
 DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 {
 	static char * sinful_public = NULL;
@@ -968,6 +980,7 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 			sinful_public = strdup(
 			    sock_to_string( (*sockTable)[initial_command_sock].iosock->get_file_desc() ) );
 		}
+		m_dirty_sinful = true;
 	}
 
 	if (!initialized_sinful_private) {
@@ -992,12 +1005,51 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 		}
 #endif /* HAVE_EXT_GCB */
 		initialized_sinful_private = true;
+		m_dirty_sinful = true;
 	}
 
-	if (usePrivateAddress && sinful_private) {
-		return sinful_private;
+	if( usePrivateAddress ) {
+		if( sinful_private ) {
+			return sinful_private;
+		}
+		else {
+			return sinful_public;
+		}
 	}
-	return sinful_public;
+
+	if( m_dirty_sinful ) { // need to rebuild full sinful string
+		m_dirty_sinful = false;
+
+		// The full sinful string is the public address plus params
+		// which specify private network address and CCB contact info.
+
+		m_sinful = Sinful(sinful_public);
+
+		char const *private_name = privateNetworkName();
+		if( private_name ) {
+			m_sinful.setPrivateNetworkName(private_name);
+
+			if( sinful_private && strcmp(sinful_public,sinful_private) ) {
+				m_sinful.setPrivateAddr(sinful_private);
+			}
+		}
+
+		if( m_ccb_listeners ) {
+			MyString ccb_contact;
+			m_ccb_listeners->GetCCBContactString(ccb_contact);
+			if( !ccb_contact.IsEmpty() ) {
+				m_sinful.setCCBContact(ccb_contact.Value());
+			}
+		}
+	}
+
+	return m_sinful.getSinful();
+}
+
+void
+DaemonCore::daemonContactInfoChanged()
+{
+	m_dirty_sinful = true;
 }
 
 const char*
@@ -1247,7 +1299,9 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 			duplicate_found = true;
         }
 
-		if ( (*sockTable)[j].iosock ) { 	// if valid entry
+		// fd may be -1 if doing a "fake" registration: reverse_connect_pending
+		// so do not require uniqueness of fd in that case
+		if ( (*sockTable)[j].iosock && fd_to_register != -1 ) {
 			if ( ((Sock *)(*sockTable)[j].iosock)->get_file_desc() ==
 								fd_to_register ) {
 				duplicate_found = true;
@@ -1292,12 +1346,17 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 	(*sockTable)[i].iosock = (Sock *)iosock;
 	switch ( iosock->type() ) {
 		case Stream::reli_sock :
+			// the rest of daemon-core 
 			(*sockTable)[i].is_connect_pending =
-								((ReliSock *)iosock)->is_connect_pending();
+				((ReliSock *)iosock)->is_connect_pending() &&
+				!((ReliSock *)iosock)->is_reverse_connect_pending();
+			(*sockTable)[i].is_reverse_connect_pending =
+				((ReliSock *)iosock)->is_reverse_connect_pending();
 			break;
 		case Stream::safe_sock :
 				// SafeSock connect never blocks....
 			(*sockTable)[i].is_connect_pending = false;
+			(*sockTable)[i].is_reverse_connect_pending = false;
 			break;
 		default:
 			EXCEPT("Adding CEDAR socket of unknown type");
@@ -1343,7 +1402,15 @@ DaemonCore::Cancel_And_Close_All_Sockets(void)
 {
 	// This method will cancel *and delete* all registered sockets.
 	// It will return the number of sockets cancelled + closed.
+	// Dan 2009-01-15: _why_ are we doing this?!
 	int i = 0;
+
+	// Since sockets get deleted below, we must delete the ccb listener
+	// first or it will have dangling references.
+	if( m_ccb_listeners ) {
+		delete m_ccb_listeners;
+		m_ccb_listeners = NULL;
+	}
 
 	while ( nSock > 0 ) {
 		if ( (*sockTable)[0].iosock ) {	// if a valid entry....
@@ -2432,6 +2499,21 @@ DaemonCore::reconfig(void) {
 
 	file_descriptor_safety_limit = 0; // 0 indicates: needs to be computed
 
+	bool never_use_ccb =
+		get_mySubSystem()->isType(SUBSYSTEM_TYPE_GAHP);
+
+	if( !never_use_ccb ) {
+		if( !m_ccb_listeners ) {
+			m_ccb_listeners = new CCBListeners;
+		}
+
+		char *ccb_addresses = param("CCB_ADDRESS");
+		m_ccb_listeners->Configure( ccb_addresses );
+		free( ccb_addresses );
+
+		const bool blocking = true;
+		m_ccb_listeners->RegisterWithCCBServer(blocking);
+	}
 }
 
 
@@ -2605,7 +2687,14 @@ void DaemonCore::Driver()
 		for (i = 0; i < nSock; i++) {
 			if ( (*sockTable)[i].iosock ) {	// if a valid entry....
 					// Setup our fdsets
-				if ( (*sockTable)[i].is_connect_pending ) {
+				if ( (*sockTable)[i].is_reverse_connect_pending ) {
+					// nothing to do; we are just allowing this socket
+					// to be registered so that it behaves like a socket
+					// that is doing a non-blocking connect
+					// CCBClient will eventually ensure that the
+					// socket's registered callback function is called
+				}
+				else if ( (*sockTable)[i].is_connect_pending ) {
 						// we want to be woken when a non-blocking
 						// connect is ready to write.  when connect
 						// is ready, select will set the writefd set
@@ -2734,7 +2823,10 @@ void DaemonCore::Driver()
 					// if the socket was doing a connect(), we check the
 					// writefds and excepfds.  otherwise, check readfds.
 					(*sockTable)[i].call_handler = false;
-					if ( (*sockTable)[i].is_connect_pending ) {
+					if ( (*sockTable)[i].is_reverse_connect_pending ) {
+						// nothing to do
+					}
+					else if ( (*sockTable)[i].is_connect_pending ) {
 
 						connect_timeout =
 							(*sockTable)[i].iosock->connect_timeout_time();
@@ -3057,6 +3149,63 @@ DaemonCore::CallSocketHandler( int &i, bool default_to_HandleCommand )
 	}
 }
 
+bool
+DaemonCore::CommandNumToTableIndex(int cmd,int *cmd_index)
+{
+		// first compute the hash
+	if ( cmd < 0 )
+		*cmd_index = -cmd % maxCommand;
+	else
+		*cmd_index = cmd % maxCommand;
+
+	if (comTable[*cmd_index].num == cmd) {
+			// hash found it first try... cool
+		return true;
+	}
+
+		// hash did not find it, search for it
+	int j;
+	for (j = (*cmd_index + 1) % maxCommand; j != *cmd_index; j = (j + 1) % maxCommand) {
+		if(comTable[j].num == cmd) {
+			*cmd_index = j;
+			return true;
+		}
+	}
+	return false;
+}
+
+int
+DaemonCore::CallCommandHandler(int req,Stream *stream,bool delete_stream)
+{
+	int result = FALSE;
+	int index = 0;
+	bool reqFound = CommandNumToTableIndex(req,&index);
+
+	if ( reqFound ) {
+		// call the handler function; first curr_dataptr for GetDataPtr()
+		curr_dataptr = &(comTable[index].data_ptr);
+
+		if ( comTable[index].is_cpp ) {
+			// the handler is c++ and belongs to a 'Service' class
+			if ( comTable[index].handlercpp )
+				result = (comTable[index].service->*(comTable[index].handlercpp))(req,stream);
+		} else {
+			// the handler is in c (not c++), so pass a Service pointer
+			if ( comTable[index].handler )
+				result = (*(comTable[index].handler))(comTable[index].service,req,stream);
+		}
+
+		// clear curr_dataptr
+		curr_dataptr = NULL;
+	}
+
+	if ( delete_stream && result != KEEP_STREAM ) {
+		delete stream;
+	}
+
+	return result;
+}
+
 void
 DaemonCore::CheckPrivState( void )
 {
@@ -3203,6 +3352,61 @@ int DaemonCore::HandleReqSocketHandler(Stream *stream)
 	return KEEP_STREAM;
 }
 
+bool
+DaemonCore::RegisterSocketForHandleReq(Stream *stream)
+{
+		// set a timer for 200 seconds, in case nothing ever arrives...
+		// why 200 seconds -vs- the time honored 20 seconds?  
+		// since we are not blocking, we can afford to be more patient,
+		// and in fact it helps to be more patient here because 
+		// if a client does a non-blocking connect to us and then gets
+		// blocked talking to someone else, we want to minimize the chance
+		// of a timeout when the client gets back around to giving us
+		// some love.
+	int tid = daemonCore->Register_Timer(
+		200,		
+		(Eventcpp) &DaemonCore::HandleReqSocketTimerHandler,
+		"DaemonCore::HandleReqSocketTimerHandler",
+		this);
+		// stash the socket with the timer 
+	daemonCore->Register_DataPtr((void*)stream);
+		// now register the socket itself.  note we needed to set the
+		// timer first because we want to register the timer id with 
+		// the socket handler, and Register_DataPtr only effects the
+		// most recent event handler registered.
+	int tmp_result = daemonCore->Register_Socket(stream,
+		"Incoming command",
+		(SocketHandlercpp) &DaemonCore::HandleReqSocketHandler,
+		"DaemonCore::HandleReqSocketHandler",
+		this);
+	if ( tmp_result >= 0 )  {	
+			// on socket register success
+		int* stashed_tid = new int;
+		*stashed_tid = tid;
+			// register the timer id with the sock, so we can cancel it.
+		daemonCore->Register_DataPtr((void*)stashed_tid);
+			// return -- we'll come back when there is something to read
+			// use KEEP_STREAM so the socket we just registered isn't closed.
+		return true;
+	} else {
+			// on socket register failure
+			// just cancel the timeout and fall-thru (i.e. service
+			// the request synchronously with a 1 second timeout
+			// reading the command int).
+		daemonCore->Cancel_Timer(tid);
+	}
+	return false;
+}
+
+void
+DaemonCore::HandleReqAsync(Stream *stream)
+{
+	if( !RegisterSocketForHandleReq(stream) ) {
+		if( HandleReq(stream) != KEEP_STREAM ) {
+			delete stream;
+		}
+	}
+}
 
 int DaemonCore::HandleReq(int socki)
 {
@@ -3219,7 +3423,7 @@ int DaemonCore::HandleReq(Stream *insock)
 
 	int					is_tcp;
 	int                 req = 0;
-	int					index, j;
+	int					index;
 	int					reqFound = FALSE;
 	int					result = FALSE;
 	int					old_timeout;
@@ -3272,45 +3476,8 @@ int DaemonCore::HandleReq(Stream *insock)
 				// we can reclaim our socket.  
 			if ( ((ReliSock *)stream)->bytes_available_to_read() < 4 ) 
 			{
-					// set a timer for 200 seconds, in case nothing ever arrives...
-					// why 200 seconds -vs- the time honored 20 seconds?  
-					// since we are not blocking, we can afford to be more patient,
-					// and in fact it helps to be more patient here because 
-					// if a client does a non-blocking connect to us and then gets
-					// blocked talking to someone else, we want to minimize the chance
-					// of a timeout when the client gets back around to giving us
-					// some love.
-				int tid = daemonCore->Register_Timer(
-									200,		
-									(Eventcpp) &DaemonCore::HandleReqSocketTimerHandler,
-									"DaemonCore::HandleReqSocketTimerHandler",
-									this);
-					// stash the socket with the timer 
-				daemonCore->Register_DataPtr((void*)stream);
-					// now register the socket itself.  note we needed to set the
-					// timer first because we want to register the timer id with 
-					// the socket handler, and Register_DataPtr only effects the
-					// most recent event handler registered.
-				int tmp_result = daemonCore->Register_Socket(stream,
-								"Incoming command",
-								(SocketHandlercpp) &DaemonCore::HandleReqSocketHandler,
-								"DaemonCore::HandleReqSocketHandler",
-								this);
-				if ( tmp_result >= 0 )  {	
-						// on socket register success
-					int* stashed_tid = new int;
-					*stashed_tid = tid;
-						// register the timer id with the sock, so we can cancel it.
-					daemonCore->Register_DataPtr((void*)stashed_tid);
-						// return -- we'll come back when there is something to read
-						// use KEEP_STREAM so the socket we just registered isn't closed.
-					return KEEP_STREAM;		
-				} else {
-						// on socket register failure
-						// just cancel the timeout and fall-thru (i.e. service
-						// the request synchronously with a 1 second timeout
-						// reading the command int).
-					daemonCore->Cancel_Timer(tid);
+				if( RegisterSocketForHandleReq( stream ) ) {
+					return KEEP_STREAM;
 				}
 			}
 		}
@@ -3694,29 +3861,9 @@ int DaemonCore::HandleReq(Stream *insock)
 		// get the auth level of this command
 		// locate the hash table entry
 		int cmd_index = 0;
+		reqFound = CommandNumToTableIndex(tmp_cmd,&cmd_index);
 
-		// first compute the hash
-		if ( tmp_cmd < 0 )
-			cmd_index = -tmp_cmd % maxCommand;
-		else
-			cmd_index = tmp_cmd % maxCommand;
-
-		int cmdFound = FALSE;
-		if (comTable[cmd_index].num == tmp_cmd) {
-			// hash found it first try... cool
-			cmdFound = TRUE;
-		} else {
-			// hash did not find it, search for it
-			for (j = (cmd_index + 1) % maxCommand; j != cmd_index; j = (j + 1) % maxCommand) {
-				if(comTable[j].num == tmp_cmd) {
-					cmdFound = TRUE;
-					cmd_index = j;
-					break;
-				}
-			}
-		}
-
-		if (!cmdFound) {
+		if (!reqFound) {
 			// we have no idea what command they want to send.
 			// too bad, bye bye
 			result = FALSE;
@@ -4266,29 +4413,7 @@ int DaemonCore::HandleReq(Stream *insock)
 	} else {
 
 		// get the handler function
-
-		// first compute the hash
-		if ( req < 0 ) {
-			index = -req % maxCommand;
-		} else {
-			index = req % maxCommand;
-		}
-
-		reqFound = FALSE;
-		if (comTable[index].num == req) {
-			// hash found it first try... cool
-			reqFound = TRUE;
-		} else {
-			// hash did not find it, search for it
-			for (j = (index + 1) % maxCommand; j != index; j = (j + 1) % maxCommand) {
-				if(comTable[j].num == req) {
-					reqFound = TRUE;
-					index = j;
-					break;
-				}
-			}
-		}
-
+		reqFound = CommandNumToTableIndex(req,&index);
 
 		if (reqFound) {
 			// need to check our security policy to see if this is allowed.
@@ -4410,23 +4535,12 @@ int DaemonCore::HandleReq(Stream *insock)
     }
 */
 	if ( reqFound == TRUE ) {
-		// call the handler function; first curr_dataptr for GetDataPtr()
-		curr_dataptr = &(comTable[index].data_ptr);
-
 		dprintf(D_COMMAND, "Calling HandleReq <%s> (%d)\n", comTable[index].handler_descrip, inServiceCommandSocket_flag);
 
 		UtcTime handler_start_time;
 		handler_start_time.getTime();
 
-		if ( comTable[index].is_cpp ) {
-			// the handler is c++ and belongs to a 'Service' class
-			if ( comTable[index].handlercpp )
-				result = (comTable[index].service->*(comTable[index].handlercpp))(req,stream);
-		} else {
-			// the handler is in c (not c++), so pass a Service pointer
-			if ( comTable[index].handler )
-				result = (*(comTable[index].handler))(comTable[index].service,req,stream);
-		}
+		result = CallCommandHandler(req,stream,false /*do not delete stream*/);
 
 		UtcTime handler_stop_time;
 		handler_stop_time.getTime();
@@ -4435,8 +4549,6 @@ int DaemonCore::HandleReq(Stream *insock)
 
 		dprintf(D_COMMAND, "Return from HandleReq <%s> (handler: %.3fs, sec: %.3fs)\n", comTable[index].handler_descrip, handler_time, sec_time);
 
-		// clear curr_dataptr
-		curr_dataptr = NULL;
 	}
 
 finalize:
@@ -4679,7 +4791,7 @@ void DaemonCore::Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocki
 	int sig = msg->theSignal();
 	PidEntry * pidinfo = NULL;
 	int same_thread, is_local;
-	char *destination;
+	char const *destination;
 	int target_has_dcpm = TRUE;		// is process pid a daemon core process?
 
 	// sanity check on the pid.  we don't want to do something silly like
@@ -8538,8 +8650,9 @@ int DaemonCore::Was_Not_Responding(pid_t pid)
 
 int DaemonCore::SendAliveToParent()
 {
-	char parent_sinful_string[30];
-	char *tmp;
+	MyString parent_sinful_string_buf;
+	char const *parent_sinful_string;
+	char const *tmp;
 	int ret_val;
 	static bool first_time = true;
 	int number_of_tries;
@@ -8566,9 +8679,10 @@ int DaemonCore::SendAliveToParent()
 
 	tmp = InfoCommandSinfulString(ppid);
 	if ( tmp ) {
-			// copy the result from InfoCommandSinfulString to the
-			// stack, because the pointer we got back is a static buffer
-		strcpy(parent_sinful_string,tmp);
+			// copy the result from InfoCommandSinfulString,
+			// because the pointer we got back is a static buffer
+		parent_sinful_string_buf = tmp;
+		parent_sinful_string = parent_sinful_string_buf.Value();
 	} else {
 		dprintf(D_FULLDEBUG,"DaemonCore: No parent_sinful_string. "
 			"SendAliveToParent() failed.\n");

@@ -190,7 +190,7 @@ static	bool		querySchedds 	= false;
 static	bool		querySubmittors = false;
 static	char		constraint[4096];
 static	DCCollector* pool = NULL; 
-static	char		scheddAddr[64];	// used by format_remote_host()
+static	char		*scheddAddr;	// used by format_remote_host()
 static	AttrListPrintMask 	mask;
 static CollectorList * Collectors = NULL;
 
@@ -297,7 +297,7 @@ int main (int argc, char **argv)
 {
 	ClassAd		*ad;
 	bool		first;
-	char		scheddName[128];
+	char		*scheddName=NULL;
 	char		daemonAdName[128];
 	char		scheddMachine[64];
 	char		*tmp;
@@ -349,12 +349,12 @@ int main (int argc, char **argv)
 
 		if ( schedd.locate() ) {
 
-			sprintf( scheddAddr, "%s", schedd.addr() );
+			scheddAddr = strdup(schedd.addr());
 			if( (tmp = schedd.name()) ) {
-				sprintf( scheddName, "%s", tmp );
+				scheddName = strdup(tmp);
 				Q.addSchedd(scheddName);
 			} else {
-				sprintf( scheddName, "Unknown" );
+				scheddName = strdup("Unknown");
 			}
 			if( (tmp = schedd.fullHostname()) ) {
 				sprintf( scheddMachine, "%s", tmp );
@@ -622,8 +622,8 @@ int main (int argc, char **argv)
 
 		freeConnectionStrings();
 		useDB = FALSE;
-		if ( ! (ad->LookupString(ATTR_SCHEDD_IP_ADDR, scheddAddr)  &&
-				 ad->LookupString(ATTR_NAME, scheddName)		&& 
+		if ( ! (ad->LookupString(ATTR_SCHEDD_IP_ADDR, &scheddAddr)  &&
+				 ad->LookupString(ATTR_NAME, &scheddName)		&& 
 				 ad->LookupString(ATTR_MACHINE, scheddMachine) ) ) 
 		{
 			/* something is wrong with this schedd/quill ad, try the next one */

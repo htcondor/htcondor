@@ -755,6 +755,14 @@ Starter::receiveJobClassAdUpdate( Stream *stream )
 		dprintf(D_FULLDEBUG, "Received job ClassAd update from starter.\n");
 		update_ad.dPrint( D_JOB );
 
+		// In addition to new info about the job, the starter also
+		// inserts contact info for itself (important for CCB and
+		// shadow-starter reconnect, because startd needs to relay
+		// starter's full contact info to the shadow when queried).
+		// It's a bit of a hack to do it through this channel, but
+		// better than nothing.
+		update_ad.LookupString(ATTR_STARTER_IP_ADDR,m_starter_addr);
+
 		if( s_claim ) {
 			s_claim->receiveJobClassAdUpdate( update_ad );
 		}
@@ -1115,12 +1123,23 @@ Starter::printInfo( int debug_level )
 }
 
 
-char*
+char const*
 Starter::getIpAddr( void )
 {
 	if( ! s_pid ) {
 		return NULL;
 	}
+	if( !m_starter_addr.IsEmpty() ) {
+		return m_starter_addr.Value();
+	}
+
+	// Fall back on the raw contact string known to daemonCore.
+	// Unfortunately, that doesn't include any of the fancy
+	// stuff like private network info and CCB.
+	dprintf(D_ALWAYS,
+			"Warning: giving raw address in response to starter address query,"
+			"because update from starter not received yet.\n");
+
 	return daemonCore->InfoCommandSinfulString( s_pid );
 }
 

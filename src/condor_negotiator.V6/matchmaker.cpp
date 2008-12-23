@@ -1111,8 +1111,8 @@ negotiateWithGroup ( int untrimmed_num_startds, ClassAdList& startdAds,
 					 int groupQuota, const char* groupAccountingName)
 {
 	ClassAd		*schedd;
-	char		scheddName[80];
-	char		scheddAddr[32];
+	MyString    scheddName;
+	MyString    scheddAddr;
 	int			result;
 	int			numStartdAds;
 	double		maxPrioValue;
@@ -1217,8 +1217,8 @@ negotiateWithGroup ( int untrimmed_num_startds, ClassAdList& startdAds,
 
 			if (( num_idle_jobs > 0 ) && (totalTime < MaxTimePerSubmitter) ) {
 				dprintf(D_ALWAYS,"  Negotiating with %s at %s\n",
-					 scheddName, scheddAddr);
-				 dprintf(D_ALWAYS, "%d seconds so far\n", totalTime);
+					scheddName.Value(), scheddAddr.Value());
+				dprintf(D_ALWAYS, "%d seconds so far\n", totalTime);
 			}
 
 			// store the verison of the schedd, so we can take advantage of
@@ -1232,7 +1232,7 @@ negotiateWithGroup ( int untrimmed_num_startds, ClassAdList& startdAds,
 			schedd_ver_string = NULL;
 
 			calculateScheddLimit(
-				scheddName,
+				scheddName.Value(),
 				groupAccountingName,
 				groupQuota,
 				numStartdAds,
@@ -1303,12 +1303,12 @@ negotiateWithGroup ( int untrimmed_num_startds, ClassAdList& startdAds,
 			if ( num_idle_jobs == 0 ) {
 				dprintf(D_FULLDEBUG,
 					"  Negotiating with %s skipped because no idle jobs\n",
-					scheddName);
+					scheddName.Value());
 				result = MM_DONE;
 			} else if (totalTime > MaxTimePerSubmitter) {
 				dprintf(D_ALWAYS,
 					"  Negotiation with %s skipped because of time limits:\n",
-					scheddName);
+					scheddName.Value());
 				dprintf(D_ALWAYS,
 					"  %d seconds spent, max allowed %d\n ",
 					totalTime, MaxTimePerSubmitter);
@@ -1324,7 +1324,7 @@ negotiateWithGroup ( int untrimmed_num_startds, ClassAdList& startdAds,
 					}
 					int numMatched = 0;
 					startTime = time(NULL);
-					result=negotiate( scheddName,schedd,scheddPrio,
+					result=negotiate( scheddName.Value(),schedd,scheddPrio,
 								  scheddAbsShare, scheddLimit,
 								  startdAds, claimIds, 
 								  scheddVersion, ignore_schedd_limit,
@@ -1375,14 +1375,14 @@ negotiateWithGroup ( int untrimmed_num_startds, ClassAdList& startdAds,
 							// the schedd got all the resources it
 							// wanted. delete this schedd ad.
 						dprintf(D_FULLDEBUG,"  Schedd %s got all it wants; "
-								"removing it.\n", scheddName );
+								"removing it.\n", scheddName.Value() );
 						scheddAds.Delete( schedd);
 					}
 					break;
 				case MM_ERROR:
 				default:
 					dprintf(D_ALWAYS,"  Error: Ignoring schedd for this cycle\n" );
-					sockCache->invalidateSock( scheddAddr );
+					sockCache->invalidateSock( scheddAddr.Value() );
 					scheddAds.Delete( schedd );
 			}
 		}
@@ -1766,7 +1766,7 @@ Matchmaker::MakeClaimIdHash(ClassAdList &startdPvtAdList, ClaimIdHash &claimIds)
 }
 
 int Matchmaker::
-negotiate( char *scheddName, const ClassAd *scheddAd, double priority, double share,
+negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, double share,
 		   int scheddLimit,
 		   ClassAdList &startdAds, ClaimIdHash &claimIds, 
 		   const CondorVersionInfo & scheddVersion,
@@ -2167,7 +2167,7 @@ schedd, thanks to GCB.  It _is_ suitable for use as a unique identifier, for
 display to the user, or for calls to sockCache->invalidateSock.
 */
 ClassAd *Matchmaker::
-matchmakingAlgorithm(char *scheddName, const char *scheddAddr, ClassAd &request,
+matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &request,
 					 ClassAdList &startdAds,
 					 double preemptPrio, double share,
 					 bool only_for_startdrank)
@@ -2726,10 +2726,10 @@ display to the user, or for calls to sockCache->invalidateSock.
 int Matchmaker::
 matchmakingProtocol (ClassAd &request, ClassAd *offer, 
 						ClaimIdHash &claimIds, Sock *sock,
-					    char* scheddName, const char* scheddAddr)
+					    const char* scheddName, const char* scheddAddr)
 {
 	int  cluster, proc;
-	char startdAddr[32];
+	MyString startdAddr;
 	char remoteUser[512];
 	char accountingGroup[256];
 	char remoteOwner[256];
@@ -2770,7 +2770,7 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	// find the startd's claim id from the private ad
 	MyString claim_id_buf;
 	if ( want_claiming ) {
-		if (!(claim_id = getClaimId (startdName.Value(), startdAddr, claimIds, claim_id_buf)))
+		if (!(claim_id = getClaimId (startdName.Value(), startdAddr.Value(), claimIds, claim_id_buf)))
 		{
 			dprintf(D_ALWAYS,"      %s has no claim id\n", startdName.Value());
 			return MM_BAD_MATCH;
@@ -2832,7 +2832,7 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 
 		NotifyStartdOfMatchHandler *h =
 			new NotifyStartdOfMatchHandler(
-				startdName.Value(),startdAddr,NegotiatorTimeout,claim_id,want_nonblocking_startd_contact);
+				startdName.Value(),startdAddr.Value(),NegotiatorTimeout,claim_id,want_nonblocking_startd_contact);
 
 		if(!h->startCommand()) {
 			return MM_BAD_MATCH;
@@ -2872,11 +2872,11 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 		strcpy(remoteUser,remoteOwner);
 	}
 	if (offer->LookupString (ATTR_STARTD_IP_ADDR, startdAddr) == 0) {
-		strcpy(startdAddr, "<0.0.0.0:0>");
+		startdAddr = "<0.0.0.0:0>";
 	}
 	dprintf(D_MATCH, "      Matched %d.%d %s %s preempting %s %s %s\n",
 			cluster, proc, scheddName, scheddAddr, remoteUser,
-			startdAddr, startdName.Value() );
+			startdAddr.Value(), startdName.Value() );
 
 	/* CONDORDB Insert into matches table */
 	insert_into_matches(scheddName, request, *offer);
@@ -3450,7 +3450,7 @@ Matchmaker::invalidateNegotiatorAd( void )
 }
 
 /* CONDORDB functions */
-void Matchmaker::insert_into_rejects(char *userName, ClassAd& job)
+void Matchmaker::insert_into_rejects(char const *userName, ClassAd& job)
 {
 	int cluster, proc;
 //	char startdname[80];
@@ -3473,8 +3473,7 @@ void Matchmaker::insert_into_rejects(char *userName, ClassAd& job)
 	snprintf(tmp, 512, "reject_time = %d", (int)clock);
 	tmpClP->Insert(tmp);
 	
-	snprintf(tmp, 512, "username = \"%s\"", userName);
-	tmpClP->Insert(tmp);
+	tmpClP->Assign("username",userName);
 		
 	snprintf(tmp, 512, "scheddname = \"%s\"", scheddName);
 	tmpClP->Insert(tmp);
@@ -3490,7 +3489,7 @@ void Matchmaker::insert_into_rejects(char *userName, ClassAd& job)
 	
 	FILEObj->file_newEvent("Rejects", tmpClP);
 }
-void Matchmaker::insert_into_matches(char * userName,ClassAd& request, ClassAd& offer)
+void Matchmaker::insert_into_matches(char const * userName,ClassAd& request, ClassAd& offer)
 {
 	char startdname[80],remote_user[80];
 	char globaljobid[200];
@@ -3514,8 +3513,7 @@ void Matchmaker::insert_into_matches(char * userName,ClassAd& request, ClassAd& 
 	snprintf(tmp, 512, "match_time = %d", (int) clock);
 	tmpClP->Insert(tmp);
 	
-	snprintf(tmp, 512, "username = \"%s\"", userName);
-	tmpClP->Insert(tmp);
+	tmpClP->Assign("username",userName);
 		
 	snprintf(tmp, 512, "scheddname = \"%s\"", scheddName);
 	tmpClP->Insert(tmp);

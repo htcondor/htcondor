@@ -62,6 +62,10 @@ public:
     **/
 	virtual int connect(char const *s, int port=0, bool do_not_block = false);
 
+	virtual int do_reverse_connect(char const *ccb_contact,bool nonblocking);
+
+	virtual void cancel_reverse_connect();
+
 	/// my IP address, string version (e.g. "128.105.101.17")
 	virtual const char* sender_ip_str();
 

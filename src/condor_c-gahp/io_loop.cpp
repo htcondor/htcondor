@@ -165,8 +165,7 @@ main_init( int argc, char ** const argv )
 	// the pipe we were passed in via stdin is overlapped-mode
 	// is probably wrong. we therefore create a new pipe with the
 	// read end overlapped and start a "forwarding thread"
-	char* tmp;
-	if ((tmp = daemonCore->InfoCommandSinfulString(daemonCore->getppid())) == NULL) {
+	if (daemonCore->InfoCommandSinfulString(daemonCore->getppid()) == NULL) {
 
 		dprintf(D_FULLDEBUG, "parent is not DaemonCore; creating a forwarding thread\n");
 

@@ -25,15 +25,17 @@
 #include "dc_message.h"
 #include "daemon_core_sock_adapter.h"
 
-DCMsg::DCMsg(int cmd) {
-	m_cmd = cmd;
-	m_cmd_str = NULL;
-	m_msg_success_debug_level = D_FULLDEBUG;
-	m_msg_failure_debug_level = (D_ALWAYS|D_FAILURE);
-	m_delivery_status = DELIVERY_PENDING;
-	m_stream_type = Stream::reli_sock;
-	m_timeout = DEFAULT_CEDAR_TIMEOUT;
-	m_raw_protocol = false;
+DCMsg::DCMsg(int cmd):
+	m_cmd( cmd ),
+	m_cmd_str( NULL ),
+	m_msg_success_debug_level( D_FULLDEBUG ),
+	m_msg_failure_debug_level( D_ALWAYS|D_FAILURE ),
+	m_msg_cancel_debug_level( 0 ),
+	m_delivery_status( DELIVERY_PENDING ),
+	m_stream_type( Stream::reli_sock ),
+	m_timeout( DEFAULT_CEDAR_TIMEOUT ),
+	m_raw_protocol( false )
+{
 }
 
 DCMsg::~DCMsg() {
@@ -174,7 +176,7 @@ DCMsg::messageReceiveFailed( DCMessenger *messenger )
 void
 DCMsg::reportSuccess( DCMessenger *messenger )
 {
-	dprintf( m_msg_success_debug_level, "Sent %s to %s\n",
+	dprintf( m_msg_success_debug_level, "Completed %s to %s\n",
 			 name(),
 			 messenger->peerDescription() );
 }
@@ -182,7 +184,11 @@ DCMsg::reportSuccess( DCMessenger *messenger )
 void
 DCMsg::reportFailure( DCMessenger *messenger )
 {
-	dprintf( m_msg_failure_debug_level, "Failed to send %s to %s: %s\n",
+	int debug_level = m_msg_failure_debug_level;
+	if( m_delivery_status == DELIVERY_CANCELED ) {
+		debug_level = m_msg_cancel_debug_level;
+	}
+	dprintf( debug_level, "Failed to send %s to %s: %s\n",
 			 name(),
 			 messenger->peerDescription(),
 			 m_errstack.getFullText() );
@@ -223,9 +229,9 @@ DCMessenger::DCMessenger( classy_counted_ptr<Daemon> daemon )
 	m_pending_operation = NOTHING_PENDING;
 }
 
-DCMessenger::DCMessenger( Sock *sock )
+DCMessenger::DCMessenger( classy_counted_ptr<Sock> sock ):
+	m_sock(sock)
 {
-	m_sock = sock;
 	m_callback_msg = NULL;
 	m_callback_sock = NULL;
 	m_pending_operation = NOTHING_PENDING;
@@ -237,10 +243,6 @@ DCMessenger::~DCMessenger()
 	ASSERT(!m_callback_msg.get());
 	ASSERT(!m_callback_sock);
 	ASSERT(m_pending_operation == NOTHING_PENDING);
-
-	if( m_sock ) {
-		delete m_sock;
-	}
 }
 
 char const *DCMessenger::peerDescription()
@@ -248,7 +250,7 @@ char const *DCMessenger::peerDescription()
 	if( m_daemon.get() ) {
 		return m_daemon->idStr();
 	}
-	if( m_sock ) {
+	if( m_sock.get() ) {
 		return m_sock->peer_description();
 	}
 	EXCEPT("No daemon or sock object in DCMessenger::peerDescription()");
@@ -288,18 +290,24 @@ void DCMessenger::startCommand( classy_counted_ptr<DCMsg> msg )
 
 	m_pending_operation = START_COMMAND_PENDING;
 	m_callback_msg = msg;
+	m_callback_sock = m_sock.get();
+	if( !m_callback_sock ) {
+		const bool nonblocking = true;
+		m_callback_sock = m_daemon->makeConnectedSocket(st,msg->getTimeout(),&msg->m_errstack,nonblocking);
+		if( !m_callback_sock ) {
+			msg->callMessageSendFailed( this );
+			return;
+		}
+	}
 
 	incRefCount();
-	const bool nonblocking = true;
-	m_daemon->startCommand (
+	m_daemon->startCommand_nonblocking (
 		msg->m_cmd,
-		st,
-		&m_callback_sock,
+		m_callback_sock,
 		msg->getTimeout(),
 		&msg->m_errstack,
 		&DCMessenger::connectCallback,
 		this,
-		nonblocking,
 		msg->name(),
 		msg->getRawProtocol(),
 		msg->getSecSessionId());
@@ -331,7 +339,7 @@ DCMessenger::doneWithSock(Stream *sock)
 {
 		// If sock == m_sock, it will be cleaned up when the messenger
 		// is deleted.  Otherwise, do it now.
-	if( sock != m_sock ) {
+	if( sock != m_sock.get() ) {
 		if( sock ) {
 			delete sock;
 		}
@@ -582,7 +590,9 @@ bool DCStringMsg::readMsg( DCMessenger *, Sock *sock )
 void
 DCMsgCallback::doCallback()
 {
-	(m_service->*m_fn_cpp)(this);
+	if( m_fn_cpp ) {
+		(m_service->*m_fn_cpp)(this);
+	}
 }
 
 DCMsgCallback::DCMsgCallback(CppFunction fn,Service *service,void *misc_data)
@@ -606,4 +616,22 @@ DCMsgCallback::cancelCallback()
 	m_fn_cpp = NULL;
 	m_service = NULL;
 	m_misc_data = NULL;
+}
+
+ClassAdMsg::ClassAdMsg(int cmd,ClassAd &msg):
+	DCMsg(cmd),
+	m_msg(msg)
+{
+}
+
+bool
+ClassAdMsg::writeMsg( DCMessenger * /*messenger*/, Sock *sock )
+{
+	return m_msg.put( *sock );
+}
+
+bool
+ClassAdMsg::readMsg( DCMessenger * /*messenger*/, Sock *sock )
+{
+	return m_msg.initFromStream( *sock );
 }

@@ -146,8 +146,8 @@ VMGahp::startUp()
 	// the pipe we were passed in via stdin is overlapped-mode
 	// is probably wrong. we therefore create a new pipe with the
 	// read end overlapped and start a "forwarding thread"
-	char* tmp;
-	if ((tmp = daemonCore->InfoCommandSinfulString(daemonCore->getppid())) == NULL) {
+
+	if ( daemonCore->InfoCommandSinfulString(daemonCore->getppid()) == NULL) {
 
 		vmprintf(D_ALWAYS, "parent is not DaemonCore: "
 				"creating a forwarding thread\n");

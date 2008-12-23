@@ -382,7 +382,6 @@ class Scheduler : public Service
 
 		// Useful public info
 	char*			shadowSockSinful( void ) { return MyShadowSockName; };
-	char*			dcSockSinful( void ) { return MySockName; };
 	int				aliveInterval( void ) { return alive_interval; };
 	char*			uidDomain( void ) { return UidDomain; };
 	int				getJobsTotalAds() { return JobsTotalAds; };
@@ -451,7 +450,6 @@ private:
 	
 	// information about this scheduler
 	ClassAd*		m_ad;
-	char*			MySockName;		// dhaval
 	Scheduler*		myself;
 
 	// information about the command port which Shadows use

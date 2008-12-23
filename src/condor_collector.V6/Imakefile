@@ -20,7 +20,7 @@ soapobjs(collector)
 
 OBJ = $(SOAP_OBJS) \
       collector_main.o collector.o view_server.o \
-       totals.o collector_stats.o PluginObj
+       totals.o collector_stats.o PluginObj ccb_server.o
 
 library_target(collector_engine.a, $(ENGINE_OBJ))
 
@@ -28,6 +28,7 @@ public_c_plus_target($(NAME),sbin,$(OBJ),$(LIB))
 
 IMPORT_LINKS = ../../config/import_links
 import_objs(../condor_status.V6,totals.o)
+import_objs(../ccb,ccb_server.o)
 
 gen_soapfiles(collector,condorCollector)
 

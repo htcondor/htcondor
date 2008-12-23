@@ -171,7 +171,7 @@ handle_cookie_refresh()
 	global_dc_set_cookie (128, randomjunk);	
 }
 
-char* global_dc_sinful() {
+char const* global_dc_sinful() {
 	if (daemonCore) {
 		return daemonCore->InfoCommandSinfulString();
 	} else {

@@ -32,6 +32,7 @@
 
 // Some error codes.  These should go to condor_errno.h once it is there.
 const int CEDAR_EWOULDBLOCK = 666;
+const int CEDAR_ENOCCB = 667;
 
 #if !defined(WIN32)
 #  ifndef SOCKET
@@ -135,6 +136,7 @@ public:
 #if defined(WIN32) && defined(_WINSOCK2API_)
 	int assign(LPWSAPROTOCOL_INFO);		// to inherit sockets from other processes
 #endif
+
 	int bind(bool outbound, int port=0, bool loopback=false);
 
 	bool bind_to_loopback(bool outbound=false, int port=0);
@@ -173,6 +175,9 @@ public:
 	*/
 	int timeout_no_timeout_multiplier(int sec);
     
+	/** Returns the timeout with timeout multiplier applied. */
+	int get_timeout_raw();
+
 	/** get the number of bytes available to read without blocking.
 		@return number of bytes, or -1 on failure
 	*/
@@ -225,7 +230,9 @@ public:
 	int get_file_desc() { return _sock; }
 
 	/// is a non-blocking connect outstanding?
-	bool is_connect_pending() { return _state == sock_connect_pending || _state == sock_connect_pending_retry; }
+	bool is_connect_pending() { return _state == sock_connect_pending || _state == sock_connect_pending_retry || _state == sock_reverse_connect_pending; }
+
+	bool is_reverse_connect_pending() { return _state == sock_reverse_connect_pending; }
 
 	/// is the socket connected?
 	bool is_connected() { return _state == sock_connect; }
@@ -272,8 +279,9 @@ protected:
 	*/
 
 	enum sock_state { sock_virgin, sock_assigned, sock_bound, sock_connect,
-						sock_writemsg, sock_readmsg, sock_special, 
-						sock_connect_pending, sock_connect_pending_retry };
+					  sock_writemsg, sock_readmsg, sock_special, 
+					  sock_connect_pending, sock_connect_pending_retry,
+					  sock_reverse_connect_pending };
 
 
 	/*
@@ -301,6 +309,17 @@ protected:
 			by passing the socket to DaemonCore's Register_Socket() function.
     */
 	int do_connect(char const *host, int port, bool non_blocking_flag = false);
+
+	/**
+	   Called internally by do_connect() to examine the address and
+	   see if we should try a reversed connection (CCB) instead of a
+	   normal forward connection.  If so, initiates the reversed
+	   connection.  If not, returns CEDAR_ENOCCB.
+	*/
+	int reverse_connect(char const *host,int port,bool nonblocking);
+
+	virtual int do_reverse_connect(char const *ccb_contact,bool nonblocking) = 0;
+	virtual void cancel_reverse_connect() = 0;
 
 	inline SOCKET get_socket (void) { return _sock; }
 	char * serialize(char *);

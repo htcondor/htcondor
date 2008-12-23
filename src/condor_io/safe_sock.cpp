@@ -257,20 +257,6 @@ int SafeSock::connect(
 
 	if (!host || port < 0) return FALSE;
 
-	/* we bind here so that a sock may be	*/
-	/* assigned to the stream if needed		*/
-	/* TRUE means this is an outgoing connection */
-	if (_state == sock_virgin || _state == sock_assigned) {
-		bind(true);
-	}
-
-	if (_state != sock_bound) {
-		dprintf(D_ALWAYS,
-		        "SafeSock::connect bind() failed: _state = %d\n",
-			  _state); 
-		return FALSE;
-	}
-	
 	memset(&_who, 0, sizeof(sockaddr_in));
 	_who.sin_family = AF_INET;
 	_who.sin_port = htons((u_short)port);
@@ -292,6 +278,28 @@ int SafeSock::connect(
 		}
 	}
 
+	// now that we have set _who (useful for getting informative
+	// peer_description), see if we should do a reverse connect
+	// instead of a forward connect
+	int retval=reverse_connect(host,port,true);
+	if( retval != CEDAR_ENOCCB ) {
+		return retval;
+	}
+
+	/* we bind here so that a sock may be	*/
+	/* assigned to the stream if needed		*/
+	/* TRUE means this is an outgoing connection */
+	if (_state == sock_virgin || _state == sock_assigned) {
+		bind(true);
+	}
+
+	if (_state != sock_bound) {
+		dprintf(D_ALWAYS,
+		        "SafeSock::connect bind() failed: _state = %d\n",
+			  _state); 
+		return FALSE;
+	}
+	
 	_state = sock_connect;
 	return TRUE;
 }
@@ -877,3 +885,7 @@ void SafeSock::dumpSock()
 	_outMsg.dumpMsg(_outMsgID);
 }
 #endif
+
+void
+SafeSock::cancel_reverse_connect() {
+}

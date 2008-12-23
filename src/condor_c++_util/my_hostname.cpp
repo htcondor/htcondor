@@ -339,8 +339,8 @@ void ConvertDefaultIPToSocketIP(char const *attr_name,char const *old_expr_strin
 	char const *ref = strstr(old_expr_string,my_default_ip);
 	if(ref) {
 			// the match must not be followed by any trailing digits
-			// GOOD: <MMM.MMM.M.M:port>   (where M is a matching digit)
-			// BAD:  <MMM.MMM.M.MN:port>  (where N is a non-matching digit)
+			// GOOD: <MMM.MMM.M.M:port?p>   (where M is a matching digit)
+			// BAD:  <MMM.MMM.M.MN:port?p>  (where N is a non-matching digit)
 		if( isdigit(ref[strlen(my_default_ip)]) ) {
 			ref = NULL;
 		}

@@ -88,6 +88,8 @@
 
 */
 
+#include "condor_debug.h"
+
 class ClassyCountedPtr {
 public:
 	ClassyCountedPtr()

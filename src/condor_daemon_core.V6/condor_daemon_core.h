@@ -56,6 +56,8 @@
 #include "daemon.h"
 #include "daemon_list.h"
 #include "limit.h"
+#include "ccb_listener.h"
+#include "condor_sinful.h"
 
 #include "../condor_procd/proc_family_io.h"
 class ProcFamilyInterface;
@@ -361,8 +363,9 @@ class DaemonCore : public Service
         @param pid The pid to ask about.  -1 (Default) means
                    the calling process
         @return A pointer into a <b>static buffer</b>, or NULL on error */
-    char* InfoCommandSinfulString (int pid = -1);
+    char const* InfoCommandSinfulString (int pid = -1);
 
+	void daemonContactInfoChanged();
 
     /** Returns the Sinful String <host:port> of the DaemonCore
 		command socket of this process
@@ -376,7 +379,7 @@ class DaemonCore : public Service
 			   is provided only for passing to other processes on the
 			   same machine as an optimization.
         @return A pointer into a <b>static buffer</b>, or NULL on error */
-	char * InfoCommandSinfulStringMyself(bool usePrivateAddress);
+	char const * InfoCommandSinfulStringMyself(bool usePrivateAddress);
 
 		/**
 		   @return Pointer to a static buffer containing the daemon's
@@ -650,8 +653,13 @@ class DaemonCore : public Service
 		// sock - previously registered socket
 		// default_to_HandleCommand - true if HandleCommand() should be called
 		//                          if there is no other callback function
-		// it will index the next registered socket.
 	void CallSocketHandler( Stream *sock, bool default_to_HandleCommand=false );
+
+		// Call the registered command handler.
+		// returns the return code of the handler
+		// if delete_stream is true and the command handler does not return
+		// KEEP_STREAM, the stream is deleted
+	int CallCommandHandler(int req,Stream *stream,bool delete_stream=true);
 
 	/// Cancel and close all registed sockets.
 	int Cancel_And_Close_All_Sockets(void);
@@ -1318,6 +1326,12 @@ class DaemonCore : public Service
 	void WantSendChildAlive( bool send_alive )
 		{ m_want_send_child_alive = send_alive; }
 
+		/** Registers a socket for read and then calls HandleReq to
+			process a command on the socket once one becomes
+			available.
+		*/
+	void HandleReqAsync(Stream *stream);
+
   private:      
 
 	bool m_wants_dc_udp; // do we want a udp comment socket at all?
@@ -1334,6 +1348,8 @@ class DaemonCore : public Service
 	int HandleReqSocketTimerHandler();
 	int HandleReqSocketHandler(Stream *stream);
     int HandleSig(int command, int sig);
+
+	bool RegisterSocketForHandleReq(Stream *stream);
 
 	friend class FakeCreateThreadReaperCaller;
 	void CallReaper(int reaper_id, char const *whatexited, pid_t pid, int exit_status);
@@ -1468,6 +1484,7 @@ class DaemonCore : public Service
         char*           handler_descrip;
         void*           data_ptr;
 		bool			is_connect_pending;
+		bool			is_reverse_connect_pending;
 		bool			call_handler;
     };
     void              DumpSocketTable(int, const char* = NULL);
@@ -1726,6 +1743,11 @@ class DaemonCore : public Service
 
 	char* m_private_network_name;
 
+	class CCBListeners *m_ccb_listeners;
+	Sinful m_sinful;     // full contact info (public, private, ccb, etc.)
+	bool m_dirty_sinful; // true if m_sinful needs to be reinitialized
+
+	bool CommandNumToTableIndex(int cmd,int *cmd_index);
 };
 
 #ifndef _NO_EXTERN_DAEMON_CORE
@@ -1803,6 +1825,6 @@ int Create_Thread_With_Data(DataThreadWorkerFunc Worker, DataThreadReaperFunc Re
 #define MAX_INHERIT_FDS   32
 
 // Prototype to get sinful string.
-char *global_dc_sinful( void );
+char const *global_dc_sinful( void );
 
 #endif /* _CONDOR_DAEMON_CORE_H_ */

@@ -350,7 +350,6 @@ Scheduler::Scheduler() :
 	job_is_finished_queue( "job_is_finished_queue", 1 )
 {
 	m_ad = NULL;
-	MySockName = NULL;
 	MyShadowSockName = NULL;
 	shadowCommandrsock = NULL;
 	shadowCommandssock = NULL;
@@ -452,8 +451,6 @@ Scheduler::Scheduler() :
 Scheduler::~Scheduler()
 {
 	delete m_ad;
-	if (MySockName)
-		free(MySockName);
 	if (MyShadowSockName)
 		free(MyShadowSockName);
 	if( LocalUnivExecuteDir ) {
@@ -821,6 +818,8 @@ Scheduler::count_jobs()
 	
 	 sprintf(tmp, "%s = \"%s\"", ATTR_NAME, Name);
 	 m_ad->InsertOrUpdate(tmp);
+
+	 m_ad->Assign( ATTR_SCHEDD_IP_ADDR, daemonCore->publicNetworkIpAddr() );
 
 	 sprintf(tmp, "%s = %d", ATTR_VIRTUAL_MEMORY, SwapSpace );
 	 m_ad->InsertOrUpdate(tmp);
@@ -2816,7 +2815,7 @@ Scheduler::WriteExecuteToUserLog( PROC_ID job_id, const char* sinful )
 	if( sinful ) {
 		host = sinful;
 	} else {
-		host = MySockName;
+		host = daemonCore->privateNetworkIpAddr();
 	}
 
 	ExecuteEvent event;
@@ -5429,7 +5428,7 @@ Scheduler::contactStartd( ContactStartdArgs* args )
 	startd->asyncRequestOpportunisticClaim(
 		jobAd,
 		description.Value(),
-		scheduler.dcSockSinful(),
+		daemonCore->publicNetworkIpAddr(),
 		scheduler.aliveInterval(),
 		STARTD_CONTACT_TIMEOUT,
 		cb );
@@ -10488,13 +10487,6 @@ Scheduler::Init()
 	}
 #endif
 
-		// Put in our sinful string.  Note, this is never going to
-		// change, so we only need to initialize it once.
-	if( ! MySockName ) {
-		MySockName = strdup( daemonCore->InfoCommandSinfulString() );
-	}
-	m_ad->Assign( ATTR_SCHEDD_IP_ADDR, MySockName );
-
 		// Now create another command port to be used exclusively by shadows.
 		// Stash the sinfull string of this new command port in MyShadowSockName.
 	if ( ! MyShadowSockName ) {
@@ -11224,7 +11216,7 @@ Scheduler::Relinquish(match_rec* mrec)
 			dprintf(D_ALWAYS,"Can't connect to accountant %s\n",
 					AccountantName);
 		}
-		else if(!sock->code(MySockName))
+		else if(!sock->put(daemonCore->publicNetworkIpAddr()))
 		{
 			dprintf(D_ALWAYS,"Can't relinquish accountant. Match record is:\n");
 			dprintf(D_ALWAYS, "%s\t%s\n", mrec->publicClaimId(), mrec->peer);
@@ -11548,7 +11540,7 @@ Scheduler::publish( ClassAd *cad ) {
 		// general case of publish() and should probably be
 		// moved back into dumpState()
 		// -------------------------------------------------------
-	cad->Assign( "MySockName", MySockName );
+	cad->Assign( ATTR_SCHEDD_IP_ADDR, daemonCore->InfoCommandSinfulString() );
 	cad->Assign( "MyShadowSockname", MyShadowSockName );
 	cad->Assign( "SchedDInterval", (int)SchedDInterval.getDefaultInterval() );
 	cad->Assign( "QueueCleanInterval", QueueCleanInterval );

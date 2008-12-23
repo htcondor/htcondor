@@ -3385,7 +3385,7 @@ DedicatedScheduler::publishRequestAd( void )
         // SCHEDD_ATTRS for us.
     daemonCore->publish(&ad);
 
-	ad.Assign( ATTR_SCHEDD_IP_ADDR, scheduler.dcSockSinful() );
+	ad.Assign(ATTR_SCHEDD_IP_ADDR, daemonCore->publicNetworkIpAddr() );
 
 		// Tell negotiator to send us the startd ad
 		// As of 7.1.3, the negotiator no longer pays attention to this

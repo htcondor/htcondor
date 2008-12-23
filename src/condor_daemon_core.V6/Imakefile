@@ -24,7 +24,7 @@ OBJ = $(GSOAP_OBJS) timer_manager.o daemon_core.o daemon_core_main.o \
   condor_perms.o \
   condor_lock_base.o condor_lock_implementation.o condor_lock_file.o \
   condor_lock.o self_monitor.o datathread.o self_draining_queue.o \
-  HookClient.o HookClientMgr.o 
+  HookClient.o HookClientMgr.o ccb_listener.o
 
 library_target(daemon_core.a,$(OBJ))
 c_plus_target(testit,test_daemon_core.o daemon_core.a,$(LIB))
@@ -43,5 +43,6 @@ soap_core.cpp:: ../condor_includes/stdsoap2.h
 
 IMPORT_LINKS = ../../config/import_links
 import_objs(../condor_util_lib,condor_perms.o)
+import_objs(../ccb,ccb_listener.o)
 
 testbin:: all

@@ -41,6 +41,8 @@
 
 typedef void StartCommandCallbackType(bool success,Sock *sock,CondorError *errstack,void *misc_data);
 
+extern char const *USE_TMP_SEC_SESSION;
+
 typedef enum {
 	StartCommandFailed = 0,
 	StartCommandSucceeded = 1,
@@ -124,7 +126,8 @@ public:
 
 	bool	FillInSecurityPolicyAd( DCpermission auth_level,
 									ClassAd* ad, bool peer_can_neg=true,
-									bool raw_protocol=false);
+									bool raw_protocol=false,
+									bool use_tmp_sec_session=false);
 	ClassAd * 				ReconcileSecurityPolicyAds(ClassAd &cli_ad, ClassAd &srv_ad);
 	bool 					ReconcileSecurityDependency (sec_req &a, sec_req &b);
 	SecMan::sec_feat_act	ReconcileSecurityAttribute(const char* attr, ClassAd &cli_ad, ClassAd &srv_ad);

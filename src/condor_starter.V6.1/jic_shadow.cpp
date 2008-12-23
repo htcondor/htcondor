@@ -822,12 +822,7 @@ JICShadow::publishStarterInfo( ClassAd* ad )
 	line += '"';
 	ad->Insert( line.Value() );
 
-	tmp_val = daemonCore->InfoCommandSinfulString();
-	size = strlen(tmp_val) + strlen(ATTR_STARTER_IP_ADDR) + 5;
-	tmp = (char*) malloc( size * sizeof(char) );
-	sprintf( tmp, "%s=\"%s\"", ATTR_STARTER_IP_ADDR, tmp_val );
-	ad->Insert( tmp );
-	free( tmp );
+	ad->Assign(ATTR_STARTER_IP_ADDR, daemonCore->InfoCommandSinfulString() );
 
 	tmp_val = param( "ARCH" );
 	size = strlen(tmp_val) + strlen(ATTR_ARCH) + 5;
@@ -1680,6 +1675,15 @@ JICShadow::publishUpdateAd( ClassAd* ad )
 		sprintf( buf, "%s=%lu", ATTR_DISK_USAGE, (long unsigned)((execsz+1023)/1024) ); 
 		ad->InsertOrUpdate( buf );
 	}
+
+	// Insert the starter's address into the update ad, because all
+	// parties who subscribe to updates (shadow & startd) also should
+	// be informed of any changes in the starter's contact info
+	// (important for CCB and shadow-starter reconnect, because startd
+	// needs to relay starter's full contact info to the shadow when
+	// queried).  It's a bit of a hack to do it through this channel,
+	// but better than nothing.
+	ad->Assign( ATTR_STARTER_IP_ADDR, daemonCore->publicNetworkIpAddr() );
 
 		// Now, get our Starter object to publish, as well.  This will
 		// walk through all the UserProcs and have those publish, as

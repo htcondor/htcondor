@@ -283,11 +283,11 @@ Init()
 	// only set it if it hasn't been set already
 	if ( ScheddAddr == NULL ) {
 		schedd_pid = daemonCore->getppid();
-		ScheddAddr = daemonCore->InfoCommandSinfulString( schedd_pid );
-		if ( ScheddAddr == NULL ) {
+		char const *tmp = daemonCore->InfoCommandSinfulString( schedd_pid );
+		if ( tmp == NULL ) {
 			EXCEPT( "Failed to determine schedd's address" );
 		} else {
-			ScheddAddr = strdup( ScheddAddr );
+			ScheddAddr = strdup( tmp );
 		}
 	}
 

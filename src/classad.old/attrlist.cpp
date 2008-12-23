@@ -2730,7 +2730,7 @@ AttrList::EscapeStringValue(char const *val,MyString &buf) {
 
 /* This is used for %s = "%s" style constructs */
 int AttrList::
-Assign(char const *variable, MyString &value)
+Assign(char const *variable, MyString const &value)
 {
 	return Assign(variable,value.Value());
 }
@@ -2783,6 +2783,43 @@ Assign(char const *variable,int value)
 	}
 	return TRUE;
 }
+
+int AttrList::
+Assign(char const *variable,unsigned int value)
+{
+	MyString buf;
+	if (!IsValidAttrName(variable)) {
+		return FALSE;
+	}
+
+	buf.sprintf("%s = %u",variable,value);
+	return Insert(buf.GetCStr());
+}
+
+int AttrList::
+Assign(char const *variable,long value)
+{
+	MyString buf;
+	if (!IsValidAttrName(variable)) {
+		return FALSE;
+	}
+
+	buf.sprintf("%s = %ld",variable,value);
+	return Insert(buf.GetCStr());
+}
+
+int AttrList::
+Assign(char const *variable,unsigned long value)
+{
+	MyString buf;
+	if (!IsValidAttrName(variable)) {
+		return FALSE;
+	}
+
+	buf.sprintf("%s = %lu",variable,value);
+	return Insert(buf.GetCStr());
+}
+
 int AttrList::
 Assign(char const *variable,float value)
 {

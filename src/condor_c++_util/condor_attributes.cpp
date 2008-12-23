@@ -790,6 +790,8 @@ const char *ATTR_PREV_LAST_HEARD_FROM	= "PrevLastHeardFrom";
 const char *ATTR_TRY_AGAIN = "TryAgain";
 const char *ATTR_DOWNLOADING = "Downloading";
 const char *ATTR_TIMEOUT = "Timeout";
+const char *ATTR_CCBID = "CCBID";
+const char *ATTR_REQUEST_ID = "RequestID";
 
 
 //************* Added for Amazon Jobs ***************************//

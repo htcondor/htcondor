@@ -196,7 +196,7 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o selector.o \
 	config.o condor_config.o \
 	stringSpace.o condor_state.o condor_adtypes.o \
 	simple_arg.o \
-	$(API_OBJ) $(DAEMON_CLIENT_OBJ) \
+	$(API_OBJ) $(DAEMON_CLIENT_OBJ) ccb_client.o \
 	classad_hashtable.o classad_log.o log_transaction.o log.o \
 	classad_collection.o usagemon.o print_wrapped_text.o \
 	classad_helpers.o classad_merge.o classad_namedlist.o \
@@ -234,7 +234,8 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o selector.o \
 	$(HIBERNATION_OBJS) \
 	ConcurrencyLimitUtils.o \
 	simple_arg.o \
-	dc_service.o
+	dc_service.o \
+	condor_sinful.o
 
 library_target(cplus_lib.a,$(OBJ))
 library_target(liburl.a,$(URL_OBJ))
@@ -332,6 +333,7 @@ green-tests: all test_network_adapter test_hibernation
 IMPORT_LINKS = ../../config/import_links
 import_objs(../condor_util_lib,mkargv.o)
 import_objs(../condor_daemon_client,$(DAEMON_CLIENT_OBJ))
+import_objs(../ccb,ccb_client.o)
 
 public_library(libcondorapi.a,lib)
 libcondorapi-release:: $(RELEASE_DIR)/lib/libcondorapi.a

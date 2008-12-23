@@ -54,6 +54,7 @@ public:
 	int number (void) const { return strings.Number(); };
 	bool isEmpty(void) const { return strings.IsEmpty(); };
 	void qsort();
+	void shuffle();
 
 	/** Add all members of a given stringlist into the current list, 
 		avoiding any duplicates.

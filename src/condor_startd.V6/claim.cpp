@@ -1633,7 +1633,7 @@ Claim::publishStarterAd( ClassAd* cad )
 		return false;
 	}
 
-	char* ip_addr = c_starter->getIpAddr();
+	char const* ip_addr = c_starter->getIpAddr();
 	if( ip_addr ) {
 		line = ATTR_STARTER_IP_ADDR;
 		line += "=\"";
@@ -2092,7 +2092,16 @@ newIdString( char** id_str_ptr )
 	sequence_num++;
 
 	MyString id;
-	id += daemonCore->InfoCommandSinfulString();
+	// Keeping with tradition, we insert the startd's address in
+	// the claim id.  As of condor 7.2, nothing relies on this.
+	// Using privateNetworkIpAddr() because public sinful string
+	// may contain CCB stuff and other junk that might contain
+	// special characters such as '#'.
+
+	char const *my_addr = daemonCore->privateNetworkIpAddr();
+	ASSERT( my_addr && !strchr(my_addr,'#') );
+
+	id += my_addr;
 	id += '#';
 	id += (int)startd_startup;
 	id += '#';

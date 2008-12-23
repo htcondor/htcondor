@@ -285,6 +285,10 @@ const int INVALIDATE_LEASE_MANAGER_ADS  = 66;
 
 const int QUERY_GENERIC_ADS = QUERY_ANY_ADS;	// == 48
 
+const int CCB_REGISTER = 67;
+const int CCB_REQUEST = 68;
+const int CCB_REVERSE_CONNECT = 69;
+
 const int UPDATE_GRID_AD 	= 70;
 const int QUERY_GRID_ADS	= 71;
 const int INVALIDATE_GRID_ADS = 72;

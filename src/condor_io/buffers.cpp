@@ -44,7 +44,7 @@ Buf::Buf(
 	int	sz
 	)
 {
-	_dta = new char[sz];
+	_dta = NULL;
 	_dta_maxsz = sz;
 	_dta_sz = 0;
 	_dta_pt = 0;
@@ -55,12 +55,26 @@ Buf::Buf(
 
 Buf::~Buf()
 {
-	if (_dta) {
-        delete [] _dta;
-    }
+	dealloc_buf();
 	num_deleted++;
 }
 
+void
+Buf::alloc_buf()
+{
+	if( !_dta ) {
+		_dta = new char[_dta_maxsz];
+	}
+}
+
+void
+Buf::dealloc_buf()
+{
+	if (_dta) {
+        delete [] _dta;
+		_dta = NULL;
+    }
+}
 
 
 int Buf::write(
@@ -70,6 +84,7 @@ int Buf::write(
 	)
 {
 	int	nw;
+	alloc_buf();
 	if (sz < 0 || sz > num_untouched()) {
         sz = num_untouched();
     }
@@ -95,6 +110,8 @@ int Buf::flush(
 /* DEBUG SESSION
 	int		dbg_fd;
 */
+
+	alloc_buf();
 
 	if (sz > max_size()) return -1;
 	if (hdr && sz > 0){
@@ -132,6 +149,8 @@ int Buf::read(
 {
 	int	nr;
 
+	alloc_buf();
+
 	if (sz < 0 || sz > num_free()){
 		dprintf(D_ALWAYS, "IO: Buffer too small\n");
 		return -1;
@@ -168,6 +187,7 @@ int Buf::put_max(
 	int			sz
 	)
 {
+	alloc_buf();
 	if (sz > num_free()) sz = num_free();
 
 	memcpy(&_dta[num_used()], dta, sz);
@@ -182,6 +202,8 @@ int Buf::get_max(
 	int			sz
 	)
 {
+	alloc_buf();
+
 	if (sz > num_untouched()) sz = num_untouched();
 
 	memcpy(dta, &_dta[num_touched()], sz);
@@ -197,6 +219,8 @@ int Buf::find(
 {
 	char	*tmp;
 
+	alloc_buf();
+
 	if (!(tmp = (char *)memchr(&_dta[num_touched()], delim, num_untouched()))){
 		return -1;
 	}
@@ -211,6 +235,8 @@ int Buf::peek(
 {
 	if (empty() || consumed()) return FALSE;
 
+	alloc_buf();
+
 	c = _dta[num_touched()];
 	return TRUE;
 }
@@ -223,6 +249,8 @@ int Buf::seek(
 {
 	int	tmp;
 
+	alloc_buf();
+
 	tmp = _dta_pt;
 	_dta_pt = (pos < 0) ? 0 : ((pos < _dta_maxsz) ? pos : _dta_maxsz-1);
 	if (_dta_pt > _dta_sz) _dta_sz = _dta_pt;
@@ -231,6 +259,8 @@ int Buf::seek(
 
 bool Buf::computeMD(char * checkSUM, Condor_MD_MAC * checker)
 {
+	alloc_buf();
+
     // I absolutely hate this! 21
     checker->addMD((unsigned char *) &(_dta[21]), _dta_sz - 21);
     unsigned char * md = checker->computeMD();
@@ -245,6 +275,8 @@ bool Buf::computeMD(char * checkSUM, Condor_MD_MAC * checker)
 
 bool Buf::verifyMD(char * checkSUM, Condor_MD_MAC * checker)
 {
+	alloc_buf();
+
     checker->addMD((unsigned char *) &(_dta[0]), _dta_sz);
 
     return checker->verifyMD((unsigned char *) checkSUM);

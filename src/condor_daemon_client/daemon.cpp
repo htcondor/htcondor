@@ -40,6 +40,7 @@
 #include "condor_netdb.h"
 #include "daemon_core_sock_adapter.h"
 #include "subsystem_info.h"
+#include "condor_sinful.h"
 
 #include "counted_ptr.h"
 
@@ -355,7 +356,9 @@ Daemon::idStr( void )
 		buf.sprintf( "%s %s", dt_str, _name );
 	} else if( _addr ) {
 		ASSERT( dt_str );
-		buf.sprintf( "%s at %s", dt_str, _addr );
+		Sinful sinful(_addr);
+		sinful.clearParams(); // too much info is ugly
+		buf.sprintf( "%s at %s", dt_str, sinful.getSinful() );
 		if( _full_hostname ) {
 			buf.sprintf_cat( " (%s)", _full_hostname );
 		}
@@ -413,28 +416,17 @@ Daemon::reliSock( int sec, CondorError* errstack, bool non_blocking, bool ignore
 			// this already deals w/ _error for us...
 		return NULL;
 	}
-	ReliSock* reli;
-	reli = new ReliSock();
-	reli->set_peer_description(idStr());
-	if( sec ) {
-		reli->timeout( sec );
-		if( ignore_timeout_multiplier ) {
-			reli->ignoreTimeoutMultiplier();
-		}
-	}
-	int rc = reli->connect(_addr, 0, non_blocking);
-	if(rc || (non_blocking && rc == CEDAR_EWOULDBLOCK)) {
-		return reli;
-	} else {
-		if (errstack) {
-			errstack->pushf("CEDAR", CEDAR_ERR_CONNECT_FAILED,
-				"Failed to connect to %s", _addr);
-		}
-		delete reli;
+	ReliSock* sock;
+	sock = new ReliSock();
+
+	if( !connectSock(sock,sec,errstack,non_blocking,ignore_timeout_multiplier) )
+	{
+		delete sock;
 		return NULL;
 	}
-}
 
+	return sock;
+}
 
 SafeSock*
 Daemon::safeSock( int sec, CondorError* errstack, bool non_blocking )
@@ -443,23 +435,41 @@ Daemon::safeSock( int sec, CondorError* errstack, bool non_blocking )
 			// this already deals w/ _error for us...
 		return NULL;
 	}
-	SafeSock* safe;
-	safe = new SafeSock();
-	safe->set_peer_description(idStr());
-	if( sec ) {
-		safe->timeout( sec );
-	}
-	int rc = safe->connect(_addr, 0, non_blocking);
-	if(rc || (non_blocking && rc == CEDAR_EWOULDBLOCK)) {
-		return safe;
-	} else {
-		if (errstack) {
-			errstack->pushf("CEDAR", CEDAR_ERR_CONNECT_FAILED,
-				"Failed to connect to %s", _addr);
-		}
-		delete safe;
+	SafeSock* sock;
+	sock = new SafeSock();
+
+	if( !connectSock(sock,sec,errstack,non_blocking) )
+	{
+		delete sock;
 		return NULL;
 	}
+
+	return sock;
+}
+
+
+bool
+Daemon::connectSock(Sock *sock, int sec, CondorError* errstack, bool non_blocking, bool ignore_timeout_multiplier )
+{
+
+	sock->set_peer_description(idStr());
+	if( sec ) {
+		sock->timeout( sec );
+		if( ignore_timeout_multiplier ) {
+			sock->ignoreTimeoutMultiplier();
+		}
+	}
+
+	int rc = sock->connect(_addr, 0, non_blocking);
+	if(rc || (non_blocking && rc == CEDAR_EWOULDBLOCK)) {
+		return true;
+	}
+
+	if (errstack) {
+		errstack->pushf("CEDAR", CEDAR_ERR_CONNECT_FAILED,
+			"Failed to connect to %s", _addr);
+	}
+	return false;
 }
 
 
@@ -511,6 +521,23 @@ Daemon::startCommand( int cmd, Sock* sock, int timeout, CondorError *errstack, S
 	}
 }
 
+Sock *
+Daemon::makeConnectedSocket( Stream::stream_type st,
+							 int timeout, CondorError* errstack,
+							 bool non_blocking )
+{
+	switch( st ) {
+	case Stream::reli_sock:
+		return reliSock(timeout, errstack, non_blocking);
+	case Stream::safe_sock:
+		return safeSock(timeout, errstack, non_blocking);
+	}
+
+	EXCEPT( "Unknown stream_type (%d) in Daemon::makeConnectedSocket",
+			(int)st );
+	return NULL;
+}
+
 StartCommandResult
 Daemon::startCommand( int cmd, Stream::stream_type st,Sock **sock,int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking, char const *cmd_description, bool raw_protocol, char const *sec_session_id )
 {
@@ -523,17 +550,7 @@ Daemon::startCommand( int cmd, Stream::stream_type st,Sock **sock,int timeout, C
 	// Also, there's no one to delete the Sock.
 	ASSERT(!nonblocking || callback_fn);
 
-	switch( st ) {
-	case Stream::reli_sock:
-		*sock = reliSock(timeout, errstack, nonblocking);
-		break;
-	case Stream::safe_sock:
-		*sock = safeSock(timeout, errstack, nonblocking);
-		break;
-	default:
-		EXCEPT( "Unknown stream_type (%d) in Daemon::startCommand",
-				(int)st );
-	}
+	*sock = makeConnectedSocket(st,timeout,errstack,nonblocking);
 	if( ! *sock ) {
 		if ( callback_fn ) {
 			(*callback_fn)( false, NULL, errstack, misc_data );
@@ -699,7 +716,7 @@ Daemon::sendCACmd( ClassAd* req, ClassAd* reply, ReliSock* cmd_sock,
 		cmd_sock->timeout( timeout );
 	}
 
-	if( ! cmd_sock->connect(_addr) ) {
+	if( ! connectSock(cmd_sock) ) {
 		MyString err_msg = "Failed to connect to ";
 		err_msg += daemonString(_type);
 		err_msg += " ";
@@ -1676,6 +1693,7 @@ Daemon::getInfoFromAd( const ClassAd* ad )
 		// them in the ad? Just _addr?
 	bool ret_val = true;
 	bool found_addr = false;
+	char const *notes = "";
 
 		// We look for _name first because we use it, if available, for
 		// error messages if we fail  to find the other attributes.
@@ -1726,9 +1744,55 @@ Daemon::getInfoFromAd( const ClassAd* ad )
 		}
 	}
 
+	if( _addr ) {
+		// See if there is a matching private network address packed
+		// into the sinful string (starting in 7.3.0 this replaces the
+		// old method of putting it in a separate attribute).
+
+		Sinful sinful(_addr);
+		char const *priv_net = sinful.getPrivateNetworkName();
+		if( priv_net ) {
+			bool using_private = false;
+			our_network_name = param( "PRIVATE_NETWORK_NAME" );
+			if( our_network_name ) {
+				if( strcmp( our_network_name, priv_net ) == 0 ) {
+					char const *priv_addr = sinful.getPrivateAddr();
+					notes = " (private network name matched)";
+					using_private = true;
+					if( priv_addr ) {
+						// replace address with private address
+						if( *priv_addr != '<' ) {
+							MyString buf;
+							buf.sprintf("<%s>",priv_addr);
+							New_addr( strnewp( buf.Value() ) );
+						}
+						else {
+							New_addr( strnewp( priv_addr ) );
+						}
+					}
+					else {
+						// no private address was specified, so use public
+						// address with CCB disabled
+						sinful.setCCBContact(NULL);
+						New_addr( strnewp( sinful.getSinful() ) );
+					}
+				}
+				free( our_network_name );
+			}
+			if( !using_private ) {
+				// Remove junk from address that we don't care about so
+				// it is not so noisy in logs and such.
+				sinful.setPrivateAddr(NULL);
+				sinful.setPrivateNetworkName(NULL);
+				New_addr( strnewp( sinful.getSinful() ) );
+				notes = " (private network name not matched)";
+			}
+		}
+	}
+
 	if ( found_addr ) {
-		dprintf( D_HOSTNAME, "Found %s in ClassAd, using \"%s\"\n",
-				 addr_attr_name.Value(), _addr );
+		dprintf( D_HOSTNAME, "Found %s in ClassAd, using \"%s\"%s\n",
+				 addr_attr_name.Value(), _addr, notes );
 		_tried_locate = true;
 	} else {
 		dprintf( D_ALWAYS, "Can't find address in classad for %s %s\n",
@@ -1739,7 +1803,6 @@ Daemon::getInfoFromAd( const ClassAd* ad )
 
 		ret_val = false;
 	}
-
 
 	if( initStringFromAd( ad, ATTR_VERSION, &_version ) ) {
 		_tried_init_version = true;
@@ -2019,7 +2082,7 @@ Daemon::getTimeOffset( long &offset )
 		//
 	ReliSock reli_sock;
 	reli_sock.timeout( 30 ); // I'm following what everbody else does
-	if( ! reli_sock.connect( this->_addr ) ) {
+	if( ! connectSock(&reli_sock) ) {
 		dprintf( D_FULLDEBUG, "Daemon::getTimeOffset() failed to connect "
 		     				  "to remote daemon at '%s'\n",
 		     				  this->_addr );
@@ -2068,7 +2131,7 @@ Daemon::getTimeOffsetRange( long &min_range, long &max_range )
 		//
 	ReliSock reli_sock;
 	reli_sock.timeout( 30 ); // I'm following what everbody else does
-	if( ! reli_sock.connect( this->_addr ) ) {
+	if( ! connectSock(&reli_sock) ) {
 		dprintf( D_FULLDEBUG, "Daemon::getTimeOffsetRange() failed to connect "
 		     				  "to remote daemon at '%s'\n",
 		     				  this->_addr );

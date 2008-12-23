@@ -37,7 +37,7 @@ extern CStarter *Starter;
 extern "C" {
 int
 REMOTE_CONDOR_register_machine_info(char *uiddomain, char *fsdomain,
-	char *address, char *fullHostname, int key)
+	char const *address, char *fullHostname, int key)
 {
 	condor_errno_t		terrno;
 	int		rval=-1;
@@ -54,7 +54,7 @@ REMOTE_CONDOR_register_machine_info(char *uiddomain, char *fsdomain,
 	ASSERT( result );
 	result = syscall_sock->code(fsdomain);
 	ASSERT( result );
-	result = syscall_sock->code(address);
+	result = syscall_sock->put(address);
 	ASSERT( result );
 	result = syscall_sock->code(fullHostname);
 	ASSERT( result );

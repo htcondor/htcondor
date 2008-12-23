@@ -44,6 +44,8 @@ public:
 	inline void reset() { _dta_pt = _dta_sz = 0; }
 	inline void rewind() { _dta_pt = 0; }
 
+	void alloc_buf();
+	void dealloc_buf();
 
 	inline int max_size() const { return _dta_maxsz; }
 	inline int num_untouched() const { return _dta_sz - _dta_pt; }

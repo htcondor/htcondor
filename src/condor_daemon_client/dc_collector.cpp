@@ -291,43 +291,33 @@ DCCollector::sendUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking )
 	}
 
 	// Add start time & seq # to the ads before we publish 'em
-	char	buf [80];
-	sprintf( buf, "%s=%ld", ATTR_DAEMON_START_TIME, (long) startTime );
 	if ( ad1 ) {
-		ad1->InsertOrUpdate( buf );
+		ad1->Assign(ATTR_DAEMON_START_TIME,(long)startTime);
 	}
 	if ( ad2 ) {
-		ad2->InsertOrUpdate( buf );
+		ad2->Assign(ATTR_DAEMON_START_TIME,(long)startTime);
 	}
 	if ( ad1 ) {
-		int	seq = adSeqMan->getSequence( ad1 );
-		sprintf( buf, "%s=%u", ATTR_UPDATE_SEQUENCE_NUMBER, seq );
-		ad1->InsertOrUpdate( buf );
+		unsigned seq = adSeqMan->getSequence( ad1 );
+		ad1->Assign(ATTR_UPDATE_SEQUENCE_NUMBER,seq);
 	}
 	if ( ad2 ) {
-		int	seq = adSeqMan->getSequence( ad2 );
-		sprintf( buf, "%s=%u", ATTR_UPDATE_SEQUENCE_NUMBER, seq );
-		ad2->InsertOrUpdate( buf );
+		unsigned seq = adSeqMan->getSequence( ad2 );
+		ad2->Assign(ATTR_UPDATE_SEQUENCE_NUMBER,seq);
 	}
 
 	// Insert "my address"
-	char	*tmp = global_dc_sinful( );
+	char const *tmp = global_dc_sinful( );
 	if ( tmp ) {
-		sprintf( buf, "%s=\"%s\"", ATTR_MY_ADDRESS, tmp );
-		// No need to free tmp -- it's static
-
+		MyString existing;
 		if ( ad1 ) {
-			if ( ad1->LookupString( ATTR_MY_ADDRESS, &tmp ) ) {
-				free( tmp );	// tmp from LookupString does need to be freed
-			} else {
-				ad1->InsertOrUpdate( buf );
+			if ( !ad1->LookupString( ATTR_MY_ADDRESS, existing ) ) {
+				ad1->Assign(ATTR_MY_ADDRESS,tmp);
 			}
 		}
 		if ( ad2 ) {
-			if ( ad2->LookupString( ATTR_MY_ADDRESS, &tmp ) ) {
-				free( tmp );
-			} else {
-				ad2->InsertOrUpdate( buf );
+			if ( !ad2->LookupString( ATTR_MY_ADDRESS, existing ) ) {
+				ad2->Assign(ATTR_MY_ADDRESS,tmp);
 			}
 		}
 	}

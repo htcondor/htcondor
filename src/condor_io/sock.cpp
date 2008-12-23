@@ -349,6 +349,10 @@ int Sock::assign(SOCKET sockd)
 	if (sockd != INVALID_SOCKET){
 		_sock = sockd;		/* Could we check for correct protocol ? */
 		_state = sock_assigned;
+
+		if ( _timeout > 0 ) {
+			timeout_no_timeout_multiplier( _timeout );
+		}
 		return TRUE;
 	}
 
@@ -669,7 +673,6 @@ int Sock::setsockopt(int level, int optname, const char* optval, int optlen)
 	return TRUE; 
 }
 
-
 int Sock::do_connect(
 	char const	*host,
 	int		port,
@@ -680,15 +683,6 @@ int Sock::do_connect(
 	unsigned long	inaddr;
 
 	if (!host || port < 0) return FALSE;
-
-		/* we bind here so that a sock may be	*/
-		/* assigned to the stream if needed		*/
-		/* TRUE means this is an outgoing connection */
-	if (_state == sock_virgin || _state == sock_assigned) {
-		bind(true);
-	}
-
-	if (_state != sock_bound) return FALSE;
 
 	memset(&_who, 0, sizeof(sockaddr_in));
 	_who.sin_family = AF_INET;
@@ -707,6 +701,23 @@ int Sock::do_connect(
 		if ((hostp = condor_gethostbyname(host)) == (hostent *)0) return FALSE;
 		memcpy(&_who.sin_addr, hostp->h_addr, hostp->h_length);
 	}
+
+	// now that we have set _who (useful for getting informative
+	// peer_description), see if we should do a reverse connect
+	// instead of a forward connect
+	int retval=reverse_connect(host,port,non_blocking_flag);
+	if( retval != CEDAR_ENOCCB ) {
+		return retval;
+	}
+
+		/* we bind here so that a sock may be	*/
+		/* assigned to the stream if needed		*/
+		/* TRUE means this is an outgoing connection */
+	if (_state == sock_virgin || _state == sock_assigned) {
+		bind(true);
+	}
+
+	if (_state != sock_bound) return FALSE;
 
 	if (_timeout < CONNECT_TIMEOUT) {
 			// NOTE: if _timeout == 0 (no connect() timeout), we still
@@ -1209,6 +1220,10 @@ bool Sock::test_connection()
 
 int Sock::close()
 {
+	if( _state == sock_reverse_connect_pending ) {
+		cancel_reverse_connect();
+	}
+
 	if (_state == sock_virgin) return FALSE;
 
 	if (type() == Stream::reli_sock) {
@@ -1306,6 +1321,12 @@ Sock::readReady() {
 	return selector.has_ready();
 }
 
+int
+Sock::get_timeout_raw()
+{
+	return _timeout;
+}
+
 /* NOTE: on timeout() we return the previous timeout value, or a -1 on an error.
  * Once more: we do _not_ return FALSE on Error like most other CEDAR functions;
  * we return a -1 !! 
@@ -1317,8 +1338,12 @@ Sock::timeout_no_timeout_multiplier(int sec)
 
 	_timeout = sec;
 
-	/* if stream not assigned to a sock, do it now	*/
-	if (_state == sock_virgin) assign();
+	if (_state == sock_virgin) {
+		// Rather than forcing creation of the socket here, we just
+		// return success.  All paths that create the socket also
+		// set the timeout.
+		return t;
+	}
 	if ( (_state != sock_assigned) &&  
 				(_state != sock_connect) &&
 				(_state != sock_bound) )  {

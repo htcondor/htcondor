@@ -37,6 +37,8 @@
 #include "globus_utils.h"
 #include "condor_auth_x509.h"
 #include "condor_config.h"
+#include "ccb_client.h"
+#include "condor_sinful.h"
 
 #ifdef WIN32
 #include <mswsock.h>	// For TransmitFile()
@@ -714,4 +716,60 @@ Stream::restore_crypto_after_secret()
 	if( !m_crypto_state_before_secret ) {
 		set_crypto_mode(false); //restore crypto mode
 	}
+}
+
+int Sock::reverse_connect(char const *host,int /*port*/,bool nonblocking)
+{
+	if( !host || *host != '<' ) {
+		return CEDAR_ENOCCB;
+	}
+
+	Sinful sinful(host);
+	if( !sinful.valid() ) {
+		return CEDAR_ENOCCB;
+	}
+
+	char const *ccb_contact = sinful.getCCBContact();
+	if( !ccb_contact || !*ccb_contact ) {
+		return CEDAR_ENOCCB;
+	}
+
+	return do_reverse_connect(ccb_contact,nonblocking);
+}
+
+int
+SafeSock::do_reverse_connect(char const *,bool)
+{
+	dprintf(D_ALWAYS,
+			"CCBClient: WARNING: UDP not supported by CCB."
+			"  Will therefore try to send packet directly to %s.\n",
+			peer_description());
+
+	return CEDAR_ENOCCB;
+}
+
+int
+ReliSock::do_reverse_connect(char const *ccb_contact,bool nonblocking)
+{
+	ASSERT( !m_ccb_client.get() ); // only one reverse connect at a time!
+	m_ccb_client =
+		new CCBClient( ccb_contact, (ReliSock *)this );
+
+	if( !m_ccb_client->ReverseConnect(NULL,nonblocking) ) {
+		dprintf(D_ALWAYS,"Failed to reverse connect to %s via CCB.\n",
+				peer_description());
+		return 0;
+	}
+	if( nonblocking ) {
+		return CEDAR_EWOULDBLOCK;
+	}
+
+	m_ccb_client = NULL; // in blocking case, we are done with ccb client
+	return 1;
+}
+
+void
+ReliSock::cancel_reverse_connect() {
+	ASSERT( m_ccb_client.get() );
+	m_ccb_client->CancelReverseConnect();
 }
