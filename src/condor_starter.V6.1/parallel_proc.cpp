@@ -81,15 +81,14 @@ ParallelProc::addEnvVars()
 
 		// Add the remote spool dir, the "server" directory for
 		// condor_chirp to stage files to/from
-    char spool[128];
-    spool[0] = 0;
+    MyString spool;
 	if ( JobAd->LookupString( ATTR_REMOTE_SPOOL_DIR, spool ) < 1 ) {
 		dprintf( D_ALWAYS, "%s not found in JobAd.  Aborting.\n", 
 				 ATTR_REMOTE_SPOOL_DIR);
 		return 0;
 	}
 
-    env.SetEnv( "_CONDOR_REMOTE_SPOOL_DIR", spool );
+    env.SetEnv( "_CONDOR_REMOTE_SPOOL_DIR", spool.Value() );
 
 		// Add this node's number to CONDOR_PROCNO
 	char buf[128];
