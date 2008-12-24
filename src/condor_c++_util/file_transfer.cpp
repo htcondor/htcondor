@@ -906,10 +906,6 @@ FileTransfer::ComputeFilesToSend()
 				dprintf( D_FULLDEBUG, "Skipping %s\n", f );
 				continue;
 			}
-			if ( NULL != strstr ( f, "condor_exec." ) ) {
-				dprintf ( D_FULLDEBUG, "Skipping %s\n", f );
-				continue;
-			}
 
 			if( proxy_file && file_strcmp(f, proxy_file) == MATCH ) {
 				dprintf( D_FULLDEBUG, "Skipping %s\n", f );

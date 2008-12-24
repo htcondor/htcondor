@@ -1802,14 +1802,6 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\executable_scripts.h"
-			>
-		</File>
-		<File
-			RelativePath="..\src\condor_c++_util\executable_scripts.WINDOWS.cpp"
-			>
-		</File>
-		<File
 			RelativePath="..\src\condor_c++_util\extArray.h"
 			>
 		</File>

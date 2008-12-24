@@ -33,7 +33,6 @@
 #include "domain_tools.h"
 
 #ifdef WIN32
-#include "executable_scripts.h"
 extern dynuser* myDynuser;
 #endif
 
@@ -51,13 +50,12 @@ VanillaProc::StartJob()
 #ifdef WIN32
 
 	char systemshell[MAX_PATH];
-    
+
 	const char* jobtmp = Starter->jic->origJobName();
-	const char *extension = strrchr ( jobtmp, '.' );
 	int joblen = strlen(jobtmp);
 	if ( joblen > 5 && 
-			( (stricmp(".bat",extension) == 0) || 
-			  (stricmp(".cmd",extension) == 0) ) ) {
+			( (stricmp(".bat",&(jobtmp[joblen-4])) == 0) || 
+			  (stricmp(".cmd",&(jobtmp[joblen-4])) == 0) ) ) {
 		// executable name ends in .bat or .cmd
 
 		// pull out pathname to executable and save
@@ -118,89 +116,6 @@ VanillaProc::StartJob()
 		}
 
 	}	// end of if executable name ends in .bat
-	else if ( joblen > 5 && 
-			( MATCH != strcasecmp ( ".exe", extension ) && 
-			  MATCH != strcasecmp ( ".com", extension ) ) ) {
-
-		CHAR		interpreter[MAX_PATH+1];
-		ArgList	 arguments;
-		MyString	jobname,
-					filename, 
-					errors;
-		BOOL		ok;
-
-		/** pull out pathname to executable and save */
-		if ( JobAd->LookupString ( ATTR_JOB_CMD, jobname ) != 1 ) {
-			/* fall back on origJobName */
-			jobname = jobtmp;
-		}		 
-
-		/** try and find the executable associated with this 
-		file extension */
-		ok = GetExecutableAndArgumentTemplateByExtention ( 
-			extension, 
-			interpreter );
-
-		if ( !ok ) {
-
-			dprintf ( 
-				D_ALWAYS, 
-				"VanillaProc::StartJob(): Failed to find an "
-				"executable for extension *%s\n",
-				extension );
-
-			return 0;
-
-		}
-
-		/** change executable to be the interpreter associated with
-		the file type. */
-		JobAd->Assign ( ATTR_JOB_CMD, interpreter );
-
-		/** Since we are adding to the argument list, we may need 
-		to deal with platform-specific arg syntax in the user's
-		args in order to successfully merge them with the
-		additional args. */
-		arguments.SetArgV1SyntaxToCurrentPlatform ();
-
-		/** If we transferred the job, it may have been renamed to 
-		condor_exec.exe even though it is not an executable. 
-		Here we rename it back to a the correct extension before 
-		it will run. */
-		if ( MATCH == strcasecmp ( CONDOR_EXEC, 
-			 condor_basename ( jobname.Value () ) ) ) {
-			filename.sprintf ( "condor_exec%s", extension );
-			rename ( CONDOR_EXEC, filename.Value () );
-		}
-		arguments.AppendArg ( filename );
-
-		if ( !arguments.AppendArgsFromClassAd ( JobAd, &errors ) ||
-			 !arguments.InsertArgsIntoClassAd ( JobAd, NULL, &errors ) ) {
-
-				dprintf (
-					D_ALWAYS,
-					"ERROR: failed to get args from job ad: %s\n",
-					errors.Value () );
-
-				return FALSE;
-
-		}
-
-		if ( DebugFlags & D_FULLDEBUG ) {
-
-			MyString description;
-			arguments.GetArgsStringForDisplay ( &description );
-
-			dprintf (
-				D_FULLDEBUG,
-				"Interpreter for *%s files: %s %s\n",
-				extension,
-				interpreter,
-				description.Value () );
-
-		}
-
-	}
 #endif
 
 	// set up a FamilyInfo structure to tell OsProc to register a family
