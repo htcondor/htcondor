@@ -45,14 +45,21 @@ with the naming of other Condor binaries.
 
 \begin{itemize}
 
+\item The default \SubmitCmd{universe} for jobs is now 
+\SubmitCmd{vanilla}, instead of \SubmitCmd{standard}.
+The default can be changed using the configuration variable
+\Macro{DEFAULT\_UNIVERSE}.
+
 \item VMware \SubmitCmd{vm} universe jobs now have any BIOS settings saved in
 an \File{nvram} file in the \SubmitCmd{vmware\_dir} given in the
 job's submit file transferred to the execute machine so that they
 apply to the job's execution.
 
-\item Daemons that become unresponsive are now killed using SIGABRT which
-causes a core file to be dropped.  Setting \MacroNI{NOT\_RESPONDING\_WANT\_CORE}
-to false will revert to the old behavior of using SIGKILL.
+\item Daemons that become unresponsive are now killed using the
+SIGABRT signal, which causes a core file to be dropped.
+Setting the configuration variable \MacroNI{NOT\_RESPONDING\_WANT\_CORE}
+to \Expr{False} will revert to the previous behavior that used
+the SIGKILL signal.
 
 \end{itemize}
 
@@ -60,11 +67,9 @@ to false will revert to the old behavior of using SIGKILL.
 
 \begin{itemize}
 
-\item The HAD parameter \MacroNI{NEGOTIATOR\_STATE\_FILE} was changed to
-\MacroNI{STATE\_FILE}.
+\item The HAD configuration varible \MacroNI{NEGOTIATOR\_STATE\_FILE}
+has changed its name to \MacroNI{STATE\_FILE}.
 
-\item The default universe for jobs is now VANILLA instead of STANDARD.
-The default can be set using the parameter \MacroNI{DEFAULT\_UNIVERSE}.
 \end{itemize}
 
 \noindent Bugs Fixed:
