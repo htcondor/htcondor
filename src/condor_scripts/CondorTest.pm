@@ -1198,7 +1198,7 @@ sub PersonalSearchLog
     my $logname = shift;
 
 	my $logdir = `condor_config_val log`;
-	chomp($logdir);
+	fullchomp($logdir);
 
     #my $logloc = $pid . "/" . $pid . $personal . "/log/" . $logname;
     my $logloc = $logdir . "/" . $logname;
@@ -1230,7 +1230,7 @@ sub PersonalPolicySearchLog
     my $logname = shift;
 
 	my $logdir = `condor_config_val log`;
-	chomp($logdir);
+	fullchomp($logdir);
 
     #my $logloc = $pid . "/" . $pid . $personal . "/log/" . $logname;
     my $logloc = $logdir . "/" . $logname;
