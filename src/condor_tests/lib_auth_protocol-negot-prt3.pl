@@ -120,7 +120,7 @@ $success = sub
 	my $cluster = $info{"cluster"};
 
 	CondorTest::debug("Good completion!!!\n",1);
-	my $found = PersonalPolicySearchLog( $piddir, $subdir, "Encryption", "SchedLog");
+	my $found = CondorTest::PersonalPolicySearchLog( $piddir, $subdir, "Encryption", "SchedLog");
 	CondorTest::debug("PersonalPolicySearchLog found $found\n",1);
 	if( $found eq $expectedres ) {
 		CondorTest::debug("Good completion!!! found $found\n",1);
@@ -129,51 +129,6 @@ $success = sub
 	}
 
 };
-
-sub PersonalSearchLog 
-{
-	my $pid = shift;
-	my $personal = shift;
-	my $searchfor = shift;
-	my $logname = shift;
-
-	my $logloc = $pid . "/" . $pid . $personal . "/log/" . $logname;
-	CondorTest::debug("Search this log <$logloc> for <$searchfor>\n",1);
-	open(LOG,"<$logloc") || die "Can not open logfile<$logloc>: $!\n";
-	while(<LOG>) {
-		if( $_ =~ /$searchfor/) {
-			CondorTest::debug("FOUND IT! $_",1);
-			return(0);
-		}
-	}
-	return(1);
-}
-
-sub PersonalPolicySearchLog 
-{
-	my $pid = shift;
-	my $personal = shift;
-	my $policyitem = shift;
-	my $logname = shift;
-
-	my $logloc = $pid . "/" . $pid . $personal . "/log/" . $logname;
-	CondorTest::debug("Search this log <$logloc> for <$policyitem>\n",1);
-	open(LOG,"<$logloc") || die "Can not open logfile<$logloc>: $!\n";
-	while(<LOG>) {
-		if( $_ =~ /^.*Security Policy.*$/) {
-			while(<LOG>) {
-				if( $_ =~ /^\s*$policyitem\s*=\s*\"(\w+)\"\s*$/ ) {
-					#print "FOUND IT! $1\n";
-					if(!defined $securityoptions{$1}){
-						CondorTest::debug("Returning <<$1>>\n",1);
-						return($1);
-					}
-				}
-			}
-		}
-	}
-	return("bad");
-}
 
 CondorTest::RegisterExecute($testname, $executed);
 CondorTest::RegisterExitedAbnormal( $testname, $abnormal );

@@ -956,6 +956,7 @@ sub TunePersonalCondor
 		print NEW "NEGOTIATOR_INTERVAL = 5\n";
 		print NEW "CONDOR_JOB_POLL_INTERVAL = 5\n";
 		print NEW "RUNBENCHMARKS = false\n";
+		print NEW "JAVA_BENCHMARK_TIME = 0\n";
 	}
 	else
 	{
@@ -1645,16 +1646,16 @@ sub SaveMeSetup
 	# make a symbolic link for personal condor module to use
 	# if we get pid recycling, blow the symbolic link 
 	# This might not be a symbolic link, so use -r to be sure
-	$res = CondorTest::verbose_system("rm -fr $mypid");
-	if($res != 0) {
-		print "SaveMeSetup: Could not remove prior pid directory\n";
-		return(0);
-	}
-	$res = CondorTest::verbose_system("ln -s $mypiddir $mypid");
-	if($res != 0) {
-		print "SaveMeSetup: Could not link to pid dir in  \"saveme\" directory\n";
-		return(0);
-	}
+	#$res = CondorTest::verbose_system("rm -fr $mypid");
+	#if($res != 0) {
+		#print "SaveMeSetup: Could not remove prior pid directory\n";
+		#return(0);
+	#}
+	#$res = CondorTest::verbose_system("ln -s $mypiddir $mypid");
+	#if($res != 0) {
+		#print "SaveMeSetup: Could not link to pid dir in  \"saveme\" directory\n";
+		#return(0);
+	#}
 	return($mypid);
 }
 
