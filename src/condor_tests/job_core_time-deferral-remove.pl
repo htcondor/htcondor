@@ -181,7 +181,7 @@ open( WRITE_FILE, ">$cmd" ) || die( "Can't open '$cmd' for writing!\n" );
 ##
 print WRITE_FILE "Executable   = ./x_time.pl\n";
 print WRITE_FILE "Notification = NEVER\n";
-print WRITE_FILE "DeferralPrep = 600\n";
+print WRITE_FILE "DeferralPrep = 20\n";
 print WRITE_FILE "Universe	   = $universe\n";
 print WRITE_FILE "Log		   = $base_name"."_$universe.log\n";
 print WRITE_FILE "Output	   = $base_name"."_$universe.out\n";
