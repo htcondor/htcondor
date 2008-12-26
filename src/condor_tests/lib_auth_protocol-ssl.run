@@ -56,10 +56,10 @@ if($mypid == 0) {
 	die "Saveme setup for test failed\n";
 }
 
-$pidleveldir = $topleveldir . "/" . $mypid;
-chdir("$mypid");
+$pidleveldir = $topleveldir . "/" . $mysaveme . "/" . $mypid;
+print "changing to $pidleveldir\n";
+chdir("$pidleveldir");
 system("pwd");
-system("ls");
 system("tar -zxvf ../../$mysslcerts");
 chdir("ssl_keys");
 

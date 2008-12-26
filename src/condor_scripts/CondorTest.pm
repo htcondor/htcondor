@@ -31,6 +31,14 @@ use Condor;
 use FileHandle;
 use Net::Domain qw(hostfqdn);
 
+my %securityoptions =
+(
+"NEVER" => "1",
+"OPTIONAL" => "1",
+"PREFERRED" => "1",
+"REQUIRED" => "1",
+);
+
 BEGIN
 {
     # disable command buffering so output is flushed immediately
@@ -1172,6 +1180,76 @@ sub getFqdnHost
 {
 	my $host = hostfqdn();
 	return($host);
+}
+
+##############################################################################
+#
+# PersonalSearchLog
+#
+# Serach a log for a pattern
+#
+##############################################################################
+
+sub PersonalSearchLog
+{
+    my $pid = shift;
+    my $personal = shift;
+    my $searchfor = shift;
+    my $logname = shift;
+
+	my $logdir = `condor_config_val log`;
+	chomp($logdir);
+
+    #my $logloc = $pid . "/" . $pid . $personal . "/log/" . $logname;
+    my $logloc = $logdir . "/" . $logname;
+    CondorTest::debug("Search this log <$logloc> for <$searchfor>\n",1);
+    open(LOG,"<$logloc") || die "Can not open logfile<$logloc>: $!\n";
+    while(<LOG>) {
+        if( $_ =~ /$searchfor/) {
+            CondorTest::debug("FOUND IT! $_",1);
+            return(0);
+        }
+    }
+    return(1);
+}
+
+##############################################################################
+#
+# PersonalPolicySearchLog
+#
+# Serach a log for a security policy
+#
+##############################################################################
+
+
+sub PersonalPolicySearchLog
+{
+    my $pid = shift;
+    my $personal = shift;
+    my $policyitem = shift;
+    my $logname = shift;
+
+	my $logdir = `condor_config_val log`;
+	chomp($logdir);
+
+    #my $logloc = $pid . "/" . $pid . $personal . "/log/" . $logname;
+    my $logloc = $logdir . "/" . $logname;
+    CondorTest::debug("Search this log <$logloc> for <$policyitem>\n",1);
+    open(LOG,"<$logloc") || die "Can not open logfile<$logloc>: $!\n";
+    while(<LOG>) {
+        if( $_ =~ /^.*Security Policy.*$/) {
+            while(<LOG>) {
+                if( $_ =~ /^\s*$policyitem\s*=\s*\"(\w+)\"\s*$/ ) {
+                    #print "FOUND IT! $1\n";
+                    if(!defined $securityoptions{$1}){
+                        CondorTest::debug("Returning <<$1>>\n",1);
+                        return($1);
+                    }
+                }
+            }
+        }
+    }
+    return("bad");
 }
 
 # Call down to Condor Perl Module for now
