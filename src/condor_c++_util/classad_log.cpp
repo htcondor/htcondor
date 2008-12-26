@@ -224,10 +224,10 @@ ClassAdLog::SaveHistoricalLogs()
 		return false;
 	}
 
-	dprintf(D_FULLDEBUG,"About to save historical log %s\n",new_histfile.GetCStr());
+	dprintf(D_FULLDEBUG,"About to save historical log %s\n",new_histfile.Value());
 
-	if( hardlink_or_copy_file(logFilename(), new_histfile.GetCStr()) < 0) {
-		dprintf(D_ALWAYS,"Failed to copy %s to %s.\n",logFilename(),new_histfile.GetCStr());
+	if( hardlink_or_copy_file(logFilename(), new_histfile.Value()) < 0) {
+		dprintf(D_ALWAYS,"Failed to copy %s to %s.\n",logFilename(),new_histfile.Value());
 		return false;
 	}
 
@@ -238,15 +238,15 @@ ClassAdLog::SaveHistoricalLogs()
 		return true; // this is not a fatal error
 	}
 
-	if( unlink(old_histfile.GetCStr()) == 0 ) {
-		dprintf(D_FULLDEBUG,"Removed historical log %s.\n",old_histfile.GetCStr());
+	if( unlink(old_histfile.Value()) == 0 ) {
+		dprintf(D_FULLDEBUG,"Removed historical log %s.\n",old_histfile.Value());
 	}
 	else {
 		// It's ok if the old file simply doesn't exist.
 		if( errno != ENOENT ) {
 			// Otherwise, it's not a fatal error, but definitely odd that
 			// we failed to remove it.
-			dprintf(D_ALWAYS,"WARNING: failed to remove '%s': %s\n",old_histfile.GetCStr(),strerror(errno));
+			dprintf(D_ALWAYS,"WARNING: failed to remove '%s': %s\n",old_histfile.Value(),strerror(errno));
 		}
 		return true; // this is not a fatal error
 	}
