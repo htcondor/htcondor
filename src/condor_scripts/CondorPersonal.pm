@@ -956,6 +956,7 @@ sub TunePersonalCondor
 		print NEW "NEGOTIATOR_INTERVAL = 5\n";
 		print NEW "CONDOR_JOB_POLL_INTERVAL = 5\n";
 		print NEW "RUNBENCHMARKS = false\n";
+		print NEW "JAVA_BENCHMARK_TIME = 0\n";
 	}
 	else
 	{
