@@ -108,11 +108,11 @@ void file_transfer_db(file_transfer_record *rp, ClassAd *ad)
 	bool found = false;
 		// src_name, src_path
 	if (inStarter && !dst_name.IsEmpty() &&
-		(strcmp(dst_name.GetCStr(), CONDOR_EXEC) == 0)) {
+		(strcmp(dst_name.Value(), CONDOR_EXEC) == 0)) {
 		ad->LookupString(ATTR_ORIG_JOB_CMD, job_name);
-		if (!job_name.IsEmpty() && fullpath(job_name.GetCStr())) {
-			src_name = condor_basename(job_name.GetCStr());
-			dir_tmp = condor_dirname(job_name.GetCStr());
+		if (!job_name.IsEmpty() && fullpath(job_name.Value())) {
+			src_name = condor_basename(job_name.Value());
+			dir_tmp = condor_dirname(job_name.Value());
 			src_path = dir_tmp;
 			free(dir_tmp);
 			found = true;
@@ -151,7 +151,7 @@ void file_transfer_db(file_transfer_record *rp, ClassAd *ad)
 	InputFiles->rewind();
 	while( !found && (inputFile = InputFiles->next()) ) {	
 		const char *inputBaseName = condor_basename(inputFile);
-		if(strcmp(inputBaseName, src_name.GetCStr()) == 0) {
+		if(strcmp(inputBaseName, src_name.Value()) == 0) {
 			found = true;
 			if(fullpath(inputFile)) {
 				dir_tmp = condor_dirname(inputFile);
@@ -182,53 +182,23 @@ void file_transfer_db(file_transfer_record *rp, ClassAd *ad)
 		dprintf( D_ALWAYS, 
 		"WARNING: File %s can not be accessed by Quill file transfer tracking.\n", rp->fullname);
 	}
-	tmp.sprintf("globalJobId = \"%s\"", globalJobId.GetCStr());
-	tmpClP1->Insert(tmp.GetCStr());			
+	tmpClP1->Assign("globalJobId", globalJobId);
 	
-	tmp.sprintf("src_name = \"%s\"", src_name.GetCStr());
-	tmpClP1->Insert(tmp.GetCStr());
-
-	tmp.sprintf("src_host = \"%s\"", src_host);
-	tmpClP1->Insert(tmp.GetCStr());
-
-	tmp.sprintf("src_port = %d", src_port);
-	tmpClP1->Insert(tmp.GetCStr());
-
-	tmp.sprintf("src_path = \"%s\"", src_path.GetCStr());
-	tmpClP1->Insert(tmp.GetCStr());
-
-	tmp.sprintf("dst_name = \"%s\"", dst_name.GetCStr());
-	tmpClP1->Insert(tmp.GetCStr());
-
-	tmp.sprintf("dst_host = \"%s\"", dst_host.GetCStr());
-	tmpClP1->Insert(tmp.GetCStr());
-
-	tmp.sprintf("dst_port = %d", dst_port);
-	tmpClP1->Insert(tmp.GetCStr());
-
-	tmp.sprintf("dst_path = \"%s\"", dst_path.GetCStr());
-	tmpClP1->Insert(tmp.GetCStr());
-
-	tmp.sprintf("transfer_size = %d", (int)rp->bytes);
-	tmpClP1->Insert(tmp.GetCStr());
-
-	tmp.sprintf("elapsed = %d", (int)rp->elapsed);
-	tmpClP1->Insert(tmp.GetCStr());
-
-	tmp.sprintf("dst_daemon = \"%s\"", rp->daemon);
-	tmpClP1->Insert(tmp.GetCStr());
-
-	tmp.sprintf("f_ts = %d", (int)file_status.st_mtime);
-	tmpClP1->Insert(tmp.GetCStr());
-
-	tmp.sprintf("transfer_time = %d", (int)rp->transfer_time);
-	tmpClP1->Insert(tmp.GetCStr());	
-
-	tmp.sprintf("is_encrypted = %s", isEncrypted.GetCStr());
-	tmpClP1->Insert(tmp.GetCStr());	
-
-	tmp.sprintf("delegation_method_id = %d", rp->delegation_method_id);
-	tmpClP1->Insert(tmp.GetCStr());	
+	tmpClP1->Assign("src_name", src_name);
+	tmpClP1->Assign("src_host", src_host);
+	tmpClP1->Assign("src_port", src_port);
+	tmpClP1->Assign("src_path", src_path);
+	tmpClP1->Assign("dst_name", dst_name);
+	tmpClP1->Assign("dst_host", dst_host);
+	tmpClP1->Assign("dst_port", dst_port);
+	tmpClP1->Assign("dst_path", dst_path);
+	tmpClP1->Assign("transfer_size", (int)rp->bytes);
+	tmpClP1->Assign("elapsed", (int)rp->elapsed);
+	tmpClP1->Assign("dst_daemon", rp->daemon);
+	tmpClP1->Assign("f_ts", (int)file_status.st_mtime);
+	tmpClP1->Assign("transfer_time", (int)rp->transfer_time);
+	tmpClP1->Assign("is_encrypted", isEncrypted);
+	tmpClP1->Assign("delegation_method_id", rp->delegation_method_id);
 
 	FILEObj->file_newEvent("Transfers", tmpClP1);
 
