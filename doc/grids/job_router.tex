@@ -275,10 +275,11 @@ the old implementation.  A good place to learn about the syntax of New
 ClassAds is the Informal Language Description in the C++ ClassAds
 tutorial: \URL{http://www.cs.wisc.edu/condor/classad/c++tut.html}.
 For the most part, everything in the old ClassAds language is
-supported by New ClassAds, with the exception of a number of ClassAd
+supported by New ClassAds, with the exception of some ClassAd
 functions that have not yet been added to New ClassAds.  So if job
-ClassAds make use of ClassAd functions, they cannot currently be
-routed.
+ClassAds make use of unsupported ClassAd functions, they cannot currently be
+routed.  As of this writing, the unsupported functions are
+all of the functions with names beginning with \Code{stringList}.
 
 Since the \Condor{job\_router} daemon is configured with New ClassAds but is operating on
 Old ClassAds stored in the job queue, it may be confusing at first to

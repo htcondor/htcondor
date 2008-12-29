@@ -61,6 +61,11 @@ Setting the configuration variable \Macro{NOT\_RESPONDING\_WANT\_CORE}
 to \Expr{False} will revert to the previous behavior that used
 the SIGKILL signal.
 
+\item \Condor{job\_router} and \Condor{q} \Opt{-better-analyze} now
+support more classad functions than they previously did.  They now
+support all classad functions except for those with names beginning
+with \Code{stringList}.
+
 \end{itemize}
 
 \noindent Configuration Variable Additions and Changes:
