@@ -32,10 +32,6 @@ token_cache::~token_cache() {
 	
 	TokenTable->startIterations();
 	while ( TokenTable->iterate(index, ent) ) {
-		// forcibly log the user out, otherwise any remaining resources
-		// will be passed up to the System for eventual collection (which
-		// may only really happen at reboot)
-		CloseHandle ( ent->user_token );
 		delete ent;
 		TokenTable->remove(index);
 	}
