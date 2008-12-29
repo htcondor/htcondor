@@ -532,9 +532,9 @@ also referred to as a partitionable \Condor{startd} or as dynamic slots,
 allows users to mark slots as partitionable. 
 This means that more than one job can occupy a single slot at any one time. 
 Typically, slots have a fixed set of resources,
-such as associated CPUs, memory and disk space. 
+including the CPUs, memory and disk space. 
 By partitioning the slot, 
-those resources become more flexible and able to be better utilized.
+these resources become more flexible and able to be better utilized.
 
 Dynamic provisioning provides powerful configuration
 possibilities, and so should be used with care. 
@@ -547,7 +547,7 @@ In this instance a job requiring 2GB of memory will be starved
 and unable to run.
 
 Here is an example that demonstrates how more than one job
-can be matched to a single slot using dyanmic provisioning.
+can be matched to a single slot using dynamic provisioning.
 In this example, slot1 has the following resources:
 \begin{description}
   \item{cpu=10}
@@ -576,7 +576,7 @@ available resources have been consumed by jobs.
 To enable dynamic provisioning, 
 set the \Macro{SLOT\_TYPE\_<N>\_PARTITIONABLE} configuration variable 
 to \Expr{True}.
-The string \MacroNI{X} within the configuration variable name
+The string \MacroNI{N} within the configuration variable name
 is the slot number.
 
 In a pool using dynamic provisioning, 
@@ -588,21 +588,21 @@ description file:
   \item{request\_disk (in kilobytes)}
 \end{description}
 
-This example gives a truncated job submit description file for use when submitting a job to a pool with dynamic provisioning.
-JobA:
+This example shows a portion of the job submit description file
+for use when submitting a job to a pool with dynamic provisioning.
 \begin{verbatim}
 universe = vanilla
-executable = ...
-...
+executable = 
+
 request_cpus = 3
 request_memory = 1024
 request_disk = 10240
-...
+
 queue 
 \end{verbatim}
 
 For each type of slot,
-the original, partionable slot and the new smaller, dynamic slots,
+the original, partitionable slot and the new smaller, dynamic slots,
 an attribute is added to identify it.
 The original slot will have an attribute stating 
 \begin{verbatim}

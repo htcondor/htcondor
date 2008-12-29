@@ -2387,12 +2387,39 @@ universes except for the standard universe.
 %%%%%%%%%%%%%%%%%%%
 %% rendezvousdir
 %%%%%%%%%%%%%%%%%%%
-
 \index{submit commands!rendezvousdir}
 \item[rendezvousdir = $<$directory-path$>$] Used to specify the
 shared file system directory to be used for file system authentication
 when submitting to a remote scheduler.  Should be a path to a preexisting
 directory.
+
+%%%%%%%%%%%%%%%%%%%
+%% request_cpus
+%%%%%%%%%%%%%%%%%%%
+\index{submit commands!request\_cpus}
+\item[request\_cpus = $<$num-cpus$>$] For pools that enable
+dynamic \Condor{startd} provisioning
+(see section~\ref{sec:SMP-dynamicprovisioning}),
+the number of CPUs requested for this job.
+
+%%%%%%%%%%%%%%%%%%%
+%% request_disk
+%%%%%%%%%%%%%%%%%%%
+\index{submit commands!request\_disk}
+\item[request\_disk = $<$quantity$>$] For pools that enable
+dynamic \Condor{startd} provisioning
+(see section~\ref{sec:SMP-dynamicprovisioning}),
+the amount of disk space requested for this job.
+
+%%%%%%%%%%%%%%%%%%%
+%% request_memory
+%%%%%%%%%%%%%%%%%%%
+\index{submit commands!request\_memory}
+\item[request\_memory = $<$quantity$>$] For pools that enable
+dynamic \Condor{startd} provisioning
+(see section~\ref{sec:SMP-dynamicprovisioning}),
+the amount of memory space requested for this job.
+
 
 %%%%%%%%%%%%%%%%%%%
 % +
