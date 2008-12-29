@@ -70,6 +70,16 @@ will contain in its submit description file:
 concurrency_limits = y,XSW,Z
 \end{verbatim}
 
+Additionally, a numerical value identifying the number of resources
+required may be specified in the definition of a resource,
+following the resource name by a colon character and the integer
+number of resources.
+Modifying the given example to specify that 3 of 
+the \AdStr{XSW} resource are needed results in: 
+\begin{verbatim}
+concurrency_limits = y,XSW:3,Z
+\end{verbatim}
+
 Note that the maximum for any given limit,
 as specified with the configuration variable \MacroNI{<*>\_LIMIT},
 is as strictly enforced \Bold{as possible}.

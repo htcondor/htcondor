@@ -75,6 +75,11 @@ is the amount of disk space available in the directory specified in
 the Condor configuration files by the \Macro{EXECUTE} macro, minus any
 space reserved with the \Macro{RESERVED\_DISK} macro.
 %
+\index{ClassAd machine attribute!DynamicSlot}
+\item[\AdAttr{DynamicSlot}:] For SMP machines that allow dynamic
+partitioning of a slot,
+this boolean value identifies that this dynamic slot may be partitioned.
+%
 \index{ClassAd machine attribute!EnteredCurrentActivity}
 \item[\AdAttr{EnteredCurrentActivity}:] Time at which the machine
 entered the current Activity (see \AdAttr{Activity} entry above).  On
@@ -173,6 +178,10 @@ maximum time in seconds that the startd will wait for the job to
 finish before kicking it off if it needs to do so.  This is evaluated
 in the context of the job ClassAd, so it may refer to job attributes
 as well as machine attributes.
+%
+\index{ClassAd machine attribute!PartitionableSlot}
+\item[\AdAttr{PartitionableSlot}:] For SMP machines,
+a boolean value identifying that this slot may be partitioned.
 %
 \index{ClassAd machine attribute!SlotID}
 \item[\AdAttr{SlotID}:] For SMP machines, the integer

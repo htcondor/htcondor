@@ -160,6 +160,11 @@ Note that \Condor{submit} issues an error message and does not
 submit the job if both \SubmitCmd{vmware\_should\_transfer\_files}
 and \SubmitCmd{vmware\_snapshot\_disk} are \Expr{False}.
 
+Note that if snapshot disks are requested and file transfer is not
+being used, the \SubmitCmd{vmware\_dir} setting given in the submit
+file should not contain any symlink path components. This is to work
+around the issue discussed in the FAQ entry in section~
+\ref{sec:vmware-symlink-bug}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:vm-Xensubmitfile}Xen-Specific Submit Commands}

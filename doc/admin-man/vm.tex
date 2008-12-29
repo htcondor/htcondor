@@ -88,6 +88,10 @@ located in Condor's sbin directory:
 VMWARE_PERL = $(SBIN)/condor_vm_vmware.pl
 \end{verbatim}
 
+Finally, note that an execute machine's \Macro{EXECUTE} setting should not
+contain any symlinks in its path if the machine is configured to run VMware
+jobs. See the FAQ entry in section~\ref{sec:vmware-symlink-bug} for details.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Xen-Specific Configuration}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

@@ -519,4 +519,108 @@ favorite_season = "summer"
 \end{verbatim}
 \end{description}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:SMP-dynamicprovisioning}
+Dynamic \Condor{startd} Provisioning: Dynamic Slots}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{dynamic \Condor{startd} provisioning}
+\index{slots!dynamic \Condor{startd} provisioning}
+\index{slots!subdividing slots}
+
+\Term{Dynamic provisioning},
+also referred to as a partitionable \Condor{startd} or as dynamic slots,
+allows users to mark slots as partitionable. 
+This means that more than one job can occupy a single slot at any one time. 
+Typically, slots have a fixed set of resources,
+including the CPUs, memory and disk space. 
+By partitioning the slot, 
+these resources become more flexible and able to be better utilized.
+
+Dynamic provisioning provides powerful configuration
+possibilities, and so should be used with care. 
+Specifically, while preemption occurs for each individual dynamic slot,
+it cannot occur directly for the partitionable slot, 
+or for groups of dynamic slots. 
+For example, for a large number of jobs requiring 1GB of memory,
+a pool might be split up into 1GB dynamic slots. 
+In this instance a job requiring 2GB of memory will be starved
+and unable to run.
+
+Here is an example that demonstrates how more than one job
+can be matched to a single slot using dynamic provisioning.
+In this example, slot1 has the following resources:
+\begin{description}
+  \item{cpu=10}
+  \item{memory=10240}
+  \item{disk=BIG}
+\end{description}
+Assume that JobA is allocated to this slot.
+JobA includes the following requirements:
+\begin{description}
+  \item{cpu=3}
+  \item{memory=1024}
+  \item{disk=10240} 
+\end{description}
+The portion of the slot that is utilized is referred to as Slot1.1,
+and after allocation, the slot advertises that it has
+the following resources still available:
+\begin{description}
+  \item{cpu=7}
+  \item{memory=9216}
+  \item{disk=BIG-10240}
+\end{description}
+As each new job is allocated to Slot1,
+it breaks into Slot1.1, Slot1.2, etc., until the entire set of
+available resources have been consumed by jobs.
+
+To enable dynamic provisioning, 
+set the \Macro{SLOT\_TYPE\_<N>\_PARTITIONABLE} configuration variable 
+to \Expr{True}.
+The string \MacroNI{N} within the configuration variable name
+is the slot number.
+
+In a pool using dynamic provisioning, 
+jobs can have extra, and desired, resources specified in the submit
+description file:
+\begin{description}
+  \item{request\_cpus}
+  \item{request\_memory}
+  \item{request\_disk (in kilobytes)}
+\end{description}
+
+This example shows a portion of the job submit description file
+for use when submitting a job to a pool with dynamic provisioning.
+\begin{verbatim}
+universe = vanilla
+executable = 
+
+request_cpus = 3
+request_memory = 1024
+request_disk = 10240
+
+queue 
+\end{verbatim}
+
+For each type of slot,
+the original, partitionable slot and the new smaller, dynamic slots,
+an attribute is added to identify it.
+The original slot will have an attribute stating 
+\begin{verbatim}
+  PartitionableSlot = True
+\end{verbatim}
+and the dynamic slots will have an attribute 
+\begin{verbatim}
+  DynamicSlot = True
+\end{verbatim}
+These attributes may be used in a \MacroNI{START} expression for 
+the purposes of creating detailed policies.
+
+A partitionable slot will always appear as though it is not running a job.
+It will eventually show as having no available resources, 
+which will prevent further matching to new jobs.
+Because it has been effectively broken up into smaller slots,
+these will show as running jobs directly.
+These dynamic slots can also be preempted in the same way as 
+nonpartitioned slots.
+
 \index{SMP machines!configuration|)}

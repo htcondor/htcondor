@@ -1980,6 +1980,11 @@ The resources are presumed to have concurrency limits placed upon them,
 thereby limiting the number of concurrent jobs in execution which
 need the named resource.
 Commas and space characters delimit the items in the list.
+Each item in the list may specify a numerical value identifying the integer
+number of resources required for the job.
+The syntax follows the resource name by a colon character (\verb@:@)
+and the numerical value.
+See section~\ref{sec:Concurrency-Limits} for details on concurrency limits.
 
 %%%%%%%%%%%%%%%%%%%
 %% copy_to_spool 
@@ -2382,12 +2387,39 @@ universes except for the standard universe.
 %%%%%%%%%%%%%%%%%%%
 %% rendezvousdir
 %%%%%%%%%%%%%%%%%%%
-
 \index{submit commands!rendezvousdir}
 \item[rendezvousdir = $<$directory-path$>$] Used to specify the
 shared file system directory to be used for file system authentication
 when submitting to a remote scheduler.  Should be a path to a preexisting
 directory.
+
+%%%%%%%%%%%%%%%%%%%
+%% request_cpus
+%%%%%%%%%%%%%%%%%%%
+\index{submit commands!request\_cpus}
+\item[request\_cpus = $<$num-cpus$>$] For pools that enable
+dynamic \Condor{startd} provisioning
+(see section~\ref{sec:SMP-dynamicprovisioning}),
+the number of CPUs requested for this job.
+
+%%%%%%%%%%%%%%%%%%%
+%% request_disk
+%%%%%%%%%%%%%%%%%%%
+\index{submit commands!request\_disk}
+\item[request\_disk = $<$quantity$>$] For pools that enable
+dynamic \Condor{startd} provisioning
+(see section~\ref{sec:SMP-dynamicprovisioning}),
+the amount of disk space requested for this job.
+
+%%%%%%%%%%%%%%%%%%%
+%% request_memory
+%%%%%%%%%%%%%%%%%%%
+\index{submit commands!request\_memory}
+\item[request\_memory = $<$quantity$>$] For pools that enable
+dynamic \Condor{startd} provisioning
+(see section~\ref{sec:SMP-dynamicprovisioning}),
+the amount of memory space requested for this job.
+
 
 %%%%%%%%%%%%%%%%%%%
 % +
