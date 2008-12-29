@@ -3520,7 +3520,8 @@ search for the corresponding attribute names using ``slot'', instead.
 \item[\Macro{SLOT\_TYPE\_<N>\_PARTITIONABLE}]
 \label{param:SlotTypeNPartitionable}
   A boolean variable that defaults to \Expr{False}.
-  When \Expr{True}, blah, blah, blah.
+  When \Expr{True}, this slot permits dynamic provisioning, as specified in
+  section~ \ref{sec:SMP-dynamicprovisioning}.
 
 \item[\Macro{NUM\_SLOTS\_TYPE\_<N>}]
 \label{param:NumSlotsTypeN}
@@ -5084,7 +5085,7 @@ If it is not specified in the submit description file, then
 this variable specifies the universe (when defined).
 If the universe is not specified in the submit description
 file, and if this variable is not defined, then
-the default universe for a job will be the standard universe.
+the default universe for a job will be the vanilla universe.
 \end{description}
 
 If you want \Condor{submit} to automatically append an expression to
