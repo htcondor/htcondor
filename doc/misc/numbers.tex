@@ -25,6 +25,8 @@
 111 &   JOB\_NO\_CKPT\_FILE & there is no checkpoint file (as it was lost) \\ \hline
 112 &   JOB\_SHOULD\_HOLD & the job should be put on hold \\ \hline
 113 &   JOB\_SHOULD\_REMOVE & the job should be removed \\ \hline
+114 &   JOB\_MISSED\_DEFERRAL\_TIME & the job goes on hold because it did not run within the specified window of time \\ \hline
+115 &   JOB\_EXITED\_AND\_CLAIM\_CLOSING & the job exited (not killed) but the startd is not accepting any more jobs in this claim \\ \hline
 \end{tabular}
 %\caption{\label{shadow-exit-codes}\Condor{shadow} exit codes}
 \label{shadow-exit-codes}
