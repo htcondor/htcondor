@@ -45,7 +45,7 @@ chirp_client_connect_starter()
 	path.sprintf( "%s%c%s",getenv("_CONDOR_SCRATCH_DIR"),DIR_DELIM_CHAR,"chirp.config");
     file = safe_fopen_wrapper(path.Value(),"r");
     if(!file) { 
-		fprintf(stderr, "Can't open chirp.config file\n");
+		fprintf(stderr, "Can't open %s file\n",path.Value());
 		return 0;
 	}
 
