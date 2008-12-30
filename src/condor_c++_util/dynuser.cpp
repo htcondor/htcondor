@@ -130,13 +130,6 @@ dynuser::dynuser() {
 	accountname_t = NULL;
 	password_t = NULL;
 	reuse_account = true; // default is	don't delete accounts when done
-	
- 	char *x = param("reuse_condor_run_account");
- 	if ( x && ( x[0]=='F' || x[0]=='f' ) ) {
- 		reuse_account = false;
-		free(x);
-		x = NULL;
- 	}
 }
 
 ////
@@ -162,6 +155,13 @@ bool dynuser::init_user() {
 		char *logappend = NULL;
 		char* tmp = NULL;
 		char slot_num[10];
+
+		char *x = param("reuse_condor_run_account");
+		if ( x && ( x[0]=='F' || x[0]=='f' ) ) {
+			reuse_account = false;
+			free(x);
+			x = NULL;
+		}
 	 
 		if ( reuse_account ) {
 	
