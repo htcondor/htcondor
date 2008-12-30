@@ -406,6 +406,14 @@
 		<File
 			RelativePath="..\src\condor_c++_util\my_subsystem.cpp"
 			>
+			<FileConfiguration
+				Name="Release|Win32"
+				>
+				<Tool
+					Name="VCCLCompilerTool"
+					PrecompiledHeaderFile="..\Release\condor_common.pch"
+				/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\src\condor_sysapi\ncpus.c"
