@@ -28,6 +28,7 @@
 #else 
 // on .NET we must use the new MFC io libraries and they seem to work ok.
 #include <iostream>
+#include <string>
 using namespace std;
 #endif // we're not in .NET
 
@@ -56,33 +57,35 @@ CString my_get_hostname() {
 	return temp;
 }
 
-CString my_getline() {
+CString my_getline () {
 	CString retval;
-	char buff[100];
-
-	cin.get(buff, 100, '\n');
-	
-	retval += buff;
-
-	char c;
-	if(cin.get(c) && c != '\n') {
-		cin.putback(c);
-		retval += my_getline();
+	std::string line;
+	while ( std::getline ( cin, line, '\n' ) ) {
+		retval += line.c_str ();
+		retval += '\n';
 	}
-
 	retval += '\n';
 	return retval;
-}
-
-int usage(const char *myname)
-{
-
-	printf(
-		"\n USAGE: %s [-s subject] -relay smtp-relay-hostname user@address [user@address ...]\n"
-		" Then give the message to send via stdin.\n",
-		myname);
-
-	exit(1);
+}
+
+int usage(const char *myname)
+
+{
+
+
+
+	printf(
+
+		"\n USAGE: %s [-s subject] -relay smtp-relay-hostname user@address [user@address ...]\n"
+
+		" Then give the message to send via stdin.\n",
+
+		myname);
+
+
+
+	exit(1);
+
 }
 
 int main( int argc, char *argv[ ], char *envp[ ]) {
@@ -118,15 +121,19 @@ int main( int argc, char *argv[ ], char *envp[ ]) {
 	}
 
 	if (!tosomeone) {
-		printf("You forgot to add who you are sending this message too.\n");
+		printf("You forgot to add who you are sending this message too.\n");
+
 		usage(argv[0]);	// never returns
 	}
 
 	if (!arelay) {
-		// Someday, nicely figure out the relay.  
-		// For now, consider no relay specified to be an error.
+		// Someday, nicely figure out the relay.  
+
+		// For now, consider no relay specified to be an error.
+
 		usage(argv[0]);	// never returns
-	}
+	}
+
 
 	if (!AfxSocketInit()) {
 		TRACE(_T("Failed to initialise the Winsock stack\n"));
