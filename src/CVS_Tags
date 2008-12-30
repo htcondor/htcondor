@@ -1,4 +1,7 @@
-12/30/2008 V7_2-use_windows_file_extensions-branch
+12/30/2008 V7_3-use_windows_file_extensions-branch
+ Branch for new class ads on Windows, based on master.
+
+12/30/2008 V7_3-use_windows_file_extensions-branch
  Branch for detectecting Windows script types by file extension, based
  on master.
 
