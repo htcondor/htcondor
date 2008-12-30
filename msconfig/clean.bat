@@ -34,11 +34,12 @@ if /i A%1==Adebug (
     shift
 )
 if /i A%1==Aexternals ( 
-    goto :clean_externals
+    call :clean_externals
     goto :EOF
 )
 
-goto :clean_build
+call :clean_build
+call :clean_dynamic_configuration
 goto :EOF
 
 REM ======================================================================
@@ -69,6 +70,21 @@ REM Remove all the "externals" build files
 rm -rf %EXTERN_DIR%\build
 rm -rf %EXTERN_DIR%\install
 rm -rf %EXTERN_DIR%\triggers
+
+REM Return to caller
+goto :EOF
+
+REM ======================================================================
+:clean_dynamic_configuration
+REM ======================================================================
+REM Cleans out the externals
+REM ======================================================================
+
+echo Cleaning the dynamicly generated files.
+
+REM Remove all the generated files
+rm -f ..\src\h\syscall_numbers.h
+rm -f ..\src\condor_includes\config.h
 
 REM Return to caller
 goto :EOF
