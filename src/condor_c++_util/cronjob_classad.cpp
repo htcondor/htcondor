@@ -53,7 +53,7 @@ ClassAdCronJob::ClassAdCronJob( const char *mgrName,
 		EnvName += "_INTERFACE_VERSION";
 		classad_env.SetEnv( EnvName, INTERFACE_VERSION );
 
-		EnvName = mySubSystem->getName( );
+		EnvName = get_mySubSystem()->getName( );
 		EnvName += "_CRON_NAME";
 		classad_env.SetEnv( EnvName, mgrName );
 

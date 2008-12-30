@@ -145,7 +145,7 @@ FILEXML::createInstanceXML() {
         ptr = new FILEXML();
         return ptr;
     }
-	daemon_name = mySubSystem->getName();
+	daemon_name = get_mySubSystem()->getName();
 
 	tmpParamName = (char *)malloc(10+strlen(daemon_name));
 

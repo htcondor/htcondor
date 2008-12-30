@@ -12913,7 +12913,7 @@ WriteCompletionVisa(ClassAd* ad)
 
 	prev_priv_state = set_user_priv_from_ad(*ad);
 	classad_visa_write(ad,
-	                   mySubSystem->getName(),
+	                   get_mySubSystem()->getName(),
 	                   daemonCore->InfoCommandSinfulString(),
 	                   iwd.Value(),
 	                   NULL);

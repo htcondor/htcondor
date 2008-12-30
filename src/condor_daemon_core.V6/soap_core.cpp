@@ -45,7 +45,7 @@ extern SOAP_NMAC struct Namespace namespaces[];
 void
 init_soap(struct soap *soap)
 {
-	MyString subsys = MyString(mySubSystem->getName() );
+	MyString subsys = MyString(get_mySubSystem()->getName() );
 
 		// KEEP-ALIVE should be turned OFF, not ON.
 	soap_init(soap);

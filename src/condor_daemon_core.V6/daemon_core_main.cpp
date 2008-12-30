@@ -283,7 +283,7 @@ DC_Exit( int status, const char *shutdown_program )
 	if ( shutdown_program ) {
 #     if (HAVE_EXECL)
 		dprintf( D_ALWAYS, "**** %s (%s_%s) pid %lu EXITING BY EXECING %s\n",
-				 myName, myDistro->Get(), mySubSystem->getName(), pid,
+				 myName, myDistro->Get(), get_mySubSystem()->getName(), pid,
 				 shutdown_program );
 		int exec_status = execl( shutdown_program, shutdown_program, NULL );
 		dprintf( D_ALWAYS, "**** execl() FAILED %d %d %s\n",
@@ -291,7 +291,7 @@ DC_Exit( int status, const char *shutdown_program )
 #     elif defined(WIN32)
 		dprintf( D_ALWAYS,
 				 "**** %s (%s_%s) pid %lu EXECING SHUTDOWN PROGRAM %s\n",
-				 myName, myDistro->Get(), mySubSystem->getName(), pid,
+				 myName, myDistro->Get(), get_mySubSystem()->getName(), pid,
 				 shutdown_program );
 		int exec_status = execl( shutdown_program, shutdown_program, NULL );
 		if ( exec_status ) {
@@ -303,7 +303,7 @@ DC_Exit( int status, const char *shutdown_program )
 #     endif
 	}
 	dprintf( D_ALWAYS, "**** %s (%s_%s) pid %lu EXITING WITH STATUS %d\n",
-			 myName, myDistro->Get(), mySubSystem->getName(), pid,
+			 myName, myDistro->Get(), get_mySubSystem()->getName(), pid,
 			 exit_status );
 
 		// Finally, exit with the appropriate status.
@@ -321,7 +321,7 @@ static void
 kill_daemon_ad_file()
 {
 	MyString param_name;
-	param_name.sprintf( "%s_DAEMON_AD_FILE", mySubSystem->getName() );
+	param_name.sprintf( "%s_DAEMON_AD_FILE", get_mySubSystem()->getName() );
 	char *ad_file = param(param_name.Value());
 	if( !ad_file ) {
 		return;
@@ -338,7 +338,7 @@ drop_addr_file()
 	FILE	*ADDR_FILE;
 	char	addr_file[100];
 
-	sprintf( addr_file, "%s_ADDRESS_FILE", mySubSystem->getName() );
+	sprintf( addr_file, "%s_ADDRESS_FILE", get_mySubSystem()->getName() );
 
 	if( addrFile ) {
 		free( addrFile );
@@ -503,7 +503,7 @@ handle_log_append( char* append_str )
 	}
 	char *tmp1, *tmp2;
 	char buf[100];
-	sprintf( buf, "%s_LOG", mySubSystem->getName() );
+	sprintf( buf, "%s_LOG", get_mySubSystem()->getName() );
 	if( !(tmp1 = param(buf)) ) { 
 		EXCEPT( "%s not defined!", buf );
 	}
@@ -707,7 +707,7 @@ drop_core_in_log( void )
 		// give our Win32 exception handler a filename for the core file
 		char pseudoCoreFileName[MAX_PATH];
 		sprintf(pseudoCoreFileName,"%s\\core.%s.WIN32",ptmp,
-				mySubSystem->getName() );
+				get_mySubSystem()->getName() );
 		g_ExceptionHandler.SetLogFileName(pseudoCoreFileName);
 
 		// set the path where our Win32 exception handler can find
@@ -1178,7 +1178,7 @@ dc_reconfig( bool is_full )
 	}
 
 	// Reinitialize logging system; after all, LOG may have been changed.
-	dprintf_config(mySubSystem->getName() );
+	dprintf_config(get_mySubSystem()->getName() );
 	
 	// again, chdir to the LOG directory so that if we dump a core
 	// it will go there.  the location of LOG may have changed, so redo it here.
@@ -1392,15 +1392,15 @@ int main( int argc, char** argv )
 		// Make sure this is set, since DaemonCore needs it for all
 		// sorts of things, and it's better to clearly EXCEPT here
 		// than to seg fault down the road...
-	if( ! mySubSystem ) {
-		EXCEPT( "Programmer error: mySubSystem is NULL!" );
+	if( ! get_mySubSystem() ) {
+		EXCEPT( "Programmer error: get_mySubSystem() is NULL!" );
 	}
-	if( !mySubSystem->isValid() ) {
-		mySubSystem->printf( );
-		EXCEPT( "Programmer error: mySubSystem info is invalid(%s,%d,%s)!",
-				mySubSystem->getName(),
-				mySubSystem->getType(),
-				mySubSystem->getTypeName() );
+	if( !get_mySubSystem()->isValid() ) {
+		get_mySubSystem()->printf( );
+		EXCEPT( "Programmer error: get_mySubSystem() info is invalid(%s,%d,%s)!",
+				get_mySubSystem()->getName(),
+				get_mySubSystem()->getType(),
+				get_mySubSystem()->getTypeName() );
 	}
 
 
@@ -1493,7 +1493,7 @@ int main( int argc, char** argv )
 			if ( strcmp( &ptr[0][1], "local-name" ) == 0 ) {
 				ptr++;
 				if( ptr && *ptr ) {
-					mySubSystem->setLocalName( *ptr );
+					get_mySubSystem()->setLocalName( *ptr );
 					dcargs += 2;
 				}
 				else {
@@ -1616,7 +1616,7 @@ int main( int argc, char** argv )
 	}
 
 		// call config so we can call param.  
-	if ( mySubSystem->isType(SUBSYSTEM_TYPE_SHADOW) ) {
+	if ( get_mySubSystem()->isType(SUBSYSTEM_TYPE_SHADOW) ) {
 		// Try to minimize shadow footprint by not loading
 		// the "extra" info from the config file
 		config( wantsQuiet, false, false );
@@ -1663,7 +1663,7 @@ int main( int argc, char** argv )
 		}
 		
 			// Actually set up logging.
-		dprintf_config(mySubSystem->getName() );
+		dprintf_config(get_mySubSystem()->getName() );
 	}
 
 		// run as condor 99.9% of the time, so studies tell us.
@@ -1723,7 +1723,7 @@ int main( int argc, char** argv )
 		// it seems safest to just leave them open but attached to
 		// /dev/null.
 
-		if ( mySubSystem->isType( SUBSYSTEM_TYPE_MASTER ) ) {
+		if ( get_mySubSystem()->isType( SUBSYSTEM_TYPE_MASTER ) ) {
 			int	fd_null = safe_open_wrapper( NULL_FILE, O_RDWR );
 			if ( fd_null < 0 ) {
 				fprintf( stderr, "Unable to open %s: %s\n", NULL_FILE, strerror(errno) );
@@ -1751,7 +1751,7 @@ int main( int argc, char** argv )
 
 	// See if the config tells us to wait on startup for a debugger to attach.
 	MyString debug_wait_param;
-	debug_wait_param.sprintf("%s_DEBUG_WAIT", mySubSystem->getName() );
+	debug_wait_param.sprintf("%s_DEBUG_WAIT", get_mySubSystem()->getName() );
 	if (param_boolean(debug_wait_param.Value(), false, false)) {
 		int debug_wait = 1;
 		dprintf(D_ALWAYS,
@@ -1766,7 +1766,7 @@ int main( int argc, char** argv )
 		// we can instantiate a daemon core and it'll have the right
 		// pid.  Have lots of pid table hash buckets if we're the
 		// SCHEDD, since the SCHEDD could have lots of children... 
-	if ( mySubSystem->isType( SUBSYSTEM_TYPE_SCHEDD ) ) {
+	if ( get_mySubSystem()->isType( SUBSYSTEM_TYPE_SCHEDD ) ) {
 		daemonCore = new DaemonCore(503);
 	} else {
 		daemonCore = new DaemonCore();
@@ -1784,7 +1784,7 @@ int main( int argc, char** argv )
 		}
 		
 			// Actually set up logging.
-		dprintf_config(mySubSystem->getName() );
+		dprintf_config(get_mySubSystem()->getName() );
 	}
 
 		// Now that we have the daemonCore object, we can finally
@@ -1793,17 +1793,17 @@ int main( int argc, char** argv )
 		// configured now, so the dprintf()s will work.
 	dprintf(D_ALWAYS,"******************************************************\n");
 	dprintf(D_ALWAYS,"** %s (%s_%s) STARTING UP\n",
-			myName,myDistro->GetUc(), mySubSystem->getName() );
+			myName,myDistro->GetUc(), get_mySubSystem()->getName() );
 	if( myFullName ) {
 		dprintf( D_ALWAYS, "** %s\n", myFullName );
 		free( myFullName );
 		myFullName = NULL;
 	}
-	dprintf(D_ALWAYS,"** %s\n", mySubSystem->getString() );
+	dprintf(D_ALWAYS,"** %s\n", get_mySubSystem()->getString() );
 	dprintf(D_ALWAYS,"** Configuration: subsystem:%s local:%s class:%s\n",
-			mySubSystem->getName(),
-			mySubSystem->getLocalName("<NONE>"),
-			mySubSystem->getClassName( )
+			get_mySubSystem()->getName(),
+			get_mySubSystem()->getLocalName("<NONE>"),
+			get_mySubSystem()->getClassName( )
 			);
 	dprintf(D_ALWAYS,"** %s\n", CondorVersion());
 	dprintf(D_ALWAYS,"** %s\n", CondorPlatform());
@@ -1938,7 +1938,7 @@ int main( int argc, char** argv )
 		// This timer checks if our parent is dead; if so, we shutdown.
 		// We only do this on Unix; on NT we watch our parent via a different mechanism.
 		// Also note: we do not want the master to exibit this behavior!
-	if ( ! mySubSystem->isType(SUBSYSTEM_TYPE_MASTER) ) {
+	if ( ! get_mySubSystem()->isType(SUBSYSTEM_TYPE_MASTER) ) {
 		daemonCore->Register_Timer( 15, 120, 
 				(TimerHandler)check_parent, "check_parent" );
 	}
@@ -1963,9 +1963,9 @@ int main( int argc, char** argv )
 				(TimerHandler)handle_cookie_refresh, "handle_cookie_refresh");
  
 
-	if( mySubSystem->isType( SUBSYSTEM_TYPE_MASTER ) ||
-		mySubSystem->isType( SUBSYSTEM_TYPE_SCHEDD ) ||
-		mySubSystem->isType( SUBSYSTEM_TYPE_STARTD ) ) {
+	if( get_mySubSystem()->isType( SUBSYSTEM_TYPE_MASTER ) ||
+		get_mySubSystem()->isType( SUBSYSTEM_TYPE_SCHEDD ) ||
+		get_mySubSystem()->isType( SUBSYSTEM_TYPE_STARTD ) ) {
         daemonCore->monitor_data.EnableMonitoring();
     }
 
@@ -2132,7 +2132,7 @@ main( int argc, char** argv)
 			break;		// break out of for loop
 		}
 	}
-	if ( (Foreground != 1) && mySubSystem->isType(SUBSYSTEM_TYPE_MASTER) ) {
+	if ( (Foreground != 1) && get_mySubSystem()->isType(SUBSYSTEM_TYPE_MASTER) ) {
 		main_init(-1,NULL);	// passing the master main_init a -1 will register as an NT service
 		return 1;
 	} else {

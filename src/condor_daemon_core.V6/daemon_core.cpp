@@ -2343,7 +2343,7 @@ DaemonCore::reconfig(void) {
 #endif
 #ifdef HAVE_EXT_GSOAP
 #ifdef COMPILE_SOAP_SSL
-	MyString subsys = MyString(mySubSystem->getName());
+	MyString subsys = MyString(get_mySubSystem()->getName());
 	bool enable_soap_ssl = param_boolean("ENABLE_SOAP_SSL", false);
 	bool subsys_enable_soap_ssl =
 		param_boolean((subsys + "_ENABLE_SOAP_SSL").GetCStr(), false);
@@ -2393,7 +2393,7 @@ DaemonCore::reconfig(void) {
 	// a daemon core parent.
 	if ( ppid && m_want_send_child_alive ) {
 		MyString buf;
-		buf.sprintf("%s_NOT_RESPONDING_TIMEOUT",mySubSystem->getName());
+		buf.sprintf("%s_NOT_RESPONDING_TIMEOUT",get_mySubSystem()->getName());
 		max_hang_time = param_integer(buf.Value(),-1);
 		if( max_hang_time == -1 ) {
 			max_hang_time = param_integer("NOT_RESPONDING_TIMEOUT",0);
@@ -6419,7 +6419,7 @@ int DaemonCore::Create_Process(
 	// families
 	//
 	if ((family_info != NULL) && (m_proc_family == NULL)) {
-		m_proc_family = ProcFamilyInterface::create(mySubSystem->getName());
+		m_proc_family = ProcFamilyInterface::create(get_mySubSystem()->getName());
 		ASSERT(m_proc_family);
 	}
 
@@ -7548,7 +7548,7 @@ void
 DaemonCore::Proc_Family_Init()
 {
 	if (m_proc_family == NULL) {
-		m_proc_family = ProcFamilyInterface::create(mySubSystem->getName());
+		m_proc_family = ProcFamilyInterface::create(get_mySubSystem()->getName());
 		ASSERT(m_proc_family);
 	}
 }
@@ -7748,7 +7748,7 @@ DaemonCore::InitDCCommandSocket( int command_port )
 		// If we are the collector, increase the socket buffer size.  This
 		// helps minimize the number of updates (UDP packets) the collector
 		// drops on the floor.
-	if( mySubSystem->isType(SUBSYSTEM_TYPE_COLLECTOR) ) {
+	if( get_mySubSystem()->isType(SUBSYSTEM_TYPE_COLLECTOR) ) {
 		int desired_size;
 
 			// Dynamically construct the log message.
@@ -7780,7 +7780,7 @@ DaemonCore::InitDCCommandSocket( int command_port )
 		// shadows, and checkpoint servers reporting network
 		// usage.  We increase our UDP read buffers here so we
 		// don't drop those messages.
-	if( mySubSystem->isType( SUBSYSTEM_TYPE_NEGOTIATOR) ) {
+	if( get_mySubSystem()->isType( SUBSYSTEM_TYPE_NEGOTIATOR) ) {
 		int desired_size = param_integer("NEGOTIATOR_SOCKET_BUFSIZE",0);
 		if( desired_size ) {
 				// set the UDP (ssock) read size to be large, so we do
@@ -8582,7 +8582,7 @@ int DaemonCore::SendAliveToParent()
 		// over the network.  So in the event that glexec
 		// is being used, clear our first time flag so we do not
 		// EXCEPT on failure and so we only try once.
-	if ( mySubSystem->isType( SUBSYSTEM_TYPE_STARTER) && 
+	if ( get_mySubSystem()->isType( SUBSYSTEM_TYPE_STARTER) && 
 		 param_boolean("GLEXEC_STARTER",false) )
 	{
 		first_time = false;
@@ -9102,7 +9102,7 @@ DaemonCore::InitSettableAttrsLists( void )
 		if( i == ALLOW ) {
 			continue;
 		}
-		if( InitSettableAttrsList(mySubSystem->getName(), i) ) {
+		if( InitSettableAttrsList(get_mySubSystem()->getName(), i) ) {
 				// that worked, move on to the next perm level
 			continue;
 		}
@@ -9355,7 +9355,7 @@ DaemonCore::UpdateLocalAd(ClassAd *daemonAd)
     FILE    *AD_FILE;
     char    localAd_path[100];
 
-    sprintf( localAd_path, "%s_DAEMON_AD_FILE", mySubSystem->getName() );
+    sprintf( localAd_path, "%s_DAEMON_AD_FILE", get_mySubSystem()->getName() );
 
 	//localAdFile is a global from daemon_core_main.C
     if( localAdFile ) {
