@@ -404,6 +404,10 @@
 			</FileConfiguration>
 		</File>
 		<File
+			RelativePath="..\src\condor_c++_util\my_subsystem.cpp"
+			>
+		</File>
+		<File
 			RelativePath="..\src\condor_sysapi\ncpus.c"
 			>
 			<FileConfiguration
