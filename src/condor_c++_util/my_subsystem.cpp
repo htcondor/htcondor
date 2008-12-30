@@ -17,7 +17,7 @@
  *
  ***************************************************************/
 
-
+#include "condor_common.h"
 /* Dummy definition of mySubSystem string to be included in Condor
    libraries where needed. */
 #include "subsystem_info.h"
