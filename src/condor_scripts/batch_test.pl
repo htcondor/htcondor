@@ -136,7 +136,7 @@ $configlocal;
 $iswindows = 0;
 
 $wantcurrentdaemons = 1; # dont set up a new testing pool in condor_tests/TestingPersonalCondor
-$wantcorechecks = 1;
+$wantcorechecks = 0;
 $pretestsetuponly = 0; # only get the personal condor in place
 
 # set up to recover from tests which hang
@@ -198,15 +198,16 @@ while( $_ = shift( @ARGV ) ) {
                 next SWITCH;
         }
         if( /--core/ ) {
-		$want_core_dumps = 1;
+				$want_core_dumps = 1;
                 next SWITCH;
         }
         if( /--no-core/ ) {
-		$want_core_dumps = 0;
+				$want_core_dumps = 0;
                 next SWITCH;
         }
-        if( /--no-error/ ) {
-		$wantcorechecks = 0;
+        if( /^-w.*/ ) {
+				$wantcorechecks = 0;
+				$ENV{WRAP_TESTS} = "yes";
                 next SWITCH;
         }
         if( /^-d.*/ ) {
@@ -364,7 +365,7 @@ print "Ready for Testing\n";
 # line, we just use that.  otherwise, we search for all subdirectories
 # in the current directory that might be compiler subdirs...
 if( ! @compilers ) {
-	@compilers = ("g77", "gcc", "g++");
+	@compilers = ("g77", "gcc", "gpp");
     # find all compiler subdirectories in the test directory
     #opendir( TEST_DIR, $test_dir ) || die "error opening \"$test_dir\": $!\n";
     #@compilers = grep -d, readdir( TEST_DIR );
@@ -509,14 +510,16 @@ foreach $compiler (@compilers)
 }
 print "\n";
 
+my $lastcompiler = "";
 foreach $compiler (@compilers)
 {
+	$lastcompiler = $compiler;
 	# as long as we have tests to start, loop back again and start
 	# another when we are trying to keep N running at once
 	my $testspercompiler = $#{$test_suite{"$compiler"}} + 1;
 	my $currenttest = 0;
 
-	debug("Compiler/Directory <$compiler> has $testspercompiler tests\n",2); 
+	debug("Compiler/Directory <$compiler> has $testspercompiler tests\n",1); 
     if ($isXML){
       system ("mkdir -p $ResultDir/$compiler");
     } 
@@ -644,7 +647,8 @@ foreach $compiler (@compilers)
 								CompleteTestOutput($compiler,$test_name,$child,$status);
 								# if we have more tests fire off another
 								# and don't wait for the last one
-								last if $currenttest < $testspercompiler;
+								debug("currenttest<$currenttest> testspercompiler<$testspercompiler>\n",2);
+								last if $currenttest <= $testspercompiler;
 
     						} # end while
 							#next;
@@ -675,6 +679,11 @@ foreach $compiler (@compilers)
 	}
 
 	# complete the tests when batching them up
+
+	if(($groupsize != 0) && ($currentgroup < $groupsize)) {
+		# move on to next compiler dir. keep batch size full
+		last;
+	}
 
 	if($kindwait == 0) {
     	while( $child = wait() ) {
@@ -709,6 +718,34 @@ foreach $compiler (@compilers)
 	# remove compiler directory from path
 	CleanFromPath("$compilerdir");
 } # end foreach compiler dir
+
+# we may be batching and not waiting at the end of the 
+# tests for this directory if we are trying to keep N
+# going at once so wait for anythins left over....
+
+if($kindwait == 0) {
+    while( $child = wait() ) {
+        # if there are no more children, we're done
+        last if $child == -1;
+
+        # record the child's return status
+        $status = $?;
+
+		$currentgroup -= 1;
+		debug( "informed $child gone yeilding test $test{$child}\n",2);
+	
+		if(! defined $test{$child}) {
+			debug("Can't find jobname for child?<ignore>\n",2);
+			next;
+		}
+
+        ($test_name) = $test{$child} =~ /(.*)\.run$/;
+
+		StartTestOutput($lastcompiler,$test_name);
+
+		CompleteTestOutput($lastcompiler,$test_name,$child,$status);
+    } # end while
+}
 
 if ($isXML){
     print XML "</test_suite>\n";
@@ -1352,11 +1389,14 @@ sub StartTestOutput
 	my $compiler = shift;
 	my $test_program = shift;
 
+	$compilerdir = getcwd();
+	debug("StartTestOutput passed compiler<<$compiler>>\n",2);
+
 	if ($isXML){
 		print XML "<test_result>\n<name>$compiler.$test_program</name>\n<description></description>\n";
 		printf( "%-40s ", $test_program );
 	} else {
-		printf( "%-40s ", $test_program );
+		printf( "%-6s %-40s ", $compiler, $test_program );
 	}
 }
 

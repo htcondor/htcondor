@@ -28,6 +28,7 @@ package CondorTest;
 require 5.0;
 use Carp;
 use Condor;
+use CondorPersonal;
 use FileHandle;
 use Net::Domain qw(hostfqdn);
 
@@ -257,6 +258,7 @@ sub RunTest
 
     my $status           = -1;
 
+	print "RunTest says test is<<$handle>>\n";
 	# moved the reset to preserve callback registrations which includes
 	# an error callback at submit time..... Had to change timing
 	CondorTest::Reset();
@@ -283,6 +285,14 @@ sub RunTest
 
 	CheckRegistrations();
 
+	my $wrap_test = $ENV{WRAP_TESTS};
+
+	my $config = "";
+	if(defined  $wrap_test) {
+		$config = PersonalCondorTest($submit_file);
+		print "PersonalCondorTest returned this config file<$config>\n";
+	}
+
     # submit the job and get the cluster id
     $cluster = Condor::TestSubmit( $submit_file );
     
@@ -294,6 +304,12 @@ sub RunTest
 
     die "$handle: FAILURE (job never checkpointed)\n"
 	if $wants_checkpoint && $checkpoints < 1;
+	if(defined  $wrap_test) {
+		if($config ne "") {
+			CondorPersonal::KillDaemonPids($config);
+			print "KillDaemonPids called on this config file<$config>\n";
+		}
+	}
 
     return $retval;
 }
@@ -505,7 +521,7 @@ sub CompareText
 	debug("\$\$aref[0] = $$aref[0]\n",4);
 
 	debug("skiplines = \"@skiplines\"\n",4);
-	print "grep returns ", grep( /^$linenum$/, @skiplines ), "\n";
+	#print "grep returns ", grep( /^$linenum$/, @skiplines ), "\n";
 
 	next if grep /^$linenum$/, @skiplines;
 
@@ -1234,7 +1250,7 @@ sub PersonalPolicySearchLog
 
     #my $logloc = $pid . "/" . $pid . $personal . "/log/" . $logname;
     my $logloc = $logdir . "/" . $logname;
-    CondorTest::debug("Search this log <$logloc> for <$policyitem>\n",1);
+    debug("Search this log <$logloc> for <$policyitem>\n",1);
     open(LOG,"<$logloc") || die "Can not open logfile<$logloc>: $!\n";
     while(<LOG>) {
         if( $_ =~ /^.*Security Policy.*$/) {
@@ -1242,7 +1258,7 @@ sub PersonalPolicySearchLog
                 if( $_ =~ /^\s*$policyitem\s*=\s*\"(\w+)\"\s*$/ ) {
                     #print "FOUND IT! $1\n";
                     if(!defined $securityoptions{$1}){
-                        CondorTest::debug("Returning <<$1>>\n",1);
+                        debug("Returning <<$1>>\n",1);
                         return($1);
                     }
                 }
@@ -1250,6 +1266,64 @@ sub PersonalPolicySearchLog
         }
     }
     return("bad");
+}
+
+sub PersonalCondorTest
+{
+	my $submitfile = shift;
+	my $cmd = "condor_config_val log";
+	my $locconfig = "";
+    print "Running this command: <$cmd> \n";
+    # shhhhhhhh third arg 0 makes it hush its output
+	$logdir = `condor_config_val log`;
+	fullchomp($logdir);
+	print "log dir is<$logdir>\n";
+	if($logdir =~ /^.*condor_tests.*$/){
+		print "Running within condor_tests\n";
+		if($logdir =~ /^.*TestingPersonalCondor.*$/){
+			print "Running with outer testing personal condor\n";
+			my $testname = findOutput($submitfile);
+			print "findOutput saya test is $testname\n";
+			my $version = "local";
+			
+			# get a local scheduler running (side a)
+			my $configloc = CondorPersonal::StartCondor( $testname, "x_param.basic_personal" ,$version);
+			my @local = split /\+/, $configloc;
+			$locconfig = shift @local;
+			my $locport = shift @local;
+			
+			debug("---local config is $locconfig and local port is $locport---\n",1);
+
+			$ENV{CONDOR_CONFIG} = $locconfig;
+		}
+	} else {
+		print "Running outside of condor_tests\n";
+	}
+	return($locconfig);
+}
+
+sub findOutput
+{
+	my $submitfile = shift;
+	open(SF,"<$submitfile") or die "Failed to open <$submitfile>:$!\n";
+	my $testname = "UNKNOWN";
+	$line = "";
+	while(<SF>) {
+		chomp($_);
+		$line = $_;
+		if($line =~ /^\s*[Ll]og\s+=\s+(.*)(\..*)$/){
+			$testname = $1;
+			$previouslog = $1 . $2;
+			system("rm -f $previouslog");
+		}
+	}
+	close(SF);
+	print "findOutput returning <$testname>\n";
+	if($testname eq "UNKNOWN") {
+		print "failed to find testname in this submit file:$submitfile\n";
+		system("cat $submitfile");
+	}
+	return($testname);
 }
 
 # Call down to Condor Perl Module for now
