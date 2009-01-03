@@ -1,3 +1,9 @@
+01/02/2009 V7_2-mysubsystem_fix-branch
+  Branch used to ensure that the new MySubsystem implementation works as
+  expected on Windows.  Currently, if some of the tools are built from the
+  command-line, they will except when accessing an uninitialized mySsubsystem
+  structure.  The branch is based on V7_2-branch.
+
 12/18/2008 V7_2-use_windows_file_extensions-branch
   Branch for detectecting Windows script types by file extension, based
   on V7_2-branch.
