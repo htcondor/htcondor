@@ -27,7 +27,7 @@
 #include "condor_config.h"
 
 
-char *get_mySubSystem() = "TEST";
+char *mySubSystem = "TEST";
 
 
 int
