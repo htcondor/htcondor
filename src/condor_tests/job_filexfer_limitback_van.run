@@ -21,7 +21,7 @@
 use CondorTest;
 
 $cmd      = 'job_filexfer_limitback_van.cmd';
-$testname = 'Base file transfer when some expected files are not produced - vanilla U';
+$testname = 'Base file transfer requesting a subset of output files - vanilla U';
 
 # truly const variables in perl
 sub IDLE{1};
@@ -50,6 +50,7 @@ $execute = sub {
 $success = sub
 {
 	CondorTest::debug("Base file transfer job!\n",1);
+	if(-f "$oute"){ print "$oute arrived unexpectedly\n"; exit(1)};
 	if(!-f "$outf"){ print "$outf failed to arrive\n"; exit(1)};
 	if(!-f "$outg"){ print "$outg failed to arrive\n"; exit(1)};
 };
