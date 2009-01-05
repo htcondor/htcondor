@@ -105,7 +105,6 @@ $submit = sub {
 
 $aborted = sub {
 	CondorTest::debug("Cleaning held job.......\n",1);
-	exit(0);
 };
 
 $ExitSuccess = sub {

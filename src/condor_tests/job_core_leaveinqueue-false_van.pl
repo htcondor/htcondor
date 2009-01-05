@@ -78,7 +78,7 @@ $success = sub
 			next;
 		} else {
 			CondorTest::debug("Job not in queue as expected\n",1);
-			exit(0);
+			last;
 		}
 	}
 	if($foundit == 1) {

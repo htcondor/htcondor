@@ -31,7 +31,7 @@ sub RUNNING{2};
 my $alreadydone=0;
 
 
-my $spool = `condor_config_val SPOOL`;
+my $spool = "";
 CondorTest::fullchomp($spool);
 CondorTest::debug("Spool is in --$spool--\n",1);
 
@@ -51,6 +51,9 @@ $execute = sub {
 	my %args = @_;
 	my $cluster = $args{"cluster"};
 
+	$spool = `condor_config_val SPOOL`;
+	CondorTest::fullchomp($spool);
+	CondorTest::debug("Spool is in --$spool--\n",1);
 	if($haveseenrun == 0) {
 		$haveseenrun = 1;
 	} else {

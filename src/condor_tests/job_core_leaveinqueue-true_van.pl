@@ -106,7 +106,9 @@ $success = sub
 		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 		exit(1)
 	}
-	exit($return);
+	if($return == 1) {
+		exit($return);
+	}
 };
 
 $submitted = sub
