@@ -30,6 +30,7 @@ use Carp;
 use Condor;
 use CondorPersonal;
 use FileHandle;
+use POSIX "sys_wait_h";
 use Net::Domain qw(hostfqdn);
 
 my %securityoptions =
@@ -257,6 +258,9 @@ sub RunTest
     my $wants_checkpoint = shift;
 
     my $status           = -1;
+	my $monitorpid = 0;
+	my $waitpid = 0;
+	my $monitorret = 0;
 
 	print "RunTest says test is<<$handle>>\n";
 	# moved the reset to preserve callback registrations which includes
@@ -267,9 +271,6 @@ sub RunTest
 
     # this is kludgey :: needed to happen sooner for an error message callback in runcommand
     $Condor::submit_info{'handle'} = $handle;
-
-    # this is kludgey :: needed to happen sooner for an error message callback in runcommand
-    #$Condor::submit_info{'handle'} = $handle;
 
     # if we want a checkpoint, register a function to force a vacate
     # and register a function to check to make sure it happens
@@ -297,21 +298,68 @@ sub RunTest
     $cluster = Condor::TestSubmit( $submit_file );
     
     # if condor_submit failed for some reason return an error
-    return 0 if $cluster == 0;
+    if($cluster == 0){
+	} else {
 
-    # monitor the cluster and return its exit status
-    $retval = Condor::Monitor();
-
-    die "$handle: FAILURE (job never checkpointed)\n"
-	if $wants_checkpoint && $checkpoints < 1;
-	if(defined  $wrap_test) {
-		if($config ne "") {
-			CondorPersonal::KillDaemonPids($config);
-			print "KillDaemonPids called on this config file<$config>\n";
+    	# monitor the cluster and return its exit status
+		# note 1/2/09 bt
+		# any exits cause monitor to never return allowing us
+		# to kill personal condor wrapping the test :-(
+		
+		$monitorpid = fork();
+		if($monitorpid == 0) {
+			# child does monitor
+    		$monitorret = Condor::Monitor();
+			debug( "Monitor did return on its own status<<<$monitorret>>>\n",4);
+			if(  $monitorret == 1 ) {
+				debug( "child happy to exit 0\n",4);
+				exit(0);
+			} else {
+				debug( "child not happy to exit 1\n",4);
+				exit(1);
+			}
+		} else {
+			# parent cleans up
+			$waitpid = waitpid($monitorpid, 0);
+			if($waitpid == -1) {
+				debug( "No such process <<$monitorpid>>\n",4);
+			} else {
+				$retval = $?;
+				debug( "Child status was <<$retval>>\n",4);
+				if( WIFEXITED( $retval ) && WEXITSTATUS( $retval ) == 0 )
+				{
+					debug( "Monitor done and status good!\n",4);
+					$retval = 1;
+				} else {
+					my $status = WEXITSTATUS( $retval );
+					debug( "Monitor done and status bad<<$status>>!\n",4);
+					$retval = 0;
+				}
+			}
 		}
 	}
 
-    return $retval;
+	debug( "************** condor_monitor back ************************ \n",4);
+
+	if(defined  $wrap_test) {
+		if($config ne "") {
+			print "KillDaemonPids called on this config file<$config>\n";
+			CondorPersonal::KillDaemonPids($config);
+		} else {
+			print "No config setting to call KillDaemonPids with\n";
+		}
+	} else {
+		debug( "Not currently wrapping tests\n",4);
+	}
+
+    die "$handle: FAILURE (job never checkpointed)\n"
+	if $wants_checkpoint && $checkpoints < 1;
+
+    if($cluster == 0){
+		return(0);
+	} else {
+    	return $retval;
+	}
 }
 
 sub RunDagTest
@@ -322,6 +370,9 @@ sub RunDagTest
 	my $dagman_args = 	shift || croak "missing dagman args";
 
     my $status           = -1;
+	my $monitorpid = 0;
+	my $waitpid = 0;
+	my $monitorret = 0;
 
     croak "too many arguments" if shift;
 
@@ -346,19 +397,79 @@ sub RunDagTest
 
 	CheckRegistrations();
 
+	my $wrap_test = $ENV{WRAP_TESTS};
+
+	my $config = "";
+	if(defined  $wrap_test) {
+		$config = PersonalCondorTest($submit_file);
+		print "PersonalCondorTest returned this config file<$config>\n";
+	}
+
     # submit the job and get the cluster id
     $cluster = Condor::TestSubmitDagman( $submit_file, $dagman_args );
     
-    # if condor_submit failed for some reason return an error
-    return 0 if $cluster == 0;
+	if($cluster == 0){
+    	# if condor_submit failed for some reason return an error
+	} else {
+    	# monitor the cluster and return its exit status
+		# note 1/2/09 bt
+		# any exits cause monitor to never return allowing us
+		# to kill personal condor wrapping the test :-(
+		
+		$monitorpid = fork();
+		if($monitorpid == 0) {
+			# child does monitor
+    		$monitorret = Condor::Monitor();
+			debug( "Monitor did return on its own status<<<$monitorret>>>\n",4);
+			if(  $monitorret == 1 ) {
+				debug( "child happy to exit 0\n",4);
+				exit(0);
+			} else {
+				debug( "child not happy to exit 1\n",4);
+				exit(1);
+			}
+		} else {
+			# parent cleans up
+			$waitpid = waitpid($monitorpid, 0);
+			if($waitpid == -1) {
+				debug( "No such process <<$monitorpid>>\n",4);
+			} else {
+				$retval = $?;
+				debug( "Child status was <<$retval>>\n",4);
+				if( WIFEXITED( $retval ) && WEXITSTATUS( $retval ) == 0 )
+				{
+					debug( "Monitor done and status good!\n",4);
+					$retval = 1;
+				} else {
+					my $status = WEXITSTATUS( $retval );
+					debug( "Monitor done and status bad<<$status>>!\n",4);
+					$retval = 0;
+				}
+			}
+		}
+	}
 
-    # monitor the cluster and return its exit status
-    $retval = Condor::Monitor();
+	debug( "************** condor_monitor back ************************ \n",4);
+
+	if(defined  $wrap_test) {
+		if($config ne "") {
+			print "KillDaemonPids called on this config file<$config>\n";
+			CondorPersonal::KillDaemonPids($config);
+		} else {
+			print "No config setting to call KillDaemonPids with\n";
+		}
+	} else {
+		debug( "Not currently wrapping tests\n",4);
+	}
 
     die "$handle: FAILURE (job never checkpointed)\n"
 	if $wants_checkpoint && $checkpoints < 1;
 
-    return $retval;
+	if($cluster == 0){
+		return(0);
+	} else {
+		return $retval;
+	}
 }
 
 sub CheckTimedRegistrations
