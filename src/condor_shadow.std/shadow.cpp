@@ -308,7 +308,7 @@ main(int argc, char *argv[] )
 	*/ 
 	set_condor_priv();
 
-	dprintf_config( mySubSystem->getName() );
+	dprintf_config( get_mySubSystem()->getName() );
 	DebugId = whoami;
 
 	// create a database connection object

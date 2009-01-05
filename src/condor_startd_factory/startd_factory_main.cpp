@@ -35,7 +35,7 @@
 //-------------------------------------------------------------
 
 // about self
-char* mySubSystem = "STARTD_FACTORY";		// used by Daemon Core
+char* get_mySubSystem() = "STARTD_FACTORY";		// used by Daemon Core
 
 //-------------------------------------------------------------
 

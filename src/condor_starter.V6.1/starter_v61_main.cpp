@@ -182,13 +182,13 @@ DECL_SUBSYSTEM( NULL, SUBSYSTEM_TYPE_STARTER );
 void
 main_pre_dc_init( int argc, char* argv[] )
 {	
-		// figure out what mySubSystem should be based on argv[0], or
+		// figure out what get_mySubSystem() should be based on argv[0], or
 		// if we see "-gridshell" anywhere on the command-line
 	const char* base = condor_basename(argv[0]);
 	char const *tmp;
 	tmp = strrchr(base, '_' );
 	if( tmp && strincmp(tmp, "_gridshell", 10) == MATCH ) {
-		mySubSystem->setName( "GRIDSHELL" );
+		get_mySubSystem()->setName( "GRIDSHELL" );
 		is_gridshell = true;
 	} else { 
 		int i, len;
@@ -200,19 +200,19 @@ main_pre_dc_init( int argc, char* argv[] )
 				continue;
 			}
 			if( strincmp(argv[i], "-gridshell", MIN(len,10)) == MATCH ) {
-				mySubSystem->setName( "GRIDSHELL" );
+				get_mySubSystem()->setName( "GRIDSHELL" );
 				is_gridshell = true;
 				break;
 			}
 		}
 	}
 	if( ! is_gridshell ) {
-		mySubSystem->setName( "STARTER" );
+		get_mySubSystem()->setName( "STARTER" );
 	}
 
 		// if we were passed "-classad", just print our classad and
 		// exit, without going back to daemoncore or anything.  we
-		// need to do this *after* we set mySubSystem, since this ends
+		// need to do this *after* we set get_mySubSystem(), since this ends
 		// up calling functions that rely on it being defined...  
 	if( argc == 2 && strincmp(argv[1],"-cla",4) == MATCH ) {
 			// needed for Java stuff
@@ -230,7 +230,7 @@ main_pre_dc_init( int argc, char* argv[] )
 
 		//Termlog = 1;
 
-		dprintf_config(mySubSystem->getName() );
+		dprintf_config(get_mySubSystem()->getName() );
 
 		printClassAd();
 		exit(0);

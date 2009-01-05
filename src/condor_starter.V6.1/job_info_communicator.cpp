@@ -745,7 +745,7 @@ JobInfoCommunicator::writeExecutionVisa( ClassAd& visa_ad )
 	priv_state priv = set_user_priv();
 	MyString filename;
 	bool ok = classad_visa_write(&visa_ad,
-	                             mySubSystem->getName(),
+	                             get_mySubSystem()->getName(),
 	                             daemonCore->InfoCommandSinfulString(),
 	                             iwd.Value(),
 	                             &filename);

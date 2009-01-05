@@ -485,12 +485,12 @@ SubsystemInfo::getString( void ) const
 	return buf;
 }
 
-/* Helper function to retrieve the value of mySubSystem global variable
- * from C functions.  This is helpful because mySubSystem is decorated w/ C++
+/* Helper function to retrieve the value of get_mySubSystem() global variable
+ * from C functions.  This is helpful because get_mySubSystem() is decorated w/ C++
  * linkage.
  */
 extern "C" {
-	const char* get_mySubSystem(void) { return mySubSystem->getName(); }
-	SubsystemType get_mySubsystemType(void)  { return mySubSystem->getType(); }
+	const char* get_mySubSystemName(void) { return get_mySubSystem()->getName(); }
+	SubsystemType get_mySubsystemType(void)  { return get_mySubSystem()->getType(); }
 }
 

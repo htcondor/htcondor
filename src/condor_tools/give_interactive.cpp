@@ -247,13 +247,13 @@ make_request_ad(ClassAd & requestAd, const char *rank)
 	requestAd.SetMyTypeName (JOB_ADTYPE);
 	requestAd.SetTargetTypeName (STARTD_ADTYPE);
 
-	mySubSystem->setTempName( "SUBMIT" );
+	get_mySubSystem()->setTempName( "SUBMIT" );
 	config_fill_ad( &requestAd );
-	mySubSystem->resetTempName( );
+	get_mySubSystem()->resetTempName( );
 
-	mySubSystem->setTempName( "TOOL" );
+	get_mySubSystem()->setTempName( "TOOL" );
 	config_fill_ad( &requestAd );
-	mySubSystem->resetTempName( );
+	get_mySubSystem()->resetTempName( );
 
 	requestAd.Assign(ATTR_INTERACTIVE, true);
 	requestAd.Assign(ATTR_SUBMITTOR_PRIO, priority);

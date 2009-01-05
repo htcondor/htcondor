@@ -137,18 +137,18 @@ config_fill_ad( ClassAd* ad, const char *prefix )
 
 	if( !ad ) return;
 
-	if ( ( NULL == prefix ) && mySubSystem->hasLocalName() ) {
-		prefix = mySubSystem->getLocalName();
+	if ( ( NULL == prefix ) && get_mySubSystem()->hasLocalName() ) {
+		prefix = get_mySubSystem()->getLocalName();
 	}
 
-	buffer.sprintf( "%s_EXPRS", mySubSystem->getName() );
+	buffer.sprintf( "%s_EXPRS", get_mySubSystem()->getName() );
 	tmp = param( buffer.Value() );
 	if( tmp ) {
 		reqdExprs.initializeFromString (tmp);	
 		free (tmp);
 	}
 
-	buffer.sprintf( "%s_ATTRS", mySubSystem->getName() );
+	buffer.sprintf( "%s_ATTRS", get_mySubSystem()->getName() );
 	tmp = param( buffer.Value() );
 	if( tmp ) {
 		reqdExprs.initializeFromString (tmp);	
@@ -156,14 +156,14 @@ config_fill_ad( ClassAd* ad, const char *prefix )
 	}
 
 	if(prefix) {
-		buffer.sprintf( "%s_%s_EXPRS", prefix, mySubSystem->getName() );
+		buffer.sprintf( "%s_%s_EXPRS", prefix, get_mySubSystem()->getName() );
 		tmp = param( buffer.Value() );
 		if( tmp ) {
 			reqdExprs.initializeFromString (tmp);	
 			free (tmp);
 		}
 
-		buffer.sprintf( "%s_%s_ATTRS", prefix, mySubSystem->getName() );
+		buffer.sprintf( "%s_%s_ATTRS", prefix, get_mySubSystem()->getName() );
 		tmp = param( buffer.Value() );
 		if( tmp ) {
 			reqdExprs.initializeFromString (tmp);	
@@ -189,7 +189,7 @@ config_fill_ad( ClassAd* ad, const char *prefix )
 			if( !ad->Insert( buffer.Value() ) ) {
 				dprintf(D_ALWAYS,
 						"CONFIGURATION PROBLEM: Failed to insert ClassAd attribute %s.  The most common reason for this is that you forgot to quote a string value in the list of attributes being added to the %s ad.\n",
-						buffer.Value(), mySubSystem->getName() );
+						buffer.Value(), get_mySubSystem()->getName() );
 			}
 
 			free( expr );
@@ -601,7 +601,7 @@ real_config(char* host, int wantsQuiet, bool wantExtraInfo)
 	}
 
 	dprintf( D_CONFIG, "config: using subsystem '%s', local '%s'\n",
-			 mySubSystem->getName(), mySubSystem->getLocalName("") );
+			 get_mySubSystem()->getName(), get_mySubSystem()->getLocalName("") );
 
 		/*
 		  N.B. if we are using the yellow pages, system calls which are
@@ -1260,7 +1260,7 @@ fill_attributes()
 		extra_info->AddInternalParam("UNAME_OPSYS");
 	}
 
-	insert( "subsystem", mySubSystem->getName(), ConfigTab, TABLESIZE );
+	insert( "subsystem", get_mySubSystem()->getName(), ConfigTab, TABLESIZE );
 	extra_info->AddInternalParam("subsystem");
 }
 
@@ -1356,9 +1356,9 @@ param( const char *name )
 	// subsystem / local.
 
 	// 1. "subsys.local.name"
-	const char	*local = mySubSystem->getLocalName();
+	const char	*local = get_mySubSystem()->getLocalName();
 	if (  (NULL == val) && local ) {
-		prefix = mySubSystem->getName();
+		prefix = get_mySubSystem()->getName();
 		prefix += ".";
 		prefix += local;
 		prefix += ".";
@@ -1374,7 +1374,7 @@ param( const char *name )
 	}
 	// 3. "subsys.name"
 	if ( NULL == val ) {
-		prefix = mySubSystem->getName();
+		prefix = get_mySubSystem()->getName();
 		prefix += ".";
 		param_name = prefix + name;
 		val = lookup_macro( param_name.GetCStr(), ConfigTab, TABLESIZE );
@@ -1740,7 +1740,7 @@ reinsert_specials( char* host )
 		insert( "hostname", my_hostname(), ConfigTab, TABLESIZE );
 	}
 	insert( "full_hostname", my_full_hostname(), ConfigTab, TABLESIZE );
-	insert( "subsystem", mySubSystem->getName(), ConfigTab, TABLESIZE );
+	insert( "subsystem", get_mySubSystem()->getName(), ConfigTab, TABLESIZE );
 	extra_info->AddInternalParam("hostname");
 	extra_info->AddInternalParam("full_hostname");
 	extra_info->AddInternalParam("subsystem");
@@ -1917,7 +1917,7 @@ init_dynamic_config()
 		// if we're using runtime config, try a subsys-specific config
 		// knob for the root location
 	MyString filename_parameter;
-	filename_parameter.sprintf( "%s_CONFIG", mySubSystem->getName() );
+	filename_parameter.sprintf( "%s_CONFIG", get_mySubSystem()->getName() );
 	tmp = param( filename_parameter.Value() );
 	if( tmp ) {
 		toplevel_persistent_config = tmp;
@@ -1928,7 +1928,7 @@ init_dynamic_config()
 	tmp = param( "PERSISTENT_CONFIG_DIR" );
 
 	if( !tmp ) {
-		if ( mySubSystem->isClient( ) || !have_config_source ) {
+		if ( get_mySubSystem()->isClient( ) || !have_config_source ) {
 				/*
 				   we are just a tool, not a daemon.
 				   or, we were explicitly told we don't have
@@ -1948,7 +1948,7 @@ init_dynamic_config()
 	}
 	toplevel_persistent_config.sprintf( "%s%c.config.%s", tmp,
 										DIR_DELIM_CHAR,
-										mySubSystem->getName() );
+										get_mySubSystem()->getName() );
 	free(tmp);
 }
 

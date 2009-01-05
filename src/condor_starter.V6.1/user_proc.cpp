@@ -176,7 +176,7 @@ UserProc::PublishToEnv( Env* proc_env )
 {
 	if (m_proc_exited) {
 			// TODO: what should these really be called?  use
-			// myDistro?  mySubSystem?  hard to say...
+			// myDistro?  get_mySubSystem()?  hard to say...
 		MyString base;
 		base = "_";
 		base += myDistro->Get();
@@ -317,17 +317,17 @@ UserProc::getStdFile( std_file_type type,
 		case SFT_IN:
 			*out_fd = Starter->starterStdinFd();
 			dprintf( D_ALWAYS, "%s: using STDIN of %s\n", log_header,
-					 mySubSystem->getName() );
+					 get_mySubSystem()->getName() );
 			break;
 		case SFT_OUT:
 			*out_fd = Starter->starterStdoutFd();
 			dprintf( D_ALWAYS, "%s: using STDOUT of %s\n", log_header,
-					 mySubSystem->getName() );
+					 get_mySubSystem()->getName() );
 			break;
 		case SFT_ERR:
 			*out_fd = Starter->starterStderrFd();
 			dprintf( D_ALWAYS, "%s: using STDERR of %s\n", log_header,
-					 mySubSystem->getName() );
+					 get_mySubSystem()->getName() );
 			break;
 		}
 		return true;

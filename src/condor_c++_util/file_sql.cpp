@@ -441,7 +441,7 @@ FILESQL::createInstance(bool use_sql_log) {
 	char *tmpParamName;
 	const char *daemon_name;
 	
-	daemon_name = mySubSystem->getName();
+	daemon_name = get_mySubSystem()->getName();
 
 	tmpParamName = (char *)malloc(10+strlen(daemon_name));
 
