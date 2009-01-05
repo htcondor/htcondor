@@ -80,7 +80,7 @@ REM ======================================================================
 REM Cleans out the externals
 REM ======================================================================
 
-echo Cleaning the dynamicly generated files.
+echo Cleaning the dynamically generated files.
 
 REM Remove all the generated files
 rm -f ..\src\h\syscall_numbers.h

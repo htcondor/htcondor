@@ -107,7 +107,7 @@ int Condor_Auth_Kerberos :: authenticate(const char * /* remoteHost */, CondorEr
 		// initialize everything if needed.
 		if (init_kerberos_context() && init_server_info()) {
             
-			if (isDaemon() || mySubSystem->isDaemon() ) {
+			if (isDaemon() || get_mySubSystem()->isDaemon() ) {
 				status = init_daemon();
 			} else {
 				status = init_user();

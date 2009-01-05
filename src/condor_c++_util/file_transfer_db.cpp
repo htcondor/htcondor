@@ -81,7 +81,7 @@ void file_transfer_db(file_transfer_record *rp, ClassAd *ad)
 		return;
 
 		// check if we are in starter process
-	if (mySubSystem->isType(SUBSYSTEM_TYPE_STARTER) )
+	if (get_mySubSystem()->isType(SUBSYSTEM_TYPE_STARTER) )
 		inStarter = TRUE;
 
 	ad->LookupString(ATTR_GLOBAL_JOB_ID, globalJobId);

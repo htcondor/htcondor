@@ -157,11 +157,14 @@ class SubsystemInfo
 	SubsystemClass setClass ( const SubsystemInfoLookup * );
 };
 
-extern SubsystemInfo	*mySubSystem;
+extern SubsystemInfo* get_mySubSystem();
 
 // Macro to declare subsystem info
 #define DECL_SUBSYSTEM(_name_,_type_) \
-	SubsystemInfo* mySubSystem = new SubsystemInfo(_name_,_type_)
+	SubsystemInfo* get_mySubSystem() { \
+		static SubsystemInfo* mySubSystem \
+			= new SubsystemInfo(_name_,_type_); \
+		return mySubSystem; }
 
 #endif	// C++
 
@@ -169,8 +172,8 @@ extern SubsystemInfo	*mySubSystem;
 // "C" accessors
 BEGIN_C_DECLS
 
-const char* get_mySubSystem(void);
-SubsystemType get_mySubsystemType(void);
+const char* get_mySubSystemName(void);
+SubsystemType get_mySubSystemType(void);
 	
 END_C_DECLS
 

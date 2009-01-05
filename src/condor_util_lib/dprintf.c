@@ -838,7 +838,7 @@ _condor_dprintf_exit( int error_code, const char* msg )
 	tmp = param( "LOG" );
 	if( tmp ) {
 		snprintf( buf, sizeof(buf), "%s/dprintf_failure.%s",
-				  tmp, get_mySubSystem() );
+				  tmp, get_mySubSystemName() );
 		fail_fp = safe_fopen_wrapper( buf, "w",0644 );
 		if( fail_fp ) {
 			fprintf( fail_fp, "%s", header );

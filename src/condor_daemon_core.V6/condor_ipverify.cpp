@@ -142,11 +142,11 @@ IpVerify::Init()
 		MyString allow_param, deny_param;
 
 		pNewAllow = SecMan::getSecSetting("ALLOW_%s",perm,&allow_param,
-										  mySubSystem->getName() );
+										  get_mySubSystem()->getName() );
 
         // This is the old stuff, eventually it will be gone
 		pOldAllow = SecMan::getSecSetting("HOSTALLOW_%s",perm,&allow_param,
-										  mySubSystem->getName() );
+										  get_mySubSystem()->getName() );
 
         // Treat a "*", "*/*" for USERALLOW_XXX as if it's just
         // undefined. 
@@ -165,10 +165,10 @@ IpVerify::Init()
 		pAllow = merge(pNewAllow, pOldAllow);
 
 		pNewDeny = SecMan::getSecSetting("DENY_%s",perm,&deny_param,
-										 mySubSystem->getName() );
+										 get_mySubSystem()->getName() );
 
 		pOldDeny = SecMan::getSecSetting("HOSTDENY_%s",perm,&deny_param,
-										 mySubSystem->getName() );
+										 get_mySubSystem()->getName() );
 
 		// concat the two
 		pDeny = merge(pNewDeny, pOldDeny);

@@ -1701,7 +1701,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		if( rc < 0 ) {
 			int the_error = errno;
 			error_buf.sprintf("%s at %s failed to receive file %s",
-			                  mySubSystem->getName(),
+			                  get_mySubSystem()->getName(),
 							  s->sender_ip_str(),fullname.Value());
 			download_success = false;
 			if(rc == GET_FILE_OPEN_FAILED || rc == GET_FILE_WRITE_FAILED) {
@@ -1765,7 +1765,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		record.elapsed  = elapsed;
     
 			// Get the name of the daemon calling DoDownload
-		strncpy(daemon, mySubSystem->getName(), 15);
+		strncpy(daemon, get_mySubSystem()->getName(), 15);
 		record.daemon = daemon;
 
 		record.sockp =s;
@@ -1804,7 +1804,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 
 		MyString download_error_buf;
 		download_error_buf.sprintf("%s failed to receive file(s) from %s",
-						  mySubSystem->getName(),peer_ip_str);
+						  get_mySubSystem()->getName(),peer_ip_str);
 		error_buf.sprintf("%s; %s",
 						  upload_error_buf.Value(),
 						  download_error_buf.Value());
@@ -2714,7 +2714,7 @@ FileTransfer::ExitDoUpload(filesize_t *total_bytes, ReliSock *s, priv_state save
 			MyString error_desc_to_send;
 			if(!upload_success) {
 				error_desc_to_send.sprintf("%s at %s failed to send file(s) to %s",
-										   mySubSystem->getName(),
+										   get_mySubSystem()->getName(),
 										   s->sender_ip_str(),
 										   s->get_sinful_peer());
 				if(upload_error_desc) {
@@ -2747,7 +2747,7 @@ FileTransfer::ExitDoUpload(filesize_t *total_bytes, ReliSock *s, priv_state save
 		}
 
 		error_buf.sprintf("%s at %s failed to send file(s) to %s",
-						  mySubSystem->getName(),
+						  get_mySubSystem()->getName(),
 						  s->sender_ip_str(),receiver_ip_str);
 		if(upload_error_desc) {
 			error_buf.sprintf_cat(": %s",upload_error_desc);
