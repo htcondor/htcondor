@@ -680,11 +680,6 @@ foreach $compiler (@compilers)
 
 	# complete the tests when batching them up
 
-	if(($groupsize != 0) && ($currentgroup < $groupsize)) {
-		# move on to next compiler dir. keep batch size full
-		last;
-	}
-
 	if($kindwait == 0) {
     	while( $child = wait() ) {
         	# if there are no more children, we're done
