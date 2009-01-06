@@ -37,7 +37,7 @@ my $writelog = "./x_write_joblog_events.exe";
 
 CondorTest::debug("Result File is $resultfile\n",1);
 
-system("chmod -R 777 .");
+#system("chmod -R 777 .");
 
 ####################################################################
 ####################################################################
@@ -109,7 +109,7 @@ $line = "";
 while(<RES>) {
 	$line = $_;
 	CondorTest::debug("RESULTS: $line\n",1);
-	if($line =~ /^Exit\s+(\d+)\s+Signal\s+\d+$/) {
+	if($line =~ /^Exit\s+(\d+).*$/) {
 		if($1 == 0) {
 			CondorTest::debug("Exit status of 0, expected. Good!\n",1);
 			exit(0);
