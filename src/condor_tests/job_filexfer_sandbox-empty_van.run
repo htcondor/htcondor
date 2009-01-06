@@ -23,7 +23,8 @@ use CondorTest;
 use File::Path;
 
 $cmd = 'job_filexfer_sandbox-empty_van.cmd';
-$testname = 'file transfer sandbox empty (vanilla) test';
+$testdesc =  'file transfer sandbox empty (vanilla) test';
+$testname = "job_filexfer_sandbox-empty_van";
 
 # How many seconds after the job terminates are we willing to wait to
 # see if the directory is removed before we give up and consider it a

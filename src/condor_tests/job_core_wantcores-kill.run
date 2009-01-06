@@ -26,7 +26,8 @@ use Cwd;
 $topdir = getcwd();
 
 $cmd_template = "job_core_wantcores.template";
-$testname = 'job_core_wantcores - Simple parallel job';
+$testdesc =  'job_core_wantcores - Simple parallel job';
+$testname = "job_core_wantcores-kill";
 $cmd = "job_core_wantcores.cmd";
 $corename = "job_core_wantcores";
 

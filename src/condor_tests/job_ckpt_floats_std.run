@@ -22,7 +22,8 @@
 use CondorTest;
 
 $cmd = 'job_ckpt_floats_std.cmd';
-$testname = 'Floats Test';
+$testdesc =  'Floats Test';
+$testname = "job_ckpt_floats_std";
 
 $foo = <<"_EOX";
 About to checkpoint

@@ -21,7 +21,8 @@
 use CondorTest;
 
 $cmd = 'job_dagman_parallel-A.dag';
-$testname = 'Condor submit dag - basic parallel test - scheduler U';
+$testdesc =  'Condor submit dag - basic parallel test - scheduler U';
+$testname = "job_dagman_parallel-A";
 $dagman_args = "-verbose";
 
 @outfiles = ("job_dagman_parallel-A-node.A", "job_dagman_parallel-A-node.B",

@@ -23,7 +23,8 @@ use CondorTest;
 #$cmd = 'lib_procapi_cputracking-snapshot.cmd';
 $cmd = $ARGV[0];
 
-$testname = 'proper reporting of remote cpu usage - vanilla U';
+$testdesc =  'proper reporting of remote cpu usage - vanilla U';
+$testname = "lib_procapi_cputracking-snapshot";
 $datafile = "lib_procapi_cputracking-snapshot.data.log";
 $worked = "yes";
 

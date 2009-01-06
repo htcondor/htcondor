@@ -22,7 +22,8 @@
 use CondorTest;
 
 $cmd = 'job_ckpt_open-async-ckpt_std.cmd';
-$testname = 'Open Test';
+$testdesc =  'Open Test';
+$testname = "job_ckpt_open-async-ckpt_std";
 
 @CondorTest::expected_output = ( 'completed successfully' );
 

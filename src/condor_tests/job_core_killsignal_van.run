@@ -21,7 +21,8 @@
 use CondorTest;
 
 $cmd = 'job_core_killsignal_van.cmd';
-$testname = 'Condor allows change of kill signal - vanilla U';
+$testdesc =  'Condor allows change of kill signal - vanilla U';
+$testname = "job_core_killsignal_van";
 
 my $killedchosen = 0;
 

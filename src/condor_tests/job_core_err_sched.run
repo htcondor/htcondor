@@ -21,7 +21,8 @@
 use CondorTest;
 
 $cmd = 'job_core_err_sched.cmd';
-$testname = 'Condor_submit correctly uses error file - scheduler U';
+$testdesc =  'Condor_submit correctly uses error file - scheduler U';
+$testname = "job_core_err_sched";
 
 $success = sub 
 {

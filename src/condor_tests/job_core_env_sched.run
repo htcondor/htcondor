@@ -21,7 +21,8 @@
 use CondorTest;
 
 $cmd = 'job_core_env_sched.cmd';
-$testname = 'Environment is preserved - scheduler U';
+$testdesc =  'Environment is preserved - scheduler U';
+$testname = "job_core_env_sched";
 
 
 $ExitSuccess = sub {

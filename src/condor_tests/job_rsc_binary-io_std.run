@@ -22,7 +22,8 @@ use CondorTest;
 
 $cmd = "job_rsc_binary-io_std.cmd";
 
-$testname = "Binary io test - standard U";
+$testdesc =  "Binary io test - standard U";
+$testname = "job_rsc_binary-io_std";
 
 
 $ExitSuccess = sub {

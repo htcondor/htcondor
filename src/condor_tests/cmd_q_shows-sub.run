@@ -22,7 +22,8 @@ use CondorTest;
 
 $cmd = 'cmd_q_shows-sub.cmd';
 $cmdout = $cmd . ".out";
-$testname = 'cmd_q_shows-sub  ';
+$testdesc =  'cmd_q_shows-sub  ';
+$testname = "cmd_q_shows-sub";
 
 $whoami = "";
 

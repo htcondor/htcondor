@@ -21,7 +21,8 @@
 use CondorTest;
 
 $cmd      = 'job_core_corefiles_sched.cmd';
-$testname = 'Core files limited by coresize = xxxxx - scheduler U';
+$testdesc =  'Core files limited by coresize = xxxxx - scheduler U';
+$testname = "job_core_corefiles_sched";
 
 
 $execute = sub {

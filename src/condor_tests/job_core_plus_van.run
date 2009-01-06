@@ -21,7 +21,8 @@
 use CondorTest;
 
 $cmd = 'job_core_plus_van.cmd';
-$testname = 'Condor_submit correctly places attributes into JobAd - vanilla U';
+$testdesc =  'Condor_submit correctly places attributes into JobAd - vanilla U';
+$testname = "job_core_plus_van";
 
 $success = sub 
 {

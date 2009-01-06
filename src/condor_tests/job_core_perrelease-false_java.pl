@@ -21,7 +21,8 @@
 use CondorTest;
 
 $cmd = 'job_core_perrelease-false_java.cmd';
-$testname = 'Condor submit policy test for periodic_release - java U';
+$testdesc =  'Condor submit policy test for periodic_release - java U';
+$testname = "job_core_perrelease-false_java";
 
 my %info;
 my $cluster;

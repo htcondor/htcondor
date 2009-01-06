@@ -23,7 +23,8 @@ use CondorTest;
 use File::Path;
 
 $cmd = 'job_core_sh-loop_van.cmd';
-$testname = 'Basic shell script loop test';
+$testdesc =  'Basic shell script loop test';
+$testname = "job_core_sh-loop_van";
 
 umask 0;
 `chmod 755 job_core_sh-loop_van.sh`;

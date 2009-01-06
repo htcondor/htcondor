@@ -26,7 +26,8 @@ use Cwd;
 my $topleveldir = getcwd();
 
 $param_template = "x_param.protocol-gsi.template";
-$testname = 'lib_auth_protocol-gsi - Security Protocol GSI Authentication Test';
+$testdesc =  'lib_auth_protocol-gsi - Security Protocol GSI Authentication Test';
+$testname = "lib_auth_protocol-gsi";
 $corename = "lib_auth_protocol-gsi";
 $mycustomconfig = "x_secgsi_configpostsrc";
 $mytestnegotiation = "x_secneg_clR_dmnR_secprepostsrc";

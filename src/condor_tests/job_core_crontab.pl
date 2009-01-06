@@ -43,7 +43,8 @@ my $universe = ($ARGV[0] ? $ARGV[0] : "vanilla");
 ##
 ## Test Information
 ##
-$testname = "CronTab Testing - $universe";
+$testdesc =  "CronTab Testing - $universe";
+$testname = "job_core_crontab";
 $base_name = 'job_core_crontab';
 $base_cmd = $base_name.".cmd";
 

@@ -23,7 +23,8 @@ use CondorPersonal;
 
 
 $cmd_template = "job_startd_multimatch.template";
-$testname = 'job_startd_multimatch - Startd Multimatch job';
+$testdesc =  'job_startd_multimatch - Startd Multimatch job';
+$testname = "job_startd_multimatch";
 $cmd = "job_startd_multimatch.cmd";
 $corename = "job_startd_multimatch";
 $localpostsrc = "x_startd_multimatch_postsrc";

@@ -27,7 +27,8 @@ sub IDLE{1};
 sub HELD{5};
 sub RUNNING{2};
 
-$testname = 'cmd_status_shows-schedd';
+$testdesc =  'cmd_status_shows-schedd';
+$testname = "cmd_status_shows-schedd";
 $corename = "cmd_status_shows-schedd";
 
 # where am I running

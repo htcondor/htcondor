@@ -21,7 +21,8 @@
 use CondorTest;
 
 $cmd = 'job_dagman_abort-A.dag';
-$testname = 'Condor submit dag - basic abort-dag-on test - scheduler U';
+$testdesc =  'Condor submit dag - basic abort-dag-on test - scheduler U';
+$testname = "job_dagman_abort-A";
 $dagman_args = "-verbose";
 
 @outfiles = ("job_dagman_abort-A-node.A", "job_dagman_abort-A-node.B");

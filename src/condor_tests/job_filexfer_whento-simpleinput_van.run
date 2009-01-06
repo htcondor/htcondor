@@ -21,7 +21,8 @@
 use CondorTest;
 
 $cmd      = 'job_filexfer_whento-simpleinput_van.cmd';
-$testname = 'Jobs properly run with FT on and input = filename - vanilla U';
+$testdesc =  'Jobs properly run with FT on and input = filename - vanilla U';
+$testname = "job_filexfer_whento-simpleinput_van";
 
 # truly const variables in perl
 sub IDLE{1};

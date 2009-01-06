@@ -31,7 +31,8 @@ system("printenv | grep CONDOR_CONFIG");
 $condor_config = $ENV{CONDOR_CONFIG};
 CondorTest::debug("CONDOR_CONFIG = $condor_config\n",1);
 
-$testname = 'job_core_periodicremove_van';
+$testdesc =  'job_core_periodicremove_van';
+$testname = "job_core_periodicremove_van";
 
 $aborted = sub {
 	my %info = @_;

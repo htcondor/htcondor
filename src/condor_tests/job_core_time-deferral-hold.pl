@@ -56,7 +56,8 @@ my $REMOVE = "";
 ##
 ## Testing Information
 ##
-$testname = "Job Deferral Testing HOLD - $universe";
+$testdesc =  "Job Deferral Testing HOLD - $universe";
+$testname = "job_core_time-deferral-hold";
 $base_name = 'job_core_time-deferral-hold';
 $base_cmd = $base_name.".cmd";
 

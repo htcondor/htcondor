@@ -21,7 +21,8 @@
 use CondorTest;
 
 my $cmd = 'job_ckpt_io-async_std.cmd';
-my $testname = 'Io Test';
+my $testdesc =  'Io Test';
+my $testname = "job_ckpt_io-async_std";
 
 sub OutputTest
 {

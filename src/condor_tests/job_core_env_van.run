@@ -21,7 +21,8 @@
 use CondorTest;
 
 $cmd = 'job_core_env_van.cmd';
-$testname = 'Environment is preserved - vanilla U';
+$testdesc =  'Environment is preserved - vanilla U';
+$testname = "job_core_env_van";
 
 
 $ExitSuccess = sub {

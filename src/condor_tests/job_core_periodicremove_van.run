@@ -23,7 +23,8 @@ use CondorPersonal;
 
 
 $cmd_template = "job_core_periodicremove_van.template";
-$testname = 'job_core_periodicremove_van - Test periodicremove / wallclockcheckpoint';
+$testdesc =  'job_core_periodicremove_van - Test periodicremove / wallclockcheckpoint';
+$testname = "job_core_periodicremove_van";
 $corename = "job_core_periodicremove_van";
 
 # where am I running

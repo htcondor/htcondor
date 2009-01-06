@@ -23,7 +23,8 @@ use CondorPersonal;
 
 
 $cmd_template = "job_core_basic_par.template";
-$testname = 'job_core_basic_par - Simple parallel job';
+$testdesc =  'job_core_basic_par - Simple parallel job';
+$testname = "job_core_basic_par";
 $cmd = "job_core_basic_par.cmd";
 $corename = "job_core_basic_par";
 

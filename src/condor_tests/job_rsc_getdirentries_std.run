@@ -22,7 +22,8 @@
 use CondorTest;
 
 $cmd = 'job_rsc_getdirentries_std.cmd';
-$testname = 'getdirentries Test';
+$testdesc =  'getdirentries Test';
+$testname = "job_rsc_getdirentries_std";
 
 
 @CondorTest::expected_output = ( 'completed successfully' );

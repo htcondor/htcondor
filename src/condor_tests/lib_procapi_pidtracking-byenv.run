@@ -21,7 +21,8 @@
 use CondorTest;
 
 $cmd = 'lib_procapi_pidtracking-byenv.cmd';
-$testname = 'We cleanup correctly after our kids. - vanilla U';
+$testdesc =  'We cleanup correctly after our kids. - vanilla U';
+$testname = "lib_procapi_pidtracking-byenv";
 $datafile = "lib_procapi_pidtracking-byenv.data";
 $kiddatafile = "lib_procapi_pidtracking-byenv.data.kids";
 $worked = "yes";

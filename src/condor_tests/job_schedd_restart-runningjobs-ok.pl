@@ -21,7 +21,8 @@
 use CondorTest;
 
 $cmd      = 'job_schedd_restart-runningjobs-ok.cmd';
-$testname = 'Verify running jobs are preserved on schedd restarts';
+$testdesc =  'Verify running jobs are preserved on schedd restarts';
+$testname = "job_schedd_restart-runningjobs-ok";
 
 $beforequeue = "job_schedd_restart-runningjobs.before";
 $afterqueue = "job_schedd_restart-runningjobs.after";

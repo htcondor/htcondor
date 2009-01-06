@@ -21,7 +21,8 @@
 use CondorTest;
 
 $cmd = 'job_core_signal-suicide_van.cmd';
-$testname = 'Does condor record signal-death properly? - vanilla U';
+$testdesc =  'Does condor record signal-death properly? - vanilla U';
+$testname = "job_core_signal-suicide_van";
 
 $died = sub {
 	my %info = @_;

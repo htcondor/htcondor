@@ -20,7 +20,8 @@
 
 use CondorTest;
 
-$testname = 'Jobs casues submit error from a missing specified input file- vanilla U';
+$testdesc =  'Jobs casues submit error from a missing specified input file- vanilla U';
+$testname = "job_filexfer_input-onegone_van";
 
 my $sanestatus = CondorTest::verbose_system("./x_sanitysubmit.pl");
 my $teststatus = CondorTest::verbose_system("./job_filexfer_input-onegone_van.pl");

@@ -22,7 +22,8 @@
 use CondorTest;
 
 $cmd = 'job_ckpt_constructor_std.cmd';
-$testname = 'C++ Constructor Test';
+$testdesc =  'C++ Constructor Test';
+$testname = "job_ckpt_constructor_std";
 
 $foo = <<"_EOX";
 "Hello World"

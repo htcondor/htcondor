@@ -23,7 +23,8 @@ use CondorPersonal;
 
 
 $cmd_template = "cmd_q_multi.template";
-$testname = 'cmd_q_shows-pool ';
+$testdesc =  'cmd_q_shows-pool ';
+$testname = "cmd_q_shows-pool";
 $corename = "cmd_q_shows-pool";
 
 # where am I running

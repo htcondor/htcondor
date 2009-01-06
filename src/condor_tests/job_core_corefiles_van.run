@@ -21,7 +21,8 @@
 use CondorTest;
 
 $cmd      = 'job_core_corefiles_van.cmd';
-$testname = 'Core files limited by coresize = xxxxx - vanilla U';
+$testdesc =  'Core files limited by coresize = xxxxx - vanilla U';
+$testname = "job_core_corefiles_van";
 
 
 $execute = sub {

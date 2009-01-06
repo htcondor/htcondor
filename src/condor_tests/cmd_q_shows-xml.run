@@ -22,7 +22,8 @@ use CondorTest;
 
 $cmd = 'cmd_q_shows-xml.cmd';
 $cmdout = $cmd . ".out";
-$testname = 'cmd_q_shows-xml  ';
+$testdesc =  'cmd_q_shows-xml  ';
+$testname = "cmd_q_shows-xml";
 
 @adarray;
 

@@ -21,7 +21,8 @@
 use CondorTest;
 
 $cmd = 'job_core_hold_sched.cmd';
-$testname = 'Condor allows submit with hold - scheduler U';
+$testdesc =  'Condor allows submit with hold - scheduler U';
+$testname = "job_core_hold_sched";
 
 my $killedchosen = 0;
 

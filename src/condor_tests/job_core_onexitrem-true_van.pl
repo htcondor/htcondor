@@ -21,7 +21,8 @@
 use CondorTest;
 
 $cmd = 'job_core_onexitrem-true_van.cmd';
-$testname = 'Condor submit policy test for ON_EXIT_REMOVE - vanilla U';
+$testdesc =  'Condor submit policy test for ON_EXIT_REMOVE - vanilla U';
+$testname = "job_core_onexitrem-true_van";
 
 my $killedchosen = 0;
 

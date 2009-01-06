@@ -21,7 +21,8 @@
 use CondorTest;
 
 $cmd = 'job_core_perremove-true_java.cmd';
-$testname = 'Condor submit policy test for PERIODIC_REMOVE - java U';
+$testdesc =  'Condor submit policy test for PERIODIC_REMOVE - java U';
+$testname = "job_core_perremove-true_java";
 
 my $killedchosen = 0;
 

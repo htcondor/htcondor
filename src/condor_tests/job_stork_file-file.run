@@ -23,7 +23,8 @@ use CondorPersonal;
 use Cwd;
 
 
-$testname = 'job_stork_file-file - Simple stork job';
+$testdesc =  'job_stork_file-file - Simple stork job';
+$testname = "job_stork_file-file";
 $corename = "job_stork_file-file";
 $topdir = getcwd();
 

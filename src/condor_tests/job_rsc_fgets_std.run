@@ -22,7 +22,8 @@
 use CondorTest;
 
 $cmd = 'job_rsc_fgets_std.cmd';
-$testname = 'Fgets Test';
+$testdesc =  'Fgets Test';
+$testname = "job_rsc_fgets_std";
 
 $input = 'x_data.in';
 open(INPUT, "<$input") || die "Can't open $input: $!\n";

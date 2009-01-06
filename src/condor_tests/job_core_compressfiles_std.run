@@ -27,7 +27,8 @@ $gzinputgz = "job_core_compressfiles_std.datain.gz";
 $gzoutput = "job_core_compressfiles_std.dataout.gz";
 $output = "job_core_compressfiles_std.dataout";
 
-$testname = 'condor_submit compressfiles works - standard U';
+$testdesc =  'condor_submit compressfiles works - standard U';
+$testname = "job_core_compressfiles_std";
 
 system("rm -f $gzinput $gzinputgz $gzoutput $output");
 system("cp $input $gzinput");

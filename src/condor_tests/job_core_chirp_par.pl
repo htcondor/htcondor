@@ -27,7 +27,8 @@ CondorTest::debug("Submit file for this test is $cmd\n",1);
 #print "looking at env for condor config\n";
 #system("printenv | grep CONDOR_CONFIG");
 
-$testname = 'Basic Parallel - Parallel U';
+$testdesc =  'Basic Parallel - Parallel U';
+$testname = "job_core_chirp_par";
 
 $aborted = sub {
 	my %info = @_;

@@ -22,7 +22,8 @@ use CondorTest;
 
 $cmd = 'cmd_q_shows-format.cmd';
 $cmdout = $cmd . ".out";
-$testname = 'cmd_q_shows-format  ';
+$testdesc =  'cmd_q_shows-format  ';
+$testname = "cmd_q_shows-format";
 
 $whoami = "";
 

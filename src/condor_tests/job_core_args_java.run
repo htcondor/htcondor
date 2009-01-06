@@ -21,7 +21,8 @@
 use CondorTest;
 
 $cmd = 'job_core_args_java.cmd';
-$testname = 'Arguments are preserved - java U';
+$testdesc =  'Arguments are preserved - java U';
+$testname = "job_core_args_java";
 
 
 $ExitSuccess = sub {

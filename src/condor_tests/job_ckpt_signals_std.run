@@ -22,7 +22,8 @@
 use CondorTest;
 
 $cmd = 'job_ckpt_signals_std.cmd';
-$testname = 'Signals Test';
+$testdesc =  'Signals Test';
+$testname = "job_ckpt_signals_std";
 
 sub OutputTest
 {

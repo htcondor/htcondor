@@ -21,7 +21,8 @@
 use CondorTest;
 
 $cmd = 'job_core_input_sched.cmd';
-$testname = 'condor_submit input works - scheduler U';
+$testdesc =  'condor_submit input works - scheduler U';
+$testname = "job_core_input_sched";
 
 
 @CondorTest::expected_output =

@@ -22,7 +22,8 @@
 use CondorTest;
 
 $cmd = 'job_rsc_fstream_std.cmd';
-$testname = 'Fstream Test';
+$testdesc =  'Fstream Test';
+$testname = "job_rsc_fstream_std";
 
 $input = 'x_data.in';
 $other_out = 'job_rsc_fstream_std.output';

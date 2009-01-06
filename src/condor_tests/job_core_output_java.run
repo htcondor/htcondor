@@ -21,7 +21,8 @@
 use CondorTest;
 
 $cmd = 'job_core_output_java.cmd';
-$testname = 'condor_submit output works - java U';
+$testdesc =  'condor_submit output works - java U';
+$testname = "job_core_output_java";
 
 
 @CondorTest::expected_output =

@@ -22,7 +22,8 @@ use CondorTest;
 
 $cmd = 'cmd_q_shows-analyze.cmd';
 $cmdout = $cmd . ".out";
-$testname = 'cmd_q_shows-analyze  ';
+$testdesc =  'cmd_q_shows-analyze  ';
+$testname = "cmd_q_shows-analyze";
 
 $whoami = `whoami`;
 chomp($whoami);

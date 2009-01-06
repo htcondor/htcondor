@@ -23,7 +23,8 @@ use CondorTest;
 #Condor::DebugOn();
 
 $cmd      = 'job_core_holdrelease_van.cmd';
-$testname = 'Jobs properly hold and release - vanilla U';
+$testdesc =  'Jobs properly hold and release - vanilla U';
+$testname = "job_core_holdrelease_van";
 
 # truly const variables in perl
 sub IDLE{1};

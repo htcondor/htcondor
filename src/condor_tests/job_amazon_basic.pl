@@ -31,7 +31,8 @@ $condor_config = $ENV{CONDOR_CONFIG};
 
 print "CONDOR_CONFIG = $condor_config\n";
 
-$testname = 'Amazon EC2 basic test';
+$testdesc =  'Amazon EC2 basic test';
+$testname = "job_amazon_basic";
 
 $aborted = sub {
 	my %info = @_;

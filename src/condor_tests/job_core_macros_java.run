@@ -23,7 +23,8 @@ use Cwd;
 use Sys::Hostname;
 
 $cmd = 'job_core_macros_java.cmd';
-$testname = 'condor_submit macros - java U';
+$testdesc =  'condor_submit macros - java U';
+$testname = "job_core_macros_java";
 
 
 @CondorTest::skipped_output_lines = ( 3, 4, 5, 6 );

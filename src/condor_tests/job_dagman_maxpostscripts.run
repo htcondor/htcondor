@@ -86,7 +86,8 @@ foreach $name (@filestochmod)
 	system("chmod 755 $name");
 }
 
-$testname = 'Condor submit dag - throttle post scripts test - scheduler U';
+$testdesc =  'Condor submit dag - throttle post scripts test - scheduler U';
+$testname = "job_dagman_maxpostscripts";
 $maxjobs = 4;
 $dagman_args = "-v -MaxPost $maxjobs";
 

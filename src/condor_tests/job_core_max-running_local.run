@@ -25,7 +25,8 @@ use Cwd;
 
 $topdir = getcwd();
 
-$testname = 'job_core_max-running_local - Simple parallel job';
+$testdesc =  'job_core_max-running_local - Simple parallel job';
+$testname = "job_core_max-running_local";
 $cmd = "job_core_max-running_local.cmd";
 $corename = "job_core_max-running_local";
 

@@ -23,7 +23,8 @@ use CondorPersonal;
 
 
 $cmd_template = "cmd_q_multi.template";
-$testname = 'cmd_q_shows-name - Simple condor_ -name test';
+$testdesc =  'cmd_q_shows-name - Simple condor_ -name test';
+$testname = "cmd_q_shows-name";
 $corename = "cmd_q_shows-name";
 
 # where am I running

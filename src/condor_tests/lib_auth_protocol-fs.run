@@ -23,7 +23,8 @@ use CondorPersonal;
 
 
 $param_template = "x_param.protocol-fs.template";
-$testname = 'lib_auth_protocol-fs - Security Protocol FS Authentication Test';
+$testdesc =  'lib_auth_protocol-fs - Security Protocol FS Authentication Test';
+$testname = "lib_auth_protocol-fs";
 $corename = "lib_auth_protocol-fs";
 $mytestnegotiation = "x_secneg_clR_dmnR_secprepostsrc";
 $mytestnegotiation_result = "yes";

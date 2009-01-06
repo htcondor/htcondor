@@ -21,7 +21,8 @@
 use CondorTest;
 
 $cmd      = 'job_filexfer_twosets_van.cmd';
-$testname = 'Base file transfer - two different sets of files supposed to be moved - vanilla U';
+$testdesc =  'Base file transfer - two different sets of files supposed to be moved - vanilla U';
+$testname = "job_filexfer_twosets_van";
 
 # truly const variables in perl
 sub IDLE{1};

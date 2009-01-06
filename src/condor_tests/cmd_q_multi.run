@@ -23,7 +23,8 @@ use CondorPersonal;
 
 
 $cmd_template = "cmd_q_multi.template";
-$testname = 'cmd_q_multi - Simple Condor-C A&B with Vanilla job';
+$testdesc =  'cmd_q_multi - Simple Condor-C A&B with Vanilla job';
+$testname = "cmd_q_multi";
 $corename = "cmd_q_multi";
 
 # where am I running

@@ -22,7 +22,8 @@ use CondorTest;
 
 $cmd = 'job_core_niceuser_van.cmd';
 my $datafile = 'job_core_niceuser_van.data';
-$testname = 'condor_submit output works - vanilla U';
+$testdesc =  'condor_submit output works - vanilla U';
+$testname = "job_core_niceuser_van";
 
 my @sdata =
 (

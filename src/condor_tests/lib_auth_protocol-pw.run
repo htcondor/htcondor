@@ -29,7 +29,8 @@ $map_template = "x_secpw_mapfile.template";
 $postsrc = "x_secpw_configpostsrc";
 $mapfile = "x_secpw_mapfile";
 
-$testname = 'lib_auth_protocol-pw - Security Protocol PASSWORD Authentication Test';
+$testdesc =  'lib_auth_protocol-pw - Security Protocol PASSWORD Authentication Test';
+$testname = "lib_auth_protocol-pw";
 $corename = "lib_auth_protocol-pw";
 $mytestnegotiation_result = "yes";
 $mycmdfile = "lib_auth_protocol-pw.cmd";

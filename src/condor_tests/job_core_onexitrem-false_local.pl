@@ -26,7 +26,8 @@
 use CondorTest;
 
 $cmd = 'job_core_onexitrem-false_local.cmd';
-$testname = 'Condor submit policy test for ON_EXIT_REMOVE - local U';
+$testdesc =  'Condor submit policy test for ON_EXIT_REMOVE - local U';
+$testname = "job_core_onexitrem-false_local";
 
 ## 
 ## Status Values

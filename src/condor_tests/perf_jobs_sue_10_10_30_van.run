@@ -20,11 +20,13 @@
 
 use CondorTest;
 
-my $testname = 'Condor autogen scalability test';
+my $testdesc =  'Condor autogen scalability test';
+my $testname = "perf_jobs_sue_10_10_30_van";
 my $datafile = "perf_jobs_sue_10_10_30_van.data";
 my $testfile = 'x_perf_autoscale.pl';
 my $cmdfile = "perf_jobs_sue_10_10_30_van.cmd";
-my $testname = 'condor scalability test';
+my $testdesc =  'condor scalability test';
+my $testname = "perf_jobs_sue_10_10_30_van";
 
 CondorTest::verbose_system("rm -rf $datafile");
 CondorTest::verbose_system("touch $datafile");

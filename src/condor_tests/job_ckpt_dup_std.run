@@ -22,7 +22,8 @@
 use CondorTest;
 
 $cmd = 'job_ckpt_dup_std.cmd';
-$testname = 'Dup Test';
+$testdesc =  'Dup Test';
+$testname = "job_ckpt_dup_std";
 
 $foo = <<"_EOX";
 OK

@@ -23,7 +23,8 @@ use CondorPersonal;
 
 
 $param_template = "x_param.protocol-krb.template";
-$testname = 'lib_auth_protocol-krb - Security Protocol Kerberos Authentication Test';
+$testdesc =  'lib_auth_protocol-krb - Security Protocol Kerberos Authentication Test';
+$testname = "lib_auth_protocol-krb";
 $corename = "lib_auth_protocol-krb";
 $mytestnegotiation = "x_secneg_clR_dmnR_secprepostsrc";
 $mytestnegotiation_result = "yes";

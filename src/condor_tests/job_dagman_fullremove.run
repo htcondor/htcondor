@@ -21,7 +21,8 @@
 use CondorTest;
 
 $cmd = 'job_dagman_fullremove.dag';
-$testname = 'Condor submit dag - full cleanup of dag test - scheduler U';
+$testdesc =  'Condor submit dag - full cleanup of dag test - scheduler U';
+$testname = "job_dagman_fullremove";
 $dagman_args = "-v";
 
 my $killedchosen = 0;

@@ -21,7 +21,8 @@
 use CondorTest;
 
 $cmd = 'job_dagman_basic.dag';
-$testname = 'Condor submit dag - basic test - scheduler U';
+$testdesc =  'Condor submit dag - basic test - scheduler U';
+$testname = "job_dagman_basic";
 $dagman_args = "-verbose";
 
 my $killedchosen = 0;

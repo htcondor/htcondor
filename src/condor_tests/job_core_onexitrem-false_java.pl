@@ -21,7 +21,8 @@
 use CondorTest;
 
 $cmd = 'job_core_onexitrem-false_java.cmd';
-$testname = 'Condor submit policy test for ONEXIT_REMOVE - java U';
+$testdesc =  'Condor submit policy test for ONEXIT_REMOVE - java U';
+$testname = "job_core_onexitrem-false_java";
 
 my $killedchosen = 0;
 

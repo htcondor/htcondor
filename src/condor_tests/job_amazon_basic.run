@@ -27,7 +27,8 @@ sub IDLE{1};
 sub HELD{5};
 sub RUNNING{2};
 
-$testname = 'job_amazon_basic';
+$testdesc =  'job_amazon_basic';
+$testname = "job_amazon_basic";
 $corename = "job_amazon_basic";
 
 # where am I running

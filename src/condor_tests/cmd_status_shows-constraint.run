@@ -27,7 +27,8 @@ sub IDLE{1};
 sub HELD{5};
 sub RUNNING{2};
 
-$testname = 'cmd_status_shows-constraint';
+$testdesc =  'cmd_status_shows-constraint';
+$testname = "cmd_status_shows-constraint";
 $corename = "cmd_status_shows-constraint";
 
 # where am I running

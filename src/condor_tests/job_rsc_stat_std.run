@@ -22,7 +22,8 @@
 use CondorTest;
 
 $cmd = 'job_rsc_stat_std.cmd';
-$testname = 'Stat Test';
+$testdesc =  'Stat Test';
+$testname = "job_rsc_stat_std";
 	
 $file = 'x_data.in';
 

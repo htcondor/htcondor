@@ -22,7 +22,8 @@
 use CondorTest;
 
 $cmd = 'job_ckpt_gettimeofday_std.cmd';
-$testname = 'Time Test';
+$testdesc =  'Time Test';
+$testname = "job_ckpt_gettimeofday_std";
 
 @CondorTest::expected_output = ( 'SUCCESS' );
 

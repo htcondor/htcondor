@@ -22,7 +22,8 @@
 use CondorTest;
 
 $cmd = 'job_rsc_true-false_std.cmd';
-$testname = 'remote io true/false Test';
+$testdesc =  'remote io true/false Test';
+$testname = "job_rsc_true-false_std";
 $line = "";
 $filenm = "/tmp/job_rsc_true-false_std.$$";
 	

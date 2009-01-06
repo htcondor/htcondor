@@ -22,7 +22,8 @@
 use CondorTest;
 
 $cmd = 'job_rsc_f-direct-write_std.cmd';
-$testname = 'Fortran Direct File I/O Test';
+$testdesc =  'Fortran Direct File I/O Test';
+$testname = "job_rsc_f-direct-write_std";
 
 #push( @CondorTest::expected_output,
 #	  "  Will open direct access file for reading" );

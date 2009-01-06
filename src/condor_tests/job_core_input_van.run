@@ -21,7 +21,8 @@
 use CondorTest;
 
 $cmd = 'job_core_input_van.cmd';
-$testname = 'condor_submit input works - vanilla U';
+$testdesc =  'condor_submit input works - vanilla U';
+$testname = "job_core_input_van";
 
 
 @CondorTest::expected_output =

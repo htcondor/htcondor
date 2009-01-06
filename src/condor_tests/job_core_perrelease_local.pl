@@ -20,7 +20,8 @@
 
 use CondorTest;
 
-$testname = 'Condor PERIODIC_RELEASE policy test - local U';
+$testdesc =  'Condor PERIODIC_RELEASE policy test - local U';
+$testname = "job_core_perrelease_local";
 
 my $nostatus = CondorTest::verbose_system("./job_core_perrelease-false_local.pl");
 my $willstatus = CondorTest::verbose_system("./job_core_perrelease-true_local.pl");

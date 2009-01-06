@@ -22,7 +22,8 @@
 use CondorTest;
 
 $cmd = 'job_ckpt_longjmp_std.cmd';
-$testname = 'Threads Test';
+$testdesc =  'Threads Test';
+$testname = "job_ckpt_longjmp_std";
 
 for( $i=0; $i<10; $i++ ) {
      push( @CondorTest::expected_output, "i = $i" );

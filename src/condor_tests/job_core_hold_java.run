@@ -21,7 +21,8 @@
 use CondorTest;
 
 $cmd = 'job_core_hold_java.cmd';
-$testname = 'Condor allows submit with hold - java U';
+$testdesc =  'Condor allows submit with hold - java U';
+$testname = "job_core_hold_java";
 
 my $killedchosen = 0;
 

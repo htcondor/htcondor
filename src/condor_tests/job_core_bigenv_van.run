@@ -23,7 +23,8 @@ use CondorTest;
 use File::Path;
 
 $cmd = 'job_core_bigenv_van.cmd';
-$testname = 'bigenv (vanilla) Test';
+$testdesc =  'bigenv (vanilla) Test';
+$testname = "job_core_bigenv_van";
 
 umask 0;
 

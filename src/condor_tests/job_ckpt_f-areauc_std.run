@@ -22,7 +22,8 @@
 use CondorTest;
 
 $cmd = 'job_ckpt_f-areauc_std.cmd';
-$testname = 'Fortran Area Under a Curve Test';
+$testdesc =  'Fortran Area Under a Curve Test';
+$testname = "job_ckpt_f-areauc_std";
 
 $OutputTest = sub {
 	my %info = @_;

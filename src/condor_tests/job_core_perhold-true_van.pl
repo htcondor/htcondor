@@ -21,7 +21,8 @@
 use CondorTest;
 
 $cmd = 'job_core_perhold-true_van.cmd';
-$testname = 'Condor submit with for periodic hold test - vanilla U';
+$testdesc =  'Condor submit with for periodic hold test - vanilla U';
+$testname = "job_core_perhold-true_van";
 $ENV{UNIVERSE} = "vanilla";
 $ENV{UPREPEND} = "v_";
 

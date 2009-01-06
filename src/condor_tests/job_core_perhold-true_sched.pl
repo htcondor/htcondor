@@ -21,7 +21,8 @@
 use CondorTest;
 
 $cmd = 'job_core_perhold-true_sched.cmd';
-$testname = 'Condor submit with for periodic hold test - scheduler U';
+$testdesc =  'Condor submit with for periodic hold test - scheduler U';
+$testname = "job_core_perhold-true_sched";
 
 my $killedchosen = 0;
 

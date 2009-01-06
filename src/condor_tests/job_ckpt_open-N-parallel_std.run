@@ -22,7 +22,8 @@
 use CondorTest;
 
 $cmd = 'job_ckpt_open-N-parallel_std.cmd';
-$testname = 'Files Test';
+$testdesc =  'Files Test';
+$testname = "job_ckpt_open-N-parallel_std";
 
 $foo = <<"_EOX";
 Opened 8 files

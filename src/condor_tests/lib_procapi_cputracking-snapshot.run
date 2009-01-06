@@ -23,7 +23,8 @@ use CondorPersonal;
 
 
 $param_template = "x_param.cputracking-snapshot";
-$testname = 'lib_procapi_cputracking-snapshot - CPU Remote usage reporting test ';
+$testdesc =  'lib_procapi_cputracking-snapshot - CPU Remote usage reporting test ';
+$testname = "lib_procapi_cputracking-snapshot";
 $corename = "lib_procapi_cputracking-snapshot";
 $mytestnegotiation = "x_secneg_clR_dmnR_secprepostsrc";
 $mytestnegotiation_result = "yes";

@@ -21,7 +21,8 @@
 use CondorTest;
 
 $cmd = 'job_core_plus_sched.cmd';
-$testname = 'Condor_submit correctly places attributes into JobAd - scheduler U';
+$testdesc =  'Condor_submit correctly places attributes into JobAd - scheduler U';
+$testname = "job_core_plus_sched";
 
 my $alreadydone=0;
 my $foundcount=0;

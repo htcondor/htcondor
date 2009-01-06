@@ -21,7 +21,8 @@
 use CondorTest;
 
 $cmd = 'job_core_perhold-true_java.cmd';
-$testname = 'Condor submit with for periodic hold test - java U';
+$testdesc =  'Condor submit with for periodic hold test - java U';
+$testname = "job_core_perhold-true_java";
 
 my $killedchosen = 0;
 

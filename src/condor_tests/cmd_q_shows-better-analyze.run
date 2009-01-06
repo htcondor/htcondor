@@ -22,7 +22,8 @@ use CondorTest;
 
 $cmd = 'cmd_q_shows-better-analyze.cmd';
 $cmdout = $cmd . ".out";
-$testname = 'cmd_q_shows-better-analyze  ';
+$testdesc =  'cmd_q_shows-better-analyze  ';
+$testname = "cmd_q_shows-better-analyze";
 
 $test_failed = 0;
 
