@@ -466,7 +466,7 @@ FILESQL::createInstance(bool use_sql_log) {
 		}
 	}
 
-	ptr = new FILESQL(outfilename.GetCStr(), O_WRONLY|O_CREAT|O_APPEND, use_sql_log);
+	ptr = new FILESQL(outfilename.Value(), O_WRONLY|O_CREAT|O_APPEND, use_sql_log);
 
 	if (ptr->file_open() == QUILL_FAILURE) {
 		dprintf(D_ALWAYS, "FILESQL createInstance failed\n");
@@ -490,13 +490,13 @@ int &prevLHF)
 	clCopy = *cl;
 	
 	tmp.sprintf("%s = %d", "PrevLastReportedTime", prevLHF);
-	(&clCopy)->Insert(tmp.GetCStr());
+	(&clCopy)->Insert(tmp.Value());
 
 		// set the lastReportedTime and make it the new prevLHF
 	prevLHF = (int)time(NULL);
 
 	tmp.sprintf("%s = %d", "LastReportedTime", prevLHF);
-	(&clCopy)->Insert(tmp.GetCStr());
+	(&clCopy)->Insert(tmp.Value());
 
 	ASSERT( dbh );
 	dbh->file_newEvent(adType, &clCopy);	

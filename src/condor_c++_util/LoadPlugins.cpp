@@ -59,7 +59,7 @@ LoadPlugins()
 		} else {
 			plugin_dir = tmp;
 			free(tmp); tmp = NULL;
-			Directory directory(plugin_dir.GetCStr());
+			Directory directory(plugin_dir.Value());
 			while (NULL != (plugin_file = directory.Next())) {
 					// NOTE: This should eventually support .dll for
 					// Windows, .dylib for Darwin, .sl for HPUX, etc
@@ -67,7 +67,7 @@ LoadPlugins()
 					dprintf(D_FULLDEBUG,
 							"PLUGIN_DIR, found: %s\n",
 							plugin_file);
-					plugins.append((plugin_dir + DIR_DELIM_STRING + plugin_file).GetCStr());
+					plugins.append((plugin_dir + DIR_DELIM_STRING + plugin_file).Value());
 				} else {
 					dprintf(D_FULLDEBUG,
 							"PLUGIN_DIR, ignoring: %s\n",
