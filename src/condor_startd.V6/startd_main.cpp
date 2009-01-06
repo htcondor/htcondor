@@ -432,6 +432,9 @@ main_config( bool /* is_full */ )
 int
 finish_main_config( void ) 
 {
+#if defined(WIN32)
+	resmgr->reset_credd_test_throttle();
+#endif
 		// Recompute machine-wide attributes object.
 	resmgr->compute( A_ALL );
 		// Rebuild ads for each resource.  
