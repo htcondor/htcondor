@@ -34,6 +34,11 @@ my $alreadydone=0;
 $execute = sub {
 	my %args = @_;
 	my $cluster = $args{"cluster"};
+	if($alreadydone == 0) {
+		$alreadydone = 1;
+	} else {
+		return(0);
+	}
 
 	CondorTest::debug("Good, we can't look for a running job without one\n",1);
 	my @adarray;
