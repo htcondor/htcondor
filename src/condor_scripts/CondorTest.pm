@@ -310,7 +310,11 @@ sub RunTest
 		if($monitorpid == 0) {
 			# child does monitor
     		$monitorret = Condor::Monitor();
+
 			debug( "Monitor did return on its own status<<<$monitorret>>>\n",4);
+    		die "$handle: FAILURE (job never checkpointed)\n"
+			if $wants_checkpoint && $checkpoints < 1;
+
 			if(  $monitorret == 1 ) {
 				debug( "child happy to exit 0\n",4);
 				exit(0);
@@ -351,9 +355,6 @@ sub RunTest
 	} else {
 		debug( "Not currently wrapping tests\n",4);
 	}
-
-    die "$handle: FAILURE (job never checkpointed)\n"
-	if $wants_checkpoint && $checkpoints < 1;
 
     if($cluster == 0){
 		return(0);
@@ -421,6 +422,10 @@ sub RunDagTest
 			# child does monitor
     		$monitorret = Condor::Monitor();
 			debug( "Monitor did return on its own status<<<$monitorret>>>\n",4);
+
+    		die "$handle: FAILURE (job never checkpointed)\n"
+			if $wants_checkpoint && $checkpoints < 1;
+
 			if(  $monitorret == 1 ) {
 				debug( "child happy to exit 0\n",4);
 				exit(0);
@@ -461,9 +466,6 @@ sub RunDagTest
 	} else {
 		debug( "Not currently wrapping tests\n",4);
 	}
-
-    die "$handle: FAILURE (job never checkpointed)\n"
-	if $wants_checkpoint && $checkpoints < 1;
 
 	if($cluster == 0){
 		return(0);
