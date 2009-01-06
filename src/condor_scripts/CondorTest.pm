@@ -57,6 +57,7 @@ BEGIN
     $vacates = 0;
     %test;
 	%machine_ads;
+	$lastconfig = "";
 
     Condor::DebugOn();
 }
@@ -290,8 +291,12 @@ sub RunTest
 
 	my $config = "";
 	if(defined  $wrap_test) {
+		print "Config before PersonalCondorTest<<<<$ENV{CONDOR_CONFIG}>>>>\n";
+		$lastconfig = $ENV{CONDOR_CONFIG};
 		$config = PersonalCondorTest($submit_file);
 		print "PersonalCondorTest returned this config file<$config>\n";
+		print "Saving old config file <<<$lastconfig>>>\n";
+		$ENV{CONDOR_CONFIG} = $config;
 	}
 
     # submit the job and get the cluster id
@@ -352,9 +357,12 @@ sub RunTest
 		} else {
 			print "No config setting to call KillDaemonPids with\n";
 		}
+		print "Restoring this config<<<$lastconfig>>>\n";
+		$ENV{CONDOR_CONFIG} = $lastconfig;
 	} else {
 		debug( "Not currently wrapping tests\n",4);
 	}
+
 
     if($cluster == 0){
 		return(0);
@@ -402,8 +410,11 @@ sub RunDagTest
 
 	my $config = "";
 	if(defined  $wrap_test) {
+		$lastconfig = $ENV{CONDOR_CONFIG};
 		$config = PersonalCondorTest($submit_file);
 		print "PersonalCondorTest returned this config file<$config>\n";
+		print "Saving last config file<<<$lastconfig>>>\n";
+		$ENV{CONDOR_CONFIG} = $config;
 	}
 
     # submit the job and get the cluster id
@@ -463,9 +474,12 @@ sub RunDagTest
 		} else {
 			print "No config setting to call KillDaemonPids with\n";
 		}
+		print "Restoring last config file<<$lastconfig>>\n";
+		$ENV{CONDOR_CONFIG} = $lastconfig;
 	} else {
 		debug( "Not currently wrapping tests\n",4);
 	}
+
 
 	if($cluster == 0){
 		return(0);
@@ -1279,10 +1293,21 @@ sub spawn_cmd
 		open(LOG,">$mylog") || die "Can not open log: $mylog: $!\n";
 		print LOG "waiting on pid <$pid>\n";
 		while(($child = waitpid($pid,WNOHANG)) != -1) { 
-			$exitval = $? >> 8;
-			$signal_num = $? & 127;
-			print RES "Exit $exitval Signal $signal_num\n";
-			print LOG "Pid $child res was $exitval\n";
+			$retval = $?;
+			debug( "Child status was <<$retval>>\n",4);
+			if( WIFEXITED( $retval ) && WEXITSTATUS( $retval ) == 0 ) {
+				debug( "Monitor done and status good!\n",4);
+				$retval = 1;
+			} else {
+				my $status = WEXITSTATUS( $retval );
+				debug( "Monitor done and status bad<<$status>>!\n",4);
+				$retval = 0;
+			}
+
+			#$exitval = $? >> 8;
+			#$signal_num = $? & 127;
+			print RES "Exit $retval \n";
+			print LOG "Pid $child res was $retval\n";
 		}
 		print LOG "Done waiting on pid <$pid>\n";
 		close(RES);
@@ -1407,7 +1432,7 @@ sub PersonalCondorTest
 			
 			debug("---local config is $locconfig and local port is $locport---\n",1);
 
-			$ENV{CONDOR_CONFIG} = $locconfig;
+			#$ENV{CONDOR_CONFIG} = $locconfig;
 		}
 	} else {
 		print "Running outside of condor_tests\n";
