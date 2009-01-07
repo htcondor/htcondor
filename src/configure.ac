@@ -2518,6 +2518,9 @@ else
 fi
 AC_SUBST([crypt_lib],$_cv_crypt_lib)
 
+# Check whether we have a well-behaved snprintf()
+AC_FUNC_SNPRINTF
+
 ##############################################################################
 
 

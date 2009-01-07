@@ -287,7 +287,7 @@ FileLock::lockViaMutex(LOCK_TYPE type)
 		strlwr(filename);
 			// Now, we pre-append "Global\" to the name so that it
 			// works properly on systems running Terminal Services
-		_snprintf(mutex_name,MAX_PATH,"Global\\%s",filename);
+		snprintf(mutex_name,MAX_PATH,"Global\\%s",filename);
 		free(filename);
 		filename = NULL;
 			// Call CreateMutex - this will create the mutex if it does

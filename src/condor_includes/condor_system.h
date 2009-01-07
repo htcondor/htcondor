@@ -188,8 +188,6 @@
 #define stricmp strcasecmp		/* stricmp no longer exits in egcs, but strcasecmp does */
 #define strincmp strncasecmp	/* strincmp no longer exits in egcs, but strncasecmp does */
 
-#include "condor_snutils.h"
-
 /* select() on all our platforms takes an fd_set pointer, so we can
    just define this here for everyone.  We don't really need it
    anymore, but we might hit a platform that has a different select,
@@ -200,6 +198,9 @@ typedef fd_set *SELECT_FDSET_PTR;
 
 
 /* This stuff here is shared by all archs, *INCLUDING* NiceTry */
+
+
+#include "condor_snutils.h"
 
 
 /* Pull in some required types */

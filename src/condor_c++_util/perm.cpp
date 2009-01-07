@@ -524,7 +524,7 @@ bool perm::init( const char *accountname, const char *domain )
 	
 		// now concatenate our domain and account name for LookupAccountName()
 		// so that we have domain\username
-		if ( 0 > snprintf(qualified_account, 1023, "%s\\%s",
+		if ( 0 > _snprintf(qualified_account, 1023, "%s\\%s",
 			   	domain, accountname) ) {
 		
 			dprintf(D_ALWAYS, "Perm object: domain\\account (%s\\%s) "
@@ -888,7 +888,7 @@ bool perm::set_owner( const char *location ) {
 
 	if ( Domain_name ) {
 
-		if ( 0 > snprintf(qualified_name, 1023, "%s\\%s",
+		if ( 0 > _snprintf(qualified_name, 1023, "%s\\%s",
 		   	Domain_name, Account_name) ) {
 		
 			dprintf(D_ALWAYS, "Perm: domain\\account (%s\\%s) "

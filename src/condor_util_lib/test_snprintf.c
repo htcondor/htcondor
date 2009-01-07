@@ -36,7 +36,7 @@ int main(int argc, char **argv)
 	for (num_chars = 0; num_chars < 10; num_chars++) {
 		// If we want 0 characters, we still need space for the
 		// null termination, so we add one in the next line.
-		reported_length = condor_snprintf(output, num_chars+1, "%s", input);
+		reported_length = snprintf(output, num_chars+1, "%s", input);
 		if (strlen(output) == num_chars) {
 			printf("PASSED: Our snprintf output %d characters, as expected\n",
 				   num_chars);
@@ -55,7 +55,7 @@ int main(int argc, char **argv)
 	}
 			
 	output[0] = 0;
-	reported_length = condor_snprintf(output, 0, "%s", input);
+	reported_length = snprintf(output, 0, "%s", input);
 	if (strlen(output) == 0) {
 		printf("PASSED: The degenerative case worked.\n");
 	} else {

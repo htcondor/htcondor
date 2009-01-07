@@ -106,7 +106,6 @@ typedef unsigned __int32 uint32_t;
 #define strdup _strdup
 #define strupr _strupr
 #define strlwr _strlwr
-#define snprintf _snprintf
 #define chdir _chdir
 #define fsync _commit
 #define access _access
@@ -138,6 +137,7 @@ typedef unsigned __int32 uint32_t;
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdarg.h>
 #include <limits.h>
 #include <math.h>
 #include <float.h>   // for DBL_MAX and other constants

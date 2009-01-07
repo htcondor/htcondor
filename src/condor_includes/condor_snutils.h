@@ -20,19 +20,30 @@
 #ifndef CONDOR_SNUTILS_H
 #define CONDOR_SNUTILS_H
 
-/*  not every platform has an snprintf, so if we're one of the unlucky few,
-	we need to provide it. Currently that seems only to be SOLARIS251
-	epaulson 6/18/2002 */
+/* Some platforms don't have a proper snprintf(). On Windows, _snprintf()
+ * doesn't NULL-terminate the buffer if the formated string is too large
+ * to fit. On HP-UX, snprintf() returns -1 if the formated string is too
+ * large to fit in the buffer.
+ *
+ * For these platforms, we provide our own snprintf(). Thus, on all
+ * platforms, we guarantee that snprintf() NULL-terminates the destination
+ * buffer in all cases and returns the number of bytes (excluding the
+ * terminating NULL) that would have been written if the buffer had been
+ * large enough.
+ *
+ * We also provide [v]printf_length(), which returns the number of bytes
+ * (excluding the terminating NULL) necessary to hold the formatted
+ * string. vprintf_length() uses a copy of the va_list passed in as a
+ * convenience to the calling function.
+ */
 
 BEGIN_C_DECLS
 
-#ifndef HAVE_SNPRINTF
-int snprintf(char *output, size_t buffer_size, const char *format, ...);
+#ifdef WIN32
+int snprintf(char *str, size_t size, const char *format, ...);
+int vsnprintf(char *str, size_t size, const char *format, va_list args);
 #endif
 
-int condor_snprintf(char *output, int buffer_size, const char *format, ...);
-int condor_vsnprintf(char *output, int buffer_size, const char *format, 
-					 va_list args);
 int printf_length(const char *format, ...);
 int vprintf_length(const char *format, va_list args);
 
