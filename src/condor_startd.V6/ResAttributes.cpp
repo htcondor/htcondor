@@ -83,8 +83,9 @@ MachAttributes::MachAttributes()
 				"get Windows version information\n" );
 		}
 	}
+	m_local_credd = NULL;
+	m_last_credd_test = 0;
 #endif
-
 }
 
 
@@ -95,6 +96,9 @@ MachAttributes::~MachAttributes()
 	if( m_uid_domain ) free( m_uid_domain );
 	if( m_filesystem_domain ) free( m_filesystem_domain );
 	if( m_ckptpltfrm ) free( m_ckptpltfrm );
+#if defined(WIN32)
+	if( m_local_credd ) free( m_local_credd );
+#endif
 }
 
 
@@ -153,8 +157,13 @@ MachAttributes::compute( amask_t how_much )
 
 
 	if( IS_UPDATE(how_much) && IS_SHARED(how_much) ) {
+
 		m_virt_mem = sysapi_swap_space();
 		dprintf( D_FULLDEBUG, "Swap space: %lu\n", m_virt_mem );
+
+#if defined(WIN32)
+		credd_test();
+#endif
 	}
 
 
@@ -297,13 +306,19 @@ MachAttributes::publish( ClassAd* cp, amask_t how_much)
 		if ( m_mips > 0 ) {
 			sprintf( line, "%s=%d", ATTR_MIPS, m_mips );
 			cp->Insert( line );
-		}		
+		}
+
+#if defined(WIN32)
+		if ( m_local_credd != NULL ) {
+			cp->Assign(ATTR_LOCAL_CREDD, m_local_credd);
+		}
+#endif
 	}
 
 		// We don't want this inserted into the public ad automatically
 	if( IS_UPDATE(how_much) || IS_TIMEOUT(how_much) ) {
 		sprintf( line, "%s=%d", ATTR_LAST_BENCHMARK, m_last_benchmark );
-		cp->Insert( line );
+	cp->Insert( line );
 	}
 
 
@@ -421,6 +436,56 @@ deal_with_benchmarks( Resource* rip )
 	}
 }
 
+#if defined(WIN32)
+void
+MachAttributes::credd_test()
+{
+	// Attempt to perform a NOP on our CREDD_HOST. This will test
+	// our ability to authenticate with DAEMON-level auth, and thus
+	// fetch passwords. If we succeed, we'll advertise the CREDD_HOST
+
+	char *credd_host = param("CREDD_HOST");
+
+	if (credd_host == NULL) {
+		if (m_local_credd != NULL) {
+			free(m_local_credd);
+			m_local_credd = NULL;
+		}
+		return;
+	}
+
+	if (m_local_credd != NULL) {
+		if (strcmp(m_local_credd, credd_host) == 0) {
+			free(credd_host);
+			return;
+		}
+		else {
+			free(m_local_credd);
+			m_local_credd = NULL;
+			m_last_credd_test = 0;
+		}
+	}
+
+	time_t now = time(NULL);
+	double thresh = (double)param_integer("CREDD_TEST_INTERVAL", 300);
+	if (difftime(now, m_last_credd_test) > thresh) {
+		Daemon credd(DT_CREDD);
+		if (credd.locate()) {
+			Sock *sock = credd.startCommand(CREDD_NOP, Stream::reli_sock, 20);
+			if (sock != NULL) {
+				sock->decode();
+				if (sock->end_of_message()) {
+					m_local_credd = credd_host;
+				}
+			}
+		}
+		m_last_credd_test = now;
+	}
+	if (credd_host != m_local_credd) {
+		free(credd_host);
+	}
+}
+#endif
 
 CpuAttributes::CpuAttributes( MachAttributes* map_arg, 
 							  int slot_type,

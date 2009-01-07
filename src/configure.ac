@@ -1915,6 +1915,14 @@ else
     fi
   fi
 fi
+# Hack: /usr/bin/strip on Mac OS 10.5 causes the condor_master to die
+# inside the plugin initialization code. A message thread in the Boost
+# mailing list suggests that running strip without -g or its equivalent
+# removes more than just debugging symbols, possibly causing RTTI lookups
+# to fail. The appropriate flags on Mac OS are '-S -x'.
+if test "$os" = "Darwin" ; then
+  STRIP="$STRIP -S -x"
+fi
 AC_MSG_RESULT([$STRIP])
 AC_SUBST([STRIP],[$STRIP])
 

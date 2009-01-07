@@ -96,6 +96,13 @@ public:
 		// Compute kflops and mips on the given resource
 	void benchmark( Resource*, int force = 0 );	
 
+#if defined(WIN32)
+		// For testing communication with the CredD, if one is
+		// configured
+	void credd_test();
+	void reset_credd_test_throttle() { m_last_credd_test = 0; }
+#endif
+
 		// On shutdown, print one last D_IDLE debug message, so we don't
 		// lose statistics when the startd is restarted.
 	void final_idle_dprintf();
@@ -125,6 +132,10 @@ private:
 	bool			m_seen_keypress;    // Have we seen our first keypress yet?
 	int				m_clock_day;
 	int				m_clock_min;
+#if defined(WIN32)
+	char*			m_local_credd;
+	time_t			m_last_credd_test;
+#endif
 		// Static info
 	int				m_num_cpus;
 	int				m_num_real_cpus;

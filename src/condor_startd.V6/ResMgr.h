@@ -139,6 +139,10 @@ public:
 	void	reset_timers( void );	// Reset the period on our timers,
 									// in case the config has changed.
 
+#if defined(WIN32)
+	void reset_credd_test_throttle() { m_attr->reset_credd_test_throttle(); }
+#endif
+
 	Claim*		getClaimByPid( pid_t );	// Find Claim by pid of starter
 	Claim*		getClaimById( const char* id );	// Find Claim by ClaimId
 	Claim*		getClaimByGlobalJobId( const char* id );
