@@ -27,8 +27,7 @@ my $envvar;
 
 my $opsys = $ARGV[0];
 my $sleeptime = $ARGV[1];
-my $testdesc =  $ARGV[2];
-my $testname = "x_pid_tracking";
+my $testname =  $ARGV[2];
 
 system("date");
 
