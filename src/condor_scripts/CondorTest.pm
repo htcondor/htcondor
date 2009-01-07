@@ -294,9 +294,11 @@ sub RunTest
 		print "Config before PersonalCondorTest<<<<$ENV{CONDOR_CONFIG}>>>>\n";
 		$lastconfig = $ENV{CONDOR_CONFIG};
 		$config = PersonalCondorTest($submit_file);
-		print "PersonalCondorTest returned this config file<$config>\n";
-		print "Saving old config file <<<$lastconfig>>>\n";
-		$ENV{CONDOR_CONFIG} = $config;
+		if($config ne "") {
+			print "PersonalCondorTest returned this config file<$config>\n";
+			print "Saving last config file<<<$lastconfig>>>\n";
+			$ENV{CONDOR_CONFIG} = $config;
+		}
 	}
 
     # submit the job and get the cluster id
@@ -412,9 +414,11 @@ sub RunDagTest
 	if(defined  $wrap_test) {
 		$lastconfig = $ENV{CONDOR_CONFIG};
 		$config = PersonalCondorTest($submit_file);
-		print "PersonalCondorTest returned this config file<$config>\n";
-		print "Saving last config file<<<$lastconfig>>>\n";
-		$ENV{CONDOR_CONFIG} = $config;
+		if($config ne "") {
+			print "PersonalCondorTest returned this config file<$config>\n";
+			print "Saving last config file<<<$lastconfig>>>\n";
+			$ENV{CONDOR_CONFIG} = $config;
+		}
 	}
 
     # submit the job and get the cluster id
@@ -1280,7 +1284,7 @@ sub spawn_cmd
 			if($res != 0) {
 				print LOG " failed\n";
 				close(LOG);
-				exit(-1);
+				exit(1);
 			} else {
 				print LOG " worked\n";
 				close(LOG);
@@ -1292,20 +1296,17 @@ sub spawn_cmd
 		$mylog = $resultfile . ".watch";
 		open(LOG,">$mylog") || die "Can not open log: $mylog: $!\n";
 		print LOG "waiting on pid <$pid>\n";
-		while(($child = waitpid($pid,WNOHANG)) != -1) { 
+		while(($child = waitpid($pid,0)) != -1) { 
 			$retval = $?;
 			debug( "Child status was <<$retval>>\n",4);
 			if( WIFEXITED( $retval ) && WEXITSTATUS( $retval ) == 0 ) {
 				debug( "Monitor done and status good!\n",4);
-				$retval = 1;
+				$retval = 0;
 			} else {
 				my $status = WEXITSTATUS( $retval );
 				debug( "Monitor done and status bad<<$status>>!\n",4);
-				$retval = 0;
+				$retval = 1;
 			}
-
-			#$exitval = $? >> 8;
-			#$signal_num = $? & 127;
 			print RES "Exit $retval \n";
 			print LOG "Pid $child res was $retval\n";
 		}
