@@ -279,7 +279,7 @@ bool Dag::Bootstrap (bool recovery) {
 		while( jobs.Next( job ) ) {
 			if( job->GetStatus() == Job::STATUS_POSTRUN ) {
 #if LAZY_LOG_FILES
-				job->RegisterLogFile( _condorLogRdr, _recovery );
+				job->MonitorLogFile( _condorLogRdr, _recovery );
 #endif // LAZY_LOG_FILES
 				_postScriptQ->Run( job->_scriptPost );
 			}
@@ -791,7 +791,7 @@ void
 Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
 
 #if LAZY_LOG_FILES
-	job->UnregisterLogFile( _condorLogRdr );
+	job->UnmonitorLogFile( _condorLogRdr );
 #endif // LAZY_LOG_FILES
 
 	//
@@ -841,7 +841,7 @@ Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
 
 			if( !recovery ) {
 #if LAZY_LOG_FILES
-				job->RegisterLogFile( _condorLogRdr, _recovery );
+				job->MonitorLogFile( _condorLogRdr, _recovery );
 #endif // LAZY_LOG_FILES
 				_postScriptQ->Run( job->_scriptPost );
 			}
@@ -861,7 +861,7 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 
 	if( job ) {
 #if LAZY_LOG_FILES
-			job->UnregisterLogFile( _condorLogRdr );
+			job->UnmonitorLogFile( _condorLogRdr );
 #endif // LAZY_LOG_FILES
 
 			// Note: "|| recovery" below is somewhat of a "quick and dirty"
@@ -2936,7 +2936,7 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 	}
 
 #if LAZY_LOG_FILES
-	node->RegisterLogFile( _condorLogRdr, _recovery );
+	node->MonitorLogFile( _condorLogRdr, _recovery );
 #endif // LAZY_LOG_FILES
 
 		// Note: we're checking for a missing log file spec here instead of
@@ -3033,7 +3033,7 @@ Dag::ProcessFailedSubmit( Job *node, int max_submit_attempts )
 	_nextSubmitDelay *= 2;
 
 #if LAZY_LOG_FILES
-			node->UnregisterLogFile( _condorLogRdr );
+			node->UnmonitorLogFile( _condorLogRdr );
 #endif // LAZY_LOG_FILES
 
 	if ( node->_submitTries >= max_submit_attempts ) {
@@ -3064,7 +3064,7 @@ Dag::ProcessFailedSubmit( Job *node, int max_submit_attempts )
 			_postRunNodeCount++;
 			node->_scriptPost->_retValJob = DAG_ERROR_CONDOR_SUBMIT_FAILED;
 #if LAZY_LOG_FILES
-			node->RegisterLogFile( _condorLogRdr, _recovery );
+			node->MonitorLogFile( _condorLogRdr, _recovery );
 #endif // LAZY_LOG_FILES
 			_postScriptQ->Run( node->_scriptPost );
 		} else {

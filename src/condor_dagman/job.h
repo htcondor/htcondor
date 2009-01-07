@@ -334,20 +334,22 @@ class Job {
 	}
 
 #if LAZY_LOG_FILES
-	/** Register this node's Condor or Stork log file with the
-		multiple log reader.
+	/** Monitor this node's Condor or Stork log file with the
+		multiple log reader.  (Must be called before this node's
+		job is submitted.)
 		@param logReader: the multiple log reader
 		@param recovery: whether we're in recovery mode
 		@return true if successful, false if failed
 	*/
-	bool RegisterLogFile( ReadMultipleUserLogs &logReader, bool recovery );
+	bool MonitorLogFile( ReadMultipleUserLogs &logReader, bool recovery );
 
-	/** Unregister this node's Condor or Stork log file with the
-		multiple log reader.
+	/** Unmonitor this node's Condor or Stork log file with the
+		multiple log reader.  (Must be called after everything is done
+		for this node.)
 		@param logReader: the multiple log reader
 		@return true if successful, false if failed
 	*/
-	bool UnregisterLogFile( ReadMultipleUserLogs &logReader );
+	bool UnmonitorLogFile( ReadMultipleUserLogs &logReader );
 #endif // LAZY_LOG_FILES
 
     /** */ CondorID _CondorID;

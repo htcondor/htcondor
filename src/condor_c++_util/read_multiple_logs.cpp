@@ -1152,10 +1152,10 @@ MultiLogFiles::logFileOnNFS(const char *logFilename, bool nfsIsError)
 ///////////////////////////////////////////////////////////////////////////////
 
 bool
-ReadMultipleUserLogs::registerLogFile(const char *logfile,
+ReadMultipleUserLogs::monitorLogFile(const char *logfile,
 			bool truncateIfFirst, CondorError &errstack)
 {
-	dprintf(D_ALWAYS, "ReadMultipleUserLogs::registerLogFile(%s, %d)\n",
+	dprintf(D_ALWAYS, "ReadMultipleUserLogs::monitorLogFile(%s, %d)\n",
 				logfile, truncateIfFirst);
 
 	return true;
@@ -1164,10 +1164,10 @@ ReadMultipleUserLogs::registerLogFile(const char *logfile,
 ///////////////////////////////////////////////////////////////////////////////
 
 bool
-ReadMultipleUserLogs::unregisterLogFile (const char *logfile,
+ReadMultipleUserLogs::unmonitorLogFile (const char *logfile,
 			CondorError &errstack)
 {
-	dprintf(D_ALWAYS, "ReadMultipleUserLogs::unregisterLogFile(%s)\n",
+	dprintf(D_ALWAYS, "ReadMultipleUserLogs::unmonitorLogFile(%s)\n",
 				logfile);
 
 	return true;

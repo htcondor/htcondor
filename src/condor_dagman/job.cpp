@@ -722,7 +722,7 @@ Job::SetDagFile(const char *dagFile)
 #if LAZY_LOG_FILES
 //---------------------------------------------------------------------------
 bool
-Job::RegisterLogFile( ReadMultipleUserLogs &logReader, bool recovery )
+Job::MonitorLogFile( ReadMultipleUserLogs &logReader, bool recovery )
 {
 	bool result = false;
 
@@ -736,9 +736,9 @@ Job::RegisterLogFile( ReadMultipleUserLogs &logReader, bool recovery )
 		delete [] _logFile; // temporary
 		_logFile = strnewp( logFileStr.Value() );
 		CondorError errstack;
-		result = logReader.registerLogFile( _logFile, recovery, errstack );
+		result = logReader.monitorLogFile( _logFile, recovery, errstack );
 		if ( !result ) {
-			debug_printf( DEBUG_QUIET, "ERROR: Unable to register log "
+			debug_printf( DEBUG_QUIET, "ERROR: Unable to monitor log "
 						"file for node %s (%s)\n", GetJobName(),
 						errstack.getFullText() );
 		}
@@ -749,12 +749,12 @@ Job::RegisterLogFile( ReadMultipleUserLogs &logReader, bool recovery )
 
 //---------------------------------------------------------------------------
 bool
-Job::UnregisterLogFile( ReadMultipleUserLogs &logReader )
+Job::UnmonitorLogFile( ReadMultipleUserLogs &logReader )
 {
 	CondorError errstack;
-	bool result = logReader.unregisterLogFile( _logFile, errstack );
+	bool result = logReader.unmonitorLogFile( _logFile, errstack );
 	if ( !result ) {
-		debug_printf( DEBUG_QUIET, "ERROR: Unable to unregister log "
+		debug_printf( DEBUG_QUIET, "ERROR: Unable to unmonitor log "
 					"file for node %s (%s)\n", GetJobName(),
 					errstack.getFullText() );
 	}

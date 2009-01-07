@@ -214,22 +214,22 @@ public:
 	int getInitializedLogCount() const;
 
 #if LAZY_LOG_FILES
-		/** Register the given log file
-			@param the log file to register
+		/** Monitor the given log file
+			@param the log file to monitor
 			@param whether to truncate the log file if this is the
 				first time we're seeing it
 			@param a CondorError object to hold any error information
 			@return true if successful, false if failed
 		*/
-	bool registerLogFile(const char *logfile, bool truncateIfFirst,
+	bool monitorLogFile(const char *logfile, bool truncateIfFirst,
 				CondorError &errstack);
 
-		/** Unregister the given log file
-			@param the log file to register
+		/** Unmonitor the given log file
+			@param the log file to unmonitor
 			@param a CondorError object to hold any error information
 			@return true if successful, false if failed
 		*/
-	bool unregisterLogFile (const char *logfile, CondorError &errstack);
+	bool unmonitorLogFile (const char *logfile, CondorError &errstack);
 #endif // LAZY_LOG_FILES
 
 protected:
