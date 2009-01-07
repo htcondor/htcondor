@@ -192,7 +192,7 @@ $shadow = sub
 		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 	}
 	CondorTest::debug("$testname: SUCCESS\n",1);
-	exit(1);
+	#exit(1);
 };
 
 
