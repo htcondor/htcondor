@@ -50,8 +50,8 @@ $deferralTime = time() + 600;
 ##
 ## If this is set to true, then we know that we caused the cooresponding command
 ##
-my $HOLD = "";
-my $REMOVE = "";
+my $HOLD = 0;
+my $REMOVE = 0;
 
 ##
 ## Testing Information
