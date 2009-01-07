@@ -22,7 +22,9 @@
 #ifndef __COMMON_H__
 #define __COMMON_H__
 
+#ifndef WIN32
 #include <strings.h>
+#endif
 
 #if defined( WANT_CLASSAD_NAMESPACE ) && defined(__cplusplus)
 #define BEGIN_NAMESPACE( x ) namespace x {
@@ -68,14 +70,20 @@
 
 #ifdef WIN32
 	// special definitions we need for Windows
+#ifndef DLL_IMPORT_MAGIC
 #define DLL_IMPORT_MAGIC __declspec(dllimport)
+#endif
 #include <windows.h>
 #include <float.h>
 #include <io.h>
 #define fsync _commit
+#ifndef open
 #define open _open
+#endif
 #define strcasecmp _stricmp
+#ifndef rint
 #define rint(num) floor(num + .5)
+#endif
 #define isnan _isnan
 	// isinf() defined in util.h
 

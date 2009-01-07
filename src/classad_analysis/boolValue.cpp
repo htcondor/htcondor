@@ -21,6 +21,7 @@
 #include "condor_common.h"
 #include "boolValue.h"
 #include "list.h"
+#include "extArray.h"
 
 // F && (T|F|U|E) = F
 // E && (T|F|U|E) = E 
@@ -593,9 +594,9 @@ GenerateABVList( List<AnnotatedBoolVector> &result )
 	AnnotatedBoolVector abv;
 
 	int frequency = 0;
-	bool seen[numCols];
-	bool tempContexts[numCols];
-	bool hasCommonTrue;
+	ExtArray<bool> seen ( numCols );
+	ExtArray<bool> tempContexts ( numCols );
+    bool hasCommonTrue;
 
 	for( int i = 0; i < numCols; i++ ) {
 	    if(!seen[i]) {
@@ -622,6 +623,7 @@ GenerateABVList( List<AnnotatedBoolVector> &result )
 			result.Append( abv );
 		}
 	}
+
 	return true;
 }
 
@@ -634,8 +636,8 @@ GenerateMaxTrueABVList( List<AnnotatedBoolVector> &result )
 
 	AnnotatedBoolVector *abv;
 	int frequency = 0;
-	bool seen[numCols];
-	bool tempContexts[numCols];
+	bool *seen = new bool[numCols];
+	bool *tempContexts = new bool[numCols];
 	for( int col = 0; col < numCols; col ++ ) {
 		seen[col] = false;
 		tempContexts[col] = false;
@@ -681,6 +683,8 @@ GenerateMaxTrueABVList( List<AnnotatedBoolVector> &result )
 			}
 		}
 	}
+    delete [] seen;
+    delete [] tempContexts;
 	return true;
 }
 

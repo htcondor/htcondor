@@ -41,7 +41,7 @@ typedef std::map<const ClassAd*, References> PortReferences;
 #include "classad/stream.h"
 #endif
 
-typedef classad_hash_map<std::string, ExprTree*, StringCaseIgnHash, CaseIgnEqStr> AttrList;
+typedef classad_hash_map<std::string, ExprTree*> AttrList;
 typedef std::set<std::string, CaseIgnLTStr> DirtyAttrList;
 
 void ClassAdLibraryVersion(int &major, int &minor, int &patch);

@@ -17,7 +17,6 @@
  *
  ***************************************************************/
 
-
 #include "classad/common.h"
 #include "classad/indexfile.h"
 #include <iostream>
@@ -29,7 +28,7 @@ BEGIN_NAMESPACE( classad )
 int IndexFile::
 dump_index()
 {
-   	hash_map<string,int,StringHash>::iterator m=Index.begin();
+   	classad_hash_map<string,int>::iterator m=Index.begin();
 	cout << "in dump index the length= " << Index.size() << std::endl;
 	while (m!=Index.end()){
 		cout << "dump index  key= " << m->first << "  offset=" << m->second << endl;
@@ -48,7 +47,7 @@ TruncateStorageFile()
 
 	cur_set = 0;
 
-	hash_map<string,int,StringHash>::iterator ptr;
+	classad_hash_map<string,int>::iterator ptr;
 	if( ( new_filed = open(filename, O_RDWR | O_CREAT | O_APPEND, 0600 )) < 0 ) {
 		CondorErrno = ERR_CACHE_FILE_ERROR;
 		CondorErrMsg = "internal error:  unable to create the temp file in truncating storagefile";
@@ -184,7 +183,7 @@ WriteBack(string key, string ad)
 bool IndexFile::
 FindInFile(string key,tag &ptr)
 {
-	hash_map<string,int,StringHash>::iterator m=Index.find(key);
+	classad_hash_map<string,int>::iterator m=Index.find(key);
 	if (m!=Index.end()){
 		ptr.offset=m->second;
 		return true; 
@@ -196,7 +195,7 @@ FindInFile(string key,tag &ptr)
 bool IndexFile::
 DeleteFromStorageFile(string key)
 {
-	hash_map<string,int,StringHash>::iterator i=Index.find(key);
+	classad_hash_map<string,int>::iterator i=Index.find(key);
 	if (i!=Index.end()){
 		int offset=i->second; 
 		lseek(filed,offset,SEEK_SET);

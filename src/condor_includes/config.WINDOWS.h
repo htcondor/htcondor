@@ -32,5 +32,7 @@
 #define WANT_QUILL 1
 #define HAVE_EXT_KRB5 1
 #define HAVE_SNPRINTF 1
+#define HAVE_EXT_CLASSADS 1
+#define WANT_CLASSAD_ANALYSIS 1
 
 #endif /* _WINDOWS_CONFIG_H_ */

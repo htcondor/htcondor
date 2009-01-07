@@ -84,17 +84,18 @@ DIST_VERSION = 1.0.1
 DISTRIBUTION_DIR = classads-$(DIST_VERSION)
 
 DIST_FILES = 								\
-	attrrefs.cpp classad.cpp classad_functional_tester.cpp		\
-	classad_unit_tester.cpp classad_version.cpp collection.cpp		\
-	collectionBase.cpp cxi.cpp debug.cpp exprList.cpp exprTree.cpp		\
-	extra_tests.cpp fnCall.cpp indexfile.cpp instantiations.cpp lexer.cpp	\
-	lexerSource.cpp literals.cpp matchClassad.cpp operators.cpp query.cpp	\
-	sample.cpp shared.cpp sink.cpp source.cpp test_instantiations.cpp		\
-	test_xml.cpp tests.txt transaction.cpp util.cpp value.cpp view.cpp	\
-	xmlLexer.cpp xmlSink.cpp xmlSource.cpp cclassad.cpp README		\
-	CHANGELOG configure.ac Makefile.am.m4 functional_tests.txt	\
-	ClassAd.swg classads.spec classad_functional_tester.h		\
-	NOTICE.txt LICENSE-2.0.txt
+	attrrefs.cpp new_classad.cpp classad_functional_tester.cpp	\
+	classad_unit_tester.cpp classad_version.cpp collection.cpp	\
+	collectionBase.cpp cxi.cpp new_classad_debug.cpp exprList.cpp	\
+	exprTree.cpp extra_tests.cpp fnCall.cpp indexfile.cpp 		\
+	instantiations.cpp lexer.cpp lexerSource.cpp literals.cpp	\
+	matchClassad.cpp new_classad_operators.cpp query.cpp sample.cpp	\
+	shared.cpp sink.cpp source.cpp test_instantiations.cpp		\
+	test_xml.cpp tests.txt transaction.cpp new_classad_util.cpp 	\
+	new_classad_value.cpp view.cpp xmlLexer.cpp xmlSink.cpp 	\
+	xmlSource.cpp cclassad.cpp README CHANGELOG configure.ac 	\
+	Makefile.am.m4 functional_tests.txt ClassAd.swg classads.spec	\
+	classad_functional_tester.h NOTICE.txt LICENSE-2.0.txt
 
 H_FILES = 								\
 	classad/attrrefs.h classad/cclassad.h				\

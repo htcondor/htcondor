@@ -21,6 +21,8 @@
 #ifndef __LITERALS_H__
 #define __LITERALS_H__
 
+#include <vector>
+
 BEGIN_NAMESPACE( classad )
 
 typedef std::vector<ExprTree*> ArgumentList;

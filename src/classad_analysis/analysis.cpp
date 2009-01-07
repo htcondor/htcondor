@@ -162,7 +162,7 @@ AnalyzeJobReqToBuffer( classad::ClassAd *request, ResourceGroup &offers, string 
 		if( ( *t == '&' ) && ( *( t+1 ) == '&' ) ) {
 			lastAnd = t + 2;
 		}
-		if( t >= lineStart + 80 ) {
+		if( distance( lineStart, t ) >= 80 ) {
 			if( lastAnd != lineStart ) {
 				temp_buffer.replace( lastAnd, lastAnd + 1, 1, '\n' );
 				lineStart = lastAnd + 1;
@@ -296,7 +296,7 @@ AnalyzeJobReqToBuffer( classad::ClassAd *request, ResourceGroup &offers, string 
 			// create map from original Condition order to sorted order
 		int numConds = 0;
 		profile->GetNumberOfConditions( numConds );
-		int condMap[numConds];
+		ExtArray<int> condMap ( numConds );
 		int i = 0;
 		while( mapList.Next( index ) ) {
 			condMap[index] = i;
@@ -359,8 +359,8 @@ AnalyzeJobReqToBuffer( classad::ClassAd *request, ResourceGroup &offers, string 
 			buffer += "\n";
 			while( profile->explain.conflicts->Next( rawIS ) ) {
 				sortedIS.Init( numConds );
-				IndexSet::Translate( *rawIS, condMap, numConds, numConds,
-									 sortedIS );
+				IndexSet::Translate( *rawIS, condMap.getarray (), 
+									numConds, numConds, sortedIS );
 				buffer += "  conditions: ";
 				bool firstNum = true;
 				for( i = 0; i < numConds; i++ ) {
@@ -379,6 +379,7 @@ AnalyzeJobReqToBuffer( classad::ClassAd *request, ResourceGroup &offers, string 
 			}
 		}	
 
+        
 		p++;
 	}
 	return true;
@@ -968,13 +969,13 @@ SuggestConditionModify( Profile *p, ResourceGroup &rg )
 	ExtArray< string > attrs;
 	ExtArray< ValueRange * > vrs;
 	string attr = "";
-	int vr4Cond[numConds];
+	ExtArray<int> vr4Cond ( numConds );
 	int attrNum = 0;
 	int condNum = 0;
 	int vrNum = 0;
-	classad::Operation::OpKind ops[numConds];
-	Condition *conds[numConds];
-	bool tooComplex[numConds]; 
+	ExtArray<classad::Operation::OpKind> ops ( numConds );
+	ExtArray<Condition*> conds ( numConds );
+    ExtArray<bool> tooComplex ( numConds ); 
 //	classad::Operation::OpKind op1, op2;
 	classad::Value val;
 	p->Rewind( );
@@ -1041,14 +1042,14 @@ SuggestConditionModify( Profile *p, ResourceGroup &rg )
 			for( int i = 0; i < vrs.getsize( ); i++ ){
 				delete vrs[i];
 			}
-			return false;
+            return false;
 		}
 		condNum++;
 	}
 
 	int numVRs = attrs.getsize( );
-	classad::Value *nearestValues[numVRs];
-	for( int i = 0; i < numVRs; i++ ) {
+	ExtArray<classad::Value*> nearestValues ( numVRs );
+    for( int i = 0; i < numVRs; i++ ) {
 		nearestValues[i] = NULL;
 	}
 
@@ -1106,7 +1107,7 @@ SuggestConditionModify( Profile *p, ResourceGroup &rg )
 	classad::Value currPt, currUpper, currLower;
 	BoolValue currBVal, tempBVal;
 	val.SetUndefinedValue( );
-	classad::Value *tempVals[numVRs];
+	ExtArray<classad::Value*> tempVals ( numVRs );
 	for( int i = 0; i < numVRs; i++ ) {
 		tempVals[i] = NULL;
 	}
@@ -1159,12 +1160,7 @@ SuggestConditionModify( Profile *p, ResourceGroup &rg )
 		}
 		sumDist = 0;
 	}
-	for( int i = 0; i < numVRs; i++ ) {
-        if (tempVals[i] != NULL) {
-            delete tempVals[i];
-        }
-	}
-
+	
 	classad::Value condVal;
 	condNum = 0;
   	p->Rewind( );
@@ -1201,8 +1197,12 @@ SuggestConditionModify( Profile *p, ResourceGroup &rg )
   		}
 		condNum++;
  	}
-
-	return true;
+	for( int i = 0; i < numVRs; i++ ) {
+		if (tempVals[i] != NULL) {
+			delete tempVals[i];
+		}
+	}  
+    return true;
 }
 
 
@@ -1396,8 +1396,8 @@ AnalyzeAttributes( classad::ClassAd *ad, ResourceGroup &rg, ClassAdExplain &caEx
 
 	int numReqs = reqList.Number( );
 
-	int firstContext[numReqs]; 
-	List< string > jobAttrs, undefAttrs, refdAttrs;
+	ExtArray<int> firstContext ( numReqs );
+    List< string > jobAttrs, undefAttrs, refdAttrs;
 	classad::ClassAd::iterator itr;
 
 		// build list of attributes
@@ -1587,8 +1587,8 @@ AnalyzeAttributes( classad::ClassAd *ad, ResourceGroup &rg, ClassAdExplain &caEx
 
 		// Convert machine map
 	int numContexts = boolValueArrayList.Number();
-	int machineForContext[numContexts];
- 	int m = 0;
+	ExtArray<int> machineForContext ( numContexts );
+    int m = 0;
   	for( int i = 0; i < numContexts; i++ ) {
   	    if( ( m+1 ) < numReqs) {
   			if( i >= firstContext[m+1] ) {
@@ -1597,7 +1597,7 @@ AnalyzeAttributes( classad::ClassAd *ad, ResourceGroup &rg, ClassAdExplain &caEx
   	    }
   	    machineForContext[i] = m;
   	}
-
+    
 		// Create BoolTable and ValueRangeTable
 	bt.Init( numContexts, numRefdAttrs );
 	vrt.Init( numContexts, numRefdAttrs );
@@ -1752,8 +1752,8 @@ AnalyzeAttributes( classad::ClassAd *ad, ResourceGroup &rg, ClassAdExplain &caEx
 		for( int i = 0; i < hrs->getsize( ); i++ ) {
 			currHR = ( *hrs )[i];
 			currHR->GetIndexSet( hasContext );
-			IndexSet::Translate( hasContext, machineForContext, numContexts,
-								 numReqs, hasMachine );
+			IndexSet::Translate( hasContext, machineForContext.getarray (), 
+								numContexts, numReqs, hasMachine );
 			hasMachine.GetCardinality( currNumContexts );
 			if( currNumContexts > maxNumContexts ) {
 				maxNumContexts = currNumContexts;
@@ -1762,8 +1762,7 @@ AnalyzeAttributes( classad::ClassAd *ad, ResourceGroup &rg, ClassAdExplain &caEx
 			}
 		}
 	}
-
-
+    
 	///////////////////////////////////////
 	// STEP 4 - SET UP ATTRIBUTE EXPLAIN //
 	///////////////////////////////////////

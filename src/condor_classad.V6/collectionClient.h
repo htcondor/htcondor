@@ -29,7 +29,7 @@ class ClientTransaction;
 
 BEGIN_NAMESPACE( classad )
 
-typedef classad_hash_map<std::string,ClientTransaction*,StringHash> LocalXactionTable;
+typedef classad_hash_map<std::string,ClientTransaction*> LocalXactionTable;
 
 class ClassAdCollectionClient : public ClassAdCollectionInterface {
 public:
