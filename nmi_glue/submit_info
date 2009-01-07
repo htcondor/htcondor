@@ -68,6 +68,7 @@ prereqs_x86_rhas_3       = binutils-2.15, perl-5.8.5, gzip-1.3.3, autoconf-2.59,
 x_test_platforms_x86_rhas_3 =  x86_rhas_4,  x86_fc_3, x86_fc_4, \
 						x86_suse_10.0, x86_sles_9, x86_deb_3.1, x86_ubuntu_5.10, \
 						x86_64_rhas_3, x86_64_rhas_4
+x_test_platforms_x86_macos_10.4 = x86_64_macos_10.5
 #x_test_platforms_x86_rhas_3 = , x86_slc_4, \
 						# x86_fc_2, \
 						#x86_fc_5,  \
@@ -127,7 +128,6 @@ test_append_prereqs = java-1.4.2_09
 [
 platforms = x86_64_macos_10.5
 test_append_prereqs = java-1.5.0_13
-x_test_platforms_x86_macos_10.4 = x86_64_macos_10.5
 ]
 
 [
