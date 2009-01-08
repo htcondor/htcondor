@@ -142,6 +142,10 @@ $pretestsetuponly = 0; # only get the personal condor in place
 # set up to recover from tests which hang
 $SIG{ALRM} = sub { die "timeout" };
 
+# set up for reading in core/ERROR exemptions
+$errexempts = "ErrorExemptions";
+%exemptions;
+
 # setup
 STDOUT->autoflush();   # disable command buffering of stdout
 STDERR->autoflush();   # disable command buffering of stderr
@@ -289,6 +293,10 @@ my $genericlocalconfig = "";
 my $nightly = IsThisNightly($BaseDir);
 my $res = 0;
 
+if($wantcorechecks == 1) {
+	LoadExemptions();
+}
+
 if(!($wantcurrentdaemons)) {
 
 	$iswindows = IsThisWindows();
@@ -366,19 +374,6 @@ print "Ready for Testing\n";
 # in the current directory that might be compiler subdirs...
 if( ! @compilers ) {
 	@compilers = ("g77", "gcc", "gpp");
-    # find all compiler subdirectories in the test directory
-    #opendir( TEST_DIR, $test_dir ) || die "error opening \"$test_dir\": $!\n";
-    #@compilers = grep -d, readdir( TEST_DIR );
-    # filter out . and ..
-    #@compilers = grep !/^\.\.?$/, @compilers;
-	# if the tests have run before we have pid labeled directories and 
-	# test.saveme directories which should be ignored.
-	#@compilers = grep !/^.*saveme.*$/, @compilers;
-	#@compilers = grep !/^\d+$/, @compilers;
-    # get rid of CVS entry for testing - won't hurt to leave it in.
-    #@compilers = grep !/CVS/, @compilers;
-    #closedir TEST_DIR;
-    #die "error: no compiler subdirectories found\n" unless @compilers;
 }
 
 if($timestamp == 1) {
@@ -1744,4 +1739,34 @@ sub yates_shuffle
         next if $i == $j;
         @$array[$i,$j] = @$array[$j,$i];
     }
+}
+
+sub LoadExemptions
+{
+	open(EE,"<$errexempts") or die "Can not open $errexempts:$!\n";
+	while(<EE>) {
+    	chomp();
+    	$line = $_;
+    	print $line . "\n";
+    	(my $test, $required, $message) = split /,/, $line;
+    	my $save = $required . "," . $message;
+    	if(exists $exemptions{$test}) {
+        	push @{$exemptions{$test}}, $save;
+    	} else {
+        	$exemptions{$test} = ();
+        	push @{$exemptions{$test}}, $save;
+    	}
+	}
+	DropExemptions();
+}
+
+sub DropExemptions
+{
+	foreach $key (sort keys %exemptions) {
+    	print "$key\n";
+    	my @array = @{$exemptions{$key}};
+    	foreach my $p (@array) {
+        	print "$p\n";
+    	}
+	}
 }
