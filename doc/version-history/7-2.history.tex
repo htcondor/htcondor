@@ -50,6 +50,11 @@ DAEMON_LIST	= NEW_DAEMON
 DC_DAEMON_LIST	= +NEW_DAEMON
 \end{verbatim}
 
+% PR 959
+\item Added the DAGMAN\_COPY\_TO\_SPOOL configuration macro to control
+whether the condor\_dagman binary gets copied to the spool directory
+when a DAG is submitted.  See \ref{param:DAGManCopyToSpool} for details.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
