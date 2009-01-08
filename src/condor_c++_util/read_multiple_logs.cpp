@@ -34,10 +34,23 @@
 
 #define LOG_HASH_SIZE 37 // prime
 
+#define LOG_INFO_HASH_SIZE 37 // prime
+
+#define DEBUG_LOG_FILES true //TEMP
+#if DEBUG_LOG_FILES
+#  define D_LOG_FILES D_ALWAYS
+#else
+#  define D_LOG_FILES D_FULLDEBUG
+#endif
+
 ///////////////////////////////////////////////////////////////////////////////
 
 ReadMultipleUserLogs::ReadMultipleUserLogs() :
 	logHash(LOG_HASH_SIZE, hashFuncJobID, rejectDuplicateKeys)
+#if LAZY_LOG_FILES
+	, allLogFiles(LOG_INFO_HASH_SIZE, MyStringHash, rejectDuplicateKeys),
+	activeLogFiles(LOG_INFO_HASH_SIZE, MyStringHash, rejectDuplicateKeys)
+#endif // LAZY_LOG_FILES
 {
 	pLogFileEntries = NULL;
 	iLogFileCount = 0;
@@ -47,6 +60,10 @@ ReadMultipleUserLogs::ReadMultipleUserLogs() :
 
 ReadMultipleUserLogs::ReadMultipleUserLogs(StringList &listLogFileNames) :
 	logHash(LOG_HASH_SIZE, hashFuncJobID, rejectDuplicateKeys)
+#if LAZY_LOG_FILES
+	, allLogFiles(LOG_INFO_HASH_SIZE, MyStringHash, rejectDuplicateKeys),
+	activeLogFiles(LOG_INFO_HASH_SIZE, MyStringHash, rejectDuplicateKeys)
+#endif // LAZY_LOG_FILES
 {
 	pLogFileEntries = NULL;
 	iLogFileCount = 0;
@@ -246,6 +263,37 @@ MultiLogFiles::TruncateLogs(StringList &logFileNames)
 		}
 	}
 }
+
+#if LAZY_LOG_FILES
+///////////////////////////////////////////////////////////////////////////////
+
+bool
+MultiLogFiles::CreateOrTruncateFile(const char *filename,
+			CondorError &errstack)
+{
+	dprintf(D_LOG_FILES, "MultiLogFiles::CreateOrTruncateFile(%s)\n",
+				filename);
+
+	bool result = true;
+
+	int fd = safe_create_keep_if_exists(filename, O_WRONLY | O_TRUNC );
+	if ( fd < 0 ) {
+		errstack.pushf("MultiLogFiles", 0/*TEMP*/, "Error (%d, %s) opening "
+					"file %s for creation or truncation", errno,
+					strerror( errno ), filename );
+		result = false;
+	} else {
+		if ( close( fd ) != 0 ) {
+			errstack.pushf("MultiLogFiles", 0/*TEMP*/, "Error (%d, %s) "
+						"closing file %s for creation or truncation",
+						errno, strerror( errno ), filename );
+			result = false;
+		}
+	}
+
+	return true;
+}
+#endif // LAZY_LOG_FILES
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -447,17 +495,6 @@ MultiLogFiles::loadLogFileNameFromSubFile(const MyString &strSubFilename,
 		}
 	}
 
-	MyString	currentDir;
-	char	tmpCwd[PATH_MAX];
-	if ( getcwd(tmpCwd, PATH_MAX) ) {
-		currentDir = tmpCwd;
-	} else {
-		dprintf(D_ALWAYS,
-				"ERROR: getcwd() failed with errno %d (%s) at %s:%d\n",
-				errno, strerror(errno), __FILE__, __LINE__);
-		return "";
-	}
-
 	StringList	logicalLines;
 	if ( fileNameToLogicalLines( strSubFilename, logicalLines ) != "" ) {
 		return "";
@@ -508,14 +545,10 @@ MultiLogFiles::loadLogFileNameFromSubFile(const MyString &strSubFilename,
 			// relative and an absolute path.  
 			// Note: we now do further checking that doesn't rely on
 			// comparing paths to the log files.  wenger 2004-05-27.
-		if ( !fullpath(logFileName.Value()) ) {
-			if ( currentDir != "" ) {
-				logFileName = currentDir + DIR_DELIM_STRING + logFileName;
-			} else {
-				dprintf(D_ALWAYS, "MultiLogFiles: unable to get "
-							"current directory\n");
-				logFileName = "";
-			}
+		CondorError errstack;
+		if ( !makePathAbsolute( logFileName, errstack ) ) {
+			dprintf(D_ALWAYS, "%s\n", errstack.getFullText());
+			return "";
 		}
 	}
 
@@ -528,6 +561,31 @@ MultiLogFiles::loadLogFileNameFromSubFile(const MyString &strSubFilename,
 	}
 
 	return logFileName;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+bool
+MultiLogFiles::makePathAbsolute(MyString &filename, CondorError &errstack)
+{
+	if ( !fullpath(filename.Value()) ) {
+			//TEMP -- I'd like to use realpath() here, but I'm not sure
+			// if that's portable across all platforms.  wenger 2009-01-09.
+		MyString	currentDir;
+		char	tmpCwd[PATH_MAX];
+		if ( getcwd(tmpCwd, PATH_MAX) ) {
+			currentDir = tmpCwd;
+		} else {
+			errstack.pushf( "MultiLogFiles", 0/*TEMP*/,
+						"ERROR: getcwd() failed with errno %d (%s) at %s:%d\n",
+						errno, strerror(errno), __FILE__, __LINE__);
+			return false;
+		}
+
+		filename = currentDir + DIR_DELIM_STRING + filename;
+	}
+
+	return true;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1149,15 +1207,73 @@ MultiLogFiles::logFileOnNFS(const char *logFilename, bool nfsIsError)
 }
 
 #if LAZY_LOG_FILES
+
 ///////////////////////////////////////////////////////////////////////////////
 
 bool
 ReadMultipleUserLogs::monitorLogFile(const char *logfile,
 			bool truncateIfFirst, CondorError &errstack)
 {
-	dprintf(D_ALWAYS, "ReadMultipleUserLogs::monitorLogFile(%s, %d)\n",
+	dprintf(D_LOG_FILES, "ReadMultipleUserLogs::monitorLogFile(%s, %d)\n",
 				logfile, truncateIfFirst);
 
+	MyString file(logfile);
+
+		// Make sure path is absolute to reduce the chance of the same
+		// file getting referred to by different names (that will cause
+		// errors).
+	if ( !MultiLogFiles::makePathAbsolute( file, errstack ) ) {
+		errstack.push( "ReadMultipleUserLogs", 0/*TEMP*/,
+					"Error making log file path absolute in "
+					"monitorLogFile()\n" );
+		return false;
+	}
+
+	LogFileMonitor *monitor;
+	if ( allLogFiles.lookup( file, monitor ) == 0 ) {
+		dprintf(D_LOG_FILES, "ReadMultipleUserLogs: found "
+					"LogFileMonitor object for %s\n", logfile);
+
+	} else {
+		dprintf(D_LOG_FILES, "ReadMultipleUserLogs: didn't "
+					"find LogFileMonitor object for %s\n", logfile);
+
+		if ( truncateIfFirst ) {
+			if ( !MultiLogFiles::CreateOrTruncateFile( logfile, errstack) ) {
+				errstack.pushf( "ReadMultipleUserLogs", 0/*TEMP*/,
+							"Error truncating log file %s", logfile );
+				return false;
+			}
+		}
+
+		monitor = new LogFileMonitor();
+		ASSERT( monitor );
+		dprintf(D_LOG_FILES, "ReadMultipleUserLogs: created LogFileMonitor "
+					"object for log file %s\n", logfile);
+
+		if ( allLogFiles.insert( file, monitor ) != 0 ) {
+			errstack.pushf( "ReadMultipleUserLogs", 0/*TEMP*/,
+						"Error inserting %s into allLogFiles", logfile );
+			return false;
+		}
+	}
+
+	if ( monitor->refCount < 1 ) {
+		// open file
+		// seek to proper location -- need to add fseek() method to ReadUserLog class
+
+		if ( activeLogFiles.insert( file, monitor ) != 0 ) {
+			errstack.pushf( "ReadMultipleUserLogs", 0/*TEMP*/,
+						"Error inserting %s into activeLogFiles", logfile );
+			return false;
+		} else {
+			dprintf(D_LOG_FILES, "ReadMultipleUserLogs: added log "
+						"file %s to active list\n", logfile);
+		}
+	}
+
+	monitor->refCount++;
+	
 	return true;
 }
 
@@ -1167,8 +1283,48 @@ bool
 ReadMultipleUserLogs::unmonitorLogFile (const char *logfile,
 			CondorError &errstack)
 {
-	dprintf(D_ALWAYS, "ReadMultipleUserLogs::unmonitorLogFile(%s)\n",
+	dprintf(D_LOG_FILES, "ReadMultipleUserLogs::unmonitorLogFile(%s)\n",
 				logfile);
+
+	MyString file(logfile);
+
+		// Make sure path is absolute to reduce the chance of the same
+		// file getting referred to by different names (that will cause
+		// errors).
+	if ( !MultiLogFiles::makePathAbsolute( file, errstack ) ) {
+		errstack.push( "ReadMultipleUserLogs", 0/*TEMP*/,
+					"Error making log file path absolute in "
+					"monitorLogFile()\n" );
+		return false;
+	}
+
+	LogFileMonitor *monitor;
+	if ( allLogFiles.lookup( file, monitor ) == 0 ) {
+		dprintf(D_LOG_FILES, "ReadMultipleUserLogs: found "
+					"LogFileMonitor object for %s\n", logfile);
+
+		monitor->refCount--;
+
+		if ( monitor->refCount < 1 ) {
+			// save current file offset -- need to add ftell() method to ReadUserLog class
+			// close file
+
+			if ( activeLogFiles.remove( file ) != 0 ) {
+				errstack.pushf( "ReadMultipleUserLogs", 0/*TEMP*/,
+							"Error removing %s from activeLogFiles", logfile );
+				return false;
+			} else {
+				dprintf(D_LOG_FILES, "ReadMultipleUserLogs: removed "
+							"log file %s from active list\n", logfile);
+			}
+		}
+
+	} else {
+		errstack.pushf( "ReadMultipleUserLogs", 0/*TEMP*/,
+					"Didn't find LogFileMonitor object for log file %s!\n",
+					logfile );
+		return false;
+	}
 
 	return true;
 }

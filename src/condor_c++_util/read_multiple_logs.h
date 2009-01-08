@@ -74,6 +74,13 @@ public:
     static MyString loadLogFileNameFromSubFile(const MyString &strSubFilename,
 			const MyString &directory);
 
+		/** Makes the given filename an absolute path
+			@param the name of the file (input/output)
+			@param a CondorError object to hold any error information
+			@return true if successful, false if failed
+		 */
+	static bool makePathAbsolute(MyString &filename, CondorError &errstack);
+
 #ifdef HAVE_EXT_CLASSADS
 	    /** Gets the log files from a Stork submit file.
 		 * @param The submit file name.
@@ -101,6 +108,17 @@ public:
 			deleting them, which breaks things if the log file is a link).
 		 */
 	static void TruncateLogs(StringList &logFileNames);
+
+#if LAZY_LOG_FILES
+		/** Creates the given file if it doesn't exist, truncates
+			it if it does.
+			@param the name of the file to create or truncate
+			@param a CondorError object to hold any error information
+			@return true if successful, false if failed
+		 */
+	static bool CreateOrTruncateFile(const char *filename,
+				CondorError &errstack);
+#endif // LAZY_LOG_FILES
 
 		/** Determines whether the given set of log files have any
 			members that are on NFS.
@@ -257,6 +275,20 @@ private:
 		// Note: this table has one entry per log file, not one per
 		// Condor ID.
 	HashTable<CondorID, LogFileEntry *>	logHash;
+
+#if LAZY_LOG_FILES
+	struct LogFileMonitor {
+		LogFileMonitor() : refCount(0), readUserLog(NULL), lastOffset(0) {}
+		int			refCount;
+		ReadUserLog	*readUserLog;
+		long		lastOffset;
+		// more stuff here?
+	};
+
+	HashTable<MyString, LogFileMonitor *>	allLogFiles;
+
+	HashTable<MyString, LogFileMonitor *>	activeLogFiles;
+#endif // LAZY_LOG_FILES
 
 	// For instantiation in programs that use this class.
 #define MULTI_LOG_HASH_INSTANCE template class \

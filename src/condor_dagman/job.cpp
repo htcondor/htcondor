@@ -736,11 +736,11 @@ Job::MonitorLogFile( ReadMultipleUserLogs &logReader, bool recovery )
 		delete [] _logFile; // temporary
 		_logFile = strnewp( logFileStr.Value() );
 		CondorError errstack;
-		result = logReader.monitorLogFile( _logFile, recovery, errstack );
+		result = logReader.monitorLogFile( _logFile, !recovery, errstack );
 		if ( !result ) {
-			debug_printf( DEBUG_QUIET, "ERROR: Unable to monitor log "
-						"file for node %s (%s)\n", GetJobName(),
-						errstack.getFullText() );
+			errstack.pushf( "DAGMan::Job", 0/*TEMP*/, "ERROR: Unable to "
+						"monitor log file for node %s", GetJobName() );
+			debug_printf( DEBUG_QUIET, "%s\n", errstack.getFullText() );
 		}
 	}
 
@@ -754,9 +754,9 @@ Job::UnmonitorLogFile( ReadMultipleUserLogs &logReader )
 	CondorError errstack;
 	bool result = logReader.unmonitorLogFile( _logFile, errstack );
 	if ( !result ) {
-		debug_printf( DEBUG_QUIET, "ERROR: Unable to unmonitor log "
-					"file for node %s (%s)\n", GetJobName(),
-					errstack.getFullText() );
+		errstack.pushf( "DAGMan::Job", 0/*TEMP*/, "ERROR: Unable to "
+					"unmonitor log " "file for node %s", GetJobName() );
+		debug_printf( DEBUG_QUIET, "%s\n", errstack.getFullText() );
 	}
 
 #if 0 // uncomment once lazy log file code is fully implemented
