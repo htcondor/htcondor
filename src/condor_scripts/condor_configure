@@ -897,24 +897,9 @@ sub install( $ )
 	# Now, let's try to run ldd on the above programs, see what we find
 	my %missing_libs;
 	my $num_missing_libs = 0;
-	foreach my $p ( @programs ) {
-		my $ldd = "ldd $p";
-		if ( !open( LDD, "$ldd|" ) ) {
-			warn "Can't run $ldd";
-			next;
-		}
-		while( <LDD> ) {
-			if (/^\s+(\S+)\s*=>\s*(.*)/ ) {
-				my $lib = $1;
-				my $loc = $2;
-				if ( $loc =~ /not found/ ) {
-					$missing_libs{$lib} = $loc;
-					$num_missing_libs++;
-				}
-			}
-		}
-		close( LDD );
-	}
+
+	determine_missing_libs(\@programs, \%missing_libs, \$num_missing_libs);
+
 	if ( $opt_test_missing_libs ) {
 		$missing_libs{$opt_test_missing_libs} = "not found";
 		$num_missing_libs++;
@@ -1233,6 +1218,101 @@ sub install( $ )
 
 }	# sub install()
 
+sub determine_missing_libs
+{
+	my ($progref, $libref, $num_ref) = @_;
+	my ($p, $ldd, $lib, $loc);
+	my $status = "able_to_check";
+	my $line;
+
+	# When checking the library dependencies, I turn off the warning that
+	# open gives me due to use warnings when it can't exec the ldd command
+	# (because it might not be there on the machine in question). It is
+	# easier for me to just have the command fail then try various methods
+	# of discovery to see which one I'm able to run. Just let the control
+	# flow fall through the failures until something works, or everything
+	# fails and we do one warning later about it.
+
+	PROGRAM: foreach $p ( @{$progref} ) {
+
+		# First, we'll try 'ldd' and see if that works... If not, silently
+		# fail. ldd automatically checked to see if the libraries are
+		# physically on the machine.
+		$ldd = "ldd $p";
+		{ # scoping for turning off the exec warning for the open
+			no warnings qw(exec);
+			if ( open( LDD, "$ldd|" ) ) {
+				while( <LDD> ) {
+					# Skip it if it is a statically linked binary
+					next if (/not a dynamic executable/);
+
+					if (/^\s+(\S+)\s*=>\s*(.*)/ ) {
+						$lib = $1;
+						$loc = $2;
+						if ( $loc =~ /not found/ ) {
+							$libref->{$lib} = $loc;
+							$$num_ref++;
+						}
+					}
+				}
+				close( LDD );
+
+				# It worked, so do the next program
+				next PROGRAM;
+			}
+		}
+
+		# Next, we'll try 'otool -L' and see if that works, if not, silently
+		# fail. Unfortunately, otool -L only prints out the libraries the
+		# executable depends upon, but doesn't actually check to see if they
+		# are present on the machine, so we must perform that functionality
+		# here.
+		$ldd = "otool -L $p";
+		{ # scoping for turning off the exec warning for the open
+			no warnings qw(exec);
+			if ( open( LDD, "$ldd|" ) ) {
+				while( <LDD> ) {
+					if (/No such file or directory/) {
+						# Hrm, I can't find the programs that I should have
+						# been shipped with?
+						die "Internal Error: Can't find program '$p' when it " .
+							"should have been there. Maybe your " .
+							"downloaded package is corrupt?";
+					}
+
+					# Grab out the library and check its existence.
+					# ignore other lines...
+					if (/^\s+(.*)\s+\(.*$/ ) {
+						$lib = $1;
+						if ( ! -f $lib ) {
+							$libref->{$lib} = $lib;
+							$$num_ref++;
+						}
+					}
+				}
+				close( LDD );
+
+				# It worked, so do the next program
+				next PROGRAM;
+			}
+		}
+
+		# If the control logic reaches here, it means none of the system
+		# installed library dependency checking programs we tried here were
+		# available.  We keep track of this fact and print out a nice warning
+		# message later.
+
+		$status = "not_able_to_check";
+	}
+
+	if ($status eq "not_able_to_check") {
+		warn "WARNING: " .
+			"Unable to determine if the shared library requirements of our " .
+			"executables can be satisfied with the shared libraries present " .
+			"on this machine. Hopefully, your Condor binaries will execute " .
+			"properly.\n";
+	}
+}
 
 sub find_release_dir( $ ) {
     my $path=shift(@_);
