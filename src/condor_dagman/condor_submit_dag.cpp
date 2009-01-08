@@ -68,6 +68,7 @@ struct SubmitDagOptions
 	bool allowVerMismatch;
 	bool recurse; // whether to recursively run condor_submit_dag on nested DAGs
 	bool updateSubmit; // allow updating submit file w/o -force
+	bool copyToSpool;
 	
 	// non-command line options
 	MyString strLibOut;
@@ -102,6 +103,7 @@ struct SubmitDagOptions
 		allowVerMismatch = false;
 		recurse = true;
 		updateSubmit = false;
+		copyToSpool = param_boolean( "DAGMAN_COPY_TO_SPOOL", false );
 	}
 
 };
@@ -802,7 +804,6 @@ void writeSubmitFile(/* const */ SubmitDagOptions &opts)
 
     fprintf(pSubFile, "universe\t= scheduler\n");
     fprintf(pSubFile, "executable\t= %s\n", opts.strDagmanPath.Value());
-    fprintf(pSubFile, "copy_to_spool\t= True\n");
 	fprintf(pSubFile, "getenv\t\t= True\n");
 	fprintf(pSubFile, "output\t\t= %s\n", opts.strLibOut.Value());
     fprintf(pSubFile, "error\t\t= %s\n", opts.strLibErr.Value());
@@ -828,7 +829,8 @@ void writeSubmitFile(/* const */ SubmitDagOptions &opts)
     fprintf(pSubFile, "# is killed (e.g., during a reboot).\n");
     fprintf(pSubFile, "on_exit_remove\t= %s\n", removeExpr.Value() );
 
-    fprintf(pSubFile, "copy_to_spool\t= False\n" );
+    fprintf(pSubFile, "copy_to_spool\t= %s\n", opts.copyToSpool ?
+				"True" : "False" );
 
 	ArgList args;
 
