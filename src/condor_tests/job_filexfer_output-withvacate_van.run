@@ -160,7 +160,6 @@ $evicted = sub {
 		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 		exit(1)
 	}
-	exit(0);
 };
 
 $success = sub
@@ -169,6 +168,11 @@ $success = sub
 	if(!-f "$oute"){ die "$oute failed to arrive\n"; exit(1)};
 	if(!-f "$outf"){ die "$outf failed to arrive\n"; exit(1)};
 	if(!-f "$outg"){ die "$outg failed to arrive\n"; exit(1)};
+};
+
+$hold = sub
+{
+	print "Job can end up on hold.\n";
 };
 
 $timed = sub
@@ -192,7 +196,6 @@ $shadow = sub
 		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 	}
 	CondorTest::debug("$testname: SUCCESS\n",1);
-	#exit(1);
 };
 
 
@@ -255,6 +258,7 @@ close(CMD);
 close(NEWCMD);
 system("mv $cmd.new $cmd");
 
+CondorTest::RegisterHold($testname, $hold);
 CondorTest::RegisterExecute($testname, $execute);
 CondorTest::RegisterShadow($testname, $shadow);
 CondorTest::RegisterEvicted($testname, $evicted);
