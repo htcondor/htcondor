@@ -41,6 +41,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item \Attr{JAVA\_MAXHEAP\_ARGUMENT} now defaults to \Opt{-Xmx1024m}.
+The installation process of Condor will reset this to the undefined value in the
+local configuration file if the detected JVM is not from Sun.
+
 \item A new feature has been added to the \Condor{master} that makes
   it possible to append the DC\_DAEMON\_LIST configuration macro
   instead of overwriting it.  To take advantage of this, put a '+' as
@@ -56,7 +60,21 @@ DC_DAEMON_LIST	= +NEW_DAEMON
 
 \begin{itemize}
 
-\item None.
+\item Fixed a bug on UNIX where \Condor{configure} would provide
+incorrect defaults for the \Attr{JAVA\_MAXHEAP\_ARGUMENT} attribute in
+the installed configuration files. The new current default for Sun Java
+JVMs is \Opt{-Xmx1024m}.
+
+\item Fixed a bug on UNIX where \Condor{configure} would imply that using
+user ``root'' or UID 0 for \Opt{--owner} is a good thing--it is not,
+and then complain that it could not find user ``root'' in the password
+file in this circumstance.
+
+\item Fixed a bug on UNIX where \Condor{configure} would emit errors
+about not being able to execute \Prog{ldd} when installing Condor on the
+Mac OS X 10.5 platform.  \Condor{configure} now correctly detects shared
+library requirements when installing the Condor binaries on the Mac OS
+X 10.5 platform.
 
 \end{itemize}
 
