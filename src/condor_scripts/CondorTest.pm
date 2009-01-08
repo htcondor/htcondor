@@ -293,15 +293,18 @@ sub RunTest
 	if(defined  $wrap_test) {
 		print "Config before PersonalCondorTest<<<<$ENV{CONDOR_CONFIG}>>>>\n";
 		$lastconfig = $ENV{CONDOR_CONFIG};
-		$config = PersonalCondorTest($submit_file);
+		$config = PersonalCondorTest($submit_file, $handle);
 		if($config ne "") {
 			print "PersonalCondorTest returned this config file<$config>\n";
 			print "Saving last config file<<<$lastconfig>>>\n";
 			$ENV{CONDOR_CONFIG} = $config;
+			print "CONDOR_CONFIG now <<$ENV{CONDOR_CONFIG}>>\n";
+			system("condor_config_val -config");
 		}
 	}
 
     # submit the job and get the cluster id
+	debug( "Now submitting test job\n",4);
     $cluster = Condor::TestSubmit( $submit_file );
     
     # if condor_submit failed for some reason return an error
@@ -413,11 +416,13 @@ sub RunDagTest
 	my $config = "";
 	if(defined  $wrap_test) {
 		$lastconfig = $ENV{CONDOR_CONFIG};
-		$config = PersonalCondorTest($submit_file);
+		$config = PersonalCondorTest($submit_file, $handle);
 		if($config ne "") {
 			print "PersonalCondorTest returned this config file<$config>\n";
 			print "Saving last config file<<<$lastconfig>>>\n";
 			$ENV{CONDOR_CONFIG} = $config;
+			print "CONDOR_CONFIG now <<$ENV{CONDOR_CONFIG}>>\n";
+			system("condor_config_val -config");
 		}
 	}
 
@@ -1410,6 +1415,7 @@ sub PersonalPolicySearchLog
 sub PersonalCondorTest
 {
 	my $submitfile = shift;
+	my $testname = shift;
 	my $cmd = "condor_config_val log";
 	my $locconfig = "";
     print "Running this command: <$cmd> \n";
@@ -1421,8 +1427,8 @@ sub PersonalCondorTest
 		print "Running within condor_tests\n";
 		if($logdir =~ /^.*TestingPersonalCondor.*$/){
 			print "Running with outer testing personal condor\n";
-			my $testname = findOutput($submitfile);
-			print "findOutput saya test is $testname\n";
+			#my $testname = findOutput($submitfile);
+			#print "findOutput saya test is $testname\n";
 			my $version = "local";
 			
 			# get a local scheduler running (side a)
