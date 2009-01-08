@@ -123,7 +123,7 @@ $success = sub
 	my %info = @_;
 	my $cluster = $info{"cluster"};
 
-	my $stat = PersonalSearchLog( $piddir, $subdir, "Authentication was a Success", "SchedLog");
+	my $stat = CondorTest::PersonalSearchLog( $piddir, $subdir, "Authentication was a Success", "SchedLog");
 	if( $stat == 0 ) {
 		CondorTest::debug("Good completion!!!\n",1);
 	} else {
@@ -131,25 +131,6 @@ $success = sub
 	}
 
 };
-
-sub PersonalSearchLog 
-{
-	my $pid = shift;
-	my $personal = shift;
-	my $searchfor = shift;
-	my $logname = shift;
-
-	my $logloc = $pid . "/" . $pid . $personal . "/log/" . $logname;
-	CondorTest::debug("Search this log <$logloc> for <$searchfor>\n",1);
-	open(LOG,"<$logloc") || die "Can not open logfile<$logloc>: $!\n";
-	while(<LOG>) {
-		if( $_ =~ /$searchfor/) {
-			CondorTest::debug("FOUND IT! $_",1);
-			return(0);
-		}
-	}
-	return(1);
-}
 
 CondorTest::RegisterExecute($testname, $executed);
 CondorTest::RegisterExitedAbnormal( $testname, $abnormal );

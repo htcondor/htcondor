@@ -58,7 +58,7 @@ classad_reevaluate(ClassAd *ad, const ClassAd *context)
 
 		dprintf(D_FULLDEBUG,
 				"classad_reevaluate: Attempting reevaluate %s with %s\n",
-				atmp, stmp.GetCStr());
+				atmp, stmp.Value());
 
 		etmp = ad->Lookup(atmp);
 		if (!etmp) {
@@ -71,10 +71,10 @@ classad_reevaluate(ClassAd *ad, const ClassAd *context)
 
 		switch (etmp->RArg()->MyType()) {
 		case LX_STRING:
-			if (!ad->EvalString(stmp.GetCStr(), context, &ntmp)) {
+			if (!ad->EvalString(stmp.Value(), context, &ntmp)) {
 				dprintf(D_ALWAYS,
 						"classad_reevaluate: Failed to evaluate %s as a String\n",
-						stmp.GetCStr());
+						stmp.Value());
 
 				goto FAIL;
 			}
@@ -96,10 +96,10 @@ classad_reevaluate(ClassAd *ad, const ClassAd *context)
 
 			break;
 		case LX_INTEGER:
-			if (!ad->EvalInteger(stmp.GetCStr(), context, itmp)) {
+			if (!ad->EvalInteger(stmp.Value(), context, itmp)) {
 				dprintf(D_ALWAYS,
 						"classad_reevaluate: Failed to evaluate %s as an Integer\n",
-						stmp.GetCStr());
+						stmp.Value());
 
 				goto FAIL;
 			}
@@ -118,10 +118,10 @@ classad_reevaluate(ClassAd *ad, const ClassAd *context)
 
 			break;
 		case LX_FLOAT:
-			if (!ad->EvalFloat(stmp.GetCStr(), context, ftmp)) {
+			if (!ad->EvalFloat(stmp.Value(), context, ftmp)) {
 				dprintf(D_ALWAYS,
 						"classad_reevaluate: Failed to evaluate %s as a Float\n",
-						stmp.GetCStr());
+						stmp.Value());
 
 				goto FAIL;
 			}
@@ -140,10 +140,10 @@ classad_reevaluate(ClassAd *ad, const ClassAd *context)
 
 			break;
 		case LX_BOOL:
-			if (!ad->EvalBool(stmp.GetCStr(), context, itmp)) {
+			if (!ad->EvalBool(stmp.Value(), context, itmp)) {
 				dprintf(D_ALWAYS,
 						"classad_reevaluate: Failed to evaluate %s as a Bool\n",
-						stmp.GetCStr());
+						stmp.Value());
 
 				goto FAIL;
 			}

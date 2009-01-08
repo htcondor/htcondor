@@ -169,7 +169,7 @@ CondorPersonal::DebugOn();
 my $configrem;
 
 if($pgresult == 0) {
-	$configrem = CondorPersonal::StartCondor("x_param.quill" ,"quill");
+	$configrem = CondorPersonal::StartCondor( "job_quill_basic", "x_param.quill" ,"quill");
 }
 
 my @quill = split /\+/, $configrem;

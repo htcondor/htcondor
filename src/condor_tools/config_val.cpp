@@ -232,8 +232,8 @@ main( int argc, char* argv[] )
 
 		// If we didn't get told what subsystem we should use, set it
 		// to "TOOL".
-	if( ! mySubSystem->isValid() ) {
-		mySubSystem->setName( "TOOL" );
+	if( ! get_mySubSystem()->isValid() ) {
+		get_mySubSystem()->setName( "TOOL" );
 	}
 
 		// We need to do this before we call config().  A) we don't

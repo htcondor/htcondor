@@ -140,36 +140,6 @@ printClassAd( void )
 #if defined(WIN32)
 		// Advertise our ability to run jobs as the submitting user
 	printf("%s = True\n", ATTR_HAS_WIN_RUN_AS_OWNER);
-
-		// Attempt to perform a NOP on our CREDD_HOST. This will test
-		// our ability to authenticate with DAEMON-level auth, and thus
-		// fetch passwords. If we succeed, advertise the CREDD_HOST.
-	char *credd_host = param("CREDD_HOST");
-	if (credd_host) {
-		Daemon credd(DT_CREDD);
-		if (credd.locate()) {
-			Sock *sock = credd.startCommand(CREDD_NOP, Stream::reli_sock, 20);
-			if (sock != NULL) {
-				sock->decode();
-				if (sock->end_of_message()) {
-					printf("%s = \"%s\"\n", ATTR_LOCAL_CREDD, credd_host);
-				}
-			} else {
-				dprintf( D_ALWAYS, "Failed to communicate with the "
-					"credd host: '%s'\n", credd.name() );
-			}
-		} else {
-			dprintf( D_ALWAYS, "Failed to locate the credd host\n" );
-		}
-		free(credd_host);
-	}
-
-		// Finally, in order for our startd to actually publish our
-		// ATTR_LOCAL_CREDD, we need to identify the attributes in this
-		// ad that we *don't* want it to publish. Otherwise, it will only
-		// publish stuff starting with "Has" or "Java".
-	printf("%s = \"%s,%s\"\n", ATTR_STARTER_IGNORED_ATTRS,
-		ATTR_VERSION, ATTR_IS_DAEMON_CORE);
 #endif
 }
 
@@ -182,13 +152,13 @@ DECL_SUBSYSTEM( NULL, SUBSYSTEM_TYPE_STARTER );
 void
 main_pre_dc_init( int argc, char* argv[] )
 {	
-		// figure out what mySubSystem should be based on argv[0], or
+		// figure out what get_mySubSystem() should be based on argv[0], or
 		// if we see "-gridshell" anywhere on the command-line
 	const char* base = condor_basename(argv[0]);
 	char const *tmp;
 	tmp = strrchr(base, '_' );
 	if( tmp && strincmp(tmp, "_gridshell", 10) == MATCH ) {
-		mySubSystem->setName( "GRIDSHELL" );
+		get_mySubSystem()->setName( "GRIDSHELL" );
 		is_gridshell = true;
 	} else { 
 		int i, len;
@@ -200,19 +170,19 @@ main_pre_dc_init( int argc, char* argv[] )
 				continue;
 			}
 			if( strincmp(argv[i], "-gridshell", MIN(len,10)) == MATCH ) {
-				mySubSystem->setName( "GRIDSHELL" );
+				get_mySubSystem()->setName( "GRIDSHELL" );
 				is_gridshell = true;
 				break;
 			}
 		}
 	}
 	if( ! is_gridshell ) {
-		mySubSystem->setName( "STARTER" );
+		get_mySubSystem()->setName( "STARTER" );
 	}
 
 		// if we were passed "-classad", just print our classad and
 		// exit, without going back to daemoncore or anything.  we
-		// need to do this *after* we set mySubSystem, since this ends
+		// need to do this *after* we set get_mySubSystem(), since this ends
 		// up calling functions that rely on it being defined...  
 	if( argc == 2 && strincmp(argv[1],"-cla",4) == MATCH ) {
 			// needed for Java stuff
@@ -230,7 +200,7 @@ main_pre_dc_init( int argc, char* argv[] )
 
 		//Termlog = 1;
 
-		dprintf_config(mySubSystem->getName() );
+		dprintf_config(get_mySubSystem()->getName() );
 
 		printClassAd();
 		exit(0);

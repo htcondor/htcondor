@@ -1042,7 +1042,7 @@ TDMan::transferd_registration(int cmd, Stream *sock)
 	sock_id += td_id;
 	sock_id += ">";
 
-	daemonCore->Register_Socket(sock, (char*)sock_id.Value(),
+	daemonCore->Register_Socket(sock, sock_id.Value(),
 		(SocketHandlercpp)&TDMan::transferd_update,
 		"TDMan::transferd_update", this, ALLOW);
 	

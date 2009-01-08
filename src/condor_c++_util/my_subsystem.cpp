@@ -17,8 +17,8 @@
  *
  ***************************************************************/
 
-
-/* Dummy definition of mySubSystem string to be included in Condor
+#include "condor_common.h"
+/* Dummy definition of get_mySubSystem() string to be included in Condor
    libraries where needed. */
 #include "subsystem_info.h"
 

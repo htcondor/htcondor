@@ -574,7 +574,7 @@ void TestFilePermissions( char *scheddAddr = NULL )
 	CheckFilesRead.startIterations();
 	while( ( CheckFilesRead.iterate( name, junk ) ) )
 	{
-		result = attempt_access((char *)name.Value(), ACCESS_READ, uid, gid, scheddAddr);
+		result = attempt_access(name.Value(), ACCESS_READ, uid, gid, scheddAddr);
 		if( result == FALSE ) {
 			fprintf(stderr, "\nWARNING: File %s is not readable by condor.\n", 
 					name.Value());
@@ -584,7 +584,7 @@ void TestFilePermissions( char *scheddAddr = NULL )
 	CheckFilesWrite.startIterations();
 	while( ( CheckFilesWrite.iterate( name, junk ) ) )
 	{
-		result = attempt_access((char *)name.Value(), ACCESS_WRITE, uid, gid, scheddAddr );
+		result = attempt_access(name.Value(), ACCESS_WRITE, uid, gid, scheddAddr );
 		if( result == FALSE ) {
 			fprintf(stderr, "\nWARNING: File %s is not writable by condor.\n",
 					name.Value());
@@ -2114,7 +2114,7 @@ SetImageSize()
 		buffer.sprintf("%s = %s", ATTR_REQUEST_MEMORY, tmp);
 		free(tmp);
 	} else {
-		buffer.sprintf("%s = %s", ATTR_REQUEST_MEMORY, ATTR_IMAGE_SIZE);
+		buffer.sprintf("%s = ceiling(%s/1024.0)", ATTR_REQUEST_MEMORY, ATTR_IMAGE_SIZE);
 	}
 	InsertJobExpr(buffer);
 

@@ -1,7 +1,18 @@
+12/30/2008 V7_3-new_classads_for_windows-branch
+ Branch for new class ads on Windows, based on master.
+
+12/30/2008 V7_3-use_windows_file_extensions-branch
+ Branch for detectecting Windows script types by file extension, based
+ on master.
+
 11/05/2008 V7_2-branch
   Branch for 7.1.4 and 7.2 series, based from the master.
-12/17.2008 V7_2-new_classads_for_windows-branch
-  Branch for new class ads on Windows.
+01/02/2009 V7_2-mysubsystem_fix-branch
+  Branch used to ensure that the new MySubsystem implementation works as
+  expected on Windows.  Currently, if some of the tools are built from the
+  command-line, they will except when accessing an uninitialized mySsubsystem
+  structure.  The branch is based on V7_2-branch.
+
 12/18/2008 V7_2-use_windows_file_extensions-branch
   Branch for detectecting Windows script types by file extension, based
   on V7_2-branch.

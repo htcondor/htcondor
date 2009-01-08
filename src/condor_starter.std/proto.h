@@ -32,7 +32,7 @@ extern "C" {
 	void set_debug_flags( const char * );
 	ReliSock *RSC_Init( int rscsock, int errsock );
 	int get_file( char *remote, char *local, int mode );
-	int send_a_file( char *local_name, char *remote_name, int mode );
+	int send_a_file( const char *local_name, const char *remote_name, int mode );
 }
 
 BOOLEAN EarlyAbort( int *reason );

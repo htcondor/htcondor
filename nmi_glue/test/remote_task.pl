@@ -35,7 +35,6 @@
 ######################################################################
 
 use File::Copy;
-use File::Find;
 
 if( ! defined $ENV{_NMI_TASKNAME} ) {
     die "_NMI_TASKNAME not in environment, can't test anything!\n";
@@ -172,28 +171,6 @@ if( $batchteststatus != 0 ) {
 } else {
     $teststatus = 0;
 }
-
-# Oh dear.  This hack is needed because results aren't coming back
-# on windows, and we don't know why, and need to get the log files
-# back asap.
-
-sub wanted {
-    if (/core\.[A-Z]+\.WIN32/) {
-        print "Condor dropped Windows core file named $File::Find::name\n";
-    	open(CORE, $_);
-    	while(<CORE>) {
-       	 print "core $_";
-    	}
-		close(CORE);
-    	open(SCHEDLOG, "SchedLog");
-    	while(<SCHEDLOG>) {
-       	 print "schedlog $_";
-    	}
-		close(SCHEDLOG);
-	}
-}
-
-find(\&wanted, ".");
 
 ######################################################################
 # print output from .run script to stdout of this task, and final exit

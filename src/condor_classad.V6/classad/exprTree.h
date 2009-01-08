@@ -33,7 +33,7 @@ class ExprTree;
 class ClassAd;
 class MatchClassAd;
 
-typedef classad_hash_map< const ExprTree*, Value, ExprHash > EvalCache;
+typedef classad_hash_map< const ExprTree*, Value > EvalCache;
 
 class EvalState {
 	public:

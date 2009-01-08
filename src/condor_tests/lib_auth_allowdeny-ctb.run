@@ -80,7 +80,7 @@ close(TPLATE);
 close(CSUB);
 sleep 10;
 
-my $configsec = CondorPersonal::StartCondor($myparamname ,"allowdeny", $mypid);
+my $configsec = CondorPersonal::StartCondor( "lib_auth_allowdeny-ctb", $myparamname ,"allowdeny", $mypid);
 my @securitypool = split /\+/, $configsec;
 my $secconfig = shift @securitypool;
 my $secport = shift @securitypool;

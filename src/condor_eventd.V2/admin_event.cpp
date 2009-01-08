@@ -509,7 +509,7 @@ AdminEvent::th_DoShutdown_States( void )
 			// how much is running? estimate when to wake up by total image size
 			// and the admin checkpointing capacity. Final check before GO!
 			check_Shutdown(false);
-			FetchAds_ByConstraint((char *)m_shutdownConstraint.Value());
+			FetchAds_ByConstraint(m_shutdownConstraint.Value());
 			m_shutdownMegs = totalRunningJobs();
 			m_mystate = EVENT_EVAL_RESAMPLE;
 			changeState(EVENT_NOW, m_mystate);
@@ -709,7 +709,7 @@ AdminEvent::th_maintainCheckpoints( void )
 						ad->LookupString( ATTR_REMOTE_USER, remoteuser ); 
 						ad->LookupString( ATTR_JOB_ID, jobid ); 
 						dprintf(D_ALWAYS
-							,"AD CLAIMED different job???-(%s)-<%s-%s-%s>-\n",
+							,"AD CLAIMED different job?-(%s)-<%s-%s-%s>-\n",
 							remoteuser.Value(),name.Value(), state.Value()
 							, jobid.Value());
 					}

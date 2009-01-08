@@ -1159,7 +1159,7 @@ UserProc::store_core()
 		new_name.sprintf( "%s/core.%d.%d", virtual_working_dir, cluster, proc);
 		dprintf( D_ALWAYS, "Transferring core file to \"%s\"\n", new_name.Value() );
 		priv = set_root_priv();
-		send_a_file( core_name, (char *)new_name.Value(), REGULAR_FILE_MODE );
+		send_a_file( core_name, new_name.Value(), REGULAR_FILE_MODE );
 		set_priv(priv);
 		core_transferred = TRUE;
 	} else {

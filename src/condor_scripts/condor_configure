@@ -131,6 +131,7 @@ username). (Only applicable when condor_configure is run by root,
 otherwise the current user is assumed).  Changes ownership of
 log,spool,execute directories to specified user, and instructs Condor
 system to run as that user (by setting CONDOR_IDS in the config file).
+You may not select 'root' or any other account with uid 0 for this purpose.
 END_OPT_OWNER
  },
  {
@@ -709,8 +710,17 @@ sub find_owner(;$) {
             #owner as uname
             $uname=$owner;
             $uid=(getpwnam ($uname))[2];
-            if( ! $uid ) {
-                die "\nInvalid user: getpwnam(\"$uname\") failed!\n";
+			if ( !defined($uid) ) {
+				# Couldn't find $uname in /etc/passwd or other name resolution
+				die "\nUser '$uname' does not appear to exist! Please fix or " .
+					"select a different user with --owner.\n";
+			}
+            if( $uid == 0 ) {
+				# root can't be used for this purpose, it must be some non-root
+				# account.
+				die "\nUser 'root' (or equivalent) may not be used as an " .
+					"owner of the Condor installation's directories and " .
+					"files. Please select a different user with --owner!\n";
             }
         }
     }

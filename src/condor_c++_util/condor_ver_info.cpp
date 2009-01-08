@@ -51,7 +51,7 @@ CondorVersionInfo::CondorVersionInfo(const char *versionstring,
 	if ( subsystem ) {
 		mysubsys = strdup(subsystem);
 	} else {
-		mysubsys = strdup(mySubSystem->getName());
+		mysubsys = strdup(get_mySubSystem()->getName());
 	}
 }
 

@@ -436,7 +436,7 @@ my $ltime = localtime(); chomp $ltime;
 CondorTest::debug("About to set up Condor Personal : <<<$ltime>>>", 1);
 
 # Fire up my condor
-my $configrem =	CondorPersonal::StartCondor( $param_file, $full_name );
+my $configrem =	CondorPersonal::StartCondor( "dummy", $param_file, $full_name );
 my ($config, $port) = split( /\+/, $configrem );
 $ENV{CONDOR_CONFIG} = $config;
 print "Condor config: '" . $ENV{CONDOR_CONFIG} . "'\n";

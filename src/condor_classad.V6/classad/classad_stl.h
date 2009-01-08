@@ -21,44 +21,10 @@
 #ifndef __CLASSAD_STL_H__
 #define __CLASSAD_STL_H__
 
-#if USING_STLPORT
-  #include <hash_map>
-  #include <slist>
-#elif defined(__GNUC__)
-  #if (__GNUC__<3)
-    #include <hash_map>
-    #include <slist>
-  #else
-    #include <string>
-    #include <ext/hash_map>
-    #include <ext/slist>
-    using namespace __gnu_cxx;
-  #endif
-#elif defined(WIN32)
-  #include <hash_map>
-  #include <slist>
-#else
-  #include <hash_map>
-#endif
-	
+#include <map>
+#include <list>
 
-#if USING_STLPORT
-  #define classad_hash_map std::hash_map 
-  #define classad_slist    std::slist
-#elif defined(__GNUC__)
-  #if ((__GNUC__ == 3 && __GNUC_MINOR__ > 0) || (__GNUC__ > 3))
-    #define classad_hash_map __gnu_cxx::hash_map 
-    #define classad_slist    __gnu_cxx::slist
-  #else
-    #define classad_hash_map std::hash_map 
-    #define classad_slist    std::slist
-  #endif
-#elif defined (WIN32)
-  #define classad_hash_map std::hash_map
-  #define classad_slist std::slist
-#else
-  #define classad_hash_map std::hash_map 
-  #define classad_slist    std::slist
-#endif
+#define classad_hash_map std::map 
+#define classad_slist    std::list
 
 #endif /* __CLASSAD_STL_H__ */

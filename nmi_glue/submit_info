@@ -31,8 +31,10 @@
 # x86_rhap_5
 # x86_64_rhap_5
 
+# These platforms are not done being ported
+
 # These platforms are in maintenance build only
-# N/A
+# x86_64_macos_10.5
 
 
 ########################################
@@ -72,6 +74,7 @@ x_test_platforms_x86_rhas_3 =  x86_rhas_4,  x86_fc_3, x86_fc_4, \
 						#x86_64_rhas_3, x86_64_rhas_4, x86_64_fc_4, \
 						#x86_64_fc_5
 #x_test_platforms_sun4u_sol_5.9 = sun4u_sol_5.10(compiler mismatch)
+#x_test_platforms_ppc_aix_5.2-pl5 = ppc_aix_5.2, ppc_aix_5.3
 #x_test_platforms_ppc_aix_5.2-pl5 = ppc_aix_5.2, ppc_aix_5.3
 ]   
 
@@ -119,6 +122,12 @@ test_append_prereqs = java-1.5.0_03
 [
 platforms = x86_macos_10.4
 test_append_prereqs = java-1.4.2_09
+x_test_platforms_x86_macos_10.4 = x86_64_macos_10.5
+]
+
+[
+platforms = x86_64_macos_10.5
+test_append_prereqs = java-1.5.0_13
 ]
 
 [

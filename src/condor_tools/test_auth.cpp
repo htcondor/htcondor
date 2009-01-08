@@ -89,8 +89,8 @@ main( int argc, char* argv[] )
 	for( i=1; i<argc; i++ ) {
 		if( match_prefix( argv[i], "-daemontype" ) ) {
 			if( argv[i + 1] ) {
-				mySubSystem->setName( argv[++i] );
-				mySubSystem->setTypeFromName( );
+				get_mySubSystem()->setName( argv[++i] );
+				get_mySubSystem()->setTypeFromName( );
 			} else {
 				usage();
 			}
@@ -108,8 +108,8 @@ main( int argc, char* argv[] )
 
 		// If we didn't get told what subsystem we should use, set it
 		// to "TOOL".
-	if( !mySubSystem->isNameValid() ) {
-		mySubSystem->setName( "TOOL" );
+	if( !get_mySubSystem()->isNameValid() ) {
+		get_mySubSystem()->setName( "TOOL" );
 	}
 
 	config( 0, true );

@@ -436,13 +436,14 @@ if( @testlist ) {
     foreach $compiler (@compilers) {
 		if($compiler eq ".") {
 			$gotdot = 1;
-		}
+		} else {
 		opendir( COMPILER_DIR, $compiler )
 	    	|| die "error opening \"$compiler\": $!\n";
 		@{$test_suite{"$compiler"}} = grep /\.run$/, readdir( COMPILER_DIR );
 		closedir COMPILER_DIR;
 		#print "error: no test programs found for $compiler\n" 
 	    	#unless @{$test_suite{"$compiler"}};
+		}
     }
 	# by default look at the current blessed tests in the top
 	# level of the condor_tests directory and run these.
@@ -467,7 +468,11 @@ if( @testlist ) {
 	}
 	close(QUICK);
 	@{$test_suite{"."}} = @toptests;
-	push @compilers, ".";
+	if($gotdot == 1) {
+		#already testing dot
+	} else {
+		push @compilers, ".";
+	}
 }
 
 
@@ -1049,6 +1054,9 @@ sub CreateLocalConfig
 	# May address some of the other machines with Java turned off also
 	print FIX "JAVA_MAXHEAP_ARGUMENT = \n";
 
+	# don't run benchmarks
+	print FIX "RunBenchmarks = false\n";
+	print FIX "JAVA_BENCHMARK_TIME = 0\n";
 
 	# below stolen from condor_configure
 

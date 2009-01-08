@@ -240,7 +240,7 @@ LinuxHibernator::initStates( void )
 			 "No hibernation methods detected; hibernation disabled\n" );
 	dprintf( D_FULLDEBUG,
 			 "  methods tried: %s\n",
-			 methods.Length() ? methods.GetCStr() : "<NONE>" );
+			 methods.Length() ? methods.Value() : "<NONE>" );
 }
 
 HibernatorBase::SLEEP_STATE
@@ -295,7 +295,7 @@ BaseLinuxHibernator::PowerOff ( bool force ) const
 	MyString	command;
 
 	command = POWER_OFF;
-	int status = system( command.GetCStr() );
+	int status = system( command.Value() );
 	if ( (status >= 0)  &&  (WEXITSTATUS(status) == 0 ) ) {
 		return HibernatorBase::S5;
 	}
@@ -363,14 +363,14 @@ PmUtilLinuxHibernator::Detect ( void )
 
 	command = PM_UTIL_CHECK;
 	command += " --suspend";
-	status = system( command.GetCStr() );
+	status = system( command.Value() );
 	if ( (status >= 0)  &&  (WEXITSTATUS(status) == 0 ) ) {
 		m_hibernator->addState( HibernatorBase::S3 );
 	}
 
 	command = PM_UTIL_CHECK;
 	command += " --hibernate";
-	status = system( command.GetCStr() );
+	status = system( command.Value() );
 	if ( (status >= 0)  &&  (WEXITSTATUS(status) == 0 ) ) {
 		m_hibernator->addState( HibernatorBase::S4 );
 	}

@@ -56,21 +56,21 @@ print "Master PID is $mypid\n";
 # Edit template config info for signal and location
 
 # get a remote scheduler running (side b)
-my $configrem = CondorPersonal::StartCondor("x_param.timedeferloc" ,"timedeferloc");
+my $configrem = CondorPersonal::StartCondor( "job_core_time-deferral_local", "x_param.timedeferloc" ,"timedeferloc");
 my @timedeferloc = split /\+/, $configrem;
 my $timedeferlocconfig = shift @timedeferloc;
 my $timedeferlocport = shift @timedeferloc;
 my $logdir = "";
 
 
-CondorTest::debug("---local max-running config is $timedeferlocconfig and remote port is $timedeferlocport---\n",1);
+CondorTest::debug("---local job_core_time-deferral local config is $timedeferlocconfig and remote port is $timedeferlocport---\n",1);
 
 $ENV{CONDOR_CONFIG} = $timedeferlocconfig;
 
 CondorTest::debug("Set config to $timedeferlocconfig\n",1);
 
 my $result = CondorPersonal::PersonalSystem("./job_core_time-deferral.pl local");
-CondorTest::debug("Result of max-run_local test  job is  $result\n",1);
+CondorTest::debug("Result of job_core_time-deferral.pl local test  job is  $result\n",1);
 
 
 system("cp *job_core_time-deferral_local* $mysaveme");

@@ -81,7 +81,7 @@ while ($row = mysql_fetch_array($result)) {
    $start      = $row["start"];
    $user       = $row["user"];
    $run_result = $row["result"];
-	$pin 			= $row["archive_results_until"];
+   $pin        = $row["archive_results_until"];
    
    //
    // Apply a break for nightly builds

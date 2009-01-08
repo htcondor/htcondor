@@ -103,7 +103,7 @@ while(<DF>) {
 	}
 	close(TPLATE);
 	close(CSUB);
-	my $configsec = CondorPersonal::StartCondor($myparamname ,$label, $mypid);
+	my $configsec = CondorPersonal::StartCondor( "lib_auth_protocol-negot-prt2", $myparamname ,$label, $mypid);
 	my @securitypool = split /\+/, $configsec;
 	my $secconfig = shift @securitypool;
 	my $secport = shift @securitypool;

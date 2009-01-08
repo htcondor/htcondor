@@ -124,7 +124,7 @@ void Server::Init()
 	num_replicate_xfers = 0;
 
 	config();
-	dprintf_config( mySubSystem->getName() );
+	dprintf_config( get_mySubSystem()->getName() );
 
 	set_condor_priv();
 
@@ -138,7 +138,7 @@ void Server::Init()
 	dprintf( D_ALWAYS,
 			 "******************************************************\n" );
 	dprintf( D_ALWAYS, "** %s (CONDOR_%s) STARTING UP\n", myName, 
-			 mySubSystem->getName() );
+			 get_mySubSystem()->getName() );
 	dprintf( D_ALWAYS, "** %s\n", CondorVersion() );
 	dprintf( D_ALWAYS, "** %s\n", CondorPlatform() );
 	dprintf( D_ALWAYS, "** PID = %lu\n", (unsigned long) getpid() );

@@ -202,17 +202,20 @@ sub StartCondor
 {
 	my $mpid = "";
 	my $arraysz = scalar(@_);
+	my $testname = shift || die "Missing test name\n";
 	my $paramfile = shift || die "Missing parameter file!\n";
 	$version = shift || die "Missing parameter version!\n";
 	my $config_and_port = "";
 	my $winpath = "";
 
-	if($arraysz == 2) {
+	if($arraysz == 3) {
 		$mpid = $pid; # assign process id
 	} else {
 		$mpid = shift; # assign process id
 	}
 
+	system("mkdir -p $topleveldir");
+	$topleveldir = $topleveldir . "/$testname" . ".saveme";
 	system("mkdir -p $topleveldir");
 	$topleveldir = $topleveldir . "/" . $mpid;
 	system("mkdir -p $topleveldir");
@@ -953,6 +956,7 @@ sub TunePersonalCondor
 		print NEW "NEGOTIATOR_INTERVAL = 5\n";
 		print NEW "CONDOR_JOB_POLL_INTERVAL = 5\n";
 		print NEW "RUNBENCHMARKS = false\n";
+		print NEW "JAVA_BENCHMARK_TIME = 0\n";
 	}
 	else
 	{
@@ -1642,16 +1646,16 @@ sub SaveMeSetup
 	# make a symbolic link for personal condor module to use
 	# if we get pid recycling, blow the symbolic link 
 	# This might not be a symbolic link, so use -r to be sure
-	$res = CondorTest::verbose_system("rm -fr $mypid");
-	if($res != 0) {
-		print "SaveMeSetup: Could not remove prior pid directory\n";
-		return(0);
-	}
-	$res = CondorTest::verbose_system("ln -s $mypiddir $mypid");
-	if($res != 0) {
-		print "SaveMeSetup: Could not link to pid dir in  \"saveme\" directory\n";
-		return(0);
-	}
+	#$res = CondorTest::verbose_system("rm -fr $mypid");
+	#if($res != 0) {
+		#print "SaveMeSetup: Could not remove prior pid directory\n";
+		#return(0);
+	#}
+	#$res = CondorTest::verbose_system("ln -s $mypiddir $mypid");
+	#if($res != 0) {
+		#print "SaveMeSetup: Could not link to pid dir in  \"saveme\" directory\n";
+		#return(0);
+	#}
 	return($mypid);
 }
 

@@ -105,11 +105,11 @@ MapFile::ParseCanonicalizationFile(const MyString filename)
 {
 	int line = 0;
 
-	FILE *file = safe_fopen_wrapper(filename.GetCStr(), "r");
+	FILE *file = safe_fopen_wrapper(filename.Value(), "r");
 	if (NULL == file) {
 		dprintf(D_ALWAYS,
 				"ERROR: Could not open canonicalization file '%s' (%s)\n",
-				filename.GetCStr(),
+				filename.Value(),
 				strerror(errno));
 		return -1;
 	}
@@ -140,16 +140,16 @@ MapFile::ParseCanonicalizationFile(const MyString filename)
 			principal.IsEmpty() ||
 			canonicalization.IsEmpty()) {
 				dprintf(D_ALWAYS, "ERROR: Error parsing line %d of %s.  Skipping to next line.\n",
-						line, filename.GetCStr());
+						line, filename.Value());
 
 				continue;
 		}
 
 		dprintf(D_FULLDEBUG,
 				"MapFile: Canonicalization File: method='%s' principal='%s' canonicalization='%s'\n",
-				method.GetCStr(),
-				principal.GetCStr(),
-				canonicalization.GetCStr());
+				method.Value(),
+				principal.Value(),
+				canonicalization.Value());
 
 /*
 		Regex *re = new Regex;
@@ -168,7 +168,7 @@ MapFile::ParseCanonicalizationFile(const MyString filename)
 												   &errptr,
 												   &erroffset)) {
 			dprintf(D_ALWAYS, "ERROR: Error compiling expression '%s' -- %s.  Skipping to next line.\n",
-					principal.GetCStr(),
+					principal.Value(),
 					errptr);
 
 			continue;
@@ -186,11 +186,11 @@ MapFile::ParseUsermapFile(const MyString filename)
 {
 	int line = 0;
 
-	FILE *file = safe_fopen_wrapper(filename.GetCStr(), "r");
+	FILE *file = safe_fopen_wrapper(filename.Value(), "r");
 	if (NULL == file) {
 		dprintf(D_ALWAYS,
 				"ERROR: Could not open usermap file '%s' (%s)\n",
-				filename.GetCStr(),
+				filename.Value(),
 				strerror(errno));
 		return -1;
 	}
@@ -215,13 +215,13 @@ MapFile::ParseUsermapFile(const MyString filename)
 
 		dprintf(D_FULLDEBUG,
 				"MapFile: Usermap File: canonicalization='%s' user='%s'\n",
-				canonicalization.GetCStr(),
-				user.GetCStr());
+				canonicalization.Value(),
+				user.Value());
 
 		if (canonicalization.IsEmpty() ||
 			user.IsEmpty()) {
 				dprintf(D_ALWAYS, "ERROR: Error parsing line %d of %s.\n",
-						line, filename.GetCStr());
+						line, filename.Value());
 				
 				return line;
 		}
@@ -236,7 +236,7 @@ MapFile::ParseUsermapFile(const MyString filename)
 											  &errptr,
 											  &erroffset)) {
 			dprintf(D_ALWAYS, "ERROR: Error compiling expression '%s' -- %s\n",
-					canonicalization.GetCStr(),
+					canonicalization.Value(),
 					errptr);
 
 			return line;
@@ -261,8 +261,8 @@ MapFile::GetCanonicalization(const MyString method,
 		 entry++) {
 
 //		printf("comparing: %s == %s => %d\n",
-//			   method.GetCStr(),
-//			   canonical_entries[entry].method.GetCStr(),
+//			   method.Value(),
+//			   canonical_entries[entry].method.Value(),
 //			   method == canonical_entries[entry].method);
 		MyString lowerMethod = method;
 		lowerMethod.lower_case();

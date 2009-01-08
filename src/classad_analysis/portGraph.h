@@ -35,9 +35,9 @@ class PortNode;
 class MatchEdge;
 class MatchPath;
 
-typedef classad_hash_map<std::string, AttrNode*, classad::StringCaseIgnHash, classad::CaseIgnEqStr> AttrNodeMap;
-typedef classad_hash_map<std::string, ExtAttrNode*, classad::StringCaseIgnHash, classad::CaseIgnEqStr> ExtAttrNodeMap;
-typedef classad_hash_map<std::string, PortNode*, classad::StringCaseIgnHash, classad::CaseIgnEqStr> PortNodeMap;
+typedef classad_hash_map<std::string, AttrNode*> AttrNodeMap;
+typedef classad_hash_map<std::string, ExtAttrNode*> ExtAttrNodeMap;
+typedef classad_hash_map<std::string, PortNode*> PortNodeMap;
 
 bool splitString( std::string s, std::string& label, std::string& attr );
 

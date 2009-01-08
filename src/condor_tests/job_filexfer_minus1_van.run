@@ -21,7 +21,7 @@
 use CondorTest;
 
 $cmd      = 'job_filexfer_minus1_van.cmd';
-$testname = 'Base file transfer short one input file - vanilla U';
+$testname = 'Base file transfer short one output file - vanilla U';
 
 # truly const variables in perl
 sub IDLE{1};
@@ -62,7 +62,7 @@ $shadow = sub
 		if(!$status)
 		{
 			CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
-			exit(0)
+			exit(1);
 		}
        CondorTest::debug("$testname: SUCCESS\n",1);
        exit(0);
@@ -70,10 +70,7 @@ $shadow = sub
 
 $success = sub
 {
-	die "Base file transfer job!\n";
-	if(!-f "$oute"){ print "$oute failed to arrive\n"; exit(1)};
-	if(!-f "$outf"){ print "$outf failed to arrive\n"; exit(1)};
-	if(!-f "$outg"){ print "$outg failed to arrive\n"; exit(1)};
+	die "Job shouldn't succeed!\n";
 };
 
 $abort = sub {

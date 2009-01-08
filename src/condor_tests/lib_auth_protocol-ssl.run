@@ -56,10 +56,10 @@ if($mypid == 0) {
 	die "Saveme setup for test failed\n";
 }
 
-$pidleveldir = $topleveldir . "/" . $mypid;
-chdir("$mypid");
+$pidleveldir = $topleveldir . "/" . $mysaveme . "/" . $mypid;
+print "changing to $pidleveldir\n";
+chdir("$pidleveldir");
 system("pwd");
-system("ls");
 system("tar -zxvf ../../$mysslcerts");
 chdir("ssl_keys");
 
@@ -165,7 +165,7 @@ while(<CONFIGTPLATE>)
 close(CONFIG);
 close(CONFIGTPLATE);
 
-my $configsec = CondorPersonal::StartCondor($myparamname ,"protocol", $mypid);
+my $configsec = CondorPersonal::StartCondor( "lib_auth_protocol-ssl", $myparamname ,"protocol", $mypid);
 my @securitypool = split /\+/, $configsec;
 my $secconfig = shift @securitypool;
 my $secport = shift @securitypool;

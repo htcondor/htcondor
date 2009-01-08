@@ -82,7 +82,7 @@ if($mypid == 0) {
 	close(CSUB);
 	sleep 10;
 
-	my $configsec = CondorPersonal::StartCondor($myparamname ,"protocol", $mypid);
+	my $configsec = CondorPersonal::StartCondor( "lib_auth_protocol-krb", $myparamname ,"protocol", $mypid);
 	my @securitypool = split /\+/, $configsec;
 	my $secconfig = shift @securitypool;
 	my $secport = shift @securitypool;

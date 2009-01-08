@@ -49,6 +49,9 @@ my $innerpid = 0;
 
 system("rm -rf $testname.data.kids");
 
+open(POUT, "> $testname.data") or die "Could not open file '$testname.data': $?";
+print POUT "Parent's pid is $$\n\n";
+
 $count = 0;
 while ($count < 3) 
 {
@@ -63,6 +66,8 @@ while ($count < 3)
 		#$SIG{'INT'} = \&handler;
 		#$SIG{'HUP'} = \&handler;
 		#$SIG{'TERM'} = \&handler;
+
+		close(POUT);
 
 		while ($innercount < 1) 
 		{
@@ -93,8 +98,8 @@ while ($count < 3)
 				}
 
 				print GCPOUT "Relationship: $$ child created $innerpid\n";
-				sleep 1;
 				close(GCPOUT);
+				sleep 1;
 	
 				$innercount++;
 			}
@@ -113,8 +118,6 @@ while ($count < 3)
 			die "some problem forking. Oh well.\n";
 		}
 	
-		open(POUT, "> $testname.data") or die "Could not open file '$testname.data': $?";
-		print POUT "Parent's pid is $$\n\n";
 		print POUT "Relationship: $$ created $pid\n";
 
 		$count++;
