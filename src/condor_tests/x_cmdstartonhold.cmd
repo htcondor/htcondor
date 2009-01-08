@@ -1,8 +1,8 @@
 universe   = vanilla
 executable = x_sleep.pl
-log = cmd_q_shows-run.log
-output = cmd_q_shows-run.out
-error = cmd_q_shows-run.err
+log = x_cmdstartonhold.log
+output = x_cmdstartonhold.out
+error = x_cmdstartonhold.err
 hold = true
 Notification = NEVER
 arguments  = 0
