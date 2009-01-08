@@ -1574,7 +1574,7 @@ my $java_jvm_maxmem_arg = "";
 	}
 
 	if ($exec_result == 0) {
-	    $java_jvm_maxmem_arg = "-Xmx"; # Sun JVM max heapsize flag
+	    $java_jvm_maxmem_arg = "-Xmx1024m"; # Sun JVM max heapsize flag
 	} else {
 	    $java_jvm_maxmem_arg = "";
 	}
