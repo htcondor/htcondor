@@ -1641,7 +1641,7 @@ JAVA = /usr/bin/java
 ##  If left blank, your JVM will choose some default value,
 ##  typically 64 MB.  The default (-Xmx) works with the Sun JVM.
 
-JAVA_MAXHEAP_ARGUMENT = -Xmx
+JAVA_MAXHEAP_ARGUMENT = -Xmx1024m
 
 ## JAVA_CLASSPATH_DEFAULT gives the default set of paths in which
 ## Java classes are to be found.  Each path is separated by spaces.
