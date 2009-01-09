@@ -134,6 +134,23 @@ int InDBX = 0;
 
 #define FCLOSE_RETRY_MAX 10
 
+
+static char *formatTimeHeader(struct tm *tm) {
+	static char timebuf[80];
+	static char *timeFormat = 0;
+	static int firstTime = 1;
+
+	if (firstTime) {
+		firstTime = 0;
+		timeFormat = param( "DEBUG_TIME_FORMAT" );
+		if (!timeFormat) {
+			timeFormat = strdup("%m/%d %H:%M:%S ");
+		}
+	}
+	strftime(timebuf, 80, timeFormat, tm);
+	return timebuf;
+}
+
 /*
 ** Print a nice log message, but only if "flags" are included in the
 ** current debugging flags.
@@ -143,7 +160,7 @@ int InDBX = 0;
 void
 _condor_dprintf_va( int flags, const char* fmt, va_list args )
 {
-	struct tm *tm, *localtime();
+	struct tm *tm;
 	time_t clock_now;
 #if !defined(WIN32)
 	sigset_t	mask, omask;
@@ -269,9 +286,7 @@ _condor_dprintf_va( int flags, const char* fmt, va_list args )
 					if ( DebugUseTimestamps ) {
 						fprintf( DebugFP, "(%d) ", clock_now );
 					} else {
-						fprintf( DebugFP, "%d/%d %02d:%02d:%02d ", 
-								tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, 
-								tm->tm_min, tm->tm_sec );
+						fprintf( DebugFP, formatTimeHeader(tm));
 					}
 
 					if ( (saved_flags|flags) & D_FDS ) {
