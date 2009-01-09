@@ -36,7 +36,7 @@
 
 #define LOG_INFO_HASH_SIZE 37 // prime
 
-#define DEBUG_LOG_FILES true //TEMP
+#define DEBUG_LOG_FILES 1 //TEMP
 #if DEBUG_LOG_FILES
 #  define D_LOG_FILES D_ALWAYS
 #else
