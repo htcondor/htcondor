@@ -233,9 +233,12 @@ void GlobusResource::PublishResourceAd( ClassAd *resource_ad )
 	BaseResource::PublishResourceAd( resource_ad );
 
 	resource_ad->Assign( ATTR_X509_USER_PROXY_SUBJECT, proxySubject );
-	resource_ad->Assign( "JobmanagerLimit", jmLimit );
-	resource_ad->Assign( "JobmanagersAllowed", jmsAllowed.Number() );
-	resource_ad->Assign( "JobmanagersWanted", jmsWanted.Number() );
+	resource_ad->Assign( "SubmitJobmanagerLimit", submitJMLimit );
+	resource_ad->Assign( "SubmitJobmanagersAllowed", submitJMsAllowed.Number() );
+	resource_ad->Assign( "SubmitJobmanagersWanted", submitJMsWanted.Number() );
+	resource_ad->Assign( "RestartJobmanagerLimit", restartJMLimit );
+	resource_ad->Assign( "RestartJobmanagersAllowed", restartJMsAllowed.Number() );
+	resource_ad->Assign( "RestartJobmanagersWanted", restartJMsWanted.Number() );
 }
 
 void GlobusResource::UnregisterJob( GlobusJob *job )
