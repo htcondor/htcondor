@@ -22,11 +22,11 @@
 use CondorTest;
 
 $cmd1 = 'job_core_coredump-yes_std.cmd';
-$handle1 = 'Create Core File';
+$handle1 = 'job_core_coredump-yes_std';
 $wants_core{$handle1} = 1;
 
 $cmd2 = 'job_core_coredump-none_std.cmd';
-$handle2 = 'No Core File';
+$handle2 = 'job_core_coredump-none_std';
 $wants_core{$handle2} = 0;
 
 $core_file = 'core';
