@@ -23,7 +23,8 @@ use CondorPersonal;
 
 
 $cmd_template = "job_condorc_ab_van.template";
-$testname = 'job_condorc_ab_van - Simple Condor-C A&B with Vanilla job';
+$testdesc =  'job_condorc_ab_van - Simple Condor-C A&B with Vanilla job';
+$testname = "job_condorc_ab_van";
 $corename = "job_condorc_ab_van";
 
 # where am I running

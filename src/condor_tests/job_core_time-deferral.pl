@@ -56,7 +56,8 @@
 use CondorTest;
 use POSIX;
 
-$testname = 'Job Deferral Testing - ';
+$testdesc =  'Job Deferral Testing - ';
+$testname = "job_core_time-deferral";
 
 ##
 ## Universe

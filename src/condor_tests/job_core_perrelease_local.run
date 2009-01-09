@@ -22,7 +22,8 @@ use CondorTest;
 use CondorPersonal;
 
 
-$testname = 'Condor PERIODIC_RELEASE policy test - local U';
+$testdesc =  'Condor PERIODIC_RELEASE policy test - local U';
+$testname = "job_core_perrelease_local";
 $corename = "job_core_perrelease_local";
 
 # where am I running

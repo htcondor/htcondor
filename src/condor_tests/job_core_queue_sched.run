@@ -23,7 +23,8 @@ use Cwd;
 use Sys::Hostname;
 
 $cmd = 'job_core_queue_sched.cmd';
-$testname = 'condor_submit queue - scheduler U';
+$testdesc =  'condor_submit queue - scheduler U';
+$testname = "job_core_queue_sched";
 $queuelog = "submit_queue_scheduler_log.log";
 
 

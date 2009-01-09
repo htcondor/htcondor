@@ -23,7 +23,8 @@ use CondorPersonal;
 
 
 $cmd_template = "cmd_chirp_get-set_par.template";
-$testname = 'cmd_chirp_get-set_par - Simple parallel job';
+$testdesc =  'cmd_chirp_get-set_par - Simple parallel job';
+$testname = "cmd_chirp_get-set_par";
 $cmd = "cmd_chirp_get-set_par.cmd";
 $corename = "cmd_chirp_get-set_par";
 

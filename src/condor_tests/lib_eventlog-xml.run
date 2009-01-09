@@ -23,7 +23,8 @@ use CondorPersonal;
 
 
 $cmd_template = "lib_eventlog.template";
-$testname = 'lib_eventlog - test dropping of events AND job ad attributes into event log' ;
+$testdesc =  'lib_eventlog - test dropping of events AND job ad attributes into event log' ;
+$testname = "lib_eventlog-xml";
 $cmd = "lib_eventlog.cmd";
 $corename = "lib_eventlog";
 

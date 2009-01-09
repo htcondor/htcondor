@@ -25,7 +25,8 @@ use Cwd;
 
 $topdir = getcwd();
 
-$testname = 'job_core_time-deferral-remove_vanilla - vanilla U time deferral-remove';
+$testdesc =  'job_core_time-deferral-remove_vanilla - vanilla U time deferral-remove';
+$testname = "job_core_time-deferral-remove_van";
 $cmd = "job_core_time-deferral-remove_vanilla.cmd";
 $corename = "job_core_time-deferral-remove_vanilla";
 

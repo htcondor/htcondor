@@ -22,7 +22,8 @@ use CondorTest;
 
 $cmd = 'cmd_q_shows-xml.cmd';
 $cmdout = $cmd . ".out";
-$testname = 'cmd_q_shows-xml  ';
+$testdesc =  'cmd_q_shows-xml  ';
+$testname = "cmd_q_shows-xml";
 
 @adarray;
 
@@ -75,7 +76,6 @@ $submit = sub {
 
 $aborted = sub {
 	CondorTest::debug("If all is good we abort our own job.......\n",1);
-	exit(0);
 };
 
 $ExitSuccess = sub {

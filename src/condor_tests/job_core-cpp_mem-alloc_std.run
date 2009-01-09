@@ -22,7 +22,8 @@
 use CondorTest;
 
 $cmd = 'job_core-cpp_mem-alloc_std.cmd';
-$testname = 'Mem Constructor Test';
+$testdesc =  'Mem Constructor Test';
+$testname = "job_core-cpp_mem-alloc_std";
 
 $OutputTest = sub
 {

@@ -22,7 +22,8 @@ use CondorTest;
 use CondorPersonal;
 
 $cmd_template = "job_schedd_restart-holdjobs-ok.template";
-$testname = 'job_schedd_restart-holdjobs-ok - Simple parallel job with security on';
+$testdesc =  'job_schedd_restart-holdjobs-ok - Simple parallel job with security on';
+$testname = "job_schedd_restart-holdjobs-ok";
 $cmd = "job_schedd_restart-holdjobs-ok.cmd";
 $corename = "job_schedd_restart-holdjobs-ok";
 

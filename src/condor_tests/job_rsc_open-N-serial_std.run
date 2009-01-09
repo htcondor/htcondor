@@ -22,7 +22,8 @@
 use CondorTest;
 
 $cmd = 'job_rsc_open-N-serial_std.cmd';
-$testname = 'Manyfiles Test';
+$testdesc =  'Manyfiles Test';
+$testname = "job_rsc_open-N-serial_std";
 
 @CondorTest::expected_output = ( "SUCCESS" );
 

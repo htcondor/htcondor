@@ -21,7 +21,8 @@
 use CondorTest;
 
 $cmd      = 'job_filexfer_whento-base_van.cmd';
-$testname = 'Jobs run with base file transfer turned on - vanilla U';
+$testdesc =  'Jobs run with base file transfer turned on - vanilla U';
+$testname = "job_filexfer_whento-base_van";
 
 # truly const variables in perl
 sub IDLE{1};

@@ -22,7 +22,8 @@
 use CondorTest;
 
 $cmd = 'job_ckpt_f-printer_std.cmd';
-$testname = 'Fortran Printer Test';
+$testdesc =  'Fortran Printer Test';
+$testname = "job_ckpt_f-printer_std";
 
 $OutputTest = sub
 {

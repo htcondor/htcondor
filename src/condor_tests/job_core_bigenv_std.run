@@ -22,7 +22,8 @@
 use CondorTest;
 
 $cmd = 'job_core_bigenv_std.cmd';
-$testname = 'bigenv (standard) Test';
+$testdesc =  'bigenv (standard) Test';
+$testname = "job_core_bigenv_std";
 
 $OutputTest = sub
 {

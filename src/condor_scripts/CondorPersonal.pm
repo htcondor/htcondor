@@ -44,6 +44,7 @@
 
 
 package CondorPersonal;
+require 5.0;
 use Net::Domain qw(hostfqdn);
 
 #################################################################
@@ -244,7 +245,7 @@ sub StartCondor
 
 	if( $ENV{NMI_PLATFORM} =~ /win/ ){
 		$winpath = `cygpath -w $localdir`;
-		CondorTest::fullchomp($winpath);
+		fullchomp($winpath);
 		$condorlocaldir = $winpath;
 		CondorPersonal::TunePersonalCondor($condorlocaldir, $mpid);
 	} else {
@@ -257,7 +258,7 @@ sub StartCondor
 
 	if( $ENV{NMI_PLATFORM} =~ /win/ ){
 		$winpath = `cygpath -w $personal_config_file`;
-		CondorTest::fullchomp($winpath);
+		fullchomp($winpath);
 		print "Windows conversion of personal config file to $winpath!!\n";
 		$config_and_port = $winpath . "+" . $collector_port ;
 	} else {
@@ -350,7 +351,7 @@ sub ParsePersonalCondorParams
      debug( "reading submit file...\n" ,4);
     while( <SUBMIT_FILE> )
     {
-		CondorTest::fullchomp($_);
+		fullchomp($_);
 		$line++;
 
 		# skip comments & blank lines
@@ -373,7 +374,7 @@ sub ParsePersonalCondorParams
 
 	    	# compress whitespace and remove trailing newline for readability
 	    	$value =~ s/\s+/ /g;
-			CondorTest::fullchomp($value);
+			fullchomp($value);
 		
 			# Do proper environment substitution
 	    	if( $value =~ /(.*)\$ENV\((.*)\)(.*)/ ) {
@@ -415,7 +416,7 @@ sub WhichCondorConfig
 	open(CONFIG, "condor_config_val -config -master 2>&1 |") || die "condor_config_val: $!\n";
 	while(<CONFIG>)
 	{
-		CondorTest::fullchomp($_);
+		fullchomp($_);
 		$line = $_;
 		debug ("--$line--\n",3);
 
@@ -469,7 +470,7 @@ sub InstallPersonalCondor
 	my $submit;
 	my $startd;
 	my $negotiator;
-	my $condorq = CondorTest::Which("condor_q");
+	my $condorq = Which("condor_q");
 	my $sbinloc;
 	my $configline = "";
 	my @configfiles;
@@ -492,7 +493,7 @@ sub InstallPersonalCondor
 			open(CONFIG,"condor_config_val -config | ") || die "Can not find config file: $!\n";
 			while(<CONFIG>)
 			{
-				CondorTest::fullchomp($_);
+				fullchomp($_);
 				$configline = $_;
 				push @configfiles, $configline;
 			}
@@ -557,7 +558,7 @@ sub InstallPersonalCondor
 			open(CONFIG,"condor_config_val -config | ") || die "Can not find config file: $!\n";
 			while(<CONFIG>)
 			{
-				CondorTest::fullchomp($_);
+				fullchomp($_);
 				$configline = $_;
 				debug( "$_\n" ,3);
 				push @configfiles, $configline;
@@ -794,7 +795,7 @@ sub TunePersonalCondor
 	my $mytoppath = "";
 	if( $ENV{NMI_PLATFORM} =~ /win/ ){
 		$mytoppath = `cygpath -w $topleveldir`;
-		CondorTest::fullchomp($mytoppath);
+		fullchomp($mytoppath);
 	} else {
 		$mytoppath =  $topleveldir;
 	}
@@ -807,7 +808,7 @@ sub TunePersonalCondor
 	open(NEW,">$topleveldir/$personal_config") || die "Can not open new config file<$topleveldir/$personal_config>: $!\n";
 	while(<TEMPLATE>)
 	{
-		CondorTest::fullchomp($_);
+		fullchomp($_);
 		$line = $_;
 		if( $line =~ /^RELEASE_DIR\s*=.*/ )
 		{
@@ -855,7 +856,7 @@ sub TunePersonalCondor
 		open(LOCSRC,"<$personal_local_src") || die "Can not open local config template: $!\n";
 		while(<LOCSRC>)
 		{
-			CondorTest::fullchomp($_);
+			fullchomp($_);
 			$line = $_;
 			print NEW "$line\n";
 		}
@@ -1031,7 +1032,7 @@ sub StartPersonalCondor
 
 	if( $ENV{NMI_PLATFORM} =~ /win/ ){
 		$figpath = `cygpath -w $fullconfig`;
-		CondorTest::fullchomp($figpath);
+		fullchomp($figpath);
 		$fullconfig = $figpath;
 		# note: on windows all binaaries in bin!
 		$personalmaster = $localdir . "bin/condor_master -f &";
@@ -1106,7 +1107,7 @@ sub IsPersonalRunning
     my $badness = "";
     my $matchedconfig = "";
 
-    CondorTest::fullchomp($pathtoconfig);
+    fullchomp($pathtoconfig);
     if($iswindows == 1) {
         $pathtoconfig =~ s/\\/\\\\/g;
     }
@@ -1116,17 +1117,21 @@ sub IsPersonalRunning
 !\n";
 	debug("parse - condor_config_val -config -master log \n",3);
     while(<CONFIG>) {
-        CondorTest::fullchomp($_);
+        fullchomp($_);
         $line = $_;
         debug ("--$line--\n",3);
 
 
         debug("Looking to match \"$pathtoconfig\"\n",3);
-        if( $line =~ /^.*($pathtoconfig).*$/ ) {
-            $matchedconfig = $1;
-            debug ("Matched! $1\n",3);
+		my $indexreturn = index($line,$pathtoconfig);
+        #if( $line =~ /^.*($pathtoconfig).*$/ ) {
+        if( $indexreturn  > -1 ) {
+            $matchedconfig = $pathtoconfig;
+            debug ("Matched! $pathtoconfig\n",1);
             last;
-        }
+        } else {
+			debug("hmmmm looking for <<$pathtoconfig>> got <<$line>> \n",2);
+		}
     }
     close(CONFIG);
 
@@ -1139,7 +1144,7 @@ sub IsPersonalRunning
     open(MADDR,"condor_config_val MASTER_ADDRESS_FILE 2>&1 |") || die "condor_config_val: $
     !\n";
     while(<MADDR>) {
-        CondorTest::fullchomp($_);
+        fullchomp($_);
         $line = $_;
         if($line =~ /^(.*master_address)$/) {
             if(-f $1) {
@@ -1177,7 +1182,7 @@ sub IsRunningYet
 	$maxattempts = 9;
 	$attempts = 0;
 	$daemonlist = `condor_config_val daemon_list`;
-	CondorTest::fullchomp($dameonlist);
+	fullchomp($dameonlist);
 	$collector = 0;
 	$schedd = 0;
 	$startd = 0;
@@ -1485,8 +1490,8 @@ sub KillDaemonPids
 		}
 	}
 	close(PD);
-	# give iot a little time for a shutdown
-	sleep(5);
+	# give it a little time for a shutdown
+	sleep(10);
 	# did it work.... is process still around?
 	$cnt = kill 0, $masterpid;
 	# try a kill again on master and see if no such process
@@ -1530,7 +1535,7 @@ sub KillDaemonPids
 				}
 			}
 			if($cnt == 0) {
-				debug("Failed to kill PID <$thispid>\n",3);
+				debug("Failed to kill PID <$thispid>\n",1);
 			} else {
 				debug("Killed PID <$thispid>\n",3);
 			}
@@ -1550,14 +1555,52 @@ sub KillDaemonPids
 
 sub IsThisWindows
 {
-    $path = CondorTest::Which("cygpath");
-    print "Path return from which cygpath: $path\n";
+    $path = Which("cygpath");
+    #print "Path return from which cygpath: $path\n";
     if($path =~ /^.*\/bin\/cygpath.*$/ ) {
-        print "This IS windows\n";
+        #print "This IS windows\n";
         return(1);
     }
-    print "This is NOT windows\n";
+    #print "This is NOT windows\n";
     return(0);
+}
+
+# Sometimes `which ...` is just plain broken due to stupid fringe vendor
+# not quite bourne shells. So, we have our own implementation that simply
+# looks in $ENV{"PATH"} for the program and return the "usual" response found
+# across unicies. As for windows, well, for now it just sucks.
+
+sub Which
+{
+	my $exe = shift(@_);
+	my @paths = split /:/, $ENV{'PATH'};
+	my $path;
+
+	foreach $path (@paths) {
+		chomp $path;
+		if (-x "$path/$exe") {
+			return "$path/$exe";
+		}
+	}
+
+	return "$exe: command not found";
+}
+
+#
+# Cygwin's perl chomp does not remove cntrl-m but this one will
+# and linux and windows can share the same code. The real chomp
+# totals the number or changes but I currently return the modified
+# array. bt 10/06
+#
+
+sub fullchomp
+{
+	push (@_,$_) if( scalar(@_) == 0);
+	foreach my $arg (@_) {
+		$arg =~ s/\012+$//;
+		$arg =~ s/\015+$//;
+	}
+	return(0);
 }
 
 #################################################################
@@ -1572,7 +1615,7 @@ sub FindCollectorPort
 {
 	my $collector_address_file = `condor_config_val collector_address_file`;
 	my $line;
-	CondorTest::fullchomp($collector_address_file);
+	fullchomp($collector_address_file);
 
 	debug( "Looking for collector port in file ---$collector_address_file---\n",3);
 
@@ -1588,7 +1631,7 @@ sub FindCollectorPort
 
 	open(COLLECTORADDR,"<$collector_address_file")  || die "Can not open collector address file: $!\n";
 	while(<COLLECTORADDR>) {
-		CondorTest::fullchomp($_);
+		fullchomp($_);
 		$line = $_;
 		if( $line =~ /^\s*<(\d+\.\d+\.\d+\.\d+):(\d+)>\s*$/ ) {
 			debug( "Looks like ip $1 and port $2!\n",3);

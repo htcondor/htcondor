@@ -21,7 +21,8 @@
 use CondorTest;
 
 $cmd = 'job_core_args_sched.cmd';
-$testname = 'Arguments are preserved - scheduler U';
+$testdesc =  'Arguments are preserved - scheduler U';
+$testname = "job_core_args_sched";
 
 # we can really expect some things not to match like some quotes
 sub exceptadjust

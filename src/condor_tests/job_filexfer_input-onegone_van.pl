@@ -21,7 +21,8 @@
 use CondorTest;
 
 $cmd      = 'job_filexfer_input-onegone_van.cmd';
-$testname = 'Jobs casues submit error from a missing specified input file- vanilla U';
+$testdesc =  'Jobs casues submit error from a missing specified input file- vanilla U';
+$testname = "job_filexfer_input-onegone_van";
 
 # truly const variables in perl
 sub IDLE{1};

@@ -21,7 +21,8 @@
 use CondorTest;
 
 $cmd = 'job_core_initialdir_java.cmd';
-$testname = 'condor_submit initialdir works - java U';
+$testdesc =  'condor_submit initialdir works - java U';
+$testname = "job_core_initialdir_java";
 
 
 system("mkdir -p initd");

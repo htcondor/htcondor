@@ -20,7 +20,8 @@
 
 use CondorTest;
 
-$testname = 'Condor ON_EXIT_REMOVE policy test - local U';
+$testdesc =  'Condor ON_EXIT_REMOVE policy test - local U';
+$testname = "job_core_onexitrem_local";
 
 my $nostatus = CondorTest::verbose_system("./job_core_onexitrem-false_local.pl");
 my $willstatus = CondorTest::verbose_system("./job_core_onexitrem-true_local.pl");

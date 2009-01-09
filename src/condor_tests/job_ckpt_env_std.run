@@ -22,7 +22,8 @@
 use CondorTest;
 
 $cmd = 'job_ckpt_env_std.cmd';
-$testname = 'Env Test';
+$testdesc =  'Env Test';
+$testname = "job_ckpt_env_std";
 # This test can have variable output depending on condor configuration file
 # settings, the cluster/proc of the job, or environment variables. So were
 # going to specifically check if known specific lines are present in the

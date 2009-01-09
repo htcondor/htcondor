@@ -25,7 +25,8 @@ use Cwd;
 
 $topdir = getcwd();
 
-$testname = 'job_core_time-deferral-hold_vanilla - vanilla U time deferral-hold';
+$testdesc =  'job_core_time-deferral-hold_vanilla - vanilla U time deferral-hold';
+$testname = "job_core_time-deferral-hold_van";
 $cmd = "job_core_time-deferral-hold_vanilla.cmd";
 $corename = "job_core_time-deferral-hold_vanilla";
 

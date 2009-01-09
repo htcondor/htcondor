@@ -22,7 +22,8 @@
 use CondorTest;
 
 $cmd = 'job_ckpt_f-reader_std.cmd';
-$testname = 'Fortran Reader Test';
+$testdesc =  'Fortran Reader Test';
+$testname = "job_ckpt_f-reader_std";
 
 $OutputTest = sub
 {

@@ -22,7 +22,8 @@
 use CondorTest;
 
 $cmd = 'job_rsc_ftell_std.cmd';
-$testname = 'Ftell Test';
+$testdesc =  'Ftell Test';
+$testname = "job_rsc_ftell_std";
 
 @CondorTest::expected_output =
 ( 'about to call ftell()', 

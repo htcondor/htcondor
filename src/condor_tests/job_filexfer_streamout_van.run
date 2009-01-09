@@ -22,7 +22,8 @@ use CondorTest;
 
 $cmd = 'job_filexfer_streamout_van.cmd';
 $out = 'job_filexfer_streamout_van.out';
-$testname = 'Stream output works - vanilla U';
+$testdesc =  'Stream output works - vanilla U';
+$testname = "job_filexfer_streamout_van";
 
 $submitted = sub
 {

@@ -50,13 +50,14 @@ $deferralTime = time() + 600;
 ##
 ## If this is set to true, then we know that we caused the cooresponding command
 ##
-my $HOLD = "";
-my $REMOVE = "";
+my $HOLD = 0;
+my $REMOVE = 0;
 
 ##
 ## Testing Information
 ##
-$testname = "Job Deferral Testing HOLD - $universe";
+$testdesc =  "Job Deferral Testing HOLD - $universe";
+$testname = "job_core_time-deferral-hold";
 $base_name = 'job_core_time-deferral-hold';
 $base_cmd = $base_name.".cmd";
 

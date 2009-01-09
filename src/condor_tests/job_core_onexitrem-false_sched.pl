@@ -21,7 +21,8 @@
 use CondorTest;
 
 $cmd = 'job_core_onexitrem-false_sched.cmd';
-$testname = 'Condor submit policy test for ONEXIT_REMOVE - scheduler U';
+$testdesc =  'Condor submit policy test for ONEXIT_REMOVE - scheduler U';
+$testname = "job_core_onexitrem-false_sched";
 
 my $killedchosen = 0;
 

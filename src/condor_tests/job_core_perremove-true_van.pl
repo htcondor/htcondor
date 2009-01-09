@@ -21,7 +21,8 @@
 use CondorTest;
 
 $cmd = 'job_core_perremove-true_van.cmd';
-$testname = 'Condor submit policy test for PERIODIC_REMOVE - vanilla U';
+$testdesc =  'Condor submit policy test for PERIODIC_REMOVE - vanilla U';
+$testname = "job_core_perremove-true_van";
 
 my $killedchosen = 0;
 

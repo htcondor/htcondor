@@ -22,7 +22,8 @@
 use CondorTest;
 
 $cmd = 'job_rsc_truncate_std.cmd';
-$testname = 'O_TRUNC Test';
+$testdesc =  'O_TRUNC Test';
+$testname = "job_rsc_truncate_std";
 
 @CondorTest::expected_output = ( 'SUCCESS' );
 

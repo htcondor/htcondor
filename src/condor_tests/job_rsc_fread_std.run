@@ -22,7 +22,8 @@
 use CondorTest;
 
 $cmd = 'job_rsc_fread_std.cmd';
-$testname = 'Fread Test';
+$testdesc =  'Fread Test';
+$testname = "job_rsc_fread_std";
 
 @CondorTest::expected_output = ( 'read 1 items from x_data.in' );
 

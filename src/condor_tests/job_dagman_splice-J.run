@@ -25,7 +25,8 @@ use CondorTest;
 #exit 0;
 
 @dagfiles = ("job_dagman_splice-J-zero.dag" , "job_dagman_splice-J-one.dag");
-$testname = 'Condor submit dag - basic splice test - scheduler U';
+$testdesc =  'Condor submit dag - basic splice test - scheduler U';
+$testname = "job_dagman_splice-J";
 $dagman_args = "-verbose";
 
 @outfiles = (

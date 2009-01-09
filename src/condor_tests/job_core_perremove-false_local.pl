@@ -26,7 +26,8 @@
 use CondorTest;
 
 $cmd = 'job_core_perremove-false_local.cmd';
-$testname = 'Condor submit policy test for PERIODIC_REMOVE - local U';
+$testdesc =  'Condor submit policy test for PERIODIC_REMOVE - local U';
+$testname = "job_core_perremove-false_local";
 
 ##
 ## executed

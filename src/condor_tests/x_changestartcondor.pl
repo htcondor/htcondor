@@ -39,7 +39,8 @@ foreach $file (readdir DH)
 	my $line = "";
 	next if $file =~ /^\.\.?$/;
 	if($file =~ /(.*)\.run$/) {
-		my $testname = $1;
+		my $testdesc =  $1;
+		my $testname = "x_changestartcondor";
 
 		#print "Currently scanning $file for name $strippattern\n";
 		open(FILE,"<$file") || die "Can not open $file for reading: $!\n";

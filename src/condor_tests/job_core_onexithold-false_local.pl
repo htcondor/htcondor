@@ -27,7 +27,8 @@
 use CondorTest;
 
 $cmd = 'job_core_onexithold-false_local.cmd';
-$testname = 'Condor submit for ON_EXIT_HOLD test - local U';
+$testdesc =  'Condor submit for ON_EXIT_HOLD test - local U';
+$testname = "job_core_onexithold-false_local";
 
 ## 
 ## Status Values

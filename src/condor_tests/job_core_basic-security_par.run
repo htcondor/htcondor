@@ -22,7 +22,8 @@ use CondorTest;
 use CondorPersonal;
 
 $cmd_template = "job_core_basic_par.template";
-$testname = 'job_core_basic-security_par - Simple parallel job with security on';
+$testdesc =  'job_core_basic-security_par - Simple parallel job with security on';
+$testname = "job_core_basic-security_par";
 $cmd = "job_core_basic_par.cmd";
 $corename = "job_core_basic-security_par";
 

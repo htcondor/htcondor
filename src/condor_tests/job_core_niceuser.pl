@@ -38,3 +38,4 @@ print NEWOUT "$arg\n";
 close(OLDOUT);
 close(NEWOUT);
 system("mv $new $old");
+print "Job $arg done\n";

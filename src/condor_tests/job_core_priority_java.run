@@ -22,7 +22,8 @@ use CondorTest;
 
 $cmd = 'job_core_priority_java.cmd';
 my $datafile = 'job_core_priority_java.data';
-$testname = 'condor_submit priority works - java U';
+$testdesc =  'condor_submit priority works - java U';
+$testname = "job_core_priority_java";
 
 my @sdata =
 (

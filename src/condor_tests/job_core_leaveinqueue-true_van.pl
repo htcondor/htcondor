@@ -22,7 +22,8 @@ use CondorTest;
 Condor::DebugOn();
 
 $cmd = 'job_core_leaveinqueue-true_van.cmd';
-$testname = 'Condor submit with test for policy trigger of leave_in_queue - vanilla U';
+$testdesc =  'Condor submit with test for policy trigger of leave_in_queue - vanilla U';
+$testname = "job_core_leaveinqueue-true_van";
 
 my $killedchosen = 0;
 
@@ -106,7 +107,9 @@ $success = sub
 		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 		exit(1)
 	}
-	exit($return);
+	if($return == 1) {
+		exit($return);
+	}
 };
 
 $submitted = sub

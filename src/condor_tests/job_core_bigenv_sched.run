@@ -22,7 +22,8 @@
 use CondorTest;
 
 $cmd = 'job_core_bigenv_sched.cmd';
-$testname = 'bigenv (scheduler) Test';
+$testdesc =  'bigenv (scheduler) Test';
+$testname = "job_core_bigenv_sched";
 
 $OutputTest = sub
 {

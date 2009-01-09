@@ -23,7 +23,8 @@ use Cwd;
 use Sys::Hostname;
 
 $cmd = 'job_core_macros-dollardollar_van.cmd';
-$testname = 'condor_submit macros - vanilla U';
+$testdesc =  'condor_submit macros - vanilla U';
+$testname = "job_core_macros-dollardollar_van";
 
 
 $ExitSuccessBase = sub {

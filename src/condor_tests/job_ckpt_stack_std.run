@@ -22,7 +22,8 @@
 use CondorTest;
 
 $cmd = 'job_ckpt_stack_std.cmd';
-$testname = 'Runtime Stack Test';
+$testdesc =  'Runtime Stack Test';
+$testname = "job_ckpt_stack_std";
 
 $OutputTest = sub
 {

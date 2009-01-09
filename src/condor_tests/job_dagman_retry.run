@@ -21,7 +21,8 @@
 use CondorTest;
 
 $cmd = 'job_dagman_retry.dag';
-$testname = 'Condor submit dag - retry test - scheduler U';
+$testdesc =  'Condor submit dag - retry test - scheduler U';
+$testname = "job_dagman_retry";
 $dagman_args = "-verbose";
 
 #	This test runs a single node which always fails.

@@ -25,7 +25,8 @@ $cmd = 'job_core_gcbbasic.cmd';
 
 CondorTest::debug("Submit file for this test is $cmd\n",1);
 
-$testname = 'Basic GCB smoke test';
+$testdesc =  'Basic GCB smoke test';
+$testname = "job_core_gcbbasic";
 
 $aborted = sub {
 	my %info = @_;

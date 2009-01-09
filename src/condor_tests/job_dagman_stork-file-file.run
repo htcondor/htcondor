@@ -23,7 +23,8 @@ use CondorPersonal;
 use Cwd;
 
 
-$testname = 'job_dagman_stork-file-file - Simple dagman/stork job';
+$testdesc =  'job_dagman_stork-file-file - Simple dagman/stork job';
+$testname = "job_dagman_stork-file-file";
 $corename = "job_dagman_stork-file-file";
 $topdir = getcwd();
 
@@ -103,7 +104,8 @@ my $makeresult = system("./x_makestorkdag.pl --root=$personaldir --dag=dag1 --da
 CondorTest::debug("make dag result is <<$makeresult>>\n",1);
 
 $cmd = "$dagnm";
-$testname = 'Condor submit dag - stork transfer test';
+$testdesc =  'Condor submit dag - stork transfer test';
+$testname = "job_dagman_stork-file-file";
 #$dagman_args = "-v -storklog `condor_config_val LOG`/Stork.user_log";
 $dagman_args = "-v ";
 

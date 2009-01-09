@@ -21,7 +21,8 @@
 use CondorTest;
 
 $cmd = 'job_core_perremove-false_sched.cmd';
-$testname = 'Condor submit policy test for periodic_remove - scheduler U';
+$testdesc =  'Condor submit policy test for periodic_remove - scheduler U';
+$testname = "job_core_perremove-false_sched";
 
 my %info;
 my $cluster;

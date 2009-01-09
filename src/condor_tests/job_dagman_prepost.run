@@ -81,7 +81,8 @@ foreach $name (@filestochmod)
 	system("chmod 755 $name");
 }
 
-$testname = 'Condor submit dag - verify pre/post ran test - scheduler U';
+$testdesc =  'Condor submit dag - verify pre/post ran test - scheduler U';
+$testname = "job_dagman_prepost";
 $dagman_args = "-verbose";
 $output = "job_dagman_prepost.dag.dagman.out";
 

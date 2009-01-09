@@ -21,7 +21,8 @@
 use CondorTest;
 
 $cmd = 'job_core_matchlist_van.cmd';
-$testname = 'Test match_list_length - vanilla U';
+$testdesc =  'Test match_list_length - vanilla U';
+$testname = "job_core_matchlist_van";
 my $counter = 5;
 my $lmn1 = "";
 my $nextlmn1 = "";

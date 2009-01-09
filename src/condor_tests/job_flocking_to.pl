@@ -22,7 +22,8 @@ use CondorTest;
 
 $cmd = 'job_flocking_to.cmd';
 $out = 'job_flocking_to.out';
-$testname = 'flocking ';
+$testdesc =  'flocking ';
+$testname = "job_flocking_to";
 
 $submitted = sub
 {

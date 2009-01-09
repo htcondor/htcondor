@@ -21,7 +21,8 @@
 use CondorTest;
 
 $cmd      = 'cmd_q_shows-hold.cmd';
-$testname = 'Condor_q shows jobs on hold - vanilla U';
+$testdesc =  'Condor_q shows jobs on hold - vanilla U';
+$testname = "cmd_q_shows-hold";
 
 # truly const variables in perl
 sub IDLE{1};

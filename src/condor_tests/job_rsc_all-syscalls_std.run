@@ -23,7 +23,8 @@ push( @INC, "../condor_scripts" );
 use CondorTest;
 
 $cmd = 'job_rsc_all-syscalls_std.cmd';
-$testname = 'Syscall Test';
+$testdesc =  'Syscall Test';
+$testname = "job_rsc_all-syscalls_std";
 
 CondorTest::RegisterExitedSuccess( $testname, sub { return 1 } );
 

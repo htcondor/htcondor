@@ -23,7 +23,8 @@ use CondorPersonal;
 
 
 $param_template = "x_param.protocol-ctb.template";
-$testname = 'lib_auth_protocol-ctb - Security Protocol CLAIMTOBE Authentication Test';
+$testdesc =  'lib_auth_protocol-ctb - Security Protocol CLAIMTOBE Authentication Test';
+$testname = "lib_auth_protocol-ctb";
 $corename = "lib_auth_protocol-ctb";
 $mytestnegotiation = "x_secneg_clR_dmnR_secprepostsrc";
 $mytestnegotiation_result = "yes";

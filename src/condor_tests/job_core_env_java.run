@@ -21,7 +21,8 @@
 use CondorTest;
 
 $cmd = 'job_core_env_java.cmd';
-$testname = 'Environment is preserved - java U';
+$testdesc =  'Environment is preserved - java U';
+$testname = "job_core_env_java";
 
 
 $ExitSuccess = sub {

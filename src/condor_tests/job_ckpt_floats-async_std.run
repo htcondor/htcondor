@@ -22,7 +22,8 @@
 use CondorTest;
 
 $cmd = 'job_ckpt_floats-async_std.cmd';
-$testname = 'Condition Test';
+$testdesc =  'Condition Test';
+$testname = "job_ckpt_floats-async_std";
 
 @CondorTest::expected_output = 
 ( 'Program completed successfully.',

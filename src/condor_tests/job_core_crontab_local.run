@@ -21,7 +21,8 @@
 use CondorTest;
 use CondorPersonal;
 
-$testname = 'Condor CronTab Test - Local Universe';
+$testdesc =  'Condor CronTab Test - Local Universe';
+$testname = "job_core_crontab_local";
 $corename = "job_core_crontab_local";
 
 # where am I running

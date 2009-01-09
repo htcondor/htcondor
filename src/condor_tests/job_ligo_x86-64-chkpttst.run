@@ -22,7 +22,8 @@
 use CondorTest;
 
 $cmd = 'job_ligo_x86-64-chkpttst.cmd';
-$testname = 'LIGO Chkpt Test';
+$testdesc =  'LIGO Chkpt Test';
+$testname = "job_ligo_x86-64-chkpttst";
 
 $tarres = system("tar -zxvf x_job_ligo_x86-64-chkpttst.tar.gz");
 
