@@ -1324,7 +1324,7 @@ negotiateWithGroup ( int untrimmed_num_startds, ClassAdList& startdAds,
 					}
 					int numMatched = 0;
 					startTime = time(NULL);
-					result=negotiate( scheddName,scheddAddr,scheddPrio,
+					result=negotiate( scheddName,schedd,scheddPrio,
 								  scheddAbsShare, scheddLimit,
 								  startdAds, claimIds, 
 								  scheddVersion, ignore_schedd_limit,
@@ -1766,7 +1766,7 @@ Matchmaker::MakeClaimIdHash(ClassAdList &startdPvtAdList, ClaimIdHash &claimIds)
 }
 
 int Matchmaker::
-negotiate( char *scheddName, char *scheddAddr, double priority, double share,
+negotiate( char *scheddName, const ClassAd *scheddAd, double priority, double share,
 		   int scheddLimit,
 		   ClassAdList &startdAds, ClaimIdHash &claimIds, 
 		   const CondorVersionInfo & scheddVersion,
@@ -1786,38 +1786,53 @@ negotiate( char *scheddName, char *scheddAddr, double priority, double share,
 
 	numMatched = 0;
 
+	// Because of GCB, we may end up contacting a different
+	// address than scheddAddr!  This is used for logging (to identify
+	// the schedd) and to uniquely identify the host in the socketCache.
+	// Do not attempt direct connections to this sinful string!
+	MyString scheddAddr;
+	if( !scheddAd->LookupString( ATTR_SCHEDD_IP_ADDR, scheddAddr ) ) {
+		dprintf( D_ALWAYS, "Matchmaker::negotiate: Internal error: Missing IP address for schedd %s.  Please contact the Condor developers.\n", scheddName);
+		return MM_ERROR;
+	}
+
 		// Starting w/ ver 6.7.15, the schedd supports the 
 		// NEGOTIATE_WITH_SIGATTRS command that expects a
 		// list of significant attributes.  
 	if ( job_attr_references && scheddVersion.built_since_version(6,7,15) ) {
 		negotiate_command = NEGOTIATE_WITH_SIGATTRS;
 	}
+
+	// Used for log messages to identify the schedd.
+	// Not for other uses, as it may change!
+	MyString schedd_id;
+	schedd_id.sprintf("%s (%s)", scheddName, scheddAddr.Value());
 	
 	// 0.  connect to the schedd --- ask the cache for a connection
-	sock = sockCache->findReliSock( scheddAddr );
+	sock = sockCache->findReliSock( scheddAddr.Value() );
 	if( ! sock ) {
 		dprintf( D_FULLDEBUG, "Socket to %s not in cache, creating one\n", 
-				 scheddAddr );
+				 schedd_id.Value() );
 			// not in the cache already, create a new connection and
 			// add it to the cache.  We want to use a Daemon object to
 			// send the first command so we setup a security session. 
-		Daemon schedd( DT_SCHEDD, scheddAddr, 0 );
+		Daemon schedd( scheddAd, DT_SCHEDD, 0 );
 		sock = schedd.reliSock( NegotiatorTimeout );
 		if( ! sock ) {
-			dprintf( D_ALWAYS, "    Failed to connect to %s\n", scheddAddr );
+			dprintf( D_ALWAYS, "    Failed to connect to %s\n", schedd_id.Value() );
 			return MM_ERROR;
 		}
 		if( ! schedd.startCommand(negotiate_command, sock, NegotiatorTimeout) ) {
 			dprintf( D_ALWAYS, "    Failed to send NEGOTIATE to %s\n",
-					 scheddAddr );
+					 schedd_id.Value() );
 			delete sock;
 			return MM_ERROR;
 		}
 			// finally, add it to the cache for later...
-		sockCache->addReliSock( scheddAddr, sock );
+		sockCache->addReliSock( scheddAddr.Value(), sock );
 	} else { 
 		dprintf( D_FULLDEBUG, "Socket to %s already in cache, reusing\n", 
-				 scheddAddr );
+				 schedd_id.Value() );
 			// this address is already in our socket cache.  since
 			// we've already got a TCP connection, we do *NOT* want to
 			// use a Daemon::startCommand() to create a new security
@@ -1826,8 +1841,8 @@ negotiate( char *scheddName, char *scheddAddr, double priority, double share,
 		sock->encode();
 		if( ! sock->put(negotiate_command) ) {
 			dprintf( D_ALWAYS, "    Failed to send NEGOTIATE to %s\n",
-					 scheddAddr );
-			sockCache->invalidateSock( scheddAddr );
+					 schedd_id.Value() );
+			sockCache->invalidateSock( scheddAddr.Value() );
 			return MM_ERROR;
 		}
 	}
@@ -1836,23 +1851,26 @@ negotiate( char *scheddName, char *scheddAddr, double priority, double share,
 	sock->encode();
 	if (!sock->put(scheddName))
 	{
-		dprintf (D_ALWAYS, "    Failed to send scheddName\n");
-		sockCache->invalidateSock(scheddAddr);
+		dprintf (D_ALWAYS, "    Failed to send scheddName to %s\n",
+			schedd_id.Value() );
+		sockCache->invalidateSock(scheddAddr.Value());
 		return MM_ERROR;
 	}
 	// send the significant attributes if the schedd can understand it
 	if ( negotiate_command == NEGOTIATE_WITH_SIGATTRS ) {
 		if (!sock->put(job_attr_references)) 
 		{
-			dprintf (D_ALWAYS, "    Failed to send significant attrs\n");
-			sockCache->invalidateSock(scheddAddr);
+			dprintf (D_ALWAYS, "    Failed to send significant attrs to %s\n",
+				schedd_id.Value() );
+			sockCache->invalidateSock(scheddAddr.Value());
 			return MM_ERROR;
 		}
 	}
 	if (!sock->end_of_message())
 	{
-		dprintf (D_ALWAYS, "    Failed to send scheddName/eom\n");
-		sockCache->invalidateSock(scheddAddr);
+		dprintf (D_ALWAYS, "    Failed to send scheddName/eom to %s\n",
+			schedd_id.Value() );
+		sockCache->invalidateSock(scheddAddr.Value());
 		return MM_ERROR;
 	}
 
@@ -1906,7 +1924,7 @@ negotiate( char *scheddName, char *scheddAddr, double priority, double share,
 		if (!sock->put(SEND_JOB_INFO) || !sock->end_of_message())
 		{
 			dprintf (D_ALWAYS, "    Failed to send SEND_JOB_INFO/eom\n");
-			sockCache->invalidateSock(scheddAddr);
+			sockCache->invalidateSock(scheddAddr.Value());
 			return MM_ERROR;
 		}
 
@@ -1917,7 +1935,7 @@ negotiate( char *scheddName, char *scheddAddr, double priority, double share,
 		{
 			dprintf (D_ALWAYS, "    Failed to get reply from schedd\n");
 			sock->end_of_message ();
-            sockCache->invalidateSock(scheddAddr);
+            sockCache->invalidateSock(scheddAddr.Value());
 			return MM_ERROR;
 		}
 
@@ -1943,7 +1961,7 @@ negotiate( char *scheddName, char *scheddAddr, double priority, double share,
 			// something goofy
 			dprintf(D_ALWAYS,"    Got illegal command %d from schedd\n",reply);
 			sock->end_of_message ();
-            sockCache->invalidateSock(scheddAddr);
+            sockCache->invalidateSock(scheddAddr.Value());
 			return MM_ERROR;
 		}
 
@@ -1953,7 +1971,7 @@ negotiate( char *scheddName, char *scheddAddr, double priority, double share,
 		{
 			dprintf(D_ALWAYS, "    JOB_INFO command not followed by ad/eom\n");
 			sock->end_of_message();
-            sockCache->invalidateSock(scheddAddr);
+            sockCache->invalidateSock(scheddAddr.Value());
 			return MM_ERROR;
 		}
 		if (!request.LookupInteger (ATTR_CLUSTER_ID, cluster) ||
@@ -1961,7 +1979,7 @@ negotiate( char *scheddName, char *scheddAddr, double priority, double share,
 		{
 			dprintf (D_ALWAYS, "    Could not get %s and %s from request\n",
 					ATTR_CLUSTER_ID, ATTR_PROC_ID);
-			sockCache->invalidateSock( scheddAddr );
+			sockCache->invalidateSock( scheddAddr.Value() );
 			return MM_ERROR;
 		}
 		dprintf(D_ALWAYS, "    Request %05d.%05d:\n", cluster, proc);
@@ -1977,7 +1995,7 @@ negotiate( char *scheddName, char *scheddAddr, double priority, double share,
 		while (result == MM_BAD_MATCH) 
 		{
 			// 2e(i).  find a compatible offer
-			if (!(offer=matchmakingAlgorithm(scheddName, scheddAddr, request,
+			if (!(offer=matchmakingAlgorithm(scheddName, scheddAddr.Value(), request,
 											 startdAds, priority,
 											 share, only_consider_startd_rank)))
 			{
@@ -2021,7 +2039,7 @@ negotiate( char *scheddName, char *scheddAddr, double priority, double share,
 					{
 						dprintf (D_ALWAYS, "      Could not send rejection\n");
 						sock->end_of_message ();
-						sockCache->invalidateSock(scheddAddr);
+						sockCache->invalidateSock(scheddAddr.Value());
 						
 						return MM_ERROR;
 					}
@@ -2059,7 +2077,7 @@ negotiate( char *scheddName, char *scheddAddr, double priority, double share,
 
 			// 2e(ii).  perform the matchmaking protocol
 			result = matchmakingProtocol (request, offer, claimIds, sock, 
-					scheddName, scheddAddr);
+					scheddName, scheddAddr.Value());
 
 			// 2e(iii). if the matchmaking protocol failed, do not consider the
 			//			startd again for this negotiation cycle.
@@ -2070,7 +2088,7 @@ negotiate( char *scheddName, char *scheddAddr, double priority, double share,
 			//			schedd, invalidate the connection and return
 			if (result == MM_ERROR)
 			{
-				sockCache->invalidateSock (scheddAddr);
+				sockCache->invalidateSock (scheddAddr.Value());
 				return MM_ERROR;
 			}
 		}
@@ -2099,7 +2117,7 @@ negotiate( char *scheddName, char *scheddAddr, double priority, double share,
 	if (!sock->put (END_NEGOTIATE) || !sock->end_of_message())
 	{
 		dprintf (D_ALWAYS, "    Could not send END_NEGOTIATE/eom\n");
-        sockCache->invalidateSock(scheddAddr);
+        sockCache->invalidateSock(scheddAddr.Value());
 	}
 
 	// ... and continue negotiating with others
@@ -2143,8 +2161,13 @@ EvalNegotiatorMatchRank(char const *expr_name,ExprTree *expr,
 }
 
 
+/*
+Warning: scheddAddr may not be the actual address we'll use to contact the
+schedd, thanks to GCB.  It _is_ suitable for use as a unique identifier, for
+display to the user, or for calls to sockCache->invalidateSock.
+*/
 ClassAd *Matchmaker::
-matchmakingAlgorithm(char *scheddName, char *scheddAddr, ClassAd &request,
+matchmakingAlgorithm(char *scheddName, const char *scheddAddr, ClassAd &request,
 					 ClassAdList &startdAds,
 					 double preemptPrio, double share,
 					 bool only_for_startdrank)
@@ -2695,10 +2718,15 @@ insertNegotiatorMatchExprs(ClassAd *ad)
 	}
 }
 
+/*
+Warning: scheddAddr may not be the actual address we'll use to contact the
+schedd, thanks to GCB.  It _is_ suitable for use as a unique identifier, for
+display to the user, or for calls to sockCache->invalidateSock.
+*/
 int Matchmaker::
 matchmakingProtocol (ClassAd &request, ClassAd *offer, 
 						ClaimIdHash &claimIds, Sock *sock,
-					    char* scheddName, char* scheddAddr)
+					    char* scheddName, const char* scheddAddr)
 {
 	int  cluster, proc;
 	char startdAddr[32];
