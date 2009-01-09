@@ -384,7 +384,8 @@ sub gnuplot_commands {
 	$myret = $myret . "set size ratio $RATIO $SCALE,$SCALE\n";
 	
 	#colors
-	$myret = $myret . "set key outside left top\n";
+	#$myret = $myret . "set key outside left top\n";
+	#$myret = $myret . "set key outside top\n";
 	$myret = $myret . "#sea green\n";
 	$myret = $myret . "set style line 1  lt rgb \"#2e8b57\" \n";
 	$myret = $myret . "#firebrick\n";

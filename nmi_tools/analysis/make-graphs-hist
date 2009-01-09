@@ -434,11 +434,11 @@ sub gnuplot_commands {
 	$myret = $myret . "set terminal postscript color eps 24\n";
 	$myret = $myret . "set title \"$title\"\n";
 	$myret = $myret . "set output \"$epsfile\"\n";
-	$myret = $myret . "set key top left\n";
+	$myret = $myret . "set key outside top right\n";
 	$myret = $myret . "set size ratio $RATIO $SCALE,$SCALE\n";
 	
 	#colors
-	$myret = $myret . "set key outside right top\n";
+	#$myret = $myret . "set key outside right top\n";
 	$myret = $myret . "#sea green\n";
 	$myret = $myret . "set style line 1  lt rgb \"#2e8b57\" \n";
 	$myret = $myret . "#firebrick\n";
@@ -525,13 +525,13 @@ sub gnuplot_commands {
 	} elsif($details eq "testsperplatform") {
 		$myret = $myret . "plot \"$datafile\" using 1:2 with boxes   ls 1 title \"Tests per Platform\"\n";
 	} elsif($details eq "downloadlogs") {
-		$myret = $myret . "plot \"$datafile\" using 1:3 with boxes   ls 5 title \"Good Downloads\", \"$datafile\" using 1:2 with boxes   ls 9 title \"Good Source Downloads\", \"$datafile\" using 1:4 with boxes   ls 7 title \"Bad Downloads\", \"$datafile\" using 1:5 with boxes   ls 3 title \"Good Downloads/20\", \"$datafile\" using 1:6 with boxes   ls 8 title \"Bad Downloads/20\"\n";
+		$myret = $myret . "plot \"$datafile\" using 1:3 with boxes   ls 5 title \"Binary\", \"$datafile\" using 1:2 with boxes   ls 9 title \"Source\"\n";
 	} elsif($details eq "weeklydownloadlogs") {
-		$myret = $myret . "plot \"$datafile\" using 1:5 with boxes   ls 5 title \"Good Downloads\", \"$datafile\" using 1:4 with boxes   ls 9 title \"Good Source Downloads\", \"$datafile\" using 1:6 with boxes   ls 7 title \"Bad Downloads\"\n";
+		$myret = $myret . "plot \"$datafile\" using 1:5 with boxes   ls 5 title \"Binary\", \"$datafile\" using 1:4 with boxes   ls 9 title \"Source\"\n";
 	} elsif($details eq "uniquedownloadlogs") {
-		$myret = $myret . "plot \"$datafile\" using 1:3 with boxes   ls 5 title \"Good Unique Downloads\"\n";
+		$myret = $myret . "plot \"$datafile\" using 1:3 with boxes   ls 5 title \"Unique\"\n";
 	} elsif($details eq "totaldownloadlogs") {
-		$myret = $myret . "plot \"$datafile\" using 1:3 with boxes   ls 5 title \"Total Good Binary Downloads\",  \"$datafile\" using 1:2 with boxes   ls 9 title \"Total Good Source Downloads\"\n";
+		$myret = $myret . "plot \"$datafile\" using 1:3 with boxes   ls 5 title \"Binary\",  \"$datafile\" using 1:2 with boxes   ls 9 title \"Source\"\n";
 	} else {
 		$myret = $myret . "plot \"$datafile\" using 1:2 with boxes ls 1 title \"Passed Tests\", \"$datafile\" using 1:4 with boxes ls 2 title \"Failed Tests\", \"$datafile\" using 1:10 with boxes ls 5 title \"Framework Lost Tests\", \"$datafile\" using 1:8 with boxes ls 7 title \"Condor Issues\", \"$datafile\" using 1:6 with boxes ls 6 title \"Platform Issues\"\n";
 	}

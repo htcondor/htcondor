@@ -95,7 +95,6 @@ while(<DATA>) {
 			#print "Second branch is $9 upping $branches to 2<<$branches>>\n";
 		}
 
-		# this was just wrong now and was turned off
 		#if(($type eq "tests") && ($8 != 0)) {
 			#$previousrate = readratehist();
 			#$previousratio = ($previousrate / $8);
