@@ -1108,9 +1108,9 @@ sub IsPersonalRunning
     my $matchedconfig = "";
 
     fullchomp($pathtoconfig);
-    if($iswindows == 1) {
-        $pathtoconfig =~ s/\\/\\\\/g;
-    }
+    #if($iswindows == 1) {
+        #$pathtoconfig =~ s/\\/\\\\/g;
+    #}
 
 	debug("call - condor_config_val -config -master log \n",3);
     open(CONFIG, "condor_config_val -config -master log 2>&1 |") || die "condor_config_val: $
