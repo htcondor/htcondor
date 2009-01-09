@@ -22,15 +22,15 @@
 use CondorTest;
 
 $cmd1 = 'job_core_coredump-yes_van.cmd';
-$handle1 = 'Create Core File';
+$handle1 = 'job_core_coredump-yes_van';
 $wants_core{$handle1} = 1;
 
 $cmd2 = 'job_core_coredump-xfer_van.cmd';
-$handle2 = 'Create Core File with file transfer';
+$handle2 = 'job_core_coredump-xfer_van';
 $wants_core{$handle2} = 1;
 
 $cmd3 = 'job_core_coredump-none_van.cmd';
-$handle3 = 'No Core File';
+$handle3 = 'job_core_coredump-none_van';
 $wants_core{$handle3} = 0;
 
 
