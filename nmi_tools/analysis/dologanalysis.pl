@@ -27,10 +27,11 @@ my $crunch = $datalocation . $datacruncher;
 #my @datafiles = ( "sendfile-v6.0", "sendfile-v6.1", "sendfile-v6.2", "sendfile-v6.3", "sendfile-v6.4", "sendfile-v6.5", "sendfile-v6.6", "sendfile-v6.7", "sendfile-v6.8", "sendfile-v6.9","sendfile-v7.0", "sendfile-v7.1" );
 #my @datafiles = ( "sendfile-v6.6", "sendfile-v6.7", "sendfile-v6.8", "sendfile-v6.9","sendfile-v7.0", "sendfile-v7.1" );
 #my @datafiles = ( "sendfile-v6.8", "sendfile-v6.9", "sendfile-v7.0", "sendfile-v7.1" );
-my @datafiles = ( "sendfile-v7.0", "sendfile-v7.1" );
-my $stable = "sendfile-v7.0";
+my @datafiles = ( "sendfile-v7.2", "sendfile-v7.1", "sendfile-v7.0");
+my $stable = "sendfile-v7.2";
 my $developer = "sendfile-v7.1";
 #my @datafiles = ( "sendfile-v6.8" );
+my %datapoints;
 
 GetOptions (
 		'help' => \$help,
@@ -175,6 +176,8 @@ $trimdata = "no";
 $firstoutput;
 %unique;
 %sigevents;
+$currentrelease = "";
+$currenttitle = "";
 my @queue = ();
 
 #print "$crunch\n";
@@ -197,6 +200,14 @@ foreach $log (@datafiles) {
 	%unique = ();
 	%sigevents = ();
 	%uniquefiles = ();
+
+	#ScanDownloadErrors ("problem-v7.0",\%datapoints);
+	if($log =~ /^.*v(\d+)\.(\d+).*$/) {
+		$currentrelease = "V$1.$2";
+		print "***************** $currentrelease ************************\n";
+	} else {
+		die "Failed to parse $log\n";
+	}
 
 	open(LOGDATA,"$crunch $datafile 2>&1|") || die "logdata bad: $!\n";
 	open(OUT,">$outfile") || die "Failed to open $outfile: $!\n";
@@ -257,7 +268,7 @@ foreach $log (@datafiles) {
 				$skip = "false";
 				$firstdate = $3 . " " . $months{$2} . " " . $5;
 				$month = $2;
-				print "Starting: $firstdate\n";
+				print "Starting: ************** $firstdate ********************************\n";
 			} else {
 				if( $day ne $3){ 
 					$scale = ScaleData();
@@ -314,12 +325,13 @@ foreach $log (@datafiles) {
 	# look for significant events for plot x axis labeling
 	if( -f $events) {
 		$line = "";
+		print "**** Found $events ******\n";		
 		open(EVENTS,"<$events") || print "failed to open $events:$!\n";
 		while(<EVENTS>) {
 			chomp();
 			$line = $_;
 			if($line =~ /^(\s*\w*\s+\d+\s+\d+),\s*\"(.*)\".*$/) {
-				print "Found and added $2 on the $1\n";
+				print "***** Found  and added $2 on the $1\n";
 				$sigevents{$1} = $2;
 			}
 		}
@@ -341,13 +353,17 @@ foreach $log (@datafiles) {
 	my $timestamp = 0;
 	my $xticslabels = "";
 	my $last7totaldate = "";
+	my $shortdate = "";
 	open(DATA,"<$outfile") || die "Failed to open $outfile: $!\n";
+	print "Reading $outfile to produce $weeklyoutfile\n";
 	open(WEEKLY,">$weeklyoutfile") || die "Failed to open $weeklyoutfile: $!\n";
 	while(<DATA>) {
 		chomp();
+		$shortdate = "";
 		$line = $_;
+		print "Outfile line: $line\n";
 		if($line =~ /^(\s*\w*\s+\d+\s+\d+),\s*(\d+),\s*(\d+),\s*[-]?(\d+),\s*(\d+),\s*[-]?(\d+),\s*(\d+),\s*[-]?(\d+)\s*.*$/) {
-			#print "Working on weekly totals for week containing $1\n";
+			print "Working on weekly totals for week containing $1\n";
 			$wdate = $1;
 			$wsrc += $2;
 			$wgood += $3;
@@ -362,25 +378,38 @@ foreach $log (@datafiles) {
 				print WEEKLY "$wdate, $wsrc, $wgood, -$wbad, 0, 0, 0, 0\n";
 				$last7totaldate = $wdate; # save for calc of partial week
 				if( $wdate =~ /^(\w+)\s+(\d+)\s+(\d+)$/) {
-					#print "turning $wdate to a timestamp\n";
+					print "turning $wdate to a timestamp\n";
 					my $mon = $monthtonum{$1};
 					my $year = $3;
 					$timestamp = timelocal("00","00","00",$2,$mon,$year);
 					print "Month $mon Day $2 Year $year, $timestamp \n";
+					my $regmon =  $monthtoregnum{$1};
+					$shortdate = $regmon . "/" . $2 . "/" . $year;
 				} else {
 					die "Can not parse date <$wdate>\n";
 				}
 				if($foundevent ne "") {
+					print "Found event <<$foundevent>>\n";
 					if($xticslabels eq "") {
+						print "$xticslabels is currently <<$xticslabels>>\n";
 						$xticslabels = $xticslabels  . "\"$foundevent\" \"$wdate\" ";
+						print "made xticslabels <<$xticslabels>>\n";
+						$xticslabels
 					} else {
+						print "$xticslabels is currently <<$xticslabels>>\n";
 						$xticslabels = $xticslabels  . ",\"$foundevent\" \"$wdate\" ";
+						print "made xticslabels <<$xticslabels>>\n";
 					}
 				} else {
+					print "Found event <<$foundevent>>\n";
 					if($xticslabels eq "") {
-						$xticslabels = $xticslabels  . "\"$wdate\" \"$wdate\" ";
+						print "$xticslabels is currently <<$xticslabels>>\n";
+						$xticslabels = $xticslabels  . "\"$shortdate\" \"$wdate\" ";
+						print "made xticslabels <<$xticslabels>>\n";
 					} else {
-						$xticslabels = $xticslabels  . ",\"$wdate\" \"$wdate\" ";
+						print "$xticslabels is currently <<$xticslabels>>\n";
+						$xticslabels = $xticslabels  . ",\"$shortdate\" \"$wdate\" ";
+						print "made xticslabels <<$xticslabels>>\n";
 					}
 				}
 				$datapoint = $datapoint + 1;
@@ -401,12 +430,14 @@ foreach $log (@datafiles) {
 		print "Adding partial week.......\n";
 		print "$wdate, $wsrc, $wgood, -$wbad, 0, 0, 0, 0\n";
 		if( $wdate =~ /^(\w+)\s+(\d+)\s+(\d+)$/) {
-			#print "turning $wdate to a timestamp\n";
+			print "turning $wdate to a timestamp\n";
 			my $mon = $monthtonum{$1};
 			my $year = ($3 - 1900);
-			#print "Month $mon Year $year\n";
-			#$timestamp = timelocal("00","00","00",$2,$mon,$year);
+			print "Month $mon Year $year\n";
+			$timestamp = timelocal("00","00","00",$2,$mon,$year);
 			print "Month $mon Day $2 Year $year, $timestamp \n";
+			my $regmon =  $monthtoregnum{$1};
+			$shortdate = $regmon . "/" . $2 . "/" . $year;
 		} else {
 			die "Can not parse date <$wdate>\n";
 		}
@@ -415,16 +446,30 @@ foreach $log (@datafiles) {
 		print WEEKLY "$newdate, $wsrc, $wgood, -$wbad, 0, 0, 0, 0\n";
 
 		if($foundevent ne "") {
+			print "foundevent not empty<<<$foundevent>>>\n";
 			if($xticslabels eq "") {
+				print "xticslabels empty\n";				
+				print "Set to <<<$xticslabels>>> based on new date <<<$newdate>>>\n";
 				$xticslabels = $xticslabels  . "\"$foundevent\" \"$newdate\" ";
+				print "xticslabels now <<<$xticslabels>>>\n";
 			} else {
+				print "xticslabels NOT empty<<<$xticslabels>>>\n";			
+				print "Set to <<<$xticslabels>>> based on new date <<<$newdate>>>\n";
 				$xticslabels = $xticslabels  . ",\"$foundevent\" \"$newdate\" ";
+				print "xticslabels now <<<$xticslabels>>>\n";
 			}
 		} else {
+			print "foundevent empty<<<$foundevent>>>\n";
 			if($xticslabels eq "") {
-				$xticslabels = $xticslabels  . "\"$newdate\" \"$newdate\" ";
+				print "xticslabels empty\n";
+				print "Set to <<<$xticslabels>>> based on new date <<<$newdate>>>\n";
+				$xticslabels = $xticslabels  . "\"$shortdate\" \"$newdate\" ";
+				print "xticslabels now <<<$xticslabels>>>\n";
 			} else {
-				$xticslabels = $xticslabels  . ",\"$newdate\" \"$newdate\" ";
+				print "xticslabels NOT empty<<<$xticslabels>>>\n";
+				print "Set to <<<$xticslabels>>> based on new date <<<$newdate>>>\n";
+				$xticslabels = $xticslabels  . ",\"$shortdate\" \"$newdate\" ";
+				print "xticslabels now <<<$xticslabels>>>\n";
 			}
 		}
 		$datapoint = $datapoint + 1;
@@ -438,14 +483,17 @@ foreach $log (@datafiles) {
 	close(XTICS);
 
 	# make plots for accumulated plot
-	$graphcmd = "$tooldir/make-graphs-hist --firstdate \"$firstdate\" --detail totaldownloadlogs --daily --input $totalsfile --output $totalsimage";
+	$currenttitle = $currentrelease . " Accumulated Downloads";
+	$graphcmd = "$tooldir/make-graphs-dwnloads --firstdate \"$firstdate\" --detail totaldownloadlogs --daily --input $totalsfile --output $totalsimage --title \"$currenttitle\"";
 	system("$graphcmd");
 
 	# make plots for this series
-	$weeklygraphcmd = "$tooldir/make-graphs-hist --firstdate \"$firstdate\" --detail weeklydownloadlogs --weekly --input $weeklyoutfile --output $image --xtics $saveevents";
+	$currenttitle = $currentrelease . " Weekly Totals";
+	$weeklygraphcmd = "$tooldir/make-graphs-dwnloads --firstdate \"$firstdate\" --detail weeklydownloadlogs --weekly --input $weeklyoutfile --output $image --xtics $saveevents --title \"$currenttitle\"";
 	system("$weeklygraphcmd");
 
-	$uniquegraphcmd = "$tooldir/make-graphs-hist --firstdate \"$firstdate\" --detail uniquedownloadlogs --daily --input $uniquefile --output $uniqueimage";
+	$currenttitle = $currentrelease . " Unique Totals";
+	$uniquegraphcmd = "$tooldir/make-graphs-dwnloads --firstdate \"$firstdate\" --detail uniquedownloadlogs --daily --input $uniquefile --output $uniqueimage --title \"$currenttitle\"";
 	system("$uniquegraphcmd");
 
 	# prepare a 2 month plot for key downloads
@@ -453,9 +501,11 @@ foreach $log (@datafiles) {
 	$shortdate = mk2month_strtdate($day, $month, $year);
 
 	if($log eq $developer) {
-		$graphcmd = "$tooldir/make-graphs-hist --firstdate \"$shortdate\" --detail downloadlogs --daily --input $outfile --output developer.png";
+		$currenttitle = $currentrelease . "(Developer) Daily Totals";
+		$graphcmd = "$tooldir/make-graphs-dwnloads --firstdate \"$shortdate\" --detail downloadlogs --daily --input $outfile --output developer.png --title \"$currenttitle\"";
 	} elsif ($log eq $stable) {
-		$graphcmd = "$tooldir/make-graphs-hist --firstdate \"$shortdate\" --detail downloadlogs --daily --input $outfile --output stable.png";
+		$currenttitle = $currentrelease . "(Stable) Daily Totals";
+		$graphcmd = "$tooldir/make-graphs-dwnloads --firstdate \"$shortdate\" --detail downloadlogs --daily --input $outfile --output stable.png --title \"$currenttitle\"";
 	}
 	if(($log eq $developer) || ($log eq $stable)) {
 		print "About to execute this:\n";
@@ -465,6 +515,70 @@ foreach $log (@datafiles) {
 
 }
 exit(0);
+
+sub ScanDownloadErrors 
+{
+    my $log = shift;
+    my $hashref = shift;
+    $datafile = $datalocation . $log;
+    print "examine $datafile\n";
+    $newrecord = 0;
+    
+    open(LOGDATA,"<$datafile") || die "logdata bad: $!\n";
+    my $line = "";
+    my @error = ();
+    my $skiprecord = 1;
+    my $firstreset = 1;
+    
+    my $date = "";
+    while(<LOGDATA>) {
+        chomp;
+        $line = $_;
+        #unshift @queue, $_;
+        print "$_\n";
+        if($line =~ /^[\-]+----$/) {
+            print "New record\n";
+            if($skiprecord == 0) {
+                print "Process Last Record\n";
+            } else {
+                if($firstreset == 0) {
+                    # remove count when first seen
+                    ${$hashref}{"$date"} -= 1;
+                } else {
+                    $firstreset = 0;
+                }
+            }
+            @error = ();
+            $skiprecord = 1;
+        } elsif($line =~ /^(\d+)\s+(\d+\.\d+\.\d+\.\d+).*$/) {
+            print "$1 $2\n";
+            my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime($1);
+            $mon += 1;
+            $year += 1900;
+            print "$months{$monthnums{$mon}} $mday $year\n";
+            $date = "$months{$monthnums{$mon}} $mday $year";
+            ${$hashref}{"$date"} += 1;
+        } elsif($line =~ /^UM:(.*)$/) {
+            # some people sent a blank form - do not count as error
+            if($1 eq "") {
+                print "Content not defined\n";
+            } else {
+                $skiprecord = 0;
+            }
+        }
+        push @error, $line;
+    }
+}
+
+
+sub DropData 
+{
+    foreach  $key (sort keys %datapoints) {
+        if(exists $datapoints{$key}) {
+            print "$key $datapoints{$key} \n";
+        }
+    }
+}
 
 # =================================
 # print help
@@ -587,6 +701,13 @@ sub MakeWeekSince
 		}
 	} else {
 		print "MakeWeekSince not parsing date\n";
+		# return todays date
+		my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime();
+        $mon += 1;
+        $year += 1900;
+        print "$months{$monthnums{$mon}} $mday $year\n";
+        my $date = "$months{$monthnums{$mon}} $mday $year";
+		return($date);
 	}
 	print "MakeWeekSince $lastdate\n";
 	print "MakeWeekSince Done\n";
