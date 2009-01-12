@@ -929,11 +929,10 @@ sub CreateConfig
 	# Windows needs config file preparation, wrapper scripts etc
 	if($iswindows == 1) {
 		# set up job wrapper
-		safe_copy("../condor_scripts/exe_switch.pl", "$wininstalldir/bin/exe_switch.pl") ||
-        die "couldn't copy exe_swtich.pl";
-		open( WRAPPER, ">$wininstalldir/bin/exe_switch.bat" ) || die "Can't open new job wrapper: $!\n";
-    	print WRAPPER "\@c:\\perl\\bin\\perl.exe $wininstalldir/bin/exe_switch.pl %*\n";
-    	close(WRAPPER);
+		# safe_copy("../condor_scripts/exe_switch.pl", "$wininstalldir/bin/exe_switch.pl") || die "couldn't copy exe_swtich.pl";
+		# open( WRAPPER, ">$wininstalldir/bin/exe_switch.bat" ) || die "Can't open new job wrapper: $!\n";
+		# print WRAPPER "\@c:\\perl\\bin\\perl.exe $wininstalldir/bin/exe_switch.pl %*\n";
+		# close(WRAPPER);
 		
 		# pre-process config file src and windowize it
 
@@ -1165,9 +1164,9 @@ sub CreateLocalConfig
 
 	# Add a job wrapper for windows.... and a few other things which
 	# normally are done by condor_configure for a personal condor
-	if($iswindows == 1) {
-		print FIX "USER_JOB_WRAPPER = $wininstalldir/bin/exe_switch.bat\n";
-	}
+	#if($iswindows == 1) {
+	#	print FIX "USER_JOB_WRAPPER = $wininstalldir/bin/exe_switch.bat\n";
+	#}
 
 	# Tell condor to use the current directory for temp.  This way,
 	# if we get preempted/killed, we don't pollute the global /tmp

@@ -44,6 +44,14 @@
 extern CStarter *Starter;
 ReliSock *syscall_sock = NULL;
 
+// Filenames are case insensitive on Win32, but case sensitive on Unix
+#ifdef WIN32
+#	define file_contains contains_anycase
+#	define file_remove remove_anycase
+#else
+#	define file_contains contains
+#	define file_remove remove
+#endif
 
 JICShadow::JICShadow( const char* shadow_name ) : JobInfoCommunicator()
 {
@@ -372,6 +380,13 @@ JICShadow::transferOutput( void )
 		char* filename;
 		while ((filename = m_added_output_files.next()) != NULL) {
 			filetrans->addOutputFile(filename);
+		}
+
+			// remove any dynamically-removed output files from
+			// the ft's list (i.e. a renamed Windows script)
+		m_removed_output_files.rewind();
+		while ((filename = m_removed_output_files.next()) != NULL) {
+			filetrans->addFileToExeptionList(filename);
 		}
 	
 			// true if job exited on its own
@@ -853,7 +868,18 @@ JICShadow::publishStarterInfo( ClassAd* ad )
 void
 JICShadow::addToOutputFiles( const char* filename )
 {
-	m_added_output_files.append(filename);
+	if (!m_removed_output_files.file_contains(filename)) {
+		m_added_output_files.append(filename);
+	}
+}
+
+void
+JICShadow::removeFromOutputFiles( const char* filename )
+{
+	if (m_added_output_files.file_contains(filename)) {
+		m_added_output_files.file_remove(filename);
+	}
+	m_removed_output_files.append(filename);
 }
 
 bool

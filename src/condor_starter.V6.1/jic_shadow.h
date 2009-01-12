@@ -186,7 +186,16 @@ public:
 		*/
 	void addToOutputFiles( const char* filename );
 
-		/** Send modified files in a job working direcotry 
+		/** Make sure the given filename will be excluded from the
+			list of files that the job sends back to the submitter.
+			If the file has already been added to the output list,
+			it is removed and added to the exception list; otherwise,
+			it is added to the exception list directly.
+			@param filename File to remove from the job's output list 
+		*/
+	void removeFromOutputFiles( const char* filename );
+
+		/** Send modified files in a job working directory 
 		    to shadow by using file transfer
 		*/
 	bool uploadWorkingFiles(void);
@@ -420,6 +429,11 @@ private:
 		    (e.g. a core file dumped by the job)
 		*/
 	StringList m_added_output_files;
+
+		/** A list of files that should NOT be transfered back to the
+			job submitter. (e.g. the job's executable itself)
+		*/
+	StringList m_removed_output_files;
 };
 
 
