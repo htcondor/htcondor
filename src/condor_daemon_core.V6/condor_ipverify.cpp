@@ -382,7 +382,7 @@ IpVerify::AuthEntryToString(const struct in_addr & host, const char * user, perm
 {
 	MyString mask_str;
 	PermMaskToString( mask, mask_str );
-	result.sprintf("%s/%s: %s\n",
+	result.sprintf("%s/%s: %s",
 			user ? user : "(null)",
 			inet_ntoa(host),
 			mask_str.Value() );
