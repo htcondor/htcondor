@@ -28,7 +28,8 @@ my $name4test = `whoami`;
 CondorTest::debug("Adjusting mapfile for <$name4test>\n",1);
 
 $param_template = "x_param.protocol-ssl.template";
-$testname = 'lib_auth_protocol-ssl - Security Protocol SSL Authentication Test';
+$testdesc =  'lib_auth_protocol-ssl - Security Protocol SSL Authentication Test';
+$testname = "lib_auth_protocol-ssl";
 $corename = "lib_auth_protocol-ssl";
 $mycustomconfig = "x_secssl_configpostsrc";
 $mytestnegotiation = "x_secneg_clR_dmnR_secprepostsrc";

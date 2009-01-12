@@ -27,7 +27,8 @@ sub IDLE{1};
 sub HELD{5};
 sub RUNNING{2};
 
-$testname = 'fetch_work-basic';
+$testdesc =  'fetch_work-basic';
+$testname = "fetch_work-basic";
 $corename = "fetch_work-basic";
 
 # where am I running

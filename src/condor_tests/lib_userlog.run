@@ -21,7 +21,8 @@
 use CondorTest;
 
 $cmd = 'lib_userlog.cmd';
-$testname = 'Test user log - write all events and expect to read the same';
+$testdesc =  'Test user log - write all events and expect to read the same';
+$testname = "lib_userlog";
 
 
 @CondorTest::expected_output =

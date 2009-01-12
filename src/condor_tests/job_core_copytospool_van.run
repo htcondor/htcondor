@@ -24,7 +24,8 @@ use Digest::MD5;
 my $stats = 0;
 
 $cmd = 'job_core_copytospool_van.cmd';
-$testname = 'Does copytospool work - vanilla U';
+$testdesc =  'Does copytospool work - vanilla U';
+$testname = "job_core_copytospool_van";
 
 $aborted = sub {
 	my %info = @_;

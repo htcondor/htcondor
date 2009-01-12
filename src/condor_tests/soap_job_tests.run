@@ -30,7 +30,8 @@ Condor::DebugOn();
 
 $topdir = getcwd();
 
-$testname = 'Condor soap test ';
+$testdesc =  'Condor soap test ';
+$testname = "soap_job_tests";
 
 @adarray;
 @bdarray;

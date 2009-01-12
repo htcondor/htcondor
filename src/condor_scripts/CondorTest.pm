@@ -28,7 +28,9 @@ package CondorTest;
 require 5.0;
 use Carp;
 use Condor;
+use CondorPersonal;
 use FileHandle;
+use POSIX "sys_wait_h";
 use Net::Domain qw(hostfqdn);
 
 my %securityoptions =
@@ -55,6 +57,7 @@ BEGIN
     $vacates = 0;
     %test;
 	%machine_ads;
+	$lastconfig = "";
 
     Condor::DebugOn();
 }
@@ -256,7 +259,11 @@ sub RunTest
     my $wants_checkpoint = shift;
 
     my $status           = -1;
+	my $monitorpid = 0;
+	my $waitpid = 0;
+	my $monitorret = 0;
 
+	print "RunTest says test is<<$handle>>\n";
 	# moved the reset to preserve callback registrations which includes
 	# an error callback at submit time..... Had to change timing
 	CondorTest::Reset();
@@ -265,9 +272,6 @@ sub RunTest
 
     # this is kludgey :: needed to happen sooner for an error message callback in runcommand
     $Condor::submit_info{'handle'} = $handle;
-
-    # this is kludgey :: needed to happen sooner for an error message callback in runcommand
-    #$Condor::submit_info{'handle'} = $handle;
 
     # if we want a checkpoint, register a function to force a vacate
     # and register a function to check to make sure it happens
@@ -283,19 +287,93 @@ sub RunTest
 
 	CheckRegistrations();
 
+	my $wrap_test = $ENV{WRAP_TESTS};
+
+	my $config = "";
+	if(defined  $wrap_test) {
+		print "Config before PersonalCondorTest<<<<$ENV{CONDOR_CONFIG}>>>>\n";
+		$lastconfig = $ENV{CONDOR_CONFIG};
+		$config = PersonalCondorTest($submit_file, $handle);
+		if($config ne "") {
+			print "PersonalCondorTest returned this config file<$config>\n";
+			print "Saving last config file<<<$lastconfig>>>\n";
+			$ENV{CONDOR_CONFIG} = $config;
+			print "CONDOR_CONFIG now <<$ENV{CONDOR_CONFIG}>>\n";
+			system("condor_config_val -config");
+		}
+	}
+
     # submit the job and get the cluster id
+	debug( "Now submitting test job\n",4);
     $cluster = Condor::TestSubmit( $submit_file );
     
     # if condor_submit failed for some reason return an error
-    return 0 if $cluster == 0;
+    if($cluster == 0){
+	} else {
 
-    # monitor the cluster and return its exit status
-    $retval = Condor::Monitor();
+    	# monitor the cluster and return its exit status
+		# note 1/2/09 bt
+		# any exits cause monitor to never return allowing us
+		# to kill personal condor wrapping the test :-(
+		
+		$monitorpid = fork();
+		if($monitorpid == 0) {
+			# child does monitor
+    		$monitorret = Condor::Monitor();
 
-    die "$handle: FAILURE (job never checkpointed)\n"
-	if $wants_checkpoint && $checkpoints < 1;
+			debug( "Monitor did return on its own status<<<$monitorret>>>\n",4);
+    		die "$handle: FAILURE (job never checkpointed)\n"
+			if $wants_checkpoint && $checkpoints < 1;
 
-    return $retval;
+			if(  $monitorret == 1 ) {
+				debug( "child happy to exit 0\n",4);
+				exit(0);
+			} else {
+				debug( "child not happy to exit 1\n",4);
+				exit(1);
+			}
+		} else {
+			# parent cleans up
+			$waitpid = waitpid($monitorpid, 0);
+			if($waitpid == -1) {
+				debug( "No such process <<$monitorpid>>\n",4);
+			} else {
+				$retval = $?;
+				debug( "Child status was <<$retval>>\n",4);
+				if( WIFEXITED( $retval ) && WEXITSTATUS( $retval ) == 0 )
+				{
+					debug( "Monitor done and status good!\n",4);
+					$retval = 1;
+				} else {
+					my $status = WEXITSTATUS( $retval );
+					debug( "Monitor done and status bad<<$status>>!\n",4);
+					$retval = 0;
+				}
+			}
+		}
+	}
+
+	debug( "************** condor_monitor back ************************ \n",4);
+
+	if(defined  $wrap_test) {
+		if($config ne "") {
+			print "KillDaemonPids called on this config file<$config>\n";
+			CondorPersonal::KillDaemonPids($config);
+		} else {
+			print "No config setting to call KillDaemonPids with\n";
+		}
+		print "Restoring this config<<<$lastconfig>>>\n";
+		$ENV{CONDOR_CONFIG} = $lastconfig;
+	} else {
+		debug( "Not currently wrapping tests\n",4);
+	}
+
+
+    if($cluster == 0){
+		return(0);
+	} else {
+    	return $retval;
+	}
 }
 
 sub RunDagTest
@@ -306,6 +384,9 @@ sub RunDagTest
 	my $dagman_args = 	shift || croak "missing dagman args";
 
     my $status           = -1;
+	my $monitorpid = 0;
+	my $waitpid = 0;
+	my $monitorret = 0;
 
     croak "too many arguments" if shift;
 
@@ -330,19 +411,90 @@ sub RunDagTest
 
 	CheckRegistrations();
 
+	my $wrap_test = $ENV{WRAP_TESTS};
+
+	my $config = "";
+	if(defined  $wrap_test) {
+		$lastconfig = $ENV{CONDOR_CONFIG};
+		$config = PersonalCondorTest($submit_file, $handle);
+		if($config ne "") {
+			print "PersonalCondorTest returned this config file<$config>\n";
+			print "Saving last config file<<<$lastconfig>>>\n";
+			$ENV{CONDOR_CONFIG} = $config;
+			print "CONDOR_CONFIG now <<$ENV{CONDOR_CONFIG}>>\n";
+			system("condor_config_val -config");
+		}
+	}
+
     # submit the job and get the cluster id
     $cluster = Condor::TestSubmitDagman( $submit_file, $dagman_args );
     
-    # if condor_submit failed for some reason return an error
-    return 0 if $cluster == 0;
+	if($cluster == 0){
+    	# if condor_submit failed for some reason return an error
+	} else {
+    	# monitor the cluster and return its exit status
+		# note 1/2/09 bt
+		# any exits cause monitor to never return allowing us
+		# to kill personal condor wrapping the test :-(
+		
+		$monitorpid = fork();
+		if($monitorpid == 0) {
+			# child does monitor
+    		$monitorret = Condor::Monitor();
+			debug( "Monitor did return on its own status<<<$monitorret>>>\n",4);
 
-    # monitor the cluster and return its exit status
-    $retval = Condor::Monitor();
+    		die "$handle: FAILURE (job never checkpointed)\n"
+			if $wants_checkpoint && $checkpoints < 1;
 
-    die "$handle: FAILURE (job never checkpointed)\n"
-	if $wants_checkpoint && $checkpoints < 1;
+			if(  $monitorret == 1 ) {
+				debug( "child happy to exit 0\n",4);
+				exit(0);
+			} else {
+				debug( "child not happy to exit 1\n",4);
+				exit(1);
+			}
+		} else {
+			# parent cleans up
+			$waitpid = waitpid($monitorpid, 0);
+			if($waitpid == -1) {
+				debug( "No such process <<$monitorpid>>\n",4);
+			} else {
+				$retval = $?;
+				debug( "Child status was <<$retval>>\n",4);
+				if( WIFEXITED( $retval ) && WEXITSTATUS( $retval ) == 0 )
+				{
+					debug( "Monitor done and status good!\n",4);
+					$retval = 1;
+				} else {
+					my $status = WEXITSTATUS( $retval );
+					debug( "Monitor done and status bad<<$status>>!\n",4);
+					$retval = 0;
+				}
+			}
+		}
+	}
 
-    return $retval;
+	debug( "************** condor_monitor back ************************ \n",4);
+
+	if(defined  $wrap_test) {
+		if($config ne "") {
+			print "KillDaemonPids called on this config file<$config>\n";
+			CondorPersonal::KillDaemonPids($config);
+		} else {
+			print "No config setting to call KillDaemonPids with\n";
+		}
+		print "Restoring last config file<<$lastconfig>>\n";
+		$ENV{CONDOR_CONFIG} = $lastconfig;
+	} else {
+		debug( "Not currently wrapping tests\n",4);
+	}
+
+
+	if($cluster == 0){
+		return(0);
+	} else {
+		return $retval;
+	}
 }
 
 sub CheckTimedRegistrations
@@ -505,7 +657,7 @@ sub CompareText
 	debug("\$\$aref[0] = $$aref[0]\n",4);
 
 	debug("skiplines = \"@skiplines\"\n",4);
-	print "grep returns ", grep( /^$linenum$/, @skiplines ), "\n";
+	#print "grep returns ", grep( /^$linenum$/, @skiplines ), "\n";
 
 	next if grep /^$linenum$/, @skiplines;
 
@@ -1137,7 +1289,7 @@ sub spawn_cmd
 			if($res != 0) {
 				print LOG " failed\n";
 				close(LOG);
-				exit(-1);
+				exit(1);
 			} else {
 				print LOG " worked\n";
 				close(LOG);
@@ -1149,11 +1301,19 @@ sub spawn_cmd
 		$mylog = $resultfile . ".watch";
 		open(LOG,">$mylog") || die "Can not open log: $mylog: $!\n";
 		print LOG "waiting on pid <$pid>\n";
-		while(($child = waitpid($pid,WNOHANG)) != -1) { 
-			$exitval = $? >> 8;
-			$signal_num = $? & 127;
-			print RES "Exit $exitval Signal $signal_num\n";
-			print LOG "Pid $child res was $exitval\n";
+		while(($child = waitpid($pid,0)) != -1) { 
+			$retval = $?;
+			debug( "Child status was <<$retval>>\n",4);
+			if( WIFEXITED( $retval ) && WEXITSTATUS( $retval ) == 0 ) {
+				debug( "Monitor done and status good!\n",4);
+				$retval = 0;
+			} else {
+				my $status = WEXITSTATUS( $retval );
+				debug( "Monitor done and status bad<<$status>>!\n",4);
+				$retval = 1;
+			}
+			print RES "Exit $retval \n";
+			print LOG "Pid $child res was $retval\n";
 		}
 		print LOG "Done waiting on pid <$pid>\n";
 		close(RES);
@@ -1234,7 +1394,7 @@ sub PersonalPolicySearchLog
 
     #my $logloc = $pid . "/" . $pid . $personal . "/log/" . $logname;
     my $logloc = $logdir . "/" . $logname;
-    CondorTest::debug("Search this log <$logloc> for <$policyitem>\n",1);
+    debug("Search this log <$logloc> for <$policyitem>\n",1);
     open(LOG,"<$logloc") || die "Can not open logfile<$logloc>: $!\n";
     while(<LOG>) {
         if( $_ =~ /^.*Security Policy.*$/) {
@@ -1242,7 +1402,7 @@ sub PersonalPolicySearchLog
                 if( $_ =~ /^\s*$policyitem\s*=\s*\"(\w+)\"\s*$/ ) {
                     #print "FOUND IT! $1\n";
                     if(!defined $securityoptions{$1}){
-                        CondorTest::debug("Returning <<$1>>\n",1);
+                        debug("Returning <<$1>>\n",1);
                         return($1);
                     }
                 }
@@ -1250,6 +1410,65 @@ sub PersonalPolicySearchLog
         }
     }
     return("bad");
+}
+
+sub PersonalCondorTest
+{
+	my $submitfile = shift;
+	my $testname = shift;
+	my $cmd = "condor_config_val log";
+	my $locconfig = "";
+    print "Running this command: <$cmd> \n";
+    # shhhhhhhh third arg 0 makes it hush its output
+	$logdir = `condor_config_val log`;
+	fullchomp($logdir);
+	print "log dir is<$logdir>\n";
+	if($logdir =~ /^.*condor_tests.*$/){
+		print "Running within condor_tests\n";
+		if($logdir =~ /^.*TestingPersonalCondor.*$/){
+			print "Running with outer testing personal condor\n";
+			#my $testname = findOutput($submitfile);
+			#print "findOutput saya test is $testname\n";
+			my $version = "local";
+			
+			# get a local scheduler running (side a)
+			my $configloc = CondorPersonal::StartCondor( $testname, "x_param.basic_personal" ,$version);
+			my @local = split /\+/, $configloc;
+			$locconfig = shift @local;
+			my $locport = shift @local;
+			
+			debug("---local config is $locconfig and local port is $locport---\n",1);
+
+			#$ENV{CONDOR_CONFIG} = $locconfig;
+		}
+	} else {
+		print "Running outside of condor_tests\n";
+	}
+	return($locconfig);
+}
+
+sub findOutput
+{
+	my $submitfile = shift;
+	open(SF,"<$submitfile") or die "Failed to open <$submitfile>:$!\n";
+	my $testname = "UNKNOWN";
+	$line = "";
+	while(<SF>) {
+		chomp($_);
+		$line = $_;
+		if($line =~ /^\s*[Ll]og\s+=\s+(.*)(\..*)$/){
+			$testname = $1;
+			$previouslog = $1 . $2;
+			system("rm -f $previouslog");
+		}
+	}
+	close(SF);
+	print "findOutput returning <$testname>\n";
+	if($testname eq "UNKNOWN") {
+		print "failed to find testname in this submit file:$submitfile\n";
+		system("cat $submitfile");
+	}
+	return($testname);
 }
 
 # Call down to Condor Perl Module for now

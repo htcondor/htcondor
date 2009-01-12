@@ -21,7 +21,8 @@
 use CondorTest;
 
 $cmd      = 'job_filexfer_output-withvacate_van.cmd';
-$testname = 'file transfer - look for two sets of output files with a vacate test - vanilla U';
+$testdesc =  'file transfer - look for two sets of output files with a vacate test - vanilla U';
+$testname = "job_filexfer_output-withvacate_van";
 
 # truly const variables in perl
 sub IDLE{1};
@@ -31,7 +32,7 @@ sub RUNNING{2};
 my $alreadydone=0;
 
 
-my $spool = `condor_config_val SPOOL`;
+my $spool = "";
 CondorTest::fullchomp($spool);
 CondorTest::debug("Spool is in --$spool--\n",1);
 
@@ -51,6 +52,9 @@ $execute = sub {
 	my %args = @_;
 	my $cluster = $args{"cluster"};
 
+	$spool = `condor_config_val SPOOL`;
+	CondorTest::fullchomp($spool);
+	CondorTest::debug("Spool is in --$spool--\n",1);
 	if($haveseenrun == 0) {
 		$haveseenrun = 1;
 	} else {
@@ -156,7 +160,6 @@ $evicted = sub {
 		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 		exit(1)
 	}
-	exit(0);
 };
 
 $success = sub
@@ -165,6 +168,11 @@ $success = sub
 	if(!-f "$oute"){ die "$oute failed to arrive\n"; exit(1)};
 	if(!-f "$outf"){ die "$outf failed to arrive\n"; exit(1)};
 	if(!-f "$outg"){ die "$outg failed to arrive\n"; exit(1)};
+};
+
+$hold = sub
+{
+	print "Job can end up on hold.\n";
 };
 
 $timed = sub
@@ -188,7 +196,6 @@ $shadow = sub
 		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 	}
 	CondorTest::debug("$testname: SUCCESS\n",1);
-	exit(1);
 };
 
 
@@ -251,6 +258,7 @@ close(CMD);
 close(NEWCMD);
 system("mv $cmd.new $cmd");
 
+CondorTest::RegisterHold($testname, $hold);
 CondorTest::RegisterExecute($testname, $execute);
 CondorTest::RegisterShadow($testname, $shadow);
 CondorTest::RegisterEvicted($testname, $evicted);

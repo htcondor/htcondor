@@ -1,8 +1,8 @@
 universe   = vanilla
 executable = x_sleep.pl
-log = cmd_q_shows-run.log
-output = cmd_q_shows-run.out
-error = cmd_q_shows-run.err
+log = x_cmdrunforever2.log
+output = x_cmdrunforever2.out
+error = x_cmdrunforever2.err
 Notification = NEVER
 arguments  = 0
 queue 2

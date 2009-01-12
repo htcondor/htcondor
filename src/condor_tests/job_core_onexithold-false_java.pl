@@ -21,7 +21,8 @@
 use CondorTest;
 
 $cmd = 'job_core_onexithold-false_java.cmd';
-$testname = 'Condor submit with hold for periodic remove test - java U';
+$testdesc =  'Condor submit with hold for periodic remove test - java U';
+$testname = "job_core_onexithold-false_java";
 
 my $killedchosen = 0;
 

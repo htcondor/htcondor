@@ -22,7 +22,8 @@
 use CondorTest;
 
 $cmd = 'job_rsc_hello_std.cmd';
-$testname = 'Hello Test';
+$testdesc =  'Hello Test';
+$testname = "job_rsc_hello_std";
 
 $foo = <<"_EOX";
 Hello World

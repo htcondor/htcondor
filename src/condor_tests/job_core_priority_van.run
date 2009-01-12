@@ -83,7 +83,8 @@ foreach $name (@filestochmod)
 	system("chmod 755 $name");
 }
 
-$testname = 'condor_submit priority works - vanilla U';
+$testdesc =  'condor_submit priority works - vanilla U';
+$testname = "job_core_priority_van";
 $cmd = 'job_core_priority_van.cmd';
 
 my $killedchosen = 0;

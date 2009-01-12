@@ -21,7 +21,8 @@
 use CondorTest;
 
 $cmd      = 'job_schedd_restart-holdjobs-ok.cmd';
-$testname = 'Verify held jobs are preserved on schedd restarts';
+$testdesc =  'Verify held jobs are preserved on schedd restarts';
+$testname = "job_schedd_restart-holdjobs-ok";
 
 $beforequeue = "job_schedd_restart-holdjobs.before";
 $afterqueue = "job_schedd_restart-holdjobs.after";

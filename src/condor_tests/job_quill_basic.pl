@@ -22,7 +22,8 @@ use CondorTest;
 
 
 $cmd      = 'job_quill_basic.cmd';
-$testname = 'Verify same data from schedd and rdbms';
+$testdesc =  'Verify same data from schedd and rdbms';
+$testname = "job_quill_basic";
 
 sub HELD{5};
 sub RUNNING{2};

@@ -21,7 +21,8 @@
 use CondorTest;
 
 $cmd = 'job_core_plus_van.cmd';
-$testname = 'Condor_submit correctly places attributes into JobAd - vanilla U';
+$testdesc =  'Condor_submit correctly places attributes into JobAd - vanilla U';
+$testname = "job_core_plus_van";
 
 $success = sub 
 {
@@ -100,9 +101,14 @@ $submit = sub
 		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 		exit(1)
 	}
-	exit(0);
 };
 
+$aborted = sub {
+	CondorTest::debug("If all is good we abort our own job.......\n",1);
+};
+
+
+CondorTest::RegisterAbort($testname, $aborted);
 CondorTest::RegisterSubmit($testname, $submit);
 CondorTest::RegisterExitedFailure( $testname, $died );
 CondorTest::RegisterExitedSuccess( $testname, $success );

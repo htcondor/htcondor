@@ -21,7 +21,8 @@
 use CondorTest;
 
 $cmd = 'job_core_err_van.cmd';
-$testname = 'Condor_submit correctly uses error file - vanilla U';
+$testdesc =  'Condor_submit correctly uses error file - vanilla U';
+$testname = "job_core_err_van";
 
 $success = sub 
 {

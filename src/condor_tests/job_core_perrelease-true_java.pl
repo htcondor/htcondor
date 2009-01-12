@@ -21,7 +21,8 @@
 use CondorTest;
 
 $cmd = 'job_core_perrelease-true_java.cmd';
-$testname = 'Condor submit with for periodic release test - java U';
+$testdesc =  'Condor submit with for periodic release test - java U';
+$testname = "job_core_perrelease-true_java";
 
 $aborted = sub {
 	my %info = @_;

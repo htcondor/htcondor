@@ -31,7 +31,8 @@ system("printenv | grep CONDOR_CONFIG");
 $condor_config = $ENV{CONDOR_CONFIG};
 CondorTest::debug("CONDOR_CONFIG = $condor_config\n",1);
 
-$testname = 'Condor-C A & B test - vanilla U';
+$testdesc =  'Condor-C A & B test - vanilla U';
+$testname = "job_condorc_ab_van";
 
 $aborted = sub {
 	my %info = @_;

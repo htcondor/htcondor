@@ -26,7 +26,8 @@ sub IDLE{1};
 sub HELD{5};
 sub RUNNING{2};
 
-$testname = 'job_flocking_to';
+$testdesc =  'job_flocking_to';
+$testname = "job_flocking_to";
 $corename = "job_flocking_to";
 
 # where am I running

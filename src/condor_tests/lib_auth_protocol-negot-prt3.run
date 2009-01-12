@@ -23,7 +23,8 @@ use CondorPersonal;
 
 
 $param_template = "x_param.protocol-negot.template";
-$testname = 'lib_auth_protocol-negot-prt3 - Security Protocol Negotiation Test';
+$testdesc =  'lib_auth_protocol-negot-prt3 - Security Protocol Negotiation Test';
+$testname = "lib_auth_protocol-negot-prt3";
 $corename = "lib_auth_protocol-negot-prt3";
 $mytestnegotiation = "x_secneg_clR_dmnR_secprepostsrc";
 $mytestnegotiation_result = "yes";

@@ -27,7 +27,8 @@ sub IDLE{1};
 sub HELD{5};
 sub RUNNING{2};
 
-$testname = 'cmd_status_shows-avail';
+$testdesc =  'cmd_status_shows-avail';
+$testname = "cmd_status_shows-avail";
 $corename = "cmd_status_shows-avail";
 
 # where am I running

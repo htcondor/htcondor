@@ -35,8 +35,10 @@ select(STDOUT); $| = 1;
 
 my $dir = $ARGV[0];
 my $cmd = $ARGV[1];
-#$testname = 'Condor submit dag - stork transfer test';
-my $testname =  $ARGV[2];
+#$testdesc =  'Condor submit dag - stork transfer test';
+#$testname = "x_runstorkdag";
+my $testdesc =   $ARGV[2];
+my $testname = "x_runstorkdag";
 my $timerlength = $ARGV[3];
 CondorTest::debug("Timer passed in is <<$timerlength>>\n",1);
 foreach my $arg  (@ARGV)

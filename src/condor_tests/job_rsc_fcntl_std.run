@@ -22,7 +22,8 @@
 use CondorTest;
 
 $cmd = 'job_rsc_fcntl_std.cmd';
-$testname = 'Fcntl Test';
+$testdesc =  'Fcntl Test';
+$testname = "job_rsc_fcntl_std";
 
 $foo = <<"_EOX";
 F_GETFD gives: 0

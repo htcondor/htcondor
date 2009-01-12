@@ -23,7 +23,8 @@ use CondorTest;
 #Condor::DebugOn();
 
 $cmd = 'job_core_initialdir_van.cmd';
-$testname = 'condor_submit initialdir works - vanilla U';
+$testdesc =  'condor_submit initialdir works - vanilla U';
+$testname = "job_core_initialdir_van";
 
 @CondorTest::expected_output =
 (

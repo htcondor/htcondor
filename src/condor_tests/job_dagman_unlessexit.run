@@ -21,7 +21,8 @@
 use CondorTest;
 
 $cmd = 'job_dagman_unlessexit.dag';
-$testname = 'Condor submit dag - unless exit test - scheduler U';
+$testdesc =  'Condor submit dag - unless exit test - scheduler U';
+$testname = "job_dagman_unlessexit";
 $dagman_args = "-verbose";
 
 #	This test runs a single node which always fails.

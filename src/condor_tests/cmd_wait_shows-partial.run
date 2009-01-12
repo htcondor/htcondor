@@ -89,7 +89,7 @@ open(RES,"<$resultfile") || die "Can not open <$resultfile>:$!\n";
 $line = "";
 while(<RES>) {
 	$line = $_;
-	if($line =~ /^Exit\s+(\d+)\s+Signal\s+\d+$/) {
+	if($line =~ /^Exit\s+(\d+).*$/) {
 		if($1 == 0) {
 			CondorTest::debug("Exit status of 0, expected. Good!\n",1);
 			exit(0);

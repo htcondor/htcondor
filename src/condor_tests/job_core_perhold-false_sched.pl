@@ -21,7 +21,8 @@
 use CondorTest;
 
 $cmd = 'job_core_perhold-false_sched.cmd';
-$testname = 'Condor submit policy test for periodic_hold - scheduler U';
+$testdesc =  'Condor submit policy test for periodic_hold - scheduler U';
+$testname = "job_core_perhold-false_sched";
 
 my %info;
 my $cluster;

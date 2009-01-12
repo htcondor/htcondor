@@ -27,7 +27,8 @@ sub IDLE{1};
 sub HELD{5};
 sub RUNNING{2};
 
-$testname = 'cmd_status_shows-format';
+$testdesc =  'cmd_status_shows-format';
+$testname = "cmd_status_shows-format";
 $corename = "cmd_status_shows-format";
 
 # where am I running

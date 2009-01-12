@@ -21,7 +21,8 @@
 use CondorTest;
 
 $cmd = 'job_core_doublejeopardy_sched.cmd';
-$testname = 'Condor does not generate an abort event along with abnormal termination - scheduler U';
+$testdesc =  'Condor does not generate an abort event along with abnormal termination - scheduler U';
+$testname = "job_core_doublejeopardy_sched";
 
 my $killedchosen = 0;
 

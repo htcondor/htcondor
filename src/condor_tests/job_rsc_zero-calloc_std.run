@@ -22,7 +22,8 @@
 use CondorTest;
 
 $cmd = 'job_rsc_zero-calloc_std.cmd';
-$testname = 'calloc test';
+$testdesc =  'calloc test';
+$testname = "job_rsc_zero-calloc_std";
 
 sub OutputTest
 {

@@ -1887,7 +1887,7 @@ F_COMPILER_TARGET(f90,$(VENDOR_F90),TESTSUITE_FLAGS_F77,0)
 /* We always want to build the test suite with gcc and g++ */
 C_COMPILER_TARGET(gcc,gcc,TESTSUITE_FLAGS_GCC)
 
-CPP_COMPILER_TARGET(g++,g++,TESTSUITE_FLAGS_GPP)
+CPP_COMPILER_TARGET(gpp,g++,TESTSUITE_FLAGS_GPP)
 
 /* now, let's see if we've got any vendor compilers */
 #if HAS_VENDOR_CC

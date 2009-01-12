@@ -25,7 +25,7 @@ $template = "x_workfetch_classad.1.template";
 $classad = "x_workfetch_classad.1";
 $line = "";
 $counter = 0;
-$maxwait = 720; # better happen in 3 minutes
+$maxwait = 1200; # better happen in 3 minutes
 
 system("date");
 

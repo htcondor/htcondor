@@ -21,7 +21,8 @@
 use CondorTest;
 
 $cmd = 'job_core_leaveinqueue-true_sched.cmd';
-$testname = 'Condor submit with test for policy trigger of leave_in_queue - scheduler U';
+$testdesc =  'Condor submit with test for policy trigger of leave_in_queue - scheduler U';
+$testname = "job_core_leaveinqueue-true_sched";
 
 my $killedchosen = 0;
 

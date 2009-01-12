@@ -20,7 +20,8 @@
 
 use CondorTest;
 
-$testname = 'Condor CronTab Test - Vanilla Universe';
+$testdesc =  'Condor CronTab Test - Vanilla Universe';
+$testname = "job_core_crontab_van";
 
 ##
 ## We need to pass what universe we would like to test

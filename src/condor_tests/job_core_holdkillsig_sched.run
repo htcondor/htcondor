@@ -21,7 +21,8 @@
 use CondorTest;
 
 $cmd = 'job_core_holdkillsig_sched.cmd';
-$testname = 'Condor allows change of hold kill signal - scheduler U';
+$testdesc =  'Condor allows change of hold kill signal - scheduler U';
+$testname = "job_core_holdkillsig_sched";
 
 my $killedchosen = 0;
 

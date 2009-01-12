@@ -22,7 +22,8 @@
 use CondorTest;
 
 $cmd = 'job_ckpt_combo-sanity_std.cmd';
-$testname = 'Printer Test';
+$testdesc =  'Printer Test';
+$testname = "job_ckpt_combo-sanity_std";
 $results = 'job_ckpt_combo-sanity_std.results';
 
 $num_tests = 500;

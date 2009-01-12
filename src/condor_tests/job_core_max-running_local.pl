@@ -28,7 +28,8 @@
 #########################################################
 use CondorTest;
 
-$testname 		= 'Max Running Local Universe Jobs';
+$testdesc =  'Max Running Local Universe Jobs';
+$testname = "job_core_max-running_local";
 $cmdfile		= 'job_core_max-running_local.cmd';
 $basefile		= 'job_core_max-running_local.out.';
 

@@ -29,7 +29,8 @@
 use CondorTest;
 
 $cmd = 'job_core_perhold-true_local.cmd';
-$testname = 'Condor submit with for PERIODIC_HOLD test - local U';
+$testdesc =  'Condor submit with for PERIODIC_HOLD test - local U';
+$testname = "job_core_perhold-true_local";
 
 ## 
 ## Status Values

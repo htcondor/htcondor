@@ -22,7 +22,8 @@ use CondorTest;
 #Condor::DebugOn();
 
 $cmd      = 'job_core_holdrelease_sched.cmd';
-$testname = 'Jobs properly hold and release - scheduler U';
+$testdesc =  'Jobs properly hold and release - scheduler U';
+$testname = "job_core_holdrelease_sched";
 
 # truly const variables in perl
 sub IDLE{1};

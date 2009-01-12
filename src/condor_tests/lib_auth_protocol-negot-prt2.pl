@@ -21,7 +21,8 @@
 use CondorTest;
 
 $cmd = 'lib_auth_protocol-negot-prt2.cmd';
-$testname = 'Condor submit to test security negotiations';
+$testdesc =  'Condor submit to test security negotiations';
+$testname = "lib_auth_protocol-negot-prt2";
 
 my $killedchosen = 0;
 

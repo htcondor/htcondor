@@ -23,7 +23,8 @@ use CondorTest;
 my $stats = 0;
 
 $cmd = 'job_filexfer_md5-remote_java.cmd';
-$testname = 'Do file transfers with md5 - java U';
+$testdesc =  'Do file transfers with md5 - java U';
+$testname = "job_filexfer_md5_java";
 
 $success = sub {
 	CondorTest::debug("Transfer job worked..... need to chack data file.\n",1);

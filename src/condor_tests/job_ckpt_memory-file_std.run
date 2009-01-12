@@ -22,7 +22,8 @@
 use CondorTest;
 
 $cmd = 'job_ckpt_memory-file_std.cmd';
-$testname = 'job_ckpt_memory-file_std test';
+$testdesc =  'job_ckpt_memory-file_std test';
+$testname = "job_ckpt_memory-file_std";
 
 @CondorTest::expected_output = ( 'SUCCESS' );
 @CondorTest::skipped_output_lines = ( 1, 2, 3, 4 );

@@ -21,7 +21,8 @@
 use CondorTest;
 
 $cmd = 'job_dagman_xmlcomlog.dag';
-$testname = 'Condor submit dag - xml common log test - scheduler U';
+$testdesc =  'Condor submit dag - xml common log test - scheduler U';
+$testname = "job_dagman_xmlcomlog";
 $maxjobs = 4;
 $dagman_args = "-v -maxjobs $maxjobs";
 

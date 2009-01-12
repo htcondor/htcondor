@@ -22,7 +22,8 @@
 use CondorTest;
 
 $cmd = 'job_ckpt_io-buffer-async_std.cmd';
-$testname = 'job_ckpt_io-buffer-async_std test';
+$testdesc =  'job_ckpt_io-buffer-async_std test';
+$testname = "job_ckpt_io-buffer-async_std";
 
 sub OutputTest
 {

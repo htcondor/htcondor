@@ -21,7 +21,8 @@
 use CondorTest;
 
 $cmd = 'job_core_args_van.cmd';
-$testname = 'Arguments are preserved - vanilla U';
+$testdesc =  'Arguments are preserved - vanilla U';
+$testname = "job_core_args_van";
 
 # we can really expect some things not to match like some quotes
 sub exceptadjust

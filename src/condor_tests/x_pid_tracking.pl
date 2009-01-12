@@ -27,7 +27,7 @@ my $envvar;
 
 my $opsys = $ARGV[0];
 my $sleeptime = $ARGV[1];
-my $testname = $ARGV[2];
+my $testname =  $ARGV[2];
 
 system("date");
 

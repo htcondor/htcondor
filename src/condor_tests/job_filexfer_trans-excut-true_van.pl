@@ -21,7 +21,8 @@
 use CondorTest;
 
 $cmd      = 'job_filexfer_trans-excut-true_van.cmd';
-$testname = 'Jobs complaining cause No FT on when tansfer_executables = true - vanilla U';
+$testdesc =  'Jobs complaining cause No FT on when tansfer_executables = true - vanilla U';
+$testname = "job_filexfer_trans-excut-true_van";
 
 # truly const variables in perl
 sub IDLE{1};

@@ -25,7 +25,8 @@ my $increasejobs = $ARGV[1];
 my $lastduration = $ARGV[2];
 my $datafile = $ARGV[3];
 my $cmd = $ARGV[4];
-my $testname = $ARGV[5];
+my $testdesc =  $ARGV[5];
+my $testname = "x_perf_autoscale";
 
 
 my $completedgood = 0;

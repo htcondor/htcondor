@@ -22,7 +22,8 @@ use CondorTest;
 
 $cmd = 'cmd_q_shows-sub.cmd';
 $cmdout = $cmd . ".out";
-$testname = 'cmd_q_shows-sub  ';
+$testdesc =  'cmd_q_shows-sub  ';
+$testname = "cmd_q_shows-sub";
 
 $whoami = "";
 
@@ -105,7 +106,6 @@ $submit = sub {
 
 $aborted = sub {
 	CondorTest::debug("Cleaning held job.......\n",1);
-	exit(0);
 };
 
 $ExitSuccess = sub {

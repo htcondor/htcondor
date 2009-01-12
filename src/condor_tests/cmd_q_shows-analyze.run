@@ -22,7 +22,8 @@ use CondorTest;
 
 $cmd = 'cmd_q_shows-analyze.cmd';
 $cmdout = $cmd . ".out";
-$testname = 'cmd_q_shows-analyze  ';
+$testdesc =  'cmd_q_shows-analyze  ';
+$testname = "cmd_q_shows-analyze";
 
 $whoami = `whoami`;
 chomp($whoami);
@@ -139,7 +140,6 @@ $submit = sub {
 
 $aborted = sub {
 	CondorTest::debug("If all is good we abort our own job.......\n",1);
-	exit(0);
 };
 
 $ExitSuccess = sub {

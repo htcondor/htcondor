@@ -23,7 +23,8 @@ use Cwd;
 use Sys::Hostname;
 
 $cmd = 'job_core_macros_sched.cmd';
-$testname = 'condor_submit macros - scheduler U';
+$testdesc =  'condor_submit macros - scheduler U';
+$testname = "job_core_macros_sched";
 
 
 @CondorTest::skipped_output_lines = ( 1, 4, 5, 6 );

@@ -25,7 +25,8 @@ $cmd = 'x_sanitysubmit.cmd';
 
 CondorTest::debug("Submit file for this test is $cmd\n",1);
 
-$testname = 'sanity submit test - vanilla U';
+$testdesc =  'sanity submit test - vanilla U';
+$testname = "x_sanitysubmit";
 
 $aborted = sub {
 	my %info = @_;

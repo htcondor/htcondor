@@ -33,7 +33,8 @@ sub RunTests( $ );
 sub RunTestOp( $$$ );
 sub CountLiveLeases( $ );
 
-my $testname = 'lib_lease_manager - runs lease manager tests';
+my $testdesc =  'lib_lease_manager - runs lease manager tests';
+my $testname = "lib_lease_manager";
 my $testbin = "../testbin_dir";
 my %programs = ( advertise	=> getcwd() . "/x_advertise.pl",
 				 tester => "$testbin/condor_lease_manager_tester",

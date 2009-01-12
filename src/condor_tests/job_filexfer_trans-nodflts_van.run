@@ -21,7 +21,8 @@
 use CondorTest;
 
 $cmd      = 'job_filexfer_trans-nodflts_van.cmd';
-$testname = ' testing of file transfer with no default values used. - vanilla U';
+$testdesc =  ' testing of file transfer with no default values used. - vanilla U';
+$testname = "job_filexfer_trans-nodflts_van";
 
 # truly const variables in perl
 sub IDLE{1};

@@ -22,7 +22,8 @@
 use CondorTest;
 
 $cmd = 'job_ckpt_getrusage-loop_std.cmd';
-$testname = 'Loop and getrusage() Test';
+$testdesc =  'Loop and getrusage() Test';
+$testname = "job_ckpt_getrusage-loop_std";
 
 $OutputTest = sub
 {

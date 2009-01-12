@@ -21,7 +21,8 @@
 use CondorTest;
 
 $cmd = 'job_core_err_java.cmd';
-$testname = 'Condor_submit correctly uses error file - java U';
+$testdesc =  'Condor_submit correctly uses error file - java U';
+$testname = "job_core_err_java";
 
 $success = sub 
 {

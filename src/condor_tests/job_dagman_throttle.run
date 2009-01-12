@@ -21,7 +21,8 @@
 use CondorTest;
 
 $cmd = './job_dagman_throttle.dag';
-$testname = 'Condor submit dag - throttle test - scheduler U';
+$testdesc =  'Condor submit dag - throttle test - scheduler U';
+$testname = "job_dagman_throttle";
 $maxjobs = 4;
 $dagman_args = "-v -maxjobs $maxjobs";
 

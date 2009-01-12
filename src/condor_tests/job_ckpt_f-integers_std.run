@@ -22,7 +22,8 @@
 use CondorTest;
 
 $cmd = 'job_ckpt_f-integers_std.cmd';
-$testname = 'Registers Test';
+$testdesc =  'Registers Test';
+$testname = "job_ckpt_f-integers_std";
 
 $foo  = <<"_EOX";
  About to checkpoint

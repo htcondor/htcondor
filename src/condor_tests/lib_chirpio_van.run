@@ -21,7 +21,8 @@
 use CondorTest;
 
 $cmd = 'lib_chirpio_van.cmd';
-$testname = 'chirp io tests - vanilla U';
+$testdesc =  'chirp io tests - vanilla U';
+$testname = "lib_chirpio_van";
 
 
 $ExitSuccess = sub {

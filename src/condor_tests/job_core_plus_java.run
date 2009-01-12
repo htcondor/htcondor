@@ -21,7 +21,8 @@
 use CondorTest;
 
 $cmd = 'job_core_plus_java.cmd';
-$testname = 'Condor_submit correctly places things into JobAds - java U';
+$testdesc =  'Condor_submit correctly places things into JobAds - java U';
+$testname = "job_core_plus_java";
 
 $success = sub 
 {
