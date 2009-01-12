@@ -212,12 +212,12 @@ HistorySnapshot::printResults(SQLQuery *queryhor,
                          if (!ad->LookupInteger(ATTR_COMPLETION_DATE, compl_date))
                                  compl_date = 0;
                          temp.sprintf("*** Offset = %ld ClusterId = %d ProcId = %d Owner = \"%s\" CompletionDate = %d\n",
-                                        offset - last_line, curClusterId_hor, curProcId_hor, owner.GetCStr(), compl_date);
+                                        offset - last_line, curClusterId_hor, curProcId_hor, owner.Value(), compl_date);
 
                          offset += ad_str.Length() + temp.Length();
                          last_line = temp.Length();
-                         fprintf(stdout, "%s", ad_str.GetCStr());
-                         fprintf(stdout, "%s", temp.GetCStr());
+                         fprintf(stdout, "%s", ad_str.Value());
+                         fprintf(stdout, "%s", temp.Value());
                  }     else if (longformat) {
                          ad->fPrint(stdout);
                          printf("\n");
