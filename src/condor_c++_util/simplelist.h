@@ -39,6 +39,7 @@ class SimpleList
 
     /// Copy Constructor
     SimpleList (const SimpleList<ObjType> & list);
+	SimpleList<ObjType> &operator=(SimpleList<ObjType> & rhs);
 
     virtual inline ~SimpleList () { delete [] items; }
 
@@ -84,7 +85,7 @@ SimpleList (const SimpleList<ObjType> & list):
     maximum_size(list.maximum_size), size(list.size), current(list.current)
 {
 	items = new ObjType[maximum_size];
-    memcpy (items, list.items, sizeof (ObjType *) * maximum_size);
+    memcpy (items, list.items, sizeof (ObjType) * maximum_size);
 }
 
 template <class ObjType>
@@ -246,6 +247,18 @@ IsMember( const ObjType& obj ) const
 		}
 	}
 	return false;
+}
+
+template <class ObjType>
+SimpleList<ObjType> &
+SimpleList<ObjType>::operator=(SimpleList<ObjType> &rhs) {
+	this->Clear();
+	rhs.Rewind();
+	ObjType item;
+	while (rhs.Next(item)) {
+		this->Append(item);
+	}
+	return *this;
 }
 
 //--------------------------------------------------------------------------
