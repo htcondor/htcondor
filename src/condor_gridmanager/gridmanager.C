@@ -110,6 +110,7 @@ int contactScheddDelay;
 time_t lastContactSchedd = 0;
 
 char *ScheddAddr = NULL;
+char *ScheddName = NULL;
 char *ScheddJobConstraint = NULL;
 char *GridmanagerScratchDir = NULL;
 DCSchedd *ScheddObj = NULL;
@@ -294,6 +295,13 @@ Init()
 		} else {
 			ScheddAddr = strdup( ScheddAddr );
 		}
+	}
+
+	const char *val = getenv( "SCHEDD_NAME" );
+	if ( val ) {
+		ScheddName = strdup( val );
+	} else {
+		ScheddName = strdup( "" );
 	}
 
 	if ( ScheddObj == NULL ) {

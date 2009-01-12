@@ -42,6 +42,7 @@
 #define GM_RESOURCE_UNLIMITED	1000000000
 
 extern char *ScheddAddr;
+extern char *ScheddName;
 extern DCSchedd *ScheddObj;
 extern DCCollector *CollectorObj;
 extern char *ScheddJobConstraint;
