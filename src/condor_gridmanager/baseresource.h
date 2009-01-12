@@ -63,8 +63,6 @@ class BaseResource
 	static void setProbeDelay( int new_delay )
 		{ probeDelay = new_delay; }
 
-	static SimpleList<BaseResource *> m_allResources;
-
  protected:
 	int DeleteMe();
 

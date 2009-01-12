@@ -32,8 +32,6 @@
 int BaseResource::probeInterval = 300;	// default value
 int BaseResource::probeDelay = 15;		// default value
 
-SimpleList<BaseResource *> BaseResource::m_allResources;
-
 BaseResource::BaseResource( const char *resource_name )
 {
 	resourceName = strdup( resource_name );
@@ -69,13 +67,10 @@ BaseResource::BaseResource( const char *resource_name )
 	_firstCollectorUpdate = true;
 	_collectorUpdateInterval = param_integer ( 
 		"GRIDMANAGER_COLLECTOR_UPDATE_INTERVAL", 5*60 );
-
-	m_allResources.Append( this );
 }
 
 BaseResource::~BaseResource()
 {
-	m_allResources.Delete( this );
 	if ( deleteMeTid != TIMER_UNSET ) {
 		daemonCore->Cancel_Timer( deleteMeTid );
 	}
