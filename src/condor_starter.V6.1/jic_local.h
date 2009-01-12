@@ -169,6 +169,12 @@ public:
 		*/
 	void addToOutputFiles( const char* filename );
 
+		/** Make sure the given filename will be excluded from the
+			list of files that the job sends back to the submitter.  
+			@param filename File to remove from the job's output list 
+		*/
+	void removeFromOutputFiles( const char* filename );
+
 
 protected:
 

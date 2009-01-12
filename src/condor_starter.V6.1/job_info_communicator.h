@@ -305,6 +305,12 @@ public:
 		*/
 	virtual void addToOutputFiles( const char* filename ) = 0;
 
+		/** Make sure the given filename will be excluded from the
+			list of files that the job sends back to the submitter.  
+			@param filename File to remove from the job's output list 
+		*/
+	virtual void removeFromOutputFiles( const char* filename ) = 0;
+
 		/// Has user_priv been initialized yet?
 	bool userPrivInitialized( void ); 
 

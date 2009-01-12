@@ -236,6 +236,11 @@ JICLocal::addToOutputFiles( const char* /*filename*/ )
 		// to the user, it's already going to be in the job's iwd...
 }
 
+void
+JICLocal::removeFromOutputFiles( const char* /*filename*/ )
+{
+		// there's no file transfer, so there is nothing to clean up.
+}
 
 bool
 JICLocal::registerStarterInfo( void )

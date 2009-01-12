@@ -104,6 +104,7 @@ FileTransfer::FileTransfer()
 	PeerDoesTransferAck = false;
 	PeerDoesGoAhead = false;
 	Iwd = NULL;
+	ExceptionFiles = NULL;
 	InputFiles = NULL;
 	OutputFiles = NULL;
 	EncryptInputFiles = NULL;
@@ -164,6 +165,7 @@ FileTransfer::~FileTransfer()
 	if (X509UserProxy) free(X509UserProxy);
 	if (SpoolSpace) free(SpoolSpace);
 	if (TmpSpoolSpace) free(TmpSpoolSpace);
+	if (ExceptionFiles) delete ExceptionFiles;
 	if (InputFiles) delete InputFiles;
 	if (OutputFiles) delete OutputFiles;
 	if (EncryptInputFiles) delete EncryptInputFiles;
@@ -905,8 +907,7 @@ FileTransfer::ComputeFilesToSend()
 			if ( file_strcmp(f,"condor_exec.bat")==MATCH ) {
 				dprintf( D_FULLDEBUG, "Skipping %s\n", f );
 				continue;
-			}
-
+			}			
 			if( proxy_file && file_strcmp(f, proxy_file) == MATCH ) {
 				dprintf( D_FULLDEBUG, "Skipping %s\n", f );
 				continue;
@@ -931,7 +932,13 @@ FileTransfer::ComputeFilesToSend()
 
 			filesize_t filesize;
 			time_t modification_time;
-			if( !LookupInFileCatalog(f, &modification_time, &filesize) ) {
+			if ( ExceptionFiles && ExceptionFiles->file_contains(f) ) {
+				dprintf ( 
+					D_FULLDEBUG, 
+					"Skipping file in exception list: %s\n", 
+					f );
+				continue;
+			} else if ( !LookupInFileCatalog(f, &modification_time, &filesize) ) {
 				// file was not found.  send it.
 				dprintf( D_FULLDEBUG, 
 						 "Sending new file %s, time==%ld, size==%ld\n",	
@@ -2823,6 +2830,19 @@ FileTransfer::addOutputFile( const char* filename )
 		return true;
 	}
 	OutputFiles->append( filename );
+	return true;
+}
+
+bool
+FileTransfer::addFileToExeptionList( const char* filename )
+{
+	if ( !ExceptionFiles ) {
+		ExceptionFiles = new StringList;
+		ASSERT ( NULL != ExceptionFiles );
+	} else if ( ExceptionFiles->file_contains ( filename ) ) {
+		return true;
+	}
+	ExceptionFiles->append ( filename );
 	return true;
 }
 
