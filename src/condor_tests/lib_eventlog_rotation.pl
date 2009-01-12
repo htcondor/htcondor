@@ -25,9 +25,9 @@ use Cwd;
 my $testdesc =  'lib_eventlog_rotation - runs eventlog rotation tests';
 my $testname = "lib_eventlog_rotation";
 my $testbin = "../testbin_dir";
-my %programs = ( reader		=> "$testbin/test_log_reader",
+my %programs = ( reader			=> "$testbin/test_log_reader",
 				 reader_state	=> "$testbin/test_log_reader_state",
-				 writer		=> "$testbin/test_log_writer", );
+				 writer			=> "$testbin/test_log_writer", );
 
 my $event_size = ( 100000 / 1160 );
 my @tests =
@@ -41,8 +41,8 @@ my @tests =
 			 #"EVENT_LOG_COUNT_EVENTS"	=> "FALSE",
 			 #"ENABLE_USERLOG_LOCKING"	=> "TRUE",
 			 #"EVENT_LOG_MAX_ROTATIONS"	=> 1,
-			 #"EVENT_LOG_MAX_SIZE"	=> -1,
-			 #"MAX_EVENT_LOG"		=> 1000000,
+			 #"EVENT_LOG_MAX_SIZE"		=> -1,
+			 #"MAX_EVENT_LOG"			=> 1000000,
 		 },
 		 loops				=> 1,
 		 size_mult			=> 1.25,
@@ -52,12 +52,12 @@ my @tests =
      {
 		 name		=> "no_rotations_1",
 		 config		=> {
-			 "EVENT_LOG"		=> "EventLog",
+			 "EVENT_LOG"			=> "EventLog",
 			 "EVENT_LOG_COUNT_EVENTS"	=> "FALSE",
 			 "ENABLE_USERLOG_LOCKING"	=> "TRUE",
 			 #"EVENT_LOG_MAX_ROTATIONS"	=> 0,
-			 "EVENT_LOG_MAX_SIZE"	=> 0,
-			 #"MAX_EVENT_LOG"		=> 0,
+			 "EVENT_LOG_MAX_SIZE"		=> 0,
+			 #"MAX_EVENT_LOG"			=> 0,
 		 },
 		 loops				=> 1,
 		 size_mult			=> 1.25,
@@ -68,12 +68,12 @@ my @tests =
      {
 		 name		=> "no_rotations_2",
 		 config		=> {
-			 "EVENT_LOG"		=> "EventLog",
+			 "EVENT_LOG"				=> "EventLog",
 			 "EVENT_LOG_COUNT_EVENTS"	=> "FALSE",
 			 "ENABLE_USERLOG_LOCKING"	=> "TRUE",
 			 #"EVENT_LOG_MAX_ROTATIONS"	=> 0,
-			 "EVENT_LOG_MAX_SIZE"	=> 0,
-			 #"MAX_EVENT_LOG"		=> 0,
+			 "EVENT_LOG_MAX_SIZE"		=> 0,
+			 #"MAX_EVENT_LOG"			=> 0,
 		 },
 		 loops				=> 1,
 		 size_mult			=> 1.25,
@@ -83,12 +83,12 @@ my @tests =
      {
 		 name		=> "no_rotations_3",
 		 config		=> {
-			 "EVENT_LOG"		=> "EventLog",
+			 "EVENT_LOG"				=> "EventLog",
 			 "EVENT_LOG_COUNT_EVENTS"	=> "FALSE",
 			 "ENABLE_USERLOG_LOCKING"	=> "TRUE",
 			 #"EVENT_LOG_MAX_ROTATIONS"	=> 0,
-			 #"EVENT_LOG_MAX_SIZE"	=> 0,
-			 "MAX_EVENT_LOG"		=> 0,
+			 #"EVENT_LOG_MAX_SIZE"		=> 0,
+			 "MAX_EVENT_LOG"			=> 0,
 		 },
 		 loops				=> 1,
 		 size_mult			=> 1.25,
@@ -99,12 +99,12 @@ my @tests =
      {
 		 name		=> "w_old_rotations",
 		 config		=> {
-			 "EVENT_LOG"		=> "EventLog",
+			 "EVENT_LOG"				=> "EventLog",
 			 "EVENT_LOG_COUNT_EVENTS"	=> "TRUE",
 			 "ENABLE_USERLOG_LOCKING"	=> "TRUE",
 			 "EVENT_LOG_MAX_ROTATIONS"	=> 1,
-			 "EVENT_LOG_MAX_SIZE"	=> 10000,
-			 #"MAX_EVENT_LOG"		=> -1,
+			 "EVENT_LOG_MAX_SIZE"		=> 10000,
+			 #"MAX_EVENT_LOG"			=> -1,
 		 },
 		 loops				=> 1,
 		 size_mult			=> 1.25,
@@ -115,12 +115,12 @@ my @tests =
      {
 		 name		=> "w_2_rotations",
 		 config		=> {
-			 "EVENT_LOG"		=> "EventLog",
+			 "EVENT_LOG"				=> "EventLog",
 			 "EVENT_LOG_COUNT_EVENTS"	=> "TRUE",
 			 "ENABLE_USERLOG_LOCKING"	=> "TRUE",
 			 "EVENT_LOG_MAX_ROTATIONS"	=> 2,
-			 "EVENT_LOG_MAX_SIZE"	=> 10000,
-			 #"MAX_EVENT_LOG"		=> -1,
+			 "EVENT_LOG_MAX_SIZE"		=> 10000,
+			 #"MAX_EVENT_LOG"			=> -1,
 		 },
 		 loops				=> 1,
 		 size_mult			=> 1.25,
@@ -131,12 +131,12 @@ my @tests =
      {
 		 name		=> "w_5_rotations",
 		 config		=> {
-			 "EVENT_LOG"		=> "EventLog",
+			 "EVENT_LOG"				=> "EventLog",
 			 "EVENT_LOG_COUNT_EVENTS"	=> "TRUE",
 			 "ENABLE_USERLOG_LOCKING"	=> "TRUE",
 			 "EVENT_LOG_MAX_ROTATIONS"	=> 5,
-			 "EVENT_LOG_MAX_SIZE"	=> 10000,
-			 #"MAX_EVENT_LOG"		=> -1,
+			 "EVENT_LOG_MAX_SIZE"		=> 10000,
+			 #"MAX_EVENT_LOG"			=> -1,
 		 },
 		 loops				=> 1,
 		 size_mult			=> 1.25,
@@ -147,12 +147,12 @@ my @tests =
      {	
 		 name		=> "w_20_rotations",
 		 config		=> {
-			 "EVENT_LOG"		=> "EventLog",
+			 "EVENT_LOG"				=> "EventLog",
 			 "EVENT_LOG_COUNT_EVENTS"	=> "TRUE",
 			 "ENABLE_USERLOG_LOCKING"	=> "TRUE",
 			 "EVENT_LOG_MAX_ROTATIONS"	=> 20,
-			 "EVENT_LOG_MAX_SIZE"	=> 10000,
-			 #"MAX_EVENT_LOG"		=> -1,
+			 "EVENT_LOG_MAX_SIZE"		=> 10000,
+			 #"MAX_EVENT_LOG"			=> -1,
 		 },
 		 loops				=> 1,
 		 size_mult			=> 1.25,
@@ -163,12 +163,12 @@ my @tests =
      {
 		 name		=> "reader_simple",
 		 config		=> {
-			 "EVENT_LOG"		=> "EventLog",
+			 "EVENT_LOG"				=> "EventLog",
 			 "EVENT_LOG_COUNT_EVENTS"	=> "TRUE",
 			 "ENABLE_USERLOG_LOCKING"	=> "TRUE",
 			 "EVENT_LOG_MAX_ROTATIONS"	=> 0,
-			 #"EVENT_LOG_MAX_SIZE"	=> 10000,
-			 #"MAX_EVENT_LOG"		=> -1,
+			 #"EVENT_LOG_MAX_SIZE"		=> 10000,
+			 #"MAX_EVENT_LOG"			=> -1,
 		 },
 		 loops				=> 1,
 		 size_mult			=> 0.1,
@@ -181,54 +181,54 @@ my @tests =
      {
 		 name		=> "reader_old_rotations",
 		 config		=> {
-			 "EVENT_LOG"		=> "EventLog",
+			 "EVENT_LOG"				=> "EventLog",
 			 "EVENT_LOG_COUNT_EVENTS"	=> "TRUE",
 			 "ENABLE_USERLOG_LOCKING"	=> "TRUE",
 			 "EVENT_LOG_MAX_ROTATIONS"	=> 1,
-			 "EVENT_LOG_MAX_SIZE"	=> 10000,
+			 "EVENT_LOG_MAX_SIZE"		=> 10000,
 		 },
 		 loops				=> 1,
 		 size_mult			=> 0.95,
 		 writer => {
 		 },
 		 reader => {
-			 persist			=> 1,
+			 persist		=> 1,
 		 },
      },
 
      {
 		 name		=> "reader_2_rotations",
 		 config		=> {
-			 "EVENT_LOG"		=> "EventLog",
+			 "EVENT_LOG"				=> "EventLog",
 			 "EVENT_LOG_COUNT_EVENTS"	=> "TRUE",
 			 "ENABLE_USERLOG_LOCKING"	=> "TRUE",
 			 "EVENT_LOG_MAX_ROTATIONS"	=> 2,
-			 "EVENT_LOG_MAX_SIZE"	=> 10000,
+			 "EVENT_LOG_MAX_SIZE"		=> 10000,
 		 },
 		 loops				=> 1,
 		 size_mult			=> 0.95,
 		 writer => {
 		 },
 		 reader => {
-			 persist			=> 1,
+			 persist		=> 1,
 		 },
      },
 
      {
 		 name		=> "reader_20_rotations",
 		 config		=> {
-			 "EVENT_LOG"		=> "EventLog",
+			 "EVENT_LOG"				=> "EventLog",
 			 "EVENT_LOG_COUNT_EVENTS"	=> "TRUE",
 			 "ENABLE_USERLOG_LOCKING"	=> "TRUE",
 			 "EVENT_LOG_MAX_ROTATIONS"	=> 20,
-			 "EVENT_LOG_MAX_SIZE"	=> 10000,
+			 "EVENT_LOG_MAX_SIZE"		=> 10000,
 		 },
 		 loops				=> 1,
 		 size_mult			=> 0.98,
 		 writer => {
 		 },
 		 reader => {
-			 persist			=> 1,
+			 persist		=> 1,
 		 },
      },
 	 );
