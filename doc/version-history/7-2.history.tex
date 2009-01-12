@@ -42,8 +42,8 @@ The details of each version are described below.
 \begin{itemize}
 
 \item \Attr{JAVA\_MAXHEAP\_ARGUMENT} now defaults to \Opt{-Xmx1024m}.
-The installation process of Condor will reset this to the undefined value in the
-local configuration file if the detected JVM is not from Sun.
+The installation process of Condor will reset this to the undefined 
+value in the local configuration file if the detected JVM is not from Sun.
 
 \item A new feature has been added to the \Condor{master} that makes
   it possible to append the DC\_DAEMON\_LIST configuration macro
@@ -64,6 +64,13 @@ when a DAG is submitted.  See \ref{param:DAGManCopyToSpool} for details.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Fixed a bug in \Condor{chirp} which was causing it to crash 
+on invocation.
+
+\item Fixed a bug on Windows in \Condor{mail} which was causing it to become
+unresponsive run when. Further, the application would start to increasingly 
+consume more memory when run.
 
 \item Fixed a bug on UNIX where \Condor{configure} would provide
 incorrect defaults for the \Attr{JAVA\_MAXHEAP\_ARGUMENT} attribute in
@@ -166,15 +173,9 @@ has changed its name to \MacroNI{STATE\_FILE}.
 
 \begin{itemize}
 
-\item \Macro{USE\_VISIBLE\_DESKTOP} now works as expected: the current user
-is given privileged access to the visible desktop for the duration of a
-job.  If the user did not start with these extended permissions, then they
-are removed when the job terminates.
-
 \item \Security A flaw was found and fixed that could allow an unauthenticated
 user to cause Condor daemons to shut down,
 and could allow running jobs to be removed from the queue.
-
 
 % PR 952
 \item Fixed a bug that caused \Condor{dagman} to stay in the Condor queue,
