@@ -833,7 +833,7 @@ ResMgr::buildSlot( int slot_id, StringList* list, int type, bool except )
 		}
 
 			// Figure out what attribute we're dealing with.
-		switch( attr[0] ) {
+		switch( tolower(attr[0]) ) {
 		case 'c':
 			cpus = compute_cpus( share );
 			break;
