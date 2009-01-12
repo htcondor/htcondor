@@ -165,13 +165,7 @@ ResMgr::init_config_classad( void )
 		// Next, try the IS_OWNER expression.  If it's not there, give
 		// them a resonable default, instead of leaving it undefined. 
 	if( ! configInsert(config_classad, ATTR_IS_OWNER, false) ) {
-		char* tmp = (char*) malloc( strlen(ATTR_IS_OWNER) + 21 ); 
-		if( ! tmp ) {
-			EXCEPT( "Out of memory!" );
-		}
-		sprintf( tmp, "%s = (START =?= False)", ATTR_IS_OWNER );
-		config_classad->Insert( tmp );
-		free( tmp );
+		config_classad->AssignExpr( ATTR_IS_OWNER, "(START =?= False)" );
 	}
 		// Next, try the CpuBusy expression.  If it's not there, try
 		// what's defined in cpu_busy (for backwards compatibility).  
@@ -180,13 +174,7 @@ ResMgr::init_config_classad( void )
 	if( ! configInsert(config_classad, ATTR_CPU_BUSY, false) ) {
 		if( ! configInsert(config_classad, "cpu_busy", ATTR_CPU_BUSY,
 						   false) ) { 
-			char* tmp = (char*) malloc( strlen(ATTR_CPU_BUSY) + 9 ); 
-			if( ! tmp ) {
-				EXCEPT( "Out of memory!" );
-			}
-			sprintf( tmp, "%s = False", ATTR_CPU_BUSY );
-			config_classad->Insert( tmp );
-			free( tmp );
+			config_classad->Assign( ATTR_CPU_BUSY, false );
 		}
 	}
 

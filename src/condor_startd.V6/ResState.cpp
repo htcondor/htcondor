@@ -48,19 +48,13 @@ ResState::ResState( Resource* res_ip )
 void
 ResState::publish( ClassAd* cp, amask_t how_much ) 
 {
-	char tmp[80];
+	cp->Assign( ATTR_STATE, state_to_string(r_state) );
 
-	sprintf( tmp, "%s=\"%s\"", ATTR_STATE, state_to_string(r_state) );
-	cp->InsertOrUpdate( tmp );
+	cp->Assign( ATTR_ENTERED_CURRENT_STATE, (int)m_stime );
 
-	sprintf( tmp, "%s=%d", ATTR_ENTERED_CURRENT_STATE, (int)m_stime );
-	cp->InsertOrUpdate( tmp );
+	cp->Assign( ATTR_ACTIVITY, activity_to_string(r_act) );
 
-	sprintf( tmp, "%s=\"%s\"", ATTR_ACTIVITY, activity_to_string(r_act) );
-	cp->InsertOrUpdate( tmp );
-
-	sprintf( tmp, "%s=%d", ATTR_ENTERED_CURRENT_ACTIVITY, (int)m_atime );
-	cp->InsertOrUpdate(tmp);
+	cp->Assign( ATTR_ENTERED_CURRENT_ACTIVITY, (int)m_atime );
 
 		// Conditionally publish any attributes about time spent in
 		// each of the following state/activity combinations.
