@@ -105,9 +105,11 @@ An installation of the Globus Toolkit version 3
 (or OSGA GRAM) may also
 include the the pre-web services GRAM.
 \item[gt4]
-The GRAM protocol was introduced in Globus Toolkit version 4 as a more
+This GRAM protocol was introduced in Globus Toolkit version 4.0 as a more
 standards-compliant version of the GT3 web services-based GRAM.
-It is also called WS GRAM.
+It is also called WS GRAM. A slightly different version of this GRAM
+protocol was introduced in Globus Toolkit 4.2 due to a change in the
+underlying Web Services standards.
 An installation of the Globus Toolkit version 4 may also
 include the the pre-web services GRAM.
 \end{description}
@@ -463,12 +465,17 @@ This example's attribute name for the additional RSL is
 
 % since version 6.7.6
 Condor-G supports submitting jobs to remote resources running
-the Globus Toolkit version 4.0.
+the Globus Toolkit version 4, which speak a protocol called
+WS GRAM.
 Please note that this Globus Toolkit version
 is \emph{not} compatible with the Globus Toolkit version 3.0 or 3.2.
+Glbous Toolkit versions 4.0 and 4.2 use slightly different (and
+incompatible) versions of WS GRAM, due to a change in the underlying
+Web Services standards. Condor is able to detect the difference and
+use the appropriate version for each remote resource automatically.
 See
-\URL{http://www-unix.globus.org/toolkit/docs/4.0/index.html}
-for more information about the Globus Toolkit version 4.0.
+\URL{http://www-unix.globus.org/toolkit/docs/4.2/index.html}
+for more information about the Globus Toolkit version 4.2.
 
 For grid jobs destined for \SubmitCmd{gt4},
 the submit description file is much the same as for
