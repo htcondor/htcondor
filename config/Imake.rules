@@ -1421,7 +1421,7 @@ XCOMM End translation of func(DEPS)
 #define RUN(name)				@@\
 XCOMM Begin translation of func(RUN)		@@\
 DEP_SYMLINK_EXT(name,run)			@@\
-DEPS(name,Condor.pm CondorTest.pm CondorPersonal.pm x_param.basic_personal)		@@\
+DEPS(name,Condor.pm CondorTest.pm CondorPersonal.pm x_param.basic_personal CondorPubLogdirs.pm)		@@\
 list_all:: Concat(list_all__,name)		@@\
 Concat(list_all__,name):: safe_append.pl name.run	@@\
 	@perl safe_append.pl -v -f list_all -a name	@@\

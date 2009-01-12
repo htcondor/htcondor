@@ -50,6 +50,13 @@
 # Nov 07 : Added repaeating a test n times by adding "-a n" to args
 # Nov 07 : Added condor_personal setup only by adding -p (pretest work);
 # Mar 17 : Added condor cleanup functionality by adding -c option.
+# Dec 08 : Have been working on detecting core/ERRORs after each test
+#	which got us into wrapping tests running in the outer personal condor
+#	in condor_tests/TestingPersonalCondor so we can report back a unique
+#	log directory for each test. This got us into needing to have a server
+#	being started and stoped as needed to collect the publishing of these
+#	log dirs so batch test can still check. This is fairly important as
+#	we now have the -e option to run batches of tests at the same time.
 #
 
 #require 5.0;
@@ -58,6 +65,7 @@ use FileHandle;
 use POSIX "sys_wait_h";
 use Cwd;
 use CondorTest;
+use CondorPubLogdirs;
 use Time::Local;
 
 #################################################################
@@ -80,6 +88,48 @@ use Time::Local;
 
 Condor::DebugOn();
 Condor::DebugLevel(1);
+
+#################################################################
+#
+#	Environament variables used to communicate with CondorPersonal
+#
+# 	This is all triggered by -w
+#
+#	WRAP_TESTS
+#	SEND_LOGS
+#
+#	We want to search out core files and ERROR prints AND we want
+#	to run many tests at once. The first check method looks for
+#	all logs changed during the test and assigns blame based on that.
+#	Sadly any error from a set of daemons still running will be assigned
+#	to the wrong test. The steps to make this happen now has the following
+#	steps:
+#
+#		Allow for every test which is not wrapped in a personal 
+#		condor to be wrapped. This is done in CondorTest.pm in RunTest
+#		and RunDagTest if WRAP_TESTS is set.
+#
+#		batch_test.pl defines that and also write file
+#		LogServerHandle when the -w option is set. This is so StartCondor 
+#		can report Test name/Log location to a server collecting such things.
+#		I wanted to only use $ENV[SEND_LOGS] but we in the nightlies have
+#		multiple calls of batch_test.pl requiring some way for
+#		it to know if it has already fired off the server to colloect
+#		test log locations.
+#
+#		batch_test will start this server and place connection
+#		information in it. Thus multiple calls to batch_test
+#		will generate exacly one server to collect logs in file
+#		LogDirs.
+#
+#		If set, batch_test will lookup the log location for a test
+#		to do the core/ERROR detection. No log location will
+#		result in a file being created called NoLogDirs where the tests
+#		name will be recorded for later fixing if it should have had
+#		a log location. This file will be restarted with a date at the top
+#		whenevere the server to collect log locations is started
+#
+#################################################################
 
 #my $LogFile = "batch_test.log";
 #open(OLDOUT, ">&STDOUT");
@@ -168,6 +218,8 @@ $ENV{PATH} = $ENV{PATH} . ":" . $BaseDir;
 # -m[arktime]: time stamp
 # -k[ind]: be kind and submit slowly
 # -b[buildandtest]: set up a personal condor and generic configs
+# -w[wrap]: test in personal condor enable core/ERROR detection
+# -x[execute log dir server]
 # -a[again]: how many times do we run each test?
 # -p[pretest]: get are environment set but run no tests
 # -c[cleanup]: stop condor when test(s) finish.  Not used on windows atm.
@@ -185,12 +237,15 @@ while( $_ = shift( @ARGV ) ) {
 	    print "-k[ind]: be kind and submit slowly\n";
 	    print "-e[venly]: <group size>: run a group of tests\n";
 	    print "-b[buildandtest]: set up a personal condor and generic configs\n";
+	    print "-w[wrap]: test in personal condor enable core/ERROR detection\n";
+	    print "-xls: execute log dir server\n";
+	    print "-xml: Output in xml\n";
+	    print "-w[wrap]: test in personal condor enable core/ERROR detection\n";
 	    print "-a[again]: how many times do we run each test?\n";
 	    print "-p[pretest]: get are environment set but run no tests\n";
 	    print "-c[cleanup]: stop condor when test(s) finish.  Not used on windows atm.\n";
 	    print "--[no-]core: enable/disable core dumping <enabled>\n";
 	    print "--[no-]debug: enable/disable test debugging <disabled>\n";
-	    print "--no-error: disable core ERROR checks \n";
 	    exit(0);
         }
         if( /--debug/ ) {
@@ -210,9 +265,16 @@ while( $_ = shift( @ARGV ) ) {
                 next SWITCH;
         }
         if( /^-w.*/ ) {
-				$wantcorechecks = 0;
+				$wantcorechecks = 1;
+				CondorPubLogdirs::CheckLogServer(); # is it running yet?
 				$ENV{WRAP_TESTS} = "yes";
+				exit(0);
                 next SWITCH;
+        }
+        if( /^-xls.*/ ) {
+				debug("Stopping LogDir server\n",1);
+				CondorPubLogdirs::StopLogServer(); # is it running yet? kill it
+	    		exit(0);
         }
         if( /^-d.*/ ) {
                 push(@compilers, shift(@ARGV));
