@@ -138,7 +138,7 @@ class AttrList : public AttrListAbstract
         AttrList(FILE*,char*,int&,int&,int&);// Constructor, read from file.
 //		AttrList(class ProcObj*);			// create from a proc object
 //		AttrList(CONTEXT*);					// create from a CONTEXT
-        AttrList(char *, char);				// Constructor, from string.
+        AttrList(const char *, char);		// Constructor, from string.
         AttrList(AttrList&);				// copy constructor
         virtual ~AttrList();				// destructor
 

@@ -772,14 +772,10 @@ real_config(char* host, int wantsQuiet, bool wantExtraInfo)
 		// glide-in code) [which should probably be fixed to use
 		// the general mechanism and set START itself --pfc]
 		if( !strcmp( macro_name, "START_owner" ) ) {
-			char *pretext = "Owner == \"";
-			char *posttext = "\"";
-			char *ownerstr = (char *)malloc( strlen( pretext ) + strlen( varvalue )
-										+ strlen( posttext ) );
-			sprintf( ownerstr, "%s%s%s", pretext, varvalue, posttext );
-			insert( "START", ownerstr, ConfigTab, TABLESIZE );
+			MyString ownerstr;
+			ownerstr.sprintf( "Owner == \"%s\"", varvalue );
+			insert( "START", ownerstr.Value(), ConfigTab, TABLESIZE );
 			extra_info->AddEnvironmentParam("START");
-			free( ownerstr );
 		}
 		// ignore "_CONDOR_" without any macro name attached
 		else if( macro_name[0] != '\0' ) {
@@ -996,7 +992,7 @@ init_tilde()
 	HKEY	handle;
 	char regKey[1024];
 
-	sprintf( regKey, "Software\\%s", myDistro->GetCap() );
+	snprintf( regKey, 1024, "Software\\%s", myDistro->GetCap() );
 
 	if ( RegOpenKeyEx(HKEY_LOCAL_MACHINE, regKey,
 		0, KEY_READ, &handle) == ERROR_SUCCESS ) {
@@ -1138,7 +1134,7 @@ find_file(const char *env_name, const char *file_name)
 	HKEY	handle;
 	char	regKey[256];
 
-	sprintf( regKey, "Software\\%s", myDistro->GetCap() );
+	snprintf( regKey, 256, "Software\\%s", myDistro->GetCap() );
 	if ( !config_source && RegOpenKeyEx(HKEY_LOCAL_MACHINE, regKey,
 		0, KEY_READ, &handle) == ERROR_SUCCESS ) {
 		// We have found a registry key for Condor, which
@@ -1787,10 +1783,10 @@ reinsert_specials( char* host )
 		myruid = getuid();
 		myrgid = getgid();
 #endif
-		sprintf(buf,"%u",myruid);
+		snprintf(buf,40,"%u",myruid);
 		insert( "real_uid", buf, ConfigTab, TABLESIZE );
 		extra_info->AddInternalParam("real_uid");
-		sprintf(buf,"%u",myrgid);
+		snprintf(buf,40,"%u",myrgid);
 		insert( "real_gid", buf, ConfigTab, TABLESIZE );
 		extra_info->AddInternalParam("real_gid");
 	}
@@ -1807,7 +1803,7 @@ reinsert_specials( char* host )
 		reinsert_pid = getpid();
 #endif
 	}
-	sprintf(buf,"%u",reinsert_pid);
+	snprintf(buf,40,"%u",reinsert_pid);
 	insert( "pid", buf, ConfigTab, TABLESIZE );
 	extra_info->AddInternalParam("pid");
 	if ( !reinsert_ppid ) {
@@ -1818,7 +1814,7 @@ reinsert_specials( char* host )
 		reinsert_ppid = getppid();
 #endif
 	}
-	sprintf(buf,"%u",reinsert_ppid);
+	snprintf(buf,40,"%u",reinsert_ppid);
 	insert( "ppid", buf, ConfigTab, TABLESIZE );
 	insert( "ip_address", my_ip_string(), ConfigTab, TABLESIZE );
 	extra_info->AddInternalParam("ppid");

@@ -250,7 +250,7 @@ AttrList(FILE *file, char *delimitor, int &isEOF, int &error, int &empty)
 // If there are only white spaces between the last delimitor and the end of 
 // string, they are to be ignored, no parse error.
 //
-AttrList::AttrList(char *AttrLists, char delimitor) : AttrListAbstract(ATTRLISTENTITY)
+AttrList::AttrList(const char *AttrLists, char delimitor) : AttrListAbstract(ATTRLISTENTITY)
 {
     ExprTree *tree;
 

@@ -728,7 +728,7 @@ CronJobBase::TodoWrite( void )
 {
 	char	fname[1024];
 	FILE	*fp;
-	sprintf( fname, "todo.%s.%06d.%02d", name, getpid(), TodoWriteNum++ );
+	snprintf( fname, 1024, "todo.%s.%06d.%02d", name, getpid(), TodoWriteNum++ );
 	dprintf( D_ALWAYS, "%s: Writing input log '%s'\n", GetName(), fname );
 
 	if ( ( fp = safe_fopen_wrapper( fname, "w" ) ) != NULL ) {

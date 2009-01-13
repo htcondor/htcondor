@@ -190,7 +190,7 @@ bool dynuser::init_user() {
 				// must not be an smp machine, so just use slot #1
 		 		
 				dprintf(D_FULLDEBUG, "Dynuser: Couldn't param slot# - using 1 by default\n");
-				sprintf(slot_num,"slot1");
+				snprintf(slot_num,10,"slot1");
 		 	}
 			int ret=_snprintf(accountname, 100, 
 				ACCOUNT_PREFIX_REUSE "%s", slot_num);
