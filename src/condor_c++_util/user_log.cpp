@@ -462,11 +462,11 @@ UserLog::checkGlobalLogRotation( void )
 	}
 
 	// Header reader for later use
-	ReadUserLogHeader	reader;
+	ReadUserLogHeader	header_reader;
 
 	// File has shrunk?  Another process rotated it
 	if ( current_filesize < m_global_filesize ) {
-		globalLogRotated( reader );
+		globalLogRotated( header_reader );
 		return true;
 	}
 	// Less than the size limit -- nothing to do
@@ -494,7 +494,7 @@ UserLog::checkGlobalLogRotation( void )
 
 	// File has shrunk?  Another process rotated it
 	if ( current_filesize < m_global_filesize ) {
-		globalLogRotated( reader );
+		globalLogRotated( header_reader );
 		return true;
 	}
 	// Less than the size limit -- nothing to do
@@ -506,6 +506,13 @@ UserLog::checkGlobalLogRotation( void )
 
 	// Now, we have the rotation lock *and* the file is over the limit
 	// Let's get down to the business of rotating it
+
+	// First, call the rotation starting callback
+	if ( !globalRotationStarting( current_filesize ) ) {
+		m_rotation_lock->release( );
+		return false;
+	}
+
 #if ROTATION_TRACE
 	StatWrapper	swrap( m_global_path );
 	UtcTime	start_time( true );
@@ -525,7 +532,7 @@ UserLog::checkGlobalLogRotation( void )
 	}
 	else {
 		ReadUserLog	log_reader( fp, m_global_use_xml );
-		if ( reader.Read( log_reader ) != ULOG_OK ) {
+		if ( header_reader.Read( log_reader ) != ULOG_OK ) {
 			dprintf( D_ALWAYS,
 					 "UserLog: Error reading header of \"%s\"\n", 
 					 m_global_path );
@@ -533,7 +540,7 @@ UserLog::checkGlobalLogRotation( void )
 		else {
 			MyString	s;
 			s.sprintf( "read %s header:", m_global_path );
-			reader.dprint( D_FULLDEBUG, s );
+			header_reader.dprint( D_FULLDEBUG, s );
 		}
 
 		if ( m_global_count_events ) {
@@ -556,7 +563,8 @@ UserLog::checkGlobalLogRotation( void )
 			double	eps = ( events / elapsed );
 #         endif
 
-			reader.setNumEvents( events );
+			globalRotationEvents( events );
+			header_reader.setNumEvents( events );
 #         if ROTATION_TRACE
 			dprintf( D_FULLDEBUG,
 					 "UserLog: Read %d events in %.4fs = %.0f/s\n",
@@ -565,9 +573,9 @@ UserLog::checkGlobalLogRotation( void )
 		}
 		fclose( fp );
 	}
-	reader.setSize( current_filesize );
+	header_reader.setSize( current_filesize );
 
-	// Craft a header writer object from the reader
+	// Craft a header writer object from the header reader
 	FILE			*header_fp = NULL;
 	FileLockBase	*fake_lock = NULL;
 	if( !openFile(m_global_path, false, false, false, fake_lock, header_fp) ) {
@@ -575,11 +583,11 @@ UserLog::checkGlobalLogRotation( void )
 				 "UserLog: failed to open %s for header rewrite: %d (%s)\n", 
 				 m_global_path, errno, strerror(errno) );
 	}
-	WriteUserLogHeader	writer( reader );
+	WriteUserLogHeader	header_writer( header_reader );
 
 	MyString	s;
 	s.sprintf( "checkGlobalLogRotation(): %s", m_global_path );
-	writer.dprint( D_FULLDEBUG, s );
+	header_writer.dprint( D_FULLDEBUG, s );
 
 	// And write the updated header
 # if ROTATION_TRACE
@@ -589,12 +597,12 @@ UserLog::checkGlobalLogRotation( void )
 # endif
 	if ( header_fp ) {
 		rewind( header_fp );
-		writer.Write( *this, header_fp );
+		header_writer.Write( *this, header_fp );
 		fclose( header_fp );
 
 		MyString	tmps;
 		tmps.sprintf( "UserLog: Wrote header to %s", m_global_path );
-		writer.dprint( D_FULLDEBUG, tmps );
+		header_writer.dprint( D_FULLDEBUG, tmps );
 	}
 	if ( fake_lock ) {
 		delete fake_lock;
@@ -631,7 +639,12 @@ UserLog::checkGlobalLogRotation( void )
 # endif
 
 	// OK, *I* did the rotation, initialize the header of the file, too
-	globalLogRotated( reader );
+	globalLogRotated( header_reader );
+
+	// Finally, call the rotation complete callback
+	globalRotationComplete( num_rotations,
+							header_reader.getSequence(),
+							header_reader.getId() );
 
 	// Finally, release the rotation lock
 	m_rotation_lock->release( );

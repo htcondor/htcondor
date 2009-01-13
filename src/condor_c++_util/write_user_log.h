@@ -69,7 +69,8 @@ class ReadUserLogHeader;
       ULogEvent object.
     </UL>
 */
-class UserLog {
+class UserLog
+{
   public:
     ///
     UserLog( void );
@@ -90,7 +91,7 @@ class UserLog {
     UserLog(const char *owner, const char *file,
 			int clu, int proc, int subp, bool xml = XML_USERLOG_DEFAULT);
     ///
-    ~UserLog();
+    virtual ~UserLog();
     
     /** Initialize the log file, if not done by constructor.
         @param file the path name of the log file to be written (copied)
@@ -171,6 +172,47 @@ class UserLog {
 	/** APIs for testing */
 	int getGlobalSequence( void ) const { return m_global_sequence; };
 
+
+	// Rotation callbacks -- for testing purposes only
+
+	/** Notification that the global log is about to be rotated
+		@param current size of the file
+		@return false to prevent rotation
+	*/
+	virtual bool globalRotationStarting( long /*filesize*/ )
+		{ return true; };
+
+	/** Notification that number of events in the global log
+		have been counted
+		Note: this will only be called if EVENT_LOG_COUNT_EVENTS is true
+		@param number of events counted
+	*/
+	virtual void globalRotationEvents( int /*events*/ )
+		{ return; };
+
+	/** Notification that the global log has finished rotation
+		@param number of files rotated
+	*/
+	virtual void globalRotationComplete( int /*num_rotations*/,
+										 int /*sequence*/,
+										 const MyString & /*id*/ )
+		{ return; };
+
+
+	// Accessor methods for testing *ONLY*:
+
+	//  get/set cluster/proc/subproc values
+	int getGlobalCluster( void ) const { return m_cluster; };
+	void setGlobalCluster( int cluster ) { m_cluster = cluster; };
+	int getGlobalProc( void ) const { return m_proc; };
+	void setGlobalProc( int proc ) { m_proc = proc; };
+	int getGlobalSubProc( void ) const { return m_subproc; };
+	void setGlobalSubProc( int subproc ) { m_subproc = subproc; };
+
+	// Get the global log file and it's size
+	const char *getGlobalPath( void ) const { return m_global_path; };
+	long getGlobalLogSize( void ) const;
+
   private:
 
 	///
@@ -195,20 +237,15 @@ class UserLog {
 	void GenerateGlobalId( MyString &id );
 
 	bool checkGlobalLogRotation(void);
-	long getGlobalLogSize( void ) const;
 	bool globalLogRotated( ReadUserLogHeader &reader );
 	bool initializeGlobalLog(const UserLogHeader &header );
 	int doRotation( const char *path, FILE *&fp,
 					MyString &rotated, int max_rotations );
 
     
-    /// Deprecated.  condorID cluster of the next event.
-    int         m_cluster;
-
-    /// Deprecated.  condorID proc of the next event.
+    /// Deprecated.  condorID cluster, proc & subproc of the next event.
+    int 		m_cluster;
     int         m_proc;
-
-    /// Deprecated.  condorID subproc of the next event.
     int         m_subproc;
 
 	/** Write to the user log? */		 bool		m_write_user_log;
