@@ -49,6 +49,10 @@ public:
 	bool isOptInt( void ) const;
 	bool getOpt( int &, bool consume = true );
 
+	// option: long operations
+	bool isOptLong( void ) const;
+	bool getOpt( long &, bool consume = true );
+
 	// option: doubles
 	bool isOptDouble( void ) const { return isOptInt(); };
 	bool getOpt( double &, bool consume = true );
