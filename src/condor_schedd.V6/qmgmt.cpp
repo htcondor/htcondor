@@ -881,7 +881,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 	} // WHILE
 
 	if ( stored_cluster_num == 0 ) {
-		sprintf(cluster_str, "%d", next_cluster_num);
+		snprintf(cluster_str, PROC_ID_STR_BUFLEN, "%d", next_cluster_num);
 //		LogSetAttribute *log = new LogSetAttribute(HeaderKey,
 //												   ATTR_NEXT_CLUSTER_NUM,
 //												   cluster_str);
@@ -1421,7 +1421,7 @@ NewCluster()
 	next_proc_num = 0;
 	active_cluster_num = next_cluster_num;
 	next_cluster_num += cluster_increment_val;
-	sprintf(cluster_str, "%d", next_cluster_num);
+	snprintf(cluster_str, PROC_ID_STR_BUFLEN, "%d", next_cluster_num);
 //	log = new LogSetAttribute(HeaderKey, ATTR_NEXT_CLUSTER_NUM, cluster_str);
 //	JobQueue->AppendLog(log);
 	JobQueue->SetAttribute(HeaderKey, ATTR_NEXT_CLUSTER_NUM, cluster_str);
@@ -2251,7 +2251,7 @@ char * simple_decode (int key, const char * src) {
 
     c=(c+strlen(mesh)-(key%strlen(mesh)))%strlen(mesh);
     
-    sprintf(buff, "%c", c+(int)' ');
+    snprintf(buff, 2, "%c", c+(int)' ');
     result[j]=buff[0];
     
   }
@@ -2791,14 +2791,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad)
 					tvalue = strstr(attribute_value,"$$");	
 					ASSERT(tvalue);
 					strcpy(tvalue,"$$(OPSYS).$$(ARCH)");
-					bigbuf2 = (char *) malloc(strlen(curr_attr_to_expand)
-											  + 3 // for the equal and the quotes
-											  + strlen(attribute_value)
-											  + 1); // for the null terminator.
-					sprintf(bigbuf2,"%s=\"%s\"",curr_attr_to_expand,
-						attribute_value);
-					ad->Insert(bigbuf2);
-					free(bigbuf2);
+					ad->Assign(curr_attr_to_expand, attribute_value);
 				}
 			}
 
@@ -3039,7 +3032,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad)
 			Q_SOCK = saved_sock;
 
 			char buf[256];
-			sprintf(buf,"Your job (%d.%d) is on hold",cluster_id,proc_id);
+			snprintf(buf,256,"Your job (%d.%d) is on hold",cluster_id,proc_id);
 			FILE* email = email_user_open(ad,buf);
 			if ( email ) {
 				fprintf(email,"Condor failed to start your job %d.%d \n",
@@ -3264,7 +3257,7 @@ GetNextJobByCluster(int c, int initScan)
 		return NULL;
 	}
 
-	sprintf(cluster,"%d.",c);
+	snprintf(cluster,25,"%d.",c);
 	len = strlen(cluster);
 
 	if (initScan) {
@@ -3482,15 +3475,13 @@ int mark_idle(ClassAd *job)
 {
     int     status, cluster, proc, hosts, universe;
 	PROC_ID	job_id;
-	static char birthdateAttr[200];
 	static time_t bDay = 0;
 
 		// Update ATTR_SCHEDD_BIRTHDATE in job ad at startup
 	if (bDay == 0) {
 		bDay = time(NULL);
-		sprintf(birthdateAttr,"%s=%d",ATTR_SCHEDD_BIRTHDATE,(int)bDay);
 	}
-	job->Insert(birthdateAttr);
+	job->Assign(ATTR_SCHEDD_BIRTHDATE,(int)bDay);
 
 	if (job->LookupInteger(ATTR_JOB_UNIVERSE, universe) < 0) {
 		universe = CONDOR_UNIVERSE_STANDARD;

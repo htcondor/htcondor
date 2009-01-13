@@ -807,7 +807,7 @@ Scheduler::treq_upload_update_callback(TransferRequest *treq,
 		buf = NULL;
 		jad->LookupString(ATTR_JOB_IWD,&buf);
 		if ( buf ) {
-			sprintf(new_attr_value,"SUBMIT_%s",ATTR_JOB_IWD);
+			snprintf(new_attr_value,500,"SUBMIT_%s",ATTR_JOB_IWD);
 			SetAttributeString(cluster,proc,new_attr_value,buf);
 			free(buf);
 			buf = NULL;
@@ -817,7 +817,7 @@ Scheduler::treq_upload_update_callback(TransferRequest *treq,
 
 			// Backup the original TRANSFER_OUTPUT_REMAPS at submit time
 		expr = jad->Lookup(ATTR_TRANSFER_OUTPUT_REMAPS);
-		sprintf(new_attr_value,"SUBMIT_%s",ATTR_TRANSFER_OUTPUT_REMAPS);
+		snprintf(new_attr_value,500,"SUBMIT_%s",ATTR_TRANSFER_OUTPUT_REMAPS);
 		if ( expr ) {
 			char *remap_buf = NULL;
 			ASSERT( expr->RArg() );
@@ -877,7 +877,7 @@ Scheduler::treq_upload_update_callback(TransferRequest *treq,
 			}
 			if ( changed ) {
 					// Backup original value
-				sprintf(new_attr_value,"SUBMIT_%s",AttrsToModify[index]);
+				snprintf(new_attr_value,500,"SUBMIT_%s",AttrsToModify[index]);
 				SetAttributeString(cluster,proc,new_attr_value,buf);
 					// Store new value
 				char *new_value = new_paths.print_to_string();
@@ -1373,7 +1373,7 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 		buf = NULL;
 		ad->LookupString(ATTR_JOB_IWD,&buf);
 		if ( buf ) {
-			sprintf(new_attr_value,"SUBMIT_%s",ATTR_JOB_IWD);
+			snprintf(new_attr_value,500,"SUBMIT_%s",ATTR_JOB_IWD);
 			SetAttributeString(cluster,proc,new_attr_value,buf);
 			free(buf);
 			buf = NULL;
@@ -1383,7 +1383,7 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 
 			// Backup the original TRANSFER_OUTPUT_REMAPS at submit time
 		expr = ad->Lookup(ATTR_TRANSFER_OUTPUT_REMAPS);
-		sprintf(new_attr_value,"SUBMIT_%s",ATTR_TRANSFER_OUTPUT_REMAPS);
+		snprintf(new_attr_value,500,"SUBMIT_%s",ATTR_TRANSFER_OUTPUT_REMAPS);
 		if ( expr ) {
 			char *remap_buf = NULL;
 			ASSERT( expr->RArg() );
@@ -1443,7 +1443,7 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 			}
 			if ( changed ) {
 					// Backup original value
-				sprintf(new_attr_value,"SUBMIT_%s",AttrsToModify[index]);
+				snprintf(new_attr_value,500,"SUBMIT_%s",AttrsToModify[index]);
 				SetAttributeString(cluster,proc,new_attr_value,buf);
 					// Store new value
 				char *new_value = new_paths.print_to_string();

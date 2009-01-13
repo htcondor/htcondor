@@ -84,6 +84,7 @@
 #include "subsystem_info.h"
 #include "../condor_privsep/condor_privsep.h"
 #include "authentication.h"
+#include "setenv.h"
 
 #if HAVE_DLOPEN
 #include "ScheddPlugin.h"
@@ -2958,8 +2959,8 @@ Scheduler::abort_job(int, Stream* s)
 			return TRUE;
 		}
 
-		sprintf(constraint,"%s == %d || %s == %d",ATTR_JOB_STATUS,REMOVED,
-				ATTR_JOB_STATUS,HELD);
+		snprintf(constraint,120,"%s == %d || %s == %d",ATTR_JOB_STATUS,REMOVED,
+				 ATTR_JOB_STATUS,HELD);
 
 		job_ad = GetNextJobByConstraint(constraint,1);
 		if ( job_ad ) {
@@ -3089,7 +3090,7 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 		buf = NULL;
 		job_ad->LookupString(ATTR_JOB_IWD,&buf);
 		if ( buf ) {
-			sprintf(new_attr_value,"SUBMIT_%s",ATTR_JOB_IWD);
+			snprintf(new_attr_value,500,"SUBMIT_%s",ATTR_JOB_IWD);
 			SetAttributeString(cluster,proc,new_attr_value,buf);
 			free(buf);
 			buf = NULL;
@@ -3099,7 +3100,7 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 
 			// Backup the original TRANSFER_OUTPUT_REMAPS at submit time
 		expr = job_ad->Lookup(ATTR_TRANSFER_OUTPUT_REMAPS);
-		sprintf(new_attr_value,"SUBMIT_%s",ATTR_TRANSFER_OUTPUT_REMAPS);
+		snprintf(new_attr_value,500,"SUBMIT_%s",ATTR_TRANSFER_OUTPUT_REMAPS);
 		if ( expr ) {
 			char *remap_buf = NULL;
 			ASSERT( expr->RArg() );
@@ -3159,7 +3160,7 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 			}
 			if ( changed ) {
 					// Backup original value
-				sprintf(new_attr_value,"SUBMIT_%s",AttrsToModify[index]);
+				snprintf(new_attr_value,500,"SUBMIT_%s",AttrsToModify[index]);
 				SetAttributeString(cluster,proc,new_attr_value,buf);
 					// Store new value
 				char *new_value = new_paths.print_to_string();
@@ -3841,7 +3842,7 @@ Scheduler::actOnJobs(int, Stream* s)
 	JobAction action = JA_ERROR;
 	int reply, i;
 	int num_matches = 0;
-	char status_str[16];
+	int new_status = -1;
 	char buf[256];
 	char *reason = NULL;
 	const char *reason_attr_name = NULL;
@@ -3920,24 +3921,24 @@ Scheduler::actOnJobs(int, Stream* s)
 		// Make sure we understand the action they requested
 	switch( action ) {
 	case JA_HOLD_JOBS:
-		sprintf( status_str, "%d", HELD );
+		new_status = HELD;
 		reason_attr_name = ATTR_HOLD_REASON;
 		break;
 	case JA_RELEASE_JOBS:
-		sprintf( status_str, "%d", IDLE );
+		new_status = IDLE;
 		reason_attr_name = ATTR_RELEASE_REASON;
 		break;
 	case JA_REMOVE_JOBS:
-		sprintf( status_str, "%d", REMOVED );
+		new_status = REMOVED;
 		reason_attr_name = ATTR_REMOVE_REASON;
 		break;
 	case JA_REMOVE_X_JOBS:
-		sprintf( status_str, "%d", REMOVED );
+		new_status = REMOVED;
 		reason_attr_name = ATTR_REMOVE_REASON;
 		break;
 	case JA_VACATE_JOBS:
 	case JA_VACATE_FAST_JOBS:
-			// no status_str needed.  also, we're not touching
+			// no new_status needed.  also, we're not touching
 			// anything in the job queue, so we don't need a
 			// transaction, either...
 		needs_transaction = false;
@@ -4008,28 +4009,28 @@ Scheduler::actOnJobs(int, Stream* s)
 		switch( action ) {
 		case JA_REMOVE_JOBS:
 				// Don't remove removed jobs
-			sprintf( buf, "(%s!=%d) && (", ATTR_JOB_STATUS, REMOVED );
+			snprintf( buf, 256, "(%s!=%d) && (", ATTR_JOB_STATUS, REMOVED );
 			break;
 		case JA_REMOVE_X_JOBS:
 				// only allow forced removal of previously "removed" jobs
 				// including jobs on hold that will go to the removed state
 				// upon release.
-			sprintf( buf, "((%s==%d) || (%s==%d && %s=?=%d)) && (", 
+			snprintf( buf, 256, "((%s==%d) || (%s==%d && %s=?=%d)) && (", 
 				ATTR_JOB_STATUS, REMOVED, ATTR_JOB_STATUS, HELD,
 				ATTR_JOB_STATUS_ON_RELEASE,REMOVED);
 			break;
 		case JA_HOLD_JOBS:
 				// Don't hold held jobs
-			sprintf( buf, "(%s!=%d) && (", ATTR_JOB_STATUS, HELD );
+			snprintf( buf, 256, "(%s!=%d) && (", ATTR_JOB_STATUS, HELD );
 			break;
 		case JA_RELEASE_JOBS:
 				// Only release held jobs
-			sprintf( buf, "(%s==%d) && (", ATTR_JOB_STATUS, HELD );
+			snprintf( buf, 256, "(%s==%d) && (", ATTR_JOB_STATUS, HELD );
 			break;
 		case JA_VACATE_JOBS:
 		case JA_VACATE_FAST_JOBS:
 				// Only vacate running jobs
-			sprintf( buf, "(%s==%d) && (", ATTR_JOB_STATUS, RUNNING );
+			snprintf( buf, 256, "(%s==%d) && (", ATTR_JOB_STATUS, RUNNING );
 			break;
 		default:
 			EXCEPT( "impossible: unknown action (%d) in actOnJobs() after "
@@ -4041,7 +4042,7 @@ Scheduler::actOnJobs(int, Stream* s)
 			EXCEPT( "Out of memory!" );
 		}
 			// we need to terminate the ()'s after their constraint
-		sprintf( constraint, "%s%s)", buf, tmp );
+		snprintf( constraint, size, "%s%s)", buf, tmp );
 		free( tmp );
 	} else {
 		constraint = NULL;
@@ -4068,8 +4069,6 @@ Scheduler::actOnJobs(int, Stream* s)
 		// // // // //
 	
 	int now = (int)time(0);
-	char time_str[32];
-	sprintf( time_str, "%d", now );
 
 	JobActionResults results( result_type );
 
@@ -4118,10 +4117,9 @@ Scheduler::actOnJobs(int, Stream* s)
 				}
 
 				if( action == JA_RELEASE_JOBS ) {
-					int on_release_status = IDLE;
+					new_status = IDLE;
 					GetAttributeInt(tmp_id.cluster, tmp_id.proc, 
-							ATTR_JOB_STATUS_ON_RELEASE, &on_release_status);
-					sprintf( status_str, "%d", on_release_status );
+							ATTR_JOB_STATUS_ON_RELEASE, &new_status);
 				}
 				if( action == JA_REMOVE_X_JOBS ) {
 					if( SetAttribute( tmp_id.cluster, tmp_id.proc,
@@ -4138,8 +4136,8 @@ Scheduler::actOnJobs(int, Stream* s)
 						continue;
 					}
 				}
-				if( SetAttribute(tmp_id.cluster, tmp_id.proc,
-								 ATTR_JOB_STATUS, status_str) < 0 ) {
+				if( SetAttributeInt(tmp_id.cluster, tmp_id.proc,
+									ATTR_JOB_STATUS, new_status) < 0 ) {
 					results.record( tmp_id, AR_PERMISSION_DENIED );
 					continue;
 				}
@@ -4149,8 +4147,8 @@ Scheduler::actOnJobs(int, Stream* s)
 							// TODO: record failure in response ad?
 					}
 				}
-				SetAttribute( tmp_id.cluster, tmp_id.proc,
-							  ATTR_ENTERED_CURRENT_STATUS, time_str );
+				SetAttributeInt( tmp_id.cluster, tmp_id.proc,
+								 ATTR_ENTERED_CURRENT_STATUS, now );
 				fixReasonAttrs( tmp_id, action );
 				results.record( tmp_id, AR_SUCCESS );
 				jobs[num_matches] = tmp_id;
@@ -4198,7 +4196,7 @@ Scheduler::actOnJobs(int, Stream* s)
 				}
 				GetAttributeInt(tmp_id.cluster, tmp_id.proc, 
 							ATTR_JOB_STATUS_ON_RELEASE, &on_release_status);
-				sprintf( status_str, "%d", on_release_status );
+				new_status = on_release_status;
 				break;
 			case JA_REMOVE_JOBS:
 				if( status == REMOVED ) {
@@ -4264,8 +4262,8 @@ Scheduler::actOnJobs(int, Stream* s)
 				num_matches++;
 				continue;
 			}
-			if( SetAttribute(tmp_id.cluster, tmp_id.proc,
-							 ATTR_JOB_STATUS, status_str) < 0 ) {
+			if( SetAttributeInt(tmp_id.cluster, tmp_id.proc,
+								ATTR_JOB_STATUS, new_status) < 0 ) {
 				results.record( tmp_id, AR_PERMISSION_DENIED );
 				continue;
 			}
@@ -4274,8 +4272,8 @@ Scheduler::actOnJobs(int, Stream* s)
 							  reason_attr_name, reason );
 					// TODO: deal w/ failure here, too?
 			}
-			SetAttribute( tmp_id.cluster, tmp_id.proc,
-						  ATTR_ENTERED_CURRENT_STATUS, time_str );
+			SetAttributeInt( tmp_id.cluster, tmp_id.proc,
+							 ATTR_ENTERED_CURRENT_STATUS, now );
 			fixReasonAttrs( tmp_id, action );
 			results.record( tmp_id, AR_SUCCESS );
 			jobs[num_matches] = tmp_id;
@@ -4290,19 +4288,16 @@ Scheduler::actOnJobs(int, Stream* s)
 	response_ad = results.publishResults();
 
 		// Let them know what action we performed in the reply
-	sprintf( buf, "%s = %d", ATTR_JOB_ACTION, action );
-	response_ad->Insert( buf );
+	response_ad->Assign( ATTR_JOB_ACTION, action );
 
 		// Set a single attribute which says if the action succeeded
 		// on at least one job or if it was a total failure
-	sprintf( buf, "%s = %d", ATTR_ACTION_RESULT, num_matches ? 1:0 );
-	response_ad->Insert( buf );
+	response_ad->Assign( ATTR_ACTION_RESULT, num_matches ? 1:0 );
 
 		// Finally, let them know if the user running this command is
 		// a queue super user here
-	sprintf( buf, "%s = %s", ATTR_IS_QUEUE_SUPER_USER,
-			 isQueueSuperUser(rsock->getOwner()) ? "True" : "False" );
-	response_ad->Insert( buf );
+	response_ad->Assign( ATTR_IS_QUEUE_SUPER_USER,
+			 isQueueSuperUser(rsock->getOwner()) ? true : false );
 	
 	rsock->encode();
 	if( ! (response_ad->put(*rsock) && rsock->eom()) ) {
@@ -4562,7 +4557,6 @@ Scheduler::negotiate(int command, Stream* s)
 	match_rec *mrec;
 	ClassAd* my_match_ad;
 	ClassAd* cad;
-	char buffer[1024];
 	bool cant_spawn_shadow = false;
 	bool skip_negotiation = false;
 	match_rec *pre_existing_match = NULL;
@@ -4779,7 +4773,7 @@ Scheduler::negotiate(int command, Stream* s)
 		}
 
 		char tmpstr[200];
-		sprintf(tmpstr,"%s@%s",PrioRec[i].owner,UidDomain);
+		snprintf(tmpstr,200,"%s@%s",PrioRec[i].owner,UidDomain);
 		if(strcmp(owner,tmpstr)!=0)
 		{
 			dprintf( D_FULLDEBUG, "Job %d.%d skipped ---  belongs to %s\n", 
@@ -4906,9 +4900,8 @@ Scheduler::negotiate(int command, Stream* s)
 					 }
 					 dprintf(D_FULLDEBUG, "Job %d.%d rejected: %s\n",
 							 id.cluster, id.proc, diagnostic_message);
-					 sprintf(buffer,"%s = \"%s\"",
-						 ATTR_LAST_REJ_MATCH_REASON, diagnostic_message);
-					 cad->Insert(buffer);
+					 cad->Assign(ATTR_LAST_REJ_MATCH_REASON,
+								 diagnostic_message);
 					 free(diagnostic_message);
 				 }
 					 // don't break: fall through to REJECTED case
@@ -4919,9 +4912,7 @@ Scheduler::negotiate(int command, Stream* s)
 					}
 					host_cnt = max_hosts + 1;
 					JobsRejected++;
-					sprintf(buffer,"%s = %d",
-									ATTR_LAST_REJ_MATCH_TIME,(int)time(0));
-					cad->Insert(buffer);
+					cad->Assign(ATTR_LAST_REJ_MATCH_TIME,(int)time(0));
 					break;
 				case SEND_JOB_INFO: {
 						// The Negotiator wants us to send it a job. 
@@ -4934,8 +4925,7 @@ Scheduler::negotiate(int command, Stream* s)
 					}
 
 					// request match diagnostics
-					sprintf (buffer, "%s = True", ATTR_WANT_MATCH_DIAGNOSTICS);
-					cad->Insert (buffer);
+					cad->Assign(ATTR_WANT_MATCH_DIAGNOSTICS, true);
 
 					// Send the ad to the negotiator
 					if( !cad->put(*s) ) {
@@ -4972,9 +4962,7 @@ Scheduler::negotiate(int command, Stream* s)
 					 */
 					dprintf ( D_FULLDEBUG, "In case PERMISSION_AND_AD\n" );
 
-					sprintf(buffer,"%s = %d",
-									ATTR_LAST_MATCH_TIME,(int)time(0));
-					cad->Insert(buffer);
+					cad->Assign(ATTR_LAST_MATCH_TIME,(int)time(0));
 
 					if( !s->get_secret(claim_id) ) {
 						dprintf( D_ALWAYS,
@@ -5034,7 +5022,7 @@ Scheduler::negotiate(int command, Stream* s)
 							{
 								char *curr_match = last_match;
 								last_match = NULL;
-								sprintf(attr_buf,"%s%d",
+								snprintf(attr_buf,100,"%s%d",
 									ATTR_LAST_MATCH_LIST_PREFIX,list_index);
 								cad->LookupString(attr_buf,&last_match);
 								if ( c == -1 ) {
@@ -5060,10 +5048,7 @@ Scheduler::negotiate(int command, Stream* s)
 							SetAttributeInt(c,p,ATTR_NUM_MATCHES,num_matches);
 							CommitTransaction();
 						} else {
-							char tbuf[200];
-							sprintf(tbuf,"%s=%d",
-										ATTR_NUM_MATCHES,num_matches);
-							cad->Insert(tbuf);
+							cad->Assign(ATTR_NUM_MATCHES,num_matches);
 						}
 					}
 
@@ -5086,10 +5071,8 @@ Scheduler::negotiate(int command, Stream* s)
 							EXCEPT("Negotiator messed up - gave null ClaimId & no match ad");
 						}
 						// Update matched attribute in job ad
-						sprintf (buffer, "%s = True", ATTR_JOB_MATCHED);
-						cad->Insert (buffer);
-						sprintf (buffer, "%s = 1", ATTR_CURRENT_HOSTS);
-						cad->Insert(buffer);
+						cad->Assign(ATTR_JOB_MATCHED,true);
+						cad->Assign(ATTR_CURRENT_HOSTS,1);
 						// Break before we fall into the Claiming Logic section below...
 						FREE( claim_id );
 						claim_id = NULL;
@@ -6131,22 +6114,18 @@ void
 Scheduler::RequestBandwidth(int cluster, int proc, match_rec *rec)
 {
 	ClassAd request;
-	char buf[256], source[100], dest[100], user[200], *str;
+	char source[100], dest[100], user[200], *str;
 	int executablesize = 0, universe = CONDOR_UNIVERSE_VANILLA, slot=1;
 
 	GetAttributeString( cluster, proc, ATTR_USER, user );	// TODDCORE 
-	sprintf(buf, "%s = \"%s\"", ATTR_USER, user );
-	request.Insert(buf);
-	sprintf(buf, "%s = 1", ATTR_FORCE);
-	request.Insert(buf);
+	request.Assign( ATTR_USER, user );
+	request.Assign(ATTR_FORCE, 1);
 	strcpy(dest, rec->peer+1);
 	str = strchr(dest, ':');
 	*str = '\0';
-	sprintf(buf, "%s = \"%s\"", ATTR_DESTINATION, dest);
-	request.Insert(buf);
+	request.Assign(ATTR_DESTINATION, dest);
 	GetAttributeInt(cluster, proc, ATTR_EXECUTABLE_SIZE, &executablesize);
-	sprintf(buf, "%s = \"%s\"", ATTR_REMOTE_HOST, rec->peer);
-	request.Insert(buf);
+	request.Assign(ATTR_REMOTE_HOST, rec->peer);
 	if (rec->my_match_ad) {
 		if (param_boolean("ALLOW_VM_CRUFT", true)) {
 			if (!rec->my_match_ad->LookupInteger(ATTR_SLOT_ID, slot)) {
@@ -6156,8 +6135,7 @@ Scheduler::RequestBandwidth(int cluster, int proc, match_rec *rec)
 			rec->my_match_ad->LookupInteger(ATTR_SLOT_ID, slot);
 		}
 	}
-	sprintf(buf, "%s = %d", ATTR_SLOT_ID, slot);
-	request.Insert(buf);
+	request.Assign(ATTR_SLOT_ID, slot);
     
     SafeSock sock;
 	sock.timeout(NEGOTIATOR_CONTACT_TIMEOUT);
@@ -6176,9 +6154,7 @@ Scheduler::RequestBandwidth(int cluster, int proc, match_rec *rec)
 		int ckptsize;
 		GetAttributeInt(cluster, proc, ATTR_IMAGE_SIZE, &ckptsize);
 		ckptsize -= executablesize;	// imagesize = ckptsize + executablesize
-		sprintf(buf, "%s = %f", ATTR_REQUESTED_CAPACITY,
-				(float)ckptsize*1024.0);
-		request.Insert(buf);
+		request.Assign(ATTR_REQUESTED_CAPACITY, (float)ckptsize*1024.0);
 		if ((GetAttributeString(cluster, proc,
                                 ATTR_LAST_CKPT_SERVER, source)) == 0) {
 			struct hostent *hp = condor_gethostbyname(source);
@@ -6187,28 +6163,22 @@ Scheduler::RequestBandwidth(int cluster, int proc, match_rec *rec)
 						ATTR_LAST_CKPT_SERVER, source);
 				return;
 			}
-			sprintf(buf, "%s = \"%s\"", ATTR_SOURCE,
-					inet_ntoa(*((struct in_addr *)hp->h_addr)));
+			request.Assign(ATTR_SOURCE,
+						   inet_ntoa(*((struct in_addr *)hp->h_addr)));
 		} else {
-			sprintf(buf, "%s = \"%s\"", ATTR_SOURCE,
-					inet_ntoa(*(my_sin_addr())));
+			request.Assign(ATTR_SOURCE,
+						   inet_ntoa(*(my_sin_addr())));
 		}
-		sprintf(buf, "%s = \"CheckpointRestart\"", ATTR_TRANSFER_TYPE);
-		request.Insert(buf);
-		request.Insert(buf);
+		request.Assign(ATTR_TRANSFER_TYPE, "CheckpointRestart");
 		sock.put(2);
 		request.put(sock);
 	} else {
 		sock.put(1);
 	}
 
-	sprintf(buf, "%s = \"InitialCheckpoint\"", ATTR_TRANSFER_TYPE);
-	request.Insert(buf);
-	sprintf(buf, "%s = %f", ATTR_REQUESTED_CAPACITY,
-			(float)executablesize*1024.0);
-	request.Insert(buf);
-	sprintf(buf, "%s = \"%s\"", ATTR_SOURCE, inet_ntoa(*(my_sin_addr())));
-	request.Insert(buf);
+	request.Assign(ATTR_TRANSFER_TYPE, "InitialCheckpoint");
+	request.Assign(ATTR_REQUESTED_CAPACITY, (float)executablesize*1024.0);
+	request.Assign(ATTR_SOURCE, inet_ntoa(*(my_sin_addr())));
 	request.put(sock);
 	sock.end_of_message();
 }
@@ -7209,10 +7179,9 @@ Scheduler::start_pvm(match_rec* mrec, PROC_ID *job_id)
 
 #if !defined(WIN32) /* NEED TO PORT TO WIN32 */
 	ArgList         args;
-	char			cluster[10], proc_str[10];
 	int				pid;
 	int				shadow_fd;
-	char			out_buf[1000];
+	MyString		out_buf;
 	struct shadow_rec *srp;
 	int	 c;     	// current hosts
 	int	 old_proc;  // the class in the cluster.  
@@ -7239,9 +7208,6 @@ Scheduler::start_pvm(match_rec* mrec, PROC_ID *job_id)
 		job, so just clear out the proc number */
 	job_id->proc = 0;
 
-	(void)sprintf( cluster, "%d", job_id->cluster );
-	(void)sprintf( proc_str, "%d", job_id->proc );
-	
 	/* See if this job is already running */
 	srp = find_shadow_rec(job_id);
 
@@ -7303,7 +7269,7 @@ Scheduler::start_pvm(match_rec* mrec, PROC_ID *job_id)
     dprintf( D_ALWAYS, "Sending job %d.%d to shadow pid %d\n", 
              job_id->cluster, job_id->proc, srp->pid);
 
-    sprintf(out_buf, "%d %d %d\n", job_id->cluster, job_id->proc, 1);
+    out_buf.sprintf("%d %d %d\n", job_id->cluster, job_id->proc, 1);
 
 		// Warning: the pvm shadow may close this pipe during a
 		// graceful shutdown.  We should consider than an indication
@@ -7313,14 +7279,14 @@ Scheduler::start_pvm(match_rec* mrec, PROC_ID *job_id)
 		// NULL here when the pipe is closed, since our caller will
 		// consider that a fatal error for the shadow).
 	
-	dprintf( D_ALWAYS, "First Line: %s", out_buf );
-	write(shadow_fd, out_buf, strlen(out_buf));
+	dprintf( D_ALWAYS, "First Line: %s", out_buf.Value() );
+	write(shadow_fd, out_buf.Value(), out_buf.Length());
 
-	sprintf(out_buf, "%s %s %d %s\n", mrec->peer, mrec->claimId(), old_proc,
-			hostname);
+	out_buf.sprintf("%s %s %d %s\n", mrec->peer, mrec->claimId(), old_proc,
+					hostname);
 	dprintf( D_ALWAYS, "sending %s %s %d %s",
 	         mrec->peer, mrec->publicClaimId(), old_proc, hostname);
-	write(shadow_fd, out_buf, strlen(out_buf));
+	write(shadow_fd, out_buf.Value(), out_buf.Length());
 	return srp;
 #else
 	return NULL;
@@ -8922,7 +8888,7 @@ Scheduler::expand_mpi_procs(StringList *job_ids, StringList *expanded_ids) {
 		
 		int proc_index = 0;
 		while( (GetJobAd(p.cluster, proc_index, false) )) {
-			sprintf(buf, "%d.%d", p.cluster, proc_index);
+			snprintf(buf, 40, "%d.%d", p.cluster, proc_index);
 			if (! expanded_ids->contains(buf)) {
 				expanded_ids->append(buf);
 			}
@@ -8959,7 +8925,8 @@ void
 Scheduler::NotifyUser(shadow_rec* srec, char* msg, int status, int JobStatus)
 {
 	int notification;
-	char owner[2048], subject[2048];
+	MyString owner;
+	MyString subject;
 	MyString cmd;
 	MyString args;
 
@@ -8993,9 +8960,9 @@ Scheduler::NotifyUser(shadow_rec* srec, char* msg, int status, int JobStatus)
 	}
 
 	if (GetAttributeString(srec->job_id.cluster, srec->job_id.proc,
-							ATTR_NOTIFY_USER, owner) < 0) {
+						   ATTR_NOTIFY_USER, owner) < 0) {
 		if (GetAttributeString(srec->job_id.cluster, srec->job_id.proc,
-								ATTR_OWNER, owner) < 0) {
+							   ATTR_OWNER, owner) < 0) {
 			EXCEPT("GetAttributeString(%d, %d, \"%s\")",
 					srec->job_id.cluster,
 					srec->job_id.proc, ATTR_OWNER);
@@ -9017,12 +8984,12 @@ Scheduler::NotifyUser(shadow_rec* srec, char* msg, int status, int JobStatus)
 	}
 
 	// Send mail to user
-	sprintf(subject, "Condor Job %d.%d", srec->job_id.cluster, 
-		srec->job_id.proc);
+	subject.sprintf("Condor Job %d.%d", srec->job_id.cluster, 
+					srec->job_id.proc);
 	dprintf( D_FULLDEBUG, "Unknown user notification selection\n");
-	dprintf( D_FULLDEBUG, "\tNotify user with subject: %s\n",subject);
+	dprintf( D_FULLDEBUG, "\tNotify user with subject: %s\n",subject.Value());
 
-	FILE* mailer = email_open(owner, subject);
+	FILE* mailer = email_open(owner.Value(), subject.Value());
 	if( mailer ) {
 		fprintf( mailer, "Your condor job %s%d.\n\n", msg, status );
 		fprintf( mailer, "Job: %s %s\n", cmd.Value(), args.Value() );
@@ -9924,7 +9891,6 @@ void
 Scheduler::Init()
 {
 	char*					tmp;
-	char					expr[1024];
 	static	int				schedd_name_in_config = 0;
 	static  bool			first_time_in_init = true;
 
@@ -10038,15 +10004,14 @@ Scheduler::Init()
 		// Only put in in the env if it is not already there, so 
 		// we don't leak memory without reason.		
 
-#define SCHEDD_NAME_LHS "SCHEDD_NAME="
+#define SCHEDD_NAME_LHS "SCHEDD_NAME"
 	
-	int lhs_length = strlen(SCHEDD_NAME_LHS);
-
-	if ( NameInEnv == NULL || strcmp(&NameInEnv[lhs_length],Name) ) {
-		NameInEnv = (char *)malloc(lhs_length +strlen(Name)+1);
-		sprintf(NameInEnv, SCHEDD_NAME_LHS "%s", Name);
-		if (putenv(NameInEnv) < 0) {
-			dprintf(D_ALWAYS, "putenv(\"%s\") failed!\n", NameInEnv);
+	if ( NameInEnv == NULL || strcmp(NameInEnv,Name) ) {
+		free( NameInEnv );
+		NameInEnv = strdup( Name );
+		if ( SetEnv( SCHEDD_NAME_LHS, NameInEnv ) == FALSE ) {
+			dprintf(D_ALWAYS, "SetEnv(%s=%s) failed!\n", SCHEDD_NAME_LHS,
+					NameInEnv);
 		}
 	}
 
@@ -10458,47 +10423,36 @@ Scheduler::Init()
     daemonCore->publish(m_ad);
 
 		// Throw name and machine into the classad.
-	sprintf( expr, "%s = \"%s\"", ATTR_NAME, Name );
-	m_ad->Insert(expr);
+	m_ad->Assign( ATTR_NAME, Name );
 
 	// This is foul, but a SCHEDD_ADTYPE _MUST_ have a NUM_USERS attribute
 	// (see condor_classad/classad.C
 	// Since we don't know how many there are yet, just say 0, it will get
 	// fixed in count_job() -Erik 12/18/2006
-	sprintf(expr, "%s = %d", ATTR_NUM_USERS, 0);
-    m_ad->Insert(expr);
+	m_ad->Assign(ATTR_NUM_USERS, 0);
 
 #ifdef WANT_QUILL
 	// Put the quill stuff into the add as well
 	if (quill_enabled == TRUE) {
-		sprintf( expr, "%s = TRUE", ATTR_QUILL_ENABLED ); 
-		m_ad->Insert(expr);
+		m_ad->Assign( ATTR_QUILL_ENABLED, true ); 
 
-		sprintf( expr, "%s = \"%s\"", ATTR_QUILL_NAME, quill_name ); 
-		m_ad->Insert(expr);
+		m_ad->Assign( ATTR_QUILL_NAME, quill_name ); 
 
-		sprintf( expr, "%s = \"%s\"", ATTR_QUILL_DB_NAME, quill_db_name ); 
-		m_ad->Insert(expr);
+		m_ad->Assign( ATTR_QUILL_DB_NAME, quill_db_name ); 
 
-		sprintf( expr, "%s = \"<%s>\"", ATTR_QUILL_DB_IP_ADDR, 
-			quill_db_ip_addr ); 
-		m_ad->Insert(expr);
+		MyString expr;
+		expr.sprintf( "%s = \"<%s>\"", ATTR_QUILL_DB_IP_ADDR,
+					  quill_db_ip_addr ); 
+		m_ad->Insert( expr.Value() );
 
-		sprintf( expr, "%s = \"%s\"", ATTR_QUILL_DB_QUERY_PASSWORD, 
-			quill_db_query_password); 
-		m_ad->Insert(expr);
+		m_ad->Assign( ATTR_QUILL_DB_QUERY_PASSWORD, quill_db_query_password); 
 
-		if (quill_is_remotely_queryable == TRUE) {
-			sprintf( expr, "%s = TRUE", ATTR_QUILL_IS_REMOTELY_QUERYABLE);
-		} else {
-			sprintf( expr, "%s = FALSE", ATTR_QUILL_IS_REMOTELY_QUERYABLE);
-		}
-		m_ad->Insert(expr);
+		m_ad->Assign( ATTR_QUILL_IS_REMOTELY_QUERYABLE, 
+					  quill_is_remotely_queryable == TRUE ? true : false );
 
 	} else {
 
-		sprintf( expr, "%s = FALSE", ATTR_QUILL_ENABLED ); 
-		m_ad->Insert(expr);
+		m_ad->Assign( ATTR_QUILL_ENABLED, false );
 	}
 #endif
 
@@ -10507,8 +10461,7 @@ Scheduler::Init()
 	if( ! MySockName ) {
 		MySockName = strdup( daemonCore->InfoCommandSinfulString() );
 	}
-	sprintf( expr, "%s = \"%s\"", ATTR_SCHEDD_IP_ADDR, MySockName );
-	m_ad->Insert(expr);
+	m_ad->Assign( ATTR_SCHEDD_IP_ADDR, MySockName );
 
 		// Now create another command port to be used exclusively by shadows.
 		// Stash the sinfull string of this new command port in MyShadowSockName.
@@ -10529,9 +10482,7 @@ Scheduler::Init()
 		daemonCore->Register_Command_Socket( (Stream*)shadowCommandrsock );
 		daemonCore->Register_Command_Socket( (Stream*)shadowCommandssock );
 
-		char nameBuf[50];
-        sprintf( nameBuf, "%s", shadowCommandrsock->get_sinful());
-		MyShadowSockName = strdup( nameBuf );
+		MyShadowSockName = strdup( shadowCommandrsock->get_sinful() );
 
 		sent_shadow_failure_email = FALSE;
 	}
@@ -10949,7 +10900,7 @@ void
 Scheduler::invalidate_ads()
 {
 	int i;
-	char line[256];
+	MyString line;
 
 		// The ClassAd we need to use is totally different from the
 		// regular one, so just delete it and start over again.
@@ -10959,9 +10910,8 @@ Scheduler::invalidate_ads()
     m_ad->SetTargetTypeName( SCHEDD_ADTYPE );
 
         // Invalidate the schedd ad
-    sprintf( line, "%s = %s == \"%s\"", ATTR_REQUIREMENTS, ATTR_NAME, 
-             Name );
-    m_ad->Insert( line );
+    line.sprintf( "%s = %s == \"%s\"", ATTR_REQUIREMENTS, ATTR_NAME, Name );
+    m_ad->Insert( line.Value() );
 
 
 		// Update collectors
@@ -10970,9 +10920,9 @@ Scheduler::invalidate_ads()
 	if (N_Owners == 0) return;	// no submitter ads to invalidate
 
 		// Invalidate all our submittor ads.
-	sprintf( line, "%s = %s == \"%s\"", ATTR_REQUIREMENTS, ATTR_SCHEDD_NAME,
-			 Name );
-    m_ad->InsertOrUpdate( line );
+	line.sprintf( "%s = %s == \"%s\"", ATTR_REQUIREMENTS, ATTR_SCHEDD_NAME,
+				  Name );
+    m_ad->InsertOrUpdate( line.Value() );
 
 	daemonCore->sendUpdates(INVALIDATE_SUBMITTOR_ADS, m_ad, NULL, false);
 
@@ -12044,20 +11994,14 @@ holdJobRaw( int cluster, int proc, const char* reason,
 			return true;  
 		}
 
-		char id_buf[64];
-		sprintf( id_buf, "%d.%d", cluster, proc );
 		MyString msg_buf;
-		msg_buf += "Condor job ";
-		msg_buf += id_buf;
-		msg_buf += " has been put on hold.\n";
-		msg_buf += reason;
-		msg_buf += "\nPlease correct this problem and release the "
-			"job with \"condor_release\"\n";
+		msg_buf.sprintf( "Condor job %d.%d has been put on hold.\n%s\n"
+						 "Please correct this problem and release the "
+						 "job with \"condor_release\"\n",
+						 cluster, proc, reason );
 
 		MyString msg_subject;
-		msg_subject += "Condor job ";
-		msg_subject += id_buf;
-		msg_subject += " put on hold";
+		msg_subject.sprintf( "Condor job %d.%d put on hold", cluster, proc );
 
 		FILE* fp;
 		if( email_user ) {
@@ -12195,18 +12139,13 @@ releaseJobRaw( int cluster, int proc, const char* reason,
 			return true;  
 		}
 
-		char id_buf[64];
-		sprintf( id_buf, "%d.%d", cluster, proc );
 		MyString msg_buf;
-		msg_buf += "Condor job ";
-		msg_buf += id_buf;
-		msg_buf += " has been released from being on hold.\n";
-		msg_buf += reason;
+		msg_buf.sprintf( "Condor job %d.%d has been released from being "
+						 "on hold.\n%s", cluster, proc, reason );
 
 		MyString msg_subject;
-		msg_subject += "Condor job ";
-		msg_subject += id_buf;
-		msg_subject += " released from hold state";
+		msg_subject.sprintf( "Condor job %d.%d released from hold state",
+							 cluster, proc );
 
 		FILE* fp;
 		if( email_user ) {

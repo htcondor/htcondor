@@ -137,7 +137,7 @@ AllocationNode::display( void )
 		for( n=0; n<=num_nodes; n++ ) {
 			mrec = (*ma)[n];
 			if( mrec ) {
-				sprintf( buf, "%d.%d.%d: ", cluster, p, n );
+				snprintf( buf, 256, "%d.%d.%d: ", cluster, p, n );
 				displayResource( mrec->my_match_ad, buf, level );
 			}
 		}
@@ -665,16 +665,16 @@ DedicatedScheduler::initialize( void )
 			// host.  ATTR_OWNER is such a yucky attribute anyway, we
 			// care much more about ATTR_USER and ATTR_SCHEDULER. 
 		*tmp = '\0';
-		sprintf( buf, "DedicatedScheduler@%s", tmpname );
+		snprintf( buf, 256, "DedicatedScheduler@%s", tmpname );
 	} else {
 			// No '@'... we're alone on this host, and can just use a 
 			// simple string...
-		sprintf( buf, "DedicatedScheduler" );
+		snprintf( buf, 256, "DedicatedScheduler" );
 	}
 	delete [] tmpname;
 	ds_owner = strnewp( buf );
 
-	sprintf( buf, "DedicatedScheduler@%s", Name );
+	snprintf( buf, 256, "DedicatedScheduler@%s", Name );
 	ds_name = strnewp( buf );
 
 		// Call our reconfig() method, since any config file stuff we
@@ -685,20 +685,13 @@ DedicatedScheduler::initialize( void )
 		// startds for claiming them.
 	dummy_job.SetMyTypeName( JOB_ADTYPE );
 	dummy_job.SetTargetTypeName( STARTD_ADTYPE );
-	sprintf( buf, "%s = True", ATTR_REQUIREMENTS );
-	dummy_job.Insert( buf );
-	sprintf( buf, "%s = \"%s\"", ATTR_OWNER, ds_owner );
-	dummy_job.Insert( buf );
-	sprintf( buf, "%s = \"%s\"", ATTR_USER, ds_name );
-	dummy_job.Insert( buf );
-	sprintf( buf, "%s = \"%s\"", ATTR_SCHEDULER, ds_name );
-	dummy_job.Insert( buf );
-	sprintf( buf, "%s = %d", ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_MPI );
-	dummy_job.Insert( buf );
-	sprintf( buf, "%s = %d", ATTR_JOB_STATUS, IDLE );
-	dummy_job.Insert( buf );
-	sprintf( buf, "%s = %d", ATTR_IMAGE_SIZE, 10 ); // WANT_SUSPEND often needs this
-	dummy_job.Insert( buf );
+	dummy_job.Assign( ATTR_REQUIREMENTS, true );
+	dummy_job.Assign( ATTR_OWNER, ds_owner );
+	dummy_job.Assign( ATTR_USER, ds_name );
+	dummy_job.Assign( ATTR_SCHEDULER, ds_name );
+	dummy_job.Assign( ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_MPI );
+	dummy_job.Assign( ATTR_JOB_STATUS, IDLE );
+	dummy_job.Assign( ATTR_IMAGE_SIZE, 10 ); // WANT_SUSPEND often needs this
 	config_fill_ad( &dummy_job );
 
 		// Next, register our special MPI shadow reaper
@@ -979,7 +972,6 @@ DedicatedScheduler::negotiateRequest( ClassAd* req, Stream* s,
 									  char* negotiator_name, 
 									  int reqs_matched, int /*max_reqs*/ )
 {
-	char	temp[512];
 	char	*claim_id = NULL;	// ClaimId for each match made
 	char	*sinful;
 	char	*machine_name;
@@ -1031,17 +1023,14 @@ DedicatedScheduler::negotiateRequest( ClassAd* req, Stream* s,
 				// TODO: Identify request in logfile
 			dprintf( D_FULLDEBUG, "Request rejected: %s\n",
 					 diagnostic_message );
-			sprintf( temp, "%s = \"%s\"",
-					 ATTR_LAST_REJ_MATCH_REASON,
-					 diagnostic_message );
-			req->Insert( temp );
+			req->Assign( ATTR_LAST_REJ_MATCH_REASON,
+						 diagnostic_message );
 			free(diagnostic_message);
 		}
 			// don't break: fall through to REJECTED case
 		case REJECTED:
-			sprintf( temp, "%s = %d", ATTR_LAST_REJ_MATCH_TIME,
-					 (int)time(0) ); 
-			req->Insert( temp );
+			req->Assign( ATTR_LAST_REJ_MATCH_TIME,
+						 (int)time(0) ); 
 
 			return NR_REJECTED;
 			break;
@@ -1078,8 +1067,7 @@ DedicatedScheduler::negotiateRequest( ClassAd* req, Stream* s,
 			}
 
 				// request match diagnostics
-			sprintf(temp, "%s = True", ATTR_WANT_MATCH_DIAGNOSTICS);
-			req->Insert( temp );
+			req->Assign(ATTR_WANT_MATCH_DIAGNOSTICS, true);
 
 					// Send the ad to the negotiator
 			if( !req->put(*s) ) {
@@ -1952,7 +1940,7 @@ DedicatedScheduler::getDedicatedResourceInfo( void )
 		// Make a new list to hold our resource classads.
 	resources = new ClassAdList;
 
-	sprintf( constraint, "DedicatedScheduler == \"%s\"", name() ); 
+	snprintf( constraint, 256, "DedicatedScheduler == \"%s\"", name() ); 
 	query.addORConstraint( constraint );
 
 		// This should fill in resources with all the classads we care
@@ -3387,7 +3375,6 @@ void
 DedicatedScheduler::publishRequestAd( void )
 {
 	ClassAd ad;
-	char tmp[1024];
 
 	dprintf( D_FULLDEBUG, "In DedicatedScheduler::publishRequestAd()\n" );
 
@@ -3398,41 +3385,31 @@ DedicatedScheduler::publishRequestAd( void )
         // SCHEDD_ATTRS for us.
     daemonCore->publish(&ad);
 
-	sprintf( tmp, "%s = \"%s\"", ATTR_SCHEDD_IP_ADDR, 
-			 scheduler.dcSockSinful() );
-	ad.InsertOrUpdate( tmp );
+	ad.Assign( ATTR_SCHEDD_IP_ADDR, scheduler.dcSockSinful() );
 
 		// Tell negotiator to send us the startd ad
 		// As of 7.1.3, the negotiator no longer pays attention to this
 		// attribute; it _always_ sends the resource request ad.
 		// For backward compatibility with older negotiators, we still set it.
-	sprintf( tmp, "%s = True", ATTR_WANT_RESOURCE_AD );
-	ad.InsertOrUpdate( tmp );
+	ad.Assign( ATTR_WANT_RESOURCE_AD, true );
 
-	sprintf( tmp, "%s = \"%s\"", ATTR_SCHEDD_NAME, Name );
-	ad.InsertOrUpdate( tmp );
+	ad.Assign( ATTR_SCHEDD_NAME, Name );
 
-	sprintf( tmp, "%s = \"%s\"", ATTR_NAME, name() );
-	ad.InsertOrUpdate( tmp );
+	ad.Assign( ATTR_NAME, name() );
 
 		// Finally, we need to tell it how many "jobs" we want to
 		// negotiate.  These are really how many resource requests
 		// we've got. 
-	sprintf( tmp, "%s = %d", ATTR_IDLE_JOBS,
-			 resource_requests->Length() ); 
-	ad.InsertOrUpdate( tmp );
+	ad.Assign( ATTR_IDLE_JOBS, resource_requests->Length() ); 
 	
 		// TODO: Eventually, we could try to publish this info as
 		// well, so condor_status -sub and friends could tell people
 		// something useful about the DedicatedScheduler...
-	sprintf( tmp, "%s = 0", ATTR_RUNNING_JOBS );
-	ad.InsertOrUpdate( tmp );
+	ad.Assign( ATTR_RUNNING_JOBS, 0 );
 	
-	sprintf( tmp, "%s = 0", ATTR_HELD_JOBS );
-	ad.InsertOrUpdate( tmp );
+	ad.Assign( ATTR_HELD_JOBS, 0 );
 
-	sprintf( tmp, "%s = 0", ATTR_FLOCKED_JOBS );
-	ad.InsertOrUpdate( tmp );
+	ad.Assign( ATTR_FLOCKED_JOBS, 0 );
 
 		// Now, we can actually send this off to the CM.
 	daemonCore->sendUpdates( UPDATE_SUBMITTOR_AD, &ad, NULL, true );
@@ -3459,25 +3436,19 @@ DedicatedScheduler::generateRequest( ClassAd* job )
 ClassAd *
 DedicatedScheduler::makeGenericAdFromJobAd(ClassAd *job)
 {
-	char tmp[8192];
-
 		// First, make a copy of the job ad, as is, and use that as the
 		// basis for our resource request.
 	ClassAd* req = new ClassAd( *job );
 
 		// Now, insert some attributes we need
-	sprintf( tmp, "%s = \"%s\"", ATTR_SCHEDULER, name() );
-	req->InsertOrUpdate( tmp );
+	req->Assign( ATTR_SCHEDULER, name() );
 
 		// Patch up existing attributes with the values we want. 
-	sprintf( tmp, "%s = 1", ATTR_MIN_HOSTS );
-	req->InsertOrUpdate( tmp );
+	req->Assign( ATTR_MIN_HOSTS, 1 );
 
-	sprintf( tmp, "%s = 1", ATTR_MAX_HOSTS );
-	req->InsertOrUpdate( tmp );
+	req->Assign( ATTR_MAX_HOSTS, 1 );
 
-	sprintf( tmp, "%s = 0", ATTR_CURRENT_HOSTS );
-	req->InsertOrUpdate( tmp );
+	req->Assign( ATTR_CURRENT_HOSTS, 0 );
 
     ExprTree* expr = job->Lookup( ATTR_REQUIREMENTS );
 
@@ -3502,14 +3473,13 @@ DedicatedScheduler::makeGenericAdFromJobAd(ClassAd *job)
 		// want to rank it, and require that the minimum claim time is
 		// >= the duration of the job...
 
-	char *buf = (char *) malloc(strlen(rhs) + 2 * strlen(name()) + 160);
-	sprintf( buf, "%s = (DedicatedScheduler == \"%s\") && "
-					"(RemoteOwner =!= \"%s\") && (%s)", 
-			 ATTR_REQUIREMENTS, name(), name(), rhs );
-	req->InsertOrUpdate( buf );
+	MyString buf;
+	buf.sprintf( "%s = (DedicatedScheduler == \"%s\") && "
+				 "(RemoteOwner =!= \"%s\") && (%s)", 
+				 ATTR_REQUIREMENTS, name(), name(), rhs );
+	req->InsertOrUpdate( buf.Value() );
 
 	free(rhs);
-	free(buf);
 	return req;
 }
 

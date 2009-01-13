@@ -366,14 +366,10 @@ GridUniverseLogic::lookupGmanByOwner(const char* owner, const char* attr_value,
 	gman_node_t* result = NULL;
 	MyString owner_key(owner);
 	if(attr_value){
-		MyString attr_key(attr_value);
-		owner_key += attr_key;
+		owner_key += attr_value;
 	}
 	if (cluster) {
-		char tmp[100];
-		sprintf(tmp,"-%d.%d",cluster,proc);
-		MyString job_key(tmp);
-		owner_key += job_key;
+		owner_key.sprintf_cat( "-%d.%d", cluster, proc );
 	}
 
 	if (!gman_pid_table) {
@@ -598,14 +594,10 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 	}
 	MyString owner_key(owner);
 	if(attr_value){
-		MyString attr_key(attr_value);
-		owner_key += attr_key;
+		owner_key += attr_value;
 	}
 	if (cluster) {
-		char tmp[100];
-		sprintf(tmp,"-%d.%d",cluster,proc);
-		MyString job_key(tmp);
-		owner_key += job_key;
+		owner_key.sprintf_cat( "-%d.%d", cluster, proc );
 	}
 
 	ASSERT( gman_pid_table->insert(owner_key,gman_node) == 0 );
