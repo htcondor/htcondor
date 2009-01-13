@@ -2005,7 +2005,7 @@ negotiate( char *scheddName, const ClassAd *scheddAd, double priority, double sh
 				char *diagnostic_message = NULL;
 				// no match found
 				dprintf(D_ALWAYS|D_MATCH, "      Rejected %d.%d %s %s: ",
-						cluster, proc, scheddName, scheddAddr);
+						cluster, proc, scheddName, scheddAddr.Value());
 				if (rejForNetwork) {
 					diagnostic_message = "insufficient bandwidth";
 					dprintf(D_ALWAYS|D_MATCH|D_NOHEADER, "%s\n",
