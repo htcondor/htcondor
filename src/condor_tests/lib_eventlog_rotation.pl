@@ -29,7 +29,8 @@ my %programs = ( reader			=> "$testbin/test_log_reader",
 				 reader_state	=> "$testbin/test_log_reader_state",
 				 writer			=> "$testbin/test_log_writer", );
 
-my $event_size = ( 100000 / 1160 );
+my $DefaultMaxEventLog = 1000000;
+my $EventSize = ( 100000 / 1160 );
 my @tests =
     (
 
@@ -44,8 +45,6 @@ my @tests =
 			 #"EVENT_LOG_MAX_SIZE"		=> -1,
 			 #"MAX_EVENT_LOG"			=> 1000000,
 		 },
-		 loops				=> 1,
-		 size_mult			=> 1.25,
 		 writer => {
 		 },
      },
@@ -59,8 +58,6 @@ my @tests =
 			 "EVENT_LOG_MAX_SIZE"		=> 0,
 			 #"MAX_EVENT_LOG"			=> 0,
 		 },
-		 loops				=> 1,
-		 size_mult			=> 1.25,
 		 writer => {
 		 },
      },
@@ -75,8 +72,6 @@ my @tests =
 			 "EVENT_LOG_MAX_SIZE"		=> 0,
 			 #"MAX_EVENT_LOG"			=> 0,
 		 },
-		 loops				=> 1,
-		 size_mult			=> 1.25,
 		 writer => {
 		 },
      },
@@ -90,8 +85,6 @@ my @tests =
 			 #"EVENT_LOG_MAX_SIZE"		=> 0,
 			 "MAX_EVENT_LOG"			=> 0,
 		 },
-		 loops				=> 1,
-		 size_mult			=> 1.25,
 		 writer => {
 		 },
      },
@@ -106,8 +99,6 @@ my @tests =
 			 "EVENT_LOG_MAX_SIZE"		=> 10000,
 			 #"MAX_EVENT_LOG"			=> -1,
 		 },
-		 loops				=> 1,
-		 size_mult			=> 1.25,
 		 writer => {
 		 },
      },
@@ -122,8 +113,6 @@ my @tests =
 			 "EVENT_LOG_MAX_SIZE"		=> 10000,
 			 #"MAX_EVENT_LOG"			=> -1,
 		 },
-		 loops				=> 1,
-		 size_mult			=> 1.25,
 		 writer => {
 		 },
      },
@@ -138,8 +127,6 @@ my @tests =
 			 "EVENT_LOG_MAX_SIZE"		=> 10000,
 			 #"MAX_EVENT_LOG"			=> -1,
 		 },
-		 loops				=> 1,
-		 size_mult			=> 1.25,
 		 writer => {
 		 },
      },
@@ -154,11 +141,13 @@ my @tests =
 			 "EVENT_LOG_MAX_SIZE"		=> 10000,
 			 #"MAX_EVENT_LOG"			=> -1,
 		 },
-		 loops				=> 1,
-		 size_mult			=> 1.25,
 		 writer => {
 		 },
      },
+
+	 # ##########################
+	 # Reader tests start here
+	 # ##########################
 
      {
 		 name		=> "reader_simple",
@@ -389,93 +378,128 @@ print CONFIG "TEST_LOG_WRITER_LOG = $fulldir/writer.log\n";
 close( CONFIG );
 $ENV{"CONDOR_CONFIG"} = $config;
 
+# ######################
 # Basic calculations
-my $default_max_size = 1000000;
-my $max_size = $default_max_size;
-my $max_rotations = 1;
+# ######################
+my %params;
+
+# Max eventlog setting
+$params{max_size} = $DefaultMaxEventLog;
 if ( exists $test->{config}{"EVENT_LOG_MAX_SIZE"} ) {
-    $max_size = $test->{config}{"EVENT_LOG_MAX_SIZE"};
+    $params{max_size} = $test->{config}{"EVENT_LOG_MAX_SIZE"};
 }
 elsif ( exists $test->{config}{"MAX_EVENT_LOG"} ) {
-    $max_size = $test->{config}{"MAX_EVENT_LOG"};
+    $params{max_size} = $test->{config}{"MAX_EVENT_LOG"};
 }
+
+# Max rotation setting
+$params{max_rotations} = 1;
 if ( exists $test->{config}{"EVENT_LOG_MAX_ROTATIONS"} ) {
-    $max_rotations = $test->{config}{"EVENT_LOG_MAX_ROTATIONS"};
+    $params{max_rotations} = $test->{config}{"EVENT_LOG_MAX_ROTATIONS"};
 }
-elsif ( $max_size == 0 ) {
-    $max_rotations = 0;
-    $max_size = $default_max_size;
+elsif ( $params{max_size} == 0 ) {
+    $params{max_rotations} = 0;
+    $params{max_size} = $DefaultMaxEventLog;
 }
-my $total_files = $max_rotations + 1;
-my $total_loops;
+
+# Number of event log files generated
+$params{files} = $params{max_rotations} + 1;
+
+# Number of loops
 if ( exists $settings{loops} ) {
-    $total_loops = $settings{loops};
+    $params{loops} = $settings{loops};
     $test->{loops} = $settings{loops};
 }
 elsif ( exists $test->{loops} ) {
-    $total_loops = $test->{loops};
+    $params{loops} = $test->{loops};
 }
 else {
-    $total_loops = 1;
+    $params{loops} = 1;
     $test->{loops} = 1;
 }
-my $total_events;
-my $loop_events;
-if ( exists $test->{loop_events} ) {
-    $loop_events = $test->{loop_events};
-    $total_events = $loop_events * $total_loops;
+
+# User log size
+if ( !exists $test->{user_size_mult} ) {
+	$test->{user_size_mult} = $params{files} + 0.25;
 }
-elsif ( exists $test->{events} ) {
-    $loop_events = int($test->{events} / $total_loops);
-    $total_events = $test->{events};
+if ( !exists( $test->{user_size} ) ) {
+	$test->{user_size} = $params{max_size} * $test->{user_size_mult};
+}
+if ( $test->{user_size} > 0 ) {
+    $test->{writer}{"--max-user"} = $test->{user_size};
+}
+
+# Event log size
+if ( !exists $test->{global_size_mult} ) {
+	$test->{global_size_mult} = 1.25;
+}
+if ( !exists( $test->{global_size} ) ) {
+	$test->{global_size} = $params{max_size} * $test->{global_size_mult};
+}
+if ( $test->{global_size} > 0 ) {
+    $test->{writer}{"--max-global"} = $test->{global_size};
+}
+
+# Max # of rotations
+if ( !exists $test->{max_rotations} ) {
+	$test->{max_rotations} = $params{max_rotations};
+}
+if ( $test->{max_rotations} > 0 ) {
+    $test->{writer}{"--max-rotations"} =
+		int( 0.9999 + ($test->{max_rotations} / $test->{loops}) );
+	$params{loop_events}  = ( $params{max_size} / $EventSize );
+	$params{total_events} = $params{loop_events} * $test->{max_rotations};
 }
 else {
-    my $mult = ( exists $test->{size_mult} ) ? $test->{size_mult} : 1.25;
-    $loop_events =
-		int($mult * $total_files * $max_size / ($event_size * $total_loops) );
-    $total_events = $loop_events * $total_loops;
+	$params{loop_events}  = int( $params{max_size} / $EventSize );
+	$params{total_events} = $params{loop_events};
 }
 
-
-# Calculate num exec / procs
-if ( !exists $test->{writer}{"--num-exec"} ) {
-    my $num_procs = 1;
-    if ( exists( $test->{writer}{"--num-procs"} ) ) {
-		$num_procs = $test->{writer}{"--num-procs"};
-    }
-    else {
-		$test->{writer}{"--num-procs"} = $num_procs;
-    }
-    $test->{writer}{"--num-exec"} = int( $loop_events / $num_procs );
+# Min number of events expected to be written per loop
+if ( exists $test->{loop_min_events} ) {
+	$params{loop_min_events} = $test->{loop_min_events};
 }
+else {
+	$params{loop_min_events} = 0.9 * $params{loop_events};
+}
+
+# Min number of events expected to be written total
+if ( exists $test->{min_events} ) {
+	$params{min_events} = $test->{min_events}
+}
+else {
+	$params{min_events} = 0.9 * $params{total_events};
+}
+
+# Sleep time?  Probably --no-sleep
 if ( !exists $test->{writer}{"--sleep"} ) {
     $test->{writer}{"--no-sleep"} = undef;
 }
-
 
 # Expected results
 my %expect =
 	(
 	 final_mins => {
-		 num_files		=> $total_files,
-		 sequence		=> $total_files,
-		 num_events		=> $total_events,
-		 file_size		=> $max_size,
+		 num_files		=> $params{files},
+		 sequence		=> $params{files},
+		 file_size		=> $params{max_size},
+		 num_events		=> $params{min_events},
 	 },
 	 maxs => {
-		 file_size		=> $max_size + 512,
-		 total_size		=> ($max_size + 512) * $total_files,
+		 file_size		=> $params{max_size} + 512,
+		 total_size		=> ($params{max_size} + 512) * $params{files},
 	 },
 	 loop_mins => {
-		 num_files		=> int($total_files / $total_loops),
-		 sequence		=> int($total_files / $total_loops),
-		 file_size		=> $max_size / $total_loops,
-		 num_events		=> $loop_events,
+		 num_files		=> int($params{files} / $params{loops}),
+		 sequence		=> int($params{files} / $params{loops}),
+		 file_size		=> $params{max_size} / $params{loops},
+		 num_events		=> $params{loop_min_events},
 	 },
 	 cur_mins => {
 		 num_files		=> 0,
 		 sequence		=> 0,
 		 file_size		=> 0,
+		 toal_size		=> 0,
 		 num_events		=> 0,
 	 },
 	 );
@@ -502,13 +526,12 @@ if ( $settings{debug} ) {
     push( @writer_args, "--debug" );
     push( @writer_args, "D_FULLDEBUG" );
 }
-if ( exists $test->{writer}{file} ) {
-    push( @writer_args, $test->{writer}{file} );
-}
-else {
-    push( @writer_args, "/dev/null" );
-}
 
+# Userlog file
+if ( !exists $test->{writer}{file} ) {
+	$test->{writer}{file} = "$dir/userlog";
+}
+push( @writer_args, $test->{writer}{file} );
 
 # Generate the reader command line
 my @reader_args;
@@ -740,6 +763,12 @@ sub RunWriter( $$$$$ )
     my $run = shift;
 
     my $errors = 0;
+
+	# Blow away any userlog file
+	if ( -f $writer_args[-1] ) {
+		print "Removing " . $writer_args[-1] . "\n" if ( $settings{verbose} );
+		unlink( $writer_args[-1] );
+	}
 
     my $cmd = "";
     my $vg_out = sprintf( "valgrind-writer-%02d.out", $loop );
