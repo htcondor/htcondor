@@ -279,7 +279,7 @@ if($bail == 1) {
 
 if($done == 0) {
 	CondorTest::debug("Test failed because we never saw a negotiator.....\n",1);
-	CondorTest::debug(" was...\n",1);
+	CondorTest::debug("Last run of \"$cmd\" was...\n",1);
 
 	foreach $lineitem (@adarray) {
 		CondorTest::debug("cmdres: $lineitem\n",1);

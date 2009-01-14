@@ -158,8 +158,8 @@ $executed = sub {
 		} elsif ( $run_ctr == 3 ) {
 			$suffix = "rd";
 		}
-		CondorTest::debug("Good - Job $cluster.$job began execution for the ",1);
-			  "$run_ctr$suffix time.\n";
+		CondorTest::debug("Good - Job $cluster.$job began execution for the ".
+			  "$run_ctr$suffix time.\n",1);
 	}
 };
 
@@ -184,8 +184,8 @@ $evicted = sub {
 	## actual time spent executing
 	##
 	if ( $DEFERRAL_TIME <= 0 ) {
-		CondorTest::debug("Bad - Job $cluster.$job was requeued but we don't have a ",1);
-			  "DeferralTime from when it started executing!\n";
+		CondorTest::debug("Bad - Job $cluster.$job was requeued but we don't have a ".
+			  "DeferralTime from when it started executing!\n",1);
 		exit(1);
 	}
 	
@@ -198,8 +198,8 @@ $evicted = sub {
 	##
 	my $sleep = $evictionTime - $DEFERRAL_TIME;
 	if ( $sleep < $SLEEP_TIME ) {
-		CondorTest::debug("Bad - Job $cluster.$job only ran for $sleep seconds. ",1);
-			  "Should have been $SLEEP_TIME seconds!\n";
+		CondorTest::debug("Bad - Job $cluster.$job only ran for $sleep seconds. ".
+			  "Should have been $SLEEP_TIME seconds!\n",1);
 		exit(1);
 	}
 	##
@@ -216,8 +216,8 @@ $evicted = sub {
 		my $diff = $DEFERRAL_TIME - $LAST_DEFERRAL_TIME;
 		CondorTest::debug("\tDIFFERENCE: $diff\n",1);
 		if ( $diff < $DEFERRAL_DIFFERENCE ) {
-			CondorTest::debug("Bad - Job $cluster.$job was scheduled to run $diff seconds after ",1);
-				  "the last execution. It should be $DEFERRAL_DIFFERENCE seconds!\n";
+			CondorTest::debug("Bad - Job $cluster.$job was scheduled to run $diff seconds after ".
+				  "the last execution. It should be $DEFERRAL_DIFFERENCE seconds!\n",1);
 			exit(1);
 		}	
 	}
@@ -287,8 +287,8 @@ $success = sub {
 	## Make sure what we have and what the job's ad has is the same
 	##
 	if ( $run_ctr != $h_runcount ) {
-		CondorTest::debug("Bad - Job $cluster.$job finished execution but its NumJobStarts ",1);
-			  "is $h_runcount. It should be $run_ctr!\n";
+		CondorTest::debug("Bad - Job $cluster.$job finished execution but its NumJobStarts ".
+			  "is $h_runcount. It should be $run_ctr!\n",1);
 		exit(1);
 	}
 			

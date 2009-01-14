@@ -87,8 +87,8 @@ $executed = sub {
 	%info = @_;
 	$cluster = $info{"cluster"};
 	$job = $info{"job"};
-	CondorTest::debug("Bad - Job $cluster.$job began execution when it should ",1);
-		  "have been on hold.\n";
+	CondorTest::debug("Bad - Job $cluster.$job began execution when it should ".
+		  "have been on hold.\n",1);
 	exit(1);
 };
 
@@ -116,8 +116,8 @@ $submit = sub {
 	## Check to make sure that it's on hold
 	## 
 	if ( $qstat == HELD) {
-		CondorTest::debug("Good - Job $cluster.$job went on hold as soon as it ",1);
-			  "was submitted.\n";
+		CondorTest::debug("Good - Job $cluster.$job went on hold as soon as it ".
+			  "was submitted.\n",1);
 		$gotHold = 1;
 	##
 	## The job didn't go on hold, so we need to abort
@@ -136,8 +136,8 @@ $success = sub {
 	%info = @_;
 	$cluster = $info{"cluster"};
 	$job = $info{"job"};
-	CondorTest::debug("Bad - Job $cluster.$job completed its execution when it should ",1);
-		  "have been on hold.\n";
+	CondorTest::debug("Bad - Job $cluster.$job completed its execution when it should ".
+		  "have been on hold.\n",1);
 	exit(1);
 };
 

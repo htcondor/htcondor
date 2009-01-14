@@ -34,7 +34,7 @@ sub RUNNING{2};
 $abnormal = sub {
 	my %info = @_;
 
-	CondorTest::debug("\n",1);
+	CondorTest::debug("keys:".join(" ",keys %info)."\n",1);
 	my $gotsig   = $info{"signal"};
 	my $outfile = $info{"log"};
 	my $killsig = $info{"hold_kill_sig"};
@@ -46,7 +46,7 @@ $aborted = sub {
 	my $done;
 	CondorTest::debug("Abort event expected\n",1);
 
-	CondorTest::debug("\n",1);
+	CondorTest::debug("keys:".join(" ",keys %info)."\n",1);
 	my $gotsig   = $info{"signal"};
 	my $outfile = $info{"output"};
 	my $killsig = $info{"hold_kill_sig"};
