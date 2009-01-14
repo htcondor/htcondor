@@ -95,7 +95,8 @@ kind of file it is.  For example:
    .c      C source file
    .C      C++ source file
    .h      C or C++ header file
-   .f      fortran source file
+   .f      fortran 77 source file
+   .f90    fortran 90 source file
    .pl     Perl script
    .pm     Perl module
    .sh     Shell script (bourne shell)

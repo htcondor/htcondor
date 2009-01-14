@@ -25,7 +25,7 @@
 #define OBJECT_MODE		0644
 #define TEXT_MODE		OBJECT_MODE
 
-.SUFFIXES: .C .cpp
+.SUFFIXES: .C .cpp .f .f90
 
 .cpp.o:
 	$(CPlusPlus) $(C_PLUS_FLAGS) -c $< -o $@
@@ -34,6 +34,9 @@
 	$(CPlusPlus) $(C_PLUS_FLAGS) -c $< -o $@
 
 .f.o:
+	$(Fortran) $(FFLAGS) -c $< -o $@
+
+.f90.o:
 	$(Fortran) $(FFLAGS) -c $< -o $@
 
 #if HAVE_CC_PIC_FLAG
@@ -1298,6 +1301,36 @@ compiler_list:: Concat(compiler_list_,compiledir)		@@\
 Concat(compiler_list_,compiledir):: safe_append.pl		@@\
 	@perl safe_append.pl -v -f compiler_list -a compiledir	@@\
 XCOMM End translation of func(F_COMPILER_TARGET)
+#endif /* F_COMPILER_TARGET */
+
+
+#ifndef F90_COMPILER_TARGET
+#define F90_COMPILER_TARGET(compiledir,compiler,flags_macro_name,has_recursion) @@\
+XCOMM Begin translation of func(F90_COMPILER_TARGET) @@\
+all:: compiledir compiledir/Makefile				@@\
+	cd compiledir; $(MAKE)					@@\
+								@@\
+compiledir:							@@\
+	mkdir compiledir					@@\
+								@@\
+compiledir/Imakefile: F90Imakefile				@@\
+	cd compiledir; /bin/rm -f Imakefile			@@\
+	cd compiledir; ln -s ../F90Imakefile Imakefile		@@\
+								@@\
+compiledir/Makefile: compiledir compiledir/Imakefile	@@\
+	cd compiledir; ../../condor_imake -I../../../config \	@@\
+		-I.. \	@@\
+		-DF_COMPILER=compiler	\			@@\
+		-DFLAGS_MACRO_NAME=flags_macro_name		@@\
+								@@\
+clean::								@@\
+	rm -rf compiledir compiler_list				@@\
+								@@\
+compiler_list:: Concat(compiler_list_,compiledir)		@@\
+								@@\
+Concat(compiler_list_,compiledir):: safe_append.pl		@@\
+	@perl safe_append.pl -v -f compiler_list -a compiledir	@@\
+XCOMM End translation of func(F90_COMPILER_TARGET)
 #endif /* F_COMPILER_TARGET */
 
 
