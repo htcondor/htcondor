@@ -905,6 +905,10 @@
 			</FileConfiguration>
 		</File>
 		<File
+			RelativePath="..\src\condor_util_lib\mark_thread.c"
+			>
+		</File>
+		<File
 			RelativePath="..\src\condor_util_lib\match_prefix.c"
 			>
 			<FileConfiguration
