@@ -34,10 +34,9 @@
 #define DLL_IMPORT_MAGIC  /* a no-op on Unix */
 #endif
 
-/* The handy __FUNCTION__ macro is gcc specific; give
- * other platforms something to use.
+/* If this platform doesn't give us __FUNCTION__ create a default.
  */
-#ifndef __GNUC__
+#ifndef __FUNCTION__
 #define __FUNCTION__ "UNKNOWN"
 #endif
 
