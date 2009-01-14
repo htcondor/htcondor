@@ -3056,34 +3056,6 @@ Configuring The Startd Policy.
    that, when \Expr{True}, defines that a preempted
    Condor job is to be vacated, instead of killed.
 
-\item[\Macro{WANT\_HOLD}] \label{param:WantHold}
-\label{param:WantHoldReason} \label{param:WantHoldReasonSubCode} A
-boolean expression that, when \Expr{True}, causes a preempted job to
-be put on hold rather than simply returning immediately to the idle
-state.  The value of \AdAttr{HoldReasonCode} is 21.  The default
-values of \AdAttr{HoldReason} and \AdAttr{HoldReasonSubCode} may be
-overridden by setting \Macro{WANT\_HOLD\_REASON} (string expression)
-and/or \Macro{WANT\_HOLD\_SUBCODE} (integer expression).
-
-Below is an example that puts jobs on hold if they drastically overuse
-the available memory, indicating something either wrong with the job
-or the specified job requirements.  (Note that for some types of
-applications it may make sense to compare \AdAttr{ImageSize} to a
-reasonable fraction of available \AdAttr{Memory}, rather than
-\AdAttr{VirtualMemory}, as in the example below.  However, there are
-some cases where a large virtual image size is typically not an
-indicator of overuse of physical RAM, for example, an application that
-mmaps a large file and reads through it sequentially.)
-
-\begin{verbatim}
-MEMORY_EXCEEDED = (TARGET.ImageSize/1024 > 0.9*VirtualMemory)
-PREEMPT = $(MEMORY_EXCEEDED)
-WANT_SUSPEND = $(MEMORY_EXCEEDED) =!= True
-WANT_HOLD = $(MEMORY_EXCEEDED)
-WANT_HOLD_REASON = ifThenElse($(MEMORY_EXCEEDED),"ImageSize too big.",undefined)
-WANT_HOLD_SUBCODE = 12
-\end{verbatim}
-
 \item[\Macro{IS\_OWNER}] \label{param:IsOwner}  A boolean expression that
    defaults to being defined as
 \begin{verbatim}
