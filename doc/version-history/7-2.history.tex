@@ -88,6 +88,11 @@ Mac OS X 10.5 platform.  \Condor{configure} now correctly detects shared
 library requirements when installing the Condor binaries on the Mac OS
 X 10.5 platform.
 
+\item Fixed a bug where execute-side daemons that were started before the
+\Condor{credd} would fail to match with Windows \SubmitCmd{run\_as\_owner}
+jobs. This condition would persist until the execute-side daemons were
+either restarted or reconfigured.
+
 \end{itemize}
 
 \noindent Known Bugs:
