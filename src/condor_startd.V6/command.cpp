@@ -569,7 +569,7 @@ command_query_ads( Service*, int, Stream* stream)
 	ClassAdList ads;
 	int more = 1, num_ads = 0;
    
-	dprintf( D_ALWAYS, "In command_query_ads\n" );
+	dprintf( D_FULLDEBUG, "In command_query_ads\n" );
 
 	stream->decode();
     stream->timeout(15);
