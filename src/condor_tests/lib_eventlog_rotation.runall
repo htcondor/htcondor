@@ -1,0 +1,83 @@
+#!/bin/env perl
+use strict;
+use warnings;
+
+my %params;
+my @ARGS = ( "--force", "--no-pid" );
+my $skip = 0;
+my $usage = "usage: $0 [--start <name>] [/<pattern>/] [run opts]";
+foreach my $n ( 0 .. $#ARGV )
+{
+    my $arg = $ARGV[$n];
+    my $arg1 = ( $n >= $#ARGV ) ? undef : $ARGV[$n+1];
+    if ( $skip > 0 ) {
+	$skip--;
+	next;
+    }
+    if ( $arg eq "--start" ) {
+	if ( !defined $arg1 ) {
+	    print STDERR "$usage\n";
+	    exit 1;
+	}
+	$params{start} = $arg1;
+	$skip = 1;
+    }
+    elsif ( $arg =~ /^\/(.*)\/$/ ) {
+	$params{pat} = $1;
+    }
+    else {
+	push( @ARGS, $arg );
+    }
+}
+
+my @names =
+qw (
+    defaults
+    no_rotations_1
+    no_rotations_2
+    no_rotations_3
+
+    w_old_rotations
+    w_old_rotations_2_loops
+    w_2_rotations
+    w_2_rotations_2_loops
+    w_5_rotations
+    w_20_rotations
+    w_20_rotations_2_loops
+    w_20_rotations_20_loops
+
+    reader_simple
+    reader_old_rotations
+    reader_old_rotations_2_loops
+    reader_2_rotations
+    reader_2_rotations_2_loops
+    reader_20_rotations
+    reader_20_rotations_2_loops
+    reader_20_rotations_20_loops
+);
+
+foreach my $name ( @names ) {
+    my $test = sprintf( "./lib_eventlog_rotation-%s.run %s",
+			$name, join(" ", @ARGS) );
+    if ( $params{start} ) {
+	if ( $name =~ /$params{start}/ ) {
+	    delete $params{start};
+	}
+	else {
+	    next;
+	}
+    }
+    elsif ( $params{pat} ) {
+	if ( ! ($name =~ /$params{pat}/) ) {
+	    next;
+	}
+    }
+    print "\n\n*** Running test '$name' ***\n";
+    system( $test );
+    if ( $? != 0 ) {
+	print "*** Failed on test '$name' ***\n";
+	print "$test\n";
+	exit( $?>>8 );
+    }
+}
+exit 0;
