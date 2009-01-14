@@ -108,10 +108,13 @@ CC_SHARED_FLAGS = @cc_shared_flags@
 #define HAS_GNU_G77 @has_gnu_g77@
 GNU_G77 = @_cv_gnu_g77@ 
 
+#define HAS_GNU_GFORTRAN @has_gnu_gfortran@
+GNU_GFORTRAN = @_cv_gnu_gfortran@ 
+
 #define HAS_VENDOR_F77 @has_vendor_f77@
 VENDOR_F77 = @_cv_vendor_f77@ 
 
-#if HAS_GNU_G77 || HAS_VENDOR_F77
+#if HAS_GNU_G77 || HAS_GNU_GFORTRAN || HAS_VENDOR_F77
 #define HAS_FORTRAN YES
 #else
 #define HAS_FORTRAN NO

@@ -405,7 +405,7 @@ if [ A$CONDOR_COMPILE = Ayes ]; then
 	 # Make certain condor_syscall_lib appears on the link line before any of
 	 # the following language-helper libraries.  Note variable $brokenbase is
 	 # currently set to the library name we may match on.
-     -lstdc++ | -lg++ | -lf2c | -lg2c | -lp2c | -lftn | -lf77 | -lF77 | -lfrtbegin)
+     -lstdc++ | -lg++ | -lgfortranbegin | -lf2c | -lg2c | -lp2c | -lftn | -lf77 | -lF77 | -lfrtbegin)
 
 		# if we see -lstdc++ specifically, then replace it with the archive
 		# version that we ship with Condor. XXX This might need tweaking if

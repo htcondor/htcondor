@@ -373,7 +373,7 @@ print "Ready for Testing\n";
 # line, we just use that.  otherwise, we search for all subdirectories
 # in the current directory that might be compiler subdirs...
 if( ! @compilers ) {
-	@compilers = ("g77", "gcc", "gpp");
+	@compilers = ("g77", "gcc", "gpp", "gfortran");
 }
 
 if($timestamp == 1) {

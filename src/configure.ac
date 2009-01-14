@@ -1268,6 +1268,14 @@ else
   _cv_has_gnu_g77="YES"
 fi
 
+# And check for gfortan as well.
+AC_PATH_PROG([_cv_gnu_gfortran],[gfortran],[no],[$PATH])
+if test "$_cv_gnu_gfortran" = "no" ; then
+  _cv_has_gnu_gfortran="NO"
+else
+  _cv_has_gnu_gfortran="YES"
+fi
+
 # now, look for everything else, depending on our platform.  if it's
 # Linux or Darwin, we know the "vendor" compilers are really gcc, so
 # we can bail without doing any real work.  otherwise, we have to
@@ -1321,6 +1329,7 @@ else
   fi
 fi
 AC_SUBST([has_gnu_g77],[$_cv_has_gnu_g77])
+AC_SUBST([has_gnu_gfortran],[$_cv_has_gnu_gfortran])
 AC_SUBST([has_vendor_cc],[$_cv_has_vendor_cc])
 AC_SUBST([has_vendor_cplus],[$_cv_has_vendor_cplus])
 AC_SUBST([has_vendor_f77],[$_cv_has_vendor_f77])
