@@ -990,6 +990,8 @@ fclose_wrapper( FILE *stream, int maxRetries )
 int
 mkargv( int* argc, char* argv[], char* line )
 {
+	// prototype
+	int _condor_mkargv( int* argc, char* argv[], char* line );
 	return( _condor_mkargv(argc, argv, line) );
 }
 
