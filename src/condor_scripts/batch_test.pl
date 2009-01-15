@@ -771,11 +771,12 @@ foreach my $compiler (@compilers)
         	my $status = $?;
 
 			$currentgroup -= 1;
-			debug( "informed $child gone yeilding test $test{$child}\n",2);
 	
 			if(! defined $test{$child}) {
 				debug("Can't find jobname for child?<ignore>\n",2);
 				next;
+			} else {
+				debug( "informed $child gone yeilding test $test{$child}\n",2);
 			}
 
         	( my $test_name) = $test{$child} =~ /(.*)\.run$/;
