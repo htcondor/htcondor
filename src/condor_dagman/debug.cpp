@@ -52,7 +52,7 @@ static void debug_cache_insert(int flags, const char *fmt, va_list args);
 
 /*--------------------------------------------------------------------------*/
 void
-debug_printf( debug_level_t level, char *fmt, ... ) {
+debug_printf( debug_level_t level, const char *fmt, ... ) {
 	if( DEBUG_LEVEL( level ) ) {
 		if (cache_enabled == false ||
 			(cache_enabled == true && cache_is_caching == false))
@@ -74,7 +74,7 @@ debug_printf( debug_level_t level, char *fmt, ... ) {
 
 /*--------------------------------------------------------------------------*/
 void
-debug_dprintf( int flags, debug_level_t level, char *fmt, ... ) {
+debug_dprintf( int flags, debug_level_t level, const char *fmt, ... ) {
 
 	if( DEBUG_LEVEL( level ) ) {
 
@@ -105,7 +105,7 @@ debug_dprintf( int flags, debug_level_t level, char *fmt, ... ) {
 
 /*--------------------------------------------------------------------------*/
 void
-debug_error( int error, debug_level_t level, char *fmt, ... ) {
+debug_error( int error, debug_level_t level, const char *fmt, ... ) {
 
 	// make sure these come out before emitting the error
 	debug_cache_flush();
