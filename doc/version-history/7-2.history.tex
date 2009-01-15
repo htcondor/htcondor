@@ -41,23 +41,28 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item \Attr{JAVA\_MAXHEAP\_ARGUMENT} now defaults to \Opt{-Xmx1024m}.
-The installation process of Condor will reset this to the undefined 
-value in the local configuration file if the detected JVM is not from Sun.
+\item The configuration variable \Macro{JAVA\_MAXHEAP\_ARGUMENT} 
+  now defaults to the value \Opt{-Xmx1024m}.
+  The installation process of Condor resets this value to \Expr{UNDEFINED} 
+  in the local configuration file, if the detected JVM is not from 
+  Sun Microsystems.
 
 \item A new feature has been added to the \Condor{master} that makes
-  it possible to append the DC\_DAEMON\_LIST configuration macro
-  instead of overwriting it.  To take advantage of this, put a '+' as
-  the first character in your DC\_DAEMON\_LIST definition.  For example:
+  it possible to append to the \MacroNI{DC\_DAEMON\_LIST} 
+  configuration variable, instead of overwriting it. 
+  To take advantage of this, place the plus character  ('\verb@+@') as
+  the first character in the \MacroNI{DC\_DAEMON\_LIST} definition.  
+  For example:
 \begin{verbatim}
-DAEMON_LIST	= NEW_DAEMON
-DC_DAEMON_LIST	= +NEW_DAEMON
+  DAEMON_LIST     = NEW_DAEMON
+  DC_DAEMON_LIST  = +NEW_DAEMON
 \end{verbatim}
 
 % PR 959
-\item Added the DAGMAN\_COPY\_TO\_SPOOL configuration macro to control
-whether the condor\_dagman binary gets copied to the spool directory
-when a DAG is submitted.  See \ref{param:DAGManCopyToSpool} for details.
+\item The new configuration variable \Macro{DAGMAN\_COPY\_TO\_SPOOL}
+  controls whether the \Condor{dagman} binary gets copied to 
+  the spool directory when a DAG is submitted.
+  See \ref{param:DAGManCopyToSpool} for details.
 
 \end{itemize}
 
@@ -72,25 +77,27 @@ on invocation.
 unresponsive run when. Further, the application would start to increasingly 
 consume more memory when run.
 
-\item Fixed a bug on UNIX where \Condor{configure} would provide
-incorrect defaults for the \Attr{JAVA\_MAXHEAP\_ARGUMENT} attribute in
+\item Fixed a bug on Unix platforms where \Condor{configure} would provide
+incorrect defaults for the \MacroNI{JAVA\_MAXHEAP\_ARGUMENT} attribute in
 the installed configuration files. The new current default for Sun Java
 JVMs is \Opt{-Xmx1024m}.
 
-\item Fixed a bug on UNIX where \Condor{configure} would imply that using
-user ``root'' or UID 0 for \Opt{--owner} is a good thing--it is not,
-and then complain that it could not find user ``root'' in the password
+\item Fixed a bug on Unix platforms where \Condor{configure} would imply
+  that using the Unix user \Login{root} or UID 0 for the \Opt{--owner} 
+  option is a good thing--it is not,
+and then complain that it could not find user \Login{root} in the password
 file in this circumstance.
 
-\item Fixed a bug on UNIX where \Condor{configure} would emit errors
+\item Fixed a bug on Unix platforms where \Condor{configure} would emit errors
 about not being able to execute \Prog{ldd} when installing Condor on the
 Mac OS X 10.5 platform.  \Condor{configure} now correctly detects shared
 library requirements when installing the Condor binaries on the Mac OS
 X 10.5 platform.
 
-\item Fixed a bug where execute-side daemons that were started before the
-\Condor{credd} would fail to match with Windows \SubmitCmd{run\_as\_owner}
-jobs. This condition would persist until the execute-side daemons were
+\item Fixed a bug where execute-side daemons started before the
+\Condor{credd} would fail to match with Windows jobs with
+\SubmitCmd{run\_as\_owner} set.
+This condition persisted until the execute-side daemons were
 either restarted or reconfigured.
 
 \end{itemize}
