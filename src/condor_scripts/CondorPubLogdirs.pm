@@ -138,7 +138,7 @@ sub StopLogServer
 	my $servername = $ENV{SEND_LOGS};
 	my $line = "";
 	debug( "Log Server seems to be <<$servername>>\n",2);
-	if($servername =~ /^(.*\/LogServer\d+)$/){
+	if(exists $ENV{SEND_LOGS}){
 		debug( "LogServer running{env clue}\n",2);
 		ShutdownServer( $1, $storehandle);
 	} elsif(-f "LogServerHandle"){
