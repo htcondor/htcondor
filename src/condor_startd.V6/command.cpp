@@ -26,7 +26,9 @@
 /* XXX fix me */
 #include "../condor_sysapi/sysapi.h"
 
+#ifndef max
 #define max(x,y) (((x) < (y)) ? (y) : (x))
+#endif
 
 extern "C" int tcp_accept_timeout( int, struct sockaddr*, int*, int );
 

@@ -295,12 +295,14 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 			respad.Assign(ATTR_TREQ_JOBID_DENY_LIST, "");
 
 		break;
-		
+
+#ifndef WIN32 // suppress warning C4809: all values of has_constraint have been covered
 		default:
 			EXCEPT("If this except happens, the boolean type has more states "
 				"than true and false. Very unlikely and indicative of a "
 				"compiler failure.");
 			break;
+#endif
 	}
 
 	// At this point, modify_allow_jobs contains an array of jobids the

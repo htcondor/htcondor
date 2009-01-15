@@ -145,6 +145,16 @@ static char *formatTimeHeader(struct tm *tm) {
 		timeFormat = param( "DEBUG_TIME_FORMAT" );
 		if (!timeFormat) {
 			timeFormat = strdup("%m/%d %H:%M:%S ");
+		} else {
+			// Skip enclosing quotes
+			char *p;
+			if (*timeFormat == '"') {
+				timeFormat++;
+			}
+			p = timeFormat;
+			while (*p++) {
+				if (*p == '"') *p = '\0';
+			}
 		}
 	}
 	strftime(timebuf, 80, timeFormat, tm);
@@ -981,6 +991,8 @@ fclose_wrapper( FILE *stream, int maxRetries )
 int
 mkargv( int* argc, char* argv[], char* line )
 {
+	// prototype
+	int _condor_mkargv( int* argc, char* argv[], char* line );
 	return( _condor_mkargv(argc, argv, line) );
 }
 

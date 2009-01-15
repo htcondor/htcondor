@@ -87,14 +87,14 @@ $executed = sub {
 	$job = $info{"job"};
 	
 	if ( $gotHold ) {
-		CondorTest::debug("Good - Job $cluster.$job and began execution ",1);
-			  "after being held.\n";
+		CondorTest::debug("Good - Job $cluster.$job and began execution ".
+			  "after being held.\n",1);
 	##
 	## We never were on hold!
 	##
 	} else {
-		CondorTest::debug("Bad - Job $cluster.$job began execution without ever ",1);
-			  "being put on hold.\n";
+		CondorTest::debug("Bad - Job $cluster.$job began execution without ever ".
+			  "being put on hold.\n",1);
 		exit(1);
 	}
 };
@@ -135,8 +135,8 @@ $submit = sub {
 	## Check to make sure that it's on hold
 	## 
 	if ( $qstat == HELD) {
-		CondorTest::debug("Good - Job $cluster.$job went on hold as soon as it ",1);
-			  "was submitted.\n";
+		CondorTest::debug("Good - Job $cluster.$job went on hold as soon as it ".
+			  "was submitted.\n",1);
 		$gotHold = 1;
 	##
 	## The job didn't go on hold, so we need to abort
@@ -196,8 +196,8 @@ $release = sub {
 	if ( $gotHold ){
 		CondorTest::debug("Good - Job $cluster.$job was released after being put on hold.\n",1);
 	} else {
-		CondorTest::debug("Bad - Job $cluster.$job received a release event without ever ",1);
-			  "being put on hold.\n";
+		CondorTest::debug("Bad - Job $cluster.$job received a release event without ever ".
+			  "being put on hold.\n",1);
 		exit(1);
 	}
 	

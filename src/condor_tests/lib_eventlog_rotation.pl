@@ -25,15 +25,16 @@ use Cwd;
 my $testdesc =  'lib_eventlog_rotation - runs eventlog rotation tests';
 my $testname = "lib_eventlog_rotation";
 my $testbin = "../testbin_dir";
-my %programs = ( reader		=> "$testbin/test_log_reader",
+my %programs = ( reader			=> "$testbin/test_log_reader",
 				 reader_state	=> "$testbin/test_log_reader_state",
-				 writer		=> "$testbin/test_log_writer", );
+				 writer			=> "$testbin/test_log_writer", );
 
-my $event_size = ( 100000 / 1160 );
+my $DefaultMaxEventLog = 1000000;
+my $EventSize = ( 100045 / 1177 );
 my @tests =
     (
 
-     # Default test
+     # Test with default configuration
      {
 		 name => "defaults",
 		 config => {
@@ -41,89 +42,85 @@ my @tests =
 			 #"EVENT_LOG_COUNT_EVENTS"	=> "FALSE",
 			 #"ENABLE_USERLOG_LOCKING"	=> "TRUE",
 			 #"EVENT_LOG_MAX_ROTATIONS"	=> 1,
-			 #"EVENT_LOG_MAX_SIZE"	=> -1,
-			 #"MAX_EVENT_LOG"		=> 1000000,
+			 #"EVENT_LOG_MAX_SIZE"		=> -1,
+			 #"MAX_EVENT_LOG"			=> 1000000,
 		 },
-		 loops				=> 1,
-		 size_mult			=> 1.25,
-		 writer => {
-		 },
-     },
-     {
-		 name		=> "no_rotations_1",
-		 config		=> {
-			 "EVENT_LOG"		=> "EventLog",
-			 "EVENT_LOG_COUNT_EVENTS"	=> "FALSE",
-			 "ENABLE_USERLOG_LOCKING"	=> "TRUE",
-			 #"EVENT_LOG_MAX_ROTATIONS"	=> 0,
-			 "EVENT_LOG_MAX_SIZE"	=> 0,
-			 #"MAX_EVENT_LOG"		=> 0,
-		 },
-		 loops				=> 1,
-		 size_mult			=> 1.25,
 		 writer => {
 		 },
      },
 
+     # Tests with rotations disabled
      {
-		 name		=> "no_rotations_2",
+		 name		=> "no_rotations_1",
 		 config		=> {
-			 "EVENT_LOG"		=> "EventLog",
+			 "EVENT_LOG"			=> "EventLog",
 			 "EVENT_LOG_COUNT_EVENTS"	=> "FALSE",
 			 "ENABLE_USERLOG_LOCKING"	=> "TRUE",
 			 #"EVENT_LOG_MAX_ROTATIONS"	=> 0,
-			 "EVENT_LOG_MAX_SIZE"	=> 0,
-			 #"MAX_EVENT_LOG"		=> 0,
+			 "EVENT_LOG_MAX_SIZE"		=> 0,
+			 #"MAX_EVENT_LOG"			=> 0,
 		 },
-		 loops				=> 1,
-		 size_mult			=> 1.25,
 		 writer => {
+			 "--max-rotations"			=> 1,
+		 },
+     },
+     {
+		 name		=> "no_rotations_2",
+		 config		=> {
+			 "EVENT_LOG"				=> "EventLog",
+			 "EVENT_LOG_COUNT_EVENTS"	=> "FALSE",
+			 "ENABLE_USERLOG_LOCKING"	=> "TRUE",
+			 #"EVENT_LOG_MAX_ROTATIONS"	=> 0,
+			 "EVENT_LOG_MAX_SIZE"		=> 0,
+			 #"MAX_EVENT_LOG"			=> 0,
+		 },
+		 writer => {
+			 "--max-rotations"			=> 1,
 		 },
      },
      {
 		 name		=> "no_rotations_3",
 		 config		=> {
-			 "EVENT_LOG"		=> "EventLog",
+			 "EVENT_LOG"				=> "EventLog",
 			 "EVENT_LOG_COUNT_EVENTS"	=> "FALSE",
 			 "ENABLE_USERLOG_LOCKING"	=> "TRUE",
 			 #"EVENT_LOG_MAX_ROTATIONS"	=> 0,
-			 #"EVENT_LOG_MAX_SIZE"	=> 0,
-			 "MAX_EVENT_LOG"		=> 0,
+			 #"EVENT_LOG_MAX_SIZE"		=> 0,
+			 "MAX_EVENT_LOG"			=> 0,
 		 },
-		 loops				=> 1,
-		 size_mult			=> 1.25,
 		 writer => {
+			 "--max-rotations"			=> 1,
 		 },
      },
 
+     # Tests with ".old" rotations
      {
 		 name		=> "w_old_rotations",
 		 config		=> {
-			 "EVENT_LOG"		=> "EventLog",
+			 "EVENT_LOG"				=> "EventLog",
 			 "EVENT_LOG_COUNT_EVENTS"	=> "TRUE",
 			 "ENABLE_USERLOG_LOCKING"	=> "TRUE",
 			 "EVENT_LOG_MAX_ROTATIONS"	=> 1,
-			 "EVENT_LOG_MAX_SIZE"	=> 10000,
-			 #"MAX_EVENT_LOG"		=> -1,
+			 "EVENT_LOG_MAX_SIZE"		=> 10000,
+			 #"MAX_EVENT_LOG"			=> -1,
 		 },
-		 loops				=> 1,
-		 size_mult			=> 1.25,
+		 auto				=> 1,
 		 writer => {
 		 },
      },
 
+     # Tests with 2 rotations (.1, .2)
      {
 		 name		=> "w_2_rotations",
 		 config		=> {
-			 "EVENT_LOG"		=> "EventLog",
+			 "EVENT_LOG"				=> "EventLog",
 			 "EVENT_LOG_COUNT_EVENTS"	=> "TRUE",
 			 "ENABLE_USERLOG_LOCKING"	=> "TRUE",
 			 "EVENT_LOG_MAX_ROTATIONS"	=> 2,
-			 "EVENT_LOG_MAX_SIZE"	=> 10000,
-			 #"MAX_EVENT_LOG"		=> -1,
+			 "EVENT_LOG_MAX_SIZE"		=> 10000,
+			 #"MAX_EVENT_LOG"			=> -1,
 		 },
-		 loops				=> 1,
-		 size_mult			=> 1.25,
+		 auto				=> 1,
 		 writer => {
 		 },
      },
@@ -131,15 +128,14 @@ my @tests =
      {
 		 name		=> "w_5_rotations",
 		 config		=> {
-			 "EVENT_LOG"		=> "EventLog",
+			 "EVENT_LOG"				=> "EventLog",
 			 "EVENT_LOG_COUNT_EVENTS"	=> "TRUE",
 			 "ENABLE_USERLOG_LOCKING"	=> "TRUE",
 			 "EVENT_LOG_MAX_ROTATIONS"	=> 5,
-			 "EVENT_LOG_MAX_SIZE"	=> 10000,
-			 #"MAX_EVENT_LOG"		=> -1,
+			 "EVENT_LOG_MAX_SIZE"		=> 10000,
+			 #"MAX_EVENT_LOG"			=> -1,
 		 },
-		 loops				=> 1,
-		 size_mult			=> 1.25,
+		 auto				=> 1,
 		 writer => {
 		 },
      },
@@ -147,31 +143,32 @@ my @tests =
      {	
 		 name		=> "w_20_rotations",
 		 config		=> {
-			 "EVENT_LOG"		=> "EventLog",
+			 "EVENT_LOG"				=> "EventLog",
 			 "EVENT_LOG_COUNT_EVENTS"	=> "TRUE",
 			 "ENABLE_USERLOG_LOCKING"	=> "TRUE",
 			 "EVENT_LOG_MAX_ROTATIONS"	=> 20,
-			 "EVENT_LOG_MAX_SIZE"	=> 10000,
-			 #"MAX_EVENT_LOG"		=> -1,
+			 "EVENT_LOG_MAX_SIZE"		=> 10000,
+			 #"MAX_EVENT_LOG"			=> -1,
 		 },
-		 loops				=> 1,
-		 size_mult			=> 1.25,
+		 auto				=> 1,
 		 writer => {
 		 },
      },
 
+	 # ##########################
+	 # Reader tests start here
+	 # ##########################
+
      {
 		 name		=> "reader_simple",
 		 config		=> {
-			 "EVENT_LOG"		=> "EventLog",
+			 "EVENT_LOG"				=> "EventLog",
 			 "EVENT_LOG_COUNT_EVENTS"	=> "TRUE",
 			 "ENABLE_USERLOG_LOCKING"	=> "TRUE",
 			 "EVENT_LOG_MAX_ROTATIONS"	=> 0,
-			 #"EVENT_LOG_MAX_SIZE"	=> 10000,
-			 #"MAX_EVENT_LOG"		=> -1,
+			 #"EVENT_LOG_MAX_SIZE"		=> 10000,
+			 #"MAX_EVENT_LOG"			=> -1,
 		 },
-		 loops				=> 1,
-		 size_mult			=> 0.1,
 		 writer => {
 		 },
 		 reader => {
@@ -181,54 +178,51 @@ my @tests =
      {
 		 name		=> "reader_old_rotations",
 		 config		=> {
-			 "EVENT_LOG"		=> "EventLog",
+			 "EVENT_LOG"				=> "EventLog",
 			 "EVENT_LOG_COUNT_EVENTS"	=> "TRUE",
 			 "ENABLE_USERLOG_LOCKING"	=> "TRUE",
 			 "EVENT_LOG_MAX_ROTATIONS"	=> 1,
-			 "EVENT_LOG_MAX_SIZE"	=> 10000,
+			 "EVENT_LOG_MAX_SIZE"		=> 10000,
 		 },
-		 loops				=> 1,
-		 size_mult			=> 0.95,
+		 auto						=> 1,
 		 writer => {
 		 },
 		 reader => {
-			 persist			=> 1,
+			 persist				=> 1,
 		 },
      },
 
      {
 		 name		=> "reader_2_rotations",
 		 config		=> {
-			 "EVENT_LOG"		=> "EventLog",
+			 "EVENT_LOG"				=> "EventLog",
 			 "EVENT_LOG_COUNT_EVENTS"	=> "TRUE",
 			 "ENABLE_USERLOG_LOCKING"	=> "TRUE",
 			 "EVENT_LOG_MAX_ROTATIONS"	=> 2,
-			 "EVENT_LOG_MAX_SIZE"	=> 10000,
+			 "EVENT_LOG_MAX_SIZE"		=> 10000,
 		 },
-		 loops				=> 1,
-		 size_mult			=> 0.95,
+		 auto						=> 1,
 		 writer => {
 		 },
 		 reader => {
-			 persist			=> 1,
+			 persist				=> 1,
 		 },
      },
 
      {
 		 name		=> "reader_20_rotations",
 		 config		=> {
-			 "EVENT_LOG"		=> "EventLog",
+			 "EVENT_LOG"				=> "EventLog",
 			 "EVENT_LOG_COUNT_EVENTS"	=> "TRUE",
 			 "ENABLE_USERLOG_LOCKING"	=> "TRUE",
 			 "EVENT_LOG_MAX_ROTATIONS"	=> 20,
-			 "EVENT_LOG_MAX_SIZE"	=> 10000,
+			 "EVENT_LOG_MAX_SIZE"		=> 10000,
 		 },
-		 loops				=> 1,
-		 size_mult			=> 0.98,
+		 auto						=> 1,
 		 writer => {
 		 },
 		 reader => {
-			 persist			=> 1,
+			 persist		=> 1,
 		 },
      },
 	 );
@@ -252,7 +246,7 @@ sub usage( )
 		"  -h|--help     this help\n";
 }
 
-sub RunWriter( $$$$$ );
+sub RunWriter( $$$$$$ );
 sub RunReader( $$$ );
 sub ReadEventlogs( $$ );
 sub ProcessEventlogs( $$ );
@@ -389,93 +383,159 @@ print CONFIG "TEST_LOG_WRITER_LOG = $fulldir/writer.log\n";
 close( CONFIG );
 $ENV{"CONDOR_CONFIG"} = $config;
 
+# ######################
 # Basic calculations
-my $default_max_size = 1000000;
-my $max_size = $default_max_size;
-my $max_rotations = 1;
+# ######################
+my %params;
+
+# Max eventlog setting
+$params{max_size} = $DefaultMaxEventLog;
 if ( exists $test->{config}{"EVENT_LOG_MAX_SIZE"} ) {
-    $max_size = $test->{config}{"EVENT_LOG_MAX_SIZE"};
+    $params{max_size} = $test->{config}{"EVENT_LOG_MAX_SIZE"};
 }
 elsif ( exists $test->{config}{"MAX_EVENT_LOG"} ) {
-    $max_size = $test->{config}{"MAX_EVENT_LOG"};
+    $params{max_size} = $test->{config}{"MAX_EVENT_LOG"};
 }
+
+# Max rotation setting
+$params{max_rotations} = 1;
 if ( exists $test->{config}{"EVENT_LOG_MAX_ROTATIONS"} ) {
-    $max_rotations = $test->{config}{"EVENT_LOG_MAX_ROTATIONS"};
+    $params{max_rotations} = $test->{config}{"EVENT_LOG_MAX_ROTATIONS"};
 }
-elsif ( $max_size == 0 ) {
-    $max_rotations = 0;
-    $max_size = $default_max_size;
+elsif ( $params{max_size} == 0 ) {
+    $params{max_rotations} = 0;
+    $params{max_size} = $DefaultMaxEventLog;
 }
-my $total_files = $max_rotations + 1;
-my $total_loops;
+
+# Stop at max rotation specified?
+if ( exists $test->{auto} ) {
+    $test->{writer}{"--max-user"} = 0;
+    $test->{writer}{"--max-global"} = 0;
+}
+
+# Number of event log files generated
+$params{files} = $params{max_rotations} + 1;
+
+# Number of loops
 if ( exists $settings{loops} ) {
-    $total_loops = $settings{loops};
+    $params{loops} = $settings{loops};
     $test->{loops} = $settings{loops};
 }
 elsif ( exists $test->{loops} ) {
-    $total_loops = $test->{loops};
+    $params{loops} = $test->{loops};
 }
 else {
-    $total_loops = 1;
+    $params{loops} = 1;
     $test->{loops} = 1;
 }
-my $total_events;
-my $loop_events;
-if ( exists $test->{loop_events} ) {
-    $loop_events = $test->{loop_events};
-    $total_events = $loop_events * $total_loops;
+
+# User log size
+if ( !exists $test->{user_size_mult} ) {
+	$test->{user_size_mult} = $params{files} + 0.25;
 }
-elsif ( exists $test->{events} ) {
-    $loop_events = int($test->{events} / $total_loops);
-    $total_events = $test->{events};
+if ( !exists( $test->{user_size} ) ) {
+	$test->{user_size} = $params{max_size} * $test->{user_size_mult};
+}
+if ( $test->{user_size} > 0 ) {
+    $test->{writer}{"--max-user"} = $test->{user_size};
+}
+
+# Event log size
+if ( !exists $test->{global_size_mult} ) {
+	$test->{global_size_mult} = 1.25;
+}
+if ( !exists( $test->{global_size} ) ) {
+	$test->{global_size} = $params{max_size} * $test->{global_size_mult};
+}
+if ( $test->{global_size} > 0 ) {
+    $test->{writer}{"--max-global"} = $test->{global_size};
+}
+
+# Total size
+$params{total_size} = ( $test->{global_size} * $params{files} );
+if ( $params{total_size} > $test->{user_size} ) {
+	$params{total_size} = $test->{user_size};
+}
+
+# Subtract off some fixed amounts for header, submit & terminate event(s)
+$params{total_esize}  = $params{total_size};
+$params{total_esize} -= ( 256 * $params{files} );		# header events
+$params{total_esize} -= ( 80 * $params{loops} );		# submit events
+$params{total_esize} -= ( 450 * ($params{loops}-1) );	# terminate events
+
+# This depends on the number of loops per file
+$params{lpf}         = ( $params{loops} / $params{files} );
+$params{max_esize}   = $params{max_size};
+$params{max_esize}   -= 256;							# header events
+$params{max_esize}   -= ( 80 * $params{lpf} );			# submit events
+$params{max_esize}   -= ( 450 * ($params{lpf}-1) );		# terminate events
+
+# Auto max rotations / loop
+if ( exists $test->{auto} ) {
+	my $fpl = int( ($params{files} / $params{loops}) + 0.99999 );
+    $test->{writer}{"--max-rotations"} = $fpl;
+}
+
+# Max # of rotations
+if ( !exists $test->{max_rotations} ) {
+	$test->{max_rotations} = 0;
+}
+if ( $test->{max_rotations} > 0 ) {
+    $test->{writer}{"--max-rotations"} =
+		int( 0.9999 + ($test->{max_rotations} / $test->{loops}) );
+	$params{loop_events}  = int( $params{max_esize} / $EventSize );
+	$params{total_events} = int( $params{total_esize} / $EventSize );
 }
 else {
-    my $mult = ( exists $test->{size_mult} ) ? $test->{size_mult} : 1.25;
-    $loop_events =
-		int($mult * $total_files * $max_size / ($event_size * $total_loops) );
-    $total_events = $loop_events * $total_loops;
+	$params{loop_events}  = int( $params{max_esize} / $EventSize );
+	$params{total_events} = $params{loop_events};
 }
 
-
-# Calculate num exec / procs
-if ( !exists $test->{writer}{"--num-exec"} ) {
-    my $num_procs = 1;
-    if ( exists( $test->{writer}{"--num-procs"} ) ) {
-		$num_procs = $test->{writer}{"--num-procs"};
-    }
-    else {
-		$test->{writer}{"--num-procs"} = $num_procs;
-    }
-    $test->{writer}{"--num-exec"} = int( $loop_events / $num_procs );
+# Min number of events expected to be written per loop
+if ( exists $test->{loop_min_events} ) {
+	$params{loop_min_events} = $test->{loop_min_events};
 }
+else {
+	$params{loop_min_events} = 0.9 * $params{loop_events};
+}
+
+# Min number of events expected to be written total
+if ( exists $test->{min_events} ) {
+	$params{total_min_events} = $test->{min_events}
+}
+else {
+	$params{total_min_events} = 0.9 * $params{total_events};
+}
+
+# Sleep time?  Probably --no-sleep
 if ( !exists $test->{writer}{"--sleep"} ) {
     $test->{writer}{"--no-sleep"} = undef;
 }
-
 
 # Expected results
 my %expect =
 	(
 	 final_mins => {
-		 num_files		=> $total_files,
-		 sequence		=> $total_files,
-		 num_events		=> $total_events,
-		 file_size		=> $max_size,
+		 num_files		=> $params{files},
+		 sequence		=> $params{files},
+		 file_size		=> $params{max_size},
+		 num_events		=> $params{total_min_events},
 	 },
 	 maxs => {
-		 file_size		=> $max_size + 512,
-		 total_size		=> ($max_size + 512) * $total_files,
+		 file_size		=> $params{max_size} + 1024,
+		 total_size		=> ($params{max_size} + 1024) * $params{files},
 	 },
 	 loop_mins => {
-		 num_files		=> int($total_files / $total_loops),
-		 sequence		=> int($total_files / $total_loops),
-		 file_size		=> $max_size / $total_loops,
-		 num_events		=> $loop_events,
+		 num_files		=> int($params{files} / $params{loops}),
+		 sequence		=> int($params{files} / $params{loops}),
+		 file_size		=> $params{max_size} / $params{loops},
+		 num_events		=> $params{loop_min_events},
 	 },
 	 cur_mins => {
 		 num_files		=> 0,
 		 sequence		=> 0,
 		 file_size		=> 0,
+		 toal_size		=> 0,
 		 num_events		=> 0,
 	 },
 	 );
@@ -502,13 +562,12 @@ if ( $settings{debug} ) {
     push( @writer_args, "--debug" );
     push( @writer_args, "D_FULLDEBUG" );
 }
-if ( exists $test->{writer}{file} ) {
-    push( @writer_args, $test->{writer}{file} );
-}
-else {
-    push( @writer_args, "/dev/null" );
-}
 
+# Userlog file
+if ( !exists $test->{writer}{file} ) {
+	$test->{writer}{file} = "$dir/userlog";
+}
+push( @writer_args, $test->{writer}{file} );
 
 # Generate the reader command line
 my @reader_args;
@@ -570,6 +629,9 @@ foreach my $k ( keys(%totals) ) {
 
 foreach my $loop ( 1 .. $test->{loops} )
 {
+	my $final = ( $loop == $test->{loops} );
+	printf "\n** Starting loop $loop %s**\n", $final ? "(final) " : "";
+
     foreach my $k ( keys(%{$expect{loop_mins}}) ) {
 		$expect{cur_mins}{$k} += $expect{loop_mins}{$k};
     }
@@ -582,7 +644,8 @@ foreach my $loop ( 1 .. $test->{loops} )
 
     # Run the writer
     my $run;
-    my $werrors += RunWriter( $loop, \%new, \%previous, \%totals, \$run );
+    my $werrors += RunWriter( $loop, $final,
+							  \%new, \%previous, \%totals, \$run );
     $errors += $werrors;
     if ( ! $run ) {
 		next;
@@ -731,15 +794,22 @@ exit( $errors == 0 ? 0 : 1 );
 # #######################################
 # Run the writer
 # #######################################
-sub RunWriter( $$$$$ )
+sub RunWriter( $$$$$$ )
 {
     my $loop = shift;
+	my $final = shift;
     my $new = shift;
     my $previous = shift;
     my $totals = shift;
     my $run = shift;
 
     my $errors = 0;
+
+	# Blow away any userlog file
+	if ( -f $writer_args[-1] ) {
+		print "Removing " . $writer_args[-1] . "\n" if ( $settings{verbose} );
+		unlink( $writer_args[-1] );
+	}
 
     my $cmd = "";
     my $vg_out = sprintf( "valgrind-writer-%02d.out", $loop );
@@ -749,6 +819,12 @@ sub RunWriter( $$$$$ )
 		$cmd .= " --log-file=$vg_full ";
     }
     $cmd .= join(" ", @writer_args );
+
+	# Prevent rotations on the final loop;
+	#   Has no effect if --max-rotations is not specified
+	if ( $final ) {
+		$cmd .= " --max-rotation-stop ";
+	}
     print "$cmd\n" if ( $settings{verbose} );
 
     if ( ! $settings{execute} ) {
@@ -1064,10 +1140,7 @@ sub CheckReaderOutput( $$$$ )
     }
 
 	if ( $nseq < 0 ) {
-		printf( STDERR
-				"ERROR: loop %d: no reader sequence\n",
-				$loop );
-		$errors++;
+		# do nothing
     }
     elsif ( $rseq < $new->{writer_sequence} ) {
 		printf( STDERR

@@ -22,7 +22,7 @@ use CondorTest;
 
 $cmd = 'job_core_leaveinqueue-false_java.cmd';
 $testdesc =  'Condor submit with policy set to not trigger for leave_in_queue - java U';
-$testname = "job_core_leaveinqueue-false_java";
+$testname = "job_core_leaveinqueue_java";
 
 my $killedchosen = 0;
 
