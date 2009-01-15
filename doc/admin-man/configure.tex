@@ -1241,6 +1241,14 @@ This macro
   When \Expr{False} (the default value), the time is printed like so:
   \Expr{<Month>/<Day> <Hour>:<Minute>:<Second>} in the local timezone.
 
+\item[\Macro{DEBUG\_TIME\_FORMAT}] \label{param:DebugTimeFormat}
+  This macro defines how to format the current time printed at the
+  start of each line in the daemon log files.  The value is a format 
+  string is passed to the C strftime function, so see that manual page for
+  complete details on your system.  If not defined, the default
+  value is \begin{verbatim} "%m/%d %H:%M:%S ".  
+\end{verbatim}
+
 \item[\MacroB{<SUBSYS>\_DEBUG}] \label{param:SubsysDebug}
 \index{SUBSYS\_DEBUG macro@\texttt{<SUBSYS>\_DEBUG} macro}
   All of the
