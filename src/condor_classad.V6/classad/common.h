@@ -49,6 +49,11 @@
 #define _STLP_NEW_PLATFORM_SDK
 #define _STLP_NO_OWN_IOSTREAMS 1
 
+// Disable warnings about possible loss of data, since "we know what
+// we are doing" and fixing them correctly would require too much 
+// time from one of us. (Maybe this should be a student exercise.)
+#pragma warning( disable : 4244 )
+
 #endif /* WIN32 */
 
 #include <stdio.h>
