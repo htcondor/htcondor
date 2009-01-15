@@ -147,10 +147,11 @@ static char *formatTimeHeader(struct tm *tm) {
 			timeFormat = strdup("%m/%d %H:%M:%S ");
 		} else {
 			// Skip enclosing quotes
+			char *p;
 			if (*timeFormat == '"') {
 				timeFormat++;
 			}
-			char *p = timeFormat;
+			p = timeFormat;
 			while (*p++) {
 				if (*p == '"') *p = '\0';
 			}
