@@ -22,7 +22,7 @@ use CondorTest;
 
 $cmd = 'job_core_perhold-false_java.cmd';
 $testdesc =  'Condor submit policy test for periodic_hold - java U';
-$testname = "job_core_perhold-false_java";
+$testname = "job_core_perhold_java";
 
 my %info;
 my $cluster;

@@ -23,7 +23,7 @@ Condor::DebugOn();
 
 $cmd = 'job_core_leaveinqueue-true_van.cmd';
 $testdesc =  'Condor submit with test for policy trigger of leave_in_queue - vanilla U';
-$testname = "job_core_leaveinqueue-true_van";
+$testname = "job_core_leaveinqueue_van";
 
 my $killedchosen = 0;
 

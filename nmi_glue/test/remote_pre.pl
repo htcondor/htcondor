@@ -252,6 +252,10 @@ if( !($ENV{NMI_PLATFORM} =~ /winnt/) ) {
     if( $? >> 8 ) {
         c_die("Can't build CondorPersonal.pm\n");
     }
+    system( "make CondorPubLogdirs.pm" );
+    if( $? >> 8 ) {
+        c_die("Can't build CondorPubLogdirs.pm\n");
+    }
 	print "About to run batch_test.pl -p\n";
 
 	system("perl $SrcDir/condor_scripts/batch_test.pl -p");

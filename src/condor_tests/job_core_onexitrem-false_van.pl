@@ -22,7 +22,7 @@ use CondorTest;
 
 $cmd = 'job_core_onexitrem-false_van.cmd';
 $testdesc =  'Condor submit policy test for PERIODIC_HOLD - vanilla U';
-$testname = "job_core_onexitrem-false_van";
+$testname = "job_core_onexitrem_van";
 
 my $killedchosen = 0;
 
