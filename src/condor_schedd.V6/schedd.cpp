@@ -10700,13 +10700,22 @@ Scheduler::RegisterTimers()
 		wallclocktid = -1;
 	}
 
+		// We've seen a test suite run where the schedd never called
+		// PeriodicExprHandler(). Add some debug statements so that
+		// we know why if it happens again.
 	if (PeriodicExprInterval.getMinInterval()>0) {
 		int time_to_next_run = PeriodicExprInterval.getTimeToNextRun();
 		periodicid = daemonCore->Register_Timer(
 			time_to_next_run,
 			time_to_next_run,
 			(Eventcpp)&Scheduler::PeriodicExprHandler,"PeriodicExpr",this);
+		dprintf( D_FULLDEBUG, "Registering PeriodicExprHandler(), next "
+				 "callback in %d seconds\n", time_to_next_run );
 	} else {
+		dprintf( D_FULLDEBUG, "Periodic expression evaluation disabled! "
+				 "(getMinInterval()=%f, PERIODIC_EXPR_INTERVAL=%d)\n",
+				 PeriodicExprInterval.getMinInterval(),
+				 param_integer("PERIODIC_EXPR_INTERVAL", 60) );
 		periodicid = -1;
 	}
 }
