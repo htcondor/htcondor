@@ -28,6 +28,8 @@
 #include "condor_string.h"
 #include "simple_arg.h"
 #include "stat_wrapper.h"
+#include "read_user_log.h"
+#include "user_log_header.h"
 #include <stdio.h>
 #include <unistd.h>
 #include <math.h>
@@ -46,49 +48,55 @@ enum Verbosity {
 	VERB_ALL
 };
 
-struct Options
+class Options
 {
-	bool			isXml;
-	const char *	logFile;
-	int				numExec;
-	int				sleep_seconds;
-	int				sleep_useconds;
-	int				cluster;
-	int				proc;
-	int				subproc;
-	int				numProcs;
-	double			randomProb;		// Probability of 'random' events
-	bool			stork;
-	const char *	submitNote;
-	Verbosity		verbosity;
-	const char *	genericEventStr;
-	const char *    persistFile;
+public:
+	Options( void );
+	~Options( void ) { };
 
-	int				maxRotations;	// # of rotations limit
-	int				maxSequence;	// Sequence # limit
-	long			maxGlobalSize;	// Limit max size of global file
-	long			maxUserSize;	// Limit max size of user log file
+	bool			m_isXml;
+	const char *	m_logFile;
+	int				m_numExec;
+	int				m_sleep_seconds;
+	int				m_sleep_useconds;
+	int				m_cluster;
+	int				m_proc;
+	int				m_subproc;
+	int				m_numProcs;
+	double			m_randomProb;		// Probability of 'random' events
+	bool			m_stork;
+	const char *	m_submitNote;
+	Verbosity		m_verbosity;
+	const char *	m_genericEventStr;
+	const char *    m_persistFile;
 
-	int				num_forks;
-	int				fork_cluster_step;
+	int				m_maxRotations;		// # of rotations limit
+	bool			m_maxRotationStop;	// Stop max rotation from happening?
+	int				m_maxSequence;		// Sequence # limit
+	long			m_maxGlobalSize;	// Limit max size of global file
+	long			m_maxUserSize;		// Limit max size of user log file
+
+	int				m_num_forks;
+	int				m_fork_cluster_step;
 };
 
 class EventInfo
 {
 public:
-	EventInfo( const Options &opts, int cluster, int proc, int subproc ) {
-		m_opts = &opts;
-		m_cluster = cluster;
-		m_proc = proc;
-		m_subproc = subproc;
-		m_eventp = NULL;
-		m_name = NULL;
-		m_note = NULL;
-		m_is_large = false;
-	}
+	EventInfo( const Options &opts, int cluster, int proc, int subproc )
+			: m_opts( opts ),
+			  m_cluster( cluster ),
+			  m_proc( proc ),
+			  m_subproc( subproc ),
+			  m_eventp( NULL ),
+			  m_name( NULL ),
+			  m_note( NULL ),
+			  m_is_large( false )
+		{
+		};
 	~EventInfo( void ) {
 		Reset( );
-	}
+	};
 	void Reset( void ) {
 		if ( m_eventp ) {
 			delete m_eventp;
@@ -124,9 +132,9 @@ public:
 
 	bool WriteEvent( UserLog &log );
 
-	bool NextCluster( void ) { m_cluster++; };
-	bool NextProc( void ) { m_proc++; };
-	bool NextSubProc( void ) { m_subproc++; };
+	int NextCluster( void ) { return ++m_cluster; };
+	int NextProc( void ) { return ++m_proc; };
+	int NextSubProc( void ) { return ++m_subproc; };
 
 	ULogEvent *GenEventBasic( const char *name, ULogEvent *event );
 	ULogEvent *GenEventSubmit( void );
@@ -144,7 +152,7 @@ public:
 	ULogEvent *GenEventGeneric( void );
 
 private:
-	const Options	*m_opts;
+	const Options	&m_opts;
 	int				 m_cluster;
 	int				 m_proc;
 	int				 m_subproc;
@@ -219,16 +227,16 @@ main(int argc, const char **argv)
 
 	int		num_events = 0;
 	int		sequence = 0;
-	if ( opts.num_forks ) {
+	if ( opts.m_num_forks ) {
 		error = ForkJobs( opts );
 	}
 	else {
 		UserLogTest writer( opts,
-							"owner", opts.logFile,
-							opts.cluster, opts.proc, opts.subproc,
-							opts.isXml );
-		int		max_proc = opts.proc + opts.numProcs - 1;
-		for( int proc = opts.proc; proc <= max_proc; proc++ ) {
+							"owner", opts.m_logFile,
+							opts.m_cluster, opts.m_proc, opts.m_subproc,
+							opts.m_isXml );
+		int		max_proc = opts.m_proc + opts.m_numProcs - 1;
+		for( int proc = opts.m_proc; proc <= max_proc; proc++ ) {
 			writer.setGlobalProc( proc );
 			error = WriteEvents( opts, writer, num_events, sequence );
 			if ( error || global_done ) {
@@ -237,15 +245,43 @@ main(int argc, const char **argv)
 		}
 	}
 
-	if ( error  &&  (opts.verbosity >= VERB_ERROR) ) {
+	if ( error  &&  (opts.m_verbosity >= VERB_ERROR) ) {
 		fprintf(stderr, "test_log_writer FAILED\n");
 	}
-	else if ( opts.verbosity >= VERB_INFO ) {
+	else if ( opts.m_verbosity >= VERB_INFO ) {
 		printf( "wrote %d events\n", num_events );
 		printf( "global sequence %d\n", sequence );
 	}
 
 	return (int) error;
+}
+
+Options::Options( void )
+{
+	m_isXml				= false;
+	m_logFile			= NULL;
+	m_numExec			= 1;
+	m_cluster			= -1;
+	m_proc				= -1;
+	m_subproc			= -1;
+	m_numProcs			= 10;
+	m_sleep_seconds		= 5;
+	m_sleep_useconds	= 0;
+	m_stork				= false;
+	m_randomProb		= 0.0;
+	m_submitNote		= "";
+	m_verbosity			= VERB_ERROR;
+	m_genericEventStr	= NULL;
+	m_persistFile		= NULL;
+
+	m_maxRotations		= -1;		// disable max # of rotations limit
+	m_maxRotationStop	= false;	// disable max rotation stop
+	m_maxSequence		= -1;		// disable max sequence # limit
+	m_maxGlobalSize		= -1;		// disable max global log size limit
+	m_maxUserSize		= -1;		// disable max user log size limit
+
+	m_num_forks			= 0;
+	m_fork_cluster_step	= 1000;
 }
 
 bool
@@ -267,6 +303,7 @@ CheckArgs(int argc, const char **argv, Options &opts)
 		"  -n|--num-procs <num>: Number of procs (default:10) (-1:no limit)\n"
 		"\n"
 		"  --max-rotations <num>: stop after <number> rotations\n"
+		"  --max-rotation-stop: prevent final rotation (default:off)\n"
 		"  --max-sequence <num>: stop when sequence <number> written\n"
 		"  --max-global <num>: stop when global log size >= <num> bytes\n"
 		"  --max-user <num>: stop when user log size >= <num> bytes\n"
@@ -292,30 +329,6 @@ CheckArgs(int argc, const char **argv, Options &opts)
 		"\n"
 		"  <filename>: the log file to write to\n";
 
-	opts.isXml				= false;
-	opts.logFile			= NULL;
-	opts.numExec			= 1;
-	opts.cluster			= -1;
-	opts.proc				= -1;
-	opts.subproc			= -1;
-	opts.numProcs			= 10;
-	opts.sleep_seconds		= 5;
-	opts.sleep_useconds		= 0;
-	opts.stork				= false;
-	opts.randomProb			= 0.0;
-	opts.submitNote			= "";
-	opts.verbosity			= VERB_ERROR;
-	opts.genericEventStr	= NULL;
-	opts.persistFile		= NULL;
-
-	opts.maxRotations		= -1;	// disable max # of rotations limit
-	opts.maxSequence		= -1;	// disable max sequence # limit
-	opts.maxGlobalSize		= -1;	// disable max global log size limit
-	opts.maxUserSize		= -1;	// disable max user log size limit
-
-	opts.num_forks			= 0;
-	opts.fork_cluster_step	= 1000;
-
 	int			 argno = 1;
 	while ( (argno < argc) & (status == 0) ) {
 		SimpleArg	arg( argv, argc, argno );
@@ -326,7 +339,7 @@ CheckArgs(int argc, const char **argv, Options &opts)
 		}
 
 		if ( arg.Match( "cluster") ) {
-			if ( ! arg.getOpt(opts.cluster) ) {
+			if ( ! arg.getOpt(opts.m_cluster) ) {
 				fprintf(stderr, "Value needed for '%s'\n", arg.Arg() );
 				printf("%s", usage);
 				status = true;
@@ -345,11 +358,11 @@ CheckArgs(int argc, const char **argv, Options &opts)
 			if ( arg.hasOpt() ) {
 				const char *opt = arg.getOpt();
 				if ( *opt == '.' ) {
-					sscanf( opt, ".%d.%d", &opts.proc, &opts.subproc );
+					sscanf( opt, ".%d.%d", &opts.m_proc, &opts.m_subproc );
 				}
 				else {
 					sscanf( opt, "%d.%d.%d",
-							&opts.cluster, &opts.proc, &opts.subproc );
+							&opts.m_cluster, &opts.m_proc, &opts.m_subproc );
 				}
 			} else {
 				fprintf(stderr, "Value needed for '%s'\n", arg.Arg() );
@@ -358,68 +371,71 @@ CheckArgs(int argc, const char **argv, Options &opts)
 			}
 
 		} else if ( arg.Match("generic") ) {
-			if ( !arg.getOpt(opts.genericEventStr) ) {
+			if ( !arg.getOpt(opts.m_genericEventStr) ) {
 				fprintf(stderr, "Value needed for '%s'\n", arg.Arg() );
 				printf("%s", usage);
 				status = true;
 			}
 
 		} else if ( arg.Match('n', "num-exec") ) {
-			if ( ! arg.getOpt(opts.numExec) ) {
+			if ( ! arg.getOpt(opts.m_numExec) ) {
 				fprintf(stderr, "Value needed for '%s'\n", arg.Arg() );
 				printf("%s", usage);
 				status = true;
 			}
 
 		} else if ( arg.Match("num-procs") ) {
-			if ( ! arg.getOpt(opts.numProcs) ) {
+			if ( ! arg.getOpt(opts.m_numProcs) ) {
 				fprintf(stderr, "Value needed for '%s'\n", arg.Arg() );
 				printf("%s", usage);
 				status = true;
 			}
 
 		} else if ( arg.Match("proc") ) {
-			if ( ! arg.getOpt(opts.proc) ) {
+			if ( ! arg.getOpt(opts.m_proc) ) {
 				fprintf(stderr, "Value needed for '%s'\n", arg.Arg() );
 				printf("%s", usage);
 				status = true;
 			}
 
 		} else if ( arg.Match("max-rotations") ) {
-			if ( ! arg.getOpt(opts.maxRotations) ) {
+			if ( ! arg.getOpt(opts.m_maxRotations) ) {
 				fprintf(stderr, "Value needed for '%s'\n", arg.Arg() );
 				printf("%s", usage);
 				status = true;
 			}
 			else {
-				opts.numExec = 100000;
-				opts.numProcs = 1;
+				opts.m_numExec = 100000;
+				opts.m_numProcs = 1;
 			}
 
+		} else if ( arg.Match("max-rotation-stop") ) {
+			opts.m_maxRotationStop = true;
+
 		} else if ( arg.Match("max-global") ) {
-			if ( ! arg.getOpt(opts.maxGlobalSize) ) {
+			if ( ! arg.getOpt(opts.m_maxGlobalSize) ) {
 				fprintf(stderr, "Value needed for '%s'\n", arg.Arg() );
 				printf("%s", usage);
 				status = true;
 			}
 			else {
-				opts.numExec = 100000;
-				opts.numProcs = 1;
+				opts.m_numExec = 100000;
+				opts.m_numProcs = 1;
 			}
 
 		} else if ( arg.Match("max-user") ) {
-			if ( ! arg.getOpt(opts.maxUserSize) ) {
+			if ( ! arg.getOpt(opts.m_maxUserSize) ) {
 				fprintf(stderr, "Value needed for '%s'\n", arg.Arg() );
 				printf("%s", usage);
 				status = true;
 			}
 			else {
-				opts.numExec = 100000;
-				opts.numProcs = 1;
+				opts.m_numExec = 100000;
+				opts.m_numProcs = 1;
 			}
 
 		} else if ( arg.Match( 'p', "persist") ) {
-			if ( !arg.getOpt(opts.persistFile) ) {
+			if ( !arg.getOpt(opts.m_persistFile) ) {
 				fprintf(stderr, "Value needed for '%s'\n", arg.Arg() );
 				printf("%s", usage);
 				status = true;
@@ -428,9 +444,9 @@ CheckArgs(int argc, const char **argv, Options &opts)
 		} else if ( arg.Match("sleep") ) {
 			double	sec;
 			if ( arg.getOpt(sec) ) {
-				opts.sleep_seconds  = (int) floor( sec );
-				opts.sleep_useconds =
-					(int) (1e6 * ( sec - opts.sleep_seconds ) );
+				opts.m_sleep_seconds  = (int) floor( sec );
+				opts.m_sleep_useconds =
+					(int) (1e6 * ( sec - opts.m_sleep_seconds ) );
 			} else {
 				fprintf(stderr, "Value needed for '%s'\n", arg.Arg() );
 				printf("%s", usage);
@@ -438,28 +454,28 @@ CheckArgs(int argc, const char **argv, Options &opts)
 			}
 
 		} else if ( arg.Match("no-sleep") ) {
-			opts.sleep_seconds  = 0;
-			opts.sleep_useconds = 0;
+			opts.m_sleep_seconds  = 0;
+			opts.m_sleep_useconds = 0;
 
 		} else if ( arg.Match( "stork") ) {
-			opts.stork = true;
+			opts.m_stork = true;
 
 		} else if ( arg.Match("subproc") ) {
-			if ( arg.getOpt(opts.subproc) ) {
+			if ( arg.getOpt(opts.m_subproc) ) {
 				fprintf(stderr, "Value needed for '%s'\n", arg.Arg() );
 				printf("%s", usage);
 				status = true;
 			}
 
 		} else if ( arg.Match('f', "fork") ) {
-			if ( !arg.getOpt(opts.num_forks) ) {
+			if ( !arg.getOpt(opts.m_num_forks) ) {
 				fprintf(stderr, "Value needed for '%s'\n", arg.Arg() );
 				printf("%s", usage);
 				status = true;
 			}
 
 		} else if ( arg.Match("fork-cluster-step") ) {
-			if ( !arg.getOpt(opts.fork_cluster_step) ) {
+			if ( !arg.getOpt(opts.m_fork_cluster_step) ) {
 				fprintf(stderr, "Value needed for '%s'\n", arg.Arg() );
 				printf("%s", usage);
 				status = true;
@@ -468,7 +484,7 @@ CheckArgs(int argc, const char **argv, Options &opts)
 		} else if ( arg.Match("random") ) {
 			double	percent;
 			if ( arg.getOpt(percent) ) {
-				opts.randomProb = percent / 100.0;
+				opts.m_randomProb = percent / 100.0;
 			} else {
 				fprintf(stderr, "Value needed for '%s'\n", arg.Arg() );
 				printf("%s", usage);
@@ -476,7 +492,7 @@ CheckArgs(int argc, const char **argv, Options &opts)
 			}
 
 		} else if ( arg.Match("submit_note") ) {
-			if ( !arg.getOpt(opts.submitNote) ) {
+			if ( !arg.getOpt(opts.m_submitNote) ) {
 				fprintf(stderr, "Value needed for '%s'\n", arg.Arg() );
 				printf("%s", usage);
 				status = true;
@@ -490,28 +506,28 @@ CheckArgs(int argc, const char **argv, Options &opts)
 			if ( arg.isOptInt() ) {
 				int		verb;
 				arg.getOpt(verb);
-				opts.verbosity = (Verbosity) verb;
+				opts.m_verbosity = (Verbosity) verb;
 			}
 			else if ( arg.hasOpt() ) {
 				const char	*s;
 				arg.getOpt( s );
 				if ( !strcasecmp(s, "NONE" ) ) {
-					opts.verbosity = VERB_NONE;
+					opts.m_verbosity = VERB_NONE;
 				}
 				else if ( !strcasecmp(s, "ERROR" ) ) {
-					opts.verbosity = VERB_ERROR;
+					opts.m_verbosity = VERB_ERROR;
 				}
 				else if ( !strcasecmp(s, "WARNING" ) ) {
-					opts.verbosity = VERB_WARNING;
+					opts.m_verbosity = VERB_WARNING;
 				}
 				else if ( !strcasecmp(s, "INFO" ) ) {
-					opts.verbosity = VERB_INFO;
+					opts.m_verbosity = VERB_INFO;
 				}
 				else if ( !strcasecmp(s, "VERBOSE" ) ) {
-					opts.verbosity = VERB_VERBOSE;
+					opts.m_verbosity = VERB_VERBOSE;
 				}
 				else if ( !strcasecmp(s, "ALL" ) ) {
-					opts.verbosity = VERB_ALL;
+					opts.m_verbosity = VERB_ALL;
 				}
 				else {
 					fprintf(stderr, "Unknown %s '%s'\n", arg.Arg(), s );
@@ -526,21 +542,21 @@ CheckArgs(int argc, const char **argv, Options &opts)
 			}
 
 		} else if ( arg.Match('v') ) {
-			int		v = (int) opts.verbosity;
-			opts.verbosity = (Verbosity) (v + 1);
+			int		v = (int) opts.m_verbosity;
+			opts.m_verbosity = (Verbosity) (v + 1);
 
 		} else if ( arg.Match('q', "quiet" ) ) {
-			opts.verbosity = VERB_NONE;
+			opts.m_verbosity = VERB_NONE;
 
 		} else if ( arg.Match("version") ) {
 			printf("test_log_writer: %s, %s\n", VERSION, __DATE__);
 			status = STATUS_CANCEL;
 
 		} else if ( arg.Match("xml") ) {
-			opts.isXml = true;
+			opts.m_isXml = true;
 
 		} else if ( !arg.ArgIsOpt() ) {
-			arg.getOpt( opts.logFile );
+			arg.getOpt( opts.m_logFile );
 
 		} else {
 			fprintf(stderr, "Unrecognized argument: '%s'\n", arg.Arg() );
@@ -550,42 +566,43 @@ CheckArgs(int argc, const char **argv, Options &opts)
 		argno = arg.Index();
 	}
 
-	if ( status == STATUS_OK && opts.logFile == NULL ) {
+	if ( status == STATUS_OK && opts.m_logFile == NULL ) {
 		fprintf(stderr, "Log file must be specified\n");
 		printf("%s", usage);
 		status = true;
 	}
 
 	// Read the persisted file (if specified)
-	if ( opts.persistFile ) {
-		FILE	*fp = safe_fopen_wrapper( opts.persistFile, "r" );
+	if ( opts.m_persistFile ) {
+		FILE	*fp = safe_fopen_wrapper( opts.m_persistFile, "r" );
 		if ( fp ) {
 			int		cluster, proc, subproc;
 			if ( 3 == fscanf( fp, "%d.%d.%d", &cluster, &proc, &subproc ) ) {
-				if ( opts.cluster < 0 ) opts.cluster = cluster;
-				if ( opts.proc < 0 )    opts.proc    = proc;
-				if ( opts.subproc < 0 ) opts.subproc = subproc;
+				if ( opts.m_cluster < 0 ) opts.m_cluster = cluster;
+				if ( opts.m_proc < 0 )    opts.m_proc    = proc;
+				if ( opts.m_subproc < 0 ) opts.m_subproc = subproc;
 			}
 			fclose( fp );
 		}
 	}
 
 	// Set defaults for the cluster, proc & subproc
-	if ( opts.cluster < 0 ) opts.cluster = getpid();
-	if ( opts.proc < 0 )    opts.proc    = 0;
-	if ( opts.subproc < 0 ) opts.subproc = 0;
+	if ( opts.m_cluster < 0 ) opts.m_cluster = getpid();
+	if ( opts.m_proc < 0 )    opts.m_proc    = 0;
+	if ( opts.m_subproc < 0 ) opts.m_subproc = 0;
 
 	// Stork sets these to -1
-	if ( opts.stork ) {
-		opts.proc = -1;
-		opts.subproc = -1;
+	if ( opts.m_stork ) {
+		opts.m_proc = -1;
+		opts.m_subproc = -1;
 	}
 
 	// Update the persisted file (if specified)
-	if ( opts.persistFile ) {
-		FILE	*fp = safe_fopen_wrapper( opts.persistFile, "w" );
+	if ( opts.m_persistFile ) {
+		FILE	*fp = safe_fopen_wrapper( opts.m_persistFile, "w" );
 		if ( fp ) {
-			fprintf( fp, "%d.%d.%d", opts.cluster+1, opts.proc, opts.subproc );
+			fprintf( fp, "%d.%d.%d",
+					 opts.m_cluster+1, opts.m_proc, opts.m_subproc );
 			fclose( fp );
 		}
 	}
@@ -605,7 +622,7 @@ ForkJobs( const Options & /*opts*/ )
 
 #if 0
 	signal( SIGCHLD, handle_sigchild );
-	for( int num = 0;  num < opts.num_forks;  num++ ) {
+	for( int num = 0;  num < opts.m_num_forks;  num++ ) {
 		// TODO
 	}
 #endif
@@ -614,10 +631,10 @@ ForkJobs( const Options & /*opts*/ )
 long
 getUserLogSize( const Options &opts )
 {
-	if ( NULL == opts.logFile ) {
+	if ( NULL == opts.m_logFile ) {
 		return 0;
 	}
-	StatWrapper	swrap( opts.logFile );
+	StatWrapper	swrap( opts.m_logFile );
 	if ( swrap.Stat() ) {
 		return -1L;			// What should we do here????
 	}
@@ -651,7 +668,7 @@ WriteEvents( Options &opts, UserLogTest &writer, int &events, int &sequence )
 		//
 		// Write a single generic event
 		//
-	if ( opts.genericEventStr ) {
+	if ( opts.m_genericEventStr ) {
 		event.GenEventGeneric( );
 		if ( event.WriteEvent( writer ) ) {
 			error = true;
@@ -665,11 +682,11 @@ WriteEvents( Options &opts, UserLogTest &writer, int &events, int &sequence )
 		//
 		// Write execute events.
 		//
-	if ( opts.verbosity >= VERB_VERBOSE ) {
+	if ( opts.m_verbosity >= VERB_VERBOSE ) {
 		printf( "Writing %d events for job %d.%d.%d\n",
-				opts.numExec, cluster, proc, subproc );
+				opts.m_numExec, cluster, proc, subproc );
 	}
-	for ( int exec = 0; ( (opts.numExec<0) || (exec<opts.numExec) ); ++exec ) {
+	for ( int exec = 0; ( (opts.m_numExec<0) || (exec<opts.m_numExec) ); ++exec ) {
 		if ( global_done ) {
 			break;
 		}
@@ -684,23 +701,23 @@ WriteEvents( Options &opts, UserLogTest &writer, int &events, int &sequence )
 		}
 		event.Reset( );
 
-		if ( ( opts.maxGlobalSize > 0 ) && 
-			 ( writer.getGlobalLogSize() > opts.maxGlobalSize ) ) {
+		if ( ( opts.m_maxGlobalSize > 0 ) && 
+			 ( writer.getGlobalLogSize() > opts.m_maxGlobalSize ) ) {
 			printf( "Maximum global log size limit hit\n" );
 			global_done = true;
 		}
 
-		if ( ( opts.maxUserSize > 0 ) && 
-			 ( getUserLogSize(opts) > opts.maxUserSize ) ) {
+		if ( ( opts.m_maxUserSize > 0 ) && 
+			 ( getUserLogSize(opts) > opts.m_maxUserSize ) ) {
 			printf( "Maximum user log size limit hit\n" );
 			global_done = true;
 		}
 
-		if ( opts.sleep_seconds ) {
-			sleep( opts.sleep_seconds);
+		if ( opts.m_sleep_seconds ) {
+			sleep( opts.m_sleep_seconds);
 		}
-		if ( opts.sleep_useconds ) {
-			usleep( opts.sleep_useconds);
+		if ( opts.m_sleep_useconds ) {
+			usleep( opts.m_sleep_useconds);
 		}
 	}
 
@@ -715,6 +732,27 @@ WriteEvents( Options &opts, UserLogTest &writer, int &events, int &sequence )
 		events++;
 	}
 	sequence = writer.getGlobalSequence( );
+
+	// If no rotations occurred, the writer did no rotations, and doesn't
+	// know it's rotation #
+	if ( sequence == 0 ) {
+		const char			*path = writer.getGlobalPath();
+		ReadUserLogHeader	header_reader;
+		ReadUserLog			log_reader;
+		printf( "Trying to get sequence # from header\n" );
+		if ( !log_reader.initialize( path, false, false, true ) ) {
+			fprintf( stderr, "Error reading eventlog header (initialize)\n" );
+			error = true;
+		}
+		else if ( header_reader.Read( log_reader ) != ULOG_OK ) {
+			fprintf( stderr, "Error reading header eventlog header\n" );
+			error = true;
+		}
+		else {
+			sequence = header_reader.getSequence( );
+			printf( "Got %d from header\n", sequence );
+		}
+	}
 
 	return error;
 }
@@ -757,7 +795,7 @@ EventInfo::GenEvent( void )
 	double	randval = get_random_float( );
 
 	// Special case: execute event
-	if ( randval > m_opts->randomProb ) {
+	if ( randval > m_opts.m_randomProb ) {
 		return GenEventExecute( );
 	}
 
@@ -775,13 +813,13 @@ EventInfo::GenEvent( void )
 bool
 EventInfo::WriteEvent( UserLog &log )
 {
-	if ( m_opts->verbosity >= VERB_ALL ) {
+	if ( m_opts.m_verbosity >= VERB_ALL ) {
 		printf("Writing %s event %s @ %s\n",
 			   m_name, m_note ? m_note : "", timestr() );
 	}
 
 	if ( !log.writeEvent( m_eventp ) ) {
-		if ( m_opts->verbosity >= VERB_ERROR ) {
+		if ( m_opts.m_verbosity >= VERB_ERROR ) {
 			fprintf(stderr, "Error writing log event\n");
 		}
 		return true;
@@ -875,7 +913,7 @@ EventInfo::GenEventSubmit( void )
 		// Note: the line below is designed specifically to work with
 		// Kent's dummy stork_submit script for testing DAGs with
 		// DATA nodes.
-	e->submitEventLogNotes  = strnewp(m_opts->submitNote);
+	e->submitEventLogNotes  = strnewp(m_opts.m_submitNote);
 	e->submitEventUserNotes = strnewp("User info");
 
 	return SetEvent( e );
@@ -1020,7 +1058,7 @@ EventInfo::GenEventGeneric( void )
 	SetName( "Generic" );
 
 	GenericEvent	*e = new GenericEvent;
-	strncpy(e->info, m_opts->genericEventStr, sizeof(e->info) );
+	strncpy(e->info, m_opts.m_genericEventStr, sizeof(e->info) );
 	e->info[sizeof(e->info)-1] = '\0';
 
 	return SetEvent( e );
@@ -1061,16 +1099,30 @@ UserLogTest::UserLogTest(const Options &opts,
 bool
 UserLogTest::globalRotationStarting( long filesize )
 {
-	if ( m_opts.verbosity >= VERB_INFO ) {
-		printf( "rotation starting, file size is %ld\n", filesize );
+	int rotations = m_rotations + 1;
+
+	if ( m_opts.m_verbosity >= VERB_INFO ) {
+		printf( "rotation %d starting, file size is %ld\n",
+				rotations, filesize );
 	}
+
+	if ( ( m_opts.m_maxRotations >= 0 ) &&
+		 ( rotations >= m_opts.m_maxRotations ) ) {
+		printf( "Max # of rotations hit: shutting down\n" );
+		global_done = true;
+		if ( m_opts.m_maxRotationStop ) {
+			return false;
+		}
+	}
+
+	m_rotations++;
 	return true;
 }
 
 void
 UserLogTest::globalRotationEvents( int events )
 {
-	if ( m_opts.verbosity >= VERB_INFO ) {
+	if ( m_opts.m_verbosity >= VERB_INFO ) {
 		printf( "Rotating: %d events counted\n", events );
 	}
 }
@@ -1080,18 +1132,12 @@ UserLogTest::globalRotationComplete( int num_rotations,
 									 int sequence,
 									 const MyString & /*id*/ )
 {
-	m_rotations++;
-	if ( m_opts.verbosity >= VERB_INFO ) {
-		printf( "rotation complete: %d %d %d\n",
-				m_rotations, num_rotations, sequence );
+	if ( m_opts.m_verbosity >= VERB_INFO ) {
+		printf( "rotation complete: %d %d\n",
+				num_rotations, sequence );
 	}
-	if ( ( m_opts.maxRotations >= 0 ) &&
-		 ( m_rotations >= m_opts.maxRotations ) ) {
-		printf( "Max # of rotations hit: shutting down\n" );
-		global_done = true;
-	}
-	if ( ( m_opts.maxSequence >= 0 ) &&
-		 ( sequence >= m_opts.maxSequence ) ) {
+	if ( ( m_opts.m_maxSequence >= 0 ) &&
+		 ( sequence >= m_opts.m_maxSequence ) ) {
 		printf( "Max sequence # hit: shutting down\n" );
 		global_done = true;
 	}

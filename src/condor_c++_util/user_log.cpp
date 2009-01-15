@@ -290,7 +290,7 @@ UserLog::Reset( void )
 	base += '.';
 
 	m_global_uniq_base = strdup( base.Value( ) );
-	m_global_sequence = 1;
+	m_global_sequence = 0;
 }
 
 bool
@@ -982,6 +982,10 @@ UserLog::GenerateGlobalId( MyString &id )
 	utc.getTime();
 
 	id =  m_global_uniq_base;
+	// First pass -- initialize the sequence #
+	if ( m_global_sequence == 0 ) {
+		m_global_sequence = 1;
+	}
 	id += m_global_sequence;
 	id += '.';
 	id += utc.seconds();
