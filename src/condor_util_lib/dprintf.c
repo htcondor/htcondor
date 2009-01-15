@@ -145,6 +145,15 @@ static char *formatTimeHeader(struct tm *tm) {
 		timeFormat = param( "DEBUG_TIME_FORMAT" );
 		if (!timeFormat) {
 			timeFormat = strdup("%m/%d %H:%M:%S ");
+		} else {
+			// Skip enclosing quotes
+			if (*timeFormat == '"') {
+				timeFormat++;
+			}
+			char *p = timeFormat;
+			while (*p++) {
+				if (*p == '"') *p = '\0';
+			}
 		}
 	}
 	strftime(timebuf, 80, timeFormat, tm);
