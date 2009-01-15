@@ -223,7 +223,7 @@ ArgList::AppendArg(int arg) {
 
 void
 ArgList::RemoveArg(int pos) {
-	MyString *arg;
+	MyString arg;
 	ASSERT(pos >= 0 && pos < Count());
 	args_list.Rewind();
 	for(int i=0;i <= pos;i++) {
