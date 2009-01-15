@@ -199,185 +199,185 @@ FILE		*DumpFile = NULL;
 /*
 **	Names of possible CONDOR variables.
 */
-char	*Cluster 		= "cluster";
-char	*Process			= "process";
-char	*Hold			= "hold";
-char	*Priority		= "priority";
-char	*Notification	= "notification";
-char	*WantRemoteIO	= "want_remote_io";
-char	*Executable		= "executable";
-char	*Arguments1		= "arguments";
-char	*Arguments2		= "arguments2";
-char    *AllowArgumentsV1 = "allow_arguments_v1";
-char	*GetEnvironment	= "getenv";
-char	*AllowStartupScript = "allow_startup_script";
-char	*AllowEnvironmentV1 = "allow_environment_v1";
-char	*Environment1	= "environment";
-char	*Environment2	= "environment2";
-char	*Input			= "input";
-char	*Output			= "output";
-char	*Error			= "error";
+const char	*Cluster 		= "cluster";
+const char	*Process			= "process";
+const char	*Hold			= "hold";
+const char	*Priority		= "priority";
+const char	*Notification	= "notification";
+const char	*WantRemoteIO	= "want_remote_io";
+const char	*Executable		= "executable";
+const char	*Arguments1		= "arguments";
+const char	*Arguments2		= "arguments2";
+const char    *AllowArgumentsV1 = "allow_arguments_v1";
+const char	*GetEnvironment	= "getenv";
+const char	*AllowStartupScript = "allow_startup_script";
+const char	*AllowEnvironmentV1 = "allow_environment_v1";
+const char	*Environment1	= "environment";
+const char	*Environment2	= "environment2";
+const char	*Input			= "input";
+const char	*Output			= "output";
+const char	*Error			= "error";
 #if !defined(WIN32)
-char	*RootDir		= "rootdir";
+const char	*RootDir		= "rootdir";
 #endif
-char	*InitialDir		= "initialdir";
-char	*RemoteInitialDir		= "remote_initialdir";
-char	*Requirements	= "requirements";
-char	*Preferences	= "preferences";
-char	*Rank				= "rank";
-char	*ImageSize		= "image_size";
-char	*DiskUsage		= "disk_usage";
+const char	*InitialDir		= "initialdir";
+const char	*RemoteInitialDir		= "remote_initialdir";
+const char	*Requirements	= "requirements";
+const char	*Preferences	= "preferences";
+const char	*Rank				= "rank";
+const char	*ImageSize		= "image_size";
+const char	*DiskUsage		= "disk_usage";
 
-char	*RequestCpus	= "request_cpus";
-char	*RequestMemory	= "request_memory";
-char	*RequestDisk	= "request_disk";
+const char	*RequestCpus	= "request_cpus";
+const char	*RequestMemory	= "request_memory";
+const char	*RequestDisk	= "request_disk";
 
-char	*Universe		= "universe";
-char	*Grid_Type		= "grid_type";
-char	*MachineCount	= "machine_count";
-char	*NotifyUser		= "notify_user";
-char	*EmailAttributes = "email_attributes";
-char	*ExitRequirements = "exit_requirements";
-char	*UserLogFile	= "log";
-char    *UseLogUseXML   = "log_xml";
-char	*CoreSize		= "coresize";
-char	*NiceUser		= "nice_user";
+const char	*Universe		= "universe";
+const char	*Grid_Type		= "grid_type";
+const char	*MachineCount	= "machine_count";
+const char	*NotifyUser		= "notify_user";
+const char	*EmailAttributes = "email_attributes";
+const char	*ExitRequirements = "exit_requirements";
+const char	*UserLogFile	= "log";
+const char    *UseLogUseXML   = "log_xml";
+const char	*CoreSize		= "coresize";
+const char	*NiceUser		= "nice_user";
 
-char	*GridResource	= "grid_resource";
-char	*X509UserProxy	= "x509userproxy";
-char	*GlobusScheduler = "globusscheduler";
-char	*GlobusJobmanagerType = "jobmanager_type";
-char    *GridShell = "gridshell";
-char	*GlobusRSL = "globus_rsl";
-char	*GlobusXML = "globus_xml";
-char	*NordugridRSL = "nordugrid_rsl";
-char	*RemoteSchedd = "remote_schedd";
-char	*RemotePool = "remote_pool";
-char	*RendezvousDir	= "rendezvousdir";
-char	*UnicoreUSite = "unicore_u_site";
-char 	*UnicoreVSite = "unicore_v_site";
-char	*KeystoreFile = "keystore_file";
-char	*KeystoreAlias = "keystore_alias";
-char	*KeystorePassphraseFile = "keystore_passphrase_file";
+const char	*GridResource	= "grid_resource";
+const char	*X509UserProxy	= "x509userproxy";
+const char	*GlobusScheduler = "globusscheduler";
+const char	*GlobusJobmanagerType = "jobmanager_type";
+const char    *GridShell = "gridshell";
+const char	*GlobusRSL = "globus_rsl";
+const char	*GlobusXML = "globus_xml";
+const char	*NordugridRSL = "nordugrid_rsl";
+const char	*RemoteSchedd = "remote_schedd";
+const char	*RemotePool = "remote_pool";
+const char	*RendezvousDir	= "rendezvousdir";
+const char	*UnicoreUSite = "unicore_u_site";
+const char 	*UnicoreVSite = "unicore_v_site";
+const char	*KeystoreFile = "keystore_file";
+const char	*KeystoreAlias = "keystore_alias";
+const char	*KeystorePassphraseFile = "keystore_passphrase_file";
 
-char	*FileRemaps = "file_remaps";
-char	*BufferFiles = "buffer_files";
-char	*BufferSize = "buffer_size";
-char	*BufferBlockSize = "buffer_block_size";
+const char	*FileRemaps = "file_remaps";
+const char	*BufferFiles = "buffer_files";
+const char	*BufferSize = "buffer_size";
+const char	*BufferBlockSize = "buffer_block_size";
 
-char	*FetchFiles = "fetch_files";
-char	*CompressFiles = "compress_files";
-char	*AppendFiles = "append_files";
-char	*LocalFiles = "local_files";
+const char	*FetchFiles = "fetch_files";
+const char	*CompressFiles = "compress_files";
+const char	*AppendFiles = "append_files";
+const char	*LocalFiles = "local_files";
 
-char	*ToolDaemonCmd = "tool_daemon_cmd";
-char	*ToolDaemonArgs = "tool_daemon_args"; // for backward compatibility
-char	*ToolDaemonArguments1 = "tool_daemon_arguments";
-char	*ToolDaemonArguments2 = "tool_daemon_arguments2";
-char	*ToolDaemonInput = "tool_daemon_input";
-char	*ToolDaemonError = "tool_daemon_error";
-char	*ToolDaemonOutput = "tool_daemon_output";
-char	*SuspendJobAtExec = "suspend_job_at_exec";
+const char	*ToolDaemonCmd = "tool_daemon_cmd";
+const char	*ToolDaemonArgs = "tool_daemon_args"; // for backward compatibility
+const char	*ToolDaemonArguments1 = "tool_daemon_arguments";
+const char	*ToolDaemonArguments2 = "tool_daemon_arguments2";
+const char	*ToolDaemonInput = "tool_daemon_input";
+const char	*ToolDaemonError = "tool_daemon_error";
+const char	*ToolDaemonOutput = "tool_daemon_output";
+const char	*SuspendJobAtExec = "suspend_job_at_exec";
 
-char	*TransferInputFiles = "transfer_input_files";
-char	*TransferOutputFiles = "transfer_output_files";
-char    *TransferOutputRemaps = "transfer_output_remaps";
-char	*TransferFiles = "transfer_files";
-char	*TransferExecutable = "transfer_executable";
-char	*TransferInput = "transfer_input";
-char	*TransferOutput = "transfer_output";
-char	*TransferError = "transfer_error";
+const char	*TransferInputFiles = "transfer_input_files";
+const char	*TransferOutputFiles = "transfer_output_files";
+const char    *TransferOutputRemaps = "transfer_output_remaps";
+const char	*TransferFiles = "transfer_files";
+const char	*TransferExecutable = "transfer_executable";
+const char	*TransferInput = "transfer_input";
+const char	*TransferOutput = "transfer_output";
+const char	*TransferError = "transfer_error";
 
-char	*EncryptInputFiles = "encrypt_input_files";
-char	*EncryptOutputFiles = "encrypt_output_files";
-char	*DontEncryptInputFiles = "dont_encrypt_input_files";
-char	*DontEncryptOutputFiles = "dont_encrypt_output_files";
+const char	*EncryptInputFiles = "encrypt_input_files";
+const char	*EncryptOutputFiles = "encrypt_output_files";
+const char	*DontEncryptInputFiles = "dont_encrypt_input_files";
+const char	*DontEncryptOutputFiles = "dont_encrypt_output_files";
 
-char	*StreamInput = "stream_input";
-char	*StreamOutput = "stream_output";
-char	*StreamError = "stream_error";
+const char	*StreamInput = "stream_input";
+const char	*StreamOutput = "stream_output";
+const char	*StreamError = "stream_error";
 
-char	*CopyToSpool = "copy_to_spool";
-char	*LeaveInQueue = "leave_in_queue";
-char	*MirrorSchedd = "mirror_schedd";
+const char	*CopyToSpool = "copy_to_spool";
+const char	*LeaveInQueue = "leave_in_queue";
+const char	*MirrorSchedd = "mirror_schedd";
 
-char	*PeriodicHoldCheck = "periodic_hold";
-char	*PeriodicReleaseCheck = "periodic_release";
-char	*PeriodicRemoveCheck = "periodic_remove";
-char	*OnExitHoldCheck = "on_exit_hold";
-char	*OnExitRemoveCheck = "on_exit_remove";
-char	*Noop = "noop_job";
-char	*NoopExitSignal = "noop_job_exit_signal";
-char	*NoopExitCode = "noop_job_exit_code";
+const char	*PeriodicHoldCheck = "periodic_hold";
+const char	*PeriodicReleaseCheck = "periodic_release";
+const char	*PeriodicRemoveCheck = "periodic_remove";
+const char	*OnExitHoldCheck = "on_exit_hold";
+const char	*OnExitRemoveCheck = "on_exit_remove";
+const char	*Noop = "noop_job";
+const char	*NoopExitSignal = "noop_job_exit_signal";
+const char	*NoopExitCode = "noop_job_exit_code";
 
-char	*GlobusResubmit = "globus_resubmit";
-char	*GlobusRematch = "globus_rematch";
+const char	*GlobusResubmit = "globus_resubmit";
+const char	*GlobusRematch = "globus_rematch";
 
-char	*LastMatchListLength = "match_list_length";
+const char	*LastMatchListLength = "match_list_length";
 
-char	*DAGManJobId = "dagman_job_id";
-char	*LogNotesCommand = "submit_event_notes";
-char	*UserNotesCommand = "submit_event_user_notes";
-char	*JarFiles = "jar_files";
-char	*JavaVMArgs = "java_vm_args";
-char	*JavaVMArguments1 = "java_vm_arguments";
-char	*JavaVMArguments2 = "java_vm_arguments2";
+const char	*DAGManJobId = "dagman_job_id";
+const char	*LogNotesCommand = "submit_event_notes";
+const char	*UserNotesCommand = "submit_event_user_notes";
+const char	*JarFiles = "jar_files";
+const char	*JavaVMArgs = "java_vm_args";
+const char	*JavaVMArguments1 = "java_vm_arguments";
+const char	*JavaVMArguments2 = "java_vm_arguments2";
 
-char    *ParallelScriptShadow  = "parallel_script_shadow";  
-char    *ParallelScriptStarter = "parallel_script_starter"; 
+const char    *ParallelScriptShadow  = "parallel_script_shadow";  
+const char    *ParallelScriptStarter = "parallel_script_starter"; 
 
-char    *MaxJobRetirementTime = "max_job_retirement_time";
+const char    *MaxJobRetirementTime = "max_job_retirement_time";
 
 //
 // Job Deferral Parameters
 //
-char	*DeferralTime	= "deferral_time";
-char	*DeferralWindow 	= "deferral_window";
-char	*DeferralPrepTime	= "deferral_prep_time";
+const char	*DeferralTime	= "deferral_time";
+const char	*DeferralWindow 	= "deferral_window";
+const char	*DeferralPrepTime	= "deferral_prep_time";
 
 //
 // CronTab Parameters
 // The index value below should be the # of parameters
 //
 const int CronFields = 5;
-char	*CronMinute		= "cron_minute";
-char	*CronHour		= "cron_hour";
-char	*CronDayOfMonth	= "cron_day_of_month";
-char	*CronMonth		= "cron_month";
-char	*CronDayOfWeek	= "cron_day_of_week";
-char	*CronWindow		= "cron_window";
-char	*CronPrepTime	= "cron_prep_time";
+const char	*CronMinute		= "cron_minute";
+const char	*CronHour		= "cron_hour";
+const char	*CronDayOfMonth	= "cron_day_of_month";
+const char	*CronMonth		= "cron_month";
+const char	*CronDayOfWeek	= "cron_day_of_week";
+const char	*CronWindow		= "cron_window";
+const char	*CronPrepTime	= "cron_prep_time";
 
 #if defined(WIN32)
-char	*RunAsOwner = "run_as_owner";
-char	*LoadProfile = "load_profile";
+const char	*RunAsOwner = "run_as_owner";
+const char	*LoadProfile = "load_profile";
 #endif
 
 // Concurrency Limit parameters
-char    *ConcurrencyLimits = "concurrency_limits";
+const char    *ConcurrencyLimits = "concurrency_limits";
 
 //
 // VM universe Parameters
 //
-char    *VM_Type = "vm_type";
-char    *VM_Memory = "vm_memory";
-char    *VM_VCPUS = "vm_vcpus";
-char    *VM_MACAddr = "vm_macaddr";
-char    *VM_Checkpoint = "vm_checkpoint";
-char    *VM_Networking = "vm_networking";
-char    *VM_Networking_Type = "vm_networking_type";
+const char    *VM_Type = "vm_type";
+const char    *VM_Memory = "vm_memory";
+const char    *VM_VCPUS = "vm_vcpus";
+const char    *VM_MACAddr = "vm_macaddr";
+const char    *VM_Checkpoint = "vm_checkpoint";
+const char    *VM_Networking = "vm_networking";
+const char    *VM_Networking_Type = "vm_networking_type";
 
 //
 // Amazon EC2 Parameters
 //
-char* AmazonPublicKey = "amazon_public_key";
-char* AmazonPrivateKey = "amazon_private_key";
-char* AmazonAmiID = "amazon_ami_id";
-char* AmazonUserData = "amazon_user_data";
-char* AmazonUserDataFile = "amazon_user_data_file";
-char* AmazonSecurityGroups = "amazon_security_groups";
-char* AmazonKeyPairFile = "amazon_keypair_file";
-char* AmazonInstanceType = "amazon_instance_type";
+const char* AmazonPublicKey = "amazon_public_key";
+const char* AmazonPrivateKey = "amazon_private_key";
+const char* AmazonAmiID = "amazon_ami_id";
+const char* AmazonUserData = "amazon_user_data";
+const char* AmazonUserDataFile = "amazon_user_data_file";
+const char* AmazonSecurityGroups = "amazon_security_groups";
+const char* AmazonKeyPairFile = "amazon_keypair_file";
+const char* AmazonInstanceType = "amazon_instance_type";
 
 char const *next_job_start_delay = "next_job_start_delay";
 char const *next_job_start_delay2 = "NextJobStartDelay";
@@ -385,9 +385,9 @@ char const *next_job_start_delay2 = "NextJobStartDelay";
 const char * REMOTE_PREFIX="Remote_";
 
 #if !defined(WIN32)
-char	*KillSig			= "kill_sig";
-char	*RmKillSig			= "remove_kill_sig";
-char	*HoldKillSig		= "hold_kill_sig";
+const char	*KillSig			= "kill_sig";
+const char	*RmKillSig			= "remove_kill_sig";
+const char	*HoldKillSig		= "hold_kill_sig";
 #endif
 
 void    SetSimpleJobExprs();
@@ -3009,7 +3009,7 @@ SetStdFile( int which_file )
 	bool	stream_it = false;
 	char	*macro_value = NULL;
 	char	*macro_value2 = NULL;
-	char	*generic_name;
+	const char	*generic_name;
 	MyString	 strbuffer;
 
 	switch( which_file ) 
