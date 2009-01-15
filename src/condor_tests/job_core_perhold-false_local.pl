@@ -26,7 +26,7 @@ use CondorTest;
 
 $cmd = 'job_core_perhold-false_local.cmd';
 $testdesc =  'Condor submit policy test for PERIOIDIC_HOLD - local U';
-$testname = "job_core_perhold-false_local";
+$testname = "job_core_perhold_local";
 
 my %info;
 my $cluster;
