@@ -358,16 +358,16 @@ if( CondorTest::RunTest($testname, $cmd, 0) ) {
 ##
 sub extractEvictionTime {
     my ($log) = @_;
+    CondorTest::debug("Searching $log for latest eviction event\n", 1);
     open(FILE, "<$log") || die "Can't open log file '$log'\n";
     while (<FILE>) {
     	##
-    	## Pull out the date and time of when the job was actually 
-    	## executed by the starter. We always want the last time 
+    	## Pull out the date and time of when the job was evicted
+    	## from the execute machine. We always want the last time 
     	## that may be in the logfile
     	##
-		print "Consider eviction: @_";
     	if ( $_ =~ /^004\s+\(.*\)\s+(\d{2})\/(\d{2})\s+(\d{2}):(\d{2}):(\d{2})/ ) {
-			print "Parseing for eviction: @_";
+            CondorTest::debug("Found eviction event: $_", 1);
     		$month  = $1;
     		$day    = $2;
     		$hour   = $3;
@@ -385,8 +385,8 @@ sub extractEvictionTime {
 	(undef, undef, undef, undef, undef, $year, undef, undef, $isdst) = localtime(time); 
 	$timestamp = mktime($second, $minute, $hour, $day, $month - 1, $year, 0, 0, $isdst);
 	
-    print "$month/$day/".($_year + 1900)." $hour:$minute:$second\n";
-    print "RUN TIME: $timestamp\n";
+    CondorTest::debug("Eviction date: $month/$day/".($_year + 1900)." $hour:$minute:$second\n", 1);
+    CondorTest::debug("Eviction timestamp: $timestamp\n", 1);
     return ($timestamp);
 };
 
