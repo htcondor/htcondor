@@ -715,11 +715,13 @@ sub verbose_system
 	$args = $args . " 2>" . $catch;
 	my $rc = 0xffff & system $args;
 
-	printf "system(%s) returned %#04x: ", $args, $rc;
+	if ($rc != 0) { 
+		printf "system(%s) returned %#04x: ", $args, $rc;
+	}
 
 	if ($rc == 0) 
 	{
-		print "ran with normal exit\n";
+		#print "ran with normal exit\n";
 		return $rc;
 	}
 	elsif ($rc == 0xff00) 
@@ -965,7 +967,7 @@ sub runCondorTool
 		system("date");
 	}
 
-	my $attempts = 8;
+	my $attempts = 6;
 	my $count = 0;
 	while( $count < $attempts) {
 		@{$arrayref} = (); #empty return array...
