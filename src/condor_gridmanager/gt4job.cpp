@@ -2169,7 +2169,7 @@ GT4Job::getDummyJobScratchDir() {
 		goto error_exit;
 	}
 #endif
-	if ( dir_stat->GetMode() & 0777 != dir_mode ) {
+	if ( ( dir_stat->GetMode() & 0777 ) != dir_mode ) {
 		dprintf( D_ALWAYS, "Scratch directory %s has wrong permissions 0%o\n",
 				 dirname.Value(), dir_stat->GetMode() & 0777 );
 		goto error_exit;
