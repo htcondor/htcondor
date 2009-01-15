@@ -484,6 +484,16 @@ Optional parameters are given within square brackets.
     1472523 = 17*24*60*60 + 1*60*60 + 2*60 + 3, results in the
     string "17+1:02:03".
 
+  \index{ClassAd functions!debug()}
+  \item[\Code{AnyType debug(AnyType expression)}]
+	This function evaluates its argument, and returns the result.  Thus, it is a no-operation.
+	However, a side-effect of the debug function is that information about the evaluation is
+	logged to the evaluating program's log file.  This is useful for determining why a given
+	classad expression is evaluating the way it does.  For example, if a startd START expression
+	is unexpectedly evaluating to undefined, wrapping the expression in the debug function will
+	log information about each component of the expression to the log file, making it easier
+	to understand the expression.
+
 \end{description}
 
 For the following functions, a delimiter is represented by a string.
