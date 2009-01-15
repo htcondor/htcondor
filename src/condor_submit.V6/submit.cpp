@@ -3992,16 +3992,22 @@ SetEnvironment()
  	{
 		for (int i=0; environ[i]; i++) {
 			if(!env2 && env1 && !envobject.IsSafeEnvV1Value(environ[i])) {
-				// We silently filter out anything that is not expressible
+				// We quietly filter out anything that is not expressible
 				// in the 'environment1' syntax.  This avoids breaking
 				// our ability to submit jobs to older startds that do
 				// not support 'environment2' syntax.
+				dprintf(D_ALWAYS,
+						"WARNING: Ignoring env '%s'\n",
+						environ[i]);
 				continue;
 			}
 			if( !envobject.IsSafeEnvV2Value(environ[i]) ) {
-					// Silently filter out environment values containing
+					// Quietly filter out environment values containing
 					// unsafe characters.  Example: newlines cause the
 					// schedd to EXCEPT in 6.8.3.
+				dprintf(D_ALWAYS,
+						"WARNING: Ignoring env '%s'\n",
+						environ[i]);
 				continue;
 			}
 
