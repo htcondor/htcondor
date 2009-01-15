@@ -443,7 +443,7 @@ void 	check_iwd( char const *iwd );
 int	read_condor_file( FILE *fp );
 char * 	condor_param( const char* name, const char* alt_name );
 char * 	condor_param( const char* name ); // call param with NULL as the alt
-void 	set_condor_param( const char* name, char* value);
+void 	set_condor_param( const char* name, const char* value);
 void 	set_condor_param_used( const char* name);
 void 	queue(int num);
 bool 	check_requirements( char const *orig, MyString &answer );
@@ -5727,7 +5727,7 @@ condor_param( const char* name, const char* alt_name )
 
 
 void
-set_condor_param( const char *name, char *value )
+set_condor_param( const char *name, const char *value )
 {
 	char *tval = strdup( value );
 
