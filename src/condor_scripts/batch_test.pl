@@ -498,7 +498,7 @@ if( @testlist ) {
 } else {
     # we weren't given any specific tests or a test list, so we need to 
     # find all test programs (all files ending in .run) for each compiler
-	my $gotdot;
+	my $gotdot = 0;
 	debug("working on default test list\n",2);
     foreach my $compiler (@compilers) {
 		if($compiler eq ".") {
@@ -1222,22 +1222,24 @@ sub CreateLocalConfig
 
 	# above stolen from condor_configure
 
-	if( ($ENV{NMI_PLATFORM} =~ /hpux_11/) )
-	{
-	    # evil hack b/c our ARCH-detection code is stupid on HPUX, and our
-	    # HPUX11 build machine in NMI doesn't seem to have the files we're
-	    # looking for...
-	    print FIX "ARCH = HPPA2\n";
-	}
+	if( exists $ENV{NMI_PLATFORM} ) {
+		if( ($ENV{NMI_PLATFORM} =~ /hpux_11/) )
+		{
+	    	# evil hack b/c our ARCH-detection code is stupid on HPUX, and our
+	    	# HPUX11 build machine in NMI doesn't seem to have the files we're
+	    	# looking for...
+	    	print FIX "ARCH = HPPA2\n";
+		}
 
-	if( ($ENV{NMI_PLATFORM} =~ /ppc64_sles_9/) ) {
-		# evil work around for bad JIT compiler
-		print FIX "JAVA_EXTRA_ARGUMENTS = -Djava.compiler=NONE\n";
-	}
+		if( ($ENV{NMI_PLATFORM} =~ /ppc64_sles_9/) ) {
+			# evil work around for bad JIT compiler
+			print FIX "JAVA_EXTRA_ARGUMENTS = -Djava.compiler=NONE\n";
+		}
 
-	if( ($ENV{NMI_PLATFORM} =~ /ppc64_macos_10.3/) ) {
-		# evil work around for macos
-		print FIX "JAVA_EXTRA_ARGUMENTS = -Djava.vm.vendor=Apple\n";
+		if( ($ENV{NMI_PLATFORM} =~ /ppc64_macos_10.3/) ) {
+			# evil work around for macos
+			print FIX "JAVA_EXTRA_ARGUMENTS = -Djava.vm.vendor=Apple\n";
+		}
 	}
 
 	# Add a job wrapper for windows.... and a few other things which
