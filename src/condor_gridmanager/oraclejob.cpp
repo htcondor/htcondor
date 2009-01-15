@@ -50,7 +50,7 @@
 #define GM_HOLD					14
 #define GM_RECOVER_QUERY		15
 
-static char *GMStateNames[] = {
+static const char *GMStateNames[] = {
 	"GM_INIT",
 	"GM_UNSUBMITTED",
 	"GM_SUBMIT_1",

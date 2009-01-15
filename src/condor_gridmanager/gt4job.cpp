@@ -60,7 +60,7 @@
 #define GM_DELEGATE_PROXY		19
 #define GM_SUBMIT_ID_SAVE		20
 
-static char *GMStateNames[] = {
+static const char *GMStateNames[] = {
 	"GM_INIT",
 	"GM_REGISTER",
 	"GM_STDIO_UPDATE",
