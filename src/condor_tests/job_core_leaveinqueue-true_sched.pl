@@ -22,7 +22,7 @@ use CondorTest;
 
 $cmd = 'job_core_leaveinqueue-true_sched.cmd';
 $testdesc =  'Condor submit with test for policy trigger of leave_in_queue - scheduler U';
-$testname = "job_core_leaveinqueue-true_sched";
+$testname = "job_core_leaveinqueue_sched";
 
 my $killedchosen = 0;
 
