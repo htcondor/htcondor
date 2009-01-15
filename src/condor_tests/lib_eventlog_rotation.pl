@@ -491,11 +491,6 @@ else {
 	$params{total_events} = $params{loop_events};
 }
 
-printf( "ms:%d mes:%d  lpf:%.1f ts:%d tes:%d  le:%d te:%d\n",
-		$params{max_size}, $params{max_esize},
-		$params{lpf}, $params{total_size}, $params{total_esize},
-		$params{loop_events}, $params{total_events} );
-
 # Min number of events expected to be written per loop
 if ( exists $test->{loop_min_events} ) {
 	$params{loop_min_events} = $test->{loop_min_events};
