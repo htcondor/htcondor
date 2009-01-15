@@ -92,8 +92,8 @@ $OutputCheck = sub
 		return;
 	}
 
-	CondorTest::debug(" certain output lines ",1);
-		"to be present, but only saw $count of them.\n";
+	CondorTest::debug("FAILURE : Expected " . scalar(@present) . " certain output lines ".
+		"to be present, but only saw $count of them.\n",1);
     die "$testname: CondorTest::RunTest() failed\n";
 };
 

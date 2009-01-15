@@ -309,7 +309,7 @@ if(($numclaimed == 4) && ($done == 1)) {
 		# it had best be in the hash!
 		if(! (exists $discoveries{$search})) {
 			$done = 0;
-			CondorTest::debug(" not discovered(Failure of Test)\n",1);
+			CondorTest::debug("Expected ad type \"$search\" not discovered(Failure of Test)\n",1);
 			last;
 		} else {
 			CondorTest::debug("Expected Ad Type ($search) found!\n",1);

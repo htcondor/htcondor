@@ -102,7 +102,7 @@ CondorTest::debug("---home collector config is $flocktoconfig and collector port
 my $bail = 0;
 
 my $flockstatus = CondorTest::verbose_system("./job_flocking_to.pl");
-CondorTest::debug("\n",1);
+CondorTest::debug("Status of flocked job is \"$flockstatus\"\n",1);
 
 CondorTest::debug("Saving things and cleaning up....\n",1);
 
