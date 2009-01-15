@@ -4342,8 +4342,16 @@ Scheduler::actOnJobs(int, Stream* s)
 		return FALSE;
 	}
 
+		// We're seeing sporadic test suite failures where this
+		// CommitTransaction() appears to take a long time to
+		// execute. This dprintf() will help in debugging.
+	time_t before = time(NULL);
 	if( needs_transaction ) {
 		CommitTransaction();
+	}
+	time_t after = time(NULL);
+	if ( (after - before) > 5 ) {
+		dprintf( D_FULLDEBUG, "actOnJobs(): CommitTransaction() took %ld seconds to run\n", after - before );
 	}
 		
 	unsetQSock();
