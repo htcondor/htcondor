@@ -1145,10 +1145,7 @@ sub CheckReaderOutput( $$$$ )
     }
 
 	if ( $nseq < 0 ) {
-		#printf( STDERR
-		#		"ERROR: loop %d: no reader sequence\n",
-		#		$loop );
-		#$errors++;
+		# do nothing
     }
     elsif ( $rseq < $new->{writer_sequence} ) {
 		printf( STDERR
