@@ -22,7 +22,7 @@ use CondorTest;
 
 $cmd = 'job_core_onexithold-false_java.cmd';
 $testdesc =  'Condor submit with hold for periodic remove test - java U';
-$testname = "job_core_onexithold-false_java";
+$testname = "job_core_onexithold_java";
 
 my $killedchosen = 0;
 

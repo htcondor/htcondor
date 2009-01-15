@@ -1,4 +1,4 @@
-#! /usr/bin/env perl
+#!/usr/bin/env perl
 ##**************************************************************
 ##
 ## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -18,38 +18,15 @@
 ##
 ##**************************************************************
 
-use CondorTest;
+use CondorPubLogdirs;
+use strict;
+use warnings;
+CondorPubLogdirs::LoadPublished();
 
-$cmd = 'job_core_perremove-false_sched.cmd';
-$testdesc =  'Condor submit policy test for periodic_remove - scheduler U';
-$testname = "job_core_perremove_sched";
+my $testref = CondorPubLogdirs::ReturnPublished("job_core_output_van");
 
-my %info;
-my $cluster;
 
-$executed = sub
-{
-	%info = @_;
-	$cluster = $info{"cluster"};
-
-	CondorTest::debug("Good. for periodic_remove cluster $cluster must run first\n",1);
-};
-
-$success = sub
-{
-	my %info = @_;
-	my $cluster = $info{"cluster"};
-
-	CondorTest::debug("Good, job should complete trivially\n",1);
-};
-
-CondorTest::RegisterExecute($testname, $executed);
-CondorTest::RegisterExitedSuccess( $testname, $success );
-
-if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	CondorTest::debug("$testname: SUCCESS\n",1);
-	exit(0);
-} else {
-	die "$testname: CondorTest::RunTest() failed\n";
+foreach my $logdir (@{$testref}) {
+	print "Dir: $logdir\n";
 }
-
+exit(0);

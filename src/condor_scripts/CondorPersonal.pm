@@ -46,6 +46,7 @@
 package CondorPersonal;
 require 5.0;
 use Net::Domain qw(hostfqdn);
+use CondorPubLogdirs;
 
 #################################################################
 #
@@ -232,6 +233,13 @@ sub StartCondor
 		$topleveldir = $personal_condor_params{"personaldir"};
 		debug( "SETTING $topleveldir as topleveldir\n",1);
 		system("mkdir -p $topleveldir");
+	}
+
+	# if we are wrapping tests, publish log location
+	my $wrap_test = $ENV{WRAP_TESTS};
+	if(defined  $wrap_test) {
+		my $logdir = $topleveldir . "/log";
+		CondorPubLogdirs::PublishLogDir($testname,$logdir);
 	}
 
 	$personal_config_file = $topleveldir ."/condor_config";

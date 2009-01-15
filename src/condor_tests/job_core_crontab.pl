@@ -44,9 +44,22 @@ my $universe = ($ARGV[0] ? $ARGV[0] : "vanilla");
 ## Test Information
 ##
 $testdesc =  "CronTab Testing - $universe";
-$testname = "job_core_crontab";
 $base_name = 'job_core_crontab';
 $base_cmd = $base_name.".cmd";
+
+if( defined $ARGV[0] ) {
+	if($ARGV[0] =~ /.*van.*/ ) {
+		$testname = "job_core_crontab_van";
+	} elsif($ARGV[0] =~ /.*sched.*/ ) {
+		$testname = "job_core_crontab_sched";
+	} elsif($ARGV[0] =~ /.*loc.*/ ) {
+		$testname = "job_core_crontab_local";
+	} else {
+		die "Unexpected universe passed to job_core_crontab.pl($ARGV[0])\n";
+	}
+} else {
+	$testname = "job_core_crontab_van";
+}
 
 # log file is related to the universe...
 my $logname = $base_name . "_" .  $universe . ".log";
