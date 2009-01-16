@@ -2692,22 +2692,30 @@ void AttrList::RestoreChain(const ChainedPair &p)
 int AttrList::
 AssignExpr(char const *variable,char const *value)
 {
-	MyString buf;
+	ExprTree *tree = NULL;
+	ExprTree *lhs = NULL;
+	ExprTree *rhs = NULL;
 
-	if (!IsValidAttrName(variable) || !IsValidAttrValue(value)) {
+
+	if ( ParseClassAdRvalExpr( variable, lhs ) != 0 || lhs == NULL ) {
+		delete lhs;
 		return FALSE;
 	}
-
-	buf += variable;
-
-	if(!value) {
-		buf += " = UNDEFINED";
+	if ( !value ) {
+		rhs = new Undefined();
 	} else {
-		buf += " = ";
-		buf += value;
+		if ( ParseClassAdRvalExpr( value, rhs ) != 0 || rhs == NULL ) {
+			delete lhs;
+			delete rhs;
+			return FALSE;
+		}
 	}
-
-	return Insert(buf.GetCStr());
+	tree = new AssignOp( lhs, rhs );
+	if ( Insert( tree ) == FALSE ) {
+		delete tree;
+		return FALSE;
+	}
+	return TRUE;
 }
 
 char const *
@@ -2724,10 +2732,6 @@ AttrList::EscapeStringValue(char const *val,MyString &buf) {
 int AttrList::
 Assign(char const *variable, MyString &value)
 {
-	if (!IsValidAttrName(variable)) {
-		return FALSE;
-	}
-
 	return Assign(variable,value.Value());
 }
 
@@ -2735,73 +2739,106 @@ Assign(char const *variable, MyString &value)
 int AttrList::
 Assign(char const *variable,char const *value)
 {
-	if (!IsValidAttrName(variable) || !IsValidAttrValue(value)) {
+	ExprTree *tree = NULL;
+	ExprTree *lhs = NULL;
+	ExprTree *rhs = NULL;
+
+	if ( ParseClassAdRvalExpr( variable, lhs ) != 0 || lhs == NULL ) {
+		delete lhs;
 		return FALSE;
 	}
-
-	MyString buf(variable);
-	MyString escape_buf;
-
-	if (!value) {
-		buf += "=UNDEFINED";
+	if ( !value ) {
+		rhs = new Undefined();
 	} else {
-		value = EscapeStringValue(value,escape_buf);
-
-		buf += "=\"";
-		buf += value;
-		buf += "\"";
+		/* I apologize for this casting away of const. It's required by
+		 * String's use of StringSpace. Nothing will modify the string,
+		 * so this is safe to do, though it's ugly.
+		 */
+		rhs = new String( (char *)value );
 	}
-
-	return Insert(buf.Value());
+	tree = new AssignOp( lhs, rhs );
+	if ( Insert( tree ) == FALSE ) {
+		delete tree;
+		return FALSE;
+	}
+	return TRUE;
 }
 
 int AttrList::
 Assign(char const *variable,int value)
 {
-	MyString buf;
-	if (!IsValidAttrName(variable)) {
+	ExprTree *tree = NULL;
+	ExprTree *lhs = NULL;
+	ExprTree *rhs = NULL;
+
+	if ( ParseClassAdRvalExpr( variable, lhs ) != 0 || lhs == NULL ) {
+		delete lhs;
 		return FALSE;
 	}
-
-	buf.sprintf("%s = %d",variable,value);
-	return Insert(buf.GetCStr());
+	rhs = new Integer( value );
+	tree = new AssignOp( lhs, rhs );
+	if ( Insert( tree ) == FALSE ) {
+		delete tree;
+		return FALSE;
+	}
+	return TRUE;
 }
 int AttrList::
 Assign(char const *variable,float value)
 {
-	MyString buf;
-	if (!IsValidAttrName(variable)) {
+	ExprTree *tree = NULL;
+	ExprTree *lhs = NULL;
+	ExprTree *rhs = NULL;
+
+	if ( ParseClassAdRvalExpr( variable, lhs ) != 0 || lhs == NULL ) {
+		delete lhs;
 		return FALSE;
 	}
-
-	buf.sprintf("%s = %f",variable,value);
-	return Insert(buf.GetCStr());
+	rhs = new Float( value );
+	tree = new AssignOp( lhs, rhs );
+	if ( Insert( tree ) == FALSE ) {
+		delete tree;
+		return FALSE;
+	}
+	return TRUE;
 }
 int AttrList::
 Assign(char const *variable,double value)
 {
-	MyString buf;
-	if (!IsValidAttrName(variable)) {
+	ExprTree *tree = NULL;
+	ExprTree *lhs = NULL;
+	ExprTree *rhs = NULL;
+
+	if ( ParseClassAdRvalExpr( variable, lhs ) != 0 || lhs == NULL ) {
+		delete lhs;
 		return FALSE;
 	}
-
-	/* WARNING: The internal representation may only store float sized 
-		quantities. but if this is ever fixed, the whole source base doesn't
-		need to be updated to deal with assigning double values due to the
-		existance of this call. */
-	buf.sprintf("%s = %f",variable,value);
-	return Insert(buf.GetCStr());
+	rhs = new Integer( value );
+	tree = new AssignOp( lhs, rhs );
+	if ( Insert( tree ) == FALSE ) {
+		delete tree;
+		return FALSE;
+	}
+	return TRUE;
 }
 int AttrList::
 Assign(char const *variable,bool value)
 {
-	MyString buf;
-	if (!IsValidAttrName(variable)) {
+	ExprTree *tree = NULL;
+	ExprTree *lhs = NULL;
+	ExprTree *rhs = NULL;
+
+	if ( ParseClassAdRvalExpr( variable, lhs ) != 0 || lhs == NULL ) {
+		delete lhs;
 		return FALSE;
 	}
-
-	buf.sprintf("%s = %s",variable,value?"TRUE":"FALSE");
-	return Insert(buf.GetCStr());
+	rhs = new ClassadBoolean( value ? 1 : 0 );
+	tree = new AssignOp( lhs, rhs );
+	if ( Insert( tree ) == FALSE ) {
+		delete tree;
+		return FALSE;
+	}
+	return TRUE;
 }
 
 bool AttrList::SetInvisible(char const *name,bool invisible)

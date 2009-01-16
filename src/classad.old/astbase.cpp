@@ -39,6 +39,16 @@ StringSpace *ExprTree::string_space = NULL;
 int ExprTree::string_space_references = 0;
 #endif
 
+#ifndef USE_STRING_SPACE_IN_CLASSADS
+static	char*	StrCpy(const char* str)
+{
+	char*	tmpStr = new char[strlen(str)+1];
+
+	strcpy(tmpStr, str);
+	return tmpStr;
+}
+#endif
+
 ////////////////////////////////////////////////////////////////////////////////
 // Tree node constructors.                                                    //
 ////////////////////////////////////////////////////////////////////////////////
@@ -52,7 +62,7 @@ VariableBase::VariableBase(char* varName)
 	// and it is safe. 
 	this->name = (char *) (*string_space)[stringSpaceIndex];
 #else
-    this->name = varName;
+    this->name = StrCpy(varName);
 #endif
     this->type = LX_VARIABLE;
 }
@@ -84,7 +94,7 @@ StringBase::StringBase(char* str)
 	// and it is safe. 
 	value = (char *) (*string_space)[stringSpaceIndex];
 #else
-    value = str;
+    value = StrCpy(str);
 #endif
     this->type  = LX_STRING;
 }
@@ -98,7 +108,7 @@ ISOTimeBase::ISOTimeBase(char* str)
 	// and it is safe. 
 	time = (char *) (*string_space)[stringSpaceIndex];
 #else
-    time = str;
+    time = StrCpy(str);
 #endif
     this->type  = LX_TIME;
 }
@@ -1135,7 +1145,7 @@ FunctionBase::FunctionBase(char *tName)
 	// and it is safe. 
 	this->name = (char *) (*string_space)[stringSpaceIndex];
 #else
-    this->name = tName;
+    this->name = StrCpy(tName);
 #endif
     this->type = LX_FUNCTION;
 	arguments = new List<ExprTree>();
