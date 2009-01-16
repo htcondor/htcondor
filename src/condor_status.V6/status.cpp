@@ -364,7 +364,7 @@ void
 usage ()
 {
 	fprintf (stderr,"Usage: %s [help-opt] [query-opt] [display-opt] "
-		"[custom-opts ...] [hostname ...]\n"
+		"[custom-opts ...] [name ...]\n"
 		"    where [help-opt] is one of\n"
 		"\t-help\t\t\tThis screen\n"
 		"\t-diagnose\t\tPrint out query ad without performing query\n"
