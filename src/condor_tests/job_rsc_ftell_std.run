@@ -25,10 +25,12 @@ $cmd = 'job_rsc_ftell_std.cmd';
 $testdesc =  'Ftell Test';
 $testname = "job_rsc_ftell_std";
 
-@CondorTest::expected_output =
+my @expected_output =
 ( 'about to call ftell()', 
   'ftell succeeds, return value = 0', 
   'ftell succeeds, return value = 4' );
+
+CondorTest::SetExpected(\@expected_output);
 
 CondorTest::RegisterExitedSuccess( $testname,
 				   \&CondorTest::DefaultOutputTest );

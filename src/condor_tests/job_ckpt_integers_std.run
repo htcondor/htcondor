@@ -136,9 +136,10 @@ locals: -1 -1 -1 -1 -1 -1 -1 -1
 
 _EOX
 
-@CondorTest::expected_output = split '\n', $foo;
+my @expected_output = split '\n', $foo;
 # kludge because split() omits trailing blank lines
-@CondorTest::expected_output = (@CondorTest::expected_output, "\n");
+@expected_output = (@expected_output, "\n");
+CondorTest::SetExpected(\@expected_output);
 
 CondorTest::RegisterExitedSuccess( $testname,
 				   \&CondorTest::DefaultOutputTest );

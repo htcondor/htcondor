@@ -25,7 +25,7 @@ $testdesc =  'condor_submit input works - scheduler U';
 $testname = "job_core_input_sched";
 
 
-@CondorTest::expected_output =
+my @expected_output =
 (
 'first',
 'second',
@@ -33,7 +33,7 @@ $testname = "job_core_input_sched";
 'fourth',
 );
 
-
+CondorTest::SetExpected(\@expected_output);
 
 $ExitSuccess = sub {
 };
