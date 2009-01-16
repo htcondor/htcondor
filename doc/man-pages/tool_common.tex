@@ -9,7 +9,7 @@
 
 %% How to locate the machines with which you want to mess.
 \newcommand{\ToolArgsLocate}{
-\Lbr \OptArg{-name}{hostname} $|$ \Arg{hostname} $|$ \OptArg{-addr}{"\SinfulAny"} $|$ \Arg{"\SinfulAny"} \Opt{\Dots} \Rbr $|$ \oOpt{-all} \\
+\Lbr \OptArg{-name}{name} $|$ \Arg{name} $|$ \OptArg{-addr}{"\SinfulAny"} $|$ \Arg{"\SinfulAny"} \Opt{\Dots} \Rbr $|$ \oOpt{-all} \\
 }
 %%%% Was:
 %%%%\oOptnm{-name hostname $|$ hostname $|$ -addr "\SinfulAny" $|$ "\SinfulAny" } \Opt{\Dots} \oOptnm{ $|$ -all} \\
@@ -17,7 +17,7 @@
 %% for checkpoint, off, on, reconfig, reschedule, restart and vacate
 \newcommand{\ToolWhere}{
 \Lbr \OptArg{-pool}{centralmanagerhostname\Lbr:portnumber\Rbr}
-$|$ \OptArg{-name}{hostname} \Rbr $|$ \oOptArg{-addr}{"\SinfulAny"}
+$|$ \OptArg{-name}{name} \Rbr $|$ \oOptArg{-addr}{"\SinfulAny"}
 \Optnm{\Dots} \oOptnm{ $|$ -all} \\
 }
 %%%% Was:
@@ -77,8 +77,8 @@ $|$ \OptArg{-name}{scheddname} \Rbr $|$ \oOptArg{-addr}{"\SinfulAny"}
 \newcommand{\ToolArgsLocateDesc}{
 \OptItem{\OptArg{-pool}{centralmanagerhostname[:portnumber]}}{Specify a pool by giving the
 	central manager's host name and an optional port number}
-\OptItem{\OptArg{-name}{hostname}}{Send the command to a machine identified by \Arg{hostname}}
-\OptItem{\Arg{hostname}}{Send the command to a machine identified by \Arg{hostname}}
+\OptItem{\OptArg{-name}{name}}{Send the command to a machine identified by \Arg{name}}
+\OptItem{\Arg{name}}{Send the command to a machine identified by \Arg{name}}
 \OptItem{\OptArg{-addr}{"\SinfulAny"}}{Send the command
 	to a machine's master located at \Arg{"\SinfulAny"}}
 \OptItem{\Arg{"\SinfulAny"}}{Send the command
