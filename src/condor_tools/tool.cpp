@@ -132,7 +132,7 @@ usage( char *str )
 	fprintf( stderr, "    <ip.address:port>\tgiven \"sinful string\"\n" );
 	fprintf( stderr,
 			 "  (for compatibility with other Condor tools, you can also use:)\n" );
-	fprintf( stderr, "    -name hostname\tgiven host\n" );
+	fprintf( stderr, "    -name name\tgiven host\n" );
 	fprintf( stderr, "    -addr <addr:port>\tgiven \"sinful string\"\n" );
 	fprintf( stderr, "  (if no targets are specified, the local host is used)\n" );
 	if( takes_subsys ) {
@@ -233,7 +233,7 @@ pool_target_usage( void )
 	fprintf( stderr, "ERROR: You have asked to find a machine in "
 			 "another pool (with\n"
 			 "the -pool option) but you have not specified which machine.\n"
-			 "Please also use -addr, -name, or list the hostname(s).\n"
+			 "Please also use -addr, -name, or list the name(s).\n"
 			 "For more information, use -help.\n" );
 	exit( 1 );
 }
