@@ -161,6 +161,13 @@ prettyPrint (ClassAdList &adList, TrackTotals *totals)
 	}
 	adList.Close();
 
+	// if there are no ads to print, but the user wanted XML output,
+	// then print out the XML header and footer, so that naive XML
+	// parsers won't get confused.
+	if ( PP_XML == ppStyle && 0 == classad_index ) {
+		printXML (NULL, true, true);
+	}
+
 	printf ("\n");
 
 	// if totals are required, display totals
@@ -748,7 +755,9 @@ printXML (ClassAd *ad, bool first_ad, bool last_ad)
 	}
 
 	unparser.SetUseCompactSpacing(false);
-	unparser.Unparse(ad, xml);
+	if ( NULL != ad ) {
+		unparser.Unparse(ad, xml);
+	}
 
 	if (last_ad) {
 		unparser.AddXMLFileFooter(xml);
