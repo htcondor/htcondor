@@ -228,7 +228,7 @@ sub StartCondor
 	my $arraysz = scalar(@_);
 	my $testname = shift || die "Missing test name\n";
 	my $paramfile = shift || die "Missing parameter file!\n";
-	my $version = shift || die "Missing parameter version!\n";
+	$version = shift || die "Missing parameter version!\n";
 	my $config_and_port = "";
 	my $winpath = "";
 
