@@ -486,13 +486,17 @@ Optional parameters are given within square brackets.
 
   \index{ClassAd functions!debug()}
   \item[\Code{AnyType debug(AnyType expression)}]
-	This function evaluates its argument, and returns the result.  Thus, it is a no-operation.
-	However, a side-effect of the debug function is that information about the evaluation is
-	logged to the evaluating program's log file.  This is useful for determining why a given
-	classad expression is evaluating the way it does.  For example, if a startd START expression
-	is unexpectedly evaluating to undefined, wrapping the expression in the debug function will
-	log information about each component of the expression to the log file, making it easier
-	to understand the expression.
+     This function evaluates its argument, and it returns the result.
+     Thus, it is a no-operation.
+     However, a side-effect of the function is that information about
+     the evaluation is logged to the evaluating program's log file.
+     This is useful for determining why a given ClassAd expression
+     is evaluating the way it does.  
+     For example, if a \Condor{startd} \MacroNI{START} expression
+     is unexpectedly evaluating to \Expr{UNDEFINED},
+     then wrapping the expression in this \Procedure{debug} function will
+     log information about each component of the expression to the log file,
+     making it easier to understand the expression.
 
 \end{description}
 
