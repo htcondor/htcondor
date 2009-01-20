@@ -848,6 +848,32 @@
 			RelativePath="..\src\condor_collector.V6\view_server.h"
 			>
 		</File>
+		<File
+			RelativePath="..\src\ccb\ccb_server.cpp"
+			>
+			<FileConfiguration
+				Name="Release|Win32"
+				>
+				<Tool
+					Name="VCCLCompilerTool"
+					PreprocessorDefinitions=""
+					CompileAs="2"
+				/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32"
+				>
+				<Tool
+					Name="VCCLCompilerTool"
+					PreprocessorDefinitions=""
+					CompileAs="2"
+				/>
+			</FileConfiguration>
+		</File>
+		<File
+			RelativePath="..\src\ccb\ccb_server.h"
+			>
+		</File>
 	</Files>
 	<Globals>
 	</Globals>

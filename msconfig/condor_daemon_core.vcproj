@@ -1094,6 +1094,32 @@
 				/>
 			</FileConfiguration>
 		</File>
+		<File
+			RelativePath="..\src\ccb\ccb_listener.h"
+			>
+		</File>
+		<File
+			RelativePath="..\src\ccb\ccb_listener.cpp"
+			>
+			<FileConfiguration
+				Name="Release|Win32"
+				>
+				<Tool
+					Name="VCCLCompilerTool"
+					PreprocessorDefinitions=""
+					CompileAs="2"
+				/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32"
+				>
+				<Tool
+					Name="VCCLCompilerTool"
+					PreprocessorDefinitions=""
+					CompileAs="2"
+				/>
+			</FileConfiguration>
+		</File>
 	</Files>
 	<Globals>
 	</Globals>
