@@ -139,7 +139,6 @@ use FileHandle;
 use POSIX "sys_wait_h";
 use Socket;
 use Sys::Hostname;
-use CondorTest;
 
 my $topleveldir = getcwd();
 my $home = $topleveldir;
@@ -1380,15 +1379,9 @@ sub IsRunningYet
 		my $currenthost = hostfqdn();
 		if(($daemonlist =~ /.*COLLECTOR.*/i) && ($personal_startup_wait eq "true")) {
 			while( $done eq "no") {
-				my $cmd = "condor_status -startd -format \"%s\\n\" name";
-    			my $qstat = CondorTest::runCondorTool($cmd,\@status,3,"CondorPersonal");
-    			if(!$qstat)
-    			{
-        			print "Test failure due to Condor Tool Failure<$cmd>\n";
-        			last;
-    			}
+				my @cmd = `condor_status -startd -format \"%s\\n\" name`;
 
-    			foreach my $line (@status)
+    			foreach my $line (@cmd)
     			{
         			print "want $currenthost Line: $line\n";
         			if( $line =~ /^.*$currenthost.*/)
@@ -1410,15 +1403,9 @@ sub IsRunningYet
 		my $currenthost = hostfqdn();
 		if(($daemonlist =~ /.*COLLECTOR.*/i) && ($personal_startup_wait eq "true")) {
 			while( $done eq "no") {
-				my $cmd = "condor_status -schedd -format \"%s\\n\" name";
-    			my $qstat = CondorTest::runCondorTool($cmd,\@status,3,"CondorPersonal");
-    			if(!$qstat)
-    			{
-        			print "Test failure due to Condor Tool Failure<$cmd>\n";
-        			last;
-    			}
+				my @cmd = `condor_status -schedd -format \"%s\\n\" name`;
 
-    			foreach my $line (@status)
+    			foreach my $line (@cmd)
     			{
         			print "want $currenthost Line: $line\n";
         			if( $line =~ /^.*$currenthost.*/)
@@ -1709,7 +1696,7 @@ sub SaveMeSetup
 	my $mypid = $$;
 	my $res = 1;
 	my $mysaveme = $testname . ".saveme";
-	$res = CondorTest::verbose_system("mkdir -p $mysaveme");
+	$res = verbose_system("mkdir -p $mysaveme");
 	if($res != 0) {
 		print "SaveMeSetup: Could not create \"saveme\" directory for test\n";
 		return(0);
@@ -1717,12 +1704,12 @@ sub SaveMeSetup
 	my $mypiddir = $mysaveme . "/" . $mypid;
 	# there should be no matching directory here
 	# unless we are getting pid recycling. Start fresh.
-	$res = CondorTest::verbose_system("rm -rf $mypiddir");
+	$res = verbose_system("rm -rf $mypiddir");
 	if($res != 0) {
 		print "SaveMeSetup: Could not remove prior pid directory in savemedir \n";
 		return(0);
 	}
-	$res = CondorTest::verbose_system("mkdir $mypiddir");
+	$res = verbose_system("mkdir $mypiddir");
 	if($res != 0) {
 		print "SaveMeSetup: Could not create pid directory in \"saveme\" directory\n";
 		return(0);
@@ -1730,12 +1717,12 @@ sub SaveMeSetup
 	# make a symbolic link for personal condor module to use
 	# if we get pid recycling, blow the symbolic link 
 	# This might not be a symbolic link, so use -r to be sure
-	#$res = CondorTest::verbose_system("rm -fr $mypid");
+	#$res = verbose_system("rm -fr $mypid");
 	#if($res != 0) {
 		#print "SaveMeSetup: Could not remove prior pid directory\n";
 		#return(0);
 	#}
-	#$res = CondorTest::verbose_system("ln -s $mypiddir $mypid");
+	#$res = verbose_system("ln -s $mypiddir $mypid");
 	#if($res != 0) {
 		#print "SaveMeSetup: Could not link to pid dir in  \"saveme\" directory\n";
 		#return(0);
@@ -1863,6 +1850,55 @@ sub PersonalDumpCondorLogs
 	}
 	close(LD);
 	chdir("$now");
+}
+
+sub verbose_system 
+{
+	my $args = shift @_;
+
+	my $catch = "vsystem$$";
+	$args = $args . " 2>" . $catch;
+	my $rc = 0xffff & system $args;
+
+	if ($rc != 0) { 
+		printf "system(%s) returned %#04x: ", $args, $rc;
+	}
+
+	if ($rc == 0) 
+	{
+		#print "ran with normal exit\n";
+		return $rc;
+	}
+	elsif ($rc == 0xff00) 
+	{
+		print "command failed: $!\n";
+	}
+	elsif (($rc & 0xff) == 0) 
+	{
+		$rc >>= 8;
+		print "ran with non-zero exit status $rc\n";
+	}
+	else 
+	{
+		print "ran with ";
+		if ($rc &   0x80) 
+		{
+			$rc &= ~0x80;
+			print "coredump from ";
+		}
+		print "signal $rc\n"
+	}
+
+	if( !open( MACH, "<$catch" )) { 
+		warn "Can't look at command  output <$catch>:$!\n";
+	} else {
+    	while(<MACH>) {
+        	print "ERROR: $_";
+    	}
+    	close(MACH);
+	}
+
+	return $rc;
 }
 
 1;
