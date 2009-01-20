@@ -658,6 +658,9 @@ GlobusJob::GlobusJob( ClassAd *classad )
 		}
 	}
 
+	m_lightWeightJob = false;
+	jobAd->LookupBool( ATTR_JOB_NONESSENTIAL, m_lightWeightJob );
+
 	// In GM_HOLD, we assme HoldReason to be set only if we set it, so make
 	// sure it's unset when we start.
 	if ( jobAd->LookupString( ATTR_HOLD_REASON, NULL, 0 ) != 0 ) {
@@ -910,6 +913,17 @@ int GlobusJob::doEvaluateState()
 			gahp->setMode( GahpClient::results_only );
 		} else {
 			gahp->setMode( GahpClient::normal );
+		}
+	}
+
+		// Special light-weight job semantics for BNL
+	if ( condorState == REMOVED && m_lightWeightJob ) {
+		if ( resourceDown && jobContact ) {
+			dprintf( D_ALWAYS, "(%d.%d) Immediately removing light-weight "
+					 "job whose resource is down.\n", procID.cluster,
+					 procID.proc );
+			SetRemoteJobId( NULL );
+			gmState = GM_CLEAR_REQUEST;
 		}
 	}
 
@@ -1167,7 +1181,7 @@ int GlobusJob::doEvaluateState()
 				// running jobmanager (due to a failure), you must call
 				// JMComplete() as well.
 				if ( myResource->RequestSubmit(this) == false ||
-					 myResource->RequestJM(this) == false ) {
+					 myResource->RequestJM(this, true) == false ) {
 					break;
 				}
 				if ( RSL == NULL ) {
@@ -1684,7 +1698,7 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 				// running jobmanager (due to a failure), you must call
 				// JMComplete() as well.
 				if ( myResource->RequestSubmit(this) == false ||
-					 myResource->RequestJM(this) == false ) {
+					 myResource->RequestJM(this, false) == false ) {
 					break;
 				}
 				if ( RSL == NULL ) {
@@ -2304,7 +2318,7 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 				// call SubmitComplete() or CancelSubmit() once you're done
 				// with the request call
 				if ( myResource->RequestSubmit(this) == false ||
-					 myResource->RequestJM(this) == false ) {
+					 myResource->RequestJM(this, false) == false ) {
 					break;
 				}
 				if ( RSL == NULL ) {
@@ -2612,6 +2626,15 @@ void GlobusJob::UpdateGlobusState( int new_state, int new_error_code )
 
 	allow_transition = AllowTransition( new_state, globusState );
 
+		// We want to call SetRemoteJobStatus() even if the status
+		// hasn't changed, so that BaseJob will know that we got a
+		// status update.
+	if ( ( allow_transition || new_state == globusState ) &&
+		 new_state != GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED ) {
+
+		SetRemoteJobStatus( GlobusJobStatusName( new_state ) );
+	}
+
 	if ( allow_transition ) {
 		// where to put logging of events: here or in EvaluateState?
 		dprintf(D_FULLDEBUG, "(%d.%d) globus state change: %s -> %s\n",
@@ -2651,6 +2674,7 @@ void GlobusJob::UpdateGlobusState( int new_state, int new_error_code )
 					WriteGridSubmitEventToUserLog( jobAd );
 					submitLogged = true;
 				}
+
 				jobAd->LookupInteger( ATTR_NUM_GLOBUS_SUBMITS,
 									  num_globus_submits );
 				num_globus_submits++;
@@ -2667,7 +2691,6 @@ void GlobusJob::UpdateGlobusState( int new_state, int new_error_code )
 			globusStateBeforeFailure = globusState;
 		} else {
 			jobAd->Assign( ATTR_GLOBUS_STATUS, new_state );
-			SetRemoteJobStatus( GlobusJobStatusName( new_state ) );
 		}
 
 		globusState = new_state;
@@ -2693,6 +2716,8 @@ void GlobusJob::GramCallback( int new_state, int new_error_code )
 		callbackGlobusStateErrorCode = new_error_code;
 
 		SetEvaluateState();
+	} else if ( new_state == globusState ) {
+		SetRemoteJobStatus( GlobusJobStatusName( globusState ) );
 	}
 }
 
@@ -3465,7 +3490,7 @@ GlobusJob::JmShouldSleep()
 	case GLOBUS_GRAM_PROTOCOL_JOB_STATE_ACTIVE:
 	case GLOBUS_GRAM_PROTOCOL_JOB_STATE_SUSPENDED:
 		if ( ( !streamOutput && !streamError ) ||
-			 myResource->GetJMLimit() != GM_RESOURCE_UNLIMITED ) {
+			 myResource->GetJMLimit(true) != GM_RESOURCE_UNLIMITED ) {
 
 			return true;
 		} else {

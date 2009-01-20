@@ -112,6 +112,19 @@ const char *AmazonResource::ResourceType()
 	return "amazon";
 }
 
+const char *AmazonResource::GetHashName()
+{
+	return HashName( resourceName, m_public_key_file, m_private_key_file );
+}
+
+void AmazonResource::PublishResourceAd( ClassAd *resource_ad )
+{
+	BaseResource::PublishResourceAd( resource_ad );
+
+	resource_ad->Assign( ATTR_AMAZON_PUBLIC_KEY, m_public_key_file );
+	resource_ad->Assign( ATTR_AMAZON_PRIVATE_KEY, m_private_key_file );
+}
+
 // we will use amazon command "status_all" to do the Ping work
 void AmazonResource::DoPing( time_t& ping_delay, bool& ping_complete, bool& ping_succeeded )
 {

@@ -70,6 +70,7 @@ CollectorEngine::CollectorEngine (CollectorStats *stats ) :
 	NegotiatorAds (LESSER_TABLE_SIZE , &adNameHashFunction),
 	HadAds        (LESSER_TABLE_SIZE , &adNameHashFunction),
 	LeaseManagerAds(LESSER_TABLE_SIZE , &adNameHashFunction),
+	GridAds       (LESSER_TABLE_SIZE , &adNameHashFunction),
 	GenericAds    (LESSER_TABLE_SIZE , &stringHashFunction)
 {
 	clientTimeout = 20;
@@ -101,6 +102,7 @@ CollectorEngine::
 	killHashTable (HadAds);
 	killHashTable (XferServiceAds);
 	killHashTable (LeaseManagerAds);
+	killHashTable (GridAds);
 	GenericAds.walk(killGenericHashTable);
 
 	if(m_collector_requirements) {
@@ -231,6 +233,10 @@ invokeHousekeeper (AdTypes adtype)
 		case HAD_AD:
 			cleanHashTable (HadAds, now, makeHadAdHashKey);
 			break;
+            
+		case GRID_AD:
+			cleanHashTable (GridAds, now, makeGridAdHashKey);
+			break;
 
 		case GENERIC_AD:
 			CollectorHashTable *cht;
@@ -342,6 +348,10 @@ walkHashTable (AdTypes adType, int (*scanFunction)(ClassAd *))
 		table = &HadAds;
 		break;
 
+      case GRID_AD:
+        table = &GridAds;
+		break;
+
 	  case XFER_SERVICE_AD:
 		table = &XferServiceAds;
 		break;
@@ -364,7 +374,7 @@ walkHashTable (AdTypes adType, int (*scanFunction)(ClassAd *))
 			QuillAds.walk(scanFunction) &&
 #endif
 			HadAds.walk(scanFunction) &&
-
+			GridAds.walk(scanFunction) &&
 			XferServiceAds.walk(scanFunction) &&
 			LeaseManagerAds.walk(scanFunction) &&
 
@@ -483,6 +493,7 @@ bool CollectorEngine::ValidateClassAd(int command,ClassAd *clientAd,Sock *sock)
 	  case UPDATE_STORAGE_AD:
 	  case UPDATE_HAD_AD:
 	  case UPDATE_AD_GENERIC:
+      case UPDATE_GRID_AD:
 		  break;
 	default:
 		dprintf(D_ALWAYS,
@@ -781,7 +792,7 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 		break;
 
 	  case UPDATE_HAD_AD:
-		  if (!makeHadAdHashKey (hk, clientAd, from))
+		if (!makeHadAdHashKey (hk, clientAd, from))
 		{
 			dprintf (D_ALWAYS, "Could not make hashkey --- ignoring ad\n");
 			insert = -3;
@@ -792,6 +803,19 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 		retVal=updateClassAd (HadAds, "HadAd  ", "HAD",
 							  clientAd, hk, hashString, insert, from );
 		break;
+
+	  case UPDATE_GRID_AD:
+		if (!makeGridAdHashKey(hk, clientAd, from))
+		{
+			dprintf (D_ALWAYS, "Could not make hashkey --- ignoring ad\n");
+			insert = -3;
+			retVal = 0;
+			break;
+		}
+		hashString.Build( hk );
+		retVal=updateClassAd (GridAds, "GridAd  ", "Grid",
+							  clientAd, hk, hashString, insert, from );
+          break;
 
 	  case UPDATE_AD_GENERIC:
 	  {
@@ -964,6 +988,11 @@ lookup (AdTypes adType, AdNameHashKey &hk)
 				return 0;
 			break;
 
+        case GRID_AD:
+            if (GridAds.lookup (hk, val) == -1)
+                return 0;
+			break;
+
 		case XFER_SERVICE_AD:
 			if (XferServiceAds.lookup (hk, val) == -1)
 				return 0;
@@ -1024,6 +1053,9 @@ remove (AdTypes adType, AdNameHashKey &hk)
 
 		case HAD_AD:
 			return !HadAds.remove (hk);
+
+        case GRID_AD:
+			return !GridAds.remove (hk);
 
 		case XFER_SERVICE_AD:
 			return !XferServiceAds.remove (hk);
@@ -1200,6 +1232,9 @@ housekeeper()
 
 	dprintf (D_ALWAYS, "\tCleaning HadAds ...\n");
 	cleanHashTable (HadAds, now, makeHadAdHashKey);
+
+    dprintf (D_ALWAYS, "\tCleaning GridAds ...\n");
+	cleanHashTable (GridAds, now, makeGridAdHashKey);
 
 	dprintf (D_ALWAYS, "\tCleaning XferServiceAds ...\n");
 	cleanHashTable (XferServiceAds, now, makeXferServiceAdHashKey);

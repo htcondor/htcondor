@@ -174,6 +174,8 @@ class GlobusJob : public BaseJob
 
 	int jmShouldBeStoppingTime;
 
+	bool m_lightWeightJob;
+
  protected:
 	bool callbackRegistered;
 	int connect_failure_counter;

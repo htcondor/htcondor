@@ -46,9 +46,10 @@ void printScheddSubmittors(ClassAd *);
 void printMasterNormal 	(ClassAd *);
 void printCollectorNormal (ClassAd *);
 void printCkptSrvrNormal(ClassAd *);
-void printStorageNormal(ClassAd *);
+void printStorageNormal (ClassAd *);
 void printNegotiatorNormal (ClassAd *);
-void printAnyNormal(ClassAd *);
+void printGridNormal 	(ClassAd *);
+void printAnyNormal 	(ClassAd *);
 void printServer 		(ClassAd *);
 void printRun    		(ClassAd *);
 void printCOD    		(ClassAd *);
@@ -117,9 +118,9 @@ prettyPrint (ClassAdList &adList, TrackTotals *totals)
 				break;
 
 			  case PP_XML:
-				  printXML (ad, (classad_index == 0),
-							(classad_index == last_classad_index));
-				  break;
+				printXML (ad, (classad_index == 0),
+					(classad_index == last_classad_index));
+				break;
 
 			  case PP_MASTER_NORMAL:
 				printMasterNormal(ad);
@@ -135,6 +136,10 @@ prettyPrint (ClassAdList &adList, TrackTotals *totals)
 
 			  case PP_STORAGE_NORMAL:
 				printStorageNormal(ad);
+				break;
+
+			  case PP_GRID_NORMAL:
+				printGridNormal(ad);
 				break;
 
 			  case PP_GENERIC_NORMAL:
@@ -668,6 +673,40 @@ printStorageNormal(ClassAd *ad)
 		}
 
 		alpm.display (stdout, ad);
+	}
+}
+
+void
+printGridNormal(ClassAd *ad)
+{
+    static bool first = true;
+	static AttrListPrintMask alpm;
+
+    if (ad)
+    {
+        // print header if necessary
+        if (first)
+        {
+            printf ("\n%-20.20s %-13.13s %-13.13s %-13.13s %-13.13s\n\n",
+				ATTR_NAME, 
+				"Job Limit", "Running", 
+				"Submit Limit", "In Progress" );
+			
+			alpm.registerFormat("%-20.20s ", ATTR_NAME, 
+				"[??????????????????]" );
+			alpm.registerFormat ( "%-13d ", "JobLimit",
+				"[???????????] " );
+			alpm.registerFormat ( "%-13d ", ATTR_RUNNING_JOBS,
+				"[???????????] " );
+			alpm.registerFormat ( "%-13d ", "SubmitLimit",
+				"[???????????] " );
+			alpm.registerFormat ( "%-13d\n", "SubmitsInProgress",
+				"[???????????\n" );
+
+            first = false;
+        }
+        
+        alpm.display (stdout, ad);
 	}
 }
 

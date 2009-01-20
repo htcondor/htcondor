@@ -40,7 +40,8 @@ getPPStyleStr ()
     	case PP_CKPT_SRVR_NORMAL:return"Normal (CkptSrvr)";
 		case PP_COLLECTOR_NORMAL:return"Normal (Collector)";
 	    case PP_NEGOTIATOR_NORMAL: return "Normal (Negotiator)";
-    	case PP_STARTD_SERVER:	return "Server";
+    	case PP_GRID_NORMAL:    return "Grid";
+        case PP_STARTD_SERVER:	return "Server";
     	case PP_STARTD_RUN:		return "Run";
     	case PP_STARTD_COD:		return "COD";
 		case PP_STARTD_STATE:	return "State";
@@ -50,7 +51,7 @@ getPPStyleStr ()
     	case PP_VERBOSE:		return "Verbose";
     	case PP_XML:		    return "XML";
     	case PP_CUSTOM:			return "Custom";
-		default:				return "<Unknown!>";
+        default:				return "<Unknown!>";
 	}
 	// should not reach here
 	exit (1);
@@ -74,7 +75,7 @@ setPPstyle (ppOption pps, int i, char *argv)
 	if (setBy != 0 && i == 0)
 		return;
 
-    if (ppStyle <= pps || setBy == 0) {
+    if ( PP_VERBOSE == pps || (ppStyle <= pps || setBy == 0) ) {
         ppStyle = pps;
         setBy = i;
         setArg = argv;
@@ -99,11 +100,12 @@ getTypeStr ()
 		case GATEWAY_AD:	return "GATEWAYS";
 		case COLLECTOR_AD:	return "COLLECTOR";
 	    case NEGOTIATOR_AD: return "NEGOTIATOR";
+		case GRID_AD:       return "GRID";
 		case LICENSE_AD:	return "LICENSE";
 		case STORAGE_AD:	return "STORAGE";
 		case ANY_AD:		return "ANY";
 		case GENERIC_AD:	return "GENERIC";
-		default: 			return "<Unknown type!>";
+        default: 			return "<Unknown type!>";
 	}
 	// should never get here
 	exit (1);
@@ -162,14 +164,17 @@ setType (char *dtype, int i, char *argv)
         if (strcmp (dtype, "GATEWAYS") == 0) {
             type = GATEWAY_AD;
         } else
-        if (strcmp (dtype, "STORAGE") == 0) {
-            type = STORAGE_AD;
+		if (strcmp(dtype, "GRID") == 0) {
+			type = GRID_AD;
 		} else
-		if (strcmp(dtype, "GENERIC") == 0) {
-			type = GENERIC_AD;
+	    if (strcmp (dtype, "STORAGE") == 0) {
+            type = STORAGE_AD;
+        } else
+        if (strcmp(dtype, "GENERIC") == 0) {
+	        type = GENERIC_AD;
         } else
         if (strcmp(dtype, "ANY") == 0) {
-            type = ANY_AD;
+	        type = ANY_AD;
         } else {
             fprintf (stderr, "Error:  Unknown entity type: %s\n", dtype);
             exit (1);
@@ -188,26 +193,27 @@ getModeStr()
 {
 	switch (mode)
 	{
-		case MODE_NOTSET:				return "Not set";
-		case MODE_STARTD_NORMAL:		return "Normal (Startd)";
-		case MODE_STARTD_AVAIL:			return "Available (Startd)";
-		case MODE_STARTD_RUN:			return "Run (Startd)";
-		case MODE_STARTD_COD:			return "COD (Startd)";
+		case MODE_NOTSET:		return "Not set";
+		case MODE_STARTD_NORMAL:	return "Normal (Startd)";
+		case MODE_STARTD_AVAIL:		return "Available (Startd)";
+		case MODE_STARTD_RUN:		return "Run (Startd)";
+		case MODE_STARTD_COD:		return "COD (Startd)";
 #ifdef WANT_QUILL
-		case MODE_QUILL_NORMAL:			return "Normal (Quill)";
+		case MODE_QUILL_NORMAL:		return "Normal (Quill)";
 #endif /* WANT_QUILL */
 
-		case MODE_SCHEDD_NORMAL:		return "Normal (Schedd)";
+		case MODE_SCHEDD_NORMAL:	return "Normal (Schedd)";
 		case MODE_SCHEDD_SUBMITTORS:	return "Submittors (Schedd)";
-		case MODE_MASTER_NORMAL:		return "Normal (Master)";
-		case MODE_CKPT_SRVR_NORMAL:		return "Normal (CkptSrvr)";
-		case MODE_COLLECTOR_NORMAL:		return "Normal (Collector)";
-	    case MODE_NEGOTIATOR_NORMAL:	return "Normal (Negotiator)";
-		case MODE_STORAGE_NORMAL:		return "Normal (Storage)";
-		case MODE_GENERIC_NORMAL:		return "Normal (Generic)";
-		case MODE_OTHER:				return "Generic";
-		case MODE_ANY_NORMAL:			return "Normal (Any)";
-		default:						return "<Unknown!>";
+		case MODE_MASTER_NORMAL:	return "Normal (Master)";
+		case MODE_CKPT_SRVR_NORMAL:	return "Normal (CkptSrvr)";
+		case MODE_COLLECTOR_NORMAL:	return "Normal (Collector)";
+		case MODE_NEGOTIATOR_NORMAL:	return "Normal (Negotiator)";
+		case MODE_GRID_NORMAL:          return "Normal (Grid)";
+		case MODE_STORAGE_NORMAL:	return "Normal (Storage)";
+		case MODE_GENERIC_NORMAL:	return "Normal (Generic)";
+		case MODE_OTHER:		return "Generic";
+		case MODE_ANY_NORMAL:		return "Normal (Any)";
+		default:			return "<Unknown!>";
 	}
 	// should never get here
 	exit (1);
@@ -293,6 +299,11 @@ setMode (Mode mod, int i, char *argv)
 		  case MODE_STORAGE_NORMAL:
 			setType ("STORAGE", i, argv);
 			setPPstyle (PP_STORAGE_NORMAL, i, argv);
+			break;
+
+          case MODE_GRID_NORMAL:
+            setType ("GRID", i, argv);
+            setPPstyle (PP_GRID_NORMAL, i, argv);
 			break;
 
 		  case MODE_GENERIC_NORMAL:

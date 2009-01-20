@@ -74,6 +74,33 @@ const char *StartdFloatKeywords [] =
 	""		// add null string to avoid compiler error
 };
 
+// for getJobStatusString (see condor_util_lib/proc.c)
+const char *GridManagerStringKeywords [] = 
+{
+    ATTR_NAME,
+    "HashName",
+    ATTR_SCHEDD_NAME,
+    ATTR_OWNER,
+    
+    // ATTR_GRID_RESOURCE_TYPE
+};
+
+const char *GridManagerIntegerKeywords [] = 
+{
+    "NumJobs",
+    "JobLimit",
+    "SubmitLimit",
+    "SubmitsInProgress",
+    "SubmitsQueued",
+    "SubmitsAllowed",
+    "SubmitsWanted"
+};
+
+const char *GridManagerFloatKeywords [] =
+{
+    ""		// add null string to avoid compiler error
+};
+
 // normal ctor
 CondorQuery::
 CondorQuery (AdTypes qType)
@@ -129,6 +156,16 @@ CondorQuery (AdTypes qType)
 		query.setStringKwList  ((char **)ScheddStringKeywords);
 		query.setFloatKwList   ((char **)ScheddFloatKeywords);
 		command = QUERY_SUBMITTOR_ADS;
+		break;
+
+      case GRID_AD:
+        query.setNumStringCats (GRID_STRING_THRESHOLD);
+		query.setNumIntegerCats(GRID_INT_THRESHOLD);
+		query.setNumFloatCats  (GRID_FLOAT_THRESHOLD);
+		query.setIntegerKwList ((char **)GridManagerIntegerKeywords);
+		query.setStringKwList  ((char **)GridManagerStringKeywords);
+		query.setFloatKwList   ((char **)GridManagerFloatKeywords);
+		command = QUERY_GRID_ADS;
 		break;
 
 	  case LICENSE_AD:
@@ -448,6 +485,10 @@ fetchAds (ClassAdList &adList, const char *poolName, CondorError* errstack)
 		queryAd.SetTargetTypeName (TT_ADTYPE);
 		break;
 
+      case GRID_AD:
+        queryAd.SetTargetTypeName (GRID_ADTYPE);
+        break;
+
 	  default:
 		return Q_INVALID_QUERY;
 	}
@@ -548,6 +589,10 @@ getQueryAd (ClassAd &queryAd)
 	  case NEGOTIATOR_AD:
 		queryAd.SetTargetTypeName (NEGOTIATOR_ADTYPE);
 		break;
+
+      case GRID_AD:
+        queryAd.SetTargetTypeName (GRID_ADTYPE);
+        break;
 
 	  case GENERIC_AD:
 		queryAd.SetTargetTypeName (GENERIC_ADTYPE);
