@@ -682,10 +682,13 @@ foreach my $loop ( 1 .. $test->{loops} )
 		last;
     }
 }
+printf "\n** End test loops **\n";
 
 if ( ! $settings{execute} ) {
     exit( 0 );
 }
+
+printf "\n** Starting final analysis **\n";
 
 # Final writer output checks
 if ( $totals{writer_events} < $expect{final_mins}{num_events} ) {
@@ -741,6 +744,11 @@ if ( $errors  or  ($settings{verbose} > 1)  or  $settings{debug} ) {
     GatherData( "/dev/stdout" );
 }
 
+my $exit_status = $errors == 0 ? 0 : 1;
+printf "\n** Analysis complete, exiting with status $exit_status **\n";
+exit $exit_status;
+
+
 sub GatherData( $ )
 {
     my $f = shift;
@@ -787,9 +795,6 @@ sub GatherData( $ )
 
     close( OUT );
 }
-
-exit( $errors == 0 ? 0 : 1 );
-
 
 # #######################################
 # Run the writer
