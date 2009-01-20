@@ -302,7 +302,7 @@ sub RunTest
     croak "too many arguments" if shift;
 
     # this is kludgey :: needed to happen sooner for an error message callback in runcommand
-    $Condor::submit_info{'handle'} = $handle;
+    Condor::SetHandle($handle);
 
     # if we want a checkpoint, register a function to force a vacate
     # and register a function to check to make sure it happens
@@ -376,7 +376,7 @@ sub RunTest
 					debug( "Monitor done and status good!\n",4);
 					$retval = 1;
 				} else {
-					my $status = WEXITSTATUS( $retval );
+					$status = WEXITSTATUS( $retval );
 					debug( "Monitor done and status bad<<$status>>!\n",4);
 					$retval = 0;
 				}
@@ -427,7 +427,7 @@ sub RunDagTest
 	CondorTest::Reset();
 
     # this is kludgey :: needed to happen sooner for an error message callback in runcommand
-    $Condor::submit_info{'handle'} = $handle;
+    Condor::SetHandle($handle);
 
     # if we want a checkpoint, register a function to force a vacate
     # and register a function to check to make sure it happens
@@ -498,7 +498,7 @@ sub RunDagTest
 					debug( "Monitor done and status good!\n",4);
 					$retval = 1;
 				} else {
-					my $status = WEXITSTATUS( $retval );
+					$status = WEXITSTATUS( $retval );
 					debug( "Monitor done and status bad<<$status>>!\n",4);
 					$retval = 0;
 				}
@@ -1085,7 +1085,6 @@ sub Which
 {
 	my $exe = shift(@_);
 	my @paths = split /:/, $ENV{'PATH'};
-	my $path;
 
 	foreach my $path (@paths) {
 		chomp $path;
@@ -1323,7 +1322,7 @@ sub spawn_cmd
 			# child 1 code....
 			$mylog = $resultfile . ".spawn";
 			open(LOG,">$mylog") || die "Can not open log: $mylog: $!\n";
-			my $res = 0;
+			$res = 0;
 			print LOG "Starting this cmd <$cmdtowatch>\n";
 			$res = system("$cmdtowatch");
 			print LOG "Result from $cmdtowatch is <$res>\n";

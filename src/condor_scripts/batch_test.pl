@@ -835,9 +835,11 @@ foreach my $test_name (@failed_tests)
 close OUTF;
 close SUMOUTF;
 
-if(($ENV{WRAP_TESTS} eq "yes") and ($killlogserver == 1)) {
-	debug("Stopping LogDir server\n",1);
-	CondorPubLogdirs::StopLogServer(); # is it running yet? kill it
+if( exists $ENV{WRAP_TESTS}) {
+	if(($ENV{WRAP_TESTS} eq "yes") and ($killlogserver == 1)) {
+		debug("Stopping LogDir server\n",1);
+		CondorPubLogdirs::StopLogServer(); # is it running yet? kill it
+	}
 }
 
 if ( $cleanupcondor )

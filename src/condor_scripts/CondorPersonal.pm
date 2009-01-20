@@ -273,7 +273,7 @@ sub StartCondor
 		return("Failed to do needed Condor Install\n");
 	}
 
-	if( $ENV{NMI_PLATFORM} =~ /win/ ){
+	if( $iswindows == 1 ){
 		$winpath = `cygpath -w $localdir`;
 		fullchomp($winpath);
 		$condorlocaldir = $winpath;
@@ -286,7 +286,7 @@ sub StartCondor
 
 	debug( "collector port is $collector_port\n",3);
 
-	if( $ENV{NMI_PLATFORM} =~ /win/ ){
+	if( $iswindows == 1 ){
 		$winpath = `cygpath -w $personal_config_file`;
 		fullchomp($winpath);
 		print "Windows conversion of personal config file to $winpath!!\n";
@@ -338,8 +338,8 @@ sub timestamp {
 sub Reset
 {
 	debug( "CondorPersonal RESET\n",3);
-    %personal_condor_params = {};
-    %personal_config_changes = {};
+    %personal_condor_params = ();
+    %personal_config_changes = ();
 	$personal_config = "condor_config";
 	$personal_template = "condor_config_template";
 	$personal_daemons = "";
@@ -831,7 +831,7 @@ sub TunePersonalCondor
 	#filter fig file storing entries we set so we can test
 	#for completeness when we are done
 	my $mytoppath = "";
-	if( $ENV{NMI_PLATFORM} =~ /win/ ){
+	if( $iswindows == 1 ){
 		$mytoppath = `cygpath -w $topleveldir`;
 		fullchomp($mytoppath);
 	} else {
@@ -1004,20 +1004,18 @@ sub TunePersonalCondor
 	}
 
 	#print NEW "PROCD_LOG = \$(LOG)/ProcLog\n";
-	if( $ENV{NMI_PLATFORM} =~ /win/ ){
+	if( $iswindows == 1 ){
 		print NEW "PROCD_ADDRESS = \\\\.\\pipe\\$procdaddress\n";
 	}
 
 	# now we consider configuration requests
 
-	my $gendatafile; #seems to never be used.....
 	if( exists $control{"slots"} )
 	{
 		my $myslots = $control{"slots"};
 		debug( "Slots wanted! Number = $myslots\n",3);
 		print NEW "NUM_CPUS = $myslots\n";
 		print NEW "SLOTS = $myslots\n";
-		$gendatafile = $gendatafile . "_" . $myslots . "Slots";
 	}
 
 	if($personal_sec_prepost_src ne "")
@@ -1069,7 +1067,7 @@ sub StartPersonalCondor
 
 	debug( "Want $configfile for config file\n",3);
 
-	if( $ENV{NMI_PLATFORM} =~ /win/ ){
+	if( $iswindows == 1 ){
 		$figpath = `cygpath -w $fullconfig`;
 		fullchomp($figpath);
 		$fullconfig = $figpath;
@@ -1082,9 +1080,11 @@ sub StartPersonalCondor
 	# We may not want to wait for certain daemons to talk
 	# to each other on startup.
 
-	my $waitparam = $control{"daemonwait"};
-	if($waitparam eq "false") {
-		$personal_startup_wait = "false";
+	if( exists $control{"daemonwait"} ) {
+		my $waitparam = $control{"daemonwait"};
+		if($waitparam eq "false") {
+			$personal_startup_wait = "false";
+		}
 	}
 
 	# set up to use the existing generated configfile
@@ -1507,7 +1507,6 @@ sub KillDaemonPids
 	$logdir =~ s/\015+$//;
 	my $masterpid = 0;
 	my $cnt = 0;
-	my $iswindows = IsThisWindows();
 	my $cmd;
 
 	#print "logs are here:$logdir\n";
