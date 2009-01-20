@@ -100,7 +100,7 @@ sub StartLogServer
 	my $servername = "LogServer" . $$;
 	my $storehandle = "LogServerHandle";
 	$current = $current . "/" . $servername;
-	debug( "Log Server name <<$servername>>\n",2);
+	debug( "Log Server name <<$servername>>\n",1);
 	$ENV{SEND_LOGS} = $current;
 	open(LS,">$storehandle") or die "Can not store <<$storehandle>>:$!\n";
 	print LS "$current\n";
@@ -113,6 +113,7 @@ sub StartLogServer
 		exec "./x_general_server.pl $current LogDirs";
 		die "can not exec dumpcore!\n";
 	}
+	debug( "Log Server returning as <<$current>>\n",1);
 	return($current);
 }
 
@@ -137,10 +138,10 @@ sub StopLogServer
 	my $storehandle = "LogServerHandle";
 	my $servername = $ENV{SEND_LOGS};
 	my $line = "";
-	debug( "Log Server seems to be <<$servername>>\n",2);
 	if(exists $ENV{SEND_LOGS}){
+		debug( "Log Server seems to be <<$servername>>\n",2);
 		debug( "LogServer running{env clue}\n",2);
-		ShutdownServer( $1, $storehandle);
+		ShutdownServer( $servername, $storehandle);
 	} elsif(-f "LogServerHandle"){
 		debug( "LogServer running{handle file(LogServerHandle)}\n",2);
 		open(KLS,"<$storehandle") or die "Can not open $storehandle:$!\n";
@@ -148,14 +149,14 @@ sub StopLogServer
 			chomp();
 			$line = $_;
 			if($line =~ /^(.*\/LogServer\d+)$/){
-				debug("LogServer handle of proper form\n",2);
+				debug("LogServer handle of proper form<<$line>>\n",2);
 				ShutdownServer( $1, $storehandle);
 			} else {
-				debug("LogServer handle of improper form, HELP\n",1);
+				debug("LogServer handle of improper form, HELP<<$line>>\n",2);
 			}
 		}
 	} else {
-		debug( "Can not find evidence of log dir server\n",1);
+		debug( "Can not find evidence of log dir server\n",2);
 	}
 }
 
