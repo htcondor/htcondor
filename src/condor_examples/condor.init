@@ -128,7 +128,6 @@ wait_pid() {
 	if [ $? -ne 0 ]; then
 	    return 0
         fi
-	ps $pid
 
 	sleep 1
 	wait=$((wait + 1))
