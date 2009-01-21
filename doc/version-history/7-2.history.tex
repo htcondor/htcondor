@@ -73,9 +73,9 @@ The details of each version are described below.
 \item Fixed a bug in \Condor{chirp} which was causing it to crash 
 on invocation.
 
-\item Fixed a bug on Windows in \Condor{mail} which was causing it to become
-unresponsive run when. Further, the application would start to increasingly 
-consume more memory when run.
+\item Fixed a Windows platform bug in the \Prog{condor\_mail.exe} program,
+which was causing it to become unresponsive when run.
+The application also increased its memory consumption.
 
 \item Fixed a bug on Unix platforms where \Condor{configure} would provide
 incorrect defaults for the \MacroNI{JAVA\_MAXHEAP\_ARGUMENT} attribute in
