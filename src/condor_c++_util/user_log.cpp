@@ -794,12 +794,25 @@ UserLog::doWriteEvent( ULogEvent *event,
 		}
 	}
 
+		// We're seeing sporadic test suite failures where a daemon
+		// takes more than 10 seconds to write to the user log.
+		// This will help narrow down where the delay is coming from.
+	time_t before = time(NULL);
 	success = doWriteEvent( fp, event, use_xml );
+	time_t after = time(NULL);
+	if ( (after - before) > 5 ) {
+		dprintf( D_FULLDEBUG, "UserLog::doWriteEvent(): writing event took %d seconds\n", (after-before) );
+	}
 
+	before = time(NULL);
 	if ( fflush(fp) != 0 ) {
 		dprintf( D_ALWAYS, "fflush() failed in UserLog::doWriteEvent - "
 				"errno %d (%s)\n", errno, strerror(errno) );
 		// Note:  should we set success to false here?
+	}
+	after = time(NULL);
+	if ( (after - before) > 5 ) {
+		dprintf( D_FULLDEBUG, "UserLog::doWriteEvent(): flushing event took %d seconds\n", (after-before) );
 	}
 
 	// Now that we have flushed the stdio stream, sync to disk
