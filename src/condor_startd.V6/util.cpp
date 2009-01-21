@@ -430,7 +430,7 @@ configInsert( ClassAd* ad, const char* param_name,
 		return false;
 	}
 
-	if ( ! ad->Assign( attr, val ) ) {
+	if ( ! ad->AssignExpr( attr, val ) ) {
 		EXCEPT( "Syntax error in %s expression: '%s'", attr, val );
 	}
 
