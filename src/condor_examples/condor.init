@@ -7,7 +7,7 @@
 # 	       platform.
 # processname: condor_master
 # config: /etc/condor/condor_config
-# pidfile: /var/lib/condor/condor_master.pid
+# pidfile: /var/run/condor/condor_master.pid
 
 ### BEGIN INIT INFO
 # Provides: condor
@@ -21,7 +21,7 @@
 prog=condor_master
 
 lockfile=/var/lock/subsys/$prog
-pidfile=/var/lib/condor/$prog.pid
+pidfile=/var/run/condor/$prog.pid
 
 # Source function library
 . /etc/init.d/functions
