@@ -244,21 +244,21 @@ MachAttributes::publish( ClassAd* cp, amask_t how_much)
 		// publish the Windows version information
 		if ( m_got_windows_version_info ) {
 			cp->Assign( ATTR_WINDOWS_MAJOR_VERSION, 
-				m_window_version_info.dwMajorVersion );
+				(int)m_window_version_info.dwMajorVersion );
 			cp->Assign( ATTR_WINDOWS_MINOR_VERSION, 
-				m_window_version_info.dwMinorVersion );
+				(int)m_window_version_info.dwMinorVersion );
 			cp->Assign( ATTR_WINDOWS_BUILD_NUMBER, 
-				m_window_version_info.dwBuildNumber );
+				(int)m_window_version_info.dwBuildNumber );
 			// publish the extended Windows version information if we
 			// have it at our disposal
 			if ( sizeof ( OSVERSIONINFOEX ) == 
 				 m_window_version_info.dwOSVersionInfoSize ) {
 				cp->Assign( ATTR_WINDOWS_SERVICE_PACK_MAJOR, 
-					m_window_version_info.wServicePackMajor );
+					(int)m_window_version_info.wServicePackMajor );
 				cp->Assign( ATTR_WINDOWS_SERVICE_PACK_MINOR, 
-					m_window_version_info.wServicePackMinor );
+					(int)m_window_version_info.wServicePackMinor );
 				cp->Assign( ATTR_WINDOWS_PRODUCT_TYPE, 
-					m_window_version_info.wProductType );
+					(int)m_window_version_info.wProductType );
 			}
 		}
 #endif
