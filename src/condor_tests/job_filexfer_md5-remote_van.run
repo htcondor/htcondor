@@ -45,6 +45,8 @@ else
 	CondorTest::debug("Data file already exists....skipping generation\n",1);
 }
 
+CondorTest::debug("Data file created, submitting job\n",1);
+
 CondorTest::RegisterExitedSuccess($testname, $success);
 if(CondorTest::RunTest($testname, $cmd, 0)) {
 	CondorTest::debug("$testname: SUCCESS\n",1);
