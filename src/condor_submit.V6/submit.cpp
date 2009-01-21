@@ -1325,7 +1325,7 @@ reschedule()
  * paths.
  */
 int
-check_and_universalize_path( MyString &path, const char *lhs )
+check_and_universalize_path( MyString & /*path*/, const char * /*lhs*/ )
 {
 
 	int retval = 0;
@@ -2026,7 +2026,6 @@ SetImageSize()
 	char	*p;
 	char    buff[2048];
 	MyString buffer;
-	int		request_memory;
 
 	tmp = condor_param( ImageSize, ATTR_IMAGE_SIZE );
 
