@@ -230,7 +230,6 @@ CondorTest::RegisterRelease( $testname, $release );
 ## suffice for now
 ##
 CondorTest::RegisterTimed($testname, $timed, 600);
-CondorTest::RegisterTimed($testname, $timed, 90);
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
 	CondorTest::debug("$testname: SUCCESS\n",1);
