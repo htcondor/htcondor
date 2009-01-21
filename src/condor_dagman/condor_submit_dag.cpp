@@ -781,6 +781,24 @@ parseArgumentsLine( const MyString &subLine , SubmitDagOptions &opts )
 	return 0;
 }
 
+
+class EnvFilter : public Env
+{
+public:
+	EnvFilter( void ) { };
+	virtual ~EnvFilter( void ) { };
+	virtual bool ImportFilter( const MyString & /*var*/,
+							   const MyString & /*val*/ ) const;
+};
+bool
+EnvFilter::ImportFilter( const MyString &var, const MyString &val ) const
+{
+	if ( (var.find(";") >= 0) || (val.find(";") >= 0) ) {
+		return false;
+	}
+	return IsSafeEnvV2Value( val.GetCStr() );
+}
+
 //---------------------------------------------------------------------------
 void writeSubmitFile(/* const */ SubmitDagOptions &opts)
 {
@@ -904,7 +922,8 @@ void writeSubmitFile(/* const */ SubmitDagOptions &opts)
 	}
     fprintf(pSubFile, "arguments\t= %s\n", arg_str.Value());
 
-	Env env;
+	EnvFilter env;
+	env.Import( );
 	env.SetEnv("_CONDOR_DAGMAN_LOG",opts.strDebugLog.Value());
 	env.SetEnv("_CONDOR_MAX_DAGMAN_LOG=0");
 	if ( opts.strConfigFile != "" ) {

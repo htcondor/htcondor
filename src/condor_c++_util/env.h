@@ -73,14 +73,25 @@ template <class Key, class Value> class HashTable;
 
 class Env {
  public:
-	Env();
-	~Env();
+	Env( void );
+	virtual ~Env( void );
 
 		// Returns the number of environment entries.
-	int Count() const;
+	int Count( void ) const;
 
 		// Remove all environment entries.
-	void Clear();
+	void Clear( void );
+
+		// Import environment from process
+	bool Import( void );
+
+		// Filter for the above
+		//  -- return true to import variable, false to not
+	virtual bool ImportFilter( const MyString & /*var*/,
+							   const MyString & /*val*/ ) const {
+		return true;
+	};
+
 
 		// Add (or overwrite) environment entries from an input
 		// string.  If the string begins with a double-quote, it will

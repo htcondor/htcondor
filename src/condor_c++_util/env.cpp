@@ -825,3 +825,29 @@ Env::GetEnv(MyString const &var) const
 		return NULL;
 	}
 }
+
+bool
+Env::Import( void )
+{
+	for (int i=0; environ[i]; i++) {
+		const char	*p = environ[i];
+
+		// don't override submit file environment settings
+		// check if environment variable is set in submit file
+		int			j;
+		MyString	varname = "";
+		MyString	value = "";
+		for (j=0;  ( p[j] != '\0' ) && ( p[j] != '=' );  j++) {
+			varname += p[j];
+		}
+		if ( p[j] == '=' ) {
+			value = p+j+1;
+		}
+
+		// Allow the application to filter the import
+		if ( ImportFilter( varname, value ) ) {
+			SetEnv( varname, value );
+		}
+	}
+	return true;
+}

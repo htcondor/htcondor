@@ -3940,6 +3940,40 @@ SetJobDeferral() {
 	}
 }
 
+class EnvFilter : public Env
+{
+public:
+	EnvFilter( const char *env1, const char *env2 )
+			: m_env1( env1 ),
+			  m_env2( env2 ) {
+		return;
+	};
+	virtual ~EnvFilter( void ) { };
+	virtual bool ImportFilter( const MyString &var,
+							   const MyString &val ) const;
+private:
+	const char	*m_env1;
+	const char	*m_env2;
+};
+bool
+EnvFilter::ImportFilter( const MyString & /*var*/, const MyString &val ) const
+{
+	if( !m_env2 && m_env1 && !IsSafeEnvV1Value(val.Value())) {
+		// We silently filter out anything that is not expressible
+		// in the 'environment1' syntax.  This avoids breaking
+		// our ability to submit jobs to older startds that do
+		// not support 'environment2' syntax.
+		return false;
+	}
+	if( !IsSafeEnvV2Value(val.Value()) ) {
+		// Silently filter out environment values containing
+		// unsafe characters.  Example: newlines cause the
+		// schedd to EXCEPT in 6.8.3.
+		return false;
+	}
+	return true;
+}
+
 void
 SetEnvironment()
 {
@@ -3952,7 +3986,7 @@ SetEnvironment()
 	char *shouldgetenv = condor_param( GetEnvironment, "get_env" );
 	char *allowscripts = condor_param( AllowStartupScript,
 									   "AllowStartupScript" );
-	Env envobject;
+	EnvFilter envobject( env1, env2 );
     MyString varname;
 
 	if( env1 && env2 && !allow_v1 ) {
@@ -3988,41 +4022,8 @@ SetEnvironment()
 	}
 
 	// grab user's environment if getenv == TRUE
-	if ( shouldgetenv && ( shouldgetenv[0] == 'T' || shouldgetenv[0] == 't' ) )
- 	{
-		for (int i=0; environ[i]; i++) {
-			if(!env2 && env1 && !envobject.IsSafeEnvV1Value(environ[i])) {
-				// We quietly filter out anything that is not expressible
-				// in the 'environment1' syntax.  This avoids breaking
-				// our ability to submit jobs to older startds that do
-				// not support 'environment2' syntax.
-				dprintf(D_ALWAYS,
-						"WARNING: Ignoring env '%s'\n",
-						environ[i]);
-				continue;
-			}
-			if( !envobject.IsSafeEnvV2Value(environ[i]) ) {
-					// Quietly filter out environment values containing
-					// unsafe characters.  Example: newlines cause the
-					// schedd to EXCEPT in 6.8.3.
-				dprintf(D_ALWAYS,
-						"WARNING: Ignoring env '%s'\n",
-						environ[i]);
-				continue;
-			}
-
-			// don't override submit file environment settings
-			// check if environment variable is set in submit file
-			int j;
-            varname = "";
-			for (j=0; environ[i][j] && environ[i][j] != '='; j++) {
-				varname += environ[i][j];
-			}
-			MyString existing_val;
-			if (!envobject.GetEnv(varname,existing_val)) {
-				envobject.SetEnv(environ[i]);
-			}
-		}
+	if ( shouldgetenv && (toupper(shouldgetenv[0]) == 'T') ) {
+		envobject.Import( );
 	}
 
 	//There may already be environment info in the ClassAd from SUBMIT_EXPRS.
