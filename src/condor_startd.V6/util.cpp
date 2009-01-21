@@ -423,7 +423,6 @@ configInsert( ClassAd* ad, const char* param_name,
 			  const char* attr, bool is_fatal ) 
 {
 	char* val = param( param_name );
-	char* tmp;
 	if( ! val ) {
 		if( is_fatal ) {
 			EXCEPT( "Required attribute \"%s\" is not defined", attr );
@@ -431,22 +430,10 @@ configInsert( ClassAd* ad, const char* param_name,
 		return false;
 	}
 
-	int size = 0;
-	size += strlen( val );
-	size += strlen( attr );
-	size += 4;
-	
-	tmp = (char*) malloc( size * sizeof(char) );
-	if( ! tmp ) {
-		EXCEPT( "Out of memory!" );
-	}
-	sprintf( tmp, "%s = %s", attr, val );
-
-	if( ! ad->Insert(tmp) ) {
+	if ( ! ad->Assign( attr, val ) ) {
 		EXCEPT( "Syntax error in %s expression: '%s'", attr, val );
 	}
 
-	free( tmp );
 	free( val );
 	return true;
 }

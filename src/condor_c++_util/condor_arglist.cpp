@@ -217,7 +217,7 @@ ArgList::AppendArg(char const *arg) {
 void
 ArgList::AppendArg(int arg) {
 	char buf[100];
-	sprintf(buf,"%d",arg);
+	snprintf(buf,100,"%d",arg);
 	AppendArg(buf);
 }
 

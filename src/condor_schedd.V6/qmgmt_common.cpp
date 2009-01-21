@@ -36,7 +36,7 @@ SetAttributeInt(int cl, int pr, const char *name, int val, SetAttributeFlags_t f
 	char buf[100];
 	int rval;
 
-	sprintf(buf,"%d",val);
+	snprintf(buf,100,"%d",val);
 	rval = SetAttribute(cl,pr,name,buf,flags);
 	return(rval);
 }
@@ -47,7 +47,7 @@ SetAttributeFloat(int cl, int pr, const char *name, float val)
 	char buf[100];
 	int rval;
 
-	sprintf(buf,"%f",val);
+	snprintf(buf,100,"%f",val);
 	rval = SetAttribute(cl,pr,name,buf);
 	return(rval);
 }
@@ -74,7 +74,7 @@ SetAttributeIntByConstraint(const char *con, const char *name, int val)
 	char buf[100];
 	int rval;
 
-	sprintf(buf,"%d",val);
+	snprintf(buf,100,"%d",val);
 	rval = SetAttributeByConstraint(con,name,buf);
 	return(rval);
 }
@@ -85,7 +85,7 @@ SetAttributeFloatByConstraint(const char *con, const char *name, float val)
 	char buf[100];
 	int rval;
 
-	sprintf(buf,"%f",val);
+	snprintf(buf,100,"%f",val);
 	rval = SetAttributeByConstraint(con,name,buf);
 	return(rval);
 }

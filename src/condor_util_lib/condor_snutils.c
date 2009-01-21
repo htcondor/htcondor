@@ -27,77 +27,132 @@
 ** Compatibility routine for systems that don't have an snprintf
 */
 
-#ifndef HAVE_SNPRINTF
+#ifdef WIN32
 int 
 snprintf(
-	char       *output, 
-	size_t     buffer_size, 
+	char       *str, 
+	size_t     size, 
 	const char *format, 
 	...)
 {
 	int length;
 	va_list  args;
 
-	va_start(args, format);
-	length = condor_vsnprintf(output, (int)buffer_size, format, args);
-	va_end(args);
+	va_start( args, format );
+	length = vsnprintf( str, size, format, args );
+	va_end( args );
 
 	return length;
 }
 
-
-// we also use vsnprintf() in the code, and platforms that don't have
-// snprintf() probably don't have this, either.
-int 
+// va_list is passed-by-value on Windows, so we don't need to copy it
+// for the two different calls.
+int
 vsnprintf(
-	char       *output, 
-	int        buffer_size, 
+	char       *str, 
+	size_t     size, 
 	const char *format, 
-	va_list args )
+	va_list    args)
 {
-	return condor_vsnprintf(output, buffer_size, format, args);
-}
-#endif
+	int length = -1;
 
-// This is snprintf, and it works like you expect. buffer_size is the 
-// size of the buffer, and at most buffer_size-1 characters will be printed,
-// and the output will also be null-termianted. The number of characters
-// that would have been printed, had there been sufficient space, is
-// returned. (If there was sufficient space, then it's the number of
-// characters).
-//
-// The reason we have condor_snprintf() in addition to snprintf() is 
-// because not all snprintfs() return the same thing when the output
-// buffer isn't big enough. We can use this one whenever we care about
-// the return value of snprintf.
+	if ( str != NULL ) {
+		length = _vsnprintf_s( str, size, _TRUNCATE, format, args );
+	}
+	if ( length < 0 ) {
+		length = _vscprintf( format, args );
+	}
+
+	return length;
+}
+		  
+
+// Returns the number of characters that a printf would return,
+// without actually printing the characters anywhere.
 int 
-condor_snprintf(
-	char       *output, 
-	int        buffer_size, 
-	const char *format, 
-	...)
+printf_length(const char *format, ...)
 {
 	int      length;
 	va_list  args;
 
 	va_start(args, format);
-	length = condor_vsnprintf(output, buffer_size, format, args);
+	length = _vscprintf(format, args);
+	va_end( args );
+
+	return length;
+}
+
+// Same as printf_length, but we take va_list instead of a ... argument.
+// va_list is passed-by-value on Windows, so we don't need to make a
+// copy of it like we do on unix.
+int 
+vprintf_length(const char *format, va_list args) 
+{
+	return _vscprintf(format, args);
+}
+
+#else /* ifdef WIN32 */
+
+#ifdef HAVE_WORKING_SNPRINTF
+
+// Returns the number of characters that a printf would return,
+// without actually printing the characters anywhere.
+int 
+printf_length(const char *format, ...)
+{
+	int      length;
+	va_list  args;
+
+	va_start(args, format);
+	length = vprintf_length(format, args);
 	va_end(args);
 
 	return length;
 }
 
-// This is the real implementation of snprintf and condor_snprintf, it just
-// takes a va_list instead of a ... argument.
+// Same as printf_length, but we take va_list instead of a ... argument.
+// As a convenience to callers who want to call vprintf_length() and then
+// call another v...() function, we copy the va_list.
 int 
-condor_vsnprintf(
-	char        *output, 
-	int         buffer_size, 
-	const char  *format, 
-	va_list     args)
+vprintf_length(const char *format, va_list args) 
+{
+	char c;
+	int length;
+
+#ifdef va_copy
+	{
+	va_list copyargs;
+
+	va_copy(copyargs, args);
+	length = vsnprintf(&c, 1, format, copyargs);
+	va_end(copyargs);
+	}
+#else
+	length = vsnprintf(&c, 1, format, args);
+#endif
+	return length;
+}
+
+#else /* ifdef HAVE_WORKING_SNPRINTF */
+
+int
+snprintf(char *str, size_t size, const char *format, ...)
+{
+	int      length;
+	va_list  args;
+
+	va_start(args, format);
+	length = vsnprintf(str, size, format, args);
+	va_end(args);
+
+	return length;
+}
+
+int
+vsnprintf(char *output, size_t buffer_size, const char *format, va_list args)
 {
 	int actual_length;
-
+	
 	actual_length = vprintf_length(format, args);
 	if (actual_length <= buffer_size - 1) { // -1 for the trailing null
 		vsprintf(output, format, args);
@@ -141,20 +196,24 @@ printf_length(const char *format, ...)
 }
 
 // Same as printf_length, but we take va_list instead of a ... argument.
+// As a convenience to callers who want to call vprintf_length() and then
+// call another v...() function, we copy the va_list.
 int 
 vprintf_length(const char *format, va_list args) 
 {
 	int   length;
-	FILE  *null_output;
+	static FILE  *null_output = NULL;
 
-	null_output = safe_fopen_wrapper((const char*)NULL_FILE, "w", 0644);
-	if(NULL == null_output) {
-		/* We used to return -1 in this case, but realistically, 
-		 * what is our caller going to do?  Indeed, at least some
-		 * callers ignored the case and merrily stomped over memory.
-		 */
-		EXCEPT("Unable to open null file (%s). Needed for formatting "
-			   "purposes. errno=%d (%s)", NULL_FILE, errno, strerror(errno));
+	if(null_output == NULL) {
+		null_output = safe_fopen_wrapper((const char*)NULL_FILE, "w", 0644);
+		if(NULL == null_output) {
+			/* We used to return -1 in this case, but realistically, 
+			 * what is our caller going to do?  Indeed, at least some
+			 * callers ignored the case and merrily stomped over memory.
+			 */
+			EXCEPT("Unable to open null file (%s). Needed for formatting "
+				   "purposes. errno=%d (%s)", NULL_FILE, errno, strerror(errno));
+		}
 	}
 
 #ifdef va_copy
@@ -168,6 +227,9 @@ vprintf_length(const char *format, va_list args)
 #else
 	length = vfprintf(null_output, format, args);
 #endif
-	fclose(null_output);
 	return length;
 }
+
+#endif /* ifdef HAVE_WORKING_SNPRINTF */
+
+#endif /* ifdef WIN32 */

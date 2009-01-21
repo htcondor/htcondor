@@ -222,64 +222,43 @@ MachAttributes::final_idle_dprintf()
 void
 MachAttributes::publish( ClassAd* cp, amask_t how_much) 
 {
-	char line[100];
-    char *sinful = NULL;
-
 	if( IS_STATIC(how_much) || IS_PUBLIC(how_much) ) {
 
 			// STARTD_IP_ADDR
-        sinful = daemonCore->InfoCommandSinfulString();
-		sprintf( line, "%s = \"%s\"", ATTR_STARTD_IP_ADDR, 
-				 sinful );
-		cp->Insert( line );
+		cp->Assign( ATTR_STARTD_IP_ADDR,
+					daemonCore->InfoCommandSinfulString() );
 
-        sprintf( line, "%s = \"%s\"", ATTR_ARCH, m_arch );
-		cp->Insert( line );
+        cp->Assign( ATTR_ARCH, m_arch );
 
-		sprintf( line, "%s = \"%s\"", ATTR_OPSYS, m_opsys );
-		cp->Insert( line );
+		cp->Assign( ATTR_OPSYS, m_opsys );
 
-		sprintf( line, "%s = \"%s\"", ATTR_UID_DOMAIN, m_uid_domain );
-		cp->Insert( line );
+		cp->Assign( ATTR_UID_DOMAIN, m_uid_domain );
 
-		sprintf( line, "%s = \"%s\"", ATTR_FILE_SYSTEM_DOMAIN, 
-				 m_filesystem_domain );
-		cp->Insert( line );
+		cp->Assign( ATTR_FILE_SYSTEM_DOMAIN, m_filesystem_domain );
 
-		sprintf( line, "%s = TRUE", ATTR_HAS_IO_PROXY );
-		cp->Insert(line);
+		cp->Assign( ATTR_HAS_IO_PROXY, true );
 
-		sprintf( line, "%s = \"%s\"", ATTR_CHECKPOINT_PLATFORM, m_ckptpltfrm );
-		cp->Insert( line );
+		cp->Assign( ATTR_CHECKPOINT_PLATFORM, m_ckptpltfrm );
 
 #if defined ( WIN32 )
 		// publish the Windows version information
 		if ( m_got_windows_version_info ) {
-			sprintf ( line, "%s = %lu", ATTR_WINDOWS_MAJOR_VERSION, 
+			cp->Assign( ATTR_WINDOWS_MAJOR_VERSION, 
 				m_window_version_info.dwMajorVersion );
-			cp->Insert ( line ); 
-			sprintf ( line, "%s = %lu", ATTR_WINDOWS_MINOR_VERSION, 
+			cp->Assign( ATTR_WINDOWS_MINOR_VERSION, 
 				m_window_version_info.dwMinorVersion );
-			cp->Insert ( line ); 
-			sprintf(line, "%s = %lu", ATTR_WINDOWS_BUILD_NUMBER, 
+			cp->Assign( ATTR_WINDOWS_BUILD_NUMBER, 
 				m_window_version_info.dwBuildNumber );
-			cp->Insert ( line ); 
 			// publish the extended Windows version information if we
 			// have it at our disposal
 			if ( sizeof ( OSVERSIONINFOEX ) == 
 				 m_window_version_info.dwOSVersionInfoSize ) {
-				sprintf(line, "%s = %lu", 
-					ATTR_WINDOWS_SERVICE_PACK_MAJOR, 
+				cp->Assign( ATTR_WINDOWS_SERVICE_PACK_MAJOR, 
 					m_window_version_info.wServicePackMajor );
-				cp->Insert ( line ); 
-				sprintf(line, "%s = %lu", 
-					ATTR_WINDOWS_SERVICE_PACK_MINOR, 
+				cp->Assign( ATTR_WINDOWS_SERVICE_PACK_MINOR, 
 					m_window_version_info.wServicePackMinor );
-				cp->Insert ( line ); 
-				sprintf(line, "%s = %lu", 
-					ATTR_WINDOWS_PRODUCT_TYPE, 
+				cp->Assign( ATTR_WINDOWS_PRODUCT_TYPE, 
 					m_window_version_info.wProductType );
-				cp->Insert ( line ); 
 			}
 		}
 #endif
@@ -288,24 +267,19 @@ MachAttributes::publish( ClassAd* cp, amask_t how_much)
 
 	if( IS_UPDATE(how_much) || IS_PUBLIC(how_much) ) {
 
-		sprintf( line, "%s=%lu", ATTR_TOTAL_VIRTUAL_MEMORY, m_virt_mem );
-		cp->Insert( line ); 
+		cp->Assign( ATTR_TOTAL_VIRTUAL_MEMORY, (int)m_virt_mem );
 
-		sprintf( line, "%s=%lu", ATTR_TOTAL_CPUS, (unsigned long)m_num_cpus );
-		cp->Insert( line ); 
+		cp->Assign( ATTR_TOTAL_CPUS, m_num_cpus );
 
-		sprintf( line, "%s=%lu", ATTR_TOTAL_MEMORY, (unsigned long)m_phys_mem );
-		cp->Insert( line ); 
+		cp->Assign( ATTR_TOTAL_MEMORY, m_phys_mem );
 
 			// KFLOPS and MIPS are only conditionally computed; thus, only
 			// advertise them if we computed them.
 		if ( m_kflops > 0 ) {
-			sprintf( line, "%s=%d", ATTR_KFLOPS, m_kflops );
-			cp->Insert( line );
+			cp->Assign( ATTR_KFLOPS, m_kflops );
 		}
 		if ( m_mips > 0 ) {
-			sprintf( line, "%s=%d", ATTR_MIPS, m_mips );
-			cp->Insert( line );
+			cp->Assign( ATTR_MIPS, m_mips );
 		}
 
 #if defined(WIN32)
@@ -317,24 +291,22 @@ MachAttributes::publish( ClassAd* cp, amask_t how_much)
 
 		// We don't want this inserted into the public ad automatically
 	if( IS_UPDATE(how_much) || IS_TIMEOUT(how_much) ) {
-		sprintf( line, "%s=%d", ATTR_LAST_BENCHMARK, m_last_benchmark );
-	cp->Insert( line );
+		cp->Assign( ATTR_LAST_BENCHMARK, m_last_benchmark );
 	}
 
 
 	if( IS_TIMEOUT(how_much) || IS_PUBLIC(how_much) ) {
 
-		sprintf( line, "%s=%.2f", ATTR_TOTAL_LOAD_AVG, m_load );
+		char line[100];
+		snprintf( line, 100, "%s=%.2f", ATTR_TOTAL_LOAD_AVG, m_load );
 		cp->Insert(line);
 		
-		sprintf( line, "%s=%.2f", ATTR_TOTAL_CONDOR_LOAD_AVG, m_condor_load );
+		snprintf( line, 100, "%s=%.2f", ATTR_TOTAL_CONDOR_LOAD_AVG, m_condor_load );
 		cp->Insert(line);
 		
-		sprintf(line, "%s=%d", ATTR_CLOCK_MIN, m_clock_min );
-		cp->Insert(line); 
+		cp->Assign( ATTR_CLOCK_MIN, m_clock_min );
 
-		sprintf(line, "%s=%d", ATTR_CLOCK_DAY, m_clock_day );
-		cp->Insert(line); 
+		cp->Assign( ATTR_CLOCK_DAY, m_clock_day );
 	}
 
 }
@@ -525,43 +497,36 @@ CpuAttributes::publish( ClassAd* cp, amask_t how_much )
 
 	if( IS_UPDATE(how_much) || IS_PUBLIC(how_much) ) {
 
-		sprintf( line, "%s=%lu", ATTR_VIRTUAL_MEMORY, c_virt_mem );
-		cp->Insert( line ); 
+		cp->Assign( ATTR_VIRTUAL_MEMORY, (int)c_virt_mem );
 
-		sprintf( line, "%s=%lu", ATTR_TOTAL_DISK, c_total_disk );
-		cp->Insert( line ); 
+		cp->Assign( ATTR_TOTAL_DISK, (int)c_total_disk );
 
-		sprintf( line, "%s=%lu", ATTR_DISK, c_disk );
-		cp->Insert( line ); 
+		cp->Assign( ATTR_DISK, (int)c_disk );
 	}
 
 	if( IS_TIMEOUT(how_much) || IS_PUBLIC(how_much) ) {
 
-		sprintf( line, "%s=%.2f", ATTR_CONDOR_LOAD_AVG, c_condor_load );
+		snprintf( line, 100, "%s=%.2f", ATTR_CONDOR_LOAD_AVG, c_condor_load );
 		cp->Insert(line);
 
-		sprintf( line, "%s=%.2f", ATTR_LOAD_AVG, 
-				 (c_owner_load + c_condor_load) );
+		snprintf( line, 100, "%s=%.2f", ATTR_LOAD_AVG, 
+				  (c_owner_load + c_condor_load) );
 		cp->Insert(line);
 
-		sprintf(line, "%s=%d", ATTR_KEYBOARD_IDLE, (int)c_idle );
-		cp->Insert(line); 
+		cp->Assign( ATTR_KEYBOARD_IDLE, (int)c_idle );
   
 			// ConsoleIdle cannot be determined on all platforms; thus, only
 			// advertise if it is not -1.
 		if( c_console_idle != -1 ) {
-			sprintf( line, "%s=%d", ATTR_CONSOLE_IDLE, (int)c_console_idle );
-			cp->Insert(line); 
+			cp->Assign( ATTR_CONSOLE_IDLE, (int)c_console_idle );
 		}
 	}
 
 	if( IS_STATIC(how_much) || IS_PUBLIC(how_much) ) {
 
-		sprintf( line, "%s=%d", ATTR_MEMORY, c_phys_mem );
-		cp->Insert(line);
+		cp->Assign( ATTR_MEMORY, c_phys_mem );
 
-		sprintf( line, "%s=%d", ATTR_CPUS, c_num_cpus );
-		cp->Insert(line);
+		cp->Assign( ATTR_CPUS, c_num_cpus );
 	}
 }
 

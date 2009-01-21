@@ -376,7 +376,7 @@ Claim::publishCOD( ClassAd* cad )
 		}
 		char buf[128];
 		if( (c_cluster > 0) && (c_proc >= 0) ) {
-			sprintf( buf, "%d.%d", c_cluster, c_proc );
+			snprintf( buf, 128, "%d.%d", c_cluster, c_proc );
 		} else {
 			strcpy( buf, "1.0" );
 		}
@@ -897,7 +897,7 @@ Claim::sendAlive()
 	}
 
 	char to_schedd[256];
-	sprintf ( to_schedd, "Alive to schedd %s", c_addr );
+	snprintf ( to_schedd, 256, "Alive to schedd %s", c_addr );
 
 	int reg_rc = daemonCore->
 			Register_Socket( sock, "<Alive Contact Socket>",
@@ -983,7 +983,7 @@ Claim::sendAliveConnectHandler(Stream *s)
 	daemonCore->Cancel_Socket( sock ); //Allow us to re-register this socket.
 
 	char to_schedd[256];
-	sprintf ( to_schedd, "Alive to schedd %s", c_addr );
+	snprintf ( to_schedd, 256, "Alive to schedd %s", c_addr );
 	int reg_rc = daemonCore->
 			Register_Socket( sock, "<Alive Contact Socket>",
 			  (SocketHandlercpp)&Claim::sendAliveResponseHandler,
@@ -2120,7 +2120,7 @@ ClaimId::ClaimId( ClaimType claim_type, char const *slotname )
 	claimid_parser.setClaimId(c_id);
 	if( claim_type == CLAIM_COD ) { 
 		char buf[64];
-		sprintf( buf, "COD%d", num );
+		snprintf( buf, 64, "COD%d", num );
 		c_cod_id = strdup( buf );
 	} else {
 		c_cod_id = NULL;

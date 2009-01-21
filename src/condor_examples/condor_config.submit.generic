@@ -607,17 +607,15 @@ GRIDMANAGER_MAX_JOBMANAGERS_PER_RESOURCE = 10
 #GRDIMANAGER_MINIMUM_PROXY_TIME  = 180
 
 ## Condor requires that each submitted job be designated to run under a
-## particular "universe". Condor-G is active when jobs are as marked as
-## "GLOBUS" universe jobs. The universe of a job is set in the submit file
-## with the 'universe = GLOBUS' line.
+## particular "universe". 
 ##
 ## If no universe is specificed in the submit file, Condor must pick one
-## for the job to use. By default, it chooses the "standard" universe.
+## for the job to use. By default, it chooses the "vanilla" universe.
 ## The default can be overridden in the config file with the DEFAULT_UNIVERSE
 ## setting, which is a string to insert into a job submit description if the
 ## job does not try and define it's own universe
 ##
-#DEFAULT_UNIVERSE = globus
+#DEFAULT_UNIVERSE = vanilla
 
 #
 # The Cred_min_time_left is the first-pass at making sure that Condor-G

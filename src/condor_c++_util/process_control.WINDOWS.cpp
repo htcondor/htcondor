@@ -59,11 +59,11 @@ windows_soft_kill(DWORD pid)
 	//
 	char command_line[1024];
 	command_line[1023] = '\0';
-	int ret = snprintf(command_line,
-	                   1024,
-	                   "\"%s\" %u debug.txt",
-	                   soft_kill_binary,
-					   pid);
+	int ret = _snprintf(command_line,
+	                    1024,
+	                    "\"%s\" %u debug.txt",
+	                    soft_kill_binary,
+					    pid);
 	if (ret < 0) {
 		dprintf(D_ALWAYS,
 		        "windows:soft_kill: snprintf error: %s (%d)\n",

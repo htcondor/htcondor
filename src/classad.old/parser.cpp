@@ -42,16 +42,6 @@ static	int		alreadyRead;
 
 int ParseExpr(const char *& s, ExprTree*&, int&);
 
-#ifndef USE_STRING_SPACE_IN_CLASSADS
-static	char*	StrCpy(const char* str)
-{
-	char*	tmpStr = new char[strlen(str)+1];
-
-	strcpy(tmpStr, str);
-	return tmpStr;
-}
-#endif
-
 ////////////////////////////////////////////////////////////////////////////////
 // ReadToken() reads in a token to the global variable for parse_... functions
 // to use. Once a token is read by this function, it can not be looked at again.
@@ -115,11 +105,7 @@ ParseFunction(char *functionName, const char *& s, ExprTree*& newTree, int& coun
 	int       parse_succeeded;
 	Token     *t;
 	Function  *function;
-#ifdef USE_STRING_SPACE_IN_CLASSADS
 	newTree = new Function(functionName);
-#else
-	newTree = new Function(StrCpy(functionName));
-#endif
 
 	function = (Function *) newTree;
 
@@ -177,11 +163,7 @@ ParseFactor(const char *& s, ExprTree*& newTree, int& count)
 
             t = ReadToken(s);
 
-#ifdef USE_STRING_SPACE_IN_CLASSADS
-			newTree = new Variable(t->strVal);
-#else
-            newTree = new Variable(StrCpy(t->strVal));
-#endif
+            newTree = new Variable(t->strVal);
     		count = count + t->length;
 
 			{
@@ -232,21 +214,13 @@ ParseFactor(const char *& s, ExprTree*& newTree, int& count)
         case LX_STRING :
 
             t = ReadToken(s);
-#ifdef USE_STRING_SPACE_IN_CLASSADS
             newTree = new String(t->strVal);
-#else
-            newTree = new String(StrCpy(t->strVal));
-#endif
     		count = count + t->length;
             break;
 
 	    case LX_TIME:
 			t = ReadToken(s);
-#ifdef USE_STRING_SPACE_IN_CLASSADS
             newTree = new ISOTime(t->strVal);
-#else
-            newTree = new ISOTime(StrCpy(t->strVal));
-#endif
     		count = count + t->length;
 			break;
 
@@ -665,7 +639,7 @@ ParseClassAdRvalExpr(const char* s, ExprTree*& tree)
 
 	count = 0;
     alreadyRead = TRUE;
-    if(ParseExpr(s, tree, count))
+    if(ParseExpr(s, tree, count) && LookToken(s)->type == LX_EOF)
     {
 		count = 0;
     } else if (tree != NULL) {

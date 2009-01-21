@@ -579,17 +579,11 @@ Resource::hackLoadForCOD( void )
 		return;
 	}
 
-	char float_buf[64];
+	MyString load;
+	load.sprintf( "%s=%.2f", ATTR_LOAD_AVG, r_pre_cod_total_load );
 
-	MyString load = ATTR_LOAD_AVG;
-	load += '=';
-	sprintf( float_buf, "%.2f", r_pre_cod_total_load );
-	load += float_buf;
-
-	MyString c_load = ATTR_CONDOR_LOAD_AVG;
-	c_load += '=';
-	sprintf( float_buf, "%.2f", r_pre_cod_condor_load );
-	c_load += float_buf;
+	MyString c_load;
+	c_load.sprintf( "%s=%.2f", ATTR_CONDOR_LOAD_AVG, r_pre_cod_condor_load );
 
 	if( DebugFlags & D_FULLDEBUG && DebugFlags & D_LOAD ) {
 		if( r_cod_mgr->isRunning() ) {
@@ -605,13 +599,9 @@ Resource::hackLoadForCOD( void )
 	r_classad->Insert( load.Value() );
 	r_classad->Insert( c_load.Value() );
 
-	MyString line = ATTR_CPU_IS_BUSY;
-	line += "=False";
-	r_classad->Insert( line.Value() );
+	r_classad->Assign( ATTR_CPU_IS_BUSY, false );
 
-	line = ATTR_CPU_BUSY_TIME;
-	line += "=0";
-	r_classad->Insert( line.Value() );
+	r_classad->Assign( ATTR_CPU_BUSY_TIME, 0 );
 }
 
 
@@ -992,16 +982,16 @@ void
 Resource::final_update( void )
 {
 	ClassAd invalidate_ad;
-	char line[256];
+	MyString line;
 
 		// Set the correct types
 	invalidate_ad.SetMyTypeName( QUERY_ADTYPE );
 	invalidate_ad.SetTargetTypeName( STARTD_ADTYPE );
 
 		// We only want to invalidate this slot.
-	sprintf( line, "%s = %s == \"%s\"", ATTR_REQUIREMENTS, ATTR_NAME,
+	line.sprintf( "%s = %s == \"%s\"", ATTR_REQUIREMENTS, ATTR_NAME,
 			 r_name );
-	invalidate_ad.Insert( line );
+	invalidate_ad.Insert( line.Value() );
 
 #if HAVE_DLOPEN
 	StartdPluginManager::Invalidate(&invalidate_ad);
@@ -1606,8 +1596,6 @@ Resource::hardkill_backfill( void )
 void
 Resource::publish( ClassAd* cap, amask_t mask )
 {
-	char line[256];
-	MyString my_line;
 	State s;
 	char* ptr;
 
@@ -1620,12 +1608,10 @@ Resource::publish( ClassAd* cap, amask_t mask )
 
 	if( IS_STATIC(mask) ) {
 			// We need these for both public and private ads
-		sprintf( line, "%s = \"%s\"", ATTR_STARTD_IP_ADDR,
+		cap->Assign( ATTR_STARTD_IP_ADDR,
 				 daemonCore->InfoCommandSinfulString() );
-		cap->Insert( line );
 
-		sprintf( line, "%s = \"%s\"", ATTR_NAME, r_name );
-		cap->Insert( line );
+		cap->Assign( ATTR_NAME, r_name );
 	}
 
 	if( IS_PUBLIC(mask) && IS_STATIC(mask) ) {
@@ -1636,8 +1622,7 @@ Resource::publish( ClassAd* cap, amask_t mask )
 			// value, since we don't want to use the job ClassAd's
 			// Rank expression when we evaluate our Rank value.
 		if( !caInsert(cap, r_classad, ATTR_RANK) ) {
-			sprintf( line, "%s = 0.0", ATTR_RANK );
-			cap->Insert( line );
+			cap->Assign( ATTR_RANK, 0.0 );
 		}
 
 			// Similarly, the CpuBusy expression only lives in the
@@ -1703,13 +1688,9 @@ Resource::publish( ClassAd* cap, amask_t mask )
 		// If this is a public ad, publish anything we had to evaluate
 		// to "compute"
 	if( IS_PUBLIC(mask) && IS_EVALUATED(mask) ) {
-		sprintf( line, "%s=%d", ATTR_CPU_BUSY_TIME,
-				 (int)cpu_busy_time() );
-		cap->Insert(line);
+		cap->Assign( ATTR_CPU_BUSY_TIME, (int)cpu_busy_time() );
 
-		sprintf( line, "%s=%s", ATTR_CPU_IS_BUSY,
-				 r_cpu_busy ? "True" : "False" );
-		cap->Insert(line);
+		cap->Assign( ATTR_CPU_IS_BUSY, r_cpu_busy ? true : false );
 
         publishDeathTime( cap );
 	}
@@ -1722,28 +1703,22 @@ Resource::publish( ClassAd* cap, amask_t mask )
 
 		// Put in max job retirement time expression
 	ptr = param(ATTR_MAX_JOB_RETIREMENT_TIME);
-	if(!ptr) {
-		ptr = strdup("0");
-	} else if ( !*ptr ) {
+	if( ptr && !*ptr ) {
 		free(ptr);
-		ptr = strdup("0");
+		ptr = NULL;
 	}
-	my_line.sprintf("%s=%s",ATTR_MAX_JOB_RETIREMENT_TIME,ptr);
-	cap->Insert(my_line.Value());
+	cap->AssignExpr( ATTR_MAX_JOB_RETIREMENT_TIME, ptr ? ptr : "0" );
 
 	free(ptr);
 
 #if HAVE_JOB_HOOKS
 	if (IS_PUBLIC(mask)) {
-		my_line.sprintf("%s=%d", ATTR_LAST_FETCH_WORK_SPAWNED,
-						(int)m_last_fetch_work_spawned);
-		cap->Insert(my_line.Value());
-		my_line.sprintf("%s=%d", ATTR_LAST_FETCH_WORK_COMPLETED,
-						(int)m_last_fetch_work_completed);
-		cap->Insert(my_line.Value());
-		my_line.sprintf("%s=%d", ATTR_NEXT_FETCH_WORK_DELAY,
-						m_next_fetch_work_delay);
-		cap->Insert(my_line.Value());
+		cap->Assign( ATTR_LAST_FETCH_WORK_SPAWNED, 
+					 (int)m_last_fetch_work_spawned );
+		cap->Assign( ATTR_LAST_FETCH_WORK_COMPLETED,
+					 (int)m_last_fetch_work_completed );
+		cap->Assign( ATTR_NEXT_FETCH_WORK_DELAY,
+					 m_next_fetch_work_delay );
 	}
 #endif /* HAVE_JOB_HOOKS */
 

@@ -1061,7 +1061,7 @@ create_temp_file() {
 	int retry_count = 10;
 
 	do {
-		sprintf (filename, "%s/tmp.%d.%d", temp_dir, mypid, timestamp++);
+		snprintf (filename, 500, "%s/tmp.%d.%d", temp_dir, mypid, timestamp++);
 	} while ((--retry_count > 0) && 
 			 ((fd=safe_open_wrapper(filename, O_EXCL | O_CREAT, S_IREAD | S_IWRITE)) == -1));
 

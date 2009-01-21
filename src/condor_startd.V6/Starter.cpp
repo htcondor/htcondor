@@ -294,8 +294,7 @@ Starter::reallykill( int signo, int type )
 #endif
 	int 		ret = 0, sig = 0;
 	priv_state	priv;
-	char		signame[32];
-	signame[0]='\0';
+	const char *signame = "";
 
 	if ( s_pid == 0 ) {
 			// If there's no starter, just return.  We've done our task.
@@ -304,27 +303,27 @@ Starter::reallykill( int signo, int type )
 
 	switch( signo ) {
 	case DC_SIGSUSPEND:
-		sprintf( signame, "DC_SIGSUSPEND" );
+		signame = "DC_SIGSUSPEND";
 		break;
 	case DC_SIGHARDKILL:
 		signo = SIGQUIT;
-		sprintf( signame, "SIGQUIT" );
+		signame = "SIGQUIT";
 		break;
 	case DC_SIGSOFTKILL:
 		signo = SIGTERM;
-		sprintf( signame, "SIGTERM" );
+		signame = "SIGTERM";
 		break;
 	case DC_SIGPCKPT:
-		sprintf( signame, "DC_SIGPCKPT" );
+		signame = "DC_SIGPCKPT";
 		break;
 	case DC_SIGCONTINUE:
-		sprintf( signame, "DC_SIGCONTINUE" );
+		signame = "DC_SIGCONTINUE";
 		break;
 	case SIGHUP:
-		sprintf( signame, "SIGHUP" );
+		signame = "SIGHUP";
 		break;
 	case SIGKILL:
-		sprintf( signame, "SIGKILL" );
+		signame = "SIGKILL";
 		break;
 	default:
 		EXCEPT( "Unknown signal (%d) in Starter::reallykill", signo );

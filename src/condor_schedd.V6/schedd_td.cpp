@@ -144,99 +144,100 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 	// ads, then we don't iterate over the job queue log, which is 
 	// extremely expensive.
 	////////////////////////////////////////////////////////////////////////
-	switch(has_constraint) 
-	{
-		/////////////
-		// The user specified the jobids directly it would like to work with.
-		// We assume the client already has the ads it wishes to transfer.
-		/////////////
-		case false:
-			dprintf(D_ALWAYS, "Submittor provides procids.\n");
-
-			modify_allow_jobs = new ExtArray<PROC_ID>;
-			ASSERT(modify_allow_jobs);
-
-			modify_deny_jobs = new ExtArray<PROC_ID>;
-			ASSERT(modify_deny_jobs);
+	
+	
+	/////////////
+	// The user specified the jobids directly it would like to work with.
+	// We assume the client already has the ads it wishes to transfer.
+	/////////////
+	if (!has_constraint) {
 		
-			if (reqad.LookupString(ATTR_TREQ_JOBID_LIST, jids) == 0) {
-				dprintf(D_ALWAYS, "requestSandBoxLocation(): Submitter "
-					"%s's reqad must have %s as an attribute.\n", 
-					fquser.Value(), ATTR_TREQ_JOBID_LIST);
+		dprintf(D_ALWAYS, "Submittor provides procids.\n");
 
-				respad.Assign(ATTR_TREQ_INVALID_REQUEST, TRUE);
-				respad.Assign(ATTR_TREQ_INVALID_REASON, "Missing jobid list.");
-				respad.put(*rsock);
-				rsock->eom();
+		modify_allow_jobs = new ExtArray<PROC_ID>;
+		ASSERT(modify_allow_jobs);
 
-				return FALSE;
+		modify_deny_jobs = new ExtArray<PROC_ID>;
+		ASSERT(modify_deny_jobs);
+
+		if (reqad.LookupString(ATTR_TREQ_JOBID_LIST, jids) == 0) {
+			dprintf(D_ALWAYS, "requestSandBoxLocation(): Submitter "
+				"%s's reqad must have %s as an attribute.\n", 
+				fquser.Value(), ATTR_TREQ_JOBID_LIST);
+
+			respad.Assign(ATTR_TREQ_INVALID_REQUEST, TRUE);
+			respad.Assign(ATTR_TREQ_INVALID_REASON, "Missing jobid list.");
+			respad.put(*rsock);
+			rsock->eom();
+
+			return FALSE;
+		}
+
+		//////////////////////
+		// convert the stringlist of jobids into an actual ExtArray of
+		// PROC_IDs. we are responsible for this newly allocated memory.
+		//////////////////////
+		jobs = mystring_to_procids(jids);
+
+		if (jobs == NULL) {
+			// can't have no constraint and no jobids, bail.
+			dprintf(D_ALWAYS, "Submitter %s sent inconsistant ad with no "
+				"constraint and also no jobids on which to perform sandbox "
+				"manipulations.\n", fquser.Value());
+
+			respad.Assign(ATTR_TREQ_INVALID_REQUEST, TRUE);
+			respad.Assign(ATTR_TREQ_INVALID_REASON, 
+				"No constraint and no jobid list.");
+			respad.put(*rsock);
+			rsock->eom();
+
+			return FALSE;
+		}
+
+		//////////////////////
+		// Filter the jobs into a two arrays, those that we can
+		// modify and those we cannot because the client is not 
+		// authorized to.
+		//////////////////////
+		setQSock(rsock);	// so OwnerCheck() will work
+		j = k = 0;
+		for (i = 0; i < jobs->length(); i++) {
+			if (OwnerCheck((*jobs)[i].cluster, (*jobs)[i].proc)) {
+				// only allow the user to manipulate jobs it is entitled to.
+				// structure copy...
+				(*modify_allow_jobs)[j++] = (*jobs)[i];
+			} else {
+				// client can't modify this ad due to not having authority
+				dprintf(D_ALWAYS, 
+					"Scheduler::requestSandBoxLocation(): "
+					"WARNING: Submitter %s tried to request a sandbox "
+					"location for jobid %d.%d which is not owned by the "
+					"submitter. Denied modification to specified job.\n",
+					fquser.Value(), (*jobs)[i].cluster, (*jobs)[i].proc);
+
+				// structure copy...
+				(*modify_deny_jobs)[k++] = (*jobs)[i];
 			}
+		}
+		unsetQSock();
 
-			//////////////////////
-			// convert the stringlist of jobids into an actual ExtArray of
-			// PROC_IDs. we are responsible for this newly allocated memory.
-			//////////////////////
-			jobs = mystring_to_procids(jids);
+		// pack back into the reqad both allow and deny arrays so the client
+		// knows for which jobids it may transfer the files.
+		procids_to_mystring(modify_allow_jobs, jids_allow);
+		procids_to_mystring(modify_deny_jobs, jids_deny);
 
-			if (jobs == NULL) {
-				// can't have no constraint and no jobids, bail.
-				dprintf(D_ALWAYS, "Submitter %s sent inconsistant ad with no "
-					"constraint and also no jobids on which to perform sandbox "
-					"manipulations.\n", fquser.Value());
+		respad.Assign(ATTR_TREQ_JOBID_ALLOW_LIST, jids_allow);
+		respad.Assign(ATTR_TREQ_JOBID_DENY_LIST, jids_deny);
 
-				respad.Assign(ATTR_TREQ_INVALID_REQUEST, TRUE);
-				respad.Assign(ATTR_TREQ_INVALID_REASON, 
-					"No constraint and no jobid list.");
-				respad.put(*rsock);
-				rsock->eom();
+		// don't need what this contains anymore
+		delete modify_deny_jobs;
+		modify_deny_jobs = NULL;
 
-				return FALSE;
-			}
+		// don't need what this contains anymore
+		delete jobs;
+		jobs = NULL;
 
-			//////////////////////
-			// Filter the jobs into a two arrays, those that we can
-			// modify and those we cannot because the client is not 
-			// authorized to.
-			//////////////////////
-			setQSock(rsock);	// so OwnerCheck() will work
-			j = k = 0;
-			for (i = 0; i < jobs->length(); i++) {
-				if (OwnerCheck((*jobs)[i].cluster, (*jobs)[i].proc)) {
-					// only allow the user to manipulate jobs it is entitled to.
-					// structure copy...
-					(*modify_allow_jobs)[j++] = (*jobs)[i];
-				} else {
-					// client can't modify this ad due to not having authority
-					dprintf(D_ALWAYS, 
-						"Scheduler::requestSandBoxLocation(): "
-						"WARNING: Submitter %s tried to request a sandbox "
-						"location for jobid %d.%d which is not owned by the "
-						"submitter. Denied modification to specified job.\n",
-						fquser.Value(), (*jobs)[i].cluster, (*jobs)[i].proc);
-
-					// structure copy...
-					(*modify_deny_jobs)[k++] = (*jobs)[i];
-				}
-			}
-			unsetQSock();
-
-			// pack back into the reqad both allow and deny arrays so the client
-			// knows for which jobids it may transfer the files.
-			procids_to_mystring(modify_allow_jobs, jids_allow);
-			procids_to_mystring(modify_deny_jobs, jids_deny);
-
-			respad.Assign(ATTR_TREQ_JOBID_ALLOW_LIST, jids_allow);
-			respad.Assign(ATTR_TREQ_JOBID_DENY_LIST, jids_deny);
-
-			// don't need what this contains anymore
-			delete modify_deny_jobs;
-			modify_deny_jobs = NULL;
-
-			// don't need what this contains anymore
-			delete jobs;
-			jobs = NULL;
-
-			break;
+	} else {
 
 		/////////////
 		// The user specified by a constraint the jobids it would like to use.
@@ -255,54 +256,45 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 		// transfer object, or any other type of protocol, to ensure the client
 		// and transferd are synchronized in what they are transferring.
 		/////////////
-		case true:
-			dprintf(D_ALWAYS, "Submittor provides constraint.\n");
 
-			if (reqad.LookupString(ATTR_TREQ_CONSTRAINT,constraint_string)==0)
+		dprintf(D_ALWAYS, "Submittor provides constraint.\n");
+
+		if (reqad.LookupString(ATTR_TREQ_CONSTRAINT,constraint_string)==0)
+		{
+			dprintf(D_ALWAYS, "Submitter %s sent inconsistant ad with "
+				"no constraint to find any jobids\n",
+				fquser.Value());
+		}
+
+		// By definition we'll only save the jobids the user may modify
+		modify_allow_jobs = new ExtArray<PROC_ID>;
+		ASSERT(modify_allow_jobs);
+
+		setQSock(rsock);	// so OwnerCheck() will work
+
+		// Walk the job queue looking for jobs which match the constraint
+		// filter. Then filter that set with OwnerCheck to ensure 
+		// the client has the correct authority to modify these jobids.
+		tmp_ad = GetNextJobByConstraint(constraint_string.Value(), 1);
+		i = 0;
+		while (tmp_ad) {
+			if ( tmp_ad->LookupInteger(ATTR_CLUSTER_ID,cluster) &&
+				tmp_ad->LookupInteger(ATTR_PROC_ID,proc) &&
+				OwnerCheck(cluster, proc) )
 			{
-				dprintf(D_ALWAYS, "Submitter %s sent inconsistant ad with "
-					"no constraint to find any jobids\n",
-					fquser.Value());
+				(*modify_allow_jobs)[i].cluster = cluster;
+				(*modify_allow_jobs)[i].proc = proc;
+				i++;
 			}
+			tmp_ad = GetNextJobByConstraint(constraint_string.Value(), 0);
+		}
+		unsetQSock();
 
-			// By definition we'll only save the jobids the user may modify
-			modify_allow_jobs = new ExtArray<PROC_ID>;
-			ASSERT(modify_allow_jobs);
+		// Let the client know what jobids it may actually transfer for.
+		procids_to_mystring(modify_allow_jobs, jids_allow);
+		respad.Assign(ATTR_TREQ_JOBID_ALLOW_LIST, jids_allow);
+		respad.Assign(ATTR_TREQ_JOBID_DENY_LIST, "");
 
-			setQSock(rsock);	// so OwnerCheck() will work
-
-			// Walk the job queue looking for jobs which match the constraint
-			// filter. Then filter that set with OwnerCheck to ensure 
-			// the client has the correct authority to modify these jobids.
-			tmp_ad = GetNextJobByConstraint(constraint_string.Value(), 1);
-			i = 0;
-			while (tmp_ad) {
-				if ( tmp_ad->LookupInteger(ATTR_CLUSTER_ID,cluster) &&
-		 			tmp_ad->LookupInteger(ATTR_PROC_ID,proc) &&
-		 			OwnerCheck(cluster, proc) )
-				{
-					(*modify_allow_jobs)[i].cluster = cluster;
-					(*modify_allow_jobs)[i].proc = proc;
-					i++;
-				}
-				tmp_ad = GetNextJobByConstraint(constraint_string.Value(), 0);
-			}
-			unsetQSock();
-
-			// Let the client know what jobids it may actually transfer for.
-			procids_to_mystring(modify_allow_jobs, jids_allow);
-			respad.Assign(ATTR_TREQ_JOBID_ALLOW_LIST, jids_allow);
-			respad.Assign(ATTR_TREQ_JOBID_DENY_LIST, "");
-
-		break;
-
-#ifndef WIN32 // suppress warning C4809: all values of has_constraint have been covered
-		default:
-			EXCEPT("If this except happens, the boolean type has more states "
-				"than true and false. Very unlikely and indicative of a "
-				"compiler failure.");
-			break;
-#endif
 	}
 
 	// At this point, modify_allow_jobs contains an array of jobids the
@@ -815,7 +807,7 @@ Scheduler::treq_upload_update_callback(TransferRequest *treq,
 		buf = NULL;
 		jad->LookupString(ATTR_JOB_IWD,&buf);
 		if ( buf ) {
-			sprintf(new_attr_value,"SUBMIT_%s",ATTR_JOB_IWD);
+			snprintf(new_attr_value,500,"SUBMIT_%s",ATTR_JOB_IWD);
 			SetAttributeString(cluster,proc,new_attr_value,buf);
 			free(buf);
 			buf = NULL;
@@ -825,7 +817,7 @@ Scheduler::treq_upload_update_callback(TransferRequest *treq,
 
 			// Backup the original TRANSFER_OUTPUT_REMAPS at submit time
 		expr = jad->Lookup(ATTR_TRANSFER_OUTPUT_REMAPS);
-		sprintf(new_attr_value,"SUBMIT_%s",ATTR_TRANSFER_OUTPUT_REMAPS);
+		snprintf(new_attr_value,500,"SUBMIT_%s",ATTR_TRANSFER_OUTPUT_REMAPS);
 		if ( expr ) {
 			char *remap_buf = NULL;
 			ASSERT( expr->RArg() );
@@ -885,7 +877,7 @@ Scheduler::treq_upload_update_callback(TransferRequest *treq,
 			}
 			if ( changed ) {
 					// Backup original value
-				sprintf(new_attr_value,"SUBMIT_%s",AttrsToModify[index]);
+				snprintf(new_attr_value,500,"SUBMIT_%s",AttrsToModify[index]);
 				SetAttributeString(cluster,proc,new_attr_value,buf);
 					// Store new value
 				char *new_value = new_paths.print_to_string();
@@ -1381,7 +1373,7 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 		buf = NULL;
 		ad->LookupString(ATTR_JOB_IWD,&buf);
 		if ( buf ) {
-			sprintf(new_attr_value,"SUBMIT_%s",ATTR_JOB_IWD);
+			snprintf(new_attr_value,500,"SUBMIT_%s",ATTR_JOB_IWD);
 			SetAttributeString(cluster,proc,new_attr_value,buf);
 			free(buf);
 			buf = NULL;
@@ -1391,7 +1383,7 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 
 			// Backup the original TRANSFER_OUTPUT_REMAPS at submit time
 		expr = ad->Lookup(ATTR_TRANSFER_OUTPUT_REMAPS);
-		sprintf(new_attr_value,"SUBMIT_%s",ATTR_TRANSFER_OUTPUT_REMAPS);
+		snprintf(new_attr_value,500,"SUBMIT_%s",ATTR_TRANSFER_OUTPUT_REMAPS);
 		if ( expr ) {
 			char *remap_buf = NULL;
 			ASSERT( expr->RArg() );
@@ -1451,7 +1443,7 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 			}
 			if ( changed ) {
 					// Backup original value
-				sprintf(new_attr_value,"SUBMIT_%s",AttrsToModify[index]);
+				snprintf(new_attr_value,500,"SUBMIT_%s",AttrsToModify[index]);
 				SetAttributeString(cluster,proc,new_attr_value,buf);
 					// Store new value
 				char *new_value = new_paths.print_to_string();

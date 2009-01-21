@@ -176,17 +176,8 @@ StarterMgr::publish( ClassAd* ad, amask_t mask )
 		ability_str = strdup("\0");
 	}
 	ASSERT(ability_str);
-	int size = strlen(ATTR_STARTER_ABILITY_LIST) +
-		strlen(ability_str) + 6;
-	char* tmp = (char*)malloc( size * sizeof(char) );
-	if( ! tmp ) {
-		EXCEPT( "Out of memory!" );
-	}
-	sprintf( tmp, "%s = \"%s\"", ATTR_STARTER_ABILITY_LIST,
-			 ability_str );
+	ad->Assign( ATTR_STARTER_ABILITY_LIST, ability_str );
 	free( ability_str );
-	ad->Insert( tmp );
-	free( tmp );
 }
 
 

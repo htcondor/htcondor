@@ -136,7 +136,7 @@ void CondorSystrayNotifier::writeToRegistryForCpu(int iCpuId, int iStatus)
 	}
 
 	char psBuf[256];
-	sprintf(psBuf, "systray_cpu_%d_state", iCpuId);
+	snprintf(psBuf, 256, "systray_cpu_%d_state", iCpuId);
 	DWORD dwValue = iStatus;
 	RegSetValueEx(hNotifyHandle, psBuf, 0, REG_DWORD, (unsigned char *) &dwValue, sizeof(DWORD));
 	RegCloseKey(hNotifyHandle);

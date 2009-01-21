@@ -39,7 +39,7 @@ printNoCollectorContact( FILE* fp, const char* addr, bool verbose )
 			collector_host = free_param;
 		}
 	}
-	sprintf( error_message, 
+	snprintf( error_message, 1000,
 			 "Error: Couldn't contact the condor_collector on %s.",
 			 collector_host ? collector_host : "your central manager");
 
@@ -57,7 +57,7 @@ printNoCollectorContact( FILE* fp, const char* addr, bool verbose )
 						   "some other problem. Check with your system "
 						   "administrator to fix this problem.", fp);
 		fprintf( fp, "\n" );
-		sprintf( error_message, 
+		snprintf( error_message, 1000,
 				 "If you are the system administrator, check that the "
 				 "condor_collector is running on %s, check the HOSTALLOW "
 				 "configuration in your condor_config, and check the "

@@ -107,22 +107,17 @@ AvailStats::publish( ClassAd* cp, amask_t how_much )
 
 	if( IS_UPDATE(how_much) || IS_PUBLIC(how_much) ) {
 
-		sprintf( line, "%s=%0.2f", ATTR_AVAIL_TIME, avail_time() );
+		snprintf( line, 100, "%s=%0.2f", ATTR_AVAIL_TIME, avail_time() );
 		cp->Insert(line); 
   
-		sprintf( line, "%s=%d", ATTR_LAST_AVAIL_INTERVAL,
-				 last_avail_interval() );
-		cp->Insert(line); 
+		cp->Assign( ATTR_LAST_AVAIL_INTERVAL, last_avail_interval() );
   
 		if( as_start_avail ) {
 
 				// only insert these attributes when in non-owner state
-			sprintf( line, "%s=%ld", ATTR_AVAIL_SINCE, (long)avail_since() );
-			cp->Insert(line); 
+			cp->Assign( ATTR_AVAIL_SINCE, (int)avail_since() );
   
-			sprintf( line, "%s=%d", ATTR_AVAIL_TIME_ESTIMATE,
-					 avail_estimate() );
-			cp->Insert(line); 
+			cp->Assign( ATTR_AVAIL_TIME_ESTIMATE, avail_estimate() );
 		}
 	}  
 }
@@ -220,19 +215,13 @@ MyString
 AvailStats::serialize()
 {
 	MyString state;
-	char buf[20];
 
-	sprintf(buf, "%ld", (long)(time(0)-as_birthdate));
-	state += buf;
-	sprintf(buf, " %d", as_tot_avail_time);
-	state += buf;
-	sprintf(buf, " %d", as_last_avail_interval);
-	state += buf;
+	state.sprintf( "%ld %d %d", (long)(time(0)-as_birthdate),
+				   as_tot_avail_time, as_last_avail_interval );
 	as_avail_periods.Rewind();
 	int item;
 	while( as_avail_periods.Next(item) ) {
-		sprintf(buf, " %d", item);
-		state += buf;
+		state.sprintf_cat( " %d", item );
 	}
 
 	return state;

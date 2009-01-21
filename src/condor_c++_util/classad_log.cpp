@@ -677,7 +677,7 @@ int
 LogHistoricalSequenceNumber::WriteBody(FILE *fp)
 {
 	char buf[100];
-	sprintf(buf,"%lu CreationTimestamp %lu",
+	snprintf(buf,100,"%lu CreationTimestamp %lu",
 		historical_sequence_number,timestamp);
 	int len = strlen(buf);
 	return (fwrite(buf, 1, len, fp) < (unsigned)len) ? -1: len;
@@ -820,10 +820,7 @@ LogSetAttribute::Play(void *data_structure)
 	ClassAd *ad;
 	if (table->lookup(HashKey(key), ad) < 0)
 		return -1;
-	char *tmp_expr = new char [strlen(name) + strlen(value) + 4];
-	sprintf(tmp_expr, "%s = %s", name, value);
-	rval = ad->Insert(tmp_expr);
-	delete [] tmp_expr;
+	rval = ad->AssignExpr(name, value);
 
 #if HAVE_DLOPEN
 	ClassAdLogPluginManager::SetAttribute(key, name, value);

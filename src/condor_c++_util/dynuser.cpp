@@ -190,9 +190,9 @@ bool dynuser::init_user() {
 				// must not be an smp machine, so just use slot #1
 		 		
 				dprintf(D_FULLDEBUG, "Dynuser: Couldn't param slot# - using 1 by default\n");
-				sprintf(slot_num,"slot1");
+				snprintf(slot_num,10,"slot1");
 		 	}
-			int ret=snprintf(accountname, 100, 
+			int ret=_snprintf(accountname, 100, 
 				ACCOUNT_PREFIX_REUSE "%s", slot_num);
 		 	if ( ret < 0 ) {
 		 		EXCEPT("account name to create too long");
@@ -206,7 +206,7 @@ bool dynuser::init_user() {
 			// don't have to link in DC to everything non-DC that uses
 			// Uids.C and Dynuser.C -stolley 7/2002
 			int current_pid = GetCurrentProcessId();
-			int ret=snprintf(accountname, 100, 
+			int ret=_snprintf(accountname, 100, 
 				ACCOUNT_PREFIX "%d", current_pid);
 		 	if ( ret < 0 ) {
 		 		EXCEPT("account name to create too long");

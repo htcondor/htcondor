@@ -516,9 +516,9 @@ bool ClassAdCollection::IterateClassAds(int CoID, RankedClassAd& RankedAd)
 float ClassAdCollection::GetClassAdRank(ClassAd* Ad, const MyString& RankExpr)
 {
   if (RankExpr.Length()==0) return 0.0;
-  char tmp[200];
-  sprintf(tmp,"%s=%s",ATTR_RANK,RankExpr.Value());
-  AttrList RankingAd(tmp,'\0');
+  MyString tmp;
+  tmp.sprintf("%s=%s",ATTR_RANK,RankExpr.Value());
+  AttrList RankingAd(tmp.Value(),'\0');
   float Rank;
   if (!RankingAd.EvalFloat(ATTR_RANK,Ad,Rank)) Rank=0.0;
   return Rank;

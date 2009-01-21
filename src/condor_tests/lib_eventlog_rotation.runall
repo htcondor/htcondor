@@ -80,4 +80,5 @@ foreach my $name ( @names ) {
 	exit( $?>>8 );
     }
 }
+print "\n\n*** All tests completed successfully ***\n";
 exit 0;
