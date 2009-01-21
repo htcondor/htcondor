@@ -2813,7 +2813,7 @@ Assign(char const *variable,double value)
 		delete lhs;
 		return FALSE;
 	}
-	rhs = new Integer( value );
+	rhs = new Float( value );
 	tree = new AssignOp( lhs, rhs );
 	if ( Insert( tree ) == FALSE ) {
 		delete tree;
