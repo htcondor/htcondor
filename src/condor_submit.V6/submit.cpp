@@ -1325,8 +1325,10 @@ reschedule()
  * paths.
  */
 int
-check_and_universalize_path( MyString & /*path*/, const char * /*lhs*/ )
+check_and_universalize_path( MyString &path, const char *lhs )
 {
+	(void) path;
+	(void) lhs;
 
 	int retval = 0;
 #ifdef WIN32
