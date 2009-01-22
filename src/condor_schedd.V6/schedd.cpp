@@ -616,7 +616,11 @@ Scheduler::timeout()
 	SchedDInterval.setFinishTimeNow();
 
 	/* Reset our timer */
-	daemonCore->Reset_Timer(timeoutid,(int)SchedDInterval.getTimeToNextRun());
+	time_to_next_run = SchedDInterval.getTimeToNextRun();
+	if ( time_to_next_run > 0 ) {
+		time_to_next_run = 0;
+	}
+	daemonCore->Reset_Timer(timeoutid,time_to_next_run);
 }
 
 void
@@ -1941,11 +1945,16 @@ Scheduler::PeriodicExprHandler( void )
 	WalkJobQueue(PeriodicExprEval);
 
 	PeriodicExprInterval.setFinishTimeNow();
+
+	int time_to_next_run = PeriodicExprInterval.getTimeToNextRun();
+	if ( time_to_next_run < 0 ) {
+		time_to_next_run = 0;
+	}
 	dprintf(D_FULLDEBUG,"Evaluated periodic expressions in %.3fs, "
 			"scheduling next run in %ds\n",
 			PeriodicExprInterval.getLastDuration(),
-			PeriodicExprInterval.getTimeToNextRun());
-	daemonCore->Reset_Timer( periodicid, PeriodicExprInterval.getTimeToNextRun() );
+			time_to_next_run);
+	daemonCore->Reset_Timer( periodicid, time_to_next_run );
 }
 
 
@@ -10713,6 +10722,10 @@ Scheduler::RegisterTimers()
 		// we know why if it happens again.
 	if (PeriodicExprInterval.getMinInterval()>0) {
 		int time_to_next_run = PeriodicExprInterval.getTimeToNextRun();
+		if ( time_to_next_run <= 0 ) {
+				// Can't use 0, because that means it's a one-time timer
+			time_to_next_run = 1;
+		}
 		periodicid = daemonCore->Register_Timer(
 			time_to_next_run,
 			time_to_next_run,
