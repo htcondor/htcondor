@@ -37,6 +37,9 @@ static const char env_delimiter = ';';
 static const char env_delimiter = '|';
 #endif
 
+// Public symbol from libc
+extern DLL_IMPORT_MAGIC char **environ;
+
 Env::Env()
 {
 	input_was_v1 = false;
