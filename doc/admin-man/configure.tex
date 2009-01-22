@@ -5702,7 +5702,10 @@ UWCS_NEGOTIATOR_POST_JOB_RANK = \
   context of the candidate machine ClassAd and the candidate idle job
   ClassAd; thus the \verb@MY@ scope prefix refers to the machine ClassAd,
   and the \verb@TARGET@ scope prefix refers to the ClassAd of the idle
-  (candidate) job.  
+  (candidate) job.  There is no direct access to the currently running job,
+  but attributes of the currently running job that need to be accessed
+  in \MacroNI{PREEMPTION\_REQUIREMENTS} can be placed in the machine ClassAd
+  using \Macro{STARTD\_JOB\_EXPRS}.
   If not explicitly set in the Condor configuration file, the default value
   for this expression is \Expr{True}.
   Note that this setting does not
