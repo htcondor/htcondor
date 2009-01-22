@@ -70,6 +70,32 @@ Example V2Quoted syntax yielding same as above:
 #include "condor_ver_info.h"
 template <class Key, class Value> class HashTable;
 
+#if defined(WIN32)
+#include <algorithm>
+#include <set>
+#include <string>
+// helper class needed for case-insensitive string comparison on Windows
+// see comment above the m_sorted_varnames member declaration below for
+// more info
+//
+struct toupper_string_less {
+	static bool
+	toupper_char_less(char c1, char c2)
+	{
+		return (toupper(static_cast<unsigned char>(c1)) <
+		        toupper(static_cast<unsigned char>(c2)));
+	}
+	bool
+	operator()(const std::string& s1, const std::string& s2) const
+	{
+		return std::lexicographical_compare(s1.begin(),
+		                                    s1.end(),
+		                                    s2.begin(),
+		                                    s2.end(),
+		                                    toupper_char_less);
+	}
+};
+#endif
 
 class Env {
  public:
@@ -171,8 +197,10 @@ class Env {
 		// Get a string describing the environment in this Env object.
 	void getDelimitedStringForDisplay(MyString *result) const;
 
+#if defined(WIN32)
 		// Caller should delete the string.
 	char *getWindowsEnvironmentString() const;
+#endif
 
 		// Returns a null-terminated array of strings.
 		// Caller should delete it (e.g. with deleteStringArray()).
@@ -205,6 +233,19 @@ class Env {
  protected:
 	HashTable<MyString, MyString> *_envTable;
 	bool input_was_v1;
+
+#if defined(WIN32)
+	// the m_sorted_varnames set is used whenever the environment is
+	// obtained for the purpose of passing to CreateProcess (using
+	// getWindowsEnvironmentString()) to:
+	//   - make sure that the environment is sorted by variable name,
+	//     as required on Windows
+	//   - enforce case-insensitivity of variable names
+	// note that a std::set keeps its elements sorted, as specified by
+	// the C++ standard
+	//
+	std::set<std::string, toupper_string_less> m_sorted_varnames;
+#endif
 
 	static bool ReadFromDelimitedString( char const *&input, char *output );
 
