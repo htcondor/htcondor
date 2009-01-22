@@ -5,7 +5,8 @@ use warnings;
 my %params;
 my @ARGS = ( "--force", "--no-pid" );
 my $skip = 0;
-my $usage = "usage: $0 [--start <name>] [/<pattern>/] [run opts]";
+my $link = 0;
+my $usage = "usage: $0 [--link] [--start <name>] [/<pattern>/] [run opts]";
 foreach my $n ( 0 .. $#ARGV )
 {
     my $arg = $ARGV[$n];
@@ -21,6 +22,9 @@ foreach my $n ( 0 .. $#ARGV )
 	}
 	$params{start} = $arg1;
 	$skip = 1;
+    }
+    elsif ( $arg eq "--link" ) {
+	$link = 1;
     }
     elsif ( $arg =~ /^\/(.*)\/$/ ) {
 	$params{pat} = $1;
@@ -56,9 +60,23 @@ qw (
     reader_20_rotations_20_loops
 );
 
+my $format = "lib_eventlog_rotation-%s.run";
+if ( $link )
+{
+    my $base = sprintf( $format, "base" );
+    foreach my $name ( @names ) {
+	my $test = sprintf( "lib_eventlog_rotation-%s.run", $name );
+	if ( -l $test || -f $test ) {
+	    unlink( $test ) or die "Can't unlink $test";
+	}
+	symlink( $base, $test ) or die "Can't create symlink to $test";
+	print "linking: $base -> $test\n";
+    }
+    exit 0;
+}
+
 foreach my $name ( @names ) {
-    my $test = sprintf( "./lib_eventlog_rotation-%s.run %s",
-			$name, join(" ", @ARGS) );
+    my $test = sprintf( $format, $name, join(" ", @ARGS) );
     if ( $params{start} ) {
 	if ( $name =~ /$params{start}/ ) {
 	    delete $params{start};
@@ -73,7 +91,7 @@ foreach my $name ( @names ) {
 	}
     }
     print "\n\n*** Running test '$name' ***\n";
-    system( $test );
+    system( "./$test" );
     if ( $? != 0 ) {
 	print "*** Failed on test '$name' ***\n";
 	print "$test\n";

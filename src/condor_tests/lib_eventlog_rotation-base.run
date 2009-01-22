@@ -21,6 +21,7 @@
 use strict;
 use warnings;
 
+my $start = time( );
 my $name;
 if ( $0 =~ /lib_eventlog_rotation-(\w+)\.run/ ) {
     $name = $1;
@@ -37,4 +38,11 @@ my $status = system( @args );
 if ( $status < 0 ) {
     die "Failed to execute " . join(" ", @args) . ": $?";
 }
+
+my $end = time();
+my $endstr = localtime( $end );
+my $duration = $end - $start;
+printf( "%s Eventlog rotation test %s done; duration %ds, exit %d\n",
+	$endstr, $name, $duration, ($? >> 8) );
+
 exit( $? >> 8 );
