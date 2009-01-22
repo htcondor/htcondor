@@ -7,7 +7,7 @@
 # 	       platform.
 # processname: condor_master
 # config: /etc/condor/condor_config
-# pidfile: /var/lib/condor/condor_master.pid
+# pidfile: /var/run/condor/condor_master.pid
 
 ### BEGIN INIT INFO
 # Provides: condor
@@ -21,7 +21,7 @@
 prog=condor_master
 
 lockfile=/var/lock/subsys/$prog
-pidfile=/var/lib/condor/$prog.pid
+pidfile=/var/run/condor/$prog.pid
 
 # Source function library
 . /etc/init.d/functions
@@ -50,7 +50,13 @@ stop() {
     killproc -p $pidfile $prog -QUIT
     RETVAL=$?
     echo
-    sleep 5
+    wait_pid $pidfile 15
+    if [ $? -ne 0 ]; then
+	# If this happens during a restart the start is likely to see
+	# condor still running and just return 0, which means when
+	# condor exits it won't be restarted
+	echo $"Warning: $prog may not have exited, start/restart may fail"
+    fi
     [ $RETVAL -eq 0 ] && rm -f $lockfile
     return $RETVAL
 }
@@ -85,26 +91,72 @@ reload() {
 #         4 = status unknown
 #
 pid_status() {
-    if [ -f $1 ]; then
-        # this can fail if we're not privileged
-        pid=`cat $1` &>/dev/null
-        if [ $? -ne 0 -o -z "$pid" ]; then
-            return 4
-        fi
+    pid=$(get_pid $1)
+    case $? in
+	1) return 3 ;;
+	2) return 4 ;;
+    esac
 
-        ps $pid &>/dev/null
-        if [ $? -ne 0 ]; then
-	    if [ -e $2 ]; then
-		return 2
-	    fi
+    ps $pid &>/dev/null
+    if [ $? -ne 0 ]; then
+	if [ -e $2 ]; then
+	    return 2
+	fi
 
-            return 1
-        fi
-
-        return 0
+	return 1
     fi
 
-    return 3
+    return 0
+}
+
+#
+# Wait for the pid in the pidfile to disappear, but only do so for at
+# most timeout seconds.
+#
+# Usage: wait_pid <pidfile> <timeout>
+# Result: 0 = pid was not found (doesn't exist or not accessible)
+#         1 = pid still exists after timeout
+wait_pid() {
+    pid=$(get_pid $1)
+    if [ $? -ne 0 ]; then
+	return 0
+    fi
+
+    wait=0
+    while [ $wait -lt $2 ]; do
+	pid_status $1 /dev/null   # ingore lockfile
+	if [ $? -ne 0 ]; then
+	    return 0
+        fi
+
+	sleep 1
+	wait=$((wait + 1))
+    done
+
+    return 1
+}
+
+#
+# Retrieve pid from a pidfile
+#
+# Usage: get_pid <pidfile>
+# Result: 0 = pid returned
+#         1 = pidfile not found
+#         2 = pidfile not accessible or didn't contain pid
+# Stdout: pid
+#
+get_pid() {
+    if [ -f $1 ]; then
+	pid=`cat $1` &>/dev/null
+	if [ $? -ne 0 -o -z "$pid" ]; then
+	    return 2
+	fi
+
+	echo -n $pid
+	return 0
+    fi
+
+    return 1
 }
 
 

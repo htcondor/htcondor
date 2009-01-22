@@ -70,6 +70,32 @@ Example V2Quoted syntax yielding same as above:
 #include "condor_ver_info.h"
 template <class Key, class Value> class HashTable;
 
+#if defined(WIN32)
+#include <algorithm>
+#include <set>
+#include <string>
+// helper class needed for case-insensitive string comparison on Windows
+// see comment above the m_sorted_varnames member declaration below for
+// more info
+//
+struct toupper_string_less {
+	static bool
+	toupper_char_less(char c1, char c2)
+	{
+		return (toupper(static_cast<unsigned char>(c1)) <
+		        toupper(static_cast<unsigned char>(c2)));
+	}
+	bool
+	operator()(const std::string& s1, const std::string& s2) const
+	{
+		return std::lexicographical_compare(s1.begin(),
+		                                    s1.end(),
+		                                    s2.begin(),
+		                                    s2.end(),
+		                                    toupper_char_less);
+	}
+};
+#endif
 
 class Env {
  public:
@@ -182,8 +208,10 @@ class Env {
 		// Get a string describing the environment in this Env object.
 	void getDelimitedStringForDisplay(MyString *result) const;
 
+#if defined(WIN32)
 		// Caller should delete the string.
 	char *getWindowsEnvironmentString() const;
+#endif
 
 		// Returns a null-terminated array of strings.
 		// Caller should delete it (e.g. with deleteStringArray()).
@@ -216,6 +244,25 @@ class Env {
  protected:
 	HashTable<MyString, MyString> *_envTable;
 	bool input_was_v1;
+
+#if defined(WIN32)
+	// on Windows, environment variable names must be treated as case
+	// insensitive. however, we can't just make the Env object's
+	// hash table case-insensitive on Windows , since Env is also
+	// used on the submit side and we want to support cross-
+	// submission. our solution is to leave the hash table case
+	// sensitive, but when we are on Windows and an environment
+	// string is pulled out with the intent of passing
+	// it to CreateProcess (done using the getWindowsEnvironmentString
+	// method), we make sure that there are no duplicate variable names.
+	// if there are multiple variables in the hash table that differ only
+	// in case, the last one to be inserted "wins"
+	//
+	// the m_sorted_varnames set is used on Windows to enable
+	// getWindowsEnvironmentString to provide this behavior
+	//
+	std::set<std::string, toupper_string_less> m_sorted_varnames;
+#endif
 
 	static bool ReadFromDelimitedString( char const *&input, char *output );
 
