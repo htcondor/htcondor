@@ -235,14 +235,20 @@ class Env {
 	bool input_was_v1;
 
 #if defined(WIN32)
-	// the m_sorted_varnames set is used whenever the environment is
-	// obtained for the purpose of passing to CreateProcess (using
-	// getWindowsEnvironmentString()) to:
-	//   - make sure that the environment is sorted by variable name,
-	//     as required on Windows
-	//   - enforce case-insensitivity of variable names
-	// note that a std::set keeps its elements sorted, as specified by
-	// the C++ standard
+	// on Windows, environment variable names must be treated as case
+	// insensitive. however, we can't just make the Env object's
+	// hash table case-insensitive on Windows , since Env is also
+	// used on the submit side and we want to support cross-
+	// submission. our solution is to leave the hash table case
+	// sensitive, but when we are on Windows and an environment
+	// string is pulled out with the intent of passing
+	// it to CreateProcess (done using the getWindowsEnvironmentString
+	// method), we make sure that there are no duplicate variable names.
+	// if there are multiple variables in the hash table that differ only
+	// in case, the last one to be inserted "wins"
+	//
+	// the m_sorted_varnames set is used on Windows to enable
+	// getWindowsEnvironmentString to provide this behavior
 	//
 	std::set<std::string, toupper_string_less> m_sorted_varnames;
 #endif
