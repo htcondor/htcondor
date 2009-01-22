@@ -44,7 +44,7 @@ const char *CondorResource::HashName( const char *resource_name,
 {
 	static MyString hash_name;
 
-	hash_name.sprintf( "%s#%s#%s", resource_name, 
+	hash_name.sprintf( "condor %s %s#%s", resource_name, 
 					   pool_name ? pool_name : "NULL",
 					   proxy_subject ? proxy_subject : "NULL" );
 
@@ -196,6 +196,24 @@ void CondorResource::Reconfig()
 const char *CondorResource::ResourceType()
 {
 	return "condor";
+}
+
+const char *CondorResource::GetHashName()
+{
+	return HashName( resourceName, poolName, proxySubject );
+}
+
+void CondorResource::PublishResourceAd( ClassAd *resource_ad )
+{
+	BaseResource::PublishResourceAd( resource_ad );
+
+	MyString buff;
+
+	buff.sprintf( "condor %s %s", resourceName, poolName );
+	resource_ad->Assign( ATTR_NAME, buff.Value() );
+	if ( proxySubject ) {
+		resource_ad->Assign( ATTR_X509_USER_PROXY_SUBJECT, proxySubject );
+	}
 }
 
 void CondorResource::RegisterJob( CondorJob *job, const char *submitter_id )

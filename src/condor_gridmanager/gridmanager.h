@@ -27,6 +27,7 @@
 #include "list.h"
 #include "daemon.h"
 #include "dc_schedd.h"
+#include "dc_collector.h"
 
 #include "basejob.h"
 
@@ -40,7 +41,9 @@
 #define GM_RESOURCE_UNLIMITED	1000000000
 
 extern char *ScheddAddr;
+extern char *ScheddName;
 extern DCSchedd *ScheddObj;
+extern DCCollector *CollectorObj;
 extern char *ScheddJobConstraint;
 extern char *GridmanagerScratchDir;
 extern char *myUserName;

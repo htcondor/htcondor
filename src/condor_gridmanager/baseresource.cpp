@@ -57,6 +57,16 @@ BaseResource::BaseResource( const char *resource_name )
 	updateLeasesActive = false;
 	leaseAttrsSynched = false;
 	updateLeasesCmdActive = false;
+
+	_updateCollectorTimerId = daemonCore->Register_Timer ( 
+		0,
+		(TimerHandlercpp)&BaseResource::UpdateCollector,
+		"BaseResource::UpdateCollector",
+		(Service*)this );
+	_lastCollectorUpdate = 0;
+	_firstCollectorUpdate = true;
+	_collectorUpdateInterval = param_integer ( 
+		"GRIDMANAGER_COLLECTOR_UPDATE_INTERVAL", 5*60 );
 }
 
 BaseResource::~BaseResource()
@@ -67,6 +77,9 @@ BaseResource::~BaseResource()
  	daemonCore->Cancel_Timer( pingTimerId );
 	if ( updateLeasesTimerId != TIMER_UNSET ) {
 		daemonCore->Cancel_Timer( updateLeasesTimerId );
+	}
+	if ( _updateCollectorTimerId != TIMER_UNSET ) {
+		daemonCore->Cancel_Timer ( _updateCollectorTimerId );
 	}
 	if ( resourceName != NULL ) {
 		free( resourceName );
@@ -156,6 +169,10 @@ void BaseResource::Reconfig()
 		submitsInProgress.Append( queued_job );
 		queued_job->SetEvaluateState();
 	}
+
+	_collectorUpdateInterval = param_integer ( 
+		"GRIDMANAGER_COLLECTOR_UPDATE_INTERVAL", 5*60 );
+
 }
 
 char *BaseResource::ResourceName()
@@ -168,10 +185,162 @@ int BaseResource::DeleteMe()
 	deleteMeTid = TIMER_UNSET;
 
 	if ( IsEmpty() ) {
+        
+        /* Tell the Collector that we're gone and self destruct */
+        Invalidate ();
+
 		delete this;
 		// DO NOT REFERENCE ANY MEMBER VARIABLES BELOW HERE!!!!!!!
+
 	}
+
 	return TRUE;
+}
+
+bool BaseResource::Invalidate () {
+
+    ClassAd ad;
+    
+    /* Set the correct types */
+    ad.SetMyTypeName ( GRID_ADTYPE );
+
+    /* We only want to invalidate this resource. Using the tuple
+       (HashName,SchedName,Owner) as unique id. */
+    MyString line;
+    line.sprintf ( 
+        "((%s =?= \"%s\") && (%s =?= \"%s\") && "
+		 "(%s =?= \"%s\") && (%s =?= \"%s\"))",
+        "HashName", GetHashName (),
+        ATTR_SCHEDD_NAME, ScheddObj->name (),
+		ATTR_SCHEDD_IP_ADDR, ScheddObj->addr (),
+        ATTR_OWNER, myUserName );
+    ad.Assign ( ATTR_REQUIREMENTS, line );
+
+    dprintf (
+        D_FULLDEBUG,
+        "BaseResource::InvalidateResource: \n%s\n",
+        line.Value() );
+    
+    bool ok = false;
+	
+	/* invalidate the resource ad */
+	if ( CollectorObj ) {
+		ok = CollectorObj->sendUpdate ( 
+			INVALIDATE_GRID_ADS, 
+			&ad, 
+			NULL, 
+			true );
+	}
+
+	return ok;
+
+}
+
+bool BaseResource::SendUpdate () {
+
+    ClassAd ad;
+
+	/* Set the correct types */
+    ad.SetMyTypeName ( GRID_ADTYPE );
+
+    /* populate class ad with the relevant resource information */
+    PublishResourceAd ( &ad );
+
+    MyString tmp;
+    ad.sPrint ( tmp );
+    dprintf (
+        D_FULLDEBUG,
+        "BaseResource::UpdateResource: \n%s\n",
+        tmp.Value() );
+
+    bool ok = false;
+	
+	/* Update the the Collector as to this resource's state */
+    if ( CollectorObj ) {
+		ok = CollectorObj->sendUpdate ( 
+			UPDATE_GRID_AD, 
+			&ad, 
+			NULL, 
+			true );
+	}
+	
+	return ok;
+}
+
+int BaseResource::UpdateCollector () {
+
+	/* avoid updating the collector too often, except on the 
+	first update */
+	if ( !_firstCollectorUpdate ) {
+		int delay = ( _lastCollectorUpdate + 
+			_collectorUpdateInterval ) - time ( NULL );
+		if ( delay > 0 ) {
+			daemonCore->Reset_Timer ( _updateCollectorTimerId, delay );
+			return TRUE;
+		}
+	} else {
+		_firstCollectorUpdate = false;
+	}
+
+	/* Update the the Collector as to this resource's state */
+    if ( !SendUpdate () && CollectorObj ) {
+		dprintf (
+			D_FULLDEBUG,
+			"BaseResource::UpdateCollector: Updating Collector(s) "
+			"failed.\n" );
+	}
+
+	/* reset the timer to fire again at the defined interval */
+	daemonCore->Reset_Timer ( 
+		_updateCollectorTimerId, 
+		_collectorUpdateInterval );
+	_lastCollectorUpdate = time ( NULL );
+
+	return TRUE;
+
+}
+
+void BaseResource::PublishResourceAd( ClassAd *resource_ad )
+{
+	MyString buff;
+
+	buff.sprintf( "%s %s", ResourceType(), resourceName );
+	resource_ad->Assign( ATTR_NAME, buff.Value() );
+	resource_ad->Assign( "HashName", GetHashName() );
+	resource_ad->Assign( ATTR_SCHEDD_NAME, ScheddName );
+    resource_ad->Assign( ATTR_SCHEDD_IP_ADDR, ScheddObj->addr() );
+	resource_ad->Assign( ATTR_OWNER, myUserName );
+	resource_ad->Assign( "NumJobs", registeredJobs.Number() );
+	resource_ad->Assign( "JobLimit", jobLimit );
+	resource_ad->Assign( "SubmitLimit", submitLimit );
+	resource_ad->Assign( "SubmitsInProgress", submitsInProgress.Number() );
+	resource_ad->Assign( "SubmitsQueued", submitsQueued.Number() );
+	resource_ad->Assign( "SubmitsAllowed", submitsAllowed.Number() );
+	resource_ad->Assign( "SubmitsWanted", submitsWanted.Number() );
+	if ( resourceDown ) {
+		resource_ad->Assign( ATTR_GRID_RESOURCE_UNAVAILABLE_TIME,
+							 (int)lastStatusChange );
+	}
+
+	int num_idle = 0;
+	int num_running = 0;
+	BaseJob *job;
+	registeredJobs.Rewind();
+	while ( registeredJobs.Next( job ) ) {
+		switch ( job->condorState ) {
+		case IDLE:
+			num_idle++;
+			break;
+		case RUNNING:
+			num_running++;
+			break;
+		default:
+			break;
+		}
+	}
+
+	resource_ad->Assign( ATTR_RUNNING_JOBS, num_running );
+	resource_ad->Assign( ATTR_IDLE_JOBS, num_idle );
 }
 
 void BaseResource::RegisterJob( BaseJob *job )
@@ -449,7 +618,7 @@ dprintf(D_FULLDEBUG,"    UpdateLeases: last update too recent, delaying\n");
 
 	daemonCore->Reset_Timer( updateLeasesTimerId, TIMER_NEVER );
 
-	if ( updateLeasesActive == false ) {
+    if ( updateLeasesActive == false ) {
 		BaseJob *curr_job;
 dprintf(D_FULLDEBUG,"    UpdateLeases: calc'ing new leases\n");
 		registeredJobs.Rewind();

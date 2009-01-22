@@ -76,7 +76,11 @@ const char * ULogEventNumberNames[] = {
 	"ULOG_GRID_RESOURCE_UP",		// Grid machine UP 
 	"ULOG_GRID_RESOURCE_DOWN",		// Grid machine Down
 	"ULOG_GRID_SUBMIT",				// Job submitted to grid resource
-	"ULOG_JOB_AD_INFORMATION"		// Job Ad information update
+	"ULOG_JOB_AD_INFORMATION",		// Job Ad information update
+	"ULOG_JOB_STATUS_UNKNOWN",		// Job status unknown
+	"ULOG_JOB_STATUS_KNOWN",		// Job status known
+	"ULOG_JOB_STAGE_IN",			// Job staging in input files
+	"ULOG_JOB_STAGE_OUT",			// Job staging out output files
 };
 
 const char * ULogEventOutcomeNames[] = {
@@ -191,6 +195,12 @@ instantiateEvent (ULogEventNumber event)
 
 	case ULOG_JOB_AD_INFORMATION:
 		return new JobAdInformationEvent;
+
+	case ULOG_JOB_STATUS_UNKNOWN:
+		return new JobStatusUnknownEvent;
+
+	case ULOG_JOB_STATUS_KNOWN:
+		return new JobStatusKnownEvent;
 
 	default:
 		dprintf( D_ALWAYS, "Invalid ULogEventNumber: %d\n", event );
@@ -5064,3 +5074,197 @@ LookupBool  (const char *attributeName, bool & value) const
 
 	return jobad->LookupBool(attributeName,value);
 }
+
+
+// ----- the JobStatusUnknownEvent class
+JobStatusUnknownEvent::
+JobStatusUnknownEvent()
+{	
+	eventNumber = ULOG_JOB_STATUS_UNKNOWN;
+}
+
+JobStatusUnknownEvent::
+~JobStatusUnknownEvent()
+{
+}
+
+int JobStatusUnknownEvent::
+writeEvent (FILE *file)
+{
+	int retval = fprintf (file, "The job's remote status is unknown\n");
+	if (retval < 0)
+	{
+		return 0;
+	}
+	
+	return (1);
+}
+
+int JobStatusUnknownEvent::
+readEvent (FILE *file)
+{
+	int retval = fscanf (file, "The job's remote status is unknown\n");
+    if (retval != 0)
+    {
+		return 0;
+    }
+	return 1;
+}
+
+ClassAd* JobStatusUnknownEvent::
+toClassAd()
+{
+	return ULogEvent::toClassAd();
+}
+
+void JobStatusUnknownEvent::
+initFromClassAd(ClassAd* ad)
+{
+	ULogEvent::initFromClassAd(ad);
+}
+
+// ----- the JobStatusKnownEvent class
+JobStatusKnownEvent::
+JobStatusKnownEvent()
+{	
+	eventNumber = ULOG_JOB_STATUS_KNOWN;
+}
+
+JobStatusKnownEvent::
+~JobStatusKnownEvent()
+{
+}
+
+int JobStatusKnownEvent::
+writeEvent (FILE *file)
+{
+	int retval = fprintf (file, "The job's remote status is known again\n");
+	if (retval < 0)
+	{
+		return 0;
+	}
+	
+	return (1);
+}
+
+int JobStatusKnownEvent::
+readEvent (FILE *file)
+{
+	int retval = fscanf (file, "The job's remote status is known again\n");
+    if (retval != 0)
+    {
+		return 0;
+    }
+	return 1;
+}
+
+ClassAd* JobStatusKnownEvent::
+toClassAd()
+{
+	return ULogEvent::toClassAd();
+}
+
+void JobStatusKnownEvent::
+initFromClassAd(ClassAd* ad)
+{
+	ULogEvent::initFromClassAd(ad);
+}
+
+
+
+// ----- the JobStageInEvent class
+JobStageInEvent::
+JobStageInEvent()
+{	
+	eventNumber = ULOG_JOB_STAGE_IN;
+}
+
+JobStageInEvent::
+~JobStageInEvent()
+{
+}
+
+int JobStageInEvent::
+writeEvent (FILE *file)
+{
+	int retval = fprintf (file, "Job is performing stage-in of input files\n");
+	if (retval < 0)
+	{
+		return 0;
+	}
+	
+	return (1);
+}
+
+int JobStageInEvent::
+readEvent (FILE *file)
+{
+	int retval = fscanf (file, "Job is performing stage-in of input files\n");
+    if (retval != 0)
+    {
+		return 0;
+    }
+	return 1;
+}
+
+ClassAd* JobStageInEvent::
+toClassAd()
+{
+	return ULogEvent::toClassAd();
+}
+
+void JobStageInEvent::
+initFromClassAd(ClassAd* ad)
+{
+	ULogEvent::initFromClassAd(ad);
+}
+
+
+// ----- the JobStageOutEvent class
+JobStageOutEvent::
+JobStageOutEvent()
+{	
+	eventNumber = ULOG_JOB_STAGE_OUT;
+}
+
+JobStageOutEvent::
+~JobStageOutEvent()
+{
+}
+
+int JobStageOutEvent::
+writeEvent (FILE *file)
+{
+	int retval = fprintf (file, "Job is performing stage-out of output files\n");
+	if (retval < 0)
+	{
+		return 0;
+	}
+	
+	return (1);
+}
+
+int JobStageOutEvent::
+readEvent (FILE *file)
+{
+	int retval = fscanf (file, "Job is performing stage-out of output files\n");
+    if (retval != 0)
+    {
+		return 0;
+    }
+	return 1;
+}
+
+ClassAd* JobStageOutEvent::
+toClassAd()
+{
+	return ULogEvent::toClassAd();
+}
+
+void JobStageOutEvent::
+initFromClassAd(ClassAd* ad)
+{
+	ULogEvent::initFromClassAd(ad);
+}
+
+

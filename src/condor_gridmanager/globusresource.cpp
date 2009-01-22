@@ -82,7 +82,8 @@ GlobusResource::GlobusResource( const char *resource_name,
 	initialized = false;
 	proxySubject = strdup( proxy_subject );
 
-	jmLimit = DEFAULT_MAX_JOBMANAGERS_PER_RESOURCE;
+	submitJMLimit = DEFAULT_MAX_JOBMANAGERS_PER_RESOURCE / 2;
+	restartJMLimit = DEFAULT_MAX_JOBMANAGERS_PER_RESOURCE - submitJMLimit;
 
 	checkMonitorTid = daemonCore->Register_Timer( TIMER_NEVER,
 							(TimerHandlercpp)&GlobusResource::CheckMonitor,
@@ -150,23 +151,32 @@ bool GlobusResource::Init()
 
 void GlobusResource::Reconfig()
 {
+	int tmp_int;
+
 	BaseResource::Reconfig();
 
 	gahp->setTimeout( gahpCallTimeout );
 
-	jmLimit = param_integer( "GRIDMANAGER_MAX_JOBMANAGERS_PER_RESOURCE",
+	tmp_int = param_integer( "GRIDMANAGER_MAX_JOBMANAGERS_PER_RESOURCE",
 							 DEFAULT_MAX_JOBMANAGERS_PER_RESOURCE );
-	if ( jmLimit == 0 ) {
-		jmLimit = GM_RESOURCE_UNLIMITED;
+	if ( tmp_int == 0 ) {
+		submitJMLimit = GM_RESOURCE_UNLIMITED;
+		restartJMLimit = GM_RESOURCE_UNLIMITED;
+	} else {
+		if ( tmp_int < 2 ) {
+			tmp_int = 2;
+		}
+		submitJMLimit = tmp_int / 2;
+		restartJMLimit = tmp_int - submitJMLimit;
 	}
 
-	// If the jmLimit was widened, move jobs from Wanted to Allowed and
-	// signal them
-	while ( jmsAllowed.Length() < jmLimit && jmsWanted.Length() > 0 ) {
-		GlobusJob *wanted_job = jmsWanted.Head();
-		jmsWanted.Delete( wanted_job );
-		jmsAllowed.Append( wanted_job );
-		wanted_job->SetEvaluateState();
+	// If the jobmanager limits were widened, move jobs from Wanted to
+	// Allowed and signal them
+	while ( ( submitJMsAllowed.Length() + restartJMsAllowed.Length() <
+			  submitJMLimit + restartJMLimit ) &&
+			( submitJMsWanted.Length() != 0 ||
+			  restartJMsWanted.Length() != 0 ) ) {
+		JMComplete( NULL );
 	}
 
 	if ( enableGridMonitor ) {
@@ -208,9 +218,27 @@ const char *GlobusResource::HashName( const char *resource_name,
 {
 	static MyString hash_name;
 
-	hash_name.sprintf( "%s#%s", resource_name, proxy_subject );
+	hash_name.sprintf( "gt2 %s#%s", resource_name, proxy_subject );
 
 	return hash_name.Value();
+}
+
+const char *GlobusResource::GetHashName()
+{
+	return HashName( resourceName, proxySubject );
+}
+
+void GlobusResource::PublishResourceAd( ClassAd *resource_ad )
+{
+	BaseResource::PublishResourceAd( resource_ad );
+
+	resource_ad->Assign( ATTR_X509_USER_PROXY_SUBJECT, proxySubject );
+	resource_ad->Assign( "SubmitJobmanagerLimit", submitJMLimit );
+	resource_ad->Assign( "SubmitJobmanagersAllowed", submitJMsAllowed.Number() );
+	resource_ad->Assign( "SubmitJobmanagersWanted", submitJMsWanted.Number() );
+	resource_ad->Assign( "RestartJobmanagerLimit", restartJMLimit );
+	resource_ad->Assign( "RestartJobmanagersAllowed", restartJMsAllowed.Number() );
+	resource_ad->Assign( "RestartJobmanagersWanted", restartJMsWanted.Number() );
 }
 
 void GlobusResource::UnregisterJob( GlobusJob *job )
@@ -221,58 +249,106 @@ void GlobusResource::UnregisterJob( GlobusJob *job )
 		// This object may be deleted now. Don't do anything below here!
 }
 
-bool GlobusResource::RequestJM( GlobusJob *job )
+bool GlobusResource::RequestJM( GlobusJob *job, bool is_submit )
 {
 	GlobusJob *jobptr;
 
-	jmsWanted.Rewind();
-	while ( jmsWanted.Next( jobptr ) ) {
-		if ( jobptr == job ) {
+	if ( is_submit ) {
+		submitJMsWanted.Rewind();
+		while ( submitJMsWanted.Next( jobptr ) ) {
+			if ( jobptr == job ) {
+				return false;
+			}
+		}
+
+		submitJMsAllowed.Rewind();
+		while ( submitJMsAllowed.Next( jobptr ) ) {
+			if ( jobptr == job ) {
+				return true;
+			}
+		}
+
+		if ( submitJMsAllowed.Length() + restartJMsAllowed.Length() <
+			 submitJMLimit + restartJMLimit ) {
+			submitJMsAllowed.Append( job );
+			return true;
+		} else {
+			submitJMsWanted.Append( job );
 			return false;
 		}
-	}
-
-	jmsAllowed.Rewind();
-	while ( jmsAllowed.Next( jobptr ) ) {
-		if ( jobptr == job ) {
-			return true;
-		}
-	}
-
-	if ( jmsAllowed.Length() < jmLimit && jmsWanted.Length() > 0 ) {
-		EXCEPT("In GlobusResource for %s, jmsWanted is not empty and jmsAllowed is not full\n",resourceName);
-	}
-
-	if ( jmsAllowed.Length() < jmLimit ) {
-		jmsAllowed.Append( job );
-		return true;
 	} else {
-		jmsWanted.Append( job );
-		return false;
+		restartJMsWanted.Rewind();
+		while ( restartJMsWanted.Next( jobptr ) ) {
+			if ( jobptr == job ) {
+				return false;
+			}
+		}
+
+		restartJMsAllowed.Rewind();
+		while ( restartJMsAllowed.Next( jobptr ) ) {
+			if ( jobptr == job ) {
+				return true;
+			}
+		}
+
+		if ( submitJMsAllowed.Length() + restartJMsAllowed.Length() <
+			 submitJMLimit + restartJMLimit ) {
+			restartJMsAllowed.Append( job );
+			return true;
+		} else {
+			restartJMsWanted.Append( job );
+			return false;
+		}
 	}
 }
 
 void GlobusResource::JMComplete( GlobusJob *job )
 {
-	if ( jmsAllowed.Delete( job ) ) {
-		if ( jmsAllowed.Length() < jmLimit && jmsWanted.Length() > 0 ) {
-			GlobusJob *queued_job = jmsWanted.Head();
-			jmsWanted.Delete( queued_job );
-			jmsAllowed.Append( queued_job );
-			queued_job->SetEvaluateState();
+	// If the job was in one of the Allowed queues, check whether we
+	// should promote a job from the Wanted queues to take its place.
+	// Also perform the check if NULL is passed.
+	if ( job == NULL || submitJMsAllowed.Delete( job ) ||
+		 restartJMsAllowed.Delete( job ) ) {
+
+		// Check if there's room in the Allowed queues for a job and
+		// if there are any jobs waiting in the Wanted queues.
+		if ( ( submitJMsAllowed.Length() + restartJMsAllowed.Length() <
+			   submitJMLimit + restartJMLimit ) &&
+			 ( submitJMsWanted.Length() != 0 ||
+			   restartJMsWanted.Length() != 0 ) ) {
+
+			// Which Wanted queue should we take a job from? If either
+			// queue is empty, take a job from the other queue.
+			// If neither queue is empty, take a job from the queue
+			// that's under its limit.
+			if ( submitJMsWanted.Length() == 0 ||
+				 ( restartJMsWanted.Length() != 0 &&
+				   restartJMsAllowed.Length() < restartJMLimit ) ) {
+
+				GlobusJob *queued_job = restartJMsWanted.Head();
+				restartJMsWanted.Delete( queued_job );
+				restartJMsAllowed.Append( queued_job );
+				queued_job->SetEvaluateState();
+
+			} else {
+
+				GlobusJob *queued_job = submitJMsWanted.Head();
+				submitJMsWanted.Delete( queued_job );
+				submitJMsAllowed.Append( queued_job );
+				queued_job->SetEvaluateState();
+			}
 		}
 	} else {
-		// We only have to check jmsWanted if the job wasn't in
-		// jmsAllowed.
-		jmsWanted.Delete( job );
+		// We only have to check the Wanted queues if the job wasn't in
+		// the Allowed queues
+		submitJMsWanted.Delete( job );
+		restartJMsWanted.Delete( job );
 	}
-
-	return;
 }
 
 void GlobusResource::JMAlreadyRunning( GlobusJob *job )
 {
-	jmsAllowed.Append( job );
+	restartJMsAllowed.Append( job );
 }
 
 void GlobusResource::DoPing( time_t& ping_delay, bool& ping_complete,

@@ -38,7 +38,7 @@ const char *NordugridResource::HashName( const char *resource_name,
 {
 	static MyString hash_name;
 
-	hash_name.sprintf( "%s#%s", resource_name, 
+	hash_name.sprintf( "nordugrid %s#%s", resource_name, 
 					   proxy_subject ? proxy_subject : "NULL" );
 
 	return hash_name.Value();
@@ -106,6 +106,18 @@ void NordugridResource::Reconfig()
 const char *NordugridResource::ResourceType()
 {
 	return "nordugrid";
+}
+
+const char *NordugridResource::GetHashName()
+{
+	return HashName( resourceName, proxySubject );
+}
+
+void NordugridResource::PublishResourceAd( ClassAd *resource_ad )
+{
+	BaseResource::PublishResourceAd( resource_ad );
+
+	resource_ad->Assign( ATTR_X509_USER_PROXY_SUBJECT, proxySubject );
 }
 
 void NordugridResource::DoPing( time_t& ping_delay, bool& ping_complete,

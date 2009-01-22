@@ -242,7 +242,7 @@ const char *CreamResource::HashName( const char *resource_name,
 {
 	static MyString hash_name;
 
-	hash_name.sprintf( "%s#%s", resource_name, proxy_subject );
+	hash_name.sprintf( "cream %s#%s", resource_name, proxy_subject );
 
 	return hash_name.Value();
 }
@@ -290,6 +290,18 @@ dprintf(D_FULLDEBUG,"*** deleting delegation %s\n",job->delegatedCredentialURI);
 
 	BaseResource::UnregisterJob( job );
 		// This object may be deleted now. Don't do anything below here!
+}
+
+const char *CreamResource::GetHashName()
+{
+	return HashName( resourceName, proxySubject );
+}
+
+void CreamResource::PublishResourceAd( ClassAd *resource_ad )
+{
+	BaseResource::PublishResourceAd( resource_ad );
+
+	resource_ad->Assign( ATTR_X509_USER_PROXY_SUBJECT, proxySubject );
 }
 
 void CreamResource::registerDelegationURI( const char *deleg_uri,

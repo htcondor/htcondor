@@ -42,7 +42,6 @@
 
 #include "nordugridjob.h"
 #include "unicorejob.h"
-#include "mirrorjob.h"
 #include "condorjob.h"
 #include "gt4job.h"
 #include "infnbatchjob.h"
@@ -105,9 +104,11 @@ int contactScheddDelay;
 time_t lastContactSchedd = 0;
 
 char *ScheddAddr = NULL;
+char *ScheddName = NULL;
 char *ScheddJobConstraint = NULL;
 char *GridmanagerScratchDir = NULL;
 DCSchedd *ScheddObj = NULL;
+DCCollector *CollectorObj = NULL;
 
 bool firstScheddContact = true;
 int scheddFailureCount = 0;
@@ -290,6 +291,13 @@ Init()
 		}
 	}
 
+	const char *val = getenv( "SCHEDD_NAME" );
+	if ( val ) {
+		ScheddName = strdup( val );
+	} else {
+		ScheddName = strdup( "" );
+	}
+
 	if ( ScheddObj == NULL ) {
 		ScheddObj = new DCSchedd( ScheddAddr );
 		ASSERT( ScheddObj );
@@ -298,7 +306,19 @@ Init()
 		}
 	}
 
-	// read config file
+    if ( NULL == CollectorObj ) {
+        CollectorObj = new DCCollector ();        
+        if ( false == CollectorObj->locate () ) {
+            dprintf ( 
+				D_ALWAYS, 
+				"Failed to locate collector: %s", 
+				CollectorObj->error () );
+			delete CollectorObj;
+			CollectorObj = NULL;
+        }
+    }
+
+    // read config file
 	// initialize variables
 
 	if ( GridmanagerScratchDir == NULL ) {
@@ -357,14 +377,6 @@ Init()
 	new_type->ReconfigFunc = UnicoreJobReconfig;
 	new_type->AdMatchFunc = UnicoreJobAdMatch;
 	new_type->CreateFunc = UnicoreJobCreate;
-	jobTypes.Append( new_type );
-
-	new_type = new JobType;
-	new_type->Name = strdup( "Mirror" );
-	new_type->InitFunc = MirrorJobInit;
-	new_type->ReconfigFunc = MirrorJobReconfig;
-	new_type->AdMatchFunc = MirrorJobAdMatch;
-	new_type->CreateFunc = MirrorJobCreate;
 	jobTypes.Append( new_type );
 
 	new_type = new JobType;
@@ -1156,4 +1168,5 @@ dprintf(D_FULLDEBUG,"leaving doContactSchedd()\n");
 	RequestContactSchedd();
 	return TRUE;
 }
+
 

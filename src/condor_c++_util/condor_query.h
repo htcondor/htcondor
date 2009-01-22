@@ -35,12 +35,15 @@
 
 // the following arrays can be indexed by the enumerated constants to get
 // the required keyword eg ScheddIntegerKeywords[SCHEDD_IDLE_JOBS]=="IdleJobs"
-extern const char *ScheddStringKeywords [];
-extern const char *ScheddIntegerKeywords[];
-extern const char *ScheddFloatKeywords	[];
-extern const char *StartdStringKeywords	[];
-extern const char *StartdIntegerKeywords[];
-extern const char *StartdFloatKeywords	[];
+extern const char *ScheddStringKeywords      [];
+extern const char *ScheddIntegerKeywords     [];
+extern const char *ScheddFloatKeywords	     [];
+extern const char *StartdStringKeywords	     [];
+extern const char *StartdIntegerKeywords     [];
+extern const char *StartdFloatKeywords	     [];
+extern const char *GridManagerStringKeywords [];
+extern const char *GridManagerIntegerKeywords[];
+extern const char *GridManagerFloatKeywords	 [];
 
 char *getStrQueryResult(QueryResult);
 
@@ -100,6 +103,33 @@ enum StartdCustomCategory
 	STARTD_CUSTOM,
 
 	STARTD_CUSTOM_THRESHOLD
+};
+
+enum GridManagerStringCategory
+{
+    GRID_NAME,
+    GRID_HASH_NAME,
+    GRID_SCHEDD_NAME,
+    GRID_OWNER,
+    
+    GRID_STRING_THRESHOLD
+};
+enum GridManagerIntCategory
+{
+    GRID_NUM_JOBS,
+    GRID_JOB_LIMIT,
+    GRID_SUBMIT_LIMIT,
+    GRID_SUBMITS_IN_PROGRESS,
+    GRID_SUBMITS_QUEUED,
+    GRID_SUBMITS_ALLOWED,
+    GRID_SUBMITS_WANTED,
+
+	GRID_INT_THRESHOLD
+};
+
+enum GridManagerFloatCategory
+{
+	GRID_FLOAT_THRESHOLD
 };
 
 
