@@ -1371,6 +1371,9 @@ sub IsRunningYet
     	}
 	}
 
+	my $runlimit = 6;
+	my $backoff = 2;
+	my $loopcount;
 	if($daemonlist =~ /.*STARTD.*/i) {
 		# lets wait for the collector to know about it
 		# if we have a collector
@@ -1378,7 +1381,9 @@ sub IsRunningYet
 		my $done = "no";
 		my $currenthost = hostfqdn();
 		if(($daemonlist =~ /.*COLLECTOR.*/i) && ($personal_startup_wait eq "true")) {
+			$loopcount = 0;
 			while( $done eq "no") {
+				$loopcount += 1;
 				my @cmd = `condor_status -startd -format \"%s\\n\" name`;
 
     			foreach my $line (@cmd)
@@ -1390,7 +1395,11 @@ sub IsRunningYet
 						print "Found startd running!\n";
         			}
     			}
-				sleep 1;
+				if($loopcount == $runlimit) { 
+					print "Collector can't see startd\n";
+					last; 
+				}
+				sleep ($loopcount * $backoff);
 			}
 		}
 	}
@@ -1402,7 +1411,9 @@ sub IsRunningYet
 		my $done = "no";
 		my $currenthost = hostfqdn();
 		if(($daemonlist =~ /.*COLLECTOR.*/i) && ($personal_startup_wait eq "true")) {
+			$loopcount = 0;
 			while( $done eq "no") {
+				$loopcount += 1;
 				my @cmd = `condor_status -schedd -format \"%s\\n\" name`;
 
     			foreach my $line (@cmd)
@@ -1414,7 +1425,11 @@ sub IsRunningYet
 						print "Found schedd running!\n";
         			}
     			}
-				sleep 1;
+				if($loopcount == $runlimit) { 
+					print "Collector can't see schedd\n";
+					last; 
+				}
+				sleep ($loopcount * $backoff);
 			}
 		}
 	}
