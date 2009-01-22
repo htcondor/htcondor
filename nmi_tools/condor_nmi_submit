@@ -97,7 +97,7 @@ use vars qw/ $opt_build $opt_test
     $opt_externals_only $opt_release_only $opt_version_buildid
 	$opt_skip_doc $opt_sha1
     $opt_buildid $opt_test_src $opt_test_timeout $opt_test_args
-    $opt_input_platform
+    $opt_input_platform $opt_tests_at_once
     /;
 
 sub TRUE { 1; };
@@ -413,6 +413,7 @@ sub parseOptions
            'test-timeout=i' => \$opt_test_timeout,
            'test-args=s'   => \$opt_test_args,
            'input-platform=s' => \$opt_input_platform,
+		   'tests-at-once=i' => \$opt_tests_at_once,
     );
 
     if( !$rc ) {
@@ -671,6 +672,7 @@ Where [test-options] can be any of:
 --test-args=string <Arguments to select what tests to declare>
 --test-timeout=int <timeout in minutes for each test task (default is 20)>
 --input-platform=string <Fetch binaries from this platform from given buildid>
+--tests-at-once=count <run count tests concurrently>
 --platforms=all    <will query DB for all platforms in the given buildid>
 
 END_USAGE
@@ -1116,6 +1118,10 @@ sub writeBuildGlue
         } else {
             $post_args = "--nosubmit-xtests";
         }
+		# If tests are desired to be run concurrently pass it on
+		if( defined $opt_tests_at_once ) {
+			$post_args .= " --tests-at-once=$opt_tests_at_once";
+		}
         # If a build is submitted using --git pass it on,
         # platform_post checks out the test_glue from some VCS
         if( defined($opt_git) ) {
@@ -1177,6 +1183,10 @@ sub writeTestGlue
     print $fh "remote_post = nmi_glue/test/remote_post\n";
     print $fh "platform_post = nmi_glue/test/platform_post\n";
     print $fh "post_all = nmi_glue/test/post_all\n";
+	# turn on testing concurrency
+	if( defined $opt_tests_at_once) {
+    	print $fh "max_concurrent_subtasks = $opt_tests_at_once\n";
+	}
     print $fh "\n";
 }
 
