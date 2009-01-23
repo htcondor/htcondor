@@ -767,7 +767,17 @@ UserLog::doWriteEvent( ULogEvent *event,
 		priv = set_user_priv();
 	}
 
+		// We're seeing sporadic test suite failures where a daemon
+		// takes more than 10 seconds to write to the user log.
+		// This will help narrow down where the delay is coming from.
+	time_t before = time(NULL);
 	lock->obtain (WRITE_LOCK);
+	time_t after = time(NULL);
+	if ( (after - before) > 5 ) {
+		dprintf( D_FULLDEBUG, "UserLog::doWriteEvent(): locking file took %d seconds\n", (after-before) );
+	}
+
+	before = time(NULL);
 	int			status;
 	const char	*whence;
 	if ( is_header_event ) {
@@ -777,6 +787,10 @@ UserLog::doWriteEvent( ULogEvent *event,
 	else {
 		status = fseek (fp, 0, SEEK_END);
 		whence = "SEEK_END";
+	}
+	after = time(NULL);
+	if ( (after - before) > 5 ) {
+		dprintf( D_FULLDEBUG, "UserLog::doWriteEvent(): fseek() took %d seconds\n", (after-before) );
 	}
 	if ( status ) {
 		dprintf( D_ALWAYS,
@@ -794,12 +808,9 @@ UserLog::doWriteEvent( ULogEvent *event,
 		}
 	}
 
-		// We're seeing sporadic test suite failures where a daemon
-		// takes more than 10 seconds to write to the user log.
-		// This will help narrow down where the delay is coming from.
-	time_t before = time(NULL);
+	before = time(NULL);
 	success = doWriteEvent( fp, event, use_xml );
-	time_t after = time(NULL);
+	after = time(NULL);
 	if ( (after - before) > 5 ) {
 		dprintf( D_FULLDEBUG, "UserLog::doWriteEvent(): writing event took %d seconds\n", (after-before) );
 	}
@@ -825,7 +836,12 @@ UserLog::doWriteEvent( ULogEvent *event,
 			// Note:  should we set success to false here?
 		}
 	}
+	before = time(NULL);
 	lock->release ();
+	after = time(NULL);
+	if ( (after - before) > 5 ) {
+		dprintf( D_FULLDEBUG, "UserLog::doWriteEvent(): unlocking file took %d seconds\n", (after-before) );
+	}
 	set_priv( priv );
 	return success;
 }

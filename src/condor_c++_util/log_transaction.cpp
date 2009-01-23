@@ -426,6 +426,12 @@ Transaction::Commit(FILE* fp, void *data_structure, bool nondurable)
 
 	ordered_op_log.Rewind();
 
+		// We're seeing sporadic test suite failures where 
+		// CommitTransaction() appears to take a long time to
+		// execute. Timing the I/O operations will help us
+		// narrow down the cause
+	time_t before, after;
+
 	/*
 	  We only go through the log once to avoid any interactions
 	  with anything that happens to the log outside of this code
@@ -436,7 +442,12 @@ Transaction::Commit(FILE* fp, void *data_structure, bool nondurable)
 	  for (int i=0; i<2; i++) {
 	    /* This call will only write to a file until it detects
 	       the first error. */
+	    before = time(NULL);
 	    write_with_status(log, &(fps[i]));
+		after = time(NULL);
+		if ( (after - before) > 5 ) {
+			dprintf( D_FULLDEBUG, "Transaction::Commit(): write_with_status() took %ld seconds to run\n", after - before );
+		}
 	  }
 
 	  log->Play(data_structure);
@@ -452,8 +463,19 @@ Transaction::Commit(FILE* fp, void *data_structure, bool nondurable)
 	     Here, we're operating on the real job queue log.
 	  */
 	  
+	  before = time(NULL);
 	  fflush_with_status(&(fps[0]));
+	  after = time(NULL);
+	  if ( (after - before) > 5 ) {
+		  dprintf( D_FULLDEBUG, "Transaction::Commit(): fflush_with_status() took %ld seconds to run\n", after - before );
+	  }
+
+	  before = time(NULL);
 	  fsync_with_status(&(fps[0]));
+	  after = time(NULL);
+	  if ( (after - before) > 5 ) {
+		  dprintf( D_FULLDEBUG, "Transaction::Commit(): fsync_with_status() took %ld seconds to run\n", after - before );
+	  }
 
 	  bool failure = fps[0].why != WHY_OK;
 
