@@ -163,6 +163,6 @@ REM ======================================================================
 echo. & echo *** Current Environment & echo.
 set
 echo. & echo *** Building Condor & echo.
-msbuild condor.sln /nologo /m /t:condor /p:Configuration="%CONFIGURATION%%SPEED%";VCBuildUseEnvironment="true"
+msbuild condor.sln /nologo /m /t:condor /p:Configuration="%CONFIGURATION% (%SPEED: =%)";VCBuildUseEnvironment="true"
 if %ERRORLEVEL% neq 0 exit /b 1
 exit /b 0
