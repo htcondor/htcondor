@@ -18,9 +18,6 @@ REM  limitations under the License.
 REM 
 REM ======================================================================
 
-REM Build Condor from a batch file
-REM Todd Tannenbaum <tannenba@cs.wisc.edu> Feb 2002
-
 REM ======================================================================
 REM ======================================================================
 REM Main entry point
@@ -31,34 +28,34 @@ REM We want to be able to make the build exit with an exit code
 REM instead of setting ERRORLEVEL, if, say, we're calling the bat file
 REM from Perl, which doesn't understand ERRORLEVEL.
 set INTERACTIVE=/b
-IF "%1" == "/exit" set INTERACTIVE=
+if "%1" == "/exit" set INTERACTIVE=
 
 call :GENERATE_SYSCALL_NUMBERS
-if %ERRORLEVEL% NEQ 0 goto :FAIL
+if %ERRORLEVEL% neq 0 goto :FAIL
 
 REM Build the externals
 call :BUILD_EXTERNALS
-if %ERRORLEVEL% NEQ 0 goto :EXTERNALS_FAIL
+if %ERRORLEVEL% neq 0 goto :EXTERNALS_FAIL
 
 REM Copy any .dll files created by the externals in debug and release
 call copy_external_dlls.bat
-if %ERRORLEVEL% NEQ 0 goto :FAIL
+if %ERRORLEVEL% neq 0 goto :FAIL
 
-call :DETERMINE_CONFIGRATION
-if %ERRORLEVEL% NEQ 0 goto :FAIL
+call :DETERMINE_CONFIGRATION %*
+if %ERRORLEVEL% neq 0 goto :FAIL
 
 REM Put our config.h file in the right place
 call configure.bat
-if %ERRORLEVEL% NEQ 0 goto :CONFIG_FAIL
+if %ERRORLEVEL% neq 0 goto :CONFIG_FAIL
 
 REM Copy the correct default library vsprops file into place. This 
 REM changes which libraries are inlcuded by default into projects
 call correct_libs.bat noinit >NUL
-if %ERRORLEVEL% NEQ 2 call correct_libs.bat noinit >NUL
+if %ERRORLEVEL% neq 2 call correct_libs.bat noinit >NUL
 
 REM Make gsoap stubs, etc.
 call :MAKE_GSOAP
-if %ERRORLEVEL% NEQ 0 goto :GSOAP_FAIL
+if %ERRORLEVEL% neq 0 goto :GSOAP_FAIL
 
 REM ======================================================================
 REM NOTE: make_win32_externals.bat implicitly calls set_vars.bat, so just 
@@ -67,14 +64,14 @@ REM ======================================================================
 
 REM Launch the Visual Studio IDE
 call :RUN_BUILD
-if %ERRORLEVEL% NEQ 0 goto :FAIL
+if %ERRORLEVEL% neq 0 goto :FAIL
 
 REM We're done, let's get out of here
 echo. & echo *** Done. Build is all happy. Congrats! Go drink beer.
 
 REM Restore the old libaries for other VS users
 call correct_libs.bat noinit >NUL
-if %ERRORLEVEL% NEQ 1 call correct_libs.bat noinit >NUL
+if %ERRORLEVEL% neq 1 call correct_libs.bat noinit >NUL
 
 REM Clean up the environment.
 endlocal
@@ -123,9 +120,9 @@ REM Build the externals and copy any .dll files created by the externals
 REM in debug and release
 REM ======================================================================
 call make_win32_externals.bat
-if %ERRORLEVEL% NEQ 0 exit /b 1
+if %ERRORLEVEL% neq 0 exit /b 1
 call copy_external_dlls.bat
-if %ERRORLEVEL% NEQ 0 exit /b 1
+if %ERRORLEVEL% neq 0 exit /b 1
 exit /b 0
 
 REM ======================================================================
@@ -133,13 +130,20 @@ REM ======================================================================
 REM ======================================================================
 REM Determine the build type
 REM ======================================================================
+set SPEED=
+if /i "%1"=="express" (
+    REM NOTE: The space preceding 'Express' is not necessary, it just
+    REM       makes the output from the script cleaner. 
+    set SPEED= Express
+    shift
+)
 set CONFIGURATION=Release
-if /i A%1==Arelease shift
-if /i A%1==Adebug (
-    set CONFIGURATION=Debug 
+if /i "%1"=="release" shift
+if /i "%1"=="debug" (
+    set CONFIGURATION=Debug
     shift 
 )
-echo. & echo *** %CONFIGURATION% Build & echo.
+echo. & echo *** Building %CONFIGURATION%%SPEED% Configuration & echo.
 exit /b 0
 
 REM ======================================================================
@@ -147,8 +151,8 @@ REM ======================================================================
 REM ======================================================================
 REM Make gsoap stubs, etc.
 REM ======================================================================
-nmake /NOLOGO /f gsoap.mak
-if %ERRORLEVEL% NEQ 0 exit /b 1
+nmake /nologo /f gsoap.mak
+if %ERRORLEVEL% neq 0 exit /b 1
 exit /b 0
 
 REM ======================================================================
@@ -156,9 +160,9 @@ REM ======================================================================
 REM ======================================================================
 REM Build condor (build order is now preserved in project)
 REM ======================================================================
-echo. & echo *** Current Environment... & echo.
+echo. & echo *** Current Environment & echo.
 set
-echo. & echo *** Building Condor... & echo.
-msbuild condor.sln /nologo /t:condor /p:Configuration=%CONFIGURATION%;VCBuildUseEnvironment="true"
-if %ERRORLEVEL% NEQ 0 exit /b 1
+echo. & echo *** Building Condor & echo.
+msbuild condor.sln /nologo /m /t:condor /p:Configuration="%CONFIGURATION%%SPEED%";VCBuildUseEnvironment="true"
+if %ERRORLEVEL% neq 0 exit /b 1
 exit /b 0

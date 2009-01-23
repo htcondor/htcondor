@@ -145,7 +145,7 @@ REM ======================================================================
 REM ======================================================================
 REM Launch the IDE
 REM ======================================================================
-echo Launching the IDE...
+echo Launching the IDE
 if not exist "%DevEnvDir%\devenv.exe" (
     echo Is Visual Studio Installed?
     exit /b 1 
