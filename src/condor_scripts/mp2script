@@ -28,6 +28,11 @@ export PATH
 _CONDOR_PROCNO=$_CONDOR_PROCNO
 _CONDOR_NPROCS=$_CONDOR_NPROCS
 
+# Remove the contact file, so if we are held and released
+# it can be recreated anew
+
+/bin/rm -f $CONDOR_CONTACT_FILE
+
 PATH=`condor_config_val libexec`/:$PATH
 
 # MPP needs a conf file, and it must be
