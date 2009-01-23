@@ -602,7 +602,9 @@ if ( exists $test->{reader} ) {
 my @valgrind = ( "valgrind", "--tool=memcheck", "--num-callers=24",
 				 "-v", "-v", "--leak-check=full" );
 
-system("date");
+my $start = time( );
+my $timestr = localtime($start);
+print "Starting @ $timestr\n";
 if ( $settings{verbose} ) {
     print "Using directory $dir\n";
 }
@@ -684,68 +686,74 @@ foreach my $loop ( 1 .. $test->{loops} )
 }
 printf "\n** End test loops **\n";
 
-if ( ! $settings{execute} ) {
-    exit( 0 );
-}
+if ( $settings{execute} ) {
 
-printf "\n** Starting final analysis **\n";
+	printf "\n** Starting final analysis **\n";
 
-# Final writer output checks
-if ( $totals{writer_events} < $expect{final_mins}{num_events} ) {
-    printf( STDERR
-			"ERROR: final: writer wrote too few events: %d < %d\n",
-			$totals{writer_events}, $expect{final_mins}{num_events} );
-    $errors++;
-}
-$totals{seq_files} = $totals{sequence} + 1;
-if ( $totals{writer_sequence} < $expect{final_mins}{sequence} ) {
-    printf( STDERR
-			"ERROR: final: writer sequence too low: %d < %d\n",
-			$totals{writer_sequence}, $expect{final_mins}{sequence} );
-    $errors++;
-}
-
-# Final counted checks
-my %final;
-foreach my $k ( keys(%totals) ) {
-    $final{$k} = 0;
-}
-my @files = ReadEventlogs( $dir, \%final );
-ProcessEventlogs( \@files, \%final );
-if ( scalar(@files) < $expect{final_mins}{num_files} ) {
-    printf( STDERR
-			"ERROR: final: too few actual files: %d < %d\n",
-			scalar(@files), $expect{final_mins}{num_files} );
-}
-if ( ! $final{events_lost} ) {
-    if ( $final{num_events} < $expect{final_mins}{num_events} ) {
+	# Final writer output checks
+	if ( $totals{writer_events} < $expect{final_mins}{num_events} ) {
 		printf( STDERR
-				"ERROR: final: too few actual events: %d < %d\n",
-				$final{num_events}, $expect{loop_mins}{num_events} );
+				"ERROR: final: writer wrote too few events: %d < %d\n",
+				$totals{writer_events}, $expect{final_mins}{num_events} );
 		$errors++;
-    }
-}
-if ( $final{sequence} < $expect{final_mins}{sequence} ) {
-    printf( STDERR
-			"ERROR: final: actual sequence too low: %d < %d\n",
-			$final{sequence}, $expect{final_mins}{sequence});
-    $errors++;
-}
+	}
+	$totals{seq_files} = $totals{sequence} + 1;
+	if ( $totals{writer_sequence} < $expect{final_mins}{sequence} ) {
+		printf( STDERR
+				"ERROR: final: writer sequence too low: %d < %d\n",
+				$totals{writer_sequence}, $expect{final_mins}{sequence} );
+		$errors++;
+	}
 
-if ( $final{file_size} > $expect{maxs}{total_size} ) {
-    printf( STDERR
-			"ERROR: final: total file size too high: %d > %d\n",
-			$final{total_size}, $expect{maxs}{total_size});
-    $errors++;
-}
+	# Final counted checks
+	my %final;
+	foreach my $k ( keys(%totals) ) {
+		$final{$k} = 0;
+	}
+	my @files = ReadEventlogs( $dir, \%final );
+	ProcessEventlogs( \@files, \%final );
+	if ( scalar(@files) < $expect{final_mins}{num_files} ) {
+		printf( STDERR
+				"ERROR: final: too few actual files: %d < %d\n",
+				scalar(@files), $expect{final_mins}{num_files} );
+	}
+	if ( ! $final{events_lost} ) {
+		if ( $final{num_events} < $expect{final_mins}{num_events} ) {
+			printf( STDERR
+					"ERROR: final: too few actual events: %d < %d\n",
+					$final{num_events}, $expect{loop_mins}{num_events} );
+			$errors++;
+		}
+	}
+	if ( $final{sequence} < $expect{final_mins}{sequence} ) {
+		printf( STDERR
+				"ERROR: final: actual sequence too low: %d < %d\n",
+				$final{sequence}, $expect{final_mins}{sequence});
+		$errors++;
+	}
+
+	if ( $final{file_size} > $expect{maxs}{total_size} ) {
+		printf( STDERR
+				"ERROR: final: total file size too high: %d > %d\n",
+				$final{total_size}, $expect{maxs}{total_size});
+		$errors++;
+	}
 
 
-if ( $errors  or  ($settings{verbose} > 1)  or  $settings{debug} ) {
-    GatherData( "/dev/stdout" );
+	if ( $errors  or  ($settings{verbose} > 1)  or  $settings{debug} ) {
+		GatherData( "/dev/stdout" );
+	}
 }
 
 my $exit_status = $errors == 0 ? 0 : 1;
-printf "\n** Analysis complete, exiting with status $exit_status **\n";
+
+my $end = time();
+$timestr = localtime( $end );
+my $duration = $end - $start;
+printf "\n** Analysis complete **\n";
+printf( "\n** Eventlog rotation test '%s' done @ %s; %ds, status %d **\n",
+		$settings{name}, $timestr, $duration, $exit_status );
+
 exit $exit_status;
 
 
