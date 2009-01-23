@@ -88,7 +88,7 @@ sub CheckLogServer
 		$servername = $handle[0];
 		fullchomp($servername);
 	} else {
-		debug( "Starting LogServer\n",2);
+		debug( "Starting LogServer\n",1);
 		$servername = StartLogServer();
 	}
 	return($servername);
@@ -113,7 +113,7 @@ sub StartLogServer
 		exec "./x_general_server.pl $current LogDirs";
 		die "can not exec dumpcore!\n";
 	}
-	debug( "Log Server returning as <<$current>>\n",1);
+	debug( "Log Server returning as <<$current>>\n",2);
 	return($current);
 }
 
