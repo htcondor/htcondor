@@ -566,7 +566,30 @@ Scheduler::timeout()
 		// If we are called too frequently, delay.
 	SchedDInterval.expediteNextRun();
 	int time_to_next_run = SchedDInterval.getTimeToNextRun();
+
 	if ( time_to_next_run > 0 ) {
+		/* BEGIN */
+		/* remove this debugging block when #78/#85 is resolved */
+		dprintf(D_FULLDEBUG, 
+			"Scheduler::timeout() information to debug #78/#85");
+		dprintf(D_FULLDEBUG, "\tSchedDInterval.getLastDuration() = %f\n",
+			SchedDInterval.getLastDuration());
+		dprintf(D_FULLDEBUG, "\tSchedDInterval.getTimeslice() = %f\n",
+			SchedDInterval.getTimeslice());
+		dprintf(D_FULLDEBUG, "\tSchedDInterval.getMinInterval() = %f\n",
+			SchedDInterval.getMinInterval());
+		dprintf(D_FULLDEBUG, "\tSchedDInterval.getMaxInterval() = %f\n",
+			SchedDInterval.getMaxInterval());
+		dprintf(D_FULLDEBUG, "\tSchedDInterval.getDefaultInterval() = %f\n",
+			SchedDInterval.getDefaultInterval());
+		dprintf(D_FULLDEBUG, "\tSchedDInterval.getInitialInterval() = %f\n",
+			SchedDInterval.getInitialInterval());
+		dprintf(D_FULLDEBUG, "\tSchedDInterval.getNextStartTime() = %ld\n",
+			(long)SchedDInterval.getNextStartTime());
+		dprintf(D_FULLDEBUG, "\tSchedDInterval.getTimeToNextRun() = %d\n",
+			SchedDInterval.getTimeToNextRun());
+		/* END */
+
 		if (!min_interval_timer_set) {
 			dprintf(D_FULLDEBUG,"Setting delay until next queue scan to %d seconds\n",time_to_next_run);
 
