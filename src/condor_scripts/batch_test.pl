@@ -1158,7 +1158,7 @@ sub CreateLocalConfig
 	# for HOSTALLOW_WRITE which causes it to EXCEPT on submit
 	# till set to some legal value. Old was most insecure..
 	print FIX "HOSTALLOW_WRITE 			= *\n";
-	print FIX "NUM_CPUS 			= 2\n";
+	print FIX "NUM_CPUS 			= 15\n";
 
 	# Allow a default heap size for java(addresses issues on x86_rhas_3)
 	# May address some of the other machines with Java turned off also
