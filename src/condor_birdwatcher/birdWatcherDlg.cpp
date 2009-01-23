@@ -80,7 +80,7 @@ void CBirdWatcherDlg::OnTimer(UINT nIDEvent)
 	CFile infile;
 	if (infile.Open(zCondorDir + "birdq.tmp", CFile::modeRead))
 	{
-		int iLen = infile.GetLength();
+		UINT iLen = (UINT)infile.GetLength();
 		char *psBuf = new char[iLen+1];
 		infile.Read(psBuf, iLen);
 		psBuf[iLen] = 0;
@@ -91,7 +91,7 @@ void CBirdWatcherDlg::OnTimer(UINT nIDEvent)
 	}
 	if (infile.Open(zCondorDir + "birdstatus.tmp", CFile::modeRead))
 	{
-		int iLen = infile.GetLength();
+		UINT iLen = (UINT)infile.GetLength();
 		char *psBuf = new char[iLen+1];
 		infile.Read(psBuf, iLen);
 		psBuf[iLen] = 0;

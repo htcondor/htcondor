@@ -69,7 +69,7 @@ SystrayManager::SystrayManager()
 SystrayManager::~SystrayManager()
 {
 	delete pDlg;
-	for (int i = 0; i < vecIconsForEachCpu.size(); i++)
+	for (BirdIconVector::size_type i = 0; i < vecIconsForEachCpu.size(); i++)
 	{
 		removeIcon(i);
 	}
@@ -96,7 +96,7 @@ void SystrayManager::init(HICON hCondorOff, HICON hIdle, HICON hClaimed, HICON h
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void SystrayManager::removeIcon(int iCpuId)
+void SystrayManager::removeIcon(BirdIconVector::size_type iCpuId)
 {
 	if (iCpuId >= vecIconsForEachCpu.size())
 		return;
@@ -111,7 +111,7 @@ void SystrayManager::removeIcon(int iCpuId)
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void SystrayManager::setIcon(int iCpuId, HICON hToSet)
+void SystrayManager::setIcon(BirdIconVector::size_type iCpuId, HICON hToSet)
 {
 	if (vecIconsForEachCpu.size() <= iCpuId)
 		vecIconsForEachCpu.resize(iCpuId+1);
@@ -202,7 +202,7 @@ void SystrayManager::onReceivedWindowsMessage(WindowsMessageReceiver *pSource, U
 			if (iTimerNum % 10 == 0)
 				reloadStatus();
 			
-			for (int i = 0; i < vecIconsForEachCpu.size(); i++)
+			for (BirdIconVector::size_type i = 0; i < vecIconsForEachCpu.size(); i++)
 			{
 				BirdIcon &icon = vecIconsForEachCpu[i];
 				if (icon.bIconActive && icon.bRunningJob)
@@ -306,7 +306,7 @@ void SystrayManager::reloadStatus()
 	
 	if (!iCpus)
 	{
-		for (int i = 1; i < vecIconsForEachCpu.size(); i++)
+		for (BirdIconVector::size_type i = 1; i < vecIconsForEachCpu.size(); i++)
 		{	
 			removeIcon(i);
 		}
@@ -408,7 +408,7 @@ void SystrayManager::reloadStatus()
 	
 	if (bUseSingleIcon && bMultipleCpusAvailable)
 	{
-		for (int i = 1; i < vecIconsForEachCpu.size(); i++)
+		for (BirdIconVector::size_type i = 1; i < vecIconsForEachCpu.size(); i++)
 		{	
 			removeIcon(i);
 		}
