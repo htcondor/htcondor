@@ -5,8 +5,11 @@ use warnings;
 my %params;
 my @ARGS = ( "--force", "--no-pid" );
 my $skip = 0;
+my $execute = 1;
+my $verbose = 0;
 my $link = 0;
-my $usage = "usage: $0 [--link] [--start <name>] [/<pattern>/] [run opts]";
+my $usage =
+    "usage: $0 [--link] [--start <name>] [-n] [/<pattern>/] [run opts]";
 foreach my $n ( 0 .. $#ARGV )
 {
     my $arg = $ARGV[$n];
@@ -25,6 +28,12 @@ foreach my $n ( 0 .. $#ARGV )
     }
     elsif ( $arg eq "--link" ) {
 	$link = 1;
+    }
+    elsif ( $arg eq "-n" or $arg eq "--no-exec" ) {
+	$execute = 0;
+    }
+    elsif ( $arg eq "-v" or $arg eq "--verbose" ) {
+	$verbose++;
     }
     elsif ( $arg =~ /^\/(.*)\/$/ ) {
 	$params{pat} = $1;
@@ -76,7 +85,7 @@ if ( $link )
 }
 
 foreach my $name ( @names ) {
-    my $test = sprintf( $format, $name, join(" ", @ARGS) );
+    my $test = sprintf( $format, $name ) . " " . join(" ", @ARGS);
     if ( $params{start} ) {
 	if ( $name =~ /$params{start}/ ) {
 	    delete $params{start};
@@ -91,11 +100,16 @@ foreach my $name ( @names ) {
 	}
     }
     print "\n\n*** Running test '$name' ***\n";
-    system( "./$test" );
-    if ( $? != 0 ) {
-	print "*** Failed on test '$name' ***\n";
-	print "$test\n";
-	exit( $?>>8 );
+    if ( $verbose ) {
+	print "Running: '$test'\n";
+    }
+    if ( $execute ) {
+	system( "./$test" );
+	if ( $? != 0 ) {
+	    print "*** Failed on test '$name' ***\n";
+	    print "$test\n";
+	    exit( $?>>8 );
+	}
     }
 }
 print "\n\n*** All tests completed successfully ***\n";

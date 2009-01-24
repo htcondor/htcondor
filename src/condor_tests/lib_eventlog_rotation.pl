@@ -242,6 +242,8 @@ sub usage( )
 		"  -s|--stop     stop after errors\n" .
 		"  --vg-writer   run writer under valgrind\n" .
 		"  --vg-reader   run reader under valgrind\n" .
+		"  --strace      strace myself\n" .
+		"  --no-strace   don't strace myself\n" .
 		"  -q|--quiet    cancel debug & verbose\n" .
 		"  -h|--help     this help\n";
 }
@@ -286,6 +288,12 @@ foreach my $arg ( @ARGV ) {
     }
     elsif ( $arg eq "-s"  or  $arg eq "--stop" ) {
 		$settings{stop} = 1;
+    }
+    elsif ( $arg eq "--strace" ) {
+		$settings{strace} = 1;
+    }
+    elsif ( $arg eq "--no-strace" ) {
+		$settings{strace} = 0;
     }
     elsif ( $arg eq "--vg-writer" ) {
 		$settings{valgrind_writer} = 1;
@@ -382,6 +390,23 @@ print CONFIG "TEST_LOG_READER_LOG = $fulldir/reader.log\n";
 print CONFIG "TEST_LOG_WRITER_LOG = $fulldir/writer.log\n";
 close( CONFIG );
 $ENV{"CONDOR_CONFIG"} = $config;
+
+
+# ################################
+# startup strace
+# ################################
+my $strace_pid = 0;
+if ( $settings{strace} ) {
+	print "Starting strace (my pid is $$)\n";
+	$strace_pid = fork();
+	if ( $strace_pid == 0 ) {
+		my $pid = getppid();
+		exec( "strace -t -e trace=process -o $dir/strace.out -p $pid" );
+	}
+	else {
+		sleep(1);		# let strace start
+	}
+}
 
 # ######################
 # Basic calculations
@@ -604,7 +629,8 @@ my @valgrind = ( "valgrind", "--tool=memcheck", "--num-callers=24",
 
 my $start = time( );
 my $timestr = localtime($start);
-print "Starting @ $timestr\n";
+printf "Starting test %s (%d loops) @ %s\n",
+	$settings{name}, $test->{loops}, $timestr;
 if ( $settings{verbose} ) {
     print "Using directory $dir\n";
 }
@@ -632,7 +658,9 @@ foreach my $k ( keys(%totals) ) {
 foreach my $loop ( 1 .. $test->{loops} )
 {
 	my $final = ( $loop == $test->{loops} );
-	printf "\n** Starting loop $loop %s**\n", $final ? "(final) " : "";
+	$timestr = localtime();
+	printf( "\n** Starting loop $loop %s@ %s **\n",
+			$final ? "(final) " : "", $timestr );
 
     foreach my $k ( keys(%{$expect{loop_mins}}) ) {
 		$expect{cur_mins}{$k} += $expect{loop_mins}{$k};
@@ -684,11 +712,13 @@ foreach my $loop ( 1 .. $test->{loops} )
 		last;
     }
 }
-printf "\n** End test loops **\n";
+
+$timestr = localtime();
+printf "\n** End test loops @ %s **\n", $timestr;
 
 if ( $settings{execute} ) {
 
-	printf "\n** Starting final analysis **\n";
+	printf "\n** Starting final analysis @ %s **\n", $timestr;
 
 	# Final writer output checks
 	if ( $totals{writer_events} < $expect{final_mins}{num_events} ) {
@@ -753,6 +783,11 @@ my $duration = $end - $start;
 printf "\n** Analysis complete **\n";
 printf( "\n** Eventlog rotation test '%s' done @ %s; %ds, status %d **\n",
 		$settings{name}, $timestr, $duration, $exit_status );
+if ( $strace_pid > 0 ) {
+	print "Killing strace\n";
+	kill( 15, $strace_pid );
+	sleep(1);
+}
 
 exit $exit_status;
 
