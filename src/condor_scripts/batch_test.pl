@@ -147,6 +147,7 @@ my $iswindows = IsThisWindows();
 my $test_retirement = 3600;	# seconds for an individual test timeout - 30 minutes
 my $BaseDir = getcwd();
 my $hush = 0;
+my $sortfirst = 0;
 my $timestamp = 0;
 my $kindwait = 1; # run tests one at a time
 my $groupsize = 0; # run tests in group for more throughput
@@ -212,12 +213,13 @@ $ENV{PATH} = $ENV{PATH} . ":" . $BaseDir;
 # the args:
 
 my $testfile = "";
-my $skipfile = "";
+my $ignorefile = "";
 my @testlist;
 
 # -d[irectory <dir>: just test this directory
 # -f[ile] <filename>: use this file as the list of tests to run
-# -s[kip] <filename>: use this file as the list of tests to skip
+# -i[gnore] <filename>: use this file as the list of tests to skip
+# -s[ort] sort tests before testing
 # -t[estname] <test-name>: just run this test
 # -q[uiet]: hush
 # -m[arktime]: time stamp
@@ -235,12 +237,13 @@ while( $_ = shift( @ARGV ) ) {
 	    print "the args:\n";
 	    print "-d[irectory <dir>: just test this directory\n";
 	    print "-f[ile] <filename>: use this file as the list of tests to run\n";
-	    print "-s[kip] <filename>: use this file as the list of tests to skip\n";
+	    print "-i[gnore] <filename>: use this file as the list of tests to skip\n";
 	    print "-t[estname] <test-name>: just run this test\n";
 	    print "-q[uiet]: hush\n";
 	    print "-m[arktime]: time stamp\n";
 	    print "-k[ind]: be kind and submit slowly\n";
 	    print "-e[venly]: <group size>: run a group of tests\n";
+	    print "-s[ort] sort before running tests\n";
 	    print "-b[buildandtest]: set up a personal condor and generic configs\n";
 	    print "-w[wrap]: test in personal condor enable core/ERROR detection\n";
 	    print "-xls: execute log dir server\n";
@@ -290,12 +293,16 @@ while( $_ = shift( @ARGV ) ) {
                 $testfile = shift(@ARGV);
                 next SWITCH;
         }
-        if( /^-s.*/ ) {
-                $skipfile = shift(@ARGV);
+        if( /^-i.*/ ) {
+                $ignorefile = shift(@ARGV);
                 next SWITCH;
         }
         if( /^-r.*/ ) { #retirement timeout
                 $test_retirement = shift(@ARGV);
+                next SWITCH;
+        }
+        if( /^-s.*/ ) {
+                $sortfirst = 1;
                 next SWITCH;
         }
         if( /^-k.*/ ) {
@@ -498,7 +505,7 @@ if( @testlist ) {
 } else {
     # we weren't given any specific tests or a test list, so we need to 
     # find all test programs (all files ending in .run) for each compiler
-	my $gotdot;
+	my $gotdot = 0;
 	debug("working on default test list\n",2);
     foreach my $compiler (@compilers) {
 		if($compiler eq ".") {
@@ -545,9 +552,9 @@ if( @testlist ) {
 
 # if we were given a skip file, let's read it in and use it.
 # remove any skipped tests from the test list  
-if( $skipfile ) {
-    debug("found a skipfile: $skipfile \n",1);
-    open(SKIPFILE, $skipfile) || die "Can't open $skipfile\n";
+if( $ignorefile ) {
+    debug("found a skipfile: $ignorefile \n",1);
+    open(SKIPFILE, $ignorefile) || die "Can't open $ignorefile\n";
     while(<SKIPFILE>) {
 	CondorTest::fullchomp($_);
 	my $test = $_;
@@ -606,11 +613,14 @@ foreach my $compiler (@compilers)
 	}
 
 	# if batching tests, randomize order
-	if($groupsize > 0) {
+	if(($groupsize > 0) && ($sortfirst == 0)){
 		yates_shuffle(\@{$test_suite{"$compiler"}});
 	}
-
-    foreach my $test_program (@{$test_suite{"$compiler"}})
+	my @currenttests = @{$test_suite{"$compiler"}};
+	if($sortfirst == 1) {
+		@currenttests = sort @currenttests;
+	}
+    foreach my $test_program (@currenttests)
     {
 		# doing this next test
 		$currenttest = $currenttest + 1;
@@ -835,9 +845,11 @@ foreach my $test_name (@failed_tests)
 close OUTF;
 close SUMOUTF;
 
-if(($ENV{WRAP_TESTS} eq "yes") and ($killlogserver == 1)) {
-	debug("Stopping LogDir server\n",1);
-	CondorPubLogdirs::StopLogServer(); # is it running yet? kill it
+if( exists $ENV{WRAP_TESTS}) {
+	if(($ENV{WRAP_TESTS} eq "yes") and ($killlogserver == 1)) {
+		debug("Stopping LogDir server\n",1);
+		CondorPubLogdirs::StopLogServer(); # is it running yet? kill it
+	}
 }
 
 if ( $cleanupcondor )
@@ -1145,7 +1157,7 @@ sub CreateLocalConfig
 	# for HOSTALLOW_WRITE which causes it to EXCEPT on submit
 	# till set to some legal value. Old was most insecure..
 	print FIX "HOSTALLOW_WRITE 			= *\n";
-	print FIX "NUM_CPUS 			= 2\n";
+	print FIX "NUM_CPUS 			= 15\n";
 
 	# Allow a default heap size for java(addresses issues on x86_rhas_3)
 	# May address some of the other machines with Java turned off also
@@ -1221,22 +1233,24 @@ sub CreateLocalConfig
 
 	# above stolen from condor_configure
 
-	if( ($ENV{NMI_PLATFORM} =~ /hpux_11/) )
-	{
-	    # evil hack b/c our ARCH-detection code is stupid on HPUX, and our
-	    # HPUX11 build machine in NMI doesn't seem to have the files we're
-	    # looking for...
-	    print FIX "ARCH = HPPA2\n";
-	}
+	if( exists $ENV{NMI_PLATFORM} ) {
+		if( ($ENV{NMI_PLATFORM} =~ /hpux_11/) )
+		{
+	    	# evil hack b/c our ARCH-detection code is stupid on HPUX, and our
+	    	# HPUX11 build machine in NMI doesn't seem to have the files we're
+	    	# looking for...
+	    	print FIX "ARCH = HPPA2\n";
+		}
 
-	if( ($ENV{NMI_PLATFORM} =~ /ppc64_sles_9/) ) {
-		# evil work around for bad JIT compiler
-		print FIX "JAVA_EXTRA_ARGUMENTS = -Djava.compiler=NONE\n";
-	}
+		if( ($ENV{NMI_PLATFORM} =~ /ppc64_sles_9/) ) {
+			# evil work around for bad JIT compiler
+			print FIX "JAVA_EXTRA_ARGUMENTS = -Djava.compiler=NONE\n";
+		}
 
-	if( ($ENV{NMI_PLATFORM} =~ /ppc64_macos_10.3/) ) {
-		# evil work around for macos
-		print FIX "JAVA_EXTRA_ARGUMENTS = -Djava.vm.vendor=Apple\n";
+		if( ($ENV{NMI_PLATFORM} =~ /ppc64_macos_10.3/) ) {
+			# evil work around for macos
+			print FIX "JAVA_EXTRA_ARGUMENTS = -Djava.vm.vendor=Apple\n";
+		}
 	}
 
 	# Add a job wrapper for windows.... and a few other things which
@@ -1525,8 +1539,36 @@ sub DoChild
 		#CoreCheck($test_starttime);
 	#}
 	debug( "Test start @ $test_starttime \n",2);
-	sleep(3);
+	sleep(1);
 	# add test core file
+
+	$_ = $test_program;
+	s/\.run//;
+	my $testname = $_;
+	my $save = $testname . ".saveme";
+	my $piddir = $save . "/$$";
+	# make sure pid storage directory exists
+	CondorTest::verbose_system("mkdir -p $save");
+	my $pidcmd = "mkdir -p " . $save . "/" . "$$";
+	CondorTest::verbose_system("$pidcmd");
+
+	my $log = $testname . ".log";
+	my $cmd = $testname . ".cmd";
+	my $out = $testname . ".out";
+	my $err = $testname . ".err";
+	my $runout = $testname . ".run.out";
+	my $cmdout = $testname . ".cmd.out";
+
+	# before starting test clean trace of earlier run
+	my $rmcmd = "rm -f $log $out $err $runout $cmdout";
+	CondorTest::verbose_system("$rmcmd");
+
+	my $newlog =  $piddir . "/" . $log;
+	my $newcmd =  $piddir . "/" . $cmd;
+	my $newout =  $piddir . "/" . $out;
+	my $newerr =  $piddir . "/" . $err;
+	my $newrunout =  $piddir . "/" . $runout;
+	my $newcmdout =  $piddir . "/" . $cmdout;
 
 	my $corecount = 0;
 	my $res;
@@ -1537,31 +1579,8 @@ sub DoChild
 			}
 			$res = system("perl $test_program > $test_program.out 2>&1");
 
-			# if not build and test move key files to saveme/pid directory
-			$_ = $test_program;
-			s/\.run//;
-			my $testname = $_;
-			my $save = $testname . ".saveme";
-			my $piddir = $save . "/$$";
-			# make sure pid storage directory exists
-			CondorTest::verbose_system("mkdir -p $save");
-			my $pidcmd = "mkdir -p " . $save . "/" . "$$";
-			CondorTest::verbose_system("$pidcmd");
 
 			# generate file names
-			my $log = $testname . ".log";
-			my $cmd = $testname . ".cmd";
-			my $out = $testname . ".out";
-			my $err = $testname . ".err";
-			my $runout = $testname . ".run.out";
-			my $cmdout = $testname . ".cmd.out";
-
-			my $newlog =  $piddir . "/" . $log;
-			my $newcmd =  $piddir . "/" . $cmd;
-			my $newout =  $piddir . "/" . $out;
-			my $newerr =  $piddir . "/" . $err;
-			my $newrunout =  $piddir . "/" . $runout;
-			my $newcmdout =  $piddir . "/" . $cmdout;
 
 			if( $nightly == 0) {
 				copy($log, $newlog);
@@ -1677,7 +1696,7 @@ sub CoreCheck {
 						$count += 1;
 					} else {
 						debug("Checking <$fullpath> for test <$test> for ERROR\n",2);
-						$scancount = ScanForERROR($fullpath);
+						$scancount = ScanForERROR($fullpath,$test);
 						$count += $scancount;
 						debug("After ScanForERROR error count <$scancount>\n",2);
 					}
@@ -1692,17 +1711,31 @@ sub CoreCheck {
 sub ScanForERROR
 {
 	my $daemonlog = shift;
+	my $testname = shift;
 	my $count = 0;
+	my $ignore = 1;
 	open(MDL,"<$daemonlog") or die "Can not open daemon log<$daemonlog>:$!\n";
 	my $line = "";
 	while(<MDL>) {
 		chomp();
 		$line = $_;
 		# ERROR preceeded by white space and trailed by white space, :, ; or -
-		if($line =~ /^\s*(\d+\/\d+\s+\d+:\d+:\d+)\s+\(.*\)\s+\(.*\)\s+ERROR[\s;:\-].*/){
-			debug("$line TStamp $1\n",1);
-			$count += 1;
-			AddFileTrace($daemonlog, $1, $line);
+		if($line =~ /^\s*(\d+\/\d+\s+\d+:\d+:\d+)\s+ERROR[\s;:\-!].*$/){
+			debug("$line TStamp $1\n",2);
+			$ignore = IgnoreError($testname,$line);
+			if($ignore == 0) {
+				$count += 1;
+				AddFileTrace($daemonlog, $1, $line);
+			}
+		} elsif($line =~ /^\s*(\d+\/\d+\s+\d+:\d+:\d+)\s+.*\s+ERROR[\s;:\-!].*$/){
+			debug("$line TStamp $1\n",2);
+			$ignore = IgnoreError($testname,$line);
+			if($ignore == 0) {
+				$count += 1;
+				AddFileTrace($daemonlog, $1, $line);
+			}
+		} elsif($line =~ /^.*ERROR.*$/){
+			debug("Skipping this error<<$line>> \n",2);
 		}
 	}
 	close(MDL);
@@ -1839,6 +1872,29 @@ sub LoadExemptions
     	}
 	}
 	DropExemptions();
+}
+
+sub IgnoreError
+{
+	my $testname = shift;
+	my $errorstring = shift;
+
+	# no no.... must acquire array for test and check all substrings
+	# against current large string.... see DropExemptions below
+	debug("IgnoreError called for test <$testname> and string <$errorstring>\n",2);
+	# get list of per/test specs
+	my @testarray = @{$exemptions{$testname}};
+	foreach my $oneexemption (@testarray) {
+		my( $must, $partialstr) = split /,/,  $oneexemption;
+		my $quoted = quotemeta($partialstr);
+		debug("Looking for <$quoted> in this error <$errorstring>\n",2);
+		if($errorstring =~ m/$quoted/) {
+			debug("IgnoreError: Ignore ******** <<$quoted>> ******** \n",2);
+			return(1);
+		} 
+	}
+	# no exemption for this one
+	return(0);
 }
 
 sub DropExemptions

@@ -25,7 +25,8 @@ $cmd = 'job_rsc_open-N-serial_std.cmd';
 $testdesc =  'Manyfiles Test';
 $testname = "job_rsc_open-N-serial_std";
 
-@CondorTest::expected_output = ( "SUCCESS" );
+my @expected_output = ( "SUCCESS" );
+CondorTest::SetExpected(\@expected_output);
 
 CondorTest::RegisterExitedSuccess( $testname,
 				   \&CondorTest::DefaultOutputTest );

@@ -25,7 +25,7 @@ $testdesc =  'Test user log - write all events and expect to read the same';
 $testname = "lib_userlog";
 
 
-@CondorTest::expected_output =
+my @expected_output =
 (
 'Job Submited.........',
 'Job Remote Error.........',
@@ -50,6 +50,8 @@ $testname = "lib_userlog";
 'Job Node Execute.........',
 'DONE',
 );
+
+CondorTest::SetExpected(\@expected_output);
 
 system("rm -f local.log");
 my $stats = system("./x_write_joblog.exe");

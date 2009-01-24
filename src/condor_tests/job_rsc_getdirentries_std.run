@@ -26,7 +26,8 @@ $testdesc =  'getdirentries Test';
 $testname = "job_rsc_getdirentries_std";
 
 
-@CondorTest::expected_output = ( 'completed successfully' );
+my @expected_output = ( 'completed successfully' );
+CondorTest::SetExpected(\@expected_output);
 
 CondorTest::RegisterExitedSuccess( $testname,
 				   \&CondorTest::DefaultOutputTest );

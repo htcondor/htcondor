@@ -26,13 +26,15 @@ $testdesc =  'Fgets Test';
 $testname = "job_rsc_fgets_std";
 
 $input = 'x_data.in';
+my @expected_output;
 open(INPUT, "<$input") || die "Can't open $input: $!\n";
 while(<INPUT>)
 {
     $lineno++;
-    push(@CondorTest::expected_output, "Read a line ($lineno)");
+    push(@expected_output, "Read a line ($lineno)");
 }
-push(@CondorTest::expected_output, "All done.");
+push(@expected_output, "All done.");
+CondorTest::SetExpected(\@expected_output);
 
 CondorTest::RegisterExitedSuccess( $testname,
 				   \&CondorTest::DefaultOutputTest );

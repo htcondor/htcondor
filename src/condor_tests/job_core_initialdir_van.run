@@ -26,13 +26,14 @@ $cmd = 'job_core_initialdir_van.cmd';
 $testdesc =  'condor_submit initialdir works - vanilla U';
 $testname = "job_core_initialdir_van";
 
-@CondorTest::expected_output =
+my @expected_output =
 (
 'one',
 'two',
 'three',
 'four',
 );
+CondorTest::SetExpected(\@expected_output);
 
 system("mkdir -p initd_van");
 
