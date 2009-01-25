@@ -250,11 +250,11 @@ sub usage( )
 
 sub RunWriter( $$$$$$ );
 sub RunReader( $$$ );
-sub ReadEventlogs( $$ );
+sub ReadEventlogs( $$$ );
 sub ProcessEventlogs( $$ );
 sub CheckWriterOutput( $$$$ );
 sub CheckReaderOutput( $$$$ );
-sub GatherData( $ );
+sub GatherData( $$ );
 
 my %settings =
 (
@@ -401,7 +401,8 @@ if ( $settings{strace} ) {
 	$strace_pid = fork();
 	if ( $strace_pid == 0 ) {
 		my $pid = getppid();
-		exec( "strace -t -e trace=process -o $dir/strace.out -p $pid" );
+		my $strace = "strace -t -e trace=process -o $dir/strace.out -p $pid";
+		exec( "$strace" ) or exit(1);
 	}
 	else {
 		sleep(1);		# let strace start
@@ -634,7 +635,7 @@ printf "Starting test %s (%d loops) @ %s\n",
 if ( $settings{verbose} ) {
     print "Using directory $dir\n";
 }
-my $errors = 0;
+my $total_errors = 0;
 
 # Total writer out
 my %totals = ( sequence => 0,
@@ -657,6 +658,8 @@ foreach my $k ( keys(%totals) ) {
 
 foreach my $loop ( 1 .. $test->{loops} )
 {
+	my $errors;	# Temp error count
+
 	my $final = ( $loop == $test->{loops} );
 	$timestr = localtime();
 	printf( "\n** Starting loop $loop %s@ %s **\n",
@@ -674,41 +677,63 @@ foreach my $loop ( 1 .. $test->{loops} )
 
     # Run the writer
     my $run;
-    my $werrors += RunWriter( $loop, $final,
-							  \%new, \%previous, \%totals, \$run );
-    $errors += $werrors;
+    $errors += RunWriter( $loop, $final,
+						  \%new, \%previous, \%totals, \$run );
+    $total_errors += $errors;
     if ( ! $run ) {
 		next;
     }
-    if ( $werrors ) {
+    if ( $errors ) {
 		print STDERR "writer failed: aborting test\n";
 		last;
     }
 
-    my @files = ReadEventlogs( $dir, \%new );
-    ProcessEventlogs( \@files, \%new );
+	my @files;
+    $errors = ReadEventlogs( $dir, \%new, \@files );
+	if ( $errors ) {
+		print STDERR "errors detected in ReadEventLogs()\n";
+		$total_errors += $errors;
+	}
+
+    $errors = ProcessEventlogs( \@files, \%new );
+	if ( $errors ) {
+		print STDERR "errors detected in ProcessEventLogs()\n";
+		$total_errors += $errors;
+	}
 
     my %diff;
     foreach my $k ( keys(%previous) ) {
 		$diff{$k} = $new{$k} - $previous{$k};
 		$totals{$k} += $new{$k};
     }
-    $errors += CheckWriterOutput( \@files, $loop, \%new, \%diff );
+    $errors = CheckWriterOutput( \@files, $loop, \%new, \%diff );
+	if ( $errors ) {
+		print STDERR "errors detected in CheckWriterOutput()\n";
+		$total_errors += $errors;
+	}
 
     # Run the reader
-    $errors += RunReader( $loop, \%new, \$run );
+    $errors = RunReader( $loop, \%new, \$run );
+	if ( $errors ) {
+		print STDERR "errors detected in RunReader()\n";
+		$total_errors += $errors;
+	}
     if ( $run ) {
-		$errors += CheckReaderOutput( \@files, $loop, \%new, \%diff );
+		$errors = CheckReaderOutput( \@files, $loop, \%new, \%diff );
+		if ( $errors ) {
+			print STDERR "errors detected in CheckReaderOutput()\n";
+			$total_errors += $errors;
+		}
     }
 
-    if ( $errors  or  $settings{verbose}  or  $settings{debug} ) {
-		GatherData( sprintf("$dir/loop-%02d.txt",$loop) );
+    if ( $total_errors  or  $settings{verbose}  or  $settings{debug} ) {
+		GatherData( sprintf("$dir/loop-%02d.txt",$loop), $total_errors );
     }
 
     foreach my $k ( keys(%previous) ) {
 		$previous{$k} = $new{$k};
     }
-    if ( $errors  and  $settings{stop} ) {
+    if ( $total_errors  and  $settings{stop} ) {
 		last;
     }
 }
@@ -725,14 +750,14 @@ if ( $settings{execute} ) {
 		printf( STDERR
 				"ERROR: final: writer wrote too few events: %d < %d\n",
 				$totals{writer_events}, $expect{final_mins}{num_events} );
-		$errors++;
+		$total_errors++;
 	}
 	$totals{seq_files} = $totals{sequence} + 1;
 	if ( $totals{writer_sequence} < $expect{final_mins}{sequence} ) {
 		printf( STDERR
 				"ERROR: final: writer sequence too low: %d < %d\n",
 				$totals{writer_sequence}, $expect{final_mins}{sequence} );
-		$errors++;
+		$total_errors++;
 	}
 
 	# Final counted checks
@@ -740,8 +765,17 @@ if ( $settings{execute} ) {
 	foreach my $k ( keys(%totals) ) {
 		$final{$k} = 0;
 	}
-	my @files = ReadEventlogs( $dir, \%final );
-	ProcessEventlogs( \@files, \%final );
+	my @files;
+	my $errors = ReadEventlogs( $dir, \%final, \@files );
+	if ( $errors ) {
+		print STDERR "ERROR: final: ReadEventLogs()\n";
+		$total_errors += $errors;
+	}
+	$errors = ProcessEventlogs( \@files, \%final );
+	if ( $errors ) {
+		print STDERR "ERROR: final: ProcessEventLogs()\n";
+		$total_errors += $errors;
+	}
 	if ( scalar(@files) < $expect{final_mins}{num_files} ) {
 		printf( STDERR
 				"ERROR: final: too few actual files: %d < %d\n",
@@ -752,30 +786,30 @@ if ( $settings{execute} ) {
 			printf( STDERR
 					"ERROR: final: too few actual events: %d < %d\n",
 					$final{num_events}, $expect{loop_mins}{num_events} );
-			$errors++;
+			$total_errors++;
 		}
 	}
 	if ( $final{sequence} < $expect{final_mins}{sequence} ) {
 		printf( STDERR
 				"ERROR: final: actual sequence too low: %d < %d\n",
 				$final{sequence}, $expect{final_mins}{sequence});
-		$errors++;
+		$total_errors++;
 	}
 
 	if ( $final{file_size} > $expect{maxs}{total_size} ) {
 		printf( STDERR
 				"ERROR: final: total file size too high: %d > %d\n",
 				$final{total_size}, $expect{maxs}{total_size});
-		$errors++;
+		$total_errors++;
 	}
 
 
-	if ( $errors  or  ($settings{verbose} > 1)  or  $settings{debug} ) {
-		GatherData( "/dev/stdout" );
+	if ( $total_errors  or  ($settings{verbose} > 1)  or  $settings{debug} ) {
+		GatherData( "/dev/stdout", $total_errors );
 	}
 }
 
-my $exit_status = $errors == 0 ? 0 : 1;
+my $exit_status = $total_errors == 0 ? 0 : 1;
 
 my $end = time();
 $timestr = localtime( $end );
@@ -792,10 +826,14 @@ if ( $strace_pid > 0 ) {
 exit $exit_status;
 
 
-sub GatherData( $ )
+sub GatherData( $$ )
 {
     my $f = shift;
-    open( OUT, ">$f" );
+	my $errors = shift;
+    if ( !open( OUT, ">$f" ) ) {
+		print STDERR "Failed to open log file $f for writing: $!\n";
+		open( OUT, ">&STDERR" ) or die "Can't dup standard error";
+	}
 
     print OUT "\n\n** Total: $errors errors detected **\n";
 
@@ -1219,14 +1257,15 @@ sub CheckReaderOutput( $$$$ )
 # #######################################
 # Read the eventlog files
 # #######################################
-sub ReadEventlogs( $$ )
+sub ReadEventlogs( $$$ )
 {
     my $dir = shift;
     my $new = shift;
+	my $files = shift;
 
+	my $errors = 0;
     my @header_fields = qw( ctime id sequence size events offset event_off );
 
-    my @files;
     opendir( DIR, $dir ) or die "Can't read directory $dir";
     while( my $t = readdir( DIR ) ) {
 		if ( $t =~ /^EventLog(\.old|\.\d+)*$/ ) {
@@ -1242,8 +1281,8 @@ sub ReadEventlogs( $$ )
 			else {
 				$rot = 0;
 			}
-			$files[$rot] = { name => $t, ext => $ext, num_events => 0 };
-			my $f = $files[$rot];
+			my $f = { name => $t, ext => $ext, num_events => 0 };
+			@{$files}[$rot] = $f;
 			my $file = "$dir/$t";
 			open( FILE, $file ) or die "Can't read $file";
 			while( <FILE> ) {
@@ -1276,7 +1315,7 @@ sub ReadEventlogs( $$ )
 		}
     }
     closedir( DIR );
-    return @files;
+    return $errors;
 }
 
 # #######################################
@@ -1286,6 +1325,8 @@ sub ProcessEventlogs( $$ )
 {
     my $files = shift;
     my $new = shift;
+
+	my $errors = 0;
 
     my $events_counted =
 		( exists $test->{config}{EVENT_LOG_COUNT_EVENTS} and
@@ -1385,6 +1426,7 @@ sub ProcessEventlogs( $$ )
 			$new->{num_events_lost} = -1;
 		}
     }
+	return $errors;
 }
 
 ### Local Variables: ***
