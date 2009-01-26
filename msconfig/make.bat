@@ -130,20 +130,13 @@ REM ======================================================================
 REM ======================================================================
 REM Determine the build type
 REM ======================================================================
-set SPEED=
-if /i "%1"=="express" (
-    REM NOTE: The space preceding 'Express' is not necessary, it just
-    REM       makes the output from the script cleaner. 
-    set SPEED= Express
-    shift
-)
 set CONFIGURATION=Release
 if /i "%1"=="release" shift
 if /i "%1"=="debug" (
     set CONFIGURATION=Debug
     shift 
 )
-echo. & echo *** Building %CONFIGURATION%%SPEED% Configuration & echo.
+echo. & echo *** Building %CONFIGURATION% Configuration & echo.
 exit /b 0
 
 REM ======================================================================
@@ -163,6 +156,6 @@ REM ======================================================================
 echo. & echo *** Current Environment & echo.
 set
 echo. & echo *** Building Condor & echo.
-msbuild condor.sln /nologo /m /t:condor /p:Configuration="%CONFIGURATION% (%SPEED: =%)";VCBuildUseEnvironment="true"
+msbuild condor.sln /nologo /m /t:condor /p:Configuration="%CONFIGURATION%";VCBuildUseEnvironment="true"
 if %ERRORLEVEL% neq 0 exit /b 1
 exit /b 0
