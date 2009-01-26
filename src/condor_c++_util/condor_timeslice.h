@@ -144,7 +144,7 @@ class Timeslice {
 		m_next_start_time = (time_t)floor(
           delay +
 		  m_start_time.seconds() +
-          m_start_time.microseconds()/1000000 +
+          m_start_time.microseconds()/1000000.0 +
           0.5 );
 	}
 
