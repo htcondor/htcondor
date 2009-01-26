@@ -1,3 +1,10 @@
+Changes for version 1.0.1 (Released 2008-12-1)
+  - Added ClassAd functions from old classads: ifThenElse(), regexps(), and
+    interval().
+  - Fixed some minor compilation problems under OS X 10.5.
+  - Source files renamed to conform to scheme for rest of condor source
+    (.C --> .cpp).
+
 Changes for version 1.0rc5  (Released 2008-03-17)
 * The WANT_NAMESPACES define is now WANT_CLASSAD_NAMESPACE
 * New warning flags were added to the distribution build
