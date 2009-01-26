@@ -119,7 +119,7 @@ class Matchmaker : public Service
 					MM_DONE if schedd got all the resources it wanted,
 					MM_ERROR if problem negotiating w/ this schedd.
 		**/
-		int negotiate( char *scheddName, char *scheddAddr, 
+		int negotiate( char *scheddName, const ClassAd *scheddAd, 
 		   double priority, double share,
 		   int scheddLimit,
 		   ClassAdList &startdAds, ClaimIdHash &claimIds, 
@@ -132,11 +132,11 @@ class Matchmaker : public Service
 			int groupQuota=INT_MAX, const char* groupAccountingName=NULL);
 
 		
-		ClassAd *matchmakingAlgorithm(char*,char*,ClassAd&,ClassAdList&,
+		ClassAd *matchmakingAlgorithm(char*,const char*,ClassAd&,ClassAdList&,
 									  double=-1.0, double=1.0, bool=false);
 		int matchmakingProtocol(ClassAd &request, ClassAd *offer, 
 						ClaimIdHash &claimIds, Sock *sock,
-						char* scheddName, char* scheddAddr);
+						char* scheddName, const char* scheddAddr);
 		void calculateNormalizationFactor (ClassAdList &, double &, double &,
 										   double &, double &);
 

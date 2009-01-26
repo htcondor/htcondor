@@ -113,6 +113,10 @@ SocketCache::findReliSock( const char *addr )
 void
 SocketCache::addReliSock( const char* addr, ReliSock* rsock )
 {
+	if(strlen(addr) > MAX_ADDR_LEN) {
+		dprintf (D_ALWAYS, "SocketCache::addReliSock: Internal error: Socket name \"%s\" is longer than %d and cannot be cached.  Please report this to the Condor developers.\n", addr, MAX_ADDR_LEN);
+		return;
+	}
 	int slot = getCacheSlot();
 	sockCache[slot].valid 		= true;
 	sockCache[slot].timeStamp 	= timeStamp;
