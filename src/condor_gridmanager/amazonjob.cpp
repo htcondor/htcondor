@@ -50,7 +50,7 @@
 #define GM_SAVE_KEYPAIR_NAME			16
 #define GM_CHECK_VM						17
 
-static char *GMStateNames[] = {
+static const char *GMStateNames[] = {
 	"GM_INIT",
 	"GM_UNSUBMITTED",
 	"GM_START_VM",

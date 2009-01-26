@@ -34,10 +34,14 @@ F_GETFL gives: 1	(should be 1)
 F_DUPFD returns: 5 with arg = 5
 _EOX
 
-@CondorTest::expected_output = split '\n', $foo;
+my @expected_output = split '\n', $foo;
 
-@CondorTest::skipped_output_lines = (1);
+my @skipped_output_lines = (1);
 # Line 1: 'Filedes = 32', so we don't know what fd we're going to get
+
+CondorTest::SetExpected(\@expected_output);
+CondorTest::SetSkipped(\@skipped_output_lines);
+
 
 CondorTest::RegisterExitedSuccess( $testname,
 				   \&CondorTest::DefaultOutputTest );

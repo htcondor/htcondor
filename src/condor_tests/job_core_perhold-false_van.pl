@@ -22,7 +22,7 @@ use CondorTest;
 
 $cmd = 'job_core_perhold-false_van.cmd';
 $testdesc =  'Condor submit policy test for periodic_hold - vanilla U';
-$testname = "job_core_perhold-false_van";
+$testname = "job_core_perhold_van";
 
 my %info;
 my $cluster;

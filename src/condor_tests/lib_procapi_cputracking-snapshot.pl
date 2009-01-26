@@ -85,7 +85,7 @@ $ExitSuccess = sub {
 		$spoolloc = $line;
 	}
 
-	CondorTest::debug("\n",1);
+	CondorTest::debug("Spool directory is \"$spoolloc\"\n",1);
 
 	#my $historyfile = $spoolloc . "/history";
 	my $historyfile = `condor_config_val HISTORY`;
@@ -93,14 +93,14 @@ $ExitSuccess = sub {
 	my $remcpu = 0.0;
 	my $remwallclock = 0.0;
 
-	CondorTest::debug("\n",1);
+	CondorTest::debug("Spool history file is \"$historyfile\"\n",1);
 
 	# look for RemoteWallClockTime and RemoteUserCpu and comparee
 	# them to our calculated results
 
 	system("cat lib_procapi_cputracking-snapshot.data.log");
 
-	CondorTest::debug(":",1);
+	CondorTest::debug("Possibly waiting on history file \"$historyfile\":",1);
 	# make sure history file has been written yet
 	while(!(-f $historyfile)) {
 		CondorTest::debug(".",1);

@@ -20,16 +20,32 @@
 #ifndef CONDOR_SYS_NT_H
 #define CONDOR_SYS_NT_H
 
-// Disable warning about protected copy constr or assignment ops
+// Disable warnings about signed/unsigned mismatches.
+#pragma warning( disable : 4018 )
+
+// Disable warnings about unreferenced parameters.  We do this because
+// our source littered with unreferenced parameters, as far as Visual
+// Studio is concerned, but most are valid when compiled on one of the 
+// many other OSs we support.
+#pragma warning( disable : 4101 )
+
+// Disable warnings about possible loss of data, since "we know what
+// we are doing" and fixing them correctly would require too much 
+// time from one of us. (Maybe this should be a student exercise.)
+#pragma warning( disable : 4244 )
+
+// Disable warnings about macros that are not defined or defined 
+// differently after the pre-compiled header.  This is typically
+// for some of the *nix OSs, so we just ignore them.
+#pragma warning( disable : 4603 )
+
+// Disable warning about protected copy ctor or assignment ops
 #pragma warning( disable : 4661 )  
 
 // Disable performance warning about casting to a bool
 #pragma warning( disable : 4800 )  
 
-// Disable warnings about multiple template instantiations (done for gcc)
-#pragma warning( disable : 4660 )  
-
-// Disable warnings about deprecated ISO confirming names (for some 
+// Disable warnings about deprecated ISO conforming names (for some 
 // reason defining fileno and fdopen to the right ones does not work 
 // in new versions of Visual Studio)
 #pragma warning( disable : 4996 )

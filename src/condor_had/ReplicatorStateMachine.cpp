@@ -716,8 +716,8 @@ ReplicatorStateMachine::killStuckDownloadingTransferer( time_t currentTime )
                  m_downloadTransfererMetadata.m_pid );
 		// sending SIGKILL signal, wrapped in daemon core function for
 		// portability
-    	if( daemonCore->Send_Signal( m_downloadTransfererMetadata.m_pid, 
-									 SIGKILL ) < 0 ) {
+    	if( !daemonCore->Send_Signal( m_downloadTransfererMetadata.m_pid, 
+									 SIGKILL ) ) {
         	dprintf( D_ALWAYS, 
                      "ReplicatorStateMachine::killStuckDownloadingTransferer"
                      " kill signal failed, reason = %s\n", strerror(errno));
@@ -761,8 +761,8 @@ ReplicatorStateMachine::killStuckUploadingTransferers( time_t currentTime )
                     uploadTransfererMetadata->m_pid );
 			// sending SIGKILL signal, wrapped in daemon core function for
         	// portability
-			if(daemonCore->Send_Signal( 
-				uploadTransfererMetadata->m_pid, SIGKILL ) < 0 ) {
+			if( !daemonCore->Send_Signal( 
+				uploadTransfererMetadata->m_pid, SIGKILL ) ) {
 				dprintf( D_ALWAYS, 
 						 "ReplicatorStateMachine::killStuckUploadingTransferers"
 						 " kill signal failed, reason = %s\n", strerror(errno));

@@ -91,8 +91,9 @@ if($mypid == 0) {
 	$ENV{CONDOR_CONFIG} = $secconfig;
 	# submit into local schedd (side a)
 
-	CondorTest::debug("Calling lib_auth_protocol job is  $result\n",1);
-	my $result = system("./x_lib_auth_protocol.pl $mypid \"protocol\" $mytestnegotiation_result $mycmdfile");
+	my $cmd = "./x_lib_auth_protocol.pl $mypid \"protocol\" $mytestnegotiation_result $mycmdfile";
+	CondorTest::debug("Calling $cmd\n",1);
+	my $result = system($cmd);
 	CondorTest::debug("Result of crafted lib_auth_protocol job is  $result\n",1);
 
 	system("cp *$corename* $mysaveme");

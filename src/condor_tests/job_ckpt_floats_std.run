@@ -135,8 +135,10 @@ args: 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000
 locals: -1.000000 -1.000000 -1.000000 -1.000000 -1.000000 -1.000000 -1.000000 -1.000000
 _EOX
 
-@CondorTest::expected_output = split '\n', $foo;
-push(@CondorTest::expected_output, "\n");
+my @expected_output = split '\n', $foo;
+push(@expected_output, "\n");
+
+CondorTest::SetExpected(\@expected_output);
 
 CondorTest::RegisterExitedSuccess( $testname,
 				   \&CondorTest::DefaultOutputTest );

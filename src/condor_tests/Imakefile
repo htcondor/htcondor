@@ -36,6 +36,7 @@ C_PLUS_FLAGS  = $(CFLAGS)
 all_symlink_target(../condor_scripts/Condor.pm,Condor.pm)
 all_symlink_target(../condor_scripts/CondorTest.pm,CondorTest.pm)
 all_symlink_target(../condor_scripts/CondorPersonal.pm,CondorPersonal.pm)
+all_symlink_target(../condor_scripts/CondorPubLogdirs.pm,CondorPubLogdirs.pm)
 all_symlink_target(../condor_scripts/safe_append.pl,safe_append.pl)
 all_symlink_target(../condor_scripts/batch_test.pl,batch_test.pl)
 
@@ -1872,6 +1873,10 @@ all:: compiler_list
 #if HAS_GNU_G77
 /* g77 never has recursion */
 F_COMPILER_TARGET(g77,$(GNU_G77),TESTSUITE_FLAGS_G77,0)
+#endif
+
+#if HAS_GNU_GFORTRAN
+F90_COMPILER_TARGET(gfortran,$(GNU_GFORTRAN),TESTSUITE_FLAGS_GFORTRAN,0)
 #endif
 
 #if HAS_VENDOR_F77

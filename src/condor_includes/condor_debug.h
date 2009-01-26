@@ -126,9 +126,9 @@ int fclose_wrapper( FILE *stream, int maxRetries );
 **	Definition of exception macro
 */
 #define EXCEPT \
-	_EXCEPT_Line = __LINE__; \
-	_EXCEPT_File = __FILE__; \
-	_EXCEPT_Errno = errno; \
+	_EXCEPT_Line = __LINE__, \
+	_EXCEPT_File = __FILE__,				\
+	_EXCEPT_Errno = errno,					\
 	_EXCEPT_
 
 /*
@@ -143,7 +143,7 @@ extern DLL_IMPORT_MAGIC char	*sys_errlist[];
 #endif
 
 extern int	_EXCEPT_Line;			/* Line number of the exception    */
-extern char	*_EXCEPT_File;			/* File name of the exception      */
+extern const char	*_EXCEPT_File;		/* File name of the exception      */
 extern int	_EXCEPT_Errno;			/* errno from most recent system call */
 extern int (*_EXCEPT_Cleanup)(int,int,char*);	/* Function to call to clean up (or NULL) */
 extern void _EXCEPT_(const char*, ...) CHECK_PRINTF_FORMAT(1,2);

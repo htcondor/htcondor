@@ -83,7 +83,7 @@
 #define GM_CLEANUP_CANCEL		30
 #define GM_CLEANUP_WAIT			31
 
-static char *GMStateNames[] = {
+static const char *GMStateNames[] = {
 	"GM_INIT",
 	"GM_REGISTER",
 	"GM_STDIO_UPDATE",

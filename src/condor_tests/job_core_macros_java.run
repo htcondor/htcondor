@@ -27,14 +27,15 @@ $testdesc =  'condor_submit macros - java U';
 $testname = "job_core_macros_java";
 
 
-@CondorTest::skipped_output_lines = ( 3, 4, 5, 6 );
-@CondorTest::expected_output =
+my @skipped_output_lines = ( 3, 4, 5, 6 );
+my @expected_output =
 (
 'foobar',
 '0',
 );
 
-
+CondorTest::SetExpected(\@expected_output);
+CondorTest::SetSkipped(\@skipped_output_lines);
 
 $ExitSuccessBase = sub {
 	my %info = @_;

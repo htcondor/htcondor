@@ -25,7 +25,8 @@ $cmd = 'job_ckpt_open-async-ckpt_std.cmd';
 $testdesc =  'Open Test';
 $testname = "job_ckpt_open-async-ckpt_std";
 
-@CondorTest::expected_output = ( 'completed successfully' );
+my @expected_output = ( 'completed successfully' );
+CondorTest::SetExpected(\@expected_output);
 
 CondorTest::RegisterExitedSuccess( $testname,
 				   \&CondorTest::DefaultOutputTest );

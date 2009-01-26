@@ -170,7 +170,7 @@ ReadUserLogState::GeneratePath( int rotation,
 {
 	// If we're not initializing and we're not initialized, something is wrong
 	if ( !initializing && !m_initialized ) {
-		return -1;
+		return false;
 	}
 
 	// Check the rotation parameter

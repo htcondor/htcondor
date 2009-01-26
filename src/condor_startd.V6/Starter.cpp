@@ -803,7 +803,7 @@ Starter::execDCStarter( ArgList const &args, Env const *env,
 	}
 	inherit_list[0] = &child_job_update_sock;
 
-	if( !daemonCore->Register_Socket(
+	if( daemonCore->Register_Socket(
 			s_job_update_sock,
 			"starter ClassAd update socket",
 			(SocketHandlercpp)&Starter::receiveJobClassAdUpdate,

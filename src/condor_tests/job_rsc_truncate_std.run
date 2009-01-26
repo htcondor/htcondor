@@ -25,7 +25,8 @@ $cmd = 'job_rsc_truncate_std.cmd';
 $testdesc =  'O_TRUNC Test';
 $testname = "job_rsc_truncate_std";
 
-@CondorTest::expected_output = ( 'SUCCESS' );
+my @expected_output = ( 'SUCCESS' );
+CondorTest::SetExpected(\@expected_output);
 
 CondorTest::RegisterExitedSuccess( $testname,
 				   \&CondorTest::DefaultOutputTest );

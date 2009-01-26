@@ -616,7 +616,11 @@ Scheduler::timeout()
 	SchedDInterval.setFinishTimeNow();
 
 	/* Reset our timer */
-	daemonCore->Reset_Timer(timeoutid,(int)SchedDInterval.getTimeToNextRun());
+	time_to_next_run = SchedDInterval.getTimeToNextRun();
+	if ( time_to_next_run > 0 ) {
+		time_to_next_run = 0;
+	}
+	daemonCore->Reset_Timer(timeoutid,time_to_next_run);
 }
 
 void
@@ -1941,11 +1945,16 @@ Scheduler::PeriodicExprHandler( void )
 	WalkJobQueue(PeriodicExprEval);
 
 	PeriodicExprInterval.setFinishTimeNow();
+
+	int time_to_next_run = PeriodicExprInterval.getTimeToNextRun();
+	if ( time_to_next_run < 0 ) {
+		time_to_next_run = 0;
+	}
 	dprintf(D_FULLDEBUG,"Evaluated periodic expressions in %.3fs, "
 			"scheduling next run in %ds\n",
 			PeriodicExprInterval.getLastDuration(),
-			PeriodicExprInterval.getTimeToNextRun());
-	daemonCore->Reset_Timer( periodicid, PeriodicExprInterval.getTimeToNextRun() );
+			time_to_next_run);
+	daemonCore->Reset_Timer( periodicid, time_to_next_run );
 }
 
 
@@ -4342,8 +4351,16 @@ Scheduler::actOnJobs(int, Stream* s)
 		return FALSE;
 	}
 
+		// We're seeing sporadic test suite failures where this
+		// CommitTransaction() appears to take a long time to
+		// execute. This dprintf() will help in debugging.
+	time_t before = time(NULL);
 	if( needs_transaction ) {
 		CommitTransaction();
+	}
+	time_t after = time(NULL);
+	if ( (after - before) > 5 ) {
+		dprintf( D_FULLDEBUG, "actOnJobs(): CommitTransaction() took %ld seconds to run\n", after - before );
 	}
 		
 	unsetQSock();
@@ -10700,13 +10717,26 @@ Scheduler::RegisterTimers()
 		wallclocktid = -1;
 	}
 
+		// We've seen a test suite run where the schedd never called
+		// PeriodicExprHandler(). Add some debug statements so that
+		// we know why if it happens again.
 	if (PeriodicExprInterval.getMinInterval()>0) {
 		int time_to_next_run = PeriodicExprInterval.getTimeToNextRun();
+		if ( time_to_next_run <= 0 ) {
+				// Can't use 0, because that means it's a one-time timer
+			time_to_next_run = 1;
+		}
 		periodicid = daemonCore->Register_Timer(
 			time_to_next_run,
 			time_to_next_run,
 			(Eventcpp)&Scheduler::PeriodicExprHandler,"PeriodicExpr",this);
+		dprintf( D_FULLDEBUG, "Registering PeriodicExprHandler(), next "
+				 "callback in %d seconds\n", time_to_next_run );
 	} else {
+		dprintf( D_FULLDEBUG, "Periodic expression evaluation disabled! "
+				 "(getMinInterval()=%f, PERIODIC_EXPR_INTERVAL=%d)\n",
+				 PeriodicExprInterval.getMinInterval(),
+				 param_integer("PERIODIC_EXPR_INTERVAL", 60) );
 		periodicid = -1;
 	}
 }

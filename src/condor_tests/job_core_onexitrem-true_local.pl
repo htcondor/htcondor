@@ -32,7 +32,7 @@ use CondorTest;
 
 $cmd = 'job_core_onexitrem-true_local.cmd';
 $testdesc =  'Condor submit policy test for ON_EXIT_REMOVE - local U';
-$testname = "job_core_onexitrem-true_local";
+$testname = "job_core_onexitrem_local";
 
 ##
 ## Status Values

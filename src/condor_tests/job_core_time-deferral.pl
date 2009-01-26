@@ -433,7 +433,7 @@ for ( $ctr = 0, $cnt = scalar(@deltas); $ctr < $cnt; $ctr++ ) {
 			CondorTest::debug("Test failure due to Condor Tool Failure <$cmd>\n",1);
 			exit(1);
 		}
-		CondorTest::debug("\n",1);
+		CondorTest::debug("Output from condor_q:\n".join("\n", @adarray)."\n",1);
 	};
 		
 	##

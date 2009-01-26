@@ -54,7 +54,7 @@
 #define GM_START				16
 #define GM_POLL_ACTIVE			17
 
-static char *GMStateNames[] = {
+static const char *GMStateNames[] = {
 	"GM_INIT",
 	"GM_REGISTER",
 	"GM_STDIO_UPDATE",

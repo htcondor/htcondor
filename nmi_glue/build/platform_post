@@ -31,7 +31,10 @@ GetOptions(
             'test-args=s' => \$opt_test_args,
             'git' => \$opt_git,
             'submit-xtests!' => \$opt_submit_xtests,
+			'tests-at-once=i' => \$opt_tests_at_once,
 );
+
+#print "Args into platform_post 1 $opt_without_tests 2 $opt_test_args 3 $opt_git 4 $opt_submit_xtests 5 $opt_tests_at_once\n";
 
 # we just want to chmod everything in the local directory (the
 # per-platform directory on the submit side, after everything was
@@ -131,7 +134,14 @@ my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime();
 my $cmd = "";
 my $cmd1 = "";
 my $cmd2 = "--platforms=$platform "; 
-my $cmd3 = "$notify_arg $opt_test_args $xtests_arg";
+my $cmd3 = "";
+if(defined $opt_tests_at_once) {
+	# hand off the concurrency test running back to condor_nmi_submit
+	$cmd3 = "$notify_arg $opt_test_args $xtests_arg --tests-at-once=$opt_tests_at_once";
+} else {
+	$cmd3 = "$notify_arg $opt_test_args $xtests_arg";
+}
+
 my $git_cmd_arg = (defined $opt_git ? "--git" : "");
 if($mode ne "workspace") {
 	if((! defined $opt_test_args) && ($wday == 6)) {

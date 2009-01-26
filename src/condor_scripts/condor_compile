@@ -305,7 +305,7 @@ if [ $# = 0 ]; then
 		exit 1
 	fi
 	echo "  where <command> is one of the following:"
-	echo "  gcc, g++, g77, cc, acc, c89, CC, f77, fort77, ld, "
+	echo "  gcc, g++, g77, gfortran, cc, acc, c89, CC, f77, fort77, ld, "
 	echo "  pgcc, pgf77, pgf90, or pghpf."
 	echo "  (on some platforms, f90 is also allowed)"
 	exit 1
@@ -354,6 +354,10 @@ if [ $myname = "g++" ]; then
 fi 
 
 if [ $myname = "g77" ]; then
+	invoke_linker $ARGS -B$CONDOR_LD_DIR/
+fi 
+
+if [ $myname = "gfortran" ]; then
 	invoke_linker $ARGS -B$CONDOR_LD_DIR/
 fi 
 
@@ -546,6 +550,10 @@ case $os in
 		if [ $myname = "f77" ]; then
 			invoke_linker $ARGS -B$CONDOR_LD_DIR/
 		fi 
+
+		if [ $myname = "gfortran" ]; then
+			invoke_linker $ARGS -B$CONDOR_LD_DIR/
+		fi 
 		
 		;;
 esac
@@ -557,7 +565,7 @@ esac
 		exit 1
 	fi
 	echo "  where <command> is one of the following:"
-	echo "  gcc, g++, g77, cc, acc, c89, CC, f77, fort77, ld, "
+	echo "  gcc, g++, g77, gfortran, cc, acc, c89, CC, f77, fort77, ld, "
 	echo "  pgcc, pgf77, pgf90, or pghpf."
 	echo "  (on some platforms, f90 is also allowed)"
 	exit 1

@@ -36,7 +36,7 @@ dprintf(int, const char* format, ...)
 }
 
 int	_EXCEPT_Line;
-char*	_EXCEPT_File;
+const char*	_EXCEPT_File;
 int	_EXCEPT_Errno;
 
 extern "C" void
