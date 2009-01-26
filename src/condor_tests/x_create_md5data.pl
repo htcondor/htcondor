@@ -34,7 +34,7 @@ open(DATA,">$filenm") || die "Can't open output file $!\n";
 
 my $rows = $megs;
 my $rowsz = 1048576;
-my $seed_char = int(rand (ord("~") - ord(" ") + 1)) + ord(" ");
+my $seed_char = int(rand ((ord("~") - ord(" ")) + 1)) + ord(" ");
 my $start_char = chr($seed_char);
 
 print "Start char -$start_char-\n";
@@ -49,21 +49,18 @@ if( !$filenm )
 }
 
 
-my $rowchar = $seed_char++;
+my $rowchar = $seed_char;
 my $row = "";
 
 
-if($seed_char == ord("~"))
-{
-	$seed_char = ord(" ");
-}
-
 foreach (1..$rowsz)
 {
-	$row .= chr($rowchar++);
+	$row .= chr($rowchar);
 	if($rowchar == ord("~"))
 	{	
 		$rowchar = ord(" ");
+	} else {
+		$rowchar++;
 	}
 }
 
