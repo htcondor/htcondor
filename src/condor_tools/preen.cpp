@@ -224,6 +224,11 @@ check_spool_dir()
 	StringList 		well_known_list, bad_spool_files;
 	Qmgr_connection *qmgr;
 
+	if ( ValidSpoolFiles == NULL ) {
+		dprintf( D_ALWAYS, "Not cleaning spool directory: No VALID_SPOOL_FILES defined\n");
+		return;
+	}
+
     history = param("HISTORY");
     history = condor_basename(history);
     history_length = strlen(history);
@@ -245,7 +250,7 @@ check_spool_dir()
 
 	// connect to the Q manager
 	if (!(qmgr = ConnectQ (0))) {
-		dprintf( D_ALWAYS, "Not cleaning spool directory.\n" );
+		dprintf( D_ALWAYS, "Not cleaning spool directory: Can't contact schedd\n" );
 		return;
 	}
 
@@ -531,7 +536,7 @@ check_log_dir()
 	Directory dir(Log, PRIV_ROOT);
 	StringList invalid;
 
-	invalid.initializeFromString (InvalidLogFiles);
+	invalid.initializeFromString (InvalidLogFiles ? InvalidLogFiles : "");
 
 	while( (f = dir.Next()) ) {
 		if( invalid.contains(f) ) {
@@ -593,13 +598,9 @@ init_params()
 		}
     }
 
-	if( (ValidSpoolFiles = param("VALID_SPOOL_FILES")) == NULL ) {
-		EXCEPT ( "VALID_SPOOL_FILES not specified in config file" );
-	}
+	ValidSpoolFiles = param("VALID_SPOOL_FILES");
 
-	if( (InvalidLogFiles = param("INVALID_LOG_FILES")) == NULL ) {
-		EXCEPT ( "INVALID_LOG_FILES not specified in config file" );
-	}
+	InvalidLogFiles = param("INVALID_LOG_FILES");
 
 	if( (MailPrg = param("MAIL")) == NULL ) {
 		EXCEPT ( "MAIL not specified in config file" );
