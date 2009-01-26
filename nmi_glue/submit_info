@@ -92,8 +92,7 @@ prereqs   = tar-1.14, m4-1.4.1, flex-2.5.4a, make-3.80, bison-1.25, perl-5.8.5
 ########################################
 [
 platforms = \
-            x86_winnt_5.1, ppc64_sles_9, ps3_ydl_5.0, x86_rhap_5, x86_64_rhap_5
-x_test_platforms_x86_rhap_5 = unmanaged-x86_rhap_5.1, x86_64_fc_5, x86_fc_5
+            x86_winnt_5.1, ppc64_sles_9, ps3_ydl_5.0
 ]
 
 
@@ -153,13 +152,14 @@ test_append_prereqs = java-1.4.2_05
 [
 platforms = x86_rhap_5
 test_append_prereqs = java-1.4.2_05
-x_test_platforms_x86_rhap_5 = unmanaged-x86_rhap_5.1
+x_test_platforms_x86_rhap_5 = unmanaged-x86_rhap_5.1, x86_64_fc_5, x86_fc_5, \
+		x86_64_fc_8, x86_64_fc_9
 ]
 
 [
 platforms = x86_64_rhap_5
 test_append_prereqs = java-1.4.2_05
-#x_test_platforms_x86_64_rhap_5 = x86_64_fc_4
+x_test_platforms_x86_64_rhap_5 = x86_64_fc_8, x86_64_fc_9
 ]
 
 [
@@ -188,7 +188,8 @@ testplatforms = unmanaged-x86_rhap_5.1
 ]
 
 [
-testplatforms = x86_fc_4,  x86_fc_5, x86_rhap_5.1, x86_64_fc_5
+testplatforms = x86_fc_4,  x86_fc_5, x86_rhap_5.1, x86_64_fc_5, \
+		x86_64_fc_8, x86_64_fc_9
 testprereqs = tar-1.14, make-3.80
 testonly_append_prereqs = java-1.5.0_08
 ]
