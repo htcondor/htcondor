@@ -239,6 +239,9 @@ check_spool_dir()
 		// SCHEDD.lock: High availability lock file.  Current
 		// manual recommends putting it in the spool, so avoid it.
 	well_known_list.append( "SCHEDD.lock" );
+		// These are Quill-related files
+	well_known_list.append( ".quillwritepassword" );
+	well_known_list.append( ".pgpass" );
 
 	// connect to the Q manager
 	if (!(qmgr = ConnectQ (0))) {
