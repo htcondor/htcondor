@@ -39,10 +39,10 @@ REM exist in every development environment.
 REM ======================================================================
 if exist %DEFAULTS%\CoreWin.vsprops.old goto :restore
 echo *** Replacing the standard Windows libraries.
-move /y %DEFAULTS%\CoreWin.vsprops %DEFAULTS%\CoreWin.vsprops.old >NUL
-copy /y CondorCoreWin.vsprops %DEFAULTS%\CoreWin.vsprops >NUL
+move /y %DEFAULTS%\CoreWin.vsprops %DEFAULTS%\CoreWin.vsprops.old >NUL 2>&1
+copy /y CondorCoreWin.vsprops %DEFAULTS%\CoreWin.vsprops >NUL 2>&1
 exit /b 2
 :restore
 echo *** Restoring the standard libraries.
-move /y %DEFAULTS%\CoreWin.vsprops.old %DEFAULTS%\CoreWin.vsprops >NUL
+move /y %DEFAULTS%\CoreWin.vsprops.old %DEFAULTS%\CoreWin.vsprops >NUL 2>&1
 exit /b 1
