@@ -571,7 +571,7 @@ Scheduler::timeout()
 		/* BEGIN */
 		/* remove this debugging block when #78/#85 is resolved */
 		dprintf(D_FULLDEBUG, 
-			"Scheduler::timeout() information to debug #78/#85");
+			"Scheduler::timeout() information to debug #78/#85\n");
 		dprintf(D_FULLDEBUG, "\tSchedDInterval.getLastDuration() = %f\n",
 			SchedDInterval.getLastDuration());
 		dprintf(D_FULLDEBUG, "\tSchedDInterval.getTimeslice() = %f\n",
