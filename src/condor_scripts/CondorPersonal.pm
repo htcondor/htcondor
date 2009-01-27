@@ -245,7 +245,7 @@ sub StartCondor
 	$topleveldir = $topleveldir . "/" . $mpid . $version;
 	system("mkdir -p $topleveldir");
 
-	my $procdaddress = $mpid . $version;
+	$procdaddress = $mpid . $version;
 
 
 	CondorPersonal::ParsePersonalCondorParams($paramfile);
