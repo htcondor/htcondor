@@ -673,58 +673,6 @@ AC_SUBST(ext_root,$ac_cv_externals)
 AC_SUBST(has_externals,NO)
 ])
 
-# Now, try to find condor_analyze binaries.  In any directory we're
-# searching, we look for condor_analyze.(strip|static|release).  If
-# any type-specific version doesn't exist, we look for
-# "condor_analyze" and try to use that.  We first see if the
-# --with-condor_analyze command-line option is set, and if so, look in
-# there.  If that fails for any reason, we treat it as a fatal error.
-# If that's not set, we look in <externals>/install/condor_analyze.
-# If we find anything, we use it, otherwise, we look in
-# /usr/local/condor/analyze.  If we still didn't find anything, we
-# just print a message, assume the user doesn't want to worry about
-# condor_analyze, and set HAS_CONDOR_ANALYZE to "NO" in externals.cf.
-AC_MSG_CHECKING([for condor_analyze])
-ac_condor_analyze_dir=""
-ac_has_condor_analyze=NO
-AC_ARG_WITH(condor_analyze,
- AC_HELP_STRING([--with-condor_analyze=DIR],
- [full path to the directory containing pre-compiled versions of condor_analyze to include in the Condor release tarballs (default is to search <externals>/install/condor_analyze, then if nothing was found, /usr/local/condor/analyze)]),
- [if test $withval = no ; then
-    ac_has_condor_analyze=NO
-  else
-    if test -d "$withval" ; then
-      CONDOR_VERIFY_ANALYZE_DIR([$withval])
-      if test $ac_has_condor_analyze = "NO" ; then
-        AC_MSG_RESULT([ERROR])
-        AC_MSG_ERROR([directory specified with --with-condor_analyze ($withval) does not contain any condor_analyze binaries])
-      fi
-    else
-      AC_MSG_RESULT([ERROR])
-      AC_MSG_ERROR([directory specified with --with-condor_analyze ($withval) does not exist])
-    fi
-  fi
- ],
- [
-  if test "x$ac_cv_has_externals" = "xYES" ; then
-    CONDOR_VERIFY_ANALYZE_DIR([$ac_cv_externals/install/condor_analyze])
-  fi
-  if test "x$ac_has_condor_analyze" = "xNO" ; then
-    CONDOR_VERIFY_ANALYZE_DIR([/usr/local/condor/analyze])
-  fi
- ]
-)
-if test "x$ac_has_condor_analyze" = "xYES" ; then
-  AC_DEFINE([HAS_CONDOR_ANALYZE],[1],[Define if condor_analyze is available])
-  AC_MSG_RESULT([$ac_condor_analyze_dir])
-  CONDOR_SET_ANALYZE([release],fatal)
-  CONDOR_SET_ANALYZE([strip],fatal)
-  CONDOR_SET_ANALYZE([static],no)
-else
-  AC_MSG_RESULT([no])
-fi
-
-
 AC_ARG_VAR(TMPDIR, [Directory for temp files during Condor build [/tmp]])
 if test "$ac_cv_env_TMPDIR_set" != set; then
     TMPDIR=/tmp
