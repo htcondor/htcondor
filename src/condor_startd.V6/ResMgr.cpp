@@ -770,6 +770,16 @@ ResMgr::buildSlot( int slot_id, StringList* list, int type, bool except )
 	MyString execute_dir, partition_id;
 	GetConfigExecuteDir( slot_id, &execute_dir, &partition_id );
 
+	if ( list == NULL) {
+	  // give everything the default share and return
+	  
+	  cpus = compute_cpus( default_share );
+	  ram = compute_phys_mem( default_share );
+	  swap = default_share;
+	  disk = default_share;
+	  
+	  return new CpuAttributes( m_attr, type, cpus, ram, swap, disk, execute_dir, partition_id );
+	}
 		// For this parsing code, deal with the following example
 		// string list:
 		// "c=1, r=25%, d=1/4, s=25%"
