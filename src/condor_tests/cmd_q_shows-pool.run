@@ -133,7 +133,7 @@ CondorTest::debug("Looking for sched1($sched1) and sched2($sched2)\n",1);
 
 # allow time for all the nodes to update the collector
 # by allowing N attempts
-my $nattempts = 5;
+my $nattempts = 8;
 my $count = 0;
 my $done = 0;
 my $found1 = 0;
@@ -171,7 +171,7 @@ if($bail != 1) {
 			}
 
 			$count = $count + 1;
-			sleep($count * 2);
+			sleep($count * 5);
 		}
 		if($found1 == 0) {
 			last;

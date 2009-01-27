@@ -252,6 +252,7 @@ if($bail == 1) {
     	}
 	
 		# 4 are busy so 4 should be claimed....
+		# some could be evicted 2 or more is fine
 	
 		$numclaimed = 0;
 		foreach $line (@adarray) {
@@ -264,7 +265,7 @@ if($bail == 1) {
 			}
 		}
 
-		if($numclaimed == 4) {
+		if($numclaimed >= 2) {
 			CondorTest::debug("Condor_status -claimed found the expected 4 slots\n",1);
 			$done = 1;
 			last;
@@ -273,7 +274,7 @@ if($bail == 1) {
 		}
 
 		$count = $count + 1;
-		sleep($count * 2);
+		sleep($count * 5);
 	}
 }
 

@@ -1051,7 +1051,7 @@ sub runCondorTool
 			$done = 1;
 			# There are times like the security tests when we want
 			# to see the stderr even when the command works.
-			if( $force ne "" ) {
+			if( (defined $force) && ($force ne "" )) {
 				if( !open( MACH, "<$catch" )) { 
 					warn "Can't look at command output <$catch>:$!\n";
 				} else {

@@ -230,7 +230,7 @@ if($bail != 1) {
 		}
 
 		$count = $count + 1;
-		sleep($count * 2);
+		sleep($count * 5);
 	}
 }
  
@@ -273,7 +273,7 @@ if($bail == 1) {
 		}
 
 		$count = $count + 1;
-		sleep($count * 2);
+		sleep($count * 5);
 	}
 }
 
