@@ -658,6 +658,20 @@ store_cred(const char* user, const char* pw, int mode, Daemon* d, bool force) {
 	int return_val;
 	Sock* sock = NULL;
 
+		// to help future debugging, print out the mode we are in
+	static const int mode_offset = 100;
+	static const char *mode_name[] = {
+		ADD_CREDENTIAL,
+		DELETE_CREDENTIAL,
+		QUERY_CREDENTIAL
+#ifdef WIN32
+		, CONFIG_CREDENTIAL
+#endif
+	};	
+	dprintf ( D_ALWAYS, 
+		"STORE_CRED: In mode '%s'\n", 
+		mode_name[mode - mode_offset] );
+	
 		// If we are root / SYSTEM and we want a local daemon, 
 		// then do the work directly to the local registry.
 		// If not, then send the request over the wire to a remote credd or schedd.
@@ -702,6 +716,9 @@ store_cred(const char* user, const char* pw, int mode, Daemon* d, bool force) {
 		if( !sock ) {
 			dprintf(D_ALWAYS, 
 				"STORE_CRED: Failed to start command.\n");
+			dprintf(D_ALWAYS, 
+				"STORE_CRED: Unable to contact the %s.\n", 
+				daemonString ( d->type () ) );
 			return FAILURE;
 		}
 

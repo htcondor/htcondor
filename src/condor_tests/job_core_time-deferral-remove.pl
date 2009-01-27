@@ -149,6 +149,13 @@ $timed = sub {
 	$cluster = $info{"cluster"};
 	$job = $info{"job"};
 
+	if ( !defined( $info{"cluster"} ) || !defined( $info{"job"} ) ) {
+		CondorTest::debug("Haven't seen submit event yet at timeout!\n,1");
+		CondorTest::debug("stat and contents of user log ".$info{"log"}.":\n",1);
+		system( "stat " . $info{"log"} );
+		system( "cat " . $info{"log"} );
+	}
+
 	##
 	## Ignore multiple call backs
 	##

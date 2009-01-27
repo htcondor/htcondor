@@ -47,7 +47,8 @@ LocalServer::initialize(const char* pipe_addr)
 						NULL);                                      // default security
 	if (m_pipe == INVALID_HANDLE_VALUE) {
 		dprintf(D_ALWAYS,
-		        "CreateNamedPipe error: %u\n",
+		        "CreateNamedPipe(%s) error: %u\n",
+				pipe_addr,
 		        GetLastError());
 		return false;
 	}

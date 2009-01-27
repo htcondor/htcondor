@@ -1571,7 +1571,8 @@ int DaemonCore::Create_Pipe( int *pipe_ends,
 				0,                          // default wait timeout (not used)
 				NULL);                      // we mark handles inheritable in Create_Process
 	if (w == INVALID_HANDLE_VALUE) {
-		dprintf(D_ALWAYS, "CreateNamedPipe error: %d\n", GetLastError());
+		dprintf(D_ALWAYS, "CreateNamedPipe(%s) error: %d\n", 
+			pipe_name.Value (), GetLastError());
 		return FALSE;
 	}
 	HANDLE r =
@@ -1584,7 +1585,8 @@ int DaemonCore::Create_Pipe( int *pipe_ends,
 			   NULL);                   // no template file
 	if (r == INVALID_HANDLE_VALUE) {
 		CloseHandle(w);
-		dprintf(D_ALWAYS, "CreateFile error on named pipe: %d\n", GetLastError());
+		dprintf(D_ALWAYS, "CreateFile(%s) error on named pipe: %d\n", 
+			pipe_name.Value(), GetLastError());
 		return FALSE;
 	}
 	read_handle = new ReadPipeEnd(r, overlapped_read_flag, nonblocking_read, psize);
