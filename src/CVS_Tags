@@ -13,6 +13,11 @@
   command-line, they will except when accessing an uninitialized mySsubsystem
   structure.  The branch is based on V7_2-branch.
 
+12/23/07 V7_2_0
+  The offical tag for 7.2.0, from the V7_2_0-branch.
+  Version string: $CondorVersion: 7.2.0 Dec 19 2008 BuildID: 121001 $
+  Original build tag: BUILD-V7_2_0-branch-2008-12-19
+
 12/18/2008 V7_2-use_windows_file_extensions-branch
   Branch for detectecting Windows script types by file extension, based
   on V7_2-branch.
