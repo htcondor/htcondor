@@ -57,7 +57,7 @@ return true on success, false on failure.
 
 
 */
-bool update_job_status( classad::ClassAd const & orig, classad::ClassAd & newgrid, classad::ClassAd &update);
+bool update_job_status( classad::ClassAd const & orig, classad::ClassAd & newgrid, classad::ClassAd &update, char* custom_attrs);
 
 /*
  Returns true if the original job is on hold only because it is mirroring

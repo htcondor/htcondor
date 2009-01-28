@@ -266,11 +266,13 @@ static void set_job_status_held(classad::ClassAd const &orig,classad::ClassAd &u
 	update.InsertAttr(ATTR_NUM_SYSTEM_HOLDS, numholds);
 }
 
-bool update_job_status( classad::ClassAd const & orig, classad::ClassAd & newgrid, classad::ClassAd & update)
+bool update_job_status( classad::ClassAd const & orig, classad::ClassAd & newgrid, classad::ClassAd & update, char* custom_attrs)
 {
 	// List courtesy of condor_gridmanager/condorjob.C CondorJob::ProcessRemoteAd
 	// Added ATTR_SHADOW_BIRTHDATE so condor_q shows current run time
 
+	StringList custom_attr_list;
+	char* attr;
 	const char *attrs_to_copy[] = {
 		ATTR_BYTES_SENT,
 		ATTR_BYTES_RECVD,
@@ -362,6 +364,20 @@ bool update_job_status( classad::ClassAd const & orig, classad::ClassAd & newgri
 		if( newgridexpr != NULL && (origexpr == NULL || ! (*origexpr == *newgridexpr) ) ) {
 			classad::ExprTree * toinsert = newgridexpr->Copy(); 
 			update.Insert(attrs_to_copy[index], toinsert);
+		}
+	}
+
+	if (custom_attrs != NULL) {
+		custom_attr_list.initializeFromString(custom_attrs);
+		custom_attr_list.remove("");
+		custom_attr_list.rewind();
+		while ((attr = custom_attr_list.next())) {
+			classad::ExprTree * origexpr = orig.Lookup(attr);
+			classad::ExprTree * newgridexpr = newgrid.Lookup(attr);
+			if( newgridexpr != NULL && (origexpr == NULL || ! (*origexpr == *newgridexpr) ) ) {
+				classad::ExprTree * toinsert = newgridexpr->Copy(); 
+				update.Insert(attr, toinsert);
+			}
 		}
 	}
 

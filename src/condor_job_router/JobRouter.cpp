@@ -71,6 +71,7 @@ JobRouter::JobRouter(Scheduler *scheduler): m_jobs(5000,hashFuncStdString,reject
 
 	m_router_lock_fd = -1;
 	m_router_lock = NULL;
+	m_custom_attrs = NULL;
 
 #if HAVE_JOB_HOOKS
 	m_hook_mgr = NULL;
@@ -316,6 +317,8 @@ JobRouter::config() {
 		// Whether to release the source job if the routed job
 		// goes on hold
 	m_release_on_hold = param_boolean("JOB_ROUTER_RELEASE_ON_HOLD", true);
+
+	m_custom_attrs = param("JOB_ROUTER_ATTRS_TO_COPY");
 
 		// default is no maximum (-1)
 	m_max_jobs = param_integer("JOB_ROUTER_MAX_JOBS",-1);
@@ -1397,7 +1400,7 @@ JobRouter::FinishCheckSubmittedJobStatus(RoutedJob *job) {
 	}
 
 	job->SetDestJobAd(ad);
-	if(!update_job_status(*src_ad,job->dest_ad,job->src_ad)) {
+	if(!update_job_status(*src_ad,job->dest_ad,job->src_ad,m_custom_attrs)) {
 		dprintf(D_ALWAYS,"JobRouter failure (%s): failed to update job status\n",job->JobDesc().c_str());
 	}
 	else if(ClassAdHasDirtyAttributes(&job->src_ad)) {
