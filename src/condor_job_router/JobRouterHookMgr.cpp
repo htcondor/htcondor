@@ -705,7 +705,7 @@ ExitClient::hookExited(int exit_status) {
 
 	if (m_std_err.Length())
 	{
-		dprintf(D_ALWAYS, "ExitClient::hookExited (%s): Warning, hook ",
+		dprintf(D_ALWAYS, "ExitClient::hookExited (%s): Warning, hook "
 				"%s (pid %d) printed to stderr: %s\n",
 				m_routed_job->JobDesc().c_str(), m_hook_path,
 				(int)m_pid, m_std_err.Value());
