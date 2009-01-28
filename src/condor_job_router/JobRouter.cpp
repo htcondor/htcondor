@@ -1352,7 +1352,7 @@ JobRouter::FinishCheckSubmittedJobStatus(RoutedJob *job) {
 			GracefullyRemoveJob(job);
 			return;
 		}
-		dprintf(D_FULLDEBUG,"JobRouter (%s): submitted job has not yet appeared in job queue mirror (submitted %d seconds ago)\n",job->JobDesc().c_str(),age);
+		dprintf(D_FULLDEBUG,"JobRouter (%s): submitted job has not yet appeared in job queue mirror or was removed by user (submitted %d seconds ago)\n",job->JobDesc().c_str(),age);
 		return;
 	}
 
