@@ -109,6 +109,10 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 #include "valgrind.h"
 #endif
 
+#ifdef HAVE_SCHED_SETAFFINITY
+#include <sched.h>
+#endif
+
 // special errno values that may be returned from Create_Process
 const int DaemonCore::ERRNO_EXEC_AS_ROOT = 666666;
 const int DaemonCore::ERRNO_PID_COLLISION = 666667;
@@ -5595,7 +5599,8 @@ public:
 		const priv_state &the_priv,
 		int the_want_command_port,
 		const sigset_t *the_sigmask,
-		size_t *core_hard_limit
+		size_t *core_hard_limit,
+		int		*affinity_mask
 	): m_errorpipe(the_errorpipe), m_args(the_args),
 	   m_job_opt_mask(the_job_opt_mask), m_env(the_env),
 	   m_inheritbuf(the_inheritbuf), m_forker_pid(the_forker_pid),
@@ -5607,7 +5612,8 @@ public:
 	   m_inheritFds(the_inheritFds), m_nice_inc(the_nice_inc),
 	   m_priv(the_priv), m_want_command_port(the_want_command_port),
 	   m_sigmask(the_sigmask), m_unix_args(0), m_unix_env(0),
-	   m_core_hard_limit(core_hard_limit)
+	   m_core_hard_limit(core_hard_limit),
+	   m_affinity_mask(affinity_mask)
 	{
 	}
 
@@ -5658,6 +5664,7 @@ private:
 	char **m_unix_args;
 	char **m_unix_env;
 	size_t *m_core_hard_limit;
+	const int    *m_affinity_mask;
 	Env m_envobject;
 };
 
@@ -6177,6 +6184,23 @@ void CreateProcessForkit::exec() {
 		}
 	}
 
+#ifdef HAVE_SCHED_SETAFFINITY
+	// Set the processor affinity
+	if (m_affinity_mask) {
+		cpu_set_t mask;
+		CPU_ZERO(&mask);
+		for (int i = 1; i < m_affinity_mask[0]; i++) {
+			CPU_SET(m_affinity_mask[i], &mask);
+		}
+		dprintf(D_FULLDEBUG, "Calling sched_setaffinity\n");
+		// first argument of pid 0 means self.
+		int result = sched_setaffinity(0, sizeof(mask), &mask);
+		if (result != 0) {
+			dprintf(D_ALWAYS, "Error calling sched_setaffinity: %d\n", result);
+		}
+	}
+#endif
+
 	if( DebugFlags & D_DAEMONCORE ) {
 			// This MyString is scoped to free itself before the call to
 			// exec().  Otherwise, it would be a leak.
@@ -6342,7 +6366,8 @@ int DaemonCore::Create_Process(
 			int           nice_inc,
 			sigset_t      *sigmask,
 			int           job_opt_mask,
-			size_t        *core_hard_limit
+			size_t        *core_hard_limit,
+			int			  *affinity_mask
             )
 {
 	int i, j;
@@ -7062,7 +7087,8 @@ int DaemonCore::Create_Process(
 			priv,
 			want_command_port,
 			sigmask,
-			core_hard_limit);
+			core_hard_limit,
+			affinity_mask);
 
 		newpid = forkit.fork_exec();
 	}

@@ -1007,7 +1007,8 @@ class DaemonCore : public Service
         int           nice_inc             = 0,
         sigset_t      *sigmask             = NULL,
         int           job_opt_mask         = 0,
-        size_t        *core_hard_limit     = NULL
+        size_t        *core_hard_limit     = NULL,
+		int			  *affinity_mask	   = NULL
         );
 
     //@}
