@@ -2370,7 +2370,25 @@ AC_SEARCH_LIBS([dlopen], [dl],
   AC_DEFINE([HAVE_DLOPEN], [1], [dlopen function is available]))
 
 AC_CHECK_FUNCS(backtrace)
-AC_CHECK_FUNCS(sched_setaffinity)
+#########
+# determine if OS has an sched_setaffinity.  Note that Linux has
+# three different interfaces to this function over the years.  We
+# just check for the most recent.
+#########
+AC_MSG_CHECKING([if os supports newest sched_setaffinity])
+
+echo "#include <sched.h>" > affinity_test.cpp
+echo "void f() {cpu_set_t s;sched_setaffinity(0,1024, &s);}" >> affinity_test.cpp
+_test_output=`gcc -c affinity_test.cpp 2>&1`
+_test_status=$?
+if test $_test_status -eq 0 
+then
+  AC_MSG_RESULT([yes])
+  AC_DEFINE([HAVE_SCHED_SETAFFINITY], [1], [does os support the sched_setaffinity])
+else
+  AC_MSG_RESULT([no])
+fi
+rm -f affinity_test.cpp affinity_test.o
 
 # If we can't find clone() on linux (for fast forking from large
 # processes), then somebody better understand why; so produce a fatal
