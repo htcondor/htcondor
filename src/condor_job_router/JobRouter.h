@@ -117,6 +117,7 @@ class JobRouter: public Service {
 	int m_max_job_mirror_update_lag; // time before giving up on mirror to update
 
 	bool m_enable_job_routing;
+	bool m_leave_src_untouched;
 
 	int m_job_router_entries_refresh;
 	int m_job_router_refresh_timer;

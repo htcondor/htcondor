@@ -58,6 +58,7 @@ const int THROTTLE_UPDATE_INTERVAL = 600;
 
 JobRouter::JobRouter(Scheduler *scheduler): m_jobs(5000,hashFuncStdString,rejectDuplicateKeys) {
 	m_scheduler = scheduler;
+	m_leave_src_untouched = true;
 	m_job_router_polling_timer = -1;
 	m_job_router_polling_period = 10;
 	m_enable_job_routing = true;
@@ -311,6 +312,10 @@ JobRouter::config() {
 	if(!m_enable_job_routing) return;
 
 	SetRoutingTable(new_routes);
+
+		// Whether to leave the source job untouched when yielding
+		// control
+	m_leave_src_untouched = param_boolean("JOB_ROUTER_LEAVE_SRC_UNTOUCHED", true);
 
 		// default is no maximum (-1)
 	m_max_jobs = param_integer("JOB_ROUTER_MAX_JOBS",-1);
@@ -756,7 +761,7 @@ JobRouter::AdoptOrphans() {
 
 		MyString error_details;
 		PROC_ID src_proc_id = getProcByString(src_key.c_str());
-		if(!yield_job(*src_ad,NULL,NULL,false,src_proc_id.cluster,src_proc_id.proc,&error_details,JobRouterName().c_str())) {
+		if(!yield_job(*src_ad,NULL,NULL,false,src_proc_id.cluster,src_proc_id.proc,&error_details,JobRouterName().c_str(), m_leave_src_untouched)) {
 			dprintf(D_ALWAYS,"JobRouter (src=%s): failed to yield orphan job: %s\n",
 					src_key.c_str(),
 					error_details.Value());
@@ -1700,7 +1705,7 @@ JobRouter::FinishCleanupJob(RoutedJob *job) {
 	if(job->is_claimed) {
 		MyString error_details;
 		bool keep_trying = true;
-		if(!yield_job(job->src_ad,NULL,NULL,job->is_done,job->src_proc_id.cluster,job->src_proc_id.proc,&error_details,JobRouterName().c_str(),&keep_trying))
+		if(!yield_job(job->src_ad,NULL,NULL,job->is_done,job->src_proc_id.cluster,job->src_proc_id.proc,&error_details,JobRouterName().c_str(),m_leave_src_untouched,&keep_trying))
 		{
 			dprintf(D_ALWAYS,"JobRouter (%s): failed to yield job: %s\n",
 					job->JobDesc().c_str(),
