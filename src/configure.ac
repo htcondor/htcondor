@@ -2370,6 +2370,7 @@ AC_SEARCH_LIBS([dlopen], [dl],
   AC_DEFINE([HAVE_DLOPEN], [1], [dlopen function is available]))
 
 AC_CHECK_FUNCS(backtrace)
+AC_CHECK_FUNCS(sched_setaffinity)
 
 # If we can't find clone() on linux (for fast forking from large
 # processes), then somebody better understand why; so produce a fatal
