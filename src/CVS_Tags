@@ -10,6 +10,10 @@
 
 12/17/2008 V7_2-new_classads_for_windows-branch
   Branch for new class ads on Windows, based on V7_2-branch.
+12/23/07 V7_2_0
+  The offical tag for 7.2.0, from the V7_2_0-branch.
+  Version string: $CondorVersion: 7.2.0 Dec 19 2008 BuildID: 121001 $
+  Original build tag: BUILD-V7_2_0-branch-2008-12-19
 
 12/08/2008 V7_2_0-branch
   Branch for the 7.2.0 release, based from V7_2-branch.
