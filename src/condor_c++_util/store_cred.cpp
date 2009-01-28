@@ -710,6 +710,7 @@ store_cred(const char* user, const char* pw, int mode, Daemon* d, bool force) {
 				sock = my_schedd.startCommand(cmd, Stream::reli_sock, 0);
 			}
 		} else {
+			dprintf(D_FULLDEBUG, "Starting a command on a REMOTE schedd\n");
 			sock = d->startCommand(cmd, Stream::reli_sock, 0);
 		}
 		
@@ -717,8 +718,7 @@ store_cred(const char* user, const char* pw, int mode, Daemon* d, bool force) {
 			dprintf(D_ALWAYS, 
 				"STORE_CRED: Failed to start command.\n");
 			dprintf(D_ALWAYS, 
-				"STORE_CRED: Unable to contact the %s.\n", 
-				daemonString ( d->type () ) );
+				"STORE_CRED: Unable to contact the REMOTE schedd.\n");
 			return FAILURE;
 		}
 

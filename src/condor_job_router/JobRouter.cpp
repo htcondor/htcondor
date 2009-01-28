@@ -1263,9 +1263,51 @@ static bool ClassAdHasDirtyAttributes(classad::ClassAd *ad) {
 }
 
 void
-JobRouter::UpdateJobStatus(RoutedJob *job) {
+JobRouter::UpdateRoutedJobStatus(RoutedJob *job, classad::ClassAd update) {
+	classad::ClassAd *new_ad = NULL;
 	classad::ClassAdCollection *ad_collection = m_scheduler->GetClassAds();
+
+	// The dest_key (dest_ad) may have changed while we are running,
+	// meaning we'll be out of sync with the ClassAdCollection. To
+	// avoid writing stale data back into the collection we MUST pull
+	// from it before updating anything.
+	new_ad = ad_collection->GetClassAd(job->dest_key);
+	if (NULL == new_ad)
+	{
+		dprintf (D_ALWAYS, "JobRouter failure (%s): Ad %s disappeared "
+				"before update finished.  Nothing will be"
+				"updated.\n", job->JobDesc().c_str(), job->dest_key.c_str());
+		GracefullyRemoveJob(job);
+		return;
+	}
+	job->SetDestJobAd(new_ad);
+
+	// Reset the dirty bits so only new or updated fields are
+	// sent to the job queue.
+	job->dest_ad.ClearAllDirtyFlags();
+
+	// Update the routed job's status
+	if (false == job->dest_ad.Update(update))
+	{
+		dprintf(D_ALWAYS, "JobRouter failure (%s): Failed to update"
+				"routed job status.\n", job->JobDesc().c_str());
+		GracefullyRemoveJob(job);
+		return;
+	}
+
+	// Send the updates to the job queue
+	if (false == PushUpdatedAttributes(job->dest_ad))
+	{
+		dprintf(D_ALWAYS, "JobRouter failure (%s): Failed to update "
+				"routed job status.\n", job->JobDesc().c_str());
+		GracefullyRemoveJob(job);
+		return;
+	}
+
+	// Update the local copy
 	ad_collection->UpdateClassAd(job->dest_key, &job->dest_ad);
+	dprintf(D_FULLDEBUG,"JobRouter (%s): updated routed job status\n",job->JobDesc().c_str());
+
 	FinishCheckSubmittedJobStatus(job);
 }
 
@@ -1276,13 +1318,6 @@ JobRouter::CheckSubmittedJobStatus(RoutedJob *job) {
 #if HAVE_JOB_HOOKS
 	if (NULL != m_hook_mgr)
 	{
-		// Update the job ad incase it's been updated elsewhere
-		classad::ClassAdCollection *ad_collection = m_scheduler->GetClassAds();
-		classad::ClassAd *ad = ad_collection->GetClassAd(job->dest_key);
-		if (NULL != ad)
-		{
-			job->SetDestJobAd(ad);
-		}
 		int rval = m_hook_mgr->hookUpdateJobInfo(job);
 		switch (rval)
 		{
@@ -1361,7 +1396,7 @@ JobRouter::FinishCheckSubmittedJobStatus(RoutedJob *job) {
 		dprintf(D_ALWAYS,"JobRouter failure (%s): failed to update job status\n",job->JobDesc().c_str());
 	}
 	else if(ClassAdHasDirtyAttributes(&job->src_ad)) {
-		if(!push_dirty_attributes(job->src_ad,NULL,NULL)) {
+		if (false == PushUpdatedAttributes(job->src_ad)) {
 			dprintf(D_ALWAYS,"JobRouter failure (%s): failed to update src job\n",job->JobDesc().c_str());
 
 			GracefullyRemoveJob(job);
@@ -1369,7 +1404,6 @@ JobRouter::FinishCheckSubmittedJobStatus(RoutedJob *job) {
 		}
 		else {
 			dprintf(D_FULLDEBUG,"JobRouter (%s): updated job status\n",job->JobDesc().c_str());
-			job->src_ad.ClearAllDirtyFlags();
 		}
 	}
 
@@ -1434,9 +1468,22 @@ JobRouter::RerouteJob(RoutedJob *job) {
 void
 JobRouter::SetJobIdle(RoutedJob *job) {
 	job->src_ad.InsertAttr(ATTR_JOB_STATUS,IDLE);
-	if(!push_dirty_attributes(job->src_ad,NULL,NULL)) {
+	if(false == PushUpdatedAttributes(job->src_ad)) {
 		dprintf(D_ALWAYS,"JobRouter failure (%s): failed to set src job status back to idle\n",job->JobDesc().c_str());
 	}
+}
+
+bool
+JobRouter::PushUpdatedAttributes(classad::ClassAd& src) {
+	if(false == push_dirty_attributes(src,NULL,NULL))
+	{
+		return false;
+	}
+	else
+	{
+		src.ClearAllDirtyFlags();
+	}
+	return true;
 }
 
 void
