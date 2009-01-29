@@ -103,6 +103,12 @@ X 10.5 platform.
 This condition persisted until the execute-side daemons were
 either restarted or reconfigured.
 
+\item Fixed a problem affecting JobRouter and Condor-C.  When jobs are
+spooling input files, they enter a temporary hold state, which could
+trigger actions by a naive periodic remove or release expression.
+Periodic expressions are no longer evaluated when in this temporary
+hold state, which has the hold reason \"Spooling input data files\".
+
 \end{itemize}
 
 \noindent Known Bugs:
