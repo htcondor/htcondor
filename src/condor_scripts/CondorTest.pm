@@ -265,7 +265,7 @@ sub DefaultOutputTest
 	my $output = "";
 	my $error = "";
 	my $initialdir = $info{'initialdir'};
-	if($initialdir ne "") {
+	if((defined $initialdir) && ($initialdir ne "")) {
 		debug( "Testing with initialdir = $initialdir\n" ,4);
 		$output = $initialdir . "/" . $info{'output'};
 		$error = $initialdir . "/" . $info{'error'};
@@ -317,6 +317,10 @@ sub RunTest
 	}
 
 	CheckRegistrations();
+
+	print "\nCurrent date and load follow:\n";
+	system("date");
+	system("uptime");
 
 	my $wrap_test = $ENV{WRAP_TESTS};
 
@@ -385,6 +389,11 @@ sub RunTest
 	}
 
 	debug( "************** condor_monitor back ************************ \n",4);
+
+	print "\nCurrent date and load follow:\n";
+	system("date");
+	system("uptime");
+
 
 	if(defined  $wrap_test) {
 		if($config ne "") {
@@ -458,6 +467,10 @@ sub RunDagTest
 		}
 	}
 
+	print "\nCurrent date and load follow:\n";
+	system("date");
+	system("uptime");
+
     # submit the job and get the cluster id
     my $cluster = Condor::TestSubmitDagman( $submit_file, $dagman_args );
     
@@ -507,6 +520,10 @@ sub RunDagTest
 	}
 
 	debug( "************** condor_monitor back ************************ \n",4);
+
+	print "\nCurrent date and load follow:\n";
+	system("date");
+	system("uptime");
 
 	if(defined  $wrap_test) {
 		if($config ne "") {
