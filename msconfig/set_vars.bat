@@ -63,7 +63,7 @@ REM EXTERNALS_NEEDED variable defined below.
 set EXT_GSOAP_VERSION=gsoap-2.7.6c-p2
 set EXT_OPENSSL_VERSION=openssl-0.9.8
 set EXT_POSTGRESQL_VERSION=postgresql-8.0.2
-set EXT_KERBEROS_VERSION=krb5-1.4.3
+set EXT_KERBEROS_VERSION=krb5-1.4.3-p0
 set EXT_PCRE_VERSION=pcre-7.6
 set EXT_DRMAA_VERSION=drmaa-1.5.1
 

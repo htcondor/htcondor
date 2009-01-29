@@ -1854,6 +1854,20 @@ ResponsibleForPeriodicExprs( ClassAd *jobad )
 		return 0;
 	}
 
+		// temporary for 7.2 only: avoid evaluating periodic
+		// expressions when the job is on hold for spooling
+	if( status == HELD ) {
+		MyString hold_reason;
+		jobad->LookupString(ATTR_HOLD_REASON,hold_reason);
+		if( hold_reason == "Spooling input data files" ) {
+			int cluster = -1, proc = -1;
+			jobad->LookupInteger(ATTR_CLUSTER_ID, cluster);
+			jobad->LookupInteger(ATTR_PROC_ID, proc);
+			dprintf(D_FULLDEBUG,"Skipping periodic expressions for job %d.%d, because hold reason is '%s'\n",cluster,proc,hold_reason.Value());
+			return 0;
+		}
+	}
+
 	if( univ==CONDOR_UNIVERSE_SCHEDULER || univ==CONDOR_UNIVERSE_LOCAL ) {
 		return 1;
 	} else if(univ==CONDOR_UNIVERSE_GRID) {
