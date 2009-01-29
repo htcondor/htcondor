@@ -1818,7 +1818,7 @@ XCOMM End translation of func(ext_target)
 #define ext_nodep_target(package_id,ext_dep)	@@\
 XCOMM Begin translation of func(ext_nodep_target) @@\
 $(EXT_TRIGGER)/$(package_id): ext_dep			@@\
-        $(EXT_ROOT)/build_external --extern_dir=$(EXT_ROOT) --package_name=$(package_id) --extern_config=$(EXT_CONFIG_SH) @@\
+        $(EXT_SRC)/build_external --extern_src=$(EXT_SRC) --extern_build=$(EXT_BUILD) --package_name=$(package_id) --extern_config=$(EXT_CONFIG_SH) @@\
 XCOMM End translation of func(ext_nodep_target)
 #endif
 

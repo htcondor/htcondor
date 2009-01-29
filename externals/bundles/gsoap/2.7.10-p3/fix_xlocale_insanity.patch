@@ -1,0 +1,11 @@
+--- gsoap-2.7.10-p1/gsoap/stdsoap2.h	2008-01-27 15:02:36.000000000 -0600
++++ gsoap-2.7.10-p1-mf/gsoap/stdsoap2.h	2008-07-09 12:33:36.000000000 -0500
+@@ -465,7 +465,7 @@
+ # endif
+ #endif
+ 
+-#if defined(HAVE_XLOCALE_H) || defined(HAVE_STRTOD_L) || defined(HAVE_STRTOF_L) || defined(HAVE_SSCANF_L) || defined(HAVE_SPRINTF_L)
++#if defined(HAVE_XLOCALE_H)
+ # include <xlocale.h>
+ #endif
+ 

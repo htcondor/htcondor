@@ -1,0 +1,84 @@
+#!/usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+use CondorTest;
+use x_vm_utils;
+
+$corename = 'job_vmu_ckpt';
+$testname = 'job_vmu_ckpt';
+$testdesc = 'VM universe checkpoint test';
+
+x_vm_utils::initialize($corename);
+
+$start_flag = 0;
+$started = sub
+{
+	print "Job is running\n";
+	if ($start_flag == 1) {
+		return;
+	}
+	$start_flag = 1;
+	until (x_vm_utils::check_output("STARTED")) {
+		sleep 5;
+	}
+	unless (CondorTest::runCondorTool("condor_qedit " .
+	                                      "-constraint True " .
+	                                      "Requirements False")) {
+		die "condor_hold failure\n";
+	}
+	unless (CondorTest::runCondorTool("condor_vacate_job -a")) {
+		die "condor_hold failure\n";
+	}
+};
+$evicted = sub
+{
+	print "Job is checkpointed\n";
+	x_vm_utils::set_data("CHECKPOINTED");
+	unless (CondorTest::runCondorTool("condor_qedit " .
+	                                      "-constraint True " .
+	                                      "Requirements True")) {
+		die "condor_release failure\n";
+	}
+};
+$completed = sub
+{
+	print "Job has completed\n";
+	unless (x_vm_utils::check_output("DONE")) {
+		die "output check failed\n";
+	}
+};
+CondorTest::RegisterExecute( $testname, $started );
+CondorTest::RegisterEvicted( $testname, $evicted );
+CondorTest::RegisterExitedSuccess( $testname, $completed );
+
+x_vm_utils::add_submit_command("vmware_should_transfer_files = yes");
+x_vm_utils::add_submit_command("vmware_snapshot_disk = false");
+x_vm_utils::add_submit_command("vm_checkpoint = true");
+$success = x_vm_utils::run_test($testname);
+
+x_vm_utils::cleanup();
+
+if( not $success )
+{
+	print "$corename FAILED\n";
+	exit(1);
+}
+print "$corename SUCCESS\n";
+exit(0);

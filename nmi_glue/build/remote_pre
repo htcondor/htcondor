@@ -134,7 +134,7 @@ if ($ENV{NMI_PLATFORM} =~ /winnt/) {
 #  already running build on the same system.
 #   Solution: Do not change externals without changing their version.
 
-$old = "/scratch/externals"; # the cache, likely /scratch/externals
+$old = "/scratch/externals2"; # the cache, likely /scratch/externals
 $new = "$BaseDir/externals"; # the new version. likely ./externals
 
 # People need to be somewhat careful if they are going to use the
@@ -147,7 +147,7 @@ if (!defined($opt_use_externals_cache)) {
     goto bail;
 }
 
-print "Updating externals in '$old' with externals from '$new'...\n";
+print "Checking externals cache in '$old'...\n";
 
 #
 # Perform sanity checks to get a good idea if we can properly access
@@ -171,8 +171,7 @@ print "Updating externals in '$old' with externals from '$new'...\n";
 
 # If we want to clear the cache or if the script used to build
 # externals changes we better clear the cache
-if (defined($opt_clear_externals_cache) ||
-    system("diff $old/build_external $new/build_external 2>&1 > /dev/null")) {
+if (defined($opt_clear_externals_cache)) {
     print "Clearing cache " .
 	"(clear_externals_cache: $opt_clear_externals_cache)...\n";
     system("rm -r $old/*");
@@ -191,78 +190,6 @@ if (defined($opt_clear_externals_cache) ||
     (-e "$old/build_external" ) &&
 	print "Failed to remove '$old/build_external'\n" &&
 	goto bail;
-}
-
-#
-# Start updating the cache, or creating it
-#
-# If the old (cache) directory does not exist we will just create
-# it from the new directory
-if (! -e "$old/build_external") {
-    print "'$old/build_external' does not exist, initializing from '$new'...\n";
-    system("cp -r $new/* $old") &&
-	print "Failed to initialize '$old'\n" &&
-	goto bail;
-
-# Update the cache
-} else {
-    # This might not be closed
-    opendir(BUNDLES, "$new/bundles") ||
-	print "Could not open '$new/bundles'\n" &&
-	goto bail;
-    while (defined($bundle = readdir(BUNDLES))) {
-	# Skip . or .. files
-	if ($bundle =~ /^\.\.?/) { next; }
-	# This might not be closed
-	opendir(VERSIONS, "$new/bundles/$bundle") ||
-	    print "Can't get a list of $new/bundles/$bundle versions\n" &&
-	    goto bail;
-	while (defined($version = readdir(VERSIONS))) {
-	    # Skip . or .. files
-	    if ($version =~ /^\.\.?/) { next; }
-	    # We only care if there is any difference, not what
-	    # the difference is
-	    if (system("diff -r $old/bundles/$bundle/$version " .
-		       "$new/bundles/$bundle/$version 2>&1 > /dev/null")) {
-		print "Updating $bundle $version...\n";
-		# Make sure the destination exists, which is
-		# important to catch the case of new externals
-		system("mkdir -p $old/bundles/$bundle/$version") &&
-		    print "Failed to ensure cache location exists\n" &&
-		    goto bail;
-		# To be completely safe we want to just blow away
-		# the old version before copying the new into
-		# place
-		system("rm -r $old/bundles/$bundle/$version") &&
-		    print "Failed to remove old cache version\n" &&
-		    goto bail;
-		system("cp -r $new/bundles/$bundle/$version " .
-		       "$old/bundles/$bundle") &&
-		       print "Failed to populate cache\n" &&
-		       goto bail;
-		# Make sure future builds can access this
-		# external, even for deletion
-		system("chmod -R a+rwX $old/bundles/$bundle/$version") &&
-		    print "Failed to change permissions on cache\n" &&
-		    goto bail;
-		# Remove the fact that we have built this external
-		# in the past. This will result in the external
-		# being rebuilt
-		(-e "$old/triggers/$bundle-$version") &&
-		    system("rm $old/triggers/$bundle-$version") &&
-		    print "Failed to remove cached trigger\n" &&
-		    goto bail;
-		(-d "$old/install/$bundle-$version") &&
-		    system("rm -r $old/install/$bundle-$version") &&
-		    print "Failed to remove cached external install\n" &&
-		    goto bail;
-	    } else {
-		print "$bundle $version is up to date...\n";
-	    }
-	}
-	close(VERSIONS);
-    }
-    close(BUNDLES);
 }
 
 success:

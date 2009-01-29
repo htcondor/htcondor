@@ -1,0 +1,49 @@
+#
+#	gSOAP 2 Makefile originally by Robert van Engelen, Genivia inc.
+#   Adapted for Win32 by Colin Stolley	
+#	Requires Flex (or Lex) and Bison
+#
+# Set in the environment:
+# PACKAGE_NAME
+# PACKAGE_BUILD_DIR
+# PACKAGE_INSTALL_DIR
+# EXTERNALS_INSTALL_DIR
+
+CC=cl.exe
+CPP=cl.exe
+#	use LEX=flex -l or LEX=lex
+LEX=flex -l
+#	use YACC=bison or YACC=yacc
+YACC=bison
+#	use LIBS=-lfl with flex or LIBS=-ll with lex
+#	and use -ly with yacc
+#LIBS=-lfl
+#COFLAGS=-O1
+CWFLAGS=
+CIFLAGS=
+#	use -DWITH_BISON or -DWITH_YACC
+#	use -DWITH_FLEX or -DWITH_LEX
+CMFLAGS=/DWITH_BISON /DWITH_FLEX /DWIN32 /DHAVE_CONFIG_H /nologo
+CFLAGS= $(CWFLAGS) $(COFLAGS) $(CIFLAGS) $(CMFLAGS)
+# set TEMP for bison, and make sure it has a trailing slash
+TEMP = C:\temp\\
+soapcpp2:	soapcpp2.h soapcpp2_yacc.o symbol2.o error2.o lex.yy.o init2.o soapcpp2.o
+		$(CC) symbol2.obj error2.obj soapcpp2_yacc.obj lex.yy.obj init2.obj soapcpp2.obj $(LIBS) -o $@
+soapcpp2_yacc.c:	soapcpp2_yacc.y soapcpp2.h error2.h
+		$(YACC) -d -v soapcpp2_yacc.y
+		ren soapcpp2_yacc.tab.h soapcpp2_yacc.h
+		ren soapcpp2_yacc.tab.c soapcpp2_yacc.c
+lex.yy.c:	soapcpp2_yacc.h soapcpp2_yacc.c soapcpp2_lex.l
+		$(LEX) soapcpp2_lex.l
+.c.o:		soapcpp2.h soapcpp2_yacc.h error2.h
+		$(CC) $(CFLAGS) /c $<
+install: 
+	"mkdir" -p $(PACKAGE_INSTALL_DIR)\src
+	cp soapcpp2.exe $(PACKAGE_INSTALL_DIR)
+	cp ..\stdsoap2.cpp $(PACKAGE_INSTALL_DIR)\src
+	cp ..\stdsoap2.h $(PACKAGE_INSTALL_DIR)\src
+	
+clean:		
+		del /f *.obj
+distclean:		
+		del /f soapcpp2.exe *.obj lex.yy.* soapcpp2_yacc.h soapcpp2_yacc.c y.tab.* *.output

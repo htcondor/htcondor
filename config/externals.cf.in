@@ -18,9 +18,10 @@
  ***************************************************************/
 
 #define HAS_EXTERNALS @has_externals@
-EXT_ROOT = @ext_root@
-EXT_TRIGGER = $(EXT_ROOT)/triggers
-EXT_INSTALL = $(EXT_ROOT)/install
+EXT_SRC = @ext_src@
+EXT_BUILD = @ext_build@
+EXT_TRIGGER = $(EXT_BUILD)/triggers
+EXT_INSTALL = $(EXT_BUILD)/install
 EXT_CONFIG_SH = @_cv_ext_config_sh@
 
 

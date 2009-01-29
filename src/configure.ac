@@ -639,35 +639,33 @@ fi
 AS_IF([test "x$enable_proper" != xyes],
 [
 ac_cv_has_externals=YES
-ac_cv_externals=none
+ac_cv_externals_src="$_root_dir/externals"
+ac_cv_externals_build="$ac_cv_externals_src"
+CONDOR_VERIFY_EXTERNALS_DIR([$ac_cv_externals_src],
+  [Can't find externals directory, should be in $_root_dir])
 AC_ARG_WITH(externals,
  AC_HELP_STRING([--with-externals=DIR],
-   [Root of directory tree for external programs needed for building Condor (default is to search in ../externals)]),
- [if test $withval = no; then
-    AC_MSG_WARN([By not using --with-externals, most of Condor will not build])
-    ac_cv_has_externals=NO
-  else
-    CONDOR_VERIFY_EXTERNALS_DIR([$withval],
-      [directory specified with --with-externals ($withval) is not valid])
+   [Directory in which to build and install external programs needed for building Condor (default is to build in ../externals)]),
+ [if test "$withval" != no; then
+    if test ! -d "$withval" || test ! -w "$withval"; then
+      AC_MSG_ERROR([directory specified with --with-externals ($withval) is not valid])
+    fi
+    ac_cv_externals_build="$withval"
   fi
  ],
  [
-  # nothing specified, try ../externals.  using this as a default
-  # makes it possible to just run "./configure" most of the time.
-  _local_ext_dir="$_root_dir/externals"
-  if test -d $_local_ext_dir ; then
-    CONDOR_VERIFY_EXTERNALS_DIR([$_local_ext_dir],
-    [$_local_ext_dir exists but is not a valid directory tree for external programs needed to build Condor, you must use --with-externals=DIR to specify the path])
-  else
-    # try /p/condor/workspaces/externals for builds at UW-Madison CS
-    _uw_cs_externals="/p/condor/workspaces/externals"
-    CONDOR_VERIFY_EXTERNALS_DIR([$_uw_cs_externals],
-    [neither $_local_ext_dir (../externals) nor $_uw_cs_externals is a valid directory tree for external programs needed to build Condor, you must use --with-externals=DIR to specify the path])
+  # nothing specified, use the UW-Madison CS cache if present, else assume
+  # ../externals. This makes it possible to just run "./configure" most 
+  # of the time.
+  _uw_cs_externals="/p/condor/workspaces/externals"
+  if test -d "$_uw_cs_externals" ; then
+    ac_cv_externals_build="$_uw_cs_externals"
   fi
  ]
 )
 AC_SUBST(has_externals,$ac_cv_has_externals)
-AC_SUBST(ext_root,$ac_cv_externals)
+AC_SUBST(ext_src,$ac_cv_externals_src)
+AC_SUBST(ext_build,$ac_cv_externals_build)
 ],
 [
 AC_SUBST(has_externals,NO)
@@ -1698,15 +1696,6 @@ case "$_cv_opsys" in
   * ) _cv_purify_platform_ld_flags="" ;;
 esac
 AC_SUBST([_cv_purify_platform_ld_flags], [$_cv_purify_platform_ld_flags])
-
-
-# Check to see if the confidential test suite is present
-AC_CHECK_FILE(../config/CONDOR_TEST_CNFDTL, 
-	AC_DEFINE(HAVE_CONDOR_TEST_CNFDTL,[1],[Do we have the confidential test suite available to us?]))
-
-# Check to see if the large test suite is present
-AC_CHECK_FILE(../config/CONDOR_TEST_LRG, 
-	AC_DEFINE(HAVE_CONDOR_TEST_LRG,[1],[Do we have the large test suite available to us?]))
 
 
 #####################
@@ -2954,7 +2943,7 @@ AS_IF([test "x$cv_ext_gsoap" = xyes -a "x$enable_proper" = xyes],
 AC_MSG_CHECKING([if we have libc.a])
 _cv_libc_a=none
 # from externals.cf.in
-GLIBC_DIR="$ac_cv_externals/install/$_cv_ext_glibc_version/lib"
+GLIBC_DIR="$ac_cv_externals_build/install/$_cv_ext_glibc_version/lib"
 case "$_cv_opsys" in
 # Ignore on clipped ports
 #  ?ALPHA_OSF1? ) /lib/libc.a ;;

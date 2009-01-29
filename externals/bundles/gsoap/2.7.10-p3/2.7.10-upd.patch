@@ -1,0 +1,766 @@
+diff -rupN gsoap-2.7/gsoap/stdsoap2.c gsoap-2.7-upd/gsoap/stdsoap2.c
+--- gsoap-2.7/gsoap/stdsoap2.c	2008-01-27 15:02:36.000000000 -0600
++++ gsoap-2.7-upd/gsoap/stdsoap2.c	2008-02-21 13:39:51.000000000 -0600
+@@ -1,5 +1,5 @@
+ /*
+-	stdsoap2.c[pp] 2.7.10
++	stdsoap2.c[pp] 2.7.10-upd
+ 
+ 	gSOAP runtime engine
+ 
+@@ -496,6 +496,10 @@ static const struct soap_code_map mime_c
+ static int tcp_done = 0;
+ #endif
+ 
++#if defined(HP_UX) && defined(HAVE_GETHOSTBYNAME_R)
++extern int h_errno;
++#endif
++
+ /******************************************************************************/
+ #ifndef WITH_NOIO
+ #ifndef PALM_1
+@@ -756,7 +760,7 @@ soap_flush(struct soap *soap)
+       do
+       { DBGLOG(TEST, SOAP_MESSAGE(fdebug, "Deflating %u bytes\n", soap->d_stream->avail_in));
+         if (deflate(soap->d_stream, Z_NO_FLUSH) != Z_OK)
+-        { DBGLOG(TEST, SOAP_MESSAGE(fdebug, "Unable to deflate: %s\n", soap->d_stream->msg?soap->d_stream->msg:""));
++        { DBGLOG(TEST, SOAP_MESSAGE(fdebug, "Unable to deflate: %s\n", soap->d_stream->msg?soap->d_stream->msg:SOAP_STR_EOS));
+           return soap->error = SOAP_ZLIB_ERROR;
+         }
+         if (!soap->d_stream->avail_out)
+@@ -1107,7 +1111,7 @@ soap_recv_raw(struct soap *soap)
+         }
+       }
+       else if (r != Z_BUF_ERROR)
+-      { DBGLOG(TEST, SOAP_MESSAGE(fdebug, "Inflate error: %s\n", soap->d_stream->msg?soap->d_stream->msg:""));
++      { DBGLOG(TEST, SOAP_MESSAGE(fdebug, "Inflate error: %s\n", soap->d_stream->msg?soap->d_stream->msg:SOAP_STR_EOS));
+         soap->d_stream->next_out = Z_NULL;
+         soap->error = SOAP_ZLIB_ERROR;
+         return EOF;
+@@ -1224,7 +1228,7 @@ zlib_again:
+       DBGMSG(RECV, soap->buf, ret);
+     }
+     else
+-    { DBGLOG(TEST, SOAP_MESSAGE(fdebug, "Unable to inflate: (%d) %s\n", r, soap->d_stream->msg?soap->d_stream->msg:""));
++    { DBGLOG(TEST, SOAP_MESSAGE(fdebug, "Unable to inflate: (%d) %s\n", r, soap->d_stream->msg?soap->d_stream->msg:SOAP_STR_EOS));
+       soap->d_stream->next_out = Z_NULL;
+       soap->error = SOAP_ZLIB_ERROR;
+       return EOF;
+@@ -2222,7 +2226,7 @@ soap_update_ptrs(struct soap *soap, char
+ #ifndef WITH_LEANER
+   for (xp = soap->xlist; xp; xp = xp->next)
+   { if (xp->ptr && (char*)xp->ptr >= start && (char*)xp->ptr < end)
+-    { DBGLOG(TEST, SOAP_MESSAGE(fdebug, "Update id='%s' %p -> %p\n", xp->id?xp->id:"", xp->ptr, (char*)xp->ptr + (p1-p2)));
++    { DBGLOG(TEST, SOAP_MESSAGE(fdebug, "Update id='%s' %p -> %p\n", xp->id?xp->id:SOAP_STR_EOS, xp->ptr, (char*)xp->ptr + (p1-p2)));
+       xp->ptr = (unsigned char**)((char*)xp->ptr + (p1-p2));
+       xp->size = (int*)((char*)xp->size + (p1-p2));
+       xp->type = (char**)((char*)xp->type + (p1-p2));
+@@ -3491,7 +3495,7 @@ tcp_gethost(struct soap *soap, const cha
+   /* inet_addr(), and hostGetByName() expect "char *"; addr is a "const char *". */
+   iadd = inet_addr((char*)addr);
+ #else
+-#if defined(_AIX43) || defined(TRU64)
++#if defined(_AIX43) || ((defined(TRU64) || defined(HP_UX)) && defined(HAVE_GETHOSTBYNAME_R))
+   struct hostent_data ht_data;
+ #endif
+ #ifdef AS400
+@@ -3507,7 +3511,7 @@ tcp_gethost(struct soap *soap, const cha
+ #if defined(__GLIBC__) || (defined(HAVE_GETHOSTBYNAME_R) && (defined(FREEBSD) || defined(__FreeBSD__)))
+   if (gethostbyname_r(addr, &hostent, soap->buf, SOAP_BUFLEN, &host, &soap->errnum) < 0)
+     host = NULL;
+-#elif defined(_AIX43) || defined(TRU64)
++#elif defined(_AIX43) || ((defined(TRU64) || defined(HP_UX)) && defined(HAVE_GETHOSTBYNAME_R))
+   memset((void*)&ht_data, 0, sizeof(ht_data));
+   if (gethostbyname_r(addr, &hostent, &ht_data) < 0)
+   { host = NULL;
+@@ -5257,7 +5261,7 @@ soap_attachment(struct soap *soap, const
+   int i;
+   if (!p || !a->__ptr || (!aid && !atype))
+     return soap_element_id(soap, tag, id, p, a, n, type, t);
+-  DBGLOG(TEST, SOAP_MESSAGE(fdebug, "Attachment tag='%s' id='%s' (%d) type='%s'\n", tag, aid?aid:"", id, atype?atype:""));
++  DBGLOG(TEST, SOAP_MESSAGE(fdebug, "Attachment tag='%s' id='%s' (%d) type='%s'\n", tag, aid?aid:SOAP_STR_EOS, id, atype?atype:SOAP_STR_EOS));
+   i = soap_array_pointer_lookup(soap, p, a, n, t, &pp);
+   if (!i)
+   { i = soap_pointer_enter(soap, p, a, n, t, &pp);
+@@ -5977,7 +5981,7 @@ soap_end_send(struct soap *soap)
+       soap->mode &= ~SOAP_ENC_ZLIB;
+       soap->zlib_state = SOAP_ZLIB_NONE;
+       if (deflateEnd(soap->d_stream) != Z_OK || r != Z_STREAM_END)
+-      { DBGLOG(TEST, SOAP_MESSAGE(fdebug, "Unable to end deflate: %s\n", soap->d_stream->msg?soap->d_stream->msg:""));
++      { DBGLOG(TEST, SOAP_MESSAGE(fdebug, "Unable to end deflate: %s\n", soap->d_stream->msg?soap->d_stream->msg:SOAP_STR_EOS));
+         return soap->error = SOAP_ZLIB_ERROR;
+       }
+ #ifdef WITH_GZIP
+@@ -6938,7 +6942,7 @@ soap_element(struct soap *soap, const ch
+ #ifdef WITH_XMLNS
+   register const char *s;
+ #endif
+-  DBGLOG(TEST, SOAP_MESSAGE(fdebug, "Element begin tag='%s' id='%d' type='%s'\n", tag, id, type?type:""));
++  DBGLOG(TEST, SOAP_MESSAGE(fdebug, "Element begin tag='%s' id='%d' type='%s'\n", tag, id, type?type:SOAP_STR_EOS));
+ #ifdef WITH_DOM
+   if (soap->part == SOAP_BEGIN_SECURITY && (soap->mode & SOAP_XML_CANONICAL) && !(soap->mode & SOAP_DOM_ASIS))
+   { register struct soap_nlist *np;
+@@ -7583,7 +7587,7 @@ soap_element_begin_in(struct soap *soap,
+         return soap->error = SOAP_NULL;
+       if (soap->body)
+         soap->level++;
+-      DBGLOG(TEST, SOAP_MESSAGE(fdebug, "Begin element found (level=%u) '%s'='%s'\n", soap->level, soap->tag, tag?tag:"" ));
++      DBGLOG(TEST, SOAP_MESSAGE(fdebug, "Begin element found (level=%u) '%s'='%s'\n", soap->level, soap->tag, tag?tag:SOAP_STR_EOS ));
+     }
+   }
+   else if (soap->error == SOAP_NO_TAG && tag && *tag == '-')
+@@ -7647,7 +7651,7 @@ soap_element_end_in(struct soap *soap, c
+     c = soap_get(soap);
+   if (c != SOAP_GT)
+     return soap->error = SOAP_SYNTAX_ERROR;
+-  DBGLOG(TEST, SOAP_MESSAGE(fdebug, "End element found (level=%u) '%s'='%s'\n", soap->level, soap->tag, tag?tag:""));
++  DBGLOG(TEST, SOAP_MESSAGE(fdebug, "End element found (level=%u) '%s'='%s'\n", soap->level, soap->tag, tag?tag:SOAP_STR_EOS));
+ #ifndef WITH_LEAN
+   if (tag && (soap->mode & SOAP_XML_STRICT))
+   { soap_pop_namespace(soap);
+@@ -7696,7 +7700,7 @@ soap_set_attr(struct soap *soap, const c
+ { register struct soap_attribute *tp;
+   if (*name == '-')
+     return SOAP_OK;
+-  DBGLOG(TEST, SOAP_MESSAGE(fdebug, "Set attribute %s='%s'\n", name, value?value:""));
++  DBGLOG(TEST, SOAP_MESSAGE(fdebug, "Set attribute %s='%s'\n", name, value?value:SOAP_STR_EOS));
+   for (tp = soap->attributes; tp; tp = tp->next)
+   { if (!strcmp(tp->name, name))
+       break;
+@@ -9512,7 +9516,10 @@ soap_float2s(struct soap *soap, float n)
+     return "-INF";
+   s = soap->tmpbuf;
+ #if defined(HAVE_SPRINTF_L)
+-  sprintf_l(s, NULL, soap->float_format, n);
++  { locale_t c_locale = soap_c_locale;
++    sprintf_l(s, c_locale, soap->float_format, n);
++    soap_freelocale(c_locale);
++  }
+ #else
+   sprintf(s, soap->float_format, n);
+   s = strchr(s, ',');	/* convert decimal comma to DP */
+@@ -9558,11 +9565,15 @@ soap_s2float(struct soap *soap, const ch
+ /* On some systems, strtof appears to be broken or doesn't link: use with caution */
+ #if defined(HAVE_STRTOF_L)
+       char *r;
+-      *p = strtof_l((char*)s, &r, NULL);
++      locale_t c_locale = soap_c_locale;
++      *p = strtof_l((char*)s, &r, c_locale);
++      soap_freelocale(c_locale);
+       if (*r)
+ #elif defined(HAVE_STRTOD_L)
+       char *r;
+-      *p = (float)strtod_l(s, &r, NULL);
++      locale_t c_locale = soap_c_locale;
++      *p = (float)strtod_l(s, &r, c_locale);
++      soap_freelocale(c_locale);
+       if (*r)
+ #elif defined(HAVE_STRTOF)
+       char *r;
+@@ -9573,15 +9584,19 @@ soap_s2float(struct soap *soap, const ch
+       *p = (float)strtod(s, &r);
+       if (*r)
+ #endif
+-#if defined(HAVE_SSCANF_L)
+-        if (sscanf_l(s, NULL, "%g", p) != 1)
++      {
++#if defined(HAVE_SSCANF_L) && !defined(HAVE_STRTOF_L) && !defined(HAVE_STRTOD_L)
++        locale_t c_locale = soap_c_locale;
++        if (sscanf_l(s, c_locale, "%g", p) != 1)
+           soap->error = SOAP_TYPE;
++        soap_freelocale(c_locale);
+ #elif defined(HAVE_SSCANF)
+         if (sscanf(s, "%g", p) != 1)
+           soap->error = SOAP_TYPE;
+ #else
+         soap->error = SOAP_TYPE;
+ #endif
++      }
+     }
+   }
+   return soap->error;
+@@ -9656,7 +9671,10 @@ soap_double2s(struct soap *soap, double 
+     return "-INF";
+   s = soap->tmpbuf;
+ #if defined(HAVE_SPRINTF_L)
+-  sprintf_l(s, NULL, soap->double_format, n);
++  { locale_t c_locale = soap_c_locale;
++    sprintf_l(s, c_locale, soap->double_format, n);
++    soap_freelocale(c_locale);
++  }
+ #else
+   sprintf(s, soap->double_format, n);
+   s = strchr(s, ',');	/* convert decimal comma to DP */
+@@ -9701,22 +9719,28 @@ soap_s2double(struct soap *soap, const c
+     {
+ #if defined(HAVE_STRTOD_L)
+       char *r;
+-      *p = strtod_l(s, &r, NULL);
++      locale_t c_locale = soap_c_locale;
++      *p = strtod_l(s, &r, c_locale);
++      soap_freelocale(c_locale);
+       if (*r)
+ #elif defined(HAVE_STRTOD)
+       char *r;
+       *p = strtod(s, &r);
+       if (*r)
+ #endif
+-#if defined(HAVE_SSCANF_L)
+-        if (sscanf_l(s, NULL, "%lg", p) != 1)
++      {
++#if defined(HAVE_SSCANF_L) && !defined(HAVE_STRTOF_L) && !defined(HAVE_STRTOD_L)
++        locale_t c_locale = soap_c_locale;
++        if (sscanf_l(s, c_locale, "%lg", p) != 1)
+           soap->error = SOAP_TYPE;
++        soap_freelocale(c_locale);
+ #elif defined(HAVE_SSCANF)
+         if (sscanf(s, "%lg", p) != 1)
+           soap->error = SOAP_TYPE;
+ #else
+         soap->error = SOAP_TYPE;
+ #endif
++      }
+     }
+   }
+   return soap->error;
+@@ -10218,7 +10242,7 @@ soap_s2QName(struct soap *soap, const ch
+             soap_append_lab(soap, "\"", 1);
+           }
+           else
+-          { DBGLOG(TEST, SOAP_MESSAGE(fdebug, "\nNamespace prefix of '%s' not defined (index=%d, URI=%s)\n", s, np->index, np->ns?np->ns:""));
++          { DBGLOG(TEST, SOAP_MESSAGE(fdebug, "\nNamespace prefix of '%s' not defined (index=%d, URI=%s)\n", s, np->index, np->ns?np->ns:SOAP_STR_EOS));
+             return soap->error = SOAP_NAMESPACE; 
+           }
+         }
+@@ -10661,11 +10685,11 @@ int
+ SOAP_FMAC2
+ soap_s2dateTime(struct soap *soap, const char *s, time_t *p)
+ { if (s)
+-  { struct tm T;
+-    char zone[32];
++  { char zone[32];
++    struct tm T;
+     const char *t;
++    *zone = '\0';
+     memset((void*)&T, 0, sizeof(T));
+-    zone[sizeof(zone)-1] = '\0';
+     if (strchr(s, '-'))
+       t = "%d-%d-%dT%d:%d:%d%31s";
+     else if (strchr(s, ':'))
+@@ -10678,36 +10702,18 @@ soap_s2dateTime(struct soap *soap, const
+     else
+       T.tm_year -= 1900;
+     T.tm_mon--;
+-    if (*zone)
+-    { if (*zone == '.')
+-      { for (s = zone + 1; *s; s++)
+-          if (*s < '0' || *s > '9')
+-            break;
+-      }
+-      else
+-        s = zone;
+-      if (*s == '+' || *s == '-')
+-      { int h = 0, m = 0;
+-        if (s[3] == ':')
+-        { sscanf(s, "%d:%d", &h, &m);
+-          if (h < 0)
+-            m = -m;
+-        }
+-        else
+-        { m = (int)atol(s);
+-          h = m / 100;
+-          m = m % 100;
+-        }
+-        T.tm_hour -= h;
+-        T.tm_min -= m;
+-      }
+-      T.tm_isdst = 0;
+-      *p = soap_timegm(&T);
++    T.tm_isdst = 0;
++    if (*zone == '.')
++    { for (s = zone + 1; *s; s++)
++        if (*s < '0' || *s > '9')
++          break;
+     }
+     else
+-    { T.tm_isdst = -1;
+-      *p = mktime(&T); /* no time zone: suppose it is localtime? */
+-    }
++      s = zone;
++    if (*s)
++      *p = soap_timegm(&T);
++    else
++      *p = mktime(&T);
+   }
+   return soap->error;
+ }
+@@ -11080,7 +11086,7 @@ SOAP_FMAC2
+ soap_putdimehdr(struct soap *soap)
+ { unsigned char tmp[12];
+   size_t optlen = 0, idlen = 0, typelen = 0;
+-  DBGLOG(TEST, SOAP_MESSAGE(fdebug, "Put DIME header id='%s'\n", soap->dime.id?soap->dime.id:""));
++  DBGLOG(TEST, SOAP_MESSAGE(fdebug, "Put DIME header id='%s'\n", soap->dime.id?soap->dime.id:SOAP_STR_EOS));
+   if (soap->dime.options)
+     optlen = (((unsigned char)soap->dime.options[2] << 8) | ((unsigned char)soap->dime.options[3])) + 4;
+   if (soap->dime.id)
+@@ -11277,7 +11283,7 @@ soap_getdimehdr(struct soap *soap)
+     return soap->error;
+   if (!(soap->dime.type = soap_getdimefield(soap, typelen)) && soap->error)
+     return soap->error;
+-  DBGLOG(TEST, SOAP_MESSAGE(fdebug, "DIME id=%s, type=%s, options=%s\n", soap->dime.id?soap->dime.id:"", soap->dime.type?soap->dime.type:"", soap->dime.options?soap->dime.options+4:""));
++  DBGLOG(TEST, SOAP_MESSAGE(fdebug, "DIME id=%s, type=%s, options=%s\n", soap->dime.id?soap->dime.id:SOAP_STR_EOS, soap->dime.type?soap->dime.type:"", soap->dime.options?soap->dime.options+4:SOAP_STR_EOS));
+   if (soap->dime.flags & SOAP_DIME_ME)
+     soap->mode &= ~SOAP_ENC_DIME;
+   return SOAP_OK;
+@@ -11529,7 +11535,7 @@ soap_get_mime_attachment(struct soap *so
+         return NULL;
+     }
+   }
+-  DBGLOG(TEST, SOAP_MESSAGE(fdebug, "Parsing MIME content id=%s type=%s\n", content->id?content->id:"", content->type?content->type:""));
++  DBGLOG(TEST, SOAP_MESSAGE(fdebug, "Parsing MIME content id=%s type=%s\n", content->id?content->id:SOAP_STR_EOS, content->type?content->type:SOAP_STR_EOS));
+   if (!content->ptr && soap_new_block(soap))
+   { soap->error = SOAP_EOM;
+     return NULL;
+@@ -11684,7 +11690,7 @@ int
+ SOAP_FMAC2
+ soap_putmimehdr(struct soap *soap, struct soap_multipart *content)
+ { const char *s;
+-  DBGLOG(TEST, SOAP_MESSAGE(fdebug, "MIME attachment type=%s\n", content->type?content->type:""));
++  DBGLOG(TEST, SOAP_MESSAGE(fdebug, "MIME attachment type=%s\n", content->type?content->type:SOAP_STR_EOS));
+   if (soap_send3(soap, "\r\n--", soap->mime.boundary, "\r\n"))
+     return soap->error;
+   if (content->type && soap_send3(soap, "Content-Type: ", content->type, "\r\n"))
+@@ -12041,7 +12047,7 @@ soap_set_cookie(struct soap *soap, const
+   else if (*path == '/')
+     path++;
+   q = soap_cookie(soap, name, domain, path);
+-  DBGLOG(TEST, SOAP_MESSAGE(fdebug, "Set %scookie: %s=%s domain=%s path=%s\n", q ? "" : "new ", name, value?value:"(null)", domain?domain:"(null)", path?path:"(null)"));
++  DBGLOG(TEST, SOAP_MESSAGE(fdebug, "Set %scookie: %s=%s domain=%s path=%s\n", q ? SOAP_STR_EOS : "new ", name, value?value:"(null)", domain?domain:"(null)", path?path:"(null)"));
+   if (!q)
+   { if ((q = (struct soap_cookie*)SOAP_MALLOC(soap, sizeof(struct soap_cookie))))
+     { if ((q->name = (char*)SOAP_MALLOC(soap, strlen(name)+1)))
+@@ -13283,6 +13289,8 @@ soap_envelope_begin_out(struct soap *soa
+       else
+         s = "application/soap+xml; charset=utf-8";
+     }
++    else if (soap->mode & SOAP_ENC_MTOM)
++      s = "application/xop+xml; text/xml; charset=utf-8";
+     else
+       s = "text/xml; charset=utf-8";
+     sprintf(soap->tmpbuf, "--%s\r\nContent-Type: %s\r\nContent-Transfer-Encoding: binary\r\nContent-ID: %s\r\n\r\n", soap->mime.boundary, s, soap->mime.start);
+@@ -14007,8 +14015,8 @@ http_post(struct soap *soap, const char 
+     return soap->error;
+ #endif
+ #endif
+-  if (soap->status != SOAP_GET && (soap->version == 1 || (action && *action && strlen(action) < sizeof(soap->tmpbuf) - 2)))
+-  { sprintf(soap->tmpbuf, "\"%s\"", action?action:"");
++  if (soap->status != SOAP_GET && (soap->version == 1 || (action && *action)))
++  { sprintf(soap->tmpbuf, "\"%s\"", action && strlen(action) < sizeof(soap->tmpbuf - 3) ? action : SOAP_STR_EOS);
+     if ((err = soap->fposthdr(soap, "SOAPAction", soap->tmpbuf)))
+       return err;
+   }
+@@ -14333,7 +14341,7 @@ soap_set_fault(struct soap *soap)
+       break;
+     case SOAP_ZLIB_ERROR:
+ #ifdef WITH_ZLIB
+-      sprintf(soap->msgbuf, "Zlib/gzip error: '%s'", soap->d_stream->msg?soap->d_stream->msg:"");
++      sprintf(soap->msgbuf, "Zlib/gzip error: '%s'", soap->d_stream->msg?soap->d_stream->msg:SOAP_STR_EOS);
+       *s = soap->msgbuf;
+ #else
+       *s = "Zlib/gzip not installed for (de)compression: recompile with -DWITH_GZIP";
+diff -rupN gsoap-2.7/gsoap/stdsoap2.cpp gsoap-2.7-upd/gsoap/stdsoap2.cpp
+--- gsoap-2.7/gsoap/stdsoap2.cpp	2008-01-27 15:02:36.000000000 -0600
++++ gsoap-2.7-upd/gsoap/stdsoap2.cpp	2008-02-21 13:39:51.000000000 -0600
+@@ -1,5 +1,5 @@
+ /*
+-	stdsoap2.c[pp] 2.7.10
++	stdsoap2.c[pp] 2.7.10-upd
+ 
+ 	gSOAP runtime engine
+ 
+@@ -496,6 +496,10 @@ static const struct soap_code_map mime_c
+ static int tcp_done = 0;
+ #endif
+ 
++#if defined(HP_UX) && defined(HAVE_GETHOSTBYNAME_R)
++extern int h_errno;
++#endif
++
+ /******************************************************************************/
+ #ifndef WITH_NOIO
+ #ifndef PALM_1
+@@ -756,7 +760,7 @@ soap_flush(struct soap *soap)
+       do
+       { DBGLOG(TEST, SOAP_MESSAGE(fdebug, "Deflating %u bytes\n", soap->d_stream->avail_in));
+         if (deflate(soap->d_stream, Z_NO_FLUSH) != Z_OK)
+-        { DBGLOG(TEST, SOAP_MESSAGE(fdebug, "Unable to deflate: %s\n", soap->d_stream->msg?soap->d_stream->msg:""));
++        { DBGLOG(TEST, SOAP_MESSAGE(fdebug, "Unable to deflate: %s\n", soap->d_stream->msg?soap->d_stream->msg:SOAP_STR_EOS));
+           return soap->error = SOAP_ZLIB_ERROR;
+         }
+         if (!soap->d_stream->avail_out)
+@@ -1107,7 +1111,7 @@ soap_recv_raw(struct soap *soap)
+         }
+       }
+       else if (r != Z_BUF_ERROR)
+-      { DBGLOG(TEST, SOAP_MESSAGE(fdebug, "Inflate error: %s\n", soap->d_stream->msg?soap->d_stream->msg:""));
++      { DBGLOG(TEST, SOAP_MESSAGE(fdebug, "Inflate error: %s\n", soap->d_stream->msg?soap->d_stream->msg:SOAP_STR_EOS));
+         soap->d_stream->next_out = Z_NULL;
+         soap->error = SOAP_ZLIB_ERROR;
+         return EOF;
+@@ -1224,7 +1228,7 @@ zlib_again:
+       DBGMSG(RECV, soap->buf, ret);
+     }
+     else
+-    { DBGLOG(TEST, SOAP_MESSAGE(fdebug, "Unable to inflate: (%d) %s\n", r, soap->d_stream->msg?soap->d_stream->msg:""));
++    { DBGLOG(TEST, SOAP_MESSAGE(fdebug, "Unable to inflate: (%d) %s\n", r, soap->d_stream->msg?soap->d_stream->msg:SOAP_STR_EOS));
+       soap->d_stream->next_out = Z_NULL;
+       soap->error = SOAP_ZLIB_ERROR;
+       return EOF;
+@@ -2222,7 +2226,7 @@ soap_update_ptrs(struct soap *soap, char
+ #ifndef WITH_LEANER
+   for (xp = soap->xlist; xp; xp = xp->next)
+   { if (xp->ptr && (char*)xp->ptr >= start && (char*)xp->ptr < end)
+-    { DBGLOG(TEST, SOAP_MESSAGE(fdebug, "Update id='%s' %p -> %p\n", xp->id?xp->id:"", xp->ptr, (char*)xp->ptr + (p1-p2)));
++    { DBGLOG(TEST, SOAP_MESSAGE(fdebug, "Update id='%s' %p -> %p\n", xp->id?xp->id:SOAP_STR_EOS, xp->ptr, (char*)xp->ptr + (p1-p2)));
+       xp->ptr = (unsigned char**)((char*)xp->ptr + (p1-p2));
+       xp->size = (int*)((char*)xp->size + (p1-p2));
+       xp->type = (char**)((char*)xp->type + (p1-p2));
+@@ -3491,7 +3495,7 @@ tcp_gethost(struct soap *soap, const cha
+   /* inet_addr(), and hostGetByName() expect "char *"; addr is a "const char *". */
+   iadd = inet_addr((char*)addr);
+ #else
+-#if defined(_AIX43) || defined(TRU64)
++#if defined(_AIX43) || ((defined(TRU64) || defined(HP_UX)) && defined(HAVE_GETHOSTBYNAME_R))
+   struct hostent_data ht_data;
+ #endif
+ #ifdef AS400
+@@ -3507,7 +3511,7 @@ tcp_gethost(struct soap *soap, const cha
+ #if defined(__GLIBC__) || (defined(HAVE_GETHOSTBYNAME_R) && (defined(FREEBSD) || defined(__FreeBSD__)))
+   if (gethostbyname_r(addr, &hostent, soap->buf, SOAP_BUFLEN, &host, &soap->errnum) < 0)
+     host = NULL;
+-#elif defined(_AIX43) || defined(TRU64)
++#elif defined(_AIX43) || ((defined(TRU64) || defined(HP_UX)) && defined(HAVE_GETHOSTBYNAME_R))
+   memset((void*)&ht_data, 0, sizeof(ht_data));
+   if (gethostbyname_r(addr, &hostent, &ht_data) < 0)
+   { host = NULL;
+@@ -5257,7 +5261,7 @@ soap_attachment(struct soap *soap, const
+   int i;
+   if (!p || !a->__ptr || (!aid && !atype))
+     return soap_element_id(soap, tag, id, p, a, n, type, t);
+-  DBGLOG(TEST, SOAP_MESSAGE(fdebug, "Attachment tag='%s' id='%s' (%d) type='%s'\n", tag, aid?aid:"", id, atype?atype:""));
++  DBGLOG(TEST, SOAP_MESSAGE(fdebug, "Attachment tag='%s' id='%s' (%d) type='%s'\n", tag, aid?aid:SOAP_STR_EOS, id, atype?atype:SOAP_STR_EOS));
+   i = soap_array_pointer_lookup(soap, p, a, n, t, &pp);
+   if (!i)
+   { i = soap_pointer_enter(soap, p, a, n, t, &pp);
+@@ -5977,7 +5981,7 @@ soap_end_send(struct soap *soap)
+       soap->mode &= ~SOAP_ENC_ZLIB;
+       soap->zlib_state = SOAP_ZLIB_NONE;
+       if (deflateEnd(soap->d_stream) != Z_OK || r != Z_STREAM_END)
+-      { DBGLOG(TEST, SOAP_MESSAGE(fdebug, "Unable to end deflate: %s\n", soap->d_stream->msg?soap->d_stream->msg:""));
++      { DBGLOG(TEST, SOAP_MESSAGE(fdebug, "Unable to end deflate: %s\n", soap->d_stream->msg?soap->d_stream->msg:SOAP_STR_EOS));
+         return soap->error = SOAP_ZLIB_ERROR;
+       }
+ #ifdef WITH_GZIP
+@@ -6938,7 +6942,7 @@ soap_element(struct soap *soap, const ch
+ #ifdef WITH_XMLNS
+   register const char *s;
+ #endif
+-  DBGLOG(TEST, SOAP_MESSAGE(fdebug, "Element begin tag='%s' id='%d' type='%s'\n", tag, id, type?type:""));
++  DBGLOG(TEST, SOAP_MESSAGE(fdebug, "Element begin tag='%s' id='%d' type='%s'\n", tag, id, type?type:SOAP_STR_EOS));
+ #ifdef WITH_DOM
+   if (soap->part == SOAP_BEGIN_SECURITY && (soap->mode & SOAP_XML_CANONICAL) && !(soap->mode & SOAP_DOM_ASIS))
+   { register struct soap_nlist *np;
+@@ -7583,7 +7587,7 @@ soap_element_begin_in(struct soap *soap,
+         return soap->error = SOAP_NULL;
+       if (soap->body)
+         soap->level++;
+-      DBGLOG(TEST, SOAP_MESSAGE(fdebug, "Begin element found (level=%u) '%s'='%s'\n", soap->level, soap->tag, tag?tag:"" ));
++      DBGLOG(TEST, SOAP_MESSAGE(fdebug, "Begin element found (level=%u) '%s'='%s'\n", soap->level, soap->tag, tag?tag:SOAP_STR_EOS ));
+     }
+   }
+   else if (soap->error == SOAP_NO_TAG && tag && *tag == '-')
+@@ -7647,7 +7651,7 @@ soap_element_end_in(struct soap *soap, c
+     c = soap_get(soap);
+   if (c != SOAP_GT)
+     return soap->error = SOAP_SYNTAX_ERROR;
+-  DBGLOG(TEST, SOAP_MESSAGE(fdebug, "End element found (level=%u) '%s'='%s'\n", soap->level, soap->tag, tag?tag:""));
++  DBGLOG(TEST, SOAP_MESSAGE(fdebug, "End element found (level=%u) '%s'='%s'\n", soap->level, soap->tag, tag?tag:SOAP_STR_EOS));
+ #ifndef WITH_LEAN
+   if (tag && (soap->mode & SOAP_XML_STRICT))
+   { soap_pop_namespace(soap);
+@@ -7696,7 +7700,7 @@ soap_set_attr(struct soap *soap, const c
+ { register struct soap_attribute *tp;
+   if (*name == '-')
+     return SOAP_OK;
+-  DBGLOG(TEST, SOAP_MESSAGE(fdebug, "Set attribute %s='%s'\n", name, value?value:""));
++  DBGLOG(TEST, SOAP_MESSAGE(fdebug, "Set attribute %s='%s'\n", name, value?value:SOAP_STR_EOS));
+   for (tp = soap->attributes; tp; tp = tp->next)
+   { if (!strcmp(tp->name, name))
+       break;
+@@ -9512,7 +9516,10 @@ soap_float2s(struct soap *soap, float n)
+     return "-INF";
+   s = soap->tmpbuf;
+ #if defined(HAVE_SPRINTF_L)
+-  sprintf_l(s, NULL, soap->float_format, n);
++  { locale_t c_locale = soap_c_locale;
++    sprintf_l(s, c_locale, soap->float_format, n);
++    soap_freelocale(c_locale);
++  }
+ #else
+   sprintf(s, soap->float_format, n);
+   s = strchr(s, ',');	/* convert decimal comma to DP */
+@@ -9558,11 +9565,15 @@ soap_s2float(struct soap *soap, const ch
+ /* On some systems, strtof appears to be broken or doesn't link: use with caution */
+ #if defined(HAVE_STRTOF_L)
+       char *r;
+-      *p = strtof_l((char*)s, &r, NULL);
++      locale_t c_locale = soap_c_locale;
++      *p = strtof_l((char*)s, &r, c_locale);
++      soap_freelocale(c_locale);
+       if (*r)
+ #elif defined(HAVE_STRTOD_L)
+       char *r;
+-      *p = (float)strtod_l(s, &r, NULL);
++      locale_t c_locale = soap_c_locale;
++      *p = (float)strtod_l(s, &r, c_locale);
++      soap_freelocale(c_locale);
+       if (*r)
+ #elif defined(HAVE_STRTOF)
+       char *r;
+@@ -9573,15 +9584,19 @@ soap_s2float(struct soap *soap, const ch
+       *p = (float)strtod(s, &r);
+       if (*r)
+ #endif
+-#if defined(HAVE_SSCANF_L)
+-        if (sscanf_l(s, NULL, "%g", p) != 1)
++      {
++#if defined(HAVE_SSCANF_L) && !defined(HAVE_STRTOF_L) && !defined(HAVE_STRTOD_L)
++        locale_t c_locale = soap_c_locale;
++        if (sscanf_l(s, c_locale, "%g", p) != 1)
+           soap->error = SOAP_TYPE;
++        soap_freelocale(c_locale);
+ #elif defined(HAVE_SSCANF)
+         if (sscanf(s, "%g", p) != 1)
+           soap->error = SOAP_TYPE;
+ #else
+         soap->error = SOAP_TYPE;
+ #endif
++      }
+     }
+   }
+   return soap->error;
+@@ -9656,7 +9671,10 @@ soap_double2s(struct soap *soap, double 
+     return "-INF";
+   s = soap->tmpbuf;
+ #if defined(HAVE_SPRINTF_L)
+-  sprintf_l(s, NULL, soap->double_format, n);
++  { locale_t c_locale = soap_c_locale;
++    sprintf_l(s, c_locale, soap->double_format, n);
++    soap_freelocale(c_locale);
++  }
+ #else
+   sprintf(s, soap->double_format, n);
+   s = strchr(s, ',');	/* convert decimal comma to DP */
+@@ -9701,22 +9719,28 @@ soap_s2double(struct soap *soap, const c
+     {
+ #if defined(HAVE_STRTOD_L)
+       char *r;
+-      *p = strtod_l(s, &r, NULL);
++      locale_t c_locale = soap_c_locale;
++      *p = strtod_l(s, &r, c_locale);
++      soap_freelocale(c_locale);
+       if (*r)
+ #elif defined(HAVE_STRTOD)
+       char *r;
+       *p = strtod(s, &r);
+       if (*r)
+ #endif
+-#if defined(HAVE_SSCANF_L)
+-        if (sscanf_l(s, NULL, "%lg", p) != 1)
++      {
++#if defined(HAVE_SSCANF_L) && !defined(HAVE_STRTOF_L) && !defined(HAVE_STRTOD_L)
++        locale_t c_locale = soap_c_locale;
++        if (sscanf_l(s, c_locale, "%lg", p) != 1)
+           soap->error = SOAP_TYPE;
++        soap_freelocale(c_locale);
+ #elif defined(HAVE_SSCANF)
+         if (sscanf(s, "%lg", p) != 1)
+           soap->error = SOAP_TYPE;
+ #else
+         soap->error = SOAP_TYPE;
+ #endif
++      }
+     }
+   }
+   return soap->error;
+@@ -10218,7 +10242,7 @@ soap_s2QName(struct soap *soap, const ch
+             soap_append_lab(soap, "\"", 1);
+           }
+           else
+-          { DBGLOG(TEST, SOAP_MESSAGE(fdebug, "\nNamespace prefix of '%s' not defined (index=%d, URI=%s)\n", s, np->index, np->ns?np->ns:""));
++          { DBGLOG(TEST, SOAP_MESSAGE(fdebug, "\nNamespace prefix of '%s' not defined (index=%d, URI=%s)\n", s, np->index, np->ns?np->ns:SOAP_STR_EOS));
+             return soap->error = SOAP_NAMESPACE; 
+           }
+         }
+@@ -10661,11 +10685,11 @@ int
+ SOAP_FMAC2
+ soap_s2dateTime(struct soap *soap, const char *s, time_t *p)
+ { if (s)
+-  { struct tm T;
+-    char zone[32];
++  { char zone[32];
++    struct tm T;
+     const char *t;
++    *zone = '\0';
+     memset((void*)&T, 0, sizeof(T));
+-    zone[sizeof(zone)-1] = '\0';
+     if (strchr(s, '-'))
+       t = "%d-%d-%dT%d:%d:%d%31s";
+     else if (strchr(s, ':'))
+@@ -10678,36 +10702,18 @@ soap_s2dateTime(struct soap *soap, const
+     else
+       T.tm_year -= 1900;
+     T.tm_mon--;
+-    if (*zone)
+-    { if (*zone == '.')
+-      { for (s = zone + 1; *s; s++)
+-          if (*s < '0' || *s > '9')
+-            break;
+-      }
+-      else
+-        s = zone;
+-      if (*s == '+' || *s == '-')
+-      { int h = 0, m = 0;
+-        if (s[3] == ':')
+-        { sscanf(s, "%d:%d", &h, &m);
+-          if (h < 0)
+-            m = -m;
+-        }
+-        else
+-        { m = (int)atol(s);
+-          h = m / 100;
+-          m = m % 100;
+-        }
+-        T.tm_hour -= h;
+-        T.tm_min -= m;
+-      }
+-      T.tm_isdst = 0;
+-      *p = soap_timegm(&T);
++    T.tm_isdst = 0;
++    if (*zone == '.')
++    { for (s = zone + 1; *s; s++)
++        if (*s < '0' || *s > '9')
++          break;
+     }
+     else
+-    { T.tm_isdst = -1;
+-      *p = mktime(&T); /* no time zone: suppose it is localtime? */
+-    }
++      s = zone;
++    if (*s)
++      *p = soap_timegm(&T);
++    else
++      *p = mktime(&T);
+   }
+   return soap->error;
+ }
+@@ -11080,7 +11086,7 @@ SOAP_FMAC2
+ soap_putdimehdr(struct soap *soap)
+ { unsigned char tmp[12];
+   size_t optlen = 0, idlen = 0, typelen = 0;
+-  DBGLOG(TEST, SOAP_MESSAGE(fdebug, "Put DIME header id='%s'\n", soap->dime.id?soap->dime.id:""));
++  DBGLOG(TEST, SOAP_MESSAGE(fdebug, "Put DIME header id='%s'\n", soap->dime.id?soap->dime.id:SOAP_STR_EOS));
+   if (soap->dime.options)
+     optlen = (((unsigned char)soap->dime.options[2] << 8) | ((unsigned char)soap->dime.options[3])) + 4;
+   if (soap->dime.id)
+@@ -11277,7 +11283,7 @@ soap_getdimehdr(struct soap *soap)
+     return soap->error;
+   if (!(soap->dime.type = soap_getdimefield(soap, typelen)) && soap->error)
+     return soap->error;
+-  DBGLOG(TEST, SOAP_MESSAGE(fdebug, "DIME id=%s, type=%s, options=%s\n", soap->dime.id?soap->dime.id:"", soap->dime.type?soap->dime.type:"", soap->dime.options?soap->dime.options+4:""));
++  DBGLOG(TEST, SOAP_MESSAGE(fdebug, "DIME id=%s, type=%s, options=%s\n", soap->dime.id?soap->dime.id:SOAP_STR_EOS, soap->dime.type?soap->dime.type:"", soap->dime.options?soap->dime.options+4:SOAP_STR_EOS));
+   if (soap->dime.flags & SOAP_DIME_ME)
+     soap->mode &= ~SOAP_ENC_DIME;
+   return SOAP_OK;
+@@ -11529,7 +11535,7 @@ soap_get_mime_attachment(struct soap *so
+         return NULL;
+     }
+   }
+-  DBGLOG(TEST, SOAP_MESSAGE(fdebug, "Parsing MIME content id=%s type=%s\n", content->id?content->id:"", content->type?content->type:""));
++  DBGLOG(TEST, SOAP_MESSAGE(fdebug, "Parsing MIME content id=%s type=%s\n", content->id?content->id:SOAP_STR_EOS, content->type?content->type:SOAP_STR_EOS));
+   if (!content->ptr && soap_new_block(soap))
+   { soap->error = SOAP_EOM;
+     return NULL;
+@@ -11684,7 +11690,7 @@ int
+ SOAP_FMAC2
+ soap_putmimehdr(struct soap *soap, struct soap_multipart *content)
+ { const char *s;
+-  DBGLOG(TEST, SOAP_MESSAGE(fdebug, "MIME attachment type=%s\n", content->type?content->type:""));
++  DBGLOG(TEST, SOAP_MESSAGE(fdebug, "MIME attachment type=%s\n", content->type?content->type:SOAP_STR_EOS));
+   if (soap_send3(soap, "\r\n--", soap->mime.boundary, "\r\n"))
+     return soap->error;
+   if (content->type && soap_send3(soap, "Content-Type: ", content->type, "\r\n"))
+@@ -12041,7 +12047,7 @@ soap_set_cookie(struct soap *soap, const
+   else if (*path == '/')
+     path++;
+   q = soap_cookie(soap, name, domain, path);
+-  DBGLOG(TEST, SOAP_MESSAGE(fdebug, "Set %scookie: %s=%s domain=%s path=%s\n", q ? "" : "new ", name, value?value:"(null)", domain?domain:"(null)", path?path:"(null)"));
++  DBGLOG(TEST, SOAP_MESSAGE(fdebug, "Set %scookie: %s=%s domain=%s path=%s\n", q ? SOAP_STR_EOS : "new ", name, value?value:"(null)", domain?domain:"(null)", path?path:"(null)"));
+   if (!q)
+   { if ((q = (struct soap_cookie*)SOAP_MALLOC(soap, sizeof(struct soap_cookie))))
+     { if ((q->name = (char*)SOAP_MALLOC(soap, strlen(name)+1)))
+@@ -13283,6 +13289,8 @@ soap_envelope_begin_out(struct soap *soa
+       else
+         s = "application/soap+xml; charset=utf-8";
+     }
++    else if (soap->mode & SOAP_ENC_MTOM)
++      s = "application/xop+xml; text/xml; charset=utf-8";
+     else
+       s = "text/xml; charset=utf-8";
+     sprintf(soap->tmpbuf, "--%s\r\nContent-Type: %s\r\nContent-Transfer-Encoding: binary\r\nContent-ID: %s\r\n\r\n", soap->mime.boundary, s, soap->mime.start);
+@@ -14007,8 +14015,8 @@ http_post(struct soap *soap, const char 
+     return soap->error;
+ #endif
+ #endif
+-  if (soap->status != SOAP_GET && (soap->version == 1 || (action && *action && strlen(action) < sizeof(soap->tmpbuf) - 2)))
+-  { sprintf(soap->tmpbuf, "\"%s\"", action?action:"");
++  if (soap->status != SOAP_GET && (soap->version == 1 || (action && *action)))
++  { sprintf(soap->tmpbuf, "\"%s\"", action && strlen(action) < sizeof(soap->tmpbuf - 3) ? action : SOAP_STR_EOS);
+     if ((err = soap->fposthdr(soap, "SOAPAction", soap->tmpbuf)))
+       return err;
+   }
+@@ -14333,7 +14341,7 @@ soap_set_fault(struct soap *soap)
+       break;
+     case SOAP_ZLIB_ERROR:
+ #ifdef WITH_ZLIB
+-      sprintf(soap->msgbuf, "Zlib/gzip error: '%s'", soap->d_stream->msg?soap->d_stream->msg:"");
++      sprintf(soap->msgbuf, "Zlib/gzip error: '%s'", soap->d_stream->msg?soap->d_stream->msg:SOAP_STR_EOS);
+       *s = soap->msgbuf;
+ #else
+       *s = "Zlib/gzip not installed for (de)compression: recompile with -DWITH_GZIP";
+diff -rupN gsoap-2.7/gsoap/stdsoap2.h gsoap-2.7-upd/gsoap/stdsoap2.h
+--- gsoap-2.7/gsoap/stdsoap2.h	2008-01-27 15:02:36.000000000 -0600
++++ gsoap-2.7-upd/gsoap/stdsoap2.h	2008-02-21 13:39:45.000000000 -0600
+@@ -1,5 +1,5 @@
+ /*
+-	stdsoap2.h 2.7.10
++	stdsoap2.h 2.7.10-upd
+ 
+ 	gSOAP runtime engine
+ 
+@@ -719,6 +719,15 @@ extern "C" {
+ # define SOAP_ULONG_FORMAT "%llu"	/* printf format for unsigned 64 bit ints */
+ #endif
+ 
++/* glibc does not support _l functions with NULL locale */
++#if defined(__GLIBC__) || defined(__GNU__)
++# define soap_c_locale newlocale(LC_ALL_MASK, "C", NULL)
++# define soap_freelocale(l) freelocale(l)
++#else
++# define soap_c_locale NULL
++# define soap_freelocale(l)
++#endif
++
+ #if defined(WIN32) && !defined(CYGWIN)
+ # define soap_int32 __int32
+ #elif defined(SYMBIAN)

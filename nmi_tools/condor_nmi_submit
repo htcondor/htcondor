@@ -1222,25 +1222,25 @@ sub generateBuildFetchFiles
 		# repositories than the source. Ideally, this would only be
 		# visible at the makeFetchFileVCS level.
 		if( defined $opt_git ) {
-	    	my $extfile = "externals-$tag.src";
-	    	$extfile =~ s,/,,g;
-	    	makeFetchFileVCS( $extfile, TRUE, EXT, $module, $tag );
-	    	push( @fetch_files, $extfile );
+#	    	my $extfile = "externals-$tag.src";
+#	    	$extfile =~ s,/,,g;
+#	    	makeFetchFileVCS( $extfile, TRUE, EXT, $module, $tag );
+#	    	push( @fetch_files, $extfile );
 	
 	    	my $docfile = "manual-$tag.src";
 	    	$docfile =~ s,/,,g;
 	    	makeFetchFileVCS( $docfile, TRUE, DOC, $module, $tag );
 	    	push( @fetch_files, $docfile );
 
-	    	my $test_cnffile = "confidential-$tag.src";
-	    	$test_cnffile =~ s,/,,g;
-	    	makeFetchFileVCS( $test_cnffile, TRUE, TST_CNF, $module, $tag );
-	    	push( @fetch_files, $test_cnffile );
+#	    	my $test_cnffile = "confidential-$tag.src";
+#	    	$test_cnffile =~ s,/,,g;
+#	    	makeFetchFileVCS( $test_cnffile, TRUE, TST_CNF, $module, $tag );
+#	    	push( @fetch_files, $test_cnffile );
 
-	    	my $test_cnffile = "largetests-$tag.src";
-	    	$test_cnffile =~ s,/,,g;
-	    	makeFetchFileVCS( $test_cnffile, TRUE, TST_LRG, $module, $tag );
-	    	push( @fetch_files, $test_cnffile );
+#	    	my $test_cnffile = "largetests-$tag.src";
+#	    	$test_cnffile =~ s,/,,g;
+#	    	makeFetchFileVCS( $test_cnffile, TRUE, TST_LRG, $module, $tag );
+#	    	push( @fetch_files, $test_cnffile );
 		}
     }
     elsif( defined $src_workspace ) {
