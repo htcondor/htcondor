@@ -376,7 +376,12 @@ sub Vacate
 sub Reschedule
 {
     my $machine = shift;
-    return runCommand( "$CONDOR_RESCHD $machine > condor_resched.out 2>&1" );
+	
+	if(defined $machine) {
+    	return runCommand( "$CONDOR_RESCHD $machine > condor_resched.out 2>&1" );
+	} else {
+    	return runCommand( "$CONDOR_RESCHD > condor_resched.out 2>&1" );
+	}
 }
 
 # runs a command string, returning 0 if anything went wrong or 1 upon success
