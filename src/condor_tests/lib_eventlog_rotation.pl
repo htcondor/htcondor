@@ -1334,7 +1334,7 @@ sub ProcessEventlogs( $$ )
 
     my $min_sequence = 9999999;
     my $min_event_off = 99999999;
-    my $maxfile = $#{@{$files}};
+    my $maxfile = $#{$files};
     foreach my $n ( 0 .. $maxfile ) {
 		if ( ! defined ${@{$files}}[$n] ) {
 			print STDERR "ERROR: EventLog file #$n is missing\n";
