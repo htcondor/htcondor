@@ -1219,7 +1219,7 @@ sub CheckReaderOutput( $$$$ )
 		$errors++;
     }
 
-    my $nseq = $#{@{$new->{reader_sequence}}};
+    my $nseq = $#{$new->{reader_sequence}};
     my $rseq = -1;
     if ( $nseq >= 0 ) {
 		$rseq = @{$new->{reader_sequence}}[$nseq];
@@ -1336,12 +1336,12 @@ sub ProcessEventlogs( $$ )
     my $min_event_off = 99999999;
     my $maxfile = $#{$files};
     foreach my $n ( 0 .. $maxfile ) {
-		if ( ! defined ${@{$files}}[$n] ) {
+		if ( ! defined ${$files}[$n] ) {
 			print STDERR "ERROR: EventLog file #$n is missing\n";
 				$errors++;
 			next;
 		}
-		my $f = ${@{$files}}[$n];
+		my $f = ${$files}[$n];
 		my $t = $f->{name};
 		if ( not exists $f->{header} ) {
 			print STDERR "ERROR: no header in file $t\n";
