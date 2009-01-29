@@ -7156,6 +7156,46 @@ ALLOW_DAEMON = submit-side@matchsession/192.168.123.*
 
 Replace the example netmask with something suitable for your situation.
 
+\item[\Macro{KERBEROS\_SERVER\_KEYTAB}]
+\label{param:KerberosServerKeytab}
+The path and file name of the keytab file that holds the necessary Kerberos
+principals.
+If not defined, this variable's value is set by the installed Kerberos;
+it is \File{/etc/v5srvtab} on most systems.
+
+\item[\Macro{KERBEROS\_SERVER\_PRINCIPAL}]
+\label{param:KerberosServerPrincipal}
+An exact Kerberos principal to use.
+The default value is \verb$host/<hostname>@<realm>$, as set by the
+installed Kerberos.
+Where both \MacroNI{KERBEROS\_SERVER\_PRINCIPAL} and
+\MacroNI{KERBEROS\_SERVER\_SERVICE} are defined, this value takes
+precedence.
+
+\item[\Macro{KERBEROS\_SERVER\_USER}]
+\label{param:KerberosServerUser}
+The user name that the Kerberos server principal will map to after
+authentication.
+The default value is \verb@condor@.
+
+\item[\Macro{KERBEROS\_SERVER\_SERVICE}]
+\label{param:KerberosServerService}
+A string representing the Kerberos service name.
+This string is prepended with a slash character (\verb@/@) and the host name
+in order to form the Kerberos server principal.
+This value defaults to \verb@host@, resulting in the same default value
+as specified by using \MacroNI{KERBEROS\_SERVER\_PRINCIPAL}.
+Where both \MacroNI{KERBEROS\_SERVER\_PRINCIPAL} and
+\MacroNI{KERBEROS\_SERVER\_SERVICE} are defined, the value of
+\MacroNI{KERBEROS\_SERVER\_PRINCIPAL} takes precedence.
+
+
+\item[\Macro{KERBEROS\_CLIENT\_KEYTAB}]
+\label{param:KerberosClientKeytab}
+The path and file name of the keytab file for the client
+in Kerberos authentication.
+This variable has no default value.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

@@ -1073,21 +1073,21 @@ then all permitted realms must be explicitly mapped.
 If no map file is specified, then Condor assumes that the
 Kerberos realm is the same as the Condor UID domain.
 
+\index{authentication!Kerberos principal}
 The configuration variable
-\Macro{CONDOR\_SERVER\_PRINCIPAL}
+\Macro{KERBEROS\_SERVER\_PRINCIPAL}
 defines the name of a Kerberos principal.
-If \MacroNI{CONDOR\_SERVER\_PRINCIPAL} is not defined,
-then the default value used is "host".
+If \MacroNI{KERBEROS\_SERVER\_PRINCIPAL} is not defined,
+then the default value used is \verb@host@.
 A principal specifies a unique name to which a set of credentials
 may be assigned.
-\index{authentication!Kerberos principal}
 
 Condor takes the specified (or default) principal and appends
 a slash character, the host name, an '@' (at sign character),
 and the Kerberos realm.
 As an example, the configuration
 \begin{verbatim}
-CONDOR_SERVER_PRINCIPAL = condor-daemon
+KERBEROS_SERVER_PRINCIPAL = condor-daemon
 \end{verbatim}
 results in Condor's use of
 \begin{verbatim}
@@ -1972,7 +1972,7 @@ be aware that Condor depends on DNS to map IP addresses to names.  The
 security and accuracy of your DNS service is therefore a requirement.
 Typos in DNS mappings are an occasional source of unexpected behavior.
 If the authorization policy is not behaving as expected, carefully compare
-the names in the policy with the hostnames Condor mentions in the
+the names in the policy with the host names Condor mentions in the
 explanations of why requests are granted or denied.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
