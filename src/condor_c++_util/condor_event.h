@@ -147,10 +147,10 @@ class ULogEvent {
         invalid condor ID, invalid eventNumber, 
         and sets eventTime to the current time.
      */
-    ULogEvent();
+    ULogEvent(void);
     
     /// Destructor
-    virtual ~ULogEvent();
+    virtual ~ULogEvent(void);
     
     /** Get the next event from the log.  Gets the log header and body.
         @param file the non-NULL readable log file
@@ -166,7 +166,7 @@ class ULogEvent {
     int putEvent (FILE *file);
 
 		// returns a pointer to the current event name char[], or NULL
-	const char* eventName() const;
+	const char* eventName(void) const;
 
 	/** Return a ClassAd representation of this ULogEvent. This is implemented
 		differently in each of the known (by John Bethencourt as of 6/5/02)
@@ -174,7 +174,7 @@ class ULogEvent {
 		ULogEvent::toClassAd to do the things common to all implementations.
 		@return NULL for failure, or the ClassAd pointer for success
 	*/
-	virtual ClassAd* toClassAd();
+	virtual ClassAd* toClassAd(void);
 	    
 	/** Initialize from this ClassAd. This is implemented differently in each
 		of the known (by John Bethencourt as of 6/5/02) subclasses of
@@ -291,9 +291,9 @@ class SubmitEvent : public ULogEvent
 {
   public:
     ///
-    SubmitEvent();
+    SubmitEvent(void);
     ///
-    ~SubmitEvent();
+    ~SubmitEvent(void);
 
     /** Read the body of the next Submit event.
         @param file the non-NULL readable log file
@@ -310,7 +310,7 @@ class SubmitEvent : public ULogEvent
 	/** Return a ClassAd representation of this SubmitEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
 	*/
-	virtual ClassAd* toClassAd();
+	virtual ClassAd* toClassAd(void);
 
 	/** Initialize from this ClassAd.
 		@param a pointer to the ClassAd to initialize from
@@ -337,8 +337,8 @@ class SubmitEvent : public ULogEvent
 class RemoteErrorEvent : public ULogEvent
 {
  public:
-	RemoteErrorEvent();
-	~RemoteErrorEvent();
+	RemoteErrorEvent(void);
+	~RemoteErrorEvent(void);
 
     /** Read the body of the next Generic event.
         @param file the non-NULL readable log file
@@ -355,7 +355,7 @@ class RemoteErrorEvent : public ULogEvent
 	/** Return a ClassAd representation of this RemoteErrorEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
 	*/
-	virtual ClassAd* toClassAd();
+	virtual ClassAd* toClassAd(void);
 
 	/** Initialize from this ClassAd.
 		@param a pointer to the ClassAd to initialize from
@@ -364,15 +364,15 @@ class RemoteErrorEvent : public ULogEvent
 
 	//Methods for accessing the error description.
 	void setErrorText(char const *str);
-	char const *getErrorText() {return error_str;}
+	char const *getErrorText(void) {return error_str;}
 
 	void setDaemonName(char const *name);
-	char const *getDaemonName() {return daemon_name;}
+	char const *getDaemonName(void) {return daemon_name;}
 
 	void setExecuteHost(char const *host);
-	char const *getExecuteHost() {return execute_host;}
+	char const *getExecuteHost(void) {return execute_host;}
 
-	bool isCriticalError() {return critical_error;}
+	bool isCriticalError(void) {return critical_error;}
 	void setCriticalError(bool f);
 
 	void setHoldReasonCode(int hold_reason_code);
@@ -406,9 +406,9 @@ class GenericEvent : public ULogEvent
 {
   public:
     ///
-    GenericEvent();
+    GenericEvent(void);
     ///
-    ~GenericEvent();
+    ~GenericEvent(void);
 
     /** Read the body of the next Generic event.
         @param file the non-NULL readable log file
@@ -425,7 +425,7 @@ class GenericEvent : public ULogEvent
 	/** Return a ClassAd representation of this GenericEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
 	*/
-	virtual ClassAd* toClassAd();
+	virtual ClassAd* toClassAd(void);
 
 	/** Initialize from this ClassAd.
 		@param a pointer to the ClassAd to initialize from
@@ -434,7 +434,7 @@ class GenericEvent : public ULogEvent
 
 	//Preferred methods for accessing the info text.
 	void setInfoText(char const *str);
-	char const *getInfoText() {return info;}
+	char const *getInfoText(void) {return info;}
 
     /// A string with unspecified format.
     char info[1024];
@@ -453,9 +453,9 @@ class ExecuteEvent : public ULogEvent
 {
   public:
     ///
-    ExecuteEvent();
+    ExecuteEvent(void);
     ///
-    ~ExecuteEvent();
+    ~ExecuteEvent(void);
 
     /** Read the body of the next Execute event.
         @param file the non-NULL readable log file
@@ -472,7 +472,7 @@ class ExecuteEvent : public ULogEvent
 	/** Return a ClassAd representation of this ExecuteEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
 	*/
-	virtual ClassAd* toClassAd();
+	virtual ClassAd* toClassAd(void);
 
 	/** Initialize from this ClassAd.
 		@param a pointer to the ClassAd to initialize from
@@ -503,9 +503,9 @@ class ExecutableErrorEvent : public ULogEvent
 {
   public:
     ///
-    ExecutableErrorEvent();
+    ExecutableErrorEvent(void);
     ///
-    ~ExecutableErrorEvent();
+    ~ExecutableErrorEvent(void);
 
     /** Read the body of the next ExecutableError event.
         @param file the non-NULL readable log file
@@ -522,7 +522,7 @@ class ExecutableErrorEvent : public ULogEvent
 	/** Return a ClassAd representation of this ExecutableErroEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
 	*/
-	virtual ClassAd* toClassAd();
+	virtual ClassAd* toClassAd(void);
 
 	/** Initialize from this ClassAd.
 		@param a pointer to the ClassAd to initialize from
@@ -541,9 +541,9 @@ class CheckpointedEvent : public ULogEvent
 {
   public:
     ///
-    CheckpointedEvent();
+    CheckpointedEvent(void);
     ///
-    ~CheckpointedEvent();
+    ~CheckpointedEvent(void);
 
     /** Read the body of the next Checkpointed event.
         @param file the non-NULL readable log file
@@ -560,7 +560,7 @@ class CheckpointedEvent : public ULogEvent
 	/** Return a ClassAd representation of this CheckpointedEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
 	*/
-	virtual ClassAd* toClassAd();
+	virtual ClassAd* toClassAd(void);
 
 	/** Initialize from this ClassAd.
 		@param a pointer to the ClassAd to initialize from
@@ -583,9 +583,9 @@ class JobAbortedEvent : public ULogEvent
 {
   public:
     ///
-    JobAbortedEvent();
+    JobAbortedEvent(void);
     ///
-    ~JobAbortedEvent();
+    ~JobAbortedEvent(void);
 
     /** Read the body of the next JobAborted event.
         @param file the non-NULL readable log file
@@ -602,14 +602,14 @@ class JobAbortedEvent : public ULogEvent
 	/** Return a ClassAd representation of this JobAbortedEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
 	*/
-	virtual ClassAd* toClassAd();
+	virtual ClassAd* toClassAd(void);
 
 	/** Initialize from this ClassAd.
 		@param a pointer to the ClassAd to initialize from
 	*/
 	virtual void initFromClassAd(ClassAd* ad);
 
-	const char* getReason() const;
+	const char* getReason(void) const;
 	void setReason( const char* );
 
  private:
@@ -671,9 +671,9 @@ class JobEvictedEvent : public ULogEvent
 {
   public:
     ///
-    JobEvictedEvent();
+    JobEvictedEvent(void);
     ///
-    ~JobEvictedEvent();
+    ~JobEvictedEvent(void);
 
     /** Read the body of the next Evicted event.
         @param file the non-NULL readable log file
@@ -690,7 +690,7 @@ class JobEvictedEvent : public ULogEvent
 	/** Return a ClassAd representation of this JobEvictedEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
 	*/
-	virtual ClassAd* toClassAd();
+	virtual ClassAd* toClassAd(void);
 
 	/** Initialize from this ClassAd.
 		@param a pointer to the ClassAd to initialize from
@@ -721,10 +721,10 @@ class JobEvictedEvent : public ULogEvent
     /// The signal that terminated it (valid only on abnormal exit)
     int     signal_number;
 
-	const char* getReason() const;
+	const char* getReason(void) const;
 	void setReason( const char* );
 
-	const char* getCoreFile();
+	const char* getCoreFile(void);
 	void setCoreFile( const char* );
 
  private:
@@ -743,9 +743,9 @@ class TerminatedEvent : public ULogEvent
 {
   public:
     ///
-    TerminatedEvent();
+    TerminatedEvent(void);
     ///
-    ~TerminatedEvent();
+    ~TerminatedEvent(void);
 
     /** Read the body of the next Terminated event.
 		This is pure virtual to make sure this is an abstract base class
@@ -787,7 +787,7 @@ class TerminatedEvent : public ULogEvent
     /// The signal that terminated it (valid only on abnormal exit)
     int     signalNumber;
 
-	const char* getCoreFile();
+	const char* getCoreFile(void);
 	void setCoreFile( const char* );
 
     /** Local  usage for the run */    rusage  run_local_rusage;
@@ -829,9 +829,9 @@ class JobTerminatedEvent : public TerminatedEvent
 {
   public:
     ///
-    JobTerminatedEvent();
+    JobTerminatedEvent(void);
     ///
-    ~JobTerminatedEvent();
+    ~JobTerminatedEvent(void);
 
     /** Read the body of the next Terminated event.
         @param file the non-NULL readable log file
@@ -848,7 +848,7 @@ class JobTerminatedEvent : public TerminatedEvent
 	/** Return a ClassAd representation of this JobTerminatedEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
 	*/
-	virtual ClassAd* toClassAd();
+	virtual ClassAd* toClassAd(void);
 
 	/** Initialize from this ClassAd.
 		@param a pointer to the ClassAd to initialize from
@@ -861,9 +861,9 @@ class NodeTerminatedEvent : public TerminatedEvent
 {
   public:
     ///
-    NodeTerminatedEvent();
+    NodeTerminatedEvent(void);
     ///
-    ~NodeTerminatedEvent();
+    ~NodeTerminatedEvent(void);
 
     /** Read the body of the next Terminated event.
         @param file the non-NULL readable log file
@@ -880,7 +880,7 @@ class NodeTerminatedEvent : public TerminatedEvent
 	/** Return a ClassAd representation of this NodeTerminatedEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
 	*/
-	virtual ClassAd* toClassAd();
+	virtual ClassAd* toClassAd(void);
 
 	/** Initialize from this ClassAd.
 		@param a pointer to the ClassAd to initialize from
@@ -896,9 +896,9 @@ class PostScriptTerminatedEvent : public ULogEvent
 {
  public:
     ///
-    PostScriptTerminatedEvent();
+    PostScriptTerminatedEvent(void);
     ///
-    ~PostScriptTerminatedEvent();
+    ~PostScriptTerminatedEvent(void);
 
     /** Read the body of the next Terminated event.
         @param file the non-NULL readable log file
@@ -915,7 +915,7 @@ class PostScriptTerminatedEvent : public ULogEvent
 	/** Return a ClassAd representation of this PostScriptTerminatedEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
 	*/
-	virtual ClassAd* toClassAd();
+	virtual ClassAd* toClassAd(void);
 
 	/** Initialize from this ClassAd.
 		@param a pointer to the ClassAd to initialize from
@@ -953,9 +953,9 @@ class GlobusSubmitEvent : public ULogEvent
 {
   public:
     ///
-    GlobusSubmitEvent();
+    GlobusSubmitEvent(void);
     ///
-    ~GlobusSubmitEvent();
+    ~GlobusSubmitEvent(void);
 
     /** Read the body of the next Submit event.
         @param file the non-NULL readable log file
@@ -972,7 +972,7 @@ class GlobusSubmitEvent : public ULogEvent
 	/** Return a ClassAd representation of this GlobusSubmitEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
 	*/
-	virtual ClassAd* toClassAd();
+	virtual ClassAd* toClassAd(void);
 
 	/** Initialize from this ClassAd.
 		@param a pointer to the ClassAd to initialize from
@@ -999,9 +999,9 @@ class GlobusSubmitFailedEvent : public ULogEvent
 {
   public:
     ///
-    GlobusSubmitFailedEvent();
+    GlobusSubmitFailedEvent(void);
     ///
-    ~GlobusSubmitFailedEvent();
+    ~GlobusSubmitFailedEvent(void);
 
     /** Read the body of the next SubmitAborted event.
         @param file the non-NULL readable log file
@@ -1018,7 +1018,7 @@ class GlobusSubmitFailedEvent : public ULogEvent
 	/** Return a ClassAd representation of this GlobusSubmitFailedEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
 	*/
-	virtual ClassAd* toClassAd();
+	virtual ClassAd* toClassAd(void);
 
 	/** Initialize from this ClassAd.
 		@param a pointer to the ClassAd to initialize from
@@ -1034,9 +1034,9 @@ class GlobusResourceUpEvent : public ULogEvent
 {
   public:
     ///
-    GlobusResourceUpEvent();
+    GlobusResourceUpEvent(void);
     ///
-    ~GlobusResourceUpEvent();
+    ~GlobusResourceUpEvent(void);
 
     /** Read the body of the next ResoruceUp event.
         @param file the non-NULL readable log file
@@ -1053,7 +1053,7 @@ class GlobusResourceUpEvent : public ULogEvent
 	/** Return a ClassAd representation of this GlobusResourceUpEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
 	*/
-	virtual ClassAd* toClassAd();
+	virtual ClassAd* toClassAd(void);
 
 	/** Initialize from this ClassAd.
 		@param a pointer to the ClassAd to initialize from
@@ -1069,9 +1069,9 @@ class GlobusResourceDownEvent : public ULogEvent
 {
   public:
     ///
-    GlobusResourceDownEvent();
+    GlobusResourceDownEvent(void);
     ///
-    ~GlobusResourceDownEvent();
+    ~GlobusResourceDownEvent(void);
 
     /** Read the body of the next SubmitAborted event.
         @param file the non-NULL readable log file
@@ -1088,7 +1088,7 @@ class GlobusResourceDownEvent : public ULogEvent
 	/** Return a ClassAd representation of this GlobusResourceDownEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
 	*/
-	virtual ClassAd* toClassAd();
+	virtual ClassAd* toClassAd(void);
 
 	/** Initialize from this ClassAd.
 		@param a pointer to the ClassAd to initialize from
@@ -1108,9 +1108,9 @@ class JobImageSizeEvent : public ULogEvent
 {
   public:
     ///
-    JobImageSizeEvent();
+    JobImageSizeEvent(void);
     ///
-    ~JobImageSizeEvent();
+    ~JobImageSizeEvent(void);
 
     /** Read the body of the next ImageSize event.
         @param file the non-NULL readable log file
@@ -1127,7 +1127,7 @@ class JobImageSizeEvent : public ULogEvent
 	/** Return a ClassAd representation of this JobImageSizeEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
 	*/
-	virtual ClassAd* toClassAd();
+	virtual ClassAd* toClassAd(void);
 
 	/** Initialize from this ClassAd.
 		@param a pointer to the ClassAd to initialize from
@@ -1146,9 +1146,9 @@ class ShadowExceptionEvent : public ULogEvent
 {
   public:
     ///
-    ShadowExceptionEvent ();
+    ShadowExceptionEvent (void);
     ///
-    ~ShadowExceptionEvent ();
+    ~ShadowExceptionEvent (void);
 
     /** Read the body of the next ShadowException event.
         @param file the non-NULL readable log file
@@ -1165,7 +1165,7 @@ class ShadowExceptionEvent : public ULogEvent
 	/** Return a ClassAd representation of this ShadowExceptionEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
 	*/
-	virtual ClassAd* toClassAd();
+	virtual ClassAd* toClassAd(void);
 
 	/** Initialize from this ClassAd.
 		@param a pointer to the ClassAd to initialize from
@@ -1189,9 +1189,9 @@ class JobSuspendedEvent : public ULogEvent
 {
   public:
     ///
-    JobSuspendedEvent ();
+    JobSuspendedEvent (void);
     ///
-    ~JobSuspendedEvent ();
+    ~JobSuspendedEvent (void);
 
     /** Read the body of the next JobSuspendedEvent event.
         @param file the non-NULL readable log file
@@ -1208,7 +1208,7 @@ class JobSuspendedEvent : public ULogEvent
 	/** Return a ClassAd representation of this JobSuspendedEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
 	*/
-	virtual ClassAd* toClassAd();
+	virtual ClassAd* toClassAd(void);
 
 	/** Initialize from this ClassAd.
 		@param a pointer to the ClassAd to initialize from
@@ -1227,9 +1227,9 @@ class JobUnsuspendedEvent : public ULogEvent
 {
   public:
     ///
-    JobUnsuspendedEvent ();
+    JobUnsuspendedEvent (void);
     ///
-    ~JobUnsuspendedEvent ();
+    ~JobUnsuspendedEvent (void);
 
     /** Read the body of the next JobUnsuspendedEvent event.
         @param file the non-NULL readable log file
@@ -1246,7 +1246,7 @@ class JobUnsuspendedEvent : public ULogEvent
 	/** Return a ClassAd representation of this JobUnsuspendedEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
 	*/
-	virtual ClassAd* toClassAd();
+	virtual ClassAd* toClassAd(void);
 
 	/** Initialize from this ClassAd.
 		@param a pointer to the ClassAd to initialize from
@@ -1268,9 +1268,9 @@ class JobHeldEvent : public ULogEvent
 {
   public:
     ///
-    JobHeldEvent ();
+    JobHeldEvent (void);
     ///
-    ~JobHeldEvent ();
+    ~JobHeldEvent (void);
 
     /** Read the body of the next JobHeldEvent event.
         @param file the non-NULL readable log file
@@ -1287,7 +1287,7 @@ class JobHeldEvent : public ULogEvent
 	/** Return a ClassAd representation of this JobHeldEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
 	*/
-	virtual ClassAd* toClassAd();
+	virtual ClassAd* toClassAd(void);
 
 	/** Initialize from this ClassAd.
 		@param a pointer to the ClassAd to initialize from
@@ -1295,10 +1295,10 @@ class JobHeldEvent : public ULogEvent
 	virtual void initFromClassAd(ClassAd* ad);
 
 		/// @return pointer to our copy of the reason, or NULL if not set
-	const char* getReason() const;
+	const char* getReason(void) const;
 
-	int getReasonCode() const;
-	int getReasonSubCode() const;
+	int getReasonCode(void) const;
+	int getReasonSubCode(void) const;
 
 		/// makes a copy of the string in our "reason" member
 	void setReason( const char* );
@@ -1322,9 +1322,9 @@ class JobReleasedEvent : public ULogEvent
 {
   public:
     ///
-    JobReleasedEvent ();
+    JobReleasedEvent (void);
     ///
-    ~JobReleasedEvent ();
+    ~JobReleasedEvent (void);
 
     /** Read the body of the next JobReleasedEvent event.
         @param file the non-NULL readable log file
@@ -1341,7 +1341,7 @@ class JobReleasedEvent : public ULogEvent
 	/** Return a ClassAd representation of this JobReleasedEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
 	*/
-	virtual ClassAd* toClassAd();
+	virtual ClassAd* toClassAd(void);
 
 	/** Initialize from this ClassAd.
 		@param a pointer to the ClassAd to initialize from
@@ -1349,7 +1349,7 @@ class JobReleasedEvent : public ULogEvent
 	virtual void initFromClassAd(ClassAd* ad);
 
 		/// @return pointer to our copy of the reason, or NULL if not set
-	const char* getReason() const;
+	const char* getReason(void) const;
 
 		/// makes a copy of the string in our "reason" member
 	void setReason( const char* );
@@ -1365,9 +1365,9 @@ class NodeExecuteEvent : public ULogEvent
 {
   public:
     ///
-    NodeExecuteEvent();
+    NodeExecuteEvent(void);
     ///
-    ~NodeExecuteEvent();
+    ~NodeExecuteEvent(void);
 
     /** Read the body of the next Execute event.
         @param file the non-NULL readable log file
@@ -1384,7 +1384,7 @@ class NodeExecuteEvent : public ULogEvent
 	/** Return a ClassAd representation of this NodeExecuteEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
 	*/
-	virtual ClassAd* toClassAd();
+	virtual ClassAd* toClassAd(void);
 
 	/** Initialize from this ClassAd.
 		@param a pointer to the ClassAd to initialize from
@@ -1413,8 +1413,8 @@ class NodeExecuteEvent : public ULogEvent
 class JobDisconnectedEvent : public ULogEvent
 {
 public:
-	JobDisconnectedEvent();
-	~JobDisconnectedEvent();
+	JobDisconnectedEvent(void);
+	~JobDisconnectedEvent(void);
 
 	virtual int readEvent( FILE * );
 
@@ -1426,21 +1426,21 @@ public:
 
 		/// stores a copy of the string in our "startd_addr" member
 	void setStartdAddr( char const *startd );
-	const char* getStartdAddr() const {return startd_addr;}
+	const char* getStartdAddr(void) const {return startd_addr;}
 
 		/// stores a copy of the string in our "startd_name" member
 	void setStartdName( char const *name );
-	const char* getStartdName() const {return startd_name;}
+	const char* getStartdName(void) const {return startd_name;}
 
 		/// stores a copy of the string in our "reason" member
 	void setDisconnectReason( const char* );
 		/// @return pointer to our copy of the reason, or NULL if not set
-	const char* getDisconnectReason() const {return disconnect_reason;};
+	const char* getDisconnectReason(void) const {return disconnect_reason;};
 
 		/// stores a copy of the string in our "reason" member
 	void setNoReconnectReason( const char* );
 		/// @return pointer to our copy of the reason, or NULL if not set
-	const char* getNoReconnectReason() const {return no_reconnect_reason;};
+	const char* getNoReconnectReason(void) const {return no_reconnect_reason;};
 
 		/** This flag defaults to true, and is set to false if a
 			NoReconnectReason is specified for the event */
@@ -1458,8 +1458,8 @@ private:
 class JobReconnectedEvent : public ULogEvent
 {
 public:
-	JobReconnectedEvent();
-	~JobReconnectedEvent();
+	JobReconnectedEvent(void);
+	~JobReconnectedEvent(void);
 
 	virtual int readEvent( FILE * );
 
@@ -1471,15 +1471,15 @@ public:
 
 		/// stores a copy of the string in our "startd_addr" member
 	void setStartdAddr( char const *startd );
-	const char* getStartdAddr() const {return startd_addr;}
+	const char* getStartdAddr(void) const {return startd_addr;}
 
 		/// stores a copy of the string in our "startd_name" member
 	void setStartdName( char const *name );
-	const char* getStartdName() const {return startd_name;}
+	const char* getStartdName(void) const {return startd_name;}
 
 		/// stores a copy of the string in our "starter_addr" member
 	void setStarterAddr( char const *starter );
-	const char* getStarterAddr() const {return startd_addr;}
+	const char* getStarterAddr(void) const {return startd_addr;}
 
 private:
 	char *startd_addr;
@@ -1491,8 +1491,8 @@ private:
 class JobReconnectFailedEvent : public ULogEvent
 {
 public:
-	JobReconnectFailedEvent();
-	~JobReconnectFailedEvent();
+	JobReconnectFailedEvent(void);
+	~JobReconnectFailedEvent(void);
 
 	virtual int readEvent( FILE * );
 
@@ -1505,11 +1505,11 @@ public:
 		/// stores a copy of the string in our "reason" member
 	void setReason( const char* );
 		/// @return pointer to our copy of the reason, or NULL if not set
-	const char* getReason() const {return reason;};
+	const char* getReason(void) const {return reason;};
 
 		/// stores a copy of the string in our "startd_name" member
 	void setStartdName( char const *name );
-	const char* getStartdName() const {return startd_name;}
+	const char* getStartdName(void) const {return startd_name;}
 
 private:
 	char *startd_name;
@@ -1521,9 +1521,9 @@ class GridResourceUpEvent : public ULogEvent
 {
   public:
     ///
-    GridResourceUpEvent();
+    GridResourceUpEvent(void);
     ///
-    ~GridResourceUpEvent();
+    ~GridResourceUpEvent(void);
 
     /** Read the body of the next GridResoruceUp event.
         @param file the non-NULL readable log file
@@ -1540,7 +1540,7 @@ class GridResourceUpEvent : public ULogEvent
 	/** Return a ClassAd representation of this GridResourceUpEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
 	*/
-	virtual ClassAd* toClassAd();
+	virtual ClassAd* toClassAd(void);
 
 	/** Initialize from this ClassAd.
 		@param a pointer to the ClassAd to initialize from
@@ -1556,9 +1556,9 @@ class GridResourceDownEvent : public ULogEvent
 {
   public:
     ///
-    GridResourceDownEvent();
+    GridResourceDownEvent(void);
     ///
-    ~GridResourceDownEvent();
+    ~GridResourceDownEvent(void);
 
     /** Read the body of the next GridResourceDown event.
         @param file the non-NULL readable log file
@@ -1575,7 +1575,7 @@ class GridResourceDownEvent : public ULogEvent
 	/** Return a ClassAd representation of this GridResourceDownEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
 	*/
-	virtual ClassAd* toClassAd();
+	virtual ClassAd* toClassAd(void);
 
 	/** Initialize from this ClassAd.
 		@param a pointer to the ClassAd to initialize from
@@ -1596,9 +1596,9 @@ class GridSubmitEvent : public ULogEvent
 {
   public:
     ///
-    GridSubmitEvent();
+    GridSubmitEvent(void);
     ///
-    ~GridSubmitEvent();
+    ~GridSubmitEvent(void);
 
     /** Read the body of the next Submit event.
         @param file the non-NULL readable log file
@@ -1615,7 +1615,7 @@ class GridSubmitEvent : public ULogEvent
 	/** Return a ClassAd representation of this GridSubmitEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
 	*/
-	virtual ClassAd* toClassAd();
+	virtual ClassAd* toClassAd(void);
 
 	/** Initialize from this ClassAd.
 		@param a pointer to the ClassAd to initialize from
@@ -1636,9 +1636,9 @@ class JobAdInformationEvent : public ULogEvent
 {
   public:
     ///
-    JobAdInformationEvent();
+    JobAdInformationEvent(void);
     ///
-    ~JobAdInformationEvent();
+    ~JobAdInformationEvent(void);
 
     /** Read the body of the next Generic event.
         @param file the non-NULL readable log file
@@ -1657,7 +1657,7 @@ class JobAdInformationEvent : public ULogEvent
 	/** Return a ClassAd representation of this GenericEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
 	*/
-	virtual ClassAd* toClassAd();
+	virtual ClassAd* toClassAd(void);
 
 	/** Initialize from this ClassAd.
 		@param a pointer to the ClassAd to initialize from
@@ -1673,7 +1673,6 @@ class JobAdInformationEvent : public ULogEvent
   protected:
 	  ClassAd *jobad;
 };
-
 
 #endif // __CONDOR_EVENT_H__
 
