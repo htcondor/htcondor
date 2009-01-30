@@ -1,6 +1,10 @@
 \begin{ManPage}{\label{man-condor-submit-dag}\Condor{submit\_dag}}{1}
 {Manage and queue jobs within a specified DAG for execution on remote machines}
-\Synopsis \SynProg{\Condor{submit\_dag}}
+\Synopsis
+\SynProg{\Condor{submit\_dag}}
+\oOpt{-help | -version}
+
+\SynProg{\Condor{submit\_dag}}
 \oOpt{-no\_submit}
 \oOpt{-verbose}
 \oOpt{-force}
@@ -45,6 +49,8 @@ See the Condor User Manual, section~\ref{sec:DAGMan} for a complete
 description.
 
 \begin{Options}
+  \OptItem{\Opt{-help}}{Display usage information.}
+  \OptItem{\Opt{-version}}{Display version information.}
   \OptItem{\Opt{-no\_submit}}{Produce the Condor submit description file
      for DAGMan, but do not submit DAGMan as a Condor job.}
   \OptItem{\Opt{-verbose}}{Cause \Condor{submit\_dag}
