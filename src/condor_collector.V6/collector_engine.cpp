@@ -440,6 +440,15 @@ collect (int command, Sock *sock, sockaddr_in *from, int &insert)
 	// the above includes a timed communication with the client
 	sock->timeout(0);
 
+	// insert the authenticated user into the ad itself
+	const char* authn_user = sock->getFullyQualifiedUser();
+	if (authn_user) {
+		clientAd->Assign("socket_authenticated_user", authn_user);
+	} else {
+		// remove it from the ad if it's not authenticated.
+		clientAd->Delete("socket_authenticated_user");
+	}
+
 	rval = collect(command, clientAd, from, insert, sock);
 
 	// Don't leak the ad on error!
