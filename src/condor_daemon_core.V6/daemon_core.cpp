@@ -4199,43 +4199,25 @@ int DaemonCore::HandleReq(Stream *insock)
 					}
 
 					int auth_timeout = getSecMan()->getSecTimeout( comTable[cmd_index].perm );
-					if (!sock->authenticate(the_key, auth_methods, &errstack, auth_timeout)) {
+					char *method_used = NULL;
+
+					if (!sock->authenticate(the_key, auth_methods, &errstack, auth_timeout, &method_used)) {
 						free( auth_methods );
+						free( method_used );
 						dprintf( D_ALWAYS,
 								 "DC_AUTHENTICATE: authenticate failed: %s\n",
 								 errstack.getFullText() );
 						result = FALSE;
 						goto finalize;
 					}
-					free( auth_methods );
 
-					// check to see if the auth IP is the same
-					// as the socket IP.  this cast is safe because
-					// we return above if sock is not a ReliSock.
-					if ( ((ReliSock*)sock)->authob ) {
-
-						// after authenticating, update the classad to reflect
-						// which method we actually used.
-						char* the_method = ((ReliSock*)sock)->authob->getMethodUsed();
-						the_policy->Assign(ATTR_SEC_AUTHENTICATION_METHODS, the_method);
-
-						const char* sockip = sin_to_string(sock->endpoint());
-						const char* authip = ((ReliSock*)sock)->authob->getRemoteAddress() ;
-
-						result = !strncmp (sockip + 1, authip, strlen(authip) );
-
-						if (!result && !param_boolean( "DISABLE_AUTHENTICATION_IP_CHECK", false)) {
-							dprintf (D_ALWAYS, "DC_AUTHENTICATE: sock ip -> %s\n", sockip);
-							dprintf (D_ALWAYS, "DC_AUTHENTICATE: auth ip -> %s\n", authip);
-							dprintf (D_ALWAYS, "DC_AUTHENTICATE: ERROR: IP not in agreement!!! BAILING!\n");
-
-							result = FALSE;
-							goto finalize;
-
-						} else {
-							dprintf (D_SECURITY, "DC_AUTHENTICATE: mutual authentication to %s complete.\n", authip);
-						}
+					if ( method_used ) {
+						the_policy->Assign(ATTR_SEC_AUTHENTICATION_METHODS, method_used);
 					}
+					dprintf (D_SECURITY, "DC_AUTHENTICATE: mutual authentication to %s complete.\n", sock->endpoint_ip_str());
+
+					free( auth_methods );
+					free( method_used );
 
 				} else {
 					if (DebugFlags & D_FULLDEBUG) {

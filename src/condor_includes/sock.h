@@ -337,7 +337,8 @@ protected:
     ///
 	virtual int authenticate(const char * auth_methods, CondorError* errstack, int timeout);
     ///
-	virtual int authenticate(KeyInfo *&ki, const char * auth_methods, CondorError* errstack, int timeout);
+	// method_used should be freed by the caller when finished with it
+	virtual int authenticate(KeyInfo *&ki, const char * auth_methods, CondorError* errstack, int timeout, char **method_used=NULL);
     ///
 	virtual bool is_encrypt();
 #ifdef WIN32

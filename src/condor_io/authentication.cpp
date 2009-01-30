@@ -62,7 +62,6 @@ Authentication::Authentication( ReliSock *sock )
 	mySock              = sock;
 	auth_status         = CAUTH_NONE;
 	method_used         = NULL;
-	t_mode              = NORMAL;
 	authenticator_      = NULL;
 #endif
 
@@ -247,7 +246,23 @@ int Authentication::authenticate_inner( char *hostAddr, const char* auth_methods
 		//------------------------------------------
 		// Now authenticate
 		//------------------------------------------
-		if (!auth->authenticate(hostAddr, errstack) ) {
+		bool auth_rc = auth->authenticate(hostAddr, errstack);
+
+			// check to see if the auth IP is the same as the socket IP
+		if( auth_rc ) {
+			char const *sockip = mySock->endpoint_ip_str();
+			char const *authip = auth->getRemoteHost() ;
+
+			auth_rc = !sockip || !authip || !strcmp(sockip,authip);
+
+			if (!auth_rc && !param_boolean( "DISABLE_AUTHENTICATION_IP_CHECK", false)) {
+				errstack->pushf("AUTHENTICATE", AUTHENTICATE_ERR_METHOD_FAILED,
+								"authenticated remote host does not match connection address (%s vs %s)", authip, sockip );
+				dprintf (D_ALWAYS, "AUTHENTICATE: ERROR: authenticated remot ehost does not match connection address (%s vs %s); configure DISABLE_AUTHENTICATION_IP_CHECK=TRUE if this check should be skipped\n",authip,sockip);
+			}
+		}
+
+		if( !auth_rc ) {
 			delete auth;
 			auth = NULL;
 
@@ -650,62 +665,6 @@ bool Authentication :: is_valid()
     }
 #endif
     return valid;
-}
-
-int Authentication :: encrypt(bool flag)
-{
-    int code = 0;
-#if !defined(SKIP_AUTHENTICATION)
-    if (flag == TRUE) {
-        if (is_valid()){//check for flags to support shd be added 
-            t_mode = ENCRYPT;
-            code = 0;
-        }
-        else{
-            t_mode = NORMAL;
-            code = -1;
-        }
-    }
-    else {
-        t_mode = NORMAL;
-        code = 0;
-    }
-#endif
-    return code;
-}
-
-bool Authentication :: is_encrypt()
-{
-#if defined(SKIP_AUTHENTICATION)
-    return FALSE;
-#else
-    if ( t_mode ==  ENCRYPT || t_mode == ENCRYPT_HDR )
-        return TRUE;
-    return FALSE;
-#endif
-}
-
-int Authentication :: hdr_encrypt()
-{
-#if defined(SKIP_AUTHENTICATION)
-    return FALSE;
-#else
-    if ( t_mode == ENCRYPT){
-        t_mode = ENCRYPT_HDR;
-    }
-    return TRUE;
-#endif
-}
-
-bool Authentication :: is_hdr_encrypt(){
-#if defined(SKIP_AUTHENTICATION)
-    return FALSE;
-#else
-    if (t_mode  == ENCRYPT_HDR)  
-        return TRUE;
-    else 
-        return FALSE;
-#endif
 }
 
 int Authentication :: wrap(char*  input, 

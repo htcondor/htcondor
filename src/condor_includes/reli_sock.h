@@ -200,18 +200,8 @@ public:
     ///
 	int authenticate( const char* methods, CondorError* errstack, int auth_timeout );
     ///
-	int authenticate( KeyInfo *& key, const char* methods, CondorError* errstack, int auth_timeout );
+	int authenticate( KeyInfo *& key, const char* methods, CondorError* errstack, int auth_timeout, char **method_used=NULL );
     ///
-    const char * getHostAddress();
-	
-	int encrypt(bool);
-	///
-	bool is_encrypt();
-	///
-	int hdr_encrypt();
-	///
-	bool is_hdr_encrypt();
-	///
 	int isClient() { return is_client; };
 
 	// Normally, the side of the connection that called connect() is
@@ -244,7 +234,7 @@ protected:
 	int prepare_for_nobuffering( stream_coding = stream_unknown);
 	int perform_authenticate( bool with_key, KeyInfo *& key, 
 							  const char* methods, CondorError* errstack,
-							  int auth_timeout );
+							  int auth_timeout, char **method_used );
 
 	// This is used internally to recover sanity on the stream after
 	// failing to open a file in put_file().
@@ -300,7 +290,6 @@ protected:
 	int	ignore_next_decode_eom;
 	float _bytes_sent, _bytes_recvd;
 
-	Authentication * authob;
 	int is_client;
 	char *hostAddr;
 	classy_counted_ptr<class CCBClient> m_ccb_client; // for reverse connects

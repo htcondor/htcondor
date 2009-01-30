@@ -31,22 +31,9 @@
 #include "file_transfer.h"
 #include "extra_param_info.h"
 #include "daemon.h"
-#include "condor_cred_base.h"
-#include "condor_credential.h"
 #include "condor_config.h"
 #include "condor_transfer_request.h"
 #include "log_transaction.h"
 #include "killfamily.h"
 #include "passwd_cache.h"
 #include "proc_family_direct.h"
-
-#if HAVE_EXT_CLASSADS 
-#include "credential.h"
-#endif
-
-
-#if HAVE_EXT_CLASSADS
-#endif
-
-#if defined(Solaris)
-#endif

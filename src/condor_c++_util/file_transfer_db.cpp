@@ -102,7 +102,7 @@ void file_transfer_db(file_transfer_record *rp, ClassAd *ad)
 		snprintf(src_host, MAXMACHNAME, "%s", tmpp);
 		dst_port = rp->sockp->get_port(); /* get_port retrieves the local port */
 		src_port = rp->sockp->endpoint_port();
-		isEncrypted = (rp->sockp->is_encrypt()==FALSE)?"FALSE":"TRUE";
+		isEncrypted = (!rp->sockp->get_encryption())?"FALSE":"TRUE";
 	}
 
 	bool found = false;

@@ -47,7 +47,6 @@ ReliSock::init()
 	_bytes_recvd = 0.0;
 	_special_state = relisock_none;
 	is_client = 0;
-	authob = NULL;
 	hostAddr = NULL;
 	snd_msg.buf.reset();                                                    
 	rcv_msg.buf.reset();   
@@ -82,10 +81,6 @@ ReliSock::CloneStream()
 ReliSock::~ReliSock()
 {
 	close();
-	if ( authob ) {
-		delete authob;
-		authob = NULL;
-	}
 	if ( hostAddr ) {
 		free( hostAddr );
 		hostAddr = NULL;
@@ -235,11 +230,6 @@ ReliSock::accept()
 int 
 ReliSock::connect( char	const *host, int port, bool non_blocking_flag )
 {
-	if (authob) {                                                           
-		delete authob;                                                  
-		authob = NULL;
-	}  	                                                                     
-
 	if (hostAddr != NULL)
 	{
 		free(hostAddr);
@@ -881,14 +871,8 @@ ReliSock::serialize(char *buf)
             ptmp++;
             memcpy(fqu, ptmp, len);
             if ((fqu[0] != ' ') && (fqu[0] != '\0')) {
-                if (authob && (authob->getFullyQualifiedUser() != NULL)) {
-                    // odd situation!
-                    dprintf(D_SECURITY, "WARNING!!!! Trying to serialize a socket for user %s but the socket is identified with another user: %s", fqu, authob->getFullyQualifiedUser());
-                }
-                else {
                     // We are cozy
-					setFullyQualifiedUser(fqu);
-                }
+				setFullyQualifiedUser(fqu);
             }
         }
     }
@@ -952,97 +936,59 @@ ReliSock::prepare_for_nobuffering(stream_coding direction)
 
 int ReliSock::perform_authenticate(bool with_key, KeyInfo *& key, 
 								   const char* methods, CondorError* errstack,
-								   int auth_timeout)
+								   int auth_timeout, char **method_used)
 {
 	int in_encode_mode;
 	int result;
 
+	if( method_used ) {
+		*method_used = NULL;
+	}
+
     if (!triedAuthentication()) {
+		Authentication authob(this);
 		setTriedAuthentication(true);
-        if ( !authob ) {
-            authob = new Authentication( this );
-        }
-        if ( authob ) {
-				// store if we are in encode or decode mode
-			in_encode_mode = is_encode();
+			// store if we are in encode or decode mode
+		in_encode_mode = is_encode();
 
-				// actually perform the authentication
-			if ( with_key ) {
-				result = authob->authenticate( hostAddr, key, methods, errstack, auth_timeout );
-			} else {
-				result = authob->authenticate( hostAddr, methods, errstack, auth_timeout );
+			// actually perform the authentication
+		if ( with_key ) {
+			result = authob.authenticate( hostAddr, key, methods, errstack, auth_timeout );
+		} else {
+			result = authob.authenticate( hostAddr, methods, errstack, auth_timeout );
+		}
+			// restore stream mode (either encode or decode)
+		if ( in_encode_mode && is_decode() ) {
+			encode();
+		} else {
+			if ( !in_encode_mode && is_encode() ) { 
+				decode();
 			}
-				// restore stream mode (either encode or decode)
-			if ( in_encode_mode && is_decode() ) {
-				encode();
-			} else {
-				if ( !in_encode_mode && is_encode() ) { 
-					decode();
-				}
-			}
+		}
 
-			setFullyQualifiedUser(authob->getFullyQualifiedUser());
-			return result;
-        }
-		setFullyQualifiedUser(NULL);
-        return( 0 );  
+		setFullyQualifiedUser(authob.getFullyQualifiedUser());
+		if( method_used ) {
+			if( authob.getMethodUsed() ) {
+				*method_used = strdup(authob.getMethodUsed());
+			}
+		}
+		return result;
     }
     else {
         return 1;
     }
 }
 
-int ReliSock::authenticate(KeyInfo *& key, const char* methods, CondorError* errstack, int auth_timeout)
+int ReliSock::authenticate(KeyInfo *& key, const char* methods, CondorError* errstack, int auth_timeout, char **method_used)
 {
-	return perform_authenticate(true,key,methods,errstack,auth_timeout);
+	return perform_authenticate(true,key,methods,errstack,auth_timeout,method_used);
 }
 
 int 
 ReliSock::authenticate(const char* methods, CondorError* errstack,int auth_timeout ) 
 {
 	KeyInfo *key = NULL;
-	return perform_authenticate(false,key,methods,errstack,auth_timeout);
-}
-
-const char * ReliSock::getHostAddress() {
-    if (authob) {
-        return ( authob->getRemoteAddress() );
-    }
-    return NULL;
-}
-
-int ReliSock :: encrypt(bool flag)
-{
-	if ( authob ){
-		return(authob -> encrypt( flag ));
-	}
-	return -1;
-}
-
-
-int ReliSock :: hdr_encrypt()
-{
-	if ( authob ){
-		return(authob -> hdr_encrypt());
-	}
-	return -1;
-}
-
-bool ReliSock :: is_hdr_encrypt()
-{
-	if ( authob ){
-		return(authob -> is_hdr_encrypt());
-	}
-	return FALSE;
-}
-
-
-bool ReliSock :: is_encrypt()
-{
-	if ( authob ){
-		return(authob -> is_encrypt());
-	}
-	return FALSE;
+	return perform_authenticate(false,key,methods,errstack,auth_timeout,NULL);
 }
 
 bool

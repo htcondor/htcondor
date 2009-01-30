@@ -118,35 +118,6 @@ class Authentication {
     //           0 -- undefined, for FS, 
     //          >0 -- for Kerberos and X.509
     //------------------------------------------
-    int encrypt(bool);
-    //------------------------------------------
-    // PURPOSE: Turn encryption mode on or off
-    // REQUIRE: bool flag
-    // RETURNS: TRUE or FALSE
-    //------------------------------------------
-   
-    bool is_encrypt();
-    //------------------------------------------
-    // PURPOSE: Return encryption mode
-    // REQUIRE: NONE
-    // RETURNS: TRUE -- encryption is on
-    //          FALSE -- otherwise
-    //------------------------------------------
-    
-    int hdr_encrypt();
-    //------------------------------------------
-    // PURPOSE: set header encryption?
-    // REQUIRE:
-    // RETURNS:
-    //------------------------------------------
-    
-    bool is_hdr_encrypt();
-    //------------------------------------------
-    // PURPOSE: Return status of hdr encryption
-    // REQUIRE:
-    // RETURNS: TRUE -- header encryption is on
-    //          FALSE -- otherwise
-    //------------------------------------------
     
     int wrap(char* input, int input_len, char*& output,int& output_len);
     //------------------------------------------
@@ -172,12 +143,6 @@ class Authentication {
 	static void split_canonical_name(char const *can_name,char **user,char **domain);
 #endif
 
-	enum transfer_mode {
-		NORMAL = 1,
-		ENCRYPT,
-		ENCRYPT_HDR
-	};
-
  private:
 #if !defined(SKIP_AUTHENTICATION)
     Authentication() {}; //should never be called, make private to help that!
@@ -201,7 +166,6 @@ class Authentication {
     //------------------------------------------
     Condor_Auth_Base *   authenticator_;    // This is it.
     ReliSock         *   mySock;
-    transfer_mode        t_mode;
     int                  auth_status;
     char*                method_used;
 
