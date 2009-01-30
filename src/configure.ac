@@ -2813,7 +2813,7 @@ CHECK_EXTERNAL([zlib], [1.2.3], [$_cv_zlib_requirement],
                [use zlib (provides compression support)],
                MF_LIB_CHECK([zlib], [[z deflate]]))
 
-CHECK_EXTERNAL([classads], [1.0.1], [soft],
+CHECK_EXTERNAL([classads], [1.0.2], [soft],
                [use new ClassAds (provides -better-analyze and more)],
 	       # This REALLY should test for headers, like most checks...
                MF_LIB_CHECK([classads], [[classad cclassad_create]]))	       
