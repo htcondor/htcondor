@@ -99,6 +99,8 @@ public:
 	void checkCoreFile( void );
 	bool renameCoreFile( const char* old_name, const char* new_name );
 
+	int *makeCpuAffinityMask(int slotId);
+
 protected:
 
 	bool is_suspended;

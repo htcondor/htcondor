@@ -394,6 +394,8 @@ OsProc::StartJob(FamilyInfo* family_info)
 		core_size_ptr = &core_size;
 	}
 
+	int *affinity_mask = makeCpuAffinityMask(Starter->getMySlotNumber());
+
 #if defined ( WIN32 )
     owner_profile_.update ();
     /*************************************************************
@@ -456,7 +458,8 @@ OsProc::StartJob(FamilyInfo* family_info)
 		                                     nice_inc,
 		                                     NULL,
 		                                     job_opt_mask, 
-		                                     core_size_ptr );
+		                                     core_size_ptr,
+											 affinity_mask );
 	}
 
 	//NOTE: Create_Process() saves the errno for us if it is an
@@ -800,4 +803,53 @@ OsProc::PublishUpdateAd( ClassAd* ad )
 	}
 
 	return UserProc::PublishUpdateAd( ad );
+}
+
+int *
+OsProc::makeCpuAffinityMask(int slotId) {
+	bool useAffinity = param_boolean("ENFORCE_CPU_AFFINITY", false);
+
+	if (!useAffinity) {
+		dprintf(D_FULLDEBUG, "ENFORCE_CPU_AFFINITY not true, not setting affinity\n");	
+		return NULL;
+	}
+
+	// slotID of 0 means "no slot".  Punt.
+	if (slotId < 1) {
+		return NULL;
+	}
+
+	MyString affinityParam;
+
+	affinityParam.sprintf("SLOT%d_CPU_AFFINITY", slotId);
+	char *affinityParamResult = param(affinityParam.Value());
+
+	if (affinityParamResult == NULL) {
+		// No specific cpu, assume one-to-one mapping from slotid
+		// to cpu affinity
+
+		dprintf(D_FULLDEBUG, "Setting cpu affinity to %d\n", slotId - 1);	
+		int *mask = (int *) malloc(sizeof(int) * 2);
+		mask[0] = 2;
+		mask[1] = slotId - 1; // slots start at 1, cpus at 0
+		return mask;
+	}
+
+	StringList cpus(affinityParamResult);
+
+	if (cpus.number() < 1) {
+		dprintf(D_ALWAYS, "Could not parse affinity string %s, not setting affinity\n", affinityParamResult);
+		return NULL;
+	}
+
+	int *mask = (int *) malloc(sizeof(int) * (cpus.number() + 1));
+	mask[0] = cpus.number() + 1;
+	cpus.rewind();
+	char *cpu;
+	int index = 1;
+	while ((cpu = cpus.next())) {
+		mask[index++] = atoi(cpu);
+	}
+
+	return mask;
 }

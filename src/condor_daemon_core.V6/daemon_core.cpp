@@ -6196,7 +6196,7 @@ void CreateProcessForkit::exec() {
 		// first argument of pid 0 means self.
 		int result = sched_setaffinity(0, sizeof(mask), &mask);
 		if (result != 0) {
-			dprintf(D_ALWAYS, "Error calling sched_setaffinity: %d\n", result);
+			dprintf(D_ALWAYS, "Error calling sched_setaffinity: %d\n", errno);
 		}
 	}
 #endif
