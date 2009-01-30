@@ -116,6 +116,7 @@ UserLog::~UserLog()
 	if (m_global_lock) delete m_global_lock;
 	if (m_global_fp != NULL) fclose(m_global_fp);
 	if (m_global_uniq_base != NULL) free( m_global_uniq_base );
+	if (m_global_stat != NULL) free( m_global_stat );
 
 	if (m_rotation_lock_path) free(m_rotation_lock_path);
 	if (m_rotation_lock_fd) close(m_rotation_lock_fd);
@@ -208,6 +209,7 @@ UserLog::Configure( void )
 	if ( NULL == m_global_path ) {
 		return true;
 	}
+	m_global_stat = new StatWrapper( m_global_path, StatWrapper::STATOP_NONE );
 	m_rotation_lock_path = param( "EVENT_LOG_ROTATION_LOCK" );
 	if ( NULL == m_rotation_lock_path ) {
 		int len = strlen(m_global_path) + 6;
@@ -259,6 +261,7 @@ UserLog::Reset( void )
 	m_global_path = NULL;
 	m_global_fp = NULL; 
 	m_global_lock = NULL;
+	m_global_stat = NULL;
 
 	m_rotation_lock = NULL;
 	m_rotation_lock_fd = 0;
@@ -656,11 +659,10 @@ UserLog::checkGlobalLogRotation( void )
 long
 UserLog::getGlobalLogSize( void ) const
 {
-	StatWrapper	swrap( m_global_path );
-	if ( swrap.Stat() ) {
+	if ( (NULL == m_global_stat) || (m_global_stat->Stat()) ) {
 		return -1L;			// What should we do here????
 	}
-	return swrap.GetBuf()->st_size;
+	return m_global_stat->GetBuf()->st_size;
 }
 
 bool
