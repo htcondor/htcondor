@@ -383,6 +383,16 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 
 		// Note: this cannot be modified on reconfig, requires restart.
 	m_wants_dc_udp = param_boolean("WANT_UDP_COMMAND_SOCKET", true);
+	m_wants_dc_udp_self = m_wants_dc_udp;
+#ifndef WIN32
+		// In unix, the shadow never needs a UDP command socket, because
+		// the schedd only sends it plain unix signals.  Since there
+		// may be a lot of shadows, this is important enough to specially
+		// optimize.
+	if( get_mySubSystem()->isType(SUBSYSTEM_TYPE_SHADOW) ) {
+		m_wants_dc_udp_self = false;
+	}
+#endif
 	m_invalidate_sessions_via_tcp = true;
 	dc_rsock = NULL;
 	dc_ssock = NULL;
@@ -7828,9 +7838,17 @@ DaemonCore::Inherit( void )
 		}
 		ptmp=inherit_list.next();
 		if ( ptmp && (strcmp(ptmp,"0") != 0) ) {
-			dc_ssock = new SafeSock();
-			dc_ssock->serialize(ptmp);
-			dc_ssock->set_inheritable(FALSE);
+			if( !m_wants_dc_udp_self ) {
+					// we don't want a UDP command socket, but our parent
+					// made one for us, because it didn't know any better
+				Sock::close_serialized_socket(ptmp);
+				dprintf(D_DAEMONCORE,"Removing inherited UDP command socket.\n");
+			}
+			else {
+				dc_ssock = new SafeSock();
+				dc_ssock->serialize(ptmp);
+				dc_ssock->set_inheritable(FALSE);
+			}
 		}
 
 	}	// end of if we read out CONDOR_INHERIT ok
@@ -7853,13 +7871,17 @@ DaemonCore::InitDCCommandSocket( int command_port )
 
 		// If dc_rsock/dc_ssock are still NULL, we need to create our
 		// own udp and tcp sockets, bind them, etc.
-	if( dc_rsock == NULL || (m_wants_dc_udp && dc_ssock == NULL) ) {
-		dc_rsock = new ReliSock;
+	if( dc_rsock == NULL || (m_wants_dc_udp_self && dc_ssock == NULL) ) {
+		if( !dc_rsock ) {
+			dc_rsock = new ReliSock;
+		}
 		if( !dc_rsock ) {
 			EXCEPT( "Unable to create command Relisock" );
 		}
-		if (m_wants_dc_udp) {
-			dc_ssock = new SafeSock;
+		if (m_wants_dc_udp_self) {
+			if( !dc_ssock ) {
+				dc_ssock = new SafeSock;
+			}
 			if( !dc_ssock ) {
 				EXCEPT( "Unable to create command SafeSock" );
 			}

@@ -323,6 +323,7 @@ protected:
 
 	inline SOCKET get_socket (void) { return _sock; }
 	char * serialize(char *);
+	static void close_serialized_socket(char const *buf);
 	char * serialize() const;
     char * serializeCryptoInfo(char * buf);
     char * serializeCryptoInfo() const;

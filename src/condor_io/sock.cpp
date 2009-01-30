@@ -1614,6 +1614,17 @@ char * Sock::serialize() const
 	return( outbuf );
 }
 
+void
+Sock::close_serialized_socket(char const *buf)
+{
+		// grab the fd from the serialized string and close it
+	SOCKET passed_sock;
+	int i;
+	i = sscanf(buf,"%u*",&passed_sock);
+	ASSERT( i == 1 );
+	::close(passed_sock);
+}
+
 char * Sock::serialize(char *buf)
 {
 	int i;
