@@ -122,6 +122,7 @@
 #ifdef __cplusplus
 #include <string>
 #endif
+#include <string.h>
 
 BEGIN_NAMESPACE( classad )
 
