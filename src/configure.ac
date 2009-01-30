@@ -325,6 +325,9 @@ elif test $os = "Linux" ; then
      "4.0" )
        _cv_linux_distro="DEBIAN40"
        ;;
+     "5.0" )
+       _cv_linux_distro="DEBIAN50"
+       ;;
      * )
        AC_MSG_WARN([Condor is not yet ported to Debian version $_suse_vers])
        AC_MSG_WARN([You may have trouble building and/or packaging Condor])
@@ -976,6 +979,12 @@ case "$gcc_vers" in
     CompilerMinor="3"
     CompilerPatch="1"
     ;;
+ "4.3.2" )
+    CompilerKind="GCC"
+    CompilerMajor="4"
+    CompilerMinor="3"
+    CompilerPatch="2"
+    ;;
  * )
     if test "x$enable_gcc_version_check" = "xyes"; then
       AC_MSG_RESULT([ERROR])
@@ -1369,6 +1378,7 @@ case "$_cv_opsys-$_cv_opsys_vers-$_cv_arch-$_cv_linux_distro-$_cv_libc_major-$_c
   *-HPUX11-* | \
   LINUX-*-ALPHA-* | \
   LINUX-*-*-DEBIAN40-* | \
+  LINUX-*-*-DEBIAN50-* | \
   LINUX-*-IA64-* | \
   SOLARIS-* | \
   LINUX-*-CONDOR_PPC-* ) _cv_clipped_default=yes ;;
@@ -2848,7 +2858,7 @@ CHECK_EXTERNAL([pcre], [7.6], [hard],
 AS_IF([test "x$cv_ext_pcre" = xyes],
   [AC_CHECK_HEADERS([pcre.h pcre/pcre.h])])
 
-AS_IF([test "x$os-$_cv_arch" = xLinux-I386 -a "x$_cv_has_globus" = xyes -a -n "$_cv_ext_classads_version"],
+AS_IF([test "x$os-$_cv_arch" = xLinux-I386 -a "x$_cv_linux_distro" != "xDEBIAN50" -a "x$_cv_has_globus" = xyes -a -n "$_cv_ext_classads_version"],
   [_cv_has_blahp=yes],
   [_cv_has_blahp=no])
 AC_MSG_RESULT([$_cv_has_blahp])

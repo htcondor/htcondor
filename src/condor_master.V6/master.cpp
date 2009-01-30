@@ -255,7 +255,7 @@ main_init( int argc, char* argv[] )
 		case 'n':
 			ptr++;
 			if( !(ptr && *ptr) ) {
-				EXCEPT( "-n requires another arugment" );
+				EXCEPT( "-n requires another argument" );
 			}
 			MasterName = build_valid_daemon_name( *ptr );
 			dprintf( D_ALWAYS, "Using name: %s\n", MasterName );
