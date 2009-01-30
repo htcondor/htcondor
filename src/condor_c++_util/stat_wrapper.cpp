@@ -185,6 +185,13 @@ StatWrapper::~StatWrapper( void )
 	delete m_fstat;
 }
 
+bool
+StatWrapper::IsInitialized( void ) const
+{
+	return m_stat->IsValid() || m_fstat->IsValid();
+}
+
+// Internal
 void
 StatWrapper::init( void )
 {
