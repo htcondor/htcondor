@@ -631,10 +631,13 @@ ForkJobs( const Options & /*opts*/ )
 long
 getUserLogSize( const Options &opts )
 {
+	static StatWrapper	swrap;
 	if ( NULL == opts.m_logFile ) {
 		return 0;
 	}
-	StatWrapper	swrap( opts.m_logFile );
+	if ( !swrap.IsInitialized() ) {
+		swrap.SetPath( opts.m_logFile );
+	}
 	if ( swrap.Stat() ) {
 		return -1L;			// What should we do here????
 	}
