@@ -38,6 +38,44 @@ use Carp;
 use Cwd;
 use FileHandle;
 use POSIX "sys_wait_h";
+use strict;
+use warnings;
+
+my $CONDOR_SUBMIT = 'condor_submit';
+my $CONDOR_SUBMIT_DAG = 'condor_submit_dag';
+my $CONDOR_VACATE = 'condor_vacate';
+my $CONDOR_VACATE_JOB = 'condor_vacate_job';
+my $CONDOR_RESCHD = 'condor_reschedule';
+my $CONDOR_RM = 'condor_rm';
+
+my $DEBUG = 0;
+my $DEBUGLEVEL = 1; # turn on lowest level output
+my $cluster = 0;
+my $num_active_jobs = 0;
+my $saw_submit = 0;
+my %submit_info;
+my %info; # assigned value of %submit_info frequently
+
+my $submit_time = 0;
+my $timer_time = 0;
+my $TimedCallbackWait = 0;
+my $SubmitCallback;
+my $ExecuteCallback;
+my $EvictedCallback;
+my $EvictedWithCheckpointCallback;
+my $EvictedWithRequeueCallback;
+my $EvictedWithoutCheckpointCallback;
+my $ExitedCallback;
+my $ExitedSuccessCallback;
+my $ExitedFailureCallback;
+my $ExitedAbnormalCallback;
+my $AbortCallback;
+my $ShadowCallback;
+my $HoldCallback;
+my $ReleaseCallback;
+my $JobErrCallback;
+my $TimedCallback;
+my $WantErrorCallback;
 
 BEGIN
 {
@@ -53,7 +91,6 @@ BEGIN
     $cluster = 0;
     $num_active_jobs = 0;
     $saw_submit = 0;
-    %submit_info;
 
 	$submit_time = 0;
 	$timer_time = 0;
@@ -90,6 +127,13 @@ sub Reset
     undef $TimedCallback;
     undef $WantErrorCallback;
 }
+
+sub SetHandle
+{
+	my $handle = shift;
+	$submit_info{'handle'} = $handle;
+}
+
 
 # submits job/s to condor, recording all variables from the submit
 # file in global %submit_info
@@ -265,6 +309,7 @@ sub TestSubmitDagman
 	my $cmd_args = shift || croak "missing Dagman Args";
 	my $argisrefarray = ref $cmd_file;
 	my $outfile = $cmd_file;
+	my $cmdfiles = "";
 
 	print "ref said type is <<$argisrefarray>>\n";
     # reset global state
@@ -273,9 +318,8 @@ sub TestSubmitDagman
 
     # submit the file
 	if($argisrefarray eq "ARRAY") {
-		$cmdfiles = "";
 		$outfile = ${$cmd_file}[0];
-		foreach $ddd (@{$cmd_file}){
+		foreach my $ddd (@{$cmd_file}){
 			$cmdfiles = $cmdfiles . " $ddd";
 		}
 		print "Multiple Dag Files: <$cmdfiles>\n";
@@ -332,7 +376,12 @@ sub Vacate
 sub Reschedule
 {
     my $machine = shift;
-    return runCommand( "$CONDOR_RESCHD $machine > condor_resched.out 2>&1" );
+	
+	if(defined $machine) {
+    	return runCommand( "$CONDOR_RESCHD $machine > condor_resched.out 2>&1" );
+	} else {
+    	return runCommand( "$CONDOR_RESCHD > condor_resched.out 2>&1" );
+	}
 }
 
 # runs a command string, returning 0 if anything went wrong or 1 upon success
@@ -342,7 +391,7 @@ sub runCommand
     my ($command) = split /\s+/, $command_string;
     
     debug( "running $command_string\n" ,5);
-    $retval = system( $command_string );
+    my $retval = system( $command_string );
 
     # did command die abormally?
 	
@@ -363,7 +412,7 @@ sub runCommand
     # did command exit w/an error?
     if( safe_WEXITSTATUS( $retval ) != 0 )
     {
-	$exitval = safe_WEXITSTATUS( $retval );
+		my $exitval = safe_WEXITSTATUS( $retval );
         print "error: $command failed (returned $exitval)\n";
 		#call error callback
 		$info{'ErrorMessage'} = "error: $command failed (returned $exitval)";
@@ -550,7 +599,7 @@ sub Monitor
     my $timeout = shift;
     my $linenum = 0;
     my $line;
-    my %info;
+    #my %info;
 	my $timestamp = 0;
 
     debug( "Entering Monitor\n" ,5);
@@ -760,7 +809,7 @@ sub Monitor
 	    {
 		debug( "Loading $1 as info{'signal'}\n" ,5);
 		$info{'signal'} = $1;
-		print "keys:".join(" ",keys %info)."\n";
+		#print "keys:".join(" ",keys %info)."\n";
 
 		debug( "checking for core file...\n" ,5);
 
@@ -1033,6 +1082,8 @@ sub ParseSubmitFile
 {
     my $submit_file = shift || croak "missing submit file argument";
     my $line = 0;
+	my $variable;
+	my $value;
 
     if( ! open( SUBMIT_FILE, $submit_file ) )
     {

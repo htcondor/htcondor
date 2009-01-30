@@ -25,9 +25,10 @@ $cmd = 'job_ckpt_floats-async_std.cmd';
 $testdesc =  'Condition Test';
 $testname = "job_ckpt_floats-async_std";
 
-@CondorTest::expected_output = 
+my @expected_output = 
 ( 'Program completed successfully.',
   'Be sure that it checkpointed at least once.' );
+CondorTest::SetExpected(\@expected_output);
 
 CondorTest::RegisterExitedSuccess( $testname, 
 				   \&CondorTest::DefaultOutputTest );

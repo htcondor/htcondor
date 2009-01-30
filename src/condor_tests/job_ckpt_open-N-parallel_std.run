@@ -25,18 +25,17 @@ $cmd = 'job_ckpt_open-N-parallel_std.cmd';
 $testdesc =  'Files Test';
 $testname = "job_ckpt_open-N-parallel_std";
 
-$foo = <<"_EOX";
-Opened 8 files
-About to checkpoint
-Returned from checkpoint
-OK
-About to checkpoint
-Returned from checkpoint
-OK
-Normal End of Job
-_EOX
+my @expected_output;
+push( @expected_output, "Opened 8 files");
+push( @expected_output, "About to checkpoint");
+push( @expected_output, "Returned from checkpoint");
+push( @expected_output, "OK");
+push( @expected_output, "About to checkpoint");
+push( @expected_output, "Returned from checkpoint");
+push( @expected_output, "OK");
+push( @expected_output, "Normal End of Job");
 
-@CondorTest::expected_output = split '\n', $foo;
+CondorTest::SetExpected(\@expected_output);
 
 CondorTest::RegisterExitedSuccess( $testname,
 				   \&CondorTest::DefaultOutputTest );

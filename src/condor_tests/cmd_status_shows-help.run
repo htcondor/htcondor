@@ -103,7 +103,7 @@ while($count < $nattempts) {
 	}
 
 	$count = $count + 1;
-	sleep($count * 2);
+	sleep($count * 5);
 }
 
 

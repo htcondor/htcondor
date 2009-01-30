@@ -25,15 +25,16 @@ use Cwd;
 my $testdesc =  'lib_eventlog_rotation - runs eventlog rotation tests';
 my $testname = "lib_eventlog_rotation";
 my $testbin = "../testbin_dir";
-my %programs = ( reader		=> "$testbin/test_log_reader",
+my %programs = ( reader			=> "$testbin/test_log_reader",
 				 reader_state	=> "$testbin/test_log_reader_state",
-				 writer		=> "$testbin/test_log_writer", );
+				 writer			=> "$testbin/test_log_writer", );
 
-my $event_size = ( 100000 / 1160 );
+my $DefaultMaxEventLog = 1000000;
+my $EventSize = ( 100045 / 1177 );
 my @tests =
     (
 
-     # Default test
+     # Test with default configuration
      {
 		 name => "defaults",
 		 config => {
@@ -41,89 +42,85 @@ my @tests =
 			 #"EVENT_LOG_COUNT_EVENTS"	=> "FALSE",
 			 #"ENABLE_USERLOG_LOCKING"	=> "TRUE",
 			 #"EVENT_LOG_MAX_ROTATIONS"	=> 1,
-			 #"EVENT_LOG_MAX_SIZE"	=> -1,
-			 #"MAX_EVENT_LOG"		=> 1000000,
+			 #"EVENT_LOG_MAX_SIZE"		=> -1,
+			 #"MAX_EVENT_LOG"			=> 1000000,
 		 },
-		 loops				=> 1,
-		 size_mult			=> 1.25,
-		 writer => {
-		 },
-     },
-     {
-		 name		=> "no_rotations_1",
-		 config		=> {
-			 "EVENT_LOG"		=> "EventLog",
-			 "EVENT_LOG_COUNT_EVENTS"	=> "FALSE",
-			 "ENABLE_USERLOG_LOCKING"	=> "TRUE",
-			 #"EVENT_LOG_MAX_ROTATIONS"	=> 0,
-			 "EVENT_LOG_MAX_SIZE"	=> 0,
-			 #"MAX_EVENT_LOG"		=> 0,
-		 },
-		 loops				=> 1,
-		 size_mult			=> 1.25,
 		 writer => {
 		 },
      },
 
+     # Tests with rotations disabled
      {
-		 name		=> "no_rotations_2",
+		 name		=> "no_rotations_1",
 		 config		=> {
-			 "EVENT_LOG"		=> "EventLog",
+			 "EVENT_LOG"			=> "EventLog",
 			 "EVENT_LOG_COUNT_EVENTS"	=> "FALSE",
 			 "ENABLE_USERLOG_LOCKING"	=> "TRUE",
 			 #"EVENT_LOG_MAX_ROTATIONS"	=> 0,
-			 "EVENT_LOG_MAX_SIZE"	=> 0,
-			 #"MAX_EVENT_LOG"		=> 0,
+			 "EVENT_LOG_MAX_SIZE"		=> 0,
+			 #"MAX_EVENT_LOG"			=> 0,
 		 },
-		 loops				=> 1,
-		 size_mult			=> 1.25,
 		 writer => {
+			 "--max-rotations"			=> 1,
+		 },
+     },
+     {
+		 name		=> "no_rotations_2",
+		 config		=> {
+			 "EVENT_LOG"				=> "EventLog",
+			 "EVENT_LOG_COUNT_EVENTS"	=> "FALSE",
+			 "ENABLE_USERLOG_LOCKING"	=> "TRUE",
+			 #"EVENT_LOG_MAX_ROTATIONS"	=> 0,
+			 "EVENT_LOG_MAX_SIZE"		=> 0,
+			 #"MAX_EVENT_LOG"			=> 0,
+		 },
+		 writer => {
+			 "--max-rotations"			=> 1,
 		 },
      },
      {
 		 name		=> "no_rotations_3",
 		 config		=> {
-			 "EVENT_LOG"		=> "EventLog",
+			 "EVENT_LOG"				=> "EventLog",
 			 "EVENT_LOG_COUNT_EVENTS"	=> "FALSE",
 			 "ENABLE_USERLOG_LOCKING"	=> "TRUE",
 			 #"EVENT_LOG_MAX_ROTATIONS"	=> 0,
-			 #"EVENT_LOG_MAX_SIZE"	=> 0,
-			 "MAX_EVENT_LOG"		=> 0,
+			 #"EVENT_LOG_MAX_SIZE"		=> 0,
+			 "MAX_EVENT_LOG"			=> 0,
 		 },
-		 loops				=> 1,
-		 size_mult			=> 1.25,
 		 writer => {
+			 "--max-rotations"			=> 1,
 		 },
      },
 
+     # Tests with ".old" rotations
      {
 		 name		=> "w_old_rotations",
 		 config		=> {
-			 "EVENT_LOG"		=> "EventLog",
+			 "EVENT_LOG"				=> "EventLog",
 			 "EVENT_LOG_COUNT_EVENTS"	=> "TRUE",
 			 "ENABLE_USERLOG_LOCKING"	=> "TRUE",
 			 "EVENT_LOG_MAX_ROTATIONS"	=> 1,
-			 "EVENT_LOG_MAX_SIZE"	=> 10000,
-			 #"MAX_EVENT_LOG"		=> -1,
+			 "EVENT_LOG_MAX_SIZE"		=> 10000,
+			 #"MAX_EVENT_LOG"			=> -1,
 		 },
-		 loops				=> 1,
-		 size_mult			=> 1.25,
+		 auto				=> 1,
 		 writer => {
 		 },
      },
 
+     # Tests with 2 rotations (.1, .2)
      {
 		 name		=> "w_2_rotations",
 		 config		=> {
-			 "EVENT_LOG"		=> "EventLog",
+			 "EVENT_LOG"				=> "EventLog",
 			 "EVENT_LOG_COUNT_EVENTS"	=> "TRUE",
 			 "ENABLE_USERLOG_LOCKING"	=> "TRUE",
 			 "EVENT_LOG_MAX_ROTATIONS"	=> 2,
-			 "EVENT_LOG_MAX_SIZE"	=> 10000,
-			 #"MAX_EVENT_LOG"		=> -1,
+			 "EVENT_LOG_MAX_SIZE"		=> 10000,
+			 #"MAX_EVENT_LOG"			=> -1,
 		 },
-		 loops				=> 1,
-		 size_mult			=> 1.25,
+		 auto				=> 1,
 		 writer => {
 		 },
      },
@@ -131,15 +128,14 @@ my @tests =
      {
 		 name		=> "w_5_rotations",
 		 config		=> {
-			 "EVENT_LOG"		=> "EventLog",
+			 "EVENT_LOG"				=> "EventLog",
 			 "EVENT_LOG_COUNT_EVENTS"	=> "TRUE",
 			 "ENABLE_USERLOG_LOCKING"	=> "TRUE",
 			 "EVENT_LOG_MAX_ROTATIONS"	=> 5,
-			 "EVENT_LOG_MAX_SIZE"	=> 10000,
-			 #"MAX_EVENT_LOG"		=> -1,
+			 "EVENT_LOG_MAX_SIZE"		=> 10000,
+			 #"MAX_EVENT_LOG"			=> -1,
 		 },
-		 loops				=> 1,
-		 size_mult			=> 1.25,
+		 auto				=> 1,
 		 writer => {
 		 },
      },
@@ -147,31 +143,32 @@ my @tests =
      {	
 		 name		=> "w_20_rotations",
 		 config		=> {
-			 "EVENT_LOG"		=> "EventLog",
+			 "EVENT_LOG"				=> "EventLog",
 			 "EVENT_LOG_COUNT_EVENTS"	=> "TRUE",
 			 "ENABLE_USERLOG_LOCKING"	=> "TRUE",
 			 "EVENT_LOG_MAX_ROTATIONS"	=> 20,
-			 "EVENT_LOG_MAX_SIZE"	=> 10000,
-			 #"MAX_EVENT_LOG"		=> -1,
+			 "EVENT_LOG_MAX_SIZE"		=> 10000,
+			 #"MAX_EVENT_LOG"			=> -1,
 		 },
-		 loops				=> 1,
-		 size_mult			=> 1.25,
+		 auto				=> 1,
 		 writer => {
 		 },
      },
 
+	 # ##########################
+	 # Reader tests start here
+	 # ##########################
+
      {
 		 name		=> "reader_simple",
 		 config		=> {
-			 "EVENT_LOG"		=> "EventLog",
+			 "EVENT_LOG"				=> "EventLog",
 			 "EVENT_LOG_COUNT_EVENTS"	=> "TRUE",
 			 "ENABLE_USERLOG_LOCKING"	=> "TRUE",
 			 "EVENT_LOG_MAX_ROTATIONS"	=> 0,
-			 #"EVENT_LOG_MAX_SIZE"	=> 10000,
-			 #"MAX_EVENT_LOG"		=> -1,
+			 #"EVENT_LOG_MAX_SIZE"		=> 10000,
+			 #"MAX_EVENT_LOG"			=> -1,
 		 },
-		 loops				=> 1,
-		 size_mult			=> 0.1,
 		 writer => {
 		 },
 		 reader => {
@@ -181,54 +178,51 @@ my @tests =
      {
 		 name		=> "reader_old_rotations",
 		 config		=> {
-			 "EVENT_LOG"		=> "EventLog",
+			 "EVENT_LOG"				=> "EventLog",
 			 "EVENT_LOG_COUNT_EVENTS"	=> "TRUE",
 			 "ENABLE_USERLOG_LOCKING"	=> "TRUE",
 			 "EVENT_LOG_MAX_ROTATIONS"	=> 1,
-			 "EVENT_LOG_MAX_SIZE"	=> 10000,
+			 "EVENT_LOG_MAX_SIZE"		=> 10000,
 		 },
-		 loops				=> 1,
-		 size_mult			=> 0.95,
+		 auto						=> 1,
 		 writer => {
 		 },
 		 reader => {
-			 persist			=> 1,
+			 persist				=> 1,
 		 },
      },
 
      {
 		 name		=> "reader_2_rotations",
 		 config		=> {
-			 "EVENT_LOG"		=> "EventLog",
+			 "EVENT_LOG"				=> "EventLog",
 			 "EVENT_LOG_COUNT_EVENTS"	=> "TRUE",
 			 "ENABLE_USERLOG_LOCKING"	=> "TRUE",
 			 "EVENT_LOG_MAX_ROTATIONS"	=> 2,
-			 "EVENT_LOG_MAX_SIZE"	=> 10000,
+			 "EVENT_LOG_MAX_SIZE"		=> 10000,
 		 },
-		 loops				=> 1,
-		 size_mult			=> 0.95,
+		 auto						=> 1,
 		 writer => {
 		 },
 		 reader => {
-			 persist			=> 1,
+			 persist				=> 1,
 		 },
      },
 
      {
 		 name		=> "reader_20_rotations",
 		 config		=> {
-			 "EVENT_LOG"		=> "EventLog",
+			 "EVENT_LOG"				=> "EventLog",
 			 "EVENT_LOG_COUNT_EVENTS"	=> "TRUE",
 			 "ENABLE_USERLOG_LOCKING"	=> "TRUE",
 			 "EVENT_LOG_MAX_ROTATIONS"	=> 20,
-			 "EVENT_LOG_MAX_SIZE"	=> 10000,
+			 "EVENT_LOG_MAX_SIZE"		=> 10000,
 		 },
-		 loops				=> 1,
-		 size_mult			=> 0.98,
+		 auto						=> 1,
 		 writer => {
 		 },
 		 reader => {
-			 persist			=> 1,
+			 persist		=> 1,
 		 },
      },
 	 );
@@ -248,17 +242,19 @@ sub usage( )
 		"  -s|--stop     stop after errors\n" .
 		"  --vg-writer   run writer under valgrind\n" .
 		"  --vg-reader   run reader under valgrind\n" .
+		"  --strace      strace myself\n" .
+		"  --no-strace   don't strace myself\n" .
 		"  -q|--quiet    cancel debug & verbose\n" .
 		"  -h|--help     this help\n";
 }
 
-sub RunWriter( $$$$$ );
+sub RunWriter( $$$$$$ );
 sub RunReader( $$$ );
-sub ReadEventlogs( $$ );
+sub ReadEventlogs( $$$ );
 sub ProcessEventlogs( $$ );
 sub CheckWriterOutput( $$$$ );
 sub CheckReaderOutput( $$$$ );
-sub GatherData( $ );
+sub GatherData( $$ );
 
 my %settings =
 (
@@ -292,6 +288,12 @@ foreach my $arg ( @ARGV ) {
     }
     elsif ( $arg eq "-s"  or  $arg eq "--stop" ) {
 		$settings{stop} = 1;
+    }
+    elsif ( $arg eq "--strace" ) {
+		$settings{strace} = 1;
+    }
+    elsif ( $arg eq "--no-strace" ) {
+		$settings{strace} = 0;
     }
     elsif ( $arg eq "--vg-writer" ) {
 		$settings{valgrind_writer} = 1;
@@ -389,93 +391,177 @@ print CONFIG "TEST_LOG_WRITER_LOG = $fulldir/writer.log\n";
 close( CONFIG );
 $ENV{"CONDOR_CONFIG"} = $config;
 
+
+# ################################
+# startup strace
+# ################################
+my $strace_pid = 0;
+if ( $settings{strace} ) {
+	print "Starting strace (my pid is $$)\n";
+	$strace_pid = fork();
+	if ( $strace_pid == 0 ) {
+		my $pid = getppid();
+		my $strace = "strace -t -e trace=process -o $dir/strace.out -p $pid";
+		exec( "$strace" ) or exit(1);
+	}
+	else {
+		sleep(1);		# let strace start
+	}
+}
+
+# ######################
 # Basic calculations
-my $default_max_size = 1000000;
-my $max_size = $default_max_size;
-my $max_rotations = 1;
+# ######################
+my %params;
+
+# Max eventlog setting
+$params{max_size} = $DefaultMaxEventLog;
 if ( exists $test->{config}{"EVENT_LOG_MAX_SIZE"} ) {
-    $max_size = $test->{config}{"EVENT_LOG_MAX_SIZE"};
+    $params{max_size} = $test->{config}{"EVENT_LOG_MAX_SIZE"};
 }
 elsif ( exists $test->{config}{"MAX_EVENT_LOG"} ) {
-    $max_size = $test->{config}{"MAX_EVENT_LOG"};
+    $params{max_size} = $test->{config}{"MAX_EVENT_LOG"};
 }
+
+# Max rotation setting
+$params{max_rotations} = 1;
 if ( exists $test->{config}{"EVENT_LOG_MAX_ROTATIONS"} ) {
-    $max_rotations = $test->{config}{"EVENT_LOG_MAX_ROTATIONS"};
+    $params{max_rotations} = $test->{config}{"EVENT_LOG_MAX_ROTATIONS"};
 }
-elsif ( $max_size == 0 ) {
-    $max_rotations = 0;
-    $max_size = $default_max_size;
+elsif ( $params{max_size} == 0 ) {
+    $params{max_rotations} = 0;
+    $params{max_size} = $DefaultMaxEventLog;
 }
-my $total_files = $max_rotations + 1;
-my $total_loops;
+
+# Stop at max rotation specified?
+if ( exists $test->{auto} ) {
+    $test->{writer}{"--max-user"} = 0;
+    $test->{writer}{"--max-global"} = 0;
+}
+
+# Number of event log files generated
+$params{files} = $params{max_rotations} + 1;
+
+# Number of loops
 if ( exists $settings{loops} ) {
-    $total_loops = $settings{loops};
+    $params{loops} = $settings{loops};
     $test->{loops} = $settings{loops};
 }
 elsif ( exists $test->{loops} ) {
-    $total_loops = $test->{loops};
+    $params{loops} = $test->{loops};
 }
 else {
-    $total_loops = 1;
+    $params{loops} = 1;
     $test->{loops} = 1;
 }
-my $total_events;
-my $loop_events;
-if ( exists $test->{loop_events} ) {
-    $loop_events = $test->{loop_events};
-    $total_events = $loop_events * $total_loops;
+
+# User log size
+if ( !exists $test->{user_size_mult} ) {
+	$test->{user_size_mult} = $params{files} + 0.25;
 }
-elsif ( exists $test->{events} ) {
-    $loop_events = int($test->{events} / $total_loops);
-    $total_events = $test->{events};
+if ( !exists( $test->{user_size} ) ) {
+	$test->{user_size} = $params{max_size} * $test->{user_size_mult};
+}
+if ( $test->{user_size} > 0 ) {
+    $test->{writer}{"--max-user"} = $test->{user_size};
+}
+
+# Event log size
+if ( !exists $test->{global_size_mult} ) {
+	$test->{global_size_mult} = 1.25;
+}
+if ( !exists( $test->{global_size} ) ) {
+	$test->{global_size} = $params{max_size} * $test->{global_size_mult};
+}
+if ( $test->{global_size} > 0 ) {
+    $test->{writer}{"--max-global"} = $test->{global_size};
+}
+
+# Total size
+$params{total_size} = ( $test->{global_size} * $params{files} );
+if ( $params{total_size} > $test->{user_size} ) {
+	$params{total_size} = $test->{user_size};
+}
+
+# Subtract off some fixed amounts for header, submit & terminate event(s)
+$params{total_esize}  = $params{total_size};
+$params{total_esize} -= ( 256 * $params{files} );		# header events
+$params{total_esize} -= ( 80 * $params{loops} );		# submit events
+$params{total_esize} -= ( 450 * ($params{loops}-1) );	# terminate events
+
+# This depends on the number of loops per file
+$params{lpf}         = ( $params{loops} / $params{files} );
+$params{max_esize}   = $params{max_size};
+$params{max_esize}   -= 256;							# header events
+$params{max_esize}   -= ( 80 * $params{lpf} );			# submit events
+$params{max_esize}   -= ( 450 * ($params{lpf}-1) );		# terminate events
+
+# Auto max rotations / loop
+if ( exists $test->{auto} ) {
+	my $fpl = int( ($params{files} / $params{loops}) + 0.99999 );
+    $test->{writer}{"--max-rotations"} = $fpl;
+}
+
+# Max # of rotations
+if ( !exists $test->{max_rotations} ) {
+	$test->{max_rotations} = 0;
+}
+if ( $test->{max_rotations} > 0 ) {
+    $test->{writer}{"--max-rotations"} =
+		int( 0.9999 + ($test->{max_rotations} / $test->{loops}) );
+	$params{loop_events}  = int( $params{max_esize} / $EventSize );
+	$params{total_events} = int( $params{total_esize} / $EventSize );
 }
 else {
-    my $mult = ( exists $test->{size_mult} ) ? $test->{size_mult} : 1.25;
-    $loop_events =
-		int($mult * $total_files * $max_size / ($event_size * $total_loops) );
-    $total_events = $loop_events * $total_loops;
+	$params{loop_events}  = int( $params{max_esize} / $EventSize );
+	$params{total_events} = $params{loop_events};
 }
 
-
-# Calculate num exec / procs
-if ( !exists $test->{writer}{"--num-exec"} ) {
-    my $num_procs = 1;
-    if ( exists( $test->{writer}{"--num-procs"} ) ) {
-		$num_procs = $test->{writer}{"--num-procs"};
-    }
-    else {
-		$test->{writer}{"--num-procs"} = $num_procs;
-    }
-    $test->{writer}{"--num-exec"} = int( $loop_events / $num_procs );
+# Min number of events expected to be written per loop
+if ( exists $test->{loop_min_events} ) {
+	$params{loop_min_events} = $test->{loop_min_events};
 }
+else {
+	$params{loop_min_events} = 0.9 * $params{loop_events};
+}
+
+# Min number of events expected to be written total
+if ( exists $test->{min_events} ) {
+	$params{total_min_events} = $test->{min_events}
+}
+else {
+	$params{total_min_events} = 0.9 * $params{total_events};
+}
+
+# Sleep time?  Probably --no-sleep
 if ( !exists $test->{writer}{"--sleep"} ) {
     $test->{writer}{"--no-sleep"} = undef;
 }
-
 
 # Expected results
 my %expect =
 	(
 	 final_mins => {
-		 num_files		=> $total_files,
-		 sequence		=> $total_files,
-		 num_events		=> $total_events,
-		 file_size		=> $max_size,
+		 num_files		=> $params{files},
+		 sequence		=> $params{files},
+		 file_size		=> $params{max_size},
+		 num_events		=> $params{total_min_events},
 	 },
 	 maxs => {
-		 file_size		=> $max_size + 512,
-		 total_size		=> ($max_size + 512) * $total_files,
+		 file_size		=> $params{max_size} + 1024,
+		 total_size		=> ($params{max_size} + 1024) * $params{files},
 	 },
 	 loop_mins => {
-		 num_files		=> int($total_files / $total_loops),
-		 sequence		=> int($total_files / $total_loops),
-		 file_size		=> $max_size / $total_loops,
-		 num_events		=> $loop_events,
+		 num_files		=> int($params{files} / $params{loops}),
+		 sequence		=> int($params{files} / $params{loops}),
+		 file_size		=> $params{max_size} / $params{loops},
+		 num_events		=> $params{loop_min_events},
 	 },
 	 cur_mins => {
 		 num_files		=> 0,
 		 sequence		=> 0,
 		 file_size		=> 0,
+		 toal_size		=> 0,
 		 num_events		=> 0,
 	 },
 	 );
@@ -502,13 +588,12 @@ if ( $settings{debug} ) {
     push( @writer_args, "--debug" );
     push( @writer_args, "D_FULLDEBUG" );
 }
-if ( exists $test->{writer}{file} ) {
-    push( @writer_args, $test->{writer}{file} );
-}
-else {
-    push( @writer_args, "/dev/null" );
-}
 
+# Userlog file
+if ( !exists $test->{writer}{file} ) {
+	$test->{writer}{file} = "$dir/userlog";
+}
+push( @writer_args, $test->{writer}{file} );
 
 # Generate the reader command line
 my @reader_args;
@@ -543,11 +628,14 @@ if ( exists $test->{reader} ) {
 my @valgrind = ( "valgrind", "--tool=memcheck", "--num-callers=24",
 				 "-v", "-v", "--leak-check=full" );
 
-system("date");
+my $start = time( );
+my $timestr = localtime($start);
+printf "Starting test %s (%d loops) @ %s\n",
+	$settings{name}, $test->{loops}, $timestr;
 if ( $settings{verbose} ) {
     print "Using directory $dir\n";
 }
-my $errors = 0;
+my $total_errors = 0;
 
 # Total writer out
 my %totals = ( sequence => 0,
@@ -570,6 +658,13 @@ foreach my $k ( keys(%totals) ) {
 
 foreach my $loop ( 1 .. $test->{loops} )
 {
+	my $errors;	# Temp error count
+
+	my $final = ( $loop == $test->{loops} );
+	$timestr = localtime();
+	printf( "\n** Starting loop $loop %s@ %s **\n",
+			$final ? "(final) " : "", $timestr );
+
     foreach my $k ( keys(%{$expect{loop_mins}}) ) {
 		$expect{cur_mins}{$k} += $expect{loop_mins}{$k};
     }
@@ -582,106 +677,163 @@ foreach my $loop ( 1 .. $test->{loops} )
 
     # Run the writer
     my $run;
-    my $werrors += RunWriter( $loop, \%new, \%previous, \%totals, \$run );
-    $errors += $werrors;
+    $errors += RunWriter( $loop, $final,
+						  \%new, \%previous, \%totals, \$run );
+    $total_errors += $errors;
     if ( ! $run ) {
 		next;
     }
-    if ( $werrors ) {
+    if ( $errors ) {
 		print STDERR "writer failed: aborting test\n";
 		last;
     }
 
-    my @files = ReadEventlogs( $dir, \%new );
-    ProcessEventlogs( \@files, \%new );
+	my @files;
+    $errors = ReadEventlogs( $dir, \%new, \@files );
+	if ( $errors ) {
+		print STDERR "errors detected in ReadEventLogs()\n";
+		$total_errors += $errors;
+	}
+
+    $errors = ProcessEventlogs( \@files, \%new );
+	if ( $errors ) {
+		print STDERR "errors detected in ProcessEventLogs()\n";
+		$total_errors += $errors;
+	}
 
     my %diff;
     foreach my $k ( keys(%previous) ) {
 		$diff{$k} = $new{$k} - $previous{$k};
 		$totals{$k} += $new{$k};
     }
-    $errors += CheckWriterOutput( \@files, $loop, \%new, \%diff );
+    $errors = CheckWriterOutput( \@files, $loop, \%new, \%diff );
+	if ( $errors ) {
+		print STDERR "errors detected in CheckWriterOutput()\n";
+		$total_errors += $errors;
+	}
 
     # Run the reader
-    $errors += RunReader( $loop, \%new, \$run );
+    $errors = RunReader( $loop, \%new, \$run );
+	if ( $errors ) {
+		print STDERR "errors detected in RunReader()\n";
+		$total_errors += $errors;
+	}
     if ( $run ) {
-		$errors += CheckReaderOutput( \@files, $loop, \%new, \%diff );
+		$errors = CheckReaderOutput( \@files, $loop, \%new, \%diff );
+		if ( $errors ) {
+			print STDERR "errors detected in CheckReaderOutput()\n";
+			$total_errors += $errors;
+		}
     }
 
-    if ( $errors  or  $settings{verbose}  or  $settings{debug} ) {
-		GatherData( sprintf("$dir/loop-%02d.txt",$loop) );
+    if ( $total_errors  or  $settings{verbose}  or  $settings{debug} ) {
+		GatherData( sprintf("$dir/loop-%02d.txt",$loop), $total_errors );
     }
 
     foreach my $k ( keys(%previous) ) {
 		$previous{$k} = $new{$k};
     }
-    if ( $errors  and  $settings{stop} ) {
+    if ( $total_errors  and  $settings{stop} ) {
 		last;
     }
 }
 
-if ( ! $settings{execute} ) {
-    exit( 0 );
-}
+$timestr = localtime();
+printf "\n** End test loops @ %s **\n", $timestr;
 
-# Final writer output checks
-if ( $totals{writer_events} < $expect{final_mins}{num_events} ) {
-    printf( STDERR
-			"ERROR: final: writer wrote too few events: %d < %d\n",
-			$totals{writer_events}, $expect{final_mins}{num_events} );
-    $errors++;
-}
-$totals{seq_files} = $totals{sequence} + 1;
-if ( $totals{writer_sequence} < $expect{final_mins}{sequence} ) {
-    printf( STDERR
-			"ERROR: final: writer sequence too low: %d < %d\n",
-			$totals{writer_sequence}, $expect{final_mins}{sequence} );
-    $errors++;
-}
+if ( $settings{execute} ) {
 
-# Final counted checks
-my %final;
-foreach my $k ( keys(%totals) ) {
-    $final{$k} = 0;
-}
-my @files = ReadEventlogs( $dir, \%final );
-ProcessEventlogs( \@files, \%final );
-if ( scalar(@files) < $expect{final_mins}{num_files} ) {
-    printf( STDERR
-			"ERROR: final: too few actual files: %d < %d\n",
-			scalar(@files), $expect{final_mins}{num_files} );
-}
-if ( ! $final{events_lost} ) {
-    if ( $final{num_events} < $expect{final_mins}{num_events} ) {
+	printf "\n** Starting final analysis @ %s **\n", $timestr;
+
+	# Final writer output checks
+	if ( $totals{writer_events} < $expect{final_mins}{num_events} ) {
 		printf( STDERR
-				"ERROR: final: too few actual events: %d < %d\n",
-				$final{num_events}, $expect{loop_mins}{num_events} );
-		$errors++;
-    }
-}
-if ( $final{sequence} < $expect{final_mins}{sequence} ) {
-    printf( STDERR
-			"ERROR: final: actual sequence too low: %d < %d\n",
-			$final{sequence}, $expect{final_mins}{sequence});
-    $errors++;
+				"ERROR: final: writer wrote too few events: %d < %d\n",
+				$totals{writer_events}, $expect{final_mins}{num_events} );
+		$total_errors++;
+	}
+	$totals{seq_files} = $totals{sequence} + 1;
+	if ( $totals{writer_sequence} < $expect{final_mins}{sequence} ) {
+		printf( STDERR
+				"ERROR: final: writer sequence too low: %d < %d\n",
+				$totals{writer_sequence}, $expect{final_mins}{sequence} );
+		$total_errors++;
+	}
+
+	# Final counted checks
+	my %final;
+	foreach my $k ( keys(%totals) ) {
+		$final{$k} = 0;
+	}
+	my @files;
+	my $errors = ReadEventlogs( $dir, \%final, \@files );
+	if ( $errors ) {
+		print STDERR "ERROR: final: ReadEventLogs()\n";
+		$total_errors += $errors;
+	}
+	$errors = ProcessEventlogs( \@files, \%final );
+	if ( $errors ) {
+		print STDERR "ERROR: final: ProcessEventLogs()\n";
+		$total_errors += $errors;
+	}
+	if ( scalar(@files) < $expect{final_mins}{num_files} ) {
+		printf( STDERR
+				"ERROR: final: too few actual files: %d < %d\n",
+				scalar(@files), $expect{final_mins}{num_files} );
+	}
+	if ( ! $final{events_lost} ) {
+		if ( $final{num_events} < $expect{final_mins}{num_events} ) {
+			printf( STDERR
+					"ERROR: final: too few actual events: %d < %d\n",
+					$final{num_events}, $expect{loop_mins}{num_events} );
+			$total_errors++;
+		}
+	}
+	if ( $final{sequence} < $expect{final_mins}{sequence} ) {
+		printf( STDERR
+				"ERROR: final: actual sequence too low: %d < %d\n",
+				$final{sequence}, $expect{final_mins}{sequence});
+		$total_errors++;
+	}
+
+	if ( $final{file_size} > $expect{maxs}{total_size} ) {
+		printf( STDERR
+				"ERROR: final: total file size too high: %d > %d\n",
+				$final{total_size}, $expect{maxs}{total_size});
+		$total_errors++;
+	}
+
+
+	if ( $total_errors  or  ($settings{verbose} > 1)  or  $settings{debug} ) {
+		GatherData( "/dev/stdout", $total_errors );
+	}
 }
 
-if ( $final{file_size} > $expect{maxs}{total_size} ) {
-    printf( STDERR
-			"ERROR: final: total file size too high: %d > %d\n",
-			$final{total_size}, $expect{maxs}{total_size});
-    $errors++;
+my $exit_status = $total_errors == 0 ? 0 : 1;
+
+my $end = time();
+$timestr = localtime( $end );
+my $duration = $end - $start;
+printf "\n** Analysis complete **\n";
+printf( "\n** Eventlog rotation test '%s' done @ %s; %ds, status %d **\n",
+		$settings{name}, $timestr, $duration, $exit_status );
+if ( $strace_pid > 0 ) {
+	print "Killing strace\n";
+	kill( 15, $strace_pid );
+	sleep(1);
 }
 
+exit $exit_status;
 
-if ( $errors  or  ($settings{verbose} > 1)  or  $settings{debug} ) {
-    GatherData( "/dev/stdout" );
-}
 
-sub GatherData( $ )
+sub GatherData( $$ )
 {
     my $f = shift;
-    open( OUT, ">$f" );
+	my $errors = shift;
+    if ( !open( OUT, ">$f" ) ) {
+		print STDERR "Failed to open log file $f for writing: $!\n";
+		open( OUT, ">&STDERR" ) or die "Can't dup standard error";
+	}
 
     print OUT "\n\n** Total: $errors errors detected **\n";
 
@@ -725,21 +877,25 @@ sub GatherData( $ )
     close( OUT );
 }
 
-exit( $errors == 0 ? 0 : 1 );
-
-
 # #######################################
 # Run the writer
 # #######################################
-sub RunWriter( $$$$$ )
+sub RunWriter( $$$$$$ )
 {
     my $loop = shift;
+	my $final = shift;
     my $new = shift;
     my $previous = shift;
     my $totals = shift;
     my $run = shift;
 
     my $errors = 0;
+
+	# Blow away any userlog file
+	if ( -f $writer_args[-1] ) {
+		print "Removing " . $writer_args[-1] . "\n" if ( $settings{verbose} );
+		unlink( $writer_args[-1] );
+	}
 
     my $cmd = "";
     my $vg_out = sprintf( "valgrind-writer-%02d.out", $loop );
@@ -749,6 +905,12 @@ sub RunWriter( $$$$$ )
 		$cmd .= " --log-file=$vg_full ";
     }
     $cmd .= join(" ", @writer_args );
+
+	# Prevent rotations on the final loop;
+	#   Has no effect if --max-rotations is not specified
+	if ( $final ) {
+		$cmd .= " --max-rotation-stop ";
+	}
     print "$cmd\n" if ( $settings{verbose} );
 
     if ( ! $settings{execute} ) {
@@ -1057,17 +1219,14 @@ sub CheckReaderOutput( $$$$ )
 		$errors++;
     }
 
-    my $nseq = $#{@{$new->{reader_sequence}}};
+    my $nseq = $#{$new->{reader_sequence}};
     my $rseq = -1;
     if ( $nseq >= 0 ) {
 		$rseq = @{$new->{reader_sequence}}[$nseq];
     }
 
 	if ( $nseq < 0 ) {
-		printf( STDERR
-				"ERROR: loop %d: no reader sequence\n",
-				$loop );
-		$errors++;
+		# do nothing
     }
     elsif ( $rseq < $new->{writer_sequence} ) {
 		printf( STDERR
@@ -1098,14 +1257,15 @@ sub CheckReaderOutput( $$$$ )
 # #######################################
 # Read the eventlog files
 # #######################################
-sub ReadEventlogs( $$ )
+sub ReadEventlogs( $$$ )
 {
     my $dir = shift;
     my $new = shift;
+	my $files = shift;
 
+	my $errors = 0;
     my @header_fields = qw( ctime id sequence size events offset event_off );
 
-    my @files;
     opendir( DIR, $dir ) or die "Can't read directory $dir";
     while( my $t = readdir( DIR ) ) {
 		if ( $t =~ /^EventLog(\.old|\.\d+)*$/ ) {
@@ -1121,8 +1281,8 @@ sub ReadEventlogs( $$ )
 			else {
 				$rot = 0;
 			}
-			$files[$rot] = { name => $t, ext => $ext, num_events => 0 };
-			my $f = $files[$rot];
+			my $f = { name => $t, ext => $ext, num_events => 0 };
+			@{$files}[$rot] = $f;
 			my $file = "$dir/$t";
 			open( FILE, $file ) or die "Can't read $file";
 			while( <FILE> ) {
@@ -1155,7 +1315,7 @@ sub ReadEventlogs( $$ )
 		}
     }
     closedir( DIR );
-    return @files;
+    return $errors;
 }
 
 # #######################################
@@ -1166,20 +1326,22 @@ sub ProcessEventlogs( $$ )
     my $files = shift;
     my $new = shift;
 
+	my $errors = 0;
+
     my $events_counted =
 		( exists $test->{config}{EVENT_LOG_COUNT_EVENTS} and
 		  $test->{config}{EVENT_LOG_COUNT_EVENTS} eq "TRUE" );
 
     my $min_sequence = 9999999;
     my $min_event_off = 99999999;
-    my $maxfile = $#{@{$files}};
+    my $maxfile = $#{$files};
     foreach my $n ( 0 .. $maxfile ) {
-		if ( ! defined ${@{$files}}[$n] ) {
+		if ( ! defined ${$files}[$n] ) {
 			print STDERR "ERROR: EventLog file #$n is missing\n";
 				$errors++;
 			next;
 		}
-		my $f = ${@{$files}}[$n];
+		my $f = ${$files}[$n];
 		my $t = $f->{name};
 		if ( not exists $f->{header} ) {
 			print STDERR "ERROR: no header in file $t\n";
@@ -1264,6 +1426,7 @@ sub ProcessEventlogs( $$ )
 			$new->{num_events_lost} = -1;
 		}
     }
+	return $errors;
 }
 
 ### Local Variables: ***

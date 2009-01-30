@@ -32,6 +32,8 @@ use CondorPersonal;
 use FileHandle;
 use POSIX "sys_wait_h";
 use Net::Domain qw(hostfqdn);
+use strict;
+use warnings;
 
 my %securityoptions =
 (
@@ -41,6 +43,21 @@ my %securityoptions =
 "REQUIRED" => "1",
 );
 
+my $MAX_CHECKPOINTS = 2;
+my $MAX_VACATES = 3;
+
+my @skipped_output_lines;
+my @expected_output;
+
+my $checkpoints;
+my $hoststring;
+my $submit_file; #RunTest and RunDagTest set.
+my $vacates;
+my %test;
+my %machine_ads;
+my $lastconfig;
+my $handle; #actually the test name.
+
 BEGIN
 {
     # disable command buffering so output is flushed immediately
@@ -49,14 +66,9 @@ BEGIN
 
     $MAX_CHECKPOINTS = 2;
     $MAX_VACATES = 3;
-
-    @skipped_output_lines = ( );
-    @expected_output = ( );
     $checkpoints = 0;
 	$hoststring = "notset:000";
     $vacates = 0;
-    %test;
-	%machine_ads;
 	$lastconfig = "";
 
     Condor::DebugOn();
@@ -67,6 +79,24 @@ sub Reset
     %machine_ads = ();
 	Condor::Reset();
 	$hoststring = "notset:000";
+}
+
+sub SetExpected
+{
+	my $expected_ref = shift;
+	foreach my $line (@{$expected_ref}) {
+		debug( "$line\n", 1);
+	}
+	@expected_output = @{$expected_ref};
+}
+
+sub SetSkipped
+{
+	my $skipped_ref = shift;
+	foreach my $line (@{$skipped_ref}) {
+		debug( "$line\n", 1);
+	}
+	@skipped_output_lines = @{$skipped_ref};
 }
 
 sub ForceVacate
@@ -228,14 +258,14 @@ sub DefaultOutputTest
     my %info = @_;
 
     croak "default_output_test called but no \@expected_output defined"
-	unless defined @expected_output;
+	unless $#expected_output >= 0;
 
     debug( "\$info{'output'} = $info{'output'}\n" ,4);
 
 	my $output = "";
 	my $error = "";
 	my $initialdir = $info{'initialdir'};
-	if($initialdir ne "") {
+	if((defined $initialdir) && ($initialdir ne "")) {
 		debug( "Testing with initialdir = $initialdir\n" ,4);
 		$output = $initialdir . "/" . $info{'output'};
 		$error = $initialdir . "/" . $info{'error'};
@@ -255,13 +285,14 @@ sub DefaultOutputTest
 sub RunTest
 {
     $handle              = shift || croak "missing handle argument";
-    my $submit_file      = shift || croak "missing submit file argument";
+    $submit_file      = shift || croak "missing submit file argument";
     my $wants_checkpoint = shift;
 
     my $status           = -1;
 	my $monitorpid = 0;
 	my $waitpid = 0;
 	my $monitorret = 0;
+	my $retval = 0;
 
 	print "RunTest says test is<<$handle>>\n";
 	# moved the reset to preserve callback registrations which includes
@@ -271,7 +302,7 @@ sub RunTest
     croak "too many arguments" if shift;
 
     # this is kludgey :: needed to happen sooner for an error message callback in runcommand
-    $Condor::submit_info{'handle'} = $handle;
+    Condor::SetHandle($handle);
 
     # if we want a checkpoint, register a function to force a vacate
     # and register a function to check to make sure it happens
@@ -286,6 +317,10 @@ sub RunTest
 	}
 
 	CheckRegistrations();
+
+	print "\nCurrent date and load follow:\n";
+	system("date");
+	system("uptime");
 
 	my $wrap_test = $ENV{WRAP_TESTS};
 
@@ -305,7 +340,7 @@ sub RunTest
 
     # submit the job and get the cluster id
 	debug( "Now submitting test job\n",4);
-    $cluster = Condor::TestSubmit( $submit_file );
+    my $cluster = Condor::TestSubmit( $submit_file );
     
     # if condor_submit failed for some reason return an error
     if($cluster == 0){
@@ -345,7 +380,7 @@ sub RunTest
 					debug( "Monitor done and status good!\n",4);
 					$retval = 1;
 				} else {
-					my $status = WEXITSTATUS( $retval );
+					$status = WEXITSTATUS( $retval );
 					debug( "Monitor done and status bad<<$status>>!\n",4);
 					$retval = 0;
 				}
@@ -354,6 +389,11 @@ sub RunTest
 	}
 
 	debug( "************** condor_monitor back ************************ \n",4);
+
+	print "\nCurrent date and load follow:\n";
+	system("date");
+	system("uptime");
+
 
 	if(defined  $wrap_test) {
 		if($config ne "") {
@@ -379,7 +419,7 @@ sub RunTest
 sub RunDagTest
 {
     $handle              = shift || croak "missing handle argument";
-    my $submit_file      = shift || croak "missing submit file argument";
+    $submit_file      = shift || croak "missing submit file argument";
     my $wants_checkpoint = shift;
 	my $dagman_args = 	shift || croak "missing dagman args";
 
@@ -387,6 +427,7 @@ sub RunDagTest
 	my $monitorpid = 0;
 	my $waitpid = 0;
 	my $monitorret = 0;
+	my $retval = 0;
 
     croak "too many arguments" if shift;
 
@@ -395,7 +436,7 @@ sub RunDagTest
 	CondorTest::Reset();
 
     # this is kludgey :: needed to happen sooner for an error message callback in runcommand
-    $Condor::submit_info{'handle'} = $handle;
+    Condor::SetHandle($handle);
 
     # if we want a checkpoint, register a function to force a vacate
     # and register a function to check to make sure it happens
@@ -426,8 +467,12 @@ sub RunDagTest
 		}
 	}
 
+	print "\nCurrent date and load follow:\n";
+	system("date");
+	system("uptime");
+
     # submit the job and get the cluster id
-    $cluster = Condor::TestSubmitDagman( $submit_file, $dagman_args );
+    my $cluster = Condor::TestSubmitDagman( $submit_file, $dagman_args );
     
 	if($cluster == 0){
     	# if condor_submit failed for some reason return an error
@@ -466,7 +511,7 @@ sub RunDagTest
 					debug( "Monitor done and status good!\n",4);
 					$retval = 1;
 				} else {
-					my $status = WEXITSTATUS( $retval );
+					$status = WEXITSTATUS( $retval );
 					debug( "Monitor done and status bad<<$status>>!\n",4);
 					$retval = 0;
 				}
@@ -475,6 +520,10 @@ sub RunDagTest
 	}
 
 	debug( "************** condor_monitor back ************************ \n",4);
+
+	print "\nCurrent date and load follow:\n";
+	system("date");
+	system("uptime");
 
 	if(defined  $wrap_test) {
 		if($config ne "") {
@@ -642,6 +691,8 @@ sub CompareText
     my $aref = shift || croak "missing array reference argument";
     my @skiplines = @_;
     my $linenum = 0;
+	my $line;
+	my $expectline;
 
 	debug("opening file $file to compare to array of expected results\n",4);
     open( FILE, "<$file" ) || die "error opening $file: $!\n";
@@ -686,7 +737,7 @@ sub CompareText
         die "$file incomplete, expecting:\n$expectline\n";
 
     # barf if there are skiplines we haven't hit yet
-    foreach $num ( @skiplines )
+    foreach my $num ( @skiplines )
     {
 	if( $num > $linenum )
 	{
@@ -715,11 +766,13 @@ sub verbose_system
 	$args = $args . " 2>" . $catch;
 	my $rc = 0xffff & system $args;
 
-	printf "system(%s) returned %#04x: ", $args, $rc;
+	if ($rc != 0) { 
+		printf "system(%s) returned %#04x: ", $args, $rc;
+	}
 
 	if ($rc == 0) 
 	{
-		print "ran with normal exit\n";
+		#print "ran with normal exit\n";
 		return $rc;
 	}
 	elsif ($rc == 0xff00) 
@@ -795,6 +848,8 @@ sub ParseMachineAds
 {
     my $machine = shift || croak "missing machine argument";
     my $line = 0;
+	my $variable;
+	my $value;
 
 	if( ! open(PULL, "condor_status -l $machine 2>&1 |") )
     {
@@ -901,7 +956,7 @@ sub setJobAd
 		print "Test failure due to Condor Tool Failure<$cmd>\n";
 	    return(1)
 	}
-	foreach $line (@status)
+	foreach my $line (@status)
 	{
 		#print "Line: $line\n";
 	}
@@ -925,7 +980,7 @@ sub getJobStatus
 	    return(1)
 	}
 
-	foreach $line (@status)
+	foreach my $line (@status)
 	{
 		#print "jobstatus: $line\n";
 		if( $line =~ /^(\d).*/)
@@ -965,8 +1020,8 @@ sub runCondorTool
 		system("date");
 	}
 
-	my $attempts = 8;
-	my $count = 0;
+	my $attempts = 6;
+	$count = 0;
 	while( $count < $attempts) {
 		@{$arrayref} = (); #empty return array...
 		my @tmparray;
@@ -985,7 +1040,7 @@ sub runCondorTool
 		{
 				print "runCondorTool: $cmd timestamp $start_time failed!\n";
 				print "************* std out ***************\n";
-				foreach $stdout (@tmparray) {
+				foreach my $stdout (@tmparray) {
 					print "STDOUT: $stdout \n";
 				}
 				print "************* std err ***************\n";
@@ -1005,15 +1060,15 @@ sub runCondorTool
 		}
 
 		if ($status == 0) {
-			$line = "";
-			foreach $value (@tmparray)
+			my $line = "";
+			foreach my $value (@tmparray)
 			{
 				push @{$arrayref}, $value;
 			}
 			$done = 1;
 			# There are times like the security tests when we want
 			# to see the stderr even when the command works.
-			if( $force ne "" ) {
+			if( (defined $force) && ($force ne "" )) {
 				if( !open( MACH, "<$catch" )) { 
 					warn "Can't look at command output <$catch>:$!\n";
 				} else {
@@ -1047,9 +1102,8 @@ sub Which
 {
 	my $exe = shift(@_);
 	my @paths = split /:/, $ENV{'PATH'};
-	my $path;
 
-	foreach $path (@paths) {
+	foreach my $path (@paths) {
 		chomp $path;
 		if (-x "$path/$exe") {
 			return "$path/$exe";
@@ -1066,7 +1120,7 @@ sub Which
 sub GetQueue
 {
 	my @cmd = ("condor_q", "condor_q -l" );
-	foreach $request (@cmd) {
+	foreach my $request (@cmd) {
 		print "Queue command <$request>\n";
 		open(PULL, "$request 2>&1 |");
 		while(<PULL>)
@@ -1105,7 +1159,7 @@ sub changeDaemonState
 	my $cmd = "";
 	my $foundTotal = "no";
 	my $status;
-	my @cmdarray1, @cmdarray2;
+	my (@cmdarray1, @cmdarray2);
 
 	print "Checking for $daemon being $state\n";
 	if($state eq "off") {
@@ -1192,12 +1246,12 @@ sub changeDaemonState
 
 sub find_pattern_in_array
 {
-    $pattern = shift;
-    $harray = shift;
-    $place = 0;
+    my $pattern = shift;
+    my $harray = shift;
+    my $place = 0;
 
     debug( "Looking for <<$pattern>> size <<$#{$harray}>>\n",4);
-    foreach $member (@{$harray}) {
+    foreach my $member (@{$harray}) {
         debug( "consider $member\n",5);
         if($member =~ /.*$pattern.*/) {
             debug( "Found <<$member>> line $place\n",4);
@@ -1220,16 +1274,16 @@ sub find_pattern_in_array
 
 sub compare_arrays
 {
-    $startrow = shift;
-    $endrow = shift;
-    $numargs = shift;
-    %lookup = ();
-    $counter = 0;
+    my $startrow = shift;
+    my $endrow = shift;
+    my $numargs = shift;
+    my %lookup = ();
+    my $counter = 0;
     debug( "Check $numargs starting row $startrow end row $endrow\n",4);
     while($counter < $numargs) {
-        $href = shift;
+        my $href = shift;
         my $thisrow = 0;
-        for $item (@{$href}) {
+        for my $item (@{$href}) {
             if( $thisrow >= $startrow) {
                 if($counter == 0) {
                     #initialize each position
@@ -1247,7 +1301,7 @@ sub compare_arrays
         $counter = $counter + 1;
     }
     #loaded up..... now look!
-    foreach $key (keys %lookup) {
+    foreach my $key (keys %lookup) {
         debug( " $key equals $lookup{$key}\n",4);
 		if($lookup{$key} != $numargs) {
 			print "Arrays are not the same! key <$key> is $lookup{$key} and not $numargs\n";
@@ -1273,15 +1327,19 @@ sub spawn_cmd
 	my $resultfile = shift;
 	my $result;
 	my $toppid = fork();
+	my $res;
+	my $child;
+	my $mylog;
+	my $retval;
 
 	if($toppid == 0) {
 
-		$pid = fork();
+		my $pid = fork();
 		if ($pid == 0) {
 			# child 1 code....
 			$mylog = $resultfile . ".spawn";
 			open(LOG,">$mylog") || die "Can not open log: $mylog: $!\n";
-			my $res = 0;
+			$res = 0;
 			print LOG "Starting this cmd <$cmdtowatch>\n";
 			$res = system("$cmdtowatch");
 			print LOG "Result from $cmdtowatch is <$res>\n";
@@ -1420,7 +1478,7 @@ sub PersonalCondorTest
 	my $locconfig = "";
     print "Running this command: <$cmd> \n";
     # shhhhhhhh third arg 0 makes it hush its output
-	$logdir = `condor_config_val log`;
+	my $logdir = `condor_config_val log`;
 	fullchomp($logdir);
 	print "log dir is<$logdir>\n";
 	if($logdir =~ /^.*condor_tests.*$/){
@@ -1452,13 +1510,13 @@ sub findOutput
 	my $submitfile = shift;
 	open(SF,"<$submitfile") or die "Failed to open <$submitfile>:$!\n";
 	my $testname = "UNKNOWN";
-	$line = "";
+	my $line = "";
 	while(<SF>) {
 		chomp($_);
 		$line = $_;
 		if($line =~ /^\s*[Ll]og\s+=\s+(.*)(\..*)$/){
 			$testname = $1;
-			$previouslog = $1 . $2;
+			my $previouslog = $1 . $2;
 			system("rm -f $previouslog");
 		}
 	}

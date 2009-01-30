@@ -57,7 +57,7 @@
 #define GM_DELEGATE_PROXY		17
 #define GM_CLEANUP		18
 
-static char *GMStateNames[] = {
+static const char *GMStateNames[] = {
 	"GM_INIT",
 	"GM_UNSUBMITTED",
 	"GM_SUBMIT",

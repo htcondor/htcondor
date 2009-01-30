@@ -60,7 +60,7 @@
 #define GM_STAGE_OUT			21
 #define GM_RECOVER_POLL			22
 
-static char *GMStateNames[] = {
+static const char *GMStateNames[] = {
 	"GM_INIT",
 	"GM_REGISTER",
 	"GM_STDIO_UPDATE",

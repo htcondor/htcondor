@@ -359,7 +359,15 @@ FileLock::obtain( LOCK_TYPE t )
 			lPosBeforeLock = ftell(m_fp); 
 		}
 		
+			// We're seeing sporadic test suite failures where a daemon
+			// takes more than 10 seconds to write to the user log.
+			// This will help narrow down where the delay is coming from.
+		time_t before = time(NULL);
 		status = lock_file( m_fd, t, m_blocking );
+		time_t after = time(NULL);
+		if ( (after - before) > 5 ) {
+			dprintf( D_FULLDEBUG, "FileLock::obtain(%d): lock_file() took %d seconds\n",t);
+		}
 		
 		if (m_fp)
 		{

@@ -329,7 +329,11 @@ WindowsFirewallHelper::removeByBasename( const char *name ) {
 		fwApp = (INetFwAuthorizedApplication*)v.byref;
 
 		fwApp->get_ProcessImageFileName(&str);
-		printf("Result is %lS\n", str);
+
+		// This should not be printing to stdout, but if you are
+		// reading this and think it is necessary to print these 
+		// executable names then dprintf() them.
+		// printf("Result is %lS\n", str);
 
 		len = wcslen(str);
 		tmp = (char*) malloc(len+1 * sizeof(char));

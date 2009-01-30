@@ -25,7 +25,8 @@ $cmd = 'job_rsc_fread_std.cmd';
 $testdesc =  'Fread Test';
 $testname = "job_rsc_fread_std";
 
-@CondorTest::expected_output = ( 'read 1 items from x_data.in' );
+my @expected_output = ( 'read 1 items from x_data.in' );
+CondorTest::SetExpected(\@expected_output);
 
 CondorTest::RegisterExitedSuccess( $testname,
 				   \&CondorTest::DefaultOutputTest );

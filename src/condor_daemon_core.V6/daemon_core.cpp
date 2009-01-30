@@ -1504,7 +1504,8 @@ int DaemonCore::Create_Pipe( int *pipe_ends,
 				0,                          // default wait timeout (not used)
 				NULL);                      // we mark handles inheritable in Create_Process
 	if (w == INVALID_HANDLE_VALUE) {
-		dprintf(D_ALWAYS, "CreateNamedPipe error: %d\n", GetLastError());
+		dprintf(D_ALWAYS, "CreateNamedPipe(%s) error: %d\n", 
+			pipe_name.Value (), GetLastError());
 		return FALSE;
 	}
 	HANDLE r =
@@ -1517,7 +1518,8 @@ int DaemonCore::Create_Pipe( int *pipe_ends,
 			   NULL);                   // no template file
 	if (r == INVALID_HANDLE_VALUE) {
 		CloseHandle(w);
-		dprintf(D_ALWAYS, "CreateFile error on named pipe: %d\n", GetLastError());
+		dprintf(D_ALWAYS, "CreateFile(%s) error on named pipe: %d\n", 
+			pipe_name.Value(), GetLastError());
 		return FALSE;
 	}
 	read_handle = new ReadPipeEnd(r, overlapped_read_flag, nonblocking_read, psize);
@@ -3615,7 +3617,7 @@ int DaemonCore::HandleReq(Stream *insock)
 		soap_serve(cursoap);
 		soap_destroy(cursoap); // clean up class instances
 		soap_end(cursoap); // clean up everything and close socket
-		free(cursoap);
+		soap_free(cursoap);
 		dprintf(D_ALWAYS, "Completed servicing HTTP request\n");
 
 			// gsoap already closed the socket.  so set the socket in

@@ -109,8 +109,8 @@ extern const char *        debug_progname;
     @param ... Refer to printf() documentation
     @return Refer to printf() documentation
 */
-void debug_printf( debug_level_t level, char *fmt, ... ) CHECK_PRINTF_FORMAT(2,3);
-void debug_dprintf( int flags, debug_level_t level, char *fmt, ... ) CHECK_PRINTF_FORMAT(3,4);
+void debug_printf( debug_level_t level, const char *fmt, ... ) CHECK_PRINTF_FORMAT(2,3);
+void debug_dprintf( int flags, debug_level_t level, const char *fmt, ... ) CHECK_PRINTF_FORMAT(3,4);
 
 /** The conditional expression that controls whether output is
     actually printed.
@@ -127,7 +127,7 @@ void debug_dprintf( int flags, debug_level_t level, char *fmt, ... ) CHECK_PRINT
     @param ... Refer to printf() documentation
     @return nothing
 */
-void debug_println (debug_level_t level, char *fmt, ...) CHECK_PRINTF_FORMAT(2,3);
+void debug_println (debug_level_t level, const char *fmt, ...) CHECK_PRINTF_FORMAT(2,3);
 
 /** Print an error an exit.  Same as debug_println(), except the progname
     will immediately called exit(error) and never return.
@@ -138,7 +138,7 @@ void debug_println (debug_level_t level, char *fmt, ...) CHECK_PRINTF_FORMAT(2,3
     @param ... Refer to printf() documentation
     @return This function never returns, because it calls exit(error)
 */
-void debug_error   (int error, debug_level_t level, char *fmt, ...) CHECK_PRINTF_FORMAT(3,4);
+void debug_error   (int error, debug_level_t level, const char *fmt, ...) CHECK_PRINTF_FORMAT(3,4);
 
 //@}
 

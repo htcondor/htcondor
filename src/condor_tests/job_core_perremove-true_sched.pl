@@ -22,7 +22,7 @@ use CondorTest;
 
 $cmd = 'job_core_perremove-true_sched.cmd';
 $testdesc =  'Condor submit policy test for PERIODIC_REMOVE - scheduler U';
-$testname = "job_core_perremove-true_sched";
+$testname = "job_core_perremove_sched";
 
 my $killedchosen = 0;
 

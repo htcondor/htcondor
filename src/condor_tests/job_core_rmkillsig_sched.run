@@ -29,7 +29,7 @@ my $killedchosen = 0;
 $abnormal = sub {
 	my %info = @_;
 
-	CondorTest::debug("\n",1);
+	CondorTest::debug("keys:".join(" ",keys %info)."\n",1);
 	my $gotsig   = $info{"signal"};
 };
 

@@ -1155,6 +1155,12 @@ FunctionBase::~FunctionBase()
 	}
 	delete arguments;
 
+#ifdef USE_STRING_SPACE_IN_CLASSADS
+	string_space->disposeByIndex(stringSpaceIndex);
+#else
+	delete [] name;
+#endif
+
 	return;
 }
 

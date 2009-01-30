@@ -25,13 +25,15 @@ $testdesc =  'condor_submit output works - java U';
 $testname = "job_core_output_java";
 
 
-@CondorTest::expected_output =
+my @expected_output =
 (
 'first',
 'second',
 'third',
 'fourth',
 );
+
+CondorTest::SetExpected(\@expected_output);
 
 
 

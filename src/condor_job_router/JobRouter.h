@@ -85,7 +85,7 @@ class JobRouter: public Service {
 	void FinishSubmitJob(RoutedJob *job);
 
 	// Update the status of the job.
-	void UpdateJobStatus(RoutedJob *job);
+	void UpdateRoutedJobStatus(RoutedJob *job, classad::ClassAd update);
 
 	// Finish the job status update.
 	void FinishCheckSubmittedJobStatus(RoutedJob *job);
@@ -98,6 +98,9 @@ class JobRouter: public Service {
 
 	// Have the job be rerouted.
 	void RerouteJob(RoutedJob *job);
+
+	// Push the updated attributes to the job queue.
+	bool PushUpdatedAttributes(classad::ClassAd& src);
 
 		// Provide access to the Scheduler, which holds the
 		// ClassAdCollection

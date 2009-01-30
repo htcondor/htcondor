@@ -470,6 +470,8 @@ DCMessenger::readMsg( classy_counted_ptr<DCMsg> msg, Sock *sock )
 
 	sock->decode();
 
+	bool done_with_sock = true;
+
 	if( msg->deliveryStatus() == DCMsg::DELIVERY_CANCELED ) {
 		msg->callMessageReceiveFailed( this );
 	}
@@ -484,13 +486,13 @@ DCMessenger::readMsg( classy_counted_ptr<DCMsg> msg, Sock *sock )
 			// Success
 		DCMsg::MessageClosureEnum closure = msg->callMessageReceived( this, sock );
 
-		switch( closure ) {
-		case DCMsg::MESSAGE_FINISHED:
-			doneWithSock(sock);
-			break;
-		case DCMsg::MESSAGE_CONTINUING:
-			break;
+		if( closure == DCMsg::MESSAGE_CONTINUING ) {
+			done_with_sock = false;
 		}
+	}
+
+	if( done_with_sock ) {
+		doneWithSock( sock );
 	}
 
 	decRefCount();

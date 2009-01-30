@@ -29,12 +29,9 @@ else {
     die "$0: invalid .run file name";
 }
 
-my @args = ( "./lib_eventlog_rotation.pl", $name, "--pid" );
+my @args = ( "./lib_eventlog_rotation.pl", $name, "--pid", "--strace" );
 foreach my $a ( @ARGV ) {
     push( @args, $a );
 }
-my $status = system( @args );
-if ( $status < 0 ) {
-    die "Failed to execute " . join(" ", @args) . ": $?";
-}
-exit( $? >> 8 );
+exec( @args ) or
+    print STDERR "Failed to execute '" . join(" ", @args) . "': $!";

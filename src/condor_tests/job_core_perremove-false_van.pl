@@ -22,7 +22,7 @@ use CondorTest;
 
 $cmd = 'job_core_perremove-false_van.cmd';
 $testdesc =  'Condor submit policy test for periodic_remove - vanilla U';
-$testname = "job_core_perremove-false_van";
+$testname = "job_core_perremove_van";
 
 my %info;
 my $cluster;

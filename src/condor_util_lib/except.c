@@ -48,7 +48,7 @@ const char	*foo;
 
 int		_EXCEPT_Line;
 int		_EXCEPT_Errno;
-char	*_EXCEPT_File;
+const char	*_EXCEPT_File;
 int		(*_EXCEPT_Cleanup)(int,int,char*);
 int		SetSyscalls(int);
 

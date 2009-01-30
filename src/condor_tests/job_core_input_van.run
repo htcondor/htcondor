@@ -25,7 +25,7 @@ $testdesc =  'condor_submit input works - vanilla U';
 $testname = "job_core_input_van";
 
 
-@CondorTest::expected_output =
+my @expected_output =
 (
 'first',
 'second',
@@ -33,6 +33,7 @@ $testname = "job_core_input_van";
 'fourth',
 );
 
+CondorTest::SetExpected(\@expected_output);
 
 
 $ExitSuccess = sub {

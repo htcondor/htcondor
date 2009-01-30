@@ -25,6 +25,7 @@
 #include "JobRouter.h"
 #include "set_user_from_ad.h"
 #include "Scheduler.h"
+#include "submit_job.h"
 
 extern JobRouter* job_router;
 
@@ -499,8 +500,9 @@ TranslateClient::hookExited(int exit_status)
 	std::string key = m_routed_job->src_key;
 	if (false == JobRouterHookMgr::removeKnownHook(key.c_str(), HOOK_TRANSLATE_JOB))
 	{
-		dprintf(D_ALWAYS|D_FAILURE, "TranslateClient::hookExited "
-			"Failed to remove hook info for job key %s.\n", key.c_str());
+		dprintf(D_ALWAYS|D_FAILURE, "TranslateClient::hookExited (%s):"
+			"Failed to remove hook info for job key %s.\n", 
+			m_routed_job->JobDesc().c_str(), key.c_str());
 		EXCEPT("TranslateClient::hookExited: Received exit "
 			"notification for job with key %s, which isn't a key "
 			"for a job known to have a translate hook running.",
@@ -512,32 +514,38 @@ TranslateClient::hookExited(int exit_status)
 
 	if (m_std_err.Length())
 	{
-		dprintf(D_ALWAYS, "TranslateClient::hookExited: "
-				"Warning, hook %s (pid %d) printed to stderr: %s\n",
+		dprintf(D_ALWAYS, "TranslateClient::hookExited (%s): "
+				"Warning, hook %s (pid %d) printed to stderr: "
+				"%s\n", m_routed_job->JobDesc().c_str(), 
 				m_hook_path, (int)m_pid, m_std_err.Value());
 	}
 	if (m_std_out.Length() && 0 == WEXITSTATUS(exit_status))
 	{
 		ClassAd old_job_ad;
 		classad::ClassAd new_job_ad;
-		m_std_out.Tokenize();
 		const char* hook_line = NULL;
+
+		m_std_out.Tokenize();
 		while ((hook_line = m_std_out.GetNextToken("\n", true)))
 		{
 			if (!old_job_ad.Insert(hook_line))
 			{
-				dprintf(D_ALWAYS, "TranslateClient::hookExited: "
-						"Failed to insert \"%s\" into ClassAd, "
-						"ignoring invalid hook output\n", hook_line);
+				dprintf(D_ALWAYS, "TranslateClient::hookExited "
+						"(%s): Failed to insert \"%s\" "
+						"into ClassAd, ignoring "
+						"invalid hook output\n", 
+						m_routed_job->JobDesc().c_str(),
+						hook_line);
 				job_router->GracefullyRemoveJob(m_routed_job);
 				return;
 			}
 		}
 		if (false == old_to_new(old_job_ad, new_job_ad))
 		{
-			dprintf(D_ALWAYS, "TranslateClient::hookExited: "
+			dprintf(D_ALWAYS, "TranslateClient::hookExited (%s): "
 					"Failed to convert ClassAd, "
-					"ignoring invalid hook output\n");
+					"ignoring invalid hook output\n",
+					m_routed_job->JobDesc().c_str());
 			job_router->GracefullyRemoveJob(m_routed_job);
 			return;
 		}
@@ -547,15 +555,19 @@ TranslateClient::hookExited(int exit_status)
 	{
 		if (0 == WEXITSTATUS(exit_status))
 		{
-			dprintf(D_ALWAYS, "TranslateClient::hookExited: Hook %s (pid %d) returned no data.\n",
+			dprintf(D_ALWAYS, "TranslateClient::hookExited (%s): "
+					"Hook %s (pid %d) returned no data.\n",
+					m_routed_job->JobDesc().c_str(), 
 					m_hook_path, (int)m_pid);
 		}
 		else
 		{
-			dprintf(D_ALWAYS, "TranslateClient::hookExited: Hook %s "
-					"(pid %d) exited with return status "
-					"%d.  Ignoring output.\n",  m_hook_path,
-					(int)m_pid, (int)WEXITSTATUS(exit_status));
+			dprintf(D_ALWAYS, "TranslateClient::hookExited (%s): "
+					"Hook %s (pid %d) exited with return "
+					"status %d.  Ignoring output.\n", 
+					m_routed_job->JobDesc().c_str(),
+					m_hook_path, (int)m_pid,
+					(int)WEXITSTATUS(exit_status));
 			job_router->GracefullyRemoveJob(m_routed_job);
 		}
 		return;
@@ -582,8 +594,9 @@ StatusClient::hookExited(int exit_status)
 	std::string key = m_routed_job->dest_key;
 	if (false == JobRouterHookMgr::removeKnownHook(key.c_str(), HOOK_UPDATE_JOB_INFO))
 	{
-		dprintf(D_ALWAYS|D_FAILURE, "StatusClient::hookExited "
-			"Failed to remove hook info for job key %s.\n", key.c_str());
+		dprintf(D_ALWAYS|D_FAILURE, "StatusClient::hookExited (%s):"
+			"Failed to remove hook info for job key %s.\n", 
+			m_routed_job->JobDesc().c_str(), key.c_str());
 		EXCEPT("StatusClient::hookExited: Received exit notification "
 			"for job with key %s, which isn't a key for a job "
 			"known to have a status hook running.", key.c_str());
@@ -594,77 +607,69 @@ StatusClient::hookExited(int exit_status)
 
 	if (m_std_err.Length())
 	{
-		dprintf(D_ALWAYS,
-				"StatusClient::hookExited: Warning, hook %s (pid %d) printed to stderr: %s\n",
-				m_hook_path, (int)m_pid, m_std_err.Value());
+		dprintf(D_ALWAYS, "StatusClient::hookExited (%s): Warning, "
+				"hook %s (pid %d) printed to stderr: %s\n",
+				m_routed_job->JobDesc().c_str(), m_hook_path,
+				(int)m_pid, m_std_err.Value());
 	}
 	if (m_std_out.Length() && 0 == WEXITSTATUS(exit_status))
 	{
 		ClassAd old_job_ad;
 		classad::ClassAd new_job_ad;
-		m_std_out.Tokenize();
 		const char* hook_line = NULL;
+		const char* attrs_to_delete[] = {
+			ATTR_MY_TYPE,
+			ATTR_TARGET_TYPE,
+			NULL };
+
+		m_std_out.Tokenize();
 		while ((hook_line = m_std_out.GetNextToken("\n", true)))
 		{
 			if (!old_job_ad.Insert(hook_line))
 			{
-				dprintf(D_ALWAYS, "StatusClient::hookExited: "
+				dprintf(D_ALWAYS, "StatusClient::hookExited (%s): "
 						"Failed to insert \"%s\" into "
 						"ClassAd, ignoring invalid "
-						"hook output.  Job status NOT updated.\n", hook_line);
+						"hook output.  Job status NOT "
+						"updated.\n", m_routed_job->JobDesc().c_str(), hook_line);
+				job_router->GracefullyRemoveJob(m_routed_job);
 				return;
 			}
 		}
 		if (false == old_to_new(old_job_ad, new_job_ad))
 		{
-			dprintf(D_ALWAYS, "StatusClient::hookExited: Failed "
-					"to convert ClassAd, ignoring invalid "
-					"hook output.  Job status NOT updated.\n");
+			dprintf(D_ALWAYS, "StatusClient::hookExited (%s): "
+					"Failed to convert ClassAd, ignoring "
+					"invalid hook output.  Job status NOT "
+					"updated.\n", m_routed_job->JobDesc().c_str());
+			job_router->GracefullyRemoveJob(m_routed_job);
 			return;
 		}
 
-			// The dest_key (dest_ad) may have changed while we were
-			// running the hook, meaning we'll be out of sync with the
-			// ClassAdCollection. To avoid writing stale data back
-			// into the collection we MUST pull from it before
-			// updating anything.
-		classad::ClassAd *new_dest_ad = job_router->GetScheduler()->GetClassAds()->GetClassAd(m_routed_job->dest_key);
-
-			// It is possible that the dest_key was deleted while we
-			// were away, in which case we cannot update it.
-		if (!new_dest_ad) {
-			dprintf(D_ALWAYS,
-					"StatusClient::hookExited: Failed because ad %s "
-					"disappeared while hook was executing. Nothing "
-					"will be updated.\n",
-					m_routed_job->dest_key.c_str());
-			return;
-		} else {
-			m_routed_job->SetDestJobAd(new_dest_ad);
-		}
-
-		if (false == m_routed_job->dest_ad.Update(new_job_ad))
+		// Delete attributes that may have been returned by the hook
+		// but should not be included in the update
+		for (int index = 0; attrs_to_delete[index] != NULL; ++index)
 		{
-			dprintf(D_ALWAYS, "StatusClient::hookExited: Failed to "
-					"update routed job status.  Job status "
-					"NOT updated.\n");
-			return;
+			new_job_ad.Delete(attrs_to_delete[index]);
 		}
-		job_router->UpdateJobStatus(m_routed_job);
+		job_router->UpdateRoutedJobStatus(m_routed_job, new_job_ad);
 	}
 	else
 	{
 		if (0 == WEXITSTATUS(exit_status))
 		{
-			dprintf(D_FULLDEBUG, "StatusClient::hookExited: Hook %s (pid %d) returned no data.\n",
+			dprintf(D_FULLDEBUG, "StatusClient::hookExited (%s): "
+					"Hook %s (pid %d) returned no data.\n",
+					m_routed_job->JobDesc().c_str(),
 					m_hook_path, (int)m_pid);
                 	job_router->FinishCheckSubmittedJobStatus(m_routed_job);
 		}
 		else
 		{
-			dprintf(D_FULLDEBUG, "StatusClient::hookExited: Hook %s "
-					"(pid %d) exited with return status %d. "
-					" Ignoring output.\n", m_hook_path, (int)m_pid,
+			dprintf(D_FULLDEBUG, "StatusClient::hookExited (%s): "						"Hook %s (pid %d) exited with return "
+					"status %d.  Ignoring output.\n", 
+					m_routed_job->JobDesc().c_str(),
+					m_hook_path, (int)m_pid,
 					(int)WEXITSTATUS(exit_status));
 		}
 	}
@@ -687,8 +692,9 @@ ExitClient::hookExited(int exit_status) {
 	std::string key = m_routed_job->dest_key;
 	if (false == JobRouterHookMgr::removeKnownHook(key.c_str(), HOOK_JOB_EXIT))
 	{
-		dprintf(D_ALWAYS|D_FAILURE, "ExitClient::hookExited: "
-			"Failed to remove hook info for job key %s.\n", key.c_str());
+		dprintf(D_ALWAYS|D_FAILURE, "ExitClient::hookExited (%s): "
+			"Failed to remove hook info for job key %s.\n",
+			m_routed_job->JobDesc().c_str(), key.c_str());
 		EXCEPT("ExitClient::hookExited: Received exit notification for "
 			"job with key %s, which isn't a key for a job known "
 			"to have an exit hook running.", key.c_str());
@@ -699,9 +705,10 @@ ExitClient::hookExited(int exit_status) {
 
 	if (m_std_err.Length())
 	{
-		dprintf(D_ALWAYS,
-				"ExitClient::hookExited: Warning, hook %s (pid %d) printed to stderr: %s\n",
-				m_hook_path, (int)m_pid, m_std_err.Value());
+		dprintf(D_ALWAYS, "ExitClient::hookExited (%s): Warning, hook "
+				"%s (pid %d) printed to stderr: %s\n",
+				m_routed_job->JobDesc().c_str(), m_hook_path,
+				(int)m_pid, m_std_err.Value());
 	}
 	if (m_std_out.Length())
 	{
@@ -709,38 +716,65 @@ ExitClient::hookExited(int exit_status) {
 		{
 			ClassAd old_job_ad;
 			classad::ClassAd new_job_ad;
-			m_std_out.Tokenize();
 			const char* hook_line = NULL;
+			classad::ClassAdCollection *ad_collection = job_router->GetScheduler()->GetClassAds();
+			classad::ClassAd *orig_ad = ad_collection->GetClassAd(m_routed_job->src_key);
+
+			m_std_out.Tokenize();
 			while ((hook_line = m_std_out.GetNextToken("\n", true)))
 			{
 				if (!old_job_ad.Insert(hook_line))
 				{
-					dprintf(D_ALWAYS, "ExitClient::hookExited: "
+					dprintf(D_ALWAYS, "ExitClient::hookExited (%s): "
 							"Failed to insert \"%s\" into "
 							"ClassAd, ignoring invalid "
-							"hook output.  Job NOT updated.\n", hook_line);
+							"hook output.  Job status NOT updated.\n", m_routed_job->JobDesc().c_str(), hook_line);
+					job_router->RerouteJob(m_routed_job);
 					return;
 				}
 			}
 			if (false == old_to_new(old_job_ad, new_job_ad))
 			{
-				dprintf(D_ALWAYS, "ExitClient::hookExited: Failed "
-						"to convert ClassAd, ignoring invalid "
-						"hook output.  Job NOT updated.\n");
+				dprintf(D_ALWAYS, "ExitClient::hookExited (%s):"
+						" Failed to convert ClassAd, "
+						"ignoring invalid hook output."
+						"  Job status NOT updated.\n", m_routed_job->JobDesc().c_str());
+				job_router->RerouteJob(m_routed_job);
 				return;
 			}
 			if (false == m_routed_job->src_ad.Update(new_job_ad))
 			{
-				dprintf(D_ALWAYS, "ExitClient::hookExited: Failed to "
-						"update source job status.  Job status "
-						"NOT updated.\n");
+				dprintf(D_ALWAYS, "ExitClient::hookExited (%s):"
+						" Failed to update source job "
+						"status.  Job status NOT "
+						"updated.\n", m_routed_job->JobDesc().c_str());
+				m_routed_job->SetSrcJobAd(m_routed_job->src_key.c_str(), orig_ad, ad_collection);
+				job_router->RerouteJob(m_routed_job);
 				return;
+			}
+			if (false == job_router->PushUpdatedAttributes(m_routed_job->src_ad))
+			{
+				dprintf(D_ALWAYS,"ExitClient::hookExited (%s): "
+						"Failed to update src job in "
+						"job queue.  Job status NOT "
+						"updated.\n", m_routed_job->JobDesc().c_str());
+				m_routed_job->SetSrcJobAd(m_routed_job->src_key.c_str(), orig_ad, ad_collection);
+				job_router->RerouteJob(m_routed_job);
+				return;
+			}
+			else
+			{
+				dprintf(D_FULLDEBUG,"ExitClient::hookExited "
+						"(%s): updated src job\n",
+						m_routed_job->JobDesc().c_str());
 			}
 		}
 		else
 		{
-			dprintf(D_FULLDEBUG, "ExitClient::hookExited: Hook exited with non-zero"
-					"return code, ignoring hook output.\n");
+			dprintf(D_FULLDEBUG, "ExitClient::hookExited (%s): "
+					"Hook exited with non-zero return "
+					"code, ignoring hook output.\n",
+					m_routed_job->JobDesc().c_str());
 		}
 	}
 
@@ -776,8 +810,9 @@ CleanupClient::hookExited(int exit_status)
 	std::string key = m_routed_job->dest_key;
 	if (false == JobRouterHookMgr::removeKnownHook(key.c_str(), HOOK_JOB_CLEANUP))
 	{
-		dprintf(D_ALWAYS|D_FAILURE, "CleanupClient::hookExited: "
-			"Failed to remove hook info for job key %s.\n", key.c_str());
+		dprintf(D_ALWAYS|D_FAILURE, "CleanupClient::hookExited (%s): "
+			"Failed to remove hook info for job key %s.\n", 
+			m_routed_job->JobDesc().c_str(), key.c_str());
 		EXCEPT("CleanupClient::hookExited: Received exit notification "
 			"for job with key %s, which isn't a key for a job "
 			"known to have a cleanup hook running.", key.c_str());
@@ -788,8 +823,10 @@ CleanupClient::hookExited(int exit_status)
 	if (m_std_err.Length())
 	{
 		dprintf(D_ALWAYS,
-				"CleanupClient::hookExited: Warning, hook %s (pid %d) printed to stderr: %s\n",
-				m_hook_path, (int)m_pid, m_std_err.Value());
+				"CleanupClient::hookExited (%s): Warning, hook "
+				"%s (pid %d) printed to stderr: %s\n",
+				m_routed_job->JobDesc().c_str(), m_hook_path,
+				(int)m_pid, m_std_err.Value());
 	}
 
 	// Only tell the job router to finish the cleanup of the job if the
@@ -804,8 +841,9 @@ CleanupClient::hookExited(int exit_status)
 		// Hook failed
 		MyString error_msg = "";
 		statusString(exit_status, error_msg);
-		dprintf(D_ALWAYS|D_FAILURE, "CleanupClient::hookExited: "
-			"HOOK_JOB_CLEANUP (%s) failed (%s)\n", m_hook_path, 
+		dprintf(D_ALWAYS|D_FAILURE, "CleanupClient::hookExited (%s): "
+			"HOOK_JOB_CLEANUP (%s) failed (%s)\n",
+			m_routed_job->JobDesc().c_str(), m_hook_path, 
 			error_msg.Value());
 	}
 }

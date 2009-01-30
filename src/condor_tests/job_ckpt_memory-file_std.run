@@ -25,8 +25,11 @@ $cmd = 'job_ckpt_memory-file_std.cmd';
 $testdesc =  'job_ckpt_memory-file_std test';
 $testname = "job_ckpt_memory-file_std";
 
-@CondorTest::expected_output = ( 'SUCCESS' );
-@CondorTest::skipped_output_lines = ( 1, 2, 3, 4 );
+my @expected_output = ( 'SUCCESS' );
+my @skipped_output_lines = ( 1, 2, 3, 4 );
+
+CondorTest::SetExpected(\@expected_output);
+CondorTest::SetSkipped(\@skipped_output_lines);
 
 CondorTest::RegisterExitedSuccess( $testname,
 				   \&CondorTest::DefaultOutputTest );

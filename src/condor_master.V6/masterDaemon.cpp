@@ -912,7 +912,7 @@ daemon::HardKill()
 		// Actually do the kill.
 	KillFamily();
 	dprintf( D_ALWAYS, 
-			 "Sent SIGKILL to %s (pid %d) and all it's children.\n",
+			 "Sent SIGKILL to %s (pid %d) and all its children.\n",
 			 name_in_config_file, pid );
 }
 

@@ -147,7 +147,7 @@ SimpleArg::isOptInt( void ) const
 	if ( !m_opt ) {
 		return false;
 	}
-	return ( isdigit(*m_opt) || ( (*m_opt == '-') && isdigit(*m_opt+1) )  );
+	return ( isdigit(*m_opt) || ( (*m_opt == '-') && isdigit(*(m_opt+1)) )  );
 }
 bool
 SimpleArg::getOpt( int &opt, bool consume )
@@ -160,7 +160,24 @@ SimpleArg::getOpt( int &opt, bool consume )
 	return true;
 }
 
-// Integer option operations
+// Long integer option operations
+bool
+SimpleArg::isOptLong( void ) const
+{
+	return isOptInt( );
+}
+bool
+SimpleArg::getOpt( long &opt, bool consume )
+{
+	if ( !isOptLong() ) {
+		return false;
+	}
+	opt = atol( m_opt );
+	ConsumeOpt( consume );
+	return true;
+}
+
+// Double option operations
 bool
 SimpleArg::getOpt( double &opt, bool consume )
 {
