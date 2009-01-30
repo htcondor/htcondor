@@ -25,13 +25,12 @@ use Sys::Hostname;
 
 my $prefix = $ARGV[0];
 my $installlog = $ARGV[1];
-my $tarfile = $ARGV[2];
-my $pgsqlversion = $ARGV[3];
-my $condorconfigadd = $ARGV[4];
-my $morelibs = $ARGV[5];
-my $testsrc = $ARGV[6];
+my $pgsql_dir = $ARGV[2];
+my $condorconfigadd = $ARGV[3];
+my $morelibs = $ARGV[4];
+my $testsrc = $ARGV[5];
 
-CondorTest::debug("$prefix $installlog $tarfile $pgsqlversion $condorconfigadd $morelibs $testsrc \n",1);
+CondorTest::debug("$prefix $installlog $pgsql_dir $condorconfigadd $morelibs $testsrc \n",1);
 
 my $startpostmasterport = 5432;
 my $postmasterinc = int(rand(100) + 13);
@@ -90,44 +89,12 @@ my $pgpass = $prefix . "/../pgpass";
 
 CondorTest::debug("Saving PGPASS date to <<$pgpass>>\n",1);
 
-system("date");
-CondorTest::debug("Extracting Postgres Source.....\n",1);
-
 chdir("$prefix");
-$dotar = system("tar -zxf $tarfile");
-if($dotar != 0) {
-	die "TAR EXTRACTION OF $tarfile FAILED\n";
-}
 
-system("date");
-CondorTest::debug("Configuring Postgres Source.....\n",1);
-
-chdir("$pgsqlversion");
-#$doconfigure = system("./configure --prefix=$prefix --without-readline --disable-shared");
-$doconfigure = system("./configure --prefix=$prefix --without-readline ");
-if($doconfigure != 0) {
-	die "Configure failed\n";
-}
-
-system("date");
-CondorTest::debug("Making Postgres Source.....\n",1);
-
-$domake = system("make");
-if($domake != 0) {
-	die "Make failed\n";
-}
-$doinstall = system("make install");
-if($doinstall != 0) {
-	die "Install failed\n";
-}
 system("mkdir $prefix/postgres-data");
 
-
-system("date");
-CondorTest::debug("Build of postgres done......\n",1);
-
 CondorTest::debug("Create db\n",1);
-$initdb = system("$prefix/bin/initdb -D $prefix/postgres-data") ;
+$initdb = system("$pgsql_dir/bin/initdb -D $prefix/postgres-data") ;
 if($initdb != 0) {
 	die "Initdb failed\n";
 }
@@ -182,7 +149,7 @@ CondorTest::debug("Setting PGDATA to $prefix/postgres-data\n",1);
 $ENV{PGDATA} = "$prefix/postgres-data";
 
 while (( $dbup ne "yes") && ($trylimit <= 10) ) {
-	$pmaster_start = system("$prefix/bin/pg_ctl -D $prefix/postgres-data -l $prefix/postgres-data/logfile start");
+	$pmaster_start = system("$pgsql_dir/bin/pg_ctl -D $prefix/postgres-data -l $prefix/postgres-data/logfile start");
 	CondorTest::debug("starting postmaster result<<<<<$pmaster_start>>>>>\n",1);
 	system("date");
 	sleep(10);
@@ -262,7 +229,7 @@ CondorTest::debug("Create quillreader\n",1);
 #$Expect::Debug=3;
 #$Expect::Exp_Internal=1;
 
-$command = Expect->spawn("$prefix/bin/createuser quillreader --port $startpostmasterport --no-createdb --no-adduser --pwprompt")||
+$command = Expect->spawn("$pgsql_dir/bin/createuser quillreader --port $startpostmasterport --no-createdb --no-adduser --pwprompt")||
 	die "Could not start program: $!\n";
 #$command->log_stdout(1);
 unless($command->expect(10,"Enter password for new user: ")) {
@@ -282,7 +249,7 @@ print $command "n\n";
 $command->soft_close();
 
 CondorTest::debug("Create quillwriter\n",1);
-$command = Expect->spawn("$prefix/bin/createuser quillwriter --port $startpostmasterport --createdb --no-adduser --pwprompt")||
+$command = Expect->spawn("$pgsql_dir/bin/createuser quillwriter --port $startpostmasterport --createdb --no-adduser --pwprompt")||
 	die "Could not start program: $!\n";
 $command->log_stdout(0);
 unless($command->expect(10,"Enter password for new user: ")) {
@@ -309,13 +276,13 @@ close(PG);
 system("date");
 CondorTest::debug("Create DB for Quil\n",1);
 
-$docreatedb = system("$prefix/bin/createdb --port $startpostmasterport test");
+$docreatedb = system("$pgsql_dir/bin/createdb --port $startpostmasterport test");
 if($docreatedb != 0) {
 	die "Failed to create test db\n";
 }
 system("date");
 
-$docreatelang = system("$prefix/bin/createlang plpgsql");
+$docreatelang = system("$pgsql_dir/bin/createlang plpgsql");
 if($docreatedb != 0) {
 	die "Failed to create test db\n";
 }
@@ -323,7 +290,7 @@ system("date");
 
 
 CondorTest::debug("Run psql program\n",1);
-$command = Expect->spawn("$prefix/bin/psql test quillwriter --port $startpostmasterport")||
+$command = Expect->spawn("$pgsql_dir/bin/psql test quillwriter --port $startpostmasterport")||
 	die "Could not start program: $!\n";
 #$command->debug(1);
 $command->log_stdout(0);
