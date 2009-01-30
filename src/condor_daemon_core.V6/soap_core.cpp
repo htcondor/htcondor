@@ -36,7 +36,7 @@ extern int soap_serve(struct soap *);
 
 extern DaemonCore *daemonCore;
 
-struct soap ssl_soap;
+struct soap *ssl_soap;
 
 #define OR(p,q) ((p) ? (p) : (q))
 
@@ -138,18 +138,21 @@ init_soap(struct soap *soap)
 					(ca_file ? ca_file : "(NULL)"),
 					(ca_path ? ca_path : "(NULL)"));
 
-			soap_init(&ssl_soap);
-			soap_set_namespaces(&ssl_soap, namespaces);
+			if( !ssl_soap ) {
+				ssl_soap = new struct soap();
+			}
+			soap_init(ssl_soap);
+			soap_set_namespaces(ssl_soap, namespaces);
 
-			soap_register_plugin_arg(&ssl_soap,http_get,(void*)http_get_handler);
+			soap_register_plugin_arg(ssl_soap,http_get,(void*)http_get_handler);
 
-			ssl_soap.send_timeout = 20;
-			ssl_soap.recv_timeout = 20;
-			ssl_soap.accept_timeout = 200;	// years of careful reasearch!
-				//ssl_soap.accept_flags = SO_NOSIGPIPE;
-				//ssl_soap.accept_flags = MSG_NOSIGNAL;
+			ssl_soap->send_timeout = 20;
+			ssl_soap->recv_timeout = 20;
+			ssl_soap->accept_timeout = 200;	// years of careful reasearch!
+				//ssl_soap->accept_flags = SO_NOSIGPIPE;
+				//ssl_soap->accept_flags = MSG_NOSIGNAL;
 
-			if (soap_ssl_server_context(&ssl_soap,
+			if (soap_ssl_server_context(ssl_soap,
 										SOAP_SSL_REQUIRE_SERVER_AUTHENTICATION |
 										SOAP_SSL_REQUIRE_CLIENT_AUTHENTICATION,
 											/* keyfile: required when server
@@ -185,19 +188,19 @@ init_soap(struct soap *soap)
 											   to enable SSL session cache
 											   (must be a unique name) */
 										"felix")) {
-				soap_print_fault(&ssl_soap, stderr);
+				soap_print_fault(ssl_soap, stderr);
 				EXCEPT("DaemonCore: Failed to initialize SOAP SSL "
 					   "server context");
 			}
 
 				// NOTE: If clients use cached sessions gSOAP seems to fail
-			SSL_CTX_set_session_cache_mode(ssl_soap.ctx, SSL_SESS_CACHE_OFF);
+			SSL_CTX_set_session_cache_mode(ssl_soap->ctx, SSL_SESS_CACHE_OFF);
 
 			int sock_fd;
-			if (0 > (sock_fd = soap_bind(&ssl_soap, my_ip_string(),
+			if (0 > (sock_fd = soap_bind(ssl_soap, my_ip_string(),
 										 ssl_port,
 										 100))) {
-				const char **details = soap_faultdetail(&ssl_soap);
+				const char **details = soap_faultdetail(ssl_soap);
 				dprintf(D_ALWAYS,
 						"Failed to setup SOAP SSL socket on port %d: %s\n",
 						ssl_port,
@@ -291,9 +294,10 @@ handle_soap_ssl_socket(Service *, Stream *stream)
 #ifdef COMPILE_SOAP_SSL
     struct soap *current_soap;
 
-	ssl_soap.accept_timeout = 10; // 10 seconds alloted for accept()
-	if (-1 == soap_accept(&ssl_soap)) {
-		const char **details = soap_faultdetail(&ssl_soap);
+	ASSERT( ssl_soap );
+	ssl_soap->accept_timeout = 10; // 10 seconds alloted for accept()
+	if (-1 == soap_accept(ssl_soap)) {
+		const char **details = soap_faultdetail(ssl_soap);
 		dprintf(D_ALWAYS,
 				"DaemonCore: Failed to accept SOAP connection: %s\n",
 				(details && *details) ? *details : "No details.");
@@ -303,14 +307,14 @@ handle_soap_ssl_socket(Service *, Stream *stream)
 
 	struct sockaddr_in sockaddr;
 	memset(&sockaddr, 0, sizeof(struct sockaddr_in));
-	sockaddr.sin_addr.s_addr = htonl(ssl_soap.ip);
-	sockaddr.sin_port = htons(ssl_soap.port);
+	sockaddr.sin_addr.s_addr = htonl(ssl_soap->ip);
+	sockaddr.sin_port = htons(ssl_soap->port);
 
-	current_soap = soap_copy(&ssl_soap);
+	current_soap = soap_copy(ssl_soap);
 	ASSERT(current_soap);
 
 	if (current_soap->recv_timeout > 0) {
-		stream->timeout(ssl_soap.recv_timeout);
+		stream->timeout(ssl_soap->recv_timeout);
 	} else {
 		stream->timeout(20);
 	}
