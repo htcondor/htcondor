@@ -42,6 +42,7 @@ class MyString;
 class UserLogHeader;
 class FileLockBase;
 class FileLock;
+class StatWrapper;
 class ReadUserLogHeader;
 
 
@@ -266,6 +267,7 @@ class UserLog
 	/** Max size of event log        */  long		m_global_max_filesize;
 	/** Max event log rotations      */  int		m_global_max_rotations;
 	/** Current global log file size */  long		m_global_filesize;
+	/** StatWrapper of global file   */  StatWrapper *m_global_stat;
 
     /** Copy of path to rotation lock*/  char     * m_rotation_lock_path;
     /** FD of the rotation lock      */  int        m_rotation_lock_fd;
