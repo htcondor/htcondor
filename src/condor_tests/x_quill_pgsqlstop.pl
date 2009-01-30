@@ -32,7 +32,7 @@ my $prefix = $ARGV[0];
 #select(STDOUT);
  #$| = 1;
 
-$stipit = system("$prefix/bin/pg_ctl -D $prefix/postgres-data stop");
+$stipit = system("pg_ctl -D $prefix/postgres-data stop");
 if( $stipit != 0 ) {
 	die "Stop of postgress failed\n";
 } 

@@ -28,8 +28,6 @@ $cmd = "job_quill_basic.cmd";
 $corename = "job_quill_basic";
 $supwfile = "x_job_quill_supw";
 $topdir = getcwd();
-#$ourtarfile = "x_quill_postgresql-8.1.4.tar.gz";
-$ourtarfile = "";
 
 # where am I running
 $currenthost = CondorTest::getFqdnHost();
@@ -55,41 +53,33 @@ $myquillpiddir = $mysaveme . "/" . $mypid . "/" . $myquillname;
 system("mkdir $myquillpiddir");
 system("ln -s $myquillpiddir $myquillname");
 
-if($ourtarfile eq "") {
-	# find the version of the current external
-	$mypostgressworld = "../../externals/bundles/postgresql";
-	system("ls $mypostgressworld");
-	$mypostgresspath = "";
+# find the version of the current external
+$testbin_dir = "$topdir/../testbin_dir";
+CondorTest::debug("Searching $testbin_dir for Postgres installations:\n",1);
+system("ls $testbin_dir");
 
-	opendir( POSTG, $mypostgressworld) || die "Error opening version dir<$mypostgressworld>: $!\n";
-	@versions = readdir( POSTG );
-	# filter out . and .. and CVS
-	@versions = grep !/^\.\.?$/, @versions;
-	@versions = grep !/CVS/, @versions;
-	$keepversion = "";
-	foreach $version (@versions) {
-		# bt if($version =~ /8.2.3/) {
-		if($version =~ /8.0.2/) {
-			CondorTest::debug("PG version is: $version\n",1);
-			$keepversion = $version;
-		}
+opendir( POSTG, $testbin_dir) || die "Error opening testbin dir<$testbin_dir>: $!\n";
+@versions = readdir( POSTG );
+closedir( POSTG );
+# filter out files that aren't postgresql installation dirs
+@versions = grep /^postgresql-/, @versions;
+$keepversion = "";
+foreach $version (@versions) {
+	CondorTest::debug("Found PG version $version\n",1);
+	# bt if($version =~ /postgresql-8.2.3/) {
+	if($version =~ /postgresql-8.0.2/) {
+		CondorTest::debug("PG version is: $version\n",1);
+		$keepversion = $version;
 	}
-	if($keepversion eq "") {
-		die "Can't find mandated 8.2.3 version of Postgres\n";
-	}
-
-	CondorTest::debug("keepversion is <<$keepversion>>",1);
-	
-	$mypostgresspath = $mypostgressworld . "/" . $keepversion . "/" ;
-	$mypgsqlversion = "postgresql-$keepversion";
-	$mypgsqltarfile = $mypostgresspath . $mypgsqlversion . ".tar.gz";
-	$usetarfile = $topdir . "/" . $mypgsqlversion . ".tar.gz";
-	CondorTest::debug("Postgress tar file is $mypgsqltarfile \n",1);
-	system("cp $mypgsqltarfile .");
-} else {
-	$usetarfile = $topdir . "/" . $ourtarfile;
-	$mypgsqlversion = "postgresql-8.1.4";
 }
+if($keepversion eq "") {
+	die "Can't find mandated 8.0.2 version of Postgres\n";
+} else {
+	CondorTest::debug("Using PG version $keepversion\n",1);
+}
+
+$postgres_dir = $testbin_dir . "/" . $keepversion;
+CondorTest::debug("Postgress install dir is $postgres_dir\n",1);
 
 $myextralibs = $topdir . "/libs/lib";
 
@@ -100,7 +90,7 @@ $topdir = getcwd();
 $installdir = $topdir . "/perllib";
 $ENV{PERL5LIB} = $installdir . "/lib/site_perl" . ":" . $installdir . "/lib/perl5/site_perl" . ":" . $installdir . "/lib64/perl5/site_perl" . ":" . $installdir . "/lib64/site_perl" . ":" . $installdir . "/Library/Perl";
 CondorTest::debug("Adjusted Perl Library search to $ENV{PERL5LIB}\n",1);
-my $newpath = $ENV{PATH} = "$myfullpgsqlloc" . "/bin:" . $ENV{PATH};
+my $newpath = $ENV{PATH} = "$postgres_dir" . "/bin:" . $ENV{PATH};
 
 CondorTest::debug("NEW Path is now <<$newpath>>\n",1);
 
@@ -124,7 +114,7 @@ chdir("$topdir");
 system("mkdir -p $myquillname");
 if( -d $myquillname ) {
 	system("cp $supwfile $myquillname");
-	$pgresult = system("./x_quill_pgsqlinstall.pl $myfullpgsqlloc $myfullpgsqlinstalllog $usetarfile $mypgsqlversion $mycondorconfigadd $myextralibs $topdir");
+	$pgresult = system("./x_quill_pgsqlinstall.pl $myfullpgsqlloc $myfullpgsqlinstalllog $postgres_dir $mycondorconfigadd $myextralibs $topdir");
 	CondorTest::debug("Result of Quill Postgresssql db install job is  <<$pgresult>>\n",1);
 	if($pgresult != 0) {
 		CondorTest::debug("Could not start POSTGRESS\n",1);
