@@ -1014,9 +1014,20 @@ parseCommandLine(SubmitDagOptions &opts, int argc, const char * const argv[])
 			{
 				opts.bSubmit = false;
 			}
-			else if (strArg.find("-v") != -1) // -verbose
+			else if ( (strArg.find("-v") != -1) &&
+						(strArg.find("-vers") == -1) ) // -verbose
 			{
 				opts.bVerbose = true;
+			}
+			else if (strArg.find("-vers") != -1) // -version
+			{
+				printf( "%s\n%s\n", CondorVersion(), CondorPlatform() );
+				exit( 0 );
+			}
+			else if (strArg.find("-help") != -1) // -help
+			{
+				printUsage();
+				exit( 0 );
 			}
 			else if (strArg.find("-f") != -1) // -force
 			{
@@ -1246,6 +1257,8 @@ int printUsage()
     printf("Usage: condor_submit_dag [options] dag_file [dag_file_2 ... dag_file_n]\n");
     printf("  where dag_file1, etc., is the name of a DAG input file\n");
     printf("  and where [options] is one or more of:\n");
+	printf("    -help               (print usage info and exit)\n");
+	printf("    -version            (print version and exit)\n");
 	printf("    -dagman <path>      (Full path to an alternate condor_dagman executable)\n");
     printf("    -no_submit          (DAG is not submitted to Condor)\n");
     printf("    -verbose            (Verbose error messages from condor_submit_dag)\n");
