@@ -109,6 +109,12 @@ trigger actions by a naive periodic remove or release expression.
 Periodic expressions are no longer evaluated when in this temporary
 hold state, which has the hold reason \"Spooling input data files\".
 
+\item The example init script condor.boot.generic erroneously claimed
+that the \Condor{master} would begin sending SIGKILL to child processes
+after 20 seconds if SIGQUIT (``fast shutdown'') failed.  The \Condor{master}
+will actually wait \MacroNI{SHUTDOWN\_FAST\_TIMEOUT} seconds, a value that
+currently defaults to 300 seconds.
+
 \end{itemize}
 
 \noindent Known Bugs:
