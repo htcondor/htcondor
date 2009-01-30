@@ -4591,6 +4591,9 @@ finalize:
 			stream->set_MD_mode(MD_OFF);
 			stream->set_crypto_key(false, NULL);
 
+			// we also need to reset the FQU
+			((Sock*)stream)->setFullyQualifiedUser(NULL);
+
 			result = KEEP_STREAM;	// HACK: keep all UDP sockets for now.  The only ones
 									// in Condor so far are Initial command socks, so keep it.
 		}
@@ -4599,6 +4602,7 @@ finalize:
 			stream->end_of_message();
 			stream->set_MD_mode(MD_OFF);
 			stream->set_crypto_key(false, NULL);
+			((Sock*)stream)->setFullyQualifiedUser(NULL);
 		}
 	}
 
