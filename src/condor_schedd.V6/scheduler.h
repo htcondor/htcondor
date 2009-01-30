@@ -262,7 +262,12 @@ class Scheduler : public Service
 	int				reschedule_negotiator_timer() { return reschedule_negotiator(0, NULL); }
 	void			release_claim(int, Stream *);
 	AutoCluster		autocluster;
-	void			sendReschedule( bool checkRecent = true );
+		// send a reschedule command to the negotiatior unless we
+		// have recently sent one and not yet heard from the negotiator
+	void			sendReschedule();
+		// call this when state of job queue has changed in a way that
+		// requires a new round of negotiation
+	void            needReschedule();
 
 	// job managing
 	int				abort_job(int, Stream *);
@@ -547,8 +552,6 @@ private:
 	char*			AccountantName;
     char*			UidDomain;
 
-	time_t last_reschedule_request;
-
 	// connection variables
 	struct sockaddr_in	From;
 	int					Len; 
@@ -660,6 +663,10 @@ private:
 		// A bit that says wether or not we've sent email to the admin
 		// about a shadow not starting.
 	int sent_shadow_failure_email;
+
+	bool m_need_reschedule;
+	int m_send_reschedule_timer;
+	Timeslice m_negotiate_timeslice;
 
 	// some stuff about Quill that should go into the ad
 #ifdef WANT_QUILL

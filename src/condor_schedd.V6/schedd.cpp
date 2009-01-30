@@ -372,6 +372,8 @@ Scheduler::Scheduler() :
 	LocalUnivExecuteDir = NULL;
 	ReservedSwap = 0;
 	SwapSpace = 0;
+	m_need_reschedule = false;
+	m_send_reschedule_timer = -1;
 
 		//
 		// ClassAd attribute for evaluating whether to start
@@ -440,7 +442,6 @@ Scheduler::Scheduler() :
 
 	CronMgr = NULL;
 
-	last_reschedule_request = 0;
 	jobThrottleNextJobDelay = 0;
 #ifdef WANT_QUILL
 	prevLHF = 0;
@@ -614,6 +615,7 @@ Scheduler::timeout()
 				 "Preempting %d jobs due to MAX_JOBS_RUNNING change\n",
 				 (real_jobs - MaxJobsRunning) );
 		preempt( real_jobs - MaxJobsRunning );
+		m_need_reschedule = false;
 	}
 
 	if( LocalUniverseJobsIdle > 0 || SchedUniverseJobsIdle > 0 ) {
@@ -634,6 +636,10 @@ Scheduler::timeout()
 	scheduler.rescheduleContactQueue();
 
 	SchedDInterval.setFinishTimeNow();
+
+	if( m_need_reschedule ) {
+		sendReschedule();
+	}
 
 	/* Reset our timer */
 	time_to_next_run = SchedDInterval.getTimeToNextRun();
@@ -4440,7 +4446,7 @@ Scheduler::actOnJobs(int, Stream* s)
 		for( i=0; i<num_matches; i++ ) {
 			WriteReleaseToUserLog( jobs[i] );		
 		}
-		sendReschedule();
+		needReschedule();
 		break;
 
 	case JA_REMOVE_X_JOBS:
@@ -4628,7 +4634,13 @@ Scheduler::negotiate(int command, Stream* s)
 	// we've been waiting for.  If only Todd can say the same about
 	// his life in general.  ;)
 	NegotiationRequestTime = 0;
-	last_reschedule_request = 0; // Our request was fulfilled.
+	m_need_reschedule = false;
+	if( m_send_reschedule_timer != -1 ) {
+		daemonCore->Cancel_Timer( m_send_reschedule_timer );
+	}
+
+		// set stop/start times on the negotiate timeslice object
+	ScopedTimesliceStopwatch negotiate_stopwatch( &m_negotiate_timeslice );
 
 	// BIOTECH
 	bool	biotech = false;
@@ -10139,6 +10151,17 @@ Scheduler::Init()
 		WalkJobQueue( (int(*)(ClassAd *))::updateSchedDInterval );
 	}
 
+		// Delay sending negotiation request if we are spending more
+		// than this amount of time negotiating.  This is currently an
+		// intentionally undocumented knob, because it's behavior is
+		// not at all well defined, given that the negotiator can
+		// initiate negotiation at any time.  We also hope to
+		// upgrade the negotiation protocol to avoid blocking the
+		// schedd, which should make this all unnecessary.
+	m_negotiate_timeslice.setTimeslice( param_double("SCHEDD_NEGOTIATE_TIMESLICE",0.1) );
+		// never delay negotiation request longer than this amount of time
+	m_negotiate_timeslice.setMaxInterval( SchedDInterval.getMaxInterval() );
+
 	// default every 24 hours
 	QueueCleanInterval = param_integer( "QUEUE_CLEAN_INTERVAL",24*60*60 );
 
@@ -10992,31 +11015,52 @@ Scheduler::reschedule_negotiator(int, Stream *s)
 		return 0;
 	}
 
-		// Update the central manager now.
-		// This also starts local jobs etc.
-	timeout();
-
-	dprintf( D_ALWAYS, "Called reschedule_negotiator()\n" );
-
-	sendReschedule();
+	needReschedule();
 
 	return 0;
 }
 
+void
+Scheduler::needReschedule()
+{
+	m_need_reschedule = true;
+
+		// Update the central manager and request a reschedule.  We
+		// don't call sendReschedule() directly below, because
+		// timeout() has internal logic to avoid doing its work too
+		// frequently, and we want to send the reschedule after
+		// updating our ad in the collector, not before.
+	timeout();
+}
 
 void
-Scheduler::sendReschedule( bool checkRecent /* = true */ )
+Scheduler::sendReschedule()
 {
-		// MIN_RESCHEDULE_GAP: If we've sent a reschedule request in the
-		// last MIN_RESCHEDULE_GAP second
-	if( checkRecent) {
-		const int MIN_RESCHEDULE_GAP = 30;
-		time_t now = time(0);
-		if( (last_reschedule_request + MIN_RESCHEDULE_GAP) > now ) {
-			dprintf( D_FULLDEBUG, "Skipping RESCHEDULE as optimization: sent one %d seconds ago and still haven't heard from negotiatator.  Will not reschedule more frequently than every %d seconds\n", (int)(now - last_reschedule_request), MIN_RESCHEDULE_GAP);
-			return;
+	if( !m_negotiate_timeslice.isTimeToRun() ) {
+			// According to our negotiate timeslice object, we are
+			// spending too much of our time negotiating, so delay
+			// sending the reschedule command to the negotiator.  That
+			// _might_ help, but there is no guarantee, since the
+			// negotiator can decide to initiate negotiation at any
+			// time.
+
+		if( m_send_reschedule_timer == -1 ) {
+			m_send_reschedule_timer = daemonCore->Register_Timer(
+				m_negotiate_timeslice.getTimeToNextRun(),
+				(TimerHandlercpp)&Scheduler::sendReschedule,
+				"Scheduler::sendReschedule",
+				this);
 		}
+		dprintf( D_FULLDEBUG,
+				 "Delaying sending RESCHEDULE to negotiator for %d seconds.\n",
+				 m_negotiate_timeslice.getTimeToNextRun() );
+		return;
 	}
+
+	if( m_send_reschedule_timer != -1 ) {
+		daemonCore->Cancel_Timer( m_send_reschedule_timer );
+	}
+
 	dprintf( D_FULLDEBUG, "Sending RESCHEDULE command to negotiator(s)\n" );
 
 	Daemon negotiator(DT_NEGOTIATOR);
@@ -11039,8 +11083,6 @@ Scheduler::sendReschedule( bool checkRecent /* = true */ )
 			}
 		}
 	}
-
-	last_reschedule_request = time(0);
 }
 
 
@@ -12236,7 +12278,7 @@ releaseJob( int cluster, int proc, const char* reason,
 		}
 	}
 
-	scheduler.sendReschedule();
+	scheduler.needReschedule();
 
 	return result;
 }

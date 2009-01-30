@@ -3502,7 +3502,7 @@ DedicatedScheduler::requestResources( void )
 			// to ask to negotiate for them...
 		displayResourceRequests();
 		publishRequestAd();
-		scheduler.sendReschedule(false);
+		scheduler.needReschedule();
 	} else {
 			// We just want to publish another add to let the
 			// negotiator know we're satisfied.

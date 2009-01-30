@@ -43,7 +43,6 @@ The following functions can then be used to query the timer:
 
 */
 
-
 #ifndef _CONDOR_TIMESLICE_H_
 #define _CONDOR_TIMESLICE_H_
 
@@ -173,6 +172,24 @@ class Timeslice {
 	time_t m_next_start_time;  // utc second number when to run next time
 	bool m_never_ran_before;   // true if never ran before
 	bool m_expedite_next_run;  // true if should ignore default interval
+};
+
+// Use this class to set the start/stop times on a timeslice object
+// automatically when this object is created and when it goes out of scope.
+// Assumes that the timeslice object does not go out of scope before this
+// object.
+class ScopedTimesliceStopwatch {
+ public:
+	ScopedTimesliceStopwatch(Timeslice *timeslice):
+		m_timeslice( timeslice )
+	{
+		m_timeslice->setStartTimeNow();
+	}
+	~ScopedTimesliceStopwatch() {
+		m_timeslice->setFinishTimeNow();
+	}
+ private:
+	Timeslice *m_timeslice;
 };
 
 #endif
