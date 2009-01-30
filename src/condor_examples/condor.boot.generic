@@ -58,7 +58,7 @@ case $1 in
     if [ -n "$pid" ]; then 
         # send SIGQUIT to the condor_master, which initiates its fast
         # shutdown method.  The master itself will start sending
-        # SIGKILL to all it's children if they're not gone in 20
+        # SIGKILL to all its children if they're not gone in 20
         # seconds. 
         echo "Shutting down Condor (fast-shutdown mode)"
         kill -QUIT $pid

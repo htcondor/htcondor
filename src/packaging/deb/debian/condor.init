@@ -47,7 +47,7 @@ case "$1" in
         echo -n "Stopping $DESC (fast-shutdown mode): "
 	    # send SIGQUIT to the condor_master, which initiates its fast
             # shutdown method.  The master itself will start sending
-            # SIGKILL to all it's children if they're not gone in 20
+            # SIGKILL to all its children if they're not gone in 20
             # seconds.
 	killall -QUIT $DAEMON &>/dev/null || echo -n " *not running* "
 	echo "$NAME."
