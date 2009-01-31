@@ -422,6 +422,19 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 
 	file_descriptor_safety_limit = 0; // 0 indicates: needs to be computed
 
+#ifndef WIN32
+	char max_fds_name[50];
+	sprintf(max_fds_name,"%s_MAX_FILE_DESCRIPTORS",get_mySubSystem()->getName());
+	int max_fds = param_integer(max_fds_name,0);
+	if( max_fds <= 0 ) {
+		max_fds = param_integer("MAX_FILE_DESCRIPTORS",0);
+	}
+	if( max_fds > 0 ) {
+		dprintf(D_ALWAYS,"Setting maximum file descriptors to %d.\n",max_fds);
+		limit(RLIMIT_NOFILE,max_fds,CONDOR_REQUIRED_LIMIT,"MAX_FILE_DESCRIPTORS");
+	}
+#endif
+
 	soap = NULL;
 
 	localAdFile = NULL;
@@ -6214,7 +6227,7 @@ void CreateProcessForkit::exec() {
 	// This is done here because limit() may do dprintfs and this happens
 	// before we lose our rootly powers, if any.
 	if (m_core_hard_limit != NULL) {
-		limit(RLIMIT_CORE, *m_core_hard_limit, CONDOR_HARD_LIMIT);
+		limit(RLIMIT_CORE, *m_core_hard_limit, CONDOR_HARD_LIMIT, "max core size");
 	}
 
 	dprintf ( D_DAEMONCORE, "About to exec \"%s\"\n", m_executable_fullpath );

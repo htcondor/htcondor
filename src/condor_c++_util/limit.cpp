@@ -26,18 +26,19 @@
 extern "C" {
 
 void
-limit( int resource, rlim_t new_limit, int kind )
+limit( int resource, rlim_t new_limit, int kind, char const *resource_str )
 {
 	int		scm;
 	struct	rlimit current = {0,0};
 	struct	rlimit desired = {0,0};
+	char const *kind_str = "";
 
 	scm = SetSyscalls( SYS_LOCAL | SYS_RECORDED );
 
 	/* Find out current limit for this resource */
 	if( getrlimit(resource, &current) < 0 ) {
-		EXCEPT( "getrlimit(%d): errno: %d(%s)", 
-					resource, errno, strerror(errno));
+		EXCEPT( "getrlimit(%d (%s)): errno: %d(%s)", 
+					resource, resource_str, errno, strerror(errno));
 	}
 
 	switch(kind) {
@@ -46,6 +47,7 @@ limit( int resource, rlim_t new_limit, int kind )
 				true */
 			desired.rlim_cur = new_limit;
 			desired.rlim_max = current.rlim_max;
+			kind_str = "soft";
 
 			/* Don't try to exceed the hard max as supplied by getrlimit() */
 			if( desired.rlim_cur > desired.rlim_max ) {
@@ -57,6 +59,7 @@ limit( int resource, rlim_t new_limit, int kind )
 		case CONDOR_HARD_LIMIT:
 			desired.rlim_cur = new_limit;
 			desired.rlim_max = new_limit;
+			kind_str = "hard";
 
 			if ((desired.rlim_max > current.rlim_max) && (getuid() != (pid_t)0))
 			{
@@ -87,6 +90,18 @@ limit( int resource, rlim_t new_limit, int kind )
 
 			break;
 
+		case CONDOR_REQUIRED_LIMIT:
+			desired.rlim_cur = new_limit;
+			desired.rlim_max = current.rlim_max;
+			kind_str = "required";
+
+				// only raise the hard limit if necessary
+			if( desired.rlim_cur > desired.rlim_max ) {
+				desired.rlim_max = desired.rlim_cur;
+			}
+
+			break;
+
 		default:
 			EXCEPT("do_limit() unknown limit enforcment policy. Programmer "
 				"Error.");
@@ -95,7 +110,7 @@ limit( int resource, rlim_t new_limit, int kind )
 
 	/* Set the new limit */
 	if( setrlimit(resource, &desired) < 0 ) {
-		if (errno == EPERM ) {
+		if (errno == EPERM && kind != CONDOR_REQUIRED_LIMIT ) {
 		/* Under tru64, this setrlimit() fails oddly in that we
 			are following the API restrictions exactly(not
 			adjusting the maximum up as non-root, and not
@@ -111,11 +126,12 @@ limit( int resource, rlim_t new_limit, int kind )
 			resource limit to UINT_MAX if we are able. */
 
 		dprintf( D_ALWAYS, 
-			"Unexpected permissions failure in setting limits for resource "
-			"kind %d. setrlimit(%d, new = [rlim_cur = %lu, rlim_max = %lu]) : "
+			"Unexpected ermissions failure in setting %s limit for %s"
+			"setrlimit(%d, new = [rlim_cur = %lu, rlim_max = %lu]) : "
 			"old = [rlim_cur = %lu, rlim_max = %lu], errno: %d(%s). Attempting "
 			"workaround.\n",
-			resource, 
+			kind_str,
+			resource_str, 
 			resource,
 			(unsigned long)desired.rlim_cur, 
 			(unsigned long)desired.rlim_max, 
@@ -131,28 +147,29 @@ limit( int resource, rlim_t new_limit, int kind )
 				desired.rlim_cur = UINT_MAX;
 				if (setrlimit(resource, &desired) < 0) {
 					dprintf( D_ALWAYS, "Workaround failed with error %d(%s). "
-						"Not adjusting limit for resource %d\n", 
-						errno, strerror(errno), resource);
+						"Not adjusting %s limit for %s\n", 
+						errno, strerror(errno), kind_str, resource_str);
 
 				} else {
-					dprintf( D_ALWAYS, "Workaround enabled. Limit for "
-						"resource %d is this: "
+					dprintf( D_ALWAYS, "Workaround enabled. The %s limit for "
+						"%s is this: "
 						"new = [rlim_cur = %lu, rlim_max = %lu]\n",
-						resource, desired.rlim_cur, desired.rlim_max);
+						kind_str,resource_str, desired.rlim_cur, desired.rlim_max);
 				}
 			} else {
-				dprintf( D_ALWAYS, "Workaround not applicable, no limit "
-					"enforcement for resource %d.\n", resource);
+				dprintf( D_ALWAYS, "Workaround not applicable, no %s limit "
+					"enforcement for %s.\n", kind_str, resource_str);
 			}
 
 		} else {
 			/* if this is something other than a permission problem
 				given the legal use of the setrlimit() interface */
 
-			EXCEPT( "Unexpected failure in setting limits for resource "
-			"kind %d. setrlimit(%d, new = [rlim_cur = %lu, rlim_max = %lu]) : "
+			EXCEPT( "Failed to set %s limits for %s. "
+			"setrlimit(%d, new = [rlim_cur = %lu, rlim_max = %lu]) : "
 			"old = [rlim_cur = %lu, rlim_max = %lu], errno: %d(%s). \n",
-			resource, 
+			kind_str,
+			resource_str,
 			resource,
 			(unsigned long)desired.rlim_cur, 
 			(unsigned long)desired.rlim_max, 

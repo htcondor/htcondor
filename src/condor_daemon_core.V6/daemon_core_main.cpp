@@ -765,9 +765,9 @@ check_core_files()
 	if( (tmp = param("CREATE_CORE_FILES")) ) {
 #ifndef WIN32	
 		if( *tmp == 't' || *tmp == 'T' ) {
-			limit( RLIMIT_CORE, RLIM_INFINITY, CONDOR_SOFT_LIMIT );
+			limit( RLIMIT_CORE, RLIM_INFINITY, CONDOR_SOFT_LIMIT,"max core size" );
 		} else {
-			limit( RLIMIT_CORE, 0, CONDOR_SOFT_LIMIT );
+			limit( RLIMIT_CORE, 0, CONDOR_SOFT_LIMIT,"max core size" );
 		}
 #endif
 		if( *tmp == 'f' || *tmp == 'F' ) {

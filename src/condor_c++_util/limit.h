@@ -27,11 +27,12 @@ extern "C" {
 
 enum thingy {
 	CONDOR_SOFT_LIMIT = 0,
-	CONDOR_HARD_LIMIT = 1
+	CONDOR_HARD_LIMIT = 1,
+	CONDOR_REQUIRED_LIMIT = 2
 };
 
 #ifndef WIN32
-void limit( int, rlim_t, int type );
+void limit( int resource, rlim_t limit, int limit_type, char const *resource_desc);
 #endif
 
 #if defined(__cplusplus)

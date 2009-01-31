@@ -621,7 +621,7 @@ UserProc::execute()
 			// the coresize to the requested amount. Otherwise, just
 			// use whatever the current default is.
 		if (coredump_limit_exists == TRUE) {
-			limit( RLIMIT_CORE, coredump_limit, CONDOR_HARD_LIMIT );
+			limit( RLIMIT_CORE, coredump_limit, CONDOR_HARD_LIMIT, "max core size" );
 		}
 
 			// child process should have only it's submitting uid, and cannot
