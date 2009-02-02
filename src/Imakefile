@@ -458,20 +458,10 @@ ext_target(EXT_DRMAA_VERSION,$(NULL))
 #if HAVE_EXT_POSTGRESQL
 ext_target(EXT_POSTGRESQL_VERSION,$(NULL))
 
-/* Use older postgresql external for now */
-#if 0
 testbin_dir/$(EXT_POSTGRESQL_VERSION): $(EXT_TRIGGER)/$(EXT_POSTGRESQL_VERSION)
 	/bin/rm -rf testbin_dir/$(EXT_POSTGRESQL_VERSION)
 	cp -r $(EXT_INSTALL)/$(EXT_POSTGRESQL_VERSION) testbin_dir
 testbin:: testbin_dir/$(EXT_POSTGRESQL_VERSION)
-#else
-OLD_POSTGRESQL_VERSION = postgresql-8.0.2
-ext_target(OLD_POSTGRESQL_VERSION,$(NULL))
-testbin_dir/postgresql-8.0.2: $(EXT_TRIGGER)/$(OLD_POSTGRESQL_VERSION)
-	/bin/rm -rf testbin_dir/$(OLD_POSTGRESQL_VERSION)
-	cp -r $(EXT_INSTALL)/$(OLD_POSTGRESQL_VERSION) testbin_dir
-testbin:: testbin_dir/$(OLD_POSTGRESQL_VERSION)
-#endif
 #endif
 
 #endif /* HAS_EXTERNALS */
