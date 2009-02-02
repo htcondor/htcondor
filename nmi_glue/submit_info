@@ -151,6 +151,11 @@ test_append_prereqs = java-1.4.2_05
 ]
 
 [
+platforms = x86_64_deb_5.0
+test_append_prereqs = java-1.4.2_05
+]
+
+[
 platforms = x86_deb_5.0
 test_append_prereqs = java-1.4.2_05
 ]
