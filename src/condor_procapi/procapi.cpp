@@ -2833,8 +2833,8 @@ static void
 unexpected_counter_size(const char* counter, int actual, const char* expected)
 {
 	EXCEPT("Unexpected performance counter size for %s: %d (expected %s); "
-	           "Registry key HKEY_LOCAL_MACHINE\SYSTEM\"
-	           "CurrentControlSet\Services\PerfProc\Performance must "
+	           "Registry key HKEY_LOCAL_MACHINE\\SYSTEM\\"
+	           "CurrentControlSet\\Services\\PerfProc\\Performance must "
 	           "have 'Disable Performance Counters' value of 0 or no "
 	           "such value",
 	       counter,
