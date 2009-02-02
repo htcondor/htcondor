@@ -229,10 +229,10 @@ CondorTest::debug("Create quillreader\n",1);
 #$Expect::Debug=3;
 #$Expect::Exp_Internal=1;
 
-$command = Expect->spawn("$pgsql_dir/bin/createuser quillreader --port $startpostmasterport --no-createdb --no-adduser --pwprompt")||
+$command = Expect->spawn("$pgsql_dir/bin/createuser quillreader --port $startpostmasterport --no-createdb --no-adduser --no-createrole --pwprompt")||
 	die "Could not start program: $!\n";
 #$command->log_stdout(1);
-unless($command->expect(10,"Enter password for new user: ")) {
+unless($command->expect(10,"Enter password for new role: ")) {
 	die "Quillreader Password request never happened\n";
 }
 print $command "condor4me#\n";
@@ -249,10 +249,10 @@ print $command "n\n";
 $command->soft_close();
 
 CondorTest::debug("Create quillwriter\n",1);
-$command = Expect->spawn("$pgsql_dir/bin/createuser quillwriter --port $startpostmasterport --createdb --no-adduser --pwprompt")||
+$command = Expect->spawn("$pgsql_dir/bin/createuser quillwriter --port $startpostmasterport --createdb --no-adduser --no-createrole --pwprompt")||
 	die "Could not start program: $!\n";
 $command->log_stdout(0);
-unless($command->expect(10,"Enter password for new user: ")) {
+unless($command->expect(10,"Enter password for new role: ")) {
 	die "Quillwriter Password request never happened\n";
 }
 print $command "condor4me#\n";
