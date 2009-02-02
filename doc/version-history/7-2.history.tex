@@ -33,7 +33,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Condor now has a clipped port to i386 Debian 5.0 (Lenny).
 
 \end{itemize}
 
@@ -41,23 +41,31 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item \Attr{JAVA\_MAXHEAP\_ARGUMENT} now defaults to \Opt{-Xmx1024m}.
-The installation process of Condor will reset this to the undefined 
-value in the local configuration file if the detected JVM is not from Sun.
+\item The configuration variable \Macro{JAVA\_MAXHEAP\_ARGUMENT} 
+  now defaults to the value \Opt{-Xmx1024m}.
+  The installation process of Condor resets this value to \Expr{UNDEFINED} 
+  in the local configuration file, if the detected JVM is not from 
+  Sun Microsystems.
 
 \item A new feature has been added to the \Condor{master} that makes
-  it possible to append the DC\_DAEMON\_LIST configuration macro
-  instead of overwriting it.  To take advantage of this, put a '+' as
-  the first character in your DC\_DAEMON\_LIST definition.  For example:
+  it possible to append to the \MacroNI{DC\_DAEMON\_LIST} 
+  configuration variable, instead of overwriting it. 
+  To take advantage of this, place the plus character  ('\verb@+@') as
+  the first character in the \MacroNI{DC\_DAEMON\_LIST} definition.  
+  For example:
 \begin{verbatim}
-DAEMON_LIST	= NEW_DAEMON
-DC_DAEMON_LIST	= +NEW_DAEMON
+  DAEMON_LIST     = NEW_DAEMON
+  DC_DAEMON_LIST  = +NEW_DAEMON
 \end{verbatim}
 
 % PR 959
-\item Added the DAGMAN\_COPY\_TO\_SPOOL configuration macro to control
-whether the condor\_dagman binary gets copied to the spool directory
-when a DAG is submitted.  See \ref{param:DAGManCopyToSpool} for details.
+\item The new configuration variable \Macro{DAGMAN\_COPY\_TO\_SPOOL}
+  controls whether the \Condor{dagman} binary gets copied to 
+  the spool directory when a DAG is submitted.
+  See \ref{param:DAGManCopyToSpool} for details.
+
+% PR 964
+\item Added \Opt{-version} and \Opt{-help} flags to \Condor{submit\_dag}.
 
 \end{itemize}
 
@@ -65,28 +73,50 @@ when a DAG is submitted.  See \ref{param:DAGManCopyToSpool} for details.
 
 \begin{itemize}
 
+\item Fixed a bug that could cause the \Condor{schedd} to never evaluate
+periodic expressions.
+
 \item Fixed a bug in \Condor{chirp} which was causing it to crash 
 on invocation.
 
-\item Fixed a bug on Windows in \Condor{mail} which was causing it to become
-unresponsive run when. Further, the application would start to increasingly 
-consume more memory when run.
+\item Fixed a Windows platform bug in the \Prog{condor\_mail.exe} program,
+which was causing it to become unresponsive when run.
+The application also increased its memory consumption.
 
-\item Fixed a bug on UNIX where \Condor{configure} would provide
-incorrect defaults for the \Attr{JAVA\_MAXHEAP\_ARGUMENT} attribute in
+\item Fixed a bug on Unix platforms where \Condor{configure} would provide
+incorrect defaults for the \MacroNI{JAVA\_MAXHEAP\_ARGUMENT} attribute in
 the installed configuration files. The new current default for Sun Java
 JVMs is \Opt{-Xmx1024m}.
 
-\item Fixed a bug on UNIX where \Condor{configure} would imply that using
-user ``root'' or UID 0 for \Opt{--owner} is a good thing--it is not,
-and then complain that it could not find user ``root'' in the password
+\item Fixed a bug on Unix platforms where \Condor{configure} would imply
+  that using the Unix user \Login{root} or UID 0 for the \Opt{--owner} 
+  option is a good thing--it is not,
+and then complain that it could not find user \Login{root} in the password
 file in this circumstance.
 
-\item Fixed a bug on UNIX where \Condor{configure} would emit errors
+\item Fixed a bug on Unix platforms where \Condor{configure} would emit errors
 about not being able to execute \Prog{ldd} when installing Condor on the
 Mac OS X 10.5 platform.  \Condor{configure} now correctly detects shared
 library requirements when installing the Condor binaries on the Mac OS
 X 10.5 platform.
+
+\item Fixed a bug where execute-side daemons started before the
+\Condor{credd} would fail to match with Windows jobs with
+\SubmitCmd{run\_as\_owner} set.
+This condition persisted until the execute-side daemons were
+either restarted or reconfigured.
+
+\item Fixed a problem affecting JobRouter and Condor-C.  When jobs are
+spooling input files, they enter a temporary hold state, which could
+trigger actions by a naive periodic remove or release expression.
+Periodic expressions are no longer evaluated when in this temporary
+hold state, which has the hold reason \"Spooling input data files\".
+
+\item The example init script condor.boot.generic erroneously claimed
+that the \Condor{master} would begin sending SIGKILL to child processes
+after 20 seconds if SIGQUIT (``fast shutdown'') failed.  The \Condor{master}
+will actually wait \MacroNI{SHUTDOWN\_FAST\_TIMEOUT} seconds, a value that
+currently defaults to 300 seconds.
 
 \end{itemize}
 
@@ -153,10 +183,11 @@ Setting the configuration variable \Macro{NOT\_RESPONDING\_WANT\_CORE}
 to \Expr{False} will revert to the previous behavior that used
 the SIGKILL signal.
 
-\item \Condor{job\_router} and \Condor{q} \Opt{-better-analyze} now
-support more classad functions than they previously did.  They now
-support all classad functions except for those with names beginning
-with \Code{stringList}.
+\item The \Condor{job\_router} and the
+\Condor{q} command with the \Opt{-better-analyze} option now
+support more ClassAd functions than they previously did.  They now
+support all ClassAd functions, except for those with names beginning
+with the string \Code{stringList}.
 
 \end{itemize}
 
@@ -309,6 +340,10 @@ enabled between the submit side and the execute side.
 
 \item Initial documentation for dynamic provisioning is available
 in section~ \ref{sec:SMP-dynamicprovisioning}.
+
+\item Documentation for Kerberos authentication
+(see section~ \ref{sec:Kerberos-Authentication})
+and associated configuration variables has been updated.
 
 \end{itemize}
 
