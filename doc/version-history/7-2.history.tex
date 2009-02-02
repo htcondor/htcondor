@@ -118,6 +118,10 @@ after 20 seconds if SIGQUIT (``fast shutdown'') failed.  The \Condor{master}
 will actually wait \MacroNI{SHUTDOWN\_FAST\_TIMEOUT} seconds, a value that
 currently defaults to 300 seconds.
 
+\item Environment variable names are now properly treated as case-insensitive
+on Windows. The most common symptom of this bug was the inability to specify
+a custom PATH setting for a job from its submit file.
+
 \end{itemize}
 
 \noindent Known Bugs:
