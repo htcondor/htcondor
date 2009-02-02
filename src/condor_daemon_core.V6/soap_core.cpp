@@ -60,7 +60,7 @@ init_soap(struct soap *soap)
 		// Note: valgrind complains about a memory leak inside
 		// here, but Matt and Todd say it's not a problem because
 		// this is only called at initialization.  wenger 2006-06-22.
-	soap_register_plugin_arg(soap,http_get,(void*)http_get_handler);
+	soap_register_plugin_arg(soap,websrv,(void*)http_get_handler);
 		// soap.accept_flags = SO_NOSIGPIPE;
 		// soap.accept_flags = MSG_NOSIGNAL;
 
@@ -141,7 +141,7 @@ init_soap(struct soap *soap)
 			soap_init(&ssl_soap);
 			soap_set_namespaces(&ssl_soap, namespaces);
 
-			soap_register_plugin_arg(&ssl_soap,http_get,(void*)http_get_handler);
+			soap_register_plugin_arg(&ssl_soap,websrv,(void*)http_get_handler);
 
 			ssl_soap.send_timeout = 20;
 			ssl_soap.recv_timeout = 20;
