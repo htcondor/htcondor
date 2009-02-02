@@ -2829,6 +2829,19 @@ nextInstance ( PERF_INSTANCE_DEFINITION *pInstance ) {
 
 /* End pointer manip thingies */
 
+static void
+unexpected_counter_size(const char* counter, int actual, const char* expected)
+{
+	EXCEPT("Unexpected performance counter size for %s: %d (expected %s); "
+	           "Registry key HKEY_LOCAL_MACHINE\\SYSTEM\\"
+	           "CurrentControlSet\\Services\\PerfProc\\Performance must "
+	           "have 'Disable Performance Counters' value of 0 or no "
+	           "such value",
+	       counter,
+	       actual,
+	       expected);
+}
+
 /* This function serves to get the offsets of all the offsets for the 
    process counters.  These offsets tell where in the data block the
    counters for each instance can be found.
@@ -2843,27 +2856,21 @@ void ProcAPI::grabOffsets ( PPERF_OBJECT_TYPE pThisObject ) {
 //    printcounter ( stdout, pThisCounter );
     offsets->pctcpu = pThisCounter->CounterOffset; // % cpu
 	if (pThisCounter->CounterSize != 8) {
-		EXCEPT("Unexpected performance counter size for total CPU: "
-		           "%d (expected 8)\n",
-		       pThisCounter->CounterSize);
+		unexpected_counter_size("total CPU", pThisCounter->CounterSize, "8");
 	}
     
     pThisCounter = nextCounter(pThisCounter);
 //    printcounter ( stdout, pThisCounter );
     offsets->utime = pThisCounter->CounterOffset;  // % user time
 	if (pThisCounter->CounterSize != 8) {
-		EXCEPT("Unexpected performance counter size for user CPU: "
-		           "%d (expected 8)\n",
-		       pThisCounter->CounterSize);
+		unexpected_counter_size("user CPU", pThisCounter->CounterSize, "8");
 	}
   
     pThisCounter = nextCounter(pThisCounter);
 //    printcounter ( stdout, pThisCounter );
     offsets->stime = pThisCounter->CounterOffset;  // % sys time
 	if (pThisCounter->CounterSize != 8) {
-		EXCEPT("Unexpected performance counter size for system CPU: "
-		           "%d (expected 8)\n",
-		       pThisCounter->CounterSize);
+		unexpected_counter_size("system CPU", pThisCounter->CounterSize, "8");
 	}
   
     pThisCounter = nextCounter(pThisCounter);
@@ -2871,27 +2878,23 @@ void ProcAPI::grabOffsets ( PPERF_OBJECT_TYPE pThisObject ) {
 //    printcounter ( stdout, pThisCounter );
     offsets->imgsize = pThisCounter->CounterOffset;  // image size
 	if (pThisCounter->CounterSize != 8) {
-		EXCEPT("Unexpected performance counter size for image size: "
-		           "%d (expected 8)\n",
-		       pThisCounter->CounterSize);
+		unexpected_counter_size("image size", pThisCounter->CounterSize, "8");
 	}
   
     pThisCounter = nextCounter(pThisCounter);
 //    printcounter ( stdout, pThisCounter );
     offsets->faults = pThisCounter->CounterOffset;   // page faults
 	if (pThisCounter->CounterSize != 4) {
-		EXCEPT("Unexpected performance counter size for page faults: "
-		           "%d (expected 4)\n",
-		       pThisCounter->CounterSize);
+		unexpected_counter_size("page faults", pThisCounter->CounterSize, "4");
 	}
     
     pThisCounter = nextCounter(pThisCounter);
     offsets->rssize = pThisCounter->CounterOffset;   // working set peak 
 	offsets->rssize_width = pThisCounter->CounterSize;
 	if ((offsets->rssize_width != 4) && (offsets->rssize_width != 8)) {
-		EXCEPT("Unexpected performance counter size for working set: "
-		           "%d (expected 4 or 8)\n",
-		       offsets->rssize_width);
+		unexpected_counter_size("working set",
+		                        pThisCounter->CounterSize,
+		                        "4 or 8");
 	}
 
 //    printcounter ( stdout, pThisCounter );
@@ -2907,18 +2910,16 @@ void ProcAPI::grabOffsets ( PPERF_OBJECT_TYPE pThisObject ) {
 //    printcounter ( stdout, pThisCounter );
     offsets->elapsed = pThisCounter->CounterOffset;  // elapsed time (age)
 	if (pThisCounter->CounterSize != 8) {
-		EXCEPT("Unexpected performance counter size for elapsed time: "
-		           "%d (expected 8)\n",
-		       pThisCounter->CounterSize);
+		unexpected_counter_size("elapsed time",
+		                        pThisCounter->CounterSize,
+		                        "8");
 	}
     
     pThisCounter = nextCounter(pThisCounter);
 //    printcounter ( stdout, pThisCounter );
     offsets->procid = pThisCounter->CounterOffset;   // process id
 		if (pThisCounter->CounterSize != 4) {
-		EXCEPT("Unexpected performance counter size for PID: "
-		           "%d (expected 4)\n",
-		       pThisCounter->CounterSize);
+		unexpected_counter_size("PID", pThisCounter->CounterSize, "4");
 	}
 }
 
