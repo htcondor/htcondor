@@ -37,6 +37,10 @@ See section~ \ref{sec:classadFunctions} for the details of this function.
 \item Log messages have been made more clear.
 % Includes: Give a clear warning instead of a terse error, when lacking a COLLECTOR.
 
+\item The \Condor{schedd} can now use MD5 checksums to avoid storing
+multiple copies of the same executable in its \Macro{SPOOL} directory.
+Note that this feature only affects executables sent to the
+\Condor{schedd} via the \SubmitCmd{copy\_to\_spool} submit macro.
 
 \end{itemize}
 
@@ -49,6 +53,12 @@ See section~ \ref{sec:classadFunctions} for the details of this function.
   printed at the start of each line in a daemon's log file.
   See \ref{param:DebugTimeFormat} for the complete definition of
   this variable.
+
+\item The new configuration variable \Macro{SHARE\_SPOOLED\_EXECUTABLES}
+  is a boolean value that determines whether the \Condor{schedd} will
+  use MD5 checksums to avoid storing multiple copies of the same
+  executable in the \Macro{SPOOL} directory. The default setting is
+  \Expr{True}.
 
 \end{itemize}
 
