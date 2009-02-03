@@ -29,6 +29,8 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Added support for CPU affinity on Linux.
+
 \item Added support for \Condor{q}'s \Opt{-better-analyze} on Windows.
 
 \item Added the ClassAd function \Procedure{debug}.
@@ -47,6 +49,10 @@ Note that this feature only affects executables sent to the
 \noindent Configuration Variable Additions and Changes:
 
 \begin{itemize}
+
+\item The new configuration variables \Macro{ENFORCE\_CPU\_AFFINITY} and 
+\Macro{SLOTx\_CPU\_AFFINITY} have been added on Linux to allow for
+condor to lock slots to given CPUs.
 
 \item The new configuration variable \Macro{DEBUG\_TIME\_FORMAT}
   allows a custom specification for the format of the time
