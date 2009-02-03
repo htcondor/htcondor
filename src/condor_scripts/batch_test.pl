@@ -1275,6 +1275,7 @@ sub CreateLocalConfig
 	print FIX "WANT_VACATE = FALSE\n";
 	print FIX "COLLECTOR_NAME = Personal Condor for Tests\n";
 	print FIX "ALL_DEBUG = D_FULLDEBUG\n";
+	print FIX "SCHEDD_INTERVAL_TIMESLICE = .99\n";
 	#insure path from framework is injected into the new pool
 	print FIX "environment=\"PATH=\'$mypath\'\"\n";
 	print FIX "SUBMIT_EXPRS=environment\n";

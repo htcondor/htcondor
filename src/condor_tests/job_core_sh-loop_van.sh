@@ -1,4 +1,4 @@
-#!/bin/csh
+#!/bin/sh
 ##**************************************************************
 ##
 ## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -18,11 +18,11 @@
 ##
 ##**************************************************************
 
-set i = 1
-while ($i <= $1)
-	echo -n $i " "
-	sleep 1
-	@ i = $i + 1
-end
-echo ""
+i=1
+while test "$i" -le "$1"
+do
+        echo $i
+        sleep 1
+        i=`expr $i + 1`
+done
 echo "Normal End-of-Job"
