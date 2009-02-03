@@ -35,24 +35,29 @@ The details of each version are described below.
 
 \item Condor now has a clipped port to i386 Debian 5.0 (Lenny).
 
+\item Added Standard Universe support for gfortran.
+
+\item Added support for '*' to match all leases for many operations.
+
+\item Added support for standard out and standard error to be greater
+than 2 Gigabytes.
+
 \end{itemize}
 
 \noindent Configuration Variable Additions and Changes:
 
 \begin{itemize}
 
-\item The configuration variable \Macro{JAVA\_MAXHEAP\_ARGUMENT} 
-  now defaults to the value \Opt{-Xmx1024m}.
-  The installation process of Condor resets this value to \Expr{UNDEFINED} 
-  in the local configuration file, if the detected JVM is not from 
-  Sun Microsystems.
+\item The configuration variable \Macro{JAVA\_MAXHEAP\_ARGUMENT} now
+defaults to the value \Opt{-Xmx1024m}.  The installation process of
+Condor resets this value to \Expr{UNDEFINED} in the local
+configuration file, if the detected JVM is not from Sun Microsystems.
 
 \item A new feature has been added to the \Condor{master} that makes
-  it possible to append to the \MacroNI{DC\_DAEMON\_LIST} 
-  configuration variable, instead of overwriting it. 
-  To take advantage of this, place the plus character  ('\verb@+@') as
-  the first character in the \MacroNI{DC\_DAEMON\_LIST} definition.  
-  For example:
+it possible to append to the \MacroNI{DC\_DAEMON\_LIST} configuration
+variable, instead of overwriting it.  To take advantage of this, place
+the plus character ('\verb@+@') as the first character in the
+\MacroNI{DC\_DAEMON\_LIST} definition.  For example:
 \begin{verbatim}
   DAEMON_LIST     = NEW_DAEMON
   DC_DAEMON_LIST  = +NEW_DAEMON
@@ -60,12 +65,13 @@ The details of each version are described below.
 
 % PR 959
 \item The new configuration variable \Macro{DAGMAN\_COPY\_TO\_SPOOL}
-  controls whether the \Condor{dagman} binary gets copied to 
-  the spool directory when a DAG is submitted.
-  See \ref{param:DAGManCopyToSpool} for details.
+controls whether the \Condor{dagman} binary gets copied to the spool
+directory when a DAG is submitted.  See \ref{param:DAGManCopyToSpool}
+for details.
 
 % PR 964
-\item Added \Opt{-version} and \Opt{-help} flags to \Condor{submit\_dag}.
+\item Added \Opt{-version} and \Opt{-help} flags to
+\Condor{submit\_dag}.
 
 \end{itemize}
 
@@ -73,38 +79,37 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Fixed a bug that could cause the \Condor{schedd} to never evaluate
-periodic expressions.
+\item Fixed a bug in \Condor{chirp} which was causing it to crash on
+invocation.
 
-\item Fixed a bug in \Condor{chirp} which was causing it to crash 
-on invocation.
+\item Fixed a Windows platform bug in the \Condor{mail} program, which
+was causing it to become unresponsive when run.  If left running, the
+application also increaseses its memory consumption.
 
-\item Fixed a Windows platform bug in the \Prog{condor\_mail.exe} program,
-which was causing it to become unresponsive when run.
-The application also increased its memory consumption.
+\item Fixed a bug that could cause the \Condor{schedd} to never
+evaluate periodic expressions.
 
-\item Fixed a bug on Unix platforms where \Condor{configure} would provide
-incorrect defaults for the \MacroNI{JAVA\_MAXHEAP\_ARGUMENT} attribute in
-the installed configuration files. The new current default for Sun Java
-JVMs is \Opt{-Xmx1024m}.
+\item Fixed a bug on Unix platforms where \Condor{configure} would
+provide incorrect defaults for the \MacroNI{JAVA\_MAXHEAP\_ARGUMENT}
+attribute in the installed configuration files. The new current
+default for Sun Java JVMs is \Opt{-Xmx1024m}.
 
-\item Fixed a bug on Unix platforms where \Condor{configure} would imply
-  that using the Unix user \Login{root} or UID 0 for the \Opt{--owner} 
-  option is a good thing--it is not,
-and then complain that it could not find user \Login{root} in the password
-file in this circumstance.
+\item Fixed a bug on Unix platforms where \Condor{configure} would
+imply that using the Unix user \Login{root} or UID 0 for the
+\Opt{--owner} option is a good thing--it is not, and then complain
+that it could not find user \Login{root} in the password file in this
+circumstance.
 
-\item Fixed a bug on Unix platforms where \Condor{configure} would emit errors
-about not being able to execute \Prog{ldd} when installing Condor on the
-Mac OS X 10.5 platform.  \Condor{configure} now correctly detects shared
-library requirements when installing the Condor binaries on the Mac OS
-X 10.5 platform.
+\item Fixed a bug on Unix platforms where \Condor{configure} would
+emit errors about not being able to execute \Prog{ldd} when installing
+Condor on the Mac OS X 10.5 platform.  \Condor{configure} now
+correctly detects shared library requirements when installing the
+Condor binaries on the Mac OS X 10.5 platform.
 
 \item Fixed a bug where execute-side daemons started before the
 \Condor{credd} would fail to match with Windows jobs with
-\SubmitCmd{run\_as\_owner} set.
-This condition persisted until the execute-side daemons were
-either restarted or reconfigured.
+\SubmitCmd{run\_as\_owner} set.  This condition persisted until the
+execute-side daemons were either restarted or reconfigured.
 
 \item Fixed a problem affecting JobRouter and Condor-C.  When jobs are
 spooling input files, they enter a temporary hold state, which could
@@ -113,14 +118,48 @@ Periodic expressions are no longer evaluated when in this temporary
 hold state, which has the hold reason \"Spooling input data files\".
 
 \item The example init script condor.boot.generic erroneously claimed
-that the \Condor{master} would begin sending SIGKILL to child processes
-after 20 seconds if SIGQUIT (``fast shutdown'') failed.  The \Condor{master}
-will actually wait \MacroNI{SHUTDOWN\_FAST\_TIMEOUT} seconds, a value that
-currently defaults to 300 seconds.
+that the \Condor{master} would begin sending SIGKILL to child
+processes after 20 seconds if SIGQUIT (``fast shutdown'') failed.  The
+\Condor{master} will actually wait \MacroNI{SHUTDOWN\_FAST\_TIMEOUT}
+seconds, a value that currently defaults to 300 seconds.
 
-\item Environment variable names are now properly treated as case-insensitive
-on Windows. The most common symptom of this bug was the inability to specify
-a custom PATH setting for a job from its submit file.
+\item Environment variable names are now properly treated as
+case-insensitive on Windows. The most common symptom of this bug was
+the inability to specify a custom PATH setting for a job from its
+submit file.
+
+\item Changed \Condor{submit} \Opt{-debug} to warn when ignoring
+environment variables (when \SubmitCmd{get\_env = true})
+
+\item Fixed a long-standing memory leak in SOAP interface.  The result
+was a few hundred bytes of memory would be leaked for each
+connection. This could eventually cause the
+
+\item Fixed Job Router hooks so that their output is properly
+propagated where appropriate.
+
+\item Implemented a fix for the \Condor{startd} that prevents it from
+crashing if the user specified a \MacroNI{NUM\_SLOTS\_TYPE\_N} without
+specifying a \MacroNI{SLOT\_TYPE\_N}.
+
+\item The sample configuration files now correctly set the default
+universe to Vanilla Universe.  This default has been true since 7.2.0,
+but was not reflected in the sample configuration files.
+
+\item Fixed default \Attr{RequestMemory}: changed \Attr{ImageSize} to
+\Attr{ceiling(ImageSize/1024.0)}. The \Attr{RequestMemory} units are
+MiB, it is compared directly to a slot's Memory attribute which is
+MiB. The \Attr{ImageSize} is in KiB. The old code was broken such that
+a 22KiB \Attr{ImageSize} would use up 22MiB on a slot. Not so bad, but
+if the \Attr{ImageSize} (calculate initially from executable size)
+were say 20MiB it would mean a request for 20GiB of slot \Attr{Memory}
+resulting in a failure.
+
+\item Fixed a memory leak in \Condor{dagman} that leaked a small
+amount of memory for each job submitted.
+
+\item Fixed a bug that was causing the network mask to be advertised
+as a Condor "sinful string" rather than a dotted-quad.
 
 \end{itemize}
 
@@ -193,6 +232,10 @@ support more ClassAd functions than they previously did.  They now
 support all ClassAd functions, except for those with names beginning
 with the string \Code{stringList}.
 
+\item \Condor{status} given the options \Opt{-submitters} \Opt{-xml}
+no longer emits a single blank line when there are no submitters,
+instead it prints valid XML output with an empty body.
+
 \end{itemize}
 
 \noindent Configuration Variable Additions and Changes:
@@ -213,8 +256,9 @@ user to cause Condor daemons to shut down,
 and could allow running jobs to be removed from the queue.
 
 % PR 952
-\item Fixed a bug that caused \Condor{dagman} to stay in the Condor queue,
-if \Condor{dagman} was accidentally submitted with an empty DAG input file.
+\item Fixed a bug that caused \Condor{dagman} to stay in the Condor
+queue, if \Condor{dagman} was accidentally submitted with an empty DAG
+input file.
 
 % PR 959
 \item \Condor{submit\_dag} now generates a \File{.condor.sub} file with
