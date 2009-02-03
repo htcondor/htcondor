@@ -228,7 +228,7 @@ ClaimJobResult claim_job(classad::ClassAd const &ad, const char * pool_name, con
 
 
 
-bool yield_job(bool done, int cluster, int proc, MyString * error_details, const char * my_identity, bool leave_src_untouched, bool *keep_trying) {
+bool yield_job(bool done, int cluster, int proc, MyString * error_details, const char * my_identity, bool release_on_hold, bool *keep_trying) {
 	ASSERT(cluster > 0);
 	ASSERT(proc >= 0);
 
@@ -287,7 +287,7 @@ bool yield_job(bool done, int cluster, int proc, MyString * error_details, const
 		}
 		else if(status != IDLE && status != COMPLETED) {
 			int hold_mirrored = 0;
-			if(status == HELD && leave_src_untouched == true) {
+			if(status == HELD && release_on_hold == true) {
 					// If held state is mirrored from target job, then
 					// undo it.  Otherwise, leave it alone.
 				GetAttributeInt(cluster, proc, ATTR_HOLD_COPIED_FROM_TARGET_JOB, &hold_mirrored);
@@ -309,7 +309,7 @@ bool yield_job(bool done, int cluster, int proc, MyString * error_details, const
 
 
 static bool yield_job_with_current_privs(const char * pool_name, const char * schedd_name,
-	bool done, int cluster, int proc, MyString * error_details, const char * my_identity, bool leave_src_untouched, bool *keep_trying) {
+	bool done, int cluster, int proc, MyString * error_details, const char * my_identity, bool release_on_hold, bool *keep_trying) {
 	// Open a qmgr
 	FailObj failobj;
 	failobj.SetNames(schedd_name, pool_name);
@@ -346,7 +346,7 @@ static bool yield_job_with_current_privs(const char * pool_name, const char * sc
 
 	//-------
 	// Do the actual yield
-	bool res = yield_job(done, cluster, proc, error_details, my_identity, leave_src_untouched, keep_trying);
+	bool res = yield_job(done, cluster, proc, error_details, my_identity, release_on_hold, keep_trying);
 	//-------
 
 
@@ -369,12 +369,12 @@ static bool yield_job_with_current_privs(const char * pool_name, const char * sc
 bool yield_job(classad::ClassAd const &ad,const char * pool_name,
 	const char * schedd_name, bool done, int cluster, int proc,
 	MyString * error_details, const char * my_identity, 
-        bool leave_src_untouched, bool *keep_trying)
+        bool release_on_hold, bool *keep_trying)
 {
 	bool success;
 	priv_state priv = set_user_priv_from_ad(ad);
 
-	success = yield_job_with_current_privs(pool_name,schedd_name,done,cluster,proc,error_details,my_identity,leave_src_untouched,keep_trying);
+	success = yield_job_with_current_privs(pool_name,schedd_name,done,cluster,proc,error_details,my_identity,release_on_hold,keep_trying);
 
 	set_priv(priv);
 
