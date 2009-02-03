@@ -264,7 +264,7 @@ class ULogEvent {
     int writeHeader (FILE *file);
 
 	/// the global job id for the job associated with this event
-	void insertCommonIdentifiers(ClassAd *adToFill);
+	void insertCommonIdentifiers(ClassAd &adToFill);
 	const char *m_gjid;
 };
 
