@@ -66,8 +66,8 @@ closedir( POSTG );
 $keepversion = "";
 foreach $version (@versions) {
 	CondorTest::debug("Found PG version $version\n",1);
-	# bt if($version =~ /postgresql-8.2.3/) {
-	if($version =~ /postgresql-8.0.2/) {
+	if($version =~ /postgresql-8.2.3/) {
+	#if($version =~ /postgresql-8.0.2/) {
 		CondorTest::debug("PG version is: $version\n",1);
 		$keepversion = $version;
 	}
