@@ -143,7 +143,7 @@ UserLog::initialize( const char *file, int c, int p, int s, const char *gjid)
 		m_fp = NULL;
 	}
 
-	if ( m_write_user_log &&
+	if ( m_userlog_enable &&
 		 !openFile(file, true, m_enable_locking, true, m_lock, m_fp) ) {
 		dprintf(D_ALWAYS, "UserLog::initialize: failed to open file\n");
 		return false;
@@ -187,7 +187,7 @@ UserLog::initialize( int c, int p, int s, const char *gjid )
 
 		// Important for performance : note we do not re-open the global log
 		// if we already have done so (i.e. if m_global_fp is not NULL).
-	if ( m_write_global_log && !m_global_fp ) {
+	if ( m_global_enable && !m_global_fp ) {
 		priv_state priv = set_condor_priv();
 		UserLogHeader	header;
 		initializeGlobalLog( header );
@@ -205,6 +205,9 @@ UserLog::initialize( int c, int p, int s, const char *gjid )
 bool
 UserLog::Configure( void )
 {
+	m_enable_fsync = param_boolean( "ENABLE_USERLOG_FSYNC", true );
+	m_enable_locking = param_boolean( "ENABLE_USERLOG_LOCKING", true );
+
 	m_global_path = param( "EVENT_LOG" );
 	if ( NULL == m_global_path ) {
 		return true;
@@ -231,8 +234,9 @@ UserLog::Configure( void )
 	}
 	m_global_use_xml = param_boolean( "EVENT_LOG_USE_XML", false );
 	m_global_count_events = param_boolean( "EVENT_LOG_COUNT_EVENTS", false );
-	m_enable_locking = param_boolean( "ENABLE_USERLOG_LOCKING", true );
 	m_global_max_rotations = param_integer( "EVENT_LOG_MAX_ROTATIONS", 1, 0 );
+	m_global_fsync = param_boolean( "EVENT_LOG_FSYNC", false );
+	m_global_locking = param_boolean( "EVENT_LOG_ENABLE_LOCKING", true );
 
 	m_global_max_filesize = param_integer( "EVENT_LOG_MAX_SIZE", -1 );
 	if ( m_global_max_filesize < 0 ) {
@@ -252,12 +256,13 @@ UserLog::Reset( void )
 	m_proc = -1;
 	m_subproc = -1;
 
-	m_write_user_log = true;
+	m_userlog_enable = true;
 	m_path = NULL;
 	m_fp = NULL; 
 	m_lock = NULL;
+	m_enable_fsync = true;
+	m_enable_locking = true;
 
-	m_write_global_log = true;
 	m_global_path = NULL;
 	m_global_fp = NULL; 
 	m_global_lock = NULL;
@@ -270,13 +275,15 @@ UserLog::Reset( void )
 	m_use_xml = XML_USERLOG_DEFAULT;
 	m_gjid = NULL;
 
+	m_global_enable = true;
 	m_global_path = NULL;
 	m_global_use_xml = false;
 	m_global_count_events = false;
-	m_enable_locking = true;
 	m_global_max_filesize = 1000000;
 	m_global_max_rotations = 1;
 	m_global_filesize = 0;
+	m_global_locking = true;
+	m_global_fsync = false;
 
 	MyString	base;
 	base = "";
@@ -831,10 +838,12 @@ UserLog::doWriteEvent( ULogEvent *event,
 	// Now that we have flushed the stdio stream, sync to disk
 	// *before* we release our write lock!
 	// For now, for performance, do not sync the global event log.
-	if ( is_global_event == false ) {
+	if ( (   is_global_event  && m_global_fsync ) ||
+		 ( (!is_global_event) && m_enable_fsync ) ) {
 		if ( fsync( fileno( fp ) ) != 0 ) {
-			dprintf( D_ALWAYS, "fsync() failed in UserLog::writeEvent - "
-					"errno %d (%s)\n", errno, strerror(errno) );
+		  dprintf( D_ALWAYS,
+				   "fsync() failed in UserLog::writeEvent - errno %d (%s)\n",
+				   errno, strerror(errno) );
 			// Note:  should we set success to false here?
 		}
 	}
@@ -926,7 +935,7 @@ UserLog::writeEvent ( ULogEvent *event, ClassAd *param_jobad )
 	event->setGlobalJobId(m_gjid);
 	
 	// write global event
-	if ( m_write_global_log && m_global_fp ) {
+	if ( m_global_enable && m_global_fp ) {
 		if ( ! doWriteEvent(event, true, false, param_jobad)  ) {
 			dprintf( D_ALWAYS, "UserLog: global doWriteEvent()!\n" );
 			return false;
@@ -934,7 +943,7 @@ UserLog::writeEvent ( ULogEvent *event, ClassAd *param_jobad )
 	}
 
 	char *attrsToWrite = param("EVENT_LOG_JOB_AD_INFORMATION_ATTRS");
-	if ( m_write_global_log && m_global_fp && attrsToWrite ) {
+	if ( m_global_enable && m_global_fp && attrsToWrite ) {
 		ExprTree *tree;
 		EvalResult result;
 		char *curr;
@@ -995,7 +1004,7 @@ UserLog::writeEvent ( ULogEvent *event, ClassAd *param_jobad )
 	}
 		
 	// write ulog event
-	if ( m_write_user_log && m_fp ) {
+	if ( m_userlog_enable && m_fp ) {
 		if ( ! doWriteEvent(event, false, false, param_jobad) ) {
 			dprintf( D_ALWAYS, "UserLog: user doWriteEvent()!\n" );
 			return false;

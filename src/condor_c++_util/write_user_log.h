@@ -144,8 +144,8 @@ class UserLog
 
 	void setUseXML(bool new_use_xml){ m_use_xml = new_use_xml; }
 
-	void setWriteUserLog(bool b){ m_write_user_log = b; }
-	void setWriteGlobalLog(bool b){ m_write_global_log = b; }
+	void setWriteUserLog(bool b){ m_userlog_enable = b; }
+	void setWriteGlobalLog(bool b){ m_global_enable = b; }
 
     /** Write an event to the log file.  Caution: if the log file is
         not initialized, then no event will be written, and this function
@@ -249,14 +249,15 @@ class UserLog
     int         m_proc;
     int         m_subproc;
 
-	/** Write to the user log? */		 bool		m_write_user_log;
+	/** Write to the user log? */		 bool		m_userlog_enable;
     /** Copy of path to the log file */  char     * m_path;
     /** The log file                 */  FILE     * m_fp;
     /** The log file lock            */  FileLockBase *m_lock;
 
     /** Enable locking?              */  bool		m_enable_locking;
+	/** Enable fsync() after writes? */  bool       m_enable_fsync;
 
-	/** Write to the global log? */		 bool		m_write_global_log;
+	/** Write to the global log? */		 bool		m_global_enable;
     /** Copy of path to global log   */  char     * m_global_path;
     /** The global log file          */  FILE     * m_global_fp;
     /** The global log file lock     */  FileLockBase *m_global_lock;
@@ -268,6 +269,8 @@ class UserLog
 	/** Max event log rotations      */  int		m_global_max_rotations;
 	/** Current global log file size */  long		m_global_filesize;
 	/** StatWrapper of global file   */  StatWrapper *m_global_stat;
+    /** Enable global locking?       */  bool		m_global_locking;
+	/** Enable fsync() after writes? */  bool       m_global_fsync;
 
     /** Copy of path to rotation lock*/  char     * m_rotation_lock_path;
     /** FD of the rotation lock      */  int        m_rotation_lock_fd;
