@@ -236,7 +236,7 @@ UserLog::Configure( void )
 	m_global_count_events = param_boolean( "EVENT_LOG_COUNT_EVENTS", false );
 	m_global_max_rotations = param_integer( "EVENT_LOG_MAX_ROTATIONS", 1, 0 );
 	m_global_fsync = param_boolean( "EVENT_LOG_FSYNC", false );
-	m_global_locking = param_boolean( "EVENT_LOG_ENABLE_LOCKING", true );
+	m_global_locking = param_boolean( "EVENT_LOG_LOCKING", true );
 
 	m_global_max_filesize = param_integer( "EVENT_LOG_MAX_SIZE", -1 );
 	if ( m_global_max_filesize < 0 ) {
@@ -399,7 +399,7 @@ UserLog::initializeGlobalLog( const UserLogHeader &header )
 	}
 
 	priv_state priv = set_condor_priv();
-	ret_val = openFile( m_global_path, false, m_enable_locking, true,
+	ret_val = openFile( m_global_path, false, m_global_locking, true,
 						m_global_lock, m_global_fp);
 
 	if ( ! ret_val ) {
