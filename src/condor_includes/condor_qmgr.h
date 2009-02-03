@@ -256,10 +256,18 @@ void FreeJobAd(ClassAd *&ad);
 	@return -1 on failure; 0 on success
 */
 int SendSpoolFile(char const *filename);
+
 /** Actually transfer the initial checkpoint file (the executable).
 	@param filename Name of initial checkpoint file source.
 */
 int SendSpoolFileBytes(char const *filename);
+
+/** New way of initializing transfer of ICKPT file.
+    @return -1 on failure
+            0 if client should send file
+            1 if client need not send file since it's already there
+*/
+int SendSpoolFileIfNeeded(ClassAd& ad);
 
 void WalkJobQueue(scan_func);
 

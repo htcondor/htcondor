@@ -215,6 +215,8 @@ extern const char * ATTR_JOB_ACTION;
 extern const char * ATTR_JOB_ARGUMENTS1;
 extern const char * ATTR_JOB_ARGUMENTS2;
 extern const char * ATTR_JOB_CMD;
+extern const char * ATTR_JOB_CMD_HASH;
+extern const char * ATTR_JOB_CMD_MD5;
 extern const char * ATTR_ORIG_JOB_CMD;
 extern const char * ATTR_JOB_CMDEXT;
 extern const char * ATTR_JOB_CORE_DUMPED;

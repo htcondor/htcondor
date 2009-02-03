@@ -784,6 +784,22 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		return 0;
 	}
 
+	case CONDOR_SendSpoolFileIfNeeded:
+	  {
+		int terrno;
+
+		ClassAd ad;
+		assert( ad.initFromStream(*syscall_sock) );
+		assert( syscall_sock->end_of_message() );;
+
+		errno = 0;
+		rval = SendSpoolFileIfNeeded(ad);
+		terrno = errno;
+		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
+
+		return 0;
+	}
+
 	case CONDOR_GetAllJobsByConstraint:
 	  {
 		char *constraint=NULL;

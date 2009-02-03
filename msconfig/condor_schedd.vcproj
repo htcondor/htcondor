@@ -533,6 +533,14 @@
 			>
 		</File>
 		<File
+			RelativePath="..\src\condor_schedd.V6\ickpt_share.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_schedd.V6\ickpt_share.h"
+			>
+		</File>
+		<File
 			RelativePath="..\src\condor_schedd.V6\loose_file_transfer.cpp"
 			>
 			<FileConfiguration

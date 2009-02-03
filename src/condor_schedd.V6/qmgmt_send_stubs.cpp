@@ -571,6 +571,31 @@ SendSpoolFile( char const *filename )
 }
 
 int
+SendSpoolFileIfNeeded( ClassAd& ad )
+{
+	int	rval = -1;
+
+	CurrentSysCall = CONDOR_SendSpoolFileIfNeeded;
+
+	qmgmt_sock->encode();
+	assert( qmgmt_sock->code(CurrentSysCall) );
+	assert( ad.put(*qmgmt_sock) );
+	assert( qmgmt_sock->end_of_message() );
+
+	qmgmt_sock->decode();
+	assert( qmgmt_sock->code(rval) );
+	if( rval < 0 ) {
+		assert( qmgmt_sock->code(terrno) );
+		assert( qmgmt_sock->end_of_message() );
+		errno = terrno;
+		return rval;
+	}
+	assert( qmgmt_sock->end_of_message() );
+
+	return rval;
+}
+
+int
 CloseSocket()
 {
 	CurrentSysCall = CONDOR_CloseSocket;

@@ -235,7 +235,8 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o selector.o \
 	ConcurrencyLimitUtils.o \
 	simple_arg.o \
 	dc_service.o \
-	condor_sinful.o
+	condor_sinful.o \
+	link.o
 
 library_target(cplus_lib.a,$(OBJ))
 library_target(liburl.a,$(URL_OBJ))

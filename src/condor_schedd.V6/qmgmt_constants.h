@@ -45,3 +45,4 @@
 #define CONDOR_GetAllJobsByConstraint 10026
 #define	CONDOR_SetAttribute2 		10027
 #define CONDOR_CloseSocket			10028
+#define CONDOR_SendSpoolFileIfNeeded 10029

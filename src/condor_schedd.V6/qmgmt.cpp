@@ -53,6 +53,7 @@
 #include "condor_crontab.h"
 #include "forkwork.h"
 #include "condor_open.h"
+#include "ickpt_share.h"
 
 #include "file_sql.h"
 extern FILESQL *FILEObj;
@@ -173,6 +174,12 @@ ClusterCleanup(int cluster_id)
 	char key[PROC_ID_STR_BUFLEN];
 	IdToStr(cluster_id,-1,key);
 
+	// pull out the owner and hash used for ickpt sharing
+	MyString hash;
+	GetAttributeString(cluster_id, -1, ATTR_JOB_CMD_HASH, hash);
+	MyString owner;
+	GetAttributeString(cluster_id, -1, ATTR_OWNER, owner);
+
 	// remove entry in ClusterSizeHashTable 
 	ClusterSizeHashTable->remove(cluster_id);
 
@@ -182,6 +189,11 @@ ClusterCleanup(int cluster_id)
 	// blow away the initial checkpoint file from the spool dir
 	char *ckpt_file_name = gen_ckpt_name( Spool, cluster_id, ICKPT, 0 );
 	(void)unlink( ckpt_file_name );
+
+	// garbage collect the shared ickpt file if necessary
+	if (!hash.IsEmpty()) {
+		ickpt_share_try_removal(owner.Value(), hash.Value());
+	}
 }
 
 
@@ -2547,6 +2559,9 @@ GetAttributeStringNew( int cluster_id, int proc_id, const char *attr_name,
 	return -1;
 }
 
+// returns -1 if the lookup fails or if the value is not a string, 0 if
+// the lookup succeeds in the job queue, 1 if it succeeds in the current
+// transaction; val is set to the empty string on failure
 int
 GetAttributeString( int cluster_id, int proc_id, const char *attr_name, 
 					MyString &val )
@@ -3279,6 +3294,22 @@ FreeJobAd(ClassAd *&ad)
 	ad = NULL;
 }
 
+static int
+RecvSpoolFileBytes(const MyString& path)
+{
+	filesize_t	size;
+	Q_SOCK->getReliSock()->decode();
+	if (Q_SOCK->getReliSock()->get_file(&size, path.Value()) < 0) {
+		dprintf(D_ALWAYS,
+		        "Failed to receive file from client in SendSpoolFile.\n");
+		Q_SOCK->getReliSock()->eom();
+		return -1;
+	}
+	chmod(path.Value(),00755);
+	Q_SOCK->getReliSock()->eom();
+	dprintf(D_FULLDEBUG, "done with transfer, errno = %d\n", errno);
+	return 0;
+}
 
 int
 SendSpoolFile(char const *filename)
@@ -3310,19 +3341,78 @@ SendSpoolFile(char const *filename)
 	Q_SOCK->getReliSock()->put(0);
 	Q_SOCK->getReliSock()->eom();
 
-	/* Read file size from client. */
-	filesize_t	size;
-	Q_SOCK->getReliSock()->decode();
-	if (Q_SOCK->getReliSock()->get_file(&size, path.Value()) < 0) {
-		dprintf(D_ALWAYS, "Failed to receive file from client in SendSpoolFile.\n");
-		Q_SOCK->getReliSock()->eom();
+	return RecvSpoolFileBytes(path);
+}
+
+int
+SendSpoolFileIfNeeded(ClassAd& ad)
+{
+	if ( !Q_SOCK || !Q_SOCK->getReliSock() ) {
+		EXCEPT( "SendSpoolFileIfNeeded called when Q_SOCK is NULL" );
+	}
+	Q_SOCK->getReliSock()->encode();
+
+	MyString path = gen_ckpt_name(Spool, active_cluster_num, ICKPT, 0);
+
+	// here we take advantage of ickpt sharing if possible. if a copy
+	// of the executable already exists we make a link to it and send
+	// a '1' back to the client. if that can't happen but sharing is
+	// enabled, the hash variable will be set to a non-empty string that
+	// can be used to create a link that can be shared by future jobs
+	//
+	MyString owner;
+	std::string hash;
+	if (param_boolean("SHARE_SPOOLED_EXECUTABLES", true)) {
+		if (!ad.LookupString(ATTR_OWNER, owner)) {
+			dprintf(D_ALWAYS,
+			        "SendSpoolFileIfNeeded: no %s attribute in ClassAd\n",
+			        ATTR_OWNER);
+			Q_SOCK->getReliSock()->put(-1);
+			Q_SOCK->getReliSock()->eom();
+			return -1;
+		}
+		if (!OwnerCheck(&ad, Q_SOCK->getOwner())) {
+			dprintf(D_ALWAYS, "SendSpoolFileIfNeeded: OwnerCheck failure\n");
+			Q_SOCK->getReliSock()->put(-1);
+			Q_SOCK->getReliSock()->eom();
+			return -1;
+		}
+		hash = ickpt_share_get_hash(ad);
+		if (!hash.empty()) {
+			std::string s = std::string("\"") + hash + "\"";
+			int rv = SetAttribute(active_cluster_num,
+			                      -1,
+			                      ATTR_JOB_CMD_HASH,
+			                      s.c_str());
+			if (rv < 0) {
+					dprintf(D_ALWAYS,
+					        "SendSpoolFileIfNeeded: unable to set %s to %s\n",
+					        ATTR_JOB_CMD_HASH,
+					        hash.c_str());
+					hash = "";
+			}
+			if (!hash.empty() &&
+			    ickpt_share_try_sharing(owner.Value(), hash, path.Value()))
+			{
+				Q_SOCK->getReliSock()->put(1);
+				Q_SOCK->getReliSock()->eom();
+				return 0;
+			}
+		}
+	}
+
+	/* Tell client to go ahead with file transfer. */
+	Q_SOCK->getReliSock()->put(0);
+	Q_SOCK->getReliSock()->eom();
+
+	if (RecvSpoolFileBytes(path) == -1) {
 		return -1;
 	}
 
-	chmod(path.Value(),00755);
+	if (!hash.empty()) {
+		ickpt_share_init_sharing(owner.Value(), hash, path.Value());
+	}
 
-	// Q_SOCK->getReliSock()->eom();
-	dprintf(D_FULLDEBUG, "done with transfer, errno = %d\n", errno);
 	return 0;
 }
 

@@ -17,8 +17,6 @@
  *
  ***************************************************************/
 
- 
-
 #include "condor_common.h"
 #include "condor_config.h"
 #include "condor_debug.h"
@@ -83,7 +81,7 @@
 #include "list.h"
 #include "condor_vm_universe_types.h"
 #include "vm_univ_utils.h"
-
+#include "condor_md.h"
 
 // TODO: hashFunction() is case-insenstive, but when a MyString is the
 //   hash key, the comparison in HashTable is case-sensitive. Therefore,
@@ -1563,14 +1561,60 @@ SetExecutable()
 
 		// spool executable if necessary
 		if ( isTrue ( copySpool ) ) {
-			if (SendSpoolFile(IckptName.Value()) < 0) {
-				fprintf( stderr, "\nERROR: Permission to transfer executable "
-						 "%s denied\n", IckptName.Value() );
+
+			bool try_ickpt_sharing = false;
+			CondorVersionInfo cvi(MySchedd->version());
+			if (cvi.built_since_version(7, 3, 0)) {
+				try_ickpt_sharing = param_boolean("SHARE_SPOOLED_EXECUTABLES",
+				                                  true);
+			}
+
+			MyString md5;
+			if (try_ickpt_sharing) {
+				Condor_MD_MAC cmm;
+				unsigned char* md5_raw;
+				if (!cmm.addMDFile(ename)) {
+					dprintf(D_ALWAYS,
+					        "SHARE_SPOOLED_EXECUTABLES will not be used: "
+					            "MD5 of file %s failed\n",
+					        ename);
+				}
+				else if ((md5_raw = cmm.computeMD()) == NULL) {
+					dprintf(D_ALWAYS,
+					        "SHARE_SPOOLED_EXECUTABLES will not be used: "
+					            "no MD5 support in this Condor build\n");
+				}
+				else {
+					for (int i = 0; i < MAC_SIZE; i++) {
+						md5.sprintf_cat("%02x", static_cast<int>(md5_raw[i]));
+					}
+					free(md5_raw);
+				}
+			}
+			int ret;
+			if (!md5.IsEmpty()) {
+				ClassAd tmp_ad;
+				tmp_ad.Assign(ATTR_OWNER, owner);
+				tmp_ad.Assign(ATTR_JOB_CMD_MD5, md5.Value());
+				ret = SendSpoolFileIfNeeded(tmp_ad);
+			}
+			else {
+				ret = SendSpoolFile(IckptName.Value());
+			}
+
+			if (ret < 0) {
+				fprintf( stderr,
+				         "\nERROR: Request to transfer executable %s failed\n",
+				         IckptName.Value() );
 				DoCleanup(0,0,NULL);
 				exit( 1 );
 			}
 
-			if (SendSpoolFileBytes(full_path(ename,false)) < 0) {
+			// ret will be 0 if the SchedD gave us the go-ahead to send
+			// the file. if it's not, the SchedD is using ickpt sharing
+			// and already has a copy, so no need
+			//
+			if ((ret == 0) && SendSpoolFileBytes(full_path(ename,false)) < 0) {
 				fprintf( stderr,
 						 "\nERROR: failed to transfer executable file %s\n", 
 						 ename );

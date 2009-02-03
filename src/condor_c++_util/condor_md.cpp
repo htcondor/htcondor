@@ -21,6 +21,7 @@
 #include "condor_common.h"
 #include "condor_md.h"
 #include "condor_open.h"
+#include "condor_debug.h"
 
 #ifdef HAVE_EXT_OPENSSL
 #include <openssl/md5.h>
@@ -136,33 +137,45 @@ void Condor_MD_MAC::addMD(const unsigned char * buffer, unsigned long length)
 #endif
 }
 
-void Condor_MD_MAC::addMDFile(const char * filePathName)
+bool Condor_MD_MAC::addMDFile(const char * filePathName)
 {
 #ifdef HAVE_EXT_OPENSSL
 	int fd;
 
     fd = safe_open_wrapper(filePathName, O_RDONLY | O_LARGEFILE, 0);
     if (fd < 0) {
-        //dprintf(D_FULLDEBUG, "addMDFile: can't open %s\n", filePathName);
-        return;
+        dprintf(D_ALWAYS,
+                "addMDFile: can't open %s: %s\n",
+                filePathName,
+                strerror(errno));
+        return false;
     }
 
 	unsigned char *buffer;	
 
 	buffer = (unsigned char *)calloc(1024*1024, 1);
-	if( !buffer) {
-		return; // I could just assert and take out the process, but nah
-	}
+	ASSERT(buffer != NULL);
 
+	bool ok = true;
 	ssize_t count = read(fd, buffer, 1024*1024); 
 	while( count > 0) {
 		MD5_Update(&(context_->md5_), buffer, count); 
 		memset(buffer, 0, 1024*1024);
 		count = read(fd, buffer, 1024*1024); 
 	}
+	if (count == -1) {
+		dprintf(D_ALWAYS,
+		        "addMDFile: error reading from %s: %s\n",
+		        filePathName,
+		        strerror(errno));
+		ok = false;
+	}
 
 	close(fd);
 	free(buffer);
+	return ok;
+#else
+	return false;
 #endif
 }
 

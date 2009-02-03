@@ -44,6 +44,7 @@
 #include "condor_distribution.h"
 #include "basename.h" // for condor_basename 
 #include "extArray.h"
+#include "link.h"
 
 State get_machine_state();
 
@@ -74,6 +75,7 @@ void check_log_dir();
 void bad_file( const char *, const char *, Directory & );
 void good_file( const char *, const char * );
 void produce_output();
+BOOLEAN is_valid_shared_exe( const char *name );
 BOOLEAN is_ckpt_file( const char *name );
 BOOLEAN is_v2_ckpt( const char *name );
 BOOLEAN is_v3_ckpt( const char *name );
@@ -280,6 +282,12 @@ check_spool_dir()
             continue;
         }
 
+			// see it it's an in-use shared executable
+		if( is_valid_shared_exe(f) ) {
+			good_file( Spool, f );
+			continue;
+		}
+
 			// see if it's a legitimate checkpoint
 		if( is_ckpt_file(f) ) {
 			good_file( Spool, f );
@@ -317,6 +325,26 @@ check_spool_dir()
 		dprintf( D_ALWAYS, 
 				 "Error disconnecting from job queue, not deleting spool files.\n" );
 	}
+}
+
+/*
+*/
+BOOLEAN
+is_valid_shared_exe( const char *name )
+{
+	if ((strlen(name) < 4) || (strncmp(name, "exe-", 4) != 0)) {
+		return FALSE;
+	}
+	MyString path;
+	path.sprintf("%s/%s", Spool, name);
+	int count = link_count(path.Value());
+	if (count == 1) {
+		return FALSE;
+	}
+	if (count == -1) {
+		dprintf(D_ALWAYS, "link_count error on %s; not deleting\n", name);
+	}
+	return TRUE;
 }
 
 /*

@@ -4248,6 +4248,14 @@
 			>
 		</File>
 		<File
+			RelativePath="..\src\condor_c++_util\link.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\link.h"
+			>
+		</File>
+		<File
 			RelativePath="..\src\condor_c++_util\list.h"
 			>
 		</File>
