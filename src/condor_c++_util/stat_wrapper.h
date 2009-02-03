@@ -60,6 +60,9 @@ public:
 	StatWrapper( void );
 	~StatWrapper( void );
 
+	// Check to see if we're initialized
+	bool IsInitialized( void ) const;
+
 	// Methods to set the path and FD
 	bool SetPath( const char *path );
 	bool SetPath( const MyString &path );

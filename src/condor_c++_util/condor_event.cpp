@@ -2,13 +2,13 @@
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -66,14 +66,14 @@ const char * ULogEventNumberNames[] = {
 	"ULOG_NODE_TERMINATED",  		// MPI (or parallel) Node terminated
 	"ULOG_POST_SCRIPT_TERMINATED",	// POST script terminated
 	"ULOG_GLOBUS_SUBMIT",			// Job Submitted to Globus
-	"ULOG_GLOBUS_SUBMIT_FAILED",	// Globus Submit Failed 
-	"ULOG_GLOBUS_RESOURCE_UP",		// Globus Machine UP 
+	"ULOG_GLOBUS_SUBMIT_FAILED",	// Globus Submit Failed
+	"ULOG_GLOBUS_RESOURCE_UP",		// Globus Machine UP
 	"ULOG_GLOBUS_RESOURCE_DOWN",	// Globus Machine Down
 	"ULOG_REMOTE_ERROR",            // Remote Error
 	"ULOG_JOB_DISCONNECTED",        // RSC socket lost
 	"ULOG_JOB_RECONNECTED",         // RSC socket re-established
 	"ULOG_JOB_RECONNECT_FAILED",    // RSC reconnect failure
-	"ULOG_GRID_RESOURCE_UP",		// Grid machine UP 
+	"ULOG_GRID_RESOURCE_UP",		// Grid machine UP
 	"ULOG_GRID_RESOURCE_DOWN",		// Grid machine Down
 	"ULOG_GRID_SUBMIT",				// Job submitted to grid resource
 	"ULOG_JOB_AD_INFORMATION",		// Job Ad information update
@@ -213,8 +213,7 @@ instantiateEvent (ULogEventNumber event)
 }
 
 
-ULogEvent::
-ULogEvent()
+ULogEvent::ULogEvent(void)
 {
 	struct tm *tm;
 
@@ -227,14 +226,12 @@ ULogEvent()
 }
 
 
-ULogEvent::
-~ULogEvent ()
+ULogEvent::~ULogEvent (void)
 {
 }
 
 
-int ULogEvent::
-getEvent (FILE *file)
+int ULogEvent::getEvent (FILE *file)
 {
 	if( !file ) {
 		dprintf( D_ALWAYS, "ERROR: file == NULL in ULogEvent::getEvent()\n" );
@@ -244,8 +241,7 @@ getEvent (FILE *file)
 }
 
 
-int ULogEvent::
-putEvent (FILE *file)
+int ULogEvent::putEvent (FILE *file)
 {
 	if( !file ) {
 		dprintf( D_ALWAYS, "ERROR: file == NULL in ULogEvent::putEvent()\n" );
@@ -255,8 +251,7 @@ putEvent (FILE *file)
 }
 
 
-const char* ULogEvent::
-eventName() const
+const char* ULogEvent::eventName(void) const
 {
 	if( eventNumber == (ULogEventNumber)-1 ) {
 		return NULL;
@@ -266,20 +261,20 @@ eventName() const
 
 
 // This function reads in the header of an event from the UserLog and fills
-// the fields of the event object.  It does *not* read the event number.  The 
-// caller is supposed to read the event number, instantiate the appropriate 
-// event type using instantiateEvent(), and then call readEvent() of the 
+// the fields of the event object.  It does *not* read the event number.  The
+// caller is supposed to read the event number, instantiate the appropriate
+// event type using instantiateEvent(), and then call readEvent() of the
 // returned event.
-int ULogEvent::
-readHeader (FILE *file)
+int
+ULogEvent::readHeader (FILE *file)
 {
 	int retval;
-	
+
 	// read from file
-	retval = fscanf (file, " (%d.%d.%d) %d/%d %d:%d:%d ", 
+	retval = fscanf (file, " (%d.%d.%d) %d/%d %d:%d:%d ",
 					 &cluster, &proc, &subproc,
-					 &(eventTime.tm_mon), &(eventTime.tm_mday), 
-					 &(eventTime.tm_hour), &(eventTime.tm_min), 
+					 &(eventTime.tm_mon), &(eventTime.tm_mday),
+					 &(eventTime.tm_hour), &(eventTime.tm_min),
 					 &(eventTime.tm_sec));
 
 	// check if all fields were successfully read
@@ -296,20 +291,20 @@ readHeader (FILE *file)
 
 
 // Write the header for the event to the file
-int ULogEvent::
-writeHeader (FILE *file)
+int
+ULogEvent::writeHeader (FILE *file)
 {
 	int       retval;
 
 	// write header
 	retval = fprintf (file, "%03d (%03d.%03d.%03d) %02d/%02d %02d:%02d:%02d ",
-					  eventNumber, 
+					  eventNumber,
 					  cluster, proc, subproc,
-					  eventTime.tm_mon+1, eventTime.tm_mday, 
+					  eventTime.tm_mon+1, eventTime.tm_mday,
 					  eventTime.tm_hour, eventTime.tm_min, eventTime.tm_sec);
 
 	// check if all fields were sucessfully written
-	if (retval < 0) 
+	if (retval < 0)
 	{
 		return 0;
 	}
@@ -317,8 +312,8 @@ writeHeader (FILE *file)
 	return 1;
 }
 
-ClassAd* ULogEvent::
-toClassAd()
+ClassAd*
+ULogEvent::toClassAd(void)
 {
 	ClassAd* myad = new ClassAd;
 
@@ -329,7 +324,7 @@ toClassAd()
 		buf0[127] = 0;
 		if( !myad->Insert(buf0) ) return NULL;
 	}
-	
+
 	switch( (ULogEventNumber) eventNumber )
 	{
 	  case ULOG_SUBMIT:
@@ -452,12 +447,12 @@ toClassAd()
 		buf0[127] = 0;
 		if( !myad->Insert(buf0) ) return NULL;
 	}
-	
+
 	return myad;
 }
 
-void ULogEvent::
-initFromClassAd(ClassAd* ad)
+void
+ULogEvent::initFromClassAd(ClassAd* ad)
 {
 	if( !ad ) return;
 	int en;
@@ -475,36 +470,34 @@ initFromClassAd(ClassAd* ad)
 	ad->LookupInteger("Subproc", subproc);
 }
 
-void ULogEvent::
-insertCommonIdentifiers(ClassAd *adToFill)
+void
+ULogEvent::insertCommonIdentifiers(ClassAd &adToFill)
 {
-	if( !adToFill ) return;
+	//if( !adToFill ) return;
 	if(scheddname) {
-	  adToFill->Assign("scheddname", scheddname);
+	  adToFill.Assign("scheddname", scheddname);
 	}
 
 	if(m_gjid) {
-	  adToFill->Assign("globaljobid", m_gjid);
+	  adToFill.Assign("globaljobid", m_gjid);
 	}
- 
-	adToFill->Assign("cluster_id", cluster);
-	adToFill->Assign("proc_id", proc);
-	adToFill->Assign("spid", subproc);
+
+	adToFill.Assign("cluster_id", cluster);
+	adToFill.Assign("proc_id", proc);
+	adToFill.Assign("spid", subproc);
 }
 
 
 // ----- the SubmitEvent class
-SubmitEvent::
-SubmitEvent()
-{	
+SubmitEvent::SubmitEvent(void)
+{
 	submitHost [0] = '\0';
 	submitEventLogNotes = NULL;
 	submitEventUserNotes = NULL;
 	eventNumber = ULOG_SUBMIT;
 }
 
-SubmitEvent::
-~SubmitEvent()
+SubmitEvent::~SubmitEvent(void)
 {
     if( submitEventLogNotes ) {
         delete[] submitEventLogNotes;
@@ -514,9 +507,9 @@ SubmitEvent::
     }
 }
 
-int SubmitEvent::
-writeEvent (FILE *file)
-{	
+int
+SubmitEvent::writeEvent (FILE *file)
+{
 	int retval = fprintf (file, "Job submitted from host: %s\n", submitHost);
 	if (retval < 0)
 	{
@@ -537,8 +530,8 @@ writeEvent (FILE *file)
 	return (1);
 }
 
-int SubmitEvent::
-readEvent (FILE *file)
+int
+SubmitEvent::readEvent (FILE *file)
 {
 	char s[8192];
 	s[0] = '\0';
@@ -560,15 +553,15 @@ readEvent (FILE *file)
 	// see if the next line contains an optional event notes string,
 	// and, if not, rewind, because that means we slurped in the next
 	// event delimiter looking for it...
- 
+
 	fpos_t filep;
 	fgetpos( file, &filep );
-     
+
 	if( !fgets( s, 8192, file ) || strcmp( s, "...\n" ) == 0 ) {
 		fsetpos( file, &filep );
 		return 1;
 	}
- 
+
 	// remove trailing newline
 	s[ strlen( s ) - 1 ] = '\0';
 
@@ -577,14 +570,14 @@ readEvent (FILE *file)
 	// see if the next line contains an optional user event notes
 	// string, and, if not, rewind, because that means we slurped in
 	// the next event delimiter looking for it...
- 
+
 	fgetpos( file, &filep );
-     
+
 	if( !fgets( s, 8192, file ) || strcmp( s, "...\n" ) == 0 ) {
 		fsetpos( file, &filep );
 		return 1;
 	}
- 
+
 	// remove trailing newline
 	s[ strlen( s ) - 1 ] = '\0';
 
@@ -592,8 +585,8 @@ readEvent (FILE *file)
 	return 1;
 }
 
-ClassAd* SubmitEvent::
-toClassAd()
+ClassAd*
+SubmitEvent::toClassAd(void)
 {
 	ClassAd* myad = ULogEvent::toClassAd();
 	if( !myad ) return NULL;
@@ -619,8 +612,8 @@ toClassAd()
 	return myad;
 }
 
-void SubmitEvent::
-initFromClassAd(ClassAd* ad)
+void
+SubmitEvent::initFromClassAd(ClassAd* ad)
 {
 	ULogEvent::initFromClassAd(ad);
 
@@ -650,24 +643,21 @@ initFromClassAd(ClassAd* ad)
 }
 
 // ----- the GlobusSubmitEvent class
-GlobusSubmitEvent::
-GlobusSubmitEvent()
-{	
+GlobusSubmitEvent::GlobusSubmitEvent(void)
+{
 	eventNumber = ULOG_GLOBUS_SUBMIT;
 	rmContact = NULL;
 	jmContact = NULL;
 	restartableJM = false;
 }
 
-GlobusSubmitEvent::
-~GlobusSubmitEvent()
+GlobusSubmitEvent::~GlobusSubmitEvent(void)
 {
 	delete[] rmContact;
 	delete[] jmContact;
 }
 
-int GlobusSubmitEvent::
-writeEvent (FILE *file)
+int GlobusSubmitEvent::writeEvent (FILE *file)
 {
 	const char * unknown = "UNKNOWN";
 	const char * rm = unknown;
@@ -678,7 +668,7 @@ writeEvent (FILE *file)
 	{
 		return 0;
 	}
-	
+
 	if ( rmContact ) rm = rmContact;
 	if ( jmContact ) jm = jmContact;
 
@@ -693,7 +683,7 @@ writeEvent (FILE *file)
 	}
 
 	int newjm = 0;
-	if ( restartableJM ) { 
+	if ( restartableJM ) {
 		newjm = 1;
 	}
 	retval = fprintf( file, "    Can-Restart-JM: %d\n", newjm );
@@ -704,8 +694,7 @@ writeEvent (FILE *file)
 	return (1);
 }
 
-int GlobusSubmitEvent::
-readEvent (FILE *file)
+int GlobusSubmitEvent::readEvent (FILE *file)
 {
 	char s[8192];
 
@@ -731,7 +720,7 @@ readEvent (FILE *file)
 		return 0;
 	}
 	jmContact = strnewp(s);
-	
+
 	int newjm = 0;
 	retval = fscanf( file, "    Can-Restart-JM: %d\n", &newjm );
 	if ( retval != 1 )
@@ -743,18 +732,17 @@ readEvent (FILE *file)
 	} else {
 		restartableJM = false;
 	}
-    
-	
+
 	return 1;
 }
 
-ClassAd* GlobusSubmitEvent::
-toClassAd()
+ClassAd*
+GlobusSubmitEvent::toClassAd(void)
 {
 	ClassAd* myad = ULogEvent::toClassAd();
 	if( !myad ) return NULL;
 	char buf0[512];
-	
+
 	if( rmContact && rmContact[0] ) {
 		MyString buf2;
 		buf2.sprintf("RMContact = \"%s\"",rmContact);
@@ -773,13 +761,13 @@ toClassAd()
 	return myad;
 }
 
-void GlobusSubmitEvent::
-initFromClassAd(ClassAd* ad)
+void
+GlobusSubmitEvent::initFromClassAd(ClassAd* ad)
 {
 	ULogEvent::initFromClassAd(ad);
 
 	if( !ad ) return;
-	
+
 	// this fanagling is to ensure we don't malloc a pointer then delete it
 	char* mallocstr = NULL;
 	ad->LookupString("RMContact", &mallocstr);
@@ -805,21 +793,19 @@ initFromClassAd(ClassAd* ad)
 }
 
 // ----- the GlobusSubmitFailedEvent class
-GlobusSubmitFailedEvent::
-GlobusSubmitFailedEvent()
-{	
+GlobusSubmitFailedEvent::GlobusSubmitFailedEvent(void)
+{
 	eventNumber = ULOG_GLOBUS_SUBMIT_FAILED;
 	reason = NULL;
 }
 
-GlobusSubmitFailedEvent::
-~GlobusSubmitFailedEvent()
+GlobusSubmitFailedEvent::~GlobusSubmitFailedEvent(void)
 {
 	delete[] reason;
 }
 
-int GlobusSubmitFailedEvent::
-writeEvent (FILE *file)
+int
+GlobusSubmitFailedEvent::writeEvent (FILE *file)
 {
 	const char * unknown = "UNKNOWN";
 	const char * reasonString = unknown;
@@ -829,7 +815,7 @@ writeEvent (FILE *file)
 	{
 		return 0;
 	}
-	
+
 	if ( reason ) reasonString = reason;
 
 	retval = fprintf( file, "    Reason: %.8191s\n", reasonString );
@@ -840,8 +826,8 @@ writeEvent (FILE *file)
 	return (1);
 }
 
-int GlobusSubmitFailedEvent::
-readEvent (FILE *file)
+int
+GlobusSubmitFailedEvent::readEvent (FILE *file)
 {
 	char s[8192];
 
@@ -856,12 +842,12 @@ readEvent (FILE *file)
 
 	fpos_t filep;
 	fgetpos( file, &filep );
-     
+
 	if( !fgets( s, 8192, file ) || strcmp( s, "...\n" ) == 0 ) {
 		fsetpos( file, &filep );
 		return 1;
 	}
- 
+
 	// remove trailing newline
 	s[ strlen( s ) - 1 ] = '\0';
 
@@ -870,12 +856,12 @@ readEvent (FILE *file)
 	return 1;
 }
 
-ClassAd* GlobusSubmitFailedEvent::
-toClassAd()
+ClassAd*
+GlobusSubmitFailedEvent::toClassAd(void)
 {
 	ClassAd* myad = ULogEvent::toClassAd();
 	if( !myad ) return NULL;
-	
+
 	if( reason && reason[0] ) {
 		MyString buf2;
 		buf2.sprintf("Reason = \"%s\"", reason);
@@ -885,8 +871,8 @@ toClassAd()
 	return myad;
 }
 
-void GlobusSubmitFailedEvent::
-initFromClassAd(ClassAd* ad)
+void
+GlobusSubmitFailedEvent::initFromClassAd(ClassAd* ad)
 {
 	ULogEvent::initFromClassAd(ad);
 
@@ -903,21 +889,19 @@ initFromClassAd(ClassAd* ad)
 }
 
 // ----- the GlobusResourceUp class
-GlobusResourceUpEvent::
-GlobusResourceUpEvent()
-{	
+GlobusResourceUpEvent::GlobusResourceUpEvent(void)
+{
 	eventNumber = ULOG_GLOBUS_RESOURCE_UP;
 	rmContact = NULL;
 }
 
-GlobusResourceUpEvent::
-~GlobusResourceUpEvent()
+GlobusResourceUpEvent::~GlobusResourceUpEvent(void)
 {
 	delete[] rmContact;
 }
 
-int GlobusResourceUpEvent::
-writeEvent (FILE *file)
+int
+GlobusResourceUpEvent::writeEvent (FILE *file)
 {
 	const char * unknown = "UNKNOWN";
 	const char * rm = unknown;
@@ -927,7 +911,7 @@ writeEvent (FILE *file)
 	{
 		return 0;
 	}
-	
+
 	if ( rmContact ) rm = rmContact;
 
 	retval = fprintf( file, "    RM-Contact: %.8191s\n", rm );
@@ -938,8 +922,8 @@ writeEvent (FILE *file)
 	return (1);
 }
 
-int GlobusResourceUpEvent::
-readEvent (FILE *file)
+int
+GlobusResourceUpEvent::readEvent (FILE *file)
 {
 	char s[8192];
 
@@ -956,16 +940,16 @@ readEvent (FILE *file)
 	{
 		return 0;
 	}
-	rmContact = strnewp(s);	
+	rmContact = strnewp(s);
 	return 1;
 }
 
-ClassAd* GlobusResourceUpEvent::
-toClassAd()
+ClassAd*
+GlobusResourceUpEvent::toClassAd(void)
 {
 	ClassAd* myad = ULogEvent::toClassAd();
 	if( !myad ) return NULL;
-	
+
 	if( rmContact && rmContact[0] ) {
 		MyString buf2;
 		buf2.sprintf("RMContact = \"%s\"",rmContact);
@@ -975,8 +959,8 @@ toClassAd()
 	return myad;
 }
 
-void GlobusResourceUpEvent::
-initFromClassAd(ClassAd* ad)
+void
+GlobusResourceUpEvent::initFromClassAd(ClassAd* ad)
 {
 	ULogEvent::initFromClassAd(ad);
 
@@ -994,21 +978,19 @@ initFromClassAd(ClassAd* ad)
 
 
 // ----- the GlobusResourceUp class
-GlobusResourceDownEvent::
-GlobusResourceDownEvent()
-{	
+GlobusResourceDownEvent::GlobusResourceDownEvent(void)
+{
 	eventNumber = ULOG_GLOBUS_RESOURCE_DOWN;
 	rmContact = NULL;
 }
 
-GlobusResourceDownEvent::
-~GlobusResourceDownEvent()
+GlobusResourceDownEvent::~GlobusResourceDownEvent(void)
 {
 	delete[] rmContact;
 }
 
-int GlobusResourceDownEvent::
-writeEvent (FILE *file)
+int
+GlobusResourceDownEvent::writeEvent (FILE *file)
 {
 	const char * unknown = "UNKNOWN";
 	const char * rm = unknown;
@@ -1018,7 +1000,7 @@ writeEvent (FILE *file)
 	{
 		return 0;
 	}
-	
+
 	if ( rmContact ) rm = rmContact;
 
 	retval = fprintf( file, "    RM-Contact: %.8191s\n", rm );
@@ -1029,8 +1011,8 @@ writeEvent (FILE *file)
 	return (1);
 }
 
-int GlobusResourceDownEvent::
-readEvent (FILE *file)
+int
+GlobusResourceDownEvent::readEvent (FILE *file)
 {
 	char s[8192];
 
@@ -1047,16 +1029,16 @@ readEvent (FILE *file)
 	{
 		return 0;
 	}
-	rmContact = strnewp(s);	
+	rmContact = strnewp(s);
 	return 1;
 }
 
-ClassAd* GlobusResourceDownEvent::
-toClassAd()
+ClassAd*
+GlobusResourceDownEvent::toClassAd(void)
 {
 	ClassAd* myad = ULogEvent::toClassAd();
 	if( !myad ) return NULL;
-	
+
 	if( rmContact && rmContact[0] ) {
 		MyString buf2;
 		buf2.sprintf("RMContact = \"%s\"",rmContact);
@@ -1066,8 +1048,8 @@ toClassAd()
 	return myad;
 }
 
-void GlobusResourceDownEvent::
-initFromClassAd(ClassAd* ad)
+void
+GlobusResourceDownEvent::initFromClassAd(ClassAd* ad)
 {
 	ULogEvent::initFromClassAd(ad);
 
@@ -1085,32 +1067,30 @@ initFromClassAd(ClassAd* ad)
 
 
 // ----- the GenericEvent class
-GenericEvent::
-GenericEvent()
-{	
+GenericEvent::GenericEvent(void)
+{
 	info[0] = '\0';
 	eventNumber = ULOG_GENERIC;
 }
 
-GenericEvent::
-~GenericEvent()
+GenericEvent::~GenericEvent(void)
 {
 }
 
-int GenericEvent::
-writeEvent(FILE *file)
+int
+GenericEvent::writeEvent(FILE *file)
 {
     int retval = fprintf(file, "%s\n", info);
     if (retval < 0)
     {
-	return 0;
+		return 0;
     }
-    
+
     return 1;
 }
 
-int GenericEvent::
-readEvent(FILE *file)
+int
+GenericEvent::readEvent(FILE *file)
 {
     int retval = fscanf(file, "%[^\n]\n", info);
     if (retval < 0)
@@ -1119,9 +1099,9 @@ readEvent(FILE *file)
     }
     return 1;
 }
-	
-ClassAd* GenericEvent::
-toClassAd()
+
+ClassAd*
+GenericEvent::toClassAd(void)
 {
 	ClassAd* myad = ULogEvent::toClassAd();
 	if( !myad ) return NULL;
@@ -1136,8 +1116,8 @@ toClassAd()
 	return myad;
 }
 
-void GenericEvent::
-initFromClassAd(ClassAd* ad)
+void
+GenericEvent::initFromClassAd(ClassAd* ad)
 {
 	ULogEvent::initFromClassAd(ad);
 
@@ -1148,16 +1128,16 @@ initFromClassAd(ClassAd* ad)
 	}
 }
 
-void GenericEvent::
-setInfoText(char const *str)
+void
+GenericEvent::setInfoText(char const *str)
 {
 	strncpy(info,str,sizeof(info));
 	info[ sizeof(info) - 1 ] = '\0'; //ensure null-termination
 }
 
 // ----- the RemoteErrorEvent class
-RemoteErrorEvent::RemoteErrorEvent()
-{	
+RemoteErrorEvent::RemoteErrorEvent(void)
+{
 	error_str = NULL;
 	execute_host[0] = daemon_name[0] = '\0';
 	eventNumber = ULOG_REMOTE_ERROR;
@@ -1166,7 +1146,7 @@ RemoteErrorEvent::RemoteErrorEvent()
 	hold_reason_subcode = 0;
 }
 
-RemoteErrorEvent::~RemoteErrorEvent()
+RemoteErrorEvent::~RemoteErrorEvent(void)
 {
 	delete[] error_str;
 }
@@ -1187,57 +1167,57 @@ RemoteErrorEvent::writeEvent(FILE *file)
 {
 	char const *error_type = "Error";
 	char messagestr[512];
-	
+
 	ClassAd tmpCl1, tmpCl2;
-	ClassAd *tmpClP1 = &tmpCl1, *tmpClP2 = &tmpCl2;
+	//ClassAd *tmpClP1 = &tmpCl1, *tmpClP2 = &tmpCl2;
 	int retval;
 
 	snprintf(messagestr, 512, "Remote %s from %s on %s",
 			error_type,
 			daemon_name,
 			execute_host);
-	
+
 	scheddname = getenv( EnvGetName( ENV_SCHEDD_NAME ) );
 
 	if(!critical_error) error_type = "Warning";
 
 	if (critical_error) {
-		tmpClP1->Assign("endts", (int)eventclock);
-		tmpClP1->Assign("endtype", ULOG_REMOTE_ERROR);
-		tmpClP1->Assign("endmessage", messagestr);
-	
+		tmpCl1.Assign("endts", (int)eventclock);
+		tmpCl1.Assign("endtype", ULOG_REMOTE_ERROR);
+		tmpCl1.Assign("endmessage", messagestr);
+
 		// this inserts scheddname, cluster, proc, etc
-		insertCommonIdentifiers(tmpClP2);		
+		insertCommonIdentifiers(tmpCl2);
 
 		MyString tmp;
 		tmp.sprintf("endtype = null");
-		tmpClP2->Insert(tmp.Value());
+		tmpCl2.Insert(tmp.Value());
 
-			// critical error means this run is ended.  
-			// condor_event.o is part of cplus_lib.a, which may be linked by 
-			// non-daemons who wouldn't have initialized FILEObj. We don't 
+			// critical error means this run is ended.
+			// condor_event.o is part of cplus_lib.a, which may be linked by
+			// non-daemons who wouldn't have initialized FILEObj. We don't
 			// need to log events for non-daemons.
 		if (FILEObj) {
-			if (FILEObj->file_updateEvent("Runs", tmpClP1, tmpClP2) 
-				== QUILL_FAILURE) {	
+			if (FILEObj->file_updateEvent("Runs", &tmpCl1, &tmpCl2)
+				== QUILL_FAILURE) {
 				dprintf(D_ALWAYS, "Logging Event 5--- Error\n");
 				return 0; // return a error code, 0
-			}		
+			}
 		}
 
-	} else {		
+	} else {
 		        // this inserts scheddname, cluster, proc, etc
-        insertCommonIdentifiers(tmpClP1);           
+        insertCommonIdentifiers(tmpCl1);
 
-		tmpClP1->Assign("eventtype", ULOG_REMOTE_ERROR);
-		tmpClP1->Assign("eventtime", (int)eventclock);
-		tmpClP1->Assign("description", messagestr);
-				
+		tmpCl1.Assign("eventtype", ULOG_REMOTE_ERROR);
+		tmpCl1.Assign("eventtime", (int)eventclock);
+		tmpCl1.Assign("description", messagestr);
+
 		if (FILEObj) {
-			if (FILEObj->file_newEvent("Events", tmpClP1) == QUILL_FAILURE) {
+			if (FILEObj->file_newEvent("Events", &tmpCl1) == QUILL_FAILURE) {
 				dprintf(D_ALWAYS, "Logging Event 5--- Error\n");
 				return 0; // return a error code, 0
-			}			
+			}
 		}
 	}
 
@@ -1312,7 +1292,7 @@ RemoteErrorEvent::readEvent(FILE *file)
 
 		fpos_t filep;
 		fgetpos( file, &filep );
-     
+
 		if( !fgets(line, sizeof(line), file) || strcmp(line, "...\n") == 0 ) {
 			fsetpos( file, &filep );
 			break;
@@ -1340,7 +1320,7 @@ RemoteErrorEvent::readEvent(FILE *file)
 }
 
 ClassAd*
-RemoteErrorEvent::toClassAd()
+RemoteErrorEvent::toClassAd(void)
 {
 	ClassAd* myad = ULogEvent::toClassAd();
 	if( !myad ) return NULL;
@@ -1422,120 +1402,115 @@ RemoteErrorEvent::setExecuteHost(char const *str)
 }
 
 // ----- the ExecuteEvent class
-ExecuteEvent::
-ExecuteEvent()
-{	
+ExecuteEvent::ExecuteEvent(void)
+{
 	executeHost [0] = '\0';
 	remoteName [0] = '\0';
 	eventNumber = ULOG_EXECUTE;
 }
 
-ExecuteEvent::
-~ExecuteEvent()
+ExecuteEvent::~ExecuteEvent(void)
 {
 }
 
 
-int ExecuteEvent::
-writeEvent (FILE *file)
-{	
-  struct hostent *hp;
-  unsigned long addr;
-  MyString executehostname = "";
-  ClassAd tmpCl1, tmpCl2, tmpCl3;
-  ClassAd *tmpClP1 = &tmpCl1, *tmpClP2 = &tmpCl2, *tmpClP3 = &tmpCl3;
-  MyString tmp = "";
-  int retval;
+int
+ExecuteEvent::writeEvent (FILE *file)
+{
+	struct hostent *hp;
+	unsigned long addr;
+	ClassAd tmpCl1, tmpCl2, tmpCl3;
+	//ClassAd *tmpClP1 = &tmpCl1, *tmpClP2 = &tmpCl2, *tmpClP3 = &tmpCl3;
+	MyString tmp = "";
+	int retval;
 
-  //JobAd is defined in condor_shadow.V6/log_events.C and is simply
-  //defined as an external variable here
+	//JobAd is defined in condor_shadow.V6/log_events.C and is simply
+	//defined as an external variable here
 
-  scheddname = getenv( EnvGetName( ENV_SCHEDD_NAME ) );
-  
-  if(scheddname) 
-    dprintf(D_FULLDEBUG, "scheddname = %s\n", scheddname);
-  else 
-    dprintf(D_FULLDEBUG, "scheddname is null\n");
-  
-  dprintf(D_FULLDEBUG, "executeHost = %s\n", executeHost);
+	scheddname = getenv( EnvGetName( ENV_SCHEDD_NAME ) );
 
-  char *start = index(executeHost, '<');
-  char *end = index(executeHost, ':');
+	if(scheddname)
+		dprintf(D_FULLDEBUG, "scheddname = %s\n", scheddname);
+	else
+		dprintf(D_FULLDEBUG, "scheddname is null\n");
 
-  if(start && end) {
-    char *tmpaddr;
-    tmpaddr = (char *) malloc(32 * sizeof(char));
-    tmpaddr = strncpy(tmpaddr, start+1, end-start-1);
-    tmpaddr[end-start-1] = '\0';
-    addr = inet_addr(tmpaddr);
-	dprintf(D_FULLDEBUG, "start = %s\n", start);
-	dprintf(D_FULLDEBUG, "end = %s\n", end);
-	dprintf(D_FULLDEBUG, "tmpaddr = %s\n", tmpaddr);
-    free(tmpaddr);
-  }
-  else {
-    addr = inet_addr(executeHost);
-  }
+	dprintf(D_FULLDEBUG, "executeHost = %s\n", executeHost);
 
-  hp = gethostbyaddr((char *) &addr, sizeof(addr), AF_INET);
-  if(hp) {    
-    dprintf(D_FULLDEBUG, "Executehost name = %s (hp->h_name) \n", hp->h_name);
-    executehostname = hp->h_name;
-  }
-  else {
-    dprintf(D_FULLDEBUG, "Executehost name = %s (executeHost) \n", executeHost);
-    executehostname = executeHost;
-  }
+	char *start = index(executeHost, '<');
+	char *end = index(executeHost, ':');
 
-  tmpClP1->Assign("endts", (int)eventclock);
+	if(start && end) {
+		char *tmpaddr;
+		tmpaddr = (char *) malloc(32 * sizeof(char));
+		tmpaddr = strncpy(tmpaddr, start+1, end-start-1);
+		tmpaddr[end-start-1] = '\0';
+		addr = inet_addr(tmpaddr);
+		dprintf(D_FULLDEBUG, "start = %s\n", start);
+		dprintf(D_FULLDEBUG, "end = %s\n", end);
+		dprintf(D_FULLDEBUG, "tmpaddr = %s\n", tmpaddr);
+		free(tmpaddr);
+	}
+	else {
+		addr = inet_addr(executeHost);
+	}
 
-  tmp.sprintf("endtype = -1");
-  tmpClP1->Insert(tmp.Value());
+	hp = gethostbyaddr((char *) &addr, sizeof(addr), AF_INET);
+	if(hp) {
+		dprintf(D_FULLDEBUG, "Executehost name = %s (hp->h_name) \n", hp->h_name);
+	}
+	else {
+		dprintf(D_FULLDEBUG, "Executehost name = %s (executeHost) \n", executeHost);
+	}
 
-  tmp.sprintf("endmessage = \"UNKNOWN ERROR\"");
-  tmpClP1->Insert(tmp.Value());
- 
-  // this inserts scheddname, cluster, proc, etc
-  insertCommonIdentifiers(tmpClP2);           
+	tmpCl1.Assign("endts", (int)eventclock);
 
-  tmp.sprintf("endtype = null");
-  tmpClP2->Insert(tmp.Value());
-  
-  if (FILEObj) {
-	  if (FILEObj->file_updateEvent("Runs", tmpClP1, tmpClP2) == QUILL_FAILURE) {
-		  dprintf(D_ALWAYS, "Logging Event 1--- Error\n");
-		  return 0; // return a error code, 0
-	  }
-  }
+	tmp.sprintf("endtype = -1");
+	tmpCl1.Insert(tmp.Value());
 
-  tmpClP3->Assign("machine_id", remoteName);
+	tmp.sprintf("endmessage = \"UNKNOWN ERROR\"");
+	tmpCl1.Insert(tmp.Value());
 
-  // this inserts scheddname, cluster, proc, etc
-  insertCommonIdentifiers(tmpClP3);           
+	// this inserts scheddname, cluster, proc, etc
+	insertCommonIdentifiers(tmpCl2);
 
-  tmpClP3->Assign("startts", (int)eventclock);
+	tmp.sprintf("endtype = null");
+	tmpCl2.Insert(tmp.Value());
 
-  if(FILEObj) {
-	  if (FILEObj->file_newEvent("Runs", tmpClP3) == QUILL_FAILURE) {
-		  dprintf(D_ALWAYS, "Logging Event 1--- Error\n");
-		  return 0; // return a error code, 0
-	  }
-  }
+	if (FILEObj) {
+		if (FILEObj->file_updateEvent("Runs", &tmpCl1, &tmpCl2) == QUILL_FAILURE) {
+			dprintf(D_ALWAYS, "Logging Event 1--- Error\n");
+			return 0; // return a error code, 0
+		}
+	}
 
-  retval = fprintf (file, "Job executing on host: %s\n", executeHost);
+	tmpCl3.Assign("machine_id", remoteName);
 
-  if (retval < 0) {
-     return 0;
-  }
+	// this inserts scheddname, cluster, proc, etc
+	insertCommonIdentifiers(tmpCl3);
 
-  return 1;
+	tmpCl3.Assign("startts", (int)eventclock);
+
+	if(FILEObj) {
+		if (FILEObj->file_newEvent("Runs", &tmpCl3) == QUILL_FAILURE) {
+			dprintf(D_ALWAYS, "Logging Event 1--- Error\n");
+			return 0; // return a error code, 0
+		}
+	}
+
+	retval = fprintf (file, "Job executing on host: %s\n", executeHost);
+
+	if (retval < 0) {
+		return 0;
+	}
+
+	return 1;
 }
 
-int ExecuteEvent::
-readEvent (FILE *file)
+int
+ExecuteEvent::readEvent (FILE *file)
 {
 	MyString line;
-	if ( ! line.readLine(file) ) 
+	if ( ! line.readLine(file) )
 	{
 		return 0; // EOF or error
 	}
@@ -1557,8 +1532,8 @@ readEvent (FILE *file)
 	return 0;
 }
 
-ClassAd* ExecuteEvent::
-toClassAd()
+ClassAd*
+ExecuteEvent::toClassAd(void)
 {
 	ClassAd* myad = ULogEvent::toClassAd();
 	if( !myad ) return NULL;
@@ -1573,8 +1548,8 @@ toClassAd()
 	return myad;
 }
 
-void ExecuteEvent::
-initFromClassAd(ClassAd* ad)
+void
+ExecuteEvent::initFromClassAd(ClassAd* ad)
 {
 	ULogEvent::initFromClassAd(ad);
 
@@ -1587,42 +1562,40 @@ initFromClassAd(ClassAd* ad)
 
 
 // ----- the ExecutableError class
-ExecutableErrorEvent::
-ExecutableErrorEvent()
+ExecutableErrorEvent::ExecutableErrorEvent(void)
 {
 	errType = (ExecErrorType) -1;
 	eventNumber = ULOG_EXECUTABLE_ERROR;
 }
 
 
-ExecutableErrorEvent::
-~ExecutableErrorEvent()
+ExecutableErrorEvent::~ExecutableErrorEvent(void)
 {
 }
 
-int ExecutableErrorEvent::
-writeEvent (FILE *file)
+int
+ExecutableErrorEvent::writeEvent (FILE *file)
 {
 	int retval;
 	char messagestr[512];
 	ClassAd tmpCl1, tmpCl2;
-	ClassAd *tmpClP1 = &tmpCl1, *tmpClP2 = &tmpCl2;
+	//ClassAd *tmpClP1 = &tmpCl1, *tmpClP2 = &tmpCl2;
 	MyString tmp = "";
 
 	scheddname = getenv( EnvGetName( ENV_SCHEDD_NAME ) );
 
-	tmpClP1->Assign("endts", (int)eventclock);
-	tmpClP1->Assign("endtype", ULOG_EXECUTABLE_ERROR);
-	tmpClP1->Assign("endmessage", messagestr);
-		
+	tmpCl1.Assign("endts", (int)eventclock);
+	tmpCl1.Assign("endtype", ULOG_EXECUTABLE_ERROR);
+	tmpCl1.Assign("endmessage", messagestr);
+
 	// this inserts scheddname, cluster, proc, etc
-	insertCommonIdentifiers(tmpClP2);           
+	insertCommonIdentifiers(tmpCl2);
 
 	tmp.sprintf( "endtype = null");
-	tmpClP2->Insert(tmp.Value());
-  
+	tmpCl2.Insert(tmp.Value());
+
 	if (FILEObj) {
-		if (FILEObj->file_updateEvent("Runs", tmpClP1, tmpClP2) == QUILL_FAILURE) {
+		if (FILEObj->file_updateEvent("Runs", &tmpCl1, &tmpCl2) == QUILL_FAILURE) {
 			dprintf(D_ALWAYS, "Logging Event 12--- Error\n");
 			return 0; // return a error code, 0
 		}
@@ -1644,23 +1617,23 @@ writeEvent (FILE *file)
 		retval = fprintf (file, "(%d) [Bad error number.]\n", errType);
 		sprintf(messagestr,  "Unknown error");
 	}
-				
+
 	if (retval < 0) return 0;
 
 	return 1;
 }
 
 
-int ExecutableErrorEvent::
-readEvent (FILE *file)
+int
+ExecutableErrorEvent::readEvent (FILE *file)
 {
 	int  retval;
 	char buffer [128];
 
 	// get the error number
 	retval = fscanf (file, "(%d)", (int*)&errType);
-	if (retval != 1) 
-	{ 
+	if (retval != 1)
+	{
 		return 0;
 	}
 
@@ -1673,13 +1646,13 @@ readEvent (FILE *file)
 	return 1;
 }
 
-ClassAd* ExecutableErrorEvent::
-toClassAd()
+ClassAd*
+ExecutableErrorEvent::toClassAd(void)
 {
 	ClassAd* myad = ULogEvent::toClassAd();
 	if( !myad ) return NULL;
 	char buf0[512];
-	
+
 	if( errType >= 0 ) {
 		snprintf(buf0, 512, "ExecuteErrorType = %d", errType);
 		buf0[511] = 0;
@@ -1689,8 +1662,8 @@ toClassAd()
 	return myad;
 }
 
-void ExecutableErrorEvent::
-initFromClassAd(ClassAd* ad)
+void
+ExecutableErrorEvent::initFromClassAd(ClassAd* ad)
 {
 	ULogEvent::initFromClassAd(ad);
 
@@ -1710,8 +1683,7 @@ initFromClassAd(ClassAd* ad)
 }
 
 // ----- the CheckpointedEvent class
-CheckpointedEvent::
-CheckpointedEvent()
+CheckpointedEvent::CheckpointedEvent(void)
 {
 	(void)memset((void*)&run_local_rusage,0,(size_t) sizeof(run_local_rusage));
 	run_remote_rusage = run_local_rusage;
@@ -1721,32 +1693,31 @@ CheckpointedEvent()
     sent_bytes = 0.0;
 }
 
-CheckpointedEvent::
-~CheckpointedEvent()
+CheckpointedEvent::~CheckpointedEvent(void)
 {
 }
 
-int CheckpointedEvent::
-writeEvent (FILE *file)
+int
+CheckpointedEvent::writeEvent (FILE *file)
 {
 	char messagestr[512];
 	ClassAd tmpCl1;
-	ClassAd *tmpClP1 = &tmpCl1;
+	//ClassAd *tmpClP1 = &tmpCl1;
 
 	sprintf(messagestr,  "Job was checkpointed");
 
 	scheddname = getenv( EnvGetName( ENV_SCHEDD_NAME ) );
 
 	// this inserts scheddname, cluster, proc, etc
-	insertCommonIdentifiers(tmpClP1);           
+	insertCommonIdentifiers(tmpCl1);
 
-	tmpClP1->Assign("eventtype", ULOG_CHECKPOINTED);
-	tmpClP1->Assign("eventtime", (int)eventclock);
-	
-	tmpClP1->Assign("description", messagestr);
-				
+	tmpCl1.Assign("eventtype", ULOG_CHECKPOINTED);
+	tmpCl1.Assign("eventtime", (int)eventclock);
+
+	tmpCl1.Assign("description", messagestr);
+
 	if (FILEObj) {
-		if (FILEObj->file_newEvent("Events", tmpClP1) == QUILL_FAILURE) {
+		if (FILEObj->file_newEvent("Events", &tmpCl1) == QUILL_FAILURE) {
 			dprintf(D_ALWAYS, "Logging Event 6--- Error\n");
 			return 0; // return a error code, 0
 		}
@@ -1768,8 +1739,8 @@ writeEvent (FILE *file)
 	return 1;
 }
 
-int CheckpointedEvent::
-readEvent (FILE *file)
+int
+CheckpointedEvent::readEvent (FILE *file)
 {
 	int retval = fscanf (file, "Job was checkpointed.\n");
 
@@ -1786,9 +1757,9 @@ readEvent (FILE *file)
 
 	return 1;
 }
-		
-ClassAd* CheckpointedEvent::
-toClassAd()
+
+ClassAd*
+CheckpointedEvent::toClassAd(void)
 {
 	ClassAd* myad = ULogEvent::toClassAd();
 	if( !myad ) return NULL;
@@ -1799,7 +1770,7 @@ toClassAd()
 	free(rs);
 	buf0[511] = 0;
 	if( !myad->Insert(buf0) ) return NULL;
-	
+
 	rs = rusageToStr(run_remote_rusage);
 	snprintf(buf0, 512, "RunRemoteUsage = \"%s\"", rs);
 	free(rs);
@@ -1813,8 +1784,8 @@ toClassAd()
 	return myad;
 }
 
-void CheckpointedEvent::
-initFromClassAd(ClassAd* ad)
+void
+CheckpointedEvent::initFromClassAd(ClassAd* ad)
 {
 	ULogEvent::initFromClassAd(ad);
 
@@ -1835,7 +1806,7 @@ initFromClassAd(ClassAd* ad)
 }
 
 // ----- the JobEvictedEvent class
-JobEvictedEvent::JobEvictedEvent()
+JobEvictedEvent::JobEvictedEvent(void)
 {
 	eventNumber = ULOG_JOB_EVICTED;
 	checkpointed = false;
@@ -1854,7 +1825,7 @@ JobEvictedEvent::JobEvictedEvent()
 }
 
 
-JobEvictedEvent::~JobEvictedEvent()
+JobEvictedEvent::~JobEvictedEvent(void)
 {
 	delete[] reason;
 	delete[] core_file;
@@ -1864,19 +1835,19 @@ JobEvictedEvent::~JobEvictedEvent()
 void
 JobEvictedEvent::setReason( const char* reason_str )
 {
-    delete[] reason; 
-    reason = NULL; 
-    if( reason_str ) { 
-        reason = strnewp( reason_str ); 
-        if( !reason ) { 
-            EXCEPT( "ERROR: out of memory!\n" ); 
-        } 
-    } 
+    delete[] reason;
+    reason = NULL;
+    if( reason_str ) {
+        reason = strnewp( reason_str );
+        if( !reason ) {
+            EXCEPT( "ERROR: out of memory!\n" );
+        }
+    }
 }
 
 
-const char* JobEvictedEvent::
-getReason( void ) const
+const char*
+JobEvictedEvent::getReason( void ) const
 {
 	return reason;
 }
@@ -1890,7 +1861,7 @@ JobEvictedEvent::setCoreFile( const char* core_name )
 	if( core_name ) {
 		core_file = strnewp( core_name );
 		if( !core_file ) {
-			EXCEPT( "ERROR: out of memory!\n" );  
+			EXCEPT( "ERROR: out of memory!\n" );
 		}
 	}
 }
@@ -1919,7 +1890,7 @@ JobEvictedEvent::readEvent( FILE *file )
 		return 0;
 	}
 
-		/* 
+		/*
 		   since the old parsing code treated the integer we read as a
 		   bool (only to decide between checkpointed or not), we now
 		   have to parse the string we just read to figure out if this
@@ -1989,7 +1960,7 @@ JobEvictedEvent::readEvent( FILE *file )
 	}
 		// finally, see if there's a reason.  this is optional.
 
-	// if we get a reason, fine. If we don't, we need to 
+	// if we get a reason, fine. If we don't, we need to
 	// rewind the file position.
 	fpos_t filep;
 	fgetpos( file, &filep );
@@ -2020,41 +1991,41 @@ JobEvictedEvent::writeEvent( FILE *file )
 {
   char messagestr[512], checkpointedstr[6], terminatestr[512];
   ClassAd tmpCl1, tmpCl2;
-  ClassAd *tmpClP1 = &tmpCl1, *tmpClP2 = &tmpCl2;
+  //ClassAd *tmpClP1 = &tmpCl1, *tmpClP2 = &tmpCl2;
   MyString tmp = "";
-  
+
   //JobAd is defined in condor_shadow.V6/log_events.C and is simply
   //defined as an external variable here
-  
+
   strcpy(checkpointedstr, "");
   strcpy(messagestr, "");
   strcpy(terminatestr, "");
-  
-  
+
+
   int retval;
-  
-  if( fprintf(file, "Job was evicted.\n\t") < 0 ) { 
+
+  if( fprintf(file, "Job was evicted.\n\t") < 0 ) {
     return 0;
   }
-  
-  if( terminate_and_requeued ) { 
+
+  if( terminate_and_requeued ) {
     retval = fprintf( file, "(0) Job terminated and was requeued\n\t" );
     sprintf(messagestr,  "Job evicted, terminated and was requeued");
     strcpy(checkpointedstr, "false");
   } else if( checkpointed ) {
     retval = fprintf( file, "(1) Job was checkpointed.\n\t" );
-    sprintf(messagestr,  "Job evicted and was checkpointed");	
+    sprintf(messagestr,  "Job evicted and was checkpointed");
     strcpy(checkpointedstr, "true");
   } else {
     retval = fprintf( file, "(0) Job was not checkpointed.\n\t" );
     sprintf(messagestr,  "Job evicted and was not checkpointed");
     strcpy(checkpointedstr, "false");
   }
-  
+
   if( retval < 0 ) {
     return 0;
   }
-  
+
   if( (!writeRusage (file, run_remote_rusage)) 			||
       (fprintf (file, "  -  Run Remote Usage\n\t") < 0) 	||
       (!writeRusage (file, run_local_rusage)) 			||
@@ -2062,24 +2033,24 @@ JobEvictedEvent::writeEvent( FILE *file )
     {
       return 0;
     }
-  
-  if( fprintf(file, "\t%.0f  -  Run Bytes Sent By Job\n", 
+
+  if( fprintf(file, "\t%.0f  -  Run Bytes Sent By Job\n",
 	      sent_bytes) < 0 ) {
     return 0;
   }
-  if( fprintf(file, "\t%.0f  -  Run Bytes Received By Job\n", 
+  if( fprintf(file, "\t%.0f  -  Run Bytes Received By Job\n",
 	      recvd_bytes) < 0 ) {
     return 0;
   }
-  
+
   if(terminate_and_requeued ) {
     if( normal ) {
-      if( fprintf(file, "\t(1) Normal termination (return value %d)\n", 
+      if( fprintf(file, "\t(1) Normal termination (return value %d)\n",
 		  return_value) < 0 ) {
 	return 0;
       }
       sprintf(terminatestr,  " (1) Normal termination (return value %d)", return_value);
-    } 
+    }
     else {
       if( fprintf(file, "\t(0) Abnormal termination (signal %d)\n",
 		  signal_number) < 0 ) {
@@ -2091,7 +2062,7 @@ JobEvictedEvent::writeEvent( FILE *file )
 	retval = fprintf( file, "\t(1) Corefile in: %s\n", core_file );
 	strcat(terminatestr, " (1) Corefile in: ");
 	strcat(terminatestr, core_file);
-      } 
+      }
       else {
 	retval = fprintf( file, "\t(0) No core file\n" );
 	strcat(terminatestr, " (0) No core file ");
@@ -2100,7 +2071,7 @@ JobEvictedEvent::writeEvent( FILE *file )
 	return 0;
       }
     }
-    
+
     if( reason ) {
       if( fprintf(file, "\t%s\n", reason) < 0 ) {
 	return 0;
@@ -2108,29 +2079,29 @@ JobEvictedEvent::writeEvent( FILE *file )
       strcat(terminatestr,  " reason: ");
       strcat(terminatestr,  reason);
     }
-  
+
   }
-  
+
   scheddname = getenv( EnvGetName( ENV_SCHEDD_NAME ) );
-  
-  tmpClP1->Assign("endts", (int)eventclock);
-  tmpClP1->Assign("endtype", ULOG_JOB_EVICTED);
-		
+
+  tmpCl1.Assign("endts", (int)eventclock);
+  tmpCl1.Assign("endtype", ULOG_JOB_EVICTED);
+
   tmp.sprintf( "endmessage = \"%s%s\"", messagestr, terminatestr);
-  tmpClP1->Insert(tmp.Value());
-		
-  tmpClP1->Assign("wascheckpointed", checkpointedstr);
-  tmpClP1->Assign("runbytessent", sent_bytes);
-  tmpClP1->Assign("runbytesreceived", recvd_bytes);
+  tmpCl1.Insert(tmp.Value());
+
+  tmpCl1.Assign("wascheckpointed", checkpointedstr);
+  tmpCl1.Assign("runbytessent", sent_bytes);
+  tmpCl1.Assign("runbytesreceived", recvd_bytes);
 
   // this inserts scheddname, cluster, proc, etc
-  insertCommonIdentifiers(tmpClP2);           
-	
+  insertCommonIdentifiers(tmpCl2);
+
   tmp.sprintf( "endtype = null");
-  tmpClP2->Insert(tmp.Value());
-  
+  tmpCl2.Insert(tmp.Value());
+
   if (FILEObj) {
-	  if (FILEObj->file_updateEvent("Runs", tmpClP1, tmpClP2) == QUILL_FAILURE) {
+	  if (FILEObj->file_updateEvent("Runs", &tmpCl1, &tmpCl2) == QUILL_FAILURE) {
 		  dprintf(D_ALWAYS, "Logging Event 2 --- Error\n");
 		  return 0; // return a error code, 0
 	  }
@@ -2139,13 +2110,13 @@ JobEvictedEvent::writeEvent( FILE *file )
   return 1;
 }
 
-ClassAd* JobEvictedEvent::
-toClassAd()
+ClassAd*
+JobEvictedEvent::toClassAd(void)
 {
 	ClassAd* myad = ULogEvent::toClassAd();
 	if( !myad ) return NULL;
 	char buf0[512];
-	
+
 	snprintf(buf0, 512, "Checkpointed = %s", checkpointed ? "TRUE" : "FALSE");
 	buf0[511] = 0;
 	if( !myad->Insert(buf0) ) return NULL;
@@ -2155,7 +2126,7 @@ toClassAd()
 	free(rs);
 	buf0[511] = 0;
 	if( !myad->Insert(buf0) ) return NULL;
-	
+
 	rs = rusageToStr(run_remote_rusage);
 	snprintf(buf0, 512, "RunRemoteUsage = \"%s\"", rs);
 	free(rs);
@@ -2173,7 +2144,7 @@ toClassAd()
 			 terminate_and_requeued ? "TRUE" : "FALSE");
 	buf0[511] = 0;
 	if( !myad->Insert(buf0) ) return NULL;
-	snprintf(buf0, 512, "TerminatedNormally = %s", 
+	snprintf(buf0, 512, "TerminatedNormally = %s",
 			 normal ? "TRUE" : "FALSE");
 	buf0[511] = 0;
 	if( !myad->Insert(buf0) ) return NULL;
@@ -2199,12 +2170,12 @@ toClassAd()
 		buf3.sprintf("CoreFile = \"%s\"", core_file);
 		if( !myad->Insert(buf3.Value()) ) return NULL;
 	}
-	
+
 	return myad;
 }
 
-void JobEvictedEvent::
-initFromClassAd(ClassAd* ad)
+void
+JobEvictedEvent::initFromClassAd(ClassAd* ad)
 {
 	ULogEvent::initFromClassAd(ad);
 
@@ -2225,7 +2196,7 @@ initFromClassAd(ClassAd* ad)
 		strToRusage(usageStr, run_remote_rusage);
 		free(usageStr);
 	}
-	
+
 	ad->LookupFloat("SentBytes", sent_bytes);
 	ad->LookupFloat("ReceivedBytes", recvd_bytes);
 
@@ -2256,22 +2227,20 @@ initFromClassAd(ClassAd* ad)
 
 
 // ----- JobAbortedEvent class
-JobAbortedEvent::
-JobAbortedEvent ()
+JobAbortedEvent::JobAbortedEvent (void)
 {
 	eventNumber = ULOG_JOB_ABORTED;
 	reason = NULL;
 }
 
-JobAbortedEvent::
-~JobAbortedEvent()
+JobAbortedEvent::~JobAbortedEvent(void)
 {
 	delete[] reason;
 }
 
 
-void JobAbortedEvent::
-setReason( const char* reason_str )
+void
+JobAbortedEvent::setReason( const char* reason_str )
 {
 	delete[] reason;
 	reason = NULL;
@@ -2284,38 +2253,38 @@ setReason( const char* reason_str )
 }
 
 
-const char* JobAbortedEvent::
-getReason( void ) const
+const char*
+JobAbortedEvent::getReason( void ) const
 {
 	return reason;
 }
 
 
-int JobAbortedEvent::
-writeEvent (FILE *file)
+int
+JobAbortedEvent::writeEvent (FILE *file)
 {
 
 	char messagestr[512];
 	ClassAd tmpCl1;
-	ClassAd *tmpClP1 = &tmpCl1;
+	//ClassAd *tmpClP1 = &tmpCl1;
 	MyString tmp = "";
 
 	scheddname = getenv( EnvGetName( ENV_SCHEDD_NAME ) );
 
 	if (reason)
 		snprintf(messagestr,  512, "Job was aborted by the user: %s", reason);
-	else 
+	else
 		sprintf(messagestr,  "Job was aborted by the user");
 
 	// this inserts scheddname, cluster, proc, etc
-	insertCommonIdentifiers(tmpClP1);           
+	insertCommonIdentifiers(tmpCl1);
 
-	tmpClP1->Assign("eventtype", ULOG_JOB_ABORTED);
-	tmpClP1->Assign("eventtime", (int)eventclock);
-	tmpClP1->Assign("description", messagestr);
-				
+	tmpCl1.Assign("eventtype", ULOG_JOB_ABORTED);
+	tmpCl1.Assign("eventtime", (int)eventclock);
+	tmpCl1.Assign("description", messagestr);
+
 	if (FILEObj) {
-		if (FILEObj->file_newEvent("Events", tmpClP1) == QUILL_FAILURE) {
+		if (FILEObj->file_newEvent("Events", &tmpCl1) == QUILL_FAILURE) {
 			dprintf(D_ALWAYS, "Logging Event 7--- Error\n");
 			return 0; // return a error code, 0
 		}
@@ -2333,8 +2302,8 @@ writeEvent (FILE *file)
 }
 
 
-int JobAbortedEvent::
-readEvent (FILE *file)
+int
+JobAbortedEvent::readEvent (FILE *file)
 {
 	if( fscanf(file, "Job was aborted by the user.\n") == EOF ) {
 		return 0;
@@ -2350,7 +2319,7 @@ readEvent (FILE *file)
 		fsetpos( file, &filep );
 		return 1;	// backwards compatibility
 	}
- 
+
 	chomp( reason_buf );  // strip the newline, if it's there.
 		// This is strange, sometimes we get the \t from fgets(), and
 		// sometimes we don't.  Instead of trying to figure out why,
@@ -2363,12 +2332,12 @@ readEvent (FILE *file)
 	return 1;
 }
 
-ClassAd* JobAbortedEvent::
-toClassAd()
+ClassAd*
+JobAbortedEvent::toClassAd(void)
 {
 	ClassAd* myad = ULogEvent::toClassAd();
 	if( !myad ) return NULL;
-	
+
 	if( reason ) {
 		MyString buf2;
 		buf2.sprintf("Reason = \"%s\"", reason);
@@ -2378,8 +2347,8 @@ toClassAd()
 	return myad;
 }
 
-void JobAbortedEvent::
-initFromClassAd(ClassAd* ad)
+void
+JobAbortedEvent::initFromClassAd(ClassAd* ad)
 {
 	ULogEvent::initFromClassAd(ad);
 
@@ -2395,7 +2364,7 @@ initFromClassAd(ClassAd* ad)
 }
 
 // ----- TerminatedEvent baseclass
-TerminatedEvent::TerminatedEvent()
+TerminatedEvent::TerminatedEvent(void)
 {
 	normal = false;
 	core_file = NULL;
@@ -2407,7 +2376,7 @@ TerminatedEvent::TerminatedEvent()
 	sent_bytes = recvd_bytes = total_sent_bytes = total_recvd_bytes = 0.0;
 }
 
-TerminatedEvent::~TerminatedEvent()
+TerminatedEvent::~TerminatedEvent(void)
 {
 	delete[] core_file;
 }
@@ -2438,18 +2407,18 @@ TerminatedEvent::writeEvent( FILE *file, const char* header )
 {
   char messagestr[512];
   ClassAd tmpCl1, tmpCl2;
-  ClassAd *tmpClP1 = &tmpCl1, *tmpClP2 = &tmpCl2;
+  //ClassAd *tmpClP1 = &tmpCl1, *tmpClP2 = &tmpCl2;
   MyString tmp = "";
 
   //JobAd is defined in condor_shadow.V6/log_events.C and is simply
   //defined as an external variable here
-  
+
   strcpy(messagestr, "");
-  
+
 	int retval=0;
 
 	if( normal ) {
-		if( fprintf(file, "\t(1) Normal termination (return value %d)\n\t", 
+		if( fprintf(file, "\t(1) Normal termination (return value %d)\n\t",
 					returnValue) < 0 ) {
 			return 0;
 		}
@@ -2486,7 +2455,7 @@ TerminatedEvent::writeEvent( FILE *file, const char* header )
 		return 0;
 
 
-	if (fprintf(file, "\t%.0f  -  Run Bytes Sent By %s\n", 
+	if (fprintf(file, "\t%.0f  -  Run Bytes Sent By %s\n",
 				sent_bytes, header) < 0 ||
 		fprintf(file, "\t%.0f  -  Run Bytes Received By %s\n",
 				recvd_bytes, header) < 0 ||
@@ -2498,17 +2467,17 @@ TerminatedEvent::writeEvent( FILE *file, const char* header )
 
 	scheddname = getenv( EnvGetName( ENV_SCHEDD_NAME ) );
 
-	tmpClP1->Assign("endmessage", messagestr);
-	tmpClP1->Assign("runbytessent", sent_bytes);
-	tmpClP1->Assign("runbytesreceived", recvd_bytes);
+	tmpCl1.Assign("endmessage", messagestr);
+	tmpCl1.Assign("runbytessent", sent_bytes);
+	tmpCl1.Assign("runbytesreceived", recvd_bytes);
 
 	// this inserts scheddname, cluster, proc, etc
-	insertCommonIdentifiers(tmpClP2);           
-	
-	tmpClP2->Assign("endts", (int)eventclock);
+	insertCommonIdentifiers(tmpCl2);
+
+	tmpCl2.Assign("endts", (int)eventclock);
 
 	if (FILEObj) {
-		if (FILEObj->file_updateEvent("Runs", tmpClP1, tmpClP2) == QUILL_FAILURE) {
+		if (FILEObj->file_updateEvent("Runs", &tmpCl1, &tmpCl2) == QUILL_FAILURE) {
 			dprintf(D_ALWAYS, "Logging Event 3--- Error\n");
 			return 0; // return a error code, 0
 		}
@@ -2550,7 +2519,7 @@ TerminatedEvent::readEvent( FILE *file, const char* header )
 			chomp( buffer );
 			setCoreFile( buffer );
 		} else {
-			if (fgets (buffer, 128, file) == 0) 
+			if (fgets (buffer, 128, file) == 0)
 				return 0;
 		}
 	}
@@ -2561,7 +2530,7 @@ TerminatedEvent::readEvent( FILE *file, const char* header )
 		!readRusage(file,total_remote_rusage)|| !fgets(buffer, 128, file) ||
 		!readRusage(file,total_local_rusage) || !fgets(buffer, 128, file))
 		return 0;
-	
+
 		// THIS CODE IS TOTALLY BROKEN.  Please fix me.
 		// In particular: fscanf() when you don't convert anything to
 		// a local variable returns 0, but we think that's failure.
@@ -2570,7 +2539,7 @@ TerminatedEvent::readEvent( FILE *file, const char* header )
 		fscanf (file, "\n") == 0 ||
 		fscanf (file, "\t%f  -  Run Bytes Received By ",
 				&recvd_bytes) == 0 ||
-		fscanf (file, header) == 0 || 
+		fscanf (file, header) == 0 ||
 		fscanf (file, "\n") == 0 ||
 		fscanf (file, "\t%f  -  Total Bytes Sent By ",
 				&total_sent_bytes) == 0 ||
@@ -2587,13 +2556,13 @@ TerminatedEvent::readEvent( FILE *file, const char* header )
 
 
 // ----- JobTerminatedEvent class
-JobTerminatedEvent::JobTerminatedEvent() : TerminatedEvent()
+JobTerminatedEvent::JobTerminatedEvent(void) : TerminatedEvent()
 {
 	eventNumber = ULOG_JOB_TERMINATED;
 }
 
 
-JobTerminatedEvent::~JobTerminatedEvent()
+JobTerminatedEvent::~JobTerminatedEvent(void)
 {
 }
 
@@ -2602,25 +2571,25 @@ int
 JobTerminatedEvent::writeEvent (FILE *file)
 {
   ClassAd tmpCl1, tmpCl2;
-  ClassAd *tmpClP1 = &tmpCl1, *tmpClP2 = &tmpCl2;
+  //ClassAd *tmpClP1 = &tmpCl1, *tmpClP2 = &tmpCl2;
   MyString tmp = "";
 
   //JobAd is defined in condor_shadow.V6/log_events.C and is simply
   //defined as an external variable here
-  
+
   scheddname = getenv( EnvGetName( ENV_SCHEDD_NAME ) );
 
-  tmpClP1->Assign("endts", (int)eventclock);
-  tmpClP1->Assign("endtype", ULOG_JOB_TERMINATED);
+  tmpCl1.Assign("endts", (int)eventclock);
+  tmpCl1.Assign("endtype", ULOG_JOB_TERMINATED);
 
   // this inserts scheddname, cluster, proc, etc
-  insertCommonIdentifiers(tmpClP2);           
-  
+  insertCommonIdentifiers(tmpCl2);
+
   tmp.sprintf( "endtype = null");
-  tmpClP2->Insert(tmp.Value());
+  tmpCl2.Insert(tmp.Value());
 
   if (FILEObj) {
-	  if (FILEObj->file_updateEvent("Runs", tmpClP1, tmpClP2) == QUILL_FAILURE) {
+	  if (FILEObj->file_updateEvent("Runs", &tmpCl1, &tmpCl2) == QUILL_FAILURE) {
 		  dprintf(D_ALWAYS, "Logging Event 4--- Error\n");
 		  return 0; // return a error code, 0
 	  }
@@ -2642,13 +2611,13 @@ JobTerminatedEvent::readEvent (FILE *file)
 	return TerminatedEvent::readEvent( file, "Job" );
 }
 
-ClassAd* JobTerminatedEvent::
-toClassAd()
+ClassAd*
+JobTerminatedEvent::toClassAd(void)
 {
 	ClassAd* myad = ULogEvent::toClassAd();
 	if( !myad ) return NULL;
 	char buf0[512];
-	
+
 	snprintf(buf0, 512, "TerminatedNormally = %s", normal ? "TRUE" : "FALSE");
 	buf0[511] = 0;
 	if( !myad->Insert(buf0) ) return NULL;
@@ -2707,8 +2676,8 @@ toClassAd()
 	return myad;
 }
 
-void JobTerminatedEvent::
-initFromClassAd(ClassAd* ad)
+void
+JobTerminatedEvent::initFromClassAd(ClassAd* ad)
 {
 	ULogEvent::initFromClassAd(ad);
 
@@ -2721,7 +2690,7 @@ initFromClassAd(ClassAd* ad)
 
 	ad->LookupInteger("ReturnValue", returnValue);
 	ad->LookupInteger("TerminatedBySignal", signalNumber);
-	
+
 	char* multi = NULL;
 	ad->LookupString("CoreFile", &multi);
 	if( multi ) {
@@ -2753,22 +2722,20 @@ initFromClassAd(ClassAd* ad)
 	ad->LookupFloat("TotalReceivedBytes", total_recvd_bytes);
 }
 
-JobImageSizeEvent::
-JobImageSizeEvent()
+JobImageSizeEvent::JobImageSizeEvent(void)
 {
 	eventNumber = ULOG_IMAGE_SIZE;
 	size = -1;
 }
 
 
-JobImageSizeEvent::
-~JobImageSizeEvent()
+JobImageSizeEvent::~JobImageSizeEvent(void)
 {
 }
 
 
-int JobImageSizeEvent::
-writeEvent (FILE *file)
+int
+JobImageSizeEvent::writeEvent (FILE *file)
 {
 	if (fprintf (file, "Image size of job updated: %d\n", size) < 0)
 		return 0;
@@ -2777,8 +2744,8 @@ writeEvent (FILE *file)
 }
 
 
-int JobImageSizeEvent::
-readEvent (FILE *file)
+int
+JobImageSizeEvent::readEvent (FILE *file)
 {
 	int retval;
 	if ((retval=fscanf(file,"Image size of job updated: %d", &size)) != 1)
@@ -2787,8 +2754,8 @@ readEvent (FILE *file)
 	return 1;
 }
 
-ClassAd* JobImageSizeEvent::
-toClassAd()
+ClassAd*
+JobImageSizeEvent::toClassAd(void)
 {
 	ClassAd* myad = ULogEvent::toClassAd();
 	if( !myad ) return NULL;
@@ -2803,8 +2770,8 @@ toClassAd()
 	return myad;
 }
 
-void JobImageSizeEvent::
-initFromClassAd(ClassAd* ad)
+void
+JobImageSizeEvent::initFromClassAd(ClassAd* ad)
 {
 	ULogEvent::initFromClassAd(ad);
 
@@ -2813,8 +2780,7 @@ initFromClassAd(ClassAd* ad)
 	ad->LookupInteger("Size", size);
 }
 
-ShadowExceptionEvent::
-ShadowExceptionEvent ()
+ShadowExceptionEvent::ShadowExceptionEvent (void)
 {
 	eventNumber = ULOG_SHADOW_EXCEPTION;
 	message[0] = '\0';
@@ -2822,13 +2788,12 @@ ShadowExceptionEvent ()
 	began_execution = FALSE;
 }
 
-ShadowExceptionEvent::
-~ShadowExceptionEvent ()
+ShadowExceptionEvent::~ShadowExceptionEvent (void)
 {
 }
 
-int ShadowExceptionEvent::
-readEvent (FILE *file)
+int
+ShadowExceptionEvent::readEvent (FILE *file)
 {
 	if (fscanf (file, "Shadow exception!\n\t") == EOF)
 		return 0;
@@ -2848,16 +2813,16 @@ readEvent (FILE *file)
 	return 1;
 }
 
-int ShadowExceptionEvent::
-writeEvent (FILE *file)
+int
+ShadowExceptionEvent::writeEvent (FILE *file)
 {
 	char messagestr[512];
 	ClassAd tmpCl1, tmpCl2;
-	ClassAd *tmpClP1 = &tmpCl1, *tmpClP2 = &tmpCl2;
+	//ClassAd *tmpClP1 = &tmpCl1, *tmpClP2 = &tmpCl2;
 	MyString tmp = "";
 
 	scheddname = getenv( EnvGetName( ENV_SCHEDD_NAME ) );
-	
+
 	snprintf(messagestr, 512, "Shadow exception: %s", message);
 
 		// remove the new line in the end if any
@@ -2865,39 +2830,39 @@ writeEvent (FILE *file)
 		messagestr[strlen(messagestr)-1] = '\0';
 
 	if (began_execution) {
-		tmpClP1->Assign("endts", (int)eventclock);
-		tmpClP1->Assign("endtype", ULOG_SHADOW_EXCEPTION);
-		tmpClP1->Assign("endmessage", messagestr);
-		tmpClP1->Assign("runbytessent", sent_bytes);
+		tmpCl1.Assign("endts", (int)eventclock);
+		tmpCl1.Assign("endtype", ULOG_SHADOW_EXCEPTION);
+		tmpCl1.Assign("endmessage", messagestr);
+		tmpCl1.Assign("runbytessent", sent_bytes);
 
-		tmpClP1->Assign("runbytesreceived", recvd_bytes);
+		tmpCl1.Assign("runbytesreceived", recvd_bytes);
 
 		// this inserts scheddname, cluster, proc, etc
-		insertCommonIdentifiers(tmpClP2);           
+		insertCommonIdentifiers(tmpCl2);
 
 		tmp.sprintf( "endtype = null");
-		tmpClP2->Insert(tmp.Value());
-  
+		tmpCl2.Insert(tmp.Value());
+
 		if (FILEObj) {
-			if (FILEObj->file_updateEvent("Runs", tmpClP1, tmpClP2) == QUILL_FAILURE) {
+			if (FILEObj->file_updateEvent("Runs", &tmpCl1, &tmpCl2) == QUILL_FAILURE) {
 				dprintf(D_ALWAYS, "Logging Event 13--- Error\n");
 				return 0; // return a error code, 0
 			}
 		}
 	} else {
 		// this inserts scheddname, cluster, proc, etc
-        insertCommonIdentifiers(tmpClP1);           
+        insertCommonIdentifiers(tmpCl1);
 
-		tmpClP1->Assign("eventtype", ULOG_SHADOW_EXCEPTION);
-		tmpClP1->Assign("eventtime", (int)eventclock);
-		tmpClP1->Assign("description", messagestr);
-				
+		tmpCl1.Assign("eventtype", ULOG_SHADOW_EXCEPTION);
+		tmpCl1.Assign("eventtime", (int)eventclock);
+		tmpCl1.Assign("description", messagestr);
+
 		if (FILEObj) {
-			if (FILEObj->file_newEvent("Events", tmpClP1) == QUILL_FAILURE) {
+			if (FILEObj->file_newEvent("Events", &tmpCl1) == QUILL_FAILURE) {
 				dprintf(D_ALWAYS, "Logging Event 14 --- Error\n");
 				return 0; // return a error code, 0
 			}
-		}			
+		}
 
 	}
 
@@ -2910,18 +2875,18 @@ writeEvent (FILE *file)
 		fprintf (file, "\t%.0f  -  Run Bytes Received By Job\n",
 				 recvd_bytes) < 0)
 		return 1;				// backwards compatibility
-	
+
 	return 1;
 }
 
-ClassAd* ShadowExceptionEvent::
-toClassAd()
+ClassAd*
+ShadowExceptionEvent::toClassAd(void)
 {
 	bool     success = true;
 	ClassAd* myad = ULogEvent::toClassAd();
 	if( myad ) {
 		char buf0[512];
-	
+
 		MyString buf2;
 		buf2.sprintf("Message = \"%s\"", message);
 		if( !myad->Insert(buf2.Value())) {
@@ -2946,34 +2911,32 @@ toClassAd()
 	return myad;
 }
 
-void ShadowExceptionEvent::
-initFromClassAd(ClassAd* ad)
+void
+ShadowExceptionEvent::initFromClassAd(ClassAd* ad)
 {
 	ULogEvent::initFromClassAd(ad);
-	
+
 	if( !ad ) return;
 
 	if( ad->LookupString("Message", message, BUFSIZ) ) {
 		message[BUFSIZ - 1] = 0;
 	}
-	
+
 	ad->LookupFloat("SentBytes", sent_bytes);
 	ad->LookupFloat("ReceivedBytes", recvd_bytes);
 }
 
-JobSuspendedEvent::
-JobSuspendedEvent ()
+JobSuspendedEvent::JobSuspendedEvent (void)
 {
 	eventNumber = ULOG_JOB_SUSPENDED;
 }
 
-JobSuspendedEvent::
-~JobSuspendedEvent ()
+JobSuspendedEvent::~JobSuspendedEvent (void)
 {
 }
 
-int JobSuspendedEvent::
-readEvent (FILE *file)
+int
+JobSuspendedEvent::readEvent (FILE *file)
 {
 	if (fscanf (file, "Job was suspended.\n\t") == EOF)
 		return 0;
@@ -2985,27 +2948,27 @@ readEvent (FILE *file)
 }
 
 
-int JobSuspendedEvent::
-writeEvent (FILE *file)
+int
+JobSuspendedEvent::writeEvent (FILE *file)
 {
 	char messagestr[512];
 	ClassAd tmpCl1;
-	ClassAd *tmpClP1 = &tmpCl1;
+	//ClassAd *tmpClP1 = &tmpCl1;
 	MyString tmp = "";
 
 	sprintf(messagestr, "Job was suspended (Number of processes actually suspended: %d)", num_pids);
-	
+
 	scheddname = getenv( EnvGetName( ENV_SCHEDD_NAME ) );
 
 	// this inserts scheddname, cluster, proc, etc
-	insertCommonIdentifiers(tmpClP1);           
+	insertCommonIdentifiers(tmpCl1);
 
-	tmpClP1->Assign("eventtype", ULOG_JOB_SUSPENDED);
-	tmpClP1->Assign("eventtime", (int)eventclock);
-	tmpClP1->Assign("description", messagestr);
-				
+	tmpCl1.Assign("eventtype", ULOG_JOB_SUSPENDED);
+	tmpCl1.Assign("eventtime", (int)eventclock);
+	tmpCl1.Assign("description", messagestr);
+
 	if (FILEObj) {
-		if (FILEObj->file_newEvent("Events", tmpClP1) == QUILL_FAILURE) {
+		if (FILEObj->file_newEvent("Events", &tmpCl1) == QUILL_FAILURE) {
 			dprintf(D_ALWAYS, "Logging Event 8--- Error\n");
 			return 0; // return a error code, 0
 		}
@@ -3013,20 +2976,20 @@ writeEvent (FILE *file)
 
 	if (fprintf (file, "Job was suspended.\n\t") < 0)
 		return 0;
-	if (fprintf (file, "Number of processes actually suspended: %d\n", 
+	if (fprintf (file, "Number of processes actually suspended: %d\n",
 			num_pids) < 0)
 		return 0;
 
 	return 1;
 }
 
-ClassAd* JobSuspendedEvent::
-toClassAd()
+ClassAd*
+JobSuspendedEvent::toClassAd(void)
 {
 	ClassAd* myad = ULogEvent::toClassAd();
 	if( !myad ) return NULL;
 	char buf0[512];
-	
+
 	snprintf(buf0, 512, "NumberOfPIDs = %d", num_pids);
 	buf0[511] = 0;
 	if( !myad->Insert(buf0) ) return NULL;
@@ -3034,8 +2997,8 @@ toClassAd()
 	return myad;
 }
 
-void JobSuspendedEvent::
-initFromClassAd(ClassAd* ad)
+void
+JobSuspendedEvent::initFromClassAd(ClassAd* ad)
 {
 	ULogEvent::initFromClassAd(ad);
 
@@ -3044,19 +3007,17 @@ initFromClassAd(ClassAd* ad)
 	ad->LookupInteger("NumberOfPIDs", num_pids);
 }
 
-JobUnsuspendedEvent::
-JobUnsuspendedEvent ()
+JobUnsuspendedEvent::JobUnsuspendedEvent (void)
 {
 	eventNumber = ULOG_JOB_UNSUSPENDED;
 }
 
-JobUnsuspendedEvent::
-~JobUnsuspendedEvent ()
+JobUnsuspendedEvent::~JobUnsuspendedEvent (void)
 {
 }
 
-int JobUnsuspendedEvent::
-readEvent (FILE *file)
+int
+JobUnsuspendedEvent::readEvent (FILE *file)
 {
 	if (fscanf (file, "Job was unsuspended.\n") == EOF)
 		return 0;
@@ -3064,27 +3025,27 @@ readEvent (FILE *file)
 	return 1;
 }
 
-int JobUnsuspendedEvent::
-writeEvent (FILE *file)
+int
+JobUnsuspendedEvent::writeEvent (FILE *file)
 {
 	char messagestr[512];
 	ClassAd tmpCl1;
-	ClassAd *tmpClP1 = &tmpCl1;
+	//ClassAd *tmpClP1 = &tmpCl1;
 	MyString tmp = "";
 
 	sprintf(messagestr, "Job was unsuspended");
-	
+
 	scheddname = getenv( EnvGetName( ENV_SCHEDD_NAME ) );
 
 	// this inserts scheddname, cluster, proc, etc
-	insertCommonIdentifiers(tmpClP1);           
+	insertCommonIdentifiers(tmpCl1);
 
-	tmpClP1->Assign("eventtype", ULOG_JOB_UNSUSPENDED);
-	tmpClP1->Assign("eventtime", (int)eventclock);
-	tmpClP1->Assign("description", messagestr);
-				
+	tmpCl1.Assign("eventtype", ULOG_JOB_UNSUSPENDED);
+	tmpCl1.Assign("eventtime", (int)eventclock);
+	tmpCl1.Assign("description", messagestr);
+
 	if (FILEObj) {
- 	    if (FILEObj->file_newEvent("Events", tmpClP1) == QUILL_FAILURE) {
+ 	    if (FILEObj->file_newEvent("Events", &tmpCl1) == QUILL_FAILURE) {
 			dprintf(D_ALWAYS, "Logging Event 9--- Error\n");
 			return 0; // return a error code, 0
 		}
@@ -3096,22 +3057,22 @@ writeEvent (FILE *file)
 	return 1;
 }
 
-ClassAd* JobUnsuspendedEvent::
-toClassAd()
+ClassAd*
+JobUnsuspendedEvent::toClassAd(void)
 {
 	ClassAd* myad = ULogEvent::toClassAd();
 	if( !myad ) return NULL;
-	
+
 	return myad;
 }
 
-void JobUnsuspendedEvent::
-initFromClassAd(ClassAd* ad)
+void
+JobUnsuspendedEvent::initFromClassAd(ClassAd* ad)
 {
 	ULogEvent::initFromClassAd(ad);
 }
 
-JobHeldEvent::JobHeldEvent ()
+JobHeldEvent::JobHeldEvent (void)
 {
 	eventNumber = ULOG_JOB_HELD;
 	reason = NULL;
@@ -3120,7 +3081,7 @@ JobHeldEvent::JobHeldEvent ()
 }
 
 
-JobHeldEvent::~JobHeldEvent ()
+JobHeldEvent::~JobHeldEvent (void)
 {
 	delete[] reason;
 }
@@ -3129,14 +3090,14 @@ JobHeldEvent::~JobHeldEvent ()
 void
 JobHeldEvent::setReason( const char* reason_str )
 {
-    delete[] reason; 
-    reason = NULL; 
-    if( reason_str ) { 
-        reason = strnewp( reason_str ); 
-        if( !reason ) { 
-            EXCEPT( "ERROR: out of memory!\n" ); 
-        } 
-    } 
+    delete[] reason;
+    reason = NULL;
+    if( reason_str ) {
+        reason = strnewp( reason_str );
+        if( !reason ) {
+            EXCEPT( "ERROR: out of memory!\n" );
+        }
+    }
 }
 
 void
@@ -3152,20 +3113,20 @@ JobHeldEvent::setReasonSubCode(const int val)
 }
 
 
-const char* JobHeldEvent::
-getReason( void ) const
+const char*
+JobHeldEvent::getReason( void ) const
 {
 	return reason;
 }
 
-int JobHeldEvent::
-getReasonCode( void ) const
+int
+JobHeldEvent::getReasonCode( void ) const
 {
 	return code;
 }
 
-int JobHeldEvent::
-getReasonSubCode( void ) const
+int
+JobHeldEvent::getReasonSubCode( void ) const
 {
 	return subcode;
 }
@@ -3173,7 +3134,7 @@ getReasonSubCode( void ) const
 int
 JobHeldEvent::readEvent( FILE *file )
 {
-	if( fscanf(file, "Job was held.\n") == EOF ) { 
+	if( fscanf(file, "Job was held.\n") == EOF ) {
 		return 0;
 	}
 	// try to read the reason, but if its not there,
@@ -3223,7 +3184,7 @@ JobHeldEvent::writeEvent( FILE *file )
 {
 	char messagestr[512];
 	ClassAd tmpCl1;
-	ClassAd *tmpClP1 = &tmpCl1;
+	//ClassAd *tmpClP1 = &tmpCl1;
 
 	if (reason)
 		snprintf(messagestr, 512, "Job was held: %s", reason);
@@ -3233,14 +3194,14 @@ JobHeldEvent::writeEvent( FILE *file )
 	scheddname = getenv( EnvGetName( ENV_SCHEDD_NAME ) );
 
 	// this inserts scheddname, cluster, proc, etc
-	insertCommonIdentifiers(tmpClP1);           
+	insertCommonIdentifiers(tmpCl1);
 
-	tmpClP1->Assign("eventtype", ULOG_JOB_HELD);
-	tmpClP1->Assign("eventtime", (int)eventclock);
-	tmpClP1->Assign("description", messagestr);
-				
+	tmpCl1.Assign("eventtype", ULOG_JOB_HELD);
+	tmpCl1.Assign("eventtime", (int)eventclock);
+	tmpCl1.Assign("description", messagestr);
+
 	if (FILEObj) {
-		if (FILEObj->file_newEvent("Events", tmpClP1) == QUILL_FAILURE) {
+		if (FILEObj->file_newEvent("Events", &tmpCl1) == QUILL_FAILURE) {
 			dprintf(D_ALWAYS, "Logging Event 10--- Error\n");
 			return 0; // return a error code, 0
 		}
@@ -3252,7 +3213,7 @@ JobHeldEvent::writeEvent( FILE *file )
 	if( reason ) {
 		if( fprintf(file, "\t%s\n", reason) < 0 ) {
 			return 0;
-		} 
+		}
 	} else {
 		if( fprintf(file, "\tReason unspecified\n") < 0 ) {
 			return 0;
@@ -3267,12 +3228,12 @@ JobHeldEvent::writeEvent( FILE *file )
 	return 1;
 }
 
-ClassAd* JobHeldEvent::
-toClassAd()
+ClassAd*
+JobHeldEvent::toClassAd(void)
 {
 	ClassAd* myad = ULogEvent::toClassAd();
 	if( !myad ) return NULL;
-	
+
 	const char* hold_reason = getReason();
 	MyString buf2;
 	if ( hold_reason ) {
@@ -3287,8 +3248,8 @@ toClassAd()
 	return myad;
 }
 
-void JobHeldEvent::
-initFromClassAd(ClassAd* ad)
+void
+JobHeldEvent::initFromClassAd(ClassAd* ad)
 {
 	ULogEvent::initFromClassAd(ad);
 
@@ -3309,14 +3270,14 @@ initFromClassAd(ClassAd* ad)
 	setReasonSubCode(insubcode);
 }
 
-JobReleasedEvent::JobReleasedEvent()
+JobReleasedEvent::JobReleasedEvent(void)
 {
 	eventNumber = ULOG_JOB_RELEASED;
 	reason = NULL;
 }
 
 
-JobReleasedEvent::~JobReleasedEvent()
+JobReleasedEvent::~JobReleasedEvent(void)
 {
 	delete[] reason;
 }
@@ -3325,19 +3286,19 @@ JobReleasedEvent::~JobReleasedEvent()
 void
 JobReleasedEvent::setReason( const char* reason_str )
 {
-    delete[] reason; 
-    reason = NULL; 
-    if( reason_str ) { 
-        reason = strnewp( reason_str ); 
-        if( !reason ) { 
-            EXCEPT( "ERROR: out of memory!\n" ); 
-        } 
-    } 
+    delete[] reason;
+    reason = NULL;
+    if( reason_str ) {
+        reason = strnewp( reason_str );
+        if( !reason ) {
+            EXCEPT( "ERROR: out of memory!\n" );
+        }
+    }
 }
 
 
-const char* JobReleasedEvent::
-getReason( void ) const
+const char*
+JobReleasedEvent::getReason( void ) const
 {
 	return reason;
 }
@@ -3346,7 +3307,7 @@ getReason( void ) const
 int
 JobReleasedEvent::readEvent( FILE *file )
 {
-	if( fscanf(file, "Job was released.\n") == EOF ) { 
+	if( fscanf(file, "Job was released.\n") == EOF ) {
 		return 0;
 	}
 	// try to read the reason, but if its not there,
@@ -3379,7 +3340,7 @@ JobReleasedEvent::writeEvent( FILE *file )
 {
 	char messagestr[512];
 	ClassAd tmpCl1;
-	ClassAd *tmpClP1 = &tmpCl1;
+	//ClassAd *tmpClP1 = &tmpCl1;
 	MyString tmp = "";
 
 	if (reason)
@@ -3390,14 +3351,14 @@ JobReleasedEvent::writeEvent( FILE *file )
 	scheddname = getenv( EnvGetName( ENV_SCHEDD_NAME ) );
 
 	// this inserts scheddname, cluster, proc, etc
-	insertCommonIdentifiers(tmpClP1);           
+	insertCommonIdentifiers(tmpCl1);
 
-	tmpClP1->Assign("eventtype", ULOG_JOB_RELEASED);
-	tmpClP1->Assign("eventtime", (int)eventclock);
-	tmpClP1->Assign("description", messagestr);
-				
+	tmpCl1.Assign("eventtype", ULOG_JOB_RELEASED);
+	tmpCl1.Assign("eventtime", (int)eventclock);
+	tmpCl1.Assign("description", messagestr);
+
 	if (FILEObj) {
-		if (FILEObj->file_newEvent("Events", tmpClP1) == QUILL_FAILURE) {
+		if (FILEObj->file_newEvent("Events", &tmpCl1) == QUILL_FAILURE) {
 			dprintf(D_ALWAYS, "Logging Event 11--- Error\n");
 			return 0; // return a error code, 0
 		}
@@ -3412,18 +3373,18 @@ JobReleasedEvent::writeEvent( FILE *file )
 		} else {
 			return 1;
 		}
-	} 
+	}
 		// do we want to do anything else if there's no reason?
-		// should we fail?  EXCEPT()?  
+		// should we fail?  EXCEPT()?
 	return 1;
 }
 
-ClassAd* JobReleasedEvent::
-toClassAd()
+ClassAd*
+JobReleasedEvent::toClassAd(void)
 {
 	ClassAd* myad = ULogEvent::toClassAd();
 	if( !myad ) return NULL;
-	
+
 	const char* release_reason = getReason();
 	if( release_reason ) {
 		MyString buf2;
@@ -3434,8 +3395,8 @@ toClassAd()
 	return myad;
 }
 
-void JobReleasedEvent::
-initFromClassAd(ClassAd* ad)
+void
+JobReleasedEvent::initFromClassAd(ClassAd* ad)
 {
 	ULogEvent::initFromClassAd(ad);
 
@@ -3455,8 +3416,8 @@ static const int minutes = 60 * seconds;
 static const int hours = 60 * minutes;
 static const int days = 24 * hours;
 
-int ULogEvent::
-writeRusage (FILE *file, rusage &usage)
+int
+ULogEvent::writeRusage (FILE *file, rusage &usage)
 {
 	int usr_secs = usage.ru_utime.tv_sec;
 	int sys_secs = usage.ru_stime.tv_sec;
@@ -3467,11 +3428,11 @@ writeRusage (FILE *file, rusage &usage)
 	usr_days = usr_secs/days;  			usr_secs %= days;
 	usr_hours = usr_secs/hours;			usr_secs %= hours;
 	usr_minutes = usr_secs/minutes;		usr_secs %= minutes;
- 	
+ 
 	sys_days = sys_secs/days;  			sys_secs %= days;
 	sys_hours = sys_secs/hours;			sys_secs %= hours;
 	sys_minutes = sys_secs/minutes;		sys_secs %= minutes;
- 	
+ 
 	int retval;
 	retval = fprintf (file, "\tUsr %d %02d:%02d:%02d, Sys %d %02d:%02d:%02d",
 					  usr_days, usr_hours, usr_minutes, usr_secs,
@@ -3481,8 +3442,8 @@ writeRusage (FILE *file, rusage &usage)
 }
 
 
-int ULogEvent::
-readRusage (FILE *file, rusage &usage)
+int
+ULogEvent::readRusage (FILE *file, rusage &usage)
 {
 	int usr_secs, usr_minutes, usr_hours, usr_days;
 	int sys_secs, sys_minutes, sys_hours, sys_days;
@@ -3506,8 +3467,8 @@ readRusage (FILE *file, rusage &usage)
 	return (1);
 }
 
-char* ULogEvent::
-rusageToStr (rusage usage)
+char*
+ULogEvent::rusageToStr (rusage usage)
 {
 	char* result = (char*) malloc(128);
 
@@ -3520,11 +3481,11 @@ rusageToStr (rusage usage)
 	usr_days = usr_secs/days;  			usr_secs %= days;
 	usr_hours = usr_secs/hours;			usr_secs %= hours;
 	usr_minutes = usr_secs/minutes;		usr_secs %= minutes;
- 	
+ 
 	sys_days = sys_secs/days;  			sys_secs %= days;
 	sys_hours = sys_secs/hours;			sys_secs %= hours;
 	sys_minutes = sys_secs/minutes;		sys_secs %= minutes;
- 	
+ 
 	sprintf(result, "Usr %d %02d:%02d:%02d, Sys %d %02d:%02d:%02d",
 			usr_days, usr_hours, usr_minutes, usr_secs,
 			sys_days, sys_hours, sys_minutes, sys_secs);
@@ -3532,8 +3493,8 @@ rusageToStr (rusage usage)
 	return result;
 }
 
-int ULogEvent::
-strToRusage (char* rusageStr, rusage & usage)
+int
+ULogEvent::strToRusage (char* rusageStr, rusage & usage)
 {
 	int usr_secs, usr_minutes, usr_hours, usr_days;
 	int sys_secs, sys_minutes, sys_hours, sys_days;
@@ -3558,21 +3519,21 @@ strToRusage (char* rusageStr, rusage & usage)
 }
 
 // ----- the NodeExecuteEvent class
-NodeExecuteEvent::NodeExecuteEvent()
-{	
+NodeExecuteEvent::NodeExecuteEvent(void)
+{
 	executeHost [0] = '\0';
 	eventNumber = ULOG_NODE_EXECUTE;
 }
 
 
-NodeExecuteEvent::~NodeExecuteEvent()
+NodeExecuteEvent::~NodeExecuteEvent(void)
 {
 }
 
 
 int
 NodeExecuteEvent::writeEvent (FILE *file)
-{	
+{
 	return( fprintf(file, "Node %d executing on host: %s\n",
 					node, executeHost) >= 0 );
 }
@@ -3581,17 +3542,17 @@ NodeExecuteEvent::writeEvent (FILE *file)
 int
 NodeExecuteEvent::readEvent (FILE *file)
 {
-	return( fscanf(file, "Node %d executing on host: %s", 
+	return( fscanf(file, "Node %d executing on host: %s",
 				   &node, executeHost) != EOF );
 }
 
-ClassAd* NodeExecuteEvent::
-toClassAd()
+ClassAd*
+NodeExecuteEvent::toClassAd(void)
 {
 	ClassAd* myad = ULogEvent::toClassAd();
 	if( !myad ) return NULL;
 	char buf0[512];
-	
+
 	snprintf(buf0, 512, "ExecuteHost = \"%s\"", executeHost);
 	buf0[511] = 0;
 	if( !myad->Insert(buf0) ) return NULL;
@@ -3602,8 +3563,8 @@ toClassAd()
 	return myad;
 }
 
-void NodeExecuteEvent::
-initFromClassAd(ClassAd* ad)
+void
+NodeExecuteEvent::initFromClassAd(ClassAd* ad)
 {
 	ULogEvent::initFromClassAd(ad);
 
@@ -3617,15 +3578,14 @@ initFromClassAd(ClassAd* ad)
 }
 
 // ----- NodeTerminatedEvent class
-NodeTerminatedEvent::NodeTerminatedEvent() : TerminatedEvent()
+NodeTerminatedEvent::NodeTerminatedEvent(void) : TerminatedEvent()
 {
 	eventNumber = ULOG_NODE_TERMINATED;
 	node = -1;
 }
 
 
-NodeTerminatedEvent::
-~NodeTerminatedEvent()
+NodeTerminatedEvent::~NodeTerminatedEvent(void)
 {
 }
 
@@ -3649,13 +3609,13 @@ NodeTerminatedEvent::readEvent( FILE *file )
 	return TerminatedEvent::readEvent( file, "Node" );
 }
 
-ClassAd* NodeTerminatedEvent::
-toClassAd()
+ClassAd*
+NodeTerminatedEvent::toClassAd(void)
 {
 	ClassAd* myad = ULogEvent::toClassAd();
 	if( !myad ) return NULL;
 	char buf0[512];
-	
+
 	snprintf(buf0, 512, "TerminatedNormally = %s", normal ? "TRUE" : "FALSE");
 	buf0[511] = 0;
 	if( !myad->Insert(buf0) ) return NULL;
@@ -3712,15 +3672,15 @@ toClassAd()
 		buf0[511] = 0;
 		if( !myad->Insert(buf0) ) return NULL;
 	}
-	
+
 	return myad;
 }
 
-void NodeTerminatedEvent::
-initFromClassAd(ClassAd* ad)
+void
+NodeTerminatedEvent::initFromClassAd(ClassAd* ad)
 {
 	ULogEvent::initFromClassAd(ad);
-	
+
 	if( !ad ) return;
 
 	int reallybool;
@@ -3730,7 +3690,7 @@ initFromClassAd(ClassAd* ad)
 
 	ad->LookupInteger("ReturnValue", returnValue);
 	ad->LookupInteger("TerminatedBySignal", signalNumber);
-	
+
 	char* multi = NULL;
 	ad->LookupString("CoreFile", &multi);
 	if( multi ) {
@@ -3766,8 +3726,7 @@ initFromClassAd(ClassAd* ad)
 
 // ----- PostScriptTerminatedEvent class
 
-PostScriptTerminatedEvent::
-PostScriptTerminatedEvent() :
+PostScriptTerminatedEvent::PostScriptTerminatedEvent(void) :
 	dagNodeNameLabel ("DAG Node: "),
 	dagNodeNameAttr ("DAGNodeName")
 {
@@ -3779,8 +3738,7 @@ PostScriptTerminatedEvent() :
 }
 
 
-PostScriptTerminatedEvent::
-~PostScriptTerminatedEvent()
+PostScriptTerminatedEvent::~PostScriptTerminatedEvent(void)
 {
 	if( dagNodeName ) {
 		delete[] dagNodeName;
@@ -3788,15 +3746,15 @@ PostScriptTerminatedEvent::
 }
 
 
-int PostScriptTerminatedEvent::
-writeEvent( FILE* file )
+int
+PostScriptTerminatedEvent::writeEvent( FILE* file )
 {
     if( fprintf( file, "POST Script terminated.\n" ) < 0 ) {
         return 0;
     }
 
     if( normal ) {
-        if( fprintf( file, "\t(1) Normal termination (return value %d)\n", 
+        if( fprintf( file, "\t(1) Normal termination (return value %d)\n",
 					 returnValue ) < 0 ) {
             return 0;
         }
@@ -3818,8 +3776,8 @@ writeEvent( FILE* file )
 }
 
 
-int PostScriptTerminatedEvent::
-readEvent( FILE* file )
+int
+PostScriptTerminatedEvent::readEvent( FILE* file )
 {
 	int tmp;
 	char buf[8192];
@@ -3830,7 +3788,7 @@ readEvent( FILE* file )
 		delete[] dagNodeName;
 	}
     dagNodeName = NULL;
-	
+
 	if( fscanf( file, "POST Script terminated.\n\t(%d) ", &tmp ) != 1 ) {
 		return 0;
 	}
@@ -3854,10 +3812,10 @@ readEvent( FILE* file )
 	// see if the next line contains an optional DAG node name string,
 	// and, if not, rewind, because that means we slurped in the next
 	// event delimiter looking for it...
- 
+
 	fpos_t filep;
 	fgetpos( file, &filep );
-     
+
 	if( !fgets( buf, 8192, file ) || strcmp( buf, "...\n" ) == 0 ) {
 		fsetpos( file, &filep );
 		return 1;
@@ -3873,13 +3831,13 @@ readEvent( FILE* file )
     return 1;
 }
 
-ClassAd* PostScriptTerminatedEvent::
-toClassAd()
+ClassAd*
+PostScriptTerminatedEvent::toClassAd(void)
 {
 	ClassAd* myad = ULogEvent::toClassAd();
 	if( !myad ) return NULL;
 	char buf0[512];
-	
+
 	snprintf(buf0, 512, "TerminatedNormally = %s", normal ? "TRUE" : "FALSE");
 	buf0[511] = 0;
 	if( !myad->Insert(buf0) ) return NULL;
@@ -3904,11 +3862,11 @@ toClassAd()
 	return myad;
 }
 
-void PostScriptTerminatedEvent::
-initFromClassAd(ClassAd* ad)
+void
+PostScriptTerminatedEvent::initFromClassAd(ClassAd* ad)
 {
 	ULogEvent::initFromClassAd(ad);
-	
+
 	if( !ad ) return;
 
 	int reallybool;
@@ -3935,7 +3893,7 @@ initFromClassAd(ClassAd* ad)
 
 // ----- JobDisconnectedEvent class
 
-JobDisconnectedEvent::JobDisconnectedEvent()
+JobDisconnectedEvent::JobDisconnectedEvent(void)
 {
 	eventNumber = ULOG_JOB_DISCONNECTED;
 	startd_addr = NULL;
@@ -3946,7 +3904,7 @@ JobDisconnectedEvent::JobDisconnectedEvent()
 }
 
 
-JobDisconnectedEvent::~JobDisconnectedEvent()
+JobDisconnectedEvent::~JobDisconnectedEvent(void)
 {
 	if( startd_addr ) {
 		delete [] startd_addr;
@@ -4048,14 +4006,14 @@ JobDisconnectedEvent::writeEvent( FILE *file )
 				"without no_reconnect_reason when can_reconnect is FALSE" );
 	}
 
-	if( fprintf(file, "Job disconnected, %s reconnect\n", 
-				can_reconnect ? "attempting to" : "can not") < 0 ) { 
+	if( fprintf(file, "Job disconnected, %s reconnect\n",
+				can_reconnect ? "attempting to" : "can not") < 0 ) {
 		return 0;
 	}
 	if( fprintf(file, "    %.8191s\n", disconnect_reason) < 0 ) {
 		return 0;
 	}
-	if( fprintf(file, "    %s reconnect to %s %s\n", 
+	if( fprintf(file, "    %s reconnect to %s %s\n",
 				can_reconnect ? "Trying to" : "Can not",
 				startd_name, startd_addr) < 0 ) {
 		return 0;
@@ -4089,7 +4047,7 @@ JobDisconnectedEvent::readEvent( FILE *file )
 		return 0;
 	}
 
-	if( line.readLine(file) && line[0] == ' ' && line[1] == ' ' 
+	if( line.readLine(file) && line[0] == ' ' && line[1] == ' '
 		&& line[2] == ' ' && line[3] == ' ' && line[4] )
 	{
 		line.chomp();
@@ -4123,7 +4081,7 @@ JobDisconnectedEvent::readEvent( FILE *file )
 		} else {
 			return 0;
 		}
-		if( line.readLine(file) && line[0] == ' ' && line[1] == ' ' 
+		if( line.readLine(file) && line[0] == ' ' && line[1] == ' '
 			&& line[2] == ' ' && line[3] == ' ' && line[4] )
 		{
 			line.chomp();
@@ -4164,7 +4122,7 @@ JobDisconnectedEvent::toClassAd( void )
 	if( !myad ) {
 		return NULL;
 	}
-	
+
 	MyString line;
 	line.sprintf( "StartdAddr = \"%s\"", startd_addr );
 	if( !myad->Insert(line.Value()) ) {
@@ -4189,7 +4147,7 @@ JobDisconnectedEvent::toClassAd( void )
 		return NULL;
 	}
 
-	if( no_reconnect_reason ) { 
+	if( no_reconnect_reason ) {
 		line.sprintf( "NoReconnectReason = \"%s\"", no_reconnect_reason );
 		if( !myad->Insert(line.Value()) ) {
 			return NULL;
@@ -4204,7 +4162,7 @@ void
 JobDisconnectedEvent::initFromClassAd( ClassAd* ad )
 {
 	ULogEvent::initFromClassAd(ad);
-	
+
 	if( !ad ) {
 		return;
 	}
@@ -4243,7 +4201,7 @@ JobDisconnectedEvent::initFromClassAd( ClassAd* ad )
 
 // ----- JobReconnectedEvent class
 
-JobReconnectedEvent::JobReconnectedEvent()
+JobReconnectedEvent::JobReconnectedEvent(void)
 {
 	eventNumber = ULOG_JOB_RECONNECTED;
 	startd_addr = NULL;
@@ -4252,7 +4210,7 @@ JobReconnectedEvent::JobReconnectedEvent()
 }
 
 
-JobReconnectedEvent::~JobReconnectedEvent()
+JobReconnectedEvent::~JobReconnectedEvent(void)
 {
 	if( startd_addr ) {
 		delete [] startd_addr;
@@ -4330,13 +4288,13 @@ JobReconnectedEvent::writeEvent( FILE *file )
 				"starter_addr" );
 	}
 
-	if( fprintf(file, "Job reconnected to %s\n", startd_name) < 0 ) { 
+	if( fprintf(file, "Job reconnected to %s\n", startd_name) < 0 ) {
 		return 0;
 	}
-	if( fprintf(file, "    startd address: %s\n", startd_addr) < 0 ) { 
+	if( fprintf(file, "    startd address: %s\n", startd_addr) < 0 ) {
 		return 0;
 	}
-	if( fprintf(file, "    starter address: %s\n", starter_addr) < 0 ) { 
+	if( fprintf(file, "    starter address: %s\n", starter_addr) < 0 ) {
 		return 0;
 	}
 	return( 1 );
@@ -4348,7 +4306,7 @@ JobReconnectedEvent::readEvent( FILE *file )
 {
 	MyString line;
 
-	if( line.readLine(file) && 
+	if( line.readLine(file) &&
 		line.replaceString("Job reconnected to ", "") )
 	{
 		line.chomp();
@@ -4357,7 +4315,7 @@ JobReconnectedEvent::readEvent( FILE *file )
 		return 0;
 	}
 
-	if( line.readLine(file) && 
+	if( line.readLine(file) &&
 		line.replaceString( "    startd address: ", "" ) )
 	{
 		line.chomp();
@@ -4366,7 +4324,7 @@ JobReconnectedEvent::readEvent( FILE *file )
 		return 0;
 	}
 
-	if( line.readLine(file) && 
+	if( line.readLine(file) &&
 		line.replaceString( "    starter address: ", "" ) )
 	{
 		line.chomp();
@@ -4424,7 +4382,7 @@ void
 JobReconnectedEvent::initFromClassAd( ClassAd* ad )
 {
 	ULogEvent::initFromClassAd(ad);
-	
+
 	if( !ad ) {
 		return;
 	}
@@ -4465,7 +4423,7 @@ JobReconnectedEvent::initFromClassAd( ClassAd* ad )
 
 // ----- JobReconnectFailedEvent class
 
-JobReconnectFailedEvent::JobReconnectFailedEvent()
+JobReconnectFailedEvent::JobReconnectFailedEvent(void)
 {
 	eventNumber = ULOG_JOB_RECONNECT_FAILED;
 	reason = NULL;
@@ -4473,7 +4431,7 @@ JobReconnectFailedEvent::JobReconnectFailedEvent()
 }
 
 
-JobReconnectFailedEvent::~JobReconnectFailedEvent()
+JobReconnectFailedEvent::~JobReconnectFailedEvent(void)
 {
 	if( reason ) {
 		delete [] reason;
@@ -4534,7 +4492,7 @@ JobReconnectFailedEvent::writeEvent( FILE *file )
 	if( fprintf(file, "    %.8191s\n", reason) < 0 ) {
 		return 0;
 	}
-	if( fprintf(file, "    Can not reconnect to %s, rescheduling job\n", 
+	if( fprintf(file, "    Can not reconnect to %s, rescheduling job\n",
 				startd_name) < 0 ) {
 		return 0;
 	}
@@ -4554,7 +4512,7 @@ JobReconnectFailedEvent::readEvent( FILE *file )
 	}
 
 		// 2nd line is the reason
-	if( line.readLine(file) && line[0] == ' ' && line[1] == ' ' 
+	if( line.readLine(file) && line[0] == ' ' && line[1] == ' '
 		&& line[2] == ' ' && line[3] == ' ' && line[4] )
 	{
 		line.chomp();
@@ -4564,7 +4522,7 @@ JobReconnectFailedEvent::readEvent( FILE *file )
 	}
 
 		// 3rd line is who we tried to reconnect to
-	if( line.readLine(file) && 
+	if( line.readLine(file) &&
 		line.replaceString( "    Can not reconnect to ", "" ) )
 	{
 			// now everything until the first ',' will be the name
@@ -4599,7 +4557,7 @@ JobReconnectFailedEvent::toClassAd( void )
 	if( !myad ) {
 		return NULL;
 	}
-	
+
 	MyString line;
 	line.sprintf( "StartdName = \"%s\"", startd_name );
 	if( !myad->Insert(line.Value()) ) {
@@ -4650,21 +4608,18 @@ JobReconnectFailedEvent::initFromClassAd( ClassAd* ad )
 
 
 // ----- the GridResourceUp class
-GridResourceUpEvent::
-GridResourceUpEvent()
-{	
+GridResourceUpEvent::GridResourceUpEvent(void)
+{
 	eventNumber = ULOG_GRID_RESOURCE_UP;
 	resourceName = NULL;
 }
 
-GridResourceUpEvent::
-~GridResourceUpEvent()
+GridResourceUpEvent::~GridResourceUpEvent(void)
 {
 	delete[] resourceName;
 }
 
-int GridResourceUpEvent::
-writeEvent (FILE *file)
+int GridResourceUpEvent::writeEvent (FILE *file)
 {
 	const char * unknown = "UNKNOWN";
 	const char * resource = unknown;
@@ -4674,7 +4629,7 @@ writeEvent (FILE *file)
 	{
 		return 0;
 	}
-	
+
 	if ( resourceName ) resource = resourceName;
 
 	retval = fprintf( file, "    GridResource: %.8191s\n", resource );
@@ -4685,8 +4640,8 @@ writeEvent (FILE *file)
 	return (1);
 }
 
-int GridResourceUpEvent::
-readEvent (FILE *file)
+int
+GridResourceUpEvent::readEvent (FILE *file)
 {
 	char s[8192];
 
@@ -4703,16 +4658,16 @@ readEvent (FILE *file)
 	{
 		return 0;
 	}
-	resourceName = strnewp(s);	
+	resourceName = strnewp(s);
 	return 1;
 }
 
-ClassAd* GridResourceUpEvent::
-toClassAd()
+ClassAd*
+GridResourceUpEvent::toClassAd(void)
 {
 	ClassAd* myad = ULogEvent::toClassAd();
 	if( !myad ) return NULL;
-	
+
 	if( resourceName && resourceName[0] ) {
 		MyString buf2;
 		buf2.sprintf("GridResource = \"%s\"",resourceName);
@@ -4722,8 +4677,8 @@ toClassAd()
 	return myad;
 }
 
-void GridResourceUpEvent::
-initFromClassAd(ClassAd* ad)
+void
+GridResourceUpEvent::initFromClassAd(ClassAd* ad)
 {
 	ULogEvent::initFromClassAd(ad);
 
@@ -4741,21 +4696,19 @@ initFromClassAd(ClassAd* ad)
 
 
 // ----- the GridResourceDown class
-GridResourceDownEvent::
-GridResourceDownEvent()
-{	
+GridResourceDownEvent::GridResourceDownEvent(void)
+{
 	eventNumber = ULOG_GRID_RESOURCE_DOWN;
 	resourceName = NULL;
 }
 
-GridResourceDownEvent::
-~GridResourceDownEvent()
+GridResourceDownEvent::~GridResourceDownEvent(void)
 {
 	delete[] resourceName;
 }
 
-int GridResourceDownEvent::
-writeEvent (FILE *file)
+int
+GridResourceDownEvent::writeEvent (FILE *file)
 {
 	const char * unknown = "UNKNOWN";
 	const char * resource = unknown;
@@ -4765,7 +4718,7 @@ writeEvent (FILE *file)
 	{
 		return 0;
 	}
-	
+
 	if ( resourceName ) resource = resourceName;
 
 	retval = fprintf( file, "    GridResource: %.8191s\n", resource );
@@ -4776,8 +4729,8 @@ writeEvent (FILE *file)
 	return (1);
 }
 
-int GridResourceDownEvent::
-readEvent (FILE *file)
+int
+GridResourceDownEvent::readEvent (FILE *file)
 {
 	char s[8192];
 
@@ -4794,16 +4747,16 @@ readEvent (FILE *file)
 	{
 		return 0;
 	}
-	resourceName = strnewp(s);	
+	resourceName = strnewp(s);
 	return 1;
 }
 
-ClassAd* GridResourceDownEvent::
-toClassAd()
+ClassAd*
+GridResourceDownEvent::toClassAd(void)
 {
 	ClassAd* myad = ULogEvent::toClassAd();
 	if( !myad ) return NULL;
-	
+
 	if( resourceName && resourceName[0] ) {
 		MyString buf2;
 		buf2.sprintf("GridResource = \"%s\"",resourceName);
@@ -4813,8 +4766,8 @@ toClassAd()
 	return myad;
 }
 
-void GridResourceDownEvent::
-initFromClassAd(ClassAd* ad)
+void
+GridResourceDownEvent::initFromClassAd(ClassAd* ad)
 {
 	ULogEvent::initFromClassAd(ad);
 
@@ -4832,23 +4785,21 @@ initFromClassAd(ClassAd* ad)
 
 
 // ----- the GridSubmitEvent class
-GridSubmitEvent::
-GridSubmitEvent()
-{	
+GridSubmitEvent::GridSubmitEvent(void)
+{
 	eventNumber = ULOG_GRID_SUBMIT;
 	resourceName = NULL;
 	jobId = NULL;
 }
 
-GridSubmitEvent::
-~GridSubmitEvent()
+GridSubmitEvent::~GridSubmitEvent(void)
 {
 	delete[] resourceName;
 	delete[] jobId;
 }
 
-int GridSubmitEvent::
-writeEvent (FILE *file)
+int
+GridSubmitEvent::writeEvent (FILE *file)
 {
 	const char * unknown = "UNKNOWN";
 	const char * resource = unknown;
@@ -4859,7 +4810,7 @@ writeEvent (FILE *file)
 	{
 		return 0;
 	}
-	
+
 	if ( resourceName ) resource = resourceName;
 	if ( jobId ) job = jobId;
 
@@ -4876,8 +4827,8 @@ writeEvent (FILE *file)
 	return (1);
 }
 
-int GridSubmitEvent::
-readEvent (FILE *file)
+int
+GridSubmitEvent::readEvent (FILE *file)
 {
 	char s[8192];
 
@@ -4907,12 +4858,12 @@ readEvent (FILE *file)
 	return 1;
 }
 
-ClassAd* GridSubmitEvent::
-toClassAd()
+ClassAd*
+GridSubmitEvent::toClassAd(void)
 {
 	ClassAd* myad = ULogEvent::toClassAd();
 	if( !myad ) return NULL;
-	
+
 	if( resourceName && resourceName[0] ) {
 		MyString buf2;
 		buf2.sprintf("GridResource = \"%s\"",resourceName);
@@ -4927,13 +4878,13 @@ toClassAd()
 	return myad;
 }
 
-void GridSubmitEvent::
-initFromClassAd(ClassAd* ad)
+void
+GridSubmitEvent::initFromClassAd(ClassAd* ad)
 {
 	ULogEvent::initFromClassAd(ad);
 
 	if( !ad ) return;
-	
+
 	// this fanagling is to ensure we don't malloc a pointer then delete it
 	char* mallocstr = NULL;
 	ad->LookupString("GridResource", &mallocstr);
@@ -4954,27 +4905,25 @@ initFromClassAd(ClassAd* ad)
 }
 
 // ----- the JobAdInformationEvent class
-JobAdInformationEvent::
-JobAdInformationEvent()
-{	
+JobAdInformationEvent::JobAdInformationEvent(void)
+{
 	jobad = NULL;
 	eventNumber = ULOG_JOB_AD_INFORMATION;
 }
 
-JobAdInformationEvent::
-~JobAdInformationEvent()
+JobAdInformationEvent::~JobAdInformationEvent(void)
 {
 	if ( jobad ) delete jobad;
 }
 
-int JobAdInformationEvent::
-writeEvent(FILE *file)
+int
+JobAdInformationEvent::writeEvent(FILE *file)
 {
 	return writeEvent(file,jobad);
 }
 
-int JobAdInformationEvent::
-writeEvent(FILE *file, ClassAd *jobad_arg)
+int
+JobAdInformationEvent::writeEvent(FILE *file, ClassAd *jobad_arg)
 {
     int retval = 0;	 // 0 == FALSE == failure
 
@@ -4983,12 +4932,12 @@ writeEvent(FILE *file, ClassAd *jobad_arg)
 	if ( jobad_arg ) {
 		retval = jobad_arg->fPrint(file);
 	}
-    
+
     return retval;
 }
 
-int JobAdInformationEvent::
-readEvent(FILE *file)
+int
+JobAdInformationEvent::readEvent(FILE *file)
 {
     int retval = 0;	// 0 == FALSE == failure
 	int EndFlag, ErrorFlag, EmptyFlag;
@@ -5005,7 +4954,7 @@ readEvent(FILE *file)
 	{
 		// Out of memory?!?!
 		return 0;
-	} 
+	}
 
 	// Backup to leave event delimiter unread go past \n too
 	fseek( file, -4, SEEK_CUR );
@@ -5014,9 +4963,9 @@ readEvent(FILE *file)
 
 	return retval;
 }
-	
-ClassAd* JobAdInformationEvent::
-toClassAd()
+
+ClassAd*
+JobAdInformationEvent::toClassAd(void)
 {
 	ClassAd* myad = ULogEvent::toClassAd();
 	if( !myad ) return NULL;
@@ -5029,8 +4978,8 @@ toClassAd()
 	return myad;
 }
 
-void JobAdInformationEvent::
-initFromClassAd(ClassAd* ad)
+void
+JobAdInformationEvent::initFromClassAd(ClassAd* ad)
 {
 	ULogEvent::initFromClassAd(ad);
 
@@ -5043,32 +4992,32 @@ initFromClassAd(ClassAd* ad)
 	return;
 }
 
-int JobAdInformationEvent::
-LookupString (const char *attributeName, char **value) const
+int
+JobAdInformationEvent::LookupString (const char *attributeName, char **value) const
 {
 	if ( !jobad ) return 0;		// 0 = failure
 
 	return jobad->LookupString(attributeName,value);
 }
 
-int JobAdInformationEvent::
-LookupInteger (const char *attributeName, int & value) const
+int
+JobAdInformationEvent::LookupInteger (const char *attributeName, int & value) const
 {
 	if ( !jobad ) return 0;		// 0 = failure
 
 	return jobad->LookupInteger(attributeName,value);
 }
 
-int JobAdInformationEvent::
-LookupFloat (const char *attributeName, float & value) const
+int
+JobAdInformationEvent::LookupFloat (const char *attributeName, float & value) const
 {
 	if ( !jobad ) return 0;		// 0 = failure
 
 	return jobad->LookupFloat(attributeName,value);
 }
 
-int JobAdInformationEvent::
-LookupBool  (const char *attributeName, bool & value) const
+int
+JobAdInformationEvent::LookupBool  (const char *attributeName, bool & value) const
 {
 	if ( !jobad ) return 0;		// 0 = failure
 
@@ -5077,31 +5026,29 @@ LookupBool  (const char *attributeName, bool & value) const
 
 
 // ----- the JobStatusUnknownEvent class
-JobStatusUnknownEvent::
-JobStatusUnknownEvent()
-{	
+JobStatusUnknownEvent::JobStatusUnknownEvent(void)
+{
 	eventNumber = ULOG_JOB_STATUS_UNKNOWN;
 }
 
-JobStatusUnknownEvent::
-~JobStatusUnknownEvent()
+JobStatusUnknownEvent::~JobStatusUnknownEvent(void)
 {
 }
 
-int JobStatusUnknownEvent::
-writeEvent (FILE *file)
+int
+JobStatusUnknownEvent::writeEvent (FILE *file)
 {
 	int retval = fprintf (file, "The job's remote status is unknown\n");
 	if (retval < 0)
 	{
 		return 0;
 	}
-	
+
 	return (1);
 }
 
-int JobStatusUnknownEvent::
-readEvent (FILE *file)
+int
+JobStatusUnknownEvent::readEvent (FILE *file)
 {
 	int retval = fscanf (file, "The job's remote status is unknown\n");
     if (retval != 0)
@@ -5111,44 +5058,41 @@ readEvent (FILE *file)
 	return 1;
 }
 
-ClassAd* JobStatusUnknownEvent::
-toClassAd()
+ClassAd*
+JobStatusUnknownEvent::toClassAd(void)
 {
 	return ULogEvent::toClassAd();
 }
 
-void JobStatusUnknownEvent::
-initFromClassAd(ClassAd* ad)
+void
+JobStatusUnknownEvent::initFromClassAd(ClassAd* ad)
 {
 	ULogEvent::initFromClassAd(ad);
 }
 
 // ----- the JobStatusKnownEvent class
-JobStatusKnownEvent::
-JobStatusKnownEvent()
-{	
+JobStatusKnownEvent::JobStatusKnownEvent(void)
+{
 	eventNumber = ULOG_JOB_STATUS_KNOWN;
 }
 
-JobStatusKnownEvent::
-~JobStatusKnownEvent()
+JobStatusKnownEvent::~JobStatusKnownEvent(void)
 {
 }
 
-int JobStatusKnownEvent::
-writeEvent (FILE *file)
+int
+JobStatusKnownEvent::writeEvent (FILE *file)
 {
 	int retval = fprintf (file, "The job's remote status is known again\n");
 	if (retval < 0)
 	{
 		return 0;
 	}
-	
+
 	return (1);
 }
 
-int JobStatusKnownEvent::
-readEvent (FILE *file)
+int JobStatusKnownEvent::readEvent (FILE *file)
 {
 	int retval = fscanf (file, "The job's remote status is known again\n");
     if (retval != 0)
@@ -5158,14 +5102,14 @@ readEvent (FILE *file)
 	return 1;
 }
 
-ClassAd* JobStatusKnownEvent::
-toClassAd()
+ClassAd*
+JobStatusKnownEvent::toClassAd(void)
 {
 	return ULogEvent::toClassAd();
 }
 
-void JobStatusKnownEvent::
-initFromClassAd(ClassAd* ad)
+void
+JobStatusKnownEvent::initFromClassAd(ClassAd* ad)
 {
 	ULogEvent::initFromClassAd(ad);
 }
@@ -5173,31 +5117,29 @@ initFromClassAd(ClassAd* ad)
 
 
 // ----- the JobStageInEvent class
-JobStageInEvent::
-JobStageInEvent()
-{	
+JobStageInEvent::JobStageInEvent(void)
+{
 	eventNumber = ULOG_JOB_STAGE_IN;
 }
 
-JobStageInEvent::
-~JobStageInEvent()
+JobStageInEvent::~JobStageInEvent(void)
 {
 }
 
-int JobStageInEvent::
-writeEvent (FILE *file)
+int
+JobStageInEvent::writeEvent (FILE *file)
 {
 	int retval = fprintf (file, "Job is performing stage-in of input files\n");
 	if (retval < 0)
 	{
 		return 0;
 	}
-	
+
 	return (1);
 }
 
-int JobStageInEvent::
-readEvent (FILE *file)
+int
+JobStageInEvent::readEvent (FILE *file)
 {
 	int retval = fscanf (file, "Job is performing stage-in of input files\n");
     if (retval != 0)
@@ -5207,45 +5149,43 @@ readEvent (FILE *file)
 	return 1;
 }
 
-ClassAd* JobStageInEvent::
-toClassAd()
+ClassAd*
+JobStageInEvent::toClassAd(void)
 {
 	return ULogEvent::toClassAd();
 }
 
-void JobStageInEvent::
-initFromClassAd(ClassAd* ad)
+void
+JobStageInEvent::initFromClassAd(ClassAd* ad)
 {
 	ULogEvent::initFromClassAd(ad);
 }
 
 
 // ----- the JobStageOutEvent class
-JobStageOutEvent::
-JobStageOutEvent()
-{	
+JobStageOutEvent::JobStageOutEvent(void)
+{
 	eventNumber = ULOG_JOB_STAGE_OUT;
 }
 
-JobStageOutEvent::
-~JobStageOutEvent()
+JobStageOutEvent::~JobStageOutEvent(void)
 {
 }
 
-int JobStageOutEvent::
-writeEvent (FILE *file)
+int
+JobStageOutEvent::writeEvent (FILE *file)
 {
 	int retval = fprintf (file, "Job is performing stage-out of output files\n");
 	if (retval < 0)
 	{
 		return 0;
 	}
-	
+
 	return (1);
 }
 
-int JobStageOutEvent::
-readEvent (FILE *file)
+int
+JobStageOutEvent::readEvent (FILE *file)
 {
 	int retval = fscanf (file, "Job is performing stage-out of output files\n");
     if (retval != 0)
@@ -5255,16 +5195,13 @@ readEvent (FILE *file)
 	return 1;
 }
 
-ClassAd* JobStageOutEvent::
-toClassAd()
+ClassAd*
+JobStageOutEvent::toClassAd(void)
 {
 	return ULogEvent::toClassAd();
 }
 
-void JobStageOutEvent::
-initFromClassAd(ClassAd* ad)
+void JobStageOutEvent::initFromClassAd(ClassAd* ad)
 {
 	ULogEvent::initFromClassAd(ad);
 }
-
-

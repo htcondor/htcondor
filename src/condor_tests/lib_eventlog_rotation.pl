@@ -38,12 +38,13 @@ my @tests =
      {
 		 name => "defaults",
 		 config => {
-			 "EVENT_LOG"		=> "EventLog",
+			 "EVENT_LOG"				=> "EventLog",
 			 #"EVENT_LOG_COUNT_EVENTS"	=> "FALSE",
-			 #"ENABLE_USERLOG_LOCKING"	=> "TRUE",
 			 #"EVENT_LOG_MAX_ROTATIONS"	=> 1,
 			 #"EVENT_LOG_MAX_SIZE"		=> -1,
 			 #"MAX_EVENT_LOG"			=> 1000000,
+			 #"ENABLE_USERLOG_LOCKING"	=> "TRUE",
+			 "ENABLE_USERLOG_FSYNC"		=> "FALSE",
 		 },
 		 writer => {
 		 },
@@ -53,12 +54,13 @@ my @tests =
      {
 		 name		=> "no_rotations_1",
 		 config		=> {
-			 "EVENT_LOG"			=> "EventLog",
+			 "EVENT_LOG"				=> "EventLog",
 			 "EVENT_LOG_COUNT_EVENTS"	=> "FALSE",
-			 "ENABLE_USERLOG_LOCKING"	=> "TRUE",
 			 #"EVENT_LOG_MAX_ROTATIONS"	=> 0,
 			 "EVENT_LOG_MAX_SIZE"		=> 0,
 			 #"MAX_EVENT_LOG"			=> 0,
+			 "ENABLE_USERLOG_LOCKING"	=> "FALSE",
+			 "ENABLE_USERLOG_FSYNC"		=> "FALSE",
 		 },
 		 writer => {
 			 "--max-rotations"			=> 1,
@@ -69,10 +71,11 @@ my @tests =
 		 config		=> {
 			 "EVENT_LOG"				=> "EventLog",
 			 "EVENT_LOG_COUNT_EVENTS"	=> "FALSE",
-			 "ENABLE_USERLOG_LOCKING"	=> "TRUE",
 			 #"EVENT_LOG_MAX_ROTATIONS"	=> 0,
 			 "EVENT_LOG_MAX_SIZE"		=> 0,
 			 #"MAX_EVENT_LOG"			=> 0,
+			 "ENABLE_USERLOG_LOCKING"	=> "FALSE",
+			 "ENABLE_USERLOG_FSYNC"		=> "FALSE",
 		 },
 		 writer => {
 			 "--max-rotations"			=> 1,
@@ -83,10 +86,11 @@ my @tests =
 		 config		=> {
 			 "EVENT_LOG"				=> "EventLog",
 			 "EVENT_LOG_COUNT_EVENTS"	=> "FALSE",
-			 "ENABLE_USERLOG_LOCKING"	=> "TRUE",
 			 #"EVENT_LOG_MAX_ROTATIONS"	=> 0,
 			 #"EVENT_LOG_MAX_SIZE"		=> 0,
 			 "MAX_EVENT_LOG"			=> 0,
+			 "ENABLE_USERLOG_LOCKING"	=> "FALSE",
+			 "ENABLE_USERLOG_FSYNC"		=> "FALSE",
 		 },
 		 writer => {
 			 "--max-rotations"			=> 1,
@@ -99,10 +103,11 @@ my @tests =
 		 config		=> {
 			 "EVENT_LOG"				=> "EventLog",
 			 "EVENT_LOG_COUNT_EVENTS"	=> "TRUE",
-			 "ENABLE_USERLOG_LOCKING"	=> "TRUE",
 			 "EVENT_LOG_MAX_ROTATIONS"	=> 1,
 			 "EVENT_LOG_MAX_SIZE"		=> 10000,
 			 #"MAX_EVENT_LOG"			=> -1,
+			 "ENABLE_USERLOG_LOCKING"	=> "FALSE",
+			 "ENABLE_USERLOG_FSYNC"		=> "FALSE",
 		 },
 		 auto				=> 1,
 		 writer => {
@@ -115,10 +120,11 @@ my @tests =
 		 config		=> {
 			 "EVENT_LOG"				=> "EventLog",
 			 "EVENT_LOG_COUNT_EVENTS"	=> "TRUE",
-			 "ENABLE_USERLOG_LOCKING"	=> "TRUE",
 			 "EVENT_LOG_MAX_ROTATIONS"	=> 2,
 			 "EVENT_LOG_MAX_SIZE"		=> 10000,
 			 #"MAX_EVENT_LOG"			=> -1,
+			 "ENABLE_USERLOG_LOCKING"	=> "FALSE",
+			 "ENABLE_USERLOG_FSYNC"		=> "FALSE",
 		 },
 		 auto				=> 1,
 		 writer => {
@@ -134,6 +140,7 @@ my @tests =
 			 "EVENT_LOG_MAX_ROTATIONS"	=> 5,
 			 "EVENT_LOG_MAX_SIZE"		=> 10000,
 			 #"MAX_EVENT_LOG"			=> -1,
+			 "ENABLE_USERLOG_FSYNC"		=> "FALSE",
 		 },
 		 auto				=> 1,
 		 writer => {
@@ -149,6 +156,7 @@ my @tests =
 			 "EVENT_LOG_MAX_ROTATIONS"	=> 20,
 			 "EVENT_LOG_MAX_SIZE"		=> 10000,
 			 #"MAX_EVENT_LOG"			=> -1,
+			 "ENABLE_USERLOG_FSYNC"		=> "FALSE",
 		 },
 		 auto				=> 1,
 		 writer => {
@@ -162,12 +170,14 @@ my @tests =
      {
 		 name		=> "reader_simple",
 		 config		=> {
+			 "USER_LOG_FSYNC"			=> "FALSE",
 			 "EVENT_LOG"				=> "EventLog",
 			 "EVENT_LOG_COUNT_EVENTS"	=> "TRUE",
-			 "ENABLE_USERLOG_LOCKING"	=> "TRUE",
 			 "EVENT_LOG_MAX_ROTATIONS"	=> 0,
 			 #"EVENT_LOG_MAX_SIZE"		=> 10000,
 			 #"MAX_EVENT_LOG"			=> -1,
+			 "ENABLE_USERLOG_LOCKING"	=> "FALSE",
+			 "ENABLE_USERLOG_FSYNC"		=> "FALSE",
 		 },
 		 writer => {
 		 },
@@ -180,9 +190,10 @@ my @tests =
 		 config		=> {
 			 "EVENT_LOG"				=> "EventLog",
 			 "EVENT_LOG_COUNT_EVENTS"	=> "TRUE",
-			 "ENABLE_USERLOG_LOCKING"	=> "TRUE",
 			 "EVENT_LOG_MAX_ROTATIONS"	=> 1,
 			 "EVENT_LOG_MAX_SIZE"		=> 10000,
+			 "ENABLE_USERLOG_LOCKING"	=> "FALSE",
+			 "ENABLE_USERLOG_FSYNC"		=> "FALSE",
 		 },
 		 auto						=> 1,
 		 writer => {
@@ -197,9 +208,10 @@ my @tests =
 		 config		=> {
 			 "EVENT_LOG"				=> "EventLog",
 			 "EVENT_LOG_COUNT_EVENTS"	=> "TRUE",
-			 "ENABLE_USERLOG_LOCKING"	=> "TRUE",
 			 "EVENT_LOG_MAX_ROTATIONS"	=> 2,
 			 "EVENT_LOG_MAX_SIZE"		=> 10000,
+			 "ENABLE_USERLOG_LOCKING"	=> "FALSE",
+			 "ENABLE_USERLOG_FSYNC"		=> "FALSE",
 		 },
 		 auto						=> 1,
 		 writer => {
@@ -214,9 +226,10 @@ my @tests =
 		 config		=> {
 			 "EVENT_LOG"				=> "EventLog",
 			 "EVENT_LOG_COUNT_EVENTS"	=> "TRUE",
-			 "ENABLE_USERLOG_LOCKING"	=> "TRUE",
 			 "EVENT_LOG_MAX_ROTATIONS"	=> 20,
 			 "EVENT_LOG_MAX_SIZE"		=> 10000,
+			 "ENABLE_USERLOG_LOCKING"	=> "FALSE",
+			 "ENABLE_USERLOG_FSYNC"		=> "FALSE",
 		 },
 		 auto						=> 1,
 		 writer => {
@@ -263,6 +276,7 @@ my %settings =
  debug				=> 0,
  execute			=> 1,
  stop				=> 0,
+ strace				=> 0,
  force				=> 0,
  valgrind_writer	=> 0,
  valgrind_reader	=> 0,
