@@ -44,6 +44,7 @@ passwd_cache::passwd_cache() {
 		// processes all pounding on NIS at the same time.
 	int default_lifetime = 300 + get_random_int() % 60;
 	Entry_lifetime = param_integer("PASSWD_CACHE_REFRESH", default_lifetime );
+	loadConfig();
 }
 void
 passwd_cache::reset() {
@@ -63,6 +64,105 @@ passwd_cache::reset() {
 	while ( uid_table->iterate(index, uent) ) {
 		delete uent;
 		uid_table->remove(index);
+	}
+
+	loadConfig();
+}
+
+bool
+parseUid(char const *str,uid_t *uid) {
+	ASSERT( uid );
+	char *endstr;
+	*uid = strtol(str,&endstr,10);
+	if( !endstr || *endstr ) {
+		return false;
+	}
+	return true;
+}
+
+bool
+parseGid(char const *str,gid_t *gid) {
+	ASSERT( gid );
+	char *endstr;
+	*gid = strtol(str,&endstr,10);
+	if( !endstr || *endstr ) {
+		return false;
+	}
+	return true;
+}
+
+void
+passwd_cache::loadConfig() {
+		// initialize cache with any configured mappings
+	char *usermap_str = param("USERID_MAP");
+	if( !usermap_str ) {
+		return;
+	}
+
+		// format is "username=uid,gid,gid2,gid3,... user2=uid2,gid2,..."
+		// first split on spaces, which separate the records
+	StringList usermap(usermap_str," ");
+	free( usermap_str );
+
+	char *username;
+	usermap.rewind();
+	while( (username=usermap.next()) ) {
+		char *userids = strchr(username,'=');
+		ASSERT( userids );
+		*userids = '\0';
+		userids++;
+
+			// the user ids are separated by commas
+		StringList ids(userids,",");
+		ids.rewind();
+
+		struct passwd pwent;
+
+		char const *idstr = ids.next();
+		uid_t uid;
+		gid_t gid;
+		if( !idstr || !parseUid(idstr,&uid) ) {
+			EXCEPT("Invalid USERID_MAP entry %s=%s",username,userids);
+		}
+		idstr = ids.next();
+		if( !idstr || !parseGid(idstr,&gid) ) {
+			EXCEPT("Invalid USERID_MAP entry %s=%s",username,userids);
+		}
+		pwent.pw_name = username;
+		pwent.pw_uid = uid;
+		pwent.pw_gid = gid;
+		cache_uid(&pwent);
+
+		ids.rewind();
+		ids.next(); // go to first group id
+
+		group_entry *group_cache_entry;
+		if ( group_table->lookup(username, group_cache_entry) < 0 ) {
+			init_group_entry(group_cache_entry);
+		}
+
+			/* now get the group list */
+		if ( group_cache_entry->gidlist != NULL ) {
+			delete[] group_cache_entry->gidlist;
+			group_cache_entry->gidlist = NULL;
+		}
+		group_cache_entry->gidlist_sz = ids.number()-1;
+		group_cache_entry->gidlist = new
+			gid_t[group_cache_entry->gidlist_sz];
+
+		unsigned g;
+		for(g=0; g<group_cache_entry->gidlist_sz; g++) {
+			idstr = ids.next();
+			ASSERT( idstr );
+
+			if( !parseGid(idstr,&group_cache_entry->gidlist[g]) ) {
+				EXCEPT("Invalid USERID_MAP entry %s=%s",username,userids);
+			}
+		}
+
+			/* finally, insert info into our cache */
+		group_cache_entry->lastupdated = time(NULL);
+		group_table->insert(username, group_cache_entry);
 	}
 }
 

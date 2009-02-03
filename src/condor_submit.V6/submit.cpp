@@ -737,15 +737,15 @@ main( int argc, char *argv[] )
 	}
 #endif /* not WIN32 */
 
+	MyName = condor_basename(argv[0]);
+	myDistro->Init( argc, argv );
+	config();
+
 	//TODO:this should go away, and the owner name be placed in ad by schedd!
 	owner = my_username();
 	if( !owner ) {
 		owner = strdup("unknown");
 	}
-
-	MyName = condor_basename(argv[0]);
-	myDistro->Init( argc, argv );
-	config();
 
 	init_params();
 

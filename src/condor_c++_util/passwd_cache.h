@@ -109,6 +109,8 @@ class passwd_cache {
 
 	private:
 
+		void loadConfig();
+
 		/* stashes the user's uid in our cache, using information
 		   from the supplied passwd struct. Returns true
 		   on success. */

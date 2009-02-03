@@ -737,10 +737,6 @@ real_config(char* host, int wantsQuiet, bool wantExtraInfo)
         condor_net_remap_config();
     }
 			
-		// Re-insert the special macros.  We don't want the user to
-		// override them, since it's not going to work.
-	reinsert_specials( host );
-
 		// Now, insert any macros defined in the environment.
 	for( int i = 0; environ[i]; i++ ) {
 		char magic_prefix[MAX_DISTRIBUTION_NAME + 3];	// case-insensitive
@@ -786,8 +782,10 @@ real_config(char* host, int wantsQuiet, bool wantExtraInfo)
 		free( varname );
 	}
 
-		// Re-insert the special macros.  We don't want the user to
+		// Insert the special macros.  We don't want the user to
 		// override them, since it's not going to work.
+		// We also do this last because some things (like USERNAME)
+		// may depend on earlier configuration (USERID_MAP).
 	reinsert_specials( host );
 
 	process_dynamic_configs();
