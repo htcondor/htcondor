@@ -1525,7 +1525,7 @@ sub KillDaemonPids
 	my $cnt = 0;
 	my $cmd;
 
-	DisplayPartialLocalConfig();
+	DisplayPartialLocalConfig($desiredconfig);
 
 	#print "logs are here:$logdir\n";
 	my $pidfile = $logdir . "/PIDS";
@@ -1934,14 +1934,15 @@ sub verbose_system
 
 sub DisplayPartialLocalConfig
 {
+	my $configloc = shift;
 	my $logdir = `condor_config_val log`;
 	my $fullpathtolocalconfig = "";
 	my $line = "";
 	chomp($logdir);
 	if($logdir =~ /(.*\/)log/) {
-		print "Config File Location <$1>\n";
+		#print "Config File Location <$1>\n";
 		$fullpathtolocalconfig = $1 . $personal_local;
-		print "local config file <$fullpathtolocalconfig>\n";
+		print "\nlocal config file <$fullpathtolocalconfig>\n";
 		if( -f $fullpathtolocalconfig) {
 			print "\nDumping Adjustments to <$personal_local>\n\n";
 			my $startdumping = 0;
@@ -1963,6 +1964,7 @@ sub DisplayPartialLocalConfig
 				}
 			}
 			close(LC);
+			print "\nDONE Dumping Adjustments to <$personal_local>\n\n";
 		}
 	}
 }
