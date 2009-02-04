@@ -76,7 +76,7 @@ config_file:
 
 # generate an RTF version of the License file, since MSI won't take plain text
 license:
-	perl txt2rtf.pl --font="Courier New" --points=7 $(BASE)\\src\\condor_release\\LICENSE-2.0.txt > license.rtf
+	perl txt2rtf.pl --font="Courier New" --points=7 $(BASE)\\LICENSE-2.0.txt > license.rtf
 
 clean:
 	rm -rf out
