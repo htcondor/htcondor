@@ -821,12 +821,13 @@ Defaults to false.
 \item[leave\_in\_queue = $<$ClassAd Boolean Expression$>$]
 When the ClassAd Expression evaluates to \Expr{True}, the job is
 not removed from the queue upon completion.
-The job remains in the queue until the user runs \Condor{rm}
-to remove the job from the queue.
 This allows the user of a remotely spooled job to retrieve output
 files in cases where Condor would have removed them as part of
-the cleanup associated with completion.
-Defaults to \Expr{False}.
+the cleanup associated with completion. The job will only exit
+the queue once it has been marked for removal (via \Condor{rm},
+for example) and the \SubmitCmd{leave\_in\_queue} expression has
+become \Expr{False}.
+\SubmitCmd{leave\_in\_queue} defaults to \Expr{False}.
 
 %%%%%%%%%%%%%%%%%%%
 %% on_exit_hold

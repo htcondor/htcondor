@@ -1677,6 +1677,28 @@ it is likely advisable to completely remove the application for which
 the LSP is a part via the Control Panel.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{Why do Condor daemons exit with "Unexpected performance counter size" or "unable to spawn the ProcD" errors?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Condor relies on some of Windows' built-in performance counters for its
+operation. It is possible (via the registry) for performance counters that
+Condor requires to be disabled. If this is the case, you may see daemons
+exit with a message like:
+\begin{verbatim}
+1/26 09:16:42 (fd:2) (pid:5732) ERROR: "Unexpected performance counter
+    size for total CPU: 0 (expected: 8)" at line 2846 in file
+    ..\src\condor_procapi\procapi.cpp
+\end{verbatim}
+or:
+\begin{verbatim}
+1/20 15:29:14 (pid:2484) ERROR "unable to spawn the ProcD" at line 136
+    in file ..\src\condor_c++_util\proc_family_proxy.C
+\end{verbatim}
+To enable the performance counters, check the registry key
+\verb@HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\PerfProc\Performance@. If a value \verb@Disable Performance Counters@ exists, delete it or set
+it to \verb@0@.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{Why does the Windows Installer fail with ``Error 2738. Could not access VBScript run time for custom action''?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
