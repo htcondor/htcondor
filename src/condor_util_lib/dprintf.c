@@ -1186,16 +1186,55 @@ dprintf_wrapup_fork_child( ) {
 }
 
 #if HAVE_BACKTRACE
+
+static void
+safe_async_simple_fwrite_fd(int fd,char const *msg,unsigned int *args,unsigned int num_args)
+{
+	unsigned int arg_index;
+	unsigned int digit,arg;
+	char intbuf[50];
+	char *intbuf_pos;
+
+	for(;*msg;msg++) {
+		if( *msg != '%' ) {
+			write(fd,msg,1);
+		}
+		else {
+				// format is % followed by index of argument in args array
+			arg_index = *(++msg)-'0';
+			if( arg_index >= num_args || !*msg ) {
+				write(fd," INVALID! ",10);
+				break;
+			}
+			arg = args[arg_index];
+			intbuf_pos=intbuf;
+			do {
+				digit = arg % 10;
+				*(intbuf_pos++) = digit + '0';
+				arg /= 10;  // integer division, shifts base-10 digits right
+			} while( arg ); // terminate when no more non-zero digits
+
+				// intbuf now contains the base-10 digits of arg
+				// in order of least to most significant
+			while( intbuf_pos-- > intbuf ) {
+				write(fd,intbuf_pos,1);
+			}
+		}
+	}
+}
+
 void
 dprintf_dump_stack(void) {
-	priv_state	priv;
+	priv_state	orig_priv_state;
+	int orig_euid;
+	int orig_egid;
 	int fd;
 	void *trace[50];
 	int trace_size;
-	char notice[100];
+	unsigned int args[3];
 
 		/* In case we are dumping stack in the segfault handler, we
-		   want this to be a simple as possible.  Calling malloc()
+		   want this to be as simple as possible.  Calling malloc()
 		   could be fatal, since the heap may be trashed.  Therefore,
 		   we dispense with some of the formalities... */
 
@@ -1209,9 +1248,28 @@ dprintf_dump_stack(void) {
 		fd = 2;
 	}
 	else {
-		priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
+			// set_priv() is unsafe, because it may call into
+			// the password cache, which may call unsafe functions
+			// such as getpwuid() or initgroups() or malloc().
+		orig_euid = geteuid();
+		orig_egid = getegid();
+		orig_priv_state = get_priv_state();
+		if( orig_priv_state != PRIV_CONDOR ) {
+				// To keep things simple, rather than trying to become
+				// the correct condor id, just switch to our real
+				// user id, which is probably either the same as
+				// our effective id (no-op) or root.
+			setegid(getgid());
+			seteuid(getuid());
+		}
+
 		fd = safe_open_wrapper(DebugFile[0],O_APPEND|O_WRONLY|O_CREAT,0644);
-		_set_priv(priv, __FILE__, __LINE__, 0);
+
+		if( orig_priv_state != PRIV_CONDOR ) {
+			setegid(orig_egid);
+			seteuid(orig_euid);
+		}
+
 		if( fd==-1 ) {
 			fd=2;
 		}
@@ -1219,8 +1277,12 @@ dprintf_dump_stack(void) {
 
 	trace_size = backtrace(trace,50);
 
-	sprintf(notice,"Stack dump for process %d at timestamp %ld (%d frames)\n",getpid(),(long)time(NULL),trace_size);
-	write(fd,notice,strlen(notice));
+		// sprintf() and other convenient string-handling functions
+		// are not officially async-signal safe, so use a crude replacement
+	args[0] = (unsigned int)getpid();
+	args[1] = (unsigned int)time(NULL);
+	args[2] = (unsigned int)trace_size;
+	safe_async_simple_fwrite_fd(fd,"Stack dump for process %0 at timestamp %1 (%2 frames)\n",args,3);
 
 	backtrace_symbols_fd(trace,trace_size,fd);
 
