@@ -5043,12 +5043,11 @@ JobStatusUnknownEvent::writeEvent (FILE *file)
 	{
 		return 0;
 	}
-
+	
 	return (1);
 }
 
-int
-JobStatusUnknownEvent::readEvent (FILE *file)
+int JobStatusUnknownEvent::readEvent (FILE *file)
 {
 	int retval = fscanf (file, "The job's remote status is unknown\n");
     if (retval != 0)
