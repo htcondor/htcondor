@@ -1863,7 +1863,7 @@ sub LoadExemptions
 	while(<EE>) {
     	chomp();
     	$line = $_;
-    	debug("$line\n",2);
+		debug("$line\n",2);
     	my ($test, $required, $message) = split /,/, $line;
     	my $save = $required . "," . $message;
     	if(exists $exemptions{$test}) {
