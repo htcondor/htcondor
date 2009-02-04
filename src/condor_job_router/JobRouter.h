@@ -179,10 +179,10 @@ class JobRouter: public Service {
 	// safe to do so.
 	void CleanupRetiredJob(RoutedJob *job);
 
-	int EvalSrcJobPeriodicExpr(RoutedJob* job);
+	bool EvalSrcJobPeriodicExpr(RoutedJob* job);
 
-	void SetJobRemoved(classad::ClassAd& ad, const char* remove_reason);
-	void SetJobHeld(classad::ClassAd& ad, const char* hold_reason,
+	bool SetJobRemoved(classad::ClassAd& ad, const char* remove_reason);
+	bool SetJobHeld(classad::ClassAd& ad, const char* hold_reason,
 			int hold_code = 0, int sub_code = 0);
 
 
