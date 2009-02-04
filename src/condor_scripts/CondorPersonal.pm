@@ -842,6 +842,7 @@ sub TunePersonalCondor
 	#print "***************** opening $personal_template as config file template *****************\n";
 	open(TEMPLATE,"<$personal_template")  || die "Can not open template<<$personal_template>>: $!\n";
 	debug( "want to open new config file as $topleveldir/$personal_config\n",3);
+	print NEW "# Editing requested config<$personal_template>\n";
 	open(NEW,">$topleveldir/$personal_config") || die "Can not open new config file<$topleveldir/$personal_config>: $!\n";
 	while(<TEMPLATE>)
 	{
@@ -889,6 +890,7 @@ sub TunePersonalCondor
 	open(NEW,">$topleveldir/$personal_local")  || die "Can not open template: $!\n";
 	if($personal_local_src ne "")
 	{
+		print NEW "# Requested local config<$personal_local_src>\n";
 		#print "******************** Must seed condor_config.local <<$personal_local_src>> ************************\n";
 		open(LOCSRC,"<$personal_local_src") || die "Can not open local config template: $!\n";
 		while(<LOCSRC>)
@@ -912,13 +914,14 @@ sub TunePersonalCondor
 	{
 		# Allow the collector to run on the default and expected port as the main
 		# condor install on this system.
+		print NEW "# Adding requested daemons\n";
 		print NEW "DAEMON_LIST = $personal_daemons\n";
 	}
 
 	if($personal_universe eq "parallel")
 	{
 		# set up dedicated scheduler
-		print "************************ Adding Dedicated Scheduler $personal_universe Universe ***************************\n";
+		print NEW "# Adding Dedicated Scheduler $personal_universe Universe\n";
 		print NEW "DedicatedScheduler = \"DedicatedScheduler\@schedd$mpid$version\@$condorhost\"\n";
 		print NEW "STARTD_EXPRS = \$(STARTD_EXPRS), DedicatedScheduler\n";
 		print NEW "SCHEDD_DEBUG = D_FULLDEBUG\n";
@@ -928,6 +931,7 @@ sub TunePersonalCondor
 	{
 		# this variation requests a dynamic port for collector and negotiator
 		# and the location where we can look up the adresses.
+		print NEW "# Adding for portchanges equal dynamic\n";
 		if( $collectorhost )
 		{
 			print NEW "COLLECTOR_HOST = $collectorhost\n";
@@ -971,11 +975,13 @@ sub TunePersonalCondor
 		print NEW "CONDOR_JOB_POLL_INTERVAL = 5\n";
 		print NEW "PERIODIC_EXPR_TIMESLICE = .99\n";
 		print NEW "JOB_START_DELAY = 0\n";
+		print NEW "# Done Adding for portchanges equal dynamic\n";
 	}
 	elsif( $portchanges eq "standard" )
 	{
 		# Allow the collector to run on the default and expected port as the main
 		# condor install on this system.
+		print NEW "# Adding for portchanges equal standard\n";
 		if( $collectorhost )
 		{
 			print NEW "COLLECTOR_HOST = $collectorhost\n";
@@ -995,6 +1001,7 @@ sub TunePersonalCondor
 		print NEW "CONDOR_JOB_POLL_INTERVAL = 5\n";
 		print NEW "RUNBENCHMARKS = false\n";
 		print NEW "JAVA_BENCHMARK_TIME = 0\n";
+		print NEW "# Done Adding for portchanges equal standard\n";
 	}
 	else
 	{
@@ -1004,6 +1011,7 @@ sub TunePersonalCondor
 
 	#print NEW "PROCD_LOG = \$(LOG)/ProcLog\n";
 	if( $iswindows == 1 ){
+		print NEW "# Adding procd pipe for windows\n";
 		print NEW "PROCD_ADDRESS = \\\\.\\pipe\\$procdaddress\n";
 	}
 
@@ -1013,19 +1021,23 @@ sub TunePersonalCondor
 	{
 		my $myslots = $control{"slots"};
 		debug( "Slots wanted! Number = $myslots\n",3);
+		print NEW "# Adding slot request from param file\n";
 		print NEW "NUM_CPUS = $myslots\n";
 		print NEW "SLOTS = $myslots\n";
+		print NEW "# Done Adding slot request from param file\n";
 	}
 
 	if($personal_sec_prepost_src ne "")
 	{
 		print "Adding to local config file from $personal_sec_prepost_src\n";
 		open(SECURITY,"<$personal_sec_prepost_src")  || die "Can not do local config additions: $! <<$personal_sec_prepost_src>>\n";
+		print NEW "# Adding changes requested from $personal_sec_prepost_src\n";
 		while(<SECURITY>)
 		{
 			print NEW "$_";
 		}
 		close(SECURITY);
+		print NEW "# Done Adding changes requested from $personal_sec_prepost_src\n";
 	}
 
 
@@ -1033,11 +1045,13 @@ sub TunePersonalCondor
 	{
 		print "Adding to local config file from $personal_local_post_src\n";
 		open(POST,"<$personal_local_post_src")  || die "Can not do local config additions: $! <<$personal_local_post_src>>\n";
+		print NEW "# Adding changes requested from $personal_local_post_src\n";
 		while(<POST>)
 		{
 			print NEW "$_";
 		}
 		close(POST);
+		print NEW "# Done Adding changes requested from $personal_local_post_src\n";
 	}
 
 	close(NEW);
@@ -1511,6 +1525,8 @@ sub KillDaemonPids
 	my $cnt = 0;
 	my $cmd;
 
+	DisplayPartialLocalConfig();
+
 	#print "logs are here:$logdir\n";
 	my $pidfile = $logdir . "/PIDS";
 	debug("Asked to kill <$oldconfig>\n",3);
@@ -1915,5 +1931,41 @@ sub verbose_system
 
 	return $rc;
 }
+
+sub DisplayPartialLocalConfig
+{
+	my $logdir = `condor_config_val log`;
+	my $fullpathtolocalconfig = "";
+	my $line = "";
+	chomp($logdir);
+	if($logdir =~ /(.*\/)log/) {
+		print "Config File Location <$1>\n";
+		$fullpathtolocalconfig = $1 . $personal_local;
+		print "local config file <$fullpathtolocalconfig>\n";
+		if( -f $fullpathtolocalconfig) {
+			print "\nDumping Adjustments to <$personal_local>\n\n";
+			my $startdumping = 0;
+			open(LC,"<$fullpathtolocalconfig") or die "Can not open $fullpathtolocalconfig: $!\n";
+			while(<LC>) {
+				chomp($_);
+				$line = $_;
+				if($line =~ /# Requested.*/) {
+					print "$line\n";
+				} elsif($line =~ /# Adding.*/) {
+					if($startdumping == 0) {
+						$startdumping = 1;
+					}
+					print "$line\n";
+				} else {
+					if($startdumping == 1) {
+						print "$line\n";
+					}
+				}
+			}
+			close(LC);
+		}
+	}
+}
+
 
 1;
