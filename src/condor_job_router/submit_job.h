@@ -78,11 +78,11 @@ ClaimJobResult claim_job(classad::ClassAd const &ad, const char * pool_name, con
 		job, the yield attempt fails.  See claim_job for details
 		on suggested identity strings.
 */
-bool yield_job(bool done, int cluster, int proc, MyString * error_details = 0, const char * my_identity = 0, bool *keep_trying = 0);
+bool yield_job(bool done, int cluster, int proc, MyString * error_details = 0, const char * my_identity = 0, bool release_on_hold = true, bool *keep_trying = 0);
 bool yield_job(classad::ClassAd const &ad, const char * pool_name,
 	const char * schedd_name, bool done, int cluster, int proc,
 	MyString * error_details = 0, const char * my_identity = 0,
-	bool *keep_trying = 0);
+	bool release_on_hold = true, bool *keep_trying = 0);
 
 /* 
 - src - The classad to submit.  The ad will be modified based on the needs of

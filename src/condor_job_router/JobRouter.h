@@ -117,6 +117,7 @@ class JobRouter: public Service {
 	int m_max_job_mirror_update_lag; // time before giving up on mirror to update
 
 	bool m_enable_job_routing;
+	bool m_release_on_hold;
 
 	int m_job_router_entries_refresh;
 	int m_job_router_refresh_timer;
@@ -124,6 +125,7 @@ class JobRouter: public Service {
 	int m_job_router_polling_timer;
 	int m_job_router_polling_period;
 
+	char* m_custom_attrs;
 	std::string m_job_router_name;
 
 	int m_poll_count;
