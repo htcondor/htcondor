@@ -443,10 +443,10 @@ collect (int command, Sock *sock, sockaddr_in *from, int &insert)
 	// insert the authenticated user into the ad itself
 	const char* authn_user = sock->getFullyQualifiedUser();
 	if (authn_user) {
-		clientAd->Assign("socket_authenticated_user", authn_user);
+		clientAd->Assign("AuthenticatedIdentity", authn_user);
 	} else {
 		// remove it from the ad if it's not authenticated.
-		clientAd->Delete("socket_authenticated_user");
+		clientAd->Delete("AuthenticatedIdentity");
 	}
 
 	rval = collect(command, clientAd, from, insert, sock);
