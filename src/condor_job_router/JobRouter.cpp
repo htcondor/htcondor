@@ -35,6 +35,8 @@
 #include "util_lib_proto.h"
 #include "my_popen.h"
 #include "file_lock.h"
+#include "classad_newold.h"
+#include "user_job_policy.h"
 
 
 const char JR_ATTR_MAX_JOBS[] = "MaxJobs";
@@ -60,6 +62,7 @@ JobRouter::JobRouter(Scheduler *scheduler): m_jobs(5000,hashFuncStdString,reject
 	m_scheduler = scheduler;
 	m_release_on_hold = true;
 	m_job_router_polling_timer = -1;
+	m_periodic_timer_id = -1;
 	m_job_router_polling_period = 10;
 	m_enable_job_routing = true;
 
@@ -334,12 +337,25 @@ JobRouter::config() {
 	if (m_job_router_polling_timer >= 0) {
 		daemonCore->Cancel_Timer(m_job_router_polling_timer);
 	}
+	if (m_periodic_timer_id >= 0) {
+		daemonCore->Cancel_Timer(m_periodic_timer_id);
+	}
 		// register timer handlers
 	m_job_router_polling_timer = daemonCore->Register_Timer(
 								  0, 
 								  m_job_router_polling_period,
 								  (Eventcpp)&JobRouter::Poll, 
 								  "JobRouter::Poll", this);
+
+	int periodic_interval = param_integer("PERIODIC_EXPR_INTERVAL", 60);
+
+	if (periodic_interval > 0) {
+		m_periodic_timer_id = daemonCore->Register_Timer(0, 
+								periodic_interval,
+								(Eventcpp)&JobRouter::EvalAllSrcJobPeriodicExprs,
+								"JobRouter::EvalAllSrcJobPeriodicExprs",
+								this);
+	}
 
 	char *name = param("JOB_ROUTER_NAME");
 	if(name) {
@@ -349,6 +365,194 @@ JobRouter::config() {
 	else {
 		m_job_router_name = DaemonIdentityString();
 	}
+}
+
+void
+JobRouter::EvalAllSrcJobPeriodicExprs()
+{
+	RoutedJob *job;
+	classad::ClassAdCollection *ad_collection = m_scheduler->GetClassAds();
+	classad::ClassAd *orig_ad;
+
+	dprintf(D_FULLDEBUG, "JobRouter: Evaluating all managed jobs periodic "
+			"job policy expressions.\n");
+
+	m_jobs.startIterations();
+	while(m_jobs.iterate(job))
+	{
+		orig_ad = ad_collection->GetClassAd(job->src_key);
+		if (false == EvalSrcJobPeriodicExpr(job))
+		{
+			dprintf(D_ALWAYS, "JobRouter failure (%s): Unable to "
+					"evaluate job's periodic policy "
+					"expressions.\n", job->JobDesc().c_str());
+			job->SetSrcJobAd(job->src_key.c_str(), orig_ad, ad_collection);
+			if (false == push_dirty_attributes(job->src_ad,NULL,NULL))
+			{
+				dprintf(D_ALWAYS, "JobRouter failure (%s): "
+						"failed to reset src job "
+						"attributesin the schedd.\n",
+						job->JobDesc().c_str());
+			}
+			else
+			{
+				dprintf(D_ALWAYS, "JobRouter (%s): reset src "
+						"job attributes in the "
+						"schedd\n", job->JobDesc().c_str());
+				job->src_ad.ClearAllDirtyFlags();
+			}
+		}
+	}
+
+	return;
+}
+
+bool
+JobRouter::EvalSrcJobPeriodicExpr(RoutedJob* job)
+{
+	UserPolicy user_policy;
+	ClassAd converted_ad;
+	int action;
+	MyString reason;
+	bool ret_val = false;
+
+	if (false == new_to_old(job->src_ad, converted_ad))
+	{
+		dprintf(D_ALWAYS, "JobRouter::EvalSrcJobPeriodicExpr(%s): "
+				"Failed to convert ClassAd.", job->JobDesc().c_str());
+		return false;
+	}
+	user_policy.Init(&converted_ad);
+
+	action = user_policy.AnalyzePolicy(PERIODIC_ONLY);
+
+	reason = user_policy.FiringReason();
+	if ( reason == "" ) {
+		reason = "Unknown user policy expression";
+	}
+
+	switch(action)
+	{
+		case UNDEFINED_EVAL:
+			ret_val = SetJobHeld(job->src_ad, reason.Value());
+			break;
+		case STAYS_IN_QUEUE:
+			// do nothing
+			ret_val = true;
+			break;
+		case REMOVE_FROM_QUEUE:
+			ret_val = SetJobRemoved(job->src_ad, reason.Value());
+			break;
+		case HOLD_IN_QUEUE:
+			ret_val = SetJobHeld(job->src_ad, reason.Value());
+			break;
+		case RELEASE_FROM_HOLD:
+			// When a job that is managed by the job router is
+			// held, the job router cleans up the routed job and
+			// releases control of the job.  Releasing the job
+			// from hold will cause the job router to claim
+			// the job as if it is a new job from the schedd.
+			ret_val = true;
+			break;
+		default:
+			EXCEPT("Unknown action (%d) in "
+				"JobRouter::EvalSrcJobPeriodicExpr(%s)",
+				 action, job->JobDesc().c_str());
+	}
+
+	return ret_val;
+}
+
+bool
+JobRouter::SetJobHeld(classad::ClassAd& ad, const char* hold_reason, int hold_code, int sub_code)
+{
+	int status, num_holds;
+	int cluster, proc;
+	bool ret_val = false;
+	std::string release_reason;
+
+	ad.EvaluateAttrInt(ATTR_CLUSTER_ID, cluster);
+	ad.EvaluateAttrInt(ATTR_PROC_ID, proc);
+
+	if (false == ad.EvaluateAttrInt(ATTR_JOB_STATUS, status))
+	{
+		dprintf(D_ALWAYS, "JobRouter failure (%d.%d): Unable to "					"retrieve current job status.\n", cluster,proc);
+		return false;
+	}
+	if (HELD != status)
+	{
+		if (REMOVED == status)
+		{
+			ad.InsertAttr(ATTR_JOB_STATUS_ON_RELEASE, REMOVED);
+		}
+		ad.InsertAttr(ATTR_JOB_STATUS, HELD);
+		ad.InsertAttr(ATTR_ENTERED_CURRENT_STATUS, (int)time(NULL));
+		ad.InsertAttr(ATTR_HOLD_REASON, hold_reason);
+		ad.InsertAttr(ATTR_HOLD_REASON_CODE, hold_code);
+		ad.InsertAttr(ATTR_HOLD_REASON_SUBCODE, sub_code);
+		if (true == ad.EvaluateAttrString(ATTR_RELEASE_REASON, release_reason))
+		{
+			ad.InsertAttr(ATTR_LAST_RELEASE_REASON, release_reason.c_str());
+		}
+		ad.InsertAttr(ATTR_RELEASE_REASON, "Undefined");
+		ad.EvaluateAttrInt(ATTR_NUM_SYSTEM_HOLDS, num_holds);
+		num_holds++;
+		ad.InsertAttr(ATTR_NUM_SYSTEM_HOLDS, num_holds);
+
+		WriteHoldEventToUserLog(ad);
+
+		if(false == push_dirty_attributes(ad,NULL,NULL))
+		{
+			dprintf(D_ALWAYS,"JobRouter failure (%d.%d): failed to "
+					"place job on hold.\n", cluster, proc);
+			ret_val = false;
+		}
+		else
+		{
+			dprintf(D_FULLDEBUG, "JobRouter (%d.%d): Placed job "
+					"on hold.\n", cluster, proc);
+			ad.ClearAllDirtyFlags();
+			ret_val = true;
+		}
+	}
+	return ret_val;
+}
+
+bool
+JobRouter::SetJobRemoved(classad::ClassAd& ad, const char* remove_reason)
+{
+	int status;
+	int cluster, proc;
+	bool ret_val = false;
+
+	ad.EvaluateAttrInt(ATTR_CLUSTER_ID, cluster);
+	ad.EvaluateAttrInt(ATTR_PROC_ID, proc);
+
+	if (false == ad.EvaluateAttrInt(ATTR_JOB_STATUS, status))
+	{
+		dprintf(D_ALWAYS, "JobRouter failure (%d.%d): Unable to "					"retrieve current job status.\n", cluster,proc);
+		return false;
+	}
+	if (REMOVED != status)
+	{
+		ad.InsertAttr(ATTR_JOB_STATUS, REMOVED);
+		ad.InsertAttr(ATTR_ENTERED_CURRENT_STATUS, (int)time(NULL));
+		ad.InsertAttr(ATTR_REMOVE_REASON, remove_reason);
+		if(false == push_dirty_attributes(ad,NULL,NULL))
+		{
+			dprintf(D_ALWAYS,"JobRouter failure (%d.%d): failed to "
+					"remove job.\n", cluster, proc);
+			ret_val = false;
+		}
+		else
+		{
+			dprintf(D_FULLDEBUG, "JobRouter (%d.%d): Removed job.\n", cluster, proc);
+			ad.ClearAllDirtyFlags();
+			ret_val = true;
+		}
+	}
+
+	return ret_val;
 }
 
 void

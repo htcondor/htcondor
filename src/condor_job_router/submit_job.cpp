@@ -862,6 +862,30 @@ bool InitializeTerminateEvent( TerminatedEvent *event, classad::ClassAd const &j
 	return true;
 }
 
+bool InitializeHoldEvent( JobHeldEvent *event, classad::ClassAd const &job_ad )
+{
+	int cluster, proc;
+	char holdReason[256];
+
+		// This code is copied from gridmanager basejob.C with a small
+		// amount of refactoring.
+		// TODO: put this code in a common place.
+
+	job_ad.EvaluateAttrInt( ATTR_CLUSTER_ID, cluster );
+	job_ad.EvaluateAttrInt( ATTR_PROC_ID, proc );
+
+	dprintf( D_FULLDEBUG, 
+			 "(%d.%d) Writing hold record to user logfile\n",
+			 cluster, proc );
+
+	holdReason[0] = '\0';
+	job_ad.EvaluateAttrString( ATTR_REMOVE_REASON, holdReason,
+						   sizeof(holdReason) - 1 );
+
+	event->setReason( holdReason );
+	return true;
+}
+
 bool WriteEventToUserLog( ULogEvent const &event, classad::ClassAd const &ad )
 {
 	UserLog ulog;
@@ -905,6 +929,17 @@ bool WriteAbortEventToUserLog( classad::ClassAd const &ad )
 	JobAbortedEvent event;
 
 	if(!InitializeAbortedEvent(&event,ad)) {
+		return false;
+	}
+
+	return WriteEventToUserLog( event, ad );
+}
+
+bool WriteHoldEventToUserLog( classad::ClassAd const &ad )
+{
+	JobHeldEvent event;
+	if(!InitializeHoldEvent(&event,ad))
+	{
 		return false;
 	}
 

@@ -69,6 +69,10 @@ class JobRouter: public Service {
 	// This is called in a timer to periodically manage the jobs.
 	void Poll();
 
+	// This is called in a timer to evaluate periodic expressions for the
+	// jobs the JobRouter manages.
+	void EvalAllSrcJobPeriodicExprs();
+
 	void config();
 	void init();
 
@@ -123,6 +127,7 @@ class JobRouter: public Service {
 	int m_job_router_refresh_timer;
 
 	int m_job_router_polling_timer;
+	int m_periodic_timer_id;
 	int m_job_router_polling_period;
 
 	char* m_custom_attrs;
@@ -173,6 +178,13 @@ class JobRouter: public Service {
 	// Sweep away memory of jobs that finished, once it is
 	// safe to do so.
 	void CleanupRetiredJob(RoutedJob *job);
+
+	bool EvalSrcJobPeriodicExpr(RoutedJob* job);
+
+	bool SetJobRemoved(classad::ClassAd& ad, const char* remove_reason);
+	bool SetJobHeld(classad::ClassAd& ad, const char* hold_reason,
+			int hold_code = 0, int sub_code = 0);
+
 
 	void SetRoutingTable(RoutingTable *new_routes);
 
