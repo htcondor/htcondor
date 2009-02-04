@@ -1863,7 +1863,7 @@ sub LoadExemptions
 	while(<EE>) {
     	chomp();
     	$line = $_;
-    	print $line . "\n";
+    	debug("$line\n",2);
     	my ($test, $required, $message) = split /,/, $line;
     	my $save = $required . "," . $message;
     	if(exists $exemptions{$test}) {
@@ -1873,7 +1873,7 @@ sub LoadExemptions
         	push @{$exemptions{$test}}, $save;
     	}
 	}
-	DropExemptions();
+	#DropExemptions();
 }
 
 sub IgnoreError
