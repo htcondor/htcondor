@@ -7,6 +7,9 @@
 
 11/05/2008 V7_2-branch
   Branch for 7.1.4 and 7.2 series, based from the master.
+03/02/2009 V7_2_1-branch
+  Branch for the 7.2.1 release; the branch is based on V7_2-branch.
+
 01/02/2009 V7_2-mysubsystem_fix-branch
   Branch used to ensure that the new MySubsystem implementation works as
   expected on Windows.  Currently, if some of the tools are built from the
