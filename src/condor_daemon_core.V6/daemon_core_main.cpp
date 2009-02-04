@@ -632,9 +632,31 @@ static char *core_dir = NULL;
 void
 linux_sig_coredump(int signum)
 {
+	struct sigaction sa;
+	static bool down = false;
+
+	/* It turns out that the abort() call will unblock the sig
+		abort signal and allow the handler to be called again. So,
+		in a real world case, which led me to write this test,
+		glibc decided something was wrong and called abort(),
+		then, in this signal handler, we tickled the exact
+		thing glibc didn't like in the first place and so it
+		called abort() again, leading back to this handler. A
+		segmentation fault happened finally when the stack was
+		exhausted. This guard is here to prevent that type
+		of scenario from happening again with this handler.
+		This fixes ticket number #183 in the condor-wiki. NOTE:
+		We never set down to false again, because this handler
+		is meant to exit() and not return. */
+
+	if (down == true) {
+		return;
+	}
+	down = true;
+
 	dprintf_dump_stack();
 
-		// Just in case we're running as condor or a user.
+	// Just in case we're running as condor or a user.
 	setuid(0);
 	setgid(0);
 
@@ -644,8 +666,7 @@ linux_sig_coredump(int signum)
 
 	WriteCoreDump("core");
 
-		// It would be idea to actually terminate for the same reason.
-	struct sigaction sa;
+	// It would be a good idea to actually terminate for the same reason.
 	sa.sa_handler = SIG_DFL;
 	sigemptyset(&sa.sa_mask);
 	sa.sa_flags = 0;
@@ -654,7 +675,10 @@ linux_sig_coredump(int signum)
 
 	raise(signum);
 
-	exit(1); // Just in case.
+	// If for whatever reason the second raise doesn't kill us properly, 
+	// we shall exit with a non-zero code so if anything depends on us,
+	// at least they know there was a problem.
+	exit(1);
 }
 #endif
 
