@@ -183,7 +183,7 @@ if( $batchteststatus != 0 ) {
 
 chdir( "$SrcDir/$testdir/$compiler" ) || 
   c_die("Can't chdir($SrcDir/$testdir/$compiler): $!\n");
-
+$local_out = "$SrcDir/$testdir/TestingPersonalCondor/condor_config.local";
 $run_out = "$testname.run.out";
 $run_out_full = "$SrcDir/$testdir/$compiler/$run_out";
 $test_out = "$testname.out";
@@ -237,6 +237,17 @@ if( open(RES, "<$test_err_full") ) {
     }
     close RES;
     print "\n----- End of $test_err -----\n";
+} else {
+    print "\n\nERROR: failed to open $test_err_full: $!\n";
+}
+# add  local config file
+if( open(RES, "<$local_out") ) {
+    print "\n\n----- Start of TestingPersonalCondor/condor_config.local -----\n";
+    while(<RES>) {
+        print "$_";
+    }
+    close RES;
+    print "\n----- End of TestingPersonalCondor/condor_config.local -----\n";
 } else {
     print "\n\nERROR: failed to open $test_err_full: $!\n";
 }
