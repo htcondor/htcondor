@@ -27,7 +27,6 @@
 #include "condor_debug.h"
 #include "condor_socket_types.h"
 #include "subsystem_info.h"
-#include "httpget.h"
 #include "directory.h"
 #include "stdsoap2.h"
 #include "soap_core.h"
@@ -55,14 +54,7 @@ init_soap(struct soap *soap)
 	soap->send_timeout = 20;
 	soap->recv_timeout = 20;
 
-		// Register a plugin to handle HTTP GET messages.
-		// See httpget.c.
-		// Note: valgrind complains about a memory leak inside
-		// here, but Matt and Todd say it's not a problem because
-		// this is only called at initialization.  wenger 2006-06-22.
-	soap_register_plugin_arg(soap,websrv,(void*)http_get_handler);
-		// soap.accept_flags = SO_NOSIGPIPE;
-		// soap.accept_flags = MSG_NOSIGNAL;
+	soap->fget = get_handler;
 
 #ifdef COMPILE_SOAP_SSL
 	bool enable_soap_ssl = param_boolean("ENABLE_SOAP_SSL", false);
@@ -141,7 +133,7 @@ init_soap(struct soap *soap)
 			soap_init(&ssl_soap);
 			soap_set_namespaces(&ssl_soap, namespaces);
 
-			soap_register_plugin_arg(&ssl_soap,websrv,(void*)http_get_handler);
+			ssl_soap.fget = get_handler;
 
 			ssl_soap.send_timeout = 20;
 			ssl_soap.recv_timeout = 20;
@@ -480,11 +472,13 @@ int http_copy_file(struct soap *soap, const char *name, const char *type)
   size_t r;
 
   char bbb[64000];
-
+  
   char * web_root_dir = param("WEB_ROOT_DIR");
+
   if (!web_root_dir) {
 	    return 404; /* HTTP not found */
   }
+    
   char * full_name = dircat(web_root_dir,name);
   fd = safe_fopen_wrapper(full_name, "rb"); /* open file to copy */
   delete [] full_name;
@@ -513,7 +507,7 @@ int http_copy_file(struct soap *soap, const char *name, const char *type)
   if (soap_end_send(soap))
     return soap->error;
   return SOAP_OK;
-}
+}   
 
 
 /******************************************************************************\
@@ -522,7 +516,7 @@ int http_copy_file(struct soap *soap, const char *name, const char *type)
  *
 \******************************************************************************/
 
-int http_get_handler(struct soap *soap)
+int get_handler(struct soap *soap)
 { /* HTTP response choices: */
   soap_omode(soap, SOAP_IO_STORE);  /* you have to buffer entire content when returning HTML pages to determine content length */
   //soap_set_omode(soap, SOAP_IO_CHUNK); /* ... or use chunked HTTP content (faster) */

@@ -13,7 +13,7 @@ FIX_BROKEN_GCC =
 #endif
 
 #if HAVE_EXT_GSOAP
-GSOAP_OBJS = soap_core.o httpget.o
+GSOAP_OBJS = soap_core.o
 #endif
 
 CFLAGS = $(STD_C_FLAGS)
