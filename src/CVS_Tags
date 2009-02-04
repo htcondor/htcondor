@@ -1,3 +1,8 @@
+02/04/2009 V7_2_1
+  The offical tag for 7.2.1, from the V7_2_1-branch.
+  Version string: $CondorVersion: 7.2.1 Feb  3 2009 BuildID: 130092 $
+  Original build tag: BUILD-BUILD-V7_2-branch-2009-2-2
+
 01/02/2009 V7_2-mysubsystem_fix-branch
   Branch used to ensure that the new MySubsystem implementation works as
   expected on Windows.  Currently, if some of the tools are built from the
