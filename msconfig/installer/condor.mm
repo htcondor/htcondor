@@ -272,6 +272,20 @@
 ;--- Copy cygwin1.dll if we find one (to avoid version conflicts) -----------
 ;<$Files '[CYGWINDLL]' DestDir='[INSTALLDIR]bin'>
 
+;--- Install the Visual Studio runtime --------------------------------------
+#(
+<$MergeModule "C:\Program Files\Common Files\Merge Modules\Microsoft_VC90_CRT_x86.msm" 
+        language="0" 
+        IgnoreErrors=^InstallExecuteSequence:AllocateRegistrySpace^>
+#)
+#(
+<$MergeModule "C:\Program Files\Common Files\Merge Modules\policy_9_0_Microsoft_VC90_CRT_x86.msm"
+	language="0" 
+        IgnoreErrors=^InstallExecuteSequence:AllocateRegistrySpace \
+        InstallExecuteSequence:SxsInstallCA InstallExecuteSequence:SxsUninstallCA^>
+#)
+
+
 ; ---- remove trailing slash from INSTALLDIR --------
 <$VbsCa Binary="RemoveSlashFromINSTALLDIR.vbs">
    <$VbsCaEntry "RemoveTrailingSlash">
