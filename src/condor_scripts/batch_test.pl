@@ -956,6 +956,10 @@ sub WhereIsInstallDir
 	}
 
 	my $tmp = CondorTest::Which("condor_master");
+	if ( ! ($tmp =~ /^\// ) ) {
+		print STDERR "Unable to find a condor_master in your \$PATH!\n";
+		exit(1);
+	}
 	chomp($tmp);
 	debug( "Install Directory \"$tmp\"\n",2);
 	if($iswindows == 0) {
@@ -1040,9 +1044,9 @@ sub CreateConfig
 		if($line =~ /^RELEASE_DIR\s*=.*/) {            
 			debug( "Matching <<$line>>\n",2);
 			if($iswindows == 1) {
-				print NEWFIG "RELEASE_DIR = $wininstalldir\n";        
+				print NEWFIG "RELEASE_DIR = $wininstalldir\n";
 			} else {
-				print NEWFIG "RELEASE_DIR = $installdir\n";        
+				print NEWFIG "RELEASE_DIR = $installdir\n";
 			}
 		} elsif($line =~ /^LOCAL_DIR\s*=.*/) {            
 			debug( "Matching <<$line>>\n",2);
@@ -1908,3 +1912,8 @@ sub DropExemptions
     	}
 	}
 }
+
+### Local Variables: ***
+### mode:perl ***
+### tab-width: 4  ***
+### End: ***
