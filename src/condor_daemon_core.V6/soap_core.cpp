@@ -33,6 +33,10 @@
 
 #include "mimetypes.h"
 
+#ifdef WIN32
+#define realpath(P,B) _fullpath((B),(P),_MAX_PATH)
+#endif
+
 extern int soap_serve(struct soap *);
 
 extern DaemonCore *daemonCore;
@@ -500,8 +504,10 @@ int serve_file(struct soap *soap, const char *name, const char *type) {
      resource is not a directory */
   if (strstr(full_name_realpath, web_root_realname) != full_name_realpath
       || IsDirectory(full_name_realpath)) {
-    /* NB:  it might be nice to redirect to index.html 
-       if the requested resource is a directory */
+    /* NB:  it might be nice to support an option 
+       to redirect to an index file or a dynamically-
+       generated index if the requested resource 
+       is a directory */
     free(full_name_realpath);
     free(web_root_realname);
     return 403;
