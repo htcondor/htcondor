@@ -106,6 +106,9 @@ class passwd_cache {
 		 */
 		time_t get_entry_lifetime() { return Entry_lifetime; }
 
+		// builds a string in the format expected for the
+		// configuration variable USERID_MAP
+		void getUseridMap(MyString &usermap);
 
 	private:
 

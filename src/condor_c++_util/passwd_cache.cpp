@@ -92,6 +92,37 @@ parseGid(char const *str,gid_t *gid) {
 }
 
 void
+passwd_cache::getUseridMap(MyString &usermap)
+{
+	// fill in string with entries of form expected by loadConfig()
+	uid_entry *uent;
+	group_entry *gent;
+	MyString index;
+
+	uid_table->startIterations();
+	while ( uid_table->iterate(index, uent) ) {
+		if( !usermap.IsEmpty() ) {
+			usermap += " ";
+		}
+		usermap.sprintf_cat("%s=%ld,%ld",index.Value(),(long)uent->uid,(long)uent->gid);
+		if( group_table->lookup(index,gent) == 0 ) {
+			int i;
+			for(i=0;i<gent->gidlist_sz;i++) {
+				if( gent->gidlist[i] == uent->gid ) {
+					// already included this gid, because it is the primary
+					continue;
+				}
+				usermap.sprintf_cat(",%ld",(long)gent->gidlist[i]);
+			}
+		}
+		else {
+			// indicate that supplemental groups are unknown
+			usermap.sprintf_cat(",?");
+		}
+	}
+}
+
+void
 passwd_cache::loadConfig() {
 		// initialize cache with any configured mappings
 	char *usermap_str = param("USERID_MAP");
@@ -101,6 +132,8 @@ passwd_cache::loadConfig() {
 
 		// format is "username=uid,gid,gid2,gid3,... user2=uid2,gid2,..."
 		// first split on spaces, which separate the records
+		// If gid2 is "?", then we assume that supplemental groups
+		// are unknown.
 	StringList usermap(usermap_str," ");
 	free( usermap_str );
 
@@ -132,6 +165,11 @@ passwd_cache::loadConfig() {
 		pwent.pw_uid = uid;
 		pwent.pw_gid = gid;
 		cache_uid(&pwent);
+
+		idstr = ids.next();
+		if( idstr && !strcmp(idstr,"?") ) {
+			continue; // no information about supplemental groups
+		}
 
 		ids.rewind();
 		ids.next(); // go to first group id

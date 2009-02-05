@@ -6925,6 +6925,36 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 	PROC_ID* job_id = &srec->job_id;
 	ClassAd* job_ad = NULL;
 
+	Env extra_env;
+	if( ! env ) {
+		extra_env.Import(); // copy schedd's environment
+	}
+	else {
+		extra_env.MergeFrom(*env);
+	}
+	env = &extra_env;
+
+	// Now add USERID_MAP to the environment so the child process does
+	// not have to look up stuff we already know.  In some
+	// environments (e.g. where NSS is used), we have observed cases
+	// where about half of the shadow's private memory was consumed by
+	// junk allocated inside of the first call to getpwuid(), so this
+	// is worth optimizing.  This may also reduce load on the ldap
+	// server.
+
+#ifndef WIN32
+	passwd_cache *p = pcache();
+	if( p ) {
+		MyString usermap;
+		p->getUseridMap(usermap);
+		if( !usermap.IsEmpty() ) {
+			MyString envname;
+			envname.sprintf("_%s_USERID_MAP",myDistro->Get());
+			extra_env.SetEnv(envname.Value(),usermap.Value());
+		}
+	}
+#endif
+
 		/* Setup the array of fds for stdin, stdout, stderr */
 	int* std_fds_p = NULL;
 	int std_fds[3];
