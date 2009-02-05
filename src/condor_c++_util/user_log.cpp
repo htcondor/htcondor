@@ -840,11 +840,16 @@ UserLog::doWriteEvent( ULogEvent *event,
 	// For now, for performance, do not sync the global event log.
 	if ( (   is_global_event  && m_global_fsync ) ||
 		 ( (!is_global_event) && m_enable_fsync ) ) {
+		before = time(NULL);
 		if ( fsync( fileno( fp ) ) != 0 ) {
 		  dprintf( D_ALWAYS,
 				   "fsync() failed in UserLog::writeEvent - errno %d (%s)\n",
 				   errno, strerror(errno) );
 			// Note:  should we set success to false here?
+		}
+		after = time(NULL);
+		if ( (after - before) > 5 ) {
+			dprintf( D_FULLDEBUG, "UserLog::doWriteEvent(): fsyncing file took %d seconds\n", (after-before) );
 		}
 	}
 	before = time(NULL);
