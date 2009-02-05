@@ -842,8 +842,8 @@ sub TunePersonalCondor
 	#print "***************** opening $personal_template as config file template *****************\n";
 	open(TEMPLATE,"<$personal_template")  || die "Can not open template<<$personal_template>>: $!\n";
 	debug( "want to open new config file as $topleveldir/$personal_config\n",3);
-	print NEW "# Editing requested config<$personal_template>\n";
 	open(NEW,">$topleveldir/$personal_config") || die "Can not open new config file<$topleveldir/$personal_config>: $!\n";
+	print NEW "# Editing requested config<$personal_template>\n";
 	while(<TEMPLATE>)
 	{
 		fullchomp($_);
