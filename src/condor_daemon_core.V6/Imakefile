@@ -13,7 +13,7 @@ FIX_BROKEN_GCC =
 #endif
 
 #if HAVE_EXT_GSOAP
-GSOAP_OBJS = soap_core.o
+GSOAP_OBJS = mimetypes.o soap_core.o 
 #endif
 
 CFLAGS = $(STD_C_FLAGS)
@@ -28,6 +28,7 @@ OBJ = $(GSOAP_OBJS) timer_manager.o daemon_core.o daemon_core_main.o \
 
 library_target(daemon_core.a,$(OBJ))
 c_plus_target(testit,test_daemon_core.o daemon_core.a,$(LIB))
+
 html_target( documentation )
 
 release:: all

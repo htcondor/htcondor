@@ -1,6 +1,6 @@
 /* ANSI-C code produced by gperf version 3.0.3 */
 /* Command-line: gperf  */
-/* Computed positions: -k'2' */
+/* Computed positions: -k'1-2,$' */
 
 #if !((' ' == 32) && ('!' == 33) && ('"' == 34) && ('#' == 35) \
       && ('%' == 37) && ('&' == 38) && ('\'' == 39) && ('(' == 40) \
@@ -46,12 +46,12 @@ const char *type_for_ext(const char *ext) {
       return NULL;
 }
 
-#define TOTAL_KEYWORDS 8
-#define MIN_WORD_LENGTH 3
-#define MAX_WORD_LENGTH 4
-#define MIN_HASH_VALUE 3
-#define MAX_HASH_VALUE 18
-/* maximum key range = 16, duplicates = 0 */
+#define TOTAL_KEYWORDS 84
+#define MIN_WORD_LENGTH 1
+#define MAX_WORD_LENGTH 7
+#define MIN_HASH_VALUE 1
+#define MAX_HASH_VALUE 258
+/* maximum key range = 258, duplicates = 0 */
 
 #ifndef GPERF_DOWNCASE
 #define GPERF_DOWNCASE 1
@@ -104,36 +104,47 @@ inline
 static unsigned int
 mime_hash (register const char *str, register unsigned int len)
 {
-  static unsigned char asso_values[] =
+  static unsigned short asso_values[] =
     {
-      19, 19, 19, 19, 19, 19, 19, 19, 19, 19,
-      19, 19, 19, 19, 19, 19, 19, 19, 19, 19,
-      19, 19, 19, 19, 19, 19, 19, 19, 19, 19,
-      19, 19, 19, 19, 19, 19, 19, 19, 19, 19,
-      19, 19, 19, 19, 19, 19, 19, 19, 19, 19,
-      19, 19, 19, 19, 19, 19, 19, 19, 19, 19,
-      19, 19, 19, 19, 19, 19, 19,  4, 19, 19,
-      19, 19, 19, 15, 19, 19, 19, 10, 19, 19,
-       5, 19, 19,  0, 10, 19, 19, 19, 19, 19,
-      19, 19, 19, 19, 19, 19, 19, 19, 19,  4,
-      19, 19, 19, 19, 19, 15, 19, 19, 19, 10,
-      19, 19,  5, 19, 19,  0, 10, 19, 19, 19,
-      19, 19, 19, 19, 19, 19, 19, 19, 19, 19,
-      19, 19, 19, 19, 19, 19, 19, 19, 19, 19,
-      19, 19, 19, 19, 19, 19, 19, 19, 19, 19,
-      19, 19, 19, 19, 19, 19, 19, 19, 19, 19,
-      19, 19, 19, 19, 19, 19, 19, 19, 19, 19,
-      19, 19, 19, 19, 19, 19, 19, 19, 19, 19,
-      19, 19, 19, 19, 19, 19, 19, 19, 19, 19,
-      19, 19, 19, 19, 19, 19, 19, 19, 19, 19,
-      19, 19, 19, 19, 19, 19, 19, 19, 19, 19,
-      19, 19, 19, 19, 19, 19, 19, 19, 19, 19,
-      19, 19, 19, 19, 19, 19, 19, 19, 19, 19,
-      19, 19, 19, 19, 19, 19, 19, 19, 19, 19,
-      19, 19, 19, 19, 19, 19, 19, 19, 19, 19,
-      19, 19, 19, 19, 19, 19
+      259, 259, 259, 259, 259, 259, 259, 259, 259, 259,
+      259, 259, 259, 259, 259, 259, 259, 259, 259, 259,
+      259, 259, 259, 259, 259, 259, 259, 259, 259, 259,
+      259, 259, 259, 259, 259, 259, 259, 259, 259, 259,
+      259, 259, 259, 259, 259, 259, 259, 259,  55, 259,
+       12,   7, 259, 259, 259, 259, 259,  55, 259, 259,
+      259, 259, 259, 259, 259,  85,   2,  65, 115,  10,
+       75,  35,   0,  10,  80,  95,   0,  25,  30,  70,
+       20,   5,   0,  15,   5,   0,  10, 125,   0, 259,
+        7, 259, 259, 259, 259, 259, 259,  85,   2,  65,
+      115,  10,  75,  35,   0,  10,  80,  95,   0,  25,
+       30,  70,  20,   5,   0,  15,   5,   0,  10, 125,
+        0, 259,   7, 259, 259, 259, 259, 259, 259, 259,
+      259, 259, 259, 259, 259, 259, 259, 259, 259, 259,
+      259, 259, 259, 259, 259, 259, 259, 259, 259, 259,
+      259, 259, 259, 259, 259, 259, 259, 259, 259, 259,
+      259, 259, 259, 259, 259, 259, 259, 259, 259, 259,
+      259, 259, 259, 259, 259, 259, 259, 259, 259, 259,
+      259, 259, 259, 259, 259, 259, 259, 259, 259, 259,
+      259, 259, 259, 259, 259, 259, 259, 259, 259, 259,
+      259, 259, 259, 259, 259, 259, 259, 259, 259, 259,
+      259, 259, 259, 259, 259, 259, 259, 259, 259, 259,
+      259, 259, 259, 259, 259, 259, 259, 259, 259, 259,
+      259, 259, 259, 259, 259, 259, 259, 259, 259, 259,
+      259, 259, 259, 259, 259, 259, 259, 259, 259, 259,
+      259, 259, 259, 259, 259, 259
     };
-  return len + asso_values[(unsigned char)str[1]];
+  register int hval = len;
+
+  switch (hval)
+    {
+      default:
+        hval += asso_values[(unsigned char)str[1]];
+      /*FALLTHROUGH*/
+      case 1:
+        hval += asso_values[(unsigned char)str[0]];
+        break;
+    }
+  return hval + asso_values[(unsigned char)str[len - 1]];
 }
 
 #ifdef __GNUC__
@@ -147,18 +158,138 @@ mime_lookup (register const char *str, register unsigned int len)
 {
   static struct mimetype wordlist[] =
     {
-      {""}, {""}, {""},
-      {"xsd","text/xml"},
-      {"wsdl","text/xml"},
+      {""},
+      {"h","text/plain"},
+      {"hh","text/plain"},
+      {"hxx","text/plain"},
+      {""},
+      {"xhtml","application/xhtml+xml"},
+      {""},
+      {"tr","application/x-troff"},
+      {"xht","application/xhtml+xml"},
+      {"html","text/html"},
+      {"lzh","application/octet-stream"},
+      {"t","application/x-troff"},
+      {"el","text/plain"},
+      {"txt","text/plain"},
+      {"vrml","model/vrml"},
       {""}, {""},
-      {"ico","image/ico"},
-      {"jpg","image/jpg"},
-      {"jpeg","image/jpg"},
+      {"qt","video/quicktime"},
+      {"xsl","text/xml"},
+      {""}, {""}, {""}, {""},
+      {"exe","application/octet-stream"},
+      {"text","text/plain"},
       {""}, {""}, {""},
       {"xml","text/xml"},
-      {"html","text/html"},
+      {"texi","application/x-texinfo"},
       {""}, {""}, {""},
-      {"gif","image/gif"}
+      {"htm","text/html"},
+      {""}, {""}, {""}, {""},
+      {"eml","message/rfc822"},
+      {"mesh","model/mesh"},
+      {""}, {""}, {""},
+      {"msh","model/mesh"},
+      {"smil","application/smil"},
+      {"bin","application/octet-stream"},
+      {""}, {""},
+      {"eps","application/postscript"},
+      {"midi","audio/midi"},
+      {"tgz","application/x-gzip"},
+      {"gz","application/x-gzip"},
+      {"ps","application/postscript"},
+      {"smi","application/smil"},
+      {"sgml","text/sgml"},
+      {"mp3","audio/mpeg"},
+      {""}, {""},
+      {"mpe","video/mpeg"},
+      {""},
+      {"mp2","audio/mpeg"},
+      {""}, {""},
+      {"igs","model/iges"},
+      {"iges","model/iges"},
+      {""}, {""}, {""},
+      {"cxx","text/plain"},
+      {""}, {""}, {""},
+      {"pm","text/plain"},
+      {"img","application/octet-stream"},
+      {""}, {""}, {""}, {""},
+      {"sgm","text/sgml"},
+      {""}, {""}, {""}, {""},
+      {"mpg","video/mpeg"},
+      {"mpeg","video/mpeg"},
+      {"class","application/octet-stream"},
+      {""},
+      {"au","audio/basic"},
+      {"lha","application/octet-stream"},
+      {""}, {""}, {""},
+      {"texinfo","application/x-texinfo"},
+      {"tif","image/tiff"},
+      {"tiff","image/tiff"},
+      {""}, {""}, {""},
+      {"iso","application/octet-stream"},
+      {"silo","model/mesh"},
+      {""}, {""}, {""},
+      {"asx","video/x-ms-asf"},
+      {""}, {""}, {""},
+      {"ai","application/postscript"},
+      {"mov","video/quicktime"},
+      {""}, {""}, {""}, {""},
+      {"jpe","image/jpeg"},
+      {"mail","message/rfc822"},
+      {""}, {""}, {""},
+      {"dll","application/octet-stream"},
+      {""}, {""}, {""}, {""},
+      {"gif","image/gif"},
+      {""}, {""}, {""}, {""},
+      {"wrl","model/vrml"},
+      {""}, {""},
+      {"c","text/plain"},
+      {""},
+      {"xsd","text/xml"},
+      {"mpga","audio/mpeg"},
+      {""}, {""}, {""},
+      {"jpg","image/jpg"},
+      {"jpeg","image/jpeg"},
+      {""}, {""}, {""},
+      {"man","application/x-troff-man"},
+      {"wsdl","text/xml"},
+      {""}, {""}, {""},
+      {"ico","image/ico"},
+      {"roff","application/x-troff"},
+      {""}, {""}, {""},
+      {"mid","audio/midi"},
+      {""}, {""}, {""},
+      {"so","application/octet-stream"},
+      {"dms","application/octet-stream"},
+      {""}, {""}, {""},
+      {"nc","application/x-netcdf"},
+      {"snd","audio/basic"},
+      {"aifc","audio/x-aiff"},
+      {""}, {""}, {""},
+      {"asc","text/plain"},
+      {""}, {""}, {""}, {""},
+      {"aif","audio/x-aiff"},
+      {"aiff","audio/x-aiff"},
+      {""}, {""}, {""},
+      {"asf","video/x-ms-asf"},
+      {""}, {""}, {""}, {""},
+      {"kar","audio/midi"},
+      {""}, {""}, {""}, {""},
+      {"f90","text/plain"},
+      {""}, {""}, {""}, {""}, {""}, {""}, {""}, {""},
+      {"cc","text/plain"},
+      {""},
+      {"djvu","image/vnd.djvu"},
+      {""}, {""}, {""}, {""}, {""}, {""}, {""}, {""},
+      {"djv","image/vnd.djvu"},
+      {""}, {""}, {""}, {""}, {""}, {""}, {""}, {""}, {""},
+      {""}, {""}, {""}, {""}, {""}, {""}, {""}, {""}, {""},
+      {""}, {""}, {""}, {""}, {""}, {""}, {""},
+      {"jfif","image/jpeg"},
+      {""}, {""}, {""}, {""}, {""}, {""}, {""}, {""}, {""},
+      {""}, {""}, {""}, {""}, {""}, {""}, {""}, {""}, {""},
+      {""}, {""}, {""}, {""}, {""},
+      {"cdf","application/x-netcdf"}
     };
 
   if (len <= MAX_WORD_LENGTH && len >= MIN_WORD_LENGTH)
