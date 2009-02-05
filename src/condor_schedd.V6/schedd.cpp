@@ -8827,11 +8827,7 @@ send_vacate(match_rec* match,int cmd)
 	msg->setTimeout( STARTD_CONTACT_TIMEOUT );
 	msg->setSecSessionId( match->secSessionId() );
 
-		// Eventually we should keep info in the match record about if 
-		// the startd is able to receive incoming UDP (it will know
-		// because of the claim keepalive heartbeat).
-		// But for now, it is a knob.
-	if ( param_boolean("SCHEDD_SEND_VACATE_VIA_TCP",false) ) {
+	if ( !startd->hasUDPCommandPort() || param_boolean("SCHEDD_SEND_VACATE_VIA_TCP",false) ) {
 		dprintf( D_FULLDEBUG, "Called send_vacate( %s, %d ) via TCP\n", 
 				 match->peer, cmd );
 		msg->setStreamType(Stream::reli_sock);
@@ -11072,7 +11068,8 @@ Scheduler::sendReschedule()
 	dprintf( D_FULLDEBUG, "Sending RESCHEDULE command to negotiator(s)\n" );
 
 	Daemon negotiator(DT_NEGOTIATOR);
-	if( !negotiator.sendCommand(RESCHEDULE, Stream::safe_sock, NEGOTIATOR_CONTACT_TIMEOUT) ) {
+	Stream::stream_type st = negotiator.hasUDPCommandPort() ? Stream::safe_sock : Stream::reli_sock;
+	if( !negotiator.sendCommand(RESCHEDULE, st, NEGOTIATOR_CONTACT_TIMEOUT) ) {
 		dprintf( D_ALWAYS,
 				 "failed to send RESCHEDULE command to negotiator\n" );
 		return;
@@ -11083,7 +11080,8 @@ Scheduler::sendReschedule()
 		FlockNegotiators->rewind();
 		FlockNegotiators->next( d );
 		for( int i=0; d && i<FlockLevel; FlockNegotiators->next(d), i++ ) {
-			if( !d->sendCommand(RESCHEDULE, Stream::safe_sock, 
+			st = d->hasUDPCommandPort() ? Stream::safe_sock : Stream::reli_sock;
+			if( !d->sendCommand(RESCHEDULE, st, 
 								NEGOTIATOR_CONTACT_TIMEOUT) ) {
 				dprintf( D_ALWAYS, 
 						 "failed to send RESCHEDULE command to %s: %s\n",
@@ -11422,7 +11420,8 @@ sendAlive( match_rec* mrec )
 
 	msg->setSuccessDebugLevel(D_PROTOCOL);
 	msg->setTimeout( STARTD_CONTACT_TIMEOUT );
-	msg->setStreamType( Stream::safe_sock );
+	Stream::stream_type st = startd->hasUDPCommandPort() ? Stream::safe_sock : Stream::reli_sock;
+	msg->setStreamType( st );
 	msg->setSecSessionId( mrec->secSessionId() );
 
 	dprintf (D_PROTOCOL,"## 6. Sending alive msg to %s\n", mrec->description());

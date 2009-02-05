@@ -469,6 +469,14 @@ public:
 	void sendBlockingMsg( classy_counted_ptr<DCMsg> msg );
 
 		/**
+		 * returns true if target daemon has a UDP command port.
+		 * Currently, we assume the answer is "yes" unless the target
+		 * daemon is being accessed via CCB.  Eventually, we could
+		 * be smarter.
+		 */
+	bool hasUDPCommandPort();
+
+		/**
 		 * Contact another daemon and initiate the time offset range 
 		 * determination logic. We create a socket connection, pass the
 		 * DC_TIME_OFFSET command then pass the Stream to the cedar stub
@@ -495,8 +503,6 @@ public:
 		 * @return true if it was able to contact the other Daemon and get range
 		 **/
 	bool getTimeOffsetRange( long &min_range, long &max_range );
-//DAN TESTING: DO NOT COMMIT!!!!!
-friend class Scheduler;
 
 protected:
 	// Data members
@@ -505,6 +511,7 @@ protected:
 	char* _hostname;
 	char* _full_hostname;
 	char* _addr;
+	bool m_has_udp_command_port;
 	char* _version;
 	char* _platform;
 	char* _pool;

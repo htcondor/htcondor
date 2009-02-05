@@ -69,6 +69,7 @@ Daemon::common_init() {
 	char buf[200];
 	sprintf(buf,"%s_TIMEOUT_MULTIPLIER",get_mySubSystem()->getName() );
 	Sock::set_timeout_multiplier( param_integer(buf,0) );
+	m_has_udp_command_port = true;
 }
 
 
@@ -92,7 +93,7 @@ Daemon::Daemon( daemon_t tType, const char* tName, const char* tPool )
 
 	if( tName && tName[0] ) {
 		if( is_valid_sinful(tName) ) {
-			_addr = strnewp( tName );
+			New_addr( strnewp(tName) );
 		} else {
 			_name = strnewp( tName );
 		}
@@ -1681,6 +1682,14 @@ Daemon::readLocalClassAd( const char* subsys )
 	return getInfoFromAd( smart_ad_ptr );
 }
 
+bool
+Daemon::hasUDPCommandPort()
+{
+	if( !_tried_locate ) {
+		locate();
+	}
+	return m_has_udp_command_port;
+}
 
 bool 
 Daemon::getInfoFromAd( const ClassAd* ad )
@@ -1895,6 +1904,16 @@ Daemon::New_addr( char* str )
 		delete [] _addr;
 	} 
 	_addr = str;
+
+	if( _addr ) {
+		Sinful addr(_addr);
+		if( addr.getCCBContact() ) {
+			// CCB cannot handle UDP, so pretend this daemon has no
+			// UDP port.
+			m_has_udp_command_port = false;
+		}
+	}
+
 	return str;
 }
 

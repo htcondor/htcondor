@@ -2661,7 +2661,8 @@ public:
 					m_startdName.Value(), m_startdAddr.Value()); 
 
 		if(!m_nonblocking) {
-			Sock *sock =  m_startd.startCommand(MATCH_INFO,Sock::safe_sock,m_timeout);
+			Stream::stream_type st = m_startd.hasUDPCommandPort() ? Stream::safe_sock : Stream::reli_sock;
+			Sock *sock =  m_startd.startCommand(MATCH_INFO,st,m_timeout);
 			bool result = false;
 			if(!sock) {
 				dprintf (D_ALWAYS,"      Failed to initiate socket (blocking mode) to send MATCH_INFO to %s\n",
@@ -2677,9 +2678,10 @@ public:
 			return result;
 		}
 
+		Stream::stream_type st = m_startd.hasUDPCommandPort() ? Stream::safe_sock : Stream::reli_sock;
 		m_startd.startCommand_nonblocking (
 			MATCH_INFO,
-			Sock::safe_sock,
+			st,
 			m_timeout,
 			NULL,
 			NotifyStartdOfMatchHandler::startCommandCallback,
