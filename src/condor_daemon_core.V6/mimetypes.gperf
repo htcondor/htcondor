@@ -1,0 +1,34 @@
+%language=ANSI-C
+%define hash-function-name mime_hash
+%define lookup-function-name mime_lookup
+%struct-type
+%ignore-case
+%define slot-name ext
+%omit-struct-type
+%{
+#include <string.h>
+#include <stdlib.h>
+
+struct mimetype { char *ext; const char *mimetype; };
+
+struct mimetype *mime_lookup (const char *, unsigned int);
+
+const char *type_for_ext(const char *ext) {
+      struct mimetype *tuple;
+      if ((tuple = mime_lookup(ext, strlen(ext))) != NULL) {
+      	 return tuple->mimetype;
+      } 
+      
+      return NULL;
+}
+%}
+struct mimetype { char *ext; const char *mimetype; };
+%%
+html,"text/html"
+xml,"text/xml"
+xsd,"text/xml"
+wsdl,"text/xml"
+jpg,"image/jpg"
+jpeg,"image/jpg"
+gif,"image/gif"
+ico,"image/ico"
