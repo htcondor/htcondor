@@ -32,6 +32,7 @@ use CondorPersonal;
 use FileHandle;
 use POSIX "sys_wait_h";
 use Net::Domain qw(hostfqdn);
+use Cwd;
 use strict;
 use warnings;
 
@@ -57,6 +58,18 @@ my %test;
 my %machine_ads;
 my $lastconfig;
 my $handle; #actually the test name.
+my $BaseDir = getcwd();
+
+# we want to process and track the collection of cores
+my $coredir = "$BaseDir/Cores";
+if(!(-d $coredir)) {
+	debug("Creating collection directory for cores\n",2);
+	system("mkdir -p $coredir");
+}
+
+# set up for reading in core/ERROR exemptions
+my $errexempts = "ErrorExemptions";
+my %exemptions;
 
 BEGIN
 {
@@ -321,6 +334,7 @@ sub RunTest
 	print "\nCurrent date and load follow:\n";
 	system("date");
 	system("uptime");
+	print "\n\n";
 
 	my $wrap_test = $ENV{WRAP_TESTS};
 
@@ -393,7 +407,51 @@ sub RunTest
 	print "\nCurrent date and load follow:\n";
 	system("date");
 	system("uptime");
+	print "\n\n";
 
+	##############################################################
+	#
+	# We ASSUME that each version of each personal condor
+	# has its own unique log directory whether we are automatically 
+	# wrapping a test at this level OR we have a test which
+	# sets up N personal condors like a test like job_condorc_abc_van
+	# which sets up 3.
+	#
+	# Our initial check is to see if we are not running in the
+	# outer personal condor because checking there requires
+	# more of an idea of begin and end times of the test and
+	# some sort of understanding about how many tests are running
+	# at once. In the case of more then one, one can not assign
+	# fault easily.
+	#
+	# A wrapped test will be found here. A test running with
+	# a personal condor outside of src/condor_tests will show
+	# up here. A test submitted as part of a multiple number 
+	# of personal condors will show up here. 
+	#
+	# If we catch calls to "CondorPersonal::KillDaemonPids($config)"
+	# and it is used consistently we can check both wrapped
+	# tests and tests involved with one or more personal condors
+	# as we shut the personal condors down.
+	#
+	# All the personal condors created by CondorPersonal
+	# have a testname.saveme in their path which would
+	# show a class of tests to be safe to check even if outside
+	# of src/condor_tests even if N tests are running concurrently.
+	#
+	# If we knew N is one we could do an every test check
+	# based on start time and end time of the tests running
+	# in any running condor.
+	#
+	##############################################################
+	if(ShouldCheck_coreERROR() == 1){
+		debug("Want to Check core and ERROR!!!!!!!!!!!!!!!!!!\n\n",1);
+	}
+	##############################################################
+	#
+	# When to do core and ERROR checking thoughts 2/5/9
+	#
+	##############################################################
 
 	if(defined  $wrap_test) {
 		if($config ne "") {
@@ -1537,6 +1595,278 @@ sub debug
 	my $level = shift;
 	my $newstring = "CT:$string";
 	Condor::debug($newstring,$level);
+}
+
+# Lets stash the test name which will be consistent even
+# with multiple personal condors being used by the test
+
+sub StartPersonal
+{
+    my $testname = shift;
+    my $paramfile = shift;
+    my $version = shift;
+	
+	$handle = $testname;
+    debug("Starting Perosnal($$) for $testname/$paramfile/$version\n",1);
+
+    my $configloc = CondorPersonal::StartCondor( $testname, $paramfile ,$version);
+    return($configloc);
+}
+
+sub KillPersonal
+{
+	my $personal_config = shift;
+	my $logdir = "";
+	if($personal_config =~ /^(.*\/)(.*)$/) {
+		print "LOG dir is $1/log\n";
+		$logdir = $1 . "/log";
+	} else {
+		die "Can not extract log directory\n";
+	}
+	CoreCheck($handle, $logdir);
+	CondorPersonal::KillDaemonPids($personal_config);
+}
+
+sub ShouldCheck_coreERROR
+{
+	my $logdir = `condor_config_val log`;
+	fullchomp($logdir);
+	if($logdir =~ /TestingPersonalCondor/) {
+		return(0);
+	}
+	return(1);
+}
+
+sub CoreCheck {
+	my $test = shift;
+	my $logdir = shift;
+	# get the most recent list of tests and their log directories
+	#CondorPubLogdirs::LoadPublished();
+	#my $publishedarrayref = CondorPubLogdirs::ReturnPublished($test);
+	#my $logdircount = $#{$publishedarrayref};
+	#debug("In searching for logs for test <$test> count is <$logdircount>\n",2);
+	#if($logdircount == -1) {
+		#open(NOLOGS,">>LogDirsMissing") or die "Can not add that <$test> has no log dir:$!\n";
+		#debug("No logs for test <$test>\n",2);
+		#print NOLOGS "$test\n";
+		#return(0);
+	#}
+
+	my $count = 0;
+	my $scancount = 0;
+	my $fullpath = "";
+	#foreach my $logdir (@{$publishedarrayref}) {
+		debug("Checking <$logdir> for test <$test>\n",2);
+		my @files = `ls $logdir`;
+		foreach my $perp (@files) {
+			chomp($perp);
+			$fullpath = $logdir . "/" . $perp;
+			if(-f $fullpath) {
+					if($fullpath =~ /^.*\/(core.*)$/) {
+						# returns printable string
+						debug("Checking <$logdir> for test <$test> Found Core <$fullpath>\n",2);
+						my $filechange = GetFileTime($fullpath);
+						my $newname = MoveCoreFile($fullpath,$coredir);
+						AddFileTrace($fullpath,$filechange,$newname);
+						$count += 1;
+					} else {
+						debug("Checking <$fullpath> for test <$test> for ERROR\n",2);
+						$scancount = ScanForERROR($fullpath,$test);
+						$count += $scancount;
+						debug("After ScanForERROR error count <$scancount>\n",2);
+					}
+			} else {
+				debug( "Not File: $fullpath\n",2);
+			}
+		}
+	#}
+	return($count);
+}
+
+sub ScanForERROR
+{
+	my $daemonlog = shift;
+	my $testname = shift;
+	my $count = 0;
+	my $ignore = 1;
+	open(MDL,"<$daemonlog") or die "Can not open daemon log<$daemonlog>:$!\n";
+	my $line = "";
+	while(<MDL>) {
+		chomp();
+		$line = $_;
+		# ERROR preceeded by white space and trailed by white space, :, ; or -
+		if($line =~ /^\s*(\d+\/\d+\s+\d+:\d+:\d+)\s+ERROR[\s;:\-!].*$/){
+			debug("$line TStamp $1\n",2);
+			$ignore = IgnoreError($testname,$line);
+			if($ignore == 0) {
+				$count += 1;
+				AddFileTrace($daemonlog, $1, $line);
+			}
+		} elsif($line =~ /^\s*(\d+\/\d+\s+\d+:\d+:\d+)\s+.*\s+ERROR[\s;:\-!].*$/){
+			debug("$line TStamp $1\n",2);
+			$ignore = IgnoreError($testname,$line);
+			if($ignore == 0) {
+				$count += 1;
+				AddFileTrace($daemonlog, $1, $line);
+			}
+		} elsif($line =~ /^.*ERROR.*$/){
+			debug("Skipping this error<<$line>> \n",2);
+		}
+	}
+	close(MDL);
+	return($count);
+}
+
+sub CheckTriggerTime
+{	
+	my $teststartstamp = shift;
+	my $timestring = shift;
+	my $tsmon = 0;
+
+	my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime();
+
+	if($timestring =~ /^(\d+)\/(\d+)\s+(\d+):(\d+):(\d+)$/) {
+		$tsmon = $1 - 1;
+		my $timeloc = timelocal($5,$4,$3,$mday,$tsmon,$year,0,0,$isdst);
+		#print "timestamp from test start is $teststartstamp\n";
+		#print "timestamp fromlocaltime is $timeloc \n";
+		if($timeloc > $teststartstamp) {
+			return(1);
+		}
+	}
+}
+
+sub GetFileChangeTime
+{
+	my $file = shift;
+	my ($dev, $ino, $mode, $nlink, $uid, $gid, $rdev, $size, $atime, $mtime, $ctime, $blksize, $blocks) = stat($file);
+
+	return($ctime);
+}
+
+sub GetFileTime
+{
+	my $file = shift;
+	my ($dev, $ino, $mode, $nlink, $uid, $gid, $rdev, $size, $atime, $mtime, $ctime, $blksize, $blocks) = stat($file);
+
+	my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime($ctime);
+
+	$mon = $mon + 1;
+	$year = $year + 1900;
+
+	return("$mon/$mday $hour:$min:$sec");
+}
+
+sub AddFileTrace
+{
+	my $file = shift;
+	my $time = shift;
+	my $entry = shift;
+
+	my $tracefile = $coredir . "/core_error_trace";
+	my $newtracefile = $coredir . "/core_error_trace.new";
+
+	# make sure the trace file exists
+	if(!(-f $tracefile)) {
+		open(TF,">$tracefile") or die "Can not create ERROR/CORE trace file<$tracefile>:$!\n";
+		print TF "Tracking file for core files and ERROR prints in daemonlogs\n";
+		close(TF);
+	}
+	open(TF,"<$tracefile") or die "Can not create ERROR/CORE trace file<$tracefile>:$!\n";
+	open(NTF,">$newtracefile") or die "Can not create ERROR/CORE trace file<$newtracefile>:$!\n";
+	while(<TF>) {
+		print NTF "$_";
+	}
+	close(TF);
+	my $buildentry = "$time	$file	$entry\n";
+	print NTF "$buildentry";
+	debug("\n$buildentry",2);
+	close(NTF);
+	system("mv $newtracefile $tracefile");
+
+}
+
+sub MoveCoreFile
+{
+	my $oldname = shift;
+	my $targetdir = shift;
+	my $newname = "";
+	# get number for core file rename into trace dir
+	my $entries = CountFileTrace();
+	if($oldname =~ /^.*\/(core.*)\s*.*$/) {
+		$newname = $coredir . "/" . $1 . "_$entries";
+		system("mv $oldname $newname");
+		#system("rm $oldname");
+		return($newname);
+	} else {
+		debug("Only move core files<$oldname>\n",2);
+		return("badmoverequest");
+	}
+}
+
+sub CountFileTrace
+{
+	my $tracefile = $coredir . "/core_error_trace";
+	my $count = 0;
+
+	open(CT,"<$tracefile") or die "Can not count<$tracefile>:$!\n";
+	while(<CT>) {
+		$count += 1;
+	}
+	close(CT);
+	return($count);
+}
+
+sub LoadExemption
+{
+	my $line = shift;
+	debug("LoadExemption: <$line>\n",1);
+    my ($test, $required, $message) = split /,/, $line;
+    my $save = $required . "," . $message;
+    if(exists $exemptions{$test}) {
+        push @{$exemptions{$test}}, $save;
+		debug("LoadExemption: added another for test $test\n",1);
+    } else {
+        $exemptions{$test} = ();
+        push @{$exemptions{$test}}, $save;
+		debug("LoadExemption: added new for test $test\n",1);
+    }
+}
+
+sub IgnoreError
+{
+	my $testname = shift;
+	my $errorstring = shift;
+
+	# no no.... must acquire array for test and check all substrings
+	# against current large string.... see DropExemptions below
+	debug("IgnoreError called for test <$testname> and string <$errorstring>\n",1);
+	# get list of per/test specs
+	if( exists $exemptions{$testname}) {
+		my @testarray = @{$exemptions{$testname}};
+		foreach my $oneexemption (@testarray) {
+			my( $must, $partialstr) = split /,/,  $oneexemption;
+			my $quoted = quotemeta($partialstr);
+			debug("Looking for <$quoted> in this error <$errorstring>\n",2);
+			if($errorstring =~ m/$quoted/) {
+				debug("IgnoreError: Ignore ******** <<$quoted>> ******** \n",2);
+				return(1);
+			} 
+		}
+	}
+	# no exemption for this one
+	return(0);
+}
+
+sub DropExemptions
+{
+	foreach my $key (sort keys %exemptions) {
+    	print "$key\n";
+    	my @array = @{$exemptions{$key}};
+    	foreach my $p (@array) {
+        	print "$p\n";
+    	}
+	}
 }
 
 1;
