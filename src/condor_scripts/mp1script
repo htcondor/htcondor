@@ -61,11 +61,6 @@ export CONDOR_CONTACT_FILE
 # that condor_ssh knows how to use
 sort -n -k 1 < $CONDOR_CONTACT_FILE | awk '{print $2}' > machines
 
-# Remove the contact file, so if we are held and released
-# it can be recreated anew
-
-/bin/rm -f $CONDOR_CONTACT_FILE
-
 ## run the actual mpijob
 mpirun -v -np $_CONDOR_NPROCS -machinefile machines $EXECUTABLE $@ 
 
