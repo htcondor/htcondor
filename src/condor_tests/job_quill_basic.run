@@ -19,7 +19,6 @@
 ##**************************************************************
 
 use CondorTest;
-use CondorPersonal;
 use Cwd;
 $quillpassword = "x_job_quill_basic.template";
 $testdesc =  'job_quill_basic - install postgress and test quillpp';
@@ -42,7 +41,7 @@ $myquillname = "pgsql" . $mypid;
 $myfullpgsqlloc = $topdir . "/" . $myquillname;
 $myfullpgsqlinstalllog = $topdir . "/" . $myquillname . "/postgress_install.log" ;
 
-$mypid = CondorPersonal::SaveMeSetup($corename);
+$mypid = $$;
 $mysaveme = $corename . ".saveme";
 
 if($mypid == 0) {
@@ -156,11 +155,10 @@ $mycorenmout = $corename . ".out";
 CondorTest::debug("Master PID is $mypid\n",1);
 CondorTest::debug("Master PID submit file is $mysubmitnm\n",1);
 
-CondorPersonal::DebugOn();
 my $configrem;
 
 if($pgresult == 0) {
-	$configrem = CondorPersonal::StartCondor( "job_quill_basic", "x_param.quill" ,"quill");
+	$configrem = CondorTest::StartPersonal( "job_quill_basic", "x_param.quill" ,"quill");
 }
 
 my @quill = split /\+/, $configrem;
@@ -219,7 +217,7 @@ if( -e "$mysubmitnmlog" )
 	system("cp $mysubmitnmlog $mycorenmlog");
 }
 
-CondorPersonal::KillDaemonPids($quillconfig);
+CondorTest::KillPersonal($quillconfig);
 system("date");
 
 if($pcresult == 0) {

@@ -19,7 +19,6 @@
 ##**************************************************************
 
 use CondorTest;
-use CondorPersonal;
 
 
 # truly const variables in perl
@@ -41,7 +40,7 @@ CondorTest::fullchomp($currenthost);
 
 system("date");
 
-$mypid = CondorPersonal::SaveMeSetup($corename);
+$mypid = $$;
 $mysaveme = $corename . ".saveme";
 
 if($mypid == 0) {
@@ -61,7 +60,7 @@ CondorTest::debug("Master PID submit file is $mysubmitnm\n",1);
 
 my $version = "local";
 # get a local scheduler running (side a)
-my $configloc = CondorPersonal::StartCondor( "cmd_status_shows-help", "x_param.cmdstatus-multi" ,$version);
+my $configloc = CondorTest::StartPersonal( "cmd_status_shows-help", "x_param.cmdstatus-multi" ,$version);
 my @local = split /\+/, $configloc;
 my $locconfig = shift @local;
 my $locport = shift @local;
@@ -127,7 +126,7 @@ if( -e "$mysubmitnmlog" )
 	system("cp $mysubmitnmlog $mycorenmlog");
 }
 
-CondorPersonal::KillDaemonPids($locconfig);
+CondorTest::KillPersonal($locconfig);
 system("date");
 
 if( $done == 0 )

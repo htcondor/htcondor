@@ -19,8 +19,6 @@
 ##**************************************************************
 
 use CondorTest;
-use CondorPersonal;
-
 
 $testdesc =  'wrapped_test.run - Simple personal condor wrapped test';
 $testname = "wrapped_test";
@@ -35,7 +33,10 @@ CondorTest::fullchomp($currenthost);
 
 system("date");
 
-$mypid = CondorPersonal::SaveMeSetup($corename);
+$mypid = $$;
+if($$ != $mypid) {
+	die "Need to access right pid\n";
+}
 $mysaveme = $corename . ".saveme";
 
 if($mypid == 0) {
@@ -55,7 +56,7 @@ CondorTest::debug("Master PID submit file is $mysubmitnm\n",1);
 
 my $version = "local";
 # get a local scheduler running (side a)
-my $configloc = CondorPersonal::StartCondor( "wrapped_test", "x_param.wrapped_test" ,$version);
+my $configloc = CondorTest::StartPersonal( "wrapped_test", "x_param.wrapped_test" ,$version);
 my @local = split /\+/, $configloc;
 my $locconfig = shift @local;
 my $locport = shift @local;
@@ -85,7 +86,7 @@ if( -e "$mysubmitnmlog" )
 	system("cp $mysubmitnmlog $mycorenmlog");
 }
 
-CondorPersonal::KillDaemonPids($locconfig);
+CondorTest::KillPersonal($locconfig);
 
 system("date");
 

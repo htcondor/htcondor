@@ -19,7 +19,6 @@
 ##**************************************************************
 
 use CondorTest;
-use CondorPersonal;
 
 
 $cmd_template = "job_core_periodicremove_van.template";
@@ -33,7 +32,7 @@ CondorTest::fullchomp($currenthost);
 
 system("date");
 
-$mypid = CondorPersonal::SaveMeSetup($corename);
+$mypid = $$;
 $mysaveme = $corename . ".saveme";
 
 if($mypid == 0) {
@@ -52,7 +51,7 @@ CondorTest::debug("Master PID is $mypid\n",1);
 CondorTest::debug("Master PID submit file is $mysubmitnm\n",1);
 
 # get a local scheduler running with controlled intervals
-my $configloc = CondorPersonal::StartCondor( "job_core_periodicremove_van", "x_param.periodicremove" ,"periodocrm");
+my $configloc = CondorTest::StartPersonal( "job_core_periodicremove_van", "x_param.periodicremove" ,"periodocrm");
 my @local = split /\+/, $configloc;
 my $locconfig = shift @local;
 my $locport = shift @local;
@@ -83,7 +82,7 @@ if( -e "$mysubmitnmlog" )
 	system("cp $mysubmitnmlog $mycorenmlog");
 }
 
-CondorPersonal::KillDaemonPids($locconfig);
+CondorTest::KillPersonal($locconfig);
 system("date");
 
 if( $result != 0 )
