@@ -225,16 +225,17 @@ numbers of startds.
   \Macro{LOCAL\_XACT\_BACKUP\_FILTER} controls whether or not the
   \Condor{schedd} will attempt to keep backups of transactions that
   were not written the job queue log.  If it is set to to
-  \Macro{FAILED}, the \Condor{schedd} will attempt to keep a backup
-  of the transation in the local queue backup directory (defined
-  above) only if operations fail on the job queue log.  If it is set
-  to none \Macro{NONE}, no backups should be performed even in the
-  event of failure.  If it is set to \Macro{ALL}, then at all
-  transactions should be backed up.  (The \Macro{ALL} option will
+  \Expr{FAILED}, the \Condor{schedd} will attempt to keep a backup
+  of the transaction in the local queue backup directory,
+  defined by \MacroNI{LOCAL\_QUEUE\_BACKUP\_DIR},
+  only if operations fail on the job queue log.  If it is set
+  to none \Expr{NONE}, no backups should be performed even in the
+  event of failure.  If it is set to \Expr{ALL}, then at all
+  transactions should be backed up.  The \Expr{ALL} value will
   create quite a large number of files and slow the \Condor{schedd}
   substantially; it is only likely to be useful for users who are
-  developing or debugging Condor.)
-  This is part of the ``Job Queue Backup'' feature, above.
+  developing or debugging Condor.
+  This is part of the Job Queue Backup feature.
 
 \end{itemize}
 
