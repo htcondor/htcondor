@@ -139,10 +139,10 @@ numbers of startds.
   for more details.
 
 \item Condor can now be configured to keep a backup of the job queue
-  log on a local filesystem in case \Condor{schedd} operations
+  log on a local file system in case \Condor{schedd} operations
   involving writes, flushes, or syncs to the job queue log fail.  This
   is most likely to happen when the job queue log is stored on a
-  network filesystem like NFS. Such a backup enables an administrator
+  network file system like NFS. Such a backup enables an administrator
   to see that a job failed to submit, but does not perform any
   automatic recovery.  See below for the these configuration parameters.
 
@@ -218,7 +218,7 @@ numbers of startds.
 
 \item The configuration parameter \Macro{LOCAL\_QUEUE\_BACKUP\_DIR}
   should be set to the pathname of a directory that is writable by
-  the Condor user and is located on a non-network filesystem.
+  the Condor user and is located on a non-network file system.
   This is part of the ``Job Queue Backup'' feature, above.
 
 \item The configuration parameter
@@ -267,7 +267,7 @@ stay active. Now the cache is disabled in all cases at the end of recovery.
 mode of operation. One bug would result in the \Macro{SPOOL} directory being
 deleted if local universe jobs (which are not supported in
 \MacroNI{GLEXEC\_STARTER} mode) were submitted. The other bug prevented
-COD jobs from running. Niether of these are problems for the newer
+COD jobs from running. Neither of these are problems for the newer
 recommended \Macro{GLEXEC\_JOB} mode.
 
 \item Fixed a bug that could cause the \Condor{procd} to crash, depending
