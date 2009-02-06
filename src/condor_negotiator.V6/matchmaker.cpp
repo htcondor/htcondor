@@ -1121,7 +1121,7 @@ negotiateWithGroup ( int untrimmed_num_startds, ClassAdList& startdAds,
 	double		normalAbsFactor;
 	double		scheddPrio;
 	double		scheddPrioFactor;
-	double		scheddShare;
+	double		scheddShare = 0.0;
 	double		scheddAbsShare = 0.0;
 	double		scheddLimitRoundoff;
 	int			scheddLimit;
