@@ -612,7 +612,7 @@ sub RunTests( $ )
 		}
 
 		printf "%d leases:\n", scalar(@{$leases});
-		foreach my $n ( 0 .. $#{@{$leases}} ) {
+		foreach my $n ( 0 .. $#{$leases} ) {
 			my $lease = @{$leases}[$n];
 			if ( $settings{verbose} ) {
 				for my $k ( keys %{$lease} ) {
@@ -667,7 +667,7 @@ sub RunTestOp( $$$ )
 	foreach my $t ( @{$op} ) {
 		if ( $t =~ /\[(\d+)\]/ ) {
 			my $n = $1;
-			if ( $n > $#{@{$leases}} ) {
+			if ( $n > $#{$leases} ) {
 				print STDERR "ERROR: Lease $n doesn't exist!!!\n";
 				push( @show, "$t=>'NONE'" );
 				$errors++;
