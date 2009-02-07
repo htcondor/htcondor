@@ -92,7 +92,8 @@ class CCBServer: Service {
 	void AddReconnectInfo( CCBReconnectInfo *reconnect_info );
 	void RemoveReconnectInfo( CCBReconnectInfo *reconnect_info );
 	void CloseReconnectFile();
-	bool OpenReconnectFile();
+	bool OpenReconnectFileIfExists();
+	bool OpenReconnectFile(bool only_if_exists=false);
 	void LoadReconnectInfo();
 	bool SaveReconnectInfo(CCBReconnectInfo *reconnect_info);
 	void SaveAllReconnectInfo();

@@ -901,7 +901,13 @@ CCBServer::CloseReconnectFile()
 }
 
 bool
-CCBServer::OpenReconnectFile()
+CCBServer::OpenReconnectFileIfExists()
+{
+	return OpenReconnectFile(true);
+}
+
+bool
+CCBServer::OpenReconnectFile(bool only_if_exists)
 {
 	if( m_reconnect_fp ) {
 		return true;
@@ -909,11 +915,16 @@ CCBServer::OpenReconnectFile()
 	if( m_reconnect_fname.IsEmpty() ) {
 		return false;
 	}
-	m_reconnect_fp = safe_fcreate_fail_if_exists(m_reconnect_fname.Value(),"w+",0600);
+	if( !only_if_exists ) {
+		m_reconnect_fp = safe_fcreate_fail_if_exists(m_reconnect_fname.Value(),"w+",0600);
+	}
 	if( !m_reconnect_fp ) {
 		m_reconnect_fp = safe_fopen_no_create(m_reconnect_fname.Value(),"r+");
 	}
 	if( !m_reconnect_fp ) {
+		if( only_if_exists && errno == ENOENT ) {
+			return false;
+		}
 		EXCEPT("CCB: Failed to open %s: %s\n",
 			   m_reconnect_fname.Value(),strerror(errno));
 	}
@@ -923,7 +934,7 @@ CCBServer::OpenReconnectFile()
 void
 CCBServer::LoadReconnectInfo()
 {
-	if( !OpenReconnectFile() ) {
+	if( !OpenReconnectFileIfExists() ) {
 		return;
 	}
 
@@ -997,6 +1008,11 @@ CCBServer::SaveAllReconnectInfo()
 		return;
 	}
 	CloseReconnectFile();
+
+	if( m_reconnect_info.getNumElements()==0 ) {
+		remove( m_reconnect_fname.Value() );
+		return;
+	}
 
 	MyString orig_reconnect_fname = m_reconnect_fname;
 	m_reconnect_fname.sprintf_cat(".new");
