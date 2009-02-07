@@ -29,6 +29,20 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Added CCB, the Condor Connection Broker.  This is similar in
+functionality to GCB, the Generic Connection Broker, but it has
+several advantages, including ease of use and working on windows as
+well as unix.  Currently, GCB will continue to work, but we may remove
+it some time in the 7.3 development series.  The main missing feature
+in CCB at the moment that prevents it from replacing GCB is support
+for connectivity from one private network to another.  It only works
+when connecting from a public network to a private one.  For example,
+jobs may be sent from a schedd on the public internet to startds on a
+private network if the startds are configured to use a CCB server that
+is accessible to the schedd.  However, if the schedd is on one private
+network and the startds are on a different private network, CCB does
+not help.  For more information on CCB, see page~\pageref{sec:CCB}.
+
 \item Added support for CPU affinity on Linux.
 
 \item Added support for \Condor{q}'s \Opt{-better-analyze} on Windows.
@@ -49,6 +63,18 @@ Note that this feature only affects executables sent to the
 \noindent Configuration Variable Additions and Changes:
 
 \begin{itemize}
+
+\item \MacroNI{CCB\_ADDRESS} configures a daemon to use one or more
+CCB servers to allow communication with Condor components outside of
+the private network.  See pafe~\pageref{sec:CCB}.
+
+\item \MacroNI{MAX\_FILE\_DESCRIPTORS} (UNIX only) specifies the
+required file descriptor limit for a Condor daemon.  File descriptors
+are a system resource used for open files and for network connections.
+Condor daemons that make many simultaneous network connections may
+require an increased number of file descriptors.  For example, see
+page~\pageref{sec:CCB} for information on file descriptor requirements
+of CCB.
 
 \item The new configuration variables \Macro{ENFORCE\_CPU\_AFFINITY} and 
 \Macro{SLOTx\_CPU\_AFFINITY} have been added on Linux to allow for
@@ -72,7 +98,9 @@ condor to lock slots to given CPUs.
 
 \begin{itemize}
 
-\item None.
+\item This release is incompatible when communicating with previous
+versions of Condor if the new CCB feature is enabled or if
+\Macro{PRIVATE\_NETWORK\_NAME} is configured.
 
 \end{itemize}
 

@@ -1963,6 +1963,27 @@ section~\ref{sec:Networking} on page~\pageref{sec:Networking}.
   section~\ref{sec:Using-BindAllInterfaces} on
   page~\pageref{sec:Using-BindAllInterfaces}. 
 
+\label{param:CcbAddress}
+\item[\Macro{CCB\_ADDRESS}] This is the address of a
+  \Condor{collector} that will serve as this daemon's Condor
+  Connection Broker (CCB).  Multiple addresses may be listed
+  (separated by commas and/or spaces) for redundancy.  The CCB server
+  must authorize this daemon at DAEMON level for this configuration to
+  succeed.  It is highly recommended to also configure
+  \Macro{PRIVATE\_NETWORK\_NAME} if you configure \Macro{CCB\_ADDRESS}
+  so communications originating within the same private network do not
+  need to go through CCB.  For more information about CCB,
+  see page~\pageref{sec:CCB}.
+
+\label{param:MaxFileDescriptors}
+\item[\Macro{MAX\_FILE\_DESCRIPTORS}] Under unix, this specifies the
+maximum number of file descriptors to allow the Condor daemon to use.
+File descriptors are a system resource used for open files and for
+network connections.  Condor daemons that make many simultaneous
+network connections may require an increased number of file
+descriptors.  For example, see page~\pageref{sec:CCB} for information
+on file descriptor requirements of CCB.
+
 \label{param:NetworkInterface}
 \item[\Macro{NETWORK\_INTERFACE}]
   For systems with multiple network interfaces, if this configuration
@@ -1990,7 +2011,7 @@ section~\ref{sec:Networking} on page~\pageref{sec:Networking}.
   If two Condor daemons are trying to communicate with each other, and
   they both belong to the same private network, this setting will
   allow them to communicate directly using the private network
-  interface, instead of having to use the Generic Connection Broker
+  interface, instead of having to use CCB or the Generic Connection Broker
   (GCB) or to go through a public IP address.
   Each private network should be assigned a unique network name.
   This string can have any form, but it must be unique for a
@@ -1999,10 +2020,10 @@ section~\ref{sec:Networking} on page~\pageref{sec:Networking}.
   \MacroNI{PRIVATE\_NETWORK\_NAME}, it will attempt to contact this
   daemon using the \Attr{PrivateIpAddr} attribute from the classified
   ad.
-  Even for sites using GCB, this is an important optimization, since
+  Even for sites using CCB or GCB, this is an important optimization, since
   it means that two daemons on the same network can communicate
-  directly, without having to go through the GCB broker.
-  If GCB is enabled, and the \MacroNI{PRIVATE\_NETWORK\_NAME} is
+  directly, without having to go through the broker.
+  If CCB/GCB is enabled, and the \MacroNI{PRIVATE\_NETWORK\_NAME} is
   defined, the \Attr{PrivateIpAddr} will be defined automatically.
   Otherwise, you can specify a particular private IP address to use by
   defining the \MacroNI{PRIVATE\_NETWORK\_INTERFACE} setting
@@ -2026,10 +2047,10 @@ section~\ref{sec:Networking} on page~\pageref{sec:Networking}.
   If another Condor daemon or tool is configured with the same
   \MacroNI{PRIVATE\_NETWORK\_NAME}, it will attempt to contact this
   daemon using the IP address specified here.
-  Sites using the Generic Connection Broker (GCB) only need to define
+  Sites using CCB or the Generic Connection Broker (GCB) only need to define
   the \MacroNI{PRIVATE\_NETWORK\_NAME}, and the 
   \MacroNI{PRIVATE\_NETWORK\_INTERFACE} will be defined automatically.
-  Unless GCB is enabled, there is no default for this setting.
+  Unless CCB/GCB is enabled, there is no default for this setting.
   % DWW
   % Described in default config file: NO
   % Defined in the default config file: NO
@@ -2140,7 +2161,9 @@ section~\ref{sec:Networking} on page~\pageref{sec:Networking}.
   If enabled, also define
   \Macro{COLLECTOR\_SOCKET\_CACHE\_SIZE} at the central manager, so
   that the collector will accept TCP connections for updates, and will
-  keep them open for reuse.
+  keep them open for reuse.  For large pools, it is also necessary to
+  ensure that the collector has a high enough file descriptor limit
+  (e.g. using \Macro{MAX\_FILE\_DESCRIPTORS}.
   Defaults to \Expr{False}.
   % PKK
   % Described in default config file: YES
@@ -2194,7 +2217,8 @@ section~\ref{sec:Networking} on page~\pageref{sec:Networking}.
 \end{description}
 
 The following settings are specific to enabling Generic Connection
-Brokering or GCB in your Condor pool.
+Brokering or GCB in your Condor pool.  The functionality of GCB is
+being replaced with CCB, so consider using CCB if it fits your needs.
 More information about GCB and how to configure it can be found in
 section~\ref{sec:GCB} on page~\pageref{sec:GCB}.
 
