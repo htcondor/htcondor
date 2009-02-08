@@ -30,18 +30,10 @@ import_objs(../condor_util_lib, setsyscalls.o )
 2007-08-29.ec2.wsdl:
 	wget "http://ec2.amazonaws.com/doc/2007-08-29/AmazonEC2.wsdl"
 
-2007-08-29.ec2.h: 2007-08-29.ec2.wsdl
-	$(WSDL2H) -nec2 -Nec2 2007-08-29.ec2.wsdl
-	echo "NOTICE: patching 2007-08-29.ec2.h"
-	echo "#import \"wsse.h\"" >> 2007-08-29.ec2.h
-	echo "struct SOAP_ENV__Header { _wsse__Security *wsse__Security; };" >> 2007-08-29.ec2.h
-	sed -e 's|import "/.*/stlvector.h"|import "stlvector.h"|' 2007-08-29.ec2.h >2007-08-29.ec2.h.new
-	mv 2007-08-29.ec2.h.new 2007-08-29.ec2.h
-
 gsoap_commands.cpp: soapH.h
 
-soapH.h soapStub.h soapC.cpp soapClient.cpp soapServer.cpp: 2007-08-29.ec2.h
-	$(SOAPCPP2) -L -w -x -I$(GSOAP_SHARE)/import 2007-08-29.ec2.h
+soapH.h soapStub.h soapC.cpp soapClient.cpp soapServer.cpp: gsoap_ec2.h
+	$(SOAPCPP2) -L -w -x -I$(GSOAP_SHARE)/import gsoap_ec2.h
 	patch -i soapStub.patch
 
 wsseapi.cpp:

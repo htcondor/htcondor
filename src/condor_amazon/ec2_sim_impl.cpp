@@ -90,7 +90,7 @@ RandomAdvance(ec2__InstanceStateType *state)
 }
 
 SOAP_FMAC5 int SOAP_FMAC6
-__ec2__CreateKeyPair(struct soap *soap,
+ec2__CreateKeyPair(struct soap *soap,
 					 ec2__CreateKeyPairType *request,
 					 ec2__CreateKeyPairResponseType *response)
 {
@@ -125,7 +125,7 @@ __ec2__CreateKeyPair(struct soap *soap,
 }
 
 SOAP_FMAC5 int SOAP_FMAC6
-__ec2__DeleteKeyPair(struct soap *soap,
+ec2__DeleteKeyPair(struct soap *soap,
 					 ec2__DeleteKeyPairType *request,
 					 ec2__DeleteKeyPairResponseType *response)
 {
@@ -159,7 +159,7 @@ __ec2__DeleteKeyPair(struct soap *soap,
 }
 
 SOAP_FMAC5 int SOAP_FMAC6
-__ec2__DescribeInstances(struct soap *soap,
+ec2__DescribeInstances(struct soap *soap,
 						 ec2__DescribeInstancesType *request,
 						 ec2__DescribeInstancesResponseType *response)
 {
@@ -221,7 +221,7 @@ __ec2__DescribeInstances(struct soap *soap,
 }
 
 SOAP_FMAC5 int SOAP_FMAC6
-__ec2__DescribeKeyPairs(struct soap *soap,
+ec2__DescribeKeyPairs(struct soap *soap,
 						ec2__DescribeKeyPairsType *request,
 						ec2__DescribeKeyPairsResponseType *response)
 {
@@ -266,7 +266,7 @@ __ec2__DescribeKeyPairs(struct soap *soap,
 }
 
 SOAP_FMAC5 int SOAP_FMAC6
-__ec2__RunInstances(struct soap *soap,
+ec2__RunInstances(struct soap *soap,
 					ec2__RunInstancesType *request,
 					ec2__ReservationInfoType *response)
 {
@@ -314,7 +314,7 @@ __ec2__RunInstances(struct soap *soap,
 }
 
 SOAP_FMAC5 int SOAP_FMAC6
-__ec2__TerminateInstances(struct soap *soap,
+ec2__TerminateInstances(struct soap *soap,
 						  ec2__TerminateInstancesType *request,
 						  ec2__TerminateInstancesResponseType *response)
 {
@@ -381,7 +381,7 @@ __ec2__TerminateInstances(struct soap *soap,
 /*
  * The functions below are not implemented...
  */
-
+/*
 SOAP_FMAC5 int SOAP_FMAC6
 __ec2__RegisterImage(struct soap *soap,
 					struct ec2__RegisterImageType *ec2__RegisterImage,
@@ -493,3 +493,4 @@ __ec2__ConfirmProductInstance(struct soap *soap,
 {
 	return SOAP_FAULT;
 }
+*/
