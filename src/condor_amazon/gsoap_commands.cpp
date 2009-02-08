@@ -34,7 +34,7 @@
 #include <smdevp.h> 
 #include "soapH.h"
 #include <wsseapi.h>
-#include "AmazonEC2Binding.nsmap"
+#include "AmazonEC2.nsmap"
 
 // For base64 encoding
 #include <openssl/sha.h>
@@ -280,7 +280,7 @@ AmazonVMKeypairNames::gsoapRequest(void)
 
 	int code = -1;		
 	amazon_gahp_release_big_mutex();
-	code = soap_call___ec2__DescribeKeyPairs(m_soap,
+	code = soap_call_ec2__DescribeKeyPairs(m_soap,
 					get_ec2_url(),
 					NULL,
 					&request,
@@ -343,7 +343,7 @@ AmazonVMCreateKeypair::gsoapRequest(void)
 
 	int code = -1;
 	amazon_gahp_release_big_mutex();
-	code = soap_call___ec2__CreateKeyPair(m_soap,
+	code = soap_call_ec2__CreateKeyPair(m_soap,
 					get_ec2_url(),
 					NULL,
 					&request,
@@ -402,7 +402,7 @@ AmazonVMDestroyKeypair::gsoapRequest(void)
 
 	int code = -1;
 	amazon_gahp_release_big_mutex();
-	code = soap_call___ec2__DeleteKeyPair(m_soap,
+	code = soap_call_ec2__DeleteKeyPair(m_soap,
 					get_ec2_url(),
 					NULL,
 					&request,
@@ -551,7 +551,7 @@ AmazonVMStart::gsoapRequest(void)
 		userdata_type.data = base64_userdata;
 		userdata_type.version = "1.0";
 		userdata_type.encoding = "base64";
-		userdata_type.__mixed = NULL;
+//		userdata_type.__mixed = NULL;
 
 		request.userData = &userdata_type;
 	}else {
@@ -570,7 +570,7 @@ AmazonVMStart::gsoapRequest(void)
 
 	int code = -1;
 	amazon_gahp_release_big_mutex();
-	code = soap_call___ec2__RunInstances(m_soap,
+	code = soap_call_ec2__RunInstances(m_soap,
 					get_ec2_url(),
 					NULL,
 					&request,
@@ -622,7 +622,7 @@ AmazonVMStop::gsoapRequest(void)
 
 	int code = -1;
 	amazon_gahp_release_big_mutex();
-	code = soap_call___ec2__TerminateInstances(m_soap,
+	code = soap_call_ec2__TerminateInstances(m_soap,
 					get_ec2_url(),
 					NULL,
 					&request,
@@ -672,7 +672,7 @@ AmazonVMStatus::gsoapRequest(void)
 
 	int code = -1;
 	amazon_gahp_release_big_mutex();
-	code = soap_call___ec2__DescribeInstances(m_soap,
+	code = soap_call_ec2__DescribeInstances(m_soap,
 					get_ec2_url(),
 					NULL,
 					&request,
@@ -762,7 +762,7 @@ AmazonVMStatusAll::gsoapRequest(void)
 
 	int code = -1;
 	amazon_gahp_release_big_mutex();
-	code = soap_call___ec2__DescribeInstances(m_soap,
+	code = soap_call_ec2__DescribeInstances(m_soap,
 					get_ec2_url(),
 					NULL,
 					&request,

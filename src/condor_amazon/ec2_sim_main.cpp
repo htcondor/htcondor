@@ -22,7 +22,7 @@
 #include <arpa/inet.h>
 
 #include "soapH.h"
-#include "AmazonEC2Binding.nsmap"
+#include "AmazonEC2.nsmap"
 
 #define DEFAULT_PORT 1980
 
