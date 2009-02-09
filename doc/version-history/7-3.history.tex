@@ -29,6 +29,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Added support for using any recognized script as an executable
+in a submit file on Windows. For more information please see
+section~\ref{sec:windows-scripts-as-executables} on
+page~\pageref{sec:windows-scripts-as-executables}.
+
 \item Added CCB, the Condor Connection Broker.  This is similar in
 functionality to GCB, the Generic Connection Broker, but it has
 several advantages, including ease of use and working on windows as
@@ -63,6 +68,12 @@ Note that this feature only affects executables sent to the
 \noindent Configuration Variable Additions and Changes:
 
 \begin{itemize}
+
+\item \MacroNI{OPEN\_VERB\_FOR\_<EXT>\_FILES} has been added to allow
+the default interpreter for scripts with an extension \textit{EXT} to
+be changed.  For more information please see
+section~\ref{sec:windows-scripts-as-executables} on
+page~\pageref{sec:windows-scripts-as-executables}.
 
 \item \MacroNI{CCB\_ADDRESS} configures a daemon to use one or more
 CCB servers to allow communication with Condor components outside of

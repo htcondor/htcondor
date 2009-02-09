@@ -99,7 +99,7 @@ Jobs can be suspended, soft-killed by using a WM\_CLOSE message,
 or hard-killed automatically based upon policy expressions.
 For example, Condor can automatically suspend a job
 whenever keyboard/mouse or non-Condor created CPU activity is detected, and
-continue the job after the the machine has been idle for a specified amount
+continue the job after the machine has been idle for a specified amount
 of time.
 
 \item Condor correctly manages jobs which create multiple processes.  For
@@ -273,6 +273,85 @@ load_profile = True
 
 This feature is currently not compatible with \SubmitCmd{run\_as\_owner}, 
 and will be ignored if both are specified.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:windows-scripts-as-executables}Using Windows \
+Scripts as Job Executables}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Historically, Condor has had limited support for scripting jobs on
+Windows.  Typically, jobs on Windows used executables or batch files.
+This limitation has now been lifted: any script recognized by Windows
+can be used in place of a job's \SubmitCmd{executable} attribute.
+Condor can determine how to interpret the script using the file's
+extension.  If there is no file extension, the file will be treated as
+it has been in the past, as a Windows executable.
+
+This feature requires little to no configuration, depending on the
+type of scripts being used.  For instance, Perl scripts, using
+\textit{ActivePerl} require no administrative intervention. On the
+other hand, \textit{Windows Scripting Host} scripts require a small
+amount of configuration to work correctly.
+
+In Microsoft nomenclature, \textit{verbs} are actions that can be
+taken upon a given a file. These are most familiar to users in the
+form of the words \textbf{Open}, \textbf{Print...}, \textbf{Edit},
+etc. which are displayed in the context menu when a file is
+right-clicked on. The commands for each of these verbs is stored in
+the registry under the \Code{HKEY\_CLASSES\_ROOT} hive. In general,
+they take the form:
+
+\begin{verbatim}
+HKCR\<FileType>\Shell\<OpenVerb>\Command
+\end{verbatim}
+
+Where \textit{FileType} is the name of a file type, \textit{OpenVerb}
+is the verb and \textit{Command} is the method by which the file is
+interpreted. In the Condor configuration file we allow for the
+selection of any one verb to act as the file type's interpreter. As
+mentioned above, Condor uses the file's extension to make the
+distinction between file types.  This extension is used in the
+configuration variable to change the verb Condor uses to interpret the
+file type. For instance, the following:
+
+\begin{verbatim}
+OPEN_VERB_FOR_JS_FILES  = Open2
+OPEN_VERB_FOR_VBS_FILES = Open2
+OPEN_VERB_FOR_VBE_FILES = Open2
+OPEN_VERB_FOR_JSE_FILES = Open2
+OPEN_VERB_FOR_WSF_FILES = Open2
+OPEN_VERB_FOR_WSH_FILES = Open2
+\end{verbatim}
+
+Tells Condor to use the \textbf{Open2} verb when interpreting scripts
+with the given file extensions.  The example tells Condor to use the
+command-line version of the \textit{Windows Scripting Host}, rather
+than the default windowed version, whose command is defined in the
+\textbf{Open} verb. This is done to allow the standard input, output
+and error to be redirected, if necessary|which is not possible when
+using the Windows interpreter.
+
+Some script interpreters which require access to the user's registry,
+like the \textit{Windows Scripting Host} scripts, will fail if they
+are not given registry access:
+
+\begin{verbatim}
+CScript Error: Loading your settings failed. (Access is denied.)
+\end{verbatim}
+
+To remedy this error, and possibly many other file type errors, add
+the \SubmitCmd{load\_profile} attribute to the job's submit script:
+
+\begin{verbatim}
+load_profile = True
+\end{verbatim}
+
+After this, there should be no registry access errors.  This technique
+should also work on many other interpreters; however, it may also be
+the case that it is not required at all. For instance,
+\textit{ActivePerl} does not, by default, require access to the user's
+registry hive (unless the script explicitly reads or modifies the
+user's registry settings) so the above attribute can be omitted.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Details on how Condor for Windows starts/stops a job}
