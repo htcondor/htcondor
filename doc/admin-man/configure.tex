@@ -3410,6 +3410,16 @@ Configuring The Startd Policy.
   This macro is described in section~\ref{param:SubsysAddressFile} as
   \MacroNI{<SUBSYS>\_ADDRESS\_FILE} 
 
+\label{param:StartdSendsAlives}
+\item[\Macro{STARTD\_SENDS\_ALIVES}]
+  A boolean value that defaults to \Expr{False},
+  such that the \Condor{schedd} daemon sends keep alive signals
+  to the \Condor{startd} daemon.
+  When \Expr{True}, the \Condor{startd} daemon sends keep alive signals
+  to the \Condor{schedd} daemon, reversing the direction.
+  This may be useful if the \Condor{startd} daemon is on a private
+  network or behind a firewall.
+
 \label{param:StartdShouldWriteClaimIdFile}
 \item[\Macro{STARTD\_SHOULD\_WRITE\_CLAIM\_ID\_FILE}]
   The \Condor{startd} can be configured
@@ -5074,6 +5084,12 @@ SYSTEM_PERIODIC_REMOVE = \
   When set to false, parallel and mpi jobs are scheduled using a
   best-fit algorithm. Using the best-fit algorithm is not recommended,
   as it can cause starvation.
+
+\label{param:ScheddSendVacateViaTcp}
+\item[\Macro{SCHEDD\_SEND\_VACATE\_VIA\_TCP}]
+  A boolean value that defaults to \Expr{False}.
+  When \Expr{True}, the \Condor{schedd} daemon sends vacate signals via TCP,
+  instead of the default UDP.
 
 \end{description}
 
