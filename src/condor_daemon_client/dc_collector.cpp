@@ -950,9 +950,9 @@ DCCollector::blacklistMonitorQueryFinished( bool success ) {
 	else {
 		blacklisted.setFinishTimeNow();
 
-		int delta = blacklisted.getTimeToNextRun();
+		unsigned int delta = blacklisted.getTimeToNextRun();
 		if( delta > 0 ) {
-			dprintf( D_ALWAYS, "Will avoid querying collector %s %s for %ds "
+			dprintf( D_ALWAYS, "Will avoid querying collector %s %s for %us "
 			         "if an alternative succeeds.\n",
 			         name(),
 					 addr(),
