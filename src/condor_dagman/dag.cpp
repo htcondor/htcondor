@@ -1291,6 +1291,7 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 	}
 
 
+	bool didLogSleep = false;
 	while( numSubmitsThisCycle < dm.max_submits_per_interval ) {
 
 //		PrintReadyQ( DEBUG_DEBUG_4 );
@@ -1348,6 +1349,27 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 			deferredJobs.Prepend( job, -job->_nodePriority );
 			_catThrottleDeferredCount++;
 		} else {
+			if( dm.submit_delay == 0 && TotalLogFileCount() > 1 &&
+						!didLogSleep ) {
+					// if we don't already have a submit_delay, sleep for one
+					// second here, so we can be sure that this job's submit
+					// event will be unambiguously later than the termination
+					// events of its parents, given that userlog timestamps
+					// only have a resolution of one second.  (Because of the
+					// new feature allowing distinct userlogs for each node, we
+					// can't just rely on the physical order in a single log
+					// file.)
+
+					// We sleep at most once per submit cycle, because
+					// we don't really have to worry about getting events
+					// for "sibling" nodes in the exact order they occurred.
+				debug_printf( DEBUG_VERBOSE,
+							"Sleeping for one second for log "
+							"file consistency\n" );
+				sleep( 1 );
+				didLogSleep = true;
+			}
+
     		CondorID condorID(0,0,0);
 			submit_result_t submit_result = SubmitNodeJob( dm, job, condorID );
 	
@@ -2916,23 +2938,6 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 					  "(DAGMAN_SUBMIT_DELAY) to throttle submissions...\n",
 					  dm.submit_delay );
 		sleep( dm.submit_delay );
-
-	} else if( node->NumParents() > 0 && TotalLogFileCount() > 1 ) {
-			// if we don't already have a submit_delay, sleep for one
-			// second here, so we can be sure that this job's submit
-			// event will be unambiguously later than the termination
-			// events of its parents, given that userlog timestamps
-			// only have a resolution of one second.  (Because of the
-			// new feature allowing distinct userlogs for each node, we
-			// can't just rely on the physical order in a single log
-			// file.)
-
-			// TODO: as an optimization, check if, for all parents,
-			// the logfile is the same as the child -- if yes, we can
-			// skip the sleep...
-		debug_printf( DEBUG_VERBOSE,
-					"Sleeping for one second for log file consistency\n" );
-		sleep( 1 );
 	}
 
 #if LAZY_LOG_FILES
