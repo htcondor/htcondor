@@ -33,7 +33,7 @@ sub RunTests( $ );
 sub RunTestOp( $$$ );
 sub CountLiveLeases( $ );
 
-my $version = "1.0";
+my $version = "1.0.0";
 my $testdesc =  'lib_lease_manager - runs lease manager tests';
 my $testname = "lib_lease_manager";
 my $testbin = "../testbin_dir";
@@ -66,6 +66,7 @@ my %tests =
 		 },
 		 config =>
 		 {
+			 KEEP_POOL_HISTORY			=> "False",
 
 			 ADVERTISER					=> $programs{advertise},
 			 ADVERTISER_LOG				=> "\$(LOG)/AdvertiserLog",

@@ -22,7 +22,7 @@ use strict;
 use warnings;
 use Cwd;
 
-my $version = "1.0";
+my $version = "1.0.0";
 my $testdesc =  'lib_eventlog_rotation - runs eventlog rotation tests';
 my $testname = "lib_eventlog_rotation";
 my $testbin = "../testbin_dir";
