@@ -305,7 +305,7 @@ CCBListener::HandleCCBRequest( ClassAd &msg )
 	msg.LookupString( ATTR_NAME, name );
 
 	if( name.find(address.Value())<0 ) {
-		name.sprintf_cat(" %s",address.Value());
+		name.sprintf_cat(" with reverse connect address %s",address.Value());
 	}
 	dprintf(D_FULLDEBUG|D_NETWORK,
 			"CCBListener: received request to connect to %s, request id %s.\n",
@@ -468,13 +468,12 @@ CCBListeners::GetCCBContactString(MyString &result)
 
 	m_ccb_listeners.Rewind();
 	while( m_ccb_listeners.Next(ccb_listener) ) {
-		char const *address = ccb_listener->getAddress();
 		char const *ccbid = ccb_listener->getCCBID();
 		if( ccbid && *ccbid ) {
 			if( !result.IsEmpty() ) {
 				result += " ";
 			}
-			result.sprintf_cat("%s#%s",address,ccbid);
+			result += ccbid;
 		}
 	}
 }

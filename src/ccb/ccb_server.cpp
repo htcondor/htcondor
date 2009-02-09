@@ -46,6 +46,23 @@ CCBIDToString(CCBID ccbid,MyString &ccbid_str)
 	return ccbid_str.Value();
 }
 
+static bool
+CCBIDFromContactString(CCBID &ccbid,char const *ccb_contact)
+{
+	// format is "IPAddress#CCBID"
+	ccb_contact = strchr(ccb_contact,'#');
+	if( !ccb_contact ) {
+		return false;
+	}
+	return CCBIDFromString(ccbid,ccb_contact+1);
+}
+
+static void
+CCBIDToContactString(char const *my_address,CCBID ccbid,MyString &ccb_contact)
+{
+	ccb_contact.sprintf("%s#%lu",my_address,ccbid);
+}
+
 CCBServer::CCBServer():
 	m_registered_handlers(false),
 	m_targets(ccbid_hash),
@@ -98,6 +115,10 @@ CCBServer::RegisterHandlers()
 void
 CCBServer::InitAndReconfig()
 {
+	Sinful sinful(daemonCore->publicNetworkIpAddr());
+	ASSERT( sinful.getHost() && sinful.getPort() );
+	m_address.sprintf("%s:%s",sinful.getHost(),sinful.getPort());
+
 	m_read_buffer_size = param_integer("CCB_SERVER_READ_BUFFER",2*1024);
 	m_write_buffer_size = param_integer("CCB_SERVER_WRITE_BUFFER",2*1024);
 
@@ -224,7 +245,7 @@ CCBServer::HandleRegistration(int cmd,Stream *stream)
 	if( msg.LookupString(ATTR_CLAIM_ID,reconnect_cookie_str) &&
 		CCBIDFromString(reconnect_cookie,reconnect_cookie_str.Value()) &&
 		msg.LookupString( ATTR_CCBID,reconnect_ccbid_str) &&
-		CCBIDFromString(reconnect_ccbid,reconnect_ccbid_str.Value()) )
+		CCBIDFromContactString(reconnect_ccbid,reconnect_ccbid_str.Value()) )
 	{
 		target->setCCBID( reconnect_ccbid );
 		reconnected = ReconnectTarget( target, reconnect_cookie );
@@ -240,10 +261,16 @@ CCBServer::HandleRegistration(int cmd,Stream *stream)
 	sock->encode();
 
 	ClassAd reply_msg;
-	MyString ccbid_str;
-	CCBIDToString( target->getCCBID(), ccbid_str );
+	MyString ccb_contact;
 	CCBIDToString( reconnect_info->getReconnectCookie(),reconnect_cookie_str );
-	reply_msg.Assign(ATTR_CCBID,ccbid_str.Value());
+		// We send our address as part of the CCB contact string, rather
+		// than letting the target daemon fill it in.  This is to give us
+		// potential flexibility on the CCB server side to do things like
+		// assign different targets to different CCB server sub-processes,
+		// each with their own command port.
+	CCBIDToContactString( m_address.Value(), target->getCCBID(), ccb_contact );
+
+	reply_msg.Assign(ATTR_CCBID,ccb_contact.Value());
 	reply_msg.Assign(ATTR_COMMAND,CCB_REGISTER);
 	reply_msg.Assign(ATTR_CLAIM_ID,reconnect_cookie_str.Value());
 

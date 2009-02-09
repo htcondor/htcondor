@@ -49,6 +49,7 @@ class CCBServer: Service {
 	bool m_registered_handlers;
 	HashTable<CCBID,CCBTarget *> m_targets;        // ccbid --> target
 	HashTable<CCBID,CCBReconnectInfo *> m_reconnect_info;
+	MyString m_address;
 	MyString m_reconnect_fname;
 	FILE *m_reconnect_fp;
 	time_t m_last_reconnect_info_sweep;
