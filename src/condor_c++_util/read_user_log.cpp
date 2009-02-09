@@ -624,7 +624,7 @@ ReadUserLog::determineLogType( void )
 	}
 	else {
 		// what sort of log is this???
-		dprintf(D_ALWAYS, "Error, apparently invalid user log file\n");
+		dprintf(D_FULLDEBUG, "Error, apparently invalid user log file\n");
 		m_state->LogType( ReadUserLogState::LOG_TYPE_UNKNOWN );
 	}
 
