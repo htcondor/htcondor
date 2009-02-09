@@ -563,11 +563,11 @@ Scheduler::timeout()
 
 		// If we are called too frequently, delay.
 	SchedDInterval.expediteNextRun();
-	int time_to_next_run = SchedDInterval.getTimeToNextRun();
+	unsigned int time_to_next_run = SchedDInterval.getTimeToNextRun();
 
 	if ( time_to_next_run > 0 ) {
 		if (!min_interval_timer_set) {
-			dprintf(D_FULLDEBUG,"Setting delay until next queue scan to %d seconds\n",time_to_next_run);
+			dprintf(D_FULLDEBUG,"Setting delay until next queue scan to %u seconds\n",time_to_next_run);
 
 			daemonCore->Reset_Timer(timeoutid,time_to_next_run,1);
 			min_interval_timer_set = true;
@@ -621,9 +621,6 @@ Scheduler::timeout()
 
 	/* Reset our timer */
 	time_to_next_run = SchedDInterval.getTimeToNextRun();
-	if ( time_to_next_run > 0 ) {
-		time_to_next_run = 0;
-	}
 	daemonCore->Reset_Timer(timeoutid,time_to_next_run);
 }
 
@@ -1966,12 +1963,9 @@ Scheduler::PeriodicExprHandler( void )
 
 	PeriodicExprInterval.setFinishTimeNow();
 
-	int time_to_next_run = PeriodicExprInterval.getTimeToNextRun();
-	if ( time_to_next_run < 0 ) {
-		time_to_next_run = 0;
-	}
+	unsigned int time_to_next_run = PeriodicExprInterval.getTimeToNextRun();
 	dprintf(D_FULLDEBUG,"Evaluated periodic expressions in %.3fs, "
-			"scheduling next run in %ds\n",
+			"scheduling next run in %us\n",
 			PeriodicExprInterval.getLastDuration(),
 			time_to_next_run);
 	daemonCore->Reset_Timer( periodicid, time_to_next_run );
@@ -10727,8 +10721,8 @@ Scheduler::RegisterTimers()
 		// PeriodicExprHandler(). Add some debug statements so that
 		// we know why if it happens again.
 	if (PeriodicExprInterval.getMinInterval()>0) {
-		int time_to_next_run = PeriodicExprInterval.getTimeToNextRun();
-		if ( time_to_next_run <= 0 ) {
+		unsigned int time_to_next_run = PeriodicExprInterval.getTimeToNextRun();
+		if ( time_to_next_run == 0 ) {
 				// Can't use 0, because that means it's a one-time timer
 			time_to_next_run = 1;
 		}
@@ -10737,7 +10731,7 @@ Scheduler::RegisterTimers()
 			time_to_next_run,
 			(Eventcpp)&Scheduler::PeriodicExprHandler,"PeriodicExpr",this);
 		dprintf( D_FULLDEBUG, "Registering PeriodicExprHandler(), next "
-				 "callback in %d seconds\n", time_to_next_run );
+				 "callback in %u seconds\n", time_to_next_run );
 	} else {
 		dprintf( D_FULLDEBUG, "Periodic expression evaluation disabled! "
 				 "(getMinInterval()=%f, PERIODIC_EXPR_INTERVAL=%d)\n",

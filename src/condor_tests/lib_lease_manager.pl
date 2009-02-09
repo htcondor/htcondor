@@ -33,6 +33,7 @@ sub RunTests( $ );
 sub RunTestOp( $$$ );
 sub CountLiveLeases( $ );
 
+my $version = "1.1.0";
 my $testdesc =  'lib_lease_manager - runs lease manager tests';
 my $testname = "lib_lease_manager";
 my $testbin = "../testbin_dir";
@@ -65,6 +66,7 @@ my %tests =
 		 },
 		 config =>
 		 {
+			 KEEP_POOL_HISTORY			=> "False",
 
 			 ADVERTISER					=> $programs{advertise},
 			 ADVERTISER_LOG				=> "\$(LOG)/AdvertiserLog",
@@ -99,7 +101,7 @@ my %tests =
 
 	 # Simple default test --
 	 # idential configuration, just grab one lease & free it
-	 defaults =>
+	 simple =>
 	 {
 		 config => { },
 		 config_lm => { },
@@ -267,6 +269,7 @@ sub usage( )
 		"  -v|--verbose  increase verbose level\n" .
 		"  -s|--stop     stop after errors\n" .
 		"  --valgrind    run test under valgrind\n" .
+		"  --version     print version information and exit\n" .
 		"  -q|--quiet    cancel debug & verbose\n" .
 		"  -h|--help     this help\n";
 }
@@ -309,6 +312,10 @@ foreach my $arg ( @ARGV ) {
     }
     elsif ( $arg eq "-v"  or  $arg eq "--verbose" ) {
 		$settings{verbose}++;
+    }
+    elsif ( $arg eq "--version" ) {
+		printf "Lease Manager Test version %s\n", $version;
+		exit( 0 );
     }
     elsif ( $arg eq "-d"  or  $arg eq "--debug" ) {
 		$settings{debug} = 1;
@@ -433,8 +440,12 @@ personaldir = $fulldir
 ENDPARAMS
 close(PARAMS);
 
-my $ltime = localtime(); chomp $ltime;
-CondorTest::debug("About to set up Condor Personal : <<<$ltime>>>", 1);
+my $time_start = time();
+my $ltime = localtime( $time_start );
+printf( "\n** Lease Manager test v%s starting test %s @ %s **\n\n",
+		$version, $settings{name}, $ltime );
+
+CondorTest::debug("About to set up Condor Personal : <<<$ltime>>>\n", 1);
 
 # Fire up my condor
 my $configrem =	CondorPersonal::StartCondor( "dummy", $param_file, $full_name );
@@ -447,14 +458,19 @@ if (! DaemonWait( $test{resource}{MaxLeases} ) ) {
 	system( 'condor_status -any -l' );
 }
 else {
-	print $test{client}->{lease_file} . "\n";;
+	print $test{client}->{lease_file} . "\n";
+	printf "* Tests starting @ %s *\n", $ltime = localtime();
 	RunTests( \%test );
+	printf "* Tests complete @ %s *\n", $ltime = localtime();
 }
 
 CondorPersonal::KillDaemonPids( $config );
 system( "rm -r ./$$" );
 
-system("date");
+my $time_end = time();
+$ltime = localtime( $time_end );
+printf( "\n** Test %s @ finished @ %s (%ss) **\n",
+		$settings{name}, $ltime, $time_end - $time_start );
 if ( $settings{verbose} ) {
     print "Used directory $dir\n";
 }
