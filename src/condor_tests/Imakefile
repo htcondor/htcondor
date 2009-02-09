@@ -747,11 +747,11 @@ TESTCLASS(lib_eventlog_rotation-reader_20_rotations_20_loops,full)
 
 
 /* Lease Manager tests */
-DESC(lib_lease_manager-defaults,"Lease manager: Default settings")
-RUN(lib_lease_manager-defaults)
-TESTCLASS(lib_lease_manager-defaults,core)
-TESTCLASS(lib_lease_manager-defaults,quick)
-TESTCLASS(lib_lease_manager-defaults,full)
+DESC(lib_lease_manager-simple,"Lease manager: Simple test")
+RUN(lib_lease_manager-simple)
+TESTCLASS(lib_lease_manager-simple,core)
+TESTCLASS(lib_lease_manager-simple,quick)
+TESTCLASS(lib_lease_manager-simple,full)
 
 DESC(lib_lease_manager-get_rel_1,"Lease manager: get/relesae test #1")
 RUN(lib_lease_manager-get_rel_1)

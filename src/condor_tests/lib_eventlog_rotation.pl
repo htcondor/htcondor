@@ -22,6 +22,7 @@ use strict;
 use warnings;
 use Cwd;
 
+my $version = "1.0";
 my $testdesc =  'lib_eventlog_rotation - runs eventlog rotation tests';
 my $testname = "lib_eventlog_rotation";
 my $testbin = "../testbin_dir";
@@ -257,6 +258,7 @@ sub usage( )
 		"  --vg-reader   run reader under valgrind\n" .
 		"  --strace      strace myself\n" .
 		"  --no-strace   don't strace myself\n" .
+		"  --version     print version information and exit\n" .
 		"  -q|--quiet    cancel debug & verbose\n" .
 		"  -h|--help     this help\n";
 }
@@ -320,6 +322,10 @@ foreach my $arg ( @ARGV ) {
     }
     elsif ( $arg eq "-v"  or  $arg eq "--verbose" ) {
 		$settings{verbose}++;
+    }
+    elsif ( $arg eq "--version" ) {
+		printf "Eventlog Rotation Test version %s\n", $version;
+		exit( 0 );
     }
     elsif ( $arg eq "-d"  or  $arg eq "--debug" ) {
 		$settings{debug} = 1;
@@ -644,8 +650,8 @@ my @valgrind = ( "valgrind", "--tool=memcheck", "--num-callers=24",
 
 my $start = time( );
 my $timestr = localtime($start);
-printf "Starting test %s (%d loops) @ %s\n",
-	$settings{name}, $test->{loops}, $timestr;
+printf "** Eventlog rotation test v%s starting test %s (%d loops) @ %s **\n",
+	$version, $settings{name}, $test->{loops}, $timestr;
 if ( $settings{verbose} ) {
     print "Using directory $dir\n";
 }

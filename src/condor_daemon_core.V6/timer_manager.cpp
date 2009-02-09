@@ -109,13 +109,7 @@ int TimerManager::NewTimer(Service* s, unsigned deltawhen, Event event, Eventcpp
 	if( timeslice ) {
 		new_timer->timeslice = *timeslice;
 		new_timer->has_timeslice = true;
-		int signed_delta = new_timer->timeslice.getTimeToNextRun();
-		if( signed_delta < 0 ) {
-			deltawhen = 0;
-		}
-		else {
-			deltawhen = (unsigned)signed_delta;
-		}
+		deltawhen = new_timer->timeslice.getTimeToNextRun();
 	}
 	else {
 		new_timer->has_timeslice = false;
