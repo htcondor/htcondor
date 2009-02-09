@@ -63,6 +63,12 @@ multiple copies of the same executable in its \Macro{SPOOL} directory.
 Note that this feature only affects executables sent to the
 \Condor{schedd} via the \SubmitCmd{copy\_to\_spool} submit macro.
 
+% gittrac #197
+\item Reduced the number of sleeps \Condor{dagman} does to maintain log
+file consistency when a DAG uses multiple user logs for node jobs.
+(DAGMan now does one sleep per submit cycle instead of one sleep for
+each submit.)
+
 \end{itemize}
 
 \noindent Configuration Variable Additions and Changes:
