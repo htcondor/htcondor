@@ -20,7 +20,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Updated the DRMAA version.  This new version is compliant with GFD.133, the DRMAA 1.0 grid recommendation standard.  Three new functions were added to meet the spec requirements, and several bugs were fixed.
+\item Updated the DRMAA version.
+This new version is compliant with GFD.133,
+the DRMAA 1.0 grid recommendation standard.
+Three new functions were added to meet the specification's requirements,
+and several bugs were fixed.
 
 \end{itemize}
 
@@ -34,19 +38,23 @@ in a submit file on Windows. For more information please see
 section~\ref{sec:windows-scripts-as-executables} on
 page~\pageref{sec:windows-scripts-as-executables}.
 
-\item Added CCB, the Condor Connection Broker.  This is similar in
+\item Added CCB, the Condor Connection Broker.  It is similar in
 functionality to GCB, the Generic Connection Broker, but it has
-several advantages, including ease of use and working on windows as
-well as unix.  Currently, GCB will continue to work, but we may remove
+several advantages, including ease of use and working on Windows as
+well as Unix platforms.
+GCB continues to work, but we may remove
 it some time in the 7.3 development series.  The main missing feature
-in CCB at the moment that prevents it from replacing GCB is support
-for connectivity from one private network to another.  It only works
+in CCB at the moment that prevents it from replacing GCB,
+is support for connectivity from one private network to another.
+CCB only works
 when connecting from a public network to a private one.  For example,
-jobs may be sent from a schedd on the public internet to startds on a
-private network if the startds are configured to use a CCB server that
-is accessible to the schedd.  However, if the schedd is on one private
-network and the startds are on a different private network, CCB does
-not help.  For more information on CCB, see page~\pageref{sec:CCB}.
+jobs may be sent from a \Condor{schedd} on the public internet to 
+\Condor{startd} daemons on a
+private network, if the \Condor{startd} daemons are configured
+to use a CCB server that is accessible to the \Condor{schedd} daemon.
+However, if the \Condor{schedd} daemon is on one private
+network and the \Condor{startd} daemons are on a different private network,
+CCB does not help.  For more information on CCB, see page~\pageref{sec:CCB}.
 
 \item Added support for CPU affinity on Linux.
 
