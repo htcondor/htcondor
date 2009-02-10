@@ -7,8 +7,8 @@ Condor Connection Brokering, or CCB, is a way of allowing Condor
 components to communicate with each other when one side is in a
 private network or behind a firewall.  Specifically, CCB allows
 communication across a private network boundary in the following
-scenario: a condor tool or daemon (process A) needs to connect to a
-condor daemon (process B), but the network does not allow a TCP
+scenario: a Condor tool or daemon (process A) needs to connect to a
+Condor daemon (process B), but the network does not allow a TCP
 connection to be created from A to B; it only allows connections from
 B to A.  In this case, B may be configured (with \Macro{CCB\_ADDRESS})
 to register itself with a CCB server that both A and B can connect to.
@@ -16,7 +16,7 @@ Then when A needs to connect to B, it can send a request to the CCB
 server, which will instruct B to connect to A so that the two can
 communicate.
 
-Example: a condor execute node that is in a private network cannot
+Example: a Condor execute node that is in a private network cannot
 normally run jobs from a schedd that is outside of that private
 network.  Bi-directional connectivity between the submit node and the
 execute node is normally required.  However, if the startd is
@@ -30,7 +30,7 @@ when a job is running and the execute node needs to connect back to
 the submit node (e.g. to transfer output files), it can do so by going
 through CCB to request a connection.
 
-Any condor collector may be used as a CCB server.  There is no
+Any Condor collector may be used as a CCB server.  There is no
 requirement that the collector(s) acting as the CCB server
 (\MacroNI{CCB\_ADDRESS}) be the same collector(s) that a daemon
 advertises itself to (\MacroNI{COLLECTOR\_HOST}).  However, this is
@@ -54,12 +54,12 @@ PRIVATE_NETWORK_NAME = cs.wisc.edu
 By defining the \MacroNI{PRIVATE\_NETWORK\_NAME}, we ensure that all
 communication between nodes in the private network continues to happen
 as normal, without going through CCB.  This name should be different
-from the private network name chosen for any condor installations that
+from the private network name chosen for any Condor installations that
 will be communicating with this pool.
 
-Under UNIX, with large condor pools, it is also necessary to give the
+Under UNIX, with large Condor pools, it is also necessary to give the
 collector serving as the CCB server a high enough file descriptor
-limit (\Macro{MAX\_FILE\_DESCRIPTORS} or equivalent).  Each condor
+limit (\Macro{MAX\_FILE\_DESCRIPTORS} or equivalent).  Each Condor
 process configured to use CCB with \Macro{CCB\_ADDRESS} requires one
 persistent TCP connection to the CCB server.  A typical execute node
 requires one for \Condor{master}, one for \Condor{startd}, and one for
@@ -89,7 +89,7 @@ are playing the role of process A in the above description).  It
 authorizes all connection requests (from process B) at the READ
 authorization level.  As usual, whether process B authorizes process A
 to do whatever it is trying to do is up to the security policy for
-process B; from the condor security model's point of view, it is as if
+process B; from the Condor security model's point of view, it is as if
 process A connected to process B, even though at the network layer,
 the reverse is true.
 
@@ -113,7 +113,7 @@ advertise this fact in its address in its ClassAd.  Use
 Any number of CCB servers may be used to serve a pool of Condor
 daemons.  For example, half of the pool could use one CCB server and
 half could use another.  Or for redundancy, all daemons could use both
-CCB serververs and then CCB connection requests will load-balance
+CCB servers and then CCB connection requests will load-balance
 across them.  Typically, the limit of how many daemons may be
 registered with a single CCB server depends on the authentication
 method used by the collector for DAEMON-level and READ-level access
@@ -687,7 +687,7 @@ NET_REMAP_INAGENT = xxx.xxx.xxx.xxx, yyy.yyy.yyy.yyy
 \normalsize
 
 When more than one IP address is given, the \Condor{master} picks one at
-random for it and all of its descendents to use.
+random for it and all of its descendants to use.
 Because the \MacroNI{NET\_REMAP\_INAGENT} setting is only
 valid on private nodes, it should not be defined in a global
 Condor configuration file (\File{condor\_config}) if the pool also
@@ -854,9 +854,9 @@ The method must be one of the strings
 \end{verbatim}
 GCB stops searching the table as soon as it finds a matching rule,
 therefore place more specific rules
-(rules with a larger value for the mask and without wildcards)
+(rules with a larger value for the mask and without wild cards)
 before generic rules
-(rules with wildcards or smaller mask values).
+(rules with wild cards or smaller mask values).
 The default when no rule is matched is to use direct communication.
 Some examples and the corresponding routing tables may help clarify
 this syntax.
