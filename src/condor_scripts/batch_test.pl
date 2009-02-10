@@ -715,11 +715,12 @@ foreach my $compiler (@compilers)
         						# record the child's return status
         						my $status = $?;
 
-								debug( "informed $child gone yeilding test $test{$child}\n",2);
 	
 								if(! defined $test{$child}) {
 									debug("Can't find jobname for child?<ignore>\n",2);
 									next;
+								} else {
+									debug( "informed $child gone yeilding test $test{$child}\n",2);
 								}
 
 								debug( "wait returned test<$currentgroup>\n",2);
@@ -1285,7 +1286,8 @@ sub CreateLocalConfig
 	print FIX "SUBMIT_EXPRS=environment\n";
 	print FIX "PROCD_LOG = \$(LOG)/ProcLog\n";
 	if($iswindows == 1) {
-		print FIX "PROCD_ADDRESS = \\\\.\\pipe\\buildandtestprocd\n";
+		my $procdaddress = "buildandtestprocd" . $$;
+		print FIX "PROCD_ADDRESS = \\\\.\\pipe\\$procdaddress\n";
 	}
 
 	close FIX; 
