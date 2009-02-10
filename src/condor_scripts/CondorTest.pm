@@ -44,6 +44,13 @@ my %securityoptions =
 "REQUIRED" => "1",
 );
 
+# Tracking Running Tests
+my $RunningFile = "RunningTests";
+my $LOCK_EXCLUSIVE = 2;
+my $UNLOCK = 8;
+my $TRUE = 1;
+my $FALSE = 0;
+
 my $MAX_CHECKPOINTS = 2;
 my $MAX_VACATES = 3;
 
@@ -352,6 +359,8 @@ sub RunTest
 		}
 	}
 
+	AddRunningTest($handle);
+
     # submit the job and get the cluster id
 	debug( "Now submitting test job\n",4);
     my $cluster = Condor::TestSubmit( $submit_file );
@@ -446,6 +455,10 @@ sub RunTest
 	##############################################################
 	if(ShouldCheck_coreERROR() == 1){
 		debug("Want to Check core and ERROR!!!!!!!!!!!!!!!!!!\n\n",1);
+		# running in TestingPersonalCondor
+		my $logdir = `condor_config_val log`;
+		chomp($logdir);
+		CoreCheck($handle, $logdir);
 	}
 	##############################################################
 	#
@@ -466,6 +479,8 @@ sub RunTest
 		debug( "Not currently wrapping tests\n",4);
 	}
 
+	# done with this test
+	RemoveRunningTest($handle);
 
     if($cluster == 0){
 		return(0);
@@ -1528,6 +1543,27 @@ sub PersonalPolicySearchLog
     return("bad");
 }
 
+sub OuterPoolTest
+{
+	my $cmd = "condor_config_val log";
+	my $locconfig = "";
+    debug( "Running this command: <$cmd> \n",1);
+    # shhhhhhhh third arg 0 makes it hush its output
+	my $logdir = `condor_config_val log`;
+	fullchomp($logdir);
+	debug( "log dir is<$logdir>\n",1);
+	if($logdir =~ /^.*condor_tests.*$/){
+		print "Running within condor_tests\n";
+		if($logdir =~ /^.*TestingPersonalCondor.*$/){
+			debug( "Running with outer testing personal condor\n",1);
+			return(1);
+		}
+	} else {
+		print "Running outside of condor_tests\n";
+	}
+	return(0);
+}
+
 sub PersonalCondorTest
 {
 	my $submitfile = shift;
@@ -1597,8 +1633,13 @@ sub debug
 	Condor::debug($newstring,$level);
 }
 
+##############################################################################
+#
 # Lets stash the test name which will be consistent even
 # with multiple personal condors being used by the test
+#
+##############################################################################
+
 
 sub StartPersonal
 {
@@ -1627,11 +1668,18 @@ sub KillPersonal
 	CondorPersonal::KillDaemonPids($personal_config);
 }
 
+##############################################################################
+#
+# core and ERROR checking code plus ERROR exemption handling 
+#
+##############################################################################
+
 sub ShouldCheck_coreERROR
 {
 	my $logdir = `condor_config_val log`;
 	fullchomp($logdir);
-	if($logdir =~ /TestingPersonalCondor/) {
+	my $testsrunning = CountRunningTests();
+	if(($logdir =~ /TestingPersonalCondor/) &&($testsrunning > 1)) {
 		return(0);
 	}
 	return(1);
@@ -1656,7 +1704,7 @@ sub CoreCheck {
 	my $scancount = 0;
 	my $fullpath = "";
 	#foreach my $logdir (@{$publishedarrayref}) {
-		debug("Checking <$logdir> for test <$test>\n",2);
+		debug("Checking <$logdir> for test <$test>\n",1);
 		my @files = `ls $logdir`;
 		foreach my $perp (@files) {
 			chomp($perp);
@@ -1868,5 +1916,155 @@ sub DropExemptions
     	}
 	}
 }
+
+##############################################################################
+#
+#	File utilities. We want to keep an up to date record of every
+#	test currently running. If we only have one, then the tests are
+#	executing sequentially and we can do full core and ERROR detecting
+#
+##############################################################################
+# Tracking Running Tests
+# my $RunningFile = "RunningTests";
+# my $LOCK_EXCLUSIVE = 2;
+# my $UNLOCK = 8;
+# my $TRUE = 1;
+# my $FALSE = 0;
+my $debuglevel = 1;
+
+sub FindControlFile
+{
+	my $cwd = getcwd();
+	my $runningfile = "";
+	chomp($cwd);
+	debug( "Current working dir is <$cwd>\n",$debuglevel);
+	if($cwd =~ /^(.*condor_tests)(.*)$/) {
+		$runningfile = $1 . "/" . $RunningFile;
+		debug( "Running file test is <$runningfile>\n",$debuglevel);
+		if(!(-f $runningfile)) {
+			debug( "Creating control file <$runningfile>\n",$debuglevel);
+			system("touch $runningfile");
+		}
+	} else {
+		die "Lost relative to where <$RunningFile> is :-(\n";
+	}
+	return($runningfile);
+}
+
+sub CleanControlFile
+{
+	my $controlfile = FindControlFile();
+	if( -f $controlfile) {
+		debug( "Cleaning old active test running file holding:\n",$debuglevel);
+		system("cat $controlfile");
+		system("rm -f $controlfile");
+	} else {
+		debug( "Creating new active test running file\n",$debuglevel);
+	}
+	system("touch $controlfile");
+}
+
+
+sub CountRunningTests
+{
+	my $runningfile = FindControlFile();
+	my $ret;
+	my $line = "";
+	my $count = 0;
+	open(RF,"<$runningfile") or die "Failed to open <$runningfile>:$!\n";
+	$ret = flock RF, $LOCK_EXCLUSIVE;
+	if($ret == $TRUE) {
+		debug( "Got file lock!\n",$debuglevel);
+		$ret = flock RF, $UNLOCK;
+		# do work here
+		while(<RF>) {
+			$line = $_;
+			$count += 1;
+			debug( "old file contains: $line<<$count>>\n",$debuglevel);
+		}
+		# now release lock
+		if($ret == $TRUE) {
+			debug( "Gave up file lock!\n",$debuglevel);
+		}
+	} else {
+		close(RF);
+		die "We should have waited for the lock!!!!!\n";
+	}
+	close(RF);
+	return($count);
+}
+
+sub AddRunningTest
+{
+	my $test = shift;
+	my $runningfile = FindControlFile();
+	my $ret;
+	my $line = "";
+	debug( "Wanting to add <$test> to running tests\n",$debuglevel);
+	open(RF,"<$runningfile") or die "Failed to open <$runningfile>:$!\n";
+	$ret = flock RF, $LOCK_EXCLUSIVE;
+	if($ret == $TRUE) {
+		debug( "Got file lock!\n",$debuglevel);
+		$ret = flock RF, $UNLOCK;
+		# do work here
+		open(NEW,">$runningfile.new") or die "Can not open temp file <$runningfile.new>:$!\n";
+		while(<RF>) {
+			$line = $_;
+			debug( "old file contains: $line\n",$debuglevel);
+			print NEW "$_";
+		}
+		print NEW "$test\n";
+		close(NEW);
+		system("cp $runningfile.new $runningfile");
+		system("rm -f $runningfile.new");
+		# now release lock
+		if($ret == $TRUE) {
+			debug( "Gave up file lock!\n",$debuglevel);
+		}
+	} else {
+		close(RF);
+		die "We should have waited for the lock!!!!!\n";
+	}
+	close(RF);
+}
+
+sub RemoveRunningTest
+{
+	my $test = shift;
+	my $runningfile = FindControlFile();
+	my $ret;
+	my $line = "";
+	debug( "Wanting to add <$test> to running tests\n",$debuglevel);
+	open(RF,"<$runningfile") or die "Failed to open <$runningfile>:$!\n";
+	$ret = flock RF, $LOCK_EXCLUSIVE;
+	if($ret == $TRUE) {
+		debug( "Got file lock!\n",$debuglevel);
+		$ret = flock RF, $UNLOCK;
+		# do work here
+		open(NEW,">$runningfile.new") or die "Can not open temp file <$runningfile.new>:$!\n";
+		while(<RF>) {
+			chomp($_);
+			$line = $_;
+			if($line =~ /^$test\s*$/) {
+				# drop tests matching name
+			} else {
+				print NEW "$line\n";
+			}
+		}
+		close(NEW);
+		system("cp $runningfile.new $runningfile");
+		system("rm -f $runningfile.new");
+		# now release lock
+		if($ret == $TRUE) {
+			debug( "Gave up file lock!\n",$debuglevel);
+		}
+	} else {
+		close(RF);
+		die "We should have waited for the lock!!!!!\n";
+	}
+	close(RF);
+}
+
+
 
 1;
