@@ -59,6 +59,7 @@ class Timeslice {
 		m_default_interval = 0;
 		m_initial_interval = -1;
 		m_last_duration = 0;
+		m_avg_duration = 0;
 		m_next_start_time = 0;
 		m_never_ran_before = true;
 		m_expedite_next_run = true;
@@ -103,6 +104,20 @@ class Timeslice {
 		UtcTime finish_time;
 		finish_time.getTime();
 		m_last_duration = finish_time.difference(&m_start_time);
+		if( m_never_ran_before ) {
+			m_avg_duration = m_last_duration;
+		}
+		else {
+			// Compute the exponential moving average of last_duration.
+			// This is intended to smooth over spikes that may happen.
+			// alpha --> 0 clings to the past; alpha --> 1 ignores the past
+			// Until we have a good reason to make this configurable,
+			// alpha=0.4 is simply hard-coded.  It takes roughly 5 cycles
+			// to get within 10% of a new radically different value.
+
+			const double alpha = 0.4;
+			m_avg_duration = alpha*m_last_duration + (1.0-alpha)*m_avg_duration;
+		}
 		m_never_ran_before = false;
 		m_expedite_next_run = false;
 		updateNextStartTime();
@@ -117,16 +132,32 @@ class Timeslice {
 	}
 
 	void updateNextStartTime() {
+		// Keep in mind in reading the following that "delay" is the
+		// time to wait before running again starting from the previous
+		// _start_ time (NOT from the previous end time).
+
 		double delay = m_default_interval;
-		if( m_expedite_next_run ) { // ignore default
+		if( m_expedite_next_run ) {
+			// ignore default, run as soon as possible
+			// this may be adjusted below by min interval and max timeslice
 			delay = 0;
 		}
 		if( m_start_time.seconds() == 0 ) {
-				// never got here before
+				// there is no previous start time (because this is
+				// the first time) so pretend that we just ran, and
+				// ignore timeslice delay
 			setStartTimeNow();
 		}
 		else if( m_timeslice > 0 ) {
-			double slice_delay = m_last_duration/m_timeslice;
+			// Compute the soonest start time from the previous start time that
+			// would result in the desired timeslice fraction, where the
+			// timeslice is the amount of time spent running divided by
+			// the total time between the start of one run to the next run.
+			// A timeslice of 1.0 means we can run right away, because the
+			// delay will just be equal to the run time.  A timeslice less
+			// than 1.0 means we must delay some amount before running again.
+
+			double slice_delay = m_avg_duration/m_timeslice;
 			if( delay < slice_delay ) {
 				delay = slice_delay;
 			}
@@ -138,13 +169,14 @@ class Timeslice {
 			delay = m_min_interval;
 		}
 		if( m_never_ran_before && m_initial_interval >= 0 ) {
+			// we never ran before and an initial interval was explicitly given
 			delay = m_initial_interval;
 		}
 		m_next_start_time = (time_t)floor(
           delay +
 		  m_start_time.seconds() +
           m_start_time.microseconds()/1000000.0 +
-          0.5 );
+          0.5 /*round to nearest integer*/ );
 	}
 
 	time_t getNextStartTime() const { return m_next_start_time; }
@@ -175,6 +207,7 @@ class Timeslice {
 	double m_initial_interval; // delay before first run
 	UtcTime m_start_time;      // when we last started running
 	double m_last_duration;    // how long it took to run last time
+	double m_avg_duration;     // moving average duration
 	time_t m_next_start_time;  // utc second number when to run next time
 	bool m_never_ran_before;   // true if never ran before
 	bool m_expedite_next_run;  // true if should ignore default interval
