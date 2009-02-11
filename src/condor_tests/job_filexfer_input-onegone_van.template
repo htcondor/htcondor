@@ -1,0 +1,13 @@
+universe   = vanilla
+executable = ./x_job_filexfer_testjob.pl
+log = job_filexfer_input-onegone_van.log
+output = job_filexfer_input-onegone_van.out
+error = job_filexfer_input-onegone_van.err
+input = filetrans_input1.txt
+transfer_input_files = xxxxxxxx
+should_transfer_files = YES
+when_to_transfer_output = ON_EXIT
+Notification = NEVER
+arguments = --job=14711 --extrainput 
+queue
+
