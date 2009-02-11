@@ -5143,7 +5143,7 @@ int DaemonCore::Shutdown_Graceful(pid_t pid)
 	args.AppendArg(pid);
 	// args.AppendArg("softkill_debug.txt");
 	int ret = my_system(args);
-	dprintf(D_FULLDEBUG,
+	dprintf((ret == 0) ? D_FULLDEBUG : D_ALWAYS,
 	        "return value from my_system for softkill: %d\n",
 	        ret);
 	return (ret == 0);

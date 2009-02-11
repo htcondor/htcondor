@@ -4,12 +4,7 @@
 ## so humans can feel free to edit it as necessary.
 ##
 
-!ifdef TEMP
-TEMPDIR = $(TEMP)\_soap_gen_temp
-!else
-TEMPDIR = C:\TEMP\_soap_gen_temp
-!endif
-
+TEMPDIR = $(MAKEDIR)\_soap_gen_temp
 
 SRCDIR = $(MAKEDIR)\..\src
 

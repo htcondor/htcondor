@@ -2165,6 +2165,22 @@ else
 fi
 AC_SUBST(JAR,$ac_jar)
 
+AC_PATH_PROG(ac_md5sum,md5sum,no,[$PATH])
+if test $ac_md5sum = "no"; then
+  AC_MSG_WARN( [md5sum not found] )
+else
+  AC_DEFINE([HAVE_MD5SUM],[1],[Define if md5sum is available])
+fi
+AC_SUBST(MD5SUM,$ac_md5sum)
+
+AC_PATH_PROG(ac_sha1sum,sha1sum,no,[$PATH])
+if test $ac_sha1sum = "no"; then
+  AC_MSG_WARN( [sha1sum not found] )
+else
+  AC_DEFINE([HAVE_SHA1SUM],[1],[Define if sha1sum is available])
+fi
+AC_SUBST(MD5SUM,$ac_sha1sum)
+
 AC_ARG_ENABLE([rpm],
   AC_HELP_STRING([--enable-rpm],
     [determine if we try to make rpms (default: no)]),
