@@ -4001,7 +4001,7 @@ private:
 	const char	*m_env2;
 };
 bool
-EnvFilter::ImportFilter( const MyString & /*var*/, const MyString &val ) const
+EnvFilter::ImportFilter( const MyString & var, const MyString &val ) const
 {
 	if( !m_env2 && m_env1 && !IsSafeEnvV1Value(val.Value())) {
 		// We silently filter out anything that is not expressible
@@ -4014,6 +4014,12 @@ EnvFilter::ImportFilter( const MyString & /*var*/, const MyString &val ) const
 		// Silently filter out environment values containing
 		// unsafe characters.  Example: newlines cause the
 		// schedd to EXCEPT in 6.8.3.
+		return false;
+	}
+	MyString existing_val;
+	if ( GetEnv( var, existing_val ) ) {
+		// Don't override submit file environment settings --
+		// check if environment variable is already set.
 		return false;
 	}
 	return true;
