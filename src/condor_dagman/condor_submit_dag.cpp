@@ -69,6 +69,7 @@ struct SubmitDagOptions
 	bool recurse; // whether to recursively run condor_submit_dag on nested DAGs
 	bool updateSubmit; // allow updating submit file w/o -force
 	bool copyToSpool;
+	bool importEnv; // explicitly import environment into .condor.sub file
 	
 	// non-command line options
 	MyString strLibOut;
@@ -104,6 +105,7 @@ struct SubmitDagOptions
 		recurse = true;
 		updateSubmit = false;
 		copyToSpool = param_boolean( "DAGMAN_COPY_TO_SPOOL", false );
+		importEnv = false;
 	}
 
 };
@@ -406,6 +408,10 @@ runSubmit( const SubmitDagOptions &opts, const char *dagFile,
 
 	if ( opts.allowVerMismatch ) {
 		cmdLine += "-allowver ";
+	}
+
+	if ( opts.importEnv ) {
+		cmdLine += "-import_env ";
 	}
 
 	cmdLine += dagFile;
@@ -923,7 +929,9 @@ void writeSubmitFile(/* const */ SubmitDagOptions &opts)
     fprintf(pSubFile, "arguments\t= %s\n", arg_str.Value());
 
 	EnvFilter env;
-	env.Import( );
+	if ( opts.importEnv ) {
+		env.Import( );
+	}
 	env.SetEnv("_CONDOR_DAGMAN_LOG",opts.strDebugLog.Value());
 	env.SetEnv("_CONDOR_MAX_DAGMAN_LOG=0");
 	if ( opts.strConfigFile != "" ) {
@@ -1159,6 +1167,10 @@ parseCommandLine(SubmitDagOptions &opts, int argc, const char * const argv[])
 			{
 				opts.updateSubmit = true;
 			}
+			else if (strArg.find("-import_env") != -1) // -import_env
+			{
+				opts.importEnv = true;
+			}
 			else if ( parsePreservedArgs( strArg, iArg, argc, argv, opts) )
 			{
 				// No-op here
@@ -1291,5 +1303,6 @@ int printUsage()
 	printf("         .condor.sub file and the condor_dagman binary)\n");
 	printf("    -no_recurse         (don't recurse in nested DAGs)\n");
 	printf("    -update_submit      (update submit file if it exists)\n");
+	printf("    -import_env         (explicitly import env into submit file)\n");
 	exit(1);
 }
