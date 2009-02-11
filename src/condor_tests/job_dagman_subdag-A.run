@@ -36,6 +36,11 @@ $dagman_args = "-verbose";
   "job_dagman_subdag-A-upper-node.A", 
   "job_dagman_subdag-A-upper-node.D");
 
+@logfiles = ("job_dagman_subdag-A-lower1.dag.dagman.out",
+  "job_dagman_subdag-A-lower2.dag.dagman.out",
+  "job_dagman_subdag-A-upper.dag.dagman.out");
+
+
 my $killedchosen = 0;
 
 # truly const variables in perl
@@ -104,6 +109,32 @@ $success = sub
 	foreach $name (@outfiles) {
 		system("rm -f $name.out $name.err");
 	}
+
+	foreach $name (@logfiles) {
+		$line = "";
+		$passed = 0;
+		$canopen = open(OUT,"<$name");
+		if( ! (defined $canopen)) {
+			CondorTest::debug("Can not open logfile<$name>:$!\n",1);
+			$diditpass = 0;
+		}
+		while(<OUT>) {
+			chomp();
+			$line = $_;
+			if( $line =~ /^*.EXITING WITH STATUS 0*.$/ ) {
+				$passed = 1;
+				CondorTest::debug("$name: $line\n",1);
+			}
+		}
+		close(OUT);
+		if($passed == 1 ) {
+			;
+		} else {
+			CondorTest::debug("failed $name: $line\n",1);
+			$diditpass = 0;
+		}
+	}
+
 	if($diditpass == 0) {
 		die "All expected files and correct output failed\n";
 	}
