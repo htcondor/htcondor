@@ -6,6 +6,15 @@
 \index{daemon!condor\_job\_router@\Condor{job\_router}}
 \index{condor\_job\_router daemon}
 
+The Condor Job Router permits vanilla universe jobs to be
+matched either with local pool resources, allowed to flock,
+or modified by Condor and sent (routed) to available grid sites. 
+Jobs are specified to use the vanilla universe,
+and identify themselves as potential candidates for job routing.
+The configuration together with the \Condor{job\_router} daemon
+implement the details of which jobs are routed under what
+circumstances.
+
 The \Condor{job\_router} daemon allows you to specify a policy for routing vanilla universe
 jobs to one or more grid sites, through any of the grid protocols
 supported by Condor (e.g. gt2, gt4, Condor-C). The idea is to do as
@@ -31,7 +40,7 @@ sitting idle or not and whether you have experienced a lot of recent
 job failures at that site.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{What does it mean to route a job?}
+\subsection{\label{sec:RouterMechanism}Routing Mechanism}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 What is meant by \textit{job routing} is this: a vanilla universe job is
@@ -58,7 +67,7 @@ more specific example of how job routing can be used and what types of
 jobs are suitable.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Usage Case: sending excess jobs to the grid}
+\subsection{\label{sec:RouterJobSubmission}Job Submission with Job Routing Capability}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Suppose you submit jobs to a Condor pool and you would like to send
@@ -183,8 +192,8 @@ TOTAL              58      10     1
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 This is a specific example of how you could configure the \Condor{job\_router} daemon to send
-jobs to grid sites.  A general discussion of configuration options
-will follow.
+jobs to grid sites.  Definitions of configuration variables
+are in section~ \ref{sec:JobRouter-Config-File-Entries}.
 
 This example sets up three routes for jobs.  One is a Condor site
 accessed via the Globus gt2 protocol.  Another is a PBS site also
@@ -262,10 +271,6 @@ routing table: C-style comments, strange ClassAd expressions, escaped
 end of lines?  The next section covers the specifics of the \Condor{job\_router} daemon
 configuration.  Read on!
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{The \Condor{job\_router} Daemon Configuration Details}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 The \Condor{job\_router} daemon is configured with a \textit{routing table}, which is a list
 of ClassAds describing each site where jobs may be sent.  The ClassAd
 syntax is slightly different from much of the rest of Condor, because
@@ -310,36 +315,10 @@ examples above.  Another option is to read in the \Condor{job\_router} daemon en
 from a separate file, rather than embedding them in the Condor
 configuration file.
 
-The \Condor{job\_router} daemon configuration parameters are listed below:
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{The \Condor{job\_router} ClassAd Attributes}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\begin{description}
-
-\item[\Macro{JOB\_ROUTER\_DEFAULTS}] \label{param:JobRouterDefaults}
-This is a single New ClassAd that is used to provide default values
-for all routes in the \Condor{job\_router} daemon's routing table.  The meaning of the
-attributes in this ad is identical to the attributes of
-\MacroNI{JOB\_ROUTER\_ENTRIES}.  If a route ClassAd sets an
-attribute by the same name, this overrides the attribute from the
-defaults.
-
-\item[\Macro{JOB\_ROUTER\_ENTRIES}] \label{param:JobRouterEntries}
-This specifies the job routing table.  It is a list of New ClassAds
-(each surrounded by []'s and separated from each other by spaces).
-Each entry in the routing table describes a site you want jobs to be
-routed to.
-
-You may modify the routing table and issue \Condor{reconfig} to have
-the \Condor{job\_router} daemon rebuild the routing table.  If you do so and you change the
-name of a route, then the count of currently routed jobs on that route
-will not be accurate until the existing jobs finish.  Another option
-if you want dynamic routing is to read the routing table from an
-external source via \Macro{JOB\_ROUTER\_ENTRIES\_FILE} or
-\Macro{JOB\_ROUTER\_ENTRIES\_CMD}.
-
-The meaning of each attribute in the routing entries is listed below.
-
-
-{\Large Job Route ClassAd Attributes}
 
 \begin{description}
 
@@ -453,76 +432,8 @@ entry is ignored.
 
 \end{description}
 
-\item[\Macro{JOB\_ROUTER\_ENTRIES\_FILE}] \label{param:JobRouterEntriesFile}
-This specifies a file that contains the ClassAds describing the
-routing table.  The format of this file is the same as
-\Macro{JOB\_ROUTER\_ENTRIES}, except that it is interpreted directly
-by the ClassAd parser, rather than first by the Condor configuration
-system.  The biggest difference therefore is that you do not need to
-use line continuations (backslashes before newlines).  The specified
-file is periodically reread to check for new information.  This
-happens every \Macro{JOB\_ROUTER\_ENTRIES\_REFRESH} seconds.
-
-\item[\Macro{JOB\_ROUTER\_ENTRIES\_CMD}]
-\label{param:JobRouterEntriesCmd} This specifies an external program
-(plus arguments) to run.  The output of the program should be ClassAds
-describing the routing table.  The format of this file is the same as
-\Macro{JOB\_ROUTER\_ENTRIES}, except that it is interpreted directly
-by the ClassAd parser, rather than first by the Condor configuration
-system.  The biggest difference therefore is that you do not need to
-use line continuations (backslashes before newlines).  The specified
-command is periodically rerun to check for new information.  This
-happens every \Macro{JOB\_ROUTER\_ENTRIES\_REFRESH} seconds.  If you
-need to enter spaces in any arguments or in the command name itself,
-surround the whole configuration value with double quotes and use
-single quotes around individual arguments that contain spaces, just
-like when dealing with spaces in job arguments in a Condor submit
-file.  For an example of \MacroNI{JOB\_ROUTER\_ENTRIES\_CMD}, see
-page~\pageref{JobRouterReSSExample}.
-
-\item[\Macro{JOB\_ROUTER\_ENTRIES\_REFRESH}]
-\label{param:JobRouterEntriesRefresh} This specifies the number of
-seconds between checks for updates to the routing table described by
-\Macro{JOB\_ROUTER\_ENTRIES\_FILE} or
-\Macro{JOB\_ROUTER\_ENTRIES\_CMD}.  The default is 0, meaning updates
-will only be read whenever \Condor{reconfig} is run or
-\Condor{job\_router} restarts.
-
-\item[\Macro{JOB\_ROUTER\_SOURCE\_JOB\_CONSTRAINT}]
-\label{JobRouterSourceJobConstraint} This specifies global
-requirements that must be met by all routed jobs in addition to
-requirements specified within the routing table.
-
-\item[\Macro{JOB\_ROUTER\_MAX\_JOBS}] \label{JobRouterMaxJobs} This
-specifies the maximum number of jobs that may be routed summed over
-all routes.  The default is -1, which means unlimited.
-
-\item[\Macro{MAX\_JOB\_MIRROR\_UPDATE\_LAG}]
-\label{MaxJobMirrorUpdateLag} This specifies the maximum number of
-seconds the \Condor{job\_router} daemon should wait before giving up when waiting to see
-routed jobs appear in the \Condor{schedd}'s job queue log file.  The
-default is 600.  We do not expect that you will need to adjust this.
-
-\item[\Macro{JOB\_ROUTER\_POLLING\_PERIOD}]
-\label{JobRouterPollingPeriod} This specifies the number of seconds
-between cycles in the \Condor{job\_router} daemon's task loop.  The default is 10
-seconds.  A small value makes the \Condor{job\_router} daemon quick to see new candidate
-jobs for routing.  A large value makes the \Condor{job\_router} daemon generate less
-overhead at the cost of being slower to see new candidates for
-routing.  If you have very large job queues and a few minutes of
-routing latency is no problem for you, increasing this to a few
-hundred seconds would be reasonable.
-
-\item[\Macro{JOB\_ROUTER\_NAME}] \label{JobRouterName} This is only
-useful if you wish to run multiple instances of the \Condor{job\_router} daemon in the same
-instance of Condor on a given machine.  Each one must have a different
-name (or all but the first to start up will refuse to run).
-
-\end{description}
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Example: constructing the routing table from ReSS}
-\label{JobRouterReSSExample}
+\subsection{\label{JobRouterReSSExample}Example: constructing the routing table from ReSS}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 The Open Science Grid has a service called ReSS (Resource Selection
