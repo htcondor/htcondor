@@ -66,7 +66,9 @@ to write a core file to disk in the UNIX ports.
 
 \begin{itemize}
 
-\item None.
+\item Added a note about the fact that environment values specified
+with the \Opt{environment} submit file command override values from
+the submittor's environment imported with \Opt{getenv = true}.
 
 \end{itemize}
 
@@ -141,7 +143,7 @@ invocation.
 
 \item Fixed a Windows platform bug in the \Condor{mail} program, which
 was causing it to become unresponsive when run.  If left running, the
-application also increaseses its memory consumption.
+application also increases its memory consumption.
 
 \item Fixed a bug that could cause the \Condor{schedd} to never
 evaluate periodic expressions.

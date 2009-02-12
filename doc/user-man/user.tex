@@ -1692,6 +1692,12 @@ does this.
 See the \Condor{submit} manual page at
 section~\ref{man-condor-submit} for more details about this command.
 
+If the environment is set with the \Opt{environment} command \emph{and}
+\Opt{getenv} is also set to true, values specified with
+\Opt{environment} override values in the submittor's environment
+(regardless of the order of the \Opt{environment} and \Opt{getenv}
+commands).
+
 Commands within the submit description file may reference the
 environment variables of the submitter as a job is submitted.
 Submit description file commands use \verb@$ENV(EnvironmentVariableName)@
