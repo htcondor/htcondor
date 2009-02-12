@@ -61,7 +61,6 @@ use FileHandle;
 use POSIX "sys_wait_h";
 use Cwd;
 use CondorTest;
-#use CondorPubLogdirs;
 use Time::Local;
 use strict;
 use warnings;
@@ -94,38 +93,14 @@ Condor::DebugLevel(1);
 # 	This is all triggered by -w
 #
 #	WRAP_TESTS
-#	SEND_LOGS
 #
 #	We want to search out core files and ERROR prints AND we want
 #	to run many tests at once. The first check method looks for
 #	all logs changed during the test and assigns blame based on that.
-#	Sadly any error from a set of daemons still running will be assigned
-#	to the wrong test. The steps to make this happen now has the following
-#	steps:
 #
 #		Allow for every test which is not wrapped in a personal 
 #		condor to be wrapped. This is done in CondorTest.pm in RunTest
 #		and RunDagTest if WRAP_TESTS is set.
-#
-#		batch_test.pl defines that and also write file
-#		LogServerHandle when the -w option is set. This is so StartCondor 
-#		can report Test name/Log location to a server collecting such things.
-#		I wanted to only use $ENV[SEND_LOGS] but we in the nightlies have
-#		multiple calls of batch_test.pl requiring some way for
-#		it to know if it has already fired off the server to colloect
-#		test log locations.
-#
-#		batch_test will start this server and place connection
-#		information in it. Thus multiple calls to batch_test
-#		will generate exacly one server to collect logs in file
-#		LogDirs.
-#
-#		If set, batch_test will lookup the log location for a test
-#		to do the core/ERROR detection. No log location will
-#		result in a file being created called NoLogDirs where the tests
-#		name will be recorded for later fixing if it should have had
-#		a log location. This file will be restarted with a date at the top
-#		whenevere the server to collect log locations is started
 #
 #################################################################
 
@@ -170,7 +145,6 @@ my $wininstalldir; # need to have dos type paths for condor
 my $testdir;
 my $configmain;
 my $configlocal;
-my $killlogserver = 1;
 
 my $wantcurrentdaemons = 1; # dont set up a new testing pool in condor_tests/TestingPersonalCondor
 my $pretestsetuponly = 0; # only get the personal condor in place
@@ -211,7 +185,6 @@ my @testlist;
 # -k[ind]: be kind and submit slowly
 # -b[buildandtest]: set up a personal condor and generic configs
 # -w[wrap]: test in personal condor enable core/ERROR detection
-# -x[execute log dir server]
 # -a[again]: how many times do we run each test?
 # -p[pretest]: get are environment set but run no tests
 # -c[cleanup]: stop condor when test(s) finish.  Not used on windows atm.
@@ -231,7 +204,6 @@ while( $_ = shift( @ARGV ) ) {
 	    print "-s[ort] sort before running tests\n";
 	    print "-b[buildandtest]: set up a personal condor and generic configs\n";
 	    print "-w[wrap]: test in personal condor enable core/ERROR detection\n";
-	    print "-xls: execute log dir server\n";
 	    print "-xml: Output in xml\n";
 	    print "-w[wrap]: test in personal condor enable core/ERROR detection\n";
 	    print "-a[again]: how many times do we run each test?\n";
@@ -259,16 +231,8 @@ while( $_ = shift( @ARGV ) ) {
         }
         if( /^-w.*/ ) {
 				$ENV{WRAP_TESTS} = "yes";
-				#my $server = CondorPubLogdirs::CheckLogServer(); # is it running yet?
-				#debug("CheckLogServer says log server is $server\n",1);
-				#$ENV{SEND_LOGS} = $server;
                 next SWITCH;
         }
-        #if( /^-xls.*/ ) {
-				#debug("Stopping LogDir server\n",1);
-				#CondorPubLogdirs::StopLogServer(); # is it running yet? kill it
-	    		#exit(0);
-        #}
         if( /^-d.*/ ) {
                 push(@compilers, shift(@ARGV));
                 next SWITCH;
@@ -314,7 +278,6 @@ while( $_ = shift( @ARGV ) ) {
                 next SWITCH;
         }
         if( /^-t.*/ ) {
-				$killlogserver = 0;
                 push(@testlist, shift(@ARGV));
                 next SWITCH;
         }
@@ -826,12 +789,6 @@ foreach my $test_name (@failed_tests)
 close OUTF;
 close SUMOUTF;
 
-if( exists $ENV{WRAP_TESTS}) {
-	if(($ENV{WRAP_TESTS} eq "yes") and ($killlogserver == 1)) {
-		debug("Stopping LogDir server\n",1);
-		CondorPubLogdirs::StopLogServer(); # is it running yet? kill it
-	}
-}
 
 if ( $cleanupcondor )
 {
