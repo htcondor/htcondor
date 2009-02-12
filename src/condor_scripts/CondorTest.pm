@@ -304,15 +304,30 @@ sub DefaultOutputTest
 
 sub RunTest
 {
+	DoTest(@_);
+}
+ 
+sub RunDagTest
+{
+	DoTest(@_);
+}
+
+sub DoTest
+{
     $handle              = shift || croak "missing handle argument";
     $submit_file      = shift || croak "missing submit file argument";
     my $wants_checkpoint = shift;
+	my $dagman_args = 	shift;
 
     my $status           = -1;
 	my $monitorpid = 0;
 	my $waitpid = 0;
 	my $monitorret = 0;
 	my $retval = 0;
+
+	if( !(defined $wants_checkpoint)) {
+		die "DoTest must get at least 3 args!!!!!\n";
+	}
 
 	print "RunTest says test is<<$handle>>\n";
 	# moved the reset to preserve callback registrations which includes
@@ -363,10 +378,20 @@ sub RunTest
 
     # submit the job and get the cluster id
 	debug( "Now submitting test job\n",4);
-    my $cluster = Condor::TestSubmit( $submit_file );
+	my $cluster = 0;
+
+    # submit the job and get the cluster id
+	if(!(defined $dagman_args)) {
+		print "Regular Test....\n";
+    	$cluster = Condor::TestSubmit( $submit_file );
+	} else {
+		print "Dagman Test....\n";
+    	$cluster = Condor::TestSubmitDagman( $submit_file, $dagman_args );
+	}
     
     # if condor_submit failed for some reason return an error
     if($cluster == 0){
+		print "Why is cluster 0 in RunTest??????\n";
 	} else {
 
     	# monitor the cluster and return its exit status
@@ -483,139 +508,13 @@ sub RunTest
 	RemoveRunningTest($handle);
 
     if($cluster == 0){
-		return(0);
+		if( exists $test{$handle}{"RegisterWantError"} ) {
+			return(1);
+		} else {
+			return(0);
+		}
 	} else {
     	return $retval;
-	}
-}
-
-sub RunDagTest
-{
-    $handle              = shift || croak "missing handle argument";
-    $submit_file      = shift || croak "missing submit file argument";
-    my $wants_checkpoint = shift;
-	my $dagman_args = 	shift || croak "missing dagman args";
-
-    my $status           = -1;
-	my $monitorpid = 0;
-	my $waitpid = 0;
-	my $monitorret = 0;
-	my $retval = 0;
-
-    croak "too many arguments" if shift;
-
-	# moved the reset to preserve callback registrations which includes
-	# an error callback at submit time..... Had to change timing
-	CondorTest::Reset();
-
-    # this is kludgey :: needed to happen sooner for an error message callback in runcommand
-    Condor::SetHandle($handle);
-
-    # if we want a checkpoint, register a function to force a vacate
-    # and register a function to check to make sure it happens
-	if( $wants_checkpoint )
-	{
-		Condor::RegisterExecute( \&ForceVacate );
-		Condor::RegisterEvictedWithCheckpoint( sub { $checkpoints++ } );
-	} else {
-		if(defined $test{$handle}{"RegisterExecute"}) {
-			Condor::RegisterExecute($test{$handle}{"RegisterExecute"});
-		}
-	}
-
-	CheckRegistrations();
-
-	my $wrap_test = $ENV{WRAP_TESTS};
-
-	my $config = "";
-	if(defined  $wrap_test) {
-		$lastconfig = $ENV{CONDOR_CONFIG};
-		$config = PersonalCondorTest($submit_file, $handle);
-		if($config ne "") {
-			print "PersonalCondorTest returned this config file<$config>\n";
-			print "Saving last config file<<<$lastconfig>>>\n";
-			$ENV{CONDOR_CONFIG} = $config;
-			print "CONDOR_CONFIG now <<$ENV{CONDOR_CONFIG}>>\n";
-			system("condor_config_val -config");
-		}
-	}
-
-	print "\nCurrent date and load follow:\n";
-	system("date");
-	system("uptime");
-
-    # submit the job and get the cluster id
-    my $cluster = Condor::TestSubmitDagman( $submit_file, $dagman_args );
-    
-	if($cluster == 0){
-    	# if condor_submit failed for some reason return an error
-	} else {
-    	# monitor the cluster and return its exit status
-		# note 1/2/09 bt
-		# any exits cause monitor to never return allowing us
-		# to kill personal condor wrapping the test :-(
-		
-		$monitorpid = fork();
-		if($monitorpid == 0) {
-			# child does monitor
-    		$monitorret = Condor::Monitor();
-			debug( "Monitor did return on its own status<<<$monitorret>>>\n",4);
-
-    		die "$handle: FAILURE (job never checkpointed)\n"
-			if $wants_checkpoint && $checkpoints < 1;
-
-			if(  $monitorret == 1 ) {
-				debug( "child happy to exit 0\n",4);
-				exit(0);
-			} else {
-				debug( "child not happy to exit 1\n",4);
-				exit(1);
-			}
-		} else {
-			# parent cleans up
-			$waitpid = waitpid($monitorpid, 0);
-			if($waitpid == -1) {
-				debug( "No such process <<$monitorpid>>\n",4);
-			} else {
-				$retval = $?;
-				debug( "Child status was <<$retval>>\n",4);
-				if( WIFEXITED( $retval ) && WEXITSTATUS( $retval ) == 0 )
-				{
-					debug( "Monitor done and status good!\n",4);
-					$retval = 1;
-				} else {
-					$status = WEXITSTATUS( $retval );
-					debug( "Monitor done and status bad<<$status>>!\n",4);
-					$retval = 0;
-				}
-			}
-		}
-	}
-
-	debug( "************** condor_monitor back ************************ \n",4);
-
-	print "\nCurrent date and load follow:\n";
-	system("date");
-	system("uptime");
-
-	if(defined  $wrap_test) {
-		if($config ne "") {
-			print "KillDaemonPids called on this config file<$config>\n";
-			CondorPersonal::KillDaemonPids($config);
-		} else {
-			print "No config setting to call KillDaemonPids with\n";
-		}
-		print "Restoring last config file<<$lastconfig>>\n";
-		$ENV{CONDOR_CONFIG} = $lastconfig;
-	} else {
-		debug( "Not currently wrapping tests\n",4);
-	}
-
-
-	if($cluster == 0){
-		return(0);
-	} else {
-		return $retval;
 	}
 }
 
@@ -1174,7 +1073,11 @@ sub runCondorTool
 sub Which
 {
 	my $exe = shift(@_);
-	my @paths = split /:/, $ENV{'PATH'};
+
+	if(!( defined  $exe)) {
+		return "CT::Which called with no args\n";
+	}
+	my @paths = split /:/, $ENV{PATH};
 
 	foreach my $path (@paths) {
 		chomp $path;
@@ -1688,46 +1591,34 @@ sub ShouldCheck_coreERROR
 sub CoreCheck {
 	my $test = shift;
 	my $logdir = shift;
-	# get the most recent list of tests and their log directories
-	#CondorPubLogdirs::LoadPublished();
-	#my $publishedarrayref = CondorPubLogdirs::ReturnPublished($test);
-	#my $logdircount = $#{$publishedarrayref};
-	#debug("In searching for logs for test <$test> count is <$logdircount>\n",2);
-	#if($logdircount == -1) {
-		#open(NOLOGS,">>LogDirsMissing") or die "Can not add that <$test> has no log dir:$!\n";
-		#debug("No logs for test <$test>\n",2);
-		#print NOLOGS "$test\n";
-		#return(0);
-	#}
-
 	my $count = 0;
 	my $scancount = 0;
 	my $fullpath = "";
-	#foreach my $logdir (@{$publishedarrayref}) {
-		debug("Checking <$logdir> for test <$test>\n",1);
-		my @files = `ls $logdir`;
-		foreach my $perp (@files) {
-			chomp($perp);
-			$fullpath = $logdir . "/" . $perp;
-			if(-f $fullpath) {
-					if($fullpath =~ /^.*\/(core.*)$/) {
-						# returns printable string
-						debug("Checking <$logdir> for test <$test> Found Core <$fullpath>\n",2);
-						my $filechange = GetFileTime($fullpath);
-						my $newname = MoveCoreFile($fullpath,$coredir);
-						AddFileTrace($fullpath,$filechange,$newname);
-						$count += 1;
-					} else {
-						debug("Checking <$fullpath> for test <$test> for ERROR\n",2);
-						$scancount = ScanForERROR($fullpath,$test);
-						$count += $scancount;
-						debug("After ScanForERROR error count <$scancount>\n",2);
-					}
+	
+	debug("Checking <$logdir> for test <$test>\n",1);
+	my @files = `ls $logdir`;
+	foreach my $perp (@files) {
+		chomp($perp);
+		$fullpath = $logdir . "/" . $perp;
+		if(-f $fullpath) {
+			if($fullpath =~ /^.*\/(core.*)$/) {
+				# returns printable string
+				debug("Checking <$logdir> for test <$test> Found Core <$fullpath>\n",2);
+				my $filechange = GetFileTime($fullpath);
+				my $newname = MoveCoreFile($fullpath,$coredir);
+				AddFileTrace($fullpath,$filechange,$newname);
+				$count += 1;
 			} else {
-				debug( "Not File: $fullpath\n",2);
+				debug("Checking <$fullpath> for test <$test> for ERROR\n",2);
+				$scancount = ScanForERROR($fullpath,$test);
+				$count += $scancount;
+				debug("After ScanForERROR error count <$scancount>\n",2);
 			}
+		} else {
+			debug( "Not File: $fullpath\n",2);
 		}
-	#}
+	}
+	
 	return($count);
 }
 
@@ -2034,7 +1925,7 @@ sub RemoveRunningTest
 	my $runningfile = FindControlFile();
 	my $ret;
 	my $line = "";
-	debug( "Wanting to add <$test> to running tests\n",$debuglevel);
+	debug( "Wanting to remove <$test> from running tests\n",$debuglevel);
 	open(RF,"<$runningfile") or die "Failed to open <$runningfile>:$!\n";
 	$ret = flock RF, $LOCK_EXCLUSIVE;
 	if($ret == $TRUE) {
