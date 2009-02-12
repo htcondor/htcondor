@@ -29,6 +29,7 @@
 \oOpt{-allowversionmismatch}
 \oOpt{-no\_recurse}
 \oOpt{-update\_submit}
+\oOpt{-import\_env}
 \Arg{DAGInputFile1}
 \oArg{{DAGInputFile2} \Dots {DAGInputFileN} }
 
@@ -202,6 +203,11 @@ description.
      \File{.condor.sub} file will be overwritten, but the existing values
      of \Opt{-maxjobs}, \Opt{-maxidle}, \Opt{-maxpre}, and \Opt{-maxpost}
      will be preserved.
+  }
+  \OptItem{\Opt{-import\_env}}{This optional argument causes
+     \Condor{submit\_dag} to import the current environment into the
+     \Opt {environment} command of the \File{.condor.sub} file it
+     generates.
   }
   \end{Options}
 

@@ -85,6 +85,11 @@ file consistency when a DAG uses multiple user logs for node jobs.
 (DAGMan now does one sleep per submit cycle instead of one sleep for
 each submit.)
 
+% gittrac #166, #208
+\item Added the \Opt{-import\_env} command-line flag to
+\Condor{submit\_dag}.  This explicitly puts the submittor's environment
+into the \File{.condor.sub} file.
+
 \end{itemize}
 
 \noindent Configuration Variable Additions and Changes:
@@ -99,7 +104,7 @@ page~\pageref{sec:windows-scripts-as-executables}.
 
 \item \MacroNI{CCB\_ADDRESS} configures a daemon to use one or more
 CCB servers to allow communication with Condor components outside of
-the private network.  See pafe~\pageref{sec:CCB}.
+the private network.  See page~\pageref{sec:CCB}.
 
 \item \MacroNI{MAX\_FILE\_DESCRIPTORS} (UNIX only) specifies the
 required file descriptor limit for a Condor daemon.  File descriptors
