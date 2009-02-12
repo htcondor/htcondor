@@ -158,11 +158,11 @@ VMProc::StartJob()
 	// take snapshots at no more than 15 seconds in between, by default
 	fi.max_snapshot_interval = param_integer("PID_SNAPSHOT_INTERVAL", 15);
 
-	bool dedicated_account = Starter->jic->getExecuteAccountIsDedicated();
+	char const *dedicated_account = Starter->jic->getExecuteAccountIsDedicated();
 
 	if (dedicated_account) {
 		// using login-based family tracking
-		fi.login = get_user_loginname();
+		fi.login = dedicated_account;
 			// The following message is documented in the manual as the
 			// way to tell whether the dedicated execution account
 			// configuration is being used.

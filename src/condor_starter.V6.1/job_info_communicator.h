@@ -328,10 +328,11 @@ public:
 
 		/** Return whether or not the uid chosen by initUserPriv() is
 			only for use by this job, so we can track the processes
-			spawned by the job via uid.
+			spawned by the job via uid.  Returns NULL if account is
+			not dedicated.  Otherwise, returns name of account.
 		 */
-	bool getExecuteAccountIsDedicated( ) {
-		return m_execute_account_is_dedicated;
+	char const *getExecuteAccountIsDedicated( ) {
+		return m_dedicated_execute_account;
 	}
 
 		/* Upload files in a job working directory */
@@ -376,11 +377,11 @@ protected:
 
 		/** This may be called by initUserPriv() to specify that the
 			chosen uid is only for use by this job, so we can track
-			the processes spawned by the job via uid.
+			the processes spawned by the job via uid.  Pass NULL
+			if account is not dedicated.  Otherwise, pass the name
+			of the dedicated account.
 		*/
-	void setExecuteAccountIsDedicated( bool flag ) {
-		m_execute_account_is_dedicated = flag;
-	}
+	void setExecuteAccountIsDedicated( char const *name );
 
 		/** Initialize the priv_state code on Windows.  For now, this
 			is identical code, no matter what kind of JIC we're using,
@@ -473,7 +474,8 @@ protected:
 
 	bool user_priv_is_initialized;
 
-	bool m_execute_account_is_dedicated;
+	MyString m_dedicated_execute_account_buf;
+	char const *m_dedicated_execute_account;
 
 #if HAVE_JOB_HOOKS
 	StarterHookMgr* m_hook_mgr;
