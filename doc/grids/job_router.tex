@@ -6,61 +6,69 @@
 \index{daemon!condor\_job\_router@\Condor{job\_router}}
 \index{condor\_job\_router daemon}
 
-The Condor Job Router permits vanilla universe jobs to be
-matched either with local pool resources, allowed to flock,
-or modified by Condor and sent (routed) to available grid sites. 
-Jobs are specified to use the vanilla universe,
-and identify themselves as potential candidates for job routing.
-The configuration together with the \Condor{job\_router} daemon
-implement the details of which jobs are routed under what
-circumstances.
+The Condor Job Router facilitates the matching of vanilla universe jobs
+with local pool resources, or allows them to flock,
+or modifies the jobs and sends (routes) them to available grid sites. 
+Jobs are specified to use the vanilla universe.
+The \Condor{job\_router} daemon and its configuration 
+implement the details and policies related to which jobs are routed,
+and under what circumstances.
 
-The \Condor{job\_router} daemon allows you to specify a policy for routing vanilla universe
-jobs to one or more grid sites, through any of the grid protocols
-supported by Condor (e.g. gt2, gt4, Condor-C). The idea is to do as
-little scheduling in advance as possible and to only feed jobs to the
-sites as they consume them. Meanwhile, the jobs waiting to be routed
-are ordinary vanilla universe jobs, so they may run in the local
-Condor pool or in other pools via flocking. Except for having your
-excess jobs queue up in the vanilla universe job queue, you can get a
-similar effect by submitting all of your jobs as grid universe jobs
-and using Condor-G matchmaking.  However, the router adds some
-additional convenience features: tracking of aggregate job states for
-use in routing policy, MaxIdleJobs, and blackhole throttling.
+Routed jobs may be sent to to one or more grid sites,
+using any of the grid protocols supported by Condor.
+No scheduling in done in advance, and jobs are fed to the
+sites as they consume them.
+Meanwhile, the jobs that have the potential to be routed
+are vanilla universe jobs, so they may run in the local
+Condor pool or in other pools via flocking.
 
-The \Condor{job\_router} daemon is most appropriate for high throughput work flows, where you
-have many more jobs than computers and you just want to keep as many
-of the computers busy as possible.  It is less suitable for a
-situation where you have a small number of jobs and you need a
-scheduler to choose the best place to run the jobs in order to finish
-them as quickly as possible.  The JobRouter doesn't know which site
-will run your jobs faster, but it can decide whether to send more jobs
-to a site based on whether jobs already submitted to that site are
-sitting idle or not and whether you have experienced a lot of recent
-job failures at that site.
+The Job Router adds additional convenience features:
+tracking of aggregate job states for use in routing policy,
+MaxIdleJobs,
+and blackhole throttling.
+
+Job Routing is most appropriate for high throughput work flows, 
+where there are many more jobs than computers,
+and the goal is to keep as many of the computers busy as possible.
+Job Routing is less suitable when there are a small number of jobs,
+and the scheduler needs to choose the best place for each job,
+in order to finish them as quickly as possible.
+The Job Router does not know which site will run the jobs faster,
+but it can decide whether to send more jobs to a site,
+based on whether jobs already submitted to that site are
+sitting idle or not, 
+as well as whether the site has experienced recent job failures.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:RouterMechanism}Routing Mechanism}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-What is meant by \textit{job routing} is this: a vanilla universe job is
-transformed into a grid universe job by making a copy of the job
-ClassAd and modifying some attributes of the job as described by a
-configurable policy.  The copy of the ClassAd shows up in the job
-queue as a new job id.  It is referred to as the routed copy of the
-job.
+The \Condor{job\_router} daemon and configuration determine a policy
+for which vanilla universe jobs may be transformed and sent to 
+grid sites.
+A vanilla universe job is transformed into a grid universe job
+by making a copy of the original job ClassAd, 
+modifying some attributes of the job.
+The copy is called the routed copy,
+and it shows up in the job queue under a new job id.
 
-Until the routed job finishes or is removed, the original copy of the
-job passively mirrors the state of the routed job.  During this time,
-it is not available for matchmaking as a normal vanilla universe job,
-because it is tied to the routed job.  It also does not evaluate
-periodic expressions, such as \Attr{PeriodicHold}.  Only the periodic
-expressions of the routed job are evaluated.  When the routed job
-completes, the original job ClassAd is updated so that it reflects the
-final status of the job.  If the routed job is removed, the original
-job returns to the normal idle state and may be available for
-matchmaking or rerouting as usual.  If instead the original job is
-removed or goes on hold, the routed job is removed.
+Until the routed copy finishes or is removed,
+the original copy of the job passively mirrors the state of the routed job.
+During this time,
+the original job is not available for matchmaking 
+as a normal vanilla universe job,
+because it is tied to the routed copy.
+The original jobs also does not evaluate periodic expressions,
+such as \Attr{PeriodicHold}.
+Periodic expressions are evaluated for the routed copy.
+When the routed copy completes,
+the original job ClassAd is updated such that it reflects the
+final status of the job.
+If the routed copy is removed,
+the original job returns to the normal idle state,
+and is available for matchmaking or rerouting.
+If, instead, the original job is removed or goes on hold,
+the routed copy is removed.
 
 Not all jobs are suitable for routing.  The following section gives a
 more specific example of how job routing can be used and what types of
