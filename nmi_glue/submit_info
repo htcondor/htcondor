@@ -66,11 +66,10 @@ prereqs_ppc_aix_5.2-pl5      = vac-6, vacpp-6, perl-5.8.5, gzip-1.3.3
 prereqs_sun4u_sol_5.9    = gcc-4.1.2, binutils-2.16, perl-5.8.5, gzip-1.3.3
 prereqs_x86_rhas_3       = binutils-2.15, perl-5.8.5, gzip-1.3.3, autoconf-2.59, \
 							VMware-server-1.0.7
-x_test_platforms_x86_rhas_3 =  x86_rhas_4,  x86_fc_3, x86_fc_4, \
+x_test_platforms_x86_rhas_3 =  x86_rhas_4, \
 						x86_suse_10.0, x86_sles_9, x86_deb_3.1, x86_ubuntu_5.10, \
 						x86_64_rhas_3, x86_64_rhas_4
 #x_test_platforms_x86_rhas_3 = , x86_slc_4, \
-						# x86_fc_2, \
 						#x86_fc_5,  \
 						#x86_64_rhas_3, x86_64_rhas_4, x86_64_fc_4, \
 						#x86_64_fc_5
@@ -132,7 +131,6 @@ x_test_platforms_x86_macos_10.4 = x86_64_macos_10.5
 
 [
 platforms = x86_winnt_5.1
-test_append_prereqs = java-1.5.0_07
 ]
 
 [
@@ -174,7 +172,7 @@ x_test_platforms_x86_64_rhap_5 = x86_64_fc_8, x86_64_fc_9
 ]
 
 [
-testplatforms = x86_rhas_4, x86_slc_3, x86_fc_3, x86_suse_10.0, \
+testplatforms = x86_rhas_4, x86_slc_3, x86_suse_10.0, \
 				x86_sles_9, x86_ubuntu_5.10, sun4u_sol_5.10, \
 				x86_deb_3.1
 testprereqs = tar-1.14, make-3.80
@@ -199,7 +197,7 @@ testplatforms = unmanaged-x86_rhap_5.1
 ]
 
 [
-testplatforms = x86_fc_4,  x86_fc_5, x86_rhap_5.1, x86_64_fc_5, \
+testplatforms = x86_fc_5, x86_rhap_5.1, x86_64_fc_5, \
 		x86_64_fc_8, x86_64_fc_9
 testprereqs = tar-1.14, make-3.80
 testonly_append_prereqs = java-1.5.0_08
