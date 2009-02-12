@@ -937,7 +937,7 @@ JICShadow::initUserPriv( void )
 
 		// by default, the uid we choose is assumed not to be
 		// dedicated to this job
-	setExecuteAccountIsDedicated( false );
+	setExecuteAccountIsDedicated( NULL );
 
 		// Before we go through any trouble, see if we even need
 		// ATTR_OWNER to initialize user_priv.  If not, go ahead and
@@ -1003,7 +1003,7 @@ JICShadow::initUserPriv( void )
 			dprintf( D_FULLDEBUG, "Initialized user_priv as \"%s\"\n", 
 			         owner.Value() );
 			if( checkDedicatedExecuteAccounts( owner.Value() ) ) {
-				setExecuteAccountIsDedicated( true );
+				setExecuteAccountIsDedicated( owner.Value() );
 			}
 		}
 		else if( stricmp(vm_univ_type.Value(), CONDOR_VM_UNIVERSE_VMWARE) == MATCH ) {
@@ -1163,7 +1163,7 @@ JICShadow::initUserPriv( void )
 			dprintf( D_FULLDEBUG, "Initialized user_priv as \"%s\"\n",
 				  nobody_user );
 			if( checkDedicatedExecuteAccounts( nobody_user ) ) {
-				setExecuteAccountIsDedicated( true );
+				setExecuteAccountIsDedicated( nobody_user );
 			}
 			free( nobody_user );
 		}			

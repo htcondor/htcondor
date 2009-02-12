@@ -216,13 +216,12 @@ ToolDaemonProc::StartJob()
 	//
 	FamilyInfo fi;
 	fi.max_snapshot_interval = 15;
-	bool dedicated_account = false;
+	char const *dedicated_account = NULL;
 	if (job_universe != CONDOR_UNIVERSE_LOCAL) {
-		dedicated_account = param_boolean("EXECUTE_LOGIN_IS_DEDICATED",
-		                                  false);
+		dedicated_account = Starter->jic->getExecuteAccountIsDedicated();
 	}
 	if (dedicated_account) {
-		fi.login = get_user_loginname();
+		fi.login = dedicated_account;
 		dprintf(D_FULLDEBUG,
 		        "Tracking process family by login \"%s\"\n",
 		        fi.login);

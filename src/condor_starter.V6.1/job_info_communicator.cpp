@@ -57,7 +57,7 @@ JobInfoCommunicator::JobInfoCommunicator()
 	had_hold = false;
 	change_iwd = false;
 	user_priv_is_initialized = false;
-	m_execute_account_is_dedicated = false;
+	m_dedicated_execute_account = NULL;
 #if HAVE_JOB_HOOKS
     m_hook_mgr = NULL;
 #endif
@@ -541,6 +541,19 @@ JobInfoCommunicator::checkDedicatedExecuteAccounts( char const *name )
 	return false;
 }
 
+void
+JobInfoCommunicator::setExecuteAccountIsDedicated( char const *name )
+{
+	if( name == NULL ) {
+		m_dedicated_execute_account_buf = "";
+		m_dedicated_execute_account = NULL;
+	}
+	else {
+		m_dedicated_execute_account_buf = name;
+		m_dedicated_execute_account = m_dedicated_execute_account_buf.Value();
+	}
+}
+
 #ifdef WIN32
 #include "my_username.h"
 bool
@@ -551,7 +564,7 @@ JobInfoCommunicator::initUserPrivWindows( void )
 	// user and initialize user_priv.
 
 	// By default, assume execute login may be shared by other processes.
-	setExecuteAccountIsDedicated( false );
+	setExecuteAccountIsDedicated( NULL );
 
 	// we support running the job as other users if the user
 	// is specifed in the config file, and the account's password
@@ -644,7 +657,7 @@ JobInfoCommunicator::initUserPrivWindows( void )
 			MyString login_name;
 			joinDomainAndName(name, domain, login_name);
 			if( checkDedicatedExecuteAccounts( login_name.Value() ) ) {
-				setExecuteAccountIsDedicated( true );
+				setExecuteAccountIsDedicated( login_name.Value() );
 			}
 		}
 
@@ -663,7 +676,7 @@ JobInfoCommunicator::initUserPrivWindows( void )
 		// just init a new nobody user; dynuser handles the rest.
 		// the "." means Local Machine to LogonUser
 
-		setExecuteAccountIsDedicated( true );
+		setExecuteAccountIsDedicated( get_user_loginname() );
 	}
 	else {
 		
