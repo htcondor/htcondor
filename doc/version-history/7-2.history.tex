@@ -52,6 +52,10 @@ The details of each version are described below.
 \item Fixed a bug where Condor daemons could segmentation fault while trying
 to write a core file to disk in the UNIX ports.
 
+\item Fixed a bug in which use of dedicated execute accounts
+(\MacroNI{DEDICATED\_EXECUTE\_ACCOUNT\_REGEXP}) did not work properly
+in privsep mode (\MacroNI{PRIVSEP\_ENABLED}).
+
 \end{itemize}
 
 \noindent Known Bugs:
