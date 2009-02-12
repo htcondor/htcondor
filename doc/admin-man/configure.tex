@@ -3216,6 +3216,47 @@ Configuring The Startd Policy.
   A boolean expression that, when \Expr{True},
   causes Condor to stop a currently running job.
 
+\item[\Macro{WANT\_HOLD}]
+\label{param:WantHold}
+A boolean expression.  When \MacroNI{PREEMPT} becomes true, if
+\MacroNI{WANT\_HOLD} is true, the job is put on hold for the reason
+(optionally) specified by \MacroNI{WANT\_HOLD\_REASON} and
+\MacroNI{WANT\_HOLD\_SUBCODE}.  As usual, the job owner may specify
+\AdAttr{periodic\_release} and/or \AdAttr{periodic\_remove}
+expressions to react to specific hold states automatically.
+The \AdAttr{HoldReasonCode} in the job ClassAd is set to 21 when
+\MacroNI{WANT\_HOLD} is responsible for putting the job on hold.
+
+Example policy for putting jobs on hold that use too much virtual memory:
+
+\begin{verbatim}
+VIRTUAL_MEMORY_AVAILABLE_MB = (VirtualMemory*0.9)
+MEMORY_EXCEEDED = ImageSize/1024 > $(VIRTUAL_MEMORY_AVAILABLE_MB)
+PREEMPT = ($(PREEMPT)) || ($(MEMORY_EXCEEDED))
+WANT_SUSPEND = ($(WANT_SUSPEND)) && ($(MEMORY_EXCEEDED)) =!= TRUE
+WANT_HOLD = ($(MEMORY_EXCEEDED))
+WANT_HOLD_REASON = \
+   ifThenElse( $(MEMORY_EXCEEDED), \
+               "Your job used too much virtual memory.", \
+               undefined )
+\end{verbatim}
+
+\item[\Macro{WANT\_HOLD\_REASON}]
+\label{param:WantHoldReason}
+An optional string expression.  When a job is put on hold due to
+\MacroNI{WANT\_HOLD}, the \AdAttr{HoldReason} in the job ClassAd is
+set to the string resulting from evaluation of this expression.  If
+this expression is not specified or evaluates to undefined, a default
+hold reason is provided.
+
+\item[\Macro{WANT\_HOLD\_SUB\_CODE}]
+\label{param:WantHoldSubCode}
+An optional integer expression.  When a job is put on hold due to
+\MacroNI{WANT\_HOLD}, the \AdAttr{HoldReasonSubCode} in the job ClassAd is
+set to the integer resulting from evaluation of this expression.  If
+this expression is not specified or evaluates to undefined, the sub-code
+is set to 0.  Note that \AdAttr{HoldReasonCode} is always set to 21.
+
 \item[\Macro{CONTINUE}]
 \label{param:Continue}
   A boolean expression that, when \Expr{True},

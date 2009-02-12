@@ -60,6 +60,14 @@ CCB does not help.  For more information on CCB, see page~\pageref{sec:CCB}.
 
 \item Added support for \Condor{q}'s \Opt{-better-analyze} on Windows.
 
+\item Added \MacroNI{WANT\_HOLD}.  When \MacroNI{PREEMPT} becomes
+true, if \MacroNI{WANT\_HOLD} is true, the job is put on hold for the
+reason (optionally) specified by \MacroNI{WANT\_HOLD\_REASON} and
+\MacroNI{WANT\_HOLD\_SUBCODE}.  These policy expressions are evaluated
+by the execute machine.  As usual, the job owner may specify
+\AdAttr{periodic\_release} and/or \AdAttr{periodic\_remove}
+expressions to react to specific hold states automatically.
+
 \item Added the ClassAd function \Procedure{debug}.
 See section~ \ref{sec:classadFunctions} for the details of this function.
 
