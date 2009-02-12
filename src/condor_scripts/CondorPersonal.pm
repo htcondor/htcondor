@@ -46,7 +46,7 @@
 package CondorPersonal;
 require 5.0;
 use Net::Domain qw(hostfqdn);
-use CondorPubLogdirs;
+#use CondorPubLogdirs;
 use warnings;
 use strict;
 
@@ -260,7 +260,7 @@ sub StartCondor
 	my $wrap_test = $ENV{WRAP_TESTS};
 	if(defined  $wrap_test) {
 		my $logdir = $topleveldir . "/log";
-		CondorPubLogdirs::PublishLogDir($testname,$logdir);
+		#CondorPubLogdirs::PublishLogDir($testname,$logdir);
 	}
 
 	$personal_config_file = $topleveldir ."/condor_config";
