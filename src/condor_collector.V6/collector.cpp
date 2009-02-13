@@ -870,6 +870,8 @@ CollectorDaemon::sockCacheHandler( Service*, Stream* sock )
 	dprintf( D_FULLDEBUG, "Activity on stashed TCP socket from %s\n",
 			 addr );
 
+	sock->timeout(20);
+
 	if( ! sock->code(cmd) ) {
 			// can't read an int, the other side probably closed the
 			// socket, which is why select() woke up.
