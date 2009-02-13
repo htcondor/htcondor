@@ -3811,8 +3811,7 @@ int DaemonCore::HandleReq(Stream *insock)
 		soap_serve(cursoap);
 		soap_destroy(cursoap); // clean up class instances
 		soap_end(cursoap); // clean up everything and close socket
-		soap_done(cursoap); // close master socket and detach environment
-		free(cursoap); // free up
+		soap_free(cursoap);
 		dprintf(D_ALWAYS, "Completed servicing HTTP request\n");
 
 			// gsoap already closed the socket.  so set the socket in
