@@ -109,7 +109,7 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 #include "valgrind.h"
 #endif
 
-#ifdef HAVE_SCHED_SETAFFINITY
+#if defined ( HAVE_SCHED_SETAFFINITY ) && !defined ( WIN32 )
 #include <sched.h>
 #endif
 
@@ -6923,6 +6923,40 @@ int DaemonCore::Create_Process(
 	// save pid info out of piProcess
 	//
 	newpid = piProcess.dwProcessId;
+	
+#ifdef HAVE_SCHED_SETAFFINITY
+	/* if we have an affinity array mask then: */
+	if ( affinity_mask ) {
+		
+		/* build the Win32 affinity mask ... */
+		DWORD_PTR mask = 0;
+		for ( int i = 1; i < affinity_mask[0]; ++i ) {
+			mask |= ( 1 << affinity_mask[i] );
+		}
+
+		dprintf ( 
+			D_FULLDEBUG, 
+			"Setting process affinity\n" );
+		
+		/* ... set the process affinity. */
+		BOOL ok = SetProcessAffinityMask ( 
+			piProcess.hProcess, 
+			mask );
+		
+		if ( !ok ) {
+
+			dprintf ( D_ALWAYS, 
+				"Failed to set process affinity. "
+				"(last-error=%d)\n", 
+				GetLastError () );
+
+			/* This is NOT a fatal error, so
+			   continue on... */
+
+		}
+
+	}
+#endif
 
 	// if requested, register a process family with the procd and unsuspend
 	// the process
