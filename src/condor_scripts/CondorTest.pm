@@ -30,7 +30,7 @@ use Carp;
 use Condor;
 use CondorPersonal;
 use FileHandle;
-use POSIX "sys_wait_h";
+use POSIX;
 use Net::Domain qw(hostfqdn);
 use Cwd;
 use Time::Local;
@@ -1911,6 +1911,7 @@ sub CountRunningTests
 	my $count = 0;
 	open(RF,"<$runningfile") or die "Failed to open <$runningfile>:$!\n";
 	$ret = flock RF, $LOCK_EXCLUSIVE;
+	seek(RF, 0, 0);
 	if($ret == $TRUE) {
 		debug( "Got file lock!\n",$debuglevel);
 		$ret = flock RF, $UNLOCK;
@@ -1922,13 +1923,13 @@ sub CountRunningTests
 		}
 		# now release lock
 		if($ret == $TRUE) {
+			close(RF);
 			debug( "Gave up file lock!\n",$debuglevel);
 		}
 	} else {
 		close(RF);
 		die "We should have waited for the lock!!!!!\n";
 	}
-	close(RF);
 	return($count);
 }
 
@@ -1937,14 +1938,21 @@ sub AddRunningTest
 	my $test = shift;
 	my $runningfile = FindControlFile();
 	my $retRF;
-	my $retNEW;
+	my $tmpfile;
 	my $line = "";
 	debug( "Wanting to add <$test> to running tests\n",$debuglevel);
+
+	# Get a tmp file first
+	do {
+		$tmpfile = tmpnam();
+	} until sysopen(NEW, $tmpfile, O_RDWR | O_CREAT | O_EXCL, 0600);
+
+	# OK now lock the file for as short as possible
 	open(RF,"<$runningfile") or die "Failed to open <$runningfile>:$!\n";
 	$retRF = flock RF, $LOCK_EXCLUSIVE;
-	open(NEW,">$runningfile.new") or die "Can not open temp file <$runningfile.new>:$!\n";
-	$retNEW = flock NEW, $LOCK_EXCLUSIVE;
-	if(($retRF == $TRUE) && ($retNEW == $TRUE)) {
+	seek(RF,0,0); # place at current start of file
+
+	if($retRF == $TRUE) {
 		debug( "Got file lock!\n",$debuglevel);
 		# do work here
 		while(<RF>) {
@@ -1954,20 +1962,17 @@ sub AddRunningTest
 		}
 		print NEW "$test\n";
 		close(NEW);
-		close(RF);
-		system("cp $runningfile.new $runningfile");
-		system("rm -f $runningfile.new");
+		system("cp $tmpfile $runningfile");
+		system("rm -f $tmpfile");
 		$retRF = flock RF, $UNLOCK;
-		$retNEW = flock NEW, $UNLOCK;
 		# now release lock
 		if($retRF == $TRUE) {
+			close(RF);
 			debug( "Gave up READ file lock!\n",$debuglevel);
-		}
-		if($retNEW == $TRUE) {
-			debug( "Gave up WRITE file lock!\n",$debuglevel);
 		}
 	} else {
 		close(RF);
+		close(NEW);
 		die "We should have waited for the READ & WRITE locks!!!!!\n";
 	}
 }
@@ -1977,17 +1982,23 @@ sub RemoveRunningTest
 	my $test = shift;
 	my $runningfile = FindControlFile();
 	my $retRF;
-	my $retNEW;
+	my $tmpfile;
 	my $line = "";
 	debug( "Wanting to remove <$test> from running tests\n",$debuglevel);
-	open(NEW,">$runningfile.new") or die "Can not open temp file <$runningfile.new>:$!\n";
-	$retNEW = flock NEW, $LOCK_EXCLUSIVE;
+
+	# Get a tmp file first
+	do {
+		$tmpfile = tmpnam();
+	} until sysopen(NEW, $tmpfile, O_RDWR | O_CREAT | O_EXCL, 0600);
+
+	# OK now lock the file for as short as possible
 	open(RF,"<$runningfile") or die "Failed to open <$runningfile>:$!\n";
 	$retRF = flock RF, $LOCK_EXCLUSIVE;
-	if(($retRF == $TRUE) && ($retNEW == $TRUE)) {
+	seek(RF,0,0); # place at current start of file
+
+	if($retRF == $TRUE) {
 		debug( "Got file locks!\n",$debuglevel);
 		# do work here
-		open(NEW,">$runningfile.new") or die "Can not open temp file <$runningfile.new>:$!\n";
 		while(<RF>) {
 			chomp($_);
 			$line = $_;
@@ -1998,23 +2009,19 @@ sub RemoveRunningTest
 			}
 		}
 		close(NEW);
-		close(RF);
-		system("cp $runningfile.new $runningfile");
-		system("rm -f $runningfile.new");
-		# now release locks
+		system("cp $tmpfile $runningfile");
+		system("rm -f $tmpfile");
+		# now release lock
 		$retRF = flock RF, $UNLOCK;
-		$retNEW = flock NEW, $UNLOCK;
 		if($retRF == $TRUE) {
+			close(RF);
 			debug( "Gave up READ file lock!\n",$debuglevel);
-		}
-		if($retNEW == $TRUE) {
-			debug( "Gave up WRITE file lock!\n",$debuglevel);
 		}
 	} else {
 		close(RF);
+		close(NEW);
 		die "We should have waited for the lock!!!!!\n";
 	}
-	close(RF);
 }
 
 
