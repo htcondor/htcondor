@@ -140,14 +140,15 @@ windows_hard_kill(DWORD pid)
 		        GetLastError());
 		return false;
 	}
-	if (TerminateProcess(process, 0) == FALSE) {
+	BOOL ok = TerminateProcess(process, 0);
+	DWORD err = GetLastError();
+	CloseHandle(process);
+	if (ok == FALSE) {
 		dprintf(D_ALWAYS,
 		        "windows_hard_kill: TerminateProcess error: %u\n",
-		        GetLastError());
+		        (unsigned)err);
 		return false;
 	}
-	CloseHandle(process);
-
 	return true;
 }
 
