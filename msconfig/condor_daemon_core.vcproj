@@ -447,29 +447,19 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_daemon_core.V6\httpget.cpp"
+			RelativePath="..\src\condor_daemon_core.V6\mimetypes.c"
 			>
 			<FileConfiguration
 				Name="Release|Win32"
 				>
 				<Tool
 					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Debug|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
+					UsePrecompiledHeader="0"
 				/>
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_daemon_core.V6\httpget.h"
+			RelativePath="..\src\condor_daemon_core.V6\mimetypes.h"
 			>
 		</File>
 		<File
