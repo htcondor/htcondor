@@ -1,0 +1,47 @@
+\begin{ManPage}{\label{man-condor-router-history}\Prog{condor\_router\_history}}{1}
+{list the history for routed jobs}
+
+\Synopsis
+\SynProg{\Prog{condor\_router\_history}}
+[\verb@--@\textbf{h}]
+
+\SynProg{\Prog{condor\_router\_history}}
+[\verb@--@\textbf{show\_records}]
+[\verb@--@\textbf{show\_iwd}]
+[\verb@--@\textbf{age} \textit{days}]
+[\verb@--@\textbf{days} \textit{days}]
+[\verb@--@\textbf{start} \textit{"YYYY-MM-DD HH:MM"}]
+
+\index{Job Router commands!condor\_router\_history}
+\index{condor\_router\_history}
+
+\Description
+\Condor{router\_history} summarizes statistics for routed jobs
+over the previous 24 hours.
+With no command line options, statistics for run time,
+number of jobs completed, and number of jobs aborted are 
+listed per route (site).
+
+\begin{Options}
+  \OptItem{\Opt{---show\_records}}{
+    Displays statistics broken down by job ID.
+  }
+  \OptItem{\Opt{---show\_iwd}}{
+    What this option does.
+  }
+  \OptItem{\OptArg{---age}{days}}{
+    What this option does.
+  }
+  \OptItem{\OptArg{---days}{days}}{
+    What this option does.
+  }
+  \OptItem{\OptArg{---start}{"YYYY-MM-DD HH:MM"}}{
+    What this option does.
+  }
+\end{Options}
+
+\ExitStatus
+\Prog{condor\_router\_history} will exit with a status of 0 (zero) upon
+success, and non-zero otherwise.
+
+\end{ManPage}
