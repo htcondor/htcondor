@@ -1879,9 +1879,9 @@ sub FindControlFile
 	if($cwd =~ /^(.*condor_tests)(.*)$/) {
 		$runningfile = $1 . "/" . $RunningFile;
 		debug( "Running file test is <$runningfile>\n",$debuglevel);
-		if(!(-f $runningfile)) {
-			debug( "Creating control file <$runningfile>\n",$debuglevel);
-			system("touch $runningfile");
+		if(!(-d $runningfile)) {
+			debug( "Creating control file directory<$runningfile>\n",$debuglevel);
+			system("mkdir -p $runningfile");
 		}
 	} else {
 		die "Lost relative to where <$RunningFile> is :-(\n";
@@ -1892,14 +1892,14 @@ sub FindControlFile
 sub CleanControlFile
 {
 	my $controlfile = FindControlFile();
-	if( -f $controlfile) {
+	if( -d $controlfile) {
 		debug( "Cleaning old active test running file holding:\n",$debuglevel);
-		system("cat $controlfile");
-		system("rm -f $controlfile");
+		system("ls $controlfile");
+		system("rm -rf $controlfile");
 	} else {
 		debug( "Creating new active test running file\n",$debuglevel);
 	}
-	system("touch $controlfile");
+	system("mkdir -p $controlfile");
 }
 
 
@@ -1909,27 +1909,17 @@ sub CountRunningTests
 	my $ret;
 	my $line = "";
 	my $count = 0;
-	open(RF,"<$runningfile") or die "Failed to open <$runningfile>:$!\n";
-	$ret = flock RF, $LOCK_EXCLUSIVE;
-	seek(RF, 0, 0);
-	if($ret == $TRUE) {
-		debug( "Got file lock!\n",$debuglevel);
-		$ret = flock RF, $UNLOCK;
-		# do work here
-		while(<RF>) {
-			$line = $_;
-			$count += 1;
-			debug( "old file contains: $line<<$count>>\n",$debuglevel);
-		}
-		# now release lock
-		if($ret == $TRUE) {
-			close(RF);
-			debug( "Gave up file lock!\n",$debuglevel);
-		}
-	} else {
-		close(RF);
-		die "We should have waited for the lock!!!!!\n";
+	my $here = getcwd();
+	chdir($runningfile);
+	my $targetdir = '.';
+	opendir DH, $targetdir or die "Can not open $targetdir:$!\n";
+	foreach my $file (readdir DH) {
+		next if $file =~ /^\.\.?$/;
+		next if (-d $file) ;
+		$count += 1;
+		debug("Counting this test<$file> count now <$count>\n",1);
 	}
+	chdir($here);
 	return($count);
 }
 
@@ -1941,40 +1931,7 @@ sub AddRunningTest
 	my $tmpfile;
 	my $line = "";
 	debug( "Wanting to add <$test> to running tests\n",$debuglevel);
-
-	# Get a tmp file first
-	do {
-		$tmpfile = tmpnam();
-	} until sysopen(NEW, $tmpfile, O_RDWR | O_CREAT | O_EXCL, 0600);
-
-	# OK now lock the file for as short as possible
-	open(RF,"<$runningfile") or die "Failed to open <$runningfile>:$!\n";
-	$retRF = flock RF, $LOCK_EXCLUSIVE;
-	seek(RF,0,0); # place at current start of file
-
-	if($retRF == $TRUE) {
-		debug( "Got file lock!\n",$debuglevel);
-		# do work here
-		while(<RF>) {
-			$line = $_;
-			debug( "old file contains: $line\n",$debuglevel);
-			print NEW "$_";
-		}
-		print NEW "$test\n";
-		close(NEW);
-		system("cp $tmpfile $runningfile");
-		system("rm -f $tmpfile");
-		$retRF = flock RF, $UNLOCK;
-		# now release lock
-		if($retRF == $TRUE) {
-			close(RF);
-			debug( "Gave up READ file lock!\n",$debuglevel);
-		}
-	} else {
-		close(RF);
-		close(NEW);
-		die "We should have waited for the READ & WRITE locks!!!!!\n";
-	}
+	system("touch $runningfile/$test");
 }
 
 sub RemoveRunningTest
@@ -1985,43 +1942,7 @@ sub RemoveRunningTest
 	my $tmpfile;
 	my $line = "";
 	debug( "Wanting to remove <$test> from running tests\n",$debuglevel);
-
-	# Get a tmp file first
-	do {
-		$tmpfile = tmpnam();
-	} until sysopen(NEW, $tmpfile, O_RDWR | O_CREAT | O_EXCL, 0600);
-
-	# OK now lock the file for as short as possible
-	open(RF,"<$runningfile") or die "Failed to open <$runningfile>:$!\n";
-	$retRF = flock RF, $LOCK_EXCLUSIVE;
-	seek(RF,0,0); # place at current start of file
-
-	if($retRF == $TRUE) {
-		debug( "Got file locks!\n",$debuglevel);
-		# do work here
-		while(<RF>) {
-			chomp($_);
-			$line = $_;
-			if($line =~ /^$test\s*$/) {
-				# drop tests matching name
-			} else {
-				print NEW "$line\n";
-			}
-		}
-		close(NEW);
-		system("cp $tmpfile $runningfile");
-		system("rm -f $tmpfile");
-		# now release lock
-		$retRF = flock RF, $UNLOCK;
-		if($retRF == $TRUE) {
-			close(RF);
-			debug( "Gave up READ file lock!\n",$debuglevel);
-		}
-	} else {
-		close(RF);
-		close(NEW);
-		die "We should have waited for the lock!!!!!\n";
-	}
+	system("rm -f $runningfile/$test");
 }
 
 
