@@ -182,7 +182,7 @@ StarterHookMgr::hookUpdateJobInfo(ClassAd* job_info)
 		return false;
 	}
 
-	dprintf(D_FULLDEBUG, "HOOK_PREPARE_JOB (%s) invoked.\n",
+	dprintf(D_FULLDEBUG, "HOOK_UPDATE_JOB_INFO (%s) invoked.\n",
 			m_hook_prepare_job);
 	return true;
 }
