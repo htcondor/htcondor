@@ -70,79 +70,91 @@ and is available for matchmaking or rerouting.
 If, instead, the original job is removed or goes on hold,
 the routed copy is removed.
 
-Not all jobs are suitable for routing.  The following section gives a
-more specific example of how job routing can be used and what types of
-jobs are suitable.
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:RouterJobSubmission}Job Submission with Job Routing Capability}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Suppose you submit jobs to a Condor pool and you would like to send
-excess jobs to other available sites, such as resources on the Open
-Science Grid.  Here is how you could use JobRouter to make this work:
+If Job Routing is set up, then the following items
+ought to be considered for vanilla universe jobs to have the
+necessary prerequisites to be considered for routing.
 
-\begin{enumerate}
+\begin{itemize}
 
 \item Jobs appropriate for routing to the grid must not rely on access to
-a shared file system or other services that are only available at your
-\textit{home} site.  For example, rather than relying on a shared file system
-to access input files and write output files, you could use Condor's file
-transfer mechanism.  In the Condor submit file:
+a shared file system, or other services that are only available on the
+local pool.
+The job will use Condor's file transfer mechanism, 
+rather than relying on a shared file system
+to access input files and write output files.
+In the submit description file, to enable file transfer, there
+will be a set of commands similar to
 
 \begin{verbatim}
-should_transfer_files = yes
+should_transfer_files = YES
 when_to_transfer_output = ON_EXIT
-input_files = input1,input2
-output_files = output1,output2
+transfer_input_files = input1, input2
+transfer_output_files = output1, output2
 \end{verbatim}
 
-Note that unlike in the vanilla universe, if your job is
-transformed into a globus job and you have not explicitly listed
-output files, files produced in the working directory of your job will
-not be automatically transferred back when the job completes.  Only
-files your explicitly list will be returned.
+Vanilla universe jobs and grid universe jobs differ in the
+set of files transferred back when the job completes.
+Vanilla universe jobs transfer back all files created or modified,
+while grid universe jobs only transfer back the file mapped with
+\SubmitCmd{output}, as well as those explicitly listed
+with \SubmitCmd{transfer\_output\_files}.
+To work properly as a routed copy, explicitly specify all
+output files that must be transferred upon job completion.
 
-An additional difference between the vanilla universe and running the
-job via globus (in this case just gt2) is that globus does not return
-any information about the job exit status.  The exit status as
-reported in the job ClassAd and user log are therefore always 0 when
-the job ran via globus gt2.
+An additional difference between the vanilla universe jobs
+and \SubmitCmd{gt2} grid universe jobs
+is that \SubmitCmd{gt2} jobs do not return
+any information about the job's exit status.
+The exit status as reported in the job ClassAd and user log are
+always 0.
+Therefore, jobs that may be routed to a \SubmitCmd{gt2} grid site
+must not rely upon a non-zero job exit status.
 
-\item Your job must satisfy the requirements of the JobRouter.  The example
-routing configuration that will be described below requires that your job
-define an expression WantJobRouter that evaluates to True.  Example of
-what you could put in a submit file:
+\item One configuration for routed jobs requires the jobs to
+identify themselves as candidates for Job Routing.
+This may be accomplished by inventing a ClassAd attribute
+that the configuration utilizes in setting the policy 
+for job identification,
+and the job defines this attribute to identify itself.
+If the invented attribute is called \Attr{WantJobRouter},
+then the job identifies itself as a job that may be routed
+by placing in the submit description file:
 
 \begin{verbatim}
 +WantJobRouter = True
 \end{verbatim}
 
-You could make this expression fancier.  For example, suppose you want
-jobs to first be rejected by your local Condor matchmaker before being
-candidates for routing to the grid:
+This implementation can be taken further,
+allowing the job to first be rejected within the local pool,
+before being a candidate for Job Routing:
 
 \begin{verbatim}
 +WantJobRouter = LastRejMatchTime =!= UNDEFINED
 \end{verbatim}
 
-\item If necessary, create a grid proxy and specify it in your submit
-file.  Example:
+\item As appropriate to the potential grid site,
+create a grid proxy, and specify it in the submit description file:
 
 \begin{verbatim}
 x509userproxy = /tmp/x509up_u275
 \end{verbatim}
 
-This is not necessary if the \Condor{job\_router} daemon is configured to add a grid proxy
-to your job for you.
+This is not necessary if the \Condor{job\_router} daemon is configured
+to add a grid proxy on behalf of jobs.
 
-\item Submit your job as usual.  Example:
+\end{itemize}
+
+Job submission does not change for jobs that may be routed.
 
 \begin{verbatim}
-$ condor_submit job1.sub
+  $ condor_submit job1.sub
 \end{verbatim}
 
-where \verb|job1.sub| might look like this:
+where \File{job1.sub} might contain:
 
 \begin{verbatim}
 universe = vanilla
@@ -150,23 +162,22 @@ executable = my_executable
 output = job1.stdout
 error = job1.stderr
 log = job1.ulog
-should_transfer_files = true
-when_to_transfer_output = on_exit
+should_transfer_files = YES
+when_to_transfer_output = ON_EXIT
 +WantJobRouter = LastRejMatchTime =!= UNDEFINED
 x509userproxy = /tmp/x509up_u275
 queue
 \end{verbatim}
 
-\item Watch the status of the job.  As usual, the job \textit{user log} will
-contain the final completion status of the job.  Before it finishes,
-you can see the status of it by looking in the Condor job queue.  Once
-it is picked up by the \Condor{job\_router} daemon, a second job will enter the job queue.
-This is the transformed copy of the original job, turned into a grid
-universe job.
-
-To see the full job queue, use \Condor{q} as usual.  To
-see a more specialized view of the routed jobs, use
-\Condor{router\_q}.  Example:
+The status of the job may be observed as with any other Condor job,
+for example by looking in the job's log file.
+Before the job completes,
+\Condor{q} shows the job's status.
+Should the job become routed,
+a second job will enter the job queue.
+This is the routed copy of the original job.
+The command \Condor{router\_q} shows a more specialized view of routed jobs, 
+as this example shows:
 
 \begin{verbatim}
 $ condor_router_q -S
@@ -176,7 +187,8 @@ $ condor_router_q -S
       2  R Site3      condor submit.site3.edu condor.site3.edu
 \end{verbatim}
 
-To see history of routed jobs, use \Condor{router\_history}.  Example:
+\Condor{router\_history} summarizes the history of routed jobs,
+as this example shows:
 
 \begin{verbatim}
 $ condor_router_history
@@ -192,12 +204,10 @@ Site3              40       6     0
 TOTAL              58      10     1
 \end{verbatim}
 
-\end{enumerate}
 
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Example Configuration}\label{ExampleJobRouterConfiguration}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{ExampleJobRouterConfiguration} Example Configuration}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 This is a specific example of how you could configure the \Condor{job\_router} daemon to send
 jobs to grid sites.  Definitions of configuration variables
