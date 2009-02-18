@@ -70,6 +70,51 @@ and is available for matchmaking or rerouting.
 If, instead, the original job is removed or goes on hold,
 the routed copy is removed.
 
+The \Condor{job\_router} daemon utilizes a \Term{routing table},
+in which a ClassAd describes each site to where jobs may be sent.
+The routing table is given using \Term{New ClassAds},
+a re-implementation of the current ClassAd language,
+as currently used by Condor.
+A good place to learn about the syntax of New ClassAds
+is the Informal Language Description in the C++ ClassAds
+tutorial: \URL{http://www.cs.wisc.edu/condor/classad/c++tut.html}.
+With the exception of a few ClassAd functions,
+everything in the current ClassAd language is
+supported by the New ClassAd language.
+A job that requires the unsupported ClassAd functions
+(those with names beginning with \Code{stringList})
+cannot be considered for Job Routing.
+
+Entries in the routing table are described with the New ClassAd language,
+but the \Condor{job\_router} daemon must interact with the
+remainder of Condor which utilizes the current ClassAd language.
+A \Attr{requirements} attribute in the routing table is given
+with the New ClassAd language.
+An attribute for a job, as represented in the job queue
+uses the current ClassAd language.
+
+Two essential differences distinguish the New ClassAd language
+from the current one.
+In the New ClassAd language,
+each ClassAd is surrounded by square brackets.
+And, in the New ClassAd language,
+each assignment statement ends with a semicolon.
+When the New
+ClassAd is embedded in a Condor configuration file,
+it may appear all on a single line,
+but the readability is often improved by inserting line continuation
+characters
+after each assignment statement.
+This is done in the examples.
+Unfortunately, this makes the insertion of comments into
+the configuration file awkward,
+because of the interaction between comments and line continuation
+characters in configuration files.
+An alternative is to use C-style comments (\Code{/* \Dots */}).
+Another alternative is to read in the routing table entries
+from a separate file,
+rather than embedding them in the Condor configuration file.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:RouterJobSubmission}Job Submission with Job Routing Capability}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -206,7 +251,7 @@ TOTAL              58      10     1
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{ExampleJobRouterConfiguration} Example Configuration}
+\subsection{\label{ExampleJobRouterConfiguration} An Example Configuration}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 This is a specific example of how you could configure the \Condor{job\_router} daemon to send
@@ -281,60 +326,16 @@ MAX_HISTORY_ROTATIONS = 20
 \end{verbatim}
 
 
-Some questions you may have after reading the above policy: Can the
-routing table be dynamically generated from grid information systems?
-Do users have to have their own grid credentials or can the \Condor{job\_router} daemon
-insert service credentials for them?  What's up with the syntax of the
-routing table: C-style comments, strange ClassAd expressions, escaped
-end of lines?  The next section covers the specifics of the \Condor{job\_router} daemon
-configuration.  Read on!
-
-The \Condor{job\_router} daemon is configured with a \textit{routing table}, which is a list
-of ClassAds describing each site where jobs may be sent.  The ClassAd
-syntax is slightly different from much of the rest of Condor, because
-it uses \emph{New ClassAds}, a re-implementation of ClassAds that
-Condor is gradually adopting and which may one day completely replace
-the old implementation.  A good place to learn about the syntax of New
-ClassAds is the Informal Language Description in the C++ ClassAds
-tutorial: \URL{http://www.cs.wisc.edu/condor/classad/c++tut.html}.
-For the most part, everything in the old ClassAds language is
-supported by New ClassAds, with the exception of some ClassAd
-functions that have not yet been added to New ClassAds.  So if job
-ClassAds make use of unsupported ClassAd functions, they cannot currently be
-routed.  As of this writing, the unsupported functions are
-all of the functions with names beginning with \Code{stringList}.
-
-Since the \Condor{job\_router} daemon is configured with New ClassAds but is operating on
-Old ClassAds stored in the job queue, it may be confusing at first to
-understand which ClassAd expressions are evaluated as New ClassAds and
-which are evaluated as Old ClassAds.  For example, the
-\Attr{requirements} expression of routes in the routing table are
-evaluated by the \Condor{job\_router} daemon, so they may use New ClassAds features,
-whereas the \Attr{PeriodicHold} expression in the routed job is
-evaluated by \Condor{schedd}, so it may only use features of Old
-ClassAds.  As long as the expressions you use in the routing table are
-compatible with both implementations of ClassAds, you do not need to
-be concerned about this detail.  In case you do need to use special
-features, the expressions that are evaluated (as New ClassAds) by the
-\Condor{job\_router} daemon will be identified in the reference below.
-
-The most basic thing to know about New ClassAd syntax is simply that
-each ClassAd is surrounded by square brackets, and each assignment
-statement in the ClassAd should end with a semicolon.  When the
-ClassAd is embedded in a Condor configuration file, it could all
-appear on a single line, but the readability of the ClassAd is often
-improved by inserting line continuations (i.e. backslashes followed by
-newlines) after each assignment statement in the ClassAd, as in the
-examples above.  Unfortunately, this makes it a little awkward to
-insert configuration comments in the ClassAd, because of the way line
-continuations and the Condor configuration comment character `\#' work.
-One alternative is to use C-style comments \verb|/* ... */| as in the
-examples above.  Another option is to read in the \Condor{job\_router} daemon entries
-from a separate file, rather than embedding them in the Condor
-configuration file.
+%Some questions you may have after reading the above policy: Can the
+%routing table be dynamically generated from grid information systems?
+%Do users have to have their own grid credentials or can the \Condor{job\_router} daemon
+%insert service credentials for them?  What's up with the syntax of the
+%routing table: C-style comments, strange ClassAd expressions, escaped
+%end of lines?  The next section covers the specifics of the \Condor{job\_router} daemon
+%configuration.  Read on!
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{The \Condor{job\_router} ClassAd Attributes}
+\subsection{\label{RoutingTableAttributes} Routing Table Entry ClassAd Attributes}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
