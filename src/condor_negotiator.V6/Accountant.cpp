@@ -566,7 +566,7 @@ void Accountant::RemoveMatch(const MyString& ResourceName, time_t T)
     int UnchargedTime=0;
     GetAttributeInt(CustomerRecord+CustomerName,UnchargedTimeAttr,UnchargedTime);
     int cpusPerSlot=1;
-    GetAttributeInt(CustomerRecord+CustomerName,Cpus,cpusPerSlot);
+    GetAttributeInt(ResourceRecord+ResourceName,Cpus,cpusPerSlot);
 
 	// Determine if we need to update a second customer record w/ the group name.
 	bool update_group_info = false;
