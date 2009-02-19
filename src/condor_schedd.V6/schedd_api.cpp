@@ -69,14 +69,14 @@ Job::initialize(CondorError &errstack)
 	}
 
 	struct stat stats;
-	if (-1 == stat(spoolDirectory.GetCStr(), &stats)) {
+	if (-1 == stat(spoolDirectory.Value(), &stats)) {
 		if (ENOENT == errno && spoolDirectory.Length() != 0) {
-			if (-1 == mkdir(spoolDirectory.GetCStr(), 0777)) {
+			if (-1 == mkdir(spoolDirectory.Value(), 0777)) {
 					// mkdir can return 17 = EEXIST (dirname exists)
 					// or 2 = ENOENT (path not found)
 				dprintf(D_FULLDEBUG,
 						"ERROR: mkdir(%s) failed, errno: %d (%s)\n",
-						spoolDirectory.GetCStr(),
+						spoolDirectory.Value(),
 						errno,
 						strerror(errno));
 
@@ -84,24 +84,24 @@ Job::initialize(CondorError &errstack)
 							   FAIL,
 							   "Creation of spool directory '%s' failed, "
 							   "reason: %s",
-							   spoolDirectory.GetCStr(),
+							   spoolDirectory.Value(),
 							   strerror(errno));
 				return 1;
 			} else {
 				dprintf(D_FULLDEBUG,
 						"mkdir(%s) succeeded.\n",
-						spoolDirectory.GetCStr());
+						spoolDirectory.Value());
 			}
 		} else {
 			dprintf(D_FULLDEBUG, "ERROR: stat(%s) errno: %d (%s)\n",
-					spoolDirectory.GetCStr(),
+					spoolDirectory.Value(),
 					errno,
 					strerror(errno));
 
 			errstack.pushf("SOAP",
 						   FAIL,
 						   "stat(%s) failed, reason: %s",
-						   spoolDirectory.GetCStr(),
+						   spoolDirectory.Value(),
 						   strerror(errno));
 
 			return 2;
@@ -111,7 +111,7 @@ Job::initialize(CondorError &errstack)
 				"WARNING: Job '%d.%d''s spool '%s' already exists.\n",
 				id.cluster,
 				id.proc,
-				spoolDirectory.GetCStr());
+				spoolDirectory.Value());
 	}
 
 	return 0;
@@ -126,10 +126,10 @@ Job::abort(CondorError & /* errstack */)
 	while (declaredFiles.iterate(currentKey, jobFile)) {
 		close(jobFile.file);
 		declaredFiles.remove(currentKey);
-		remove(jobFile.name.GetCStr());
+		remove(jobFile.name.Value());
 	}
 
-	remove(spoolDirectory.GetCStr());
+	remove(spoolDirectory.Value());
 
 	return 0;
 }
@@ -173,9 +173,9 @@ int
 Job::get_spool_list(List<FileInfo> &file_list,
 					CondorError &errstack)
 {
-	StatInfo directoryInfo(spoolDirectory.GetCStr());
+	StatInfo directoryInfo(spoolDirectory.Value());
 	if (directoryInfo.IsDirectory()) {
-		Directory directory(spoolDirectory.GetCStr());
+		Directory directory(spoolDirectory.Value());
 		const char * name;
 		FileInfo *info;
 		while (NULL != (name = directory.Next())) {
@@ -196,12 +196,12 @@ Job::get_spool_list(List<FileInfo> &file_list,
 		return 0;
 	} else {
 		dprintf(D_ALWAYS, "spoolDirectory == '%s'\n",
-				spoolDirectory.GetCStr());
+				spoolDirectory.Value());
 
 		errstack.pushf("SOAP",
 					   FAIL,
 					   "spool directory '%s' is not actually a directory.",
-					   spoolDirectory.GetCStr());
+					   spoolDirectory.Value());
 
 		return 1;
 	}
@@ -220,7 +220,7 @@ Job::declare_file(const MyString &name,
 	jobFile.name = name;
 
 	jobFile.file =
-		safe_open_wrapper((spoolDirectory + DIR_DELIM_STRING + jobFile.name).GetCStr(),
+		safe_open_wrapper((spoolDirectory + DIR_DELIM_STRING + jobFile.name).Value(),
 			 O_WRONLY | O_CREAT | _O_BINARY,
 			 0600);
 	if (-1 != jobFile.file) {
@@ -229,7 +229,7 @@ Job::declare_file(const MyString &name,
 			errstack.pushf("SOAP",
 						   ALREADYEXISTS,
 						   "File '%s' already declared.",
-						   name.GetCStr());
+						   name.Value());
 
 			return 4;
 		}
@@ -239,7 +239,7 @@ Job::declare_file(const MyString &name,
 			errstack.pushf("SOAP",
 						   FAIL,
 						   "Failed to record file '%s'.",
-						   name.GetCStr());
+						   name.Value());
 
 			return 2;
 		}
@@ -251,13 +251,13 @@ Job::declare_file(const MyString &name,
 		if (-1 != name.FindChar(DIR_DELIM_CHAR)) {
 			dprintf(D_FULLDEBUG,
 					"Failed to open '%s' for writing, reason: %s\n",
-					(spoolDirectory+DIR_DELIM_STRING+jobFile.name).GetCStr(),
+					(spoolDirectory+DIR_DELIM_STRING+jobFile.name).Value(),
 					strerror(errno));
 
 			errstack.pushf("SOAP",
 						   FAIL,
 						   "Failed to open '%s' for writing, reason: %s",
-						   name.GetCStr(),
+						   name.Value(),
 						   strerror(errno));
 
 			return 3;
@@ -278,7 +278,7 @@ Job::submit(const struct condor__ClassAdStruct &jobAd,
 	rval = SetAttributeString(id.cluster,
 							  id.proc,
 							  ATTR_JOB_IWD,
-							  spoolDirectory.GetCStr());
+							  spoolDirectory.Value());
 	if (rval < 0) {
 		errstack.pushf("SOAP",
 					   FAIL,
@@ -286,7 +286,7 @@ Job::submit(const struct condor__ClassAdStruct &jobAd,
 					   id.cluster,
 					   id.proc,
 					   ATTR_JOB_IWD,
-					   spoolDirectory.GetCStr());
+					   spoolDirectory.Value());
 
 		return rval;
 	}
@@ -296,7 +296,7 @@ Job::submit(const struct condor__ClassAdStruct &jobAd,
 	JobFile jobFile;
 	declaredFiles.startIterations();
 	while (declaredFiles.iterate(currentKey, jobFile)) {
-		transferFiles.append(jobFile.name.GetCStr());
+		transferFiles.append(jobFile.name.Value());
 	}
 
 	char *fileList = NULL;
@@ -373,7 +373,7 @@ Job::submit(const struct condor__ClassAdStruct &jobAd,
 		rval = SetAttributeString(id.cluster,
 								  id.proc,
 								  ATTR_JOB_IWD,
-								  spoolDirectory.GetCStr());
+								  spoolDirectory.Value());
 		if (rval < 0) {
 			errstack.pushf("SOAP",
 						   FAIL,
@@ -381,7 +381,7 @@ Job::submit(const struct condor__ClassAdStruct &jobAd,
 						   id.cluster,
 						   id.proc,
 						   ATTR_JOB_IWD,
-						   spoolDirectory.GetCStr());
+						   spoolDirectory.Value());
 
 			return rval;
 		}
@@ -402,7 +402,7 @@ Job::put_file(const MyString &name,
 		errstack.pushf("SOAP",
 					   FAIL,
 					   "File '%s' has not been declared.",
-					   name.GetCStr());
+					   name.Value());
 
 		return 1;
 	}
@@ -412,7 +412,7 @@ Job::put_file(const MyString &name,
 			errstack.pushf("SOAP",
 						   FAIL,
 						   "Failed to lseek in file '%s', reason: %s",
-						   name.GetCStr(),
+						   name.Value(),
 						   strerror(errno));
 
 			return 2;
@@ -423,7 +423,7 @@ Job::put_file(const MyString &name,
 			errstack.pushf("SOAP",
 						   FAIL,
 						   "Failed to write to from file '%s', wanted to write %d bytes but was only able to write %d",
-						   name.GetCStr(),
+						   name.Value(),
 						   data_length,
 						   result);
 
@@ -434,7 +434,7 @@ Job::put_file(const MyString &name,
 						   FAIL,
 						   "Failed to open file '%s', it should not "
 						   "contain any path separators.",
-						   name.GetCStr());
+						   name.Value());
 
 		return 5;
 	}
@@ -449,7 +449,7 @@ Job::get_file(const MyString &name,
               unsigned char *&data,
 			  CondorError &errstack)
 {
-	int file = safe_open_wrapper((spoolDirectory + DIR_DELIM_STRING + name).GetCStr(),
+	int file = safe_open_wrapper((spoolDirectory + DIR_DELIM_STRING + name).Value(),
 					O_RDONLY | _O_BINARY,
 					0);
 
@@ -459,7 +459,7 @@ Job::get_file(const MyString &name,
 			errstack.pushf("SOAP",
 						   FAIL,
 						   "Failed to lseek in file '%s', reason: %s",
-						   name.GetCStr(),
+						   name.Value(),
 						   strerror(errno));
 
 			return 2;
@@ -472,7 +472,7 @@ Job::get_file(const MyString &name,
 						   FAIL,
 						   "Failed to read from file '%s', wanted to "
 						   "read %d bytes but received %d",
-						   name.GetCStr(),
+						   name.Value(),
 						   length,
 						   result);
 
@@ -482,7 +482,7 @@ Job::get_file(const MyString &name,
 			errstack.pushf("SOAP",
 						   FAIL,
 						   "Failed to close file '%s', reason: %s",
-						   name.GetCStr(),
+						   name.Value(),
 						   strerror(errno));
 
 			return 4;
@@ -491,7 +491,7 @@ Job::get_file(const MyString &name,
 		errstack.pushf("SOAP",
 					   FAIL,
 					   "Failed to open file '%s', reason: %s",
-					   name.GetCStr(),
+					   name.Value(),
 					   strerror(errno));
 
 		return 1;

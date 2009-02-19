@@ -45,19 +45,19 @@ QuillErrCode schedd_files_ins_file(
 	MyString tmp;
 
 	tmp.sprintf("f_name = \"%s\"", fileName);
-	tmpClP1->Insert(tmp.GetCStr());		
+	tmpClP1->Insert(tmp.Value());		
 
 	tmp.sprintf("f_host = \"%s\"", fs_domain);
-	tmpClP1->Insert(tmp.GetCStr());	
+	tmpClP1->Insert(tmp.Value());	
 
 	tmp.sprintf("f_path = \"%s\"", path);
-	tmpClP1->Insert(tmp.GetCStr());	
+	tmpClP1->Insert(tmp.Value());	
 
 	tmp.sprintf("f_ts = %d", (int)f_ts);
-	tmpClP1->Insert(tmp.GetCStr());	
+	tmpClP1->Insert(tmp.Value());	
 		
 	tmp.sprintf("f_size = %d", fsize);
-	tmpClP1->Insert(tmp.GetCStr());	
+	tmpClP1->Insert(tmp.Value());	
 
 	return FILEObj->file_newEvent("Files", tmpClP1);
 }
@@ -75,22 +75,22 @@ void schedd_files_ins_usage(
 	MyString tmp;
 
 	tmp.sprintf("f_name = \"%s\"", fileName);
-	tmpClP1->Insert(tmp.GetCStr());	
+	tmpClP1->Insert(tmp.Value());	
 
 	tmp.sprintf("f_host = \"%s\"", fs_domain);
-	tmpClP1->Insert(tmp.GetCStr());	
+	tmpClP1->Insert(tmp.Value());	
 
 	tmp.sprintf("f_path = \"%s\"", path);
-	tmpClP1->Insert(tmp.GetCStr());	
+	tmpClP1->Insert(tmp.Value());	
 
 	tmp.sprintf("f_ts = %d", (int) f_ts);
-	tmpClP1->Insert(tmp.GetCStr());	
+	tmpClP1->Insert(tmp.Value());	
 
 	tmp.sprintf("globalJobId = \"%s\"", globalJobId);
-	tmpClP1->Insert(tmp.GetCStr());	
+	tmpClP1->Insert(tmp.Value());	
 	
 	tmp.sprintf("type = \"%s\"", type);
-	tmpClP1->Insert(tmp.GetCStr());	
+	tmpClP1->Insert(tmp.Value());	
 
 	FILEObj->file_newEvent("Fileusages", tmpClP1);
 }
@@ -123,8 +123,8 @@ void schedd_files_ins(
 	procad->LookupString(ATTR_GLOBAL_JOB_ID, globalJobId);
 
 		// determine file name, path.
-	if (fullpath(tmpFile.GetCStr())) {
-		if (strcmp(tmpFile.GetCStr(), "/dev/null") == 0)
+	if (fullpath(tmpFile.Value())) {
+		if (strcmp(tmpFile.Value(), "/dev/null") == 0)
 			return; /* job doesn't care about this type of file */
 		
 		// condor_basename and condor_dirname may modify the string, so have two
@@ -132,20 +132,20 @@ void schedd_files_ins(
 		pathname = tmpFile;
 		MyString tmpFile2 = tmpFile;
 
-		fileName = condor_basename(tmpFile.GetCStr()); 
-		char *dir_tmp = condor_dirname(tmpFile2.GetCStr());
+		fileName = condor_basename(tmpFile.Value()); 
+		char *dir_tmp = condor_dirname(tmpFile2.Value());
 		path = dir_tmp;
 		free(dir_tmp);
 	}
 	else {
-		pathname.sprintf("%s/%s", path.GetCStr(), tmpFile.GetCStr());
+		pathname.sprintf("%s/%s", path.Value(), tmpFile.Value());
 		fileName = tmpFile;
 	}
 
 		// get the file status which contains timestamp and size
-	if (stat(pathname.GetCStr(), &file_status) < 0) {
+	if (stat(pathname.Value(), &file_status) < 0) {
 		dprintf(D_FULLDEBUG, "ERROR: File '%s' can not be accessed.\n", 
-				pathname.GetCStr());
+				pathname.Value());
 		fileExist = FALSE;
 	}
 
@@ -154,9 +154,9 @@ void schedd_files_ins(
 	}
 
 		// insert the file entry into the files table
-	retcode = schedd_files_ins_file(fileName.GetCStr(), 
-									fs_domain.GetCStr(), 
-									path.GetCStr(), 
+	retcode = schedd_files_ins_file(fileName.Value(), 
+									fs_domain.Value(), 
+									path.Value(), 
 									file_status.st_mtime, 
 									file_status.st_size);
 	
@@ -166,10 +166,10 @@ void schedd_files_ins(
 	}
 
 		// insert a usage for this file by this job
-	schedd_files_ins_usage(globalJobId.GetCStr(), type, 
-						   fileName.GetCStr(), 
-						   fs_domain.GetCStr(), 
-						   path.GetCStr(), 
+	schedd_files_ins_usage(globalJobId.Value(), type, 
+						   fileName.Value(), 
+						   fs_domain.Value(), 
+						   path.Value(), 
 						   file_status.st_mtime);
 }
 

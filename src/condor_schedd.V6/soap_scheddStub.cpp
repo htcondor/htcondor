@@ -666,7 +666,7 @@ condor__removeCluster(struct soap *soap,
 	if (soap->user) {
         ClassAd *an_ad;
         int jobId;
-        if (!(an_ad = GetNextJobByConstraint(constraint.GetCStr(), 1))) {
+        if (!(an_ad = GetNextJobByConstraint(constraint.Value(), 1))) {
 				// Nothing to remove, this is strange
 			result.response.code = FAIL;
 			result.response.message = "Cluster not found";
@@ -691,7 +691,7 @@ condor__removeCluster(struct soap *soap,
         }
 	}
 
-	if (!abortJobsByConstraint(constraint.GetCStr(),
+	if (!abortJobsByConstraint(constraint.Value(),
 							   reason,
 							   transaction->id ? false : true)) {
 		result.response.code = FAIL;
@@ -1482,7 +1482,7 @@ condor__discoverJobRequirements(struct soap *soap,
 
 		// SimpleInit will bail out if ATTR_JOB_IWD is not set...
 	MyString attribute = MyString(ATTR_JOB_IWD) + " = \"/tmp\"";
-	if (!ad.Insert(attribute.GetCStr())) {
+	if (!ad.Insert(attribute.Value())) {
 		result.response.status.code = FAIL;
 		result.response.status.message = "Failed to setup temporary Iwd attribute.";
 
@@ -1581,7 +1581,7 @@ condor__createJobTemplate(struct soap *soap,
 	if (soapLeaveInQueue) {
 		attribute = attribute + " && (" + soapLeaveInQueue + ")";
 	}
-	job->AssignExpr(ATTR_JOB_LEAVE_IN_QUEUE, attribute.GetCStr());
+	job->AssignExpr(ATTR_JOB_LEAVE_IN_QUEUE, attribute.Value());
 
 	ArgList arglist;
 	MyString arg_errors;
