@@ -47,11 +47,11 @@ uploadTerminateSignalHandler(Service* service, int signalNumber)
     extension += UPLOADING_TEMPORARY_FILES_EXTENSION;
 
 	FilesOperations::safeUnlinkFile(
-        replicaTransferer->getVersionFilePath( ).GetCStr( ),
-        extension.GetCStr( ) );
+        replicaTransferer->getVersionFilePath( ).Value( ),
+        extension.Value( ) );
     FilesOperations::safeUnlinkFile(
-        replicaTransferer->getStateFilePath( ).GetCStr( ),
-        extension.GetCStr( ) );
+        replicaTransferer->getStateFilePath( ).Value( ),
+        extension.Value( ) );
     exit(1);
 	return 0;
 }
@@ -69,11 +69,11 @@ downloadTerminateSignalHandler(Service* service, int signalNumber)
     extension += DOWNLOADING_TEMPORARY_FILES_EXTENSION;
 
 	FilesOperations::safeUnlinkFile(
-        replicaTransferer->getVersionFilePath( ).GetCStr( ),
-        extension.GetCStr( ) );
+        replicaTransferer->getVersionFilePath( ).Value( ),
+        extension.Value( ) );
     FilesOperations::safeUnlinkFile(
-        replicaTransferer->getStateFilePath( ).GetCStr( ),
-        extension.GetCStr( ) );
+        replicaTransferer->getStateFilePath( ).Value( ),
+        extension.Value( ) );
     exit(1);
 
 	return 0;
@@ -100,11 +100,11 @@ cleanTemporaryFiles()
 
 	// we first delete the possible temporary version files
 	FilesOperations::safeUnlinkFile(
-        replicaTransferer->getVersionFilePath( ).GetCStr( ),
-        downloadingExtension.GetCStr( ) );
+        replicaTransferer->getVersionFilePath( ).Value( ),
+        downloadingExtension.Value( ) );
     FilesOperations::safeUnlinkFile(
-        replicaTransferer->getVersionFilePath( ).GetCStr( ),
-        uploadingExtension.GetCStr( ) );
+        replicaTransferer->getVersionFilePath( ).Value( ),
+        uploadingExtension.Value( ) );
 
 	// then the possible temporary state files
     StringList& stateFilePathsList = 
@@ -114,13 +114,13 @@ cleanTemporaryFiles()
 
     while( ( stateFilePath = stateFilePathsList.next( ) ) ) {
 		if( ! FilesOperations::safeUnlinkFile( stateFilePath, 
-										downloadingExtension.GetCStr( ) ) ) {
+										downloadingExtension.Value( ) ) ) {
             dprintf( D_ALWAYS, "cleanTemporaryFiles unable to unlink "
                                "state file %s with .down extension\n", 
 					 stateFilePath );
         }
 		if( ! FilesOperations::safeUnlinkFile( stateFilePath,
-										uploadingExtension.GetCStr( ) ) ) {
+										uploadingExtension.Value( ) ) ) {
 			dprintf( D_ALWAYS, "cleanTemporaryFiles unable to unlink "
                                "state file %s with .up extension\n",
 					 stateFilePath );

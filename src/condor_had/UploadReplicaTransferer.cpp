@@ -31,7 +31,7 @@ getFileSize( const MyString& filePath )
 {
 	int begin, end;
 	
-	ifstream file ( filePath.GetCStr( ) );
+	ifstream file ( filePath.Value( ) );
 
 	begin = file.tellg( );
 	file.seekg( 0, ios::end );
@@ -46,10 +46,10 @@ safeUnlinkStateAndVersionFiles( const MyString& stateFilePath,
 							    const MyString& versionFilePath,
 							    const MyString& extension )
 {
-	FilesOperations::safeUnlinkFile( versionFilePath.GetCStr( ),
-                                     extension.GetCStr( ) );
-    FilesOperations::safeUnlinkFile( stateFilePath.GetCStr( ),
-                                     extension.GetCStr( ) );
+	FilesOperations::safeUnlinkFile( versionFilePath.Value( ),
+                                     extension.Value( ) );
+    FilesOperations::safeUnlinkFile( stateFilePath.Value( ),
+                                     extension.Value( ) );
 }*/
 
 int
@@ -69,10 +69,10 @@ UploadReplicaTransferer::initialize( )
     m_socket->doNotEnforceMinimalCONNECT_TIMEOUT( );
 
     if( ! m_socket->connect( 
-		const_cast<char*>( m_daemonSinfulString.GetCStr( ) ), 0, false ) ) {
+		const_cast<char*>( m_daemonSinfulString.Value( ) ), 0, false ) ) {
         dprintf( D_ALWAYS, 
 				"UploadReplicaTransferer::initialize cannot connect to %s\n",
-                 m_daemonSinfulString.GetCStr( ) );
+                 m_daemonSinfulString.Value( ) );
         return TRANSFERER_FALSE;
     }
     // send accounting information and version files
@@ -119,10 +119,10 @@ UploadReplicaTransferer::upload( )
     extension += UPLOADING_TEMPORARY_FILES_EXTENSION;
 
 	char* temporaryVersionFilePath =
-			const_cast<char*>(m_versionFilePath.GetCStr());
+			const_cast<char*>(m_versionFilePath.Value());
 	/*char* temporaryStateFilePath   = 
-			const_cast<char*>(m_stateFilePath.GetCStr());*/
-	char* temporaryExtension       = const_cast<char*>(extension.GetCStr());
+			const_cast<char*>(m_stateFilePath.Value());*/
+	char* temporaryExtension       = const_cast<char*>(extension.Value());
 
     if( ! FilesOperations::safeCopyFile( temporaryVersionFilePath,
 										 temporaryExtension ) ) {
@@ -215,13 +215,13 @@ int
 UploadReplicaTransferer::uploadFile( MyString& filePath, MyString& extension )
 {
     dprintf( D_ALWAYS, "UploadReplicaTransferer::uploadFile %s.%s started\n", 
-			 filePath.GetCStr( ), extension.GetCStr( ) );
+			 filePath.Value( ), extension.Value( ) );
     // sending the temporary file through the opened socket
 	if( ! utilSafePutFile( *m_socket, filePath + "." + extension ) ){
 		dprintf( D_ALWAYS, "UploadReplicaTransferer::uploadFile failed, "
-                "unlinking %s.%s\n", filePath.GetCStr(), extension.GetCStr());
-		FilesOperations::safeUnlinkFile( filePath.GetCStr( ), 
-										 extension.GetCStr( ) );
+                "unlinking %s.%s\n", filePath.Value(), extension.Value());
+		FilesOperations::safeUnlinkFile( filePath.Value( ), 
+										 extension.Value( ) );
 		return TRANSFERER_FALSE;
 	}
 	return TRANSFERER_TRUE;

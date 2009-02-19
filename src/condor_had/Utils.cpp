@@ -180,7 +180,7 @@ utilToSinful( char* address )
 
     free( ipAddress );
     
-    return strdup( sinfulString.GetCStr( ) );
+    return strdup( sinfulString.Value( ) );
 }
 
 int
@@ -225,13 +225,13 @@ utilSafePutFile( ReliSock& socket, const MyString& filePath )
 	REPLICATION_ASSERT( filePath != "" );
 	// bool       successValue = true;
 	filesize_t bytes        = 0;
-    dprintf( D_ALWAYS, "utilSafePutFile %s started\n", filePath.GetCStr( ) );
+    dprintf( D_ALWAYS, "utilSafePutFile %s started\n", filePath.Value( ) );
 
-	ifstream file( filePath.GetCStr( ) );
+	ifstream file( filePath.Value( ) );
 	
 	if( file.fail( ) ){
 		dprintf( D_ALWAYS, "utilSafePutFile failed to open file %s\n",
-				 filePath.GetCStr( ) ); 
+				 filePath.Value( ) ); 
 		return false;
 	}
 	int bytesTotal = 0;
@@ -262,11 +262,11 @@ utilSafePutFile( ReliSock& socket, const MyString& filePath )
 	socket.encode( );
     
 	if(	! socket.code_bytes( md, MAC_SIZE ) ||
-        socket.put_file( &bytes, filePath.GetCStr( ) ) < 0  ||
+        socket.put_file( &bytes, filePath.Value( ) ) < 0  ||
 	    ! socket.eom( ) ) {
         dprintf( D_ALWAYS,
                 "utilSafePutFile unable to send file %s, MAC "
-                "or to code the end of the message\n", filePath.GetCStr( ) );
+                "or to code the end of the message\n", filePath.Value( ) );
         free( md );
 		return false;
     }
@@ -283,25 +283,25 @@ utilSafeGetFile( ReliSock& socket, const MyString& filePath )
 	filesize_t  bytes      = 0;
 	char*       md      = ( char *) malloc( ( MAC_SIZE ) * sizeof( char ) );
 
-	dprintf( D_ALWAYS, "utilSafeGetFile %s started\n", filePath.GetCStr( ) );	
+	dprintf( D_ALWAYS, "utilSafeGetFile %s started\n", filePath.Value( ) );	
 	socket.decode( );
 
     if( ! socket.code_bytes( md, MAC_SIZE ) ||
-	    socket.get_file( &bytes, filePath.GetCStr( ), true ) < 0 ||
+	    socket.get_file( &bytes, filePath.Value( ), true ) < 0 ||
 	    ! socket.eom( ) ) {
         dprintf( D_ALWAYS, "utilSafeGetFile unable to get file %s, MAC or the "
 							"end of the message\n", 
-				 filePath.GetCStr( ) );
+				 filePath.Value( ) );
         free( md );
 		
 		return false;
     }
 	dprintf( D_ALWAYS, "utilSafeGetFile MAC received\n" );
-	ifstream file( filePath.GetCStr( ) );
+	ifstream file( filePath.Value( ) );
 
     if( file.fail( ) ){
         dprintf( D_ALWAYS, "utilSafeGetFile failed to open file %s\n",
-                 filePath.GetCStr( ) );
+                 filePath.Value( ) );
 		free( md );
 
         return false;
@@ -329,7 +329,7 @@ utilSafeGetFile( ReliSock& socket, const MyString& filePath )
 	if( memcmp(md, localMd, MAC_SIZE) ) {
 		dprintf( D_ALWAYS, "utilSafeGetFile %s received with errors: "
 						   "local MAC does not match remote MAC\n",
-                 filePath.GetCStr( ) );
+                 filePath.Value( ) );
 		free( localMd );
 		free( md );
 
@@ -348,15 +348,15 @@ utilSafePutFile( ReliSock& socket, const MyString& filePath )
 {
     REPLICATION_ASSERT( filePath != "" );
     filesize_t bytes = 0;
-    dprintf( D_ALWAYS, "utilSafePutFile %s started\n", filePath.GetCStr( ) );
+    dprintf( D_ALWAYS, "utilSafePutFile %s started\n", filePath.Value( ) );
 
     socket.encode( );
     // sending the temporary file through the opened socket
-    if( socket.put_file( &bytes, filePath.GetCStr( ) ) < 0  ||
+    if( socket.put_file( &bytes, filePath.Value( ) ) < 0  ||
         ! socket.end_of_message( ) ) {
         dprintf( D_ALWAYS,
                 "utilSafePutFile unable to send file %s "
-                "or to code the end of the message\n", filePath.GetCStr( ) );
+                "or to code the end of the message\n", filePath.Value( ) );
         return false;
     }
     dprintf( D_ALWAYS, "utilSafePutFile finished successfully\n" );
@@ -370,14 +370,14 @@ utilSafeGetFile( ReliSock& socket, const MyString& filePath )
     REPLICATION_ASSERT( filePath != "" );
     filesize_t  bytes = 0;
 
-	dprintf( D_ALWAYS, "utilSafeGetFile %s started\n", filePath.GetCStr( ) );
+	dprintf( D_ALWAYS, "utilSafeGetFile %s started\n", filePath.Value( ) );
     socket.decode( );
 
-    if(  socket.get_file( &bytes, filePath.GetCStr( ), true ) < 0 ||
+    if(  socket.get_file( &bytes, filePath.Value( ), true ) < 0 ||
        ! socket.end_of_message( ) ) {
         dprintf( D_ALWAYS, "utilSafeGetFile unable to get file %s or the "
                             "end of the message\n",
-                 filePath.GetCStr( ) );
+                 filePath.Value( ) );
         return false;
     }
     dprintf( D_ALWAYS, "utilSafeGetFile finished successfully\n" );
