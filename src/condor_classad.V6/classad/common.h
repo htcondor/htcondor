@@ -34,7 +34,6 @@
 #define END_NAMESPACE
 #endif
 
-#ifdef CLASSAD_DISTRIBUTION
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE /* to get definition for strptime on Linux */
 #endif
@@ -106,17 +105,6 @@
 #endif // WIN32
 
 
-#else /* CLASSAD_DISTRIBUTION isn't defined */
-
-#ifndef _POSIX_C_SOURCE
-#define _POSIX_C_SOURCE 199506L /* To get asctime_r */
-#endif
-
-#include "condor_common.h"
-#include "condor_debug.h"
-#include "condor_attributes.h"
-#endif /* CLASSAD_DISTRIBUTION */
-
 #include "classad/debug.h"
 
 #ifdef __cplusplus
@@ -150,10 +138,8 @@ static const char ATTR_VIEW_INFO			[]	= "ViewInfo";
 static const char ATTR_VIEW_NAME			[]	= "ViewName";
 static const char ATTR_XACTION_NAME			[]	= "XactionName";
 
-#if defined( CLASSAD_DISTRIBUTION )
 static const char ATTR_REQUIREMENTS			[]	= "Requirements";
 static const char ATTR_RANK					[]	= "Rank";
-#endif
 
 #if defined(__cplusplus)
 struct CaseIgnLTStr {
@@ -204,10 +190,6 @@ END_NAMESPACE // classad
 
 char* strnewp( const char* );
 
-#if defined(CLASSAD_DISTRIBUTION)
 #include "classad/classadErrno.h"
-#else
-#include "condor_errno.h"
-#endif
 
 #endif//__COMMON_H__

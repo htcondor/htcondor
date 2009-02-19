@@ -105,7 +105,6 @@ template CLASS vector<ExprTree*>;
 
 template CLASS map<const ClassAd*, References>;
 
-#ifdef CLASSAD_DISTRIBUTION
 END_NAMESPACE
 template CLASS vector<string>;
 #include "transaction.h"
@@ -178,8 +177,6 @@ template CLASS hash_map<string, ServerTransaction*, StringHash>::iterator;
 
 // operations in transaction
 template CLASS list<XactionRecord>;
-
-#endif
 
 class _ClassAdInit 
 {

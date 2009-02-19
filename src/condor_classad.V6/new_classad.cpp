@@ -32,10 +32,8 @@ BEGIN_NAMESPACE( classad )
 // This is probably not the best place to put these. However, 
 // I am reconsidering how we want to do errors, and this may all
 // change in any case. 
-#ifdef CLASSAD_DISTRIBUTION
 string CondorErrMsg;
 int CondorErrno;
-#endif
 
 void ClassAdLibraryVersion(int &major, int &minor, int &patch)
 {

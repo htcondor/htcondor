@@ -25,11 +25,8 @@
 
 BEGIN_NAMESPACE(classad)
 
-// bring in Condor system errors used if not in Condor
-#if defined(CLASSAD_DISTRIBUTION)
 static const int ERR_OK						= 0;
 static const int ERR_MEM_ALLOC_FAILED		= 1;
-#endif
 
 static const int ERR_BAD_VALUE				= 255;
 static const int ERR_FAILED_SET_VIEW_NAME 	= 256;

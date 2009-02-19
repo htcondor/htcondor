@@ -21,10 +21,6 @@
 #ifndef __CLASSAD_DISTRIBUTION_H__
 #define __CLASSAD_DISTRIBUTION_H__
 
-#ifndef CLASSAD_DISTRIBUTION
-#define CLASSAD_DISTRIBUTION
-#endif
-
 #include "classad/common.h"
 #include "classad/classad.h"
 #include "classad/source.h"

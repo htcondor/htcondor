@@ -22,11 +22,7 @@
 #include "config.h"
 #endif
 
-#if defined(CLASSAD_DISTRIBUTION)
 #include "classad/classad_distribution.h"
-#else
-#include "condor_classad.h"
-#endif
 
 #include <iostream>
 

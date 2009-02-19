@@ -24,10 +24,6 @@
 #define COLLECTIONS
 /*#define EXPERIMENTAL*/
 
-#ifndef CLASSAD_DISTRIBUTION
-#define CLASSAD_DEPRECATED
-#endif
-
 /*#define ENABLE_SHARED_LIBRARY_FUNCTIONS*/
 
 /* Select how we wish to do regular expressions. 

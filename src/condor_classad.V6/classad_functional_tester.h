@@ -19,11 +19,7 @@
 
 
 #include <map>
-#if defined( CLASSAD_DISTRIBUTION )
 #include "classad/classad_distribution.h"
-#else
-#include "condor_classad.h"
-#endif
 
 #ifdef WANT_CLASSAD_NAMESPACE
 using namespace classad;

@@ -184,8 +184,6 @@ AS_IF([test "x$enable_flexible_member" = xyes],
   [CPPFLAGS="$CPPFLAGS -DFLEXIBLE_MEMBER"])
 
 
-CPPFLAGS="$CPPFLAGS -DCLASSAD_DISTRIBUTION"
-
 AC_OUTPUT
 
 # Remove rpath junk from libtool
