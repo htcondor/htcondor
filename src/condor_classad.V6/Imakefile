@@ -2,19 +2,21 @@ SRC_DIR = $(SRC_TREE)/condor_classad.V6
 
 /* select required features */
 
+#define CLASSAD_DEPRECATED
+#define COLLECTIONS
 
-C_PLUS_FLAGS 		= -Wall $(STD_C_PLUS_FLAGS)
-CFLAGS 			= -Wall $(STD_C_FLAGS)
+C_PLUS_FLAGS 		= -Wall $(STD_C_PLUS_FLAGS) -DCLASSAD_DEPRECATED -DWANT_CLASSAD_NAMESPACE -DDISABLE_DLOPEN_CHECK
+CFLAGS 			= -Wall $(STD_C_FLAGS) -DCLASSAD_DEPRECATED -DWANT_CLASSAD_NAMESPACE -DDISABLE_DLOPEN_CHECK
 
 
 /* The basic classad source and object files */
 CLASSAD_SRC_0 		= new_classad_debug.cpp lexer.cpp lexerSource.cpp source.cpp new_classad_operators.cpp attrrefs.cpp fnCall.cpp   \
                       literals.cpp exprTree.cpp new_classad.cpp exprList.cpp new_classad_value.cpp \
-                      sink.cpp matchClassad.cpp condorUtil.cpp      \
+                      sink.cpp matchClassad.cpp      \
                       new_classad_util.cpp xmlLexer.cpp xmlSink.cpp xmlSource.cpp cclassad.cpp
 CLASSAD_OBJ_0 		= new_classad_debug.o lexer.o lexerSource.o source.o new_classad_operators.o attrrefs.o fnCall.o   \
                       literals.o exprTree.o new_classad.o exprList.o new_classad_value.o \
-                      sink.o  matchClassad.o condorUtil.o     \
+                      sink.o  matchClassad.o     \
                       new_classad_util.o xmlLexer.o xmlSink.o xmlSource.o cclassad.o
 
 
@@ -22,12 +24,12 @@ CLASSAD_OBJ_0 		= new_classad_debug.o lexer.o lexerSource.o source.o new_classad
 #if defined(COLLECTIONS)
 CLASSAD_SRC_1		= $(CLASSAD_SRC_0) view.cpp collection.cpp collectionBase.cpp   \
                       collectionServer.cpp collectionClient.cpp transaction.cpp     \
-                      query.cpp remoteQuery.cpp coll-comm-inst.cpp coll-serv-inst.cpp \
-                      coll-client-inst.cpp indexfile.cpp 
+                      query.cpp remoteQuery.cpp \
+                      indexfile.cpp 
 CLASSAD_OBJ_1		= $(CLASSAD_OBJ_0) view.o collection.o collectionBase.o   \
                       collectionServer.o collectionClient.o transaction.o     \
-                      query.o remoteQuery.o	coll-comm-inst.o coll-serv-inst.o \
-                      coll-client-inst.o indexfile.o
+                      query.o remoteQuery.o \
+                      indexfile.o
 #else
 CLASSAD_SRC_1		= $(CLASSAD_SRC_0)
 CLASSAD_OBJ_1		= $(CLASSAD_OBJ_0)
@@ -55,11 +57,11 @@ CLASSAD_OBJ_3		= $(CLASSAD_OBJ_2)
 #endif
 
 
-SRC = $(CLASSAD_SRC_3) ../condor_c++_util/condor_attributes.cpp
-OBJ = $(CLASSAD_OBJ_3) ../condor_c++_util/condor_attributes.o
+SRC = $(CLASSAD_SRC_3)
+OBJ = $(CLASSAD_OBJ_3)
 
 
-LIB_BASE =  ./libclassad.a ../condor_c++_util/cplus_lib.a \
+LIB_BASE =  ./libclassad_ns.a ../condor_c++_util/cplus_lib.a \
       ../condor_util_lib/util_lib.a \
       ../condor_c++_util/cplus_lib.a ../condor_util_lib/util_lib.a \
       ../condor_util_lib/util_lib.a ../condor_sysapi/libsysapi.a \
@@ -72,8 +74,8 @@ LIB = $(LIB_BASE)
 #endif
 
 /* the main condor library target */
-all_target(libclassad.a classad_functional_tester classad_unit_tester classad_version test_xml extra_tests)
-library_target(libclassad.a,$(OBJ))
+all_target(libclassad_ns.a classad_functional_tester classad_unit_tester classad_version test_xml extra_tests)
+library_target(libclassad_ns.a,$(OBJ))
 
 release:: all
 

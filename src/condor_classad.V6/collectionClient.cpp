@@ -629,7 +629,7 @@ _GetViewNames( int command, const ViewName &view, vector<string>& viewNames)
 
 	if( !ack->EvaluateAttr( command==ClassAdCollOp_GetPartitionedViewNames ? 
 			ATTR_PARTITIONED_VIEWS:ATTR_SUBORDINATE_VIEWS, val ) ||
-			!val.IsListValue( (const ExprList *)el ) ) {
+			!val.IsListValue( el ) ) {
 		CondorErrno = ERR_BAD_SERVER_ACK;
 		CondorErrMsg = "bad server ack --- bad or missing view names";
 		return( false );
@@ -1075,7 +1075,7 @@ _GetAllxxxTransactions( int command, vector<string>& xactions )
 
 	if( !ack->EvaluateAttr( command==ClassAdCollOp_GetAllActiveTransactions ? 
 			"ActiveTransactions":"CommittedTransactions", val ) ||
-			!val.IsListValue( (const ExprList *)el ) ) {
+			!val.IsListValue( el ) ) {
 		CondorErrno = ERR_BAD_SERVER_ACK;
 		CondorErrMsg = "bad server ack --- bad or missing transaction names";
 		return( false );

@@ -28,6 +28,10 @@
 #include "classad/classad_stl.h"
 #include "classad/exprTree.h"
 
+#ifdef CLASSAD_DEPRECATED
+class Stream;
+#endif
+
 BEGIN_NAMESPACE( classad )
 
 typedef std::set<std::string, CaseIgnLTStr> References;
@@ -35,10 +39,6 @@ typedef std::map<const ClassAd*, References> PortReferences;
 
 #if defined( EXPERIMENTAL )
 #include "classad/rectangle.h"
-#endif
-
-#ifdef CLASSAD_DEPRECATED
-#include "classad/stream.h"
 #endif
 
 typedef classad_hash_map<std::string, ExprTree*, CaseIgnLTStr> AttrList;
@@ -685,7 +685,7 @@ e		*/
             @param file The file handle to print to.
             @return TRUE
          */
-        virtual int	fPrint(FILE *file);
+        int	fPrint(FILE *file);
 
         /** Print the ClassAd as an old ClasAd with dprintf
             @param level The dprintf level.

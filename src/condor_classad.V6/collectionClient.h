@@ -25,9 +25,10 @@
 #include "classad/collection.h"
 
 class Sock;
-class ClientTransaction;
 
 BEGIN_NAMESPACE( classad )
+
+class ClientTransaction;
 
 typedef classad_hash_map<std::string,ClientTransaction*> LocalXactionTable;
 

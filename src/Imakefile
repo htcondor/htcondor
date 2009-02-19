@@ -91,7 +91,7 @@
 		StdUnvLibs NetmanLibs	\
 		condor_procd/procd_client.a \
 		condor_privsep/privsep_client.a \
-		chirp AnalysisLibs
+		chirp AnalysisLibs classad.V6
 
 
 #if HAS_STATIC
@@ -242,6 +242,7 @@ condor_object_target(examples)
 condor_object_target(eventd)
 #endif
 condor_object_target(ckpt_server)
+condor_object_target(classad.V6)
 
 condor_object_target(shadow.std)
 condor_object_target(transferd)

@@ -26,6 +26,8 @@
 #include "classad/sink.h"
 #include "classad/view.h"
 
+class Sock;
+
 BEGIN_NAMESPACE( classad )
 
 class ClassAd;
@@ -76,8 +78,6 @@ private:
 	ClassAd					*xactionErrCause;
 };
 
-
-class Sock;
 
 class ClientTransaction {
 public:

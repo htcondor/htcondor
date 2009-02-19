@@ -17,16 +17,20 @@
  *
  ***************************************************************/
 
+#define WANT_CLASSAD_NAMESPACE
 
-#include "classad/common.h"
-#include "classad/classad.h"
+#include "condor_common.h"
+#include "classad/classad_distribution.h"
 #include "condor_attributes.h"
 #include "condor_debug.h"
-#include "condor_classad.h"
+#include "condor_constants.h"
+#include "classad_oldnew.h"
 
 using namespace std;
 
 BEGIN_NAMESPACE(classad)
+
+#define ATTRLIST_MAX_EXPRESSION         10240
 
 // AttrList methods
 
