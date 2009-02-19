@@ -8,14 +8,14 @@ CFLAGS 			= -Wall $(STD_C_FLAGS)
 
 
 /* The basic classad source and object files */
-CLASSAD_SRC_0 		= debug.cpp lexer.cpp lexerSource.cpp source.cpp operators.cpp attrrefs.cpp fnCall.cpp   \
-                      literals.cpp exprTree.cpp classad.cpp exprList.cpp value.cpp \
-                      instantiations.cpp sink.cpp matchClassad.cpp condorUtil.cpp      \
-                      util.cpp xmlLexer.cpp xmlSink.cpp xmlSource.cpp cclassad.cpp
-CLASSAD_OBJ_0 		= debug.o lexer.o lexerSource.o source.o operators.o attrrefs.o fnCall.o   \
-                      literals.o exprTree.o classad.o exprList.o value.o \
-                      instantiations.o sink.o  matchClassad.o condorUtil.o     \
-                      util.o xmlLexer.o xmlSink.o xmlSource.o cclassad.o
+CLASSAD_SRC_0 		= new_classad_debug.cpp lexer.cpp lexerSource.cpp source.cpp new_classad_operators.cpp attrrefs.cpp fnCall.cpp   \
+                      literals.cpp exprTree.cpp new_classad.cpp exprList.cpp new_classad_value.cpp \
+                      sink.cpp matchClassad.cpp condorUtil.cpp      \
+                      new_classad_util.cpp xmlLexer.cpp xmlSink.cpp xmlSource.cpp cclassad.cpp
+CLASSAD_OBJ_0 		= new_classad_debug.o lexer.o lexerSource.o source.o new_classad_operators.o attrrefs.o fnCall.o   \
+                      literals.o exprTree.o new_classad.o exprList.o new_classad_value.o \
+                      sink.o  matchClassad.o condorUtil.o     \
+                      new_classad_util.o xmlLexer.o xmlSink.o xmlSource.o cclassad.o
 
 
 /* Are collections required? */
@@ -166,8 +166,8 @@ LDFLAGS =  -Xlinker --export-dynamic -ldl
 #endif
 
 c_plus_target (cxi, cxi.o, $(LIB))
-c_plus_target (test_classads, test_classads.o test_instantiations.o, $(LIB))
-c_plus_target (classad_functional_tester, classad_functional_tester.o test_instantiations.o, $(LIB))
+c_plus_target (test_classads, test_classads.o, $(LIB))
+c_plus_target (classad_functional_tester, classad_functional_tester.o, $(LIB))
 c_plus_target (classad_unit_tester, classad_unit_tester.o, $(LIB))
 c_plus_target (classad_version, classad_version.o, $(LIB))
 c_plus_target (test_xml, test_xml.o, $(LIB))
