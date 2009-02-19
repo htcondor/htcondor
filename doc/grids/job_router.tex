@@ -254,29 +254,33 @@ TOTAL              58      10     1
 \subsection{\label{ExampleJobRouterConfiguration} An Example Configuration}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-This is a specific example of how you could configure the \Condor{job\_router} daemon to send
-jobs to grid sites.  Definitions of configuration variables
+The following sample configuration sets up potential job routing
+to three routes (grid sites).
+Definitions of the configuration variables specific to the Job Router
 are in section~ \ref{sec:JobRouter-Config-File-Entries}.
+One route is a Condor site accessed via the Globus gt2 protocol.
+A second route is a PBS site, also accessed via Globus gt2.
+The third site is a Condor site accessed by Condor-C.
+The \Condor{job\_router} daemon
+does not know which site will be best for a given job.
+The policy implemented in this sample configuration 
+stops sending more jobs to a site,
+if ten jobs that have already been sent to that site are idle.
 
-This example sets up three routes for jobs.  One is a Condor site
-accessed via the Globus gt2 protocol.  Another is a PBS site also
-accessed via Globus gt2.  The third site is a Condor site accessed by
-schedd-to-schedd job submission, a.k.a Condor-C.  The \Condor{job\_router} daemon
-doesn't know which site would be best for a given job, but, as
-specified in the following policy, it will stop sending more jobs to a
-site if ten jobs that have already been sent there are idle.
+These configuration settings belong in the local configuration file
+of the machine where jobs are submitted.
+Check that the machine can successfully submit grid jobs
+before setting up and using the Job Router.
+Typically, the single required element that needs to be
+added for GSI authentication
+is an X.509 trusted certification authority directory,
+in a place recognized by Condor
+(for example,  \File{/etc/grid-security/certificates}).
+The VDT (\URL{http://vdt.cs.wisc.edu}) project provides 
+a convenient way to set up and install a trusted CAs,
+if needed.
 
-These configuration settings should be made in the local config file
-of the submit machine.  If you have not already successfully submitted
-grid jobs from this machine, it is a good idea to get that working
-before you attempt to use JobRouter.  Typically, the only thing you
-need to add (supposing you are using GSI authentication for the grid)
-is an X509 trusted certification authority directory in a place
-recognized by Condor (e.g. /etc/grid-security/certificates).  The VDT
-(\URL{http://vdt.cs.wisc.edu}) provides a convenient way to setup and
-install trusted CAs if you are using one of the common CAs in your
-grid.
-
+\footnotesize
 \begin{verbatim}
 
 # These settings become the default settings for all routes
@@ -324,6 +328,7 @@ JOB_ROUTER_POLLING_PERIOD = 10
 #for use with the router_history command.
 MAX_HISTORY_ROTATIONS = 20
 \end{verbatim}
+\normalsize
 
 
 %Some questions you may have after reading the above policy: Can the
