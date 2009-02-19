@@ -744,7 +744,7 @@ static long findLastDelimiter(FILE *fd, char *filename)
                 break;
 	  
             // If line starts with *** and its last line of file
-            if (strncmp(buf.GetCStr(), "***", 3) == 0 && buf.readLine(fd) == false) {
+            if (strncmp(buf.Value(), "***", 3) == 0 && buf.readLine(fd) == false) {
                 found = true;
                 break;
             }
@@ -782,7 +782,7 @@ static long findPrevDelimiter(FILE *fd, char* filename, long currOffset)
     // *** ProcId = a ClusterId = b Owner = "cde" CompletionDate = f
     // For the moment, owner and completionDate are just parsed in, reserved for future functionalities. 
 
-    sscanf(buf.GetCStr(), "%*s %*s %*s %ld %*s %*s %d %*s %*s %d %*s %*s %s %*s %*s %ld", 
+    sscanf(buf.Value(), "%*s %*s %*s %ld %*s %*s %d %*s %*s %d %*s %*s %s %*s %*s %ld", 
            &prevOffset, &clusterId, &procId, owner, &completionDate);
 
     if (prevOffset == -1 && clusterId == -1 && procId == -1) {
@@ -810,7 +810,7 @@ static long findPrevDelimiter(FILE *fd, char* filename, long currOffset)
             
             owner = (char *) realloc (owner, buf.Length() * sizeof(char));
       
-            sscanf(buf.GetCStr(), "%*s %*s %*s %ld %*s %*s %d %*s %*s %d %*s %*s %s %*s %*s %ld", 
+            sscanf(buf.Value(), "%*s %*s %*s %ld %*s %*s %d %*s %*s %d %*s %*s %s %*s %*s %ld", 
                    &prevOffset, &clusterId, &procId, owner, &completionDate);
         }
     }

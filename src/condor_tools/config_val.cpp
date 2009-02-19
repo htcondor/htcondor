@@ -410,10 +410,10 @@ main( int argc, char* argv[] )
 					int      line_number;
 					param_get_location(tmp, filename, line_number);
 					if (line_number == -1) {
-						printf("  Defined in '%s'.\n\n", filename.GetCStr());
+						printf("  Defined in '%s'.\n\n", filename.Value());
 					} else {
 						printf("  Defined in '%s', line %d.\n\n",
-							   filename.GetCStr(), line_number);
+							   filename.Value(), line_number);
 					}
 				}
 			}

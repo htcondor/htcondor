@@ -262,7 +262,7 @@ static void doDBconfig() {
 	MyString writePasswordFile; 
 	writePasswordFile.sprintf("%s/.pgpass", spool);
 
-	MyString writePassword = getWritePassword(writePasswordFile.GetCStr(), 
+	MyString writePassword = getWritePassword(writePasswordFile.Value(), 
 										   host?host:"", port?port:"", 
 										   DBName?DBName:"", 
 										   DBUser);
@@ -301,13 +301,13 @@ static void doDBconfig() {
 	switch (dt) {				
 		case T_ORACLE:
 #if HAVE_ORACLE
-			DBObj = new ORACLEDatabase(DBConn.GetCStr());
+			DBObj = new ORACLEDatabase(DBConn.Value());
 #else
 			EXCEPT("Oracle database requested, but this version of Condor was compiled without Oracle support!\n");
 #endif
 			break;
 		case T_PGSQL:
-			DBObj = new PGSQLDatabase(DBConn.GetCStr());
+			DBObj = new PGSQLDatabase(DBConn.Value());
 			break;
 		default:
 			break;;
@@ -377,7 +377,7 @@ static MyString getWritePassword(const char *write_passwd_fname,
 			//fprintf(stderr, "line: %s\n", buf);
 
 			// check if the entry matches the prefix
-		if (strncmp(buf, prefix.GetCStr(), len) == 0) {
+		if (strncmp(buf, prefix.Value(), len) == 0) {
 				// extract the password
 			passwd = msbuf.Substr(len, msbuf.Length());
 			found = TRUE;
@@ -483,15 +483,15 @@ static void readHistoryFromFile(char *JobHistoryFileName)
   sql_stmt.sprintf("DELETE FROM History_Horizontal WHERE scheddname = '%s' AND cluster_id = %d AND proc = %d", scheddname, cid, pid);
   sql_stmt2.sprintf("INSERT INTO History_Horizontal(scheddname, cluster_id, proc, enteredhistorytable) VALUES('%s', %d, %d, current_timestamp)", scheddname, cid, pid);
 
-  if (DBObj->execCommand(sql_stmt.GetCStr()) == QUILL_FAILURE) {
+  if (DBObj->execCommand(sql_stmt.Value()) == QUILL_FAILURE) {
 	  fprintf(stderr, "Executing Statement --- Error\n");
-	  fprintf(stderr, "sql = %s\n", sql_stmt.GetCStr());
+	  fprintf(stderr, "sql = %s\n", sql_stmt.Value());
 	  return FAILURE;	  
   }
 
-  if (DBObj->execCommand(sql_stmt2.GetCStr()) == QUILL_FAILURE) {
+  if (DBObj->execCommand(sql_stmt2.Value()) == QUILL_FAILURE) {
 	  fprintf(stderr, "Executing Statement --- Error\n");
-	  fprintf(stderr, "sql = %s\n", sql_stmt2.GetCStr());
+	  fprintf(stderr, "sql = %s\n", sql_stmt2.Value());
 	  return QUILL_FAILURE;	  
   }
   
@@ -535,7 +535,7 @@ static void readHistoryFromFile(char *JobHistoryFileName)
 		  flag3 = true;
 	  }
 
-	  if(isHorizontalHistoryAttribute(name.GetCStr())) {
+	  if(isHorizontalHistoryAttribute(name.Value())) {
 		  if(name == "in" || name == "user") {
 			  name += "_j";
 		  }
@@ -555,40 +555,40 @@ static void readHistoryFromFile(char *JobHistoryFileName)
 			
 			  time_t clock;
 			  MyString ts_expr;
-			  clock = atoi(value.GetCStr());
+			  clock = atoi(value.Value());
 			  
 			  ts_expr = condor_ttdb_buildts(&clock, dt);	
 				  
-			  sql_stmt.sprintf("UPDATE History_Horizontal SET %s = (%s) WHERE scheddname = '%s' and cluster_id = %d and proc = %d", name.GetCStr(), ts_expr.Value(), scheddname, cid, pid);
+			  sql_stmt.sprintf("UPDATE History_Horizontal SET %s = (%s) WHERE scheddname = '%s' and cluster_id = %d and proc = %d", name.Value(), ts_expr.Value(), scheddname, cid, pid);
 
 		  }	else {
-			  newvalue = condor_ttdb_fillEscapeCharacters(value.GetCStr(), dt);
-			  sql_stmt.sprintf("UPDATE History_Horizontal SET %s = '%s' WHERE scheddname = '%s' and cluster_id = %d and proc = %d", name.GetCStr(), newvalue.GetCStr(), 
+			  newvalue = condor_ttdb_fillEscapeCharacters(value.Value(), dt);
+			  sql_stmt.sprintf("UPDATE History_Horizontal SET %s = '%s' WHERE scheddname = '%s' and cluster_id = %d and proc = %d", name.Value(), newvalue.Value(), 
 							   scheddname, cid, pid);			  
 		  }
 	  } else {
-		  newvalue = condor_ttdb_fillEscapeCharacters(value.GetCStr(), dt);
+		  newvalue = condor_ttdb_fillEscapeCharacters(value.Value(), dt);
 		  
 		  sql_stmt = ""; 
 		  sql_stmt2 = ""; 
 
-		  sql_stmt.sprintf("DELETE FROM History_Vertical WHERE scheddname = '%s' AND cluster_id = %d AND proc = %d AND attr = '%s'", scheddname, cid, pid, name.GetCStr());
+		  sql_stmt.sprintf("DELETE FROM History_Vertical WHERE scheddname = '%s' AND cluster_id = %d AND proc = %d AND attr = '%s'", scheddname, cid, pid, name.Value());
 			  
 		  sql_stmt2.sprintf("INSERT INTO History_Vertical(scheddname, cluster_id, proc, attr, val) VALUES('%s', %d, %d, '%s', '%s')", scheddname, cid, pid, 
-							name.GetCStr(), newvalue.GetCStr());
+							name.Value(), newvalue.Value());
 
 	  }	  
 
-	  if (DBObj->execCommand(sql_stmt.GetCStr()) == QUILL_FAILURE) {
+	  if (DBObj->execCommand(sql_stmt.Value()) == QUILL_FAILURE) {
 		  fprintf(stderr, "Executing Statement --- Error\n");
-		  fprintf(stderr, "sql = %s\n", sql_stmt.GetCStr());
+		  fprintf(stderr, "sql = %s\n", sql_stmt.Value());
 		  
 		  return QUILL_FAILURE;
 	  }
 		  
-	  if (sql_stmt2 != "" && (DBObj->execCommand(sql_stmt2.GetCStr()) == QUILL_FAILURE)) {
+	  if (sql_stmt2 != "" && (DBObj->execCommand(sql_stmt2.Value()) == QUILL_FAILURE)) {
 		  fprintf(stderr, "Executing Statement --- Error\n");
-		  fprintf(stderr, "sql = %s\n", sql_stmt2.GetCStr());
+		  fprintf(stderr, "sql = %s\n", sql_stmt2.Value());
 		  
 		  return QUILL_FAILURE;			  
 	  }

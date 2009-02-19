@@ -143,7 +143,7 @@ int main( int argc, char *argv[] )
 	}
 	if ( tmp.Length() == 0 ) {
 		tmp.sprintf( "%s = \"<%s:0>\"", ATTR_MY_ADDRESS, my_ip_string() );
-		ad->Insert( tmp.GetCStr() );
+		ad->Insert( tmp.Value() );
 	}
 
 	CollectorList * collectors;

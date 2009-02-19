@@ -1163,11 +1163,7 @@ resolveNames( DaemonList* daemon_list, StringList* name_list )
 					  version and the ip/port, and those will
 					  obviously be the same for all slots)
 					*/
-				MyString attr = ATTR_NAME;
-				attr += "=\"";
-				attr += name;
-				attr += '"';
-				ad->Insert( attr.GetCStr() );
+				ad->Assign( ATTR_NAME, name);
 				d = new Daemon( ad, real_dt, pool_addr );
 				free( tmp );
 				tmp = NULL;
