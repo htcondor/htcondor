@@ -511,7 +511,7 @@ StorkLeaseManager::destroyFromBusy(StorkLeaseEntry*  match)
 		if ( *temp == *match ) {
 			const char	*s;
 			if ( temp->CompletePath ) {
-				s = temp->CompletePath->GetCStr();
+				s = temp->CompletePath->Value();
 			} else if ( temp->Lease ) {
 				s = temp->Lease->leaseId().c_str();
 			} else {
@@ -536,7 +536,7 @@ StorkLeaseManager::destroyFromIdle(StorkLeaseEntry*  match)
 		if ( *temp == *match ) {
 			const char	*s;
 			if ( temp->CompletePath ) {
-				s = temp->CompletePath->GetCStr();
+				s = temp->CompletePath->Value();
 			} else if ( temp->Lease ) {
 				s = temp->Lease->leaseId().c_str();
 			} else {

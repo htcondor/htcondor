@@ -534,7 +534,7 @@ dprintf(D_ALWAYS, "DEBUG: dest_file: '%s'\n", dest_file);
 
 	// "command" is the command is exec'ed by daemon core
 	MyString	command;
-	command.sprintf( "%s/%s", Module_dir, commandbody.GetCStr() );
+	command.sprintf( "%s/%s", Module_dir, commandbody.Value() );
 
 	// Append the src and dest URLs
 	new_args.AppendArg( strip_str(src_url) );
@@ -595,7 +595,7 @@ dprintf(D_ALWAYS, "DEBUG: dest_file: '%s'\n", dest_file);
 	// Create child process via daemoncore
 	pid =
 		daemonCore->Create_Process(
-			command.GetCStr(),			// command path
+			command.Value(),			// command path
 			new_args,					// arguments
 			PRIV_USER_FINAL,			// privilege state
 			transfer_dap_reaper_id,		// reaper id
