@@ -99,8 +99,25 @@ Insert( const char *str )
 	vector< pair< string, ExprTree *> > vec;
 	vector< pair< string, ExprTree *> >::iterator itr;
 
-	string newAdStr = "[" + string( str ) + "]";
+		// String escaping is different between new and old ClassAds.
+		// We need to convert the escaping from old to new style before
+		// handing the expression to the new ClassAds parser.
+	string newAdStr = "[";
+	for ( int i = 0; str[i] != '\0'; i++ ) {
+		if ( str[i] == '\\' && 
+			 ( str[i + 1] != '"' ||
+			   str[i + 1] == '"' &&
+			   ( str[i + 2] == '\0' || str[i + 2] == '\n' ||
+				 str[i + 2] == '\r') ) ) {
+			newAdStr.append( 1, '\\' );
+		}
+		newAdStr.append( 1, str[i] );
+	}
+	newAdStr += "]";
 	newAd = parser.ParseClassAd( newAdStr );
+	if ( newAd == NULL ) {
+		return FALSE;
+	}
 	newAd->GetComponents( vec );
 	
 	for( itr = vec.begin( ); itr != vec.end( ); itr++ ) {
