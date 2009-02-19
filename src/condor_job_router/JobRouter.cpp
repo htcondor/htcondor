@@ -328,6 +328,9 @@ JobRouter::config() {
 
 	m_max_job_mirror_update_lag = param_integer("MAX_JOB_MIRROR_UPDATE_LAG",600);
 
+	Timeslice periodic_interval;
+	periodic_interval.setMinInterval(param_integer("PERIODIC_EXPR_INTERVAL", 60));
+	periodic_interval.setTimeslice(param_double("PERIODIC_EXPR_TIMESLICE", 0.01, 0, 1));
 
 		// read the polling period and if one is not specified use 
 		// default value of 10 seconds
@@ -347,14 +350,15 @@ JobRouter::config() {
 								  (Eventcpp)&JobRouter::Poll, 
 								  "JobRouter::Poll", this);
 
-	int periodic_interval = param_integer("PERIODIC_EXPR_INTERVAL", 60);
-
-	if (periodic_interval > 0) {
-		m_periodic_timer_id = daemonCore->Register_Timer(0, 
-								periodic_interval,
+	if (periodic_interval.getMinInterval() > 0) {
+		m_periodic_timer_id = daemonCore->Register_Timer(periodic_interval, 
 								(Eventcpp)&JobRouter::EvalAllSrcJobPeriodicExprs,
 								"JobRouter::EvalAllSrcJobPeriodicExprs",
 								this);
+		dprintf(D_FULLDEBUG, "JobRouter: Registered EvalAllSrcJobPeriodicExprs() to evaluate periodic expressions.\n");
+	}
+	else {
+		dprintf(D_FULLDEBUG, "JobRouter: Evaluation of periodic expressions disabled.\n");
 	}
 
 	char *name = param("JOB_ROUTER_NAME");
@@ -404,6 +408,7 @@ JobRouter::EvalAllSrcJobPeriodicExprs()
 		}
 	}
 
+	dprintf(D_FULLDEBUG, "JobRouter: Evaluated all managed jobs periodic expressions.\n");
 	return;
 }
 
