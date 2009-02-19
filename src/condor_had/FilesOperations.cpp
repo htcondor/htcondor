@@ -46,7 +46,7 @@ FilesOperations::rotateFile( const char* filePath,
     temporaryFilePath += ".";
     temporaryFilePath += temporaryFilesExtension;
 
-    if( rotate_file( temporaryFilePath.GetCStr( ), filePath ) < 0 ) {
+    if( rotate_file( temporaryFilePath.Value( ), filePath ) < 0 ) {
         dprintf( D_ALWAYS, "FilesOperations::rotateFile "
                            "cannot rotate file %s\n", filePath );
         return false;
@@ -71,10 +71,10 @@ FilesOperations::copyFile( const char* filePath,
     temporaryFilePath += ".";
     temporaryFilePath += temporaryFilesExtension;
 
-    if( copy_file( filePath, temporaryFilePath.GetCStr( ) ) ) {
+    if( copy_file( filePath, temporaryFilePath.Value( ) ) ) {
         dprintf( D_ALWAYS, "FilesOperations::copyFile "
                            "unable to copy %s to %s\n",
-                    filePath, temporaryFilePath.GetCStr( ) );
+                    filePath, temporaryFilePath.Value( ) );
         return false;
     }
     return true;
@@ -102,14 +102,14 @@ FilesOperations::unlinkFile( const char* filePath,
 	
 	if ( statWrapper.GetRc( ) && statWrapper.GetErrno( ) == ENOENT ) {
 		dprintf( D_ALWAYS, "FilesOperations::unlinkFile the specified file %s"
-						   "does not exist\n", temporaryFilePath.GetCStr( ) );
+						   "does not exist\n", temporaryFilePath.Value( ) );
 		return true;
     }
 	
-	if( unlink( temporaryFilePath.GetCStr( ) ) != 0 ) {
+	if( unlink( temporaryFilePath.Value( ) ) != 0 ) {
         dprintf( D_ALWAYS, "FilesOperations::unlinkFile unable "
                            "to unlink %s, reason: %s\n",
-                   temporaryFilePath.GetCStr( ), strerror(errno));
+                   temporaryFilePath.Value( ), strerror(errno));
         return false;
     }
     return true;
@@ -152,13 +152,13 @@ FilesOperations::safeManipulateFile( const char* filePath,
      * heavy operations between them
      */
 //    while( retryTimes < IO_RETRY_TIMES &&
-//         (*manipulation)(versionFilePath.GetCStr(),
+//         (*manipulation)(versionFilePath.Value(),
 //                         temporaryFilesExtension) == false ) {
 //        retryTimes ++;
 //    }
 //    if (retryTimes == IO_RETRY_TIMES) {
 //        dprintf( D_ALWAYS, "FilesOperations::safeManipulateFile failed with "
-//							 "%s.%s %d times\n", versionFilePath.GetCStr( ),
+//							 "%s.%s %d times\n", versionFilePath.Value( ),
 //                temporaryFilesExtension, IO_RETRY_TIMES );
 //        return false;
 //    }

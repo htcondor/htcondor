@@ -68,12 +68,12 @@ BaseReplicaTransferer::reinitialize( )
         if( ! result || m_connectionTimeout <= 0 ) {
             utilCrucialError(
 				utilConfigurationError("HAD_CONNECTION_TIMEOUT", 
-									   "HAD").GetCStr( ) );
+									   "HAD").Value( ) );
         }
         free( buffer );
     } else {
 		utilCrucialError(
-       		utilNoParameterError("HAD_CONNECTION_TIMEOUT", "HAD").GetCStr( ) );
+       		utilNoParameterError("HAD_CONNECTION_TIMEOUT", "HAD").Value( ) );
     }
 
 	m_maxTransferLifetime = param_integer( "MAX_TRANSFER_LIFETIME",
@@ -87,8 +87,8 @@ BaseReplicaTransferer::safeUnlinkStateAndVersionFiles(
     const MyString&   versionFilePath,
     const MyString&   extension)
 {
-	FilesOperations::safeUnlinkFile( versionFilePath.GetCStr( ),
-                                     extension.GetCStr( ) );
+	FilesOperations::safeUnlinkFile( versionFilePath.Value( ),
+                                     extension.Value( ) );
 	StringList& stateFilePathsListRef =
 		const_cast<StringList&>(stateFilePathsList);
 	stateFilePathsListRef.rewind();
@@ -97,7 +97,7 @@ BaseReplicaTransferer::safeUnlinkStateAndVersionFiles(
 
 	while( ( stateFilePath = stateFilePathsListRef.next( ) ) ) {
 		FilesOperations::safeUnlinkFile( stateFilePath,
-                                     	 extension.GetCStr( ) );
+                                     	 extension.Value( ) );
 	}
 	stateFilePathsListRef.rewind();
 }

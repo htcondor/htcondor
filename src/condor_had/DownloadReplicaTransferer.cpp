@@ -58,7 +58,7 @@ int
 DownloadReplicaTransferer::transferFileCommand( )
 {
     char* temporaryDaemonSinfulString =
-        const_cast<char*>( m_daemonSinfulString.GetCStr( ) );
+        const_cast<char*>( m_daemonSinfulString.Value( ) );
 
     dprintf( D_ALWAYS, "DownloadReplicaTransferer::transferFileCommand "
                        "to %s started\n", temporaryDaemonSinfulString );
@@ -111,7 +111,7 @@ DownloadReplicaTransferer::transferFileCommand( )
     free( hostNameString );
     // after the socket for the downloading/uploading process is occupied,
     // its number is sent to the remote replication daemon
-    char* temporarySinfulString = const_cast<char*>( sinfulString.GetCStr( ) );
+    char* temporarySinfulString = const_cast<char*>( sinfulString.Value( ) );
     if( ! temporarySocket.code( temporarySinfulString ) ||
         ! temporarySocket.eom( ) ) {
         dprintf( D_NETWORK, "DownloadReplicaTransferer::transferFileCommand "
@@ -171,8 +171,8 @@ DownloadReplicaTransferer::download( ) {
 	}
 	m_stateFilePathsList.rewind( );	
 //	if( downloadFile( m_stateFilePath, extension ) == TRANSFERER_FALSE ) {
-//		FilesOperations::safeUnlinkFile( m_versionFilePath.GetCStr( ), 
-//										 extension.GetCStr( ) );
+//		FilesOperations::safeUnlinkFile( m_versionFilePath.Value( ), 
+//										 extension.Value( ) );
 //		return TRANSFERER_FALSE;	
 //	}
     return TRANSFERER_TRUE;
@@ -194,13 +194,13 @@ DownloadReplicaTransferer::downloadFile(MyString& filePath, MyString& extension)
 //						  "purposedly stalling the downloading process\n" );
 //    sleep( 300 );
     dprintf( D_ALWAYS, "DownloadReplicaTransferer::downloadFile %s.%s\n", 
-			 filePath.GetCStr( ), extension.GetCStr( ) );
+			 filePath.Value( ), extension.Value( ) );
 
 	if( ! utilSafeGetFile( *m_socket, filePath + "." + extension) ) {
 		dprintf( D_ALWAYS, "DownloadReplicaTransferer::downloadFile failed, "
-				"unlinking %s.%s\n", filePath.GetCStr(), extension.GetCStr());
-		FilesOperations::safeUnlinkFile( filePath.GetCStr( ), 
-										 extension.GetCStr( ) );
+				"unlinking %s.%s\n", filePath.Value(), extension.Value());
+		FilesOperations::safeUnlinkFile( filePath.Value( ), 
+										 extension.Value( ) );
 		return TRANSFERER_FALSE;
 	}
 	return TRANSFERER_TRUE;

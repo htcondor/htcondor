@@ -167,7 +167,7 @@ HADStateMachine::isHardConfigurationNeeded()
 		initializeHADList( buffer, m_usePrimary, otherHADIPsCopy, &selfIdCopy );
         free( buffer );
     } else {
-		utilCrucialError( utilNoParameterError( "HAD_LIST", "HAD" ).GetCStr() );
+		utilCrucialError( utilNoParameterError( "HAD_LIST", "HAD" ).Value() );
     }
 
 	// if either the HAD_LIST length has changed or the index of the local
@@ -240,7 +240,7 @@ HADStateMachine::softReconfigure()
 		if( ! res || m_connectionTimeout <= 0 ) {
             free( buffer );
             utilCrucialError( utilConfigurationError( 
-								"HAD_CONNECTION_TIMEOUT", "HAD" ).GetCStr( ) );
+								"HAD_CONNECTION_TIMEOUT", "HAD" ).Value( ) );
         }
     
         free( buffer );
@@ -284,12 +284,12 @@ HADStateMachine::softReconfigure()
 		if( ! res || m_updateCollectorInterval <= 0 ) {
             free( buffer );
             utilCrucialError( utilConfigurationError(
-                                "HAD_UPDATE_INTERVAL", "HAD" ).GetCStr( ) );
+                                "HAD_UPDATE_INTERVAL", "HAD" ).Value( ) );
         }
         free( buffer );
     } else {
         utilCrucialError( utilNoParameterError(
-                            "HAD_UPDATE_INTERVAL", "HAD" ).GetCStr( ) );
+                            "HAD_UPDATE_INTERVAL", "HAD" ).Value( ) );
     }*/
 	printParamsInformation();
 
@@ -330,7 +330,7 @@ HADStateMachine::initializeClassAd()
 				  daemonCore->InfoCommandPort( ) );
     free( userName );
     // ATTR_NAME is mandatory in order to be accepted by collector
-    line.sprintf( "%s = \"%s\"", ATTR_NAME, name.GetCStr( ) );
+    line.sprintf( "%s = \"%s\"", ATTR_NAME, name.Value( ) );
     m_classAd->Insert(line.Value());
 
     line.sprintf( "%s = \"%s\"", ATTR_MY_ADDRESS,
@@ -356,7 +356,7 @@ HADStateMachine::initializeClassAd()
 		attrHadList += hadAddress;
 		comma = ",";
 	}
-	line.sprintf( "%s = \"%s\"", ATTR_HAD_LIST, attrHadList.GetCStr( ) );
+	line.sprintf( "%s = \"%s\"", ATTR_HAD_LIST, attrHadList.Value( ) );
 	m_classAd->Insert(line.Value());
 
 	free( buffer );
@@ -704,7 +704,7 @@ HADStateMachine::setReplicationDaemonSinfulString( )
 
     if ( ! tmp ) {
         utilCrucialError( utilNoParameterError("REPLICATION_LIST",
-                                               "REPLICATION").GetCStr( ) );
+                                               "REPLICATION").Value( ) );
     }
 
     StringList replicationAddressList;
@@ -1118,8 +1118,8 @@ HADStateMachine::updateCollectorsClassAd(const MyString& isHadActive)
 {
     MyString line;
 
-    line.sprintf( "%s = %s", ATTR_HAD_IS_ACTIVE, isHadActive.GetCStr( ) );
-    m_classAd->InsertOrUpdate( line.GetCStr( ) );
+    line.sprintf( "%s = %s", ATTR_HAD_IS_ACTIVE, isHadActive.Value( ) );
+    m_classAd->InsertOrUpdate( line.Value( ) );
 
     int successfulUpdatesNumber =
         daemonCore->sendUpdates ( UPDATE_HAD_AD, m_classAd, NULL, true );

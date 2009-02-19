@@ -97,7 +97,7 @@ getConfigurationPositiveIntegerParameter( const char* parameter )
 
         if( ! result || parameterValue <= 0 ) {
         	utilCrucialError( utilConfigurationError(parameter,
-                                             "REPLICATION").GetCStr( ) );
+                                             "REPLICATION").Value( ) );
 		}
     } else {
         dprintf( D_ALWAYS, "getConfigurationPositiveIntegerParameter "
@@ -211,7 +211,7 @@ ReplicatorStateMachine::reinitialize()
         dprintf( D_FULLDEBUG, "ReplicatorStateMachine::reinitialize %s=%d\n",
                 "HAD_LIST", m_hadAliveTolerance );
     } else {
-        utilCrucialError( utilNoParameterError( "HAD_LIST", "HAD" ).GetCStr( ));
+        utilCrucialError( utilNoParameterError( "HAD_LIST", "HAD" ).Value( ));
     }
     // set a timer to replication routine
     dprintf( D_ALWAYS, "ReplicatorStateMachine::reinitialize setting "
@@ -324,7 +324,7 @@ ReplicatorStateMachine::inLeaderStateHandler( )
             "is set to %s", ctime( &m_lastHadAliveTime ) );
     //if( downloadTransferersNumber( ) == 0 && 
 	// 	  replicaSelectionHandler( newVersion ) ) {
-    //    download( newVersion.getSinfulString( ).GetCStr( ) );
+    //    download( newVersion.getSinfulString( ).Value( ) );
     //}
 }
 
@@ -334,7 +334,7 @@ ReplicatorStateMachine::replicaSelectionHandler( Version& newVersion )
     REPLICATION_ASSERT( m_state == VERSION_DOWNLOADING || m_state == BACKUP );
     dprintf( D_ALWAYS, "ReplicatorStateMachine::replicaSelectionHandler "
 			"started with my version = %s, #versions = %d\n",
-             m_myVersion.toString( ).GetCStr( ), m_versionsList.Number( ) );
+             m_myVersion.toString( ).Value( ), m_versionsList.Number( ) );
     List<Version> actualVersionsList;
     Version myVersionCopy = m_myVersion;
     
@@ -364,11 +364,11 @@ ReplicatorStateMachine::replicaSelectionHandler( Version& newVersion )
     // taking the first actual version as the best version in the meantime
     actualVersionsList.Next( bestVersion );
     dprintf( D_ALWAYS, "ReplicatorStateMachine::replicaSelectionHandler best "
-			"version = %s\n", bestVersion.toString( ).GetCStr( ) );
+			"version = %s\n", bestVersion.toString( ).Value( ) );
     
     while( actualVersionsList.Next( version ) ) {
         dprintf( D_ALWAYS, "ReplicatorStateMachine::replicaSelectionHandler "
-				"actual version = %s\n", version.toString( ).GetCStr( ) );
+				"actual version = %s\n", version.toString( ).Value( ) );
         if( version.isComparable( bestVersion ) && version > bestVersion ) {
             bestVersion = version;
         }
@@ -387,7 +387,7 @@ ReplicatorStateMachine::replicaSelectionHandler( Version& newVersion )
     }
     newVersion = bestVersion;
     dprintf( D_ALWAYS, "ReplicatorStateMachine::replicaSelectionHandler "
-			"best version selected: %s\n", newVersion.toString().GetCStr()); 
+			"best version selected: %s\n", newVersion.toString().Value()); 
     return true;
 }
 // until the state files merging utility is ready, the function is not really
@@ -501,8 +501,8 @@ ReplicatorStateMachine::onLeaderVersion( Stream* stream )
     if( downloadTransferersNumber( ) == 0 && newVersion && downloadNeeded ) {
         dprintf( D_FULLDEBUG, "ReplicatorStateMachine::onLeaderVersion "
 				"downloading from %s\n", 
-				newVersion->getSinfulString( ).GetCStr( ) );
-        download( newVersion->getSinfulString( ).GetCStr( ) );
+				newVersion->getSinfulString( ).Value( ) );
+        download( newVersion->getSinfulString( ).Value( ) );
     }
     // replication leader must not send a version which hasn't been updated
     //assert(downloadNeeded);
@@ -731,10 +731,10 @@ ReplicatorStateMachine::killStuckDownloadingTransferer( time_t currentTime )
         extension += ".";
         extension += DOWNLOADING_TEMPORARY_FILES_EXTENSION;
 
-        FilesOperations::safeUnlinkFile( m_versionFilePath.GetCStr( ),
-                                         extension.GetCStr( ) );
-        FilesOperations::safeUnlinkFile( m_stateFilePath.GetCStr( ),
-                                         extension.GetCStr( ) );
+        FilesOperations::safeUnlinkFile( m_versionFilePath.Value( ),
+                                         extension.Value( ) );
+        FilesOperations::safeUnlinkFile( m_stateFilePath.Value( ),
+                                         extension.Value( ) );
 		m_downloadTransfererMetadata.set( );
 	}
 }
@@ -776,10 +776,10 @@ ReplicatorStateMachine::killStuckUploadingTransferers( time_t currentTime )
             extension += ".";
             extension += UPLOADING_TEMPORARY_FILES_EXTENSION;
 
-            FilesOperations::safeUnlinkFile( m_versionFilePath.GetCStr( ),
-                                             extension.GetCStr( ) );
-            FilesOperations::safeUnlinkFile( m_stateFilePath.GetCStr( ),
-                                             extension.GetCStr( ) );
+            FilesOperations::safeUnlinkFile( m_versionFilePath.Value( ),
+                                             extension.Value( ) );
+            FilesOperations::safeUnlinkFile( m_stateFilePath.Value( ),
+                                             extension.Value( ) );
 			delete uploadTransfererMetadata;
 			m_uploadTransfererMetadataList.DeleteCurrent( );
 		}
@@ -867,7 +867,7 @@ ReplicatorStateMachine::versionRequestingTimer( )
     Version updatedVersion;
 
     if( replicaSelectionHandler( updatedVersion ) ) {
-        download( updatedVersion.getSinfulString( ).GetCStr( ) );
+        download( updatedVersion.getSinfulString( ).Value( ) );
         dprintf( D_FULLDEBUG, "ReplicatorStateMachine::versionRequestingTimer "
 				"registering version downloading timer\n" );
         m_versionDownloadingTimerId = daemonCore->Register_Timer( 

@@ -131,7 +131,7 @@ AbstractReplicatorStateMachine::reinitialize()
         free( buffer );
     } else {
         utilCrucialError( utilNoParameterError("REPLICATION_LIST", 
-		  								       "REPLICATION").GetCStr( ) );
+		  								       "REPLICATION").Value( ) );
     }
     buffer = param( "HAD_CONNECTION_TIMEOUT" );
 
@@ -140,12 +140,12 @@ AbstractReplicatorStateMachine::reinitialize()
 
         if( errno == ERANGE || m_connectionTimeout <= 0 ) {
         	utilCrucialError( utilConfigurationError( "HAD_CONNECTION_TIMEOUT",
-													  "HAD" ).GetCStr( ) );
+													  "HAD" ).Value( ) );
         }
         free( buffer );
     } else {
         utilCrucialError( utilNoParameterError("HAD_CONNECTION_TIMEOUT",
-										       "HAD").GetCStr( ) );
+										       "HAD").Value( ) );
     }
     buffer = param( "BIN" );
 
@@ -155,7 +155,7 @@ AbstractReplicatorStateMachine::reinitialize()
         free( buffer );
     } else {
         utilCrucialError( utilConfigurationError("RELEASE_DIR", 
-											     "REPLICATION").GetCStr( ) );
+											     "REPLICATION").Value( ) );
     }
 	char* spoolDirectory = param( "SPOOL" );
     
@@ -182,7 +182,7 @@ AbstractReplicatorStateMachine::reinitialize()
         free( spoolDirectory );
     } else {
         utilCrucialError( utilNoParameterError("SPOOL", "REPLICATION").
-                          GetCStr( ) );
+                          Value( ) );
     }
 	printDataMembers( );
 }
@@ -237,11 +237,11 @@ AbstractReplicatorStateMachine::downloadReplicaTransfererReaper(
     // upon failure we do not synchronize the local version, since such
 	// downloading is considered invalid
 	if( ! FilesOperations::safeRotateFile(
-						  replicatorStateMachine->m_versionFilePath.GetCStr(),
-										  temporaryFilesExtension.GetCStr()) ||
+						  replicatorStateMachine->m_versionFilePath.Value(),
+										  temporaryFilesExtension.Value()) ||
 		! FilesOperations::safeRotateFile(
-						    replicatorStateMachine->m_stateFilePath.GetCStr(),
-										  temporaryFilesExtension.GetCStr()) ) {
+						    replicatorStateMachine->m_stateFilePath.Value(),
+										  temporaryFilesExtension.Value()) ) {
 		return TRANSFERER_FALSE;
 	}
     replicatorStateMachine->m_myVersion.synchronize( false );
@@ -319,22 +319,22 @@ AbstractReplicatorStateMachine::download( const char* daemonSinfulString )
     MyString executable;
 
     executable.sprintf( "%s/condor_transferer",
-                                m_releaseDirectoryPath.GetCStr( ) );
+                                m_releaseDirectoryPath.Value( ) );
 	ArgList  processArguments;
-	processArguments.AppendArg( executable.GetCStr() );
+	processArguments.AppendArg( executable.Value() );
 	processArguments.AppendArg( "-f" );
 	processArguments.AppendArg( "down" );
 	processArguments.AppendArg( daemonSinfulString );
-	processArguments.AppendArg( m_versionFilePath.GetCStr() );
+	processArguments.AppendArg( m_versionFilePath.Value() );
 	processArguments.AppendArg( "1" );
-	processArguments.AppendArg( m_stateFilePath.GetCStr() );
+	processArguments.AppendArg( m_stateFilePath.Value() );
 	// Get arguments from this ArgList object for descriptional purposes.
 	MyString	s;
 	processArguments.GetArgsStringForDisplay( &s );
     dprintf( D_FULLDEBUG,
 			 "AbstractReplicatorStateMachine::download creating "
 			 "downloading condor_transferer process: \n \"%s\"\n",
-			 s.GetCStr( ) );
+			 s.Value( ) );
     // PRIV_USER_FINAL privilege is necessary here to create a user process,
     // after setting it to PRIV_UNKNOWN, the transferer process failed to
     // create when the pool was started with real uid of 'root'
@@ -346,7 +346,7 @@ AbstractReplicatorStateMachine::download( const char* daemonSinfulString )
 		return false;
 	}
 	int transfererPid = daemonCore->Create_Process(
-        executable.GetCStr( ),        // name
+        executable.Value( ),        // name
         processArguments,             // args
         privilege,                    // priv
         m_downloadReaperId,           // reaper id
@@ -386,16 +386,16 @@ AbstractReplicatorStateMachine::upload( const char* daemonSinfulString )
     MyString executable;
 
     executable.sprintf( "%s/condor_transferer",
-                                m_releaseDirectoryPath.GetCStr( ) );
+                                m_releaseDirectoryPath.Value( ) );
 
 	ArgList  processArguments;
-	processArguments.AppendArg( executable.GetCStr() );
+	processArguments.AppendArg( executable.Value() );
 	processArguments.AppendArg( "-f" );
 	processArguments.AppendArg( "up" );
 	processArguments.AppendArg( daemonSinfulString );
-	processArguments.AppendArg( m_versionFilePath.GetCStr() );
+	processArguments.AppendArg( m_versionFilePath.Value() );
 	processArguments.AppendArg( "1" );
-	processArguments.AppendArg( m_stateFilePath.GetCStr() );
+	processArguments.AppendArg( m_stateFilePath.Value() );
 
 	// Get arguments from this ArgList object for descriptional purposes.
 	MyString	s;
@@ -403,7 +403,7 @@ AbstractReplicatorStateMachine::upload( const char* daemonSinfulString )
     dprintf( D_FULLDEBUG,
 			 "AbstractReplicatorStateMachine::upload creating "
 			 "uploading condor_transferer process: \n \"%s\"\n",
-			 s.GetCStr( ) );
+			 s.Value( ) );
 
 	// PRIV_USER_FINAL privilege is necessary here to create a user process,
 	// after setting it to PRIV_UNKNOWN, the transferer process failed to
@@ -417,7 +417,7 @@ AbstractReplicatorStateMachine::upload( const char* daemonSinfulString )
     }
 
     int transfererPid = daemonCore->Create_Process(
-        executable.GetCStr( ),        // name
+        executable.Value( ),        // name
         processArguments,             // args
         privilege,                    // priv
         m_uploadReaperId,             // reaper id
@@ -502,7 +502,7 @@ AbstractReplicatorStateMachine::updateVersionsList( Version& newVersion )
     }
     dprintf( D_FULLDEBUG,
         "AbstractReplicatorStateMachine::updateVersionsList appending %s\n",
-         newVersion.toString( ).GetCStr( ) );
+         newVersion.toString( ).Value( ) );
     m_versionsList.Append( newVersion );
     m_versionsList.Rewind( );
 // End of TODO: Atomic operation
@@ -654,10 +654,10 @@ AbstractReplicatorStateMachine::killTransferers()
         extension += ".";
         extension += DOWNLOADING_TEMPORARY_FILES_EXTENSION;
 
-        FilesOperations::safeUnlinkFile( m_versionFilePath.GetCStr( ),
-                                         extension.GetCStr( ) );
-        FilesOperations::safeUnlinkFile( m_stateFilePath.GetCStr( ),
-                                         extension.GetCStr( ) );
+        FilesOperations::safeUnlinkFile( m_versionFilePath.Value( ),
+                                         extension.Value( ) );
+        FilesOperations::safeUnlinkFile( m_stateFilePath.Value( ),
+                                         extension.Value( ) );
 		m_downloadTransfererMetadata.set();
     }
 
@@ -684,10 +684,10 @@ AbstractReplicatorStateMachine::killTransferers()
             extension += ".";
             extension += UPLOADING_TEMPORARY_FILES_EXTENSION;
 
-            FilesOperations::safeUnlinkFile( m_versionFilePath.GetCStr( ),
-                                             extension.GetCStr( ) );
-            FilesOperations::safeUnlinkFile( m_stateFilePath.GetCStr( ),
-                                             extension.GetCStr( ) );
+            FilesOperations::safeUnlinkFile( m_versionFilePath.Value( ),
+                                             extension.Value( ) );
+            FilesOperations::safeUnlinkFile( m_stateFilePath.Value( ),
+                                             extension.Value( ) );
 			delete uploadTransfererMetadata;
 			// after deletion the iterator is moved to the previous member
 			// so advancing the iterator twice and missing one entry does not

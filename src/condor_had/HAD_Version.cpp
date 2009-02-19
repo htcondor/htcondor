@@ -39,7 +39,7 @@ createFile(const MyString& filePath)
 	StatWrapper statWrapper( filePath );
 	// if no state file found, create one
 	if ( statWrapper.GetRc( ) && statWrapper.GetErrno() == ENOENT) {
-   		ofstream file( filePath.GetCStr( ) );
+   		ofstream file( filePath.Value( ) );
     }
 }
 
@@ -97,13 +97,13 @@ Version::synchronize(bool isLogicalClockIncremented)
                     "before setting last mod. time:\n"
                     "last known mod. time - %sactual mod. time - %s"
                     "current time - %s",
-               m_stateFilePath.GetCStr( ),
+               m_stateFilePath.Value( ),
                //ctime_r( &m_lastModifiedTime, timeBuffer ),
                //ctime_r( &status->st_mtime, timeBuffer + BUFSIZ / 3 ),
                //ctime_r( &currentTime, timeBuffer + 2 * BUFSIZ / 3 ) );
-			   lastKnownModifiedTimeString.GetCStr( ),
-			   lastModifiedTimeString.GetCStr( ),
-			   currentTimeString.GetCStr( ) );
+			   lastKnownModifiedTimeString.Value( ),
+			   lastModifiedTimeString.Value( ),
+			   currentTimeString.Value( ) );
     // updating the version: by modification time of the underlying file
     // and incrementing the logical version number
     if( m_lastModifiedTime >= status->st_mtime ) {
@@ -134,7 +134,7 @@ Version::code( ReliSock& socket )
     dprintf( D_ALWAYS, "Version::code started\n" );
     socket.encode( );
 
-    char* temporarySinfulString = const_cast<char*>( m_sinfulString.GetCStr() );
+    char* temporarySinfulString = const_cast<char*>( m_sinfulString.Value() );
    	int isPrimaryAsInteger      = int( m_isPrimary );
    
     if( ! socket.code( m_gid )          /*|| ! socket.eom( )*/ ||
@@ -192,7 +192,7 @@ Version::decode( Stream* stream )
     m_sinfulString = temporarySinfulString;
 	m_isPrimary    = temporaryIsPrimary;
     dprintf( D_FULLDEBUG, "Version::decode remote version %s\n", 
-			 toString( ).GetCStr( ) );
+			 toString( ).Value( ) );
     free( temporarySinfulString );
 
     return true;
@@ -201,12 +201,12 @@ Version::decode( Stream* stream )
 MyString
 Version::getHostName( ) const
 {
-    char*     hostNameString = getHostFromAddr( m_sinfulString.GetCStr( ) );
+    char*     hostNameString = getHostFromAddr( m_sinfulString.Value( ) );
     MyString  hostName       = hostNameString;
 
     free( hostNameString );
     dprintf( D_FULLDEBUG, "Version::getHostName returned %s\n", 
-			 hostName.GetCStr( ) );
+			 hostName.Value( ) );
     return hostName;
 }
 
@@ -221,7 +221,7 @@ bool
 Version::operator > ( const Version& version ) const
 {
     dprintf( D_FULLDEBUG, "Version::operator > comparing %s vs. %s\n",
-               toString( ).GetCStr( ), version.toString( ).GetCStr( ) );
+               toString( ).Value( ), version.toString( ).Value( ) );
     
     if( getState( ) == REPLICATION_LEADER &&
         version.getState( ) != REPLICATION_LEADER ) {
@@ -265,20 +265,20 @@ bool
 Version::load( )
 {
     dprintf( D_ALWAYS, "Version::load of %s started\n", 
-			 m_versionFilePath.GetCStr( ) );
+			 m_versionFilePath.Value( ) );
 //    char     buffer[BUFSIZ];
-//    ifstream versionFile( m_versionFilePath.GetCStr( ) );
+//    ifstream versionFile( m_versionFilePath.Value( ) );
 //
 //    if( ! versionFile.is_open( ) ) {
 //        dprintf( D_FAILURE, "Version::load unable to open %s\n",
-//                 m_versionFilePath.GetCStr( ) );
+//                 m_versionFilePath.Value( ) );
 //        return false;
 //    }
     // read gid
 //    if( versionFile.eof( ) ) {
 //        dprintf( D_FAILURE, "Version::load %s format is corrupted, "
 //                            "nothing appears inside it\n", 
-//				 m_versionFilePath.GetCStr( ) );
+//				 m_versionFilePath.Value( ) );
 //        return false;
 //    }
 //    versionFile.getline( buffer, BUFSIZ );
@@ -290,7 +290,7 @@ Version::load( )
 //    if( versionFile.eof( ) ) {
 //        dprintf( D_FAILURE, "Version::load %s format is corrupted, "
 //                			"only gid appears inside it\n", 
-//				 m_versionFilePath.GetCStr( ) );
+//				 m_versionFilePath.Value( ) );
 //        return false;
 //    }
 //
@@ -315,18 +315,18 @@ bool
 Version::load( int& temporaryGid, int& temporaryLogicalClock ) const
 {
     char     buffer[BUFSIZ];
-    ifstream versionFile( m_versionFilePath.GetCStr( ) );
+    ifstream versionFile( m_versionFilePath.Value( ) );
 
     if( ! versionFile.is_open( ) ) {
         dprintf( D_FAILURE, "Version::load unable to open %s\n",
-                 m_versionFilePath.GetCStr( ) );
+                 m_versionFilePath.Value( ) );
         return false;
     }
     // read gid
     if( versionFile.eof( ) ) {
         dprintf( D_FAILURE, "Version::load %s format is corrupted, "
                             "nothing appears inside it\n",
-                 m_versionFilePath.GetCStr( ) );
+                 m_versionFilePath.Value( ) );
         return false;
     }
     versionFile.getline( buffer, BUFSIZ );
@@ -338,7 +338,7 @@ Version::load( int& temporaryGid, int& temporaryLogicalClock ) const
     if( versionFile.eof( ) ) {
         dprintf( D_FAILURE, "Version::load %s format is corrupted, "
                             "only gid appears inside it\n",
-                 m_versionFilePath.GetCStr( ) );
+                 m_versionFilePath.Value( ) );
         return false;
     }
     versionFile.getline( buffer, BUFSIZ );
@@ -358,7 +358,7 @@ Version::save( )
 {
     dprintf( D_ALWAYS, "Version::save started\n" );
 
-    ofstream versionFile( m_versionFilePath.GetCStr( ) );
+    ofstream versionFile( m_versionFilePath.Value( ) );
 
     versionFile << m_gid << endl << m_logicalClock;
     //versionFile.close( );
@@ -368,7 +368,7 @@ Version::save( )
 //    if ( statWrapper.GetRc( ) ) {
 //        EXCEPT("Version::synchronize cannot get %s status "
 //               "due to errno = %d", 
-//               m_versionFilePath.GetCStr( ), 
+//               m_versionFilePath.Value( ), 
 //				 statWrapper.GetErrno());
 //    }
 //    m_lastModifiedTime = statWrapper.GetBuf( )->st_mtime;
