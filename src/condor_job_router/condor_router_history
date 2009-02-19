@@ -35,11 +35,11 @@ class SiteSummary:
 def Usage():
 	msg = """
 USAGE: router_history [OPTIONS]
- --show_records
- --show_iwd
- --age=<days>
- --days=<days>
- --start="YYYY-MM-DD HH:MM"
+ --show_records             (show individual records in addition to summary)
+ --show_iwd                 (when showing records, include working directory)
+ --age=<days>               (how many days ago end time should be)
+ --days=<days>              (how many days report should cover)
+ --start="YYYY-MM-DD HH:MM" (date of start time of report)
 """
 	sys.stderr.write(msg)
 
@@ -150,7 +150,7 @@ for option,value in options:
 show_summary = not show_records
 
 if not start_timestamp:
-	start_timestamp = time.time() - report_period
+	start_timestamp = end_timestamp - report_period
 
 spool_dir = os.popen("condor_config_val SPOOL").read()
 spool_dir = string.strip(spool_dir)
