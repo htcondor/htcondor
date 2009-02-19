@@ -37,7 +37,7 @@ using namespace std;
 #endif
 
 
-#if (__GNUC__>=3) && (__GNUC_MINOR__ >= 4)
+#if ((__GNUC__==3) && (__GNUC_MINOR__ >= 4)) || (__GNUC__>3)
 #define DEREF_TYPEDEFS
 #endif
 
@@ -107,8 +107,8 @@ template CLASS map<const ClassAd*, References>;
 
 END_NAMESPACE
 template CLASS vector<string>;
-#include "transaction.h"
-#include "view.h"
+#include "classad/transaction.h"
+#include "classad/view.h"
 BEGIN_NAMESPACE(classad)
 
 // view content
