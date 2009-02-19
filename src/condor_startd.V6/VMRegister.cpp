@@ -166,9 +166,7 @@ VMRegister::requestHostClassAds(void)
 	ClassAd query_ad;
 	query_ad.SetMyTypeName(QUERY_ADTYPE);
 	query_ad.SetTargetTypeName(STARTD_ADTYPE);
-	MyString req = ATTR_REQUIREMENTS;
-	req += " = True";
-	query_ad.Insert(req.GetCStr());
+	query_ad.Assign(ATTR_REQUIREMENTS, true);
 
 	char *addr = m_vm_host_daemon->addr();
 	Daemon hstartd(DT_STARTD, addr);
@@ -247,7 +245,7 @@ VMRegister::requestHostClassAds(void)
 		attr += attr_name;
 
 		// Insert or Update an attribute to host_classAd in a VMRegister object
-		host_classad->AssignExpr(attr.GetCStr(), attr_val);
+		host_classad->AssignExpr(attr.Value(), attr_val);
 		delete(attr_val);
 	}
 }

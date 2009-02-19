@@ -63,7 +63,7 @@ Resource::Resource( CpuAttributes* cap, int rid, Resource* _parent )
 
 		// we need this before we instantiate the Reqexp object...
 	tmp.sprintf( "SLOT_TYPE_%d_PARTITIONABLE", type() );
-	if( param_boolean( tmp.GetCStr(), false ) ) {
+	if( param_boolean( tmp.Value(), false ) ) {
 		set_feature( PARTITIONABLE_SLOT );
 
 		m_id_dispenser = new IdDispenser( 3, 1 );

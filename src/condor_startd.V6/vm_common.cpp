@@ -296,11 +296,7 @@ _FindDaemon( char *host_name, daemon_t real_dt, Daemon *pool)
 				continue;
 			}
 
-			MyString attr = ATTR_NAME;
-			attr += "=\"";
-			attr += host_name;
-			attr += '"';
-			ad->Insert( attr.GetCStr() );
+			ad->Assign( ATTR_NAME, host_name);
 			d = new Daemon( ad, real_dt, pool_addr );
 			free( tmp );
 			tmp = NULL;

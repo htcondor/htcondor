@@ -1099,9 +1099,9 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		}
 
 		rip->dprintf( D_FULLDEBUG,
-					  "Match requesting resources: %s\n", type.GetCStr() );
+					  "Match requesting resources: %s\n", type.Value() );
 
-		type_list.initializeFromString( type.GetCStr() );
+		type_list.initializeFromString( type.Value() );
 		cpu_attrs = resmgr->buildSlot( rip->r_id, &type_list, -1, false );
 		if( ! cpu_attrs ) {
 			rip->dprintf( D_ALWAYS,

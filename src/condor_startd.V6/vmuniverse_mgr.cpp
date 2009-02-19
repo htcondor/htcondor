@@ -158,7 +158,7 @@ VMStarterInfo::addMACForVM(const char* mac)
 const char *
 VMStarterInfo::getMACForVM(void)
 {
-	return m_vm_mac.GetCStr();
+	return m_vm_mac.Value();
 }
 
 void
@@ -170,7 +170,7 @@ VMStarterInfo::addIPForVM(const char* ip)
 const char *
 VMStarterInfo::getIPForVM(void)
 {
-	return m_vm_ip.GetCStr();
+	return m_vm_ip.Value();
 }
 
 void 
@@ -612,7 +612,7 @@ VMUniverseMgr::canCreateVM(ClassAd *jobAd)
 	// is conflict with running VMs.
 	MyString string_value;
 	if( jobAd->LookupString(ATTR_VM_CKPT_MAC, string_value) == 1 ) {
-		if( findVMStarterInfoWithMac(string_value.GetCStr()) ) {
+		if( findVMStarterInfoWithMac(string_value.Value()) ) {
 			dprintf(D_ALWAYS, "MAC address[%s] for VM is already being used "
 					"by other VM\n", string_value.Value());
 			return false;
