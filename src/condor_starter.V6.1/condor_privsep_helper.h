@@ -100,6 +100,10 @@ private:
 	// the sandbox directory name
 	//
 	char* m_sandbox_path;
+
+	// true when the sandbox is owned by the user, not condor
+	//
+	bool m_sandbox_owned_by_user;
 };
 
 #endif

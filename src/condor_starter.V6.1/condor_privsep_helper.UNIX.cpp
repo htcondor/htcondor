@@ -31,7 +31,8 @@ CondorPrivSepHelper::CondorPrivSepHelper() :
 	m_user_initialized(false),
 	m_sandbox_initialized(false),
 	m_uid(0),
-	m_sandbox_path(NULL)
+	m_sandbox_path(NULL),
+	m_sandbox_owned_by_user(false)
 {
 	ASSERT(!s_instantiated);
 	s_instantiated = true;
@@ -86,6 +87,7 @@ CondorPrivSepHelper::initialize_sandbox(const char* path)
 
 	m_sandbox_path = strdup(path);
 	ASSERT(m_sandbox_path);
+	m_sandbox_owned_by_user = false;
 
 	m_sandbox_initialized = true;
 }
@@ -102,10 +104,19 @@ CondorPrivSepHelper::chown_sandbox_to_user()
 {
 	ASSERT(m_sandbox_initialized);
 
+	if (m_sandbox_owned_by_user) {
+		dprintf(D_FULLDEBUG,
+		        "CondorPrivSepHelper::chown_sandbox_to_user: "
+		        	"sandbox already user-owned\n");
+		return;
+	}
+
 	dprintf(D_FULLDEBUG, "changing sandbox ownership to the user\n");
 	if (!privsep_chown_dir(m_uid, get_condor_uid(), m_sandbox_path)) {
 		EXCEPT("error changing sandbox ownership to the user");
 	}
+
+	m_sandbox_owned_by_user = true;
 }
 
 void
@@ -113,10 +124,19 @@ CondorPrivSepHelper::chown_sandbox_to_condor()
 {
 	ASSERT(m_sandbox_initialized);
 
+	if (!m_sandbox_owned_by_user) {
+		dprintf(D_FULLDEBUG,
+		        "CondorPrivSepHelper::chown_sandbox_to_condor: "
+		        	"sandbox already condor-owned\n");
+		return;
+	}
+
 	dprintf(D_FULLDEBUG, "changing sandbox ownership to condor\n");
 	if (!privsep_chown_dir(get_condor_uid(), m_uid, m_sandbox_path)) {
 		EXCEPT("error changing sandbox ownership to condor");
 	}
+
+	m_sandbox_owned_by_user = false;
 }
 
 int
