@@ -3410,6 +3410,16 @@ Configuring The Startd Policy.
   This macro is described in section~\ref{param:SubsysAddressFile} as
   \MacroNI{<SUBSYS>\_ADDRESS\_FILE} 
 
+\label{param:StartdSendsAlives}
+\item[\Macro{STARTD\_SENDS\_ALIVES}]
+  A boolean value that defaults to \Expr{False},
+  such that the \Condor{schedd} daemon sends keep alive signals
+  to the \Condor{startd} daemon.
+  When \Expr{True}, the \Condor{startd} daemon sends keep alive signals
+  to the \Condor{schedd} daemon, reversing the direction.
+  This may be useful if the \Condor{startd} daemon is on a private
+  network or behind a firewall.
+
 \label{param:StartdShouldWriteClaimIdFile}
 \item[\Macro{STARTD\_SHOULD\_WRITE\_CLAIM\_ID\_FILE}]
   The \Condor{startd} can be configured
@@ -5075,6 +5085,12 @@ SYSTEM_PERIODIC_REMOVE = \
   best-fit algorithm. Using the best-fit algorithm is not recommended,
   as it can cause starvation.
 
+\label{param:ScheddSendVacateViaTcp}
+\item[\Macro{SCHEDD\_SEND\_VACATE\_VIA\_TCP}]
+  A boolean value that defaults to \Expr{False}.
+  When \Expr{True}, the \Condor{schedd} daemon sends vacate signals via TCP,
+  instead of the default UDP.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -6697,11 +6713,118 @@ Configuration File Entries}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{configuration!condor\_job\_router configuration variables}
-These macros affect the \Condor{job\_router}.
+These macros affect the \Condor{job\_router} daemon.
 
-\Todo
-%\begin{description}
-%\end{description}
+\begin{description}
+
+\label{param:JobRouterDefaults}
+\item[\Macro{JOB\_ROUTER\_DEFAULTS}]
+  This is a single New ClassAd that is used to provide default values
+  for all routes in the \Condor{job\_router} daemon's routing table.
+  The meaning of the
+  attributes in this ad is identical to the attributes of
+  \MacroNI{JOB\_ROUTER\_ENTRIES}.  If a route ClassAd sets an
+  attribute by the same name, this overrides the attribute from the
+  defaults.
+
+\label{param:JobRouterEntries}
+\item[\Macro{JOB\_ROUTER\_ENTRIES}]
+  This specifies the job routing table.  It is a list of New ClassAds,
+  each surrounded by square brackets and separated from each other by spaces.
+  Each entry in the routing table describes a site that jobs may be
+  routed to.
+
+  \Condor{reconfig} will cause the \Condor{job\_router} daemon
+  to rebuild the routing table.
+  If this changes the name of a route,
+  then the count of currently routed jobs on that route
+  will not be accurate until the existing jobs finish.  Another option
+  to achieve dynamic routing is to read the routing table from an
+  external source using the \MacroNI{JOB\_ROUTER\_ENTRIES\_FILE} or
+  the \MacroNI{JOB\_ROUTER\_ENTRIES\_CMD} configuration variable.
+
+
+\label{param:JobRouterEntriesFile}
+\item[\Macro{JOB\_ROUTER\_ENTRIES\_FILE}]
+  Specifies a file that contains the ClassAds describing the
+  routing table.  The format of this file is the same as
+  \MacroNI{JOB\_ROUTER\_ENTRIES}, except that it is interpreted directly
+  by the ClassAd parser, rather than first by the Condor configuration
+  system.  The biggest difference therefore is that you do not need to
+  use line continuation characters.  The specified
+  file is periodically reread to check for new information.  This
+  occurs every \MacroUNI{JOB\_ROUTER\_ENTRIES\_REFRESH} seconds.
+
+\label{param:JobRouterEntriesCmd}
+\item[\Macro{JOB\_ROUTER\_ENTRIES\_CMD}]
+  Specifies the command line of an external program
+  to run.  The output of the program should be ClassAds
+  describing the routing table.  The format of this file is the same as
+  \MacroNI{JOB\_ROUTER\_ENTRIES}, except that it is interpreted directly
+  by the ClassAd parser, rather than first by the Condor configuration
+  system.  The biggest difference therefore is that you do not need to
+  use line continuations (backslashes before newlines).  The specified
+  command is periodically rerun to check for new information.  This
+  happens every \MacroUNI{JOB\_ROUTER\_ENTRIES\_REFRESH} seconds.
+  To enter spaces in any arguments or in the command name itself,
+  surround the right hand side of the definition with double quotes and use
+  single quotes around individual arguments that contain spaces, just
+  like when dealing with spaces in job arguments in a Condor submit
+  file.  For an example of \MacroNI{JOB\_ROUTER\_ENTRIES\_CMD}, see
+  page~\pageref{JobRouterReSSExample}.
+
+\label{param:JobRouterEntriesRefresh}
+\item[\Macro{JOB\_ROUTER\_ENTRIES\_REFRESH}]
+  Specifies the number of
+  seconds between checks for updates to the routing table described by
+  \MacroNI{JOB\_ROUTER\_ENTRIES\_FILE} or
+  \MacroNI{JOB\_ROUTER\_ENTRIES\_CMD}.
+  The default value is 0, meaning updates will only be read
+  whenever \Condor{reconfig} is run or when the \Condor{job\_router} restarts.
+
+\label{JobRouterSourceJobConstraint}
+\item[\Macro{JOB\_ROUTER\_SOURCE\_JOB\_CONSTRAINT}]
+  Specifies global
+  requirements that must be met by all routed jobs in addition to
+  requirements specified within the routing table.
+
+\label{JobRouterMaxJobs}
+\item[\Macro{JOB\_ROUTER\_MAX\_JOBS}]
+  An integer value representing the maximum number of jobs that may be routed,
+  summed over all routes.
+  The default value is -1, which means an unlimited number of jobs
+  may be routed.
+
+\label{MaxJobMirrorUpdateLag}
+\item[\Macro{MAX\_JOB\_MIRROR\_UPDATE\_LAG}]
+  An integer value representing the maximum number of
+  seconds the \Condor{job\_router} daemon should wait
+  before giving up when waiting to see
+  routed jobs appear in the \Condor{schedd}'s job queue log file.
+  The default value is 600.
+  It is unlikely that this value will need to be adjusted.
+
+\label{JobRouterPollingPeriod}
+\item[\Macro{JOB\_ROUTER\_POLLING\_PERIOD}]
+  An integer value representing the number of seconds
+  between cycles in the \Condor{job\_router} daemon's task loop.
+  The default is 10 seconds.
+  A small value makes the \Condor{job\_router} daemon 
+  quick to see new candidate jobs for routing.
+  A large value makes the \Condor{job\_router} daemon generate less
+  overhead at the cost of being slower to see new candidates for routing.
+  For very large job queues where a few minutes of
+  routing latency is no problem, increasing this value to a few
+  hundred seconds would be reasonable.
+
+\label{JobRouterName}
+\item[\Macro{JOB\_ROUTER\_NAME}]
+  Names multiple instances of the \Condor{job\_router} daemon for the same
+  instance of Condor on a given machine.  Each one must have a different
+  name, or all but the first to start up will refuse to run.
+
+\end{description}
+
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

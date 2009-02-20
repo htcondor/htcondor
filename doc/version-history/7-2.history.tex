@@ -85,9 +85,8 @@ the submittor's environment imported with \Opt{getenv = true}.
 
 \begin{itemize}
 
-\item This release addresses the reported 7.2.0 problems with the
-Windows Condor distribution.  Please the ``Bugs Fixed'' section bellow
-for further details.
+\item This release addresses reported 7.2.0 problems with the
+Windows distribution.
 
 \end{itemize}
 
@@ -98,11 +97,9 @@ for further details.
 
 \item Condor now has a clipped port to i386 Debian 5.0 (Lenny).
 
-\item Added Standard Universe support for gfortran.
+\item Added standard universe support for \Prog{gfortran}.
 
-\item Added support for '*' to match all leases for many operations.
-
-\item Added support for standard out and standard error to be greater
+\item Added support for standard output and standard error to be greater
 than 2 Gigabytes.
 
 \end{itemize}
@@ -133,7 +130,7 @@ directory when a DAG is submitted.  See \ref{param:DAGManCopyToSpool}
 for details.
 
 % PR 964
-\item Added \Opt{-version} and \Opt{-help} flags to
+\item Added \Opt{-version} and \Opt{-help} command line options to
 \Condor{submit\_dag}.
 
 \end{itemize}
@@ -142,12 +139,15 @@ for details.
 
 \begin{itemize}
 
-\item Fixed a bug in \Condor{chirp} which was causing it to crash on
-invocation.
+\item Fixed a bug in the \Condor{collector} which could cause it
+to hang indefinitely while reading network input in rare conditions.
 
-\item Fixed a Windows platform bug in the \Condor{mail} program, which
-was causing it to become unresponsive when run.  If left running, the
-application also increases its memory consumption.
+\item Fixed a bug in \Condor{chirp} for Windows which was causing it
+to crash on invocation.
+
+\item Fixed a bug in the Windows \Condor{mail} program, which was causing
+it to become unresponsive when run.  If left running, the application also
+increased its memory consumption.
 
 \item Fixed a bug that could cause the \Condor{schedd} to never
 evaluate periodic expressions.
@@ -159,9 +159,8 @@ default for Sun Java JVMs is \Opt{-Xmx1024m}.
 
 \item Fixed a bug on Unix platforms where \Condor{configure} would
 imply that using the Unix user \Login{root} or UID 0 for the
-\Opt{--owner} option is a good thing--it is not, and then complain
-that it could not find user \Login{root} in the password file in this
-circumstance.
+\Opt{--owner} option is a good thing.  It is not, and would then complain
+that it could not find user \Login{root} in the password file.
 
 \item Fixed a bug on Unix platforms where \Condor{configure} would
 emit errors about not being able to execute \Prog{ldd} when installing
@@ -174,55 +173,55 @@ Condor binaries on the Mac OS X 10.5 platform.
 \SubmitCmd{run\_as\_owner} set.  This condition persisted until the
 execute-side daemons were either restarted or reconfigured.
 
-\item Fixed a problem affecting JobRouter and Condor-C.  When jobs are
-spooling input files, they enter a temporary hold state, which could
+\item Fixed a problem affecting the Job Router and Condor-C.  When jobs
+spool input files, they enter a temporary hold state, which could
 trigger actions by a naive periodic remove or release expression.
 Periodic expressions are no longer evaluated when in this temporary
-hold state, which has the hold reason \"Spooling input data files\".
+hold state, which has the hold reason \AdStr{Spooling input data files}.
 
-\item The example init script condor.boot.generic erroneously claimed
+\item The example init script \Prog{condor.boot.generic} erroneously claimed
 that the \Condor{master} would begin sending SIGKILL to child
-processes after 20 seconds if SIGQUIT (``fast shutdown'') failed.  The
-\Condor{master} will actually wait \MacroNI{SHUTDOWN\_FAST\_TIMEOUT}
+processes after 20 seconds if SIGQUIT (the fast shutdown) failed.  The
+\Condor{master} will actually wait \MacroUNI{SHUTDOWN\_FAST\_TIMEOUT}
 seconds, a value that currently defaults to 300 seconds.
 
 \item Environment variable names are now properly treated as
 case-insensitive on Windows. The most common symptom of this bug was
-the inability to specify a custom PATH setting for a job from its
-submit file.
+the inability to specify a custom \Env{PATH} environment variable
+for a job from its submit description file.
 
-\item Changed \Condor{submit} \Opt{-debug} to warn when ignoring
-environment variables (when \SubmitCmd{get\_env = true})
+\item Changed \Condor{submit} \Opt{-debug} to issue a warning when ignoring
+environment variables. This occurs with \SubmitCmd{getenv = True} set
+in a submit description file.
 
-\item Fixed a long-standing memory leak in SOAP interface.  The result
-was a few hundred bytes of memory would be leaked for each
-connection. This could eventually cause the
+\item Fixed a long-standing memory leak in SOAP interface.
+This caused the leak of a few hundred bytes of memory for each connection.
+This could eventually have caused the \Condor{schedd} daemon to crash.
 
 \item Fixed Job Router hooks so that their output is properly
 propagated where appropriate.
 
 \item Implemented a fix for the \Condor{startd} that prevents it from
-crashing if the user specified a \MacroNI{NUM\_SLOTS\_TYPE\_N} without
-specifying a \MacroNI{SLOT\_TYPE\_N}.
+crashing if the user specified the configuration variable
+\MacroNI{NUM\_SLOTS\_TYPE\_N}, without also specifying \MacroNI{SLOT\_TYPE\_N}.
 
 \item The sample configuration files now correctly set the default
-universe to Vanilla Universe.  This default has been true since 7.2.0,
+universe to vanilla.  This default has been true since 7.2.0,
 but was not reflected in the sample configuration files.
 
-\item Fixed default \Attr{RequestMemory}: changed \Attr{ImageSize} to
-\Attr{ceiling(ImageSize/1024.0)}. The \Attr{RequestMemory} units are
-MiB, it is compared directly to a slot's Memory attribute which is
-MiB. The \Attr{ImageSize} is in KiB. The old code was broken such that
-a 22KiB \Attr{ImageSize} would use up 22MiB on a slot. Not so bad, but
-if the \Attr{ImageSize} (calculate initially from executable size)
-were say 20MiB it would mean a request for 20GiB of slot \Attr{Memory}
-resulting in a failure.
+\item Fixed a bug that incorrectly set the value of the
+job ClassAd attribute \Attr{RequestMemory} to be 1024 times its
+correct size due to a mismatch in units;
+the attribute \Attr{RequestMemory} is given in Mbytes, while
+the attribute \Attr{ImageSize} is given in Kbytes.
 
 \item Fixed a memory leak in \Condor{dagman} that leaked a small
 amount of memory for each job submitted.
 
 \item Fixed a bug that was causing the network mask to be advertised
-as a Condor ``sinful string'' rather than a dotted-quad.
+as a Condor sinful string, rather than a dotted-quad.
+
+\item Fixed a handle leak in the \Condor{procd} on Windows.
 
 \end{itemize}
 
@@ -238,9 +237,11 @@ as a Condor ``sinful string'' rather than a dotted-quad.
 
 \begin{itemize}
 
-\item A FAQ entry for Windows has been added describing how machines
+\item Added a FAQ entry for Windows describing how machines
 with miss-configured performance counters may cause the \Condor{procd}
 to crash.
+
+\item Added a manual page for the command \Condor{router\_history}.
 
 \end{itemize}
 
