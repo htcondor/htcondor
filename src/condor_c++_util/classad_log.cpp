@@ -585,7 +585,7 @@ ClassAdLog::LogState(FILE *fp)
 	ExprTree	*expr=NULL;
 	HashKey		hashval;
 	MyString	key;
-	char		*attr_name = NULL;
+	const char	*attr_name = NULL;
 	char		*attr_val;
 
 	// This must always be the first entry in the log.
@@ -608,7 +608,7 @@ ClassAdLog::LogState(FILE *fp)
 			// not all the exprs in the chained ad as well.
 		ChainedPair chain = ad->unchain();
 		ad->ResetName();
-		attr_name = ad->NextName();
+		attr_name = ad->NextNameOriginal();
 		while (attr_name) {
 			attr_val = NULL;
 			expr = ad->Lookup(attr_name);
@@ -622,8 +622,7 @@ ClassAdLog::LogState(FILE *fp)
 				free(attr_val);
 				delete log;
 			}
-			delete [] attr_name;
-			attr_name = ad->NextName();
+			attr_name = ad->NextNameOriginal();
 		}
 			// ok, now that we're done writing out this ad, restore the chain
 		ad->RestoreChain(chain);
