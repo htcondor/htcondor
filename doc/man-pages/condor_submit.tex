@@ -242,6 +242,11 @@ two=2
 three="quotes have no 'special' meaning"
 \end{verbatim}
 
+If the environment is set with the \Opt{environment} command \emph{and}
+\Opt{getenv} is also set to true, values specified with
+\Opt{environment} override values in the submittor's environment
+(regardless of the order of the \Opt{environment} and \Opt{getenv}
+commands).
 
 
 %%%%%%%%%%%%%%%%%%%
@@ -305,6 +310,12 @@ variables that the user had at submit time. Defaults to \Expr{False}.
 %If your environment is larger than that, Condor will not allow you to
 %submit your job, and you will have to use the ``Environment'' setting
 %described below, instead.
+
+If the environment is set with the \Opt{environment} command \emph{and}
+\Opt{getenv} is also set to true, values specified with
+\Opt{environment} override values in the submittor's environment
+(regardless of the order of the \Opt{environment} and \Opt{getenv}
+commands).
 
 
 %%%%%%%%%%%%%%%%%%%
@@ -1441,8 +1452,9 @@ there are further type-specific values that must specified.
 This submit description file command allows each to
 be given in a space-separated list.
 Allowable \SubmitCmd{grid-type-string} values are
-\SubmitCmd{gt2}, \SubmitCmd{gt4},
-\SubmitCmd{condor}, \SubmitCmd{nordugrid}, and \SubmitCmd{unicore}.
+\SubmitCmd{amazon}, \SubmitCmd{gt2}, \SubmitCmd{gt4}, \SubmitCmd{condor}, 
+\SubmitCmd{lsf}, \SubmitCmd{nordugrid}, \SubmitCmd{pbs},
+and \SubmitCmd{unicore}.
 See section~\ref{sec:GridUniverse} for details on the variety of 
 grid types.
 

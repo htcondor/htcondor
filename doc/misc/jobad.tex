@@ -78,7 +78,7 @@ due to this job.
 %%% ClassAd attribute: DiskUsage
 \index{ClassAd job attribute!DiskUsage}
 \index{DiskUsage!job ClassAd attribute}
-\item[\AdAttr{DiskUsage}:] Amount of disk space (kbytes) in the Condor
+\item[\AdAttr{DiskUsage}:] Amount of disk space (Kbytes) in the Condor
 execute directory on the execute machine that this job has used.
 The initial estimate may be specified in the job
 submit file.
@@ -149,6 +149,14 @@ Instead, see the attributes: \AdAttr{ExitBySignal},
 \index{GridJobStatus!job ClassAd attribute}
 \item[\AdAttr{GridJobStatus}:] A string containing the job's status as
 reported by the remote job management system.
+
+%%% ClassAd attribute: GridResource
+\index{ClassAd job attribute!GridResource}
+\index{GridResource!job ClassAd attribute}
+\item[\AdAttr{GridResource}:] A string defined by the right hand side
+of the the submit description file command \SubmitCmd{grid\_resource}.
+It specifies the target grid type, plus additional parameters
+specific to the grid type.
 
 %%% ClassAd attribute: HoldKillSig
 \index{ClassAd job attribute!HoldKillSig}
@@ -599,7 +607,7 @@ If \Expr{True}, and \Attr{TransferErr} is \Expr{True}, then
 standard error is streamed back to the submit machine, instead
 of doing the transfer (as a whole) after the job completes.
 If \Expr{False}, then
-standard error is transfered back to the submit machine
+standard error is transferred back to the submit machine
 (as a whole) after the job completes.
 If \Attr{TransferErr} is \Expr{False}, then this job attribute is ignored.
 
