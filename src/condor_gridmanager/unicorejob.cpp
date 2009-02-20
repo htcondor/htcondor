@@ -762,7 +762,7 @@ void UnicoreJob::UpdateUnicoreState( ClassAd *update_ad )
 	}
 
 	update_ad->ResetName();
-	while ( ( next_attr_name = update_ad->NextName() ) != NULL ) {
+	while ( ( next_attr_name = update_ad->NextNameOriginal() ) != NULL ) {
 		if ( strcasecmp( next_attr_name, ATTR_MY_TYPE ) == 0 ||
 			 strcasecmp( next_attr_name, ATTR_TARGET_TYPE ) == 0 ||
 			 strcasecmp( next_attr_name, "UnicoreJobId" ) == 0 ) {
