@@ -1745,7 +1745,7 @@ compareString( const char*name, const ArgumentList &argList, EvalState &state,
 
         int  order;
         
-        if (strcmp(name, "strcmp") == 0) {
+        if (strcasecmp(name, "strcmp") == 0) {
             order = strcmp(s0.c_str(), s1.c_str());
             if (order < 0) order = -1;
             else if (order > 0) order = 1;
