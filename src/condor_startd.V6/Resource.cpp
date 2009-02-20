@@ -1340,7 +1340,7 @@ Resource::claimWorklifeExpired()
 		int ClaimWorklife = 0;
 
 		//look up the maximum retirement time specified by the startd
-		if(!r_classad->LookupElem("CLAIM_WORKLIFE") ||
+		if(!r_classad->Lookup("CLAIM_WORKLIFE") ||
 		   !r_classad->EvalInteger(
 				  "CLAIM_WORKLIFE",
 		          NULL,
@@ -1370,7 +1370,7 @@ Resource::retirementExpired()
 
 	if (r_cur && r_cur->isActive() && r_cur->ad()) {
 		//look up the maximum retirement time specified by the startd
-		if(!r_classad->LookupElem(ATTR_MAX_JOB_RETIREMENT_TIME) ||
+		if(!r_classad->Lookup(ATTR_MAX_JOB_RETIREMENT_TIME) ||
 		   !r_classad->EvalInteger(
 		          ATTR_MAX_JOB_RETIREMENT_TIME,
 		          r_cur->ad(),
@@ -1383,7 +1383,7 @@ Resource::retirementExpired()
 			MaxJobRetirementTime = INT_MAX;
 		}
 		//look up the maximum retirement time specified by the job
-		if(r_cur->ad()->LookupElem(ATTR_MAX_JOB_RETIREMENT_TIME) &&
+		if(r_cur->ad()->Lookup(ATTR_MAX_JOB_RETIREMENT_TIME) &&
 		   r_cur->ad()->EvalInteger(
 		          ATTR_MAX_JOB_RETIREMENT_TIME,
 		          r_classad,
