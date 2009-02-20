@@ -48,17 +48,20 @@ in CCB at the moment that prevents it from replacing GCB,
 is support for connectivity from one private network to another.
 CCB only works
 when connecting from a public network to a private one.  For example,
-jobs may be sent from a \Condor{schedd} on the public internet to 
+jobs may be sent from a \Condor{schedd} on the public Internet to 
 \Condor{startd} daemons on a
 private network, if the \Condor{startd} daemons are configured
 to use a CCB server that is accessible to the \Condor{schedd} daemon.
 However, if the \Condor{schedd} daemon is on one private
 network and the \Condor{startd} daemons are on a different private network,
 CCB does not help.  For more information on CCB, see page~\pageref{sec:CCB}.
+Note that this release is incompatible when communicating with previous
+versions of Condor if CCB is enabled or if
+\Macro{PRIVATE\_NETWORK\_NAME} is configured.
 
-\item Added support for CPU affinity on Linux.
+\item Added support for a CPU affinity on Linux platforms.
 
-\item Added support for \Condor{q}'s \Opt{-better-analyze} on Windows.
+\item Added support for the \Condor{q} \Opt{-better-analyze} option on Windows.
 
 \item Added \MacroNI{WANT\_HOLD}.  When \MacroNI{PREEMPT} becomes
 true, if \MacroNI{WANT\_HOLD} is true, the job is put on hold for the
@@ -71,19 +74,22 @@ expressions to react to specific hold states automatically.
 \item Added the ClassAd function \Procedure{debug}.
 See section~ \ref{sec:classadFunctions} for the details of this function.
 
-\item Log messages have been made more clear.
+% Commented out by Karen, as this is useless to a user taking the
+% time to read a version history. More info is needed. 
+%\item Log messages have been made more clear.
 % Includes: Give a clear warning instead of a terse error, when lacking a COLLECTOR.
 
-\item The \Condor{schedd} can now use MD5 checksums to avoid storing
+\item The \Condor{schedd} can now use MD5 check sums to avoid storing
 multiple copies of the same executable in its \Macro{SPOOL} directory.
 Note that this feature only affects executables sent to the
-\Condor{schedd} via the \SubmitCmd{copy\_to\_spool} submit macro.
+\Condor{schedd} via the \SubmitCmd{copy\_to\_spool} command within
+a submit description file.
 
 % gittrac #197
 \item Reduced the number of sleeps \Condor{dagman} does to maintain log
 file consistency when a DAG uses multiple user logs for node jobs.
-(DAGMan now does one sleep per submit cycle instead of one sleep for
-each submit.)
+DAGMan now does one sleep per submit cycle,
+instead of one sleep for each submit.
 
 % gittrac #166, #208
 \item Added the \Opt{-import\_env} command-line flag to
@@ -96,17 +102,19 @@ into the \File{.condor.sub} file.
 
 \begin{itemize}
 
-\item \MacroNI{OPEN\_VERB\_FOR\_<EXT>\_FILES} has been added to allow
-the default interpreter for scripts with an extension \textit{EXT} to
+\item The new configuration variable \Macro{OPEN\_VERB\_FOR\_<EXT>\_FILES}
+allows the default interpreter for scripts with an extension \textit{EXT} to
 be changed.  For more information please see
 section~\ref{sec:windows-scripts-as-executables} on
 page~\pageref{sec:windows-scripts-as-executables}.
 
-\item \MacroNI{CCB\_ADDRESS} configures a daemon to use one or more
+\item The new configuration variable \Macro{CCB\_ADDRESS}
+configures a daemon to use one or more
 CCB servers to allow communication with Condor components outside of
 the private network.  See page~\pageref{sec:CCB}.
 
-\item \MacroNI{MAX\_FILE\_DESCRIPTORS} (UNIX only) specifies the
+\item The new configuration variable \Macro{MAX\_FILE\_DESCRIPTORS}
+(on Unix platforms only) specifies the
 required file descriptor limit for a Condor daemon.  File descriptors
 are a system resource used for open files and for network connections.
 Condor daemons that make many simultaneous network connections may
@@ -115,8 +123,8 @@ page~\pageref{sec:CCB} for information on file descriptor requirements
 of CCB.
 
 \item The new configuration variables \Macro{ENFORCE\_CPU\_AFFINITY} and 
-\Macro{SLOTx\_CPU\_AFFINITY} have been added on Linux to allow for
-condor to lock slots to given CPUs.
+\Macro{SLOTx\_CPU\_AFFINITY} on Linux platforms allow for
+Condor to lock slots to given CPUs.
 
 \item The new configuration variable \Macro{DEBUG\_TIME\_FORMAT}
   allows a custom specification for the format of the time
@@ -125,9 +133,9 @@ condor to lock slots to given CPUs.
   this variable.
 
 \item The new configuration variable \Macro{SHARE\_SPOOLED\_EXECUTABLES}
-  is a boolean value that determines whether the \Condor{schedd} will
-  use MD5 checksums to avoid storing multiple copies of the same
-  executable in the \Macro{SPOOL} directory. The default setting is
+  is a boolean value that determines whether the \Condor{schedd} daemon will
+  use MD5 check sums to avoid storing multiple copies of the same
+  executable in the \MacroNI{SPOOL} directory. The default setting is
   \Expr{True}.
 
 \end{itemize}
@@ -136,9 +144,7 @@ condor to lock slots to given CPUs.
 
 \begin{itemize}
 
-\item This release is incompatible when communicating with previous
-versions of Condor if the new CCB feature is enabled or if
-\Macro{PRIVATE\_NETWORK\_NAME} is configured.
+\item None.
 
 \end{itemize}
 
