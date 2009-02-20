@@ -300,7 +300,7 @@ EvalString( const char *name, class ClassAd *target, char *value )
 int ClassAd::
 EvalInteger (const char *name, class ClassAd *target, int &value)
 {
-	if( strcmp( name, "CurrentTime" ) == 0 ) {
+	if( strcasecmp( name, "CurrentTime" ) == 0 ) {
 		time_t	now = time (NULL);
 		if (now == (time_t) -1) {
 			return 0;
