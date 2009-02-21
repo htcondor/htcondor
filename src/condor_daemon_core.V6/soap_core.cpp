@@ -67,13 +67,13 @@ init_soap(struct soap *soap)
 #ifdef COMPILE_SOAP_SSL
 	bool enable_soap_ssl = param_boolean("ENABLE_SOAP_SSL", false);
 	bool subsys_enable_soap_ssl =
-		param_boolean((subsys + "_ENABLE_SOAP_SSL").GetCStr(), false);
+		param_boolean((subsys + "_ENABLE_SOAP_SSL").Value(), false);
 	if (subsys_enable_soap_ssl ||
 		(enable_soap_ssl &&
-		 (!(NULL != param((subsys + "_ENABLE_SOAP_SSL").GetCStr())) ||
+		 (!(NULL != param((subsys + "_ENABLE_SOAP_SSL").Value())) ||
 		  subsys_enable_soap_ssl))) {
 		int ssl_port =
-			param_integer((subsys + "_SOAP_SSL_PORT").GetCStr(), 0);
+			param_integer((subsys + "_SOAP_SSL_PORT").Value(), 0);
 
  		if (ssl_port >= 0) {
 			dprintf(D_FULLDEBUG,
@@ -82,7 +82,7 @@ init_soap(struct soap *soap)
 
 			char *server_keyfile;
 			if (!(server_keyfile =
-				  param((subsys + "_SOAP_SSL_SERVER_KEYFILE").GetCStr())) &&
+				  param((subsys + "_SOAP_SSL_SERVER_KEYFILE").Value())) &&
 				!(server_keyfile = param("SOAP_SSL_SERVER_KEYFILE"))) {
 				EXCEPT("DaemonCore: Must define [SUBSYS_]SOAP_SSL_SERVER_KEYFILE "
 					   "with [SUBSYS_]ENABLE_SOAP_SSL");
@@ -98,7 +98,7 @@ init_soap(struct soap *soap)
 			bool freePassword = true;
 			char *server_keyfile_password;
 			if (!(server_keyfile_password =
-				  param((subsys + "_SOAP_SSL_SERVER_KEYFILE_PASSWORD").GetCStr())) &&
+				  param((subsys + "_SOAP_SSL_SERVER_KEYFILE_PASSWORD").Value())) &&
 				!(server_keyfile_password =
 				  param("SOAP_SSL_SERVER_KEYFILE_PASSWORD")))
 			if (NULL == server_keyfile_password) {
@@ -107,12 +107,12 @@ init_soap(struct soap *soap)
 			}
 
 			char *ca_file;
-			if (!(ca_file = param((subsys + "_SOAP_SSL_CA_FILE").GetCStr()))) {
+			if (!(ca_file = param((subsys + "_SOAP_SSL_CA_FILE").Value()))) {
 				ca_file = param("SOAP_SSL_CA_FILE");
 			}
 
 			char *ca_path;
-			if (!(ca_path = param((subsys + "_SOAP_SSL_CA_DIR").GetCStr()))) {
+			if (!(ca_path = param((subsys + "_SOAP_SSL_CA_DIR").Value()))) {
 				ca_path = param("SOAP_SSL_CA_DIR");
 			}
 
@@ -124,7 +124,7 @@ init_soap(struct soap *soap)
 			}
 
 			char *dh_file;
-			if (!(dh_file = param((subsys + "_SOAP_SSL_DH_FILE").GetCStr()))) {
+			if (!(dh_file = param((subsys + "_SOAP_SSL_DH_FILE").Value()))) {
 				dh_file = param("SOAP_SSL_DH_FILE");
 			}
 
@@ -426,9 +426,9 @@ handle_soap_ssl_socket(Service *, Stream *stream)
 
 	dprintf(D_FULLDEBUG,
 			"SOAP SSL connection subject mapped to '%s'\n",
-			canonical_user.GetCStr());
+			canonical_user.Value());
 
-	if (!daemonCore->Verify("SOAP SSL",SOAP_PERM, &sockaddr, canonical_user.GetCStr())) {
+	if (!daemonCore->Verify("SOAP SSL",SOAP_PERM, &sockaddr, canonical_user.Value())) {
 
 		soap_done(current_soap);
 		free(current_soap);
@@ -436,7 +436,7 @@ handle_soap_ssl_socket(Service *, Stream *stream)
 		return KEEP_STREAM;
 	}
 
-	current_soap->user = soap_strdup(current_soap, canonical_user.GetCStr());
+	current_soap->user = soap_strdup(current_soap, canonical_user.Value());
 	soap_serve(current_soap);	// process RPC request
 	soap_destroy(current_soap);	// clean up class instances
 	soap_end(current_soap);	// clean up everything and close socket

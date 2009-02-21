@@ -85,7 +85,7 @@ DBMSManager::InitPublicAd() {
 	m_public_ad.SetTargetTypeName( "" );
 
 	m_public_ad.Assign(ATTR_MACHINE,my_full_hostname());
-	m_public_ad.Assign(ATTR_NAME,m_name.GetCStr());
+	m_public_ad.Assign(ATTR_NAME,m_name.Value());
 
 	config_fill_ad( &m_public_ad );
 }
@@ -198,7 +198,7 @@ DBMSManager::InvalidatePublicAd() {
     query_ad.SetTargetTypeName(DBMSD_ADTYPE);
 
     MyString line;
-    line.sprintf("%s = %s == \"%s\"", ATTR_REQUIREMENTS, ATTR_NAME, m_name.GetCStr());
+    line.sprintf("%s = %s == \"%s\"", ATTR_REQUIREMENTS, ATTR_NAME, m_name.Value());
     query_ad.Insert(line.Value());
 
     m_collectors->sendUpdates(INVALIDATE_ADS_GENERIC, &query_ad, NULL, true);

@@ -265,8 +265,8 @@ AmazonVMKeypairNames::gsoapRequest(void)
 		return false;
 	}
 
-	if( !check_access_and_secret_key_file(accesskeyfile.GetCStr(),
-				secretkeyfile.GetCStr(), m_error_msg) ) {
+	if( !check_access_and_secret_key_file(accesskeyfile.Value(),
+				secretkeyfile.Value(), m_error_msg) ) {
 		dprintf(D_ALWAYS, "AmazonVMKeypairNames Error: %s\n", m_error_msg.Value());
 		return false;
 	}
@@ -311,8 +311,8 @@ AmazonVMCreateKeypair::gsoapRequest(void)
 		return false;
 	}
 
-	if( !check_access_and_secret_key_file(accesskeyfile.GetCStr(), 
-				secretkeyfile.GetCStr(), m_error_msg) ) {
+	if( !check_access_and_secret_key_file(accesskeyfile.Value(), 
+				secretkeyfile.Value(), m_error_msg) ) {
 		dprintf(D_ALWAYS, "AmazonVMCreateKeyPair Error: %s\n", m_error_msg.Value());
 		return false;
 	}
@@ -329,7 +329,7 @@ AmazonVMCreateKeypair::gsoapRequest(void)
 
 	// check if output file could be created
 	if( has_outputfile ) { 
-		if( check_create_file(outputfile.GetCStr()) == false ) {
+		if( check_create_file(outputfile.Value()) == false ) {
 			m_error_msg = "No_permission_for_keypair_outputfile";
 			dprintf(D_ALWAYS, "AmazonVMCreateKeypair Error: %s\n", m_error_msg.Value());
 			return false;
@@ -339,7 +339,7 @@ AmazonVMCreateKeypair::gsoapRequest(void)
 	ec2__CreateKeyPairType request;
 	ec2__CreateKeyPairResponseType response;
 
-	request.keyName = keyname.GetCStr();
+	request.keyName = keyname.Value();
 
 	int code = -1;
 	amazon_gahp_release_big_mutex();
@@ -381,8 +381,8 @@ AmazonVMDestroyKeypair::gsoapRequest(void)
 		return false;
 	}
 
-	if( !check_access_and_secret_key_file(accesskeyfile.GetCStr(),
-				secretkeyfile.GetCStr(), m_error_msg) ) {
+	if( !check_access_and_secret_key_file(accesskeyfile.Value(),
+				secretkeyfile.Value(), m_error_msg) ) {
 		dprintf(D_ALWAYS, "AmazonVMDestroyKeypair Error: %s\n", 
 				m_error_msg.Value());
 		return false;
@@ -398,7 +398,7 @@ AmazonVMDestroyKeypair::gsoapRequest(void)
 	ec2__DeleteKeyPairType request;
 	ec2__DeleteKeyPairResponseType response;
 
-	request.keyName = keyname.GetCStr();
+	request.keyName = keyname.Value();
 
 	int code = -1;
 	amazon_gahp_release_big_mutex();
@@ -431,14 +431,14 @@ AmazonVMStart::gsoapRequest(void)
 		return false;
 	}
 
-	if( !check_access_and_secret_key_file(accesskeyfile.GetCStr(),
-				secretkeyfile.GetCStr(), m_error_msg) ) {
+	if( !check_access_and_secret_key_file(accesskeyfile.Value(),
+				secretkeyfile.Value(), m_error_msg) ) {
 		dprintf(D_ALWAYS, "AmazonVMStart Error: %s\n", m_error_msg.Value());
 		return false;
 	}
 
 	if( user_data_file.IsEmpty() == false ) {
-		if( !check_read_access_file( user_data_file.GetCStr()) ) {
+		if( !check_read_access_file( user_data_file.Value()) ) {
 			m_error_msg.sprintf("Cannot read the file for user data(%s)",
 					user_data_file.Value());
 			return false;
@@ -496,7 +496,7 @@ AmazonVMStart::gsoapRequest(void)
 		}
 	}else {
 		if( user_data.IsEmpty() == false ) { 
-			base64_userdata = base64_encode((unsigned char*)user_data.GetCStr(), user_data.Length());
+			base64_userdata = base64_encode((unsigned char*)user_data.Value(), user_data.Length());
 		}
 	}
 
@@ -506,7 +506,7 @@ AmazonVMStart::gsoapRequest(void)
 	std::string request_keyname;
 
 	// image id
-	request.imageId = ami_id.GetCStr();
+	request.imageId = ami_id.Value();
 	// min Count
 	request.minCount = 1;
 	// max Count
@@ -514,7 +514,7 @@ AmazonVMStart::gsoapRequest(void)
 
 	// Keypair
 	if( keypair.IsEmpty() == false ) {
-		request_keyname = keypair.GetCStr();
+		request_keyname = keypair.Value();
 		request.keyName = &request_keyname;
 	}else {
 		request.keyName = NULL;
@@ -563,7 +563,7 @@ AmazonVMStart::gsoapRequest(void)
 
 	// instanceType
 	if( instance_type.IsEmpty() == false ) {
-		request.instanceType = instance_type.GetCStr();
+		request.instanceType = instance_type.Value();
 	}else {
 		request.instanceType = "m1.small";
 	}
@@ -596,8 +596,8 @@ AmazonVMStop::gsoapRequest(void)
 		return false;
 	}
 
-	if( !check_access_and_secret_key_file(accesskeyfile.GetCStr(),
-				secretkeyfile.GetCStr(), m_error_msg) ) {
+	if( !check_access_and_secret_key_file(accesskeyfile.Value(),
+				secretkeyfile.Value(), m_error_msg) ) {
 		dprintf(D_ALWAYS, "AmazonVMStop Error: %s\n", m_error_msg.Value());
 		return false;
 	}
@@ -614,7 +614,7 @@ AmazonVMStop::gsoapRequest(void)
 	ec2__TerminateInstancesInfoType instanceSet;
 
 	ec2__TerminateInstancesItemType item;
-	item.instanceId = instance_id.GetCStr();
+	item.instanceId = instance_id.Value();
 
 	instanceSet.item.push_back( &item );
 
@@ -645,8 +645,8 @@ AmazonVMStatus::gsoapRequest(void)
 		return false;
 	}
 
-	if( !check_access_and_secret_key_file(accesskeyfile.GetCStr(),
-				secretkeyfile.GetCStr(), m_error_msg) ) {
+	if( !check_access_and_secret_key_file(accesskeyfile.Value(),
+				secretkeyfile.Value(), m_error_msg) ) {
 		dprintf(D_ALWAYS, "AmazonVMStatus Error: %s\n", m_error_msg.Value());
 		return false;
 	}
@@ -663,7 +663,7 @@ AmazonVMStatus::gsoapRequest(void)
 	ec2__DescribeInstancesInfoType instancesSet;
 	ec2__DescribeInstancesItemType item;
 
-	item.instanceId = instance_id.GetCStr();
+	item.instanceId = instance_id.Value();
 
 	instancesSet.item.push_back( &item );
 
@@ -746,8 +746,8 @@ AmazonVMStatusAll::gsoapRequest(void)
 		return false;
 	}
 
-	if( !check_access_and_secret_key_file(accesskeyfile.GetCStr(),
-				secretkeyfile.GetCStr(), m_error_msg) ) {
+	if( !check_access_and_secret_key_file(accesskeyfile.Value(),
+				secretkeyfile.Value(), m_error_msg) ) {
 		dprintf(D_ALWAYS, "AmazonVMStatusAll Error: %s\n", m_error_msg.Value());
 		return false;
 	}

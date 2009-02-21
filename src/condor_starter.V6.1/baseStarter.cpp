@@ -1093,7 +1093,7 @@ CStarter::SpawnPreScript( void )
 
 	attr = "Pre";
 	attr += ATTR_JOB_CMD;
-	if( jobAd->LookupString(attr.GetCStr(), &tmp) ) {
+	if( jobAd->LookupString(attr.Value(), &tmp) ) {
 		free( tmp );
 		tmp = NULL;
 		pre_script = new ScriptProc( jobAd, "Pre" );
@@ -1101,7 +1101,7 @@ CStarter::SpawnPreScript( void )
 
 	attr = "Post";
 	attr += ATTR_JOB_CMD;
-	if( jobAd->LookupString(attr.GetCStr(), &tmp) ) {
+	if( jobAd->LookupString(attr.Value(), &tmp) ) {
 		free( tmp );
 		tmp = NULL;
 		post_script = new ScriptProc( jobAd, "Post" );
@@ -1696,24 +1696,24 @@ CStarter::PublishToEnv( Env* proc_env )
 		// path to the output ad, if any
 	const char* output_ad = jic->getOutputAdFile();
 	if( output_ad && !(output_ad[0] == '-' && output_ad[1] == '\0') ) {
-		env_name = base.GetCStr();
+		env_name = base.Value();
 		env_name += "OUTPUT_CLASSAD";
-		proc_env->SetEnv( env_name.GetCStr(), output_ad );
+		proc_env->SetEnv( env_name.Value(), output_ad );
 	}
 	
 		// job scratch space
-	env_name = base.GetCStr();
+	env_name = base.Value();
 	env_name += "SCRATCH_DIR";
-	proc_env->SetEnv( env_name.GetCStr(), GetWorkingDir() );
+	proc_env->SetEnv( env_name.Value(), GetWorkingDir() );
 
 		// slot identifier
-	env_name = base.GetCStr();
+	env_name = base.Value();
 	env_name += "SLOT";
 	int slot = getMySlotNumber();
 	if (!slot) {
 		slot = 1;
 	}
-	proc_env->SetEnv(env_name.GetCStr(), slot);
+	proc_env->SetEnv(env_name.Value(), slot);
 
 		// pass through the pidfamily ancestor env vars this process
 		// currently has to the job.
@@ -1724,14 +1724,14 @@ CStarter::PublishToEnv( Env* proc_env )
 		MyString tmp_port_number;
 
 		tmp_port_number = high;
-		env_name = base.GetCStr();
+		env_name = base.Value();
 		env_name += "HIGHPORT";
-		proc_env->SetEnv( env_name.GetCStr(), tmp_port_number.GetCStr() );
+		proc_env->SetEnv( env_name.Value(), tmp_port_number.Value() );
 
 		tmp_port_number = low;
-		env_name = base.GetCStr();
+		env_name = base.Value();
 		env_name += "LOWPORT";
-		proc_env->SetEnv( env_name.GetCStr(), tmp_port_number.GetCStr() );
+		proc_env->SetEnv( env_name.Value(), tmp_port_number.Value() );
     }
 }
 

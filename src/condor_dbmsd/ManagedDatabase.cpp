@@ -200,10 +200,10 @@ void ManagedDatabase::PurgeDatabase() {
 		break;
 	}
 
-	ret_st = DBObj->execCommand(sql_str.GetCStr());
+	ret_st = DBObj->execCommand(sql_str.Value());
 	if (ret_st == QUILL_FAILURE) {
 		dprintf(D_ALWAYS, "ManagedDatabase::PurgeDatabase --- ERROR [SQL] %s\n", 
-				sql_str.GetCStr());
+				sql_str.Value());
 	}
 
 	ret_st = DBObj->commitTransaction();
@@ -216,7 +216,7 @@ void ManagedDatabase::PurgeDatabase() {
 		*/
 	
 	sql_str.sprintf("SELECT dbsize FROM quillDBMonitor");
-	ret_st = DBObj->execQuery(sql_str.GetCStr(), num_result);
+	ret_st = DBObj->execQuery(sql_str.Value(), num_result);
 
 	if ((ret_st == QUILL_SUCCESS) && 
 		(num_result == 1)) {
@@ -263,7 +263,7 @@ void ManagedDatabase::PurgeDatabase() {
 
 	} else {
 		dprintf(D_ALWAYS, "Reading quillDBMonitor --- ERROR or returned # of rows is not exactly one [SQL] %s\n", 
-				sql_str.GetCStr());		
+				sql_str.Value());		
 	}
 	
 	DBObj->releaseQueryResult();
@@ -293,10 +293,10 @@ void ManagedDatabase::ReindexDatabase() {
 		
 		sql_str.sprintf("select quill_reindexTables()");
 
-		ret_st = DBObj->execCommand(sql_str.GetCStr());
+		ret_st = DBObj->execCommand(sql_str.Value());
 		if (ret_st == QUILL_FAILURE) {
 			dprintf(D_ALWAYS, "ManagedDatabase::ReindexDatabase --- ERROR [SQL] %s\n", 
-					sql_str.GetCStr());
+					sql_str.Value());
 		}
 
 

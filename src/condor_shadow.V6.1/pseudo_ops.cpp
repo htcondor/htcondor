@@ -577,7 +577,7 @@ pseudo_ulog( ClassAd *ad )
 		dprintf(
 		  D_ALWAYS,
 		  "invalid event ClassAd in pseudo_ulog: %s\n",
-		  add_str.GetCStr());
+		  add_str.Value());
 		return -1;
 	}
 
@@ -607,7 +607,7 @@ pseudo_ulog( ClassAd *ad )
 			  err->getExecuteHost(),
 			  err->getErrorText());
 
-			critical_error = CriticalErrorBuf.GetCStr();
+			critical_error = CriticalErrorBuf.Value();
 			if(!hold_reason) {
 				hold_reason = critical_error;
 			}
@@ -627,7 +627,7 @@ pseudo_ulog( ClassAd *ad )
 		dprintf(
 		  D_ALWAYS,
 		  "unable to log event in pseudo_ulog: %s\n",
-		  add_str.GetCStr());
+		  add_str.Value());
 		result = -1;
 	}
 

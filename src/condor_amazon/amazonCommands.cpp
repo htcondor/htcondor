@@ -216,7 +216,7 @@ bool AmazonVMStart::workerFunction(char **argv, int argc, MyString &result_strin
 
 	if( tmp_result == false ) {
 		// Fail
-		result_string = create_failure_result(req_id, request.m_error_msg.GetCStr(), request.m_error_code.GetCStr());
+		result_string = create_failure_result(req_id, request.m_error_msg.Value(), request.m_error_code.Value());
 	}else {
 		// Success
 		StringList result_list;
@@ -268,7 +268,7 @@ bool AmazonVMStop::workerFunction(char **argv, int argc, MyString &result_string
 
 	if( tmp_result == false ) {
 		// Fail
-		result_string = create_failure_result(req_id, request.m_error_msg.GetCStr(), request.m_error_code.GetCStr());
+		result_string = create_failure_result(req_id, request.m_error_msg.Value(), request.m_error_code.Value());
 	}else {
 		// Success
 		result_string = create_success_result(req_id, NULL);
@@ -331,7 +331,7 @@ bool AmazonVMStatus::workerFunction(char **argv, int argc, MyString &result_stri
 
 	if( tmp_result == false ) {
 		// Fail
-		result_string = create_failure_result(req_id, request.m_error_msg.GetCStr(), request.m_error_code.GetCStr());
+		result_string = create_failure_result(req_id, request.m_error_msg.Value(), request.m_error_code.Value());
 	}else {
 		// Success
 		StringList result_list;
@@ -401,7 +401,7 @@ bool AmazonVMStatusAll::workerFunction(char **argv, int argc, MyString &result_s
 
 	if( tmp_result == false ) {
 		// Fail
-		result_string = create_failure_result(req_id, request.m_error_msg.GetCStr(), request.m_error_code.GetCStr());
+		result_string = create_failure_result(req_id, request.m_error_msg.Value(), request.m_error_code.Value());
 	}else {
 		// Success
 		if( request.status_num == 0 ) {
@@ -461,7 +461,7 @@ bool AmazonVMRunningKeypair::workerFunction(char **argv, int argc, MyString &res
 
 	if( tmp_result == false ) {
 		// Fail
-		result_string = create_failure_result(req_id, request.m_error_msg.GetCStr(), request.m_error_code.GetCStr());
+		result_string = create_failure_result(req_id, request.m_error_msg.Value(), request.m_error_code.Value());
 	}else {
 		// Success
 		if( request.status_num == 0 ) {
@@ -520,7 +520,7 @@ bool AmazonVMCreateKeypair::workerFunction(char **argv, int argc, MyString &resu
 
 	if( tmp_result == false ) {
 		// Fail
-		result_string = create_failure_result(req_id, request.m_error_msg.GetCStr(), request.m_error_code.GetCStr());
+		result_string = create_failure_result(req_id, request.m_error_msg.Value(), request.m_error_code.Value());
 	}else {
 		// Success
 		result_string = create_success_result(req_id, NULL);
@@ -563,7 +563,7 @@ bool AmazonVMDestroyKeypair::workerFunction(char **argv, int argc, MyString &res
 
 	if( tmp_result == false ) {
 		// Fail
-		result_string = create_failure_result(req_id, request.m_error_msg.GetCStr(), request.m_error_code.GetCStr());
+		result_string = create_failure_result(req_id, request.m_error_msg.Value(), request.m_error_code.Value());
 	}else {
 		// Success
 		result_string = create_success_result(req_id, NULL);
@@ -617,7 +617,7 @@ bool AmazonVMKeypairNames::workerFunction(char **argv, int argc, MyString &resul
 
 	if( tmp_result == false ) {
 		// Fail
-		result_string = create_failure_result(req_id, request.m_error_msg.GetCStr(), request.m_error_code.GetCStr());
+		result_string = create_failure_result(req_id, request.m_error_msg.Value(), request.m_error_code.Value());
 	}else {
 		// Success
 		result_string = create_success_result(req_id, &request.keynames);

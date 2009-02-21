@@ -1000,7 +1000,7 @@ main( int argc, char *argv[] )
 
 	// open the file we are to dump the ClassAds to...
 	if ( DumpClassAdToFile ) {
-		if( (DumpFile=safe_fopen_wrapper(DumpFileName.GetCStr(),"w")) == NULL ) {
+		if( (DumpFile=safe_fopen_wrapper(DumpFileName.Value(),"w")) == NULL ) {
 			fprintf( stderr, "\nERROR: Failed to open file to dump ClassAds into (%s)\n",
 				strerror(errno));
 			exit(1);
@@ -6516,7 +6516,7 @@ check_requirements( char const *orig, MyString &answer )
 			tmp_rao += "\")";
 		}
 		tmp_rao += ")";
-		answer += tmp_rao.GetCStr();
+		answer += tmp_rao.Value();
 		free(RunAsOwnerCredD);
 	}
 #endif
@@ -7441,13 +7441,13 @@ SetConcurrencyLimits()
 
 		tmp.strlwr();
 
-		StringList list(tmp.GetCStr());
+		StringList list(tmp.Value());
 
 		list.qsort();
 
 		str = list.print_to_string();
 		tmp.sprintf("%s = \"%s\"", ATTR_CONCURRENCY_LIMITS, str);
-		InsertJobExpr(tmp.GetCStr());
+		InsertJobExpr(tmp.Value());
 
 		free(str);
 	}

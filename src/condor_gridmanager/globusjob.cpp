@@ -336,10 +336,10 @@ static bool write_classad_input_file( ClassAd *classad,
 	MyString CmdExpr;
 	CmdExpr = ATTR_JOB_CMD;
 	CmdExpr += "=\"";
-	CmdExpr += condor_basename( executable_path.GetCStr() );
+	CmdExpr += condor_basename( executable_path.Value() );
 	CmdExpr += '"';
 	// TODO: Store old Cmd as OrigCmd?
-	tmpclassad.InsertOrUpdate(CmdExpr.GetCStr());
+	tmpclassad.InsertOrUpdate(CmdExpr.Value());
 
 	PROC_ID procID;
 	if( ! tmpclassad.LookupInteger( ATTR_CLUSTER_ID, procID.cluster ) ) {
@@ -379,16 +379,16 @@ static bool write_classad_input_file( ClassAd *classad,
 	tmpclassad.InsertOrUpdate( "JobUniverse = 5" );
 
 	dprintf(D_FULLDEBUG,"(%d.%d) Writing ClassAd to file %s\n",
-		procID.cluster, procID.proc, out_filename.GetCStr());
+		procID.cluster, procID.proc, out_filename.Value());
 
 	// TODO: Test for file's existance, complain and die on existance?
-	FILE * fp = safe_fopen_wrapper(out_filename_full.GetCStr(), "w");
+	FILE * fp = safe_fopen_wrapper(out_filename_full.Value(), "w");
 
 	if( ! fp )
 	{
 		dprintf(D_ALWAYS,"(%d.%d) Failed to write ClassAd to file %s. "
 			"Error number %d (%s).\n",
-			procID.cluster, procID.proc, out_filename.GetCStr(),
+			procID.cluster, procID.proc, out_filename.Value(),
 			errno, strerror(errno));
 		return false;
 	}
@@ -396,7 +396,7 @@ static bool write_classad_input_file( ClassAd *classad,
 	if( tmpclassad.fPrint(fp) ) {
 		dprintf(D_ALWAYS,"(%d.%d) Failed to write ClassAd to file %s. "
 			"Unknown error in ClassAd::fPrint.\n",
-			procID.cluster, procID.proc, out_filename.GetCStr());
+			procID.cluster, procID.proc, out_filename.Value());
 		fclose(fp);
 		return false;
 	} 
@@ -544,7 +544,7 @@ static bool merge_file_into_classad(const char * filename, ClassAd * ad)
 			full_filename += filename;
 		}
 		
-		FILE * fp = safe_fopen_wrapper(full_filename.GetCStr(), "r");
+		FILE * fp = safe_fopen_wrapper(full_filename.Value(), "r");
 		if( ! fp ) {
 			dprintf(D_ALWAYS, "Unable to read output ClassAd at %s.  "
 				"Error number %d (%s).  "
@@ -559,19 +559,19 @@ static bool merge_file_into_classad(const char * filename, ClassAd * ad)
 			int n = line.find(" = ");
 			if(n < 1) {
 				dprintf( D_ALWAYS,
-					"Failed to parse \"%s\", ignoring.", line.GetCStr());
+					"Failed to parse \"%s\", ignoring.", line.Value());
 				continue;
 			}
 			MyString attr = line.Substr(0, n - 1);
 
-			dprintf( D_ALWAYS, "FILE: %s\n", line.GetCStr() );
-			if( ! SAVE_ATTRS.contains_anycase(attr.GetCStr()) ) {
+			dprintf( D_ALWAYS, "FILE: %s\n", line.Value() );
+			if( ! SAVE_ATTRS.contains_anycase(attr.Value()) ) {
 				continue;
 			}
 
-			if( ! ad->Insert(line.GetCStr()) ) {
+			if( ! ad->Insert(line.Value()) ) {
 				dprintf( D_ALWAYS, "Failed to insert \"%s\" into ClassAd, "
-						 "ignoring.\n", line.GetCStr() );
+						 "ignoring.\n", line.Value() );
 			}
 		}
 		fclose( fp );
@@ -1556,7 +1556,7 @@ int GlobusJob::doEvaluateState()
 			// Report job completion to the schedd.
 
 			if(useGridShell && !mergedGridShellOutClassad) {
-				if( ! merge_file_into_classad(outputClassadFilename.GetCStr(), jobAd) ) {
+				if( ! merge_file_into_classad(outputClassadFilename.Value(), jobAd) ) {
 					/* TODO: put job on hold or otherwise don't let it
 					   quietly pass into the great beyond? */
 					dprintf(D_ALWAYS,"(%d.%d) Failed to add job result attributes to job's classad.  Job's history will lack run information.\n",procID.cluster,procID.proc);
@@ -2900,10 +2900,10 @@ MyString *GlobusJob::buildSubmitRSL()
 		if( ! bsuccess ) {
 			/* TODO XXX adesmet: Writing to file failed?  Bail. */
 			dprintf(D_ALWAYS, "(%d.%d) Attempt to write gridshell file %s failed.\n", 
-				procID.cluster, procID.proc, input_classad_filename.GetCStr() );
+				procID.cluster, procID.proc, input_classad_filename.Value() );
 		}
 
-		output_classad_filename.sprintf("%s.OUT", input_classad_filename.GetCStr());
+		output_classad_filename.sprintf("%s.OUT", input_classad_filename.Value());
 		outputClassadFilename = output_classad_filename;
 
 
@@ -3038,9 +3038,9 @@ MyString *GlobusJob::buildSubmitRSL()
 			filelist.initializeFromString( attr_value );
 		}
 		if( useGridShell ) {
-			filelist.append(input_classad_filename.GetCStr());
+			filelist.append(input_classad_filename.Value());
 			if(transfer_executable) {
-				filelist.append(executable_path.GetCStr());
+				filelist.append(executable_path.Value());
 			}
 		}
 		if ( !filelist.isEmpty() ) {
@@ -3080,9 +3080,9 @@ MyString *GlobusJob::buildSubmitRSL()
 				// files to  be transfered back: the final status
 				// ClassAd from the gridshell
 
-			ASSERT( output_classad_filename.GetCStr() );
-			filelist.append( output_classad_filename.GetCStr() );
-			filelist.append( gridshell_log_filename.GetCStr() );
+			ASSERT( output_classad_filename.Value() );
+			filelist.append( output_classad_filename.Value() );
+			filelist.append( gridshell_log_filename.Value() );
 		}
 		if ( !filelist.isEmpty() || stageOutput || stageError ) {
 			char *filename;
@@ -3145,7 +3145,7 @@ MyString *GlobusJob::buildSubmitRSL()
 		*rsl += "(CONDOR_CONFIG 'only_env')";
 		*rsl += "(_CONDOR_GRIDSHELL_DEBUG 'D_FULLDEBUG')";
 		*rsl += "(_CONDOR_GRIDSHELL_LOG '";
-		*rsl += gridshell_log_filename.GetCStr();
+		*rsl += gridshell_log_filename.Value();
 		*rsl += "')";
 	} else {
 		Env envobj;
@@ -3195,7 +3195,7 @@ MyString *GlobusJob::buildSubmitRSL()
 		free( rsl_suffix );
 	}
 
-	dprintf( D_FULLDEBUG, "Final RSL: %s\n", rsl->GetCStr() );
+	dprintf( D_FULLDEBUG, "Final RSL: %s\n", rsl->Value() );
 	return rsl;
 }
 

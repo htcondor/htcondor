@@ -408,7 +408,7 @@ JobInfoCommunicator::initOutputAdFile( void )
 		path += DIR_DELIM_CHAR;
 		path += job_output_ad_file;
 		free( job_output_ad_file );
-		job_output_ad_file = strdup( path.GetCStr() );
+		job_output_ad_file = strdup( path.Value() );
 	}
 	dprintf( D_ALWAYS, "Will write job output ClassAd to \"%s\"\n",
 			 job_output_ad_is_stdout ? "STDOUT" : job_output_ad_file );

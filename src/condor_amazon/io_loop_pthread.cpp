@@ -224,7 +224,7 @@ main( int argc, char ** const argv )
 	// get env
 	MyString debug_string = getenv("DebugLevel");
 	if( debug_string.IsEmpty() == false ) {
-		set_debug_flags(debug_string.GetCStr());
+		set_debug_flags(debug_string.Value());
 	}
 
 	// parse arguments
@@ -239,7 +239,7 @@ main( int argc, char ** const argv )
 			case 'f':
 				// Log file
 				log_file = my_optarg;
-				if( !set_gahp_log_file(log_file.GetCStr()) ) {
+				if( !set_gahp_log_file(log_file.Value()) ) {
 					fprintf(stderr, "Can't create the log file(%s)\n", 
 							log_file.Value());
 					exit(1);
@@ -249,7 +249,7 @@ main( int argc, char ** const argv )
 				// Debug Level
 				debug_string = my_optarg;
 				if( debug_string.IsEmpty() == false ) {
-					set_debug_flags(debug_string.GetCStr());
+					set_debug_flags(debug_string.Value());
 				}
 
 				break;
@@ -277,7 +277,7 @@ main( int argc, char ** const argv )
 	//Try to read env for amazon_http_proxy
 	MyString amazon_proxy_server = getenv(AMAZON_HTTP_PROXY);
 	if( amazon_proxy_server.IsEmpty() == false ) {
-		set_amazon_proxy_server(amazon_proxy_server.GetCStr());
+		set_amazon_proxy_server(amazon_proxy_server.Value());
 		dprintf(D_ALWAYS, "Using http proxy = %s\n", amazon_proxy_server.Value());
 	}
 
@@ -883,7 +883,7 @@ enqueue_result(Request* request)
 		return;
 	}
 
-	ioprocess->addResult(request->m_result.GetCStr());
+	ioprocess->addResult(request->m_result.Value());
 }
 
 static bool

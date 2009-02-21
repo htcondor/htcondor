@@ -71,9 +71,9 @@ ScriptProc::StartJob()
 	attr = name;
 	attr += ATTR_JOB_CMD;
 	char* tmp = NULL;
-	if( ! JobAd->LookupString( attr.GetCStr(), &tmp ) ) {
+	if( ! JobAd->LookupString( attr.Value(), &tmp ) ) {
 		dprintf( D_ALWAYS, "%s not found in JobAd.  Aborting StartJob.\n", 
-				 attr.GetCStr() );
+				 attr.Value() );
 		return 0;
 	}
 
@@ -95,11 +95,11 @@ ScriptProc::StartJob()
 			// probably transfered it for us and left it with bad
 			// permissions...
 		priv_state old_priv = set_user_priv();
-		int retval = chmod( exe_path.GetCStr(), 0755 );
+		int retval = chmod( exe_path.Value(), 0755 );
 		set_priv( old_priv );
 		if( retval < 0 ) {
 			dprintf( D_ALWAYS, "Failed to chmod %s: %s (errno %d)\n", 
-					 exe_path.GetCStr(), strerror(errno), errno );
+					 exe_path.Value(), strerror(errno), errno );
 			return 0;
 		}
 	} 
@@ -178,7 +178,7 @@ ScriptProc::StartJob()
 		if( ! job_env.MergeFromV2Raw(env2,&env_errors) ) {
 			dprintf( D_ALWAYS, "Invalid %s found in JobAd (%s).  "
 					 "Aborting ScriptProc::StartJob.\n",
-					 env2_attr.GetCStr(),env_errors.Value() );  
+					 env2_attr.Value(),env_errors.Value() );  
 			free( env1 );
 			free( env2 );
 			return 0;
@@ -188,7 +188,7 @@ ScriptProc::StartJob()
 		if( ! job_env.MergeFromV1Raw(env1,&env_errors) ) {
 			dprintf( D_ALWAYS, "Invalid %s found in JobAd (%s).  "
 					 "Aborting ScriptProc::StartJob.\n",
-					 env1_attr.GetCStr(),env_errors.Value() );  
+					 env1_attr.Value(),env_errors.Value() );  
 			free( env1 );
 			free( env2 );
 			return 0;
@@ -239,7 +239,7 @@ ScriptProc::StartJob()
 	MyString args_string;
 	args.GetArgsStringForDisplay(&args_string,1);
 	dprintf( D_ALWAYS, "About to exec %s script: %s %s\n", 
-			 name, exe_path.GetCStr(), 
+			 name, exe_path.Value(), 
 			 args_string.Value() );
 		
 	// If there is a requested coresize for this job, enforce it.
@@ -256,7 +256,7 @@ ScriptProc::StartJob()
 		core_size_ptr = &core_size;
 	}
 
-	JobPid = daemonCore->Create_Process(exe_path.GetCStr(), 
+	JobPid = daemonCore->Create_Process(exe_path.Value(), 
 	                                    args,
 	                                    PRIV_USER_FINAL,
 	                                    1,
@@ -285,7 +285,7 @@ ScriptProc::StartJob()
 
 		if( create_process_error ) {
 			MyString err_msg = "Failed to execute '";
-			err_msg += exe_path.GetCStr();
+			err_msg += exe_path.Value();
 			err_msg += "'";
 			if(!args_string.IsEmpty()) {
 				err_msg += " with arguments ";
@@ -297,7 +297,7 @@ ScriptProc::StartJob()
 		}
 
 		EXCEPT( "Create_Process(%s,%s, ...) failed",
-				exe_path.GetCStr(), args_string.Value() );
+				exe_path.Value(), args_string.Value() );
 		return 0;
 	}
 

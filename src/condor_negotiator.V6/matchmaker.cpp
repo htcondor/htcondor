@@ -2201,7 +2201,7 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 	MyString limits;
 	if (request.LookupString(ATTR_CONCURRENCY_LIMITS, limits)) {
 		limits.strlwr();
-		StringList list(limits.GetCStr());
+		StringList list(limits.Value());
 		char *limit;
 		MyString str;
 		list.rewind();

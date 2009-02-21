@@ -39,7 +39,7 @@ extern FILE *DebugFP;
 
 const char* get_ec2_url(void)
 {
-	return amazon_ec2_url.GetCStr();
+	return amazon_ec2_url.Value();
 }
 
 void set_ec2_url(const char* url)
@@ -107,7 +107,7 @@ void set_amazon_proxy_server(const char* url)
 	if( -1 != (pos = amazon_proxy_host.FindChar(':')) ) {
 		int port =
 			atoi(amazon_proxy_host.Substr(pos + 1,
-										  amazon_proxy_host.Length()).GetCStr());
+										  amazon_proxy_host.Length()).Value());
 
 		if( port > 0 ) {
 			amazon_proxy_port = port;
@@ -123,7 +123,7 @@ void set_amazon_proxy_server(const char* url)
 bool get_amazon_proxy_server(const char* &host_name, int& port )
 {
 	if( amazon_proxy_host.IsEmpty() == false ) {
-		host_name = amazon_proxy_host.GetCStr();
+		host_name = amazon_proxy_host.Value();
 		port = amazon_proxy_port;
 		return true;
 	}

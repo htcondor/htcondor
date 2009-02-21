@@ -505,7 +505,7 @@ void Accountant::AddMatch(const MyString& CustomerName, ClassAd* ResourceAd)
   }
 
   int cpusPerSlot = 1;
-  if (ResourceAd->LookupInteger(Cpus.GetCStr(), cpusPerSlot)==0) cpusPerSlot=1;
+  if (ResourceAd->LookupInteger(Cpus.Value(), cpusPerSlot)==0) cpusPerSlot=1;
 
   AcctLog->BeginTransaction(); 
   
@@ -1277,7 +1277,7 @@ double Accountant::GetLimit(const MyString& limit)
 	if (-1 == concurrencyLimits.lookup(limit, count)) {
 		dprintf(D_ACCOUNTANT,
 				"Looking for Limit '%s' count, which does not exist\n",
-				limit.GetCStr());
+				limit.Value());
 	}
 
 	return count;
@@ -1285,7 +1285,7 @@ double Accountant::GetLimit(const MyString& limit)
 
 double Accountant::GetLimitMax(const MyString& limit)
 {
-	return param_double((limit + "_LIMIT").GetCStr(),
+	return param_double((limit + "_LIMIT").Value(),
 						 param_double("CONCURRENCY_LIMIT_DEFAULT",
 									   2308032));
 }
@@ -1296,7 +1296,7 @@ void Accountant::DumpLimits()
  	double count;
 	concurrencyLimits.startIterations();
 	while (concurrencyLimits.iterate(limit, count)) {
-		dprintf(D_ACCOUNTANT, "  Limit: %s = %f\n", limit.GetCStr(), count);
+		dprintf(D_ACCOUNTANT, "  Limit: %s = %f\n", limit.Value(), count);
 	}
 }
 
@@ -1307,8 +1307,8 @@ void Accountant::ReportLimits(AttrList *attrList)
  	double count;
 	concurrencyLimits.startIterations();
 	while (concurrencyLimits.iterate(limit, count)) {
-		attr.sprintf("ConcurrencyLimit.%s = %f\n", limit.GetCStr(), count);
-		attrList->Insert(attr.GetCStr());
+		attr.sprintf("ConcurrencyLimit.%s = %f\n", limit.Value(), count);
+		attrList->Insert(attr.Value());
 	}
 }
 
@@ -1319,13 +1319,13 @@ void Accountant::ClearLimits()
 	concurrencyLimits.startIterations();
 	while (concurrencyLimits.iterate(limit, count)) {
 		concurrencyLimits.insert(limit, 0);
-		dprintf(D_ACCOUNTANT, "  Limit: %s = %f\n", limit.GetCStr(), count);
+		dprintf(D_ACCOUNTANT, "  Limit: %s = %f\n", limit.Value(), count);
 	}
 }
 
 void Accountant::IncrementLimit(const MyString& _limit)
 {
-	char *limit = strdup(_limit.GetCStr());
+	char *limit = strdup(_limit.Value());
 	double increment;
 
 	dprintf(D_ACCOUNTANT, "IncrementLimit(%s)\n", limit);
@@ -1339,7 +1339,7 @@ void Accountant::IncrementLimit(const MyString& _limit)
 
 void Accountant::DecrementLimit(const MyString& _limit)
 {
-	char *limit = strdup(_limit.GetCStr());
+	char *limit = strdup(_limit.Value());
 	double increment;
 
 	dprintf(D_ACCOUNTANT, "DecrementLimit(%s)\n", limit);
@@ -1353,7 +1353,7 @@ void Accountant::DecrementLimit(const MyString& _limit)
 
 void Accountant::IncrementLimits(const MyString& limits)
 {
-	StringList list(limits.GetCStr());
+	StringList list(limits.Value());
 	char *limit;
 	MyString str;
 	list.rewind();
@@ -1365,7 +1365,7 @@ void Accountant::IncrementLimits(const MyString& limits)
 
 void Accountant::DecrementLimits(const MyString& limits)
 {
-	StringList list(limits.GetCStr());
+	StringList list(limits.Value());
 	char *limit;
 	MyString str;
 	list.rewind();

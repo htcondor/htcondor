@@ -137,7 +137,7 @@ JICLocalFile::readClassAdFromFile( void )
         read_something = true;
 		line.chomp();
 		if( line[0] == '#' ) {
-			dprintf( D_JOB, "IGNORING COMMENT: %s\n", line.GetCStr() );
+			dprintf( D_JOB, "IGNORING COMMENT: %s\n", line.Value() );
 			continue;
 		}
 		if( ! line[0] ) {
@@ -145,11 +145,11 @@ JICLocalFile::readClassAdFromFile( void )
 			continue;
 		}
 		if( DebugFlags & D_JOB ) {
-			dprintf( D_JOB, "FILE: %s\n", line.GetCStr() );
+			dprintf( D_JOB, "FILE: %s\n", line.Value() );
 		} 
-        if( ! job_ad->Insert(line.GetCStr()) ) {
+        if( ! job_ad->Insert(line.Value()) ) {
             dprintf( D_ALWAYS, "Failed to insert \"%s\" into ClassAd, "
-                     "ignoring this line\n", line.GetCStr() );
+                     "ignoring this line\n", line.Value() );
         }
     }
 	
