@@ -608,7 +608,7 @@ handle_shutdown_program( int cmd, Stream* stream )
 	MyString	pname;
 	pname =  "master_shutdown_";
 	pname += name;
-	char	*path = param( pname.GetCStr() );
+	char	*path = param( pname.Value() );
 	if ( NULL == path ) {
 		dprintf( D_ALWAYS, "No shutdown program defined for '%s'\n", name );
 		return FALSE;
@@ -764,7 +764,7 @@ init_daemon_list()
 			dclist = default_dc_daemon_list;
 			dclist += ", ";
 			dclist += &dc_daemon_list[1];
-			dc_daemon_names.initializeFromString( dclist.GetCStr() );
+			dc_daemon_names.initializeFromString( dclist.Value() );
 		}
 		else {
 			dc_daemon_names.initializeFromString(dc_daemon_list);

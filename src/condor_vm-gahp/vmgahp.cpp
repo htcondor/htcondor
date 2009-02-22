@@ -1102,7 +1102,7 @@ VMGahp::killAllProcess()
 		priv_state priv = set_user_priv();
 		if( VMwareType::checkVMwareParams(m_gahp_config) ) {
 			VMwareType::killVMFast(m_gahp_config->m_prog_for_script.Value(), 
-					m_gahp_config->m_vm_script.Value(), m_workingdir.GetCStr());
+					m_gahp_config->m_vm_script.Value(), m_workingdir.Value());
 			vmprintf( D_FULLDEBUG, "killVMFast is called\n");
 		}
 		set_priv(priv);

@@ -298,8 +298,8 @@ protected:
 						   "Connection timeout     - %d\n"
 						   "Downloading reaper id  - %d\n"
 						   "Uploading reaper id    - %d\n",
-				 m_stateFilePath.GetCStr(), m_versionFilePath.GetCStr(), 
-				 m_state, m_releaseDirectoryPath.GetCStr(), m_connectionTimeout,
+				 m_stateFilePath.Value(), m_versionFilePath.Value(), 
+				 m_state, m_releaseDirectoryPath.Value(), m_connectionTimeout,
 				 m_downloadReaperId, m_uploadReaperId );    
 	};
 	// process ids of uploading/downloading 'condor_transferer' processes for

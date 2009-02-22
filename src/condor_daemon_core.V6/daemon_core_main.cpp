@@ -1861,7 +1861,7 @@ int main( int argc, char** argv )
 
 	if (global_config_source != "") {
 		dprintf(D_ALWAYS, "Using config source: %s\n", 
-				global_config_source.GetCStr());
+				global_config_source.Value());
 	} else {
 		const char* env_name = EnvGetName( ENV_CONFIG );
 		char* env = getenv( env_name );

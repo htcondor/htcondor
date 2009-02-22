@@ -449,8 +449,8 @@ int Condor_Auth_X509::nameGssToLocal(const char * GSSClientname)
 	MyString domain;
 	Authentication::split_canonical_name( local_user, user, domain );
     
-	setRemoteUser  (user.GetCStr());
-	setRemoteDomain(domain.GetCStr());
+	setRemoteUser  (user.Value());
+	setRemoteDomain(domain.Value());
 	setAuthenticatedName(GSSClientname);
 	return 1;
 }

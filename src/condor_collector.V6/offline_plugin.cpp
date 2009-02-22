@@ -214,7 +214,7 @@ OfflineCollectorPlugin::update (
         ClassAd *p;
         MyString s;
         hashKey.sprint ( s );
-        const char *key = s.GetCStr ();
+        const char *key = s.Value ();
 
         /* if it is off-line then add it to the list; ortherwise,
         remove it */
@@ -308,7 +308,7 @@ OfflineCollectorPlugin::invalidate (
         hashKey.sprint ( key );
 
         /* can't remove ads that do not exist */
-        if ( !_ads->LookupClassAd ( key.GetCStr (), cad ) ) {
+        if ( !_ads->LookupClassAd ( key.Value (), cad ) ) {
 
             _ads->AbortTransaction ();
             return;
@@ -316,7 +316,7 @@ OfflineCollectorPlugin::invalidate (
         }
 
         /* try to remove the ad */
-        if ( !_ads->DestroyClassAd ( key.GetCStr () ) ) {
+        if ( !_ads->DestroyClassAd ( key.Value () ) ) {
 
             dprintf (
                 D_FULLDEBUG,

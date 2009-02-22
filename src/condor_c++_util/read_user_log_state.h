@@ -57,8 +57,8 @@ public:
 	bool InitializeError( void ) const { return m_init_error; };
 
 	// Accessors
-	const char *BasePath( void ) const { return m_base_path.GetCStr(); };
-	const char *CurPath( void ) const { return m_cur_path.GetCStr( ); };
+	const char *BasePath( void ) const { return m_base_path.Value(); };
+	const char *CurPath( void ) const { return m_cur_path.Value( ); };
 	int Rotation( void ) const { return m_cur_rot; };
 	filesize_t Offset( void ) const { return m_offset; };
 	bool IsValid( void ) const { return (m_cur_rot >= 0); };
@@ -86,7 +86,7 @@ public:
 
 	// Get / set the uniq identifier
 	void UniqId( const MyString &id ) { Update(); m_uniq_id = id; };
-	const char *UniqId( void ) const { return m_uniq_id.GetCStr(); };
+	const char *UniqId( void ) const { return m_uniq_id.Value(); };
 	bool ValidUniqId( void ) const { return ( m_uniq_id.Length() != 0 ); };
 
 	// Get / set the sequence number

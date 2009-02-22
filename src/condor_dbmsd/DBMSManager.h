@@ -31,7 +31,7 @@ public:
 	void config();
 	void stop();
 
-	char const *Name() const {return m_name.GetCStr();}
+	char const *Name() const {return m_name.Value();}
 
 private:
 	MyString m_name;

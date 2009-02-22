@@ -95,11 +95,11 @@ class CronJobBase : public Service
 	virtual int Initialize( void );
 
 	// Manipulate the job
-	const char *GetName( void ) { return name.GetCStr(); };
-	const char *GetPrefix( void ) { return prefix.GetCStr(); };
-	const char *GetPath( void ) { return path.GetCStr(); };
-	//const char *GetArgs( void ) { return args.GetCStr(); };
-	const char *GetCwd( void ) { return cwd.GetCStr(); };
+	const char *GetName( void ) { return name.Value(); };
+	const char *GetPrefix( void ) { return prefix.Value(); };
+	const char *GetPath( void ) { return path.Value(); };
+	//const char *GetArgs( void ) { return args.Value(); };
+	const char *GetCwd( void ) { return cwd.Value(); };
 	unsigned GetPeriod( void ) { return period; };
 
 	// State information

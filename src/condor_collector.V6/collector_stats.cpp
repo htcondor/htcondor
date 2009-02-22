@@ -35,13 +35,13 @@ static unsigned int hashFunction (const StatsHashKey &key)
     unsigned int result = 0;
 	const char *p;
 
-    for (p = key.type.GetCStr(); p && *p;
+    for (p = key.type.Value(); p && *p;
 	     result = (result<<5) + result + (unsigned int)(*(p++)));
 
-    for (p = key.name.GetCStr(); p && *p;
+    for (p = key.name.Value(); p && *p;
 	     result = (result<<5) + result + (unsigned int)(*(p++)));
 
-    for (p = key.ip_addr.GetCStr(); p && *p;
+    for (p = key.ip_addr.Value(); p && *p;
 	     result = (result<<5) + result + (unsigned int)(*(p++)));
 
     return result;
@@ -518,7 +518,7 @@ CollectorDaemonStatsList::updateStats( const char *class_name,
 		MyString	string;
 		key.getstr( string );
 		dprintf( D_ALWAYS,
-				 "stats: Inserting new hashent for %s\n", string.GetCStr() );
+				 "stats: Inserting new hashent for %s\n", string.Value() );
 	}
 
 	// Compute the size of the string we need..
@@ -617,7 +617,7 @@ void
 StatsHashKey::getstr( MyString &buf )
 {
 	buf.sprintf( "'%s':'%s':'%s'",
-				 type.GetCStr(), name.GetCStr(), ip_addr.GetCStr()  );
+				 type.Value(), name.Value(), ip_addr.Value()  );
 }
 
 // Generate a hash key

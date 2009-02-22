@@ -168,7 +168,7 @@ utilCopyList(List<T>& lhs, List<T>& rhs)
     while( ( rhs.Next( element ) ) )
     {
         dprintf( D_FULLDEBUG, "utilCopyList: %s ", 
-				 element->toString().GetCStr() );
+				 element->toString().Value() );
         lhs.Append( element );
     }
 

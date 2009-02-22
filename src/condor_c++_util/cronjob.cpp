@@ -652,7 +652,7 @@ CronJobBase::RunProcess( void )
 	}
 
 	// Add the name to the argument list, then any specified in the config
-	final_args.AppendArg( name.GetCStr() );
+	final_args.AppendArg( name.Value() );
 	if(args.Count()) {
 		final_args.AppendArgsFromArgList(args);
 	}
@@ -682,13 +682,13 @@ CronJobBase::RunProcess( void )
 
 	// Create the process, finally..
 	pid = daemonCore->Create_Process(
-		path.GetCStr(),		// Path to executable
+		path.Value(),		// Path to executable
 		final_args,			// argv
 		priv,				// Priviledge level
 		reaperId,			// ID Of reaper
 		FALSE,				// Command port?  No
 		&env, 		 		// Env to give to child
-		cwd.GetCStr(),		// Starting CWD
+		cwd.Value(),		// Starting CWD
 		NULL,				// Process family info
 		NULL,				// Socket list
 		childFds,			// Stdin/stdout/stderr

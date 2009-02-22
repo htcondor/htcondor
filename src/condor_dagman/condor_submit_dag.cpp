@@ -802,7 +802,7 @@ EnvFilter::ImportFilter( const MyString &var, const MyString &val ) const
 	if ( (var.find(";") >= 0) || (val.find(";") >= 0) ) {
 		return false;
 	}
-	return IsSafeEnvV2Value( val.GetCStr() );
+	return IsSafeEnvV2Value( val.Value() );
 }
 
 //---------------------------------------------------------------------------

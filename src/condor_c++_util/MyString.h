@@ -78,9 +78,6 @@ class MyString
 	/** Returns space reserved for string */
 	int Capacity()        const { return capacity;           }
 
-	/** Returns string. Note that it may return NULL */
-	const char *GetCStr() const { return Data;               }
-
 	/** Returns a strdup()ed C string. */
 	char *StrDup() const { return strdup( Value() );         }
 
@@ -338,6 +335,9 @@ class MyString
 	//@}
 
 private:
+
+	/** Returns string. Note that it may return NULL */
+	const char *GetCStr() const { return Data;               }
 
     void init();
 	void append_str( const char *s, int s_len );

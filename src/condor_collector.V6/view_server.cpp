@@ -1065,7 +1065,7 @@ GeneralRecord* ViewServer::GetAccData(AccHash* AccData,const MyString& Key)
 			EXCEPT( "Failed to allocate a GeneralRecord" );
 		}
 		if ( AccData->insert(Key,GenRec) < 0 ) {
-			EXCEPT( "Insert failed: Key=%s", Key.GetCStr() );
+			EXCEPT( "Insert failed: Key=%s", Key.Value() );
 		}
 	}
 	return GenRec;

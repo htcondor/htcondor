@@ -75,8 +75,8 @@ class AmazonRequest {
 		virtual bool HandleError();
 		virtual void cleanupRequest() {};
 
-		const char* getErrorCode(void) { return m_error_code.GetCStr(); }
-		const char* getErrorStr(void) { return m_error_msg.GetCStr(); }
+		const char* getErrorCode(void) { return m_error_code.Value(); }
+		const char* getErrorStr(void) { return m_error_msg.Value(); }
 
 	protected:
 		// Request Name

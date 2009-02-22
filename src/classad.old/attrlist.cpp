@@ -2793,7 +2793,7 @@ Assign(char const *variable,unsigned int value)
 	}
 
 	buf.sprintf("%s = %u",variable,value);
-	return Insert(buf.GetCStr());
+	return Insert(buf.Value());
 }
 
 int AttrList::
@@ -2805,7 +2805,7 @@ Assign(char const *variable,long value)
 	}
 
 	buf.sprintf("%s = %ld",variable,value);
-	return Insert(buf.GetCStr());
+	return Insert(buf.Value());
 }
 
 int AttrList::
@@ -2817,7 +2817,7 @@ Assign(char const *variable,unsigned long value)
 	}
 
 	buf.sprintf("%s = %lu",variable,value);
-	return Insert(buf.GetCStr());
+	return Insert(buf.Value());
 }
 
 int AttrList::

@@ -3288,7 +3288,7 @@ int Function::FunctionRegexps(
 		}
 		input++;
 	}
-	result->s    = strnewp(output.GetCStr());
+	result->s    = strnewp(output.Value());
 	return TRUE;
 }
 

@@ -35,9 +35,9 @@ extern "C" char * sin_to_string(struct sockaddr_in *);
 void AdNameHashKey::sprint (MyString &s)
 {
 	if (ip_addr.Length() )
-		s.sprintf( "< %s , %s >", name.GetCStr(), ip_addr.GetCStr() );
+		s.sprintf( "< %s , %s >", name.Value(), ip_addr.Value() );
 	else
-		s.sprintf( "< %s >", name.GetCStr() );
+		s.sprintf( "< %s >", name.Value() );
 }
 
 bool operator== (const AdNameHashKey &lhs, const AdNameHashKey &rhs)
@@ -48,7 +48,7 @@ bool operator== (const AdNameHashKey &lhs, const AdNameHashKey &rhs)
 static int sumOverString(const MyString &str)
 {
 	int sum = 0;
-	for (const char *p = str.GetCStr(); p && *p; p++) {
+	for (const char *p = str.Value(); p && *p; p++) {
 		sum += *p;
 	}
 	return sum;
@@ -208,7 +208,7 @@ makeStartdAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in * /*from*/ )
 					 "STARTD_IP_ADDR", hk.ip_addr ) ) {
 		dprintf (D_FULLDEBUG,
 				 "StartAd: No IP address in classAd from %s\n",
-				 hk.name.GetCStr() );
+				 hk.name.Value() );
 	}
 
 	return true;
@@ -395,10 +395,10 @@ parseIpPort (const MyString &ip_port_pair, MyString &ip_addr)
 {
 	ip_addr = "";
 
-    const char *ip_port = ip_port_pair.GetCStr();
-    if ( ! ip_port ) {
+	if (ip_port_pair.IsEmpty()) {
         return false;
-    }
+	}
+    const char *ip_port = ip_port_pair.Value();
 	ip_port++;			// Skip the leading "<"
     while ( *ip_port && *ip_port != ':')
     {
@@ -425,8 +425,8 @@ void
 HashString::Build( const AdNameHashKey &hk )
 {
 	if ( hk.ip_addr.Length() ) {
-		sprintf( "< %s , %s >", hk.name.GetCStr(), hk.ip_addr.GetCStr() );
+		sprintf( "< %s , %s >", hk.name.Value(), hk.ip_addr.Value() );
 	} else {
-		sprintf( "< %s >", hk.name.GetCStr() );
+		sprintf( "< %s >", hk.name.Value() );
 	}
 }

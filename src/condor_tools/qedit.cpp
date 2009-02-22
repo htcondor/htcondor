@@ -100,7 +100,8 @@ main(int argc, char *argv[])
 		nextarg++;
 	}
 
-	DCSchedd schedd(schedd_name.GetCStr(), pool_name.GetCStr());
+	DCSchedd schedd((schedd_name.Length() == 0) ? NULL : schedd_name.Value(),
+					(pool_name.Length() == 0) ? NULL   : pool_name.Value());
 	if ( schedd.locate() == false ) {
 		if (schedd_name == "") {
 			fprintf( stderr, "%s: ERROR: Can't find address of local schedd\n",

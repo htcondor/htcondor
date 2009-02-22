@@ -2170,7 +2170,7 @@ process_buffer_line( ClassAd *job )
 	if (use_xml) {
 		MyString s;
 		job->sPrintAsXML(s);
-		tempCPS->string = strnewp( s.GetCStr() );
+		tempCPS->string = strnewp( s.Value() );
 	} else if( analyze ) {
 		tempCPS->string = strnewp( doRunAnalysisToBuffer( job ) );
 	} else if ( show_io ) {

@@ -1098,7 +1098,7 @@ updateClassAd (CollectorHashTable &hashTable,
 		EXCEPT ("Error reading system time!");
 	}	
 	buf.sprintf( "%s = %d", ATTR_LAST_HEARD_FROM, (int)now);
-	ad->Insert ( buf.GetCStr() );
+	ad->Insert ( buf.Value() );
 
 	// this time stamped ad is the new ad
 	new_ad = ad;
@@ -1107,7 +1107,7 @@ updateClassAd (CollectorHashTable &hashTable,
 	if ( hashTable.lookup (hk, old_ad) == -1)
     {	 	
 		// no ... new ad
-		dprintf (D_ALWAYS, "%s: Inserting ** \"%s\"\n", adType, hashString.GetCStr() );
+		dprintf (D_ALWAYS, "%s: Inserting ** \"%s\"\n", adType, hashString.Value() );
 
 		// Update statistics
 		collectorStats->update( label, NULL, new_ad );
@@ -1125,7 +1125,7 @@ updateClassAd (CollectorHashTable &hashTable,
 	else
     {
 		// yes ... old ad must be updated
-		dprintf (D_FULLDEBUG, "%s: Updating ... \"%s\"\n", adType, hashString.GetCStr() );
+		dprintf (D_FULLDEBUG, "%s: Updating ... \"%s\"\n", adType, hashString.Value() );
 
 		// Update statistics
 		collectorStats->update( label, old_ad, new_ad );
@@ -1162,7 +1162,7 @@ CollectorEngine::updateAd ( ClassAd *ad ) {
     }
 
     buf.sprintf( "%s = %d", ATTR_LAST_HEARD_FROM, (int) now );
-	ad->Insert ( buf.GetCStr () );
+	ad->Insert ( buf.Value () );
 
     /* update statistics */
     collectorStats->update ( label, NULL, ad );
@@ -1298,7 +1298,7 @@ cleanHashTable (CollectorHashTable &hashTable, time_t now,
 			// then remove it from the segregated table
 			(*makeKey) (hk, ad, NULL);
 			hk.sprint( hkString );
-			dprintf (D_ALWAYS,"\t\t**** Removing stale ad: \"%s\"\n", hkString.GetCStr() );
+			dprintf (D_ALWAYS,"\t\t**** Removing stale ad: \"%s\"\n", hkString.Value() );
 			if (hashTable.remove (hk) == -1)
 			{
 				dprintf (D_ALWAYS, "\t\tError while removing ad\n");
