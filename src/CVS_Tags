@@ -1,3 +1,8 @@
+02/23/2009 V7_3_0
+ The official tag for 7.3.0, from V7_3_0-branch.
+ Version string: $CondorVersion: 7.3.0 Feb 17 2009 BuildID: 132922 $
+ Original build tag: BUILD-trunk-2009-2-16
+
 12/30/2008 V7_3-new_classads_for_windows-branch
  Branch for new class ads on Windows, based on master.
 
