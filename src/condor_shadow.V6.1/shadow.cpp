@@ -77,7 +77,7 @@ UniShadow::updateFromStarterClassAd(ClassAd* update_ad) {
 	remRes->updateFromStarter(update_ad);
 
 	int cur_image = getImageSize();
-	if (cur_image > prev_image) {
+	if (cur_image != prev_image) {
 		JobImageSizeEvent event;
 		event.size = cur_image;
 		if (!uLog.writeEvent(&event, job_ad)) {
