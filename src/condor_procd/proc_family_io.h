@@ -22,6 +22,9 @@
 #define _PROC_FAMILY_IO_H
 
 #include "condor_common.h"
+#include "../condor_procapi/procapi.h"
+
+#include <vector>
 
 // command identifiers for communication with the ProcD
 //
@@ -80,6 +83,22 @@ struct ProcFamilyUsage {
 	unsigned long max_image_size;
 	unsigned long total_image_size;
 	int           num_procs;
+};
+
+// structures for retrieving a state dump from the ProcD
+//
+struct ProcFamilyProcessDump {
+	pid_t      pid;
+	pid_t      ppid;
+	birthday_t birthday;
+	long       user_time;
+	long       sys_time;
+};
+struct ProcFamilyDump {
+	pid_t                              parent_root;
+	pid_t                              root_pid;
+	pid_t                              watcher_pid;
+	std::vector<ProcFamilyProcessDump> procs;
 };
 
 #endif

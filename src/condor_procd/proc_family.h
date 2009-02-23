@@ -25,10 +25,6 @@
 #include "proc_family_member.h"
 #include "proc_family_io.h"
 
-#if defined(PROCD_DEBUG)
-#include "local_server.h"
-#endif
-
 class ProcFamilyMonitor;
 
 class ProcFamily {
@@ -117,11 +113,9 @@ public:
 	void set_proxy(char*);
 #endif
 
-#if defined(PROCD_DEBUG)
-	// output the PIDs of all processes in this family
+	// dump info about all processes in this family
 	//
-	void output(LocalServer&);
-#endif
+	void dump(ProcFamilyDump& fam);
 
 private:
 	// we need a pointer to the monitor that's tracking us since we

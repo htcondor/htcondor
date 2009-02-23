@@ -24,6 +24,8 @@
 #include "proc_family_io.h"
 #include "../condor_procapi/procapi.h"
 
+#include <vector>
+
 class LocalClient;
 
 class ProcFamilyClient {
@@ -103,14 +105,9 @@ public:
 	//
 	bool quit(bool&);
 
-#if defined(PROCD_DEBUG)
-	// tell the procd to dump out its state, then return our
-	// LocalClient object so that a tester can read the state
-	// and compare it against reality. the caller must call
-	// end_connection on this object once it's done
+	// tell the procd to dump out its state
 	//
-	LocalClient* dump(pid_t);
-#endif
+	bool dump(pid_t, bool&, std::vector<ProcFamilyDump>&);
 
 private:
 

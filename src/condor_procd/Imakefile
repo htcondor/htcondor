@@ -1,4 +1,4 @@
-all_target(procd_client.a condor_procd)
+all_target(procd_client.a condor_procd procd_ctl)
 
 CFLAGS = $(STD_C_FLAGS) -DPROCD_DEBUG=1
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -DPROCD_DEBUG=1
@@ -45,6 +45,9 @@ LOCAL_CLIENT_TEST_OBJ=local_client_test.o local_client.UNIX.o \
                       named_pipe_reader.o named_pipe_writer.o \
                       named_pipe_util.o
 c_plus_target(local_client_test,$(LOCAL_CLIENT_TEST_OBJ),$(STD_LIBS))
+
+PROCD_CTL_OBJ=procd_ctl.o
+c_plus_target(procd_ctl,$(PROCD_CTL_OBJ),$(STD_LIBS))
 
 html:
 release:: all

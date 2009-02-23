@@ -639,10 +639,11 @@ ProcFamilyClient::quit(bool& response)
 	response = (err == PROC_FAMILY_ERROR_SUCCESS);
 	return true;
 }
-#if defined(PROCD_DEBUG)
 
-LocalClient*
-ProcFamilyClient::dump(pid_t pid)
+bool
+ProcFamilyClient::dump(pid_t pid,
+                       bool& response,
+                       std::vector<ProcFamilyDump>& vec)
 {
 	ASSERT(m_initialized);
 
@@ -662,16 +663,68 @@ ProcFamilyClient::dump(pid_t pid)
 
 	ASSERT(ptr - (char*)buffer == message_len);
 
-	m_client->start_connection(buffer, message_len);
-
-	proc_family_error_t err;
-	m_client->read_data(&err, sizeof(proc_family_error_t));
-	if (err != PROC_FAMILY_ERROR_SUCCESS) {
-		m_client->end_connection();
-		return NULL;
+	if (!m_client->start_connection(buffer, message_len)) {
+		dprintf(D_ALWAYS,
+		        "ProcFamilyClient: "
+			    "failed to start connection with ProcD\n");
+		return false;
 	}
 
-	return m_client;
-}
+	proc_family_error_t err;
+	if (!m_client->read_data(&err, sizeof(proc_family_error_t))) {
+		dprintf(D_ALWAYS,
+		        "ProcFamilyClient: "
+			    "failed to read response from ProcD\n");
+		return false;
+	}
+	response = (err == PROC_FAMILY_ERROR_SUCCESS);
+	if (!response) {
+		m_client->end_connection();
+		log_exit("dump", err);
+		return true;
+	}
 
-#endif
+	vec.clear();
+
+	int family_count;
+	if (!m_client->read_data(&family_count, sizeof(int))) {
+		dprintf(D_ALWAYS,
+		        "ProcFamilyClient: "
+		            "failed to read family count from ProcD\n");
+		return false;
+	}
+	vec.resize(family_count);
+	for (int i = 0; i < family_count; ++i) {
+		if (!m_client->read_data(&vec[i].parent_root, sizeof(pid_t)) ||
+		    !m_client->read_data(&vec[i].root_pid, sizeof(pid_t)) ||
+			!m_client->read_data(&vec[i].watcher_pid, sizeof(pid_t)))
+		{
+			dprintf(D_ALWAYS,
+			        "ProcFamilyClient: "
+			            "failed reading family dump info from ProcD\n");
+			return false;
+		}
+		int proc_count;
+		if (!m_client->read_data(&proc_count, sizeof(int))) {
+			dprintf(D_ALWAYS,
+			        "ProcFamilyClient: "
+			            "failed reading process count from ProcD\n");
+			return false;
+		}
+		vec[i].procs.resize(proc_count);
+		for (int j = 0; j < proc_count; ++j) {
+			if (!m_client->read_data(&vec[i].procs[j],
+			                         sizeof(ProcFamilyProcessDump)))
+			{
+			dprintf(D_ALWAYS,
+			        "ProcFamilyClient: "
+			            "failed reading process dump info from ProcD\n");
+			return false;
+			}
+		}
+	}
+	m_client->end_connection();
+
+	log_exit("dump", err);
+	return true;
+}

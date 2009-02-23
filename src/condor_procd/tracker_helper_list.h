@@ -32,6 +32,7 @@ class ProcFamily;
 //
 class ProcInfoMatcher {
 public:
+	virtual ~ProcInfoMatcher() { }
 	virtual bool test(procInfo*) = 0;
 };
 

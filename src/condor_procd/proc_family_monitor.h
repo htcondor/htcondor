@@ -28,10 +28,6 @@
 #include "proc_family_io.h"
 #include "procd_common.h"
 
-#if defined(PROCD_DEBUG)
-#include "local_server.h"
-#endif
-
 class PIDTracker;
 #if defined(LINUX)
 class GroupTracker;
@@ -104,6 +100,14 @@ public:
 	// subfamilies)
 	//
 	proc_family_error_t get_family_usage(pid_t, ProcFamilyUsage*);
+
+	// helper for looking up families by PID. a 2nd argument of true
+	// means that a PID value of zero will cause this method to return
+	// the root of our tree (otherwise a PID of 0 causes the lookup to
+	// fail)
+	//
+	Tree<ProcFamily*>* lookup_family(pid_t pid,
+	                                 bool zero_means_root = false);
 
 	// return the time that the procd should ewait in between taking
 	// snapshots. this is the minimum of all the "maximum snapshot
@@ -201,19 +205,15 @@ private:
 	//
 	void delete_all_families(Tree<ProcFamily*>*);
 
-#if defined(PROCD_DEBUG)
-
 public:
 	// output all our families
 	//
-	void output(LocalServer&, pid_t);
+	proc_family_error_t dump(pid_t, std::vector<ProcFamilyDump>& vec);
 
 private:
-	// helper for output
+	// helper for dump
 	//
-	void output(LocalServer&, pid_t, Tree<ProcFamily*>*);
-
-#endif
+	void dump(Tree<ProcFamily*>* tree, std::vector<ProcFamilyDump>& vec);
 };
 
 #endif

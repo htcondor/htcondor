@@ -321,27 +321,18 @@ ProcFamily::set_proxy(char* proxy)
 }
 #endif
 
-#if defined(PROCD_DEBUG)
-
 void
-ProcFamily::output(LocalServer& server)
+ProcFamily::dump(ProcFamilyDump& fam)
 {
-	// we'll send the following back to the client:
-	//   - our root pid
-	//   - each pid in the list
-	//   - zero to terminate the list
-	//
-
-	server.write_data(&m_root_pid, sizeof(pid_t));
-
 	ProcFamilyMember* member = m_member_list;
 	while (member != NULL) {
-		server.write_data(&member->m_proc_info->pid, sizeof(pid_t));
+		ProcFamilyProcessDump proc;
+		proc.pid = member->m_proc_info->pid;
+		proc.ppid = member->m_proc_info->ppid;
+		proc.birthday = member->m_proc_info->birthday;
+		proc.user_time = member->m_proc_info->user_time;
+		proc.sys_time = member->m_proc_info->sys_time;
+		fam.procs.push_back(proc);
 		member = member->m_next;
 	}
-
-	int zero = 0;
-	server.write_data(&zero, sizeof(int));
 }
-
-#endif
