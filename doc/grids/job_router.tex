@@ -514,6 +514,7 @@ Using \Macro{JOB\_ROUTER\_ENTRIES\_CMD}, we tell the \Condor{job\_router} daemon
 simple script which queries the collector and outputs a routing table.
 The script, called \verb|osg_ress_routing_table.sh|, is just this:
 
+\footnotesize
 \begin{verbatim}
 #!/bin/sh
 
@@ -526,6 +527,7 @@ $condor_status -format '[ ' BeginAd \
               -format 'GridResource = "gt2 %s"; ' GlueCEInfoContactString \
 	      -format ']\n' EndAd "$@" | uniq
 \end{verbatim}
+\normalsize
 
 Save this script to a file and make sure the permissions on the file
 mark it as executable.  Test this script by calling it by hand before
@@ -535,6 +537,7 @@ such as \Opt{-constraint} to limit the sites which are returned.
 Once you are satisfied that the routing table constructed by the
 script is what you want, configure the \Condor{job\_router} daemon to use it:
 
+\footnotesize
 \begin{verbatim}
 # command to build the routing table
 JOB_ROUTER_ENTRIES_CMD = /path/to/osg_ress_routing_table.sh <extra arguments>
@@ -542,11 +545,12 @@ JOB_ROUTER_ENTRIES_CMD = /path/to/osg_ress_routing_table.sh <extra arguments>
 # how often to rebuild the routing table:
 JOB_ROUTER_ENTRIES_REFRESH = 3600
 \end{verbatim}
+\normalsize
 
-Using the previous example of the \Condor{job\_router} daemon configuration on
-page~\pageref{ExampleJobRouterConfiguration}, you may simply use the
-above settings to replace \Macro{JOB\_ROUTER\_ENTRIES}.  (Or you may
+Using the example configuration, use the
+above settings to replace \Macro{JOB\_ROUTER\_ENTRIES}.  Or,
 leave \Macro{JOB\_ROUTER\_ENTRIES} there and have a routing table
-containing entries from both sources.)  When you restart or reconfig
-the \Condor{job\_router} daemon, you should see messages in JobRouterLog indicating that it
+containing entries from both sources.  When you restart or reconfigure
+the \Condor{job\_router} daemon,
+you should see messages in the Job Router's log indicating that it
 is adding more routes to the table.
