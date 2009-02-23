@@ -119,6 +119,7 @@ MPIShadow::init( ClassAd* job_ad, const char* schedd_addr, const char *xfer_queu
 
 	rr->setStartdInfo( temp );
 
+	temp->Assign( ATTR_JOB_STATUS, RUNNING );
     ResourceList[ResourceList.getlast()+1] = rr;
 
 		// now, we want to re-initialize the shadow_user_policy object
