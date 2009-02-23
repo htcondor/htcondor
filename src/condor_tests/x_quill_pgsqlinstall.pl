@@ -284,6 +284,7 @@ system("date");
 
 $docreatelang = system("$pgsql_dir/bin/createlang plpgsql test --port $startpostmasterport");
 if($docreatelang != 0) {
+	print "$pgsql_dir/bin/createlang plpgsql test --port $startpostmasterport FAILED!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n";
 	die "Failed to createlang plpgsql\n";
 } else {
 	print "$pgsql_dir/bin/createlang plpgsql test --port $startpostmasterport Worked!!\n";
