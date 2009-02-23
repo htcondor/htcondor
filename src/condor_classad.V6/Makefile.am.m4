@@ -146,10 +146,10 @@ check_PROGRAMS =							\
 	$(TESTS)
 
 libclassad_la_SOURCES = \
-	attrrefs.cpp classad.cpp collection.cpp collectionBase.cpp debug.cpp	\
+	attrrefs.cpp new_classad.cpp collection.cpp collectionBase.cpp new_classad_debug.cpp	\
 	exprList.cpp exprTree.cpp fnCall.cpp indexfile.cpp lexer.cpp		\
-	lexerSource.cpp literals.cpp matchClassad.cpp operators.cpp query.cpp	\
-	sink.cpp source.cpp transaction.cpp util.cpp value.cpp view.cpp xmlLexer.cpp	\
+	lexerSource.cpp literals.cpp matchClassad.cpp new_classad_operators.cpp query.cpp	\
+	sink.cpp source.cpp transaction.cpp new_classad_util.cpp new_classad_value.cpp view.cpp xmlLexer.cpp	\
 	xmlSink.cpp xmlSource.cpp cclassad.cpp $(_libclassad_la_SOURCES)
 
 MF_IF_NAMESPACE([libclassad_ns_la_SOURCES = $(libclassad_la_SOURCES)
