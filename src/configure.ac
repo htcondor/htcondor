@@ -2932,7 +2932,7 @@ fi
 # NOTE: We don't need the --unresolved-symbols flag in the non-proper
 # case because in that case Condor links with the static libraries,
 # and the linker does not complain as much.
-CHECK_EXTERNAL([gsoap], [2.7.10-p2], [soft],
+CHECK_EXTERNAL([gsoap], [2.7.10-p3], [soft],
                [use gSOAP (enables Birdbath interface)],
                [_ldflags_save="$LDFLAGS"
                 LDFLAGS="$LDFLAGS -Wl[,]--unresolved-symbols=ignore-in-shared-libs"
