@@ -2017,23 +2017,33 @@ ResMgr::allHibernating( MyString &target ) const
 		// We take largest value as the representative 
 		// hibernation level for this machine
 	target = "";
+	MyString str;
 	int level = 0;
+	bool activity = false;
 	for( int i = 0; i < nresources; i++ ) {
-
-		MyString	str;
-		if ( !resources[i]->evaluateHibernate(str) ) {
+		
+		str = "";
+		if ( !resources[i]->evaluateHibernate ( str ) ) {
 			return 0;
 		}
 
-		int tmp = m_hibernation_manager->stringToSleepState( str.Value() );
-		dprintf( D_FULLDEBUG, "allHibernating: resource #%d: '%s' = %d\n",
-				 i, str.Value(), tmp );
+		int tmp = m_hibernation_manager->stringToSleepState (
+			str.Value () );
+		
+		dprintf ( D_FULLDEBUG, 
+			"allHibernating: resource #%d: '%s' = %d\n",
+			i + 1, str.Value (), tmp );
+		
+		if ( 0 == tmp ) {
+			activity = true;
+		}
+
 		if ( tmp > level ) {
 			target = str;
 			level = tmp;
 		}
 	}
-	return level;
+	return activity ? 0 : level;
 }
 
 
