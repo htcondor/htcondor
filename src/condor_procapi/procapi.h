@@ -80,6 +80,8 @@ BEGIN_C_DECLS
 extern int getprocs64(struct procentry64*, int, struct fdsinfo64*, int,
         pid_t*, int);
 END_C_DECLS
+/* AIX # defines the following symbol, which we use later as a formal param*/
+#undef l_name
 #endif
 
 #else // It's WIN32...
