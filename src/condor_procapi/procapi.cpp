@@ -2213,23 +2213,23 @@ ProcAPI::do_usage_sampling( piPTR& pi,
 		// a bug in the Linux SMP kernel, or there may be a problem 
 		// in the above code.
 	if( pi->cpuusage < 0.0 ) {
-        dprintf ( D_ALWAYS, "ProcAPI sanity failure, cpuusage = %f\n", 
-                  pi->cpuusage );
+        dprintf ( D_ALWAYS, "ProcAPI sanity failure on pid %d, cpuusage = %f\n", 
+                  pi->pid, pi->cpuusage );
         pi->cpuusage = 0.0;
 	}
 	if( pi->user_time < 0 ) {
-		dprintf ( D_ALWAYS, "ProcAPI sanity failure, user_time = %ld\n", 
-				  pi->user_time );
+		dprintf ( D_ALWAYS, "ProcAPI sanity failure on pid %d, user_time = %ld\n", 
+				  pi->pid, pi->user_time );
 		pi->user_time = 0;
 	}
 	if( pi->sys_time < 0 ) {
-		dprintf ( D_ALWAYS, "ProcAPI sanity failure, sys_time = %ld\n", 
-				  pi->sys_time );
+		dprintf ( D_ALWAYS, "ProcAPI sanity failure on pid %d, sys_time = %ld\n", 
+				  pi->pid, pi->sys_time );
 		pi->sys_time = 0;
 	}
 	if( pi->age < 0 ) {
-		dprintf ( D_ALWAYS, "ProcAPI sanity failure, age = %ld\n", 
-				  pi->age );
+		dprintf ( D_ALWAYS, "ProcAPI sanity failure on pid, age = %ld\n", 
+				  pi->pid, pi->age );
 		pi->age = 0;
 	}
 
