@@ -36,6 +36,7 @@
 **
 ************************************************************************/
 
+#define _FILE_OFFSET_BITS 64
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_config.h"
@@ -47,6 +48,7 @@
 #if HAVE_BACKTRACE
 #include "execinfo.h"
 #endif
+#include "util_lib_proto.h"		// for mkargv() proto
 
 FILE *debug_lock(int debug_level);
 FILE *open_debug_file( int debug_level, char flags[] );
@@ -140,10 +142,13 @@ int InDBX = 0;
 */
 /* VARARGS1 */
 
+// prototype
+struct tm *localtime();
+
 void
 _condor_dprintf_va( int flags, const char* fmt, va_list args )
 {
-	struct tm *tm, *localtime();
+	struct tm *tm;
 	time_t clock_now;
 #if !defined(WIN32)
 	sigset_t	mask, omask;
@@ -267,7 +272,11 @@ _condor_dprintf_va( int flags, const char* fmt, va_list args )
 				/* Print the message with the time and a nice identifier */
 				if( ((saved_flags|flags) & D_NOHEADER) == 0 ) {
 					if ( DebugUseTimestamps ) {
-						fprintf( DebugFP, "(%d) ", clock_now );
+						// Casting clock_now to int to get rid of compile
+						// warning.  Probably format should be %ld, and
+						// we should cast to long int, but I'm afraid of
+						// changing the output format.  wenger 2009-02-24.
+						fprintf( DebugFP, "(%d) ", (int)clock_now );
 					} else {
 						fprintf( DebugFP, "%d/%d %02d:%02d:%02d ", 
 								tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, 
@@ -416,7 +425,7 @@ _condor_open_lock_file(const char *filename,int flags, mode_t perm)
 FILE *
 debug_lock(int debug_level)
 {
-	int			length = 0;
+	off_t		length = 0; // this gets assigned return value from lseek()
 	priv_state	priv;
 	int save_errno;
 	char msg_buf[DPRINTF_ERR_MAX];
@@ -484,7 +493,7 @@ debug_lock(int debug_level)
 			_condor_dprintf_exit( save_errno, msg_buf );
 		}
 			/* Seek to the end */
-		if( (length=lseek(fileno(DebugFP),0,2)) < 0 ) {
+		if( (length=lseek(fileno(DebugFP), 0, SEEK_END)) < 0 ) {
 			if (debug_level > 0) {
 				fclose_wrapper( DebugFP, FCLOSE_RETRY_MAX );
 				DebugFP = NULL;
@@ -497,8 +506,12 @@ debug_lock(int debug_level)
 
 			/* If it's too big, preserve it and start a new one */
 		if( MaxLog[debug_level] && length > MaxLog[debug_level] ) {
+				// Casting length to int to get rid of compile warning.
+				// Probably format should be %ld, and we should cast to
+				// long int, but I'm afraid of changing the output format.
+				// wenger 2009-02-24.
 			fprintf( DebugFP, "MaxLog = %d, length = %d\n",
-					 MaxLog[debug_level], length );
+					 MaxLog[debug_level], (int)length );
 			preserve_log_file(debug_level);
 		}
 	}
@@ -722,7 +735,7 @@ _condor_fd_panic( int line, char* file )
 		_condor_dprintf_exit( save_errno, msg_buf );
 	}
 		/* Seek to the end */
-	(void)lseek( fileno(DebugFP), 0, 2 );
+	(void)lseek( fileno(DebugFP), 0, SEEK_END );
 	fprintf( DebugFP, "%s\n", panic_msg );
 	(void)fflush( DebugFP );
 
@@ -816,7 +829,11 @@ _condor_dprintf_exit( int error_code, const char* msg )
 	(void)time( &clock_now );
 
 	if ( DebugUseTimestamps ) {
-		snprintf( header, sizeof(header), "(%d) ", clock_now );
+			// Casting clock_now to int to get rid of compile warning.
+			// Probably format should be %ld, and we should cast to long
+			// int, but I'm afraid of changing the output format.
+			// wenger 2009-02-24.
+		snprintf( header, sizeof(header), "(%d) ", (int)clock_now );
 	} else {
 		tm = localtime( &clock_now );
 		snprintf( header, sizeof(header), "%d/%d %02d:%02d:%02d ",
@@ -963,11 +980,13 @@ fclose_wrapper( FILE *stream, int maxRetries )
 	return result;
 }
 
+int _condor_mkargv( int* argc, char* argv[], char* line );
+
+// Why the heck is this in here, rather than in mkargv.c?  wenger 2009-02-24.
+// prototype
 int
 mkargv( int* argc, char* argv[], char* line )
 {
-	// prototype
-	int _condor_mkargv( int* argc, char* argv[], char* line );
 	return( _condor_mkargv(argc, argv, line) );
 }
 
