@@ -44,7 +44,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item The \Condor{schedd} was failing to send `reschedule' commands to
+flocked negotiators, so unless some other schedd in the negotiator's
+pool sent it a reschedule command, negotiation cycles would only
+happen every \Macro{NEGOTIATOR\_INTERVAL}.
 
 \end{itemize}
 
