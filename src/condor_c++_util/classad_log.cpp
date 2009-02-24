@@ -351,7 +351,7 @@ ClassAdLog::DecNondurableCommitLevel(int old_level)
 void
 ClassAdLog::BeginTransaction()
 {
-	assert(!active_transaction);
+	ASSERT(!active_transaction);
 	active_transaction = new Transaction();
 }
 
