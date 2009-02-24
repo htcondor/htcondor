@@ -87,7 +87,7 @@ bool OwnerCheck( ClassAd *ad, const char *test_owner );
 bool OwnerCheck2( ClassAd *ad, const char *test_owner );
 bool BuildPrioRecArray(bool no_match_found=false);
 void DirtyPrioRecArray();
-extern ClassAd *dollarDollarExpand(int cid, int pid, ClassAd *job, ClassAd *res);
+extern ClassAd *dollarDollarExpand(int cid, int pid, ClassAd *job, ClassAd *res, bool persist_expansions);
 ClassAd* GetNextJobByCluster( int, int );
 
 int get_myproxy_password_handler(Service *, int, Stream *sock);

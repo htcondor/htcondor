@@ -5390,7 +5390,7 @@ Scheduler::contactStartd( ContactStartdArgs* args )
 		jobAd = dedicated_scheduler.GetMatchRequestAd( mrec );
 	}
 	else {
-		jobAd = GetJobAd( mrec->cluster, mrec->proc, true );
+		jobAd = GetJobAd( mrec->cluster, mrec->proc, true, false );
 	}
 	if( ! jobAd ) {
 		char const *reason = "find/expand";
@@ -7002,7 +7002,9 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 	srec->pid = 0; 
 	add_shadow_rec( srec );
 
-	job_ad = GetJobAd( job_id->cluster, job_id->proc, true );
+		// expand $$ stuff and persist expansions so they can be
+		// retrieved on restart for reconnect
+	job_ad = GetJobAd( job_id->cluster, job_id->proc, true, true );
 	if( ! job_ad ) {
 			// this might happen if the job is asking for
 			// something in $$() that doesn't exist in the machine

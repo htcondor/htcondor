@@ -614,7 +614,7 @@ CloseSocket()
 #define assert(x) if (!(x)) { errno = ETIMEDOUT; return NULL; }
 
 ClassAd *
-GetJobAd( int cluster_id, int proc_id, bool /*expStartdAttrs*/ )
+GetJobAd( int cluster_id, int proc_id, bool /*expStartdAttrs*/, bool /*persist_expansions*/ )
 {
 	int	rval = -1;
 

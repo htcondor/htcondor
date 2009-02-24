@@ -365,7 +365,7 @@ ConvertOldJobAdAttrs( ClassAd *job_ad, bool startup )
 							// calling GetJobAd().
 						MyString resource;
 						ClassAd *job_ad2 = GetJobAd( cluster, proc,
-													true );
+													true, false );
 						if ( !job_ad2 ||
 							 !job_ad2->LookupString(
 													ATTR_GLOBUS_RESOURCE,
@@ -434,7 +434,7 @@ ConvertOldJobAdAttrs( ClassAd *job_ad, bool startup )
 					// GridJobId. That means calling GetJobAd().
 				ClassAd *job_ad2;
 
-				job_ad2 = GetJobAd( cluster, proc, true );
+				job_ad2 = GetJobAd( cluster, proc, true, false );
 
 				if ( job_ad2 ) {
 					schedd = "";
@@ -2667,7 +2667,7 @@ DeleteAttribute(int cluster_id, int proc_id, const char *attr_name)
 }
 
 ClassAd *
-dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad) 
+dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad, bool persist_expansions)
 {
 	// This is prepended to attributes that we've already expanded,
 	// making them available if the match ad is no longer available.
@@ -2678,6 +2678,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad)
 	// you'll get
 	//   MATCH_EXP_GlobusScheduler=foobarqux
 	const char * MATCH_EXP = "MATCH_EXP_";
+	bool started_transaction = false;
 
 	int	job_universe = -1;
 	ad->LookupInteger(ATTR_JOB_UNIVERSE,job_universe);
@@ -2931,12 +2932,19 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad)
 					// before we mess with it any further.  however, no need to
 					// re-insert it if we got the value from the job ad
 					// in the first place.
-					if ( !value_came_from_jobad ) {
+					if ( !value_came_from_jobad && persist_expansions) {
 						MyString expr;
 						expr = "MATCH_";
 						expr += name;
 
-						// We used to only bother saving the MATCH_ entry for
+						if( !started_transaction ) {
+							started_transaction = true;
+								// for efficiency, when storing multiple
+								// expansions, do it all in one transaction
+							BeginTransaction();
+						}	
+
+					// We used to only bother saving the MATCH_ entry for
 						// the GRID universe, but we now need it for flocked
 						// jobs using disconnected starter-shadow (job-leases).
 						// So just always do it.
@@ -2976,11 +2984,17 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad)
 				}
 			}
 
-			if(expanded_something && ! attribute_not_found) {
+			if(expanded_something && ! attribute_not_found && persist_expansions) {
 				// Cache the expanded string so that we still
 				// have it after, say, a restart and the collector
 				// is no longer available.
 
+				if( !started_transaction ) {
+					started_transaction = true;
+						// for efficiency, when storing multiple
+						// expansions, do it all in one transaction
+					BeginTransaction();
+				}
 				if ( SetAttribute(cluster_id,proc_id,cachedAttrName.Value(),attribute_value) < 0 )
 				{
 					EXCEPT("Failed to store '%s=%s' into job ad %d.%d",
@@ -2988,6 +3002,10 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad)
 				}
 			}
 
+		}
+
+		if( started_transaction ) {
+			CommitTransaction();
 		}
 
 		if ( startd_ad ) {
@@ -3161,7 +3179,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad)
 
 
 ClassAd *
-GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
+GetJobAd(int cluster_id, int proc_id, bool expStartdAd, bool persist_expansions)
 {
 	char	key[PROC_ID_STR_BUFLEN];
 	ClassAd	*ad;
@@ -3208,7 +3226,7 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 			
 		}
 
-		return dollarDollarExpand(cluster_id, proc_id, ad, startd_ad);
+		return dollarDollarExpand(cluster_id, proc_id, ad, startd_ad, persist_expansions);
 
 	} else {
 		// we could not find this job ad
