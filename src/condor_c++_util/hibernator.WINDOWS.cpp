@@ -61,13 +61,14 @@ MsWindowsHibernator::initStates () {
 	}
 
 	/* S4 requires that the Hibernation file exist as well */
-	capabilities.SystemS4 &= capabilities.HiberFilePresent;
+	if ( capabilities.HiberFilePresent ) {
+		states |= capabilities.SystemS4 << 3;
+	}
 
-	/* Finally, set supported states */
+	/* Finally, set the remaining supported states */
 	states |= capabilities.SystemS1;
 	states |= capabilities.SystemS2 << 1;
 	states |= capabilities.SystemS3 << 2;
-	states |= capabilities.SystemS4 << 3;
 	states |= capabilities.SystemS5 << 4;
 	setStates ( states );
 
@@ -84,13 +85,23 @@ MsWindowsHibernator::tryShutdown ( bool force ) const
 		FALSE	/* no reboot */, 
 		SHTDN_REASON_MAJOR_APPLICATION 
 		| SHTDN_REASON_FLAG_PLANNED ) );
+	
 	if ( !ok ) {
+	
 		/* if the computer is already shutting down, we interpret 
-		   this as success... is this correct? */
+		   this as success... */
 		if ( ERROR_SHUTDOWN_IN_PROGRESS == GetLastError () ) {
-			ok = true;
+			return true;
 		}
+
+		/* otherwise, it's an error and we'll tell the user so */
+		dprintf ( 
+			D_ALWAYS,
+			"tryShutdown(): Shutdown failed. (last-error = %d)",
+			GetLastError () );
+
 	}
+
 	return ok;
 }
 
@@ -125,7 +136,7 @@ HibernatorBase::SLEEP_STATE
 MsWindowsHibernator::enterStatePowerOff ( bool force ) const
 {
     if ( !tryShutdown ( force ) ) {
-        return S4;
+        return S5;
     }
 	return NONE;
 }

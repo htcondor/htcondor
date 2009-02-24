@@ -31,7 +31,6 @@
 */
 
 static void (*SaveFunc)();
-static jmp_buf Env;
 
 // The stack is to be aligned on an 8-byte boundary on some
 // machines. This is required so that double's can be pushed
