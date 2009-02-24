@@ -973,6 +973,12 @@ case "$gcc_vers" in
     CompilerMinor="2"
     CompilerPatch="1"
     ;;
+ "4.3.0" )
+    CompilerKind="GCC"
+    CompilerMajor="4"
+    CompilerMinor="3"
+    CompilerPatch="0"
+    ;;
  "4.3.1" )
     CompilerKind="GCC"
     CompilerMajor="4"
