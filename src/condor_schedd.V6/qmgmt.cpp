@@ -2937,7 +2937,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 						expr = "MATCH_";
 						expr += name;
 
-						if( !started_transaction ) {
+						if( !started_transaction && !InTransaction() ) {
 							started_transaction = true;
 								// for efficiency, when storing multiple
 								// expansions, do it all in one transaction
@@ -2989,7 +2989,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 				// have it after, say, a restart and the collector
 				// is no longer available.
 
-				if( !started_transaction ) {
+				if( !started_transaction && !InTransaction() ) {
 					started_transaction = true;
 						// for efficiency, when storing multiple
 						// expansions, do it all in one transaction

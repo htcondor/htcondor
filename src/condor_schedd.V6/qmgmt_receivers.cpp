@@ -631,8 +631,11 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		dprintf( D_SYSCALLS, "	proc_id = %d\n", proc_id );
 		assert( syscall_sock->end_of_message() );;
 
+			// The GridManager depends on the fact that the following call
+			// expands $$ and saves the expansions to disk in case of
+			// restart.
 		errno = 0;
-		ad = GetJobAd( cluster_id, proc_id, true );
+		ad = GetJobAd( cluster_id, proc_id, true, true );
 		terrno = errno;
 		rval = ad ? 0 : -1;
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
