@@ -59,6 +59,8 @@ to write a core file to disk in the UNIX ports.
 (\MacroNI{DEDICATED\_EXECUTE\_ACCOUNT\_REGEXP}) did not work properly
 in privsep mode (\MacroNI{PRIVSEP\_ENABLED}).
 
+\item Fixed an erroneous log message that would report that \Macro{HOOK\_UPDATE\_JOB\_INFO} had run, but would print the \Macro{HOOK\_PREPARE\_JOB} path.  The correct hook would run, this was only a logging error.  The log message is only visible at the D\_FULLDEBUG level.
+
 % PR 953
 \item Fixed a bug that caused \Condor{dagman} to crash if the
 \File{dagman.out} file reached a size of 2 GB.
