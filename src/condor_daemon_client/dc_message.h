@@ -384,6 +384,18 @@ class DCMsgCallback: public ClassyCountedPtr {
 
 
 /*
+ * DCCommandOnlyMsg is a simple message consisting of just a command int.
+ */
+
+class DCCommandOnlyMsg: public DCMsg {
+public:
+	DCCommandOnlyMsg( int cmd );
+
+	bool writeMsg( DCMessenger *messenger, Sock *sock );
+	bool readMsg( DCMessenger *messenger, Sock *sock );
+};
+
+/*
  * DCStringMsg is a simple message consisting of one string.
  */
 
@@ -397,6 +409,10 @@ public:
 private:
 	MyString m_str;
 };
+
+/*
+ * DCClassAdMsg is a simple message consisting of one ClassAd.
+ */
 
 class ClassAdMsg: public DCMsg {
 public:

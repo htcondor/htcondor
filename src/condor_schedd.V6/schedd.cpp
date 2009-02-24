@@ -11063,13 +11063,14 @@ Scheduler::sendReschedule()
 
 	dprintf( D_FULLDEBUG, "Sending RESCHEDULE command to negotiator(s)\n" );
 
-	Daemon negotiator(DT_NEGOTIATOR);
-	Stream::stream_type st = negotiator.hasUDPCommandPort() ? Stream::safe_sock : Stream::reli_sock;
-	if( !negotiator.sendCommand(RESCHEDULE, st, NEGOTIATOR_CONTACT_TIMEOUT) ) {
-		dprintf( D_ALWAYS,
-				 "failed to send RESCHEDULE command to negotiator\n" );
-		return;
-	}
+	classy_counted_ptr<Daemon> negotiator = new Daemon(DT_NEGOTIATOR);
+	classy_counted_ptr<DCCommandOnlyMsg> msg = new DCCommandOnlyMsg(RESCHEDULE);
+
+	Stream::stream_type st = negotiator->hasUDPCommandPort() ? Stream::safe_sock : Stream::reli_sock;
+	msg->setStreamType(st);
+	msg->setTimeout(NEGOTIATOR_CONTACT_TIMEOUT);
+
+	negotiator->sendMsg( msg.get() );
 
 	Daemon* d;
 	if( FlockNegotiators ) {
@@ -11077,12 +11078,12 @@ Scheduler::sendReschedule()
 		FlockNegotiators->next( d );
 		for( int i=0; d && i<FlockLevel; FlockNegotiators->next(d), i++ ) {
 			st = d->hasUDPCommandPort() ? Stream::safe_sock : Stream::reli_sock;
-			if( !d->sendCommand(RESCHEDULE, st, 
-								NEGOTIATOR_CONTACT_TIMEOUT) ) {
-				dprintf( D_ALWAYS, 
-						 "failed to send RESCHEDULE command to %s: %s\n",
-						 d->name(), d->error() );
-			}
+			negotiator = new Daemon( *d );
+			msg = new DCCommandOnlyMsg(RESCHEDULE);
+			msg->setStreamType(st);
+			msg->setTimeout(NEGOTIATOR_CONTACT_TIMEOUT);
+
+			negotiator->sendMsg( msg.get() );
 		}
 	}
 }

@@ -559,6 +559,20 @@ int DCMessenger::startCommandAfterDelay_alarm()
 	return TRUE;
 }
 
+DCCommandOnlyMsg::DCCommandOnlyMsg( int cmd ): DCMsg( cmd )
+{
+}
+
+bool DCCommandOnlyMsg::writeMsg( DCMessenger *, Sock * )
+{
+	return true;
+}
+
+bool DCCommandOnlyMsg::readMsg( DCMessenger *, Sock * )
+{
+	return true;
+}
+
 DCStringMsg::DCStringMsg( int cmd, char const *str ):
 	DCMsg( cmd )
 {
