@@ -56,6 +56,10 @@ to write a core file to disk in the UNIX ports.
 (\MacroNI{DEDICATED\_EXECUTE\_ACCOUNT\_REGEXP}) did not work properly
 in privsep mode (\MacroNI{PRIVSEP\_ENABLED}).
 
+% PR 953
+\item Fixed a bug that caused \Condor{dagman} to crash if the
+\File{dagman.out} file reached a size of 2 GB.
+
 \end{itemize}
 
 \noindent Known Bugs:
