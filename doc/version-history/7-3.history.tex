@@ -20,6 +20,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Note that this release is incompatible when communicating with
+previous versions of Condor if CCB is enabled or if
+\Macro{PRIVATE\_NETWORK\_NAME} is configured.
+
 \item Updated the DRMAA version.
 This new version is compliant with GFD.133,
 the DRMAA 1.0 grid recommendation standard.
@@ -55,9 +59,6 @@ to use a CCB server that is accessible to the \Condor{schedd} daemon.
 However, if the \Condor{schedd} daemon is on one private
 network and the \Condor{startd} daemons are on a different private network,
 CCB does not help.  For more information on CCB, see page~\pageref{sec:CCB}.
-Note that this release is incompatible when communicating with previous
-versions of Condor if CCB is enabled or if
-\Macro{PRIVATE\_NETWORK\_NAME} is configured.
 
 \item Added support for a CPU affinity on Linux platforms.
 
@@ -95,6 +96,22 @@ instead of one sleep for each submit.
 \item Added the \Opt{-import\_env} command-line flag to
 \Condor{submit\_dag}.  This explicitly puts the submittor's environment
 into the \File{.condor.sub} file.
+
+\item Optimized removal of large numbers of jobs.  Previously, removal
+of 10s of thousands of jobs would cause the \Condor{schedd} to consume
+a lot of cpu time for several minutes.
+
+\item Reduced memory usage in \Condor{shadow}.  Since there is one
+\Condor{shadow} process per running job, this helps increase the
+number of running jobs a submit machine can handle.  Under Linux 2.6,
+we found that running 10,000 jobs from a single submit machine
+requires about 10GB of system RAM.  We also found in this case that to
+run more than 10,000 simultaneous jobs requires a 64-bit submit
+machine.  Under 32-bit Linux, kernel memory becomes exhausted,
+regardless of how much additional RAM the system has.
+
+\item Reduced memory usage of \Condor{collector} when using
+\MacroNI{UPDATE\_COLLECTOR\_WITH\_TCP}.
 
 \end{itemize}
 
