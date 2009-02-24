@@ -43,30 +43,39 @@ DaemonList::~DaemonList( void )
 
 
 void
-DaemonList::init( daemon_t type, const char* host_list )
+DaemonList::init( daemon_t type, const char* host_list, const char* pool_list )
 {
 	Daemon* tmp;
 	char* host;
+	char const *pool = NULL;
 	StringList foo;
+	StringList pools;
 	foo.initializeFromString( host_list );
 	foo.rewind();
+	if( pool_list ) {
+		pools.initializeFromString( pool_list );
+		pools.rewind();
+	}
 	while( (host = foo.next()) ) {
-		tmp = buildDaemon( type, host );
+		if( pool_list ) {
+			pool = pools.next();
+		}
+		tmp = buildDaemon( type, host, pool );
 		append( tmp );
 	}
 }
 
 
 Daemon*
-DaemonList::buildDaemon( daemon_t type, const char* str )
+DaemonList::buildDaemon( daemon_t type, const char* host, char const *pool )
 {
 	Daemon* tmp;
 	switch( type ) {
 	case DT_COLLECTOR:
-		tmp = new DCCollector( str );
+		tmp = new DCCollector( host );
 		break;
 	default:
-		tmp = new Daemon( type, str );
+		tmp = new Daemon( type, host, pool );
 		break;
 	}
 	return tmp;

@@ -10302,7 +10302,7 @@ Scheduler::Init()
 			delete FlockNegotiators;
 		}
 		FlockNegotiators = new DaemonList();
-		FlockNegotiators->init( DT_NEGOTIATOR, flock_negotiator_hosts );
+		FlockNegotiators->init( DT_NEGOTIATOR, flock_negotiator_hosts, flock_collector_hosts );
 		if( FlockCollectors->number() != FlockNegotiators->number() ) {
 			dprintf(D_ALWAYS, "FLOCK_COLLECTOR_HOSTS and "
 					"FLOCK_NEGOTIATOR_HOSTS lists are not the same size."

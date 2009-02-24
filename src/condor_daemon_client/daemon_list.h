@@ -50,7 +50,7 @@ public:
 		/** Initialize the list with Daemons of the given type,
 			specified with the given list of contact info
 		*/
-	void init( daemon_t type, const char* host_list );
+	void init( daemon_t type, const char* host_list, const char* pools=NULL );
 
 		// Provide the same interface that both SimpleList and
 		// StringList do (which, unfortunately, are not the same). 
@@ -86,7 +86,7 @@ public:
 		/** Helper which constructs a Daemon object of the given type
 			and contact info.  This is used to initalize the list. 
 		*/
-	Daemon* buildDaemon( daemon_t type, const char* str );
+	Daemon* buildDaemon( daemon_t type, const char* host, char const *pool );
 
 		// I can't be copied (yet)
 	DaemonList( const DaemonList& );
