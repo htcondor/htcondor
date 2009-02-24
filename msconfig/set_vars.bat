@@ -37,7 +37,7 @@ set VC_DIR=%VS_DIR%\VC
 set VC_BIN=%VC_DIR%\bin
 set PERL_DIR=%ROOT_DRIVE%\Perl\bin
 set SDK_DIR=%ProgramFiles%\Microsoft Platform SDK
-set DBG_DIR=%ProgramFiles%\Debugging Tools for Windows
+set DBG_DIR=%ProgramFiles%\Debugging Tools for Windows (x86)
 set DOTNET_DIR=%ROOT_DRIVE%\Windows\Microsoft.NET\Framework\v3.5
 
 REM For some reason this is not defined whilst in some environments
