@@ -67,6 +67,9 @@ sub build_from_source {
 	$bundle_location  = "$bundle_dir/$pname/$pversion";
 	$install_location = "$install_dir/$package_name";
 
+	print LOG "** rm -rf $bundle_workspace\n";
+	system ("rm -rf $bundle_workspace");
+
 	print LOG "** mkdir -p $bundle_workspace\n";
 
 	# HACK - surround mkdir with quotes so Windows uses our GNU
