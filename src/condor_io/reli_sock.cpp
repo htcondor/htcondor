@@ -91,7 +91,10 @@ ReliSock::~ReliSock()
 int 
 ReliSock::listen()
 {
-	if (_state != sock_bound) return FALSE;
+	if (_state != sock_bound) {
+        dprintf(D_ALWAYS, "Failed to listen on TCP socket, because it is not bound to a port.\n");
+        return FALSE;
+    }
 
 	// many modern OS's now support a >5 backlog, so we ask for 500,
 	// but since we don't know how they behave when you ask for too
@@ -104,6 +107,18 @@ ReliSock::listen()
 		if( ::listen( _sock, 200 ) < 0 ) 
 		if( ::listen( _sock, 100 ) < 0 ) 
 		if( ::listen( _sock, 5 ) < 0 ) {
+
+            char const *self_address = get_sinful();
+            if( !self_address ) {
+                self_address = "<bad address>";
+            }
+#ifdef WIN32
+			int error = WSAGetLastError();
+			dprintf( D_ALWAYS, "Failed to listen on TCP socket %s: WSAError = %d\n", self_address, error );
+#else
+			dprintf(D_ALWAYS, "Failed to listen on TCP socket %s: (errno = %d) %s\n", self_address, errno, strerror(errno));
+#endif
+
 			return FALSE;
 		}
 	}

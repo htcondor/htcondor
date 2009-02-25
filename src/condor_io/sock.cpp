@@ -495,7 +495,10 @@ int Sock::bind(bool outbound, int port, bool loopback)
 	// Following lines are added because some functions in condor call
 	// this method without checking the port numbers returned from
 	// such as 'getportbyserv'
-	if (port < 0) return FALSE;
+	if (port < 0) {
+        dprintf(D_ALWAYS, "Sock::bind - invalid port %d\n", port);
+        return FALSE;
+    }
 
 	// if stream not assigned to a sock, do it now	*/
 	if (_state == sock_virgin) assign();
@@ -566,6 +569,7 @@ int Sock::bind(bool outbound, int port, bool loopback)
 		bind_return_value = _bind_helper(_sock, (sockaddr *)&sin, sizeof(sockaddr_in), outbound, loopback);
 
 #ifndef WIN32
+        int bind_errno = errno;
 		if(port > 0 && port < 1024) {
 			set_priv (old_priv);
 		}
@@ -573,9 +577,9 @@ int Sock::bind(bool outbound, int port, bool loopback)
 		if ( bind_return_value < 0) {
 	#ifdef WIN32
 			int error = WSAGetLastError();
-			dprintf( D_ALWAYS, "bind failed: WSAError = %d\n", error );
+			dprintf( D_ALWAYS, "Sock::bind failed: WSAError = %d\n", error );
 	#else
-			dprintf(D_NETWORK, "bind failed errno = %d\n", errno);
+			dprintf(D_ALWAYS, "Sock::bind failed: errno = %d %s\n", bind_errno, strerror(bind_errno));
 	#endif
 			return FALSE;
 		}
