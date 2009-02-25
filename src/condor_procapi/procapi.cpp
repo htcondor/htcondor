@@ -2228,7 +2228,7 @@ ProcAPI::do_usage_sampling( piPTR& pi,
 		pi->sys_time = 0;
 	}
 	if( pi->age < 0 ) {
-		dprintf ( D_ALWAYS, "ProcAPI sanity failure on pid, age = %ld\n", 
+		dprintf ( D_ALWAYS, "ProcAPI sanity failure on pid %d, age = %ld\n", 
 				  pi->pid, pi->age );
 		pi->age = 0;
 	}
