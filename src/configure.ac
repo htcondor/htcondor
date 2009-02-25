@@ -2126,9 +2126,9 @@ AC_SUBST(MD5SUM,$ac_sha1sum)
 
 AC_ARG_ENABLE([rpm],
   AC_HELP_STRING([--enable-rpm],
-    [determine if we try to make rpms (default: no)]),
+    [determine if we try to make rpms (default: yes)]),
   [],
-  [enable_rpm=no])
+  [enable_rpm=yes])
 # there might be two kinds of rpm on a machine, 'rpm' and 'rpmbuild'
 # use the latter if we have it.
 if test "x$_cv_linux_distro" = "xSLES9"; then
