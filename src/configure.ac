@@ -639,91 +639,37 @@ fi
 AS_IF([test "x$enable_proper" != xyes],
 [
 ac_cv_has_externals=YES
-ac_cv_externals=none
+ac_cv_externals_src="$_root_dir/externals"
+ac_cv_externals_build="$ac_cv_externals_src"
+CONDOR_VERIFY_EXTERNALS_DIR([$ac_cv_externals_src],
+  [Can't find externals directory, should be in $_root_dir])
 AC_ARG_WITH(externals,
  AC_HELP_STRING([--with-externals=DIR],
-   [Root of directory tree for external programs needed for building Condor (default is to search in ../externals)]),
- [if test $withval = no; then
-    AC_MSG_WARN([By not using --with-externals, most of Condor will not build])
-    ac_cv_has_externals=NO
-  else
-    CONDOR_VERIFY_EXTERNALS_DIR([$withval],
-      [directory specified with --with-externals ($withval) is not valid])
+   [Directory in which to build and install external programs needed for building Condor (default is to build in ../externals)]),
+ [if test "$withval" != no; then
+    if test ! -d "$withval" || test ! -w "$withval"; then
+      AC_MSG_ERROR([directory specified with --with-externals ($withval) is not valid])
+    fi
+    ac_cv_externals_build="$withval"
   fi
  ],
  [
-  # nothing specified, try ../externals.  using this as a default
-  # makes it possible to just run "./configure" most of the time.
-  _local_ext_dir="$_root_dir/externals"
-  if test -d $_local_ext_dir ; then
-    CONDOR_VERIFY_EXTERNALS_DIR([$_local_ext_dir],
-    [$_local_ext_dir exists but is not a valid directory tree for external programs needed to build Condor, you must use --with-externals=DIR to specify the path])
-  else
-    # try /p/condor/workspaces/externals for builds at UW-Madison CS
-    _uw_cs_externals="/p/condor/workspaces/externals"
-    CONDOR_VERIFY_EXTERNALS_DIR([$_uw_cs_externals],
-    [neither $_local_ext_dir (../externals) nor $_uw_cs_externals is a valid directory tree for external programs needed to build Condor, you must use --with-externals=DIR to specify the path])
+  # nothing specified, use the UW-Madison CS cache if present, else assume
+  # ../externals. This makes it possible to just run "./configure" most 
+  # of the time.
+  _uw_cs_externals="/p/condor/workspaces/externals"
+  if test -d "$_uw_cs_externals" ; then
+    ac_cv_externals_build="$_uw_cs_externals"
   fi
  ]
 )
 AC_SUBST(has_externals,$ac_cv_has_externals)
-AC_SUBST(ext_root,$ac_cv_externals)
+AC_SUBST(ext_src,$ac_cv_externals_src)
+AC_SUBST(ext_build,$ac_cv_externals_build)
 ],
 [
 AC_SUBST(has_externals,NO)
 ])
-
-# Now, try to find condor_analyze binaries.  In any directory we're
-# searching, we look for condor_analyze.(strip|static|release).  If
-# any type-specific version doesn't exist, we look for
-# "condor_analyze" and try to use that.  We first see if the
-# --with-condor_analyze command-line option is set, and if so, look in
-# there.  If that fails for any reason, we treat it as a fatal error.
-# If that's not set, we look in <externals>/install/condor_analyze.
-# If we find anything, we use it, otherwise, we look in
-# /usr/local/condor/analyze.  If we still didn't find anything, we
-# just print a message, assume the user doesn't want to worry about
-# condor_analyze, and set HAS_CONDOR_ANALYZE to "NO" in externals.cf.
-AC_MSG_CHECKING([for condor_analyze])
-ac_condor_analyze_dir=""
-ac_has_condor_analyze=NO
-AC_ARG_WITH(condor_analyze,
- AC_HELP_STRING([--with-condor_analyze=DIR],
- [full path to the directory containing pre-compiled versions of condor_analyze to include in the Condor release tarballs (default is to search <externals>/install/condor_analyze, then if nothing was found, /usr/local/condor/analyze)]),
- [if test $withval = no ; then
-    ac_has_condor_analyze=NO
-  else
-    if test -d "$withval" ; then
-      CONDOR_VERIFY_ANALYZE_DIR([$withval])
-      if test $ac_has_condor_analyze = "NO" ; then
-        AC_MSG_RESULT([ERROR])
-        AC_MSG_ERROR([directory specified with --with-condor_analyze ($withval) does not contain any condor_analyze binaries])
-      fi
-    else
-      AC_MSG_RESULT([ERROR])
-      AC_MSG_ERROR([directory specified with --with-condor_analyze ($withval) does not exist])
-    fi
-  fi
- ],
- [
-  if test "x$ac_cv_has_externals" = "xYES" ; then
-    CONDOR_VERIFY_ANALYZE_DIR([$ac_cv_externals/install/condor_analyze])
-  fi
-  if test "x$ac_has_condor_analyze" = "xNO" ; then
-    CONDOR_VERIFY_ANALYZE_DIR([/usr/local/condor/analyze])
-  fi
- ]
-)
-if test "x$ac_has_condor_analyze" = "xYES" ; then
-  AC_DEFINE([HAS_CONDOR_ANALYZE],[1],[Define if condor_analyze is available])
-  AC_MSG_RESULT([$ac_condor_analyze_dir])
-  CONDOR_SET_ANALYZE([release],fatal)
-  CONDOR_SET_ANALYZE([strip],fatal)
-  CONDOR_SET_ANALYZE([static],no)
-else
-  AC_MSG_RESULT([no])
-fi
-
 
 AC_ARG_VAR(TMPDIR, [Directory for temp files during Condor build [/tmp]])
 if test "$ac_cv_env_TMPDIR_set" != set; then
@@ -1750,15 +1696,6 @@ case "$_cv_opsys" in
   * ) _cv_purify_platform_ld_flags="" ;;
 esac
 AC_SUBST([_cv_purify_platform_ld_flags], [$_cv_purify_platform_ld_flags])
-
-
-# Check to see if the confidential test suite is present
-AC_CHECK_FILE(../config/CONDOR_TEST_CNFDTL, 
-	AC_DEFINE(HAVE_CONDOR_TEST_CNFDTL,[1],[Do we have the confidential test suite available to us?]))
-
-# Check to see if the large test suite is present
-AC_CHECK_FILE(../config/CONDOR_TEST_LRG, 
-	AC_DEFINE(HAVE_CONDOR_TEST_LRG,[1],[Do we have the large test suite available to us?]))
 
 
 #####################
@@ -3037,7 +2974,7 @@ AS_IF([test "x$cv_ext_gsoap" = xyes -a "x$enable_proper" = xyes],
 AC_MSG_CHECKING([if we have libc.a])
 _cv_libc_a=none
 # from externals.cf.in
-GLIBC_DIR="$ac_cv_externals/install/$_cv_ext_glibc_version/lib"
+GLIBC_DIR="$ac_cv_externals_build/install/$_cv_ext_glibc_version/lib"
 case "$_cv_opsys" in
 # Ignore on clipped ports
 #  ?ALPHA_OSF1? ) /lib/libc.a ;;

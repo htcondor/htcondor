@@ -19,16 +19,4 @@ public_c_plus_target($(NAME),bin,$(OBJ),$(LIB))
 
 html:
 
-/*
-  NOTE: since we're using a different input file depending on where
-  we're copying to, we can't use the unified public_copy_target().
-*/ 
-#ifdef HAS_CONDOR_ANALYZE
-release_copy_target($(CONDOR_ANALYZE_RELEASE),bin,condor_analyze,EXECUTABLE_MODE)
-strip_copy_target($(CONDOR_ANALYZE_STRIP),bin,condor_analyze,EXECUTABLE_MODE)
-#if HAS_STATIC
-static_copy_target($(CONDOR_ANALYZE_STATIC),bin,condor_analyze,EXECUTABLE_MODE)
-#endif /* HAS_STATIC */
-#endif /* HAS_CONDOR_ANALYZE */
-
 testbin:: all

@@ -1,0 +1,24 @@
+#!/bin/sh
+
+# If there's an error with any command in here, consider it a failure
+# installing this package, since there's no build or test involved at
+# all.  The build_external interface specifies an exit code of 3 for
+# installation errors.
+
+rm -rf $PACKAGE_INSTALL_DIR
+mkdir $PACKAGE_INSTALL_DIR
+if test $? != 0 ; then 
+   exit 3
+fi
+
+cd $PACKAGE_INSTALL_DIR
+if test $? != 0 ; then 
+   exit 3
+fi
+
+gunzip -c $PACKAGE_BUILD_DIR/$PACKAGE_NAME.tar.gz | tar xvf -  
+if test $? != 0 ; then 
+   exit 3
+fi
+
+exit 0

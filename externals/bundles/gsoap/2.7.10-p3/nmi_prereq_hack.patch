@@ -1,0 +1,11 @@
+--- gsoap-2.7.10-p1/gsoap/wsdl/Makefile.in	2008-01-27 15:02:57.000000000 -0600
++++ gsoap-2.7.10-p1-mf/gsoap/wsdl/Makefile.in	2008-07-09 10:32:15.000000000 -0500
+@@ -102,7 +102,7 @@
+ AUTOMAKE_OPTIONS = foreign 1.4
+ 
+ INCLUDES = -I$(top_srcdir)/gsoap
+-LDFLAGS = $(INCLUDES) -L$(srcdir)
++LDFLAGS = $(INCLUDES) -L$(srcdir) -L/prereq/openssl-0.9.7/lib -L/prereq/zlib-1.2.3/lib
+ SOAP = $(top_builddir)/gsoap/src/soapcpp2
+ SOAP_CPP_LIB_SSL = $(top_builddir)/gsoap/libgsoapssl++.a
+ SOAP_CPP_SRC = wsdlC.cpp

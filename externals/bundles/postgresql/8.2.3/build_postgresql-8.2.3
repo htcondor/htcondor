@@ -1,0 +1,37 @@
+#!/bin/sh
+############# build_postgresql-8.2.3
+
+cd $PACKAGE_NAME
+
+./configure --prefix=$PACKAGE_INSTALL_DIR --with-ccopts=$PACKAGE_DEBUG --without-readline --without-zlib --disable-shared
+if [ $? -ne 0 ]
+then
+    echo "configure failed"
+    exit 1
+fi
+
+make
+if [ $? -ne 0 ]
+then
+    echo "make failed"
+    exit 1
+fi
+
+#make test
+#if [ $? -ne 0 ]
+#then
+#    echo "test failed"
+#    exit 2
+#fi
+
+mkdir -p $PACKAGE_INSTALL_DIR
+make install
+if [ $? -ne 0 ]
+then
+    echo "install failed"
+    exit 3
+fi
+
+exit 0
+
+############# end of build_postgresql-8.2.3

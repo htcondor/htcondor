@@ -1,0 +1,12 @@
+diff -upN gsoap-2.7/configure.in gsoap-2.7-mf/configure.in
+--- gsoap-2.7/configure.in	2008-01-27 15:02:36.000000000 -0600
++++ gsoap-2.7-mf/configure.in	2008-02-21 16:58:09.000000000 -0600
+@@ -89,7 +89,7 @@ AC_FUNC_MKTIME
+ AC_TYPE_SIGNAL
+ AC_FUNC_STRFTIME
+ AC_FUNC_STRTOD
+-AC_CHECK_FUNCS([random gettimeofday ftime localtime_r timegm gmtime gmtime_r memset select socket strchr strerror strrchr strstr strtol strtoul strtoll strtoull strtold strtod strtof strtold_l strtod_l strtof_l sscanf sscanf_l sprintf_l wctomb mbtowc])
++AC_CHECK_FUNCS([random gettimeofday ftime localtime_r timegm gmtime gmtime_r memset select socket strchr strerror strrchr strstr strtol strtoul strtoll strtoull strtold strtod strtof wctomb mbtowc])
+ 
+ dnl Function test depending on platform
+ dnl AIX Has incompatible gethostbyname_r
