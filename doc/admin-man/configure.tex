@@ -1976,7 +1976,7 @@ section~\ref{sec:Networking} on page~\pageref{sec:Networking}.
   see page~\pageref{sec:CCB}.
 
 \label{param:MaxFileDescriptors}
-\item[\Macro{MAX\_FILE\_DESCRIPTORS}] Under unix, this specifies the
+\item[\Macro{MAX\_FILE\_DESCRIPTORS}] Under Unix, this specifies the
 maximum number of file descriptors to allow the Condor daemon to use.
 File descriptors are a system resource used for open files and for
 network connections.  Condor daemons that make many simultaneous
@@ -6901,12 +6901,13 @@ These macros affect the \Condor{job\_router} daemon.
 
 \label{JobRouterReleaseOnHold}
 \item[\Macro{JOB\_ROUTER\_RELEASE\_ON\_HOLD}]
-  True or False.  Defaults to True.  Controls how the \Condor{job\_router}
-  will handle the routed job going on hold.  If True the \Condor{job\_router}
-  will leave the source job in the same state the \Condor{job\_router}
-  found when it was claimed.  If False the \Condor{job\_router} will not
-  attempt to reset the source job to a pre-claimed state upon yielding
-  control of the job.
+  A boolean value that defaults to \Expr{True}.
+  It controls how the \Condor{job\_router} handles the routed copy when it
+  goes on hold.
+  When \Expr{True}, the \Condor{job\_router} leaves the original job 
+  ClassAd in the same state as when claimed.  When \Expr{False},
+  the \Condor{job\_router} does not attempt to reset the original job
+  ClassAd to a pre-claimed state upon yielding control of the job.
 
 \end{description}
 
