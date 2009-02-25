@@ -22,7 +22,7 @@ use CondorTest;
 
 $cmd = 'job_core_perrelease-false_van.cmd';
 $testdesc =  'Condor submit policy test for periodic_release - vanilla U';
-$testname = "job_core_perrelease-false_van";
+$testname = "job_core_perrelease_van";
 
 my %info;
 my $cluster;
