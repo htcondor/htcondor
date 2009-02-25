@@ -130,7 +130,7 @@ my $testpersonalcondorlocation = "$BaseDir/TestingPersonalCondor";
 my $wintestpersonalcondorlocation = "";
 if($iswindows == 1) {
 	my $tmp = `cygpath -w $testpersonalcondorlocation`;
-	chomp($tmp);
+	CondorTest::fullchomp($tmp);
 	$wintestpersonalcondorlocation = $tmp;
 }
 
@@ -343,7 +343,7 @@ if(!($wantcurrentdaemons)) {
 
 	if($iswindows == 1) {
 		my $tmp = `cygpath -w $targetconfig`;
-		chomp($tmp);
+		CondorTest::fullchomp($tmp);
 		$ENV{CONDOR_CONFIG} = $tmp;
 		$res = IsPersonalRunning($tmp);
 	} else {
@@ -887,7 +887,7 @@ sub WhereIsInstallDir
 		my $top = getcwd();
 		debug( "getcwd says \"$top\"\n",2);
 		my $crunched = `cygpath -w $top`;
-		chomp($crunched);
+		CondorTest::fullchomp($crunched);
 		debug( "cygpath changed it to: \"$crunched\"\n",2);
 		my $ppwwdd = `pwd`;
 		debug( "pwd says: $ppwwdd\n",2);
@@ -898,7 +898,7 @@ sub WhereIsInstallDir
 		print STDERR "Unable to find a condor_master in your \$PATH!\n";
 		exit(1);
 	}
-	chomp($tmp);
+	CondorTest::fullchomp($tmp);
 	debug( "Install Directory \"$tmp\"\n",2);
 	if($iswindows == 0) {
 		if($tmp =~ /^(.*)\/sbin\/condor_master\s*$/) {
@@ -947,7 +947,7 @@ sub CreateConfig
 	# file is to set the release-dir and local-dir. (non-windows)
 	# change RELEASE_DIR and LOCAL_DIR    
 	my $currenthost = CondorTest::getFqdnHost();
-	chomp($currenthost);
+	CondorTest::fullchomp($currenthost);
 
 	debug( "Set RELEASE_DIR and LOCAL_DIR\n",2);
 
@@ -978,7 +978,7 @@ sub CreateConfig
 	open( NEWFIG, ">$targetconfig" ) 
 		|| die "Can't open new config file: $!\n";    
 	while( <OLDFIG> ) {        
-		chomp;        
+		CondorTest::fullchomp($_);        
 		$line = $_;        
 		if($line =~ /^RELEASE_DIR\s*=.*/) {            
 			debug( "Matching <<$line>>\n",2);
@@ -1120,7 +1120,7 @@ sub CreateLocalConfig
                  "/s/std/bin/java");
 
     unless (system ("which java >> /dev/null 2>&1")) {
-    	chomp (my $which_java = CondorTest::Which("java"));
+    	CondorTest::fullchomp (my $which_java = CondorTest::Which("java"));
     	@default_jvm_locations = ($which_java, @default_jvm_locations) unless ($?);
     }
 
