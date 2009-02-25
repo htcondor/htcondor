@@ -651,6 +651,9 @@ AC_ARG_WITH(externals,
       AC_MSG_ERROR([directory specified with --with-externals ($withval) is not valid])
     fi
     ac_cv_externals_build="$withval"
+  else
+    AC_MSG_WARN([By not using --with-externals, most of Condor will not build])
+    ac_cv_has_externals=NO
   fi
  ],
  [
