@@ -39,8 +39,6 @@ $mypid = $$;
 $mysaveme = $corename . ".saveme";
 
 $myquillname = "pgsql" . $mypid;
-$myfullpgsqlloc = $topdir . "/" . $myquillname;
-$myfullpgsqlinstalllog = $topdir . "/" . $myquillname . "/postgress_install.log" ;
 
 $mypid = CondorPersonal::SaveMeSetup($corename);
 $mysaveme = $corename . ".saveme";
@@ -50,6 +48,8 @@ if($mypid == 0) {
 }
 
 $myquillpiddir = $mysaveme . "/" . $mypid . "/" . $myquillname;
+$myfullpgsqlloc = $topdir . "/" . $myquillpiddir;
+$myfullpgsqlinstalllog = $myfullpgsqlloc . "/postgress_install.log" ;
 system("mkdir $myquillpiddir");
 system("ln -s $myquillpiddir $myquillname");
 
