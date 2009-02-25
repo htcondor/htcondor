@@ -97,7 +97,7 @@ AmazonRequest::ParseSoapError(const char* callerstring)
 
 		// NOTE: The faultcode appears to have a qualifying 
 		// namespace, which we need to strip
-		char *s = strrchr(*code, ':');
+		const char *s = strrchr(*code, ':');
 		if( s ) {
 			s++;
 			if( !strncasecmp(s, "Client.", strlen("Client.")) ) {

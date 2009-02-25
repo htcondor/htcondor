@@ -170,7 +170,7 @@ char* getStoredCredential(const char *username, const char *domain)
 
 int store_cred_service(const char *user, const char *pw, int mode)
 {
-	char *at = strchr(user, '@');
+	const char *at = strchr(user, '@');
 	if ((at == NULL) || (at == user)) {
 		dprintf(D_ALWAYS, "store_cred: malformed user name\n");
 		return FAILURE;

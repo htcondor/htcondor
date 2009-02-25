@@ -160,7 +160,7 @@ main( int argc, char* argv[] ) {
 	Directory dir( buff.Value() );
 	dir.Rewind();
 	while ( (ctmp = dir.Next()) ) {
-		char *match = strstr( ctmp, ".jar" );
+		const char *match = strstr( ctmp, ".jar" );
 		if ( match && strlen( match ) == 4 ) {
 			classpath += classpath_seperator;
 			classpath += dir.GetFullPath();
