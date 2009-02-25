@@ -70,6 +70,7 @@ my %machine_ads;
 my $lastconfig;
 my $handle; #actually the test name.
 my $BaseDir = getcwd();
+my $iswindows = IsThisWindows();
 
 # we want to process and track the collection of cores
 my $coredir = "$BaseDir/Cores";
@@ -360,7 +361,9 @@ sub DoTest
 
 	print "\nCurrent date and load follow:\n";
 	system("date");
-	system("uptime");
+	if($iswindows == 0) {
+		system("uptime");
+	}
 	print "\n\n";
 
 	my $wrap_test = $ENV{WRAP_TESTS};
@@ -451,7 +454,9 @@ sub DoTest
 
 	print "\nCurrent date and load follow:\n";
 	system("date");
-	system("uptime");
+	if($iswindows == 0) {
+		system("uptime");
+	}
 	print "\n\n";
 
 	##############################################################
@@ -503,6 +508,9 @@ sub DoTest
 	##############################################################
 
 	if(defined  $wrap_test) {
+		my $logdir = `condor_config_val log`;
+		chomp($logdir);
+		$failed_coreERROR = CoreCheck($handle, $logdir, $teststrt, $teststop);
 		if($config ne "") {
 			print "KillDaemonPids called on this config file<$config>\n";
 			CondorPersonal::KillDaemonPids($config);
@@ -1585,6 +1593,7 @@ sub KillPersonal
 	} else {
 		die "Can not extract log directory\n";
 	}
+	debug("Doing core ERROR check in  KillPersonal\n",1);
 	$failed_coreERROR = CoreCheck($handle, $logdir, $teststrt, $teststop);
 	CondorPersonal::KillDaemonPids($personal_config);
 }
@@ -1601,8 +1610,17 @@ sub ShouldCheck_coreERROR
 	fullchomp($logdir);
 	my $testsrunning = CountRunningTests();
 	if(($logdir =~ /TestingPersonalCondor/) &&($testsrunning > 1)) {
+		# no because we are doing concurrent testing
 		return(0);
 	}
+	my $saveme = $handle . ".saveme";
+	debug("Not /TestingPersonalCondor/ based, saveme is $saveme\n",1);
+	debug("Logdir is $logdir\n",1);
+	if($logdir =~ /$saveme/) {
+		# no because KillPersonal will do it
+		return(0);
+	}
+	debug("Does not look like its in a personal condor\n",1);
 	return(1);
 }
 
@@ -1629,6 +1647,7 @@ sub CoreCheck {
 				# belong to the current test. Even if the test has ended
 				# assign blame and move file so we can investigate.
 				my $newname = MoveCoreFile($fullpath,$coredir);
+				print "\nFound core <$fullpath>\n";
 				AddFileTrace($fullpath,$filechange,$newname);
 				$count += 1;
 			} else {
@@ -1660,21 +1679,23 @@ sub ScanForERROR
 		$line = $_;
 		# ERROR preceeded by white space and trailed by white space, :, ; or -
 		if($line =~ /^\s*(\d+\/\d+\s+\d+:\d+:\d+)\s+ERROR[\s;:\-!].*$/){
-			debug("$line TStamp $1\n",1);
+			debug("$line TStamp $1\n",2);
 			$ignore = IgnoreError($testname,$1,$line,$tstart,$tend);
 			if($ignore == 0) {
 				$count += 1;
+				print "\nFound ERROR <$line>\n";
 				AddFileTrace($daemonlog, $1, $line);
 			}
 		} elsif($line =~ /^\s*(\d+\/\d+\s+\d+:\d+:\d+)\s+.*\s+ERROR[\s;:\-!].*$/){
-			debug("$line TStamp $1\n",1);
+			debug("$line TStamp $1\n",2);
 			$ignore = IgnoreError($testname,$1,$line,$tstart,$tend);
 			if($ignore == 0) {
 				$count += 1;
+				print "\nFound ERROR <$line>\n";
 				AddFileTrace($daemonlog, $1, $line);
 			}
 		} elsif($line =~ /^.*ERROR.*$/){
-			debug("Skipping this error<<$line>> \n",1);
+			debug("Skipping this error<<$line>> \n",2);
 		}
 	}
 	close(MDL);
@@ -1818,7 +1839,9 @@ sub IgnoreError
 	debug("Start <$tstart> ERROR <$timeloc> End <$tend>\n",1);
 
 	# First item we care about is if this ERROR hapened during this test
-	if( ($timeloc < $tstart) || ($timeloc > $tend)) {
+	if(($tstart == 0) && ($tend == 0)) {
+		# this is happening within a personal condor so do not ignore
+	} elsif( ($timeloc < $tstart) || ($timeloc > $tend)) {
 		debug("IgnoreError: Did not happen during test\n",1);
 		return(1); # not on our watch so ignore
 	}
@@ -1943,6 +1966,18 @@ sub RemoveRunningTest
 	my $line = "";
 	debug( "Wanting to remove <$test> from running tests\n",$debuglevel);
 	system("rm -f $runningfile/$test");
+}
+
+sub IsThisWindows
+{
+	my $path = CondorTest::Which("cygpath");
+	debug("Path return from which cygpath: $path\n",2);
+	if($path =~ /^.*\/bin\/cygpath.*$/ ) {
+		#print "This IS windows\n";
+		return(1);
+	}
+	#print "This is NOT windows\n";
+	return(0);
 }
 
 
