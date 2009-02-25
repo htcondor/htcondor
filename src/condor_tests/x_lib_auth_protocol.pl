@@ -22,7 +22,7 @@ use CondorTest;
 
 #$cmd = 'lib_auth_protocol-negot.cmd';
 $testdesc =  'Condor submit to test security negotiations';
-$testname = "x_lib_auth_protocol";
+$testname = "lib_auth_protocol";
 
 my $killedchosen = 0;
 
@@ -39,6 +39,13 @@ my $piddir = $ARGV[0];
 my $subdir = $ARGV[1];
 my $expectedres = $ARGV[2];
 my $submitfile = $ARGV[3];
+my $variation = $ARGV[4];
+
+if(!(defined $variation)) {
+	die "Must have variation to build real testname not just <<$testname>>\n";
+}
+
+$testname = $testname . "-" . $variation;
 $cmd = $submitfile;
 
 CondorTest::debug("Submit file is $cmd\n",1);

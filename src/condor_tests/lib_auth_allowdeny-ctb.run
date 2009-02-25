@@ -91,7 +91,7 @@ CondorTest::debug("---security config is $secconfig and securitypool port is $se
 $ENV{CONDOR_CONFIG} = $secconfig;
 # submit into local schedd (side a)
 
-my $result = system("./x_lib_auth_protocol.pl $mypid \"allowdeny\" $mytestnegotiation_result $mycmdfile");
+my $result = system("./x_lib_auth_protocol.pl $mypid \"allowdeny\" $mytestnegotiation_result $mycmdfile \"ctb\"");
 CondorTest::debug("Result of crafted lib_auth_allowdeny-ctb job is  $result\n",1);
 
 system("cp *$corename* $mysaveme");
