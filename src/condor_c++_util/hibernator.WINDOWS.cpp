@@ -53,10 +53,21 @@ MsWindowsHibernator::initStates () {
 	setStates ( NONE );
 
 	/* retrieve power information */
-	status = CallNtPowerInformation ( SystemPowerCapabilities, 
-		NULL, 0, &capabilities, sizeof ( SYSTEM_POWER_CAPABILITIES ) );
+	status = CallNtPowerInformation ( 
+		SystemPowerCapabilities, 
+		NULL, 
+		0, 
+		&capabilities, 
+		sizeof ( SYSTEM_POWER_CAPABILITIES ) );
+	
 	if ( ERROR_SUCCESS != status ) {
-		printf ( "Failed to retrieve power information\n" );
+		
+		dprintf ( 
+			D_ALWAYS, 
+			"MsWindowsHibernator::initStates: Failed to retrieve "
+			"power information. (last-error = %d)",
+			GetLastError () );
+
 		return;
 	}
 
@@ -87,18 +98,21 @@ MsWindowsHibernator::tryShutdown ( bool force ) const
 		| SHTDN_REASON_FLAG_PLANNED ) );
 	
 	if ( !ok ) {
+
+		DWORD last_error = GetLastError ();
 	
 		/* if the computer is already shutting down, we interpret 
 		   this as success... */
-		if ( ERROR_SHUTDOWN_IN_PROGRESS == GetLastError () ) {
+		if ( ERROR_SHUTDOWN_IN_PROGRESS == last_error ) {
 			return true;
 		}
 
 		/* otherwise, it's an error and we'll tell the user so */
 		dprintf ( 
 			D_ALWAYS,
-			"tryShutdown(): Shutdown failed. (last-error = %d)",
-			GetLastError () );
+			"MsWindowsHibernator::tryShutdown(): Shutdown failed. "
+			"(last-error = %d)",
+			last_error );
 
 	}
 
@@ -109,35 +123,35 @@ HibernatorBase::SLEEP_STATE
 MsWindowsHibernator::enterStateStandBy ( bool force ) const
 {
     if ( !SetSuspendState ( FALSE, force, FALSE ) ) {
-        return S3;
+        return HibernatorBase::NONE;
     }
-	return NONE;
+	return HibernatorBase::S3;
 }
 
 HibernatorBase::SLEEP_STATE
 MsWindowsHibernator::enterStateSuspend ( bool force ) const
 {
     if ( !SetSuspendState ( FALSE, force, FALSE ) ) {
-        return S3;
+        return HibernatorBase::NONE;
     }
-	return NONE;
+	return HibernatorBase::S3;
 }
 
 HibernatorBase::SLEEP_STATE
 MsWindowsHibernator::enterStateHibernate ( bool force ) const
 {
     if ( !SetSuspendState ( TRUE, force, FALSE ) ) {
-        return S4;
+        return HibernatorBase::NONE;
     }
-	return NONE;
+	return HibernatorBase::S4;
 }
 
 HibernatorBase::SLEEP_STATE
 MsWindowsHibernator::enterStatePowerOff ( bool force ) const
 {
     if ( !tryShutdown ( force ) ) {
-        return S5;
+        return HibernatorBase::NONE;
     }
-	return NONE;
+	return HibernatorBase::S5;
 }
 
