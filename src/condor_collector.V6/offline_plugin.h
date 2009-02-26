@@ -43,12 +43,12 @@ public:
     /** Reconfigures the plug-in (also used in construction, to
         initialize the plug-in) .
         */
-    void configure ( int classad_lifetime );
+    void configure ();
 
     /** Receive a ClassAd sent as part of an UPDATE_ command,
 	    command int is provided.
         */
-	void update ( int command, const ClassAd &ad );
+	void update ( int command, ClassAd &ad );
 
     /** Receive a ClassAd INVALIDATE_ command, command int
 	    provided.
@@ -69,13 +69,6 @@ public:
         */
     bool enabled () const;
 
-protected:
-
-    /** Called on a timer to update the expiry time for ads we are
-        monitoring.  We don't want them to expire on our watch.
-        */
-    int update_classad_lifetime ();
-
 private:
 
     /** Persistent copies of machine class-ads to allow us
@@ -84,11 +77,6 @@ private:
 
     /** Storage destination for persistent ads */
     char                *_persistent_store;
-
-    /** Timer ID and interval for updating all off line ads' 
-        last ping time */
-    int                 _update_classad_lifetime_timer_id;
-    int                 _update_interval;
 
 };
 

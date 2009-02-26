@@ -23,6 +23,7 @@
 
 #include "condor_common.h"
 #include "hibernator.WINDOWS.h"
+#include "security.WINDOWS.h"
 
 /* Remove me when NMI updates the SDKs.  Need for the XP SDKs which
    do NOT declare the functions as C functions... */
@@ -47,28 +48,52 @@ MsWindowsHibernator::initStates () {
 	
 	LONG                      status;
 	SYSTEM_POWER_CAPABILITIES capabilities;
-	USHORT					  states = NONE;
+	USHORT					  states		= NONE;
+	BOOL					  privileged	= FALSE;
+
+	/* allow Condor to shutdown the OS */
+	privileged = ModifyPrivilege ( SE_SHUTDOWN_NAME, TRUE );
+
+	if ( !privileged ) {
+
+		dprintf ( 
+			D_ALWAYS, 
+			"MsWindowsHibernator::initStates: Failed to grant "
+			"Condor the ability to shutdown this machine. "
+			"(last-error = %d)\n",
+			GetLastError () );
+
+		return;
+
+	}
 
 	/* set defaults: no sleep */
 	setStates ( NONE );
 
 	/* retrieve power information */
-	status = CallNtPowerInformation ( SystemPowerCapabilities, 
-		NULL, 0, &capabilities, sizeof ( SYSTEM_POWER_CAPABILITIES ) );
+	status = CallNtPowerInformation ( 
+		SystemPowerCapabilities, 
+		NULL, 
+		0, 
+		&capabilities, 
+		sizeof ( SYSTEM_POWER_CAPABILITIES ) );
+	
 	if ( ERROR_SUCCESS != status ) {
-		printf ( "Failed to retrieve power information\n" );
-		return;
-	}
+		
+		dprintf ( 
+			D_ALWAYS, 
+			"MsWindowsHibernator::initStates: Failed to retrieve "
+			"power information. (last-error = %d)\n",
+			GetLastError () );
 
-	/* S4 requires that the Hibernation file exist as well */
-	if ( capabilities.HiberFilePresent ) {
-		states |= capabilities.SystemS4 << 3;
+		return;
 	}
 
 	/* Finally, set the remaining supported states */
 	states |= capabilities.SystemS1;
 	states |= capabilities.SystemS2 << 1;
 	states |= capabilities.SystemS3 << 2;
+	states |= capabilities.SystemS4 << 3;
 	states |= capabilities.SystemS5 << 4;
 	setStates ( states );
 
@@ -87,18 +112,21 @@ MsWindowsHibernator::tryShutdown ( bool force ) const
 		| SHTDN_REASON_FLAG_PLANNED ) );
 	
 	if ( !ok ) {
+
+		DWORD last_error = GetLastError ();
 	
 		/* if the computer is already shutting down, we interpret 
 		   this as success... */
-		if ( ERROR_SHUTDOWN_IN_PROGRESS == GetLastError () ) {
+		if ( ERROR_SHUTDOWN_IN_PROGRESS == last_error ) {
 			return true;
 		}
 
 		/* otherwise, it's an error and we'll tell the user so */
 		dprintf ( 
 			D_ALWAYS,
-			"tryShutdown(): Shutdown failed. (last-error = %d)",
-			GetLastError () );
+			"MsWindowsHibernator::tryShutdown(): Shutdown failed. "
+			"(last-error = %d)\n",
+			last_error );
 
 	}
 
@@ -109,35 +137,35 @@ HibernatorBase::SLEEP_STATE
 MsWindowsHibernator::enterStateStandBy ( bool force ) const
 {
     if ( !SetSuspendState ( FALSE, force, FALSE ) ) {
-        return S3;
+        return HibernatorBase::NONE;
     }
-	return NONE;
+	return HibernatorBase::S3;
 }
 
 HibernatorBase::SLEEP_STATE
 MsWindowsHibernator::enterStateSuspend ( bool force ) const
 {
     if ( !SetSuspendState ( FALSE, force, FALSE ) ) {
-        return S3;
+        return HibernatorBase::NONE;
     }
-	return NONE;
+	return HibernatorBase::S3;
 }
 
 HibernatorBase::SLEEP_STATE
 MsWindowsHibernator::enterStateHibernate ( bool force ) const
 {
     if ( !SetSuspendState ( TRUE, force, FALSE ) ) {
-        return S4;
+        return HibernatorBase::NONE;
     }
-	return NONE;
+	return HibernatorBase::S4;
 }
 
 HibernatorBase::SLEEP_STATE
 MsWindowsHibernator::enterStatePowerOff ( bool force ) const
 {
     if ( !tryShutdown ( force ) ) {
-        return S5;
+        return HibernatorBase::NONE;
     }
-	return NONE;
+	return HibernatorBase::S5;
 }
 

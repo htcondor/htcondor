@@ -145,7 +145,7 @@ GetFileSecurityAttributes (
  * Token Security
  ***************************************************************/
 
- BOOL 
+BOOL 
 ModifyPrivilege ( LPCTSTR privilege, BOOL enable ) { 
 
     

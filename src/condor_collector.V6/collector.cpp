@@ -1246,7 +1246,7 @@ void CollectorDaemon::Config()
     collector.scheduleHousekeeper( ClassadLifetime );
 
 #if ( HAVE_HIBERNATION )
-    offline_plugin_.configure ( ClassadLifetime );
+    offline_plugin_.configure ();
 #endif
 
     // if we're not the View Collector, let's set something up to forward

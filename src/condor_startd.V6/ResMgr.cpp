@@ -160,6 +160,8 @@ ResMgr::init_config_classad( void )
 #endif /* HAVE_JOB_HOOKS */
 #if HAVE_HIBERNATION
 	configInsert( config_classad, "HIBERNATE", false );
+	configInsert( config_classad, "HIBERNATE_CHECK_INTERVAL", false );
+	configInsert( config_classad, "OFFLINE_EXPIRE_AD_AFTER", false );
 #endif /* HAVE_HIBERNATION */
 
 		// Next, try the IS_OWNER expression.  If it's not there, give
@@ -2025,7 +2027,7 @@ ResMgr::allHibernating( MyString &target ) const
 			str.Value () );
 		
 		dprintf ( D_FULLDEBUG, 
-			"allHibernating: resource #%d: '%s' = %d\n",
+			"allHibernating: resource #%d: '%s' (0x%x)\n",
 			i + 1, str.Value (), tmp );
 		
 		if ( 0 == tmp ) {

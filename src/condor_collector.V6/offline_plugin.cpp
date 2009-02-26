@@ -50,8 +50,6 @@ OfflineCollectorPlugin::OfflineCollectorPlugin () throw ()
 {
 	_ads = NULL;
 	_persistent_store = NULL;
-    _update_classad_lifetime_timer_id = -1;
-    _update_interval = 0;
 }
 
 OfflineCollectorPlugin::~OfflineCollectorPlugin ()
@@ -75,13 +73,12 @@ OfflineCollectorPlugin::~OfflineCollectorPlugin ()
  ***************************************************************/
 
 void
-OfflineCollectorPlugin::configure ( int class_ad_lifetime )
+OfflineCollectorPlugin::configure ()
 {
 
     dprintf (
         D_FULLDEBUG,
-        "In OfflineCollectorPlugin::configure ( %d )\n",
-        class_ad_lifetime );
+        "In OfflineCollectorPlugin::configure ()\n" );
 
     if ( _persistent_store ) {
         /* was param()'d so we must use free() */
@@ -90,13 +87,14 @@ OfflineCollectorPlugin::configure ( int class_ad_lifetime )
     }
 
     _persistent_store = param ( 
-        "OFFLINE_ADSFILE" );
+        "OFFLINE_LOG" );
 
     if ( _persistent_store ) {
 
         dprintf (
             D_ALWAYS,
-            "Off-line ad persistent store: %s\n",
+			"OfflineCollectorPlugin::configure: off-line ad "
+			"persistent store: %s\n",
             _persistent_store );
 
         if ( _ads ) {
@@ -105,59 +103,23 @@ OfflineCollectorPlugin::configure ( int class_ad_lifetime )
         }
 
         _ads = new ClassAdCollection ( _persistent_store );
+		ASSERT ( _ads );
 
-        /* cancel any outstanding timers */
-        if ( -1 != _update_classad_lifetime_timer_id ) {
+	} else {
 
-            daemonCore->Cancel_Timer (
-                _update_classad_lifetime_timer_id );
+		dprintf (
+			D_ALWAYS,
+			"OfflineCollectorPlugin::configure: no persistent store "
+			"was defined for off-line ads\n" );
 
-            _update_classad_lifetime_timer_id = -1;
-
-        }
-
-        /* get the update interval and compare it to the half the 
-           classad lifetime.  If our interval is larger, use half 
-           the classad lifetime. */
-        class_ad_lifetime /= 2;
-        _update_interval = param_integer ( 
-            "OFFLINE_CLASSAD_LIFETIME_UPDATE", 
-            300 );
-
-        if ( _update_interval > class_ad_lifetime ) {
-            _update_interval = class_ad_lifetime;
-        }
-
-        if ( _update_interval > 0 ) {
-
-            _update_classad_lifetime_timer_id = 
-                daemonCore->Register_Timer (
-                _update_interval,
-                _update_interval,
-                (TimerHandlercpp) &OfflineCollectorPlugin::update_classad_lifetime,
-                "OfflineCollectorPlugin::update_classad_lifetime",
-                this );
-
-        }
-
-        if ( _update_interval <= 0 || 
-            -1 == _update_classad_lifetime_timer_id ) {
-
-            dprintf (
-                D_ALWAYS,
-                "Failed to start timer to stop offline ads from "
-                "timing out.\n" );
-
-        }
-
-    }
+	}
 
 }
 
 void
 OfflineCollectorPlugin::update (
-    int             command,
-    const ClassAd   &ad )
+    int     command,
+    ClassAd	&ad )
 {
 
     dprintf (
@@ -173,7 +135,7 @@ OfflineCollectorPlugin::update (
     if ( UPDATE_STARTD_AD_WITH_ACK == command ||
          UPDATE_STARTD_AD == command ) {
 
-        AdNameHashKey hashKey;
+		AdNameHashKey hashKey;
         if ( !makeStartdAdHashKey (
             hashKey,
             const_cast<ClassAd*> ( &ad ),
@@ -188,27 +150,63 @@ OfflineCollectorPlugin::update (
 
         }
 
-        /* determine if this ad is "off-line" or not */
-        int offline = 0;
-        if ( 0 == ad.EvalInteger (
-            ATTR_OFFLINE,
-            &ad,
-            offline ) ) {
+        /* report whether this ad is "off-line" or not and update
+		   the ad accordingly. */		
+		int offline  = FALSE,
+			lifetime = 0;
 
-            /* if we fail, this is not a bad thing, it just means
-               this ad does not concern us */
+		if ( UPDATE_STARTD_AD_WITH_ACK == command ) {
+			
+			/* set the off-line state of the machine */
+			offline = TRUE;
 
-            /*
-            dprintf (
-                D_FULLDEBUG,
-                "OfflineCollectorPlugin::update: "
-                "failed evaluate and determine offline status.\n" );
-            */
+			/* get the off-line expiry time */
+			if ( 0 == ad.EvalInteger (
+				"OFFLINE_EXPIRE_AD_AFTER",
+				NULL,
+				lifetime ) ) {
 
-            return;
+				/* default to the largest possible integer */
+				lifetime = INT_MAX;
 
-        }
+			}			
 
+		} else {
+
+			/* try and determine if the ad has an offline
+			   attribute set */
+			if ( !ad.LookupInteger ( ATTR_OFFLINE, offline ) ) {
+
+				dprintf (
+					D_FULLDEBUG,
+					"OfflineCollectorPlugin::update: failed to "
+					"determine offline status. Assuming we are "
+					"on-line.\n" );
+
+				/* not a fatal error, we'll just set the ad to be
+				   "on-line" bellow */
+
+			}
+
+			/* if the ad was offline, then put it back in the game */
+			if ( TRUE == offline ) {
+
+				/* flag the ad as back "on-line" */
+				offline = FALSE;
+				
+				/* set a sane ad lifetime */
+				lifetime = 30; /* from collector_engine.cpp */
+
+			}
+
+		}
+
+		/* record the new values as specified above */
+		ad.Assign ( ATTR_OFFLINE, offline );
+		if ( lifetime > 0 ) {
+			ad.Assign ( ATTR_CLASSAD_LIFETIME, lifetime );
+		}
+		
         _ads->BeginTransaction ();
 
         ClassAd *p;
@@ -217,8 +215,8 @@ OfflineCollectorPlugin::update (
         const char *key = s.Value ();
 
         /* if it is off-line then add it to the list; ortherwise,
-        remove it */
-        if ( TRUE == offline ) {
+           remove it. */
+        if ( offline > 0 ) {
 
             /* don't try to add duplicate ads */
             if ( _ads->LookupClassAd ( key, p ) ) {
@@ -227,7 +225,9 @@ OfflineCollectorPlugin::update (
             }
 
             /* try to add the new ad */
-            if ( !_ads->NewClassAd ( key, const_cast<ClassAd *>(&ad) ) ) {
+            if ( !_ads->NewClassAd ( 
+				key, 
+				const_cast<ClassAd*> ( &ad ) ) ) {
 
                 dprintf (
                     D_FULLDEBUG,
@@ -357,25 +357,4 @@ bool
 OfflineCollectorPlugin::enabled () const
 {
     return ( (NULL != _persistent_store) && (NULL != _ads) );
-}
-
-int
-OfflineCollectorPlugin::update_classad_lifetime ()
-{
-    /* get the current time */
-    time_t now;
-    time ( &now );
-    if ( -1 == now ) {
-        EXCEPT ( "OfflineCollectorPlugin::update_classad_lifetime: "
-            "Unable to read system time!" );
-    }
-
-    /* update all off line ads' last ping time */
-    rewind ();
-    ClassAd ad;
-    while ( iterate( ad ) ) {
-        ad.Assign ( ATTR_LAST_HEARD_FROM, (int) now );
-    }
-
-    return TRUE;
 }
