@@ -43,6 +43,8 @@ my $variation = $ARGV[4];
 
 if(!(defined $variation)) {
 	die "Must have variation to build real testname not just <<$testname>>\n";
+} else {
+	print "Variation for this test is <<$variation>>\n";
 }
 
 $testname = $testname . "-" . $variation;
