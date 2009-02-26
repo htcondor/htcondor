@@ -19,7 +19,6 @@
 ##**************************************************************
 
 use CondorTest;
-use CondorPersonal;
 
 
 $param_template = "x_param.cputracking-snapshot";
@@ -37,7 +36,7 @@ CondorTest::fullchomp($currenthost);
 
 system("date");
 
-$mypid = CondorPersonal::SaveMeSetup($corename);
+$mypid = $$;
 $mysaveme = $corename . ".saveme";
 
 if($mypid == 0) {
@@ -60,7 +59,7 @@ if($mypid == 0) {
 	system("cp $mycmdfile $mysubmitnm");
 	system("cp $param_template $myparamname");
 
-	my $configsec = CondorPersonal::StartCondor( "lib_procapi_cputracking-snapshot", $myparamname ,"cputracking", $mypid);
+	my $configsec = CondorTest::StartPersonal( "lib_procapi_cputracking-snapshot", $myparamname ,"cputracking", $mypid);
 	my @cputrackingpool = split /\+/, $configsec;
 	my $secconfig = shift @cputrackingpool;
 	my $secport = shift @cputrackingpool;
@@ -91,7 +90,7 @@ if($mypid == 0) {
 		system("cp $mysubmitnmlog $mycorenmlog");
 	}
 
-CondorPersonal::KillDaemonPids($parallelconfig);
+CondorTest::KillPersonal($parallelconfig);
 system("date");
 
 if($result != 0)

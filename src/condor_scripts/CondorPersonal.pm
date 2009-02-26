@@ -46,7 +46,7 @@
 package CondorPersonal;
 require 5.0;
 use Net::Domain qw(hostfqdn);
-use CondorPubLogdirs;
+#use CondorPubLogdirs;
 use warnings;
 use strict;
 
@@ -148,6 +148,7 @@ my $pid = $$;
 my $version = ""; # remote, middle, ....... for naming schedd "schedd . pid . version"
 my $mastername = ""; # master_$verison
 my $iswindows = IsThisWindows();
+my $wrap_test;
 
 #################################################################
 #
@@ -257,10 +258,10 @@ sub StartCondor
 	}
 
 	# if we are wrapping tests, publish log location
-	my $wrap_test = $ENV{WRAP_TESTS};
+	$wrap_test = $ENV{WRAP_TESTS};
 	if(defined  $wrap_test) {
 		my $logdir = $topleveldir . "/log";
-		CondorPubLogdirs::PublishLogDir($testname,$logdir);
+		#CondorPubLogdirs::PublishLogDir($testname,$logdir);
 	}
 
 	$personal_config_file = $topleveldir ."/condor_config";
@@ -842,8 +843,8 @@ sub TunePersonalCondor
 	#print "***************** opening $personal_template as config file template *****************\n";
 	open(TEMPLATE,"<$personal_template")  || die "Can not open template<<$personal_template>>: $!\n";
 	debug( "want to open new config file as $topleveldir/$personal_config\n",3);
-	print NEW "# Editing requested config<$personal_template>\n";
 	open(NEW,">$topleveldir/$personal_config") || die "Can not open new config file<$topleveldir/$personal_config>: $!\n";
+	print NEW "# Editing requested config<$personal_template>\n";
 	while(<TEMPLATE>)
 	{
 		fullchomp($_);
@@ -1632,14 +1633,23 @@ sub IsThisWindows
 sub Which
 {
 	my $exe = shift(@_);
-	my @paths = split /:/, $ENV{'PATH'};
+
+	if(!( defined  $exe)) {
+		return "CP::Which called with no args\n";
+	}
+	my @paths;
 	my $path;
 
-	foreach my $path (@paths) {
-		chomp $path;
-		if (-x "$path/$exe") {
-			return "$path/$exe";
+	if( exists $ENV{PATH}) {
+		@paths = split /:/, $ENV{PATH};
+		foreach my $path (@paths) {
+			chomp $path;
+			if (-x "$path/$exe") {
+				return "$path/$exe";
+			}
 		}
+	} else {
+		#print "Who is calling CondorPersonal::Which($exe)\n";
 	}
 
 	return "$exe: command not found";

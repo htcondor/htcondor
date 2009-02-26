@@ -22,7 +22,7 @@ use CondorTest;
 
 $cmd = 'job_core_perrelease-true_sched.cmd';
 $testdesc =  'Condor submit with for periodic release test - scheduler U';
-$testname = "job_core_perrelease-true_sched";
+$testname = "job_core_perrelease_sched";
 
 $aborted = sub {
 	my %info = @_;

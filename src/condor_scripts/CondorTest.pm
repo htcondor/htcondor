@@ -30,8 +30,10 @@ use Carp;
 use Condor;
 use CondorPersonal;
 use FileHandle;
-use POSIX "sys_wait_h";
+use POSIX;
 use Net::Domain qw(hostfqdn);
+use Cwd;
+use Time::Local;
 use strict;
 use warnings;
 
@@ -42,6 +44,16 @@ my %securityoptions =
 "PREFERRED" => "1",
 "REQUIRED" => "1",
 );
+
+# Tracking Running Tests
+my $RunningFile = "RunningTests";
+my $LOCK_EXCLUSIVE = 2;
+my $UNLOCK = 8;
+my $TRUE = 1;
+my $FALSE = 0;
+my $teststrt = 0;
+my $teststop = 0;
+
 
 my $MAX_CHECKPOINTS = 2;
 my $MAX_VACATES = 3;
@@ -57,6 +69,20 @@ my %test;
 my %machine_ads;
 my $lastconfig;
 my $handle; #actually the test name.
+my $BaseDir = getcwd();
+my $iswindows = IsThisWindows();
+
+# we want to process and track the collection of cores
+my $coredir = "$BaseDir/Cores";
+if(!(-d $coredir)) {
+	debug("Creating collection directory for cores\n",2);
+	system("mkdir -p $coredir");
+}
+
+# set up for reading in core/ERROR exemptions
+my $errexempts = "ErrorExemptions";
+my %exemptions;
+my $failed_coreERROR = 0;
 
 BEGIN
 {
@@ -284,15 +310,30 @@ sub DefaultOutputTest
 
 sub RunTest
 {
+	DoTest(@_);
+}
+ 
+sub RunDagTest
+{
+	DoTest(@_);
+}
+
+sub DoTest
+{
     $handle              = shift || croak "missing handle argument";
     $submit_file      = shift || croak "missing submit file argument";
     my $wants_checkpoint = shift;
+	my $dagman_args = 	shift;
 
     my $status           = -1;
 	my $monitorpid = 0;
 	my $waitpid = 0;
 	my $monitorret = 0;
 	my $retval = 0;
+
+	if( !(defined $wants_checkpoint)) {
+		die "DoTest must get at least 3 args!!!!!\n";
+	}
 
 	print "RunTest says test is<<$handle>>\n";
 	# moved the reset to preserve callback registrations which includes
@@ -320,7 +361,10 @@ sub RunTest
 
 	print "\nCurrent date and load follow:\n";
 	system("date");
-	system("uptime");
+	if($iswindows == 0) {
+		system("uptime");
+	}
+	print "\n\n";
 
 	my $wrap_test = $ENV{WRAP_TESTS};
 
@@ -338,12 +382,25 @@ sub RunTest
 		}
 	}
 
+	AddRunningTest($handle);
+
     # submit the job and get the cluster id
 	debug( "Now submitting test job\n",4);
-    my $cluster = Condor::TestSubmit( $submit_file );
+	my $cluster = 0;
+
+	$teststrt = time();;
+    # submit the job and get the cluster id
+	if(!(defined $dagman_args)) {
+		print "Regular Test....\n";
+    	$cluster = Condor::TestSubmit( $submit_file );
+	} else {
+		print "Dagman Test....\n";
+    	$cluster = Condor::TestSubmitDagman( $submit_file, $dagman_args );
+	}
     
     # if condor_submit failed for some reason return an error
     if($cluster == 0){
+		print "Why is cluster 0 in RunTest??????\n";
 	} else {
 
     	# monitor the cluster and return its exit status
@@ -390,12 +447,70 @@ sub RunTest
 
 	debug( "************** condor_monitor back ************************ \n",4);
 
+	$teststop = time();
+	my $timediff = $teststop - $teststrt;
+
+	print "Test started <$teststrt> ended <$teststop> taking <$timediff> seconds\n";
+
 	print "\nCurrent date and load follow:\n";
 	system("date");
-	system("uptime");
+	if($iswindows == 0) {
+		system("uptime");
+	}
+	print "\n\n";
 
+	##############################################################
+	#
+	# We ASSUME that each version of each personal condor
+	# has its own unique log directory whether we are automatically 
+	# wrapping a test at this level OR we have a test which
+	# sets up N personal condors like a test like job_condorc_abc_van
+	# which sets up 3.
+	#
+	# Our initial check is to see if we are not running in the
+	# outer personal condor because checking there requires
+	# more of an idea of begin and end times of the test and
+	# some sort of understanding about how many tests are running
+	# at once. In the case of more then one, one can not assign
+	# fault easily.
+	#
+	# A wrapped test will be found here. A test running with
+	# a personal condor outside of src/condor_tests will show
+	# up here. A test submitted as part of a multiple number 
+	# of personal condors will show up here. 
+	#
+	# If we catch calls to "CondorPersonal::KillDaemonPids($config)"
+	# and it is used consistently we can check both wrapped
+	# tests and tests involved with one or more personal condors
+	# as we shut the personal condors down.
+	#
+	# All the personal condors created by CondorPersonal
+	# have a testname.saveme in their path which would
+	# show a class of tests to be safe to check even if outside
+	# of src/condor_tests even if N tests are running concurrently.
+	#
+	# If we knew N is one we could do an every test check
+	# based on start time and end time of the tests running
+	# in any running condor.
+	#
+	##############################################################
+	if(ShouldCheck_coreERROR() == 1){
+		debug("Want to Check core and ERROR!!!!!!!!!!!!!!!!!!\n\n",1);
+		# running in TestingPersonalCondor
+		my $logdir = `condor_config_val log`;
+		fullchomp($logdir);
+		$failed_coreERROR = CoreCheck($handle, $logdir, $teststrt, $teststop);
+	}
+	##############################################################
+	#
+	# When to do core and ERROR checking thoughts 2/5/9
+	#
+	##############################################################
 
 	if(defined  $wrap_test) {
+		my $logdir = `condor_config_val log`;
+		fullchomp($logdir);
+		$failed_coreERROR = CoreCheck($handle, $logdir, $teststrt, $teststop);
 		if($config ne "") {
 			print "KillDaemonPids called on this config file<$config>\n";
 			CondorPersonal::KillDaemonPids($config);
@@ -408,141 +523,24 @@ sub RunTest
 		debug( "Not currently wrapping tests\n",4);
 	}
 
+	# done with this test
+	RemoveRunningTest($handle);
 
     if($cluster == 0){
-		return(0);
-	} else {
-    	return $retval;
-	}
-}
-
-sub RunDagTest
-{
-    $handle              = shift || croak "missing handle argument";
-    $submit_file      = shift || croak "missing submit file argument";
-    my $wants_checkpoint = shift;
-	my $dagman_args = 	shift || croak "missing dagman args";
-
-    my $status           = -1;
-	my $monitorpid = 0;
-	my $waitpid = 0;
-	my $monitorret = 0;
-	my $retval = 0;
-
-    croak "too many arguments" if shift;
-
-	# moved the reset to preserve callback registrations which includes
-	# an error callback at submit time..... Had to change timing
-	CondorTest::Reset();
-
-    # this is kludgey :: needed to happen sooner for an error message callback in runcommand
-    Condor::SetHandle($handle);
-
-    # if we want a checkpoint, register a function to force a vacate
-    # and register a function to check to make sure it happens
-	if( $wants_checkpoint )
-	{
-		Condor::RegisterExecute( \&ForceVacate );
-		Condor::RegisterEvictedWithCheckpoint( sub { $checkpoints++ } );
-	} else {
-		if(defined $test{$handle}{"RegisterExecute"}) {
-			Condor::RegisterExecute($test{$handle}{"RegisterExecute"});
-		}
-	}
-
-	CheckRegistrations();
-
-	my $wrap_test = $ENV{WRAP_TESTS};
-
-	my $config = "";
-	if(defined  $wrap_test) {
-		$lastconfig = $ENV{CONDOR_CONFIG};
-		$config = PersonalCondorTest($submit_file, $handle);
-		if($config ne "") {
-			print "PersonalCondorTest returned this config file<$config>\n";
-			print "Saving last config file<<<$lastconfig>>>\n";
-			$ENV{CONDOR_CONFIG} = $config;
-			print "CONDOR_CONFIG now <<$ENV{CONDOR_CONFIG}>>\n";
-			system("condor_config_val -config");
-		}
-	}
-
-	print "\nCurrent date and load follow:\n";
-	system("date");
-	system("uptime");
-
-    # submit the job and get the cluster id
-    my $cluster = Condor::TestSubmitDagman( $submit_file, $dagman_args );
-    
-	if($cluster == 0){
-    	# if condor_submit failed for some reason return an error
-	} else {
-    	# monitor the cluster and return its exit status
-		# note 1/2/09 bt
-		# any exits cause monitor to never return allowing us
-		# to kill personal condor wrapping the test :-(
-		
-		$monitorpid = fork();
-		if($monitorpid == 0) {
-			# child does monitor
-    		$monitorret = Condor::Monitor();
-			debug( "Monitor did return on its own status<<<$monitorret>>>\n",4);
-
-    		die "$handle: FAILURE (job never checkpointed)\n"
-			if $wants_checkpoint && $checkpoints < 1;
-
-			if(  $monitorret == 1 ) {
-				debug( "child happy to exit 0\n",4);
-				exit(0);
-			} else {
-				debug( "child not happy to exit 1\n",4);
-				exit(1);
-			}
+		if( exists $test{$handle}{"RegisterWantError"} ) {
+			return(1);
 		} else {
-			# parent cleans up
-			$waitpid = waitpid($monitorpid, 0);
-			if($waitpid == -1) {
-				debug( "No such process <<$monitorpid>>\n",4);
-			} else {
-				$retval = $?;
-				debug( "Child status was <<$retval>>\n",4);
-				if( WIFEXITED( $retval ) && WEXITSTATUS( $retval ) == 0 )
-				{
-					debug( "Monitor done and status good!\n",4);
-					$retval = 1;
-				} else {
-					$status = WEXITSTATUS( $retval );
-					debug( "Monitor done and status bad<<$status>>!\n",4);
-					$retval = 0;
-				}
-			}
+			return(0);
 		}
-	}
-
-	debug( "************** condor_monitor back ************************ \n",4);
-
-	print "\nCurrent date and load follow:\n";
-	system("date");
-	system("uptime");
-
-	if(defined  $wrap_test) {
-		if($config ne "") {
-			print "KillDaemonPids called on this config file<$config>\n";
-			CondorPersonal::KillDaemonPids($config);
+	} else {
+		# ok we think we want to pass it but how did core and ERROR
+		# checking go
+		if($failed_coreERROR == 0) {
+    		return $retval;
 		} else {
-			print "No config setting to call KillDaemonPids with\n";
+			# oops found a problem fail test
+    		return 0;
 		}
-		print "Restoring last config file<<$lastconfig>>\n";
-		$ENV{CONDOR_CONFIG} = $lastconfig;
-	} else {
-		debug( "Not currently wrapping tests\n",4);
-	}
-
-
-	if($cluster == 0){
-		return(0);
-	} else {
-		return $retval;
 	}
 }
 
@@ -1101,10 +1099,14 @@ sub runCondorTool
 sub Which
 {
 	my $exe = shift(@_);
-	my @paths = split /:/, $ENV{'PATH'};
+
+	if(!( defined  $exe)) {
+		return "CT::Which called with no args\n";
+	}
+	my @paths = split /:/, $ENV{PATH};
 
 	foreach my $path (@paths) {
-		chomp $path;
+		fullchomp($path);
 		if (-x "$path/$exe") {
 			return "$path/$exe";
 		}
@@ -1470,6 +1472,27 @@ sub PersonalPolicySearchLog
     return("bad");
 }
 
+sub OuterPoolTest
+{
+	my $cmd = "condor_config_val log";
+	my $locconfig = "";
+    debug( "Running this command: <$cmd> \n",1);
+    # shhhhhhhh third arg 0 makes it hush its output
+	my $logdir = `condor_config_val log`;
+	fullchomp($logdir);
+	debug( "log dir is<$logdir>\n",1);
+	if($logdir =~ /^.*condor_tests.*$/){
+		print "Running within condor_tests\n";
+		if($logdir =~ /^.*TestingPersonalCondor.*$/){
+			debug( "Running with outer testing personal condor\n",1);
+			return(1);
+		}
+	} else {
+		print "Running outside of condor_tests\n";
+	}
+	return(0);
+}
+
 sub PersonalCondorTest
 {
 	my $submitfile = shift;
@@ -1512,7 +1535,7 @@ sub findOutput
 	my $testname = "UNKNOWN";
 	my $line = "";
 	while(<SF>) {
-		chomp($_);
+		fullchomp($_);
 		$line = $_;
 		if($line =~ /^\s*[Ll]og\s+=\s+(.*)(\..*)$/){
 			$testname = $1;
@@ -1538,5 +1561,426 @@ sub debug
 	my $newstring = "CT:$string";
 	Condor::debug($newstring,$level);
 }
+
+##############################################################################
+#
+# Lets stash the test name which will be consistent even
+# with multiple personal condors being used by the test
+#
+##############################################################################
+
+
+sub StartPersonal
+{
+    my $testname = shift;
+    my $paramfile = shift;
+    my $version = shift;
+	
+	$handle = $testname;
+    debug("Starting Perosnal($$) for $testname/$paramfile/$version\n",1);
+
+    my $configloc = CondorPersonal::StartCondor( $testname, $paramfile ,$version);
+    return($configloc);
+}
+
+sub KillPersonal
+{
+	my $personal_config = shift;
+	my $logdir = "";
+	if($personal_config =~ /^(.*[\\\/])(.*)$/) {
+		print "LOG dir is $1/log\n";
+		$logdir = $1 . "/log";
+	} else {
+		debug("KillPersonal passed this config<<$personal_config>>\n",1);
+		die "Can not extract log directory\n";
+	}
+	debug("Doing core ERROR check in  KillPersonal\n",1);
+	$failed_coreERROR = CoreCheck($handle, $logdir, $teststrt, $teststop);
+	CondorPersonal::KillDaemonPids($personal_config);
+}
+
+##############################################################################
+#
+# core and ERROR checking code plus ERROR exemption handling 
+#
+##############################################################################
+
+sub ShouldCheck_coreERROR
+{
+	my $logdir = `condor_config_val log`;
+	fullchomp($logdir);
+	my $testsrunning = CountRunningTests();
+	if(($logdir =~ /TestingPersonalCondor/) &&($testsrunning > 1)) {
+		# no because we are doing concurrent testing
+		return(0);
+	}
+	my $saveme = $handle . ".saveme";
+	debug("Not /TestingPersonalCondor/ based, saveme is $saveme\n",1);
+	debug("Logdir is $logdir\n",1);
+	if($logdir =~ /$saveme/) {
+		# no because KillPersonal will do it
+		return(0);
+	}
+	debug("Does not look like its in a personal condor\n",1);
+	return(1);
+}
+
+sub CoreCheck {
+	my $test = shift;
+	my $logdir = shift;
+	my $tstart = shift;
+	my $tend = shift;
+	my $count = 0;
+	my $scancount = 0;
+	my $fullpath = "";
+	
+	debug("Checking <$logdir> for test <$test>\n",1);
+	my @files = `ls $logdir`;
+	foreach my $perp (@files) {
+		fullchomp($perp);
+		$fullpath = $logdir . "/" . $perp;
+		if(-f $fullpath) {
+			if($fullpath =~ /^.*\/(core.*)$/) {
+				# returns printable string
+				debug("Checking <$logdir> for test <$test> Found Core <$fullpath>\n",2);
+				my $filechange = GetFileTime($fullpath);
+				# running sequentially or wrapped core should always
+				# belong to the current test. Even if the test has ended
+				# assign blame and move file so we can investigate.
+				my $newname = MoveCoreFile($fullpath,$coredir);
+				print "\nFound core <$fullpath>\n";
+				AddFileTrace($fullpath,$filechange,$newname);
+				$count += 1;
+			} else {
+				debug("Checking <$fullpath> for test <$test> for ERROR\n",2);
+				$scancount = ScanForERROR($fullpath,$test,$tstart,$tend);
+				$count += $scancount;
+				debug("After ScanForERROR error count <$scancount>\n",2);
+			}
+		} else {
+			debug( "Not File: $fullpath\n",1);
+		}
+	}
+	
+	return($count);
+}
+
+sub ScanForERROR
+{
+	my $daemonlog = shift;
+	my $testname = shift;
+	my $tstart = shift;
+	my $tend = shift;
+	my $count = 0;
+	my $ignore = 1;
+	open(MDL,"<$daemonlog") or die "Can not open daemon log<$daemonlog>:$!\n";
+	my $line = "";
+	while(<MDL>) {
+		fullchomp();
+		$line = $_;
+		# ERROR preceeded by white space and trailed by white space, :, ; or -
+		if($line =~ /^\s*(\d+\/\d+\s+\d+:\d+:\d+)\s+ERROR[\s;:\-!].*$/){
+			debug("$line TStamp $1\n",2);
+			$ignore = IgnoreError($testname,$1,$line,$tstart,$tend);
+			if($ignore == 0) {
+				$count += 1;
+				print "\nFound ERROR <$line>\n";
+				AddFileTrace($daemonlog, $1, $line);
+			}
+		} elsif($line =~ /^\s*(\d+\/\d+\s+\d+:\d+:\d+)\s+.*\s+ERROR[\s;:\-!].*$/){
+			debug("$line TStamp $1\n",2);
+			$ignore = IgnoreError($testname,$1,$line,$tstart,$tend);
+			if($ignore == 0) {
+				$count += 1;
+				print "\nFound ERROR <$line>\n";
+				AddFileTrace($daemonlog, $1, $line);
+			}
+		} elsif($line =~ /^.*ERROR.*$/){
+			debug("Skipping this error<<$line>> \n",2);
+		}
+	}
+	close(MDL);
+	return($count);
+}
+
+sub CheckTriggerTime
+{	
+	my $teststartstamp = shift;
+	my $timestring = shift;
+	my $tsmon = 0;
+
+	my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime();
+
+	if($timestring =~ /^(\d+)\/(\d+)\s+(\d+):(\d+):(\d+)$/) {
+		$tsmon = $1 - 1;
+		my $timeloc = timelocal($5,$4,$3,$mday,$tsmon,$year,0,0,$isdst);
+		print "timestamp from test start is $teststartstamp\n";
+		print "timestamp fromlocaltime is $timeloc \n";
+		if($timeloc > $teststartstamp) {
+			return(1);
+		}
+	}
+}
+
+sub GetFileChangeTime
+{
+	my $file = shift;
+	my ($dev, $ino, $mode, $nlink, $uid, $gid, $rdev, $size, $atime, $mtime, $ctime, $blksize, $blocks) = stat($file);
+
+	return($ctime);
+}
+
+sub GetFileTime
+{
+	my $file = shift;
+	my ($dev, $ino, $mode, $nlink, $uid, $gid, $rdev, $size, $atime, $mtime, $ctime, $blksize, $blocks) = stat($file);
+
+	my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime($ctime);
+
+	$mon = $mon + 1;
+	$year = $year + 1900;
+
+	return("$mon/$mday $hour:$min:$sec");
+}
+
+sub AddFileTrace
+{
+	my $file = shift;
+	my $time = shift;
+	my $entry = shift;
+
+	my $tracefile = $coredir . "/core_error_trace";
+	my $newtracefile = $coredir . "/core_error_trace.new";
+
+	# make sure the trace file exists
+	if(!(-f $tracefile)) {
+		open(TF,">$tracefile") or die "Can not create ERROR/CORE trace file<$tracefile>:$!\n";
+		print TF "Tracking file for core files and ERROR prints in daemonlogs\n";
+		close(TF);
+	}
+	open(TF,"<$tracefile") or die "Can not create ERROR/CORE trace file<$tracefile>:$!\n";
+	open(NTF,">$newtracefile") or die "Can not create ERROR/CORE trace file<$newtracefile>:$!\n";
+	while(<TF>) {
+		print NTF "$_";
+	}
+	close(TF);
+	my $buildentry = "$time	$file	$entry\n";
+	print NTF "$buildentry";
+	debug("\n$buildentry",2);
+	close(NTF);
+	system("mv $newtracefile $tracefile");
+
+}
+
+sub MoveCoreFile
+{
+	my $oldname = shift;
+	my $targetdir = shift;
+	my $newname = "";
+	# get number for core file rename into trace dir
+	my $entries = CountFileTrace();
+	if($oldname =~ /^.*\/(core.*)\s*.*$/) {
+		$newname = $coredir . "/" . $1 . "_$entries";
+		system("mv $oldname $newname");
+		#system("rm $oldname");
+		return($newname);
+	} else {
+		debug("Only move core files<$oldname>\n",2);
+		return("badmoverequest");
+	}
+}
+
+sub CountFileTrace
+{
+	my $tracefile = $coredir . "/core_error_trace";
+	my $count = 0;
+
+	open(CT,"<$tracefile") or die "Can not count<$tracefile>:$!\n";
+	while(<CT>) {
+		$count += 1;
+	}
+	close(CT);
+	return($count);
+}
+
+sub LoadExemption
+{
+	my $line = shift;
+	debug("LoadExemption: <$line>\n",1);
+    my ($test, $required, $message) = split /,/, $line;
+    my $save = $required . "," . $message;
+    if(exists $exemptions{$test}) {
+        push @{$exemptions{$test}}, $save;
+		debug("LoadExemption: added another for test $test\n",1);
+    } else {
+        $exemptions{$test} = ();
+        push @{$exemptions{$test}}, $save;
+		debug("LoadExemption: added new for test $test\n",1);
+    }
+}
+
+sub IgnoreError
+{
+	my $testname = shift;
+	my $errortime = shift;
+	my $errorstring = shift;
+	my $tstart = shift;
+	my $tend = shift;
+	my $timeloc = 0;
+	my $tsmon = 0;
+
+	my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime();
+
+	if($errortime =~ /^(\d+)\/(\d+)\s+(\d+):(\d+):(\d+)$/) {
+		$tsmon = $1 - 1;
+		$timeloc = timelocal($5,$4,$3,$mday,$tsmon,$year,0,0,$isdst);
+	} else {
+		die "Time string into IgnoreError: Bad Format: $errortime\n";
+	}
+	debug("Start <$tstart> ERROR <$timeloc> End <$tend>\n",1);
+
+	# First item we care about is if this ERROR hapened during this test
+	if(($tstart == 0) && ($tend == 0)) {
+		# this is happening within a personal condor so do not ignore
+	} elsif( ($timeloc < $tstart) || ($timeloc > $tend)) {
+		debug("IgnoreError: Did not happen during test\n",1);
+		return(1); # not on our watch so ignore
+	}
+
+	# no no.... must acquire array for test and check all substrings
+	# against current large string.... see DropExemptions below
+	debug("IgnoreError called for test <$testname> and string <$errorstring>\n",2);
+	# get list of per/test specs
+	if( exists $exemptions{$testname}) {
+		my @testarray = @{$exemptions{$testname}};
+		foreach my $oneexemption (@testarray) {
+			my( $must, $partialstr) = split /,/,  $oneexemption;
+			my $quoted = quotemeta($partialstr);
+			debug("Looking for <$quoted> in this error <$errorstring>\n",2);
+			if($errorstring =~ m/$quoted/) {
+				debug("IgnoreError: Valid exemption\n",1);
+				debug("IgnoreError: Ignore ******** <<$quoted>> ******** \n",2);
+				return(1);
+			} 
+		}
+	}
+	# no exemption for this one
+	return(0);
+}
+
+sub DropExemptions
+{
+	foreach my $key (sort keys %exemptions) {
+    	print "$key\n";
+    	my @array = @{$exemptions{$key}};
+    	foreach my $p (@array) {
+        	print "$p\n";
+    	}
+	}
+}
+
+##############################################################################
+#
+#	File utilities. We want to keep an up to date record of every
+#	test currently running. If we only have one, then the tests are
+#	executing sequentially and we can do full core and ERROR detecting
+#
+##############################################################################
+# Tracking Running Tests
+# my $RunningFile = "RunningTests";
+# my $LOCK_EXCLUSIVE = 2;
+# my $UNLOCK = 8;
+# my $TRUE = 1;
+# my $FALSE = 0;
+my $debuglevel = 1;
+
+sub FindControlFile
+{
+	my $cwd = getcwd();
+	my $runningfile = "";
+	fullchomp($cwd);
+	debug( "Current working dir is <$cwd>\n",$debuglevel);
+	if($cwd =~ /^(.*condor_tests)(.*)$/) {
+		$runningfile = $1 . "/" . $RunningFile;
+		debug( "Running file test is <$runningfile>\n",$debuglevel);
+		if(!(-d $runningfile)) {
+			debug( "Creating control file directory<$runningfile>\n",$debuglevel);
+			system("mkdir -p $runningfile");
+		}
+	} else {
+		die "Lost relative to where <$RunningFile> is :-(\n";
+	}
+	return($runningfile);
+}
+
+sub CleanControlFile
+{
+	my $controlfile = FindControlFile();
+	if( -d $controlfile) {
+		debug( "Cleaning old active test running file holding:\n",$debuglevel);
+		system("ls $controlfile");
+		system("rm -rf $controlfile");
+	} else {
+		debug( "Creating new active test running file\n",$debuglevel);
+	}
+	system("mkdir -p $controlfile");
+}
+
+
+sub CountRunningTests
+{
+	my $runningfile = FindControlFile();
+	my $ret;
+	my $line = "";
+	my $count = 0;
+	my $here = getcwd();
+	chdir($runningfile);
+	my $targetdir = '.';
+	opendir DH, $targetdir or die "Can not open $targetdir:$!\n";
+	foreach my $file (readdir DH) {
+		next if $file =~ /^\.\.?$/;
+		next if (-d $file) ;
+		$count += 1;
+		debug("Counting this test<$file> count now <$count>\n",1);
+	}
+	chdir($here);
+	return($count);
+}
+
+sub AddRunningTest
+{
+	my $test = shift;
+	my $runningfile = FindControlFile();
+	my $retRF;
+	my $tmpfile;
+	my $line = "";
+	debug( "Wanting to add <$test> to running tests\n",$debuglevel);
+	system("touch $runningfile/$test");
+}
+
+sub RemoveRunningTest
+{
+	my $test = shift;
+	my $runningfile = FindControlFile();
+	my $retRF;
+	my $tmpfile;
+	my $line = "";
+	debug( "Wanting to remove <$test> from running tests\n",$debuglevel);
+	system("rm -f $runningfile/$test");
+}
+
+sub IsThisWindows
+{
+	my $path = CondorTest::Which("cygpath");
+	debug("Path return from which cygpath: $path\n",2);
+	if($path =~ /^.*\/bin\/cygpath.*$/ ) {
+		#print "This IS windows\n";
+		return(1);
+	}
+	#print "This is NOT windows\n";
+	return(0);
+}
+
+
 
 1;

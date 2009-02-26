@@ -93,6 +93,8 @@ chdir("$prefix");
 
 system("mkdir $prefix/postgres-data");
 
+$ENV{"LD_LIBRARY_PATH"} = $pgsql_dir . "/lib";
+
 CondorTest::debug("Create db\n",1);
 $initdb = system("$pgsql_dir/bin/initdb -D $prefix/postgres-data") ;
 if($initdb != 0) {
@@ -282,10 +284,15 @@ if($docreatedb != 0) {
 }
 system("date");
 
-$docreatelang = system("$pgsql_dir/bin/createlang plpgsql");
-if($docreatedb != 0) {
-	die "Failed to create test db\n";
+#$docreatelang = system("$pgsql_dir/bin/createlang plpgsql test --port $startpostmasterport");
+$docreatelang = system("$pgsql_dir/bin/createlang plpgsql test");
+if($docreatelang != 0) {
+	print "$pgsql_dir/bin/createlang plpgsql FAILED!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n";
+	die "Failed to createlang plpgsql\n";
+} else {
+	print "$pgsql_dir/bin/createlang plpgsql Worked!!\n";
 }
+
 system("date");
 
 

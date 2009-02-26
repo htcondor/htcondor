@@ -19,7 +19,6 @@
 ##**************************************************************
 
 use CondorTest;
-use CondorPersonal;
 
 
 # truly const variables in perl
@@ -41,7 +40,7 @@ CondorTest::fullchomp($currenthost);
 
 system("date");
 
-$mypid = CondorPersonal::SaveMeSetup($corename);
+$mypid = $$;
 $mysaveme = $corename . ".saveme";
 
 if($mypid == 0) {
@@ -61,7 +60,7 @@ CondorTest::debug("Master PID submit file is $mysubmitnm\n",1);
 
 my $version = "local";
 # get a local scheduler running (side a)
-my $configloc = CondorPersonal::StartCondor( "cmd_status_shows-schedd", "x_param.cmdstatus-multi" ,$version);
+my $configloc = CondorTest::StartPersonal( "cmd_status_shows-schedd", "x_param.cmdstatus-multi" ,$version);
 my @local = split /\+/, $configloc;
 my $locconfig = shift @local;
 my $locport = shift @local;
@@ -95,7 +94,7 @@ close(SCHEDDONE);
 
 $version = "scheddone";
 # get another node running
-my $configscheddone = CondorPersonal::StartCondor( "cmd_status_shows-schedd", "x_param.cmd_status_shows-schedd" ,$version);
+my $configscheddone = CondorTest::StartPersonal( "cmd_status_shows-schedd", "x_param.cmd_status_shows-schedd" ,$version);
 my @scheddone = split /\+/, $configscheddone;
 my $scheddoneconfig = shift @scheddone;
 my $scheddoneport = shift @scheddone;
@@ -296,8 +295,8 @@ if( -e "$mysubmitnmlog" )
 	system("cp $mysubmitnmlog $mycorenmlog");
 }
 
-CondorPersonal::KillDaemonPids($locconfig);
-CondorPersonal::KillDaemonPids($scheddoneconfig);
+CondorTest::KillPersonal($locconfig);
+CondorTest::KillPersonal($scheddoneconfig);
 system("date");
 
 if( $done == 0 )

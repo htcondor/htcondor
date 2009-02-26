@@ -19,7 +19,6 @@
 ##**************************************************************
 
 use CondorTest;
-use CondorPersonal;
 use Cwd;
 use x_hadutilities;
 
@@ -76,7 +75,7 @@ system("mkdir $mypiddir");
 #make a symbolic link for personal condor module to use
 system("rm -f $pId"); system("ln -s $mypiddir $pId");
 
-#$mypid = CondorPersonal::SaveMeSetup($corename);
+#$mypid = $$;
 #$mysaveme = $corename . ".saveme";
 
 #if($mypid == 0) {
@@ -241,7 +240,7 @@ foreach my $hadIndex (1 .. $hadsNumber)
 	# Generate condor instance: we configure each instance so that no possible
 	# clash can happen between different condor daemons of all the instances
 	my $configurationFileAndCollectorPort =
-	    CondorPersonal::StartCondor(
+	    CondorTest::StartPersonal(
 			"$topDirectory/$personalCondorParametersName", 
 			"_instance$hadIndex");
 	($configurationFiles[$hadIndex], $collectorPorts[$hadIndex]) =
@@ -357,7 +356,7 @@ while($time - $startTimer <= $configurationTable{RUN_TIME})
 &MoveAllToSaveDirectory();
 
 CondorTest::debug("$coreName test SUCCESS!\n",1);
-#CondorPersonal::KillDaemonPids($remconfig);
+#CondorTest::KillPersonal($remconfig);
 ### End of main ###
 
 ### Checkers ###
@@ -1309,7 +1308,7 @@ sub RaiseMachines
 #    	&ImplantLine($localPostSourceFile, 'TRANSFERER_TIMEOUT_MULTIPLIER', '1');
 #
 #    	my $configurationFileAndCollectorPort =
-#        	CondorPersonal::StartCondor(
+#        	CondorTest::StartPersonal(
 #				"$topDirectory/$personalCondorParametersName", 
 #				"_instance$hadIndex");
 #    	($configurationFiles[$hadIndex], $collectorPorts[$hadIndex]) =

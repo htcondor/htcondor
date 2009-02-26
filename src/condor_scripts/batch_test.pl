@@ -50,13 +50,9 @@
 # Nov 07 : Added repaeating a test n times by adding "-a n" to args
 # Nov 07 : Added condor_personal setup only by adding -p (pretest work);
 # Mar 17 : Added condor cleanup functionality by adding -c option.
-# Dec 08 : Have been working on detecting core/ERRORs after each test
-#	which got us into wrapping tests running in the outer personal condor
-#	in condor_tests/TestingPersonalCondor so we can report back a unique
-#	log directory for each test. This got us into needing to have a server
-#	being started and stoped as needed to collect the publishing of these
-#	log dirs so batch test can still check. This is fairly important as
-#	we now have the -e option to run batches of tests at the same time.
+# Dec 2008: working on concurrency testing. Here with -e 20 we try to keep
+#	20 tests going at a time within the given compiler or toplevel
+#	directory.
 #
 
 #require 5.0;
@@ -65,7 +61,6 @@ use FileHandle;
 use POSIX "sys_wait_h";
 use Cwd;
 use CondorTest;
-use CondorPubLogdirs;
 use Time::Local;
 use strict;
 use warnings;
@@ -98,38 +93,14 @@ Condor::DebugLevel(1);
 # 	This is all triggered by -w
 #
 #	WRAP_TESTS
-#	SEND_LOGS
 #
 #	We want to search out core files and ERROR prints AND we want
 #	to run many tests at once. The first check method looks for
 #	all logs changed during the test and assigns blame based on that.
-#	Sadly any error from a set of daemons still running will be assigned
-#	to the wrong test. The steps to make this happen now has the following
-#	steps:
 #
 #		Allow for every test which is not wrapped in a personal 
 #		condor to be wrapped. This is done in CondorTest.pm in RunTest
 #		and RunDagTest if WRAP_TESTS is set.
-#
-#		batch_test.pl defines that and also write file
-#		LogServerHandle when the -w option is set. This is so StartCondor 
-#		can report Test name/Log location to a server collecting such things.
-#		I wanted to only use $ENV[SEND_LOGS] but we in the nightlies have
-#		multiple calls of batch_test.pl requiring some way for
-#		it to know if it has already fired off the server to colloect
-#		test log locations.
-#
-#		batch_test will start this server and place connection
-#		information in it. Thus multiple calls to batch_test
-#		will generate exacly one server to collect logs in file
-#		LogDirs.
-#
-#		If set, batch_test will lookup the log location for a test
-#		to do the core/ERROR detection. No log location will
-#		result in a file being created called NoLogDirs where the tests
-#		name will be recorded for later fixing if it should have had
-#		a log location. This file will be restarted with a date at the top
-#		whenevere the server to collect log locations is started
 #
 #################################################################
 
@@ -159,7 +130,7 @@ my $testpersonalcondorlocation = "$BaseDir/TestingPersonalCondor";
 my $wintestpersonalcondorlocation = "";
 if($iswindows == 1) {
 	my $tmp = `cygpath -w $testpersonalcondorlocation`;
-	chomp($tmp);
+	CondorTest::fullchomp($tmp);
 	$wintestpersonalcondorlocation = $tmp;
 }
 
@@ -168,31 +139,19 @@ my $targetconfiglocal = $testpersonalcondorlocation . "/condor_config.local";
 my $condorpidfile = "/tmp/condor.pid.$$";
 my @extracondorargs;
 
-# we want to process and track the collection of cores
-my $coredir = "$BaseDir/Cores";
-if(!(-d $coredir)) {
-	debug("Creating collection directory for cores\n",2);
-	system("mkdir -p $coredir");
-}
-
 my $localdir = $testpersonalcondorlocation . "/local";
 my $installdir;
 my $wininstalldir; # need to have dos type paths for condor
 my $testdir;
 my $configmain;
 my $configlocal;
-my $killlogserver = 1;
 
 my $wantcurrentdaemons = 1; # dont set up a new testing pool in condor_tests/TestingPersonalCondor
-my $wantcorechecks = 0;
 my $pretestsetuponly = 0; # only get the personal condor in place
 
 # set up to recover from tests which hang
 $SIG{ALRM} = sub { die "timeout" };
 
-# set up for reading in core/ERROR exemptions
-my $errexempts = "ErrorExemptions";
-my %exemptions;
 my @compilers;
 my @successful_tests;
 my @failed_tests;
@@ -226,7 +185,6 @@ my @testlist;
 # -k[ind]: be kind and submit slowly
 # -b[buildandtest]: set up a personal condor and generic configs
 # -w[wrap]: test in personal condor enable core/ERROR detection
-# -x[execute log dir server]
 # -a[again]: how many times do we run each test?
 # -p[pretest]: get are environment set but run no tests
 # -c[cleanup]: stop condor when test(s) finish.  Not used on windows atm.
@@ -246,7 +204,6 @@ while( $_ = shift( @ARGV ) ) {
 	    print "-s[ort] sort before running tests\n";
 	    print "-b[buildandtest]: set up a personal condor and generic configs\n";
 	    print "-w[wrap]: test in personal condor enable core/ERROR detection\n";
-	    print "-xls: execute log dir server\n";
 	    print "-xml: Output in xml\n";
 	    print "-w[wrap]: test in personal condor enable core/ERROR detection\n";
 	    print "-a[again]: how many times do we run each test?\n";
@@ -273,17 +230,8 @@ while( $_ = shift( @ARGV ) ) {
                 next SWITCH;
         }
         if( /^-w.*/ ) {
-				$wantcorechecks = 1;
 				$ENV{WRAP_TESTS} = "yes";
-				my $server = CondorPubLogdirs::CheckLogServer(); # is it running yet?
-				debug("CheckLogServer says log server is $server\n",1);
-				$ENV{SEND_LOGS} = $server;
                 next SWITCH;
-        }
-        if( /^-xls.*/ ) {
-				debug("Stopping LogDir server\n",1);
-				CondorPubLogdirs::StopLogServer(); # is it running yet? kill it
-	    		exit(0);
         }
         if( /^-d.*/ ) {
                 push(@compilers, shift(@ARGV));
@@ -330,7 +278,6 @@ while( $_ = shift( @ARGV ) ) {
                 next SWITCH;
         }
         if( /^-t.*/ ) {
-				$killlogserver = 0;
                 push(@testlist, shift(@ARGV));
                 next SWITCH;
         }
@@ -368,10 +315,6 @@ my $genericlocalconfig = "";
 my $nightly = IsThisNightly($BaseDir);
 my $res = 0;
 
-if($wantcorechecks == 1) {
-	LoadExemptions();
-}
-
 if(!($wantcurrentdaemons)) {
 
 	$awkscript = "../condor_examples/convert_config_to_win32.awk";
@@ -400,7 +343,7 @@ if(!($wantcurrentdaemons)) {
 
 	if($iswindows == 1) {
 		my $tmp = `cygpath -w $targetconfig`;
-		chomp($tmp);
+		CondorTest::fullchomp($tmp);
 		$ENV{CONDOR_CONFIG} = $tmp;
 		$res = IsPersonalRunning($tmp);
 	} else {
@@ -846,12 +789,6 @@ foreach my $test_name (@failed_tests)
 close OUTF;
 close SUMOUTF;
 
-if( exists $ENV{WRAP_TESTS}) {
-	if(($ENV{WRAP_TESTS} eq "yes") and ($killlogserver == 1)) {
-		debug("Stopping LogDir server\n",1);
-		CondorPubLogdirs::StopLogServer(); # is it running yet? kill it
-	}
-}
 
 if ( $cleanupcondor )
 {
@@ -950,7 +887,7 @@ sub WhereIsInstallDir
 		my $top = getcwd();
 		debug( "getcwd says \"$top\"\n",2);
 		my $crunched = `cygpath -w $top`;
-		chomp($crunched);
+		CondorTest::fullchomp($crunched);
 		debug( "cygpath changed it to: \"$crunched\"\n",2);
 		my $ppwwdd = `pwd`;
 		debug( "pwd says: $ppwwdd\n",2);
@@ -961,7 +898,7 @@ sub WhereIsInstallDir
 		print STDERR "Unable to find a condor_master in your \$PATH!\n";
 		exit(1);
 	}
-	chomp($tmp);
+	CondorTest::fullchomp($tmp);
 	debug( "Install Directory \"$tmp\"\n",2);
 	if($iswindows == 0) {
 		if($tmp =~ /^(.*)\/sbin\/condor_master\s*$/) {
@@ -1010,7 +947,7 @@ sub CreateConfig
 	# file is to set the release-dir and local-dir. (non-windows)
 	# change RELEASE_DIR and LOCAL_DIR    
 	my $currenthost = CondorTest::getFqdnHost();
-	chomp($currenthost);
+	CondorTest::fullchomp($currenthost);
 
 	debug( "Set RELEASE_DIR and LOCAL_DIR\n",2);
 
@@ -1040,7 +977,7 @@ sub CreateConfig
 	open( NEWFIG, ">$targetconfig" ) 
 		|| die "Can't open new config file: $!\n";    
 	while( <OLDFIG> ) {        
-		chomp;        
+		CondorTest::fullchomp($_);        
 		$line = $_;        
 		if($line =~ /^RELEASE_DIR\s*=.*/) {            
 			debug( "Matching <<$line>>\n",2);
@@ -1182,7 +1119,7 @@ sub CreateLocalConfig
                  "/s/std/bin/java");
 
     unless (system ("which java >> /dev/null 2>&1")) {
-    	chomp (my $which_java = CondorTest::Which("java"));
+    	CondorTest::fullchomp (my $which_java = CondorTest::Which("java"));
     	@default_jvm_locations = ($which_java, @default_jvm_locations) unless ($?);
     }
 
@@ -1542,9 +1479,6 @@ sub DoChild
 	# we know where the published directories are if we ask by name
 	# and they are relevant for the entire test time. We need ask
 	# and check only once.
-	#if($wantcorechecks) {
-		#CoreCheck($test_starttime);
-	#}
 	debug( "Test start @ $test_starttime \n",2);
 	sleep(1);
 	# add test core file
@@ -1613,14 +1547,6 @@ sub DoChild
 				#print "Perl test($test_program) returned <<$res>>!!! \n"; 
 				exit(1); 
 			}
-			if($wantcorechecks) {
-				# send off the name without the .run attached
-				$corecount = CoreCheck($testname);
-				if($corecount != 0) {
-					print "\n ************ -Core/ERROR found- *************\n";
-					exit(1);
-				}
-			}
 			exit(0);
 		};
 
@@ -1654,6 +1580,18 @@ sub DebugOff
 {
 }
 
+# yates_shuffle(\@foo) random shuffle of array
+sub yates_shuffle
+{
+    my $array = shift;
+    my $i;
+    for($i = @$array; --$i; ) {
+        my $j = int rand ($i+1);
+        next if $i == $j;
+        @$array[$i,$j] = @$array[$j,$i];
+    }
+}
+
 sub timestamp {
     return scalar localtime();
 }
@@ -1670,252 +1608,4 @@ sub safe_copy {
     }
 }
 
-sub CoreCheck {
-	my $test = shift;
-	# get the most recent list of tests and their log directories
-	CondorPubLogdirs::LoadPublished();
-	my $publishedarrayref = CondorPubLogdirs::ReturnPublished($test);
-	my $logdircount = $#{$publishedarrayref};
-	debug("In searching for logs for test <$test> count is <$logdircount>\n",2);
-	if($logdircount == -1) {
-		open(NOLOGS,">>LogDirsMissing") or die "Can not add that <$test> has no log dir:$!\n";
-		debug("No logs for test <$test>\n",2);
-		print NOLOGS "$test\n";
-		return(0);
-	}
-
-	my $count = 0;
-	my $scancount = 0;
-	my $fullpath = "";
-	foreach my $logdir (@{$publishedarrayref}) {
-		debug("Checking <$logdir> for test <$test>\n",2);
-		my @files = `ls $logdir`;
-		foreach my $perp (@files) {
-			chomp($perp);
-			$fullpath = $logdir . "/" . $perp;
-			if(-f $fullpath) {
-					if($fullpath =~ /^.*\/(core.*)$/) {
-						# returns printable string
-						debug("Checking <$logdir> for test <$test> Found Core <$fullpath>\n",2);
-						my $filechange = GetFileTime($fullpath);
-						my $newname = MoveCoreFile($fullpath,$coredir);
-						AddFileTrace($fullpath,$filechange,$newname);
-						$count += 1;
-					} else {
-						debug("Checking <$fullpath> for test <$test> for ERROR\n",2);
-						$scancount = ScanForERROR($fullpath,$test);
-						$count += $scancount;
-						debug("After ScanForERROR error count <$scancount>\n",2);
-					}
-			} else {
-				debug( "Not File: $fullpath\n",2);
-			}
-		}
-	}
-	return($count);
-}
-
-sub ScanForERROR
-{
-	my $daemonlog = shift;
-	my $testname = shift;
-	my $count = 0;
-	my $ignore = 1;
-	open(MDL,"<$daemonlog") or die "Can not open daemon log<$daemonlog>:$!\n";
-	my $line = "";
-	while(<MDL>) {
-		chomp();
-		$line = $_;
-		# ERROR preceeded by white space and trailed by white space, :, ; or -
-		if($line =~ /^\s*(\d+\/\d+\s+\d+:\d+:\d+)\s+ERROR[\s;:\-!].*$/){
-			debug("$line TStamp $1\n",2);
-			$ignore = IgnoreError($testname,$line);
-			if($ignore == 0) {
-				$count += 1;
-				AddFileTrace($daemonlog, $1, $line);
-			}
-		} elsif($line =~ /^\s*(\d+\/\d+\s+\d+:\d+:\d+)\s+.*\s+ERROR[\s;:\-!].*$/){
-			debug("$line TStamp $1\n",2);
-			$ignore = IgnoreError($testname,$line);
-			if($ignore == 0) {
-				$count += 1;
-				AddFileTrace($daemonlog, $1, $line);
-			}
-		} elsif($line =~ /^.*ERROR.*$/){
-			debug("Skipping this error<<$line>> \n",2);
-		}
-	}
-	close(MDL);
-	return($count);
-}
-
-sub CheckTriggerTime
-{	
-	my $teststartstamp = shift;
-	my $timestring = shift;
-	my $tsmon = 0;
-
-	my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime();
-
-	if($timestring =~ /^(\d+)\/(\d+)\s+(\d+):(\d+):(\d+)$/) {
-		$tsmon = $1 - 1;
-		my $timeloc = timelocal($5,$4,$3,$mday,$tsmon,$year,0,0,$isdst);
-		#print "timestamp from test start is $teststartstamp\n";
-		#print "timestamp fromlocaltime is $timeloc \n";
-		if($timeloc > $teststartstamp) {
-			return(1);
-		}
-	}
-}
-
-sub GetFileChangeTime
-{
-	my $file = shift;
-	my ($dev, $ino, $mode, $nlink, $uid, $gid, $rdev, $size, $atime, $mtime, $ctime, $blksize, $blocks) = stat($file);
-
-	return($ctime);
-}
-
-sub GetFileTime
-{
-	my $file = shift;
-	my ($dev, $ino, $mode, $nlink, $uid, $gid, $rdev, $size, $atime, $mtime, $ctime, $blksize, $blocks) = stat($file);
-
-	my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime($ctime);
-
-	$mon = $mon + 1;
-	$year = $year + 1900;
-
-	return("$mon/$mday $hour:$min:$sec");
-}
-
-sub AddFileTrace
-{
-	my $file = shift;
-	my $time = shift;
-	my $entry = shift;
-
-	my $tracefile = $coredir . "/core_error_trace";
-	my $newtracefile = $coredir . "/core_error_trace.new";
-
-	# make sure the trace file exists
-	if(!(-f $tracefile)) {
-		open(TF,">$tracefile") or die "Can not create ERROR/CORE trace file<$tracefile>:$!\n";
-		print TF "Tracking file for core files and ERROR prints in daemonlogs\n";
-		close(TF);
-	}
-	open(TF,"<$tracefile") or die "Can not create ERROR/CORE trace file<$tracefile>:$!\n";
-	open(NTF,">$newtracefile") or die "Can not create ERROR/CORE trace file<$newtracefile>:$!\n";
-	while(<TF>) {
-		print NTF "$_";
-	}
-	close(TF);
-	my $buildentry = "$time	$file	$entry\n";
-	print NTF "$buildentry";
-	debug("\n$buildentry",2);
-	close(NTF);
-	system("mv $newtracefile $tracefile");
-
-}
-
-sub MoveCoreFile
-{
-	my $oldname = shift;
-	my $targetdir = shift;
-	my $newname = "";
-	# get number for core file rename into trace dir
-	my $entries = CountFileTrace();
-	if($oldname =~ /^.*\/(core.*)\s*.*$/) {
-		$newname = $coredir . "/" . $1 . "_$entries";
-		system("mv $oldname $newname");
-		#system("rm $oldname");
-		return($newname);
-	} else {
-		debug("Only move core files<$oldname>\n",2);
-		return("badmoverequest");
-	}
-}
-
-sub CountFileTrace
-{
-	my $tracefile = $coredir . "/core_error_trace";
-	my $count = 0;
-
-	open(CT,"<$tracefile") or die "Can not count<$tracefile>:$!\n";
-	while(<CT>) {
-		$count += 1;
-	}
-	close(CT);
-	return($count);
-}
-
-# yates_shuffle(\@foo) random shuffle of array
-sub yates_shuffle
-{
-    my $array = shift;
-    my $i;
-    for($i = @$array; --$i; ) {
-        my $j = int rand ($i+1);
-        next if $i == $j;
-        @$array[$i,$j] = @$array[$j,$i];
-    }
-}
-
-sub LoadExemptions
-{
-	my $line = "";
-	open(EE,"<$errexempts") or die "Can not open $errexempts:$!\n";
-	while(<EE>) {
-    	chomp();
-    	$line = $_;
-		debug("$line\n",2);
-    	my ($test, $required, $message) = split /,/, $line;
-    	my $save = $required . "," . $message;
-    	if(exists $exemptions{$test}) {
-        	push @{$exemptions{$test}}, $save;
-    	} else {
-        	$exemptions{$test} = ();
-        	push @{$exemptions{$test}}, $save;
-    	}
-	}
-	#DropExemptions();
-}
-
-sub IgnoreError
-{
-	my $testname = shift;
-	my $errorstring = shift;
-
-	# no no.... must acquire array for test and check all substrings
-	# against current large string.... see DropExemptions below
-	debug("IgnoreError called for test <$testname> and string <$errorstring>\n",2);
-	# get list of per/test specs
-	my @testarray = @{$exemptions{$testname}};
-	foreach my $oneexemption (@testarray) {
-		my( $must, $partialstr) = split /,/,  $oneexemption;
-		my $quoted = quotemeta($partialstr);
-		debug("Looking for <$quoted> in this error <$errorstring>\n",2);
-		if($errorstring =~ m/$quoted/) {
-			debug("IgnoreError: Ignore ******** <<$quoted>> ******** \n",2);
-			return(1);
-		} 
-	}
-	# no exemption for this one
-	return(0);
-}
-
-sub DropExemptions
-{
-	foreach my $key (sort keys %exemptions) {
-    	print "$key\n";
-    	my @array = @{$exemptions{$key}};
-    	foreach my $p (@array) {
-        	print "$p\n";
-    	}
-	}
-}
-
-### Local Variables: ***
-### mode:perl ***
-### tab-width: 4  ***
-### End: ***
+1;

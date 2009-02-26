@@ -19,7 +19,6 @@
 ##**************************************************************
 
 use CondorTest;
-use CondorPersonal;
 
 
 $cmd_template = "job_condorc_ab_van.template";
@@ -31,12 +30,9 @@ $corename = "job_condorc_ab_van";
 $currenthost = CondorTest::getFqdnHost();
 CondorTest::fullchomp($currenthost);
 
-CondorPersonal::DebugOn();
-CondorPersonal::DebugLevel(1);
-
 system("date");
 
-$mypid = CondorPersonal::SaveMeSetup($corename);
+$mypid = $$;
 $mysaveme = $corename . ".saveme";
 
 if($mypid == 0) {
@@ -55,7 +51,7 @@ CondorTest::debug("Master PID is $mypid\n",1);
 CondorTest::debug("Master PID submit file is $mysubmitnm\n",1);
 
 # get a remote scheduler running (side b)
-my $configrem = CondorPersonal::StartCondor( "job_condorc_ab_van", "x_param.condorcremote" ,"remote");
+my $configrem = CondorTest::StartPersonal( "job_condorc_ab_van", "x_param.condorcremote" ,"remote");
 my @remote = split /\+/, $configrem;
 my $remconfig = shift @remote;
 my $remport = shift @remote;
@@ -97,7 +93,7 @@ close(CSUB);
 sleep 10;
 
 # get a local scheduler running (side a)
-my $configloc = CondorPersonal::StartCondor( "job_condorc_ab_van", "x_param.condorclocal" ,"local");
+my $configloc = CondorTest::StartPersonal( "job_condorc_ab_van", "x_param.condorclocal" ,"local");
 my @local = split /\+/, $configloc;
 my $locconfig = shift @local;
 my $locport = shift @local;
@@ -115,7 +111,7 @@ if( ! -e "job_condorc_xxx_van.in" )
 CondorTest::debug("Looking for schedds at B remote point of AB - Condor-C\n",1);
 system("condor_status -pool $currenthost:$remport -schedd -format '%s\n' Name");
 
-my $result = CondorPersonal::PersonalSystem("./job_condorc_ab_van.pl $mysubmitnm");
+my $result = system("./job_condorc_ab_van.pl $mysubmitnm job_condorc_ab_van");
 CondorTest::debug("Result of crafted Condor-C job is  $result\n",1);
 
 system("cp *condorc* $mysaveme");
@@ -136,8 +132,8 @@ if( -e "$mysubmitnmlog" )
 }
 
 
-CondorPersonal::KillDaemonPids($remconfig);
-CondorPersonal::KillDaemonPids($locconfig);
+CondorTest::KillPersonal($remconfig);
+CondorTest::KillPersonal($locconfig);
 system("date");
 
 if( $result != 0 )

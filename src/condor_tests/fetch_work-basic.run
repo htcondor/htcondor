@@ -19,7 +19,6 @@
 ##**************************************************************
 
 use CondorTest;
-use CondorPersonal;
 use Cwd;
 
 # truly const variables in perl
@@ -41,7 +40,7 @@ CondorTest::fullchomp($currenthost);
 
 system("date");
 
-$mypid = CondorPersonal::SaveMeSetup($corename);
+$mypid = $$;
 $mysaveme = $corename . ".saveme";
 
 if($mypid == 0) {
@@ -139,7 +138,7 @@ close(PASRAMDONE);
 
 my $version = "fetch";
 # get a local scheduler running (side a)
-my $configloc = CondorPersonal::StartCondor( "fetch_work-basic", "x_param.fetch-basic" ,$version);
+my $configloc = CondorTest::StartPersonal( "fetch_work-basic", "x_param.fetch-basic" ,$version);
 my @fetch = split /\+/, $configloc;
 my $locconfig = shift @fetch;
 my $locport = shift @fetch;
@@ -178,7 +177,7 @@ if( -e "$mysubmitnmlog" )
 	system("cp $mysubmitnmlog $mycorenmlog");
 }
 
-CondorPersonal::KillDaemonPids($locconfig);
+CondorTest::KillPersonal($locconfig);
 system("date");
 
 if( $fetchstatus != 0 )
