@@ -23,6 +23,7 @@
 
 #include "condor_common.h"
 #include "hibernator.WINDOWS.h"
+#include "security.WINDOWS.h"
 
 /* Remove me when NMI updates the SDKs.  Need for the XP SDKs which
    do NOT declare the functions as C functions... */
@@ -47,7 +48,24 @@ MsWindowsHibernator::initStates () {
 	
 	LONG                      status;
 	SYSTEM_POWER_CAPABILITIES capabilities;
-	USHORT					  states = NONE;
+	USHORT					  states		= NONE;
+	BOOL					  privileged	= FALSE;
+
+	/* allow Condor to shutdown the OS */
+	privileged = ModifyPrivilege ( SE_SHUTDOWN_NAME, TRUE );
+
+	if ( !privileged ) {
+
+		dprintf ( 
+			D_ALWAYS, 
+			"MsWindowsHibernator::initStates: Failed to grant "
+			"Condor the ability to shutdown this machine. "
+			"(last-error = %d)\n",
+			GetLastError () );
+
+		return;
+
+	}
 
 	/* set defaults: no sleep */
 	setStates ( NONE );
@@ -71,15 +89,11 @@ MsWindowsHibernator::initStates () {
 		return;
 	}
 
-	/* S4 requires that the Hibernation file exist as well */
-	if ( capabilities.HiberFilePresent ) {
-		states |= capabilities.SystemS4 << 3;
-	}
-
 	/* Finally, set the remaining supported states */
 	states |= capabilities.SystemS1;
 	states |= capabilities.SystemS2 << 1;
 	states |= capabilities.SystemS3 << 2;
+	states |= capabilities.SystemS4 << 3;
 	states |= capabilities.SystemS5 << 4;
 	setStates ( states );
 
