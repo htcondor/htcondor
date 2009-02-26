@@ -65,7 +65,7 @@ MsWindowsHibernator::initStates () {
 		dprintf ( 
 			D_ALWAYS, 
 			"MsWindowsHibernator::initStates: Failed to retrieve "
-			"power information. (last-error = %d)",
+			"power information. (last-error = %d)\n",
 			GetLastError () );
 
 		return;
@@ -111,7 +111,7 @@ MsWindowsHibernator::tryShutdown ( bool force ) const
 		dprintf ( 
 			D_ALWAYS,
 			"MsWindowsHibernator::tryShutdown(): Shutdown failed. "
-			"(last-error = %d)",
+			"(last-error = %d)\n",
 			last_error );
 
 	}
