@@ -2323,6 +2323,10 @@ int
 ResMgr::disableResources( const MyString &state_str )
 {
 
+	dprintf ( 
+		D_FULLDEBUG,
+		"In ResMgr::disableResources ()\n" );
+
     int i; /* stupid VC6 */
 
 	/* set the sleep state so the plugin will pickup on the
@@ -2340,9 +2344,15 @@ ResMgr::disableResources( const MyString &state_str )
         ok = resources[i]->update_with_ack();
 	}
 
-    /* if any of the updates failed, then renable all the
-    resources and try again later (next time HIBERNATE evaluates
-    to an value>0) */
+	dprintf ( 
+		D_FULLDEBUG,
+		"All resources disabled: %s\n", 
+		ok ? "yes." : "no. (resource #%d)",
+		i + 1 );
+
+    /* if any of the updates failed, then re-enable all the
+	resources and try again later (next time HIBERNATE evaluates
+	to a value>0) */
     if ( !ok ) {
         m_hibernation_manager->setTargetState (
             HibernatorBase::NONE );
