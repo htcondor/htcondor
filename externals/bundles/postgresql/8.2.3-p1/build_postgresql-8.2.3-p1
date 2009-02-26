@@ -1,9 +1,9 @@
 #!/bin/sh
 ############# build_postgresql-8.2.3
 
-cd $PACKAGE_NAME
+cd $PACKAGE_SRC_NAME
 
-./configure --prefix=$PACKAGE_INSTALL_DIR --with-ccopts=$PACKAGE_DEBUG --without-readline --without-zlib --disable-shared
+./configure --prefix=$PACKAGE_INSTALL_DIR --with-ccopts=$PACKAGE_DEBUG --without-readline --without-zlib
 if [ $? -ne 0 ]
 then
     echo "configure failed"

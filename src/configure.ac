@@ -2869,7 +2869,7 @@ fi
 
 # Figure out which postgresql we need.
 
-CHECK_EXTERNAL([postgresql], [8.2.3], [soft],
+CHECK_EXTERNAL([postgresql], [8.2.3-p1], [soft],
                [use PostgreSQL (provides Quill and other support)],
                MF_LIB_CHECK([postgresql], [[pq PQconnectdb]], [postgresql]))
 AC_MSG_CHECKING([postgresql])

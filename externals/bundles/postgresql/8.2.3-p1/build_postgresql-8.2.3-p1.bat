@@ -6,6 +6,7 @@ REM .
 
 REM FYI: Here's the variables we should have available:
 REM PACKAGE_NAME
+REM PACKAGE_SRC_NAME
 REM PACKAGE_BUILD_DIR
 REM PACKAGE_INSTALL_DIR
 REM EXTERNALS_INSTALL_DIR
@@ -14,7 +15,7 @@ REM Some magic to make sure PACKAGE_INSTALL_DIR has no forward slashes in it
 set PACKAGE_INSTALL_DIR=%PACKAGE_INSTALL_DIR:/=\%
 
 REM Set the current working dir
-cd %PACKAGE_NAME%
+cd %PACKAGE_SRC_NAME%
 
 REM Apply patch file, if it exists.
 rem touch zerolength
