@@ -22,6 +22,7 @@
 
 #include <iostream.h>
 #include <fstream.h>
+using namespace std;
 
 int main() {
 	fstream fin("x_data.in", ios::in);
