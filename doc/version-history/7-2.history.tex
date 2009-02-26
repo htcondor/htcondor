@@ -49,6 +49,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug in Condor's hibernation facilities where if any slot
+satisfied the \MacroNI{HIBERNATE} expression, the machine would enter
+a low power state.
+
 \item Fixed a bug in the parallel universe where periodic expressions
 involving the JobStatus would not function properly.
 
