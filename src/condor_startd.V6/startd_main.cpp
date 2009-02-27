@@ -48,6 +48,7 @@ ResMgr*	resmgr;			// Pointer to the resource manager object
 // Polling variables
 int	polling_interval = 0;	// Interval for polling when there are resources in use
 int	update_interval = 0;	// Interval to update CM
+int	update_offset = 0;		// Interval offset to update CM
 
 // String Lists
 StringList *startd_job_exprs = NULL;
@@ -401,7 +402,8 @@ main_init( int, char* argv[] )
 		// Evaluate the state of all resources and update CM 
 		// We don't just call eval_and_update_all() b/c we don't need
 		// to recompute anything.
-	resmgr->first_eval_and_update_all();
+		// This is now called by a timer registered by start_update_timer()
+	//resmgr->update_all();
 
 #if HAVE_DLOPEN
    StartdPluginManager::Load();
@@ -453,7 +455,8 @@ finish_main_config( void )
 		// Re-evaluate and update the CM for each resource (again, we
 		// don't need to recompute, since we just did that, so we call
 		// the special case version).
-	resmgr->first_eval_and_update_all();
+		// This is now called by a timer registered by reset_timers()
+	//resmgr->update_all();
 	return TRUE;
 }
 
@@ -469,6 +472,7 @@ init_params( int /* first_time */)
 	polling_interval = param_integer( "POLLING_INTERVAL", 5 );
 
 	update_interval = param_integer( "UPDATE_INTERVAL", 300, 1 );
+	update_offset = param_integer( "UPDATE_OFFSET", 0, 0 );
 
 	if( accountant_host ) {
 		free( accountant_host );

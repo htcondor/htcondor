@@ -89,6 +89,7 @@ extern	ResMgr*	resmgr;		// Pointer to the resource manager object
 extern	int		polling_interval;	// Interval for polling when
 									// running a job
 extern	int		update_interval;	// Interval to update CM
+extern	int		update_offset;		// Interval offset to update CM
 
 // String Lists
 extern	StringList* console_devices;

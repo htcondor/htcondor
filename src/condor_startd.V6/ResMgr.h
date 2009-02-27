@@ -96,8 +96,7 @@ public:
 
 		// The first one is special, since we already computed
 		// everything and we don't need to recompute anything.
-	void	first_eval_and_update_all( void );	
-
+	void	update_all( void );	
 	// These two functions walk through the array of rip pointers and
 	// call the specified function on each resource.  The first takes
 	// functions that take a rip as an arg.  The second takes Resource
