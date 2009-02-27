@@ -24,7 +24,6 @@ use Cwd;
 
 my $topleveldir = getcwd();
 my $name4test = `whoami`;
-CondorTest::fullchomp($name4test);
 CondorTest::debug("Adjusting mapfile for <$name4test>\n",1);
 
 $param_template = "x_param.protocol-ssl.template";
@@ -56,12 +55,6 @@ $mysaveme = $corename . ".saveme";
 if($mypid == 0) {
 	die "Saveme setup for test failed\n";
 }
-
-# make sure path exists since we have not called StartPersonal yet
-my $saveme = $topleveldir . "/" . $mysaveme;
-system("mkdir -p $saveme");
-my $lowerlevel = $saveme . "/" . $mypid;
-system("mkdir -p $lowerlevel");
 
 $pidleveldir = $topleveldir . "/" . $mysaveme . "/" . $mypid;
 print "changing to $pidleveldir\n";
