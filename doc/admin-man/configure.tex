@@ -1627,6 +1627,23 @@ but across all users and user's jobs.
   \MacroNI{EVENT\_LOG\_MAX\_SIZE} has a value of 0 (which disables
   event log rotation), this parameter has no affect.
 
+\label{param:EventLogFsync}
+\item[\Macro{EVENT\_LOG\_FSYNC}]
+  Controls the whether Condor will perform an ``fsync()''
+  after writing each event to the event log.  When \Expr{True},
+  a ``fsync()'' operation is performed after each event.
+  This ``fsync()'' operation forces the operating system to
+  synchronize the updates to the event log to the disk, but can
+  negatively effect the performance of the system.  This is a boolean
+  parameter which defaults to \Expr{False}.
+
+\label{param:EventLogLocking}
+\item[\Macro{EVENT\_LOG\_LOCKING}]
+  When \Expr{True} (the default value),
+  the event log (as specified by \MacroNI{EVENT\_LOG})
+  will be locked before being written to.
+  If \Expr{False}, Condor will not lock the file before writing.
+
 \label{param:EventLogUseXML}
 \item[\Macro{EVENT\_LOG\_USE\_XML}]
   A boolean value that defaults to \Expr{False}.

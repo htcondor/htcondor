@@ -69,6 +69,20 @@ in privsep mode (\MacroNI{PRIVSEP\_ENABLED}).
 \item Fixed a bug that caused \Condor{dagman} to crash if the
 \File{dagman.out} file reached a size of 2 GB.
 
+\item The new boolean configuration variable
+  \Macro{EVENT\_LOG\_FSYNC} provides control of the behavior of
+  Condor when writing events to the event log.  Previously,
+  the behavior was as if this parameter were set to \Expr{False}.
+  See \ref{param:EventLogFsync} for the complete definition of
+  this variable.
+
+\item The new boolean configuration variable
+  \Macro{EVENT\_LOG\_LOCKING} provides control of the behavior of
+  Condor when writing events to the event log.  Previously,
+  the behavior was controlled by \MacroNI{ENABLE\_USERLOG\_LOCKING}.
+  See \ref{param:EventLogLocking} for the complete definition of
+  this variable.
+
 \end{itemize}
 
 \noindent Known Bugs:
