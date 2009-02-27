@@ -543,12 +543,23 @@ int daemon::RealStart( )
 			// get the port from that entry
 		command_port = -1;
 
+		dprintf ( 
+			D_ALWAYS, 
+			"Looking for matching Collector on '%s'...\n", 
+			my_full_hostname () );
 		CollectorList* collectors = NULL;
 		if ((collectors = daemonCore->getCollectorList())) {
 			char * my_hostname = my_full_hostname();
 			Daemon * my_daemon;
 			collectors->rewind();
 			while (collectors->next (my_daemon)) {
+
+				dprintf ( 
+					D_ALWAYS, 
+					"Found '%s:%d'\n", 
+					my_daemon->fullHostname (),
+					my_daemon->port () );
+
 				if (same_host (my_hostname, 
 							   my_daemon->fullHostname())) {
 					command_port = my_daemon->port();
@@ -565,6 +576,9 @@ int daemon::RealStart( )
 				command_port = 1;
 			}
 		}
+		dprintf ( 
+			D_ALWAYS, 
+			"Finished looking for Collectors.\n" );
 
 		if (command_port == -1) {
 				// strange....
