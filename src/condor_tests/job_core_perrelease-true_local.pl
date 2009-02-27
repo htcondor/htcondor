@@ -35,7 +35,7 @@ $corenamewithpid = 'job_core_perrelease-true_local' . $mypid;
 $template = $corename . '.template';
 $cmd = $corenamewithpid . '.cmd';
 $testdesc =  'Condor submit policy test for PERIODIC_RELEASE - local U';
-$testname = "job_core_perrelease_local";
+$testname = "job_core_perrelease-true_local";
 
 #create command file
 

@@ -35,7 +35,7 @@ $corenamewithpid = 'job_core_perrelease-false_local' . $mypid;
 $template = $corename . '.template';
 $cmd = $corenamewithpid . '.cmd';
 $testdesc =  'Condor submit policy test for PERIODIC_RELEASE - local U';
-$testname = "job_core_perrelease_local";
+$testname = "job_core_perrelease-false_local";
 
 #create command file
 
@@ -149,18 +149,11 @@ $success = sub {
 ## the abort event, we know it was us and not a mistake from
 ## something else
 ##
-
-my $timeddone = 0;
 $timed = sub {
 	##
 	## We have to use info hash from the last event callback, because
 	## the timer callback doesn't provide us with it
 	## 
-	if($timeddone != 0) {
-		return(0);
-	}
-	$timeddone = 1;
-
 	$cluster = $info{"cluster"};
 	$job = $info{"job"};
 	
