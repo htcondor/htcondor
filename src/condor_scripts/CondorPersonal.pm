@@ -148,7 +148,6 @@ my $pid = $$;
 my $version = ""; # remote, middle, ....... for naming schedd "schedd . pid . version"
 my $mastername = ""; # master_$verison
 my $iswindows = IsThisWindows();
-my $wrap_test;
 
 #################################################################
 #
@@ -258,7 +257,7 @@ sub StartCondor
 	}
 
 	# if we are wrapping tests, publish log location
-	$wrap_test = $ENV{WRAP_TESTS};
+	my $wrap_test = $ENV{WRAP_TESTS};
 	if(defined  $wrap_test) {
 		my $logdir = $topleveldir . "/log";
 		#CondorPubLogdirs::PublishLogDir($testname,$logdir);
