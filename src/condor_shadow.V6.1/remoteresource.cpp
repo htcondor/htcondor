@@ -962,13 +962,17 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 	}
 
 	if( update_ad->LookupInteger(ATTR_IMAGE_SIZE, int_value) ) {
-		image_size = int_value;
-		jobAd->Assign(ATTR_IMAGE_SIZE, int_value);
+		if( int_value > image_size ) {
+			image_size = int_value;
+			jobAd->Assign(ATTR_IMAGE_SIZE, int_value);
+		}
 	}
 			
 	if( update_ad->LookupInteger(ATTR_DISK_USAGE, int_value) ) {
-		disk_usage = int_value;
-		jobAd->Assign(ATTR_DISK_USAGE, int_value);
+		if( int_value > disk_usage ) {
+			disk_usage = int_value;
+			jobAd->Assign(ATTR_DISK_USAGE, int_value);
+		}
 	}
 
 	if( update_ad->LookupString(ATTR_EXCEPTION_HIERARCHY,string_value) ) {
