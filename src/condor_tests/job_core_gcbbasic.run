@@ -19,6 +19,9 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorPersonal;
+
+CondorPersonal::DebugOn();
 
 $cmd_template = "job_core_gcbbasic.template";
 $testdesc =  'job_core_gcbbasic - gcb smoke test';
@@ -34,7 +37,7 @@ CondorTest::fullchomp($currenthost);
 
 system("date");
 
-$mypid = $$;
+$mypid = CondorPersonal::SaveMeSetup($corename);
 $mysaveme = $corename . ".saveme";
 
 if($mypid == 0) {
@@ -67,7 +70,7 @@ while(<TEMPL>) {
 
 my $version = $mypid . "local";
 # get a local scheduler running (side a)
-my $configloc = CondorTest::StartPersonal( "job_core_gcbbasic", "x_param.gcbbasic" ,$version);
+my $configloc = CondorPersonal::StartCondor( "job_core_gcbbasic", "x_param.gcbbasic" ,$version);
 my @local = split /\+/, $configloc;
 my $locconfig = shift @local;
 my $locport = shift @local;
@@ -115,7 +118,7 @@ if( -e "$mysubmitnmlog" )
 	system("cp $mysubmitnmlog $mycorenmlog");
 }
 
-CondorTest::KillPersonal($locconfig);
+CondorPersonal::KillDaemonPids($locconfig);
 system("date");
 
 if( $bail == 1 )

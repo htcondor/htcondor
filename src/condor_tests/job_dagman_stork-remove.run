@@ -19,6 +19,7 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorPersonal;
 use Cwd;
 
 
@@ -35,7 +36,7 @@ CondorTest::fullchomp($currenthost);
 
 system("date");
 
-$mypid = $$;
+$mypid = CondorPersonal::SaveMeSetup($corename);
 $mysaveme = $corename . ".saveme";
 
 if($mypid == 0) {
@@ -57,7 +58,7 @@ CondorTest::debug("Master PID submit file is $mysubmitnm\n",1);
 # which we are currently configured to run and return a config_location:port 
 # string after starting up that personal condor.
 
-my $configloc = CondorTest::StartPersonal( "job_dagman_stork-remove", "x_param.storksrvr" ,"local");
+my $configloc = CondorPersonal::StartCondor( "job_dagman_stork-remove", "x_param.storksrvr" ,"local");
 my @local = split /\+/, $configloc;
 my $locconfig = shift @local;
 my $locport = shift @local;
@@ -186,7 +187,7 @@ if( -e "$mysubmitnmlog" )
 	system("cp $mysubmitnmlog $mycorenmlog");
 }
 
-CondorTest::KillPersonal($locconfig);
+CondorPersonal::KillDaemonPids($locconfig);
 system("date");
 
 if( $run_result != 0 )

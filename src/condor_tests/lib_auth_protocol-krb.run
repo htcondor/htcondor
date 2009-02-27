@@ -19,6 +19,7 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorPersonal;
 
 
 $param_template = "x_param.protocol-krb.template";
@@ -38,7 +39,7 @@ system("date");
 
 $myvariation = 1;
 
-$mypid = $$;
+$mypid = CondorPersonal::SaveMeSetup($corename);
 $mysaveme = $corename . ".saveme";
 
 if($mypid == 0) {
@@ -82,7 +83,7 @@ if($mypid == 0) {
 	close(CSUB);
 	sleep 10;
 
-	my $configsec = CondorTest::StartPersonal( "lib_auth_protocol-krb", $myparamname ,"protocol", $mypid);
+	my $configsec = CondorPersonal::StartCondor( "lib_auth_protocol-krb", $myparamname ,"protocol", $mypid);
 	my @securitypool = split /\+/, $configsec;
 	my $secconfig = shift @securitypool;
 	my $secport = shift @securitypool;
@@ -113,7 +114,7 @@ if($mypid == 0) {
 		system("cp $mysubmitnmlog $mycorenmlog");
 	}
 
-CondorTest::KillPersonal($secconfig);
+CondorPersonal::KillDaemonPids($secconfig);
 system("date");
 
 if($result != 0)

@@ -19,6 +19,7 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorPersonal;
 
 $testdesc =  'Condor CronTab Test - Local Universe';
 $testname = "job_core_crontab_local";
@@ -30,7 +31,7 @@ CondorTest::fullchomp($currenthost);
 
 system("date");
 
-$mypid = $$;
+$mypid = CondorPersonal::SaveMeSetup($corename);
 $mysaveme = $corename . ".saveme/$mypid";
 
 if($mypid == 0) {
@@ -38,7 +39,7 @@ if($mypid == 0) {
 }
 
 # get a remote scheduler running (side b)
-my $configrem = CondorTest::StartPersonal( "job_core_crontab_local", "x_param.vancrontab" ,"crontab_van");
+my $configrem = CondorPersonal::StartCondor( "job_core_crontab_local", "x_param.vancrontab" ,"crontab_van");
 my @personal = split /\+/, $configrem;
 my $personalconfig = shift @personal;
 my $personalport = shift @personal;
@@ -57,7 +58,7 @@ my $result = CondorTest::verbose_system("./job_core_crontab.pl local");
 #save key files
 system("cp $corename* $mysaveme");
 
-CondorTest::KillPersonal($personalconfig);
+CondorPersonal::KillDaemonPids($personalconfig);
 system("date");
 
 if($result != 0)

@@ -19,6 +19,7 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorPersonal;
 use Cwd;
 use x_hadutilities;
 
@@ -228,7 +229,7 @@ foreach my $hadIndex (1 .. $hadsNumber)
 	# Generate condor instance: we configure each instance so that no possible
 	# clash can happen between different condor daemons of all the instances
 	my $configurationFileAndCollectorPort =
-	    CondorTest::StartPersonal(
+	    CondorPersonal::StartCondor(
 			"$topDirectory/$personalCondorParametersName", 
 			"_instance$hadIndex");
 	($configurationFiles[$hadIndex], $collectorPorts[$hadIndex]) =
@@ -343,7 +344,7 @@ while($time - $startTimer <= $configurationTable{RUN_TIME})
 
 &MoveAllToSaveDirectory();
 
-#CondorTest::KillPersonal($quillconfig);
+#CondorPersonal::KillDaemonPids($quillconfig);
 system("date");
 
 CondorTest::debug("$coreName test SUCCESS!\n",1);
@@ -1301,7 +1302,7 @@ sub RaiseMachines
 #    	&ImplantLine($localPostSourceFile, 'TRANSFERER_TIMEOUT_MULTIPLIER', '1');
 #
 #    	my $configurationFileAndCollectorPort =
-#        	CondorTest::StartPersonal(
+#        	CondorPersonal::StartCondor(
 #				"$topDirectory/$personalCondorParametersName", 
 #				"_instance$hadIndex");
 #    	($configurationFiles[$hadIndex], $collectorPorts[$hadIndex]) =

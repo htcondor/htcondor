@@ -48,12 +48,6 @@ my $subdir = $ARGV[1];
 my $expectedres = "";
 $expectedres = $ARGV[2];
 
-CondorTest::LoadExemption("lib_auth_protocol-negot-prt4,no,SECMAN:2004:Failed to create security session to");
-CondorTest::LoadExemption("lib_auth_protocol-negot-prt4,no,SECMAN:2004:Was waiting for TCP auth session to");
-CondorTest::LoadExemption("lib_auth_protocol-negot-prt4,no,FAILED TO SEND INITIAL KEEP ALIVE TO OUR PARENT");
-CondorTest::LoadExemption("lib_auth_protocol-negot-prt4,no,DC_AUTHENTICATE unable to receive auth_info!");
-CondorTest::LoadExemption("lib_auth_protocol-negot-prt4,no,SECMAN:2003:TCP auth connection to");
-
 CondorTest::debug("Handed args from main test loop.....<<<<<<<<<<<<<<<<<<<<<<$piddir/$subdir/$expectedres>>>>>>>>>>>>>>\n",1);
 $abnormal = sub {
 	my %info = @_;

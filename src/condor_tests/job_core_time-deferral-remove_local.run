@@ -19,6 +19,7 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorPersonal;
 use Cwd;
 
 
@@ -35,7 +36,7 @@ CondorTest::fullchomp($currenthost);
 
 system("date");
 
-$mypid = $$;
+$mypid = CondorPersonal::SaveMeSetup($corename);
 $mysaveme = $corename . ".saveme";
 
 if($mypid == 0) {
@@ -56,7 +57,7 @@ print "Master PID is $mypid\n";
 # Edit template config info for signal and location
 
 # get a remote scheduler running (side b)
-my $configrem = CondorTest::StartPersonal( "job_core_time-deferral-remove_local", "x_param.timedeferloc" ,"timedeferloc");
+my $configrem = CondorPersonal::StartCondor( "job_core_time-deferral-remove_local", "x_param.timedeferloc" ,"timedeferloc");
 my @timedeferloc = split /\+/, $configrem;
 my $timedeferlocconfig = shift @timedeferloc;
 my $timedeferlocport = shift @timedeferloc;
@@ -69,7 +70,7 @@ $ENV{CONDOR_CONFIG} = $timedeferlocconfig;
 
 CondorTest::debug("Set config to $timedeferlocconfig\n",1);
 
-my $result = system("./job_core_time-deferral-remove.pl local");
+my $result = CondorPersonal::PersonalSystem("./job_core_time-deferral-remove.pl local");
 CondorTest::debug("Result of job_core_time-deferral-remove.pl local test  job is  $result\n",1);
 
 
@@ -90,7 +91,7 @@ if( -e "$mysubmitnmlog" )
 	system("cp $mysubmitnmlog $mycorenmlog");
 }
 
-CondorTest::KillPersonal($timedeferlocconfig);
+CondorPersonal::KillDaemonPids($timedeferlocconfig);
 system("date");
 
 if( $result != 0 )
