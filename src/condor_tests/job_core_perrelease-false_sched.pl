@@ -22,7 +22,7 @@ use CondorTest;
 
 $cmd = 'job_core_perrelease-false_sched.cmd';
 $testdesc =  'Condor submit policy test for periodic_release - scheduler U';
-$testname = "job_core_perrelease_sched";
+$testname = "job_core_perrelease-false_sched";
 
 my %info;
 my $cluster;

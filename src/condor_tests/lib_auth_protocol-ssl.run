@@ -19,12 +19,12 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorPersonal;
 use Cwd;
 
 
 my $topleveldir = getcwd();
 my $name4test = `whoami`;
-CondorTest::fullchomp($name4test);
 CondorTest::debug("Adjusting mapfile for <$name4test>\n",1);
 
 $param_template = "x_param.protocol-ssl.template";
@@ -50,18 +50,12 @@ system("date");
 
 $myvariation = 1;
 
-$mypid = $$;
+$mypid = CondorPersonal::SaveMeSetup($corename);
 $mysaveme = $corename . ".saveme";
 
 if($mypid == 0) {
 	die "Saveme setup for test failed\n";
 }
-
-# make sure path exists since we have not called StartPersonal yet
-my $saveme = $topleveldir . "/" . $mysaveme;
-system("mkdir -p $saveme");
-my $lowerlevel = $saveme . "/" . $mypid;
-system("mkdir -p $lowerlevel");
 
 $pidleveldir = $topleveldir . "/" . $mysaveme . "/" . $mypid;
 print "changing to $pidleveldir\n";
@@ -172,7 +166,7 @@ while(<CONFIGTPLATE>)
 close(CONFIG);
 close(CONFIGTPLATE);
 
-my $configsec = CondorTest::StartPersonal( "lib_auth_protocol-ssl", $myparamname ,"protocol", $mypid);
+my $configsec = CondorPersonal::StartCondor( "lib_auth_protocol-ssl", $myparamname ,"protocol", $mypid);
 my @securitypool = split /\+/, $configsec;
 my $secconfig = shift @securitypool;
 my $secport = shift @securitypool;
@@ -183,7 +177,7 @@ CondorTest::debug("---security config is $secconfig and securitypool port is $se
 $ENV{CONDOR_CONFIG} = $secconfig;
 # submit into local schedd (side a)
 
-my $result = system("./x_lib_auth_protocol.pl $mypid \"protocol\" $mytestnegotiation_result $mycmdfile \"ssl\"");
+my $result = system("./x_lib_auth_protocol.pl $mypid \"protocol\" $mytestnegotiation_result $mycmdfile");
 CondorTest::debug("Result of crafted lib_auth_protocol job is  $result\n",1);
 
 system("cp *$corename* $mysaveme");
@@ -203,7 +197,7 @@ if( -e "$mysubmitnmlog" )
 	system("cp $mysubmitnmlog $mycorenmlog");
 }
 
-CondorTest::KillPersonal($secconfig);
+CondorPersonal::KillDaemonPids($secconfig);
 system("date");
 
 if($result != 0)

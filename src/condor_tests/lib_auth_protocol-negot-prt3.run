@@ -19,6 +19,7 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorPersonal;
 
 
 $param_template = "x_param.protocol-negot.template";
@@ -42,7 +43,7 @@ CondorTest::fullchomp($currenthost);
 system("date");
 $myvariation = 1;
 
-$pid = $mypid = $$;
+$pid = $mypid = CondorPersonal::SaveMeSetup($corename);
 $mysaveme = $corename . ".saveme";
 
 if($mypid == 0) {
@@ -103,7 +104,7 @@ while(<DF>) {
 	}
 	close(TPLATE);
 	close(CSUB);
-	my $configsec = CondorTest::StartPersonal( "lib_auth_protocol-negot-prt3", $myparamname ,$label, $mypid);
+	my $configsec = CondorPersonal::StartCondor( "lib_auth_protocol-negot-prt3", $myparamname ,$label, $mypid);
 	my @securitypool = split /\+/, $configsec;
 	my $secconfig = shift @securitypool;
 	my $secport = shift @securitypool;
@@ -139,7 +140,7 @@ while(<DF>) {
 		system("cp $mysubmitnmlog $mycorenmlog");
 	}
 
-	CondorTest::KillPersonal($secconfig);
+	CondorPersonal::KillDaemonPids($secconfig);
 	system("date");
 }
 

@@ -600,10 +600,18 @@ startd_exit()
 
 	// Cleanup the resource manager
 	if ( resmgr ) {
-		dprintf( D_FULLDEBUG, "About to send final update to the central manager\n" );	
-		resmgr->final_update();
-		if ( resmgr->m_attr ) {
-			resmgr->m_attr->final_idle_dprintf();
+#if HAVE_HIBERNATION
+		// don't want the final update, since it will overwrite 
+		// our off-line ad
+		if ( !resmgr->hibernating () ) {
+#else
+		if ( true ) {
+#endif /* HAVE_HIBERNATION */
+			dprintf( D_FULLDEBUG, "About to send final update to the central manager\n" );	
+			resmgr->final_update();
+			if ( resmgr->m_attr ) {
+				resmgr->m_attr->final_idle_dprintf();
+			}
 		}
 		
 			// clean-up stale claim-id files

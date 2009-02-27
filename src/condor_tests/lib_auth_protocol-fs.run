@@ -19,6 +19,7 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorPersonal;
 
 
 $param_template = "x_param.protocol-fs.template";
@@ -36,7 +37,7 @@ CondorTest::fullchomp($currenthost);
 
 system("date");
 
-$mypid = $$;
+$mypid = CondorPersonal::SaveMeSetup($corename);
 $mysaveme = $corename . ".saveme";
 
 if($mypid == 0) {
@@ -79,7 +80,7 @@ if($mypid == 0) {
 	close(CSUB);
 	sleep 10;
 
-	my $configsec = CondorTest::StartPersonal( "lib_auth_protocol-fs", $myparamname ,"protocol", $mypid);
+	my $configsec = CondorPersonal::StartCondor( "lib_auth_protocol-fs", $myparamname ,"protocol", $mypid);
 	my @securitypool = split /\+/, $configsec;
 	my $secconfig = shift @securitypool;
 	my $secport = shift @securitypool;
@@ -90,7 +91,7 @@ if($mypid == 0) {
 	$ENV{CONDOR_CONFIG} = $secconfig;
 	# submit into local schedd (side a)
 
-	my $cmd = "./x_lib_auth_protocol.pl $mypid \"protocol\" $mytestnegotiation_result $mycmdfile \"fs\"";
+	my $cmd = "./x_lib_auth_protocol.pl $mypid \"protocol\" $mytestnegotiation_result $mycmdfile";
 	CondorTest::debug("Calling $cmd\n",1);
 	my $result = system($cmd);
 	CondorTest::debug("Result of crafted lib_auth_protocol job is  $result\n",1);
@@ -112,7 +113,7 @@ if($mypid == 0) {
 		system("cp $mysubmitnmlog $mycorenmlog");
 	}
 
-CondorTest::KillPersonal($secconfig);
+CondorPersonal::KillDaemonPids($secconfig);
 system("date");
 
 if($result != 0)

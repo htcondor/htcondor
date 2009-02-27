@@ -197,6 +197,7 @@ public:
 	HibernationManager const& getHibernationManager () const;
 	void updateHibernateConfiguration ();
     int disableResources ( const MyString &state );
+	bool hibernating () const;
 #endif /* HAVE_HIBERNATION */
 
 	time_t	now( void ) { return cur_time; };
@@ -315,6 +316,7 @@ private:
 	NetworkAdapterBase  *m_netif;
 	HibernationManager	*m_hibernation_manager;
 	int					m_hibernate_tid;
+	bool				m_hibernating;
 	void checkHibernate(void);
 	int	 allHibernating( MyString &state_str ) const;
 	int  startHibernateTimer();

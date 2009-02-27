@@ -26,7 +26,6 @@ use CondorTest;
 use CondorPersonal;
 
 my $DATA_SIZE = 1440 * 1024;
-my $locconfig = "";
 
 sub setup_data_disk
 {
@@ -108,12 +107,12 @@ sub initialize
 
 	# start a personal Condor for the test
 	#
-	my $configloc = CondorTest::StartPersonal($corename,
+	my $configloc = CondorPersonal::StartCondor($corename,
 	                                            "x_param.vmware",
 	                                            "vmuniverse");
 	print $configloc . "\n";
 	my @local = split /\+/, $configloc;
-	$locconfig = shift @local;
+	my $locconfig = shift @local;
 	$ENV{CONDOR_CONFIG} = $locconfig;
 
 	# now chdir into the personal Condor directory so files produced
@@ -149,7 +148,7 @@ sub run_test
 {
 	my $testname = shift;
 	add_submit_command("queue");
-	return CondorTest::RunTest($testname, "x_vmware_test_vm.cmd", 0);
+	return CondorTest::RunTest($testname, "x_vmware_test_vm.cmd");
 }
 
 sub get_data
@@ -189,7 +188,13 @@ sub cleanup
 {
 	# shut down the personal Condor
 	#
-	CondorTest::KillPersonal($locconfig);
+	my $cmd = "condor_off -fast -master";
+	my @adarray;
+	my $status = CondorTest::runCondorTool($cmd,\@adarray,2);
+	if(!$status)
+	{
+		die "Test failure due to Condor Tool Failure<$cmd>\n";
+	}
 
 	# delete the tarball contents
 	#

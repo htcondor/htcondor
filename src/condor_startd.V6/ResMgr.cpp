@@ -62,6 +62,7 @@ ResMgr::ResMgr()
 		dprintf( D_FULLDEBUG, "Using network interface %s for hibernation\n",
 				 primary->interfaceName() );
 	}
+	m_hibernating = FALSE;
 #endif
 
 	id_disp = NULL;
@@ -2150,6 +2151,60 @@ ResMgr::cancelHibernateTimer( void )
 }
 
 
+int
+ResMgr::disableResources( const MyString &state_str )
+{
+
+	dprintf ( 
+		D_FULLDEBUG,
+		"In ResMgr::disableResources ()\n" );
+
+	int i; /* stupid VC6 */
+
+	/* set the sleep state so the plugin will pickup on the
+	fact that we are sleeping */
+	m_hibernation_manager->setTargetState ( state_str.Value() );
+
+	/* disable all resource on this machine */
+	for ( i = 0; i < nresources; ++i ) {
+		resources[i]->disable();
+	}
+
+	/* update the CM */
+	bool ok = true;
+	for ( i = 0; i < nresources && ok; ++i ) {
+		ok = resources[i]->update_with_ack();
+	}
+
+	dprintf ( 
+		D_FULLDEBUG,
+		"All resources disabled: %s\n", 
+		ok ? "yes." : "no. (resource #%d)",
+		i + 1 );
+
+	/* if any of the updates failed, then re-enable all the
+	resources and try again later (next time HIBERNATE evaluates
+	to a value>0) */
+	if ( !ok ) {
+		m_hibernation_manager->setTargetState (
+			HibernatorBase::NONE );
+		for ( i = 0; i < nresources; ++i ) {
+			resources[i]->enable();
+			resources[i]->update();
+		}
+	}
+
+	/* record if we we are hibernating or not */
+	m_hibernating = ok;
+
+	return ok;
+}
+
+
+bool ResMgr::hibernating () const {
+	return m_hibernating;
+}
+
 #endif /* HAVE_HIBERNATION */
 
 
@@ -2310,53 +2365,3 @@ ResMgr::FillExecuteDirsList( class StringList *list )
 		}
 	}
 }
-
-#if HAVE_HIBERNATION
-
-int
-ResMgr::disableResources( const MyString &state_str )
-{
-
-	dprintf ( 
-		D_FULLDEBUG,
-		"In ResMgr::disableResources ()\n" );
-
-    int i; /* stupid VC6 */
-
-	/* set the sleep state so the plugin will pickup on the
-	fact that we are sleeping */
-	m_hibernation_manager->setTargetState ( state_str.Value() );
-
-    /* disable all resource on this machine */
-    for ( i = 0; i < nresources; ++i ) {
-        resources[i]->disable();
-	}
-
-    /* update the CM */
-    bool ok = true;
-    for ( i = 0; i < nresources && ok; ++i ) {
-        ok = resources[i]->update_with_ack();
-	}
-
-	dprintf ( 
-		D_FULLDEBUG,
-		"All resources disabled: %s\n", 
-		ok ? "yes." : "no. (resource #%d)",
-		i + 1 );
-
-    /* if any of the updates failed, then re-enable all the
-	resources and try again later (next time HIBERNATE evaluates
-	to a value>0) */
-    if ( !ok ) {
-        m_hibernation_manager->setTargetState (
-            HibernatorBase::NONE );
-        for ( i = 0; i < nresources; ++i ) {
-            resources[i]->enable();
-            resources[i]->update();
-	    }
-    }
-
-    return ok;
-}
-
-#endif

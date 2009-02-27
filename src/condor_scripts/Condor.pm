@@ -403,8 +403,7 @@ sub runCommand
 		if (defined $WantErrorCallback )
 		{
 			debug("Calling error callback!!!!!! at @ $WantErrorCallback\n",6);
-			&$WantErrorCallback( %info );
-			return 1;
+			&$WantErrorCallback( %info )
 		}
 		DumpFailedCommand($command_string);
         return 0;
@@ -420,8 +419,7 @@ sub runCommand
 		if (defined $WantErrorCallback )
 		{
 			debug("Calling error callback!!!!!! at @ $WantErrorCallback\n",6);
-			&$WantErrorCallback( %info );
-			return 1;
+			&$WantErrorCallback( %info )
 		}
 		DumpFailedCommand($command_string);
         return 0;

@@ -22,7 +22,7 @@ use CondorTest;
 
 $cmd      = 'job_filexfer_trans-excut-true_van.cmd';
 $testdesc =  'Jobs complaining cause No FT on when tansfer_executables = true - vanilla U';
-$testname = "job_filexfer_trans-excut_van";
+$testname = "job_filexfer_trans-excut-true_van";
 
 # truly const variables in perl
 sub IDLE{1};
@@ -72,21 +72,21 @@ $wanterror = sub
     if($errmsg =~ /^.*died abnormally.*$/) {
         CondorTest::debug("BAD. Submit died was to fail but with error 1\n",1);
         CondorTest::debug("$testname: Failure\n",1);
-        return(1);
+        exit(1);
     } elsif($errmsg =~ /^.*\(\s*returned\s*(\d+)\s*\).*$/) {
         if($1 == 1) {
             CondorTest::debug("Good. Job was not to submit with File Transfer off and input files requested\n",1);
             CondorTest::debug("$testname: SUCCESS\n",1);
-            return(0);
+            exit(0);
         } else {
             CondorTest::debug("BAD. Submit was to fail but with error 1 not <<$1>>\n",1);
             CondorTest::debug("$testname: Failure\n",1);
-            return(1);
+            exit(1);
         }
     } else {
             CondorTest::debug("BAD. Submit failure mode unexpected....\n",1);
             CondorTest::debug("$testname: Failure\n",1);
-            return(1);
+            exit(1);
     }
 };
 
