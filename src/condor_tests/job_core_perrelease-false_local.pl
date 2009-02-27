@@ -126,8 +126,6 @@ $submit = sub {
 		CondorTest::debug("Bad - Job $cluster.$job failed to go on hold.\n",1);
 		exit(1);
 	}
-	# wait till we check our state , then set timer
-	CondorTest::RegisterTimed($testname, $timed, 60);
 };
 
 ##
@@ -219,7 +217,7 @@ CondorTest::RegisterExitedSuccess( $testname, $success );
 ## than we know that the expression works as expected
 ## We will sleep for 1 minute because the interval is 15 seconds
 ##
-#CondorTest::RegisterTimed($testname, $timed, 60);
+CondorTest::RegisterTimed($testname, $timed, 60);
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
 	CondorTest::debug("$testname: SUCCESS\n",1);
