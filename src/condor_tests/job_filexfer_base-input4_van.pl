@@ -59,16 +59,16 @@ $wanterror = sub
 		if($1 == 1) {
 			CondorTest::debug("Good. Job was not to submit with File Transfer off and input files requested\n",1);
 			CondorTest::debug("$testname: SUCCESS\n",1);
-			return(0);
+			exit(0);
 		} else {
 			CondorTest::debug("BAD. Submit was to fail but with error 1 not <<$1>>\n",1);
 			CondorTest::debug("$testname: Failure\n",1);
-			return(1);
+			exit(1);
 		}
 	} else {
 			CondorTest::debug("BAD. Submit failure mode unexpected....\n",1);
 			CondorTest::debug("$testname: Failure\n",1);
-			return(1);
+			exit(1);
 	}
 };
 
