@@ -282,13 +282,10 @@ if($docreatedb != 0) {
 }
 system("date");
 
-$docreatelang = system("$pgsql_dir/bin/createlang plpgsql test --port $startpostmasterport");
-if($docreatelang != 0) {
-	die "Failed to createlang plpgsql\n";
-} else {
-	print "$pgsql_dir/bin/createlang plpgsql test --port $startpostmasterport Worked!!\n";
+$docreatelang = system("$pgsql_dir/bin/createlang plpgsql");
+if($docreatedb != 0) {
+	die "Failed to create test db\n";
 }
-
 system("date");
 
 
