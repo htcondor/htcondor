@@ -1629,20 +1629,22 @@ but across all users and user's jobs.
 
 \label{param:EventLogFsync}
 \item[\Macro{EVENT\_LOG\_FSYNC}]
-  Controls the whether Condor will perform an ``fsync()''
-  after writing each event to the event log.  When \Expr{True},
-  a ``fsync()'' operation is performed after each event.
-  This ``fsync()'' operation forces the operating system to
+  A boolean value that controls whether Condor will perform an
+  \Procedure{fsync} after writing each event to the event log.
+  When \Expr{True},
+  an \Procedure{fsync} operation is performed after each event.
+  This \Procedure{fsync} operation forces the operating system to
   synchronize the updates to the event log to the disk, but can
-  negatively effect the performance of the system.  This is a boolean
-  parameter which defaults to \Expr{False}.
+  negatively affect the performance of the system.  
+  Defaults to \Expr{False}.
 
 \label{param:EventLogLocking}
 \item[\Macro{EVENT\_LOG\_LOCKING}]
-  When \Expr{True} (the default value),
+  A boolean value that defaults to \Expr{True}.
+  When \Expr{True},
   the event log (as specified by \MacroNI{EVENT\_LOG})
   will be locked before being written to.
-  If \Expr{False}, Condor will not lock the file before writing.
+  When \Expr{False}, Condor does not lock the file before writing.
 
 \label{param:EventLogUseXML}
 \item[\Macro{EVENT\_LOG\_USE\_XML}]
