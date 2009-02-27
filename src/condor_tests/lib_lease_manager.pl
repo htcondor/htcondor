@@ -465,7 +465,6 @@ else {
 }
 
 CondorTest::KillPersonal( $config );
-system( "rm -r ./$$" );
 
 my $time_end = time();
 $ltime = localtime( $time_end );
