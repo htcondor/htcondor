@@ -1632,23 +1632,14 @@ sub IsThisWindows
 sub Which
 {
 	my $exe = shift(@_);
-
-	if(!( defined  $exe)) {
-		return "CP::Which called with no args\n";
-	}
-	my @paths;
+	my @paths = split /:/, $ENV{'PATH'};
 	my $path;
 
-	if( exists $ENV{PATH}) {
-		@paths = split /:/, $ENV{PATH};
-		foreach my $path (@paths) {
-			chomp $path;
-			if (-x "$path/$exe") {
-				return "$path/$exe";
-			}
+	foreach my $path (@paths) {
+		chomp $path;
+		if (-x "$path/$exe") {
+			return "$path/$exe";
 		}
-	} else {
-		#print "Who is calling CondorPersonal::Which($exe)\n";
 	}
 
 	return "$exe: command not found";
