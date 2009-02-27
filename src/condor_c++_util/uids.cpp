@@ -1131,6 +1131,11 @@ _set_priv(priv_state s, char file[], int line, int dologging)
 				"warning: attempted switch out of PRIV_USER_FINAL\n");
 		return PRIV_USER_FINAL;
 	}
+	if (CurrentPrivState == PRIV_CONDOR_FINAL) {
+		dprintf(D_ALWAYS,
+				"warning: attempted switch out of PRIV_CONDOR_FINAL\n");
+		return PRIV_CONDOR_FINAL;
+	}
 	CurrentPrivState = s;
 
 	if (can_switch_ids()) {
