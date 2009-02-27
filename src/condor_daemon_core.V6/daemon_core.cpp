@@ -6814,13 +6814,16 @@ int DaemonCore::Create_Process(
 
 		// We have to do some checks on the executable name and the
 		// cwd before we fork.  We want to do these in priv state
-		// specified, but in the user priv if PRIV_USER_FINAL specified.
+		// specified, but in the user priv if PRIV_USER_FINAL specified
+		// or in the condor priv if PRIV_CONDOR_FINAL is specified.
 		// Don't do anything in PRIV_UNKNOWN case.
 
 	priv_state current_priv;
 	if ( priv != PRIV_UNKNOWN ) {
 		if ( priv == PRIV_USER_FINAL ) {
 			current_priv = set_user_priv();
+		} else if ( priv == PRIV_CONDOR_FINAL ) {
+			current_priv = set_condor_priv();
 		} else {
 			current_priv = set_priv( priv );
 		}
