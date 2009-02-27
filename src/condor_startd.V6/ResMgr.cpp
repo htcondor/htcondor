@@ -1481,9 +1481,8 @@ ResMgr::send_update( int cmd, ClassAd* public_ad, ClassAd* private_ad,
 	return daemonCore->sendUpdates(cmd, public_ad, private_ad, nonblock);
 }
 
-
 void
-ResMgr::first_eval_and_update_all( void )
+ResMgr::update_all( void )
 {
 	num_updates = 0;
 	walk( &Resource::eval_and_update );
@@ -1497,7 +1496,7 @@ void
 ResMgr::eval_and_update_all( void )
 {
 	compute( A_TIMEOUT | A_UPDATE );
-	first_eval_and_update_all();
+	update_all();
 }
 
 
@@ -1742,10 +1741,22 @@ ResMgr::check_polling( void )
 int
 ResMgr::start_update_timer( void )
 {
-	up_tid = 
-		daemonCore->Register_Timer( update_interval, update_interval,
-							(TimerHandlercpp)&ResMgr::eval_and_update_all,
-							"eval_and_update_all", this );
+	int		initial_interval;
+
+	if ( update_offset ) {
+		initial_interval = update_offset;
+		dprintf( D_FULLDEBUG, "Delaying initial update by %d seconds\n",
+				 update_offset );
+	} else {
+		initial_interval = update_interval;
+		update_all( );
+	}
+	up_tid = daemonCore->Register_Timer(
+		initial_interval,
+		update_interval,
+		(TimerHandlercpp)&ResMgr::eval_and_update_all,
+		"eval_and_update_all",
+		this );
 	if( up_tid < 0 ) {
 		EXCEPT( "Can't register DaemonCore timer" );
 	}
@@ -1794,12 +1805,17 @@ ResMgr::cancel_poll_timer( void )
 void
 ResMgr::reset_timers( void )
 {
+	if ( update_offset ) {
+		dprintf( D_FULLDEBUG,
+				 "Delaying update after reconfig by %d seconds\n",
+				 update_offset );
+	}
 	if( poll_tid != -1 ) {
-		daemonCore->Reset_Timer( poll_tid, polling_interval, 
+		daemonCore->Reset_Timer( poll_tid, polling_interval,
 								 polling_interval );
 	}
 	if( up_tid != -1 ) {
-		daemonCore->Reset_Timer( up_tid, update_interval, 
+		daemonCore->Reset_Timer( up_tid, update_offset,
 								 update_interval );
 	}
 

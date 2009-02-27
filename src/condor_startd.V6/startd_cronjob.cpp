@@ -81,7 +81,7 @@ StartdCronJob::Publish( const char *ad_name, ClassAd *ad )
 		break;
 	}
 	if( wants_update ) {
-		resmgr->first_eval_and_update_all();
+		resmgr->update_all();
 	}
 	return rval;
 }
