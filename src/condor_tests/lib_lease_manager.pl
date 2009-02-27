@@ -448,7 +448,7 @@ printf( "\n** Lease Manager test v%s starting test %s @ %s **\n\n",
 CondorTest::debug("About to set up Condor Personal : <<<$ltime>>>\n", 1);
 
 # Fire up my condor
-my $configrem =	CondorPersonal::StartCondor( "dummy", $param_file, $full_name );
+my $configrem =	CondorTest::StartPersonal($full_name, $param_file, $version);
 my ($config, $port) = split( /\+/, $configrem );
 $ENV{CONDOR_CONFIG} = $config;
 print "Condor config: '" . $ENV{CONDOR_CONFIG} . "'\n";
@@ -464,7 +464,7 @@ else {
 	printf "* Tests complete @ %s *\n", $ltime = localtime();
 }
 
-CondorPersonal::KillDaemonPids( $config );
+CondorTest::KillPersonal( $config );
 system( "rm -r ./$$" );
 
 my $time_end = time();
