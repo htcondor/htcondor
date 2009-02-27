@@ -498,7 +498,7 @@ sub DoTest
 		debug("Want to Check core and ERROR!!!!!!!!!!!!!!!!!!\n\n",1);
 		# running in TestingPersonalCondor
 		my $logdir = `condor_config_val log`;
-		fullchomp($logdir);
+		chomp($logdir);
 		$failed_coreERROR = CoreCheck($handle, $logdir, $teststrt, $teststop);
 	}
 	##############################################################
@@ -509,7 +509,7 @@ sub DoTest
 
 	if(defined  $wrap_test) {
 		my $logdir = `condor_config_val log`;
-		fullchomp($logdir);
+		chomp($logdir);
 		$failed_coreERROR = CoreCheck($handle, $logdir, $teststrt, $teststop);
 		if($config ne "") {
 			print "KillDaemonPids called on this config file<$config>\n";
@@ -1106,7 +1106,7 @@ sub Which
 	my @paths = split /:/, $ENV{PATH};
 
 	foreach my $path (@paths) {
-		fullchomp($path);
+		chomp $path;
 		if (-x "$path/$exe") {
 			return "$path/$exe";
 		}
@@ -1535,7 +1535,7 @@ sub findOutput
 	my $testname = "UNKNOWN";
 	my $line = "";
 	while(<SF>) {
-		fullchomp($_);
+		chomp($_);
 		$line = $_;
 		if($line =~ /^\s*[Ll]og\s+=\s+(.*)(\..*)$/){
 			$testname = $1;
@@ -1587,11 +1587,10 @@ sub KillPersonal
 {
 	my $personal_config = shift;
 	my $logdir = "";
-	if($personal_config =~ /^(.*[\\\/])(.*)$/) {
+	if($personal_config =~ /^(.*\/)(.*)$/) {
 		print "LOG dir is $1/log\n";
 		$logdir = $1 . "/log";
 	} else {
-		debug("KillPersonal passed this config<<$personal_config>>\n",1);
 		die "Can not extract log directory\n";
 	}
 	debug("Doing core ERROR check in  KillPersonal\n",1);
@@ -1637,7 +1636,7 @@ sub CoreCheck {
 	debug("Checking <$logdir> for test <$test>\n",1);
 	my @files = `ls $logdir`;
 	foreach my $perp (@files) {
-		fullchomp($perp);
+		chomp($perp);
 		$fullpath = $logdir . "/" . $perp;
 		if(-f $fullpath) {
 			if($fullpath =~ /^.*\/(core.*)$/) {
@@ -1676,7 +1675,7 @@ sub ScanForERROR
 	open(MDL,"<$daemonlog") or die "Can not open daemon log<$daemonlog>:$!\n";
 	my $line = "";
 	while(<MDL>) {
-		fullchomp();
+		chomp();
 		$line = $_;
 		# ERROR preceeded by white space and trailed by white space, :, ; or -
 		if($line =~ /^\s*(\d+\/\d+\s+\d+:\d+:\d+)\s+ERROR[\s;:\-!].*$/){
@@ -1898,7 +1897,7 @@ sub FindControlFile
 {
 	my $cwd = getcwd();
 	my $runningfile = "";
-	fullchomp($cwd);
+	chomp($cwd);
 	debug( "Current working dir is <$cwd>\n",$debuglevel);
 	if($cwd =~ /^(.*condor_tests)(.*)$/) {
 		$runningfile = $1 . "/" . $RunningFile;
