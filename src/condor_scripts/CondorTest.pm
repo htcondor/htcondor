@@ -33,7 +33,6 @@ use FileHandle;
 use POSIX "sys_wait_h";
 use Net::Domain qw(hostfqdn);
 use Cwd;
-use Time::Local;
 use strict;
 use warnings;
 
@@ -51,9 +50,6 @@ my $LOCK_EXCLUSIVE = 2;
 my $UNLOCK = 8;
 my $TRUE = 1;
 my $FALSE = 0;
-my $teststrt = 0;
-my $teststop = 0;
-
 
 my $MAX_CHECKPOINTS = 2;
 my $MAX_VACATES = 3;
@@ -81,7 +77,6 @@ if(!(-d $coredir)) {
 # set up for reading in core/ERROR exemptions
 my $errexempts = "ErrorExemptions";
 my %exemptions;
-my $failed_coreERROR = 0;
 
 BEGIN
 {
@@ -385,7 +380,6 @@ sub DoTest
 	debug( "Now submitting test job\n",4);
 	my $cluster = 0;
 
-	$teststrt = time();;
     # submit the job and get the cluster id
 	if(!(defined $dagman_args)) {
 		print "Regular Test....\n";
@@ -444,11 +438,6 @@ sub DoTest
 
 	debug( "************** condor_monitor back ************************ \n",4);
 
-	$teststop = time();
-	my $timediff = $teststop - $teststrt;
-
-	print "Test started <$teststrt> ended <$teststop> taking <$timediff> seconds\n";
-
 	print "\nCurrent date and load follow:\n";
 	system("date");
 	system("uptime");
@@ -494,7 +483,7 @@ sub DoTest
 		# running in TestingPersonalCondor
 		my $logdir = `condor_config_val log`;
 		chomp($logdir);
-		$failed_coreERROR = CoreCheck($handle, $logdir, $teststrt, $teststop);
+		CoreCheck($handle, $logdir);
 	}
 	##############################################################
 	#
@@ -525,14 +514,7 @@ sub DoTest
 			return(0);
 		}
 	} else {
-		# ok we think we want to pass it but how did core and ERROR
-		# checking go
-		if($failed_coreERROR == 0) {
-    		return $retval;
-		} else {
-			# oops found a problem fail test
-    		return 0;
-		}
+    	return $retval;
 	}
 }
 
@@ -1585,7 +1567,7 @@ sub KillPersonal
 	} else {
 		die "Can not extract log directory\n";
 	}
-	$failed_coreERROR = CoreCheck($handle, $logdir, $teststrt, $teststop);
+	CoreCheck($handle, $logdir);
 	CondorPersonal::KillDaemonPids($personal_config);
 }
 
@@ -1609,8 +1591,6 @@ sub ShouldCheck_coreERROR
 sub CoreCheck {
 	my $test = shift;
 	my $logdir = shift;
-	my $tstart = shift;
-	my $tend = shift;
 	my $count = 0;
 	my $scancount = 0;
 	my $fullpath = "";
@@ -1625,20 +1605,17 @@ sub CoreCheck {
 				# returns printable string
 				debug("Checking <$logdir> for test <$test> Found Core <$fullpath>\n",2);
 				my $filechange = GetFileTime($fullpath);
-				# running sequentially or wrapped core should always
-				# belong to the current test. Even if the test has ended
-				# assign blame and move file so we can investigate.
 				my $newname = MoveCoreFile($fullpath,$coredir);
 				AddFileTrace($fullpath,$filechange,$newname);
 				$count += 1;
 			} else {
 				debug("Checking <$fullpath> for test <$test> for ERROR\n",2);
-				$scancount = ScanForERROR($fullpath,$test,$tstart,$tend);
+				$scancount = ScanForERROR($fullpath,$test);
 				$count += $scancount;
 				debug("After ScanForERROR error count <$scancount>\n",2);
 			}
 		} else {
-			debug( "Not File: $fullpath\n",1);
+			debug( "Not File: $fullpath\n",2);
 		}
 	}
 	
@@ -1649,8 +1626,6 @@ sub ScanForERROR
 {
 	my $daemonlog = shift;
 	my $testname = shift;
-	my $tstart = shift;
-	my $tend = shift;
 	my $count = 0;
 	my $ignore = 1;
 	open(MDL,"<$daemonlog") or die "Can not open daemon log<$daemonlog>:$!\n";
@@ -1660,21 +1635,21 @@ sub ScanForERROR
 		$line = $_;
 		# ERROR preceeded by white space and trailed by white space, :, ; or -
 		if($line =~ /^\s*(\d+\/\d+\s+\d+:\d+:\d+)\s+ERROR[\s;:\-!].*$/){
-			debug("$line TStamp $1\n",1);
-			$ignore = IgnoreError($testname,$1,$line,$tstart,$tend);
+			debug("$line TStamp $1\n",2);
+			$ignore = IgnoreError($testname,$line);
 			if($ignore == 0) {
 				$count += 1;
 				AddFileTrace($daemonlog, $1, $line);
 			}
 		} elsif($line =~ /^\s*(\d+\/\d+\s+\d+:\d+:\d+)\s+.*\s+ERROR[\s;:\-!].*$/){
-			debug("$line TStamp $1\n",1);
-			$ignore = IgnoreError($testname,$1,$line,$tstart,$tend);
+			debug("$line TStamp $1\n",2);
+			$ignore = IgnoreError($testname,$line);
 			if($ignore == 0) {
 				$count += 1;
 				AddFileTrace($daemonlog, $1, $line);
 			}
 		} elsif($line =~ /^.*ERROR.*$/){
-			debug("Skipping this error<<$line>> \n",1);
+			debug("Skipping this error<<$line>> \n",2);
 		}
 	}
 	close(MDL);
@@ -1692,8 +1667,8 @@ sub CheckTriggerTime
 	if($timestring =~ /^(\d+)\/(\d+)\s+(\d+):(\d+):(\d+)$/) {
 		$tsmon = $1 - 1;
 		my $timeloc = timelocal($5,$4,$3,$mday,$tsmon,$year,0,0,$isdst);
-		print "timestamp from test start is $teststartstamp\n";
-		print "timestamp fromlocaltime is $timeloc \n";
+		#print "timestamp from test start is $teststartstamp\n";
+		#print "timestamp fromlocaltime is $timeloc \n";
 		if($timeloc > $teststartstamp) {
 			return(1);
 		}
@@ -1800,32 +1775,11 @@ sub LoadExemption
 sub IgnoreError
 {
 	my $testname = shift;
-	my $errortime = shift;
 	my $errorstring = shift;
-	my $tstart = shift;
-	my $tend = shift;
-	my $timeloc = 0;
-	my $tsmon = 0;
-
-	my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime();
-
-	if($errortime =~ /^(\d+)\/(\d+)\s+(\d+):(\d+):(\d+)$/) {
-		$tsmon = $1 - 1;
-		$timeloc = timelocal($5,$4,$3,$mday,$tsmon,$year,0,0,$isdst);
-	} else {
-		die "Time string into IgnoreError: Bad Format: $errortime\n";
-	}
-	debug("Start <$tstart> ERROR <$timeloc> End <$tend>\n",1);
-
-	# First item we care about is if this ERROR hapened during this test
-	if( ($timeloc < $tstart) || ($timeloc > $tend)) {
-		debug("IgnoreError: Did not happen during test\n",1);
-		return(1); # not on our watch so ignore
-	}
 
 	# no no.... must acquire array for test and check all substrings
 	# against current large string.... see DropExemptions below
-	debug("IgnoreError called for test <$testname> and string <$errorstring>\n",2);
+	debug("IgnoreError called for test <$testname> and string <$errorstring>\n",1);
 	# get list of per/test specs
 	if( exists $exemptions{$testname}) {
 		my @testarray = @{$exemptions{$testname}};
@@ -1834,7 +1788,6 @@ sub IgnoreError
 			my $quoted = quotemeta($partialstr);
 			debug("Looking for <$quoted> in this error <$errorstring>\n",2);
 			if($errorstring =~ m/$quoted/) {
-				debug("IgnoreError: Valid exemption\n",1);
 				debug("IgnoreError: Ignore ******** <<$quoted>> ******** \n",2);
 				return(1);
 			} 
@@ -1936,17 +1889,16 @@ sub AddRunningTest
 {
 	my $test = shift;
 	my $runningfile = FindControlFile();
-	my $retRF;
-	my $retNEW;
+	my $ret;
 	my $line = "";
 	debug( "Wanting to add <$test> to running tests\n",$debuglevel);
 	open(RF,"<$runningfile") or die "Failed to open <$runningfile>:$!\n";
-	$retRF = flock RF, $LOCK_EXCLUSIVE;
-	open(NEW,">$runningfile.new") or die "Can not open temp file <$runningfile.new>:$!\n";
-	$retNEW = flock NEW, $LOCK_EXCLUSIVE;
-	if(($retRF == $TRUE) && ($retNEW == $TRUE)) {
+	$ret = flock RF, $LOCK_EXCLUSIVE;
+	if($ret == $TRUE) {
 		debug( "Got file lock!\n",$debuglevel);
+		$ret = flock RF, $UNLOCK;
 		# do work here
+		open(NEW,">$runningfile.new") or die "Can not open temp file <$runningfile.new>:$!\n";
 		while(<RF>) {
 			$line = $_;
 			debug( "old file contains: $line\n",$debuglevel);
@@ -1954,38 +1906,31 @@ sub AddRunningTest
 		}
 		print NEW "$test\n";
 		close(NEW);
-		close(RF);
 		system("cp $runningfile.new $runningfile");
 		system("rm -f $runningfile.new");
-		$retRF = flock RF, $UNLOCK;
-		$retNEW = flock NEW, $UNLOCK;
 		# now release lock
-		if($retRF == $TRUE) {
-			debug( "Gave up READ file lock!\n",$debuglevel);
-		}
-		if($retNEW == $TRUE) {
-			debug( "Gave up WRITE file lock!\n",$debuglevel);
+		if($ret == $TRUE) {
+			debug( "Gave up file lock!\n",$debuglevel);
 		}
 	} else {
 		close(RF);
-		die "We should have waited for the READ & WRITE locks!!!!!\n";
+		die "We should have waited for the lock!!!!!\n";
 	}
+	close(RF);
 }
 
 sub RemoveRunningTest
 {
 	my $test = shift;
 	my $runningfile = FindControlFile();
-	my $retRF;
-	my $retNEW;
+	my $ret;
 	my $line = "";
 	debug( "Wanting to remove <$test> from running tests\n",$debuglevel);
-	open(NEW,">$runningfile.new") or die "Can not open temp file <$runningfile.new>:$!\n";
-	$retNEW = flock NEW, $LOCK_EXCLUSIVE;
 	open(RF,"<$runningfile") or die "Failed to open <$runningfile>:$!\n";
-	$retRF = flock RF, $LOCK_EXCLUSIVE;
-	if(($retRF == $TRUE) && ($retNEW == $TRUE)) {
-		debug( "Got file locks!\n",$debuglevel);
+	$ret = flock RF, $LOCK_EXCLUSIVE;
+	if($ret == $TRUE) {
+		debug( "Got file lock!\n",$debuglevel);
+		$ret = flock RF, $UNLOCK;
 		# do work here
 		open(NEW,">$runningfile.new") or die "Can not open temp file <$runningfile.new>:$!\n";
 		while(<RF>) {
@@ -1998,17 +1943,11 @@ sub RemoveRunningTest
 			}
 		}
 		close(NEW);
-		close(RF);
 		system("cp $runningfile.new $runningfile");
 		system("rm -f $runningfile.new");
-		# now release locks
-		$retRF = flock RF, $UNLOCK;
-		$retNEW = flock NEW, $UNLOCK;
-		if($retRF == $TRUE) {
-			debug( "Gave up READ file lock!\n",$debuglevel);
-		}
-		if($retNEW == $TRUE) {
-			debug( "Gave up WRITE file lock!\n",$debuglevel);
+		# now release lock
+		if($ret == $TRUE) {
+			debug( "Gave up file lock!\n",$debuglevel);
 		}
 	} else {
 		close(RF);
