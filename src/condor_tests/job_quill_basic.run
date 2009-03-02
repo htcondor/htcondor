@@ -39,8 +39,6 @@ $mypid = $$;
 $mysaveme = $corename . ".saveme";
 
 $myquillname = "pgsql" . $mypid;
-$myfullpgsqlloc = $topdir . "/" . $myquillname;
-$myfullpgsqlinstalllog = $topdir . "/" . $myquillname . "/postgress_install.log" ;
 
 $mypid = CondorPersonal::SaveMeSetup($corename);
 $mysaveme = $corename . ".saveme";
@@ -50,6 +48,8 @@ if($mypid == 0) {
 }
 
 $myquillpiddir = $mysaveme . "/" . $mypid . "/" . $myquillname;
+$myfullpgsqlloc = $topdir . "/" . $myquillpiddir;
+$myfullpgsqlinstalllog = $myfullpgsqlloc . "/postgress_install.log" ;
 system("mkdir $myquillpiddir");
 system("ln -s $myquillpiddir $myquillname");
 
@@ -160,7 +160,7 @@ CondorPersonal::DebugOn();
 my $configrem;
 
 if($pgresult == 0) {
-	$configrem = CondorPersonal::StartCondor( "job_quill_basic", "x_param.quill" ,"quill");
+	$configrem = CondorTest::StartPersonal( "job_quill_basic", "x_param.quill" ,"quill");
 }
 
 my @quill = split /\+/, $configrem;
@@ -219,7 +219,7 @@ if( -e "$mysubmitnmlog" )
 	system("cp $mysubmitnmlog $mycorenmlog");
 }
 
-CondorPersonal::KillDaemonPids($quillconfig);
+CondorTest::KillPersonal($quillconfig);
 system("date");
 
 if($pcresult == 0) {

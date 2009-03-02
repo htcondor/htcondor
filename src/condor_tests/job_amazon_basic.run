@@ -19,7 +19,6 @@
 ##**************************************************************
 
 use CondorTest;
-use CondorPersonal;
 
 
 # truly const variables in perl
@@ -41,7 +40,7 @@ CondorTest::fullchomp($currenthost);
 
 system("date");
 
-$mypid = CondorPersonal::SaveMeSetup($corename);
+$mypid = $$;
 $mysaveme = $corename . ".saveme";
 
 if($mypid == 0) {
@@ -102,7 +101,7 @@ close(CFGSRC);
 close(CFGDST);
 
 # get a local scheduler running (side a)
-my $configloc = CondorPersonal::StartCondor( "job_amazon_basic", "x_param.amazon", "amazon");
+my $configloc = CondorTest::StartPersonal( "job_amazon_basic", "x_param.amazon", "amazon");
 my @local = split /\+/, $configloc;
 my $locconfig = shift @local;
 my $locport = shift @local;

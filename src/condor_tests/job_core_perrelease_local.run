@@ -19,7 +19,6 @@
 ##**************************************************************
 
 use CondorTest;
-use CondorPersonal;
 
 
 $testdesc =  'Condor PERIODIC_RELEASE policy test - local U';
@@ -32,7 +31,7 @@ CondorTest::fullchomp($currenthost);
 
 system("date");
 
-$mypid = CondorPersonal::SaveMeSetup($corename);
+$mypid = $$;
 $mysaveme = $corename . ".saveme";
 
 if($mypid == 0) {
@@ -40,7 +39,7 @@ if($mypid == 0) {
 }
 
 # get a remote scheduler running (side b)
-my $configrem = CondorPersonal::StartCondor( "job_core_perrelease_local", "x_param.locperrelease" ,"perrelease_loc");
+my $configrem = CondorTest::StartPersonal( "job_core_perrelease_local", "x_param.locperrelease" ,"perrelease_loc");
 my @personal = split /\+/, $configrem;
 my $personalconfig = shift @personal;
 my $personalport = shift @personal;
@@ -71,7 +70,7 @@ if($willstatus != 0)
 
 system("cp job_core_perrelease-false_local* job_core_perrelease-true_local* job_core_perrelease_local.* $mysaveme");
 
-CondorPersonal::KillDaemonPids($personalconfig);
+CondorTest::KillPersonal($personalconfig);
 system("date");
 
 if(($willstatus != 0) || ($nostatus != 0))

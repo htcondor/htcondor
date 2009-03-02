@@ -21,6 +21,7 @@
 use CondorTest;
 
 $cmd      = 'job_filexfer_input-onegone_van.cmd';
+$template = 'job_filexfer_input-onegone_van.template';
 $testdesc =  'Jobs casues submit error from a missing specified input file- vanilla U';
 $testname = "job_filexfer_input-onegone_van";
 
@@ -48,21 +49,21 @@ $wanterror = sub {
     if($errmsg =~ /^.*died abnormally.*$/) {
         CondorTest::debug("BAD. Submit died was to fail but with error 1\n",1);
         CondorTest::debug("$testname: Failure\n",1);
-        exit(1);
+        return(1);
     } elsif($errmsg =~ /^.*\(\s*returned\s*(\d+)\s*\).*$/) {
         if($1 == 1) {
             CondorTest::debug("Good. Job was not to submit with File Transfer off and input files requested\n",1);
             CondorTest::debug("$testname: SUCCESS\n",1);
-            exit(0);
+            return(0);
         } else {
             CondorTest::debug("BAD. Submit was to fail but with error 1 not <<$1>>\n",1);
             CondorTest::debug("$testname: Failure\n",1);
-            exit(1);
+            return(1);
         }
     } else {
             CondorTest::debug("BAD. Submit failure mode unexpected....\n",1);
             CondorTest::debug("$testname: Failure\n",1);
-            exit(1);
+            return(1);
     }
 };
 
@@ -100,8 +101,8 @@ my $args = "--job=$job --extrainput ";
 
 # pass pid for output file production
 # open submitfile and fix
-open(CMD,"<$cmd") || die "Can not open command file: $!\n";
-open(NEWCMD,">$cmd.new") || die "Can not open command file: $!\n";
+open(CMD,"<$template") || die "Can not open command file: $!\n";
+open(NEWCMD,">$cmd") || die "Can not open command file: $!\n";
 while(<CMD>)
 {
 	CondorTest::fullchomp($_);
@@ -129,7 +130,6 @@ while(<CMD>)
 }
 close(CMD);
 close(NEWCMD);
-system("mv $cmd.new $cmd");
 
 CondorTest::RegisterExecute($testname, $execute);
 CondorTest::RegisterWantError($testname, $wanterror);

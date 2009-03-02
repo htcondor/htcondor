@@ -19,7 +19,6 @@
 ##**************************************************************
 
 use CondorTest;
-use CondorPersonal;
 
 
 $cmd_template = "job_startd_multimatch.template";
@@ -37,7 +36,7 @@ CondorTest::fullchomp($currenthost);
 
 system("date");
 
-$mypid = CondorPersonal::SaveMeSetup($corename);
+$mypid = $$;
 $mysaveme = $corename . ".saveme";
 
 if($mypid == 0) {
@@ -80,7 +79,7 @@ print LOCAL "NEGOTIATOR_INTERVAL = $interval\n";
 close(LOCAL);
 
 # get a remote scheduler running (side b)
-my $configrem = CondorPersonal::StartCondor( "job_startd_multimatch", "x_param.startdmultimatch" ,"startdmultimatch");
+my $configrem = CondorTest::StartPersonal( "job_startd_multimatch", "x_param.startdmultimatch" ,"startdmultimatch");
 my @multimatch = split /\+/, $configrem;
 my $multimatchconfig = shift @multimatch;
 my $multimatchport = shift @multimatch;
@@ -114,7 +113,7 @@ if( -e "$mysubmitnmlog" )
 	system("cp $mysubmitnmlog $mycorenmlog");
 }
 
-CondorPersonal::KillDaemonPids($multimatchconfig);
+CondorTest::KillPersonal($multimatchconfig);
 system("date");
 
 if($result != 0)

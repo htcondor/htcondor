@@ -19,7 +19,6 @@
 ##**************************************************************
 
 use CondorTest;
-use CondorPersonal;
 use Cwd;
 
 
@@ -36,7 +35,7 @@ CondorTest::fullchomp($currenthost);
 
 system("date");
 
-$mypid = CondorPersonal::SaveMeSetup($corename);
+$mypid = $$;
 $mysaveme = $corename . ".saveme";
 
 if($mypid == 0) {
@@ -57,7 +56,7 @@ print "Master PID is $mypid\n";
 # Edit template config info for signal and location
 
 # get a remote scheduler running (side b)
-my $configrem = CondorPersonal::StartCondor( "job_core_max-running_local", "x_param.maxrunninglocal" ,"maxrunlocal");
+my $configrem = CondorTest::StartPersonal( "job_core_max-running_local", "x_param.maxrunninglocal" ,"maxrunlocal");
 my @maxrunlocal = split /\+/, $configrem;
 my $maxrunlocalconfig = shift @maxrunlocal;
 my $maxrunlocalport = shift @maxrunlocal;
@@ -70,7 +69,7 @@ $ENV{CONDOR_CONFIG} = $maxrunlocalconfig;
 
 CondorTest::debug("Set config to $maxrunlocalconfig\n",1);
 
-my $result = CondorPersonal::PersonalSystem("./job_core_max-running_local.pl");
+my $result = system("./job_core_max-running_local.pl");
 CondorTest::debug("Result of max-run_local test  job is  $result\n",1);
 
 
@@ -91,7 +90,7 @@ if( -e "$mysubmitnmlog" )
 	system("cp $mysubmitnmlog $mycorenmlog");
 }
 
-CondorPersonal::KillDaemonPids($maxrunlocalconfig);
+CondorTest::KillPersonal($maxrunlocalconfig);
 system("date");
 
 if( $result != 0 )

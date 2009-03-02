@@ -19,7 +19,6 @@
 ##**************************************************************
 
 use CondorTest;
-use CondorPersonal;
 use Cwd;
 
 
@@ -37,7 +36,7 @@ CondorTest::fullchomp($currenthost);
 
 system("date");
 
-$mypid = CondorPersonal::SaveMeSetup($corename);
+$mypid = $$;
 $mysaveme = $corename . ".saveme";
 
 if($mypid == 0) {
@@ -87,7 +86,7 @@ close(TPLATE);
 close(CSUB);
 
 # get a remote scheduler running (side b)
-my $configrem = CondorPersonal::StartCondor( "job_core_wantcores-kill", "x_param.wantcore" ,"wantcore");
+my $configrem = CondorTest::StartPersonal( "job_core_wantcores-kill", "x_param.wantcore" ,"wantcore");
 my @wantcore = split /\+/, $configrem;
 my $wantcoreconfig = shift @wantcore;
 my $wantcoreport = shift @wantcore;
@@ -106,7 +105,7 @@ $ENV{CONDOR_CONFIG} = $wantcoreconfig;
 CondorTest::debug("Set config to $wantcoreconfig\n",1);
 
 system("ls -l $logdir");
-my $result = CondorPersonal::PersonalSystem("./job_core_wantcores-look.pl $logdir");
+my $result = system("./job_core_wantcores-look.pl $logdir");
 CondorTest::debug("Result of core file test  job is  $result\n",1);
 
 
@@ -127,7 +126,7 @@ if( -e "$mysubmitnmlog" )
 	system("cp $mysubmitnmlog $mycorenmlog");
 }
 
-CondorPersonal::KillDaemonPids($wantcoreconfig);
+CondorTest::KillPersonal($wantcoreconfig);
 system("date");
 
 if( $result != 0 )
