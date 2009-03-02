@@ -49,6 +49,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed two seemingly small memory leaks in Condor's SOAP
+interface. A small amount of memory was lost per SOAP transaction. On
+high traffic machine, this leak would eventually render the
+\Condor{schedd} unresponsive.
+
 \item Fixed a bug in Condor's hibernation facilities where if any slot
 satisfied the \MacroNI{HIBERNATE} expression, the machine would enter
 a low power state.
