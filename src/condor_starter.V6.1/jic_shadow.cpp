@@ -40,6 +40,7 @@
 #include "stream_handler.h"
 #include "condor_vm_universe_types.h"
 #include "authentication.h"
+#include "condor_mkstemp.h"
 
 extern CStarter *Starter;
 ReliSock *syscall_sock = NULL;
@@ -1587,12 +1588,33 @@ updateX509Proxy(int cmd, ReliSock * rsock, const char * path)
 	rsock->timeout(10);
 	rsock->decode();
 
-	dprintf(D_FULLDEBUG, "Remote side requests to update X509 proxy at %s\n", path);
+	dprintf(D_FULLDEBUG,
+	        "Remote side requests to update X509 proxy at %s\n",
+	        path);
 
-	MyString tmp_path(path);
-	tmp_path += ".tmp";
-
-	rsock->decode();
+	MyString tmp_path;
+	GLExecPrivSepHelper* gpsh = Starter->glexecPrivSepHelper();
+	if (gpsh != NULL) {
+		// in glexec mode, we may not have permission to write the
+		// new proxy directly into the sandbox, so we stage it into
+		// /tmp first, then use a GLExec helper script
+		//
+		char tmp[] = "/tmp/condor_proxy_XXXXXX";
+		int fd = condor_mkstemp(tmp);
+		if (fd == -1) {
+			dprintf(D_ALWAYS,
+			        "updateX509Proxy: error creating temp file "
+			            "for proxy: %s\n",
+			        strerror(errno));
+			return 0;
+		}
+		close(fd);
+		tmp_path = tmp;
+	}
+	else {
+		tmp_path = path;
+		tmp_path += ".tmp";
+	}
 
 	priv_state old_priv = set_priv(PRIV_USER);
 
@@ -1604,22 +1626,39 @@ updateX509Proxy(int cmd, ReliSock * rsock, const char * path)
 	} else if ( cmd == DELEGATE_GSI_CRED_STARTER ) {
 		rc = rsock->get_x509_delegation(&size,tmp_path.Value());
 	} else {
-		dprintf( D_ALWAYS, "unknown CEDAR command %d in updateX509Proxy\n",
-				 cmd );
+		dprintf( D_ALWAYS,
+		         "unknown CEDAR command %d in updateX509Proxy\n",
+		         cmd );
 		rc = -1;
 	}
 	if ( rc < 0 ) {
 			// transfer failed
 		reply = 0; // == failure
 	} else {
-			// transfer worked, now rename the file to final_proxy_path
-		if ( rotate_file(tmp_path.Value(), path) < 0 ) 
-		{
-				// the rename failed!!?!?!
-			dprintf( D_ALWAYS, "updateX509Proxy failed, could not rename file\n");
-			reply = 0; // == failure
-		} else {
-			reply = 1; // == success
+		if (gpsh != NULL) {
+			// use our glexec helper object, which will
+			// call out to GLExec
+			//
+			if (gpsh->update_proxy(tmp_path.Value())) {
+				reply = 1;
+			}
+			else {
+				reply = 0;
+			}
+		}
+		else {
+				// transfer worked, now rename the file to
+				// final_proxy_path
+			if ( rotate_file(tmp_path.Value(), path) < 0 ) 
+			{
+					// the rename failed!!?!?!
+				dprintf( D_ALWAYS,
+				         "updateX509Proxy failed, "
+				             "could not rename file\n");
+				reply = 0; // == failure
+			} else {
+				reply = 1; // == success
+			}
 		}
 	}
 	set_priv(old_priv);
@@ -1630,9 +1669,11 @@ updateX509Proxy(int cmd, ReliSock * rsock, const char * path)
 	rsock->eom();
 
 	if(reply) {
-		dprintf(D_FULLDEBUG, "Attempt to refresh X509 proxy succeeded.\n");
+		dprintf(D_FULLDEBUG,
+		        "Attempt to refresh X509 proxy succeeded.\n");
 	} else {
-		dprintf(D_ALWAYS, "Attempt to refresh X509 proxy FAILED.\n");
+		dprintf(D_ALWAYS,
+		        "Attempt to refresh X509 proxy FAILED.\n");
 	}
 	
 	return reply;

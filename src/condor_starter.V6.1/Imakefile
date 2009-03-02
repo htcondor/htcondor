@@ -52,6 +52,7 @@ public_copy_target(condor_glexec_setup,libexec,condor_glexec_setup,EXECUTABLE_MO
 public_copy_target(condor_glexec_run,libexec,condor_glexec_run,EXECUTABLE_MODE)
 public_copy_target(condor_glexec_cleanup,libexec,condor_glexec_cleanup,EXECUTABLE_MODE)
 public_copy_target(condor_glexec_kill,libexec,condor_glexec_kill,EXECUTABLE_MODE)
+public_copy_target(condor_glexec_update_proxy,libexec,condor_glexec_update_proxy,EXECUTABLE_MODE)
 public_c_plus_nowrap_target(condor_glexec_job_wrapper,libexec,glexec_job_wrapper.o,$(STD_LIBS))
 #endif
 
