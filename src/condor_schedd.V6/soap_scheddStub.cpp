@@ -1603,6 +1603,10 @@ condor__createJobTemplate(struct soap *soap,
 	convert_ad_to_adStruct(soap, job, &result.response.classAd, true);
 
 return_from_stub:
+	if(job) {
+		delete job;
+		job = NULL;
+	}
 	if (soapLeaveInQueue) {
 		free(soapLeaveInQueue); soapLeaveInQueue = NULL;
 	}
