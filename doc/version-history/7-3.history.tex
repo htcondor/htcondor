@@ -41,6 +41,10 @@ information about `dollar dollar' expansions in the job ClassAd.
 Also made it more efficient in how it contacts the \Condor{negotiator}
 to submit `reschedule' requests.
 
+\item Added \Macro{UPDATE\_OFFSET} to cause the \Condor{startd} to
+  delay the initial (and all further) updates that it sends to the
+  \Condor{collector}.  See \ref{param:UpdateOffset} for more details.
+
 \end{itemize}
 
 \noindent Bugs Fixed:

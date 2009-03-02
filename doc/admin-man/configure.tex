@@ -3363,6 +3363,27 @@ is set to 0.  Note that \AdAttr{HoldReasonCode} is always set to 21.
   \Expr{START} expression.  This macro is defined in
   terms of seconds and defaults to 300 (5 minutes).
   
+\label{param:UpdateOffset}
+\item[\Macro{UPDATE\_OFFSET}]
+  Determines the delay, in seconds, that the \Condor{startd} should wait
+  before sending its initial update (and the first update after a
+  ``reconfig'') to the \Condor{collector}.  All other updates are
+  sent after this initial update, as determined by
+  \MacroUNI{UPDATE\_INTERVAL}.  Thus, the first update will be sent after
+  \MacroUNI{UPDATE\_OFFSET} seconds, the second at
+  \MacroUNI{UPDATE\_OFFSET} + \MacroUNI{UPDATE\_INTERVAL}, etc.
+  This is useful when used in conjunction
+  with \$RANDOM\_INTEGER() for large pools to spread out the updates
+  sent by a large number of \Condor{startd}s.  This macro is defined
+  in terms of seconds and defaults to zero.  For example:
+\begin{verbatim}
+startd.UPDATE_INTERVAL = 300
+startd.UPDATE_OFFSET   = $RANDOM_INTEGER(0,300)
+\end{verbatim}
+  This would cause the initial update to be a random number of seconds
+  (between 0 and 300), with all further updates occurring at fixed 300
+  second intervals following the initial update.
+
 \label{param:MaxJobRetirementTime}
 \item[\Macro{MAXJOBRETIREMENTTIME}]
   An integer value representing the number of seconds a preempted job
