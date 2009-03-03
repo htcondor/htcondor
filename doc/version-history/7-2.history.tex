@@ -51,28 +51,34 @@ The details of each version are described below.
 
 \item Fixed two seemingly small memory leaks in Condor's SOAP
 interface. A small amount of memory was lost per SOAP transaction. On
-high traffic machine, this leak would eventually render the
-\Condor{schedd} unresponsive.
+a high traffic machine, this leak would eventually render the
+\Condor{schedd} daemon unresponsive.
 
-\item Fixed a bug in Condor's hibernation facilities where if any slot
+\item Fixed a bug in Condor's hibernation facilities, where if any slot
 satisfied the \MacroNI{HIBERNATE} expression, the machine would enter
 a low power state.
 
 \item Fixed a bug in the parallel universe where periodic expressions
-involving the JobStatus would not function properly.
+involving the \Attr{JobStatus} attribute would not function properly.
 
 \item Fixed a bug where Condor daemons could segmentation fault while trying
-to write a core file to disk in the UNIX ports.
+to write a core file to disk in the Unix ports.
 
-\item Fixed a bug in which use of dedicated execute accounts
-(\MacroNI{DEDICATED\_EXECUTE\_ACCOUNT\_REGEXP}) did not work properly
-in privsep mode (\MacroNI{PRIVSEP\_ENABLED}).
+\item Fixed a bug in which the use of dedicated execute accounts
+(indicated by use of the configuration variable
+\MacroNI{DEDICATED\_EXECUTE\_ACCOUNT\_REGEXP}) did not work properly
+in PrivSep mode (with the configuration variable \MacroNI{PRIVSEP\_ENABLED}
+set to \Expr{True}).
 
-\item Fixed an erroneous log message that would report that \Macro{HOOK\_UPDATE\_JOB\_INFO} had run, but would print the \Macro{HOOK\_PREPARE\_JOB} path.  The correct hook would run, this was only a logging error.  The log message is only visible at the D\_FULLDEBUG level.
+\item Fixed an erroneous log message that reported that
+the hook defined by \Macro{HOOK\_UPDATE\_JOB\_INFO} had run,
+but would print the \MacroUNI{HOOK\_PREPARE\_JOB} path.
+The correct hook ran, so this was only a logging error.
+The log message is only visible at the \Expr{D\_FULLDEBUG} level.
 
 % PR 953
 \item Fixed a bug that caused \Condor{dagman} to crash if the
-\File{dagman.out} file reached a size of 2 GB.
+\File{dagman.out} file reached a size of 2 GBytes.
 
 \item The new boolean configuration variable
   \Macro{EVENT\_LOG\_FSYNC} provides control of the behavior of
@@ -103,8 +109,8 @@ in privsep mode (\MacroNI{PRIVSEP\_ENABLED}).
 \begin{itemize}
 
 \item Added a note about the fact that environment values specified
-with the \Opt{environment} submit file command override values from
-the submittor's environment imported with \Opt{getenv = true}.
+with the \Opt{environment} submit description file command override values from
+the submittor's environment, as imported with \Opt{getenv = True}.
 
 \end{itemize}
 
