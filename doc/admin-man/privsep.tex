@@ -84,8 +84,8 @@ The format of this file is different than
 a Condor configuration file.
 It consists
 of lines with ``\Code{key = value}'' pairs. 
-Lines with only whitespace
-or lines with ``\Code{\#}'' as the first non-whitespace character are ignored.
+Lines with only white space
+or lines with ``\Code{\#}'' as the first non-white space character are ignored.
 
 In the PrivSep Kernel configuration file,
 some configuration settings are interpreted as single values, 
@@ -266,38 +266,51 @@ be considerably reduced.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \Prog{glexec} is a tool that provides a sudo-like capability in a grid
-environment. \Prog{glexec} takes an X.509 proxy and a command to run as
-inputs and maps the proxy to a local identity (i.e., a UNIX UID) which
-it then uses to execute the command. Like the \Condor{root\_switchboard}
-command, which provides similar functionality for Condor's PrivSep mode
-(see \ref{sec:PrivSep}), \Prog{glexec} must be installed as a root-owned
+environment. 
+\Prog{glexec} takes an X.509 proxy and a command to run as
+inputs,
+and maps the proxy to a local identity (that is, a Unix UID),
+which it then uses to execute the command.
+Like the \Condor{root\_switchboard} command,
+which provides similar functionality for Condor's PrivSep mode
+(see section \ref{sec:PrivSep}), \Prog{glexec} must be installed as a root-owned
 setuid program. See \URL{http://www.nikhef.nl/grid/lcaslcmaps/glexec/}
 for more information about \Prog{glexec}.
 
 Condor can interoperate with \Prog{glexec}, using it in a similar way
 to how the \Condor{root\_switchboard} is used when running Condor in
 PrivSep mode. The \Condor{starter} uses \Prog{glexec} when launching
-a job in order to give it a separate UID from that of the Condor daemons.
-\Prog{glexec} is also used when performing maintenance actions like
-cleaning up a job's files and processes (which can't be done well
-directly under the Condor daemons' UID due to permissions). A consequence
+a job, in order to give the job a separate UID from that of the Condor daemons.
+\Prog{glexec} is also used when performing maintenance actions such as
+cleaning up a job's files and processes, which cannot be done well
+directly under the Condor daemons' UID due to permissions.
+A consequence
 of this type of integration with \Prog{glexec} is that the execution
 of a single Condor job results in several \Prog{glexec} invocations, and
-each must map the proxy to the same UID. It is thus important to ensure
+each must map the proxy to the same UID.
+It is thus important to ensure
 that \Prog{glexec} is configured to provide this guarantee.
 
-Configuration for \Prog{glexec} support is straightforward. The boolean
-\Macro{GLEXEC\_JOB} setting must be set \Expr{True} on execute machines
-where \Prog{glexec} is to be used. Condor also must be given the full
-path to the \Prog{glexec} binary using the \Macro{GLEXEC} setting. Note
-that Condor must be started as a non-root user when \Prog{glexec} is used.
-(When Condor runs as root, it can perform actions as other UIDs arbitrarily
-and \Prog{glexec}'s services are not needed.) Finally, for a job to execute
-properly in \Prog{GLEXEC\_JOB} mode, it must be submitted with a proxy
-specified via \SubmitCmd{x509userproxy} in its submit file, since a
-proxy is needed as input to \Prog{glexec}.
+Configuration for \Prog{glexec} support is straightforward. 
+The boolean configuration variable \Macro{GLEXEC\_JOB} 
+must be set \Expr{True} on execute machines where \Prog{glexec} is to be used.
+Condor also must be given the full path
+to the \Prog{glexec} binary using the \Macro{GLEXEC} configuration variable.
+Note that Condor must be started as a non-root user when \Prog{glexec} is used.
+This is because when Condor runs as root,
+it can perform actions as other UIDs arbitrarily,
+and \Prog{glexec}'s services are not needed.
+Finally, for a job to execute
+properly in the mode utilizing \Prog{glexec},
+the job must be submitted with a proxy
+specified via the \SubmitCmd{x509userproxy} command in
+its submit description file,
+since a proxy is needed as input to \Prog{glexec}.
 
 Earlier versions of Condor employed a different form of \Prog{glexec}
-support, where the \Condor{starter} ran under the same UID as the job.
-This feature was enabled using the \Macro{GLEXEC\_STARTER} setting. It
-is now deprecated in favor of \MacroNI{GLEXEC\_JOB} mode.
+support, where the \Condor{starter} daemon ran under the same UID as the job.
+This feature was enabled using 
+the \Macro{GLEXEC\_STARTER} configuration variable.
+This configuration variable is no longer used,
+and it is replaced by the \MacroNI{GLEXEC\_JOB} configuration variable,
+to enable usage of \Prog{glexec}.
