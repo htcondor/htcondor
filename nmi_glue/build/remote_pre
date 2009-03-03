@@ -134,7 +134,7 @@ if ($ENV{NMI_PLATFORM} =~ /winnt/) {
 #  already running build on the same system.
 #   Solution: Do not change externals without changing their version.
 
-$old = "/scratch/externals2"; # the cache, likely /scratch/externals
+$old = "/scratch/externals"; # the cache, likely /scratch/externals
 $new = "$BaseDir/externals"; # the new version. likely ./externals
 
 # People need to be somewhat careful if they are going to use the
