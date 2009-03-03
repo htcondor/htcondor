@@ -234,22 +234,4 @@ encode_status( int status )
         }
 }
 
-static bool EvalBool(AttrList* ad, ExprTree *tree)
-{
-  EvalResult result;
-
-  // Evaluate constraint with ad in the target scope so that constraints
-  // have the same semantics as the collector queries.  --RR
-  if (!tree->EvalTree(NULL, ad, &result)) {        
-        // dprintf(D_ALWAYS, "can't evaluate constraint: %s\n", constraint);
-    return false;
-  }
-        
-  if (result.type == LX_INTEGER) {
-    return (bool)result.i;
-  }
-         
-  return false;
-}
-
 #endif
