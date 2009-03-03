@@ -23,8 +23,8 @@ REM A simple command line way to clean up the builds and externals
 REM Usage: clean [type], where type can be: release, debug or externals
 REM ======================================================================
 
-REM Configure the environment
-REM call set_vars.bat
+REM Configure the environment (for %EXTERN_DIR%)
+call set_vars.bat
 
 REM Determine which build to clean
 set CONFIGURATION=Release
