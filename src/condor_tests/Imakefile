@@ -783,7 +783,7 @@ TESTCLASS(lib_lease_manager-get_rel_5,core)
 TESTCLASS(lib_lease_manager-get_rel_5,quick)
 TESTCLASS(lib_lease_manager-get_rel_5,full)
 
-#if defined(IS_IA64_LINUX_RHEL3) || defined(IS_CONDOR_PPC_LINUX_SLES9) || defined(IS_CONDOR_PPC_LINUX_YD50) || defined(IS_X86_64_LINUX_RHEL5)  || defined(IS_X86_64_LINUX_RHEL3) || defined(IS_I386_CONDOR_FREEBSD) || defined(IS_I386_OSX_10_4) || defined(IS_I386_LINUX_RHEL5) || defined(IS_I386_LINUX_RHEL51)
+#if defined(IS_IA64_LINUX_RHEL3) || defined(IS_CONDOR_PPC_LINUX_SLES9) || defined(IS_CONDOR_PPC_LINUX_YD50) || defined(IS_X86_64_LINUX_RHEL5)  || defined(IS_X86_64_LINUX_RHEL3) || defined(IS_I386_CONDOR_FREEBSD) || defined(IS_I386_LINUX_RHEL5) || defined(IS_I386_LINUX_RHEL51)
 DESC(job_quill_basic,"Basic Quill Test")
 RUN(job_quill_basic)
 TESTCLASS(job_quill_basic,core)
