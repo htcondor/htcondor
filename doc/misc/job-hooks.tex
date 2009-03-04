@@ -4,15 +4,6 @@
 \index{Job hooks|(}
 
 \index{Job hooks!introduction} 
-In the past, Condor has always sent work to the execute machines by
-pushing jobs to the \Condor{startd} daemon, either from the \Condor{schedd}
-daemon or via \Condor{cod}.
-Beginning with the Condor 7.1.0, the \Condor{startd} daemon now has the
-ability to pull work by fetching jobs via a system of plug-ins or
-hooks.
-Any site can configure a set of hooks to fetch work completely
-outside of the usual Condor matchmaking system.
-
 A \Term{hook} is an external program or script invoked by Condor at various
 points during the life cycle of a job.
 Instead of putting all the code and logic directly into the Condor
@@ -28,6 +19,27 @@ they offer.
 Therefore, the hooks allow Condor to more easily and directly interface with
 external scheduling systems.
 
+
+The following sections describe the system of hooks,
+both for work that is fetched from an external system,
+and for hooks that behave as a Job Router.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:job-hooks-overview}
+Hooks that Fetch Work}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{Job hooks!overview} 
+
+In the past, Condor has always sent work to the execute machines by
+pushing jobs to the \Condor{startd} daemon, either from the \Condor{schedd}
+daemon or via \Condor{cod}.
+Beginning with the Condor 7.1.0, the \Condor{startd} daemon now has the
+ability to pull work by fetching jobs via a system of plug-ins or
+hooks.
+Any site can configure a set of hooks to fetch work completely
+outside of the usual Condor matchmaking system.
+
 A projected use of the hook mechanism implements what might
 be termed a \Term{glide-in factory}, especially where the
 factory is behind a firewall.
@@ -41,19 +53,6 @@ The hook needs only an outbound network connection to complete
 its task,
 thereby being able to operate from behind the firewall,
 without the intervention of GCB.
-
-The following sections describe how this system of hooks works,
-the semantics of fetched jobs, the interaction between fetched work
-and regular Condor jobs, what hooks are invoked by Condor at various
-stages of the job work flow, how to configure a machine to fetch jobs,
-and how to write your own hooks.
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:job-hooks-overview}
-Overview of Fetching Work}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{Job hooks!overview} 
 
 Periodically, each execution slot managed by a \Condor{startd} will
 invoke a hook to see if there is any work that can be fetched.
@@ -101,8 +100,8 @@ will be evicted, and the slot will return to the Owner state.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:job-hooks-hooks}
-Hooks Invoked by Condor}
+\subsubsection{\label{sec:job-hooks-hooks}
+Work Fetching Hooks Invoked by Condor}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{Job hooks!Hooks invoked by Condor} 
 \index{Job hooks!Hooks}
@@ -115,11 +114,9 @@ task it is supposed to accomplish, what data is passed to the hook,
 and what output (and, when relevant) exit status is expected.
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:job-hooks-fetch-work}
-Hook: Fetch Work}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{Job hooks!Hooks!Fetch work}
+\begin{itemize}
+\index{Job hooks!Fetch Hooks!Fetch work}
+\item[Hook: Fetch Work]
 
 The hook defined by the configuration variable
 \Macro{HOOK\_FETCH\_WORK} is invoked whenever the \Condor{startd}
@@ -157,12 +154,8 @@ page~\pageref{sec:cod-application-attributes}.
 \end{description}
 
 
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:job-hooks-reply-fetch}
-Hook: Reply Fetch}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{Job hooks!Hooks!Reply to fetched work}
+\index{Job hooks!Fetch Hooks!Reply to fetched work}
+\item[Hook: Reply Fetch]
 
 The hook defined by the configuration variable
 \Macro{HOOK\_REPLY\_FETCH} is invoked whenever
@@ -190,11 +183,8 @@ The hook is simply advisory, and has no impact on the behavior of the
 \end{description}
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:job-hooks-evict-claim}
-Hook: Evict Claim}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{Job hooks!Hooks!Evict a claim}
+\index{Job hooks!Fetch Hooks!Evict a claim}
+\item[Hook: Evict Claim]
 
 The hook defined by the configuration variable
 \Macro{HOOK\_EVICT\_CLAIM} is invoked whenever the \Condor{startd}
@@ -221,11 +211,8 @@ The hook is simply advisory, and has no impact on the behavior of the
 \end{description}
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:job-hooks-prepare-job}
-Hook: Prepare Job}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{Job hooks!Hooks!Prepare job}
+\index{Job hooks!Fetch Hooks!Prepare job}
+\item[Hook: Prepare Job]
 
 The hook defined by the configuration variable
 \Macro{HOOK\_PREPARE\_JOB} is invoked by the \Condor{starter} before
@@ -256,11 +243,8 @@ environment and abort the job.
 \end{description}
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:job-hooks-update-job-info}
-Hook: Update Job Info}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{Job hooks!Hooks!Update job info}
+\index{Job hooks!Fetch Hooks! Update job info}
+\item[Hook:  Update Job Info]
 
 The hook defined by the configuration variable
 \Macro{HOOK\_UPDATE\_JOB\_INFO} is invoked periodically during the
@@ -322,11 +306,8 @@ The additional attributes included inside the job ClassAd are:
 \end{description}
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:job-hooks-job-exit}
-Hook: Job Exit}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{Job hooks!Hooks!Job Exit}
+\index{Job hooks!Fetch Hooks! Job exit}
+\item[Hook:  Job Exit]
 
 The hook defined by the configuration variable
 \Macro{HOOK\_JOB\_EXIT} is invoked whenever a job exits, either on its
@@ -407,10 +388,11 @@ exits:
 %   The IP address of the virtual machine.
 % \end{description}
 
+\end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:job-hooks-keywords}
-Keywords to Define Hooks in the Condor Configuration files }
+\subsubsection{\label{sec:job-hooks-keywords}
+Keywords to Define Job Fetch Hooks in the Condor Configuration files }
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{Job hooks!keywords} 
 
@@ -466,7 +448,7 @@ appropriate for their own needs.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:job-hooks-fetch-work-delay}
+\subsubsection{\label{sec:job-hooks-fetch-work-delay}
 Defining the FetchWorkDelay Expression}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{Job hooks!FetchWorkDelay}
@@ -518,7 +500,7 @@ If this expression is not defined, the \Condor{startd} will default to
 a five minute (300 second) delay between all attempts to fetch work.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:job-hooks-java-example}
+\subsubsection{\label{sec:job-hooks-java-example}
 Example Job Hook: Making multiple java runtimes available}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{Job hooks!JavaExample}
@@ -576,4 +558,146 @@ log    = log
 queue
 
 \end{verbatim}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:job-hooks-JR-overview}
+Hooks for a Job Router}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{Job hooks!Job Router} 
+
+Job Router Hooks allow for an alternate transformation and/or 
+monitoring engine for the Job Router.
+Routing is still controlled by the Job Router,
+but if the Job Router Hooks are configured,
+then these hooks will be used to transform
+and monitor the job instead of Condor's internal engine.
+
+Job Router Hooks are similiar in concept to Job Fetch Hooks,
+but they are limited in their scope to just the Job Router.
+As with Job Fetch Hooks,
+a hook is an external program or script invoked by Condor's Job Router
+at various points during the life cycle of a routed job.
+
+The following sections describe how these hooks are used by the Job Router,
+what hooks are invoked by Condor at various stages of the job's life, 
+and how to configure Condor to use Job Router Hooks.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:job-hooks-JR}
+Hooks Invoked for Job Routing}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The Job Router Hooks allow for replacement of the tranformation engine used
+by Condor for routing a job.
+Since the external transformation engine is not controlled by Condor,
+additional hooks provide a means to update the job's
+status in Condor and clean up upon exit or failure cases.
+This allows a job to be transformed to just about any other type of job
+that Condor supports,
+as well as to use execution nodes not normally available to Condor.
+
+It is important to note that if the Job Router Hooks are configured, 
+then Condor will not ignore a failure in any hook execution.
+If a hook is configured,
+then Condor assumes it is required to execute and will not
+continue by falling back to a part of its internal engine.
+For example,
+if there is a problem transforming the job using the hooks,
+Condor will not fall back on its internal transformation engine 
+to process the job.
+
+There are 4 hooks that the Job Router can be configured to use.
+Each hook will be described below along with data passed 
+to the hook and expected output.
+Again, all hooks must exit successfully.
+
+\begin{itemize}
+\index{Job hooks!Job Router Hooks!Translate}
+\item[Hook: Translate]
+
+  The hook defined by the configuration variable \Macro{HOOK\_TRANSLATE}
+  is invoked when the Job Router has determined that a job
+  meets the definition for a route.  This hook is responsible for doing the
+  transformation of the job and configuring any resources that are external to
+  Condor if applicable.
+
+\begin{description}
+\item[Command-line arguments passed to the hook]
+  None.
+\item[Standard input given to the hook]
+  The first line will be the route that the job matched as
+  defined in Condor's configuration files followed by the job ClassAd,
+  separated by the string \verb@"------"@ and a new line.
+\item[Expected standard output from the hook]
+  The transformed job.
+\item[Exit status of the hook]
+  0 for success, any non-zero value on failure.
+\end{description}
+
+
+\index{Job hooks!Job Router Hooks!Update Job Info}
+\item[Hook: Update Job Info]
+
+  The hook defined by the configuration variable \Macro{HOOK\_UPDATE\_JOB\_INFO}
+  is invoked to provide status on the specified routed job
+  when the Job Router polls the status of routed jobs at intervals
+  set by \Macro{JOB\_ROUTER\_POLLING\_PERIOD}.
+
+\begin{description}
+\item[Command-line arguments passed to the hook]
+  None.
+\item[Standard input given to the hook]
+  The routed job ClassAd that is to be updated.
+\item[Expected standard output from the hook]
+   The job attributes to be updated in the routed job,
+   or nothing, if there was no update.
+   To prevent clashing with Condor's management of job attributes,
+   only attributes that are not managed by Condor should be output
+   from this hook.
+\item[Exit status of the hook]
+  0 for success, any non-zero value on failure.
+\end{description}
+
+
+\index{Job hooks!Job Router Hooks!Job Finalize}
+\item[Hook: Job Finalize]
+
+  The hook defined by the configuration variable \Macro{HOOK\_JOB\_FINALIZE}
+  is invoked when the Job Router has found that the job has completed.
+  Any output from the hook is treated as an update to the source job.
+
+\begin{description}
+\item[Command-line arguments passed to the hook]
+  None.
+\item[Standard input given to the hook]
+  The source job ClassAd, followed by the routed copy Classad that completed,
+  separated by the string \verb@"------"@ and a new line.
+\item[Expected standard output from the hook]
+  An updated source job ClassAd, or nothing if there was no update.
+\item[Exit status of the hook]
+  0 for success, any non-zero value on failure.
+\end{description}
+
+\index{Job hooks!Job Router Hooks!Job Cleanup}
+\item[Hook: Job Cleanup]
+
+  The hook defined by the configuration variable \Macro{HOOK\_JOB\_CLEANUP}
+  is invoked when the Job Router finishes managing the job.
+  This hook will be invoked regardless of whether the job
+  completes successfully or not,
+  and must exit successfully.
+
+\begin{description}
+\item[Command-line arguments passed to the hook]
+  None.
+\item[Standard input given to the hook]
+  The job ClassAd that the Job Router is done managing.
+\item[Expected standard output from the hook]
+  None.
+\item[Exit status of the hook]
+  0 for success, any non-zero value on failure.
+\end{description}
+
+\end{itemize}
+
 \index{Job hooks|)}

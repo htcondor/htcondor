@@ -343,115 +343,162 @@ MAX_HISTORY_ROTATIONS = 20
 \subsection{\label{RoutingTableAttributes} Routing Table Entry ClassAd Attributes}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+The conversion of a vanilla job to a routed copy requires the
+job ClassAd to be modified.
+Defaults for routed copy attributes,
+as well as instructions for creating needed attributes 
+are listed in the Routing Table.
+
+The following attributes and instructions for creating attributes
+may appear in a Routing Table entry.
 
 \begin{description}
 
-\item[GridResource] This specifies the GridResource attribute that
-will be inserted into the routed job ClassAd.
+\index{Job Router Routing Table ClassAd attribute!GridResource}
+\item[GridResource] Specifies the value for the \Attr{GridResource}
+attribute that will be inserted into the routed copy ClassAd.
 
-\item[name] This is an optional identifier that will be used in log
+\index{Job Router Routing Table ClassAd attribute!Name}
+\item[Name] An optional identifier that will be used in log
 messages concerning this route.  If no name is specified, the default
-is the value of \Attr{GridResource}.
+used will be the value of \Attr{GridResource}.
+The \Condor{job\_router} distinguishes routes and advertises
+statistics based on this attribute's value.
 
-\item[requirements] This is a requirements expression (in New ClassAd
-syntax) that specifies which jobs may be matched to the route.  Note
-that, as with all settings, if you specify the requirements in
-\MacroNI{JOB\_ROUTER\_ENTRIES}, it overrides the setting in
-\MacroNI{JOB\_ROUTER\_DEFAULTS}.  To specify global requirements, that
+\index{Job Router Routing Table ClassAd attribute!Requirements}
+\item[Requirements] A \Attr{Requirements} expression in New ClassAd
+syntax that identifies jobs that may be matched to the route.  Note
+that, as with all settings, requirements specified in
+the configuration variable
+\MacroNI{JOB\_ROUTER\_ENTRIES} override the setting of
+\MacroNI{JOB\_ROUTER\_DEFAULTS}.  To specify global requirements that
 are not overridden by \MacroNI{JOB\_ROUTER\_ENTRIES}, use
-\MacroNI{JOB\_ROUTER\_SOURCE\_JOB\_CONSTRAINT} instead.
+\MacroNI{JOB\_ROUTER\_SOURCE\_JOB\_CONSTRAINT}.
 
-\item[MaxJobs] This is the maximum number of jobs to allow on the route at
+\index{Job Router Routing Table ClassAd attribute!MaxJobs}
+\item[MaxJobs] An integer maximum number of jobs permitted on the route at
 one time. The default is 100.
 
-\item[MaxIdleJobs] This is the maximum number of routed jobs in the
-idle state.  At or above this level, no more jobs will be routed.
+\index{Job Router Routing Table ClassAd attribute!MaxIdleJobs}
+\item[MaxIdleJobs] An integer maximum number of routed jobs in the
+idle state.  At or above this value, no more jobs will be sent
+to this site.
 This is intended to prevent too many jobs from being sent to sites
-which are too busy to run them.  The disadvantage of setting this too
-small is that it will slow down the rate of job submission to the
-site, because the \Condor{job\_router} daemon will submit jobs up to this limit, wait to see
-some of them enter the running state, and then submit more.  The
-disadvantage of setting it too high is that a lot of jobs may be sent
-to a site only to site idle for hours or days.  The default is 50.
+which are too busy to run them.
+If the value set for this attribute is too small,
+the rate of job submission to the site will slow,
+because the \Condor{job\_router} daemon will submit jobs up to this limit,
+wait to see some of the jobs enter the running state,
+and then submit more.
+The disadvantage of setting this attribute's value too high
+is that a lot of jobs may be sent
+to a site, only to site idle for hours or days.
+The default value is 50.
 
-\item[FailureRateThreshold] Maximum tolerated rate of job failures.
-Failure is determined by the \Attr{JobFailureTest} expression.  The
-default threshold is 0.03 jobs/sec.  If the failure rate is exceeded,
-submission of new jobs is throttled until jobs begin succeeding and
-failures are less than the threshold.
+\index{Job Router Routing Table ClassAd attribute!FailureRateThreshold}
+\item[FailureRateThreshold] A maximum tolerated rate of job failures.
+Failure is determined by the expression sets for 
+the attribute \Attr{JobFailureTest} expression.
+The default threshold is 0.03 jobs/second.
+If the threshold is exceeded,
+submission of new jobs is throttled until jobs begin succeeding,
+such that the failure rate is less than the threshold.
+This attribute implements \Term{black hole throttling},
+such that a site at which jobs are sent only to fail (a black hole)
+receives fewer jobs.
 
-\item[JobFailureTest] This is an expression (in New ClassAds syntax),
-evaluated for each job that finishes to determine whether it was a
-failure.  The default is to assume the job was a success.  An example
-expression to treat all jobs running for less than 30 minutes as
-failures: other.RemoteWallClockTime < 1800.  A more flexible
-expression could reference a property or expression of the job that
-specifies a failure condition specific to the type of job.  Routed
-jobs that are removed (e.g. by \Attr{PeriodicRemove}) are considered
-to be failures.
+\index{Job Router Routing Table ClassAd attribute!JobFailureTest}
+\item[JobFailureTest] An expression in New ClassAds syntax
+evaluated for each job that finishes,
+to determine whether it was a failure.
+The default value if no expression is defined
+assumes all jobs are successful.
+Routed jobs that are removed are considered to be failures.
+An example expression to treat all jobs running for less than 30 minutes as
+failures is \Expr{other.RemoteWallClockTime < 1800}.  A more flexible
+expression might reference a property or expression of the job that
+specifies a failure condition specific to the type of job.
 
-\item[TargetUniverse] This is an integer specifying the desired
-universe for the routed copy of the job.  The default is 9, which
-means the grid universe.
+\index{Job Router Routing Table ClassAd attribute!TargetUniverse}
+\item[TargetUniverse] An integer value specifying the desired
+universe for the routed copy of the job.  The default value is 9, 
+which is the \SubmitCmd{grid} universe.
 
-\item[UseSharedX509UserProxy] If this (New ClassAds) expression
-evaluates to true, then the value of \Attr{SharedX509UserProxy} will
-be used as the x509 user proxy for the routed job.  NOTE: if the \Condor{job\_router} daemon
-is running as root, the copy of this file that is given to the job
-will have its ownership set to that of the user running the job.  This
-means you must trust the user to have access to the proxy file.  It is
-therefore recommended to avoid this mechanism when possible.  (For
-example, simply require users to submit jobs with \Attr{X509UserProxy}
-set in their submit file.)  If you do need this feature, use the
-boolean expression to only allow specific values of \Expr{other.Owner}
-to use this shared proxy file.  The shared proxy file should be owned
-by the \Login{condor} user.  Currently, to use a shared proxy, you must also
-turn on sandboxing with \Attr{JobShouldBeSandboxed}.
+\index{Job Router Routing Table ClassAd attribute!UseSharedX509UserProxy}
+\item[UseSharedX509UserProxy] A boolean expression in New ClassAds syntax,
+that when \Expr{True} causes the value of \Attr{SharedX509UserProxy}
+to be the X.509 user proxy for the routed job.
+Note that if the \Condor{job\_router} daemon is running as root,
+the copy of this file that is given to the job
+will have its ownership set to that of the user running the job.
+This requires the trust of the user.
+It is therefore recommended to avoid this mechanism when possible.
+Instead,
+require users to submit jobs with \Attr{X509UserProxy}
+set in the submit description  file.
+If this feature is needed,
+use the boolean expression to only allow specific values of \Expr{other.Owner}
+to use this shared proxy file.
+The shared proxy file should be owned by the \Login{condor} user.
+Currently, to use a shared proxy, the job must also
+turn on sandboxing by having the attribute \Attr{JobShouldBeSandboxed}.
 
-\item[SharedX509UserProxy] See \Attr{UseSharedX509UserProxy}.
+\index{Job Router Routing Table ClassAd attribute!SharedX509UserProxy}
+\item[SharedX509UserProxy]
+A string representing file containing the X.509 user proxy for the routed job.
 
-\item[JobShouldBeSandboxed] If this (New ClassAds) expression
-evaluates to true, the copy of the job that is created will be
-sandboxed.  This means a copy of the input files will be placed in the
-schedd's spool area for the target job, and when the job runs, the
-output will be staged back into the spool area.  Once all of the
-output has been successfully staged back, then it will be copied
-again, this time from the spool area of the sandboxed job back to the
-original job's output locations.  By default, sandboxing is turned
-off.  You would only want to turn it on if you are using a shared x509
-user proxy or if you do not want direct staging of remote output files
-back to the final output locations.
+\index{Job Router Routing Table ClassAd attribute!JobShouldBeSandboxed}
+\item[JobShouldBeSandboxed] A boolean expression in New ClassAd syntax,
+that when \Expr{True} causes the created copy of the job to be sandboxed.
+A copy of the input files will be placed in the
+\Condor{schedd} daemon's spool area for the target job,
+and when the job runs,
+the output will be staged back into the spool area.
+Once all of the output has been successfully staged back,
+it will be copied again,
+this time from the spool area of the sandboxed job back to the
+original job's output locations.
+By default, sandboxing is turned off.
+Only to turn it on if using a shared X.509
+user proxy or if direct staging of remote output files
+back to the final output locations is not desired.
 
-\item[OverrideRoutingEntry] When true, this indicates that this entry
-in the routing table should replace any previous entry in the table
-with the same name.  When false, it indicates that if there is a
+\index{Job Router Routing Table ClassAd attribute!OverrideRoutingEntry}
+\item[OverrideRoutingEntry] A boolean value that when \Expr{True},
+indicates that this entry
+in the routing table replaces any previous entry in the table
+with the same name.
+When \Expr{False}, it indicates that if there is a
 previous entry by the same name, the previous entry should be retained
-and this entry should be ignored.  The default is true.
+and this entry should be ignored.
+The default value is \Expr{True}.
 
-\item[set\_ATTRIBUTE] Sets the value of \Attr{ATTRIBUTE} in the routed
-job ClassAd to the specified value.  The \Attr{PeriodicRemove}
-expression is an example of something you might want to set in the
-routed job.  (For example, if the routed job goes on hold or stays
-idle for too long, remove it and return the original copy of the job to
-a normal state.)
+\index{Job Router Routing Table ClassAd attribute!Set\_<ATTR>}
+\item[Set\_<ATTR>] Sets the value of \Attr{<ATTR>} in the routed
+job ClassAd to the specified value.  An example of
+an attribute that might be set is \Attr{PeriodicRemove}.
+For example, if the routed job goes on hold or stays idle for too long,
+remove it and return the original copy of the job to a normal state.
 
-\item[eval\_set\_ATTRIBUTE] Sets the value of \Attr{ATTRIBUTE} in the
-routed job ClassAd to the result gotten by evaluating the specified
-expression.  Note that the expression is evaluated using New ClassAds
-syntax.  One reason to force evaluation by the \Condor{job\_router} daemon is when you need
-to use New ClassAds features in the expression.  Otherwise, the
-unevaluated expression is inserted into the ClassAd and if it is
-incompatible with Old ClassAds, the ClassAd conversion will fail when
-the routed job is submitted to \Condor{schedd}.
+\index{Job Router Routing Table ClassAd attribute!Eval\_Set\_<ATTR>}
+\item[Eval\_Set\_<ATTR>] Defines an expression written in New ClassAd
+syntax. The expression is evaluated, and the resulting value
+sets the value of the routed copy's job ClassAd attribute \Attr{<ATTR>}.
+An expected usage is where a New ClassAd expression evaluation is required.
+Recall that the \Condor{job\_router} daemon evaluates using New ClassAd
+syntax, but the routed copy is represented by the current ClassAd language.
 
-\item[copy\_ATTRIBUTE] Copies the value of \Attr{ATTRIBUTE} from the
-original job ClassAd into the specified attribute of the routed job
-ClassAd.  This may be useful if you need to save the value of an
-expression before replacing it with something else that references the
+\index{Job Router Routing Table ClassAd attribute!Copy\_<ATTR>}
+\item[Copy\_<ATTR>] Defined with the name of a routed copy ClassAd
+attribute. Copies the value of \Attr{<ATTR>} from the
+original job ClassAd into the specified attribute named of the routed copy.
+Useful to save the value of an
+expression, before replacing it with something else that references the
 original expression.
 
-\item[delete\_ATTRIBUTE] Deletes \Attr{ATTRIBUTE} from the routed job
-ClassAd.  The value that you assign to this attribute in the routing
+\index{Job Router Routing Table ClassAd attribute!Delete\_<ATTR>}
+\item[Delete\_<ATTR>] Deletes \Attr{<ATTR>} from the routed copy
+ClassAd.  A value assigned to this attribute in the routing table
 entry is ignored.
 
 \end{description}
@@ -469,6 +516,7 @@ Using \Macro{JOB\_ROUTER\_ENTRIES\_CMD}, we tell the \Condor{job\_router} daemon
 simple script which queries the collector and outputs a routing table.
 The script, called \verb|osg_ress_routing_table.sh|, is just this:
 
+\footnotesize
 \begin{verbatim}
 #!/bin/sh
 
@@ -481,6 +529,7 @@ $condor_status -format '[ ' BeginAd \
               -format 'GridResource = "gt2 %s"; ' GlueCEInfoContactString \
 	      -format ']\n' EndAd "$@" | uniq
 \end{verbatim}
+\normalsize
 
 Save this script to a file and make sure the permissions on the file
 mark it as executable.  Test this script by calling it by hand before
@@ -490,6 +539,7 @@ such as \Opt{-constraint} to limit the sites which are returned.
 Once you are satisfied that the routing table constructed by the
 script is what you want, configure the \Condor{job\_router} daemon to use it:
 
+\footnotesize
 \begin{verbatim}
 # command to build the routing table
 JOB_ROUTER_ENTRIES_CMD = /path/to/osg_ress_routing_table.sh <extra arguments>
@@ -497,11 +547,12 @@ JOB_ROUTER_ENTRIES_CMD = /path/to/osg_ress_routing_table.sh <extra arguments>
 # how often to rebuild the routing table:
 JOB_ROUTER_ENTRIES_REFRESH = 3600
 \end{verbatim}
+\normalsize
 
-Using the previous example of the \Condor{job\_router} daemon configuration on
-page~\pageref{ExampleJobRouterConfiguration}, you may simply use the
-above settings to replace \Macro{JOB\_ROUTER\_ENTRIES}.  (Or you may
+Using the example configuration, use the
+above settings to replace \Macro{JOB\_ROUTER\_ENTRIES}.  Or,
 leave \Macro{JOB\_ROUTER\_ENTRIES} there and have a routing table
-containing entries from both sources.)  When you restart or reconfig
-the \Condor{job\_router} daemon, you should see messages in JobRouterLog indicating that it
+containing entries from both sources.  When you restart or reconfigure
+the \Condor{job\_router} daemon,
+you should see messages in the Job Router's log indicating that it
 is adding more routes to the table.
