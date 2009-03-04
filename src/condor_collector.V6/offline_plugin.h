@@ -61,7 +61,7 @@ public:
 
     /** Get the next class-ad in the repository and its key.
         */
-    bool iterate ( ClassAd &ad );
+    bool iterate ( ClassAd *&ad );
 
     /* Attributes */
 

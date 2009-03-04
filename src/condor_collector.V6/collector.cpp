@@ -282,10 +282,10 @@ void CollectorDaemon::Init()
     // add all persisted ads back into the collector's store
     // process the given command
     int     insert = -3;
-    ClassAd cad;
+    ClassAd *ad;
     offline_plugin_.rewind ();
-    while ( offline_plugin_.iterate ( cad ) ) {
-	    if ( !collector.collect ( UPDATE_STARTD_AD, &cad, NULL, insert ) ) {
+    while ( offline_plugin_.iterate ( ad ) ) {
+	    if ( !collector.collect ( UPDATE_STARTD_AD, ad, NULL, insert ) ) {
 		    
             if ( -3 == insert ) {
 
@@ -681,7 +681,7 @@ int CollectorDaemon::receive_update(Service* /*s*/, int command, Stream* sock)
 
 #if ( HAVE_HIBERNATION )
 	/* let the off-line plug-in have at it */
-	offline_plugin_.update ( command, *ad );
+	offline_plugin_.update ( command, *cad );
 #endif
 
 #if HAVE_DLOPEN

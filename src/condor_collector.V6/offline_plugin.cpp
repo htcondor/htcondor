@@ -27,6 +27,7 @@
 #include "condor_commands.h"
 #include "condor_attributes.h"
 #include "condor_daemon_core.h"
+#include "condor_state.h"
 #include "hashkey.h"
 
 #include "offline_plugin.h"
@@ -94,7 +95,7 @@ OfflineCollectorPlugin::configure ()
         dprintf (
             D_ALWAYS,
 			"OfflineCollectorPlugin::configure: off-line ad "
-			"persistent store: %s\n",
+			"persistent store: '%s'.\n",
             _persistent_store );
 
         if ( _ads ) {
@@ -102,7 +103,7 @@ OfflineCollectorPlugin::configure ()
             _ads = NULL;
         }
 
-        _ads = new ClassAdCollection ( _persistent_store );
+        _ads = new ClassAdCollection ( _persistent_store, 2 );
 		ASSERT ( _ads );
 
 	} else {
@@ -110,10 +111,21 @@ OfflineCollectorPlugin::configure ()
 		dprintf (
 			D_ALWAYS,
 			"OfflineCollectorPlugin::configure: no persistent store "
-			"was defined for off-line ads\n" );
+			"was defined for off-line ads.\n" );
 
 	}
 
+}
+
+/* remove all the whitespace from a string */
+void
+compressSpaces ( MyString &s ) {
+	for ( int i = 0, j = 0; i <= s.Length (); ++i, ++j ) {
+		if ( isspace ( s[i] ) ) {
+			i++;
+		}
+		s.setChar ( j, s[i] );
+	}
 }
 
 void
@@ -124,7 +136,8 @@ OfflineCollectorPlugin::update (
 
     dprintf (
         D_FULLDEBUG,
-        "In OfflineCollectorPlugin::update ()\n" );
+        "In OfflineCollectorPlugin::update ( %d )\n",
+		command );
 
     /* bail out if the plug-in is not enabled */
     if ( !enabled () ) {
@@ -132,139 +145,147 @@ OfflineCollectorPlugin::update (
     }
 
     /* make sure the command is relevant to us */
-    if ( UPDATE_STARTD_AD_WITH_ACK == command ||
-         UPDATE_STARTD_AD == command ) {
+    if ( UPDATE_STARTD_AD_WITH_ACK != command &&
+         UPDATE_STARTD_AD != command ) {
+		 return;
+	}
 
-		AdNameHashKey hashKey;
-        if ( !makeStartdAdHashKey (
-            hashKey,
-            const_cast<ClassAd*> ( &ad ),
-            NULL ) ) {
+	AdNameHashKey hashKey;
+    if ( !makeStartdAdHashKey (
+        hashKey,
+        &ad,
+        NULL ) ) {
 
-            dprintf (
-                D_FULLDEBUG,
-                "OfflineCollectorPlugin::update: "
-                "failed to hash class ad. Ignoring.\n" );
+        dprintf (
+            D_FULLDEBUG,
+            "OfflineCollectorPlugin::update: "
+            "failed to hash class ad. Ignoring.\n" );
 
+        return;
+
+    }
+
+    /* report whether this ad is "off-line" or not and update
+	   the ad accordingly. */		
+	int offline  = FALSE,
+		lifetime = 0;
+
+	if ( UPDATE_STARTD_AD_WITH_ACK == command ) {
+		
+		/* set the off-line state of the machine */
+		offline = TRUE;
+
+		/* get the off-line expiry time (default to INT_MAX) */
+		param_integer ( 
+			"OFFLINE_EXPIRE_AD_AFTER", 
+			lifetime, 
+			INT_MAX );
+
+		/* reset any values in the ad that may interfere with
+		a match in the future */
+
+		/* Reset Condor state */
+		ad.Assign ( ATTR_STATE, state_to_string ( unclaimed_state ) );
+		ad.Assign ( ATTR_ACTIVITY, activity_to_string ( idle_act ) );
+
+		/* Reset machine load */
+		ad.Assign ( ATTR_TOTAL_LOAD_AVG, 0.0 );
+
+		/* Reset CPU load */
+		ad.Assign ( ATTR_CPU_IS_BUSY, false );
+		ad.Assign ( ATTR_CPU_BUSY_TIME, false );
+
+		/* any others? */
+
+	} else {
+
+		/* try and determine if the ad has an offline attribute. 
+		If not, don't consider it a fatal error, we'll just set
+		the ad to be "on-line" bellow. */
+		ad.LookupInteger ( ATTR_OFFLINE, offline );
+
+		/* if the ad was offline, then put it back in the game */
+		if ( TRUE == offline ) {
+
+			/* flag the ad as back "on-line" */
+			offline = FALSE;
+			
+			/* set a sane ad lifetime */
+			lifetime = 30; /* from collector_engine.cpp */
+
+		}
+
+	}
+
+	/* record the new values as specified above */
+	ad.Assign ( ATTR_OFFLINE, offline );
+	if ( lifetime > 0 ) {
+		ad.Assign ( ATTR_CLASSAD_LIFETIME, lifetime );
+	}
+	
+    _ads->BeginTransaction ();
+
+    ClassAd *p;
+    MyString s;
+    hashKey.sprint ( s );
+	compressSpaces ( s );
+    const char *key = s.Value ();
+
+    /* if it is off-line then add it to the list; otherwise,
+       remove it. */
+    if ( offline > 0 ) {
+
+        /* don't try to add duplicate ads */
+        if ( _ads->LookupClassAd ( key, p ) ) {
+            
+			_ads->AbortTransaction ();
             return;
 
         }
 
-        /* report whether this ad is "off-line" or not and update
-		   the ad accordingly. */		
-		int offline  = FALSE,
-			lifetime = 0;
+        /* try to add the new ad */
+        if ( !_ads->NewClassAd ( 
+			key, 
+			&ad ) ) {
 
-		if ( UPDATE_STARTD_AD_WITH_ACK == command ) {
-			
-			/* set the off-line state of the machine */
-			offline = TRUE;
+            dprintf (
+                D_FULLDEBUG,
+                "OfflineCollectorPlugin::update: "
+                "failed add off-line ad to the persistent "
+                "store.\n" );
 
-			/* get the off-line expiry time */
-			if ( 0 == ad.EvalInteger (
-				"OFFLINE_EXPIRE_AD_AFTER",
-				NULL,
-				lifetime ) ) {
+            _ads->AbortTransaction ();
+			return;
 
-				/* default to the largest possible integer */
-				lifetime = INT_MAX;
+        }
 
-			}			
+    } else {
 
-		} else {
+        /* can't remove ads that do not exist */
+        if ( !_ads->LookupClassAd ( key, p ) ) {
 
-			/* try and determine if the ad has an offline
-			   attribute set */
-			if ( !ad.LookupInteger ( ATTR_OFFLINE, offline ) ) {
+            _ads->AbortTransaction ();
+            return;
 
-				dprintf (
-					D_FULLDEBUG,
-					"OfflineCollectorPlugin::update: failed to "
-					"determine offline status. Assuming we are "
-					"on-line.\n" );
+        }
 
-				/* not a fatal error, we'll just set the ad to be
-				   "on-line" bellow */
+        /* try to remove the ad */
+        if ( !_ads->DestroyClassAd ( key ) ) {
 
-			}
+            dprintf (
+                D_FULLDEBUG,
+                "OfflineCollectorPlugin::update: "
+                "failed remove off-line ad from the persistent "
+                "store.\n" );
 
-			/* if the ad was offline, then put it back in the game */
-			if ( TRUE == offline ) {
-
-				/* flag the ad as back "on-line" */
-				offline = FALSE;
-				
-				/* set a sane ad lifetime */
-				lifetime = 30; /* from collector_engine.cpp */
-
-			}
-
-		}
-
-		/* record the new values as specified above */
-		ad.Assign ( ATTR_OFFLINE, offline );
-		if ( lifetime > 0 ) {
-			ad.Assign ( ATTR_CLASSAD_LIFETIME, lifetime );
-		}
-		
-        _ads->BeginTransaction ();
-
-        ClassAd *p;
-        MyString s;
-        hashKey.sprint ( s );
-        const char *key = s.Value ();
-
-        /* if it is off-line then add it to the list; ortherwise,
-           remove it. */
-        if ( offline > 0 ) {
-
-            /* don't try to add duplicate ads */
-            if ( _ads->LookupClassAd ( key, p ) ) {
-                _ads->AbortTransaction ();
-                return;
-            }
-
-            /* try to add the new ad */
-            if ( !_ads->NewClassAd ( 
-				key, 
-				const_cast<ClassAd*> ( &ad ) ) ) {
-
-                dprintf (
-                    D_FULLDEBUG,
-                    "OfflineCollectorPlugin::update: "
-                    "failed add off-line ad to the persistent "
-                    "store.\n" );
-
-                _ads->AbortTransaction ();
-
-            }
-
-        } else {
-
-            /* can't remove ads that do not exist */
-            if ( !_ads->LookupClassAd ( key, p ) ) {
-
-                _ads->AbortTransaction ();
-                return;
-
-            }
-
-            /* try to remove the ad */
-            if ( !_ads->DestroyClassAd ( key ) ) {
-
-                dprintf (
-                    D_FULLDEBUG,
-                    "OfflineCollectorPlugin::update: "
-                    "failed remove off-line ad from the persistent "
-                    "store.\n" );
-
-                _ads->AbortTransaction ();
-
-            }
+            _ads->AbortTransaction ();
+			return;
 
         }
 
     }
+
+	_ads->CommitTransaction ();
 
 }
 
@@ -274,9 +295,10 @@ OfflineCollectorPlugin::invalidate (
     const ClassAd   &ad )
 {
 
-    dprintf (
-        D_FULLDEBUG,
-        "In OfflineCollectorPlugin::invalidate ()\n" );
+	dprintf (
+		D_FULLDEBUG,
+		"In OfflineCollectorPlugin::update ( %d )\n",
+		command );
 
     /* bail out if the plug-in is not enabled */
     if ( !enabled () ) {
@@ -303,12 +325,14 @@ OfflineCollectorPlugin::invalidate (
 
         _ads->BeginTransaction ();
 
-        ClassAd *cad;
-        MyString key;
-        hashKey.sprint ( key );
+        ClassAd *p;
+        MyString s;
+        hashKey.sprint ( s );
+		compressSpaces ( s );
+		const char *key = s.Value ();
 
         /* can't remove ads that do not exist */
-        if ( !_ads->LookupClassAd ( key.Value (), cad ) ) {
+        if ( !_ads->LookupClassAd ( key, p ) ) {
 
             _ads->AbortTransaction ();
             return;
@@ -316,7 +340,7 @@ OfflineCollectorPlugin::invalidate (
         }
 
         /* try to remove the ad */
-        if ( !_ads->DestroyClassAd ( key.Value () ) ) {
+        if ( !_ads->DestroyClassAd ( key ) ) {
 
             dprintf (
                 D_FULLDEBUG,
@@ -325,6 +349,7 @@ OfflineCollectorPlugin::invalidate (
                 "store.\n" );
 
             _ads->AbortTransaction ();
+			return;
 
         }
 
@@ -343,11 +368,10 @@ OfflineCollectorPlugin::rewind ()
 }
 
 bool
-OfflineCollectorPlugin::iterate ( ClassAd &ad )
+OfflineCollectorPlugin::iterate ( ClassAd *&ad )
 {
 	if ( _ads ) {
-		ClassAd *p = &ad;
-		return _ads->IterateAllClassAds ( p );
+		return _ads->IterateAllClassAds ( ad );
 	}
 	return false;
 }
