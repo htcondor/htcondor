@@ -43,6 +43,7 @@ NEW_INCLUDE_DIR =	../condor_includes
 C_PLUS_INCLUDE =	../condor_c++_util
 DAEMONCLIENT_INCLUDE =	../condor_daemon_client
 DAEMONCORE_INCLUDE =	../condor_daemon_core.V6
+CLASSAD_INCLUDE =       ../classad ../classad_support
 CCB_INCLUDE = ../ccb
 
 
@@ -289,9 +290,16 @@ DAEMONCORE_WRAP_LDFLAGS = -Wl,--wrap,exit
  end of externals-specific settings and flags
 ********************************************/
 
-VENDOR_C_FLAGS = -I. -I.. -I../.. -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) \
-		 -I$(C_PLUS_INCLUDE) -I$(DAEMONCLIENT_INCLUDE) \
-		 -I$(DAEMONCORE_INCLUDE) -I$(CCB_INCLUDE) \
+ALL_INCLUDES = \
+	. .. ../..			\
+	$(INCLUDE_DIR)			\
+	$(NEW_INCLUDE_DIR)		\
+	$(C_PLUS_INCLUDE) 		\
+	$(DAEMONCLIENT_INCLUDE) 	\
+	$(DAEMONCORE_INCLUDE)		\
+	$(CLASSAD_INCLUDE)		\
+	$(CCB_INCLUDE)
+VENDOR_C_FLAGS = $(addprefix -I, $(ALL_INCLUDES) ) \
 		 $(CONFIGURE_DEFS) -D$(ARCH_FLAG)=$(ARCH_FLAG) \
 		 -D$(OS_FLAG)=$(OS_FLAG) $(SITE_C_FLAGS) \
 		 $(SECURITY_FLAGS) $(NETMAN_FLAGS) \

@@ -18,7 +18,6 @@
  ***************************************************************/
 
 
-#include "condor_common.h"
 #include "classad/common.h"
 #include "classad/exprTree.h"
 #include "queryProcessor.h"

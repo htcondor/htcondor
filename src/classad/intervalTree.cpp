@@ -18,7 +18,7 @@
  ***************************************************************/
 
 
-#include "condor_common.h"
+#include <stdio.h>
 #include "common.h"
 #include "classad.h"
 #include "intervalTree.h"

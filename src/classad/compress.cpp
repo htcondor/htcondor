@@ -17,9 +17,7 @@
  *
  ***************************************************************/
 
-
-#include "condor_common.h"
-#include "condor_classad.h"
+#include "classad.h"
 #include "compress.h"
 
 using namespace std;

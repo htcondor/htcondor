@@ -18,8 +18,8 @@
  ***************************************************************/
 
 
-#include "condor_common.h"
-#include "condor_classad.h"
+#include <stdio.h>
+#include "classad.h"
 #include "queryProcessor.h"
 #include "intervalTree.h"
 #include "../gm-oo/gangster-indexed.h"

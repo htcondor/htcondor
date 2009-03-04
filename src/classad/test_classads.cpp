@@ -33,7 +33,7 @@
 #if defined( CLASSAD_DISTRIBUTION )
 #include "classad/classad_distribution.h"
 #else
-#include "condor_classad.h"
+#include "classad.h"
 #endif
 #include "classad/lexerSource.h"
 #include "classad/xmlSink.h"

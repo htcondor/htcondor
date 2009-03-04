@@ -13,13 +13,13 @@
 #define StdUnvProgs shadow.std starter.std 
 #define StdUnvLibs ckpt syscall_lib
 
-#if HAVE_EXT_CLASSADS && HAVE_EXT_GLOBUS
+#if HAVE_EXT_GLOBUS
 #define CreddProgs credd
 #else
 #define CreddProgs
 #endif
 
-#if HAVE_EXT_CLASSADS && WANT_QUILL
+#if WANT_QUILL
 #define JobRouterProgs job_router
 #else
 #define JobRouterProgs
@@ -72,26 +72,30 @@
 #endif
 
 #define Programs \
-		procapi sysapi unit_tests ckpt_server \
-		master.V6 negotiator.V6 schedd.V6 prio q.V6 rm.V6 \
-		scripts startd.V6 StdUnvProgs submit.V6 status.V6 \
-		tools KbddProgs collector.V6 dagman userlog Eventd \
-		gridmanager starter.V6.1 shadow.V6.1 dcskel c-gahp had \
-		CreddProgs StorkProgs LeaseManagerProgs \
-		TTProgs DeploymentTools \
-		eventd.V2 transferd procd privsep vm-gahp EC2 \
-		JobRouterProgs GlobusGahps startd_factory \
-		power
+	procapi sysapi unit_tests ckpt_server \
+	master.V6 negotiator.V6 schedd.V6 prio q.V6 rm.V6 \
+	scripts startd.V6 StdUnvProgs submit.V6 status.V6 \
+	tools KbddProgs collector.V6 dagman userlog Eventd \
+	gridmanager starter.V6.1 shadow.V6.1 dcskel c-gahp had \
+	CreddProgs StorkProgs LeaseManagerProgs \
+	TTProgs DeploymentTools \
+	eventd.V2 transferd procd privsep vm-gahp EC2 \
+	JobRouterProgs GlobusGahps startd_factory \
+	power
 
 #define Libraries \
-		util_lib target-ccb daemon_core.V6 daemon_client target-classad.old c++_util	\
-		condor_procapi/libprocapi.a condor_sysapi/libsysapi.a	\
-		io condor_ckpt_server/ckpt_server_api.a			\
-		condor_schedd.V6/libqmgmt.a				\
-		StdUnvLibs NetmanLibs	\
-		condor_procd/procd_client.a \
-		condor_privsep/privsep_client.a \
-		chirp AnalysisLibs classad.V6
+	target-classad 						\
+	util_lib target-ccb daemon_core.V6 daemon_client 	\
+	target-classad.old 					\
+	target-classad_support					\
+	c++_util						\
+	condor_procapi/libprocapi.a condor_sysapi/libsysapi.a	\
+	io condor_ckpt_server/ckpt_server_api.a			\
+	condor_schedd.V6/libqmgmt.a				\
+	StdUnvLibs NetmanLibs	\
+	condor_procd/procd_client.a \
+	condor_privsep/privsep_client.a \
+	chirp AnalysisLibs
 
 
 #if HAS_STATIC
@@ -242,7 +246,8 @@ condor_object_target(examples)
 condor_object_target(eventd)
 #endif
 condor_object_target(ckpt_server)
-condor_object_target(classad.V6)
+object_target(target-classad,classad)
+object_target(target-classad_support,classad_support)
 
 condor_object_target(shadow.std)
 condor_object_target(transferd)
@@ -291,12 +296,10 @@ condor_object_target(prio)
 condor_object_target(scripts)
 condor_object_target(gridmanager)
 
-#if HAVE_EXT_CLASSADS && HAVE_EXT_GLOBUS
+#if HAVE_EXT_GLOBUS
 	condor_object_target(credd)
 #endif
-#if HAVE_EXT_CLASSADS
-	condor_object_target(job_router)
-#endif
+condor_object_target(job_router)
 condor_object_target(starter.V6.1)
 condor_object_target(shadow.V6.1)
 condor_object_target(c-gahp)

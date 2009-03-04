@@ -18,7 +18,7 @@
  ***************************************************************/
 
 
-#include "condor_common.h"
+#include <stdio.h>
 #include "classad/common.h"
 #include "classad/operators.h"
 #include "rectangle.h"
@@ -343,12 +343,12 @@ Summarize( Rectangles &rectangles, Representatives &representatives,
                         (isItr=diItr->second.find(i))!=diItr->second.end() ) {
                     buffer += isItr->second;
                 } else {
-                    dprintf( D_ALWAYS, "Error: Deviant imported attribute %s"
+                    fprintf( stderr, "Error: Deviant imported attribute %s"
                         " in rectangle %d without signature\n",ritr->c_str(),i);
                     return( false );
                 }
             } else {
-                dprintf( D_ALWAYS, "Error: %s not present, absent or deviant "
+                fprintf( stderr, "Error: %s not present, absent or deviant "
                     "in %d\n", ritr->c_str(), i );
                 return( false );
             }
