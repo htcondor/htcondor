@@ -39,13 +39,14 @@ SimpleList<HOOK_RUN_INFO*> JobRouterHookMgr::m_job_hook_list;
 JobRouterHookMgr::JobRouterHookMgr()
 	: HookClientMgr(),
 	  NUM_HOOKS(4),
-	  UNDEFINED((char*)1),
+	  UNDEFINED((char*)"UNDEFINED"),
 	  m_hook_paths(MyStringHash)
 {
 	m_hook_maps[HOOK_TRANSLATE_JOB] = 1;
 	m_hook_maps[HOOK_UPDATE_JOB_INFO] = 2;
 	m_hook_maps[HOOK_JOB_EXIT] = 3;
 	m_hook_maps[HOOK_JOB_CLEANUP] = 4;
+	m_default_hook_keyword = NULL;
 
 	dprintf(D_FULLDEBUG, "Instantiating a JobRouterHookMgr\n");
 }
@@ -59,6 +60,11 @@ JobRouterHookMgr::~JobRouterHookMgr()
 	clearHookPaths();
 
 	JobRouterHookMgr::removeAllKnownHooks();
+
+	if (NULL != m_default_hook_keyword)
+	{
+		free(m_default_hook_keyword);
+	}
 }
 
 
@@ -100,6 +106,12 @@ JobRouterHookMgr::reconfig()
 	// Clear out old copies of each hook's path.
 	clearHookPaths();
 
+	// Get the default hook keyword if it's defined
+	if (NULL != m_default_hook_keyword)
+	{
+		free(m_default_hook_keyword);
+	}
+	m_default_hook_keyword = param("JOB_ROUTER_HOOK_KEYWORD");
 	return true;
 }
 
@@ -118,7 +130,7 @@ JobRouterHookMgr::getHookPath(HookType hook_type, classad::ClassAd ad)
 	}
 	if (false == ad.EvaluateAttrString(ATTR_HOOK_KEYWORD, keyword))
 	{
-		keyword = param("JOB_ROUTER_HOOK_KEYWORD");
+		keyword = m_default_hook_keyword;
 	}
 	if (0 == keyword.length())
 	{

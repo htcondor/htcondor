@@ -75,6 +75,8 @@ private:
 	// to not being defined (NULL)
 	char* UNDEFINED;
 
+	char* m_default_hook_keyword;
+
 	// Hook definitions in a hash table.  Hook keyword is the hash key,
 	// and the validated hook paths are the value
 	HashTable<MyString, char**> m_hook_paths;
