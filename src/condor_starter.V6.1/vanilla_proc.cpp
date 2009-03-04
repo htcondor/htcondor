@@ -33,7 +33,7 @@
 #include "domain_tools.h"
 
 #ifdef WIN32
-#include "executable_scripts.h"
+#include "executable_scripts.WINDOWS.h"
 extern dynuser* myDynuser;
 #endif
 
@@ -235,12 +235,12 @@ VanillaProc::StartJob()
 					 !arguments.InsertArgsIntoClassAd ( JobAd, NULL, 
 					&error ) ) {
 
-						dprintf (
-							D_ALWAYS,
-							"ERROR: failed to get args from job ad: %s\n",
-							error.Value () );
+					dprintf (
+						D_ALWAYS,
+						"ERROR: failed to get args from job ad: %s\n",
+						error.Value () );
 
-						return FALSE;
+					return FALSE;
 
 				}
 				

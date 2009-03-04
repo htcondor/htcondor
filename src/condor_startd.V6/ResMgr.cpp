@@ -1495,7 +1495,7 @@ ResMgr::eval_and_update_all( void )
 {
 	if ( !hibernating () ) {
 		compute( A_TIMEOUT | A_UPDATE );
-		first_eval_and_update_all();
+		update_all();
 	}
 }
 
