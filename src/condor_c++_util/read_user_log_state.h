@@ -26,6 +26,67 @@
 #include "MyString.h"
 #include "stat_wrapper.h"
 
+
+	// ********************************************************************
+	// This is the file state buffer that we generate for the init/get/set
+	// methods
+	// ********************************************************************
+#define FILESTATE_VERSION		103
+
+class ReadUserLogFileState
+{
+  public:
+
+	// Make things 8 bytes
+	union FileStateI64_t {
+		char		bytes[8];
+		int64_t		asint;
+	};
+
+	// The structure itself
+	struct FileState {
+		char			m_signature[64];	// File state signature
+		int				m_version;			// Version #
+		char			m_base_path[512];	// The log's base path
+		char			m_uniq_id[128];		// File's uniq identifier
+		int				m_sequence;			// File's sequence number
+		int				m_rotation;			// 0 == the "current" file
+		int				m_max_rotations;	// Max rotation level
+		UserLogType		m_log_type;			// The log's type
+		StatStructInode	m_inode;			// The log's inode #
+		time_t			m_ctime;			// The log's creation time
+		FileStateI64_t	m_size;				// The log's size (bytes)
+		FileStateI64_t	m_offset;			// Our offset in current log
+		FileStateI64_t	m_log_offset;		// UNUSED
+		FileStateI64_t	m_log_position;		// Our position in the whole log
+		FileStateI64_t	m_log_record;		// Cur record # in the whole log
+		time_t			m_update_time;		// Time of last struct update
+	};
+
+	// "Public" view of the file state
+	typedef union {
+		FileState	internal;
+		char		filler [2048];
+	} FileStatePub;
+
+	ReadUserLogFileState( void );
+	ReadUserLogFileState( const ReadUserLog::FileState &state );
+	~ReadUserLogFileState( void );
+
+	static bool InitState( ReadUserLog::FileState &state );
+
+	int getSize( void ) const
+		{ return sizeof(ReadUserLogFileState::FileState); };
+	ReadUserLogFileState::FileState *getPubState( void ) const
+		{ return m_state; };
+	ReadUserLogFileState::FileState *getState( void ) const
+		{ if (!m_state) return NULL;  return m_state->internal; };
+
+  private:
+	ReadUserLogFileState::FileStatePub	*m_state;
+};
+
+
 // Internal verion of the file state
 class ReadUserLogState
 {
@@ -157,47 +218,8 @@ public:
 						 MyString &str, const char *label = NULL ) const;
 
 	// Get the file state
-	static const ReadUserLogState::FileState *
+	static const ReadUserLogFileState *
 		GetFileStateConst( const ReadUserLog::FileState &state );
-
-
-	// ********************************************************************
-	// This is the file state buffer that we generate for the init/get/set
-	// methods
-	// ********************************************************************
-#define FILESTATE_VERSION		103
-
-	// Make things 8 bytes
-	union FileStateI64_t {
-		char		bytes[8];
-		int64_t		asint;
-	};
-
-	// The structure itself
-	struct FileState {
-		char			m_signature[64];	// File state signature
-		int				m_version;			// Version #
-		char			m_base_path[512];	// The log's base path
-		char			m_uniq_id[128];		// File's uniq identifier
-		int				m_sequence;			// File's sequence number
-		int				m_rotation;			// 0 == the "current" file
-		int				m_max_rotations;	// Max rotation level
-		UserLogType		m_log_type;			// The log's type
-		StatStructInode	m_inode;			// The log's inode #
-		time_t			m_ctime;			// The log's creation time
-		FileStateI64_t	m_size;				// The log's size (bytes)
-		FileStateI64_t	m_offset;			// Our offset in current log
-		FileStateI64_t	m_log_offset;		// UNUSED
-		FileStateI64_t	m_log_position;		// Our position in the whole log
-		FileStateI64_t	m_log_record;		// Cur record # in the whole log
-		time_t			m_update_time;		// Time of last struct update
-	};
-
-	// "Public" view of the file state
-	typedef union {
-		FileState	actual_state;
-		char		filler [2048];
-	} FileStatePub;
 		
 
 private:
@@ -207,7 +229,7 @@ private:
 	int StatFile( const char *path, StatStructType &statbuf ) const;
 
 	// Get the "internal" state pointer from the application file state
-	static ReadUserLogState::FileState *
+	static ReadUserLogFileState *
 		GetFileState( ReadUserLog::FileState &state );
 
 	// Private data

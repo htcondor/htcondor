@@ -473,6 +473,39 @@ class ReadUserLog
 	int					 m_lock_rot;	/** Lock managing what rotation #? */
 };
 
+
+// Provide access to parts of the user log state data
+class ReadUserLogStateAccess
+{
+public:
+	
+	ReadUserLogStateAccess(const ReadUserLog::FileState &state);
+	~ReadUserLogStateAccess(void);
+
+	// Valid?
+	bool isValid( void ) const;
+
+	// Positional difference between to states (this - other)
+	bool LogPositionDiff( const ReadUserLogStateData &other,
+						  long &diff ) const;
+
+	// # of events between to states (this - other)
+	bool EventNumberDiff( const ReadUserLogStateData &other,
+						  long &diff ) const;
+
+	// Get the unique ID and sequence # of the associated state file
+	const char *UniqId( void ) const;
+	void UniqId( MyString &s ) const;
+	int SequenceNumber( void ) const;
+
+	// Access to the state
+protected:
+	const ReadUserLogState::FileState *getState( void ) const;
+
+private:
+	const ReadUserLogState::FileState	*m_state;
+};
+
 #endif /* __cplusplus */
 
 #endif /* _CONDOR_USER_LOG_CPP_H */

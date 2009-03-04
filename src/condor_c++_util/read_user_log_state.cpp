@@ -427,8 +427,18 @@ ReadUserLogState::CompareUniqId( const MyString &id ) const
 	}
 }
 
+ReadUserLogFileState::ReadUserLogFileState( void )
+{
+	m_state = NULL;
+}
+
+ReadUserLogFileState::ReadUserLogFileState( const ReadUserLog::FileState &state )
+{
+	m_state = state.buf;
+}
+
 bool
-ReadUserLogState::InitState( ReadUserLog::FileState &state )
+ReadUserLogFileState::InitState( ReadUserLog::FileState &state )
 {
 	state.buf  = (void *) new ReadUserLogState::FileStatePub;
 	state.size = sizeof( ReadUserLogState::FileStatePub );
@@ -451,7 +461,7 @@ ReadUserLogState::InitState( ReadUserLog::FileState &state )
 }
 
 bool
-ReadUserLogState::UninitState( ReadUserLog::FileState &state )
+ReadUserLogFileState::UninitState( ReadUserLog::FileState &state )
 {
 	ReadUserLogState::FileStatePub	*istate =
 		(ReadUserLogState::FileStatePub *) state.buf;
@@ -466,7 +476,8 @@ ReadUserLogState::UninitState( ReadUserLog::FileState &state )
 bool
 ReadUserLogState::GetState( ReadUserLog::FileState &state ) const
 {
-	ReadUserLogState::FileState *istate = GetFileState( state );
+	ReadUserLogFileState			 fstate( state );
+	ReadUserLogFileState::FileState *istate = fstate.getState();
 	if ( !istate ) {
 		return false;
 	}
@@ -705,4 +716,45 @@ ReadUserLogState::LogRecordNo( const ReadUserLog::FileState &state ) const
 		return -1;
 	}
 	return (filesize_t) istate->m_log_record.asint;
+}
+
+
+// **********************************
+// ReadUserLogStateAccess methods
+// **********************************
+
+// Constructor
+ReadUserLogStateAccess::ReadUserLogStateData(const ReadUserLog::FileState &state) const
+{
+	m_state = ReadUserLogState::GetFileStateConst( state );
+}
+
+ReadUserLogStateAccess::~ReadUserLogStateData(void)
+{
+}
+
+// Positional difference between to states
+bool ReadUserLogStateAccess::LogPositionDiff( const ReadUserLogStateData &other,
+											  long &diff ) const
+{
+	
+	filesize_t	idiff = this.LogPosition() - other.LogPosition();
+	
+}
+
+// # of events between to states
+long ReadUserLogStateAccess::EventNumberDiff( const ReadUserLogStateData &other,
+											  long &diff) const
+{
+}
+
+// Get the unique ID and sequence # of the associated state file
+const char *ReadUserLogStateAccess::UniqId( void ) const
+{
+}
+void ReadUserLogStateAccess::UniqId( MyString &s ) const
+{
+}
+int ReadUserLogStateAccess::SequenceNumber( void ) const
+{
 }
