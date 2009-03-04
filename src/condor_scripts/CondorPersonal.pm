@@ -909,7 +909,7 @@ sub TunePersonalCondor
 	}
 
 	# Dan: Jan 30, '08 added D_NETWORK in order to debug condor_rm timeout
-	print NEW "ALL_DEBUG = D_FULLDEBUG D_NETWORK\n";
+	print NEW "ALL_DEBUG = D_FULLDEBUG\n";
 
 	if($personal_daemons ne "")
 	{

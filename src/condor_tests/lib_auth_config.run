@@ -27,6 +27,11 @@ $inputdir = "lib_auth_config_tests";
 
 system("date");
 
+if(!(-f $test)) {
+	print "Failure from lack of testing program <$test>\n";
+	exit(1);
+}
+
 my $input;
 foreach $input ( glob($inputdir . "/test_auth_*_input") ) {
   my $config = $input;

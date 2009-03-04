@@ -1390,13 +1390,6 @@ TESTCLASS(job_core_macros_sched,quick)
 TESTCLASS(job_core_macros_sched,full)
 TESTCLASS(job_core_macros_sched,quicknolink)
 
-DESC(job_core_niceuser_van,"Vanilla: Ensure non nice_user job completes before nice_user job") 
-RUN(job_core_niceuser_van)
-TESTCLASS(job_core_niceuser_van,core)
-TESTCLASS(job_core_niceuser_van,quick)
-TESTCLASS(job_core_niceuser_van,full)
-TESTCLASS(job_core_niceuser_van,quicknolink)
-
 DESC(job_core_output_sched,"Scheduler: Verify trivially simple output from an input file")
 RUN(job_core_output_sched)
 TESTCLASS(job_core_output_sched,core)
@@ -1460,6 +1453,14 @@ TESTCLASS(job_core_plus_sched,full)
 TESTCLASS(job_core_plus_sched,quicknolink)
 
 /*
+Both have race conditions
+DESC(job_core_niceuser_van,"Vanilla: Ensure non nice_user job completes before nice_user job") 
+RUN(job_core_niceuser_van)
+TESTCLASS(job_core_niceuser_van,core)
+TESTCLASS(job_core_niceuser_van,quick)
+TESTCLASS(job_core_niceuser_van,full)
+TESTCLASS(job_core_niceuser_van,quicknolink)
+
 DESC(job_core_priority_van,"Vanilla: Verify respect for job priority")
 RUN(job_core_priority_van)
 TESTCLASS(job_core_priority_van,core)

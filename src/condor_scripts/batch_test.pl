@@ -112,7 +112,7 @@ Condor::DebugLevel(1);
 #select(STDERR); $| = 1;
 #select(STDOUT); $| = 1;
 
-my $iswindows = IsThisWindows();
+my $iswindows = CondorTest::IsThisWindows();
 
 # configuration options
 my $test_retirement = 3600;	# seconds for an individual test timeout - 30 minutes
@@ -143,8 +143,8 @@ my $localdir = $testpersonalcondorlocation . "/local";
 my $installdir;
 my $wininstalldir; # need to have dos type paths for condor
 my $testdir;
-my $configmain;
-my $configlocal;
+my $configmain = "../condor_examples/condor_config.generic";
+my $configlocal = "../condor_examples/condor_config.local.central.manager";
 
 my $wantcurrentdaemons = 1; # dont set up a new testing pool in condor_tests/TestingPersonalCondor
 my $pretestsetuponly = 0; # only get the personal condor in place
@@ -312,7 +312,7 @@ my %test_suite = ();
 my $awkscript = "";
 my $genericconfig = "";
 my $genericlocalconfig = "";
-my $nightly = IsThisNightly($BaseDir);
+my $nightly = CondorTest::IsThisNightly($BaseDir);
 my $res = 0;
 
 if(!($wantcurrentdaemons)) {
@@ -818,46 +818,6 @@ sub CleanFromPath
 			$newpath = $newpath . ":" . $spath;
 		}
 	}
-}
-
-sub IsThisNightly
-{
-	my $mylocation = shift;
-
-	debug("IsThisNightly passed <$mylocation>\n",2);
-	if($mylocation =~ /^.*(\/execute\/).*$/) {
-		print "Nightly testing\n";
-		$configlocal = "../condor_examples/condor_config.local.central.manager";
-		$configmain = "../condor_examples/condor_config.generic";
-		if(!(-f $configmain)) {
-			system("ls ..");
-			system("ls ../condor_examples");
-			die "No base config file!!!!!\n";
-		}
-		return(1);
-	} else {
-		print "Workspace testing\n";
-		$configlocal = "../condor_examples/condor_config.local.central.manager";
-		$configmain = "../condor_examples/condor_config.generic";
-		if(!(-f $configmain)) {
-			system("ls ..");
-			system("ls ../condor_examples");
-			die "No base config file!!!!!\n";
-		}
-		return(0);
-	}
-}
-
-sub IsThisWindows
-{
-	my $path = CondorTest::Which("cygpath");
-	debug("Path return from which cygpath: $path\n",2);
-	if($path =~ /^.*\/bin\/cygpath.*$/ ) {
-		print "This IS windows\n";
-		return(1);
-	}
-	print "This is NOT windows\n";
-	return(0);
 }
 
 sub IsPersonalTestDirThere

@@ -71,6 +71,7 @@ my $lastconfig;
 my $handle; #actually the test name.
 my $BaseDir = getcwd();
 my $iswindows = IsThisWindows();
+my $isnightly = IsThisNightly($BaseDir);
 
 # we want to process and track the collection of cores
 my $coredir = "$BaseDir/Cores";
@@ -111,7 +112,7 @@ sub SetExpected
 {
 	my $expected_ref = shift;
 	foreach my $line (@{$expected_ref}) {
-		debug( "$line\n", 1);
+		debug( "$line\n", 2);
 	}
 	@expected_output = @{$expected_ref};
 }
@@ -120,7 +121,7 @@ sub SetSkipped
 {
 	my $skipped_ref = shift;
 	foreach my $line (@{$skipped_ref}) {
-		debug( "$line\n", 1);
+		debug( "$line\n", 2);
 	}
 	@skipped_output_lines = @{$skipped_ref};
 }
@@ -335,7 +336,7 @@ sub DoTest
 		die "DoTest must get at least 3 args!!!!!\n";
 	}
 
-	print "RunTest says test is<<$handle>>\n";
+	debug("RunTest says test is<<$handle>>\n",2);;
 	# moved the reset to preserve callback registrations which includes
 	# an error callback at submit time..... Had to change timing
 	CondorTest::Reset();
@@ -359,12 +360,14 @@ sub DoTest
 
 	CheckRegistrations();
 
-	print "\nCurrent date and load follow:\n";
-	system("date");
-	if($iswindows == 0) {
-		system("uptime");
+	if($isnightly == 1) {
+		print "\nCurrent date and load follow:\n";
+		system("date");
+		if($iswindows == 0) {
+			system("uptime");
+		}
+		print "\n\n";
 	}
-	print "\n\n";
 
 	my $wrap_test = $ENV{WRAP_TESTS};
 
@@ -391,10 +394,10 @@ sub DoTest
 	$teststrt = time();;
     # submit the job and get the cluster id
 	if(!(defined $dagman_args)) {
-		print "Regular Test....\n";
+		#print "Regular Test....\n";
     	$cluster = Condor::TestSubmit( $submit_file );
 	} else {
-		print "Dagman Test....\n";
+		#print "Dagman Test....\n";
     	$cluster = Condor::TestSubmitDagman( $submit_file, $dagman_args );
 	}
     
@@ -450,14 +453,15 @@ sub DoTest
 	$teststop = time();
 	my $timediff = $teststop - $teststrt;
 
-	print "Test started <$teststrt> ended <$teststop> taking <$timediff> seconds\n";
-
-	print "\nCurrent date and load follow:\n";
-	system("date");
-	if($iswindows == 0) {
-		system("uptime");
+	if($isnightly == 1) {
+		print "Test started <$teststrt> ended <$teststop> taking <$timediff> seconds\n";
+		print "Current date and load follow:\n";
+		system("date");
+		if($iswindows == 0) {
+			system("uptime");
+		}
+		print "\n\n";
 	}
-	print "\n\n";
 
 	##############################################################
 	#
@@ -495,7 +499,7 @@ sub DoTest
 	#
 	##############################################################
 	if(ShouldCheck_coreERROR() == 1){
-		debug("Want to Check core and ERROR!!!!!!!!!!!!!!!!!!\n\n",1);
+		debug("Want to Check core and ERROR!!!!!!!!!!!!!!!!!!\n\n",2);
 		# running in TestingPersonalCondor
 		my $logdir = `condor_config_val log`;
 		fullchomp($logdir);
@@ -691,8 +695,9 @@ sub CompareText
     my $linenum = 0;
 	my $line;
 	my $expectline;
+	my $debuglevel = 4;
 
-	debug("opening file $file to compare to array of expected results\n",4);
+	debug("opening file $file to compare to array of expected results\n",$debuglevel);
     open( FILE, "<$file" ) || die "error opening $file: $!\n";
     
     while( <FILE> )
@@ -701,11 +706,11 @@ sub CompareText
 	$line = $_;
 	$linenum++;
 
-	debug("linenum $linenum\n",4);
-	debug("\$line: $line\n",4);
-	debug("\$\$aref[0] = $$aref[0]\n",4);
+	debug("linenum $linenum\n",$debuglevel);
+	debug("\$line: $line\n",$debuglevel);
+	debug("\$\$aref[0] = $$aref[0]\n",$debuglevel);
 
-	debug("skiplines = \"@skiplines\"\n",4);
+	debug("skiplines = \"@skiplines\"\n",$debuglevel);
 	#print "grep returns ", grep( /^$linenum$/, @skiplines ), "\n";
 
 	next if grep /^$linenum$/, @skiplines;
@@ -717,7 +722,7 @@ sub CompareText
 	}
 	fullchomp($expectline);
 
-	debug("\$expectline: $expectline\n",4);
+	debug("\$expectline: $expectline\n",$debuglevel);
 
 	# if they match, go on
 	next if $expectline eq $line;
@@ -745,7 +750,7 @@ sub CompareText
 	croak "invalid skipline argument ($num)" if $num < 1;
     }
     
-	debug("CompareText successful\n",4);
+	debug("CompareText successful\n",$debuglevel);
     return 1;
 }
 
@@ -1014,9 +1019,6 @@ sub runCondorTool
 	my $catch = "runCTool$$";
 
 	# clean array before filling
-	if($quiet != 0) {
-		system("date");
-	}
 
 	my $attempts = 6;
 	$count = 0;
@@ -1087,7 +1089,7 @@ sub runCondorTool
 		debug("runCondorTool: iteration<$count> failed sleep 10 * $count \n",1);
 		sleep((10*$count));
 	}
-	debug( "runCondorTool: $cmd worked!\n",4);
+	debug( "runCondorTool: $cmd worked!\n",1);
 
 	return(0);
 }
@@ -1422,11 +1424,11 @@ sub PersonalSearchLog
 
     #my $logloc = $pid . "/" . $pid . $personal . "/log/" . $logname;
     my $logloc = $logdir . "/" . $logname;
-    CondorTest::debug("Search this log <$logloc> for <$searchfor>\n",1);
+    CondorTest::debug("Search this log <$logloc> for <$searchfor>\n",2);
     open(LOG,"<$logloc") || die "Can not open logfile<$logloc>: $!\n";
     while(<LOG>) {
         if( $_ =~ /$searchfor/) {
-            CondorTest::debug("FOUND IT! $_",1);
+            CondorTest::debug("FOUND IT! $_",2);
             return(0);
         }
     }
@@ -1454,7 +1456,7 @@ sub PersonalPolicySearchLog
 
     #my $logloc = $pid . "/" . $pid . $personal . "/log/" . $logname;
     my $logloc = $logdir . "/" . $logname;
-    debug("Search this log <$logloc> for <$policyitem>\n",1);
+    debug("Search this log <$logloc> for <$policyitem>\n",2);
     open(LOG,"<$logloc") || die "Can not open logfile<$logloc>: $!\n";
     while(<LOG>) {
         if( $_ =~ /^.*Security Policy.*$/) {
@@ -1462,7 +1464,7 @@ sub PersonalPolicySearchLog
                 if( $_ =~ /^\s*$policyitem\s*=\s*\"(\w+)\"\s*$/ ) {
                     #print "FOUND IT! $1\n";
                     if(!defined $securityoptions{$1}){
-                        debug("Returning <<$1>>\n",1);
+                        debug("Returning <<$1>>\n",2);
                         return($1);
                     }
                 }
@@ -1476,15 +1478,15 @@ sub OuterPoolTest
 {
 	my $cmd = "condor_config_val log";
 	my $locconfig = "";
-    debug( "Running this command: <$cmd> \n",1);
+    debug( "Running this command: <$cmd> \n",2);
     # shhhhhhhh third arg 0 makes it hush its output
 	my $logdir = `condor_config_val log`;
 	fullchomp($logdir);
-	debug( "log dir is<$logdir>\n",1);
+	debug( "log dir is<$logdir>\n",2);
 	if($logdir =~ /^.*condor_tests.*$/){
 		print "Running within condor_tests\n";
 		if($logdir =~ /^.*TestingPersonalCondor.*$/){
-			debug( "Running with outer testing personal condor\n",1);
+			debug( "Running with outer testing personal condor\n",2);
 			return(1);
 		}
 	} else {
@@ -1518,7 +1520,7 @@ sub PersonalCondorTest
 			$locconfig = shift @local;
 			my $locport = shift @local;
 			
-			debug("---local config is $locconfig and local port is $locport---\n",1);
+			debug("---local config is $locconfig and local port is $locport---\n",2);
 
 			#$ENV{CONDOR_CONFIG} = $locconfig;
 		}
@@ -1577,7 +1579,7 @@ sub StartPersonal
     my $version = shift;
 	
 	$handle = $testname;
-    debug("Starting Perosnal($$) for $testname/$paramfile/$version\n",1);
+    debug("Starting Perosnal($$) for $testname/$paramfile/$version\n",2);
 
     my $configloc = CondorPersonal::StartCondor( $testname, $paramfile ,$version);
     return($configloc);
@@ -1591,10 +1593,10 @@ sub KillPersonal
 		print "LOG dir is $1/log\n";
 		$logdir = $1 . "/log";
 	} else {
-		debug("KillPersonal passed this config<<$personal_config>>\n",1);
+		debug("KillPersonal passed this config<<$personal_config>>\n",2);
 		die "Can not extract log directory\n";
 	}
-	debug("Doing core ERROR check in  KillPersonal\n",1);
+	debug("Doing core ERROR check in  KillPersonal\n",2);
 	$failed_coreERROR = CoreCheck($handle, $logdir, $teststrt, $teststop);
 	CondorPersonal::KillDaemonPids($personal_config);
 }
@@ -1615,13 +1617,13 @@ sub ShouldCheck_coreERROR
 		return(0);
 	}
 	my $saveme = $handle . ".saveme";
-	debug("Not /TestingPersonalCondor/ based, saveme is $saveme\n",1);
-	debug("Logdir is $logdir\n",1);
+	debug("Not /TestingPersonalCondor/ based, saveme is $saveme\n",2);
+	debug("Logdir is $logdir\n",2);
 	if($logdir =~ /$saveme/) {
 		# no because KillPersonal will do it
 		return(0);
 	}
-	debug("Does not look like its in a personal condor\n",1);
+	debug("Does not look like its in a personal condor\n",2);
 	return(1);
 }
 
@@ -1634,7 +1636,7 @@ sub CoreCheck {
 	my $scancount = 0;
 	my $fullpath = "";
 	
-	debug("Checking <$logdir> for test <$test>\n",1);
+	debug("Checking <$logdir> for test <$test>\n",2);
 	my @files = `ls $logdir`;
 	foreach my $perp (@files) {
 		fullchomp($perp);
@@ -1658,7 +1660,7 @@ sub CoreCheck {
 				debug("After ScanForERROR error count <$scancount>\n",2);
 			}
 		} else {
-			debug( "Not File: $fullpath\n",1);
+			debug( "Not File: $fullpath\n",2);
 		}
 	}
 	
@@ -1806,16 +1808,16 @@ sub CountFileTrace
 sub LoadExemption
 {
 	my $line = shift;
-	debug("LoadExemption: <$line>\n",1);
+	debug("LoadExemption: <$line>\n",2);
     my ($test, $required, $message) = split /,/, $line;
     my $save = $required . "," . $message;
     if(exists $exemptions{$test}) {
         push @{$exemptions{$test}}, $save;
-		debug("LoadExemption: added another for test $test\n",1);
+		debug("LoadExemption: added another for test $test\n",2);
     } else {
         $exemptions{$test} = ();
         push @{$exemptions{$test}}, $save;
-		debug("LoadExemption: added new for test $test\n",1);
+		debug("LoadExemption: added new for test $test\n",2);
     }
 }
 
@@ -1837,13 +1839,13 @@ sub IgnoreError
 	} else {
 		die "Time string into IgnoreError: Bad Format: $errortime\n";
 	}
-	debug("Start <$tstart> ERROR <$timeloc> End <$tend>\n",1);
+	debug("Start <$tstart> ERROR <$timeloc> End <$tend>\n",2);
 
 	# First item we care about is if this ERROR hapened during this test
 	if(($tstart == 0) && ($tend == 0)) {
 		# this is happening within a personal condor so do not ignore
 	} elsif( ($timeloc < $tstart) || ($timeloc > $tend)) {
-		debug("IgnoreError: Did not happen during test\n",1);
+		debug("IgnoreError: Did not happen during test\n",2);
 		return(1); # not on our watch so ignore
 	}
 
@@ -1858,7 +1860,7 @@ sub IgnoreError
 			my $quoted = quotemeta($partialstr);
 			debug("Looking for <$quoted> in this error <$errorstring>\n",2);
 			if($errorstring =~ m/$quoted/) {
-				debug("IgnoreError: Valid exemption\n",1);
+				debug("IgnoreError: Valid exemption\n",2);
 				debug("IgnoreError: Ignore ******** <<$quoted>> ******** \n",2);
 				return(1);
 			} 
@@ -1892,7 +1894,7 @@ sub DropExemptions
 # my $UNLOCK = 8;
 # my $TRUE = 1;
 # my $FALSE = 0;
-my $debuglevel = 1;
+my $debuglevel = 2;
 
 sub FindControlFile
 {
@@ -1941,7 +1943,7 @@ sub CountRunningTests
 		next if $file =~ /^\.\.?$/;
 		next if (-d $file) ;
 		$count += 1;
-		debug("Counting this test<$file> count now <$count>\n",1);
+		debug("Counting this test<$file> count now <$count>\n",2);
 	}
 	chdir($here);
 	return($count);
@@ -1981,6 +1983,34 @@ sub IsThisWindows
 	return(0);
 }
 
+sub IsThisNightly
+{
+	my $mylocation = shift;
+	my $configlocal = "";
+	my $configmain = "";
 
+	debug("IsThisNightly passed <$mylocation>\n",2);
+	if($mylocation =~ /^.*(\/execute\/).*$/) {
+		#print "Nightly testing\n";
+		$configlocal = "../condor_examples/condor_config.local.central.manager";
+		$configmain = "../condor_examples/condor_config.generic";
+		if(!(-f $configmain)) {
+			system("ls ..");
+			system("ls ../condor_examples");
+			die "No base config file!!!!!\n";
+		}
+		return(1);
+	} else {
+		#print "Workspace testing\n";
+		$configlocal = "../condor_examples/condor_config.local.central.manager";
+		$configmain = "../condor_examples/condor_config.generic";
+		if(!(-f $configmain)) {
+			system("ls ..");
+			system("ls ../condor_examples");
+			die "No base config file!!!!!\n";
+		}
+		return(0);
+	}
+}
 
 1;
