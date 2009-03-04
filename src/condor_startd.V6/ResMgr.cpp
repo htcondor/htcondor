@@ -1502,19 +1502,23 @@ ResMgr::first_eval_and_update_all( void )
 void
 ResMgr::eval_and_update_all( void )
 {
-	compute( A_TIMEOUT | A_UPDATE );
-	first_eval_and_update_all();
+	if ( !hibernating () ) {
+		compute( A_TIMEOUT | A_UPDATE );
+		first_eval_and_update_all();
+	}
 }
 
 
 void
 ResMgr::eval_all( void )
 {
-	num_updates = 0;
-	compute( A_TIMEOUT );
-	walk( &Resource::eval_state );
-	report_updates();
-	check_polling();
+	if ( !hibernating () ) {
+		num_updates = 0;
+		compute( A_TIMEOUT );
+		walk( &Resource::eval_state );
+		report_updates();
+		check_polling();
+	}
 }
 
 
@@ -2054,6 +2058,12 @@ void
 ResMgr::checkHibernate( void )
 {
 
+		// If we have already issued the command to hibernate, then
+		// don't bother re-entering the check/evaluation.
+	if ( hibernating () ) {
+		return;
+	}
+
 		// If all resources have gone unused for some time	
 		// then put the machine to sleep
 	MyString	target;
@@ -2184,8 +2194,8 @@ ResMgr::disableResources( const MyString &state_str )
 
 	dprintf ( 
 		D_FULLDEBUG,
-		"All resources disabled: %s\n", 
-		ok ? "yes." : "no. (resource #%d)",
+		"All resources disabled: %s (%d).\n", 
+		ok ? "yes" : "no",
 		i + 1 );
 
 	/* if any of the updates failed, then re-enable all the
