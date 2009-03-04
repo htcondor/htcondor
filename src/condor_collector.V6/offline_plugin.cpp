@@ -27,6 +27,7 @@
 #include "condor_commands.h"
 #include "condor_attributes.h"
 #include "condor_daemon_core.h"
+#include "condor_state.h"
 #include "hashkey.h"
 
 #include "offline_plugin.h"
@@ -174,38 +175,34 @@ OfflineCollectorPlugin::update (
 		/* set the off-line state of the machine */
 		offline = TRUE;
 
-		/* get the off-line expiry time */
-		if ( 0 == ad.EvalInteger (
-			"OFFLINE_EXPIRE_AD_AFTER",
-			NULL,
-			lifetime ) ) {
+		/* get the off-line expiry time (default to INT_MAX) */
+		param_integer ( 
+			"OFFLINE_EXPIRE_AD_AFTER", 
+			lifetime, 
+			INT_MAX );
 
-			/* default to the largest possible integer */
-			lifetime = INT_MAX;
+		/* reset any values in the ad that may interfere with
+		a match in the future */
 
-		}			
+		/* Reset Condor state */
+		ad.Assign ( ATTR_STATE, state_to_string ( unclaimed_state ) );
+		ad.Assign ( ATTR_ACTIVITY, activity_to_string ( idle_act ) );
+
+		/* Reset machine load */
+		ad.Assign ( ATTR_TOTAL_LOAD_AVG, 0.0 );
+
+		/* Reset CPU load */
+		ad.Assign ( ATTR_CPU_IS_BUSY, false );
+		ad.Assign ( ATTR_CPU_BUSY_TIME, false );
+
+		/* any others? */
 
 	} else {
 
-		/* try and determine if the ad has an offline
-		   attribute set */
-		if ( !ad.LookupInteger ( ATTR_OFFLINE, offline ) ) {
-
-			/* Don't print an error as it becomes too noisy in
-			   the log file */
-
-			/*
-			dprintf (
-				D_FULLDEBUG,
-				"OfflineCollectorPlugin::update: failed to "
-				"determine offline status. Assuming we are "
-				"on-line.\n" );
-			*/
-
-			/* not a fatal error, we'll just set the ad to be
-			   "on-line" bellow */
-
-		}
+		/* try and determine if the ad has an offline attribute. 
+		If not, don't consider it a fatal error, we'll just set
+		the ad to be "on-line" bellow. */
+		ad.LookupInteger ( ATTR_OFFLINE, offline );
 
 		/* if the ad was offline, then put it back in the game */
 		if ( TRUE == offline ) {
