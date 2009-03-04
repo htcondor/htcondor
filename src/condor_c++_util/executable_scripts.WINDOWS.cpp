@@ -21,9 +21,9 @@
 * Headers
 ***************************************************************/
 
-#include "condor_common.h"      /* pre-compiled header */
-#include "condor_config.h"      /* for param */
-#include "executable_scripts.h" /* our header file */
+#include "condor_common.h"				/* pre-compiled header */
+#include "condor_config.h"				/* for param */
+#include "executable_scripts.WINDOWS.h" /* our header file */
 
 /***************************************************************
 * Macros
