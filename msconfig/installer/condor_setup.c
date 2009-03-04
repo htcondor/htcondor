@@ -22,7 +22,7 @@
 #include <stdio.h>
 #include <errno.h>
 #define CONDOR_COMMON_H
-#include "getopt.h"
+#include "my_getopt.h"
 
 #ifdef WIN32
 #define snprintf _snprintf
@@ -358,48 +358,48 @@ parse_args(int argc, char** argv) {
 
 		switch(i) {
 			case 'a':
-				if (!isempty(optarg)) {
-					Opt.accountingdomain = strdup(optarg);
+				if (!isempty(my_optarg)) {
+					Opt.accountingdomain = strdup(my_optarg);
 				}
 			break;
 			case 'c':
-				if (!isempty(optarg)) {
-					Opt.condoremail = strdup(optarg);
+				if (!isempty(my_optarg)) {
+					Opt.condoremail = strdup(my_optarg);
 				}
 			break;
 
 			case 'e':
-				if (!isempty(optarg)) {
-					Opt.hostallowread = strdup(optarg);
+				if (!isempty(my_optarg)) {
+					Opt.hostallowread = strdup(my_optarg);
 				}
 			break;
 
 			case 't':
-				if (!isempty(optarg)) {
-					Opt.hostallowwrite = strdup(optarg);
+				if (!isempty(my_optarg)) {
+					Opt.hostallowwrite = strdup(my_optarg);
 				}
 			break;
 
 			case 'i':
-				if (!isempty(optarg)) {
-					Opt.hostallowadministrator = strdup(optarg);
+				if (!isempty(my_optarg)) {
+					Opt.hostallowadministrator = strdup(my_optarg);
 				}
 			break;
 
 			case 'j':
-				if (!isempty(optarg)) {
-					Opt.jvmlocation = get_short_path_name(optarg);
+				if (!isempty(my_optarg)) {
+					Opt.jvmlocation = get_short_path_name(my_optarg);
 				}
 			break;
 
 			case 'l':
-				if (!isempty(optarg)) {
-					Opt.perllocation = get_short_path_name(optarg);
+				if (!isempty(my_optarg)) {
+					Opt.perllocation = get_short_path_name(my_optarg);
 				}
 			break;
 
 			case 'n': 
-				if ( optarg && (optarg[0] == 'N' || optarg[0] == 'n') ) {
+				if ( my_optarg && (my_optarg[0] == 'N' || my_optarg[0] == 'n') ) {
 					Opt.newpool = 'N';
 				} else {
 					Opt.newpool = 'Y';
@@ -407,29 +407,29 @@ parse_args(int argc, char** argv) {
 			break;
 			
 			case 'd':
-				if (!isempty(optarg)) {
-					Opt.release_dir = get_short_path_name(optarg);
+				if (!isempty(my_optarg)) {
+					Opt.release_dir = get_short_path_name(my_optarg);
 				}
 			break;
 
 			case 'p':
-				if (!isempty(optarg)) {
-					Opt.poolname = strdup(optarg);
+				if (!isempty(my_optarg)) {
+					Opt.poolname = strdup(my_optarg);
 				}
 			break;
 
 			case 'o':
-				if (!isempty(optarg)) {
-					Opt.poolhostname = strdup(optarg);
+				if (!isempty(my_optarg)) {
+					Opt.poolhostname = strdup(my_optarg);
 				}
 			break;
 			
 			case 'r':
-				Opt.runjobs = toupper(optarg[0]);
+				Opt.runjobs = toupper(my_optarg[0]);
 			break;
 			
 			case 's':
-				if ( optarg && (optarg[0] == 'N' || optarg[0] == 'n') ) {
+				if ( my_optarg && (my_optarg[0] == 'N' || my_optarg[0] == 'n') ) {
 					Opt.submitjobs = 'N';
 				} else {
 					Opt.submitjobs = 'Y';
@@ -437,7 +437,7 @@ parse_args(int argc, char** argv) {
 			break;
 			
 			case 'v':
-				if ( optarg && (optarg[0] == 'N' || optarg[0] == 'n') ) {
+				if ( my_optarg && (my_optarg[0] == 'N' || my_optarg[0] == 'n') ) {
 					Opt.vacatejobs = 'N';
 				} else {
 					Opt.vacatejobs = 'Y';
@@ -445,13 +445,13 @@ parse_args(int argc, char** argv) {
 			break;
 
 			case 'm':
-				if (!isempty(optarg)) {
-					Opt.smtpserver = strdup(optarg);
+				if (!isempty(my_optarg)) {
+					Opt.smtpserver = strdup(my_optarg);
 				}
 			break;
 
 			case 'u':
-				if ( optarg && (optarg[0] == 'N' || optarg[0] == 'n') ) {
+				if ( my_optarg && (my_optarg[0] == 'N' || my_optarg[0] == 'n') ) {
 					Opt.enablevmuniverse = 'N';
 				} else {
 					Opt.enablevmuniverse = 'Y';
@@ -459,26 +459,26 @@ parse_args(int argc, char** argv) {
 			break;
 			
 			case 'w':
-				if (!isempty(optarg)) {
-					Opt.vmmaxnumber = strdup(optarg);
+				if (!isempty(my_optarg)) {
+					Opt.vmmaxnumber = strdup(my_optarg);
 				}
 			break;
 
 			case 'x':
-				if (!isempty(optarg)) {
-					Opt.vmversion = strdup(optarg);
+				if (!isempty(my_optarg)) {
+					Opt.vmversion = strdup(my_optarg);
 				}
 			break;
 
 			case 'y':
-				if (!isempty(optarg)) {
-					Opt.vmmemory = strdup(optarg);
+				if (!isempty(my_optarg)) {
+					Opt.vmmemory = strdup(my_optarg);
 				}
 			break;
 
 			case 'z':
-				if ( optarg ) {
-					Opt.vmnetworking = toupper(optarg[0]);
+				if ( my_optarg ) {
+					Opt.vmnetworking = toupper(my_optarg[0]);
 				}
 			break;
 			
