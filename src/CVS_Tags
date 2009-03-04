@@ -1,3 +1,9 @@
+03/04/2009 V7_3-new_classads_benchmarks-branch
+ Branch for benchmarking new ClassAds (based off V7_3-new_classads-branch)
+
+03/04/2009 V7_3-new_classads-branch
+ Branch for new ClassAds migration work (based off master)
+
 02/23/2009 V7_3_0
  The official tag for 7.3.0, from V7_3_0-branch.
  Version string: $CondorVersion: 7.3.0 Feb 17 2009 BuildID: 132922 $
