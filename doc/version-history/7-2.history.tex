@@ -95,6 +95,12 @@ The log message is only visible at the \Expr{D\_FULLDEBUG} level.
   See \ref{param:EventLogLocking} for the complete definition of
   this variable.
 
+\item Fixed a problem affecting \Condor{starter} when in privsep mode.
+After the user job exited, an error was printed in the
+\Condor{starter} log file complaining that it failed to `chown' the
+sandbox to condor ownership.  This error was not actually harmful,
+just noisy.
+
 \end{itemize}
 
 \noindent Known Bugs:
