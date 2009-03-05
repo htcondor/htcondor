@@ -1058,7 +1058,7 @@ sub CreateLocalConfig
 
 	# ADD size for log files and debug level
 	# default settings are in condor_config, set here to override 
-	print FIX "ALL_DEBUG               = D_FULLDEBUG\n";
+	print FIX "ALL_DEBUG               = D_FULLDEBUG D_SECURITY\n";
 
 	print FIX "MAX_COLLECTOR_LOG       = $logsize\n";
 	print FIX "COLLECTOR_DEBUG         = \n";
@@ -1216,7 +1216,7 @@ sub CreateLocalConfig
 	print FIX "WANT_SUSPEND = FALSE\n";
 	print FIX "WANT_VACATE = FALSE\n";
 	print FIX "COLLECTOR_NAME = Personal Condor for Tests\n";
-	print FIX "ALL_DEBUG = D_FULLDEBUG\n";
+	print FIX "ALL_DEBUG = D_FULLDEBUG D_SECURITY\n";
 	print FIX "SCHEDD_INTERVAL_TIMESLICE = .99\n";
 	#insure path from framework is injected into the new pool
 	print FIX "environment=\"PATH=\'$mypath\'\"\n";
