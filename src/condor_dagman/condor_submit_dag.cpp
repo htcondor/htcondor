@@ -69,6 +69,7 @@ struct SubmitDagOptions
 	bool recurse; // whether to recursively run condor_submit_dag on nested DAGs
 	bool updateSubmit; // allow updating submit file w/o -force
 	bool copyToSpool;
+	bool dumpRescueDag;
 	
 	// non-command line options
 	MyString strLibOut;
@@ -104,6 +105,7 @@ struct SubmitDagOptions
 		recurse = true;
 		updateSubmit = false;
 		copyToSpool = param_boolean( "DAGMAN_COPY_TO_SPOOL", false );
+		dumpRescueDag = false;
 	}
 
 };
@@ -896,6 +898,9 @@ void writeSubmitFile(/* const */ SubmitDagOptions &opts)
 	if(opts.allowVerMismatch) {
 		args.AppendArg("-AllowVersionMismatch");
 	}
+	if(opts.dumpRescueDag) {
+		args.AppendArg("-DumpRescue");
+	}
 
 	MyString arg_str,args_error;
 	if(!args.GetArgsStringV1WackedOrV2Quoted(&arg_str,&args_error)) {
@@ -1140,6 +1145,10 @@ parseCommandLine(SubmitDagOptions &opts, int argc, const char * const argv[])
 			{
 				opts.updateSubmit = true;
 			}
+			else if (strArg.find("-dumpr") != -1) // -DumpRescue
+			{
+				opts.dumpRescueDag = true;
+			}
 			else if ( parsePreservedArgs( strArg, iArg, argc, argv, opts) )
 			{
 				// No-op here
@@ -1272,5 +1281,6 @@ int printUsage()
 	printf("         .condor.sub file and the condor_dagman binary)\n");
 	printf("    -no_recurse         (don't recurse in nested DAGs)\n");
 	printf("    -update_submit      (update submit file if it exists)\n");
+	printf("    -DumpRescue         (DAGMan dumps rescue DAG and exits)\n");
 	exit(1);
 }
