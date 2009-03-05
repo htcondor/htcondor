@@ -1,7 +1,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{\label{sec:platform-aix}AIX}
-\index{platform-specific information!AIX}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{platform-specific information!AIX}
 
 This section provides information specific to the AIX ports of
 Condor.
@@ -11,10 +11,10 @@ Condor.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{platform-specific information!AIX 5.2L}
 
-The version of Condor for AIX 5.2L has the same shortcommings as Condor
+The version of Condor for AIX 5.2L has the same limitations as Condor
 for the AIX5.1L platform.
 
-In addition the Condor binaries for AIX 5.2L will NOT execute on an
+In addition, the Condor binaries for AIX 5.2L will \emph{not} execute on an
 AIX 5.1L machine.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -22,20 +22,19 @@ AIX 5.1L machine.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{platform-specific information!AIX 5.1L}
 
-This is a relatively new port of Condor to the AIX architecture and as such
-there are a few things that aren't completely finished. Over time, these will
-be fixed.
+This is a relatively new port of Condor to the AIX architecture,
+and as such there are a few things that are not finished.
+Over time, these will be fixed.
 
-Condor on AIX 5.1L has a few shortcomings:
+Condor limitations on AIX 5.1L:
 \begin{itemize}
-\item Keyboard Idle and Mouse Idle is wrong and will be fixed in a future
-	release of Condor.
+\item Keyboard Idle and Mouse Idle are wrong.
 \item The memory size of threaded programs is reported incorrectly.
-\item The memory/usage statistics of completed jobs is sometimes wrong.
-\item The Standard Universe is not supported.
-\item The LSF and PBS grid-types of the grid universe aren't supported.
+\item The memory and usage statistics of completed jobs is sometimes wrong.
+\item The standard universe is not supported.
+\item The LSF and PBS grid-types of the grid universe are not supported.
 \end{itemize}
 
-In addition, Condor for the AIX 5.1L machine WILL execute correctly on an
+Note that Condor for the AIX 5.1L machine \emph{will} execute correctly on an
 AIX 5.2L machine.
 
