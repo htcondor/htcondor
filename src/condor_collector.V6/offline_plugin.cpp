@@ -179,6 +179,7 @@ OfflineCollectorPlugin::update (
 		param_integer ( 
 			"OFFLINE_EXPIRE_AD_AFTER",
 			lifetime,
+			0,
 			INT_MAX );
 
 		/* reset any values in the ad that may interfere with
