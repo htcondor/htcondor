@@ -16,6 +16,7 @@
 \oOptArg{-dorescuefrom}{number}
 \OptArg{-csdversion}{version\_string}
 \oOpt{-allowversionmismatch}
+\oOpt{-DumpRescue}
 \OptArg{-dag}{dag\_file}
 \oArg{\OptArg{-dag}{dag\_file\_2} \Dots \OptArg{-dag}{dag\_file\_n} }
 
@@ -149,6 +150,10 @@ Level values and what they produce is described as
        \Condor{submit\_dag} and \Condor{dagman}).  WARNING!  This option
        should be used only if absolutely necessary.  Allowing version
        mismatches can cause subtle problems when running DAGs.}
+    \OptItem{\Opt{-DumpRescue}}{This optional argument causes
+       \Condor{dagman} to immediately dump a rescue DAG and then exit,
+       as opposed to actually running the DAG.  (This feature is mainly
+       intended for testing.)}
     \OptItem{\OptArg{-dag}{filename}}{\Arg{filename} is the name of the
        DAG input file that is set as an argument to \Condor{submit\_dag},
        and passed to \Condor{dagman}.}

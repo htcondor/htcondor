@@ -29,6 +29,7 @@
 \oOpt{-allowversionmismatch}
 \oOpt{-no\_recurse}
 \oOpt{-update\_submit}
+\oOpt{-DumpRescue}
 \Arg{DAGInputFile1}
 \oArg{{DAGInputFile2} \Dots {DAGInputFileN} }
 
@@ -202,6 +203,11 @@ description.
      \File{.condor.sub} file will be overwritten, but the existing values
      of \Opt{-maxjobs}, \Opt{-maxidle}, \Opt{-maxpre}, and \Opt{-maxpost}
      will be preserved.
+  }
+  \OptItem{\Opt{-DumpRescue}}{This optional argument tells \Condor{dagman}
+     to immediately dump a rescue DAG and then exit, as opposed to
+     actually running the DAG.  (This feature is mainly intended for
+     testing.)
   }
   \end{Options}
 
