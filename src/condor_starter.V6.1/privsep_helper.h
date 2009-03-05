@@ -36,6 +36,9 @@ public:
 	//
 	virtual void chown_sandbox_to_condor() = 0;
 
+	// change our state to "sandbox is owned by user"
+	virtual void set_sandbox_owned_by_user() = 0;
+
 	// launch the job as the user
 	//
 	virtual int create_process(const char* path,

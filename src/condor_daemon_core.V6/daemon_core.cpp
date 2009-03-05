@@ -8990,12 +8990,23 @@ InitCommandSockets(int port, ReliSock *rsock, SafeSock *ssock, bool fatal)
 	else {
 			// Use the well-known port specified in the arguments.
 		int on = 1;
+		int so_option = SO_REUSEADDR;
+
+#if defined ( WIN32 )
+		/** To better match the *nix semantics of SO_REUSEADDR we
+			enable MSs SO_EXCLUSIVEADDRUSE option, which prohibits
+			multiple process/identities/etc. from binding to the
+			same address (which is just crazy behaviour!). 
+
+			For further details refer to ticket #288. */
+		so_option = SO_EXCLUSIVEADDRUSE;
+#endif
 
 			// Set options on this socket, SO_REUSEADDR, so that
 			// if we are binding to a well known port, and we
 			// crash, we can be restarted and still bind ok back
 			// to this same port. -Todd T, 11/97
-		if( !rsock->setsockopt(SOL_SOCKET, SO_REUSEADDR,
+		if( !rsock->setsockopt(SOL_SOCKET, so_option,
 							   (char*)&on, sizeof(on)) ) {
 			if (fatal) {
 				EXCEPT("setsockopt() SO_REUSEADDR failed on TCP command port");
@@ -9007,7 +9018,7 @@ InitCommandSockets(int port, ReliSock *rsock, SafeSock *ssock, bool fatal)
 			}
 		}
 		if( ssock &&
-			!ssock->setsockopt(SOL_SOCKET, SO_REUSEADDR,
+			!ssock->setsockopt(SOL_SOCKET, so_option,
 							   (char*)&on, sizeof(on)) ) {
 			if (fatal) {
 				EXCEPT("setsockopt() SO_REUSEADDR failed on UDP command port");
