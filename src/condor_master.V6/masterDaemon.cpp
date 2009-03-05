@@ -563,7 +563,7 @@ int daemon::RealStart( )
 				if (same_host (my_hostname, 
 							   my_daemon->fullHostname())) {
 					command_port = my_daemon->port();
-					dprintf ( D_FULLDEBUG, "Host name matches." );
+					dprintf ( D_FULLDEBUG, "Host name matches.\n" );
 					break;
 				}
 			}
