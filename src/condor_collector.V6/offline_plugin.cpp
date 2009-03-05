@@ -179,6 +179,7 @@ OfflineCollectorPlugin::update (
 		param_integer ( 
 			"OFFLINE_EXPIRE_AD_AFTER",
 			lifetime,
+			0,
 			INT_MAX );
 
 		/* reset any values in the ad that may interfere with
@@ -186,7 +187,7 @@ OfflineCollectorPlugin::update (
 
 		/* Reset Condor state */
 		int now = static_cast<int> ( time ( NULL ) );
-		ad.Assign ( ATTR_STATE, state_to_string ( unclaimed_state ) );
+		ad.Assign ( ATTR_STATE, ATTR_OFFLINE );
 		ad.Assign ( ATTR_ACTIVITY, activity_to_string ( idle_act ) );
 		ad.Assign ( ATTR_ENTERED_CURRENT_STATE, now );
 		ad.Assign ( ATTR_ENTERED_CURRENT_ACTIVITY, now );
@@ -294,7 +295,7 @@ OfflineCollectorPlugin::update (
 
 void
 OfflineCollectorPlugin::invalidate (
-	int			 command,
+	int				command,
 	const ClassAd   &ad )
 {
 
