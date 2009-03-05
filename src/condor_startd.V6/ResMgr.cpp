@@ -2120,6 +2120,7 @@ ResMgr::checkHibernate( void )
         for ( int i = 0; i < nresources; ++i ) {
             resources[i]->enable();
             resources[i]->update();
+			m_hibernating = false;
 	    }
 		
 #     endif
@@ -2202,9 +2203,8 @@ ResMgr::disableResources( const MyString &state_str )
 
 	dprintf ( 
 		D_FULLDEBUG,
-		"All resources disabled: %s (%d).\n", 
-		ok ? "yes" : "no",
-		i + 1 );
+		"All resources disabled: %s.\n", 
+		ok ? "yes" : "no" );
 
 	/* if any of the updates failed, then re-enable all the
 	resources and try again later (next time HIBERNATE evaluates
