@@ -1994,6 +1994,14 @@ section~\ref{sec:Networking} on page~\pageref{sec:Networking}.
   need to go through CCB.  For more information about CCB,
   see page~\pageref{sec:CCB}.
 
+\label{param:SubsysMaxFileDescriptors}
+\item[\MacroB{<SUBSYS>\_MAX\_FILE\_DESCRIPTORS}]
+\index{SUBSYS\_MAX\_FILE\_DESCRIPTORS macro@\texttt{<SUBSYS>\_MAX\_FILE\_DESCRIPTORS}}
+This setting is identical to \MacroNI{MAX\_FILE\_DESCRIPTORS}, but it
+only applies to a specific condor subsystem.  If the
+subsystem-specific setting is unspecified, \MacroNI{MAX\_FILE\_DESCRIPTORS}
+is used.
+
 \label{param:MaxFileDescriptors}
 \item[\Macro{MAX\_FILE\_DESCRIPTORS}] Under Unix, this specifies the
 maximum number of file descriptors to allow the Condor daemon to use.
