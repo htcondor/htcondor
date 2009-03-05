@@ -5455,6 +5455,24 @@ These settings affect the \Condor{starter}.
   cannot keep up with large bursts of activity, such as many jobs all
   completing at the same time.
 
+\label{param:EnforceCpuAffinity} 
+\item[\Macro{ENFORCE\_CPU\_AFFINITY}]
+  A boolean value that defaults to \Expr{False}.  When \Expr{False},
+  the affinity of jobs and their descendants to a CPU is not enforced.
+  When \Expr{True}, Condor jobs and their descendants maintain their
+  affinity to a CPU.
+  When \Expr{True}, more fine grained affinities may be specified with
+  \MacroNI{SLOT<X>\_CPU\_AFFINITY}.
+
+\label{param:SlotXCpuAffinity} 
+\item[\Macro{SLOT<X>\_CPU\_AFFINITY}]
+  A comma separated list of cores to which a Condor job running on
+  a specific slot given by the value of \MacroNI{<X>} show affinity.
+  Note that slots are numbered beginning with the value 1,
+  while CPU cores are numbered beginning with the value 0.
+  This affinity list only takes effect if
+  \Expr{ENFORCE\_CPU\_AFFINITY = True}.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
