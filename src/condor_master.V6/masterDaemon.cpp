@@ -587,8 +587,6 @@ int daemon::RealStart( )
 			dprintf (D_ALWAYS, "Collector port not defined, will use default: %d\n", COLLECTOR_PORT);
 		}
 
-		command_port = 1234;
-
 		dprintf (D_FULLDEBUG, "Starting Collector on port %d\n", command_port);
 
 
