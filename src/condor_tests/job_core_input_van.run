@@ -46,7 +46,7 @@ CondorTest::RegisterExitedSuccess( $testname, \&CondorTest::DefaultOutputTest );
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
 	print "ok\n";
-	CondorTest::debug("$testname: SUCCESS\n",1);
+	CondorTest::debug("$testname: SUCCESS\n",2);
 	exit(0);
 } else {
 	print "bad\n";
