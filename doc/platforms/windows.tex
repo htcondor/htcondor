@@ -56,7 +56,7 @@ not supported.
 \item For \SubmitCmd{grid} universe jobs, the only supported grid type is
 \SubmitCmd{condor}.
 
-\item Accessing files via a network share that requires a kerberos ticket
+\item Accessing files via a network share that requires a Kerberos ticket
 (such as AFS) is not yet supported.
 
 \end{itemize}
@@ -176,7 +176,7 @@ need access to files on a network share or to other resources that aren't
 available to a low-privilege run account.
 
 This feature requires use of a \Condor{credd} daemon for secure
-password storage and retreival. It is first necessary to select
+password storage and retrieval. It is first necessary to select
 a machine on which to run the \Condor{credd}. Often, the machine
 acting as the pool's central manager is a good choice. An important
 restriction, however, is that the \Condor{credd} host must be a
@@ -212,7 +212,7 @@ SEC_CONFIG_INTEGRITY = REQUIRED
 \end{verbatim}
 
 The configuration employed here relies on the \verb@PASSWORD@
-authentication method to faciliate secure communication between execute
+authentication method to facilitate secure communication between execute
 machines and the \Condor{credd}. In order for \verb@PASSWORD@ 
 authenticated communication to work, a ``pool password'' must be chosen
 and distributed. Once a pool password is decided upon, it must be
