@@ -60,7 +60,7 @@ getConfigurationDefaultPositiveIntegerParameter( const char* parameter )
 	else if( ! strcmp( parameter, "HAD_CONNECTION_TIMEOUT" ) ) {
 		return DEFAULT_SEND_COMMAND_TIMEOUT;
 	}
-	else if( ! strcmp( parameter, "MAX_TRANSFER_LIFETIME" ) ) {
+	else if( ! strcmp( parameter, "MAX_TRANSFERER_LIFETIME" ) ) {
     	return 5 * MINUTE;
 	}
 	else if( ! strcmp( parameter, "NEWLY_JOINED_WAITING_VERSION_INTERVAL" ) ) {
