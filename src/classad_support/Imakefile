@@ -31,16 +31,18 @@ LIB_BASE =  $(NEW_CLASSADS_DIR)/libclassad_ns.a ../condor_c++_util/cplus_lib.a \
       $(STLPORT_LIB)
 
 #if defined(CLASSAD_DEPRECATED)
-LIB = $(LIB_BASE) $(IO_LIB) $(SECURITY_LIB) $(CPLUS_LIB) $(SECURITY_LIB) 
+LIB = $(LIB_BASE) $(IO_LIB) $(SECURITY_LIB) $(CPLUS_LIB) $(SECURITY_LIB)
 #else
 LIB = $(LIB_BASE)
 #endif
 
 /* the main condor library target */
-all_target(libclassad_support.a classad_functional_tester classad_unit_tester classad_version test_xml extra_tests)
+all_target(libclassad_support.a)
 library_target(libclassad_support.a,$(OBJ))
 
 release:: all
+
+testbin:: all
 
 /* template instantiations go in here */
 

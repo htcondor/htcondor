@@ -10,7 +10,7 @@
 #   define standalone
 #endif
 
-#define StdUnvProgs shadow.std starter.std 
+#define StdUnvProgs shadow.std starter.std
 #define StdUnvLibs ckpt syscall_lib
 
 #if HAVE_EXT_GLOBUS
@@ -35,11 +35,7 @@
 #define EventdTar
 #endif
 
-#if WANT_CLASSAD_ANALYSIS
 #define AnalysisLibs ClassAdAnalysis
-#else
-#define AnalysisLibs
-#endif
 
 #if WANT_STORK
 #define StorkProgs Stork
@@ -95,7 +91,8 @@
 	StdUnvLibs NetmanLibs	\
 	condor_procd/procd_client.a \
 	condor_privsep/privsep_client.a \
-	chirp AnalysisLibs
+	AnalysisLibs \
+	chirp
 
 
 #if HAS_STATIC
@@ -317,9 +314,7 @@ condor_object_target(amazon)
 condor_object_target(drmaa)
 #endif
 
-#if WANT_CLASSAD_ANALYSIS
 object_target(ClassAdAnalysis,classad_analysis)
-#endif
 
 condor_object_target(chirp)
 
@@ -381,7 +376,7 @@ libcondorapi-release: libcondorapi
 
 check_platform_target
 
-clean:: 
+clean::
 	cd h; $(MAKE) clean
 	$(MAKE) clean-up
 
@@ -480,13 +475,13 @@ today:
 
 
 #if HAS_STATIC
-#define StaticTar static.tar 
+#define StaticTar static.tar
 static.tar: static manpages
 	rm -f static_dir/release.tar
 	cd static_dir; $(TAR_CMD) -cvf release.tar AllFiles
 #else
 #define StaticTar
-#endif 
+#endif
 
 #if HAVE_DEBUGLINK_TARBALL
 
@@ -503,7 +498,7 @@ debugsyms.tar: stripped manpages
 
 #else
 
-#define DebugLinkTar 
+#define DebugLinkTar
 
 strip.tar: stripped manpages
 	rm -f strip_dir/release.tar

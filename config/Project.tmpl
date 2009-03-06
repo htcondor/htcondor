@@ -2,13 +2,13 @@
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,10 +17,17 @@
  *
  ***************************************************************/
 
-/************************************************************************** 
+/**************************************************************************
 ** There shouldn't be any platform-specific info in this.  By now, all
 ** the platform, version and OS specific files have been included.
 **************************************************************************/
+
+/* Function to search for a library $(1) in a set of directories $(2) */
+libsearch  = $(wildcard $(addsuffix /lib$(1).a,$(2) ) )
+
+/* Function to search for a set of libraries $(1) in a set of directories $(2) */
+libsearchm = $(foreach F, $(1),$(call libsearch,$(F),$(2)) )
+
 
 TOP = Top
 PLATFORM = Platform
@@ -34,6 +41,11 @@ STATIC_DIR	=	../static_dir
 STATIC_CONTRIB	=	../static_contrib
 STATIC_UNSTRIP_DIR =	../static_unstrip_dir
 
+CLASSAD_DIRS =		../classad ../classad_analysis ../classad_support
+CLASSAD_LIBNAMES =	support analysis conversion ns
+CLASSAD_LIBS =		$(addprefix classad_, $(CLASSAD_LIBNAMES))
+CLASSAD_LIB_FILES =	$(call libsearchm,$(CLASSAD_LIBS),$(CLASSAD_DIRS))
+
 LIB_DIR =		$(RELEASE_DIR)/lib
 CONFIG_DIR =		$(TOP)/config
 SRC_TREE =		$(TOP)/src
@@ -43,7 +55,7 @@ NEW_INCLUDE_DIR =	../condor_includes
 C_PLUS_INCLUDE =	../condor_c++_util
 DAEMONCLIENT_INCLUDE =	../condor_daemon_client
 DAEMONCORE_INCLUDE =	../condor_daemon_core.V6
-CLASSAD_INCLUDE =       ../classad ../classad_support
+CLASSAD_INCLUDE =       $(CLASSAD_DIRS)
 CCB_INCLUDE = ../ccb
 
 
@@ -223,7 +235,7 @@ NOTE: we also need the same crap for libpcre.a...
 #  if HAS_EXTERNALS
      OPENSSL_FLAGS = -I$(OPENSSL_DIR)/include
      OPENSSL_LIB = $(OPENSSL_DIR)/lib/libssl.a $(OPENSSL_DIR)/lib/libcrypto.a
-     OPENSSL_MD_LIB = $(OPENSSL_DIR)/lib/libcrypto.a 
+     OPENSSL_MD_LIB = $(OPENSSL_DIR)/lib/libcrypto.a
 #  endif
 #endif
 
@@ -260,13 +272,13 @@ PCRE_LIB = $(PCRE_DIR)/lib/libpcre.a
 #ifdef WANT_QUILL
 #if HAS_EXTERNALS
 /* These variables should be coalesced into something more meaningful */
-QUILL_LIB = $(POSTGRESQL_LIB)/libpq.a 
-QUILL_INC = -I$(POSTGRESQL_INC) 
-POSTGRESQL_LIBS = $(POSTGRESQL_LIB)/libpq.a 
+QUILL_LIB = $(POSTGRESQL_LIB)/libpq.a
+QUILL_INC = -I$(POSTGRESQL_INC)
+POSTGRESQL_LIBS = $(POSTGRESQL_LIB)/libpq.a
 TT_LIB = $(POSTGRESQL_LIBS) $(ORACLE_LIB)
 TT_INC = -I$(POSTGRESQL_INC) $(ORACLE_INC)
 #endif
-QUILL_FLAGS = -DWANT_QUILL 
+QUILL_FLAGS = -DWANT_QUILL
 #endif
 
 #ifdef WANT_LEASE_MANAGER
@@ -299,13 +311,16 @@ ALL_INCLUDES = \
 	$(DAEMONCORE_INCLUDE)		\
 	$(CLASSAD_INCLUDE)		\
 	$(CCB_INCLUDE)
-VENDOR_C_FLAGS = $(addprefix -I, $(ALL_INCLUDES) ) \
-		 $(CONFIGURE_DEFS) -D$(ARCH_FLAG)=$(ARCH_FLAG) \
-		 -D$(OS_FLAG)=$(OS_FLAG) $(SITE_C_FLAGS) \
-		 $(SECURITY_FLAGS) $(NETMAN_FLAGS) \
-		 $(QUILL_FLAGS) $(TT_FLAGS) $(GCB_FLAGS) \
-		 $(LEASE_MANAGER_FLAGS) \
-		 $(CONFIGURE_CFLAGS) $(CONFIGURE_CPPFLAGS)
+VENDOR_C_FLAGS = \
+	$(addprefix -I, $(ALL_INCLUDES) )	\
+	$(CONFIGURE_DEFS)			\
+	-D$(ARCH_FLAG)=$(ARCH_FLAG)		\
+	-D$(OS_FLAG)=$(OS_FLAG)			\
+	$(SITE_C_FLAGS)				\
+	$(SECURITY_FLAGS) $(NETMAN_FLAGS)	\
+	$(QUILL_FLAGS) $(TT_FLAGS) $(GCB_FLAGS)	\
+	$(LEASE_MANAGER_FLAGS)			\
+	$(CONFIGURE_CFLAGS) $(CONFIGURE_CPPFLAGS)
 
 
 /* This flag is a bad idea since when this stuff eventually goes truly obselete
@@ -336,10 +351,10 @@ GPP_SHARED_FLAGS = $(GPP_VERS_FLAGS) $(GPP_ARCH_FLAGS)
 SHARED_COMPILER_FLAGS = $(VENDOR_C_FLAGS) $(COMP_DEBUG_FLAGS) $(CC_PIC_FLAG) PlatformFlags $(CCOMPILER_ID) $(GSOAP_FLAGS) $(PCRE_FLAGS) $(COREDUMPER_FLAGS)
 
 /* We use separate flag definitions for the C compiler and the C++ compiler.
-	These are the flags actually passed to the respective compilers. 
+	These are the flags actually passed to the respective compilers.
 	Don't forget to mix in flags specific to one compiler or the other. */
 STD_C_FLAGS = $(SHARED_COMPILER_FLAGS) $(GCC_DEBUG_FLAGS) PlatformGccFlags
-STD_C_PLUS_FLAGS = $(SHARED_COMPILER_FLAGS) $(GPP_DEBUG_FLAGS) $(GPP_SHARED_FLAGS) PlatformGppFlags 
+STD_C_PLUS_FLAGS = $(SHARED_COMPILER_FLAGS) $(GPP_DEBUG_FLAGS) $(GPP_SHARED_FLAGS) PlatformGppFlags
 
 TESTSUITE_FLAGS_GCC =  $(STD_C_FLAGS)
 TESTSUITE_FLAGS_GPP = $(STD_C_PLUS_FLAGS)
@@ -361,6 +376,7 @@ SYSAPI_LIB = ../condor_sysapi/libsysapi.a
 DAEMONCORE_LIB = ../condor_daemon_core.V6/daemon_core.a $(COREDUMPER_LINK_LIB) $(DAEMONCORE_WRAP_LDFLAGS)
 PROCD_CLIENT_LIB = ../condor_procd/procd_client.a
 PRIVSEP_CLIENT_LIB = ../condor_privsep/privsep_client.a
+NEW_CLASSAD_LIB = -L../classad -lclassad_ns
 
 
 /* common ld flags which should be first in the list */
@@ -368,7 +384,7 @@ COM_LDFLAGS_F = $(GCC_RDYNAMIC_FLAG) $(GCC_STACK_PROTECTOR) $(GCC_HASH_STYLE_FLA
                 $(LDFLAGS) $(CONFIGURE_LIBS) $(CONFIGURE_LDFLAGS)
 
 /* common ld flags which should be last in the list */
-COM_LDFLAGS_L = 
+COM_LDFLAGS_L =
 
 /* The various lists of needed ldflags for differing contexts */
 NOWRAP_LDFLAGS = $(COM_LDFLAGS_F) $(PLATFORM_LDFLAGS) $(COM_LDFLAGS_L)
@@ -406,4 +422,40 @@ STD_LIBS = \
   $(POST_EXT_LIBS) \
   $(PROCD_CLIENT_LIB) \
   $(PRIVSEP_CLIENT_LIB) \
-  $(CUTIL_LIB)
+  $(CUTIL_LIB) \
+  $(addprefix -L , $(CLASSAD_DIRS)) \
+  $(addprefix -l , $(CLASSAD_LIBS))
+
+STD_LIB_FILES = \
+  $(CUTIL_LIB) \
+  $(CPLUS_LIB) \
+  $(CKPT_SERV_LIB) \
+  $(QMGMT_LIB) \
+  $(PROCAPI_LIB) \
+  $(SYSAPI_LIB) \
+  $(CPLUS_LIB) \
+  $(CLASSAD_LIB) \
+  $(IO_LIB) \
+  $(CPLUS_LIB) \
+  $(CUTIL_LIB) \
+  $(SYSAPI_LIB) \
+  $(CPLUS_LIB) \
+  $(CUTIL_LIB) \
+  $(SYSAPI_LIB) \
+  $(CLASSAD_LIB) \
+  $(IO_LIB) \
+  $(CPLUS_LIB) \
+  $(IO_LIB) \
+  $(CPLUS_LIB) \
+  $(CUTIL_LIB) \
+  $(GSOAP_LIB) \
+  $(PRE_EXT_LIBS) \
+  $(SECURITY_LIB) \
+  $(PCRE_LIB) \
+  $(GCB_LIB) \
+  $(POST_EXT_LIBS) \
+  $(PROCD_CLIENT_LIB) \
+  $(PRIVSEP_CLIENT_LIB) \
+  $(CUTIL_LIB) \
+  $(CLASSAD_LIB_FILES)
+

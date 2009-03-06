@@ -50,9 +50,7 @@
 #include "condor_version.h"
 #include "subsystem_info.h"
 
-#ifdef WANT_CLASSAD_ANALYSIS
 #include "../classad_analysis/analysis.h"
-#endif
 
 #ifdef WANT_QUILL
 #include "sqlquery.h"
@@ -149,9 +147,7 @@ static	CondorQuery submittorQuery(SUBMITTOR_AD);
 
 static	ClassAdList	scheddList;
 
-#ifdef WANT_CLASSAD_ANALYSIS
 static  ClassAdAnalyzer analyzer;
-#endif
 
 static char* format_owner( char*, AttrList* );
 
@@ -1153,15 +1149,9 @@ processCommandLineArguments (int argc, char *argv[])
         else
         if (match_prefix( arg, "better-analyze")
 			|| match_prefix( arg , "better-analyse")) {
-#ifdef WANT_CLASSAD_ANALYSIS
             analyze = true;
             better_analyze = true;
 			attrs.clearAll();
-#else
-            fprintf(stderr, "Sorry, the -better-analyze option is not available "
-                            "on this platform.\n");
-            exit(1);
-#endif
         }
 		else
 		if (match_prefix( arg, "run")) {
@@ -1812,9 +1802,7 @@ usage (char *myName)
 		"\t\t-xml\t\t\tDisplay entire classads, but in XML\n"
 		"\t\t-format <fmt> <attr>\tPrint attribute attr using format fmt\n"
 		"\t\t-analyze\t\tPerform schedulability analysis on jobs\n"
-#ifdef WANT_CLASSAD_ANALYSIS
         "\t\t-better-analyze\t\tImproved version of -analyze\n"
-#endif
 		"\t\t-run\t\t\tGet information about running jobs\n"
 		"\t\t-hold\t\t\tGet information about jobs on hold\n"
 		"\t\t-goodput\t\tDisplay job goodput statistics\n"	
@@ -2787,9 +2775,7 @@ doRunAnalysisToBuffer( ClassAd *request )
 	if( fReqConstraint == totalMachines ) {
 		strcat( return_buff, "\nWARNING:  Be advised:\n");
 		strcat( return_buff, "   No resources matched request's constraints\n");
-#ifdef WANT_CLASSAD_ANALYSIS
         if (!better_analyze) {
-#endif
             char reqs[2048];
             ExprTree *reqExp;
             sprintf( return_buff, "%s   Check the %s expression below:\n\n" , 
@@ -2802,12 +2788,9 @@ doRunAnalysisToBuffer( ClassAd *request )
                 reqExp->PrintToStr( reqs );
                 sprintf( return_buff, "%s%s\n\n", return_buff, reqs );
             }
-#ifdef WANT_CLASSAD_ANALYSIS
         }
-#endif
 	}
 
-#if defined( WANT_CLASSAD_ANALYSIS )
     if (better_analyze) {
         std::string buffer_string = "";
         char ana_buffer[SHORT_BUFFER_SIZE];
@@ -2819,7 +2802,6 @@ doRunAnalysisToBuffer( ClassAd *request )
             strcat( return_buff, ana_buffer );
         }
     }
-#endif
 
 	if( fOffConstraint == totalMachines ) {
 		sprintf( return_buff, "%s\nWARNING:  Be advised:", return_buff );
@@ -2827,7 +2809,6 @@ doRunAnalysisToBuffer( ClassAd *request )
 			"resource's constraints\n\n", return_buff, cluster, proc);
 	}
 
-#if defined( WANT_CLASSAD_ANALYSIS )
     if (better_analyze) {
         std::string buffer_string = "";
         char ana_buffer[SHORT_BUFFER_SIZE];
@@ -2839,7 +2820,6 @@ doRunAnalysisToBuffer( ClassAd *request )
             strcat( return_buff, ana_buffer );
         }
     }
-#endif
 
 	/* Attributes to check for grid universe matchmaking */ 
 	const char * ads_to_check[] = { ATTR_GLOBUS_RESOURCE,

@@ -1,9 +1,3 @@
-#if HAVE_EXT_CLASSADS
-#define New_classads_lib		-L$(NEW_CLASSADS_LIB) -lclassad_ns
-#else
-#define New_classads_lib
-#endif
-
 NAME = condor_dagman
 all_target($(NAME) condor_submit_dag)
 
@@ -12,8 +6,8 @@ C_PLUS_FLAGS = -I. $(STD_C_PLUS_FLAGS) \
 	-Wall
 
 CFLAGS = $(STD_C_FLAGS)
-LIB = $(DAEMONCORE_LIB) $(STD_LIBS) $(CONFIGURE_GSOAP_LDFLAGS) New_classads_lib
-TOOL_LIB = $(STD_LIBS) New_classads_lib
+LIB = $(DAEMONCORE_LIB) $(STD_LIBS) $(CONFIGURE_GSOAP_LDFLAGS)
+TOOL_LIB = $(STD_LIBS)
 
 soapobjs(dagman)
 

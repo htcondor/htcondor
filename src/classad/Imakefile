@@ -36,7 +36,7 @@ CLASSAD_SRC_1	= $(CLASSAD_SRC_0) view.cpp collection.cpp \
 	collectionBase.cpp   \
 	transaction.cpp     \
 	query.cpp \
-	indexfile.cpp 
+	indexfile.cpp
 CLASSAD_OBJ_1	= $(CLASSAD_OBJ_0) view.o collection.o collectionBase.o   \
 	transaction.o     \
 	query.o \
@@ -74,6 +74,8 @@ all_target(libclassad_ns.a classad_functional_tester classad_unit_tester classad
 library_target(libclassad_ns.a,$(OBJ))
 
 release:: all
+
+testbin:: all
 
 /* template instantiations go in here */
 
@@ -172,4 +174,3 @@ c_plus_target (test_xml, test_xml.o, $(LIB))
 c_plus_target (extra_tests, extra_tests.o, $(LIB))
 c_plus_target (sample, sample.o, $(LIB))
 c_plus_target (man_cache_test, man_cache_test.o, $(LIB))
-

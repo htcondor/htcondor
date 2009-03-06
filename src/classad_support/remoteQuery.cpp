@@ -17,7 +17,7 @@
  *
  ***************************************************************/
 
-
+#include "condor_common.h"
 #include "classad/common.h"
 #include "collectionServer.h"
 #include "remoteQuery.h"
