@@ -109,6 +109,11 @@ just noisy.
   use \MacroNI{MAX\_TRANSFERER\_LIFETIME} as the limit of the High
   Availability transferer lifetime.
 
+% gittrac #285
+\item Fixed a bug that caused \Condor{dagman} to crash if a splice
+DAG has node categories (in other words, if a DAG with node categories
+is spliced into another DAG).
+
 \end{itemize}
 
 \noindent Known Bugs:
