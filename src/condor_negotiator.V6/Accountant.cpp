@@ -295,27 +295,28 @@ float Accountant::GetPriority(const MyString& CustomerName)
 //------------------------------------------------------------------
 
 // Get group priority local helper function.
-static float getGroupPriorityFactor(const MyString& CustomerName) 
+float Accountant::getGroupPriorityFactor(const MyString& CustomerName) 
 {
 	float priorityFactor = 0.0;	// "error" value
 
-	// Group names contain a '.' character.
-	// To do:  This is a weak test.  Improve the group test by also checking
-	// the GROUP_NAMES config macro value.
+	// Group names contain a '.' character, so check for it.
 	int pos = CustomerName.FindChar('.');
-	if ( pos == 0 ) return priorityFactor;
-
-	// Group separator character found: Accounting groups
+	if ( pos <= 0 ) return priorityFactor;
+	// Group separator character found: if the group name appears in
+	// config macro GROUP_NAMES, then we know to treat it as a group.
 	MyString GroupName = CustomerName;
 	GroupName.setChar(pos,'\0');
-	MyString groupPrioFactorConfig;
-	groupPrioFactorConfig.sprintf("GROUP_PRIO_FACTOR_%s",
-			GroupName.Value() );
+	if (GroupNamesList && GroupNamesList->contains_anycase(GroupName.Value())) 
+	{
+		MyString groupPrioFactorConfig;
+		groupPrioFactorConfig.sprintf("GROUP_PRIO_FACTOR_%s",
+				GroupName.Value() );
 #define ERR_CONVERT_DEFPRIOFACTOR   (-1.0)
-	double tmpPriorityFactor = param_double(groupPrioFactorConfig.Value(),
-			   ERR_CONVERT_DEFPRIOFACTOR);
-	if (tmpPriorityFactor != ERR_CONVERT_DEFPRIOFACTOR) {
-		priorityFactor = tmpPriorityFactor;
+		double tmpPriorityFactor = param_double(groupPrioFactorConfig.Value(),
+				   ERR_CONVERT_DEFPRIOFACTOR);
+		if (tmpPriorityFactor != ERR_CONVERT_DEFPRIOFACTOR) {
+			priorityFactor = tmpPriorityFactor;
+		}
 	}
 	return priorityFactor;
 }
