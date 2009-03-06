@@ -3170,7 +3170,6 @@ Dag::PrefixAllNodeNames(const MyString &prefix)
 	debug_printf(DEBUG_QUIET, "Leaving: Dag::PrefixAllNodeNames()\n");
 }
 
-
 //---------------------------------------------------------------------------
 int 
 Dag::InsertSplice(MyString spliceName, Dag *splice_dag)
@@ -3336,7 +3335,30 @@ Dag::AssumeOwnershipofNodes(OwnedMaterials *om)
 		}
 	}
 
-	// 1b. Copy the nodes into _jobs.
+	// 1b. Re-set the node categories (if any) so they point to the
+	// ThrottleByCategory object in *this* DAG rather than the splice
+	// DAG (which will be deleted soon).
+	for ( i = 0; i < nodes->length(); i++ ) {
+		Job *tmpNode = (*nodes)[i];
+		ThrottleByCategory::ThrottleInfo *catThrottle =
+					tmpNode->GetThrottleInfo();
+		if ( catThrottle != NULL ) {
+
+				// Copy the category throttle setting from the splice
+				// DAG to the upper DAG (creates the category if we don't
+				// already have it).
+			_catThrottles.SetThrottle( catThrottle->_category,
+						catThrottle->_maxJobs );
+
+				// Now re-set the category in the node, so that the
+				// category info points to the upper DAG rather than the
+				// splice DAG.
+			tmpNode->SetCategory( catThrottle->_category->Value(),
+						_catThrottles );
+		}
+	}
+
+	// 1c. Copy the nodes into _jobs.
 	for (i = 0; i < nodes->length(); i++) {
 		_jobs.Append((*nodes)[i]);
 	}

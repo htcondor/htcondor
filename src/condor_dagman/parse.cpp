@@ -1474,6 +1474,8 @@ parse_splice(
 	debug_printf(DEBUG_QUIET, "Splice scope is: %s\n", 
 		current_splice_scope().Value());
 	splice_dag->PrefixAllNodeNames(MyString(current_splice_scope()));
+	splice_dag->_catThrottles.PrefixAllCategoryNames(
+				MyString(current_splice_scope()));
 
 	// Print out a useful piece of debugging...
 	splice_dag->PrintJobList();

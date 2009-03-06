@@ -663,13 +663,15 @@ Job::NumChildren() const
 void
 Job::SetCategory( const char *categoryName, ThrottleByCategory &catThrottles )
 {
-	if ( _throttleInfo != NULL ) {
+	MyString	tmpName( categoryName );
+
+	if ( (_throttleInfo != NULL) &&
+				(tmpName != *(_throttleInfo->_category)) ) {
 		debug_printf( DEBUG_NORMAL, "Warning: new category %s for node %s "
 					"overrides old value %s\n", categoryName, GetJobName(),
 					_throttleInfo->_category->Value() );
 	}
 
-	MyString	tmpName( categoryName );
 	ThrottleByCategory::ThrottleInfo *throttleInfo =
 				catThrottles.GetThrottleInfo( &tmpName );
 	if ( throttleInfo != NULL ) {
@@ -678,7 +680,6 @@ Job::SetCategory( const char *categoryName, ThrottleByCategory &catThrottles )
 		_throttleInfo = catThrottles.AddCategory( &tmpName );
 	}
 }
-
 
 void
 Job::PrefixName(const MyString &prefix)
