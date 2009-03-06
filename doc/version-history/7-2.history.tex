@@ -101,6 +101,10 @@ After the user job exited, an error was printed in the
 sandbox to condor ownership.  This error was not actually harmful,
 just noisy.
 
+\item Fixed a bug in the \Condor{master} that caused it to not have
+  REPLICATION in it's default \MacroNI{DC\_DAEMON\_LIST}.  The example
+  configuration file for HAD has been updated to match, as well.
+
 \end{itemize}
 
 \noindent Known Bugs:
