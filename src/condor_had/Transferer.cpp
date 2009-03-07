@@ -28,7 +28,7 @@
 
 extern char* myName;
 // for daemon core
-DECL_SUBSYSTEM( "TRANSFERER", SUBSYSTEM_TYPE_DAEMON );// used by Daemon Core
+DECL_SUBSYSTEM( "TRANSFERER", SUBSYSTEM_TYPE_DAEMON );	// used by Daemon Core
 
 // single 'condor_transferer' object
 BaseReplicaTransferer* replicaTransferer = NULL; 

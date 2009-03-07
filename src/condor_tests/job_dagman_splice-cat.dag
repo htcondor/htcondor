@@ -1,0 +1,15 @@
+job A0 job_dagman_splice-cat.cmd
+vars A0 racer = "Eddy Merckx"
+
+job B0 job_dagman_splice-cat.cmd
+category B0 cat0
+
+job C0 job_dagman_splice-cat.cmd
+category C0 cat0
+
+splice D0 job_dagman_splice-cat-splice1.dag
+
+parent A0 child B0 C0
+parent B0 C0 child D0
+
+maxjobs cat0 10

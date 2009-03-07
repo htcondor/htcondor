@@ -70,6 +70,7 @@ struct SubmitDagOptions
 	bool updateSubmit; // allow updating submit file w/o -force
 	bool copyToSpool;
 	bool importEnv; // explicitly import environment into .condor.sub file
+	bool dumpRescueDag;
 	
 	// non-command line options
 	MyString strLibOut;
@@ -106,6 +107,7 @@ struct SubmitDagOptions
 		updateSubmit = false;
 		copyToSpool = param_boolean( "DAGMAN_COPY_TO_SPOOL", false );
 		importEnv = false;
+		dumpRescueDag = false;
 	}
 
 };
@@ -920,6 +922,9 @@ void writeSubmitFile(/* const */ SubmitDagOptions &opts)
 	if(opts.allowVerMismatch) {
 		args.AppendArg("-AllowVersionMismatch");
 	}
+	if(opts.dumpRescueDag) {
+		args.AppendArg("-DumpRescue");
+	}
 
 	MyString arg_str,args_error;
 	if(!args.GetArgsStringV1WackedOrV2Quoted(&arg_str,&args_error)) {
@@ -1170,6 +1175,10 @@ parseCommandLine(SubmitDagOptions &opts, int argc, const char * const argv[])
 			else if (strArg.find("-import_env") != -1) // -import_env
 			{
 				opts.importEnv = true;
+			}			     
+			else if (strArg.find("-dumpr") != -1) // -DumpRescue
+			{
+				opts.dumpRescueDag = true;
 			}
 			else if ( parsePreservedArgs( strArg, iArg, argc, argv, opts) )
 			{
@@ -1304,5 +1313,6 @@ int printUsage()
 	printf("    -no_recurse         (don't recurse in nested DAGs)\n");
 	printf("    -update_submit      (update submit file if it exists)\n");
 	printf("    -import_env         (explicitly import env into submit file)\n");
+	printf("    -DumpRescue         (DAGMan dumps rescue DAG and exits)\n");
 	exit(1);
 }

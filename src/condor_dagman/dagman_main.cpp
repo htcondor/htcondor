@@ -74,6 +74,7 @@ static void Usage() {
             "\t\t[-AutoRescue <0|1>]\n"
             "\t\t[-DoRescueFrom <int N>]\n"
 			"\t\t[-AllowVersionMismatch]\n"
+			"\t\t[-DumpRescue]\n"
             "\twhere NAME is the name of your DAG.\n"
             "\tdefault -Debug is -Debug %d\n", DEBUG_NORMAL);
 	DC_Exit( EXIT_ERROR );
@@ -116,7 +117,8 @@ Dagman::Dagman() :
 	autoRescue(false),
 	doRescueFrom(0),
 	maxRescueDagNum(ABS_MAX_RESCUE_DAG_NUM),
-	rescueFileToRun("")
+	rescueFileToRun(""),
+	dumpRescueDag(false)
 {
 }
 
@@ -579,6 +581,9 @@ int main_init (int argc, char ** const argv) {
         } else if( !strcasecmp( "-AllowVersionMismatch", argv[i] ) ) {
 			allowVerMismatch = true;
 
+        } else if( !strcasecmp( "-DumpRescue", argv[i] ) ) {
+			dagman.dumpRescueDag = true;
+
         } else {
     		debug_printf( DEBUG_SILENT, "\nUnrecognized argument: %s\n",
 						argv[i] );
@@ -783,7 +788,6 @@ int main_init (int argc, char ** const argv) {
 	// fix up any use of $(JOB) in the vars values for any node
 	dagman.dag->ResolveVarsInterpolations();
 
-
 /*	debug_printf(DEBUG_QUIET, "COMPLETED DAG!\n");*/
 /*	dagman.dag->PrintJobList();*/
 
@@ -797,6 +801,15 @@ int main_init (int argc, char ** const argv) {
 				  dagman.dag->NumNodes() );
 
 	dagman.dag->DumpDotFile();
+
+	if ( dagman.dumpRescueDag ) {
+    	debug_printf( DEBUG_QUIET, "Dumping rescue DAG and exiting "
+					"because of -DumpRescue flag\n" );
+		dagman.dag->Rescue( dagman.primaryDagFile.Value(),
+					dagman.multiDags, dagman.maxRescueDagNum );
+		ExitSuccess();
+		return 0;
+	}
 
     //------------------------------------------------------------------------
     // Bootstrap and Recovery

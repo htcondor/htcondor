@@ -1763,6 +1763,15 @@ TESTCLASS(job_dagman_subdag-A,quick)
 TESTCLASS(job_dagman_subdag-A,full)
 TESTCLASS(job_dagman_subdag-A,quicknolink)
 
+/* Turned off until gittrace #285 is fixed.  wenger 2009-03-05.
+* DESC(job_dagman_splice-cat,"Test DAG splice/node category")
+* RUN(job_dagman_splice-cat)
+* TESTCLASS(job_dagman_splice-cat,dagman)
+* TESTCLASS(job_dagman_splice-cat,quick)
+* TESTCLASS(job_dagman_splice-cat,full)
+* TESTCLASS(job_dagman_splice-cat,quicknolink)
+*/
+
 /* Sample performance tests */
 
 /*
