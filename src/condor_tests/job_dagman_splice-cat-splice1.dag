@@ -9,7 +9,9 @@ category C1 cat1
 
 splice D1 job_dagman_splice-cat-splice2.dag
 
+splice E1 job_dagman_splice-cat-splice2.dag
+
 parent A1 child B1 C1
-parent B1 C1 child D1
+parent B1 C1 child D1 E1
 
 maxjobs cat1 11
