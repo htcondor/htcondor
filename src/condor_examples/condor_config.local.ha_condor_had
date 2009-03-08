@@ -13,8 +13,8 @@ CONDOR_HOST=
 ## For simplicity in writing other expressions, define a variable
 ## for each potential central manager in the pool. 
 ## These are samples.
-CENTRAL_MANAGER1 = cm1.cs.technion.ac.il
-CENTRAL_MANAGER2 = cm2.cs.technion.ac.il
+CENTRAL_MANAGER1 = cm1.domain.name
+CENTRAL_MANAGER2 = cm2.domain.name
 ## A list of all potential central managers in the pool.
 COLLECTOR_HOST = $(CENTRAL_MANAGER1),$(CENTRAL_MANAGER2)
 
@@ -39,7 +39,9 @@ REPLICATION_ARGS = -p $(REPLICATION_PORT)
 ## as HAD_LIST. In addition, for each hostname, it should specify 
 ## the port number of condor_replication daemon running on that host.
 ## This parameter is mandatory and has no default value
-REPLICATION_LIST = $(CENTRAL_MANAGER1):$(REPLICATION_PORT),$(CENTRAL_MANAGER2):$( REPLICATION_PORT)
+REPLICATION_LIST = \
+	$(CENTRAL_MANAGER1):$(REPLICATION_PORT), \
+	$(CENTRAL_MANAGER2):$(REPLICATION_PORT)
 
 
 ## The following list must contain the same addresses in the same order 
@@ -47,7 +49,9 @@ REPLICATION_LIST = $(CENTRAL_MANAGER1):$(REPLICATION_PORT),$(CENTRAL_MANAGER2):$
 ## the port number of condor_had daemon running on that host.
 ## The first machine in the list will be the PRIMARY central manager
 ## machine, in case HAD_USE_PRIMARY is set to true.
-HAD_LIST = $(CENTRAL_MANAGER1):$(HAD_PORT),$(CENTRAL_MANAGER2):$(HAD_PORT)
+HAD_LIST = \
+	$(CENTRAL_MANAGER1):$(HAD_PORT), \
+	$(CENTRAL_MANAGER2):$(HAD_PORT)
 
 
 ## HAD connection time.
@@ -89,11 +93,9 @@ REPLICATION = $(SBIN)/condor_replication
 
 ## the master should start at least these four daemons
 DAEMON_LIST = MASTER, COLLECTOR, NEGOTIATOR, HAD
+
 # The default for DC_DAEMON_LIST is usually correct.
-#DC_DAEMON_LIST = \
-#MASTER, STARTD, SCHEDD, KBDD, COLLECTOR, NEGOTIATOR, EVENTD, \
-#VIEW_SERVER, CONDOR_VIEW, VIEW_COLLECTOR, HAWKEYE, CREDD, HAD, \
-#QUILL
+DC_DAEMON_LIST = + HAD, REPLICATION
 
 
 ## Enables/disables the replication feature of HAD daemon
@@ -125,12 +127,12 @@ MASTER_NEGOTIATOR_CONTROLLER	= HAD
 MASTER_HAD_BACKOFF_CONSTANT	= 360
 
 
-## The size of the log file
+## The size of the HAD log file
 MAX_HAD_LOG = 640000
 ## debug level 
-HAD_DEBUG = D_COMMAND
+HAD_DEBUG   = D_COMMAND
 ## location of the condor_had log file
-HAD_LOG = $(LOG)/HADLog
+HAD_LOG     = $(LOG)/HADLog
 
 ## The size of replication log file
 MAX_REPLICATION_LOG     = 640000
@@ -138,3 +140,10 @@ MAX_REPLICATION_LOG     = 640000
 REPLICATION_DEBUG       = D_COMMAND
 ## Replication log file
 REPLICATION_LOG         = $(LOG)/ReplicationLog
+
+## The size of transferer log file
+MAX_TRANSFERER_LOG      = 640000
+## Replication debug level 
+TRANSFERER_DEBUG        = D_COMMAND
+## Replication log file
+TRANSFERER_LOG          = $(LOG)/TransferLog

@@ -187,7 +187,7 @@ OfflineCollectorPlugin::update (
 
 		/* Reset Condor state */
 		int now = static_cast<int> ( time ( NULL ) );
-		ad.Assign ( ATTR_STATE, ATTR_OFFLINE );
+		ad.Assign ( ATTR_STATE, state_to_string ( unclaimed_state ) );
 		ad.Assign ( ATTR_ACTIVITY, activity_to_string ( idle_act ) );
 		ad.Assign ( ATTR_ENTERED_CURRENT_STATE, now );
 		ad.Assign ( ATTR_ENTERED_CURRENT_ACTIVITY, now );
@@ -295,7 +295,7 @@ OfflineCollectorPlugin::update (
 
 void
 OfflineCollectorPlugin::invalidate (
-	int				command,
+	int			 command,
 	const ClassAd   &ad )
 {
 
