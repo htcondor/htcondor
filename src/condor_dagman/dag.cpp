@@ -3135,7 +3135,7 @@ Dag::PrefixAllNodeNames(const MyString &prefix)
     Job *job = NULL;
 	MyString key;
 
-	debug_printf(DEBUG_QUIET, "Entering: Dag::PrefixAllNodeNames()\n");
+	debug_printf(DEBUG_DEBUG_1, "Entering: Dag::PrefixAllNodeNames()\n");
 
     _jobs.Rewind();
     while( (job = _jobs.Next()) ) {
@@ -3167,7 +3167,7 @@ Dag::PrefixAllNodeNames(const MyString &prefix)
 		}
     }
 
-	debug_printf(DEBUG_QUIET, "Leaving: Dag::PrefixAllNodeNames()\n");
+	debug_printf(DEBUG_DEBUG_1, "Leaving: Dag::PrefixAllNodeNames()\n");
 }
 
 //---------------------------------------------------------------------------
@@ -3268,7 +3268,7 @@ Dag::LiftSplices(SpliceLayer layer)
 	_splices.startIterations();
 	while(_splices.iterate(key, splice)) {
 
-		debug_printf(DEBUG_QUIET, "Lifting splice %s\n", key.Value());
+		debug_printf(DEBUG_DEBUG_1, "Lifting splice %s\n", key.Value());
 		om = splice->LiftSplices(DESCENDENTS);
 		// this function moves what it needs out of the returned object
 		AssumeOwnershipofNodes(om);
@@ -3296,13 +3296,13 @@ Dag::LiftChildSplices(void)
 	MyString key;
 	Dag *splice = NULL;
 
-	debug_printf(DEBUG_QUIET, "Lifting child splices...\n");
+	debug_printf(DEBUG_DEBUG_1, "Lifting child splices...\n");
 	_splices.startIterations();
 	while( _splices.iterate(key, splice) ) {
-		debug_printf(DEBUG_QUIET, "Lifting child splice: %s\n", key.Value());
+		debug_printf(DEBUG_DEBUG_1, "Lifting child splice: %s\n", key.Value());
 		splice->LiftSplices(SELF);
 	}
-	debug_printf(DEBUG_QUIET, "Done lifting child splices.\n");
+	debug_printf(DEBUG_DEBUG_1, "Done lifting child splices.\n");
 }
 
 
@@ -3367,7 +3367,7 @@ Dag::AssumeOwnershipofNodes(OwnedMaterials *om)
 	for (i = 0; i < nodes->length(); i++) {
 		key = (*nodes)[i]->GetJobName();
 
-		debug_printf(DEBUG_QUIET, "Creating view hash fixup for: job %s\n", 
+		debug_printf(DEBUG_DEBUG_1, "Creating view hash fixup for: job %s\n", 
 			key.Value());
 
 		if (_nodeNameHash.insert(key, (*nodes)[i]) != 0) {
