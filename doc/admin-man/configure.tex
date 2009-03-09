@@ -8441,11 +8441,28 @@ MASTER_NEGOTIATOR_CONTROLLER = HAD
   Logging level for the \Condor{replication} daemon.
   See \MacroNI{<SUBSYS>\_DEBUG} for values.
 
-
 \label{param:ReplicationLog}
 \item[\Macro{REPLICATION\_LOG}]
   Full path and file name to the log file.
   There is no default value.
+
+\label{param:TransfererLog}
+\item[\Macro{TRANSFERER\_LOG}]
+  Full path and file name to the log file.
+  There is no default value for this variable; a definition is required
+  if the \Condor{replication} daemon does a file transfer.
+
+\label{param:TransfererDebug}
+\item[\Macro{TRANSFERER\_DEBUG}]
+  Logging level for the \Condor{transferer} daemon.
+  See \MacroNI{<SUBSYS>\_DEBUG} for values.
+
+\label{param:MaxTransfererLog}
+\item[\Macro{MAX\_TRANSFERER\_LOG}]
+  Controls the maximum length in bytes to which the \Condor{transferer}
+  daemon log will be allowed to grow.
+  A value of 0 specifies that this file may grow without bounds.
+  The default is 1 Mbyte.
 
 \end{description}
 
