@@ -32,7 +32,6 @@ static void shorten (char *, int);
 static char* format_date( time_t date );
 static char* format_time( int tot_secs );
 static char encode_status( int status );
-static bool EvalBool(AttrList *ad, ExprTree *tree);
 
 
 //------------------------------------------------------------------------
