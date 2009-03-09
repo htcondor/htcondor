@@ -63,6 +63,13 @@ and \Condor{submit\_dag}.  (This is mainly for testing.)
 
 \begin{itemize}
 
+\item An ill-formed network packet could crash a Condor daemon.  This wouldn't
+be seen in normal Condor operation, but sometimes port-scanning software could
+trigger such a crash.
+
+\item \Condor{q} would sometimes exit with  zero when it could not connect to
+a schedd.  Now it exits with an error code in this case.
+
 \item Fixed two seemingly small memory leaks in Condor's SOAP
 interface. A small amount of memory was lost per SOAP transaction. On
 a high traffic machine, this leak would eventually render the
