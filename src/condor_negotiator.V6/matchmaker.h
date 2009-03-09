@@ -83,12 +83,9 @@ class Matchmaker : public Service
 		/// Invalidate our negotiator ad at the collector(s).
 		void invalidateNegotiatorAd( void );
 
-<<<<<<< HEAD:src/condor_negotiator.V6/matchmaker.h
 		Accountant & getAccountant() { return accountant; }
-=======
 		static float EvalNegotiatorMatchRank(char const *expr_name,ExprTree *expr,
 		                              ClassAd &request,ClassAd *resource);
->>>>>>> Allow PREEMPTION_REQUIREMENTS statement reference many new attributes.:src/condor_negotiator.V6/matchmaker.h
 
     protected:
 		char * NegotiatorName;
