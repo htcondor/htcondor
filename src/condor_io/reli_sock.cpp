@@ -704,7 +704,7 @@ int ReliSock::RcvMsg::rcv_packet( SOCKET _sock, int _timeout)
 		return FALSE;
 	}
 	if ((len < 0) || 
-		(len == 0) && (end==0))	// len and end would never BOTH be zero
+		(len == 0) && (end!=0))
 	{
 		delete tmp;
 		dprintf(D_ALWAYS, 
