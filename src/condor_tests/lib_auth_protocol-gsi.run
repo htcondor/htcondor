@@ -45,7 +45,7 @@ $myx509certdir = "gsi_keys/certificates";
 $currenthost = CondorTest::getFqdnHost();
 CondorTest::fullchomp($currenthost);
 
-system("date");
+print scalar localtime() . "\n";
 
 $pid = $$;
 $mypid = $pid;
@@ -181,7 +181,7 @@ if( -e "$mysubmitnmlog" )
 }
 
 CondorTest::KillPersonal($secconfig);
-system("date");
+print scalar localtime() . "\n";
 
 if($result != 0)
 {

@@ -299,7 +299,7 @@ sub StartCondor
 	CondorPersonal::Reset();
 	debug( "StartCondor config_and_port is --$config_and_port--\n",3);
 	debug( "Personal Condor Started\n",3);
-	system("date");
+	print scalar localtime() . "\n";
 	return( $config_and_port );
 }
 

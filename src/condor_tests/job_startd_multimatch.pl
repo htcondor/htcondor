@@ -70,7 +70,7 @@ $executed = sub
 
 $timed = sub
 {
-	system("date");
+	print scalar localtime() . "\n";
 	CondorTest::debug("Held job count test.\n",1);
 	if( $jobcount == $heldcount) {
 		CondorTest::debug("multimatch working\n",1);

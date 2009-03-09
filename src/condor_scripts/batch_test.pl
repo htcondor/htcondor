@@ -394,7 +394,7 @@ if($#compilers == -1 ) {
 }
 
 if($timestamp == 1) {
-	system("date");
+	print scalar localtime() . "\n";
 }
 
 foreach my $name (@compilers) {

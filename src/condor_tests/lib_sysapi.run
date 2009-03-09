@@ -24,7 +24,7 @@ $testdesc =  'lib_sysapi - runs prebuilt sysapi tests from testbin_dir';
 $testname = "lib_sysapi";
 $test = "../testbin_dir/condor_sysapi";
 
-system("date");
+print scalar localtime() . "\n";
 
 open(ELOG,"$test 2>&1 |") || die "Could not run test<<$test>>: $!\n";
 while(<ELOG>) {

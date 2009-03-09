@@ -38,7 +38,7 @@ my @adarray;
 
 CondorTest::fullchomp($currenthost);
 
-system("date");
+print scalar localtime() . "\n";
 
 $mypid = $$;
 $mysaveme = $corename . ".saveme";
@@ -115,7 +115,7 @@ if($done != 0) {
 } else {
 	$test_cmd = "./job_amazon_basic.pl $submit_file";
 	CondorTest::debug("About to run Amazon EC2 basic test: $test_cmd\n",1);
-	system("date");
+	print scalar localtime() . "\n";
 
 	$done = system("$test_cmd");
 }
@@ -142,7 +142,7 @@ if(!$status)
 	exit(1)
 }
 
-system("date");
+print scalar localtime() . "\n";
 
 if( $done != 0 )
 {
@@ -152,5 +152,5 @@ if( $done != 0 )
 }
 
 CondorTest::debug("job_amazon_basic SUCCESS\n",1);
-system("date");
+print scalar localtime() . "\n";
 exit(0);

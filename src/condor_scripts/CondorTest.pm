@@ -362,7 +362,7 @@ sub DoTest
 
 	if($isnightly == 1) {
 		print "\nCurrent date and load follow:\n";
-		system("date");
+		print scalar localtime() . "\n";
 		if($iswindows == 0) {
 			system("uptime");
 		}
@@ -456,7 +456,7 @@ sub DoTest
 	if($isnightly == 1) {
 		print "Test started <$teststrt> ended <$teststop> taking <$timediff> seconds\n";
 		print "Current date and load follow:\n";
-		system("date");
+		print scalar localtime() . "\n";
 		if($iswindows == 0) {
 			system("uptime");
 		}
@@ -1986,29 +1986,29 @@ sub IsThisWindows
 sub IsThisNightly
 {
 	my $mylocation = shift;
-	my $configlocal = "";
-	my $configmain = "";
+	#my $configlocal = "";
+	#my $configmain = "";
 
 	debug("IsThisNightly passed <$mylocation>\n",2);
 	if($mylocation =~ /^.*(\/execute\/).*$/) {
 		#print "Nightly testing\n";
-		$configlocal = "../condor_examples/condor_config.local.central.manager";
-		$configmain = "../condor_examples/condor_config.generic";
-		if(!(-f $configmain)) {
-			system("ls ..");
-			system("ls ../condor_examples");
-			die "No base config file!!!!!\n";
-		}
+		#$configlocal = "../condor_examples/condor_config.local.central.manager";
+		#$configmain = "../condor_examples/condor_config.generic";
+		#if(!(-f $configmain)) {
+			#system("ls ..");
+			#system("ls ../condor_examples");
+			#die "No base config file!!!!!\n";
+		#}
 		return(1);
 	} else {
 		#print "Workspace testing\n";
-		$configlocal = "../condor_examples/condor_config.local.central.manager";
-		$configmain = "../condor_examples/condor_config.generic";
-		if(!(-f $configmain)) {
-			system("ls ..");
-			system("ls ../condor_examples");
-			die "No base config file!!!!!\n";
-		}
+		#$configlocal = "../condor_examples/condor_config.local.central.manager";
+		#$configmain = "../condor_examples/condor_config.generic";
+		#if(!(-f $configmain)) {
+			#system("ls ..");
+			#system("ls ../condor_examples");
+			#die "No base config file!!!!!\n";
+		#}
 		return(0);
 	}
 }

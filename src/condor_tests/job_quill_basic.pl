@@ -220,7 +220,7 @@ $submitted = sub
 	sleep(60); # database settling time
 
 		CondorTest::debug("75 submitted: <<<",1);
-		system("date");
+		print scalar localtime() . "\n";
 		CondorTest::debug(">>>\n",1);
 		CondorTest::debug("Collecting queue details from schedd\n",1);
 		my @adarray;
@@ -258,7 +258,7 @@ $submitted = sub
 		%skip = ("Submitter", 1, "LocalSysCpu", 1, "LocalUserCpu", 1,
 					"Rank", 1, "RemoteSysCpu", 1, "RemoteWallClockTime", 1,
 					"ServerTime", 1, "RemoteUserCpu", 1, "Environment", 1);
-		system("date");
+		print scalar localtime() . "\n";
 		@scheddads = sort(@adarray);
 		@rdbmsads = sort(@bdarray);
 		$scheddout = "job_quill_basic.schedd_ads";
@@ -276,7 +276,7 @@ $submitted = sub
 		print RDBS "*******************\n";
 		close(SCHEDD);
 		close(RDBS);
-		system("date");
+		print scalar localtime() . "\n";
 		$result = compare_2arrays_byrows(\@scheddads, \@rdbmsads, \%skip);
 		# save the time and leave the jobs behind before stopping condor
 		if( $result != 0 ) {

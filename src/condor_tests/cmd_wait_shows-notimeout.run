@@ -64,31 +64,31 @@ while(!(-f $flowlog)) {
 }
 
 CondorTest::debug("About to spawn condor_wait -wait 30\n",1);
-system("date");
+print scalar localtime() . "\n";
 
 # Start condor_wait
 $spawncmd = "condor_wait -wait 30 $flowlog";
 CondorTest::spawn_cmd($spawncmd, $resultfile);
 
 CondorTest::debug("Back from spawn condor_wait -wait 30\n",1);
-system("date");
+print scalar localtime() . "\n";
 
 sleep(5);
 
 CondorTest::debug("Slept 5, about to drop execute event\n",1);
-system("date");
+print scalar localtime() . "\n";
 
 # start 1 runs
 system("$writelog $flowlog execute 1");
 
 CondorTest::debug("droped execute event, about to drop terminated event\n",1);
-system("date");
+print scalar localtime() . "\n";
 
 # end 1 runs
 system("$writelog $flowlog terminated 1");
 
 CondorTest::debug("droped terminate event, about to check results\n",1);
-system("date");
+print scalar localtime() . "\n";
 
 while(!(-f $resultfile)) {
 	CondorTest::debug("Waiting for $resultfile to exist\n",1);

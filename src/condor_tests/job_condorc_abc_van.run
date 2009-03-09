@@ -31,7 +31,7 @@ $currenthost = CondorTest::getFqdnHost();
 CondorTest::fullchomp($currenthost);
 CondorTest::debug("Running on $currenthost\n",1);
 
-system("date");
+print scalar localtime() . "\n";
 
 $mypid = $$;
 $mysaveme = $corename . ".saveme";
@@ -47,7 +47,7 @@ $mycorenamecmd = $corename . ".cmd";
 $mycorenamecmdout = $corename . ".cmd.out";
 $mycorenamelog = $corename . ".log";
 
-system("date");
+print scalar localtime() . "\n";
 CondorTest::debug("Master PID is $mypid\n",1);
 CondorTest::debug("Master PID submit file is $mysubmitnm\n",1);
 
@@ -162,7 +162,7 @@ if( -e "$mysubmitnmlog" )
 CondorTest::KillPersonal($locconfig);
 CondorTest::KillPersonal($midconfig);
 CondorTest::KillPersonal($remconfig);
-system("date");
+print scalar localtime() . "\n";
 
 if($result != 0)
 {

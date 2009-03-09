@@ -27,7 +27,7 @@ $line = "";
 $counter = 0;
 $maxwait = 1200; # better happen in 3 minutes
 
-system("date");
+print scalar localtime() . "\n";
 
 # create unique classad
 open(TEMP,"<$template") || die "Can not open $template:$!\n";
@@ -58,7 +58,7 @@ system("cp $classad $workdir");
 # wait
 while($counter < $maxwait) {
 	if( ! ( -f "$resultsdir/$classad.results")) {
-		system("date");
+		print scalar localtime() . "\n";
 		print "Waiting for $resultsdir/$classad.results\n";
 		system("ls $resultsdir");
 		sleep 6;
