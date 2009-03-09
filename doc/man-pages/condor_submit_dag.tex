@@ -30,6 +30,7 @@
 \oOpt{-no\_recurse}
 \oOpt{-update\_submit}
 \oOpt{-import\_env}
+\oOpt{-DumpRescue}
 \Arg{DAGInputFile1}
 \oArg{{DAGInputFile2} \Dots {DAGInputFileN} }
 
@@ -208,6 +209,11 @@ description.
      \Condor{submit\_dag} to import the current environment into the
      \Opt {environment} command of the \File{.condor.sub} file it
      generates.
+  }
+  \OptItem{\Opt{-DumpRescue}}{This optional argument tells \Condor{dagman}
+     to immediately dump a rescue DAG and then exit, as opposed to
+     actually running the DAG.  (This feature is mainly intended for
+     testing.)
   }
   \end{Options}
 

@@ -33,7 +33,8 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Added the \Opt{-DumpRescue} command-line flag to \Condor{dagman}
+and \Condor{submit\_dag}.  (This is mainly for testing.)
 
 \end{itemize}
 
@@ -41,13 +42,33 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item The new boolean configuration variable
+  \Macro{EVENT\_LOG\_FSYNC} provides control of the behavior of
+  Condor when writing events to the event log.  Previously,
+  the behavior was as if this parameter were set to \Expr{False}.
+  See \ref{param:EventLogFsync} for the complete definition of
+  this variable.
+
+\item The new boolean configuration variable
+  \Macro{EVENT\_LOG\_LOCKING} provides control of the behavior of
+  Condor when writing events to the event log.  Previously,
+  the behavior was controlled by \MacroNI{ENABLE\_USERLOG\_LOCKING}.
+  See \ref{param:EventLogLocking} for the complete definition of
+  this variable.
+
 
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item An ill-formed network packet could crash a Condor daemon.  This wouldn't
+be seen in normal Condor operation, but sometimes port-scanning software could
+trigger such a crash.
+
+\item \Condor{q} would sometimes exit with  zero when it could not connect to
+a schedd.  Now it exits with an error code in this case.
 
 \item Fixed two seemingly small memory leaks in Condor's SOAP
 interface. A small amount of memory was lost per SOAP transaction. On
@@ -80,19 +101,29 @@ The log message is only visible at the \Expr{D\_FULLDEBUG} level.
 \item Fixed a bug that caused \Condor{dagman} to crash if the
 \File{dagman.out} file reached a size of 2 GBytes.
 
-\item The new boolean configuration variable
-  \Macro{EVENT\_LOG\_FSYNC} provides control of the behavior of
-  Condor when writing events to the event log.  Previously,
-  the behavior was as if this parameter were set to \Expr{False}.
-  See \ref{param:EventLogFsync} for the complete definition of
-  this variable.
+\item Fixed a problem affecting \Condor{starter} when in privsep mode.
+After the user job exited, an error was printed in the
+\Condor{starter} log file complaining that it failed to `chown' the
+sandbox to condor ownership.  This error was not actually harmful,
+just noisy.
 
-\item The new boolean configuration variable
-  \Macro{EVENT\_LOG\_LOCKING} provides control of the behavior of
-  Condor when writing events to the event log.  Previously,
-  the behavior was controlled by \MacroNI{ENABLE\_USERLOG\_LOCKING}.
-  See \ref{param:EventLogLocking} for the complete definition of
-  this variable.
+\item Fixed a bug in the \Condor{master} that caused it to not have
+  \MacroNI{REPLICATION} in its default list for \MacroNI{DC\_DAEMON\_LIST}.
+  The example
+  configuration file for HAD has been updated to match, as well.
+
+\item Fixed the \Condor{transferer} and documentation to consistently
+  use \MacroNI{MAX\_TRANSFERER\_LIFETIME} as the limit of the High
+  Availability transferer lifetime.
+
+% gittrac #285
+\item Fixed a bug that caused \Condor{dagman} to crash if a splice
+DAG has node categories (in other words, if a DAG with node categories
+is spliced into another DAG).
+
+\item Changed a number of splice-related \Condor{dagman} debug messages
+to not be printed at the default verbosity (they are now mostly printed
+at debug level 4).
 
 % PR 953
 \item Fixed a bug that caused \Condor{dagman} to crash if the
