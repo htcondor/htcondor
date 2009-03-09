@@ -83,12 +83,16 @@ class Matchmaker : public Service
 		/// Invalidate our negotiator ad at the collector(s).
 		void invalidateNegotiatorAd( void );
 
+<<<<<<< HEAD:src/condor_negotiator.V6/matchmaker.h
 		Accountant & getAccountant() { return accountant; }
+=======
+		static float EvalNegotiatorMatchRank(char const *expr_name,ExprTree *expr,
+		                              ClassAd &request,ClassAd *resource);
+>>>>>>> Allow PREEMPTION_REQUIREMENTS statement reference many new attributes.:src/condor_negotiator.V6/matchmaker.h
 
     protected:
 		char * NegotiatorName;
 		int update_interval;
-		
 
 	private:
 		ClassAd * publicAd;
@@ -204,7 +208,7 @@ class Matchmaker : public Service
 
 		void MakeClaimIdHash(ClassAdList &startdPvtAdList, ClaimIdHash &claimIds);
 		char const *getClaimId (const char *, const char *, ClaimIdHash &, MyString &);
-		void addRemoteUserPrios( ClassAdList& );
+		void addRemoteUserPrios( ClassAd* ad );
 		void insertNegotiatorMatchExprs(ClassAd *ad);
 		void insertNegotiatorMatchExprs( ClassAdList &cal );
 		void reeval( ClassAd *ad );
@@ -212,9 +216,6 @@ class Matchmaker : public Service
 		static unsigned int HashFunc(const MyString &Key);
 		friend int comparisonFunction (AttrList *, AttrList *,
 										void *);
-
-		float EvalNegotiatorMatchRank(char const *expr_name,ExprTree *expr,
-		                              ClassAd &request,ClassAd *resource);
 
 			// If we are not considering preemption, this function will
 			// trim out startd ads that are not in the Unclaimed state.
@@ -232,6 +233,8 @@ class Matchmaker : public Service
 		int  MaxTimePerSpin;        // How long per pie spin
 		ExprTree *PreemptionReq;	// only preempt if true
 		ExprTree *PreemptionRank; 	// rank preemption candidates
+		bool preemption_req_unstable;
+		bool preemption_rank_unstable;
 		ExprTree *NegotiatorPreJobRank;  // rank applied before job rank
 		ExprTree *NegotiatorPostJobRank; // rank applied after job rank
 		bool want_matchlist_caching;	// should we cache matches per autocluster?
@@ -252,6 +255,12 @@ class Matchmaker : public Service
 		typedef HashTable<MyString, MapEntry*> AdHash;
 		AdHash *stashedAds;			
 
+		typedef HashTable<MyString, int> groupQuotasHashType;
+		groupQuotasHashType *groupQuotasHash;
+
+		bool getGroupInfoFromUserId( const char *user, int & groupQuota, 
+			 int & groupUsage );
+		
 #ifdef WANT_NETMAN
 		// allocate network capacity
 		NetworkManager netman;
@@ -325,8 +334,10 @@ class Matchmaker : public Service
 		class MatchListType
 		{
 		public:
-
+			
 			ClassAd* pop_candidate();
+			bool cache_still_valid(ClassAd &request,ExprTree *preemption_req,
+				ExprTree *preemption_rank,bool preemption_req_unstable, bool preemption_rank_unstable);
 			void get_diagnostics(int & rejForNetwork,
 					int & rejForNetworkShare,
 					int & rejForConcurrencyLimit,
@@ -350,8 +361,10 @@ class Matchmaker : public Service
 
 			MatchListType(int maxlen);
 			~MatchListType();
-
+			
 		private:
+
+			// AdListEntry* peek_candidate();
 			static int sort_compare(const void*, const void*);
 			AdListEntry* AdListArray;			
 			int adListMaxLen;	// max length of AdListArray

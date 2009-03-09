@@ -110,6 +110,8 @@ Matchmaker ()
 	update_interval = 5*MINUTE; 
     DynQuotaMachConstraint = NULL;
 
+	groupQuotasHash = NULL;
+
 	strcpy(RejectsTable, "rejects");
 	strcpy(MatchesTable, "matches");
 
@@ -139,7 +141,8 @@ Matchmaker::
 
 	if (NegotiatorName) free (NegotiatorName);
 	if (publicAd) delete publicAd;
-    if ( DynQuotaMachConstraint) delete DynQuotaMachConstraint;
+    if (DynQuotaMachConstraint) delete DynQuotaMachConstraint;
+	if (groupQuotasHash) delete groupQuotasHash;
 }
 
 
@@ -318,10 +321,10 @@ reinitialize ()
 			EXCEPT ("Error parsing PREEMPTION_RANK expression: %s", tmp);
 		}
 	}
-
 	dprintf (D_ALWAYS,"PREEMPTION_RANK = %s\n", (tmp?tmp:"None"));
-
 	if( tmp ) free( tmp );
+
+
 
 	if (NegotiatorPreJobRank) delete NegotiatorPreJobRank;
 	NegotiatorPreJobRank = NULL;
@@ -372,6 +375,10 @@ reinitialize ()
 	ConsiderPreemption = param_boolean("NEGOTIATOR_CONSIDER_PREEMPTION",true);
 	want_inform_startd = param_boolean("NEGOTIATOR_INFORM_STARTD", true);
 	want_nonblocking_startd_contact = param_boolean("NEGOTIATOR_USE_NONBLOCKING_STARTD_CONTACT",true);
+
+	// we should figure these out automatically someday ....
+	preemption_req_unstable = ! (param_boolean("PREEMPTION_REQUIREMENTS_STABLE",true)) ;
+	preemption_rank_unstable = ! (param_boolean("PREEMPTION_RANK_STABLE",true)) ;
 
 	if (DynQuotaMachConstraint) delete DynQuotaMachConstraint;
 	DynQuotaMachConstraint = NULL;
@@ -796,17 +803,60 @@ compute_significant_attrs(ClassAdList & startdAds)
 	}
 		// Always get rid of the follow attrs:
 		//    CurrentTime - for obvious reasons
-		//    RemoteUserPrio - not needed since we negotiate per user
-		//    SubmittorPrio - not needed since we negotiate per user
+		//    RemoteUserPrio and friends - not needed since we negotiate per user
+		//    SubmittorPrio and friends - not needed since we negotiate per user
 	external_references.remove_anycase(ATTR_CURRENT_TIME);
 	external_references.remove_anycase(ATTR_REMOTE_USER_PRIO);
+	external_references.remove_anycase(ATTR_REMOTE_USER_RESOURCES_IN_USE);
+	external_references.remove_anycase(ATTR_REMOTE_GROUP_RESOURCES_IN_USE);
 	external_references.remove_anycase(ATTR_SUBMITTOR_PRIO);
+	external_references.remove_anycase(ATTR_SUBMITTER_USER_PRIO);
+	external_references.remove_anycase(ATTR_SUBMITTER_USER_RESOURCES_IN_USE);
+	external_references.remove_anycase(ATTR_SUBMITTER_GROUP_RESOURCES_IN_USE);
 		// Note: print_to_string mallocs memory on the heap
 	result = external_references.print_to_string();
 	dprintf(D_FULLDEBUG,"Leaving compute_significant_attrs() - result=%s\n",
 					result ? result : "(none)" );
 	return result;
 }
+
+
+bool Matchmaker::
+getGroupInfoFromUserId( const char *user, int & groupQuota, int & groupUsage )
+{
+	/*  Given a user id in the form group.user, strip off the group name
+		return any associated quota and usage for that group.  On failure,
+		return false and quota=usage=0.
+		NOTE - Since we discover the quotas in negotationTime(), we
+		assert that this function should not be called ahead of a call 
+		to negotationTime().
+	 */
+	ASSERT(groupQuotasHash);
+
+	groupQuota = 0;
+	groupUsage = 0;
+
+	if (!user) return false;
+
+	MyString groupname(user);
+
+		// User Id is group-name.user-name, so replace the
+		// '.' with a NULL.
+	int pos = groupname.FindChar('.');
+	if ( pos <= 0 ) {
+		return false;
+	}
+	groupname.setChar( pos , '\0' );
+	if ( groupQuotasHash->lookup(groupname,groupQuota) == -1 ) {
+		// hash lookup failed, must not be a group name
+		return false;
+	}
+
+	groupUsage = accountant.GetResourcesUsed(groupname.Value());
+
+	return true;
+}
+
 
 
 int Matchmaker::
@@ -891,9 +941,6 @@ negotiationTime ()
 	if ( num_trimmed > 0 ) {
 		dprintf(D_FULLDEBUG,
 			"Trimmed out %d startd ads not Unclaimed\n",num_trimmed);
-	} else {
-		// for ads which have RemoteUser set, add RemoteUserPrio
-		addRemoteUserPrios( startdAds ); 
 	}
 
 		// We insert NegotiatorMatchExprXXX attributes into the
@@ -903,6 +950,11 @@ negotiationTime ()
 		// matching contexts, the negotiator match exprs are in different
 		// ads, but they should always be in at least one.
 	insertNegotiatorMatchExprs( startdAds );
+
+	if ( !groupQuotasHash ) {
+		groupQuotasHash = new groupQuotasHashType(100,HashFunc);
+		ASSERT(groupQuotasHash);
+	}
 
 	char *groups = param("GROUP_NAMES");
 	if ( groups ) {
@@ -938,6 +990,7 @@ negotiationTime ()
 
 		MyString tmpstr;
 		i = 0;
+		groupQuotasHash->clear();
 		groupList.rewind();
 		while ((groups = groupList.next ()))
 		{
@@ -971,6 +1024,7 @@ negotiationTime ()
                     continue;
                 }
             }
+
             if ( quota <= 0 ) {
                 // Quota for group may have been set to zero by admin.
                 dprintf(D_ALWAYS,
@@ -979,6 +1033,14 @@ negotiationTime ()
                 continue;
             }
 
+			// store this groups quota into our groupQuotas hash so we 
+			// can easily retrieve the quota for this group elsewhere in 
+			// this class.
+			MyString groupQuotaKey(groups);
+			groupQuotasHash->insert(groupQuotaKey,quota);
+
+			// fill in the info into the groupArray, so we can sort
+			// the groups into the order we want to negotiate them.
 			int usage  = accountant.GetResourcesUsed(groups);
 			groupArray[i].groupName = groups;  // don't free this! (in groupList)
 			groupArray[i].maxAllowed = quota;
@@ -1781,7 +1843,7 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, dou
 	ClassAd		*offer;
 	bool		only_consider_startd_rank;
 	bool		display_overlimit = true;
-	char		prioExpr[128], remoteUser[128];
+	char		remoteUser[128];
 	int negotiate_command = NEGOTIATE;
 
 	numMatched = 0;
@@ -1874,9 +1936,7 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, dou
 		return MM_ERROR;
 	}
 
-	// setup expression with the submittor's priority
-	(void) sprintf( prioExpr , "%s = %f" , ATTR_SUBMITTOR_PRIO , priority );
-
+	
 	// 2.  negotiation loop with schedd
 	for (numMatched=0;true;numMatched++)
 	{
@@ -1984,8 +2044,21 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, dou
 		}
 		dprintf(D_ALWAYS, "    Request %05d.%05d:\n", cluster, proc);
 
-		// insert the priority expression into the request
-		request.Insert( prioExpr );
+		// insert the submitter user priority attributes into the request ad
+		// first insert old-style ATTR_SUBMITTOR_PRIO
+		request.Assign(ATTR_SUBMITTOR_PRIO , (float)priority );  
+		// next insert new-style ATTR_SUBMITTER_USER_PRIO
+		request.Assign(ATTR_SUBMITTER_USER_PRIO , (float)priority );  
+		// next insert the submitter user usage attributes into the request
+		request.Assign(ATTR_SUBMITTER_USER_RESOURCES_IN_USE, 
+					   accountant.GetResourcesUsed ( scheddName ));
+		int temp_groupQuota, temp_groupUsage;
+		if (getGroupInfoFromUserId(scheddName,temp_groupQuota,temp_groupUsage))
+		{
+			// this is a group, so enter group usage info
+			request.Assign(ATTR_SUBMITTER_GROUP_RESOURCES_IN_USE,temp_groupUsage);
+			request.Assign(ATTR_SUBMITTER_GROUP_QUOTA,temp_groupQuota);
+		}
 
 		// 2e.  find a compatible offer for the request --- keep attempting
 		//		to find matches until we can successfully (1) find a match,
@@ -2250,7 +2323,9 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 		 cachedPrio == preemptPrio &&
 		 cachedOnlyForStartdRank == only_for_startdrank &&
 		 strcmp(cachedName,scheddName)==0 &&
-		 strcmp(cachedAddr,scheddAddr)==0 )
+		 strcmp(cachedAddr,scheddAddr)==0 &&
+		 MatchList->cache_still_valid(request,PreemptionReq,PreemptionRank,
+					preemption_req_unstable,preemption_rank_unstable) )
 	{
 		// we can use cached information.  pop off the best
 		// candidate from our sorted list.
@@ -2370,6 +2445,13 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 	// scan the offer ads
 	startdAds.Open ();
 	while ((candidate = startdAds.Next ())) {
+
+			// this will insert remote user priority information into the 
+			// startd ad (if it is currently running a job), which can then
+			// be referenced via the various PREEMPTION_REQUIREMENTS expressions.
+			// we now need to do this inside the inner loop because we insert
+			// usage information 
+		addRemoteUserPrios(candidate);
 
 			// the candidate offer and request must match
 		if( !( *candidate == request ) ) {
@@ -3089,64 +3171,101 @@ Matchmaker::getClaimId (const char *startdName, const char *startdAddr, ClaimIdH
 }
 
 void Matchmaker::
-addRemoteUserPrios( ClassAdList &cal )
-{
-	ClassAd	*ad;
+addRemoteUserPrios( ClassAd	*ad )
+{	
 	MyString	remoteUser;
-	MyString	buffer;
+	MyString	buffer,buffer1,buffer2,buffer3;
 	MyString    slot_prefix;
 	float	prio;
 	int     total_slots, i;
 	float     preemptingRank;
+	int temp_groupQuota, temp_groupUsage;
 
-	cal.Open();
-	while( ( ad = cal.Next() ) ) {
-			// If there is a preempting user, use that for computing remote user prio.
-			// Otherwise, use the current user.
-		if (ad->LookupString(ATTR_PREEMPTING_ACCOUNTING_GROUP, remoteUser) ||
-			ad->LookupString(ATTR_PREEMPTING_USER, remoteUser) ||
-			ad->LookupString(ATTR_ACCOUNTING_GROUP, remoteUser) ||
-			ad->LookupString(ATTR_REMOTE_USER, remoteUser)) 
+	if ( !ConsiderPreemption ) {
+			// Hueristic - no need to take the time to populate ad with 
+			// accounting information if no preemption is to be considered.
+		return;
+	}
+
+		// If there is a preempting user, use that for computing remote user prio.
+		// Otherwise, use the current user.
+	if( ad->LookupString( ATTR_PREEMPTING_ACCOUNTING_GROUP , remoteUser ) ||
+		ad->LookupString( ATTR_PREEMPTING_USER , remoteUser ) ||
+		ad->LookupString( ATTR_ACCOUNTING_GROUP , remoteUser ) ||
+		ad->LookupString( ATTR_REMOTE_USER , remoteUser ) ) 
+	{
+		prio = (float) accountant.GetPriority( remoteUser.Value() );
+		ad->Assign(ATTR_REMOTE_USER_PRIO, prio);
+		ad->Assign(ATTR_REMOTE_USER_RESOURCES_IN_USE,
+			accountant.GetResourcesUsed( remoteUser.Value() ));
+		if (getGroupInfoFromUserId(remoteUser.Value(),
+									temp_groupQuota,temp_groupUsage))
 		{
-			prio = (float) accountant.GetPriority(remoteUser.Value());
-			ad->Assign(ATTR_REMOTE_USER_PRIO, prio); 
+			// this is a group, so enter group usage info
+			ad->Assign(ATTR_REMOTE_GROUP_RESOURCES_IN_USE,temp_groupUsage);
+			ad->Assign(ATTR_REMOTE_GROUP_QUOTA,temp_groupQuota);
 		}
-		if (ad->LookupFloat( ATTR_PREEMPTING_RANK, preemptingRank)) {
-				// There is already a preempting claim (waiting for
-				// the previous claim to retire), so set current rank
-				// to the preempting rank, since any new preemption
-				// must trump the current preempter.
-			ad->Assign(ATTR_CURRENT_RANK, preemptingRank);
-		}
-		char* resource_prefix = param("STARTD_RESOURCE_PREFIX");
-		if (!resource_prefix) {
-			resource_prefix = strdup("slot");
-		}
+	}
+	if( ad->LookupFloat( ATTR_PREEMPTING_RANK, preemptingRank ) ) {
+			// There is already a preempting claim (waiting for the previous
+			// claim to retire), so set current rank to the preempting
+			// rank, since any new preemption must trump the
+			// current preempter.
+		ad->Assign(ATTR_CURRENT_RANK, preemptingRank);
+	}
+		
+	char* resource_prefix = param("STARTD_RESOURCE_PREFIX");
+	if (!resource_prefix) {
+		resource_prefix = strdup("slot");
+	}
+	total_slots = 0;
+	if (!ad->LookupInteger(ATTR_TOTAL_SLOTS, total_slots)) {
 		total_slots = 0;
-		if (!ad->LookupInteger(ATTR_TOTAL_SLOTS, total_slots)) {
+	}
+	if (!total_slots && (param_boolean("ALLOW_VM_CRUFT", true))) {
+		if (!ad->LookupInteger(ATTR_TOTAL_VIRTUAL_MACHINES, total_slots)) {
 			total_slots = 0;
 		}
-		if (!total_slots && (param_boolean("ALLOW_VM_CRUFT", true))) {
-			if (!ad->LookupInteger(ATTR_TOTAL_VIRTUAL_MACHINES, total_slots)) {
-				total_slots = 0;
-			}
-		}
-			// This won't fire if total_slots is still 0...
-		for(i = 1; i <= total_slots; i++) {
-			slot_prefix.sprintf("%s%d_", resource_prefix, i);
-			buffer.sprintf("%s%s", slot_prefix.Value(), ATTR_REMOTE_USER);
-			if (ad->LookupString(buffer.Value(), remoteUser)) {
-				// If there is a user on that slot, stick that
-				// user's priority into the ad
-				prio = (float) accountant.GetPriority(remoteUser.Value());
-				buffer.sprintf("%s%s", slot_prefix.Value(),
-							   ATTR_REMOTE_USER_PRIO);
-				ad->Assign(buffer.Value(), prio);
-			}
-		}
-		free( resource_prefix );
 	}
-	cal.Close();
+		// This won't fire if total_slots is still 0...
+	for(i = 1; i <= total_slots; i++) {
+		slot_prefix.sprintf("%s%d_", resource_prefix, i);
+		buffer.sprintf("%s%s", slot_prefix.Value(), ATTR_PREEMPTING_ACCOUNTING_GROUP);
+		buffer1.sprintf("%s%s", slot_prefix.Value(), ATTR_PREEMPTING_USER);
+		buffer2.sprintf("%s%s", slot_prefix.Value(), ATTR_ACCOUNTING_GROUP);
+		buffer3.sprintf("%s%s", slot_prefix.Value(), ATTR_REMOTE_USER);
+			// If there is a preempting user, use that for computing remote user prio.
+		if( ad->LookupString( buffer.Value() , remoteUser ) ||
+			ad->LookupString( buffer1.Value() , remoteUser ) ||
+			ad->LookupString( buffer2.Value() , remoteUser ) ||
+			ad->LookupString( buffer3.Value() , remoteUser ) ) 
+		{
+				// If there is a user on that VM, stick that user's priority
+				// information into the ad	
+			prio = (float) accountant.GetPriority( remoteUser.Value() );
+			buffer.sprintf("%s%s", slot_prefix.Value(), 
+					ATTR_REMOTE_USER_PRIO);
+			ad->Assign(buffer.Value(),prio);
+			buffer.sprintf("%s%s", slot_prefix.Value(), 
+					ATTR_REMOTE_USER_RESOURCES_IN_USE);
+			ad->Assign(buffer.Value(),
+					accountant.GetResourcesUsed(remoteUser.Value()));
+			if (getGroupInfoFromUserId(remoteUser.Value(),
+										temp_groupQuota,temp_groupUsage))
+			{
+					// this is a group, so enter group usage info
+				buffer.sprintf("%s%s = %d", slot_prefix.Value(), 
+					ATTR_REMOTE_GROUP_RESOURCES_IN_USE, 
+					temp_groupUsage);
+				ad->Insert( buffer.Value() );
+				buffer.sprintf("%s%s = %d", slot_prefix.Value(),
+					ATTR_REMOTE_GROUP_QUOTA, 
+					temp_groupQuota);
+				ad->Insert( buffer.Value() );
+			}
+		}	
+	}
+	free( resource_prefix );
 }
 
 void Matchmaker::
@@ -3204,6 +3323,29 @@ Matchmaker::MatchListType::
 	}
 }
 
+
+#if 0
+Matchmaker::AdListEntry* Matchmaker::MatchListType::
+peek_candidate()
+{
+	ClassAd* candidate = NULL;
+	int temp_adListHead = adListHead;
+
+	while ( temp_adListHead < adListLen && !candidate ) {
+		candidate = AdListArray[temp_adListHead].ad;
+		temp_adListHead++;
+	}
+
+	if ( candidate ) {
+		temp_adListHead--;
+		ASSERT( temp_adListHead >= 0 );
+		return AdListArray[temp_adListHead];
+	} else {
+		return NULL;
+	}
+}
+#endif
+
 ClassAd* Matchmaker::MatchListType::
 pop_candidate()
 {
@@ -3215,6 +3357,76 @@ pop_candidate()
 	}
 
 	return candidate;
+}
+
+bool Matchmaker::MatchListType::
+cache_still_valid(ClassAd &request, ExprTree *preemption_req, ExprTree *preemption_rank,
+				  bool preemption_req_unstable, bool preemption_rank_unstable)
+{
+	AdListEntry* next_entry = NULL;
+
+	if ( !preemption_req_unstable && !preemption_rank_unstable ) {
+		return true;
+	}
+
+	// Set next_entry to be a "peek" at the next entry on
+	// our cached match list, i.e. don't actually pop it off our list.
+	{
+		ClassAd* candidate = NULL;
+		int temp_adListHead = adListHead;
+
+		while ( temp_adListHead < adListLen && !candidate ) {
+			candidate = AdListArray[temp_adListHead].ad;
+			temp_adListHead++;
+		}
+
+		if ( candidate ) {
+			temp_adListHead--;
+			ASSERT( temp_adListHead >= 0 );
+			next_entry =  &AdListArray[temp_adListHead];
+		} else {
+			next_entry = NULL;
+		}
+	}
+
+	if ( preemption_req_unstable ) 
+	{
+		if ( !next_entry ) {
+			return false;
+		}
+		
+		if ( next_entry->PreemptStateValue == PRIO_PREEMPTION ) {
+			EvalResult result;
+			if (preemption_req && 
+				!(preemption_req->EvalTree(next_entry->ad,&request,&result) &&
+						result.type == LX_INTEGER && result.i == TRUE) ) 
+			{
+				dprintf(D_FULLDEBUG,
+					"Cache invalidated due to preemption_requirements\n");
+				return false;
+			}
+		}
+	}
+
+	if ( next_entry && preemption_rank_unstable ) 
+	{		
+		if( next_entry->PreemptStateValue != NO_PREEMPTION) {
+			double candidatePreemptRankValue = -(FLT_MAX);
+			candidatePreemptRankValue = EvalNegotiatorMatchRank(
+					"PREEMPTION_RANK",preemption_rank,request,next_entry->ad);
+			if ( candidatePreemptRankValue != next_entry->PreemptRankValue ) {
+				// ranks don't match ....  now what?
+				// ideally we would just want to resort the cache, but for now
+				// we do the safest thing - just invalidate the cache.
+				dprintf(D_FULLDEBUG,
+					"Cache invalidated due to preemption_rank\n");
+				return false;
+				
+			}
+		}
+	}
+
+	return true;
 }
 
 
