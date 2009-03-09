@@ -75,6 +75,8 @@ class CCBServer: Service {
 	CCBServerRequest *GetRequest( CCBID request_id );
 
 	void ForwardRequestToTarget( CCBServerRequest *request, CCBTarget *target );
+	void RequestReply( Sock *sock, bool success, char const *error_msg, CCBID request_cid, CCBID target_cid );
+
 	void RequestFinished( CCBServerRequest *request, bool success, char const *error_msg );
 
 	int HandleRequestDisconnect( Stream *stream );
