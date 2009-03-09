@@ -34,7 +34,7 @@ The details of each version are described below.
 \begin{itemize}
 
 \item Added the \Opt{-DumpRescue} command-line flag to \Condor{dagman}
-and \Condor{submit\_dag}.  (This is mainly for testing.)
+and \Condor{submit\_dag}.  This flag is intended mainly for testing.
 
 \end{itemize}
 
@@ -63,12 +63,14 @@ and \Condor{submit\_dag}.  (This is mainly for testing.)
 
 \begin{itemize}
 
-\item An ill-formed network packet could crash a Condor daemon.  This wouldn't
-be seen in normal Condor operation, but sometimes port-scanning software could
-trigger such a crash.
+\item Fixed a bug in which an ill-formed network packet could
+crash a Condor daemon.
+This would not be seen in normal Condor operation,
+but sometimes port-scanning software could trigger such a crash.
 
-\item \Condor{q} would sometimes exit with  zero when it could not connect to
-a schedd.  Now it exits with an error code in this case.
+\item \Condor{q} would sometimes exit with  the value zero,
+indicating success, when it could not connect to a \Condor{schedd} daemon.
+Now it exits with an error code in this case.
 
 \item Fixed two seemingly small memory leaks in Condor's SOAP
 interface. A small amount of memory was lost per SOAP transaction. On
@@ -101,10 +103,10 @@ The log message is only visible at the \Expr{D\_FULLDEBUG} level.
 \item Fixed a bug that caused \Condor{dagman} to crash if the
 \File{dagman.out} file reached a size of 2 GBytes.
 
-\item Fixed a problem affecting \Condor{starter} when in privsep mode.
+\item Fixed a problem affecting the \Condor{starter} when in PrivSep mode.
 After the user job exited, an error was printed in the
-\Condor{starter} log file complaining that it failed to `chown' the
-sandbox to condor ownership.  This error was not actually harmful,
+\Condor{starter} log file complaining that it failed to \Prog{chown} the
+sandbox to Condor ownership.  This error was not actually harmful,
 just noisy.
 
 \item Fixed a bug in the \Condor{master} that caused it to not have
@@ -112,18 +114,19 @@ just noisy.
   The example
   configuration file for HAD has been updated to match, as well.
 
-\item Fixed the \Condor{transferer} and documentation to consistently
-  use \MacroNI{MAX\_TRANSFERER\_LIFETIME} as the limit of the High
-  Availability transferer lifetime.
+\item Fixed the \Condor{transferer} daemon and documentation to consistently
+  use the value of the configuration variable 
+  \MacroNI{MAX\_TRANSFERER\_LIFETIME} in High Availability code.
 
 % gittrac #285
-\item Fixed a bug that caused \Condor{dagman} to crash if a splice
-DAG has node categories (in other words, if a DAG with node categories
-is spliced into another DAG).
+\item Fixed a bug that caused \Condor{dagman} to crash,
+if a splice DAG has node categories.
 
-\item Changed a number of splice-related \Condor{dagman} debug messages
-to not be printed at the default verbosity (they are now mostly printed
-at debug level 4).
+\item Changed splice-related \Condor{dagman} debug messages
+to \emph{not} be printed at the default verbosity.
+They are now mostly printed at debug level 4.
+For definitions of the debug levels, see the \Condor{dagman} manual
+page at section~ \ref{man-condor-dagman}.
 
 \end{itemize}
 
