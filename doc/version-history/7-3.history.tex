@@ -28,18 +28,16 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Made the \Condor{schedd} more efficient in how it stores
+information about `dollar dollar' expansions in the job ClassAd.
+Also made it more efficient in how it contacts the \Condor{negotiator}
+to submit `reschedule' requests.
 
 \end{itemize}
 
 \noindent Configuration Variable Additions and Changes:
 
 \begin{itemize}
-
-\item Made the \Condor{schedd} more efficient in how it stores
-information about `dollar dollar' expansions in the job ClassAd.
-Also made it more efficient in how it contacts the \Condor{negotiator}
-to submit `reschedule' requests.
 
 \item Added \Macro{UPDATE\_OFFSET} to cause the \Condor{startd} to
   delay the initial (and all further) updates that it sends to the
