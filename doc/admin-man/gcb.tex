@@ -30,12 +30,7 @@ when a job is running and the execute node needs to connect back to
 the submit node (e.g. to transfer output files), it can do so by going
 through CCB to request a connection.
 
-There is one known case where CCB does not help cross a public to
-private network boundary: a private submit node running standard
-universe jobs on a public execute node (i.e. where the execute node
-cannot connect to the submit node).  This case is currently not
-supported by CCB.  Jobs in other universes (e.g. vanilla) are fine in
-this situation.  Just standard universe has problems.
+Important note: at this time, CCB does not support standard universe jobs.
 
 Any Condor collector may be used as a CCB server.  There is no
 requirement that the collector(s) acting as the CCB server
