@@ -335,16 +335,11 @@ AbstractReplicatorStateMachine::download( const char* daemonSinfulString )
 			 "AbstractReplicatorStateMachine::download creating "
 			 "downloading condor_transferer process: \n \"%s\"\n",
 			 s.GetCStr( ) );
-    // PRIV_USER_FINAL privilege is necessary here to create a user process,
-    // after setting it to PRIV_UNKNOWN, the transferer process failed to
-    // create when the pool was started with real uid of 'root'
-	priv_state privilege;
 
-	if( ! getProcessPrivilege(privilege) ) {
-		dprintf( D_ALWAYS, "AbstractReplicatorStateMachine::download unable to "
-						   "grant to the transferer the necessary privilege\n");
-		return false;
-	}
+	// PRIV_ROOT privilege is necessary here to create the process
+	// so we can read GSI certs <sigh>
+	priv_state privilege = PRIV_ROOT;
+
 	int transfererPid = daemonCore->Create_Process(
         executable.GetCStr( ),        // name
         processArguments,             // args
@@ -405,16 +400,9 @@ AbstractReplicatorStateMachine::upload( const char* daemonSinfulString )
 			 "uploading condor_transferer process: \n \"%s\"\n",
 			 s.GetCStr( ) );
 
-	// PRIV_USER_FINAL privilege is necessary here to create a user process,
-	// after setting it to PRIV_UNKNOWN, the transferer process failed to
-	// create when the pool was started with real uid of 'root'
-	priv_state privilege;
-
-	if( ! getProcessPrivilege(privilege) ) {
-        dprintf( D_ALWAYS, "AbstractReplicatorStateMachine::upload unable to "
-                           "grant to the transferer the necessary privilege\n");
-        return false;
-    }
+	// PRIV_ROOT privilege is necessary here to create the process
+	// so we can read GSI certs <sigh>
+	priv_state privilege = PRIV_ROOT;
 
     int transfererPid = daemonCore->Create_Process(
         executable.GetCStr( ),        // name
@@ -696,39 +684,4 @@ AbstractReplicatorStateMachine::killTransferers()
 		}
     }
 	m_uploadTransfererMetadataList.Rewind( );
-}
-
-bool 
-AbstractReplicatorStateMachine::getProcessPrivilege(priv_state& privilege)
-{
-	// Create the priv state for the process
-	//priv_state priv;
-# ifdef WIN32
-	// WINDOWS
-	privilege = PRIV_CONDOR;
-# else
-	// UNIX
-	privilege = PRIV_USER_FINAL;
-	uid_t uid = get_condor_uid( );
-	
-	if ( uid == (uid_t) -1 )
-	{
-		dprintf( D_ALWAYS, "Cron: Invalid UID -1\n" );
-		
-		return false;
-	}
-	gid_t gid = get_condor_gid( );
-	
-	if ( gid == (uid_t) -1 )
-	{
-		dprintf( D_ALWAYS, "Cron: Invalid GID -1\n" );
-		
-		return false;
-	}
-	// tells DaemonCore what uid/gid to use for PRIV_USER_FINAL
-	set_user_ids( uid, gid );
-# endif
-
-	return true;
-	//return priv;
 }
