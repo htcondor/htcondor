@@ -1,3 +1,17 @@
+Changes for version 1.0.3 (Released 2009-03-10)
+* Fixed name of ClassAd function strcmp() to be case-insensitive, like all
+  other function names. The function's behavior was and continues to be
+  a case-sensitive comparison of two strings.
+* Removed usage of non-standard STL types hash_map and slist.
+* Fixed a bad gcc version check.
+* Updated Windows build files.
+* Added #include <cstring> to build on gcc 3.4.x.
+* Some source files renamed due to Windows build limitations.
+* Removed CLASSAD_DISTRIBUTION build symbol.
+
+Changes for version 1.0.2 (Released 2009-01-30)
+* Added #include <string.h> to build on gcc 3.4.x.
+
 Changes for version 1.0.1 (Released 2008-12-1)
   - Added ClassAd functions from old classads: ifThenElse(), regexps(), and
     interval().
