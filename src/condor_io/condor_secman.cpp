@@ -1013,7 +1013,7 @@ SecManStartCommand::doCallback( StartCommandResult result )
 		if( authorized != USER_AUTH_SUCCESS ) {
 			m_errstack->pushf("SECMAN", SECMAN_ERR_CLIENT_AUTH_FAILED,
 			         "DENIED authorization of server '%s/%s' (I am acting as "
-			         "the client): reason: %s\n",
+			         "the client): reason: %s.",
 					 server_fqu ? server_fqu : "*",
 					 m_sock->endpoint_ip_str(), deny_reason.Value() );
 			result = StartCommandFailed;
@@ -1117,7 +1117,7 @@ SecManStartCommand::startCommand_inner()
 		dprintf(D_SECURITY,"SECMAN: TCP connection to %s failed\n",
 				m_sock->peer_description());
 		m_errstack->pushf("SECMAN", SECMAN_ERR_CONNECT_FAILED,
-		                "TCP connection to %s failed",
+		                "TCP connection to %s failed.",
 		                m_sock->peer_description());
 
 		return StartCommandFailed;
@@ -1232,7 +1232,7 @@ SecManStartCommand::sendAuthInfo_inner()
 			dprintf( D_ALWAYS, 
 					 "SECMAN: ERROR: The security policy is invalid.\n" );
 			m_errstack->push("SECMAN", SECMAN_ERR_INVALID_POLICY,
-				"Configuration Problem: The security policy is invalid.\n" );
+				"Configuration Problem: The security policy is invalid." );
 			return StartCommandFailed;
 		}
 
@@ -1435,7 +1435,7 @@ SecManStartCommand::sendAuthInfo_inner()
 				dprintf ( D_ALWAYS, "SECMAN: action attribute missing from classad\n");
 				m_auth_info.dPrint( D_SECURITY );
 				m_errstack->push( "SECMAN", SECMAN_ERR_ATTRIBUTE_MISSING,
-						"Protocol Error: Action attribute missing");
+						"Protocol Error: Action attribute missing.");
 				return StartCommandFailed;
 			}
 
@@ -1450,7 +1450,7 @@ SecManStartCommand::sendAuthInfo_inner()
 				if (!ki) {
 					dprintf ( D_ALWAYS, "SECMAN: enable_mac has no key to use, failing...\n");
 					m_errstack->push( "SECMAN", SECMAN_ERR_NO_KEY,
-							"Failed to establish a crypto key" );
+							"Failed to establish a crypto key." );
 					return StartCommandFailed;
 				}
 
@@ -1479,7 +1479,7 @@ SecManStartCommand::sendAuthInfo_inner()
 			if (turn_encryption_on && !ki) {
 				dprintf ( D_ALWAYS, "SECMAN: enable_enc no key to use, failing...\n");
 				m_errstack->push( "SECMAN", SECMAN_ERR_NO_KEY,
-						"Failed to establish a crypto key" );
+						"Failed to establish a crypto key." );
 				return StartCommandFailed;
 			}
 
@@ -1532,7 +1532,7 @@ SecManStartCommand::sendAuthInfo_inner()
 	if (! m_sock->code(authcmd)) {
 		dprintf ( D_ALWAYS, "SECMAN: failed to send DC_AUTHENTICATE\n");
 		m_errstack->push( "SECMAN", SECMAN_ERR_COMMUNICATIONS_ERROR,
-						"Failed to send DC_AUTHENTICATE message" );
+						"Failed to send DC_AUTHENTICATE message." );
 		return StartCommandFailed;
 	}
 
@@ -1546,7 +1546,7 @@ SecManStartCommand::sendAuthInfo_inner()
 	if (! m_auth_info.put(*m_sock)) {
 		dprintf ( D_ALWAYS, "SECMAN: failed to send auth_info\n");
 		m_errstack->push( "SECMAN", SECMAN_ERR_COMMUNICATIONS_ERROR,
-						"Failed to send auth_info" );
+						"Failed to send auth_info." );
 		return StartCommandFailed;
 	}
 
@@ -1556,7 +1556,7 @@ SecManStartCommand::sendAuthInfo_inner()
 		if (! m_sock->end_of_message()) {
 			dprintf ( D_ALWAYS, "SECMAN: failed to end classad message\n");
 			m_errstack->push( "SECMAN", SECMAN_ERR_COMMUNICATIONS_ERROR,
-						"Failed to end classad message" );
+						"Failed to end classad message." );
 			return StartCommandFailed;
 		}
 	}
@@ -1594,7 +1594,7 @@ SecManStartCommand::receiveAuthInfo_inner()
 				if (m_negotiation == SecMan::SEC_REQ_REQUIRED) {
 					dprintf ( D_ALWAYS, "SECMAN: no classad from server, failing\n");
 					m_errstack->push( "SECMAN", SECMAN_ERR_COMMUNICATIONS_ERROR,
-						"Failed to end classad message" );
+						"Failed to end classad message." );
 					return StartCommandFailed;
 				}
 
@@ -1610,7 +1610,7 @@ SecManStartCommand::receiveAuthInfo_inner()
 				if (!m_sock->connect(tcp_addr.Value())) {
 					dprintf ( D_SECURITY, "SECMAN: couldn't connect via TCP to %s, failing...\n", tcp_addr.Value());
 					m_errstack->pushf( "SECMAN", SECMAN_ERR_CONNECT_FAILED,
-						"TCP connection to %s failed\n", tcp_addr.Value());
+						"TCP connection to %s failed.", tcp_addr.Value());
 					return StartCommandFailed;
 				}
 
@@ -1694,7 +1694,7 @@ SecManStartCommand::authenticate_inner()
 			dprintf ( D_SECURITY, "SECMAN: action attribute missing from classad, failing!\n");
 			m_auth_info.dPrint( D_SECURITY );
 			m_errstack->push( "SECMAN", SECMAN_ERR_ATTRIBUTE_MISSING,
-						"Protocol Error: Action attribute missing");
+						"Protocol Error: Action attribute missing.");
 			return StartCommandFailed;
 		}
 
@@ -1757,7 +1757,7 @@ SecManStartCommand::authenticate_inner()
 				// there's no auth methods.
 				dprintf ( D_ALWAYS, "SECMAN: no auth method!, failing.\n");
 				m_errstack->push( "SECMAN", SECMAN_ERR_ATTRIBUTE_MISSING,
-						"Protocol Error: No auth methods");
+						"Protocol Error: No auth methods.");
 				return StartCommandFailed;
 			} else {
 				dprintf ( D_SECURITY, "SECMAN: Auth methods: %s\n", auth_methods);
@@ -1791,7 +1791,7 @@ SecManStartCommand::authenticate_inner()
 			if (!m_private_key) {
 				dprintf ( D_ALWAYS, "SECMAN: enable_mac has no key to use, failing...\n");
 				m_errstack->push ("SECMAN", SECMAN_ERR_NO_KEY,
-							"Failed to establish a crypto key" );
+							"Failed to establish a crypto key." );
 				return StartCommandFailed;
 			}
 
@@ -1816,7 +1816,7 @@ SecManStartCommand::authenticate_inner()
 			if (!m_private_key) {
 				dprintf ( D_ALWAYS, "SECMAN: enable_enc no key to use, failing...\n");
 				m_errstack->push ("SECMAN", SECMAN_ERR_NO_KEY,
-							"Failed to establish a crypto key" );
+							"Failed to establish a crypto key." );
 				return StartCommandFailed;
 			}
 
@@ -1864,7 +1864,7 @@ SecManStartCommand::receivePostAuthInfo_inner()
 			if (!post_auth_info.initFromStream(*m_sock) || !m_sock->eom()) {
 				dprintf (D_ALWAYS, "SECMAN: could not receive session info, failing!\n");
 				m_errstack->push ("SECMAN", SECMAN_ERR_COMMUNICATIONS_ERROR,
-							"could not receive post_auth_info" );
+							"could not receive post_auth_info." );
 				return StartCommandFailed;
 			} else {
 				if (DebugFlags & D_FULLDEBUG) {
@@ -1905,7 +1905,7 @@ SecManStartCommand::receivePostAuthInfo_inner()
 			if (sesid == NULL) {
 				dprintf (D_ALWAYS, "SECMAN: session id is NULL, failing\n");
 				m_errstack->push( "SECMAN", SECMAN_ERR_ATTRIBUTE_MISSING,
-						"Failed to lookup session id");
+						"Failed to lookup session id.");
 				return StartCommandFailed;
 			}
 
@@ -1914,7 +1914,7 @@ SecManStartCommand::receivePostAuthInfo_inner()
 			if (cmd_list == NULL) {
 				dprintf (D_ALWAYS, "SECMAN: valid commands is NULL, failing\n");
 				m_errstack->push( "SECMAN", SECMAN_ERR_ATTRIBUTE_MISSING,
-						"Protocol Failure: Unable to lookup valid commands");
+						"Protocol Failure: Unable to lookup valid commands.");
 				delete sesid;
 				return StartCommandFailed;
 			}
@@ -2055,7 +2055,7 @@ SecManStartCommand::DoTCPAuth_inner()
 	if (!tcp_auth_sock->connect(tcp_addr.Value(),0,m_nonblocking)) {
 		dprintf ( D_SECURITY, "SECMAN: couldn't connect via TCP to %s, failing...\n", tcp_addr.Value());
 		m_errstack->pushf("SECMAN", SECMAN_ERR_CONNECT_FAILED,
-						  "TCP auth connection to %s failed\n", tcp_addr.Value());
+						  "TCP auth connection to %s failed.", tcp_addr.Value());
 		delete tcp_auth_sock;
 		return StartCommandFailed;
 	}
@@ -2132,7 +2132,7 @@ SecManStartCommand::TCPAuthCallback_inner( bool auth_succeeded, Sock *tcp_auth_s
 				  "SECMAN: unable to create security session to %s via TCP, "
 		          "failing.\n", m_sock->get_sinful_peer() );
 		m_errstack->pushf("SECMAN", SECMAN_ERR_NO_SESSION,
-		                 "Failed to create security session to %s with TCP",
+		                 "Failed to create security session to %s with TCP.",
 		                 m_sock->get_sinful_peer());
 		rc = StartCommandFailed;
 	}
@@ -2212,12 +2212,12 @@ SecManStartCommand::WaitForSocketCallback()
 	if(reg_rc < 0) {
 		MyString msg;
 		msg.sprintf("StartCommand to %s failed because "
-					"Register_Socket returned %d",
+					"Register_Socket returned %d.",
 					m_sock->get_sinful_peer(),
 					reg_rc);
 		dprintf(D_SECURITY, "SECMAN: %s\n", msg.Value());
 		m_errstack->pushf("SECMAN", SECMAN_ERR_CONNECT_FAILED,
-						  "%s\n", msg.Value());
+						  "%s", msg.Value());
 
 		return StartCommandFailed;
 	}

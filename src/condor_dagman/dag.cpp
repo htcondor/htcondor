@@ -3165,7 +3165,7 @@ Dag::PrefixAllNodeNames(const MyString &prefix)
     Job *job = NULL;
 	MyString key;
 
-	debug_printf(DEBUG_QUIET, "Entering: Dag::PrefixAllNodeNames()\n");
+	debug_printf(DEBUG_DEBUG_1, "Entering: Dag::PrefixAllNodeNames()\n");
 
     _jobs.Rewind();
     while( (job = _jobs.Next()) ) {
@@ -3197,9 +3197,8 @@ Dag::PrefixAllNodeNames(const MyString &prefix)
 		}
     }
 
-	debug_printf(DEBUG_QUIET, "Leaving: Dag::PrefixAllNodeNames()\n");
+	debug_printf(DEBUG_DEBUG_1, "Leaving: Dag::PrefixAllNodeNames()\n");
 }
-
 
 //---------------------------------------------------------------------------
 int 
@@ -3299,7 +3298,7 @@ Dag::LiftSplices(SpliceLayer layer)
 	_splices.startIterations();
 	while(_splices.iterate(key, splice)) {
 
-		debug_printf(DEBUG_QUIET, "Lifting splice %s\n", key.Value());
+		debug_printf(DEBUG_DEBUG_1, "Lifting splice %s\n", key.Value());
 		om = splice->LiftSplices(DESCENDENTS);
 		// this function moves what it needs out of the returned object
 		AssumeOwnershipofNodes(om);
@@ -3327,13 +3326,13 @@ Dag::LiftChildSplices(void)
 	MyString key;
 	Dag *splice = NULL;
 
-	debug_printf(DEBUG_QUIET, "Lifting child splices...\n");
+	debug_printf(DEBUG_DEBUG_1, "Lifting child splices...\n");
 	_splices.startIterations();
 	while( _splices.iterate(key, splice) ) {
-		debug_printf(DEBUG_QUIET, "Lifting child splice: %s\n", key.Value());
+		debug_printf(DEBUG_DEBUG_1, "Lifting child splice: %s\n", key.Value());
 		splice->LiftSplices(SELF);
 	}
-	debug_printf(DEBUG_QUIET, "Done lifting child splices.\n");
+	debug_printf(DEBUG_DEBUG_1, "Done lifting child splices.\n");
 }
 
 
@@ -3366,7 +3365,30 @@ Dag::AssumeOwnershipofNodes(OwnedMaterials *om)
 		}
 	}
 
-	// 1b. Copy the nodes into _jobs.
+	// 1b. Re-set the node categories (if any) so they point to the
+	// ThrottleByCategory object in *this* DAG rather than the splice
+	// DAG (which will be deleted soon).
+	for ( i = 0; i < nodes->length(); i++ ) {
+		Job *tmpNode = (*nodes)[i];
+		ThrottleByCategory::ThrottleInfo *catThrottle =
+					tmpNode->GetThrottleInfo();
+		if ( catThrottle != NULL ) {
+
+				// Copy the category throttle setting from the splice
+				// DAG to the upper DAG (creates the category if we don't
+				// already have it).
+			_catThrottles.SetThrottle( catThrottle->_category,
+						catThrottle->_maxJobs );
+
+				// Now re-set the category in the node, so that the
+				// category info points to the upper DAG rather than the
+				// splice DAG.
+			tmpNode->SetCategory( catThrottle->_category->Value(),
+						_catThrottles );
+		}
+	}
+
+	// 1c. Copy the nodes into _jobs.
 	for (i = 0; i < nodes->length(); i++) {
 		_jobs.Append((*nodes)[i]);
 	}
@@ -3375,7 +3397,7 @@ Dag::AssumeOwnershipofNodes(OwnedMaterials *om)
 	for (i = 0; i < nodes->length(); i++) {
 		key = (*nodes)[i]->GetJobName();
 
-		debug_printf(DEBUG_QUIET, "Creating view hash fixup for: job %s\n", 
+		debug_printf(DEBUG_DEBUG_1, "Creating view hash fixup for: job %s\n", 
 			key.Value());
 
 		if (_nodeNameHash.insert(key, (*nodes)[i]) != 0) {

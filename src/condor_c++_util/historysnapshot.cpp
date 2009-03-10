@@ -24,6 +24,7 @@
 #include "pgsqldatabase.h"
 #include "historysnapshot.h"
 #include "quill_enums.h"
+#include "condor_classad_util.h"
 
 #if HAVE_ORACLE
 #undef ATTR_VERSION

@@ -9,8 +9,8 @@ CONDOR_HOST =
 
 ## For simplicity define a variable for each potential central manager
 ## in the pool. 
-CENTRAL_MANAGER1 = cm1.cs.technion.ac.il
-CENTRAL_MANAGER2 = cm2.cs.technion.ac.il
+CENTRAL_MANAGER1 = cm1.domain.name
+CENTRAL_MANAGER2 = cm2.domain.name
 ## List of all potential central managers in the pool
 COLLECTOR_HOST = $(CENTRAL_MANAGER1),$(CENTRAL_MANAGER2)
 

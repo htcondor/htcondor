@@ -122,7 +122,7 @@ VanillaProc::StartJob()
 			MyString args_desc;
 			args.GetArgsStringForDisplay(&args_desc);
 			dprintf(D_FULLDEBUG,
-					"Executable is .bat, so running %s\\cmd.exe %s\n",
+					"Executable is a batch file, so running %s\\cmd.exe %s\n",
 					systemshell,args_desc.Value());
 		}
 
@@ -259,7 +259,7 @@ VanillaProc::StartJob()
 
 					dprintf (
 						D_FULLDEBUG,
-						"Interpreter for *%s files: %s %s\n",
+						"Executable is a *%s script, so running %s %s\n",
 						extension,
 						interpreter,
 						description.Value () );

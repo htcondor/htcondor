@@ -25,6 +25,7 @@
 #include "string_list.h"
 
 bool EvalBool(ClassAd *ad, const char *constraint);
+bool EvalBool(AttrList* ad, ExprTree *tree);
 
 bool ClassAdsAreSame( ClassAd* ad1, ClassAd* ad2, 
 					  StringList* ignored_attrs=NULL, bool verbose=false );

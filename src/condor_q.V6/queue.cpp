@@ -298,7 +298,7 @@ int main (int argc, char **argv)
 	char		scheddMachine[64];
 	char		*tmp;
 	bool        useDB; /* Is there a database to query for a schedd */
-	int         retval;
+	int         retval = 0;
 	show_queue_fp sqfp;
 
 	Collectors = NULL;
@@ -791,7 +791,7 @@ int main (int argc, char **argv)
 			case DIRECT_SCHEDD:
 				/* database not configured or could not be reached,
 					query the schedd daemon directly */
-				sqfp(scheddAddr, scheddName, scheddMachine, NULL, FALSE);
+				retval = sqfp(scheddAddr, scheddName, scheddMachine, NULL, FALSE);
 
 				break;
 
@@ -823,7 +823,7 @@ int main (int argc, char **argv)
 	}
 
 	freeConnectionStrings();
-	return 0;
+	exit(retval?EXIT_SUCCESS:EXIT_FAILURE);
 }
 
 static void 

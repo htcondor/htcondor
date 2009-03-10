@@ -1,0 +1,20 @@
+job A2 job_dagman_splice-cat.cmd
+vars A2 racer = "Fausto Coppi"
+
+job B2 job_dagman_splice-cat.cmd
+category B2 cat2
+
+job C2 job_dagman_splice-cat.cmd
+category C2 cat2
+
+job D2 job_dagman_splice-cat.cmd
+category D2 cat2D
+
+job E2 job_dagman_splice-cat.cmd
+category E2 cat2D
+
+parent A2 child B2 C2
+parent B2 C2 child D2 E2
+
+maxjobs cat2 12
+maxjobs cat2D 22

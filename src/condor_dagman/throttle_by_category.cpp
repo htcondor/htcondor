@@ -102,6 +102,20 @@ ThrottleByCategory::GetThrottleInfo( const MyString *category )
 }
 
 //---------------------------------------------------------------------------
+void
+ThrottleByCategory::PrefixAllCategoryNames( const MyString &prefix )
+{
+	_throttles.startIterations();
+	ThrottleInfo	*info;
+	while ( _throttles.iterate( info ) ) {
+		MyString *newCat = new MyString( prefix );
+		*newCat += *(info->_category);
+		delete info->_category;
+		info->_category = newCat;
+	}
+}
+
+//---------------------------------------------------------------------------
 // Note: don't change the format here -- this is used for rescue DAG files,
 // so what we print has to be parseable by parse().
 void

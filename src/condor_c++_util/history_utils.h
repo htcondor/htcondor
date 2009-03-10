@@ -22,6 +22,7 @@
 #define _HISTORY_UTILS_H_
 
 #include "condor_common.h"
+#include "condor_classad_util.h"
 
 //------------------------------------------------------------------------
 
@@ -32,7 +33,6 @@ static void shorten (char *, int);
 static char* format_date( time_t date );
 static char* format_time( int tot_secs );
 static char encode_status( int status );
-static bool EvalBool(AttrList *ad, ExprTree *tree);
 
 
 //------------------------------------------------------------------------
@@ -232,24 +232,6 @@ encode_status( int status )
           default:
                 return ' ';
         }
-}
-
-static bool EvalBool(AttrList* ad, ExprTree *tree)
-{
-  EvalResult result;
-
-  // Evaluate constraint with ad in the target scope so that constraints
-  // have the same semantics as the collector queries.  --RR
-  if (!tree->EvalTree(NULL, ad, &result)) {        
-        // dprintf(D_ALWAYS, "can't evaluate constraint: %s\n", constraint);
-    return false;
-  }
-        
-  if (result.type == LX_INTEGER) {
-    return (bool)result.i;
-  }
-         
-  return false;
 }
 
 #endif

@@ -349,8 +349,17 @@ CCBServer::HandleRequest(int cmd,Stream *stream)
 	CCBTarget *target = GetTarget( target_ccbid );
 	if( !target ) {
 		dprintf(D_ALWAYS,
-				"CCB: rejecting request from %s for unregistered ccbid %s\n",
-				sock->peer_description(), target_ccbid_str.Value());
+			"CCB: rejecting request from %s for ccbid %s because no daemon is "
+			"currently registered with that id "
+			"(perhaps it recently disconnected).\n",
+			sock->peer_description(), target_ccbid_str.Value());
+
+		MyString error_msg;
+		error_msg.sprintf(
+			"CCB server rejecting request for ccbid %s because no daemon is "
+			"currently registered with that id "
+			"(perhaps it recently disconnected).", target_ccbid_str.Value());
+		RequestReply( sock, false, error_msg.Value(), 0, target_ccbid );
 		return FALSE;
 	}
 
@@ -522,29 +531,33 @@ CCBServer::ForwardRequestToTarget( CCBServerRequest *request, CCBTarget *target 
 }
 
 void
-CCBServer::RequestFinished( CCBServerRequest *request, bool success, char const *error_msg )
+CCBServer::RequestReply( Sock *sock, bool success, char const *error_msg, CCBID request_cid, CCBID target_cid )
 {
-	Sock *sock = request->getSock();
-
 	ClassAd msg;
 	msg.Assign( ATTR_RESULT, success );
 	msg.Assign( ATTR_ERROR_STRING, error_msg );
 
 	sock->encode();
 	if( !msg.put( *sock ) || !sock->end_of_message() ) {
-			// If the request was successful, do not complain here,
-			// because it is expected that the client may have gone
-			// way by now, since it got what it wanted.
-		if( !success ) {
-			dprintf(D_ALWAYS,
-					"CCB: failed to send result to request id %lu "
-					"%s target ccbid %lu: %s\n",
-					request->getRequestID(),
-					request->getSock()->peer_description(),
-					request->getTargetCCBID(),
-					error_msg );
-		}
+		dprintf(D_ALWAYS,
+				"CCB: failed to send result to request id %lu "
+				"%s target ccbid %lu: %s\n",
+				request_cid,
+				sock->peer_description(),
+				target_cid,
+				error_msg );
 	}
+}
+
+void
+CCBServer::RequestFinished( CCBServerRequest *request, bool success, char const *error_msg )
+{
+	RequestReply(
+		request->getSock(),
+		success,
+		error_msg,
+		request->getRequestID(),
+		request->getTargetCCBID() );
 
 	RemoveRequest( request );
 }

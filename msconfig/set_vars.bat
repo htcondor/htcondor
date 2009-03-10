@@ -61,7 +61,7 @@ REM Specify which versions of the externals we're using. To add a
 REM new external, just add its version here, and add that to the 
 REM EXTERNALS_NEEDED variable defined below.
 set EXT_GSOAP_VERSION=gsoap-2.7.10-p3
-set EXT_OPENSSL_VERSION=openssl-0.9.8
+set EXT_OPENSSL_VERSION=openssl-0.9.8h
 set EXT_POSTGRESQL_VERSION=postgresql-8.0.2
 set EXT_KERBEROS_VERSION=krb5-1.4.3-p0
 set EXT_PCRE_VERSION=pcre-7.6
@@ -131,7 +131,7 @@ popd
 
 set CONDOR_NOWARN=/D_CRT_SECURE_NO_DEPRECATE /D_CRT_SECURE_NO_WARNINGS /D_CRT_NONSTDC_NO_WARNINGS /D_CRT_NON_CONFORMING_SWPRINTFS
 REM /D_CONST_RETURN
-set CONDOR_CPPARGS=/GR
+set CONDOR_CPPARGS=/GR /MP4
 set CONDOR_DEFINE=/DHAVE_CONFIG_H /DBUILDID=%BID% %CONDOR_CPPARGS% %CONDOR_NOWARN%
 set CONDOR_INCLUDE=/I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /I "..\src\condor_daemon_client" /I "..\src\condor_daemon_core.V6" /I "..\src\condor_schedd.V6" /I "..\src\condor_classad.V6" /I "..\src\ccb"
 set CONDOR_LIB=crypt32.lib mpr.lib psapi.lib mswsock.lib netapi32.lib imagehlp.lib ws2_32.lib powrprof.lib iphlpapi.lib userenv.lib

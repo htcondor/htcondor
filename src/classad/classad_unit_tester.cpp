@@ -802,7 +802,11 @@ static void test_collection(const Parameters &, Results &results)
     // We delete the log file so we start with a fresh slate.
     // Later on we will make a different collection from the log file
     // that we create, so we can test that it does what we want.
-    unlink(collection_log_file_name);
+#if defined ( WIN32 )
+	_unlink(collection_log_file_name);
+#else
+	unlink(collection_log_file_name);
+#endif
     success = collection->InitializeFromLog(collection_log_file_name);
     TEST("Initialized from empty log", success == true);
 
