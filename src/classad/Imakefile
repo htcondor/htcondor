@@ -110,18 +110,15 @@ H_FILES = 								\
 	classad/util.h classad/value.h classad/view.h			\
 	classad/xmlLexer.h classad/xmlSink.h classad/xmlSource.h
 
-WIN32_FILES = win32/classad_dist.dsw				\
-win32/classad_functional_tester.dep				\
-win32/classad_functional_tester.dsp				\
-win32/classad_functional_tester.mak win32/classad_lib.dep	\
-win32/classad_lib.dsp win32/classad_lib.mak			\
-win32/classad_unit_tester.dep win32/classad_unit_tester.dsp	\
-win32/classad_unit_tester.mak win32/make.bat
+WIN32_FILES =						\
+	win32/classad_dist.sln				\
+	win32/classad_functional_tester.vcproj		\
+	win32/classad_lib.vcproj			\
+	win32/classad_unit_tester.vcproj
 
 dist: $(DIST_FILES)
 	chmod 664 $(DIST_FILES)
 	chmod 664 $(WIN32_FILES)
-	chmod 775 win32/make.bat
 	rm -rf $(DISTRIBUTION_DIR) *.gz
 	mkdir $(DISTRIBUTION_DIR)
 	mkdir $(DISTRIBUTION_DIR)/win32
