@@ -272,14 +272,13 @@ protected:
 	// configuration variables	
     MyString                 m_stateFilePath;
     MyString                 m_versionFilePath;
+	MyString                 m_transfererPath;
 
 	// the replication daemon state
     ReplicatorState          m_state;
 
 	// list of remote replication daemons
     StringList               m_replicationDaemonsList;
-    // path to the directory where 'condor_transferer' binary is located
-	MyString                 m_releaseDirectoryPath;
 	// socket connection timeout
     int                      m_connectionTimeout;
 
@@ -293,12 +292,12 @@ protected:
 						   "State file path        - %s\n"
 						   "Version file path      - %s\n"
 						   "State                  - %d\n"
-						   "Release directory path - %s\n"
+						   "Transferer executeable - %s\n"
 						   "Connection timeout     - %d\n"
 						   "Downloading reaper id  - %d\n"
 						   "Uploading reaper id    - %d\n",
 				 m_stateFilePath.GetCStr(), m_versionFilePath.GetCStr(), 
-				 m_state, m_releaseDirectoryPath.GetCStr(), m_connectionTimeout,
+				 m_state, m_transfererPath.GetCStr(), m_connectionTimeout,
 				 m_downloadReaperId, m_uploadReaperId );    
 	};
 	// process ids of uploading/downloading 'condor_transferer' processes for
