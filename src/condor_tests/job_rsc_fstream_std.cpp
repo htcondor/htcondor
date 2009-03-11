@@ -20,8 +20,8 @@
 
  
 
-#include <iostream.h>
-#include <fstream.h>
+#include <iostream>
+#include <fstream>
 using namespace std;
 
 int main() {
