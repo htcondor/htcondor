@@ -2179,6 +2179,11 @@ negotiate( char *scheddName, const ClassAd *scheddAd, double priority, double sh
 		offer->LookupBool(ATTR_WANT_AD_REVAULATE, reevaluate_ad);
 		if( reevaluate_ad ) {
 			reeval(offer);
+			// Shuffle this resource to the end of the list.  This way, if
+			// two resources with the same RANK match, we'll hand them out
+			// in a round-robin way
+			startdAds.Delete (offer);
+			startdAds.Insert (offer);
 		} else  {
 			startdAds.Delete (offer);
 		}	
