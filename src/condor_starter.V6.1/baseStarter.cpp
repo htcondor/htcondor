@@ -155,6 +155,9 @@ CStarter::Init( JobInfoCommunicator* my_jic, const char* original_cwd,
 	daemonCore->Register_Signal(DC_SIGREMOVE, "DC_SIGREMOVE",
 		(SignalHandlercpp)&CStarter::RemoteRemove, "RemoteRemove",
 		this);
+	daemonCore->Register_Signal(SIGUSR1, "SIGUSR1",
+		(SignalHandlercpp)&CStarter::RemoteRemove, "RemoteRemove",
+		this);
 	daemonCore->Register_Signal(DC_SIGHOLD, "DC_SIGHOLD",
 		(SignalHandlercpp)&CStarter::RemoteHold, "RemoteHold",
 		this);

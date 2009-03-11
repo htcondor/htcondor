@@ -1650,12 +1650,12 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold,
 			const char* handler_sig_str;
 			switch( action ) {
 			case JA_HOLD_JOBS:
-				handler_sig = DC_SIGHOLD;
-				handler_sig_str = "DC_SIGHOLD";
+				handler_sig = SIGUSR1;
+				handler_sig_str = "SIGUSR1";
 				break;
 			case JA_REMOVE_JOBS:
-				handler_sig = DC_SIGREMOVE;
-				handler_sig_str = "DC_SIGREMOVE";
+				handler_sig = SIGUSR1;
+				handler_sig_str = "SIGUSR1";
 				break;
 			case JA_VACATE_JOBS:
 				handler_sig = DC_SIGSOFTKILL;
