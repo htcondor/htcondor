@@ -1,6 +1,6 @@
---- gt4.2.0-all-source-installer/source-trees/gridftp/server/src/Makefile.in	Thu Jan 12 16:24:44 2006
-+++ gt4.2.0-all-source-installer.new/source-trees/gridftp/server/src/Makefile.in	Thu Jan 12 16:29:35 2006
-@@ -95,7 +95,7 @@
+--- gt4.2.1-all-source-installer/source-trees/gridftp/server/src/Makefile.in	2008-10-03 00:18:49.000000000 -0500
++++ gt4.2.1-all-source-installer.patched/source-trees/gridftp/server/src/Makefile.in	2009-01-20 15:58:20.000000000 -0600
+@@ -112,7 +112,7 @@
  	$(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) \
  	$(AM_CFLAGS) $(CFLAGS)
  CCLD = $(CC)

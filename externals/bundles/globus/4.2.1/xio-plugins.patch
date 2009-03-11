@@ -1,5 +1,6 @@
---- gt4.2.0-all-source-installer/source-trees/xio/src/configure	2008-08-08 10:48:24.000000000 -0500
-+++ gt4.2.0-all-source-installer/source-trees/xio/src/configure.patch	2008-08-08 10:49:26.000000000 -0500
+diff -u -r gt4.2.1-all-source-installer/source-trees/xio/src/configure gt4.2.1-all-source-installer.patched/source-trees/xio/src/configure
+--- gt4.2.1-all-source-installer/source-trees/xio/src/configure	2008-10-03 00:13:09.000000000 -0500
++++ gt4.2.1-all-source-installer.patched/source-trees/xio/src/configure	2009-01-20 14:21:50.000000000 -0600
 @@ -3672,7 +3672,7 @@
  
  
@@ -18,8 +19,9 @@
    "depfiles" ) CONFIG_COMMANDS="$CONFIG_COMMANDS depfiles" ;;
    "config.h" ) CONFIG_HEADERS="$CONFIG_HEADERS config.h" ;;
    *) { { echo "$as_me:$LINENO: error: invalid argument: $ac_config_target" >&5
---- gt4.2.0-all-source-installer/source-trees/xio/src/pkgdata/pkg_data_src.gpt.in	2008-04-30 13:25:28.000000000 -0500
-+++ gt4.2.0-all-source-installer/source-trees/xio/src/pkgdata/pkg_data_src.gpt.in.patch	2008-08-08 11:13:10.000000000 -0500
+diff -u -r gt4.2.1-all-source-installer/source-trees/xio/src/pkgdata/pkg_data_src.gpt.in gt4.2.1-all-source-installer.patched/source-trees/xio/src/pkgdata/pkg_data_src.gpt.in
+--- gt4.2.1-all-source-installer/source-trees/xio/src/pkgdata/pkg_data_src.gpt.in	2008-04-30 13:25:28.000000000 -0500
++++ gt4.2.1-all-source-installer.patched/source-trees/xio/src/pkgdata/pkg_data_src.gpt.in	2009-01-20 14:25:22.000000000 -0600
 @@ -15,10 +15,28 @@
      <Source_Dependencies Type="compile" >
        <Dependency Name="globus_common" > <Version > <Simple_Version Major="4" /> </Version> </Dependency>
