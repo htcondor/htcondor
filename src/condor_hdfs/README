@@ -1,0 +1,181 @@
+/-------------------------------------------------------------------\
+/                     Condor Hadoop Daemon                          \   
+/                      Version: 0.1_alpha                           \    
+/                                                                   \
+/-------------------------------------------------------------------\                      
+
+
+TOC
+---
+
+1. Introduction
+2. Few Terminologies
+3. Typical Setup (also cluster setup)
+4. Configuration Options
+5. Logging
+6. Accessing Storage through C++ code.
+7. TODO
+8. Caveats
+
+1. Introduction
+---------------
+
+Apache Hadoop is a software platform intended for applications that need to process a vast
+amount of data. It provides an implementation of MapReduce backed by a distributed storage
+system that can be used to pool together individual disks on multiple and potentially 
+heterogeneous systems. To augment Condor's currently available options for staging files, 
+we are now also offering hadoop's distributed storage capabilities. We have written a condor 
+daemon that configures a typical storage cluster by using a smaller set of
+hadoop's configuration options, all of them available under usual Condor's configuration 
+file(s). This way user's don't need to manage/understand a lot of configuration options 
+,possibly, spread across multiple files and written in different formats (e.g key-value 
+vs XML). We tried to provide suitable default for as much parameters as possible. But, more 
+advance users will still be able to fine tune their storage installation. Additionally, this
+daemon runs under the usual control of  Master daemon and is capable of handling commands for
+starting, stopping and reconfiguring the storage. 
+
+Here we are giving a brief description of different hadoop related configuration parameters that
+are available via Condor. You probably will need to modify only few of these. 
+
+Please have a look at the section 3 of this README for a typical setup. 
+
+2. Few Terminologies
+---------------------
+
+Namenode - Hadoop metadata service, containing information for storage structure, location of data blocks etc
+
+Datanode - Hadoop's block storage service, provides storage and access of  data blocks of file stored under hadoop
+
+HDFS - The abbreviation we used (almost) consistently to refer to hadoop distributed storage.
+
+3. Typical configuration (also cluster setup)
+---------------------------------------------
+
+<Remarks: This section may need more explanation, we might want to flag one machine as
+namenode as default, so that to enjoy hadoop user don't have to do anything for a fully working setup. >
+
+In a typical hadoop storage cluster there will be one or more namenode service(s) and multiple
+datanode services. Typically only one namenode service is required for a storage, but, redundant
+secondary namenode service can also be setup. 
+
+Here are typical steps one should take to enable hadoop storage under Condor
+
+a) Add string "HDFS", name of daemon controlling hadoop,  under DAEMON_LIST and also DC_DAEMON_LIST. 
+
+b) Specify the location of the binary of hdfs daemon (named condor_hadoop, by default it is installed under $CONDOR_HOME/sbin/ directory by 'make'), if it is not already specified in the configuration file.
+
+c) Make necessary changes to HDFS section of condor_config file. Generally, you will need to 
+modify the HDFS_HOME (TODO: relative path?). By default, HDFS daemon will start a datanode service on a machine unless you change this by modifying HDFS_SERVICES parameters. Also, you should change the default directories where the namenode and datanode should store its files (More about these later).
+
+4. Configuration
+-----------------
+
+Some basic (and important) HDFS configuration options are specified in condor_config file.
+
+Here is a listing along with brief description of each parameters:
+
+a) HDFS_HOME: 
+     It should point to a directory containing hadoop's installation. Typically we expect
+     for an installation directory to have a 'lib' folder containing all necessary jar files
+     and a 'conf' folder for different kind of configuration files.
+
+       Here is a typical snapshot of hadoop's installation directory
+       HDFS_HOME/
+                |/lib
+                    |hadoop-0.17.2.1-core.jar
+                    |log4j-1.2.13.jar
+                    |commons-logging-api-1.0.4.jar
+                    ...
+                    ...
+                    ...
+                    |/native
+                         |<hadoop's native libraries folder> (More about this later)
+
+                |/conf
+
+                    |hadoop-default.xml - contains default configuration for hadoop
+                    |hadoop-site.xml    - overwritten by condor_hadoop daemon based on condor_config 
+                    |...
+
+
+b) HDFS_NAMENODE: 
+     ip:port of the machine running hadoop's metadata server. HDFS's naemnode keeps track
+     of all file blocks and their location on individual machines. 
+
+c) HDFS_SERVICES: 
+     It takes comma separated list of services to be run on a particular machine. 
+     You can specify HDFS_NAMENODE for hadoop's metadata server and HDFS_DATANODE for block
+     storage server. Usually, only one namenode is required for a storage cluster.
+     A backup namenode (aka secondary-namenode) can optionally be setup, but, currently 
+     there is no way to do it under condor. 
+
+d) HDFS_NAMENODE_DIR: 
+     An absolute path specifying the directory used by hadoop's name node to store necessary
+     metadata information. The hadoop version shipped with condor is patched to automatically
+     prepare this directory for name server's use only if it is empty. If your version of 
+     hadoop is different from ours than you might need to make sure that this directory is 
+     ready for name server's use.
+
+e) HDFS_DATANODE_DIR:
+     Similar to name node's directory parameter but doesn't require any kind of pre-processing.
+
+f) HDFS_DATANODE_ADDRESS:
+     On which ip:port should data node run
+
+g) HDFS_STDOUT    
+   HDFS_STDERR
+       Specify where should the datanode and namenode processes should direct their
+       standard input and output. By default, this information is thrown to {LOG} directory.
+
+Upon start condor_hadoop will write (or overwrite if already existed) hadoop-site.xml 
+configuration file under HDFS_HOME/conf . This file contains necessary configuration for 
+a hadoop's storage service to run. A bulk of optional configuration parameters can be 
+specified in HDFS_HOME/conf/hadoop-default.xml file. 
+
+
+5. Logging
+-----------
+
+HDFS uses log4j for logging. Our daemon will configure the log4j logger to write a rolling
+log files under the $CONDOR_LOCAL/log  directory. Additionally the location of standard 
+output/error files (of hadoop's services) can also be configured (see section 4).
+
+6. Using HDFS with C/C++ code
+------------------------------
+
+HDFS comes with a C++ client library based on JNI (Java native interface) for manipulating 
+its storage system. Look into the condor_hadoop/libhdfs folder for an example of how this client
+can be used. In order to compile this C++ client you need to have Java SDK installed. For compiling
+this library on *nix platform modify the accompanied bash or csh script (in libhdfs directory)
+to point to correct jdk's path etc. 
+
+The provided hdfs_copy example can be invoked as:
+
+    ./hdfs_copy <source-file-path> <dest-file-path>
+
+Use file:// hdfs:// prefix to specify the source/target filesystem e.g
+
+    ./hdfs_copy file:///path/to/file hdfs:///path/where/to/write
+
+copies from local file system to hadoop's distributed file system
+
+Note: This example is based on the libhdfs code provided with hadoop's source directory (HADOOP_HOME/src/c++/libhdfs)
+
+7. TODO
+--------
+
+1. Hadoop's web viewer exposes our log direcotry (Fix it!)
+2. Test the hdfs c++ client code with Condor.
+3. Write ip based access control settings to hadoop-site.xml file. Based these settings on many 
+   host allow and deny settings available in condor_config.
+4. Handle HDFS native code library paths.
+5. Test on Windows.
+
+8. Caveats
+----------
+
+1. Currently only tested with version 0.17 of Hadoop (This will change very soon).
+ 
+
+
+

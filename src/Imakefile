@@ -76,7 +76,7 @@
 		master.V6 negotiator.V6 schedd.V6 prio q.V6 rm.V6 \
 		scripts startd.V6 StdUnvProgs submit.V6 status.V6 \
 		tools KbddProgs collector.V6 dagman userlog Eventd \
-		gridmanager starter.V6.1 shadow.V6.1 dcskel c-gahp had \
+		gridmanager starter.V6.1 shadow.V6.1 dcskel hdfs c-gahp had \
 		CreddProgs StorkProgs LeaseManagerProgs \
 		TTProgs DeploymentTools \
 		eventd.V2 transferd procd privsep vm-gahp EC2 \
@@ -302,6 +302,7 @@ condor_object_target(c-gahp)
 condor_object_target(procd)
 condor_object_target(privsep)
 condor_object_target(dcskel)
+condor_object_target(hdfs)
 condor_object_target(startd_factory)
 condor_object_target(vm-gahp)
 
