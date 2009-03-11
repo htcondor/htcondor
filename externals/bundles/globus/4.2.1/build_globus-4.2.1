@@ -2,6 +2,7 @@
 
 . $EXTERNALS_CONFIG
 FLAVOR=$GLOBUS_FLAVOR
+THR_FLAVOR=$GLOBUS_THR_FLAVOR
 cd $PACKAGE_BUILD_DIR
 
 SOURCE_DIR="gt4.2.1-all-source-installer"
@@ -115,7 +116,7 @@ fi
 
 cd $SOURCE_DIR
 
-./configure --prefix=$PACKAGE_INSTALL_DIR --with-flavor=${FLAVOR}pthr
+./configure --prefix=$PACKAGE_INSTALL_DIR --with-flavor=${THR_FLAVOR}
 if [ $? -ne 0 ]
 then
   echo "configure failed"

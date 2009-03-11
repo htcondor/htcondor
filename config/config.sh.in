@@ -13,6 +13,7 @@ EXT_OPENSSL_VERSION=@ext_openssl_version@
 
 EXT_GLOBUS_VERSION=@ext_globus_version@
 GLOBUS_FLAVOR=@globus_flavor@
+GLOBUS_THR_FLAVOR=@globus_thr_flavor@
 
 EXT_ZLIB_VERSION=@ext_zlib_version@
 

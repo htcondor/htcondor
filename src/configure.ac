@@ -2897,8 +2897,10 @@ if test "x$cv_ext_globus" = xyes; then
   elif test "$_cv_opsys" = "AIX" ; then
     _cv_globus_flavor=vendorcc32dbg
   fi
+  _cv_globus_thr_flavor=${_cv_globus_flavor}pthr
   AC_MSG_RESULT([$_cv_globus_flavor])
   AC_SUBST(globus_flavor,$_cv_globus_flavor)
+  AC_SUBST(globus_thr_flavor,$_cv_globus_thr_flavor)
 fi
 
 # The test for gsoap needs to happen after the openssl check, so
