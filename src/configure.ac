@@ -2821,7 +2821,7 @@ CHECK_EXTERNAL([classads], [1.0.2], [soft],
 	       # This REALLY should test for headers, like most checks...
                MF_LIB_CHECK([classads], [[classad cclassad_create]]))	       
 
-CHECK_EXTERNAL([srb], [3.2.1-p1], [soft])
+CHECK_EXTERNAL([srb], [3.2.1-p2], [soft])
 
 CHECK_EXTERNAL([pcre], [7.6], [hard],
                [use PCRE (provides regular expression support)],
