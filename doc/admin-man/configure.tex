@@ -8425,6 +8425,15 @@ MASTER_NEGOTIATOR_CONTROLLER = HAD
   It is normally defined relative to \MacroUNI{SBIN}.
   There is no default value.
 
+\label{param:Transferer}
+\item[\Macro{TRANSFERER}]
+  The full path and file name of the \Condor{transferer} executable.
+  It is normally defined relative to \MacroUNI{SBIN}.
+  This defaults to ``\MacroUNI{RELEASE\_DIR}/sbin/condor\_transferer'',
+  which was the hard coded behavior before Condor 7.2.2.  The use of
+  this hard coded behavior should be considered obsolete behavior, and
+  will be removed in a future version of Condor.
+
 \label{param:MaxReplicationLog}
 \item[\Macro{MAX\_REPLICATION\_LOG}]
   Controls the maximum length in bytes to which the \Condor{replication}

@@ -56,6 +56,16 @@ and \Condor{submit\_dag}.  This flag is intended mainly for testing.
   See \ref{param:EventLogLocking} for the complete definition of
   this variable.
 
+% gittrac #314
+\item The new string configuration variable \Macro{TRANSFERER}
+  specifies the path to the \Condor{transferer} program which is
+  invoked by the \Condor{replication} daemon to perform the actual
+  transfer of the \MacroNI{STATE\_FILE}.  This is part of the high
+  availability framework.
+  Prior to Condor 7.2.2, this was hard coded to
+  ``\MacroUNI{RELEASE\_DIR}/sbin/condor\_transferer''.  The use of
+  this hard coded behavior should be considered obsolete behavior, and
+  will be removed in a future version of Condor.
 
 \end{itemize}
 
@@ -127,6 +137,13 @@ to \emph{not} be printed at the default verbosity.
 They are now mostly printed at debug level 4.
 For definitions of the debug levels, see the \Condor{dagman} manual
 page at section~ \ref{man-condor-dagman}.
+
+% gittrac #313
+\item Fixed a bug that was causing the \Condor{replication} daemon
+  (part of the high availability framework) to
+  start the \Condor{transferer} client incorrectly; the end result is
+  that the \Condor{transferer} was unable to authenticate via GSI
+  using host-based certificates.
 
 \end{itemize}
 
