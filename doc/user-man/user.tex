@@ -334,7 +334,7 @@ every time your job is checkpointed and/or migrated to a different machine.
 When your program completes, Condor will tell you
 (by e-mail, if preferred) the exit status of your program and various
 statistics about its performances, including time used and I/O performed.
-If you are using a log file for the job(which is recommended) the exit
+If you are using a log file for the job (which is recommended) the exit
 status will be recorded in the log file.
 You can remove a job from the
 queue prematurely with \Condor{rm}. 
@@ -659,9 +659,9 @@ in the
 \subsubsection{Example 1} 
 
 Example 1 is the simplest submit description
-file possible. It queues up one copy of the program \Prog{foo}(which had been
-created by \Condor{compile}) for execution
-by Condor.
+file possible. It queues up one copy of the program \Prog{foo}
+(which had been created by \Condor{compile})
+for execution by Condor.
 Since no platform is specified, Condor will use its default,
 which is to run the job on a machine which has the
 same architecture and operating system as the machine from which it was
@@ -831,7 +831,7 @@ The \Condor{status} command displays
 statistics about machines within the pool.
 The \Opt{-l} option displays the
 machine ClassAd attributes for all machines in the Condor pool.
-The job ClassAds, if there jobs in the queue, can be seen
+The job ClassAds, if there are jobs in the queue, can be seen
 with the \Condor{q -l} command.
 This shows all the defined attributes for current jobs in the queue.
 
