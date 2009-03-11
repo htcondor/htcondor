@@ -1,7 +1,0 @@
-This isn't really blahp 1.4.0. I checked it out using this command:
-
-cvs -d :pserver:anonymous@jra1mw.cvs.cern.ch:/cvs/jra1mw co -r \
-  Experimental_branch4Condor org.glite.ce.blahp
-
-extra-files.tar.gz came from 
-http://glite.web.cern.ch/glite/packages/R3.1/N20060406/src/glite-ce-blahp-1.7.0_src.tar.gz

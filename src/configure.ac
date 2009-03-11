@@ -2829,11 +2829,15 @@ CHECK_EXTERNAL([pcre], [7.6], [hard],
 AS_IF([test "x$cv_ext_pcre" = xyes],
   [AC_CHECK_HEADERS([pcre.h pcre/pcre.h])])
 
-AS_IF([test "x$os-$_cv_arch" = xLinux-I386 -a "x$_cv_linux_distro" != "xDEBIAN50" -a "x$_cv_has_globus" = xyes -a -n "$_cv_ext_classads_version"],
+# The auto-tools aren't working correctly on AIX
+# Solaris doesn't have the auto-tools on NMI
+# FreeBSD has different types for network structs
+# Mac OS X doesn't have strndup()
+AS_IF([test "x$_cv_opsys" != xDARWIN -a "x$_cv_opsys" != xAIX -a "x$_cv_opsys" != "xSOLARIS" -a "x$_cv_opsys" != "xCONDOR_FREEBSD" -a "x$_cv_has_globus" = xyes -a -n "$_cv_ext_classads_version"],
   [_cv_has_blahp=yes],
   [_cv_has_blahp=no])
 AC_MSG_RESULT([$_cv_has_blahp])
-CHECK_EXTERNAL([blahp], [1.7.0-p2], [soft])
+CHECK_EXTERNAL([blahp], [1.12.2], [soft])
 
 # When --with-proper the detection of the man pages is a little
 # ugly. The value added to the end of $_dir must be what

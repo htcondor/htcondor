@@ -1,6 +1,6 @@
-diff -u -r org.glite.ce.blahp/src/classad_binary_op_unwind.C org.glite.ce.blahp-patched/src/classad_binary_op_unwind.C
---- org.glite.ce.blahp/src/classad_binary_op_unwind.C	Wed Mar 12 12:54:55 2008
-+++ org.glite.ce.blahp-patched/src/classad_binary_op_unwind.C	Wed Mar 12 12:55:25 2008
+diff -u -r org.glite.ce.blahp/src/classad_binary_op_unwind.C org.glite.ce.blahp.patched/src/classad_binary_op_unwind.C
+--- org.glite.ce.blahp/src/classad_binary_op_unwind.C	2006-03-13 04:23:36.000000000 -0600
++++ org.glite.ce.blahp.patched/src/classad_binary_op_unwind.C	2009-01-20 18:06:28.000000000 -0600
 @@ -21,10 +21,10 @@
  
  #include <strings.h> // strcasecmp
@@ -22,9 +22,9 @@ diff -u -r org.glite.ce.blahp/src/classad_binary_op_unwind.C org.glite.ce.blahp-
 +#ifdef WANT_CLASSAD_NAMESPACE
  } // end of classad namespace
  #endif
-diff -u -r org.glite.ce.blahp/src/classad_binary_op_unwind.h org.glite.ce.blahp-patched/src/classad_binary_op_unwind.h
---- org.glite.ce.blahp/src/classad_binary_op_unwind.h	Wed Mar 12 12:54:55 2008
-+++ org.glite.ce.blahp-patched/src/classad_binary_op_unwind.h	Wed Mar 12 12:55:25 2008
+diff -u -r org.glite.ce.blahp/src/classad_binary_op_unwind.h org.glite.ce.blahp.patched/src/classad_binary_op_unwind.h
+--- org.glite.ce.blahp/src/classad_binary_op_unwind.h	2006-03-13 04:23:36.000000000 -0600
++++ org.glite.ce.blahp.patched/src/classad_binary_op_unwind.h	2009-01-20 18:07:09.000000000 -0600
 @@ -16,12 +16,12 @@
  //   All rights reserved.
  //   See http://grid.infn.it/grid/license.html for license details.
@@ -49,10 +49,10 @@ diff -u -r org.glite.ce.blahp/src/classad_binary_op_unwind.h org.glite.ce.blahp-
  } // end of classad namespace
  #endif
  
-diff -u -r org.glite.ce.blahp/src/classad_c_helper.C org.glite.ce.blahp-patched/src/classad_c_helper.C
---- org.glite.ce.blahp/src/classad_c_helper.C	Wed Mar 12 12:54:55 2008
-+++ org.glite.ce.blahp-patched/src/classad_c_helper.C	Wed Mar 12 12:55:25 2008
-@@ -21,10 +21,10 @@
+diff -u -r org.glite.ce.blahp/src/classad_c_helper.C org.glite.ce.blahp.patched/src/classad_c_helper.C
+--- org.glite.ce.blahp/src/classad_c_helper.C	2007-11-30 09:38:34.000000000 -0600
++++ org.glite.ce.blahp.patched/src/classad_c_helper.C	2009-01-20 18:07:52.000000000 -0600
+@@ -23,10 +23,10 @@
  //
  
  #include <string.h>

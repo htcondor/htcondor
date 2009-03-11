@@ -1,0 +1,14 @@
+--- org.glite.ce.blahp/src/server.c	2008-10-17 11:11:42.000000000 -0500
++++ org.glite.ce.blahp.patched/src/server.c	2009-03-18 11:40:59.000000000 -0500
+@@ -1087,10 +1087,7 @@
+         {
+                 conv_environment = ConvertArgs(environment,' ');
+ 		/* fprintf(stderr, "DEBUG: args conversion <%s> to <%s>\n", environment, conv_environment); */
+-                if(conv_environment == NULL)
+-                {
+-                        free(environment);
+-                }else
++                if(conv_environment != NULL)
+                 {
+                         command_ext = make_message("%s -V %s", command, conv_environment);
+                         if (command_ext == NULL)
