@@ -80,6 +80,7 @@ HOSTALLOW_ADMINISTRATOR = $(COLLECTOR_HOST)
 ##  managers.  You should normally not have to change this.
 HOSTALLOW_NEGOTIATOR = $(COLLECTOR_HOST)
 
+
 ###################################################################
 ## THE PARAMETERS BELOW ARE ALLOWED TO BE DIFFERENT ON EACH       #
 ## CENTRAL MANAGERS                                               #
@@ -89,10 +90,11 @@ HOSTALLOW_NEGOTIATOR = $(COLLECTOR_HOST)
 ## The location of executable files
 HAD         = $(SBIN)/condor_had
 REPLICATION = $(SBIN)/condor_replication
+TRANSFERER  = $(SBIN)/condor_transferer
 
 
 ## the master should start at least these four daemons
-DAEMON_LIST = MASTER, COLLECTOR, NEGOTIATOR, HAD
+DAEMON_LIST = MASTER, COLLECTOR, NEGOTIATOR, HAD, REPLICATION
 
 # The default for DC_DAEMON_LIST is usually correct.
 DC_DAEMON_LIST = + HAD, REPLICATION
