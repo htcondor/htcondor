@@ -62,6 +62,11 @@ ResMgr::ResMgr()
 		dprintf( D_FULLDEBUG, "Using network interface %s for hibernation\n",
 				 primary->interfaceName() );
 	}
+	MyString	states;
+	m_hibernation_manager->getSupportedStates(states);
+	dprintf( D_FULLDEBUG,
+			 "Detected hibernation states: %s\n", states.Value() );
+
 	m_hibernating = FALSE;
 #endif
 

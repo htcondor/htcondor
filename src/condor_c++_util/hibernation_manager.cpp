@@ -90,6 +90,54 @@ HibernationManager::isStateSupported( HibernatorBase::SLEEP_STATE state ) const
 }
 
 bool
+HibernationManager::getSupportedStates( unsigned & mask ) const
+{
+	if ( m_hibernator ) {
+		mask = m_hibernator->getStates( );
+		return true;
+	}
+	return false;
+}
+
+bool
+HibernationManager::getSupportedStates(
+	ExtArray<HibernatorBase::SLEEP_STATE> &states ) const
+{
+	states.truncate(-1);
+	if ( m_hibernator ) {
+		unsigned mask = m_hibernator->getStates( );
+		unsigned bit;
+		for ( bit = (unsigned)HibernatorBase::S1;
+			  bit <= (unsigned)HibernatorBase::S5;
+			  bit <<= 1 ) {
+			if ( bit & mask ) {
+				states.add( (HibernatorBase::SLEEP_STATE)bit );
+			}
+		}
+		return true;
+	}
+	return false;
+}
+
+bool
+HibernationManager::getSupportedStates( MyString &str ) const
+{
+	ExtArray<HibernatorBase::SLEEP_STATE> states;
+	str = "";
+	if ( m_hibernator ) {
+		getSupportedStates( states );
+		for( int i = 0;  i <= states.getlast();  i++ ) {
+			if ( i ) {
+				str += ",";
+			}
+			str += HibernatorBase::sleepStateToString( states[i] );
+		}
+		return true;
+	}
+	return false;
+}
+
+bool
 HibernationManager::setTargetState( HibernatorBase::SLEEP_STATE state )
 {
 	if ( state == m_target_state ) {
@@ -245,6 +293,10 @@ HibernationManager::publish ( ClassAd &ad )
 	const char *state = sleepStateToString( m_target_state );
     ad.Assign ( ATTR_HIBERNATION_LEVEL, level );
     ad.Assign ( ATTR_HIBERNATION_STATE, state );
+
+	MyString	states;
+	getSupportedStates( states );
+    ad.Assign ( ATTR_HIBERNATION_SUPPORTED_STATES, states );
 
     /* publish whether or not we can enter a state of hibernation */
     ad.Assign ( ATTR_CAN_HIBERNATE, canHibernate () );

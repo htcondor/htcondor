@@ -253,6 +253,7 @@ const char *ATTR_HAS_WIN_RUN_AS_OWNER     = "HasWindowsRunAsOwner";
 const char *ATTR_HELD_JOBS				 = "HeldJobs";
 const char *ATTR_HIBERNATION_LEVEL        = "HibernationLevel";
 const char *ATTR_HIBERNATION_STATE        = "HibernationState";
+const char *ATTR_HIBERNATION_SUPPORTED_STATES = "HibernationSupportedStates";
 const char *ATTR_HOLD_KILL_SIG            = "HoldKillSig";
 const char *ATTR_HOOK_KEYWORD             = "HookKeyword";
 const char *ATTR_IDLE_JOBS                = "IdleJobs";
