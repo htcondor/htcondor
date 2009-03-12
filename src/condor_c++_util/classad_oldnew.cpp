@@ -28,14 +28,13 @@ using namespace std;
 #include "classad/classad_distribution.h"
 #include "classad_oldnew.h"
 #include "conversion.h"
-BEGIN_NAMESPACE( classad )
 
 classad::ClassAd *
 getOldClassAd( Stream *sock )
 {
 	classad::ClassAd *ad = new classad::ClassAd( );
 	if( !ad ) { 
-		return (ClassAd*) 0;
+		return NULL;
 	}
 	if( !getOldClassAd( sock, *ad ) ) {
 		delete ad;
@@ -227,5 +226,3 @@ putOldClassAdNoTypes ( Stream *sock, classad::ClassAd& ad )
 
 	return true;
 }
-
-END_NAMESPACE // classad

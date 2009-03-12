@@ -17,26 +17,30 @@
  *
  ***************************************************************/
 
-#define WANT_CLASSAD_NAMESPACE
+#include "compat_classad.h"
 
-#include "condor_common.h"
-#include "classad/classad_distribution.h"
-#include "condor_attributes.h"
-#include "condor_debug.h"
-#include "condor_constants.h"
+#include "condor_classad.h"
 #include "classad_oldnew.h"
+#include "condor_attributes.h"
 
 using namespace std;
+using namespace classad;
 
-BEGIN_NAMESPACE(classad)
+CompatClassAd::CompatClassAd()
+{
+}
 
-#define ATTRLIST_MAX_EXPRESSION         10240
+CompatClassAd::CompatClassAd( const CompatClassAd &ad )
+{
+	CopyFrom( ad );
+}
 
-// AttrList methods
+CompatClassAd::~CompatClassAd()
+{
+}
 
-
-ClassAd::
-ClassAd( FILE *file, char *delimitor, int &isEOF, int&error, int &empty )
+CompatClassAd::
+CompatClassAd( FILE *file, char *delimitor, int &isEOF, int&error, int &empty )
 {
 	nodeKind = CLASSAD_NODE;
 
@@ -91,11 +95,11 @@ ClassAd( FILE *file, char *delimitor, int &isEOF, int&error, int &empty )
 	return;
 }
 
-int ClassAd::
+int CompatClassAd::
 Insert( const char *str )
 {
-	ClassAdParser parser;
-	ClassAd *newAd;
+	classad::ClassAdParser parser;
+	classad::ClassAd *newAd;
 	vector< pair< string, ExprTree *> > vec;
 	vector< pair< string, ExprTree *> >::iterator itr;
 
@@ -121,7 +125,7 @@ Insert( const char *str )
 	newAd->GetComponents( vec );
 	
 	for( itr = vec.begin( ); itr != vec.end( ); itr++ ) {
-		if( !Insert( itr->first, itr->second ) ) {
+		if( !ClassAd::Insert( itr->first, itr->second ) ) {
 			return FALSE;
 		}
 		itr->first = "";
@@ -130,26 +134,26 @@ Insert( const char *str )
 	return TRUE;
 }
 
-//  void ClassAd::
+//  void CompatClassAd::
 //  ResetExpr() { this->ptrExpr = exprList; }
 
-//  ExprTree* ClassAd::
+//  ExprTree* CompatClassAd::
 //  NextExpr(){}
 
-//  void ClassAd::
+//  void CompatClassAd::
 //  ResetName() { this->ptrName = exprList; }
 
-//  const char* ClassAd::
+//  const char* CompatClassAd::
 //  NextNameOriginal(){}
 
 
-//  ExprTree* ClassAd::
+//  ExprTree* CompatClassAd::
 //  Lookup(char *) const{}
 
-//  ExprTree* ClassAd::
+//  ExprTree* CompatClassAd::
 //  Lookup(const char*) const{}
 
-int ClassAd::
+int CompatClassAd::
 LookupString( const char *name, char *value ) const 
 {
 	string strVal;
@@ -160,7 +164,7 @@ LookupString( const char *name, char *value ) const
 	return 1;
 } 
 
-int ClassAd::
+int CompatClassAd::
 LookupString(const char *name, char *value, int max_len) const
 {
 	string strVal;
@@ -171,7 +175,7 @@ LookupString(const char *name, char *value, int max_len) const
 	return 1;
 }
 
-int ClassAd::
+int CompatClassAd::
 LookupString (const char *name, char **value) const 
 {
 	string strVal;
@@ -188,7 +192,7 @@ LookupString (const char *name, char **value) const
 	return 0;
 }
 
-int ClassAd::
+int CompatClassAd::
 LookupInteger( const char *name, int &value ) const 
 {
 	bool    boolVal;
@@ -207,7 +211,7 @@ LookupInteger( const char *name, int &value ) const
 	return haveInteger;
 }
 
-int ClassAd::
+int CompatClassAd::
 LookupFloat( const char *name, float &value ) const
 {
 	double  doubleVal;
@@ -226,7 +230,7 @@ LookupFloat( const char *name, float &value ) const
 	return haveFloat;
 }
 
-int ClassAd::
+int CompatClassAd::
 LookupBool( const char *name, int &value ) const
 {
 	int   intVal;
@@ -249,7 +253,7 @@ LookupBool( const char *name, int &value ) const
 	return haveBool;
 }
 
-int ClassAd::
+int CompatClassAd::
 LookupBool( const char *name, bool &value ) const
 {
 	int   intVal;
@@ -272,8 +276,8 @@ LookupBool( const char *name, bool &value ) const
 	return haveBool;
 }
 
-int ClassAd::
-EvalString( const char *name, class ClassAd *target, char *value )
+int CompatClassAd::
+EvalString( const char *name, classad::ClassAd *target, char *value )
 {
 	string strVal;
 
@@ -285,7 +289,7 @@ EvalString( const char *name, class ClassAd *target, char *value )
 		return 0;
 	}
 
-	MatchClassAd mad( this, target );
+	classad::MatchClassAd mad( this, target );
 	if( EvaluateAttrString( name, strVal ) ) {
 		strcpy( value, strVal.c_str( ) );
 		mad.RemoveLeftAd( );
@@ -297,8 +301,8 @@ EvalString( const char *name, class ClassAd *target, char *value )
 	return 0;
 }
 
-int ClassAd::
-EvalInteger (const char *name, class ClassAd *target, int &value)
+int CompatClassAd::
+EvalInteger (const char *name, classad::ClassAd *target, int &value)
 {
 	if( strcasecmp( name, "CurrentTime" ) == 0 ) {
 		time_t	now = time (NULL);
@@ -318,7 +322,7 @@ EvalInteger (const char *name, class ClassAd *target, int &value)
 		return 0;
 	}
 
-	MatchClassAd mad( this, target );
+	classad::MatchClassAd mad( this, target );
 	if( EvaluateAttrInt( name, value ) ) { 
 		mad.RemoveLeftAd( );
 		mad.RemoveRightAd( );
@@ -329,8 +333,8 @@ EvalInteger (const char *name, class ClassAd *target, int &value)
 	return 0;
 }
 
-int ClassAd::
-EvalFloat (const char *name, class ClassAd *target, float &value)
+int CompatClassAd::
+EvalFloat (const char *name, classad::ClassAd *target, float &value)
 {
 	Value val;
 	double doubleVal;
@@ -350,7 +354,7 @@ EvalFloat (const char *name, class ClassAd *target, float &value)
 		return 0;
 	}
 
-	MatchClassAd mad( this, target );
+	classad::MatchClassAd mad( this, target );
 	if( EvaluateAttr( name, val ) ) {
 		if( val.IsRealValue( doubleVal ) ) {
 			value = ( float )doubleVal;
@@ -370,8 +374,8 @@ EvalFloat (const char *name, class ClassAd *target, float &value)
 	return 0;
 }
 
-int ClassAd::
-EvalBool  (const char *name, class ClassAd *target, int &value)
+int CompatClassAd::
+EvalBool  (const char *name, classad::ClassAd *target, int &value)
 {
 	Value val;
 	double doubleVal;
@@ -396,7 +400,7 @@ EvalBool  (const char *name, class ClassAd *target, int &value)
 		return 0;
 	}
 
-	MatchClassAd mad( this, target );
+	classad::MatchClassAd mad( this, target );
 	if( EvaluateAttr( name, val ) ) {
 		if( val.IsBooleanValue( boolVal ) ) {
 			value = boolVal ? 1 : 0;
@@ -424,7 +428,7 @@ EvalBool  (const char *name, class ClassAd *target, int &value)
 }
 
         // shipping functions
-int ClassAd::
+int CompatClassAd::
 put( Stream &s )
 {
 	if( !putOldClassAd( &s, *this ) ) {
@@ -433,10 +437,10 @@ put( Stream &s )
 	return TRUE;
 }
 
-int ClassAd::
+int CompatClassAd::
 initFromStream(Stream& s)
 {
-	ClassAd *newAd;
+	classad::ClassAd *newAd;
 	if( !( newAd = getOldClassAd( &s ) ) ) {
 		return FALSE;
 	}
@@ -447,10 +451,10 @@ initFromStream(Stream& s)
 }
 
 		// output functions
-int	ClassAd::
+int	CompatClassAd::
 fPrint( FILE *file )
 {
-	ClassAdUnParser unp;
+	classad::ClassAdUnParser unp;
 	unp.SetOldClassAd( true );
 	string buffer;
 
@@ -464,10 +468,10 @@ fPrint( FILE *file )
 	return TRUE;
 }
 
-void ClassAd::
+void CompatClassAd::
 dPrint( int level )
 {
-	ClassAdUnParser unp;
+	classad::ClassAdUnParser unp;
 	unp.SetOldClassAd( true );
 	string buffer;
 
@@ -481,7 +485,7 @@ dPrint( int level )
 // ClassAd methods
 
 		// Type operations
-void ClassAd::
+void CompatClassAd::
 SetMyTypeName( const char *myType )
 {
 	if( myType ) {
@@ -491,7 +495,7 @@ SetMyTypeName( const char *myType )
 	return;
 }
 
-const char*	ClassAd::
+const char*	CompatClassAd::
 GetMyTypeName( )
 {
 	string myTypeStr;
@@ -501,7 +505,7 @@ GetMyTypeName( )
 	return myTypeStr.c_str( );
 }
 
-void ClassAd::
+void CompatClassAd::
 SetTargetTypeName( const char *targetType )
 {
 	if( targetType ) {
@@ -511,7 +515,7 @@ SetTargetTypeName( const char *targetType )
 	return;
 }
 
-const char*	ClassAd::
+const char*	CompatClassAd::
 GetTargetTypeName( )
 {
 	string targetTypeStr;
@@ -523,7 +527,7 @@ GetTargetTypeName( )
 
 // Back compatibility helper methods
 
-bool ClassAd::
+bool CompatClassAd::
 AddExplicitConditionals( ExprTree *expr, ExprTree *&newExpr )
 {
 	if( expr == NULL ) {
@@ -533,18 +537,18 @@ AddExplicitConditionals( ExprTree *expr, ExprTree *&newExpr )
 	return true;
 }
 
-ClassAd *ClassAd::
+classad::ClassAd *CompatClassAd::
 AddExplicitTargetRefs( )
 {
 	string attr = "";
 	set< string, CaseIgnLTStr > definedAttrs;
 	
-	for( AttrList::iterator a = begin( ); a != end( ); a++ ) {
+	for( classad::AttrList::iterator a = begin( ); a != end( ); a++ ) {
 		definedAttrs.insert( a->first );
 	}
 	
-	ClassAd *newAd = new ClassAd( );
-	for( AttrList::iterator a = begin( ); a != end( ); a++ ) {
+	classad::ClassAd *newAd = new classad::ClassAd( );
+	for( classad::AttrList::iterator a = begin( ); a != end( ); a++ ) {
 		newAd->Insert( a->first, 
 					   AddExplicitTargetRefs( a->second, definedAttrs ) );
 	}
@@ -554,7 +558,7 @@ AddExplicitTargetRefs( )
 
 
 // private methods
-void ClassAd::
+void CompatClassAd::
 evalFromEnvironment( const char *name, Value val )
 {
 	if (strcmp (name, "CurrentTime") == 0)
@@ -574,7 +578,7 @@ evalFromEnvironment( const char *name, Value val )
 
 }
 
-ExprTree *ClassAd::
+classad::ExprTree *CompatClassAd::
 AddExplicitConditionals( ExprTree *expr )
 {
 	if( expr == NULL ) {
@@ -736,7 +740,7 @@ AddExplicitConditionals( ExprTree *expr )
 	return NULL;
 }
 
-ExprTree *ClassAd::
+classad::ExprTree *CompatClassAd::
 AddExplicitTargetRefs( ExprTree *tree, set<string,CaseIgnLTStr> &definedAttrs )
 {
 	if( tree == NULL ) {
@@ -793,5 +797,3 @@ AddExplicitTargetRefs( ExprTree *tree, set<string,CaseIgnLTStr> &definedAttrs )
 	}
 }
 
-
-END_NAMESPACE

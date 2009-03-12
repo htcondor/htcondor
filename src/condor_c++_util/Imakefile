@@ -1,4 +1,4 @@
-#define New_classads_obj	credential.o X509credential.o classad_oldnew.o newclassad_stream.o
+#define New_classads_obj	credential.o X509credential.o classad_oldnew.o newclassad_stream.o compat_classad.o
 #define New_classads_dc_obj	dc_credd.o dc_lease_manager.o dc_lease_manager_lease.o
 #define New_classads_lib	-lclassad_ns
 

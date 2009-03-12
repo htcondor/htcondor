@@ -28,10 +28,6 @@
 #include "classad/classad_stl.h"
 #include "classad/exprTree.h"
 
-#ifdef CLASSAD_DEPRECATED
-class Stream;
-#endif
-
 BEGIN_NAMESPACE( classad )
 
 typedef std::set<std::string, CaseIgnLTStr> References;
@@ -558,145 +554,6 @@ e		*/
 					const std::string &allowed, const References &imported );
 #endif
 
-#if defined( CLASSAD_DEPRECATED )
-		/**@name Deprecated functions (only for use within Condor) */
-        //@{
-        /** Insert an attribute/value into the ClassAd 
-         *  @param str A string of the form "Attribute = Value"
-         */
-        int        	Insert(const char *str);
-        /** Insert an attribute/value into the ClassAd 
-         *  @param expr A string of the form "Attribute = Value"
-         */
-		int			InsertOrUpdate(const char *expr) { return Insert(expr); }
-
-		// for iteration through expressions
-//		void		ResetExpr();
-//		ExprTree*	NextExpr();
-
-		// for iteration through names (i.e., lhs of the expressions)
-//		void		ResetName() { this->ptrName = exprList; }
-//		const char* NextNameOriginal();
-
-		// lookup values in classads  (for simple assignments)
-//		ExprTree*   Lookup(char *) const;  		// for convenience
-//      ExprTree*	Lookup(const char*) const;	// look up an expression
-
-        /** Lookup (don't evaluate) an attribute that is a string.
-         *  @param name The attribute
-         *  @param value The string, copied with strcpy (DANGER)
-         *  @return true if the attribute exists and is a string, false otherwise
-         */
-		int         LookupString(const char *name, char *value) const; 
-        /** Lookup (don't evaluate) an attribute that is a string.
-         *  @param name The attribute
-         *  @param value The string, copied with strncpy
-         *  @param max_len The maximum number of bytes in the string to copy
-         *  @return true if the attribute exists and is a string, false otherwise
-         */
-		int         LookupString(const char *name, char *value, int max_len) const;
-        /** Lookup (don't evaluate) an attribute that is a string.
-         *  @param name The attribute
-         *  @param value The string, allocated with malloc() not new.
-         *  @return true if the attribute exists and is a string, false otherwise
-         */
-		int         LookupString (const char *name, char **value) const;
-        /** Lookup (don't evaluate) an attribute that is an integer.
-         *  @param name The attribute
-         *  @param value The integer
-         *  @return true if the attribute exists and is an integer, false otherwise
-         */
-        int         LookupInteger(const char *name, int &value) const;
-        /** Lookup (don't evaluate) an attribute that is a float.
-         *  @param name The attribute
-         *  @param value The integer
-         *  @return true if the attribute exists and is a float, false otherwise
-         */
-        int         LookupFloat(const char *name, float &value) const;
-        /** Lookup (don't evaluate) an attribute that can be considered a boolean
-         *  @param name The attribute
-         *  @param value 0 if the attribute is 0, 1 otherwise
-         *  @return true if the attribute exists and is a boolean/integer, false otherwise
-         */
-        int         LookupBool(const char *name, int &value) const;
-        /** Lookup (don't evaluate) an attribute that can be considered a boolean
-         *  @param name The attribute
-         *  @param value false if the attribute is 0, true otherwise
-         *  @return true if the attribute exists and is a boolean/integer, false otherwise
-         */
-        int         LookupBool(const char *name, bool &value) const;
-
-		/** Lookup and evaluate an attribute in the ClassAd that is a string
-         *  @param name The name of the attribute
-         *  @param target A ClassAd to resolve MY or other references
-         *  @param value Where we the copy the string. Danger: we just use strcpy.
-         *  @return 1 on success, 0 if the attribute doesn't exist, or if it does exist 
-         *  but is not a string.
-         */
-		int         EvalString (const char *name, class ClassAd *target, char *value);
-		/** Lookup and evaluate an attribute in the ClassAd that is an integer
-         *  @param name The name of the attribute
-         *  @param target A ClassAd to resolve MY or other references
-         *  @param value Where we the copy the value.
-         *  @return 1 on success, 0 if the attribute doesn't exist, or if it does exist 
-         *  but is not an integer
-         */
-		int         EvalInteger (const char *name, class ClassAd *target, int &value);
-		/** Lookup and evaluate an attribute in the ClassAd that is a float
-         *  @param name The name of the attribute
-         *  @param target A ClassAd to resolve MY or other references
-         *  @param value Where we the copy the value. Danger: we just use strcpy.
-         *  @return 1 on success, 0 if the attribute doesn't exist, or if it does exist 
-         *  but is not a float.
-         */
-		int         EvalFloat (const char *name, class ClassAd *target, float &value);
-		/** Lookup and evaluate an attribute in the ClassAd that is a boolean
-         *  @param name The name of the attribute
-         *  @param target A ClassAd to resolve MY or other references
-         *  @param value Where we a 1 (if the value is non-zero) or a 1. 
-         *  @return 1 on success, 0 if the attribute doesn't exist, or if it does exist 
-         *  but is not a number.
-         */
-		int         EvalBool  (const char *name, class ClassAd *target, int &value);
-
-        /** A constructor that reads old ClassAds from a FILE */
-        ClassAd(FILE*,char*,int&,int&,int&);	// Constructor, read from file.
-
-        /** Set the MyType attribute */
-        void		SetMyTypeName(const char *);
-        /** Get the value of the MyType attribute */
-        const char*	GetMyTypeName();
-        /** Set the value of the TargetType attribute */
-        void 		SetTargetTypeName(const char *);
-        /** Get the value of the TargetType attribtute */
-        const char*	GetTargetTypeName();
-
-        /** Print the ClassAd as an old ClassAd to the stream
-         * @param s the stream
-         */
-        int put(Stream& s);
-
-        /** Read the old ClassAd from the stream, and fill in this ClassAd.
-         * @param s the stream
-         */
-		int initFromStream(Stream& s);
-
-        /** Print the ClassAd as an old ClassAd to the FILE
-            @param file The file handle to print to.
-            @return TRUE
-         */
-        int	fPrint(FILE *file);
-
-        /** Print the ClassAd as an old ClasAd with dprintf
-            @param level The dprintf level.
-         */
-		void		dPrint( int level);
-
-		bool AddExplicitConditionals( ExprTree *expr, ExprTree *&newExpr );
-		ClassAd *AddExplicitTargetRefs( );
-		//@}
-#endif
-
 		/**@name Chaining functions */
         //@{
         /** Chain this ad to the parent ad.
@@ -785,13 +642,6 @@ e		*/
 #if defined( EXPERIMENTAL )
 		bool _MakeRectangles(const ExprTree*,const std::string&,Rectangles&, bool);
 		bool _CheckRef( ExprTree *, const std::string & );
-#endif
-
-#if defined( CLASSAD_DEPRECATED )
-		void evalFromEnvironment( const char *name, Value val );
-		ExprTree *AddExplicitConditionals( ExprTree * );
-		ExprTree *AddExplicitTargetRefs( ExprTree *,
-			std::set < std::string, CaseIgnLTStr > & );
 #endif
 
 		ClassAd *_GetDeepScope( const std::string& ) const;

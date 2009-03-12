@@ -2,11 +2,10 @@ SRC_DIR = $(SRC_TREE)/classad
 
 /* select required features */
 
-#define CLASSAD_DEPRECATED
 #define COLLECTIONS
 
 LOCAL_FLAGS = \
-	-DCLASSAD_DEPRECATED -DWANT_CLASSAD_NAMESPACE -DDISABLE_DLOPEN_CHECK
+	-DWANT_CLASSAD_NAMESPACE -DDISABLE_DLOPEN_CHECK
 C_PLUS_FLAGS 	= -Wall -I/usr/include $(STD_C_PLUS_FLAGS) $(LOCAL_FLAGS)
 CFLAGS 		= -Wall -I/usr/include $(STD_C_FLAGS) $(LOCAL_FLAGS)
 
@@ -15,13 +14,11 @@ CFLAGS 		= -Wall -I/usr/include $(STD_C_FLAGS) $(LOCAL_FLAGS)
 SRC = \
 	collectionServer.cpp \
 	collectionClient.cpp \
-	remoteQuery.cpp \
-	classad_deprecated.cpp
+	remoteQuery.cpp
 OBJ = \
 	collectionServer.o \
 	collectionClient.o \
-	remoteQuery.o \
-	classad_deprecated.o
+	remoteQuery.o
 
 
 LIB_BASE =  $(NEW_CLASSADS_DIR)/libclassad_ns.a ../condor_c++_util/cplus_lib.a \
@@ -30,11 +27,7 @@ LIB_BASE =  $(NEW_CLASSADS_DIR)/libclassad_ns.a ../condor_c++_util/cplus_lib.a \
       ../condor_util_lib/util_lib.a ../condor_sysapi/libsysapi.a \
       $(STLPORT_LIB)
 
-#if defined(CLASSAD_DEPRECATED)
 LIB = $(LIB_BASE) $(IO_LIB) $(SECURITY_LIB) $(CPLUS_LIB) $(SECURITY_LIB)
-#else
-LIB = $(LIB_BASE)
-#endif
 
 /* the main condor library target */
 all_target(libclassad_support.a)

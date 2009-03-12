@@ -30,13 +30,11 @@
 #endif
 #include "classad/classad_distribution.h"
 using namespace std;
-BEGIN_NAMESPACE( classad )
 
-ClassAd* getOldClassAd( Stream *sock );
-bool getOldClassAd( Stream *sock, ClassAd& ad );
-bool getOldClassAdNoTypes( Stream *sock, ClassAd& ad );
-bool putOldClassAd ( Stream *sock, ClassAd& ad );
-bool putOldClassAdNoTypes ( Stream *sock, ClassAd& ad );
-END_NAMESPACE // classad
+classad::ClassAd* getOldClassAd( Stream *sock );
+bool getOldClassAd( Stream *sock, classad::ClassAd& ad );
+bool getOldClassAdNoTypes( Stream *sock, classad::ClassAd& ad );
+bool putOldClassAd ( Stream *sock, classad::ClassAd& ad );
+bool putOldClassAdNoTypes ( Stream *sock, classad::ClassAd& ad );
 
 #endif
