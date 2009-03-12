@@ -70,7 +70,7 @@ if ( $ec2_sim_pid == 0 ) {
 	open STDERR, ">ec2_sim.out";
 	exec( "$ec2_sim -p 0" ) or die "Failed to exec $ec2_sim\n";
 } elsif ( $ec2_sim_pid > 0 ) {
-	for ( my $i = 0; $i < 5 && $ec2_sim_port == 0; $i++ ) {
+	for ( my $i = 0; $i < 10 && $ec2_sim_port == 0; $i++ ) {
 		sleep 1;
 		if ( waitpid( $ec2_sim_pid, &POSIX::WNOHANG ) == $ec2_sim_pid ) {
 			die( "$ec2_sim died unexpectedly!\n" );
