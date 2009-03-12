@@ -52,7 +52,6 @@ ProtectedAttribute(char attr[])
 int
 main(int argc, char *argv[])
 {
-	MyString DaemonName;
 	MyString constraint;
 	Qmgr_connection *q;
 	int nextarg = 1, cluster, proc;
@@ -120,10 +119,10 @@ main(int argc, char *argv[])
 	}
 
 	// Open job queue 
-	q = ConnectQ( DaemonName.Value() );
+	q = ConnectQ( schedd.addr() );
 	if( !q ) {
 		fprintf( stderr, "Failed to connect to queue manager %s\n", 
-				 DaemonName.Value() );
+				 schedd.addr() );
 		exit(1);
 	}
 
