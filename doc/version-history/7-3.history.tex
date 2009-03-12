@@ -28,6 +28,12 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item When matchmaking Condor-G jobs to resources, if multiple jobs
+match multiple resources, and every job has identical job rank, the
+matchmaker would always fill up one particular resource first.  Now,
+the resources will be matched in a round robin fashion.  This can be
+overridden by setting job rank appropriately.
+
 \item Made the \Condor{schedd} more efficient in how it stores
 information about `dollar dollar' expansions in the job ClassAd.
 Also made it more efficient in how it contacts the \Condor{negotiator}
@@ -48,6 +54,9 @@ to submit `reschedule' requests.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Fixed a problem with job removal in the local universe that 
+would cause spurious error messages to be written to the SchedLog.
 
 \item The \Condor{schedd} was failing to send `reschedule' commands to
 flocked negotiators, so unless some other schedd in the negotiator's
