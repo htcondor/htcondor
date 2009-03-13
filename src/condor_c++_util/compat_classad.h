@@ -191,6 +191,12 @@ class CompatClassAd : public classad::ClassAd
 		*/
 	void dPrint( int level);
 
+		/** Format the ClassAd as an old ClassAd into the MyString.
+			@param output The MyString to write into
+			@return TRUE
+		*/
+	int sPrint( MyString &output );
+
 	bool AddExplicitConditionals( classad::ExprTree *expr, classad::ExprTree *&newExpr );
 	classad::ClassAd *AddExplicitTargetRefs( );
 		//@}

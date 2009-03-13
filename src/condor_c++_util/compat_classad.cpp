@@ -533,6 +533,22 @@ dPrint( int level )
 	dprintf( level|D_NOHEADER, "%s", buffer.Value() );
 }
 
+int CompatClassAd::
+sPrint( MyString &output )
+{
+	classad::ClassAdUnParser unp;
+	unp.SetOldClassAd( true );
+	string buffer;
+
+	unp.Unparse( buffer, GetChainedParentAd() );
+	output = buffer.c_str();
+
+	buffer = "";
+	unp.Unparse( buffer, this );
+	output += buffer.c_str();
+
+	return TRUE;
+}
 
 // ClassAd methods
 
