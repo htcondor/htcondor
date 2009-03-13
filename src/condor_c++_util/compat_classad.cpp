@@ -95,6 +95,12 @@ CompatClassAd( FILE *file, char *delimitor, int &isEOF, int&error, int &empty )
 	return;
 }
 
+bool CompatClassAd::
+Insert( const std::string &attrName, classad::ExprTree *expr )
+{
+	return ClassAd::Insert( attrName, expr );
+}
+
 int CompatClassAd::
 Insert( const char *str )
 {

@@ -43,6 +43,12 @@ class CompatClassAd : public classad::ClassAd
 		/** A constructor that reads old ClassAds from a FILE */
 	CompatClassAd(FILE*,char*,int&,int&,int&);	// Constructor, read from file.
 
+		/* This is a pass-through to ClassAd::Insert(). Because we define
+		 * our own Insert() below, our parent's Insert() won't be found
+		 * by users of this class.
+		 */
+	bool Insert( const std::string &attrName, classad::ExprTree *expr );
+
 		/** Insert an attribute/value into the ClassAd 
 		 *  @param str A string of the form "Attribute = Value"
 		 */
