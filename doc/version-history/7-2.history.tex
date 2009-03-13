@@ -145,6 +145,10 @@ page at section~ \ref{man-condor-dagman}.
   that the \Condor{transferer} was unable to authenticate via GSI
   using host-based certificates.
 
+\item \AdAttr{RemoteWallClockTime} could get too big in some cases after
+a restart of the schedd for jobs that were running at the time of the
+restart.
+
 \end{itemize}
 
 \noindent Known Bugs:
