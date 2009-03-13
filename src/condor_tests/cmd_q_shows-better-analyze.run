@@ -19,34 +19,41 @@
 ##**************************************************************
 
 use CondorTest;
+use strict;
+use warnings;
 
-$cmd = 'cmd_q_shows-better-analyze.cmd';
-$cmdout = $cmd . ".out";
-$testdesc =  'cmd_q_shows-better-analyze  ';
-$testname = "cmd_q_shows-better-analyze";
+my $cmd = 'cmd_q_shows-better-analyze.cmd';
+my $cmdout = $cmd . ".out";
+my $testdesc =  'cmd_q_shows-better-analyze  ';
+my $testname = "cmd_q_shows-better-analyze";
+my $debuglevel = 2;
+my $cmdstatus;
 
-$test_failed = 0;
+my $test_failed = 0;
 
-$whoami = `whoami`;
+my $whoami = `whoami`;
 chomp($whoami);
 
 
-@adarray;
+my @adarray;
 
-$submit = sub {
+my $submit = sub {
 	my %info = @_;
 
 	my $cluster = $info{'cluster'};;
-	CondorTest::debug("Job submitted, cluster is $cluster\n",1);
+	CondorTest::debug("Job submitted, cluster is $cluster\n",$debuglevel);
 
 	my $foundnegotiator = 0;
 	my $foundstartd = 0;
 	my $wait_time = 0;
 	my $wait_max = 60;
 	my $wait_interval = 5;
+	
+	print "Have cluster - $cluster\n";
 
-	CondorTest::debug("Checking for negotiator and startd ads\n",1);
+	CondorTest::debug("Checking for negotiator and startd ads\n",$debuglevel);
 
+	print "Do we have a negotiator and a startd advertised - ";
 	# Wait for the negotiator and startd to advertise themselves
 	while ( ( !$foundnegotiator || !$foundstartd ) && $wait_time < $wait_max ) {
 		if ( !$foundnegotiator ) {
@@ -78,32 +85,39 @@ $submit = sub {
 	}
 
 	if ( !$foundnegotiator || !$foundstartd ) {
-		CondorTest::debug("Negotiator or startd still missing after $wait_max seconds of waiting!\n",1);
+		print "bad\n";
+		CondorTest::debug("Negotiator or startd still missing after $wait_max seconds of waiting!\n",$debuglevel);
+		die "No sense going on\n";
 	}
+	print "ok\n";
 
 	my $foundcluster = 0;
 	my $foundanalyze = 0;
 	my $cmd = "condor_q -better-analyze $cluster";
+	print "Execute: condor_q -better-analyze $cluster - ";
 
 	$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
 	if(!$cmdstatus)
 	{
-		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
+		print "bad\n";
+		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",$debuglevel);
 		exit(1)
 	}
+	print "ok\n";
 
-	CondorTest::debug("Examining condor_q -better-analyze output...\n",1);
+	CondorTest::debug("Examining condor_q -better-analyze output...\n",$debuglevel);
 
-	foreach $line (@adarray) {
+	print "Looking at command output - ";
+	foreach my $line (@adarray) {
 		chomp($line);
 		if($line =~ /^\s*(\d+)\.(\d+):\s*Run\s+analysis\s+summary\.\s+.*$/) {
-				CondorTest::debug("Score!!!!! found cluster $cluster:\n",1);
-				CondorTest::debug("  $line\n",1);
+				CondorTest::debug("Score!!!!! found cluster $cluster:\n",$debuglevel);
+				CondorTest::debug("  $line\n",$debuglevel);
 				$foundcluster = 1;
 		}
 		if($line =~ /^\s*The\s+Requirements\s+expression\s+for\s+your\s+job\s+is:\s*.*$/) {
-				CondorTest::debug("Score!!!!! found -better-analyze output:\n",1);
-				CondorTest::debug("  $line\n",1);
+				CondorTest::debug("Score!!!!! found -better-analyze output:\n",$debuglevel);
+				CondorTest::debug("  $line\n",$debuglevel);
 				$foundanalyze = 1;
 		}
 	}
@@ -112,27 +126,29 @@ $submit = sub {
 	$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
 
 	if( !$foundcluster | !$foundanalyze ) {
-		CondorTest::debug("Failed to find expected output from condor_q -better-analyze\n",1);
+		print "bad\n";
+		CondorTest::debug("Failed to find expected output from condor_q -better-analyze\n",$debuglevel);
 		$test_failed = 1;
 	}
+	print "ok\n";
 };
 
-$aborted = sub {
-	CondorTest::debug("Job aborted\n",1);
+my $aborted = sub {
+	CondorTest::debug("Job aborted\n",$debuglevel);
 	if ( $test_failed ) {
-		CondorTest::debug("Test Failed!\n",1);
+		CondorTest::debug("Test Failed!\n",$debuglevel);
 	} else {
-		CondorTest::debug("Test Succeeded!\n",1);
+		CondorTest::debug("Test Succeeded!\n",$debuglevel);
 	}
 	exit($test_failed);
 };
 
-$exited = sub {
-	CondorTest::debug("Our job shouldn't have run, failing...\n",1);
+my $exited = sub {
+	CondorTest::debug("Our job shouldn't have run, failing...\n",$debuglevel);
 	exit(1);
 };
 
-$timed = sub
+my $timed = sub
 {
     die "Job should have ended by now. condor_q -better-analyze broken!\n";
 };
@@ -142,7 +158,7 @@ CondorTest::RegisterAbort($testname, $aborted);
 CondorTest::RegisterExited( $testname, $exited );
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	CondorTest::debug("$testname: SUCCESS\n",1);
+	CondorTest::debug("$testname: SUCCESS\n",$debuglevel);
 	exit(0);
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";

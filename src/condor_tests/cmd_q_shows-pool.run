@@ -110,8 +110,6 @@ if($forever != 0) {
 # submit into collector node schedd
 $ENV{CONDOR_CONFIG} = $locconfig;
 
-print "\n\n*********************************** Environment before personal condor *******************\n";
-system("printenv");
 print "*********************************** condor_config_val -v collector_host *******************\n";
 system("condor_config_val -v collector_host");
 print "*********************************** DONE *******************\n\n";

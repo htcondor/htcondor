@@ -53,6 +53,7 @@ my $TRUE = 1;
 my $FALSE = 0;
 my $teststrt = 0;
 my $teststop = 0;
+my $debuglevel = 2;
 
 
 my $MAX_CHECKPOINTS = 2;
@@ -386,6 +387,12 @@ sub DoTest
 	}
 
 	AddRunningTest($handle);
+
+	if($iswindows) {
+		my $path = $ENV{PATH};
+		print "PATH = $path\n";
+		SweepPath($path);
+	}
 
     # submit the job and get the cluster id
 	debug( "Now submitting test job\n",4);
@@ -1590,7 +1597,7 @@ sub KillPersonal
 	my $personal_config = shift;
 	my $logdir = "";
 	if($personal_config =~ /^(.*[\\\/])(.*)$/) {
-		print "LOG dir is $1/log\n";
+		debug("LOG dir is $1/log\n",$debuglevel);
 		$logdir = $1 . "/log";
 	} else {
 		debug("KillPersonal passed this config<<$personal_config>>\n",2);
@@ -1894,7 +1901,6 @@ sub DropExemptions
 # my $UNLOCK = 8;
 # my $TRUE = 1;
 # my $FALSE = 0;
-my $debuglevel = 2;
 
 sub FindControlFile
 {
@@ -1986,31 +1992,50 @@ sub IsThisWindows
 sub IsThisNightly
 {
 	my $mylocation = shift;
-	#my $configlocal = "";
-	#my $configmain = "";
 
 	debug("IsThisNightly passed <$mylocation>\n",2);
 	if($mylocation =~ /^.*(\/execute\/).*$/) {
-		#print "Nightly testing\n";
-		#$configlocal = "../condor_examples/condor_config.local.central.manager";
-		#$configmain = "../condor_examples/condor_config.generic";
-		#if(!(-f $configmain)) {
-			#system("ls ..");
-			#system("ls ../condor_examples");
-			#die "No base config file!!!!!\n";
-		#}
 		return(1);
 	} else {
-		#print "Workspace testing\n";
-		#$configlocal = "../condor_examples/condor_config.local.central.manager";
-		#$configmain = "../condor_examples/condor_config.generic";
-		#if(!(-f $configmain)) {
-			#system("ls ..");
-			#system("ls ../condor_examples");
-			#die "No base config file!!!!!\n";
-		#}
 		return(0);
 	}
+}
+
+sub SweepPath
+{
+	my $oldpath = shift;
+	my $newpath = "";
+
+	print "In SweepPath<<$oldpath>>\n";
+	my @pathparts = split "\:", $oldpath;
+	my @newpathparts;
+
+	foreach my $part (@pathparts) {
+		print "PathPart: $part\n";
+		if($part =~ /^\/cygdrive\/c\/(.*)$/) {
+			push (@newpathparts,"c:\/$1");
+			push (@newpathparts,$part);
+		} elsif($part =~ /^\/usr\/bin$/) {
+			push (@newpathparts,"c:\/cygwin\/bin");
+			push (@newpathparts,$part);
+		} elsif($part =~ /^\/usr\/sbin$/) {
+			push (@newpathparts,"c:\/cygwin\/usr\/sbin");
+			push (@newpathparts,$part);
+		} else {
+			push (@newpathparts,$part);
+		}
+
+	}
+	foreach my $part (@newpathparts) {
+		print "Newpath: $part\n";
+		if($newpath eq ""){
+				$newpath = $part;
+		} else {
+				$newpath = $newpath . ":" . $part;
+		}
+	}
+	print "Full new path: $newpath\n";
+	$ENV{PATH} = $newpath;
 }
 
 1;

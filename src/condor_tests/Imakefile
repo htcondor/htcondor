@@ -1373,6 +1373,7 @@ TESTCLASS(job_core_input_van,simple)
 DESC(job_core_leaveinqueue_sched,"Scheduler: verify true and false classads do leave_in_queue right")
 RUN(job_core_leaveinqueue_sched)
 TESTCLASS(job_core_leaveinqueue_sched,core)
+TESTCLASS(job_core_leaveinqueue_van,quick)
 TESTCLASS(job_core_leaveinqueue_sched,long)
 TESTCLASS(job_core_leaveinqueue_sched,full)
 

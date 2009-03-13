@@ -19,63 +19,74 @@
 ##**************************************************************
 
 use CondorTest;
+use strict;
+use warnings;
 
-$cmd = 'cmd_q_shows-cputime.cmd';
-$cmdout = $cmd . ".out";
-$testdesc =  'cmd_q_shows-cputime  ';
-$testname = "cmd_q_shows-cputime";
+my $cmd = 'cmd_q_shows-cputime.cmd';
+my $cmdout = $cmd . ".out";
+my $testdesc =  'cmd_q_shows-cputime  ';
+my $testname = "cmd_q_shows-cputime";
+my $debuglevel = 2;
 
-@adarray;
+my @adarray;
 
-$submit = sub {
+my $submit = sub {
 	my %info = @_;
 	my $cmd = "condor_q -cputime ";
 
-	$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
+	print "Running $cmd - ";
+	my $cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
 	if(!$cmdstatus)
 	{
-		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
+		print "bad\n";
+		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",$debuglevel);
 		exit(1)
 	}
+	print "ok\n";
 
 	my $submitline = "";
 	my $cluster = "";
 
+	print "Looking for cluster - ";
 	open(CMD, "<$cmdout") || die "Can not find submit output:$!\n";;
 	while(<CMD>) {
 		chomp($_);
 		$submitline = $_;
 		if($submitline =~ /^.*cluster\s+(\d+).*$/) {
 			$cluster = $1;
-			CondorTest::debug("Found my cluster which is $cluster!\n",1);
+			CondorTest::debug("Found my cluster which is $cluster!\n",$debuglevel);
 		}
-		CondorTest::debug("$_\n",1);
+		CondorTest::debug("$_\n",$debuglevel);
 	}
+	print "$cluster\n";
 
 	$cmd = "condor_rm $cluster";
 
-	foreach $line (@adarray) {
+	print "Looking for CPU_TIME - ";
+	foreach my $line (@adarray) {
 		chomp($line);
 		if($line =~ /^\s*ID\s+OWNER\s+SUBMITTED\s+CPU_TIME\s+ST\s+PRI\s+SIZE\s+CMD\s*$/) {
-				CondorTest::debug("Bingo\n",1);
+				CondorTest::debug("Bingo\n",$debuglevel);
 				$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,8);
+				print "ok\n";
 				return(0);
 		} else {
-			CondorTest::debug("<<<$line>>>\n",1);
+			CondorTest::debug("<<<$line>>>\n",$debuglevel);
 			#$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,8);
 			#exit(1)
 		}
 	}
 
 	$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,8);
+	print "bad\n";
 	exit(1);
 };
 
-$aborted = sub {
-	CondorTest::debug("If all is good we abort our own job.......\n",1);
+my $aborted = sub {
+	CondorTest::debug("If all is good we abort our own job.......\n",$debuglevel);
 };
 
-$ExitSuccess = sub {
+my $ExitSuccess = sub {
 	my %info = @_;
 };
 
@@ -84,7 +95,7 @@ CondorTest::RegisterSubmit($testname, $submit);
 CondorTest::RegisterExitedSuccess( $testname, $ExitSuccess );
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	CondorTest::debug("$testname: SUCCESS\n",1);
+	CondorTest::debug("$testname: SUCCESS\n",$debuglevel);
 	exit(0);
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";

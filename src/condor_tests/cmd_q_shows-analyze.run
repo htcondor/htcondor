@@ -19,18 +19,21 @@
 ##**************************************************************
 
 use CondorTest;
+use strict;
+use warnings;
 
-$cmd = 'cmd_q_shows-analyze.cmd';
-$cmdout = $cmd . ".out";
-$testdesc =  'cmd_q_shows-analyze  ';
-$testname = "cmd_q_shows-analyze";
+my $cmd = 'cmd_q_shows-analyze.cmd';
+my $cmdout = $cmd . ".out";
+my $testdesc =  'cmd_q_shows-analyze  ';
+my $testname = "cmd_q_shows-analyze";
+my $debuglevel = 2;
 
-$whoami = `whoami`;
+my $whoami = `whoami`;
 chomp($whoami);
 
-@adarray;
+my @adarray;
 
-$submit = sub {
+my $submit = sub {
 	my %info = @_;
 
 	my $foundcluster = 0;
@@ -50,19 +53,20 @@ $submit = sub {
 
 	$cmd = "condor_status -negotiator";
 
+	print "Do we have a negotiator yet - ";
 	while($timecollector < $maxwait) {
-		$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
-		CondorTest::debug("runCondorTool returned <<$cmdstatus>>\n",1);
+		my $cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
+		CondorTest::debug("runCondorTool returned <<$cmdstatus>>\n",$debuglevel);
 		if(!$cmdstatus)
 		{
-			CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
+			CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",$debuglevel);
 			exit(1);
 		}
-		foreach $line (@adarray) {
+		foreach my $line (@adarray) {
 			chomp($line);
-			CondorTest::debug("Examing line $line\n",1);
+			CondorTest::debug("Examing line $line\n",$debuglevel);
 			if($line =~ /^\s*(\w+).*\s*(\w+)\s*.*$/) {
-				CondorTest::debug("Score!!!!! something for a negotiator <<$1/$2>>\n",1);
+				CondorTest::debug("Score!!!!! something for a negotiator <<$1/$2>>\n",$debuglevel);
 				$foundnegotiator = 1;
 				last;
 			}
@@ -76,54 +80,63 @@ $submit = sub {
 	}
 
 	if($timecollector == $maxwait) {
+		print "bad\n";
 		die "Failed to ever find a usable negotiator!!!!\n";
 	}
+	print "ok\n";
 
+	print "Does condor_q -analyze run - ";
 	$cmd = "condor_q -analyze";
 
-	$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
-	CondorTest::debug("runCondorTool returned <<$cmdstatus>>\n",1);
+	my $cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
+	CondorTest::debug("runCondorTool returned <<$cmdstatus>>\n",$debuglevel);
 	if(!$cmdstatus)
 	{
-		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
+		print "bad\n";
+		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",$debuglevel);
 		system("ps auxww | grep negotiator");
-		CondorTest::debug("NegotiatorLog:--------------------------------\n",1);
+		CondorTest::debug("NegotiatorLog:--------------------------------\n",$debuglevel);
 		system("cat `condor_config_val LOG`/NegotiatorLog");
-		CondorTest::debug("condor_status -any -l:--------------------------------\n",1);
+		CondorTest::debug("condor_status -any -l:--------------------------------\n",$debuglevel);
 		system("condor_status -any -l");
 		exit(1);
 	}
 
+	print "ok\n";
 	my $submitline = "";
 	my $cluster = -1;
 
+	print "Looking for cluster - ";
 	open(CMD, "<$cmdout") || die "Can not find analyze output:$!\n";;
 	while(<CMD>) {
 		chomp($_);
 		$submitline = $_;
 		if($submitline =~ /^.*cluster\s+(\d+).*$/) {
 			$cluster = $1;
-			CondorTest::debug("Found my cluster which is $cluster!\n",1);
+			CondorTest::debug("Found my cluster which is $cluster!\n",$debuglevel);
 		}
-		CondorTest::debug("$_\n",1);
+		CondorTest::debug("$_\n",$debuglevel);
 	}
 
 	if ($cluster == -1) {
+		print "bad\n";
 		die("Can not find a cluster in $cmdout\n");	
 	}
+	print "$cluster\n";
 
-	foreach $line (@adarray) {
+	print "Checking cluster and other output - ";
+	foreach my $line (@adarray) {
 		chomp($line);
-		CondorTest::debug("Examing line $line\n",1);
+		CondorTest::debug("Examing line $line\n",$debuglevel);
 		if($line =~ /^\s*(\d+)\.(\d+):\s*Run\s+analysis\s+summary\.\s+.*$/) {
-			CondorTest::debug("Score!!!!! found cluster $1\n",1);
-			CondorTest::debug("$line\n",1);
+			CondorTest::debug("Score!!!!! found cluster $1\n",$debuglevel);
+			CondorTest::debug("$line\n",$debuglevel);
 			$foundcluster = 1;
 		}
 		if($line =~ /^\s*Requirements\s+=\s+.*$/) {
-			CondorTest::debug("Score!!!!! found -analyze\n",1);
-			CondorTest::debug("$line\n",1);
-			CondorTest::debug("condor_q -analyse prints Requirements like this\n",1);
+			CondorTest::debug("Score!!!!! found -analyze\n",$debuglevel);
+			CondorTest::debug("$line\n",$debuglevel);
+			CondorTest::debug("condor_q -analyse prints Requirements like this\n",$debuglevel);
 			$foundanalyze = 1;
 		}
 	}
@@ -132,17 +145,19 @@ $submit = sub {
 	$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
 
 	if(($foundcluster) && ($foundanalyze)) {
-		CondorTest::debug("Found analyze output\n",1);
+		print "ok\n";
+		CondorTest::debug("Found analyze output\n",$debuglevel);
 	} else {
+		print "bad\n";
 		die("Could not parse condor_q -analyze output\n");
 	}
 };
 
-$aborted = sub {
-	CondorTest::debug("If all is good we abort our own job.......\n",1);
+my $aborted = sub {
+	CondorTest::debug("If all is good we abort our own job.......\n",$debuglevel);
 };
 
-$ExitSuccess = sub {
+my $ExitSuccess = sub {
 	my %info = @_;
 };
 
@@ -151,7 +166,7 @@ CondorTest::RegisterAbort($testname, $aborted);
 CondorTest::RegisterExitedSuccess( $testname, $ExitSuccess );
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	CondorTest::debug("$testname: SUCCESS\n",1);
+	CondorTest::debug("$testname: SUCCESS\n",$debuglevel);
 	exit(0);
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";

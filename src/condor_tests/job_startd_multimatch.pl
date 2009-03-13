@@ -31,8 +31,6 @@ CondorTest::debug("Interval to wait is <<$neginterval>>\n",1);
 $heldcount = 0;
 
 CondorTest::debug("Submit file for this test is $cmd\n",1);
-#print "looking at env for condor config\n";
-#system("printenv | grep CONDOR_CONFIG");
 
 $testdesc =  'Basic Startd MultiMatch - Grid U';
 $testname = "job_startd_multimatch";
