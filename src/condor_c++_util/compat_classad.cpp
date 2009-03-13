@@ -96,6 +96,28 @@ CompatClassAd( FILE *file, char *delimitor, int &isEOF, int&error, int &empty )
 }
 
 bool CompatClassAd::
+ClassAdAttributeIsPrivate( char const *name )
+{
+	if( stricmp(name,ATTR_CLAIM_ID) == 0 ) {
+			// This attribute contains the secret capability cookie
+		return true;
+	}
+	if( stricmp(name,ATTR_CAPABILITY) == 0 ) {
+			// This attribute contains the secret capability cookie
+		return true;
+	}
+	if( stricmp(name,ATTR_CLAIM_IDS) == 0 ) {
+			// This attribute contains secret capability cookies
+		return true;
+	}
+	if( stricmp(name,ATTR_TRANSFER_KEY) == 0 ) {
+			// This attribute contains the secret file transfer cookie
+		return true;
+	}
+	return false;
+}
+
+bool CompatClassAd::
 Insert( const std::string &attrName, classad::ExprTree *expr )
 {
 	return ClassAd::Insert( attrName, expr );
@@ -468,6 +490,10 @@ fPrint( FILE *file )
 		return FALSE;
 	}
 
+	unp.Unparse( buffer, GetChainedParentAd() );
+	fprintf( file, "%s", buffer.c_str() );
+
+	buffer = "";
 	unp.Unparse( buffer, this );
 	fprintf( file, "%s", buffer.c_str( ) );
 
@@ -477,14 +503,34 @@ fPrint( FILE *file )
 void CompatClassAd::
 dPrint( int level )
 {
+	ClassAd::iterator itr;
+
 	classad::ClassAdUnParser unp;
 	unp.SetOldClassAd( true );
-	string buffer;
+	string value;
+	MyString buffer;
 
-	unp.Unparse( buffer, this );
-	dprintf( level, "%s", buffer.c_str( ) );
+	ClassAd *parent = GetChainedParentAd();
 
-	return;
+	for ( itr = parent->begin(); itr != parent->end(); itr++ ) {
+		if ( !ClassAdAttributeIsPrivate( itr->first.c_str() ) ) {
+			value = "";
+			unp.Unparse( value, itr->second );
+			buffer.sprintf_cat( "%s = %s\n", itr->first.c_str(),
+								value.c_str() );
+		}
+	}
+
+	for ( itr = this->begin(); itr != this->end(); itr++ ) {
+		if ( !ClassAdAttributeIsPrivate( itr->first.c_str() ) ) {
+			value = "";
+			unp.Unparse( value, itr->second );
+			buffer.sprintf_cat( "%s = %s\n", itr->first.c_str(),
+								value.c_str() );
+		}
+	}
+
+	dprintf( level|D_NOHEADER, "%s", buffer.Value() );
 }
 
 

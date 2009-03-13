@@ -195,6 +195,8 @@ class CompatClassAd : public classad::ClassAd
 	classad::ClassAd *AddExplicitTargetRefs( );
 		//@}
 
+	static bool ClassAdAttributeIsPrivate( char const *name );
+
  private:
 	void evalFromEnvironment( const char *name, classad::Value val );
 	classad::ExprTree *AddExplicitConditionals( classad::ExprTree * );
