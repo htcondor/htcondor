@@ -1508,7 +1508,6 @@ sub set_config_values ($$$) {
     
     close TEMP;
     close SOURCE;
-	print("GGT GGT GGT file is $file\n");
     system("mv /tmp/set_config_values.temp.$$ $file") &&
 		die "Unable to move /tmp/set_config_values.temp.$$ to $file!\n";
 }
