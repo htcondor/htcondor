@@ -149,6 +149,14 @@ page at section~ \ref{man-condor-dagman}.
 a restart of the schedd for jobs that were running at the time of the
 restart.
 
+% gittrac #231
+\item Fixed a bug that was causing the \Condor{startd} to log an
+  error message ``ioctl(SIOCETHTOOL/GWOL) failed: Operation not
+  permitted (1)'' when started as a personal Condor on Linux.
+  The message is now suppressed in this case.  When the message is
+  printed, an additional message is logged informing the user that
+  this error can be ignored unless hibernation is being used.
+
 \end{itemize}
 
 \noindent Known Bugs:
