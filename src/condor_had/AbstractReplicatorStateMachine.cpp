@@ -157,7 +157,7 @@ AbstractReplicatorStateMachine::reinitialize()
 		buffer = param( "SBIN" );
 		if( !buffer ) {
 			utilCrucialError(
-				utilConfigurationError("SBIN","REPLICATION").GetCStr());
+				utilConfigurationError("SBIN","REPLICATION").Value());
 		}
 		else {
 			m_transfererPath.sprintf( "%s/condor_transferer", buffer );

@@ -1503,6 +1503,7 @@ ResMgr::eval_and_update_all( void )
 #endif
 		compute( A_TIMEOUT | A_UPDATE );
 		update_all();
+#if HAVE_HIBERNATION
 	}
 #endif
 }
