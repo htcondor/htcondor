@@ -282,10 +282,12 @@ LinuxNetworkAdapter::detectWOL ( void )
 	set_priv( saved_priv );
 
 	if ( err < 0 ) {
-		derror( "ioctl(SIOCETHTOOL/GWOL)" );
-		dprintf( D_ALWAYS,
-				 "You can safely ignore the above error if you're not"
-				 " using hibernation\n" );
+		if ( (EPERM != errno) || (geteuid() == 0) ) {
+			derror( "ioctl(SIOCETHTOOL/GWOL)" );
+			dprintf( D_ALWAYS,
+					 "You can safely ignore the above error if you're not"
+					 " using hibernation\n" );
+		}
 		m_wol_support_mask = 0;
 		m_wol_enable_mask = 0;
 	}
