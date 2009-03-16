@@ -3676,6 +3676,10 @@ int mark_idle(ClassAd *job)
 		JobQueue->BeginTransaction();
 		SetAttributeFloat(cluster,proc,ATTR_JOB_REMOTE_WALL_CLOCK, wall_clock);
 		DeleteAttribute(cluster,proc,ATTR_JOB_WALL_CLOCK_CKPT);
+			// remove shadow birthdate so if CkptWallClock()
+			// runs before a new shadow starts, it won't
+			// potentially double-count
+		DeleteAttribute(cluster,proc,ATTR_SHADOW_BIRTHDATE);
 		JobQueue->CommitTransaction();
 	}
 

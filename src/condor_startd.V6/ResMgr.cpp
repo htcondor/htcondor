@@ -1498,23 +1498,30 @@ ResMgr::update_all( void )
 void
 ResMgr::eval_and_update_all( void )
 {
+#if HAVE_HIBERNATION
 	if ( !hibernating () ) {
+#endif
 		compute( A_TIMEOUT | A_UPDATE );
 		update_all();
 	}
+#endif
 }
 
 
 void
 ResMgr::eval_all( void )
 {
+#if HAVE_HIBERNATION
 	if ( !hibernating () ) {
+#endif
 		num_updates = 0;
 		compute( A_TIMEOUT );
 		walk( &Resource::eval_state );
 		report_updates();
 		check_polling();
+#if HAVE_HIBERNATION
 	}
+#endif
 }
 
 
