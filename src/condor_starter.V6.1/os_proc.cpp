@@ -84,6 +84,9 @@ OsProc::StartJob(FamilyInfo* family_info)
 		return 0;
 	}
 
+	bool interpreted = false;
+	JobAd->LookupBool ( ATTR_IS_INTERPRETED, interpreted );
+
 	const char* job_iwd = Starter->jic->jobRemoteIWD();
 	dprintf( D_ALWAYS, "IWD: %s\n", job_iwd );
 
@@ -143,10 +146,12 @@ OsProc::StartJob(FamilyInfo* family_info)
 		// For Java, set it correctly.  In a future version, we
 		// may consider removing the CONDOR_EXEC feature entirely.
 		//
-	if( (job_universe == CONDOR_UNIVERSE_JAVA) ) {
-		args.AppendArg(JobName.Value());
-	} else {
-		args.AppendArg(CONDOR_EXEC);
+	if ( !interpreted ) {
+		if( (job_universe == CONDOR_UNIVERSE_JAVA) ) {
+			args.AppendArg(JobName.Value());
+		} else {
+			args.AppendArg(CONDOR_EXEC);
+		}
 	}
 
 		// Support USER_JOB_WRAPPER parameter...

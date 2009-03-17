@@ -898,13 +898,9 @@ FileTransfer::ComputeFilesToSend()
 
 		const char *f;
 		while( (f=dir.Next()) ) {
-			// don't send back condor_exec.exe
-			if ( file_strcmp(f,CONDOR_EXEC)==MATCH ) {
-				dprintf( D_FULLDEBUG, "Skipping %s\n", f );
-				continue;
-			}
-			if ( file_strcmp(f,"condor_exec.bat")==MATCH ) {
-				dprintf( D_FULLDEBUG, "Skipping %s\n", f );
+			// don't send back condor_exec.*
+			if ( MATCH == file_strcmp ( f, "condor_exec." ) ) {
+				dprintf ( D_FULLDEBUG, "Skipping %s\n", f );
 				continue;
 			}			
 			if( proxy_file && file_strcmp(f, proxy_file) == MATCH ) {
