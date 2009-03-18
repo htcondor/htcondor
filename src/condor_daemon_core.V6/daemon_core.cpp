@@ -4728,7 +4728,7 @@ void DCSignalMsg::reportFailure( DCMessenger * )
 	}
 
 	dprintf(D_ALWAYS,
-			"Send_Signal: ERROR sending signal %d (%s) to pid %d (%s)\n",
+			"Send_Signal: Warning: could not send signal %d (%s) to pid %d (%s)\n",
 			theSignal(),signalName(),thePid(),status);
 }
 
