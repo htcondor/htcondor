@@ -3237,17 +3237,22 @@ Configuring The Startd Policy.
 
 \label{param:WantHold}
 \item[\Macro{WANT\_HOLD}]
-  A boolean expression.  When \MacroNI{PREEMPT} becomes true, if
-  \MacroNI{WANT\_HOLD} is true, the job is put on hold for the reason
-  (optionally) specified by \MacroNI{WANT\_HOLD\_REASON} and
-  \MacroNI{WANT\_HOLD\_SUBCODE}.  As usual, the job owner may specify
-  \AdAttr{periodic\_release} and/or \AdAttr{periodic\_remove}
+  A boolean expression that defaults to \Expr{False}.
+  When \Expr{True} and the value of \MacroNI{PREEMPT} becomes \Expr{True},
+  the job is put on hold for the reason
+  (optionally) specified by the variables \MacroNI{WANT\_HOLD\_REASON} and
+  \MacroNI{WANT\_HOLD\_SUBCODE}.
+  As usual, the job owner may specify
+  \SubmitCmd{periodic\_release} and/or \SubmitCmd{periodic\_remove}
   expressions to react to specific hold states automatically.
-  The \AdAttr{HoldReasonCode} in the job ClassAd is set to 21 when
+  The attribute \AdAttr{HoldReasonCode} in the job ClassAd is set to 
+  the value 21 when
   \MacroNI{WANT\_HOLD} is responsible for putting the job on hold.
 
-  Example policy for putting jobs on hold that use too much virtual memory:
+  Here is an example policy that puts jobs on hold
+  that use too much virtual memory:
 
+\footnotesize
 \begin{verbatim}
 VIRTUAL_MEMORY_AVAILABLE_MB = (VirtualMemory*0.9)
 MEMORY_EXCEEDED = ImageSize/1024 > $(VIRTUAL_MEMORY_AVAILABLE_MB)
@@ -3259,22 +3264,24 @@ WANT_HOLD_REASON = \
                "Your job used too much virtual memory.", \
                undefined )
 \end{verbatim}
+\normalsize
 
 \label{param:WantHoldReason}
 \item[\Macro{WANT\_HOLD\_REASON}]
-  An optional string expression.  When a job is put on hold due to
-  \MacroNI{WANT\_HOLD}, the \AdAttr{HoldReason} in the job ClassAd is
-  set to the string resulting from evaluation of this expression.  If
-  this expression is not specified or evaluates to undefined, a default
-  hold reason is provided.
+  An expression that defines a string utilized to set the job ClassAd
+  attribute \AdAttr{HoldReason} when a job is put on hold due to
+  \MacroNI{WANT\_HOLD}.
+  If not defined or if the expression evaluates to \Expr{Undefined},
+  a default hold reason is provided.
 
 \label{param:WantHoldSubCode}
 \item[\Macro{WANT\_HOLD\_SUB\_CODE}]
-  An optional integer expression.  When a job is put on hold due to
-  \MacroNI{WANT\_HOLD}, the \AdAttr{HoldReasonSubCode} in the job ClassAd is
-  set to the integer resulting from evaluation of this expression.  If
-  this expression is not specified or evaluates to undefined, the sub-code
-  is set to 0.  Note that \AdAttr{HoldReasonCode} is always set to 21.
+  An expression that defines an integer value utilized to set the job ClassAd
+  attribute\AdAttr{HoldReasonSubCode}  when a job is put on hold due to
+  \MacroNI{WANT\_HOLD}.
+  If not defined or if the expression evaluates to \Expr{Undefined},
+  the value is set to 0.
+  Note that \AdAttr{HoldReasonCode} is always set to 21.
 
 \label{param:Continue}
 \item[\Macro{CONTINUE}]
