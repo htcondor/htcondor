@@ -6,26 +6,19 @@
 \index{daemon!condor\_job\_router@\Condor{job\_router}}
 \index{condor\_job\_router daemon}
 
-The Condor Job Router facilitates the matching of vanilla universe jobs
-with local pool resources, or allows them to flock,
-or modifies the jobs and sends (routes) them to available grid sites. 
-Jobs are specified to use the vanilla universe.
-The \Condor{job\_router} daemon and its configuration 
-implement the details and policies related to which jobs are routed,
-and under what circumstances.
+The Condor Job Router is an add-on to \condor{schedd} that transforms
+jobs from one type into another according to a configurable policy.
+This process of transforming the jobs is called \emph{job routing}.
 
-Routed jobs may be sent to to one or more grid sites,
-using any of the grid protocols supported by Condor.
-No scheduling in done in advance, and jobs are fed to the
-sites as they consume them.
-Meanwhile, the jobs that have the potential to be routed
-are vanilla universe jobs, so they may run in the local
-Condor pool or in other pools via flocking.
-
-The Job Router adds additional convenience features:
-tracking of aggregate job states for use in routing policy,
-MaxIdleJobs,
-and blackhole throttling.
+One example of how the Job Router can be used is the task of sending
+excess vanilla universe jobs to one or more remote grid sites.  The
+Job Router can transform the vanilla universe jobs into grid universe
+jobs that use any of the grid types supported by Condor.  The rate at
+which jobs are routed can be matched roughly to the rate at which the
+site is able to start running them.  This makes it possible to balance
+a large work flow across multiple grid sites, a local condor pool, and
+any flocked condor pools, without having to guess in advance how quickly
+jobs will run and complete in each of the different sites.
 
 Job Routing is most appropriate for high throughput work flows, 
 where there are many more jobs than computers,

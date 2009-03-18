@@ -3238,24 +3238,29 @@ Configuring The Startd Policy.
   The machine may still be claimed, but the job makes no further
   progress, and Condor does not generate a load on the machine.
 
-\item[\Macro{PREEMPT}]
 \label{param:Preempt}
+\item[\Macro{PREEMPT}]
   A boolean expression that, when \Expr{True},
   causes Condor to stop a currently running job.
 
-\item[\Macro{WANT\_HOLD}]
 \label{param:WantHold}
-A boolean expression.  When \MacroNI{PREEMPT} becomes true, if
-\MacroNI{WANT\_HOLD} is true, the job is put on hold for the reason
-(optionally) specified by \MacroNI{WANT\_HOLD\_REASON} and
-\MacroNI{WANT\_HOLD\_SUBCODE}.  As usual, the job owner may specify
-\AdAttr{periodic\_release} and/or \AdAttr{periodic\_remove}
-expressions to react to specific hold states automatically.
-The \AdAttr{HoldReasonCode} in the job ClassAd is set to 21 when
-\MacroNI{WANT\_HOLD} is responsible for putting the job on hold.
+\item[\Macro{WANT\_HOLD}]
+  A boolean expression that defaults to \Expr{False}.
+  When \Expr{True} and the value of \MacroNI{PREEMPT} becomes \Expr{True},
+  the job is put on hold for the reason
+  (optionally) specified by the variables \MacroNI{WANT\_HOLD\_REASON} and
+  \MacroNI{WANT\_HOLD\_SUBCODE}.
+  As usual, the job owner may specify
+  \SubmitCmd{periodic\_release} and/or \SubmitCmd{periodic\_remove}
+  expressions to react to specific hold states automatically.
+  The attribute \AdAttr{HoldReasonCode} in the job ClassAd is set to 
+  the value 21 when
+  \MacroNI{WANT\_HOLD} is responsible for putting the job on hold.
 
-Example policy for putting jobs on hold that use too much virtual memory:
+  Here is an example policy that puts jobs on hold
+  that use too much virtual memory:
 
+\footnotesize
 \begin{verbatim}
 VIRTUAL_MEMORY_AVAILABLE_MB = (VirtualMemory*0.9)
 MEMORY_EXCEEDED = ImageSize/1024 > $(VIRTUAL_MEMORY_AVAILABLE_MB)
@@ -3267,30 +3272,32 @@ WANT_HOLD_REASON = \
                "Your job used too much virtual memory.", \
                undefined )
 \end{verbatim}
+\normalsize
 
-\item[\Macro{WANT\_HOLD\_REASON}]
 \label{param:WantHoldReason}
-An optional string expression.  When a job is put on hold due to
-\MacroNI{WANT\_HOLD}, the \AdAttr{HoldReason} in the job ClassAd is
-set to the string resulting from evaluation of this expression.  If
-this expression is not specified or evaluates to undefined, a default
-hold reason is provided.
+\item[\Macro{WANT\_HOLD\_REASON}]
+  An expression that defines a string utilized to set the job ClassAd
+  attribute \AdAttr{HoldReason} when a job is put on hold due to
+  \MacroNI{WANT\_HOLD}.
+  If not defined or if the expression evaluates to \Expr{Undefined},
+  a default hold reason is provided.
 
-\item[\Macro{WANT\_HOLD\_SUB\_CODE}]
 \label{param:WantHoldSubCode}
-An optional integer expression.  When a job is put on hold due to
-\MacroNI{WANT\_HOLD}, the \AdAttr{HoldReasonSubCode} in the job ClassAd is
-set to the integer resulting from evaluation of this expression.  If
-this expression is not specified or evaluates to undefined, the sub-code
-is set to 0.  Note that \AdAttr{HoldReasonCode} is always set to 21.
+\item[\Macro{WANT\_HOLD\_SUB\_CODE}]
+  An expression that defines an integer value utilized to set the job ClassAd
+  attribute\AdAttr{HoldReasonSubCode}  when a job is put on hold due to
+  \MacroNI{WANT\_HOLD}.
+  If not defined or if the expression evaluates to \Expr{Undefined},
+  the value is set to 0.
+  Note that \AdAttr{HoldReasonCode} is always set to 21.
 
-\item[\Macro{CONTINUE}]
 \label{param:Continue}
+\item[\Macro{CONTINUE}]
   A boolean expression that, when \Expr{True},
   causes Condor to continue the execution of a suspended job.
 
-\item[\Macro{KILL}]
 \label{param:Kill}
+\item[\Macro{KILL}]
   A boolean expression that, when \Expr{True},
   causes Condor to immediately stop the
   execution of a currently running job, without delay, and
@@ -5483,6 +5490,24 @@ These settings affect the \Condor{starter}.
   Increase this value if the disk on the submit machine
   cannot keep up with large bursts of activity, such as many jobs all
   completing at the same time.
+
+\label{param:EnforceCpuAffinity} 
+\item[\Macro{ENFORCE\_CPU\_AFFINITY}]
+  A boolean value that defaults to \Expr{False}.  When \Expr{False},
+  the affinity of jobs and their descendants to a CPU is not enforced.
+  When \Expr{True}, Condor jobs and their descendants maintain their
+  affinity to a CPU.
+  When \Expr{True}, more fine grained affinities may be specified with
+  \MacroNI{SLOT<X>\_CPU\_AFFINITY}.
+
+\label{param:SlotXCpuAffinity} 
+\item[\Macro{SLOT<X>\_CPU\_AFFINITY}]
+  A comma separated list of cores to which a Condor job running on
+  a specific slot given by the value of \MacroNI{<X>} show affinity.
+  Note that slots are numbered beginning with the value 1,
+  while CPU cores are numbered beginning with the value 0.
+  This affinity list only takes effect if
+  \Expr{ENFORCE\_CPU\_AFFINITY = True}.
 
 \end{description}
 
@@ -8556,11 +8581,37 @@ MASTER_NEGOTIATOR_CONTROLLER = HAD
   Logging level for the \Condor{replication} daemon.
   See \MacroNI{<SUBSYS>\_DEBUG} for values.
 
-
 \label{param:ReplicationLog}
 \item[\Macro{REPLICATION\_LOG}]
   Full path and file name to the log file.
   There is no default value.
+
+\label{param:Transferer}
+\item[\Macro{TRANSFERER}]
+  The full path and file name of the \Condor{transferer} executable.
+  Versions of Condor previous to 7.2.2 hard coded the location
+  as \File{\MacroUNI{RELEASE\_DIR}/sbin/condor\_transferer}.
+  This is now the default value.
+  The future default value is likely to change, 
+  and be defined relative to \MacroUNI{SBIN}.
+
+\label{param:TransfererLog}
+\item[\Macro{TRANSFERER\_LOG}]
+  Full path and file name to the log file.
+  There is no default value for this variable; a definition is required
+  if the \Condor{replication} daemon does a file transfer.
+
+\label{param:TransfererDebug}
+\item[\Macro{TRANSFERER\_DEBUG}]
+  Logging level for the \Condor{transferer} daemon.
+  See \MacroNI{<SUBSYS>\_DEBUG} for values.
+
+\label{param:MaxTransfererLog}
+\item[\Macro{MAX\_TRANSFERER\_LOG}]
+  Controls the maximum length in bytes to which the \Condor{transferer}
+  daemon log will be allowed to grow.
+  A value of 0 specifies that this file may grow without bounds.
+  The default is 1 Mbyte.
 
 \end{description}
 

@@ -275,44 +275,60 @@ This feature is currently not compatible with \SubmitCmd{run\_as\_owner},
 and will be ignored if both are specified.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:windows-scripts-as-executables}Using Windows \
-Scripts as Job Executables}
+\subsection{\label{sec:windows-scripts-as-executables}Using Windows Scripts as Job Executables}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Historically, Condor has had limited support for scripting jobs on
-Windows.  Typically, jobs on Windows used executables or batch files.
-This limitation has now been lifted: any script recognized by Windows
-can be used in place of a job's \SubmitCmd{executable} attribute.
-Condor can determine how to interpret the script using the file's
-extension.  If there is no file extension, the file will be treated as
-it has been in the past, as a Windows executable.
+Condor has added support for scripting jobs on Windows.
+Previously, Condor jobs on Windows were limited to executables or batch files.
+With this new support,
+Condor determines how to interpret the script using 
+the file name's extension.
+Without a file name extension, 
+the file will be treated as it has been in the past:
+as a Windows executable.
 
-This feature requires little to no configuration, depending on the
-type of scripts being used.  For instance, Perl scripts, using
-\textit{ActivePerl} require no administrative intervention. On the
-other hand, \textit{Windows Scripting Host} scripts require a small
-amount of configuration to work correctly.
+This feature may not require any modifications to Condor's configuration.
+Perl scripts, using \Prog{ActivePerl} require no administrative intervention.
 
-In Microsoft nomenclature, \textit{verbs} are actions that can be
-taken upon a given a file. These are most familiar to users in the
-form of the words \textbf{Open}, \textbf{Print...}, \textbf{Edit},
-etc. which are displayed in the context menu when a file is
-right-clicked on. The commands for each of these verbs is stored in
-the registry under the \Code{HKEY\_CLASSES\_ROOT} hive. In general,
-they take the form:
+\Prog{Windows Scripting Host} scripts do require
+configuration to work correctly.
+The configuration variables set values to be used in registry look up,
+which results in a command that invokes the correct interpreter,
+with the correct command line arguments for the specific scripting
+language.
+In Microsoft nomenclature, 
+\Term{verbs} are actions that can be taken upon a given a file.
+Familiar examples are the words 
+\textbf{Open}, \textbf{Print}, and \textbf{Edit},
+which are displayed in the context menu when a user right clicks on a file.
+The command lines to be used for each of these verbs are stored in
+the registry under the \Code{HKEY\_CLASSES\_ROOT} hive.
+In general, a look up uses the form:
 
+\footnotesize
 \begin{verbatim}
-HKCR\<FileType>\Shell\<OpenVerb>\Command
+HKEY_CLASSES_ROOT\<FileType>\Shell\<OpenVerb>\Command
 \end{verbatim}
+\normalsize
 
-Where \textit{FileType} is the name of a file type, \textit{OpenVerb}
-is the verb and \textit{Command} is the method by which the file is
-interpreted. In the Condor configuration file we allow for the
-selection of any one verb to act as the file type's interpreter. As
-mentioned above, Condor uses the file's extension to make the
-distinction between file types.  This extension is used in the
-configuration variable to change the verb Condor uses to interpret the
-file type. For instance, the following:
+Within this specification, 
+\verb@<FileType>@ is the name of a file type
+(and therefore a scripting language),
+and is obtained from the file name extension.
+\verb@<OpenVerb>@ identifies the verb,
+and is obtained from the Condor configuration.
+
+The Condor configuration sets the selection of a verb,
+to aid in the registry look up.
+The file name extension sets the name of the Condor configuration variable.
+This variable name is of the form
+\begin{verbatim}
+OPEN_VERB_FOR_<EXT>_FILES
+\end{verbatim}
+\verb@<EXT>@ represents the file name extension.
+The following configuration example uses the \verb@Open2@ verb for
+a Windows Scripting Host registry look up for several scripting
+languages:
 
 \begin{verbatim}
 OPEN_VERB_FOR_JS_FILES  = Open2
@@ -323,35 +339,40 @@ OPEN_VERB_FOR_WSF_FILES = Open2
 OPEN_VERB_FOR_WSH_FILES = Open2
 \end{verbatim}
 
-Tells Condor to use the \textbf{Open2} verb when interpreting scripts
-with the given file extensions.  The example tells Condor to use the
-command-line version of the \textit{Windows Scripting Host}, rather
-than the default windowed version, whose command is defined in the
-\textbf{Open} verb. This is done to allow the standard input, output
-and error to be redirected, if necessary|which is not possible when
-using the Windows interpreter.
+In this example, Condor specifies the \verb@Open2@ verb,
+instead of the default \verb@Open@ verb,
+for a script with the file name extension of \verb@wsh@.
+The \verb@Open2@ verb of \Prog{Windows Scripting Host} allows standard input,
+standard output, and standard error to be redirected
+as needed for Condor jobs.
 
-Some script interpreters which require access to the user's registry,
-like the \textit{Windows Scripting Host} scripts, will fail if they
-are not given registry access:
+A common difficulty is encountered when
+a script interpreter requires access to the user's registry.
+Note that the user's registry is different than the root registry.
+If not given access to the user's registry,
+some scripts, such as \Prog{Windows Scripting Host} scripts,
+will fail.
+The failure error message appears as: 
 
 \begin{verbatim}
 CScript Error: Loading your settings failed. (Access is denied.)
 \end{verbatim}
 
-To remedy this error, and possibly many other file type errors, add
-the \SubmitCmd{load\_profile} attribute to the job's submit script:
+The fix for this error is to give access explicitly for the job
+by the addition of the
+\SubmitCmd{load\_profile} command in the job's submit description file:
 
 \begin{verbatim}
 load_profile = True
 \end{verbatim}
 
-After this, there should be no registry access errors.  This technique
-should also work on many other interpreters; however, it may also be
-the case that it is not required at all. For instance,
-\textit{ActivePerl} does not, by default, require access to the user's
-registry hive (unless the script explicitly reads or modifies the
-user's registry settings) so the above attribute can be omitted.
+With this command,
+there should be no registry access errors.
+This command should also work for other interpreters.
+Note that not all interpreters will require access.
+For example,
+\Prog{ActivePerl} does not by default require access to the user's
+registry hive.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Details on how Condor for Windows starts/stops a job}

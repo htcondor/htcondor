@@ -455,6 +455,7 @@ HAD_CONNECTION_TIMEOUT = 2
 ##If true, the first central manager in HAD_LIST is a primary.
 HAD_USE_PRIMARY = true
 
+
 ##--------------------------------------------------------------------
 ##  Host/IP access levels
 ##--------------------------------------------------------------------
@@ -478,8 +479,9 @@ HOSTALLOW_NEGOTIATOR = $(COLLECTOR_HOST)
 ###################################################################
 
 ## The location of executable files
-HAD = $(SBIN)/condor_had
+HAD         = $(SBIN)/condor_had
 REPLICATION = $(SBIN)/condor_replication
+TRANSFERER  = $(SBIN)/condor_transferer
 
 ## the master should start at least these five daemons
 DAEMON_LIST = MASTER, COLLECTOR, NEGOTIATOR, HAD, REPLICATION
