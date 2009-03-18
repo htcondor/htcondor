@@ -322,7 +322,17 @@ path set in the user's \File{.cshrc} script.
 As of this writing, the LAM implementation does not work
 if the user's login shell is the Bourne or compatible shell.
 
-
+These MPI jobs operate as all parallel universe jobs do.
+The default policy is that when the first node exits,
+the whole job is considered done, 
+and Condor kills all other running nodes in that parallel job.
+Alternatively, a parallel universe job that sets the attribute
+\begin{verbatim}
++ParallelShutdownPolicy = "WAIT_FOR_ALL"
+\end{verbatim}
+in its submit description file changes the policy,
+such that Condor will wait until every node in the parallel 
+job has completed to consider the job finished. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \input{user-man/mpi.tex}
