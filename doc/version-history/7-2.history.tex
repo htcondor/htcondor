@@ -33,7 +33,8 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Added the \Opt{-DumpRescue} command-line flag to \Condor{dagman}
+and \Condor{submit\_dag}.  This flag is intended mainly for testing.
 
 \end{itemize}
 
@@ -41,13 +42,45 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item The new boolean configuration variable
+  \Macro{EVENT\_LOG\_FSYNC} provides control of the behavior of
+  Condor when writing events to the event log.  Previously,
+  the behavior was as if this parameter were set to \Expr{False}.
+  See \ref{param:EventLogFsync} for the complete definition of
+  this variable.
+
+\item The new boolean configuration variable
+  \Macro{EVENT\_LOG\_LOCKING} provides control of the behavior of
+  Condor when writing events to the event log.  Previously,
+  the behavior was controlled by \MacroNI{ENABLE\_USERLOG\_LOCKING}.
+  See \ref{param:EventLogLocking} for the complete definition of
+  this variable.
+
+% gittrac #314
+\item The new string configuration variable \Macro{TRANSFERER}
+  specifies the path to the \Condor{transferer} program which is
+  invoked by the \Condor{replication} daemon to perform the actual
+  transfer of the file set by \MacroNI{STATE\_FILE}.
+  This is part of the high availability framework.
+  Prior to Condor 7.2.2, the value of \MacroNI{TRANSFERER} was hard coded to
+  \File{\MacroUNI{RELEASE\_DIR}/sbin/condor\_transferer}.  The use of
+  this hard coded behavior should be considered obsolete behavior, and
+  will be removed in a future version of Condor.
 
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Fixed a bug in which an ill-formed network packet could
+crash a Condor daemon.
+This would not be seen in normal Condor operation,
+but sometimes port-scanning software could trigger such a crash.
+
+\item \Condor{q} would sometimes exit with  the value zero,
+indicating success, when it could not connect to a \Condor{schedd} daemon.
+Now it exits with an error code in this case.
 
 \item Fixed two seemingly small memory leaks in Condor's SOAP
 interface. A small amount of memory was lost per SOAP transaction. On
@@ -67,8 +100,8 @@ to write a core file to disk in the Unix ports.
 \item Fixed a bug in which the use of dedicated execute accounts
 (indicated by use of the configuration variable
 \MacroNI{DEDICATED\_EXECUTE\_ACCOUNT\_REGEXP}) did not work properly
-in PrivSep mode (with the configuration variable \MacroNI{PRIVSEP\_ENABLED}
-set to \Expr{True}).
+in PrivSep mode: those with the configuration variable
+\MacroNI{PRIVSEP\_ENABLED} set to \Expr{True}.
 
 \item Fixed an erroneous log message that reported that
 the hook defined by \Macro{HOOK\_UPDATE\_JOB\_INFO} had run,
@@ -80,19 +113,57 @@ The log message is only visible at the \Expr{D\_FULLDEBUG} level.
 \item Fixed a bug that caused \Condor{dagman} to crash if the
 \File{dagman.out} file reached a size of 2 GBytes.
 
-\item The new boolean configuration variable
-  \Macro{EVENT\_LOG\_FSYNC} provides control of the behavior of
-  Condor when writing events to the event log.  Previously,
-  the behavior was as if this parameter were set to \Expr{False}.
-  See \ref{param:EventLogFsync} for the complete definition of
-  this variable.
+\item Fixed a problem affecting the \Condor{starter} when in PrivSep mode.
+After the user job exited, an error was printed in the
+\Condor{starter} log file complaining that it failed to \Prog{chown} the
+sandbox to Condor ownership.  This error was not actually harmful,
+just noisy.
 
-\item The new boolean configuration variable
-  \Macro{EVENT\_LOG\_LOCKING} provides control of the behavior of
-  Condor when writing events to the event log.  Previously,
-  the behavior was controlled by \MacroNI{ENABLE\_USERLOG\_LOCKING}.
-  See \ref{param:EventLogLocking} for the complete definition of
-  this variable.
+\item Fixed a bug in the \Condor{master} that caused it to not have
+  \MacroNI{REPLICATION} in its default list for \MacroNI{DC\_DAEMON\_LIST}.
+  The example
+  configuration file for HAD has been updated to match, as well.
+
+\item Fixed the \Condor{transferer} daemon and documentation to consistently
+  use the value of the configuration variable 
+  \MacroNI{MAX\_TRANSFERER\_LIFETIME} in High Availability code.
+
+% gittrac #285
+\item Fixed a bug that caused \Condor{dagman} to crash,
+if a splice DAG has node categories.
+
+\item Changed splice-related \Condor{dagman} debug messages
+to \emph{not} be printed at the default verbosity.
+They are now mostly printed at debug level 4.
+For definitions of the debug levels, see the \Condor{dagman} manual
+page at section~ \ref{man-condor-dagman}.
+
+% gittrac #313
+\item Fixed a bug that caused the \Condor{replication} daemon,
+  as part of the high availability framework,
+  to start the \Condor{transferer} client incorrectly; the end result was
+  that the \Condor{transferer} was unable to authenticate via GSI
+  using host-based certificates.
+
+\item Fixed a bug in which the ClassAd attribute \AdAttr{RemoteWallClockTime}
+  could get too big after a restart of the \Condor{schedd} daemon,
+  for jobs that were running at the time of the restart.
+
+% gittrac #231
+\item Fixed a bug that was causing the \Condor{startd} to log the
+  error message 
+\begin{verbatim}
+  ioctl(SIOCETHTOOL/GWOL) failed: Operation not permitted (1)
+\end{verbatim}
+  when started as a Personal Condor on Linux.
+  The message is now suppressed in this case.  When the message is
+  printed, an additional message is logged informing the user that
+  this error can be ignored, unless hibernation is being used.
+
+% gittrac #330
+\item Fixed a bug that was causing the \Condor{startd} to sometimes
+  publish the network adapter's hardware address incorrectly in its
+  ClassAd.
 
 \end{itemize}
 
