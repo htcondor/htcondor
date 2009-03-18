@@ -60,10 +60,10 @@ and \Condor{submit\_dag}.  This flag is intended mainly for testing.
 \item The new string configuration variable \Macro{TRANSFERER}
   specifies the path to the \Condor{transferer} program which is
   invoked by the \Condor{replication} daemon to perform the actual
-  transfer of the \MacroNI{STATE\_FILE}.  This is part of the high
-  availability framework.
-  Prior to Condor 7.2.2, this was hard coded to
-  ``\MacroUNI{RELEASE\_DIR}/sbin/condor\_transferer''.  The use of
+  transfer of the file set by \MacroNI{STATE\_FILE}.
+  This is part of the high availability framework.
+  Prior to Condor 7.2.2, the value of \MacroNI{TRANSFERER} was hard coded to
+  \File{\MacroUNI{RELEASE\_DIR}/sbin/condor\_transferer}.  The use of
   this hard coded behavior should be considered obsolete behavior, and
   will be removed in a future version of Condor.
 
@@ -100,8 +100,8 @@ to write a core file to disk in the Unix ports.
 \item Fixed a bug in which the use of dedicated execute accounts
 (indicated by use of the configuration variable
 \MacroNI{DEDICATED\_EXECUTE\_ACCOUNT\_REGEXP}) did not work properly
-in PrivSep mode (with the configuration variable \MacroNI{PRIVSEP\_ENABLED}
-set to \Expr{True}).
+in PrivSep mode: those with the configuration variable
+\MacroNI{PRIVSEP\_ENABLED} set to \Expr{True}.
 
 \item Fixed an erroneous log message that reported that
 the hook defined by \Macro{HOOK\_UPDATE\_JOB\_INFO} had run,
@@ -139,23 +139,26 @@ For definitions of the debug levels, see the \Condor{dagman} manual
 page at section~ \ref{man-condor-dagman}.
 
 % gittrac #313
-\item Fixed a bug that was causing the \Condor{replication} daemon
-  (part of the high availability framework) to
-  start the \Condor{transferer} client incorrectly; the end result is
+\item Fixed a bug that caused the \Condor{replication} daemon,
+  as part of the high availability framework,
+  to start the \Condor{transferer} client incorrectly; the end result was
   that the \Condor{transferer} was unable to authenticate via GSI
   using host-based certificates.
 
-\item \AdAttr{RemoteWallClockTime} could get too big in some cases after
-a restart of the schedd for jobs that were running at the time of the
-restart.
+\item Fixed a bug in which the ClassAd attribute \AdAttr{RemoteWallClockTime}
+  could get too big after a restart of the \Condor{schedd} daemon,
+  for jobs that were running at the time of the restart.
 
 % gittrac #231
-\item Fixed a bug that was causing the \Condor{startd} to log an
-  error message ``ioctl(SIOCETHTOOL/GWOL) failed: Operation not
-  permitted (1)'' when started as a personal Condor on Linux.
+\item Fixed a bug that was causing the \Condor{startd} to log the
+  error message 
+\begin{verbatim}
+  ioctl(SIOCETHTOOL/GWOL) failed: Operation not permitted (1)
+\end{verbatim}
+  when started as a Personal Condor on Linux.
   The message is now suppressed in this case.  When the message is
   printed, an additional message is logged informing the user that
-  this error can be ignored unless hibernation is being used.
+  this error can be ignored, unless hibernation is being used.
 
 % gittrac #330
 \item Fixed a bug that was causing the \Condor{startd} to sometimes
