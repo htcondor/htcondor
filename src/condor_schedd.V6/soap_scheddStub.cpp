@@ -196,6 +196,21 @@ transtimeout()
 	return TRUE;
 }
 
+static void
+release_data ( void *p ) {
+
+	dprintf ( 
+		D_FULLDEBUG, 
+		"SOAP in release_data()\n" );
+
+	/** release the memory */
+	if ( p ) {
+		free ( p );
+		p = NULL;
+	}
+
+}
+
   // forward reference....
 static bool
 stub_suffix(const char*,
@@ -470,6 +485,7 @@ condor__beginTransaction(struct soap *soap,
 	trans_timer_id =
 		daemonCore->Register_Timer(duration,
 								   (TimerHandler)&transtimeout,
+								   (TimerRelease)&release_data,
 								   "condor_transtimeout");
 	intPtr = (void*) malloc(sizeof(struct condor__Transaction));	
 	memcpy(intPtr,transaction,sizeof(condor__Transaction));
