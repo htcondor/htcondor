@@ -131,21 +131,6 @@ VanillaProc::StartJob()
 
 			}
 
-			/** Flag ourself as a script so we get special 
-				treatment in OsProc::StartJob(). */
-			if ( !JobAd->Assign ( 
-				ATTR_IS_INTERPRETED, 
-				true ) ) {
-
-				dprintf (
-					D_ALWAYS,
-					"VanillaProc::StartJob(): ERROR: failed to "
-					"flag ourself as a script.\n" );
-
-				return FALSE;
-
-			}
-			
 			/** We've moved the script to argv[1], so we need to 
 				add	the remaining arguments to positions argv[2]..
 				argv[/n/]. */
@@ -163,11 +148,10 @@ VanillaProc::StartJob()
 
 			}
 
-			/** Since we know already that we do not want this
-				file returned to us, we explicitly add it to an
-				exception list which will stop the file transfer
-				mechanism from considering it for transfer to
-				submitter */
+			/** Since we know already we don't want this file returned
+				to us, we explicitly add it to an exception list which
+				will stop the file transfer mechanism from considering
+				it for transfer back to its submitter */
 			Starter->jic->removeFromOutputFiles (
 				filename.Value () );
 

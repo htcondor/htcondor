@@ -6791,8 +6791,8 @@ int DaemonCore::Create_Process(
 
 	dprintf (
 		D_FULLDEBUG,
-		"Create_Process(): File extension: *%s\n",
-		extension );
+		"Create_Process(): executable: '%s'\n",
+		executable );
 	
 	if ( bIs16Bit ) {
 
@@ -6832,8 +6832,8 @@ int DaemonCore::Create_Process(
 
 		/** find out where cmd.exe lives on this box and
 			set it to our executable */
-		::GetSystemDirectory ( systemshell, MAX_PATH );
-		strncat ( systemshell, "\\cmd.exe", MAX_PATH );
+		UINT length = GetSystemDirectory ( systemshell, MAX_PATH );
+		strncat ( systemshell, "\\cmd.exe", MAX_PATH - length - 1 );
 		
 		/** next, stuff the extra cmd.exe args in with 
 			the arguments */
@@ -6846,8 +6846,9 @@ int DaemonCore::Create_Process(
 		executable_buf	= systemshell;
 		executable		= executable_buf.Value();
 
-		/** append the arguments given in the submit file. */
-		first_arg_to_copy = 0;
+		/** skip argv[0], since it only contains junk and will goof
+			up the args to the batch file. */
+		first_arg_to_copy = 1;
 		args_success = args.GetArgsStringWin32 (
 			&strArgs,
 			first_arg_to_copy,
@@ -6855,7 +6856,7 @@ int DaemonCore::Create_Process(
 
 		dprintf ( 
 			D_ALWAYS, 
-			"Executable is a batch script, "
+			"Executable is a batch file, "
 			"running: %s\n",
 			strArgs.Value () );
 
@@ -6915,8 +6916,9 @@ int DaemonCore::Create_Process(
 				executable_buf	= interpreter;
 				executable		= executable_buf.Value ();
 
-				/** append the arguments given in the submit file. */
-				first_arg_to_copy = 0;
+				/** skip argv[0], since it only contains junk and
+					will goof up the args to the script. */
+				first_arg_to_copy = 1;
 				args_success = args.GetArgsStringWin32 (
 					&strArgs,
 					first_arg_to_copy,
@@ -6933,10 +6935,15 @@ int DaemonCore::Create_Process(
 
 		}
 
-	}
-	else {
+	} else {
+
+		/** append the arguments given in the submit file. */
 		first_arg_to_copy = 0;
-		args_success = args.GetArgsStringWin32(&strArgs,first_arg_to_copy,&args_errors);
+		args_success = args.GetArgsStringWin32 (
+			&strArgs,
+			first_arg_to_copy,
+			&args_errors );
+
 	}
 
 	if(!args_success) {
