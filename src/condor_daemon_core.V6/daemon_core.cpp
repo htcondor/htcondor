@@ -4925,7 +4925,7 @@ void DaemonCore::Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocki
 
 			if ( use_kill ) {
 				const char* tmp = signalName(sig);
-				dprintf( D_DAEMONCORE,
+				dprintf( D_FULLDEBUG,
 						 "Send_Signal(): Doing kill(%d,%d) [%s]\n",
 						 pid, sig, tmp ? tmp : "Unknown" );
 				priv_state priv = set_root_priv();

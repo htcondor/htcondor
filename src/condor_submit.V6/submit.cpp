@@ -7543,7 +7543,7 @@ SetVMParams()
 	tmp_ptr = condor_param(VM_MACAddr, ATTR_JOB_VM_MACADDR);
 	if(tmp_ptr)
 	  {
-	    buffer.sprintf("%s = %s", ATTR_JOB_VM_MACADDR, tmp_ptr);
+	    buffer.sprintf("%s = \"%s\"", ATTR_JOB_VM_MACADDR, tmp_ptr);
 	    InsertJobExpr(buffer, false);
 	  }
 
