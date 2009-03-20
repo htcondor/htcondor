@@ -54,12 +54,8 @@ VanillaProc::StartJob()
 				systemshell[MAX_PATH+1];    
 	const char* jobtmp				= Starter->jic->origJobName();
 	int			joblen				= strlen(jobtmp);
-	const char	*extension			= joblen >= 4 ? &(jobtmp[joblen-4]) : NULL;
-	bool		batch_file			= ( extension && 
-										( MATCH == strcasecmp ( ".bat", extension ) || 
-										  MATCH == strcasecmp ( ".cmd", extension ) ) ),
-				allow_scripts		= param_boolean ( "ALLOW_SCRIPTS_AS_EXECUTABLES", true ),
-				binary_executable	= ( extension && 
+	const char	*extension			= joblen > 0 ? &(jobtmp[joblen-4]) : NULL;
+	bool		binary_executable	= ( extension && 
 										( MATCH == strcasecmp ( ".exe", extension ) || 
 										  MATCH == strcasecmp ( ".com", extension ) ) ),
 				java_universe		= ( CONDOR_UNIVERSE_JAVA == job_universe );
@@ -68,8 +64,7 @@ VanillaProc::StartJob()
 				jobname, 
 				error;
 	
-	if ( !java_universe && 
-		( batch_file || ( allow_scripts && !binary_executable ) ) ) {
+	if ( extension && !java_universe && !binary_executable ) {
 
 		/** since we do not actually know how long the extension of
 			the file is, we'll need to hunt down the '.' in the path,

@@ -6780,11 +6780,12 @@ int DaemonCore::Create_Process(
 
 	// Define a some short-hand variables for use bellow
 	namelen				= strlen(executable);
-	extension			= namelen >= 4 ? &(executable[namelen-4]) : NULL;
+	extension			= namelen > 0 ? &(executable[namelen-4]) : NULL;
 	batch_file			= ( extension && 
 							( MATCH == strcasecmp ( ".bat", extension ) || 
 							  MATCH == strcasecmp ( ".cmd", extension ) ) ),
-	allow_scripts		= param_boolean ( "ALLOW_SCRIPTS_AS_EXECUTABLES", true ),
+	allow_scripts		= param_boolean ( 
+							"ALLOW_SCRIPTS_TO_RUN_AS_EXECUTABLES", true ),
 	binary_executable	= ( extension && 
 							( MATCH == strcasecmp ( ".exe", extension ) || 
 							  MATCH == strcasecmp ( ".com", extension ) ) );
