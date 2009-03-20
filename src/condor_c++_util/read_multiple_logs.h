@@ -239,7 +239,7 @@ public:
 			@param a CondorError object to hold any error information
 			@return true if successful, false if failed
 		*/
-	bool monitorLogFile(const char *logfile, bool truncateIfFirst,
+	bool monitorLogFile(MyString logfile, bool truncateIfFirst,
 				CondorError &errstack);
 
 		/** Unmonitor the given log file
@@ -247,7 +247,7 @@ public:
 			@param a CondorError object to hold any error information
 			@return true if successful, false if failed
 		*/
-	bool unmonitorLogFile (const char *logfile, CondorError &errstack);
+	bool unmonitorLogFile (MyString logfile, CondorError &errstack);
 #endif // LAZY_LOG_FILES
 
 protected:
@@ -278,10 +278,15 @@ private:
 
 #if LAZY_LOG_FILES
 	struct LogFileMonitor {
-		LogFileMonitor() : refCount(0), readUserLog(NULL), lastOffset(0) {}
+		LogFileMonitor() : refCount(0), lastLogEvent(NULL),
+					lastOffset(0) {
+			readUserLog = new ReadUserLog();
+		}
+
 		int			refCount;
 		ReadUserLog	*readUserLog;
-		long		lastOffset;
+		ULogEvent	*lastLogEvent;
+		long		lastOffset;//TEMP -- not needed?
 		// more stuff here?
 	};
 
@@ -308,6 +313,14 @@ private:
 		 */
 	static bool LogGrew(LogFileEntry &log);
 
+#if LAZY_LOG_FILES
+		//TEMP -- document better
+		/** Returns true iff the given log grew since the last time
+		    we called this method on it.
+		 */
+	static bool LogGrew(const MyString &logfile, LogFileMonitor *monitor );
+#endif
+
 		/**
 		 * Read an event from a log, including checking whether this log
 		 * is actually a duplicate of another log.  Note that if this *is*
@@ -317,6 +330,12 @@ private:
 		 * @return The outcome of trying to read an event.
 		 */
 	ULogEventOutcome readEventFromLog(LogFileEntry &log);
+
+#if LAZY_LOG_FILES
+		//TEMP -- document
+	ULogEventOutcome readEventFromLog(const MyString &logfile,
+				LogFileMonitor *monitor);
+#endif
 
 		/**
 		 * Determine whether a log object exists that is a logical duplicate

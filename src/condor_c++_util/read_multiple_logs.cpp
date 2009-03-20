@@ -36,7 +36,7 @@
 
 #define LOG_INFO_HASH_SIZE 37 // prime
 
-#define DEBUG_LOG_FILES 1 //TEMP
+#define DEBUG_LOG_FILES 0 //TEMP
 #if DEBUG_LOG_FILES
 #  define D_LOG_FILES D_ALWAYS
 #else
@@ -153,6 +153,43 @@ ReadMultipleUserLogs::readEvent (ULogEvent * & event)
 {
     dprintf(D_FULLDEBUG, "ReadMultipleUserLogs::readEvent()\n");
 
+#if LAZY_LOG_FILES
+	LogFileMonitor *oldestEventLog = NULL;
+
+	activeLogFiles.startIterations();
+	MyString logfile;
+	LogFileMonitor *log;
+	while ( activeLogFiles.iterate( logfile, log ) ) {
+		ULogEventOutcome outcome = ULOG_OK;
+		if ( !log->lastLogEvent ) {
+			outcome = readEventFromLog( logfile, log );
+
+			if ( outcome == ULOG_RD_ERROR || outcome == ULOG_UNK_ERROR ) {
+				// peter says always return an error immediately,
+				// then go on our merry way trying again if they
+				// call us again.
+				dprintf( D_ALWAYS, "ReadMultipleUserLogs: read error "
+							"on log %s\n", logfile.Value() );
+				return outcome;
+			}
+		}
+
+		if ( outcome != ULOG_NO_EVENT ) {
+			if ( oldestEventLog == NULL ||
+						(oldestEventLog->lastLogEvent->eventTime >
+						log->lastLogEvent->eventTime) ) {
+				oldestEventLog = log;
+			}
+		}
+	}
+
+	if ( oldestEventLog == NULL ) {
+		return ULOG_NO_EVENT;
+	}
+
+	event = oldestEventLog->lastLogEvent;
+	oldestEventLog->lastLogEvent = NULL;
+#else
 	if (!iLogFileCount) {
 		return ULOG_UNK_ERROR;
 	}
@@ -195,6 +232,7 @@ ReadMultipleUserLogs::readEvent (ULogEvent * & event)
 	
 	event = pLogFileEntries[iOldestEventIndex].pLastLogEvent;
 	pLogFileEntries[iOldestEventIndex].pLastLogEvent = NULL;
+#endif
 
 	return ULOG_OK;
 }
@@ -204,7 +242,7 @@ ReadMultipleUserLogs::readEvent (ULogEvent * & event)
 bool
 ReadMultipleUserLogs::detectLogGrowth()
 {
-    dprintf( D_FULLDEBUG, "ReadMultipleUserLogs::detectLogGrowth()\n");
+    dprintf( D_FULLDEBUG, "ReadMultipleUserLogs::detectLogGrowth()\n" );
 
     initializeUninitializedLogs();
 
@@ -213,11 +251,22 @@ ReadMultipleUserLogs::detectLogGrowth()
 	    // Note: we must go through the whole loop even after we find a
 		// log that grew, so we have the right log lengths for next time.
 		// wenger 2003-04-11.
+#if LAZY_LOG_FILES
+	activeLogFiles.startIterations();
+	MyString logfile;
+	LogFileMonitor *log;
+	while ( activeLogFiles.iterate( logfile, log ) ) {
+	    if ( LogGrew( logfile, log ) ) {
+		    grew = true;
+		}
+	}
+#else
     for (int index = 0; index < iLogFileCount; index++) {
 	    if (LogGrew(pLogFileEntries[index])) {
 		    grew = true;
 		}
 	}
+#endif
 
     return grew;
 }
@@ -364,6 +413,33 @@ ReadMultipleUserLogs::LogGrew(LogFileEntry &log)
 	return grew;
 }
 
+#if LAZY_LOG_FILES
+///////////////////////////////////////////////////////////////////////////////
+
+bool
+ReadMultipleUserLogs::LogGrew( const MyString &logfile,
+			LogFileMonitor *monitor )
+{
+    dprintf( D_FULLDEBUG, "ReadMultipleUserLogs::LogGrew(%s)\n",
+				logfile.Value() );
+
+	ReadUserLog::FileStatus fs = monitor->readUserLog->CheckFileStatus();
+
+	if ( ReadUserLog::LOG_STATUS_ERROR == fs ) {
+		dprintf( D_FULLDEBUG,
+				 "ReadMultipleUserLogs error: can't stat "
+				 "condor log (%s): %s\n",
+				 logfile.Value(), strerror( errno ) );
+		return false;
+	}
+	bool grew = ( fs != ReadUserLog::LOG_STATUS_NOCHANGE );
+    dprintf( D_FULLDEBUG, "ReadMultipleUserLogs: %s\n",
+			 grew ? "log GREW!" : "no log growth..." );
+
+	return grew;
+}
+#endif
+
 ///////////////////////////////////////////////////////////////////////////////
 
 ULogEventOutcome
@@ -391,6 +467,40 @@ ReadMultipleUserLogs::readEventFromLog(LogFileEntry &log)
 
 	return result;
 }
+
+#if LAZY_LOG_FILES
+///////////////////////////////////////////////////////////////////////////////
+
+ULogEventOutcome
+ReadMultipleUserLogs::readEventFromLog( const MyString &logfile,
+			LogFileMonitor *monitor )
+{
+	dprintf( D_FULLDEBUG, "ReadMultipleUserLogs::readEventFromLog(%s)\n",
+				logfile.Value() );
+
+	ULogEventOutcome	result;
+
+	result = monitor->readUserLog->readEvent( monitor->lastLogEvent );
+
+#if 0 //TEMP? -- not sure yet whether we need this here
+   	if ( result == ULOG_OK ) {
+			// Check for duplicate logs.  We only need to do that the
+			// first time we've successfully read an event from this
+			// log.
+		if ( !log.haveReadEvent ) {
+			log.haveReadEvent = true;
+
+			if ( DuplicateLogExists(log.pLastLogEvent, &log) ) {
+				result = ULOG_NO_EVENT;
+				log.isValid = FALSE;
+			}
+		}
+	}
+#endif //TEMP?
+
+	return result;
+}
+#endif
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -1211,18 +1321,16 @@ MultiLogFiles::logFileOnNFS(const char *logFilename, bool nfsIsError)
 ///////////////////////////////////////////////////////////////////////////////
 
 bool
-ReadMultipleUserLogs::monitorLogFile(const char *logfile,
-			bool truncateIfFirst, CondorError &errstack)
+ReadMultipleUserLogs::monitorLogFile( MyString logfile,
+			bool truncateIfFirst, CondorError &errstack )
 {
-	dprintf(D_LOG_FILES, "ReadMultipleUserLogs::monitorLogFile(%s, %d)\n",
-				logfile, truncateIfFirst);
-
-	MyString file(logfile);
+	dprintf( D_LOG_FILES, "ReadMultipleUserLogs::monitorLogFile(%s, %d)\n",
+				logfile.Value(), truncateIfFirst );
 
 		// Make sure path is absolute to reduce the chance of the same
 		// file getting referred to by different names (that will cause
 		// errors).
-	if ( !MultiLogFiles::makePathAbsolute( file, errstack ) ) {
+	if ( !MultiLogFiles::makePathAbsolute( logfile, errstack ) ) {
 		errstack.push( "ReadMultipleUserLogs", 0/*TEMP*/,
 					"Error making log file path absolute in "
 					"monitorLogFile()\n" );
@@ -1230,45 +1338,61 @@ ReadMultipleUserLogs::monitorLogFile(const char *logfile,
 	}
 
 	LogFileMonitor *monitor;
-	if ( allLogFiles.lookup( file, monitor ) == 0 ) {
-		dprintf(D_LOG_FILES, "ReadMultipleUserLogs: found "
-					"LogFileMonitor object for %s\n", logfile);
+	if ( allLogFiles.lookup( logfile, monitor ) == 0 ) {
+		dprintf( D_LOG_FILES, "ReadMultipleUserLogs: found "
+					"LogFileMonitor object for %s\n", logfile.Value() );
 
 	} else {
-		dprintf(D_LOG_FILES, "ReadMultipleUserLogs: didn't "
-					"find LogFileMonitor object for %s\n", logfile);
+		dprintf( D_LOG_FILES, "ReadMultipleUserLogs: didn't "
+					"find LogFileMonitor object for %s\n", logfile.Value() );
 
 		if ( truncateIfFirst ) {
-			if ( !MultiLogFiles::CreateOrTruncateFile( logfile, errstack) ) {
+			if ( !MultiLogFiles::CreateOrTruncateFile( logfile.Value(),
+						errstack) ) {
 				errstack.pushf( "ReadMultipleUserLogs", 0/*TEMP*/,
-							"Error truncating log file %s", logfile );
+							"Error truncating log file %s", logfile.Value() );
 				return false;
 			}
 		}
+		//TEMP -- if we're not truncating, do we need to touch the file to amake sure it exists, and therefore initialize will work?
 
 		monitor = new LogFileMonitor();
 		ASSERT( monitor );
-		dprintf(D_LOG_FILES, "ReadMultipleUserLogs: created LogFileMonitor "
-					"object for log file %s\n", logfile);
-
-		if ( allLogFiles.insert( file, monitor ) != 0 ) {
+		dprintf( D_LOG_FILES, "ReadMultipleUserLogs: created LogFileMonitor "
+					"object for log file %s\n", logfile.Value() );
+		if ( allLogFiles.insert( logfile, monitor ) != 0 ) {
 			errstack.pushf( "ReadMultipleUserLogs", 0/*TEMP*/,
-						"Error inserting %s into allLogFiles", logfile );
+						"Error inserting %s into allLogFiles",
+						logfile.Value() );
 			return false;
+		}
+
+		if ( !monitor->readUserLog->initialize( logfile.Value() ) ) {
+			errstack.pushf( "ReadMultipleUserLogs", 0/*TEMP*/,
+						"Error initializing log file %s", logfile.Value() );
+			return false;
+		}
+
+			// Workaround for gittrac #337.
+		if ( LogGrew( logfile, monitor ) ) {
+				// This will fail unless an event got written after the
+				// call to CreateOrTruncateFile() above (race condition).
+			(void)monitor->readUserLog->readEvent( monitor->lastLogEvent );
 		}
 	}
 
 	if ( monitor->refCount < 1 ) {
-		// open file
-		// seek to proper location -- need to add fseek() method to ReadUserLog class
+		// open file if not already opened
+		//TEMP -- hmm -- what about the do_seek argument to ReadUserLog::OpenLogFile()?  Maybe that will take care of the seek/tell
 
-		if ( activeLogFiles.insert( file, monitor ) != 0 ) {
+		if ( activeLogFiles.insert( logfile, monitor ) != 0 ) {
 			errstack.pushf( "ReadMultipleUserLogs", 0/*TEMP*/,
-						"Error inserting %s into activeLogFiles", logfile );
+						"Error inserting %s into activeLogFiles",
+						logfile.Value() );
 			return false;
 		} else {
-			dprintf(D_LOG_FILES, "ReadMultipleUserLogs: added log "
-						"file %s to active list\n", logfile);
+			dprintf( D_LOG_FILES, "ReadMultipleUserLogs: added log "
+						"file %s to active list\n", logfile.Value() );
 		}
 	}
 
@@ -1280,18 +1404,16 @@ ReadMultipleUserLogs::monitorLogFile(const char *logfile,
 ///////////////////////////////////////////////////////////////////////////////
 
 bool
-ReadMultipleUserLogs::unmonitorLogFile (const char *logfile,
-			CondorError &errstack)
+ReadMultipleUserLogs::unmonitorLogFile( MyString logfile,
+			CondorError &errstack )
 {
-	dprintf(D_LOG_FILES, "ReadMultipleUserLogs::unmonitorLogFile(%s)\n",
-				logfile);
-
-	MyString file(logfile);
+	dprintf( D_LOG_FILES, "ReadMultipleUserLogs::unmonitorLogFile(%s)\n",
+				logfile.Value() );
 
 		// Make sure path is absolute to reduce the chance of the same
 		// file getting referred to by different names (that will cause
 		// errors).
-	if ( !MultiLogFiles::makePathAbsolute( file, errstack ) ) {
+	if ( !MultiLogFiles::makePathAbsolute( logfile, errstack ) ) {
 		errstack.push( "ReadMultipleUserLogs", 0/*TEMP*/,
 					"Error making log file path absolute in "
 					"monitorLogFile()\n" );
@@ -1299,9 +1421,9 @@ ReadMultipleUserLogs::unmonitorLogFile (const char *logfile,
 	}
 
 	LogFileMonitor *monitor;
-	if ( allLogFiles.lookup( file, monitor ) == 0 ) {
-		dprintf(D_LOG_FILES, "ReadMultipleUserLogs: found "
-					"LogFileMonitor object for %s\n", logfile);
+	if ( allLogFiles.lookup( logfile, monitor ) == 0 ) {
+		dprintf( D_LOG_FILES, "ReadMultipleUserLogs: found "
+					"LogFileMonitor object for %s\n", logfile.Value() );
 
 		monitor->refCount--;
 
@@ -1309,20 +1431,22 @@ ReadMultipleUserLogs::unmonitorLogFile (const char *logfile,
 			// save current file offset -- need to add ftell() method to ReadUserLog class
 			// close file
 
-			if ( activeLogFiles.remove( file ) != 0 ) {
+			if ( activeLogFiles.remove( logfile ) != 0 ) {
 				errstack.pushf( "ReadMultipleUserLogs", 0/*TEMP*/,
-							"Error removing %s from activeLogFiles", logfile );
+							"Error removing %s from activeLogFiles",
+							logfile.Value() );
 				return false;
 			} else {
-				dprintf(D_LOG_FILES, "ReadMultipleUserLogs: removed "
-							"log file %s from active list\n", logfile);
+				dprintf( D_LOG_FILES, "ReadMultipleUserLogs: removed "
+							"log file %s from active list\n",
+							logfile.Value() );
 			}
 		}
 
 	} else {
 		errstack.pushf( "ReadMultipleUserLogs", 0/*TEMP*/,
 					"Didn't find LogFileMonitor object for log file %s!\n",
-					logfile );
+					logfile.Value() );
 		return false;
 	}
 

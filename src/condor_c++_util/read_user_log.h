@@ -162,7 +162,7 @@ class ReadUserLog
 					 bool read_only = false );
 
     /** Initialize the log file.  Similar to above, but takes an integer
-		as it's second parameter. This function will return false
+		as its second parameter. This function will return false
         if it can't open the log file (among other problems).
         @param file the file to read from
 		@param max_rotation sets max rotation file # the reader will
