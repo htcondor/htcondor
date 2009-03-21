@@ -9,7 +9,7 @@ soapobjs(hdfs)
 
 OBJ = hadoop.o hadoop_main.o $(SOAP_OBJS)
 
-public_c_plus_target($(NAME), sbin, $(OBJ),$(LIB))
+public_c_plus_target($(NAME),sbin,$(OBJ),$(LIB))
 
 html:
 release:: all
