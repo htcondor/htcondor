@@ -1,5 +1,5 @@
 NAME = condor_hdfs
-all_target( $(NAME) )
+all_target($(NAME))
 
 CFLAGS = $(STD_FLAGS)
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
