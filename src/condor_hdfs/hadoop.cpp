@@ -214,8 +214,8 @@ void Hadoop::startService(int type) {
 
         java_config(m_java, &arglist, &m_classpath);
 
-        MyString stdout("/tmp/hdfs.stdout");
-        MyString stderr("/tmp/hdfs.stderr");
+        MyString out("/tmp/hdfs.stdout");
+        MyString err("/tmp/hdfs.stderr");
 
         char *ldir = param("LOG");
         if (ldir != NULL) {
@@ -229,8 +229,8 @@ void Hadoop::startService(int type) {
                 arglist.AppendArg(log_dir.Value());
                 arglist.AppendArg("-Dhadoop.log.file=hdfs.log");
 
-                stdout.sprintf("%s/hdfs.stdout", ldir);
-                stderr.sprintf("%s/hdfs.stderr", ldir);
+                out.sprintf("%s/hdfs.stdout", ldir);
+                err.sprintf("%s/hdfs.stderr", ldir);
 
                 free(ldir);
         }
@@ -248,19 +248,19 @@ void Hadoop::startService(int type) {
 
         char *file = param("HDFS_STDOUT");
         if (file) {
-                stdout = file;
+                out = file;
                 free(file);
         }
 
         file = param("HDFS_STDERR");
         if (file) {
-                stderr = file;
+                err = file;
                 free(file);
         } 
 
         /* Standard input and output for our this hadoop daemon */
-        stdout_fd = safe_open_wrapper(stdout.Value(), O_CREAT|O_WRONLY);
-        stderr_fd = safe_open_wrapper(stderr.Value(), O_CREAT|O_WRONLY);
+        stdout_fd = safe_open_wrapper(out.Value(), O_CREAT|O_WRONLY);
+        stderr_fd = safe_open_wrapper(err.Value(), O_CREAT|O_WRONLY);
 
         if (stdout_fd == -1) 
                 dprintf(D_ALWAYS, "Failed to create stdout pipe for service type=%d\n", type);
