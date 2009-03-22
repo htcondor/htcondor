@@ -74,18 +74,18 @@ Job::~Job() {
 	delete _scriptPost;
 }
 
-Job::
-Job( const job_type_t jobType, const char* jobName, const char *directory,
-			const char* cmdFile, bool prohibitMultiJobs ) :
+//---------------------------------------------------------------------------
+Job::Job( const job_type_t jobType, const char* jobName,
+			const char *directory, const char* cmdFile,
+			bool prohibitMultiJobs ) :
 	_jobType( jobType )
 {
 	Init( jobName, directory, cmdFile, prohibitMultiJobs );
 }
 
-
-void Job::
-Init( const char* jobName, const char* directory, const char* cmdFile,
-			bool prohibitMultiJobs )
+//---------------------------------------------------------------------------
+void Job::Init( const char* jobName, const char* directory,
+			const char* cmdFile, bool prohibitMultiJobs )
 {
 	ASSERT( jobName != NULL );
 	ASSERT( cmdFile != NULL );
@@ -147,6 +147,7 @@ Init( const char* jobName, const char* directory, const char* cmdFile,
 	_hasNodePriority = false;
 	_nodePriority = 0;
 
+#if !LAZY_LOG_FILES
 		// Note: we use "" for the directory here because when this method
 		// is called we should *already* be in the directory from which
 		// this job is to be run.
@@ -156,6 +157,7 @@ Init( const char* jobName, const char* directory, const char* cmdFile,
 		// This will go away once the lazy log file code is fully
 		// implemented.  wenger 2008-12-19.
     _logFile = strnewp (logFile.Value());
+#endif
 
 	varNamesFromDag = new List<MyString>;
 	varValsFromDag = new List<MyString>;

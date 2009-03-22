@@ -110,13 +110,14 @@ public:
 	static void TruncateLogs(StringList &logFileNames);
 
 #if LAZY_LOG_FILES
-		/** Creates the given file if it doesn't exist, truncates
-			it if it does.
+		/** Initializes the given file -- creates it if it doesn't exist,
+			possibly truncates it if it does.
 			@param the name of the file to create or truncate
+			@param whether to truncate the file
 			@param a CondorError object to hold any error information
 			@return true if successful, false if failed
 		 */
-	static bool CreateOrTruncateFile(const char *filename,
+	static bool InitializeFile(const char *filename, bool truncate,
 				CondorError &errstack);
 #endif // LAZY_LOG_FILES
 
@@ -318,7 +319,7 @@ private:
 		/** Returns true iff the given log grew since the last time
 		    we called this method on it.
 		 */
-	static bool LogGrew(const MyString &logfile, LogFileMonitor *monitor );
+	static bool LogGrew( LogFileMonitor *monitor, const MyString &logfile );
 #endif
 
 		/**
@@ -333,8 +334,8 @@ private:
 
 #if LAZY_LOG_FILES
 		//TEMP -- document
-	ULogEventOutcome readEventFromLog(const MyString &logfile,
-				LogFileMonitor *monitor);
+	ULogEventOutcome readEventFromLog( LogFileMonitor *monitor,
+				const MyString &logfile );
 #endif
 
 		/**

@@ -175,8 +175,10 @@ int main(int argc, char *argv[])
 
 		// Make sure that all node jobs have log files, the files
 		// aren't on NFS, etc.
+#if !LAZY_LOG_FILES
 	tmpResult = checkLogFiles( opts );
 	if ( tmpResult != 0 ) return tmpResult;
+#endif
 
 		// Note that this MUST come after recursion, otherwise we'd
 		// pass down the "preserved" values from the current .condor.sub

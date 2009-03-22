@@ -581,12 +581,14 @@ class Dag {
 	*/
 	void PrintDagFiles( /* const */ StringList &dagFiles );
 
+#if !LAZY_LOG_FILES
 	/** Find all Condor (not DaP) log files associated with this DAG.
 	    @param The list of DAG files being run.
 		@param useDagDir run DAGs in directories from DAG file paths
 		       if true
 	*/
 	void FindLogFiles( /* const */ StringList &dagFiles, bool useDagDir );
+#endif
 
     /* Prepares to submit job by running its PRE Script if one exists,
        otherwise adds job to _readyQ and calls SubmitReadyJobs()

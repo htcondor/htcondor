@@ -122,6 +122,7 @@ Dag::Dag( /* const */ StringList &dagFiles,
 		ASSERT( dagFiles.number() >= 1 );
 		PrintDagFiles( dagFiles );
 
+#if !LAZY_LOG_FILES
 		FindLogFiles( dagFiles, _useDagDir );
 		if ( TotalLogFileCount() < 1 ) {
 			const char *tail = (_dagFiles.number() > 1) ? "these DAGs" :
@@ -130,6 +131,7 @@ Dag::Dag( /* const */ StringList &dagFiles,
 						"ERROR: no log files found for the node "
 						"jobs of %s\n", tail );
 		}
+#endif
 	}
 
  	_readyQ = new PrioritySimpleList<Job*>;
@@ -192,6 +194,7 @@ Dag::~Dag() {
 void
 Dag::InitializeDagFiles( bool deleteOldLogs )
 {
+#if !LAZY_LOG_FILES
 		// if there is an older version of the log files,
 		// we need to delete these.
 
@@ -226,6 +229,7 @@ Dag::InitializeDagFiles( bool deleteOldLogs )
 	MultiLogFiles::TruncateLogs( _condorLogFiles );
 	MultiLogFiles::TruncateLogs( _storkLogFiles );
 	}
+#endif
 }
 
 //-------------------------------------------------------------------------
@@ -259,6 +263,13 @@ bool Dag::Bootstrap (bool recovery) {
 
 		debug_cache_start_caching();
 
+#if LAZY_LOG_FILES
+		if( !ProcessLogEvents( CONDORLOG, recovery ) ) {
+			_recovery = false;
+			debug_cache_stop_caching();
+			return false;
+		}
+#else
 		if( _condorLogFiles.number() > 0 ) {
 			if( !ProcessLogEvents( CONDORLOG, recovery ) ) {
 				_recovery = false;
@@ -273,6 +284,7 @@ bool Dag::Bootstrap (bool recovery) {
 				return false;
 			}
 		}
+#endif
 
 		// all jobs stuck in STATUS_POSTRUN need their scripts run
 		jobs.ToBeforeFirst();
@@ -351,9 +363,13 @@ Job * Dag::FindNodeByNodeID (const JobID_t jobID) const {
 }
 
 //-------------------------------------------------------------------------
+//TEMP -- make sure lazy log file code works for Stork logs!
+//TEMP -- make sure lazy log file code works in recovery mode!
+//TEMP -- make sure NFS check still works with lazy log file code
 bool
 Dag::DetectCondorLogGrowth () {
 
+#if !LAZY_LOG_FILES
 	if( _condorLogFiles.number() <= 0 ) {
 		return false;
 	}
@@ -369,6 +385,7 @@ Dag::DetectCondorLogGrowth () {
 			return false;
 		}
     }
+#endif
 
 	bool growth = _condorLogRdr.detectLogGrowth();
     debug_printf( DEBUG_DEBUG_4, "%s\n",
@@ -400,6 +417,9 @@ Dag::DetectCondorLogGrowth () {
 
 //-------------------------------------------------------------------------
 bool Dag::DetectDaPLogGrowth () {
+#if LAZY_LOG_FILES
+	return false;
+#else
 	if( _storkLogFiles.number() <= 0 ) {
 		return false;
 	}
@@ -420,12 +440,14 @@ bool Dag::DetectDaPLogGrowth () {
     debug_printf( DEBUG_DEBUG_4, "%s\n",
 				  growth ? "Log GREW!" : "No log growth..." );
     return growth;
+#endif
 }
 
 //-------------------------------------------------------------------------
 // Developer's Note: returning false tells main_timer to abort the DAG
 bool Dag::ProcessLogEvents (int logsource, bool recovery) {
 
+#if !LAZY_LOG_FILES
 	if ( logsource == CONDORLOG ) {
 		if ( !_condorLogInitialized ) {
 			_condorLogInitialized = _condorLogRdr.initialize(_condorLogFiles);
@@ -435,6 +457,7 @@ bool Dag::ProcessLogEvents (int logsource, bool recovery) {
 			_dapLogInitialized = _storkLogRdr.initialize(_storkLogFiles);
 		}
 	}
+#endif
 
 	bool done = false;  // Keep scanning until ULOG_NO_EVENT
 	bool result = true;
@@ -1195,6 +1218,7 @@ Dag::PrintDagFiles( /* const */ StringList &dagFiles )
 	}
 }
 
+#if !LAZY_LOG_FILES
 //-------------------------------------------------------------------------
 void
 Dag::FindLogFiles( /* const */ StringList &dagFiles, bool useDagDir )
@@ -1238,6 +1262,7 @@ Dag::FindLogFiles( /* const */ StringList &dagFiles, bool useDagDir )
 		}
 	}
 }
+#endif
 
 //-------------------------------------------------------------------------
 bool
@@ -1349,8 +1374,12 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 			deferredJobs.Prepend( job, -job->_nodePriority );
 			_catThrottleDeferredCount++;
 		} else {
+#if LAZY_LOG_FILES
+			if( dm.submit_delay == 0 && !didLogSleep ) {
+#else
 			if( dm.submit_delay == 0 && TotalLogFileCount() > 1 &&
 						!didLogSleep ) {
+#endif
 					// if we don't already have a submit_delay, sleep for one
 					// second here, so we can be sure that this job's submit
 					// event will be unambiguously later than the termination

@@ -595,6 +595,9 @@ ReadEventsLazy()
 		isOkay = false;
 	}
 
+		// --------------------------------------------------------------
+		// Make sure we don't see log growth or events on empty log files.
+		//
 	printf("Testing detectLogGrowth() on empty files...\n");
 	if ( !lazyReader.detectLogGrowth() ) {
 		printf("...succeeded\n");
@@ -605,14 +608,6 @@ ReadEventsLazy()
 		fflush(stdout);
 		isOkay = false;
 	}
-
-//TEMP -- add tests that monitor log files with truncateIfFirst false
-
-//TEMP -- make a test that monitors a file, gets events, unmonitors it, writes events to the file, monitors it again, and makes sure we get those events
-
-//TEMP -- make a test that monitors a file, unmonitors it before any events are written, and monitors it again
-
-//TEMP -- test unmonitoring a file that hasn't been monitored yet
 
 	ULogEvent	*event;
 	printf("Testing readEvent() on empty files...\n");
@@ -633,7 +628,6 @@ ReadEventsLazy()
 	UserLog		log2("test", file2, 2, 0, 0, true);
 	UserLog		log3("test", file3, 3, 0, 0, false);
 	UserLog		log4("test", file4, 4, 0, 0, false);
-	UserLog		log5("test", file5, 5, -1, -1, false);
 
 	SubmitEvent	subE;
 	strcpy(subE.submitHost, "<128.105.165.12:32779>");
@@ -678,7 +672,42 @@ ReadEventsLazy()
 		isOkay = false;
 	}
 
+		//
+		// Make sure truncating works.
+		//
+	if ( !log2.writeEvent(&subE) ) {
+		printf("Error: writeEvent() failed");
+		printf(" (at %s: %d)\n", __FILE__, __LINE__);
+		fflush(stdout);
+		isOkay = false;
+	}
+
 	if (!monitorLogFile( lazyReader, file2, true ) ) {
+		isOkay = false;
+	}
+
+	if ( !ReadAndTestEvent(lazyReader, NULL) ) {
+		isOkay = false;
+	}
+
+		//
+		// Unmonitoring a file we haven't monitored yet should fail.
+		//
+	if ( unmonitorLogFile( lazyReader, file3 ) ) {
+		fprintf( stderr, "Unmonitoring file3 should have failed\n" );
+		isOkay = false;
+	}
+
+		//
+		// Make sure monitoring the same file several times works okay.
+		//
+	if (!monitorLogFile( lazyReader, file3, true ) ) {
+		isOkay = false;
+	}
+	if (!monitorLogFile( lazyReader, file3, true ) ) {
+		isOkay = false;
+	}
+	if (!monitorLogFile( lazyReader, file3, true ) ) {
 		isOkay = false;
 	}
 	if (!monitorLogFile( lazyReader, file3, true ) ) {
@@ -750,11 +779,18 @@ ReadEventsLazy()
 		isOkay = false;
 	}
 
-/*TEMP
 	if (!unmonitorLogFile( lazyReader, file3 ) ) {
 		isOkay = false;
 	}
-TEMP*/
+	if (!unmonitorLogFile( lazyReader, file3 ) ) {
+		isOkay = false;
+	}
+	if (!unmonitorLogFile( lazyReader, file3 ) ) {
+		isOkay = false;
+	}
+	if (!unmonitorLogFile( lazyReader, file3 ) ) {
+		isOkay = false;
+	}
 
 	if (!monitorLogFile( lazyReader, file4, true ) ) {
 		isOkay = false;
@@ -791,13 +827,19 @@ TEMP*/
 		isOkay = false;
 	}
 
-	if (!monitorLogFile( lazyReader, file5, true ) ) {
+		//
+		// Make sure things work with truncateIfFirst == false.
+		//
+	if ( unlink( file5 ) != 0 ) {
+		fprintf( stderr, "Error unlinking <%s>: %s\n", file5,
+					strerror( errno ) );
+		isOkay = false;
+	}
+	UserLog		log5("test", file5, 5, -1, -1, false);
+	if (!monitorLogFile( lazyReader, file5, false ) ) {
 		isOkay = false;
 	}
 
-	subE.cluster = 5;
-	subE.proc = -1;
-	subE.subproc = -1;
 	if ( !log5.writeEvent(&subE) ) {
 		printf("Error: writeEvent() failed");
 		printf(" (at %s: %d)\n", __FILE__, __LINE__);
@@ -864,6 +906,76 @@ TEMP*/
 	if ( !ReadAndTestEvent(lazyReader, &termE) ) {
 		isOkay = false;
 	}
+
+		// --------------------------------------------------------------
+		// Make sure we *don't* see events on an unmonitored file, but that
+		// we *do* see them after we monitor the file again.
+		//
+	if (!unmonitorLogFile( lazyReader, file5 ) ) {
+		isOkay = false;
+	}
+
+	if ( !log5.initialize( 6, 0, 0, NULL )) {
+		fprintf( stderr, "Error re-initializing log5\n" );
+		isOkay = false;
+	}
+
+	if ( !log5.writeEvent(&subE) ) {
+		printf("Error: writeEvent() failed");
+		printf(" (at %s: %d)\n", __FILE__, __LINE__);
+		fflush(stdout);
+		isOkay = false;
+	}
+
+	strcpy(execE.executeHost, "<128.105.777.99:12345>");
+	if ( !log5.writeEvent(&execE) ) {
+		printf("Error: writeEvent() failed");
+		printf(" (at %s: %d)\n", __FILE__, __LINE__);
+		fflush(stdout);
+		isOkay = false;
+	}
+
+	if ( !log5.writeEvent(&termE) ) {
+		printf("Error: writeEvent() failed");
+		printf(" (at %s: %d)\n", __FILE__, __LINE__);
+		fflush(stdout);
+		isOkay = false;
+	}
+
+	if ( !ReadAndTestEvent( lazyReader, NULL ) ) {
+		isOkay = false;
+	}
+
+	if (!monitorLogFile( lazyReader, file5, true ) ) {
+		isOkay = false;
+	}
+
+	if ( !ReadAndTestEvent( lazyReader, &subE ) ) {
+		isOkay = false;
+	}
+	if ( !ReadAndTestEvent( lazyReader, &execE ) ) {
+		isOkay = false;
+	}
+	if ( !ReadAndTestEvent(lazyReader, &termE) ) {
+		isOkay = false;
+	}
+	if ( !ReadAndTestEvent(lazyReader, NULL) ) {
+		isOkay = false;
+	}
+
+		//
+		// Make sure monitoring and then immediately unmonitoring a file
+		// doesn't mess things up.
+		//
+	const char *file6 = "test_multi_log.log6";
+
+	if (!monitorLogFile( lazyReader, file6, true ) ) {
+		isOkay = false;
+	}
+	if (!unmonitorLogFile( lazyReader, file6 ) ) {
+		isOkay = false;
+	}
+
 
 	if ( isOkay ) {
 		printf("...succeeded\n");
