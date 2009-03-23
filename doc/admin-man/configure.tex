@@ -1234,7 +1234,7 @@ File System Configuration File Entries''.
   and post-scripts, or when producing configuration macros, etc..
   This is not an exhaustive list of locations scripts can be used in
   place of executables, the full list locations is defined as follows:
-  a script can be used in any location that was previously limited to
+  A script can be used in any location that was previously limited to
   executing Windows executables or Windows Batch Files.
 
   See section~\ref{sec:windows-scripts-as-executables} on
@@ -1244,19 +1244,19 @@ File System Configuration File Entries''.
 \label{param:OpenVerbForExtFiles}
 \item[\Macro{OPEN\_VERB\_FOR\_<EXT>\_FILES}]
   The \Term{verb} used when interpreting files with the file extension
-  \MacroNI{<EXT>}. In Microsoft nomenclature, \Term{verbs} are actions
+  \verb@<EXT>@. In Microsoft nomenclature, \Term{verbs} are actions
   that can be taken upon a given a file. Typically these \Term{verbs}
   define a Windowed application, but some also define a command-line
   application, which is, in general, preferred by Condor.  With a
   command-line tool, the standard error and output can be captured and
   returned as results to the submitter.
 
-  The \emph{Windows Scripting Host} (\Term{WSH}) is a perfect example
-  of Windows application that has a command-line alternative.  The
-  \texttt{Open} \Term{verb} runs scripts as a Windowed application.
+  The \Prog{Windows Scripting Host} (\Term{WSH}) is a perfect example
+  of a Windows application that has a command-line alternative.  The
+  \verb@Open@ \Term{verb} runs scripts as a Windowed application.
   Meaning that all the \Term{WSH} scripts run using this \Term{verb}
   will result in all the output being piped to a Window. The
-  \texttt{Open2} \Term{verb}, in contrast, is a command-line
+  \verb@Open2@ \Term{verb}, in contrast, is a command-line
   application.  To use the command-line application, the following
   changes can be made to the configuration file:
 

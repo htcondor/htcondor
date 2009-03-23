@@ -287,8 +287,9 @@ Without a file name extension,
 the file will be treated as it has been in the past:
 as a Windows executable.
 
-This feature may not require any modifications to Condor's configuration.
-Perl scripts, using \Prog{ActivePerl} require no administrative intervention.
+This feature may not require any modifications to Condor's
+configuration.  Perl scripts, using \Prog{ActivePerl}, for example,
+require no administrative intervention.
 
 \Prog{Windows Scripting Host} scripts do require
 configuration to work correctly.
@@ -298,12 +299,12 @@ with the correct command line arguments for the specific scripting
 language.
 In Microsoft nomenclature, 
 \Term{verbs} are actions that can be taken upon a given a file.
-Familiar examples are the words 
+Familiar examples,
 \textbf{Open}, \textbf{Print}, and \textbf{Edit},
-which are displayed in the context menu when a user right clicks on a file.
+can be found on the context menu when a user right clicks on a file.
 The command lines to be used for each of these verbs are stored in
 the registry under the \Code{HKEY\_CLASSES\_ROOT} hive.
-In general, a look up uses the form:
+In general, a registry look up uses the form:
 
 \footnotesize
 \begin{verbatim}
@@ -321,13 +322,13 @@ and is obtained from the Condor configuration.
 The Condor configuration sets the selection of a verb,
 to aid in the registry look up.
 The file name extension sets the name of the Condor configuration variable.
-This variable name is of the form
+This variable name is of the form:
 \begin{verbatim}
 OPEN_VERB_FOR_<EXT>_FILES
 \end{verbatim}
-\verb@<EXT>@ represents the file name extension.
+Where \verb@<EXT>@ represents the file name extension.
 The following configuration example uses the \verb@Open2@ verb for
-a Windows Scripting Host registry look up for several scripting
+a \Prog{Windows Scripting Host} registry look up for several scripting
 languages:
 
 \begin{verbatim}
@@ -341,8 +342,8 @@ OPEN_VERB_FOR_WSH_FILES = Open2
 
 In this example, Condor specifies the \verb@Open2@ verb,
 instead of the default \verb@Open@ verb,
-for a script with the file name extension of \verb@wsh@.
-The \verb@Open2@ verb of \Prog{Windows Scripting Host} allows standard input,
+for a script with the file name extension of \verb@wsh@, or \verb@vbs@, etc..
+The \Prog{Windows Scripting Host's} \verb@Open2@ verb allows standard input,
 standard output, and standard error to be redirected
 as needed for Condor jobs.
 
@@ -358,9 +359,10 @@ The failure error message appears as:
 CScript Error: Loading your settings failed. (Access is denied.)
 \end{verbatim}
 
-The fix for this error is to give access explicitly for the job
-by the addition of the
-\SubmitCmd{load\_profile} command in the job's submit description file:
+The fix for this error is to give explicit access to the submitting
+user's registry hive.  This can be accomplished with the addition of
+the \SubmitCmd{load\_profile} command in the job's submit description
+file:
 
 \begin{verbatim}
 load_profile = True
