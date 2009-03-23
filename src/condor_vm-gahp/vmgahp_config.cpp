@@ -69,7 +69,7 @@ VMGahpConfig::init(const char* vmtype)
 
 	// Handle VM_TYPE
 	m_vm_type = vmtype;
-	m_vm_type.strlwr();
+	m_vm_type.lower_case();
 
 	// Read VM_VERSION
 	config_value = param("VM_VERSION");
@@ -108,7 +108,7 @@ VMGahpConfig::init(const char* vmtype)
 			MyString networking_type = delete_quotation_marks(config_value);
 			networking_type.trim();
 			// change string to lowercase
-			networking_type.strlwr();
+			networking_type.lower_case();
 			free(config_value);
 
 			StringList networking_types(networking_type.Value(), ", ");

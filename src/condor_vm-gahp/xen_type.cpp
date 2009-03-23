@@ -984,7 +984,7 @@ XenType::CreateConfigFile()
 	// Read the parameter of Xen cdrom device
 	if( m_classAd.LookupString(VMPARAM_XEN_CDROM_DEVICE, m_xen_cdrom_device) == 1 ) {
 		m_xen_cdrom_device.trim();
-		m_xen_cdrom_device.strlwr();
+		m_xen_cdrom_device.lower_case();
 	}
 
 	if( (m_vm_cdrom_files.isEmpty() == false) && 
@@ -1123,7 +1123,7 @@ XenType::parseXenDiskParam(const char *format)
 		// device name
 		MyString disk_device = single_disk_file.next();
 		disk_device.trim();
-		disk_device.strlwr();
+		disk_device.lower_case();
 
 		// disk permission
 		MyString disk_perm = single_disk_file.next();

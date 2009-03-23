@@ -558,17 +558,6 @@ MyString::lower_case(void)
 	return;
 }
 
-
-void
-MyString::strlwr(void)
-{
-	if (Data != NULL) {
-		::strlwr(Data);
-	}
-	return;
-}
-
-
 void
 MyString::upper_case(void)
 {
@@ -577,17 +566,6 @@ MyString::upper_case(void)
 	}
 	return;
 }
-
-
-void
-MyString::strupr(void)
-{
-	if (Data != NULL) {
-		::strupr(Data);
-	}
-	return;
-}
-
 
 bool
 MyString::chomp( void )

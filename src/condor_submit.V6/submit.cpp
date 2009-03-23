@@ -1836,7 +1836,7 @@ SetUniverse()
 			exit(1);
 		}
 		VMType = vm_tmp;
-		VMType.strlwr();
+		VMType.lower_case();
 		free(vm_tmp);
 
 		// need vm checkpoint?
@@ -7439,7 +7439,7 @@ SetConcurrencyLimits()
 	if (!tmp.IsEmpty()) {
 		char *str;
 
-		tmp.strlwr();
+		tmp.lower_case();
 
 		StringList list(tmp.Value());
 
