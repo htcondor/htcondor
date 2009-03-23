@@ -52,7 +52,9 @@ thain Wed Jan 27 1999
 #include <fcntl.h>
 #include <time.h>
 #include <string.h>
-#include <iostream.h>
+#include <iostream>
+
+using namespace std;
 
 /*
 This is really ugly, but memory_file just refused to link
