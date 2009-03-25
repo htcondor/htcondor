@@ -45,7 +45,7 @@ my $submitted = sub {
     my $cluster = $info{"cluster"};
 	my $qstat;
 
-    my $qstat = CondorTest::getJobStatus($cluster);
+	$qstat = CondorTest::getJobStatus($cluster);
     while($qstat == -1)
     {
         CondorTest::debug("Job status unknown - wait a bit\n",$debuglevel);

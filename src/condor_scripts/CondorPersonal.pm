@@ -236,6 +236,10 @@ sub StartCondor
 	my $config_and_port = "";
 	my $winpath = "";
 
+	if(!(-f $paramfile)) {
+		die "StartCondor: param file $paramfile does not exist!!\n";
+	}
+
 	if($arraysz == 3) {
 		$mpid = $pid; # assign process id
 	} else {
@@ -278,7 +282,7 @@ sub StartCondor
 	}
 
 	if( $iswindows == 1 ){
-		$winpath = `cygpath -w $localdir`;
+		$winpath = `cygpath -m $localdir`;
 		fullchomp($winpath);
 		$condorlocaldir = $winpath;
 		CondorPersonal::TunePersonalCondor($condorlocaldir, $mpid);
@@ -291,7 +295,7 @@ sub StartCondor
 	debug( "collector port is $collector_port\n",$debuglevel);
 
 	if( $iswindows == 1 ){
-		$winpath = `cygpath -w $personal_config_file`;
+		$winpath = `cygpath -m $personal_config_file`;
 		fullchomp($winpath);
 		print "Windows conversion of personal config file to $winpath!!\n";
 		$config_and_port = $winpath . "+" . $collector_port ;
@@ -837,7 +841,7 @@ sub TunePersonalCondor
 	#for completeness when we are done
 	my $mytoppath = "";
 	if( $iswindows == 1 ){
-		$mytoppath = `cygpath -w $topleveldir`;
+		$mytoppath = `cygpath -m $topleveldir`;
 		fullchomp($mytoppath);
 	} else {
 		$mytoppath =  $topleveldir;
@@ -1087,7 +1091,7 @@ sub StartPersonalCondor
 	debug( "Want $configfile for config file\n",$debuglevel);
 
 	if( $iswindows == 1 ){
-		$figpath = `cygpath -w $fullconfig`;
+		$figpath = `cygpath -m $fullconfig`;
 		fullchomp($figpath);
 		$fullconfig = $figpath;
 		# note: on windows all binaaries in bin!

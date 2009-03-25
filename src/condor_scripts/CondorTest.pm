@@ -390,7 +390,6 @@ sub DoTest
 
 	if($iswindows) {
 		my $path = $ENV{PATH};
-		print "PATH = $path\n";
 		SweepPath($path);
 	}
 
@@ -1006,7 +1005,7 @@ sub getJobStatus
 
 #
 # Run a condor tool and look for exit value. Apply multiplier
-# upon failure and return 1 on failure.
+# upon failure and return 0 on failure.
 #
 
 sub runCondorTool
@@ -1096,7 +1095,7 @@ sub runCondorTool
 		debug("runCondorTool: iteration<$count> failed sleep 10 * $count \n",1);
 		sleep((10*$count));
 	}
-	debug( "runCondorTool: $cmd worked!\n",1);
+	debug( "runCondorTool: $cmd failed!\n",1);
 
 	return(0);
 }
@@ -1104,7 +1103,14 @@ sub runCondorTool
 # Sometimes `which ...` is just plain broken due to stupid fringe vendor
 # not quite bourne shells. So, we have our own implementation that simply
 # looks in $ENV{"PATH"} for the program and return the "usual" response found
-# across unicies. As for windows, well, for now it just sucks.
+# across unixies. As for windows, well, for now it just sucks.
+# You'll note a very strange path on windows created by SweepPath before we start
+# condor so we get The starter can use which concatenates a windows path
+# on to the end of the cygwin path. This combined with JOB_INHERITS_STARTER_ENVIRONMENT
+# gets us system calls of cygwin fnction for jobs. BUT the split on ':' mangles
+# the regular windows paths at the end.
+#
+
 sub Which
 {
 	my $exe = shift(@_);
@@ -1112,10 +1118,16 @@ sub Which
 	if(!( defined  $exe)) {
 		return "CT::Which called with no args\n";
 	}
-	my @paths = split /:/, $ENV{PATH};
+	my @paths;
+	@paths = split /:/, $ENV{PATH};
 
 	foreach my $path (@paths) {
 		fullchomp($path);
+		if($path =~ /^(.*)Program Files(.*)$/){
+			$path = $1 . "progra~1" . $2;
+		} else {
+			CondorTest::debug("Path DOES NOT contain Program Files\n",3);
+		}
 		if (-x "$path/$exe") {
 			return "$path/$exe";
 		}
@@ -1643,6 +1655,12 @@ sub CoreCheck {
 	my $scancount = 0;
 	my $fullpath = "";
 	
+	if($iswindows == 1) {
+		my $windowslogdir = `cygpath -m $logdir`;
+		fullchomp($windowslogdir);
+		$logdir = $windowslogdir;
+	}
+
 	debug("Checking <$logdir> for test <$test>\n",2);
 	my @files = `ls $logdir`;
 	foreach my $perp (@files) {
@@ -2005,36 +2023,13 @@ sub SweepPath
 {
 	my $oldpath = shift;
 	my $newpath = "";
+	my $tmppath = $oldpath;
+	$tmppath =~ s/Program Files/progra~1/g;
+	my $cygconvert = `cygpath -m -p $tmppath`;
+	fullchomp($cygconvert);
+	$newpath = $oldpath . ":" . $cygconvert;
+	CondorTest::debug("SweepPath created <<$newpath>>\n",2);
 
-	print "In SweepPath<<$oldpath>>\n";
-	my @pathparts = split "\:", $oldpath;
-	my @newpathparts;
-
-	foreach my $part (@pathparts) {
-		print "PathPart: $part\n";
-		if($part =~ /^\/cygdrive\/c\/(.*)$/) {
-			push (@newpathparts,"c:\/$1");
-			push (@newpathparts,$part);
-		} elsif($part =~ /^\/usr\/bin$/) {
-			push (@newpathparts,"c:\/cygwin\/bin");
-			push (@newpathparts,$part);
-		} elsif($part =~ /^\/usr\/sbin$/) {
-			push (@newpathparts,"c:\/cygwin\/usr\/sbin");
-			push (@newpathparts,$part);
-		} else {
-			push (@newpathparts,$part);
-		}
-
-	}
-	foreach my $part (@newpathparts) {
-		print "Newpath: $part\n";
-		if($newpath eq ""){
-				$newpath = $part;
-		} else {
-				$newpath = $newpath . ":" . $part;
-		}
-	}
-	print "Full new path: $newpath\n";
 	$ENV{PATH} = $newpath;
 }
 

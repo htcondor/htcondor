@@ -32,6 +32,32 @@ $success = sub
 	die "Job should have failed due to Perl errors! $cluster.$job did not.\n";
 };
 
+# on windows we get Normal termination with return value 1
+$failed = sub 
+{
+	my %info = @_;
+	my $expectedsig = $info{"job"}+1;
+	my $gotsig      = $info{"signal"};
+	my $error 		= $info{"error"};
+	CondorTest::debug("Good, an error as expected.\n",1);
+	if(! -f $error )
+	{
+		die "Specified error file -$error- fails to exist\n";
+	}
+	else
+	{
+		CondorTest::debug("Error file $error created as expected\n",1);
+		if( -s $error )
+		{
+			CondorTest::debug("Good file not empty!\n",1);
+		}
+		else
+		{
+			die "File was not expected to be empty!\n";
+		}
+	}
+};
+
 $died = sub 
 {
 	my %info = @_;
@@ -58,6 +84,7 @@ $died = sub
 };
 
 CondorTest::RegisterExitedAbnormal( $testname, $died );
+CondorTest::RegisterExitedFailure( $testname, $failed );
 CondorTest::RegisterExitedSuccess( $testname, $success );
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {

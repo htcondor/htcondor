@@ -69,7 +69,7 @@ $ENV{CONDOR_CONFIG} = $timedeferlocconfig;
 
 CondorTest::debug("Set config to $timedeferlocconfig\n",1);
 
-my $result = system("./job_core_time-deferral.pl vanilla");
+my $result = system("./job_core_time-deferral.pl van");
 CondorTest::debug("Result of job_core_time-deferral.pl local test  job is  $result\n",1);
 
 

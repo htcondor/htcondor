@@ -63,17 +63,17 @@ while(!(-f $flowlog)) {
 	sleep(1);
 }
 
-CondorTest::debug("About to spawn condor_wait -wait 30\n",1);
+CondorTest::debug("About to spawn condor_wait -wait 90\n",1);
 print scalar localtime() . "\n";
 
 # Start condor_wait
-$spawncmd = "condor_wait -wait 30 $flowlog";
+$spawncmd = "condor_wait -wait 90 $flowlog";
 CondorTest::spawn_cmd($spawncmd, $resultfile);
 
-CondorTest::debug("Back from spawn condor_wait -wait 30\n",1);
+CondorTest::debug("Back from spawn condor_wait -wait 90\n",1);
 print scalar localtime() . "\n";
 
-sleep(5);
+sleep(1);
 
 CondorTest::debug("Slept 5, about to drop execute event\n",1);
 print scalar localtime() . "\n";

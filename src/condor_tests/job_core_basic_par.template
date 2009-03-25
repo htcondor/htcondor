@@ -1,5 +1,5 @@
 universe   = parallel
-executable = /bin/sleep
+executable = ./x_sleep.pl
 output = job_core_basic_par.out
 error = job_core_basic_par.err
 log = job_core_basic_par.log
