@@ -501,6 +501,9 @@ condor__commitTransaction(struct soap *soap,
 
 	entry->commit();
 
+		// Don't ask, don't tell...
+	getQmgmtConnectionInfo();
+
 	if (transactionManager.destroyTransaction(transaction.id)) {
 		dprintf(D_ALWAYS, "condor__commitTransaction cleanup failed\n");
 	}
@@ -543,6 +546,15 @@ condor__abortTransaction(struct soap *soap,
 	}
 
 	entry->abort();
+
+		// Horrible hack...
+		// The ScheddTransaction, entry, owns the memory that Q_SOCK
+		// is holding onto. That memory is free'd by
+		// destroyTransaction() below. Before we delete that memory we
+		// need to clear Q_SOCK. If we don't then later when
+		// getQmgmtConnectionInfo() is called it will try to write to
+		// free'd memory.
+	getQmgmtConnectionInfo();
 
 	if (transactionManager.destroyTransaction(transaction.id)) {
 		dprintf(D_ALWAYS, "condor__abortTransaction cleanup failed\n");
