@@ -38,7 +38,14 @@ use POSIX;
 ##
 ## Universe
 ## 
-my $universe = ($ARGV[0] ? $ARGV[0] : "vanilla");
+my $universe = $ARGV[0];
+my $longuniverse = "";
+
+if($universe eq "van") {
+	$longuniverse = "vanilla";
+} else {
+	$longuniverse = $universe;
+}
 
 ##
 ## Test Information
@@ -338,7 +345,7 @@ close( READ_FILE );
 ##
 ## Add the universe information closing with the 'Queue' command
 ##
-print WRITE_FILE "Universe	= $universe\n";
+print WRITE_FILE "Universe	= $longuniverse\n";
 print WRITE_FILE "Log		= $base_name"."_$universe.log\n";
 print WRITE_FILE "Output	= $base_name"."_$universe.out\n";
 print WRITE_FILE "Error		= $base_name"."_$universe.err\n";
