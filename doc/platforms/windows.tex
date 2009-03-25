@@ -287,9 +287,9 @@ Without a file name extension,
 the file will be treated as it has been in the past:
 as a Windows executable.
 
-This feature may not require any modifications to Condor's
-configuration.  Perl scripts, using \Prog{ActivePerl}, for example,
-require no administrative intervention.
+This feature may not require any modifications to Condor's configuration.  
+An example that does not require administrative intervention
+are Perl scripts using \Prog{ActivePerl}.
 
 \Prog{Windows Scripting Host} scripts do require
 configuration to work correctly.
@@ -299,7 +299,7 @@ with the correct command line arguments for the specific scripting
 language.
 In Microsoft nomenclature, 
 \Term{verbs} are actions that can be taken upon a given a file.
-Familiar examples,
+The familiar examples of
 \textbf{Open}, \textbf{Print}, and \textbf{Edit},
 can be found on the context menu when a user right clicks on a file.
 The command lines to be used for each of these verbs are stored in
@@ -326,7 +326,7 @@ This variable name is of the form:
 \begin{verbatim}
 OPEN_VERB_FOR_<EXT>_FILES
 \end{verbatim}
-Where \verb@<EXT>@ represents the file name extension.
+\verb@<EXT>@ represents the file name extension.
 The following configuration example uses the \verb@Open2@ verb for
 a \Prog{Windows Scripting Host} registry look up for several scripting
 languages:
@@ -342,8 +342,8 @@ OPEN_VERB_FOR_WSH_FILES = Open2
 
 In this example, Condor specifies the \verb@Open2@ verb,
 instead of the default \verb@Open@ verb,
-for a script with the file name extension of \verb@wsh@, or \verb@vbs@, etc..
-The \Prog{Windows Scripting Host's} \verb@Open2@ verb allows standard input,
+for a script with the file name extension of \verb@wsh@.
+The \Prog{Windows Scripting Host}'s \verb@Open2@ verb allows standard input,
 standard output, and standard error to be redirected
 as needed for Condor jobs.
 
