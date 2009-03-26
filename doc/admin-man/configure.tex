@@ -7016,6 +7016,15 @@ and glidein.
   There are no default values, but working URLs that copy from the UW site
   are provided in the distributed sample configuration files.
 
+\label{param:GlexecJob}
+\item[\Macro{GLEXEC\_JOB}]
+  A boolean value that defaults to \Expr{False}.
+  When \Expr{True}, it enables the use of \Prog{glexec} on the machine.
+
+\label{param:Glexec}
+\item[\Macro{GLEXEC}]
+  The full path and file name of the \Prog{glexec} executable.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -7743,6 +7752,7 @@ Relating to PrivSep}
 \item[\Macro{PRIVSEP\_SWITCHBOARD}]
   The full (trusted) path and file name of the \Condor{root\_switchboard}
   executable.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
