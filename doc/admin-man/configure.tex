@@ -3477,16 +3477,19 @@ Configuring The Startd Policy.
 
 \label{param:MaxNumCpus}
 \item[\Macro{MAX\_NUM\_CPUS}]
-  This macro will cap the number of CPUs detected by Condor on a machine.
-  If you set \MacroNI{NUM\_CPUS} this cap is ignored.
-  If it is set to zero, there is no cap. 
-  If it is not defined in the config file, it defaults to zero and there is
-  no cap. 
+  An integer value used as a ceiling for the number of CPUs detected
+  by Condor on a machine.
+  This value is ignored if \MacroNI{NUM\_CPUS} is set.
+  If set to zero, there is no ceiling. 
+  If not defined, the default value is zero, and thus there is no ceiling. 
 
-  \Note This setting cannot be changed with a simple reconfig (either
-  by sending a SIGHUP or using \Condor{reconfig}.
-  If you change this, you must restart the \Condor{startd} for the
-  change to take effect (by using ``\condor{restart} -startd'').
+  Note that this setting cannot be changed with a simple reconfigure, 
+  either by sending a SIGHUP or by using the \Condor{reconfig} command.
+  To change this, restart the \Condor{startd} daemon for the
+  change to take effect. The command will be
+\begin{verbatim}
+  condor_restart -startd
+\end{verbatim}
 
 \label{param:CountHyperthreadCpus}
 \item[\Macro{COUNT\_HYPERTHREAD\_CPUS}]
