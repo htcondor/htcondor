@@ -284,8 +284,6 @@ Running \Condor{q}'s analyzer provided the following information:
 \begin{verbatim}
 % condor_q -pool condor -name beak -analyze 331228.2359
 
-Warning:  No PREEMPTION_REQUIREMENTS expression in config file --- assuming FALSE
-
 
 -- Schedd: beak.cs.wisc.edu : <128.105.146.14:30918>
  ID      OWNER            SUBMITTED     RUN_TIME ST PRI SIZE CMD
@@ -293,10 +291,10 @@ Warning:  No PREEMPTION_REQUIREMENTS expression in config file --- assuming FALS
 331228.2359:  Run analysis summary.  Of 819 machines,
     159 are rejected by your job's requirements
     137 reject your job because of their own requirements
-    488 match, but are serving users with a better priority in the pool
-    11 match, but prefer another specific job despite its worse user-priority
-    24 match, but cannot currently preempt their existing job
-     0 are available to run your job
+    488 match but are serving users with a better priority in the pool
+     11 match but reject the job for unknown reasons
+     24 match but will not currently preempt their existing job
+      0 are available to run your job
 \end{verbatim}
 \normalsize
 
@@ -307,7 +305,6 @@ to be preempted.
 \begin{verbatim}
 % condor_q -pool condor -name beak -analyze 207525.0
 
-Warning:  No PREEMPTION_REQUIREMENTS expression in config file --- assuming FALSE
 
 -- Schedd: beak.cs.wisc.edu : <128.105.146.14:30918>
  ID      OWNER            SUBMITTED     RUN_TIME ST PRI SIZE CMD
@@ -315,40 +312,12 @@ Warning:  No PREEMPTION_REQUIREMENTS expression in config file --- assuming FALS
  207525.000:  Run analysis summary.  Of 818 machines,
      317 are rejected by your job's requirements
      419 reject your job because of their own requirements
-     79 match, but are serving users with a better priority in the pool
-      3 match, but prefer another specific job despite its worse user-priority
-      0 match, but cannot currently preempt their existing job
-      0 are available to run your job
-        Last successful match: Wed Jan  8 14:57:42 2003
-        Last failed match: Fri Jan 10 15:46:45 2003
-        Reason for last match failure: insufficient priority
+      79 match but are serving users with a better priority in the pool
+       3 match but reject the job for unknown reasons
+       0 match but will not currently preempt their existing job
+       0 are available to run your job
 \end{verbatim}
 \normalsize
-%%%%%%%%%%%%%%%%%%%
-%%%%%%% NOTE: If you're considering reenabling this, 
-%%%%%%% You'll need to make a new one as IRIX is no longer
-%%%%%%% supported.  You could probably just delete the IRIX6
-%%%%%%% line and redo the totals.
-%condor_status -total lists the Arch/OS combinations in our pool:
-%
-%                     Machines Owner Claimed Unclaimed Matched Preempting
-%
-%           SGI/IRIX6       14     3       0        11       0          0
-%          ALPHA/OSF1        8     6       1         1       0          0
-%     SUN4u/SOLARIS26       84    38      46         0       0          0
-%    SUN4u/SOLARIS251        8     0       1         7       0          0
-%     SUN4x/SOLARIS26      104    47      56         1       0          0
-%    SUN4x/SOLARIS251        1     0       1         0       0          0
-%     INTEL/SOLARIS26      214    63     144         7       0          0
-%       INTEL/WINNT40        6     0       0         6       0          0
-%
-%               Total      439   157     249        33       0          0
-%
-%So, one example of a platform that does not exist would be:
-%
-% requirements = Arch == "INTEL" && OpSys == "SOLARIS251"
-%
-%%%%%%%%%%%%%%%%%%%
 
 While the analyzer can diagnose most common problems, there are some situations
 that it cannot reliably detect due to the instantaneous and local nature of the
