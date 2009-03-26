@@ -63,7 +63,8 @@ Foo::timerone()
 
 	printf("*** going to port %d\n",port);
 	
-	ReliSock* rsock = new ReliSock(daemonCore->InfoCommandSinfulString(),0,3);
+	ReliSock* rsock = new ReliSock();
+	rsock->connect("127.0.0.1", port);
 	rsock->encode();
 	rsock->snd_int(1,FALSE);
 	char *buf="Please Work!";
@@ -75,7 +76,7 @@ Foo::timerone()
 }
 
 int
-Foo::com1(int command, Stream* stream)
+Foo::com1(int /*command*/, Stream* stream)
 {
 	char *thestring = NULL;
 
@@ -94,7 +95,7 @@ Foo::com1(int command, Stream* stream)
 	return TRUE;
 }
 
-int sig9(Service* s,int sig)
+int sig9(Service* /*s*/,int sig)
 {
 	printf("*** HEY MAN!! I got sig %d\n",sig);
 
@@ -103,7 +104,7 @@ int sig9(Service* s,int sig)
 	return TRUE;
 }
 
-int sig10(Service* s,int sig)
+int sig10(Service* /*s*/,int sig)
 {
 	printf("*** HEY MAN!! I got sig %d\n",sig);
 
@@ -121,8 +122,8 @@ int reaper(Service*, int pid, int exit_status)
 Foo::Foo()
 {
 
-	daemonCore->Register_Timer(3,(Eventcpp)timerone,"One-Time Timer",this);
-	daemonCore->Register_Command(1,"Command One",(CommandHandlercpp)com1,"com1()",this);
+	daemonCore->Register_Timer(3,(Eventcpp)&Foo::timerone,"One-Time Timer",this);
+	daemonCore->Register_Command(1,"Command One",(CommandHandlercpp)&Foo::com1,"com1()",this);
 
 // Can't catch signal 9 on unix.
 #ifdef WIN32
@@ -132,6 +133,16 @@ Foo::Foo()
 	daemonCore->Register_Reaper("General Reaper",(ReaperHandler)reaper,"reaper()");
 }
 
+int
+main_pre_command_sock_init() {
+	return true;
+}
+
+int
+main_pre_dc_init(int, char**) {
+	return TRUE;
+
+}
 int
 main_shutdown_graceful()
 {
@@ -146,13 +157,14 @@ main_shutdown_fast()
 	return TRUE;
 }
 int
-main_config( bool is_full )
+main_config( bool /*is_full*/ )
 {
 	printf("** IN MAIN_CONFIG\n");
 	return TRUE;
 }
 
-main_init(int argc, char *argv[])
+int
+main_init(int argc, char ** /*argv*/)
 {
 	Foo*	f;
 	pid_t result;
@@ -166,9 +178,12 @@ main_init(int argc, char *argv[])
 #endif
 
 	if ( argc == 1 ) {
+		ArgList al;
+		al.AppendArg("/bin/ls");
+		al.AppendArg("-l");
 		result = daemonCore->Create_Process(
 					"/bin/ls",
-					"/bin/ls -l");
+					al);
 		if ( result == FALSE ) {
 			printf("*** Create_Process failed\n");
 		} else {
@@ -177,7 +192,7 @@ main_init(int argc, char *argv[])
 		if ( !daemonCore->Send_Signal(result,10) ) {
 			printf("*** Send_Signal 10 to child failed!!!\n");
 		}
-		daemonCore->Register_Timer(5,5,(Eventcpp)f->timer5,"Five Second Timer",f);
+		daemonCore->Register_Timer(5,5,(Eventcpp)&Foo::timer5,"Five Second Timer",f);
 	}
 
 

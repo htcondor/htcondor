@@ -27,7 +27,7 @@ OBJ = $(GSOAP_OBJS) timer_manager.o daemon_core.o daemon_core_main.o \
   HookClient.o HookClientMgr.o ccb_listener.o
 
 library_target(daemon_core.a,$(OBJ))
-c_plus_target(testit,test_daemon_core.o daemon_core.a,$(LIB))
+
 html_target( documentation )
 
 release:: all
