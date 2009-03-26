@@ -2710,7 +2710,9 @@ if test "x$_cv_libc_kind" = "xGLIBC" -a \( "x$_cv_arch" = "xI386" -o "x$_cv_arch
     if test "x$_cv_arch" = "xI386" ; then
        CHECK_EXTERNAL([glibc],[2.7-18], [soft])
 	else # x86_64
-       CHECK_EXTERNAL([glibc],[2.7-18-x86_64], [soft])
+		# commented out for now, since we're clipped on this platform.
+       #CHECK_EXTERNAL([glibc],[2.7-18-x86_64], [soft])
+		:
 	fi
     ;;
   * )
