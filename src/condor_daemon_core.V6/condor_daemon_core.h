@@ -808,19 +808,6 @@ class DaemonCore : public Service
                         Event        event,
                         const char * event_descrip, 
                         Service*     s = NULL);
-
-	/** Not_Yet_Documented
-        @param deltawhen       Not_Yet_Documented
-        @param event           Not_Yet_Documented
-        @param event_descrip   Not_Yet_Documented
-        @param s               Not_Yet_Documented
-        @return Not_Yet_Documented
-    */
-    int Register_Timer (unsigned     deltawhen,
-                        Event        event,
-						Release      release,
-                        const char * event_descrip, 
-                        Service*     s = NULL);
     
     /** Not_Yet_Documented
         @param deltawhen       Not_Yet_Documented
