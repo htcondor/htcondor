@@ -3463,48 +3463,52 @@ Configuring The Startd Policy.
 
 \label{param:NumCpus}
 \item[\Macro{NUM\_CPUS}]
-  This macro can be used to lie to the \Condor{startd} about how many CPUs
-  a machine has.
-  If you set this, it will override Condor's automatic computation of
-  the number of CPUs in your machine, and Condor will use whatever
-  integer you specify here. 
-  In this way, you can allow multiple Condor jobs to run on a
-  single-CPU machine by having that machine treated like an SMP
+  An integer value, which can be used to lie to the \Condor{startd} daemon
+  about how many CPUs a machine has.
+  When set, it overrides the value determined with Condor's 
+  automatic computation of the number of CPUs in the machine.
+  Lying in this way can allow multiple Condor jobs to run on a
+  single-CPU machine, by having that machine treated like an SMP
   machine with multiple CPUs, which could have different Condor jobs
   running on each one.
-  Or, you can have an SMP machine advertise more slots than
-  it has CPUs.
-  However, using this parameter will hurt the performance of the jobs,
-  since you would now have multiple jobs running on the same CPU,
-  competing with each other.
+  Or, an SMP machine may advertise more slots than it has CPUs.
+  However, lying in this manner will hurt the performance of the jobs,
+  since now multiple jobs will run on the same CPU,
+  and the jobs will compete with each other.
   The option is only meant for people who specifically want this
   behavior and know what they are doing.  
   It is disabled by default.
 
-  \Note This setting cannot be changed with a simple reconfig (either
-  by sending a SIGHUP or using \Condor{reconfig}.
-  If you change this, you must restart the \Condor{startd} for the
-  change to take effect (by using ``\condor{restart} -startd'').
+  Note that this setting cannot be changed with a simple reconfigure, 
+  either by sending a SIGHUP or by using the \Condor{reconfig} command.
+  To change this, restart the \Condor{startd} daemon for the
+  change to take effect. The command will be
+\begin{verbatim}
+  condor_restart -startd
+\end{verbatim}
 
-  \Note If you use this setting on a given machine, you should
-  probably advertise that fact in the machine's ClassAd by using the
-  \MacroNI{STARTD\_ATTRS} setting (described above).
-  This way, jobs submitted in your pool could specify that they did or
+  If lying about a given machine, 
+  this fact should probably be advertised in the machine's ClassAd
+  by using the \MacroNI{STARTD\_ATTRS} setting.
+  This way, jobs submitted in the pool could specify that they did or
   did not want to be matched with machines that were only really
-  offering ``fractional CPUs''.
+  offering these fractional CPUs.
 
 \label{param:MaxNumCpus}
 \item[\Macro{MAX\_NUM\_CPUS}]
-  This macro will cap the number of CPUs detected by Condor on a machine.
-  If you set \MacroNI{NUM\_CPUS} this cap is ignored.
-  If it is set to zero, there is no cap. 
-  If it is not defined in the config file, it defaults to zero and there is
-  no cap. 
+  An integer value used as a ceiling for the number of CPUs detected
+  by Condor on a machine.
+  This value is ignored if \MacroNI{NUM\_CPUS} is set.
+  If set to zero, there is no ceiling. 
+  If not defined, the default value is zero, and thus there is no ceiling. 
 
-  \Note This setting cannot be changed with a simple reconfig (either
-  by sending a SIGHUP or using \Condor{reconfig}.
-  If you change this, you must restart the \Condor{startd} for the
-  change to take effect (by using ``\condor{restart} -startd'').
+  Note that this setting cannot be changed with a simple reconfigure, 
+  either by sending a SIGHUP or by using the \Condor{reconfig} command.
+  To change this, restart the \Condor{startd} daemon for the
+  change to take effect. The command will be
+\begin{verbatim}
+  condor_restart -startd
+\end{verbatim}
 
 \label{param:CountHyperthreadCpus}
 \item[\Macro{COUNT\_HYPERTHREAD\_CPUS}]
@@ -7034,6 +7038,15 @@ and glidein.
   There are no default values, but working URLs that copy from the UW site
   are provided in the distributed sample configuration files.
 
+\label{param:GlexecJob}
+\item[\Macro{GLEXEC\_JOB}]
+  A boolean value that defaults to \Expr{False}.
+  When \Expr{True}, it enables the use of \Prog{glexec} on the machine.
+
+\label{param:Glexec}
+\item[\Macro{GLEXEC}]
+  The full path and file name of the \Prog{glexec} executable.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -7761,6 +7774,7 @@ Relating to PrivSep}
 \item[\Macro{PRIVSEP\_SWITCHBOARD}]
   The full (trusted) path and file name of the \Condor{root\_switchboard}
   executable.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
