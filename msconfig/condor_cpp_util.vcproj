@@ -572,14 +572,6 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\condor_close.cpp"
-			>
-		</File>
-		<File
-			RelativePath="..\src\condor_c++_util\condor_close.h"
-			>
-		</File>
-		<File
 			RelativePath="..\src\condor_c++_util\condor_common.cpp"
 			>
 			<FileConfiguration
