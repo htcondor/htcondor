@@ -34,7 +34,6 @@
 #ifdef WIN32
 #include "perm.h"
 #endif
-#include "condor_close.h"
 
 extern CStarter *Starter;
 
@@ -198,7 +197,7 @@ ToolDaemonProc::StartJob()
 			/* only close ones that had been opened correctly */
 		for( int fdindex=0; fdindex<=2; fdindex++ ) {
 			if( fds[fdindex] >= 0 ) {
-				condor_close(fds[fdindex]);
+				daemonCore->Close_Pipe(fds[fdindex]);
 			}
 		}
 		dprintf(D_ALWAYS, "Failed to open some/all of the std files...\n");
@@ -259,10 +258,9 @@ ToolDaemonProc::StartJob()
 
 		// now close the descriptors in daemon_fds array.  our child has inherited
 		// them already, so we should close them so we do not leak descriptors.
-
 	for (i=0;i<=2;i++) {
 		if( fds[i] >= 0 ) {
-			condor_close( fds[i] );
+			daemonCore->Close_Pipe(fds[i]);
 		}
 	}
 
