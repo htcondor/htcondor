@@ -40,6 +40,7 @@
 #include "perm.h"
 #include "profile.WINDOWS.h"
 #endif
+#include "condor_close.h"
 
 extern CStarter *Starter;
 
@@ -280,7 +281,7 @@ OsProc::StartJob(FamilyInfo* family_info)
 			/* only close ones that had been opened correctly */
 		for( int fdindex=0; fdindex<=2; fdindex++ ) {
 			if( fds[fdindex] >= 0 ) {
-				daemonCore->Close_Pipe(fds[fdindex]);
+				condor_close(fds[fdindex]);
 			}
 		}
 		dprintf(D_ALWAYS, "Failed to open some/all of the std files...\n");
@@ -469,7 +470,7 @@ OsProc::StartJob(FamilyInfo* family_info)
 	// reason.
 	for( int fdindex=0; fdindex<=2; fdindex++ ) {
 		if( fds[fdindex] >= 0 ) {
-			daemonCore->Close_Pipe(fds[fdindex]);
+			condor_close(fds[fdindex]);
 		}
 	}
 
