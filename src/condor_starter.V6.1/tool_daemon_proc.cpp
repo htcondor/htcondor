@@ -34,7 +34,6 @@
 #ifdef WIN32
 #include "perm.h"
 #endif
-#include "condor_close.h"
 
 extern CStarter *Starter;
 
@@ -198,7 +197,7 @@ ToolDaemonProc::StartJob()
 			/* only close ones that had been opened correctly */
 		for( int fdindex=0; fdindex<=2; fdindex++ ) {
 			if( fds[fdindex] >= 0 ) {
-				condor_close(fds[fdindex]);
+				close(fds[fdindex]);
 			}
 		}
 		dprintf(D_ALWAYS, "Failed to open some/all of the std files...\n");
@@ -262,7 +261,7 @@ ToolDaemonProc::StartJob()
 
 	for (i=0;i<=2;i++) {
 		if( fds[i] >= 0 ) {
-			condor_close( fds[i] );
+			close( fds[i] );
 		}
 	}
 

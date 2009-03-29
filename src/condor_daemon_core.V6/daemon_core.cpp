@@ -1433,7 +1433,7 @@ int DaemonCore::Cancel_Socket( Stream* insock)
 // cannot do I/O directly on these handles, they *can* pass them unaltered
 // to Create_Process (via the std[] parameter) and we'll do the right thing.
 //    - Greg Quinn, 04/12/2006
-extern const int PIPE_INDEX_OFFSET = 0x10000;
+static const int PIPE_INDEX_OFFSET = 0x10000;
 
 int DaemonCore::pipeHandleTableInsert(PipeHandle entry)
 {
