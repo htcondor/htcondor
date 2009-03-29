@@ -197,7 +197,7 @@ ToolDaemonProc::StartJob()
 			/* only close ones that had been opened correctly */
 		for( int fdindex=0; fdindex<=2; fdindex++ ) {
 			if( fds[fdindex] >= 0 ) {
-				daemonCore->Close_Pipe(fds[fdindex]);
+				close(fds[fdindex]);
 			}
 		}
 		dprintf(D_ALWAYS, "Failed to open some/all of the std files...\n");
@@ -258,9 +258,10 @@ ToolDaemonProc::StartJob()
 
 		// now close the descriptors in daemon_fds array.  our child has inherited
 		// them already, so we should close them so we do not leak descriptors.
+
 	for (i=0;i<=2;i++) {
 		if( fds[i] >= 0 ) {
-			daemonCore->Close_Pipe(fds[i]);
+			close( fds[i] );
 		}
 	}
 
