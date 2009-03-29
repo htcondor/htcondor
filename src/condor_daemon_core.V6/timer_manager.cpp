@@ -60,20 +60,13 @@ TimerManager::~TimerManager()
 int TimerManager::NewTimer(Service* s, unsigned deltawhen, Event event, const char* event_descrip,
 						   unsigned period, int id)
 {
-	return( NewTimer(s,deltawhen,event,(Eventcpp)NULL,(Release)NULL,(Releasecpp)NULL,event_descrip,period,NULL,id,0) );
-}
-
-int TimerManager::NewTimer(Service* s, unsigned deltawhen, Event event, 
-						   Release release, const char* event_descrip,
-						   unsigned period, int id)
-{
-	return( NewTimer(s,deltawhen,event,(Eventcpp)NULL,release,(Releasecpp)NULL,event_descrip,period,NULL,id,0) );
+	return( NewTimer(s,deltawhen,event,(Eventcpp)NULL,event_descrip,period,NULL,id,0) );
 }
 
 int TimerManager::NewTimer(unsigned deltawhen, Event event, const char* event_descrip,
 						   unsigned period, int id)
 {
-	return( NewTimer((Service *)NULL,deltawhen,event,(Eventcpp)NULL,(Release)NULL,(Releasecpp)NULL,event_descrip,period,NULL,id,0) );
+	return( NewTimer((Service *)NULL,deltawhen,event,(Eventcpp)NULL,event_descrip,period,NULL,id,0) );
 }
 
 int TimerManager::NewTimer(Service* s, unsigned deltawhen, Eventcpp event, const char* event_descrip,
@@ -83,20 +76,19 @@ int TimerManager::NewTimer(Service* s, unsigned deltawhen, Eventcpp event, const
 		dprintf( D_DAEMONCORE,"DaemonCore NewTimer() called with c++ pointer & NULL Service*\n");
 		return -1;
 	}
-	return( NewTimer(s,deltawhen,(Event)NULL,event,(Release)NULL,(Releasecpp)NULL,event_descrip,period,NULL,id,1) );
+	return( NewTimer(s,deltawhen,(Event)NULL,event,event_descrip,period,NULL,id,1) );
 }
 
 int TimerManager::NewTimer (Service* s,Timeslice timeslice,Eventcpp event,const char * event_descrip,int id)
 {
-	return NewTimer(s,0,(Event)NULL,event,(Release)NULL,(Releasecpp)NULL,event_descrip,0,&timeslice,id,1);
+	return NewTimer(s,0,(Event)NULL,event,event_descrip,0,&timeslice,id,1);
 }
 
 
 // Add a new event in the timer list. if period is 0, this event is a one time
 // event instead of periodical
 int TimerManager::NewTimer(Service* s, unsigned deltawhen, Event event, Eventcpp eventcpp,
-		Release release, Releasecpp releasecpp, const char *event_descrip, unsigned period, 
-		Timeslice *timeslice,int id, int is_cpp)
+		const char *event_descrip, unsigned period, Timeslice *timeslice,int id, int is_cpp)
 {
 	Timer*		new_timer;
 	Timer*		timer_ptr;
@@ -110,8 +102,6 @@ int TimerManager::NewTimer(Service* s, unsigned deltawhen, Event event, Eventcpp
 
 	new_timer->handler = event;
 	new_timer->handlercpp = eventcpp;
-	new_timer->release = release;
-	new_timer->releasecpp = releasecpp;
 	new_timer->period = period;
 	new_timer->service = s; 
 	new_timer->is_cpp = is_cpp;
@@ -138,7 +128,7 @@ int TimerManager::NewTimer(Service* s, unsigned deltawhen, Event event, Eventcpp
 
 
 	if(id >= 0)	{
-		if ( CancelTimer(id, false /* don't delete data_ptr */ ) == -1 ) {
+		if ( CancelTimer(id) == -1 ) {
 			dprintf( D_DAEMONCORE, "cannot find timer id %d\n",id);
 			daemonCore->free_descrip( new_timer->event_descrip);
 			delete new_timer;
@@ -196,8 +186,6 @@ int TimerManager::ResetTimer(int id, unsigned when, unsigned period)
 	Timer*			timer_ptr;
 	Event			handler;
 	Eventcpp		handlercpp;
-	Release			release;
-	Releasecpp		releasecpp;
 	Service*		s; 
 	int				is_cpp;
 	char*			event_descrip;
@@ -227,8 +215,6 @@ int TimerManager::ResetTimer(int id, unsigned when, unsigned period)
 
 	handler = timer_ptr->handler;
 	handlercpp = timer_ptr->handlercpp;
-	release = timer_ptr->release;
-	releasecpp = timer_ptr->releasecpp;
 	s = timer_ptr->service; 
 	is_cpp = timer_ptr->is_cpp;
 	event_descrip = timer_ptr->event_descrip;
@@ -238,8 +224,8 @@ int TimerManager::ResetTimer(int id, unsigned when, unsigned period)
 
 	// note that this call to NewTimer() will first call CancelTimer on the tid, 
 	// then create a new timer with the same tid.
-	if ( NewTimer(s, when, handler, handlercpp, release, releasecpp, 
-			event_descrip, period, NULL, id, is_cpp) != -1 ) {
+	if ( NewTimer(s, when, handler, handlercpp, event_descrip, period, NULL, 
+			id, is_cpp) != -1 ) {
 		// and dont forget to renew the users data_ptr
 		daemonCore->Register_DataPtr(data_ptr);
 		// and if a handler was resetting _its own_ tid entry, reset curr_dataptr to new value
@@ -261,13 +247,10 @@ int TimerManager::ResetTimer(int id, unsigned when, unsigned period)
 	}
 }
 
-int TimerManager::CancelTimer(int id, bool release_data_ptr /* = true */ )
+int TimerManager::CancelTimer(int id)
 {
-	Timer*		timer_ptr;
-	Timer*		trail_ptr;
-	Service		*service;
-	Release		release;
-	Releasecpp	releasecpp;
+	Timer*			timer_ptr;
+	Timer*			trail_ptr;
 
 	dprintf( D_DAEMONCORE, "In cancel_timer(), id=%d\n",id);
 	if (timer_list == NULL) {
@@ -309,22 +292,6 @@ int TimerManager::CancelTimer(int id, bool release_data_ptr /* = true */ )
 		timer_ptr->event_descrip = 0;
 	}
 
-	// free the data_ptr
-	service		= timer_ptr->service; 
-	release		= timer_ptr->release;
-	releasecpp	= timer_ptr->releasecpp;
-	if ( release_data_ptr ) {
-		if ( timer_ptr->is_cpp ) {
-			if ( releasecpp ) {
-				(service->*releasecpp)(timer_ptr->data_ptr);
-			}
-		} else {
-			if ( release ) {
-				(*release)(timer_ptr->data_ptr);
-			}
-		}
-	}
-
 	// set curr_dataptr to NULL if a handler is removing itself. 
 	if ( daemonCore->curr_dataptr == &(timer_ptr->data_ptr) )
 		daemonCore->curr_dataptr = NULL;
@@ -344,27 +311,12 @@ int TimerManager::CancelTimer(int id, bool release_data_ptr /* = true */ )
 
 void TimerManager::CancelAllTimers()
 {
-	Timer		*timer_ptr;
-	Service		*service;
-	Release		release;
-	Releasecpp	releasecpp;
+	Timer	*timer_ptr;
 
 	while( timer_list != NULL ) {
 		timer_ptr = timer_list;
 		timer_list = timer_list->next;
-		service = timer_ptr->service; 
-		release = timer_ptr->release;
-		releasecpp = timer_ptr->releasecpp;
-		if ( timer_ptr->is_cpp ) {
-			if ( releasecpp ) {
-				(service->*releasecpp)(timer_ptr->data_ptr);
-			}
-		} else {
-			if ( release ) {
-				(*release)(timer_ptr->data_ptr);
-			}
-		}
-		daemonCore->free_descrip(timer_ptr->event_descrip);
+		daemonCore->free_descrip( timer_ptr->event_descrip);
 		delete timer_ptr;
 	}
 	timer_list = NULL;
@@ -381,8 +333,6 @@ TimerManager::Timeout()
 	unsigned		period;						// for periodic events
 	Event			handler;
 	Eventcpp		handlercpp;
-	Release			release;
-	Releasecpp		releasecpp;
 	Service*		s; 
 	int				result, timer_check_cntr;
 	time_t			now, time_sample;
@@ -458,8 +408,6 @@ TimerManager::Timeout()
 		period = timer_list->period;
 		handler = timer_list->handler;
 		handlercpp = timer_list->handlercpp;
-		release = timer_list->release;
-		releasecpp = timer_list->releasecpp;
 		s = timer_list->service; 
 		is_cpp = timer_list->is_cpp;
 		event_descrip = strdup(timer_list->event_descrip);
@@ -524,9 +472,8 @@ TimerManager::Timeout()
 			if ( period > 0 || has_timeslice ) {
 				// timer is periodic, renew it.  note that this call to NewTimer() 
 				// will first call CancelTimer on the expired timer, then renew it.
-				if ( NewTimer(s, period, handler, handlercpp, release, releasecpp,
-						event_descrip, period, has_timeslice ? &timeslice : NULL, 
-						current_id, is_cpp) != -1 ) {
+				if ( NewTimer(s, period, handler, handlercpp, event_descrip, period, 
+						has_timeslice ? &timeslice : NULL, current_id, is_cpp) != -1 ) {
 					// and dont forget to renew the users data_ptr
 					daemonCore->Register_DataPtr(data_ptr);
 					// now clear curr_dataptr; the above NewTimer should appear "transparent"

@@ -53,25 +53,11 @@ typedef int     (*Event)(Service*);
 
 /// Service Method that returns an int (C++ Version).
 typedef int     (Service::*Eventcpp)();
-
-/** Function, which given a pointer to a void* releases its 
-	memory (C Version).
-	*/
-typedef void    (*Release)(void*);
-
-/** Service Method, which given a pointer to a void* memory
-	buffer, releases its memory (C++ Version).
-	*/
-typedef void    (Service::*Releasecpp)(void*);
 //@}
 
 // to make the timer handler stuff similar to the rest of Daemon Core...
 #define TimerHandler Event
 #define TimerHandlercpp Eventcpp
-
-// to make the timer release stuff similar to the rest of Daemon Core...
-#define TimerRelease Release
-#define TimerReleasecpp Releasecpp
 
 // This value, passed for "when", will cause the timer to never expire
 const unsigned	TIMER_NEVER = 0xffffffff;
@@ -94,8 +80,6 @@ struct tagTimer {
     /** Not_Yet_Documented */ void*             data_ptr;
     /** Not_Yet_Documented */ Timeslice         timeslice;
     /** Not_Yet_Documented */ bool              has_timeslice;
-	/** Not_Yet_Documented */ Release           release;
-	/** Not_Yet_Documented */ Releasecpp        releasecpp;
 };
 
 ///
@@ -128,23 +112,6 @@ class TimerManager
                  int          id              = -1);
 
     /** Not_Yet_Documented.
-        @param deltawhen      Not_Yet_Documented.
-        @param event          Not_Yet_Documented.
-		@param release        Not_Yet_Documented.
-        @param event_descrip  Not_Yet_Documented.
-        @param period         Not_Yet_Documented.
-        @param id             Not_Yet_Documented.
-        @return The ID of the new timer, or -1 on failure
-    */
-    int NewTimer(Service*     s,
-                 unsigned     deltawhen,
-                 Event        event,
-                 Release      release,
-                 const char * event_descrip, 
-                 unsigned     period          =  0,
-                 int          id              = -1);
-
-	/** Not_Yet_Documented.
         @param deltawhen      Not_Yet_Documented.
         @param event          Not_Yet_Documented.
         @param event_descrip  Not_Yet_Documented.
@@ -187,10 +154,9 @@ class TimerManager
 
     /** Not_Yet_Documented.
         @param id The ID of the timer
-		@param release_data_ptr True if the timer's data_ptr should be freed
         @return 0 if successful, -1 on failure (timer not found)
     */
-    int CancelTimer(int id, bool release_data_ptr = true);
+    int CancelTimer(int id);
 
     /** Not_Yet_Documented.
         @param tid The ID of the timer
@@ -216,17 +182,15 @@ class TimerManager
     
   private:
     
-    int NewTimer (Service*   s,
-                  unsigned   deltawhen,
-                  Event      event,
-                  Eventcpp   eventcpp,
-				  Release	 release,
-				  Releasecpp releasecpp,
-                  const char *event_descrip,
-                  unsigned   period          =  0,
-				  Timeslice  *timeslice      = NULL,
-                  int        id              = -1, 
-                  int        is_cpp          =  0);
+    int NewTimer (Service*  s,
+                  unsigned  deltawhen,
+                  Event     event,
+                  Eventcpp  eventcpp,
+                  const char *    event_descrip,
+                  unsigned  period          =  0,
+				  Timeslice *timeslice      = NULL,
+                  int       id              = -1, 
+                  int       is_cpp          =  0);
 
     Timer*  timer_list;
     int     timer_ids;

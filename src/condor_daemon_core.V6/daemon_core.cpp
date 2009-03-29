@@ -770,12 +770,6 @@ int	DaemonCore::Register_Timer(unsigned deltawhen, Event event,
 	return( t.NewTimer(s, deltawhen, event, event_descrip, 0, -1) );
 }
 
-int	DaemonCore::Register_Timer(unsigned deltawhen, Event event,
-							   Release release, const char *event_descrip, Service* s)
-{
-	return( t.NewTimer(s, deltawhen, event, release, event_descrip, 0, -1) );
-}
-
 int	DaemonCore::Register_Timer(unsigned deltawhen, unsigned period,
 				Event event, const char *event_descrip, Service* s)
 {
