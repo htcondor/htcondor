@@ -1333,7 +1333,7 @@ case "$_cv_opsys-$_cv_opsys_vers-$_cv_arch-$_cv_linux_distro-$_cv_libc_major-$_c
   *-HPUX11-* | \
   LINUX-*-ALPHA-* | \
   LINUX-*-*-DEBIAN40-* | \
-  LINUX-*-X86_64-DEBIAN50-* | \
+  LINUX-*-*-DEBIAN50-* | \
   LINUX-*-IA64-* | \
   SOLARIS-* | \
   LINUX-*-CONDOR_PPC-* ) _cv_clipped_default=yes ;;
@@ -2735,16 +2735,8 @@ if test "x$_cv_libc_kind" = "xGLIBC" -a \( "x$_cv_arch" = "xI386" -o "x$_cv_arch
   "2.6." ) # F7 uses glibc 2.6-4
     including_glibc_ext=NO
     ;;
-  "2.7." )
- 	 # F8 uses glibc 2.7-2
-	 # debian uses glibc 2.7-18
-    if test "x$_cv_arch" = "xI386" ; then
-       CHECK_EXTERNAL([glibc],[2.7-18], [soft])
-	else # x86_64
-		# commented out for now, since we're clipped on this platform.
-       #CHECK_EXTERNAL([glibc],[2.7-18-x86_64], [soft])
-		:
-	fi
+  "2.7." ) # F8 uses glibc 2.7-2
+    including_glibc_ext=NO
     ;;
   * )
     if test "x$enable_glibc_version_check" = "xyes"; then

@@ -126,6 +126,6 @@ html:
 
 #if IS_LINUX && ! IS_CLIPPED 
 all::
-	_condor_LIB=../condor_syscall_lib CONDOR_CONFIG=/dev/null PATH=.:../condor_scripts:$$PATH condor_compile gcc -Wl,--trace-symbol=fstat -Wl,--trace-symbol=__fstat ckpttest.c 
+	_condor_LIB=../condor_syscall_lib CONDOR_CONFIG=/dev/null PATH=.:../condor_scripts:$$PATH condor_compile gcc ckpttest.c 
 
 #endif
