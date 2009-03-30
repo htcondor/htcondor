@@ -19,10 +19,13 @@
 ##**************************************************************
 
 use CondorTest;
+use strict;
+use warnings;
 
-$cmd = 'job_core_args_sched.cmd';
-$testdesc =  'Arguments are preserved - scheduler U';
-$testname = "job_core_args_sched";
+my $cmd = 'job_core_args_sched.cmd';
+my $testdesc =  'Arguments are preserved - scheduler U';
+my $testname = "job_core_args_sched";
+my $debuglevel = 2;
 
 # we can really expect some things not to match like some quotes
 sub exceptadjust
@@ -72,19 +75,22 @@ sub exceptadjust
 	}
 };
 
-$ExitSuccess = sub {
+my $ExitSuccess = sub {
 	my %info = @_;
 
+	print "Test exited. about to examine args\n";
 	# Pull out requested environment values
 	my $args   = $info{"arguments"};
 	if(!defined($args)) {
 		die "Can't pull arguments from submit file";
 	}
 	CondorTest::fullchomp($args);
+	print "Get the original arguments to the job\n";
 	my(@args_reqd) = split / /, $args;
 
-	$output = $info{"output"};
+	my $output = $info{"output"};
 	open(IN, "<$output" ) || die "Can't open $output: $!\n";
+	print "Open the output files where the job placed them.\n";
 
 	# snarf up file in one huge chunk
 	local $/;
@@ -93,33 +99,37 @@ $ExitSuccess = sub {
 
 	# see which actual values were passed along
 	my(@args_found) = split /\n/, $file;
-	
+	print "Comparing the two - ";
 	if(scalar(@args_reqd) != scalar(@args_found)) {
+		print "bad\n";
 		die "Args reqd has " . scalar(@args_reqd) . " items but " .
 		    "Args found has " . scalar(@args_found) . "items.\n";
 	}
 	my $i;
-	for($i = 0; $i < scalar(@args_reqd); $i++) {
-		CondorTest::debug("Checking $args_reqd[$i]...\n",1);
+	for(my $i = 0; $i < scalar(@args_reqd); $i++) {
+		CondorTest::debug("Checking $args_reqd[$i]...\n",$debuglevel);
 		if($args_reqd[$i] ne $args_found[$i]) 
 		{
-			$adjust = exceptadjust($args_reqd[$i]); # translate escapes
+			my $adjust = exceptadjust($args_reqd[$i]); # translate escapes
 			if($adjust ne $args_found[$i])
 			{
+				print "bad\n";
 				die "Argument " . $args_reqd[$i] . " was mangled into " .
 			    	$args_found[$i] . "\n";
 			}
 		}
 	}
+	print "ok\n";
 };
 
 
 CondorTest::RegisterExitedSuccess( $testname, $ExitSuccess );
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	CondorTest::debug("$testname: SUCCESS\n",1);
+	CondorTest::debug("$testname: SUCCESS\n",$debuglevel);
 	exit(0);
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";
 }
+
 

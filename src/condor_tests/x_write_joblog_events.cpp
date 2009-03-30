@@ -62,7 +62,7 @@ main(int argc, char **argv)
 {
 
 	if(argc != 4) {
-		printf("x_write_joblog_events log event count\n");
+		printf("ussage: x_write_joblog_events log event count\n");
 		exit(1);
 	}
 
@@ -71,19 +71,19 @@ main(int argc, char **argv)
 
 
 	if( strcmp(argv[2],"submit") == 0) {
-		printf("Drop submit events\n");
+		//printf("Drop submit events\n");
 		for(int cluster = 1;cluster <= count;cluster++) {
 			UserLog log("owner", NULL, logname, cluster, 0, 0, (bool)0, NULL);
 			writeSubmitEvent(&log);
 		}
 	} else if( strcmp(argv[2],"execute") == 0) {
-		printf("Drop execute event\n");
+		//printf("Drop execute event\n");
 		for(int cluster = 1;cluster <= count;cluster++) {
 			UserLog log("owner", NULL, logname, cluster, 0, 0, (bool)0, NULL);
 			writeExecuteEvent(&log);
 		}
 	} else if( strcmp(argv[2],"terminated") == 0) {
-		printf("Drop terminated event\n");
+		//printf("Drop terminated event\n");
 		for(int cluster = 1;cluster <= count;cluster++) {
 			UserLog log("owner", NULL, logname, cluster, 0, 0, (bool)0, NULL);
 			writeJobTerminatedEvent(&log);
@@ -124,7 +124,7 @@ int writeSubmitEvent(UserLog *log)
 	submit.submitEventLogNotes = strdup("DAGMan info");
 	submit.submitEventUserNotes = strdup("User info");
 	if ( !log->writeEvent(&submit) ) {
-		printf("Complain about bad submit write\n");
+		printf("Bad submit write\n");
 		exit(1);
 	}
 	return(0);
@@ -135,7 +135,7 @@ int writeExecuteEvent(UserLog *log)
 	ExecuteEvent execute;
 	strcpy(execute.executeHost, "<128.105.165.12:32779>");
 	if ( !log->writeEvent(&execute) ) {
-		printf("Complain about bad execute write\n");
+		printf("Bad execute write\n");
 		exit(1);
 	}
 	return(0);
@@ -156,7 +156,7 @@ int writeJobTerminatedEvent(UserLog *log)
 	jobterminated.total_recvd_bytes = 800000;
 	jobterminated.total_sent_bytes = 900000;
 	if ( !log->writeEvent(&jobterminated) ) {
-	        printf("Complain about bad jobterminated write\n");
+	        printf("Bad jobterminate write\n");
 			exit(1);
 	}
 	return(0);
