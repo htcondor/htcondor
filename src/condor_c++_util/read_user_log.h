@@ -445,10 +445,9 @@ class ReadUserLog
 	ULogEventOutcome OpenLogFile( bool do_seek, bool read_header = true );
 
 	/** Close the log file between operations
-		@param force close even if "don't close" mode is set?
 		@return true:success, false:failure
 	 */
-	bool CloseLogFile( bool force );
+	bool CloseLogFile( bool force = false );
 
 
 	/** Class private data
