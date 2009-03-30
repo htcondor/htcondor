@@ -454,12 +454,17 @@ if( @testlist ) {
 		if($compiler eq ".") {
 			$gotdot = 1;
 		} else {
-		opendir( COMPILER_DIR, $compiler )
-	    	|| die "error opening \"$compiler\": $!\n";
-		@{$test_suite{"$compiler"}} = grep /\.run$/, readdir( COMPILER_DIR );
-		closedir COMPILER_DIR;
-		#print "error: no test programs found for $compiler\n" 
-	    	#unless @{$test_suite{"$compiler"}};
+		if (-d $compiler) {
+			opendir( COMPILER_DIR, $compiler )
+	    		|| die "error opening \"$compiler\": $!\n";
+			@{$test_suite{"$compiler"}} = 
+				grep /\.run$/, readdir( COMPILER_DIR );
+			closedir COMPILER_DIR;
+			#print "error: no test programs found for $compiler\n" 
+	    		#unless @{$test_suite{"$compiler"}};
+			} else {
+				print "Skipping unbuilt compiler dir: $compiler\n";
+			}
 		}
     }
 	# by default look at the current blessed tests in the top
@@ -544,7 +549,8 @@ foreach my $compiler (@compilers)
       CondorTest::verbose_system ("mkdir -p $ResultDir/$compiler");
     } 
 	if($compiler ne "\.") {
-    	chdir $compiler || die "error switching to directory $compiler: $!\n";
+		# Meh, if the directory isn't there, just skip it instead of bailing.
+    	chdir $compiler || (print "Skipping $compiler directory\n" && next);
 	}
 	my $compilerdir = getcwd();
 	# add in compiler dir to the current path
