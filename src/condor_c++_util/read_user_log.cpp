@@ -395,7 +395,9 @@ ReadUserLog::InternalInitialize ( int max_rotations,
 	}
 
 	// Close the file between operations
-	CloseLogFile( false );
+	if ( m_close_file ) {
+		CloseLogFile( false );
+	}
 	m_initialized = true;
 	return true;
 
@@ -413,12 +415,13 @@ ReadUserLog::CheckFileStatus( void )
 bool
 ReadUserLog::CloseLogFile( bool force )
 {
-	if ( m_lock && m_lock->isLocked() ) {
-		m_lock->release();
-		m_lock_rot = -1;
-	}
+	if ( (force) || (!m_never_close_fp) ) {
 
-	if ( (!m_never_close_fp) || (force) ) {
+		if ( m_lock && m_lock->isLocked() ) {
+			m_lock->release();
+			m_lock_rot = -1;
+		}
+
 		if ( m_fp ) {
 			fclose( m_fp );
 			m_fp = NULL;
@@ -900,7 +903,9 @@ ReadUserLog::readEvent (ULogEvent *& event, bool store_state )
 	
 	// Close the file between operations
   CLEANUP:
-	CloseLogFile( false );
+	if ( m_close_file ) {
+		CloseLogFile( false );
+	}
 
 	return outcome;
 
