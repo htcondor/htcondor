@@ -109,10 +109,6 @@ but would print the \MacroUNI{HOOK\_PREPARE\_JOB} path.
 The correct hook ran, so this was only a logging error.
 The log message is only visible at the \Expr{D\_FULLDEBUG} level.
 
-% PR 953
-\item Fixed a bug that caused \Condor{dagman} to crash if the
-\File{dagman.out} file reached a size of 2 GBytes.
-
 \item Fixed a problem affecting the \Condor{starter} when in PrivSep mode.
 After the user job exited, an error was printed in the
 \Condor{starter} log file complaining that it failed to \Prog{chown} the
@@ -164,6 +160,9 @@ page at section~ \ref{man-condor-dagman}.
 \item Fixed a bug that was causing the \Condor{startd} to sometimes
   publish the network adapter's hardware address incorrectly in its
   ClassAd.
+
+\item Fixed a case in which \Condor{history} could get into an infinite
+loop when searching through a corrupted history file.
 
 % PR 953
 \item Fixed a bug that caused \Condor{dagman} to crash if the
