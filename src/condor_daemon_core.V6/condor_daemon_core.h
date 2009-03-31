@@ -772,6 +772,13 @@ class DaemonCore : public Service
 	int Get_Pipe_FD(int pipe_end, int* fd);
 #endif
 
+	/** Close an anonymous pipe or file depending on its value
+		relative to PIPE_INDEX_OFFSET.  If the fd's value is 
+		>= PIPE_INDEX_OFFSET then it is a pipe; otherwise, it
+		is an file.
+		*/
+	int Close_FD(int fd);
+
 	/**
 	   Gain access to data written to a given DC process's std(out|err) pipe.
 
