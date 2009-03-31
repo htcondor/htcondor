@@ -1940,6 +1940,18 @@ DaemonCore::Get_Pipe_FD(int pipe_end, int* fd)
 }
 #endif
 
+int
+DaemonCore::Close_FD(int fd)
+{
+	int retval = -1;  
+	if ( fd >= PIPE_INDEX_OFFSET ) {  
+		retval = ( daemonCore->Close_Pipe ( fd ) ? 0 : -1 );
+	} else {
+		retval = close ( fd );
+	}
+	return retval;
+}
+
 MyString*
 DaemonCore::Read_Std_Pipe(int pid, int std_fd) {
 	PidEntry *pidinfo = NULL;

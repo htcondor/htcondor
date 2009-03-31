@@ -277,15 +277,11 @@ OsProc::StartJob(FamilyInfo* family_info)
 
 	/* Bail out if we couldn't open the std files correctly */
 	if( !stdin_ok || !stdout_ok || !stderr_ok ) {
-			/* only close ones that had been opened correctly */
-		if( fds[0] >= 0 ) {
-			close(fds[0]);
-		}
-		if( fds[1] >= 0 ) {
-			close(fds[1]);
-		}
-		if( fds[2] >= 0 ) {
-			close(fds[2]);
+		/* only close ones that had been opened correctly */
+		for ( int i = 0; i <= 2; i++ ) {
+			if ( fds[i] >= 0 ) {
+				daemonCore->Close_FD ( fds[i] );
+			}
 		}
 		dprintf(D_ALWAYS, "Failed to open some/all of the std files...\n");
 		dprintf(D_ALWAYS, "Aborting OsProc::StartJob.\n");
@@ -471,14 +467,10 @@ OsProc::StartJob(FamilyInfo* family_info)
 	// versions, if that's what we're using, so we don't think we've
 	// still got those available in other parts of the code for any
 	// reason.
-	if ( fds[0] >= 0 ) {
-		close(fds[0]);
-	}
-	if ( fds[1] >= 0 ) {
-		close(fds[1]);
-	}
-	if ( fds[2] >= 0 ) {
-		close(fds[2]);
+	for ( int i = 0; i <= 2; i++ ) {
+		if ( fds[i] >= 0 ) {
+			daemonCore->Close_FD ( fds[i] );
+		}
 	}
 
 	if ( JobPid == FALSE ) {
