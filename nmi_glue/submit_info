@@ -54,7 +54,7 @@ testargs = quick
 platforms = \
 	  hppa_hpux_11, ppc_aix_5.2-pl5, \
 	  sun4u_sol_5.9, \
-	  x86_rhas_3, x86_deb_4.0, x86_deb_5.0
+	  x86_rhas_3, x86_deb_4.0
 
 # shared prereqs
 prereqs = tar-1.14, patch-2.5.4, m4-1.4.1, flex-2.5.4a, \
