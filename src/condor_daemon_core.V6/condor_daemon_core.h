@@ -757,6 +757,8 @@ class DaemonCore : public Service
 	*/
 	int Close_Pipe(int pipe_end);
 
+	int Get_Max_Pipe_Buffer() { return maxPipeBuffer; };
+
 #if !defined(WIN32)
 	/** Get the FD underlying the given pipe end. Returns FALSE
 	 *  if not given a valid pipe end.
@@ -785,7 +787,7 @@ class DaemonCore : public Service
 
 	/**
 	   Write data to the given DC process's stdin pipe.
-	   @see Write_Pipe()
+	   @see pipeFullWrite()
 	*/
 	int Write_Stdin_Pipe(int pid, const void* buffer, int len);
 
@@ -1515,6 +1517,7 @@ class DaemonCore : public Service
 	int pipeHandleTableInsert(PipeHandle);
 	void pipeHandleTableRemove(int);
 	int pipeHandleTableLookup(int, PipeHandle* = NULL);
+	int maxPipeBuffer;
 
 	// this table is for dispatching registered pipes
 	class PidEntry;  // forward reference
@@ -1562,6 +1565,7 @@ class DaemonCore : public Service
 		PidEntry();
 		~PidEntry();
 		int pipeHandler(int pipe_fd);
+		void pipeFullWrite(int pipe_fd);
 
         pid_t pid;
         int new_process_group;
@@ -1584,6 +1588,7 @@ class DaemonCore : public Service
         int was_not_responding;
         int std_pipes[3];  // Pipe handles for automagic DC std pipes.
         MyString* pipe_buf[3];  // Buffers for data written to DC std pipes.
+        int stdin_offset;
 
 		/* the environment variables which allow me the track the pidfamily
 			of this pid (where applicable) */
