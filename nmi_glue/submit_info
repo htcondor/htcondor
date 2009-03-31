@@ -54,7 +54,7 @@ testargs = quick
 platforms = \
 	  hppa_hpux_11, ppc_aix_5.2-pl5, \
 	  sun4u_sol_5.9, \
-	  x86_rhas_3, x86_deb_4.0, x86_deb_5.0
+	  x86_rhas_3, x86_deb_4.0
 
 # shared prereqs
 prereqs = tar-1.14, patch-2.5.4, m4-1.4.1, flex-2.5.4a, \
@@ -64,7 +64,6 @@ prereqs = tar-1.14, patch-2.5.4, m4-1.4.1, flex-2.5.4a, \
 prereqs_hppa_hpux_11     = binutils-2.16, coreutils-5.2.1, gcc-3.4.3, gzip-1.2.4, wget-1.9.1
 prereqs_ppc_aix_5.2-pl5      = vac-6, vacpp-6, perl-5.8.5, gzip-1.3.3
 prereqs_sun4u_sol_5.9    = gcc-4.1.2, binutils-2.16, perl-5.8.5, gzip-1.3.3, wget-1.9.1
-prereqs_x86_deb_5.0      = libtool-1.5.26
 prereqs_x86_rhas_3       = binutils-2.15, perl-5.8.5, gzip-1.3.3, autoconf-2.59, \
 							VMware-server-1.0.7
 x_test_platforms_x86_rhas_3 =  x86_rhas_4, \
@@ -98,11 +97,20 @@ prereqs   = libtool-1.5.26
 ]
 
 ########################################
+# x86 Debian 5.0
+# We need libtool for the blahp
+########################################
+[
+platforms = x86_deb_5.0
+prereqs   = libtool-1.5.26
+]
+
+########################################
 # Platforms with no prereqs at all
 ########################################
 [
 platforms = \
-            x86_winnt_5.1, ppc64_sles_9, ps3_ydl_5.0, x86_deb_5.0
+            x86_winnt_5.1, ppc64_sles_9, ps3_ydl_5.0
 ]
 
 
