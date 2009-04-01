@@ -1552,3 +1552,10 @@ ReadUserLogMatch::MatchStr( ReadUserLogMatch::MatchResult value ) const
 	};
 	
 }
+
+/*
+### Local Variables: ***
+### mode:c++ ***
+### tab-width:4 ***
+### End: ***
+*/

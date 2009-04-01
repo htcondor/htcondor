@@ -1049,3 +1049,9 @@ UserLog::GenerateGlobalId( MyString &id )
 	id += '.';
 	id += utc.microseconds();
 }
+/*
+### Local Variables: ***
+### mode:c++ ***
+### tab-width:4 ***
+### End: ***
+*/

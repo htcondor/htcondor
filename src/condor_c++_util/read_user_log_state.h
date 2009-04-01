@@ -36,6 +36,10 @@
 class ReadUserLogFileState
 {
   public:
+	// Log file type
+	enum UserLogType {
+		LOG_TYPE_UNKNOWN = 0, LOG_TYPE_OLD, LOG_TYPE_XML
+	};
 
 	// Make things 8 bytes
 	union FileStateI64_t {
@@ -63,6 +67,7 @@ class ReadUserLogFileState
 		time_t			m_update_time;		// Time of last struct update
 	};
 
+
 	// "Public" view of the file state
 	typedef union {
 		FileState	internal;
@@ -70,33 +75,66 @@ class ReadUserLogFileState
 	} FileStatePub;
 
 	ReadUserLogFileState( void );
+	ReadUserLogFileState( ReadUserLog::FileState &state );
 	ReadUserLogFileState( const ReadUserLog::FileState &state );
-	~ReadUserLogFileState( void );
+	virtual ~ReadUserLogFileState( void );
 
 	static bool InitState( ReadUserLog::FileState &state );
+	static bool UninitState( ReadUserLog::FileState &state );
 
+	// Convert an application file state to an "internal" state pointer
+	static bool convertState(
+		const ReadUserLog::FileState				&state,
+		const ReadUserLogFileState::FileStatePub	*&pub
+		);
+	static bool convertState(
+		ReadUserLog::FileState						&state,
+		ReadUserLogFileState::FileStatePub			*&pub
+		);
+	static bool convertState(
+		const ReadUserLog::FileState				&state,
+		const ReadUserLogFileState::FileState		*&internal
+		);
+	static bool convertState(
+		ReadUserLog::FileState						&state,
+		ReadUserLogFileState::FileState				*&internal
+		);
+
+	// Get the size of the internal data structure
 	int getSize( void ) const
-		{ return sizeof(ReadUserLogFileState::FileState); };
-	ReadUserLogFileState::FileState *getPubState( void ) const
-		{ return m_state; };
-	ReadUserLogFileState::FileState *getState( void ) const
-		{ if (!m_state) return NULL;  return m_state->internal; };
+		{ return sizeof(FileState); };
+
+	// Get the state (in various forms)
+	const FileState *getState( void ) {
+		if (!m_ro_state) return NULL;
+		return &(m_ro_state->internal);
+	};
+	const FileStatePub *getPubState( void ) {
+		return m_ro_state;
+	};
+	FileState *getRwState( void ) {
+		if (!m_rw_state) return NULL; 
+		return &(m_rw_state->internal);
+	};
+	FileStatePub *getPubRwState( void )
+		{ return m_rw_state; };
+
+	// General accessors
+	bool getLogPosition( int64_t & ) const;
+	bool getLogRecordNo( int64_t & ) const;
+	bool getSequenceNo( int & ) const;
+	bool getUniqId( char *buf, int len ) const;
 
   private:
-	ReadUserLogFileState::FileStatePub	*m_state;
+	FileStatePub		*m_rw_state;
+	const FileStatePub	*m_ro_state;
 };
 
 
 // Internal verion of the file state
-class ReadUserLogState
+class ReadUserLogState : public ReadUserLogFileState
 {
 public:
-
-	// Log file type
-	enum UserLogType {
-		LOG_TYPE_UNKNOWN = 0, LOG_TYPE_OLD, LOG_TYPE_XML
-	};
-	struct FileState;
 	// Reset type
 	enum ResetType {
 		RESET_FILE, RESET_FULL, RESET_INIT,
@@ -190,9 +228,12 @@ public:
 	int ScoreFile( const char *path = NULL, int rot = -1 ) const;
 	int ScoreFile( const StatStructType &statbuf, int rot = -1 ) const;
 
-	UserLogType LogType( void ) const { return m_log_type; };
-	UserLogType LogType( UserLogType t ) { Update(); return m_log_type = t; };
-	bool IsLogType( UserLogType t ) const { return m_log_type == t; };
+	ReadUserLogFileState::UserLogType LogType( void ) const
+		{ return m_log_type; };
+	void LogType( ReadUserLogFileState::UserLogType t )
+		{ Update(); m_log_type = t; };
+	bool IsLogType( ReadUserLogFileState::UserLogType t ) const
+		{ return m_log_type == t; };
 
 	// Set the score factors
 	enum ScoreFactors {
@@ -206,8 +247,6 @@ public:
 
 
 	// Generate an external file state structure
-	static bool InitState( ReadUserLog::FileState &state );
-	static bool UninitState( ReadUserLog::FileState &state );
 	bool GetState( ReadUserLog::FileState &state ) const;
 	bool SetState( const ReadUserLog::FileState &state );
 
@@ -217,20 +256,11 @@ public:
 	void GetStateString( const ReadUserLog::FileState &state,
 						 MyString &str, const char *label = NULL ) const;
 
-	// Get the file state
-	static const ReadUserLogFileState *
-		GetFileStateConst( const ReadUserLog::FileState &state );
-		
-
 private:
 	// Private methods
 	void Clear( bool init = false );
 	int StatFile( StatStructType &statbuf ) const;
 	int StatFile( const char *path, StatStructType &statbuf ) const;
-
-	// Get the "internal" state pointer from the application file state
-	static ReadUserLogFileState *
-		GetFileState( ReadUserLog::FileState &state );
 
 	// Private data
 	bool			m_init_error;		// Error initializing?
@@ -267,3 +297,10 @@ private:
 };
 
 #endif
+
+/*
+### Local Variables: ***
+### mode:c++ ***
+### tab-width:4 ***
+### End: ***
+*/

@@ -478,6 +478,7 @@ class ReadUserLog
 
 
 // Provide access to parts of the user log state data
+class ReadUserLogFileState;
 class ReadUserLogStateAccess
 {
 public:
@@ -489,24 +490,23 @@ public:
 	bool isValid( void ) const;
 
 	// Positional difference between to states (this - other)
-	bool LogPositionDiff( const ReadUserLogStateData &other,
+	bool LogPositionDiff( const ReadUserLogStateAccess &other,
 						  long &diff ) const;
 
 	// # of events between to states (this - other)
-	bool EventNumberDiff( const ReadUserLogStateData &other,
+	bool EventNumberDiff( const ReadUserLogStateAccess &other,
 						  long &diff ) const;
 
 	// Get the unique ID and sequence # of the associated state file
-	const char *UniqId( void ) const;
-	void UniqId( MyString &s ) const;
-	int SequenceNumber( void ) const;
+	bool UniqId( char *buf, int len ) const;
+	bool SequenceNumber( int &seqno ) const;
 
 	// Access to the state
 protected:
-	const ReadUserLogState::FileState *getState( void ) const;
+	bool getState( const ReadUserLogFileState *&state ) const;
 
 private:
-	const ReadUserLogState::FileState	*m_state;
+	const ReadUserLogFileState	*m_state;
 };
 
 #endif /* __cplusplus */
@@ -515,6 +515,7 @@ private:
 
 /*
 ### Local Variables: ***
-### mode:C++ ***
-### End: **
+### mode:c++ ***
+### tab-width:4 ***
+### End: ***
 */
