@@ -33,6 +33,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Added a full port of Condor to Debian 5.0 on the x86 platform.
+
+\item Added a clipped port of Condor to Debian 5.0 on the x86\_64 platform.
+
 \item Added the \Opt{-DumpRescue} command-line flag to \Condor{dagman}
 and \Condor{submit\_dag}.  This flag is intended mainly for testing.
 
@@ -73,10 +77,13 @@ and \Condor{submit\_dag}.  This flag is intended mainly for testing.
 
 \begin{itemize}
 
-\item Fixed a bug in which an ill-formed network packet could
-crash a Condor daemon.
-This would not be seen in normal Condor operation,
-but sometimes port-scanning software could trigger such a crash.
+\item Fixed a bug in streaming I/O on Windows. Previously, if it was
+enabled the \Condor{starter} would crash after the the job's
+executable was run.
+
+\item Fixed a bug in which an ill-formed network packet could crash a
+Condor daemon.  This would not be seen in normal Condor operation, but
+sometimes port-scanning software could trigger such a crash.
 
 \item \Condor{q} would sometimes exit with  the value zero,
 indicating success, when it could not connect to a \Condor{schedd} daemon.
