@@ -2278,7 +2278,7 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 	rejForConcurrencyLimit = 0;
 	MyString limits;
 	if (request.LookupString(ATTR_CONCURRENCY_LIMITS, limits)) {
-		limits.strlwr();
+		limits.lower_case();
 		StringList list(limits.Value());
 		char *limit;
 		MyString str;
@@ -2904,7 +2904,7 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 		// is sent.
 	MyString limits;
 	if (request.LookupString(ATTR_CONCURRENCY_LIMITS, limits)) {
-		limits.strlwr();
+		limits.lower_case();
 		offer->Assign(ATTR_MATCHED_CONCURRENCY_LIMITS, limits);
 	} else {
 		offer->Delete(ATTR_MATCHED_CONCURRENCY_LIMITS);

@@ -59,7 +59,7 @@ static const char* DEFAULT_INDENT = "DaemonCore--> ";
 static const int MAX_TIME_SKIP = (60*20); //20 minutes
 static const int MIN_FILE_DESCRIPTOR_SAFETY_LIMIT = 20;
 static const int MIN_REGISTERED_SOCKET_SAFETY_LIMIT = 15;
-static const int DC_PIPE_BUF_SIZE = 1024;
+static const int DC_PIPE_BUF_SIZE = 65536;
 
 #include "authentication.h"
 #include "daemon.h"
@@ -355,6 +355,7 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 
 	pipeHandleTable = new ExtArray<PipeHandle>(maxPipe);
 	maxPipeHandleIndex = -1;
+	maxPipeBuffer = 10240;
 
 	if(maxReap == 0)
 		maxReap = DEFAULT_MAXREAPS;
@@ -809,6 +810,12 @@ int	DaemonCore::Register_Timer(unsigned deltawhen, Event event,
 				const char *event_descrip, Service* s)
 {
 	return( t.NewTimer(s, deltawhen, event, event_descrip, 0, -1) );
+}
+
+int	DaemonCore::Register_Timer(unsigned deltawhen, Event event,
+							   Release release, const char *event_descrip, Service* s)
+{
+	return( t.NewTimer(s, deltawhen, event, release, event_descrip, 0, -1) );
 }
 
 int	DaemonCore::Register_Timer(unsigned deltawhen, unsigned period,
@@ -2030,6 +2037,18 @@ DaemonCore::Get_Pipe_FD(int pipe_end, int* fd)
 }
 #endif
 
+int
+DaemonCore::Close_FD(int fd)
+{
+	int retval = -1;  
+	if ( fd >= PIPE_INDEX_OFFSET ) {  
+		retval = ( daemonCore->Close_Pipe ( fd ) ? 0 : -1 );
+	} else {
+		retval = close ( fd );
+	}
+	return retval;
+}
+
 MyString*
 DaemonCore::Read_Std_Pipe(int pid, int std_fd) {
 	PidEntry *pidinfo = NULL;
@@ -2060,7 +2079,10 @@ DaemonCore::Write_Stdin_Pipe(int pid, const void* buffer, int len) {
 			// TODO-pipe: set custom errno?
 		return -1;
 	}
-	return Write_Pipe(pidinfo->std_pipes[0], buffer, len);
+	pidinfo->pipe_buf[0] = new MyString;
+	*pidinfo->pipe_buf[0] = (char*)buffer;
+	daemonCore->Register_Pipe(pidinfo->std_pipes[0], "DC stdin pipe", (PipeHandlercpp)& DaemonCore::PidEntry::pipeFullWrite, "Guarantee all data written to pipe", pidinfo, HANDLE_WRITE);
+	return 0;
 }
 
 
@@ -2387,6 +2409,10 @@ DaemonCore::reconfig(void) {
 		daemonCore->Cancel_Timer( m_refresh_dns_timer );
 		m_refresh_dns_timer = -1;
 	}
+
+	// Maximum number of bytes read from a stdout/stderr pipes.
+	// Default is 10k (10*1024 bytes)
+	maxPipeBuffer = param_integer("PIPE_BUFFER_MAX", 10240);
 
 		// Grab a copy of our private network name (if any).
 	if (m_private_network_name) {
@@ -4925,7 +4951,7 @@ void DaemonCore::Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocki
 
 			if ( use_kill ) {
 				const char* tmp = signalName(sig);
-				dprintf( D_DAEMONCORE,
+				dprintf( D_FULLDEBUG,
 						 "Send_Signal(): Doing kill(%d,%d) [%s]\n",
 						 pid, sig, tmp ? tmp : "Unknown" );
 				priv_state priv = set_root_priv();
@@ -6780,19 +6806,20 @@ int DaemonCore::Create_Process(
 
 	// Define a some short-hand variables for use bellow
 	namelen				= strlen(executable);
-	extension			= namelen >= 4 ? &(executable[namelen-4]) : NULL;
+	extension			= namelen > 0 ? &(executable[namelen-4]) : NULL;
 	batch_file			= ( extension && 
 							( MATCH == strcasecmp ( ".bat", extension ) || 
 							  MATCH == strcasecmp ( ".cmd", extension ) ) ),
-	allow_scripts		= param_boolean ( "ALLOW_SCRIPTS_AS_EXECUTABLES", true ),
+	allow_scripts		= param_boolean ( 
+							"ALLOW_SCRIPTS_TO_RUN_AS_EXECUTABLES", true ),
 	binary_executable	= ( extension && 
 							( MATCH == strcasecmp ( ".exe", extension ) || 
 							  MATCH == strcasecmp ( ".com", extension ) ) );
 
 	dprintf (
 		D_FULLDEBUG,
-		"Create_Process(): File extension: *%s\n",
-		extension );
+		"Create_Process(): executable: '%s'\n",
+		executable );
 	
 	if ( bIs16Bit ) {
 
@@ -6832,8 +6859,8 @@ int DaemonCore::Create_Process(
 
 		/** find out where cmd.exe lives on this box and
 			set it to our executable */
-		::GetSystemDirectory ( systemshell, MAX_PATH );
-		strncat ( systemshell, "\\cmd.exe", MAX_PATH );
+		UINT length = GetSystemDirectory ( systemshell, MAX_PATH );
+		strncat ( systemshell, "\\cmd.exe", MAX_PATH - length - 1 );
 		
 		/** next, stuff the extra cmd.exe args in with 
 			the arguments */
@@ -6846,8 +6873,9 @@ int DaemonCore::Create_Process(
 		executable_buf	= systemshell;
 		executable		= executable_buf.Value();
 
-		/** append the arguments given in the submit file. */
-		first_arg_to_copy = 0;
+		/** skip argv[0], since it only contains junk and will goof
+			up the args to the batch file. */
+		first_arg_to_copy = 1;
 		args_success = args.GetArgsStringWin32 (
 			&strArgs,
 			first_arg_to_copy,
@@ -6855,7 +6883,7 @@ int DaemonCore::Create_Process(
 
 		dprintf ( 
 			D_ALWAYS, 
-			"Executable is a batch script, "
+			"Executable is a batch file, "
 			"running: %s\n",
 			strArgs.Value () );
 
@@ -6915,8 +6943,9 @@ int DaemonCore::Create_Process(
 				executable_buf	= interpreter;
 				executable		= executable_buf.Value ();
 
-				/** append the arguments given in the submit file. */
-				first_arg_to_copy = 0;
+				/** skip argv[0], since it only contains junk and
+					will goof up the args to the script. */
+				first_arg_to_copy = 1;
 				args_success = args.GetArgsStringWin32 (
 					&strArgs,
 					first_arg_to_copy,
@@ -6933,10 +6962,15 @@ int DaemonCore::Create_Process(
 
 		}
 
-	}
-	else {
+	} else {
+
+		/** append the arguments given in the submit file. */
 		first_arg_to_copy = 0;
-		args_success = args.GetArgsStringWin32(&strArgs,first_arg_to_copy,&args_errors);
+		args_success = args.GetArgsStringWin32 (
+			&strArgs,
+			first_arg_to_copy,
+			&args_errors );
+
 	}
 
 	if(!args_success) {
@@ -9833,13 +9867,13 @@ DaemonCore::PidEntry::PidEntry() {
 		pipe_buf[i] = NULL;
 		std_pipes[i] = DC_STD_FD_NOPIPE;
 	}
+	stdin_offset = 0;
 }
 
 
 DaemonCore::PidEntry::~PidEntry() {
 	int i;
-	ASSERT(pipe_buf[0] == NULL);
-	for (i=1; i<=2; i++) {
+	for (i=0; i<=2; i++) {
 		if (pipe_buf[i]) {
 			delete pipe_buf[i];
 		}
@@ -9856,8 +9890,7 @@ DaemonCore::PidEntry::~PidEntry() {
 int
 DaemonCore::PidEntry::pipeHandler(int pipe_fd) {
     char buf[DC_PIPE_BUF_SIZE + 1];
-    int bytes;
-    int reads = 0;
+    int bytes, max_read_bytes, max_buffer;
 	int pipe_index = 0;
 	MyString* cur_buf = NULL;
 	char* pipe_desc;
@@ -9881,36 +9914,79 @@ DaemonCore::PidEntry::pipeHandler(int pipe_fd) {
 	cur_buf = pipe_buf[pipe_index];
 
 	// Read until we consume all the data (or loop too many times...)
-    while ((++reads < 10) && (std_pipes[pipe_index] >= 0 )) {
-        bytes = daemonCore->Read_Pipe(pipe_fd, buf, DC_PIPE_BUF_SIZE);
-        if (bytes == 0) {
-            dprintf(D_FULLDEBUG, "DC %s pipe closed for pid %d\n",
-					pipe_desc, (int)pid);
+	max_buffer = daemonCore->Get_Max_Pipe_Buffer();
+
+	max_read_bytes = max_buffer - cur_buf->Length();
+	if (max_read_bytes > DC_PIPE_BUF_SIZE) {
+		max_read_bytes = DC_PIPE_BUF_SIZE;
+	}
+
+	bytes = daemonCore->Read_Pipe(pipe_fd, buf, max_read_bytes);
+	if (bytes > 0) {
+		// Actually read some data, so append it to our MyString.
+		// First, null-terminate the buffer so that sprintf_cat()
+		// doesn't go berserk. This is always safe since buf was
+		// created on the stack with 1 extra byte, just in case.
+		buf[bytes] = '\0';
+		*cur_buf += buf;
+
+		if (cur_buf->Length() >= max_buffer) {
+			dprintf(D_DAEMONCORE, "DC %s pipe closed for "
+					"pid %d because max bytes (%d)"
+					"read\n", pipe_desc, (int)pid,
+					max_buffer);
 			daemonCore->Close_Pipe(pipe_fd);
 			std_pipes[pipe_index] = DC_STD_FD_NOPIPE;
-        }
-        else if (bytes > 0) {
-			// Actually read some data, so append it to our MyString.
-			// First, null-terminate the buffer so that sprintf_cat()
-			// doesn't go berserk. This is always safe since buf was
-			// created on the stack with 1 extra byte, just in case.
-			buf[bytes] = '\0';
-			*cur_buf += buf;
 		}
-		// Negative is an error; check for EWOULDBLOCK
-        else if ((EWOULDBLOCK == errno) || (EAGAIN == errno)) {
-			// No more data -- we're done.
-            break;
-        }
-        else {
-			// Something bad	
-            dprintf(D_ALWAYS|D_FAILURE, "DC pipeHandler: "
-					"read %s failed for pid %d: '%s' (errno: %d)\n",
-					pipe_desc, (int)pid, strerror(errno), errno);
-            return FALSE;
-        }
-    }
+	}
+	else if ((bytes < 0) && ((EWOULDBLOCK != errno) && (EAGAIN != errno))) {
+		// Negative is an error; If not EWOULDBLOCK or EAGAIN then:
+		// Something bad	
+		dprintf(D_ALWAYS|D_FAILURE, "DC pipeHandler: "
+				"read %s failed for pid %d: '%s' (errno: %d)\n",
+				pipe_desc, (int)pid, strerror(errno), errno);
+		return FALSE;
+	}
 	return TRUE;
+}
+
+
+void
+DaemonCore::PidEntry::pipeFullWrite(int fd)
+{
+	int bytes_written = 0;
+	void* data_left = NULL;
+	int total_len = 0;
+
+	if (pipe_buf[0] != NULL)
+	{
+		data_left = (void*)(((const char*) pipe_buf[0]->Value()) + stdin_offset);
+		total_len = pipe_buf[0]->Length();
+		bytes_written = daemonCore->Write_Pipe(fd, data_left, total_len - stdin_offset);
+		dprintf(D_DAEMONCORE, "DaemonCore::PidEntry::pipeFullWrite: Total bytes to write = %d, bytes written this pass = %d\n", total_len, bytes_written);
+	}
+
+	if (0 <= bytes_written)
+	{
+		stdin_offset = stdin_offset + bytes_written;
+		if ((stdin_offset == total_len) || (pipe_buf[0] == NULL))
+		{
+			dprintf(D_DAEMONCORE, "DaemonCore::PidEntry::pipeFullWrite: Closing Stdin Pipe\n");
+			// All data has been written to the pipe
+			daemonCore->Close_Stdin_Pipe(pid);
+		}
+	}
+	else if (errno != EINTR && errno != EAGAIN)
+	{
+		// Problem writting to the pipe and it's not an acceptable
+		// failure case, so close the pipe
+		dprintf(D_ALWAYS, "DaemonCore::PidEntry::pipeFullWrite: Unable to write to fd %d (errno = %d).  Aborting write attempts.\n", fd, errno);
+		daemonCore->Close_Stdin_Pipe(pid);
+	}
+	else
+	{
+		dprintf(D_DAEMONCORE|D_FULLDEBUG, "DaemonCore::PidEntry::pipeFullWrite: Failed to write to fd %d (errno = %d).  Will try again.\n", fd, errno);
+	}
 }
 
 void DaemonCore::send_invalidate_session ( const char* sinful, const char* sessid ) {

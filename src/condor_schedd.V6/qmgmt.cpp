@@ -3959,8 +3959,8 @@ void FindRunnableJob(PROC_ID & jobid, const ClassAd* my_match_ad,
 						ad->LookupString(ATTR_CONCURRENCY_LIMITS, jobLimits);
 						my_match_ad->LookupString(ATTR_MATCHED_CONCURRENCY_LIMITS,
 												  recordedLimits);
-						jobLimits.strlwr();
-						recordedLimits.strlwr();
+						jobLimits.lower_case();
+						recordedLimits.lower_case();
 						
 						if (jobLimits == recordedLimits) {
 							dprintf(D_FULLDEBUG,

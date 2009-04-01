@@ -207,7 +207,6 @@ extern const char * ATTR_WAKE_SUPPORTED_FLAGS;
 extern const char * ATTR_IS_WAKE_ENABLED;
 extern const char * ATTR_WAKE_ENABLED_FLAGS;
 extern const char * ATTR_IS_WAKEABLE;
-extern const char * ATTR_IS_INTERPRETED;
 extern const char * ATTR_INACTIVE;
 extern const char * ATTR_JAR_FILES;
 extern const char * ATTR_JAVA_MFLOPS;

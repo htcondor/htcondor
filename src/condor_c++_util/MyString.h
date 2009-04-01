@@ -246,8 +246,6 @@ class MyString
 
 	void lower_case(void);
 	void upper_case(void);
-	void strlwr( void );
-	void strupr( void );
 
 	/** If the last character in the string is a newline, remove
 		it (by setting it to '\0' and decrementing Len).

@@ -1333,7 +1333,7 @@ case "$_cv_opsys-$_cv_opsys_vers-$_cv_arch-$_cv_linux_distro-$_cv_libc_major-$_c
   *-HPUX11-* | \
   LINUX-*-ALPHA-* | \
   LINUX-*-*-DEBIAN40-* | \
-  LINUX-*-*-DEBIAN50-* | \
+  LINUX-*-X86_64-DEBIAN50-* | \
   LINUX-*-IA64-* | \
   SOLARIS-* | \
   LINUX-*-CONDOR_PPC-* ) _cv_clipped_default=yes ;;
@@ -2735,8 +2735,16 @@ if test "x$_cv_libc_kind" = "xGLIBC" -a \( "x$_cv_arch" = "xI386" -o "x$_cv_arch
   "2.6." ) # F7 uses glibc 2.6-4
     including_glibc_ext=NO
     ;;
-  "2.7." ) # F8 uses glibc 2.7-2
-    including_glibc_ext=NO
+  "2.7." )
+ 	 # F8 uses glibc 2.7-2
+	 # debian uses glibc 2.7-18
+    if test "x$_cv_arch" = "xI386" ; then
+       CHECK_EXTERNAL([glibc],[2.7-18], [soft])
+	else # x86_64
+		# commented out for now, since we're clipped on this platform.
+       #CHECK_EXTERNAL([glibc],[2.7-18-x86_64], [soft])
+		:
+	fi
     ;;
   * )
     if test "x$enable_glibc_version_check" = "xyes"; then
@@ -2837,7 +2845,7 @@ AS_IF([test "x$_cv_opsys" != xDARWIN -a "x$_cv_opsys" != xAIX -a "x$_cv_opsys" !
   [_cv_has_blahp=yes],
   [_cv_has_blahp=no])
 AC_MSG_RESULT([$_cv_has_blahp])
-CHECK_EXTERNAL([blahp], [1.12.2], [soft])
+CHECK_EXTERNAL([blahp], [1.12.2-p2], [soft])
 
 # When --with-proper the detection of the man pages is a little
 # ugly. The value added to the end of $_dir must be what

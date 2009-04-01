@@ -267,7 +267,6 @@ const char *ATTR_IS_WAKE_SUPPORTED        = "IsWakeOnLanSupported";
 const char *ATTR_WAKE_SUPPORTED_FLAGS     = "WakeOnLanSupportedFlags";
 const char *ATTR_IS_WAKE_ENABLED          = "IsWakeOnLanEnabled";
 const char *ATTR_WAKE_ENABLED_FLAGS       = "WakeOnLanEnabledFlags";
-const char *ATTR_IS_INTERPRETED			  = "IsInterpreted";
 const char *ATTR_INACTIVE                 = "Inactive";
 const char *ATTR_JAR_FILES                = "JarFiles";
 const char *ATTR_JAVA_MFLOPS              = "JavaMFlops";

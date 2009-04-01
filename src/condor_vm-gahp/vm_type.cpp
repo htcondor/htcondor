@@ -141,7 +141,7 @@ VMType::parseCommonParamFromClassAd(bool is_root /*false*/)
 
 			// change string to lowercase
 			m_vm_networking_type.trim();
-			m_vm_networking_type.strlwr();
+			m_vm_networking_type.lower_case();
 			if( vmgahp->m_gahp_config->m_vm_networking_types.contains(m_vm_networking_type.Value()) == false ) {
 				vmprintf(D_ALWAYS, "Networking type(%s) is not supported by "
 						"this gahp server\n", m_vm_networking_type.Value());
