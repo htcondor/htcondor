@@ -1065,6 +1065,10 @@ sub writeCommonInfo
         print $fh "configure = $opt_configure\n";
     }
 
+    # Enable loading the slot user's profile so that VB scripts can
+    # be run.  This is to support automatic packaging for Windows.
+    printf $fh "+load_profile = true";
+
     print $fh "platforms = " . join(', ', @platforms) . "\n";
 }
 

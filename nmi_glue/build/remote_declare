@@ -37,6 +37,7 @@ open( LIST, ">tasklist.nmi" ) || die "Can't open tasklist.nmi: $!\n";
 if ($ENV{NMI_PLATFORM} =~ /winnt/) {
     print LIST "win_make\n";
     print LIST "win_release\n";
+    print LIST "win_package\n";
 } else {
     print LIST "externals\n";
     if (!defined($opt_externals_only)) {
