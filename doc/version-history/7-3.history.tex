@@ -39,6 +39,13 @@ information about `dollar dollar' expansions in the job ClassAd.
 Also made it more efficient in how it contacts the \Condor{negotiator}
 to submit `reschedule' requests.
 
+\item Improved JobRouter's heuristic for site throttle adjustment.  It
+is now quicker to release the throttle when the failure rate drops
+below the configured threshold.
+
+\item Made JobRouter more efficient on startup by improving the way it
+reads the job queue log file.
+
 \end{itemize}
 
 \noindent Configuration Variable Additions and Changes:
