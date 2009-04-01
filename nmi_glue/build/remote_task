@@ -38,8 +38,6 @@ if ($ENV{NMI_PLATFORM} =~ /winnt/) {
     $SrcDir = "$BaseDir\\src";
     $msconfigDir = "$BaseDir\\msconfig";
     $PublicDir = "$BaseDir\\public";
-    $ReleaseDir = "$PublicDir\\release";
-    $PackageDir = "$BaseDir\\package";
     $ENV{USERPROFILE} = "$BaseDir";
     $ENV{TMP} = "$BaseDir";
     $ENV{PATH} .= ";$msconfigDir";
@@ -81,14 +79,9 @@ if ($taskname eq "win_make") {
     system("make.bat /exit");
 }
 elsif ($taskname eq "win_release") {
-    mkdir("$ReleaseDir", 0777) || c_die ("Can't mkdir($ReleaseDir): $!\n");
+    mkdir("$PublicDir", 0777) || c_die ("Can't mkdir($PublicDir): $!\n");
     chdir("$msconfigDir") || c_die("Can't chdir($msconfigDir): $!\n");
-    system("dorelease $ReleaseDir");
-}
-elsif ($taskname eq "win_package") {
-    mkdir("$PackageDir", 0777) || c_die ("Can't mkdir($PackageDir): $!\n");
-    chdir("$msconfigDir") || c_die("Can't chdir($msconfigDir): $!\n");
-    system("dopackaging $ReleaseDir $PackageDir");
+    system("dorelease $PublicDir");
 }
 else {
     chdir("$SrcDir") || c_die("Can't chdir($SrcDir): $!\n");
