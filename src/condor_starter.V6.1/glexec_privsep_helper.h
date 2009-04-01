@@ -40,6 +40,9 @@ public:
 	//
 	void chown_sandbox_to_user();
 
+	// change our state to "sandbox is owned by user"
+	void set_sandbox_owned_by_user() { m_sandbox_owned_by_user=true; }
+
 	// change ownership of the sandbox to condor
 	//
 	void chown_sandbox_to_condor();

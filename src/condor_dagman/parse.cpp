@@ -702,12 +702,12 @@ parse_parent(
 			// grab all of the initial nodes of the splice and make them 
 			// children for this job.
 
-			debug_printf( DEBUG_QUIET, "%s (line %d): "
-				"Detected slice %s as a child....\n", filename, lineNumber,
+			debug_printf( DEBUG_DEBUG_1, "%s (line %d): "
+				"Detected splice %s as a child....\n", filename, lineNumber,
 					jobName2);
 
 			splice_initial = splice_dag->InitialRecordedNodes();
-			debug_printf( DEBUG_QUIET, "Adding %d initial nodes\n", 
+			debug_printf( DEBUG_DEBUG_1, "Adding %d initial nodes\n", 
 				splice_initial->length());
 
 			// now add each initial node as a child
@@ -1439,8 +1439,9 @@ parse_splice(
 	// initialize whatever the DIR line was, or defaults to, here.
 	splice_dag->SetDirectory(directory);
 
-	dprintf(D_ALWAYS, "Parsing Splice %s in directory %s with file %s\n", 
-		spliceName.Value(), directory.Value(), spliceFile.Value());
+	debug_printf(DEBUG_VERBOSE, "Parsing Splice %s in directory %s with "
+		"file %s\n", spliceName.Value(), directory.Value(),
+		spliceFile.Value());
 
 	// CD into the DIR directory so we can continue parsing.
 	// This must be done AFTER the DAG is created due to the DAG object
@@ -1471,12 +1472,16 @@ parse_splice(
 	spliceName = munge_job_name(spliceName.Value());
 
 	// XXX I'm not sure this goes here quite yet....
-	debug_printf(DEBUG_QUIET, "Splice scope is: %s\n", 
+	debug_printf(DEBUG_DEBUG_1, "Splice scope is: %s\n", 
 		current_splice_scope().Value());
 	splice_dag->PrefixAllNodeNames(MyString(current_splice_scope()));
+	splice_dag->_catThrottles.PrefixAllCategoryNames(
+				MyString(current_splice_scope()));
 
 	// Print out a useful piece of debugging...
-	splice_dag->PrintJobList();
+	if( DEBUG_LEVEL( DEBUG_DEBUG_1 ) ) {
+		splice_dag->PrintJobList();
+	}
 
 	// associate the splice_dag with its name in _this_ dag, later I'll merge
 	// the nodes from this splice into _this_ dag.
@@ -1490,7 +1495,7 @@ parse_splice(
 	// For now, we only keep track of the splice levels just below this dag.
 	dag->LiftChildSplices();
 
-	debug_printf(DEBUG_QUIET, "Done parsing splice %s\n", spliceName.Value());
+	debug_printf(DEBUG_DEBUG_1, "Done parsing splice %s\n", spliceName.Value());
 
 	// pop the just pushed value off of the end of the ext array
 	free(_spliceScope[_spliceScope.getlast()]);

@@ -148,9 +148,8 @@ OsProc::StartJob(FamilyInfo* family_info)
 	} else {
 		args.AppendArg(CONDOR_EXEC);
 	}
-
+	
 		// Support USER_JOB_WRAPPER parameter...
-
 	char *wrapper = NULL;
 	if( (wrapper=param("USER_JOB_WRAPPER")) ) {
 

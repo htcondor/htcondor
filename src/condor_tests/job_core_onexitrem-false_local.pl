@@ -28,6 +28,7 @@ use CondorTest;
 $cmd = 'job_core_onexitrem-false_local.cmd';
 $testdesc =  'Condor submit policy test for ON_EXIT_REMOVE - local U';
 $testname = "job_core_onexitrem_local";
+$removed = 0;
 
 ## 
 ## Status Values
@@ -91,6 +92,11 @@ $evicted = sub {
 	my %info = @_;
 	my $cluster = $info{"cluster"};
 	my $job = $info{"job"};
+	if($removed != 0) {
+		return(0); # been here done this - don't try two job removals
+	} else {
+		$removed = 1;
+	}
 
 	CondorTest::debug("Good - Job $cluster.$job was requeued after being evicted.\n",1);
 

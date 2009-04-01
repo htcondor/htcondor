@@ -1,0 +1,174 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+## Note: this tests the DAGMan splice/category bug documented in
+## gittrac #285.  Also tests for correct name munging of VARS.
+
+use CondorTest;
+
+$cmd = 'job_dagman_splice-cat.dag';
+$testdesc =  'Condor submit dag - splice/category test - scheduler U';
+$testname = "job_dagman_splice-cat";
+$dagman_args = "-verbose -dumprescue";
+
+@logfiles = ("job_dagman_splice-cat.dag.dagman.out");
+
+$rescuedag = "job_dagman_splice-cat.dag.rescue001";
+
+my $killedchosen = 0;
+
+# truly const variables in perl
+sub IDLE{1};
+sub HELD{5};
+sub RUNNING{2};
+
+$abnormal = sub 
+{
+
+	die "Want to see only submit, execute and successful completion\n";
+};
+
+$aborted = sub 
+{
+	die "Abort event NOT expected\n";
+};
+
+$held = sub 
+{
+	die "Held event NOT expected\n";
+};
+
+$executed = sub
+{
+	my %info = @_;
+
+	CondorTest::debug("Good. We need the dag to run<$info{cluster}>\n",1);
+};
+
+$submitted = sub
+{
+	CondorTest::debug("submitted: This test will see submit, executing and successful completion\n",1);
+};
+
+$success = sub
+{
+	CondorTest::debug("executed successfully\n",1);
+	CondorTest::debug("Verifying output\n",1);
+	$diditpass = 1;
+
+	foreach $name (@logfiles) {
+		$line = "";
+		$passed = 0;
+		$canopen = open(OUT,"<$name");
+		if( ! (defined $canopen)) {
+			CondorTest::debug("Can not open logfile<$name>:$!\n",1);
+			$diditpass = 0;
+		}
+		while(<OUT>) {
+			chomp();
+			$line = $_;
+			if( $line =~ /^*.EXITING WITH STATUS 0*.$/ ) {
+				$passed = 1;
+				CondorTest::debug("$name: $line\n",1);
+			}
+		}
+		close(OUT);
+		if($passed == 1 ) {
+			;
+		} else {
+			CondorTest::debug("failed $name: $line\n",1);
+			$diditpass = 0;
+		}
+	}
+
+	# Check for a bunch of lines in the rescue DAG.
+	# Hmm -- I'm not going to do this right now, but a nice way to do
+	# the checking would be to delete stuff from checklines as we find
+	# it, and then print the remaining stuff at the end if it's not all
+	# found.  wenger 2009-03-05.
+	@checklines = ("JOB A0 job_dagman_splice-cat.cmd",
+				"VARS A0 racer=\"Eddy Merckx\"",
+				"CATEGORY B0 cat0",
+				"JOB D0\\+A1 job_dagman_splice-cat.cmd",
+				"VARS D0\\+A1 racer=\"Bernard Hinault\"",
+				"CATEGORY D0\\+B1 D0\\+cat1",
+				"JOB D0\\+D1\\+A2 job_dagman_splice-cat.cmd",
+				"VARS D0\\+D1\\+A2 racer=\"Fausto Coppi\"",
+				"CATEGORY D0\\+D1\\+B2 D0\\+D1\\+cat2",
+				"JOB D0\\+D1\\+D2 job_dagman_splice-cat.cmd",
+				"CATEGORY D0\\+D1\\+E2 D0\\+D1\\+cat2D",
+				"PARENT D0\\+D1\\+C2 CHILD D0\\+D1\\+D2 D0\\+D1\\+E2",
+				"JOB D0\\+E1\\+A2 job_dagman_splice-cat.cmd",
+				"VARS D0\\+E1\\+A2 racer=\"Fausto Coppi\"",
+				"CATEGORY D0\\+E1\\+B2 D0\\+E1\\+cat2",
+				"JOB D0\\+E1\\+D2 job_dagman_splice-cat.cmd",
+				"CATEGORY D0\\+E1\\+E2 D0\\+E1\\+cat2D",
+				"PARENT D0\\+E1\\+C2 CHILD D0\\+E1\\+D2 D0\\+E1\\+E2",
+				"MAXJOBS cat0 10",
+				"MAXJOBS D0\\+cat1 11",
+				"MAXJOBS D0\\+D1\\+cat2 12",
+				"MAXJOBS D0\\+D1\\+cat2D 22",
+				"MAXJOBS D0\\+E1\\+cat2 12",
+				"MAXJOBS D0\\+E1\\+cat2D 22",
+				);
+	$line = "";
+	$passed = 0;
+	$canopen = open(OUT,"<$rescuedag");
+	if( ! (defined $canopen)) {
+		CondorTest::debug("Can not open rescue DAG <$rescuedag>:$!\n",1);
+		$diditpass = 0;
+	}
+	while(<OUT>) {
+		chomp();
+		$line = $_;
+		foreach $check (@checklines) {
+			if( $line =~ /$check/ ) {
+				$passed++;
+				CondorTest::debug("$rescuedag: $line\n",1);
+			}
+		}
+	}
+	close(OUT);
+	if($passed == @checklines) {
+		;
+	} else {
+		CondorTest::debug("failed $rescuedag: $line\n",1);
+		$diditpass = 0;
+	}
+
+	if($diditpass == 0) {
+		die "All expected files and correct output failed\n";
+	}
+};
+
+CondorTest::RegisterExitedSuccess( $testname, $success);
+CondorTest::RegisterExecute($testname, $executed);
+CondorTest::RegisterExitedAbnormal( $testname, $abnormal );
+CondorTest::RegisterAbort( $testname, $aborted );
+CondorTest::RegisterHold( $testname, $held );
+CondorTest::RegisterSubmit( $testname, $submitted );
+
+if( CondorTest::RunDagTest($testname, $cmd, 0, $dagman_args) ) {
+	CondorTest::debug("$testname: SUCCESS\n",1);
+	exit(0);
+} else {
+	die "$testname: CondorTest::RunTest() failed\n";
+}
+

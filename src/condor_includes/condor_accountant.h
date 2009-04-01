@@ -97,6 +97,9 @@ private:
   void IncrementLimits(const MyString& limits);
   void DecrementLimits(const MyString& limits);
 
+  // Get group priority helper function.
+  float getGroupPriorityFactor(const MyString& CustomerName); 
+
   //--------------------------------------------------------
   // Configuration variables
   //--------------------------------------------------------

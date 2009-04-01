@@ -68,7 +68,8 @@ sub initialize
 		if ( $^O eq "darwin" ) {
 			$fetch_prog = "curl -O";
 		} else {
-			$fetch_prog = "wget";
+			# Retry up to 60 times, waiting 22 seconds between tries
+			$fetch_prog = "wget --tries=60 --timeout=22";
 		}
 		CondorTest::debug("Fetching $fetch_url\n",1);
 		my $rc = system( "$fetch_prog $fetch_url 2>&1" );

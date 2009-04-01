@@ -71,6 +71,11 @@ public:
 	*/
 	ThrottleInfo *	GetThrottleInfo( const MyString *category );
 
+	/** Prefix all category names with the specified label.
+		@param a MyString of the prefix for all categories
+	*/
+	void PrefixAllCategoryNames( const MyString &prefix );
+
 	/** Print the throttle info.
 		@param the FILE to print to
 	*/

@@ -118,8 +118,10 @@ class ReadUserLog
 		- No rotation handling
 		- No locking
         @param fp the file to read from
+		@param XML mode?
+		@param close the FP when done?
 	*/
-    ReadUserLog( FILE *fp, bool is_xml );
+    ReadUserLog( FILE *fp, bool is_xml, bool enable_close = false );
 
     /** Constructor.
         @param filename the file to read from
@@ -445,9 +447,10 @@ class ReadUserLog
 	ULogEventOutcome OpenLogFile( bool do_seek, bool read_header = true );
 
 	/** Close the log file between operations
+		@param force close even if "don't close" mode is set?
 		@return true:success, false:failure
 	 */
-	bool CloseLogFile( bool force = false );
+	bool CloseLogFile( bool force );
 
 
 	/** Class private data
@@ -461,8 +464,8 @@ class ReadUserLog
     int    				 m_fd;			/** The log's file descriptor */
     FILE				*m_fp;			/** The log's file pointer    */
 
-	bool				 m_never_close_fp; /** Never close the FP? */
 	bool				 m_close_file;	/** Close file between operations? */
+	bool				 m_enable_close; /** enable close operations? */
 	bool				 m_handle_rot;	/** Do we handle file rotation? */
 	int					 m_max_rotations; /** Max rotation number */
 	bool				 m_read_header;	/** Read the file's header? */

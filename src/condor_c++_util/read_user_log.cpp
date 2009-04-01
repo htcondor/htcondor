@@ -153,7 +153,7 @@ ReadUserLog::ReadUserLog (const FileState &state, bool read_only )
 
 // Create a log reader with minimal functionality
 // Only reads from the file, will not lock, write the header, etc.
-ReadUserLog::ReadUserLog ( FILE *fp, bool is_xml )
+ReadUserLog::ReadUserLog ( FILE *fp, bool is_xml, bool enable_close )
 {
 	clear();
 	if ( ! fp ) {
@@ -161,6 +161,7 @@ ReadUserLog::ReadUserLog ( FILE *fp, bool is_xml )
 	}
 	m_fp = fp;
 	m_fd = fileno( fp );
+	m_enable_close = enable_close;
 
 	m_lock = new FakeFileLock( );
 
@@ -358,13 +359,11 @@ ReadUserLog::InternalInitialize ( int max_rotations,
 	}
 
 	// Should we close the file between operations?
-# if defined(WIN32)
 	m_close_file = param_boolean( "ALWAYS_CLOSE_USERLOG", false );
+# if defined(WIN32)
 	if ( m_handle_rot ) {
 		m_close_file = true;	// Can't rely on open FD with unlink / rename
 	}
-# else
-	m_close_file = param_boolean( "ALWAYS_CLOSE_USERLOG", false );
 # endif
 
 	// Now, open the file, setup locks, read the header, etc.
@@ -395,13 +394,11 @@ ReadUserLog::InternalInitialize ( int max_rotations,
 	}
 
 	// Close the file between operations
-	if ( m_close_file ) {
-		CloseLogFile( );
-	}
-
+	CloseLogFile( false );
 	m_initialized = true;
 	return true;
-}
+
+}	// InternalInitialize()
 
 ReadUserLog::FileStatus
 ReadUserLog::CheckFileStatus( void )
@@ -415,24 +412,24 @@ ReadUserLog::CheckFileStatus( void )
 bool
 ReadUserLog::CloseLogFile( bool force )
 {
+	if ( force || m_close_file ) {
 
-	// Remove any locks
-	if ( m_lock  &&  m_lock->isLocked() ) {
-		m_lock->release();
-		m_lock_rot = -1;
-	}
+		if ( m_lock && m_lock->isLocked() ) {
+			m_lock->release();
+			m_lock_rot = -1;
+		}
 
-	// Close the file pointer
-    if ( m_fp && (!m_never_close_fp || force) ) {
-		fclose( m_fp );
-		m_fp = NULL;
-		m_fd = -1;
-	}
-
-	// Close the FD
-	if ( m_fd >= 0 ) {
-	    close( m_fd );
-		m_fd = -1;
+		if ( m_enable_close ) {
+			if ( m_fp ) {
+				fclose( m_fp );
+				m_fp = NULL;
+				m_fd = -1;
+			}
+			else if ( m_fd >= 0 ) {
+				close(m_fd);
+				m_fd = -1;
+			}
+		}
 	}
 
 	return true;
@@ -471,14 +468,14 @@ ReadUserLog::OpenLogFile( bool do_seek, bool read_header )
 
 	m_fp = fdopen( m_fd, "r" );
 	if ( m_fp == NULL ) {
-		CloseLogFile( );
+		CloseLogFile( true );
 	    return ULOG_RD_ERROR;
 	}
 
 	// Seek to the previous location
 	if ( do_seek && m_state->Offset() ) {
 		if( fseek( m_fp, m_state->Offset(), SEEK_SET) ) {
-			CloseLogFile( );
+			CloseLogFile( true );
 			return ULOG_RD_ERROR;
 		}
 	}
@@ -500,7 +497,7 @@ ReadUserLog::OpenLogFile( bool do_seek, bool read_header )
 					 m_fd, m_fp, m_state->CurPath() );
 			m_lock = new FileLock( m_fd, m_fp, m_state->CurPath() );
 			if( ! m_lock ) {
-				CloseLogFile( );
+				CloseLogFile( true );
 				return ULOG_RD_ERROR;
 			}
 			m_lock_rot = m_state->Rotation( );
@@ -862,7 +859,7 @@ ReadUserLog::readEvent (ULogEvent *& event, bool store_state )
 					 "readEvent: checking to see if file (%s) matches: %s\n",
 					 m_state->CurPath(), m_match->MatchStr(result) );
 			if ( result == ReadUserLogMatch::NOMATCH ) {
-				CloseLogFile( );
+				CloseLogFile( true );
 			}
 			else {
 				try_again = false;
@@ -871,7 +868,7 @@ ReadUserLog::readEvent (ULogEvent *& event, bool store_state )
 
 		// We've hit the end of a ".old" or ".1", ".2" ... file
 		else {
-			CloseLogFile( );
+			CloseLogFile( true );
 
 			bool found = FindPrevFile( m_state->Rotation() - 1, 1, true );
 			dprintf( D_FULLDEBUG,
@@ -905,9 +902,7 @@ ReadUserLog::readEvent (ULogEvent *& event, bool store_state )
 	
 	// Close the file between operations
   CLEANUP:
-	if ( m_close_file ) {
-		CloseLogFile( );
-	}
+	CloseLogFile( false );
 
 	return outcome;
 
@@ -1354,8 +1349,8 @@ ReadUserLog::clear( void )
 	m_lock = NULL;
 	m_lock_rot = -1;
 
-	m_never_close_fp = true;
 	m_close_file = false;
+	m_enable_close = true;
 	m_handle_rot = false;
 	m_lock_enable = false;
 	m_max_rotations = 0;
@@ -1375,21 +1370,7 @@ ReadUserLog::releaseResources( void )
 		m_state = NULL;
 	}
 
-	if ( m_lock && m_lock->isLocked() ) {
-		m_lock->release();
-		m_lock_rot = -1;
-	}
-
-    if ( m_fp && !m_never_close_fp ) {
-		fclose( m_fp );
-		m_fp = NULL;
-		m_fd = -1;
-	}
-
-	if (m_fd != -1) {
-	    close(m_fd);
-		m_fd = -1;
-	}
+	CloseLogFile( true );
 
 	delete m_lock;
 	m_lock = NULL;

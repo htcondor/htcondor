@@ -454,12 +454,17 @@ if( @testlist ) {
 		if($compiler eq ".") {
 			$gotdot = 1;
 		} else {
-		opendir( COMPILER_DIR, $compiler )
-	    	|| die "error opening \"$compiler\": $!\n";
-		@{$test_suite{"$compiler"}} = grep /\.run$/, readdir( COMPILER_DIR );
-		closedir COMPILER_DIR;
-		#print "error: no test programs found for $compiler\n" 
-	    	#unless @{$test_suite{"$compiler"}};
+		if (-d $compiler) {
+			opendir( COMPILER_DIR, $compiler )
+	    		|| die "error opening \"$compiler\": $!\n";
+			@{$test_suite{"$compiler"}} = 
+				grep /\.run$/, readdir( COMPILER_DIR );
+			closedir COMPILER_DIR;
+			#print "error: no test programs found for $compiler\n" 
+	    		#unless @{$test_suite{"$compiler"}};
+			} else {
+				print "Skipping unbuilt compiler dir: $compiler\n";
+			}
 		}
     }
 	# by default look at the current blessed tests in the top
@@ -544,7 +549,8 @@ foreach my $compiler (@compilers)
       CondorTest::verbose_system ("mkdir -p $ResultDir/$compiler");
     } 
 	if($compiler ne "\.") {
-    	chdir $compiler || die "error switching to directory $compiler: $!\n";
+		# Meh, if the directory isn't there, just skip it instead of bailing.
+    	chdir $compiler || (print "Skipping $compiler directory\n" && next);
 	}
 	my $compilerdir = getcwd();
 	# add in compiler dir to the current path
@@ -1058,7 +1064,7 @@ sub CreateLocalConfig
 
 	# ADD size for log files and debug level
 	# default settings are in condor_config, set here to override 
-	print FIX "ALL_DEBUG               = D_FULLDEBUG\n";
+	print FIX "ALL_DEBUG               = D_FULLDEBUG D_SECURITY\n";
 
 	print FIX "MAX_COLLECTOR_LOG       = $logsize\n";
 	print FIX "COLLECTOR_DEBUG         = \n";
@@ -1216,7 +1222,7 @@ sub CreateLocalConfig
 	print FIX "WANT_SUSPEND = FALSE\n";
 	print FIX "WANT_VACATE = FALSE\n";
 	print FIX "COLLECTOR_NAME = Personal Condor for Tests\n";
-	print FIX "ALL_DEBUG = D_FULLDEBUG\n";
+	print FIX "ALL_DEBUG = D_FULLDEBUG D_SECURITY\n";
 	print FIX "SCHEDD_INTERVAL_TIMESLICE = .99\n";
 	#insure path from framework is injected into the new pool
 	print FIX "environment=\"PATH=\'$mypath\'\"\n";

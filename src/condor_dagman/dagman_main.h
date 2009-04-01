@@ -166,6 +166,10 @@ class Dagman {
 		// current run fails.
 	MyString rescueFileToRun;
 
+		// Whether to dump a rescue DAG and exit after parsing the input
+		// DAG(s).
+	bool dumpRescueDag;
+
     bool Config();
 };
 

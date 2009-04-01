@@ -178,6 +178,7 @@ PURE_CACHE_DIR = @pure_cache_dir@
 #define HAS_STATIC @_cv_has_static@
 
 GlobusFlavor = @globus_flavor@
+GlobusThrFlavor = @globus_thr_flavor@
 
 LIBCRYPT = @crypt_lib@
 

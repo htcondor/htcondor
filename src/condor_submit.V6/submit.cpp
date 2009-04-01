@@ -1836,7 +1836,7 @@ SetUniverse()
 			exit(1);
 		}
 		VMType = vm_tmp;
-		VMType.strlwr();
+		VMType.lower_case();
 		free(vm_tmp);
 
 		// need vm checkpoint?
@@ -7439,7 +7439,7 @@ SetConcurrencyLimits()
 	if (!tmp.IsEmpty()) {
 		char *str;
 
-		tmp.strlwr();
+		tmp.lower_case();
 
 		StringList list(tmp.Value());
 
@@ -7543,7 +7543,7 @@ SetVMParams()
 	tmp_ptr = condor_param(VM_MACAddr, ATTR_JOB_VM_MACADDR);
 	if(tmp_ptr)
 	  {
-	    buffer.sprintf("%s = %s", ATTR_JOB_VM_MACADDR, tmp_ptr);
+	    buffer.sprintf("%s = \"%s\"", ATTR_JOB_VM_MACADDR, tmp_ptr);
 	    InsertJobExpr(buffer, false);
 	  }
 

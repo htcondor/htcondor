@@ -27,6 +27,12 @@ using namespace std;
 
 BEGIN_NAMESPACE( classad )
 
+#if defined ( WIN32 )
+#if !defined ( fileno )
+#define fileno _fileno
+#endif
+#endif
+
 ServerTransaction::
 ServerTransaction( )
 {

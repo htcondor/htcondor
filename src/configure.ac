@@ -1333,7 +1333,7 @@ case "$_cv_opsys-$_cv_opsys_vers-$_cv_arch-$_cv_linux_distro-$_cv_libc_major-$_c
   *-HPUX11-* | \
   LINUX-*-ALPHA-* | \
   LINUX-*-*-DEBIAN40-* | \
-  LINUX-*-*-DEBIAN50-* | \
+  LINUX-*-X86_64-DEBIAN50-* | \
   LINUX-*-IA64-* | \
   SOLARIS-* | \
   LINUX-*-CONDOR_PPC-* ) _cv_clipped_default=yes ;;
@@ -2735,8 +2735,16 @@ if test "x$_cv_libc_kind" = "xGLIBC" -a \( "x$_cv_arch" = "xI386" -o "x$_cv_arch
   "2.6." ) # F7 uses glibc 2.6-4
     including_glibc_ext=NO
     ;;
-  "2.7." ) # F8 uses glibc 2.7-2
-    including_glibc_ext=NO
+  "2.7." )
+ 	 # F8 uses glibc 2.7-2
+	 # debian uses glibc 2.7-18
+    if test "x$_cv_arch" = "xI386" ; then
+       CHECK_EXTERNAL([glibc],[2.7-18], [soft])
+	else # x86_64
+		# commented out for now, since we're clipped on this platform.
+       #CHECK_EXTERNAL([glibc],[2.7-18-x86_64], [soft])
+		:
+	fi
     ;;
   * )
     if test "x$enable_glibc_version_check" = "xyes"; then
@@ -2794,8 +2802,8 @@ if test "x$_cv_ext_openssl_version" != x; then
   # have ssl.h) to make gsoap happy
   AC_DEFINE(HAVE_OPENSSL_SSL_H,1,[do we have openssl])
 
-  # Globus 4.2.0 is dependent on an external version of openssl
-  CHECK_EXTERNAL([globus],[4.2.0], [soft])
+  # Globus 4.2.1 is dependent on an external version of openssl
+  CHECK_EXTERNAL([globus],[4.2.1], [soft])
 fi
 
 if test -z "$_cv_ext_globus_version"; then
@@ -2821,7 +2829,7 @@ CHECK_EXTERNAL([classads], [1.0.2], [soft],
 	       # This REALLY should test for headers, like most checks...
                MF_LIB_CHECK([classads], [[classad cclassad_create]]))	       
 
-CHECK_EXTERNAL([srb], [3.2.1-p1], [soft])
+CHECK_EXTERNAL([srb], [3.2.1-p2], [soft])
 
 CHECK_EXTERNAL([pcre], [7.6], [hard],
                [use PCRE (provides regular expression support)],
@@ -2829,11 +2837,15 @@ CHECK_EXTERNAL([pcre], [7.6], [hard],
 AS_IF([test "x$cv_ext_pcre" = xyes],
   [AC_CHECK_HEADERS([pcre.h pcre/pcre.h])])
 
-AS_IF([test "x$os-$_cv_arch" = xLinux-I386 -a "x$_cv_linux_distro" != "xDEBIAN50" -a "x$_cv_has_globus" = xyes -a -n "$_cv_ext_classads_version"],
+# The auto-tools aren't working correctly on AIX
+# Solaris doesn't have the auto-tools on NMI
+# FreeBSD has different types for network structs
+# Mac OS X doesn't have strndup()
+AS_IF([test "x$_cv_opsys" != xDARWIN -a "x$_cv_opsys" != xAIX -a "x$_cv_opsys" != "xSOLARIS" -a "x$_cv_opsys" != "xCONDOR_FREEBSD" -a "x$_cv_has_globus" = xyes -a -n "$_cv_ext_classads_version"],
   [_cv_has_blahp=yes],
   [_cv_has_blahp=no])
 AC_MSG_RESULT([$_cv_has_blahp])
-CHECK_EXTERNAL([blahp], [1.7.0-p2], [soft])
+CHECK_EXTERNAL([blahp], [1.12.2-p2], [soft])
 
 # When --with-proper the detection of the man pages is a little
 # ugly. The value added to the end of $_dir must be what
@@ -2869,9 +2881,15 @@ fi
 
 # Figure out which postgresql we need.
 
-CHECK_EXTERNAL([postgresql], [8.2.3-p1], [soft],
-               [use PostgreSQL (provides Quill and other support)],
-               MF_LIB_CHECK([postgresql], [[pq PQconnectdb]], [postgresql]))
+if test "$_cv_opsys" = "AIX" ; then
+  CHECK_EXTERNAL([postgresql], [8.2.3], [soft],
+                 [use PostgreSQL (provides Quill and other support)],
+                 MF_LIB_CHECK([postgresql], [[pq PQconnectdb]], [postgresql]))
+else
+  CHECK_EXTERNAL([postgresql], [8.2.3-p1], [soft],
+                 [use PostgreSQL (provides Quill and other support)],
+                 MF_LIB_CHECK([postgresql], [[pq PQconnectdb]], [postgresql]))
+fi
 AC_MSG_CHECKING([postgresql])
 AC_MSG_RESULT([$_cv_ext_postgresql_version])
 #AC_SUBST(ext_postgresql_version,$_cv_ext_postgresql_version)
@@ -2887,8 +2905,10 @@ if test "x$cv_ext_globus" = xyes; then
   elif test "$_cv_opsys" = "AIX" ; then
     _cv_globus_flavor=vendorcc32dbg
   fi
+  _cv_globus_thr_flavor=${_cv_globus_flavor}pthr
   AC_MSG_RESULT([$_cv_globus_flavor])
   AC_SUBST(globus_flavor,$_cv_globus_flavor)
+  AC_SUBST(globus_thr_flavor,$_cv_globus_thr_flavor)
 fi
 
 # The test for gsoap needs to happen after the openssl check, so

@@ -196,6 +196,21 @@ transtimeout()
 	return TRUE;
 }
 
+static void
+release_data ( void *p ) {
+
+	dprintf ( 
+		D_FULLDEBUG, 
+		"SOAP in release_data()\n" );
+
+	/** release the memory */
+	if ( p ) {
+		free ( p );
+		p = NULL;
+	}
+
+}
+
   // forward reference....
 static bool
 stub_suffix(const char*,
@@ -470,6 +485,7 @@ condor__beginTransaction(struct soap *soap,
 	trans_timer_id =
 		daemonCore->Register_Timer(duration,
 								   (TimerHandler)&transtimeout,
+								   (TimerRelease)&release_data,
 								   "condor_transtimeout");
 	intPtr = (void*) malloc(sizeof(struct condor__Transaction));	
 	memcpy(intPtr,transaction,sizeof(condor__Transaction));
@@ -500,6 +516,9 @@ condor__commitTransaction(struct soap *soap,
 	}
 
 	entry->commit();
+
+		// Don't ask, don't tell...
+	getQmgmtConnectionInfo();
 
 	if (transactionManager.destroyTransaction(transaction.id)) {
 		dprintf(D_ALWAYS, "condor__commitTransaction cleanup failed\n");
@@ -543,6 +562,15 @@ condor__abortTransaction(struct soap *soap,
 	}
 
 	entry->abort();
+
+		// Horrible hack...
+		// The ScheddTransaction, entry, owns the memory that Q_SOCK
+		// is holding onto. That memory is free'd by
+		// destroyTransaction() below. Before we delete that memory we
+		// need to clear Q_SOCK. If we don't then later when
+		// getQmgmtConnectionInfo() is called it will try to write to
+		// free'd memory.
+	getQmgmtConnectionInfo();
 
 	if (transactionManager.destroyTransaction(transaction.id)) {
 		dprintf(D_ALWAYS, "condor__abortTransaction cleanup failed\n");

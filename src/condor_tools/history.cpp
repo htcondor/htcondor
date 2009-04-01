@@ -810,8 +810,20 @@ static long findPrevDelimiter(FILE *fd, char* filename, long currOffset)
             
             owner = (char *) realloc (owner, buf.Length() * sizeof(char));
       
+			prevOffset = -1;
+			clusterId = -1;
+			procId = -1;
+
             sscanf(buf.Value(), "%*s %*s %*s %ld %*s %*s %d %*s %*s %d %*s %*s %s %*s %*s %ld", 
                    &prevOffset, &clusterId, &procId, owner, &completionDate);
+
+			if (prevOffset == -1 && clusterId == -1 && procId == -1) {
+				fprintf(stderr, 
+						"Error: (%s) is an incompatible history file, please run condor_convert_history.\n",
+						filename);
+				free(owner);
+				exit(1);
+			}
         }
     }
  

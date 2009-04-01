@@ -962,11 +962,8 @@ sub TunePersonalCondor
 		print NEW "COLLECTOR_ADDRESS_FILE = \$(LOG)/.collector_address\n";
 		print NEW "NEGOTIATOR_ADDRESS_FILE = \$(LOG)/.negotiator_address\n";
 
-		if( $iswindows == 1 ) {
-			print NEW "CONDOR_HOST = \$(IP_ADDRESS)\n";
-		} else {
-			print NEW "CONDOR_HOST = $condorhost\n";
-		}
+		print NEW "CONDOR_HOST = $condorhost\n";
+		
 		print NEW "START = TRUE\n";
 		print NEW "RUNBENCHMARKS = FALSE\n";
 		print NEW "JAVA_BENCHMARK_TIME = 0\n";

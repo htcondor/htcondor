@@ -25,6 +25,7 @@
  ***************************************************************/
 
 #include "extArray.h"
+#include "MyString.h"
 #include "hibernator.h"
 #include "network_adapter.h"
 
@@ -74,6 +75,16 @@ public:
         */
     bool isStateSupported ( HibernatorBase::SLEEP_STATE state ) const;
 
+	/** Get bit-mask of supported states
+		@return true of successful, false otherwise
+        @see isStateSupported()
+        @see setTargetState()
+	*/
+	bool getSupportedStates( unsigned & mask ) const;
+	bool getSupportedStates( MyString &states ) const;
+	bool getSupportedStates(
+		ExtArray<HibernatorBase::SLEEP_STATE> &states ) const;
+
     /** Set which hibernation level the computer should enter
         @param the hibernation state to place machine into
         @return true if the internal state ha changed; otherwise, false.
@@ -95,7 +106,6 @@ public:
 	bool switchToTargetState ( void );
 
 	/** Switch to the specified state
-		@param The target state
 		@return true if the machine will enter hibernation; otherwise, false.
 		@see canHibernate
 		@see wantsHibernate

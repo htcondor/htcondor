@@ -544,8 +544,8 @@ int daemon::RealStart( )
 		command_port = -1;
 
 		dprintf ( 
-			D_ALWAYS, 
-			"Looking for matching Collector on '%s'...\n", 
+			D_FULLDEBUG, 
+			"Looking for matching Collector on '%s' ...\n", 
 			my_full_hostname () );
 		CollectorList* collectors = NULL;
 		if ((collectors = daemonCore->getCollectorList())) {
@@ -555,14 +555,15 @@ int daemon::RealStart( )
 			while (collectors->next (my_daemon)) {
 
 				dprintf ( 
-					D_ALWAYS, 
-					"Found '%s:%d'\n", 
+					D_FULLDEBUG, 
+					"Matching '%s:%d'\n", 
 					my_daemon->fullHostname (),
 					my_daemon->port () );
 
 				if (same_host (my_hostname, 
 							   my_daemon->fullHostname())) {
 					command_port = my_daemon->port();
+					dprintf ( D_FULLDEBUG, "Host name matches.\n" );
 					break;
 				}
 			}
@@ -577,7 +578,7 @@ int daemon::RealStart( )
 			}
 		}
 		dprintf ( 
-			D_ALWAYS, 
+			D_FULLDEBUG, 
 			"Finished looking for Collectors.\n" );
 
 		if (command_port == -1) {

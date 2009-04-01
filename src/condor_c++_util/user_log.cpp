@@ -541,7 +541,7 @@ UserLog::checkGlobalLogRotation( void )
 				 m_global_path, errno, strerror(errno) );
 	}
 	else {
-		ReadUserLog	log_reader( fp, m_global_use_xml );
+		ReadUserLog	log_reader( fp, m_global_use_xml, false );
 		if ( header_reader.Read( log_reader ) != ULOG_OK ) {
 			dprintf( D_ALWAYS,
 					 "UserLog: Error reading header of \"%s\"\n", 
@@ -783,7 +783,9 @@ UserLog::doWriteEvent( ULogEvent *event,
 	lock->obtain (WRITE_LOCK);
 	time_t after = time(NULL);
 	if ( (after - before) > 5 ) {
-		dprintf( D_FULLDEBUG, "UserLog::doWriteEvent(): locking file took %d seconds\n", (after-before) );
+		dprintf( D_FULLDEBUG,
+				 "UserLog::doWriteEvent(): locking file took %ld seconds\n",
+				 (after-before) );
 	}
 
 	before = time(NULL);
@@ -799,7 +801,9 @@ UserLog::doWriteEvent( ULogEvent *event,
 	}
 	after = time(NULL);
 	if ( (after - before) > 5 ) {
-		dprintf( D_FULLDEBUG, "UserLog::doWriteEvent(): fseek() took %d seconds\n", (after-before) );
+		dprintf( D_FULLDEBUG,
+				 "UserLog::doWriteEvent(): fseek() took %ld seconds\n",
+				 (after-before) );
 	}
 	if ( status ) {
 		dprintf( D_ALWAYS,
@@ -821,7 +825,9 @@ UserLog::doWriteEvent( ULogEvent *event,
 	success = doWriteEvent( fp, event, use_xml );
 	after = time(NULL);
 	if ( (after - before) > 5 ) {
-		dprintf( D_FULLDEBUG, "UserLog::doWriteEvent(): writing event took %d seconds\n", (after-before) );
+		dprintf( D_FULLDEBUG,
+				 "UserLog::doWriteEvent(): writing event took %ld seconds\n",
+				 (after-before) );
 	}
 
 	before = time(NULL);
@@ -832,7 +838,9 @@ UserLog::doWriteEvent( ULogEvent *event,
 	}
 	after = time(NULL);
 	if ( (after - before) > 5 ) {
-		dprintf( D_FULLDEBUG, "UserLog::doWriteEvent(): flushing event took %d seconds\n", (after-before) );
+		dprintf( D_FULLDEBUG,
+				 "UserLog::doWriteEvent(): flushing event took %ld seconds\n",
+				 (after-before) );
 	}
 
 	// Now that we have flushed the stdio stream, sync to disk
@@ -849,14 +857,18 @@ UserLog::doWriteEvent( ULogEvent *event,
 		}
 		after = time(NULL);
 		if ( (after - before) > 5 ) {
-			dprintf( D_FULLDEBUG, "UserLog::doWriteEvent(): fsyncing file took %d seconds\n", (after-before) );
+			dprintf( D_FULLDEBUG,
+					 "UserLog::doWriteEvent(): fsyncing file took %ld secs\n",
+					 (after-before) );
 		}
 	}
 	before = time(NULL);
 	lock->release ();
 	after = time(NULL);
 	if ( (after - before) > 5 ) {
-		dprintf( D_FULLDEBUG, "UserLog::doWriteEvent(): unlocking file took %d seconds\n", (after-before) );
+		dprintf( D_FULLDEBUG,
+				 "UserLog::doWriteEvent(): unlocking file took %ld seconds\n",
+				 (after-before) );
 	}
 	set_priv( priv );
 	return success;

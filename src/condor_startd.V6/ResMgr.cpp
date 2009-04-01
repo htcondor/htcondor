@@ -62,6 +62,11 @@ ResMgr::ResMgr()
 		dprintf( D_FULLDEBUG, "Using network interface %s for hibernation\n",
 				 primary->interfaceName() );
 	}
+	MyString	states;
+	m_hibernation_manager->getSupportedStates(states);
+	dprintf( D_FULLDEBUG,
+			 "Detected hibernation states: %s\n", states.Value() );
+
 	m_hibernating = FALSE;
 #endif
 
@@ -1493,23 +1498,31 @@ ResMgr::update_all( void )
 void
 ResMgr::eval_and_update_all( void )
 {
+#if HAVE_HIBERNATION
 	if ( !hibernating () ) {
+#endif
 		compute( A_TIMEOUT | A_UPDATE );
-		first_eval_and_update_all();
+		update_all();
+#if HAVE_HIBERNATION
 	}
+#endif
 }
 
 
 void
 ResMgr::eval_all( void )
 {
+#if HAVE_HIBERNATION
 	if ( !hibernating () ) {
+#endif
 		num_updates = 0;
 		compute( A_TIMEOUT );
 		walk( &Resource::eval_state );
 		report_updates();
 		check_polling();
+#if HAVE_HIBERNATION
 	}
+#endif
 }
 
 
@@ -2120,6 +2133,7 @@ ResMgr::checkHibernate( void )
         for ( int i = 0; i < nresources; ++i ) {
             resources[i]->enable();
             resources[i]->update();
+			m_hibernating = false;
 	    }
 		
 #     endif
@@ -2202,9 +2216,8 @@ ResMgr::disableResources( const MyString &state_str )
 
 	dprintf ( 
 		D_FULLDEBUG,
-		"All resources disabled: %s (%d).\n", 
-		ok ? "yes" : "no",
-		i + 1 );
+		"All resources disabled: %s.\n", 
+		ok ? "yes" : "no" );
 
 	/* if any of the updates failed, then re-enable all the
 	resources and try again later (next time HIBERNATE evaluates

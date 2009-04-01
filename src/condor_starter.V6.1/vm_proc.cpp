@@ -289,7 +289,7 @@ VMProc::StartJob()
 				CONDOR_HOLD_CODE_FailedToCreateProcess, 0);
 		return false;
 	}
-	vm_type_name.strlwr();
+	vm_type_name.lower_case();
 	m_vm_type = vm_type_name;
 
 	// get vm checkpoint flag from ClassAd

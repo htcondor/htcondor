@@ -367,7 +367,7 @@ int main_init(int argc, char *argv[])
 	Reconfig();
 
 	// change vmtype to lowercase
-	vmtype.strlwr();
+	vmtype.lower_case();
 
 	// check whether vmtype is supported by this gahp server
 	if( verify_vm_type(vmtype.Value()) == false ) {

@@ -3676,6 +3676,10 @@ int mark_idle(ClassAd *job)
 		JobQueue->BeginTransaction();
 		SetAttributeFloat(cluster,proc,ATTR_JOB_REMOTE_WALL_CLOCK, wall_clock);
 		DeleteAttribute(cluster,proc,ATTR_JOB_WALL_CLOCK_CKPT);
+			// remove shadow birthdate so if CkptWallClock()
+			// runs before a new shadow starts, it won't
+			// potentially double-count
+		DeleteAttribute(cluster,proc,ATTR_SHADOW_BIRTHDATE);
 		JobQueue->CommitTransaction();
 	}
 
@@ -3955,8 +3959,8 @@ void FindRunnableJob(PROC_ID & jobid, const ClassAd* my_match_ad,
 						ad->LookupString(ATTR_CONCURRENCY_LIMITS, jobLimits);
 						my_match_ad->LookupString(ATTR_MATCHED_CONCURRENCY_LIMITS,
 												  recordedLimits);
-						jobLimits.strlwr();
-						recordedLimits.strlwr();
+						jobLimits.lower_case();
+						recordedLimits.lower_case();
 						
 						if (jobLimits == recordedLimits) {
 							dprintf(D_FULLDEBUG,

@@ -21,9 +21,9 @@
 * Headers
 ***************************************************************/
 
-#include "condor_common.h"      /* pre-compiled header */
-#include "condor_config.h"      /* for param */
-#include "executable_scripts.h" /* our header file */
+#include "condor_common.h"				/* pre-compiled header */
+#include "condor_config.h"				/* for param */
+#include "executable_scripts.WINDOWS.h" /* our header file */
 
 /***************************************************************
 * Macros
@@ -48,6 +48,14 @@ ExpandArgumentTemplate (
 /***************************************************************
 * Functions
 ***************************************************************/
+
+/** The code bellow should probably be changed to use:
+	RegOpenUserClassesRoot() when impersonating a user, and
+	HKLM\Software\Classes instead of HKEY_CLASSES_ROOT.
+
+	For reasons explained here:
+	http://blogs.msdn.com/larryosterman/archive/2004/10/20/245172.aspx
+	*/
 
 /** Finds the executable and parameter list associated with the
     provided extension. */

@@ -1,0 +1,11 @@
+--- gt4.2.1-all-source-installer/source-trees/gridftp/server/src/Makefile.in	2008-10-03 00:18:49.000000000 -0500
++++ gt4.2.1-all-source-installer.patched/source-trees/gridftp/server/src/Makefile.in	2009-01-20 15:58:20.000000000 -0600
+@@ -112,7 +112,7 @@
+ 	$(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) \
+ 	$(AM_CFLAGS) $(CFLAGS)
+ CCLD = $(CC)
+-LINK = $(LIBTOOL) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
++LINK = $(LIBTOOL) --mode=link $(CCLD) -all-static $(AM_CFLAGS) $(CFLAGS) \
+ 	$(AM_LDFLAGS) $(LDFLAGS) -o $@
+ SOURCES =  \
+ 	$(libglobus_gridftp_server___GLOBUS_FLAVOR_NAME__la_SOURCES) \

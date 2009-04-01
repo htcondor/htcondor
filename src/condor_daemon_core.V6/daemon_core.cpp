@@ -88,6 +88,7 @@ static const int DC_PIPE_BUF_SIZE = 1024;
 #ifdef WIN32
 #include "exphnd.WIN32.h"
 #include "process_control.WINDOWS.h"
+#include "executable_scripts.WINDOWS.h"
 #include "condor_fix_assert.h"
 typedef unsigned (__stdcall *CRT_THREAD_HANDLER) (void *);
 CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
@@ -104,6 +105,7 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 #include "condor_netdb.h"
 #include "util_lib_proto.h"
 #include "subsystem_info.h"
+#include "basename.h"
 
 #if defined(HAVE_VALGRIND_H)
 #include "valgrind.h"
@@ -807,6 +809,12 @@ int	DaemonCore::Register_Timer(unsigned deltawhen, Event event,
 				const char *event_descrip, Service* s)
 {
 	return( t.NewTimer(s, deltawhen, event, event_descrip, 0, -1) );
+}
+
+int	DaemonCore::Register_Timer(unsigned deltawhen, Event event,
+							   Release release, const char *event_descrip, Service* s)
+{
+	return( t.NewTimer(s, deltawhen, event, release, event_descrip, 0, -1) );
 }
 
 int	DaemonCore::Register_Timer(unsigned deltawhen, unsigned period,
@@ -4726,7 +4734,7 @@ void DCSignalMsg::reportFailure( DCMessenger * )
 	}
 
 	dprintf(D_ALWAYS,
-			"Send_Signal: ERROR sending signal %d (%s) to pid %d (%s)\n",
+			"Send_Signal: Warning: could not send signal %d (%s) to pid %d (%s)\n",
 			theSignal(),signalName(),thePid(),status);
 }
 
@@ -4923,7 +4931,7 @@ void DaemonCore::Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocki
 
 			if ( use_kill ) {
 				const char* tmp = signalName(sig);
-				dprintf( D_DAEMONCORE,
+				dprintf( D_FULLDEBUG,
 						 "Send_Signal(): Doing kill(%d,%d) [%s]\n",
 						 pid, sig, tmp ? tmp : "Unknown" );
 				priv_state priv = set_root_priv();
@@ -6421,6 +6429,13 @@ int DaemonCore::Create_Process(
 	bool bIs16Bit = FALSE;
 	int first_arg_to_copy = 0;
 	bool args_success = false;
+	const char *extension = NULL;
+	bool allow_scripts = true;
+	bool batch_file = false;
+	bool binary_executable = false;
+	CHAR interpreter[MAX_PATH+1];
+	MyString description;
+	BOOL ok;
 
 #else
 	int inherit_handles;
@@ -6769,51 +6784,173 @@ int DaemonCore::Create_Process(
 		bIs16Bit = true;
 	UnMapAndLoad(&loaded);
 
-	// CreateProcess requires different params for 16-bit apps:
-	//		NULL for the app name
-	//		args begins with app name
-	namelen = strlen(executable);
-	if (bIs16Bit)
-	{
-		// surround the executable name with quotes or you'll have problems
-		// when the execute directory contains spaces!
-		strArgs = "\"" + MyString(executable) + MyString("\" ");
+	// Define a some short-hand variables for use bellow
+	namelen				= strlen(executable);
+	extension			= namelen > 0 ? &(executable[namelen-4]) : NULL;
+	batch_file			= ( extension && 
+							( MATCH == strcasecmp ( ".bat", extension ) || 
+							  MATCH == strcasecmp ( ".cmd", extension ) ) ),
+	allow_scripts		= param_boolean ( 
+							"ALLOW_SCRIPTS_TO_RUN_AS_EXECUTABLES", true ),
+	binary_executable	= ( extension && 
+							( MATCH == strcasecmp ( ".exe", extension ) || 
+							  MATCH == strcasecmp ( ".com", extension ) ) );
 
-		// make sure we're only using backslashes
-		strArgs.replaceString("/", "\\", 0);
+	dprintf (
+		D_FULLDEBUG,
+		"Create_Process(): executable: '%s'\n",
+		executable );
+	
+	if ( bIs16Bit ) {
+
+		/** CreateProcess() requires different params for 16-bit apps:
+			1) NULL for the app name
+			2) args begins with app name
+			*/
+
+		/** surround the executable name with quotes or you'll 
+			have problems when the execute directory contains 
+			spaces! */
+		strArgs.sprintf ( 
+			"\"%s\"",
+			executable );
+		
+		/* make sure we're only using backslashes */
+		strArgs.replaceString (
+			"/", 
+			"\\", 
+			0 );
 
 		first_arg_to_copy = 1;
-		args_success = args.GetArgsStringWin32(&strArgs,first_arg_to_copy,&args_errors);
+		args_success = args.GetArgsStringWin32 ( 
+			&strArgs,
+			first_arg_to_copy,
+			&args_errors );
 
-		dprintf(D_ALWAYS, "Create_Process: 16-bit job detected, args=%s\n", args);
+		dprintf ( 
+			D_ALWAYS, 
+			"Executable is 16-bit, "
+			"args=%s\n", 
+			args );
 
-
-	} else if ( (stricmp(".bat",&(executable[namelen-4])) == 0) ||
-			(stricmp(".cmd",&(executable[namelen-4])) == 0) ) {
+	} else if ( batch_file ) {
 
 		char systemshell[MAX_PATH+1];
 
-		// next, stuff the extra cmd.exe args in with the arguments
-		strArgs = " /Q /C \"" + MyString(executable) + MyString("\" ");
+		/** find out where cmd.exe lives on this box and
+			set it to our executable */
+		UINT length = GetSystemDirectory ( systemshell, MAX_PATH );
+		strncat ( systemshell, "\\cmd.exe", MAX_PATH - length - 1 );
+		
+		/** next, stuff the extra cmd.exe args in with 
+			the arguments */
+		strArgs.sprintf ( 
+			"\"%s\" /Q /C \"%s\"",
+			systemshell,
+			executable );
 
-		// now find out where cmd.exe lives on this box and
-		// set it to our executable
-		::GetSystemDirectory(systemshell, MAX_PATH);
-		strncat(systemshell, "\\cmd.exe", MAX_PATH);
-		executable_buf = systemshell;
-		executable = executable_buf.Value();
+		/** store the cmd.exe as the executable */
+		executable_buf	= systemshell;
+		executable		= executable_buf.Value();
 
-		// skip argv[0], since that will goof up the args to the batch
-		// script.
+		/** skip argv[0], since it only contains junk and will goof
+			up the args to the batch file. */
 		first_arg_to_copy = 1;
-		args_success = args.GetArgsStringWin32(&strArgs,first_arg_to_copy,&args_errors);
+		args_success = args.GetArgsStringWin32 (
+			&strArgs,
+			first_arg_to_copy,
+			&args_errors);
 
-		dprintf(D_ALWAYS, "Executable is a batch script, so executing %s %s\n",
-			executable, strArgs.Value());
-	}
-	else {
+		dprintf ( 
+			D_ALWAYS, 
+			"Executable is a batch file, "
+			"running: %s\n",
+			strArgs.Value () );
+
+	} else if ( allow_scripts && !binary_executable ) {
+
+		/** since we do not actually know how long the extension of
+			the file is, we'll need to hunt down the '.' in the path
+			*/
+		extension = strrchr ( executable, '.' );
+
+		if ( !extension ) {
+
+			dprintf ( 
+				D_ALWAYS, 
+				"Create_Process(): Failed to extract "
+				"the file's extension.\n" );
+
+			/** don't fail here, since we want executables to run
+				as usual.  That is, some condor jobs submit 
+				executables that do not have the '.exe' extension,
+				but are, nonetheless, executable binaries.  For
+				instance, a submit script may contain:
+				
+				executable = executable$(OPSYS) */
+
+		} else {
+
+			/** try and find the executable associated with this 
+				file extension */
+			ok = GetExecutableAndArgumentTemplateByExtention ( 
+				extension, 
+				interpreter );
+
+			if ( !ok ) {
+
+				dprintf ( 
+					D_ALWAYS, 
+					"Create_Process(): Failed to find an "
+					"executable for extension *%s\n",
+					extension );
+
+				/** don't fail here either, for the same reasons we 
+					outline above, save a small modification to the 
+					executable's name: executable.$(OPSYS) */
+
+			} else {
+
+				/** add the script to the command-line. The 
+					executable is actually the script. */
+				strArgs.sprintf (
+					"\"%s\" \"%s\"",
+					interpreter, 
+					executable );
+				
+				/** change executable to be the interpreter 
+					associated with the file type. */
+				executable_buf	= interpreter;
+				executable		= executable_buf.Value ();
+
+				/** skip argv[0], since it only contains junk and
+					will goof up the args to the script. */
+				first_arg_to_copy = 1;
+				args_success = args.GetArgsStringWin32 (
+					&strArgs,
+					first_arg_to_copy,
+					&args_errors );
+				
+				dprintf (
+					D_FULLDEBUG,
+					"Executable is a *%s script, "
+					"running: %s\n",
+					extension,
+					strArgs.Value () );
+
+			}
+
+		}
+
+	} else {
+
+		/** append the arguments given in the submit file. */
 		first_arg_to_copy = 0;
-		args_success = args.GetArgsStringWin32(&strArgs,first_arg_to_copy,&args_errors);
+		args_success = args.GetArgsStringWin32 (
+			&strArgs,
+			first_arg_to_copy,
+			&args_errors );
+
 	}
 
 	if(!args_success) {
@@ -8990,12 +9127,23 @@ InitCommandSockets(int port, ReliSock *rsock, SafeSock *ssock, bool fatal)
 	else {
 			// Use the well-known port specified in the arguments.
 		int on = 1;
+		int so_option = SO_REUSEADDR;
+
+#if defined ( WIN32 )
+		/** To better match the *nix semantics of SO_REUSEADDR we
+			enable MSs SO_EXCLUSIVEADDRUSE option, which prohibits
+			multiple process/identities/etc. from binding to the
+			same address (which is just crazy behaviour!). 
+
+			For further details refer to ticket #288. */
+		so_option = SO_EXCLUSIVEADDRUSE;
+#endif
 
 			// Set options on this socket, SO_REUSEADDR, so that
 			// if we are binding to a well known port, and we
 			// crash, we can be restarted and still bind ok back
 			// to this same port. -Todd T, 11/97
-		if( !rsock->setsockopt(SOL_SOCKET, SO_REUSEADDR,
+		if( !rsock->setsockopt(SOL_SOCKET, so_option,
 							   (char*)&on, sizeof(on)) ) {
 			if (fatal) {
 				EXCEPT("setsockopt() SO_REUSEADDR failed on TCP command port");
@@ -9007,7 +9155,7 @@ InitCommandSockets(int port, ReliSock *rsock, SafeSock *ssock, bool fatal)
 			}
 		}
 		if( ssock &&
-			!ssock->setsockopt(SOL_SOCKET, SO_REUSEADDR,
+			!ssock->setsockopt(SOL_SOCKET, so_option,
 							   (char*)&on, sizeof(on)) ) {
 			if (fatal) {
 				EXCEPT("setsockopt() SO_REUSEADDR failed on UDP command port");

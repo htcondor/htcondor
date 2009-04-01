@@ -118,12 +118,12 @@ main(int argc, const char **argv)
 	net->wakeEnabledString( tmpstr );
 	printf( "wake enable flags: %s\n", tmpstr.Value() );
 
-	ClassAd	ad;
-	net->publish( ad );
-	ad.fPrint( stdout );
-
 	HibernationManager	hman;
 	hman.addInterface( *net );
+
+	ClassAd	ad;
+	hman.publish( ad );
+	ad.fPrint( stdout );
 
 	printf( "Hibernation method used: %s\n", hman.getHibernationMethod() );
 

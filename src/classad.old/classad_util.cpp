@@ -22,6 +22,23 @@
 #include "condor_classad_util.h"
 #include "MyString.h"
 
+bool EvalBool(AttrList* ad, ExprTree *tree)
+{
+  EvalResult result;
+
+  // Evaluate constraint with ad in the target scope so that constraints
+  // have the same semantics as the collector queries.  --RR
+  if (!tree->EvalTree(NULL, ad, &result)) {        
+    return false;
+  }
+        
+  if (result.type == LX_INTEGER) {
+    return (bool)result.i;
+  }
+         
+  return false;
+}
+
 bool EvalBool(ClassAd *ad, const char *constraint)
 {
 	static ExprTree *tree = NULL;
