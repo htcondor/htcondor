@@ -77,9 +77,9 @@ and \Condor{submit\_dag}.  This flag is intended mainly for testing.
 
 \begin{itemize}
 
-\item Fixed a bug in streaming I/O on Windows. Previously, if it was
-enabled the \Condor{starter} would crash after the the job's
-executable was run.
+\item Fixed a Windows platform bug for jobs that enable streaming I/O.
+  The bug caused the \Condor{starter} to crash upon
+  invocation of the job.
 
 \item Fixed a bug in which an ill-formed network packet could crash a
 Condor daemon.  This would not be seen in normal Condor operation, but
