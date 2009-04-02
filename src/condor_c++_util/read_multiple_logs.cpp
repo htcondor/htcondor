@@ -351,6 +351,30 @@ MultiLogFiles::InitializeFile(const char *filename, bool truncate,
 void
 ReadMultipleUserLogs::cleanup()
 {
+
+#if LAZY_LOG_FILES
+	activeLogFiles.clear();
+
+	allLogFiles.startIterations();
+	LogFileMonitor *monitor;
+	while ( allLogFiles.iterate( monitor ) ) {
+		delete monitor->lastLogEvent;
+		monitor->lastLogEvent = NULL;
+
+		delete monitor->readUserLog;
+		monitor->readUserLog = NULL;
+
+		if ( monitor->state ) {
+			ReadUserLog::UninitFileState( *(monitor->state) );
+		}
+		delete monitor->state;
+		monitor->state = NULL;
+
+		delete monitor;
+	}
+	allLogFiles.clear();
+#endif // LAZY_LOG_FILES
+
 	if (pLogFileEntries == NULL) {
 		return;
 	}
@@ -1338,7 +1362,6 @@ ReadMultipleUserLogs::monitorLogFile( MyString logfile,
 		return false;
 	}
 
-	bool opened = false;
 	LogFileMonitor *monitor;
 	if ( allLogFiles.lookup( logfile, monitor ) == 0 ) {
 		dprintf( D_LOG_FILES, "ReadMultipleUserLogs: found "
@@ -1348,8 +1371,10 @@ ReadMultipleUserLogs::monitorLogFile( MyString logfile,
 		dprintf( D_LOG_FILES, "ReadMultipleUserLogs: didn't "
 					"find LogFileMonitor object for %s\n", logfile.Value() );
 
+			// Make sure the log file is in the correct state -- it must
+			// exist, and be truncated if necessary.
 		if ( !MultiLogFiles::InitializeFile( logfile.Value(),
-					truncateIfFirst, errstack) ) {
+					truncateIfFirst, errstack ) ) {
 			errstack.pushf( "ReadMultipleUserLogs", 0/*TEMP*/,
 						"Error initializing log file %s", logfile.Value() );
 			return false;
@@ -1365,35 +1390,26 @@ ReadMultipleUserLogs::monitorLogFile( MyString logfile,
 						logfile.Value() );
 			return false;
 		}
-
-		if ( !monitor->readUserLog->initialize( logfile.Value() ) ) {
-			errstack.pushf( "ReadMultipleUserLogs", 0/*TEMP*/,
-						"Error initializing log file %s", logfile.Value() );
-			return false;
-		}
-		opened = true;
-
-			// Workaround for gittrac #337.
-		if ( LogGrew( monitor, logfile ) ) {
-				// This will fail unless an event got written after the
-				// call to CreateOrTruncateFile() above (race condition).
-			(void)monitor->readUserLog->readEvent( monitor->lastLogEvent );
-		}
 	}
 
 	if ( monitor->refCount < 1 ) {
-		// open file if not already opened
-		//TEMP -- hmm -- what about the do_seek argument to ReadUserLog::OpenLogFile()?  Maybe that will take care of the seek/tell
+			// Open the log file (return to previous location if it was
+			// opened before).
+	
+		if ( monitor->state ) {
+			monitor->readUserLog = new ReadUserLog( *(monitor->state) );
+		} else {
+			monitor->readUserLog = new ReadUserLog( logfile.Value() );
+		}
 
-#if 0 //TEMP
-		if ( !opened ) {
-			if ( !monitor->readUserLog->OpenLogFile( true ) ) {
-				errstack.pushf( "ReadMultipleUserLogs", 0/*TEMP*/,
-							"Error opening log file %s", logfile.Value() );
-				return false;
+			// Workaround for gittrac #337.
+		if ( LogGrew( monitor, logfile ) ) {
+			if ( !monitor->lastLogEvent ) {
+					// This will fail unless an event got written after the
+					// call to CreateOrTruncateFile() above (race condition).
+				(void)monitor->readUserLog->readEvent( monitor->lastLogEvent );
 			}
 		}
-#endif //TEMP
 
 		if ( activeLogFiles.insert( logfile, monitor ) != 0 ) {
 			errstack.pushf( "ReadMultipleUserLogs", 0/*TEMP*/,
@@ -1438,14 +1454,32 @@ ReadMultipleUserLogs::unmonitorLogFile( MyString logfile,
 		monitor->refCount--;
 
 		if ( monitor->refCount < 1 ) {
-#if 0 //TEMP
-			if ( !monitor->readUserLog->CloseLogFile( true/*TEMP?*/ ) ) {
+				// Okay, if we are no longer monitoring this file at all,
+				// we need to close it.  We do that by saving its state
+				// into a ReadUserLog::FileState object (so we can go back
+				// to the right place if we later monitor it again) and
+				// then deleting the ReadUserLog object.
+			dprintf( D_LOG_FILES, "Closing file <%s>\n", logfile.Value() );
+
+			if ( !monitor->state ) {
+				monitor->state = new ReadUserLog::FileState();
+				//TEMP -- check return value
+				ReadUserLog::InitFileState( *(monitor->state) );
+			}
+
+			if ( !monitor->readUserLog->GetFileState( *(monitor->state) ) ) {
 				errstack.pushf( "ReadMultipleUserLogs", 0/*TEMP*/,
-							"Error closing log file %s", logfile.Value() );
+							"Error getting state for log file %s",
+							logfile.Value() );
 				return false;//TEMP?
 			}
-#endif //TEMP
 
+			delete monitor->readUserLog;
+			monitor->readUserLog = NULL;
+
+
+				// Now we remove this file from the "active" list, so
+				// we don't check it the next time we get an event.
 			if ( activeLogFiles.remove( logfile ) != 0 ) {
 				errstack.pushf( "ReadMultipleUserLogs", 0/*TEMP*/,
 							"Error removing %s from activeLogFiles",

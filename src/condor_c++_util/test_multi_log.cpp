@@ -686,7 +686,7 @@ ReadEventsLazy()
 		isOkay = false;
 	}
 
-	if ( !ReadAndTestEvent(lazyReader, NULL) ) {
+	if ( !ReadAndTestEvent( lazyReader, NULL ) ) {
 		isOkay = false;
 	}
 
@@ -862,6 +862,9 @@ ReadEventsLazy()
 	if ( !ReadAndTestEvent(lazyReader, &execE) ) {
 		isOkay = false;
 	}
+	if ( !ReadAndTestEvent(lazyReader, NULL) ) {
+		isOkay = false;
+	}
 
 	GenericEvent	genE;
 	strcpy(genE.info, "job type: transfer");
@@ -1024,7 +1027,7 @@ ReadAndTestEvent(ReadMultipleUserLogs &reader, ULogEvent *expectedEvent)
 {
 	bool	isOkay = true;
 
-	ULogEvent	*event;
+	ULogEvent	*event = NULL;
 	if ( reader.readEvent(event) != ULOG_OK ) {
 		if ( expectedEvent ) {
 			printf("Error reading event");
@@ -1060,8 +1063,13 @@ ReadAndTestEvent(ReadMultipleUserLogs &reader, ULogEvent *expectedEvent)
 	if ( !isOkay ) {
 		printf("  Expecting ");
 		PrintEvent(expectedEvent);
+		printf("; got ");
+		PrintEvent(event);
+		printf("\n");
 		fflush(stdout);
 	}
+
+	delete event;
 
 	return isOkay;
 }
@@ -1070,7 +1078,7 @@ void
 PrintEvent(ULogEvent *event)
 {
 	if ( event ) {
-		printf("Event: %d.%d.%d: %s\n", event->cluster, event->proc,
+		printf("Event: %d.%d.%d: %s", event->cluster, event->proc,
 				event->subproc,ULogEventNumberNames[event->eventNumber]);
 		fflush(stdout);
 	} else {

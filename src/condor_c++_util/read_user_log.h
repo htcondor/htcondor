@@ -296,7 +296,7 @@ class ReadUserLog
 		  read( fd, statebuf.buf, statebuf.size );
 
 		  ReadUserLog  				reader;
-		  status = userlog.initialize( statebuf );
+		  status = reader.initialize( statebuf );
 
 		  status = UninitFileState( statebuf );
 		  ....

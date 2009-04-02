@@ -273,21 +273,29 @@ private:
 	int				iLogFileCount;
 	LogFileEntry *	pLogFileEntries;
 
-		// Note: this table has one entry per log file, not one per
-		// Condor ID.
+		// Holds CondorID->log mappings to check for duplicate logs.
+		// Note: we only map the first CondorID we see for a log, so
+		// there is only one entry per log.
 	HashTable<CondorID, LogFileEntry *>	logHash;
 
 #if LAZY_LOG_FILES
 	struct LogFileMonitor {
-		LogFileMonitor() : refCount(0), lastLogEvent(NULL),
-					lastOffset(0) {
-			readUserLog = new ReadUserLog();
-		}
+		LogFileMonitor() : refCount(0), readUserLog(NULL), lastLogEvent(NULL),
+					state(NULL) {}
 
+			// Reference count -- how many net calls to monitor this log?
 		int			refCount;
+
+			// The actual log reader object -- may be null
 		ReadUserLog	*readUserLog;
+
+			// The last event we read from this log.
 		ULogEvent	*lastLogEvent;
-		long		lastOffset;//TEMP -- not needed?
+
+			// Log reader state -- used to pick up where we left off if
+			// we close and re-open the same log file.
+		ReadUserLog::FileState	*state;
+
 		// more stuff here?
 	};
 
@@ -315,12 +323,16 @@ private:
 	static bool LogGrew(LogFileEntry &log);
 
 #if LAZY_LOG_FILES
-		//TEMP -- document better
 		/** Returns true iff the given log grew since the last time
 		    we called this method on it.
+		    @param The LogFileMonitor object to test.
+			@param The filename this corresponds to (for error messages
+				only).
+		    @return True iff the log grew.
+
 		 */
 	static bool LogGrew( LogFileMonitor *monitor, const MyString &logfile );
-#endif
+#endif // LAZY_LOG_FILES
 
 		/**
 		 * Read an event from a log, including checking whether this log
@@ -336,7 +348,7 @@ private:
 		//TEMP -- document
 	ULogEventOutcome readEventFromLog( LogFileMonitor *monitor,
 				const MyString &logfile );
-#endif
+#endif // LAZY_LOG_FILES
 
 		/**
 		 * Determine whether a log object exists that is a logical duplicate
@@ -352,10 +364,5 @@ private:
 	bool DuplicateLogExists(ULogEvent *event, LogFileEntry *log);
 
 };
-
-	/** Returns true when any of the log files are
-	  determined to be on an NFS volume or it is indeterminable,
-	  and USER_LOGS_ON_NFS_IS_ERROR is true.
-	 */
 
 #endif
