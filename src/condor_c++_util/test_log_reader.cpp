@@ -53,6 +53,7 @@ struct Options
 	bool			isEventLog;
 	int				maxExec;
 	bool			exit;
+	int				stop;
 	int				sleep;
 	int				term;
 	Verbosity		verbosity;
@@ -101,7 +102,7 @@ main(int argc, const char **argv)
 	}
 
 	if ( opts.verbosity >= VERB_INFO ) {
-		printf( "Read %d events\n", events );
+		printf( "Total of %d events read\n", events );
 	}
 
 	if ( result != 0 && opts.verbosity >= VERB_ERROR ) {
@@ -131,8 +132,10 @@ CheckArgs(int argc, const char **argv, Options &opts)
 		"  --init-only: exit after initialization\n"
 		"  --rotation|-r <n>: enable rotation handling, set max #\n"
 		"  --no-rotation: disable rotation handling\n"
+		"  --no-sleep: No sleep between events\n"
 		"  --sleep <number>: how many seconds to sleep between events\n"
-		"  --exit|-x: Exit when no event available\n"
+		"  --stop: Send myself a SIGSTOP when no events available\n"
+		"  --exit|-x: Exit when no events available\n"
 		"  --eventlog|-e: Setup to read the EventLog\n"
 		"  --ro: Read-only access to log file (disables locking)\n"
 		"  --no-term: No limit on terminte events\n"
@@ -153,6 +156,7 @@ CheckArgs(int argc, const char **argv, Options &opts)
 	opts.isEventLog = false;
 	opts.exit = false;
 	opts.sleep = 5;
+	opts.stop = 0;
 	opts.term = 1;
 	opts.verbosity = VERB_ERROR;
 	opts.rotation = false;
@@ -225,6 +229,9 @@ CheckArgs(int argc, const char **argv, Options &opts)
 		} else if ( arg.Match( 'x', "exit") ) {
 			opts.exit = true;
 
+		} else if ( arg.Match("stop") ) {
+			opts.stop++;
+
 		} else if ( arg.Match( 'r', "rotation") ) {
 			if ( arg.getOpt( opts.maxRotations ) ) {
 				opts.rotation = opts.maxRotations > 0;
@@ -241,6 +248,9 @@ CheckArgs(int argc, const char **argv, Options &opts)
 				printf("%s", usage);
 				status = STATUS_ERROR;
 			}
+
+		} else if ( arg.Match("no-sleep") ) {
+			opts.sleep = 0;
 
 		} else if ( arg.Match("no-term") ) {
 			opts.term = -1;
@@ -329,12 +339,13 @@ CheckArgs(int argc, const char **argv, Options &opts)
 }
 
 int
-ReadEvents(Options &opts, int &numEvents)
+ReadEvents(Options &opts, int &totalEvents)
 {
 	int		result = 0;
+	int		numEvents = 0;
 
 	// No events yet!
-	numEvents = 0;
+	totalEvents = 0;
 
 	// Create & initialize the state
 	ReadUserLog::FileState	state;
@@ -461,6 +472,7 @@ ReadEvents(Options &opts, int &numEvents)
 			prevSubproc = event->subproc;
 
 			numEvents++;
+			totalEvents++;
 			switch ( event->eventNumber ) {
 			case ULOG_SUBMIT:
 				if ( opts.verbosity >= VERB_ALL ) {
@@ -531,7 +543,19 @@ ReadEvents(Options &opts, int &numEvents)
 			}
 
 		} else if ( outcome == ULOG_NO_EVENT ) {
-			if ( opts.exit ) {
+			if ( opts.stop > 0 ) {
+				if ( opts.verbosity >= VERB_INFO ) {
+					printf( "Read %d events\n", numEvents );
+				}
+				printf( "\n*** Sending SIGSTOP to myself (PID %d) ***\n",
+						getpid() );
+				fflush( stdout );
+				kill( getpid(), SIGSTOP );
+				opts.stop--;
+				numEvents = 0;
+				printf( "\n*** Continued after stop ***\n");
+			}
+			else if ( opts.exit ) {
 				done = true;
 			}
 			else {
@@ -540,7 +564,7 @@ ReadEvents(Options &opts, int &numEvents)
 			missedLast = false;
 
 		} else if ( outcome == ULOG_MISSED_EVENT ) {
-			printf( "\n*** Missed event ***\n" );
+			printf( "\n*** Missed event(s) ***\n" );
 			missedLast = true;
 
 		} else if ( outcome == ULOG_RD_ERROR || outcome == ULOG_UNK_ERROR ) {
@@ -579,6 +603,11 @@ ReadEvents(Options &opts, int &numEvents)
 	}
 
 	ReadUserLog::UninitFileState( state );
+
+	if ( opts.verbosity >= VERB_INFO ) {
+		printf( "Read %d events\n", numEvents );
+	}
+
 	return result;
 }
 

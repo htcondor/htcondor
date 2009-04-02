@@ -745,6 +745,18 @@ TESTCLASS(lib_eventlog_rotation-reader_20_rotations_20_loops,core)
 TESTCLASS(lib_eventlog_rotation-reader_20_rotations_20_loops,quick)
 TESTCLASS(lib_eventlog_rotation-reader_20_rotations_20_loops,full)
 
+DESC(lib_eventlog_rotation-reader_missed_1,"Event Log Rotation: reader, missed events #1")
+RUN(lib_eventlog_rotation-reader_missed_1)
+TESTCLASS(lib_eventlog_rotation-reader_missed_1,core)
+TESTCLASS(lib_eventlog_rotation-reader_missed_1,quick)
+TESTCLASS(lib_eventlog_rotation-reader_missed_1,full)
+
+DESC(lib_eventlog_rotation-reader_missed_2,"Event Log Rotation: reader, missed events #2")
+RUN(lib_eventlog_rotation-reader_missed_2)
+TESTCLASS(lib_eventlog_rotation-reader_missed_2,core)
+TESTCLASS(lib_eventlog_rotation-reader_missed_2,quick)
+TESTCLASS(lib_eventlog_rotation-reader_missed_2,full)
+
 
 /* Lease Manager tests */
 DESC(lib_lease_manager-simple,"Lease manager: Simple test")
