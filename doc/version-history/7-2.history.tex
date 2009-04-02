@@ -40,6 +40,18 @@ The details of each version are described below.
 \item Added the \Opt{-DumpRescue} command-line flag to \Condor{dagman}
 and \Condor{submit\_dag}.  This flag is intended mainly for testing.
 
+\item Added support for the \Opt{-debug} option to \Condor{qedit}.
+
+\item The JobRouter now uses a timeslice timer for periodic expression
+  evaluation similar to the \Condor{schedd}.  The evaluation interval
+  is controlled by the \MacroNI{PERIODIC\_EXPR\_INTERVAL} and defaults
+  to 60 seconds, just like the schedd.
+
+\item Job Router now resets the source job if a failure occurs when
+  updating the \Condor{schedd} for a periodic expression that
+  evaluated to true.  The job's periodic expressions should be
+  evaluated again sometime in the future with a successful update.
+
 \end{itemize}
 
 \noindent Configuration Variable Additions and Changes:
@@ -71,15 +83,71 @@ and \Condor{submit\_dag}.  This flag is intended mainly for testing.
   this hard coded behavior should be considered obsolete behavior, and
   will be removed in a future version of Condor.
 
+\item The \MacroNI{PREEMPTION\_REQUIREMENTS} and the \MacroNI{RANK}
+  expression in the matchmaker can now reference many more ClassAd
+  attributes than just \Attr{SubmittorPrio}.  New attributes allow
+  this expression to take into account resources currently in use, as
+  well as group usage and quota info.  New attributes are:
+  \MacroNI{SubmitterUserResourcesInUse},
+  \MacroNI{RemoteUserResourcesInUse},
+  \MacroNI{RemoteGroupResourcesInUse}, \MacroNI{RemoteGroupQuota},
+  \MacroNI{SubmitterGroupResourcesInUse},
+  \MacroNI{SubmitterGroupQuota}.
+
+\item Added \MacroNI{JOB\_ROUTER\_ATTRS\_TO\_COPY} configuration
+  option. This is a comma separated list of attributes that the Job
+  Router should copy from the routed ad to the source ad in addition
+  to internally hardcoded attributes that are copied.
+
+\item Added \MacroNI{JOB\_ROUTER\_RELEASE\_ON\_HOLD}. configuration
+  option that will control whether the Job Router will reset the
+  source job to an untouched state if it needs to yield the job
+  because the routed job went on hold.  The option defaults to
+  resetting the source job.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
 
+\item Fixed a bug where if any idle slot satisfied the
+  \MacroNI{HIBERNATE} expression, Condor would put the machine into a
+  sleep state irespective of any active slots.
+
+\item Fixed a bug on Windows that made it impossible to use \Verb@S5@
+  (Shutdown) for hibernation.
+
+\item Fixed a bug in the \Condor{starter} where it would be running as
+  real uid condor after job hooks are invoked which causes issues when
+  accessing files.
+
+\item Fixed a bug where some machines would send a final update ad to
+  the \Condor{collector}, invalidating the persistent one that was
+  previously sent (when \MacroNI{HIBERNATE} evaluates to \Expr{True}).
+  This had the effect of dropping the machine out of the pool once the
+  ad had grown stale.
+
+\item Fixed a bug where any two Condor daemons on Windows were able to
+  bind to the same port at the same time.
+
+\item If \Condor{q} fails to connect to a \Condor{schedd} it now
+  returns an error.
+
+\item Fixed the behavior of the \Condor{negotiator} so that when a
+  Condor-G matchmaking ad matches, the machine's ad will be shuffled
+  to the end for round-robin matching to multiple gatekeepers with the
+  same rank.
+
+\item Resolved bug where \SubmitCmd{vm_macaddr} was improperly parsed,
+  and thus ignored, by \Condor{submit} for jobs in the VM Universe.
+
+\item Condor's Windows zip file distribution now includes the new
+  C/C++ runtime libraries.
+
 \item Fixed a Windows platform bug for jobs that enable streaming I/O.
-  The bug caused the \Condor{starter} to crash upon
-  invocation of the job.
+  The bug caused the \Condor{starter} to crash upon invocation of the
+  job.
 
 \item Fixed a bug in which an ill-formed network packet could crash a
 Condor daemon.  This would not be seen in normal Condor operation, but
