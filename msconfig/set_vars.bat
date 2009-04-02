@@ -61,11 +61,11 @@ REM Specify which versions of the externals we're using. To add a
 REM new external, just add its version here, and add that to the 
 REM EXTERNALS_NEEDED variable defined below.
 set EXT_GSOAP_VERSION=gsoap-2.7.10-p3
-set EXT_OPENSSL_VERSION=openssl-0.9.8
+set EXT_OPENSSL_VERSION=openssl-0.9.8h
 set EXT_POSTGRESQL_VERSION=postgresql-8.0.2
 set EXT_KERBEROS_VERSION=krb5-1.4.3-p0
 set EXT_PCRE_VERSION=pcre-7.6
-set EXT_DRMAA_VERSION=drmaa-1.5.1
+set EXT_DRMAA_VERSION=drmaa-1.6
 
 REM Now tell the build system what externals we need built.
 set EXTERNALS_NEEDED=%EXT_GSOAP_VERSION% %EXT_OPENSSL_VERSION% %EXT_KERBEROS_VERSION% %EXT_PCRE_VERSION% %EXT_POSTGRESQL_VERSION% %EXT_DRMAA_VERSION%
