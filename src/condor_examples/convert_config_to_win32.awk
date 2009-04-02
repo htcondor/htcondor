@@ -94,6 +94,12 @@ BEGIN {
 	next
 }
 
+# Default to -Xmx1024m
+/^JAVA_MAXHEAP_ARGUMENT/ {
+	printf "%s= -Xmx1024m\n", $1
+	next
+}
+
 # Win32 has a path separator of ';', while on Unix it is ':'
 /^JAVA_CLASSPATH_SEPARATOR/ {
 	printf "%s= ;\n", $1
