@@ -236,9 +236,56 @@ my @tests =
 		 writer => {
 		 },
 		 reader => {
-			 persist		=> 1,
+			 persist				=> 1,
 		 },
      },
+
+     {
+		 name		=> "reader_missed_1",
+		 loops		=> 5,
+		 config		=> {
+			 "EVENT_LOG"				=> "EventLog",
+			 "EVENT_LOG_COUNT_EVENTS"	=> "TRUE",
+			 "EVENT_LOG_MAX_ROTATIONS"	=> 2,
+			 "EVENT_LOG_MAX_SIZE"		=> 10000,
+			 "ENABLE_USERLOG_LOCKING"	=> "FALSE",
+			 "ENABLE_USERLOG_FSYNC"		=> "FALSE",
+		 },
+		 auto						=> 1,
+		 writer => {
+		 },
+		 reader => {
+			 persist				=> 1,
+			 loops					=> {
+				 1 => {},
+				 5 => { "missed_ok" => 1, },
+			 },
+		 },
+     },
+
+     {
+		 name		=> "reader_missed_2",
+		 loops		=> 5,
+		 config		=> {
+			 "EVENT_LOG"				=> "EventLog",
+			 "EVENT_LOG_COUNT_EVENTS"	=> "TRUE",
+			 "EVENT_LOG_MAX_ROTATIONS"	=> 2,
+			 "EVENT_LOG_MAX_SIZE"		=> 10000,
+			 "ENABLE_USERLOG_LOCKING"	=> "FALSE",
+			 "ENABLE_USERLOG_FSYNC"		=> "FALSE",
+		 },
+		 auto						=> 1,
+		 writer => {
+		 },
+		 reader => {
+			 persist				=> 1,
+			 loops					=> {
+				 1 => { "stop" => 1, },
+				 5 => { "continue" => 1, "missed_ok" => 1 },
+			 },
+		 },
+     },
+
 	 );
 
 sub usage( )
@@ -264,7 +311,7 @@ sub usage( )
 }
 
 sub RunWriter( $$$$$$ );
-sub RunReader( $$$ );
+sub RunReader( $$$$$ );
 sub ReadEventlogs( $$$ );
 sub ProcessEventlogs( $$ );
 sub CheckWriterOutput( $$$$ );
@@ -618,6 +665,7 @@ push( @writer_args, $test->{writer}{file} );
 # Generate the reader command line
 my @reader_args;
 if ( exists $test->{reader} ) {
+	$settings{run_reader} = 1;
     push( @reader_args, $programs{reader} );
     foreach my $t ( keys(%{$test->{reader}}) ) {
 		if ( $t =~ /^-/ ) {
@@ -642,6 +690,9 @@ if ( exists $test->{reader} ) {
 		push( @reader_args, "--persist" );
 		push( @reader_args, "$dir/reader.state" );
     }
+}
+else {
+	$settings{run_reader} = 0;
 }
 
 
@@ -668,6 +719,9 @@ my %totals = ( sequence => 0,
 
 			   writer_events => 0,
 			   writer_sequence => 0,
+
+			   reader_events => 0,
+			   missed_events => 0,
 			   );
 
 # Actual from previous loop
@@ -676,6 +730,7 @@ foreach my $k ( keys(%totals) ) {
     $previous{$k} = 0;
 }
 
+my %reader_state;
 foreach my $loop ( 1 .. $test->{loops} )
 {
 	my $errors;	# Temp error count
@@ -724,7 +779,6 @@ foreach my $loop ( 1 .. $test->{loops} )
     my %diff;
     foreach my $k ( keys(%previous) ) {
 		$diff{$k} = $new{$k} - $previous{$k};
-		$totals{$k} += $new{$k};
     }
     $errors = CheckWriterOutput( \@files, $loop, \%new, \%diff );
 	if ( $errors ) {
@@ -733,17 +787,32 @@ foreach my $loop ( 1 .. $test->{loops} )
 	}
 
     # Run the reader
-    $errors = RunReader( $loop, \%new, \$run );
-	if ( $errors ) {
-		print STDERR "errors detected in RunReader()\n";
-		$total_errors += $errors;
+	my $opts = { };
+	my $run_reader = $settings{run_reader};
+	if ( exists $test->{reader}{loops} ) {
+		if ( !exists $test->{reader}{loops}{$loop} ) {
+			print "Skipping reading on loop $loop\n";
+			$run_reader = 0;
+		}
+		$opts = $test->{reader}{loops}{$loop};
 	}
-    if ( $run ) {
-		$errors = CheckReaderOutput( \@files, $loop, \%new, \%diff );
+	if ( $run_reader ) {
+		$errors = RunReader( $loop, \%new, \$run, \%reader_state, $opts );
 		if ( $errors ) {
-			print STDERR "errors detected in CheckReaderOutput()\n";
+			print STDERR "errors detected in RunReader()\n";
 			$total_errors += $errors;
 		}
+		if ( $run ) {
+			$errors = CheckReaderOutput( \@files, $loop, \%new, \%diff );
+			if ( $errors ) {
+				print STDERR "errors detected in CheckReaderOutput()\n";
+				$total_errors += $errors;
+			}
+		}
+	}
+
+    foreach my $k ( keys(%previous) ) {
+		$totals{$k} += $new{$k};
     }
 
     if ( $total_errors  or  $settings{verbose}  or  $settings{debug} ) {
@@ -772,6 +841,19 @@ if ( $settings{execute} ) {
 				$totals{writer_events}, $expect{final_mins}{num_events} );
 		$total_errors++;
 	}
+	if ( $settings{run_reader} and
+		 ( !$totals{missed_events} ) and
+		 ( $totals{reader_events} < $totals{writer_events} )  ) {
+		printf( STDERR
+				"ERROR: final: read fewer events than writer wrote: %d < %d\n",
+				$totals{reader_events}, $totals{writer_events} );
+		$total_errors++;
+	}
+	if ( $settings{run_reader} ) {
+		printf( STDERR "final: reader read %d events, writer wrote %d\n",
+				$totals{reader_events}, $totals{writer_events} );
+	}
+
 	$totals{seq_files} = $totals{sequence} + 1;
 	if ( $totals{writer_sequence} < $expect{final_mins}{sequence} ) {
 		printf( STDERR
@@ -985,17 +1067,24 @@ sub RunWriter( $$$$$$ )
 # #######################################
 # Run the reader
 # #######################################
-sub RunReader( $$$ )
+sub RunReader( $$$$$ )
 {
     my $loop = shift;
     my $new = shift;
     my $run = shift;
+	my $state = shift;
+	my $opts = shift;
 
     my $errors = 0;
-    if ( scalar(@reader_args) == 0 ) {
-		$$run = 0;
-		return 0;
-    }
+
+	if ( exists $opts->{"continue"} ) {
+		if ( (!exists $state->{"pid"}) or ($state->{"pid"} == 0) ) {
+			die "Can't continue reader: no PID\n";
+		}
+		if ( !exists $state->{"pipe"} ) {
+			die "Can't continue reader: no pipe\n";
+		}
+	}
 
     my $cmd = "";
     my $vg_out = sprintf( "valgrind-reader-%02d.out", $loop );
@@ -1005,6 +1094,9 @@ sub RunReader( $$$ )
 		$cmd .= " --log-file=$vg_full ";
     }
     $cmd .= join(" ", @reader_args );
+	if ( exists $opts->{"stop"} ) {
+		$cmd .= " --stop";
+	}
     print "$cmd\n" if ( $settings{verbose} );
 
     if ( ! $settings{execute} ) {
@@ -1015,12 +1107,28 @@ sub RunReader( $$$ )
     $$run = 1;
     $new->{reader_files} = 0;
     $new->{reader_events} = 0;
+    $new->{missed_events} = 0;
     $new->{reader_sequence} = [ ];
 
     my $out = sprintf( "%s/reader-%02d.out", $dir, $loop );
     open( OUT, ">$out" );
-    open( READER, "$cmd 2>&1 |" ) or die "Can't run $cmd";
-    while( <READER> ) {
+	my $pipe;
+	my $pid;
+	if ( exists $opts->{"continue"} ) {
+		$pid  = $state->{"pid"};
+		$pipe = $state->{"pipe"};
+		print "Continuing reader PID $pid\n";
+		kill( 18, $state->{"pid"} ) or
+			die "Can't send CONTINUE to ".$state->{"pid"};
+	}
+	else {
+		$pid = open( $pipe, "$cmd 2>&1 |" );
+		if ( !$pid ) {
+			die "Can't run $cmd";
+		}
+	}
+	$state->{stopped} = 0;
+    while( <$pipe> ) {
 		print if ( $settings{verbose} > 1 );
 		print OUT;
 		chomp;
@@ -1031,26 +1139,48 @@ sub RunReader( $$$ )
 			push( @{$new->{reader_sequence}}, $1 );
 			$new->{reader_files}++;
 		}
-
+		elsif ( /SIGSTOP/ ) {
+			$state->{stopped} = 1;
+			last;
+		}
+		elsif ( /Missed event/ ) {
+			$new->{missed_events}++;
+			print "Missed event(s) detected\n" if ( $settings{verbose} );
+			if ( ! exists $opts->{missed_ok} ) {
+				printf "ERROR: unexpected missed event(s)\n";
+				$errors++;
+			}
+		}
     }
-    close( READER );
     close( OUT );
+	if ( $state->{stopped} ) {
+		if ( ! exists $opts->{"stop"} ) {
+			kill( 9, $pid );
+			die "Reader processed $pid stopped unexpectedly; killed";
+		}
+		print "reader process stopped\n";
+		$state->{"pid"}  = $pid;
+		$state->{"pipe"} = $pipe;
+	}
+	else {
+		close( $pipe );
 
-    if ( $? & 127 ) {
-		printf "ERROR: reader exited from signal %d\n", ($? & 127);
-		$errors++;
-    }
-    if ( $? & 128 ) {
-		print "ERROR: reader dumped core\n";
-		$errors++;
-    }
-    if ( $? >> 8 ) {
-		printf "ERROR: reader exited with status %d\n", ($? >> 8);
-		$errors++;
-    }
-    if ( ! $errors and $settings{verbose}) {
-		print "reader process exited normally\n";
-    }
+		if ( $? & 127 ) {
+			printf "ERROR: reader exited from signal %d\n", ($? & 127);
+			$errors++;
+		}
+		if ( $? & 128 ) {
+			print "ERROR: reader dumped core\n";
+			$errors++;
+		}
+		if ( $? >> 8 ) {
+			printf "ERROR: reader exited with status %d\n", ($? >> 8);
+			$errors++;
+		}
+		if ( ! $errors and $settings{verbose}) {
+			print "reader process exited normally\n";
+		}
+	}
 
     if ( -f "$dir/reader.state" ) {
 		my $state = sprintf( "%s/reader.state", $dir );
