@@ -451,6 +451,8 @@ handle_soap_ssl_socket(Service *, Stream *stream)
 #endif
 }
 
+#define FILEEXT_BUF_SIZE 64
+
 static char *file_ext(const char *filename) {
   static const char *err;
   static int erroffset;
@@ -460,37 +462,38 @@ static char *file_ext(const char *filename) {
     pat = pcre_compile(".*\\.(\\w+)$", 0, &err, &erroffset, NULL);
   }
 
-  char ext[64];
+  char ext[FILEEXT_BUF_SIZE];
   int offsets[6];
   int result;
   
+  memset(ext, 0, sizeof(char) * FILEEXT_BUF_SIZE);
+  
   result = pcre_exec(pat, NULL, filename, strlen(filename), 0, 0, offsets, 6);
   
-  if (result != 2) {
+  if (result != 2 || pcre_copy_substring(filename, offsets, 2, 1, ext, FILEEXT_BUF_SIZE) <= 0) {
     return strdup("");
   }
-
-  pcre_copy_substring(filename, offsets, 2, 1, ext, 64);
+  
   return strdup(ext);
 }
 
 int serve_file(struct soap *soap, const char *name, const char *type) { 
-  FILE *fd;
+  FILE *fstr;
   size_t r;
 
   char bbb[4096];
   
   char * web_root_dir = param("WEB_ROOT_DIR");
-  char * web_root_realname;
+  char * web_root_realpath;
 
   if (!web_root_dir) {
     return 404;
   } 
   
-  web_root_realname = realpath(web_root_dir, NULL);
+  web_root_realpath = realpath(web_root_dir, NULL);
   free(web_root_dir);
   
-  char * full_name = dircat(web_root_realname,name);
+  char * full_name = dircat(web_root_realpath,name);
   char * full_name_realpath = realpath(full_name, NULL);
 
   delete [] full_name;
@@ -501,24 +504,33 @@ int serve_file(struct soap *soap, const char *name, const char *type) {
 
   /* Ensure that the requested resource is contained
      within the web root and that the requested 
-     resource is not a directory */
-  if (strstr(full_name_realpath, web_root_realname) != full_name_realpath
+     resource is not a directory.
+
+     The calls to realpath (above) resolve any 
+     symbolic links and relative pathname components 
+     in web_root_realpath and full_name_realpath.
+
+     The strstr call ensures that the canonicalized 
+     web root path appears at the beginning of the 
+     canonical path for the requested file.
+  */
+  if (strstr(full_name_realpath, web_root_realpath) != full_name_realpath
       || IsDirectory(full_name_realpath)) {
     /* NB:  it might be nice to support an option 
        to redirect to an index file or a dynamically-
        generated index if the requested resource 
        is a directory */
     free(full_name_realpath);
-    free(web_root_realname);
+    free(web_root_realpath);
     return 403;
   }
 
-  fd = safe_fopen_wrapper(full_name_realpath, "rb");
+  fstr = safe_fopen_wrapper(full_name_realpath, "rb");
 
   free(full_name_realpath);
-  free(web_root_realname);
+  free(web_root_realpath);
 
-  if (!fd) {
+  if (!fstr) {
     return 404;
   }
 
@@ -528,16 +540,24 @@ int serve_file(struct soap *soap, const char *name, const char *type) {
     return soap->error;
   }
 
-  while ((r = fread(bbb, 1, sizeof(bbb), fd))) {
+  while ((r = fread(bbb, 1, sizeof(bbb), fstr))) {
     if (soap_send_raw(soap, bbb, r) != SOAP_OK) {
       if (soap_end_send(soap) != SOAP_OK) {
-	fclose(fd);
+	fclose(fstr);
 	return soap->error;
       }
     }
   }
 
-  fclose(fd);
+  /* Did we break out of the above loop because 
+     of an error reading from fd? */
+  if (ferror(fstr)) {
+    fclose(fstr);
+    soap->error = SOAP_HTTP_ERROR;
+    return 500;
+  }
+
+  fclose(fstr);
 
   if (soap_end_send(soap) != SOAP_OK) {
     return soap->error;
