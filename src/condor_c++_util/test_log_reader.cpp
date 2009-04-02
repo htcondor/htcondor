@@ -429,19 +429,6 @@ ReadEvents(Options &opts, int &numEvents)
 						timestr(event->eventTime) );
 			}
 
-			// Store off the persisted state
-			if ( opts.writePersist && reader.GetFileState( state ) ) {
-				int	fd = safe_open_wrapper( opts.persistFile,
-											O_WRONLY|O_CREAT,
-											S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP );
-				if ( fd >= 0 ) {
-					if ( write( fd, state.buf, state.size ) != state.size ) {
-						fprintf( stderr, "Failed writing persistent file\n" );
-					}
-					close( fd );
-				}
-			}
-
 			if (opts.missedCheck ) {
 				bool isPrevCluster = ( prevCluster == event->cluster );
 				bool isPrevProc = (  ( prevProc   == event->proc )  ||
@@ -459,6 +446,30 @@ ReadEvents(Options &opts, int &numEvents)
 			prevCluster = event->cluster;
 			prevProc = event->proc;
 			prevSubproc = event->subproc;
+
+			if ( missedLast ) {
+				ReadUserLogStateAccess		paccess( state );
+				ReadUserLog::FileState		nstate;
+				ReadUserLog::InitFileState( nstate );
+				ReadUserLogStateAccess		naccess( nstate );
+
+				long						diff_pos, diff_enum;
+				char						puniq[256], nuniq[256];
+				int							pseq, nseq;
+
+				paccess.LogPositionDiff( paccess, diff_pos );
+				paccess.EventNumberDiff( paccess, diff_enum );
+				paccess.UniqId( puniq, sizeof(puniq) );
+				paccess.SequenceNumber( pseq );
+				naccess.UniqId( nuniq, sizeof(nuniq) );
+				paccess.SequenceNumber( nseq );
+				printf( "Missed: %ld bytes, %ld events\n"
+						"  Previous Uniq=%s, seq=%d\n"
+						"  Current  Uniq=%s, seq=%d\n",
+						diff_pos, diff_enum,
+						puniq, pseq,
+						nuniq, nseq );
+			}
 
 			numEvents++;
 			switch ( event->eventNumber ) {
@@ -530,6 +541,19 @@ ReadEvents(Options &opts, int &numEvents)
 
 			}
 
+			// Store off the persisted state
+			if ( opts.writePersist && reader.GetFileState( state ) ) {
+				int	fd = safe_open_wrapper( opts.persistFile,
+											O_WRONLY|O_CREAT,
+											S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP );
+				if ( fd >= 0 ) {
+					if ( write( fd, state.buf, state.size ) != state.size ) {
+						fprintf( stderr, "Failed writing persistent file\n" );
+					}
+					close( fd );
+				}
+			}
+
 		} else if ( outcome == ULOG_NO_EVENT ) {
 			if ( opts.exit ) {
 				done = true;
@@ -593,3 +617,9 @@ const char *timestr( struct tm &t )
 	return tbuf;
 }
 
+/*
+### Local Variables: ***
+### mode:c++ ***
+### tab-width:4 ***
+### End: ***
+*/
