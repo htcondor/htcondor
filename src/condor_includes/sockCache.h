@@ -70,12 +70,10 @@ public:
 
 private:
 
-	enum { MAX_ADDR_LEN = 31 };
-
 	struct sockEntry
 	{
 		bool		valid;
-		char 		addr[MAX_ADDR_LEN+1];
+		MyString	addr;
 		ReliSock	*sock;
 		int			timeStamp;
 	};

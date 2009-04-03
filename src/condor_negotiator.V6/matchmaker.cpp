@@ -1174,7 +1174,7 @@ negotiateWithGroup ( int untrimmed_num_startds, ClassAdList& startdAds,
 {
 	ClassAd		*schedd;
 	char		scheddName[80];
-	char		scheddAddr[32];
+	MyString	scheddAddr;
 	int			result;
 	int			numStartdAds;
 	double		maxPrioValue;
@@ -1279,7 +1279,7 @@ negotiateWithGroup ( int untrimmed_num_startds, ClassAdList& startdAds,
 
 			if (( num_idle_jobs > 0 ) && (totalTime < MaxTimePerSubmitter) ) {
 				dprintf(D_ALWAYS,"  Negotiating with %s at %s\n",
-					 scheddName, scheddAddr);
+                        scheddName, scheddAddr.Value());
 				 dprintf(D_ALWAYS, "%d seconds so far\n", totalTime);
 			}
 
@@ -1444,7 +1444,7 @@ negotiateWithGroup ( int untrimmed_num_startds, ClassAdList& startdAds,
 				case MM_ERROR:
 				default:
 					dprintf(D_ALWAYS,"  Error: Ignoring schedd for this cycle\n" );
-					sockCache->invalidateSock( scheddAddr );
+					sockCache->invalidateSock( scheddAddr.Value() );
 					scheddAds.Delete( schedd );
 			}
 		}
