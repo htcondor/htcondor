@@ -244,6 +244,10 @@ page at section~ \ref{man-condor-dagman}.
 \item Fixed a case in which \Condor{history} could get into an infinite
 loop when searching through a corrupted history file.
 
+% gittrac #355
+\item Fixed a bug in the user log reader code that could cause it to
+  get into an inconsistent state after detecting missed events.
+
 \end{itemize}
 
 \noindent Known Bugs:
