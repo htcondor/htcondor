@@ -2121,10 +2121,21 @@ JobRoute::AdjustFailureThrottles() {
 		new_throttle = THROTTLE_UPDATE_INTERVAL * m_failure_rate_threshold / failure_ratio;
 	}
 	else {
-		if (m_recent_jobs_succeeded) {
+        // heuristic for accelerating:
+        //   - if all jobs are succeeding, accel by x5
+        //   - if half are succeeding and half failing, accel x2.5
+        //   - if no failures or successes, accel x2.0
+        //   - if all jobs are failing, do not change
+        float accel = (3.0*m_recent_jobs_succeeded - 2.0*m_recent_jobs_failed);
+        if( accel > 0 ) {
+            accel /= (m_recent_jobs_succeeded + m_recent_jobs_failed);
+        }
+        accel += 2.0;
+		if( accel > 1.0 ) {
 				//Accelerate.
-			new_throttle *= 5;
+			new_throttle *= accel;
 		}
+
 		if( new_throttle > THROTTLE_UPDATE_INTERVAL * m_failure_rate_threshold * 10000 ) {
 				//Things seem to be going fine.  Remove throttle.
 			new_throttle = 0;

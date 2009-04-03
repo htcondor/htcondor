@@ -67,6 +67,9 @@ qw (
     reader_20_rotations
     reader_20_rotations_2_loops
     reader_20_rotations_20_loops
+
+    reader_missed_1
+    reader_missed_2
 );
 
 my $format = "lib_eventlog_rotation-%s.run";

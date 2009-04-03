@@ -1065,6 +1065,8 @@ sub writeCommonInfo
         print $fh "configure = $opt_configure\n";
     }
 
+    print $fh "+load_profile = true\n";
+
     print $fh "platforms = " . join(', ', @platforms) . "\n";
 }
 
