@@ -431,6 +431,7 @@ int UnicoreJob::doEvaluateState()
 						// responsibility for free()ing it.
 					SetRemoteJobId( job_contact );
 					free( job_contact );
+					WriteGridSubmitEventToUserLog( jobAd );
 					gmState = GM_SUBMIT_SAVE;
 				} else {
 					// unhandled error

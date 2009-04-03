@@ -372,6 +372,7 @@ int INFNBatchJob::doEvaluateState()
 					if(jobProxy) {
 						remoteProxyExpireTime = jobProxy->expiration_time;
 					}
+					WriteGridSubmitEventToUserLog( jobAd );
 					gmState = GM_SUBMIT_SAVE;
 				} else {
 					// unhandled error
