@@ -67,7 +67,7 @@ SocketCache::resize( int newSize )
 			new_cache[i].valid = true;
 			new_cache[i].sock = sockCache[i].sock;
 			new_cache[i].timeStamp = sockCache[i].timeStamp;
-			strcpy( new_cache[i].addr, sockCache[i].addr );
+			new_cache[i].addr = sockCache[i].addr;
 		} else {
 			initEntry( &(new_cache[i]) );
 		}
@@ -91,7 +91,7 @@ void
 SocketCache::invalidateSock( const char* addr )
 {
 	for( int i = 0; i < cacheSize; i++ ) {
-		if( sockCache[i].valid && strcmp(addr,sockCache[i].addr) == 0 ) {
+		if( sockCache[i].valid && addr == sockCache[i].addr ) {
 			invalidateEntry(i);
 		}
 	}
@@ -102,7 +102,7 @@ ReliSock*
 SocketCache::findReliSock( const char *addr )
 {
     for( int i = 0; i < cacheSize; i++ ) {
-        if( sockCache[i].valid && strcmp(addr,sockCache[i].addr) == 0 ) {
+        if( sockCache[i].valid && addr == sockCache[i].addr ) {
 			return sockCache[i].sock;
 		}
 	}
@@ -113,15 +113,11 @@ SocketCache::findReliSock( const char *addr )
 void
 SocketCache::addReliSock( const char* addr, ReliSock* rsock )
 {
-	if(strlen(addr) > MAX_ADDR_LEN) {
-		dprintf (D_ALWAYS, "SocketCache::addReliSock: Internal error: Socket name \"%s\" is longer than %d and cannot be cached.  Please report this to the Condor developers.\n", addr, MAX_ADDR_LEN);
-		return;
-	}
 	int slot = getCacheSlot();
 	sockCache[slot].valid 		= true;
 	sockCache[slot].timeStamp 	= timeStamp;
 	sockCache[slot].sock 		= rsock;	
-	strcpy(sockCache[slot].addr, addr);
+	sockCache[slot].addr = addr;
 }
 
 
@@ -172,7 +168,7 @@ SocketCache::getCacheSlot()
 
 	// evict the oldest
 	dprintf (D_FULLDEBUG, "SocketCache:  Evicting old connection to %s\n", 
-				sockCache[oldest].addr);
+			 sockCache[oldest].addr.Value());
 	invalidateEntry( oldest );
 	return oldest;
 }
@@ -193,7 +189,7 @@ void
 SocketCache::initEntry( sockEntry* entry )
 {
 	entry->valid = false;
-	entry->addr[0] = '\0';
+	entry->addr = "";
 	entry->timeStamp = 0;
 	entry->sock = NULL;
 }
