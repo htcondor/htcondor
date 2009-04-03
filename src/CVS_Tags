@@ -18,6 +18,9 @@
 
 11/05/2008 V7_2-branch
   Branch for 7.1.4 and 7.2 series, based from the master.
+04/02/2009 V7_2_2-branch
+  Branch for the 7.2.2 release; the branch is based on V7_2-branch.
+
 03/23/2009 V7_2-deb5-branch
   Branch used for the deb5 stduniv port, based from V7_2-branch.
 
