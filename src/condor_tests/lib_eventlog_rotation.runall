@@ -34,6 +34,11 @@ foreach my $n ( 0 .. $#ARGV )
     }
     elsif ( $arg eq "-v" or $arg eq "--verbose" ) {
 	$verbose++;
+	push( @ARGS, "-v" )
+    }
+    elsif ( $arg eq "-h" or $arg eq "--help" ) {
+	print "$usage\n";
+	exit( 0 );
     }
     elsif ( $arg =~ /^\/(.*)\/$/ ) {
 	$params{pat} = $1;
