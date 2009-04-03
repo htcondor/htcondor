@@ -46,6 +46,12 @@ below the configured threshold.
 \item Made JobRouter more efficient on startup by improving the way it
 reads the job queue log file.
 
+\item Added a accessor class to the user log reader API to allow the
+  application to query things about reader state, including the
+  difference in the event numbers and log position of 2 states.  This
+  can be used by the application to determine the number of events
+  missed when missed events are detected.
+
 \end{itemize}
 
 \noindent Configuration Variable Additions and Changes:
