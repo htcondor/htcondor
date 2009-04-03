@@ -449,6 +449,22 @@ collect (int command, Sock *sock, sockaddr_in *from, int &insert)
 
 bool CollectorEngine::ValidateClassAd(int command,ClassAd *clientAd,Sock *sock)
 {
+    // In Version 7.2 only, reject any ads that have extra info packed
+    // into the sinful string (e.g. CCB info), because 7.2 does not
+    // support that and will get all confused.
+    {
+        MyString my_address;
+        clientAd->LookupString( ATTR_MY_ADDRESS, my_address );
+        if( my_address.FindChar('?') >= 0 ) {
+            dprintf(D_ALWAYS,
+                    "REJECTION: ClassAd from %s advertises incompatible"
+                    " IP address (perhaps using CCB or other feature"
+                    " not supported by this version of Condor): %s=%s\n",
+                    (sock ? sock->get_sinful_peer() : "(NULL)"),
+                    ATTR_MY_ADDRESS, my_address.Value());
+            return false;
+        }
+    }
 
 	if( !m_collector_requirements ) {
 			// no need to do any of the following checks if the admin has
