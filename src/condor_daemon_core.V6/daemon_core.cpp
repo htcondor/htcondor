@@ -95,9 +95,7 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 #endif
 #include "directory.h"
 #include "../condor_io/condor_rw.h"
-#ifdef HAVE_EXT_GSOAP
-#  include "httpget.h"
-#endif
+
 #include "daemon_core_sock_adapter.h"
 #include "HashTable.h"
 #include "selector.h"
