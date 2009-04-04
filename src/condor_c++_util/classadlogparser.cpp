@@ -46,12 +46,14 @@ ptr = NULL;
 ClassAdLogParser::ClassAdLogParser()
 {
 	log_fp = NULL;
+	log_fd = -1;
 	nextOffset = 0;
 }
 
 ClassAdLogParser::~ClassAdLogParser()
 {
 	log_fp = NULL;
+	log_fd = -1;
 	nextOffset = 0;
 }
 
@@ -59,13 +61,13 @@ ClassAdLogParser::~ClassAdLogParser()
 int
 ClassAdLogParser::getFileDescriptor()
 {
-	return fileno(log_fp);
+	return log_fd;
 }
 
 void
 ClassAdLogParser::setFileDescriptor(int fd)
 {
-    log_fp = fdopen(fd,"r");
+	log_fd = fd;
 }
 
 FILE *
@@ -106,20 +108,42 @@ ClassAdLogParser::setNextOffset(long offset)
 }
 
 FileOpErrCode 
-ClassAdLogParser::openFile() {
-    // open a job_queue.log file
-    log_fp = safe_fopen_wrapper(job_queue_name, "r");
+ClassAdLogParser::openFile(bool ex) {
+	if (ex == false) { // Standard File I/O Operations
+			// open a job_queue.log file
 
-    if (log_fp == NULL) {
-        dprintf(D_ALWAYS, "[QUILL] Unable to open the job_queue.log file!\n");
-        return FILE_OPEN_ERROR;
-    }
+			// The job_queue.log has cr/nls at the end on windows
+			// so open in text mode only there
+#ifdef WIN32
+		log_fd = safe_open_wrapper(job_queue_name, O_RDONLY | O_TEXT);
+#else
+		log_fd = safe_open_wrapper(job_queue_name, O_RDONLY);
+#endif
+		
+		if (log_fd < 0) {
+			dprintf(D_ALWAYS, "[QUILL] Unable to open the job_queue.log file!\n");
+			return FILE_OPEN_ERROR;
+		}
+	}
+	else { // File Stream I/O Operations
+		// open a job_queue.log file
+		log_fp = safe_fopen_wrapper(job_queue_name, "r");
+
+		if (log_fp == NULL) {
+			dprintf(D_ALWAYS, "[QUILL] Unable to open the job_queue.log file!\n");
+			return FILE_OPEN_ERROR;
+		}
+	}
 	return FILE_OP_SUCCESS;
 }
 
 FileOpErrCode 
-ClassAdLogParser::closeFile() {
-	if (log_fp != NULL) {
+ClassAdLogParser::closeFile(bool ex) {
+	if (ex == false && log_fd != -1) {
+	  close(log_fd);
+	  log_fd = -1;
+	}
+	if (ex == true && log_fp != NULL) {
 	  fclose(log_fp);
 	  log_fp = NULL;
 	}
@@ -141,26 +165,47 @@ ClassAdLogParser::getJobQueueName()
 
 /*! read a classad log entry in the current offset of a job queue log file
  *
+ * \param ex determine if the file is through standard file I/O 
+ * 			 or stream file I/O (default is false, which means 
+ * 			 standard file I/O).
  * \return operation result status and command type
  */
 FileOpErrCode
-ClassAdLogParser::readLogEntry(int &op_type)
+ClassAdLogParser::readLogEntry(int &op_type, bool ex)
 {
 	int	rval;
 
-    // move to the current offset
-    if (fseek(log_fp, nextOffset, SEEK_SET) != 0) {
-        fclose(log_fp);
-        log_fp = NULL;
-        return FILE_READ_EOF;
-    }
+	if (ex == false) { // Standard File I/O Operations
+		// move to the current offset
+		if (lseek(log_fd, nextOffset, SEEK_SET) != nextOffset) {
+			close(log_fd);
+			log_fd = -1;
+			return FILE_READ_EOF;
+		}
 
-    rval = readHeader(log_fp, op_type);
-    if (rval < 0) {
-        fclose(log_fp);
-        log_fp = NULL;
-        return FILE_READ_EOF;
-    }
+		rval = readHeader(log_fd, op_type);
+		if (rval < 0) {
+		  close(log_fd);
+		  log_fd = -1;
+		  return FILE_READ_EOF;
+		}
+
+	}
+	else { // File Stream I/O Operations
+		// move to the current offset
+		if (fseek(log_fp, nextOffset, SEEK_SET) != nextOffset) {
+			fclose(log_fp);
+			log_fp = NULL;
+			return FILE_READ_EOF;
+		}
+
+		rval = readHeader(log_fp, op_type);
+		if (rval < 0) {
+		  fclose(log_fp);
+		  log_fp = NULL;
+		  return FILE_READ_EOF;
+		}
+	}
 
 		// initialize of current & last ClassAd Log Entry objects
 	lastCALogEntry.init(curCALogEntry.op_type);
@@ -172,29 +217,70 @@ ClassAdLogParser::readLogEntry(int &op_type)
 		// read a ClassAd Log Entry Body
 	switch(op_type) {
 	    case CondorLogOp_LogHistoricalSequenceNumber:
-            rval = readLogHistoricalSNBody(log_fp);
+			if(ex == false) {
+				rval = readLogHistoricalSNBody(log_fd);
+			}
+			else {
+				rval = readLogHistoricalSNBody(log_fp);
+			}
 			break;
 	    case CondorLogOp_NewClassAd:
-            rval = readNewClassAdBody(log_fp);
+			if (ex == false) {
+				rval = readNewClassAdBody(log_fd);
+			}
+			else {
+				rval = readNewClassAdBody(log_fp);
+			}
 			break;
 	    case CondorLogOp_DestroyClassAd:
-            rval = readDestroyClassAdBody(log_fp);
+			if (ex == false) {
+				rval = readDestroyClassAdBody(log_fd);
+			}
+			else {
+				rval = readDestroyClassAdBody(log_fp);
+			}
 			break;
 	    case CondorLogOp_SetAttribute:
-            rval = readSetAttributeBody(log_fp);
+			if (ex == false) {
+				rval = readSetAttributeBody(log_fd);
+			}
+			else {
+				rval = readSetAttributeBody(log_fp);
+			}
 			break;
 	    case CondorLogOp_DeleteAttribute:
-            rval = readDeleteAttributeBody(log_fp);
+			if (ex == false) {
+				rval = readDeleteAttributeBody(log_fd);
+			}
+			else {
+				rval = readDeleteAttributeBody(log_fp);
+			}
 			break;
 		case CondorLogOp_BeginTransaction:
-            rval = readBeginTransactionBody(log_fp);
+			if (ex == false) {
+				rval = readBeginTransactionBody(log_fd);
+			}
+			else {
+				rval = readBeginTransactionBody(log_fp);
+			}
 			break;
 		case CondorLogOp_EndTransaction:
-            rval = readEndTransactionBody(log_fp);
+			if (ex == false) {
+				rval = readEndTransactionBody(log_fd);
+			}
+			else {
+				rval = readEndTransactionBody(log_fp);
+			}
 			break;
 	    default:
-            fclose(log_fp);
-            log_fp = NULL;
+			if(ex == false) {
+				close(log_fd);
+				log_fd = -1;
+			}
+			else {
+				fclose(log_fp);
+				log_fp = NULL;
+			}
 		    return FILE_READ_ERROR;
 			break;
 	}
@@ -209,14 +295,20 @@ ClassAdLogParser::readLogEntry(int &op_type)
 			// (try to find a CloseTransaction log record)
 		
 		MyString	line;
-
+		FILE 	*fp;
+		if (ex == false) {
+			fp = fdopen(log_fd, "r" );
+		}
+		else {
+		  fp = log_fp;
+		}
 		int		op;
 
-		if( !log_fp ) {
+		if( !fp ) {
 			EXCEPT("Failed fdopen() when recovering corrupt log file");
 		}
 
-		while( line.readLine( log_fp ) ) {
+		while( line.readLine( fp ) ) {
 			if( sscanf( line.Value(), "%d ", &op ) != 1 ) {
 					// no op field in line; more bad log records...
 				continue;
@@ -228,9 +320,8 @@ ClassAdLogParser::readLogEntry(int &op_type)
 			}
 		}
 		
-		if( !feof( log_fp ) ) {
-			fclose(log_fp);
-            log_fp = NULL;
+		if( !feof( fp ) ) {
+			fclose(fp);
 			EXCEPT("Failed recovering from corrupt file, errno=%d",
 				   errno );
 		}
@@ -240,8 +331,7 @@ ClassAdLogParser::readLogEntry(int &op_type)
 			// records starting from the bad record to the end-of-file, and
 		
 			// pretend that we hit the end-of-file.
-		fclose( log_fp );
-        log_fp = NULL;
+		fclose( fp );
 
 		curCALogEntry = lastCALogEntry;
 		curCALogEntry.offset = nextOffset;
@@ -251,7 +341,12 @@ ClassAdLogParser::readLogEntry(int &op_type)
 
 
 	// get and set the new current offset
-    nextOffset = ftell(log_fp);
+	if (ex == false) {
+		nextOffset = lseek(log_fd, 0, SEEK_CUR);
+	}
+	else {
+		nextOffset = ftell(log_fp);
+	}
 
 	curCALogEntry.next_offset = nextOffset;
 
@@ -341,6 +436,35 @@ ClassAdLogParser::getLogHistoricalSNBody(char*& seqnum, char*& timestamp)
 }
 
 int
+ClassAdLogParser::readNewClassAdBody(int fd)
+{
+	curCALogEntry.init(CondorLogOp_NewClassAd);
+
+		// This code part is borrowed from LogNewClassAd::ReadBody 
+		// in classad_log.C
+	int rval, rval1;
+
+	rval = readword(fd, curCALogEntry.key);
+	if (rval < 0) {
+		return rval;
+	}
+
+	rval1 = readword(fd, curCALogEntry.mytype);
+	if (rval1 < 0) {
+		return rval;
+	}
+
+	rval += rval1;
+
+	rval1 = readword(fd, curCALogEntry.targettype);
+	if (rval1 < 0) {
+		return rval;
+	}
+
+	return rval + rval1;
+}
+
+int
 ClassAdLogParser::readNewClassAdBody(FILE *fp)
 {
 	curCALogEntry.init(CondorLogOp_NewClassAd);
@@ -365,6 +489,16 @@ ClassAdLogParser::readNewClassAdBody(FILE *fp)
 }
 
 int
+ClassAdLogParser::readDestroyClassAdBody(int fd)
+{
+	curCALogEntry.init(CondorLogOp_DestroyClassAd);
+
+		// This code part is borrowed from LogDestroyClassAd::ReadBody 
+		// in classad_log.C
+	return readword(fd, curCALogEntry.key);
+}	
+
+int
 ClassAdLogParser::readDestroyClassAdBody(FILE *fp)
 {
 	curCALogEntry.init(CondorLogOp_DestroyClassAd);
@@ -372,6 +506,33 @@ ClassAdLogParser::readDestroyClassAdBody(FILE *fp)
 		// This code part is borrowed from LogDestroyClassAd::ReadBody 
 		// in classad_log.C
 	return readword(fp, curCALogEntry.key);
+}
+
+int
+ClassAdLogParser::readSetAttributeBody(int fd)
+{
+	curCALogEntry.init(CondorLogOp_SetAttribute);
+
+		// This code part is borrowed from LogSetAttribute::ReadBody 
+		// in classad_log.C
+	int rval, rval1;
+
+	rval1 = readword(fd, curCALogEntry.key);
+	if (rval1 < 0) {
+		return rval1;
+	}
+
+	rval = readword(fd, curCALogEntry.name);
+	if (rval < 0) {
+		return rval;
+	}
+	rval1 += rval;
+
+	rval = readline(fd, curCALogEntry.value);
+	if (rval < 0) {
+		return rval;
+	}
+	return rval + rval1;
 }
 
 int
@@ -402,6 +563,27 @@ ClassAdLogParser::readSetAttributeBody(FILE *fp)
 }
 
 int
+ClassAdLogParser::readDeleteAttributeBody(int fd)
+{
+	curCALogEntry.init(CondorLogOp_DeleteAttribute);
+
+		// This code part is borrowed from LogNewClassAd::ReadBody 
+		// in classad_log.C
+	int rval, rval1;
+
+	rval1 = readword(fd, curCALogEntry.key);
+	if (rval1 < 0) {
+		return rval1;
+	}
+
+	rval = readword(fd, curCALogEntry.name);
+	if (rval < 0) {
+		return rval;
+	}
+	return rval + rval1;
+}
+
+int
 ClassAdLogParser::readDeleteAttributeBody(FILE *fp)
 {
 	curCALogEntry.init(CondorLogOp_DeleteAttribute);
@@ -423,6 +605,21 @@ ClassAdLogParser::readDeleteAttributeBody(FILE *fp)
 }
 
 int
+ClassAdLogParser::readBeginTransactionBody(int fd)
+{
+	curCALogEntry.init(CondorLogOp_BeginTransaction);
+
+		// This code part is borrowed from LogBeginTransaction::ReadBody 
+		// in classad_log.C
+	char 	ch;
+	int		rval = read( fd, &ch, 1 );
+	if( rval < 1 || ch != '\n' ) {
+		return( -1 );
+	}
+	return( 1 );
+}
+
+int
 ClassAdLogParser::readBeginTransactionBody(FILE *fp)
 {
 	curCALogEntry.init(CondorLogOp_BeginTransaction);
@@ -434,6 +631,21 @@ ClassAdLogParser::readBeginTransactionBody(FILE *fp)
 	ch = fgetc(fp);
 
 	if( ch == EOF || ch != '\n' ) {
+		return( -1 );
+	}
+	return( 1 );
+}
+
+int
+ClassAdLogParser::readEndTransactionBody(int fd)
+{
+	curCALogEntry.init(CondorLogOp_EndTransaction);
+
+		// This code part is borrowed from LogEndTransaction::ReadBody 
+		// in classad_log.C
+	char 	ch;
+	int		rval = read( fd, &ch, 1 );
+	if( rval < 1 || ch != '\n' ) {
 		return( -1 );
 	}
 	return( 1 );
@@ -454,6 +666,33 @@ ClassAdLogParser::readEndTransactionBody(FILE *fp)
 		return( -1 );
 	}
 	return( 1 );
+}
+
+int
+ClassAdLogParser::readLogHistoricalSNBody(int fd)
+{
+	curCALogEntry.init(CondorLogOp_LogHistoricalSequenceNumber);
+
+		// This code part is borrowed from LogSetAttribute::ReadBody 
+		// in classad_log.C
+	int rval, rval1;
+
+	rval1 = readword(fd, curCALogEntry.key);
+	if (rval1 < 0) {
+		return rval1;
+	}
+
+	rval = readword(fd, curCALogEntry.name);
+	if (rval < 0) {
+		return rval;
+	}
+	rval1 += rval;
+
+	rval = readline(fd, curCALogEntry.value);
+	if (rval < 0) {
+		return rval;
+	}
+	return rval + rval1;
 }
 
 int
@@ -485,6 +724,22 @@ ClassAdLogParser::readLogHistoricalSNBody(FILE *fp)
 
 
 int
+ClassAdLogParser::readHeader(int fd, int& op_type)
+{
+	int	rval;
+	char *op = NULL;
+
+	rval = readword(fd, op);
+	if (rval < 0) {
+		return rval;
+	}
+	op_type = atoi(op);
+	free(op);
+	return rval;
+}
+
+
+int
 ClassAdLogParser::readHeader(FILE *fp, int& op_type)
 {
 	int	rval;
@@ -497,6 +752,47 @@ ClassAdLogParser::readHeader(FILE *fp, int& op_type)
 	op_type = atoi(op);
 	free(op);
 	return rval;
+}
+
+
+int
+ClassAdLogParser::readword(int fd, char * &str)
+{
+	int		i, rval, bufsize = 1024;
+
+	char	*buf = (char *)malloc(bufsize);
+
+	// ignore leading whitespace but don't pass newline
+	do {
+		rval = read(fd, &(buf[0]), 1);
+		if (rval < 0) {
+			free(buf);
+			return -1;
+		}
+	} while( rval>0 && isspace(buf[0]) && buf[0]!='\n' );
+
+	// read until whitespace
+	for (i = 1; rval > 0 && !isspace(buf[i-1]) && buf[i-1] != '\0'; i++) {
+		if (i == bufsize) {
+			buf = (char *)realloc(buf, bufsize*2);
+			if(!buf) {
+				EXCEPT("Call to realloc failed\n");
+			}
+			bufsize *= 2;
+		} 
+		rval = read(fd, &(buf[i]), 1);
+	}
+
+		// check for error (no input is also an error)
+	if (rval <= 0 || i==1 ) {
+		free(buf);
+		return -1;
+	}
+
+	buf[i-1] = '\0';
+	str = strdup(buf);
+	free(buf);
+	return i-1;
 }
 
 
@@ -536,6 +832,50 @@ ClassAdLogParser::readword(FILE *fp, char * &str)
 	if( feof( fp ) || i==1 ) {
 		free( buf );
 		return( -1 );
+	}
+
+	buf[i-1] = '\0';
+
+	if(str != NULL) {
+		free(str);
+	}
+	str = strdup(buf);
+	free(buf);
+	return i-1;
+}
+
+
+
+int
+ClassAdLogParser::readline(int fd, char * &str)
+{
+	int		i, rval, bufsize = 4096;
+	char	*buf = (char *)malloc(bufsize);
+
+	// ignore leading whitespace but don't pass newline
+	do {
+		rval = read(fd, &(buf[0]), 1);
+		if (rval < 0) {
+			return rval;
+		}
+	} while( rval>0 && isspace(buf[0]) && buf[0] != '\n' );
+
+	// read until newline
+	for (i = 1; rval > 0 && buf[i-1] != '\n' && buf[i-1] != '\0'; i++) {
+		if (i == bufsize) {
+			buf = (char *)realloc(buf, bufsize*2);
+			if(!buf) {
+				EXCEPT("Call to realloc failed\n");
+			}
+			bufsize *= 2;
+		}
+		rval = read(fd, &(buf[i]), 1);
+	}
+
+		// report read errors, EOF and no input as errors
+	if (rval <= 0 || i==1 ) {
+		free(buf);
+		return -1;
 	}
 
 	buf[i-1] = '\0';

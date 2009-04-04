@@ -50,8 +50,8 @@ public:
 	FILE *  getFilePointer();
 
 		//! set the file handles
+	void    setFileDescriptor(int fd);
 	void    setFilePointer(FILE *fp);
-    void setFileDescriptor(int fd);
 
 		//! return the current ClassAd log entry
 	ClassAdLogEntry* 	getLastCALogEntry();
@@ -84,15 +84,16 @@ public:
 	QuillErrCode	getLogHistoricalSNBody(char*& seqnum, char*& timestamp);
 
 	//! read a classad log entry in the current offset of a file
-	FileOpErrCode readLogEntry(int &op_type);
+	FileOpErrCode readLogEntry(int &op_type, bool ex = false);
 
-	FileOpErrCode openFile();
-	FileOpErrCode closeFile();
+	FileOpErrCode openFile(bool ex = false);
+	FileOpErrCode closeFile(bool ex = false);
 
 private:
 		//
 		// helper functions
 		// 
+	int	readHeader(int fd, int& op_type);
 	int 	readHeader(FILE *fp, int& op_type);
 	int 	readword(FILE *fp, char *&);
 	int 	readword(int, char *&);
@@ -100,12 +101,19 @@ private:
 	int 	readline(int, char *&);
 
 
+	int	    readLogHistoricalSNBody(int fd);
 	int	    readLogHistoricalSNBody(FILE *fp);	
+	int 	readNewClassAdBody(int fd);
 	int 	readNewClassAdBody(FILE *fp);
+	int 	readDestroyClassAdBody(int fd);
 	int 	readDestroyClassAdBody(FILE *fp);
+	int 	readSetAttributeBody(int fd);
 	int 	readSetAttributeBody(FILE *fp);
+	int 	readDeleteAttributeBody(int fd);
 	int 	readDeleteAttributeBody(FILE *fp);
+	int 	readBeginTransactionBody(int fd);
 	int 	readBeginTransactionBody(FILE *fp);
+	int 	readEndTransactionBody(int fd);
 	int 	readEndTransactionBody(FILE *fp);
 		
 		//
@@ -118,6 +126,7 @@ private:
 	ClassAdLogEntry		lastCALogEntry; //!< last ClassAd log entry 
 
 	FILE 	*log_fp;
+	int	    log_fd;
 };
 
 #endif /* _CLASSADLOGPARSER_H_ */
