@@ -188,28 +188,28 @@ printStartdNormal (ClassAd *ad)
 	int    now;
 	int	   actvty;
 
-	char *opsys_attr, *arch_attr, *mem_attr;
-	char *opsys_name, *arch_name, *mem_name;
-
+	const char *opsys_attr, *arch_attr, *mem_attr;
+	const char *opsys_name, *arch_name, *mem_name;
+ 
 	mem_name = "Mem";
-	mem_attr = (char*) ATTR_MEMORY;
+	mem_attr = ATTR_MEMORY;
 
 	if(javaMode) {
-		opsys_name = opsys_attr = (char*) ATTR_JAVA_VENDOR;
+		opsys_name = opsys_attr = ATTR_JAVA_VENDOR;
 		arch_name = "Ver";
-		arch_attr = (char*) ATTR_JAVA_VERSION;	
+		arch_attr = ATTR_JAVA_VERSION;	
 	} else if(vmMode) {
 		// For vm universe, we will print ATTR_VM_MEMORY
 		// instead of ATTR_MEMORY
 		opsys_name = "VMType";
-		opsys_attr = (char*) ATTR_VM_TYPE;
+		opsys_attr = ATTR_VM_TYPE;
 		arch_name = "Ver";
-		arch_attr = (char*) ATTR_VM_VERSION;	
+		arch_attr = ATTR_VM_VERSION;	
 		mem_name = "VMMem";
-		mem_attr = (char*) ATTR_VM_MEMORY;
+		mem_attr = ATTR_VM_MEMORY;
 	} else {
-		opsys_name = opsys_attr = (char*) ATTR_OPSYS;
-		arch_name = arch_attr = (char*) ATTR_ARCH;
+		opsys_name = opsys_attr = ATTR_OPSYS;
+		arch_name = arch_attr = ATTR_ARCH;
 	}
 
 	if (ad)
@@ -355,21 +355,21 @@ printRun (ClassAd *ad)
 	static bool first = true;
 	static AttrListPrintMask alpm;
 
-	char *opsys_attr, *arch_attr;
-	char *opsys_name, *arch_name;
+	const char *opsys_attr, *arch_attr;
+	const char *opsys_name, *arch_name;
 
 	if(javaMode) {
-		opsys_name = opsys_attr = (char*) ATTR_JAVA_VENDOR;
+		opsys_name = opsys_attr = ATTR_JAVA_VENDOR;
 		arch_name = "Ver";
-		arch_attr = (char*) ATTR_JAVA_VERSION;	
+		arch_attr = ATTR_JAVA_VERSION;	
 	} else if(vmMode) {
 		opsys_name = "VMType";
-		opsys_attr = (char*) ATTR_VM_TYPE;
+		opsys_attr = ATTR_VM_TYPE;
 		arch_name = "Ver";
-		arch_attr = (char*) ATTR_VM_VERSION;	
+		arch_attr = ATTR_VM_VERSION;	
 	} else {
-		opsys_name = opsys_attr = (char*) ATTR_OPSYS;
-		arch_name = arch_attr = (char*) ATTR_ARCH;
+		opsys_name = opsys_attr = ATTR_OPSYS;
+		arch_name = arch_attr = ATTR_ARCH;
 	}
 
 	if (ad)
