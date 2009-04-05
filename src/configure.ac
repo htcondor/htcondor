@@ -2170,14 +2170,6 @@ AC_ARG_ENABLE([malloc-debug],
 AS_IF([test "x$enable_malloc_debug" = xyes],
   [CPPFLAGS="$CPPFLAGS -DMALLOC_DEBUG"])
 
-AC_ARG_ENABLE([netman],
-  AC_HELP_STRING([--enable-netman],
-    [enable NETMAN functionality (default: no)]),
-  [],
-  [enable_netman=no])
-AS_IF([test "x$enable_netman" = xyes],
-  [AC_DEFINE([ENABLE_NETMAN], [1], [Define if enabling NETMAM])])
-
 AC_ARG_ENABLE([nest],
   AC_HELP_STRING([--enable-nest],
     [enable NeST functionality (default: no)]),
