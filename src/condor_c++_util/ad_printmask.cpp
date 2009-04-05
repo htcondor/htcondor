@@ -48,7 +48,7 @@ AttrListPrintMask::
 
 
 void AttrListPrintMask::
-registerFormat (char *fmt, const char *attr, char *alternate)
+registerFormat (const char *fmt, const char *attr, char *alternate)
 {
 	Formatter *newFmt = new Formatter;
 

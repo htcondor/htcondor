@@ -51,7 +51,7 @@ class AttrListPrintMask
 	~AttrListPrintMask ();
 
 	// register a format and an attribute
-	void registerFormat (char *fmt, const char *attr, char*alt="");
+	void registerFormat (const char *fmt, const char *attr, char*alt="");
 	void registerFormat (IntCustomFmt fmt, const char *attr, char *alt="");
 	void registerFormat (FloatCustomFmt fmt, const char *attr, char *alt="");
 	void registerFormat (StringCustomFmt fmt, const char *attr, char *alt="");
