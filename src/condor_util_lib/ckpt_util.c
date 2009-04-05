@@ -36,12 +36,6 @@
 #include "condor_socket_types.h"
 
 
-#ifdef WANT_NETMAN
-/* Perform a callback during file stream transfers so we can manage
-   our network usage. */
-void file_stream_progress_report(int bytes_moved);
-#endif
-
 //function prototypes
 ssize_t stream_file_xfer( int src_fd, int dst_fd, size_t n_bytes );
 ssize_t multi_stream_file_xfer( int src_fd, int dst_fd_cnt, int *dst_fd_list,
@@ -117,11 +111,6 @@ stream_file_xfer( int src_fd, int dst_fd, size_t n_bytes )
 			);
 			return bytes_moved;
 		}
-#ifdef WANT_NETMAN
-		else {
-			file_stream_progress_report((int)bytes_moved);
-		}
-#endif
 	}
 }
 

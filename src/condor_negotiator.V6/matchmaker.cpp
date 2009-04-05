@@ -186,11 +186,6 @@ initialize ()
     daemonCore->Register_Command (GET_RESLIST, "GetResList",
 		(CommandHandlercpp) &Matchmaker::GET_RESLIST_commandHandler, 
 			"GET_RESLIST_commandHandler", this, READ);
-#ifdef WANT_NETMAN
-	daemonCore->Register_Command (REQUEST_NETWORK, "RequestNetwork",
-	    (CommandHandlercpp) &Matchmaker::REQUEST_NETWORK_commandHandler,
-			"REQUEST_NETWORK_commandHandler", this, WRITE);
-#endif
 
 	// Set a timer to renegotiate.
     negotiation_timerID = daemonCore->Register_Timer (0,  NegotiatorInterval,
@@ -357,10 +352,6 @@ reinitialize ()
  	update_interval = param_integer ("NEGOTIATOR_UPDATE_INTERVAL", 
 									 5*MINUTE);
 
-
-#ifdef WANT_NETMAN
-	netman.Config();
-#endif
 
 
 	char *preferred_collector = param ("COLLECTOR_HOST_FOR_NEGOTIATOR");
@@ -678,13 +669,6 @@ GET_RESLIST_commandHandler (int, Stream *strm)
 	return TRUE;
 }
 
-#ifdef WANT_NETMAN
-int Matchmaker::
-REQUEST_NETWORK_commandHandler (int, Stream *stream)
-{
-	return netman.HandleNetworkRequest(stream);
-}
-#endif
 
 /*
 Look for an ad matching the given constraint string
@@ -892,10 +876,6 @@ negotiationTime ()
 	dprintf( D_ALWAYS, "---------- Started Negotiation Cycle ----------\n" );
 
 	GotRescheduleCmd=false;  // Reset the reschedule cmd flag
-
-#ifdef WANT_NETMAN
-	netman.PrepareForSchedulingCycle();
-#endif
 
 	// We need to nuke our MatchList from the previous negotiation cycle,
 	// since a different set of machines may now be available.
@@ -1204,19 +1184,6 @@ negotiateWithGroup ( int untrimmed_num_startds, ClassAdList& startdAds,
 
 	int spin_pie=0;
 	do {
-#if WANT_NETMAN
-		allocNetworkShares = true;
-		if (spin_pie && !hit_schedd_prio_limit) {
-				// If this is not our first pie spin and we didn't hit
-				// a CPU limit for any schedds on our last spin, then
-				// we're spinning again because all remaining schedds
-				// have been allocated their network fair-share, and
-				// they want more network capacity.  We don't want to
-				// under-allocate the network, so let them have any
-				// remaining network capacity in priority order.
-			allocNetworkShares = false;
-		}
-#endif
 		spin_pie++;
 		hit_schedd_prio_limit = FALSE;
 		hit_network_prio_limit = FALSE;
@@ -2083,9 +2050,6 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, dou
 					diagnostic_message = "insufficient bandwidth";
 					dprintf(D_ALWAYS|D_MATCH|D_NOHEADER, "%s\n",
 							diagnostic_message);
-#if WANT_NETMAN
-					netman.ShowDeniedRequests(D_BANDWIDTH);
-#endif
 				} else {
 					if (rejForNetworkShare) {
 						diagnostic_message = "network share exceeded";
@@ -2389,56 +2353,7 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 		cachedName = strdup(scheddName);
 		cachedAddr = strdup(scheddAddr);
 	}
-	
 
-#ifdef WANT_NETMAN
-	// initialize network information for this request
-	char scheddIPbuf[128];
-	strcpy(scheddIPbuf, scheddAddr);
-	char *colon = strchr(scheddIPbuf, ':');
-	if (!colon) {
-		dprintf(D_ALWAYS, "      Invalid %s: %s\n", ATTR_SCHEDD_IP_ADDR,
-				scheddIPbuf);
-		return NULL;
-	}
-	*colon = '\0';
-	char *scheddIP = scheddIPbuf+1;	// skip the leading '<'
-	int executableSize = 0;
-	request.LookupInteger(ATTR_EXECUTABLE_SIZE, executableSize);
-	int universe = CONDOR_UNIVERSE_STANDARD;
-	int ckptSize = 0;
-	request.LookupInteger(ATTR_JOB_UNIVERSE, universe);
-	char lastCkptServer[MAXHOSTNAMELEN], lastCkptServerIP[16];
-	lastCkptServerIP[0] = '\0';
-	if (universe == CONDOR_UNIVERSE_STANDARD) {
-		float cputime = 1.0;
-		request.LookupFloat(ATTR_JOB_REMOTE_USER_CPU, cputime);
-		if (cputime > 0.0) {
-			// if job_universe is STANDARD (checkpointing is
-			// enabled) and cputime > 0.0 (job has committed
-			// some work), then the job will need to read a
-			// checkpoint to restart, so we must set ckptSize
-			request.LookupInteger(ATTR_IMAGE_SIZE, ckptSize);
-			ckptSize -= executableSize;	// imagesize = ckptsize + executablesz
-			if (ckptSize > 0) {
-				if (request.LookupString(ATTR_LAST_CKPT_SERVER,
-										 lastCkptServer)) {
-					struct hostent *hp = condor_gethostbyname(lastCkptServer);
-					if (!hp) {
-						dprintf(D_ALWAYS,
-								"      DNS lookup for %s %s failed!\n",
-								ATTR_LAST_CKPT_SERVER, lastCkptServer);
-					} else {
-						strcpy(lastCkptServerIP,
-							   inet_ntoa(*((struct in_addr *)hp->h_addr)));
-					}
-				} else {
-					strcpy(lastCkptServerIP, scheddIP);
-				}
-			}
-		}
-	}
-#endif
 
 	// initialize reasons for match failure
 	rejForNetwork = 0;
@@ -2548,21 +2463,6 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 			}
 		}
 
-#if WANT_NETMAN
-			// is network bandwidth available for this match?
-		double networkShare = (allocNetworkShares) ? share : 1.0;
-		int rval = netman.RequestPlacement(scheddName, networkShare, scheddIP,
-										   executableSize, lastCkptServerIP,
-										   ckptSize, request, *candidate);
-		if (rval == 1) {
-			rejForNetworkShare++;
-			continue;
-		} else if (rval == 0) {
-			rejForNetwork++;
-			continue;
-		}
-#endif
-
 		candidatePreJobRankValue = EvalNegotiatorMatchRank(
 		  "NEGOTIATOR_PRE_JOB_RANK",NegotiatorPreJobRank,
 		  request,candidate);
@@ -2664,14 +2564,6 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 		bestCached = NULL; // just to remove unused variable warning
 	}
 
-#if WANT_NETMAN
-	if (bestSoFar) {
-		// request the network bandwidth for our choice
-		netman.RequestPlacement(scheddName, share, scheddIP, executableSize,
-								lastCkptServerIP, ckptSize, request,
-								*bestSoFar);
-	}
-#endif
 	if(!bestSoFar)
 	{
 	/* Insert an entry into the rejects table only if no matches were found at all */
@@ -2969,12 +2861,6 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 
 	/* CONDORDB Insert into matches table */
 	insert_into_matches(scheddName, request, *offer);
-
-#if WANT_NETMAN
-	// match was successful; commit our network bandwidth allocation
-	// (this will generate D_BANDWIDTH debug messages)
-	netman.CommitPlacement(scheddName);
-#endif
 
     // 4. notifiy the accountant
 	dprintf(D_FULLDEBUG,"      Notifying the accountant\n");

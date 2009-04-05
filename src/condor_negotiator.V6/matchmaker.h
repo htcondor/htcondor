@@ -30,9 +30,6 @@
 
 /* FILESQL include */
 #include "file_sql.h"
-#ifdef WANT_NETMAN
-#include "../condor_netman/netman.h"
-#endif
 
 typedef struct MapEntry {
 	char *remoteHost;
@@ -70,9 +67,6 @@ class Matchmaker : public Service
 		int SET_LASTTIME_commandHandler(int, Stream*);
 		int GET_PRIORITY_commandHandler(int, Stream*);
 		int GET_RESLIST_commandHandler(int, Stream*);
-#ifdef WANT_NETMAN
-		int REQUEST_NETWORK_commandHandler(int, Stream*);
-#endif
 
 		// timeout handler (for periodic negotiations)
 		int negotiationTime ();
@@ -258,11 +252,6 @@ class Matchmaker : public Service
 		bool getGroupInfoFromUserId( const char *user, int & groupQuota, 
 			 int & groupUsage );
 		
-#ifdef WANT_NETMAN
-		// allocate network capacity
-		NetworkManager netman;
-		bool allocNetworkShares;
-#endif
 
 
 		// rank condition on matches

@@ -46,10 +46,6 @@ XferSummary	xfer_summary;
 
 Server server;
 Alarm  rt_alarm;
-#ifdef WANT_NETMAN
-static bool ManageBandwidth = false;
-static int NetworkHorizon = 300;
-#endif
 
 /* For daemonCore, etc. */
 DECL_SUBSYSTEM( "CKPT_SERVER", SUBSYSTEM_TYPE_DAEMON );
@@ -177,23 +173,6 @@ void Server::Init()
 	max_restore_xfers = param_integer( "CKPT_SERVER_MAX_RESTORE_PROCESSES",max_xfers );
 
 	max_replicate_xfers = max_store_xfers/5;
-
-#ifdef WANT_NETMAN
-	char		*tmp;				//declare this down here
-									//so the compiler doesn't argue
-	tmp = param( "MANAGE_BANDWIDTH" );
-	if (!tmp) {
-		ManageBandwidth = false;
-	} else {
-		if (tmp[0] == 'T' || tmp[0] == 't') {
-			ManageBandwidth = true;
-		} else {
-			ManageBandwidth = false;
-		}
-		free(tmp);
-		NetworkHorizon = param_integer( "NETWORK_HORIZON",300 );
-	}
-#endif
 
 	if (first_time) {
 		store_req_sd = SetUpPort(CKPT_SVR_STORE_REQ_PORT);
@@ -1196,76 +1175,6 @@ void Server::SendStatus(int data_conn_sd)
   imds.TransferFileInfo(xfer_sd);
 }
 
-#ifdef WANT_NETMAN
-static struct _file_stream_info {
-	struct in_addr shadow_IP;
-	int shadow_pid;
-	struct in_addr startd_IP;
-	bool store_req;
-	int total_bytes;
-	time_t last_update;
-	char user[MAX_NAME_LENGTH];
-} file_stream_info;
-
-extern "C" {
-void
-file_stream_progress_report(int bytes_moved)
-{
-	if (!ManageBandwidth) return;
-
-	time_t current_time = time(0);
-	if (current_time < file_stream_info.last_update + (NetworkHorizon/5))
-		return;
-
-	dprintf(D_ALWAYS, "Sending CkptServerUpdate: %d bytes to go.\n", 
-			file_stream_info.total_bytes-bytes_moved);
-	ClassAd request;
-	char buf[100];
-
-	sprintf(buf, "%s = \"CkptServerUpdate\"", ATTR_TRANSFER_TYPE);
-	request.Insert(buf);
-	sprintf(buf, "%s = \"%s\"", ATTR_USER, file_stream_info.user);
-	request.Insert(buf);
-	sprintf(buf, "%s = 1", ATTR_FORCE);
-	request.Insert(buf);
-	sprintf(buf, "%s = \"%s\"", ATTR_SOURCE,
-			file_stream_info.store_req ?
-			inet_ntoa(file_stream_info.startd_IP) :
-			inet_ntoa(*my_sin_addr()));
-	request.Insert(buf);
-	sprintf(buf, "%s = \"%s\"", ATTR_DESTINATION,
-			file_stream_info.store_req ?
-			inet_ntoa(*my_sin_addr()) :
-			inet_ntoa(file_stream_info.startd_IP));
-	request.Insert(buf);
-	sprintf(buf, "%s = \"<%s:0>\"", ATTR_REMOTE_HOST,
-			inet_ntoa(file_stream_info.startd_IP));
-	request.Insert(buf);
-	sprintf(buf, "%s = %d", ATTR_REQUESTED_CAPACITY,
-			file_stream_info.total_bytes-bytes_moved);
-	request.Insert(buf);
-	sprintf(buf, "%s = \"%u.%d\"", ATTR_TRANSFER_KEY,
-			ntohl(file_stream_info.shadow_IP.s_addr),
-			file_stream_info.shadow_pid);
- 	request.Insert(buf);
-	Daemon Negotiator(DT_NEGOTIATOR);
-
-    SafeSock sock;
-    sock.timeout(10);
-    if (!sock.connect(Negotiator.addr())) {
-		dprintf(D_ALWAYS, "Couldn't connect to negotiator!\n");
-    }
-
-	Negotiator.startCommand( REQUEST_NETWORK, &sock);
-
-	sock.put(1);
-	request.put(sock);
-	sock.end_of_message();
-	file_stream_info.last_update = time(0);
-}
-}
-#endif
-
 /* check to make sure something being used as a filename that we will
 	be reading or writing isn't trying to do anything funny. This
 	means the filename can't be "." ".." or have a path separator
@@ -1491,15 +1400,6 @@ void Server::ProcessStoreReq(int            req_id,
 			sprintf(pathname, "%s%s/%s/%s", LOCAL_DRIVE_PREFIX, 
 					inet_ntoa(shadow_IP), store_req.owner, 
 					store_req.filename);
-#ifdef WANT_NETMAN
-			memcpy(&file_stream_info.shadow_IP, &shadow_IP,
-				   sizeof(struct in_addr));
-			file_stream_info.shadow_pid = ntohl(store_req.key);
-			file_stream_info.store_req = true;
-			file_stream_info.total_bytes = (int) store_req.file_size;
-			file_stream_info.last_update = time(0);
-			strcpy(file_stream_info.user, store_req.owner);
-#endif
 			ReceiveCheckpointFile(data_conn_sd, pathname,
 								  (int) store_req.file_size);
 			exit(CHILDTERM_SUCCESS);
@@ -1556,9 +1456,6 @@ void Server::ReceiveCheckpointFile(int         data_conn_sd,
 		setsockopt(xfer_sd, SOL_SOCKET, SO_RCVBUF, (char*) &socket_bufsize, 
 				   sizeof(socket_bufsize));
 	}
-#ifdef WANT_NETMAN
-	file_stream_info.startd_IP = chkpt_addr.sin_addr;
-#endif
 	bytes_recvd = stream_file_xfer(xfer_sd, file_fd, file_size);
 	// note that if file size == -1, we don't know if we got the complete 
 	// file, so we must rely on the client to commit via SERVICE_RENAME
@@ -1776,15 +1673,6 @@ void Server::ProcessRestoreReq(int             req_id,
 			  close(store_req_sd);
 			  close(restore_req_sd);
 			  close(service_req_sd);
-#ifdef WANT_NETMAN
-			  memcpy(&file_stream_info.shadow_IP, &shadow_IP,
-					 sizeof(struct in_addr));
-			  file_stream_info.shadow_pid = ntohl(restore_req.key);
-			  file_stream_info.store_req = false;
-			  file_stream_info.total_bytes = (int) chkpt_file_status.st_size;
-			  file_stream_info.last_update = time(0);
-			  strcpy(file_stream_info.user, restore_req.owner);
-#endif
 			  TransmitCheckpointFile(data_conn_sd, pathname,
 									 chkpt_file_status.st_size);
 			  exit(CHILDTERM_SUCCESS);
@@ -1838,9 +1726,6 @@ void Server::TransmitCheckpointFile(int         data_conn_sd,
 			   sizeof(socket_bufsize));
 	}
 
-#ifdef WANT_NETMAN
-	file_stream_info.startd_IP = chkpt_addr.sin_addr;
-#endif
 	bytes_sent = stream_file_xfer(file_fd, xfer_sd, file_size);
 
 	close(xfer_sd);

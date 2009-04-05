@@ -336,9 +336,6 @@ class Scheduler : public Service
 	bool			WriteTerminateToUserLog( PROC_ID job_id, int status );
 	bool			WriteRequeueToUserLog( PROC_ID job_id, int status, const char * reason );
 	int				receive_startd_alive(int cmd, Stream *s);
-#ifdef WANT_NETMAN
-	void			RequestBandwidth(int cluster, int proc, match_rec *rec);
-#endif
 
 		// Public startd socket management functions
 	void            checkContactQueue();

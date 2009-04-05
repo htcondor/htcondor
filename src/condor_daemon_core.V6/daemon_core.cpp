@@ -8128,24 +8128,6 @@ DaemonCore::InitDCCommandSocket( int command_port )
 		dprintf(D_FULLDEBUG, "%s\n", msg.Value());
 	}
 
-#ifdef WANT_NETMAN
-		// The negotiator gets a lot of UDP messages from schedds,
-		// shadows, and checkpoint servers reporting network
-		// usage.  We increase our UDP read buffers here so we
-		// don't drop those messages.
-	if( get_mySubSystem()->isType( SUBSYSTEM_TYPE_NEGOTIATOR) ) {
-		int desired_size = param_integer("NEGOTIATOR_SOCKET_BUFSIZE",0);
-		if( desired_size ) {
-				// set the UDP (ssock) read size to be large, so we do
-				// not drop incoming updates.
-			int final_size = dc_ssock->set_os_buffers( desired_size );
-
-			dprintf( D_FULLDEBUG,"Reset OS socket buffer size to %dk\n",
-					 final_size / 1024 );
-		}
-	}
-#endif
-
 		// now register these new command sockets.
 		// Note: In other parts of the code, we assume that the
 		// first command socket registered is TCP, so we must

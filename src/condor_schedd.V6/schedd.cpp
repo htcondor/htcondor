@@ -6180,12 +6180,6 @@ Scheduler::StartJob(match_rec *rec)
 		return;
 	}
 
-#ifdef WANT_NETMAN
-	if (ManageBandwidth && ReactivatingMatch) {
-		RequestBandwidth(id.cluster, id.proc, rec);
-	}
-#endif
-
 	if(!(rec->shadowRec = StartJob(rec, &id))) {
                 
 			// Start job failed. Throw away the match. The reason being that we
@@ -6235,81 +6229,6 @@ Scheduler::StartJob(match_rec *rec)
 	rec->setStatus( M_ACTIVE );
 }
 
-
-#ifdef WANT_NETMAN
-void
-Scheduler::RequestBandwidth(int cluster, int proc, match_rec *rec)
-{
-	ClassAd request;
-	char source[100], dest[100], user[200], *str;
-	int executablesize = 0, universe = CONDOR_UNIVERSE_VANILLA, slot=1;
-
-	GetAttributeString( cluster, proc, ATTR_USER, user );	// TODDCORE 
-	request.Assign( ATTR_USER, user );
-	request.Assign(ATTR_FORCE, 1);
-	strcpy(dest, rec->peer+1);
-	str = strchr(dest, ':');
-	*str = '\0';
-	request.Assign(ATTR_DESTINATION, dest);
-	GetAttributeInt(cluster, proc, ATTR_EXECUTABLE_SIZE, &executablesize);
-	request.Assign(ATTR_REMOTE_HOST, rec->peer);
-	if (rec->my_match_ad) {
-		if (param_boolean("ALLOW_VM_CRUFT", true)) {
-			if (!rec->my_match_ad->LookupInteger(ATTR_SLOT_ID, slot)) {
-				rec->my_match_ad->LookupInteger(ATTR_VIRTUAL_MACHINE_ID, slot);
-			}
-		} else {
-			rec->my_match_ad->LookupInteger(ATTR_SLOT_ID, slot);
-		}
-	}
-	request.Assign(ATTR_SLOT_ID, slot);
-    
-    SafeSock sock;
-	sock.timeout(NEGOTIATOR_CONTACT_TIMEOUT);
-	Daemon negotiator (DT_NEGOTIATOR);
-	if (!sock.connect(negotiator.addr())) {
-		dprintf(D_FAILURE|D_ALWAYS, "Couldn't connect to negotiator!\n");
-		return;
-	}
-
-	negotiator.startCommand(REQUEST_NETWORK, &sock);
-
-	GetAttributeInt(cluster, proc, ATTR_JOB_UNIVERSE, &universe);
-	float cputime = 1.0;
-	GetAttributeFloat(cluster, proc, ATTR_JOB_REMOTE_USER_CPU, &cputime);
-	if (universe == CONDOR_UNIVERSE_STANDARD && cputime > 0.0) {
-		int ckptsize;
-		GetAttributeInt(cluster, proc, ATTR_IMAGE_SIZE, &ckptsize);
-		ckptsize -= executablesize;	// imagesize = ckptsize + executablesize
-		request.Assign(ATTR_REQUESTED_CAPACITY, (float)ckptsize*1024.0);
-		if ((GetAttributeString(cluster, proc,
-                                ATTR_LAST_CKPT_SERVER, source)) == 0) {
-			struct hostent *hp = condor_gethostbyname(source);
-			if (!hp) {
-				dprintf(D_FAILURE|D_ALWAYS, "DNS lookup for %s %s failed!\n",
-						ATTR_LAST_CKPT_SERVER, source);
-				return;
-			}
-			request.Assign(ATTR_SOURCE,
-						   inet_ntoa(*((struct in_addr *)hp->h_addr)));
-		} else {
-			request.Assign(ATTR_SOURCE,
-						   inet_ntoa(*(my_sin_addr())));
-		}
-		request.Assign(ATTR_TRANSFER_TYPE, "CheckpointRestart");
-		sock.put(2);
-		request.put(sock);
-	} else {
-		sock.put(1);
-	}
-
-	request.Assign(ATTR_TRANSFER_TYPE, "InitialCheckpoint");
-	request.Assign(ATTR_REQUESTED_CAPACITY, (float)executablesize*1024.0);
-	request.Assign(ATTR_SOURCE, inet_ntoa(*(my_sin_addr())));
-	request.put(sock);
-	sock.end_of_message();
-}
-#endif
 
 void
 Scheduler::StartLocalJobs()
