@@ -1301,7 +1301,12 @@ bool ClassAdParser::shouldEvaluateAtParseTime(
 	if (   strcasecmp(c_function_name, "absTime") == 0 
 		|| strcasecmp(c_function_name, "relTime") == 0) {
 		if (argList.size() == 1 && argList[0]->GetKind() == ExprTree::LITERAL_NODE) {
-			should_eval = true;
+			Value val;
+			Value::NumberFactor factor;
+			((Literal *)argList[0])->GetComponents(val, factor);
+			if (val.IsStringValue()) {
+				should_eval = true;
+			}
 		}
 	}
 	return should_eval;
