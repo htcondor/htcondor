@@ -30,6 +30,7 @@ my $pid = $$;
 system("mkdir $pid");
 my $curcwd = getcwd();
 CondorTest::debug("current directory is $curcwd\n",1);
+CondorTest::LoadExemption("job_dagman_prepost,no,DC_AUTHENTICATE unable to receive auth_info!");
 
 my $socketname = "prepostsock";
 my $newsocketname = $curcwd . "/" . $pid . "/prepostsock";
