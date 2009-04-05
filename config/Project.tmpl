@@ -299,15 +299,6 @@ VENDOR_C_FLAGS = -I. -I.. -I../.. -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) \
 		 $(LEASE_MANAGER_FLAGS) \
 		 $(CONFIGURE_CFLAGS) $(CONFIGURE_CPPFLAGS)
 
-
-/* This flag is a bad idea since when this stuff eventually goes truly obselete
-	we'll have to fix it anyway. */
-#if defined(IS_C_COMP_MAJOR_GCC_3) || defined(IS_C_COMP_MAJOR_GCC_4)
-GPP_VERS_FLAGS = -Wno-deprecated
-#else
-GPP_VERS_FLAGS =
-#endif
-
 /**
  * Special flags needed for OSX using gcc4
  * We force the platform/arch information to be passed into the compilation
@@ -322,7 +313,7 @@ GPP_ARCH_FLAGS = -DTARGET_OS_MAC=1 -DTARGET_CPU_PPC=1
 GPP_ARCH_FLAGS =
 #endif
 
-GPP_SHARED_FLAGS = $(GPP_VERS_FLAGS) $(GPP_ARCH_FLAGS)
+GPP_SHARED_FLAGS = $(GPP_ARCH_FLAGS)
 
 /* Flags shared between C and C++ compilers */
 SHARED_COMPILER_FLAGS = $(VENDOR_C_FLAGS) $(COMP_DEBUG_FLAGS) $(CC_PIC_FLAG) PlatformFlags $(CCOMPILER_ID) $(GSOAP_FLAGS) $(PCRE_FLAGS) $(COREDUMPER_FLAGS)
