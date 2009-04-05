@@ -53,7 +53,7 @@ void Emitter::init() {
 /* Formats and prints a parameter and its value as a sub-point of input,
  * output_expected, or output_actual.  format can use printf formatting.
  */
-void Emitter::emit_param(char* pname, char* format, ...) {
+void Emitter::emit_param(const char* pname, const char* format, ...) {
 	va_list args;
 	MyString tmp;
 	va_start(args, format);
