@@ -28,7 +28,7 @@
 // operation
 //
 static void
-log_exit(char* op_str, proc_family_error_t error_code)
+log_exit(const char* op_str, proc_family_error_t error_code)
 {
 	int debug_level = D_PROCFAMILY;
 	if (error_code != PROC_FAMILY_ERROR_SUCCESS) {
