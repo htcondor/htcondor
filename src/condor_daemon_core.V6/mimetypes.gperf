@@ -5,6 +5,7 @@
 %ignore-case
 %define slot-name ext
 %omit-struct-type
+%define initializer-suffix ,""
 %{
 #include <string.h>
 #include <stdlib.h>
