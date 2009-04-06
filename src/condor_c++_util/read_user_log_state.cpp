@@ -62,6 +62,32 @@ ReadUserLogFileState::~ReadUserLogFileState( void )
 {
 }
 
+// Is the state initialized?
+bool
+ReadUserLogFileState::isInitialized( void ) const
+{
+	if ( NULL == m_ro_state ) {
+		return false;
+	}
+	if ( strcmp( m_ro_state->internal.m_signature, FileStateSignature ) ) {
+		return false;
+	}
+	return true;
+}
+
+// Is the state valid for use?
+bool
+ReadUserLogFileState::isValid( void ) const
+{
+	if ( !isInitialized() ) {
+		return false;
+	}
+	if ( 0 == strlen(m_ro_state->internal.m_base_path) ) {
+		return false;
+	}
+	return true;
+}
+
 bool
 ReadUserLogFileState::getLogPosition( int64_t &pos ) const
 {
@@ -844,9 +870,40 @@ ReadUserLogStateAccess::~ReadUserLogStateAccess(void)
 	delete m_state;
 }
 
+// Is the state buffer initialized?
+bool
+ReadUserLogStateAccess::isInitialized( void ) const
+{
+	return m_state->isInitialized( );
+}
+
+// Is the state buffer valid for use?
+bool
+ReadUserLogStateAccess::isValid( void ) const
+{
+	return m_state->isValid( );
+}
+
+// Log position of a state
+bool
+ReadUserLogStateAccess::getLogPosition(
+	unsigned long		&pos ) const
+{
+	int64_t	my_pos;
+	if ( !m_state->getLogPosition(my_pos) ) {
+		return false;
+	}
+
+	if ( my_pos > ULONG_MAX ) {
+		return false;
+	}
+	pos = (unsigned long) my_pos;
+	return true;
+}
+
 // Positional difference between to states
 bool
-ReadUserLogStateAccess::LogPositionDiff(
+ReadUserLogStateAccess::getLogPositionDiff(
 	const ReadUserLogStateAccess	&other,
 	long							&diff ) const
 {
@@ -865,9 +922,26 @@ ReadUserLogStateAccess::LogPositionDiff(
 	return true;
 }
 
+// Event number of a state
+bool
+ReadUserLogStateAccess::getEventNumber(
+	unsigned long		&event_no ) const
+{
+	int64_t	my_event_no;
+	if ( !m_state->getLogRecordNo(my_event_no) ) {
+		return false;
+	}
+
+	if ( my_event_no > ULONG_MAX ) {
+		return false;
+	}
+	event_no = (unsigned long) my_event_no;
+	return true;
+}
+
 // # of events between to states
 bool
-ReadUserLogStateAccess::EventNumberDiff(
+ReadUserLogStateAccess::getEventNumberDiff(
 	const ReadUserLogStateAccess	&other,
 	long							&diff) const
 {
@@ -888,13 +962,13 @@ ReadUserLogStateAccess::EventNumberDiff(
 
 // Get the unique ID and sequence # of the associated state file
 bool
-ReadUserLogStateAccess::UniqId( char *buf, int len ) const
+ReadUserLogStateAccess::getUniqId( char *buf, int len ) const
 {
 	return m_state->getUniqId( buf, len );
 }
 
 bool
-ReadUserLogStateAccess::SequenceNumber( int &seqno ) const
+ReadUserLogStateAccess::getSequenceNumber( int &seqno ) const
 {
 	return m_state->getSequenceNo( seqno );
 }

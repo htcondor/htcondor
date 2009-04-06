@@ -43,8 +43,10 @@ enum Command
 {
 	CMD_NONE,
 	CMD_DUMP,
+	CMD_DIFF,
 	CMD_LIST,
-	CMD_VERIFY
+	CMD_VERIFY,
+	CMD_CHECK
 };
 enum Field
 {
@@ -124,6 +126,7 @@ public:
 	int handleFixed( SimpleArg &arg, int & );
 
 	const char *getFile( void ) const { return m_file; };
+	const char *getFile2( void ) const { return m_file2; };
 	Command getCommand( void ) const { return m_command; };
 	const FieldData *getField( void ) const { return m_field; };
 	Value getValue( void ) const { return m_value; };
@@ -135,10 +138,16 @@ public:
 	const FieldData *lookupField( Field field ) const;
 	bool isValueOk( void ) const { return m_num_values >= 1; };
 	bool needStateFile( void ) const { return m_command != CMD_LIST; };
+	bool needStateFile2( void ) const { return m_command == CMD_DIFF; };
 
 private:
-	enum { ST_CMD, ST_FILE, ST_FIELD, ST_VALUES, ST_NONE } m_state;
+	enum { ST_CMD,
+		   ST_FILE,
+		   ST_FIELD, ST_FILE2=ST_FIELD,
+		   ST_VALUES,
+		   ST_NONE } m_state;
 	const char		*m_file;
+	const char		*m_file2;
 	Command			 m_command;
 	const FieldData	*m_field;
 	Value			 m_value;
@@ -155,14 +164,26 @@ private:
 };
 
 int
-CheckArgs(int argc, const char **argv, Options &opts);
+CheckArgs(int argc,
+		  const char **argv,
+		  Options &opts);
 int
-ReadState(const Options &opts, ReadUserLog::FileState &state );
+ReadState(const Options &opts,
+		  ReadUserLog::FileState &state );
 int
-DumpState(const Options &opts, const ReadUserLog::FileState &state,
+DumpState(const Options &opts,
+		  const ReadUserLog::FileState &state,
 		  const FieldData *wdata = NULL );
 int
-VerifyState(const Options &opts, const ReadUserLog::FileState &state );
+DiffState(const Options &opts,
+		  const ReadUserLog::FileState &state,
+		  const ReadUserLog::FileState &state2 );
+int
+VerifyState(const Options &opts,
+			const ReadUserLog::FileState &state );
+int
+CheckState(const Options &opts,
+		   const ReadUserLog::FileState &state );
 
 const char *timestr( struct tm &tm, char *buf = NULL, int bufsize = 0 );
 const char *timestr( time_t t, char *buf = NULL, int bufsize = 0 );
@@ -200,6 +221,11 @@ main(int argc, const char **argv)
 		fprintf( stderr, "ReadState() failed\n" );
 		exit( 1 );
 	}
+	ReadUserLog::FileState	state2;
+	if ( opts.needStateFile2() && ( ReadState( opts, state2 ) < 0 )  ) {
+		fprintf( stderr, "ReadState() failed\n" );
+		exit( 1 );
+	}
 
 	int	status = 0;
 	switch( opts.getCommand() )
@@ -212,6 +238,12 @@ main(int argc, const char **argv)
 		break;
 	case CMD_DUMP:
 		status = DumpState( opts, state );
+		break;
+	case CMD_DIFF:
+		status = DiffState( opts, state, state2 );
+		break;
+	case CMD_CHECK:
+		status = CheckState( opts, state );
 		break;
 	case CMD_VERIFY:
 		status = VerifyState( opts, state );
@@ -258,6 +290,12 @@ CheckArgs(int argc, const char **argv, Options &opts)
 				 "  use -h for help\n" );
 		status = -1;
 	}
+	else if ( ( opts.needStateFile2() ) && ( NULL == opts.getFile2() ) ) {
+		fprintf( stderr,
+				 "2nd State file not specified\n"
+				 "  use -h for help\n" );
+		status = -1;
+	}
 	else if ( CMD_NONE == opts.getCommand() ) {
 		fprintf( stderr,
 				 "No command specified\n"
@@ -284,7 +322,8 @@ CheckArgs(int argc, const char **argv, Options &opts)
 }
 
 int
-ReadState(const Options &opts, ReadUserLog::FileState &state )
+ReadState(const Options &opts,
+		  ReadUserLog::FileState &state )
 {
 
 	// Create & initialize the state
@@ -425,6 +464,57 @@ DumpState( const Options &opts,
 		return -1;
 	}
 	return 0;
+}
+
+int
+CheckState( const Options &opts,
+			const ReadUserLog::FileState &state )
+{
+	ReadUserLogStateAccess access1(state);
+	unsigned long	pos, num;
+	int				seq;
+	char			uniq_id[256];
+
+	if (!state.getLogPosition(pos) ) {
+		fprintf( "Error getting log position\n" );
+		return -1;
+	}
+	if (!state.getEventNumber(num) ) {
+		fprintf( "Error getting event number\n" );
+		return -1;
+	}
+	if (!state.getUniqId(uniq_id, sizeof(uniq_id)) ) {
+		fprintf( "Error getting uniq ID\n" );
+		return -1;
+	}
+	if (!state.getSequenceNumber(seq) ) {
+		fprintf( "Error getting sequence number\n" );
+		return -1;
+	}
+
+	printf( "State:\n"
+			"  Initialized: %s\n"
+			"  Valid: %s\n"
+			"  Log Position: %ul\n"
+			"  Log Event #: %ul\n"
+			"  UniqID: %s\n"
+			"  Sequence #: %d\n",
+			state.isInitialized(),
+			state.isValid(),
+			pos,
+			num,
+			uniq_id,
+			seq );
+}
+
+int
+DiffState( const Options &opts,
+		   const ReadUserLog::FileState &state1,
+		   const ReadUserLog::FileState &state2 )
+{
+	ReadUserLogStateAccess access1(state1);
+	ReadUserLogStateAccess access2(state2);
+	
 }
 
 bool
@@ -692,6 +782,7 @@ Options::Options( void )
 {
 	m_state = ST_CMD;
 	m_file = NULL;
+	m_file2 = NULL;
 	m_command = CMD_NONE;
 	m_field = NULL;
 	memset( &m_value, 0, sizeof(m_value) );
@@ -704,6 +795,7 @@ Options::Options( void )
 		"[options] <command> [filename [field-name [value/min [max-value]]]]\n"
 		"  commands: dump verify list\n"
 		"    dump/any: dump [what]\n"
+		"    diff: diff two state files [file2]\n"
 		"    verify/numeric: what min max\n"
 		"    verify/string:  what [value]\n"
 		"    list (list names of things)\n"

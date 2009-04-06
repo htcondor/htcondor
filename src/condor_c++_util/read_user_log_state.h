@@ -79,6 +79,12 @@ class ReadUserLogFileState
 	ReadUserLogFileState( const ReadUserLog::FileState &state );
 	virtual ~ReadUserLogFileState( void );
 
+	// Is the state buffer initialized?
+	bool isInitialized( void ) const;
+
+	// Is the state buffer valid for use?
+	bool isValid( void ) const;
+
 	static bool InitState( ReadUserLog::FileState &state );
 	static bool UninitState( ReadUserLog::FileState &state );
 

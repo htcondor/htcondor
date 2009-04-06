@@ -524,20 +524,33 @@ public:
 	ReadUserLogStateAccess(const ReadUserLog::FileState &state);
 	~ReadUserLogStateAccess(void);
 
-	// Valid?
+	// Is the buffer initialized?
+	bool isInitialized( void ) const;
+
+	// Is the buffer valid for use by the ReadUserLog::initialize()?
 	bool isValid( void ) const;
 
+	// Position in overall log
+	// Note: Can return an error if the result is too large
+	//  to be stored in a long
+	bool getLogPosition( unsigned long &pos ) const;
+
 	// Positional difference between to states (this - other)
-	bool LogPositionDiff( const ReadUserLogStateAccess &other,
+	bool getLogPositionDiff( const ReadUserLogStateAccess &other,
 						  long &diff ) const;
 
+	// Absolute event number
+	// Note: Can return an error if the result is too large
+	//  to be stored in a long
+	bool getEventNumber( unsigned long &num ) const;
+
 	// # of events between to states (this - other)
-	bool EventNumberDiff( const ReadUserLogStateAccess &other,
+	bool getEventNumberDiff( const ReadUserLogStateAccess &other,
 						  long &diff ) const;
 
 	// Get the unique ID and sequence # of the associated state file
-	bool UniqId( char *buf, int len ) const;
-	bool SequenceNumber( int &seqno ) const;
+	bool getUniqId( char *buf, int len ) const;
+	bool getSequenceNumber( int &seqno ) const;
 
 	// Access to the state
 protected:
