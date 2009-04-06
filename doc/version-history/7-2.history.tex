@@ -42,15 +42,17 @@ and \Condor{submit\_dag}.  This flag is intended mainly for testing.
 
 \item Added support for the \Opt{-debug} option to \Condor{qedit}.
 
-\item The JobRouter now uses a timeslice timer for periodic expression
-  evaluation similar to the \Condor{schedd}.  The evaluation interval
-  is controlled by the \MacroNI{PERIODIC\_EXPR\_INTERVAL} and defaults
-  to 60 seconds, just like the \Condor{schedd}.
+\item The Job Router now uses a time slice timer for periodic expression
+  evaluation, similar to the \Condor{schedd} daemon.
+  The evaluation interval is controlled by 
+  the configuration variable \MacroNI{PERIODIC\_EXPR\_INTERVAL},
+  and defaults to 60 seconds, the same default value used by
+  the \Condor{schedd} daemon.
 
-\item Job Router now resets the source job if a failure occurs when
-  updating the \Condor{schedd} for a periodic expression that
-  evaluated to true.  The job's periodic expressions should be
-  evaluated again sometime in the future with a successful update.
+\item The Job Router now resets the source job, if a failure occurs when
+  updating the \Condor{schedd} daemon for a periodic expression that
+  evaluated to \Expr{True}.  The job's periodic expressions should be
+  evaluated again some time in the future with a successful update.
 
 \end{itemize}
 
@@ -97,7 +99,7 @@ and \Condor{submit\_dag}.  This flag is intended mainly for testing.
 \item Added \MacroNI{JOB\_ROUTER\_ATTRS\_TO\_COPY} configuration
   option. This is a comma separated list of attributes that the Job
   Router should copy from the routed ad to the source ad in addition
-  to internally hardcoded attributes that are copied.
+  to internally hard coded attributes that are copied.
 
 \item Added \MacroNI{JOB\_ROUTER\_RELEASE\_ON\_HOLD}. configuration
   option that will control whether the Job Router will reset the
@@ -116,7 +118,7 @@ and \Condor{submit\_dag}.  This flag is intended mainly for testing.
   sleep state irrespective of any active slots.
 
 \item Fixed a bug on Windows that made it impossible to use
-  \textbf{S5} (Shutdown) for hibernation.
+  the defined string \verb@"S5"@ for hibernation.
 
 \item Fixed a bug in the \Condor{starter} where it would be running as
   real uid condor after job hooks are invoked which causes issues when
@@ -131,17 +133,17 @@ and \Condor{submit\_dag}.  This flag is intended mainly for testing.
 \item Fixed a bug where any two Condor daemons on Windows were able to
   bind to the same port at the same time.
 
-\item If \Condor{q} fails to connect to a \Condor{schedd} it now
-  returns an error.
+\item If \Condor{q} fails to connect to a \Condor{schedd} daemon,
+  it now returns an error.
 
 \item Fixed the behavior of the \Condor{negotiator} so that when a
   Condor-G matchmaking ad matches, the machine's ad will be shuffled
   to the end for round-robin matching to multiple gatekeepers with the
   same rank.
 
-\item Resolved bug where \SubmitCmd{vm\_macaddr} was improperly
-  parsed, and thus ignored, by \Condor{submit} for jobs in the VM
-  Universe.
+\item Resolved a bug in which the submit description file command
+  \SubmitCmd{vm\_macaddr} was improperly parsed,
+  and thus ignored, by \Condor{submit} for vm universe jobs.
 
 \item Condor's Windows zip file distribution now includes the new
   C/C++ runtime libraries.
