@@ -1490,6 +1490,8 @@ formatTime(const char*, const ArgumentList &argList, EvalState &state,
     return did_eval;
 }
 
+#if 0
+
 bool FunctionCall::
 inTimeUnits(const char*name,const ArgumentList &argList,EvalState &state, 
 	Value &val )
@@ -1540,6 +1542,8 @@ inTimeUnits(const char*name,const ArgumentList &argList,EvalState &state,
 	val.SetErrorValue( );
 	return( true );
 }
+
+#endif
 
 	// concatenate all arguments (expected to be strings)
 bool FunctionCall::
@@ -2697,11 +2701,11 @@ doSplitTime(const Value &time, ClassAd * &splitClassAd)
     did_conversion = true;
     if (time.IsIntegerValue(integer)) {
         asecs.secs = integer;
-        asecs.offset = timezone_offset();
+        asecs.offset = -timezone_offset();
         absTimeToClassAd(asecs, splitClassAd);
     } else if (time.IsRealValue(real)) {
         asecs.secs = (int) real;
-        asecs.offset = timezone_offset();
+        asecs.offset = -timezone_offset();
         absTimeToClassAd(asecs, splitClassAd);
     } else if (time.IsAbsoluteTimeValue(asecs)) {
         absTimeToClassAd(asecs, splitClassAd);
@@ -2724,7 +2728,7 @@ absTimeToClassAd(const abstime_t &asecs, ClassAd * &splitClassAd)
 
     splitClassAd = new ClassAd;
 
-    clock = asecs.secs;
+    clock = asecs.secs + asecs.offset;
     getGMTime( &clock, &tms );
 
     splitClassAd->InsertAttr("Type", "AbsoluteTime");

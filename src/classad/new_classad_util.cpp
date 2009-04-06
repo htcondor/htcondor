@@ -291,7 +291,7 @@ void absTimeToString(const abstime_t &atime, string &buffer)
     struct tm tms;
 
     tzsecs = atime.offset;  
-    epoch_time = atime.secs;
+    epoch_time = atime.secs + atime.offset;
     if (tzsecs > 0) { 
         sign = '+';         // timezone offset's sign
     } else {

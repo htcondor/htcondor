@@ -114,7 +114,6 @@ MakeAbsTime( abstime_t *tim )
         if (tt.tm_isdst > 0) { // add an hour to the offset, if day-light saving is set
             abst.offset += 3600;
         }
-        abst.secs += abst.offset;
     }
     else { //make a literal out of the passed value
         abst = *tim;
@@ -224,6 +223,10 @@ MakeAbsTime(string timeStr )
 		abst.offset = findOffset(abst.secs);
 		//abst.secs -= abst.offset;
 	}
+	// If the time string we converted had a timezone offset (either
+	// explicit or implicit), we need to adjust the resulting time_t
+	// so that our final value is UTC.
+	abst.secs -= abst.offset;
 	
 	if(abst.offset == -1) { // corresponds to illegal offset
 		val.SetErrorValue( );
