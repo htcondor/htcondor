@@ -602,10 +602,12 @@ in Condor's queue.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{RETRY}
+\subsubsection{Retrying Failed Nodes}
 
 \index{DAGMan input file!RETRY key word}
 \index{DAGMan!RETRY of failed nodes}
+\index{DAGMan input file!ABORT-DAG-ON key word}
+\index{DAGMan!ABORT-DAG-ON}
 
 The \Arg{RETRY} key word provides a
 way to retry failed nodes.
@@ -650,6 +652,58 @@ integer exit value).
 If the node exits with the specified integer exit value,
 then no further processing will be done
 on the node. 
+
+The \Arg{ABORT-DAG-ON} key word provides a way
+to abort the entire DAG if a given node returns a specific exit
+code.  The syntax for \Arg{ABORT-DAG-ON} is
+
+\Opt{ABORT-DAG-ON} \Arg{JobName} \Arg{AbortExitValue}
+\oOptArg{RETURN}{DAGReturnValue}
+
+If the node specified by \Arg{JobName} returns the specified
+\Arg{AbortExitValue}, the
+DAG is immediately aborted.
+A DAG abort differs from a node failure,
+in that a DAG abort causes all nodes within the DAG to be stopped immediately.
+This includes removing the jobs in nodes that are currently running.
+A node failure allows the DAG to continue running,
+until no more progress can be made due to dependencies.
+
+An abort overrides node retries. 
+If a node returns the abort exit value,
+the DAG is aborted,
+even if the node has retry specified.
+
+When a DAG aborts, by default it exits with the node return value that
+caused the abort.  This can be changed by 
+using  the optional \Arg{RETURN} key word along
+with specifying the desired \Arg{DAGReturnValue}.
+The DAG abort return value
+can be used for DAGs within DAGs,
+allowing an inner DAG to cause an abort of an outer DAG.
+
+Adding \Arg{ABORT-DAG-ON} for node C in the diamond-shaped
+DAG
+\footnotesize
+\begin{verbatim}
+    # File name: diamond.dag
+    #
+    JOB  A  A.condor 
+    JOB  B  B.condor 
+    JOB  C  C.condor	
+    JOB  D  D.condor
+    PARENT A CHILD B C
+    PARENT B C CHILD D
+    Retry  C 3
+    ABORT-DAG-ON C 10 RETURN 1
+\end{verbatim}
+\normalsize
+
+causes the DAG to be aborted, if node C exits with a return value of 10.
+Any other currently running nodes (only node B is a possibility for 
+this particular example) are stopped and removed.
+If this abort occurs, the return value for the DAG is 1.
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{VARS}
@@ -814,94 +868,44 @@ This will cause node C to be submitted before node B (normally, node B
 would be submitted first).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{CATEGORY}
-\index{DAGMan input file!CATEGORY key word}
+\subsubsection{Limiting the Number of Submitted Job Clusters within a DAG}
 
-The \Arg{CATEGORY} key word assigns a category to a DAG node.
+\index{DAGMan input file!CATEGORY key word}
+\index{DAGMan input file!MAXJOBS key word}
+
+In order to limit the number of submitted job clusters within a DAG,
+the nodes may be placed into categories by assignment of a name.
+Then, a maximum number of submitted clusters may be specified
+for each category.
+
+The \Arg{CATEGORY} key word assigns a category name to a DAG node.
 The syntax for CATEGORY is
 
 \Opt{CATEGORY} \Arg{JobName} \Arg{CategoryName}
 
-Node categories are used for job submission throttling (see \Opt{MAXJOBS}
-below).  Category names cannot contain white space.
+Category names cannot contain white space.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{MAXJOBS}
-\index{DAGMan input file!MAXJOBS key word}
-
-The \Arg{MAXJOBS} key word limits the number of submitted jobs for a node
-category.  The syntax for MAXJOBS is
+The \Arg{MAXJOBS} key word limits the number of submitted job clusters
+on a per category basis.
+The syntax for \Arg{MAXJOBS} is
 
 \Opt{MAXJOBS} \Arg{CategoryName} \Arg{MaxJobsValue}
 
-If the number of submitted jobs for a given category reaches the limit,
-no further jobs in that category will be submitted until other jobs
-in the category terminate.  If there is no MAXJOBS entry for a given node
-category, the limit is set to infinity.
+If the number of submitted job clusters for a given category reaches the limit,
+no further job clusters in that category will be submitted until other
+job clusters within the category terminate.
+If MAXJOBS is not set for a defined category,
+then there is no limit placed on the number of submissions
+within that category.
 
 Note that a single invocation
-of \Condor{submit} counts as one job, even if the submit file produces
-a multi-job cluster.
+of \Condor{submit} results in one job cluster.
+The number of Condor jobs within a cluster may be greater than 1. 
 
-The \MacroNI{DAGMAN\_MAX\_JOBS\_SUBMITTED} configuration macro and the
-\Condor{submit\_dag} \Arg{-maxjobs} command-line flag are still in effect
-if node category throttles are used.
+The  configuration variable \MacroNI{DAGMAN\_MAX\_JOBS\_SUBMITTED} 
+and the \Condor{submit\_dag} \Arg{-maxjobs} command-line option
+are still enforced if these \Arg{CATEGORY} and \Arg{MAXJOBS} throttles are used.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{ABORT-DAG-ON}
-\index{DAGMan input file!ABORT-DAG-ON key word}
-
-\index{DAGMan!ABORT-DAG-ON}
-The \Arg{ABORT-DAG-ON} key word provides a way
-to abort the entire DAG if a given node returns a specific exit
-code.  The syntax for \Arg{ABORT-DAG-ON} is
-
-\Opt{ABORT-DAG-ON} \Arg{JobName} \Arg{AbortExitValue}
-\oOptArg{RETURN}{DAGReturnValue}
-
-If the node specified by \Arg{JobName} returns the specified
-\Arg{AbortExitValue}, the
-DAG is immediately aborted.
-A DAG abort differs from a node failure,
-in that a DAG abort causes all nodes within the DAG to be stopped immediately.
-This includes removing the jobs in nodes that are currently running.
-A node failure allows the DAG to continue running,
-until no more progress can be made due to dependencies.
-
-An abort overrides node retries. 
-If a node returns the abort exit value,
-the DAG is aborted,
-even if the node has retry specified.
-
-When a DAG aborts, by default it exits with the node return value that
-caused the abort.  This can be changed by 
-using  the optional \Arg{RETURN} key word along
-with specifying the desired \Arg{DAGReturnValue}.
-The DAG abort return value
-can be used for DAGs within DAGs,
-allowing an inner DAG to cause an abort of an outer DAG.
-
-Adding \Arg{ABORT-DAG-ON} for node C in the diamond-shaped
-DAG
-\footnotesize
-\begin{verbatim}
-    # File name: diamond.dag
-    #
-    JOB  A  A.condor 
-    JOB  B  B.condor 
-    JOB  C  C.condor	
-    JOB  D  D.condor
-    PARENT A CHILD B C
-    PARENT B C CHILD D
-    Retry  C 3
-    ABORT-DAG-ON C 10 RETURN 1
-\end{verbatim}
-\normalsize
-
-causes the DAG to be aborted, if node C exits with a return value of 10.
-Any other currently running nodes (only node B is a possibility for 
-this particular example) are stopped and removed.
-If this abort occurs, the return value for the DAG is 1.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{CONFIG}
@@ -934,7 +938,7 @@ see section~\ref{sec:DAGConfig}.
 \subsection{Job Recovery:  The Rescue DAG}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\index{DAGMan!rescue DAG}
+\index{DAGMan!Rescue DAG}
 DAGMan can help with the resubmission of uncompleted
 portions of a DAG, when one or more nodes result in failure.
 If any node in the DAG fails,
@@ -945,75 +949,131 @@ called a Rescue DAG.
 
 The Rescue DAG is a DAG input file,
 functionally the same as the original DAG file.
-(Note that if multiple DAG files are specified on the
-\Condor{submit\_dag} command line, a single rescue
-DAG encompassing all of the input DAGs is generated.)
-The rescue DAG additionally contains an indication of
+The Rescue DAG additionally contains an indication of
 successfully completed nodes by appending the \Arg{DONE}
 key word to the node's \Arg{JOB} or \Arg{DATA} lines.
-If the DAG is resubmitted using this Rescue DAG input file,
-the nodes marked as completed will not be re-executed.
+If the DAG is resubmitted utilizing the Rescue DAG,
+the successfully completed nodes will not be re-executed.
+
+Note that if multiple DAG files are specified on the
+\Condor{submit\_dag} command line, a single rescue
+DAG encompassing all of the input DAGs is generated.
 
 If the Rescue DAG file is generated before all retries
 of a node are completed, 
-then the Rescue DAG file will also contain Retry entries.
+then the Rescue DAG file will also contain \Arg{Retry} entries.
 The number of retries will be set to the appropriate remaining
 number of retries. 
+
+The granularity defining success or failure
+in the Rescue DAG is the node.
+For a node that fails,
+all parts of the node will be re-run,
+even if some parts were successful the first time.
+For example, if a node's PRE script
+succeeds, but then the node's Condor job cluster fails,
+the entire node, which includes the PRE script will be re-run.
+A job cluster may result in the submission of multiple Condor jobs.
+If one of the multiple jobs fails, the node fails.
+Therefore, a the Rescue DAG will
+re-run the entire node,
+implying the submission of the entire cluster of jobs,
+not just the one(s) that failed.
+
+Statistics about the failed DAG execution are presented as
+comments at the beginning of the Rescue DAG input file.
 
 The Rescue DAG is automatically generated by DAGMan when a node
 within the DAG fails or when \Condor{dagman} itself is removed
 with \Condor{rm}.
-The file name of the rescue DAG depends on whether "old-style" or
-"new-style" rescue DAG naming is used (see below).
-Statistics about the failed DAG execution are presented as
-comments at the beginning of the Rescue DAG input file.
+The file name of the Rescue DAG, and usage of the Rescue
+DAG changed from explicit specification to implicit usage
+beginning with Condor version 7.1.0.
 
-The granularity defining success or failure
-in the Rescue DAG input file is the node -- if a node fails,
-all parts of the node will be re-run even if some of them
-worked the first time.  For example, if a node's PRE script
-succeeds, but then the node job fails, when the rescue DAG is
-run the PRE script for that node will be re-run.
-The Condor job within a node may result in
-the submission of multiple Condor jobs under a single cluster.
-If one of the multiple jobs fails, the node fails.
-Therefore, a resubmission of the Rescue DAG will again
-result in the submission of the entire cluster of jobs.
+Current naming of the Rescue DAG appends the string
+\verb@.rescue<XXX>@ to the original DAG input file.
+Values for \verb@<XXX>@ start at \verb@001@ and continue
+to \verb@002@, \verb@003@, and beyond.
+If a Rescue DAG exists,
+the Rescue DAG with the largest magnitude value for \verb@<XXX>@
+will be used, and its usage is implied.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:DAGRescueOld}"Old-style" Rescue DAGs}
+Here is an example showing file naming and DAG submission
+for the case of a failed DAG.
+The initial DAG is submitted with
+\begin{verbatim}
+  condor_submit_dag  my.dag
+\end{verbatim}
+A failure of this DAG results in the Rescue DAG
+called \File{my.dag.rescue001}.
+The DAG is resubmitted using the same command: 
+\begin{verbatim}
+  condor_submit_dag  my.dag
+\end{verbatim}
+This resubmission of the DAG uses the Rescue DAG file \File{my.dag.rescue001},
+because it exists.
+Failure of this Rescue DAG results in another Rescue DAG
+called \File{my.dag.rescue002}.
+If the DAG is again submitted, using the same command
+as with the first two submissions, but not repeated here,
+then this third submission uses the Rescue DAG file \File{my.dag.rescue002},
+because it exists, and because the value \verb@002@ is larger
+in magnitude than \verb@001@.
 
-Prior to version 7.1.0, the default has been that, for a DAG file
-\File{my.dag}, the rescue DAG created (if any) would be named
-\File{my.dag.rescue}.  To run the rescue DAG, you would run
-\Condor{submit\_dag} on \File{my.dag.rescue}, and if that run
-fails, it would produce a rescue DAG named
-\File{my.dag.rescue.rescue}, and so on.
+To explicitly specify a particular Rescue DAG,
+use the optional command-line argument \Arg{-dorescuefrom}
+with \Condor{submit\_dag}.
+Note that this will have the side effect of renaming 
+existing Rescue DAG files with larger magnitude values 
+of \verb@<XXX>@.
+Each renamed file has its existing name appended with
+the string \File{.old}.
+For example, assume that \File{my.dag} has failed 4 times,
+resulting in the Rescue DAGs named
+\File{my.dag.rescue001},
+\File{my.dag.rescue002},
+\File{my.dag.rescue003},
+and
+\File{my.dag.rescue004}.
+A decision is made to re-run using \File{my.dag.rescue002}.
+The submit command is
+\begin{verbatim}
+  condor_submit_dag  -dorescuefrom 2  my.dag
+\end{verbatim}
+The DAG specified by the DAG input file \File{my.dag.rescue002}
+is submitted.
+And, the existing Rescue DAG \File{my.dag.rescue003} is
+renamed to be \File{my.dag.rescue003.old},
+while the existing Rescue DAG \File{my.dag.rescue004} is
+renamed to be \File{my.dag.rescue004.old}.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:DAGRescueNew}"New-style" Rescue DAGs}
-
-Starting with version 7.1.0, however, the default behavior is
-different.  For a DAG file \File{my.dag}, an initial failure
-produces a rescue DAG named \File{my.dag.rescue001}.  However, if
-you re-run \Condor{submit\_dag} on \File{my.dag}, the rescue
-DAG \File{my.dag.rescue001} will automatically be run instead of
-the original DAG.  If that run fails, the rescue DAG written will
-be \File{my.dag.rescue002}.  In fact, running \Condor{submit\_dag}
-on the original DAG file will automatically run the newest
-(highest numbered) rescue DAG.  You can specify a rescue DAG
-to run with the the \Arg{-dorescuefrom} flag -- for example, if you
-specify \Arg{-dorescuefrom 3}, rescue DAG number 3 will be run, and
-all newer rescue DAGs will be renamed (\File{.old} will be appended to the
-file name, and previous \File{.old} files, if any, will be overwritten).
-The maximum rescue DAG number is configured by the
+A maximum value for \verb@XXX@ may be configured by the
 \MacroNI{DAGMAN\_MAX\_RESCUE\_NUM} configuration macro
 (see~\pageref{param:DAGManMaxRescueNum}).
 
-The old behavior can be maintained by setting
-\MacroNI{DAGMAN\_OLD\_RESCUE} (see~\pageref{param:DAGManOldRescue})
-to true and \MacroNI{DAGMAN\_AUTO\_RESCUE}
-(see~\pageref{param:DAGManAutoRescue}) to false.
+Prior to Condor version 7.1.0, the naming of a Rescue DAG
+appended the string \File{.rescue} to the existing DAG input
+file name. 
+And, the Rescue DAG file would be explicitly placed in 
+the command line that submitted it.
+For example a first submission is
+\begin{verbatim}
+  condor_submit_dag  my.dag
+\end{verbatim}
+Assuming that this DAG failed, the file \File{my.dag.rescue}
+would be created.
+To run this Rescue DAG, the submission command is
+\begin{verbatim}
+  condor_submit_dag  my.dag.rescue
+\end{verbatim}
+If this Rescue DAG also failed, a new Rescue DAG named
+\File{my.dag.rescue.rescue} would be created.
+
+The behavior of DAGMan with respect to Rescue DAGs 
+can be forced to the old behavior by setting the configuration variables
+\Macro{DAGMAN\_OLD\_RESCUE} (see~\pageref{param:DAGManOldRescue})
+to \Expr{True} and \Macro{DAGMAN\_AUTO\_RESCUE}
+(see~\pageref{param:DAGManAutoRescue}) to \Expr{False}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:DAGsinDAGs}Advanced Usage: A DAG within a DAG}
@@ -1156,7 +1216,7 @@ following:
 \end{verbatim}
 
 This would set maxjobs to 1 for the inner DAG, and then run the
-entire workflow.
+entire work flow.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{dagman:NestedRescue}Nested DAGs and rescue DAGs}
@@ -1164,7 +1224,7 @@ entire workflow.
 When using nested DAGs, it is strongly recommended that you use
 "new-style" rescue DAGs (this is the default).  Using "new-style"
 rescue DAGs will automatically run the proper rescue DAG(s) if
-there is a failure in your workflow.  For example, if one of the
+there is a failure in your work flow.  For example, if one of the
 nodes in \File{inner.dag} fails, this will produce a rescue
 DAG for inner.dag (\File{inner.dag.rescue.001}, etc.).  Then,
 since \File{inner.dag} failed, node B of \File{diamond.dag} will fail,
