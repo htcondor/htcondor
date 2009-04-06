@@ -90,13 +90,11 @@ double get_random_real(void)
     return (get_random_integer() / (double) BIGGEST_RANDOM_INT);
 }
 
-long timezone_offset(void)
+long timezone_offset( time_t clock, bool no_dst )
 {
     long tz_offset;
     struct tm  tms;
-    time_t     clock;
 
-    time(&clock);
     getLocalTime(&clock, &tms);
 #ifdef HAVE_TM_GMTOFF
     tz_offset = tms.tm_gmtoff;
@@ -125,7 +123,7 @@ long timezone_offset(void)
 #endif
 
 	// Correct for daylignt savings time.
-    if (0 != tms.tm_isdst) {
+    if ( no_dst && 0 != tms.tm_isdst ) {
         tz_offset -= 3600;
     }
 

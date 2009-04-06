@@ -1161,16 +1161,7 @@ timeZoneOffset (const char *, const ArgumentList &argList, EvalState &,
 		return( true );
 	}
 	
-	struct tm tms;
-	time_t clock;
-	time(&clock);
-	getLocalTime( &clock, &tms );
-	if(tms.tm_isdst > 0) { //check for daylight saving
-	  val.SetRelativeTimeValue( (time_t) (timezone_offset()+3600) );
-	}
-	else {
-	  val.SetRelativeTimeValue( (time_t) (timezone_offset()));
-	}
+	val.SetRelativeTimeValue( (time_t) timezone_offset( time(NULL), false ) );
 	return( true );
 }
 
@@ -2699,11 +2690,11 @@ doSplitTime(const Value &time, ClassAd * &splitClassAd)
     did_conversion = true;
     if (time.IsIntegerValue(integer)) {
         asecs.secs = integer;
-        asecs.offset = timezone_offset();
+        asecs.offset = timezone_offset( asecs.secs, false );
         absTimeToClassAd(asecs, splitClassAd);
     } else if (time.IsRealValue(real)) {
         asecs.secs = (int) real;
-        asecs.offset = timezone_offset();
+        asecs.offset = timezone_offset( asecs.secs, false );
         absTimeToClassAd(asecs, splitClassAd);
     } else if (time.IsAbsoluteTimeValue(asecs)) {
         absTimeToClassAd(asecs, splitClassAd);

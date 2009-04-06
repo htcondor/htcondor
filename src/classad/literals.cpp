@@ -106,14 +106,9 @@ MakeAbsTime( abstime_t *tim )
     abstime_t abst;
     if (tim == NULL) { // => current time/offset
         time_t now;
-        struct tm tt;
         time( &now );
-        getLocalTime(&now, &tt);
         abst.secs = now;
-        abst.offset = timezone_offset();
-        if (tt.tm_isdst > 0) { // add an hour to the offset, if day-light saving is set
-            abst.offset += 3600;
-        }
+        abst.offset = timezone_offset( now, false );
     }
     else { //make a literal out of the passed value
         abst = *tim;
@@ -214,7 +209,7 @@ MakeAbsTime(string timeStr )
     // local time.  We want the time as if we were in Greenwich (we'll
     // call gmTime later to extract it, not localtime()), so we adjust
     // by our timezone.
-    abst.secs += timezone_offset();
+    abst.secs += timezone_offset( abst.secs, true );
 	
 	if(offset) {
 		abst.offset = (tzhr*3600) + (tzmin*60);
@@ -426,24 +421,7 @@ static double revDouble(string revNumStr)
 int Literal::
 findOffset(time_t epochsecs) 
 {
-	tm abstm;
-	int  offset;
-
-	abstm.tm_year = 70;
-	abstm.tm_mon = 0;
-	abstm.tm_mday = 1;
-	abstm.tm_hour = 0;
-	abstm.tm_min =0;
-	abstm.tm_sec = epochsecs;
-	if(mktime(&abstm) == -1) {
-		offset = -1;
-	}
-	if(abstm.tm_isdst > 0) {
-		offset = timezone_offset()+3600;
-	} else {
-		offset = timezone_offset();
-	}
-	return offset;
+	return timezone_offset( epochsecs, false );
 } 
 
 
