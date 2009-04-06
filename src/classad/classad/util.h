@@ -40,6 +40,10 @@ int get_random_integer(void);
 // Get a random number between 0 and 1
 double get_random_real(void);
 
+/* This calculates the timezone offset of the current locality. The
+ * returned value is the offset in seconds east of UTC, assuming daylight
+ * saving time is not in effect.
+ */
 long timezone_offset(void);
 
 /* This converts a string so that sequences like \t

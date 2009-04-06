@@ -1165,13 +1165,11 @@ timeZoneOffset (const char *, const ArgumentList &argList, EvalState &,
 	time_t clock;
 	time(&clock);
 	getLocalTime( &clock, &tms );
-		// POSIX says that timezone is positive west of GMT;  we reverse it
-		// here to make it more intuitive
 	if(tms.tm_isdst > 0) { //check for daylight saving
-	  val.SetRelativeTimeValue( (time_t) (-timezone_offset()+3600) );
+	  val.SetRelativeTimeValue( (time_t) (timezone_offset()+3600) );
 	}
 	else {
-	  val.SetRelativeTimeValue( (time_t) (-timezone_offset()));
+	  val.SetRelativeTimeValue( (time_t) (timezone_offset()));
 	}
 	return( true );
 }
@@ -1281,7 +1279,7 @@ makeDate( const char*, const ArgumentList &argList, EvalState &state,
 		return( true );
 	}
 	abst.secs = clock;	
-	abst.offset = -timezone_offset();
+	abst.offset = timezone_offset();
 	// alter absolute time parameters based on current day-light saving status
 	if(tms->tm_isdst > 0) { 
 		abst.offset += 3600;
@@ -2701,11 +2699,11 @@ doSplitTime(const Value &time, ClassAd * &splitClassAd)
     did_conversion = true;
     if (time.IsIntegerValue(integer)) {
         asecs.secs = integer;
-        asecs.offset = -timezone_offset();
+        asecs.offset = timezone_offset();
         absTimeToClassAd(asecs, splitClassAd);
     } else if (time.IsRealValue(real)) {
         asecs.secs = (int) real;
-        asecs.offset = -timezone_offset();
+        asecs.offset = timezone_offset();
         absTimeToClassAd(asecs, splitClassAd);
     } else if (time.IsAbsoluteTimeValue(asecs)) {
         absTimeToClassAd(asecs, splitClassAd);

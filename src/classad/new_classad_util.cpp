@@ -99,34 +99,34 @@ long timezone_offset(void)
     time(&clock);
     getLocalTime(&clock, &tms);
 #ifdef HAVE_TM_GMTOFF
-    tz_offset = -tms.tm_gmtoff;
+    tz_offset = tms.tm_gmtoff;
 #else
     struct tm gtms;
     getGMTime(&clock, &gtms);
 
-    tz_offset = (gtms.tm_hour - tms.tm_hour)*3600 +
-                (gtms.tm_min - tms.tm_min)*60 +
-                (gtms.tm_sec - tms.tm_sec);
+    tz_offset = (tms.tm_hour - gtms.tm_hour)*3600 +
+                (tms.tm_min - gtms.tm_min)*60 +
+                (tms.tm_sec - gtms.tm_sec);
 
     // Correct above for 24-hour wrap-around.
     // Assume GM time and local time only differ by at most one day.
-    if( gtms.tm_year > tms.tm_year ) {
+    if( tms.tm_year > gtms.tm_year ) {
         tz_offset += 24*3600;
     }
-    else if( gtms.tm_year < tms.tm_year ) {
+    else if( tms.tm_year < gtms.tm_year ) {
         tz_offset -= 24*3600;
     }
-    else if( gtms.tm_yday > tms.tm_yday ) {
+    else if( tms.tm_yday > gtms.tm_yday ) {
         tz_offset += 24*3600;
     }
-    else if( gtms.tm_yday < tms.tm_yday ) {
+    else if( tms.tm_yday < gtms.tm_yday ) {
         tz_offset -= 24*3600;
     }
 #endif
 
 	// Correct for daylignt savings time.
     if (0 != tms.tm_isdst) {
-        tz_offset += 3600;
+        tz_offset -= 3600;
     }
 
     return tz_offset;

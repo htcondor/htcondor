@@ -110,7 +110,7 @@ MakeAbsTime( abstime_t *tim )
         time( &now );
         getLocalTime(&now, &tt);
         abst.secs = now;
-        abst.offset = -timezone_offset();
+        abst.offset = timezone_offset();
         if (tt.tm_isdst > 0) { // add an hour to the offset, if day-light saving is set
             abst.offset += 3600;
         }
@@ -214,7 +214,7 @@ MakeAbsTime(string timeStr )
     // local time.  We want the time as if we were in Greenwich (we'll
     // call gmTime later to extract it, not localtime()), so we adjust
     // by our timezone.
-    abst.secs -= timezone_offset();
+    abst.secs += timezone_offset();
 	
 	if(offset) {
 		abst.offset = (tzhr*3600) + (tzmin*60);
@@ -439,9 +439,9 @@ findOffset(time_t epochsecs)
 		offset = -1;
 	}
 	if(abstm.tm_isdst > 0) {
-		offset = -timezone_offset()+3600;
+		offset = timezone_offset()+3600;
 	} else {
-		offset = -timezone_offset();
+		offset = timezone_offset();
 	}
 	return offset;
 } 
