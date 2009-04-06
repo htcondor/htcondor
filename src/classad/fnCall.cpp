@@ -1161,13 +1161,13 @@ timeZoneOffset (const char *, const ArgumentList &argList, EvalState &,
 		return( true );
 	}
 	
-	struct tm *tms;
+	struct tm tms;
 	time_t clock;
 	time(&clock);
-	tms  = localtime( &clock);
+	getLocalTime( &clock, &tms );
 		// POSIX says that timezone is positive west of GMT;  we reverse it
 		// here to make it more intuitive
-	if(tms->tm_isdst > 0) { //check for daylight saving
+	if(tms.tm_isdst > 0) { //check for daylight saving
 	  val.SetRelativeTimeValue( (time_t) (-timezone_offset()+3600) );
 	}
 	else {
@@ -1206,7 +1206,7 @@ makeDate( const char*, const ArgumentList &argList, EvalState &state,
 	Value 	arg0, arg1, arg2;
 	int		dd, mm, yy;
 	time_t	clock;
-	struct	tm	*tms;
+	struct	tm	tms;
 	char	buffer[64];
 	string	month;
 	abstime_t abst;
@@ -1229,7 +1229,7 @@ makeDate( const char*, const ArgumentList &argList, EvalState &state,
 		val.SetErrorValue( );
 		return( false );
 	}
-	tms  = localtime( &clock);
+	getLocalTime( &clock, &tms );
 
 		// evaluate optional third argument
 	if( argList.size( ) == 3 ) {
@@ -1239,7 +1239,7 @@ makeDate( const char*, const ArgumentList &argList, EvalState &state,
 		}
 	} else {
 			// use the current year (tm_year is years since 1900)
-		arg2.SetIntegerValue( tms->tm_year + 1900 );
+		arg2.SetIntegerValue( tms.tm_year + 1900 );
 	}
 		
 		// check if any of the arguments are undefined
@@ -1265,7 +1265,7 @@ makeDate( const char*, const ArgumentList &argList, EvalState &state,
 		}
 	} else if( arg1.IsStringValue( month ) ) {
 		if( sprintf( buffer, "%d %s %d", dd, month.c_str( ), yy ) > 63 ||
-				strptime( buffer, "%d %b %Y", tms ) == NULL ) {
+				strptime( buffer, "%d %b %Y", &tms ) == NULL ) {
 			val.SetErrorValue( );
 			return( true );
 		}
@@ -1275,7 +1275,7 @@ makeDate( const char*, const ArgumentList &argList, EvalState &state,
 	}
 
 		// convert the struct tm -> time_t -> absolute time
-	clock = mktime( tms );
+	clock = mktime( &tms );
 	if(clock == -1) {
 		val.SetErrorValue( );
 		return( true );

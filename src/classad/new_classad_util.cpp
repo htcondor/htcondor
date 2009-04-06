@@ -97,12 +97,12 @@ long timezone_offset(void)
     time_t     clock;
 
     time(&clock);
-    tms = *localtime(&clock);
+    getLocalTime(&clock, &tms);
 #ifdef HAVE_TM_GMTOFF
     tz_offset = -tms.tm_gmtoff;
 #else
     struct tm gtms;
-    gtms = *gmtime(&clock);
+    getGMTime(&clock, &gtms);
 
     tz_offset = (gtms.tm_hour - tms.tm_hour)*3600 +
                 (gtms.tm_min - tms.tm_min)*60 +
