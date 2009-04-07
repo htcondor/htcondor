@@ -1176,33 +1176,10 @@ run the outer DAG.  Therefore, all paths in the inner DAG file
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:DAGSplicing}DAG Splicing}
+\subsubsection{\label{sec:DAGSplicing}DAG Splicing}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{DAGMan!Splicing DAGs}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{SPLICE}
-
-\index{DAGMan!SPLICE}
 \index{DAGMan input file!SPLICE key word}
-
-The \Arg{SPLICE} keyword creates a named instance of a DAG as specified
-in another file as an entity which may have \Arg{PARENT} and \Arg{CHILD}
-dependencies associated with other splice names or node names in the
-including DAG file.
-The syntax for \Arg{SPLICE} is
-
-\Opt{SPLICE} \Arg{SpliceName} \Arg{DagFileName} \oOptArg{DIR}{directory}
-
-After parsing incorporates a splice,
-all nodes within the spice become nodes within the including DAG.
-For detailed information about splices, see 
-section~\ref{sec:DAGSplicing}.
-%%%%%%%%%%%%%%
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{Original SPLICE subsection}
 
 A weakness in scalability exists when submitting a DAG within a DAG.
 Each executing independent DAG requires its own invocation of
@@ -1243,6 +1220,19 @@ Condor does not detect nor support splices that form a cycle
 within the DAG.
 A DAGMan job that causes a cyclic inclusion of splices will
 eventually exhaust available memory and crash.
+
+The \Arg{SPLICE} keyword in a DAG input file
+creates a named instance of a DAG as specified
+in another file as an entity which may have \Arg{PARENT} and \Arg{CHILD}
+dependencies associated with other splice names or node names in the
+including DAG file.
+The syntax for \Arg{SPLICE} is
+
+\Opt{SPLICE} \Arg{SpliceName} \Arg{DagFileName} \oOptArg{DIR}{directory}
+
+After parsing incorporates a splice,
+all nodes within the spice become nodes within the including DAG.
+
 
 The following series of examples illustrate potential uses of
 splicing. To simplify the examples,
