@@ -133,9 +133,6 @@ and \Condor{submit\_dag}.  This flag is intended mainly for testing.
 \item Fixed a bug where any two Condor daemons on Windows were able to
   bind to the same port at the same time.
 
-\item If \Condor{q} fails to connect to a \Condor{schedd} daemon,
-  it now returns an error.
-
 \item Fixed the behavior of the \Condor{negotiator} so that when a
   Condor-G matchmaking ad matches, the machine's ad will be shuffled
   to the end for round-robin matching to multiple gatekeepers with the
@@ -156,18 +153,15 @@ and \Condor{submit\_dag}.  This flag is intended mainly for testing.
 Condor daemon.  This would not be seen in normal Condor operation, but
 sometimes port-scanning software could trigger such a crash.
 
-\item \Condor{q} would sometimes exit with  the value zero,
-indicating success, when it could not connect to a \Condor{schedd} daemon.
-Now it exits with an error code in this case.
+\item Fixed a bug in which \Condor{q} would sometimes exit with 
+  the value zero, indicating success,
+  when it could not connect to a \Condor{schedd} daemon.
+  It now exits with an error code.
 
 \item Fixed two seemingly small memory leaks in Condor's SOAP
 interface. A small amount of memory was lost per SOAP transaction. On
 a high traffic machine, this leak would eventually render the
 \Condor{schedd} daemon unresponsive.
-
-\item Fixed a bug in Condor's hibernation facilities, where if any slot
-satisfied the \MacroNI{HIBERNATE} expression, the machine would enter
-a low power state.
 
 \item Fixed a bug in the parallel universe where periodic expressions
 involving the \Attr{JobStatus} attribute would not function properly.
