@@ -2,6 +2,7 @@
    //
    // Configuration
    //
+   define("HISTORY_URL", "./Test-history.php?branch=%s&test=%s");
    define("BRANCH_URL", "./Run-condor-branch.php?branch=%s&user=%s");
    define("DETAIL_URL", "./Run-condor-details.php?runid=%s&type=%s");
    define("CONDOR_USER", "cndrauto");
@@ -16,6 +17,7 @@
    $runid = (int)$_REQUEST["runid"];
    $user = $_REQUEST["user"];
    $build_id = $runid;
+   $branch = "unknown";
    
    define('PLATFORM_PENDING', 'pending');
    define('PLATFORM_FAILED',  'failed');
@@ -36,6 +38,30 @@
    mysql_select_db(DB_NAME) or die("Could not select database");
 
    include "last.inc";
+
+ 	// 
+    // need to have the branch if we get a request for a test history
+    // Test-history.php?branch=xxxxx&test=yyyyyy
+    //
+
+    $query_branch="
+        
+        SELECT 
+            LEFT(description,
+            (IF(LOCATE('branch-',description),
+            LOCATE('branch-',description)+5,
+            (IF(LOCATE('trunk-',description),
+            LOCATE('trunk-',description)+4,
+            CHAR_LENGTH(description)))))) AS branch
+        FROM 
+            Run 
+        WHERE 
+            runid=$runid";
+    
+    $result = mysql_query($query_branch) or die ("Query ".$query_branch." failed : " . mysql_error()); 
+    
+    $row = mysql_fetch_array($result);
+    $branch = $row["branch"];
 
    $sql = "SELECT host, gid, UNIX_TIMESTAMP(start) AS start ".
           "  FROM Run ".
@@ -218,10 +244,14 @@
    } // FOREACH
 
 	foreach ($data AS $task => $arr) {
+		// need $branch still
+		$history_url = sprintf(HISTORY_URL,$branch,rawurlencode($task));
+		$history_disp = "<a href=\"$history_url\">".limitSize($task, 30)."</a>";
       echo "<tr>\n".
            "<td ".($task_status[$task] != PLATFORM_PASSED ?
                   "class=\"".$task_status[$task]."\"" : "").">".
-                  "<span title=\"$task\">".limitSize($task, 30)."</span></td>\n";
+                  //"<span title=\"$task\">".limitSize($task, 30)."</span></td>\n";
+                  "<span title=\"$task\">$history_disp</span></td>\n";
 
       foreach ($platforms AS $platform) {
          $result = $arr[$platform];
