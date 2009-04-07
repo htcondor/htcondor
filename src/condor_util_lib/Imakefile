@@ -65,6 +65,7 @@ FDPASS_OBJ = fdpass.o
 	setsyscalls.o match_prefix.o sleep.o basename.o strcmp_until.o\
 	filename_tools.o d_format_time.o chomp.o strupr.o globus_utils.o \
 	string_funcs.o \
+	get_uc_first.o get_uc_first_underscore.o \
 	condor_universe.o condor_perms.o access_euid.o \
 	condor_snutils.o printf_format.o nullfile.o copy_file.o \
 	get_exec_path.o exit_utils.o condor_blkng_full_disk_io.o \
@@ -86,6 +87,9 @@ test_exit_utils: test_exit_utils.o
 
 test_basename: test_basename.o
 	$(CC) $(CFLAGS) -o test_basename test_basename.o basename.o
+
+test_ucfirst: test_ucfirst.o
+	$(CC) $(CFLAGS) -o test_ucfirst test_ucfirst.o util_lib.a
 
 test_fs_util: fs_util.c
 	$(CC) $(CFLAGS) -DFS_UTIL_TEST -o $@ $<

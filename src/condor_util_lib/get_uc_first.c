@@ -20,20 +20,25 @@
 #include "condor_common.h"
 #include "string_funcs.h"
 
-#if ( !HAVE_STRCASESTR )
-/* Like strstr(), but case-insensitive */
+/* Convert a string to it's "upper case first" match */
 char *
-strcasestr( const char *string, const char *pattern )
+getUcFirst( const char *orig )
 {
-	char	*str;
-	int			n;
+	int		len = strlen(orig);
+	char	*new = calloc( 1, len+1 );	/* calloc() zeros memory */
+	char	*tmp = new;
 
-	n = strlen( pattern );
-	for( str=(char *)string; *str; str++ ) {
-		if( strncasecmp(str,pattern,n) == 0 ) {
-			return str;
-		}
+	*tmp++ = toupper( *orig++ );
+	while( *orig ) {
+		*tmp++ = tolower( *orig++ );
 	}
-	return NULL;
+	return new;
 }
-#endif
+
+/*
+### Local Variables: ***
+### mode:c++ ***
+### style:cc-mode ***
+### tab-width:4 ***
+### End: ***
+*/

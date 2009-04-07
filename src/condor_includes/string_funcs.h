@@ -29,6 +29,18 @@ BEGIN_C_DECLS
   char *strcasestr( const char *string, const char *pattern );
 #endif
 
+/* Convert a string to it's "upper case first" match */
+char *
+getUcFirst( const char *orig );
+
+/* Convert a string to it's "upper case first" match, converting '_+([a-z])' to
+   strings to toupper($1), the rest to tolower($1).  In other words, it splits
+   the string into sequences of '_' separated words, eats the underscores, and
+   converts the next character to upper case, and the rest to lower case.
+ */
+char *
+getUcFirstUnderscore( const char *orig );
+
 END_C_DECLS
 
 #endif

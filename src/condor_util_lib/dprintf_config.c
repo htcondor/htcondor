@@ -28,6 +28,7 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_string.h"
+#include "subsystem_info.h"
 
 #if HAVE_BACKTRACE
 #include "sig_install.h"
@@ -89,7 +90,7 @@ void
 dprintf_config( const char *subsys )
 {
 	char pname[ BUFSIZ ];
-	char *pval, *param();
+	char *pval;
 	static int first_time = 1;
 	int want_truncate;
 	int debug_level;
@@ -150,6 +151,24 @@ dprintf_config( const char *subsys )
 				if ( tmp ) {
 					free( tmp );
 				}
+			}
+
+			if( debug_level == 0 && DebugFile[0] == NULL ) {
+				const char	*ucfirst = get_mySubSystemNameUc( );
+				if ( NULL == ucfirst ) {
+					EXCEPT("Can't find upper case of name.");
+				}
+				char	*logdir = param("LOG");
+				if ( NULL == logdir ) {
+					EXCEPT("No 'LOG' parameter specified.");
+				}
+				char	*tmp = malloc( strlen(ucfirst) + strlen(logdir) + 6 );
+				strcpy( tmp, logdir );
+				strcat( tmp, "/" );
+				strcat( tmp, ucfirst );
+				strcat( tmp, "Log" );
+				DebugFile[0] = tmp;
+				free( logdir );
 			}
 
 			if( debug_level == 0 && DebugFile[0] == NULL ) {

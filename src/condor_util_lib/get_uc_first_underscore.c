@@ -20,20 +20,46 @@
 #include "condor_common.h"
 #include "string_funcs.h"
 
-#if ( !HAVE_STRCASESTR )
-/* Like strstr(), but case-insensitive */
-char *
-strcasestr( const char *string, const char *pattern )
-{
-	char	*str;
-	int			n;
 
-	n = strlen( pattern );
-	for( str=(char *)string; *str; str++ ) {
-		if( strncasecmp(str,pattern,n) == 0 ) {
-			return str;
+/* Convert a string to it's "upper case first" match, converting '_+([a-z])' to
+   strings to toupper($1), the rest to tolower($1).  In other words, it splits
+   the string into sequences of '_' separated words, eats the underscores, and
+   converts the next character to upper case, and the rest to lower case.
+ */
+char *
+getUcFirstUnderscore( const char *orig )
+{
+	int		len = strlen(orig);
+	char	*new = calloc( 1, len+1 );	/* calloc() zeros memory */
+	char	*tmp = new;
+
+	int		skip = FALSE;
+	int		first = TRUE;
+	while( *orig ) {
+		int		underscore = ( *orig == '_');
+
+		if ( underscore ) {
+			orig++;
+			first = TRUE;
+		}
+		else if ( skip ) {
+			orig++;
+		}
+		else if ( first ) {
+			*tmp++ = toupper( *orig++ );
+			first = FALSE;
+		}
+		else {
+			*tmp++ = tolower( *orig++ );
 		}
 	}
-	return NULL;
+	return new;
 }
-#endif
+
+/*
+### Local Variables: ***
+### mode:c++ ***
+### style:cc-mode ***
+### tab-width:4 ***
+### End: ***
+*/
