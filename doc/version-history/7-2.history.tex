@@ -113,6 +113,13 @@ and \Condor{submit\_dag}.  This flag is intended mainly for testing.
 
 \begin{itemize}
 
+\item Fixed the Collector so that ``hibernating'' machines never timeout.
+
+\item Fixed some of the class ad values of a ``hibernating'' machine
+  when gathered from the Collector.  For instance, all ``hibernating''
+  machines are unclaimed and idle, have no load, the cpu is not busy, and
+  the keyboard and console are set as if they had been idle for a long time.
+
 \item Fixed a bug where if any idle slot satisfied the
   \MacroNI{HIBERNATE} expression, Condor would put the machine into a
   sleep state irrespective of any active slots.
