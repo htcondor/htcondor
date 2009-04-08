@@ -185,7 +185,7 @@ ReadUserLog::initialize( void )
 {
 	char	*path = param( "EVENT_LOG" );
 	if ( NULL == path ) {
-		Error( ERROR_FILE_NOT_FOUND,__LINE__ );
+		Error( LOG_ERROR_FILE_NOT_FOUND,__LINE__ );
 		return false;
 	}
 	int max_rotations = param_integer( "EVENT_LOG_MAX_ROTATIONS", 1, 0 );
@@ -215,7 +215,7 @@ ReadUserLog::initialize( const char *filename,
 						 bool read_only )
 {
 	if ( m_initialized ) {
-		Error( ERROR_RE_INITIALIZE, __LINE__ );
+		Error( LOG_ERROR_RE_INITIALIZE, __LINE__ );
 		return false;
 	}
 
@@ -223,7 +223,7 @@ ReadUserLog::initialize( const char *filename,
 	m_state = new ReadUserLogState( filename, max_rotations,
 									SCORE_RECENT_THRESH );
 	if ( ! m_state->Initialized() ) {
-		Error( ERROR_NOT_INITIALIZED, __LINE__ );
+		Error( LOG_ERROR_NOT_INITIALIZED, __LINE__ );
 		return false;
 	}
 	m_match = new ReadUserLogMatch( m_state );
@@ -288,13 +288,13 @@ ReadUserLog::InternalInitialize( const ReadUserLog::FileState &state,
 								 bool read_only )
 {
 	if ( m_initialized ) {
-		Error( ERROR_RE_INITIALIZE, __LINE__ );
+		Error( LOG_ERROR_RE_INITIALIZE, __LINE__ );
 		return false;
 	}
 
 	m_state = new ReadUserLogState( state, SCORE_RECENT_THRESH );
 	if (  ( m_state->InitializeError() ) || ( !m_state->Initialized() )  ) {
-		Error( ERROR_STATE_ERROR, __LINE__ );
+		Error( LOG_ERROR_STATE_ERROR, __LINE__ );
 		return false;
 	}
 
@@ -319,7 +319,7 @@ ReadUserLog::InternalInitialize ( int max_rotations,
 								  bool read_only )
 {
 	if ( m_initialized ) {
-		Error( ERROR_RE_INITIALIZE, __LINE__ );
+		Error( LOG_ERROR_RE_INITIALIZE, __LINE__ );
 		return false;
 	}
 
@@ -347,7 +347,7 @@ ReadUserLog::InternalInitialize ( int max_rotations,
 	else if ( m_handle_rot && check_for_rotation ) {
 		if (! FindPrevFile( m_max_rotations, 0, true ) ) {
 			releaseResources();
-			Error( ERROR_FILE_NOT_FOUND, __LINE__ );
+			Error( LOG_ERROR_FILE_NOT_FOUND, __LINE__ );
 			return false;
 		}
 	}
@@ -355,7 +355,7 @@ ReadUserLog::InternalInitialize ( int max_rotations,
 		m_max_rotations = 0;
 		if ( m_state->Rotation( 0, true ) ) {
 			releaseResources();
-			Error( ERROR_FILE_NOT_FOUND, __LINE__ );
+			Error( LOG_ERROR_FILE_NOT_FOUND, __LINE__ );
 			return false;
 		}
 	}
@@ -389,7 +389,7 @@ ReadUserLog::InternalInitialize ( int max_rotations,
 			dprintf( D_ALWAYS,
 					 "ReadUserLog::initialize: error re-opening file\n" );
 			releaseResources();
-			Error( ERROR_FILE_NOT_FOUND, __LINE__ );
+			Error( LOG_ERROR_FILE_NOT_FOUND, __LINE__ );
 			return false;
 		}
 	}
@@ -399,7 +399,7 @@ ReadUserLog::InternalInitialize ( int max_rotations,
 			dprintf( D_ALWAYS,
 					 "ReadUserLog::initialize: error opening file\n" );
 			releaseResources();
-			Error( ERROR_FILE_NOT_FOUND, __LINE__ );
+			Error( LOG_ERROR_FILE_NOT_FOUND, __LINE__ );
 			return false;
 		}
 	}
@@ -590,7 +590,7 @@ ReadUserLog::determineLogType( void )
 	if( filepos < 0 ) {
 		dprintf(D_ALWAYS, "ftell failed in ReadUserLog::determineLogType\n");
 		Unlock( false );
-		Error( ERROR_FILE_OTHER, __LINE__ );
+		Error( LOG_ERROR_FILE_OTHER, __LINE__ );
 		return false;
 	}
 	m_state->Offset( filepos );
@@ -600,7 +600,7 @@ ReadUserLog::determineLogType( void )
 		dprintf(D_ALWAYS,
 				"fseek(0) failed in ReadUserLog::determineLogType\n");
 		Unlock( false );
-		Error( ERROR_FILE_OTHER, __LINE__ );
+		Error( LOG_ERROR_FILE_OTHER, __LINE__ );
 		return false;
 	}
 	int scanf_result = fscanf(m_fp, " <%c", &afterangle);
@@ -613,7 +613,7 @@ ReadUserLog::determineLogType( void )
 			if( !skipXMLHeader(afterangle, filepos) ) {
 				m_state->LogType( ReadUserLogState::LOG_TYPE_UNKNOWN );
 				Unlock( false );
-				Error( ERROR_FILE_OTHER, __LINE__ );
+				Error( LOG_ERROR_FILE_OTHER, __LINE__ );
 				return false;
 			}
 		}
@@ -630,7 +630,7 @@ ReadUserLog::determineLogType( void )
 		dprintf(D_ALWAYS,
 				"fseek failed in ReadUserLog::determineLogType");
 		Unlock( false );
-		Error( ERROR_FILE_OTHER, __LINE__ );
+		Error( LOG_ERROR_FILE_OTHER, __LINE__ );
 		return false;
 	}
 	if( fscanf( m_fp, " %d", &nothing ) > 0 ) {
@@ -646,7 +646,7 @@ ReadUserLog::determineLogType( void )
 		dprintf( D_ALWAYS,
 				 "fseek failed in ReadUserLog::determineLogType");
 		Unlock( false );
-		Error( ERROR_FILE_OTHER, __LINE__ );
+		Error( LOG_ERROR_FILE_OTHER, __LINE__ );
 		return false;
 	}
 
@@ -670,7 +670,7 @@ ReadUserLog::skipXMLHeader(char afterangle, long filepos)
 			}
 
 			if( nextchar == EOF ) {
-				Error( ERROR_FILE_OTHER, __LINE__ );
+				Error( LOG_ERROR_FILE_OTHER, __LINE__ );
 				return false;
 			}
 
@@ -681,7 +681,7 @@ ReadUserLog::skipXMLHeader(char afterangle, long filepos)
 				nextchar = fgetc(m_fp);
 			}
 			if( nextchar == EOF ) {
-				Error( ERROR_FILE_OTHER, __LINE__ );
+				Error( LOG_ERROR_FILE_OTHER, __LINE__ );
 				return false;
 			}
 			nextchar = fgetc(m_fp);
@@ -691,14 +691,14 @@ ReadUserLog::skipXMLHeader(char afterangle, long filepos)
 		// we're all set
 		if( fseek(m_fp, filepos, SEEK_SET) )	{
 			dprintf(D_ALWAYS, "fseek failed in ReadUserLog::skipXMLHeader");
-			Error( ERROR_FILE_OTHER, __LINE__ );
+			Error( LOG_ERROR_FILE_OTHER, __LINE__ );
 			return false;
 		}
 	} else {
 		// there was no prolog, so go back to the beginning
 		if( fseek(m_fp, filepos, SEEK_SET) )	{
 			dprintf(D_ALWAYS, "fseek failed in ReadUserLog::skipXMLHeader");
-			Error( ERROR_FILE_OTHER, __LINE__ );
+			Error( LOG_ERROR_FILE_OTHER, __LINE__ );
 			return false;
 		}
 	}
@@ -733,7 +733,7 @@ ReadUserLog::FindPrevFile( int start, int num, bool store_stat )
 			return true;
 		}
 	}
-	Error( ERROR_FILE_NOT_FOUND, __LINE__ );
+	Error( LOG_ERROR_FILE_NOT_FOUND, __LINE__ );
 	return false;
 }
 
@@ -756,13 +756,13 @@ ReadUserLog::ReopenLogFile( bool restore )
 		if ( m_handle_rot ) {
 			dprintf( D_FULLDEBUG, "reopen: looking for previous file...\n" );
 			if (! FindPrevFile( m_max_rotations, 0, true ) ) {
-				Error( ERROR_FILE_NOT_FOUND, __LINE__ );
+				Error( LOG_ERROR_FILE_NOT_FOUND, __LINE__ );
 				return ULOG_NO_EVENT;
 			}
 		}
 		else {
 			if ( m_state->Rotation( 0, true ) ) {
-				Error( ERROR_FILE_NOT_FOUND, __LINE__ );
+				Error( LOG_ERROR_FILE_NOT_FOUND, __LINE__ );
 				return ULOG_NO_EVENT;
 			}
 		}
@@ -809,7 +809,7 @@ ReadUserLog::ReopenLogFile( bool restore )
 	// If we've found a good match, or a high score, do it
 	if ( new_rot >= 0 ) {
 		if ( m_state->Rotation( new_rot ) ) {
-			Error( ERROR_FILE_NOT_FOUND, __LINE__ );
+			Error( LOG_ERROR_FILE_NOT_FOUND, __LINE__ );
 			return ULOG_RD_ERROR;
 		}
 		return OpenLogFile( true );
@@ -830,7 +830,7 @@ ULogEventOutcome
 ReadUserLog::readEvent (ULogEvent *& event, bool store_state )
 {
 	if ( !m_initialized ) {
-		Error( ERROR_NOT_INITIALIZED, __LINE__ );
+		Error( LOG_ERROR_NOT_INITIALIZED, __LINE__ );
 		return ULOG_RD_ERROR;
 	}
 
@@ -858,7 +858,7 @@ ReadUserLog::readEvent (ULogEvent *& event, bool store_state )
 	if( m_state->IsLogType( ReadUserLogState::LOG_TYPE_UNKNOWN ) ) {
 	    if( !determineLogType() ) {
 			outcome = ULOG_RD_ERROR;
-			Error( ERROR_FILE_OTHER, __LINE__ );
+			Error( LOG_ERROR_FILE_OTHER, __LINE__ );
 			goto CLEANUP;
 		}
 	}
@@ -1273,7 +1273,7 @@ bool
 ReadUserLog::GetFileState( ReadUserLog::FileState &state ) const
 {
 	if ( !m_initialized ) {
-		Error( ERROR_NOT_INITIALIZED, __LINE__ );
+		Error( LOG_ERROR_NOT_INITIALIZED, __LINE__ );
 		return false;
 	}
 	return m_state->GetState( state );
@@ -1283,7 +1283,7 @@ bool
 ReadUserLog::SetFileState( const ReadUserLog::FileState &state )
 {
 	if ( !m_initialized ) {
-		Error( ERROR_NOT_INITIALIZED, __LINE__ );
+		Error( LOG_ERROR_NOT_INITIALIZED, __LINE__ );
 		return false;
 	}
 	return m_state->SetState( state );
@@ -1318,7 +1318,7 @@ bool
 ReadUserLog::synchronize ( void )
 {
 	if ( !m_initialized ) {
-		Error( ERROR_NOT_INITIALIZED, __LINE__ );
+		Error( LOG_ERROR_NOT_INITIALIZED, __LINE__ );
 		return false;
 	}
 
@@ -1390,7 +1390,7 @@ ReadUserLog::clear( void )
 	m_max_rotations = 0;
 	m_read_header = false;
 
-	m_error = ERROR_NONE;
+	m_error = LOG_ERROR_NONE;
 	m_line_num = 0;
 }
 

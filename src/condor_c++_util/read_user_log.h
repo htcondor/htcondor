@@ -112,12 +112,12 @@ class ReadUserLog
 	/** Simple error information
 	 */
 	enum ErrorType {
-		ERROR_NONE,					/* No error */
-		ERROR_NOT_INITIALIZED,		/* Reader not initialized */
-		ERROR_RE_INITIALIZE,		/* Attempt to re-initialize */
-		ERROR_FILE_NOT_FOUND,		/* Log file not found */
-		ERROR_FILE_OTHER,			/* Other file error */
-		ERROR_STATE_ERROR			/* Invalid state */
+		LOG_ERROR_NONE,					/* No error */
+		LOG_ERROR_NOT_INITIALIZED,		/* Reader not initialized */
+		LOG_ERROR_RE_INITIALIZE,		/* Attempt to re-initialize */
+		LOG_ERROR_FILE_NOT_FOUND,		/* Log file not found */
+		LOG_ERROR_FILE_OTHER,			/* Other file error */
+		LOG_ERROR_STATE_ERROR			/* Invalid state */
 	};
 
     /** Default constructor.
