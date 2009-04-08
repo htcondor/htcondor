@@ -361,6 +361,9 @@ libcondorapi-release:: $(RELEASE_DIR)/include/read_user_log.h
 public_copy_target(write_user_log.h,include,write_user_log.h,TEXT_MODE)
 libcondorapi-release:: $(RELEASE_DIR)/include/write_user_log.h
 
+public_copy_target(iso_dates.h,include,iso_dates.h,TEXT_MODE)
+libcondorapi-release:: $(RELEASE_DIR)/include/iso_dates.h
+
 condor_version.o: condor_version.cpp
 	$(CPlusPlus) $(C_PLUS_FLAGS) -c -DPLATFORM=$(PLATFORM) condor_version.cpp
 
