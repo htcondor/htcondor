@@ -112,12 +112,12 @@ class ReadUserLog
 	/** Simple error information
 	 */
 	enum ErrorType {
-		ERROR_NONE,					// No error
-		ERROR_NOT_INITIALIZED,		// Reader not initialized
-		ERROR_RE_INITIALIZE,		// Attempt to re-initialize
-		ERROR_FILE_NOT_FOUND,		// Log file not found
-		ERROR_FILE_OTHER,			// Other file error
-		ERROR_STATE_ERROR,			// Invalid state
+		ERROR_NONE,					/* No error */
+		ERROR_NOT_INITIALIZED,		/* Reader not initialized */
+		ERROR_RE_INITIALIZE,		/* Attempt to re-initialize */
+		ERROR_FILE_NOT_FOUND,		/* Log file not found */
+		ERROR_FILE_OTHER,			/* Other file error */
+		ERROR_STATE_ERROR			/* Invalid state */
 	};
 
     /** Default constructor.
@@ -504,7 +504,7 @@ class ReadUserLog
     FileLockBase		*m_lock;		/** The log file lock         */
 	int					 m_lock_rot;	/** Lock managing what rotation #? */
 
-	// Error history
+	/* Error history data */
 	mutable ErrorType	 m_error;		/** Type of latest error (think errno) */
 	mutable unsigned	 m_line_num;	/** Line number of latest error */
 };
