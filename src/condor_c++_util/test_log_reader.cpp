@@ -208,7 +208,6 @@ CheckArgs(int argc, const char **argv, Options &opts)
 			opts.missedCheck = true;
 
 		} else if ( arg.Match('e', "eventlog") ) {
-			printf( "EventLog enabled\n" );
 			opts.isEventLog = true;
 
 		} else if ( arg.Match("ro") ) {
@@ -351,8 +350,6 @@ CheckArgs(int argc, const char **argv, Options &opts)
 		status = STATUS_ERROR;
 	}
 
-	printf( "file=%s, isEventLog=%s\n",
-			opts.logFile, opts.isEventLog ? "True" : "False" );
 	return status;
 }
 
@@ -398,18 +395,6 @@ ReadEvents(Options &opts, int &totalEvents)
 			}
 			printf( "Initialized log reader from state %s\n",
 					opts.persistFile );
-
-			{
-				ReadUserLog::FileState	state2;
-				ReadUserLog::InitFileState( state2 );
-
-				ReadUserLogState	rstate(state2, 60);
-				MyString			str;
-
-				rstate.GetStateString( state2, str, "Restore File State" );
-				puts( str.GetCStr() );
-			}
-
 		}
 
 #     if ENABLE_STATE_DUMP
@@ -668,4 +653,3 @@ const char *timestr( struct tm &t )
 	}
 	return tbuf;
 }
-

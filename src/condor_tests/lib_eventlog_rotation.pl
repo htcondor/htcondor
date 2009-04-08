@@ -325,6 +325,7 @@ sub usage( )
 
 sub RunWriter( $$$$$$ );
 sub RunReader( $$$$$ );
+sub CopyCore( $$$ );
 sub ReadEventlogs( $$$ );
 sub ProcessEventlogs( $$ );
 sub CheckWriterOutput( $$$$ );
@@ -970,7 +971,8 @@ sub RunWriter( $$$$$$ )
 
     $$run = 1;
     my $out = sprintf( "%s/writer-%02d.out", $dir, $loop );
-    open( WRITER, "$cmd 2>&1 |" ) or die "Can't run $cmd";
+    my $pid = open( WRITER, "$cmd 2>&1 |" );
+	$pid or die "Can't run $cmd";
     open( OUT, ">$out" );
     while( <WRITER> ) {
 		print if ( $settings{verbose} > 1 );
@@ -989,15 +991,16 @@ sub RunWriter( $$$$$$ )
     close( OUT );
 
     if ( $? & 127 ) {
-		printf "ERROR: writer exited from signal %d\n", ($? & 127);
+		printf "ERROR: writer (PID $$) exited from signal %d\n", ($? & 127);
 		$errors++;
     }
     if ( $? & 128 ) {
-		print "ERROR: writer dumped core\n";
+		print "ERROR: writer (PID $$) dumped core\n";
+		CopyCore( $writer_args[0], $pid, $dir );
 		$errors++;
     }
     if ( $? >> 8 ) {
-		printf "ERROR: writer exited with status %d\n", ($? >> 8);
+		printf "ERROR: writer (PID $$) exited with status %d\n", ($? >> 8);
 		$errors++;
     }
     if ( ! $errors and $settings{verbose}) {
@@ -1068,12 +1071,16 @@ sub RunReader( $$$$$ )
 		print "Continuing reader PID $pid\n";
 		kill( $signos{CONT}, $state->{"pid"} ) or
 			die "Can't send CONTINUE to ".$state->{"pid"};
+		if ( $settings{valgrind_reader} ) {
+			if ( open( VG, ">$vg_full.$$" ) ) {
+				print VG "fake\n";
+				close( VG );
+			}
+		}
 	}
 	else {
 		$pid = open( $pipe, "$cmd 2>&1 |" );
-		if ( !$pid ) {
-			die "Can't run $cmd";
-		}
+		$pid or die "Can't run $cmd";
 	}
 	$state->{stopped} = 0;
     while( <$pipe> ) {
@@ -1118,15 +1125,18 @@ sub RunReader( $$$$$ )
 		close( $pipe );
 
 		if ( $? & 127 ) {
-			printf "ERROR: reader exited from signal %d\n", ($? & 127);
+			printf( "ERROR: reader (PID $pid) exited from signal %d\n",
+					($? & 127) );
 			$errors++;
 		}
 		if ( $? & 128 ) {
-			print "ERROR: reader dumped core\n";
+			print( "ERROR: reader (PID $pid) dumped core\n" );
+			CopyCore( $reader_args[0], $pid, $dir );
 			$errors++;
 		}
 		if ( $? >> 8 ) {
-			printf "ERROR: reader exited with status %d\n", ($? >> 8);
+			printf( "ERROR: reader (PID $pid) exited with status %d\n",
+					($? >> 8) );
 			$errors++;
 		}
 		if ( ! $errors and $settings{verbose}) {
@@ -1164,6 +1174,38 @@ sub RunReader( $$$$$ )
 		$errors += CheckValgrind( $vg_out );
     }
     return $errors;
+}
+
+sub CopyCore( $$$ )
+{
+	my $prog = shift;
+	my $pid = shift;
+	my $dir = shift;
+
+	my $core = "";
+	if ( -f "core.$pid" ) {
+		$core = "core.$pid";
+	}
+	elsif ( -f "core.$pid.0" ) {
+		$core = "core.$pid";
+	}
+	elsif ( -f "core" ) {
+		my $fileout = `/usr/bin/file core`;
+		if ( defined $fileout and $fileout =~ /$prog/ ) {
+			$core = "core";
+		}
+		else {
+			my @statbuf = stat( "core" );
+			if ( $#statbuf >= 9 and ( $statbuf[9] > (time()-10) ) ) {
+				$core = "core";
+			}
+		}
+	}
+
+	if ( $core ne "" ) {
+		print "Copying core to $dir\n";
+		system( "cp $core $dir" );
+	}
 }
 
 sub CheckValgrind( $$ )
