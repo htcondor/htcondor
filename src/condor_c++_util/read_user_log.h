@@ -2,13 +2,13 @@
  *
  * Copyright (C) 1990-2008, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -109,6 +109,17 @@ class ReadUserLog
 		LOG_STATUS_SHRUNK,
 	};
 
+	/** Simple error information
+	 */
+	enum ErrorType {
+		LOG_ERROR_NONE,					/* No error */
+		LOG_ERROR_NOT_INITIALIZED,		/* Reader not initialized */
+		LOG_ERROR_RE_INITIALIZE,		/* Attempt to re-initialize */
+		LOG_ERROR_FILE_NOT_FOUND,		/* Log file not found */
+		LOG_ERROR_FILE_OTHER,			/* Other file error */
+		LOG_ERROR_STATE_ERROR			/* Invalid state */
+	};
+
     /** Default constructor.
         @param isEventLog setup reader to read the global event log?
 	*/
@@ -133,11 +144,11 @@ class ReadUserLog
 		@param Read only access to the file (locking disabled)
 	*/
     ReadUserLog( const FileState &state, bool read_only = false );
-                                      
+
     /** Destructor.
 	*/
     ~ReadUserLog() { releaseResources(); }
-                                      
+
     /** Detect whether the object has been initialized
 	*/
     bool isInitialized( void ) const { return m_initialized; };
@@ -207,7 +218,7 @@ class ReadUserLog
         @return the outcome of attempting to read the log
     */
     ULogEventOutcome readEvent (ULogEvent * & event);
-	
+
     /** Synchronize the log file if the last event read was an error.  This
         safe guard function should be called if there is some error reading an
         event, but there are events after it in the file.  Will skip over the
@@ -267,6 +278,16 @@ class ReadUserLog
 		@return true if "old-style", false otherwise
 	*/
 	bool getIsOldLog( void ) const;
+
+	/** Get error data
+		@param error type
+		@param source line # where error was detected
+		@return void
+	 */
+	void getErrorInfo( ErrorType &error,
+					   const char *& error_str,
+					   unsigned &line_num ) const;
+
 
 	/** Methods to serialize the state.
 		Always use InitFileState() to initialize this structure.
@@ -328,7 +349,7 @@ class ReadUserLog
 		@return true on success
 	 */
 	bool SetFileState( const ReadUserLog::FileState &state );
-	
+
   private:
 
     /** Internal initializer from saved state.
@@ -339,10 +360,10 @@ class ReadUserLog
 		@param max_rotations max rotations value of the logs
         @return true for success
     */
-    bool InternalInitialize (const ReadUserLog::FileState &state,
-							 bool set_rotations,
-							 int max_rotations,
-							 bool read_only );
+    bool InternalInitialize ( const ReadUserLog::FileState &state,
+							  bool set_rotations,
+							  int max_rotations,
+							  bool read_only );
 
     /** Internal initializer.  This function will return false
         if it can't open the log file (among other things).
@@ -374,7 +395,7 @@ class ReadUserLog
 	 */
 	void Lock( bool verify_init );
 	void Unlock( bool verify_init );
-	
+
 	/** Set all members to their cleared values.
 	*/
 	void clear( void );
@@ -427,9 +448,10 @@ class ReadUserLog
     ULogEventOutcome readEventOld (ULogEvent * & event);
 
 	/** Reopen the log file
+		@param Restore from state?
 		@return the outcome of the re-open attempt
 	 */
-	ULogEventOutcome ReopenLogFile( void );
+	ULogEventOutcome ReopenLogFile( bool restore = false );
 
 	/** Find the previous log file starting with start
 		@param log file rotation # to start the search with
@@ -451,6 +473,13 @@ class ReadUserLog
 		@return true:success, false:failure
 	 */
 	bool CloseLogFile( bool force );
+
+	/** Report error
+		@param error type
+		@param line number where error was detected
+	*/
+	void Error( ErrorType error, unsigned line_num ) const
+		{ m_error = error; m_line_num = line_num; };
 
 
 	/** Class private data
@@ -474,6 +503,10 @@ class ReadUserLog
 	bool				 m_lock_enable;	/** Should we lock the file?  */
     FileLockBase		*m_lock;		/** The log file lock         */
 	int					 m_lock_rot;	/** Lock managing what rotation #? */
+
+	/* Error history data */
+	mutable ErrorType	 m_error;		/** Type of latest error (think errno) */
+	mutable unsigned	 m_line_num;	/** Line number of latest error */
 };
 
 

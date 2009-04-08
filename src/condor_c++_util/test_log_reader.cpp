@@ -62,8 +62,11 @@ struct Options
 Status
 CheckArgs(int argc, const char **argv, Options &opts);
 
-int // 0 == okay, 1 == error
+Status
 ReadEvents( Options &opts, int &numEvents );
+
+void
+ReportError( const ReadUserLog &reader );
 
 const char *timestr( struct tm &tm );
 
@@ -94,10 +97,17 @@ main(int argc, const char **argv)
 
 	Options	opts;
 	Status tmpStatus = CheckArgs(argc, argv, opts);
+	if ( STATUS_CANCEL == tmpStatus ) {
+		exit( 0 );
+	}
+	else if ( STATUS_OK != tmpStatus ) {
+		printf( "Error parsing command line\n" );
+		exit( 1 );
+	}
 
-	if ( tmpStatus == STATUS_OK ) {
-		result = ReadEvents(opts, events);
-	} else if ( tmpStatus == STATUS_ERROR ) {
+	tmpStatus = ReadEvents(opts, events);
+	if ( tmpStatus == STATUS_ERROR ) {
+		printf( "Error from ReadEvents: %d\n", (int)tmpStatus );
 		result = 1;
 	}
 
@@ -106,9 +116,11 @@ main(int argc, const char **argv)
 	}
 
 	if ( result != 0 && opts.verbosity >= VERB_ERROR ) {
-		fprintf(stderr, "test_log_reader FAILED\n");
+		printf( "test_log_reader FAILED\n" );
 	}
 
+	printf( "test_log_reader: exiting with status %d\n", result );
+	exit( result );
 	return result;
 }
 
@@ -165,7 +177,8 @@ CheckArgs(int argc, const char **argv, Options &opts)
 	opts.dumpState = false;
 	opts.missedCheck = false;
 
-	for ( int argno = 1; argno < argc; ++argno ) {
+	int		argno = 1;
+	while ( (argno < argc) & (status == STATUS_OK) ) {
 		SimpleArg	arg( argv, argc, argno );
 
 		if ( arg.Error() ) {
@@ -175,8 +188,9 @@ CheckArgs(int argc, const char **argv, Options &opts)
 
 		if ( arg.Match('d', "debug") ) {
 			if ( arg.hasOpt() ) {
-				set_debug_flags( const_cast<char *>(arg.getOpt()) );
-				argno = arg.ConsumeOpt( );
+				const char	*flags;
+				arg.getOpt( flags );
+				set_debug_flags( const_cast<char *>(flags) );
 			} else {
 				fprintf(stderr, "Value needed for '%s'\n", arg.Arg() );
 				printf("%s", usage);
@@ -324,6 +338,7 @@ CheckArgs(int argc, const char **argv, Options &opts)
 			printf("%s", usage);
 			status = STATUS_ERROR;
 		}
+		argno = arg.Index( );
 	}
 
 	if ( status == STATUS_OK &&
@@ -338,11 +353,11 @@ CheckArgs(int argc, const char **argv, Options &opts)
 	return status;
 }
 
-int
+Status
 ReadEvents(Options &opts, int &totalEvents)
 {
-	int		result = 0;
-	int		numEvents = 0;
+	Status					 result = STATUS_OK;
+	int						 numEvents = 0;
 
 	// No events yet!
 	totalEvents = 0;
@@ -375,6 +390,7 @@ ReadEvents(Options &opts, int &totalEvents)
 			}
 			if ( ! istatus ) {
 				fprintf( stderr, "Failed to initialize from state\n" );
+				ReportError( reader );
 				return STATUS_ERROR;
 			}
 			printf( "Initialized log reader from state %s\n",
@@ -398,6 +414,7 @@ ReadEvents(Options &opts, int &totalEvents)
 		if ( opts.isEventLog ) {
 			if ( !reader.initialize( ) ) {
 				fprintf( stderr, "Failed to initialize with EventLog\n" );
+				ReportError( reader );
 				return STATUS_ERROR;
 			}
 		}
@@ -406,7 +423,9 @@ ReadEvents(Options &opts, int &totalEvents)
 									 opts.maxRotations,
 									 opts.rotation,
 									 opts.readOnly ) ) {
-				fprintf( stderr, "Failed to initialize with file\n" );
+				fprintf( stderr, "Failed to initialize with file %s\n",
+						 opts.logFile );
+				ReportError( reader );
 				return STATUS_ERROR;
 			}
 		}
@@ -502,7 +521,7 @@ ReadEvents(Options &opts, int &totalEvents)
 						fprintf(stderr, "Maximum number of execute "
 								"events (%d) exceeded\n", opts.maxExec);
 					}
-					result = 1;
+					result = STATUS_ERROR;
 					done = true;
 				}
 				missedLast = false;
@@ -593,9 +612,10 @@ ReadEvents(Options &opts, int &totalEvents)
 
 		} else if ( outcome == ULOG_RD_ERROR || outcome == ULOG_UNK_ERROR ) {
 			if ( opts.verbosity >= VERB_ERROR ) {
-				fprintf(stderr, "Error reading event\n");
+				fprintf(stderr, "Error reading event @ # %d / %d\n",
+						numEvents, totalEvents );
 			}
-			result = 1;
+			result = STATUS_ERROR;
 		}
 
 		delete event;
@@ -633,6 +653,18 @@ ReadEvents(Options &opts, int &totalEvents)
 	}
 
 	return result;
+}
+
+void
+ReportError( const ReadUserLog &reader )
+{
+	ReadUserLog::ErrorType	 error;
+	const char				*error_str;
+	unsigned				 line_num;
+
+	reader.getErrorInfo( error, error_str, line_num );
+	fprintf( stderr, "  %s (#%d) @ line %d\n",
+			 error_str, error, line_num );
 }
 
 const char *timestr( struct tm &t )

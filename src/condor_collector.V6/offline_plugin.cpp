@@ -194,10 +194,15 @@ OfflineCollectorPlugin::update (
 
 		/* Reset machine load */
 		ad.Assign ( ATTR_TOTAL_LOAD_AVG, 0.0 );
+		ad.Assign ( "CondorLoadAvg", 0.0 );
 
 		/* Reset CPU load */
 		ad.Assign ( ATTR_CPU_IS_BUSY, false );
 		ad.Assign ( ATTR_CPU_BUSY_TIME, 0 );
+
+		/* Reset keyboard and mouse times */
+		ad.Assign ( ATTR_KEYBOARD_IDLE, INT_MAX );
+		ad.Assign ( ATTR_CONSOLE_IDLE, INT_MAX );		
 
 		/* any others? */
 

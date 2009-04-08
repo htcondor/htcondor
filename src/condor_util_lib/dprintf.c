@@ -851,63 +851,71 @@ _condor_dprintf_exit( int error_code, const char* msg )
 	struct tm *tm;
 	time_t clock_now;
 
-	(void)time( &clock_now );
+		/* We might land here with DprintfBroken true if our call to
+		   dprintf_unlock() down below hits an error.  Since the
+		   "error" that it hit might simply be that there was no lock,
+		   we don't want to overwrite the original dprintf error
+		   message with a new one, so skip most of the following if
+		   DprintfBroken is already true.
+		*/
+	if( !DprintfBroken ) {
+		(void)time( &clock_now );
 
-	if ( DebugUseTimestamps ) {
-			// Casting clock_now to int to get rid of compile warning.
-			// Probably format should be %ld, and we should cast to long
-			// int, but I'm afraid of changing the output format.
-			// wenger 2009-02-24.
-		snprintf( header, sizeof(header), "(%d) ", (int)clock_now );
-	} else {
-		tm = localtime( &clock_now );
-		snprintf( header, sizeof(header), "%d/%d %02d:%02d:%02d ",
-				tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, 
-				tm->tm_min, tm->tm_sec );
-	}
-	snprintf( header, sizeof(header), "dprintf() had a fatal error in pid %d\n", (int)getpid() );
-	tail[0] = '\0';
-	if( error_code ) {
-		sprintf( tail, "errno: %d (%s)\n", error_code,
-				 strerror(error_code) );
-	}
+		if ( DebugUseTimestamps ) {
+				// Casting clock_now to int to get rid of compile warning.
+				// Probably format should be %ld, and we should cast to long
+				// int, but I'm afraid of changing the output format.
+				// wenger 2009-02-24.
+			snprintf( header, sizeof(header), "(%d) ", (int)clock_now );
+		} else {
+			tm = localtime( &clock_now );
+			snprintf( header, sizeof(header), "%d/%d %02d:%02d:%02d ",
+					  tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, 
+					  tm->tm_min, tm->tm_sec );
+		}
+		snprintf( header, sizeof(header), "dprintf() had a fatal error in pid %d\n", (int)getpid() );
+		tail[0] = '\0';
+		if( error_code ) {
+			sprintf( tail, "errno: %d (%s)\n", error_code,
+					 strerror(error_code) );
+		}
 #ifndef WIN32			
-	sprintf( buf, "euid: %d, ruid: %d\n", (int)geteuid(),
-			 (int)getuid() );
-	strcat( tail, buf );
+		sprintf( buf, "euid: %d, ruid: %d\n", (int)geteuid(),
+				 (int)getuid() );
+		strcat( tail, buf );
 #endif
 
-	tmp = param( "LOG" );
-	if( tmp ) {
-		snprintf( buf, sizeof(buf), "%s/dprintf_failure.%s",
-				  tmp, get_mySubSystemName() );
-		fail_fp = safe_fopen_wrapper( buf, "w",0644 );
-		if( fail_fp ) {
-			fprintf( fail_fp, "%s", header );
-			fprintf( fail_fp, "%s", msg );
-			if( tail[0] ) {
-				fprintf( fail_fp, "%s", tail );
-			}
-			fclose_wrapper( fail_fp, FCLOSE_RETRY_MAX );
-			wrote_warning = TRUE;
-		} 
-		free( tmp );
-	}
-	if( ! wrote_warning ) {
-		fprintf( stderr, "%s", header );
-		fprintf( stderr, "%s", msg );
-		if( tail[0] ) {
-			fprintf( stderr, "%s", tail );
+		tmp = param( "LOG" );
+		if( tmp ) {
+			snprintf( buf, sizeof(buf), "%s/dprintf_failure.%s",
+					  tmp, get_mySubSystemName() );
+			fail_fp = safe_fopen_wrapper( buf, "w",0644 );
+			if( fail_fp ) {
+				fprintf( fail_fp, "%s", header );
+				fprintf( fail_fp, "%s", msg );
+				if( tail[0] ) {
+					fprintf( fail_fp, "%s", tail );
+				}
+				fclose_wrapper( fail_fp, FCLOSE_RETRY_MAX );
+				wrote_warning = TRUE;
+			} 
+			free( tmp );
 		}
+		if( ! wrote_warning ) {
+			fprintf( stderr, "%s", header );
+			fprintf( stderr, "%s", msg );
+			if( tail[0] ) {
+				fprintf( stderr, "%s", tail );
+			}
 
+		}
+			/* First, set a flag so we know not to try to keep using
+			   dprintf during the rest of this */
+		DprintfBroken = 1;
+
+			/* Don't forget to unlock the log file, if possible! */
+		debug_unlock(0);
 	}
-
-		/* First, set a flag so we know not to try to keep using
-		   dprintf during the rest of this */
-	DprintfBroken = 1;
-
-		/* Don't forget to unlock the log file, if possible! */
-	debug_unlock(0);
 
 		/* If _EXCEPT_Cleanup is set for cleaning up during EXCEPT(),
 		   we call that here, as well. */

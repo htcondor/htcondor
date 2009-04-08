@@ -21,6 +21,18 @@
 use strict;
 use warnings;
 use Cwd;
+use Config;
+
+# Initialize signals
+defined $Config{sig_name} || die "No signal names";
+my %signos;
+my @signames = split( ' ', $Config{sig_name} );
+foreach my $i ( 0 .. $#signames ) {
+    $signos{$signames[$i]} = $i;
+}
+exists $signos{CONT} || die "No CONT signal";
+exists $signos{TERM} || die "No TERM signal";
+exists $signos{KILL} || die "No KILL signal";
 
 my $version = "1.1.0";
 my $testdesc =  'lib_eventlog_rotation - runs eventlog rotation tests';
@@ -298,6 +310,7 @@ sub usage( )
 		"  -p|--pid      Append PID to test directory\n" .
 		"  -N|--no-pid   Don't append PID to test directory (default)\n" .
 		"  -d|--debug    enable D_FULLDEBUG debugging\n" .
+		"  --dump_state  enable state dumping in reader\n" .
 		"  --loops=<n>   Override # of loops in test\n" .
 		"  -v|--verbose  increase verbose level\n" .
 		"  -s|--stop     stop after errors\n" .
@@ -312,17 +325,20 @@ sub usage( )
 
 sub RunWriter( $$$$$$ );
 sub RunReader( $$$$$ );
+sub CopyCore( $$$ );
 sub ReadEventlogs( $$$ );
 sub ProcessEventlogs( $$ );
 sub CheckWriterOutput( $$$$ );
 sub CheckReaderOutput( $$$$ );
 sub GatherData( $$ );
+sub FinalCheck( );
 
 my %settings =
 (
  use_pid			=> 0,
  verbose			=> 0,
  debug				=> 0,
+ reader_dump_state	=> 0,
  execute			=> 1,
  stop				=> 0,
  strace				=> 0,
@@ -351,6 +367,9 @@ foreach my $arg ( @ARGV ) {
     }
     elsif ( $arg eq "-s"  or  $arg eq "--stop" ) {
 		$settings{stop} = 1;
+    }
+    elsif ( $arg eq "--dump-state" ) {
+		$settings{reader_dump_state} = 1;
     }
     elsif ( $arg eq "--strace" ) {
 		$settings{strace} = 1;
@@ -690,6 +709,9 @@ if ( exists $test->{reader} ) {
 		push( @reader_args, "--persist" );
 		push( @reader_args, "$dir/reader.state" );
     }
+	if ( $settings{reader_dump_state} ) {
+		push( @reader_args, "--dump-state" );
+	}
 }
 else {
 	$settings{run_reader} = 0;
@@ -831,82 +853,9 @@ $timestr = localtime();
 printf "\n** End test loops @ %s **\n", $timestr;
 
 if ( $settings{execute} ) {
+	$total_errors += FinalCheck( );
 
-	printf "\n** Starting final analysis @ %s **\n", $timestr;
-
-	# Final writer output checks
-	if ( $totals{writer_events} < $expect{final_mins}{num_events} ) {
-		printf( STDERR
-				"ERROR: final: writer wrote too few events: %d < %d\n",
-				$totals{writer_events}, $expect{final_mins}{num_events} );
-		$total_errors++;
-	}
-	if ( $settings{run_reader} and
-		 ( !$totals{missed_events} ) and
-		 ( $totals{reader_events} < $totals{writer_events} )  ) {
-		printf( STDERR
-				"ERROR: final: read fewer events than writer wrote: %d < %d\n",
-				$totals{reader_events}, $totals{writer_events} );
-		$total_errors++;
-	}
-	if ( $settings{run_reader} ) {
-		printf( STDERR "final: reader read %d events, writer wrote %d\n",
-				$totals{reader_events}, $totals{writer_events} );
-	}
-
-	$totals{seq_files} = $totals{sequence} + 1;
-	if ( $totals{writer_sequence} < $expect{final_mins}{sequence} ) {
-		printf( STDERR
-				"ERROR: final: writer sequence too low: %d < %d\n",
-				$totals{writer_sequence}, $expect{final_mins}{sequence} );
-		$total_errors++;
-	}
-
-	# Final counted checks
-	my %final;
-	foreach my $k ( keys(%totals) ) {
-		$final{$k} = 0;
-	}
-	my @files;
-	my $errors = ReadEventlogs( $dir, \%final, \@files );
-	if ( $errors ) {
-		print STDERR "ERROR: final: ReadEventLogs()\n";
-		$total_errors += $errors;
-	}
-	$errors = ProcessEventlogs( \@files, \%final );
-	if ( $errors ) {
-		print STDERR "ERROR: final: ProcessEventLogs()\n";
-		$total_errors += $errors;
-	}
-	if ( scalar(@files) < $expect{final_mins}{num_files} ) {
-		printf( STDERR
-				"ERROR: final: too few actual files: %d < %d\n",
-				scalar(@files), $expect{final_mins}{num_files} );
-	}
-	if ( ! $final{events_lost} ) {
-		if ( $final{num_events} < $expect{final_mins}{num_events} ) {
-			printf( STDERR
-					"ERROR: final: too few actual events: %d < %d\n",
-					$final{num_events}, $expect{loop_mins}{num_events} );
-			$total_errors++;
-		}
-	}
-	if ( $final{sequence} < $expect{final_mins}{sequence} ) {
-		printf( STDERR
-				"ERROR: final: actual sequence too low: %d < %d\n",
-				$final{sequence}, $expect{final_mins}{sequence});
-		$total_errors++;
-	}
-
-	if ( $final{file_size} > $expect{maxs}{total_size} ) {
-		printf( STDERR
-				"ERROR: final: total file size too high: %d > %d\n",
-				$final{total_size}, $expect{maxs}{total_size});
-		$total_errors++;
-	}
-
-
-	if ( $total_errors  or  ($settings{verbose} > 1)  or  $settings{debug} ) {
+	if ( $total_errors  or  ($settings{verbose} > 2)  or  $settings{debug} ) {
 		GatherData( "/dev/stdout", $total_errors );
 	}
 }
@@ -921,7 +870,7 @@ printf( "\n** Eventlog rotation test '%s' done @ %s; %ds, status %d **\n",
 		$settings{name}, $timestr, $duration, $exit_status );
 if ( $strace_pid > 0 ) {
 	print "Killing strace\n";
-	kill( 15, $strace_pid );
+	kill( $signos{TERM}, $strace_pid );
 	sleep(1);
 }
 
@@ -1013,7 +962,7 @@ sub RunWriter( $$$$$$ )
 	if ( $final ) {
 		$cmd .= " --max-rotation-stop ";
 	}
-    print "$cmd\n" if ( $settings{verbose} );
+    print "Running: $cmd\n" if ( $settings{verbose} );
 
     if ( ! $settings{execute} ) {
 		$$run = 0;
@@ -1022,7 +971,8 @@ sub RunWriter( $$$$$$ )
 
     $$run = 1;
     my $out = sprintf( "%s/writer-%02d.out", $dir, $loop );
-    open( WRITER, "$cmd 2>&1 |" ) or die "Can't run $cmd";
+    my $pid = open( WRITER, "$cmd 2>&1 |" );
+	$pid or die "Can't run $cmd";
     open( OUT, ">$out" );
     while( <WRITER> ) {
 		print if ( $settings{verbose} > 1 );
@@ -1041,15 +991,16 @@ sub RunWriter( $$$$$$ )
     close( OUT );
 
     if ( $? & 127 ) {
-		printf "ERROR: writer exited from signal %d\n", ($? & 127);
+		printf "ERROR: writer (PID $$) exited from signal %d\n", ($? & 127);
 		$errors++;
     }
     if ( $? & 128 ) {
-		print "ERROR: writer dumped core\n";
+		print "ERROR: writer (PID $$) dumped core\n";
+		CopyCore( $writer_args[0], $pid, $dir );
 		$errors++;
     }
     if ( $? >> 8 ) {
-		printf "ERROR: writer exited with status %d\n", ($? >> 8);
+		printf "ERROR: writer (PID $$) exited with status %d\n", ($? >> 8);
 		$errors++;
     }
     if ( ! $errors and $settings{verbose}) {
@@ -1097,7 +1048,7 @@ sub RunReader( $$$$$ )
 	if ( exists $opts->{"stop"} ) {
 		$cmd .= " --stop";
 	}
-    print "$cmd\n" if ( $settings{verbose} );
+    print "Running: $cmd\n" if ( $settings{verbose} );
 
     if ( ! $settings{execute} ) {
 		$$run = 0;
@@ -1118,14 +1069,18 @@ sub RunReader( $$$$$ )
 		$pid  = $state->{"pid"};
 		$pipe = $state->{"pipe"};
 		print "Continuing reader PID $pid\n";
-		kill( 18, $state->{"pid"} ) or
+		kill( $signos{CONT}, $state->{"pid"} ) or
 			die "Can't send CONTINUE to ".$state->{"pid"};
+		if ( $settings{valgrind_reader} ) {
+			if ( open( VG, ">$vg_full.$$" ) ) {
+				print VG "fake\n";
+				close( VG );
+			}
+		}
 	}
 	else {
 		$pid = open( $pipe, "$cmd 2>&1 |" );
-		if ( !$pid ) {
-			die "Can't run $cmd";
-		}
+		$pid or die "Can't run $cmd";
 	}
 	$state->{stopped} = 0;
     while( <$pipe> ) {
@@ -1145,8 +1100,12 @@ sub RunReader( $$$$$ )
 		}
 		elsif ( /Missed event/ ) {
 			$new->{missed_events}++;
-			print "Missed event(s) detected\n" if ( $settings{verbose} );
-			if ( ! exists $opts->{missed_ok} ) {
+			if ( exists $opts->{missed_ok} ) {
+				if ( $settings{verbose} ) {
+					print "Missed event(s) detected (OK)\n";
+				}
+			}
+			else {
 				printf "ERROR: unexpected missed event(s)\n";
 				$errors++;
 			}
@@ -1155,7 +1114,7 @@ sub RunReader( $$$$$ )
     close( OUT );
 	if ( $state->{stopped} ) {
 		if ( ! exists $opts->{"stop"} ) {
-			kill( 9, $pid );
+			kill( $signos{KILL}, $pid );
 			die "Reader processed $pid stopped unexpectedly; killed";
 		}
 		print "reader process stopped\n";
@@ -1166,15 +1125,18 @@ sub RunReader( $$$$$ )
 		close( $pipe );
 
 		if ( $? & 127 ) {
-			printf "ERROR: reader exited from signal %d\n", ($? & 127);
+			printf( "ERROR: reader (PID $pid) exited from signal %d\n",
+					($? & 127) );
 			$errors++;
 		}
 		if ( $? & 128 ) {
-			print "ERROR: reader dumped core\n";
+			print( "ERROR: reader (PID $pid) dumped core\n" );
+			CopyCore( $reader_args[0], $pid, $dir );
 			$errors++;
 		}
 		if ( $? >> 8 ) {
-			printf "ERROR: reader exited with status %d\n", ($? >> 8);
+			printf( "ERROR: reader (PID $pid) exited with status %d\n",
+					($? >> 8) );
 			$errors++;
 		}
 		if ( ! $errors and $settings{verbose}) {
@@ -1212,6 +1174,38 @@ sub RunReader( $$$$$ )
 		$errors += CheckValgrind( $vg_out );
     }
     return $errors;
+}
+
+sub CopyCore( $$$ )
+{
+	my $prog = shift;
+	my $pid = shift;
+	my $dir = shift;
+
+	my $core = "";
+	if ( -f "core.$pid" ) {
+		$core = "core.$pid";
+	}
+	elsif ( -f "core.$pid.0" ) {
+		$core = "core.$pid";
+	}
+	elsif ( -f "core" ) {
+		my $fileout = `/usr/bin/file core`;
+		if ( defined $fileout and $fileout =~ /$prog/ ) {
+			$core = "core";
+		}
+		else {
+			my @statbuf = stat( "core" );
+			if ( $#statbuf >= 9 and ( $statbuf[9] > (time()-10) ) ) {
+				$core = "core";
+			}
+		}
+	}
+
+	if ( $core ne "" ) {
+		print "Copying core to $dir\n";
+		system( "cp $core $dir" );
+	}
 }
 
 sub CheckValgrind( $$ )
@@ -1578,6 +1572,90 @@ sub ProcessEventlogs( $$ )
     }
 	return $errors;
 }
+
+# #######################################
+# Final checks
+# #######################################
+sub FinalCheck(  )
+{
+	my $errors = 0;
+
+	printf "\n** Starting final analysis @ %s **\n", $timestr;
+
+	# Final writer output checks
+	if ( $totals{writer_events} < $expect{final_mins}{num_events} ) {
+		printf( STDERR
+				"ERROR: final: writer wrote too few events: %d < %d\n",
+				$totals{writer_events}, $expect{final_mins}{num_events} );
+		$errors++;
+	}
+	if ( $settings{run_reader} and
+		 ( !$totals{missed_events} ) and
+		 ( $totals{reader_events} < $totals{writer_events} )  ) {
+		printf( STDERR
+				"ERROR: final: read fewer events than writer wrote: %d < %d\n",
+				$totals{reader_events}, $totals{writer_events} );
+		$errors++;
+	}
+	if ( $settings{run_reader} ) {
+		printf( STDERR "final: reader read %d events, writer wrote %d\n",
+				$totals{reader_events}, $totals{writer_events} );
+	}
+
+	$totals{seq_files} = $totals{sequence} + 1;
+	if ( $totals{writer_sequence} < $expect{final_mins}{sequence} ) {
+		printf( STDERR
+				"ERROR: final: writer sequence too low: %d < %d\n",
+				$totals{writer_sequence}, $expect{final_mins}{sequence} );
+		$errors++;
+	}
+
+	# Final counted checks
+	my %final;
+	foreach my $k ( keys(%totals) ) {
+		$final{$k} = 0;
+	}
+	my @files;
+	my $tmp_errors;
+
+	$tmp_errors = ReadEventlogs( $dir, \%final, \@files );
+	if ( $errors ) {
+		print STDERR "ERROR: final: ReadEventLogs()\n";
+		$total_errors += $errors;
+	}
+	$tmp_errors = ProcessEventlogs( \@files, \%final );
+	if ( $tmp_errors ) {
+		print STDERR "ERROR: final: ProcessEventLogs()\n";
+		$errors += $tmp_errors;
+	}
+	if ( scalar(@files) < $expect{final_mins}{num_files} ) {
+		printf( STDERR
+				"ERROR: final: too few actual files: %d < %d\n",
+				scalar(@files), $expect{final_mins}{num_files} );
+	}
+	if ( ! $final{events_lost} ) {
+		if ( $final{num_events} < $expect{final_mins}{num_events} ) {
+			printf( STDERR
+					"ERROR: final: too few actual events: %d < %d\n",
+					$final{num_events}, $expect{loop_mins}{num_events} );
+			$errors++;
+		}
+	}
+	if ( $final{sequence} < $expect{final_mins}{sequence} ) {
+		printf( STDERR
+				"ERROR: final: actual sequence too low: %d < %d\n",
+				$final{sequence}, $expect{final_mins}{sequence});
+		$errors++;
+	}
+
+	if ( $final{file_size} > $expect{maxs}{total_size} ) {
+		printf( STDERR
+				"ERROR: final: total file size too high: %d > %d\n",
+				$final{total_size}, $expect{maxs}{total_size});
+		$errors++;
+	}
+}
+
 
 ### Local Variables: ***
 ### mode:perl ***

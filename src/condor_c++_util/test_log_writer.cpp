@@ -347,7 +347,9 @@ CheckArgs(int argc, const char **argv, Options &opts)
 
 		} else if ( arg.Match('d', "debug") ) {
 			if ( arg.hasOpt() ) {
-				set_debug_flags( const_cast<char *>(arg.getOpt()) );
+				const char	*flags;
+				arg.getOpt( flags );
+				set_debug_flags( const_cast<char *>(flags) );
 			} else {
 				fprintf(stderr, "Value needed for '%s'\n", arg.Arg() );
 				printf("%s", usage);

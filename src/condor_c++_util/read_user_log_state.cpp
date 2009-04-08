@@ -2,13 +2,13 @@
  *
  * Copyright (C) 1990-2008, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -210,7 +210,10 @@ ReadUserLogState::ReadUserLogState(
 	m_recent_thresh = recent_thresh;
 
 	// Sets m_initialized and m_init_error as appropriate
-	SetState( state );
+	if ( !SetState( state ) ) {
+		dprintf( D_FULLDEBUG, "::ReadUserLogState: failed to set state from buffer\n" );
+		m_init_error = true;
+	}
 }
 ReadUserLogState::ReadUserLogState( void )
 	: ReadUserLogFileState( )
@@ -294,7 +297,7 @@ ReadUserLogState::Rotation( int rotation, bool store_stat, bool initializing )
 int
 ReadUserLogState::Rotation( int rotation,
 							StatStructType &statbuf,
-							bool initializing ) 
+							bool initializing )
 {
 	// If we're not initializing and we're not initialized, something is wrong
 	if ( !initializing && !m_initialized ) {
