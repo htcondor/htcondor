@@ -107,6 +107,12 @@ and \Condor{submit\_dag}.  This flag is intended mainly for testing.
   because the routed job went on hold.  The option defaults to
   resetting the source job.
 
+\item Added \MacroNI{PREEMPTION\_REQUIREMENTS\_STABLE} and
+  \MacroNI{PREEMPTION\_RANK\_STABLE} which tell Condor if all
+  attributes in the \MacroNI{PREEMPTION\_REQUIREMENTS} and
+  \MacroNI{PREEMPTION\_RANK} variables will not change within
+  a negotiation interval.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
