@@ -34,6 +34,8 @@ void success(void)
 		longjmp(3) is used to terminate execution of
 		one of the functions registered atexit()."
 
+		Of course, this does raise the question of what happens during
+		a checkpoint and restart of a process in an atexit() handler...
 	*/
 
 	/* While exit() may not be called (posix says it is undefined), _exit()
