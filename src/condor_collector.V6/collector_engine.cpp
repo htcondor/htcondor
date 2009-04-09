@@ -479,6 +479,7 @@ bool CollectorEngine::ValidateClassAd(int command,ClassAd *clientAd,Sock *sock)
 	char const *ipattr = NULL;
 	switch( command ) {
 	  case UPDATE_STARTD_AD:
+	  case UPDATE_STARTD_AD_WITH_ACK:
 		  ipattr = ATTR_STARTD_IP_ADDR;
 		  break;
 	  case UPDATE_SCHEDD_AD:
