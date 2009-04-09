@@ -7661,7 +7661,7 @@ SetVMParams()
 		free(vm_cdrom_files);
 	}
 
-	if( stricmp(VMType.Value(), CONDOR_VM_UNIVERSE_XEN) == MATCH ) {
+	if( (stricmp(VMType.Value(), CONDOR_VM_UNIVERSE_XEN) == MATCH) || (stricmp(VMType.Value(), CONDOR_VM_UNIVERSE_KVM) == MATCH) ) {
 		bool real_xen_kernel_file = false;
 		bool need_xen_root_device = false;
 

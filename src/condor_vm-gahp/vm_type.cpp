@@ -156,7 +156,10 @@ VMType::parseCommonParamFromClassAd(bool is_root /*false*/)
 				m_vm_networking_type = "nat";
 			}
 		}
-		m_classAd.LookupString( ATTR_JOB_VM_MACADDR, m_vm_job_mac);
+		if(m_classAd.LookupString( ATTR_JOB_VM_MACADDR, m_vm_job_mac) != 1)
+		  {
+		    vmprintf(D_FULLDEBUG, "MAC address was not defined.\n");
+		  }
 	}
 
 	// Read parameter for checkpoint
