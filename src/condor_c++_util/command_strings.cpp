@@ -257,7 +257,7 @@ int
 getCommandNum( const char* command )
 {
 	int result = getNumFromName( command, DCTranslation );
-	if( !result ) {
+	if( -1 == result ) {
 		return getCollectorCommandNum(command);
 	}
 	return result;
