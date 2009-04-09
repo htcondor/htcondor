@@ -7,7 +7,7 @@
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
  * 
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *	http://www.apache.org/licenses/LICENSE-2.0
  * 
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -34,21 +34,43 @@ void fill_buf( char *buf, char fill_char, size_t size );
 #include "x_waste_second.h"
 
 #if defined(GLIBC27)
-/* we need this to encrypt/decrypt the pointer from the jmp_buf so we can switch
-	stacks when we need to. */
-#define PTR_ENCRYPT(variable)  \
-        asm ("xorl %%gs:24, %0\n"   \
-            "roll $9, %0"          \
-            : "=r" (variable)           \
-            : "0" (variable))
-#define PTR_DECRYPT(variable)  \
-        asm ("rorl $9, %0\n"    \
-            "xorl %%gs:24, %0" \
-            : "=r" (variable)       \
-            : "0" (variable))
+
+/* see condor_ckpt/machdep.h about this code */
+#if defined(I386)
+
+	/* we need this to encrypt/decrypt the pointer from the jmp_buf
+		so we can switch stacks when we need to. */
+
+#	define PTR_ENCRYPT(variable)  \
+		asm ("xorl %%gs:24, %0\n"   \
+			"roll $9, %0"		  \
+			: "=r" (variable)		   \
+			: "0" (variable))
+#	define PTR_DECRYPT(variable)  \
+		asm ("rorl $9, %0\n"	\
+			"xorl %%gs:24, %0" \
+			: "=r" (variable)	   \
+			: "0" (variable))
+
+#elif defined(X86_64)
+
+#   define PTR_ENCRYPT(variable)  \
+		asm ("xorq %%fs:48, %0\n"   \
+			"rolq $17, %0"		  \
+			: "=r" (variable)		   \
+			: "0" (variable))
+#   define PTR_DECRYPT(variable)  \
+		asm ("rorq $17, %0\n"	\
+			"xorq %%fs:48, %0" \
+			: "=r" (variable)	   \
+			: "0" (variable))
 #else
+
 #define PTR_ENCRYPT(variable)
 #define PTR_DECRYPT(variable)
+
+#endif
+
 #endif
 
 
