@@ -21,6 +21,8 @@
 #include "classad_newold.h"
 #include "condor_new_classads.h"
 #include "condor_classad.h"
+#include "condor_debug.h"
+#include "MyString.h"
 #define WANT_CLASSAD_NAMESPACE
 #undef open
 #include "classad/classad_distribution.h"
