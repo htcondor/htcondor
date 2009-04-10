@@ -31,6 +31,7 @@
 #include "condor_adtypes.h"
 #include "condor_config.h"
 #include "filename_tools.h"
+#include "proc.h"
 
 
 /*

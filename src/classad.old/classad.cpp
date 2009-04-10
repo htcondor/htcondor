@@ -32,6 +32,7 @@
 # include "condor_classad.h"
 # include "condor_adtypes.h"
 # include "MyString.h"
+# include "stream.h"
 # include "condor_xml_classads.h"
 
 static Registration regi;                   // this is the registration for 

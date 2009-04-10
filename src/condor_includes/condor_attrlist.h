@@ -32,8 +32,8 @@
 #include "condor_debug.h"
 #include "MyString.h"
 
-#include "stream.h"
-//#include "list.h"
+// Forward definition of stream
+class Stream;
 
 #define		ATTRLIST_MAX_EXPRESSION		10240
 

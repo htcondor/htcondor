@@ -22,6 +22,7 @@
 #include "condor_attributes.h"
 #include "condor_config.h"
 #include "user_job_policy.h"
+#include "proc.h"
 
 const char * PARAM_SYSTEM_PERIODIC_REMOVE = "SYSTEM_PERIODIC_REMOVE";
 const char * PARAM_SYSTEM_PERIODIC_RELEASE = "SYSTEM_PERIODIC_RELEASE";

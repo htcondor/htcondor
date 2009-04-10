@@ -33,8 +33,8 @@
 
 #define		CLASSAD_MAX_ADTYPE			50
 
-//for the shipping functions -- added by Lei Cao
-#include "stream.h"
+// Forward definition of stream
+class Stream;
 
 struct AdType                   // type of a ClassAd.
 {

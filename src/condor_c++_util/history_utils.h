@@ -22,6 +22,7 @@
 #define _HISTORY_UTILS_H_
 
 #include "condor_common.h"
+#include "proc.h"
 
 //------------------------------------------------------------------------
 
