@@ -21,6 +21,7 @@
 #include "condor_classad.h"
 #include "string_list.h"
 #include "classad_support.h"
+#include "condor_debug.h"
 
 char ATTR_DIRTY_ATTR_LIST [] = "DirtyAttrList";
 
