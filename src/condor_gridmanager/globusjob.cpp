@@ -1775,6 +1775,7 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 					myResource->JMComplete( this );
 					gmState = GM_CLEAR_REQUEST;
 				} else if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_WAITING_FOR_COMMIT ) {
+					callbackRegistered = true;
 					jmProxyExpireTime = jobProxy->expiration_time;
 					jmDown = false;
 					SetRemoteJobId( job_contact );
@@ -2341,6 +2342,7 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 					gmState = GM_CLEANUP_CANCEL;
 					break;
 				} else if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_WAITING_FOR_COMMIT ) {
+					callbackRegistered = true;
 					jmProxyExpireTime = jobProxy->expiration_time;
 					jmDown = false;
 					SetRemoteJobId( job_contact );
