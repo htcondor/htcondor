@@ -107,10 +107,10 @@ and \Condor{submit\_dag}.  This flag is intended mainly for testing.
   because the routed job went on hold.  The option defaults to
   resetting the source job.
 
-\item Added \MacroNI{PREEMPTION\_REQUIREMENTS\_STABLE} and
-  \MacroNI{PREEMPTION\_RANK\_STABLE} which tell Condor if all
-  attributes in the \MacroNI{PREEMPTION\_REQUIREMENTS} and
-  \MacroNI{PREEMPTION\_RANK} variables will not change within
+\item The new configuration variables \Macro{PREEMPTION\_REQUIREMENTS\_STABLE}
+  and \Macro{PREEMPTION\_RANK\_STABLE} identify for Condor if all
+  attributes in the variables \MacroNI{PREEMPTION\_REQUIREMENTS} and
+  \MacroNI{PREEMPTION\_RANK} will not change within
   a negotiation interval.
 
 \end{itemize}
@@ -119,12 +119,14 @@ and \Condor{submit\_dag}.  This flag is intended mainly for testing.
 
 \begin{itemize}
 
-\item Fixed the Collector so that ``hibernating'' machines never timeout.
+\item Fixed the \Condor{collector} daemon such that hibernating machines
+  never time out.
 
-\item Fixed some of the class ad values of a ``hibernating'' machine
-  when gathered from the Collector.  For instance, all ``hibernating''
-  machines are unclaimed and idle, have no load, the cpu is not busy, and
-  the keyboard and console are set as if they had been idle for a long time.
+\item Fixed incorrectly set ClassAd attribute values of machines
+  entering a hibernation state.
+  All hibernating machines are unclaimed and idle,
+  they have no load, the CPU is not busy, and
+  the keyboard and console appear as if they had been idle for a long time.
 
 \item Fixed a bug where if any idle slot satisfied the
   \MacroNI{HIBERNATE} expression, Condor would put the machine into a
