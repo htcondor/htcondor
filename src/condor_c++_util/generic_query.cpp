@@ -21,6 +21,7 @@
 #include "generic_query.h"
 #include "condor_attributes.h"
 #include "condor_parser.h"
+#include "MyString.h"
 
 static char *new_strdup (const char *);
 

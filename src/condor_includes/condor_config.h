@@ -26,6 +26,7 @@
 #include "MyString.h"
 #include "string_list.h"
 #include "simplelist.h"
+#include "extArray.h"
 #endif
 
 #define CONDOR_GCB_INVALID_BROKER "0.0.0.1"

@@ -19,6 +19,7 @@
 
 
 #include "condor_common.h"
+#include "condor_debug.h"
 #include "udp_waker.h"
 
 #include "condor_classad.h"

@@ -369,6 +369,24 @@ libcondorapi-release:: $(RELEASE_DIR)/include/write_user_log.h
 public_copy_target(iso_dates.h,include,iso_dates.h,TEXT_MODE)
 libcondorapi-release:: $(RELEASE_DIR)/include/iso_dates.h
 
+public_copy_target(../condor_includes/condor_classad.h,include,condor_classad.h,TEXT_MODE)
+libcondorapi-release:: $(RELEASE_DIR)/include/condor_classad.h
+
+public_copy_target(../condor_includes/condor_exprtype.h,include,condor_exprtype.h,TEXT_MODE)
+libcondorapi-release:: $(RELEASE_DIR)/include/condor_exprtype.h
+
+public_copy_target(../condor_includes/condor_astbase.h,include,condor_astbase.h,TEXT_MODE)
+libcondorapi-release:: $(RELEASE_DIR)/include/condor_astbase.h
+
+public_copy_target(../condor_includes/condor_ast.h,include,condor_ast.h,TEXT_MODE)
+libcondorapi-release:: $(RELEASE_DIR)/include/condor_ast.h
+
+public_copy_target(../condor_includes/condor_attrlist.h,include,condor_attrlist.h,TEXT_MODE)
+libcondorapi-release:: $(RELEASE_DIR)/include/condor_attrlist.h
+
+public_copy_target(../condor_includes/condor_parser.h,include,condor_parser.h,TEXT_MODE)
+libcondorapi-release:: $(RELEASE_DIR)/include/condor_parser.h
+
 condor_version.o: condor_version.cpp
 	$(CPlusPlus) $(C_PLUS_FLAGS) -c -DPLATFORM=$(PLATFORM) condor_version.cpp
 

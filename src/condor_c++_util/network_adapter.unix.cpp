@@ -18,6 +18,7 @@
 ***************************************************************/
 
 #include "condor_common.h"
+#include "condor_debug.h"
 #include "internet.h"
 #include "network_adapter.unix.h"
 
