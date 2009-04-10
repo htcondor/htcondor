@@ -30,10 +30,10 @@
 #include "condor_exprtype.h"
 #include "condor_astbase.h"
 #include "condor_debug.h"
-#include "MyString.h"
 
-// Forward definition of stream
+// Forward definition of things
 class Stream;
+class MyString;
 
 #define		ATTRLIST_MAX_EXPRESSION		10240
 
