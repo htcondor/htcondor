@@ -213,6 +213,7 @@ const char *ATTR_GLOBUS_STATUS			 = "GlobusStatus";
 const char *ATTR_GLOBUS_XML				 = "GlobusXML";
 const char *ATTR_X509_USER_PROXY          = "x509userproxy";
 const char *ATTR_X509_USER_PROXY_SUBJECT	 = "x509userproxysubject";
+const char *ATTR_DELEGATED_PROXY_EXPIRATION = "DelegatedProxyExpiration";
 const char *ATTR_GLOBUS_JOBMANAGER_TYPE   	= "JobmanagerType";	// for gt4
 const char *ATTR_GLOBUS_SUBMIT_ID	     = "GlobusSubmitId"; // for gt4
 const char *ATTR_GRIDFTP_SERVER_JOB       = "GridftpServerJob";

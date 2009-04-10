@@ -101,6 +101,7 @@ GlobusResource::GlobusResource( const char *resource_name,
 	gahp = NULL;
 	monitorGahp = NULL;
 	monitorRetryTime = 0;
+	monitorFirstStartup = true;
 }
 
 GlobusResource::~GlobusResource()
@@ -530,6 +531,7 @@ GlobusResource::CheckMonitor()
 					dprintf(D_ALWAYS, "Successfully started grid_monitor "
 							"for %s\n", resourceName);
 					monitorStarting = false;
+					monitorFirstStartup = false;
 					monitorActive = true;
 					registeredJobs.Rewind();
 					while ( registeredJobs.Next( (BaseJob*&)job ) ) {
@@ -608,10 +610,11 @@ GlobusResource::StopMonitor()
 
 	dprintf(D_ALWAYS, "Stopping grid_monitor for resource %s\n", resourceName);
 
-	monitorStarting = false;
+		// Do we want to notify jobs when the grid monitor fails?
 	monitorActive = false;
-	if ( monitorActive ) {
-		monitorActive = false;
+	monitorFirstStartup = false;
+	monitorStarting = false;
+	if ( monitorActive || monitorFirstStartup ) {
 		registeredJobs.Rewind();
 		while ( registeredJobs.Next( (BaseJob*&)job ) ) {
 			job->SetEvaluateState();

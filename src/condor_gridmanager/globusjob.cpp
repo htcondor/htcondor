@@ -591,6 +591,7 @@ GlobusJob::GlobusJob( ClassAd *classad )
 	: BaseJob( classad )
 {
 	int bool_value;
+	int int_value;
 	MyString iwd;
 	MyString job_output;
 	MyString job_error;
@@ -770,6 +771,10 @@ GlobusJob::GlobusJob( ClassAd *classad )
 	jobAd->LookupInteger( ATTR_GLOBUS_STATUS, globusState );
 
 	globusError = GLOBUS_SUCCESS;
+
+	if ( jobAd->LookupInteger( ATTR_DELEGATED_PROXY_EXPIRATION, int_value ) ) {
+		jmProxyExpireTime = (time_t)int_value;
+	}
 
 	if ( jobAd->LookupString(ATTR_JOB_IWD, iwd) && iwd.Length() ) {
 		int len = iwd.Length();
@@ -1055,8 +1060,7 @@ int GlobusJob::doEvaluateState()
 			}
 			// Test for authorization error here because someone else's
 			// jobmanager could now be running on our old port.
-			if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ||
-				 rc == GLOBUS_GRAM_PROTOCOL_ERROR_AUTHORIZATION ||
+			if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_AUTHORIZATION ||
 				 rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
 				globusError = GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER;
 				gmState = GM_RESTART;
@@ -1075,6 +1079,11 @@ int GlobusJob::doEvaluateState()
 				myResource->JMAlreadyRunning( this );
 				probeNow = true;
 				gmState = GM_SUBMITTED;
+				break;
+			}
+			if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ) {
+				// The jobmanager appears to not be running.
+				gmState = GM_JOBMANAGER_ASLEEP;
 				break;
 			}
 			if ( rc != GLOBUS_SUCCESS ) {
@@ -1217,6 +1226,8 @@ int GlobusJob::doEvaluateState()
 				}
 				numSubmitAttempts++;
 				jmProxyExpireTime = jobProxy->expiration_time;
+				jobAd->Assign( ATTR_DELEGATED_PROXY_EXPIRATION,
+							   (int)jmProxyExpireTime );
 				if ( rc == GLOBUS_SUCCESS ) {
 					// Previously this supported GRAM 1.0
 					dprintf(D_ALWAYS, "(%d.%d) Unexpected remote response.  GRAM 1.6 is now required.\n", procID.cluster, procID.proc);
@@ -1399,6 +1410,8 @@ int GlobusJob::doEvaluateState()
 					break;
 				}
 				jmProxyExpireTime = jobProxy->expiration_time;
+				jobAd->Assign( ATTR_DELEGATED_PROXY_EXPIRATION,
+							   (int)jmProxyExpireTime );
 				gmState = GM_SUBMITTED;
 			}
 			} break;
@@ -1790,6 +1803,8 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 					gmState = GM_CLEAR_REQUEST;
 				} else if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_WAITING_FOR_COMMIT ) {
 					jmProxyExpireTime = jobProxy->expiration_time;
+					jobAd->Assign( ATTR_DELEGATED_PROXY_EXPIRATION,
+								   (int)jmProxyExpireTime );
 					jmDown = false;
 					SetRemoteJobId( job_contact );
 					gahp->globus_gram_client_job_contact_free( job_contact );
@@ -2098,6 +2113,10 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 			errorString = "";
 			ClearCallbacks();
 			useGridJobMonitor = true;
+			if ( jmProxyExpireTime != 0 ) {
+				jmProxyExpireTime = 0;
+				jobAd->AssignExpr( ATTR_DELEGATED_PROXY_EXPIRATION, "Undefined" );
+			}
 			// HACK!
 			retryStdioSize = true;
 			myResource->CancelSubmit( this );
@@ -2356,6 +2375,8 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 					break;
 				} else if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_WAITING_FOR_COMMIT ) {
 					jmProxyExpireTime = jobProxy->expiration_time;
+					jobAd->Assign( ATTR_DELEGATED_PROXY_EXPIRATION,
+								   (int)jmProxyExpireTime );
 					jmDown = false;
 					SetRemoteJobId( job_contact );
 					gahp->globus_gram_client_job_contact_free( job_contact );
@@ -3475,13 +3496,23 @@ GlobusJob::JmShouldSleep()
 		return false;
 	}
 
-	int limit = param_integer( "GRID_MONITOR_NO_STATUS_TIMEOUT", 15*60 );
-	if ( myResource->LastGridJobMonitorUpdate() >
-		 lastRemoteStatusUpdate + limit ) {
-		return false;
-	}
-	if ( myResource->GridJobMonitorActive() == false ) {
-		return false;
+	// If our resource object is making its first attempt to start the
+	// grid monitor and our jobmanager is asleep, wait for the grid
+	// monitor to succeed or fail before considering restarting the
+	// jobmanager.
+	// This is meant to avoid unnecessary jobmanager restarts when the
+	// gridmanager starts up after a failure.
+	if ( !myResource->GridMonitorFirstStartup() ||
+		 !gmState == GM_JOBMANAGER_ASLEEP ) {
+
+		int limit = param_integer( "GRID_MONITOR_NO_STATUS_TIMEOUT", 15*60 );
+		if ( myResource->LastGridJobMonitorUpdate() >
+			 lastRemoteStatusUpdate + limit ) {
+			return false;
+		}
+		if ( myResource->GridJobMonitorActive() == false ) {
+			return false;
+		}
 	}
 
 	switch ( globusState ) {

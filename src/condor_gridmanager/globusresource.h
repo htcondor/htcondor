@@ -51,6 +51,7 @@ class GlobusResource : public BaseResource
 
 	bool GridJobMonitorActive() { return monitorActive; }
 	int LastGridJobMonitorUpdate() { return jobStatusFileLastUpdate; }
+	bool GridMonitorFirstStartup() { return monitorFirstStartup; }
 
 	static const char *CanonicalName( const char *name );
 	static const char *HashName( const char *resource_name,
@@ -131,6 +132,7 @@ class GlobusResource : public BaseResource
 		// When true, a gram job request is in progress to launch the
 		// grid monitor.
 	bool monitorSubmitActive;
+	bool monitorFirstStartup;
 
 	char *monitorDirectory;
 	char *monitorJobStatusFile;
