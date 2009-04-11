@@ -382,7 +382,7 @@ libcondorapi-release:: $(RELEASE_DIR)/include/condor_attrlist.h
 public_copy_target(../condor_includes/condor_parser.h,include,condor_parser.h,TEXT_MODE)
 libcondorapi-release:: $(RELEASE_DIR)/include/condor_parser.h
 
-public_copy_target(MyString.h,include,MyString_parser.h,TEXT_MODE)
+public_copy_target(MyString.h,include,MyString.h,TEXT_MODE)
 libcondorapi-release:: $(RELEASE_DIR)/include/MyString.h
 
 public_copy_target(../condor_includes/condor_header_features.h,include,condor_header_features.h,TEXT_MODE)
