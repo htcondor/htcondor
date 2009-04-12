@@ -19,6 +19,7 @@
 
 
 #include "condor_common.h"
+#include "condor_debug.h"
 #include "schedd_files.h"
 #include "condor_attributes.h"
 #include "condor_md.h"
