@@ -64,14 +64,17 @@ void fill_buf( char *buf, char fill_char, size_t size );
 			"xorq %%fs:48, %0" \
 			: "=r" (variable)	   \
 			: "0" (variable))
-#else
 
+#endif
+#endif
+
+/* If it isn't defined by now, make it a no-op */
+
+#ifndef PTR_ENCRYPT
 #define PTR_ENCRYPT(variable)
 #define PTR_DECRYPT(variable)
-
 #endif
 
-#endif
 
 
 int
