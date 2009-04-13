@@ -180,7 +180,7 @@ test_append_prereqs = java-1.4.2_05
 [
 platforms = x86_rhap_5
 test_append_prereqs = java-1.4.2_05
-x_test_platforms_x86_rhap_5 = unmanaged-x86_rhap_5.1, x86_64_fc_5, x86_fc_5, \
+x_test_platforms_x86_rhap_5 = unmanaged-x86_rhap_5, x86_64_fc_5, x86_fc_5, \
 		x86_64_fc_8, x86_64_fc_9
 ]
 
@@ -212,7 +212,7 @@ testonly_append_prereqs = java-1.4.2_05
 ]
 
 [
-testplatforms = unmanaged-x86_rhap_5.1
+testplatforms = unmanaged-x86_rhap_5
 ]
 
 [
@@ -229,5 +229,5 @@ testonly_append_prereqs = java-1.4.2_05
 ]
 
 [
-testplatforms =  unmanaged-x86_rhap_5.1
+testplatforms =  unmanaged-x86_rhap_5
 ]
