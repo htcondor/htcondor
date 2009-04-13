@@ -435,7 +435,7 @@ VMUniverseMgr::testVMGahp(const char* gahppath, const char* vmtype)
 	bool read_something = false;
 	char buf[2048];
 
-	m_vmgahp_info.clear();
+	m_vmgahp_info.Clear();
 	while( fgets(buf, 2048, fp) ) {
 		if( !m_vmgahp_info.Insert(buf) ) {
 			dprintf( D_ALWAYS, "Failed to insert \"%s\" into VMInfo, "

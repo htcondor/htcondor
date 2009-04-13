@@ -442,7 +442,7 @@ fetchQueueFromDBAndProcess ( char *dbconn, char *&lastUpdate, process_function p
 	while (ad != (ClassAd *) 0) {
 			// Process the data and insert it into the list
 		if ((*process_func) (ad) ) {
-			ad->clear();
+			ad->Clear();
 			delete ad;
 		}
 		
@@ -720,7 +720,7 @@ ClassAd* getDBNextJobByConstraint(const char* constraint, JobQueueSnapshot	*jqSn
 		}
 		
 		if (ad != (ClassAd *) 0) {
-			ad->clear();
+			ad->Clear();
 			delete ad;
 			ad = (ClassAd *) 0;
 		}

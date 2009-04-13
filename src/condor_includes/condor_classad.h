@@ -128,7 +128,7 @@ class ClassAd : public AttrList
 		int         sPrintAsXML(MyString &output);
 		void		dPrint( int );				// dprintf to given dprintf level
 
-		void		clear( void );				// clear out all attributes
+		void		Clear( void );				// clear out all attributes
 
 		// poor man's update function until ClassAd Update Protocol  --RR
 		 void ExchangeExpressions (class ClassAd *);

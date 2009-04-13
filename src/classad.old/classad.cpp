@@ -795,13 +795,13 @@ int ClassAd::put(Stream& s)
 
 
 void
-ClassAd::clear( void )
+ClassAd::Clear( void )
 {
 		// First, clear out everything in our AttrList
-	AttrList::clear();
+	AttrList::Clear();
 
 		// Now, clear out our Type fields, since those are specific to
-		// ClassAd and aren't handled by AttrList::clear().
+		// ClassAd and aren't handled by AttrList::Clear().
     if( myType ) {
         delete myType;
 		myType = NULL;

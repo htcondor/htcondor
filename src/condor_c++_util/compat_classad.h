@@ -204,11 +204,6 @@ class CompatClassAd : public classad::ClassAd
 		/** Get the value of the TargetType attribtute */
 	const char*	GetTargetTypeName();
 
-		/** Pass-through to slightly-differently named Clear() in
-			new ClassAds.
-		 */
-	void clear();
-
 		/** Print the ClassAd as an old ClassAd to the stream
 		 * @param s the stream
 		 */

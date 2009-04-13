@@ -285,7 +285,7 @@ class AttrList : public AttrListAbstract
 		 */
 		bool initFromString(char const *str,MyString *err_msg);
 
-		void clear( void );
+		void Clear( void );
 
 			// Create a list of all ClassAd attribute references made
 			// by the value of the specified attribute.  Note that

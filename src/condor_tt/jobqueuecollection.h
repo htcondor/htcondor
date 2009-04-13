@@ -77,7 +77,7 @@ public:
 
 			//added by ameet as a possible solution to the memory leak problem
 		if (ad != NULL) {
-			ad->clear(); 
+			ad->Clear(); 
 			delete ad;
 		}
 	}

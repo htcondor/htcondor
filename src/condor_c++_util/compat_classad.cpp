@@ -618,12 +618,6 @@ GetTargetTypeName( )
 	return targetTypeStr.c_str( );
 }
 
-void CompatClassAd::
-clear()
-{
-	Clear();
-}
-
 // Back compatibility helper methods
 
 bool CompatClassAd::

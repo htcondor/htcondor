@@ -754,7 +754,7 @@ AttrList::AttrList(AttrList &old) : AttrListAbstract(ATTRLISTENTITY)
 AttrList::~AttrList()
 {
 		// Delete all of the attributes in this list
-	clear();
+	Clear();
 	
 		// Free memory associated with the hash table
 	if ( hash ) {
@@ -774,7 +774,7 @@ AttrList& AttrList::operator=(const AttrList& other)
 {
 	if (this != &other) {
 		// First delete our old stuff.
-		clear();
+		Clear();
 
 		if ( !this->hash ) {
 			// should not happen, but just in case...
@@ -2349,7 +2349,7 @@ int AttrList::put(Stream& s)
 
 
 void
-AttrList::clear( void )
+AttrList::Clear( void )
 {
 		// First, unchain ourselves, if we're a chained classad
 	unchain();
@@ -2480,7 +2480,7 @@ AttrList::initFromStream(Stream& s)
 	succeeded = 1;
 
 	// First, clear our ad so we start with a fresh ClassAd
-	clear();
+	Clear();
 	if ( !hash ) {
 		// is hash ever NULL? don't think so, but just in case.
 		this->hash = new HashTable<YourString, AttrListElem *>(hash_size, torekHash);
@@ -2535,7 +2535,7 @@ AttrList::initFromString(char const *str,MyString *err_msg)
 	bool succeeded = true;
 
 	// First, clear our ad so we start with a fresh ClassAd
-	clear();
+	Clear();
 	if ( !hash ) {
 		// is hash ever NULL? don't think so, but just in case.
 		this->hash = new HashTable<YourString, AttrListElem *>(hash_size, torekHash);
