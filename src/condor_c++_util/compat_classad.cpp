@@ -128,8 +128,6 @@ Insert( const char *str )
 {
 	classad::ClassAdParser parser;
 	classad::ClassAd *newAd;
-	vector< pair< string, ExprTree *> > vec;
-	vector< pair< string, ExprTree *> >::iterator itr;
 
 		// String escaping is different between new and old ClassAds.
 		// We need to convert the escaping from old to new style before
@@ -150,15 +148,17 @@ Insert( const char *str )
 	if ( newAd == NULL ) {
 		return FALSE;
 	}
-	newAd->GetComponents( vec );
-	
-	for( itr = vec.begin( ); itr != vec.end( ); itr++ ) {
-		if( !ClassAd::Insert( itr->first, itr->second ) ) {
-			return FALSE;
-		}
-		itr->first = "";
-		itr->second = NULL;
+	if ( newAd->size() != 1 ) {
+		delete newAd;
+		return FALSE;
 	}
+	
+	iterator itr = newAd->begin();
+	if ( !ClassAd::Insert( itr->first, itr->second->Copy() ) ) {
+		delete newAd;
+		return FALSE;
+	}
+	delete newAd;
 	return TRUE;
 }
 
