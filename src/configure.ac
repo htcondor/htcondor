@@ -2489,6 +2489,12 @@ if test "$ac_cv_func_statfs" = yes ; then
       AC_MSG_ERROR([unable to determine number of arguments to statfs()])])])
 fi dnl test "$ac_cv_func_statfs" = yes
 
+# Do we have member tm_gmtoff in struct tm?
+AC_CHECK_MEMBER([struct tm.tm_gmtoff],
+                [AC_DEFINE([HAVE_TM_GMTOFF], [1], [tm.tm_gmtoff available])],
+                [],
+                [[#include <time.h>]])
+
 # Do we have the "ethtool" and similar declarations?
 AC_CHECK_DECLS([SIOCETHTOOL,SIOCGIFCONF],,, [[#include <linux/sockios.h>]])
 
