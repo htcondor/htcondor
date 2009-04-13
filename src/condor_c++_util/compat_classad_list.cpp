@@ -1,0 +1,103 @@
+/***************************************************************
+ *
+ * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * University of Wisconsin-Madison, WI.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License"); you
+ * may not use this file except in compliance with the License.  You may
+ * obtain a copy of the License at
+ * 
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ ***************************************************************/
+
+#include "compat_classad_list.h"
+
+
+CompatClassAdList::~CompatClassAdList()
+{
+		// This is to avoid the size lookup each time
+	int imax = list.size();
+	for (int i = 0; i < imax; i++)
+	{
+		if (list[i]) delete list[i];
+			// this transient state in the
+			// destructor is the only time
+			// NULL is put on the list.
+		list[i] = NULL;
+	}
+}
+
+CompatClassAd* CompatClassAdList::Next()
+{  // Return this element _and_then_ push pointer
+	if (index < 0 || index >= list.size())
+	{ // This also handles the empty list case.
+		return NULL;
+	} else {
+		return list[index++]; // Note that it's postfix ++
+	}
+}
+
+int CompatClassAdList::Delete(CompatClassAd* cad)
+{
+	int retval = FALSE;
+	std::vector<CompatClassAd*>::iterator it = list.begin();
+		// This is to avoid the size lookup each time
+	int imax = list.size();
+	for (int i = 0; i < imax; i++)
+	{
+		if (*it == cad)
+			// or should I do *(*it) == *cad to
+			// do a deep comparison?
+		{
+			CompatClassAd* tmp = *it;
+			it = list.erase(it);
+			if (tmp) delete tmp;
+			retval = TRUE;
+				// Now if this element that we deleted occurs
+				// at or after our index value, we're fine. But
+				// if that's not the case, we need to decrement
+				// the index to emulate old ClassAdList behaviour
+				// correctly.
+			if ( i < index ){ 
+				index--;  // This will not cause index to go below zero.
+			}
+		} else {
+			++it;
+		}
+	}
+	return retval;
+}
+
+void CompatClassAdList::Insert(CompatClassAd* cad)
+{
+	bool is_in_list = false;
+	std::vector<CompatClassAd*>::iterator it = list.begin();
+	int imax = list.size(); // Performance optimization
+	for(int i = 0; i < imax; i++)
+	{
+		if (*it == cad)
+			// or should I do *(*it) == *cad to
+			// do a deep comaprison?
+		{
+			is_in_list = true;
+			break;
+		}
+	}
+	if (!is_in_list)
+	{
+		list.push_back(cad);
+	}
+}
+
+void CompatClassAdList::Sort(SortFunctionType smallerThan, void* userInfo)
+{
+	ClassAdComparator isSmallerThan(userInfo, smallerThan);
+	std::sort(list.begin(), list.end(), isSmallerThan);
+}
