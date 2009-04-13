@@ -76,7 +76,10 @@ public:
 	void Close()            { index = 0; /*Just a safety measure*/ }
 	void Rewind()           { /*same as Open()*/ index = 0; }
 	int MyLength()          { /*Same as Length()*/ return list.size(); }
+		/* Removes ad from list and deletes it */
 	int Delete(CompatClassAd* cad);
+		/* Removes ad from list, but does not delete it */
+	int Remove(CompatClassAd* cad);
 	void Insert(CompatClassAd* cad);
 	int Length()            { /*Same as MyLength()*/ return list.size(); }
 		/* Note on behaviour. The Sort function does not touch the

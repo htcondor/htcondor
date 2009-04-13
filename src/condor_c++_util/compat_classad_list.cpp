@@ -46,6 +46,15 @@ CompatClassAd* CompatClassAdList::Next()
 
 int CompatClassAdList::Delete(CompatClassAd* cad)
 {
+	int ret = Remove( cad );
+	if ( ret == TRUE ) {
+		delete cad;
+	}
+	return ret;
+}
+
+int CompatClassAdList::Remove(CompatClassAd* cad)
+{
 	int retval = FALSE;
 	std::vector<CompatClassAd*>::iterator it = list.begin();
 		// This is to avoid the size lookup each time
@@ -58,7 +67,6 @@ int CompatClassAdList::Delete(CompatClassAd* cad)
 		{
 			CompatClassAd* tmp = *it;
 			it = list.erase(it);
-			if (tmp) delete tmp;
 			retval = TRUE;
 				// Now if this element that we deleted occurs
 				// at or after our index value, we're fine. But
