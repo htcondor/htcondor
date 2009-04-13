@@ -162,6 +162,22 @@ Insert( const char *str )
 	return TRUE;
 }
 
+int CompatClassAd::
+AssignExpr(char const *name,char const *value)
+{
+	ClassAdParser par;
+	ExprTree *expr = NULL;
+
+	if ( !par.ParseExpression( value, expr, true ) ) {
+		return FALSE;
+	}
+	if ( !Insert( name, expr ) ) {
+		delete expr;
+		return FALSE;
+	}
+	return TRUE;
+}
+
 //  void CompatClassAd::
 //  ResetExpr() { this->ptrExpr = exprList; }
 
@@ -600,6 +616,12 @@ GetTargetTypeName( )
 		return NULL;
 	}
 	return targetTypeStr.c_str( );
+}
+
+void CompatClassAd::
+clear()
+{
+	Clear();
 }
 
 // Back compatibility helper methods

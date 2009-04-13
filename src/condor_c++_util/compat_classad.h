@@ -59,6 +59,40 @@ class CompatClassAd : public classad::ClassAd
 		 */
 	int InsertOrUpdate(const char *expr) { return Insert(expr); }
 
+		/* Insert an attribute/value into the Classad
+		 */
+	int AssignExpr(char const *name,char const *value);
+
+		/* Insert an attribute/value into the Classad with the
+		 * appropriate type.
+		 */
+	int Assign(char const *name, MyString const &value)
+	{ return InsertAttr( name, value.Value()) ? TRUE : FALSE; }
+
+	int Assign(char const *name,char const *value)
+	{ return InsertAttr( name, value) ? TRUE : FALSE; }
+
+	int Assign(char const *name,int value)
+	{ return InsertAttr( name, value) ? TRUE : FALSE; }
+
+	int Assign(char const *name,unsigned int value)
+	{ return InsertAttr( name, (int)value) ? TRUE : FALSE; }
+
+	int Assign(char const *name,long value)
+	{ return InsertAttr( name, (int)value) ? TRUE : FALSE; }
+
+	int Assign(char const *name,unsigned long value)
+	{ return InsertAttr( name, (int)value) ? TRUE : FALSE; }
+
+	int Assign(char const *name,float value)
+	{ return InsertAttr( name, (double)value) ? TRUE : FALSE; }
+
+	int Assign(char const *name,double value)
+	{ return InsertAttr( name, value) ? TRUE : FALSE; }
+
+	int Assign(char const *name,bool value)
+	{ return InsertAttr( name, value) ? TRUE : FALSE; }
+
 		// for iteration through expressions
 //		void		ResetExpr();
 //		classad::ExprTree*	NextExpr();
@@ -169,6 +203,11 @@ class CompatClassAd : public classad::ClassAd
 	void 		SetTargetTypeName(const char *);
 		/** Get the value of the TargetType attribtute */
 	const char*	GetTargetTypeName();
+
+		/** Pass-through to slightly-differently named Clear() in
+			new ClassAds.
+		 */
+	void clear();
 
 		/** Print the ClassAd as an old ClassAd to the stream
 		 * @param s the stream
