@@ -484,16 +484,19 @@ fPrint( FILE *file )
 {
 	classad::ClassAdUnParser unp;
 	unp.SetOldClassAd( true );
-	string buffer;
+	string buffer = "";
 
 	if( !file ) {
 		return FALSE;
 	}
 
-	unp.Unparse( buffer, GetChainedParentAd() );
-	fprintf( file, "%s", buffer.c_str() );
+	if ( GetChainedParentAd() ) {
+		unp.Unparse( buffer, GetChainedParentAd() );
+		fprintf( file, "%s", buffer.c_str() );
 
-	buffer = "";
+		buffer = "";
+	}
+
 	unp.Unparse( buffer, this );
 	fprintf( file, "%s", buffer.c_str( ) );
 
@@ -512,12 +515,14 @@ dPrint( int level )
 
 	ClassAd *parent = GetChainedParentAd();
 
-	for ( itr = parent->begin(); itr != parent->end(); itr++ ) {
-		if ( !ClassAdAttributeIsPrivate( itr->first.c_str() ) ) {
-			value = "";
-			unp.Unparse( value, itr->second );
-			buffer.sprintf_cat( "%s = %s\n", itr->first.c_str(),
-								value.c_str() );
+	if ( parent ) {
+		for ( itr = parent->begin(); itr != parent->end(); itr++ ) {
+			if ( !ClassAdAttributeIsPrivate( itr->first.c_str() ) ) {
+				value = "";
+				unp.Unparse( value, itr->second );
+				buffer.sprintf_cat( "%s = %s\n", itr->first.c_str(),
+									value.c_str() );
+			}
 		}
 	}
 
@@ -540,8 +545,12 @@ sPrint( MyString &output )
 	unp.SetOldClassAd( true );
 	string buffer;
 
-	unp.Unparse( buffer, GetChainedParentAd() );
-	output = buffer.c_str();
+	if ( GetChainedParentAd() ) {
+		unp.Unparse( buffer, GetChainedParentAd() );
+		output = buffer.c_str();
+	} else {
+		output = "";
+	}
 
 	buffer = "";
 	unp.Unparse( buffer, this );
