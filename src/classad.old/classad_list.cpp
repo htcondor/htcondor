@@ -20,7 +20,6 @@
 
 #include "condor_common.h"
 #include "condor_classad.h"
-#include "condor_debug.h"
 
 static bool _evalBool(ClassAd *ad, ExprTree *tree)
 {

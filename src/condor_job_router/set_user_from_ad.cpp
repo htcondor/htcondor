@@ -24,7 +24,6 @@
 #include "condor_attributes.h"
 #include "condor_classad.h"
 #include "classad_newold.h"
-#include "condor_debug.h"
 #include "condor_uid.h"
 #define WANT_CLASSAD_NAMESPACE
 #undef open

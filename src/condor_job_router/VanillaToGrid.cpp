@@ -25,9 +25,6 @@
 #include "VanillaToGrid.h"
 #include "filename_tools.h"
 #include "string_list.h"
-#include "condor_debug.h"
-#include "proc.h"
-#include "MyString.h"
 #define WANT_CLASSAD_NAMESPACE
 #undef open
 #include "classad/classad_distribution.h"
