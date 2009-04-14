@@ -259,6 +259,13 @@ loop when searching through a corrupted history file.
 \item Fixed a bug in the user log reader code that could cause it to
   get into an inconsistent state after detecting missed events.
 
+\item Condor 7.2 and previous releases do not support communication
+with Condor 7.3+ daemons that are using \MacroNI{CCB\_ADDRESS} or
+\MacroNI{PRIVATE\_NETWORK\_NAME}.  The Condor 7.2.2 collector now
+recognizes when it is receiving ads from such daemons and will reject them.
+In prior versions of Condor, it would accept the ads, but attempts to use
+them could lead to unexpected behavior.
+
 \end{itemize}
 
 \noindent Known Bugs:
