@@ -55,6 +55,9 @@ to the current host when the type of installation is `manager'.
 \item Fixed a bug in the event log reader code that could cause it to
   not detect missed events in rare cases.
 
+\item A bug in the Chirp java client has been fixed.  ChirpInputStream's
+read() method was returning negative values when encountering binary data.
+
 \end{itemize}
 
 \noindent Known Bugs:
