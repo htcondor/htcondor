@@ -3125,12 +3125,9 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 		expr = job_ad->Lookup(ATTR_TRANSFER_OUTPUT_REMAPS);
 		snprintf(new_attr_value,500,"SUBMIT_%s",ATTR_TRANSFER_OUTPUT_REMAPS);
 		if ( expr ) {
-			char *remap_buf = NULL;
-			ASSERT( expr->RArg() );
-			expr->RArg()->PrintToNewStr(&remap_buf);
+			const char *remap_buf = ExprTreeAssignmentValue(expr);
 			ASSERT(remap_buf);
 			SetAttribute(cluster,proc,new_attr_value,remap_buf);
-			free(remap_buf);
 		}
 		else if(job_ad->Lookup(new_attr_value)) {
 				// SUBMIT_TransferOutputRemaps is defined, but
@@ -4019,13 +4016,12 @@ Scheduler::actOnJobs(int, Stream* s)
 	ExprTree *tree, *rhs;
 	tree = command_ad.Lookup(ATTR_ACTION_CONSTRAINT);
 	if( tree ) {
-		rhs = tree->RArg();
-		if( ! rhs ) {
+		const char *value = ExprTreeAssignmentValue( tree );
+		if( ! value ) {
 				// TODO: deal with this kind of error
 			free(reason);
 			return false;
 		}
-		rhs->PrintToNewStr( &tmp );
 
 			// we want to tack on another clause to make sure we're
 			// not doing something invalid
@@ -4059,14 +4055,13 @@ Scheduler::actOnJobs(int, Stream* s)
 			EXCEPT( "impossible: unknown action (%d) in actOnJobs() after "
 					"it was already recognized", action_num );
 		}
-		int size = strlen(buf) + strlen(tmp) + 3;
+		int size = strlen(buf) + strlen(value) + 3;
 		constraint = (char*) malloc( size * sizeof(char) );
 		if( ! constraint ) {
 			EXCEPT( "Out of memory!" );
 		}
 			// we need to terminate the ()'s after their constraint
-		snprintf( constraint, size, "%s%s)", buf, tmp );
-		free( tmp );
+		snprintf( constraint, size, "%s%s)", buf, value );
 	} else {
 		constraint = NULL;
 	}

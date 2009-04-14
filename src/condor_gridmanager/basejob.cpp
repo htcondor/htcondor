@@ -668,13 +668,11 @@ void BaseJob::JobAdUpdateFromSchedd( const ClassAd *new_ad )
 	if ( new_condor_state == REMOVED || new_condor_state == HELD ) {
 
 		for ( int i = 0; held_removed_update_attrs[i] != NULL; i++ ) {
-			char attr_value[1024];
 			ExprTree *expr;
 
 			if ( (expr = new_ad->Lookup( held_removed_update_attrs[i] )) != NULL ) {
-				attr_value[0] = '\0';
-				expr->RArg()->PrintToStr(attr_value);
-				jobAd->AssignExpr( held_removed_update_attrs[i], attr_value );
+				jobAd->AssignExpr( held_removed_update_attrs[i],
+								   ExprTreeAssignmentValue( expr ) );
 			} else {
 				jobAd->Delete( held_removed_update_attrs[i] );
 			}

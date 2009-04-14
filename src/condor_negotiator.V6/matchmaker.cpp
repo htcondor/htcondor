@@ -1633,7 +1633,8 @@ obtainAdsFromCollector (
 			// do is replace the Requirements attribute with whatever
 			// we find in NegotiatorRequirements
 			ExprTree  *negReqTree, *reqTree;
-			char *subReqs, *newReqs;
+			const char *subReqs;
+			char *newReqs;
 			subReqs = newReqs = NULL;
 			negReqTree = reqTree = NULL;
 			int length;
@@ -1645,14 +1646,13 @@ obtainAdsFromCollector (
 				reqTree = ad->Lookup(ATTR_REQUIREMENTS);
 				if(reqTree != NULL && reqTree->RArg() != NULL) {
 				// Now, put the old requirements back into the ad
-				reqTree->RArg()->PrintToNewStr(&subReqs); //Print allocs mem
+				subReqs = ExprTreeAssignmentValue(reqTree);
 				length = strlen(subReqs) + strlen(ATTR_REQUIREMENTS) + 7;
 				newReqs = (char *)malloc(length+16);
 				snprintf(newReqs, length+15, "Saved%s = %s", 
 							ATTR_REQUIREMENTS, subReqs); 
 				ad->InsertOrUpdate(newReqs);
 				free(newReqs);
-				free(subReqs);
 				} else {
 					char *tmpstr;
 					reqTree->PrintToNewStr(&tmpstr);
@@ -1661,7 +1661,7 @@ obtainAdsFromCollector (
 				// Get the requirements expression we're going to 
 				// subsititute in, and convert it to a string... 
 				// Sadly, this might be the best interface :(
-				negReqTree->RArg()->PrintToNewStr(&subReqs); //Print allocs mem
+				subReqs = ExprTreeAssignmentValue(negReqTree);
 				length = strlen(subReqs) + strlen(ATTR_REQUIREMENTS);
 				newReqs = (char *)malloc(length+16);
 
@@ -1670,7 +1670,6 @@ obtainAdsFromCollector (
 				ad->InsertOrUpdate(newReqs);
 
 				free(newReqs);
-				free(subReqs);
 				
 			}
 
@@ -2871,17 +2870,10 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	savedRequirements = offer->Lookup(tmp);
 	free(tmp);
 	if(savedRequirements != NULL && savedRequirements->RArg() != NULL) {
-		char *savedReqStr, *replacementReqStr;
-		savedReqStr = NULL;
-		savedRequirements->RArg()->PrintToNewStr(&savedReqStr);
-		length = strlen(savedReqStr) + strlen(ATTR_REQUIREMENTS);
-        replacementReqStr = (char *)malloc(length+16);
-        snprintf(replacementReqStr, length+15, "%s = %s", 
-							ATTR_REQUIREMENTS, savedReqStr); 
-        offer->InsertOrUpdate(replacementReqStr);
-		dprintf(D_ALWAYS, "Inserting %s into the ad\n", replacementReqStr);	
-		free(replacementReqStr);
-		free(savedReqStr);
+		const char *savedReqStr = ExprTreeAssignmentValue(savedRequirements);
+		offer->AssignExpr( ATTR_REQUIREMENTS, savedReqStr );
+		dprintf( D_ALWAYS, "Inserting %s = %s into the ad\n",
+				 ATTR_REQUIREMENTS, savedReqStr );
 	}	
 
 		// Stash the Concurrency Limits in the offer, they are part of

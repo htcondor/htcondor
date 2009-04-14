@@ -611,16 +611,12 @@ VMType::createConfigUsingScript(const char* configfile)
 	StringList name_list;
 
 	ExprTree* expr = NULL;
-	ExprTree* L_expr;
-	ExprTree* R_expr;
 
 	m_classAd.ResetExpr();
 	while( (expr = m_classAd.NextExpr()) != NULL ) {
-		L_expr = expr->LArg();
-		L_expr->PrintToStr(name);
+		name = ExprTreeAssignmentName( expr );
 
-		R_expr = expr->RArg();
-		R_expr->PrintToStr(value);
+		value = ExprTreeAssignmentValue( expr );
 
 		if( !strncasecmp( name.Value(), "JobVM", strlen("JobVM") ) ||
 			!strncasecmp( name.Value(), "VMPARAM", strlen("VMPARAM") )) {

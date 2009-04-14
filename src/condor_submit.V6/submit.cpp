@@ -6882,8 +6882,8 @@ log_submit()
 int
 SaveClassAd ()
 {
-	ExprTree *tree = NULL, *lhs = NULL, *rhs = NULL;
-	char *lhstr, *rhstr;
+	ExprTree *tree = NULL;
+	const char *lhstr, *rhstr;
 	int  retval = 0;
 	int myprocid = ProcId;
 	static ClassAd* current_cluster_ad = NULL;
@@ -6906,18 +6906,14 @@ SaveClassAd ()
 		if( tree->invisible ) {
 			continue;
 		}
-		lhstr = NULL;
-		rhstr = NULL;
-		if( (lhs = tree->LArg()) ) { lhs->PrintToNewStr (&lhstr); }
-		if( (rhs = tree->RArg()) ) { rhs->PrintToNewStr (&rhstr); }
-		if( !lhs || !rhs || !lhstr || !rhstr) { retval = -1; }
+		lhstr = ExprTreeAssignmentName( tree );
+		rhstr = ExprTreeAssignmentValue( tree );
+		if( !lhstr || !rhstr) { retval = -1; }
 		if( SetAttribute(ClusterId, myprocid, lhstr, rhstr) == -1 ) {
 			fprintf( stderr, "\nERROR: Failed to set %s=%s for job %d.%d (%d)\n", 
 					 lhstr, rhstr, ClusterId, ProcId, errno );
 			retval = -1;
 		}
-		free(lhstr);
-		free(rhstr);
 		if(retval == -1) {
 			return -1;
 		}
@@ -6963,7 +6959,7 @@ InsertJobExpr (MyString const &expr, bool clustercheck)
 void 
 InsertJobExpr (const char *expr, bool clustercheck)
 {
-	ExprTree *tree = NULL, *lhs = NULL;
+	ExprTree *tree = NULL;
 	int unused = 0;
 
 	MyString hashkey(expr);
@@ -6993,7 +6989,7 @@ InsertJobExpr (const char *expr, bool clustercheck)
 		exit( 1 );
 	}
 
-	if( !(lhs = tree->LArg()) ) {
+	if( !ExprTreeAssignmentName(tree) ) {
 		fprintf (stderr, "\nERROR: Expression not assignment: %s\n", expr);
 		fprintf(stderr,"Error in submit file\n");
 		DoCleanup(0,0,NULL);

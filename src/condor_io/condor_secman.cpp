@@ -2522,11 +2522,9 @@ SecMan::sec_copy_attribute( ClassAd &dest, const char *to_attr, ClassAd &source,
 		return false;
 	}
 
-	ASSERT(e->MyType() == LX_ASSIGN && e->RArg());
-	char *buf = NULL;
-	e->RArg()->PrintToNewStr(&buf);
-	bool retval = dest.AssignExpr(to_attr,buf) != 0;
-	free(buf);
+	const char *value = ExprTreeAssignmentValue(e);
+	ASSERT(value);
+	bool retval = dest.AssignExpr(to_attr,value) != 0;
 	return retval;
 }
 
@@ -2919,11 +2917,10 @@ SecMan::ExportSecSessionInfo(char const *session_id,MyString &session_info) {
 	while( (elem=exp_policy.NextExpr()) ) {
 			// In the following, we attempt to avoid any spaces in the
 			// result string.  However, no code should depend on this.
-		session_info += ((Variable*)elem->LArg())->Name();
+		session_info += ExprTreeAssignmentName(elem);
 		session_info += "=";
 
-        char *line = NULL;
-        elem->RArg()->PrintToNewStr(&line);
+        const char *line = ExprTreeAssignmentValue(elem);
 
 			// none of the ClassAd values should ever contain ';'
 			// that makes things easier in ImportSecSessionInfo()
@@ -2931,8 +2928,6 @@ SecMan::ExportSecSessionInfo(char const *session_id,MyString &session_info) {
 
 		session_info += line;
 		session_info += ";";
-
-		free(line);
     }
 	session_info += "]";
 

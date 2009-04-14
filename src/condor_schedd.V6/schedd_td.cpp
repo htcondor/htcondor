@@ -819,12 +819,9 @@ Scheduler::treq_upload_update_callback(TransferRequest *treq,
 		expr = jad->Lookup(ATTR_TRANSFER_OUTPUT_REMAPS);
 		snprintf(new_attr_value,500,"SUBMIT_%s",ATTR_TRANSFER_OUTPUT_REMAPS);
 		if ( expr ) {
-			char *remap_buf = NULL;
-			ASSERT( expr->RArg() );
-			expr->RArg()->PrintToNewStr(&remap_buf);
+			const char *remap_buf = ExprTreeAssignmentValue( expr );
 			ASSERT(remap_buf);
 			SetAttribute(cluster,proc,new_attr_value,remap_buf);
-			free(remap_buf);
 		}
 		else if(jad->Lookup(new_attr_value)) {
 				// SUBMIT_TransferOutputRemaps is defined, but
@@ -1385,12 +1382,9 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 		expr = ad->Lookup(ATTR_TRANSFER_OUTPUT_REMAPS);
 		snprintf(new_attr_value,500,"SUBMIT_%s",ATTR_TRANSFER_OUTPUT_REMAPS);
 		if ( expr ) {
-			char *remap_buf = NULL;
-			ASSERT( expr->RArg() );
-			expr->RArg()->PrintToNewStr(&remap_buf);
+			const char *remap_buf = ExprTreeAssignmentValue( expr );
 			ASSERT(remap_buf);
 			SetAttribute(cluster,proc,new_attr_value,remap_buf);
-			free(remap_buf);
 		}
 		else if(ad->Lookup(new_attr_value)) {
 				// SUBMIT_TransferOutputRemaps is defined, but

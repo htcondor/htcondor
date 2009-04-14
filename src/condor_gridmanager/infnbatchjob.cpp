@@ -898,12 +898,11 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 
 	jobAd->ResetExpr();
 	while ( (next_expr = jobAd->NextExpr()) != NULL ) {
-		if ( strncasecmp( ((Variable*)next_expr->LArg())->Name(),
+		if ( strncasecmp( ExprTreeAssignmentName(next_expr),
 						  "REMOTE_", 7 ) == 0 &&
-			 strlen( ((Variable*)next_expr->LArg())->Name() ) > 7 ) {
+			 strlen( ExprTreeAssignmentName(next_expr) ) > 7 ) {
 
-			char *attr_value;
-			char const *attr_name = &((Variable*)next_expr->LArg())->Name()[7];
+			char const *attr_name = &(ExprTreeAssignmentName(next_expr)[7]);
 
 			if(strcasecmp(attr_name,ATTR_JOB_ENVIRONMENT1) == 0 ||
 			   strcasecmp(attr_name,ATTR_JOB_ENVIRONMENT1_DELIM) == 0 ||
@@ -935,9 +934,8 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 				}
 			}
 
-			next_expr->RArg()->PrintToNewStr(&attr_value);
-			submit_ad->AssignExpr( attr_name, attr_value );
-			free(attr_value);
+			submit_ad->AssignExpr( attr_name,
+								   ExprTreeAssignmentValue(next_expr) );
 		}
 	}
 

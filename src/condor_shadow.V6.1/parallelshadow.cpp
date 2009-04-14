@@ -666,13 +666,9 @@ ParallelShadow::replaceNode ( ClassAd *ad, int nodenum ) {
 	while( (tree = ad->NextExpr()) ) {
 		MyString rhstr;
 		MyString lhstr;
-		if( (lhs = tree->LArg()) ) {
-			lhs->PrintToStr (lhstr);
-		}
-		if( (rhs = tree->RArg()) ) {
-			rhs->PrintToStr (rhstr);
-		}
-		if( !lhs || !rhs ) {
+		lhstr = ExprTreeAssignmentName(tree);
+		rhstr = ExprTreeAssignmentValue(tree);
+		if( lhstr.IsEmpty() || rhstr.IsEmpty() ) {
 			dprintf( D_ALWAYS, "Could not replace $(NODE) in ad!\n" );
 			return;
 		}

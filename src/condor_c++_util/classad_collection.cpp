@@ -83,20 +83,10 @@ bool ClassAdCollection::NewClassAd(const char* key, ClassAd* ad)
   LogRecord* log=new LogNewClassAd(key,ad->GetMyTypeName(),ad->GetTargetTypeName());
   ClassAdLog::AppendLog(log);
   ExprTree* expr;
-  ExprTree* L_expr;
-  ExprTree* R_expr;
-  char name[1000];
-  char *value;
   ad->ResetExpr();
   while ((expr=ad->NextExpr())!=NULL) {
-    strcpy(name,"");
-    L_expr=expr->LArg();
-    L_expr->PrintToStr(name);
-    R_expr=expr->RArg();
-	value = NULL;
-    R_expr->PrintToNewStr(&value);
-    LogRecord* l=new LogSetAttribute(key,name,value);
-	free(value);
+    LogRecord* l=new LogSetAttribute(key,ExprTreeAssignmentName(expr),
+									 ExprTreeAssignmentValue(expr));
     ClassAdLog::AppendLog(l);
   }
   // return AddClassAd(0,key);
@@ -329,17 +319,15 @@ bool ClassAdCollection::CheckClassAd(BaseCollection* Coll,const MyString& OID, C
     StringSet Values;
     MyString AttrName;
     MyString AttrValue;
-    char tmp[1000];
     ParentColl->Attributes.StartIterations();
 // printf("Checking OID %s\n",OID.Value());
     while (ParentColl->Attributes.Iterate(AttrName)) {
-      *tmp='\0';
       ExprTree* expr=Ad->Lookup(AttrName.Value());
       if (expr) {
-        expr=expr->RArg();
-        expr->PrintToStr(tmp);
-      }
-      AttrValue=tmp;
+		  AttrValue = ExprTreeAssignmentValue( expr );
+      } else {
+		  AttrValue = "";
+	  }
       Values.Add(AttrValue);
     }
 // Values.StartIterations(); while (Values.Iterate(AttrValue)) { printf("Val: AttrValue=%s\n",AttrValue.Value()); }

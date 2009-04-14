@@ -967,15 +967,15 @@ UserLog::writeEvent ( ULogEvent *event, ClassAd *param_jobad )
 					switch (result.type) {
 					case LX_BOOL:
 					case LX_INTEGER:
-						eventAd->Assign( ((Variable*)tree->LArg())->Name(),
+						eventAd->Assign( ExprTreeAssignmentName(tree),
 										 result.i);
 						break;
 					case LX_FLOAT:
-						eventAd->Assign( ((Variable*)tree->LArg())->Name(),
+						eventAd->Assign( ExprTreeAssignmentName(tree),
 										 result.f);
 						break;
 					case LX_STRING:
-						eventAd->Assign( ((Variable*)tree->LArg())->Name(),
+						eventAd->Assign( ExprTreeAssignmentName(tree),
 										 result.s);
 						break;
 					default:

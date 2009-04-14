@@ -445,13 +445,11 @@ static bool submit_job_with_current_priv( ClassAd & src, const char * schedd_nam
 	ExprTree * tree;
 	src.ResetExpr();
 	while( (tree = src.NextExpr()) ) {
-		char *lhstr = 0;
-		char *rhstr = 0;
-		ExprTree * lhs = 0;
-		ExprTree * rhs = 0;
-		if( (lhs = tree->LArg()) ) { lhs->PrintToNewStr (&lhstr); }
-		if( (rhs = tree->RArg()) ) { rhs->PrintToNewStr (&rhstr); }
-		if( !lhs || !rhs || !lhstr || !rhstr) { 
+		const char *lhstr = 0;
+		const char *rhstr = 0;
+		lhstr = ExprTreeAssignmentName( tree );
+		rhstr = ExprTreeAssignmentValue( tree );
+		if( !lhstr || !rhstr) { 
 			failobj.fail("Problem processing classad\n");
 			return false;
 		}
@@ -459,8 +457,6 @@ static bool submit_job_with_current_priv( ClassAd & src, const char * schedd_nam
 			failobj.fail("Failed to set %s = %s\n", lhstr, rhstr);
 			return false;
 		}
-		free(lhstr);
-		free(rhstr);
 	}
 
 	if( ! DisconnectQ(qmgr, true /* commit */)) {
@@ -517,13 +513,11 @@ bool push_dirty_attributes(int cluster, int proc, ClassAd & src)
 	src.ResetExpr();
 	ExprTree * tree;
 	while( (tree = src.NextDirtyExpr()) ) {
-		char *lhstr = 0;
-		char *rhstr = 0;
-		ExprTree * lhs = 0;
-		ExprTree * rhs = 0;
-		if( (lhs = tree->LArg()) ) { lhs->PrintToNewStr (&lhstr); }
-		if( (rhs = tree->RArg()) ) { rhs->PrintToNewStr (&rhstr); }
-		if( !lhs || !rhs || !lhstr || !rhstr) { 
+		const char *lhstr = 0;
+		const char *rhstr = 0;
+		lhstr = ExprTreeAssignmentName( tree );
+		rhstr = ExprTreeAssignmentValue( tree );
+		if( !lhstr || !rhstr) { 
 			dprintf(D_ALWAYS,"(%d.%d) push_dirty_attributes: Problem processing classad\n", cluster, proc);
 			return false;
 		}
@@ -532,8 +526,6 @@ bool push_dirty_attributes(int cluster, int proc, ClassAd & src)
 			dprintf(D_ALWAYS,"(%d.%d) push_dirty_attributes: Failed to set %s = %s\n", cluster, proc, lhstr, rhstr);
 			return false;
 		}
-		free(lhstr);
-		free(rhstr);
 	}
 	return true;
 }

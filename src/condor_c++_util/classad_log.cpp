@@ -586,7 +586,6 @@ ClassAdLog::LogState(FILE *fp)
 	HashKey		hashval;
 	MyString	key;
 	const char	*attr_name = NULL;
-	char		*attr_val;
 
 	// This must always be the first entry in the log.
 	log = new LogHistoricalSequenceNumber( historical_sequence_number, m_original_log_birthdate );
@@ -610,16 +609,14 @@ ClassAdLog::LogState(FILE *fp)
 		ad->ResetName();
 		attr_name = ad->NextNameOriginal();
 		while (attr_name) {
-			attr_val = NULL;
 			expr = ad->Lookup(attr_name);
 			if (expr && !expr->invisible) {
-				expr->RArg()->PrintToNewStr(&attr_val);
-				log = new LogSetAttribute(key.Value(), attr_name, attr_val);
+				log = new LogSetAttribute(key.Value(), attr_name,
+										  ExprTreeAssignmentValue(expr));
 				if (log->Write(fp) < 0) {
 					EXCEPT("write to %s failed, errno = %d", logFilename(),
 						   errno);
 				}
-				free(attr_val);
 				delete log;
 			}
 			attr_name = ad->NextNameOriginal();

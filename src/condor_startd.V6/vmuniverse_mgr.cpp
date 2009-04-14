@@ -309,9 +309,9 @@ VMUniverseMgr::publish( ClassAd* ad, amask_t mask )
 
 	MyString line;
 	ExprTree* expr = NULL;
-	char *attr_name = NULL;
+	const char *attr_name = NULL;
 	while((expr = m_vmgahp_info.NextExpr()) != NULL) {
-		attr_name = ((Variable*)expr->LArg())->Name();
+		attr_name = ExprTreeAssignmentName( expr );
 
 		// we need to adjust available vm memory
 		if( stricmp(attr_name, ATTR_VM_MEMORY) == MATCH ) {

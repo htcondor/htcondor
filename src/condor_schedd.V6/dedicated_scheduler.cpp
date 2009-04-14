@@ -3452,17 +3452,15 @@ DedicatedScheduler::makeGenericAdFromJobAd(ClassAd *job)
 
     ExprTree* expr = job->Lookup( ATTR_REQUIREMENTS );
 
-		// ATTR_REQUIREMENTS better be there, better be an assignment,
-		// and better have a right argument! 
+		// ATTR_REQUIREMENTS better be there!
 	ASSERT( expr );
-	ASSERT( expr->MyType() == LX_ASSIGN );
-	ASSERT( expr->RArg() );
 
 		// We just want the right side of the assignment, which is
 		// just the value (without the "Requirements = " part)
-	char *rhs;
+	const char *rhs = ExprTreeAssignmentValue( expr );
 
-	expr->RArg()->PrintToNewStr( &rhs );
+		// We had better have a string for the expression!
+	ASSERT( rhs );
 
 		// Construct the new requirements expression by adding a
 		// clause that says we need to run on a machine that's going
@@ -3479,7 +3477,6 @@ DedicatedScheduler::makeGenericAdFromJobAd(ClassAd *job)
 				 ATTR_REQUIREMENTS, name(), name(), rhs );
 	req->InsertOrUpdate( buf.Value() );
 
-	free(rhs);
 	return req;
 }
 

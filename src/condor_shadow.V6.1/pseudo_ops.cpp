@@ -664,8 +664,12 @@ pseudo_get_job_attr( const char *name, char *expr )
 	ClassAd *ad = remote->getJobAd();
 	ExprTree *e = ad->Lookup(name);
 	if(e) {
-		expr[0] = 0;
-		e->RArg()->PrintToStr(expr);
+		const char *value = ExprTreeAssignmentValue(e);
+		if ( value ) {
+			strcpy( expr, value );
+		} else {
+			expr[0] = 0;
+		}
 		dprintf(D_SYSCALLS,"pseudo_get_job_attr(%s) = %s\n",name,expr);
 		return 0;
 	} else {
@@ -687,7 +691,7 @@ pseudo_get_job_attr( const char *name, MyString &expr )
 
 	ExprTree *e = ad->Lookup(name);
 	if(e) {
-		e->RArg()->PrintToStr(expr);
+		expr = ExprTreeAssignmentValue(e);
 		dprintf(D_SYSCALLS,"pseudo_get_job_attr(%s) = %s\n",name,expr.Value());
 		return 0;
 	} else {

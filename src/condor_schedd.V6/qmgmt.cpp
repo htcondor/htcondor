@@ -2743,12 +2743,10 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 					// when we did have a startd ad.
 				ExprTree *cached_value = ad->Lookup(cachedAttrName.Value());
 				if( cached_value ) {
-					char *cached_value_buf = NULL;
-					ASSERT( cached_value->RArg() );
-					cached_value->RArg()->PrintToNewStr(&cached_value_buf);
+					const char *cached_value_buf =
+						ExprTreeAssignmentValue(cached_value);
 					ASSERT(cached_value_buf);
 					expanded_ad->AssignExpr(curr_attr_to_expand,cached_value_buf);
-					free(cached_value_buf);
 					continue;
 				}
 
@@ -2773,15 +2771,13 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 			// the mis-leading name PrintTo**NEW**Str.  
 			ExprTree *tree = ad->Lookup(curr_attr_to_expand);
 			if ( tree ) {
-				ExprTree *rhs = tree->RArg();
-				if ( rhs ) {
-					rhs->PrintToNewStr( &attribute_value );
+				const char *new_value = ExprTreeAssignmentValue( tree );
+				if ( new_value ) {
+					attribute_value = strdup( new_value );
 				}
 			}
 
 			if ( attribute_value == NULL ) {
-					// Did not find the attribute to expand in the job ad.
-					// Just move on to the next attribute...
 				continue;
 			}
 
@@ -3023,8 +3019,8 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 					if( !expr ) {
 						continue;
 					}
-					char *new_value = NULL;
-					expr->PrintToNewStr( &new_value );
+					const char *new_value = NULL;
+					new_value = ExprTreeAssignmentValue(expr);
 					ASSERT(new_value);
 					expanded_ad->AssignExpr(c_name,new_value);
 

@@ -2262,10 +2262,8 @@ Claim::receiveJobClassAdUpdate( ClassAd &update_ad )
 	ExprTree *expr;
 	while( (expr=update_ad.NextExpr()) != NULL ) {
 
-		ASSERT( expr->MyType() == LX_ASSIGN &&
-				expr->LArg()->MyType() == LX_VARIABLE );
-
-		char const *name = ((Variable *)expr->LArg())->Name();
+		char const *name = ExprTreeAssignmentName( expr );
+		ASSERT( name );
 		if( !strcmp(name,ATTR_MY_TYPE) ||
 			!strcmp(name,ATTR_TARGET_TYPE) )
 		{

@@ -65,6 +65,17 @@
 #include "condor_exprtype.h"
 #include "condor_astbase.h"
 
+/* These helper functions return the name and unevaluated value of an
+ * assignment ExprTree as strings. If the ExprTree is not a valid
+ * assignment expression, NULL is returned. The pointer returned by
+ * ExprTreeAssignmentValue() is valid until the next call to
+ * ExprTreeAssignmentValue().
+ * These functions are meant to ease the transition to new ClassAds,
+ * whose ExprTree's are handled differently.
+ */
+const char *ExprTreeAssignmentName( ExprTree *expr );
+const char *ExprTreeAssignmentValue( ExprTree *expr );
+
 ////////////////////////////////////////////////////////////////////////////////
 // Class EvalResult is passed to ExprTree::EvalTree() to buffer the result of
 // the evaluation. The result can be integer, floating point, string, boolean,

@@ -237,7 +237,7 @@ QmgrJobUpdater::updateJob( update_t type )
 	bool final_update = false;
 	static bool checked_for_history = false;
 	static bool has_history = false;
-	char* name;
+	const char* name;
 	
 	if( ! checked_for_history ) {
 		char* history = param( "HISTORY" );
@@ -291,7 +291,7 @@ QmgrJobUpdater::updateJob( update_t type )
 		if( tree->invisible ) {
 			continue;
 		}
-		name = ((Variable*)tree->LArg())->Name();
+		name = ExprTreeAssignmentName(tree);
 
 			// If we have the lists of attributes we care about and
 			// this attribute is in one of the lists, actually do the
@@ -339,16 +339,16 @@ QmgrJobUpdater::updateExprTree( ExprTree* tree )
 		dprintf( D_ALWAYS, "QmgrJobUpdater::updateExprTree: tree is NULL!\n" );
 		return false;
 	}
-	ExprTree *rhs = tree->RArg(), *lhs = tree->LArg();
-	if( ! rhs || ! lhs ) {
-		dprintf( D_ALWAYS,
-				 "QmgrJobUpdater::updateExprTree: tree is invalid!\n" );
-		return false;
-	}
-	char* name = ((Variable*)lhs)->Name();
+	const char* name = ExprTreeAssignmentName( tree );
 	if( ! name ) {
 		dprintf( D_ALWAYS,
 				 "QmgrJobUpdater::updateExprTree: can't find name!\n" );
+		return false;
+	}		
+	const char* value = ExprTreeAssignmentValue( tree );
+	if( ! value ) {
+		dprintf( D_ALWAYS,
+				 "QmgrJobUpdater::updateExprTree: can't find value!\n" );
 		return false;
 	}		
 		// This code used to be smart about figuring out what type of
@@ -359,19 +359,15 @@ QmgrJobUpdater::updateExprTree( ExprTree* tree )
 		// and call SetAttribute(), so it was both a waste of effort
 		// here, and made this code needlessly more complex.  
 		// Derek Wright, 3/25/02
-	char* tmp = NULL;
-	rhs->PrintToNewStr( &tmp );
-	if( SetAttribute(cluster, proc, name, tmp) < 0 ) {
+	if( SetAttribute(cluster, proc, name, value) < 0 ) {
 		dprintf( D_ALWAYS, 
 				 "updateExprTree: Failed SetAttribute(%s, %s)\n",
-				 name, tmp );
-		free( tmp );
+				 name, value );
 		return false;
 	}
 	dprintf( D_FULLDEBUG, 
 			 "Updating Job Queue: SetAttribute(%s = %s)\n",
-			 name, tmp );
-	free( tmp );
+			 name, value );
 	return true;
 }
 

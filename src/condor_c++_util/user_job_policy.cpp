@@ -598,15 +598,12 @@ const char* UserPolicy::FiringReason()
 		case FS_JobAttribute:
 		{
 			expr_src = "job attribute";
-			ExprTree *tree, *rhs = NULL;
+			ExprTree *tree;
 			tree = m_ad->Lookup( m_fire_expr );
 
 			// Get a formatted expression string
-			if( tree && (rhs=tree->RArg()) ) {
-				char* exprStringTmp = NULL;
-				rhs->PrintToNewStr( &exprStringTmp );
-				exprString = exprStringTmp;
-				free(exprStringTmp);
+			if( tree ) {
+				exprString = ExprTreeAssignmentValue( tree );
 			}
 			break;
 		}

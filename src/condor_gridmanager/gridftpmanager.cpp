@@ -700,16 +700,12 @@ bool GridftpServer::SubmitServerJob()
 	// Set all the classad attribute on the remote classad
 	job_ad->ResetExpr();
 	while( (tree = job_ad->NextExpr()) ) {
-		ExprTree *lhs;
-		ExprTree *rhs;
-		char *lhstr, *rhstr;
+		const char *lhstr, *rhstr;
 
-		lhs = NULL, rhs = NULL;
-		rhs = NULL, rhstr = NULL;
+		lhstr = ExprTreeAssignmentName( tree );
+		rhstr = ExprTreeAssignmentValue( tree );
 
-		if( (lhs = tree->LArg()) ) { lhs->PrintToNewStr (&lhstr); }
-		if( (rhs = tree->RArg()) ) { rhs->PrintToNewStr (&rhstr); }
-		if( !lhs || !rhs || !lhstr || !rhstr) {
+		if( !lhstr || !rhstr) {
 			dprintf( D_ALWAYS, "GridftpServer::SubmitServerJob: Failed to "
 					 "unparse job attribute\n" );
 			goto error_exit;
@@ -717,13 +713,8 @@ bool GridftpServer::SubmitServerJob()
 			dprintf( D_ALWAYS, "GridftpServer::SubmitServerJob: Failed to "
 					 "SetAttribute %s=%s for job %d.%d\n",
 					 lhstr, rhstr, cluster_id, proc_id );
-			free( lhstr );
-			free( rhstr );
 			goto error_exit;
 		}
-
-		free( lhstr );
-		free( rhstr );
 	}
 
 	if ( CloseConnection() < 0 ) {

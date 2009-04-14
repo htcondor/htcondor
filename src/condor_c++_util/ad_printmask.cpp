@@ -137,7 +137,7 @@ display (AttrList *al, AttrList *target /* = NULL */)
 	int		intValue;
 	float 	floatValue;
 	MyString stringValue;
-	char*	bool_str = NULL;
+	const char*	bool_str = NULL;
 	char *value_from_classad = NULL;
 
 	struct printf_fmt_info fmt_info;
@@ -232,15 +232,10 @@ display (AttrList *al, AttrList *target /* = NULL */)
 						free( value_from_classad );
 						value_from_classad = NULL;
 					} else {
-						rhs = tree->RArg();
-						if( rhs ) {
-							rhs->PrintToNewStr( &bool_str );
-							if( bool_str ) {
-								stringValue.sprintf(fmt->printfFmt, bool_str);
-								retval += stringValue;
-								free( bool_str );
-								bool_str = NULL;
-							}
+						bool_str = ExprTreeAssignmentValue( tree );
+						if( bool_str ) {
+							stringValue.sprintf(fmt->printfFmt, bool_str);
+							retval += stringValue;
 						} else {
 							if ( alt ) {
 								retval += alt;

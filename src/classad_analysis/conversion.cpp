@@ -47,12 +47,8 @@ toNewClassAd( ClassAd *ad )
 		ad->ResetExpr( );
 		while( ( expr = ad->NextExpr( ) ) ) {
 			buffer += "'";
-			str = NULL;
-			expr->LArg( )->PrintToNewStr( &str );
-			buffer += std::string( str ) + "' = ";
-			str = NULL;
-			expr->RArg( )->PrintToNewStr( &str );
-			buffer += std::string( str ) + ";";
+			buffer += std::string( ExprTreeAssignmentName( expr ) ) + "' = ";
+			buffer += std::string( ExprTreeAssignmentValue( expr ) ) + ";";
 		}
 		buffer += "]";
 

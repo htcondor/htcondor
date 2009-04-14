@@ -139,7 +139,7 @@ int main( int argc, char *argv[] )
 	ExprTree *tree = ad->Lookup( ATTR_MY_ADDRESS );
 	MyString tmp = "";
 	if ( tree ) {
-		tmp = ((MyString *)tree->RArg())->Value();
+		tmp = ExprTreeAssignmentValue( tree );
 	}
 	if ( tmp.Length() == 0 ) {
 		tmp.sprintf( "%s = \"<%s:0>\"", ATTR_MY_ADDRESS, my_ip_string() );
