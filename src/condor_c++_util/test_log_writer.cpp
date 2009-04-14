@@ -236,7 +236,8 @@ main(int argc, const char **argv)
 							opts.m_cluster, opts.m_proc, opts.m_subproc,
 							opts.m_isXml );
 		int		max_proc = opts.m_proc + opts.m_numProcs - 1;
-		for( int proc = opts.m_proc; proc <= max_proc; proc++ ) {
+		for( int proc = opts.m_proc;
+			 ( (opts.m_numProcs < 0) || (proc <= max_proc) ); proc++ ) {
 			writer.setGlobalProc( proc );
 			error = WriteEvents( opts, writer, num_events, sequence );
 			if ( error || global_done ) {
