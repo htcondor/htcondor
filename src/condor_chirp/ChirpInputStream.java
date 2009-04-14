@@ -120,7 +120,8 @@ public class ChirpInputStream extends java.io.InputStream {
 		byte [] temp = new byte[1];
 		int actual = read(temp,0,1);
 		if( actual>0 ) {
-			return temp[0];
+		    /* byte is signed, so convert to unsigned */
+		    return (int) temp[0] & 0xFF;
 		} else {
 			return -1;
 		}
