@@ -4458,6 +4458,19 @@ See section~\ref{sec:power-man} on page~\pageref{sec:power-man} on
   set \MacroNI{LINUX\_HIBERNATION\_METHOD} to one of the above names
   (``pm-utils'', ``/sys'', or ``/proc'').
 
+\label{param:CollectorOfflineLog}
+\item[\Macro{OFFLINE\_LOG}]
+  The full path to a log file that will store the machine ClassAd 
+  for every hibernating machine.  It is kept in a log so that if
+  the Collector crashes, knowledge of the hibernating machines is
+  not lost.
+
+\label{param:CollectorOfflineExpireAds}
+\item[\Macro{OFFLINE\_EXPIRE\_ADS\_AFTER}]
+  An integer number of seconds that determines the lifetime of a
+  machine ClassAd that represents a hibernating machine.  This
+  defaults to the largest 32-bit integer.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

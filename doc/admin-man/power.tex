@@ -146,17 +146,48 @@ subsystem's log configuration.
 \subsection{Returning From a Low Power State}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Condor version 7.1.3 does not provide the service of waking a machine
-that is in a low power state.
-This functionality is planned for a future release.
+Condor currently provides a tool \Condor{power} to wake machines:
 
-The machine ClassAd has all the information needed for a remote
-user to wake it by external means.
-This includes the public IP machine address,
+\begin{verbatim}
+usage: condor_power [OPTIONS] [CLASS-AD-FILE]
+condor_power - wake a remote machine
+
+-h       this message
+-m       hardware address (MAC address)
+-s       subnet (default: 255.255.255.255)
+-d       turns debugging on
+
+With no CLASS-AD-FILE, read standard input.
+\end{verbatim}
+
+As the help output describes, the tool can be used in two separate ways. 
+First, it can be given a set of parameters, which it will use directly. 
+Otherwise, it can be given a machine ClassAd on its standard input.
+The machine ClassAd has all the information needed for a remote user
+to wake it by external means. This includes the public IP machine address,
 as well as the subnet the machine resides on.
-Using this information,
-the remote user may use available wake on LAN (WOL) tools 
-to wake a machine.
+
+The tool is currently restricted to sending UDP Wake On LAN (WOL) packets, 
+but this may change in future releases.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Tracking Hibernating Machines}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+
+A Pool's Collector can be configured to keep a persistent ClassAd
+entry for each machine once it has entered hibernation.
+
+To do this you must define a a log file using the \Macro{OFFLINE\_LOG}
+configuration option.  And, optionally, an expiry time for each ad can
+be specified with \Macro{OFFLINE\_EXPIRE\_ADS\_AFTER}.  This expiry
+time starts from the time the hibernating machine's ClassAd enters
+the Collector.
+
+See the description of \Macro{OFFLINE\_LOG} and
+\Macro{OFFLINE\_EXPIRE\_ADS\_AFTER} in
+section~\ref{param:CollectorOfflineLog} on
+page~\pageref{param:CollectorOfflineLog} for details on
+these features.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Troubleshooting}
