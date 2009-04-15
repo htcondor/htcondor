@@ -347,6 +347,8 @@ static const int USER_HASH_SIZE = 100;
 
 Scheduler::Scheduler() :
 	GridJobOwners(USER_HASH_SIZE, UserIdentity::HashFcn, updateDuplicateKeys),
+	stop_job_queue( "stop_job_queue" ),
+	act_on_job_myself_queue( "act_on_job_myself_queue" ),
 	job_is_finished_queue( "job_is_finished_queue", 1 )
 {
 	m_ad = NULL;
@@ -354,6 +356,8 @@ Scheduler::Scheduler() :
 	shadowCommandrsock = NULL;
 	shadowCommandssock = NULL;
 	QueueCleanInterval = 0; JobStartDelay = 0;
+	JobStopDelay = 0;
+	JobStopCount = 1;
 	RequestClaimTimeout = 0;
 	MaxJobsRunning = 0;
 	MaxJobsSubmitted = INT_MAX;
@@ -431,6 +435,14 @@ Scheduler::Scheduler() :
 	checkReconnectQueue_tid = -1;
 	num_pending_startd_contacts = 0;
 	max_pending_startd_contacts = 0;
+
+	act_on_job_myself_queue.
+		registerHandlercpp( (ServiceDataHandlercpp)
+							&Scheduler::actOnJobMyselfHandler, this );
+
+	stop_job_queue.
+		registerHandlercpp( (ServiceDataHandlercpp)
+							&Scheduler::actOnJobMyselfHandler, this );
 
 	job_is_finished_queue.
 		registerHandlercpp( (ServiceDataHandlercpp)
@@ -4383,13 +4395,103 @@ Scheduler::actOnJobs(int, Stream* s)
 		// Now that we know the events are logged and commited to
 		// the queue, we can do the final actions for these jobs,
 		// like killing shadows if needed...
+	for( i=0; i<num_matches; i++ ) {
+		enqueueActOnJobMyself( jobs[i], action, notify );
+	}
+	return TRUE;
+}
+
+class ActOnJobRec: public ServiceData {
+public:
+	ActOnJobRec(PROC_ID job_id, JobAction action, bool notify):
+		m_job_id(job_id.cluster,job_id.proc,-1), m_action(action), m_notify(notify) {}
+
+	CondorID m_job_id;
+	JobAction m_action;
+	bool m_notify;
+
+		/** These are not actually used, because we are
+		 *  using the all_dups option to SelfDrainingQueue. */
+	virtual int ServiceDataCompare( ServiceData const* other ) const;
+	virtual unsigned int HashFn( ) const;
+};
+
+int
+ActOnJobRec::ServiceDataCompare( ServiceData const* other ) const
+{
+	ActOnJobRec const *o = (ActOnJobRec const *)other;
+
+	if( m_notify < o->m_notify ) {
+		return -1;
+	}
+	else if( m_notify > o->m_notify ) {
+		return 1;
+	}
+	else if( m_action < o->m_action ) {
+		return -1;
+	}
+	else if( m_action > o->m_action ) {
+		return 1;
+	}
+	return m_job_id.ServiceDataCompare( &o->m_job_id );
+}
+
+unsigned int
+ActOnJobRec::HashFn( ) const
+{
+	return m_job_id.HashFn();
+}
+
+void
+Scheduler::enqueueActOnJobMyself( PROC_ID job_id, JobAction action, bool notify )
+{
+	ActOnJobRec *act_rec = new ActOnJobRec( job_id, action, notify );
+	bool stopping_job = false;
+
+	if( action == JA_HOLD_JOBS ||
+		action == JA_REMOVE_JOBS ||
+		action == JA_VACATE_JOBS ||
+		action == JA_VACATE_FAST_JOBS )
+	{
+		if( scheduler.FindSrecByProcID(job_id) ) {
+				// currently, only jobs with shadows are intended
+				// to be handled specially
+			stopping_job = true;
+		}
+	}
+
+	if( stopping_job ) {
+			// all of these actions are rate-limited via
+			// JOB_STOP_COUNT and JOB_STOP_DELAY
+		stop_job_queue.enqueue( act_rec );
+	}
+	else {
+			// these actions are not currently rate-limited, but it is
+			// still useful to handle them in a self draining queue, because
+			// this may help keep the schedd responsive to other things
+		act_on_job_myself_queue.enqueue( act_rec );
+	}
+}
+
+int
+Scheduler::actOnJobMyselfHandler( ServiceData* data )
+{
+	ActOnJobRec *act_rec = (ActOnJobRec *)data;
+
+	JobAction action = act_rec->m_action;
+	bool notify = act_rec->m_notify;
+	PROC_ID job_id;
+	job_id.cluster = act_rec->m_job_id._cluster;
+	job_id.proc = act_rec->m_job_id._proc;
+
+	delete act_rec;
+
 	switch( action ) {
 	case JA_HOLD_JOBS:
 	case JA_REMOVE_JOBS:
 	case JA_VACATE_JOBS:
 	case JA_VACATE_FAST_JOBS:
-		 for( i=0; i<num_matches; i++ ) {
- 			abort_job_myself( jobs[i], action, true, notify );		
+		abort_job_myself( job_id, action, true, notify );		
 #ifdef WIN32
 			/*	This is a small patch so when DAGMan jobs are removed
 				on Win32, jobs submitted by the DAGMan are removed as well.
@@ -4399,38 +4501,34 @@ Scheduler::actOnJobs(int, Stream* s)
 				was deemed to much code churning for a stable series, thus this
 				simpler but temporary patch.  -Todd 8/2006.
 			*/
-			int job_universe = CONDOR_UNIVERSE_MIN;
-			GetAttributeInt(jobs[i].cluster, jobs[i].proc, 
-								ATTR_JOB_UNIVERSE, &job_universe);
-			if ( job_universe == CONDOR_UNIVERSE_SCHEDULER ) {
-				MyString constraint;
-				constraint.sprintf( "%s == %d", ATTR_DAGMAN_JOB_ID,
-					jobs[i].cluster );
-				abortJobsByConstraint(constraint.Value(),
-					"removed because controlling DAGMan was removed",
-					true);
-			}
-#endif
+		int job_universe = CONDOR_UNIVERSE_MIN;
+		GetAttributeInt(job_id.cluster, job_id.proc, 
+						ATTR_JOB_UNIVERSE, &job_universe);
+		if ( job_universe == CONDOR_UNIVERSE_SCHEDULER ) {
+			MyString constraint;
+			constraint.sprintf( "%s == %d", ATTR_DAGMAN_JOB_ID,
+								job_id.cluster );
+			abortJobsByConstraint(constraint.Value(),
+				"removed because controlling DAGMan was removed",
+				true);
 		}
+#endif
 		break;
 
 	case JA_RELEASE_JOBS:
-		for( i=0; i<num_matches; i++ ) {
-			WriteReleaseToUserLog( jobs[i] );		
-		}
+		WriteReleaseToUserLog( job_id );
 		needReschedule();
 		break;
 
 	case JA_REMOVE_X_JOBS:
-		for( i=0; i<num_matches; i++ ) {		
-			if( !scheduler.WriteAbortToUserLog( jobs[i] ) ) {
-				dprintf( D_ALWAYS, 
-						 "Failed to write abort event to the user log\n" ); 
-			}
-			DestroyProc( jobs[i].cluster, jobs[i].proc );
+		if( !scheduler.WriteAbortToUserLog( job_id ) ) {
+			dprintf( D_ALWAYS, 
+					 "Failed to write abort event to the user log\n" ); 
 		}
+		DestroyProc( job_id.cluster, job_id.proc );
 		break;
 
+	case JA_ERROR:
 	default:
 		EXCEPT( "impossible: unknown action (%d) at the end of actOnJobs()",
 				(int)action );
@@ -10471,6 +10569,11 @@ Scheduler::Init()
 	int int_val = param_integer( "JOB_IS_FINISHED_INTERVAL", 0, 0 );
 	job_is_finished_queue.setPeriod( int_val );	
 
+	JobStopDelay = param_integer( "JOB_STOP_DELAY", 0, 0 );
+	stop_job_queue.setPeriod( JobStopDelay );
+
+	JobStopCount = param_integer( "JOB_STOP_COUNT", 1, 1 );
+	stop_job_queue.setCountPerInterval( JobStopCount );
 
 		////////////////////////////////////////////////////////////////////
 		// Initialize the queue managment code
@@ -10822,7 +10925,7 @@ Scheduler::attempt_shutdown()
 {
 	if ( numShadows ) {
 		if( !daemonCore->GetPeacefulShutdown() ) {
-			preempt( 1 );
+			preempt( JobStopCount );
 		}
 		return;
 	}
@@ -10859,7 +10962,7 @@ Scheduler::shutdown_graceful()
  	 */
 	MaxJobsRunning = 0;
 	ExitWhenDone = TRUE;
-	daemonCore->Register_Timer( 0, MAX(JobStartDelay,1), 
+	daemonCore->Register_Timer( 0, MAX(JobStopDelay,1), 
 					(TimerHandlercpp)&Scheduler::attempt_shutdown,
 					"attempt_shutdown()", this );
 
