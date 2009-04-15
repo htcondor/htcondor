@@ -1120,6 +1120,11 @@ lock_or_mutex_file(int fd, LOCK_TYPE type, int do_block)
 		// starving to get the lock.  The Win32 mutex object,
 		// on the other hand, is FIFO --- thus starvation is avoided.
 
+		// If we're trying to lock NUL, just return success early
+	if (stricmp(DebugLock, "NUL") == 0) {
+		return 0;
+	}
+
 		// first, open a handle to the mutex if we haven't already
 	if ( debug_win32_mutex == NULL && DebugLock ) {
 			// Create the mutex name based upon the lock file
