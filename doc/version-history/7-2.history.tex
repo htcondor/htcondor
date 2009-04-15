@@ -15,6 +15,68 @@ New features will be added in the 7.3.x development series.
 
 The details of each version are described below.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-7-2-3}Version 7.2.3}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item Enhanced the Debian 5.0 Condor port on the x86\_64 platform to 
+include support for standard universe. 
+
+\item The \Condor{install} script now sets the default central manager
+to the current host when the type of installation is `manager'.
+
+\end{itemize}
+
+\noindent Configuration Variable Additions and Changes:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Fixed a bug in the event log reader code that could cause it to
+  not detect missed events in rare cases.
+
+\item A bug in the Chirp java client has been fixed.  ChirpInputStream's
+read() method was returning negative values when encountering binary data.
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-7-2-2}Version 7.2.2}
@@ -33,8 +95,26 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Added a full port of Condor to Debian 5.0 on the x86 platform.
+
+\item Added a clipped port of Condor to Debian 5.0 on the x86\_64 platform.
+
 \item Added the \Opt{-DumpRescue} command-line flag to \Condor{dagman}
 and \Condor{submit\_dag}.  This flag is intended mainly for testing.
+
+\item Added support for the \Opt{-debug} option to \Condor{qedit}.
+
+\item The Job Router now uses a time slice timer for periodic expression
+  evaluation, similar to the \Condor{schedd} daemon.
+  The evaluation interval is controlled by 
+  the configuration variable \MacroNI{PERIODIC\_EXPR\_INTERVAL},
+  and defaults to 60 seconds, the same default value used by
+  the \Condor{schedd} daemon.
+
+\item The Job Router now resets the source job, if a failure occurs when
+  updating the \Condor{schedd} daemon for a periodic expression that
+  evaluated to \Expr{True}.  The job's periodic expressions should be
+  evaluated again some time in the future with a successful update.
 
 \end{itemize}
 
@@ -67,29 +147,98 @@ and \Condor{submit\_dag}.  This flag is intended mainly for testing.
   this hard coded behavior should be considered obsolete behavior, and
   will be removed in a future version of Condor.
 
+\item The \MacroNI{PREEMPTION\_REQUIREMENTS} and the \MacroNI{RANK}
+  expression in the matchmaker can now reference many more ClassAd
+  attributes than just \Attr{SubmittorPrio}.  New attributes allow
+  this expression to take into account resources currently in use, as
+  well as group usage and quota info.  New attributes are:
+  \MacroNI{SubmitterUserResourcesInUse},
+  \MacroNI{RemoteUserResourcesInUse},
+  \MacroNI{RemoteGroupResourcesInUse}, \MacroNI{RemoteGroupQuota},
+  \MacroNI{SubmitterGroupResourcesInUse},
+  \MacroNI{SubmitterGroupQuota}.
+
+\item Added \MacroNI{JOB\_ROUTER\_ATTRS\_TO\_COPY} configuration
+  option. This is a comma separated list of attributes that the Job
+  Router should copy from the routed ad to the source ad in addition
+  to internally hard coded attributes that are copied.
+
+\item Added \MacroNI{JOB\_ROUTER\_RELEASE\_ON\_HOLD}. configuration
+  option that will control whether the Job Router will reset the
+  source job to an untouched state if it needs to yield the job
+  because the routed job went on hold.  The option defaults to
+  resetting the source job.
+
+\item The new configuration variables \Macro{PREEMPTION\_REQUIREMENTS\_STABLE}
+  and \Macro{PREEMPTION\_RANK\_STABLE} identify for Condor if all
+  attributes in the variables \MacroNI{PREEMPTION\_REQUIREMENTS} and
+  \MacroNI{PREEMPTION\_RANK} will not change within
+  a negotiation interval.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
 
-\item Fixed a bug in which an ill-formed network packet could
-crash a Condor daemon.
-This would not be seen in normal Condor operation,
-but sometimes port-scanning software could trigger such a crash.
+\item Fixed the \Condor{collector} daemon such that hibernating machines
+  never time out.
 
-\item \Condor{q} would sometimes exit with  the value zero,
-indicating success, when it could not connect to a \Condor{schedd} daemon.
-Now it exits with an error code in this case.
+\item Fixed incorrectly set ClassAd attribute values of machines
+  entering a hibernation state.
+  All hibernating machines are unclaimed and idle,
+  they have no load, the CPU is not busy, and
+  the keyboard and console appear as if they had been idle for a long time.
+
+\item Fixed a bug where if any idle slot satisfied the
+  \MacroNI{HIBERNATE} expression, Condor would put the machine into a
+  sleep state irrespective of any active slots.
+
+\item Fixed a bug on Windows that made it impossible to use
+  the defined string \verb@"S5"@ for hibernation.
+
+\item Fixed a bug in the \Condor{starter} where it would be running as
+  real uid condor after job hooks are invoked which causes issues when
+  accessing files.
+
+\item Fixed a bug where some machines would send a final update ad to
+  the \Condor{collector}, invalidating the persistent one that was
+  previously sent (when \MacroNI{HIBERNATE} evaluates to \Expr{True}).
+  This had the effect of dropping the machine out of the pool once the
+  ad had grown stale.
+
+\item Fixed a bug where any two Condor daemons on Windows were able to
+  bind to the same port at the same time.
+
+\item Fixed the behavior of the \Condor{negotiator} so that when a
+  Condor-G matchmaking ad matches, the machine's ad will be shuffled
+  to the end for round-robin matching to multiple gatekeepers with the
+  same rank.
+
+\item Resolved a bug in which the submit description file command
+  \SubmitCmd{vm\_macaddr} was improperly parsed,
+  and thus ignored, by \Condor{submit} for vm universe jobs.
+
+\item Condor's Windows zip file distribution now includes the new
+  C/C++ runtime libraries.
+
+\item Fixed a Windows platform bug for jobs that enable streaming I/O.
+  The bug caused the \Condor{starter} to crash upon invocation of the
+  job.
+
+\item Fixed a bug in which an ill-formed network packet could crash a
+Condor daemon.  This would not be seen in normal Condor operation, but
+sometimes port-scanning software could trigger such a crash.
+
+\item Fixed a bug in which \Condor{q} would sometimes exit with 
+  the value zero, indicating success,
+  when it could not connect to a \Condor{schedd} daemon.
+  It now exits with an error code.
 
 \item Fixed two seemingly small memory leaks in Condor's SOAP
 interface. A small amount of memory was lost per SOAP transaction. On
 a high traffic machine, this leak would eventually render the
 \Condor{schedd} daemon unresponsive.
-
-\item Fixed a bug in Condor's hibernation facilities, where if any slot
-satisfied the \MacroNI{HIBERNATE} expression, the machine would enter
-a low power state.
 
 \item Fixed a bug in the parallel universe where periodic expressions
 involving the \Attr{JobStatus} attribute would not function properly.
@@ -168,6 +317,20 @@ page at section~ \ref{man-condor-dagman}.
 \item Fixed a case in which \Condor{history} could get into an infinite
 loop when searching through a corrupted history file.
 
+% gittrac #355
+\item Fixed a bug in the user log reader code that could cause it to
+  get into an inconsistent state after detecting missed events.
+
+\item Condor version 7.2.2 and previous releases do not support 
+  communication with Condor 7.3.x daemons using the new 7.3.x
+  configuration variables \MacroNI{CCB\_ADDRESS} or
+  \MacroNI{PRIVATE\_NETWORK\_NAME}.
+  The version 7.2.2 \Condor{collector} daemon now
+  recognizes when it is receiving ClassAds from such daemons,
+  and it will reject them.
+  In prior versions, Condor would accept the ClassAds,
+  but attempts to use them led to unexpected behavior.
+
 \end{itemize}
 
 \noindent Known Bugs:
@@ -181,6 +344,8 @@ loop when searching through a corrupted history file.
 \noindent Additions and Changes to the Manual:
 
 \begin{itemize}
+
+\item Reorganized the user manual section that describes DAGMan.
 
 \item Added a note about the fact that environment values specified
 with the \Opt{environment} submit description file command override values from

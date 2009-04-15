@@ -4,7 +4,6 @@
 \index{DAGMan|(}
 \index{directed acyclic graph (DAG)}
 \index{Directed Acyclic Graph Manager (DAGMan)}
-\index{condor\_submit\_dag}
 \index{job!dependencies within}
 
 A directed acyclic graph (DAG) can be used to represent a set of computations
@@ -76,44 +75,8 @@ within the cluster, and/or a POST script.
 \subsection{Input File Describing the DAG}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\index{DAGMan!input file example}
+\index{DAGMan!DAG input file}
 The input file used by DAGMan is called a DAG input file.
-It may specify twelve types of items:
-\begin{enumerate}
-\item
-A list of the nodes in the DAG which cause the submission of
-one or more Condor jobs. Each entry serves to name a node
-and specify a Condor submit description file.
-\item
-A list of the nodes in the DAG which cause the submission of
-a data placement job.
-Each entry serves to name a node and 
-specify the Stork submit description file.
-\item
-Any processing required to take place before submission of
-a node's Condor or Stork job, or after a node's Condor or Stork
-job has completed execution.
-\item
-A description of the dependencies within the DAG.
-\item
-The number of times to retry a node's execution,
-if a node within the DAG fails.
-\item
-Any definition of macros associated with a node.
-\item
-A specification of the priority of a node.
-\item
-A specification of the category of a node.
-\item
-A maxjobs specification for a given node category.
-\item
-A node's exit value that causes the entire DAG to abort.
-\item
-A configuration file.
-\item
-A splice to be included within the DAG.
-\end{enumerate}
-
 All items are optional, but there must be at least one \Arg{JOB}
 or \Arg{DATA} item.
 
@@ -149,10 +112,13 @@ A very simple DAG input file for this diamond-shaped DAG is
 \end{verbatim}
 \normalsize
 
-Each DAG input file key word is described below.
+A set of basic key words appearing in a DAG input file is described below.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{dagman:JOB}JOB}
+\begin{itemize}
+
+\label{dagman:JOB}
+\index{DAGMan input file!JOB key word}
+\item \Bold{JOB}
 
 The \Arg{JOB} key word specifies a job to be managed by Condor.
 The syntax used for each \Arg{JOB} entry is
@@ -198,44 +164,9 @@ DAGMan generates a Rescue DAG, a DAG input file that can be
 used to restart and complete a DAG without re-executing
 completed nodes.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{dagman:SUBDAG}SUBDAG}
-
-The \Arg{SUBDAG} keyword specifies a special case of a \Opt{JOB}
-node, where the job is a DAG.
-
-\Opt{SUBDAG} \Opt{EXTERNAL} \Arg{JobName} \Arg{DagFileName}
-\oOptArg{DIR}{directory} \oOpt{DONE}
-
-A \Opt{SUBDAG} node is essentially the same as a "normal" node, except
-that the nested DAG file is specified instead of the Condor submit file.
-("SUBDAG EXTERNAL A foo.dag" is functionally equivalent to
-"JOB A foo.dag.condor.sub", but SUBDAG EXTERNAL is now the preferred
-syntax for specifying such a node.)  "EXTERNAL" means that the
-SUBDAG is run in its own instance of \Condor{dagman}.
-
-For more information, see section~\ref{sec:DAGsinDAGs}.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{SPLICE}
-
-\index{DAGMan!SPLICE}
-
-The \Arg{SPLICE} keyword creates a named instance of a DAG as specified
-in another file as an entity which may have \Arg{PARENT} and \Arg{CHILD}
-dependencies associated with other splice names or node names in the
-including DAG file.
-The syntax for \Arg{SPLICE} is
-
-\Opt{SPLICE} \Arg{SpliceName} \Arg{DagFileName} \oOptArg{DIR}{directory}
-
-After parsing incorporates a splice,
-all nodes within the spice become nodes within the including DAG.
-For detailed information about splices, see 
-section~\ref{sec:DAGSplicing}.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{dagman:DATA}DATA}
+\label{dagman:DATA}
+\index{DAGMan input file!DATA key word}
+\item \Bold{DATA}
 
 The \Arg{DATA} key word specifies a job to be managed by the Stork data
 placement server.  
@@ -267,9 +198,9 @@ may be run in parallel.
 \end{verbatim}
 \normalsize
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{dagman:SCRIPT}SCRIPT}
-
+\label{dagman:SCRIPT}
+\index{DAGMan input file!SCRIPT key word}
+\item \Bold{SCRIPT}
 \index{DAGMan!PRE and POST scripts}
 
 The \Arg{SCRIPT} key word specifies
@@ -422,8 +353,10 @@ of the compressed file:
 % $ % this comment just has a dollar sign so that emacs will not think
 %	  we're inside of a math section and will draw things more nicely
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{dagman:ParentChild}PARENT..CHILD}
+
+\label{dagman:ParentChild}
+\index{DAGMan input file!PARENT \Dots CHILD key word}
+\item \Bold{PARENT \Dots CHILD}
 
 The \Arg{PARENT} and \Arg{CHILD} key words specify the
 dependencies within the DAG.
@@ -457,279 +390,7 @@ produces four dependencies:
 \item{\verb@p2@ to \verb@c2@}
 \end{enumerate}
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{RETRY}
-
-\index{DAGMan!RETRY of failed nodes}
-
-The \Arg{RETRY} key word provides a
-way to retry failed nodes.
-The use of retry is optional.
-The syntax for retry is
-
-\Opt{RETRY} \Arg{JobName} \Arg{NumberOfRetries} \oOptArg{UNLESS-EXIT}{value}
-
-where \Arg{JobName} identifies the node.
-\Arg{NumberOfRetries} is an integer
-number of times to retry the node after failure.
-The implied number of retries for any node is 0,
-the same as not having a retry line in the file. 
-Retry is implemented on nodes, not parts of a node.
-
-The diamond-shaped DAG example may be modified to
-retry node C:
-
-\footnotesize
-\begin{verbatim}
-    # File name: diamond.dag
-    #
-    JOB  A  A.condor 
-    JOB  B  B.condor 
-    JOB  C  C.condor	
-    JOB  D  D.condor
-    PARENT A CHILD B C
-    PARENT B C CHILD D
-    Retry  C 3
-\end{verbatim}
-\normalsize
-
-If node C is marked as failed (for any reason),
-then it is started over as a first retry.
-The node will be tried a second and third time,
-if it continues to fail.
-If the node is marked as successful, then further retries do not occur.
-
-Retry of a node may be short circuited using the
-optional key word \Arg{UNLESS-EXIT} (followed by an
-integer exit value).
-If the node exits with the specified integer exit value,
-then no further processing will be done
-on the node. 
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{VARS}
-
-\index{DAGMan!VARS (macro for submit description file)}
-\index{VARS}
-The \Arg{VARS} key word provides a
-method for defining a macro that can be referenced in the
-node's submit description file.
-These macros are defined on a per-node basis, using the
-following syntax:
-
-\Opt{VARS} \Arg{JobName} \OptArg{macroname=}{"string"} \oOptArg{macroname=}{"string"\Dots}
-
-The macro may be used within the
-submit description file of the relevant node.  A \Arg{macroname}
-consists of alphanumeric characters (a..Z and 0..9),
-as well as the underscore character.
-The space character delimits macros,
-when there is more than one macro defined for a node.
-
-Correct syntax requires that the \Arg{string} must be
-enclosed in double quotes.
-To use a double quote inside \Arg{string},
-escape it with the backslash character (\verb@\@).
-To add the backslash character itself, use two backslashes (\verb@\\@).
-The string \$(JOB) maybe used in \Arg{string} and will expand to
-\Arg{JobName}. 
-If the \Opt{VARS} line appears in a DAG file used as a splice file, 
-then \$(JOB) will be the fully scoped name of the node.
-
-Note that macro names cannot begin with the string "queue"
-(in any combination of upper and lower case).
-
-If the DAG input file contains
-\footnotesize
-\begin{verbatim}
-    # File name: diamond.dag
-    #
-    JOB  A  A.condor 
-    JOB  B  B.condor 
-    JOB  C  C.condor	
-    JOB  D  D.condor
-    VARS A state="Wisconsin"
-\end{verbatim}
-\normalsize
-
-then file \File{A.condor} may use the macro \Arg{state}.
-This example submit description file for the Condor
-job in node A passes the value
-of the macro as a command-line argument to the job.
-
-\footnotesize
-\begin{verbatim}
-    # file name: A.condor
-    executable = A.exe
-    log        = A.log
-    error      = A.err
-    arguments  = $(state)
-    queue
-\end{verbatim}
-\normalsize
-
-This Condor job's command line will be
-\footnotesize
-\begin{verbatim}
-A.exe Wisconsin
-\end{verbatim}
-\normalsize
-The use of macros may allow a reduction in the necessary number 
-of unique submit description files.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{PRIORITY}
-
-The \Arg{PRIORITY} key word assigns a priority to a DAG node.
-The syntax for PRIORITY is
-
-\Opt{PRIORITY} \Arg{JobName} \Arg{PriorityValue}
-
-The node priority affects the order in which nodes that are ready
-at the same time will be submitted.  Note that node priority does
-\emph{not} override the DAG dependencies.
-
-Node priority is mainly relevant if
-node submission is throttled via the \Arg{-maxjobs} or \Arg{-maxidle}
-command-line flags or the \MacroNI{DAGMAN\_MAX\_JOBS\_SUBMITTED} or
-\MacroNI{DAGMAN\_MAX\_JOBS\_IDLE} configuration macros.  Note that PRE
-scripts can affect the order in which jobs run, so DAGs containing
-PRE scripts may not run the nodes in exact priority order, even if
-doing so would satisfy the DAG dependencies.
-
-The priority value is an integer (which can be negative).  A larger
-numerical priority is better (will be run before a smaller numerical
-value).  The default priority is 0.
-
-Adding \Arg{PRIORITY} for node C in the diamond-shaped
-DAG
-\footnotesize
-\begin{verbatim}
-    # File name: diamond.dag
-    #
-    JOB  A  A.condor 
-    JOB  B  B.condor 
-    JOB  C  C.condor	
-    JOB  D  D.condor
-    PARENT A CHILD B C
-    PARENT B C CHILD D
-    Retry  C 3
-    PRIORITY C 1
-\end{verbatim}
-\normalsize
-
-This will cause node C to be submitted before node B (normally, node B
-would be submitted first).
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{CATEGORY}
-
-The \Arg{CATEGORY} key word assigns a category to a DAG node.
-The syntax for CATEGORY is
-
-\Opt{CATEGORY} \Arg{JobName} \Arg{CategoryName}
-
-Node categories are used for job submission throttling (see \Opt{MAXJOBS}
-below).  Category names cannot contain white space.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{MAXJOBS}
-
-The \Arg{MAXJOBS} key word limits the number of submitted jobs for a node
-category.  The syntax for MAXJOBS is
-
-\Opt{MAXJOBS} \Arg{CategoryName} \Arg{MaxJobsValue}
-
-If the number of submitted jobs for a given category reaches the limit,
-no further jobs in that category will be submitted until other jobs
-in the category terminate.  If there is no MAXJOBS entry for a given node
-category, the limit is set to infinity.
-
-Note that a single invocation
-of \Condor{submit} counts as one job, even if the submit file produces
-a multi-job cluster.
-
-The \MacroNI{DAGMAN\_MAX\_JOBS\_SUBMITTED} configuration macro and the
-\Condor{submit\_dag} \Arg{-maxjobs} command-line flag are still in effect
-if node category throttles are used.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{ABORT-DAG-ON}
-
-\index{DAGMan!ABORT-DAG-ON}
-The \Arg{ABORT-DAG-ON} key word provides a way
-to abort the entire DAG if a given node returns a specific exit
-code.  The syntax for \Arg{ABORT-DAG-ON} is
-
-\Opt{ABORT-DAG-ON} \Arg{JobName} \Arg{AbortExitValue}
-\oOptArg{RETURN}{DAGReturnValue}
-
-If the node specified by \Arg{JobName} returns the specified
-\Arg{AbortExitValue}, the
-DAG is immediately aborted.
-A DAG abort differs from a node failure,
-in that a DAG abort causes all nodes within the DAG to be stopped immediately.
-This includes removing the jobs in nodes that are currently running.
-A node failure allows the DAG to continue running,
-until no more progress can be made due to dependencies.
-
-An abort overrides node retries. 
-If a node returns the abort exit value,
-the DAG is aborted,
-even if the node has retry specified.
-
-When a DAG aborts, by default it exits with the node return value that
-caused the abort.  This can be changed by 
-using  the optional \Arg{RETURN} key word along
-with specifying the desired \Arg{DAGReturnValue}.
-The DAG abort return value
-can be used for DAGs within DAGs,
-allowing an inner DAG to cause an abort of an outer DAG.
-
-Adding \Arg{ABORT-DAG-ON} for node C in the diamond-shaped
-DAG
-\footnotesize
-\begin{verbatim}
-    # File name: diamond.dag
-    #
-    JOB  A  A.condor 
-    JOB  B  B.condor 
-    JOB  C  C.condor	
-    JOB  D  D.condor
-    PARENT A CHILD B C
-    PARENT B C CHILD D
-    Retry  C 3
-    ABORT-DAG-ON C 10 RETURN 1
-\end{verbatim}
-\normalsize
-
-causes the DAG to be aborted, if node C exits with a return value of 10.
-Any other currently running nodes (only node B is a possibility for 
-this particular example) are stopped and removed.
-If this abort occurs, the return value for the DAG is 1.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{CONFIG}
-
-\index{DAGMan!CONFIG}
-
-The \Arg{CONFIG} keyword specifies a configuration file to be used
-to set \Condor{dagman} configuration options when running this DAG.
-The syntax for \Arg{CONFIG} is
-
-\Opt{CONFIG} \Arg{ConfigFileName}
-
-If the DAG file contains a line like this:
-
-\begin{verbatim}
-    CONFIG dagman.config
-\end{verbatim}
-
-the configuration values in the file \File{dagman.config} will be used
-for this DAG.
-
-For more information about how \Condor{dagman} configuration files work,
-see section~\ref{sec:DAGConfig}.
+\end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Submit Description File}
@@ -802,48 +463,6 @@ This tells Condor not to send e-mail about the completion of a job
 submitted to Condor.
 For DAGs with many nodes, this
 reduces or eliminates excessive numbers of e-mails.
-
-A separate example shows an intended use of a \Arg{VARS} entry
-in the DAG input file.
-This use may dramatically reduce the number of Condor submit description
-files needed for a DAG.
-In the case where the submit description file for each node
-varies only in file naming, the use of a substitution macro
-within the submit description file reduces the need to
-a single submit description file.
-Note that the user log file for a job currently cannot be specified
-using a macro passed from the DAG.
-
-The example uses a single submit description file in the DAG input
-file, and uses the \Arg{Vars} entry to name output files.
-
-The relevant portion of the DAG input file appears as 
-\begin{verbatim}
-JOB A theonefile.sub
-JOB B theonefile.sub
-JOB C theonefile.sub
-
-VARS A outfilename="A"
-VARS B outfilename="B"
-VARS C outfilename="C"
-\end{verbatim}
-
-The submit description file appears as 
-\footnotesize
-\begin{verbatim}
-    # submit description file called:  theonefile.sub
-    executable   = progX
-    universe     = standard
-    output       = $(outfilename)
-    error        = error.$(outfilename)
-    log          = progX.log
-    queue
-\end{verbatim}
-\normalsize
-
-For a DAG like this one with thousands of nodes,
-being able to write and maintain a single submit description file 
-and a single, yet more complex, DAG input file is preferable.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{dagman:submitdag}Job Submission}
@@ -978,184 +597,427 @@ However, it will leave any submitted jobs
 in Condor's queue.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Job Recovery:  The Rescue DAG}
+\subsection{\label{sec:AdvDAGMan}Advanced Features of DAGMan}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\index{DAGMan!rescue DAG}
-DAGMan can help with the resubmission of uncompleted
-portions of a DAG, when one or more nodes result in failure.
-If any node in the DAG fails,
-the remainder of the DAG is continued until no more forward
-progress can be made based on the DAG's dependencies.
-At this point, DAGMan produces a file
-called a Rescue DAG.
-
-The Rescue DAG is a DAG input file,
-functionally the same as the original DAG file.
-(Note that if multiple DAG files are specified on the
-\Condor{submit\_dag} command line, a single rescue
-DAG encompassing all of the input DAGs is generated.)
-The rescue DAG additionally contains an indication of
-successfully completed nodes by appending the \Arg{DONE}
-key word to the node's \Arg{JOB} or \Arg{DATA} lines.
-If the DAG is resubmitted using this Rescue DAG input file,
-the nodes marked as completed will not be re-executed.
-
-If the Rescue DAG file is generated before all retries
-of a node are completed, 
-then the Rescue DAG file will also contain Retry entries.
-The number of retries will be set to the appropriate remaining
-number of retries. 
-
-The Rescue DAG is automatically generated by DAGMan when a node
-within the DAG fails or when \Condor{dagman} itself is removed
-with \Condor{rm}.
-The file name of the rescue DAG depends on whether "old-style" or
-"new-style" rescue DAG naming is used (see below).
-Statistics about the failed DAG execution are presented as
-comments at the beginning of the Rescue DAG input file.
-
-The granularity defining success or failure
-in the Rescue DAG input file is the node -- if a node fails,
-all parts of the node will be re-run even if some of them
-worked the first time.  For example, if a node's PRE script
-succeeds, but then the node job fails, when the rescue DAG is
-run the PRE script for that node will be re-run.
-The Condor job within a node may result in
-the submission of multiple Condor jobs under a single cluster.
-If one of the multiple jobs fails, the node fails.
-Therefore, a resubmission of the Rescue DAG will again
-result in the submission of the entire cluster of jobs.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:DAGRescueOld}"Old-style" Rescue DAGs}
-
-Prior to version 7.1.0, the default has been that, for a DAG file
-\File{my.dag}, the rescue DAG created (if any) would be named
-\File{my.dag.rescue}.  To run the rescue DAG, you would run
-\Condor{submit\_dag} on \File{my.dag.rescue}, and if that run
-fails, it would produce a rescue DAG named
-\File{my.dag.rescue.rescue}, and so on.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:DAGRescueNew}"New-style" Rescue DAGs}
-
-Starting with version 7.1.0, however, the default behavior is
-different.  For a DAG file \File{my.dag}, an initial failure
-produces a rescue DAG named \File{my.dag.rescue001}.  However, if
-you re-run \Condor{submit\_dag} on \File{my.dag}, the rescue
-DAG \File{my.dag.rescue001} will automatically be run instead of
-the original DAG.  If that run fails, the rescue DAG written will
-be \File{my.dag.rescue002}.  In fact, running \Condor{submit\_dag}
-on the original DAG file will automatically run the newest
-(highest numbered) rescue DAG.  You can specify a rescue DAG
-to run with the the \Arg{-dorescuefrom} flag -- for example, if you
-specify \Arg{-dorescuefrom 3}, rescue DAG number 3 will be run, and
-all newer rescue DAGs will be renamed (\File{.old} will be appended to the
-file name, and previous \File{.old} files, if any, will be overwritten).
-The maximum rescue DAG number is configured by the
-\MacroNI{DAGMAN\_MAX\_RESCUE\_NUM} configuration macro
-(see~\pageref{param:DAGManMaxRescueNum}).
-
-The old behavior can be maintained by setting
-\MacroNI{DAGMAN\_OLD\_RESCUE} (see~\pageref{param:DAGManOldRescue})
-to true and \MacroNI{DAGMAN\_AUTO\_RESCUE}
-(see~\pageref{param:DAGManAutoRescue}) to false.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Visualizing DAGs with \Prog{dot}}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{DAGMan!dot}
-\index{dot}
-\index{DAGMan!visualizing DAGs}
+\subsubsection{Retrying Failed Nodes}
 
-It can be helpful to see a picture of a DAG.
-DAGMan can assist you in visualizing a DAG by creating
-the input files used by the AT\&T Research Labs 
-\Prog{graphviz} package. 
-\Prog{dot} is a program within this package,
-available from \URL{http://www.graphviz.org/},
-and it is used to draw pictures of DAGs. 
+\index{DAGMan input file!RETRY key word}
+\index{DAGMan!RETRY of failed nodes}
+\index{DAGMan input file!ABORT-DAG-ON key word}
+\index{DAGMan!ABORT-DAG-ON}
 
-DAGMan produces one or more dot files as the result of
-an extra line
-in a DAGMan input file. 
-The line appears as
-%For example, to produce a single dot
-%file that shows the state of your DAG before any jobs are running, add
-%the following line:
+The \Arg{RETRY} key word provides a
+way to retry failed nodes.
+The use of retry is optional.
+The syntax for retry is
+
+\Opt{RETRY} \Arg{JobName} \Arg{NumberOfRetries} \oOptArg{UNLESS-EXIT}{value}
+
+where \Arg{JobName} identifies the node.
+\Arg{NumberOfRetries} is an integer
+number of times to retry the node after failure.
+The implied number of retries for any node is 0,
+the same as not having a retry line in the file. 
+Retry is implemented on nodes, not parts of a node.
+
+The diamond-shaped DAG example may be modified to
+retry node C:
+
+\footnotesize
 \begin{verbatim}
-    DOT dag.dot
+    # File name: diamond.dag
+    #
+    JOB  A  A.condor 
+    JOB  B  B.condor 
+    JOB  C  C.condor	
+    JOB  D  D.condor
+    PARENT A CHILD B C
+    PARENT B C CHILD D
+    Retry  C 3
+\end{verbatim}
+\normalsize
+
+If node C is marked as failed (for any reason),
+then it is started over as a first retry.
+The node will be tried a second and third time,
+if it continues to fail.
+If the node is marked as successful, then further retries do not occur.
+
+Retry of a node may be short circuited using the
+optional key word \Arg{UNLESS-EXIT} (followed by an
+integer exit value).
+If the node exits with the specified integer exit value,
+then no further processing will be done
+on the node. 
+
+The \Arg{ABORT-DAG-ON} key word provides a way
+to abort the entire DAG if a given node returns a specific exit
+code.  The syntax for \Arg{ABORT-DAG-ON} is
+
+\Opt{ABORT-DAG-ON} \Arg{JobName} \Arg{AbortExitValue}
+\oOptArg{RETURN}{DAGReturnValue}
+
+If the node specified by \Arg{JobName} returns the specified
+\Arg{AbortExitValue}, the
+DAG is immediately aborted.
+A DAG abort differs from a node failure,
+in that a DAG abort causes all nodes within the DAG to be stopped immediately.
+This includes removing the jobs in nodes that are currently running.
+A node failure allows the DAG to continue running,
+until no more progress can be made due to dependencies.
+
+An abort overrides node retries. 
+If a node returns the abort exit value,
+the DAG is aborted,
+even if the node has retry specified.
+
+When a DAG aborts, by default it exits with the node return value that
+caused the abort.  This can be changed by 
+using  the optional \Arg{RETURN} key word along
+with specifying the desired \Arg{DAGReturnValue}.
+The DAG abort return value
+can be used for DAGs within DAGs,
+allowing an inner DAG to cause an abort of an outer DAG.
+
+Adding \Arg{ABORT-DAG-ON} for node C in the diamond-shaped
+DAG
+\footnotesize
+\begin{verbatim}
+    # File name: diamond.dag
+    #
+    JOB  A  A.condor 
+    JOB  B  B.condor 
+    JOB  C  C.condor	
+    JOB  D  D.condor
+    PARENT A CHILD B C
+    PARENT B C CHILD D
+    Retry  C 3
+    ABORT-DAG-ON C 10 RETURN 1
+\end{verbatim}
+\normalsize
+
+causes the DAG to be aborted, if node C exits with a return value of 10.
+Any other currently running nodes (only node B is a possibility for 
+this particular example) are stopped and removed.
+If this abort occurs, the return value for the DAG is 1.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Variable Values Associated with Nodes}
+\index{DAGMan input file!VARS key word}
+
+\index{DAGMan!VARS (macro for submit description file)}
+\index{VARS}
+The \Arg{VARS} key word provides a
+method for defining a macro that can be referenced in the
+node's submit description file.
+These macros are defined on a per-node basis, using the
+following syntax:
+
+\Opt{VARS} \Arg{JobName} \OptArg{macroname=}{"string"} \oOptArg{macroname=}{"string"\Dots}
+
+The macro may be used within the
+submit description file of the relevant node.  A \Arg{macroname}
+consists of alphanumeric characters (a..Z and 0..9),
+as well as the underscore character.
+The space character delimits macros,
+when there is more than one macro defined for a node.
+
+Correct syntax requires that the \Arg{string} must be
+enclosed in double quotes.
+To use a double quote inside \Arg{string},
+escape it with the backslash character (\verb@\@).
+To add the backslash character itself, use two backslashes (\verb@\\@).
+The string \$(JOB) maybe used in \Arg{string} and will expand to
+\Arg{JobName}. 
+If the \Opt{VARS} line appears in a DAG file used as a splice file, 
+then \$(JOB) will be the fully scoped name of the node.
+
+Note that macro names cannot begin with the string "queue"
+(in any combination of upper and lower case).
+
+If the DAG input file contains
+\footnotesize
+\begin{verbatim}
+    # File name: diamond.dag
+    #
+    JOB  A  A.condor 
+    JOB  B  B.condor 
+    JOB  C  C.condor	
+    JOB  D  D.condor
+    VARS A state="Wisconsin"
+    PARENT A CHILD B C
+    PARENT B C CHILD D
+
+\end{verbatim}
+\normalsize
+
+then file \File{A.condor} may use the macro \verb@state@.
+This example submit description file for the Condor
+job in node A passes the value
+of the macro as a command-line argument to the job.
+
+\footnotesize
+\begin{verbatim}
+    # file name: A.condor
+    executable = A.exe
+    log        = A.log
+    error      = A.err
+    arguments  = $(state)
+    queue
+\end{verbatim}
+\normalsize
+
+This Condor job's command line will be
+\footnotesize
+\begin{verbatim}
+A.exe Wisconsin
+\end{verbatim}
+\normalsize
+The use of macros may allow a reduction in the necessary number 
+of unique submit description files.
+
+A separate example shows an intended use of a \Arg{VARS} entry
+in the DAG input file.
+This use may dramatically reduce the number of Condor submit description
+files needed for a DAG.
+In the case where the submit description file for each node
+varies only in file naming, the use of a substitution macro
+within the submit description file reduces the need to
+a single submit description file.
+Note that the user log file for a job currently cannot be specified
+using a macro passed from the DAG.
+
+The example uses a single submit description file in the DAG input
+file, and uses the \Arg{Vars} entry to name output files.
+
+The relevant portion of the DAG input file appears as 
+\begin{verbatim}
+JOB A theonefile.sub
+JOB B theonefile.sub
+JOB C theonefile.sub
+
+VARS A outfilename="A"
+VARS B outfilename="B"
+VARS C outfilename="C"
 \end{verbatim}
 
-This creates a file called \File{dag.dot}.
-which contains
-a specification of the DAG before any jobs within the DAG
-are submitted to Condor.
-The \File{dag.dot} file is used to create a visualization
-of the DAG by using this file as input to \Prog{dot}.
-This example creates a Postscript file, with a visualization of the DAG:
-
+The submit description file appears as 
+\footnotesize
 \begin{verbatim}
-    dot -Tps dag.dot -o dag.ps
+    # submit description file called:  theonefile.sub
+    executable   = progX
+    universe     = standard
+    output       = $(outfilename)
+    error        = error.$(outfilename)
+    log          = progX.log
+    queue
 \end{verbatim}
+\normalsize
 
-Within the DAGMan input file,
-the DOT command can take several optional parameters:
+For a DAG such as this one, but with thousands of nodes,
+being able to write and maintain a single submit description file 
+and a single, yet more complex, DAG input file is preferable.
 
-\begin{itemize}
-
-\item \Opt{UPDATE}  This will update the dot file every time a
-significant update happens. 
-
-\item \Opt{DONT-UPDATE} Creates a single dot file, when
-the DAGMan begins executing. This is the default if the parameter
-\Opt{UPDATE} is not used.
-
-\item \Opt{OVERWRITE} Overwrites the dot file each time it
-is created. This is the default, unless \Opt{DONT-OVERWRITE}
-is specified.
-
-\item \Opt{DONT-OVERWRITE} Used to create multiple dot files, instead
-of overwriting the single one specified.
-To create file names,
-DAGMan uses the name of the file concatenated a period and an
-integer. For example, the DAGMan input file line
-\begin{verbatim}
-    DOT dag.dot DONT-OVERWRITE
-\end{verbatim}
-causes files
-\File{dag.dot.0},
-\File{dag.dot.1},
-\File{dag.dot.2},
-etc. to be created.
-This option is
-most useful combined with the \Opt{UPDATE} option to
-visualize the history of the DAG after it has finished executing. 
-
-\item \OptArg{INCLUDE}{path-to-filename} Includes the contents
-of a file given by \File{path-to-filename} in the file produced by the
-\Opt{DOT} command.
-The include file contents are always placed after the line of
-the form
-\verb@label=@.
-This may be useful if further editing of the created files would
-be necessary,
-perhaps because you are automatically visualizing the DAG as it
-progresses. 
-
-\end{itemize}
-
-If conflicting parameters are used in a DOT command, the last one
-listed is used.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:DAGsinDAGs}Advanced Usage: A DAG within a DAG}
+\subsubsection{Setting Priorities for Nodes}
+\index{DAGMan input file!PRIORITY key word}
+
+The \Arg{PRIORITY} key word assigns a priority to a DAG node.
+The syntax for PRIORITY is
+
+\Opt{PRIORITY} \Arg{JobName} \Arg{PriorityValue}
+
+The node priority affects the order in which nodes that are ready
+at the same time will be submitted.  Note that node priority does
+\emph{not} override the DAG dependencies.
+
+Node priority is mainly relevant if
+node submission is throttled via the \Arg{-maxjobs} or \Arg{-maxidle}
+command-line flags or the \MacroNI{DAGMAN\_MAX\_JOBS\_SUBMITTED} or
+\MacroNI{DAGMAN\_MAX\_JOBS\_IDLE} configuration macros.  Note that PRE
+scripts can affect the order in which jobs run, so DAGs containing
+PRE scripts may not run the nodes in exact priority order, even if
+doing so would satisfy the DAG dependencies.
+
+The priority value is an integer (which can be negative).  A larger
+numerical priority is better (will be run before a smaller numerical
+value).  The default priority is 0.
+
+Adding \Arg{PRIORITY} for node C in the diamond-shaped
+DAG
+\footnotesize
+\begin{verbatim}
+    # File name: diamond.dag
+    #
+    JOB  A  A.condor 
+    JOB  B  B.condor 
+    JOB  C  C.condor	
+    JOB  D  D.condor
+    PARENT A CHILD B C
+    PARENT B C CHILD D
+    Retry  C 3
+    PRIORITY C 1
+\end{verbatim}
+\normalsize
+
+This will cause node C to be submitted before node B (normally, node B
+would be submitted first).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Limiting the Number of Submitted Job Clusters within a DAG}
+
+\index{DAGMan input file!CATEGORY key word}
+\index{DAGMan input file!MAXJOBS key word}
+
+In order to limit the number of submitted job clusters within a DAG,
+the nodes may be placed into categories by assignment of a name.
+Then, a maximum number of submitted clusters may be specified
+for each category.
+
+The \Arg{CATEGORY} key word assigns a category name to a DAG node.
+The syntax for CATEGORY is
+
+\Opt{CATEGORY} \Arg{JobName} \Arg{CategoryName}
+
+Category names cannot contain white space.
+
+The \Arg{MAXJOBS} key word limits the number of submitted job clusters
+on a per category basis.
+The syntax for \Arg{MAXJOBS} is
+
+\Opt{MAXJOBS} \Arg{CategoryName} \Arg{MaxJobsValue}
+
+If the number of submitted job clusters for a given category reaches the limit,
+no further job clusters in that category will be submitted until other
+job clusters within the category terminate.
+If MAXJOBS is not set for a defined category,
+then there is no limit placed on the number of submissions
+within that category.
+
+Note that a single invocation
+of \Condor{submit} results in one job cluster.
+The number of Condor jobs within a cluster may be greater than 1. 
+
+The  configuration variable \MacroNI{DAGMAN\_MAX\_JOBS\_SUBMITTED} 
+and the \Condor{submit\_dag} \Arg{-maxjobs} command-line option
+are still enforced if these \Arg{CATEGORY} and \Arg{MAXJOBS} throttles are used.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Configuration Specific to a DAG}
+\index{DAGMan input file!CONFIG key word}
+
+\index{DAGMan!CONFIG}
+
+The \Arg{CONFIG} keyword specifies a configuration file to be used
+to set \Condor{dagman} configuration options when running this DAG.
+The syntax for \Arg{CONFIG} is
+
+\Opt{CONFIG} \Arg{ConfigFileName}
+
+If the DAG file contains a line like this:
+
+\begin{verbatim}
+    CONFIG dagman.config
+\end{verbatim}
+
+the configuration values in the file \File{dagman.config} will be used
+for this DAG.
+
+Configuration macros for \Condor{dagman} can be specified in several
+ways, as given within the ordered list:
+\begin{enumerate}
+\item
+In a Condor configuration file.
+\item
+With an environment variable.
+Prepend the string \verb@"_CONDOR_"@ to the macro name.
+\item
+In a \Condor{dagman}-specific configuration file specified in the DAG
+file or on the \Condor{submit\_dag} command line.
+\item
+For some configuration macros, there is a corresponding \Condor{submit\_dag}
+command line flag (for example, \MacroNI{DAGMAN\_MAX\_JOBS\_SUBMITTED}/\Arg{-maxjobs}).
+\end{enumerate}
+
+In the above list, configuration values specified later in the list
+override ones specified earlier (e.g., a value specified on the
+\Condor{submit\_dag} command line overrides corresponding values in any
+configuration file; a value specified in a DAGMan-specific configuration
+file overrides values specified in a general Condor configuration file).
+
+Non-\Condor{dagman}, non-daemoncore configuration macros in a
+\Condor{dagman}-specific configuration file are ignored.
+
+Only a single configuration file can be specified for a given
+\Condor{dagman} run.  For example, if one file is specified in a DAG,
+and a different file is specified on the \Condor{submit\_dag} command
+line, this is a fatal error at submit time.  The same is true if
+different configuration files are specified in multiple DAG files
+referenced in a single \Condor{submit\_dag} command.
+
+If multiple DAGs are run in a single \Condor{dagman} run, the
+configuration options specified in the \Condor{dagman} configuration
+file, if any, apply to all DAGs, even if some of the DAGs specify no
+configuration file.
+
+Configuration variables relating to DAGMan may be found
+in section~\ref{sec:DAGMan-Config-File-Entries}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:MultipleDAGs}Single Submission of Multiple, Independent DAGs}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{DAGMan!Single submission of multiple, independent DAGs}
+
+A single use of \Condor{submit\_dag} may execute multiple, independent DAGs.
+Each independent DAG has its own DAG input file.
+These DAG input files are command-line arguments to
+\Condor{submit\_dag}
+(see the \Condor{submit\_dag} manual page at ~\ref{man-condor-submit-dag}).
+
+Internally, all of the independent DAGs are combined
+into a single, larger DAG, with no dependencies between
+the original independent DAGs.
+As a result,
+any generated rescue DAG file represents all of the input DAGs
+as a single DAG.
+The file name of this rescue DAG is based on the DAG input file
+listed first within the command-line arguments to
+\Condor{submit\_dag} (unlike a single-DAG rescue DAG file, however,
+the file name will be
+\File{\textless{whatever}\textgreater.dag\_multi.rescue} or
+\File{\textless{whatever}\textgreater.dag\_multi.rescueNNN},
+as opposed to
+just \File{\textless{whatever}\textgreater.dag.rescue}
+or \File{\textless{whatever}\textgreater.dag.rescueNNN}).
+Other files such
+as \File{dagman.out} and the lock file also have names based on this
+first DAG input file.
+
+The success or failure of the independent DAGs is well defined.
+When multiple, independent DAGs are submitted with a single
+command, the
+success of the composite DAG is defined as the logical AND
+of the success of each independent DAG.
+This implies that failure is defined as the logical OR
+of the failure of any of the independent DAGs.
+
+By default, DAGMan internally renames the nodes to avoid node name collisions.  
+If all node names are unique, 
+the renaming of nodes may be disabled by
+setting the configuration variable \Macro{DAGMAN\_MUNGE\_NODE\_NAMES}
+to \Expr{False} (see ~\ref{param:DAGManMungeNodeNames}).
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:DAGsinDAGs}A DAG Within a DAG Is a SUBDAG}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{DAGMan!DAGs within DAGs}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:NestedBasics}Basics}
+\index{DAGMan input file!SUBDAG key word}
 
 The organization and dependencies of the jobs within a DAG
 are the keys to its utility.
@@ -1215,8 +1077,22 @@ This is equivalent, but the version above is now preferred:
     PARENT B C CHILD D
 \end{verbatim}
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{dagman:NestedRecursion}\Condor{submit\_dag} recursion}
+Within the DAG input file,
+the \Arg{SUBDAG} keyword specifies a special case of a \Opt{JOB}
+node, where the job is a DAG.
+
+\Opt{SUBDAG} \Opt{EXTERNAL} \Arg{JobName} \Arg{DagFileName}
+\oOptArg{DIR}{directory} \oOpt{DONE}
+
+A \Opt{SUBDAG} node is essentially the same as a "normal" node, except
+that the nested DAG file is specified instead of the Condor submit file.
+("SUBDAG EXTERNAL A foo.dag" is functionally equivalent to
+"JOB A foo.dag.condor.sub", but SUBDAG EXTERNAL is now the preferred
+syntax for specifying such a node.)  "EXTERNAL" means that the
+SUBDAG is run in its own instance of \Condor{dagman}.
+
+\begin{itemize}
+\item{\Condor{submit\_dag} recursion}
 
 The outer DAG is then submitted as before, with the command
 \begin{verbatim}
@@ -1271,15 +1147,14 @@ following:
 \end{verbatim}
 
 This would set maxjobs to 1 for the inner DAG, and then run the
-entire workflow.
+entire work flow.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{dagman:NestedRescue}Nested DAGs and rescue DAGs}
+\item{Interaction with Rescue DAGs}
 
 When using nested DAGs, it is strongly recommended that you use
 "new-style" rescue DAGs (this is the default).  Using "new-style"
 rescue DAGs will automatically run the proper rescue DAG(s) if
-there is a failure in your workflow.  For example, if one of the
+there is a failure in your work flow.  For example, if one of the
 nodes in \File{inner.dag} fails, this will produce a rescue
 DAG for inner.dag (\File{inner.dag.rescue.001}, etc.).  Then,
 since \File{inner.dag} failed, node B of \File{diamond.dag} will fail,
@@ -1291,63 +1166,20 @@ actually run the most recent inner rescue DAG.  If you use
 "old-style" rescue DAGs, you would have to either rename the 
 inner rescue DAG or run it manually.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{dagman:NestedFilePaths}File paths in nested DAGs}
+\item{File Paths}
 
 Remember that, unless you use the DIR keyword in your outer DAG,
 the inner DAG will be submitted from the directory in which you
 run the outer DAG.  Therefore, all paths in the inner DAG file
 (to submit files, etc.) must be specified accordingly.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:MultipleDAGs}Single Submission of Multiple, Independent DAGs}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{DAGMan!Single submission of multiple, independent DAGs}
-
-A single use of \Condor{submit\_dag} may execute multiple, independent DAGs.
-Each independent DAG has its own DAG input file.
-These DAG input files are command-line arguments to
-\Condor{submit\_dag}
-(see the \Condor{submit\_dag} manual page at ~\ref{man-condor-submit-dag}).
-
-Internally, all of the independent DAGs are combined
-into a single, larger DAG, with no dependencies between
-the original independent DAGs.
-As a result,
-any generated rescue DAG file represents all of the input DAGs
-as a single DAG.
-The file name of this rescue DAG is based on the DAG input file
-listed first within the command-line arguments to
-\Condor{submit\_dag} (unlike a single-DAG rescue DAG file, however,
-the file name will be
-\File{\textless{whatever}\textgreater.dag\_multi.rescue} or
-\File{\textless{whatever}\textgreater.dag\_multi.rescueNNN},
-as opposed to
-just \File{\textless{whatever}\textgreater.dag.rescue}
-or \File{\textless{whatever}\textgreater.dag.rescueNNN}).
-Other files such
-as \File{dagman.out} and the lock file also have names based on this
-first DAG input file.
-
-The success or failure of the independent DAGs is well defined.
-When multiple, independent DAGs are submitted with a single
-command, the
-success of the composite DAG is defined as the logical AND
-of the success of each independent DAG.
-This implies that failure is defined as the logical OR
-of the failure of any of the independent DAGs.
-
-By default, DAGMan internally renames the nodes to avoid node name collisions.  
-If all node names are unique, 
-the renaming of nodes may be disabled by
-setting the configuration variable \Macro{DAGMAN\_MUNGE\_NODE\_NAMES}
-to \Expr{False} (see ~\ref{param:DAGManMungeNodeNames}).
-% Karen has edited to this point.
+\end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:DAGSplicing}DAG Splicing}
+\subsubsection{\label{sec:DAGSplicing}DAG Splicing}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{DAGMan!Splicing DAGs}
+\index{DAGMan input file!SPLICE key word}
 
 A weakness in scalability exists when submitting a DAG within a DAG.
 Each executing independent DAG requires its own invocation of
@@ -1388,6 +1220,19 @@ Condor does not detect nor support splices that form a cycle
 within the DAG.
 A DAGMan job that causes a cyclic inclusion of splices will
 eventually exhaust available memory and crash.
+
+The \Arg{SPLICE} keyword in a DAG input file
+creates a named instance of a DAG as specified
+in another file as an entity which may have \Arg{PARENT} and \Arg{CHILD}
+dependencies associated with other splice names or node names in the
+including DAG file.
+The syntax for \Arg{SPLICE} is
+
+\Opt{SPLICE} \Arg{SpliceName} \Arg{DagFileName} \oOptArg{DIR}{directory}
+
+After parsing incorporates a splice,
+all nodes within the spice become nodes within the including DAG.
+
 
 The following series of examples illustrate potential uses of
 splicing. To simplify the examples,
@@ -1609,6 +1454,148 @@ A rescue DAG generated by a DAG run with the \Arg{-usedagdir} argument
 will contain DIR specifications, so the rescue DAG must be run
 \emph{without} the \Arg{-usedagdir} argument.
 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Job Recovery:  The Rescue DAG}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\index{DAGMan!Rescue DAG}
+DAGMan can help with the resubmission of uncompleted
+portions of a DAG, when one or more nodes result in failure.
+If any node in the DAG fails,
+the remainder of the DAG is continued until no more forward
+progress can be made based on the DAG's dependencies.
+At this point, DAGMan produces a file
+called a Rescue DAG.
+
+The Rescue DAG is a DAG input file,
+functionally the same as the original DAG file.
+The Rescue DAG additionally contains an indication of
+successfully completed nodes by appending the \Arg{DONE}
+key word to the node's \Arg{JOB} or \Arg{DATA} lines.
+If the DAG is resubmitted utilizing the Rescue DAG,
+the successfully completed nodes will not be re-executed.
+
+Note that if multiple DAG files are specified on the
+\Condor{submit\_dag} command line, a single rescue
+DAG encompassing all of the input DAGs is generated.
+
+If the Rescue DAG file is generated before all retries
+of a node are completed, 
+then the Rescue DAG file will also contain \Arg{Retry} entries.
+The number of retries will be set to the appropriate remaining
+number of retries. 
+
+The granularity defining success or failure
+in the Rescue DAG is the node.
+For a node that fails,
+all parts of the node will be re-run,
+even if some parts were successful the first time.
+For example, if a node's PRE script
+succeeds, but then the node's Condor job cluster fails,
+the entire node, which includes the PRE script will be re-run.
+A job cluster may result in the submission of multiple Condor jobs.
+If one of the multiple jobs fails, the node fails.
+Therefore, a the Rescue DAG will
+re-run the entire node,
+implying the submission of the entire cluster of jobs,
+not just the one(s) that failed.
+
+Statistics about the failed DAG execution are presented as
+comments at the beginning of the Rescue DAG input file.
+
+The Rescue DAG is automatically generated by DAGMan when a node
+within the DAG fails or when \Condor{dagman} itself is removed
+with \Condor{rm}.
+The file name of the Rescue DAG, and usage of the Rescue
+DAG changed from explicit specification to implicit usage
+beginning with Condor version 7.1.0.
+
+Current naming of the Rescue DAG appends the string
+\verb@.rescue<XXX>@ to the original DAG input file.
+Values for \verb@<XXX>@ start at \verb@001@ and continue
+to \verb@002@, \verb@003@, and beyond.
+If a Rescue DAG exists,
+the Rescue DAG with the largest magnitude value for \verb@<XXX>@
+will be used, and its usage is implied.
+
+Here is an example showing file naming and DAG submission
+for the case of a failed DAG.
+The initial DAG is submitted with
+\begin{verbatim}
+  condor_submit_dag  my.dag
+\end{verbatim}
+A failure of this DAG results in the Rescue DAG
+called \File{my.dag.rescue001}.
+The DAG is resubmitted using the same command: 
+\begin{verbatim}
+  condor_submit_dag  my.dag
+\end{verbatim}
+This resubmission of the DAG uses the Rescue DAG file \File{my.dag.rescue001},
+because it exists.
+Failure of this Rescue DAG results in another Rescue DAG
+called \File{my.dag.rescue002}.
+If the DAG is again submitted, using the same command
+as with the first two submissions, but not repeated here,
+then this third submission uses the Rescue DAG file \File{my.dag.rescue002},
+because it exists, and because the value \verb@002@ is larger
+in magnitude than \verb@001@.
+
+To explicitly specify a particular Rescue DAG,
+use the optional command-line argument \Arg{-dorescuefrom}
+with \Condor{submit\_dag}.
+Note that this will have the side effect of renaming 
+existing Rescue DAG files with larger magnitude values 
+of \verb@<XXX>@.
+Each renamed file has its existing name appended with
+the string \File{.old}.
+For example, assume that \File{my.dag} has failed 4 times,
+resulting in the Rescue DAGs named
+\File{my.dag.rescue001},
+\File{my.dag.rescue002},
+\File{my.dag.rescue003},
+and
+\File{my.dag.rescue004}.
+A decision is made to re-run using \File{my.dag.rescue002}.
+The submit command is
+\begin{verbatim}
+  condor_submit_dag  -dorescuefrom 2  my.dag
+\end{verbatim}
+The DAG specified by the DAG input file \File{my.dag.rescue002}
+is submitted.
+And, the existing Rescue DAG \File{my.dag.rescue003} is
+renamed to be \File{my.dag.rescue003.old},
+while the existing Rescue DAG \File{my.dag.rescue004} is
+renamed to be \File{my.dag.rescue004.old}.
+
+A maximum value for \verb@XXX@ may be configured by the
+\MacroNI{DAGMAN\_MAX\_RESCUE\_NUM} configuration macro
+(see~\pageref{param:DAGManMaxRescueNum}).
+
+Prior to Condor version 7.1.0, the naming of a Rescue DAG
+appended the string \File{.rescue} to the existing DAG input
+file name. 
+And, the Rescue DAG file would be explicitly placed in 
+the command line that submitted it.
+For example a first submission is
+\begin{verbatim}
+  condor_submit_dag  my.dag
+\end{verbatim}
+Assuming that this DAG failed, the file \File{my.dag.rescue}
+would be created.
+To run this Rescue DAG, the submission command is
+\begin{verbatim}
+  condor_submit_dag  my.dag.rescue
+\end{verbatim}
+If this Rescue DAG also failed, a new Rescue DAG named
+\File{my.dag.rescue.rescue} would be created.
+
+The behavior of DAGMan with respect to Rescue DAGs 
+can be forced to the old behavior by setting the configuration variables
+\Macro{DAGMAN\_OLD\_RESCUE} (see~\pageref{param:DAGManOldRescue})
+to \Expr{True} and \Macro{DAGMAN\_AUTO\_RESCUE}
+(see~\pageref{param:DAGManAutoRescue}) to \Expr{False}.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:DAGPaths}File Paths in DAGs}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1673,47 +1660,91 @@ the current working directory, and should be run from that directory.
 The rescue DAG includes all the path information necessary to
 run each node job in the proper directory.
 
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:DAGConfig}Configuration}
+\subsection{Visualizing DAGs with \Prog{dot}}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{DAGMan!dot}
+\index{dot}
+\index{DAGMan!visualizing DAGs}
 
-Configuration macros for \Condor{dagman} can be specified in several
-ways:
-\begin{enumerate}
-\item
-In a Condor configuration file.
-\item
-With an environment variable (prepend "\_CONDOR\_" to the macro name).
-\item
-In a \Condor{dagman}-specific configuration file specified in the DAG
-file or on the \Condor{submit\_dag} command line.
-\item
-For some configuration macros, there is a corresponding \Condor{submit\_dag}
-command line flag (e.g., \MacroNI{DAGMAN\_MAX\_JOBS\_SUBMITTED}/\Arg{-maxjobs}).
-\end{enumerate}
+It can be helpful to see a picture of a DAG.
+DAGMan can assist you in visualizing a DAG by creating
+the input files used by the AT\&T Research Labs 
+\Prog{graphviz} package. 
+\Prog{dot} is a program within this package,
+available from \URL{http://www.graphviz.org/},
+and it is used to draw pictures of DAGs. 
 
-In the above list, configuration values specified later in the list
-override ones specified earlier (e.g., a value specified on the
-\Condor{submit\_dag} command line overrides corresponding values in any
-configuration file; a value specified in a DAGMan-specific configuration
-file overrides values specified in a general Condor configuration file).
+DAGMan produces one or more dot files as the result of
+an extra line
+in a DAGMan input file. 
+The line appears as
+%For example, to produce a single dot
+%file that shows the state of your DAG before any jobs are running, add
+%the following line:
+\begin{verbatim}
+    DOT dag.dot
+\end{verbatim}
 
-Non-\Condor{dagman}, non-daemoncore configuration macros in a
-\Condor{dagman}-specific configuration file are ignored.
+This creates a file called \File{dag.dot}.
+which contains
+a specification of the DAG before any jobs within the DAG
+are submitted to Condor.
+The \File{dag.dot} file is used to create a visualization
+of the DAG by using this file as input to \Prog{dot}.
+This example creates a Postscript file, with a visualization of the DAG:
 
-Only a single configuration file can be specified for a given
-\Condor{dagman} run.  For example, if one file is specified in a DAG,
-and a different file is specified on the \Condor{submit\_dag} command
-line, this is a fatal error at submit time.  The same is true if
-different configuration files are specified in multiple DAG files
-referenced in a single \Condor{submit\_dag} command.
+\begin{verbatim}
+    dot -Tps dag.dot -o dag.ps
+\end{verbatim}
 
-If multiple DAGs are run in a single \Condor{dagman} run, the
-configuration options specified in the \Condor{dagman} configuration
-file, if any, apply to all DAGs, even if some of the DAGs specify no
-configuration file.
+Within the DAGMan input file,
+the DOT command can take several optional parameters:
 
-Configuration variables relating to DAGMan may be found
-in section~\ref{sec:DAGMan-Config-File-Entries}.
+\begin{itemize}
 
+\item \Opt{UPDATE}  This will update the dot file every time a
+significant update happens. 
+
+\item \Opt{DONT-UPDATE} Creates a single dot file, when
+the DAGMan begins executing. This is the default if the parameter
+\Opt{UPDATE} is not used.
+
+\item \Opt{OVERWRITE} Overwrites the dot file each time it
+is created. This is the default, unless \Opt{DONT-OVERWRITE}
+is specified.
+
+\item \Opt{DONT-OVERWRITE} Used to create multiple dot files, instead
+of overwriting the single one specified.
+To create file names,
+DAGMan uses the name of the file concatenated a period and an
+integer. For example, the DAGMan input file line
+\begin{verbatim}
+    DOT dag.dot DONT-OVERWRITE
+\end{verbatim}
+causes files
+\File{dag.dot.0},
+\File{dag.dot.1},
+\File{dag.dot.2},
+etc. to be created.
+This option is
+most useful combined with the \Opt{UPDATE} option to
+visualize the history of the DAG after it has finished executing. 
+
+\item \OptArg{INCLUDE}{path-to-filename} Includes the contents
+of a file given by \File{path-to-filename} in the file produced by the
+\Opt{DOT} command.
+The include file contents are always placed after the line of
+the form
+\verb@label=@.
+This may be useful if further editing of the created files would
+be necessary,
+perhaps because you are automatically visualizing the DAG as it
+progresses. 
+
+\end{itemize}
+
+If conflicting parameters are used in a DOT command, the last one
+listed is used.
 \index{DAGMan|)}
