@@ -49,7 +49,7 @@ All Condor tools and daemons that need to communicate with the
 
 Sites that configure any checkpoint servers will introduce
 other fixed ports into their network.
-Each \Condor{cktp\_server} will listen to 4 fixed ports: 5651, 5652,
+Each \Condor{ckpt\_server} will listen to 4 fixed ports: 5651, 5652,
 5653, and 5654.
 There is currently no way to configure alternative values for any of
 these ports.
@@ -179,7 +179,7 @@ The configuration macros
 \MacroNI{HIGHPORT} and \MacroNI{LOWPORT} 
 will restrict dynamic ports to the range specified.
 The configuration variables are fully defined
-in section~\ref{sec:Condor-wide-Config-File-Entries}.
+in section~\ref{sec:Network-Related-Config-File-Entries}.
 All of these ports must be greater than 0 and less than 65,536.
 Note that both \MacroNI{HIGHPORT} and \MacroNI{LOWPORT} must be at 
 least 1024 for Condor version 6.6.8.

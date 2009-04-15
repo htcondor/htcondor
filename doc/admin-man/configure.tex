@@ -7560,26 +7560,27 @@ jobs within Condor.
 \label{param:DAGManOldRescue}
 \item[\Macro{DAGMAN\_OLD\_RESCUE}]
   A boolean value that controls whether \Condor{dagman} uses "old-style"
-  rescue DAG naming when creating a rescue DAG.  (With "old-style" rescue
-  DAG naming, if your DAG file is \File{my.dag}, the rescue DAG file will
-  be \File{my.dag.rescue}, and that file will be overwritten if you re-run
-  \File{my.dag} and it fails again.  With "new-style" rescue DAG naming,
+  rescue DAG naming when creating a rescue DAG.  With "old-style" rescue
+  DAG naming, if the DAG file is \File{my.dag}, then the rescue DAG file will
+  be \File{my.dag.rescue}, and that file will be overwritten if
+  \File{my.dag} is re-run and it fails again.
+  With "new-style" rescue DAG naming,
   the first time a rescue DAG is created for \File{my.dag}, it will be
   named \File{my.dag.rescue001},and subsequent failures of
   \File{my.dag} will produce rescue DAGs named \File{my.dag.rescue002},
-  \File{my.dag.rescue003}, etc.)
+  \File{my.dag.rescue003}, etc.
   If not defined, \MacroNI{DAGMAN\_OLD\_RESCUE} defaults to
-  \Expr{false}.
+  \Expr{False}.
 
 \label{param:DAGManAutoRescue}
 \item[\Macro{DAGMAN\_AUTO\_RESCUE}]
   A boolean value that controls whether \Condor{dagman} automatically
-  runs rescue DAGs.  If \MacroNI{DAGMAN\_AUTO\_RESCUE} is true and you
-  run the DAG file \File{my.dag}, if a rescue dag such as
-  \File{my.dag.rescue001}, \File{my.dag.rescue002}, etc., exists, the newest
-  (highest-numbered) such rescue DAG will be run.
-  If not defined, \MacroNI{DAGMAN\_AUTO\_RESCUE} defaults to
-  \Expr{true}.
+  runs rescue DAGs.  If \MacroNI{DAGMAN\_AUTO\_RESCUE} is \Expr{True}
+  and the DAG file \File{my.dag} is run,
+  if a rescue dag such as the examples \File{my.dag.rescue001} or
+  \File{my.dag.rescue002} exists, 
+  then the newest (highest-numbered) such rescue DAG will be run.
+  If not defined, \MacroNI{DAGMAN\_AUTO\_RESCUE} defaults to \Expr{True}.
 
   Note: having \MacroNI{DAGMAN\_OLD\_RESCUE} and
   \MacroNI{DAGMAN\_AUTO\_RESCUE} both set to \Expr{true} is a
@@ -7588,22 +7589,24 @@ jobs within Condor.
 \label{param:DAGManMaxRescueNum}
 \item[\Macro{DAGMAN\_MAX\_RESCUE\_NUM}]
   An integer value that controls the maximum "new-style" rescue DAG
-  number that will be written (if \MacroNI{DAGMAN\_OLD\_RESCUE} is
-  \Expr{false}) or run (if \MacroNI{DAGMAN\_AUTO\_RESCUE} is
-  \Expr{true}).  The maximum legal value is 999; the minimum value
-  is 0 (which will prevent a rescue DAG from being written at all,
-  or automatically run).  If not defined,
-  \MacroNI{DAGMAN\_MAX\_RESCUE\_NUM} defaults to 100.
+  number that will be written if \MacroNI{DAGMAN\_OLD\_RESCUE} is \Expr{False},
+  or run if \MacroNI{DAGMAN\_AUTO\_RESCUE} is \Expr{True}.
+  The maximum legal value is 999; the minimum value is 0
+  The minimum value will prevent a rescue DAG from being written at all,
+  or automatically run.
+  If not defined, \MacroNI{DAGMAN\_MAX\_RESCUE\_NUM} defaults to 100.
 
-\item[\Macro{DAGMAN\_COPY\_TO\_SPOOL}]
 \label{param:DAGManCopyToSpool}
-  A boolean value that controls whether the condor\_dagman binary
-  is copied to the spool directory when a DAG is submitted.  The main
-  reason for setting this value to \Expr{true} is if you have
-  long-running DAGs that should survive a DAGMan version upgrade.
-  If you run large numbers of small DAGs, you should leave this
-  macro unset (or set it to \Expr{false}).  If not defined,
-  \MacroNI{DAGMAN\_AUTO\_RESCUE} defaults to \Expr{false}.
+\item[\Macro{DAGMAN\_COPY\_TO\_SPOOL}]
+  A boolean value that controls whether the \Condor{dagman} binary
+  is copied to the spool directory when a DAG is submitted.
+  The main reason for setting this value to \Expr{True} is to allow
+  long-running DAGs to survive a \Condor{dagman} version upgrade.
+  If running large numbers of small DAGs,
+  leave this configuration variable unset,
+  or set it to the default value of \Expr{False}.
+  If not defined,
+  \MacroNI{DAGMAN\_AUTO\_RESCUE} defaults to \Expr{False}.
 
 \end{description}
 
