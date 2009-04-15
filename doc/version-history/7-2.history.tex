@@ -321,6 +321,16 @@ loop when searching through a corrupted history file.
 \item Fixed a bug in the user log reader code that could cause it to
   get into an inconsistent state after detecting missed events.
 
+\item Condor version 7.2.2 and previous releases do not support 
+  communication with Condor 7.3.x daemons using the new 7.3.x
+  configuration variables \MacroNI{CCB\_ADDRESS} or
+  \MacroNI{PRIVATE\_NETWORK\_NAME}.
+  The version 7.2.2 \Condor{collector} daemon now
+  recognizes when it is receiving ClassAds from such daemons,
+  and it will reject them.
+  In prior versions, Condor would accept the ClassAds,
+  but attempts to use them led to unexpected behavior.
+
 \end{itemize}
 
 \noindent Known Bugs:
