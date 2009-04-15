@@ -57,6 +57,7 @@ email_open( const char *email_addr, const char *subject )
 {
 	char *Mailer;
 	char *SmtpServer = NULL;
+	char *FromAddress = NULL;
 	char *FinalSubject;
 	char *FinalAddr;
 	char *temp;
@@ -85,6 +86,10 @@ email_open( const char *email_addr, const char *subject )
 		FinalSubject = strdup(EMAIL_SUBJECT_PROLOG);
 	}
 
+	/** The following will not cause a fatal error, it just means
+		that on Windows we may construct an invalid "from" address. */
+	FromAddress = param("MAIL_FROM");
+	
 #ifdef WIN32
 	/* On WinNT, we need to be given an SMTP server, and we must pass
 	 * this servername to the Mailer with a -relay option.
@@ -94,6 +99,7 @@ email_open( const char *email_addr, const char *subject )
 			"Trying to email, but SMTP_SERVER not specified in config file\n");
 		free(Mailer);
 		free(FinalSubject);
+		if (FromAddress) free(FromAddress);
 		return NULL;
 	}
 #endif 	
@@ -111,6 +117,7 @@ email_open( const char *email_addr, const char *subject )
 				"Trying to email, but CONDOR_ADMIN not specified in config file\n");
 			free(Mailer);
 			free(FinalSubject);
+			if (FromAddress) free(FromAddress);
 			if (SmtpServer) free(SmtpServer);
 			return NULL;
 		}
@@ -136,13 +143,14 @@ email_open( const char *email_addr, const char *subject )
 		dprintf(D_FULLDEBUG, "Trying to email, but address list is empty\n");
 		free(Mailer);
 		free(FinalSubject);
+		if (FromAddress) free(FromAddress);
 		if (SmtpServer) free(SmtpServer);
 		free(FinalAddr);
 		return NULL;
 	}
 
 	/* construct the argument vector for the mailer */
-	final_args = malloc((6 + num_addresses) * sizeof(char*));
+	final_args = malloc((8 + num_addresses) * sizeof(char*));
 	if (final_args == NULL) {
 		EXCEPT("Out of memory");
 	}
@@ -150,6 +158,10 @@ email_open( const char *email_addr, const char *subject )
 	final_args[arg_index++] = Mailer;
 	final_args[arg_index++] = "-s";
 	final_args[arg_index++] = FinalSubject;
+	if (FromAddress) {
+		final_args[arg_index++] = "-f";
+		final_args[arg_index++] = FromAddress;
+	}
 	if (SmtpServer) {
 		final_args[arg_index++] = "-relay";
 		final_args[arg_index++] = SmtpServer;
@@ -180,8 +192,8 @@ email_open( const char *email_addr, const char *subject )
 	/* free up everything we strdup-ed and param-ed, and return result */
 	free(Mailer);
 	free(FinalSubject);
-	if (SmtpServer)
-		free(SmtpServer);
+	if (FromAddress) free(FromAddress);
+	if (SmtpServer) free(SmtpServer);
 	free(FinalAddr);
 	free(final_args);
 

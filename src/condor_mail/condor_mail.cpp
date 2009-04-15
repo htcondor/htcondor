@@ -41,6 +41,8 @@ int main(array<System::String ^> ^args) {
 		for (int i = 0; i < args->Length; i++) {
 			if (args[i]->CompareTo("-s") == 0) {
 				subject = args[++i];
+			} else if (args[i]->CompareTo("-f") == 0) {
+				from = args[++i];
 			} else if (args[i]->CompareTo("-relay") == 0) {
 				relay = args[++i];
 			} else {
@@ -59,8 +61,10 @@ int main(array<System::String ^> ^args) {
 		System::Console::Error->WriteLine("usage:  condor_mail [-s subject] [-relay relayhost] recipient ...");				
 		Environment::Exit(2);
 	}
-			
-	from = Username() + "@" + Dns::GetHostName();
+
+	if (from->CompareTo("unknown") == 0) {
+		from = Username() + "@" + Dns::GetHostName();
+	}
 			
 	MailMessage^ msg = gcnew MailMessage();
 	msg->From = gcnew MailAddress(from);
