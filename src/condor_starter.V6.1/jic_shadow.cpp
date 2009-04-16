@@ -1109,6 +1109,7 @@ JICShadow::initUserPriv( void )
 			// If "VM_UNIV_NOBODY_USER" is defined in Condor configuration file, 
 			// we will use it. 
         	nobody_user = param("VM_UNIV_NOBODY_USER");
+			sprintf( paramer, "VM_UNIV_NOBODY_USER" );
 			if( nobody_user == NULL ) {
 				// "VM_UNIV_NOBODY_USER" is NOT defined.
 				// Next, we will try to use SLOTx_VMUSER
