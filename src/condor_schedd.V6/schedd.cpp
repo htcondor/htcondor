@@ -4490,7 +4490,7 @@ Scheduler::actOnJobMyselfHandler( ServiceData* data )
 	case JA_HOLD_JOBS:
 	case JA_REMOVE_JOBS:
 	case JA_VACATE_JOBS:
-	case JA_VACATE_FAST_JOBS:
+	case JA_VACATE_FAST_JOBS: {
 		abort_job_myself( job_id, action, true, notify );		
 #ifdef WIN32
 			/*	This is a small patch so when DAGMan jobs are removed
@@ -4514,20 +4514,20 @@ Scheduler::actOnJobMyselfHandler( ServiceData* data )
 		}
 #endif
 		break;
-
-	case JA_RELEASE_JOBS:
+    }
+	case JA_RELEASE_JOBS: {
 		WriteReleaseToUserLog( job_id );
 		needReschedule();
 		break;
-
-	case JA_REMOVE_X_JOBS:
+    }
+	case JA_REMOVE_X_JOBS: {
 		if( !scheduler.WriteAbortToUserLog( job_id ) ) {
 			dprintf( D_ALWAYS, 
 					 "Failed to write abort event to the user log\n" ); 
 		}
 		DestroyProc( job_id.cluster, job_id.proc );
 		break;
-
+    }
 	case JA_ERROR:
 	default:
 		EXCEPT( "impossible: unknown action (%d) at the end of actOnJobs()",
