@@ -35,16 +35,17 @@ The result of configuration is a list of key/value pairs.
 Each key is a configuration variable name,
 and each value is a string literal
 that may utilize macro substitution (as defined below).
-Note that the string literal value portion of a pair is not an expression,
-and therefore it is not evaluated.
-Those configuration variables that express the policy for
-starting and stopping of jobs appear as expressions in the
-configuration file.
-However, these expressions (for configuration) are string literals.
-At appropriate times,
-Condor daemons and tools use these strings as expressions,
-parsing them in order to do evaluation.
+Some configuration variables are evaluated by Condor as ClassAd
+expressions; some are not.  Consult the documentation for each specific
+case.  Unless otherwise noted, configuration values that are expected
+to be numeric or boolean constants may be any valid ClassAd expression
+of operators on constants.  Example:
 
+\begin{verbatim}
+MINUTE          = 60
+HOUR            = (60 * $(MINUTE))
+SHUTDOWN_GRACEFUL_TIMEOUT = ($(HOUR)*24)
+\end{verbatim}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Ordering-Config-File}Ordered Evaluation to

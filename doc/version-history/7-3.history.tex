@@ -56,6 +56,18 @@ reads the job queue log file.
 stopped via \Condor{rm}, \Condor{hold}, \Condor{vacate\_job},
 and during a graceful shutdown of the \Condor{schedd} daemon.
 
+\item In the configuration file, Condor now accepts expressions for
+the values of configuration parameters that are required to be numbers
+or boolean constants.  Note that this does not imply that the
+expressions may freely reference ClassAd values in places where they
+could not before.  Unless otherwise noted, the expressions are limited
+to operations on constants and macro substitutions that evaluate to
+constants.  Example:
+
+\begin{verbatim}
+SHUTDOWN_GRACEFUL_TIMEOUT = ($(HOUR)*24)
+\end{verbatim}
+
 \end{itemize}
 
 \noindent Configuration Variable Additions and Changes:
