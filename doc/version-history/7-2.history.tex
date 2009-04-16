@@ -113,10 +113,10 @@ and \Condor{submit\_dag}.  This flag is intended mainly for testing.
   \MacroNI{PREEMPTION\_RANK} will not change within
   a negotiation interval.
 
-\item Added \MacroNI{OFFLINE\_LOG} and \MacroNI{OFFLINE\_EXPIRE\_ADS\_AFTER}
-  configuration options.  They control where off-line (or hibernating) machine
-  ads are stored persistently, and the lifetime of each persistent ad,
-  respectively.
+\item The new configuration variables \Macro{OFFLINE\_LOG}
+  and \Macro{OFFLINE\_EXPIRE\_ADS\_AFTER} specify the location of
+  persistent machine ClassAds for hibernating machines,
+  as well as the lifetime of the persistent ClassAds.
 
 \end{itemize}
 
@@ -294,10 +294,8 @@ loop when searching through a corrupted history file.
 with the \Opt{environment} submit description file command override values from
 the submittor's environment, as imported with \Opt{getenv = True}.
 
-\item Added a few definitions and a new sub-section to the Green 
-  Computing documentation. The new section, as well as the definitions,
-  pertain to the handling of hibernating machines.  They explain how
-  to keep track of hibernating machines in the Collector.
+\item Added new information to the section on Power Management
+  pertaining to the handling of hibernating machines.
   
 
 \end{itemize}
