@@ -4837,7 +4837,8 @@ These macros control the \Condor{schedd}.
   During graceful shutdown, this macro determines the wait time in
   between requesting each \Condor{shadow} daemon to gracefully shut down.  
   It is defined in terms of seconds and defaults to 0, which means jobs
-  will be stopped as fast as possible.
+  will be stopped as fast as possible.  These settings do not apply to grid
+  or scheduler universe jobs.
 
 \label{param:JobIsFinishedInterval}
 \item[\Macro{JOB\_IS\_FINISHED\_INTERVAL}]

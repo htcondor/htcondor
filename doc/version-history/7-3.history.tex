@@ -84,7 +84,8 @@ This limits the rate at which jobs are stopped via \Condor{rm},
 the \Condor{schedd} daemon.  The average rate is limited to
 \MacroNI{JOB\_STOP\_COUNT}/\MacroNI{JOB\_STOP\_DELAY} jobs/second.
 The special value \MacroNI{JOB\_STOP\_DELAY}=0 indicates no limit;
-this is the default.
+this is the default.  These settings do not apply to grid or scheduler
+universe jobs.
 
 \end{itemize}
 
