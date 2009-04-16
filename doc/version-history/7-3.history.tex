@@ -52,6 +52,10 @@ reads the job queue log file.
   can be used by the application to determine the number of events
   missed when missed events are detected.
 
+\item Added the ability to throttle the rate at which jobs are
+stopped via \Condor{rm}, \Condor{hold}, \Condor{vacate\_job},
+and during a graceful shutdown of the \Condor{schedd} daemon.
+
 \end{itemize}
 
 \noindent Configuration Variable Additions and Changes:
@@ -61,6 +65,14 @@ reads the job queue log file.
 \item Added \Macro{UPDATE\_OFFSET} to cause the \Condor{startd} to
   delay the initial (and all further) updates that it sends to the
   \Condor{collector}.  See \ref{param:UpdateOffset} for more details.
+
+\item Added \Macro{JOB\_STOP\_COUNT} and \Macro{JOB\_STOP\_DELAY}.
+This limits the rate at which jobs are stopped via \Condor{rm},
+\Condor{hold}, \Condor{vacate\_job}, and during a graceful shutdown of
+the \Condor{schedd} daemon.  The average rate is limited to
+\MacroNI{JOB\_STOP\_COUNT}/\MacroNI{JOB\_STOP\_DELAY} jobs/second.
+The special value \MacroNI{JOB\_STOP\_DELAY}=0 indicates no limit;
+this is the default.
 
 \end{itemize}
 

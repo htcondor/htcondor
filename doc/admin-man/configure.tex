@@ -4800,13 +4800,9 @@ These macros control the \Condor{schedd}.
   The resulting job start rate
   averages as fast as
   (\MacroUNI{JOB\_START\_COUNT}/\MacroUNI{JOB\_START\_DELAY}) jobs/second.
-  This configuration variable is also used during the graceful shutdown of the
-  \Condor{schedd} daemon.
-  During graceful shutdown, this macro determines the wait time in
-  between requesting each \Condor{shadow} daemon to gracefully shut down.  
-  It is defined in terms of seconds and defaults to 0, which means jobs
-  will be started as fast as possible.  If you wish to throttle the rate
-  of specific types of jobs, you can use the job attribute
+  This setting is defined in terms of seconds and defaults to 0, which means
+  jobs will be started as fast as possible.  If you wish to throttle
+  the rate of specific types of jobs, you can use the job attribute
   \AdAttr{NextJobStartDelay}.
 
 \label{param:MaxNextJobStartDelay}
@@ -4814,6 +4810,33 @@ These macros control the \Condor{schedd}.
   An integer number of seconds representing the maximum allowed value
   of the job ClassAd attribute \AdAttr{NextJobStartDelay}.  It defaults to 600,
   which is 10 minutes.
+
+\label{param:JobStopCount}
+\item[\Macro{JOB\_STOP\_COUNT}]
+  This macro works together with the \Macro{JOB\_STOP\_DELAY} macro to
+  throttle the rate at which jobs are stopped via \Condor{rm}, \Condor{hold},
+  or \Condor{vacate\_job}.  The default and minimum values for this
+  integer configuration variable are both 1.
+
+\label{param:JobStopDelay}
+\item[\Macro{JOB\_STOP\_DELAY}]
+  This integer-valued macro works together with the
+  \Macro{JOB\_STOP\_COUNT} macro
+  to throttle the rate at which jobs are stopping via \Condor{rm},
+  \Condor{hold}, or \Condor{vacate\_job}.  The  \Condor{schedd} daemon stops
+  \MacroUNI{JOB\_STOP\_COUNT} jobs at a time, then delays for
+  \MacroUNI{JOB\_STOP\_DELAY} seconds before stoping the next set of jobs.
+  This delay prevents a sudden, large load on resources required by
+  the jobs when they are terminating.
+  The resulting job stop rate
+  averages as fast as
+  (\MacroUNI{JOB\_STOP\_COUNT}/\MacroUNI{JOB\_STOP\_DELAY}) jobs/second.
+  This configuration variable is also used during the graceful shutdown of the
+  \Condor{schedd} daemon.
+  During graceful shutdown, this macro determines the wait time in
+  between requesting each \Condor{shadow} daemon to gracefully shut down.  
+  It is defined in terms of seconds and defaults to 0, which means jobs
+  will be stopped as fast as possible.
 
 \label{param:JobIsFinishedInterval}
 \item[\Macro{JOB\_IS\_FINISHED\_INTERVAL}]
