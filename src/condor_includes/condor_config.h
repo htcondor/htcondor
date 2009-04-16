@@ -105,13 +105,17 @@ class ParamValue {
 					   int min_value = INT_MIN, int max_value = INT_MAX );
 	// Alternate param_integer():
 	bool param_integer( const char *name, int &value,
-						bool use_default, int default_value,
-						bool check_ranges = true,
-						int min_value = INT_MIN, int max_value = INT_MAX );
-    double param_double( const char *name, double default_value,
-					   double min_value = DBL_MIN, double max_value = DBL_MAX );
-	bool param_boolean( const char *name, const bool default_value, bool do_log = true );
-	bool param_boolean_expr( const char *name, bool default_value, ClassAd const *me, ClassAd const *target );
+                        bool use_default, int default_value,
+                        bool check_ranges, int min_value, int max_value,
+                        ClassAd *me=NULL, ClassAd *target=NULL );
+
+	double param_double(const char *name, double default_value,
+                        double min_value = DBL_MIN, double max_value = DBL_MAX,
+                        ClassAd *me=NULL, ClassAd *target=NULL );
+
+	bool param_boolean( const char *name, const bool default_value,
+                        bool do_log = true,
+						ClassAd *me=NULL, ClassAd *target=NULL );
 	bool param_get_location(const char *parameter, MyString &filename,
 							int &line_number);
 

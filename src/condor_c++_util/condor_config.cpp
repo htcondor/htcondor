@@ -1429,7 +1429,8 @@ param( const char *name )
 bool
 param_integer( const char *name, int &value,
 			   bool use_default, int default_value,
-			   bool check_ranges, int min_value, int max_value )
+			   bool check_ranges, int min_value, int max_value,
+			   ClassAd *me, ClassAd *target )
 {
 	int result;
 	long long_result;
@@ -1459,12 +1460,32 @@ param_integer( const char *name, int &value,
 	bool valid = (endptr != string && *endptr == '\0');
 
 	if( !valid ) {
-		EXCEPT( "%s in the condor configuration is not an integer (%s)."
-		        "  Please set it to an integer in the range %d to %d"
-		        " (default %d).",
-		        name, string, min_value, max_value, default_value );
+		// For efficiency, we first tried to read the value as a
+		// simple literal.  Since that didn't work, now try parsing it
+		// as an expression.
+		ClassAd rhs;
+		if( me ) {
+			rhs = *me;
+		}
+		if( !rhs.AssignExpr( name, string ) ) {
+			EXCEPT("Invalid expression for %s (%s) "
+				   "in condor configuration.  Please set it to "
+				   "an integer expression in the range %d to %d "
+				   "(default %d).",
+				   name,string,min_value,max_value,default_value);
+		}
+
+		if( !rhs.EvalInteger(name,target,result) ) {
+			EXCEPT("Invalid result (not an integer) for %s (%s) "
+				   "in condor configuration.  Please set it to "
+				   "an integer expression in the range %d to %d "
+				   "(default %d).",
+				   name,string,min_value,max_value,default_value);
+		}
+		long_result = result;
 	}
-	else if( (long)result != long_result ) {
+
+	if( (long)result != long_result ) {
 		EXCEPT( "%s in the condor configuration is out of bounds for"
 				" an integer (%s)."
 				"  Please set it to an integer in the range %d to %d"
@@ -1537,7 +1558,8 @@ char* param_or_except(const char *attr)
 
 double
 param_double( const char *name, double default_value,
-			   double min_value, double max_value )
+			  double min_value, double max_value,
+			  ClassAd *me, ClassAd *target )
 {
 	double result;
 	char *string;
@@ -1560,24 +1582,44 @@ param_double( const char *name, double default_value,
 		}
 	}
 	bool valid = (endptr != string && *endptr == '\0');
-
 	if( !valid ) {
-		EXCEPT( "%s in the condor configuration is not a valid floating point number (%s)."
-		        "  Please set it to a number in the range %lg to %lg"
-		        " (default %lg).",
-		        name, string, min_value, max_value, default_value );
+		// For efficiency, we first tried to read the value as a
+		// simple literal.  Since that didn't work, now try parsing it
+		// as an expression.
+		ClassAd rhs;
+		float float_result;
+		if( me ) {
+			rhs = *me;
+		}
+		if( !rhs.AssignExpr( name, string ) ) {
+			EXCEPT("Invalid expression for %s (%s) "
+				   "in condor configuration.  Please set it to "
+				   "a numeric expression in the range %lg to %lg "
+				   "(default %lg).",
+				   name,string,min_value,max_value,default_value);
+		}
+
+		if( !rhs.EvalFloat(name,target,float_result) ) {
+			EXCEPT("Invalid result (not a number) for %s (%s) "
+				   "in condor configuration.  Please set it to "
+				   "a numeric expression in the range %lg to %lg "
+				   "(default %lg).",
+				   name,string,min_value,max_value,default_value);
+		}
+		result = float_result;
 	}
-	else if( result < min_value ) {
+
+	if( result < min_value ) {
 		EXCEPT( "%s in the condor configuration is too low (%s)."
-		        "  Please set it to a number in the range %lg to %lg"
-		        " (default %lg).",
-		        name, string, min_value, max_value, default_value );
+				"  Please set it to a number in the range %lg to %lg"
+				" (default %lg).",
+				name, string, min_value, max_value, default_value );
 	}
 	else if( result > max_value ) {
 		EXCEPT( "%s in the condor configuration is too high (%s)."
-		        "  Please set it to a number in the range %lg to %lg"
-		        " (default %lg).",
-		        name, string, min_value, max_value, default_value );
+				"  Please set it to a number in the range %lg to %lg"
+				" (default %lg).",
+				name, string, min_value, max_value, default_value );
 	}
 	free( string );
 	return result;
@@ -1592,7 +1634,8 @@ param_double( const char *name, double default_value,
 */
 
 bool
-param_boolean( const char *name, const bool default_value, bool do_log )
+param_boolean( const char *name, const bool default_value, bool do_log,
+			   ClassAd *me, ClassAd *target )
 {
 	bool result;
 	char *string;
@@ -1638,52 +1681,32 @@ param_boolean( const char *name, const bool default_value, bool do_log )
 	}
 
 	if( !valid ) {
-		EXCEPT( "%s in the condor configuration  is not a valid boolean (\"%s\")."
-		        "  Please set it to True or False (default is %s)",
-		        name, string, default_value ? "True" : "False" );
-	}
-
-	free( string );
-	
-	return result;
-}
-
-bool
-param_boolean_expr( const char *name, bool default_value, ClassAd const *me, ClassAd const *target )
-{
-	char *expr;
-	bool value = default_value;
-
-	ASSERT( name );
-	expr = param( name );
-	if( ! expr ) {
-		dprintf( D_CONFIG, "%s is undefined, using default value of %s\n",
-				 name, default_value ? "True" : "False" );
-		return default_value;
-	}
-
-	if( *expr ) {
+		// For efficiency, we first tried to read the value as a
+		// simple literal.  Since that didn't work, now try parsing it
+		// as an expression.
+		int int_value = default_value;
 		ClassAd rhs;
 		if( me ) {
 			rhs = *me;
 		}
 
-		if( !rhs.AssignExpr( name, expr ) ) {
-			EXCEPT("Invalid expression for %s (%s) in config file.",
-			       name, expr);
+		if( rhs.AssignExpr( name, string ) &&
+			rhs.EvalBool(name,target,int_value) )
+		{
+			result = (int_value != 0);
+			valid = true;
 		}
-
-		int int_value = value;
-		if( !rhs.EvalBool(name,target,int_value) ) {
-			EXCEPT("Invalid result (not a boolean) for %s (%s) "
-			       "in condor configuration.",
-			       name, expr );
-		}
-		value = (int_value != 0);
 	}
-	free( expr );
 
-	return value;
+	if( !valid ) {
+		EXCEPT( "%s in the condor configuration  is not a valid boolean (\"%s\")."
+				"  Please set it to True or False (default is %s)",
+				name, string, default_value ? "True" : "False" );
+	}
+
+	free( string );
+	
+	return result;
 }
 
 char *

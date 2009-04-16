@@ -85,14 +85,8 @@ int param_integer(const char *, int default_value, int, int)
 	return default_value;
 }
 
-bool param_boolean( const char *, const bool default_value )
+bool param_boolean( const char *, const bool default_value, bool, ClassAd *, ClassAd * )
 {
-	return default_value;
-}
-
-bool param_boolean( const char *, const bool default_value, bool do_log )
-{
-	(void) do_log;
 	return default_value;
 }
 
