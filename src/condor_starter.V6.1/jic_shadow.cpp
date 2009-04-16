@@ -1099,7 +1099,8 @@ JICShadow::initUserPriv( void )
 
        // first see if we define SLOTx_USER in the config file
         char *nobody_user = NULL;
-        char paramer[20];
+			// 20 is the longest param: len(VM_UNIV_NOBODY_USER) + 1
+        char nobody_param[20];
 		int slot = Starter->getMySlotNumber();
 		if( ! slot ) {
 			slot = 1;
@@ -1108,33 +1109,33 @@ JICShadow::initUserPriv( void )
 		if( job_universe == CONDOR_UNIVERSE_VM ) {
 			// If "VM_UNIV_NOBODY_USER" is defined in Condor configuration file, 
 			// we will use it. 
-        	nobody_user = param("VM_UNIV_NOBODY_USER");
-			sprintf( paramer, "VM_UNIV_NOBODY_USER" );
+			snprintf( nobody_param, 20, "VM_UNIV_NOBODY_USER" );
+			nobody_user = param(nobody_param);
 			if( nobody_user == NULL ) {
 				// "VM_UNIV_NOBODY_USER" is NOT defined.
 				// Next, we will try to use SLOTx_VMUSER
-				sprintf( paramer, "SLOT%d_VMUSER", slot );
-				nobody_user = param(paramer);
+				snprintf( nobody_param, 20, "SLOT%d_VMUSER", slot );
+				nobody_user = param(nobody_param);
 			}
 		}
 		if( nobody_user == NULL ) {
-			sprintf( paramer, "SLOT%d_USER", slot );
-			nobody_user = param(paramer);
+			snprintf( nobody_param, 20, "SLOT%d_USER", slot );
+			nobody_user = param(nobody_param);
 			if (!nobody_user && param_boolean("ALLOW_VM_CRUFT", true)) {
-				sprintf( paramer, "VM%d_USER", slot );
-				nobody_user = param(paramer);
+				snprintf( nobody_param, 20, "VM%d_USER", slot );
+				nobody_user = param(nobody_param);
 			}
 		}
 
         if ( nobody_user != NULL ) {
             if ( strcmp(nobody_user, "root") == MATCH ) {
                 dprintf(D_ALWAYS, "WARNING: %s set to root, which is not "
-                       "allowed. Ignoring.\n", paramer);
+                       "allowed. Ignoring.\n", nobody_param);
                 free(nobody_user);
                 nobody_user = strdup("nobody");
             } else {
                 dprintf(D_ALWAYS, "%s set, so running job as %s\n",
-                        paramer, nobody_user);
+                        nobody_param, nobody_user);
             }
         } else {
             nobody_user = strdup("nobody");
