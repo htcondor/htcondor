@@ -2159,7 +2159,11 @@ SetImageSize()
 		buffer.sprintf("%s = %s", ATTR_REQUEST_MEMORY, tmp);
 		free(tmp);
 	} else {
-		buffer.sprintf("%s = ceiling(%s/1024.0)", ATTR_REQUEST_MEMORY, ATTR_IMAGE_SIZE);
+		buffer.sprintf("%s = ceiling(ifThenElse(%s =!= UNDEFINED, %s, %s/1024.0))",
+					   ATTR_REQUEST_MEMORY,
+					   ATTR_JOB_VM_MEMORY,
+					   ATTR_JOB_VM_MEMORY,
+					   ATTR_IMAGE_SIZE);
 	}
 	InsertJobExpr(buffer);
 
