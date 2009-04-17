@@ -1595,7 +1595,12 @@ updateX509Proxy(int cmd, ReliSock * rsock, const char * path)
 	        path);
 
 	MyString tmp_path;
+#if defined(LINUX)
 	GLExecPrivSepHelper* gpsh = Starter->glexecPrivSepHelper();
+#else
+	// dummy for non-linux platforms.
+	int* gpsh = NULL;
+#endif
 	if (gpsh != NULL) {
 		// in glexec mode, we may not have permission to write the
 		// new proxy directly into the sandbox, so we stage it into
@@ -1638,6 +1643,7 @@ updateX509Proxy(int cmd, ReliSock * rsock, const char * path)
 		reply = 0; // == failure
 	} else {
 		if (gpsh != NULL) {
+#if defined(LINUX)
 			// use our glexec helper object, which will
 			// call out to GLExec
 			//
@@ -1647,6 +1653,9 @@ updateX509Proxy(int cmd, ReliSock * rsock, const char * path)
 			else {
 				reply = 0;
 			}
+#else
+			EXCEPT("not on a linux platform and encounterd GLEXEC code!");
+#endif
 		}
 		else {
 				// transfer worked, now rename the file to
