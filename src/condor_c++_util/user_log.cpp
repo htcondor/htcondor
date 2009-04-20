@@ -119,7 +119,7 @@ UserLog::~UserLog()
 	if (m_global_stat != NULL) delete m_global_stat;
 
 	if (m_rotation_lock_path) free(m_rotation_lock_path);
-	if (m_rotation_lock_fd) close(m_rotation_lock_fd);
+	if (m_rotation_lock_fd >= 0) close(m_rotation_lock_fd);
 	if (m_rotation_lock) delete m_rotation_lock;
 }
 
@@ -269,7 +269,7 @@ UserLog::Reset( void )
 	m_global_stat = NULL;
 
 	m_rotation_lock = NULL;
-	m_rotation_lock_fd = 0;
+	m_rotation_lock_fd = -1;
 	m_rotation_lock_path = NULL;
 
 	m_use_xml = XML_USERLOG_DEFAULT;
