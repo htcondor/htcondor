@@ -42,6 +42,7 @@ MyString Accountant::ResourceRecord="Resource.";
 
 MyString Accountant::PriorityAttr="Priority";
 MyString Accountant::ResourcesUsedAttr="ResourcesUsed";
+MyString Accountant::ResourcesUsedRWAttr="ResourcesUsedRW";
 MyString Accountant::UnchargedTimeAttr="UnchargedTime";
 MyString Accountant::AccumulatedUsageAttr="AccumulatedUsage";
 MyString Accountant::BeginUsageTimeAttr="BeginUsageTime";
@@ -54,7 +55,7 @@ MyString Accountant::RemoteUserAttr="RemoteUser";
 MyString Accountant::StartTimeAttr="StartTime";
 
 MyString Accountant::Cpus="Cpus";
-
+MyString Accountant::ResourceWeightAttr=ATTR_RESOURCE_WEIGHT;
 
 //------------------------------------------------------------------
 // Constructor - One time initialization
@@ -164,6 +165,8 @@ void Accountant::Initialize()
 
   DiscountSuspendedResources = param_boolean(
                              "NEGOTIATOR_DISCOUNT_SUSPENDED_RESOURCES",false);
+  UseResourceWeights = param_boolean("NEGOTIATOR_USE_RESOURCE_WEIGHTS",false);
+
 
   dprintf(D_ACCOUNTANT,"PRIORITY_HALFLIFE=%f\n",HalfLifePeriod);
   dprintf(D_ACCOUNTANT,"NICE_USER_PRIO_FACTOR=%f\n",NiceUserPriorityFactor);
@@ -269,6 +272,17 @@ int Accountant::GetResourcesUsed(const MyString& CustomerName)
   int ResourcesUsed=0;
   GetAttributeInt(CustomerRecord+CustomerName,ResourcesUsedAttr,ResourcesUsed);
   return ResourcesUsed;
+}
+
+//------------------------------------------------------------------
+// Return the number of resources used (floating point version)
+//------------------------------------------------------------------
+
+float Accountant::GetResourcesUsedFloat(const MyString& CustomerName) 
+{
+  float ResourcesUsedRW=0.0;
+  GetAttributeFloat(CustomerRecord+CustomerName,ResourcesUsedRWAttr,ResourcesUsedRW);
+  return ResourcesUsedRW;
 }
 
 //------------------------------------------------------------------
@@ -467,18 +481,22 @@ void Accountant::AddMatch(const MyString& CustomerName, ClassAd* ResourceAd)
   MyString ResourceName=GetResourceName(ResourceAd);
   time_t T=time(0);
 
-  // dprintf(D_ACCOUNTANT,"Accountant::AddMatch - CustomerName=%s, ResourceName=%s\n",CustomerName.Value(),ResourceName.Value());
+  dprintf(D_ACCOUNTANT,"Accountant::AddMatch - CustomerName=%s, ResourceName=%s\n",CustomerName.Value(),ResourceName.Value());
 
   // Check if the resource is used
   MyString RemoteUser;
   if (GetAttributeString(ResourceRecord+ResourceName,RemoteUserAttr,RemoteUser)) {
     if (CustomerName==RemoteUser) {
-      // dprintf(D_ACCOUNTANT,"Match already existed!\n");
+	  dprintf(D_ACCOUNTANT,"Match already existed!\n");
       return;
     }
     RemoveMatch(ResourceName,T);
   }
-  
+
+  float ResourceWeight=1.0;
+  if(ResourceAd->EvalFloat(ResourceWeightAttr.Value(),NULL,ResourceWeight) == 0) {
+	  ResourceWeight = 1.0;
+  }
 
   int ResourcesUsed=0;
   GetAttributeInt(CustomerRecord+CustomerName,ResourcesUsedAttr,ResourcesUsed);
@@ -489,6 +507,7 @@ void Accountant::AddMatch(const MyString& CustomerName, ClassAd* ResourceAd)
   bool update_group_info = false;
   MyString GroupName;
   int GroupResourcesUsed=0;
+  float GroupResourcesUsedRW = 0.0;
   int GroupUnchargedTime=0;
   if ( GroupNamesList ) {
 	  GroupName = CustomerName;
@@ -501,6 +520,7 @@ void Accountant::AddMatch(const MyString& CustomerName, ClassAd* ResourceAd)
 	  if ( pos != -1 && GroupNamesList->contains_anycase(GroupName.Value()) ) {
 			update_group_info = true;			
 			GetAttributeInt(CustomerRecord+GroupName,ResourcesUsedAttr,GroupResourcesUsed);
+			GetAttributeFloat(CustomerRecord+GroupName,ResourcesUsedRWAttr,GroupResourcesUsedRW);
 			GetAttributeInt(CustomerRecord+GroupName,UnchargedTimeAttr,GroupUnchargedTime);
 	  }
   }
@@ -521,14 +541,18 @@ void Accountant::AddMatch(const MyString& CustomerName, ClassAd* ResourceAd)
   // there is a group record to update
   if ( update_group_info ) {
 	  // Update customer's group resource usage count
+	  GroupResourcesUsedRW += ResourceWeight * cpusPerSlot;
 	  GroupResourcesUsed += cpusPerSlot;
+	  dprintf(D_ACCOUNTANT, "GroupResourcesUsedRW becomes: %.3f\n", GroupResourcesUsedRW);
+	  SetAttributeFloat(CustomerRecord+GroupName,ResourcesUsedRWAttr,GroupResourcesUsedRW);
 	  SetAttributeInt(CustomerRecord+GroupName,ResourcesUsedAttr,GroupResourcesUsed);
 	  // add negative "uncharged" time if match starts after last update 
 	  GroupUnchargedTime-=T-LastUpdateTime;
 	  SetAttributeInt(CustomerRecord+GroupName,UnchargedTimeAttr,GroupUnchargedTime);
+	  SetAttributeFloat(ResourceRecord+ResourceName,ResourceWeightAttr,ResourceWeight);
   }
 
-  // Set resource's info: user, and start-time
+  // Set reosurce's info: user, and start-time
   SetAttributeString(ResourceRecord+ResourceName,RemoteUserAttr,CustomerName);
   SetAttributeInt(ResourceRecord+ResourceName,Cpus,cpusPerSlot);
   SetAttributeInt(ResourceRecord+ResourceName,StartTimeAttr,T);
@@ -573,7 +597,9 @@ void Accountant::RemoveMatch(const MyString& ResourceName, time_t T)
 	bool update_group_info = false;
 	MyString GroupName;
 	int GroupResourcesUsed=0;
+	float GroupResourcesUsedRW=0.0;
 	int GroupUnchargedTime=0;
+	float ResourceWeight=1.0;
 	if ( GroupNamesList ) {
 	  GroupName = CustomerName;
 	  int pos = GroupName.FindChar('.');	// '.' is the group seperater
@@ -585,7 +611,12 @@ void Accountant::RemoveMatch(const MyString& ResourceName, time_t T)
 	  if ( pos != -1 && GroupNamesList->contains_anycase(GroupName.Value()) ) {
 			update_group_info = true;			
 			GetAttributeInt(CustomerRecord+GroupName,ResourcesUsedAttr,GroupResourcesUsed);
+			GetAttributeFloat(CustomerRecord+GroupName,ResourcesUsedRWAttr,GroupResourcesUsedRW);
 			GetAttributeInt(CustomerRecord+GroupName,UnchargedTimeAttr,GroupUnchargedTime);
+			GetAttributeFloat(ResourceRecord+ResourceName,ResourceWeightAttr,ResourceWeight);
+			if(ResourceWeight <= 0.0) {
+				ResourceWeight = 1.0;
+			}
 	  }
 	}
 
@@ -603,7 +634,16 @@ void Accountant::RemoveMatch(const MyString& ResourceName, time_t T)
 	if ( update_group_info ) {
 	  // Update customer's group resource usage count
       GroupResourcesUsed -= cpusPerSlot;
-	  if (GroupResourcesUsed < 0) GroupResourcesUsed = 0;
+      if (GroupResourcesUsed < 0) GroupResourcesUsed = 0;
+
+	  if (GroupResourcesUsedRW>0.0) { 
+	  	GroupResourcesUsedRW -= ResourceWeight;
+		if(GroupResourcesUsedRW < 0.0) {
+		  GroupResourcesUsedRW = 0.0;
+		}
+	  }
+	  SetAttributeFloat(CustomerRecord+GroupName,ResourcesUsedRWAttr,GroupResourcesUsedRW);
+
 	  SetAttributeInt(CustomerRecord+GroupName,ResourcesUsedAttr,GroupResourcesUsed);
 	  // update uncharged time
 	  GroupUnchargedTime+=T-StartTime;
@@ -691,6 +731,7 @@ void Accountant::UpdatePriorities()
   float AccumulatedUsage;
   float RecentUsage;
   int ResourcesUsed;
+  float ResourcesUsedRW;
   int BeginUsageTime;
 
   AcctLog->table.startIterations();
@@ -713,6 +754,7 @@ void Accountant::UpdatePriorities()
     if (ad->LookupFloat(AccumulatedUsageAttr.Value(),AccumulatedUsage)==0) AccumulatedUsage=0;
     if (ad->LookupInteger(BeginUsageTimeAttr.Value(),BeginUsageTime)==0) BeginUsageTime=0;
     if (ad->LookupInteger(ResourcesUsedAttr.Value(),ResourcesUsed)==0) ResourcesUsed=0;
+	if (ad->LookupFloat(ResourcesUsedRWAttr.Value(),ResourcesUsedRW)==0) ResourcesUsedRW=0.0;
 
     RecentUsage=float(ResourcesUsed)+float(UnchargedTime)/TimePassed;
     Priority=Priority*AgingFactor+RecentUsage*(1-AgingFactor);
@@ -732,7 +774,7 @@ void Accountant::UpdatePriorities()
 
 	AcctLog->CommitTransaction();
 	
-    dprintf(D_ACCOUNTANT,"CustomerName=%s , Old Priority=%5.3f , New Priority=%5.3f , ResourcesUsed=%d\n",key,OldPrio,Priority,ResourcesUsed);
+    dprintf(D_ACCOUNTANT,"CustomerName=%s , Old Priority=%5.3f , New Priority=%5.3f , ResourcesUsed=%d , ResourcesUsedRW=%f\n",key,OldPrio,Priority,ResourcesUsed,ResourcesUsedRW);
     dprintf(D_ACCOUNTANT,"RecentUsage=%8.3f, UnchargedTime=%d, AccumulatedUsage=%5.3f, BeginUsageTime=%d\n",RecentUsage,UnchargedTime,AccumulatedUsage,BeginUsageTime);
 
   }

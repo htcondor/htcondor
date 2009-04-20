@@ -488,6 +488,7 @@ const char *ATTR_REMOVE_KILL_SIG          = "RemoveKillSig";
 const char *ATTR_REMOVE_REASON            = "RemoveReason";
 const char *ATTR_REQUEUE_REASON           = "RequeueReason";
 const char *ATTR_REQUIREMENTS             = "Requirements";
+const char *ATTR_RESOURCE_WEIGHT          = "ResourceWeight";
 const char *ATTR_RESULT                   = "Result";
 const char *ATTR_RSC_BYTES_SENT			 = "RSCBytesSent";
 const char *ATTR_RSC_BYTES_RECVD			 = "RSCBytesRecvd";
