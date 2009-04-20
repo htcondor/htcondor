@@ -116,7 +116,7 @@ UserLog::~UserLog()
 	if (m_global_lock) delete m_global_lock;
 	if (m_global_fp != NULL) fclose(m_global_fp);
 	if (m_global_uniq_base != NULL) free( m_global_uniq_base );
-	if (m_global_stat != NULL) free( m_global_stat );
+	if (m_global_stat != NULL) delete m_global_stat;
 
 	if (m_rotation_lock_path) free(m_rotation_lock_path);
 	if (m_rotation_lock_fd) close(m_rotation_lock_fd);
