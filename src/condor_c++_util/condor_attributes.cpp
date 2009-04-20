@@ -500,6 +500,7 @@ const char *ATTR_MY_ADDRESS               = "MyAddress";
 const char *ATTR_SCHEDD_INTERVAL		= "ScheddInterval";
 const char *ATTR_SCHEDD_IP_ADDR           = "ScheddIpAddr";
 const char *ATTR_SCHEDD_NAME				 = "ScheddName";
+const char *ATTR_SCHEDD_SWAP_EXHAUSTED		= "ScheddSwapExhausted";
 const char *ATTR_SCHEDULER				 = "Scheduler";
 const char *ATTR_SHADOW_WAIT_FOR_DEBUG    = "ShadowWaitForDebug";
 const char *ATTR_SLOT_ID				 = "SlotID";

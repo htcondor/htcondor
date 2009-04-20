@@ -436,6 +436,7 @@ extern const char * ATTR_RUNNING_COD_JOB;
 extern const char * ATTR_RUN_BENCHMARKS;
 extern const char * ATTR_SHADOW_IP_ADDR;
 extern const char * ATTR_MY_ADDRESS;
+extern const char * ATTR_SCHEDD_SWAP_EXHAUSTED;
 extern const char * ATTR_SCHEDD_INTERVAL;
 extern const char * ATTR_SCHEDD_IP_ADDR;
 extern const char * ATTR_SCHEDD_NAME;
