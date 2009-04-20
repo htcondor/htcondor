@@ -1415,13 +1415,12 @@ int DaemonCore::Cancel_Socket( Stream* insock)
 	if ( curr_dataptr == &( (*sockTable)[i].data_ptr) )
 		curr_dataptr = NULL;
 
-	// Log a message
-	dprintf(D_DAEMONCORE,"Cancel_Socket: cancelled socket %d <%s> %p\n",
-			i,(*sockTable)[i].iosock_descrip, (*sockTable)[i].iosock );
-
 	if ((*sockTable)[i].servicing_tid == 0 ||
 		(*sockTable)[i].servicing_tid == CondorThreads::get_handle()->get_tid())
 	{
+		// Log a message
+		dprintf(D_DAEMONCORE,"Cancel_Socket: cancelled socket %d <%s> %p\n",
+				i,(*sockTable)[i].iosock_descrip, (*sockTable)[i].iosock );
 		// Remove entry; mark it is available for next add via iosock=NULL
 		(*sockTable)[i].iosock = NULL;
 		free_descrip( (*sockTable)[i].iosock_descrip );
@@ -1433,8 +1432,10 @@ int DaemonCore::Cancel_Socket( Stream* insock)
 			nSock--;            
 		}
 	} else {
+		// Log a message
+		dprintf(D_DAEMONCORE,"Cancel_Socket: deferred cancel socket %d <%s> %p\n",
+				i,(*sockTable)[i].iosock_descrip, (*sockTable)[i].iosock );
 		(*sockTable)[i].remove_asap = true;
-		EXCEPT(" TODD FIX ME!! ");
 	}
 	
 	DumpSocketTable(D_FULLDEBUG | D_DAEMONCORE);
@@ -3126,16 +3127,18 @@ DaemonCore::CallSocketHandler( int &i, bool default_to_HandleCommand )
 				return;
 		}
 	} else {
-		if (insock->type() == Stream::reli_sock ) {
-			set_service_tid = true;
-		}
+		set_service_tid = true;
 	}
 	args->i = i;
 	args->default_to_HandleCommand = default_to_HandleCommand;
-	int newtid = CondorThreads::pool_add(DaemonCore::CallSocketHandler_worker_demarshall,args);
+	int* pTid = NULL;
 	if ( set_service_tid ) {
-		(*sockTable)[i].servicing_tid = newtid;
+		// setup pointer (pTid) to pass to pool_add - thus servicing_tid will be
+		// set to the tid value BEFORE pool_add() yields.
+		pTid = &((*sockTable)[i].servicing_tid);
 	}
+	CondorThreads::pool_add(DaemonCore::CallSocketHandler_worker_demarshall,args,
+								pTid,(*sockTable)[i].handler_descrip);
 }
 
 void
@@ -3215,16 +3218,17 @@ DaemonCore::CallSocketHandler_worker( int i, bool default_to_HandleCommand, Stre
 			// cancel the socket handler
 		Cancel_Socket( (*sockTable)[i].iosock );
 	} else {
-			// in this case, we are keeping the socket around.
-			// so if this tid has it marked as being serviced,
-			// reset the servicing_tid to 0 to signify we done operating
-			// with the socket for the moment.
-		if ( (*sockTable)[i].servicing_tid  &&
-			 (*sockTable)[i].servicing_tid == CondorThreads::get_handle()->get_tid() ) 
+		// in this case, we are keeping the socket around.
+		// so if this tid has it marked as being serviced,
+		// reset the servicing_tid to 0 to signify we done operating
+		// with the socket for the moment.
+		if ( (*sockTable)[i].servicing_tid &&
+			 (*sockTable)[i].servicing_tid == 
+				CondorThreads::get_handle()->get_tid() ) 
 		{
-			(*sockTable)[i].servicing_tid = 0;
-			// need to potentially add this sock to select
-			daemonCore->Wake_up_select();	
+				(*sockTable)[i].servicing_tid = 0;
+				// need to potentially add this sock to select
+				daemonCore->Wake_up_select();	
 		}
 	}
 }

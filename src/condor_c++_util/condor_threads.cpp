@@ -233,7 +233,7 @@ WorkerThread::WorkerThread()
 	status_ = THREAD_UNBORN;
 }
 
-WorkerThread::WorkerThread(char* name, condor_thread_func_t routine, void* arg)
+WorkerThread::WorkerThread(const char* name, condor_thread_func_t routine, void* arg)
 {
 	name_ = NULL;
 	routine_ = NULL;
@@ -263,7 +263,7 @@ WorkerThread::~WorkerThread()
 }
 
 WorkerThreadPtr_t 
-WorkerThread::create(char* name, condor_thread_func_t routine, void* arg )
+WorkerThread::create(const char* name, condor_thread_func_t routine, void* arg )
 {
 	WorkerThread* newthread_rawptr = new WorkerThread(name,routine,arg);
 	ASSERT(newthread_rawptr);
@@ -482,7 +482,8 @@ ThreadImplementation::mutex_handle_unlock()
 }
 
 int
-ThreadImplementation::pool_add(condor_thread_func_t routine, void *arg)
+ThreadImplementation::pool_add(condor_thread_func_t routine, void* arg,
+		int* pTid, const char* pDescrip)
 {
 	// no need to grab the big_lock here, we should already have it!
 	// ASSERT big_lock ?
@@ -493,7 +494,8 @@ ThreadImplementation::pool_add(condor_thread_func_t routine, void *arg)
 	}
 
 
-	WorkerThreadPtr_t newthread = WorkerThread::create("FOO",routine,arg);
+	WorkerThreadPtr_t newthread = 
+		WorkerThread::create(pDescrip ? pDescrip : "Unnamed",routine,arg);
 
 	// Generate a tid (task id) not currently in use.
 	mutex_handle_lock();
@@ -506,6 +508,9 @@ ThreadImplementation::pool_add(condor_thread_func_t routine, void *arg)
 	mutex_handle_unlock();
 	
 	newthread->tid_ = mytid;
+	if (pTid) {
+		*pTid = mytid;
+	}
 
 	// Queue up the work
 	work_queue.enqueue(newthread);
@@ -862,7 +867,7 @@ int ThreadImplementation::pool_init()
 	return -1;
 }
 
-int ThreadImplementation::pool_add(condor_thread_func_t , void *)
+int ThreadImplementation::pool_add(condor_thread_func_t , void *, int *, const char *)
 {
 	return -1;
 }
@@ -915,18 +920,22 @@ CondorThreads::pool_size()
 }
 
 int 
-CondorThreads::pool_add(condor_thread_func_t routine, void *arg)
+CondorThreads::pool_add(condor_thread_func_t routine, void* arg, int* tid,
+				const char* descrip)
 {
 
 	// If we are using threads, call implementation.
 	// If no threads, then just call the routine right now.
 
 	if ( !TI ) {
+		if ( tid )  {
+			*tid = 0;
+		}
 		(*(routine))(arg);	// call routine directly
 		return 0;
 	}
 
-	return TI->pool_add(routine,arg);
+	return TI->pool_add(routine,arg,tid,descrip);
 }
 
 int

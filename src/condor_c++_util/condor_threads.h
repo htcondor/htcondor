@@ -69,7 +69,7 @@ public:
 		THREAD_COMPLETED	// all done; the start routine returned
 	};
 
-	static WorkerThreadPtr_t create(char* name, condor_thread_func_t routine, void* arg = NULL);
+	static WorkerThreadPtr_t create(const char* name, condor_thread_func_t routine, void* arg = NULL);
 	bool enable_parallel(bool flag) {bool ret=enable_parallel_flag_; enable_parallel_flag_=flag; return ret;}
 	thread_status_t get_status() { return status_; }
 	static const char* get_status_string(thread_status_t status);
@@ -85,7 +85,7 @@ private:
 	// Ctors are private since only the ThreadImplementation class
 	// should create WorkerThread objects.
 	WorkerThread();
-	WorkerThread(char* name, condor_thread_func_t routine, void* arg = NULL);	
+	WorkerThread(const char* name, condor_thread_func_t routine, void* arg = NULL);	
 	void set_status(thread_status_t status);
 	condor_thread_func_t routine_;
 	void *arg_;	// will NOT be deleted
@@ -100,7 +100,8 @@ class CondorThreads
 {
 public:
 	static int pool_init();
-	static int pool_add(condor_thread_func_t routine, void *arg);
+	static int pool_add(condor_thread_func_t routine, void* arg, 
+			int* tid=NULL, const char* descrip=NULL);
 	static int pool_size();
 
 	static const WorkerThreadPtr_t get_handle(int tid = 0);
