@@ -419,6 +419,7 @@ foreach my $arg ( @ARGV ) {
 		exit(1);
     }
 }
+$#ARGV = -1;
 if ( !exists $settings{name} ) {
     usage( );
     exit(1);
@@ -719,7 +720,7 @@ else {
 
 
 my @valgrind = ( "valgrind", "--tool=memcheck", "--num-callers=24",
-				 "-v", "-v", "--leak-check=full" );
+				 "-v", "-v", "--leak-check=full", "--track-fds=yes" );
 
 my $start = time( );
 my $timestr = localtime($start);
@@ -1260,6 +1261,45 @@ sub CheckValgrind( $$ )
 					if ( int($1) > 0 ) {
 						$leaks++;
 						$errors++;
+					}
+				}
+			}
+			if ( $settings{verbose}  or  $leaks ) {
+				if ( !$dumped ) {
+					print "$full:\n";
+					$dumped++;
+				}
+				foreach $_ ( @lines ) {
+					print "  $_";
+				}
+			}
+		}
+
+		elsif ( /FILE DESCRIPTORS: (\d+) open/ ) {
+			my $open_fds = $1;
+			my @lines = ( $_ );
+			my @files;
+			my $leaks = 0;
+			while ( ($open_fds > 0) && (<VG>) ) {
+				if ( /Open file descriptor (\d+):(.*)/ ) {
+					push( @lines, $_ );
+					$open_fds--;
+					my $fd   = $1; chomp($fd);
+					my $file = $2; chomp($file);
+					$_ = <VG>;
+					if ( ! $_ ) {
+						print "End of file!\n";
+						last;
+					}
+					push( @lines, $_ );
+					if ( /inherited from parent/ ) {
+						next;
+					}
+					else {
+						$leaks++;
+					}
+					if ( len($file) ) {
+						push( @files, "$fd=$file" );
 					}
 				}
 			}

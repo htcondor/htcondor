@@ -129,6 +129,7 @@ public:
 
 	ULogEvent *GenEvent( void );
 	ULogEvent *GenEvent( ULogEventNumber );
+	ULogEvent *GenEventRandom( void );
 
 	bool WriteEvent( UserLog &log );
 
@@ -236,7 +237,8 @@ main(int argc, const char **argv)
 							opts.m_cluster, opts.m_proc, opts.m_subproc,
 							opts.m_isXml );
 		int		max_proc = opts.m_proc + opts.m_numProcs - 1;
-		for( int proc = opts.m_proc; proc <= max_proc; proc++ ) {
+		for( int proc = opts.m_proc;
+			 ( (opts.m_numProcs < 0) || (proc <= max_proc) ); proc++ ) {
 			writer.setGlobalProc( proc );
 			error = WriteEvents( opts, writer, num_events, sequence );
 			if ( error || global_done ) {
@@ -696,15 +698,30 @@ WriteEvents( Options &opts, UserLogTest &writer, int &events, int &sequence )
 			break;
 		}
 
-		event.GenEvent( );
+		event.GenEventExecute( );
 		if ( event.WriteEvent( writer ) ) {
 			error = true;
 		}
 		else {
 			events++;
-			event.NextProc( );
 		}
 		event.Reset( );
+
+		if ( !error && ( get_random_float() < opts.m_randomProb )  ) {
+			event.GenEventRandom( );
+			if ( event.WriteEvent( writer ) ) {
+				printf( "Error writing event type %d\n",
+						(int) event.GetEventNumber() );
+				error = true;
+			}
+			else {
+				events++;
+			}
+			event.Reset( );
+		}
+		if ( !error ) {
+			event.NextProc( );
+		}
 
 		if ( ( opts.m_maxGlobalSize > 0 ) && 
 			 ( writer.getGlobalLogSize() > opts.m_maxGlobalSize ) ) {
@@ -800,10 +817,17 @@ EventInfo::GenEvent( void )
 	double	randval = get_random_float( );
 
 	// Special case: execute event
-	if ( randval > m_opts.m_randomProb ) {
+	if ( randval < m_opts.m_randomProb ) {
 		return GenEventExecute( );
 	}
+	else {
+		return GenEventRandom( );
+	}
+}
 
+ULogEvent *
+EventInfo::GenEventRandom( void )
+{
 	ULogEvent	*eventp = NULL;
 	while( NULL == eventp ) {
 		unsigned	rand_event = randint(29);
