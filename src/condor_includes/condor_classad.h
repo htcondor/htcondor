@@ -68,24 +68,6 @@ class ClassAd : public AttrList
         int			GetMyTypeNumber();			// my type number returned.
         int			GetTargetTypeNumber();		// target type number returned.
 
-		// Requirement operations
-#if 0
-		int			SetRequirements(char *);
-		void        SetRequirements(ExprTree *);
-#endif
-		ExprTree	*GetRequirements(void);
-
-		// Ranking operations
-#if 0
-		int 		SetRankExpr(char *);
-		void		SetRankExpr(ExprTree *);
-#endif
-		ExprTree	*GetRankExpr(void);
-
-		// Sequence numbers
-		void		SetSequenceNumber(int);
-		int			GetSequenceNumber(void);
-
 		// Matching operations
         int			IsAMatch(class ClassAd*);			  // tests symmetric match
 		friend bool operator==(class ClassAd&,class ClassAd&);// same as symmetric match
@@ -129,9 +111,6 @@ class ClassAd : public AttrList
 		void		dPrint( int );				// dprintf to given dprintf level
 
 		void		Clear( void );				// clear out all attributes
-
-		// poor man's update function until ClassAd Update Protocol  --RR
-		 void ExchangeExpressions (class ClassAd *);
 
     private :
 

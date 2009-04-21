@@ -330,8 +330,6 @@ class AttrList : public AttrListAbstract
 		bool			ptrExprInChain;		// used by NextExpr and NextDirtyExpr
 		AttrListElem*	ptrName;		// used by NextName and NextDirtyName
 		bool			ptrNameInChain;		// used by NextName and NextDirtyName
-		int				seq;			// sequence number
-
 		HashTable<YourString, AttrListElem *> *hash;
 		HashTable<YourString, AttrListElem *> *chained_hash;
 

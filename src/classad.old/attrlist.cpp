@@ -118,7 +118,6 @@ AttrListRep::AttrListRep(AttrList* aList, AttrListList* attrListList)
 ////////////////////////////////////////////////////////////////////////////////
 AttrList::AttrList() : AttrListAbstract(ATTRLISTENTITY)
 {
-	seq = 0;
     exprList = NULL;
 	hash = new HashTable<YourString, AttrListElem *>(hash_size, torekHash);
 	chained_hash = NULL;
@@ -139,7 +138,6 @@ AttrList::AttrList() : AttrListAbstract(ATTRLISTENTITY)
 AttrList::AttrList(AttrListList* assocList) :
 		  AttrListAbstract(ATTRLISTENTITY)
 {
-	seq = 0;
     exprList = NULL;
 	hash = new HashTable<YourString, AttrListElem *>(hash_size, torekHash);
 	chained_hash = NULL;
@@ -178,7 +176,6 @@ AttrList(FILE *file, char *delimitor, int &isEOF, int &error, int &empty)
 	int 		index;
     MyString    line_buffer;
 
-	seq 			= 0;
     exprList 		= NULL;
 	hash = new HashTable<YourString, AttrListElem *>(hash_size, torekHash);
 	inside_insert = false;
@@ -254,7 +251,6 @@ AttrList::AttrList(const char *AttrLists, char delimitor) : AttrListAbstract(ATT
 {
     ExprTree *tree;
 
-	seq = 0;
     exprList = NULL;
 	hash = new HashTable<YourString, AttrListElem *>(hash_size, torekHash);
 	chained_hash = NULL;
@@ -366,7 +362,6 @@ AttrList::AttrList(ProcObj* procObj) : AttrListAbstract(ATTRLISTENTITY)
 {
 	ExprTree*	tmpTree;	// trees converted from proc structure fields
 
-	seq = 0;
 	exprList = NULL;
 	hash = new HashTable<YourString, AttrListElem *>(hash_size, torekHash);
 	inside_insert = false;
@@ -613,7 +608,6 @@ AttrList::AttrList(CONTEXT* context) : AttrListAbstract(ATTRLISTENTITY)
 	ExprTree*	tmpTree;
 
 	stack.top = 0;
-	seq = 0;
 	associatedList = NULL;
 	tail = NULL;
 	ptrExpr = NULL;
@@ -741,7 +735,6 @@ AttrList::AttrList(AttrList &old) : AttrListAbstract(ATTRLISTENTITY)
     this->ptrExprInChain = false;
     this->ptrNameInChain = false;
     this->associatedList = old.associatedList;
-	this->seq = old.seq;
     if(this->associatedList) {
 		this->associatedList->associatedAttrLists->Insert(this);
     }
@@ -816,7 +809,6 @@ AttrList& AttrList::operator=(const AttrList& other)
     	this->ptrExprInChain = false;
     	this->ptrNameInChain = false;
 		this->associatedList = other.associatedList;
-		this->seq = other.seq;
 		if (this->associatedList) {
 			this->associatedList->associatedAttrLists->Insert(this);
 		}

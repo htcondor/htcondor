@@ -453,92 +453,6 @@ int ClassAd::GetTargetTypeNumber()
 }
 
 
-// Requirement expression management functions
-#if 0
-int ClassAd::
-SetRequirements (char *expr)
-{
-	ExprTree *tree;
-	int result = Parse (expr, tree);
-	if (result != 0)
-	{
-		delete tree;
-		return -1;		
-	}
-	SetRequirements (tree);	
-	return 0;
-}
-
-void ClassAd::
-SetRequirements (ExprTree *tree)
-{
-	if (!AttrList::Insert (tree))
-	{
-		AttrList::UpdateExpr (tree);
-		delete tree;
-	}
-}
-#endif
-
-ExprTree *ClassAd::
-GetRequirements (void)
-{
-	return Lookup (ATTR_REQUIREMENTS);
-}
-
-//
-// Implementation of rank expressions is same as the requirement --RR
-//
-#if 0
-int ClassAd::
-SetRankExpr (char *expr)
-{
-    ExprTree *tree;
-    int result = Parse (expr, tree);
-    if (result != 0)
-    {
-        delete tree;
-        return -1;     
-    }
-    SetRankExpr (tree); 
-    return 0;
-}
-
-void ClassAd::
-SetRankExpr (ExprTree *tree)
-{
-	if (!AttrList::Insert (tree))
-	{
-		AttrList::UpdateExpr (tree);
-		delete tree;
-	}
-}
-#endif
-
-ExprTree *ClassAd::
-GetRankExpr (void)
-{
-    return Lookup (ATTR_RANK);
-}
-
-
-//
-// Set and get sequence numbers --- stored in the attrlist
-//
-void ClassAd::
-SetSequenceNumber (int num)
-{
-	seq = num;
-}
-
-
-int ClassAd::
-GetSequenceNumber (void)
-{
-	return seq;
-}
-
-
 //
 // This member function tests whether two ClassAds match mutually.
 //
@@ -922,33 +836,6 @@ int ClassAd::get (XDR *xdrs)
 	return 1;
 }
 #endif
-
-void ClassAd::
-ExchangeExpressions (ClassAd *ad)
-{
-    AttrListElem *tmp1;
-    AttrListList *tmp2;
-    int           tmp3;
-	HashTable<YourString,AttrListElem *> *tmpHash;
-
-    // exchange variables which maintain the attribute list
-    // see condor_attrlist.h  --RR
-
-#   define SWAP(a,b,t) {t=a; a=b; b=t;}
-
-    SWAP(associatedList, ad->associatedList, tmp2); // this is AttrListList*
-    SWAP(exprList, ad->exprList, tmp1);             // these are AttrListElem*
-	SWAP(hash, ad->hash, tmpHash);
-    SWAP(tail, ad->tail, tmp1);
-    SWAP(ptrExpr, ad->ptrExpr, tmp1);
-    SWAP(ptrName, ad->ptrName, tmp1);
-    SWAP(seq, ad->seq, tmp3);                      // this is an int
-
-    // undefine macro to decrease name-space pollution
-#   undef SWAP
-
-    return;
-}
 
 ClassAd* ClassAdList::Lookup(const char* name)
 {
