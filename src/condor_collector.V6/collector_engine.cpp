@@ -1131,12 +1131,17 @@ updateClassAd (CollectorHashTable &hashTable,
 		collectorStats->update( label, old_ad, new_ad );
 
 		// Now, finally, store the new ClassAd
-		old_ad->ExchangeExpressions (new_ad);
+		if (hashTable.remove(hk) == -1) {
+			EXCEPT( "Error removing ad" );
+		}
+		if (hashTable.insert(hk, new_ad) == -1) {
+			EXCEPT( "Error inserting ad" );
+		}
 
-		delete new_ad;
+		delete old_ad;
 
 		insert = 0;
-		return old_ad;
+		return new_ad;
 	}
 }
 
