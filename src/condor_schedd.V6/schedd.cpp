@@ -839,7 +839,7 @@ Scheduler::count_jobs()
 	sprintf(tmp, "%s = %d", ATTR_TOTAL_REMOVED_JOBS, JobsRemoved);
 	m_ad->Insert (tmp);
 
-	m_ad->Assign(ATTR_SCHEDD_SWAP_EXHAUSTED, SwapSpaceExhausted);
+	m_ad->Assign(ATTR_SCHEDD_SWAP_EXHAUSTED, (bool)SwapSpaceExhausted);
 
     daemonCore->publish(m_ad);
     daemonCore->monitor_data.ExportData(m_ad);
