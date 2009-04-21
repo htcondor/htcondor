@@ -274,7 +274,7 @@ class UserLog
 
     /** Copy of path to rotation lock*/  char     * m_rotation_lock_path;
     /** FD of the rotation lock      */  int        m_rotation_lock_fd;
-    /** The global log file lock     */  FileLock * m_rotation_lock;
+    /** The global log file lock     */  FileLockBase *m_rotation_lock;
 
 	/** Whether we use XML or not    */  bool       m_use_xml;
 

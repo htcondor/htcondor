@@ -226,11 +226,15 @@ UserLog::Configure( void )
 			dprintf( D_ALWAYS,
 					 "Unable to open event rotation lock file %s\n",
 					 m_rotation_lock_path );
+			m_rotation_lock_fd = -1;
+			m_rotation_lock = new FakeFileLock( );
 		}
-		m_rotation_lock_fd = fd;
-		m_rotation_lock = new FileLock( fd, NULL, m_rotation_lock_path );
-		dprintf( D_FULLDEBUG, "Created rotation lock %s @ %p\n",
-				 m_rotation_lock_path, m_rotation_lock );
+		else {
+			m_rotation_lock_fd = fd;
+			m_rotation_lock = new FileLock( fd, NULL, m_rotation_lock_path );
+			dprintf( D_FULLDEBUG, "Created rotation lock %s @ %p\n",
+					 m_rotation_lock_path, m_rotation_lock );
+		}
 	}
 	m_global_use_xml = param_boolean( "EVENT_LOG_USE_XML", false );
 	m_global_count_events = param_boolean( "EVENT_LOG_COUNT_EVENTS", false );
