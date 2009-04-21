@@ -210,7 +210,7 @@ $evicted = sub {
 	## is wrong with the deferral time
 	##
 	my $sleep = $evictionTime - $DEFERRAL_TIME;
-	if ( $sleep < $SLEEP_TIME ) {
+	if ( $sleep < ($SLEEP_TIME - 2)) {
 		CondorTest::debug("Bad - Job $cluster.$job only ran for $sleep seconds. ".
 			  "Should have been $SLEEP_TIME seconds!\n",1);
 		exit(1);
