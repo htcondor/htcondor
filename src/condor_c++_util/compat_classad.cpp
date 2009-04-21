@@ -237,6 +237,17 @@ LookupString (const char *name, char **value) const
 }
 
 int CompatClassAd::
+LookupString( const char *name, MyString &value ) const 
+{
+	string strVal;
+	if( !EvaluateAttrString( string( name ), strVal ) ) {
+		return 0;
+	}
+	value = strVal.c_str();
+	return 1;
+} 
+
+int CompatClassAd::
 LookupInteger( const char *name, int &value ) const 
 {
 	bool    boolVal;

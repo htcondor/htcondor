@@ -127,6 +127,13 @@ class CompatClassAd : public classad::ClassAd
 		 */
 	int LookupString (const char *name, char **value) const;
 
+		/** Lookup (don't evaluate) an attribute that is a string.
+		 *  @param name The attribute
+		 *  @param value The string
+		 *  @return true if the attribute exists and is a string, false otherwise
+		 */
+	int LookupString(const char *name, MyString &value) const; 
+
 		/** Lookup (don't evaluate) an attribute that is an integer.
 		 *  @param name The attribute
 		 *  @param value The integer
