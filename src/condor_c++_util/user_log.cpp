@@ -219,23 +219,24 @@ UserLog::Configure( void )
 		char *tmp = (char*) malloc(len);
 		snprintf( tmp, len, "%s.lock", m_global_path );
 		m_rotation_lock_path = tmp;
-
-		// Make sure the global lock exists
-		int fd = safe_open_wrapper( m_rotation_lock_path, O_WRONLY|O_CREAT );
-		if ( fd < 0 ) {
-			dprintf( D_ALWAYS,
-					 "Unable to open event rotation lock file %s\n",
-					 m_rotation_lock_path );
-			m_rotation_lock_fd = -1;
-			m_rotation_lock = new FakeFileLock( );
-		}
-		else {
-			m_rotation_lock_fd = fd;
-			m_rotation_lock = new FileLock( fd, NULL, m_rotation_lock_path );
-			dprintf( D_FULLDEBUG, "Created rotation lock %s @ %p\n",
-					 m_rotation_lock_path, m_rotation_lock );
-		}
 	}
+
+	// Make sure the global lock exists
+	int fd = safe_open_wrapper( m_rotation_lock_path, O_WRONLY|O_CREAT );
+	if ( fd < 0 ) {
+		dprintf( D_ALWAYS,
+				 "Unable to open event rotation lock file %s\n",
+				 m_rotation_lock_path );
+		m_rotation_lock_fd = -1;
+		m_rotation_lock = new FakeFileLock( );
+	}
+	else {
+		m_rotation_lock_fd = fd;
+		m_rotation_lock = new FileLock( fd, NULL, m_rotation_lock_path );
+		dprintf( D_FULLDEBUG, "Created rotation lock %s @ %p\n",
+				 m_rotation_lock_path, m_rotation_lock );
+	}
+
 	m_global_use_xml = param_boolean( "EVENT_LOG_USE_XML", false );
 	m_global_count_events = param_boolean( "EVENT_LOG_COUNT_EVENTS", false );
 	m_global_max_rotations = param_integer( "EVENT_LOG_MAX_ROTATIONS", 1, 0 );
