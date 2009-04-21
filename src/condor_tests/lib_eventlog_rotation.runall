@@ -48,7 +48,8 @@ foreach my $n ( 0 .. $#ARGV )
     }
     elsif ( $arg eq "-h" or $arg eq "--help" ) {
 	print "$usage\n";
-	exit( 0 );
+	print "\nusage for base test script:\n";
+	exec( "./lib_eventlog_rotation.pl -h" );
     }
     elsif ( $arg =~ /^\/(.*)\/$/ ) {
 	$params{pat} = $1;
