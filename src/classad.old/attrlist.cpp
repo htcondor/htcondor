@@ -120,9 +120,8 @@ AttrList::AttrList() : AttrListAbstract(ATTRLISTENTITY)
 {
     exprList = NULL;
 	hash = new HashTable<YourString, AttrListElem *>(hash_size, torekHash);
-	chained_hash = NULL;
+	chainedAd = NULL;
 	inside_insert = false;
-	chainedAttrs = NULL;
     tail = NULL;
     ptrExpr = NULL;
     ptrName = NULL;
@@ -140,9 +139,8 @@ AttrList::AttrList(AttrListList* assocList) :
 {
     exprList = NULL;
 	hash = new HashTable<YourString, AttrListElem *>(hash_size, torekHash);
-	chained_hash = NULL;
+	chainedAd = NULL;
 	inside_insert = false;
-	chainedAttrs = NULL;
     tail = NULL;
     ptrExpr = NULL;
     ptrName = NULL;
@@ -179,8 +177,7 @@ AttrList(FILE *file, char *delimitor, int &isEOF, int &error, int &empty)
     exprList 		= NULL;
 	hash = new HashTable<YourString, AttrListElem *>(hash_size, torekHash);
 	inside_insert = false;
-	chainedAttrs = NULL;
-	chained_hash = NULL;
+	chainedAd = NULL;
     associatedList 	= NULL;
     tail 			= NULL;
     ptrExpr 		= NULL;
@@ -253,9 +250,8 @@ AttrList::AttrList(const char *AttrLists, char delimitor) : AttrListAbstract(ATT
 
     exprList = NULL;
 	hash = new HashTable<YourString, AttrListElem *>(hash_size, torekHash);
-	chained_hash = NULL;
+	chainedAd = NULL;
 	inside_insert = false;
-	chainedAttrs = NULL;
     associatedList = NULL;
     tail = NULL;
     ptrExpr = NULL;
@@ -365,7 +361,7 @@ AttrList::AttrList(ProcObj* procObj) : AttrListAbstract(ATTRLISTENTITY)
 	exprList = NULL;
 	hash = new HashTable<YourString, AttrListElem *>(hash_size, torekHash);
 	inside_insert = false;
-	chainedAttrs = NULL;
+	chainedAd = NULL;
 	associatedList = NULL;
 	tail = NULL;
 	ptrExpr = NULL;
@@ -616,9 +612,8 @@ AttrList::AttrList(CONTEXT* context) : AttrListAbstract(ATTRLISTENTITY)
     ptrNameInChain = false;
 	exprList = NULL;
 	hash = new HashTable<YourString, AttrListElem *>(hash_size, torekHash);
-	chained_hash = NULL;
+	chainedAd = NULL;
 	inside_insert = false;
-	chainedAttrs = NULL;
 
 	for(i = 0; i < context->len; i++)
 	{
@@ -727,8 +722,7 @@ AttrList::AttrList(AttrList &old) : AttrListAbstract(ATTRLISTENTITY)
         this->tail = NULL;
     }
 
-	this->chainedAttrs = old.chainedAttrs;
-	chained_hash = old.chained_hash;
+	this->chainedAd = old.chainedAd;
 	this->inside_insert = false;
     this->ptrExpr = NULL;
     this->ptrName = NULL;
@@ -801,8 +795,7 @@ AttrList& AttrList::operator=(const AttrList& other)
 			this->tail = NULL;
 		}
 
-		this->chainedAttrs = other.chainedAttrs;
-		this->chained_hash = other.chained_hash;
+		this->chainedAd = other.chainedAd;
 		this->inside_insert = false;
 		this->ptrExpr = NULL;
 		this->ptrName = NULL;
@@ -963,8 +956,8 @@ int AttrList::Delete(const char* name)
 
 	// see this attr exists in our chained
 	// ad; if so, must insert the attr into this ad as UNDEFINED.
-	if ( chainedAttrs && !inside_insert) {
-		for (cur = *chainedAttrs; cur; cur = cur->next ) {
+	if ( chainedAd && !inside_insert) {
+		for (cur = chainedAd->exprList; cur; cur = cur->next ) {
 			if(!strcasecmp(name, cur->name))
 			// expression to be deleted is found
 			{
@@ -1073,15 +1066,14 @@ AttrList::ChainCollapse(bool with_deep_copy)
 {
 	ExprTree *tmp;
 
-	if (!chainedAttrs) {
+	if (!chainedAd) {
 		// no chained attributes, we're done
 		return;
 	}
 
-	AttrListElem* chained = *chainedAttrs;
+	AttrListElem* chained = chainedAd->exprList;
 	
-	chainedAttrs = NULL;
-	chained_hash = NULL;	// do not delete chained_hash here!
+	chainedAd = NULL;	// do not delete chainedAd here!
 
 	while (chained && (tmp=chained->tree)) {
 			// Move the value from our chained ad into our ad ONLY
@@ -1105,9 +1097,9 @@ ExprTree* AttrList::NextExpr()
 {
 	// After iterating through all the exprs in this ad,
 	// get all the exprs in our chained ad as well.
-    if (!this->ptrExpr && chainedAttrs && !ptrExprInChain ) {
+    if (!this->ptrExpr && chainedAd && !ptrExprInChain ) {
 		ptrExprInChain = true;
-		ptrExpr = *chainedAttrs;
+		ptrExpr = chainedAd->exprList;
 	}
     if(!this->ptrExpr)
     {
@@ -1164,9 +1156,9 @@ const char* AttrList::NextNameOriginal()
 
 	// After iterating through all the names in this ad,
 	// get all the names in our chained ad as well.
-    if (!this->ptrName && chainedAttrs && !ptrNameInChain ) {
+    if (!this->ptrName && chainedAd && !ptrNameInChain ) {
 		ptrNameInChain = true;
-		ptrName = *chainedAttrs;
+		ptrName = chainedAd->exprList;
 	}
     if (!this->ptrName) {
 		name = NULL;
@@ -1220,8 +1212,8 @@ ExprTree* AttrList::Lookup(const char* name) const
 		return tmpNode->tree;
 	}
 
-	if (chained_hash && !inside_insert) {
-		chained_hash->lookup(name, tmpNode);
+	if (chainedAd && !inside_insert) {
+		chainedAd->hash->lookup(name, tmpNode);
 		if (tmpNode) {
 			return tmpNode->tree;
 		}
@@ -1240,8 +1232,8 @@ AttrListElem *AttrList::LookupElem(const char *name) const
 		return theElem;
 	}
 
-	if (chained_hash && !inside_insert) {
-		chained_hash->lookup(name, theElem);
+	if (chainedAd && !inside_insert) {
+		chainedAd->hash->lookup(name, theElem);
 	}
 
     return theElem;
@@ -1738,8 +1730,8 @@ int AttrList::fPrint(FILE* f)
 	// if this is a chained ad, print out chained attrs first. this is so
 	// if this ad is scanned in from a file, the chained attrs will get
 	// updated with attrs from this ad in case of duplicates.
-	if ( chainedAttrs ) {
-		for(tmpElem = *chainedAttrs; tmpElem; tmpElem = tmpElem->next)
+	if ( chainedAd ) {
+		for(tmpElem = chainedAd->exprList; tmpElem; tmpElem = tmpElem->next)
 		{
 			tmpLine = NULL;
 			if( tmpElem->tree->invisible ) {
@@ -1780,8 +1772,8 @@ int AttrList::sPrint(MyString &output)
 	// if this is a chained ad, print out chained attrs first. this is so
 	// if this ad is scanned in from a file, the chained attrs will get
 	// updated with attrs from this ad in case of duplicates.
-	if ( chainedAttrs ) {
-		for(tmpElem = *chainedAttrs; tmpElem; tmpElem = tmpElem->next)
+	if ( chainedAd ) {
+		for(tmpElem = chainedAd->exprList; tmpElem; tmpElem = tmpElem->next)
 		{
 			tmpLine = NULL;
 			if( tmpElem->tree->invisible ) {
@@ -1833,8 +1825,8 @@ AttrList::dPrint( int level )
 	// if this is a chained ad, print out chained attrs first. this is so
 	// if this ad is scanned in from a file, the chained attrs will get
 	// updated with attrs from this ad in case of duplicates.
-	if ( chainedAttrs ) {
-		for(tmpElem = *chainedAttrs; tmpElem; tmpElem = tmpElem->next)
+	if ( chainedAd ) {
+		for(tmpElem = chainedAd->exprList; tmpElem; tmpElem = tmpElem->next)
 		{
 			tmpLine = NULL;
 			if( tmpElem->tree->invisible ) {
@@ -2259,9 +2251,9 @@ int AttrList::put(Stream& s)
         numExprs++;
 	}
 
-	if ( chainedAttrs ) {
+	if ( chainedAd ) {
 		// now count up all the chained ad attrs
-		for(elem = *chainedAttrs; elem; elem = elem->next) {
+		for(elem = chainedAd->exprList; elem; elem = elem->next) {
 			if( elem->tree->invisible ) {
 				continue;
 			}
@@ -2287,10 +2279,10 @@ int AttrList::put(Stream& s)
 				// copy chained attrs first, so if there are
 				// duplicates, the get() method will overide the attrs
 				// from the chained ad with attrs from this ad.
-			if( !chainedAttrs ) {
+			if( !chainedAd ) {
 				continue;
 			}
-			elem = *chainedAttrs;
+			elem = chainedAd->exprList;
 		}
 		else {
 			elem = exprList;
@@ -2344,7 +2336,7 @@ void
 AttrList::Clear( void )
 {
 		// First, unchain ourselves, if we're a chained classad
-	unchain();
+	Unchain();
 
 		// Clear out hashtable of attributes. Note we cannot
 		// delete the hash table here - we can do that safely
@@ -2362,7 +2354,6 @@ AttrList::Clear( void )
     }
 	exprList = NULL;
 
-	chained_hash = NULL;	// do not delete chained_hash here!
 	tail = NULL;
 }
 
@@ -2658,26 +2649,19 @@ void AttrList::ChainToAd(AttrList *ad)
 		return;
 	}
 
-	chainedAttrs = &( ad->exprList );
-	chained_hash = ad->hash;
+	chainedAd = ad;
 }
 
 
-ChainedPair
-AttrList::unchain( void )
+void
+AttrList::Unchain( void )
 {
-	ChainedPair p;
-	p.exprList = chainedAttrs;
-	p.exprHash = chained_hash;
-	chainedAttrs = NULL;
-	chained_hash = NULL;
-	return p;
+	chainedAd = NULL;
 }
 
-void AttrList::RestoreChain(const ChainedPair &p)
+AttrList *AttrList::GetChainedParentAd()
 {
-	this->chainedAttrs = p.exprList;
-	this->chained_hash = p.exprHash;
+	return chainedAd;
 }
 
 /* This is used for %s = %s style constructs */

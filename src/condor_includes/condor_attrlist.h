@@ -79,12 +79,6 @@ class AttrListElem
         class AttrListElem*	next;	// next element in the list
 };
 
-// An abstract pair returned by unchain.
-struct ChainedPair {
-	AttrListElem **exprList;
-	HashTable<YourString, AttrListElem *> *exprHash;
-};
-
 class AttrListAbstract
 {
     public :
@@ -128,8 +122,8 @@ class AttrList : public AttrListAbstract
 {
     public :
 	    void ChainToAd( AttrList * );
-		ChainedPair unchain( void );
-		void RestoreChain(const ChainedPair &p);
+		void Unchain( void );
+		AttrList *GetChainedParentAd();
 		void ChainCollapse(bool with_deep_copy = true);
 
 		// ctors/dtor
@@ -315,7 +309,7 @@ class AttrList : public AttrListAbstract
 		static bool		IsValidAttrValue(const char *);
 
     protected :
-	    AttrListElem**	chainedAttrs;
+		AttrList *chainedAd;
 
 		// update an aggregate expression if the AttrList list associated with
 		// this AttrList is changed
@@ -331,7 +325,6 @@ class AttrList : public AttrListAbstract
 		AttrListElem*	ptrName;		// used by NextName and NextDirtyName
 		bool			ptrNameInChain;		// used by NextName and NextDirtyName
 		HashTable<YourString, AttrListElem *> *hash;
-		HashTable<YourString, AttrListElem *> *chained_hash;
 
 private:
 	bool inside_insert;

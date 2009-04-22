@@ -605,7 +605,8 @@ ClassAdLog::LogState(FILE *fp)
 		delete log;
 			// Unchain the ad -- we just want to write out this ads exprs,
 			// not all the exprs in the chained ad as well.
-		ChainedPair chain = ad->unchain();
+		AttrList *chain = ad->GetChainedParentAd();
+		ad->Unchain();
 		ad->ResetName();
 		attr_name = ad->NextNameOriginal();
 		while (attr_name) {
@@ -622,7 +623,7 @@ ClassAdLog::LogState(FILE *fp)
 			attr_name = ad->NextNameOriginal();
 		}
 			// ok, now that we're done writing out this ad, restore the chain
-		ad->RestoreChain(chain);
+		ad->ChainToAd(chain);
 	}
 	if (fflush(fp) !=0){
 	  EXCEPT("fflush of %s failed, errno = %d", logFilename(), errno);
