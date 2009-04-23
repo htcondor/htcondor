@@ -316,9 +316,6 @@ class AttrList : public AttrListAbstract
 		// update an aggregate expression if the AttrList list associated with
 		// this AttrList is changed
       	int				UpdateAgg(ExprTree*, int);
-		// convert a (key, value) pair to an assignment tree. used by the
-		// constructor that builds an AttrList from a proc structure.
-		ExprTree*		ProcToTree(char*, LexemeType, int, float, char*);
         AttrListElem*	exprList;		// my collection of expressions
 		AttrListList*	associatedList;	// the AttrList list I'm associated with
 		AttrListElem*	tail;			// used by Insert
