@@ -8,7 +8,7 @@ LIB = $(DAEMONCORE_LIB) $(STD_LIBS) $(CONFIGURE_GSOAP_LDFLAGS)
 soapobjs(master)
 
 #if HAVE_DLOPEN
-PLUGIN_OBJ = MasterPlugin.o
+PLUGIN_OBJ = MasterPluginManager.o
 #endif
 
 %-plugin.so: %.cpp

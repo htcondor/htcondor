@@ -8,7 +8,7 @@ LIB = $(DAEMONCORE_LIB) $(STD_LIBS) $(CONFIGURE_GSOAP_LDFLAGS)
 soapobjs(negotiator)
 
 #if HAVE_DLOPEN
-PLUGIN_OBJ = NegotiatorPlugin.o
+PLUGIN_OBJ = NegotiatorPluginManager.o
 
 %-plugin.so: %.cpp
 	$(CPlusPlus) $(C_PLUS_FLAGS) -shared $< -o $@

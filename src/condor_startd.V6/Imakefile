@@ -6,7 +6,7 @@ all_target( $(NAME) )
 CFLAGS = $(STD_C_FLAGS)
 
 #if HAVE_DLOPEN
-PLUGIN_OBJ = StartdPlugin.o
+PLUGIN_OBJ = StartdPluginManager.o
 #endif
 
 %-plugin.so: %.cpp

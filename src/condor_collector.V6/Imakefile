@@ -8,7 +8,7 @@ LIB = collector_engine.a $(DAEMONCORE_LIB) $(STD_LIBS) $(CONFIGURE_GSOAP_LDFLAGS
 ENGINE_OBJ = hashkey.o collector_engine.o
 
 #if HAVE_DLOPEN
-# define PluginObj CollectorPlugin.o offline_plugin.o
+# define PluginObj CollectorPluginManager.o offline_plugin.o
 #else
 # define PluginObj
 #endif
