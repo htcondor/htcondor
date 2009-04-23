@@ -273,6 +273,8 @@ TESTCLASS(job_vmu_cdrom,quick)
 TESTCLASS(job_vmu_cdrom,full)
 TESTCLASS(job_vmu_cdrom,quicknolink)
 TESTCLASS(job_vmu_cdrom,btdebug)
+
+/* This one is flakey for unknown reasons
 DESC(job_vmu_network,"VM Universe networking test")
 RUN(job_vmu_network)
 TESTCLASS(job_vmu_network,core)
@@ -280,6 +282,8 @@ TESTCLASS(job_vmu_network,quick)
 TESTCLASS(job_vmu_network,full)
 TESTCLASS(job_vmu_network,quicknolink)
 TESTCLASS(job_vmu_network,btdebug)
+*/
+
 DESC(job_vmu_ckpt,"VM Universe checkpoint test")
 RUN(job_vmu_ckpt)
 TESTCLASS(job_vmu_ckpt,core)
