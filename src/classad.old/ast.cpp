@@ -1176,14 +1176,7 @@ Variable::DeepCopy(void) const
 {
 	Variable *copy;
 
-#ifdef USE_STRING_SPACE_IN_CLASSADS
 	copy = new Variable(name);
-#else
-	char     *name_copy;
-	name_copy = new char[strlen(name)+1];
-	strcpy(name_copy, name);
-	copy = new Variable(name_copy);
-#endif
 	CopyBaseExprTree(copy);
 	
 	return copy;
@@ -1227,14 +1220,7 @@ String::DeepCopy(void) const
 {
 	String *copy;
 
-#ifdef USE_STRING_SPACE_IN_CLASSADS
 	copy = new String(value);
-#else
-	char   *value_copy;
-	value_copy = new char[strlen(value)+1];
-	strcpy(value_copy, value);
-	copy = new String(value_copy);
-#endif
 	CopyBaseExprTree(copy);
 	
 	return copy;
@@ -1245,14 +1231,7 @@ ISOTime::DeepCopy(void) const
 {
 	ISOTime *copy;
 
-#ifdef USE_STRING_SPACE_IN_CLASSADS
 	copy = new ISOTime(time);
-#else
-	char   *time_copy;
-	time_copy = new char[strlen(time)+1];
-	strcpy(time_copy, time);
-	copy = new ISOTime(time_copy);
-#endif
 	CopyBaseExprTree(copy);
 	
 	return copy;
@@ -1573,12 +1552,7 @@ ExprTree *Function::DeepCopy(void) const
 {
 	Function *copy;
 
-#ifdef USE_STRING_SPACE_IN_CLASSADS
 	copy = new Function(name);
-#else
-	char     *name_copy;
-	name_copy = strnewp(name);
-#endif
 	CopyBaseExprTree(copy);
 
 	ListIterator< ExprTree > iter(*arguments);
