@@ -115,12 +115,12 @@ static char * getDBConnStr(char *&, char *&, char *&, char *&);
 /* get the quill address for the quill_name specified */
 static QueryResult getQuillAddrFromCollector(char *quill_name, char *&quill_addr);
 
-/* Warn about schedd-wide limits that may confuse analysis code */
-void warnScheddLimits(const char *scheddName);
-
 /* avgqueuetime is used to indicate a request to query average wait time for uncompleted jobs in queue */
 static  bool avgqueuetime = false;
 #endif
+
+/* Warn about schedd-wide limits that may confuse analysis code */
+void warnScheddLimits(const char *scheddName);
 
 /* directDBquery means we will just run a database query and return results directly to user */
 static  bool directDBquery = false;
