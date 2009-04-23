@@ -2926,7 +2926,11 @@ AttrList::CopyAttribute(char const *target_attr, char const *source_attr, AttrLi
 
 	ExprTree *e = source_ad->Lookup(source_attr);
 	if (e && e->MyType() == LX_ASSIGN && e->RArg()) {
+#ifdef USE_STRING_SPACE_IN_CLASSADS
+		ExprTree *lhs = new Variable((char *)target_attr);
+#else
 		ExprTree *lhs = new Variable(strnewp(target_attr));
+#endif
 		ExprTree *rhs = e->RArg()->DeepCopy();
 		ASSERT( lhs && rhs );
 		ExprTree *assign = new AssignOp(lhs,rhs);
