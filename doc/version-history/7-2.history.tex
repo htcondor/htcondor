@@ -52,6 +52,10 @@ to the current host when the type of installation is `manager'.
 
 \begin{itemize}
 
+\item Fixed a memory leak in the \Condor{collector} daemon.  The growth
+in memory over time was approximately 10MB/day per 1000 slots.  This
+bug was introduced in 7.2.0.
+
 \item Fixed a bug in the event log reader code that could cause it to
   not detect missed events in rare cases.
 
