@@ -97,10 +97,6 @@ class CompatClassAd : public classad::ClassAd
 //		void		ResetExpr();
 //		classad::ExprTree*	NextExpr();
 
-		// for iteration through names (i.e., lhs of the expressions)
-//		void		ResetName() { this->ptrName = exprList; }
-//		const char* NextNameOriginal();
-
 		// lookup values in classads  (for simple assignments)
 //		classad::ExprTree*   Lookup(char *) const;  		// for convenience
 //      classad::ExprTree*	Lookup(const char*) const;	// look up an expression
@@ -238,6 +234,9 @@ class CompatClassAd : public classad::ClassAd
 		*/
 	int sPrint( MyString &output );
 
+	void ResetName();
+	const char *NextNameOriginal();
+
 	bool AddExplicitConditionals( classad::ExprTree *expr, classad::ExprTree *&newExpr );
 	classad::ClassAd *AddExplicitTargetRefs( );
 		//@}
@@ -249,6 +248,9 @@ class CompatClassAd : public classad::ClassAd
 	classad::ExprTree *AddExplicitConditionals( classad::ExprTree * );
 	classad::ExprTree *AddExplicitTargetRefs( classad::ExprTree *,
 						std::set < std::string, classad::CaseIgnLTStr > & );
+
+	classad::ClassAd::iterator m_nameItr;
+	bool m_nameItrInChain;
 };
 
 #endif

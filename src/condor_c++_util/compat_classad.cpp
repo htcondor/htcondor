@@ -28,11 +28,14 @@ using namespace classad;
 
 CompatClassAd::CompatClassAd()
 {
+	ResetName();
 }
 
 CompatClassAd::CompatClassAd( const CompatClassAd &ad )
 {
 	CopyFrom( ad );
+
+	ResetName();
 }
 
 CompatClassAd::~CompatClassAd()
@@ -92,7 +95,8 @@ CompatClassAd( FILE *file, char *delimitor, int &isEOF, int&error, int &empty )
 			empty = FALSE;
 		}
 	}
-	return;
+
+	ResetName();
 }
 
 bool CompatClassAd::
@@ -627,6 +631,33 @@ GetTargetTypeName( )
 		return NULL;
 	}
 	return targetTypeStr.c_str( );
+}
+
+void CompatClassAd::
+ResetName()
+{
+	m_nameItr = begin();
+	m_nameItrInChain = false;
+}
+
+const char *CompatClassAd::
+NextNameOriginal()
+{
+	const char *name = NULL;
+	ClassAd *chained_ad = GetChainedParentAd();
+	// After iterating through all the names in this ad,
+	// get all the names in our chained ad as well.
+	if ( m_nameItr == end() && chained_ad ) {
+		m_nameItr = chained_ad->begin();
+		m_nameItrInChain = true;
+	}
+	if ( m_nameItr == end() ||
+		 m_nameItrInChain && m_nameItr == chained_ad->end() ) {
+		return NULL;
+	}
+	name = m_nameItr->first.c_str();
+	m_nameItr++;
+	return name;
 }
 
 // Back compatibility helper methods
