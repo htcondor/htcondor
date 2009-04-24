@@ -2555,7 +2555,8 @@ DaemonCore::reconfig(void) {
 	file_descriptor_safety_limit = 0; // 0 indicates: needs to be computed
 
 	bool never_use_ccb =
-		get_mySubSystem()->isType(SUBSYSTEM_TYPE_GAHP);
+		get_mySubSystem()->isType(SUBSYSTEM_TYPE_GAHP) ||
+		get_mySubSystem()->isType(SUBSYSTEM_TYPE_DAGMAN);
 
 	if( !never_use_ccb ) {
 		if( !m_ccb_listeners ) {

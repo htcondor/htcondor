@@ -49,7 +49,7 @@ extern "C" void process_config_source( char* file, char* name,
 extern "C" bool is_piped_command(const char* filename);
 
 //---------------------------------------------------------------------------
-DECL_SUBSYSTEM( "DAGMAN", SUBSYSTEM_TYPE_DAEMON );
+DECL_SUBSYSTEM( "DAGMAN", SUBSYSTEM_TYPE_DAGMAN );
 
 static char* lockFileName = NULL;
 
