@@ -2234,15 +2234,22 @@ fi
 # checks for libraries
 ############################################################
 
-# The DRMAA C library needs to be compiled with pthreads in mind if
-# pthreads are available. This machinery ends up defining HAS_PTHREADS
-# In the build system which is then used to add the correct threading
-# flags to the compile line for drmaa code.
-AC_CHECK_LIB([pthread], [pthread_create],
-  [ac_pthreads=yes
-   AC_DEFINE([HAS_PTHREADS],[1],[Define if pthreads are available])],
-  [ac_pthreads=no])
-
+# Currently in Condor, threading in daemon core on Unix requires
+# both pthreads and thread local storage.  HACK: for right now
+# we know that only Linux meets that requirement, and furthermore
+# that TLS exists but is broken on ia64 (the compiler blows up).  So for now
+# we only want pthreads defined on Linux that is not ia64.  Once we 
+# remove the requirement on TLS in the code, we can safely remove 
+# this hack.
+if test $os = "Linux" && test $arch != "ia64"; then
+	AC_CHECK_LIB([pthread], [pthread_create],
+  		[ac_pthreads=yes
+   		AC_DEFINE([HAVE_PTHREADS],[1],[Define if pthreads are available])],
+		AC_DEFINE([HAS_PTHREADS],[1],[Define if pthreads are available for DRMAA])],
+  		[ac_pthreads=no])
+	# Check if this system support Thread Local Storage class.
+	AX_TLS
+fi
 
 ############################################################
 # checks for header files
@@ -2285,6 +2292,7 @@ AC_CHECK_HEADERS([resolv.h],[],[],[
 #include<sys/types.h>
 #include<netinet/in.h>
 #include<arpa/nameser.h>])
+AC_CHECK_HEADERS([pthread.h])
 
 
 ############################################################

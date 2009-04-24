@@ -34,6 +34,13 @@
 #define DLL_IMPORT_MAGIC  /* a no-op on Unix */
 #endif
 
+/* If this platform doesn't give us __FUNCTION__ create a default.
+ */
+#ifndef __FUNCTION__
+#define __FUNCTION__ "UNKNOWN"
+#endif
+
+
 #ifndef CHECK_PRINTF_FORMAT
 /*
 Check printf-style format arguments at compile time.

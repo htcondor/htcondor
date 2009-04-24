@@ -23,7 +23,7 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "selector.h"
-
+#include "condor_threads.h"
 
 int Selector::_fd_select_size = -1;
 
@@ -308,11 +308,13 @@ Selector::execute()
 
 		// select() ignores its first argument on Windows. We still track
 		// max_fd for the display() functions.
+	start_thread_safe("select");
 	nfds = select( max_fd + 1, 
 				  (SELECT_FDSET_PTR) read_fds, 
 				  (SELECT_FDSET_PTR) write_fds, 
 				  (SELECT_FDSET_PTR) except_fds, 
 				  tp );
+	stop_thread_safe("select");
 	_select_retval = nfds;
 
 	if( nfds < 0 ) {

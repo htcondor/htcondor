@@ -87,7 +87,7 @@ CC_LINK = CPlusLinker
 endif
 
 
-STATIC	= -static
+STATIC	= -static 
 STAR	= *
 
 PLATFORM_LDFLAGS = PlatformLdFlags
@@ -284,6 +284,13 @@ DAEMONCORE_WRAP_LDFLAGS = -Wl,--wrap,exit
  end of externals-specific settings and flags
 ********************************************/
 
+#if HAVE_PTHREADS
+PTHREAD_LIB = -lpthread
+#if HAVE_GNU_LD
+PTHREAD_FLAG = -pthread
+#endif
+#endif
+
 VENDOR_C_FLAGS = -I. -I.. -I../.. -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) \
 		 -I$(C_PLUS_INCLUDE) -I$(DAEMONCLIENT_INCLUDE) \
 		 -I$(DAEMONCORE_INCLUDE) -I$(CCB_INCLUDE) \
@@ -292,7 +299,7 @@ VENDOR_C_FLAGS = -I. -I.. -I../.. -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) \
 		 $(SECURITY_FLAGS) \
 		 $(QUILL_FLAGS) $(TT_FLAGS) $(GCB_FLAGS) \
 		 $(LEASE_MANAGER_FLAGS) \
-		 $(CONFIGURE_CFLAGS) $(CONFIGURE_CPPFLAGS)
+		 $(CONFIGURE_CFLAGS) $(CONFIGURE_CPPFLAGS) $(PTHREAD_FLAG)
 
 /**
  * Special flags needed for OSX using gcc4
@@ -309,7 +316,7 @@ GPP_ARCH_FLAGS =
 #endif
 
 /* Flags shared between C and C++ compilers */
-SHARED_COMPILER_FLAGS = $(VENDOR_C_FLAGS) $(COMP_DEBUG_FLAGS) $(CC_PIC_FLAG) PlatformFlags $(CCOMPILER_ID) $(GSOAP_FLAGS) $(PCRE_FLAGS) $(COREDUMPER_FLAGS)
+SHARED_COMPILER_FLAGS = $(VENDOR_C_FLAGS) $(COMP_DEBUG_FLAGS) $(CC_PIC_FLAG) PlatformFlags $(CCOMPILER_ID) $(GSOAP_FLAGS) $(PCRE_FLAGS) $(COREDUMPER_FLAGS) $(PTHREAD_FLAG)
 
 /* We use separate flag definitions for the C compiler and the C++ compiler.
 	These are the flags actually passed to the respective compilers. 
@@ -334,7 +341,7 @@ CUTIL_LIB = ../condor_util_lib/util_lib.a
 CPLUS_LIB = ../condor_c++_util/cplus_lib.a
 PROCAPI_LIB = ../condor_procapi/libprocapi.a
 SYSAPI_LIB = ../condor_sysapi/libsysapi.a
-DAEMONCORE_LIB = ../condor_daemon_core.V6/daemon_core.a $(COREDUMPER_LINK_LIB) $(DAEMONCORE_WRAP_LDFLAGS)
+DAEMONCORE_LIB = ../condor_daemon_core.V6/daemon_core.a $(COREDUMPER_LINK_LIB) $(DAEMONCORE_WRAP_LDFLAGS) $(PTHREAD_LIB)
 PROCD_CLIENT_LIB = ../condor_procd/procd_client.a
 PRIVSEP_CLIENT_LIB = ../condor_privsep/privsep_client.a
 
@@ -348,7 +355,7 @@ COM_LDFLAGS_L =
 
 /* The various lists of needed ldflags for differing contexts */
 NOWRAP_LDFLAGS = $(COM_LDFLAGS_F) $(PLATFORM_LDFLAGS) $(COM_LDFLAGS_L)
-ALL_LDFLAGS = $(NOWRAP_LDFLAGS) $(WRAP_LDFLAGS)
+ALL_LDFLAGS = $(NOWRAP_LDFLAGS) $(WRAP_LDFLAGS) $(PTHREAD_LIB)
 TEST_LDFLAGS = $(COM_LDFLAGS_F) $(TEST_PLATFORM_LDFLAGS) $(COM_LDFLAGS_L)
 
 

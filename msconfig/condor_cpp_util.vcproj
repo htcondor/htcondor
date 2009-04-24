@@ -4432,6 +4432,10 @@
 			>
 		</File>
 		<File
+			RelativePath="..\src\condor_c++_util\condor_threads.cpp"
+			>
+		</File>
+		<File
 			RelativePath="..\src\condor_c++_util\lsa_mgr.cpp"
 			>
 			<FileConfiguration
