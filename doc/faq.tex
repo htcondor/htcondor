@@ -1676,8 +1676,17 @@ Although the \Prog{LSP-Fix} tool allows the direct removal of an LSP,
 it is likely advisable to completely remove the application for which
 the LSP is a part via the Control Panel.
 
+Another approach is to completely reset the TCP/IP stack to its
+original state.  This can be done using the \verb@netsh@ tool:
+\begin{verbatim}
+netsh int ip reset reset-stack.log
+\end{verbatim}
+The command will return the TCP/IP stack back to the state is was
+in when the OS was first installed.  The log file defined above will
+record all the configuration changes made by \verb@netsh@.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{Why do Condor daemons exit with "Unexpected performance counter size" or "unable to spawn the ProcD" errors?}
+\subsection*{Why do Condor daemons exit with "Unexpected performance counter size", "unable to spawn the ProcD" or "loadavg thread died, restarting. (exit code=2)" errors?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Condor relies on some of Windows' built-in performance counters for its
@@ -1693,6 +1702,10 @@ or:
 \begin{verbatim}
 1/20 15:29:14 (pid:2484) ERROR "unable to spawn the ProcD" at line 136
     in file ..\src\condor_c++_util\proc_family_proxy.C
+\end{verbatim}
+and even:
+\begin{verbatim}
+4/16 10:49:13 loadavg thread died, restarting. (exit code=2)
 \end{verbatim}
 To enable the performance counters, check the registry key
 \verb@HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\PerfProc\Performance@. If a value \verb@Disable Performance Counters@ exists, delete it or set
@@ -1724,6 +1737,62 @@ If successful, the message
   DllRegisterServer in vbscript.dll succeeded.  
 \end{verbatim}
 is printed.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{Why does Condor sometimes fail to parse floating point numbers?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Condor assumes that all floating point numbers are of the form x.y, which,
+depending on a computer's current locale, may not always be the case. This
+problem occurs even if Condor is running under an account that has had the
+locale configured correctly.  The problem lies in the template user account
+which is used to create Condor's dynamic accounts. Even if the entire
+system is configured to use a new locale, this template account seems to
+retain the original system locale. The following steps can be used fix
+this problem.
+
+To create a default user profile, you must be logged on as 
+\textbf{Administrator} or be a member of the \textbf{Administrators} group.
+Create a new user profile for all new user accounts on a computer to be
+based on. To create subsequent profiles, you can use the new user account
+as a template. Here is how to use the new user profile as a template account
+to use as a new user's profile:
+\begin{enumerate}
+\item \textbf{Log on} to the computer as the new user, and customize the
+desktop if appropriate. 
+\item Optionally, install and configure any applications to be shared
+by user accounts made from this template. 
+\item \textbf{Log off}, and then log on as the \textbf{Administrator}. 
+\item In the \textbf{Control Panel}, open the \textbf{System} Control Panel
+ applet. 
+ \begin{itemize}
+ \item On \textbf{Vista} you will need to click on the 
+ \textbf{Advanced system settings} \textbf{Task} listed in the left pane.
+ \end{itemize} 
+\item On the \textbf{Advanced} tab, under \textbf{User Profiles}, 
+click \textbf{Settings}. 
+\item Under \textbf{Profiles stored on this computer}, select the user
+you created to be the template, and then click \textbf{Copy To}. 
+\item To create the default user profile for the computer, type the path
+to the default user:
+ \begin{itemize}
+ \item On Windows 2000: \verb@%WinDir%\Profiles\Default@;
+ \item On Windows XP: \verb@%SystemDrive%\Documents and Settings\Defualt@;
+ \item On Vista: \verb@%SystemDrive%\Users\Default@.
+ \end{itemize}
+\item In the \textbf{Copy To} dialog box, under \textbf{Permitted to use},
+click \textbf{Change}. 
+\item In the \textbf{Select User or Group} dialog box, in the 
+\textbf{Enter the object name to select} text box, type: \textbf{Everyone}
+and click \textbf{OK}.
+\item Click \textbf{OK} to dismiss the \textbf{Copy To} dialog box.
+\item Click \textbf{OK} again to dismiss the \textbf{User Profiles} dialog box.
+\item Finally, click \textbf{OK} one last time to dismiss the
+\textbf{System Properties} dialog.
+\end{enumerate}
+
+If Condor has already created some dynamic accounts, you will need to remove
+them so that Condor can re-create them with the new template account.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Grid Computing}
