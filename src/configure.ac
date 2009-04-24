@@ -2244,8 +2244,9 @@ fi
 if test $os = "Linux" && test $arch != "ia64"; then
 	AC_CHECK_LIB([pthread], [pthread_create],
   		[ac_pthreads=yes
-   		AC_DEFINE([HAVE_PTHREADS],[1],[Define if pthreads are available])],
-		AC_DEFINE([HAS_PTHREADS],[1],[Define if pthreads are available for DRMAA])],
+   		AC_DEFINE([HAVE_PTHREADS],[1],[Define if pthreads are available])
+		AC_DEFINE([HAS_PTHREADS],[1],[Define if pthreads are available for DRMAA])
+		],
   		[ac_pthreads=no])
 	# Check if this system support Thread Local Storage class.
 	AX_TLS
