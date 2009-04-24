@@ -1386,7 +1386,11 @@ int DaemonCore::Cancel_Socket( Stream* insock)
 
 	if ( i == -1 ) {
 		dprintf( D_ALWAYS,"Cancel_Socket: called on non-registered socket!\n");
-		dprintf( D_ALWAYS,"Offending socket number %d\n", i );
+        if( insock ) {
+            dprintf( D_ALWAYS,"Offending socket number %d to %s\n",
+                     ((Sock *)insock)->get_file_desc(),
+                     insock->peer_description());
+        }
 		DumpSocketTable( D_DAEMONCORE );
 		return FALSE;
 	}
