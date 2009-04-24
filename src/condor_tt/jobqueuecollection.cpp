@@ -465,9 +465,7 @@ JobQueueCollection::loadAd(char* cid,
 {
 	MyString sql_str;
 	AssignOpBase*	expr;		// For Each Attribute in ClassAd
-	VariableBase* 	nameExpr;	// For Attribute Name
-	StringBase* 	valExpr;	// For Value
-	char name[1000];
+	const char *name = NULL;
 	MyString value;
 	int len;
 	MyString attNameList; 
@@ -475,7 +473,6 @@ JobQueueCollection::loadAd(char* cid,
 	MyString tmpVal;
 	MyString newvalue;
 	MyString ts_expr;
-	char *tmp;
 	int hor_bndcnt = 0;
 	const char* longstr_arr[2];
 	QuillAttrDataType typ_arr[2];
@@ -494,18 +491,8 @@ JobQueueCollection::loadAd(char* cid,
 	ad->ResetExpr(); // for iteration initialization
 
 	while((expr = (AssignOpBase*)(ad->NextExpr())) != NULL) {
-		nameExpr = (VariableBase*)expr->LArg(); // Name Express Tree
-		valExpr = (StringBase*)expr->RArg();	// Value Express Tree
-
-		valExpr->PrintToNewStr(&tmp);
-
-		if (tmp == NULL) break;
-
-		value = tmp;
-		free(tmp);
-
-		strcpy(name, "");
-		nameExpr->PrintToStr(name);		
+		name = ExprTreeAssignmentName(expr);
+		value = ExprTreeAssignmentValue(expr);
 		
 			// procad
 		if (pid != NULL) {
