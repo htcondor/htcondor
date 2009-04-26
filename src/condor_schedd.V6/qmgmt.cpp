@@ -2377,6 +2377,10 @@ CloseConnection()
 		char *eventlog = param("EVENT_LOG");
 		if ( eventlog ) {
 			write_submit_events = true;
+				// don't write to the user log here, since
+				// hopefully condor_submit already did.
+			usr_log.setWriteUserLog(false);
+			usr_log.initialize(cluster_id,i,0,NULL);
 			free(eventlog);
 		}
 
@@ -2399,10 +2403,6 @@ CloseConnection()
 							// write submit event to global event log
 						if ( write_submit_events ) {
 							SubmitEvent jobSubmit;
-								// don't write to the user log here, since
-								// hopefully condor_submit already did.
-							usr_log.setWriteUserLog(false);
-							usr_log.initialize(cluster_id,i,0,NULL);
 							jobSubmit.initFromClassAd(procad);
 							usr_log.writeEvent(&jobSubmit,procad);
 						}
