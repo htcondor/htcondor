@@ -1,3 +1,7 @@
+04/27/2009 V7_3-dagspeed-branch
+ Branch for an optimization of dagman to use sets instead of lists for 
+ keeping edge dependencies.
+
 03/04/2009 V7_3-new_classads_benchmarks-branch
  Branch for benchmarking new ClassAds (based off V7_3-new_classads-branch)
 
