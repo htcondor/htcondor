@@ -417,7 +417,7 @@ SHADOW			= $(SBIN)/condor_shadow
 ##  into a file.  This way, tools running on the local machine don't
 ##  need to query the central manager to find the schedd.  This
 ##  feature can be turned off by commenting out this setting.
-SCHEDD_ADDRESS_FILE	= $(LOG)/.schedd_address
+SCHEDD_ADDRESS_FILE	= $(SPOOL)/.schedd_address
 
 ##  What name do you want to use for this schedd?
 #SCHEDD_NAME = username@$(FULL_HOSTNAME)
