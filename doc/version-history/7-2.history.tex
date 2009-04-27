@@ -175,6 +175,11 @@ and \Condor{submit\_dag}.  This flag is intended mainly for testing.
   \MacroNI{PREEMPTION\_RANK} will not change within
   a negotiation interval.
 
+\item The new configuration variables \Macro{OFFLINE\_LOG}
+  and \Macro{OFFLINE\_EXPIRE\_ADS\_AFTER} specify the location of
+  persistent machine ClassAds for hibernating machines,
+  as well as the lifetime of the persistent ClassAds.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -350,6 +355,10 @@ loop when searching through a corrupted history file.
 \item Added a note about the fact that environment values specified
 with the \Opt{environment} submit description file command override values from
 the submittor's environment, as imported with \Opt{getenv = True}.
+
+\item Added new information to the section on Power Management
+  pertaining to the handling of hibernating machines.
+  
 
 \end{itemize}
 
