@@ -1,3 +1,7 @@
+04/27/2009 V7_2-fixckptprot-branch
+  Branch to hack a fix for 32/64 bit incompatibilities in ckpt server protocol
+  as per gittrac ticket #177.
+
 04/02/2009 V7_2_2-branch
   Branch for the 7.2.2 release; the branch is based on V7_2-branch.
 
