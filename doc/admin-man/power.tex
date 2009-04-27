@@ -1,35 +1,33 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{\label{sec:power-man}Power Management}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 \index{power management|(}
-\index{installation!power management}
-On the Windows platform,
-Condor can be configured to place a machine in a low power state.  
-The details of the machine's power capabilities are in the
-configuration. 
 
-This section discusses a starting point for users interested in 
-experimenting with power conservation within their Condor pool.
+Condor supports placing machines in low power states.
+Power setting decisions are based upon  
+Condor configuration.
+
 Power conservation is relevant when machines are not in heavy use,
 or when there are known periods of low activity within the pool.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Configuration to Enter a Low Power State}
+\subsection{Entering a Low Power State}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{power management!entering a low power state}
 
-By default, Condor's does not do power management.
+By default, Condor does not do power management.
 When desired, the ability to place a machine into a low
 power state is accomplished through configuration.
 This occurs when all slots on a machine agree that a low power state
 is desired.
 
 A slot's readiness to hibernate is determined by the 
-evaluating the \Macro{HIBERNATE} expression in the context of the slot.
-Readiness is evaluated on at fixed intervals, 
+evaluating the \Macro{HIBERNATE} configuration variable within 
+the context of the slot.
+Readiness is evaluated at fixed intervals, 
 as determined by the configuration variable
 \Macro{HIBERNATE\_CHECK\_INTERVAL}.
-A non-zero value enables the power management facility.
+A non-zero value of this variables enables the power management facility.
 It is an integer value representing seconds,
 an it need not be a small value.
 There is a trade off between the accuracy of measurement and 
@@ -70,11 +68,13 @@ This permits an easy determination whether or not
 the machine is in an Unclaimed state through the use of
 an auxiliary macro called \MacroNI{ShouldHibernate}.
 
+\footnotesize
 \begin{verbatim}
 ShouldHibernate = ((KeyboardIdle > $(StartIdleTime)) \
                   && $(CPUIdle) \
                   && ($(StateTimer) > (2 * $(HOUR)))
 \end{verbatim}
+\normalsize
 
 This macro evaluates to \Expr{True} if
 \begin{itemize}
@@ -85,18 +85,20 @@ This macro evaluates to \Expr{True} if
 
 The \MacroNI{HIBERNATE} expression becomes
 
+\footnotesize
 \begin{verbatim}
-HIBERNATE = ifThenElse($(ShouldHibernate), ``RAM'', ``NONE'' )
+HIBERNATE = ifThenElse($(ShouldHibernate), "RAM", "NONE" )
 \end{verbatim}
+\normalsize
 
 In words, this expresses:
-enter power state ''RAM'',
+enter power state \verb@"RAM"@,
 if \MacroNI{ShouldHibernate} evaluates to \Expr{True}; 
-otherwise, enter power state ''NONE'',
+otherwise, enter power state \verb@"NONE"@,
 which leaves the machine in its current state.   Unknown names are
-treated as ``NONE''.
+treated as \verb@"NONE"@.
 
-If any slot returns ''NONE'',
+If any slot returns \verb@"NONE"@,
 it vetoes the decision to enter a low power state.
 Only when values returned by all slots are all non-zero 
 is there a decision to enter a low power state.
@@ -105,46 +107,9 @@ then the largest magnitude value is chosen.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Linux}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-Depending on the Linux distribution and version, there are 3 different
-methods for controlling the system's power state.  The methods are:
-\begin{itemize}
-\item pm-utils is a set of command-line tools which can be used to
-  detect and switch power states.  In Condor, this is named ``pm-utils''.
-\item The /sys/power virtual directory has sever virtual files that
-  can be used to detect / set the power states.  In Condor, this is
-  name ``/sys''.
-\item The /proc/acpi virtual directory has sever virtual files that
-  can be used to detect / set the power states.  In Condor, this is
-  name ``/proc''.
-\end{itemize}
-
-By default, the Condor Linux hibernator attempts to detect the method
-to use in the above order.  The first method that's detected as usable
-on the system will be used.
-
-This behavior can be overridden by specifying the
-\MacroNI{LINUX\_HIBERNATION\_METHOD} configuration parameter -- it
-should be set to one of the above names (``pm-utils'', ``/sys'', or
-``/proc'').
-See the description of \MacroNI{LINUX\_HIBERNATION\_METHOD} in
-section~\ref{param:LinuxHibernationMethod} on
-page~\pageref{param:LinuxHibernationMethod}
-for details on overriding this behavior.
-
-If no usable methods are detected, or the method specified by
-\MacroNI{LINUX\_HIBERNATION\_METHOD} be either not detected or
-invalid, hibernation will be disabled.
-
-The details of this selection process, and the final method selected
-can be logged via enabling \MacroNI{D\_FULLDEBUG} in the relevant
-subsystem's log configuration.
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Returning From a Low Power State}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{power management!leaving a low power state}
 
 Condor currently provides a tool \Condor{power} to wake machines:
 
@@ -174,14 +139,14 @@ but this may change in future releases.
 \subsection{Tracking Hibernating Machines}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
 
-A Pool's Collector can be configured to keep a persistent ClassAd
-entry for each machine once it has entered hibernation.
+A pool's \Condor{collector} daemon can be configured to keep a 
+persistent ClassAd entry for each machine, once it has entered hibernation.
 
-To do this you must define a a log file using the \Macro{OFFLINE\_LOG}
+To do this, define a log file using the \Macro{OFFLINE\_LOG}
 configuration option.  And, optionally, an expiry time for each ad can
 be specified with \Macro{OFFLINE\_EXPIRE\_ADS\_AFTER}.  This expiry
 time starts from the time the hibernating machine's ClassAd enters
-the Collector.
+the \Condor{collector} daemon.
 
 See the description of \Macro{OFFLINE\_LOG} and
 \Macro{OFFLINE\_EXPIRE\_ADS\_AFTER} in
@@ -190,7 +155,48 @@ page~\pageref{param:CollectorOfflineLog} for details on
 these features.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Troubleshooting}
+\subsection{Linux Platform Details}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{power management!leaving a low power state}
+
+Depending on the Linux distribution and version, there are 3 different
+methods for controlling the system's power state.  The methods are:
+\begin{itemize}
+\item pm-utils is a set of command-line tools which can be used to
+  detect and switch power states.
+  In Condor, this is defined by the string \verb@"pm-utils"@.
+\item The \File{/sys/power} virtual directory has several virtual files that
+  can be used to detect and set the power states.
+  In Condor, this is defined by the string \verb@"/sys"@.
+\item The \File{/proc/acpi} virtual directory has several virtual files that
+  can be used to detect and set the power states.
+  In Condor, this is defined by the string \verb@"/proc"@.
+\end{itemize}
+
+By default, the Condor Linux hibernator attempts to detect the method
+to use in the above order.  The first method that's detected as usable
+on the system will be used.
+
+This behavior can be overridden by specifying the
+\MacroNI{LINUX\_HIBERNATION\_METHOD} configuration parameter -- it
+should be set to one of the above names
+(\verb@"pm-utils"@, \verb@"/sys"@, or \verb@"/proc"@).
+See the description of \MacroNI{LINUX\_HIBERNATION\_METHOD} in
+section~\ref{param:LinuxHibernationMethod} on
+page~\pageref{param:LinuxHibernationMethod}
+for details on overriding this behavior.
+
+If no usable methods are detected, or the method specified by
+\MacroNI{LINUX\_HIBERNATION\_METHOD} be either not detected or
+invalid, hibernation will be disabled.
+
+The details of this selection process, and the final method selected
+can be logged via enabling \MacroNI{D\_FULLDEBUG} in the relevant
+subsystem's log configuration.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Windows Platform Details}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 If after a suitable amount of time,

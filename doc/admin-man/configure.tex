@@ -4450,13 +4450,13 @@ See section~\ref{sec:power-man} on page~\pageref{sec:power-man} on
   Condor on Linux to detect the hibernation method to use.  The default
   behavior is to try:
   \begin{itemize}
-  \item Detect and use the pm-UTIL command line tools ``pm-UTIL''
-  \item Detect and use the /sys/power virtual files ``/sys''
-  \item Detect and use the /proc/ACPI virtual files ``/proc''
+  \item Detect and use the pm-util command line tools \verb@"pm-util"@ 
+  \item Detect and use the \File{/sys/power} virtual files \verb@"/sys"@ 
+  \item Detect and use the \File{/proc/ACPI} virtual files \verb@"/proc"@ 
   \end{itemize}
   To override this behavior and force the use of a particular method,
   set \MacroNI{LINUX\_HIBERNATION\_METHOD} to one of the above names
-  (``pm-utils'', ``/sys'', or ``/proc'').
+  (\verb@"pm-utils"@, \verb@"/sys"@, or \verb@"/proc"@).
 
 \label{param:OfflineLog}
 \item[\Macro{OFFLINE\_LOG}]
