@@ -7600,10 +7600,27 @@ section~\ref{sec:Security} on Security.
 \label{param:SecTCPSessionTimeout}
 \item[\Macro{SEC\_TCP\_SESSION\_TIMEOUT}]
   The length of time in seconds until the timeout
-  when establishing a UDP security session via TCP.
+  on individual network operations when establishing a UDP security
+  session via TCP.
   The default value is 20 seconds.
   Scalability issues with a large pool would be the only basis
   for a change from the default value.
+
+\label{param:SecTCPSessionTimeout}
+\item[\Macro{SEC\_TCP\_SESSION\_DEADLINE}]
+  The total length of time in seconds until giving up
+  when establishing a security session.  Whereas
+  \Macro{SEC\_TCP\_SESSION\_TIMEOUT} specifies the timeout
+  for individual blocking operations (connect, read, write), this
+  setting specifies the total time across all operations, including
+  non-blocking operations that have little cost other than holding
+  open the socket.
+  The default value is 120 seconds.
+  The intention of this setting is to avoid waiting for hours
+  for a response in the rare event that the other side
+  freezes up and the socket remains in a connected state.
+  This problem has been observed in some types of operating system
+  crashes.
 
 \label{param:SecDefaultAuthenticationTimeout}
 \item[\Macro{SEC\_DEFAULT\_AUTHENTICATION\_TIMEOUT}]

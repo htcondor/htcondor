@@ -44,7 +44,10 @@ to the current host when the type of installation is `manager'.
 
 \begin{itemize}
 
-\item None.
+\item Added \MacroNI{SEC\_TCP\_SESSION\_DEADLINE}.  This specifies the
+number of seconds after which the client should give up its attempt to
+establish a security session with a daemon that it is connecting to.
+The default is 120 seconds.
 
 \end{itemize}
 
@@ -59,6 +62,17 @@ bug was introduced in 7.2.0.
 \item Fixed a problem that caused integrity checking of most UDP packets
 longer than about 40k to fail.  This bug affects all previous versions of
 Condor.
+
+\item By adding \MacroNI{SEC\_TCP\_SESSION\_DEADLINE}, fixed a problem
+that has existed since 7.1.2.  The problem is that non-blocking read
+operations in the security handshake had no timeout and could therefore
+lead to a socket remaining allocated indefinitely if the other side of
+the connection didn't respond.  When this problem was observed, the following
+message appeared in the SchedLog:
+
+\begin{verbatim}
+file descriptor safety level exceeded
+\end{verbatim}
 
 \item Fixed a bug in the event log reader code that could cause it to
   not detect missed events in rare cases.
