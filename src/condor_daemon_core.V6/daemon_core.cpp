@@ -2511,7 +2511,7 @@ void DaemonCore::Driver()
 	int			tmpErrno;
 	time_t		timeout;
 	int result;
-	time_t connect_timeout, min_connect_timeout;
+	time_t min_deadline;
 
 #ifndef WIN32
 	sigset_t fullset, emptyset;
@@ -2631,7 +2631,7 @@ void DaemonCore::Driver()
 		// every time because 1) some timeout handler may have removed/added
 		// sockets, and 2) it ain't that expensive....
 		selector.reset();
-		min_connect_timeout = 0;
+		min_deadline = 0;
 		for (i = 0; i < nSock; i++) {
 			if ( (*sockTable)[i].iosock ) {	// if a valid entry....
 					// Setup our fdsets
@@ -2642,29 +2642,30 @@ void DaemonCore::Driver()
 						// on success, or the exceptfd set on failure.
 					selector.add_fd( (*sockTable)[i].iosock->get_file_desc(), Selector::IO_WRITE );
 					selector.add_fd( (*sockTable)[i].iosock->get_file_desc(), Selector::IO_EXCEPT );
-
-					// If this connection attempt times out sooner than
-					// our select timeout, adjust the select timeout.
-					connect_timeout = (*sockTable)[i].iosock->connect_timeout_time();
-					if(connect_timeout) { // If non-zero, there is a timeout.
-						if(min_connect_timeout == 0 || \
-						   min_connect_timeout > connect_timeout) {
-							min_connect_timeout = connect_timeout;
-						}
-						connect_timeout -= time(NULL);
-						if(connect_timeout < timeout) {
-							if(connect_timeout < 0) connect_timeout = 0;
-							timeout = connect_timeout;
-						}
-					}
 				} else {
 						// we want to be woken when there is something
 						// to read.
 					selector.add_fd( (*sockTable)[i].iosock->get_file_desc(), Selector::IO_READ );
 				}
+
+					// If this socket times out sooner than
+					// our select timeout, adjust the select timeout.
+				time_t deadline = (*sockTable)[i].iosock->get_deadline();
+				if(deadline) { // If non-zero, there is a timeout.
+					if(min_deadline == 0 || min_deadline > deadline) {
+						min_deadline = deadline;
+					}
+				}
             }
 		}
 
+		if( min_deadline ) {
+			int deadline_timeout = min_deadline - time(NULL) + 1;
+			if(deadline_timeout < timeout) {
+				if(deadline_timeout < 0) deadline_timeout = 0;
+				timeout = deadline_timeout;
+			}
+		}
 
 #if !defined(WIN32)
 		// Add the registered pipe fds into the list of descriptors to
@@ -2750,9 +2751,15 @@ void DaemonCore::Driver()
 
 		if ( selector.has_ready() ||
 			 ( selector.timed_out() && 
-			   min_connect_timeout && min_connect_timeout < time(NULL) ) ) {
-			// No socket activity has happened, but a connection attempt
-			// has timed out, so do enter the following section.
+			   min_deadline && min_deadline < time(NULL) ) )
+		{
+			// Either socket activity has happened or a socket
+			// operation has timed out.
+
+			// To avoid repeated calls to time(), store it once
+			// for the following loop; all uses of it below should
+			// be ok if it drifts a little into the past.
+			time_t now = time(NULL);
 
 			bool recheck_status = false;
 			//bool call_soap_handler = false;
@@ -2764,17 +2771,16 @@ void DaemonCore::Driver()
 					// if the socket was doing a connect(), we check the
 					// writefds and excepfds.  otherwise, check readfds.
 					(*sockTable)[i].call_handler = false;
+					time_t deadline = (*sockTable)[i].iosock->get_deadline();
+					bool sock_timed_out = ( deadline && deadline < now );
+
 					if ( (*sockTable)[i].is_connect_pending ) {
 
-						connect_timeout =
-							(*sockTable)[i].iosock->connect_timeout_time();
-						bool connect_timed_out =
-							connect_timeout != 0 && connect_timeout < time(NULL);
 						if ( selector.fd_ready( (*sockTable)[i].iosock->get_file_desc(),
 												Selector::IO_WRITE ) ||
 							 selector.fd_ready( (*sockTable)[i].iosock->get_file_desc(),
 												Selector::IO_EXCEPT ) ||
-							 connect_timed_out )
+							 sock_timed_out )
 						{
 							// A connection pending socket has been
 							// set or the connection attempt has timed out.
@@ -2789,7 +2795,8 @@ void DaemonCore::Driver()
 						}
 					} else {
 						if ( selector.fd_ready( (*sockTable)[i].iosock->get_file_desc(),
-												Selector::IO_READ ) )
+												Selector::IO_READ ) ||
+							 sock_timed_out )
 						{
 							(*sockTable)[i].call_handler = true;
 						}

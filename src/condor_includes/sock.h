@@ -332,6 +332,11 @@ protected:
 	bool test_connection();
 	///
 	time_t connect_timeout_time();
+
+	/// if we are connecting, merges together Stream::get_deadline
+	/// and connect_timeout_time()
+	virtual time_t get_deadline();
+
 	///
 	int move_descriptor_up();
 
