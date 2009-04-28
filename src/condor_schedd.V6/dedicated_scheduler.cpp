@@ -1112,7 +1112,7 @@ DedicatedScheduler::negotiateRequest( ClassAd* req, Stream* s,
 							 ATTR_LAST_MATCH_TIME, (int)time(0) );
 #endif
 
-			if( !s->get(claim_id) ) {
+			if( !s->get_secret(claim_id) ) {
 				dprintf( D_ALWAYS, "Can't receive ClaimId from mgr\n" ); 
 				return NR_ERROR;
 			}
