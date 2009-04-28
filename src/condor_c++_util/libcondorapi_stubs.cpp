@@ -164,8 +164,8 @@ int Stream::put_secret( char const *s ){not_impl();return 0;}
 int Stream::get_secret( char *&s ){not_impl();return 0;}
 void Stream::set_deadline_timeout(int){not_impl();}
 void Stream::set_deadline(time_t){not_impl();}
-time_t Stream::get_deadline(){not_impl();}
-bool Stream::deadline_expired(){not_impl();}
+time_t Stream::get_deadline(){not_impl();return 0;}
+bool Stream::deadline_expired(){not_impl();return false;}
 
 
 /* stubs for generic query object */
