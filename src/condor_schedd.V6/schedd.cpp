@@ -8476,7 +8476,7 @@ void
 _mark_job_running(PROC_ID* job_id)
 {
 	int status;
-	int orig_max = 0;
+	int orig_max;
 
 	GetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_STATUS, &status);
 	GetAttributeInt(job_id->cluster, job_id->proc, ATTR_MAX_HOSTS, &orig_max);
@@ -8521,7 +8521,7 @@ void
 _mark_job_stopped(PROC_ID* job_id)
 {
 	int		status;
-	int		orig_max = 0;
+	int		orig_max;
 	int		had_orig;
 
 	had_orig = GetAttributeInt(job_id->cluster, job_id->proc, 
