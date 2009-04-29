@@ -185,6 +185,8 @@ if ( $Config{Debug} )
     }
 }
 
+ReadStatusFile();
+
 # Loop forever...
 my $QuitTime = time( ) + $Config{MaxRunTime};
 while( 1 )
@@ -328,6 +330,7 @@ sub ReadJobs( )
     my $PassStartTime = time( );
 
     my %Jobs;
+    my %NewCachedJobs;
     foreach my $StateFileDir ( keys %{$Config{StateFileDirs}} )
     {
 	# State files
@@ -439,6 +442,7 @@ sub ReadJobs( )
 
 	    # If we already have a status for this job, don't poll
 	    if ( exists $CachedJobs{$Contact} ) {
+		$NewCachedJobs{$Contact} = $CachedJobs{$Contact};
 		if ( $Config{Debug} > 4 ) {
 		    print "Found cached state for $Contact\n";
 		}
@@ -484,7 +488,7 @@ sub ReadJobs( )
 	    if ( defined $JobState )
 	    {
 		if ( $JobState == 8 ) {
-		    $CachedJobs{$Contact} = $JobState;
+		    $NewCachedJobs{$Contact} = $JobState;
 		} else {
 		    $Jobs{$Contact} = $JobState;
 
@@ -505,9 +509,9 @@ sub ReadJobs( )
     my $TmpFile = $Config{TmpFile};
     open( FILE, ">$TmpFile" ) || die( "Can't write to data file '$TmpFile': $!" );
     print FILE "$PassStartTime " . time() . "\n";
-    foreach my $Job ( sort keys %CachedJobs )
+    foreach my $Job ( sort keys %NewCachedJobs )
     {
-	printf FILE "%-60s %5d\n", $Job, $CachedJobs{$Job};
+	printf FILE "%-60s %5d\n", $Job, $NewCachedJobs{$Job};
     }
     foreach my $Job ( sort keys %Jobs )
     {
@@ -515,12 +519,41 @@ sub ReadJobs( )
     }
     print FILE "GRIDMONEOF\n";
     close( FILE );
-    print "Wrote " . ( scalar( keys %CachedJobs ) + scalar( keys %Jobs ) ) .
+    print "Wrote " . ( scalar( keys %NewCachedJobs ) + scalar( keys %Jobs ) ) .
 	" entries to $TmpFile\n"
 	if ( $Config{Debug} );
 
     # Ok, move it on top of the real file
     rename( $TmpFile, $File ) || die "Rename '$TmpFile' -> '$File' failed: $!";
+
+    # Replace the old cache with the new one. Thus, as gram state files
+    # disappear, we stop caching those jobs' status.
+    %CachedJobs = %NewCachedJobs;
+}
+
+# Read the last job status file written by our predecessor and seed our
+# cache of completed jobs.
+sub ReadStatusFile( )
+{
+    my $file = $Config{OutputFile};
+    my $contact;
+    my $status;
+
+    if ( ! -r $file ) {
+	print "Didn't find old job status file\n";
+	return;
+    }
+    open( FILE, "<$file" ) || die "Can't open $file for read: $!";
+    # Skip the first line
+    <FILE>; 
+    while ( <FILE> ) {
+	last if /GRIDMONEOF/;
+	( $contact, $status ) = split;
+	if ( $status == 8 ) {
+	    $CachedJobs{$contact} = $status;
+	}
+    }
+    close( FILE );
 }
 
 # Check to see if we're the only process running, handle it...
