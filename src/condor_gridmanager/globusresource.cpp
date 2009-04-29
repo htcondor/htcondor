@@ -33,7 +33,7 @@
 // If the grid_monitor appears hosed, how long do we
 // disable grid_monitoring that site for?
 // (We actually just set the timer for that site to this)
-#define GM_DISABLE_LENGTH (60*60)
+int GlobusResource::monitorDisableLength = DEFAULT_GM_DISABLE_LENGTH;
 
 int GlobusResource::gahpCallTimeout = 300;	// default value
 bool GlobusResource::enableGridMonitor = false;
@@ -597,10 +597,10 @@ GlobusResource::AbandonMonitor()
 {
 	dprintf(D_ALWAYS, "Giving up on grid_monitor for site %s.  "
 		"Will retry in %d seconds (%d minutes)\n",
-		resourceName, GM_DISABLE_LENGTH, GM_DISABLE_LENGTH / 60);
+		resourceName, monitorDisableLength, monitorDisableLength / 60);
 	StopMonitor();
-	monitorRetryTime = time(NULL) + GM_DISABLE_LENGTH;
-	daemonCore->Reset_Timer( checkMonitorTid, GM_DISABLE_LENGTH);
+	monitorRetryTime = time(NULL) + monitorDisableLength;
+	daemonCore->Reset_Timer( checkMonitorTid, monitorDisableLength );
 }
 
 void

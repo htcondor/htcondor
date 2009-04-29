@@ -287,6 +287,10 @@ void GlobusJobReconfig()
 	tmp_bool = param_boolean("ENABLE_GRID_MONITOR",false);
 	GlobusResource::setEnableGridMonitor( tmp_bool );
 
+	tmp_int = param_integer("GRID_MONITOR_DISABLE_TIME",
+							DEFAULT_GM_DISABLE_LENGTH);
+	GlobusResource::setGridMonitorDisableLength( tmp_int );
+
 	// Tell all the resource objects to deal with their new config values
 	GlobusResource *next_resource;
 

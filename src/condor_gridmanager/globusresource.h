@@ -28,6 +28,8 @@
 #include "baseresource.h"
 #include "gahp-client.h"
 
+#define DEFAULT_GM_DISABLE_LENGTH (60*60)
+
 class GlobusJob;
 class GlobusResource;
 
@@ -71,6 +73,8 @@ class GlobusResource : public BaseResource
 		{ enableGridMonitor = enable; }
 	static bool GridMonitorEnabled()
 		{ return enableGridMonitor; }
+	static void setGridMonitorDisableLength( int len )
+	{ monitorDisableLength = len; }
 
 	// This should be private, but GlobusJob references it directly for now
 	static HashTable <HashKey, GlobusResource *> ResourcesByName;
@@ -117,6 +121,7 @@ class GlobusResource : public BaseResource
 		// When true, we'll try to run a grid monitor on each gt2
 		// gatekeeper.
 	static bool enableGridMonitor;
+	static int monitorDisableLength;
 	int checkMonitorTid;
 
 		// monitorStarting and monitorActive should not be true at the
