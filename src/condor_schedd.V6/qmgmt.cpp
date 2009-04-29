@@ -4036,18 +4036,6 @@ int Runnable(ClassAd *job)
 		return FALSE;
 	}
 
-	if ( job->LookupInteger(ATTR_CURRENT_HOSTS, cur) == 0 )
-	{
-		dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (no %s)\n",
-				ATTR_CURRENT_HOSTS);
-		return FALSE; 
-	}
-	if ( job->LookupInteger(ATTR_MAX_HOSTS, max) == 0 )
-	{
-		dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (no %s)\n",
-				ATTR_MAX_HOSTS);
-		return FALSE; 
-	}
 	if (cur < max)
 	{
 		dprintf (D_FULLDEBUG | D_NOHEADER, " is runnable\n");
