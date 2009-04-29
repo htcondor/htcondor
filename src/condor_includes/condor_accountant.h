@@ -80,6 +80,8 @@ public:
   void DisplayLog();
   void DisplayMatches();
 
+  ClassAd* GetClassAd(const MyString& Key);
+
 private:
 
   //--------------------------------------------------------
@@ -162,7 +164,6 @@ private:
   static ClassAd* FindResourceAd(const MyString& ResourceName, ClassAdList& ResourceList);
   static MyString GetDomain(const MyString& CustomerName);
 
-  ClassAd* GetClassAd(const MyString& Key);
   bool DeleteClassAd(const MyString& Key);
 
   void SetAttributeInt(const MyString& Key, const MyString& AttrName, int AttrValue);
