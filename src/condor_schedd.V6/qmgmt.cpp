@@ -3999,7 +3999,7 @@ void FindRunnableJob(PROC_ID & jobid, const ClassAd* my_match_ad,
 
 int Runnable(ClassAd *job)
 {
-	int status, universe, cur, max;
+	int status, universe, cur = 0, max = 1;
 
 	if ( job->LookupInteger(ATTR_JOB_STATUS, status) == 0 )
 	{
@@ -4036,18 +4036,9 @@ int Runnable(ClassAd *job)
 		return FALSE;
 	}
 
-	if ( job->LookupInteger(ATTR_CURRENT_HOSTS, cur) == 0 )
-	{
-		dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (no %s)\n",
-				ATTR_CURRENT_HOSTS);
-		return FALSE; 
-	}
-	if ( job->LookupInteger(ATTR_MAX_HOSTS, max) == 0 )
-	{
-		dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (no %s)\n",
-				ATTR_MAX_HOSTS);
-		return FALSE; 
-	}
+	job->LookupInteger(ATTR_CURRENT_HOSTS, cur);
+	job->LookupInteger(ATTR_MAX_HOSTS, max);
+
 	if (cur < max)
 	{
 		dprintf (D_FULLDEBUG | D_NOHEADER, " is runnable\n");

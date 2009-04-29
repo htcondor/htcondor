@@ -8476,7 +8476,7 @@ void
 _mark_job_running(PROC_ID* job_id)
 {
 	int status;
-	int orig_max;
+	int orig_max = 1; // If it was not set this is the same default
 
 	GetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_STATUS, &status);
 	GetAttributeInt(job_id->cluster, job_id->proc, ATTR_MAX_HOSTS, &orig_max);
