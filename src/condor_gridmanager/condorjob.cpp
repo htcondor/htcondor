@@ -541,8 +541,8 @@ int CondorJob::doEvaluateState()
 			// another one.
 			if ( now >= lastSubmitAttempt + submitInterval ) {
 				// Once RequestSubmit() is called at least once, you must
-				// CancelSubmit() or SubmitComplete() once you're done with
-				// the request call
+				// call CancelSubmit() when there's no job left on the
+				// remote host and you don't plan to submit one.
 				if ( myResource->RequestSubmit(this) == false ) {
 					break;
 				}
@@ -568,7 +568,6 @@ int CondorJob::doEvaluateState()
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
 				}
-				myResource->SubmitComplete(this);
 				lastSubmitAttempt = time(NULL);
 				numSubmitAttempts++;
 				if ( rc == GLOBUS_SUCCESS ) {

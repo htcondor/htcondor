@@ -53,7 +53,6 @@ class BaseResource
 	time_t getLastStatusChangeTime() { return lastStatusChange; }
 
 	bool RequestSubmit( BaseJob *job );
-	void SubmitComplete( BaseJob *job );
 	void CancelSubmit( BaseJob *job );
 	void AlreadySubmitted( BaseJob *job );
 
@@ -92,15 +91,10 @@ class BaseResource
 	static int probeInterval;
 	static int probeDelay;
 
-	// jobs that are currently executing a submit
-	List<BaseJob> submitsInProgress;
-	// jobs that want to submit but can't due to submitLimit
-	List<BaseJob> submitsQueued;
 	// jobs allowed to submit under jobLimit
 	List<BaseJob> submitsAllowed;
 	// jobs that want to submit but can't due to jobLimit
 	List<BaseJob> submitsWanted;
-	int submitLimit;		// max number of submit actions
 	int jobLimit;			// max number of submitted jobs
 
 	bool hasLeases;

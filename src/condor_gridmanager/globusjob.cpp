@@ -1188,11 +1188,11 @@ int GlobusJob::doEvaluateState()
 			if ( now >= lastSubmitAttempt + submitInterval ) {
 				CHECK_PROXY;
 				// Once RequestSubmit() is called at least once, you must
-				// SubmitComplete() or CancelSubmit() once you're done with
-				// the request call
-				// Also, if you call SubmitComplete() but don't have a
-				// running jobmanager (due to a failure), you must call
-				// JMComplete() as well.
+				// call CancelSubmit() when there's no job left on the
+				// remote host and you don't plan to submit one.
+				// Once RequestJM() is called, you must call JMComplete()
+				// when the jobmanager is no longer running and you don't
+				// plan to start one.
 				if ( myResource->RequestSubmit(this) == false ||
 					 myResource->RequestJM(this, true) == false ) {
 					break;
@@ -1213,7 +1213,6 @@ int GlobusJob::doEvaluateState()
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
 				}
-				myResource->SubmitComplete(this);
 				jmShouldBeStoppingTime = 0;
 				lastSubmitAttempt = time(NULL);
 				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONNECTION_FAILED ||
@@ -1709,11 +1708,11 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 
 				CHECK_PROXY;
 				// Once RequestSubmit() is called at least once, you must
-				// call SubmitComplete() or CancelSubmit() once you're done
-				// with the request call
-				// Also, if you call SubmitComplete() but don't have a
-				// running jobmanager (due to a failure), you must call
-				// JMComplete() as well.
+				// call CancelSubmit() when there's no job left on the
+				// remote host and you don't plan to submit one.
+				// Once RequestJM() is called, you must call JMComplete()
+				// when the jobmanager is no longer running and you don't
+				// plan to start one.
 				if ( myResource->RequestSubmit(this) == false ||
 					 myResource->RequestJM(this, false) == false ) {
 					break;
@@ -1730,7 +1729,6 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
 				}
-				myResource->SubmitComplete(this);
 				lastRestartAttempt = time(NULL);
 				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONNECTION_FAILED ||
 					 //rc == GLOBUS_GRAM_PROTOCOL_ERROR_AUTHORIZATION ||
@@ -2339,8 +2337,8 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 
 				CHECK_PROXY;
 				// Once RequestSubmit() is called at least once, you must
-				// call SubmitComplete() or CancelSubmit() once you're done
-				// with the request call
+				// call CancelSubmit() when the job is gone from the
+				// remote host.
 				if ( myResource->RequestSubmit(this) == false ||
 					 myResource->RequestJM(this, false) == false ) {
 					break;
@@ -2357,7 +2355,6 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
 				}
-				myResource->SubmitComplete(this);
 				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_USER_PROXY_EXPIRED ) {
 					myResource->JMComplete( this );
 					gmState = GM_PROXY_EXPIRED;

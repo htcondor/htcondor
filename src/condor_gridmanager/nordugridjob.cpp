@@ -453,7 +453,6 @@ int NordugridJob::doEvaluateState()
 					SetRemoteJobId( job_id );
 					free( job_id );
 					WriteGridSubmitEventToUserLog( jobAd );
-					myResource->SubmitComplete( this );
 					gmState = GM_SUBMIT_SAVE;
 				} else {
 					errorString = gahp->getErrorString();
