@@ -3261,7 +3261,7 @@ DaemonCore::CallSocketHandler( int &i, bool default_to_HandleCommand )
 	args->accepted_sock = NULL;
 	Stream *insock = (*sockTable)[i].iosock;
 	ASSERT(insock);
-	if ( (*sockTable)[i].handler==NULL && (*sockTable)[i].handler==NULL &&
+	if ( (*sockTable)[i].handler==NULL && (*sockTable)[i].handlercpp==NULL &&
 		 default_to_HandleCommand &&
 		 insock->type() == Stream::reli_sock &&
 		 ((ReliSock *)insock)->_state == Sock::sock_special &&
