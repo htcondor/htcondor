@@ -48,6 +48,13 @@ sub IDLE{1};
 sub HELD{5};
 sub RUNNING{2};
 
+# Get rid of any existing log files.
+foreach $name (@logfiles) {
+	if (-e $name) {
+		system("rm -f $name");
+	}
+}
+
 $abnormal = sub 
 {
 
