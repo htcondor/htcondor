@@ -248,6 +248,7 @@
 ;--- Create INSTALLDIR ------------------------------------------------------
 <$DirectoryTree Key="INSTALLDIR" Dir="c:\condor" CHANGE="\" PrimaryFolder="Y">
 
+
 ;--- Create LOG, SPOOL and EXECUTE ------------------------------------------
 <$Component "CreateExecuteFolder" Create="Y" Directory_="EXECUTEDIR">
 	<$DirectoryTree Key="EXECUTEDIR" Dir="[INSTALLDIR]\execute" MAKE="Y">
@@ -259,6 +260,7 @@
 	<$DirectoryTree Key="LOGDIR" Dir="[INSTALLDIR]\log" MAKE="Y">
 <$/Component>
 
+
 ;--- Add the files (components generated) -----------------------------------
 <$Files '<$ImageRootDirectory>\*.*' SubDir='TREE' DestDir='INSTALLDIR'>
 
@@ -269,6 +271,20 @@
 
 ;--- Copy cygwin1.dll if we find one (to avoid version conflicts) -----------
 ;<$Files '[CYGWINDLL]' DestDir='[INSTALLDIR]bin'>
+
+;--- Install the Visual Studio runtime --------------------------------------
+#(
+<$MergeModule "C:\Program Files\Common Files\Merge Modules\Microsoft_VC90_CRT_x86.msm" 
+        language="0" 
+        IgnoreErrors=^InstallExecuteSequence:AllocateRegistrySpace^>
+#)
+#(
+<$MergeModule "C:\Program Files\Common Files\Merge Modules\policy_9_0_Microsoft_VC90_CRT_x86.msm"
+	language="0" 
+        IgnoreErrors=^InstallExecuteSequence:AllocateRegistrySpace \
+        InstallExecuteSequence:SxsInstallCA InstallExecuteSequence:SxsUninstallCA^>
+#)
+
 
 ; ---- remove trailing slash from INSTALLDIR --------
 <$VbsCa Binary="RemoveSlashFromINSTALLDIR.vbs">
