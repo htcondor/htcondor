@@ -18,28 +18,18 @@
 ##
 ##**************************************************************
 
+## This makes sure that node priorities work correctly.
+
 use CondorTest;
 
-$cmd = 'job_dagman_subdag-A-upper.dag';
-$testdesc =  'Condor submit dag - basic splice test - scheduler U';
-$testname = "job_dagman_subdag-A";
+$cmd = 'job_dagman_node_prio.dag';
+$testdesc =  'Condor submit dag - node-priority test - scheduler U';
+$testname = "job_dagman_node_prio";
 $dagman_args = "-verbose";
 
-@outfiles = ("job_dagman_subdag-A-lower1-node.A",
-  "job_dagman_subdag-A-lower1-node.B", 
-  "job_dagman_subdag-A-lower1-node.C", 
-  "job_dagman_subdag-A-lower1-node.D", 
-  "job_dagman_subdag-A-lower2-node.A", 
-  "job_dagman_subdag-A-lower2-node.B", 
-  "job_dagman_subdag-A-lower2-node.C", 
-  "job_dagman_subdag-A-lower2-node.D", 
-  "job_dagman_subdag-A-upper-node.A", 
-  "job_dagman_subdag-A-upper-node.D");
+@logfiles = ("job_dagman_node_prio.dag.dagman.out");
 
-@logfiles = ("job_dagman_subdag-A-lower1.dag.dagman.out",
-  "job_dagman_subdag-A-lower2.dag.dagman.out",
-  "job_dagman_subdag-A-upper.dag.dagman.out");
-
+@outfiles = ("job_dagman_node_prio.order");
 
 my $killedchosen = 0;
 
@@ -88,34 +78,6 @@ $success = sub
 	CondorTest::debug("executed successfully\n",1);
 	CondorTest::debug("Verifying output\n",1);
 	$diditpass = 1;
-	foreach $name (@outfiles) {
-		$line = "";
-		$passed = 0;
-		$canopen = open(OUT,"<$name.out");
-		if( ! (defined $canopen)) {
-			CondorTest::debug("Can not open outfile<$name.out>:$!\n",1);
-			$diditpass = 0;
-		}
-		while(<OUT>) {
-			chomp();
-			$line = $_;
-			if( $line =~ /^*.OK$/ ) {
-				$passed = 1;
-				CondorTest::debug("$name.out: $line\n",1);
-			}
-		}
-		close(OUT);
-		if($passed == 1 ) {
-			;
-		} else {
-			CondorTest::debug("failed $name.out: $line\n",1);
-			$diditpass = 0;
-		}
-	}
-	# clean out old output files
-	foreach $name (@outfiles) {
-		system("rm -f $name.out $name.err");
-	}
 
 	foreach $name (@logfiles) {
 		$line = "";
@@ -142,6 +104,33 @@ $success = sub
 		}
 	}
 
+	# Make sure nodes executed in correct order.
+	foreach $name (@outfiles) {
+		$line = "";
+		$passed = 0;
+		$canopen = open(OUT,"<$name");
+		if( ! (defined $canopen)) {
+			CondorTest::debug("Can not open outfile<$name>:$!\n",1);
+			$diditpass = 0;
+		}
+		while(<OUT>) {
+			chomp();
+			$line = $_;
+			if( $line =~ /A B5 B7 B3 B9 B4 B1 B10 B2 B8 B6 C/ ) {
+				$passed = 1;
+				CondorTest::debug("$name: $line\n",1);
+			}
+		}
+		close(OUT);
+		if($passed == 1 ) {
+			;
+		} else {
+			CondorTest::debug("failed (wrong node order) $name: $line\n",1);
+			$diditpass = 0;
+		}
+	}
+
+
 	if($diditpass == 0) {
 		die "All expected files and correct output failed\n";
 	}
@@ -158,6 +147,6 @@ if( CondorTest::RunDagTest($testname, $cmd, 0, $dagman_args) ) {
 	CondorTest::debug("$testname: SUCCESS\n",1);
 	exit(0);
 } else {
-	die "$testname: CondorTest::RunTest() failed\n";
+	die "$testname: CondorTest::RunDagTest() failed\n";
 }
 
