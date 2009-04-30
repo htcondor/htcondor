@@ -25,6 +25,7 @@
 #include "dagman_main.h"
 #include "read_multiple_logs.h"
 #include "throttle_by_category.h"
+#include <set>
 
 //---------------------------------------------------------------------------
 JobID_t Job::_jobID_counter = 0;  // Initialize the static data memeber
@@ -192,16 +193,13 @@ Job::PrefixDirectory(MyString &prefix)
 }
 
 //---------------------------------------------------------------------------
-bool Job::Remove (const queue_t queue, const JobID_t jobID) {
-    _queues[queue].Rewind();
-    JobID_t currentJobID;
-    while(_queues[queue].Next(currentJobID)) {
-        if (currentJobID == jobID) {
-            _queues[queue].DeleteCurrent();
-            return true;
-        }
-    }
-    return false;   // Element Not Found
+bool Job::Remove (const queue_t queue, const JobID_t jobID)
+{
+	if (_queues[queue].erase(jobID) == 0) {
+		return false; // element not found
+	}
+
+	return true;
 }  
 
 //---------------------------------------------------------------------------
@@ -245,10 +243,10 @@ void Job::Dump () const {
   
     for (int i = 0 ; i < 3 ; i++) {
         dprintf( D_ALWAYS, "%15s: ", queue_t_names[i] );
-        SimpleListIterator<JobID_t> iList (_queues[i]);
-        JobID_t jobID;
-        while( iList.Next( jobID ) ) {
-			dprintf( D_ALWAYS | D_NOHEADER, "%d, ", jobID );
+
+		set<JobID_t>::const_iterator qit;
+		for (qit = _queues[i].begin(); qit != _queues[i].end(); qit++) {
+			dprintf( D_ALWAYS | D_NOHEADER, "%d, ", *qit );
 		}
         dprintf( D_ALWAYS | D_NOHEADER, "<END>\n" );
     }
@@ -474,13 +472,18 @@ Job::TerminateFailure()
 bool
 Job::Add( const queue_t queue, const JobID_t jobID )
 {
-	if( _queues[queue].IsMember( jobID ) ) {
+	pair<set<JobID_t>::iterator, bool> ret;
+
+	ret = _queues[queue].insert(jobID);
+
+	if (ret.second == false) {
 		dprintf( D_ALWAYS,
 				 "ERROR: can't add Job ID %d to DAG: already present!",
 				 jobID );
 		return false;
 	}
-	return _queues[queue].Append(jobID);
+
+	return true;
 }
 
 bool
@@ -546,18 +549,40 @@ Job::GetStatusName() const
 
 bool
 Job::HasChild( Job* child ) {
+	JobID_t cid;
+	set<JobID_t>::iterator it;
+
 	if( !child ) {
 		return false;
 	}
-	return _queues[Q_CHILDREN].IsMember( child->GetJobID() );
+
+	cid = child->GetJobID();
+	it = _queues[Q_CHILDREN].find(cid);
+
+	if (it == _queues[Q_CHILDREN].end()) {
+		return false;
+	}
+
+	return true;
 }
 
 bool
 Job::HasParent( Job* parent ) {
+	JobID_t pid;
+	set<JobID_t>::iterator it;
+
 	if( !parent ) {
 		return false;
 	}
-	return _queues[Q_PARENTS].IsMember( parent->GetJobID() );
+
+	pid = parent->GetJobID();
+	it = _queues[Q_PARENTS].find(pid);
+
+	if (it == _queues[Q_PARENTS].end()) {
+		return false;
+	}
+
+	return true;
 }
 
 
@@ -608,21 +633,14 @@ Job::RemoveDependency( queue_t queue, JobID_t job )
 bool
 Job::RemoveDependency( queue_t queue, JobID_t job, MyString &whynot )
 {
-	JobID_t candidate;
-    _queues[queue].Rewind();
-    while( _queues[queue].Next( candidate ) ) {
-        if( candidate == job ) {
-            _queues[queue].DeleteCurrent();
-			if ( _queues[queue].IsMember( job ) ) {
-				EXCEPT( "Job %d still in queue %d after deletion!!",
-							job, queue );
-			}
-			whynot = "n/a";
-			return true;
-        }
-    }
-	whynot = "no such dependency";
-	return false;
+	if (_queues[queue].erase(job) == 0)
+	{
+		whynot = "no such dependency";
+		return false;
+	}
+
+	whynot = "n/a";
+	return true;
 }
 
 
@@ -651,15 +669,13 @@ const char* Job::JobIdString() const
 int
 Job::NumParents() const
 {
-	int n = _queues[Q_PARENTS].Number();
-	return n;
+	return _queues[Q_PARENTS].size();
 }
 
 int
 Job::NumChildren() const
 {
-	int n = _queues[Q_CHILDREN].Number();
-	return n;
+	return _queues[Q_CHILDREN].size();
 }
 
 void
