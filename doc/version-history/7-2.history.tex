@@ -83,6 +83,11 @@ read() method was returning negative values when encountering binary data.
 % Gnats PR 872
 \item \Condor{dagman} now rejects negative node retry values.
 
+% Gnats PR 946
+\item \Condor{dagman} no longer generates a rescue DAG if the DAG is
+aborted but is considered successful (ABORT-DAG-ON with return value
+of 0).
+
 \end{itemize}
 
 \noindent Known Bugs:
