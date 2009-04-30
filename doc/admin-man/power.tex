@@ -2,6 +2,7 @@
 \section{\label{sec:power-man}Power Management}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{power management|(}
+\index{green computing|(}
 
 Condor supports placing machines in low power states.
 Power setting decisions are based upon  
@@ -25,8 +26,7 @@ A slot's readiness to hibernate is determined by the
 evaluating the \Macro{HIBERNATE} configuration variable within 
 the context of the slot.
 Readiness is evaluated at fixed intervals, 
-as determined by the configuration variable
-\Macro{HIBERNATE\_CHECK\_INTERVAL}.
+as determined by the \Macro{HIBERNATE\_CHECK\_INTERVAL} configuration variable.
 A non-zero value of this variables enables the power management facility.
 It is an integer value representing seconds,
 an it need not be a small value.
@@ -83,20 +83,16 @@ This macro evaluates to \Expr{True} if
 \item The slot has been Unclaimed for more than 2 hours.
 \end{itemize}
 
-The \MacroNI{HIBERNATE} expression becomes
+The \MacroNI{HIBERNATE} expression 
+that enters the power state called \verb@"RAM"@ if
+\MacroNI{ShouldHibernate} evaluates to \Expr{True},
+and remains in its current state otherwise is
 
 \footnotesize
 \begin{verbatim}
 HIBERNATE = ifThenElse($(ShouldHibernate), "RAM", "NONE" )
 \end{verbatim}
 \normalsize
-
-In words, this expresses:
-enter power state \verb@"RAM"@,
-if \MacroNI{ShouldHibernate} evaluates to \Expr{True}; 
-otherwise, enter power state \verb@"NONE"@,
-which leaves the machine in its current state.   Unknown names are
-treated as \verb@"NONE"@.
 
 If any slot returns \verb@"NONE"@,
 it vetoes the decision to enter a low power state.
@@ -111,84 +107,68 @@ then the largest magnitude value is chosen.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{power management!leaving a low power state}
 
-Condor currently provides a tool \Condor{power} to wake machines:
+The Condor command line tool \Condor{power} may wake a machine
+from a low power state by 
+sending a UDP Wake On LAN (WOL) packet. 
 
-\begin{verbatim}
-usage: condor_power [OPTIONS] [CLASS-AD-FILE]
-condor_power - wake a remote machine
-
--h       this message
--m       hardware address (MAC address)
--s       subnet (default: 255.255.255.255)
--d       turns debugging on
-
-With no CLASS-AD-FILE, read standard input.
-\end{verbatim}
-
-As the help output describes, the tool can be used in two separate ways. 
-First, it can be given a set of parameters, which it will use directly. 
-Otherwise, it can be given a machine ClassAd on its standard input.
-The machine ClassAd has all the information needed for a remote user
-to wake it by external means. This includes the public IP machine address,
-as well as the subnet the machine resides on.
-
-The tool is currently restricted to sending UDP Wake On LAN (WOL) packets, 
-but this may change in future releases.
+See the \Condor{power} manual page on
+page~\pageref{man-condor-power}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Tracking Hibernating Machines}
+\subsection{Keeping a ClassAd for a Hibernating Machine}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
 
 A pool's \Condor{collector} daemon can be configured to keep a 
 persistent ClassAd entry for each machine, once it has entered hibernation.
 
 To do this, define a log file using the \Macro{OFFLINE\_LOG}
-configuration option.  And, optionally, an expiry time for each ad can
-be specified with \Macro{OFFLINE\_EXPIRE\_ADS\_AFTER}.  This expiry
-time starts from the time the hibernating machine's ClassAd enters
+configuration variable.
+An optional an expiration time for each ClassAd can
+be specified with \Macro{OFFLINE\_EXPIRE\_ADS\_AFTER}.
+The timing begins from the time the hibernating machine's ClassAd enters
 the \Condor{collector} daemon.
-
-See the description of \Macro{OFFLINE\_LOG} and
-\Macro{OFFLINE\_EXPIRE\_ADS\_AFTER} in
-section~\ref{param:CollectorOfflineLog} on
-page~\pageref{param:CollectorOfflineLog} for details on
-these features.
+A description of \MacroNI{OFFLINE\_LOG} is at
+section~\ref{param:OfflineLog} on
+page~\pageref{param:OfflineLog},
+and a description of \MacroNI{OFFLINE\_EXPIRE\_ADS\_AFTER} is at
+section~\ref{param:OfflineExpireAdsAfter} on
+page~\pageref{param:OfflineExpireAdsAfter}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Linux Platform Details}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{power management!leaving a low power state}
+\index{power management!Linux platform details}
 
-Depending on the Linux distribution and version, there are 3 different
-methods for controlling the system's power state.  The methods are:
-\begin{itemize}
-\item pm-utils is a set of command-line tools which can be used to
+Depending on the Linux distribution and version,
+there are three 
+methods for controlling a machine's power state.
+The methods:
+\begin{enumerate}
+\item \Prog{pm-utils} is a set of command line tools which can be used to
   detect and switch power states.
   In Condor, this is defined by the string \verb@"pm-utils"@.
-\item The \File{/sys/power} virtual directory has several virtual files that
-  can be used to detect and set the power states.
+\item The directory in the virtual file system \File{/sys/power} 
+  contains virtual files that can be used to detect and set the power states.
   In Condor, this is defined by the string \verb@"/sys"@.
-\item The \File{/proc/acpi} virtual directory has several virtual files that
-  can be used to detect and set the power states.
+\item The directory in the virtual file system \File{/proc/acpi} 
+  contains virtual files that can be used to detect and set the power states.
   In Condor, this is defined by the string \verb@"/proc"@.
-\end{itemize}
+\end{enumerate}
 
-By default, the Condor Linux hibernator attempts to detect the method
-to use in the above order.  The first method that's detected as usable
-on the system will be used.
+By default, the Condor attempts to detect the method
+to use in the order shown.  The first method detected as usable
+on the system is chosen.
 
-This behavior can be overridden by specifying the
-\MacroNI{LINUX\_HIBERNATION\_METHOD} configuration parameter -- it
-should be set to one of the above names
-(\verb@"pm-utils"@, \verb@"/sys"@, or \verb@"/proc"@).
-See the description of \MacroNI{LINUX\_HIBERNATION\_METHOD} in
+This ordered detection may be bypassed,
+to use a specified method instead by setting the configuration
+variable \MacroNI{LINUX\_HIBERNATION\_METHOD} with
+one of the defined strings.
+This variable is defined in 
 section~\ref{param:LinuxHibernationMethod} on
-page~\pageref{param:LinuxHibernationMethod}
-for details on overriding this behavior.
-
-If no usable methods are detected, or the method specified by
-\MacroNI{LINUX\_HIBERNATION\_METHOD} be either not detected or
-invalid, hibernation will be disabled.
+page~\pageref{param:LinuxHibernationMethod}.
+If no usable methods are detected or the method specified by
+\MacroNI{LINUX\_HIBERNATION\_METHOD} is either not detected or invalid,
+hibernation is disabled.
 
 The details of this selection process, and the final method selected
 can be logged via enabling \MacroNI{D\_FULLDEBUG} in the relevant
@@ -198,9 +178,10 @@ subsystem's log configuration.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Windows Platform Details}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{power management!Windows platform troubleshooting}
 
 If after a suitable amount of time,
-the machine has not entered the expected power state,
+a Windows machine has not entered the expected power state,
 then Condor is having difficulty exercising the operating system's
 low power capabilities.  
 While the cause will be specific to the machine's hardware,
@@ -242,4 +223,5 @@ Windows 2000 and XP lack the \Prog{powercfg} program,
 so all configuration must be done via the \Prog{Power Options}
 control panel application.
 
+\index{green computing|)}
 \index{power management|)}
