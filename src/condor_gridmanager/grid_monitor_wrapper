@@ -127,6 +127,8 @@ my $force_agent_start = 1;
 # Hold PID of last started agent.
 my $last_started_agent_pid = 0;
 
+# Record whether we've previously tried a globus-url-copy
+my $first_transfer = 1;
 
 sub REAPER {
 	my $child;
@@ -303,50 +305,44 @@ sub timeout_system {
 }
 
 ################################################################################
-# The loop in question is loops on the timeout.
-sub looping_timeout_system {
-	my($loops, $timeout, @args) = @_;
-	while($loops) {
-		my $ret = timeout_system($timeout, @args);
-		if($ret != -2) { return $ret; }
-		$loops--;
-	}
-	return -2;
-}
-
-################################################################################
 sub send_file {
 	my($src_file, $dst_url) = @_;
 	my $src_url = "file://$src_file";
-	my $max_timeouts = 2;
 	my $size = -s $src_file;
 	my $timeout = $size / $MIN_BYTES_PER_SECOND;
 	if($timeout < $MIN_TIMEOUT) { $timeout = $MIN_TIMEOUT; }
-	my $ret = looping_timeout_system($max_timeouts, $timeout,
-		"$ENV{GLOBUS_LOCATION}/bin/globus-url-copy", $src_url, $dst_url);
-	if($ret != 0) {
-		# We have seen some sites where /etc/grid-security/certificates
-		# is no good, but $GL/share/certificates is. Give the second
-		# location a try before failing
-		$ENV{X509_CERT_DIR} = "$ENV{GLOBUS_LOCATION}/share/certificates";
-		report_info("Retrying globus-url-copy with X509_CERT_DIR=$ENV{X509_CERT_DIR}");
-		$ret = looping_timeout_system($max_timeouts, $timeout,
+	my $ret;
+	my $loops = 2;
+	while ( $loops ) {
+		$ret = timeout_system($timeout,
 			"$ENV{GLOBUS_LOCATION}/bin/globus-url-copy", $src_url, $dst_url);
+		$loops--;
+		last if ( $ret == 0 );
+		report_info("globus-url-copy attempt returned $ret" .
+					($loops ? ", will retry" : ""));
+		if ( $ret != -2 && $first_transfer ) {
+			# We have seen some sites where /etc/grid-security/certificates
+			# is no good, but $GL/share/certificates is. Give the second
+			# location a try before failing
+			$ENV{X509_CERT_DIR} = "$ENV{GLOBUS_LOCATION}/share/certificates";
+			report_info("Retrying globus-url-copy with X509_CERT_DIR=$ENV{X509_CERT_DIR}");
+		}
+		$first_transfer = 0;
 	}
 	if($ret == -1) {
 		fatal_error($ERROR_GUC_FAILED,
-			"Failed to execute globus-url-copy $src_url $dst_url "
-			."because of $!");
+					"Failed to execute globus-url-copy $src_url $dst_url "
+					."because of $!");
 	}
 	if($ret == -2) {
 		fatal_error($ERROR_GUC_FAILED,
-			"Timed out attempting globus-url-copy $src_url $dst_url ");
+					"Timed out attempting globus-url-copy $src_url $dst_url ");
 	}
 	if($ret != 0) {
 		my $real_ret = $ret / 256;
 		fatal_error($ERROR_GUC_FAILED,
-			"globus-url-copy $src_url $dst_url failed for unknown reason. "
-			."wait status is $ret, return value might be $real_ret");
+					"globus-url-copy $src_url $dst_url failed for unknown reason. "
+					."wait status is $ret, return value might be $real_ret");
 	}
 }
 
