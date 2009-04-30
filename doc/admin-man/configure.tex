@@ -7606,9 +7606,9 @@ section~\ref{sec:Security} on Security.
   Scalability issues with a large pool would be the only basis
   for a change from the default value.
 
-\label{param:SecTCPSessionTimeout}
+\label{param:SecTCPSessionDeadline}
 \item[\Macro{SEC\_TCP\_SESSION\_DEADLINE}]
-  The total length of time in seconds until giving up
+  An integer representing the total length of time in seconds until giving up
   when establishing a security session.  Whereas
   \Macro{SEC\_TCP\_SESSION\_TIMEOUT} specifies the timeout
   for individual blocking operations (connect, read, write), this
