@@ -447,7 +447,6 @@ set ARGS=%ARGS% VMVERSION="server1.4"
 set ARGS=%ARGS% VMMEMORY="128"
 set ARGS=%ARGS% VMMAXNUMBER="$(NUM_CPUS)"
 set ARGS=%ARGS% VMNETWORKING="N"
-set ARGS=%ARGS% STARTSERVICE="Y"
 
 msiexec /qb /l* condor-install-log.txt /i condor-7.1.0-winnt50-x86.msi %ARGS%
 \end{verbatim}
@@ -558,10 +557,6 @@ will cause the installer to enable VM Universe jobs on the target machine.
 \item[PERLLOCATION]
 defines the path to \Prog{Perl} on the target machine. This is required in
 order to use the \SubmitCmd{vm} universe.
-
-\item [STARTSERVICE = $<$ Y \Bar\ N $>$]
-determines whether the Condor service will be started after the installation
-completes.
 \end {description}
 
 After defining each of these properties for the MSI installer, the
@@ -570,7 +565,7 @@ command starts the installer in unattended mode, and it dumps a journal of
 the installer's progress to a log file:
 \footnotesize
 \begin{verbatim}
-msiexec /qb /l* condor-install-log.txt /i condor-6.7.18-winnt50-x86.msi [property=value] ... 
+msiexec /qb /lxv* condor-install-log.txt /i condor-7.2.2-winnt50-x86.msi [property=value] ... 
 \end{verbatim}
 \normalsize
 
