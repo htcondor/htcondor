@@ -28,6 +28,12 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Implemented a performance increase to \Condor{dagman} which can
+decrease the parsing times of dag files by up to 60 times--especially for
+certain common dag geometries. This will help in submission and recovery
+time for dags whose nodes have a very large number of dependency edges
+associated with them.
+
 \item \Condor{q} -analyze and -better-analyze now emit warnings
 if the schedd won't runs jobs when it is out of swap space or
 has hit the MAX\_JOBS\_RUNNING limit.
