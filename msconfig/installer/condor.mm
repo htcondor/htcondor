@@ -52,7 +52,6 @@
 <$Property "HOSTALLOWREAD" VALUE="*">
 <$Property "HOSTALLOWWRITE" VALUE="your.domain.com, *.cs.wisc.edu">
 <$Property "HOSTALLOWADMINISTRATOR" VALUE="$(FULL_HOSTNAME)">
-<$Property "STARTSERVICE" VALUE="Y">
 <$Property "AA" VALUE="N">
 <$Property "AB" VALUE="N">
 <$Property "AC" VALUE="N">
@@ -236,17 +235,9 @@
 <$/Table>
 
 
-<$Dialog "Condor Service" Description="Choose whether to start Condor after installation." Dialog="StartService" INSERT="VMUniverseSettings">
-   	<$DialogEntry Property="AA" LabelWidth="250" Label="Start the Condor service after installation?" Control="Text">
-   	#data 'RadioButton_STARTSERVICE'
-	         'Y'	'Yes'	''	''
-	         'N'	'No'	''	''
-	#data
-	<$DialogEntry Property="STARTSERVICE" Label="" Control="RB">
-<$/Dialog>
-
 ;--- Create INSTALLDIR ------------------------------------------------------
 <$DirectoryTree Key="INSTALLDIR" Dir="c:\condor" CHANGE="\" PrimaryFolder="Y">
+
 
 ;--- Create LOG, SPOOL and EXECUTE ------------------------------------------
 <$Component "CreateExecuteFolder" Create="Y" Directory_="EXECUTEDIR">
@@ -259,6 +250,7 @@
 	<$DirectoryTree Key="LOGDIR" Dir="[INSTALLDIR]\log" MAKE="Y">
 <$/Component>
 
+
 ;--- Add the files (components generated) -----------------------------------
 <$Files '<$ImageRootDirectory>\*.*' SubDir='TREE' DestDir='INSTALLDIR'>
 
@@ -267,8 +259,24 @@
 	<$Files '<$ImageRootDirectory>\etc\condor_vmware_local_settings' KeyFile="*">
 <$/Component>
 
+
 ;--- Copy cygwin1.dll if we find one (to avoid version conflicts) -----------
 ;<$Files '[CYGWINDLL]' DestDir='[INSTALLDIR]bin'>
+
+
+;--- Install the Visual Studio runtime --------------------------------------
+#(
+<$MergeModule "C:\Program Files\Common Files\Merge Modules\Microsoft_VC90_CRT_x86.msm" 
+        language="0" 
+        IgnoreErrors=^InstallExecuteSequence:AllocateRegistrySpace^>
+#)
+#(
+<$MergeModule "C:\Program Files\Common Files\Merge Modules\policy_9_0_Microsoft_VC90_CRT_x86.msm"
+	language="0" 
+        IgnoreErrors=^InstallExecuteSequence:AllocateRegistrySpace \
+        InstallExecuteSequence:SxsInstallCA InstallExecuteSequence:SxsUninstallCA^>
+#)
+
 
 ; ---- remove trailing slash from INSTALLDIR --------
 <$VbsCa Binary="RemoveSlashFromINSTALLDIR.vbs">
@@ -294,6 +302,7 @@
 <$/VbsCa>
 <$VbsCaSetup Binary="RemoveSlashFromINSTALLDIR.vbs" Entry="RemoveTrailingSlash" Seq=1401 CONDITION=^<$CONDITION_INSTALL_ONLY>^ Deferred="N">
 
+
 ;--- set CONDOR_CONFIG registry key ----------------------------------------
 #(
 <$Registry 
@@ -304,37 +313,6 @@
 	Name="CONDOR_CONFIG">
 #)
 
-;--- Install the Condor Service ----------------------------------------
-<$Component "Condor" Create="Y" Directory_="[INSTALLDIR]bin" Condition=^STARTSERVICE = "Y"^>
-   ;--- The service EXE MUST be the keypath of the component ----------------
-   <$Files "<$ImageRootDirectory>\bin\condor_master.exe" KeyFile="*">
-
-#(
-   <$ServiceInstall
-                  Name="Condor"
-           DisplayName="Condor"
-           Description="Condor Master Daemon"
-               Process="OWN"
-			     Start="AUTO"
-   >
-#)
-   <$ServiceControl Name="Condor" AtInstall="stop start" AtUninstall="stop delete">
-<$/Component>
-<$Component "CondorUnstarted" Create="Y" Directory_="[INSTALLDIR]bin" Condition=^STARTSERVICE <> "Y"^>
-   ;--- The service EXE MUST be the keypath of the component ----------------
-   <$Files "<$ImageRootDirectory>\bin\condor_master.exe" KeyFile="*">
-
-#(
-   <$ServiceInstall
-                  Name="Condor"
-           DisplayName="Condor"
-           Description="Condor Master Daemon"
-               Process="OWN"
-			     Start="AUTO"
-   >
-#)
-   <$ServiceControl Name="Condor" AtInstall="" AtUninstall="stop delete">
-<$/Component>
 
 ;--- Set Config file parameters ---------------------------------------------
 ;----------------------------------------------------------------------------
@@ -396,8 +374,8 @@ Type="System" ;; run as the System account
 >
 #)
 
+
 ;--- Set directory Permissions ----------------------------------------------
-;-------- Set INSTALLDIR perms first ---
 #(
 <$ExeCa EXE=^[INSTALLDIR]condor_set_acls.exe^ Args=^"[INSTALLDIR_NTS]"^ 
 WorkDir="INSTALLDIR" Condition="<$CONDITION_EXCEPT_UNINSTALL>" 
@@ -408,3 +386,21 @@ Type="System" ;; run as the System account
 #)
 
 
+;--- Install the Condor Service ----------------------------------------
+<$Component "Condor" Create="Y" Directory_="[INSTALLDIR]bin">
+	;--- The service EXE MUST be the keypath of the component ----------------
+	<$Files "<$ImageRootDirectory>\bin\condor_master.exe" KeyFile="*">
+#(
+		<$ServiceInstall
+			Name="Condor"
+			DisplayName="Condor"
+			Description="Condor Master Daemon"
+			Process="OWN"
+			Start="AUTO">
+#)
+	<$ServiceControl Name="Condor" AtInstall="" AtUninstall="stop delete">
+<$/Component>
+
+
+;--- Force a system reboot  -------------------------------------------------
+<$Property "REBOOT" VALUE="F">
