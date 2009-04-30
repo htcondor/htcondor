@@ -192,24 +192,24 @@ public:
 	*/
 
     /// peer's port and IP address in a struct sockaddr_in.
-	struct sockaddr_in *endpoint();
+	struct sockaddr_in *peer_addr();
 
 	/// peer's port number
-	int endpoint_port();
+	int peer_port();
 
 	/// peer's IP address, string verison (e.g. "128.105.101.17")
-	const char* endpoint_ip_str();
+	const char* peer_ip_str();
 
 	/// peer's IP address, integer version (e.g. 2154390801)
-	unsigned int endpoint_ip_int();
+	unsigned int peer_ip_int();
 
     /// my port and IP address in a struct sockaddr_in
     /// @args: the address is returned via 'sin'
     /// @ret: 0 if succeed, -1 if failed
-    int mypoint(struct sockaddr_in *sin);
+    int my_addr(struct sockaddr_in *sin);
 
 	/// my IP address, string version (e.g. "128.105.101.17")
-	virtual const char* sender_ip_str();
+	virtual const char* my_ip_str();
 
 	/// local port number
 	int get_port();
@@ -361,6 +361,10 @@ protected:
 	///
 	int move_descriptor_up();
 
+
+    /// called whenever the bound or connected state changes
+    void addr_changed();
+
 	/*
 	**	Data structures
 	*/
@@ -381,15 +385,15 @@ protected:
 	bool ignore_timeout_multiplier;
 
 	// Buffer to hold the string version of our own IP address. 
-	char _sender_ip_buf[IP_STRING_BUF_SIZE];	
+	char _my_ip_buf[IP_STRING_BUF_SIZE];	
 
 private:
 	int _condor_read(SOCKET fd, char *buf, int sz, int timeout);
 	int _condor_write(SOCKET fd, char *buf, int sz, int timeout);
 	int bindWithin(const int low, const int high, bool outbound);
 	///
-	// Buffer to hold the string version of our endpoint's IP address. 
-	char _endpoint_ip_buf[IP_STRING_BUF_SIZE];	
+	// Buffer to hold the string version of our peer's IP address. 
+	char _peer_ip_buf[IP_STRING_BUF_SIZE];	
 
 	// Buffer to hold the sinful address of our peer
 	char _sinful_peer_buf[SINFUL_STRING_BUF_SIZE];

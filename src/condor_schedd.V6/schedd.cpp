@@ -4729,7 +4729,7 @@ Scheduler::negotiate(int command, Stream* s)
 
 	if (FlockNegotiators) {
 		// first, check if this is our local negotiator
-		struct in_addr endpoint_addr = (sock->endpoint())->sin_addr;
+		struct in_addr endpoint_addr = (sock->peer_addr())->sin_addr;
 		struct hostent *hent;
 		bool match = false;
 		Daemon negotiator (DT_NEGOTIATOR);
@@ -4774,7 +4774,7 @@ Scheduler::negotiate(int command, Stream* s)
 		}
 		if (!match) {
 			dprintf(D_ALWAYS, "Unknown negotiator (%s).  "
-					"Aborting negotiation.\n", sin_to_string(sock->endpoint()));
+					"Aborting negotiation.\n", sock->peer_ip_str());
 			return (!(KEEP_STREAM));
 		}
 	}
@@ -5434,7 +5434,7 @@ Scheduler::release_claim(int, Stream *sock)
 	match_rec *mrec;
 
 	dprintf( D_ALWAYS, "Got RELEASE_CLAIM from %s\n", 
-			 sin_to_string(((Sock*)sock)->endpoint()) );
+			 sock->peer_description() );
 
 	if (!sock->get_secret(claim_id)) {
 		dprintf (D_ALWAYS, "Failed to get ClaimId\n");

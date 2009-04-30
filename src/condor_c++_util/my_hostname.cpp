@@ -320,7 +320,7 @@ void ConvertDefaultIPToSocketIP(char const *attr_name,char const *old_expr_strin
 
 
 	char const *my_default_ip = my_ip_string();
-	char const *my_sock_ip = s.sender_ip_str();
+	char const *my_sock_ip = s.my_ip_str();
 	if(!my_default_ip || !my_sock_ip) {
 		return;
 	}

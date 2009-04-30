@@ -1127,9 +1127,9 @@ int Condor_Auth_Kerberos :: init_server_info()
 		if (mySock_->isClient()) {
 			if (instance == 0) {
 				struct hostent * hp;
-				hp = condor_gethostbyaddr((char *) &(mySock_->endpoint())->sin_addr, 
+				hp = condor_gethostbyaddr((char *) &(mySock_->peer_addr())->sin_addr, 
 								   sizeof (struct in_addr),
-								   mySock_->endpoint()->sin_family);
+								   mySock_->peer_addr()->sin_family);
 				instance = hp->h_name;
 			}
 		}
@@ -1169,9 +1169,9 @@ int Condor_Auth_Kerberos :: forward_tgt_creds(krb5_creds      * cred,
     int              message, rc = 1;
     struct hostent * hp;
     
-    hp = condor_gethostbyaddr((char *) &(mySock_->endpoint())->sin_addr, 		  
+    hp = condor_gethostbyaddr((char *) &(mySock_->peer_addr())->sin_addr, 		  
                        sizeof (struct in_addr), 
-                       mySock_->endpoint()->sin_family);
+                       mySock_->peer_addr()->sin_family);
     
     if ((code = krb5_fwd_tgt_creds(krb_context_, 
                                   auth_context_,

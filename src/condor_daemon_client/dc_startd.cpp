@@ -97,7 +97,7 @@ bool
 ClaimStartdMsg::writeMsg( DCMessenger * /*messenger*/, Sock *sock ) {
 		// save startd fqu for hole punching
 	m_startd_fqu = sock->getFullyQualifiedUser();
-	m_startd_ip_addr = sock->endpoint_ip_str();
+	m_startd_ip_addr = sock->peer_ip_str();
 
 	if( !sock->put_secret( m_claim_id.Value() ) ||
 	    !m_job_ad.put( *sock ) ||

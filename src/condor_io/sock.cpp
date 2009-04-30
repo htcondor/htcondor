@@ -60,7 +60,7 @@ Sock::Sock() : Stream() {
 	connect_state.host = NULL;
 	connect_state.connect_failure_reason = NULL;
 	memset(&_who, 0, sizeof(struct sockaddr_in));
-	memset(&_endpoint_ip_buf, 0, IP_STRING_BUF_SIZE);
+    addr_changed();
 }
 
 Sock::Sock(const Sock & orig) : Stream() {
@@ -77,7 +77,7 @@ Sock::Sock(const Sock & orig) : Stream() {
 	connect_state.host = NULL;
 	connect_state.connect_failure_reason = NULL;
 	memset( &_who, 0, sizeof( struct sockaddr_in ) );
-	memset(	&_endpoint_ip_buf, 0, IP_STRING_BUF_SIZE );
+    addr_changed();
 
 	// now duplicate the underlying network socket
 #ifdef WIN32
@@ -407,6 +407,7 @@ int Sock::assign(SOCKET sockd)
 	if ( _timeout > 0 )
 		timeout_no_timeout_multiplier( _timeout );
 
+    addr_changed();
 	return TRUE;
 }
 
@@ -456,6 +457,8 @@ Sock::bindWithin(const int low_port, const int high_port, bool outbound)
 		bind_return_val = _bind_helper(_sock, 
 			(SOCKET_ADDR_CONST_BIND SOCKET_ADDR_TYPE)&sin, 
 			sizeof(sockaddr_in), outbound, false);
+
+        addr_changed();
 
 #ifndef WIN32
 		if (this_trial <= 1024) {
@@ -567,6 +570,8 @@ int Sock::bind(bool outbound, int port, bool loopback)
 #endif
 
 		bind_return_value = _bind_helper(_sock, (sockaddr *)&sin, sizeof(sockaddr_in), outbound, loopback);
+
+        addr_changed();
 
 #ifndef WIN32
         int bind_errno = errno;
@@ -705,6 +710,8 @@ int Sock::do_connect(
 		if ((hostp = condor_gethostbyname(host)) == (hostent *)0) return FALSE;
 		memcpy(&_who.sin_addr, hostp->h_addr, hostp->h_length);
 	}
+
+    addr_changed();
 
 	// now that we have set _who (useful for getting informative
 	// peer_description), see if we should do a reverse connect
@@ -1262,7 +1269,7 @@ int Sock::close()
     }
 	connect_state.host = NULL;
 	memset(&_who, 0, sizeof( struct sockaddr_in ) );
-	memset(&_endpoint_ip_buf, 0, IP_STRING_BUF_SIZE );
+    addr_changed();
 	
 	return TRUE;
 }
@@ -1733,36 +1740,47 @@ char * Sock::serialize(char *buf)
 	return buf;
 }
 
+void
+Sock::addr_changed()
+{
+    // these are all regenerated whenever they are needed, so when
+    // either the peer's address or our address change, zap them all
+    _my_ip_buf[0] = '\0';
+    _peer_ip_buf[0] = '\0';
+    _sinful_self_buf[0] = '\0';
+    _sinful_peer_buf[0] = '\0';
+}
 
 struct sockaddr_in *
-Sock::endpoint()
+Sock::peer_addr()
 {
 	return &_who;
 }
 
 
 int
-Sock::endpoint_port()
+Sock::peer_port()
 {
 	return (int) ntohs( _who.sin_port );
 }
 
 
 unsigned int
-Sock::endpoint_ip_int()
+Sock::peer_ip_int()
 {
 	return (unsigned int) ntohl( _who.sin_addr.s_addr );
 }
 
 
 const char *
-Sock::endpoint_ip_str()
+Sock::peer_ip_str()
 {
-		// We need to recompute this each time because _who might have changed.
-	memset(&_endpoint_ip_buf, 0, IP_STRING_BUF_SIZE );
-	snprintf( _endpoint_ip_buf, IP_STRING_BUF_SIZE, "%s",
-			  inet_ntoa(_who.sin_addr) );
-	return &(_endpoint_ip_buf[0]);
+    if( _peer_ip_buf[0] ) {
+        return _peer_ip_buf;
+    }
+    strncpy( _peer_ip_buf, inet_ntoa(_who.sin_addr), IP_STRING_BUF_SIZE );
+    _peer_ip_buf[IP_STRING_BUF_SIZE-1] = '\0';
+	return _peer_ip_buf;
 }
 
 
@@ -1770,7 +1788,7 @@ Sock::endpoint_ip_str()
 // @args: the address is returned via 'sin'
 // @ret: 0 if succeed, -1 if failed
 int
-Sock::mypoint( struct sockaddr_in *sin )
+Sock::my_addr( struct sockaddr_in *sin )
 {
     struct sockaddr_in *tmp = getSockAddr(_sock);
     if (tmp == NULL) return -1;
@@ -1780,36 +1798,44 @@ Sock::mypoint( struct sockaddr_in *sin )
 }
 
 const char *
-Sock::sender_ip_str()
+Sock::my_ip_str()
 {
-		// We need to recompute this each in case we have reconnected via a different interface
+    if( _my_ip_buf[0] ) {
+        return _my_ip_buf;
+    }
 	struct sockaddr_in sin;
-	if(mypoint(&sin) == -1) {
+	if(my_addr(&sin) == -1) {
 		return NULL;
 	}
-	memset(&_sender_ip_buf, 0, IP_STRING_BUF_SIZE );
-	strcpy( _sender_ip_buf, inet_ntoa(sin.sin_addr) );
-	return &(_sender_ip_buf[0]);
+    strncpy( _my_ip_buf, inet_ntoa(sin.sin_addr), IP_STRING_BUF_SIZE );
+    _my_ip_buf[IP_STRING_BUF_SIZE-1] = '\0';
+	return _my_ip_buf;
 }
 
 char *
 Sock::get_sinful()
 {       
+    if( _sinful_self_buf[0] ) {
+        return _sinful_self_buf;
+    }
     struct sockaddr_in *tmp = getSockAddr(_sock);
     if (tmp == NULL) return NULL;
     char const *s = sin_to_string(tmp);
 	if(!s) {
 		return NULL;
 	}
-	ASSERT(strlen(s) < sizeof(_sinful_self_buf));
-	strcpy(_sinful_self_buf,s);
+	strncpy(_sinful_self_buf,s,SINFUL_STRING_BUF_SIZE);
+    _sinful_self_buf[SINFUL_STRING_BUF_SIZE-1] = '\0';
 	return _sinful_self_buf;
 }
 
 char *
 Sock::get_sinful_peer()
 {       
-    char const *s = sin_to_string(&_who);
+    if( _sinful_peer_buf[0] ) {
+        return _sinful_peer_buf;
+    }
+	char const *s = sin_to_string(&_who);
 	if(!s) {
 		return NULL;
 	}
@@ -1823,7 +1849,7 @@ Sock::default_peer_description()
 {
 	char const *retval = get_sinful_peer();
 	if( !retval ) {
-		return "(unconnected)";
+		return "(unconnected socket)";
 	}
 	return retval;
 }

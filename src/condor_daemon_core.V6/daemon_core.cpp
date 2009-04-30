@@ -3554,7 +3554,7 @@ int DaemonCore::HandleReqSocketTimerHandler()
 		
 		// and blow it away
 	dprintf(D_ALWAYS,"Closing socket from %s - no data received\n",
-			sin_to_string(((Sock*)stream)->endpoint()));
+			sin_to_string(((Sock*)stream)->peer_addr()));
 	delete stream;
 
 	return TRUE;
@@ -3747,7 +3747,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 		// after we read the command below...
 
 		dprintf ( D_SECURITY, "DC_AUTHENTICATE: received UDP packet from %s.\n",
-				sin_to_string(((Sock*)stream)->endpoint()));
+				sin_to_string(((Sock*)stream)->peer_addr()));
 
 
 		// get the info, if there is any
@@ -3967,32 +3967,32 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 	memset(tmpbuf,0,sizeof(tmpbuf));
 	if ( is_tcp ) {
 			// TODO Should we be ignoring the return value of condor_read?
-		condor_read(((Sock*)stream)->get_file_desc(),
+		condor_read(stream->peer_description(), ((Sock*)stream)->get_file_desc(),
 			tmpbuf, sizeof(tmpbuf) - 1, 1, MSG_PEEK);
 	}
 #ifdef HAVE_EXT_GSOAP
 	if ( strstr(tmpbuf,"GET") ) {
 		if ( param_boolean("ENABLE_WEB_SERVER",false) ) {
 			// mini-web server requires READ authorization.
-			if ( Verify("HTTP GET", READ,((Sock*)stream)->endpoint(),NULL) ) {
+			if ( Verify("HTTP GET", READ,((Sock*)stream)->peer_addr(),NULL) ) {
 				is_http_get = true;
 			}
 		} else {
 			dprintf(D_ALWAYS,"Received HTTP GET connection from %s -- "
 				             "DENIED because ENABLE_WEB_SERVER=FALSE\n",
-							 sin_to_string(((Sock*)stream)->endpoint()));
+							 sin_to_string(((Sock*)stream)->peer_addr()));
 		}
 	} else {
 		if ( strstr(tmpbuf,"POST") ) {
 			if ( param_boolean("ENABLE_SOAP",false) ) {
 				// SOAP requires SOAP authorization.
-				if ( Verify("HTTP POST",SOAP_PERM,((Sock*)stream)->endpoint(),NULL) ) {
+				if ( Verify("HTTP POST",SOAP_PERM,((Sock*)stream)->peer_addr(),NULL) ) {
 					is_http_post = true;
 				}
 			} else {
 				dprintf(D_ALWAYS,"Received HTTP POST connection from %s -- "
 							 "DENIED because ENABLE_SOAP=FALSE\n",
-							 sin_to_string(((Sock*)stream)->endpoint()));
+							 sin_to_string(((Sock*)stream)->peer_addr()));
 			}
 		}
 	}
@@ -4003,7 +4003,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 			// Socket appears to be HTTP, so deal with it.
 		dprintf(D_ALWAYS, "Received HTTP %s connection from %s\n",
 			is_http_get ? "GET" : "POST",
-			sin_to_string(((Sock*)stream)->endpoint()) );
+			sin_to_string(((Sock*)stream)->peer_addr()) );
 
 
 		ASSERT( soap );
@@ -4052,7 +4052,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 	// a timeout of 20 seconds on their socket.
 	stream->timeout(20);
 	if(!result) {
-		char const *ip = stream->endpoint_ip_str();
+		char const *ip = stream->peer_ip_str();
 		if(!ip) {
 			ip = "unknown address";
 		}
@@ -4070,7 +4070,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 		Sock* sock = (Sock*)stream;
 		sock->decode();
 
-		dprintf (D_SECURITY, "DC_AUTHENTICATE: received DC_AUTHENTICATE from %s\n", sin_to_string(sock->endpoint()));
+		dprintf (D_SECURITY, "DC_AUTHENTICATE: received DC_AUTHENTICATE from %s\n", sin_to_string(sock->peer_addr()));
 
 		ClassAd auth_info;
 		if( !auth_info.initFromStream(*sock)) {
@@ -4460,7 +4460,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 					if ( method_used ) {
 						the_policy->Assign(ATTR_SEC_AUTHENTICATION_METHODS, method_used);
 					}
-					dprintf (D_SECURITY, "DC_AUTHENTICATE: mutual authentication to %s complete.\n", sock->endpoint_ip_str());
+					dprintf (D_SECURITY, "DC_AUTHENTICATE: mutual authentication to %s complete.\n", sock->peer_ip_str());
 
 					free( auth_methods );
 					free( method_used );
@@ -4604,7 +4604,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 					// add the key to the cache
 
 					// This is a session for incoming connections, so
-					// do not pass in sock->endpoint() as addr,
+					// do not pass in sock->peer_addr() as addr,
 					// because then this key would get confused for an
 					// outgoing session to a daemon with that IP and
 					// port as its command socket.
@@ -4690,7 +4690,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 						(is_tcp) ? "TCP" : "UDP",
 						!user.IsEmpty() ? " from " : "",
 						user.Value(),
-						sin_to_string(((Sock*)stream)->endpoint()),
+						sin_to_string(((Sock*)stream)->peer_addr()),
 						PermString(comTable[index].perm));
 
 					result = FALSE;
@@ -4723,7 +4723,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 		MyString command_desc;
 		command_desc.sprintf("command %d (%s)",req,comTable[index].command_descrip);
 
-		if ( (perm = Verify(command_desc.Value(),comTable[index].perm, ((Sock*)stream)->endpoint(), user.Value())) != USER_AUTH_SUCCESS )
+		if ( (perm = Verify(command_desc.Value(),comTable[index].perm, ((Sock*)stream)->peer_addr(), user.Value())) != USER_AUTH_SUCCESS )
 		{
 			// Permission check FAILED
 			reqFound = FALSE;	// so we do not call the handler function below
@@ -9587,7 +9587,7 @@ DaemonCore::CheckConfigAttrSecurity( const char* attr, Sock* sock )
 		MyString command_desc;
 		command_desc.sprintf("remote config %s",name);
 
-		if( Verify(command_desc.Value(),(DCpermission)i, sock->endpoint(), sock->getFullyQualifiedUser())) {
+		if( Verify(command_desc.Value(),(DCpermission)i, sock->peer_addr(), sock->getFullyQualifiedUser())) {
 				// now we can see if the specific attribute they're
 				// trying to set is in our list.
 			if( (SettableAttrsLists[i])->
@@ -9612,7 +9612,7 @@ DaemonCore::CheckConfigAttrSecurity( const char* attr, Sock* sock )
 
 		// Grab a pointer to this string, since it's a little bit
 		// expensive to re-compute.
-	ip_str = sock->endpoint_ip_str();
+	ip_str = sock->peer_ip_str();
 		// Upper-case-ify the string for everything we print out.
 	strupr(name);
 

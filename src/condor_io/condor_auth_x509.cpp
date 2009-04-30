@@ -461,7 +461,7 @@ StringList * getDaemonList(ReliSock * sock)
     // build a string list, then do a search to see if the target is 
     // in the list
     char * daemonNames = param( "GSI_DAEMON_NAME" );
-    char * fqh         = sin_to_hostname(sock->endpoint(), NULL);
+    char * fqh         = sin_to_hostname(sock->peer_addr(), NULL);
     char * entry       = NULL;
 
 	if (!daemonNames) {

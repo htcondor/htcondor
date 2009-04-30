@@ -1001,14 +1001,14 @@ SecManStartCommand::doCallback( StartCommandResult result )
 			dprintf(D_SECURITY,
 			        "Authorizing server '%s/%s'.\n",
 			        server_fqu ? server_fqu : "*",
-					m_sock->endpoint_ip_str() );
+					m_sock->peer_ip_str() );
 		}
 
 		MyString deny_reason;
 
 		int authorized = m_sec_man.Verify(
 			CLIENT_PERM,
-			m_sock->endpoint(),
+			m_sock->peer_addr(),
 			server_fqu,
 			NULL,
 			&deny_reason );
@@ -1018,7 +1018,7 @@ SecManStartCommand::doCallback( StartCommandResult result )
 			         "DENIED authorization of server '%s/%s' (I am acting as "
 			         "the client): reason: %s.",
 					 server_fqu ? server_fqu : "*",
-					 m_sock->endpoint_ip_str(), deny_reason.Value() );
+					 m_sock->peer_ip_str(), deny_reason.Value() );
 			result = StartCommandFailed;
 		}
 	}
@@ -1956,7 +1956,7 @@ SecManStartCommand::receivePostAuthInfo_inner()
 
 				// This makes a copy of the policy ad, so we don't
 				// have to. 
-			KeyCacheEntry tmp_key( sesid, m_sock->endpoint(), m_private_key,
+			KeyCacheEntry tmp_key( sesid, m_sock->peer_addr(), m_private_key,
 								   &m_auth_info, expiration_time ); 
 			dprintf (D_SECURITY, "SECMAN: added session %s to cache for %s seconds.\n", sesid, dur);
 
@@ -2613,7 +2613,7 @@ SecMan :: invalidateExpiredCache()
 			// close this connection and start a new one
 			if (!sock->close()) {
 				dprintf ( D_ALWAYS, "SECMAN: could not close socket to %s\n",
-						sin_to_string(sock->endpoint()));
+						sin_to_string(sock->peer_addr()));
 				return false;
 			}
 
@@ -2626,9 +2626,9 @@ SecMan :: invalidateExpiredCache()
 				dprintf ( D_ALWAYS, "SECMAN: could not re-init MD5!\n");
 				return false;
 			}
-			if (!sock->connect(sin_to_string(sock->endpoint()), 0)) {
+			if (!sock->connect(sin_to_string(sock->peer_addr()), 0)) {
 				dprintf ( D_ALWAYS, "SECMAN: could not reconnect to %s.\n",
-						sin_to_string(sock->endpoint()));
+						sin_to_string(sock->peer_addr()));
 				return false;
 			}
 

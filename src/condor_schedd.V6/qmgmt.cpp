@@ -579,7 +579,7 @@ const char*
 QmgmtPeer::endpoint_ip_str() const
 {
 	if ( sock ) {
-		return sock->endpoint_ip_str();
+		return sock->peer_ip_str();
 	} else {
 		return myendpoint;
 	}
@@ -589,7 +589,7 @@ const struct sockaddr_in*
 QmgmtPeer::endpoint() const
 {
 	if ( sock ) {
-		return sock->endpoint();
+		return sock->peer_addr();
 	} else {
 		return &sockaddr;
 	}

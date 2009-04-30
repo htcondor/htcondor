@@ -1704,7 +1704,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 			int the_error = errno;
 			error_buf.sprintf("%s at %s failed to receive file %s",
 			                  get_mySubSystem()->getName(),
-							  s->sender_ip_str(),fullname.Value());
+							  s->my_ip_str(),fullname.Value());
 			download_success = false;
 			if(rc == GET_FILE_OPEN_FAILED || rc == GET_FILE_WRITE_FAILED) {
 				// errno is well defined in this case, and transferred data
@@ -1799,7 +1799,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 	if(!upload_success) {
 		// Our peer had some kind of problem sending the files.
 
-		char const *peer_ip_str = "unknown source";
+		char const *peer_ip_str = "disconnected socket";
 		if(s->type() == Stream::reli_sock) {
 			peer_ip_str = ((Sock *)s)->get_sinful_peer();
 		}
@@ -1882,7 +1882,7 @@ FileTransfer::GetTransferAck(Stream *s,bool &success,bool &try_again,int &hold_c
 			ip = ((ReliSock *)s)->get_sinful_peer();
 		}
 		dprintf(D_FULLDEBUG,"Failed to receive download acknowledgment from %s.\n",
-				ip ? ip : "(unknown source)");
+				ip ? ip : "(disconnected socket)");
 		success = false;
 		try_again = true; // could just be a transient network problem
 		return;
@@ -1976,7 +1976,7 @@ FileTransfer::SendTransferAck(Stream *s,bool success,bool try_again,int hold_cod
 		}
 		dprintf(D_ALWAYS,"Failed to send download %s to %s.\n",
 		        success ? "acknowledgment" : "failure report",
-		        ip ? ip : "(unknown recipient)");
+		        ip ? ip : "(disconnected socket)");
 	}
 }
 
@@ -2493,7 +2493,7 @@ FileTransfer::DoObtainAndSendTransferGoAhead(DCTransferQueue &xfer_queue,bool do
 			}
 		}
 
-		char const *ip = s->endpoint_ip_str();
+		char const *ip = s->peer_ip_str();
 		char const *go_ahead_desc = "";
 		if( go_ahead < 0 ) go_ahead_desc = "NO ";
 		if( go_ahead == GO_AHEAD_UNDEFINED ) go_ahead_desc = "PENDING ";
@@ -2606,7 +2606,7 @@ FileTransfer::DoReceiveTransferGoAhead(
 	while(1) {
 		ClassAd msg;
 		if( !msg.initFromStream(*s) || !s->end_of_message() ) {
-			char const *ip = s->sender_ip_str();
+			char const *ip = s->peer_ip_str();
 			error_desc.sprintf("Failed to receive GoAhead message from %s.",
 							   ip ? ip : "(null)");
 
@@ -2717,7 +2717,7 @@ FileTransfer::ExitDoUpload(filesize_t *total_bytes, ReliSock *s, priv_state save
 			if(!upload_success) {
 				error_desc_to_send.sprintf("%s at %s failed to send file(s) to %s",
 										   get_mySubSystem()->getName(),
-										   s->sender_ip_str(),
+										   s->my_ip_str(),
 										   s->get_sinful_peer());
 				if(upload_error_desc) {
 					error_desc_to_send.sprintf_cat(": %s",upload_error_desc);
@@ -2745,12 +2745,12 @@ FileTransfer::ExitDoUpload(filesize_t *total_bytes, ReliSock *s, priv_state save
 	if(rc != 0) {
 		char const *receiver_ip_str = s->get_sinful_peer();
 		if(!receiver_ip_str) {
-			receiver_ip_str = "unknown recipient";
+			receiver_ip_str = "disconnected socket";
 		}
 
 		error_buf.sprintf("%s at %s failed to send file(s) to %s",
 						  get_mySubSystem()->getName(),
-						  s->sender_ip_str(),receiver_ip_str);
+						  s->my_ip_str(),receiver_ip_str);
 		if(upload_error_desc) {
 			error_buf.sprintf_cat(": %s",upload_error_desc);
 		}

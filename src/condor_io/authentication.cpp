@@ -250,7 +250,7 @@ int Authentication::authenticate_inner( char *hostAddr, const char* auth_methods
 
 			// check to see if the auth IP is the same as the socket IP
 		if( auth_rc ) {
-			char const *sockip = mySock->endpoint_ip_str();
+			char const *sockip = mySock->peer_ip_str();
 			char const *authip = auth->getRemoteHost() ;
 
 			auth_rc = !sockip || !authip || !strcmp(sockip,authip);
