@@ -815,6 +815,15 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 				continue;
 			}
 
+			if( universe <= CONDOR_UNIVERSE_MIN ||
+				universe >= CONDOR_UNIVERSE_MAX ) {
+				dprintf( D_ALWAYS,
+						 "Job %s has invalid %s = %d.  Removing....\n",
+						 tmp, ATTR_JOB_UNIVERSE, universe );
+				JobQueue->DestroyClassAd( tmp );
+				continue;
+			}
+
 				// Figure out what ATTR_USER *should* be for this job
 			int nice_user = 0;
 			ad->LookupInteger( ATTR_NICE_USER, nice_user );
