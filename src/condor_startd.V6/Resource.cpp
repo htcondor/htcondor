@@ -2330,6 +2330,17 @@ Resource::fetchCompleted(void)
 		// Now that a fetch hook returned, (re)set our timer to try
 		// fetching again based on the delay expression.
 	resetFetchWorkTimer();
+
+		// If we are a dynamically created slot, it is possible that
+		// we became unclaimed while waiting for the fetch to
+		// complete. Now that it has we can reevaluate our state and
+		// potentially delete ourself.
+	if ( get_feature() == DYNAMIC_SLOT ) {
+		// WARNING: This must be the last thing done in response to a
+		// hook exiting, if it isn't then there is a chance we will be
+		// referenced after we are deleted.
+		eval_state();
+	}
 }
 
 
