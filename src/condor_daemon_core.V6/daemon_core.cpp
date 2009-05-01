@@ -7025,19 +7025,25 @@ int DaemonCore::Create_Process(
 			switch( errno ) {
 
 			case ERRNO_EXEC_AS_ROOT:
-				dprintf( D_ALWAYS, "Create_Process: child failed because "
-						 "%s process was still root before exec()\n",
+				dprintf( D_ALWAYS, "Create_Process(%s): child "
+						 "failed because %s process was still root "
+						 "before exec()\n",
+						 executable,
 						 priv_to_string(priv) );
 				break;
 
 			case ERRNO_REGISTRATION_FAILED:
-				dprintf( D_ALWAYS, "Create_Process: child failed becuase "
-				         "it failed to register itself with the ProcD\n" );
+				dprintf( D_ALWAYS, "Create_Process(%s): child "
+						 "failed because it failed to register itself "
+						 "with the ProcD\n",
+						 executable );
 				break;
 
 			case ERRNO_EXIT:
-				dprintf( D_ALWAYS, "Create_Process: child failed becuase "
-				         "it called exit(%d).\n", child_status );
+				dprintf( D_ALWAYS, "Create_Process(%s): child "
+						 "failed because it called exit(%d).\n",
+						 executable,
+						 child_status );
 				break;
 
 			case ERRNO_PID_COLLISION:
@@ -7049,8 +7055,10 @@ int DaemonCore::Create_Process(
 					  before we give up, and if not, recursively
 					  re-try the whole call to Create_Process().
 					*/
-				dprintf( D_ALWAYS, "Create_Process: child failed because "
-						 "PID %d is still in use by DaemonCore\n",
+				dprintf( D_ALWAYS, "Create_Process(%s): child "
+						 "failed because PID %d is still in use by "
+						 "DaemonCore\n",
+						 executable,
 						 (int)newpid );
 				num_pid_collisions++;
 				max_pid_retry = param_integer( "MAX_PID_COLLISION_RETRY",
@@ -7089,8 +7097,10 @@ int DaemonCore::Create_Process(
 				break;
 
 			default:
-				dprintf( D_ALWAYS, "Create_Process: child failed with "
-						 "errno %d (%s) before exec()\n", errno,
+				dprintf( D_ALWAYS, "Create_Process(%s): child "
+						 "failed with errno %d (%s) before exec()\n",
+						 executable,
+						 errno,
 						 strerror(errno) );
 				break;
 
@@ -7114,7 +7124,9 @@ int DaemonCore::Create_Process(
 			set_priv( prev_priv );
 			if( rval == -1 ) {
 				return_errno = errno;
-				dprintf(D_ALWAYS, "Create_Process wait failed: %d (%s)\n",
+				dprintf(D_ALWAYS, 
+					"Create_Process wait for '%s' failed: %d (%s)\n",
+					executable,
 					errno, strerror (errno) );
 				newpid = FALSE;
 				goto wrapup;
@@ -7127,7 +7139,9 @@ int DaemonCore::Create_Process(
 	}
 	else if( newpid < 0 )// Error condition
 	{
-		dprintf(D_ALWAYS, "Create Process: fork() failed: %s (%d)\n",
+		dprintf(D_ALWAYS, "Create Process: fork() for '%s' "
+				"failed: %s (%d)\n",
+				executable,
 				strerror(errno), errno );
 		close(errorpipe[0]); close(errorpipe[1]);
 		newpid = FALSE;
