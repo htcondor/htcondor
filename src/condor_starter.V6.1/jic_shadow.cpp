@@ -534,8 +534,8 @@ JICShadow::reconnect( ReliSock* s, ClassAd* ad )
 		// Destroy our old DCShadow object and make a new one with the
 		// current info.
 	dprintf( D_ALWAYS, "Accepted request to reconnect from <%s:%d>\n",
-			 syscall_sock->endpoint_ip_str(), 
-			 syscall_sock->endpoint_port() );
+			 syscall_sock->peer_ip_str(), 
+			 syscall_sock->peer_port() );
 	dprintf( D_ALWAYS, "Ignoring old shadow %s\n", shadow->addr() );
 	delete shadow;
 	shadow = new DCShadow;
@@ -559,14 +559,14 @@ JICShadow::reconnect( ReliSock* s, ClassAd* ad )
 
 		// switch over to the new syscall_sock
 	dprintf( D_FULLDEBUG, "Closing old syscall sock <%s:%d>\n",
-			 syscall_sock->endpoint_ip_str(), 
-			 syscall_sock->endpoint_port() );
+			 syscall_sock->peer_ip_str(), 
+			 syscall_sock->peer_port() );
 	delete syscall_sock;
 	syscall_sock = s;
 	syscall_sock->timeout(param_integer( "STARTER_UPLOAD_TIMEOUT", 300));
 	dprintf( D_FULLDEBUG, "Using new syscall sock <%s:%d>\n",
-			 syscall_sock->endpoint_ip_str(), 
-			 syscall_sock->endpoint_port() );
+			 syscall_sock->peer_ip_str(), 
+			 syscall_sock->peer_port() );
 
 	initMatchSecuritySession();
 

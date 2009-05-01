@@ -504,7 +504,7 @@ int CollectorDaemon::receive_invalidation(Service* /*s*/,
 	AdTypes whichAds;
 	ClassAd cad;
 
-	from = ((Sock*)sock)->endpoint();
+	from = ((Sock*)sock)->peer_addr();
 
 	sock->decode();
 	sock->timeout(ClientTimeout);
@@ -658,7 +658,7 @@ int CollectorDaemon::receive_update(Service* /*s*/, int command, Stream* sock)
 	}
 
 	// get endpoint
-	from = ((Sock*)sock)->endpoint();
+	from = ((Sock*)sock)->peer_addr();
 
     // process the given command
 	if (!(cad = collector.collect (command,(Sock*)sock,from,insert)))
@@ -739,7 +739,7 @@ int CollectorDaemon::receive_update_expect_ack( Service* /*s*/,
     int insert = -3;
     
     /* get peer's IP/port */
-    sockaddr_in *from = socket->endpoint ();
+    sockaddr_in *from = socket->peer_addr();
 
     /* "collect" the ad */
     ClassAd *cad = collector.collect ( 
@@ -789,7 +789,7 @@ int CollectorDaemon::receive_update_expect_ack( Service* /*s*/,
                 "receive_update_expect_ack: "
                 "Failed to send acknowledgement to host %s, "
                 "aborting\n",
-                socket->sender_ip_str () );
+                socket->peer_ip_str () );
         
             /* it's ok if we fail here, since we won't drop the ad,
             it's only on the client side that any error should be
@@ -803,7 +803,7 @@ int CollectorDaemon::receive_update_expect_ack( Service* /*s*/,
                 D_FULLDEBUG, 
                 "receive_update_expect_ack: "
                 "Failed to send update EOM to host %s.\n", 
-                socket->sender_ip_str () );
+                socket->peer_ip_str () );
             
 	    }   
         
@@ -832,7 +832,7 @@ CollectorDaemon::stashSocket( Stream* sock )
 {
 		
 	ReliSock* rsock;
-	char* addr = sin_to_string( ((Sock*)sock)->endpoint() );
+	char* addr = sin_to_string( ((Sock*)sock)->peer_addr() );
 	rsock = sock_cache->findReliSock( addr );
 	if( ! rsock ) {
 			// don't have it in the socket already, see if the cache
@@ -869,7 +869,7 @@ int
 CollectorDaemon::sockCacheHandler( Service*, Stream* sock )
 {
 	int cmd;
-	char* addr = sin_to_string( ((Sock*)sock)->endpoint() );
+	char* addr = sin_to_string( ((Sock*)sock)->peer_addr() );
 	sock->decode();
 	dprintf( D_FULLDEBUG, "Activity on stashed TCP socket from %s\n",
 			 addr );

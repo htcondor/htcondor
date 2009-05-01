@@ -60,10 +60,10 @@ int IOProxy::connect_callback( Stream * /*stream*/ )
 
 	success = server->accept(*client);
 	if(success) {
-		if( my_ip_addr() != client->endpoint_ip_int() ) {
-			dprintf(D_ALWAYS,"IOProxy: rejecting connection from %s: invalid ip addr\n",client->endpoint_ip_str());
+		if( my_ip_addr() != client->peer_ip_int() ) {
+			dprintf(D_ALWAYS,"IOProxy: rejecting connection from %s: invalid ip addr\n",client->peer_ip_str());
 		} else {
-			dprintf(D_ALWAYS,"IOProxy: accepting connection from %s\n",client->endpoint_ip_str());
+			dprintf(D_ALWAYS,"IOProxy: accepting connection from %s\n",client->peer_ip_str());
 			accept_client = true;
 		}
 	} else {
