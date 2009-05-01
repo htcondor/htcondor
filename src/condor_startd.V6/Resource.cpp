@@ -163,8 +163,16 @@ Resource::~Resource()
 	}
 #endif /* HAVE_JOB_HOOKS */
 
+		// Note on "&& !m_currently_fetching": A DYNAMIC slot will
+		// defer its destruction while it is waiting on a fetch work
+		// hook. The only time when a slot with a parent will be
+		// destroyed while waiting on a hook is during
+		// shutdown. During shutdown there is no need to give
+		// resources back to the parent slot, and doing so may
+		// actually be dangerous if our parent was deleted first.
+
 		// If we have a parent, return our resources to it
-	if( m_parent ) {
+	if( m_parent && !m_currently_fetching ) {
 		*(m_parent->r_attr) += *(r_attr);
 		m_parent->m_id_dispenser->insert( r_sub_id );
 		m_parent->update();
