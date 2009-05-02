@@ -297,7 +297,7 @@ elif test $os = "Linux" ; then
           esac
        elif (grep -q "Red Hat Enterprise Linux" /etc/redhat-release) ; then
          # RHEL
-	 _cv_linux_distro=RHEL`$RPMQUERY -q --queryformat "%{VERSION}" redhat-release | tr -d \[[A-Za-z]] `
+	 _cv_linux_distro=RHEL`cat /etc/redhat-release|$PERL -ne '/.* (.*)\..* \((.*)\)/;print $1;'`
        else
           $_rh_release=`cat /etc/redhat-release`
           AC_MSG_WARN([You may have trouble building and/or packaging Condor on $_rh_release])
