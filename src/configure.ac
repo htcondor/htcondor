@@ -262,7 +262,7 @@ elif test $os = "Linux" ; then
 	;;
      # Handle post-FC releases more robustly
      * )
-        _cv_linux_distro=`$RPMQUERY -q --queryformat "F%{VERSION}" fedora-release`
+        _cv_linux_distro=F`cat /etc/fedora-release|$PERL -ne '/.* (.*) \((.*)\)/;print $1;'`
 	;;
     esac
   elif test -f "/etc/redhat-release" ; then
