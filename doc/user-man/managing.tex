@@ -415,7 +415,7 @@ the queue.
 
 \noindent\Bold{Event Number:} 009 \\
 \Bold{Event Name:} Job aborted \\
-\Bold{Event Description:} The user cancelled the job.
+\Bold{Event Description:} The user canceled the job.
 
 \noindent\Bold{Event Number:} 010 \\
 \Bold{Event Name:} Job was suspended \\
@@ -450,7 +450,7 @@ aborted or released.
 
 \noindent\Bold{Event Number:} 016 \\
 \Bold{Event Name:} POST script terminated \\
-\Bold{Event Description:} A node in a DAGMan workflow has a script
+\Bold{Event Description:} A node in a DAGMan work flow has a script
 that should be run after a job. 
 The script is run on the submit host. 
 This event signals that the post script has completed.
@@ -511,6 +511,22 @@ run on is unavailable.
 \Bold{Event Name:} Job submitted to grid resource \\
 \Bold{Event Description:} A job has been submitted,
 and is under the auspices of the grid resource.
+
+\noindent\Bold{Event Number:} 028 \\
+\Bold{Event Name:} Job ad information event triggered. \\
+\Bold{Event Description:} Extra job ad attributes. This event is
+written as a supplement to other events when the configuration
+parameter \Macro{EVENT\_LOG\_JOB\_AD\_INFORMATION\_ATTRS} is set.
+
+\noindent\Bold{Event Number:} 029 \\
+\Bold{Event Name:} The job's remote status is unknown \\
+\Bold{Event Description:} No updates of the job's remote status
+have been received for 15 minutes.
+
+\noindent\Bold{Event Number:} 030 \\
+\Bold{Event Name:} The job's remote status is known again \\
+\Bold{Event Description:} An update has been recevied for a job whose
+remote status was previous logged as unknown.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%e
 \subsection{\label{sec:job-completion}Job Completion}

@@ -4519,7 +4519,7 @@ See section~\ref{sec:job-hooks} on page~\pageref{sec:job-hooks} on
 These macros control the power management capabilities of the 
 \Condor{startd} to optionally put the machine in to a low power state.
 See section~\ref{sec:power-man} on page~\pageref{sec:power-man} on
-``Power Management'' for more details.
+Power Management for more details.
 
 \begin{description}
 
@@ -4582,17 +4582,34 @@ See section~\ref{sec:power-man} on page~\pageref{sec:power-man} on
 
 \label{param:LinuxHibernationMethod}
 \item[\Macro{LINUX\_HIBERNATION\_METHOD}]
-  This macro can be used to override the default search used by
-  Condor on Linux to detect the hibernation method to use.  The default
-  behavior is to try:
-  \begin{itemize}
-  \item Detect and use the pm-UTIL command line tools ``pm-UTIL''
-  \item Detect and use the /sys/power virtual files ``/sys''
-  \item Detect and use the /proc/ACPI virtual files ``/proc''
-  \end{itemize}
-  To override this behavior and force the use of a particular method,
-  set \MacroNI{LINUX\_HIBERNATION\_METHOD} to one of the above names
-  (``pm-utils'', ``/sys'', or ``/proc'').
+  A string that can be used to override the default search used by
+  Condor on Linux platforms to detect the hibernation method to use.
+  The default behavior orders its search with:
+  \begin{enumerate}
+  \item Detect and use the \Prog{pm-utils} command line tools.
+    The corresponding string is defined with \verb@"pm-utils"@. 
+  \item Detect and use the directory in the virtual file system
+    \File{/sys/power}.
+    The corresponding string is defined with \verb@"/sys"@.
+  \item Detect and use the directory in the virtual file system
+    \File{/proc/ACPI}.
+    The corresponding string is defined with \verb@"/proc"@.
+  \end{enumerate}
+  To override this ordered search behavior,
+  and force the use of one particular method,
+  set \MacroNI{LINUX\_HIBERNATION\_METHOD} to one of the defined strings.
+
+\label{param:OfflineLog}
+\item[\Macro{OFFLINE\_LOG}]
+  The full path and file name of a file that stores machine ClassAds 
+  for every hibernating machine.  This forms a persistent storage
+  of these ClassAds, in case the \Condor{collector} daemon crashes.
+
+\label{param:OfflineExpireAdsAfter}
+\item[\Macro{OFFLINE\_EXPIRE\_ADS\_AFTER}]
+  An integer number of seconds specifying the lifetime of the
+  persistent machine ClassAd representing a hibernating machine.
+  Defaults to the largest 32-bit integer.
 
 \end{description}
 
@@ -7779,10 +7796,27 @@ section~\ref{sec:Security} on Security.
 \label{param:SecTCPSessionTimeout}
 \item[\Macro{SEC\_TCP\_SESSION\_TIMEOUT}]
   The length of time in seconds until the timeout
-  when establishing a UDP security session via TCP.
+  on individual network operations when establishing a UDP security
+  session via TCP.
   The default value is 20 seconds.
   Scalability issues with a large pool would be the only basis
   for a change from the default value.
+
+\label{param:SecTCPSessionDeadline}
+\item[\Macro{SEC\_TCP\_SESSION\_DEADLINE}]
+  An integer representing the total length of time in seconds until giving up
+  when establishing a security session.  Whereas
+  \Macro{SEC\_TCP\_SESSION\_TIMEOUT} specifies the timeout
+  for individual blocking operations (connect, read, write), this
+  setting specifies the total time across all operations, including
+  non-blocking operations that have little cost other than holding
+  open the socket.
+  The default value is 120 seconds.
+  The intention of this setting is to avoid waiting for hours
+  for a response in the rare event that the other side
+  freezes up and the socket remains in a connected state.
+  This problem has been observed in some types of operating system
+  crashes.
 
 \label{param:SecDefaultAuthenticationTimeout}
 \item[\Macro{SEC\_DEFAULT\_AUTHENTICATION\_TIMEOUT}]

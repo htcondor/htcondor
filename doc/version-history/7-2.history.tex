@@ -44,7 +44,11 @@ to the current host when the type of installation is `manager'.
 
 \begin{itemize}
 
-\item None.
+\item The new integer configuration variable
+  \MacroNI{SEC\_TCP\_SESSION\_DEADLINE} specifies the
+  number of seconds after which the client should give up its attempt to
+  establish a security session with a daemon that it is connecting to.
+  The default is 120 seconds.
 
 \end{itemize}
 
@@ -52,11 +56,41 @@ to the current host when the type of installation is `manager'.
 
 \begin{itemize}
 
+\item Fixed a memory leak in the \Condor{collector} daemon.
+  The growth in memory over time was approximately 10MB/day per 1000 slots.
+  This bug was introduced in Condor version 7.2.0.
+
+\item Fixed a problem that caused integrity checking of most UDP packets
+longer than about 40Kbytes to fail.  This bug affects all previous versions of
+Condor.
+
+\item By adding the new configuration variable
+  \MacroNI{SEC\_TCP\_SESSION\_DEADLINE}, fixed a problem
+  that has existed since Condor version 7.1.2. 
+  The problem is that non-blocking read
+  operations in the security handshake had no timeout and could therefore
+  lead to a socket remaining allocated indefinitely, if the other side of
+  the connection did not respond.
+  When this problem was observed,
+  the following message appeared in the SchedLog:
+
+\begin{verbatim}
+  file descriptor safety level exceeded
+\end{verbatim}
+
 \item Fixed a bug in the event log reader code that could cause it to
   not detect missed events in rare cases.
 
 \item A bug in the Chirp java client has been fixed.  ChirpInputStream's
 read() method was returning negative values when encountering binary data.
+
+% Gnats PR 872
+\item \Condor{dagman} now rejects negative node retry values.
+
+% Gnats PR 946
+\item \Condor{dagman} no longer generates a rescue DAG if the DAG is
+aborted but is considered successful (ABORT-DAG-ON with return value
+of 0).
 
 \end{itemize}
 
@@ -174,6 +208,11 @@ and \Condor{submit\_dag}.  This flag is intended mainly for testing.
   attributes in the variables \MacroNI{PREEMPTION\_REQUIREMENTS} and
   \MacroNI{PREEMPTION\_RANK} will not change within
   a negotiation interval.
+
+\item The new configuration variables \Macro{OFFLINE\_LOG}
+  and \Macro{OFFLINE\_EXPIRE\_ADS\_AFTER} specify the location of
+  persistent machine ClassAds for hibernating machines,
+  as well as the lifetime of the persistent ClassAds.
 
 \end{itemize}
 
@@ -345,11 +384,19 @@ loop when searching through a corrupted history file.
 
 \begin{itemize}
 
+\item A manual page for \Condor{power} now appears in the manual.
+\Condor{power} sends a packet to a machine in a low power state,
+to cause the machine to wake from that state.
+
 \item Reorganized the user manual section that describes DAGMan.
 
 \item Added a note about the fact that environment values specified
 with the \Opt{environment} submit description file command override values from
 the submittor's environment, as imported with \Opt{getenv = True}.
+
+\item Added new information to the section on Power Management
+  pertaining to the handling of hibernating machines.
+  
 
 \end{itemize}
 
