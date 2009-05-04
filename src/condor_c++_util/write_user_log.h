@@ -218,6 +218,7 @@ class UserLog
 
 	///
     void Reset( void );
+	void FreeResources( void );
 
 	// Write header event to global file
 	bool writeHeaderEvent ( const UserLogHeader &header );

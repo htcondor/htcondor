@@ -107,20 +107,7 @@ UserLog::UserLog (const char *owner,
 // Destructor
 UserLog::~UserLog()
 {
-	if (m_path) delete [] m_path;
-	if (m_lock) delete m_lock;
-	if (m_gjid) free(m_gjid);
-	if (m_fp != NULL) fclose( m_fp );
-
-	if (m_global_path) free(m_global_path);
-	if (m_global_lock) delete m_global_lock;
-	if (m_global_fp != NULL) fclose(m_global_fp);
-	if (m_global_uniq_base != NULL) free( m_global_uniq_base );
-	if (m_global_stat != NULL) delete m_global_stat;
-
-	if (m_rotation_lock_path) free(m_rotation_lock_path);
-	if (m_rotation_lock_fd >= 0) close(m_rotation_lock_fd);
-	if (m_rotation_lock) delete m_rotation_lock;
+	FreeResources( );
 }
 
 
@@ -306,6 +293,63 @@ UserLog::Reset( void )
 
 	m_global_uniq_base = strdup( base.Value( ) );
 	m_global_sequence = 0;
+}
+
+// Free used resources
+void
+UserLog::FreeResources( void )
+{
+
+	if (m_path) {
+		delete [] m_path;
+		m_path = NULL;
+	}
+	if (m_lock) {
+		delete m_lock;
+		m_lock = NULL;
+	}
+	if (m_gjid) {
+		free(m_gjid);
+		m_gjid = NULL;
+	}
+	if (m_fp != NULL) {
+		fclose( m_fp );
+		m_fp = NULL;
+	}
+
+	if (m_global_path) {
+		free(m_global_path);
+		m_global_path = NULL;
+	}
+	if (m_global_lock) {
+		delete m_global_lock;
+		m_global_lock = NULL;
+	}
+	if (m_global_fp != NULL) {
+		fclose(m_global_fp);
+		m_global_fp = NULL;
+	}
+	if (m_global_uniq_base != NULL) {
+		free( m_global_uniq_base );
+		m_global_uniq_base = NULL;
+	}
+	if (m_global_stat != NULL) {
+		delete m_global_stat;
+		m_global_stat = NULL;
+	}
+
+	if (m_rotation_lock_path) {
+		free(m_rotation_lock_path);
+		m_rotation_lock_path = NULL;
+	}
+	if (m_rotation_lock_fd >= 0) {
+		close(m_rotation_lock_fd);
+		m_rotation_lock_fd = -1;
+	}
+	if (m_rotation_lock) {
+		delete m_rotation_lock;
+		m_rotation_lock = NULL;
+	}
 }
 
 bool
