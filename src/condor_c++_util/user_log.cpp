@@ -192,6 +192,8 @@ UserLog::initialize( int c, int p, int s, const char *gjid )
 bool
 UserLog::Configure( void )
 {
+	FreeResources( );
+
 	m_enable_fsync = param_boolean( "ENABLE_USERLOG_FSYNC", true );
 	m_enable_locking = param_boolean( "ENABLE_USERLOG_LOCKING", true );
 
