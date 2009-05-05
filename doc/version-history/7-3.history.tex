@@ -29,36 +29,38 @@ The details of each version are described below.
 \begin{itemize}
 
 \item Implemented a performance increase to \Condor{dagman} which can
-decrease the parsing times of dag files by up to 60 times--especially for
-certain common dag geometries. This will help in submission and recovery
-time for dags whose nodes have a very large number of dependency edges
+decrease the parsing times of DAG input files by up to 60 times.
+This performance increase works for certain common DAG geometries.
+This will help in submission and recovery
+time for DAGs whose nodes have a very large number of dependency edges
 associated with them.
 
 \item \Condor{q} -analyze and -better-analyze now emit warnings
-if the schedd won't runs jobs when it is out of swap space or
-has hit the MAX\_JOBS\_RUNNING limit.
+if the \Condor{schedd} will not run jobs when it is out of swap space or
+has hit the limit imposed by the configuration variable
+\MacroNI{MAX\_JOBS\_RUNNING}.
 
-\item When matchmaking Condor-G jobs to resources, if multiple jobs
+\item When matching Condor-G jobs to resources, if multiple jobs
 match multiple resources, and every job has identical job rank, the
 matchmaker would always fill up one particular resource first.  Now,
 the resources will be matched in a round robin fashion.  This can be
 overridden by setting job rank appropriately.
 
 \item Made the \Condor{schedd} more efficient in how it stores
-information about `dollar dollar' expansions in the job ClassAd.
-Also made it more efficient in how it contacts the \Condor{negotiator}
-to submit `reschedule' requests.
+information about \verb@$$()@ expansions in the job ClassAd.
+Also made the \Condor{schedd} more efficient in how it contacts
+the \Condor{negotiator} to submit reschedule requests.
 
-\item Improved JobRouter's heuristic for site throttle adjustment.  It
+\item Improved the Job Router's heuristic for site throttle adjustment.  It
 is now quicker to release the throttle when the failure rate drops
 below the configured threshold.
 
-\item Made JobRouter more efficient on startup by improving the way it
+\item Made the Job Router more efficient on startup by improving the way it
 reads the job queue log file.
 
-\item Added a accessor class to the user log reader API to allow the
-  application to query things about reader state, including the
-  difference in the event numbers and log position of 2 states.  This
+\item Added an accessor class to the user log reader API to allow the
+  application to query about reader state, including the
+  difference in the event numbers and log position of two states.  This
   can be used by the application to determine the number of events
   missed when missed events are detected.
 
@@ -67,16 +69,13 @@ stopped via \Condor{rm}, \Condor{hold}, \Condor{vacate\_job},
 and during a graceful shutdown of the \Condor{schedd} daemon.
 
 \item In the configuration file, Condor now accepts expressions for
-the values of configuration parameters that are required to be numbers
-or boolean constants.  Note that this does not imply that the
+the values of configuration variables that are required to be 
+numeric literals or boolean constants.  
+Note that this does not imply that the
 expressions may freely reference ClassAd values in places where they
-could not before.  Unless otherwise noted, the expressions are limited
-to operations on constants and macro substitutions that evaluate to
-constants.  Example:
-
-\begin{verbatim}
-SHUTDOWN_GRACEFUL_TIMEOUT = ($(HOUR)*24)
-\end{verbatim}
+could not before.  
+See section~\ref{sec:Intro-to-Config-Files} for an example with
+further explanation.
 
 \end{itemize}
 
@@ -84,18 +83,18 @@ SHUTDOWN_GRACEFUL_TIMEOUT = ($(HOUR)*24)
 
 \begin{itemize}
 
-\item Added \Macro{UPDATE\_OFFSET} to cause the \Condor{startd} to
+\item The new configuration variable \Macro{UPDATE\_OFFSET} 
+  causes the \Condor{startd} to
   delay the initial (and all further) updates that it sends to the
   \Condor{collector}.  See \ref{param:UpdateOffset} for more details.
 
-\item Added \Macro{JOB\_STOP\_COUNT} and \Macro{JOB\_STOP\_DELAY}.
-This limits the rate at which jobs are stopped via \Condor{rm},
-\Condor{hold}, \Condor{vacate\_job}, and during a graceful shutdown of
-the \Condor{schedd} daemon.  The average rate is limited to
-\MacroNI{JOB\_STOP\_COUNT}/\MacroNI{JOB\_STOP\_DELAY} jobs/second.
-The special value \MacroNI{JOB\_STOP\_DELAY}=0 indicates no limit;
-this is the default.  These settings do not apply to grid or scheduler
-universe jobs.
+\item The new configuration variables
+  \Macro{JOB\_STOP\_COUNT} and \Macro{JOB\_STOP\_DELAY}
+  limit the rate at which jobs are stopped via \Condor{rm},
+  \Condor{hold}, \Condor{vacate\_job}, and during a graceful shutdown of
+  the \Condor{schedd} daemon.
+  See \ref{param:JobStopCount} and \ref{param:JobStopDelay} 
+  for full definitions.
 
 \end{itemize}
 
@@ -104,7 +103,8 @@ universe jobs.
 \begin{itemize}
 
 \item Fixed a problem with job removal in the local universe that 
-would cause spurious error messages to be written to the SchedLog.
+  would cause spurious error messages to be written to the log of the
+  \Condor{schedd} daemon.
 
 \item The \Condor{schedd} was failing to send `reschedule' commands to
 flocked negotiators, so unless some other schedd in the negotiator's
