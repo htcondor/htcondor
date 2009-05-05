@@ -1002,6 +1002,7 @@ TESTCLASS(lib_procapi_cputracking-snapshot,btdebug)
 **
 */
 
+#if !defined(IS_SOLARIS)
 DESC(job_core_killsignal_sched,"Scheduler: Verify the specified input file is used")
 RUN(job_core_killsignal_sched)
 DEPS(job_core_killsignal_sched,x_trapsig.exe)
@@ -1009,6 +1010,7 @@ TESTCLASS(job_core_killsignal_sched,core)
 TESTCLASS(job_core_killsignal_sched,quick)
 TESTCLASS(job_core_killsignal_sched,full)
 TESTCLASS(job_core_killsignal_sched,quicknolink)
+#endif
 
 /*
 ** The test in hanging in 6.7.x turn off for now.
