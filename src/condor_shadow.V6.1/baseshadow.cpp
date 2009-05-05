@@ -1135,8 +1135,18 @@ BaseShadow::evalPeriodicUserPolicy( void )
     if (jobAd && always_update_job_ad) {
         job_updater->updateJob( U_PERIODIC );
 
-		delete jobAd;
-		jobAd = GetJobAd(cluster, proc);
+		if( ConnectQ( scheddAddr, SHADOW_QMGMT_TIMEOUT ) ) {
+			ClassAd *new_ad = GetJobAd(cluster, proc);
+			if ( new_ad ) {
+				jobAd->ExchangeExpressions( new_ad );
+				delete new_ad;
+			} else {
+				dprintf( D_ALWAYS, "Failed to fetch updated ad!\n" );
+			}
+			DisconnectQ( NULL );
+		} else {
+			dprintf( D_ALWAYS, "Failed to connect to schedd!\n" );
+		}
     }
     // END NMI HACK
 
