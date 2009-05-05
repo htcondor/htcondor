@@ -1124,6 +1124,23 @@ BaseShadow::updateJobInQueue( update_t type )
 void
 BaseShadow::evalPeriodicUserPolicy( void )
 {
+    // HACK FOR NMI USING CONDOR-C
+    // always update the job ad and then pull down a fresh copy
+    // so that everything, in particular the condor-c lease info,
+    // is up-to-date at the time of evaluation.  this is a major
+    // scalability issue, so it's off by default and needs the
+    // ALWAYS_UPDATE_JOB_AD_ON_PERIODIC_EVALUATION knob set to true.
+    bool always_update_job_ad =
+        param_boolean("ALWAYS_UPDATE_JOB_AD_ON_PERIODIC_EVALUATION", false);
+    if (jobAd && always_update_job_ad) {
+        job_updater->updateJob( U_PERIODIC );
+
+		delete jobAd;
+		jobAd = GetJobAd(cluster, proc);
+    }
+    // END NMI HACK
+
+
 	shadow_user_policy.checkPeriodic();
 }
 
