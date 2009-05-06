@@ -1,4 +1,4 @@
-executable   = ./job_dagman_depth_first-nodeA.csh
+executable   = ./job_dagman_depth_first-nodeA.pl
 universe     = scheduler
 output       = $(job).out
 error        = $(job).err
