@@ -612,9 +612,9 @@ TESTCLASS(lib_eventlog-xml,core)
 TESTCLASS(lib_eventlog-xml,quick)
 TESTCLASS(lib_eventlog-xml,full)
 
-/* Test to verify that re-initialization of the eventlog does not cause
-   seg faults */
-DESC(lib_eventlog_base,"Test re-initialization of eventlog")
+/* Test to verify that re-initialization of the eventlog reader does not
+   cause seg faults */
+DESC(lib_eventlog_base,"Test re-initialization of eventlog reader")
 RUN(lib_eventlog_base)
 DEPS(lib_eventlog_base,lib_eventlog_base.exe)
 DEPS(lib_eventlog_base,lib_eventlog_base.exe)
@@ -1881,7 +1881,7 @@ TESTCLASS(job_rsc_binary-io_std,btdebug)
 */
 
 lib_eventlog_build.exe : lib_eventlog_base.cpp
-	$(CPlusPlus) $< -DLIBAPI_ONLY \
+	$(CPlusPlus) $< -ggdb -DLIBAPI_ONLY \
 	-I ../release_dir/include ../release_dir/lib/libcondorapi.a \
 	-lc -ldl -o $@
 
