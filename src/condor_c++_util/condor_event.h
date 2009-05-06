@@ -205,7 +205,7 @@ class ULogEvent {
     /// Added by Ameet
     char *scheddname;
     //char globaljobid[100];
-	
+
 	time_t eventclock;
 
   protected:

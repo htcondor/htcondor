@@ -73,21 +73,7 @@ UserLog::UserLog( void )
 	Reset( );
 }
 
-UserLog::UserLog (const char *owner,
-                  const char *domain,
-                  const char *file,
-                  int c,
-                  int p,
-                  int s,
-                  bool xml, const char *gjid)
-{
-	Reset();
-	m_use_xml = xml;
-
-	initialize (owner, domain, file, c, p, s, gjid);
-}
-
-/* This constructor is just like the constructor above, except
+/* This constructor is just like the constructor below, except
  * that it doesn't take a domain, and it passes NULL for the domain and
  * the globaljobid. Hopefully it's not called anywhere by the condor code...
  * It's a convenience function, requested by our friends in LCG. */
@@ -104,40 +90,31 @@ UserLog::UserLog (const char *owner,
 	initialize (owner, NULL, file, c, p, s, NULL);
 }
 
+UserLog::UserLog (const char *owner,
+                  const char *domain,
+                  const char *file,
+                  int c,
+                  int p,
+                  int s,
+                  bool xml,
+				  const char *gjid)
+{
+	Reset();
+	m_use_xml = xml;
+
+	initialize (owner, domain, file, c, p, s, gjid);
+}
+
 // Destructor
 UserLog::~UserLog()
 {
-	FreeResources( );
+	FreeAllResources( );
 }
 
 
 // ********************************
 //   UserLog initialize() methods
 // ********************************
-bool
-UserLog::initialize( const char *file, int c, int p, int s, const char *gjid)
-{
-		// Save parameter info
-	m_path = new char[ strlen(file) + 1 ];
-	strcpy( m_path, file );
-
-	if( m_fp ) {
-		if( fclose( m_fp ) != 0 ) {
-			dprintf( D_ALWAYS, "UserLog::initialize: "
-					 "fclose(\"%s\") failed - errno %d (%s)\n", m_path,
-					 errno, strerror(errno) );
-		}
-		m_fp = NULL;
-	}
-
-	if ( m_userlog_enable &&
-		 !openFile(file, true, m_enable_locking, true, m_lock, m_fp) ) {
-		dprintf(D_ALWAYS, "UserLog::initialize: failed to open file\n");
-		return false;
-	}
-
-	return initialize(c, p, s, gjid);
-}
 
 bool
 UserLog::initialize( const char *owner, const char *domain, const char *file,
@@ -155,7 +132,7 @@ UserLog::initialize( const char *owner, const char *domain, const char *file,
 	priv = set_user_priv();
 
 		// initialize log file
-	bool res = initialize(file, c, p, s, gjid);
+	bool res = initialize( file, c, p, s, gjid );
 
 		// get back to whatever UID and GID we started with
 	set_priv(priv);
@@ -164,13 +141,36 @@ UserLog::initialize( const char *owner, const char *domain, const char *file,
 }
 
 bool
+UserLog::initialize( const char *file, int c, int p, int s, const char *gjid)
+{
+		// Save parameter info
+	FreeLocalResources( );
+	m_path = strdup( file );
+
+	if ( m_userlog_enable &&
+		 !openFile(file, true, m_enable_locking, true, m_lock, m_fp) ) {
+		dprintf(D_ALWAYS, "UserLog::initialize: failed to open file\n");
+		return false;
+	}
+
+	return internalInitialize( c, p, s, gjid );
+}
+
+bool
 UserLog::initialize( int c, int p, int s, const char *gjid )
 {
+	return internalInitialize( c, p, s, gjid );
+}
+
+// Internal-only initializer, invoked by all of the others
+bool
+UserLog::internalInitialize( int c, int p, int s, const char *gjid )
+{
+	Configure( false );
+
 	m_cluster = c;
 	m_proc = p;
 	m_subproc = s;
-
-	Configure( );
 
 		// Important for performance : note we do not re-open the global log
 		// if we already have done so (i.e. if m_global_fp is not NULL).
@@ -190,8 +190,15 @@ UserLog::initialize( int c, int p, int s, const char *gjid )
 
 // Read in our configuration information
 bool
-UserLog::Configure( void )
+UserLog::Configure( bool force )
 {
+	// If we're already configured and not in "force" mode, do nothing
+	if (  m_configured && ( !force )  ) {
+		return true;
+	}
+	FreeGlobalResources( );
+	m_configured = true;
+
 	m_enable_fsync = param_boolean( "ENABLE_USERLOG_FSYNC", true );
 	m_enable_locking = param_boolean( "ENABLE_USERLOG_LOCKING", true );
 
@@ -244,6 +251,8 @@ UserLog::Configure( void )
 void
 UserLog::Reset( void )
 {
+	m_configured = false;
+
 	m_cluster = -1;
 	m_proc = -1;
 	m_subproc = -1;
@@ -297,25 +306,15 @@ UserLog::Reset( void )
 
 // Free used resources
 void
-UserLog::FreeResources( void )
+UserLog::FreeAllResources( void )
 {
+	FreeGlobalResources( );
+	FreeLocalResources( );
+}
 
-	if (m_path) {
-		delete [] m_path;
-		m_path = NULL;
-	}
-	if (m_lock) {
-		delete m_lock;
-		m_lock = NULL;
-	}
-	if (m_gjid) {
-		free(m_gjid);
-		m_gjid = NULL;
-	}
-	if (m_fp != NULL) {
-		fclose( m_fp );
-		m_fp = NULL;
-	}
+void
+UserLog::FreeGlobalResources( void )
+{
 
 	if (m_global_path) {
 		free(m_global_path);
@@ -349,6 +348,32 @@ UserLog::FreeResources( void )
 	if (m_rotation_lock) {
 		delete m_rotation_lock;
 		m_rotation_lock = NULL;
+	}
+}
+
+void
+UserLog::FreeLocalResources( void )
+{
+
+	if (m_path) {
+		free( m_path );
+		m_path = NULL;
+	}
+	if (m_gjid) {
+		free(m_gjid);
+		m_gjid = NULL;
+	}
+	if (m_fp != NULL) {
+		if ( fclose( m_fp ) != 0 ) {
+			dprintf( D_ALWAYS, "UserLog::FreeLocalResources(): "
+					 "fclose() failed - errno %d (%s)\n",
+					 errno, strerror(errno) );
+		}
+		m_fp = NULL;
+	}
+	if (m_lock) {
+		delete m_lock;
+		m_lock = NULL;
 	}
 }
 
