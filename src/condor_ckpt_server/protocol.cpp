@@ -74,7 +74,12 @@ int recv_service_req_pkt(service_req_pkt *srp, FDContext *fdc)
 			*/
 			return -1;
 		}
+
+		/* TODO 64 bit case*/
+		return 0;
 	}
+
+	/* TODO 32 bit case */
 
 	return 0;
 }
