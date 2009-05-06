@@ -1023,6 +1023,7 @@ TESTCLASS(job_core_holdkillsig_sched,full)
 TESTCLASS(job_core_holdkillsig_sched,quicknolink)
 */
 
+#if !defined(IS_SOLARIS)
 DESC(job_core_rmkillsig_sched,"Scheduler: Verify the  remove_kill_sig")
 RUN(job_core_rmkillsig_sched)
 DEPS(job_core_rmkillsig_sched,x_trapsig.exe)
@@ -1030,6 +1031,7 @@ TESTCLASS(job_core_rmkillsig_sched,core)
 TESTCLASS(job_core_rmkillsig_sched,quick)
 TESTCLASS(job_core_rmkillsig_sched,full)
 TESTCLASS(job_core_rmkillsig_sched,quicknolink)
+#endif
 
 DESC(job_core_macros-dollardollar_van,"Vanilla: Did dollar dollar macros work?")
 RUN(job_core_macros-dollardollar_van)
