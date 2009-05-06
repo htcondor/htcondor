@@ -138,9 +138,11 @@ class UserLog
     bool initialize(int c, int p, int s, const char *gjid);
 
 	/** Read in the configuration parameters
+		@param force Force a reconfigure; otherwise Configure() will
+		  do nothing if the object is already configured
 		@return true on success
 	*/
-	bool Configure( void );
+	bool Configure( bool force = true );
 
 	void setUseXML(bool new_use_xml){ m_use_xml = new_use_xml; }
 
@@ -218,7 +220,10 @@ class UserLog
 
 	///
     void Reset( void );
-	void FreeResources( void );
+    bool internalInitialize(int c, int p, int s, const char *gjid);
+	void FreeAllResources( void );
+	void FreeGlobalResources( void );
+	void FreeLocalResources( void );
 
 	// Write header event to global file
 	bool writeHeaderEvent ( const UserLogHeader &header );
@@ -284,6 +289,8 @@ class UserLog
 	/** PrivSep: the user's GID      */  gid_t      m_privsep_gid;
 #endif
 	/** The GlobalJobID for this job */  char     * m_gjid;
+
+	/** Previously configured?       */  bool       m_configured;
 };
 
 
