@@ -1,4 +1,4 @@
-executable   = ./job_dagman_node_prio.csh
+executable   = ./job_dagman_node_prio.pl
 arguments    = $(nodename)
 universe     = scheduler
 output       = $(job).out
