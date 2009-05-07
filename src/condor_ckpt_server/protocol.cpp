@@ -151,5 +151,37 @@ read_result_t net_read_with_timeout(int fd, char *ptr, size_t nbytes,
 }
 
 
+/* ------------------------------------------------------------------------- */
+/* These are the unpack/pack methods to get stuff out of the network packet */
+/* This assumes the same endianess between client and server */
+
+uint64_t unpack_uint64_t(char *pkt, size_t off)
+{
+	return *(uint64_t*)&pkt[off];
+}
+
+uint32_t unpack_uint32_t(char *pkt, size_t off)
+{
+	return *(uint32_t*)&pkt[off];
+}
+
+unsigned short unpack_uint16_t(char *pkt, size_t off)
+{
+	return *(unsigned short*)&pkt[off];
+}
+
+struct in_addr unpack_in_addr(char *pkt, size_t off)
+{
+	return *(struct in_addr*)&pkt[off];
+}
+
+/* Do not free this memory, caller doesn't own it */
+char* unpack_char_array(char *pkt, size_t off)
+{
+	return &pkt[off];
+}
+
+
+
 
 
