@@ -80,12 +80,14 @@ int param_boolean_int(const char *, int default_value)
 }
 
 END_C_DECLS
-int param_integer(const char *, int default_value, int, int)
+int param_integer(const char *, int default_value, int, int, ClassAd *, 
+	ClassAd *, bool)
 {
 	return default_value;
 }
 
-bool param_boolean( const char *, const bool default_value, bool, ClassAd *, ClassAd * )
+bool param_boolean( const char *, const bool default_value, bool, 
+	ClassAd *, ClassAd *, bool)
 {
 	return default_value;
 }

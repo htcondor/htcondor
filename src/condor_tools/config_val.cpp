@@ -139,6 +139,7 @@ main( int argc, char* argv[] )
 	bool    verbose = false;
 	bool    dump_all_variables = false;
 	bool    print_config_sources = false;
+	bool	write_config = false;
 	
 	PrintType pt = CONDOR_NONE;
 	ModeType mt = CONDOR_QUERY;
@@ -219,6 +220,8 @@ main( int argc, char* argv[] )
 			verbose = true;
 		} else if( match_prefix( argv[i], "-dump" ) ) {
 			dump_all_variables = true;
+		} else if( match_prefix( argv[i], "-writeconfig" ) ) {
+			write_config = true;
 		} else if( match_prefix( argv[i], "-debug" ) ) {
 				// dprintf to console
 			Termlog = 1;
@@ -321,7 +324,7 @@ main( int argc, char* argv[] )
 				fprintf(stdout, "# Line %d, File %s\n", 
 					pv.lnum, pv.filename.Value());
 			}
-			fprintf(stdout, "%s = %s\n\n", upname.Value(), pv.value.Value());
+			fprintf(stdout, "%s = %s\n", upname.Value(), pv.value.Value());
 			
 		}
 		fflush( stdout );
@@ -335,7 +338,11 @@ main( int argc, char* argv[] )
 		my_exit( 0 );
 
 	}
-
+	
+	if(write_config == true) {
+		write_config_file("static_condor_config");
+	}
+	
 	if( pool && ! name ) {
 		fprintf( stderr, "Error: you must specify -name with -pool\n" );
 		my_exit( 1 );

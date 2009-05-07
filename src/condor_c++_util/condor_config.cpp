@@ -81,6 +81,7 @@
 #include "condor_random_num.h"
 #include "extArray.h"
 #include "subsystem_info.h"
+#include "param_info.h"
 
 #if HAVE_EXT_GCB
 #include "GCB.h"
@@ -1299,6 +1300,7 @@ init_config(bool wantExtraInfo  /* = true */)
 	} else {
 		extra_info = new DummyExtraParamTable();
 	}
+	param_info_init();
 
 	return;
 }
@@ -1338,7 +1340,7 @@ clear_config()
 ** if the given parameter is not defined.
 */
 char *
-param( const char *name )
+param_without_default( const char *name )
 {
 	char		*val = NULL;
 	char param_name[MAX_PARAM_LEN];
@@ -1416,6 +1418,114 @@ param( const char *name )
 	}
 }
 
+char*
+param(const char* name) {
+	return param_with_default_abort(name, 1);
+}
+
+char *
+param_with_default_abort(const char *name, int abort) {
+	//look for subsys.param in config table first
+	MyString subsysparamname = get_mySubSystem()->getName();
+	subsysparamname += ".";
+	subsysparamname += name;
+	const char* subsysname = subsysparamname.Value();
+	char *val = lookup_macro( subsysname, ConfigTab, TABLESIZE );
+
+	if( val == NULL ) {
+
+		printf("'%s' not found in config table, looking in param info table\n", subsysname);
+		//couldn't find subsys.param in config table
+		//look for subsys.param in param info table
+
+		val = param_default_string(subsysname);
+		if (val != NULL) {
+
+			//add value to config table
+			insert(subsysname, val, ConfigTab, TABLESIZE);
+
+			if (val[0] != '\0') {
+
+				printf("'%s' found in param info table, adding to config table, value: '%s'\n", subsysname, val);
+				//found subsys.param in param info table
+
+			} else {
+
+				// the subsytem-specific setting was set to the empty string, so we
+				// return NULL without checking for the actual name since presumably
+				// it was set to empty specifically to clear this parameter for this
+				// specific subsystem.
+
+				printf("'%s' found in param info table, but it was empty, adding to config table\n", subsysname);
+
+				return NULL;
+			}
+
+		} else {
+
+			printf("'%s' not found in param info table, looking for '%s' in config table\n", subsysname, name);
+			//couldn't find subsys.param in param info table
+			//look for param in config table
+
+			val = lookup_macro( name, ConfigTab, TABLESIZE );
+			if (val != NULL) {
+
+				printf("'%s' found in config table\n", name);
+				//found param in config table
+
+			} else {
+
+				printf("'%s' not found in config table, looking in param info table\n", name);
+				//couldn't find param in config table
+				//look for param in param info table
+
+				val = param_default_string(name);
+				if (val != NULL) {
+
+					printf("'%s' found in param info table, adding to config table, value: '%s'\n", name, val);
+					//found param in param info table
+
+					//add value to config table
+					insert(name, val, ConfigTab, TABLESIZE);
+
+				} else {
+
+					//couldn't find subsys.param or param anywhere
+					if (abort) {
+						EXCEPT("'%s' or '%s' not found anywhere, add one of them to the table\n", subsysname, name);
+					} else {
+						return NULL;
+					}
+				}
+			}
+		}
+	} else if (val[0] == '\0' ) {
+		// the subsytem-specific setting was set to the empty string, so we
+		// return NULL without checking for the actual name since presumably
+		// it was set to empty specifically to clear this parameter for this
+		// specific subsystem.
+
+		printf("'%s' found in config table, but it was empty\n", subsysname);
+
+		return NULL;
+	} else {
+		printf("'%s' found in config table\n", subsysname);
+	}
+
+	// Ok, now expand it out...
+	val = expand_macro( val, ConfigTab, TABLESIZE );
+
+	// If it returned an empty string, free it before returning NULL
+	if( val == NULL ) {
+		return NULL;
+	} else if ( val[0] == '\0' ) {
+		free( val );
+		return NULL;
+	} else {
+		return val;
+	}
+}
+
 /*
 ** Return the integer value associated with the named paramter.
 ** This version returns true if a the parameter was found, or false
@@ -1430,8 +1540,27 @@ bool
 param_integer( const char *name, int &value,
 			   bool use_default, int default_value,
 			   bool check_ranges, int min_value, int max_value,
-			   ClassAd *me, ClassAd *target )
+			   ClassAd *me, ClassAd *target,
+			   bool use_param_table )
 {
+	if(use_param_table) {
+		int tbl_default_valid;
+		int tbl_default_value = 
+			param_default_integer( name, &tbl_default_valid );
+		bool tbl_check_ranges = 
+			(param_range_integer(name, &min_value, &max_value)==-1) 
+				? false : true;
+
+		// if not found in the table, then use what was passed in.
+		if (tbl_default_valid) {
+			use_default = true;
+			default_value = tbl_default_value;
+		}
+		if (tbl_check_ranges) {
+			check_ranges = true;
+		}
+	}
+	
 	int result;
 	long long_result;
 	char *string;
@@ -1520,19 +1649,19 @@ param_integer( const char *name, int &value,
 
 int
 param_integer( const char *name, int default_value,
-			   int min_value, int max_value )
+			   int min_value, int max_value, bool use_param_table )
 {
 	int result;
 
 	param_integer( name, result, true, default_value,
-				   true, min_value, max_value );
+				   true, min_value, max_value, use_param_table );
 	return result;
 }
 
 int param_integer_c( const char *name, int default_value,
-					   int min_value, int max_value)
+					   int min_value, int max_value, bool use_param_table )
 {
-	return param_integer( name, default_value, min_value, max_value );
+	return param_integer( name, default_value, min_value, max_value, use_param_table );
 }
 
 // require that the attribute I'm looking for is defined in the config file.
@@ -1559,14 +1688,30 @@ char* param_or_except(const char *attr)
 double
 param_double( const char *name, double default_value,
 			  double min_value, double max_value,
-			  ClassAd *me, ClassAd *target )
+			  ClassAd *me, ClassAd *target,
+			  bool use_param_table )
 {
+	if(use_param_table) {
+		int tbl_default_valid;
+		double tbl_default_value = 
+			param_default_double( name, &tbl_default_valid );
+
+		// if the min_value & max_value are changed, we use it.
+		param_range_double(name, &min_value, &max_value);
+
+		// if not found in the table, then use what was passed in.
+		if (tbl_default_valid) {
+			default_value = tbl_default_value;
+		}
+	}
+	
 	double result;
 	char *string;
 	char *endptr = NULL;
 
 	ASSERT( name );
 	string = param( name );
+	
 	if( ! string ) {
 		dprintf( D_CONFIG, "%s is undefined, using default value of %f\n",
 				 name, default_value );
@@ -1635,8 +1780,20 @@ param_double( const char *name, double default_value,
 
 bool
 param_boolean( const char *name, const bool default_value, bool do_log,
-			   ClassAd *me, ClassAd *target )
+			   ClassAd *me, ClassAd *target,
+			   bool use_param_table )
 {
+	if(use_param_table) {
+		int tbl_default_valid;
+		bool tbl_default_value = 
+			param_default_boolean( name, &tbl_default_valid );
+
+		// if not found in the table, then use what was passed in.
+		if (tbl_default_valid) {
+			default_value = tbl_default_value;
+		}
+	}
+
 	bool result;
 	char *string;
 	char *endptr;
@@ -1644,6 +1801,7 @@ param_boolean( const char *name, const bool default_value, bool do_log,
 
 	ASSERT( name );
 	string = param( name );
+	
 	if (!string) {
 		if (do_log) {
 			dprintf( D_CONFIG, "%s is undefined, using default value of %s\n",
@@ -1723,12 +1881,22 @@ macro_expand( const char *str )
 ** return the default_value argument.
 */
 extern "C" int
-param_boolean_int( const char *name, int default_value )
-{
-    bool default_bool;
+param_boolean_int( const char *name, int default_value ) {
+    return param_boolean_int_with_default(name);
+}
 
+extern "C" int
+param_boolean_int_with_default( const char* name ) {
+    return param_boolean_with_default(name) ? 1 : 0;
+}
+
+extern "C" int
+param_boolean_int_without_default( const char *name, int default_value ) {
+	
+    bool default_bool;
     default_bool = default_value == 0 ? false : true;
     return param_boolean(name, default_bool) ? 1 : 0;
+
 }
 
 // Note that the line_number can be -1 if the filename isn't a real
@@ -2306,6 +2474,41 @@ process_dynamic_configs()
 	}
 	if( per_rval || run_rval ) {
 		return 1;
+	}
+	return 0;
+}
+
+int
+write_config_file(const char* pathname) {
+	int config_fd = creat(pathname, O_WRONLY);
+	if(config_fd == -1) {
+		dprintf(D_ALWAYS, "Failed to create configuration file.\n");
+		return -1;
+	}
+	iterate_params(&write_config_variable, &config_fd);
+	if(close(config_fd) == -1) {
+		dprintf(D_ALWAYS, "Error closing new configuration file.\n");
+		return -1;
+	}
+	return 0;
+}
+
+int
+write_config_variable(param_info_t* value, void* file_desc) {
+	int config_fd = *((int*) file_desc);
+	char* actual_value = param(value->name);
+	if(strcmp(actual_value, value->str_val) != 0) {
+		char output[512];
+		snprintf(output, 512, "# %s:  Default value = (%s)\n", value->name, value->str_val);
+		if(write(config_fd, &output, 512*sizeof(char)) == -1) {
+			dprintf(D_ALWAYS, "Failed to write to configuration file.\n");
+			return -1;
+		}
+		snprintf(output, 512, "%s = %s", value->name, actual_value);
+		if(write(config_fd, &output, 512*sizeof(char)) == -1) {
+			dprintf(D_ALWAYS, "Failed to write to configuration file.\n");
+			return -1;
+		}
 	}
 	return 0;
 }
