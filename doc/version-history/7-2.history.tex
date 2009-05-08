@@ -23,10 +23,9 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Header files for old ClassAds are now included in the release.
 
 \end{itemize}
-
 
 \noindent New Features:
 
@@ -91,6 +90,37 @@ read() method was returning negative values when encountering binary data.
 \item \Condor{dagman} no longer generates a rescue DAG if the DAG is
 aborted but is considered successful (ABORT-DAG-ON with return value
 of 0).
+
+\item The ``Job submitted to grid resource'' user log event is now
+written for all grid universe jobs. Previously, it wasn't written for
+pbs, lsf, nordugrid, or unicore grid-types.
+
+% gittrac #376
+\item Fixed a bug where a Condor-C job with both \MacroNI{remote\_foo}
+and \MacroNI{remote\_remote\_foo} attributes would not have a
+\MacroNI{remote\_foo} attribute when submitted to the remote
+\Condor{schedd}.
+
+% gittrac #380
+\item Fixed a bug in \Condor{configure} and \Condor{install} that would
+leave \MacroNI{CONDOR\_HOST} unset in the configuration file when
+configuring a central manager without using the \MacroNI{--central-manager}
+command-line argument.
+
+% gittrac #395
+\item Fixed a bug that could cause the schedd to leak memory and file
+descriptors with using the \MacroNI{EVENT\_LOG} configuration parameter.
+
+\item Fixed a bug in the \Condor{gridmanager} that could cause it to
+not send a cleanup signal to the GRAM jobmanager for removed gt2 jobs.
+
+% gittrac #426
+\item Fixed a bug that caused parallel jobs to not work when
+encryption is enabled.
+
+% gittrac #261
+\item Fixed a bug in the Windows installer that cause it to fail to start
+Condor.
 
 \end{itemize}
 
