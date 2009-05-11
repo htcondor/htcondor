@@ -390,7 +390,7 @@ fetchAds (ClassAdList &adList, const char *poolName, CondorError* errstack)
 	Sock*    sock; 
 	int                     more;
 	QueryResult result;
-	ClassAd     queryAd, *ad;
+	ClassAd     queryAd(extraAttrs), *ad;
 
 	if ( !poolName ) {
 		return Q_NO_COLLECTOR_HOST;
@@ -627,6 +627,11 @@ filterAds (ClassAdList &in, ClassAdList &out)
     in.Close ();
     
 	return Q_OK;
+}
+
+int 
+CondorQuery::addExtraAttribute(const char *attr) {
+	return extraAttrs.Insert(attr);
 }
 
 

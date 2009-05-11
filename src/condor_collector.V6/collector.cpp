@@ -112,6 +112,8 @@ extern "C"
 
 //----------------------------------------------------------------
 
+void computeProjection(ClassAd *shortAd, ClassAd *curr_ad, SimpleList<MyString> *projectionList);
+
 void CollectorDaemon::Init()
 {
 	dprintf(D_ALWAYS, "In CollectorDaemon::Init()\n");
@@ -355,9 +357,27 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 	ClassAd *curr_ad = NULL;
 	int more = 1;
 	
+		// See if query ad asks for server-side projection
+	char *projection = NULL;
+	cad.LookupString("projection", &projection);
+	SimpleList<MyString> projectionList;
+	::split_args(projection, &projectionList);
+
 	while ( (curr_ad=results.Next()) )
     {
-        if (!sock->code(more) || !curr_ad->put(*sock))
+		ClassAd *ad_to_send = NULL;
+		ClassAd shortAd;
+
+		if (projectionList.Number() > 0) {
+			// compute projection, send thin ad
+			computeProjection(&shortAd, curr_ad, &projectionList);
+			ad_to_send = &shortAd;
+		} else {
+			// if no projection, send the full ad
+			ad_to_send = curr_ad;
+		}
+		
+        if (!sock->code(more) || !ad_to_send->put(*sock))
         {
             dprintf (D_ALWAYS,
                     "Error sending query result to client -- aborting\n");
@@ -948,9 +968,9 @@ int CollectorDaemon::query_scanFunc (ClassAd *cad)
 {
     if ((*cad) >= (*__query__))
     {
-		// Found a match --- append to our results list
-		__ClassAdResultList__->Append(cad);
+		// Found a match 
         __numAds__++;
+		__ClassAdResultList__->Append(cad);
     }
 
     return 1;
@@ -1597,4 +1617,39 @@ CollectorUniverseStats::publish( const char *label, ClassAd *ad )
 	ad->Insert(line);
 
 	return 0;
+}
+
+	// Given a full ad, and a StringList of expressions, Project out of
+	// the full ad into the short ad all the attributes those expressions
+	// depend on.
+
+	// So, if the projection is passed in "foo", and foo is an expression
+	// that expands to bar, we return bar
+	
+void
+computeProjection(ClassAd *shortAd, ClassAd *full_ad, SimpleList<MyString> *projectionList) {
+	shortAd->SetMyTypeName("Machine");
+	shortAd->SetTargetTypeName("Job");
+
+    projectionList->Rewind();
+
+		// For each expression in the list...
+	MyString attr;
+	while (projectionList->Next(attr)) {
+		StringList internals;
+		StringList externals; // shouldn't have any
+
+			// Get the indirect attributes
+		if( !full_ad->GetExprReferences(attr.Value(), internals, externals) ) {
+			dprintf(D_FULLDEBUG,
+				"computeProjection failed to parse "
+				"requested ClassAd expression: %s\n",attr.Value());
+		}
+		internals.rewind();
+
+		while (char *indirect_attr = internals.next()) {
+			ExprTree *tree = full_ad->Lookup(indirect_attr);
+			if (tree) shortAd->Insert(tree->DeepCopy());
+		}
+	}
 }
