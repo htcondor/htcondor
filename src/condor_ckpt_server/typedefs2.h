@@ -150,6 +150,7 @@ typedef struct xmit_reply_pkt
 
 
 
+/* This is an old crusty packet sent on the wire in the network protocol */
 typedef struct service_req_pkt
 {
   u_lint  ticket;
@@ -160,6 +161,20 @@ typedef struct service_req_pkt
   char    new_file_name[MAX_CONDOR_FILENAME_LENGTH-4]; /* -4 to fit shadowIP */
   struct in_addr shadow_IP;
 } service_req_pkt;
+
+
+/* This is the packet to be used internally in the codes, it admits both
+	32 and 64 bit values in a 32 bit process. */
+typedef struct host_service_req_pkt
+{
+  uint64_t  ticket;
+  uint16_t service;
+  uint64_t  key;
+  char    owner_name[MAX_NAME_LENGTH]; 
+  char    file_name[MAX_CONDOR_FILENAME_LENGTH];
+  char    new_file_name[MAX_CONDOR_FILENAME_LENGTH-4]; /* -4 to fit shadowIP */
+  struct in_addr shadow_IP;
+} host_service_req_pkt;
 
 
 

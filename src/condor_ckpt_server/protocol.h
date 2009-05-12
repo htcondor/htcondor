@@ -14,10 +14,10 @@ enum {
 	server. */
 enum {
 	/* Sizes in bytes of a 32 or 64 bit service_req_pkt */
-	SREQ_PKT_32 = 576,
-	SREQ_PKT_64 = 592,
-	SREQ_MINSIZE = SREQ_PKT_32,
-	SREQ_MAXSIZE = SREQ_PKT_64,
+	SREQ_PKTSIZE_32 = 576,
+	SREQ_PKTSIZE_64 = 592,
+	SREQ_PKTSIZE_MIN = SREQ_PKTSIZE_32,
+	SREQ_PKTSIZE_MAX = SREQ_PKTSIZE_64,
 
 
 	/* --------------------------------------------------------*/
@@ -232,5 +232,22 @@ int recv_service_req_pkt(service_req_pkt *srp, FDContext *fdc);
 
 read_result_t net_read_with_timeout(int fd, char *ptr, size_t nbytes,
 	size_t *numread, int timeout);
+
+/* byte unpacking interface */
+uint64_t unpack_uint64_t(char *pkt, size_t off);
+uint32_t unpack_uint32_t(char *pkt, size_t off);
+unsigned short unpack_uint16_t(char *pkt, size_t off);
+struct in_addr unpack_in_addr(char *pkt, size_t off);
+char* unpack_char_array(char *pkt, size_t off);
+
+/* byte packing interface */
+void pack_uint64_t(char *pkt, size_t off, uint64_t val);
+void pack_uint32_t(char *pkt, size_t off, uint32_t val);
+void pack_uint16_t(char *pkt, size_t off, uint16_t val);
+void pack_in_addr(char *pkt, size_t off, struct in_addr inaddr);
+void pack_char_array(char *pkt, size_t off, char *str, size_t len);
+
+bool sreq_is_32bit(char *pkt);
+bool sreq_is_64bit(char *pkt);
 
 #endif
