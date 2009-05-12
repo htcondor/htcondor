@@ -49,6 +49,13 @@ to the current host when the type of installation is `manager'.
   establish a security session with a daemon that it is connecting to.
   The default value is 120 seconds.
 
+\item Added support for SCHEDD\_CLUSTER\_{INITIAL|INCREMENT}\_VALUE knobs.
+	The \Macro{SCHEDD\_CLUSTER\_INITIAL\_VALUE} config knob should be an
+	integer that specifies the cluster number to use for the first submission
+	to the schedd (defaults to 1).  The
+	\Macro{SCHEDD\_CLUSTER\_INCREMENT\_VALUE} will be used to increment the
+	cluster id upon successive submits (defaults to 1).
+
 \end{itemize}
 
 \noindent Bugs Fixed:
