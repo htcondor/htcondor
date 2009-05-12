@@ -5133,16 +5133,17 @@ SYSTEM_PERIODIC_REMOVE = \
 
 \label{param:ScheddClusterInitialValue}
 \item[\Macro{SCHEDD\_CLUSTER\_INITIAL\_VALUE}]
-	An integer that specifies the initial cluster number value to use within a
-	job id when a job is
-	first submitted.  Default value is 1.
+  An integer that specifies the initial cluster number value to use within a
+  job id when a job is first submitted.
+  The default value is 1.
 
 \label{param:ScheddClusterIncrementValue}
 \item[\Macro{SCHEDD\_CLUSTER\_INCREMENT\_VALUE}]
-	This parameter should be a positive integer; the default value is 1.
-	When a job is submitted, the job will be assigned a job id.  The cluster
-	number of the job id will be equal to the previous cluster number used
-	plus the value of this setting.
+  A positive integer that defaults to 1, representing a stride used
+  for assignment of cluster numbers within a job id.
+  When a job is submitted, the job will be assigned a job id.  The cluster
+  number of the job id will be equal to the previous cluster number used
+  plus the value of this setting.
 
 \end{description}
 
