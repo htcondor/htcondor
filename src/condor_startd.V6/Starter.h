@@ -107,6 +107,7 @@ private:
 	int		execDCStarter( Stream* s );
 	int		execDCStarter( ArgList const &args, Env const *env, 
 						   int std_fds[], Stream* s );
+	void	writeMachAdToFile( void );
 #if HAVE_BOINC
 	int 	execBOINCStarter( void );
 #endif /* HAVE_BOINC */

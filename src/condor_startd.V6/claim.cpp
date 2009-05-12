@@ -65,6 +65,7 @@ Claim::Claim( Resource* res_ip, ClaimType claim_type, int lease_duration )
 	setResource( res_ip );
 	c_type = claim_type;
 	c_cod_keyword = NULL;
+	c_mach_filename = NULL;
 	c_has_job_ad = 0;
 	c_pending_cmd = -1;
 	c_wants_remove = false;
@@ -121,6 +122,10 @@ Claim::~Claim()
 	}
 	if( c_cod_keyword ) {
 		free( c_cod_keyword );
+	}
+	if( c_mach_filename ) {
+		remove( c_mach_filename );
+		free( c_mach_filename );
 	}
 }	
 
@@ -1559,6 +1564,10 @@ Claim::makeFetchStarterArgs( ArgList &args )
 	args.AppendArg("-f");
 	args.AppendArg("-job-input-ad");
 	args.AppendArg("-");
+	if( c_mach_filename ) {
+		args.AppendArg("-mach-input-ad");
+		args.AppendArg(c_mach_filename);
+	}
 }
 #endif /* HAVE_JOB_HOOKS */
 
@@ -1602,6 +1611,10 @@ Claim::makeCODStarterArgs( ArgList &args )
 	if( c_has_job_ad ) { 
 		args.AppendArg("-job-input-ad");
 		args.AppendArg("-");
+	}
+	if( c_mach_filename ) {
+		args.AppendArg("-mach-input-ad");
+		args.AppendArg(c_mach_filename);
 	}
 }
 
@@ -1919,6 +1932,49 @@ Claim::writeJobAd( int pipe_end )
 	}
 
 	return true;
+}
+
+bool
+Claim::writeMachAd( int fd )
+{
+	MyString mach_str;
+	c_rip->r_classad->sPrint(mach_str);
+
+	const char* ptr = mach_str.Value();
+	int len = mach_str.Length();
+	while (len) {
+		int bytes_written = write(fd, ptr, len);
+		if (bytes_written == -1) {
+			dprintf(D_ALWAYS, "writeMachAd: File write failed\n");
+			return false;
+		}
+		ptr += bytes_written;
+		len -= bytes_written;
+	}
+	return true;
+}
+
+int
+Claim::genMachFilename( void )
+{
+	char basename[] = "/tmp/machad-XXXXXX";
+	int fd;
+
+	if ( c_mach_filename ) {
+		remove( c_mach_filename );
+		free( c_mach_filename );
+		c_mach_filename = NULL;
+	}
+	fd = mkstemp( basename );
+        c_mach_filename = strdup( basename );
+
+	return fd;
+}
+
+const char*
+Claim::getMachFilename( void )
+{
+	return c_mach_filename;
 }
 
 ///////////////////////////////////////////////////////////////////////////

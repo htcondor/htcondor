@@ -41,16 +41,17 @@ public:
 
 		/** Constructor with a keyword on the command-line.
 			@param classad_filename Full path to the ClassAd, "-" if STDIN
+			@param machad_filename Fill path to the Machine ClassAd
 			@param keyword Config file keyword to find other attributes
 			@cluster Cluster ID number (if any)
 			@proc Proc ID number (if any)
 			@subproc Subproc ID number (if any)
 		*/
-	JICLocalFile( const char* classad_filename, const char* keyword,
-				  int cluster, int proc, int subproc );
+	JICLocalFile( const char* classad_filename, const char* machad_filename,
+				  const char* keyword, int cluster, int proc, int subproc );
 
 		/// Constructor without a keyword on the command-line
-	JICLocalFile( const char* classad_filename,
+	JICLocalFile( const char* classad_filename, const char* machad_filename,
 				  int cluster, int proc, int subproc );
 
 		/// Destructor
@@ -69,7 +70,8 @@ public:
 		*/
 	bool getLocalJobAd( void );
 
-	char* fileName( void );
+	char* jobAdFileName( void );
+	char* machAdFileName( void );
 
 protected:
 
@@ -79,20 +81,26 @@ protected:
 	virtual bool getUniverse( void );
 
 		/** Private helper to actually read the file and try to insert
-			it into our job ClassAd.
+			it into the passed ClassAd.
 		*/
-	bool readClassAdFromFile( void );
+	bool readClassAdFromFile( char* filename, ClassAd* ad );
 
-		/** Private helper to initialize our filename data member.
-			we use this since we have two constructors, both of which
-			need to do the same thing with this info.
+
+		/** Private helper to initialize our job_filename mach_filename
+			data members.  We use this since we have two
+			constructors, both of which need to do the same thing
+			with this info.
 		*/
-	void initFilename( const char* path );
+	void initFilenames( const char* jobad_path, const char* machad_path );
 
 		/** The full path to the file we get our ClassAd from (or "-"
 			if we're reading it from STDIN).
 		*/
-	char* filename;
+	char* job_filename;
+
+		/** The full path to the file we get the MachineAd from
+		*/
+	char* mach_filename;
 };
 
 

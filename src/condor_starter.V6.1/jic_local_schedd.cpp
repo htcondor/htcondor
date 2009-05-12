@@ -36,10 +36,11 @@
 extern CStarter *Starter;
 
 
-JICLocalSchedd::JICLocalSchedd( const char* classad_filename, 
+JICLocalSchedd::JICLocalSchedd( const char* classad_filename,
+								const char* machad_filename,
 								const char* schedd_address, 
 								int cluster, int proc, int subproc )
-	: JICLocalFile( classad_filename, cluster, proc, subproc )
+	: JICLocalFile( classad_filename, machad_filename, cluster, proc, subproc )
 {
 		// initialize this to something reasonable.  we'll change it
 		// if anything special happens which needs a different value.

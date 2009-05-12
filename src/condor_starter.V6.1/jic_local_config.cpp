@@ -53,6 +53,7 @@ JICLocalConfig::JICLocalConfig( int cluster, int proc, int subproc )
 	job_proc = proc;
 	job_subproc = subproc;
 	job_ad = new ClassAd();
+	mach_ad = new ClassAd();
 }
 
 

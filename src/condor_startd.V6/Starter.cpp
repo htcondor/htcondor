@@ -664,6 +664,13 @@ Starter::execJobPipeStarter( void )
 		env.SetEnv(lock_env.Value());
 	}
 
+	writeMachAdToFile();
+/*
+	mach_fd = s_claim->genMachFilename();
+	s_claim->writeMachAd( mach_fd );
+	close( mach_fd );
+*/
+
 		// Create an argument list for this starter, based on the claim.
 	s_claim->makeStarterArgs(args);
 
@@ -746,6 +753,9 @@ Starter::execDCStarter( Stream* s )
 		args.AppendArg("-f");
 		args.AppendArg(hostname);
 	}
+	writeMachAdToFile();
+	args.AppendArg("-mach-input-ad");
+	args.AppendArg(s_claim->getMachFilename());
 	execDCStarter( args, NULL, NULL, s );
 
 	return s_pid;
@@ -1323,4 +1333,16 @@ Starter::holdJobCallback(DCMsgCallback *cb)
 		dprintf(D_ALWAYS,"Failed to hold job (starter pid %d), so killing it.\n", s_pid);
 		killSoft();
 	}
+}
+
+void
+Starter::writeMachAdToFile()
+{
+	int mach_fd;
+
+	// Write the machine ad to a temporary file for the starter
+	// to use.
+	mach_fd = s_claim->genMachFilename();
+	s_claim->writeMachAd( mach_fd );
+	close( mach_fd );
 }

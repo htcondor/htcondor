@@ -264,6 +264,13 @@ public:
 		*/
 	bool writeJobAd( int fd );
 
+		/** Write out the machine ClassAd to the filename stored
+			in c_mach_filename.
+ 		*/
+	bool writeMachAd( int fd );
+	int genMachFilename( void );
+	const char* getMachFilename( void );
+
 	void receiveJobClassAdUpdate( ClassAd &update_ad );
 
 		// registered callback for premature closure of connection from
@@ -313,6 +320,7 @@ private:
 	int			c_aliveint;		// Alive interval for this claim
 
 	char*		c_cod_keyword;	// COD keyword for this claim, if any
+	char*		c_mach_filename;
 	int			c_has_job_ad;	// Do we have a job ad for the COD claim?
 
 	ClaimState	c_state;		// the state of this claim

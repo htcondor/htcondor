@@ -54,7 +54,8 @@ ReliSock *syscall_sock = NULL;
 #	define file_remove remove
 #endif
 
-JICShadow::JICShadow( const char* shadow_name ) : JobInfoCommunicator()
+JICShadow::JICShadow( const char* shadow_name, const char* filename )
+		 : JobInfoCommunicator()
 {
 	if( ! shadow_name ) {
 		EXCEPT( "Trying to instantiate JICShadow with no shadow name!" );
@@ -63,6 +64,11 @@ JICShadow::JICShadow( const char* shadow_name ) : JobInfoCommunicator()
 
 	shadow = NULL;
 	shadow_version = NULL;
+	if( filename ) {
+		machad_filename = strdup( filename );
+	} else {
+		machad_filename = NULL;
+	}
 	filetrans = NULL;
 	m_filetrans_sec_session = NULL;
 	m_reconnect_sec_session = NULL;
@@ -124,6 +130,10 @@ JICShadow::~JICShadow()
 	if( fs_domain ) {
 		free( fs_domain );
 	}
+	if ( machad_filename )
+	{
+		free( machad_filename );
+	}
 	free(m_reconnect_sec_session);
 	free(m_filetrans_sec_session);
 }
@@ -139,6 +149,11 @@ JICShadow::init( void )
 		dprintf( D_ALWAYS|D_FAILURE,
 				 "Failed to get job ad from shadow!\n" );
 		return false;
+	}
+
+	if ( machad_filename ) {
+		getMachAdFromFile();
+		mach_ad->dPrint(D_FULLDEBUG);
 	}
 
 		// stash a copy of the unmodified job ad in case we decide
@@ -2065,4 +2080,33 @@ JICShadow::initMatchSecuritySession()
 			m_filetrans_sec_session = strdup(filetrans_session_id.Value());
 		}
 	}
+}
+
+bool
+JICShadow::getMachAdFromFile()
+{
+	FILE* fp;
+	int atEOF, error, empty;
+
+	if( machad_filename ) {
+		fp = safe_fopen_wrapper( machad_filename, "r" );
+		if( ! fp ) {
+			dprintf( D_ALWAYS, "Failed to open \"%s\" for reading: %s "
+					"(errno %d)\n", machad_filename,
+					 strerror(errno), errno );
+			return false;
+		}
+	} else {
+		dprintf(D_FULLDEBUG, "No machine ad file defined\n");
+		return false;
+	}
+
+	if( mach_ad ) {
+		delete mach_ad;
+	}
+	mach_ad = new ClassAd(fp, "--", atEOF, error, empty);
+
+	fclose(fp);
+
+	return true;
 }

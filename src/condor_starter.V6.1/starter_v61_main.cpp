@@ -69,6 +69,7 @@ usage()
 	dprintf(D_ALWAYS, "usage: condor_starter initiating_host\n");
 	dprintf(D_ALWAYS, "   or: condor_starter -job-keyword keyword\n");
 	dprintf(D_ALWAYS, "                      -job-input-ad path\n");
+	dprintf(D_ALWAYS, "                      -mach-input-ad path\n");
 	dprintf(D_ALWAYS, "                      -job-cluster number\n");
 	dprintf(D_ALWAYS, "                      -job-proc    number\n");
 	dprintf(D_ALWAYS, "                      -job-subproc number\n");
@@ -306,6 +307,7 @@ parseArgs( int argc, char* argv [] )
 {
 	JobInfoCommunicator* jic = NULL;
 	char* job_input_ad = NULL; 
+	char* mach_input_ad = NULL;
 	char* job_output_ad = NULL; 
 	char* job_keyword = NULL; 
 	int job_cluster = -1;
@@ -319,6 +321,7 @@ parseArgs( int argc, char* argv [] )
 
 	bool warn_multi_keyword = false;
 	bool warn_multi_input_ad = false;
+	bool warn_multi_mach_ad = false;
 	bool warn_multi_output_ad = false;
 	bool warn_multi_cluster = false;
 	bool warn_multi_proc = false;
@@ -331,6 +334,7 @@ parseArgs( int argc, char* argv [] )
 	int opt_len;
 
 	char _jobinputad[] = "-job-input-ad";
+	char _machinputad[] = "-mach-input-ad";
 	char _joboutputad[] = "-job-output-ad";
 	char _jobkeyword[] = "-job-keyword";
 	char _jobcluster[] = "-job-cluster";
@@ -384,6 +388,15 @@ parseArgs( int argc, char* argv [] )
 			free( schedd_addr );
 			schedd_addr = strdup( arg );
 			tmp++;	// consume the arg so we don't get confused 
+			continue;
+		}
+
+		if( ! strncmp(opt, _machinputad, opt_len) ) { 
+			if( mach_input_ad ) {
+				warn_multi_mach_ad = true;
+				free( mach_input_ad );
+			}
+			mach_input_ad = strdup( arg );
 			continue;
 		}
 
@@ -566,6 +579,11 @@ parseArgs( int argc, char* argv [] )
 				 "multiple '%s' options given, using \"%s\"\n",
 				 _jobinputad, job_input_ad );
 	}
+	if( warn_multi_mach_ad ) {
+		dprintf( D_ALWAYS, "WARNING: "
+				 "multiple '%s' options given, using \"%s\"\n",
+				 _machinputad, mach_input_ad );
+	}
 	if( warn_multi_output_ad ) {
 		dprintf( D_ALWAYS, "WARNING: "
 				 "multiple '%s' options given, using \"%s\"\n",
@@ -613,7 +631,7 @@ parseArgs( int argc, char* argv [] )
 					 "shadow host\n", _jobinputad );
 			usage();
 		}
-		jic = new JICShadow( shadow_host );
+		jic = new JICShadow( shadow_host, mach_input_ad );
 		free( shadow_host );
 		shadow_host = NULL;
 		return jic;
@@ -634,14 +652,14 @@ parseArgs( int argc, char* argv [] )
 					 _jobinputad, _schedd_addr ); 
 			usage();
 		}
-		jic = new JICLocalSchedd( job_input_ad, schedd_addr,
+		jic = new JICLocalSchedd( job_input_ad, mach_input_ad, schedd_addr,
 								  job_cluster, job_proc, job_subproc );
 	} else if( job_input_ad ) {
 		if( job_keyword ) {
-			jic = new JICLocalFile( job_input_ad, job_keyword, 
+			jic = new JICLocalFile( job_input_ad, mach_input_ad, job_keyword, 
 									job_cluster, job_proc, job_subproc );
 		} else {
-			jic = new JICLocalFile( job_input_ad, job_cluster, job_proc,
+			jic = new JICLocalFile( job_input_ad, mach_input_ad, job_cluster, job_proc,
 									job_subproc );
 		}
 	} else {

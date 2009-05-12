@@ -143,6 +143,9 @@ public:
 		/// Return a pointer to the ClassAd for our job.
 	virtual ClassAd* jobClassAd( void );
 
+		/// Return a pointer to the ClassAd for the machine.
+	virtual ClassAd* machClassAd( void );
+
 		/// Return the job's universe integer.
 	int jobUniverse( void );
 
@@ -460,6 +463,9 @@ protected:
 	
 		/// The ClassAd for our job.  We control the memory for this.
 	ClassAd* job_ad;
+
+		// The Machine ClassAd running the job.
+	ClassAd* mach_ad;
 
 		/// The universe of the job.
 	int job_universe;
