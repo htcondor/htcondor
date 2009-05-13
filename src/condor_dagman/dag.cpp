@@ -2000,6 +2000,11 @@ Dag::RestartNode( Job *node, bool recovery )
 				  node->GetRetryMax() );
 	if( !recovery ) {
 		StartNode( node, true );
+	} else {
+		// Doing this fixes gittrac #481 (recovery fails on a DAG that
+		// has retried nodes).  (See SubmitNodeJob() for where this
+		// gets done during "normal" running.)
+		node->_CondorID = _defaultCondorId;
 	}
 }
 
