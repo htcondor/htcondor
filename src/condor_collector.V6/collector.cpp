@@ -1628,8 +1628,8 @@ CollectorUniverseStats::publish( const char *label, ClassAd *ad )
 	
 void
 computeProjection(ClassAd *shortAd, ClassAd *full_ad, SimpleList<MyString> *projectionList) {
-	shortAd->SetMyTypeName("Machine");
-	shortAd->SetTargetTypeName("Job");
+	shortAd->SetMyTypeName(full_ad->GetMyTypeName());
+	shortAd->SetTargetTypeName(full_ad->GetTargetTypeName());
 
     projectionList->Rewind();
 
