@@ -1,0 +1,10 @@
+config job_dagman_retry_recovery.config
+
+Job A job_dagman_retry_recovery-nodeA.cmd
+
+Job B job_dagman_retry_recovery-nodeB.cmd
+Retry B 1
+Parent A Child B
+
+Job C job_dagman_retry_recovery-nodeC.cmd
+Parent B Child C
