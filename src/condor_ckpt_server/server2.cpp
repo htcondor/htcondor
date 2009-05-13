@@ -41,6 +41,7 @@
 #include "condor_uid.h"
 #include "classad_collection.h"
 #include "daemon.h"
+#include "protocol.h"
 
 XferSummary	xfer_summary;
 
@@ -496,6 +497,8 @@ void Server::HandleRequest(int req_sd,
 	int                bytes_recvd=0;
 	int                temp_len;
 	char               log_msg[256];
+	FDContext			fdc;
+	int					ret;
 	
 	shadow_sa_len = sizeof(shadow_sa);
 	if ((new_req_sd=I_accept(req_sd, &shadow_sa, &shadow_sa_len)) == 
@@ -504,6 +507,13 @@ void Server::HandleRequest(int req_sd,
 		exit(ACCEPT_ERROR);
     }
 	req_ID++;
+
+	/* Set up our connection object */
+	fdc.fd = new_req_sd;
+	fdc.type = FDC_UNKNOWN;
+	fdc.who = shadow_sa.sin_addr;
+	fdc.req_ID = req_ID;
+
 	dprintf(D_ALWAYS, "----------------------------------------------------\n");
 	switch (req) {
         case SERVICE_REQ:
@@ -531,13 +541,21 @@ void Server::HandleRequest(int req_sd,
 	sprintf(log_msg, "%s%d%s", "Using descriptor ", new_req_sd, 
 			" to handle request");
 	Log(log_msg);
-	if ((req == STORE_REQ) || (req == RESTORE_REQ) || (req == REPLICATE_REQ)) {
+
+
+	/* If for whatever reason we don't want to accept the request, bail
+		on the connection with a refusal, close it, and move on. */
+	/* XXX FIXME to happen AFTER I read the packet from the socket
+		so I know what bit width the client is. */
+	if ((req == STORE_REQ) || (req == RESTORE_REQ) || (req == REPLICATE_REQ)) 
+	{
 		if ((num_store_xfers+num_restore_xfers == max_xfers) ||
 			((req == STORE_REQ) && (num_store_xfers == max_store_xfers)) ||
 			((req == RESTORE_REQ) &&
 			 (num_restore_xfers == max_restore_xfers)) ||
 			((req == REPLICATE_REQ) &&
-			 (num_replicate_xfers == max_replicate_xfers))) {
+			 (num_replicate_xfers == max_replicate_xfers))) 
+			{
 			if (req == STORE_REQ || req == REPLICATE_REQ) {
 				store_reply.server_name.s_addr = htonl(0);
 				store_reply.port = htons(0);
@@ -565,8 +583,20 @@ void Server::HandleRequest(int req_sd,
 
 	switch (req) {
         case SERVICE_REQ:
-		    req_len = sizeof(service_req_pkt);
-			buf_ptr = (char*) &service_req;
+			Log(req_ID, "Unpacking service req pkt");
+			ret = recv_service_req_pkt(&service_req, &fdc);
+			if (ret != PC_OK) {
+				Log(req_ID, "NOT OK!");
+				return;
+			}
+
+			Log(req_ID, "Processing Service Request!");
+			ProcessServiceReq(req_ID, &fdc, shadow_sa.sin_addr, service_req);
+
+			Log(req_ID, "Done");
+
+			return;
+
 			break;
 		case STORE_REQ:
 			req_len = sizeof(store_req_pkt);
@@ -582,7 +612,11 @@ void Server::HandleRequest(int req_sd,
 			break;
 	}
 
-	rt_alarm.SetAlarm(new_req_sd, REQUEST_TIMEOUT);
+/* XXX testing */
+if (req != SERVICE_REQ) {
+
+	/* original code */
+	rt_alarm.SetAlarm(REQUEST_TIMEOUT);
 
 	while (bytes_recvd < req_len) {
 		errno = 0;
@@ -600,14 +634,21 @@ void Server::HandleRequest(int req_sd,
 						bytes_recvd, req_len);
 				Log(-1, log_msg);
 				return;
+			} else {
+				if (rt_alarm.IsExpired() == true) {
+					close(new_req_sd);
+				}
 			}
 		} else
 			bytes_recvd += temp_len;
     }
 	rt_alarm.ResetAlarm();
+}
+
+
 	switch (req) {
     case SERVICE_REQ:
-		ProcessServiceReq(req_ID, new_req_sd, shadow_sa.sin_addr, service_req);
+/*		ProcessServiceReq(req_ID, new_req_sd, shadow_sa.sin_addr, service_req);*/
 		break;
     case STORE_REQ:
 		ProcessStoreReq(req_ID, new_req_sd, shadow_sa.sin_addr, store_req);
@@ -627,12 +668,14 @@ void Server::HandleRequest(int req_sd,
 						store_req);
 		break;
     }  
-	
+
 }
 
-
+/* XXX remove all explicit network/host byte ordering crap since the 
+	network protocol functions now take care of all of that for you.
+	XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX Important! */
 void Server::ProcessServiceReq(int             req_id,
-							   int             req_sd,
+							   FDContext       *fdc,
 							   struct in_addr  shadow_IP,
 							   service_req_pkt service_req)
 {  
@@ -645,6 +688,13 @@ void Server::ProcessServiceReq(int             req_id,
 	int                num_files;
 	int                child_pid;
 	int                ret_code;
+
+	int					req_sd;
+
+	/* XXX fixme, extend the fdc concept throughout this function.
+		I also need to fix all of the net_write() to be a correct sending
+		of a packet depending upon the fdc type. */
+	req_sd = fdc->fd;
 
 	service_req.ticket = ntohl(service_req.ticket);
 	if (service_req.ticket != AUTHENTICATION_TCKT) {

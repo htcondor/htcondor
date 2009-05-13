@@ -10,6 +10,9 @@
 #include "server2.h"
 #include "protocol.h"
 
+/* This doesn't nest, so be careful! */
+extern Alarm rt_alarm;
+
 /*
 
 int recv_store_req();
@@ -37,12 +40,11 @@ read_result_t net_read_with_timeout(int fd, char *ptr, size_t nbytes,
 {
     int nleft, nread;
 	MyString log_msg;
-	Alarm rt_alarm;
 	int save_errno;
 
 	/* we use signal to implement breaking out of a permanently blocked 
 		or very slow read situation */
-	rt_alarm.SetAlarm(fd, timeout);
+	rt_alarm.SetAlarm(timeout);
 
     nleft = nbytes;
     while (nleft > 0) {
@@ -51,15 +53,34 @@ read_result_t net_read_with_timeout(int fd, char *ptr, size_t nbytes,
         if (nread < 0) {
 			save_errno = errno;
             if (errno == EINTR) {
-				/* ignore the einter, which, if it happened due to timeout
-					the signal handler will have closed the fd associated with
-					this call, then the next read issued on the closed fd will
-					result in a failure of a badfd, which means the read was
-					incomplete. This logic is screwy, but it is better than
-					what I originally found. :(
+				/*	If the alarm is expired (we'll know because the SIGALARM
+					handler tells the global rt_alarm object it is expired),
+					then we timed out on the connection, otherwise
+					ignore whatever signal it was and reissue the read.
 				*/
+				if (rt_alarm.IsExpired() == true) {
+
+					rt_alarm.ResetAlarm();
+
+					/* of course, we really don't know exactly how much we
+						read, but that's ok, since we're closing the connection
+						very soon at any rate. */
+    				*numread = (nbytes - nleft);     
+
+					return NET_READ_TIMEOUT;
+				} 
+
+				/* However, if it was some other kind of signal instead of
+					the alarm, we'll be generous and resubmit the read with
+					the same timeout again. This does make it possible for
+					the timeout to never fire of the right frequency of non
+					alarm signals happens, but this checkpoint server code
+					is horrible and probably going away very soon. So we'll
+					soak that small chance. */
+				rt_alarm.SetAlarm(timeout);
                 goto REISSUE_READ;
             }
+
             /* The caller has no idea how much was actually read in this
                 scenario, but we know we aren't going to be reading anymore.
 			*/
@@ -101,11 +122,12 @@ read_result_t net_read_with_timeout(int fd, char *ptr, size_t nbytes,
 int recv_service_req_pkt(service_req_pkt *srp, FDContext *fdc)
 {
 	size_t bytes_recvd;
-	int req_len, temp_len;
 	char netpkt[SREQ_PKTSIZE_MAX];
 	read_result_t ret;
 	int ok;
 	size_t diff;
+
+	Server::Log(fdc->req_ID, "Entered recv_service_req_pkt()");
 
 	/* We better not know what the client bit width is when this function is
 		called, since it figures it out! */
@@ -117,37 +139,79 @@ int recv_service_req_pkt(service_req_pkt *srp, FDContext *fdc)
 	*/
 	ret = net_read_with_timeout(fdc->fd, netpkt, SREQ_PKTSIZE_MIN, &bytes_recvd,
 								REQUEST_TIMEOUT);
-	if (ret == NET_READ_FAIL) {
-		return PC_NOT_OK;
+	switch(ret) {
+		case NET_READ_FAIL:
+		Server::Log(fdc->req_ID, "recv_service_req_pkt(): Failed to read!");
+			return PC_NOT_OK;
+			break;
+		case NET_READ_TIMEOUT:
+		Server::Log(fdc->req_ID, "recv_service_req_pkt(): Timed out!");
+			return PC_NOT_OK;
+			break;
+		case NET_READ_OK:
+		Server::Log(fdc->req_ID, "recv_service_req_pkt(): Read MIN pkt ok!");
+			break;
+		default:
+			EXCEPT("Programmer error with ret = %d\n", ret);
+			break;
 	}
 
-	/* ok, see if I can pick out the magic number in the "ticket" member
-		as described by the 32 bit packet */
+	/* Figure out what kind of packet it is */
 	ok = sreq_is_32bit(netpkt);
 	if (!ok) {
+		Server::Log(fdc->req_ID, "recv_service_req_pkt(): is 64 bit?");
 		/* try to read the rest of the pkt, assuming it is a 64 bit packet */
 		diff = SREQ_PKTSIZE_64 - SREQ_PKTSIZE_32;
+		dprintf(D_ALWAYS, "Already read %d bytes, need to read %d more for "
+				"a total of %d[real: %d] bytes\n",
+				SREQ_PKTSIZE_MIN, diff, SREQ_PKTSIZE_32 + diff, SREQ_PKTSIZE_64);
 		ret = net_read_with_timeout(fdc->fd, netpkt + diff, diff, &bytes_recvd,
 								REQUEST_TIMEOUT);
-		if (ret == NET_READ_FAIL) {
-			/* Hrm, timed out or failed */
-			return PC_NOT_OK;
+		switch(ret) {
+			case NET_READ_FAIL:
+			Server::Log(fdc->req_ID, "recv_service_req_pkt(): failed to read rest of pkt");
+				return PC_NOT_OK;
+				break;
+			case NET_READ_TIMEOUT:
+			Server::Log(fdc->req_ID, "recv_service_req_pkt(): timed out while reading rest of pkt");
+				return PC_NOT_OK;
+				break;
+			case NET_READ_OK:
+			Server::Log(fdc->req_ID, "recv_service_req_pkt(): read rest of pkt");
+				break;
+			default:
+				EXCEPT("Programmer error on continuation read with ret = %d\n",
+					ret);
+				break;
 		}
-		
+
 		/* now, see if we can find it in the 64 bit version of the packet */
 		ok = sreq_is_64bit(netpkt);
 		if (!ok) {
 			/* oops, we didn't find the hard coded ticket in either context
 				of 32 bit or 64 bit, so apparently, we didn't read the
 				expected kind of packet on the wire or it was garbage.
+				fdc stays unknown.
 			*/
+			Server::Log(fdc->req_ID, "recv_service_req_pkt(): not a service_req_pkt! FAIL!");
 			return PC_NOT_OK;
 		}
 
-		/* unpack the 64 bit case into the host structure */
+		/* unpack the 64 bit case into the host structure. Don't forget
+			to undo the network byte ordering. */
+
 		srp->ticket = unpack_uint64_t(netpkt, SREQ64_ticket);
+		srp->ticket =
+			network_uint64_t_order_to_host_uint64_t_order(srp->ticket);
+
 		srp->service = unpack_uint16_t(netpkt, SREQ64_service);
+		srp->service =
+			network_uint16_t_order_to_host_uint16_t_order(srp->service);
+
 		srp->key = unpack_uint64_t(netpkt, SREQ64_key);
+		srp->key =
+			network_uint64_t_order_to_host_uint64_t_order(srp->key);
+
 		memmove(srp->owner_name,
 			unpack_char_array(netpkt, SREQ64_owner_name),
 			MAX_NAME_LENGTH);
@@ -157,11 +221,44 @@ int recv_service_req_pkt(service_req_pkt *srp, FDContext *fdc)
 		memmove(srp->new_file_name,
 			unpack_char_array(netpkt, SREQ64_new_file_name),
 			MAX_CONDOR_FILENAME_LENGTH-4);
+
 		srp->shadow_IP = unpack_in_addr(netpkt, SREQ64_shadow_IP);
+		srp->shadow_IP.s_addr =
+			network_uint32_t_order_to_host_uint32_t_order(srp->shadow_IP.s_addr);
+
+		Server::Log(fdc->req_ID, "recv_service_req_pkt(): unpacked 64 bit service_req_pkt!");
+		fdc->type = FDC_64;
 		return PC_OK;
 	}
 
-	/* TODO 32 bit case */
+	/* unpack the 32 bit case into the host structure. Don't forget
+		to undo the network byte ordering. */
+	srp->ticket = unpack_uint32_t(netpkt, SREQ32_ticket);
+	srp->ticket = network_uint32_t_order_to_host_uint32_t_order(srp->ticket);
+
+	srp->service = unpack_uint16_t(netpkt, SREQ32_service);
+	srp->service = network_uint16_t_order_to_host_uint16_t_order(srp->service);
+
+	srp->key = unpack_uint32_t(netpkt, SREQ32_key);
+	srp->key = network_uint32_t_order_to_host_uint32_t_order(srp->key);
+
+	memmove(srp->owner_name,
+		unpack_char_array(netpkt, SREQ32_owner_name),
+		MAX_NAME_LENGTH);
+	memmove(srp->file_name,
+		unpack_char_array(netpkt, SREQ32_file_name),
+		MAX_CONDOR_FILENAME_LENGTH);
+	memmove(srp->new_file_name,
+		unpack_char_array(netpkt, SREQ32_new_file_name),
+		MAX_CONDOR_FILENAME_LENGTH-4);
+
+	srp->shadow_IP = unpack_in_addr(netpkt, SREQ32_shadow_IP);
+	srp->shadow_IP.s_addr =
+		network_uint32_t_order_to_host_uint32_t_order(srp->shadow_IP.s_addr);
+
+	Server::Log(fdc->req_ID, "recv_service_req_pkt(): unpacked 32 bit service_req_pkt!");
+
+	fdc->type = FDC_32;
 
 	return PC_OK;
 }
@@ -171,9 +268,14 @@ int recv_service_req_pkt(service_req_pkt *srp, FDContext *fdc)
 bool sreq_is_32bit(char *pkt)
 {
 	uint32_t ticket;
+	MyString str;
 
 	/* Get what I think to be the ticket field out of the packet */
 	ticket = unpack_uint32_t(pkt, SREQ32_ticket);
+	ticket = network_uint32_t_order_to_host_uint32_t_order(ticket);
+
+	str.sprintf("Unpacked 32bit ticket %d\n", ticket);
+	Server::Log(str.Value());
 
 	/* If this constant ever changes from 1637102411L, it means a new "version"
 		of the protocol. */
@@ -190,9 +292,14 @@ bool sreq_is_32bit(char *pkt)
 bool sreq_is_64bit(char *pkt)
 {
 	uint64_t ticket;
+	MyString str;
 
 	/* Get what I think to be the ticket field out of the packet */
 	ticket = unpack_uint64_t(pkt, SREQ64_ticket);
+	ticket = network_uint64_t_order_to_host_uint64_t_order(ticket);
+
+	str.sprintf("Unpacked 64bit ticket %d\n", ticket);
+	Server::Log(str.Value());
 
 	/* If this constant ever changes from 1637102411L, it means a new "version"
 		of the protocol. */
@@ -203,6 +310,47 @@ bool sreq_is_64bit(char *pkt)
 	/* if this equals the magic number, we're done! */
 	return true;
 }
+
+
+uint16_t network_uint16_t_order_to_host_uint16_t_order(uint16_t val)
+{
+	/* This function is defined to take a uint16_t */
+	return ntohs(val);
+}
+
+uint32_t network_uint32_t_order_to_host_uint32_t_order(uint32_t val)
+{
+	/* This function is defined to take a uint32_t */
+	return ntohl(val);
+}
+
+uint64_t network_uint64_t_order_to_host_uint64_t_order(uint64_t val)
+{
+	union {
+		uint64_t val;
+		char bytes[sizeof(uint64_t)];
+	} sex, xes;
+	
+	sex.val = val;
+
+	if (42 != htonl(42)) {
+		/* host is little endian...so do the switch */
+		xes.bytes[0] = sex.bytes[7];
+		xes.bytes[1] = sex.bytes[6];
+		xes.bytes[2] = sex.bytes[5];
+		xes.bytes[3] = sex.bytes[4];
+		xes.bytes[4] = sex.bytes[3];
+		xes.bytes[5] = sex.bytes[2];
+		xes.bytes[6] = sex.bytes[1];
+		xes.bytes[7] = sex.bytes[0];
+	} else {
+		/* host is big endian, which matches the network order */
+		xes = sex;
+	}
+
+	return xes.val;
+}
+
 
 /* ------------------------------------------------------------------------- */
 /* These are the unpack/pack methods to get stuff out of the network packet */
@@ -217,17 +365,17 @@ uint64_t unpack_uint64_t(char *pkt, size_t off)
 
 uint32_t unpack_uint32_t(char *pkt, size_t off)
 {
-	return *(uint32_t*)&pkt[off];
+	return *(uint32_t*)(&pkt[off]);
 }
 
 unsigned short unpack_uint16_t(char *pkt, size_t off)
 {
-	return *(unsigned short*)&pkt[off];
+	return *(unsigned short*)(&pkt[off]);
 }
 
 struct in_addr unpack_in_addr(char *pkt, size_t off)
 {
-	return *(struct in_addr*)&pkt[off];
+	return *(struct in_addr*)(&pkt[off]);
 }
 
 /* Do not free this memory, caller doesn't own it */
@@ -241,22 +389,22 @@ char* unpack_char_array(char *pkt, size_t off)
 
 void pack_uint64_t(char *pkt, size_t off, uint64_t val)
 {
-	*(uint64_t*)&pkt[off] = val;
+	*(uint64_t*)(&pkt[off]) = val;
 }
 
 void pack_uint32_t(char *pkt, size_t off, uint32_t val)
 {
-	*(uint32_t*)&pkt[off] = val;
+	*(uint32_t*)(&pkt[off]) = val;
 }
 
 void pack_uint16_t(char *pkt, size_t off, uint16_t val)
 {
-	*(unsigned short*)&pkt[off] = val;
+	*(unsigned short*)(&pkt[off]) = val;
 }
 
 void pack_in_addr(char *pkt, size_t off, struct in_addr inaddr)
 {
-	*(struct in_addr*)&pkt[off] = inaddr;
+	*(struct in_addr*)(&pkt[off]) = inaddr;
 }
 
 void pack_char_array(char *pkt, size_t off, char *str, size_t len)

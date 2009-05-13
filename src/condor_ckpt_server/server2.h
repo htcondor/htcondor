@@ -31,6 +31,7 @@
 #include "replication.h"
 #include "list.h"
 #include "classad_collection.h"
+#include "protocol.h"
 
 
 class Server
@@ -71,7 +72,7 @@ class Server
     void HandleRequest(int          req_sd,
 		       request_type req);
     void ProcessServiceReq(int            req_id,
-			   int            req_sd,
+				FDContext *fdc,
 			   struct in_addr shadow_IP,
 			   service_req_pkt service_req);
     void ProcessStoreReq(int            req_id,
@@ -98,9 +99,9 @@ class Server
     void ChildComplete();
     void NoMore(char const *reason);
     void ServerDump();
-    void Log(int         request,
+    static void Log(int         request,
 	     const char* event);
-    void Log(const char* event);
+    static void Log(const char* event);
 };
 
 

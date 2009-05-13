@@ -165,6 +165,7 @@ typedef struct service_req_pkt
 
 /* This is the packet to be used internally in the codes, it admits both
 	32 and 64 bit values in a 32 bit process. */
+/* XXX not used yet */
 typedef struct host_service_req_pkt
 {
   uint64_t  ticket;

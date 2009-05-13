@@ -225,6 +225,7 @@ enum {
 enum read_result_t
 {
 	NET_READ_FAIL,
+	NET_READ_TIMEOUT,
 	NET_READ_OK
 };
 
@@ -249,5 +250,10 @@ void pack_char_array(char *pkt, size_t off, char *str, size_t len);
 
 bool sreq_is_32bit(char *pkt);
 bool sreq_is_64bit(char *pkt);
+
+/* endian garbage */
+uint16_t network_uint16_t_order_to_host_uint16_t_order(uint16_t val);
+uint32_t network_uint32_t_order_to_host_uint32_t_order(uint32_t val);
+uint64_t network_uint64_t_order_to_host_uint64_t_order(uint64_t val);
 
 #endif
