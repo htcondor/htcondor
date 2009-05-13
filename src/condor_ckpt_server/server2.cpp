@@ -587,6 +587,7 @@ void Server::HandleRequest(int req_sd,
 			ret = recv_service_req_pkt(&service_req, &fdc);
 			if (ret != PC_OK) {
 				Log(req_ID, "NOT OK!");
+				close(fdc.fd);
 				return;
 			}
 
