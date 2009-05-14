@@ -52,6 +52,10 @@ The details of each version are described below.
 \item Fixed a bug that caused \Condor{dagman} to fail in recovery mode on
 a DAG in which any nodes had been retried.
 
+% gittrac #484
+\item Xen-based virtual machines now have the correct amount of memory.
+Previously, the amount of memory was too small by a factor of 1024.
+
 \end{itemize}
 
 \noindent Known Bugs:
