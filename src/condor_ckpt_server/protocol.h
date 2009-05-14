@@ -13,11 +13,17 @@ enum {
 	fields in the network protocol between the schedd, shadow, and checkpoint
 	server. */
 enum {
+
 	/* Sizes in bytes of a 32 or 64 bit service_req_pkt */
 	SREQ_PKTSIZE_32 = 576,
 	SREQ_PKTSIZE_64 = 592,
 	SREQ_PKTSIZE_MIN = SREQ_PKTSIZE_32,
 	SREQ_PKTSIZE_MAX = SREQ_PKTSIZE_64,
+
+	/* Sizes in bytes of a 32 or 64 bit service_reply_pkt */
+	SREP_PKTSIZE_32 = 32,
+	SREP_PKTSIZE_64 = 40,
+	SREP_PKTSIZE_MAX = SREP_PKTSIZE_64,
 
 
 	/* --------------------------------------------------------*/
@@ -229,7 +235,15 @@ enum read_result_t
 	NET_READ_OK
 };
 
-int recv_service_req_pkt(service_req_pkt *srp, FDContext *fdc);
+enum write_result_t
+{
+	NET_WRITE_FAIL,
+	NET_WRITE_OK
+};
+
+/* The packet reception/transmission API */
+int recv_service_req_pkt(service_req_pkt *srq, FDContext *fdc);
+int send_service_reply_pkt(service_reply_pkt *srp, FDContext *fdc);
 
 read_result_t net_read_with_timeout(int fd, char *ptr, size_t nbytes,
 	size_t *numread, int timeout);
@@ -255,5 +269,8 @@ bool sreq_is_64bit(char *pkt);
 uint16_t network_uint16_t_order_to_host_uint16_t_order(uint16_t val);
 uint32_t network_uint32_t_order_to_host_uint32_t_order(uint32_t val);
 uint64_t network_uint64_t_order_to_host_uint64_t_order(uint64_t val);
+uint16_t host_uint16_t_order_to_network_uint16_t_order(uint16_t val);
+uint32_t host_uint32_t_order_to_network_uint32_t_order(uint32_t val);
+uint64_t host_uint64_t_order_to_network_uint64_t_order(uint64_t val);
 
 #endif

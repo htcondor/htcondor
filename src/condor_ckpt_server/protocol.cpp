@@ -119,7 +119,7 @@ read_result_t net_read_with_timeout(int fd, char *ptr, size_t nbytes,
 	the client side is. This function also translates between the host
 	service_req_socket and whatever the client has.
 */
-int recv_service_req_pkt(service_req_pkt *srp, FDContext *fdc)
+int recv_service_req_pkt(service_req_pkt *srq, FDContext *fdc)
 {
 	size_t bytes_recvd;
 	char netpkt[SREQ_PKTSIZE_MAX];
@@ -200,31 +200,33 @@ int recv_service_req_pkt(service_req_pkt *srp, FDContext *fdc)
 		/* unpack the 64 bit case into the host structure. Don't forget
 			to undo the network byte ordering. */
 
-		srp->ticket = unpack_uint64_t(netpkt, SREQ64_ticket);
-		srp->ticket =
-			network_uint64_t_order_to_host_uint64_t_order(srp->ticket);
+		/* XXX type narrowing, ignoring for now */
+		srq->ticket = unpack_uint64_t(netpkt, SREQ64_ticket);
+		srq->ticket =
+			network_uint64_t_order_to_host_uint64_t_order(srq->ticket);
 
-		srp->service = unpack_uint16_t(netpkt, SREQ64_service);
-		srp->service =
-			network_uint16_t_order_to_host_uint16_t_order(srp->service);
+		srq->service = unpack_uint16_t(netpkt, SREQ64_service);
+		srq->service =
+			network_uint16_t_order_to_host_uint16_t_order(srq->service);
 
-		srp->key = unpack_uint64_t(netpkt, SREQ64_key);
-		srp->key =
-			network_uint64_t_order_to_host_uint64_t_order(srp->key);
+		/* XXX type narrowing, ignoring for now */
+		srq->key = unpack_uint64_t(netpkt, SREQ64_key);
+		srq->key =
+			network_uint64_t_order_to_host_uint64_t_order(srq->key);
 
-		memmove(srp->owner_name,
+		memmove(srq->owner_name,
 			unpack_char_array(netpkt, SREQ64_owner_name),
 			MAX_NAME_LENGTH);
-		memmove(srp->file_name,
+		memmove(srq->file_name,
 			unpack_char_array(netpkt, SREQ64_file_name),
 			MAX_CONDOR_FILENAME_LENGTH);
-		memmove(srp->new_file_name,
+		memmove(srq->new_file_name,
 			unpack_char_array(netpkt, SREQ64_new_file_name),
 			MAX_CONDOR_FILENAME_LENGTH-4);
 
-		srp->shadow_IP = unpack_in_addr(netpkt, SREQ64_shadow_IP);
-		srp->shadow_IP.s_addr =
-			network_uint32_t_order_to_host_uint32_t_order(srp->shadow_IP.s_addr);
+		srq->shadow_IP = unpack_in_addr(netpkt, SREQ64_shadow_IP);
+		srq->shadow_IP.s_addr =
+			network_uint32_t_order_to_host_uint32_t_order(srq->shadow_IP.s_addr);
 
 		Server::Log(fdc->req_ID, "recv_service_req_pkt(): unpacked 64 bit service_req_pkt!");
 		fdc->type = FDC_64;
@@ -233,28 +235,28 @@ int recv_service_req_pkt(service_req_pkt *srp, FDContext *fdc)
 
 	/* unpack the 32 bit case into the host structure. Don't forget
 		to undo the network byte ordering. */
-	srp->ticket = unpack_uint32_t(netpkt, SREQ32_ticket);
-	srp->ticket = network_uint32_t_order_to_host_uint32_t_order(srp->ticket);
+	srq->ticket = unpack_uint32_t(netpkt, SREQ32_ticket);
+	srq->ticket = network_uint32_t_order_to_host_uint32_t_order(srq->ticket);
 
-	srp->service = unpack_uint16_t(netpkt, SREQ32_service);
-	srp->service = network_uint16_t_order_to_host_uint16_t_order(srp->service);
+	srq->service = unpack_uint16_t(netpkt, SREQ32_service);
+	srq->service = network_uint16_t_order_to_host_uint16_t_order(srq->service);
 
-	srp->key = unpack_uint32_t(netpkt, SREQ32_key);
-	srp->key = network_uint32_t_order_to_host_uint32_t_order(srp->key);
+	srq->key = unpack_uint32_t(netpkt, SREQ32_key);
+	srq->key = network_uint32_t_order_to_host_uint32_t_order(srq->key);
 
-	memmove(srp->owner_name,
+	memmove(srq->owner_name,
 		unpack_char_array(netpkt, SREQ32_owner_name),
 		MAX_NAME_LENGTH);
-	memmove(srp->file_name,
+	memmove(srq->file_name,
 		unpack_char_array(netpkt, SREQ32_file_name),
 		MAX_CONDOR_FILENAME_LENGTH);
-	memmove(srp->new_file_name,
+	memmove(srq->new_file_name,
 		unpack_char_array(netpkt, SREQ32_new_file_name),
 		MAX_CONDOR_FILENAME_LENGTH-4);
 
-	srp->shadow_IP = unpack_in_addr(netpkt, SREQ32_shadow_IP);
-	srp->shadow_IP.s_addr =
-		network_uint32_t_order_to_host_uint32_t_order(srp->shadow_IP.s_addr);
+	srq->shadow_IP = unpack_in_addr(netpkt, SREQ32_shadow_IP);
+	srq->shadow_IP.s_addr =
+		network_uint32_t_order_to_host_uint32_t_order(srq->shadow_IP.s_addr);
 
 	Server::Log(fdc->req_ID, "recv_service_req_pkt(): unpacked 32 bit service_req_pkt!");
 
@@ -274,10 +276,11 @@ bool sreq_is_32bit(char *pkt)
 	ticket = unpack_uint32_t(pkt, SREQ32_ticket);
 	ticket = network_uint32_t_order_to_host_uint32_t_order(ticket);
 
-	str.sprintf("Unpacked 32bit ticket %d\n", ticket);
+	str.sprintf("Unpacked 32bit ticket %u, should be %u\n", ticket, 
+		1637102411);
 	Server::Log(str.Value());
 
-	/* If this constant ever changes from 1637102411L, it means a new "version"
+	/* If this constant ever changes from 1637102411UL, it means a new "version"
 		of the protocol. */
 	if (ticket != AUTHENTICATION_TCKT) {
 		return false;
@@ -298,7 +301,8 @@ bool sreq_is_64bit(char *pkt)
 	ticket = unpack_uint64_t(pkt, SREQ64_ticket);
 	ticket = network_uint64_t_order_to_host_uint64_t_order(ticket);
 
-	str.sprintf("Unpacked 64bit ticket %d\n", ticket);
+	str.sprintf("Unpacked 64bit ticket %lu, should be %lu\n",
+		(unsigned long)ticket, 1637102411UL);
 	Server::Log(str.Value());
 
 	/* If this constant ever changes from 1637102411L, it means a new "version"
@@ -309,6 +313,94 @@ bool sreq_is_64bit(char *pkt)
 
 	/* if this equals the magic number, we're done! */
 	return true;
+}
+
+/* depending upon the connection type, assemble a service_reply_pkt and
+	send it to the other side */
+int send_service_reply_pkt(service_reply_pkt *srp, FDContext *fdc)
+{
+	/* This will be the service_reply_pkt */
+	char netpkt[SREP_PKTSIZE_MAX];
+	/* The fields of the packet */
+	uint16_t			req_status;
+	struct in_addr		server_addr;
+	uint16_t			port;
+	uint32_t			num_files_32;
+	uint64_t			num_files_64;
+	char				capacity_free_ACD[MAX_ASCII_CODED_DECIMAL_LENGTH];
+	int					ret = -1;
+
+	ASSERT(fdc->type != FDC_UNKNOWN);
+
+	/* get the right sized quantities I need depending upon what the client
+		needs.  Ensure to convert it to network byte order here too.
+	*/
+	req_status = srp->req_status;
+	req_status = host_uint16_t_order_to_network_uint16_t_order(req_status);
+
+	server_addr = srp->server_addr;
+	server_addr.s_addr =
+		host_uint32_t_order_to_network_uint32_t_order(server_addr.s_addr);
+	
+	port = srp->port;
+	port = host_uint16_t_order_to_network_uint16_t_order(port);
+
+	switch(fdc->type)
+	{
+		case FDC_32:
+			/* XXX type narrowing, I'm ignoring it for now */
+			num_files_32 = srp->num_files;
+			num_files_32 =
+				host_uint32_t_order_to_network_uint32_t_order(num_files_32);
+			break;
+		case FDC_64:
+			num_files_64 = srp->num_files;
+			num_files_64 =
+				host_uint64_t_order_to_network_uint64_t_order(num_files_64);
+			break;
+		default:
+			EXCEPT("send_service_reply_pkt(): Conversion error!");
+			break;
+	}
+
+	strcpy(capacity_free_ACD, srp->capacity_free_ACD);
+	
+	/* Assemble the packet according to what type of connection it is. 
+		Then send it. */
+	switch(fdc->type)
+	{
+		case FDC_32:
+			pack_uint16_t(netpkt, SREP32_req_status, req_status);
+			pack_in_addr(netpkt, SREP32_server_addr, server_addr);
+			pack_uint16_t(netpkt, SREP32_port, port);
+			pack_uint32_t(netpkt, SREP32_num_files, num_files_32);
+			pack_char_array(netpkt, SREP32_capacity_free_ACD,
+				capacity_free_ACD, MAX_ASCII_CODED_DECIMAL_LENGTH);
+
+			ret = net_write(fdc->fd, netpkt, SREP_PKTSIZE_32);
+			break;
+
+		case FDC_64:
+			pack_uint16_t(netpkt, SREP64_req_status, req_status);
+			pack_in_addr(netpkt, SREP64_server_addr, server_addr);
+			pack_uint16_t(netpkt, SREP64_port, port);
+			pack_uint64_t(netpkt, SREP64_num_files, num_files_64);
+			pack_char_array(netpkt, SREP64_capacity_free_ACD,
+				capacity_free_ACD, MAX_ASCII_CODED_DECIMAL_LENGTH);
+
+			ret = net_write(fdc->fd, netpkt, SREP_PKTSIZE_64);
+			break;
+
+		default:
+			EXCEPT("send_service_reply_pkt(): Packing error!");
+			break;
+	}
+
+	if (ret < 0) {
+		return NET_WRITE_FAIL;
+	}
+
+	return NET_WRITE_OK;
 }
 
 
@@ -333,8 +425,8 @@ uint64_t network_uint64_t_order_to_host_uint64_t_order(uint64_t val)
 	
 	sex.val = val;
 
-	if (42 != htonl(42)) {
-		/* host is little endian...so do the switch */
+	if (42 != htonl(42)) { /* am I little endian? */
+		/* yes...so do the switch */
 		xes.bytes[0] = sex.bytes[7];
 		xes.bytes[1] = sex.bytes[6];
 		xes.bytes[2] = sex.bytes[5];
@@ -344,7 +436,47 @@ uint64_t network_uint64_t_order_to_host_uint64_t_order(uint64_t val)
 		xes.bytes[6] = sex.bytes[1];
 		xes.bytes[7] = sex.bytes[0];
 	} else {
-		/* host is big endian, which matches the network order */
+		/* no, so already done */
+		xes = sex;
+	}
+
+	return xes.val;
+}
+
+
+uint16_t host_uint16_t_order_to_network_uint16_t_order(uint16_t val)
+{
+	/* This function is defined to take a uint16_t */
+	return htons(val);
+}
+
+uint32_t host_uint32_t_order_to_network_uint32_t_order(uint32_t val)
+{
+	/* This function is defined to take a uint32_t */
+	return htonl(val);
+}
+
+uint64_t host_uint64_t_order_to_network_uint64_t_order(uint64_t val)
+{
+	union {
+		uint64_t val;
+		char bytes[sizeof(uint64_t)];
+	} sex, xes;
+	
+	sex.val = val;
+
+	if (42 != htonl(42)) { /* am I little endian? */
+		/* yes...so do the switch */
+		xes.bytes[0] = sex.bytes[7];
+		xes.bytes[1] = sex.bytes[6];
+		xes.bytes[2] = sex.bytes[5];
+		xes.bytes[3] = sex.bytes[4];
+		xes.bytes[4] = sex.bytes[3];
+		xes.bytes[5] = sex.bytes[2];
+		xes.bytes[6] = sex.bytes[1];
+		xes.bytes[7] = sex.bytes[0];
+	} else {
+		/* no, so already done */
 		xes = sex;
 	}
 

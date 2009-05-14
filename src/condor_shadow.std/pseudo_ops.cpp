@@ -801,10 +801,10 @@ pseudo_get_file_stream(
 #endif
 
 		*ip_addr = ntohl( *ip_addr );
-		display_ip_addr( *ip_addr );
 		*port = ntohs( *port );
-		dprintf( D_ALWAYS, "RestoreRequest returned %d using port %d\n", 
-				rval, *port );
+		dprintf( D_ALWAYS, "RestoreRequest returned address:\n");
+		display_ip_addr( *ip_addr );
+		dprintf( D_ALWAYS, "at port %d\n", *port );
 		BytesSent += *len;
 		NumRestarts++;
 		return 0;
@@ -978,7 +978,6 @@ pseudo_put_file_stream(
 		file_stream_info.total_bytes = len;
 #endif
 
-		display_ip_addr( *ip_addr );
 		*ip_addr = ntohl(*ip_addr);
 		*port = ntohs( *port );
 		dprintf(D_ALWAYS,  "StoreRequest returned addr:\n");
@@ -1535,21 +1534,12 @@ get_host_addr( unsigned int *ip_addr )
 void
 display_ip_addr( unsigned int addr )
 {
-	int		net_part;
-	int		host_part;
-
-	if( IN_CLASSB(addr) ) {
-		net_part = B_NET(addr);
-		host_part = B_HOST(addr);
-		dprintf( D_ALWAYS, "\t%lu.%lu.%lu.%lu\n",
-			(unsigned long) HI(B_NET(addr)),
-			(unsigned long) LO(B_NET(addr)),
-			(unsigned long) HI(B_HOST(addr)),
-			(unsigned long) LO(B_HOST(addr))
-		);
-	} else {
-		dprintf( D_ALWAYS, "\t Weird 0x%x\n", addr );
-	}
+	dprintf( D_ALWAYS, "\t%lu.%lu.%lu.%lu\n",
+		(unsigned long) HI(B_NET(addr)),
+		(unsigned long) LO(B_NET(addr)),
+		(unsigned long) HI(B_HOST(addr)),
+		(unsigned long) LO(B_HOST(addr))
+	);
 }
 
 /*
