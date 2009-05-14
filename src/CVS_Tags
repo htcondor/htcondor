@@ -1,6 +1,11 @@
 05/07/2009 V7_2_3-branch
   Branch for the 7.2.3 release, based on V7_2-branch
 
+05/12/2009 V7_2_3
+  The official tag for 7.2.3, from the V7_2_3-branch.
+  Version String: $CondorVersion: 7.2.3 May 11 2009 BuildID: 151729 $
+  Original build tag: BUILD-V7_2_3-branch-2009-5-11
+
 04/02/2009 V7_2_2-branch
   Branch for the 7.2.2 release; the branch is based on V7_2-branch.
 
