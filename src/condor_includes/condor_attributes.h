@@ -293,6 +293,7 @@ extern const char * ATTR_JOB_VM_CHECKPOINT;
 extern const char * ATTR_JOB_VM_NETWORKING;
 extern const char * ATTR_JOB_VM_NETWORKING_TYPE;
 extern const char * ATTR_JOB_VM_HARDWARE_VT;
+extern const char * ATTR_JOB_WANTS_ADS;
 extern const char * ATTR_KEYBOARD_IDLE;
 extern const char * ATTR_KEYSTORE_FILE;
 extern const char * ATTR_KEYSTORE_ALIAS;

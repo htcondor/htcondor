@@ -397,6 +397,7 @@ parseArgs( int argc, char* argv [] )
 				free( mach_input_ad );
 			}
 			mach_input_ad = strdup( arg );
+			tmp++;	// consume the arg so we don't get confused 
 			continue;
 		}
 
@@ -672,6 +673,9 @@ parseArgs( int argc, char* argv [] )
 	}
 	if( job_input_ad ) {
 		free( job_input_ad );
+	}
+	if( mach_input_ad ) {
+		free( mach_input_ad );
 	}
 	if( job_output_ad ) {
         jic->setOutputAdFile( job_output_ad );		

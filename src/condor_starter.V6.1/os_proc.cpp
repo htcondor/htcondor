@@ -43,6 +43,8 @@
 #endif
 
 extern CStarter *Starter;
+const char* JOB_AD_FILENAME = "job.ad";
+const char* MACHINE_AD_FILENAME = "machine.ad";
 
 
 /* OsProc class implementation */
@@ -420,6 +422,16 @@ OsProc::StartJob(FamilyInfo* family_info)
 #endif
 
 	set_priv ( priv );
+
+	// If the machine and job ads are desired, write the ClassAds to
+	// the execute directory
+	if ( Starter->jic->enforceLimits() ) {
+		if ( ! WriteAdsToExeDir() )
+		{
+			dprintf ( D_ALWAYS, "OsProc::StartJob(): Failed to "
+				"write classad files.\n" );
+		}
+	}
 
 	if (privsep_helper != NULL) {
 		const char* std_file_names[3] = {
@@ -843,4 +855,44 @@ OsProc::makeCpuAffinityMask(int slotId) {
 	}
 
 	return mask;
+}
+
+bool
+OsProc::WriteAdsToExeDir()
+{
+	ClassAd* ad;
+	const char* dir = Starter->GetWorkingDir();
+	MyString ad_str, filename;
+	FILE* fp;
+	bool ret_val = true;
+
+	// Write the job ad first
+	ad = Starter->jic->jobClassAd();
+	filename.sprintf("%s%c%s", dir, DIR_DELIM_CHAR, JOB_AD_FILENAME);
+	fp = safe_fopen_wrapper(filename.Value(), "w");
+	if (!fp)
+	{
+		dprintf(D_ALWAYS, "Failed to open \"%s\" for to write job ad: "
+					"%s (errno %d)\n", filename.Value(),
+					strerror(errno), errno);
+		ret_val = false;
+	}
+	ad->fPrint(fp);
+	fclose(fp);
+
+	// Write the machine ad
+	ad = Starter->jic->machClassAd();
+	filename.sprintf("%s%c%s", dir, DIR_DELIM_CHAR, MACHINE_AD_FILENAME);
+	fp = safe_fopen_wrapper(filename.Value(), "w");
+	if (!fp)
+	{
+		dprintf(D_ALWAYS, "Failed to open \"%s\" for to write machine "
+					"ad: %s (errno %d)\n", filename.Value(),
+					strerror(errno), errno);
+		ret_val = false;
+	}
+	ad->fPrint(fp);
+	fclose(fp);
+
+	return ret_val;
 }

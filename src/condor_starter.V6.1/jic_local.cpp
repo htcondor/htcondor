@@ -112,7 +112,7 @@ JICLocal::init( void )
 void
 JICLocal::config( void ) 
 { 
-		// nothing to look up just for JICLocal
+	m_enforce_limits = param_boolean("ENFORCE_JOB_LIMITS", false);
 }
 
 

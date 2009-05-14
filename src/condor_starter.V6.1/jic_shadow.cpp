@@ -44,6 +44,8 @@
 
 extern CStarter *Starter;
 ReliSock *syscall_sock = NULL;
+extern const char* JOB_AD_FILENAME;
+extern const char* MACHINE_AD_FILENAME;
 
 // Filenames are case insensitive on Win32, but case sensitive on Unix
 #ifdef WIN32
@@ -256,6 +258,7 @@ JICShadow::config( void )
 		}			
 		free( tmp );
 	}
+	m_enforce_limits = param_boolean("ENFORCE_JOB_LIMITS", false);
 }
 
 
@@ -403,6 +406,13 @@ JICShadow::transferOutput( void )
 		m_removed_output_files.rewind();
 		while ((filename = m_removed_output_files.next()) != NULL) {
 			filetrans->addFileToExeptionList(filename);
+		}
+
+			// remove the job and machine classad files from the
+			// ft list
+		if (enforceLimits()) {
+			filetrans->addFileToExeptionList(JOB_AD_FILENAME);
+			filetrans->addFileToExeptionList(MACHINE_AD_FILENAME);
 		}
 	
 			// true if job exited on its own
@@ -2087,6 +2097,7 @@ JICShadow::getMachAdFromFile()
 {
 	FILE* fp;
 	int atEOF, error, empty;
+	char delim[] = "--";
 
 	if( machad_filename ) {
 		fp = safe_fopen_wrapper( machad_filename, "r" );
@@ -2104,7 +2115,7 @@ JICShadow::getMachAdFromFile()
 	if( mach_ad ) {
 		delete mach_ad;
 	}
-	mach_ad = new ClassAd(fp, "--", atEOF, error, empty);
+	mach_ad = new ClassAd(fp, delim, atEOF, error, empty);
 
 	fclose(fp);
 

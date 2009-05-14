@@ -1562,12 +1562,12 @@ Claim::makeFetchStarterArgs( ArgList &args )
 {
 	args.AppendArg("condor_starter");
 	args.AppendArg("-f");
-	args.AppendArg("-job-input-ad");
-	args.AppendArg("-");
 	if( c_mach_filename ) {
 		args.AppendArg("-mach-input-ad");
 		args.AppendArg(c_mach_filename);
 	}
+	args.AppendArg("-job-input-ad");
+	args.AppendArg("-");
 }
 #endif /* HAVE_JOB_HOOKS */
 
@@ -1608,13 +1608,14 @@ Claim::makeCODStarterArgs( ArgList &args )
 		args.AppendArg(c_cod_keyword);
 	}
 
-	if( c_has_job_ad ) { 
-		args.AppendArg("-job-input-ad");
-		args.AppendArg("-");
-	}
 	if( c_mach_filename ) {
 		args.AppendArg("-mach-input-ad");
 		args.AppendArg(c_mach_filename);
+	}
+
+	if( c_has_job_ad ) { 
+		args.AppendArg("-job-input-ad");
+		args.AppendArg("-");
 	}
 }
 

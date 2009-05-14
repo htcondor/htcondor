@@ -64,6 +64,7 @@ JobInfoCommunicator::JobInfoCommunicator()
 #endif
 	m_periodic_job_update_tid = -1;
 	m_allJobsDone_finished = false;
+	m_enforce_limits = false;
 }
 
 
@@ -902,4 +903,17 @@ JobInfoCommunicator::getExitReasonString( void )
 		return "evict";
 	}
 	return "exit";
+}
+
+
+bool
+JobInfoCommunicator::enforceLimits()
+{
+	bool job_wants_ads = false;
+
+	if (job_ad) {
+		job_ad->LookupBool( ATTR_JOB_WANTS_ADS, job_wants_ads );
+	}
+
+	return (m_enforce_limits || job_wants_ads);
 }

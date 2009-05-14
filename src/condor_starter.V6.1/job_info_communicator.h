@@ -350,6 +350,8 @@ public:
 		/* Update Job ClassAd with checkpoint info and log it */
 	virtual void updateCkptInfo(void) {};
 
+		/* Returns true if limits should be enforced on the job */
+	bool enforceLimits();
 
 protected:
 
@@ -492,6 +494,8 @@ protected:
 #if HAVE_JOB_HOOKS
 	StarterHookMgr* m_hook_mgr;
 #endif /* HAVE_JOB_HOOKS */
+
+	bool m_enforce_limits;
 
 private:
 		/// Start a timer for the periodic job updates

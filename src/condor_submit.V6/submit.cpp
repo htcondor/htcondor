@@ -326,6 +326,8 @@ const char    *ParallelScriptStarter = "parallel_script_starter";
 
 const char    *MaxJobRetirementTime = "max_job_retirement_time";
 
+const char    *JobWantsAds = "want_ads";
+
 //
 // Job Deferral Parameters
 //
@@ -480,6 +482,7 @@ void SetMaxJobRetirementTime();
 bool mightTransfer( int universe );
 bool isTrue( const char* attr );
 void SetConcurrencyLimits();
+void SetJobLimits();
 void SetVMParams();
 void SetVMRequirements();
 bool parse_vm_option(char *value, bool& onoff);
@@ -6038,6 +6041,7 @@ queue(int num)
 		SetJavaVMArgs();
 		SetParallelStartupScripts(); //JDB
 		SetConcurrencyLimits();
+		SetJobLimits();
 		SetVMParams();
 
 			// SetForcedAttributes should be last so that it trumps values
@@ -7460,6 +7464,22 @@ void SetVMRequirements()
 	InsertJobExpr (buffer);
 }
 
+void
+SetJobLimits()
+{
+	char *limits = condor_param(JobWantsAds, ATTR_JOB_WANTS_ADS);
+	MyString buffer;
+
+	if (limits) {
+		if ('Y' == limits[0] || 'y' == limits[0]) {
+			buffer.sprintf( "%s = TRUE", ATTR_JOB_WANTS_ADS);
+		} else {
+			buffer.sprintf( "%s = FALSE", ATTR_JOB_WANTS_ADS);
+		}
+		free( limits );
+		InsertJobExpr ( buffer );
+	}
+}
 
 void
 SetConcurrencyLimits()
