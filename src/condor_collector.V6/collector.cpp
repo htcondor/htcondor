@@ -1628,10 +1628,13 @@ CollectorUniverseStats::publish( const char *label, ClassAd *ad )
 	
 void
 computeProjection(ClassAd *shortAd, ClassAd *full_ad, SimpleList<MyString> *projectionList) {
-	shortAd->SetMyTypeName(full_ad->GetMyTypeName());
-	shortAd->SetTargetTypeName(full_ad->GetTargetTypeName());
-
     projectionList->Rewind();
+
+		// schedds ads, by fiat, must have NUM_USERS, otherwise, the classad code
+		// morphs them into submitter ads, regardless of MyType
+	if (strcmp("Scheduler", full_ad->GetMyTypeName()) == 0) {
+		projectionList->Append(MyString(ATTR_NUM_USERS));
+	}
 
 		// For each expression in the list...
 	MyString attr;
@@ -1652,4 +1655,7 @@ computeProjection(ClassAd *shortAd, ClassAd *full_ad, SimpleList<MyString> *proj
 			if (tree) shortAd->Insert(tree->DeepCopy());
 		}
 	}
+	shortAd->SetMyTypeName(full_ad->GetMyTypeName());
+	shortAd->SetTargetTypeName(full_ad->GetTargetTypeName());
+
 }
