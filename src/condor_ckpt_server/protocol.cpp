@@ -164,7 +164,7 @@ int recv_service_req_pkt(service_req_pkt *srq, FDContext *fdc)
 		diff = SREQ_PKTSIZE_64 - SREQ_PKTSIZE_32;
 		dprintf(D_ALWAYS, "Already read %d bytes, need to read %d more for "
 				"a total of %d[real: %d] bytes\n",
-				SREQ_PKTSIZE_MIN, diff, SREQ_PKTSIZE_32 + diff, SREQ_PKTSIZE_64);
+				SREQ_PKTSIZE_MIN, (int)diff, (int)(SREQ_PKTSIZE_32 + diff), SREQ_PKTSIZE_64);
 		ret = net_read_with_timeout(fdc->fd, netpkt + diff, diff, &bytes_recvd,
 								REQUEST_TIMEOUT);
 		switch(ret) {
@@ -270,23 +270,37 @@ int recv_service_req_pkt(service_req_pkt *srq, FDContext *fdc)
 bool sreq_is_32bit(char *pkt)
 {
 	uint32_t ticket;
+	uint16_t service;
 	MyString str;
 
-	/* Get what I think to be the ticket field out of the packet */
+	/* first we sanity check the ticket and see if the ticket field is the
+		correct authentication number */
 	ticket = unpack_uint32_t(pkt, SREQ32_ticket);
 	ticket = network_uint32_t_order_to_host_uint32_t_order(ticket);
-
-	str.sprintf("Unpacked 32bit ticket %u, should be %u\n", ticket, 
-		1637102411);
-	Server::Log(str.Value());
-
-	/* If this constant ever changes from 1637102411UL, it means a new "version"
-		of the protocol. */
 	if (ticket != AUTHENTICATION_TCKT) {
 		return false;
 	}
+	
+	/* To check the validity of this packet, I extract the second field
+		out of the packet, the "service" field. With a 64 bit packet, this
+		should be zero (at the offset of the field in a 32 bit packet) because
+		this is the high 32 bits of the 64 bit "ticket" field, which comes
+		before it in memory. On a 32 bit machine, the service type should be
+		within the set defined by the service_type enum. 
+	*/
 
-	/* if this equals the magic number, we're done! */
+	/* ok, extract the service type, and see if it is in the right set */
+	service = unpack_uint16_t(pkt, SREQ32_service);
+	service = network_uint16_t_order_to_host_uint16_t_order(service);
+
+	if (service < CKPT_SERVER_SERVICE_STATUS || 
+		service > SERVICE_ABORT_REPLICATION)
+	{
+		/* oops, can't be a 32 bit packet */
+		return false;
+	}
+	
+	/* I guess it passed! Heuristics to the rescue! */
 	return true;
 }
 
@@ -295,23 +309,39 @@ bool sreq_is_32bit(char *pkt)
 bool sreq_is_64bit(char *pkt)
 {
 	uint64_t ticket;
+	uint16_t service;
 	MyString str;
 
-	/* Get what I think to be the ticket field out of the packet */
+	/* first we sanity check the ticket and see if the ticket field is the
+		correct authentication number */
 	ticket = unpack_uint64_t(pkt, SREQ64_ticket);
 	ticket = network_uint64_t_order_to_host_uint64_t_order(ticket);
-
-	str.sprintf("Unpacked 64bit ticket %lu, should be %lu\n",
-		(unsigned long)ticket, 1637102411UL);
+	str.sprintf("found ticket = %lu", ticket);
 	Server::Log(str.Value());
-
-	/* If this constant ever changes from 1637102411L, it means a new "version"
-		of the protocol. */
+	str.sprintf("real ticket = %lu", AUTHENTICATION_TCKT);
+	Server::Log(str.Value());
 	if (ticket != AUTHENTICATION_TCKT) {
 		return false;
 	}
+	
+	/* To check the validity of this packet, I extract the second field
+		out of the packet, the "service" field. With a 64 bit packet, this
+		should be in range (at the offset of the 64 bit packet) because. If
+		not, then I guess it isn't a 64 bit packet. 
+	*/
 
-	/* if this equals the magic number, we're done! */
+	/* ok, extract the service type, and see if it is in the right set */
+	service = unpack_uint16_t(pkt, SREQ64_service);
+	service = network_uint16_t_order_to_host_uint16_t_order(service);
+
+	if (service < CKPT_SERVER_SERVICE_STATUS || 
+		service > SERVICE_ABORT_REPLICATION)
+	{
+		/* oops, can't be a 64 bit packet */
+		return false;
+	}
+	
+	/* I guess it passed! Heuristics to the rescue! */
 	return true;
 }
 

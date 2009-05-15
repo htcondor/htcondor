@@ -698,7 +698,9 @@ void Server::ProcessServiceReq(int             req_id,
 		sprintf(log_msg, "Request for service from %s DENIED:", 
 				inet_ntoa(shadow_IP));
 		Log(log_msg);
-		Log("Invalid authentication ticket used");
+		sprintf(log_msg, "Invalid authentication ticket [%lu] used", 
+			(unsigned long) service_req.ticket);
+		Log(log_msg);
 
 		close(fdc->fd);
 		return;
