@@ -665,11 +665,6 @@ Starter::execJobPipeStarter( void )
 	}
 
 	writeMachAdToFile();
-/*
-	mach_fd = s_claim->genMachFilename();
-	s_claim->writeMachAd( mach_fd );
-	close( mach_fd );
-*/
 
 		// Create an argument list for this starter, based on the claim.
 	s_claim->makeStarterArgs(args);
