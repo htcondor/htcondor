@@ -313,11 +313,11 @@ CCBListener::HandleCCBRequest( ClassAd &msg )
 			"CCBListener: received request to connect to %s, request id %s.\n",
 			name.Value(), request_id.Value());
 
-	return DoReversedCCBConnect( address.Value(), connect_id.Value(), request_id.Value() );
+	return DoReversedCCBConnect( address.Value(), connect_id.Value(), request_id.Value(), name.Value() );
 }
 
 bool
-CCBListener::DoReversedCCBConnect( char const *address, char const *connect_id, char const *request_id)
+CCBListener::DoReversedCCBConnect( char const *address, char const *connect_id, char const *request_id, char const *peer_description )
 {
 	Daemon daemon( DT_ANY, address );
 	CondorError errstack;
@@ -339,6 +339,18 @@ CCBListener::DoReversedCCBConnect( char const *address, char const *connect_id, 
 		return false;
 	}
 
+	if( peer_description ) {
+		char const *peer_ip = sock->peer_ip_str();
+		if( peer_ip && !strstr(peer_description,peer_ip)) {
+			MyString desc;
+			desc.sprintf("%s at %s",peer_description,sock->get_sinful_peer());
+			sock->set_peer_description(desc.Value());
+		}
+		else {
+			sock->set_peer_description(peer_description);
+		}
+	}
+
 	incRefCount();      // do not delete self until called back
 
 	MyString sock_desc;
@@ -349,7 +361,14 @@ CCBListener::DoReversedCCBConnect( char const *address, char const *connect_id, 
 		"CCBListener::ReverseConnected",
 		this);
 
-	ASSERT( rc >= 0 );
+	if( rc < 0 ) {
+		ReportReverseConnectResult(msg_ad,false,"failed to register socket for non-blocking reversed connection");
+		delete msg_ad;
+		delete sock;
+		decRefCount();
+		return false;
+	}
+
 	rc = daemonCore->Register_DataPtr(msg_ad);
 	ASSERT( rc );
 
