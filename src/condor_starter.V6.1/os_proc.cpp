@@ -43,8 +43,10 @@
 #endif
 
 extern CStarter *Starter;
-const char* JOB_AD_FILENAME = "job.ad";
-const char* MACHINE_AD_FILENAME = "machine.ad";
+extern const char* JOB_WRAPPER_FAILURE_FILE;
+
+const char* JOB_AD_FILENAME = ".job.ad";
+const char* MACHINE_AD_FILENAME = ".machine.ad";
 
 
 /* OsProc class implementation */
@@ -352,9 +354,42 @@ OsProc::StartJob(FamilyInfo* family_info)
 			// it, if they need to.
 		dprintf( D_ALWAYS, "Using wrapper %s to exec %s\n", JobName.Value(), 
 				 args_string.Value() );
+
+		MyString wrapper_err;
+		wrapper_err.sprintf("%s%c%s", Starter->GetWorkingDir(),
+				 	DIR_DELIM_CHAR,
+					JOB_WRAPPER_FAILURE_FILE);
+		if( ! job_env.SetEnv("_CONDOR_WRAPPER_ERROR_FILE", wrapper_err.Value()) ) {
+			dprintf( D_ALWAYS, "Failed to set _CONDOR_WRAPPER_ERROR_FILE environment variable\n");
+		}
 	} else {
 		dprintf( D_ALWAYS, "About to exec %s %s\n", JobName.Value(),
 				 args_string.Value() );
+	}
+
+	// If the machine and job ads are desired, write the ClassAds to
+	// the execute directory
+	if ( Starter->jic->enforceLimits() ) {
+		if ( ! WriteAdsToExeDir() ) {
+			dprintf ( D_ALWAYS, "OsProc::StartJob(): Failed to "
+				"write classad files.\n" );
+		}
+		else {
+			MyString path;
+			path.sprintf("%s%c%s", Starter->GetWorkingDir(),
+					 	DIR_DELIM_CHAR,
+						MACHINE_AD_FILENAME);
+			if( ! job_env.SetEnv("_CONDOR_MACHINE_AD", path.Value()) ) {
+				dprintf( D_ALWAYS, "Failed to set _CONDOR_MACHINE_AD environment variable\n");
+			}
+
+			path.sprintf("%s%c%s", Starter->GetWorkingDir(),
+					 	DIR_DELIM_CHAR,
+						JOB_AD_FILENAME);
+			if( ! job_env.SetEnv("_CONDOR_JOB_AD", path.Value()) ) {
+				dprintf( D_ALWAYS, "Failed to set _CONDOR_JOB_AD environment variable\n");
+			}
+		}
 	}
 
 		// Grab the full environment back out of the Env object 
@@ -422,16 +457,6 @@ OsProc::StartJob(FamilyInfo* family_info)
 #endif
 
 	set_priv ( priv );
-
-	// If the machine and job ads are desired, write the ClassAds to
-	// the execute directory
-	if ( Starter->jic->enforceLimits() ) {
-		if ( ! WriteAdsToExeDir() )
-		{
-			dprintf ( D_ALWAYS, "OsProc::StartJob(): Failed to "
-				"write classad files.\n" );
-		}
-	}
 
 	if (privsep_helper != NULL) {
 		const char* std_file_names[3] = {

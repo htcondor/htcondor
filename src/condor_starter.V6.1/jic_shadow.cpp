@@ -155,7 +155,9 @@ JICShadow::init( void )
 
 	if ( machad_filename ) {
 		getMachAdFromFile();
+		dprintf( D_FULLDEBUG, "Machine Ad for this job:\n" );
 		mach_ad->dPrint(D_FULLDEBUG);
+		dprintf( D_FULLDEBUG, "End of Machine Ad\n" );
 	}
 
 		// stash a copy of the unmodified job ad in case we decide

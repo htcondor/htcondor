@@ -98,6 +98,9 @@ JICLocalFile::getLocalJobAd( void )
 			dprintf( D_ALWAYS, "No ClassAd data in \"%s\"\n", machAdFileName() );
 		} else {
 			dprintf( D_ALWAYS, "Found ClassAd data in \"%s\"\n", machAdFileName() );
+			dprintf( D_FULLDEBUG, "Machine Ad for this job:\n" );
+			mach_ad->dPrint(D_FULLDEBUG);
+			dprintf( D_FULLDEBUG, "End of Machine Ad\n" );
 		}
 	}
 
