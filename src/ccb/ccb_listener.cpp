@@ -118,7 +118,7 @@ CCBListener::SendMsgToCCB(ClassAd &msg,bool blocking)
 			}
 		}
 		else if( !m_waiting_for_connect ) {
-			m_sock = ccb.makeConnectedSocket(Stream::reli_sock, CCB_TIMEOUT, NULL, true /*nonblocking*/ );
+			m_sock = ccb.makeConnectedSocket(Stream::reli_sock, CCB_TIMEOUT, 0, NULL, true /*nonblocking*/ );
 			m_waiting_for_connect = true;
 			incRefCount(); // do not let ourselves be deleted until called back
 			ccb.startCommand_nonblocking( cmd, m_sock, CCB_TIMEOUT, NULL, CCBListener::CCBConnectCallback, this, NULL, false, USE_TMP_SEC_SESSION );
@@ -322,7 +322,7 @@ CCBListener::DoReversedCCBConnect( char const *address, char const *connect_id, 
 	Daemon daemon( DT_ANY, address );
 	CondorError errstack;
 	Sock *sock = daemon.makeConnectedSocket(
-		Stream::reli_sock,CCB_TIMEOUT,&errstack,true /*nonblocking*/);
+		Stream::reli_sock,CCB_TIMEOUT,0,&errstack,true /*nonblocking*/);
 
 	ClassAd *msg_ad = new ClassAd;
 	ASSERT( msg_ad );

@@ -88,9 +88,9 @@ ClaimStartdMsg::ClaimStartdMsg( char const *the_claim_id, ClassAd const *job_ad,
 }
 
 void
-ClaimStartdMsg::cancelMessage() {
-	dprintf(D_ALWAYS,"Canceling request for claim %s\n", description());
-	DCMsg::cancelMessage();
+ClaimStartdMsg::cancelMessage(char const *reason) {
+	dprintf(D_ALWAYS,"Canceling request for claim %s %s\n", description(),reason ? reason : "");
+	DCMsg::cancelMessage(reason);
 }
 
 bool

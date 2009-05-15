@@ -267,6 +267,10 @@ public:
 	bool triedAuthentication() const { return _tried_authentication; }
 
 	void setTriedAuthentication(bool toggle) { _tried_authentication = toggle; }
+	/// if we are connecting, merges together Stream::get_deadline
+	/// and connect_timeout_time()
+	virtual time_t get_deadline();
+
 
 //	PRIVATE INTERFACE TO ALL SOCKS
 //
@@ -353,10 +357,6 @@ protected:
 	bool test_connection();
 	///
 	time_t connect_timeout_time();
-
-	/// if we are connecting, merges together Stream::get_deadline
-	/// and connect_timeout_time()
-	virtual time_t get_deadline();
 
 	///
 	int move_descriptor_up();

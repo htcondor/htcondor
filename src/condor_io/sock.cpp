@@ -1201,7 +1201,7 @@ Sock::get_deadline()
 	time_t deadline = Stream::get_deadline();
 	if( is_connect_pending() ) {
 		time_t connect_deadline = connect_timeout_time();
-		if( connect_deadline ) {
+		if( connect_deadline && !is_reverse_connect_pending() ) {
 			if( deadline && deadline < connect_deadline ) {
 				return deadline;
 			}
