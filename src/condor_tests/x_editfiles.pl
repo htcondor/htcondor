@@ -18,43 +18,28 @@
 ##
 ##**************************************************************
 
-
-use CondorTest;
-use File::Path;
 use strict;
 use warnings;
 
-my $cmd = 'job_core_bigenv_van.cmd';
-my $testdesc =  'bigenv (vanilla) Test';
-my $testname = "job_core_bigenv_van";
+my $newfile = "";
+my $line = "";
+foreach my $file (@ARGV) {
+	$newfile = "$file.new";
+	open(NF,">$newfile") or die "Can not create $newfile:$!\n";
+	open(OF,"<$file") or die "Can not open $file:$!\n";
+	while(<OF>) {
+		chomp();
+		$line = $_;
+		if($line =~ /^executable\s+=\s+(.*)\.exe\..*/) {
+			print NF "executable = $1.exe.LINUX.INTEL\n";
+			print NF "requirements = (Arch == \"X86_64\")\n";
+		} else {
+			print NF "$line\n";
+		}
 
-umask 0;
-
-my $OutputTest = sub
-{
-    my %info = @_;
-	my $last;
-
-	print "Job ended, checking results - ";
-    my $output = $info{"output"};
-    open( OUTPUT, "<$output" ) || die "Can't open $output: $!\n";
-    while( <OUTPUT> ) {
-    	$last = $_;
-    }
-    $last =~ /(.*)SUCCESS(.*)/ ||
-    die "$testname: FAILURE (bad output to STDOUT)\n";
-
-    -z $info{"error"} ||
-    die "$testname: FAILURE (STDERR contains data)\n";
-	print "ok\n";
-};
-
-CondorTest::RegisterExitedSuccess( $testname, $OutputTest);
-
-if( CondorTest::RunTest($testname, $cmd, 0) ) {
-    CondorTest::debug("$testname: SUCCESS\n",2);
-    exit(0);
-} else {
-    die "$testname: CondorTest::RunTest() failed\n";
+	}
+	system("mv $newfile $file");
+	print "$file\n";
 }
+exit(0);
 
