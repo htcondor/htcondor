@@ -160,6 +160,8 @@ CCBListener::CCBConnectCallback(bool success,Sock *sock,CondorError * /*errstack
 		self->RegisterWithCCBServer();
 	}
 	else {
+		delete self->m_sock;
+		self->m_sock = NULL;
 		self->Disconnected();
 	}
 
