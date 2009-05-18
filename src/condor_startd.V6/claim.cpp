@@ -889,7 +889,7 @@ Claim::sendAlive()
 
 	int connect_timeout = MAX(20, ((c_lease_duration / 3)-3) );
 
-	if (!(sock = matched_schedd.reliSock( connect_timeout, NULL, true ))) {
+	if (!(sock = matched_schedd.reliSock( connect_timeout, 0, NULL, true ))) {
 		dprintf( D_FAILURE|D_ALWAYS, 
 				"Alive failed - couldn't initiate connection to %s\n",
 		         c_addr );

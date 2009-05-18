@@ -173,7 +173,7 @@ public:
 	bool writeMsg( DCMessenger *messenger, Sock *sock );
 	bool readMsg( DCMessenger *messenger, Sock *sock );
 	MessageClosureEnum messageSent(DCMessenger *messenger, Sock *sock );
-	void cancelMessage();
+	void cancelMessage(char const *reason=NULL);
 
 	char const *description() {return m_description.Value();}
 	char const *claim_id() {return m_claim_id.Value();}

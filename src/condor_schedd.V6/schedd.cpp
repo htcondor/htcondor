@@ -160,7 +160,7 @@ static void WriteCompletionVisa(ClassAd* ad);
 
 int	WallClockCkptInterval = 0;
 static bool gridman_per_job = false;
-int STARTD_CONTACT_TIMEOUT = 45;
+int STARTD_CONTACT_TIMEOUT = 45;  // how long to potentially block
 
 #ifdef CARMI_OPS
 struct shadow_rec *find_shadow_by_cluster( PROC_ID * );
@@ -11094,6 +11094,10 @@ Scheduler::sendReschedule()
 	msg->setStreamType(st);
 	msg->setTimeout(NEGOTIATOR_CONTACT_TIMEOUT);
 
+	// since we may be sending reschedule periodically, make sure they do
+	// not pile up
+	msg->setDeadlineTimeout( 300 );
+
 	negotiator->sendMsg( msg.get() );
 
 	Daemon* d;
@@ -11441,6 +11445,9 @@ sendAlive( match_rec* mrec )
 
 	msg->setSuccessDebugLevel(D_PROTOCOL);
 	msg->setTimeout( STARTD_CONTACT_TIMEOUT );
+	// since we send these messages periodically, we do not want
+	// any single attempt to hang around forever and potentially pile up
+	msg->setDeadlineTimeout( 300 );
 	Stream::stream_type st = startd->hasUDPCommandPort() ? Stream::safe_sock : Stream::reli_sock;
 	msg->setStreamType( st );
 	msg->setSecSessionId( mrec->secSessionId() );
