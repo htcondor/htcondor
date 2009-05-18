@@ -48,6 +48,9 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug that caused \Condor{procd} to sometimes fail when monitoring
+processes with environments larger than 1MB.
+
 % gittrac #481
 \item Fixed a bug that caused \Condor{dagman} to fail in recovery mode on
 a DAG in which any nodes had been retried.
