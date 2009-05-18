@@ -26,6 +26,8 @@ int send_replicate_reply();
 
 */
 
+void dump_pkt(char *netpkt, size_t size);
+
 /* This does a blocking read for size amount of bytes. However, there is
 	a timeout associated with it. This function is closely allied in
 	implementation with _condor_full_read, but due to the alarm signal
@@ -200,7 +202,6 @@ int recv_service_req_pkt(service_req_pkt *srq, FDContext *fdc)
 		/* unpack the 64 bit case into the host structure. Don't forget
 			to undo the network byte ordering. */
 
-		/* XXX type narrowing, ignoring for now */
 		srq->ticket = unpack_uint64_t(netpkt, SREQ64_ticket);
 		srq->ticket =
 			network_uint64_t_order_to_host_uint64_t_order(srq->ticket);
@@ -209,7 +210,6 @@ int recv_service_req_pkt(service_req_pkt *srq, FDContext *fdc)
 		srq->service =
 			network_uint16_t_order_to_host_uint16_t_order(srq->service);
 
-		/* XXX type narrowing, ignoring for now */
 		srq->key = unpack_uint64_t(netpkt, SREQ64_key);
 		srq->key =
 			network_uint64_t_order_to_host_uint64_t_order(srq->key);
@@ -273,6 +273,8 @@ bool sreq_is_32bit(char *pkt)
 	uint16_t service;
 	MyString str;
 
+	dump_pkt(pkt, SREQ_PKTSIZE_32);
+
 	/* first we sanity check the ticket and see if the ticket field is the
 		correct authentication number */
 	ticket = unpack_uint32_t(pkt, SREQ32_ticket);
@@ -312,10 +314,13 @@ bool sreq_is_64bit(char *pkt)
 	uint16_t service;
 	MyString str;
 
+	dump_pkt(pkt, SREQ_PKTSIZE_64);
+
 	/* first we sanity check the ticket and see if the ticket field is the
 		correct authentication number */
 	ticket = unpack_uint64_t(pkt, SREQ64_ticket);
 	ticket = network_uint64_t_order_to_host_uint64_t_order(ticket);
+
 	str.sprintf("found ticket = %lu", ticket);
 	Server::Log(str.Value());
 	str.sprintf("real ticket = %lu", AUTHENTICATION_TCKT);
@@ -452,7 +457,7 @@ uint64_t network_uint64_t_order_to_host_uint64_t_order(uint64_t val)
 		uint64_t val;
 		char bytes[sizeof(uint64_t)];
 	} sex, xes;
-	
+
 	sex.val = val;
 
 	if (42 != htonl(42)) { /* am I little endian? */
@@ -465,14 +470,55 @@ uint64_t network_uint64_t_order_to_host_uint64_t_order(uint64_t val)
 		xes.bytes[5] = sex.bytes[2];
 		xes.bytes[6] = sex.bytes[1];
 		xes.bytes[7] = sex.bytes[0];
+
 	} else {
 		/* no, so already done */
 		xes = sex;
 	}
 
-	return xes.val;
+	/* This is a bloody, bloody hack. The reason why this is like this is
+		vecause the client side used htonl() on an 8 byte quantity, which
+		only converted the lower 4 bytes in place. So, after we undo what
+		would have been a real 64 bit quantity, we shift it right, losing 4
+		bytes of data (which were junk/zeros anyhow).
+	*/
+	return xes.val >> 32;
 }
 
+void dump_pkt(char *netpkt, size_t size)
+{
+	int r;
+	MyString str, val = "", tmp;
+	char c;
+	char *lookup[16] = { "0", "1", "2", "3", "4", "5", "6", "7",
+						"8", "9", "A", "B", "C", "D", "E", "F" };
+
+	str.sprintf("Netpkt dump: %u bytes\n", size);
+	Server::Log(str.Value());
+	for (r = 0; r < size; r++) {
+		val += lookup[((unsigned char)netpkt[r]) >> 4];
+		val += lookup[((unsigned char)netpkt[r]) & 0x0F];
+	}
+
+	str.sprintf("%s\n",val.Value());
+	Server::Log(str.Value());
+
+	val = "";
+	for (r = 0; r < size; r++) {
+		tmp.sprintf("[%d: ", r);
+		c = netpkt[r];
+		if (isprint(c)) {
+			tmp += c;
+		} else {
+			tmp += '.';
+		}
+		tmp += "]\n";
+		val += tmp;
+	}
+
+	str.sprintf("%s\n",val.Value());
+	Server::Log(str.Value());
+}
 
 uint16_t host_uint16_t_order_to_network_uint16_t_order(uint16_t val)
 {
@@ -510,7 +556,8 @@ uint64_t host_uint64_t_order_to_network_uint64_t_order(uint64_t val)
 		xes = sex;
 	}
 
-	return xes.val;
+	/* This is a shameful hack. See the sister function to this one. */
+	return xes.val >> 32;
 }
 
 
@@ -522,7 +569,7 @@ uint64_t host_uint64_t_order_to_network_uint64_t_order(uint64_t val)
 
 uint64_t unpack_uint64_t(char *pkt, size_t off)
 {
-	return *(uint64_t*)&pkt[off];
+	return *(uint64_t*)(&pkt[off]);
 }
 
 uint32_t unpack_uint32_t(char *pkt, size_t off)
@@ -532,7 +579,7 @@ uint32_t unpack_uint32_t(char *pkt, size_t off)
 
 unsigned short unpack_uint16_t(char *pkt, size_t off)
 {
-	return *(unsigned short*)(&pkt[off]);
+	return *(uint16_t*)(&pkt[off]);
 }
 
 struct in_addr unpack_in_addr(char *pkt, size_t off)
@@ -561,7 +608,7 @@ void pack_uint32_t(char *pkt, size_t off, uint32_t val)
 
 void pack_uint16_t(char *pkt, size_t off, uint16_t val)
 {
-	*(unsigned short*)(&pkt[off]) = val;
+	*(uint16_t*)(&pkt[off]) = val;
 }
 
 void pack_in_addr(char *pkt, size_t off, struct in_addr inaddr)
