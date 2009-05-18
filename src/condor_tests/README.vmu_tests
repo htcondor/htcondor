@@ -54,3 +54,19 @@ disk (x_vmware_test_vm/condor_test.vmdk in x_vmware_test_vm.tar.gz):
      $ tar czf x_vmware_test_vm-2.tar.gz x_vmware_test_vm
      <copy new tarball to externals server>
      <change tarball name in x_vm_utils.pm>
+
+On May 18, 2009, the test VM in x_vmware_test_vm.tar.gz was modified 
+in-place (i.e. the new image was not given a new filename). The old 
+image was renamed to x_vmware_test_vm.tar.gz-old.
+The problem was that when fsck is run at boot-time, it forces a check 
+starting 6 months after the image was first created. Fsck says it 
+modified the filesystem, causing the boot script to ask on the console 
+whether the admin wants to enter single-user mode. As the system never 
+finishes booting, all of the VM-related tests time out. We believe the 
+only change fsck is making to the filesystem is recording that a new 
+check was performed. In the new VM image, /etc/rc.d/rc.sysinit is 
+modified to not perform the fsck on the root filesystem. Since we never 
+save the modified image after running an instance, there shouldn't be a 
+chance for the filesystem to be corrupted. The same name was kept for 
+the new image because no test can succeed with the old image after May 
+16, 2009.
