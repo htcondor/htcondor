@@ -24,16 +24,16 @@ use Cwd;
 
 $topdir = getcwd();
 
-$testdesc =  'job_core_time-deferral-hold_vanilla - vanilla U time deferral-hold';
+$testdesc =  'job_core_time-deferral-hold_van - vanilla U time deferral-hold';
 $testname = "job_core_time-deferral-hold_van";
-$cmd = "job_core_time-deferral-hold_vanilla.cmd";
-$corename = "job_core_time-deferral-hold_vanilla";
+$cmd = "job_core_time-deferral-hold_van.cmd";
+$corename = "job_core_time-deferral-hold_van";
 
 # where am I running
 $currenthost = CondorTest::getFqdnHost();
 CondorTest::fullchomp($currenthost);
 
-system("date");
+print scalar localtime() . "\n";
 
 $mypid = $$;
 $mysaveme = $corename . ".saveme";
@@ -69,11 +69,11 @@ $ENV{CONDOR_CONFIG} = $timedeferlocconfig;
 
 CondorTest::debug("Set config to $timedeferlocconfig\n",1);
 
-my $result = system("./job_core_time-deferral-hold.pl vanilla");
+my $result = system("./job_core_time-deferral-hold.pl van");
 CondorTest::debug("Result of job_core_time-deferral-hold.pl vanilla test  job is  $result\n",1);
 
 
-system("cp *job_core_time-deferral-hold_vanilla* $mysaveme");
+system("cp *job_core_time-deferral-hold_van* $mysaveme");
 
 if( -e "$mysubmitnm" )
 {
@@ -91,12 +91,12 @@ if( -e "$mysubmitnmlog" )
 }
 
 CondorTest::KillPersonal($timedeferlocconfig);
-system("date");
+print scalar localtime() . "\n";
 
 if( $result != 0 )
 {
 	exit(1);
 }
 
-CondorTest::debug("job_core_time-deferral-hold_vanilla SUCCESS\n",1);
+CondorTest::debug("job_core_time-deferral-hold_van SUCCESS\n",1);
 exit(0);

@@ -22,10 +22,11 @@ use CondorTest;
 use Cwd;
 use Sys::Hostname;
 
-$cmd = 'job_core_macros_sched.cmd';
-$testdesc =  'condor_submit macros - scheduler U';
-$testname = "job_core_macros_sched";
+my $cmd = 'job_core_macros_sched.cmd';
+my $testdesc =  'condor_submit macros - scheduler U';
+my $testname = "job_core_macros_sched";
 
+my $debuglevel = 2;
 
 my @skipped_output_lines = ( 1, 4, 5, 6 );
 my @expected_output =
@@ -37,6 +38,7 @@ my @expected_output =
 CondorTest::SetExpected(\@expected_output);
 CondorTest::SetSkipped(\@skipped_output_lines);
 
+print "Set expected output\n";
 
 $ExitSuccessBase = sub {
 	my %info = @_;
@@ -68,25 +70,29 @@ $success = sub
 
 	chdir;
 	$home = getcwd;
-	CondorTest::debug("My home is $home\n",1);
-	CondorTest::debug("My host is $host\n",1);
+	CondorTest::debug("My home is $home\n",$debuglevel);
+	CondorTest::debug("My host is $host\n",$debuglevel);
 	chdir($workdir);
 	load_up_lines();
 	foreach my $item ( @lines )
 	{
-		CondorTest::debug("ARG -$item-\n",1);
+		CondorTest::debug("ARG -$item-\n",$debuglevel);
 	}
 	$random = $lines[5];
-	CondorTest::debug("RANDOM is $random\n",1);
+	CondorTest::debug("RANDOM is $random\n",$debuglevel);
 
+	print "Looking for random 2 <= random <= 5 - ";
 	if( $random < 2 )
 	{
+		print "bad\n";
 		die "Random value below range\n";
 	}
 	elsif( $random > 5 )
 	{
+		print "bad\n";
 		die "Random value above range\n";
 	}
+	print "ok\n";
 };
 
 #CondorTest::RegisterExecute($testname, $execute);
@@ -95,7 +101,7 @@ CondorTest::RegisterExitedSuccess( $testname, $success );
 
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	CondorTest::debug("$testname: SUCCESS\n",1);
+	CondorTest::debug("$testname: SUCCESS\n",$debuglevel);
 	exit(0);
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";

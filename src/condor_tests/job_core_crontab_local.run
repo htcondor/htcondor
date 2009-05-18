@@ -28,7 +28,7 @@ $corename = "job_core_crontab_local";
 $currenthost = CondorTest::getFqdnHost();
 CondorTest::fullchomp($currenthost);
 
-system("date");
+print scalar localtime() . "\n";
 
 $mypid = $$;
 $mysaveme = $corename . ".saveme/$mypid";
@@ -58,7 +58,7 @@ my $result = CondorTest::verbose_system("./job_core_crontab.pl local");
 system("cp $corename* $mysaveme");
 
 CondorTest::KillPersonal($personalconfig);
-system("date");
+print scalar localtime() . "\n";
 
 if($result != 0)
 {

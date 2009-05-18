@@ -20,31 +20,39 @@
 
 
 use CondorTest;
+use File::Path;
+use strict;
+use warnings;
 
-$cmd = 'job_core_bigenv_sched.cmd';
-$testdesc =  'bigenv (scheduler) Test';
-$testname = "job_core_bigenv_sched";
+my $cmd = 'job_core_bigenv_sched.cmd';
+my $testdesc =  'bigenv (scheduler) Test';
+my $testname = "job_core_bigenv_sched";
 
-$OutputTest = sub
+umask 0;
+
+my $OutputTest = sub
 {
     my %info = @_;
+	my $last;
 
-    $output = $info{"output"};
+	print "Job ended, checking results - ";
+    my $output = $info{"output"};
     open( OUTPUT, "<$output" ) || die "Can't open $output: $!\n";
     while( <OUTPUT> ) {
-    $last = $_;
+    	$last = $_;
     }
     $last =~ /(.*)SUCCESS(.*)/ ||
     die "$testname: FAILURE (bad output to STDOUT)\n";
 
     -z $info{"error"} ||
     die "$testname: FAILURE (STDERR contains data)\n";
+	print "ok\n";
 };
 
 CondorTest::RegisterExitedSuccess( $testname, $OutputTest);
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
-    CondorTest::debug("$testname: SUCCESS\n",1);
+    CondorTest::debug("$testname: SUCCESS\n",2);
     exit(0);
 } else {
     die "$testname: CondorTest::RunTest() failed\n";

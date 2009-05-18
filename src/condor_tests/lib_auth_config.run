@@ -25,7 +25,12 @@ $testname = "lib_auth_config";
 $test = "../testbin_dir/condor_test_auth";
 $inputdir = "lib_auth_config_tests";
 
-system("date");
+print scalar localtime() . "\n";
+
+if(!(-f $test)) {
+	print "Failure from lack of testing program <$test>\n";
+	exit(1);
+}
 
 my $input;
 foreach $input ( glob($inputdir . "/test_auth_*_input") ) {

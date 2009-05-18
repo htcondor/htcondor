@@ -26,7 +26,7 @@ $testname = "job_core_crontab_van";
 ##
 ## We need to pass what universe we would like to test
 ##
-my $result = CondorTest::verbose_system("./job_core_crontab.pl vanilla");
+my $result = CondorTest::verbose_system("./job_core_crontab.pl van");
 if ( $result != 0 ) {
 	die( "$testname FAILED!\n" );
 }

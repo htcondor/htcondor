@@ -20,63 +20,70 @@
 
 use CondorTest;
 use Digest::MD5;
+#use strict;
+use warnings;
 
 my $stats = 0;
 
-$cmd = 'job_core_copytospool_van.cmd';
-$testdesc =  'Does copytospool work - vanilla U';
-$testname = "job_core_copytospool_van";
+my $cmd = 'job_core_copytospool_van.cmd';
+my $testdesc =  'Does copytospool work - vanilla U';
+my $testname = "job_core_copytospool_van";
+my $debuglevel = 2;
 
-$aborted = sub {
+my $aborted = sub {
 	my %info = @_;
 	my $done;
-	CondorTest::debug("Abort event expected as we clear job\n",1);
+	CondorTest::debug("Abort event expected as we clear job\n",$debuglevel);
 };
 
-$submitted = sub {
+my $submitted = sub {
 	my %info = @_;
 	my $cluster = $info{"cluster"};
 	my $program = $info{"executable"};
 	my $spool = `condor_config_val SPOOL`;
 	CondorTest::fullchomp($spool);
 
-	CondorTest::debug("Checking spool dir --$spool--\n",1);
-	CondorTest::debug("Executable is $program\n",1);
-	CondorTest::debug("Transfer job worked..... need to check spool file.\n",1);
+	CondorTest::debug("Checking spool dir --$spool--\n",$debuglevel);
+	CondorTest::debug("Executable is $program\n",$debuglevel);
+	CondorTest::debug("Transfer job worked..... need to check spool file.\n",$debuglevel);
 
-	CondorTest::debug("MD5 of $program is needed first\n",1);
+	CondorTest::debug("MD5 of $program is needed first\n",$debuglevel);
 
 	open(DATA,"<$program") || die "Can't open input file $!\n";
 	my $datamd5 = Digest::MD5->new;
 	$datamd5->addfile(DATA);
 	close(DATA);
 	my $hexexemd5 = $datamd5->hexdigest;
-	CondorTest::debug("executable md5: $hexexemd5\n",1);
+	CondorTest::debug("executable md5: $hexexemd5\n",$debuglevel);
 
 	my $spoolfile = $spool . "/cluster$cluster" . ".ickpt.subproc0";
-	CondorTest::debug("Spool file should be $spoolfile\n",1);
+	CondorTest::debug("Spool file should be $spoolfile\n",$debuglevel);
 	#system("ls $spool");
 
-	open(DATA,"<$spoolfile") || die "Can't open input file $!\n";
+	open(DATA1,"<$spoolfile") || die "Can't open input file $!\n";
 	my $sdatamd5 = Digest::MD5->new;
-	$sdatamd5->addfile(DATA);
-	close(DATA);
+	$sdatamd5->addfile(DATA1);
+	close(DATA1);
 	my $shexexemd5 = $sdatamd5->hexdigest;
-	CondorTest::debug("spooled executable md5: $shexexemd5\n",1);
+	CondorTest::debug("spooled executable md5: $shexexemd5\n",$debuglevel);
 
-	CondorTest::debug("OK remove the job!\n",1);
+	CondorTest::debug("OK remove the job!\n",$debuglevel);
 
-	if( $hexexemd5 != $shexexemd5 )
+	print "Comparing md5 of original file and copy in spool - ";
+	if( $hexexemd5 ne $shexexemd5 )
 	{
+		print "bad\n";
 		die "Spooled executable and executable have DIFFERENT MD5 checksums!!!\n";
 	}
+
+	print "ok\n";
 	my @adarray;
 	my $status = 1;
 	my $cmd = "condor_rm $cluster";
 	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
 	if(!$status)
 	{
-		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
+		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",$debuglevel);
 		exit(1)
 	}
 
@@ -86,7 +93,7 @@ CondorTest::RegisterAbort( $testname, $aborted );
 CondorTest::RegisterSubmit($testname, $submitted);
 
 if(CondorTest::RunTest($testname, $cmd, 0)) {
-	CondorTest::debug("$testname: SUCCESS\n",1);
+	CondorTest::debug("$testname: SUCCESS\n",$debuglevel);
 	exit(0);
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";

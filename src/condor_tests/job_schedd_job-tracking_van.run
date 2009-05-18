@@ -30,7 +30,7 @@ CondorTest::debug( "Good it is all submitted and we'll start the timer....\n",1)
 $timed = sub
 {
 	my $left = $submitcount - $donecount;
-	system("date");
+	print scalar localtime() . "\n";
 	CondorTest::debug("Not all kids found in time!!!!!!!!!!!!< $left left >!!!!!!!!!!!!!!!!!!\n",1);
 	exit(1);
 };
@@ -39,7 +39,7 @@ CondorTest::RegisterExitedSuccess( $testname, $success );
 CondorTest::RegisterSubmit( $testname, $submit );
 
 
-system("date");
+print scalar localtime() . "\n";
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
 	CondorTest::debug("$testname: SUCCESS\n",1);
 	exit(0);

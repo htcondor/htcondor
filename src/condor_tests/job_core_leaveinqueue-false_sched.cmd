@@ -1,5 +1,5 @@
 universe   = scheduler
-executable = x_sleep.pl
+executable = ./x_sleep.pl
 log = job_core_leaveinqueue-false_sched.log
 output = job_core_leaveinqueue-false_sched.out
 error = job_core_leaveinqueue-false_sched.err

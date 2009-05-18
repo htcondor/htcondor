@@ -42,23 +42,28 @@ TESTCLASS_DECL(quicknolink)
    may be in zero or more of the below 'functional categories'
 */
 TESTCLASS_DECL(env)
+
 /* every standard universe test must be in rsc and/or ckpt class. Which class
 it goes into is determined by primarily what it tests. */
 TESTCLASS_DECL(rsc)
 TESTCLASS_DECL(ckpt)
+
 /* every standard universe job must be in the stduniv class */
 TESTCLASS_DECL(stduniv)
-TESTCLASS_DECL(critical)
-TESTCLASS_DECL(framework)
-TESTCLASS_DECL(filexfer)
-TESTCLASS_DECL(dagman)
-TESTCLASS_DECL(performance)
+
+TESTCLASS_DECL(btdebug)
 TESTCLASS_DECL(condorc)
 TESTCLASS_DECL(core)
+TESTCLASS_DECL(critical)
+TESTCLASS_DECL(dagman)
+TESTCLASS_DECL(filexfer)
+TESTCLASS_DECL(framework)
+TESTCLASS_DECL(java)
 TESTCLASS_DECL(lib)
 TESTCLASS_DECL(local)
+TESTCLASS_DECL(performance)
 TESTCLASS_DECL(simple) /* used for testing test process - simple non-compiled tests */
-TESTCLASS_DECL(btdebug)
+TESTCLASS_DECL(time) /* time deferral and crondor type tests */
 
 
 /***************************************************

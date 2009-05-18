@@ -27,7 +27,7 @@ $line = "";
 $counter = 0;
 $maxwait = 1200; # better happen in 3 minutes
 
-system("date");
+print scalar localtime() . "\n";
 
 # create unique classad
 open(TEMP,"<$template") || die "Can not open $template:$!\n";
@@ -49,17 +49,18 @@ close(TEMP);
 close(CA);
 
 # trigger the test by placing classad in work dir
-print "Good  sending work to $workdir\n";
-print "Good  sending copy to $resultsdir\n";
-print "Work is $classad\n";
+print "Good  sending work\n";
+#print "Good  sending copy to $resultsdir\n";
+#print "Work is $classad\n";
 system("cp $classad $resultsdir");
 system("cp $classad $workdir");
 
 # wait
+print "Waiting - ";
 while($counter < $maxwait) {
 	if( ! ( -f "$resultsdir/$classad.results")) {
-		system("date");
-		print "Waiting for $resultsdir/$classad.results\n";
+		print scalar localtime() . "\n";
+		#print "Waiting for $resultsdir/$classad.results\n";
 		system("ls $resultsdir");
 		sleep 6;
 	} else {
@@ -68,9 +69,13 @@ while($counter < $maxwait) {
 	$counter += 3;
 }
 if( $counter >= $maxwait ) {
-	print "Error took $maxwait seconds\n";
+	print "bad\n";
+	#print "Error took $maxwait seconds\n";
 	exit(1);
+} else {
+	print "ok\n";
 }
 
 $status = system("diff $resultsdir/$version $resultsdir/$classad");
+print "Status on diff is <$status>\n";
 exit($status);
