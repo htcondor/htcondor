@@ -13,19 +13,6 @@
 /* This doesn't nest, so be careful! */
 extern Alarm rt_alarm;
 
-/*
-
-int recv_store_req();
-int recv_restore_req();
-int recv_replicate_req();
-
-int send_service_reply();
-int send_store_reply();
-int send_restore_reply();
-int send_replicate_reply();
-
-*/
-
 void dump_pkt(char *netpkt, size_t size);
 
 /* This does a blocking read for size amount of bytes. However, there is
@@ -129,8 +116,6 @@ int recv_service_req_pkt(service_req_pkt *srq, FDContext *fdc)
 	int ok;
 	size_t diff;
 
-	Server::Log(fdc->req_ID, "Entered recv_service_req_pkt()");
-
 	/* We better not know what the client bit width is when this function is
 		called, since it figures it out! */
 	ASSERT(fdc->type == FDC_UNKNOWN);
@@ -143,47 +128,58 @@ int recv_service_req_pkt(service_req_pkt *srq, FDContext *fdc)
 								REQUEST_TIMEOUT);
 	switch(ret) {
 		case NET_READ_FAIL:
-		Server::Log(fdc->req_ID, "recv_service_req_pkt(): Failed to read!");
+			Server::Log("Failed to read initial packet length!");
 			return PC_NOT_OK;
 			break;
+
 		case NET_READ_TIMEOUT:
-		Server::Log(fdc->req_ID, "recv_service_req_pkt(): Timed out!");
+			Server::Log("Timed out while reading initial packet length!");
 			return PC_NOT_OK;
 			break;
+
 		case NET_READ_OK:
-		Server::Log(fdc->req_ID, "recv_service_req_pkt(): Read MIN pkt ok!");
+			/* do nothing */
 			break;
+
 		default:
-			EXCEPT("Programmer error with ret = %d\n", ret);
+			/* Normally, one would except, but why take down a whole server
+				when we could just close this errant connection? */
+			Server::Log("Programmer error: unhandled return code on "
+						"net_read_with_timeout() with suspected 32 bit client");
+			return PC_NOT_OK;
 			break;
 	}
 
 	/* Figure out what kind of packet it is */
 	ok = sreq_is_32bit(netpkt);
 	if (!ok) {
-		Server::Log(fdc->req_ID, "recv_service_req_pkt(): is 64 bit?");
 		/* try to read the rest of the pkt, assuming it is a 64 bit packet */
 		diff = SREQ_PKTSIZE_64 - SREQ_PKTSIZE_32;
-		dprintf(D_ALWAYS, "Already read %d bytes, need to read %d more for "
-				"a total of %d[real: %d] bytes\n",
-				SREQ_PKTSIZE_MIN, (int)diff, (int)(SREQ_PKTSIZE_32 + diff), SREQ_PKTSIZE_64);
-		ret = net_read_with_timeout(fdc->fd, netpkt + diff, diff, &bytes_recvd,
-								REQUEST_TIMEOUT);
+
+		ret = net_read_with_timeout(fdc->fd, netpkt + SREQ_PKTSIZE_32,
+									diff, &bytes_recvd, REQUEST_TIMEOUT);
 		switch(ret) {
 			case NET_READ_FAIL:
-			Server::Log(fdc->req_ID, "recv_service_req_pkt(): failed to read rest of pkt");
+				Server::Log("Failed to read 64 bit portion of pkt");
 				return PC_NOT_OK;
 				break;
+
 			case NET_READ_TIMEOUT:
-			Server::Log(fdc->req_ID, "recv_service_req_pkt(): timed out while reading rest of pkt");
+				Server::Log("Timed out while reading 64 bit portion of pkt");
 				return PC_NOT_OK;
 				break;
+
 			case NET_READ_OK:
-			Server::Log(fdc->req_ID, "recv_service_req_pkt(): read rest of pkt");
+				/* do nothing */
 				break;
+
 			default:
-				EXCEPT("Programmer error on continuation read with ret = %d\n",
-					ret);
+				/* Normally, one would except, but why take down a whole server
+					when we could just close this errant connection? */
+				Server::Log("Programmer error: unhandled return code on "
+							"net_read_with_timeout() with suspected 64 "
+							"bit client");
+				return PC_NOT_OK;
 				break;
 		}
 
@@ -195,7 +191,8 @@ int recv_service_req_pkt(service_req_pkt *srq, FDContext *fdc)
 				expected kind of packet on the wire or it was garbage.
 				fdc stays unknown.
 			*/
-			Server::Log(fdc->req_ID, "recv_service_req_pkt(): not a service_req_pkt! FAIL!");
+			Server::Log("Could not determine if packet is a service_req_pkt! "
+						"Aborting connection!");
 			return PC_NOT_OK;
 		}
 
@@ -217,9 +214,11 @@ int recv_service_req_pkt(service_req_pkt *srq, FDContext *fdc)
 		memmove(srq->owner_name,
 			unpack_char_array(netpkt, SREQ64_owner_name),
 			MAX_NAME_LENGTH);
+
 		memmove(srq->file_name,
 			unpack_char_array(netpkt, SREQ64_file_name),
 			MAX_CONDOR_FILENAME_LENGTH);
+
 		memmove(srq->new_file_name,
 			unpack_char_array(netpkt, SREQ64_new_file_name),
 			MAX_CONDOR_FILENAME_LENGTH-4);
@@ -228,7 +227,8 @@ int recv_service_req_pkt(service_req_pkt *srq, FDContext *fdc)
 		srq->shadow_IP.s_addr =
 			network_uint32_t_order_to_host_uint32_t_order(srq->shadow_IP.s_addr);
 
-		Server::Log(fdc->req_ID, "recv_service_req_pkt(): unpacked 64 bit service_req_pkt!");
+		Server::Log("Client is using the 64 bit protocol.");
+
 		fdc->type = FDC_64;
 		return PC_OK;
 	}
@@ -247,9 +247,11 @@ int recv_service_req_pkt(service_req_pkt *srq, FDContext *fdc)
 	memmove(srq->owner_name,
 		unpack_char_array(netpkt, SREQ32_owner_name),
 		MAX_NAME_LENGTH);
+
 	memmove(srq->file_name,
 		unpack_char_array(netpkt, SREQ32_file_name),
 		MAX_CONDOR_FILENAME_LENGTH);
+
 	memmove(srq->new_file_name,
 		unpack_char_array(netpkt, SREQ32_new_file_name),
 		MAX_CONDOR_FILENAME_LENGTH-4);
@@ -258,10 +260,9 @@ int recv_service_req_pkt(service_req_pkt *srq, FDContext *fdc)
 	srq->shadow_IP.s_addr =
 		network_uint32_t_order_to_host_uint32_t_order(srq->shadow_IP.s_addr);
 
-	Server::Log(fdc->req_ID, "recv_service_req_pkt(): unpacked 32 bit service_req_pkt!");
+	Server::Log("Client is using the 32 bit protocol.");
 
 	fdc->type = FDC_32;
-
 	return PC_OK;
 }
 
@@ -271,9 +272,6 @@ bool sreq_is_32bit(char *pkt)
 {
 	uint32_t ticket;
 	uint16_t service;
-	MyString str;
-
-	dump_pkt(pkt, SREQ_PKTSIZE_32);
 
 	/* first we sanity check the ticket and see if the ticket field is the
 		correct authentication number */
@@ -312,26 +310,19 @@ bool sreq_is_64bit(char *pkt)
 {
 	uint64_t ticket;
 	uint16_t service;
-	MyString str;
-
-	dump_pkt(pkt, SREQ_PKTSIZE_64);
 
 	/* first we sanity check the ticket and see if the ticket field is the
 		correct authentication number */
 	ticket = unpack_uint64_t(pkt, SREQ64_ticket);
 	ticket = network_uint64_t_order_to_host_uint64_t_order(ticket);
 
-	str.sprintf("found ticket = %lu", ticket);
-	Server::Log(str.Value());
-	str.sprintf("real ticket = %lu", AUTHENTICATION_TCKT);
-	Server::Log(str.Value());
 	if (ticket != AUTHENTICATION_TCKT) {
 		return false;
 	}
 	
 	/* To check the validity of this packet, I extract the second field
 		out of the packet, the "service" field. With a 64 bit packet, this
-		should be in range (at the offset of the 64 bit packet) because. If
+		should be in range (at the offset of the 64 bit packet). If
 		not, then I guess it isn't a 64 bit packet. 
 	*/
 
@@ -388,13 +379,16 @@ int send_service_reply_pkt(service_reply_pkt *srp, FDContext *fdc)
 			num_files_32 =
 				host_uint32_t_order_to_network_uint32_t_order(num_files_32);
 			break;
+
 		case FDC_64:
 			num_files_64 = srp->num_files;
 			num_files_64 =
 				host_uint64_t_order_to_network_uint64_t_order(num_files_64);
 			break;
+
 		default:
-			EXCEPT("send_service_reply_pkt(): Conversion error!");
+			Server::Log("service_reply_pkt type conversion error!");
+			return NET_WRITE_FAIL;
 			break;
 	}
 
@@ -427,7 +421,8 @@ int send_service_reply_pkt(service_reply_pkt *srp, FDContext *fdc)
 			break;
 
 		default:
-			EXCEPT("send_service_reply_pkt(): Packing error!");
+			Server::Log("service_reply_pkt type packing error!");
+			return NET_WRITE_FAIL;
 			break;
 	}
 
@@ -438,6 +433,12 @@ int send_service_reply_pkt(service_reply_pkt *srp, FDContext *fdc)
 	return NET_WRITE_OK;
 }
 
+/* ------------------------------------------------------------------------- */
+/* These are size and type specific functions to handle endianess wrt host and
+	network ordering. These functions are named what they are named to make
+	it perfectly clear what is going on. Also the 64bit ones are explicitly
+	handled to dampen the extra crazy deep in the raw bits off the wire.
+*/
 
 uint16_t network_uint16_t_order_to_host_uint16_t_order(uint16_t val)
 {
@@ -461,63 +462,35 @@ uint64_t network_uint64_t_order_to_host_uint64_t_order(uint64_t val)
 	sex.val = val;
 
 	if (42 != htonl(42)) { /* am I little endian? */
-		/* yes...so do the switch */
-		xes.bytes[0] = sex.bytes[7];
-		xes.bytes[1] = sex.bytes[6];
-		xes.bytes[2] = sex.bytes[5];
-		xes.bytes[3] = sex.bytes[4];
-		xes.bytes[4] = sex.bytes[3];
-		xes.bytes[5] = sex.bytes[2];
-		xes.bytes[6] = sex.bytes[1];
-		xes.bytes[7] = sex.bytes[0];
+		/* This partial swapping is a result of the original author
+			calling ntohl() on an unsigned long int, and then shoving it across
+			the wire via write(). This was before ntohl() became *defined* to
+			only work on 32 bits, and machines got powerful enough that  the
+			unsigned long int became an 8 byte quantity instead of a 4 byte
+			quantity.
+
+			This means that this function, and its sister, does logically what
+			it is meant to do, but not functionally.
+
+			Don't weep for mankind. It isn't worth it.
+		*/
+
+		xes.bytes[0] = sex.bytes[3];
+		xes.bytes[1] = sex.bytes[2];
+		xes.bytes[2] = sex.bytes[1];
+		xes.bytes[3] = sex.bytes[0];
+
+		xes.bytes[4] = sex.bytes[4];
+		xes.bytes[5] = sex.bytes[5];
+		xes.bytes[6] = sex.bytes[6];
+		xes.bytes[7] = sex.bytes[7];
 
 	} else {
 		/* no, so already done */
 		xes = sex;
 	}
 
-	/* This is a bloody, bloody hack. The reason why this is like this is
-		vecause the client side used htonl() on an 8 byte quantity, which
-		only converted the lower 4 bytes in place. So, after we undo what
-		would have been a real 64 bit quantity, we shift it right, losing 4
-		bytes of data (which were junk/zeros anyhow).
-	*/
-	return xes.val >> 32;
-}
-
-void dump_pkt(char *netpkt, size_t size)
-{
-	int r;
-	MyString str, val = "", tmp;
-	char c;
-	char *lookup[16] = { "0", "1", "2", "3", "4", "5", "6", "7",
-						"8", "9", "A", "B", "C", "D", "E", "F" };
-
-	str.sprintf("Netpkt dump: %u bytes\n", size);
-	Server::Log(str.Value());
-	for (r = 0; r < size; r++) {
-		val += lookup[((unsigned char)netpkt[r]) >> 4];
-		val += lookup[((unsigned char)netpkt[r]) & 0x0F];
-	}
-
-	str.sprintf("%s\n",val.Value());
-	Server::Log(str.Value());
-
-	val = "";
-	for (r = 0; r < size; r++) {
-		tmp.sprintf("[%d: ", r);
-		c = netpkt[r];
-		if (isprint(c)) {
-			tmp += c;
-		} else {
-			tmp += '.';
-		}
-		tmp += "]\n";
-		val += tmp;
-	}
-
-	str.sprintf("%s\n",val.Value());
-	Server::Log(str.Value());
+	return xes.val;
 }
 
 uint16_t host_uint16_t_order_to_network_uint16_t_order(uint16_t val)
@@ -542,22 +515,22 @@ uint64_t host_uint64_t_order_to_network_uint64_t_order(uint64_t val)
 	sex.val = val;
 
 	if (42 != htonl(42)) { /* am I little endian? */
-		/* yes...so do the switch */
-		xes.bytes[0] = sex.bytes[7];
-		xes.bytes[1] = sex.bytes[6];
-		xes.bytes[2] = sex.bytes[5];
-		xes.bytes[3] = sex.bytes[4];
-		xes.bytes[4] = sex.bytes[3];
-		xes.bytes[5] = sex.bytes[2];
-		xes.bytes[6] = sex.bytes[1];
-		xes.bytes[7] = sex.bytes[0];
+		/* see the sister function to this one for an explanation */
+		xes.bytes[0] = sex.bytes[3];
+		xes.bytes[1] = sex.bytes[2];
+		xes.bytes[2] = sex.bytes[1];
+		xes.bytes[3] = sex.bytes[0];
+
+		xes.bytes[4] = sex.bytes[4];
+		xes.bytes[5] = sex.bytes[5];
+		xes.bytes[6] = sex.bytes[6];
+		xes.bytes[7] = sex.bytes[7];
 	} else {
 		/* no, so already done */
 		xes = sex;
 	}
 
-	/* This is a shameful hack. See the sister function to this one. */
-	return xes.val >> 32;
+	return xes.val;
 }
 
 
@@ -593,7 +566,6 @@ char* unpack_char_array(char *pkt, size_t off)
 	return &pkt[off];
 }
 
-
 /* packing interface */
 
 void pack_uint64_t(char *pkt, size_t off, uint64_t val)
@@ -622,9 +594,41 @@ void pack_char_array(char *pkt, size_t off, char *str, size_t len)
 }
 
 
+/* ------------------------------------------------------------------------- */
+/* These are some utility functions */
 
+void dump_pkt(char *netpkt, size_t size)
+{
+	size_t r;
+	MyString str, val = "", tmp;
+	char c;
+	const char *lookup[16] = 
+		{	"0", "1", "2", "3", "4", "5", "6", "7",
+			"8", "9", "A", "B", "C", "D", "E", "F" };
 
+	str.sprintf("Netpkt dump: %u bytes\n", (unsigned int)size);
+	Server::Log(str.Value());
+	for (r = 0; r < size; r++) {
+		val += lookup[((unsigned char)netpkt[r]) >> 4];
+		val += lookup[((unsigned char)netpkt[r]) & 0x0F];
+	}
 
+	str.sprintf("%s\n",val.Value());
+	Server::Log(str.Value());
 
+	val = "";
+	for (r = 0; r < size; r++) {
+		tmp.sprintf("[%u: ", (unsigned int)r);
+		c = netpkt[r];
+		if (isprint(c)) {
+			tmp += c;
+		} else {
+			tmp += '.';
+		}
+		tmp += "]\n";
+		val += tmp;
+	}
 
-
+	str.sprintf("%s\n",val.Value());
+	Server::Log(str.Value());
+}
