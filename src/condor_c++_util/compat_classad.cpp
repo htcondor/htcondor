@@ -28,6 +28,12 @@ using namespace classad;
 
 CompatClassAd::CompatClassAd()
 {
+		// Compatibility ads are born with this to emulate the special
+		// CurrentTime in old ClassAds. We don't protect it afterwards,
+		// but that shouldn't be problem unless someone is deliberately
+		// trying to shoot themselves in the foot.
+	AssignExpr( ATTR_CURRENT_TIME, "time()" );
+
 	ResetName();
 }
 
