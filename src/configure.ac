@@ -2241,7 +2241,9 @@ fi
 # we only want pthreads defined on Linux that is not ia64.  Once we 
 # remove the requirement on TLS in the code, we can safely remove 
 # this hack.
-if test $os = "Linux" && test $arch != "ia64"; then
+#     if test $os = "Linux" && test $arch != "ia64"; then
+# Actually, until TLS is out of the code, don't compile it anywhere.
+if test $os = "FOOBAR" && test $arch != "ia64"; then
 	AC_CHECK_LIB([pthread], [pthread_create],
   		[ac_pthreads=yes
    		AC_DEFINE([HAVE_PTHREADS],[1],[Define if pthreads are available])

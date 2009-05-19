@@ -651,7 +651,7 @@ int	DaemonCore::Register_Signal(int sig, const char *sig_descrip,
 
 int DaemonCore::RegisteredSocketCount()
 {
-	return nSock + nPendingSockets;
+	return nRegisteredSocks + nPendingSockets;
 }
 
 int DaemonCore::FileDescriptorSafetyLimit()
@@ -1337,11 +1337,15 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 	}
 
 	// Verify that this socket has not already been registered
+	// Since we are scanning the entire table to do this (change this someday to a hash!),
+	// at the same time update our nRegisteredSocks count by initializing it
+	// to the number of slots (nSock) and then subtracting out the number of slots
+	// not in use.
+	nRegisteredSocks = nSock;
 	int fd_to_register = ((Sock *)iosock)->get_file_desc();
+	bool duplicate_found = false;
 	for ( j=0; j < nSock; j++ )
-	{
-		bool duplicate_found = false;
-
+	{		
 		if ( (*sockTable)[j].iosock == iosock ) {
 			duplicate_found = true;
         }
@@ -1355,12 +1359,18 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 			}
 		}
 
-		if (duplicate_found) {
-			dprintf(D_ALWAYS, "DaemonCore: Attempt to register socket twice\n");
-
-			return -2;
+		// check if slot empty or available
+		if ( ((*sockTable)[j].iosock == NULL) ||  // slot is empty
+			 ((*sockTable)[j].remove_asap &&	   // slot available
+			           (*sockTable)[j].servicing_tid==0 ) ) 
+		{
+			nRegisteredSocks--;		// decrement count of active sockets
 		}
 	}
+	if (duplicate_found) {
+		dprintf(D_ALWAYS, "DaemonCore: Attempt to register socket twice\n");
+		return -2;
+	} 
 
 		// Check that we are within the file descriptor safety limit
 		// We currently only do this for non-blocking connection attempts because
@@ -1542,6 +1552,8 @@ int DaemonCore::Cancel_Socket( Stream* insock)
 				i,(*sockTable)[i].iosock_descrip, (*sockTable)[i].iosock );
 		(*sockTable)[i].remove_asap = true;
 	}
+
+	nRegisteredSocks--;		// decrement count of active sockets
 	
 	DumpSocketTable(D_FULLDEBUG | D_DAEMONCORE);
 
