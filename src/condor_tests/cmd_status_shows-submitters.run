@@ -165,9 +165,9 @@ if(($numclaimed == 4) && ($done == 1)) {
 	}
 
 	if($jobcount != 4) {
-		print "bad\n";
+		print "bad<jobcount=$jobcount>\n";
 		$done = 0;
-		CondorTest::debug("Test failed because this submitter expected to have 4 running jobs not ($jobcount)\n",$debuglevel);
+		CondorTest::debug("Test failed because this submitter expected to have 4 running jobs not ($jobcount)\n",1);
 	}
 
 }
