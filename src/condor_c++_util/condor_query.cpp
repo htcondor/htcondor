@@ -424,6 +424,11 @@ fetchAds (ClassAdList &adList, const char *poolName, CondorError* errstack)
 
 	  case SCHEDD_AD:
 	  case SUBMITTOR_AD:
+		// CRUFT: Before 7.3.2, submitter ads had a MyType of
+		//   "Scheduler". The only way to tell the difference
+		//   was that submitter ads didn't have ATTR_NUM_USERS.
+		//   Newer collectors will coerce the TargetType to
+		//   "Submitter" for queries of submitter ads.
 		queryAd.SetTargetTypeName (SCHEDD_ADTYPE);
 		break;
 
