@@ -31,6 +31,10 @@ The details of each version are described below.
 \item The \Condor{status} command is now substantially faster, especially with the
 -format option.
 
+\item When low on file descriptors for creating new network sockets,
+the \Condor{schedd} daemon now avoids unlimited stacking up of
+messages that it sends periodically to the negotiator and startd.
+
 \end{itemize}
 
 \noindent Configuration Variable Additions and Changes:
