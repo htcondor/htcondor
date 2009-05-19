@@ -45,7 +45,12 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item \Condor{job\_router} sets \AdAttr{EnteredCurrentStatus} to the current
+time when creating a new routed job.  Previously, it copied this attribute
+from the original job.
+
+\item \Condor{job\_router} emits a more friendly log message when it
+observes that the routed copy of the job was removed.
 
 \end{itemize}
 
