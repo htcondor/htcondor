@@ -85,18 +85,33 @@ my $success = sub
 	    die "Output file $output is missing \"Done\"!\n";
 	}
 
+	# chomp results
+	my @chomped_output;
+	print "Result File:\n";
+	foreach my $res (@output_lines) {
+		CondorTest::fullchomp($res);
+		push  @chomped_output, $res;
+		print "out: <$res>\n";
+	}
 	# Verify that output file contains the contents of the
 	# input file.
 	my $input = $info{"transfer_input_files"};
 	open( INPUT, "< $input" );
 	my @input_lines = <INPUT>;
+	print "Input File:\n";
+	foreach my $fed (@input_lines) {
+		CondorTest::fullchomp($fed);
+		print "in: <$fed>\n";
+	}
 	close INPUT;
 	for my $input_line (@input_lines) {
-	    if( !grep($_ eq $input_line,@output_lines) ) {
+		CondorTest::fullchomp($input_line);
+	    if( !grep($_ eq $input_line,@chomped_output) ) {
 			print "bad\n";
-			die "Output file is missing echoed input!\n";
+			die "Output file is missing echoed input!<$input_line>\n";
 	    }
 	}
+	print "All input lines are in output file.\n";
 	print "ok\n";
 
 	CondorTest::debug("Success: ok\n",$debuglevel);
