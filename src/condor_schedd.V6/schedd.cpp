@@ -906,6 +906,7 @@ Scheduler::count_jobs()
 	sprintf(tmp, "%s = \"%s\"", ATTR_SCHEDD_NAME, Name);
 	m_ad->InsertOrUpdate(tmp);
 
+	m_ad->SetMyTypeName( SUBMITTER_ADTYPE );
 
 	for ( i=0; i<N_Owners; i++) {
 	  sprintf(tmp, "%s = %d", ATTR_RUNNING_JOBS, Owners[i].JobsRunning);
@@ -1085,6 +1086,8 @@ Scheduler::count_jobs()
 		  }
 	  }
 	}
+
+	m_ad->SetMyTypeName( SCHEDD_ADTYPE );
 
 	// If JobsIdle > 0, then we are asking the negotiator to contact us. 
 	// Record the earliest time we asked the negotiator to talk to us.
