@@ -25,6 +25,16 @@ enum {
 	SREP_PKTSIZE_64 = 40,
 	SREP_PKTSIZE_MAX = SREP_PKTSIZE_64,
 
+	/* Sizes in bytes of a 32 or 64 bit store_req_pkt */
+	STREQ_PKTSIZE_32 = 328,
+	STREQ_PKTSIZE_64 = 352,
+	STREQ_PKTSIZE_MIN = STREQ_PKTSIZE_32,
+	STREQ_PKTSIZE_MAX = STREQ_PKTSIZE_64,
+
+	/* Sizes in bytes of a 32 or 64 bit store_reply_pkt */
+	STREP_PKTSIZE_32 = 8,
+	STREP_PKTSIZE_64 = 8,
+	STREP_PKTSIZE_MAX = SREP_PKTSIZE_64,
 
 	/* --------------------------------------------------------*/
 	/* These describe offsets into the 64 bit structures from x86_64 */
@@ -242,9 +252,23 @@ enum write_result_t
 };
 
 /* The packet reception/transmission API */
+
+/* Dealing with the SERVICE protocol */
 int recv_service_req_pkt(service_req_pkt *srq, FDContext *fdc);
+bool sreq_is_32bit(char *pkt);
+bool sreq_is_64bit(char *pkt);
 int send_service_reply_pkt(service_reply_pkt *srp, FDContext *fdc);
 
+/* Dealing with the STORE protocol */
+int recv_store_req_pkt(store_req_pkt *strq, FDContext *fdc);
+bool streq_is_32bit(char *pkt);
+bool streq_is_64bit(char *pkt);
+int send_store_reply_pkt(store_reply_pkt *strp, FDContext *fdc);
+
+
+
+
+/* read some bytes with a timeout on a socket */
 read_result_t net_read_with_timeout(int fd, char *ptr, size_t nbytes,
 	size_t *numread, int timeout);
 
@@ -261,9 +285,6 @@ void pack_uint32_t(char *pkt, size_t off, uint32_t val);
 void pack_uint16_t(char *pkt, size_t off, uint16_t val);
 void pack_in_addr(char *pkt, size_t off, struct in_addr inaddr);
 void pack_char_array(char *pkt, size_t off, char *str, size_t len);
-
-bool sreq_is_32bit(char *pkt);
-bool sreq_is_64bit(char *pkt);
 
 /* endian garbage */
 uint16_t network_uint16_t_order_to_host_uint16_t_order(uint16_t val);

@@ -128,12 +128,14 @@ int recv_service_req_pkt(service_req_pkt *srq, FDContext *fdc)
 								REQUEST_TIMEOUT);
 	switch(ret) {
 		case NET_READ_FAIL:
-			Server::Log("Failed to read initial packet length!");
+			Server::Log("Failed to read initial service_req_pkt "
+						"packet length!");
 			return PC_NOT_OK;
 			break;
 
 		case NET_READ_TIMEOUT:
-			Server::Log("Timed out while reading initial packet length!");
+			Server::Log("Timed out while reading initial service_req_pkt "
+						"packet length!");
 			return PC_NOT_OK;
 			break;
 
@@ -145,7 +147,8 @@ int recv_service_req_pkt(service_req_pkt *srq, FDContext *fdc)
 			/* Normally, one would except, but why take down a whole server
 				when we could just close this errant connection? */
 			Server::Log("Programmer error: unhandled return code on "
-						"net_read_with_timeout() with suspected 32 bit client");
+						"net_read_with_timeout() with suspected 32 bit client "
+						"while handling a service_req_pkt");
 			return PC_NOT_OK;
 			break;
 	}
@@ -178,7 +181,7 @@ int recv_service_req_pkt(service_req_pkt *srq, FDContext *fdc)
 					when we could just close this errant connection? */
 				Server::Log("Programmer error: unhandled return code on "
 							"net_read_with_timeout() with suspected 64 "
-							"bit client");
+							"bit client while handling a service_req_pkt");
 				return PC_NOT_OK;
 				break;
 		}
@@ -432,6 +435,278 @@ int send_service_reply_pkt(service_reply_pkt *srp, FDContext *fdc)
 
 	return NET_WRITE_OK;
 }
+
+/* This function accepts the *first* packet on a ready store req socket.
+	Its job is to figure out if the client side is 32 bits or 64 bits, 
+	read the appropriate information off the socket, and set up the
+	FDContext with the fd and the knowledge of what type of bit width
+	the client side is. This function also translates between the host
+	store_req_socket and whatever the client has.
+*/
+int recv_store_req_pkt(store_req_pkt *strq, FDContext *fdc)
+{
+	size_t bytes_recvd;
+	char netpkt[STREQ_PKTSIZE_MAX];
+	read_result_t ret;
+	int ok;
+	size_t diff;
+
+	/* We better not know what the client bit width is when this function is
+		called, since it figures it out! */
+	ASSERT(fdc->type == FDC_UNKNOWN);
+
+	/* Read the *smallest* of the two possible structure
+		widths, this will ensure we don't deadlock reading more
+		bytes that will never come.
+	*/
+	ret = net_read_with_timeout(fdc->fd, netpkt, STREQ_PKTSIZE_MIN, 
+								&bytes_recvd, REQUEST_TIMEOUT);
+	switch(ret) {
+		case NET_READ_FAIL:
+			Server::Log("Failed to read initial store_req_pkt packet length!");
+			return PC_NOT_OK;
+			break;
+
+		case NET_READ_TIMEOUT:
+			Server::Log("Timed out while reading initial store_req_pkt "
+						"packet length!");
+			return PC_NOT_OK;
+			break;
+
+		case NET_READ_OK:
+			/* do nothing */
+			break;
+
+		default:
+			/* Normally, one would except, but why take down a whole server
+				when we could just close this errant connection? */
+			Server::Log("Programmer error: unhandled return code on "
+						"net_read_with_timeout() with suspected 32 bit client "
+						"while handling a store_req_pkt");
+			return PC_NOT_OK;
+			break;
+	}
+
+	/* Figure out what kind of packet it is */
+	ok = streq_is_32bit(netpkt);
+	if (!ok) {
+		/* try to read the rest of the pkt, assuming it is a 64 bit packet */
+		diff = STREQ_PKTSIZE_64 - STREQ_PKTSIZE_32;
+
+		ret = net_read_with_timeout(fdc->fd, netpkt + STREQ_PKTSIZE_32,
+									diff, &bytes_recvd, REQUEST_TIMEOUT);
+		switch(ret) {
+			case NET_READ_FAIL:
+				Server::Log("Failed to read 64 bit portion of store_req_pkt");
+				return PC_NOT_OK;
+				break;
+
+			case NET_READ_TIMEOUT:
+				Server::Log("Timed out while reading 64 bit portion of "
+							"store_req_pkt");
+				return PC_NOT_OK;
+				break;
+
+			case NET_READ_OK:
+				/* do nothing */
+				break;
+
+			default:
+				/* Normally, one would except, but why take down a whole server
+					when we could just close this errant connection? */
+				Server::Log("Programmer error: unhandled return code on "
+							"net_read_with_timeout() with suspected 64 "
+							"bit client while handling a store_req_pkt");
+				return PC_NOT_OK;
+				break;
+		}
+
+		/* now, see if we can find it in the 64 bit version of the packet */
+		ok = streq_is_64bit(netpkt);
+		if (!ok) {
+			/* oops, we didn't find the hard coded ticket in either context
+				of 32 bit or 64 bit, so apparently, we didn't read the
+				expected kind of packet on the wire or it was garbage.
+				fdc stays unknown.
+			*/
+			Server::Log("Could not determine if packet is a store_req_pkt! "
+						"Aborting connection!");
+			return PC_NOT_OK;
+		}
+
+		/* unpack the 64 bit case into the host structure. Don't forget
+			to undo the network byte ordering. */
+
+		strq->file_size = unpack_uint64_t(netpkt, STREQ64_file_size);
+		strq->file_size =
+			network_uint64_t_order_to_host_uint64_t_order(strq->file_size);
+
+		strq->ticket = unpack_uint64_t(netpkt, STREQ64_ticket);
+		strq->ticket =
+			network_uint64_t_order_to_host_uint64_t_order(strq->ticket);
+
+		strq->priority = unpack_uint64_t(netpkt, STREQ64_priority);
+		strq->priority =
+			network_uint64_t_order_to_host_uint64_t_order(strq->priority);
+
+		strq->time_consumed = unpack_uint64_t(netpkt, STREQ64_time_consumed);
+		strq->time_consumed =
+			network_uint64_t_order_to_host_uint64_t_order(strq->time_consumed);
+
+		strq->key = unpack_uint64_t(netpkt, STREQ64_key);
+		strq->key =
+			network_uint64_t_order_to_host_uint64_t_order(strq->key);
+
+		memmove(strq->filename,
+			unpack_char_array(netpkt, STREQ64_filename),
+			MAX_CONDOR_FILENAME_LENGTH);
+
+		memmove(strq->owner,
+			unpack_char_array(netpkt, STREQ64_owner),
+			MAX_NAME_LENGTH);
+
+		Server::Log("Client is using the 64 bit protocol.");
+
+		fdc->type = FDC_64;
+		return PC_OK;
+	}
+
+	/* unpack the 32 bit case into the host structure. Don't forget
+		to undo the network byte ordering. */
+
+	strq->file_size = unpack_uint32_t(netpkt, STREQ32_file_size);
+	strq->file_size =
+		network_uint32_t_order_to_host_uint32_t_order(strq->file_size);
+
+	strq->ticket = unpack_uint32_t(netpkt, STREQ32_ticket);
+	strq->ticket =
+		network_uint32_t_order_to_host_uint32_t_order(strq->ticket);
+
+	strq->priority = unpack_uint32_t(netpkt, STREQ32_priority);
+	strq->priority =
+		network_uint32_t_order_to_host_uint32_t_order(strq->priority);
+
+	strq->time_consumed = unpack_uint32_t(netpkt, STREQ32_time_consumed);
+	strq->time_consumed =
+		network_uint32_t_order_to_host_uint32_t_order(strq->time_consumed);
+
+	strq->key = unpack_uint32_t(netpkt, STREQ32_key);
+	strq->key =
+		network_uint32_t_order_to_host_uint32_t_order(strq->key);
+
+	memmove(strq->filename,
+		unpack_char_array(netpkt, STREQ32_filename),
+		MAX_CONDOR_FILENAME_LENGTH);
+
+	memmove(strq->owner,
+		unpack_char_array(netpkt, STREQ32_owner),
+		MAX_NAME_LENGTH);
+
+	Server::Log("Client is using the 32 bit protocol.");
+
+	fdc->type = FDC_32;
+	return PC_OK;
+}
+
+/* Does a pile of bits on the floor look like a 32 bit store_request_pkt
+	when squinted at in the right light? */
+bool streq_is_32bit(char *pkt)
+{
+	uint32_t ticket;
+
+	/* we sanity check the ticket and see if the ticket field is the
+		correct authentication number. This is in a different place between
+		the 32 and 64 bit packets, so it is good enough to separate them. */
+	ticket = unpack_uint32_t(pkt, STREQ32_ticket);
+	ticket = network_uint32_t_order_to_host_uint32_t_order(ticket);
+	if (ticket != AUTHENTICATION_TCKT) {
+		return false;
+	}
+	
+	/* I guess it passed! Heuristics to the rescue! */
+	return true;
+}
+
+/* Does a pile of bits on the floor look like a 64 bit store_request_pkt
+	when squinted at in the right light? */
+bool streq_is_64bit(char *pkt)
+{
+	uint64_t ticket;
+
+	/* we sanity check the ticket and see if the ticket field is the
+		correct authentication number. This is in a different place between
+		the 32 and 64 bit packets, so it is good enough to separate them. */
+	ticket = unpack_uint64_t(pkt, STREQ64_ticket);
+	ticket = network_uint64_t_order_to_host_uint64_t_order(ticket);
+
+	if (ticket != AUTHENTICATION_TCKT) {
+		return false;
+	}
+	
+	/* I guess it passed! Heuristics to the rescue! */
+	return true;
+}
+
+/* depending upon the connection type, assemble a service_reply_pkt and
+	send it to the other side */
+int send_store_reply_pkt(store_reply_pkt *strp, FDContext *fdc)
+{
+	/* This will be the service_reply_pkt */
+	char netpkt[STREP_PKTSIZE_MAX];
+	/* The fields of the packet */
+	struct in_addr		server_name;
+	uint16_t			port;
+	uint16_t			req_status;
+	int					ret = -1;
+
+	ASSERT(fdc->type != FDC_UNKNOWN);
+
+	/* get the right sized quantities I need depending upon what the client
+		needs.  Ensure to convert it to network byte order here too.
+	*/
+	req_status = strp->req_status;
+	req_status = host_uint16_t_order_to_network_uint16_t_order(req_status);
+
+	server_name = strp->server_name;
+	server_name.s_addr =
+		host_uint32_t_order_to_network_uint32_t_order(server_name.s_addr);
+	
+	port = strp->port;
+	port = host_uint16_t_order_to_network_uint16_t_order(port);
+
+	/* Assemble the packet according to what type of connection it is. 
+		Then send it. */
+	switch(fdc->type)
+	{
+		case FDC_32:
+			pack_in_addr(netpkt, STREP32_server_name, server_name);
+			pack_uint16_t(netpkt, STREP32_req_status, req_status);
+			pack_uint16_t(netpkt, STREP32_port, port);
+
+			ret = net_write(fdc->fd, netpkt, SREP_PKTSIZE_32);
+			break;
+
+		case FDC_64:
+			pack_in_addr(netpkt, STREP64_server_name, server_name);
+			pack_uint16_t(netpkt, STREP64_req_status, req_status);
+			pack_uint16_t(netpkt, STREP64_port, port);
+
+			ret = net_write(fdc->fd, netpkt, SREP_PKTSIZE_64);
+			break;
+
+		default:
+			Server::Log("store_reply_pkt type packing error!");
+			return NET_WRITE_FAIL;
+			break;
+	}
+
+	if (ret < 0) {
+		return NET_WRITE_FAIL;
+	}
+
+	return NET_WRITE_OK;
+}
+
 
 /* ------------------------------------------------------------------------- */
 /* These are size and type specific functions to handle endianess wrt host and

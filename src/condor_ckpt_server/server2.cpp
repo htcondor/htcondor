@@ -429,7 +429,7 @@ void Server::Execute()
 			UnblockSignals();
 		}
 		BlockSignals();
-		if (num_sds_ready < 0)
+		if (num_sds_ready < 0) {
 			if (errno == ECHILD) {
 				// Note: we shouldn't really get an ECHILD here, but
 				// we did (see condor-admin 14075).
@@ -440,6 +440,7 @@ void Server::Execute()
 						"%d (%s)\n", errno, strerror(errno));
 				exit(SELECT_ERROR);
 			}
+		}
 		current_time = time(NULL);
 		if (((unsigned int) current_time - (unsigned int) last_reclaim_time) 
 				>= (unsigned int) reclaim_interval) {
@@ -542,11 +543,13 @@ void Server::HandleRequest(int req_sd,
 			" to handle request");
 	Log(log_msg);
 
+#if 0
+	/* XXX FIXME to happen AFTER I read the packet from the socket
+		so I know what bit width the client is. I should probably write
+		a function to abstract this. */
 
 	/* If for whatever reason we don't want to accept the request, bail
 		on the connection with a refusal, close it, and move on. */
-	/* XXX FIXME to happen AFTER I read the packet from the socket
-		so I know what bit width the client is. */
 	if ((req == STORE_REQ) || (req == RESTORE_REQ) || (req == REPLICATE_REQ)) 
 	{
 		if ((num_store_xfers+num_restore_xfers == max_xfers) ||
@@ -580,12 +583,14 @@ void Server::HandleRequest(int req_sd,
 			return;
 		} 
     }
+#endif 
 
 	switch (req) {
         case SERVICE_REQ:
 			ret = recv_service_req_pkt(&service_req, &fdc);
 			if (ret != PC_OK) {
-				Log(req_ID, "Could not convert packet! Closing connection.");
+				Log(req_ID, "Unable to process SERVICE request! "
+					"Closing connection.");
 				close(fdc.fd);
 				return;
 			}
@@ -595,14 +600,28 @@ void Server::HandleRequest(int req_sd,
 			return;
 
 			break;
+
 		case STORE_REQ:
-			req_len = sizeof(store_req_pkt);
-			buf_ptr = (char*) &store_req;
+			ret = recv_store_req_pkt(&store_req, &fdc);
+			if (ret != PC_OK) {
+				Log(req_ID, "Unable to process STORE request! "
+					"Closing connection.");
+				close(fdc.fd);
+				return;
+			}
+
+			/* TODO do rejection code here! */
+
+			ProcessStoreReq(req_ID, &fdc, shadow_sa.sin_addr, store_req);
+
+			return;
 			break;
+
 		case RESTORE_REQ:
 			req_len = sizeof(restore_req_pkt);
 			buf_ptr = (char*) &restore_req;
 			break;
+
 		case REPLICATE_REQ:
 			req_len = sizeof(replicate_req_pkt);
 			buf_ptr = (char*) &replicate_req;
@@ -610,7 +629,7 @@ void Server::HandleRequest(int req_sd,
 	}
 
 /* XXX testing */
-if (req != SERVICE_REQ) {
+if (req != SERVICE_REQ && req != STORE_REQ) {
 
 	/* original code */
 	rt_alarm.SetAlarm(REQUEST_TIMEOUT);
@@ -648,12 +667,14 @@ if (req != SERVICE_REQ) {
 /*		ProcessServiceReq(req_ID, new_req_sd, shadow_sa.sin_addr, service_req);*/
 		break;
     case STORE_REQ:
-		ProcessStoreReq(req_ID, new_req_sd, shadow_sa.sin_addr, store_req);
+/*		ProcessStoreReq(req_ID, new_req_sd, shadow_sa.sin_addr, store_req);*/
 		break;
     case RESTORE_REQ:
 		ProcessRestoreReq(req_ID, new_req_sd, shadow_sa.sin_addr, restore_req);
 		break;
 	case REPLICATE_REQ:
+#if 0
+	/* XXX This is all from an old student project which should ripped out */
 		store_req.file_size = replicate_req.file_size;
 		store_req.ticket = replicate_req.ticket;
 		store_req.priority = replicate_req.priority;
@@ -663,6 +684,7 @@ if (req != SERVICE_REQ) {
 		strcpy(store_req.owner, replicate_req.owner);
 		ProcessStoreReq(req_ID, new_req_sd, replicate_req.shadow_IP,
 						store_req);
+#endif
 		break;
     }  
 
@@ -841,12 +863,12 @@ void Server::ProcessServiceReq(int             req_id,
 					exit(LISTEN_ERROR);
 				}
 
-				service_reply.server_addr.s_addr = server_addr.s_addr;
 
-		  		// From the I_bind() call, the port should already be in
+		  		// From the I_bind() call, the port & addr should already be in
 				// network-byte order. However, I need it in host order
 				// so the protocol layer does the right thing when I send
 				// the reply.
+				service_reply.server_addr.s_addr = ntohl(server_addr.s_addr);
 				service_reply.port = ntohs(server_sa.sin_port);
 			} else {
 				service_reply.server_addr.s_addr = 0;
@@ -1361,9 +1383,9 @@ int ValidateNoPathComponents(char *path)
 }
 
 void Server::ProcessStoreReq(int            req_id,
-							 int            req_sd,
-							 struct in_addr shadow_IP,
-							 store_req_pkt  store_req)
+							FDContext *fdc,
+							struct in_addr shadow_IP,
+							store_req_pkt  store_req)
 {
 	int                ret_code;
 	store_reply_pkt    store_reply;
@@ -1373,30 +1395,38 @@ void Server::ProcessStoreReq(int            req_id,
 	char               pathname[MAX_PATHNAME_LENGTH];
 	char               log_msg[256];
 	int                err_code;
-	
-	store_req.ticket = ntohl(store_req.ticket);
+
+	ASSERT(fdc->type == FDC_32 || fdc->type == FDC_64);
+
 	if (store_req.ticket != AUTHENTICATION_TCKT) {
-		store_reply.server_name.s_addr = htonl(0);
-		store_reply.port = htons(0);
-		store_reply.req_status = htons(BAD_AUTHENTICATION_TICKET);
-		net_write(req_sd, (char*) &store_reply, sizeof(store_reply_pkt));
+		store_reply.server_name.s_addr = 0;
+		store_reply.port = 0;
+		store_reply.req_status = BAD_AUTHENTICATION_TICKET;
+
+		send_store_reply_pkt(&store_reply, fdc);
+
 		sprintf(log_msg, "Store request from %s DENIED:", 
 				inet_ntoa(shadow_IP));
 		Log(log_msg);
 		Log("Invalid authentication ticket used");
-		close(req_sd);
+
+		close(fdc->fd);
 		return;
     }
+
 	if ((strlen(store_req.filename) == 0) || (strlen(store_req.owner) == 0)) {
-		store_reply.server_name.s_addr = htonl(0);
-		store_reply.port = htons(0);
-		store_reply.req_status = htons(BAD_REQ_PKT);
-		net_write(req_sd, (char*) &store_reply, sizeof(store_reply_pkt));
+		store_reply.server_name.s_addr = 0;
+		store_reply.port = 0;
+		store_reply.req_status = BAD_REQ_PKT;
+
+		send_store_reply_pkt(&store_reply, fdc);
+
 		sprintf(log_msg, "Store request from %s DENIED:", 
 				inet_ntoa(shadow_IP));
 		Log(log_msg);
 		Log("Incomplete request packet");
-		close(req_sd);
+
+		close(fdc->fd);
 		return;
     }
 
@@ -1404,7 +1434,7 @@ void Server::ProcessStoreReq(int            req_id,
 	Log(log_msg);
 	sprintf(log_msg, "File name: %s", store_req.filename);
 	Log(log_msg);
-	sprintf(log_msg, "File size: %d", ntohl(store_req.file_size));
+	sprintf(log_msg, "File size: %d", store_req.file_size);
 	Log(log_msg);
 
 	/* Make sure the various pieces we will be using from the client 
@@ -1412,68 +1442,82 @@ void Server::ProcessStoreReq(int            req_id,
 		it if it is '.' '..' or contains a path separator. */
 	
 	if (ValidateNoPathComponents(store_req.owner) == FALSE) {
-		store_reply.server_name.s_addr = htonl(0);
-		store_reply.port = htons(0);
-		store_reply.req_status = htons(BAD_REQ_PKT);
-		net_write(req_sd, (char*) &store_reply, sizeof(store_reply_pkt));
+		store_reply.server_name.s_addr = 0;
+		store_reply.port = 0;
+		store_reply.req_status = BAD_REQ_PKT;
+
+		send_store_reply_pkt(&store_reply, fdc);
+
 		sprintf(log_msg, "Owner field contans illegal path components!");
 		Log(log_msg);
 		sprintf(log_msg, "STORE request DENIED!");
 		Log(log_msg);
-		close(req_sd);
+
+		close(fdc->fd);
 		return;
 	}
 
 	if (ValidateNoPathComponents(store_req.filename) == FALSE) {
-		store_reply.server_name.s_addr = htonl(0);
-		store_reply.port = htons(0);
-		store_reply.req_status = htons(BAD_REQ_PKT);
-		net_write(req_sd, (char*) &store_reply, sizeof(store_reply_pkt));
+		store_reply.server_name.s_addr = 0;
+		store_reply.port = 0;
+		store_reply.req_status = BAD_REQ_PKT;
+
+		send_store_reply_pkt(&store_reply, fdc);
+
 		sprintf(log_msg, "Filename field contans illegal path components!");
 		Log(log_msg);
 		sprintf(log_msg, "STORE request DENIED!");
 		Log(log_msg);
-		close(req_sd);
+
+		close(fdc->fd);
 		return;
 	}
 
 	if (ValidateNoPathComponents(inet_ntoa(shadow_IP)) == FALSE) {
-		store_reply.server_name.s_addr = htonl(0);
-		store_reply.port = htons(0);
-		store_reply.req_status = htons(BAD_REQ_PKT);
-		net_write(req_sd, (char*) &store_reply, sizeof(store_reply_pkt));
+		store_reply.server_name.s_addr = 0;
+		store_reply.port = 0;
+		store_reply.req_status = BAD_REQ_PKT;
+
+		send_store_reply_pkt(&store_reply, fdc);
+
 		sprintf(log_msg, "ShadowIpAddr field contans illegal path components!");
 		Log(log_msg);
 		sprintf(log_msg, "STORE request DENIED!");
 		Log(log_msg);
-		close(req_sd);
+
+		close(fdc->fd);
 		return;
 	}
 
-
-	store_req.file_size = ntohl(store_req.file_size);
 	data_conn_sd = I_socket();
 	if (data_conn_sd == INSUFFICIENT_RESOURCES) {
-		store_reply.server_name.s_addr = htonl(0);
-		store_reply.port = htons(0);
-		store_reply.req_status = htons(abs(INSUFFICIENT_RESOURCES));
-		net_write(req_sd, (char*) &store_reply, sizeof(store_reply_pkt));
+		store_reply.server_name.s_addr = 0;
+		store_reply.port = 0;
+		store_reply.req_status = abs(INSUFFICIENT_RESOURCES);
+
+		send_store_reply_pkt(&store_reply, fdc);
+
 		sprintf(log_msg, "Store request from %s DENIED:", 
 				inet_ntoa(shadow_IP));
 		Log(log_msg);
 		Log("Insufficient buffers/ports to handle request");
-		close(req_sd);
+
+		close(fdc->fd);
 		return;
+
 	} else if (data_conn_sd == CKPT_SERVER_SOCKET_ERROR) {
-		store_reply.server_name.s_addr = htonl(0);
-		store_reply.port = htons(0);
-		store_reply.req_status = htons(abs(CKPT_SERVER_SOCKET_ERROR));
-		net_write(req_sd, (char*) &store_reply, sizeof(store_reply_pkt));
+		store_reply.server_name.s_addr = 0;
+		store_reply.port = 0;
+		store_reply.req_status = abs(CKPT_SERVER_SOCKET_ERROR);
+
+		send_store_reply_pkt(&store_reply, fdc);
+
 		sprintf(log_msg, "Store request from %s DENIED:", 
 				inet_ntoa(shadow_IP));
 		Log(log_msg);
 		Log("Cannot obtain a new socket from server");
-		close(req_sd);
+
+		close(fdc->fd);
 		return;
 	}
 
@@ -1497,17 +1541,21 @@ void Server::ProcessStoreReq(int            req_id,
 
 	imds.AddFile(shadow_IP, store_req.owner, store_req.filename, 
 				 store_req.file_size, NOT_PRESENT);
-	store_reply.server_name = server_addr;
-	// From the I_bind() call, the port should already be in network-byte
-		   //   order
-		   store_reply.port = server_sa.sin_port;  
-	store_reply.req_status = htons(CKPT_OK);
+
+
+	// From the I_bind() call, the port & addr should already be in
+	// network-byte order, so we undo it since it gets redone in the writing of
+	// the packet.
+	store_reply.server_name.s_addr = ntohl(server_addr.s_addr);
+	store_reply.port = ntohs(server_sa.sin_port);
+
+	store_reply.req_status = CKPT_OK;
 	sprintf(log_msg, "STORE service address: %s:%d", 
-		inet_ntoa(server_addr), ntohs(store_reply.port));
+		inet_ntoa(server_addr), store_reply.port);
 	Log(log_msg);
-	if (net_write(req_sd, (char*) &store_reply, 
-				  sizeof(store_reply_pkt)) < 0) {
-		close(req_sd);
+
+	if (send_store_reply_pkt(&store_reply, fdc) == NET_WRITE_FAIL) {
+		close(fdc->fd);
 		sprintf(log_msg, "Store request from %s DENIED:", 
 				inet_ntoa(shadow_IP));
 		Log(log_msg);
@@ -1515,7 +1563,7 @@ void Server::ProcessStoreReq(int            req_id,
 		imds.RemoveFile(shadow_IP, store_req.owner, store_req.filename);
 		close(data_conn_sd);
 	} else {
-		close(req_sd);
+		close(fdc->fd);
 
 		child_pid = fork();
 

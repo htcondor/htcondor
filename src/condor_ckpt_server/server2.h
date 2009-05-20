@@ -73,12 +73,12 @@ class Server
 		       request_type req);
     void ProcessServiceReq(int            req_id,
 				FDContext *fdc,
-			   struct in_addr shadow_IP,
-			   service_req_pkt service_req);
+				struct in_addr shadow_IP,
+				service_req_pkt service_req);
     void ProcessStoreReq(int            req_id,
-			 int            req_sd,
-			 struct in_addr shadow_IP,
-			 store_req_pkt  store_req);
+				FDContext *fdc,
+				struct in_addr shadow_IP,
+				store_req_pkt  store_req);
     void ProcessRestoreReq(int             req_id,
 			   int             req_sd,
 			   struct in_addr  shadow_IP,
