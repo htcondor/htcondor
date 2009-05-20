@@ -87,6 +87,12 @@ sub initialize
 	my $newpath = "/prereq/VMware-server-1.0.7/bin:" . $oldpath;
 	$ENV{PATH} = $newpath;
 
+	unless ( system("vmrun list") == 0 && system("vmware-cmd -l") == 0 &&
+			 system("mkisofs -version") == 0 ) {
+		CondorTest::debug("VMWare tools exited with non-zero status\n",1);
+		die "VMWare tools failed\n";
+	}
+
 	# do the saveme thing so we know the name of the
 	# directory that will house our personal Condor
 	#
@@ -180,8 +186,8 @@ sub check_output
 	my $output = get_data();
 	my $ret = $output_check eq $output;
 	unless ($ret) {
-		print "expected: $output_check\n";
-		print "actual: $output\n"
+		CondorTest::debug("expected: $output_check\n",1);
+		CondorTest::debug("actual: $output\n",1);
 	}
 	return $ret;
 }

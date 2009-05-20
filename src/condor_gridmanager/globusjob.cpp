@@ -3505,7 +3505,7 @@ GlobusJob::JmShouldSleep()
 	// This is meant to avoid unnecessary jobmanager restarts when the
 	// gridmanager starts up after a failure.
 	if ( !myResource->GridMonitorFirstStartup() ||
-		 !gmState == GM_JOBMANAGER_ASLEEP ) {
+		 gmState != GM_JOBMANAGER_ASLEEP ) {
 
 		int limit = param_integer( "GRID_MONITOR_NO_STATUS_TIMEOUT", 15*60 );
 		if ( myResource->LastGridJobMonitorUpdate() >

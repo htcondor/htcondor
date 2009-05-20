@@ -25,6 +25,7 @@
 #include <time.h>
 #include "MyString.h"
 #include "read_user_log_state.h"
+#include "write_user_log.h"
 
 // User log header info
 
@@ -134,7 +135,7 @@ public:
 		{ };
 
 	// Read the header from a file
-	int Write( UserLog &writer, FILE *fp = NULL );
+	int Write( WriteUserLog &writer, FILE *fp = NULL );
 	bool GenerateEvent( GenericEvent &event );
 
 private:

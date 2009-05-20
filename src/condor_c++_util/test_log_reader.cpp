@@ -51,6 +51,7 @@ struct Options
 	bool			missedCheck;
 	bool			exitAfterInit;
 	bool			isEventLog;
+	bool			checkFileStatus;
 	int				maxExec;
 	bool			exit;
 	int				stop;
@@ -149,6 +150,7 @@ CheckArgs(int argc, const char **argv, Options &opts)
 		"  --stop: Send myself a SIGSTOP when no events available\n"
 		"  --exit|-x: Exit when no events available\n"
 		"  --eventlog|-e: Setup to read the EventLog\n"
+		"  --check-file-status: Check the file status, print when changed\n"
 		"  --ro: Read-only access to log file (disables locking)\n"
 		"  --no-term: No limit on terminte events\n"
 		"  --term <number>: number of terminate events to exit after\n"
@@ -166,6 +168,7 @@ CheckArgs(int argc, const char **argv, Options &opts)
 	opts.readOnly = false;
 	opts.maxExec = 0;
 	opts.isEventLog = false;
+	opts.checkFileStatus = false;
 	opts.exit = false;
 	opts.sleep = 5;
 	opts.stop = 0;
@@ -228,6 +231,9 @@ CheckArgs(int argc, const char **argv, Options &opts)
 		} else if ( arg.Match("dump-state") ) {
 			opts.dumpState = true;
 #     endif
+
+		} else if ( arg.Match("check-file-status") ) {
+			opts.checkFileStatus = true;
 
 		} else if ( arg.Match("init-only") ) {
 			opts.exitAfterInit = true;
@@ -331,7 +337,7 @@ CheckArgs(int argc, const char **argv, Options &opts)
 			opts.writePersist = true;
 
 		} else if ( !arg.ArgIsOpt() ) {
-			opts.logFile = arg.Arg();
+			arg.getOpt(opts.logFile);
 
 		} else {
 			fprintf(stderr, "Unrecognized argument: '%s'\n", arg.Arg() );
@@ -411,24 +417,34 @@ ReadEvents(Options &opts, int &totalEvents)
 
 	// If, after the above, the reader isn't initialized, do so now
 	if ( !reader.isInitialized() ) {
+		bool		 istatus = false;
+		const char	*type = "None";
+		char		 buf[64];
 		if ( opts.isEventLog ) {
-			if ( !reader.initialize( ) ) {
-				fprintf( stderr, "Failed to initialize with EventLog\n" );
-				ReportError( reader );
-				return STATUS_ERROR;
-			}
+			istatus = reader.initialize( );
+			type = "EventLog";
+		}
+		else if ( opts.maxRotations <= 1 ) {
+			istatus = reader.initialize( opts.logFile,
+										 opts.rotation,
+										 opts.rotation );
+			type = opts.rotation ? "file (rotation)" : "file (no rotations)";
 		}
 		else {
-			if ( !reader.initialize( opts.logFile,
-									 opts.maxRotations,
-									 opts.rotation,
-									 opts.readOnly ) ) {
-				fprintf( stderr, "Failed to initialize with file %s\n",
-						 opts.logFile );
-				ReportError( reader );
-				return STATUS_ERROR;
-			}
+			istatus = reader.initialize( opts.logFile,
+										 opts.maxRotations,
+										 opts.rotation,
+										 opts.readOnly );
+			snprintf( buf, sizeof(buf), "file (%s/%d)",
+					  opts.rotation ? "rotation" : "no rotations",
+					  opts.maxRotations );
+			type = buf;
 		}
+		if ( !istatus ) {
+			fprintf( stderr, "Failed to initialize with %s\n", type );
+			return STATUS_ERROR;
+		}
+		printf( "Initialized with %s\n", type );
 	}
 
 	// --init-only ?
@@ -441,17 +457,55 @@ ReadEvents(Options &opts, int &totalEvents)
 	signal( SIGQUIT, handle_sig );
 	signal( SIGINT, handle_sig );
 
-	int		execEventCount = 0;
-	int		termEventCount = 0;
-	bool	done = (opts.term == 0);
-	bool	missedLast = false;
-	int		prevCluster=999, prevProc=999, prevSubproc=999;
-
+	int						execEventCount = 0;
+	int						termEventCount = 0;
+	bool					done = (opts.term == 0);
+	bool					missedLast = false;
+	int						prevCluster=999;
+	int						prevProc=999;
+	int						prevSubproc=999;
+	ReadUserLog::FileStatus	prevFstatus = (ReadUserLog::FileStatus) 999;
 
 	while ( !done && !global_done ) {
-		ULogEvent	*event = NULL;
+		bool	empty = false;
+		if ( opts.checkFileStatus ) {
+			ReadUserLog::FileStatus	fstatus = reader.CheckFileStatus( empty );
+			if ( fstatus != prevFstatus ) {
+				char	*s;
+				switch( fstatus ) {
+				case ReadUserLog::LOG_STATUS_ERROR:
+					s = "ERROR";
+					break;
+				case ReadUserLog::LOG_STATUS_NOCHANGE:
+					s = "NOCHANGE";
+					break;
+				case ReadUserLog::LOG_STATUS_GROWN:
+					s = "GROWN";
+					break;
+				case ReadUserLog::LOG_STATUS_SHRUNK:
+					s = "SHRUNK";
+					break;
+				default:
+					s = "unknown";
+					break;
+				}
+				if ( opts.verbosity >= VERB_INFO ) {
+					printf( "New status: %d/%s%s\n",
+							(int) fstatus, s, empty ? " [empty]" : "" );
+				}
+				prevFstatus = fstatus;
+			}
+		}
 
-		ULogEventOutcome	outcome = reader.readEvent(event);
+		ULogEvent			*event = NULL;
+		ULogEventOutcome	 outcome;
+		if ( empty ) {
+			outcome = ULOG_NO_EVENT;
+		}
+		else {
+			outcome = reader.readEvent(event);
+		}
+
 		if ( outcome == ULOG_OK ) {
 			if ( opts.verbosity >= VERB_ALL ) {
 				printf( "Got an event from %d.%d.%d @ %s",
@@ -586,6 +640,9 @@ ReadEvents(Options &opts, int &totalEvents)
 			}
 
 		} else if ( outcome == ULOG_NO_EVENT ) {
+			if ( opts.verbosity >= VERB_ALL ) {
+				printf( "No events available\n" );
+			}
 			if ( opts.stop > 0 ) {
 				if ( opts.verbosity >= VERB_INFO ) {
 					printf( "Read %d events\n", numEvents );
