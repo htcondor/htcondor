@@ -34,14 +34,13 @@
 /* Predeclare some classes */
 class FileLockBase;
 class FileLock;
-class UserLog;
 
 
 /** API for reading a log file.
 
     This class was written at the same time the ULogEvent class was written,
     so it does not contain the old deprecated functions and parameters that
-    the UserLog class is plagued with.
+    the WriteUserLog class is plagued with.
 
 	There is one know problem with the reader:
 	First, let's define 3 files:
