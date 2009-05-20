@@ -647,7 +647,7 @@ bool streq_is_64bit(char *pkt)
 	return true;
 }
 
-/* depending upon the connection type, assemble a service_reply_pkt and
+/* depending upon the connection type, assemble a store_reply_pkt and
 	send it to the other side */
 int send_store_reply_pkt(store_reply_pkt *strp, FDContext *fdc)
 {
