@@ -126,7 +126,7 @@ my $numsubmitters = 0;
 my %discoveries = ();
 my @expectations = ("Submitter", "Negotiator", "DaemonMaster", "Scheduler", "Machine");
 
-if(($numclaimed == 4) && ($done == 1)) {
+if($done == 1) {
 # process one of each ad type and then compare with expected list
 	my $nattempts = 8;
 	my $jobcount = 0;
@@ -145,7 +145,6 @@ if(($numclaimed == 4) && ($done == 1)) {
 	    }
 		
 		# we know we have 2 jobs in each of the two pools
-		my $jobcount = 0;
 		foreach my $line (@adarray) {
 			CondorTest::debug("-submitters: $line\n",$debuglevel);
 			if( $line =~ /^<(.*):(.*):(\d+)>$/ ) {
@@ -167,7 +166,7 @@ if(($numclaimed == 4) && ($done == 1)) {
 	if($jobcount != 4) {
 		print "bad<jobcount=$jobcount>\n";
 		$done = 0;
-		CondorTest::debug("Test failed because this submitter expected to have 4 running jobs not ($jobcount)\n",1);
+		CondorTest::debug("Test failed because this submitter expected to have 4 running jobs not ($jobcount)\n",$debuglevel);
 	}
 
 }
