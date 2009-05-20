@@ -331,7 +331,7 @@ CheckArgs(int argc, const char **argv, Options &opts)
 			opts.writePersist = true;
 
 		} else if ( !arg.ArgIsOpt() ) {
-			opts.logFile = arg.Arg();
+			arg.getOpt(opts.logFile);
 
 		} else {
 			fprintf(stderr, "Unrecognized argument: '%s'\n", arg.Arg() );
