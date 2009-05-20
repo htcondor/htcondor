@@ -417,24 +417,34 @@ ReadEvents(Options &opts, int &totalEvents)
 
 	// If, after the above, the reader isn't initialized, do so now
 	if ( !reader.isInitialized() ) {
+		bool		 istatus = false;
+		const char	*type = "None";
+		char		 buf[64];
 		if ( opts.isEventLog ) {
-			if ( !reader.initialize( ) ) {
-				fprintf( stderr, "Failed to initialize with EventLog\n" );
-				ReportError( reader );
-				return STATUS_ERROR;
-			}
+			istatus = reader.initialize( );
+			type = "EventLog";
+		}
+		else if ( opts.maxRotations <= 1 ) {
+			istatus = reader.initialize( opts.logFile,
+										 opts.rotation,
+										 opts.rotation );
+			type = opts.rotation ? "file (rotation)" : "file (no rotations)";
 		}
 		else {
-			if ( !reader.initialize( opts.logFile,
-									 opts.maxRotations,
-									 opts.rotation,
-									 opts.readOnly ) ) {
-				fprintf( stderr, "Failed to initialize with file %s\n",
-						 opts.logFile );
-				ReportError( reader );
-				return STATUS_ERROR;
-			}
+			istatus = reader.initialize( opts.logFile,
+										 opts.maxRotations,
+										 opts.rotation,
+										 opts.readOnly );
+			snprintf( buf, sizeof(buf), "file (%s/%d)",
+					  opts.rotation ? "rotation" : "no rotations",
+					  opts.maxRotations );
+			type = buf;
 		}
+		if ( !istatus ) {
+			fprintf( stderr, "Failed to initialize with %s\n", type );
+			return STATUS_ERROR;
+		}
+		printf( "Initialized with %s\n", type );
 	}
 
 	// --init-only ?
