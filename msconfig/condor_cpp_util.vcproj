@@ -3900,30 +3900,6 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\user_log.cpp"
-			>
-			<FileConfiguration
-				Name="Debug|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					AdditionalIncludeDirectories=""
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Release|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					AdditionalIncludeDirectories=""
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-		</File>
-		<File
 			RelativePath="..\src\condor_c++_util\user_log_header.cpp"
 			>
 		</File>
@@ -4049,6 +4025,14 @@
 		</File>
 		<File
 			RelativePath="..\src\condor_c++_util\windows_firewall.h"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\write_user_log.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\write_user_log.h"
 			>
 		</File>
 	</Files>
