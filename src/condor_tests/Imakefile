@@ -1770,6 +1770,13 @@ TESTCLASS(job_dagman_splice-cat,quick)
 TESTCLASS(job_dagman_splice-cat,full)
 TESTCLASS(job_dagman_splice-cat,quicknolink)
 
+DESC(job_dagman_,"Test DAG tricky log file paths")
+RUN(job_dagman_log_path)
+TESTCLASS(job_dagman_log_path,dagman)
+TESTCLASS(job_dagman_log_path,quick)
+TESTCLASS(job_dagman_log_path,full)
+TESTCLASS(job_dagman_log_path,quicknolink)
+
 /* Sample performance tests */
 
 /*
