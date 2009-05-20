@@ -20,10 +20,10 @@
 
 use CondorTest;
 
-$cmd = 'job_core_niceuser_van.cmd';
+my $cmd = 'job_core_niceuser_van.cmd';
 my $datafile = 'job_core_niceuser_van.data';
-$testdesc =  'condor_submit output works - vanilla U';
-$testname = "job_core_niceuser_van";
+my $testdesc =  'condor_submit output works - vanilla U';
+my $testname = "job_core_niceuser_van";
 
 my @sdata =
 (
@@ -45,15 +45,17 @@ my @skiplines = ();
 
 
 my $doonlyonce = "";
-my $count = 6;
+my $count = 2;
 
 
 $ExitSuccess = sub 
 {
 	my %info = @_;
 
+	print "Job Completed.....\n";
 	$count = $count - 1;
 
+	print "Count now $count\n";
 	if( $count != 0 )
 	{
 		return(0);

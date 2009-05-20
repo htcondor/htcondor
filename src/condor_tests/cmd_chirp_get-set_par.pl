@@ -25,7 +25,6 @@ $cmd = $ARGV[0];
 
 CondorTest::debug("Submit file for this test is $cmd\n",1);
 #print "looking at env for condor config\n";
-#system("printenv | grep CONDOR_CONFIG");
 
 $testdesc =  'Basic Parallel - Parallel U';
 $testname = "cmd_chirp_get-set_par";

@@ -651,7 +651,7 @@ int	DaemonCore::Register_Signal(int sig, const char *sig_descrip,
 
 int DaemonCore::RegisteredSocketCount()
 {
-	return nSock + nPendingSockets;
+	return nRegisteredSocks + nPendingSockets;
 }
 
 int DaemonCore::FileDescriptorSafetyLimit()
@@ -1337,11 +1337,15 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 	}
 
 	// Verify that this socket has not already been registered
+	// Since we are scanning the entire table to do this (change this someday to a hash!),
+	// at the same time update our nRegisteredSocks count by initializing it
+	// to the number of slots (nSock) and then subtracting out the number of slots
+	// not in use.
+	nRegisteredSocks = nSock;
 	int fd_to_register = ((Sock *)iosock)->get_file_desc();
+	bool duplicate_found = false;
 	for ( j=0; j < nSock; j++ )
-	{
-		bool duplicate_found = false;
-
+	{		
 		if ( (*sockTable)[j].iosock == iosock ) {
 			duplicate_found = true;
         }
@@ -1355,12 +1359,18 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 			}
 		}
 
-		if (duplicate_found) {
-			dprintf(D_ALWAYS, "DaemonCore: Attempt to register socket twice\n");
-
-			return -2;
+		// check if slot empty or available
+		if ( ((*sockTable)[j].iosock == NULL) ||  // slot is empty
+			 ((*sockTable)[j].remove_asap &&	   // slot available
+			           (*sockTable)[j].servicing_tid==0 ) ) 
+		{
+			nRegisteredSocks--;		// decrement count of active sockets
 		}
 	}
+	if (duplicate_found) {
+		dprintf(D_ALWAYS, "DaemonCore: Attempt to register socket twice\n");
+		return -2;
+	} 
 
 		// Check that we are within the file descriptor safety limit
 		// We currently only do this for non-blocking connection attempts because
@@ -1542,6 +1552,8 @@ int DaemonCore::Cancel_Socket( Stream* insock)
 				i,(*sockTable)[i].iosock_descrip, (*sockTable)[i].iosock );
 		(*sockTable)[i].remove_asap = true;
 	}
+
+	nRegisteredSocks--;		// decrement count of active sockets
 	
 	DumpSocketTable(D_FULLDEBUG | D_DAEMONCORE);
 
@@ -3272,7 +3284,7 @@ DaemonCore::CallSocketHandler( int &i, bool default_to_HandleCommand )
 	args->accepted_sock = NULL;
 	Stream *insock = (*sockTable)[i].iosock;
 	ASSERT(insock);
-	if ( (*sockTable)[i].handler==NULL && (*sockTable)[i].handler==NULL &&
+	if ( (*sockTable)[i].handler==NULL && (*sockTable)[i].handlercpp==NULL &&
 		 default_to_HandleCommand &&
 		 insock->type() == Stream::reli_sock &&
 		 ((ReliSock *)insock)->_state == Sock::sock_special &&
@@ -3554,7 +3566,7 @@ int DaemonCore::HandleReqSocketTimerHandler()
 		
 		// and blow it away
 	dprintf(D_ALWAYS,"Closing socket from %s - no data received\n",
-			sin_to_string(((Sock*)stream)->endpoint()));
+			sin_to_string(((Sock*)stream)->peer_addr()));
 	delete stream;
 
 	return TRUE;
@@ -3747,7 +3759,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 		// after we read the command below...
 
 		dprintf ( D_SECURITY, "DC_AUTHENTICATE: received UDP packet from %s.\n",
-				sin_to_string(((Sock*)stream)->endpoint()));
+				sin_to_string(((Sock*)stream)->peer_addr()));
 
 
 		// get the info, if there is any
@@ -3967,32 +3979,32 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 	memset(tmpbuf,0,sizeof(tmpbuf));
 	if ( is_tcp ) {
 			// TODO Should we be ignoring the return value of condor_read?
-		condor_read(((Sock*)stream)->get_file_desc(),
+		condor_read(stream->peer_description(), ((Sock*)stream)->get_file_desc(),
 			tmpbuf, sizeof(tmpbuf) - 1, 1, MSG_PEEK);
 	}
 #ifdef HAVE_EXT_GSOAP
 	if ( strstr(tmpbuf,"GET") ) {
 		if ( param_boolean("ENABLE_WEB_SERVER",false) ) {
 			// mini-web server requires READ authorization.
-			if ( Verify("HTTP GET", READ,((Sock*)stream)->endpoint(),NULL) ) {
+			if ( Verify("HTTP GET", READ,((Sock*)stream)->peer_addr(),NULL) ) {
 				is_http_get = true;
 			}
 		} else {
 			dprintf(D_ALWAYS,"Received HTTP GET connection from %s -- "
 				             "DENIED because ENABLE_WEB_SERVER=FALSE\n",
-							 sin_to_string(((Sock*)stream)->endpoint()));
+							 sin_to_string(((Sock*)stream)->peer_addr()));
 		}
 	} else {
 		if ( strstr(tmpbuf,"POST") ) {
 			if ( param_boolean("ENABLE_SOAP",false) ) {
 				// SOAP requires SOAP authorization.
-				if ( Verify("HTTP POST",SOAP_PERM,((Sock*)stream)->endpoint(),NULL) ) {
+				if ( Verify("HTTP POST",SOAP_PERM,((Sock*)stream)->peer_addr(),NULL) ) {
 					is_http_post = true;
 				}
 			} else {
 				dprintf(D_ALWAYS,"Received HTTP POST connection from %s -- "
 							 "DENIED because ENABLE_SOAP=FALSE\n",
-							 sin_to_string(((Sock*)stream)->endpoint()));
+							 sin_to_string(((Sock*)stream)->peer_addr()));
 			}
 		}
 	}
@@ -4003,7 +4015,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 			// Socket appears to be HTTP, so deal with it.
 		dprintf(D_ALWAYS, "Received HTTP %s connection from %s\n",
 			is_http_get ? "GET" : "POST",
-			sin_to_string(((Sock*)stream)->endpoint()) );
+			sin_to_string(((Sock*)stream)->peer_addr()) );
 
 
 		ASSERT( soap );
@@ -4052,7 +4064,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 	// a timeout of 20 seconds on their socket.
 	stream->timeout(20);
 	if(!result) {
-		char const *ip = stream->endpoint_ip_str();
+		char const *ip = stream->peer_ip_str();
 		if(!ip) {
 			ip = "unknown address";
 		}
@@ -4070,7 +4082,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 		Sock* sock = (Sock*)stream;
 		sock->decode();
 
-		dprintf (D_SECURITY, "DC_AUTHENTICATE: received DC_AUTHENTICATE from %s\n", sin_to_string(sock->endpoint()));
+		dprintf (D_SECURITY, "DC_AUTHENTICATE: received DC_AUTHENTICATE from %s\n", sin_to_string(sock->peer_addr()));
 
 		ClassAd auth_info;
 		if( !auth_info.initFromStream(*sock)) {
@@ -4460,7 +4472,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 					if ( method_used ) {
 						the_policy->Assign(ATTR_SEC_AUTHENTICATION_METHODS, method_used);
 					}
-					dprintf (D_SECURITY, "DC_AUTHENTICATE: mutual authentication to %s complete.\n", sock->endpoint_ip_str());
+					dprintf (D_SECURITY, "DC_AUTHENTICATE: mutual authentication to %s complete.\n", sock->peer_ip_str());
 
 					free( auth_methods );
 					free( method_used );
@@ -4604,7 +4616,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 					// add the key to the cache
 
 					// This is a session for incoming connections, so
-					// do not pass in sock->endpoint() as addr,
+					// do not pass in sock->peer_addr() as addr,
 					// because then this key would get confused for an
 					// outgoing session to a daemon with that IP and
 					// port as its command socket.
@@ -4690,7 +4702,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 						(is_tcp) ? "TCP" : "UDP",
 						!user.IsEmpty() ? " from " : "",
 						user.Value(),
-						sin_to_string(((Sock*)stream)->endpoint()),
+						sin_to_string(((Sock*)stream)->peer_addr()),
 						PermString(comTable[index].perm));
 
 					result = FALSE;
@@ -4723,7 +4735,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 		MyString command_desc;
 		command_desc.sprintf("command %d (%s)",req,comTable[index].command_descrip);
 
-		if ( (perm = Verify(command_desc.Value(),comTable[index].perm, ((Sock*)stream)->endpoint(), user.Value())) != USER_AUTH_SUCCESS )
+		if ( (perm = Verify(command_desc.Value(),comTable[index].perm, ((Sock*)stream)->peer_addr(), user.Value())) != USER_AUTH_SUCCESS )
 		{
 			// Permission check FAILED
 			reqFound = FALSE;	// so we do not call the handler function below
@@ -7526,19 +7538,25 @@ int DaemonCore::Create_Process(
 			switch( errno ) {
 
 			case ERRNO_EXEC_AS_ROOT:
-				dprintf( D_ALWAYS, "Create_Process: child failed because "
-						 "%s process was still root before exec()\n",
+				dprintf( D_ALWAYS, "Create_Process(%s): child "
+						 "failed because %s process was still root "
+						 "before exec()\n",
+						 executable,
 						 priv_to_string(priv) );
 				break;
 
 			case ERRNO_REGISTRATION_FAILED:
-				dprintf( D_ALWAYS, "Create_Process: child failed becuase "
-				         "it failed to register itself with the ProcD\n" );
+				dprintf( D_ALWAYS, "Create_Process(%s): child "
+						 "failed because it failed to register itself "
+						 "with the ProcD\n",
+						 executable );
 				break;
 
 			case ERRNO_EXIT:
-				dprintf( D_ALWAYS, "Create_Process: child failed becuase "
-				         "it called exit(%d).\n", child_status );
+				dprintf( D_ALWAYS, "Create_Process(%s): child "
+						 "failed because it called exit(%d).\n",
+						 executable,
+						 child_status );
 				break;
 
 			case ERRNO_PID_COLLISION:
@@ -7550,8 +7568,10 @@ int DaemonCore::Create_Process(
 					  before we give up, and if not, recursively
 					  re-try the whole call to Create_Process().
 					*/
-				dprintf( D_ALWAYS, "Create_Process: child failed because "
-						 "PID %d is still in use by DaemonCore\n",
+				dprintf( D_ALWAYS, "Create_Process(%s): child "
+						 "failed because PID %d is still in use by "
+						 "DaemonCore\n",
+						 executable,
 						 (int)newpid );
 				num_pid_collisions++;
 				max_pid_retry = param_integer( "MAX_PID_COLLISION_RETRY",
@@ -7590,8 +7610,10 @@ int DaemonCore::Create_Process(
 				break;
 
 			default:
-				dprintf( D_ALWAYS, "Create_Process: child failed with "
-						 "errno %d (%s) before exec()\n", errno,
+				dprintf( D_ALWAYS, "Create_Process(%s): child "
+						 "failed with errno %d (%s) before exec()\n",
+						 executable,
+						 errno,
 						 strerror(errno) );
 				break;
 
@@ -7615,7 +7637,9 @@ int DaemonCore::Create_Process(
 			set_priv( prev_priv );
 			if( rval == -1 ) {
 				return_errno = errno;
-				dprintf(D_ALWAYS, "Create_Process wait failed: %d (%s)\n",
+				dprintf(D_ALWAYS, 
+					"Create_Process wait for '%s' failed: %d (%s)\n",
+					executable,
 					errno, strerror (errno) );
 				newpid = FALSE;
 				goto wrapup;
@@ -7628,7 +7652,9 @@ int DaemonCore::Create_Process(
 	}
 	else if( newpid < 0 )// Error condition
 	{
-		dprintf(D_ALWAYS, "Create Process: fork() failed: %s (%d)\n",
+		dprintf(D_ALWAYS, "Create Process: fork() for '%s' "
+				"failed: %s (%d)\n",
+				executable,
 				strerror(errno), errno );
 		close(errorpipe[0]); close(errorpipe[1]);
 		newpid = FALSE;
@@ -9587,7 +9613,7 @@ DaemonCore::CheckConfigAttrSecurity( const char* attr, Sock* sock )
 		MyString command_desc;
 		command_desc.sprintf("remote config %s",name);
 
-		if( Verify(command_desc.Value(),(DCpermission)i, sock->endpoint(), sock->getFullyQualifiedUser())) {
+		if( Verify(command_desc.Value(),(DCpermission)i, sock->peer_addr(), sock->getFullyQualifiedUser())) {
 				// now we can see if the specific attribute they're
 				// trying to set is in our list.
 			if( (SettableAttrsLists[i])->
@@ -9612,7 +9638,7 @@ DaemonCore::CheckConfigAttrSecurity( const char* attr, Sock* sock )
 
 		// Grab a pointer to this string, since it's a little bit
 		// expensive to re-compute.
-	ip_str = sock->endpoint_ip_str();
+	ip_str = sock->peer_ip_str();
 		// Upper-case-ify the string for everything we print out.
 	strupr(name);
 

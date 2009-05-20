@@ -192,6 +192,13 @@ CCBClient::ReverseConnect_blocking( CondorError *error )
 
 		time_t start_time = time(NULL);
 		int timeout = m_target_sock->get_timeout_raw();
+		time_t deadline = m_target_sock->get_deadline();
+		if( deadline && deadline-start_time < timeout ) {
+			timeout = deadline-start_time;
+			if( timeout <= 0 ) {
+				timeout = 1;
+			}
+		}
 		while( listen_fd != -1 || ccb_fd != -1 ) {
 			bool timed_out = false;
 
@@ -491,6 +498,8 @@ CCBClient::try_next_ccb()
 	    (DCMsgCallback::CppFunction)&CCBClient::CCBResultsCallback,
 	    this );
 	msg->setCallback( m_ccb_cb );
+
+	msg->setDeadlineTime( m_target_sock->get_deadline() );
 
 	if( ccb_server->addr() && !strcmp(ccb_server->addr(),return_address) ) {
 			// Special case: the CCB server is in the same process as

@@ -339,10 +339,7 @@ void ClassAd::SetMyTypeName(const char *tempName)
         EXCEPT("Warning : you ran out of memory -- quitting !");
     }
 		// Also set the corresponding attribute in the attrlist.
-		// Note that we call GetMyTypeName() instead of passing
-		// tempName directly, because of extra hackery that happens
-		// in that function.
-	Assign("MyType",GetMyTypeName());
+	Assign("MyType",tempName);
 	SetInvisible("MyType");
 }
 
@@ -357,25 +354,6 @@ const char *ClassAd::GetMyTypeName()
     }
     else
     {
-		// We should just return myType->name here.  Instead, we have
-		// a dreadful hack:  If the ad claims to be a SCHEDD_ADTYPE,
-		// we see if it has a ATTR_NUM_USERS attribute.  If it does not,
-		// then it is really a SUBMITTER_ADTYPE and that is what we 
-		// return.  We massage the name here because in Condor v6.3.x
-		// it is important to distinguish between the two types of
-		// ads (because the negotiator now fetches all ads with the
-		// ANY_AD query).  However, we do not *really* set Submittor
-		// ads to SUBMITTER_ADTYPE.... this should have been done
-		// right from the start in v6.0, but it was not.  And if we
-		// do it now, then there will be lots of backwards compatibility
-		// and flocking problems between v6.3 and older versions.
-		// Sigh.  Yet another hack in order to preserve backwards
-		// compatibility.  The sins of the father... <tannenba 9/14/01>
-		if ( strcmp(SCHEDD_ADTYPE,myType->name) == 0 ) {
-			if ( !Lookup(ATTR_NUM_USERS) ) {
-				return SUBMITTER_ADTYPE;
-			}
-		}
         return myType->name;
     }
 }

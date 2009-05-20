@@ -548,10 +548,10 @@ public:
 	bool deadline_expired();
 
 	/// For stream types that support it, this returns the ip address we are connecting from.
-	virtual char const *sender_ip_str() = 0;
+	virtual char const *my_ip_str() = 0;
 
 	/// For stream types that support it, this returns the ip address we are connecting to.
-	virtual char const *endpoint_ip_str() = 0;
+	virtual char const *peer_ip_str() = 0;
 
 	/// For stream types that support it, this is the sinful address of peer.
 	virtual char const *default_peer_description() = 0;

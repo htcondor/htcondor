@@ -112,6 +112,8 @@ extern "C"
 
 //----------------------------------------------------------------
 
+void computeProjection(ClassAd *shortAd, ClassAd *curr_ad, SimpleList<MyString> *projectionList);
+
 void CollectorDaemon::Init()
 {
 	dprintf(D_ALWAYS, "In CollectorDaemon::Init()\n");
@@ -335,6 +337,15 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 	// Initial query handler
 	AdTypes whichAds = receive_query_public( command );
 
+	// CRUFT: Before 7.3.2, submitter ads had a MyType of
+	//   "Scheduler". The only way to tell the difference
+	//   was that submitter ads didn't have ATTR_NUM_USERS.
+	//   The correosponding query ads had a TargetType of
+	//   "Scheduler", which we now coerce to "Submitter".
+	if ( whichAds == SUBMITTOR_AD ) {
+		cad.SetTargetTypeName( SUBMITTER_ADTYPE );
+	}
+
 	// Perform the query
 	List<ClassAd> results;
 	ForkStatus	fork_status = FORK_FAILED;
@@ -355,9 +366,27 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 	ClassAd *curr_ad = NULL;
 	int more = 1;
 	
+		// See if query ad asks for server-side projection
+	char *projection = NULL;
+	cad.LookupString("projection", &projection);
+	SimpleList<MyString> projectionList;
+	::split_args(projection, &projectionList);
+
 	while ( (curr_ad=results.Next()) )
     {
-        if (!sock->code(more) || !curr_ad->put(*sock))
+		ClassAd *ad_to_send = NULL;
+		ClassAd shortAd;
+
+		if (projectionList.Number() > 0) {
+			// compute projection, send thin ad
+			computeProjection(&shortAd, curr_ad, &projectionList);
+			ad_to_send = &shortAd;
+		} else {
+			// if no projection, send the full ad
+			ad_to_send = curr_ad;
+		}
+		
+        if (!sock->code(more) || !ad_to_send->put(*sock))
         {
             dprintf (D_ALWAYS,
                     "Error sending query result to client -- aborting\n");
@@ -504,7 +533,7 @@ int CollectorDaemon::receive_invalidation(Service* /*s*/,
 	AdTypes whichAds;
 	ClassAd cad;
 
-	from = ((Sock*)sock)->endpoint();
+	from = ((Sock*)sock)->peer_addr();
 
 	sock->decode();
 	sock->timeout(ClientTimeout);
@@ -658,7 +687,7 @@ int CollectorDaemon::receive_update(Service* /*s*/, int command, Stream* sock)
 	}
 
 	// get endpoint
-	from = ((Sock*)sock)->endpoint();
+	from = ((Sock*)sock)->peer_addr();
 
     // process the given command
 	if (!(cad = collector.collect (command,(Sock*)sock,from,insert)))
@@ -739,7 +768,7 @@ int CollectorDaemon::receive_update_expect_ack( Service* /*s*/,
     int insert = -3;
     
     /* get peer's IP/port */
-    sockaddr_in *from = socket->endpoint ();
+    sockaddr_in *from = socket->peer_addr();
 
     /* "collect" the ad */
     ClassAd *cad = collector.collect ( 
@@ -789,7 +818,7 @@ int CollectorDaemon::receive_update_expect_ack( Service* /*s*/,
                 "receive_update_expect_ack: "
                 "Failed to send acknowledgement to host %s, "
                 "aborting\n",
-                socket->sender_ip_str () );
+                socket->peer_ip_str () );
         
             /* it's ok if we fail here, since we won't drop the ad,
             it's only on the client side that any error should be
@@ -803,7 +832,7 @@ int CollectorDaemon::receive_update_expect_ack( Service* /*s*/,
                 D_FULLDEBUG, 
                 "receive_update_expect_ack: "
                 "Failed to send update EOM to host %s.\n", 
-                socket->sender_ip_str () );
+                socket->peer_ip_str () );
             
 	    }   
         
@@ -832,7 +861,7 @@ CollectorDaemon::stashSocket( Stream* sock )
 {
 		
 	ReliSock* rsock;
-	char* addr = sin_to_string( ((Sock*)sock)->endpoint() );
+	char* addr = sin_to_string( ((Sock*)sock)->peer_addr() );
 	rsock = sock_cache->findReliSock( addr );
 	if( ! rsock ) {
 			// don't have it in the socket already, see if the cache
@@ -869,7 +898,7 @@ int
 CollectorDaemon::sockCacheHandler( Service*, Stream* sock )
 {
 	int cmd;
-	char* addr = sin_to_string( ((Sock*)sock)->endpoint() );
+	char* addr = sin_to_string( ((Sock*)sock)->peer_addr() );
 	sock->decode();
 	dprintf( D_FULLDEBUG, "Activity on stashed TCP socket from %s\n",
 			 addr );
@@ -948,9 +977,9 @@ int CollectorDaemon::query_scanFunc (ClassAd *cad)
 {
     if ((*cad) >= (*__query__))
     {
-		// Found a match --- append to our results list
-		__ClassAdResultList__->Append(cad);
+		// Found a match 
         __numAds__++;
+		__ClassAdResultList__->Append(cad);
     }
 
     return 1;
@@ -1597,4 +1626,49 @@ CollectorUniverseStats::publish( const char *label, ClassAd *ad )
 	ad->Insert(line);
 
 	return 0;
+}
+
+	// Given a full ad, and a StringList of expressions, Project out of
+	// the full ad into the short ad all the attributes those expressions
+	// depend on.
+
+	// So, if the projection is passed in "foo", and foo is an expression
+	// that expands to bar, we return bar
+	
+void
+computeProjection(ClassAd *shortAd, ClassAd *full_ad, SimpleList<MyString> *projectionList) {
+    projectionList->Rewind();
+
+	// CRUFT: Before 7.3.2, submitter ads had a MyType of
+	//   "Scheduler". The only way to tell the difference
+	//   was that submitter ads didn't have ATTR_NUM_USERS.
+	//   If we don't include ATTR_NUM_USERS in our projection,
+	//   older clients will morph scheduler ads into
+	//   submitter ads, regardless of MyType.
+	if (strcmp("Scheduler", full_ad->GetMyTypeName()) == 0) {
+		projectionList->Append(MyString(ATTR_NUM_USERS));
+	}
+
+		// For each expression in the list...
+	MyString attr;
+	while (projectionList->Next(attr)) {
+		StringList internals;
+		StringList externals; // shouldn't have any
+
+			// Get the indirect attributes
+		if( !full_ad->GetExprReferences(attr.Value(), internals, externals) ) {
+			dprintf(D_FULLDEBUG,
+				"computeProjection failed to parse "
+				"requested ClassAd expression: %s\n",attr.Value());
+		}
+		internals.rewind();
+
+		while (char *indirect_attr = internals.next()) {
+			ExprTree *tree = full_ad->Lookup(indirect_attr);
+			if (tree) shortAd->Insert(tree->DeepCopy());
+		}
+	}
+	shortAd->SetMyTypeName(full_ad->GetMyTypeName());
+	shortAd->SetTargetTypeName(full_ad->GetTargetTypeName());
+
 }

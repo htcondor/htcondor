@@ -167,6 +167,10 @@ class CondorQuery
 	// set the type for the next generic query
 	void setGenericQueryType(const char*);
 
+	// Add a non-requirements attribute to send along with the
+	// query.  The server will decide what, if anything to do with it
+	int addExtraAttribute(const char*);
+
   private:
 		// These are unimplemented, so make them private so that they
 		// can't be used.
@@ -177,6 +181,9 @@ class CondorQuery
 	AdTypes     queryType;
 	GenericQuery query;
 	char*		genericQueryType;
+
+ // Stores extra attributes other than reqs to send to server
+	ClassAd		extraAttrs;
 };
 
 #endif

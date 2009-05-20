@@ -36,8 +36,6 @@ my $start_char = "a";
 
 if ( $help )    { help() and exit(0); }
 
-print "Message is $message\n";
-
 die "Need message defined\n" unless defined $message;
 
 my $rowchar = $seed_char++;

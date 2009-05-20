@@ -3134,7 +3134,6 @@ void warnScheddLimits(const char *scheddName) {
 	Daemon schedd(DT_SCHEDD, scheddName, pool ? pool->addr() : NULL );
 	schedd.locate();
 	ClassAd *ad = schedd.daemonAd();
-ad->dPrint(D_ALWAYS);
 	if (ad) {
 		bool exhausted = false;
 		ad->LookupBool("SwapSpaceExhausted", exhausted);

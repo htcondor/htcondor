@@ -262,7 +262,7 @@ elif test $os = "Linux" ; then
 	;;
      # Handle post-FC releases more robustly
      * )
-        _cv_linux_distro=`$RPMQUERY -q --queryformat "F%{VERSION}" fedora-release`
+        _cv_linux_distro=F`cat /etc/fedora-release|$PERL -ne '/.* (.*) \((.*)\)/;print $1;'`
 	;;
     esac
   elif test -f "/etc/redhat-release" ; then
@@ -297,7 +297,7 @@ elif test $os = "Linux" ; then
           esac
        elif (grep -q "Red Hat Enterprise Linux" /etc/redhat-release) ; then
          # RHEL
-	 _cv_linux_distro=RHEL`$RPMQUERY -q --queryformat "%{VERSION}" redhat-release | tr -d \[[A-Za-z]] `
+	 _cv_linux_distro=RHEL`cat /etc/redhat-release|$PERL -ne '/.* (.*) \(.*\)/;print $1;' | $AWK -F. '{printf "%s", $1}'`
        else
           $_rh_release=`cat /etc/redhat-release`
           AC_MSG_WARN([You may have trouble building and/or packaging Condor on $_rh_release])
@@ -2241,7 +2241,9 @@ fi
 # we only want pthreads defined on Linux that is not ia64.  Once we 
 # remove the requirement on TLS in the code, we can safely remove 
 # this hack.
-if test $os = "Linux" && test $arch != "ia64"; then
+#     if test $os = "Linux" && test $arch != "ia64"; then
+# Actually, until TLS is out of the code, don't compile it anywhere.
+if test $os = "FOOBAR" && test $arch != "ia64"; then
 	AC_CHECK_LIB([pthread], [pthread_create],
   		[ac_pthreads=yes
    		AC_DEFINE([HAVE_PTHREADS],[1],[Define if pthreads are available])

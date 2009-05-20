@@ -112,7 +112,12 @@ Condor::DebugLevel(1);
 #select(STDERR); $| = 1;
 #select(STDOUT); $| = 1;
 
-my $iswindows = IsThisWindows();
+my $iswindows = CondorTest::IsThisWindows();
+if($iswindows == 1) {
+	# secure a path with cygwin paths and regular windows
+	# paths all in one.
+	CondorTest::SweepPath($ENV{PATH});
+}
 
 # configuration options
 my $test_retirement = 3600;	# seconds for an individual test timeout - 30 minutes
@@ -129,7 +134,7 @@ my $want_core_dumps = 1;
 my $testpersonalcondorlocation = "$BaseDir/TestingPersonalCondor";
 my $wintestpersonalcondorlocation = "";
 if($iswindows == 1) {
-	my $tmp = `cygpath -w $testpersonalcondorlocation`;
+	my $tmp = `cygpath -m $testpersonalcondorlocation`;
 	CondorTest::fullchomp($tmp);
 	$wintestpersonalcondorlocation = $tmp;
 }
@@ -143,8 +148,8 @@ my $localdir = $testpersonalcondorlocation . "/local";
 my $installdir;
 my $wininstalldir; # need to have dos type paths for condor
 my $testdir;
-my $configmain;
-my $configlocal;
+my $configmain = "../condor_examples/condor_config.generic";
+my $configlocal = "../condor_examples/condor_config.local.central.manager";
 
 my $wantcurrentdaemons = 1; # dont set up a new testing pool in condor_tests/TestingPersonalCondor
 my $pretestsetuponly = 0; # only get the personal condor in place
@@ -312,7 +317,7 @@ my %test_suite = ();
 my $awkscript = "";
 my $genericconfig = "";
 my $genericlocalconfig = "";
-my $nightly = IsThisNightly($BaseDir);
+my $nightly = CondorTest::IsThisNightly($BaseDir);
 my $res = 0;
 
 if(!($wantcurrentdaemons)) {
@@ -342,7 +347,7 @@ if(!($wantcurrentdaemons)) {
 	}
 
 	if($iswindows == 1) {
-		my $tmp = `cygpath -w $targetconfig`;
+		my $tmp = `cygpath -m $targetconfig`;
 		CondorTest::fullchomp($tmp);
 		$ENV{CONDOR_CONFIG} = $tmp;
 		$res = IsPersonalRunning($tmp);
@@ -394,7 +399,7 @@ if($#compilers == -1 ) {
 }
 
 if($timestamp == 1) {
-	system("date");
+	print scalar localtime() . "\n";
 }
 
 foreach my $name (@compilers) {
@@ -826,46 +831,6 @@ sub CleanFromPath
 	}
 }
 
-sub IsThisNightly
-{
-	my $mylocation = shift;
-
-	debug("IsThisNightly passed <$mylocation>\n",2);
-	if($mylocation =~ /^.*(\/execute\/).*$/) {
-		print "Nightly testing\n";
-		$configlocal = "../condor_examples/condor_config.local.central.manager";
-		$configmain = "../condor_examples/condor_config.generic";
-		if(!(-f $configmain)) {
-			system("ls ..");
-			system("ls ../condor_examples");
-			die "No base config file!!!!!\n";
-		}
-		return(1);
-	} else {
-		print "Workspace testing\n";
-		$configlocal = "../condor_examples/condor_config.local.central.manager";
-		$configmain = "../condor_examples/condor_config.generic";
-		if(!(-f $configmain)) {
-			system("ls ..");
-			system("ls ../condor_examples");
-			die "No base config file!!!!!\n";
-		}
-		return(0);
-	}
-}
-
-sub IsThisWindows
-{
-	my $path = CondorTest::Which("cygpath");
-	debug("Path return from which cygpath: $path\n",2);
-	if($path =~ /^.*\/bin\/cygpath.*$/ ) {
-		print "This IS windows\n";
-		return(1);
-	}
-	print "This is NOT windows\n";
-	return(0);
-}
-
 sub IsPersonalTestDirThere
 {
 	if( -d $testpersonalcondorlocation ) {
@@ -892,7 +857,7 @@ sub WhereIsInstallDir
 	if($iswindows == 1) {
 		my $top = getcwd();
 		debug( "getcwd says \"$top\"\n",2);
-		my $crunched = `cygpath -w $top`;
+		my $crunched = `cygpath -m $top`;
 		CondorTest::fullchomp($crunched);
 		debug( "cygpath changed it to: \"$crunched\"\n",2);
 		my $ppwwdd = `pwd`;
@@ -914,7 +879,7 @@ sub WhereIsInstallDir
 	} else {
 		if($tmp =~ /^(.*)\/bin\/condor_master\s*$/) {
 			$installdir = $1;
-			$tmp = `cygpath -w $1`;
+			$tmp = `cygpath -m $1`;
     		CondorTest::fullchomp($tmp);
 			$wininstalldir = $tmp;
 			$wininstalldir =~ s/\\/\//;
@@ -1107,6 +1072,9 @@ sub CreateLocalConfig
 	print FIX "HOSTALLOW_WRITE 			= *\n";
 	print FIX "NUM_CPUS 			= 15\n";
 
+	if($iswindows == 1) {
+		print FIX "JOB_INHERITS_STARTER_ENVIRONMENT = TRUE\n";
+	}
 	# Allow a default heap size for java(addresses issues on x86_rhas_3)
 	# May address some of the other machines with Java turned off also
 	print FIX "JAVA_MAXHEAP_ARGUMENT = \n";
@@ -1115,43 +1083,53 @@ sub CreateLocalConfig
 	print FIX "RunBenchmarks = false\n";
 	print FIX "JAVA_BENCHMARK_TIME = 0\n";
 
-	# below stolen from condor_configure
 
 	my $jvm = "";
-
-    my @default_jvm_locations = ("/bin/java",
-                 "/usr/bin/java",
-                 "/usr/local/bin/java",
-                 "/s/std/bin/java");
-
-    unless (system ("which java >> /dev/null 2>&1")) {
-    	CondorTest::fullchomp (my $which_java = CondorTest::Which("java"));
-    	@default_jvm_locations = ($which_java, @default_jvm_locations) unless ($?);
-    }
-
-    my $java_libdir = "";
+	my $java_libdir = "";
+	my $exec_result;
+	my $javabinary = "";
 	if($iswindows == 1) {
-    	$java_libdir = "$wininstalldir/lib";
+
+		$javabinary = "java.exe";
+		my $whichtest = `which $javabinary`;
+	    CondorTest::fullchomp ($whichtest);
+		$whichtest =~ s/Program Files/progra~1/g;
+		$jvm = `cygpath -m $whichtest`;
+		CondorTest::fullchomp($jvm);
+		CondorTest::debug("which java said<<$jvm>>\n",2);
+
+	    $java_libdir = "$wininstalldir/lib";
+
 	} else {
-    	$java_libdir = "$installdir/lib";
+		# below stolen from condor_configure
+
+	    my @default_jvm_locations = ("/bin/java",
+	                 "/usr/bin/java",
+	                 "/usr/local/bin/java",
+	                 "/s/std/bin/java");
+
+		$javabinary = "java";
+	    unless (system ("which java >> /dev/null 2>&1")) {
+	    	CondorTest::fullchomp (my $which_java = CondorTest::Which("$javabinary"));
+			CondorTest::debug("CT::Which for $javabinary said $which_java\n",2);
+	    	@default_jvm_locations = ($which_java, @default_jvm_locations) unless ($?);
+	    }
+
+	    $java_libdir = "$installdir/lib";
+
+	    # check some default locations for java and pick first valid one
+	    foreach my $default_jvm_location (@default_jvm_locations) {
+		    CondorTest::debug("default_jvm_location is <<$default_jvm_location>>\n",2);
+	    	if ( -f $default_jvm_location && -x $default_jvm_location) {
+	        	$jvm = $default_jvm_location;
+				print "Set JAVA to $jvm\n";
+	        	last;
+	    	}
+	    }
 	}
-
-    my $exec_result;
-    my $default_jvm_location;
-
-    # check some default locations for java and pick first valid one
-    foreach $default_jvm_location (@default_jvm_locations) {
-    	if ( -f $default_jvm_location && -x $default_jvm_location) {
-        	$jvm = $default_jvm_location;
-        	last;
-    	}
-    }
-
     # if nothing is found, explain that, otherwise see if they just want to
     # accept what I found.
-
 	debug ("Setting JAVA=$jvm",2);
-
     # Now that we have an executable JVM, see if it is a Sun jvm because that
     # JVM it supports the -Xmx argument then, which is used to specify the
     # maximum size to which the heap can grow.
@@ -1176,7 +1154,12 @@ sub CreateLocalConfig
         $java_jvm_maxmem_arg = "";
     }
 
-	print FIX "JAVA = $jvm\n";
+	if($iswindows == 1){
+		print FIX "JAVA = $jvm\n";
+		print FIX "JAVA_EXTRA_ARGUMENTS = -Xmx1024m\n";
+	} else {
+		print FIX "JAVA = $jvm\n";
+	}
 
 
 	# above stolen from condor_configure
@@ -1225,7 +1208,9 @@ sub CreateLocalConfig
 	print FIX "ALL_DEBUG = D_FULLDEBUG D_SECURITY\n";
 	print FIX "SCHEDD_INTERVAL_TIMESLICE = .99\n";
 	#insure path from framework is injected into the new pool
-	print FIX "environment=\"PATH=\'$mypath\'\"\n";
+	if($iswindows == 0) {
+		print FIX "environment=\"PATH=\'$mypath\'\"\n";
+	}
 	print FIX "SUBMIT_EXPRS=environment\n";
 	print FIX "PROCD_LOG = \$(LOG)/ProcLog\n";
 	if($iswindows == 1) {

@@ -37,7 +37,7 @@ my $WinTestList = "$SrcDir/Windows_list";
 $SIG{ALRM} = sub { die "timeout" };
 
 print "Starting tests now: ";
-system("date");
+print scalar localtime() . "\n";
 
 my @classlist;
 my $timeout = 0;
@@ -174,7 +174,7 @@ foreach $task (sort keys %tasklist ) {
 close( TASKFILE );
 
 print "Wrote $unique_tests unique tests\n";
-system("date");
+print scalar localtime() . "\n";
 
 exit(0);
 

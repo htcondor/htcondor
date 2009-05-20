@@ -20,52 +20,54 @@
 
 use CondorTest;
 use Cwd;
+use strict;
+use warnings;
 
 # truly const variables in perl
 sub IDLE{1};
 sub HELD{5};
 sub RUNNING{2};
 
-$testdesc =  'fetch_work-basic';
-$testname = "fetch_work-basic";
-$corename = "fetch_work-basic";
+my $testdesc =  'fetch_work-basic';
+my $testname = "fetch_work-basic";
+my $corename = "fetch_work-basic";
+my $debuglevel = 2;
 
 # where am I running
-$currenthost = `hostname`;
+my $currenthost = `hostname`;
 chomp($currenthost);
-$primarycollector = $currenthost;
+my $primarycollector = $currenthost;
 my @adarray;
 
 CondorTest::fullchomp($currenthost);
 
-system("date");
+print scalar localtime() . "\n";
 
-$mypid = $$;
-$mysaveme = $corename . ".saveme";
+my $mypid = $$;
+my $mysaveme = $corename . ".saveme";
 
 if($mypid == 0) {
 	die "Saveme setup for test failed\n";
 }
 
-$mysubmitnm = $corename . $mypid . ".cmd";
-$mysubmitnmout = $corename . $mypid . ".cmd.out";
-$mysubmitnmlog = $corename . $mypid . ".log";
-$mysubmitnmout = $corename . $mypid . ".out";
-$mycorenm = $corename . ".cmd";
-$mycorenmout = $corename . ".cmd.out";
-$mycorenmlog = $corename . ".log";
+my $mysubmitnm = $corename . $mypid . ".cmd";
+my $mysubmitnmlog = $corename . $mypid . ".log";
+my $mysubmitnmout = $corename . $mypid . ".out";
+my $mycorenm = $corename . ".cmd";
+my $mycorenmout = $corename . ".cmd.out";
+my $mycorenmlog = $corename . ".log";
 
-CondorTest::debug("Master PID is $mypid\n",1);
-CondorTest::debug("Master PID submit file is $mysubmitnm\n",1);
+CondorTest::debug("Master PID is $mypid\n",$debuglevel);
+CondorTest::debug("Master PID submit file is $mysubmitnm\n",$debuglevel);
 
-$topdir = getcwd();
-CondorTest::debug("Running here: $topdir\n",1);
+my $topdir = getcwd();
+CondorTest::debug("Running here: $topdir\n",$debuglevel);
 
-$workfetchscripts = $topdir . "/" . $mysaveme . "/" . "$mypid" . "/" . "workfetch_scripts";
-$work = $topdir . "/" . $mysaveme . "/" . "$mypid" . "/" . "work";
-$results = $topdir . "/" . $mysaveme . "/" . "$mypid" . "/" . "results";
-$scripts = "x_fetchwork_scripts.tar.gz";
-CondorTest::debug("Work fetch scripts here: $workfetchscripts\n",1);
+my $workfetchscripts = $topdir . "/" . $mysaveme . "/" . "$mypid" . "/" . "workfetch_scripts";
+my $work = $topdir . "/" . $mysaveme . "/" . "$mypid" . "/" . "work";
+my $results = $topdir . "/" . $mysaveme . "/" . "$mypid" . "/" . "results";
+my $scripts = "x_fetchwork_scripts.tar.gz";
+CondorTest::debug("Work fetch scripts here: $workfetchscripts\n",$debuglevel);
 
 system("mkdir -p $workfetchscripts");
 system("cp $scripts $workfetchscripts");
@@ -73,32 +75,32 @@ system("cp $scripts $workfetchscripts");
 system("mkdir -p $work");
 system("mkdir -p $results");
 
-$here = getcwd();
+my $here = getcwd();
 chdir("$workfetchscripts");
 ###### extract work fetch scripts ######
-system("tar -zxvf $scripts");
+system("tar -zxf $scripts");
 if( !(-f "job_fetch.pl")) {
-	CondorTest::debug("Failed to setup fetch scripts\n",1);
+	CondorTest::debug("Failed to setup fetch scripts\n",$debuglevel);
 	system("pwd");
 	system("ls");
 	exit(1);
 } else {
-	CondorTest::debug("Have setup fetch scripts\n",1);
-	system("pwd");
-	system("ls");
+	CondorTest::debug("Have setup fetch scripts\n",$debuglevel);
+	#system("pwd");
+	#system("ls");
 }
 ###### tie to this unique test ######
 my $targetdir = '.';
-CondorTest::debug("Directory to change is $targetdir\n",1);
-opendir DH, $targetdir or die "Can not open $dir:$!\n";
-foreach $file (readdir DH)
+CondorTest::debug("Directory to change is $targetdir\n",$debuglevel);
+opendir DH, $targetdir or die "Can not open $targetdir:$!\n";
+foreach my $file (readdir DH)
 {
-	$new = $file . ".new";
+	my $new = $file . ".new";
     my $line = "";
     next if $file =~ /^\.\.?$/;
     next if $file =~ /^.*\.txt$/;
     next if $file =~ /^.*\.tar\.gz$/;
-	CondorTest::debug("Edit $file.......\n",1);
+	CondorTest::debug("Edit $file.......\n",$debuglevel);
 	open(OLD,"<$file") || die "Can not open $file:$!\n";
 	open(NEW,">$new") || die "Can not open $new:$!\n";
 	while(<OLD>) {
@@ -134,7 +136,7 @@ while(<POSTFIGSRC>) {
 	}
 }
 close(POSTFIGSRC);
-close(PASRAMDONE);
+close(POSTFIGDONE);
 
 my $version = "fetch";
 # get a local scheduler running (side a)
@@ -143,24 +145,24 @@ my @fetch = split /\+/, $configloc;
 my $locconfig = shift @fetch;
 my $locport = shift @fetch;
 
-CondorTest::debug("---fetch config is $locconfig and local port is $locport---\n",1);
+CondorTest::debug("---fetch config is $locconfig and local port is $locport---\n",$debuglevel);
 
 $primarycollector = $primarycollector . ":" . $locport;
 
-CondorTest::debug("Primary collector for other nodes <<$primarycollector>>\n",1);
+CondorTest::debug("Primary collector for other nodes <<$primarycollector>>\n",$debuglevel);
 
 $ENV{CONDOR_CONFIG} = $locconfig;
-CondorTest::debug("New collector is this:\n",1);
+CondorTest::debug("New collector is this:\n",$debuglevel);
 system("condor_config_val COLLECTOR_HOST");
 
 my $bail = 0;
 
 my $fetchstatus = CondorTest::verbose_system("./fetch_work-basic.pl $work $results $version");
-CondorTest::debug("Status of work fetch is \"$fetchstatus\"\n",1);
+CondorTest::debug("Status of work fetch is \"$fetchstatus\"\n",$debuglevel);
 
-CondorTest::debug("Saving things and cleaning up....\n",1);
+CondorTest::debug("Saving things and cleaning up....\n",$debuglevel);
 
-system("cp *fetck_work-basic* $mysaveme");
+system("cp *fetch_work-basic* $mysaveme");
 
 if( -e "$mysubmitnm" )
 {
@@ -178,15 +180,15 @@ if( -e "$mysubmitnmlog" )
 }
 
 CondorTest::KillPersonal($locconfig);
-system("date");
+print scalar localtime() . "\n";
 
 if( $fetchstatus != 0 )
 {
 	# actual test failed but we allowed cleanup
-	CondorTest::debug("fetck_work-basic FAILED\n",1);
-	system("date");
+	CondorTest::debug("fetck_work-basic FAILED\n",$debuglevel);
+	print scalar localtime() . "\n";
 	exit(1);
 }
 
-CondorTest::debug("fetck_work-basic SUCCESS\n",1);
+CondorTest::debug("fetck_work-basic SUCCESS\n",$debuglevel);
 exit(0);

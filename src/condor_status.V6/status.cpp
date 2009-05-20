@@ -59,6 +59,7 @@ bool            javaMode = false;
 bool			vmMode = false;
 char 		*target = NULL;
 ClassAd		*targetAd = NULL;
+ArgList projList;		// Attributes that we want the server to send us
 
 // instantiate templates
 
@@ -245,6 +246,34 @@ main (int argc, char *argv[])
 
 	// fetch the query
 	QueryResult q;
+
+	if ((mode == MODE_STARTD_NORMAL) && (ppStyle == PP_STARTD_NORMAL)) {
+		projList.AppendArg("Name");
+		projList.AppendArg("Opsys");
+		projList.AppendArg("Arch");
+		projList.AppendArg("State");
+		projList.AppendArg("Activity");
+		projList.AppendArg("LoadAvg");
+		projList.AppendArg("Memory");
+		projList.AppendArg("ActvtyTime");
+		projList.AppendArg("MyCurrentTime");
+		projList.AppendArg("EnteredCurrentActivity");
+	}
+
+	// Calculate the projected arguments, and insert into
+	// the projection query attribute
+
+	MyString quotedProjStr;
+	MyString projStrError;
+
+	projList.GetArgsStringV2Quoted(&quotedProjStr, &projStrError);
+
+	MyString projStr("projection = ");
+	projStr += quotedProjStr;
+		// If it is empty, it's just quotes
+	if (quotedProjStr.Length() > 2) {
+		query->addExtraAttribute(projStr.Value());
+	}
 
 	// if diagnose was requested, just print the query ad
 	if (diagnose) {
@@ -703,6 +732,7 @@ secondPass (int argc, char *argv[])
 		}
 		if (matchPrefix (argv[i], "-format", 2)) {
 			pm.registerFormat (argv[i+1], argv[i+2]);
+			projList.AppendArg(argv[i+2]);
 			if (diagnose) {
 				printf ("Arg %d --- register format [%s] for [%s]\n",
 						i, argv[i+1], argv[i+2]);

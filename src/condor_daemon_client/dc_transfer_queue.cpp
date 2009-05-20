@@ -165,7 +165,7 @@ DCTransferQueue::RequestTransferQueueSlot(bool downloading,char const *fname,cha
 		// amount of time or risk not responding to the file transfer
 		// peer in time, so ignore the timeout multiplier and set the
 		// timeout exactly as specified.
-	m_xfer_queue_sock = reliSock( timeout, &errstack, false, true );
+	m_xfer_queue_sock = reliSock( timeout, 0, &errstack, false, true );
 
 	if( !m_xfer_queue_sock ) {
 		m_xfer_rejected_reason.sprintf(

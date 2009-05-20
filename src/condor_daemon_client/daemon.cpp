@@ -411,7 +411,7 @@ Daemon::display( FILE* fp )
 //////////////////////////////////////////////////////////////////////
 
 ReliSock*
-Daemon::reliSock( int sec, CondorError* errstack, bool non_blocking, bool ignore_timeout_multiplier )
+Daemon::reliSock( int timeout, time_t deadline, CondorError* errstack, bool non_blocking, bool ignore_timeout_multiplier )
 {
 	if( !checkAddr() ) {
 			// this already deals w/ _error for us...
@@ -420,7 +420,9 @@ Daemon::reliSock( int sec, CondorError* errstack, bool non_blocking, bool ignore
 	ReliSock* sock;
 	sock = new ReliSock();
 
-	if( !connectSock(sock,sec,errstack,non_blocking,ignore_timeout_multiplier) )
+	sock->set_deadline( deadline );
+
+	if( !connectSock(sock,timeout,errstack,non_blocking,ignore_timeout_multiplier) )
 	{
 		delete sock;
 		return NULL;
@@ -430,7 +432,7 @@ Daemon::reliSock( int sec, CondorError* errstack, bool non_blocking, bool ignore
 }
 
 SafeSock*
-Daemon::safeSock( int sec, CondorError* errstack, bool non_blocking )
+Daemon::safeSock( int timeout, time_t deadline, CondorError* errstack, bool non_blocking )
 {
 	if( !checkAddr() ) {
 			// this already deals w/ _error for us...
@@ -439,7 +441,9 @@ Daemon::safeSock( int sec, CondorError* errstack, bool non_blocking )
 	SafeSock* sock;
 	sock = new SafeSock();
 
-	if( !connectSock(sock,sec,errstack,non_blocking) )
+	sock->set_deadline( deadline );
+
+	if( !connectSock(sock,timeout,errstack,non_blocking) )
 	{
 		delete sock;
 		return NULL;
@@ -524,14 +528,14 @@ Daemon::startCommand( int cmd, Sock* sock, int timeout, CondorError *errstack, S
 
 Sock *
 Daemon::makeConnectedSocket( Stream::stream_type st,
-							 int timeout, CondorError* errstack,
-							 bool non_blocking )
+							 int timeout, time_t deadline,
+							 CondorError* errstack, bool non_blocking )
 {
 	switch( st ) {
 	case Stream::reli_sock:
-		return reliSock(timeout, errstack, non_blocking);
+		return reliSock(timeout, deadline, errstack, non_blocking);
 	case Stream::safe_sock:
-		return safeSock(timeout, errstack, non_blocking);
+		return safeSock(timeout, deadline, errstack, non_blocking);
 	}
 
 	EXCEPT( "Unknown stream_type (%d) in Daemon::makeConnectedSocket",
@@ -551,7 +555,7 @@ Daemon::startCommand( int cmd, Stream::stream_type st,Sock **sock,int timeout, C
 	// Also, there's no one to delete the Sock.
 	ASSERT(!nonblocking || callback_fn);
 
-	*sock = makeConnectedSocket(st,timeout,errstack,nonblocking);
+	*sock = makeConnectedSocket(st,timeout,0,errstack,nonblocking);
 	if( ! *sock ) {
 		if ( callback_fn ) {
 			(*callback_fn)( false, NULL, errstack, misc_data );

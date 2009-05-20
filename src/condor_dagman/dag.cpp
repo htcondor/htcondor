@@ -47,6 +47,9 @@
 #include "condor_daemon_core.h"
 #include "extArray.h"
 #include "HashTable.h"
+#include <set>
+
+using namespace std;
 
 const CondorID Dag::_defaultCondorId;
 
@@ -1888,17 +1891,17 @@ void Dag::WriteRescue (const char * rescue_file, const char * datafile)
     fprintf (fp, "\n");
     it.ToBeforeFirst();
     while (it.Next(job)) {
-        SimpleList<JobID_t> & _queue = job->GetQueueRef(Job::Q_CHILDREN);
-        if (!_queue.IsEmpty()) {
+
+        set<JobID_t> & _queue = job->GetQueueRef(Job::Q_CHILDREN);
+        if (!_queue.empty()) {
             fprintf (fp, "PARENT %s CHILD", job->GetJobName());
-            
-            SimpleListIterator<JobID_t> jobit (_queue);
-            JobID_t jobID;
-            while (jobit.Next(jobID)) {
-                Job * child = FindNodeByNodeID( jobID );
+
+			set<JobID_t>::const_iterator qit;
+			for (qit = _queue.begin(); qit != _queue.end(); qit++) {
+                Job * child = FindNodeByNodeID( *qit );
                 ASSERT( child != NULL );
                 fprintf (fp, " %s", child->GetJobName());
-            }
+			}
             fprintf (fp, "\n");
         }
     }
@@ -1930,11 +1933,11 @@ Dag::TerminateJob( Job* job, bool recovery )
     // Report termination to all child jobs by removing parent's ID from
     // each child's waiting queue.
     //
-    SimpleList<JobID_t> & qp = job->GetQueueRef(Job::Q_CHILDREN);
-    SimpleListIterator<JobID_t> iList (qp);
-    JobID_t childID;
-    while (iList.Next(childID)) {
-        Job * child = FindNodeByNodeID( childID );
+    set<JobID_t> & qp = job->GetQueueRef(Job::Q_CHILDREN);
+
+	set<JobID_t>::const_iterator qit;
+	for (qit = qp.begin(); qit != qp.end(); qit++) {
+        Job * child = FindNodeByNodeID( *qit );
         ASSERT( child != NULL );
         child->Remove(Job::Q_WAITING, job->GetJobID());
 		// if child has no more parents in its waiting queue, submit it
@@ -1942,7 +1945,8 @@ Dag::TerminateJob( Job* job, bool recovery )
 			child->IsEmpty( Job::Q_WAITING ) && recovery == FALSE ) {
 			StartNode( child, false );
 		}
-    }
+	}
+
 		// this is a little ugly, but since this function can be
 		// called multiple times for the same job, we need to be
 		// careful not to double-count...
@@ -1996,6 +2000,11 @@ Dag::RestartNode( Job *node, bool recovery )
 				  node->GetRetryMax() );
 	if( !recovery ) {
 		StartNode( node, true );
+	} else {
+		// Doing this fixes gittrac #481 (recovery fails on a DAG that
+		// has retried nodes).  (See SubmitNodeJob() for where this
+		// gets done during "normal" running.)
+		node->_CondorID = _defaultCondorId;
 	}
 }
 
@@ -2012,18 +2021,15 @@ Dag::DFSVisit (Job * job)
 	job->_visited = true; 
 	
 	//Get the children of current job	
-	SimpleList <JobID_t> & children = job->GetQueueRef(Job::Q_CHILDREN);
-	SimpleListIterator <JobID_t> child_itr (children); 
-	
-	JobID_t childID;
-	child_itr.ToBeforeFirst();
-	
-	while (child_itr.Next(childID))
+	set<JobID_t> & children = job->GetQueueRef(Job::Q_CHILDREN);
+	set<JobID_t>::const_iterator child_itr;
+
+	for (child_itr = children.begin(); child_itr != children.end(); child_itr++)
 	{
-		Job * child = FindNodeByNodeID( childID );
+		Job * child = FindNodeByNodeID( *child_itr );
 		DFSVisit (child);
 	}
-
+	
 	DFS_ORDER++;
 	job->_dfsOrder = DFS_ORDER;
 }		
@@ -2034,7 +2040,6 @@ Dag::isCycle ()
 {
 	bool cycle = false; 
 	Job * job;
-	JobID_t childID;
 	ListIterator <Job> joblist (_jobs);
 	SimpleListIterator <JobID_t> child_list;
 
@@ -2046,7 +2051,7 @@ Dag::isCycle ()
 	while (joblist.Next(job))
 	{
   		if (!job->_visited &&
-			job->GetQueueRef(Job::Q_PARENTS).Number()==0)
+			job->GetQueueRef(Job::Q_PARENTS).size()==0)
 			DFSVisit (job);	
 	}	
 
@@ -2054,11 +2059,12 @@ Dag::isCycle ()
 	joblist.ToBeforeFirst();	
 	while (joblist.Next(job))
 	{
-		child_list.Initialize(job->GetQueueRef(Job::Q_CHILDREN));
-		child_list.ToBeforeFirst();
-		while (child_list.Next(childID))
-		{
-			Job * child = FindNodeByNodeID( childID );
+
+		set<JobID_t> &cset = job->GetQueueRef(Job::Q_CHILDREN);
+		set<JobID_t>::const_iterator cit;
+
+		for(cit = cset.begin(); cit != cset.end(); cit++) {
+			Job * child = FindNodeByNodeID( *cit );
 
 			//No child's DFS order should be smaller than parent's
 			if (child->_dfsOrder >= job->_dfsOrder) {
@@ -2069,7 +2075,7 @@ Dag::isCycle ()
 #endif 			
 				cycle = true;
 			}
-		}		
+		}
 	}
 	return cycle;
 }
@@ -2096,16 +2102,15 @@ Dag::CheckForDagAbort(Job *job, const char *type)
 const MyString
 Dag::ParentListString( Job *node, const char delim ) const
 {
-	SimpleListIterator <JobID_t> parent_list;
-	JobID_t parentID;
 	Job* parent;
 	const char* parent_name = NULL;
 	MyString parents_str;
 
-	parent_list.Initialize( node->GetQueueRef( Job::Q_PARENTS ) );
-	parent_list.ToBeforeFirst();
-	while( parent_list.Next( parentID ) ) {
-		parent = FindNodeByNodeID( parentID );
+	set<JobID_t> &parent_list = node->GetQueueRef( Job::Q_PARENTS );
+	set<JobID_t>::const_iterator pit;
+
+	for (pit = parent_list.begin(); pit != parent_list.end(); pit++) {
+		parent = FindNodeByNodeID( *pit );
 		parent_name = parent->GetJobName();
 		ASSERT( parent_name );
 		if( ! parents_str.IsEmpty() ) {
@@ -2449,18 +2454,17 @@ Dag::DumpDotFileArcs(FILE *temp_dot_file)
 	joblist.ToBeforeFirst();	
 	while (joblist.Next(parent)) {
 		Job        *child;
-		JobID_t                      childID;
 		SimpleListIterator <JobID_t> child_list;
 		const char                   *parent_name;
 		const char                   *child_name;
 		
 		parent_name = parent->GetJobName();
-		
-		child_list.Initialize(parent->GetQueueRef(Job::Q_CHILDREN));
-		child_list.ToBeforeFirst();
-		while (child_list.Next(childID)) {
-			
-			child = FindNodeByNodeID( childID );
+
+		set<JobID_t> &cset = parent->GetQueueRef(Job::Q_CHILDREN);
+		set<JobID_t>::const_iterator cit;
+
+		for (cit = cset.begin(); cit != cset.end(); cit++) {
+			child = FindNodeByNodeID( *cit );
 			
 			child_name  = child->GetJobName();
 			if (parent_name != NULL && child_name != NULL) {

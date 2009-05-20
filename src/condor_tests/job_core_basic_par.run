@@ -19,37 +19,39 @@
 ##**************************************************************
 
 use CondorTest;
+use strict;
+use warnings;
 
-
-$cmd_template = "job_core_basic_par.template";
-$testdesc =  'job_core_basic_par - Simple parallel job';
-$testname = "job_core_basic_par";
-$cmd = "job_core_basic_par.cmd";
-$corename = "job_core_basic_par";
+my $cmd_template = "job_core_basic_par.template";
+my $testdesc =  'job_core_basic_par - Simple parallel job';
+my $testname = "job_core_basic_par";
+my $cmd = "job_core_basic_par.cmd";
+my $corename = "job_core_basic_par";
+my $debuglevel = 2;
 
 # where am I running
-$currenthost = CondorTest::getFqdnHost();
+my $currenthost = CondorTest::getFqdnHost();
 CondorTest::fullchomp($currenthost);
 
-system("date");
+print scalar localtime() . "\n";
 
-$mypid = $$;
-$mysaveme = $corename . ".saveme";
+my $mypid = $$;
+my $mysaveme = $corename . ".saveme";
 
 if($mypid == 0) {
 	die "Saveme setup for test failed\n";
 }
 
-$mysubmitnm = $corename . $mypid . ".cmd";
-$mysubmitnmcmdout = $corename . $mypid . ".cmd.out";
-$mysubmitnmlog = $corename . $mypid . ".log" ;
-$mysubmitnmerr = $corename . $mypid . ".err" . "\$(NODE)";
-$mysubmitnmout = $corename . $mypid . ".out" . "\$(NODE)";
-$mycorenm = $corename . ".cmd";
-$mycorenmcmdout = $corename . ".cmd.out";
-$mycorenmlog = $corename . ".log";
-$mycorenmerr = $corename . ".err";
-$mycorenmout = $corename . ".out";
+my $mysubmitnm = $corename . $mypid . ".cmd";
+my $mysubmitnmcmdout = $corename . $mypid . ".cmd.out";
+my $mysubmitnmlog = $corename . $mypid . ".log" ;
+my $mysubmitnmerr = $corename . $mypid . ".err" . "\$(NODE)";
+my $mysubmitnmout = $corename . $mypid . ".out" . "\$(NODE)";
+my $mycorenm = $corename . ".cmd";
+my $mycorenmcmdout = $corename . ".cmd.out";
+my $mycorenmlog = $corename . ".log";
+my $mycorenmerr = $corename . ".err";
+my $mycorenmout = $corename . ".out";
 
 #print "Master PID is $mypid\n";
 #print "Master PID submit file is $mysubmitnm\n";
@@ -60,11 +62,11 @@ my @parallel = split /\+/, $configrem;
 my $parallelconfig = shift @parallel;
 my $parallelport = shift @parallel;
 
-CondorTest::debug("---Parallel config is $parallelconfig and remote port is $parallelport---\n",1);
+CondorTest::debug("---Parallel config is $parallelconfig and remote port is $parallelport---\n",$debuglevel);
 
 $ENV{CONDOR_CONFIG} = $parallelconfig;
 
-CondorTest::debug("Set config to $parallelconfig\n",1);
+CondorTest::debug("Set config to $parallelconfig\n",$debuglevel);
 
 #print "Looking for schedd for Basic Parallel Test\n";
 system("condor_status -pool $currenthost:$parallelport -schedd -format '%s\n' Name");
@@ -111,8 +113,8 @@ close(TPLATE);
 close(CSUB);
 
 
-my $result = system("./job_core_basic_par.pl $mysubmitnm");
-CondorTest::debug("Result of basic paarallel  job is  $result\n",1);
+my $result = system("./job_core_basic_par.pl $mysubmitnm $mypid");
+CondorTest::debug("Result of basic paarallel  job is  $result\n",$debuglevel);
 
 
 system("cp *job_core_basic_par* $mysaveme");
@@ -133,7 +135,7 @@ if( -e "$mysubmitnmlog" )
 }
 
 CondorTest::KillPersonal($parallelconfig);
-system("date");
+print scalar localtime() . "\n";
 
 if($result != 0)
 {
@@ -141,5 +143,5 @@ if($result != 0)
 	exit(1);
 }
 
-CondorTest::debug("job_core_basic_par SUCCESS\n",1);
+CondorTest::debug("job_core_basic_par SUCCESS\n",$debuglevel);
 exit(0);

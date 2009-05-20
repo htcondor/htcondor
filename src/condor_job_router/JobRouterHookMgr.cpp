@@ -130,7 +130,9 @@ JobRouterHookMgr::getHookPath(HookType hook_type, classad::ClassAd ad)
 	}
 	if (false == ad.EvaluateAttrString(ATTR_HOOK_KEYWORD, keyword))
 	{
-		keyword = m_default_hook_keyword;
+		if ( m_default_hook_keyword ) {
+			keyword = m_default_hook_keyword;
+		}
 	}
 	if (0 == keyword.length())
 	{

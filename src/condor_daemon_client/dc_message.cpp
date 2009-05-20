@@ -34,11 +34,23 @@ DCMsg::DCMsg(int cmd):
 	m_delivery_status( DELIVERY_PENDING ),
 	m_stream_type( Stream::reli_sock ),
 	m_timeout( DEFAULT_CEDAR_TIMEOUT ),
+	m_deadline( 0 ),
 	m_raw_protocol( false )
 {
 }
 
 DCMsg::~DCMsg() {
+}
+
+void
+DCMsg::setDeadlineTimeout(int timeout)
+{
+	if( timeout < 0 ) {
+		setDeadlineTime(0);
+	}
+	else {
+		setDeadlineTime(time(NULL)+timeout);
+	}
 }
 
 void
@@ -93,10 +105,13 @@ DCMsg::setMessenger(DCMessenger *messenger)
 }
 
 void
-DCMsg::cancelMessage()
+DCMsg::cancelMessage(char const *reason)
 {
 	deliveryStatus( DELIVERY_CANCELED );
-	addError( CEDAR_ERR_CANCELED, "operation was canceled" );
+	if( !reason ) {
+		reason = "operation was canceled";
+	}
+	addError( CEDAR_ERR_CANCELED, reason );
 
 	if( m_messenger.get() ) {
 		m_messenger->cancelMessage( this );
@@ -267,6 +282,14 @@ void DCMessenger::startCommand( classy_counted_ptr<DCMsg> msg )
 		return;
 	}
 
+	time_t deadline = msg->getDeadline();
+	if( deadline && deadline < time(NULL) ) {
+		msg->addError(CEDAR_ERR_DEADLINE_EXPIRED,
+					  "deadline for delivery of this message expired");
+		msg->callMessageSendFailed( this );
+		return;
+	}
+
 		// For a UDP message, we may need to register two sockets, one for
 		// the SafeSock and another for a ReliSock to establish the
 		// security session.
@@ -293,7 +316,7 @@ void DCMessenger::startCommand( classy_counted_ptr<DCMsg> msg )
 	m_callback_sock = m_sock.get();
 	if( !m_callback_sock ) {
 		const bool nonblocking = true;
-		m_callback_sock = m_daemon->makeConnectedSocket(st,msg->getTimeout(),&msg->m_errstack,nonblocking);
+		m_callback_sock = m_daemon->makeConnectedSocket(st,msg->getTimeout(),msg->getDeadline(),&msg->m_errstack,nonblocking);
 		if( !m_callback_sock ) {
 			msg->callMessageSendFailed( this );
 			return;
@@ -479,6 +502,10 @@ DCMessenger::readMsg( classy_counted_ptr<DCMsg> msg, Sock *sock )
 	sock->decode();
 
 	bool done_with_sock = true;
+
+	if( sock->deadline_expired() ) {
+		msg->cancelMessage("deadline expired");
+	}
 
 	if( msg->deliveryStatus() == DCMsg::DELIVERY_CANCELED ) {
 		msg->callMessageReceiveFailed( this );

@@ -160,7 +160,7 @@ static void WriteCompletionVisa(ClassAd* ad);
 
 int	WallClockCkptInterval = 0;
 static bool gridman_per_job = false;
-int STARTD_CONTACT_TIMEOUT = 45;
+int STARTD_CONTACT_TIMEOUT = 45;  // how long to potentially block
 
 #ifdef CARMI_OPS
 struct shadow_rec *find_shadow_by_cluster( PROC_ID * );
@@ -906,6 +906,7 @@ Scheduler::count_jobs()
 	sprintf(tmp, "%s = \"%s\"", ATTR_SCHEDD_NAME, Name);
 	m_ad->InsertOrUpdate(tmp);
 
+	m_ad->SetMyTypeName( SUBMITTER_ADTYPE );
 
 	for ( i=0; i<N_Owners; i++) {
 	  sprintf(tmp, "%s = %d", ATTR_RUNNING_JOBS, Owners[i].JobsRunning);
@@ -1085,6 +1086,8 @@ Scheduler::count_jobs()
 		  }
 	  }
 	}
+
+	m_ad->SetMyTypeName( SCHEDD_ADTYPE );
 
 	// If JobsIdle > 0, then we are asking the negotiator to contact us. 
 	// Record the earliest time we asked the negotiator to talk to us.
@@ -4729,7 +4732,7 @@ Scheduler::negotiate(int command, Stream* s)
 
 	if (FlockNegotiators) {
 		// first, check if this is our local negotiator
-		struct in_addr endpoint_addr = (sock->endpoint())->sin_addr;
+		struct in_addr endpoint_addr = (sock->peer_addr())->sin_addr;
 		struct hostent *hent;
 		bool match = false;
 		Daemon negotiator (DT_NEGOTIATOR);
@@ -4774,7 +4777,7 @@ Scheduler::negotiate(int command, Stream* s)
 		}
 		if (!match) {
 			dprintf(D_ALWAYS, "Unknown negotiator (%s).  "
-					"Aborting negotiation.\n", sin_to_string(sock->endpoint()));
+					"Aborting negotiation.\n", sock->peer_ip_str());
 			return (!(KEEP_STREAM));
 		}
 	}
@@ -5434,7 +5437,7 @@ Scheduler::release_claim(int, Stream *sock)
 	match_rec *mrec;
 
 	dprintf( D_ALWAYS, "Got RELEASE_CLAIM from %s\n", 
-			 sin_to_string(((Sock*)sock)->endpoint()) );
+			 sock->peer_description() );
 
 	if (!sock->get_secret(claim_id)) {
 		dprintf (D_ALWAYS, "Failed to get ClaimId\n");
@@ -8476,7 +8479,7 @@ void
 _mark_job_running(PROC_ID* job_id)
 {
 	int status;
-	int orig_max;
+	int orig_max = 1; // If it was not set this is the same default
 
 	GetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_STATUS, &status);
 	GetAttributeInt(job_id->cluster, job_id->proc, ATTR_MAX_HOSTS, &orig_max);
@@ -11094,6 +11097,10 @@ Scheduler::sendReschedule()
 	msg->setStreamType(st);
 	msg->setTimeout(NEGOTIATOR_CONTACT_TIMEOUT);
 
+	// since we may be sending reschedule periodically, make sure they do
+	// not pile up
+	msg->setDeadlineTimeout( 300 );
+
 	negotiator->sendMsg( msg.get() );
 
 	Daemon* d;
@@ -11441,6 +11448,9 @@ sendAlive( match_rec* mrec )
 
 	msg->setSuccessDebugLevel(D_PROTOCOL);
 	msg->setTimeout( STARTD_CONTACT_TIMEOUT );
+	// since we send these messages periodically, we do not want
+	// any single attempt to hang around forever and potentially pile up
+	msg->setDeadlineTimeout( 300 );
 	Stream::stream_type st = startd->hasUDPCommandPort() ? Stream::safe_sock : Stream::reli_sock;
 	msg->setStreamType( st );
 	msg->setSecSessionId( mrec->secSessionId() );

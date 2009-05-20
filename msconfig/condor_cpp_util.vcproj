@@ -6756,11 +6756,11 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\user_log.c++.h"
+			RelativePath="..\src\condor_c++_util\read_user_log.c++.h"
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\user_log.cpp"
+			RelativePath="..\src\condor_c++_util\read_user_log.cpp"
 			>
 			<FileConfiguration
 				Name="Debug|Win32"
@@ -6812,28 +6812,16 @@
 			>
 		</File>
 		<File
+			RelativePath="..\src\condor_c++_util\user_log_header.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\user_log_header.h"
+			>
+		</File>
+		<File
 			RelativePath="..\src\condor_c++_util\utc_time.cpp"
 			>
-			<FileConfiguration
-				Name="Debug|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					AdditionalIncludeDirectories=""
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Release|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					AdditionalIncludeDirectories=""
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
 			<FileConfiguration
 				Name="Debug (Express)|Win32"
 				>
@@ -6882,29 +6870,17 @@
 					CompileAs="2"
 				/>
 			</FileConfiguration>
-			<FileConfiguration
-				Name="Debug (Express)|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					AdditionalIncludeDirectories=""
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Release (Express)|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					AdditionalIncludeDirectories=""
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\vm_univ_utils.h"
+			RelativePath="..\src\condor_c++_util\user_job_policy.h"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\user_log.c++.h"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\user_log_header.cpp"
 			>
 		</File>
 		<File
@@ -7009,6 +6985,14 @@
 		</File>
 		<File
 			RelativePath="..\src\condor_c++_util\windows_firewall.h"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\write_user_log.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\write_user_log.h"
 			>
 		</File>
 	</Files>

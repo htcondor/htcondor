@@ -21,21 +21,24 @@
 use CondorTest;
 use Cwd;
 #use Time::localtime;
+use strict;
+use warnings;
 
-$cmd = "cmd_wait_shows.cmd";
+my $cmd = "cmd_wait_shows.cmd";
+my $debuglevel = 2;
 
 my $pid = $$;
 system("rm -rf $pid");
 system("mkdir $pid");
 my $curcwd = getcwd();
-CondorTest::debug("current directory is $curcwd\n",1);
+CondorTest::debug("current directory is $curcwd\n",$debuglevel);
 
 my $socketname = "cmd_wait";
 my $resultfile = $curcwd . "/" . $pid . "/results";
-my $flowlog = $curcwd . "/" . $pid . "/cmd_wait_shows.log";
+my $flowlog = $curcwd . "/" . $pid . "/cmd_wait_shows-all.log";
 my $writelog = "./x_write_joblog_events.exe";
 
-CondorTest::debug("Result File is $resultfile\n",1);
+CondorTest::debug("Result File is $resultfile\n",$debuglevel);
 
 system("chmod -R 777 .");
 
@@ -51,9 +54,11 @@ system("chmod -R 777 .");
 
 # seed log with 1 runs
 system("$writelog $flowlog submit 6");
+print "Drop a submit into log.\n";
 
 # Start condor_wait
-$spawncmd = "condor_wait $flowlog";
+my $spawncmd = "condor_wait $flowlog";
+print "Start condor_wait on log.\n";
 CondorTest::spawn_cmd($spawncmd, $resultfile);
 
 sleep(5);
@@ -62,33 +67,40 @@ system("$writelog $flowlog execute 6");
 
 # end 1 runs
 system("$writelog $flowlog terminated 6");
+print "Drop execute and terminate events into log.\n";
 
+print "Wait for results - ";
 while(!(-f $resultfile)) {
-	CondorTest::debug("Waiting for $resultfile to exist\n",1);
+	CondorTest::debug("Waiting for $resultfile to exist\n",$debuglevel);
 	sleep(2);
 }
 
-CondorTest::debug("$resultfile exits!\n",1);
+CondorTest::debug("$resultfile exits!\n",$debuglevel);
 
 while( (-s $resultfile) == 0 ) {
-	CondorTest::debug("Waiting for results\n",1);
+	CondorTest::debug("Waiting for results\n",$debuglevel);
 	sleep(2);
 }
 
-CondorTest::debug("$resultfile not empty!\n",1);
+print "ok\n";
+CondorTest::debug("$resultfile not empty!\n",$debuglevel);
 
+print "Checking exit status - ";
 open(RES,"<$resultfile") || die "Can not open <$resultfile>:$!\n";
-$line = "";
+my $line = "";
 while(<RES>) {
 	$line = $_;
 	if($line =~ /^Exit\s+(\d+).*$/) {
 		if($1 == 0) {
-			CondorTest::debug("Exit status of 0, expected. Good!\n",1);
+			CondorTest::debug("Exit status of 0, expected. Good!\n",$debuglevel);
+			print "ok\n";
 			exit(0);
 		} else {
+			print "bad\n";
 			exit(1);
 		}
 	} else {
+			print "bad\n";
 			exit(1);
 	}
 }

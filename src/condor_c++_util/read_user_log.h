@@ -34,14 +34,13 @@
 /* Predeclare some classes */
 class FileLockBase;
 class FileLock;
-class UserLog;
 
 
 /** API for reading a log file.
 
     This class was written at the same time the ULogEvent class was written,
     so it does not contain the old deprecated functions and parameters that
-    the UserLog class is plagued with.
+    the WriteUserLog class is plagued with.
 
 	There is one know problem with the reader:
 	First, let's define 3 files:
@@ -106,7 +105,7 @@ class ReadUserLog
 		LOG_STATUS_ERROR = -1,
 		LOG_STATUS_NOCHANGE,
 		LOG_STATUS_GROWN,
-		LOG_STATUS_SHRUNK,
+		LOG_STATUS_SHRUNK
 	};
 
 	/** Simple error information
@@ -261,8 +260,14 @@ class ReadUserLog
 
     /** Check the status of the file - has it grown, shrunk, etc.
 		@return LOG_STATUS_{ERROR,NOCHANGE,GROWN,SHRUNK}
-	 */
-    FileStatus CheckFileStatus( void );
+	*/
+	FileStatus CheckFileStatus( void );	
+
+    /** Check the status of the file - has it grown, shrunk, etc.
+		@param reference: returned as true of the file is empty
+		@return LOG_STATUS_{ERROR,NOCHANGE,GROWN,SHRUNK}
+	*/
+	FileStatus CheckFileStatus( bool &is_emtpy );	
 
 	/** Set whether the log file should be treated as "old-style" (non-XML).
 	    The constructor will attempt to figure this out on its own.

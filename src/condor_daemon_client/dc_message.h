@@ -103,6 +103,16 @@ public:
 	void setTimeout(int timeout=DEFAULT_CEDAR_TIMEOUT) {
 		m_timeout = timeout;
 	}
+
+		// Set the time past which attempts to deliver this message
+		// should be aborted.  0 means no deadline.
+	void setDeadlineTime(time_t deadline) {
+		m_deadline = deadline;
+	}
+		// Set the time from now past which attempts to deliver this message
+		// should be aborted.  timeout<0 means no deadline.
+	void setDeadlineTimeout(int timeout);
+
 		// Set to true to use raw CEDAR protocol with no security negotiation
 	void setRawProtocol(bool raw_protocol=false) {
 		m_raw_protocol=raw_protocol;
@@ -114,6 +124,7 @@ public:
 
 	Stream::stream_type getStreamType() {return m_stream_type;}
 	int getTimeout() {return m_timeout;}
+	time_t getDeadline() {return m_deadline;}
 	bool getRawProtocol() {return m_raw_protocol;}
 	char const *getSecSessionId() {
 		return m_sec_session_id.Value()[0] ? m_sec_session_id.Value() : NULL;
@@ -210,7 +221,7 @@ public:
 		   The callback (if any) will still be called.  The delivery status
 		   will be set to DELIVERY_CANCELED.
 		*/
-	virtual void cancelMessage();
+	virtual void cancelMessage(char const *reason=NULL);
 
 	friend class DCMessenger;
 private:
@@ -228,6 +239,7 @@ private:
 		// CEDAR connection parameters
 	Stream::stream_type m_stream_type;
 	int m_timeout;
+	time_t m_deadline;
 	bool m_raw_protocol;
 	MyString m_sec_session_id;
 

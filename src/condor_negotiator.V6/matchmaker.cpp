@@ -1799,7 +1799,12 @@ obtainAdsFromCollector (
 				}
 			}
 			startdAds.Insert(ad);
-		} else if( !strcmp(ad->GetMyTypeName(),SUBMITTER_ADTYPE) ) {
+		} else if( !strcmp(ad->GetMyTypeName(),SUBMITTER_ADTYPE) ||
+				   ( !strcmp(ad->GetMyTypeName(),SCHEDD_ADTYPE) &&
+					 !ad->Lookup(ATTR_NUM_USERS) ) ) {
+				// CRUFT: Before 7.3.2, submitter ads had a MyType of
+				//   "Scheduler". The only way to tell the difference
+				//   was that submitter ads didn't have ATTR_NUM_USERS.
     		ad->Assign(ATTR_TOTAL_TIME_IN_CYCLE, 0);
 			scheddAds.Insert(ad);
 		}

@@ -31,16 +31,14 @@ struct sigaction old;
 
 void catchsig( int sig )
 {
-		/*
 		printf("Generate lots of output.................\n");
         printf("%d\n",sig);
 		fflush(stdout);
-		*/
-		/*fsync(stdout);*/
-        printf("%d\n",sig);
+		fsync(stdout);
+		printf("%d\n",sig);
 		fflush(stdout);
 		signalcaught = sig;
-		exit(sig);
+		/*exit(sig);*/
 }
 
 int main(int argc, char **argv)
@@ -52,6 +50,19 @@ int main(int argc, char **argv)
 	sa.sa_handler = catchsig;
 	sigemptyset(&sa.sa_mask);
 	sa.sa_flags = SA_NODEFER;
+
+	sigset_t	set;
+	int 		caughtsig;
+	int 		n;
+
+	sigemptyset(&set);
+	for(n=1;n<15;n++) {
+		if(n != 9) {
+			sigaddset(&set,n);
+		}
+	}
+
+
 
 	/*signal( 1, (sighandler_t)&catchsig);*/
 	res = sigaction( 1, &sa, &old);
@@ -126,7 +137,10 @@ int main(int argc, char **argv)
 	{
 		printf("failed to replace handler intr 14\n");
 	}
-	while(1);
+	sigwait(&set,&caughtsig);
+	sleep(1);
+	printf("%d\n",caughtsig);
+	fflush(stdout);
 
 	return 0;
 }

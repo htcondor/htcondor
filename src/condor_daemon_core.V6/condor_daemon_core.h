@@ -1519,7 +1519,8 @@ class DaemonCore : public Service
     };
     void              DumpSocketTable(int, const char* = NULL);
     int               maxSocket;  // number of socket handlers to start with
-    int               nSock;      // number of socket handlers used
+    int               nSock;      // number of socket handler slots in use use
+	int				  nRegisteredSocks; // number of sockets registered, always < nSock
 	int               nPendingSockets; // number of sockets waiting on timers or any other callbacks
     ExtArray<SockEnt> *sockTable; // socket table; grows dynamically if needed
     int               initial_command_sock;  

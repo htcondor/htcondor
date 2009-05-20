@@ -173,7 +173,7 @@ CredDaemon::get_passwd_handler(int i, Stream *s)
 	if ( s->type() != Stream::reli_sock ) {
 		dprintf(D_ALWAYS,
 			"WARNING - password fetch attempt via UDP from %s\n",
-			sin_to_string(((Sock*)s)->endpoint()));
+			sin_to_string(((Sock*)s)->peer_addr()));
 		return;
 	}
 
@@ -182,14 +182,14 @@ CredDaemon::get_passwd_handler(int i, Stream *s)
 	if ( !sock->triedAuthentication() ) {
 		dprintf(D_ALWAYS,
 			"WARNING - password fetch attempt without authentication from %s\n",
-			sin_to_string(sock->endpoint()));
+			sin_to_string(sock->peer_addr()));
 		goto bail_out;
 	}
 
 	if ( !sock->get_encryption() ) {
 		dprintf(D_ALWAYS,
 			"WARNING - password fetch attempt without encryption from %s\n",
-			sin_to_string(sock->endpoint()));
+			sin_to_string(sock->peer_addr()));
 		goto bail_out;
 	}
 
@@ -217,7 +217,7 @@ CredDaemon::get_passwd_handler(int i, Stream *s)
 
 	client_user = strdup(sock->getOwner());
 	client_domain = strdup(sock->getDomain());
-	client_ipaddr = strdup(sin_to_string(sock->endpoint()));
+	client_ipaddr = strdup(sin_to_string(sock->peer_addr()));
 
 		// Now fetch the password from the secure store -- 
 		// If not LocalSystem, this step will fail.

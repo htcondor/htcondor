@@ -20,38 +20,43 @@
 
 
 use CondorTest;
+use strict;
+use warnings;
 
-$cmd1 = 'job_core_coredump-yes_std.cmd';
-$handle1 = 'job_core_coredump_std';
+my %wants_core;
+my $cmd1 = 'job_core_coredump-yes_std.cmd';
+my $handle1 = 'job_core_coredump_std';
 $wants_core{$handle1} = 1;
 
-$cmd2 = 'job_core_coredump-none_std.cmd';
-$handle2 = 'job_core_coredump_std';
+my $cmd2 = 'job_core_coredump-none_std.cmd';
+my $handle2 = 'job_core_coredump_std';
 $wants_core{$handle2} = 0;
+my $debuglevel = 2;
 
-$core_file = 'core';
+my $core_file = 'core';
 
-$CheckCoreFiles = sub {
+my $CheckCoreFiles = sub {
     my %info = @_;
     my $core = $info{"core"};
     my $handle = $info{"handle"};
     my $core_file_found = 0;
     my @expected_output;
 
-	CondorTest::debug("Callback for RegisterExitedAbnormal handle <<$handle/$info{'handle'}>> core <<$core/$info{'core'}",3); 
 	my %listoftests; 
 	$listoftests{"corename"} = "job_core_coredump_std";
 	$listoftests{"tests"} = [ "job_core_coredump-yes_std", "job_core_coredump-none_std"];
 	$listoftests{"extensions"} = [ ".cmd", ".cmd.out", ".err", ".out", ".log"];
 	CondorTest::MergeOutputFiles(\%listoftests);
 
-    CondorTest::debug("Checking for $core...",3);
-    if( $core ne "" && (-e $core) ) {
-		CondorTest::debug("yes.\n",3);
-		$core_file_found = 1;
-    } else {
-		CondorTest::debug("no.\n",3);
-    }
+	if(defined $core) {
+    	CondorTest::debug("Checking for $core...",3);
+    	if( $core ne "" && (-e $core) ) {
+			CondorTest::debug("yes.\n",3);
+			$core_file_found = 1;
+    	} else {
+			CondorTest::debug("no.\n",3);
+    	}
+	}
 
     if( $wants_core{$handle} ) {
 		$core_file_found || 
@@ -77,18 +82,24 @@ CondorTest::RegisterExitedAbnormal( $handle2, $CheckCoreFiles );
 CondorTest::debug("job_core_coredump-yes_std being called",3);
 $wants_core{$handle1} = 1;
 
+print "This part should create and return a core file - ";
 if( CondorTest::RunTest($handle1, $cmd1, 0) ) {
-    CondorTest::debug("$handle1: SUCCESS\n",1);
+	print "ok\n";
+    CondorTest::debug("$handle1: SUCCESS\n",$debuglevel);
 } else {
+	print "bad\n";
     die "$handle1: CondorTest::RunTest() failed\n";
 }
 
+print "This part should create but not return a core file - ";
 CondorTest::debug("job_core_coredump-none_std being called",3);
 $wants_core{$handle1} = 0;
 
 if( CondorTest::RunTest($handle2, $cmd2, 0) ) {
+	print "ok\n";
     CondorTest::debug("$handle2: SUCCESS\n",3);
 } else {
+	print "bad\n";
     die "$handle2: CondorTest::RunTest() failed\n";
 }
 

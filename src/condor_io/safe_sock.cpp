@@ -193,7 +193,7 @@ int SafeSock::end_of_message()
 }
 
 const char *
-SafeSock::sender_ip_str()
+SafeSock::my_ip_str()
 {
 	//In order to call getSockAddr(_sock), we would need to call
 	//::connect() on _sock, which changes semantics on what other
@@ -206,9 +206,9 @@ SafeSock::sender_ip_str()
 		return NULL;
 	}
 
-	if(_sender_ip_buf[0]) {
+	if(_my_ip_buf[0]) {
 		// return cached result
-		return &(_sender_ip_buf[0]);
+		return _my_ip_buf;
 	}
 
 	SafeSock s;
@@ -216,7 +216,7 @@ SafeSock::sender_ip_str()
 
 	if (s._state != sock_bound) {
 		dprintf(D_ALWAYS,
-		        "SafeSock::sender_ip_str() failed to bind: _state = %d\n",
+		        "SafeSock::my_ip_str() failed to bind: _state = %d\n",
 			  s._state); 
 		return NULL;
 	}
@@ -224,22 +224,22 @@ SafeSock::sender_ip_str()
 	if(::connect(s._sock, (sockaddr *)&_who, sizeof(sockaddr_in)) != 0) {
 #if defined(WIN32)
 		int lasterr = WSAGetLastError();
-		dprintf( D_ALWAYS, "SafeSock::sender_ip_str() failed to connect, errno = %d\n",
+		dprintf( D_ALWAYS, "SafeSock::my_ip_str() failed to connect, errno = %d\n",
 				 lasterr );
 #else
-		dprintf( D_ALWAYS, "SafeSock::sender_ip_str() failed to connect, errno = %d\n",
+		dprintf( D_ALWAYS, "SafeSock::my_ip_str() failed to connect, errno = %d\n",
 				 errno );
 #endif
 		return NULL;
 	}
 
 	struct sockaddr_in sin;
-	if(s.mypoint(&sin) == -1) {
+	if(s.my_addr(&sin) == -1) {
 		return NULL;
 	}
-	memset(&_sender_ip_buf, 0, IP_STRING_BUF_SIZE );
-	strcpy( _sender_ip_buf, inet_ntoa(sin.sin_addr) );
-	return &(_sender_ip_buf[0]);
+	strncpy( _my_ip_buf, inet_ntoa(sin.sin_addr), IP_STRING_BUF_SIZE );
+    _my_ip_buf[IP_STRING_BUF_SIZE-1] = '\0';
+	return _my_ip_buf;
 }
 
 int SafeSock::connect(
@@ -250,10 +250,6 @@ int SafeSock::connect(
 {
 	struct hostent	*hostp = NULL;
 	unsigned long	inaddr = 0;
-
-	// Remove any cached sender IP info, since the new target may route us
-	// through a different network interface.
-	_sender_ip_buf[0] = '\0';
 
 	if (!host || port < 0) return FALSE;
 
@@ -277,6 +273,8 @@ int SafeSock::connect(
 			memcpy(&_who.sin_addr, hostp->h_addr, sizeof(hostp->h_addr));
 		}
 	}
+
+    addr_changed();
 
 	// now that we have set _who (useful for getting informative
 	// peer_description), see if we should do a reverse connect

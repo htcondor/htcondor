@@ -227,23 +227,11 @@ _condor_dprintf_va( int flags, const char* fmt, va_list args )
 		return;
 	}
 
-	/* We want dprintf to be thread safe.  For now, we achieve this
-	 * with fairly coarse-grained mutex.
-	 */
-#ifdef WIN32
-	if ( _condor_dprintf_critsec == NULL ) {
-		_condor_dprintf_critsec = 
-			(CRITICAL_SECTION *)malloc(sizeof(CRITICAL_SECTION));
-		InitializeCriticalSection(_condor_dprintf_critsec);
-	}
-	EnterCriticalSection(_condor_dprintf_critsec);
-#elif defined(HAVE_PTHREADS)
-	pthread_mutex_lock(&_condor_dprintf_critsec);
-#endif
 
 #if !defined(WIN32) /* signals and umasks don't exist in WIN32 */
 
 	/* Block any signal handlers which might try to print something */
+	/* Note: do this BEFORE grabbing the _condor_dprintf_critsec mutex */
 	sigfillset( &mask );
 	sigdelset( &mask, SIGABRT );
 	sigdelset( &mask, SIGBUS );
@@ -257,7 +245,22 @@ _condor_dprintf_va( int flags, const char* fmt, va_list args )
 		   and the remote job has tried to set its umask or
 		   something.  -Derek Wright 6/11/98 */
 	old_umask = umask( 022 );
+#endif
 
+	/* We want dprintf to be thread safe.  For now, we achieve this
+	 * with fairly coarse-grained mutex. On Unix, signals that may result
+	 * in a call to dprintf() had better be blocked by now, or deadlock may 
+	 * occur.
+	 */
+#ifdef WIN32
+	if ( _condor_dprintf_critsec == NULL ) {
+		_condor_dprintf_critsec = 
+			(CRITICAL_SECTION *)malloc(sizeof(CRITICAL_SECTION));
+		InitializeCriticalSection(_condor_dprintf_critsec);
+	}
+	EnterCriticalSection(_condor_dprintf_critsec);
+#elif defined(HAVE_PTHREADS)
+	pthread_mutex_lock(&_condor_dprintf_critsec);
 #endif
 
 	saved_errno = errno;
@@ -369,22 +372,22 @@ _condor_dprintf_va( int flags, const char* fmt, va_list args )
 	errno = saved_errno;
 	DebugFlags = saved_flags;
 
-#if !defined(WIN32) // signals and umasks don't exist in WIN32
-
+#if !defined(WIN32) // umasks don't exist in WIN32
 		/* restore umask */
 	(void)umask( old_umask );
-
-		/* Let them signal handlers go!! */
-	(void) sigprocmask( SIG_SETMASK, &omask, 0 );
-
 #endif
 
+	/* Release mutex.  Note: we MUST do this before we renable signals */
 #ifdef WIN32
 	LeaveCriticalSection(_condor_dprintf_critsec);
 #elif defined(HAVE_PTHREADS)
 	pthread_mutex_unlock(&_condor_dprintf_critsec);
 #endif
 
+#if !defined(WIN32) // signals don't exist in WIN32
+		/* Let them signal handlers go!! */
+	(void) sigprocmask( SIG_SETMASK, &omask, 0 );
+#endif
 }
 
 int

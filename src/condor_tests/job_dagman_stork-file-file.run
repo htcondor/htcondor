@@ -33,7 +33,7 @@ CondorTest::debug("Working Directory is $topdir\n",1);
 $currenthost = CondorTest::getFqdnHost();
 CondorTest::fullchomp($currenthost);
 
-system("date");
+print scalar localtime() . "\n";
 
 $mypid = $$;
 $mysaveme = $corename . ".saveme";
@@ -138,7 +138,7 @@ if( -e "$mysubmitnmlog" )
 }
 
 CondorTest::KillPersonal($locconfig);
-system("date");
+print scalar localtime() . "\n";
 
 if( $run_result != 0 )
 {

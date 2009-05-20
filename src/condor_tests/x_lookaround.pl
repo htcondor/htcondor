@@ -24,7 +24,7 @@ my $request = $ARGV[0];
 print "My name is \"$name\"\n";
 
 print "This is the time: ";
-system("date");
+print scalar localtime() . "\n";
 
 print "This is the current directory: ";
 system("pwd");

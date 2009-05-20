@@ -23,8 +23,8 @@ use CondorTest;
 $testdesc =  'Condor PERIODIC_HOLD policy test - java U';
 $testname = "job_core_perhold_java";
 
-my $nostatus = CondorTest::verbose_system("job_core_perhold-false_java.pl");
-my $willstatus = CondorTest::verbose_system("job_core_perhold-true_java.pl");
+my $nostatus = CondorTest::verbose_system("./job_core_perhold-false_java.pl");
+my $willstatus = CondorTest::verbose_system("./job_core_perhold-true_java.pl");
 
 if($nostatus != 0)
 {

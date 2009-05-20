@@ -1,0 +1,38 @@
+Config job_dagman_depth_first.config
+
+Job A job_dagman_depth_first-nodeA.cmd
+
+Job B1-1 job_dagman_depth_first-nodeB.cmd
+Vars B1-1 nodename="$(JOB)"
+Job B1-2 job_dagman_depth_first-nodeB.cmd
+Vars B1-2 nodename="$(JOB)"
+Job B1-3 job_dagman_depth_first-nodeB.cmd
+Vars B1-3 nodename="$(JOB)"
+Parent A Child B1-1
+Parent B1-1 Child B1-2
+Parent B1-2 Child B1-3
+
+Job B2-1 job_dagman_depth_first-nodeB.cmd
+Vars B2-1 nodename="$(JOB)"
+Job B2-2 job_dagman_depth_first-nodeB.cmd
+Vars B2-2 nodename="$(JOB)"
+Job B2-3 job_dagman_depth_first-nodeB.cmd
+Vars B2-3 nodename="$(JOB)"
+Parent A Child B2-1
+Parent B2-1 Child B2-2
+Parent B2-2 Child B2-3
+
+Job B3-1 job_dagman_depth_first-nodeB.cmd
+Vars B3-1 nodename="$(JOB)"
+Job B3-2 job_dagman_depth_first-nodeB.cmd
+Vars B3-2 nodename="$(JOB)"
+Job B3-3 job_dagman_depth_first-nodeB.cmd
+Vars B3-3 nodename="$(JOB)"
+Parent A Child B3-1
+Parent B3-1 Child B3-2
+Parent B3-2 Child B3-3
+
+Job C job_dagman_depth_first-nodeC.cmd
+Parent B1-3 Child C
+Parent B2-3 Child C
+Parent B3-3 Child C

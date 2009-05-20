@@ -616,9 +616,9 @@ TESTCLASS(lib_eventlog-xml,core)
 TESTCLASS(lib_eventlog-xml,quick)
 TESTCLASS(lib_eventlog-xml,full)
 
-/* Test to verify that re-initialization of the eventlog does not cause
-   seg faults */
-DESC(lib_eventlog_base,"Test re-initialization of eventlog")
+/* Test to verify that re-initialization of the eventlog reader does not
+   cause seg faults */
+DESC(lib_eventlog_base,"Test re-initialization of eventlog reader")
 RUN(lib_eventlog_base)
 DEPS(lib_eventlog_base,lib_eventlog_base.exe)
 DEPS(lib_eventlog_base,lib_eventlog_base.exe)
@@ -887,6 +887,7 @@ TESTCLASS(job_core_err_java,core)
 TESTCLASS(job_core_err_java,quick)
 TESTCLASS(job_core_err_java,full)
 TESTCLASS(job_core_err_java,quicknolink)
+TESTCLASS(job_core_err_java,java)
 
 DESC(job_core_output_java,"Java Universe: basic output test")
 RUN(job_core_output_java)
@@ -894,6 +895,7 @@ TESTCLASS(job_core_output_java,core)
 TESTCLASS(job_core_output_java,quick)
 TESTCLASS(job_core_output_java,full)
 TESTCLASS(job_core_output_java,quicknolink)
+TESTCLASS(job_core_output_java,java)
 
 DESC(job_core_hold_java,"Java Universe: basic output test")
 RUN(job_core_hold_java)
@@ -901,6 +903,7 @@ TESTCLASS(job_core_hold_java,core)
 TESTCLASS(job_core_hold_java,quick)
 TESTCLASS(job_core_hold_java,full)
 TESTCLASS(job_core_hold_java,quicknolink)
+TESTCLASS(job_core_hold_java,java)
 
 DESC(job_core_initialdir_java,"Java Universe: basic output test")
 RUN(job_core_initialdir_java)
@@ -908,6 +911,7 @@ TESTCLASS(job_core_initialdir_java,core)
 TESTCLASS(job_core_initialdir_java,quick)
 TESTCLASS(job_core_initialdir_java,full)
 TESTCLASS(job_core_initialdir_java,quicknolink)
+TESTCLASS(job_core_initialdir_java,java)
 
 DESC(job_core_input_java,"Java Universe: basic output test")
 RUN(job_core_input_java)
@@ -915,6 +919,7 @@ TESTCLASS(job_core_input_java,core)
 TESTCLASS(job_core_input_java,quick)
 TESTCLASS(job_core_input_java,full)
 TESTCLASS(job_core_input_java,quicknolink)
+TESTCLASS(job_core_input_java,java)
 
 /*
 ** This test is simply submit and getting things in the job ads
@@ -1002,6 +1007,7 @@ TESTCLASS(lib_procapi_cputracking-snapshot,btdebug)
 **
 */
 
+#if !defined(IS_SOLARIS)
 DESC(job_core_killsignal_sched,"Scheduler: Verify the specified input file is used")
 RUN(job_core_killsignal_sched)
 DEPS(job_core_killsignal_sched,x_trapsig.exe)
@@ -1009,6 +1015,7 @@ TESTCLASS(job_core_killsignal_sched,core)
 TESTCLASS(job_core_killsignal_sched,quick)
 TESTCLASS(job_core_killsignal_sched,full)
 TESTCLASS(job_core_killsignal_sched,quicknolink)
+#endif
 
 /*
 ** The test in hanging in 6.7.x turn off for now.
@@ -1021,6 +1028,7 @@ TESTCLASS(job_core_holdkillsig_sched,full)
 TESTCLASS(job_core_holdkillsig_sched,quicknolink)
 */
 
+#if !defined(IS_SOLARIS)
 DESC(job_core_rmkillsig_sched,"Scheduler: Verify the  remove_kill_sig")
 RUN(job_core_rmkillsig_sched)
 DEPS(job_core_rmkillsig_sched,x_trapsig.exe)
@@ -1028,6 +1036,7 @@ TESTCLASS(job_core_rmkillsig_sched,core)
 TESTCLASS(job_core_rmkillsig_sched,quick)
 TESTCLASS(job_core_rmkillsig_sched,full)
 TESTCLASS(job_core_rmkillsig_sched,quicknolink)
+#endif
 
 DESC(job_core_macros-dollardollar_van,"Vanilla: Did dollar dollar macros work?")
 RUN(job_core_macros-dollardollar_van)
@@ -1107,6 +1116,7 @@ TESTCLASS(job_core_crontab_local,quick)
 TESTCLASS(job_core_crontab_local,full)
 TESTCLASS(job_core_crontab_local,quicknolink)
 TESTCLASS(job_core_crontab_local,local)
+TESTCLASS(job_core_crontab_local,time)
 
 DESC(job_core_time-deferral_local,"Local: Verify deferred execution")
 RUN(job_core_time-deferral_local)
@@ -1115,6 +1125,7 @@ TESTCLASS(job_core_time-deferral_local,quick)
 TESTCLASS(job_core_time-deferral_local,full)
 TESTCLASS(job_core_time-deferral_local,quicknolink)
 TESTCLASS(job_core_time-deferral_local,local)
+TESTCLASS(job_core_time-deferral_local,time)
 
 DESC(job_core_time-deferral-hold_local,"Local: Verify HOLD against deferred execution")
 RUN(job_core_time-deferral-hold_local)
@@ -1123,6 +1134,7 @@ TESTCLASS(job_core_time-deferral-hold_local,quick)
 TESTCLASS(job_core_time-deferral-hold_local,full)
 TESTCLASS(job_core_time-deferral-hold_local,quicknolink)
 TESTCLASS(job_core_time-deferral-hold_local,local)
+TESTCLASS(job_core_time-deferral-hold_local,time)
 
 DESC(job_core_time-deferral-remove_local,"Local: Verify REMOVE against deferred execution")
 RUN(job_core_time-deferral-remove_local)
@@ -1131,6 +1143,7 @@ TESTCLASS(job_core_time-deferral-remove_local,quick)
 TESTCLASS(job_core_time-deferral-remove_local,full)
 TESTCLASS(job_core_time-deferral-remove_local,quicknolink)
 TESTCLASS(job_core_time-deferral-remove_local,local)
+TESTCLASS(job_core_time-deferral-remove_local,time)
 
 /* Likely Bugs in Policy matters scheduler Universe */
 
@@ -1389,6 +1402,7 @@ TESTCLASS(job_core_input_van,simple)
 DESC(job_core_leaveinqueue_sched,"Scheduler: verify true and false classads do leave_in_queue right")
 RUN(job_core_leaveinqueue_sched)
 TESTCLASS(job_core_leaveinqueue_sched,core)
+TESTCLASS(job_core_leaveinqueue_van,quick)
 TESTCLASS(job_core_leaveinqueue_sched,long)
 TESTCLASS(job_core_leaveinqueue_sched,full)
 
@@ -1405,13 +1419,6 @@ TESTCLASS(job_core_macros_sched,core)
 TESTCLASS(job_core_macros_sched,quick)
 TESTCLASS(job_core_macros_sched,full)
 TESTCLASS(job_core_macros_sched,quicknolink)
-
-DESC(job_core_niceuser_van,"Vanilla: Ensure non nice_user job completes before nice_user job") 
-RUN(job_core_niceuser_van)
-TESTCLASS(job_core_niceuser_van,core)
-TESTCLASS(job_core_niceuser_van,quick)
-TESTCLASS(job_core_niceuser_van,full)
-TESTCLASS(job_core_niceuser_van,quicknolink)
 
 DESC(job_core_output_sched,"Scheduler: Verify trivially simple output from an input file")
 RUN(job_core_output_sched)
@@ -1476,6 +1483,14 @@ TESTCLASS(job_core_plus_sched,full)
 TESTCLASS(job_core_plus_sched,quicknolink)
 
 /*
+Both have race conditions
+DESC(job_core_niceuser_van,"Vanilla: Ensure non nice_user job completes before nice_user job") 
+RUN(job_core_niceuser_van)
+TESTCLASS(job_core_niceuser_van,core)
+TESTCLASS(job_core_niceuser_van,quick)
+TESTCLASS(job_core_niceuser_van,full)
+TESTCLASS(job_core_niceuser_van,quicknolink)
+
 DESC(job_core_priority_van,"Vanilla: Verify respect for job priority")
 RUN(job_core_priority_van)
 TESTCLASS(job_core_priority_van,core)
@@ -1497,19 +1512,15 @@ TESTCLASS(job_core_time-deferral_van,core)
 TESTCLASS(job_core_time-deferral_van,quick)
 TESTCLASS(job_core_time-deferral_van,full)
 TESTCLASS(job_core_time-deferral_van,quicknolink)
+TESTCLASS(job_core_time-deferral_van,time)
 
-/*******
- These work but always cause a ShadowException
- Commenting out for for now
- Andy - 02.17.06
- Seem fine now... bt 12.19.08
-*********/
 DESC(job_core_time-deferral-hold_van,"Vanilla: Verify HOLD against deferred execution")
 RUN(job_core_time-deferral-hold_van)
 TESTCLASS(job_core_time-deferral-hold_van,core)
 TESTCLASS(job_core_time-deferral-hold_van,quick)
 TESTCLASS(job_core_time-deferral-hold_van,full)
 TESTCLASS(job_core_time-deferral-hold_van,quicknolink)
+TESTCLASS(job_core_time-deferral-hold_van,time)
 
 DESC(job_core_time-deferral-remove_van,"Vanilla: Verify REMOVE against deferred execution")
 RUN(job_core_time-deferral-remove_van)
@@ -1517,6 +1528,7 @@ TESTCLASS(job_core_time-deferral-remove_van,core)
 TESTCLASS(job_core_time-deferral-remove_van,quick)
 TESTCLASS(job_core_time-deferral-remove_van,full)
 TESTCLASS(job_core_time-deferral-remove_van,quicknolink)
+TESTCLASS(job_core_time-deferral-remove_van,time)
 
 DESC(job_core_crontab_van,"Vanilla: CronTab Scheduling")
 RUN(job_core_crontab_van)
@@ -1524,6 +1536,7 @@ TESTCLASS(job_core_crontab_van,core)
 TESTCLASS(job_core_crontab_van,quick)
 TESTCLASS(job_core_crontab_van,full)
 TESTCLASS(job_core_crontab_van,quicknolink)
+TESTCLASS(job_core_crontab_van,time)
 
 DESC(job_core_max-running_local,"Local: Max job running limit")
 RUN(job_core_max-running_local)
@@ -1786,6 +1799,20 @@ TESTCLASS(job_dagman_splice-cat,quick)
 TESTCLASS(job_dagman_splice-cat,full)
 TESTCLASS(job_dagman_splice-cat,quicknolink)
 
+DESC(job_dagman_node_prio,"Test DAG node priorities")
+RUN(job_dagman_node_prio)
+TESTCLASS(job_dagman_node_prio,dagman)
+TESTCLASS(job_dagman_node_prio,quick)
+TESTCLASS(job_dagman_node_prio,full)
+TESTCLASS(job_dagman_node_prio,quicknolink)
+
+DESC(job_dagman_depth_first,"Make sure DAGMan depth-first traversal works")
+RUN(job_dagman_depth_first)
+TESTCLASS(job_dagman_depth_first,dagman)
+TESTCLASS(job_dagman_depth_first,quick)
+TESTCLASS(job_dagman_depth_first,full)
+TESTCLASS(job_dagman_depth_first,quicknolink)
+
 /* Sample performance tests */
 
 /*
@@ -1878,7 +1905,7 @@ TESTCLASS(job_rsc_binary-io_std,btdebug)
 */
 
 lib_eventlog_build.exe : lib_eventlog_base.cpp
-	$(CPlusPlus) $< -DLIBAPI_ONLY \
+	$(CPlusPlus) $< -ggdb -DLIBAPI_ONLY \
 	-I ../release_dir/include ../release_dir/lib/libcondorapi.a \
 	-lc -ldl -o $@
 
