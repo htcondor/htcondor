@@ -25,5 +25,6 @@ for(my $i=0; $i < ($count + 1); $i++) {
 	print "$ARGV[$i] ";
 }
 print "\n";
+sleep(30);
 exit(0);
 
