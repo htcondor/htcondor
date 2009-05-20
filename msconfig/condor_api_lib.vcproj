@@ -516,7 +516,7 @@
 			>
 		</File>
 		<File
-			RelativePath="$(OutDir)\user_log.obj"
+			RelativePath="$(OutDir)\read_user_log.obj"
 			>
 		</File>
 		<File
