@@ -6756,7 +6756,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\user_log.c++.h"
+			RelativePath="..\src\condor_c++_util\read_user_log.c++.h"
 			>
 		</File>
 		<File
