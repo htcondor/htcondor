@@ -382,7 +382,7 @@ ReadUserLogState::SetScoreFactor( enum ScoreFactors which, int factor )
 }
 
 ReadUserLog::FileStatus
-ReadUserLogState::CheckFileStatus( int fd )
+ReadUserLogState::CheckFileStatus( int fd, bool &is_empty )
 {
 	StatWrapper	sb;
 
@@ -402,6 +402,16 @@ ReadUserLogState::CheckFileStatus( int fd )
 	filesize_t				size = sb.GetBuf()->st_size;
 	ReadUserLog::FileStatus status;
 
+	// Special case for zero size file
+	if ( 0 == size ) {
+		is_empty = true;
+		if ( m_status_size < 0 ) {
+			m_status_size = 0;
+		}
+	}
+	else {
+		is_empty = false;
+	}
 	if ( (m_status_size < 0) || (size > m_status_size) ) {
 		status = ReadUserLog::LOG_STATUS_GROWN;
 	}
