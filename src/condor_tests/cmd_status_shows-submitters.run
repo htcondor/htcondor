@@ -31,7 +31,7 @@ sub RUNNING{2};
 my $testdesc =  'cmd_status_shows-submitters';
 my $testname = "cmd_status_shows-submitters";
 my $corename = "cmd_status_shows-submitters";
-my $debuglevel = 2;
+my $debuglevel = 1;
 
 print scalar localtime() . "\n";
 
@@ -138,6 +138,7 @@ if($done == 1) {
 		#$cmd = "condor_status -submitters -l ";
 		CondorTest::debug("Looking at -submitters($cmd)\n",$debuglevel);
 		$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
+		$jobcount = 0;
 	    if(!$cmdstatus)
 	    {
 	        CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",$debuglevel);
