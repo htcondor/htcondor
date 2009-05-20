@@ -216,7 +216,7 @@ public:
 	void Update( void ) { m_update_time = time(NULL); };
 
 	// Has the log file grown?
-	ReadUserLog::FileStatus CheckFileStatus( int fd = -1 );
+	ReadUserLog::FileStatus CheckFileStatus( int fd, bool &is_emtpy );
 
 	// Get / set the log file type
 	// Method to generate log path

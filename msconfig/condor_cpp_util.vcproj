@@ -6812,28 +6812,16 @@
 			>
 		</File>
 		<File
+			RelativePath="..\src\condor_c++_util\user_log_header.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\user_log_header.h"
+			>
+		</File>
+		<File
 			RelativePath="..\src\condor_c++_util\utc_time.cpp"
 			>
-			<FileConfiguration
-				Name="Debug|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					AdditionalIncludeDirectories=""
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Release|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					AdditionalIncludeDirectories=""
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
 			<FileConfiguration
 				Name="Debug (Express)|Win32"
 				>
