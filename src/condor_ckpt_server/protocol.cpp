@@ -683,7 +683,7 @@ int send_store_reply_pkt(store_reply_pkt *strp, FDContext *fdc)
 			pack_uint16_t(netpkt, STREP32_req_status, req_status);
 			pack_uint16_t(netpkt, STREP32_port, port);
 
-			ret = net_write(fdc->fd, netpkt, SREP_PKTSIZE_32);
+			ret = net_write(fdc->fd, netpkt, STREP_PKTSIZE_32);
 			break;
 
 		case FDC_64:
@@ -691,7 +691,7 @@ int send_store_reply_pkt(store_reply_pkt *strp, FDContext *fdc)
 			pack_uint16_t(netpkt, STREP64_req_status, req_status);
 			pack_uint16_t(netpkt, STREP64_port, port);
 
-			ret = net_write(fdc->fd, netpkt, SREP_PKTSIZE_64);
+			ret = net_write(fdc->fd, netpkt, STREP_PKTSIZE_64);
 			break;
 
 		default:
@@ -706,6 +706,340 @@ int send_store_reply_pkt(store_reply_pkt *strp, FDContext *fdc)
 
 	return NET_WRITE_OK;
 }
+
+/* XXX convert */
+
+/* This function accepts the *first* packet on a ready restore req socket.
+	Its job is to figure out if the client side is 32 bits or 64 bits, 
+	read the appropriate information off the socket, and set up the
+	FDContext with the fd and the knowledge of what type of bit width
+	the client side is. This function also translates between the host
+	restore_req_socket and whatever the client has.
+*/
+int recv_restore_req_pkt(restore_req_pkt *rstrq, FDContext *fdc)
+{
+	size_t bytes_recvd;
+	char netpkt[RSTREQ_PKTSIZE_MAX];
+	read_result_t ret;
+	int ok;
+	size_t diff;
+
+	/* We better not know what the client bit width is when this function is
+		called, since it figures it out! */
+	ASSERT(fdc->type == FDC_UNKNOWN);
+
+	/* Read the *smallest* of the two possible structure
+		widths, this will ensure we don't deadlock reading more
+		bytes that will never come.
+	*/
+	ret = net_read_with_timeout(fdc->fd, netpkt, RSTREQ_PKTSIZE_MIN, 
+								&bytes_recvd, REQUEST_TIMEOUT);
+	switch(ret) {
+		case NET_READ_FAIL:
+			Server::Log("Failed to read initial restore_req_pkt packet length!");
+			return PC_NOT_OK;
+			break;
+
+		case NET_READ_TIMEOUT:
+			Server::Log("Timed out while reading initial restore_req_pkt "
+						"packet length!");
+			return PC_NOT_OK;
+			break;
+
+		case NET_READ_OK:
+			/* do nothing */
+			break;
+
+		default:
+			/* Normally, one would except, but why take down a whole server
+				when we could just close this errant connection? */
+			Server::Log("Programmer error: unhandled return code on "
+						"net_read_with_timeout() with suspected 32 bit client "
+						"while handling a restore_req_pkt");
+			return PC_NOT_OK;
+			break;
+	}
+
+	/* Figure out what kind of packet it is */
+	ok = rstreq_is_32bit(netpkt);
+	if (!ok) {
+		/* try to read the rest of the pkt, assuming it is a 64 bit packet */
+		diff = RSTREQ_PKTSIZE_64 - RSTREQ_PKTSIZE_32;
+
+		ret = net_read_with_timeout(fdc->fd, netpkt + RSTREQ_PKTSIZE_32,
+									diff, &bytes_recvd, REQUEST_TIMEOUT);
+		switch(ret) {
+			case NET_READ_FAIL:
+				Server::Log("Failed to read 64 bit portion of restore_req_pkt");
+				return PC_NOT_OK;
+				break;
+
+			case NET_READ_TIMEOUT:
+				Server::Log("Timed out while reading 64 bit portion of "
+							"restore_req_pkt");
+				return PC_NOT_OK;
+				break;
+
+			case NET_READ_OK:
+				/* do nothing */
+				break;
+
+			default:
+				/* Normally, one would except, but why take down a whole server
+					when we could just close this errant connection? */
+				Server::Log("Programmer error: unhandled return code on "
+							"net_read_with_timeout() with suspected 64 "
+							"bit client while handling a restore_req_pkt");
+				return PC_NOT_OK;
+				break;
+		}
+
+		/* now, see if we can find it in the 64 bit version of the packet */
+		ok = rstreq_is_64bit(netpkt);
+		if (!ok) {
+			/* oops, we didn't find the hard coded ticket in either context
+				of 32 bit or 64 bit, so apparently, we didn't read the
+				expected kind of packet on the wire or it was garbage.
+				fdc stays unknown.
+			*/
+			Server::Log("Could not determine if packet is a restore_req_pkt! "
+						"Aborting connection!");
+			return PC_NOT_OK;
+		}
+
+		/* unpack the 64 bit case into the host structure. Don't forget
+			to undo the network byte ordering. */
+
+		rstrq->ticket = unpack_uint64_t(netpkt, RSTREQ64_ticket);
+		rstrq->ticket =
+			network_uint64_t_order_to_host_uint64_t_order(rstrq->ticket);
+
+		rstrq->priority = unpack_uint64_t(netpkt, RSTREQ64_priority);
+		rstrq->priority =
+			network_uint64_t_order_to_host_uint64_t_order(rstrq->priority);
+
+		rstrq->key = unpack_uint64_t(netpkt, RSTREQ64_key);
+		rstrq->key =
+			network_uint64_t_order_to_host_uint64_t_order(rstrq->key);
+
+		memmove(rstrq->filename,
+			unpack_char_array(netpkt, RSTREQ64_filename),
+			MAX_CONDOR_FILENAME_LENGTH);
+
+		memmove(rstrq->owner,
+			unpack_char_array(netpkt, RSTREQ64_owner),
+			MAX_NAME_LENGTH);
+
+		Server::Log("Client is using the 64 bit protocol.");
+
+		fdc->type = FDC_64;
+		return PC_OK;
+	}
+
+	/* unpack the 32 bit case into the host structure. Don't forget
+		to undo the network byte ordering. */
+
+	rstrq->ticket = unpack_uint32_t(netpkt, RSTREQ32_ticket);
+	rstrq->ticket =
+		network_uint32_t_order_to_host_uint32_t_order(rstrq->ticket);
+
+	rstrq->priority = unpack_uint32_t(netpkt, RSTREQ32_priority);
+	rstrq->priority =
+		network_uint32_t_order_to_host_uint32_t_order(rstrq->priority);
+
+	rstrq->key = unpack_uint32_t(netpkt, RSTREQ32_key);
+	rstrq->key =
+		network_uint32_t_order_to_host_uint32_t_order(rstrq->key);
+
+	memmove(rstrq->filename,
+		unpack_char_array(netpkt, RSTREQ32_filename),
+		MAX_CONDOR_FILENAME_LENGTH);
+
+	memmove(rstrq->owner,
+		unpack_char_array(netpkt, RSTREQ32_owner),
+		MAX_NAME_LENGTH);
+
+	Server::Log("Client is using the 32 bit protocol.");
+
+	fdc->type = FDC_32;
+	return PC_OK;
+}
+
+/* checking the restore_req_pkt for 32 or 64 bit width is difficult due to the
+	layout of the packet in memory:
+
+t = ticket
+p = priority (known to be hardcoded to zero)
+k = key (a pid of a process)
+f = filename
+o = owner
+
+32 bit Layout (in bytes): ttttppppkkkkf...fo...o
+64 bit Layout (in bytes): ttttttttppppppppkkkkkkkkf...fo...o
+
+*/
+
+/* Does a pile of bits on the floor look like a 32 bit restore_request_pkt
+	when squinted at in the right light? */
+bool rstreq_is_32bit(char *pkt)
+{
+	uint32_t ticket;
+	uint32_t priority;
+
+	/* sanity check */
+	ticket = unpack_uint32_t(pkt, RSTREQ32_ticket);
+	ticket = network_uint32_t_order_to_host_uint32_t_order(ticket);
+	if (ticket != AUTHENTICATION_TCKT) {
+		return false;
+	}
+
+	/* priority must be zero */
+	priority = unpack_uint32_t(pkt, RSTREQ32_priority);
+	priority = network_uint32_t_order_to_host_uint32_t_order(priority);
+	if (priority != 0) {
+		return false;
+	}
+
+	/* if the first character of the filename portion is not a valid character,
+		then this is a 64 bit packet. I know this because the subsequent byte
+		in a 64 bit packet will *always* be zero */
+	if (!isprint(pkt[RSTREQ32_filename])) {
+		return false;
+	}
+
+	/* probably should check the first character of owner to ensure it is
+		a printable character as well, if not, then this definitely can't be
+		a 32 bit packet.
+	*/
+	if (!isprint(pkt[RSTREQ32_owner])) {
+		return false;
+	}
+	
+	/* I guess it passed! Heuristics to the rescue! */
+	return true;
+}
+
+/* Does a pile of bits on the floor look like a 64 bit restore_request_pkt
+	when squinted at in the right light? */
+bool rstreq_is_64bit(char *pkt)
+{
+	uint64_t ticket;
+	uint64_t priority;
+
+	/* sanity check */
+	ticket = unpack_uint64_t(pkt, RSTREQ64_ticket);
+	ticket = network_uint64_t_order_to_host_uint64_t_order(ticket);
+	if (ticket != AUTHENTICATION_TCKT) {
+		return false;
+	}
+
+	/* priority must be zero */
+	priority = unpack_uint64_t(pkt, RSTREQ64_priority);
+	priority = network_uint64_t_order_to_host_uint64_t_order(priority);
+	if (priority != 0) {
+		return false;
+	}
+
+	/* I suppose I can check the first characters of the strings in this
+		packet, and if either of them are not printable, then I would know
+		for sure this _isn't_ a 64 bit packet. But it does not confirm that
+		it is. :)
+	*/
+	if (!isprint(pkt[RSTREQ64_filename])) {
+		return false;
+	}
+
+	if (!isprint(pkt[RSTREQ64_owner])) {
+		return false;
+	}
+
+	/* I guess it passed! Heuristics to the rescue! */
+	return true;
+}
+
+/* depending upon the connection type, assemble a store_reply_pkt and
+	send it to the other side */
+int send_restore_reply_pkt(restore_reply_pkt *rstrp, FDContext *fdc)
+{
+	/* This will be the service_reply_pkt */
+	char netpkt[RSTREP_PKTSIZE_MAX];
+	/* The fields of the packet */
+	struct in_addr		server_name;
+	uint16_t			port;
+	uint32_t			file_size_32;
+	uint64_t			file_size_64;
+	uint16_t			req_status;
+	int					ret = -1;
+
+	ASSERT(fdc->type != FDC_UNKNOWN);
+
+	/* get the right sized quantities I need depending upon what the client
+		needs.  Ensure to convert it to network byte order here too.
+	*/
+	server_name = rstrp->server_name;
+	server_name.s_addr =
+		host_uint32_t_order_to_network_uint32_t_order(server_name.s_addr);
+	
+	port = rstrp->port;
+	port = host_uint16_t_order_to_network_uint16_t_order(port);
+
+	switch(fdc->type)
+	{
+		case FDC_32:
+			file_size_32 = rstrp->file_size;
+			file_size_32 = 
+				host_uint32_t_order_to_network_uint32_t_order(file_size_32);
+			break;
+		case FDC_64:
+			file_size_64 = rstrp->file_size;
+			file_size_64 = 
+				host_uint64_t_order_to_network_uint64_t_order(file_size_64);
+			break;
+		default:
+			Server::Log("restore_reply_pkt type conversion error!");
+			return NET_WRITE_FAIL;
+			break;
+	}
+
+	req_status = rstrp->req_status;
+	req_status = host_uint16_t_order_to_network_uint16_t_order(req_status);
+
+	/* Assemble the packet according to what type of connection it is. 
+		Then send it. */
+	switch(fdc->type)
+	{
+		case FDC_32:
+			pack_in_addr(netpkt, RSTREP32_server_name, server_name);
+			pack_uint16_t(netpkt, RSTREP32_port, port);
+			pack_uint32_t(netpkt, RSTREP32_file_size, file_size_32);
+			pack_uint16_t(netpkt, RSTREP32_req_status, req_status);
+
+			ret = net_write(fdc->fd, netpkt, RSTREP_PKTSIZE_32);
+			break;
+
+		case FDC_64:
+			pack_in_addr(netpkt, RSTREP64_server_name, server_name);
+			pack_uint16_t(netpkt, RSTREP64_port, port);
+			pack_uint64_t(netpkt, RSTREP64_file_size, file_size_64);
+			pack_uint16_t(netpkt, RSTREP64_req_status, req_status);
+
+			ret = net_write(fdc->fd, netpkt, RSTREP_PKTSIZE_64);
+			break;
+
+		default:
+			Server::Log("restore_reply_pkt type packing error!");
+			return NET_WRITE_FAIL;
+			break;
+	}
+
+	if (ret < 0) {
+		return NET_WRITE_FAIL;
+	}
+
+	return NET_WRITE_OK;
+}
+
+
 
 
 /* ------------------------------------------------------------------------- */

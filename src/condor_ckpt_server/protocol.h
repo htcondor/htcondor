@@ -34,7 +34,18 @@ enum {
 	/* Sizes in bytes of a 32 or 64 bit store_reply_pkt */
 	STREP_PKTSIZE_32 = 8,
 	STREP_PKTSIZE_64 = 8,
-	STREP_PKTSIZE_MAX = SREP_PKTSIZE_64,
+	STREP_PKTSIZE_MAX = STREP_PKTSIZE_64,
+
+	/* Sizes in bytes of a 32 or 64 bit restore_req_pkt */
+	RSTREQ_PKTSIZE_32 = 320,
+	RSTREQ_PKTSIZE_64 = 336,
+	RSTREQ_PKTSIZE_MIN = RSTREQ_PKTSIZE_32,
+	RSTREQ_PKTSIZE_MAX = RSTREQ_PKTSIZE_64,
+
+	/* Sizes in bytes of a 32 or 64 bit restore_reply_pkt */
+	RSTREP_PKTSIZE_32 = 16,
+	RSTREP_PKTSIZE_64 = 24,
+	RSTREP_PKTSIZE_MAX = RSTREP_PKTSIZE_64,
 
 	/* --------------------------------------------------------*/
 	/* These describe offsets into the 64 bit structures from x86_64 */
@@ -265,8 +276,11 @@ bool streq_is_32bit(char *pkt);
 bool streq_is_64bit(char *pkt);
 int send_store_reply_pkt(store_reply_pkt *strp, FDContext *fdc);
 
-
-
+/* Dealing with the RESTORE protocol */
+int recv_restore_req_pkt(restore_req_pkt *rstrq, FDContext *fdc);
+bool rstreq_is_32bit(char *pkt);
+bool rstreq_is_64bit(char *pkt);
+int send_restore_reply_pkt(restore_reply_pkt *rstrp, FDContext *fdc);
 
 /* read some bytes with a timeout on a socket */
 read_result_t net_read_with_timeout(int fd, char *ptr, size_t nbytes,
