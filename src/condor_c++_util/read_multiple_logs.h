@@ -34,6 +34,7 @@
 #include "HashTable.h"
 #include "condor_id.h"
 #include "CondorError.h"
+#include "stat_struct.h"
 #include <iosfwd>
 #include <string>
 
@@ -79,7 +80,7 @@ public:
 			@param a CondorError object to hold any error information
 			@return true if successful, false if failed
 		 */
-	static bool makePathAbsolute(MyString &filename, CondorError &errstack);
+	static bool makePathAbsolute(MyString filename, CondorError &errstack);
 
 #ifdef HAVE_EXT_CLASSADS
 	    /** Gets the log files from a Stork submit file.
@@ -248,7 +249,17 @@ public:
 			@param a CondorError object to hold any error information
 			@return true if successful, false if failed
 		*/
-	bool unmonitorLogFile (MyString logfile, CondorError &errstack);
+	bool unmonitorLogFile(MyString logfile, CondorError &errstack);
+
+		/** Print information about all LogMonitor objects.
+			@param the stream to print to.
+		*/
+	void printAllLogMonitors( FILE *stream );
+
+		/** Print information about active LogMonitor objects.
+			@param the stream to print to.
+		*/
+	void printActiveLogMonitors( FILE *stream );
 #endif // LAZY_LOG_FILES
 
 protected:
@@ -259,6 +270,7 @@ protected:
 private:
 	void cleanup();
 
+//TEMP -- get rid of LogFileEntry stuff when lazy code works
 	struct LogFileEntry
 	{
 		bool		isInitialized;
@@ -273,15 +285,36 @@ private:
 	int				iLogFileCount;
 	LogFileEntry *	pLogFileEntries;
 
+#if !LAZY_LOG_FILES
 		// Holds CondorID->log mappings to check for duplicate logs.
 		// Note: we only map the first CondorID we see for a log, so
 		// there is only one entry per log.
 	HashTable<CondorID, LogFileEntry *>	logHash;
+#endif // LAZY_LOG_FILES
 
 #if LAZY_LOG_FILES
 	struct LogFileMonitor {
-		LogFileMonitor() : refCount(0), readUserLog(NULL), lastLogEvent(NULL),
-					state(NULL) {}
+		LogFileMonitor( const MyString &file ) : logFile(file), refCount(0),
+					readUserLog(NULL), state(NULL), lastLogEvent(NULL) {}
+
+		~LogFileMonitor() {
+			delete readUserLog;
+			readUserLog = NULL;
+
+			if ( state ) {
+				ReadUserLog::UninitFileState( *state );
+			}
+			delete state;
+			state = NULL;
+
+			delete lastLogEvent;
+			lastLogEvent = NULL;
+		}
+
+			// The file name corresponding to this object; if the same
+			// actual log file is registered via multiple paths, this
+			// is the first path used to register it.
+		MyString	logFile;
 
 			// Reference count -- how many net calls to monitor this log?
 		int			refCount;
@@ -289,19 +322,19 @@ private:
 			// The actual log reader object -- may be null
 		ReadUserLog	*readUserLog;
 
-			// The last event we read from this log.
-		ULogEvent	*lastLogEvent;
-
 			// Log reader state -- used to pick up where we left off if
 			// we close and re-open the same log file.
 		ReadUserLog::FileState	*state;
 
+			// The last event we read from this log.
+		ULogEvent	*lastLogEvent;
+
 		// more stuff here?
 	};
 
-	HashTable<MyString, LogFileMonitor *>	allLogFiles;
+	HashTable<StatStructInode, LogFileMonitor *>	allLogFiles;
 
-	HashTable<MyString, LogFileMonitor *>	activeLogFiles;
+	HashTable<StatStructInode, LogFileMonitor *>	activeLogFiles;
 #endif // LAZY_LOG_FILES
 
 	// For instantiation in programs that use this class.
@@ -331,9 +364,10 @@ private:
 		    @return True iff the log grew.
 
 		 */
-	static bool LogGrew( LogFileMonitor *monitor, const MyString &logfile );
+	static bool LogGrew( LogFileMonitor *monitor );
 #endif // LAZY_LOG_FILES
 
+#if !LAZY_LOG_FILES
 		/**
 		 * Read an event from a log, including checking whether this log
 		 * is actually a duplicate of another log.  Note that if this *is*
@@ -343,13 +377,18 @@ private:
 		 * @return The outcome of trying to read an event.
 		 */
 	ULogEventOutcome readEventFromLog(LogFileEntry &log);
+#endif // !LAZY_LOG_FILES
 
 #if LAZY_LOG_FILES
-		//TEMP -- document
-	ULogEventOutcome readEventFromLog( LogFileMonitor *monitor,
-				const MyString &logfile );
+		/**
+		 * Read an event from a log monitor.
+		 * @param The log monitor to read from.
+		 * @return The outcome of trying to read an event.
+		 */
+	ULogEventOutcome readEventFromLog( LogFileMonitor *monitor );
 #endif // LAZY_LOG_FILES
 
+#if !LAZY_LOG_FILES
 		/**
 		 * Determine whether a log object exists that is a logical duplicate
 		 * of the one given (in other words, points to the same log file).
@@ -362,6 +401,12 @@ private:
 		 * @return True iff a duplicate log exists.
 		 */
 	bool DuplicateLogExists(ULogEvent *event, LogFileEntry *log);
+#endif // !LAZY_LOG_FILES
+
+#if LAZY_LOG_FILES
+	void printLogMonitors(FILE *stream,
+				HashTable<StatStructInode, LogFileMonitor *> logTable);
+#endif // LAZY_LOG_FILES
 
 };
 

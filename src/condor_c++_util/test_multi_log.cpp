@@ -584,10 +584,22 @@ ReadEventsLazy()
 	fflush(stdout);
 
 	const char *file1 = "test_multi_log.log1";
+	unlink( file1 );
 	const char *file2 = "test_multi_log.log2";
+	unlink( file2 );
 	const char *file3 = "test_multi_log.log3";
+	unlink( file3 );
 	const char *file4 = file3;
+	unlink( file4 );
 	const char *file5 = "test_multi_log.log5";
+	unlink( file5 );
+		// Different path to same file -- make sure we deal with that
+		// correctly.
+	const char *file5a = "./test_multi_log.log5";
+	unlink( file5a );
+		// This will be a sym link.
+	const char *file5b = "test_multi_log.log5b";
+	unlink( file5b );
 
 	ReadMultipleUserLogs lazyReader;
 
@@ -714,6 +726,8 @@ ReadEventsLazy()
 		isOkay = false;
 	}
 
+	lazyReader.printAllLogMonitors( stdout );
+
 	if ( !log2.writeEvent(&subE) ) {
 		printf("Error: writeEvent() failed");
 		printf(" (at %s: %d)\n", __FILE__, __LINE__);
@@ -792,6 +806,8 @@ ReadEventsLazy()
 		isOkay = false;
 	}
 
+	lazyReader.printActiveLogMonitors( stdout );
+
 	if (!monitorLogFile( lazyReader, file4, true ) ) {
 		isOkay = false;
 	}
@@ -828,15 +844,15 @@ ReadEventsLazy()
 	}
 
 		//
-		// Make sure things work with truncateIfFirst == false.
+		// Make sure things work with truncateIfFirst == false; also
+		// monitoring the same file with two different paths.
 		//
-	if ( unlink( file5 ) != 0 ) {
-		fprintf( stderr, "Error unlinking <%s>: %s\n", file5,
-					strerror( errno ) );
-		isOkay = false;
-	}
+	unlink( file5 );
 	UserLog		log5("test", file5, 5, -1, -1, false);
 	if (!monitorLogFile( lazyReader, file5, false ) ) {
+		isOkay = false;
+	}
+	if (!monitorLogFile( lazyReader, file5a, false ) ) {
 		isOkay = false;
 	}
 
@@ -917,6 +933,10 @@ ReadEventsLazy()
 	if (!unmonitorLogFile( lazyReader, file5 ) ) {
 		isOkay = false;
 	}
+		//TEMP -- what if we *don't* unmonitor and remonitor file5a here?  that's even a harder case...
+	if (!unmonitorLogFile( lazyReader, file5a ) ) {
+		isOkay = false;
+	}
 
 	if ( !log5.initialize( 6, 0, 0, NULL )) {
 		fprintf( stderr, "Error re-initializing log5\n" );
@@ -949,13 +969,21 @@ ReadEventsLazy()
 		isOkay = false;
 	}
 
-	if (!monitorLogFile( lazyReader, file5, true ) ) {
+		// Note: monitoring the "secondary" path to this log.
+	if (!monitorLogFile( lazyReader, file5a, true ) ) {
 		isOkay = false;
 	}
 
 	if ( !ReadAndTestEvent( lazyReader, &subE ) ) {
 		isOkay = false;
 	}
+
+	link( file5, file5b );
+		// Note: monitoring the sym link to this log.
+	if (!monitorLogFile( lazyReader, file5b, true ) ) {
+		isOkay = false;
+	}
+
 	if ( !ReadAndTestEvent( lazyReader, &execE ) ) {
 		isOkay = false;
 	}
@@ -971,6 +999,7 @@ ReadEventsLazy()
 		// doesn't mess things up.
 		//
 	const char *file6 = "test_multi_log.log6";
+	unlink( file6 );
 
 	if (!monitorLogFile( lazyReader, file6, true ) ) {
 		isOkay = false;

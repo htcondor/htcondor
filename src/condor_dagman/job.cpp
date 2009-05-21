@@ -724,6 +724,7 @@ Job::SetDagFile(const char *dagFile)
 
 #if LAZY_LOG_FILES
 //---------------------------------------------------------------------------
+//TEMP -- should this work w/ more than one log file per submit file? (see Gnats PR 886)
 bool
 Job::MonitorLogFile( ReadMultipleUserLogs &logReader, bool recovery )
 {
