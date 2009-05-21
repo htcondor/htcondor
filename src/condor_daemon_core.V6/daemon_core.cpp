@@ -7117,7 +7117,10 @@ int DaemonCore::Create_Process(
 				but are, nonetheless, executable binaries.  For
 				instance, a submit script may contain:
 				
-				executable = executable$(OPSYS) */
+				executable = executable$(OPSYS) 
+				
+				As such, we assume the file is an executable. */
+			binary_executable = true;
 
 		} else {
 
@@ -7137,7 +7140,9 @@ int DaemonCore::Create_Process(
 
 				/** don't fail here either, for the same reasons we 
 					outline above, save a small modification to the 
-					executable's name: executable.$(OPSYS) */
+					executable's name: executable.$(OPSYS).
+					As above, we assume the file is an executable. */
+				binary_executable = true;
 
 			} else {
 
@@ -7172,7 +7177,13 @@ int DaemonCore::Create_Process(
 
 		}
 
-	} else {
+	} 
+	
+	/** either we were given an binary executable directly, or one of
+		the	above checks determined that the given executable must be
+		either a binary executable or garbage. Either way, we treat it
+		as a binary and hope for the best. */
+	if ( binary_executable ) {
 
 		/** append the arguments given in the submit file. */
 		first_arg_to_copy = 0;
