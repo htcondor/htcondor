@@ -4469,6 +4469,12 @@ Power Management for more details.
   for every hibernating machine.  This forms a persistent storage
   of these ClassAds, in case the \Condor{collector} daemon crashes.
 
+  To avoid \Condor{preen} removing this log, place it in a directory
+  other than the directory defined by \MacroUNI{SPOOL}.  
+  Alternatively, if this log file is to go in the 
+  directory defined by \MacroUNI{SPOOL}, add the file to the list
+  given by \MacroNI{VALID\_SPOOL\_FILES}.
+
 \label{param:OfflineExpireAdsAfter}
 \item[\Macro{OFFLINE\_EXPIRE\_ADS\_AFTER}]
   An integer number of seconds specifying the lifetime of the
