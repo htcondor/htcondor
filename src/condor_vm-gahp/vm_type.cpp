@@ -58,6 +58,7 @@ VMType::VMType(const char* prog_for_script, const char* scriptname, const char* 
 	m_status = VM_STOPPED;
 	m_cpu_time = 0;
 	m_delete_working_files = false;
+	m_vcpus = 1;
 
 	vmprintf(D_FULLDEBUG, "Constructed VM_Type.\n");
 
@@ -116,10 +117,8 @@ VMType::parseCommonParamFromClassAd(bool is_root /*false*/)
 	if( m_classAd.LookupInteger( ATTR_JOB_VM_VCPUS, m_vcpus) != 1) {
 	  vmprintf(D_FULLDEBUG, "No VCPUS defined or VCPUS definition is bad.\n");
 	}
-	else {
-	  if(m_vcpus < 1) m_vcpus = 1;
-	  vmprintf(D_FULLDEBUG, "Setting up %d CPUS\n", m_vcpus);
-	}
+	if(m_vcpus < 1) m_vcpus = 1;
+	vmprintf(D_FULLDEBUG, "Setting up %d CPUS\n", m_vcpus);
 
 	// Read parameter for networking
 	m_vm_networking = false;
