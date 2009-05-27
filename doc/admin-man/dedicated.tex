@@ -3,6 +3,7 @@
 Condor's Dedicated Scheduling} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\index{dedicated scheduling}
 \index{MPI application!under the dedicated scheduler}
 
 Applications that require multiple resources,
@@ -115,13 +116,12 @@ resource for it to be considered dedicated.
 
 Job ClassAds from the dedicated scheduler 
 contain the attribute \Attr{Scheduler}.
-dedicated scheduler.
 The attribute is defined by a string of the form 
 \begin{verbatim}
 Scheduler = "DedicatedScheduler@full.host.name"
 \end{verbatim}
 The host name of the dedicated scheduler
-substitutes for the string "\verb@full.host.name@". 
+substitutes for the string \verb@full.host.name@. 
 
 Different resources in the pool may have different dedicated policies
 by varying the local configuration.
