@@ -101,8 +101,11 @@ Macro definitions are of the form:
 <macro_name> = <macro_definition>
 \end{verbatim}
 
-\Note There must be white space between the macro name, the
-``='' sign, and the macro definition.
+The macro name given on the left hand side of the definition is
+a case sensitive identifier.
+There must be white space between the macro name, the
+equals sign (\verb@=@), and the macro definition.
+The macro definition is a string literal that may utilize macro substitution.
 
 Macro invocations are of the form: 
 \begin{verbatim}
@@ -110,11 +113,10 @@ $(macro_name)
 \end{verbatim}
 
 Macro definitions may contain references to other macros, even ones
-that are not yet defined (as long as they are eventually defined in
-the configuration files).
-All macro expansion is done after all configuration files have been parsed
-(with the exception of macros that reference themselves, described
-below). 
+that are not yet defined, as long as they are eventually defined in
+the configuration files.
+All macro expansion is done after all configuration files have been parsed,
+with the exception of macros that reference themselves.
 
 \begin{verbatim}
 A = xxx
@@ -162,12 +164,8 @@ B = $(A)
 are not allowed.
 They create definitions that Condor refuses to parse. 
 
-\Note Macros should not be incrementally defined in the
-\Macro{LOCAL\_ROOT\_CONFIG\_FILE} for security reasons.
-
 All entries in a configuration file must have an operator,
 which will be an equals sign (\verb@=@).
-%or a colon character (\verb@:@).
 Identifiers are alphanumerics combined with the underscore character,
 optionally with a subsystem name and a period as a prefix.
 As a special case,
@@ -286,7 +284,7 @@ have different requirements for which parameters need to be
 specified individually.  This example works for the \Condor{schedd},
 and more local configuration can, and likely would be specified.
 
-also note that each daemon's log file must be specified individually,
+Also note that each daemon's log file must be specified individually,
 and in two places: one specification is for use by the \Condor{master},
 and the other is for use by the daemon itself.
 In the example,
@@ -301,10 +299,10 @@ the \Attr{XYZZY} \Condor{schedd} configuration variable
 
 A Condor configuration file may contain comments and
 line continuations.
-A comment is any line beginning with a ``\#'' character.
+A comment is any line beginning with a pound character (\verb@#@).
 A continuation is any entry that continues across multiples lines.
-Line continuation is accomplished by placing the ``$\backslash$''
-character at the end of any line to be continued onto another.
+Line continuation is accomplished by placing the backslash
+character (\Bs) at the end of any line to be continued onto another.
 Valid examples of line continuation are
 \begin{verbatim}
   START = (KeyboardIdle > 15 * $(MINUTE)) && \
