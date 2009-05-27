@@ -1356,6 +1356,12 @@ int main( int argc, char** argv )
 	}
 	condor_main_argv[i] = NULL;
 
+#ifdef WIN32
+	/** Enable support of the %n format in the printf family 
+		of functions. */
+	_set_printf_count_output(TRUE);
+#endif
+
 #ifndef WIN32
 		// Set a umask value so we get reasonable permissions on the
 		// files we create.  Derek Wright <wright@cs.wisc.edu> 3/3/98
