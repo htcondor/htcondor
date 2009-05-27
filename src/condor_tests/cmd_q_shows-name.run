@@ -160,6 +160,8 @@ if($bail != 1) {
 	    	if(!$cmdstatus)
 	    	{
 	        	CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",$debuglevel);
+				CondorTest::KillPersonal($locconfig);
+				CondorTest::KillPersonal($scheddoneconfig);
 	        	exit(1)
 	    	}
 
@@ -193,10 +195,11 @@ if($bail != 1) {
 	print "Checking that condor_q -name can see specific schedds - ";
 	if($targets != 2) {
 		print "bad\n";
+		CondorTest::KillPersonal($locconfig);
+		CondorTest::KillPersonal($scheddoneconfig);
 		exit(1);
 	}
 	print "ok\n";
-	exit(0);
 }
 
 system("cp *cmd_q_shows-name* $mysaveme");
