@@ -6422,14 +6422,14 @@ Configuration File Macros}
 \label{param:ProcdAddress}
 \item[\Macro{PROCD\_ADDRESS}]
   This specifies
-  the ``address'' that the \Condor{procd} will use to receive requests
-  from other Condor daemons. On UNIX, this should point to a file system
+  the address that the \Condor{procd} will use to receive requests
+  from other Condor daemons. On Unix, this should point to a file system
   location that can be used for a named pipe. On Windows, named pipes
   are also used but they do not exist in the file system. The default
-  setting therefore depends on the platform: \Code{\$(LOCK)/procd\_pipe}
-  on Unix and
-  \Code{$\backslash$$\backslash$.$\backslash$pipe$\backslash$procd\_pipe}
-  on Windows.
+  setting therefore depends on the platform: 
+  \verb@$(LOCK)/procd_pipe@ on Unix and
+%  \Code{$\backslash$$\backslash$.$\backslash$pipe$\backslash$procd\_pipe}
+  \verb@\\.\pipe\procd_pipe@ on Windows.
 
 \end{description}
 
