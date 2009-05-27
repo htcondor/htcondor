@@ -105,6 +105,8 @@ if($bail == 0) {
     	{
 			print "bad\n";
         	CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",$debuglevel);
+			CondorTest::KillPersonal($locconfig);
+			CondorTest::KillPersonal($scheddoneconfig);
         	exit(1)
     	}
 	

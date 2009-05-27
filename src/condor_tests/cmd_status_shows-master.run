@@ -83,6 +83,8 @@ if($stable == 1) {
     	if(!$cmdstatus)
     	{
         	CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",$debuglevel);
+			CondorTest::KillPersonal($locconfig);
+			CondorTest::KillPersonal($scheddoneconfig);
         	exit(1)
     	}
 	
