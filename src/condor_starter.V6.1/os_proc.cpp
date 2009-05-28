@@ -39,6 +39,7 @@
 #ifdef WIN32
 #include "perm.h"
 #include "profile.WINDOWS.h"
+#include "access_desktop.WINDOWS.h"
 #endif
 
 extern CStarter *Starter;
@@ -582,7 +583,6 @@ OsProc::JobExit( void )
 	if (use_visible && (*use_visible=='T' || *use_visible=='t') ) {        
         /* at this point we can revoke the user's access to
         the visible desktop */
-        int RevokeDesktopAccess ( HANDLE ); // prototype
         RevokeDesktopAccess ( user_token );
     }
 

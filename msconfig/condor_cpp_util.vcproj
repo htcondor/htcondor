@@ -346,6 +346,22 @@
 					CompileAs="2"
 				/>
 			</FileConfiguration>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\access.h"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\access_desktop.WINDOWS.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\access_desktop.WINDOWS.h"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\ad_printmask.cpp"
+			>
 			<FileConfiguration
 				Name="Debug (Express)|Win32"
 				>
