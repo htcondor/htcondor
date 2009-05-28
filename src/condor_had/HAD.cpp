@@ -2,13 +2,13 @@
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -51,10 +51,10 @@ HADStateMachine* stateMachine = NULL;
 int
 main_init (int, char *[])
 {
-    dprintf(D_ALWAYS,"Starting HAD ....\n");	
+    dprintf(D_ALWAYS,"Starting HAD ....\n");
     try {
         stateMachine = new HADStateMachine();
-	
+
         stateMachine->initialize();
         return TRUE;
     } catch (char* rr) {
@@ -87,16 +87,18 @@ main_shutdown_fast()
     DC_Exit(0);
     return 0;
 }
-// we employ the following terminology inside the function:
-// hard reconfiguration - for starting the HAD state machine from the scratch
-//                        and gracefully killing the negotiator
-// soft reconfiguration - for rereading configuration values from $CONDOR_CONFIG
-//						  without changing the state machine
+/**
+ * we employ the following terminology inside the function:
+ * hard reconfiguration - for starting the HAD state machine from the scratch
+ *                        and gracefully killing the negotiator
+ * soft reconfiguration - for rereading configuration values from
+ *                        $CONDOR_CONFIG without changing the state machine
+ **/
 int
 main_config( bool /* is_full */ )
 {
 	int returnValue = 0;
-	
+
 	if( stateMachine->isHardConfigurationNeeded( ) ) {
     	dprintf( D_ALWAYS, "main_config hard configuration started\n" );
 		returnValue = stateMachine->reinitialize( );
@@ -104,7 +106,7 @@ main_config( bool /* is_full */ )
 		dprintf( D_ALWAYS, "main_config soft configuration started\n" );
 		returnValue = stateMachine->softReconfigure( );
 	}
-	
+
 	return returnValue;
 }
 
