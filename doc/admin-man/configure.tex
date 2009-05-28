@@ -102,8 +102,11 @@ Macro definitions are of the form:
 <macro_name> = <macro_definition>
 \end{verbatim}
 
-\Note There must be white space between the macro name, the
-``='' sign, and the macro definition.
+The macro name given on the left hand side of the definition is
+a case sensitive identifier.
+There must be white space between the macro name, the
+equals sign (\verb@=@), and the macro definition.
+The macro definition is a string literal that may utilize macro substitution.
 
 Macro invocations are of the form: 
 \begin{verbatim}
@@ -111,11 +114,10 @@ $(macro_name)
 \end{verbatim}
 
 Macro definitions may contain references to other macros, even ones
-that are not yet defined (as long as they are eventually defined in
-the configuration files).
-All macro expansion is done after all configuration files have been parsed
-(with the exception of macros that reference themselves, described
-below). 
+that are not yet defined, as long as they are eventually defined in
+the configuration files.
+All macro expansion is done after all configuration files have been parsed,
+with the exception of macros that reference themselves.
 
 \begin{verbatim}
 A = xxx
@@ -163,12 +165,8 @@ B = $(A)
 are not allowed.
 They create definitions that Condor refuses to parse. 
 
-\Note Macros should not be incrementally defined in the
-\Macro{LOCAL\_ROOT\_CONFIG\_FILE} for security reasons.
-
 All entries in a configuration file must have an operator,
 which will be an equals sign (\verb@=@).
-%or a colon character (\verb@:@).
 Identifiers are alphanumerics combined with the underscore character,
 optionally with a subsystem name and a period as a prefix.
 As a special case,
@@ -287,7 +285,7 @@ have different requirements for which parameters need to be
 specified individually.  This example works for the \Condor{schedd},
 and more local configuration can, and likely would be specified.
 
-also note that each daemon's log file must be specified individually,
+Also note that each daemon's log file must be specified individually,
 and in two places: one specification is for use by the \Condor{master},
 and the other is for use by the daemon itself.
 In the example,
@@ -302,10 +300,10 @@ the \Attr{XYZZY} \Condor{schedd} configuration variable
 
 A Condor configuration file may contain comments and
 line continuations.
-A comment is any line beginning with a ``\#'' character.
+A comment is any line beginning with a pound character (\verb@#@).
 A continuation is any entry that continues across multiples lines.
-Line continuation is accomplished by placing the ``$\backslash$''
-character at the end of any line to be continued onto another.
+Line continuation is accomplished by placing the backslash
+character (\Bs) at the end of any line to be continued onto another.
 Valid examples of line continuation are
 \begin{verbatim}
   START = (KeyboardIdle > 15 * $(MINUTE)) && \
@@ -2777,13 +2775,6 @@ These macros control the \Condor{master}.
   will be different from your regular pool, since it will include
   entries for the \Condor{collector} and \Condor{negotiator}.  
   
-  \Note On machines running Digital Unix, your
-  \MacroUNI{DAEMON\_LIST} will also include KBDD, for the
-  \Condor{kbdd}, which is a special daemon that runs to monitor
-  keyboard and mouse activity on the console.  It is only with this
-  special daemon that we can acquire this information on those
-  platforms. 
-
 \label{param:DCDaemonList}
 \item[\Macro{DC\_DAEMON\_LIST}]
   This macro
@@ -3694,9 +3685,10 @@ startd.UPDATE_OFFSET   = $RANDOM_INTEGER(0,300)
 
 \label{param:DedicatedScheduler}
 \item[\Macro{DedicatedScheduler}]
-  A string that identifies the dedicated scheduler.
-  See section~\ref{sec:Configure-Dedicated-Resource}
-  on page~\pageref{sec:Configure-Dedicated-Resource} for details.
+  A string that identifies the dedicated scheduler this machine is managed by.
+  Section~\ref{sec:Configure-Dedicated-Resource}
+  on page~\pageref{sec:Configure-Dedicated-Resource} details the use of
+  a dedicated scheduler.
 
 \label{param:StartdNoclaimShutdown}
 \item[\Macro{STARTD\_NOCLAIM\_SHUTDOWN}]
@@ -4605,6 +4597,12 @@ Power Management for more details.
   for every hibernating machine.  This forms a persistent storage
   of these ClassAds, in case the \Condor{collector} daemon crashes.
 
+  To avoid \Condor{preen} removing this log, place it in a directory
+  other than the directory defined by \MacroUNI{SPOOL}.  
+  Alternatively, if this log file is to go in the 
+  directory defined by \MacroUNI{SPOOL}, add the file to the list
+  given by \MacroNI{VALID\_SPOOL\_FILES}.
+
 \label{param:OfflineExpireAdsAfter}
 \item[\Macro{OFFLINE\_EXPIRE\_ADS\_AFTER}]
   An integer number of seconds specifying the lifetime of the
@@ -5290,6 +5288,20 @@ SYSTEM_PERIODIC_REMOVE = \
   A boolean value that defaults to \Expr{False}.
   When \Expr{True}, the \Condor{schedd} daemon sends vacate signals via TCP,
   instead of the default UDP.
+
+\label{param:ScheddClusterInitialValue}
+\item[\Macro{SCHEDD\_CLUSTER\_INITIAL\_VALUE}]
+  An integer that specifies the initial cluster number value to use within a
+  job id when a job is first submitted.
+  The default value is 1.
+
+\label{param:ScheddClusterIncrementValue}
+\item[\Macro{SCHEDD\_CLUSTER\_INCREMENT\_VALUE}]
+  A positive integer that defaults to 1, representing a stride used
+  for assignment of cluster numbers within a job id.
+  When a job is submitted, the job will be assigned a job id.  The cluster
+  number of the job id will be equal to the previous cluster number used
+  plus the value of this setting.
 
 \end{description}
 
@@ -6471,6 +6483,18 @@ The following configuration macros affect negotiation for group users.
   is \Expr{False},
   and if all \condor{startd} rank expressions are \Expr{False}.}
 
+\label{param:StartdAdReevalExpr}
+\item[\Macro{STARTD\_AD\_REEVAL\_EXPR}]
+  A boolean value evaluated in the context of each machine ClassAd within
+  a negotiation cycle that determines whether the ClassAd from the
+  \Condor{collector} is to replace the stashed ClassAd utilized during
+  the previous negotiation cycle.
+  When \Expr{True},
+  the ClassAd from the \Condor{collector} does replace the stashed one.
+  When not defined, the default value is to replace the stashed ClassAd
+  if the stashed ClassAd's sequence number is older than its potential
+  replacement.
+
 \end{description}
 
 % entire section commented out Nov 2005
@@ -6582,14 +6606,14 @@ Configuration File Macros}
 \label{param:ProcdAddress}
 \item[\Macro{PROCD\_ADDRESS}]
   This specifies
-  the ``address'' that the \Condor{procd} will use to receive requests
-  from other Condor daemons. On UNIX, this should point to a file system
+  the address that the \Condor{procd} will use to receive requests
+  from other Condor daemons. On Unix, this should point to a file system
   location that can be used for a named pipe. On Windows, named pipes
   are also used but they do not exist in the file system. The default
-  setting therefore depends on the platform: \Code{\$(LOCK)/procd\_pipe}
-  on Unix and
-  \Code{$\backslash$$\backslash$.$\backslash$pipe$\backslash$procd\_pipe}
-  on Windows.
+  setting therefore depends on the platform: 
+  \verb@$(LOCK)/procd_pipe@ on Unix and
+%  \Code{$\backslash$$\backslash$.$\backslash$pipe$\backslash$procd\_pipe}
+  \verb@\\.\pipe\procd_pipe@ on Windows.
 
 \end{description}
 

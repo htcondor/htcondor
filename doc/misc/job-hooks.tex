@@ -124,8 +124,8 @@ wants to see if there is any work to fetch.
 There is a related configuration expression called
 \Macro{FetchWorkDelay} which determines how long the \Condor{startd}
 will wait between attempts to fetch work, which is described in detail
-in section~\ref{sec:job-hooks-fetch-work-delay} on
-page~\pageref{sec:job-hooks-fetch-work-delay} below.
+in within section~\ref{sec:job-hooks-fetch-work-delay} on
+page~\pageref{sec:job-hooks-fetch-work-delay}.
 \MacroNI{HOOK\_FETCH\_WORK} is the most important hook in the whole
 system, and is the only hook that must be defined for any of the other
 \Condor{startd} hooks to operate.
@@ -135,7 +135,7 @@ information for the \Condor{starter} to eventually spawn the work.
 The required and optional attributes in this ClassAd are identical to
 the ones described for Computing on Demand (COD) jobs in
 section~\ref{sec:cod-application-attributes} 
-``COD Application Attributes'' on
+called COD Application Attributes on
 page~\pageref{sec:cod-application-attributes}.
 
 \begin{description}
@@ -442,7 +442,7 @@ uses a custom keyword to handle work fetched from a web service.
   WEB_HOOK_FETCH_WORK = $(WEB_HOOK_DIR)/fetch_work.php
 \end{verbatim}
 
-The keywords ``DATABASE'' and ``WEB'' are completely arbitrary, so
+The keywords \AdStr{DATABASE} and \AdStr{WEB} are completely arbitrary, so
 each site is encouraged to use different (more specific) names as
 appropriate for their own needs.
 
@@ -461,17 +461,17 @@ fetch new work:
   fetched work.
 \end{itemize}
 
-Even if a given compute slot is already busy running other work, it's
+Even if a given compute slot is already busy running other work, it is
 possible that if it fetched new work, the \Condor{startd} would prefer
-the fetched work (via the \AdAttr{Rank} expression) over the work it
+this newly fetched work (via the \AdAttr{Rank} expression) over the work it
 is currently running.
 However, the \Condor{startd} frequently evaluates its own state,
 especially when a slot is claimed.
-Therefore, administrators can define an expression which controls how
-long the \Condor{startd} will wait between attempts to fetch new work.
-This expression is called \AdAttr{FetchWorkDelay}.
+Therefore, administrators can define a configuration variable which controls
+how long the \Condor{startd} will wait between attempts to fetch new work.
+This variable is called \Macro{FetchWorkDelay}.
 
-The \AdAttr{FetchWorkDelay} expression must evaluate to an integer,
+The \MacroNI{FetchWorkDelay} expression must evaluate to an integer,
 which defines the number of seconds since the last fetch attempt
 completed before the \Condor{startd} will attempt to fetch more work.
 However, as a ClassAd expression (evaluated in the context of the
@@ -501,9 +501,9 @@ a five minute (300 second) delay between all attempts to fetch work.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:job-hooks-java-example}
-Example Job Hook: Making multiple java runtimes available}
+Example Job Hook: Making multiple java run times available}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{Job hooks!JavaExample}
+\index{Job hooks!Java Example}
 
 A common problem the Java Universe does not solve is when there
 are multiple Java virtual machines available to run user jobs.  If
@@ -572,7 +572,7 @@ but if the Job Router Hooks are configured,
 then these hooks will be used to transform
 and monitor the job instead of Condor's internal engine.
 
-Job Router Hooks are similiar in concept to Job Fetch Hooks,
+Job Router Hooks are similar in concept to Job Fetch Hooks,
 but they are limited in their scope to just the Job Router.
 As with Job Fetch Hooks,
 a hook is an external program or script invoked by Condor's Job Router
@@ -587,7 +587,7 @@ and how to configure Condor to use Job Router Hooks.
 Hooks Invoked for Job Routing}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-The Job Router Hooks allow for replacement of the tranformation engine used
+The Job Router Hooks allow for replacement of the transformation engine used
 by Condor for routing a job.
 Since the external transformation engine is not controlled by Condor,
 additional hooks provide a means to update the job's

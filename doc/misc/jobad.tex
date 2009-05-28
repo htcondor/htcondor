@@ -708,25 +708,62 @@ If \Expr{False}, no transfer takes place (remote to submit machine),
 and the name of the file is the file referred to
 by job attribute \Attr{Out}.
 
-%%% ClassAd attribute: WindowsBuildNumber
-\index{ClassAd machine attribute!WindowsBuildNumber}
+\index{ClassAd job attribute!WindowsBuildNumber}
 \item[\AdAttr{WindowsBuildNumber}:] An integer, extracted from the
 platform type of the machine upon which this job is submitted,
 representing a build number for a Windows operating system.
 This attribute only exists for jobs submitted from Windows machines.
 
-\index{ClassAd machine attribute!WindowsMajorVersion}
+\index{ClassAd job attribute!WindowsMajorVersion}
 \item[\AdAttr{WindowsMajorVersion}:] An integer, extracted from the
 platform type of the machine upon which this job is submitted,
 representing a major version number (currently 5 or 6)
 for a Windows operating system.
 This attribute only exists for jobs submitted from Windows machines.
 
-\index{ClassAd machine attribute!WindowsMinorVersion}
+\index{ClassAd job attribute!WindowsMinorVersion}
 \item[\AdAttr{WindowsMinorVersion}:] An integer, extracted from the
 platform type of the machine upon which this job is submitted, 
 representing a minor version number (currently 0, 1, or 2)
 for a Windows operating system.
 This attribute only exists for jobs submitted from Windows machines.
+
+\end{description}
+
+The following job ClassAd attributes are relevant only for
+\SubmitCmd{vm} universe jobs.
+
+\begin {description}
+%%% ClassAd attribute: VM_Checkpoint
+%\index{ClassAd job attribute!VM\_Checkpoint}
+%\item[\AdAttr{VM\_Checkpoint}:] Definition here.
+
+%%% ClassAd attribute: VM_MACAddr
+\index{ClassAd job attribute!VM\_MACAddr}
+\item[\AdAttr{VM\_MACAddr}:] The MAC address of the virtual
+machine's network interface,
+in the standard format of six groups of
+two hexadecimal digits separated by colons.
+This attribute is currently limited to apply only to Xen virtual machines.
+
+%%% ClassAd attribute: VM_Memory
+%\index{ClassAd job attribute!VM\_Memory}
+%\item[\AdAttr{VM\_Memory}:] Definition here.
+
+%%% ClassAd attribute: VM_Networking
+%\index{ClassAd job attribute!VM\_Networking}
+%\item[\AdAttr{VM\_Networking}:] Definition here.
+
+%%% ClassAd attribute: VM_Networking_Type
+%\index{ClassAd job attribute!VM\_Networking\_Type}
+%\item[\AdAttr{VM\_Networking\_Type}:] Definition here.
+
+%%% ClassAd attribute: VM_Type
+%\index{ClassAd job attribute!VM\_Type}
+%\item[\AdAttr{VM\_Type}:] Definition here.
+
+%%% ClassAd attribute: VM_VCPUS
+%\index{ClassAd job attribute!VM\_VCPUS}
+%\item[\AdAttr{VM\_VCPUS}:] Definition here.
 
 \end{description}
