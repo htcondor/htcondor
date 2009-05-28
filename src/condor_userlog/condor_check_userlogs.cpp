@@ -1,3 +1,5 @@
+//TEMP -- make sure this still works!!!
+//TEMP -- look for any other places that include the multi-log-reader code
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -47,7 +49,21 @@ int main(int argc, char **argv)
 	}
 	logFiles.rewind();
 
+#if LAZY_LOG_FILES
+	ReadMultipleUserLogs	ru;
+	char *filename;
+	while ( (filename = logFiles.next()) ) {
+		MyString filestring( filename );
+		CondorError errstack;
+		if ( !ru.monitorLogFile( filestring, false, errstack ) ) {
+			fprintf( stderr, "Error monitoring log file %s: %s\n", filename,
+						errstack.getFullText() );
+			result = 1;
+		}
+	}
+#else
 	ReadMultipleUserLogs	ru(logFiles);
+#endif // !LAZY_LOG_FILES
 
 	int logCount = ru.getInitializedLogCount();
 	bool logsMissing = false;

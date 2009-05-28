@@ -125,7 +125,9 @@ int runSubmit( const SubmitDagOptions &opts, const char *dagFile,
 			const char *directory );
 int setUpOptions( SubmitDagOptions &opts );
 void ensureOutputFilesExist(const SubmitDagOptions &opts);
+#if !LAZY_LOG_FILES
 int checkLogFiles( SubmitDagOptions &opts );
+#endif // !LAZY_LOG_FILES
 int getOldSubmitFlags( SubmitDagOptions &opts );
 int parseArgumentsLine( const MyString &subLine , SubmitDagOptions &opts );
 void writeSubmitFile(/* const */ SubmitDagOptions &opts);
@@ -507,6 +509,7 @@ setUpOptions( SubmitDagOptions &opts )
 	return 0;
 }
 
+#if !LAZY_LOG_FILES
 //---------------------------------------------------------------------------
 /** Make sure every node job has a log file, the log file isn't on
     NFS, etc.
@@ -554,6 +557,7 @@ checkLogFiles( SubmitDagOptions &opts )
 
 	return 0;
 }
+#endif // !LAZY_LOG_FILES
 
 //---------------------------------------------------------------------------
 /** Submit the DAGMan submit file unless the -no_submit option was given.

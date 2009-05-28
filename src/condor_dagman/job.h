@@ -341,7 +341,9 @@ class Job {
 		@param recovery: whether we're in recovery mode
 		@return true if successful, false if failed
 	*/
-	bool MonitorLogFile( ReadMultipleUserLogs &logReader, bool recovery );
+	bool MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
+				ReadMultipleUserLogs &storkLogReader, bool nfsIsError,
+				bool recovery );
 
 	/** Unmonitor this node's Condor or Stork log file with the
 		multiple log reader.  (Must be called after everything is done
@@ -349,7 +351,8 @@ class Job {
 		@param logReader: the multiple log reader
 		@return true if successful, false if failed
 	*/
-	bool UnmonitorLogFile( ReadMultipleUserLogs &logReader );
+	bool UnmonitorLogFile( ReadMultipleUserLogs &logReader,
+				ReadMultipleUserLogs &storkLogReader );
 #endif // LAZY_LOG_FILES
 
     /** */ CondorID _CondorID;

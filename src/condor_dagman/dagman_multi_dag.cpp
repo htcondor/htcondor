@@ -36,6 +36,7 @@ AppendError(MyString &errMsg, const MyString &newError)
 	errMsg += newError;
 }
 
+#if !LAZY_LOG_FILES
 //-------------------------------------------------------------------------
 bool
 GetLogFiles(/* const */ StringList &dagFiles, bool useDagDir, 
@@ -121,6 +122,7 @@ LogFileNfsError(/* const */ StringList &condorLogFiles,
 
 	return false;
 }
+#endif // !LAZY_LOG_FILES
 
 //-------------------------------------------------------------------------
 bool

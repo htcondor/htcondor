@@ -38,8 +38,8 @@
 
 // NOTE: must be kept in sync with Job::job_type_t
 enum Log_source{
-  CONDORLOG,
-  DAPLOG
+  CONDORLOG = Job::TYPE_CONDOR,
+  DAPLOG = Job::TYPE_STORK
 };
 
 // Which layer of splices do we want to lift?
@@ -85,6 +85,7 @@ class OwnedMaterials
 class Dag {
   public:
   
+	//TEMP -- findUserLogs should go away
     /** Create a DAG
 		@param dagFile the DAG file name
         @param maxJobsSubmitted the maximum number of jobs to submit to Condor
@@ -110,7 +111,7 @@ class Dag {
 			   job procs are prohibited
 		@param submitDepthFirst whether ready nodes should be submitted
 			   in depth-first (as opposed to breadth-first) order
-		@param fundUserLogs whether or not log files for the submit files
+		@param findUserLogs whether or not log files for the submit files
 				should be recursively dug out of the dag file and any
 				splices it contains. Usually this is true for the root
 				dag, and false for any splices brought in by the root dag.
@@ -137,9 +138,11 @@ class Dag {
 		_abortOnScarySubmit = abortOnScarySubmit;
 	}
 
+#if !LAZY_LOG_FILES
 	/** Initialize log files, lock files, etc.
 	*/
 	void InitializeDagFiles( bool deleteOldLogs );
+#endif // !LAZY_LOG_FILES
 
     /** Prepare DAG for initial run.  Call this function ONLY ONCE.
         @param recovery specifies if this is a recovery
@@ -163,8 +166,7 @@ class Dag {
     */
 
     
-    //    bool DetectLogGrowth();
-    bool DetectCondorLogGrowth();         //<--DAP 
+    bool DetectCondorLogGrowth();
     bool DetectDaPLogGrowth();            //<--DAP
 
     /** Force the Dag to process all new events in the condor log file.
@@ -284,7 +286,7 @@ class Dag {
 		@param allowEvents what "bad" events to treat as non-fatal (as
 			   opposed to fatal) errors; see check_events.h for values.
     */
-	void SetAllowEvents( int allowEvents);
+	void SetAllowEvents( int allowEvents );
 
     /// Print the list of jobs to stdout (for debugging).
     void PrintJobList() const;
@@ -400,7 +402,7 @@ class Dag {
     /* Detects cycle within dag submitted by user
 	   @return true if there is cycle
 	*/
-	bool isCycle ();
+	bool isCycle();
 
 	// max number of PRE & POST scripts to run at once (0 means no limit)
     const int _maxPreScripts;
@@ -423,10 +425,12 @@ class Dag {
 
 	int NumIdleJobProcs() const { return _numIdleJobProcs; }
 
+#if !LAZY_LOG_FILES
 		/** Get the number of Stork (nee DaP) log files.
 			@return The number of Stork log files (can be 0).
 		*/
 	int GetStorkLogCount() const { return _storkLogFiles.number(); }
+#endif // !LAZY_LOG_FILES
 
 		/** Print the number of deferrals during the run (caused
 		    by MaxJobs, MaxIdle, MaxPre, or MaxPost).
@@ -698,34 +702,38 @@ class Dag {
 	// run DAGs in directories from DAG file paths if true
 	bool _useDagDir;
 
+#if !LAZY_LOG_FILES
     // name of consolidated condor log
 	StringList _condorLogFiles;
-
-    // Documentation on ReadUserLog is present in condor_c++_util
-	ReadMultipleUserLogs _condorLogRdr;
-
-    //
-    bool          _condorLogInitialized;
 
     //-->DAP
 		// The list of all Stork log files (generated from the relevant
 		// submit files).
 	StringList	_storkLogFiles;
+#endif // !LAZY_LOG_FILES
+
+    // Documentation on ReadUserLog is present in condor_c++_util
+	ReadMultipleUserLogs _condorLogRdr;
 
 		// Object to read events from Stork logs.
 	ReadMultipleUserLogs	_storkLogRdr;
+
+#if !LAZY_LOG_FILES
+    //
+    bool          _condorLogInitialized;
 
 		// Whether the Stork (nee DaP) log(s) have been successfully
 		// initialized.
     bool          _dapLogInitialized;
     //<--DAP
+#endif // !LAZY_LOG_FILES
 
 		/** Get the total number of node job user log files we'll be
 			accessing.
 			@return The total number of log files.
 		*/
-	int TotalLogFileCount() { return _condorLogFiles.number() +
-				_storkLogFiles.number(); }
+	int TotalLogFileCount() { return _condorLogRdr.totalLogFileCount() +
+				_storkLogRdr.totalLogFileCount(); }
 
     /// List of Job objects
     List<Job>     _jobs;
@@ -881,6 +889,12 @@ class Dag {
 		// Default Condor ID to use in reseting a node's Condor ID on
 		// retry.
 	static const CondorID	_defaultCondorId;
+
+#if LAZY_LOG_FILES
+		// Whether having node job log files on NFS is an error (vs.
+		// just a warning).
+	bool	_nfsLogIsError;
+#endif // LAZY_LOG_FILES
 
 };
 

@@ -33,6 +33,7 @@ const int MAX_RESCUE_DAG_DEFAULT = 100;
 	// is normally configured lower).
 const int ABS_MAX_RESCUE_DAG_NUM = 999;
 
+#if !LAZY_LOG_FILES
 /** Get the log files from an entire set of DAGs, dealing with
     DAG paths if necessary.
 	@param dagFiles: all of the DAG files we're using.
@@ -55,6 +56,7 @@ bool GetLogFiles(/* const */ StringList &dagFiles, bool useDagDir,
 */
 bool LogFileNfsError(/* const */ StringList &condorLogFiles,
 			/* const */ StringList &storkLogFiles);
+#endif // !LAZY_LOG_FILES
 
 /** Get the configuration file, if any, specified by the given list of
 	DAG files.  If more than one DAG file specifies a configuration file,

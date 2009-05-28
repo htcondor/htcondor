@@ -724,22 +724,57 @@ Job::SetDagFile(const char *dagFile)
 
 #if LAZY_LOG_FILES
 //---------------------------------------------------------------------------
-//TEMP -- should this work w/ more than one log file per submit file? (see Gnats PR 886)
 bool
-Job::MonitorLogFile( ReadMultipleUserLogs &logReader, bool recovery )
+Job::MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
+			ReadMultipleUserLogs &storkLogReader, bool nfsIsError,
+			bool recovery )
 {
 	bool result = false;
 
-    MyString logFileStr = MultiLogFiles::loadLogFileNameFromSubFile(
-				_cmdFile, _directory );
+	ReadMultipleUserLogs &logReader = (_jobType == TYPE_CONDOR) ?
+				condorLogReader : storkLogReader;
+
+    MyString logFileStr;
+	if ( _jobType == TYPE_CONDOR ) {
+    	logFileStr = MultiLogFiles::loadLogFileNameFromSubFile( _cmdFile,
+					_directory );
+	} else {
+		StringList logFiles;
+		MyString tmpResult = MultiLogFiles::loadLogFileNamesFromStorkSubFile(
+					_cmdFile, _directory, logFiles );
+		if ( tmpResult != "" ) {
+			debug_printf( DEBUG_QUIET, "Error getting Stork log file: %s\n",
+						tmpResult.Value() );
+			result = false;
+		} else if ( logFiles.number() != 1 ) {
+			debug_printf( DEBUG_QUIET, "Error: %d Stork log files found "
+						"in submit file %s; we want 1\n",
+						logFiles.number(), _cmdFile );
+			result = false;
+		} else {
+			logFiles.rewind();
+			logFileStr = logFiles.next();
+		}
+	}
+
 	if ( logFileStr == "" ) {
 		debug_printf( DEBUG_QUIET, "ERROR: Unable to get log file from "
 					"submit file %s (node %s)\n", _cmdFile, GetJobName() );
 		result = false;
+
+	} else if ( MultiLogFiles::logFileOnNFS( logFileStr.Value(),
+				nfsIsError ) ) {
+		debug_printf( DEBUG_QUIET, "Error: log file %s on NFS\n",
+					_logFile );
+		result = false;
+
 	} else {
 		delete [] _logFile; // temporary
 		_logFile = strnewp( logFileStr.Value() );
+		debug_printf( DEBUG_DEBUG_1, "Monitoring log file <%s> for node %s\n",
+					_logFile, GetJobName() );
 		CondorError errstack;
+			//TEMP -- should truncating the file depend on dagman.deleteOldLogs?
 		result = logReader.monitorLogFile( _logFile, !recovery, errstack );
 		if ( !result ) {
 			errstack.pushf( "DAGMan::Job", 0/*TEMP*/, "ERROR: Unable to "
@@ -753,8 +788,15 @@ Job::MonitorLogFile( ReadMultipleUserLogs &logReader, bool recovery )
 
 //---------------------------------------------------------------------------
 bool
-Job::UnmonitorLogFile( ReadMultipleUserLogs &logReader )
+Job::UnmonitorLogFile( ReadMultipleUserLogs &condorLogReader,
+			ReadMultipleUserLogs &storkLogReader )
 {
+	debug_printf( DEBUG_DEBUG_1, "Unmonitoring log file <%s> for node %s\n",
+				_logFile, GetJobName() );
+
+	ReadMultipleUserLogs &logReader = (_jobType == TYPE_CONDOR) ?
+				condorLogReader : storkLogReader;
+
 	CondorError errstack;
 	bool result = logReader.unmonitorLogFile( _logFile, errstack );
 	if ( !result ) {
@@ -763,10 +805,10 @@ Job::UnmonitorLogFile( ReadMultipleUserLogs &logReader )
 		debug_printf( DEBUG_QUIET, "%s\n", errstack.getFullText() );
 	}
 
-#if 0 // uncomment once lazy log file code is fully implemented
+#if LAZY_LOG_FILES
 	delete [] _logFile;
 	_logFile = NULL;
-#endif
+#endif // LAZY_LOG_FILES
 
 	return result;
 }

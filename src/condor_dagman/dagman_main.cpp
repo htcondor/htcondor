@@ -839,8 +839,10 @@ int main_init (int argc, char ** const argv) {
 					// We should never get to here!
 				}
 			}
+#if !LAZY_LOG_FILES
         } else {
 			dagman.dag->InitializeDagFiles( dagman.deleteOldLogs );
+#endif // !LAZY_LOG_FILES
         }
 
 			//

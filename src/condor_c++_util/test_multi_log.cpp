@@ -1,3 +1,4 @@
+//TEMPTEMP -- crap -- this fails with the lazy log file code turned off!
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -29,7 +30,7 @@
 #include "string_list.h"
 #include "read_multiple_logs.h"
 
-static const char * VERSION = "0.9.2";
+static const char * VERSION = "0.9.3";
 
 MULTI_LOG_HASH_INSTANCE; // For the multi-log-file code...
 
@@ -150,6 +151,7 @@ CheckArgs(int argc, char **argv)
 	return status;
 }
 
+#if !LAZY_LOG_FILES
 // true == okay; false == error
 bool
 GetGoodLogFiles(StringList &logFiles)
@@ -271,6 +273,7 @@ GetBadLogFiles()
 	return isOkay;
 }
 
+
 // true == okay; false == error
 bool
 CompareStringLists(StringList &reference, StringList &test)
@@ -293,6 +296,14 @@ CompareStringLists(StringList &reference, StringList &test)
 			printf(" (at %s: %d)\n", __FILE__, __LINE__);
 			fflush(stdout);
 			isOkay = false;
+		}
+	}
+
+	if ( !isOkay ) {
+		printf("Log file list:\n");
+		test.rewind();
+		while ( (str = test.next()) != NULL ) {
+			printf("  <%s>\n", str );
 		}
 	}
 
@@ -321,6 +332,7 @@ ReadEvents(StringList &logFiles)
 	}
 
 	printf("Testing detectLogGrowth() on empty files...\n");
+	//TEMPTEMP -- does this fail because of Nick's changes?
 	if ( !reader.detectLogGrowth() ) {
 		printf("...succeeded\n");
 		fflush(stdout);
@@ -329,6 +341,7 @@ ReadEvents(StringList &logFiles)
 		printf(" (at %s: %d)\n", __FILE__, __LINE__);
 		fflush(stdout);
 		isOkay = false;
+		exit(1);//TEMPTEMP
 	}
 
 	ULogEvent	*event;
@@ -572,6 +585,7 @@ ReadEvents(StringList &logFiles)
 
 	return isOkay;
 }
+#endif // !LAZY_LOG_FILES
 
 #if LAZY_LOG_FILES
 // true == okay; false == error
@@ -602,8 +616,19 @@ ReadEventsLazy()
 	unlink( file5b );
 
 	ReadMultipleUserLogs lazyReader;
+	int totalLogCount;
+	if ( (totalLogCount = lazyReader.totalLogFileCount()) != 0 ) {
+		fprintf( stderr, "lazyReader.totalLogFileCount() was %d; should "
+					"have been 0\n", totalLogCount );
+		isOkay = false;
+	}
 
-	if (!monitorLogFile( lazyReader, file1, true ) ) {
+	if ( !monitorLogFile( lazyReader, file1, true ) ) {
+		isOkay = false;
+	}
+	if ( (totalLogCount = lazyReader.totalLogFileCount()) != 1 ) {
+		fprintf( stderr, "lazyReader.totalLogFileCount() was %d; should "
+					"have been 1\n", totalLogCount );
 		isOkay = false;
 	}
 
@@ -725,6 +750,11 @@ ReadEventsLazy()
 	if (!monitorLogFile( lazyReader, file3, true ) ) {
 		isOkay = false;
 	}
+	if ( (totalLogCount = lazyReader.totalLogFileCount()) != 3 ) {
+		fprintf( stderr, "lazyReader.totalLogFileCount() was %d; should "
+					"have been 3\n", totalLogCount );
+		isOkay = false;
+	}
 
 	lazyReader.printAllLogMonitors( stdout );
 
@@ -803,6 +833,11 @@ ReadEventsLazy()
 		isOkay = false;
 	}
 	if (!unmonitorLogFile( lazyReader, file3 ) ) {
+		isOkay = false;
+	}
+	if ( (totalLogCount = lazyReader.totalLogFileCount()) != 3 ) {
+		fprintf( stderr, "lazyReader.totalLogFileCount() was %d; should "
+					"have been 3\n", totalLogCount );
 		isOkay = false;
 	}
 
@@ -981,6 +1016,11 @@ ReadEventsLazy()
 	link( file5, file5b );
 		// Note: monitoring the sym link to this log.
 	if (!monitorLogFile( lazyReader, file5b, true ) ) {
+		isOkay = false;
+	}
+	if ( (totalLogCount = lazyReader.totalLogFileCount()) != 4 ) {
+		fprintf( stderr, "lazyReader.totalLogFileCount() was %d; should "
+					"have been 4\n", totalLogCount );
 		isOkay = false;
 	}
 

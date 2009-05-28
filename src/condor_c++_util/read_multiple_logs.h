@@ -46,6 +46,7 @@
 class MultiLogFiles
 {
 public:
+#if !LAZY_LOG_FILES
 	    /** Gets the userlog files used by a dag
 		    on success, the return value will be ""
 		    on failure, it will be an appropriate error message
@@ -53,6 +54,7 @@ public:
     static MyString getJobLogsFromSubmitFiles(const MyString &strDagFileName,
 			const MyString &jobKeyword, const MyString &dirKeyword,
 			StringList &listLogFilenames);
+#endif // !LAZY_LOG_FILES
 
 		/** Gets values from a file, where the file contains lines of
 			the form
@@ -80,7 +82,7 @@ public:
 			@param a CondorError object to hold any error information
 			@return true if successful, false if failed
 		 */
-	static bool makePathAbsolute(MyString filename, CondorError &errstack);
+	static bool makePathAbsolute(MyString &filename, CondorError &errstack);
 
 #ifdef HAVE_EXT_CLASSADS
 	    /** Gets the log files from a Stork submit file.
@@ -105,10 +107,12 @@ public:
 	static int getQueueCountFromSubmitFile(const MyString &strSubFilename,
 	            const MyString &directory, MyString &errorMsg);
 
+#if !LAZY_LOG_FILES
 	    /** Truncates the given log files to zero length (as opposed to
 			deleting them, which breaks things if the log file is a link).
 		 */
 	static void TruncateLogs(StringList &logFileNames);
+#endif // !LAZY_LOG_FILES
 
 #if LAZY_LOG_FILES
 		/** Initializes the given file -- creates it if it doesn't exist,
@@ -122,6 +126,7 @@ public:
 				CondorError &errstack);
 #endif // LAZY_LOG_FILES
 
+#if !LAZY_LOG_FILES
 		/** Determines whether the given set of log files have any
 			members that are on NFS.
 			@param The list of log files
@@ -131,6 +136,7 @@ public:
 				is true
 		*/
 	static bool logFilesOnNFS(StringList&, bool nfsIsError);
+#endif // !LAZY_LOG_FILES
 
 		/** Determines whether the given log file is on NFS.
 			@param The log file name
@@ -209,14 +215,18 @@ class ReadMultipleUserLogs
 {
 public:
 	ReadMultipleUserLogs();
+#if !LAZY_LOG_FILES
 	explicit ReadMultipleUserLogs(StringList &listLogFileNames);
+#endif // !LAZY_LOG_FILES
 
 	~ReadMultipleUserLogs();
 
+#if !LAZY_LOG_FILES
 	    /** Sets the list of log files to monitor; throws away any
 		    previous list of files to monitor.
 		 */
     bool initialize(StringList &listLogFileNames);
+#endif // !LAZY_LOG_FILES
 
     	/** Returns the "next" event from any log file.  The event pointer 
         	is set to point to a newly instatiated ULogEvent object.
@@ -232,6 +242,11 @@ public:
 		 	initialized.
 		 */
 	int getInitializedLogCount() const;
+
+		/** Returns the total number of user logs this object "knows
+			about".
+		 */
+	int totalLogFileCount() const;
 
 #if LAZY_LOG_FILES
 		/** Monitor the given log file
@@ -270,7 +285,7 @@ protected:
 private:
 	void cleanup();
 
-//TEMP -- get rid of LogFileEntry stuff when lazy code works
+#if !LAZY_LOG_FILES
 	struct LogFileEntry
 	{
 		bool		isInitialized;
@@ -285,7 +300,6 @@ private:
 	int				iLogFileCount;
 	LogFileEntry *	pLogFileEntries;
 
-#if !LAZY_LOG_FILES
 		// Holds CondorID->log mappings to check for duplicate logs.
 		// Note: we only map the first CondorID we see for a log, so
 		// there is only one entry per log.
@@ -338,24 +352,32 @@ private:
 #endif // LAZY_LOG_FILES
 
 	// For instantiation in programs that use this class.
+#if LAZY_LOG_FILES
+#define MULTI_LOG_HASH_INSTANCE template class \
+		HashTable<StatStructInode, ReadMultipleUserLogs::LogFileMonitor *>
+#else
 #define MULTI_LOG_HASH_INSTANCE template class \
 		HashTable<CondorID, \
 		ReadMultipleUserLogs::LogFileEntry *>
+#endif // !LAZY_LOG_FILES
 
 
+#if !LAZY_LOG_FILES
 	    /** Goes through the list of logs and tries to initialize (open
 		    the file of) any that aren't initialized yet.
 			Returns true iff it successfully initialized *any* previously-
 			uninitialized log.
 		 */
 	bool initializeUninitializedLogs();
+#endif // !LAZY_LOG_FILES
 
+#if !LAZY_LOG_FILES
 		/** Returns true iff the given log grew since the last time
 		    we called this method on it.
 		 */
 	static bool LogGrew(LogFileEntry &log);
 
-#if LAZY_LOG_FILES
+#else
 		/** Returns true iff the given log grew since the last time
 		    we called this method on it.
 		    @param The LogFileMonitor object to test.

@@ -1,3 +1,11 @@
+//TEMP -- recovery mode doesn't work yet...
+//TEMP -- hmm -- maybe have a check at the end that we're not monitoring any log files
+//TEMP -- job_dagman_splice-J.run fails
+//TEMP -- job_dagman_splice-M.run fails
+//TEMP -- job_dagman_splice-N.run fails
+//TEMP -- job_dagman_splice-O.run fails
+//TEMP -- job_dagman_stork-file-file.run fails
+//TEMP -- job_dagman_stork-remove.run fails
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -78,8 +86,10 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	_splices              (200, hashFuncMyString, rejectDuplicateKeys),
 	_dagFiles             (dagFiles),
 	_useDagDir            (useDagDir),
+#if !LAZY_LOG_FILES
     _condorLogInitialized (false),
     _dapLogInitialized    (false),             //<--DAP
+#endif // !LAZY_LOG_FILES
 	_nodeNameHash		  (NODE_HASH_SIZE, MyStringHash, rejectDuplicateKeys),
 	_nodeIDHash			  (NODE_HASH_SIZE, hashFuncInt, rejectDuplicateKeys),
 	_condorIDHash		  (NODE_HASH_SIZE, hashFuncInt, rejectDuplicateKeys),
@@ -163,6 +173,10 @@ Dag::Dag( /* const */ StringList &dagFiles,
 		// recovery mode.
 	_pendingReportInterval = -1;
 
+#if LAZY_LOG_FILES
+	_nfsLogIsError = param_boolean( "DAGMAN_LOG_ON_NFS_IS_ERROR", true );
+#endif // LAZY_LOG_FILES
+
 	return;
 }
 
@@ -190,11 +204,11 @@ Dag::~Dag() {
     return;
 }
 
+#if !LAZY_LOG_FILES
 //-------------------------------------------------------------------------
 void
 Dag::InitializeDagFiles( bool deleteOldLogs )
 {
-#if !LAZY_LOG_FILES
 		// if there is an older version of the log files,
 		// we need to delete these.
 
@@ -229,8 +243,8 @@ Dag::InitializeDagFiles( bool deleteOldLogs )
 	MultiLogFiles::TruncateLogs( _condorLogFiles );
 	MultiLogFiles::TruncateLogs( _storkLogFiles );
 	}
-#endif
 }
+#endif
 
 //-------------------------------------------------------------------------
 bool Dag::Bootstrap (bool recovery) {
@@ -263,35 +277,30 @@ bool Dag::Bootstrap (bool recovery) {
 
 		debug_cache_start_caching();
 
-#if LAZY_LOG_FILES
-		if( !ProcessLogEvents( CONDORLOG, recovery ) ) {
-			_recovery = false;
-			debug_cache_stop_caching();
-			return false;
-		}
-#else
-		if( _condorLogFiles.number() > 0 ) {
+			//TEMP -- could use an active log file count here
+		if( _condorLogRdr.totalLogFileCount() > 0 ) {
 			if( !ProcessLogEvents( CONDORLOG, recovery ) ) {
 				_recovery = false;
 				debug_cache_stop_caching();
 				return false;
 			}
 		}
-		if( _storkLogFiles.number() > 0 ) {
+			//TEMP -- could use an active log file count here
+		if( _storkLogRdr.totalLogFileCount() > 0 ) {
 			if( !ProcessLogEvents( DAPLOG, recovery ) ) {
 				_recovery = false;
 				debug_cache_stop_caching();
 				return false;
 			}
 		}
-#endif
 
 		// all jobs stuck in STATUS_POSTRUN need their scripts run
 		jobs.ToBeforeFirst();
 		while( jobs.Next( job ) ) {
 			if( job->GetStatus() == Job::STATUS_POSTRUN ) {
 #if LAZY_LOG_FILES
-				job->MonitorLogFile( _condorLogRdr, _recovery );
+				job->MonitorLogFile( _condorLogRdr, _storkLogRdr,
+							_nfsLogIsError, _recovery );
 #endif // LAZY_LOG_FILES
 				_postScriptQ->Run( job->_scriptPost );
 			}
@@ -369,11 +378,12 @@ Job * Dag::FindNodeByNodeID (const JobID_t jobID) const {
 bool
 Dag::DetectCondorLogGrowth () {
 
-#if !LAZY_LOG_FILES
-	if( _condorLogFiles.number() <= 0 ) {
+		//TEMP -- could use an active log file count here
+	if( _condorLogRdr.totalLogFileCount() <= 0 ) {
 		return false;
 	}
 
+#if !LAZY_LOG_FILES
     if (!_condorLogInitialized) {
 		_condorLogInitialized = _condorLogRdr.initialize( _condorLogFiles );
 		if( !_condorLogInitialized ) {
@@ -417,13 +427,13 @@ Dag::DetectCondorLogGrowth () {
 
 //-------------------------------------------------------------------------
 bool Dag::DetectDaPLogGrowth () {
-#if LAZY_LOG_FILES
-	return false;
-#else
-	if( _storkLogFiles.number() <= 0 ) {
+
+		//TEMP -- could use an active log file count here
+	if( _storkLogRdr.totalLogFileCount() <= 0 ) {
 		return false;
 	}
 
+#if !LAZY_LOG_FILES
     if (!_dapLogInitialized) {
 		_dapLogInitialized = _storkLogRdr.initialize( _storkLogFiles );
 		if( !_dapLogInitialized ) {
@@ -435,12 +445,12 @@ bool Dag::DetectDaPLogGrowth () {
 			return false;
 		}
     }
+#endif // !LAZY_LOG_FILES
 
 	bool growth = _storkLogRdr.detectLogGrowth();
     debug_printf( DEBUG_DEBUG_4, "%s\n",
 				  growth ? "Log GREW!" : "No log growth..." );
     return growth;
-#endif
 }
 
 //-------------------------------------------------------------------------
@@ -632,6 +642,7 @@ bool Dag::ProcessOneEvent (int logsource, ULogEventOutcome outcome,
 }
 
 
+//---------------------------------------------------------------------------
 void
 Dag::ProcessAbortEvent(const ULogEvent *event, Job *job,
 		bool recovery) {
@@ -814,7 +825,9 @@ void
 Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
 
 #if LAZY_LOG_FILES
-	job->UnmonitorLogFile( _condorLogRdr );
+	if ( job->_queuedNodeJobProcs == 0 ) {
+		job->UnmonitorLogFile( _condorLogRdr, _storkLogRdr );
+	}
 #endif // LAZY_LOG_FILES
 
 	//
@@ -864,7 +877,8 @@ Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
 
 			if( !recovery ) {
 #if LAZY_LOG_FILES
-				job->MonitorLogFile( _condorLogRdr, _recovery );
+				job->MonitorLogFile( _condorLogRdr, _storkLogRdr,
+							_nfsLogIsError, _recovery );
 #endif // LAZY_LOG_FILES
 				_postScriptQ->Run( job->_scriptPost );
 			}
@@ -884,7 +898,7 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 
 	if( job ) {
 #if LAZY_LOG_FILES
-			job->UnmonitorLogFile( _condorLogRdr );
+			job->UnmonitorLogFile( _condorLogRdr, _storkLogRdr );
 #endif // LAZY_LOG_FILES
 
 			// Note: "|| recovery" below is somewhat of a "quick and dirty"
@@ -1375,11 +1389,17 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 			_catThrottleDeferredCount++;
 		} else {
 #if LAZY_LOG_FILES
+				// The problem here is that we wouldn't need to sleep if
+				// we only have one total log file *after* we monitor the
+				// log file for the job we're going to submit.  I guess
+				// we could be smarter and move this test somewhere else,
+				// but I'm not going to deal with that right now.
+				// wenger 2009-05-27
 			if( dm.submit_delay == 0 && !didLogSleep ) {
 #else
 			if( dm.submit_delay == 0 && TotalLogFileCount() > 1 &&
 						!didLogSleep ) {
-#endif
+#endif // !LAZY_LOG_FILES
 					// if we don't already have a submit_delay, sleep for one
 					// second here, so we can be sure that this job's submit
 					// event will be unambiguously later than the termination
@@ -1982,6 +2002,7 @@ Dag::TerminateJob( Job* job, bool recovery )
 	}
 }
 
+//-------------------------------------------------------------------------
 void Dag::
 PrintEvent( debug_level_t level, const ULogEvent* event, Job* node )
 {
@@ -1998,6 +2019,7 @@ PrintEvent( debug_level_t level, const ULogEvent* event, Job* node )
 	return;
 }
 
+//-------------------------------------------------------------------------
 void
 Dag::RestartNode( Job *node, bool recovery )
 {
@@ -2029,6 +2051,7 @@ Dag::RestartNode( Job *node, bool recovery )
 }
 
 
+//-------------------------------------------------------------------------
 // Number the nodes according to DFS order 
 void 
 Dag::DFSVisit (Job * job)
@@ -2057,6 +2080,7 @@ Dag::DFSVisit (Job * job)
 	job->_dfsOrder = DFS_ORDER;
 }		
 
+//-------------------------------------------------------------------------
 // Detects cycle and warns user about it
 bool 
 Dag::isCycle ()
@@ -2103,6 +2127,7 @@ Dag::isCycle ()
 	return cycle;
 }
 
+//-------------------------------------------------------------------------
 bool
 Dag::CheckForDagAbort(Job *job, const char *type)
 {
@@ -2122,6 +2147,7 @@ Dag::CheckForDagAbort(Job *job, const char *type)
 }
 
 
+//-------------------------------------------------------------------------
 const MyString
 Dag::ParentListString( Job *node, const char delim ) const
 {
@@ -2970,7 +2996,8 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 	}
 
 #if LAZY_LOG_FILES
-	node->MonitorLogFile( _condorLogRdr, _recovery );
+	node->MonitorLogFile( _condorLogRdr, _storkLogRdr, _nfsLogIsError,
+				_recovery );
 #endif // LAZY_LOG_FILES
 
 		// Note: we're checking for a missing log file spec here instead of
@@ -3067,7 +3094,7 @@ Dag::ProcessFailedSubmit( Job *node, int max_submit_attempts )
 	_nextSubmitDelay *= 2;
 
 #if LAZY_LOG_FILES
-			node->UnmonitorLogFile( _condorLogRdr );
+	node->UnmonitorLogFile( _condorLogRdr, _storkLogRdr );
 #endif // LAZY_LOG_FILES
 
 	if ( node->_submitTries >= max_submit_attempts ) {
@@ -3098,7 +3125,8 @@ Dag::ProcessFailedSubmit( Job *node, int max_submit_attempts )
 			_postRunNodeCount++;
 			node->_scriptPost->_retValJob = DAG_ERROR_CONDOR_SUBMIT_FAILED;
 #if LAZY_LOG_FILES
-			node->MonitorLogFile( _condorLogRdr, _recovery );
+			node->MonitorLogFile( _condorLogRdr, _storkLogRdr,
+						_nfsLogIsError, _recovery );
 #endif // LAZY_LOG_FILES
 			_postScriptQ->Run( node->_scriptPost );
 		} else {

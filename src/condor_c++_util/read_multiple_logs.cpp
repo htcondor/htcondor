@@ -65,24 +65,23 @@ ReadMultipleUserLogs::ReadMultipleUserLogs() :
 	activeLogFiles(LOG_INFO_HASH_SIZE, InodeHash, rejectDuplicateKeys)
 #endif // LAZY_LOG_FILES
 {
+#if !LAZY_LOG_FILES
 	pLogFileEntries = NULL;
 	iLogFileCount = 0;
+#endif // !LAZY_LOG_FILES
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-ReadMultipleUserLogs::ReadMultipleUserLogs(StringList &listLogFileNames) :
 #if !LAZY_LOG_FILES
+ReadMultipleUserLogs::ReadMultipleUserLogs(StringList &listLogFileNames) :
 	logHash(LOG_HASH_SIZE, hashFuncJobID, rejectDuplicateKeys)
-#else
-	allLogFiles(LOG_INFO_HASH_SIZE, InodeHash, rejectDuplicateKeys),
-	activeLogFiles(LOG_INFO_HASH_SIZE, InodeHash, rejectDuplicateKeys)
-#endif // LAZY_LOG_FILES
 {
 	pLogFileEntries = NULL;
 	iLogFileCount = 0;
 	initialize(listLogFileNames);
 }
+#endif // !LAZY_LOG_FILES
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -93,6 +92,7 @@ ReadMultipleUserLogs::~ReadMultipleUserLogs()
 
 ///////////////////////////////////////////////////////////////////////////////
 
+#if !LAZY_LOG_FILES
 bool
 ReadMultipleUserLogs::initialize(StringList &listLogFileNames)
 {
@@ -124,6 +124,7 @@ ReadMultipleUserLogs::initialize(StringList &listLogFileNames)
 
 	return result;
 }
+#endif // !LAZY_LOG_FILES
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -257,7 +258,9 @@ ReadMultipleUserLogs::detectLogGrowth()
 {
     dprintf( D_FULLDEBUG, "ReadMultipleUserLogs::detectLogGrowth()\n" );
 
+#if !LAZY_LOG_FILES
     initializeUninitializedLogs();
+#endif // !LAZY_LOG_FILES
 
 	bool grew = false;
 
@@ -293,16 +296,33 @@ ReadMultipleUserLogs::getInitializedLogCount() const
 
 	int result = 0;
 
+#if LAZY_LOG_FILES
+	//TEMP -- figure out what to do here
+#else
 	for ( int i = 0; i < iLogFileCount; ++i ) {
 		LogFileEntry &log = pLogFileEntries[i];
 		if ( log.isInitialized ) ++result;
 	}
+#endif // !LAZY_LOG_FILES
 
 	return result;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
+int
+ReadMultipleUserLogs::totalLogFileCount() const
+{
+#if LAZY_LOG_FILES
+	return allLogFiles.getNumElements();
+#else
+	return iLogFileCount;
+#endif // !LAZY_LOG_FILES
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+#if !LAZY_LOG_FILES
 void
 MultiLogFiles::TruncateLogs(StringList &logFileNames)
 {
@@ -325,10 +345,11 @@ MultiLogFiles::TruncateLogs(StringList &logFileNames)
 		}
 	}
 }
+#endif // !LAZY_LOG_FILES
 
-#if LAZY_LOG_FILES
 ///////////////////////////////////////////////////////////////////////////////
 
+#if LAZY_LOG_FILES
 bool
 MultiLogFiles::InitializeFile(const char *filename, bool truncate,
 			CondorError &errstack)
@@ -374,8 +395,7 @@ ReadMultipleUserLogs::cleanup()
 		delete monitor;
 	}
 	allLogFiles.clear();
-#endif // LAZY_LOG_FILES
-
+#else
 	if (pLogFileEntries == NULL) {
 		return;
 	}
@@ -389,10 +409,12 @@ ReadMultipleUserLogs::cleanup()
 	
 	pLogFileEntries = NULL;
 	iLogFileCount = 0;
+#endif // LAZY_LOG_FILES
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
+#if !LAZY_LOG_FILES
 bool
 ReadMultipleUserLogs::initializeUninitializedLogs()
 {
@@ -411,9 +433,11 @@ ReadMultipleUserLogs::initializeUninitializedLogs()
 
 	return result;
 }
+#endif // !LAZY_LOG_FILES
 
 ///////////////////////////////////////////////////////////////////////////////
 
+#if !LAZY_LOG_FILES
 bool
 ReadMultipleUserLogs::LogGrew(LogFileEntry &log)
 {
@@ -425,6 +449,7 @@ ReadMultipleUserLogs::LogGrew(LogFileEntry &log)
 	}
 
 	ReadUserLog::FileStatus fs = log.readUserLog.CheckFileStatus( );
+printf("DIAG 1010: fs: %d\n", fs);//TEMPTEMP
 
 	if ( ReadUserLog::LOG_STATUS_ERROR == fs ) {
 		dprintf( D_FULLDEBUG,
@@ -433,16 +458,18 @@ ReadMultipleUserLogs::LogGrew(LogFileEntry &log)
 				 log.strFilename.Value(), strerror( errno ) );
 		return false;
 	}
+	//TEMP -- make sure this is still right with Nick's latest changes
 	bool grew = ( fs != ReadUserLog::LOG_STATUS_NOCHANGE );
     dprintf( D_FULLDEBUG, "ReadMultipleUserLogs: %s\n",
 			 grew ? "log GREW!" : "no log growth..." );
 
 	return grew;
 }
+#endif // !LAZY_LOG_FILES
 
-#if LAZY_LOG_FILES
 ///////////////////////////////////////////////////////////////////////////////
 
+#if LAZY_LOG_FILES
 bool
 ReadMultipleUserLogs::LogGrew( LogFileMonitor *monitor )
 {
@@ -458,6 +485,7 @@ ReadMultipleUserLogs::LogGrew( LogFileMonitor *monitor )
 				 monitor->logFile.Value(), strerror( errno ) );
 		return false;
 	}
+	//TEMP -- make sure this is still right with Nick's latest changes
 	bool grew = ( fs != ReadUserLog::LOG_STATUS_NOCHANGE );
     dprintf( D_FULLDEBUG, "ReadMultipleUserLogs: %s\n",
 			 grew ? "log GREW!" : "no log growth..." );
@@ -496,9 +524,9 @@ ReadMultipleUserLogs::readEventFromLog(LogFileEntry &log)
 }
 #endif // !LAZY_LOG_FILES
 
-#if LAZY_LOG_FILES
 ///////////////////////////////////////////////////////////////////////////////
 
+#if LAZY_LOG_FILES
 ULogEventOutcome
 ReadMultipleUserLogs::readEventFromLog( LogFileMonitor *monitor )
 {
@@ -686,7 +714,7 @@ MultiLogFiles::loadLogFileNameFromSubFile(const MyString &strSubFilename,
 ///////////////////////////////////////////////////////////////////////////////
 
 bool
-MultiLogFiles::makePathAbsolute(MyString filename, CondorError &errstack)
+MultiLogFiles::makePathAbsolute(MyString &filename, CondorError &errstack)
 {
 	if ( !fullpath(filename.Value()) ) {
 			// I'd like to use realpath() here, but I'm not sure
@@ -915,6 +943,7 @@ MultiLogFiles::getQueueCountFromSubmitFile(const MyString &strSubFilename,
 
 ///////////////////////////////////////////////////////////////////////////////
 
+#if !LAZY_LOG_FILES
 // Note: it would probably make sense to have this method use the new
 // getValuesFromFile() method in order to reduce more-or-less duplicate
 // code.  However, I'm just leaving it alone for now.  If
@@ -1093,6 +1122,7 @@ MultiLogFiles::getJobLogsFromSubmitFiles(const MyString &strDagFileName,
 
 	return "";
 }
+#endif // !LAZY_LOG_FILES
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -1282,6 +1312,7 @@ ReadMultipleUserLogs::hashFuncJobID(const CondorID &key)
 
 ///////////////////////////////////////////////////////////////////////////////
 
+#if !LAZY_LOG_FILES
 bool
 MultiLogFiles::logFilesOnNFS(StringList &listLogFileNames, bool nfsIsError)
 {
@@ -1300,6 +1331,7 @@ MultiLogFiles::logFilesOnNFS(StringList &listLogFileNames, bool nfsIsError)
 	// on NFS.
 	return false;
 }
+#endif // !LAZY_LOG_FILES
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -1372,6 +1404,7 @@ ReadMultipleUserLogs::monitorLogFile( MyString logfile,
 	dprintf( D_LOG_FILES, "ReadMultipleUserLogs::monitorLogFile(%s, %d)\n",
 				logfile.Value(), truncateIfFirst );
 
+//TEMP -- do we even need this anymore now that we're doing things by inode?
 		// Make sure path is absolute to reduce the chance of the same
 		// file getting referred to by different names (that will cause
 		// errors).
@@ -1469,6 +1502,7 @@ ReadMultipleUserLogs::unmonitorLogFile( MyString logfile,
 	dprintf( D_LOG_FILES, "ReadMultipleUserLogs::unmonitorLogFile(%s)\n",
 				logfile.Value() );
 
+//TEMP -- do we even need this anymore now that we're doing things by inode?
 		// Make sure path is absolute to reduce the chance of the same
 		// file getting referred to by different names (that will cause
 		// errors).
