@@ -509,7 +509,13 @@ int daemon::RealStart( )
 			// Already running
 		return TRUE;
 	}
-	if( stop_state != NONE ) {
+		// Check for a controller. If one exists, e.g. HAD, it is
+		// likely this daemon has stop_state = FAST, but we want to
+		// let it start anyway. The stop_state != NONE check is to
+		// avoid letting the master start HA daemons it is
+		// maintaining. A controller indicates something else is
+		// maintaining the daemon.
+	if( !controller && stop_state != NONE ) {
 			// Currently trying to shutdown, this might happen for an
 			// HA daemon who acquires a lock just before shutdown.
 		dprintf( D_FULLDEBUG, "::RealStart; %s stop_state=%d, ignoring\n",
@@ -748,6 +754,10 @@ int daemon::RealStart( )
 
 		// Since we just started it, we know it's not a new executable. 
 	newExec = FALSE;
+
+		// Be sure to reset the stop_state, if the daemon is HAD
+		// managed it will have been set to FAST on startup
+	stop_state = NONE;
 
 		// If starting the collector, give it a few seconds to get
 		// going before starting other daemons or talking to ti
