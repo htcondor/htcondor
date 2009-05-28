@@ -281,7 +281,7 @@ bool Dag::Bootstrap (bool recovery) {
 		debug_cache_start_caching();
 
 			//TEMP -- could use an active log file count here
-		if( _condorLogRdr.totalLogFileCount() > 0 ) {
+		if( CondorLogFileCount() > 0 ) {
 			if( !ProcessLogEvents( CONDORLOG, recovery ) ) {
 				_recovery = false;
 				debug_cache_stop_caching();
@@ -289,7 +289,7 @@ bool Dag::Bootstrap (bool recovery) {
 			}
 		}
 			//TEMP -- could use an active log file count here
-		if( _storkLogRdr.totalLogFileCount() > 0 ) {
+		if( StorkLogFileCount() > 0 ) {
 			if( !ProcessLogEvents( DAPLOG, recovery ) ) {
 				_recovery = false;
 				debug_cache_stop_caching();
@@ -382,7 +382,7 @@ bool
 Dag::DetectCondorLogGrowth () {
 
 		//TEMP -- could use an active log file count here
-	if( _condorLogRdr.totalLogFileCount() <= 0 ) {
+	if( CondorLogFileCount() <= 0 ) {
 		return false;
 	}
 
@@ -432,7 +432,7 @@ Dag::DetectCondorLogGrowth () {
 bool Dag::DetectDaPLogGrowth () {
 
 		//TEMP -- could use an active log file count here
-	if( _storkLogRdr.totalLogFileCount() <= 0 ) {
+	if( StorkLogFileCount() <= 0 ) {
 		return false;
 	}
 
@@ -476,6 +476,8 @@ bool Dag::ProcessLogEvents (int logsource, bool recovery) {
 	bool result = true;
 
 	while (!done) {
+
+		//TEMP -- monitor log files of all ready jobs here in recovery mode?
 
 		ULogEvent* e = NULL;
 		ULogEventOutcome outcome = ULOG_NO_EVENT;

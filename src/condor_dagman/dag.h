@@ -732,8 +732,18 @@ class Dag {
 			accessing.
 			@return The total number of log files.
 		*/
-	int TotalLogFileCount() { return _condorLogRdr.totalLogFileCount() +
-				_storkLogRdr.totalLogFileCount(); }
+	int TotalLogFileCount() { return CondorLogFileCount() +
+				StorkLogFileCount(); }
+
+#if LAZY_LOG_FILES
+	int CondorLogFileCount() { return _condorLogRdr.totalLogFileCount(); }
+
+	int StorkLogFileCount() { return _stockLogRdr.totalLogFileCount(); }
+#else
+	int CondorLogFileCount() { return _condorLogFiles.number(); }
+
+	int StorkLogFileCount() { return _storkLogFiles.number(); }
+#endif // !LAZY_LOG_FILES
 
     /// List of Job objects
     List<Job>     _jobs;

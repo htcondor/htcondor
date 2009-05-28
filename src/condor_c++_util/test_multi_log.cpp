@@ -330,6 +330,12 @@ ReadEvents(StringList &logFiles)
 		if ( verbosity >= 1 ) printf("reader.initialize() returns true\n");
 	}
 
+	if ( reader.totalLogFileCount() != 5 ) {
+		printf("Total log file count was %d; expected 5\n",
+					reader.totalLogFileCount() );
+		isOkay = false;
+	}
+
 	printf("Testing detectLogGrowth() on empty files...\n");
 	if ( !reader.detectLogGrowth() ) {
 		printf("...succeeded\n");
