@@ -6305,6 +6305,18 @@ The following configuration macros affect negotiation for group users.
   is \Expr{False},
   and if all \condor{startd} rank expressions are \Expr{False}.}
 
+\label{param:StartdAdReevalExpr}
+\item[\Macro{STARTD\_AD\_REEVAL\_EXPR}]
+  A boolean value evaluated in the context of each machine ClassAd within
+  a negotiation cycle that determines whether the ClassAd from the
+  \Condor{collector} is to replace the stashed ClassAd utilized during
+  the previous negotiation cycle.
+  When \Expr{True},
+  the ClassAd from the \Condor{collector} does replace the stashed one.
+  When not defined, the default value is to replace the stashed ClassAd
+  if the stashed ClassAd's sequence number is older than its potential
+  replacement.
+
 \end{description}
 
 % entire section commented out Nov 2005
