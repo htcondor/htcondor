@@ -33,6 +33,9 @@ public:
 	StringList(const char *s = NULL, const char *delim = " ," ); 
 	virtual ~StringList();
 	void initializeFromString (const char *);
+
+	/** Note: the contains* methods have side affects -- they
+		change "current" to point at the location of the match */
 	BOOLEAN contains( const char * );
 	BOOLEAN substring( const char * );	
 	BOOLEAN contains_anycase( const char * );
@@ -41,7 +44,12 @@ public:
 		// str: string to find
 		// matches: if not NULL, list to insert matches into
 		// returns true if any matching entries found
-    bool find_matches_anycase_withwildcard( const char *str, StringList *matches);
+    bool find_matches_anycase_withwildcard( const char *str,
+											StringList *matches);
+
+	/** This doesn't have any side affects */
+	bool find( const char *str, bool anycase = false ) const;
+
 	void print (void);
 	void rewind (void) { strings.Rewind(); }
 	void append (const char* str) { strings.Append( strdup(str) ); }
@@ -74,12 +82,34 @@ public:
 	*/
 	bool contains_list(StringList & subset, bool anycase);
 
+	/** Checks to see if the given list is identical to the current list
+		@param other
+		@param anycase false for case sensitive comparison, true for case
+				in-sensitive.
+		@retval true if subset is indeed a subset, else false
+	*/
+	bool identical(const StringList & subset, bool anycase = true) const;
+
+	/** Checks to see if the given list is similar to the current list;
+			like ::identical(), but ignores order
+		@param other
+		@param anycase false for case sensitive comparison, true for case
+				in-sensitive.
+		@retval true if other is indeed similar, else false
+	*/
+	bool similar(const StringList & subset, bool anycase) const;
+
 	/* return a comma delimited list if the internals of the class. This will
 		rewind the string in order to construct this char array, and you
 		are responsible to release the memory allocated by this function 
 		with free() */
-	char* print_to_string(void);
-	char* print_to_delimed_string(const char *delim = NULL);
+	char* print_to_string(void) const;
+	char* print_to_delimed_string(const char *delim = NULL) const;
+
+	/** Return the actual list -- used for ::identical() and ::similar()
+		@retval the list
+	*/
+	const List<char> &getList( void ) const { return strings; };
 
 protected:
     const char * contains_withwildcard(const char *string, bool anycase, StringList *matches=NULL);
