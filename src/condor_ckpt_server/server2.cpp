@@ -493,8 +493,6 @@ void Server::HandleRequest(int req_sd,
 	restore_req_pkt    restore_req;
 	replicate_req_pkt  replicate_req;
 	char*              buf_ptr;
-	int                bytes_recvd=0;
-	int                temp_len;
 	char               log_msg[256];
 	FDContext			fdc;
 	int					ret;
@@ -541,48 +539,6 @@ void Server::HandleRequest(int req_sd,
 			" to handle request");
 	Log(log_msg);
 
-#if 0
-	/* XXX FIXME to happen AFTER I read the packet from the socket
-		so I know what bit width the client is. I should probably write
-		a function to abstract this. */
-
-	/* If for whatever reason we don't want to accept the request, bail
-		on the connection with a refusal, close it, and move on. */
-	if ((req == STORE_REQ) || (req == RESTORE_REQ) || (req == REPLICATE_REQ)) 
-	{
-		if ((num_store_xfers+num_restore_xfers == max_xfers) ||
-			((req == STORE_REQ) && (num_store_xfers == max_store_xfers)) ||
-			((req == RESTORE_REQ) &&
-			 (num_restore_xfers == max_restore_xfers)) ||
-			((req == REPLICATE_REQ) &&
-			 (num_replicate_xfers == max_replicate_xfers))) 
-			{
-			if (req == STORE_REQ || req == REPLICATE_REQ) {
-				store_reply.server_name.s_addr = htonl(0);
-				store_reply.port = htons(0);
-				store_reply.req_status = htons(INSUFFICIENT_BANDWIDTH);
-				net_write(new_req_sd, (char*) &store_reply, 
-						  sizeof(store_reply_pkt));
-				sprintf(log_msg, "%s", 
-						"Request to store a file has been DENIED");
-			} else {
-				restore_reply.server_name.s_addr = htonl(0);
-				restore_reply.port = htons(0);
-				restore_reply.file_size = htonl(0);
-				restore_reply.req_status = htons(INSUFFICIENT_BANDWIDTH);
-				net_write(new_req_sd, (char*) &restore_reply, 
-						  sizeof(restore_reply_pkt));	      
-				sprintf(log_msg, "%s", 
-						"Request to restore a file has been DENIED");
-			}
-			Log(req_ID, log_msg);
-			Log("Configured maximum number of active transfers exceeded");
-			close(new_req_sd);
-			return;
-		} 
-    }
-#endif 
-
 	switch (req) {
         case SERVICE_REQ:
 			ret = recv_service_req_pkt(&service_req, &fdc);
@@ -608,7 +564,24 @@ void Server::HandleRequest(int req_sd,
 				return;
 			}
 
-			/* TODO do rejection code here! */
+			/* Reject the store request under certain conditions */
+			if (((num_store_xfers + num_restore_xfers) == max_xfers) ||
+				num_store_xfers == max_store_xfers)
+			{
+				store_reply_pkt store_reply;
+
+				store_reply.server_name.s_addr = 0;
+				store_reply.port = 0;
+				store_reply.req_status = INSUFFICIENT_BANDWIDTH;
+
+				send_store_reply_pkt(&store_reply, &fdc);
+
+				Log(req_ID, "Request to store a file has been DENIED");
+				Log("Configured maximum number of active transfers exceeded");
+
+				close(fdc.fd);
+				return;
+			}
 
 			ProcessStoreReq(req_ID, &fdc, shadow_sa.sin_addr, store_req);
 
@@ -624,45 +597,38 @@ void Server::HandleRequest(int req_sd,
 				return;
 			}
 
-			/* TODO do rejection code here! */
+			/* Reject the restore request under certain conditions */
+			if (((num_store_xfers + num_restore_xfers) == max_xfers) ||
+				 (num_restore_xfers == max_restore_xfers))
+			{
+				restore_reply_pkt restore_reply;
+
+				restore_reply.server_name.s_addr = 0;
+				restore_reply.port = 0;
+				restore_reply.file_size = 0;
+				restore_reply.req_status = INSUFFICIENT_BANDWIDTH;
+
+				send_restore_reply_pkt(&restore_reply, &fdc);
+
+				Log(req_ID, "Request to restore a file has been DENIED");
+				Log("Configured maximum number of active transfers exceeded");
+
+				close(fdc.fd);
+				return;
+			}
 
 			ProcessRestoreReq(req_ID, &fdc, shadow_sa.sin_addr, restore_req);
+
+			return;
 			break;
 
 		case REPLICATE_REQ:
-			req_len = sizeof(replicate_req_pkt);
-			buf_ptr = (char*) &replicate_req;
+			Log(fdc.req_ID, "Ignoring REPLICATE_REQ. Feature not implemented.");
+
+			close(fdc.fd);
+			return;
 			break;
 	}
-
-#if 0 /* this is defunct junk now */
-	switch (req) {
-    case SERVICE_REQ:
-/*		ProcessServiceReq(req_ID, new_req_sd, shadow_sa.sin_addr, service_req);*/
-		break;
-    case STORE_REQ:
-/*		ProcessStoreReq(req_ID, new_req_sd, shadow_sa.sin_addr, store_req);*/
-		break;
-    case RESTORE_REQ:
-/*		ProcessRestoreReq(req_ID, new_req_sd, shadow_sa.sin_addr, restore_req);*/
-		break;
-	case REPLICATE_REQ:
-#if 0
-	/* XXX This is all from an old student project which should ripped out */
-		store_req.file_size = replicate_req.file_size;
-		store_req.ticket = replicate_req.ticket;
-		store_req.priority = replicate_req.priority;
-		store_req.time_consumed = replicate_req.time_consumed;
-		store_req.key = replicate_req.key;
-		strcpy(store_req.filename, replicate_req.filename);
-		strcpy(store_req.owner, replicate_req.owner);
-		ProcessStoreReq(req_ID, new_req_sd, replicate_req.shadow_IP,
-						store_req);
-#endif
-		break;
-    }  
-#endif
-
 }
 
 void Server::ProcessServiceReq(int             req_id,

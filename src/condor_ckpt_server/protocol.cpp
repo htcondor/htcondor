@@ -449,6 +449,7 @@ int recv_store_req_pkt(store_req_pkt *strq, FDContext *fdc)
 	read_result_t ret;
 	int ok;
 	size_t diff;
+	uint32_t tmp64;
 
 	/* We better not know what the client bit width is when this function is
 		called, since it figures it out! */
@@ -536,9 +537,20 @@ int recv_store_req_pkt(store_req_pkt *strq, FDContext *fdc)
 		/* unpack the 64 bit case into the host structure. Don't forget
 			to undo the network byte ordering. */
 
-		strq->file_size = unpack_uint64_t(netpkt, STREQ64_file_size);
-		strq->file_size =
-			network_uint64_t_order_to_host_uint64_t_order(strq->file_size);
+		tmp64 = unpack_uint64_t(netpkt, STREQ64_file_size);
+		tmp64 = network_uint64_t_order_to_host_uint64_t_order(tmp64);
+		/* This could be type narrowing if compiled on a 32 bit machine. */
+		strq->file_size = tmp64;
+
+		/* ok, if the file_size field we're putting this into can't support the 
+			extent of the number, we'll bail on the connection with a
+			warning to upgrade to a 64 bit checkpoint server. */
+		if ((uint64_t)strq->file_size != (uint64_t)tmp64) {
+			Server::Log("This checkpoint server cannot represent the file "
+				"size for this checkpoint STORE request. Please upgrade this "
+				"checkpoint server to a 64-bit executable.");
+			return PC_NOT_OK;
+		}
 
 		strq->ticket = unpack_uint64_t(netpkt, STREQ64_ticket);
 		strq->ticket =
