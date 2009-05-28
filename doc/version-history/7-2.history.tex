@@ -16,7 +16,7 @@ New features will be added in the 7.3.x development series.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{\label{sec:New-7-2-3}Version 7.2.3}
+\subsection*{\label{sec:New-7-2-4}Version 7.2.4}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \noindent Release Notes:
@@ -32,11 +32,70 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Enhanced the Debian 5.0 Condor port on the x86\_64 platform to 
-include support for standard universe. 
+\item None.
 
-\item The \Condor{install} script now sets the default central manager
-to the current host when the type of installation is `manager'.
+\end{itemize}
+
+\noindent Configuration Variable Additions and Changes:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Fixed a bug that caused \Condor{procd} to sometimes fail when monitoring
+processes with environments larger than 1MB.
+
+% gittrac #481
+\item Fixed a bug that caused \Condor{dagman} to fail in recovery mode on
+a DAG in which any nodes had been retried.
+
+% gittrac #484
+\item Xen-based virtual machines now have the correct amount of memory.
+Previously, the amount of memory was too small by a factor of 1024.
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-7-2-3}Version 7.2.3}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item The header files for ClassAds are now included within the release.
+
+\end{itemize}
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item Enhanced the Debian 5.0 Condor port on the x86\_64 platform to 
+include support for the standard universe. 
 
 \end{itemize}
 
@@ -45,10 +104,18 @@ to the current host when the type of installation is `manager'.
 \begin{itemize}
 
 \item The new integer configuration variable
-  \MacroNI{SEC\_TCP\_SESSION\_DEADLINE} specifies the
+  \Macro{SEC\_TCP\_SESSION\_DEADLINE} specifies the
   number of seconds after which the client should give up its attempt to
   establish a security session with a daemon that it is connecting to.
-  The default is 120 seconds.
+  The default value is 120 seconds.
+
+\item The new configuration variables \Macro{SCHEDD\_CLUSTER\_INITIAL\_VALUE}
+  and \Macro{SCHEDD\_CLUSTER\_INCREMENT\_VALUE} are integers that 
+  specify the cluster number to use for the first job submission,
+  and the stride used to increment the cluster id upon successive submissions.
+  See \ref{param:ScheddClusterInitialValue} and
+  \ref{param:ScheddClusterIncrementValue}
+  for the complete definitions of these variables.
 
 \end{itemize}
 
@@ -57,40 +124,75 @@ to the current host when the type of installation is `manager'.
 \begin{itemize}
 
 \item Fixed a memory leak in the \Condor{collector} daemon.
-  The growth in memory over time was approximately 10MB/day per 1000 slots.
+  The growth in memory over time was approximately 10Mbytes per day
+  per 1000 slots.
   This bug was introduced in Condor version 7.2.0.
 
 \item Fixed a problem that caused integrity checking of most UDP packets
-longer than about 40Kbytes to fail.  This bug affects all previous versions of
-Condor.
+  longer than about 40Kbytes to fail.
+  This bug affected all previous versions of Condor.
 
 \item By adding the new configuration variable
   \MacroNI{SEC\_TCP\_SESSION\_DEADLINE}, fixed a problem
   that has existed since Condor version 7.1.2. 
-  The problem is that non-blocking read
-  operations in the security handshake had no timeout and could therefore
-  lead to a socket remaining allocated indefinitely, if the other side of
-  the connection did not respond.
+  The problem was that non-blocking read
+  operations in the security handshake had no timeout,
+  and could therefore lead to a socket remaining allocated indefinitely,
+  if the other side of the connection did not respond.
   When this problem was observed,
-  the following message appeared in the SchedLog:
-
+  the following message appeared in the log written by the \Condor{schedd}
+  daemon:
 \begin{verbatim}
   file descriptor safety level exceeded
 \end{verbatim}
 
-\item Fixed a bug in the event log reader code that could cause it to
-  not detect missed events in rare cases.
+\item Fixed a rarely observed bug in the event log reader code
+  that could cause it to not detect missed events.
 
-\item A bug in the Chirp java client has been fixed.  ChirpInputStream's
-read() method was returning negative values when encountering binary data.
+\item A bug in the Chirp java client has been fixed.
+  The ChirpInputStream's \Procedure{read} method was returning
+  negative values when encountering binary data.
 
 % Gnats PR 872
 \item \Condor{dagman} now rejects negative node retry values.
 
 % Gnats PR 946
 \item \Condor{dagman} no longer generates a rescue DAG if the DAG is
-aborted but is considered successful (ABORT-DAG-ON with return value
-of 0).
+  aborted, but is considered successful;
+  this is when ABORT-DAG-ON returns the value 0.
+
+\item The user log event numbered 27,
+  named \AdStr{Job submitted to grid resource},
+  is now written for all grid universe jobs.
+  Previously, it was not written for pbs, lsf, nordugrid, or unicore grid types.
+
+% gittrac #376
+\item Fixed a bug where a Condor-C job with both \MacroNI{remote\_<foo>}
+and \MacroNI{remote\_remote\_<foo>} attributes would not have a
+\MacroNI{remote\_<foo>} attribute when submitted to the remote
+\Condor{schedd} daemon.
+
+% gittrac #380
+\item Fixed a bug in \Condor{configure} and \Condor{install} that would
+  leave the configuration variable \MacroNI{CONDOR\_HOST} unset when
+  configuring a central manager without using the \Arg{--central-manager}
+  command-line argument.
+
+% gittrac #395
+\item Fixed a bug that could cause the \Condor{schedd} daemon
+  to leak memory and file descriptors when using the
+  \MacroNI{EVENT\_LOG} configuration variable.
+
+\item Fixed a bug in the \Condor{gridmanager} that could cause it to
+not send a clean up signal to the GRAM jobmanager for removed gt2 jobs.
+
+% gittrac #426
+\item Fixed a bug that caused parallel jobs to not work when
+encryption was enabled.
+
+% gittrac #261
+\item Fixed a bug in the Windows installer that caused it to fail to start
+Condor.
 
 \end{itemize}
 

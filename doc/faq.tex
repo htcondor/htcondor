@@ -1399,7 +1399,7 @@ machines.}
 \item{Unix machines can submit jobs to run on other Unix or Windows
 machines.}
 
-\item{Windows NT machines can submit jobs to run on other Windows
+\item{Windows machines can submit jobs to run on other Windows
 or Unix machines.}
 
 \end{enumerate}
@@ -1506,20 +1506,20 @@ machine for execution on a Windows machine.
 
 Condor uses the first network interface it sees on your machine.
 This problem usually means you have an extra, inactive network
-interface (such as a RAS dial up interface) defined before to your
+interface (such as a RAS dial up interface) defined before the
 regular network interface.
 
-To solve this problem, either change the order of your network
+To solve this problem, either change the order of the network
 interfaces in the Control Panel, or explicitly set which network
-interface Condor should use by adding the following parameter to your
+interface Condor should use by adding the following definition to the
 Condor configuration file:
 
 \begin{verbatim}
-NETWORK_INTERFACE = ip-address
+NETWORK_INTERFACE = <ip-address>
 \end{verbatim}
 
-Where \verb@ip-address@ is the IP address of the interface you wish
-Condor to use.
+Where \verb@<ip-address>@ is the IP address of the interface that
+Condor is to use.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{My job starts but exits right away with status 128.}
@@ -1595,9 +1595,9 @@ to restart the Condor daemons and effect the change.
 The \Macro{USER\_JOB\_WRAPPER} configuration variable
 does work on Windows machines.
 The wrapper must be either a
-batch script with a file extension of \File{.bat} or \File{.cmd},
+batch script with a file name extension of \File{.bat} or \File{.cmd},
 or an
-executable with a file extension of \File{.exe} or \File{.com}.
+executable with a file name extension of \File{.exe} or \File{.com}.
 
 An example of a batch script sets environment variables:
 \footnotesize
@@ -1616,12 +1616,14 @@ REM Run the actual job now
 \subsection*{\Condor{store\_cred} is failing, and I'm sure I'm typing my password correctly.}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-First, make sure the \Condor{schedd} is running.
+First, make sure the \Condor{schedd} daemon is running.
 
-Next, check the SchedLog. It will contain more detailed information
-about the failure. Frequently, the error is a result of 
-\verb@PERMISSION DENIED@ errors. You can read more about properly configuring 
-security settings on page~\pageref{sec:Host-Security}.
+Next, check the log file written by the \Condor{schedd} daemon.
+It will contain more detailed information about the failure.
+Frequently, the error is a result of 
+\verb@PERMISSION DENIED@ errors.
+More information about proper configuration of 
+security settings is on page~\pageref{sec:Host-Security}.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1689,26 +1691,43 @@ record all the configuration changes made by \verb@netsh@.
 \subsection*{Why do Condor daemons exit with "Unexpected performance counter size", "unable to spawn the ProcD" or "loadavg thread died, restarting. (exit code=2)" errors?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Condor relies on some of Windows' built-in performance counters for its
-operation. It is possible (via the registry) for performance counters that
-Condor requires to be disabled. If this is the case, you may see daemons
-exit with a message like:
+Condor on Windows platforms relies on built-in performance counters
+for its operation. 
+If performance counters that Condor requires are disabled,
+daemons may exit with a message such as
+
+\footnotesize
 \begin{verbatim}
 1/26 09:16:42 (fd:2) (pid:5732) ERROR: "Unexpected performance counter
     size for total CPU: 0 (expected: 8)" at line 2846 in file
     ..\src\condor_procapi\procapi.cpp
 \end{verbatim}
-or:
+\normalsize
+
+or
+
+\footnotesize
 \begin{verbatim}
 1/20 15:29:14 (pid:2484) ERROR "unable to spawn the ProcD" at line 136
     in file ..\src\condor_c++_util\proc_family_proxy.C
 \end{verbatim}
-and even:
+\normalsize
+
+and even
+
+\footnotesize
 \begin{verbatim}
 4/16 10:49:13 loadavg thread died, restarting. (exit code=2)
 \end{verbatim}
+\normalsize
+
 To enable the performance counters, check the registry key
-\verb@HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\PerfProc\Performance@. If a value \verb@Disable Performance Counters@ exists, delete it or set
+\footnotesize
+\begin{verbatim}
+HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\PerfProc\Performance
+\end{verbatim}
+\normalsize
+If a value for \verb@Disable Performance Counters@ exists, delete it or set
 it to \verb@0@.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1766,7 +1785,7 @@ by user accounts made from this template.
 \item In the \textbf{Control Panel}, open the \textbf{System} Control Panel
  applet. 
  \begin{itemize}
- \item On \textbf{Vista} you will need to click on the 
+ \item On \textbf{Vista} click on the 
  \textbf{Advanced system settings} \textbf{Task} listed in the left pane.
  \end{itemize} 
 \item On the \textbf{Advanced} tab, under \textbf{User Profiles}, 
