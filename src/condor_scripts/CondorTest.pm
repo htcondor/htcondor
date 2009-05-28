@@ -1612,7 +1612,7 @@ sub KillPersonal
 		debug("LOG dir is $1/log\n",$debuglevel);
 		$logdir = $1 . "/log";
 	} else {
-		debug("KillPersonal passed this config<<$personal_config>>\n",2);
+		debug("KillPersonal passed this config<<$personal_config>>\n",1);
 		die "Can not extract log directory\n";
 	}
 	debug("Doing core ERROR check in  KillPersonal\n",2);
