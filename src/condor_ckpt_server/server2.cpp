@@ -785,6 +785,8 @@ void Server::ProcessServiceReq(int             req_id,
 	switch (service_req.service) {
         case CKPT_SERVER_SERVICE_STATUS:
 
+			/* XXX This code path appears never to be taken */
+
 		    num_files = imds.GetNumFiles();
 			service_reply.num_files = num_files;
 
@@ -990,6 +992,7 @@ void Server::ProcessServiceReq(int             req_id,
     } else {
 		close(fdc->fd);
 		if (service_req.service == CKPT_SERVER_SERVICE_STATUS) {
+			/* XXX This code path appears never to be taken */
 			if (num_files == 0) {
 				Log("Request for server status GRANTED:");
 				Log("No files on checkpoint server");
@@ -1011,6 +1014,14 @@ void Server::ProcessServiceReq(int             req_id,
 					close(store_req_sd);
 					close(restore_req_sd);
 					close(service_req_sd);
+					/* XXX This call sends a raw file_state_info structure
+						down the wire to the other side. Since this code
+						doesn't seem to be ever called, I'm not making it
+						32/64 auto detecting and backwards compatible.
+						Since I already know the service packet connection
+						bit witdh that requested this reply, I could easily
+						pass the FDContext here instead which will tell me
+						what to send to the client. */
 					SendStatus(data_conn_sd);
 					exit(CHILDTERM_SUCCESS);
 				}

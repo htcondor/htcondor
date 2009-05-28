@@ -377,7 +377,6 @@ int send_service_reply_pkt(service_reply_pkt *srp, FDContext *fdc)
 	switch(fdc->type)
 	{
 		case FDC_32:
-			/* XXX type narrowing, I'm ignoring it for now */
 			num_files_32 = srp->num_files;
 			num_files_32 =
 				host_uint32_t_order_to_network_uint32_t_order(num_files_32);
@@ -706,8 +705,6 @@ int send_store_reply_pkt(store_reply_pkt *strp, FDContext *fdc)
 
 	return NET_WRITE_OK;
 }
-
-/* XXX convert */
 
 /* This function accepts the *first* packet on a ready restore req socket.
 	Its job is to figure out if the client side is 32 bits or 64 bits, 
