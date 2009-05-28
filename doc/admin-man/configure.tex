@@ -3414,23 +3414,30 @@ WANT_HOLD_REASON = \
   
 \label{param:UpdateOffset}
 \item[\Macro{UPDATE\_OFFSET}]
-  Determines the delay, in seconds, that the \Condor{startd} should wait
-  before sending its initial update (and the first update after a
-  ``reconfig'') to the \Condor{collector}.  All other updates are
-  sent after this initial update, as determined by
-  \MacroUNI{UPDATE\_INTERVAL}.  Thus, the first update will be sent after
-  \MacroUNI{UPDATE\_OFFSET} seconds, the second at
-  \MacroUNI{UPDATE\_OFFSET} + \MacroUNI{UPDATE\_INTERVAL}, etc.
+  An integer value representing the number of seconds of delay 
+  that the \Condor{startd} should wait
+  before sending its initial update, and the first update after a
+  \Condor{reconfig} command is sent to the \Condor{collector}.
+  The time of all other updates sent after this initial update
+  is determined by \MacroUNI{UPDATE\_INTERVAL}.
+  Thus, the first update will be sent after
+  \MacroUNI{UPDATE\_OFFSET} seconds, and the second update will be sent after
+  \MacroUNI{UPDATE\_OFFSET} + \MacroUNI{UPDATE\_INTERVAL}.
   This is useful when used in conjunction
-  with \$RANDOM\_INTEGER() for large pools to spread out the updates
-  sent by a large number of \Condor{startd}s.  This macro is defined
-  in terms of seconds and defaults to zero.  For example:
-\begin{verbatim}
-startd.UPDATE_INTERVAL = 300
-startd.UPDATE_OFFSET   = $RANDOM_INTEGER(0,300)
-\end{verbatim}
-  This would cause the initial update to be a random number of seconds
-  (between 0 and 300), with all further updates occurring at fixed 300
+  with the \MacroNI{\$RANDOM\_INTEGER()} macro for large pools,
+  to spread out the updates
+  sent by a large number of \Condor{startd} daemons.
+  Defaults to zero.
+  The example configuration
+  \footnotesize
+  \begin{verbatim}
+  startd.UPDATE_INTERVAL = 300
+  startd.UPDATE_OFFSET   = $RANDOM_INTEGER(0,300)
+  \end{verbatim}
+  \normalsize
+  causes the initial update to occur at a random number of seconds
+  falling between 0 and 300,
+  with all further updates occurring at fixed 300
   second intervals following the initial update.
 
 \label{param:MaxJobRetirementTime}
@@ -4841,7 +4848,7 @@ These macros control the \Condor{schedd}.
   to throttle the rate at which jobs are stopping via \Condor{rm},
   \Condor{hold}, or \Condor{vacate\_job}.  The  \Condor{schedd} daemon stops
   \MacroUNI{JOB\_STOP\_COUNT} jobs at a time, then delays for
-  \MacroUNI{JOB\_STOP\_DELAY} seconds before stoping the next set of jobs.
+  \MacroUNI{JOB\_STOP\_DELAY} seconds before stopping the next set of jobs.
   This delay prevents a sudden, large load on resources required by
   the jobs when they are terminating.
   The resulting job stop rate
