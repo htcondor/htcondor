@@ -1,4 +1,3 @@
-//TEMPTEMP -- crap -- this fails with the lazy log file code turned off!
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -332,7 +331,6 @@ ReadEvents(StringList &logFiles)
 	}
 
 	printf("Testing detectLogGrowth() on empty files...\n");
-	//TEMPTEMP -- does this fail because of Nick's changes?
 	if ( !reader.detectLogGrowth() ) {
 		printf("...succeeded\n");
 		fflush(stdout);
@@ -341,7 +339,6 @@ ReadEvents(StringList &logFiles)
 		printf(" (at %s: %d)\n", __FILE__, __LINE__);
 		fflush(stdout);
 		isOkay = false;
-		exit(1);//TEMPTEMP
 	}
 
 	ULogEvent	*event;

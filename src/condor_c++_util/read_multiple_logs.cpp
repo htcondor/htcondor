@@ -449,7 +449,6 @@ ReadMultipleUserLogs::LogGrew(LogFileEntry &log)
 	}
 
 	ReadUserLog::FileStatus fs = log.readUserLog.CheckFileStatus( );
-printf("DIAG 1010: fs: %d\n", fs);//TEMPTEMP
 
 	if ( ReadUserLog::LOG_STATUS_ERROR == fs ) {
 		dprintf( D_FULLDEBUG,
