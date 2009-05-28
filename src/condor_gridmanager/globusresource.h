@@ -158,12 +158,6 @@ class GlobusResource : public BaseResource
 		// again.
 	int monitorRetryTime;
 
-		// Very simily to logFileLastReadTime, but not updated every time the
-		// grid_monitor is resubmitted.  As a result it reliably reports on the
-		// last time we got some sort of result back.  Used for the "Thing have
-		// been failing over and over for too long" timeout.
-	int logFileTimeoutLastReadTime;
-
 		// This reports the time we saw a new complete job status file
 		// from the grid monitor (and therefore sent out job status
 		// updates to the job objects). This time is not updated when the

@@ -95,7 +95,7 @@ GlobusResource::GlobusResource( const char *resource_name,
 	monitorDirectory = NULL;
 	monitorJobStatusFile = NULL;
 	monitorLogFile = NULL;
-	logFileTimeoutLastReadTime = 0;
+	logFileLastReadTime = 0;
 	jobStatusFileLastUpdate = 0;
 	monitorGramJobId = NULL;
 	gahp = NULL;
@@ -541,7 +541,6 @@ GlobusResource::CheckMonitor()
 					}
 				}
 				logFileLastReadTime = time(NULL);
-				logFileTimeoutLastReadTime = time(NULL);
 				daemonCore->Reset_Timer( checkMonitorTid, 30 );
 				break;
 
@@ -574,16 +573,22 @@ GlobusResource::CheckMonitor()
 
 			}
 
-		} else if ( time(NULL) > logFileLastReadTime + log_file_timeout ) {
+		} else if ( time(NULL) > logFileLastReadTime + log_file_timeout &&
+					!monitorStarting ) {
+			dprintf( D_ALWAYS, "Haven't heard from running grid_monitor "
+					 "at %s for %d seconds, trying new job submission\n",
+					 resourceName, log_file_timeout );
 			if( ! SubmitMonitorJob() ) {
 				dprintf(D_ALWAYS, "Failed to restart grid_monitor.  Giving up on grid_monitor for site %s\n", resourceName);
 				AbandonMonitor();
 			}
 			daemonCore->Reset_Timer( checkMonitorTid, 30);
 
-		} else if ( time(NULL) > logFileTimeoutLastReadTime + monitor_retry_duration) {
-			dprintf(D_ALWAYS, "grid_monitor log file for %s is too old.\n",
-				resourceName);
+		} else if ( monitorStarting &&
+					time(NULL) > logFileLastReadTime + monitor_retry_duration) {
+			dprintf( D_ALWAYS, "Haven't heard from new grid_monitor "
+					 "at %s for %d seconds, giving up\n",
+					 resourceName, monitor_retry_duration );
 			AbandonMonitor();
 
 		} else {
@@ -733,14 +738,6 @@ GlobusResource::SubmitMonitorJob()
 
 	jobStatusFileLastReadTime = now;
 	logFileLastReadTime = now;
-
-	if( monitorStarting ) {
-		// Anything special to do on a cold start?
-		// (It's possible for this to get called after startup
-		// if someone wants to force a cold restart (say, after
-		// AbandonMonitor())
-		logFileTimeoutLastReadTime = now;
-	}
 
 	monitor_executable = param( "GRID_MONITOR" );
 	if ( monitor_executable == NULL ) {
