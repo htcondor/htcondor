@@ -102,6 +102,8 @@ GlobusResource::GlobusResource( const char *resource_name,
 	monitorGahp = NULL;
 	monitorRetryTime = 0;
 	monitorFirstStartup = true;
+	monitorGramJobStatus = GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNKNOWN;
+	monitorGramErrorCode = 0;
 }
 
 GlobusResource::~GlobusResource()
@@ -642,6 +644,8 @@ GlobusResource::CleanupMonitorJob()
 
 		free( monitorGramJobId );
 		monitorGramJobId = NULL;
+		monitorGramJobStatus = GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNKNOWN;
+		monitorGramErrorCode = 0;
 	}
 	if ( monitorDirectory ) {
 		MyString tmp_dir;
@@ -757,7 +761,8 @@ GlobusResource::SubmitMonitorJob()
 	contact.sprintf( "%s/jobmanager-fork", resourceName );
 
 	rc = monitorGahp->globus_gram_client_job_request( contact.Value(),
-													  RSL.Value(), 0, NULL,
+													  RSL.Value(), 0, 
+													  monitorGahp->getGt2CallbackContact(),
 													  NULL );
 
 	if ( rc != GAHPCLIENT_COMMAND_PENDING ) {
@@ -917,3 +922,13 @@ GlobusResource::ReadMonitorLogFile()
 	return retval;
 }
 
+void
+GlobusResource::gridMonitorCallback( int state, int errorcode )
+{
+	if ( state != monitorGramJobStatus ) {
+		dprintf( D_FULLDEBUG, "grid_monitor for %s: gram callback "
+				 "status=%d errorcode=%d\n", resourceName, state, errorcode );
+		monitorGramJobStatus = state;
+		monitorGramErrorCode = errorcode;
+	}
+}

@@ -211,25 +211,38 @@ orphanCallbackHandler()
 
 	// Find the right job object
 	rc = JobsByContact.lookup( HashKey( globusJobId(orphan->job_contact) ), this_job );
-	if ( rc != 0 || this_job == NULL ) {
-		dprintf( D_ALWAYS, 
-			"orphanCallbackHandler: Can't find record for globus job with "
-			"contact %s on globus state %d, errorcode %d, ignoring\n",
-			orphan->job_contact, orphan->state, orphan->errorcode );
+	if ( rc == 0 && this_job != NULL ) {
+		dprintf( D_ALWAYS, "(%d.%d) gram callback: state %d, errorcode %d\n",
+				 this_job->procID.cluster, this_job->procID.proc,
+				 orphan->state, orphan->errorcode );
+
+		this_job->GramCallback( orphan->state, orphan->errorcode );
+
 		free( orphan->job_contact );
 		delete orphan;
 		return TRUE;
 	}
 
-	dprintf( D_ALWAYS, "(%d.%d) gram callback: state %d, errorcode %d\n",
-			 this_job->procID.cluster, this_job->procID.proc, orphan->state,
-			 orphan->errorcode );
+	GlobusResource *next_resource;
+	GlobusResource::ResourcesByName.startIterations();
 
-	this_job->GramCallback( orphan->state, orphan->errorcode );
+	while ( GlobusResource::ResourcesByName.iterate( next_resource ) != 0 ) {
+		if ( !strcmp( orphan->job_contact, next_resource->monitorGramJobId ) ) {
+			next_resource->gridMonitorCallback( orphan->state,
+												orphan->errorcode );
 
+			free( orphan->job_contact );
+			delete orphan;
+			return TRUE;
+		}
+	}
+
+	dprintf( D_ALWAYS, 
+			 "orphanCallbackHandler: Can't find record for globus job with "
+			 "contact %s on globus state %d, errorcode %d, ignoring\n",
+			 orphan->job_contact, orphan->state, orphan->errorcode );
 	free( orphan->job_contact );
 	delete orphan;
-
 	return TRUE;
 }
 
@@ -242,26 +255,36 @@ gramCallbackHandler( void * /* user_arg */, char *job_contact, int state,
 
 	// Find the right job object
 	rc = JobsByContact.lookup( HashKey( globusJobId(job_contact) ), this_job );
-	if ( rc != 0 || this_job == NULL ) {
-		dprintf( D_ALWAYS, 
-			"gramCallbackHandler: Can't find record for globus job with "
-			"contact %s on globus state %d, errorcode %d, delaying\n",
-			job_contact, state, errorcode );
-		OrphanCallback_t *new_orphan = new OrphanCallback_t;
-		new_orphan->job_contact = strdup( job_contact );
-		new_orphan->state = state;
-		new_orphan->errorcode = errorcode;
-		OrphanCallbackList.Append( new_orphan );
-		daemonCore->Register_Timer( 1, (TimerHandler)&orphanCallbackHandler,
-									"orphanCallbackHandler", NULL );
+	if ( rc == 0 && this_job != NULL ) {
+		dprintf( D_ALWAYS, "(%d.%d) gram callback: state %d, errorcode %d\n",
+				 this_job->procID.cluster, this_job->procID.proc, state,
+				 errorcode );
+
+		this_job->GramCallback( state, errorcode );
 		return;
 	}
 
-	dprintf( D_ALWAYS, "(%d.%d) gram callback: state %d, errorcode %d\n",
-			 this_job->procID.cluster, this_job->procID.proc, state,
-			 errorcode );
+	GlobusResource *next_resource;
+	GlobusResource::ResourcesByName.startIterations();
 
-	this_job->GramCallback( state, errorcode );
+	while ( GlobusResource::ResourcesByName.iterate( next_resource ) != 0 ) {
+		if ( !strcmp( job_contact, next_resource->monitorGramJobId ) ) {
+			next_resource->gridMonitorCallback( state, errorcode );
+			return;
+		}
+	}
+
+	dprintf( D_ALWAYS, 
+			 "gramCallbackHandler: Can't find record for globus job with "
+			 "contact %s on globus state %d, errorcode %d, delaying\n",
+			 job_contact, state, errorcode );
+	OrphanCallback_t *new_orphan = new OrphanCallback_t;
+	new_orphan->job_contact = strdup( job_contact );
+	new_orphan->state = state;
+	new_orphan->errorcode = errorcode;
+	OrphanCallbackList.Append( new_orphan );
+	daemonCore->Register_Timer( 1, (TimerHandler)&orphanCallbackHandler,
+								"orphanCallbackHandler", NULL );
 }
 
 /////////////////////////interface functions to gridmanager.C

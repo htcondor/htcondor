@@ -76,8 +76,13 @@ class GlobusResource : public BaseResource
 	static void setGridMonitorDisableLength( int len )
 	{ monitorDisableLength = len; }
 
+	void gridMonitorCallback( int state, int errorcode );
+
 	// This should be private, but GlobusJob references it directly for now
 	static HashTable <HashKey, GlobusResource *> ResourcesByName;
+
+		// This is the gram job contact string for the grid monitor job.
+	char *monitorGramJobId;
 
  private:
 	void DoPing( time_t& ping_delay, bool& ping_complete,
@@ -165,8 +170,8 @@ class GlobusResource : public BaseResource
 		// grid-monitor is (re)submitted.
 	time_t jobStatusFileLastUpdate;
 
-		// This is the gram job contact string for the grid monitor job.
-	char *monitorGramJobId;
+	int monitorGramJobStatus;
+	int monitorGramErrorCode;
 
 	GahpClient *gahp;
 	GahpClient *monitorGahp;
