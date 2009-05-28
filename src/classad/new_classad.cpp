@@ -354,13 +354,15 @@ Insert( const string &name, ExprTree *tree )
 	tree->SetParentScope( this );
 
 		// check if attribute already exists in classad
+        // if not, just add it to the tree
 	AttrList::iterator itr = attrList.find( name );
 	if( itr != attrList.end( ) ) {
 			// delete old expression and replace
 		delete itr->second;
+        itr->second = tree;
 	}
-	attrList[name] = tree;
-
+    else
+        attrList[name] = tree;
 	MarkAttributeDirty(name);
         
 	return( true );
