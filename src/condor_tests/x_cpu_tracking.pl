@@ -37,7 +37,7 @@ my $LogFile = $testname . ".data.log";
 system("rm -f $LogFile");
 system("touch $LogFile");
 
-system("date");
+print scalar localtime() . "\n";
 
 print "OPSYS = $opsys\n";
 print "SLEEP = $sleeptime\n";

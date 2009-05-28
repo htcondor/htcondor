@@ -152,7 +152,7 @@ ModifyPrivilege ( LPCTSTR privilege, BOOL enable ) {
     DWORD               last_error          = ERROR_SUCCESS;
     TOKEN_PRIVILEGES    token_privileges;
     LUID                luid;
-    HANDLE              process_token       = NULL;
+    HANDLE              process_token       = INVALID_HANDLE_VALUE;
     BOOL                have_pricess_token  = FALSE,
                         found_privelage     = FALSE,
                         privelages_adjusted = FALSE,
@@ -234,6 +234,10 @@ ModifyPrivilege ( LPCTSTR privilege, BOOL enable ) {
 
         /* propagate the last error */
         SetLastError ( ok ? ERROR_SUCCESS : last_error );
+
+		if ( INVALID_HANDLE_VALUE != process_token ) {
+			CloseHandle ( process_token );
+		}
     
     }
 

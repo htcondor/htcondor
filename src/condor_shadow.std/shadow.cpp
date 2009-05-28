@@ -141,14 +141,6 @@ int  CommittedTime = 0;			// run-time committed in checkpoints
 // last known checkpointing signature of a successful checkpoint
 extern char *LastCkptPlatform;
 
-#ifdef WANT_NETMAN
-extern bool ManageBandwidth;	// notify negotiator about network usage?
-extern int NetworkHorizon;		// how often do we request network bandwidth?
-extern "C" void file_stream_child_exit(pid_t pid);
-extern "C" void abort_file_stream_transfer();
-extern "C" void RequestRSCBandwidth();
-#endif
-
 extern char *Executing_Arch, *Executing_OpSys;
 
 extern char *IpcFile;
@@ -476,11 +468,6 @@ main(int argc, char *argv[] )
 
 	SlowCkptSpeed = param_integer( "SLOW_CKPT_SPEED", 0 );
 
-#ifdef WANT_NETMAN
-	ManageBandwidth = param_boolean("MANAGE_BANDWIDTH",false);
-	NetworkHorizon = param_integer("NETWORK_HORIZON",300);
-#endif
-
 	// Install signal handlers such that all signals are blocked when inside
 	// the handler.
 	sigset_t fullset;
@@ -625,9 +612,6 @@ HandleSyscalls()
 
 	time_t current_time = time(0);
 	time_t next_periodic_update = current_time + periodic_interval_len;
-#if WANT_NETMAN
-	time_t next_bw_update = current_time + NetworkHorizon;
-#endif
 	
 	for(;;) {	/* get a request and fulfill it */
 
@@ -639,13 +623,6 @@ HandleSyscalls()
 		timer.tv_sec = next_periodic_update - current_time;
 		timer.tv_usec = 0;
 		ptimer = &timer;
-#if WANT_NETMAN
-		if (ManageBandwidth && next_bw_update > current_time) {
-			timer.tv_sec = next_bw_update - current_time;
-			timer.tv_usec = 0;
-			ptimer = &timer;
-		}
-#endif
 		/* if the current timer is set for a time longer than this, than
 			truncate the timer required to the periodic limit. After 
 			inspection of the bandwidth timer, it seems that it will recorrect
@@ -710,13 +687,6 @@ HandleSyscalls()
 				break;
 			}
 		}
-
-#if WANT_NETMAN
-		if (ManageBandwidth && current_time >= next_bw_update) {
-			RequestRSCBandwidth();
-			next_bw_update = current_time + NetworkHorizon;
-		}
-#endif
 
 #if defined(SYSCALL_DEBUG)
 		strcpy( SyscallLabel, "shadow" );
@@ -1348,10 +1318,6 @@ DoCleanup()
 		(void) unlink_local_or_ckpt_server( TmpCkptName );
 	}
 
-#if WANT_NETMAN
-	abort_file_stream_transfer(); // if we've got one
-#endif
-
 	return 0;
 }
 
@@ -1494,11 +1460,6 @@ reaper(int unused)
 				pid, WTERMSIG(status)
 			);
 		}
-#if WANT_NETMAN
-			// tell the file_stream code whenever a child exits, so it
-			// can do some cleanup with its children
-		file_stream_child_exit(pid);
-#endif
 	}
 
 #ifdef HPUX

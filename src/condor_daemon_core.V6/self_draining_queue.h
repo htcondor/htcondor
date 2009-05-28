@@ -69,6 +69,7 @@ public:
 	bool registerHandlercpp( ServiceDataHandlercpp handlercpp_fn, 
 							 Service* service_ptr );
 	bool setPeriod( int new_period );
+	void setCountPerInterval( int count );
 
 
 		/// Main public interface
@@ -84,6 +85,7 @@ private:
 	Service* service_ptr;
 	int tid;
 	int period;
+	int m_count_per_interval;
 	char* name;
 	char* timer_name;
 	

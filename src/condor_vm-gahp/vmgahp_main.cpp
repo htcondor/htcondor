@@ -377,7 +377,7 @@ int main_init(int argc, char *argv[])
 	initialize_uids();
 
 #if defined(LINUX)
-	if( strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_XEN) == 0 ) {
+	if( (strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_XEN) == 0) || (strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_KVM) == 0)) {
 		// Xen requires root priviledge 
 		if( !canSwitchUid() ) {
 			vmprintf(D_ALWAYS, "VMGahp server for Xen requires "
@@ -399,13 +399,25 @@ int main_init(int argc, char *argv[])
 
 	// Check if vm specific paramaters are valid in config file
 #if defined(LINUX)
-	if( strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_XEN) == 0 ) {
+	// The calls to checkXenParams() were moved here because each
+	// call is specific to the subclass type that is calling it.
+	// These methods are static, so dynamic dispatch cannot be
+	// used, and the testXen method belongs in the superclass.
+	// Therefore, there was only one place where this could have
+	// gone...
+	if( (strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_XEN) == 0)) {
 		priv_state priv = set_root_priv();
 		if( XenType::checkXenParams(gahpconfig) == false ) {
 			DC_Exit(1);
 		}
 		set_priv(priv);
-	}else
+	}else if ((strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_KVM) == 0)) {
+                priv_state priv = set_root_priv();
+		if( KVMType::checkXenParams(gahpconfig) == false ) {
+			DC_Exit(1);
+		}
+		set_priv(priv);
+	} else
 #endif
 	if( strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_VMWARE) == 0 ) {
 		priv_state priv = set_user_priv();
@@ -418,15 +430,26 @@ int main_init(int argc, char *argv[])
 	if( vmgahp_mode == VMGAHP_TEST_MODE ) {
 		// Try to test
 #if defined(LINUX)
-		if( strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_XEN) == 0 ) {
+	  if( (strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_XEN) == 0)) {
 			priv_state priv = set_root_priv();
-			if( XenType::testXen(gahpconfig) == false ) {
+
+			if( (VirshType::testXen(gahpconfig) == false) || (XenType::checkXenParams(gahpconfig) == false) ) {
 				vmprintf(D_ALWAYS, "\nERROR: the vm_type('%s') cannot "
 						"be used.\n", vmtype.Value());
 				DC_Exit(0);
 			}
 			set_priv(priv);
-		}else
+	  }else if ( (strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_KVM) == 0)) {
+			priv_state priv = set_root_priv();
+
+			if( (VirshType::testXen(gahpconfig) == false) || (KVMType::checkXenParams(gahpconfig) == false) ) {
+				vmprintf(D_ALWAYS, "\nERROR: the vm_type('%s') cannot "
+						"be used.\n", vmtype.Value());
+				DC_Exit(0);
+			}
+			set_priv(priv);
+
+	  } else 
 #endif
 		if( strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_VMWARE) == 0 ) {
 			priv_state priv = set_user_priv();
@@ -468,8 +491,8 @@ int main_init(int argc, char *argv[])
 		set_root_priv();
 
 #if defined(LINUX)
-		if( strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_XEN ) == 0 ) {
-			XenType::killVMFast(gahpconfig->m_vm_script.Value(), 
+		if( (strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_XEN) == 0) || (strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_KVM) == 0)) {
+			VirshType::killVMFast(gahpconfig->m_vm_script.Value(), 
 					matchstring.Value());
 		}else
 #endif

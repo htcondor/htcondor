@@ -822,6 +822,14 @@ parse_retry(
 		exampleSyntax( example );
 		return false;
 	}
+	if ( job->retry_max < 0 ) {
+		debug_printf( DEBUG_QUIET,
+					  "%s (line %d): Invalid Retry value \"%d\" "
+					  "(cannot be negative)\n",
+					  filename, lineNumber, job->retry_max );
+		exampleSyntax( example );
+		return false;
+	}
 
     // Check for optional retry-abort value
     s = strtok( NULL, DELIMITERS );

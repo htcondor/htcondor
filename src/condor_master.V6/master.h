@@ -82,6 +82,8 @@ public:
 	int		SetupController( void );
 	int		RegisterControllee( class daemon * );
 
+	bool	IsHA( void ) { return is_ha; };
+
 private:
 
 	int		runs_on_this_host();

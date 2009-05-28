@@ -69,6 +69,10 @@ copy ..\Release\*.exe %1\bin
 copy ..\Release\*.dll %1\bin
 copy msvcrt.dll %1\bin
 copy msvcirt.dll %1\bin
+copy Microsoft.VC90.CRT.manifest %1\bin
+copy msvcm90.dll %1\bin
+copy msvcp90.dll %1\bin
+copy msvcr90.dll %1\bin
 copy ..\src\condor_vm-gahp\condor_vm_vmware.pl %1\bin
 copy ..\src\condor_vm-gahp\*.dll %1\bin
 copy ..\src\condor_vm-gahp\mkisofs.exe %1\bin
@@ -122,6 +126,7 @@ copy condor.exe condor_reconfig.exe
 copy condor.exe condor_reschedule.exe
 copy condor.exe condor_vacate.exe
 copy condor.exe condor_set_shutdown.exe
+copy condor.exe condor_squawk.exe
 copy condor_cod.exe condor_cod_request.exe
 popd
 

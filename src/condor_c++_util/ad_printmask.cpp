@@ -48,7 +48,7 @@ AttrListPrintMask::
 
 
 void AttrListPrintMask::
-registerFormat (char *fmt, const char *attr, char *alternate)
+registerFormat (const char *fmt, const char *attr, const char *alternate)
 {
 	Formatter *newFmt = new Formatter;
 
@@ -57,11 +57,11 @@ registerFormat (char *fmt, const char *attr, char *alternate)
 	formats.Append (newFmt);
 
 	attributes.Append(new_strdup (attr));
-	alternates.Append(new_strdup(collapse_escapes(alternate)));
+	alternates.Append(collapse_escapes(new_strdup(alternate)));
 }
 
 void AttrListPrintMask::
-registerFormat (IntCustomFmt fmt, const char *attr, char *alternate)
+registerFormat (IntCustomFmt fmt, const char *attr, const char *alternate)
 {
 	Formatter *newFmt = new Formatter;
 
@@ -71,11 +71,11 @@ registerFormat (IntCustomFmt fmt, const char *attr, char *alternate)
 	formats.Append (newFmt);
 
 	attributes.Append(new_strdup (attr));
-	alternates.Append(new_strdup(collapse_escapes(alternate)));
+	alternates.Append(collapse_escapes(new_strdup(alternate)));
 }
 
 void AttrListPrintMask::
-registerFormat (FloatCustomFmt fmt, const char *attr, char *alternate)
+registerFormat (FloatCustomFmt fmt, const char *attr, const char *alternate)
 {
 	Formatter *newFmt = new Formatter;
 
@@ -85,11 +85,11 @@ registerFormat (FloatCustomFmt fmt, const char *attr, char *alternate)
 	formats.Append (newFmt);
 
 	attributes.Append(new_strdup (attr));
-	alternates.Append(new_strdup(collapse_escapes(alternate)));
+	alternates.Append(collapse_escapes(new_strdup(alternate)));
 }
 
 void AttrListPrintMask::
-registerFormat (StringCustomFmt fmt, const char *attr, char *alternate)
+registerFormat (StringCustomFmt fmt, const char *attr, const char *alternate)
 {
 	Formatter *newFmt = new Formatter;
 
@@ -99,7 +99,7 @@ registerFormat (StringCustomFmt fmt, const char *attr, char *alternate)
 	formats.Append (newFmt);
 
 	attributes.Append(new_strdup (attr));
-	alternates.Append(new_strdup(collapse_escapes(alternate)));
+	alternates.Append(collapse_escapes(new_strdup(alternate)));
 }
 
 void AttrListPrintMask::

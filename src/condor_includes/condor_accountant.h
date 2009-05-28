@@ -49,6 +49,7 @@ public:
   void Initialize();  // Configuration
 
   int GetResourcesUsed(const MyString& CustomerName); // get # of used resources
+  float GetResourcesUsedFloat(const MyString& CustomerName); // same for float
   float GetPriority(const MyString& CustomerName); // get priority for a customer
   void SetPriority(const MyString& CustomerName, float Priority); // set priority for a customer
 
@@ -78,6 +79,8 @@ public:
                                                 
   void DisplayLog();
   void DisplayMatches();
+
+  ClassAd* GetClassAd(const MyString& Key);
 
 private:
 
@@ -112,7 +115,8 @@ private:
   float HalfLifePeriod;     // The time in sec in which the priority is halved by aging
   MyString LogFileName;      // Name of Log file
   int	MaxAcctLogSize;		// Max size of log file
-  bool   DiscountSuspendedResources;
+  bool  DiscountSuspendedResources;
+  bool  UseResourceWeights; 
   StringList *GroupNamesList;
 
   //--------------------------------------------------------
@@ -135,6 +139,7 @@ private:
   static MyString PriorityAttr;
   static MyString UnchargedTimeAttr;
   static MyString ResourcesUsedAttr;
+  static MyString ResourcesUsedRWAttr;
   static MyString AccumulatedUsageAttr;
   static MyString BeginUsageTimeAttr;
   static MyString LastUsageTimeAttr;
@@ -145,6 +150,8 @@ private:
   static MyString RemoteUserAttr;
   static MyString StartTimeAttr;
   static MyString Cpus;
+
+  static MyString ResourceWeightAttr;
 
   //--------------------------------------------------------
   // Utility functions
@@ -157,7 +164,6 @@ private:
   static ClassAd* FindResourceAd(const MyString& ResourceName, ClassAdList& ResourceList);
   static MyString GetDomain(const MyString& CustomerName);
 
-  ClassAd* GetClassAd(const MyString& Key);
   bool DeleteClassAd(const MyString& Key);
 
   void SetAttributeInt(const MyString& Key, const MyString& AttrName, int AttrValue);

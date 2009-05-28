@@ -62,6 +62,8 @@ class RoutedJob {
 
 	bool is_sandboxed;// true if dest copy of job has a separate sandbox
 
+	bool saw_dest_job;// true if dest job ad showed up in job mirror
+
 	time_t submission_time;
 	time_t retirement_time;
 
@@ -76,6 +78,7 @@ class RoutedJob {
 	bool SetSrcJobAd(char const *key,classad::ClassAd *ad,classad::ClassAdCollection *ad_collection);
 	void SetDestJobAd(classad::ClassAd const *ad);
 	bool IsRunning() {return is_running;}
+	bool SawDestJob() {return saw_dest_job;}
 
 	bool PrepareSharedX509UserProxy(JobRoute *route);
 	bool CleanupSharedX509UserProxy(JobRoute *route);

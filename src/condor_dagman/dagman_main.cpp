@@ -49,7 +49,7 @@ extern "C" void process_config_source( char* file, char* name,
 extern "C" bool is_piped_command(const char* filename);
 
 //---------------------------------------------------------------------------
-DECL_SUBSYSTEM( "DAGMAN", SUBSYSTEM_TYPE_DAEMON );
+DECL_SUBSYSTEM( "DAGMAN", SUBSYSTEM_TYPE_DAGMAN );
 
 static char* lockFileName = NULL;
 
@@ -367,18 +367,20 @@ int main_shutdown_rescue( int exitVal ) {
 			// otherwise if we crashed, failed, or were killed while
 			// removing them, we would leave the DAG in an
 			// unrecoverable state...
-		if( dagman.rescueFileToWrite ) {
-			debug_printf( DEBUG_NORMAL, "Rescue DAG file %s was specified; "
-						"overriding automatic rescue DAG naming\n",
-						dagman.rescueFileToWrite );
-			dagman.dag->WriteRescue( dagman.rescueFileToWrite,
-						dagman.primaryDagFile.Value() );
-		} else if ( dagman.maxRescueDagNum > 0 ) {
-			dagman.dag->Rescue( dagman.primaryDagFile.Value(),
-						dagman.multiDags, dagman.maxRescueDagNum );
-		} else {
-			debug_printf( DEBUG_QUIET, "No rescue DAG written because "
-						"DAGMAN_MAX_RESCUE_NUM is 0\n" );
+		if( exitVal != 0 ) {
+			if( dagman.rescueFileToWrite ) {
+				debug_printf( DEBUG_NORMAL, "Rescue DAG file %s was specified; "
+							"overriding automatic rescue DAG naming\n",
+							dagman.rescueFileToWrite );
+				dagman.dag->WriteRescue( dagman.rescueFileToWrite,
+							dagman.primaryDagFile.Value() );
+			} else if ( dagman.maxRescueDagNum > 0 ) {
+				dagman.dag->Rescue( dagman.primaryDagFile.Value(),
+							dagman.multiDags, dagman.maxRescueDagNum );
+			} else {
+				debug_printf( DEBUG_QUIET, "No rescue DAG written because "
+							"DAGMAN_MAX_RESCUE_NUM is 0\n" );
+			}
 		}
 
 		debug_printf( DEBUG_DEBUG_1, "We have %d running jobs to remove\n",

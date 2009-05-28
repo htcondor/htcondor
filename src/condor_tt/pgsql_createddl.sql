@@ -369,6 +369,11 @@ end_time timestamp with time zone;
 	
 BEGIN
 
+-- lock tables in a specific order so we do not deadlock with Quill
+-- more tables may be needed, but at least these are needed to avoid
+-- deadlocking with the initial job queue load
+LOCK TABLE clusterads_horizontal, clusterads_vertical, procads_horizontal, procads_vertical, JobQueuePollingInfo;
+
 -- start timer
 select into start_time timeofday();
 
@@ -551,6 +556,11 @@ DECLARE
 start_time timestamp with time zone;
 end_time timestamp with time zone;
 BEGIN
+
+-- lock tables in a specific order so we do not deadlock with Quill
+-- more tables may be needed, but at least these are needed to avoid
+-- deadlocking with the initial job queue load
+LOCK TABLE clusterads_horizontal, clusterads_vertical, procads_horizontal, procads_vertical, JobQueuePollingInfo;
 
 -- start timer
 select into start_time timeofday();

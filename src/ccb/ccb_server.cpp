@@ -596,7 +596,7 @@ CCBServer::ReconnectTarget( CCBTarget *target, CCBID reconnect_cookie )
 	}
 
 	char const *previous_ip = reconnect_info->getPeerIP();
-	char const *new_ip = target->getSock()->endpoint_ip_str();
+	char const *new_ip = target->getSock()->peer_ip_str();
 	if( strcmp(previous_ip,new_ip) )
 	{
 		dprintf(D_ALWAYS,
@@ -676,7 +676,7 @@ CCBServer::AddTarget( CCBTarget *target )
 	CCBReconnectInfo *reconnect_info = new CCBReconnectInfo(
 		target->getCCBID(),
 		reconnect_cookie,
-		target->getSock()->endpoint_ip_str());
+		target->getSock()->peer_ip_str());
 	AddReconnectInfo( reconnect_info );
 	SaveReconnectInfo( reconnect_info );
 

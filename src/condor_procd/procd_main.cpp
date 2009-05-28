@@ -89,7 +89,7 @@ fail_illegal_option(char* option)
 }
 
 static inline void
-fail_option_args(char* option, int args_required)
+fail_option_args(const char* option, int args_required)
 {
 	fprintf(stderr,
 	        "error: option \"%s\" requires %d arguments",

@@ -633,7 +633,7 @@ ProcFamilyMonitor::lookup_member(pid_t pid)
 bool
 ProcFamilyMonitor::add_member_to_family(ProcFamily* pf,
                                         procInfo* pi,
-                                        char* method_str)
+                                        const char* method_str)
 {
 	// see if this process has already been inserted into a family
 	//

@@ -1040,7 +1040,7 @@ VMProc::Ckpt()
 		return false;
 	}
 
-	if( strcasecmp(m_vm_type.Value(), CONDOR_VM_UNIVERSE_XEN) == MATCH ) {
+	if( (strcasecmp(m_vm_type.Value(), CONDOR_VM_UNIVERSE_XEN) == MATCH) || (strcasecmp(m_vm_type.Value(), CONDOR_VM_UNIVERSE_KVM) == MATCH) ) {
 		if( !m_is_vacate_ckpt ) {
 			// Xen doesn't support periodic checkpoint
 			return false;
@@ -1183,7 +1183,7 @@ VMProc::PublishUpdateAd( ClassAd* ad )
 	dprintf( D_FULLDEBUG, "Inside VMProc::PublishUpdateAd()\n" );
 
 	MyString buf;
-	if( strcasecmp(m_vm_type.Value(), CONDOR_VM_UNIVERSE_XEN) == MATCH ) {
+	if( (strcasecmp(m_vm_type.Value(), CONDOR_VM_UNIVERSE_XEN) == MATCH) || (strcasecmp(m_vm_type.Value(), CONDOR_VM_UNIVERSE_KVM) == MATCH) ) {
 		float sys_time = m_vm_cputime;
 		float user_time = 0.0;
 

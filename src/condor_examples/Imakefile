@@ -4,7 +4,6 @@ FILES = README condor_config.local.central.manager \
 	condor_config.local.ckpt.server \
 	condor_config.local.ha_condor_client \
 	condor_config.local.ha_condor_had \
-	condor_config.local.root.ckpt.server \
 	condor_config.local.view_server \
 	lamscript \
 	mp1script \

@@ -262,7 +262,7 @@ elif test $os = "Linux" ; then
 	;;
      # Handle post-FC releases more robustly
      * )
-        _cv_linux_distro=`$RPMQUERY -q --queryformat "F%{VERSION}" fedora-release`
+        _cv_linux_distro=F`cat /etc/fedora-release|$PERL -ne '/.* (.*) \((.*)\)/;print $1;'`
 	;;
     esac
   elif test -f "/etc/redhat-release" ; then
@@ -297,7 +297,7 @@ elif test $os = "Linux" ; then
           esac
        elif (grep -q "Red Hat Enterprise Linux" /etc/redhat-release) ; then
          # RHEL
-	 _cv_linux_distro=RHEL`$RPMQUERY -q --queryformat "%{VERSION}" redhat-release | tr -d \[[A-Za-z]] `
+	 _cv_linux_distro=RHEL`cat /etc/redhat-release|$PERL -ne '/.* (.*) \(.*\)/;print $1;' | $AWK -F. '{printf "%s", $1}'`
        else
           $_rh_release=`cat /etc/redhat-release`
           AC_MSG_WARN([You may have trouble building and/or packaging Condor on $_rh_release])
@@ -1333,7 +1333,6 @@ case "$_cv_opsys-$_cv_opsys_vers-$_cv_arch-$_cv_linux_distro-$_cv_libc_major-$_c
   *-HPUX11-* | \
   LINUX-*-ALPHA-* | \
   LINUX-*-*-DEBIAN40-* | \
-  LINUX-*-X86_64-DEBIAN50-* | \
   LINUX-*-IA64-* | \
   SOLARIS-* | \
   LINUX-*-CONDOR_PPC-* ) _cv_clipped_default=yes ;;
@@ -2170,14 +2169,6 @@ AC_ARG_ENABLE([malloc-debug],
 AS_IF([test "x$enable_malloc_debug" = xyes],
   [CPPFLAGS="$CPPFLAGS -DMALLOC_DEBUG"])
 
-AC_ARG_ENABLE([netman],
-  AC_HELP_STRING([--enable-netman],
-    [enable NETMAN functionality (default: no)]),
-  [],
-  [enable_netman=no])
-AS_IF([test "x$enable_netman" = xyes],
-  [AC_DEFINE([ENABLE_NETMAN], [1], [Define if enabling NETMAM])])
-
 AC_ARG_ENABLE([nest],
   AC_HELP_STRING([--enable-nest],
     [enable NeST functionality (default: no)]),
@@ -2243,15 +2234,25 @@ fi
 # checks for libraries
 ############################################################
 
-# The DRMAA C library needs to be compiled with pthreads in mind if
-# pthreads are available. This machinery ends up defining HAS_PTHREADS
-# In the build system which is then used to add the correct threading
-# flags to the compile line for drmaa code.
-AC_CHECK_LIB([pthread], [pthread_create],
-  [ac_pthreads=yes
-   AC_DEFINE([HAS_PTHREADS],[1],[Define if pthreads are available])],
-  [ac_pthreads=no])
-
+# Currently in Condor, threading in daemon core on Unix requires
+# both pthreads and thread local storage.  HACK: for right now
+# we know that only Linux meets that requirement, and furthermore
+# that TLS exists but is broken on ia64 (the compiler blows up).  So for now
+# we only want pthreads defined on Linux that is not ia64.  Once we 
+# remove the requirement on TLS in the code, we can safely remove 
+# this hack.
+#     if test $os = "Linux" && test $arch != "ia64"; then
+# Actually, until TLS is out of the code, don't compile it anywhere.
+if test $os = "FOOBAR" && test $arch != "ia64"; then
+	AC_CHECK_LIB([pthread], [pthread_create],
+  		[ac_pthreads=yes
+   		AC_DEFINE([HAVE_PTHREADS],[1],[Define if pthreads are available])
+		AC_DEFINE([HAS_PTHREADS],[1],[Define if pthreads are available for DRMAA])
+		],
+  		[ac_pthreads=no])
+	# Check if this system support Thread Local Storage class.
+	AX_TLS
+fi
 
 ############################################################
 # checks for header files
@@ -2294,6 +2295,7 @@ AC_CHECK_HEADERS([resolv.h],[],[],[
 #include<sys/types.h>
 #include<netinet/in.h>
 #include<arpa/nameser.h>])
+AC_CHECK_HEADERS([pthread.h])
 
 
 ############################################################
@@ -2739,12 +2741,10 @@ if test "x$_cv_libc_kind" = "xGLIBC" -a \( "x$_cv_arch" = "xI386" -o "x$_cv_arch
  	 # F8 uses glibc 2.7-2
 	 # debian uses glibc 2.7-18
     if test "x$_cv_arch" = "xI386" ; then
-       CHECK_EXTERNAL([glibc],[2.7-18], [soft])
-	else # x86_64
-		# commented out for now, since we're clipped on this platform.
-       #CHECK_EXTERNAL([glibc],[2.7-18-x86_64], [soft])
-		:
-	fi
+      CHECK_EXTERNAL([glibc],[2.7-18], [soft])
+    else # x86_64
+      CHECK_EXTERNAL([glibc],[2.7-18-x86_64], [soft])
+    fi
     ;;
   * )
     if test "x$enable_glibc_version_check" = "xyes"; then

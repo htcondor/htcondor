@@ -58,10 +58,10 @@ public:
 	inline int consumed() const { return _dta_pt == _dta_sz; }
 
 
-	int write(SOCKET sockd, int sz=-1, int timeout=0);
-	int read(SOCKET sockd, int sz=-1, int timeout=0);
+	int write(char const *peer_description,SOCKET sockd, int sz=-1, int timeout=0);
+	int read(char const *peer_description,SOCKET sockd, int sz=-1, int timeout=0);
 
-	int flush(SOCKET sockd, void * hdr=0, int sz=0, int timeout=0);
+	int flush(char const *peer_description,SOCKET sockd, void * hdr=0, int sz=0, int timeout=0);
 
 	int put_max(const void *, int);
 	int get_max(void *, int);

@@ -176,28 +176,37 @@ OfflineCollectorPlugin::update (
 		offline = TRUE;
 
 		/* get the off-line expiry time (default to INT_MAX) */
-		param_integer ( 
-			"OFFLINE_EXPIRE_AD_AFTER",
-			lifetime,
-			0,
+		lifetime = param_integer ( 
+			"OFFLINE_EXPIRE_ADS_AFTER",
 			INT_MAX );
 
 		/* reset any values in the ad that may interfere with
 		a match in the future */
 
 		/* Reset Condor state */
-		int now = static_cast<int> ( time ( NULL ) );
 		ad.Assign ( ATTR_STATE, state_to_string ( unclaimed_state ) );
 		ad.Assign ( ATTR_ACTIVITY, activity_to_string ( idle_act ) );
-		ad.Assign ( ATTR_ENTERED_CURRENT_STATE, now );
-		ad.Assign ( ATTR_ENTERED_CURRENT_ACTIVITY, now );
+		ad.Assign ( ATTR_ENTERED_CURRENT_STATE, 0 );
+		ad.Assign ( ATTR_ENTERED_CURRENT_ACTIVITY, 0 );
+
+		/* Set the heart-beat time */
+		int now = static_cast<int> ( time ( NULL ) );
+		ad.Assign ( ATTR_MY_CURRENT_TIME, now );
+		ad.Assign ( ATTR_LAST_HEARD_FROM, now );
 
 		/* Reset machine load */
+		ad.Assign ( ATTR_LOAD_AVG, 0.0 );
+		ad.Assign ( ATTR_CONDOR_LOAD_AVG, 0.0 );		
 		ad.Assign ( ATTR_TOTAL_LOAD_AVG, 0.0 );
-
+		ad.Assign ( ATTR_TOTAL_CONDOR_LOAD_AVG, 0.0 );
+		
 		/* Reset CPU load */
 		ad.Assign ( ATTR_CPU_IS_BUSY, false );
 		ad.Assign ( ATTR_CPU_BUSY_TIME, 0 );
+
+		/* Reset keyboard and mouse times */
+		ad.Assign ( ATTR_KEYBOARD_IDLE, INT_MAX );
+		ad.Assign ( ATTR_CONSOLE_IDLE, INT_MAX );		
 
 		/* any others? */
 
@@ -220,6 +229,11 @@ OfflineCollectorPlugin::update (
 		}
 
 	}
+
+	dprintf ( 
+		D_FULLDEBUG, 
+		"Machine ad lifetime: %d\n",
+		lifetime );
 
 	/* record the new values as specified above */
 	ad.Assign ( ATTR_OFFLINE, offline );

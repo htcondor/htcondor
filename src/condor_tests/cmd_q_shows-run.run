@@ -19,10 +19,13 @@
 ##**************************************************************
 
 use CondorTest;
+use strict;
+use warnings;
 
-$cmd      = 'cmd_q_shows-run.cmd';
-$testdesc =  'Condor_q shows jobs running - vanilla U';
-$testname = "cmd_q_shows-run";
+my $cmd      = 'cmd_q_shows-run.cmd';
+my $testdesc =  'Condor_q shows jobs running - vanilla U';
+my $testname = "cmd_q_shows-run";
+my $debuglevel = 2;
 
 # truly const variables in perl
 sub IDLE{1};
@@ -31,7 +34,7 @@ sub RUNNING{2};
 
 my $alreadydone=0;
 
-$execute = sub {
+my $execute = sub {
 	my %args = @_;
 	my $cluster = $args{"cluster"};
 	if($alreadydone == 0) {
@@ -40,58 +43,68 @@ $execute = sub {
 		return(0);
 	}
 
-	CondorTest::debug("Good, we can't look for a running job without one\n",1);
+	print "ok\n";
+	print "Cluster is - $cluster\n";
+	CondorTest::debug("Good, we can't look for a running job without one\n",$debuglevel);
 	my @adarray;
 	my $running = "no";
 	my $status = 1;
 	my $cmd = "condor_q -run $cluster";
+	print "Look for condor_q -run $cluster showing this as a running job - ";
 	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
 	if(!$status)
 	{
-		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
+		print "bad\n";
+		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",$debuglevel);
 		$cmd = "condor_rm $cluster";
 		$status = CondorTest::runCondorTool($cmd,\@adarray,2);
 		exit(1)
 	}
-	foreach $line (@adarray) {
+	foreach my $line (@adarray) {
 		chomp($line);
-		CondorTest::debug("$line\n",1);
+		CondorTest::debug("$line\n",$debuglevel);
 		if($line =~ /^.*$cluster.*$/) {
-			CondorTest::debug("Cluster $cluster found running!\n",1);
+			CondorTest::debug("Cluster $cluster found running!\n",$debuglevel);
 			$running = "yes";
 			last;
 		}
 	}
 
 	if($running eq "no") {
-		CondorTest::debug("Failed to find $cluster running with condor_q -run \n",1);
+		print "bad\n";
+		CondorTest::debug("Failed to find $cluster running with condor_q -run \n",$debuglevel);
 		exit(1);
 	} else {
-		my $cmd = "condor_rm $cluster";
+		print "ok\n";
+		$cmd = "condor_rm $cluster";
+		print "Removing $cluster - ";
 		$status = CondorTest::runCondorTool($cmd,\@adarray,2);
 		if(!$status)
 		{
-			CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
+			print "bad\n";
+			CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",$debuglevel);
 			exit(1)
 		}
+		print "ok\n";
 	}
 };
 
-$abort = sub {
-	CondorTest::debug("Job is gone now, cool.\n",1);
+my $abort = sub {
+	CondorTest::debug("Job is gone now, cool.\n",$debuglevel);
 };
 
-$success = sub
+my $success = sub
 {
 	die "/Remove/Abort is expected event trail!\n";
 };
 
+print "Start a long runniing job - ";
 CondorTest::RegisterExecute($testname, $execute);
 CondorTest::RegisterAbort($testname, $abort);
 CondorTest::RegisterExitedSuccess($testname, $success);
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	CondorTest::debug("$testname: SUCCESS\n",1);
+	CondorTest::debug("$testname: SUCCESS\n",$debuglevel);
 	exit(0);
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";

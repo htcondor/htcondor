@@ -479,6 +479,7 @@ bool CollectorEngine::ValidateClassAd(int command,ClassAd *clientAd,Sock *sock)
 	char const *ipattr = NULL;
 	switch( command ) {
 	  case UPDATE_STARTD_AD:
+	  case UPDATE_STARTD_AD_WITH_ACK:
 		  ipattr = ATTR_STARTD_IP_ADDR;
 		  break;
 	  case UPDATE_SCHEDD_AD:
@@ -708,6 +709,12 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 			retVal = 0;
 			break;
 		}
+		// CRUFT: Before 7.3.2, submitter ads had a MyType of
+		//   "Scheduler". The only way to tell the difference
+		//   was that submitter ads didn't have ATTR_NUM_USERS.
+		//   Coerce MyStype to "Submitter" for ads coming from
+		//   these older schedds.
+		clientAd->SetMyTypeName( SUBMITTER_ADTYPE );
 		// since submittor ads always follow a schedd ad, and a master check is
 		// performed for schedd ads, we don't need a master check in here
 		hashString.Build( hk );

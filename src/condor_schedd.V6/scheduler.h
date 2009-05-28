@@ -279,6 +279,8 @@ class Scheduler : public Service
 	friend	int		updateSchedDInterval( ClassAd* );
 	void			display_shadow_recs();
 	int				actOnJobs(int, Stream *);
+	void            enqueueActOnJobMyself( PROC_ID job_id, JobAction action, bool notify );
+	int             actOnJobMyselfHandler( ServiceData* data );
 	int				updateGSICred(int, Stream* s);
 	void            setNextJobDelay( ClassAd const *job_ad, ClassAd const *machine_ad );
 	int				spoolJobFiles(int, Stream *);
@@ -334,9 +336,6 @@ class Scheduler : public Service
 	bool			WriteTerminateToUserLog( PROC_ID job_id, int status );
 	bool			WriteRequeueToUserLog( PROC_ID job_id, int status, const char * reason );
 	int				receive_startd_alive(int cmd, Stream *s);
-#ifdef WANT_NETMAN
-	void			RequestBandwidth(int cluster, int proc, match_rec *rec);
-#endif
 
 		// Public startd socket management functions
 	void            checkContactQueue();
@@ -474,6 +473,8 @@ private:
 	int             RequestClaimTimeout;
 	int				JobStartDelay;
 	int				JobStartCount;
+	int				JobStopDelay;
+	int				JobStopCount;
 	int             MaxNextJobDelay;
 	int				JobsThisBurst;
 	int				MaxJobsRunning;
@@ -526,6 +527,12 @@ private:
 		// queue.  Then, we can spawn all the shadows after the fact. 
 	SimpleList<PROC_ID> jobsToReconnect;
 	int				checkReconnectQueue_tid;
+
+		// queue for sending hold/remove signals to shadows
+	SelfDrainingQueue stop_job_queue;
+		// queue for doing other "act_on_job_myself" calls
+		// such as releasing jobs
+	SelfDrainingQueue act_on_job_myself_queue;
 
 	SelfDrainingQueue job_is_finished_queue;
 	int jobIsFinishedHandler( ServiceData* job_id );

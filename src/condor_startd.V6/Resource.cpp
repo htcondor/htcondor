@@ -163,8 +163,16 @@ Resource::~Resource()
 	}
 #endif /* HAVE_JOB_HOOKS */
 
+		// Note on "&& !m_currently_fetching": A DYNAMIC slot will
+		// defer its destruction while it is waiting on a fetch work
+		// hook. The only time when a slot with a parent will be
+		// destroyed while waiting on a hook is during
+		// shutdown. During shutdown there is no need to give
+		// resources back to the parent slot, and doing so may
+		// actually be dangerous if our parent was deleted first.
+
 		// If we have a parent, return our resources to it
-	if( m_parent ) {
+	if( m_parent && !m_currently_fetching ) {
 		*(m_parent->r_attr) += *(r_attr);
 		m_parent->m_id_dispenser->insert( r_sub_id );
 		m_parent->update();
@@ -1636,6 +1644,8 @@ Resource::publish( ClassAd* cap, amask_t mask )
 					"should be added by ResMgr!", ATTR_CPU_BUSY );
 		}
 
+		caInsert(cap, r_classad, ATTR_RESOURCE_WEIGHT);
+
 			// Include everything from STARTD_EXPRS.
 			// And then include everything from SLOTx_STARTD_EXPRS
 		daemonCore->publish(cap);
@@ -2328,6 +2338,17 @@ Resource::fetchCompleted(void)
 		// Now that a fetch hook returned, (re)set our timer to try
 		// fetching again based on the delay expression.
 	resetFetchWorkTimer();
+
+		// If we are a dynamically created slot, it is possible that
+		// we became unclaimed while waiting for the fetch to
+		// complete. Now that it has we can reevaluate our state and
+		// potentially delete ourself.
+	if ( get_feature() == DYNAMIC_SLOT ) {
+		// WARNING: This must be the last thing done in response to a
+		// hook exiting, if it isn't then there is a chance we will be
+		// referenced after we are deleted.
+		eval_state();
+	}
 }
 
 

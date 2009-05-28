@@ -167,6 +167,7 @@ ResMgr::init_config_classad( void )
 #if HAVE_HIBERNATION
 	configInsert( config_classad, "HIBERNATE", false );
 #endif /* HAVE_HIBERNATION */
+	configInsert( config_classad, ATTR_RESOURCE_WEIGHT, false );
 
 		// Next, try the IS_OWNER expression.  If it's not there, give
 		// them a resonable default, instead of leaving it undefined. 
@@ -437,7 +438,7 @@ ResMgr::reconfig_resources( void )
 
 #if HAVE_HIBERNATION
 	updateHibernateConfiguration();
-#endif /* HAVE_HIBERNATION */
+#endif /* HAVE_HIBERNATE */
 
 		// Tell each resource to reconfig itself.
 	walk(&Resource::reconfig);
@@ -1484,6 +1485,7 @@ ResMgr::send_update( int cmd, ClassAd* public_ad, ClassAd* private_ad,
 	return daemonCore->sendUpdates(cmd, public_ad, private_ad, nonblock);
 }
 
+
 void
 ResMgr::update_all( void )
 {
@@ -1598,24 +1600,24 @@ ResMgr::compute( amask_t how_much )
 	}
 
 		// Now that everything has actually been computed, we can
-		// refresh our interval classad with all the current values of
+		// refresh our internal classad with all the current values of
 		// everything so that when we evaluate our state or any other
 		// expressions, we've got accurate data to evaluate.
 	walk( &Resource::refresh_classad, how_much );
 
-		// Now that we have an updated interval classad for each
+		// Now that we have an updated internal classad for each
 		// resource, we can "compute" anything where we need to 
 		// evaluate classad expressions to get the answer.
 	walk( &Resource::compute, A_EVALUATED );
 
-		// Next, we can publish any results from that to our interval
+		// Next, we can publish any results from that to our internal
 		// classads to make sure those are still up-to-date
 	walk( &Resource::refresh_classad, A_EVALUATED );
 
-		// Finally, now that all the interval classads are up to date
+		// Finally, now that all the internal classads are up to date
 		// with all the attributes they could possibly have, we can
 		// publish the cross-slot attributes desired from
-		// STARTD_SLOT_ATTRS into each slots's interval ClassAd.
+		// STARTD_SLOT_ATTRS into each slots's internal ClassAd.
 	walk( &Resource::refresh_classad, A_SHARED_SLOT );
 
 		// Now that we're done, we can display all the values.
@@ -1826,7 +1828,7 @@ ResMgr::reset_timers( void )
 				 update_offset );
 	}
 	if( poll_tid != -1 ) {
-		daemonCore->Reset_Timer( poll_tid, polling_interval,
+		daemonCore->Reset_Timer( poll_tid, polling_interval, 
 								 polling_interval );
 	}
 	if( up_tid != -1 ) {
@@ -1836,7 +1838,7 @@ ResMgr::reset_timers( void )
 
 #if HAVE_HIBERNATION
 	resetHibernateTimer();
-#endif /* HAVE_HIBERNATION */
+#endif /* HAVE_HIBERNATE */
 
 }
 
@@ -2037,7 +2039,6 @@ ResMgr::allHibernating( MyString &target ) const
 		dprintf( D_FULLDEBUG, "allHibernating: doesn't want hibernate\n" );
 		return 0;
 	}
-
 		// The following may evaluate to true even if there
 		// is a claim on one or more of the resources, so we
 		// don't bother checking for claims first. 

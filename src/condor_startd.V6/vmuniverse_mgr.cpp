@@ -416,7 +416,7 @@ VMUniverseMgr::testVMGahp(const char* gahppath, const char* vmtype)
 #endif
 
 	priv_state prev_priv;
-	if( strcasecmp(vmtype, CONDOR_VM_UNIVERSE_XEN) == MATCH ) {
+	if( (strcasecmp(vmtype, CONDOR_VM_UNIVERSE_XEN) == MATCH) || (strcasecmp(vmtype, CONDOR_VM_UNIVERSE_KVM) == MATCH) ) {
 		// Xen requires root privilege
 		prev_priv = set_root_priv();
 	}else {
@@ -451,11 +451,23 @@ VMUniverseMgr::testVMGahp(const char* gahppath, const char* vmtype)
 		dprintf( D_ALWAYS, 
 				 "Warning: '%s' did not produce any valid output.\n", 
 				 args_string.Value());
-		if( strcasecmp(vmtype, CONDOR_VM_UNIVERSE_XEN) == 0 ) {
+		if( (strcasecmp(vmtype, CONDOR_VM_UNIVERSE_XEN) == 0) ) {
 			MyString err_msg;
 			err_msg += "\n#######################################################\n";
 			err_msg += "##### Make sure the followings ";
 			err_msg += "to use VM universe for Xen\n";
+			err_msg += "### - The owner of script progrm like ";
+			err_msg += "'condor_vm_xen.sh' must be root\n";
+			err_msg += "### - The script program must be executable\n";
+			err_msg += "### - Other writable bit for the above files is ";
+			err_msg += "not allowed.\n";
+			err_msg += "#########################################################\n";
+			dprintf( D_ALWAYS, "%s", err_msg.Value());
+		} else if( (strcasecmp(vmtype, CONDOR_VM_UNIVERSE_KVM) == 0)) {
+		        MyString err_msg;
+			err_msg += "\n#######################################################\n";
+			err_msg += "##### Make sure the followings ";
+			err_msg += "to use VM universe for KVM\n";
 			err_msg += "### - The owner of script progrm like ";
 			err_msg += "'condor_vm_xen.sh' must be root\n";
 			err_msg += "### - The script program must be executable\n";
@@ -856,7 +868,7 @@ VMUniverseMgr::killVM(VMStarterInfo *info)
 	workingdir.sprintf("%s%cdir_%ld", info->m_execute_dir.Value(),
 	                   DIR_DELIM_CHAR, (long)info->m_pid);
 
-	if( strcasecmp(m_vm_type.Value(), CONDOR_VM_UNIVERSE_XEN ) == MATCH ) {
+	if( (strcasecmp(m_vm_type.Value(), CONDOR_VM_UNIVERSE_XEN ) == MATCH) || (strcasecmp(m_vm_type.Value(), CONDOR_VM_UNIVERSE_KVM) == 0)) {
 		if( create_name_for_VM(&info->m_job_ad, matchstring) == false ) {
 			dprintf(D_ALWAYS, "VMUniverseMgr::killVM() : "
 					"cannot make the name of VM\n");

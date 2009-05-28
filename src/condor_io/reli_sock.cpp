@@ -191,7 +191,7 @@ ReliSock::accept( ReliSock	&c )
 	c.setsockopt(IPPROTO_TCP, TCP_NODELAY, (char*)&on, sizeof(on));
 
 	if( DebugFlags & D_NETWORK ) {
-        char* from = strdup( sin_to_string(c.endpoint()) );
+        char* from = strdup( sin_to_string(c.peer_addr()) );
         char* to = strdup(  sock_to_string(_sock) );
         dprintf( D_NETWORK, "ACCEPT from=%s newfd=%d to=%s\n",
                  from, c._sock, to );
@@ -295,13 +295,13 @@ ReliSock::get_line_raw( char *buffer, int length )
 int 
 ReliSock::put_bytes_raw( char *buffer, int length )
 {
-	return condor_write(_sock,buffer,length,_timeout);
+	return condor_write(peer_description(),_sock,buffer,length,_timeout);
 }
 
 int 
 ReliSock::get_bytes_raw( char *buffer, int length )
 {
-	return condor_read(_sock,buffer,length,_timeout);
+	return condor_read(peer_description(),_sock,buffer,length,_timeout);
 }
 
 int 
@@ -345,7 +345,7 @@ ReliSock::put_bytes_nobuffer( char *buffer, int length, int send_size )
 	{
 		// If there is less then a page left.
 		if( (length - i) < pagesize ) {
-			result = condor_write(_sock, (char *)cur, (length - i), _timeout);
+			result = condor_write(peer_description(), _sock, (char *)cur, (length - i), _timeout);
 			if( result < 0 ) {
                                 goto error;
 			}
@@ -353,7 +353,7 @@ ReliSock::put_bytes_nobuffer( char *buffer, int length, int send_size )
 			i += (length - i);
 		} else {  
 			// Send another page...
-			result = condor_write(_sock, (char *)cur, pagesize, _timeout);
+			result = condor_write(peer_description(), _sock, (char *)cur, pagesize, _timeout);
 			if( result < 0 ) {
                             goto error;
 			}
@@ -409,7 +409,7 @@ ReliSock::get_bytes_nobuffer(char *buffer, int max_length, int receive_size)
                 goto error;
 	}
 
-	result = condor_read(_sock, buffer, length, _timeout);
+	result = condor_read(peer_description(), _sock, buffer, length, _timeout);
 
 	
 	if( result < 0 ) {
@@ -446,7 +446,7 @@ ReliSock::handle_incoming_packet()
 		return TRUE;
 	}
 
-	if (!rcv_msg.rcv_packet(_sock, _timeout)) {
+	if (!rcv_msg.rcv_packet(peer_description(), _sock, _timeout)) {
 		return FALSE;
 	}
 
@@ -468,7 +468,7 @@ ReliSock::end_of_message()
 				return TRUE;
 			}
 			if (!snd_msg.buf.empty()) {
-				return snd_msg.snd_packet(_sock, TRUE, _timeout);
+				return snd_msg.snd_packet(peer_description(), _sock, TRUE, _timeout);
 			}
 			if ( allow_empty_message_flag ) {
 				allow_empty_message_flag = FALSE;
@@ -541,7 +541,7 @@ ReliSock::put_bytes(const void *data, int sz)
 	for(nw=0;;) {
 		
 		if (snd_msg.buf.full()) {
-			if (!snd_msg.snd_packet(_sock, FALSE, _timeout)) {
+			if (!snd_msg.snd_packet(peer_description(), _sock, FALSE, _timeout)) {
 				if (dta != NULL)
 				{
 					free(dta);
@@ -664,7 +664,7 @@ ReliSock::RcvMsg::~RcvMsg()
     delete mdChecker_;
 }
 
-int ReliSock::RcvMsg::rcv_packet( SOCKET _sock, int _timeout)
+int ReliSock::RcvMsg::rcv_packet( char const *peer_description, SOCKET _sock, int _timeout)
 {
 	Buf		*tmp;
 	char	        hdr[MAX_HEADER_SIZE];
@@ -674,7 +674,7 @@ int ReliSock::RcvMsg::rcv_packet( SOCKET _sock, int _timeout)
 
 	header_size = (mode_ != MD_OFF) ? MAX_HEADER_SIZE : NORMAL_HEADER_SIZE;
 
-	int retval = condor_read(_sock,hdr,header_size,_timeout);
+	int retval = condor_read(peer_description,_sock,hdr,header_size,_timeout);
 	if ( retval < 0 && 
 		 retval != -2 ) // -2 means peer just closed the socket
 	{
@@ -711,7 +711,7 @@ int ReliSock::RcvMsg::rcv_packet( SOCKET _sock, int _timeout)
 			len,end);
 		return FALSE;
 	}
-	if ((tmp_len = tmp->read(_sock, len, _timeout)) != len){
+	if ((tmp_len = tmp->read(peer_description, _sock, len, _timeout)) != len){
 		delete tmp;
 		dprintf(D_ALWAYS, "IO: Packet read failed: read %d of %d\n",
 				tmp_len, len);
@@ -751,7 +751,7 @@ ReliSock::SndMsg::~SndMsg()
     delete mdChecker_;
 }
 
-int ReliSock::SndMsg::snd_packet( int _sock, int end, int _timeout )
+int ReliSock::SndMsg::snd_packet( char const *peer_description, int _sock, int end, int _timeout )
 {
 	char	        hdr[MAX_HEADER_SIZE];
 	int		len, header_size;
@@ -771,7 +771,7 @@ int ReliSock::SndMsg::snd_packet( int _sock, int end, int _timeout )
             }
         }
 
-        if (buf.flush(_sock, hdr, header_size, _timeout) != (ns+header_size)){
+        if (buf.flush(peer_description, _sock, hdr, header_size, _timeout) != (ns+header_size)){
             return FALSE;
         }
         
@@ -917,7 +917,7 @@ ReliSock::prepare_for_nobuffering(stream_coding direction)
 				return TRUE;
 			}
 			if (!snd_msg.buf.empty()) {
-				ret_val = snd_msg.snd_packet(_sock, TRUE, _timeout);
+				ret_val = snd_msg.snd_packet(peer_description(), _sock, TRUE, _timeout);
 			}
 			if ( ret_val ) {
 				ignore_next_encode_eom = TRUE;
@@ -1025,7 +1025,7 @@ ReliSock::connect_socketpair(ReliSock &sock)
 		return false;
 	}
 
-	if( !connect(tmp_srv.sender_ip_str(),tmp_srv.get_port()) ) {
+	if( !connect(tmp_srv.my_ip_str(),tmp_srv.get_port()) ) {
 		dprintf(D_ALWAYS, "connect_socketpair: failed in tmp_srv.get_port()\n");
 		return false;
 	}

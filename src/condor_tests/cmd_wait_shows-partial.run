@@ -21,21 +21,27 @@
 use CondorTest;
 use Cwd;
 #use Time::localtime;
+use strict;
+use warnings;
 
-$cmd = "cmd_wait_shows.cmd";
+my $cmd = "cmd_wait_shows.cmd";
+my $debuglevel = 2;
 
 my $pid = $$;
 system("rm -rf $pid");
 system("mkdir $pid");
 my $curcwd = getcwd();
-CondorTest::debug("current directory is $curcwd\n",1);
+CondorTest::debug("current directory is $curcwd\n",$debuglevel);
 
 my $socketname = "cmd_wait";
 my $resultfile = $curcwd . "/" . $pid . "/results";
-my $flowlog = $curcwd . "/" . $pid . "/cmd_wait_shows.log";
+my $outputfile = $curcwd . "/" . $pid . "/condor_wait.out";
+CondorTest::debug("condor_wait output is in $outputfile\n",$debuglevel);
+
+my $flowlog = $curcwd . "/" . $pid . "/cmd_wait_shows-partial.log";
 my $writelog = "./x_write_joblog_events.exe";
 
-CondorTest::debug("Result File is $resultfile\n",1);
+CondorTest::debug("Result File is $resultfile\n",$debuglevel);
 
 system("chmod -R 777 .");
 
@@ -51,10 +57,13 @@ system("chmod -R 777 .");
 
 # seed log with 1 runs
 system("$writelog $flowlog submit 4");
+print "Drop 4 submits into the log\n";
 
 # Start condor_wait
-$spawncmd = "condor_wait -num 2 $flowlog";
+my $spawncmd = "_CONDOR_TOOL_DEBUG=D_FULLDEBUG condor_wait -debug -num 2 $flowlog >$outputfile 2>&1";
+#my $spawncmd = "condor_wait -num 2 $flowlog";
 CondorTest::spawn_cmd($spawncmd, $resultfile);
+print "Have condor_wait wait for 2\n";
 
 sleep(5);
 # start 1 runs
@@ -62,20 +71,22 @@ system("$writelog $flowlog execute 2");
 
 # end 1 runs
 system("$writelog $flowlog terminated 2");
+print "Add log entries to complete 2 jobs\n";
 
+print "Wait for results - ";
 while(!(-f $resultfile)) {
-	CondorTest::debug("Waiting for $resultfile to exist\n",1);
+	CondorTest::debug("Waiting for $resultfile to exist\n",$debuglevel);
 	sleep(2);
 }
 
-CondorTest::debug("$resultfile exits!\n",1);
+CondorTest::debug("$resultfile exits!\n",$debuglevel);
 
-$waitmax = 14;
-$waittime = 0;
-$inc = 2;
+my $waitmax = 14;
+my $waittime = 0;
+my $inc = 2;
 
 while( (-s $resultfile) == 0 ) {
-	CondorTest::debug("Waiting for results\n",1);
+	CondorTest::debug("Waiting for results\n",$debuglevel);
 	$waittime = $waittime + $inc;
 	if($waittime >= $waitmax) {
 		die "Waited $waitmax seconds when 2 jobs are already done\n";
@@ -83,20 +94,25 @@ while( (-s $resultfile) == 0 ) {
 	sleep($inc);
 }
 
-CondorTest::debug("$resultfile not empty!\n",1);
+CondorTest::debug("$resultfile not empty!\n",$debuglevel);
+print "ok\n";
 
+print "Checking result status - ";
 open(RES,"<$resultfile") || die "Can not open <$resultfile>:$!\n";
-$line = "";
+my $line = "";
 while(<RES>) {
 	$line = $_;
 	if($line =~ /^Exit\s+(\d+).*$/) {
 		if($1 == 0) {
-			CondorTest::debug("Exit status of 0, expected. Good!\n",1);
+			CondorTest::debug("Exit status of 0, expected. Good!\n",$debuglevel);
+			print "ok\n";
 			exit(0);
 		} else {
+			print "bad\n";
 			exit(1);
 		}
 	} else {
+			print "bad\n";
 			exit(1);
 	}
 }

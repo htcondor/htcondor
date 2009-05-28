@@ -87,7 +87,7 @@ CC_LINK = CPlusLinker
 endif
 
 
-STATIC	= -static
+STATIC	= -static 
 STAR	= *
 
 PLATFORM_LDFLAGS = PlatformLdFlags
@@ -238,11 +238,6 @@ SECURITY_FLAGS = $(KERBEROS_FLAG) \
 SECURITY_LIB   = $(KERBEROS_LIB) \
 		 $(GSI_LIB) $(OPENSSL_LIB)
 
-#ifdef ENABLE_NETMAN
-NETMAN_LIB = ../condor_netman/libnetman.a
-NETMAN_FLAGS = -DWANT_NETMAN
-#endif
-
 #if HAVE_EXT_COREDUMPER
 COREDUMPER_FLAGS = -I$(COREDUMPER_INC)
 COREDUMPER_LINK_LIB = $(COREDUMPER_LIB)/libcoredumper.a
@@ -289,24 +284,22 @@ DAEMONCORE_WRAP_LDFLAGS = -Wl,--wrap,exit
  end of externals-specific settings and flags
 ********************************************/
 
+#if HAVE_PTHREADS
+PTHREAD_LIB = -lpthread
+#if HAVE_GNU_LD
+PTHREAD_FLAG = -pthread
+#endif
+#endif
+
 VENDOR_C_FLAGS = -I. -I.. -I../.. -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) \
 		 -I$(C_PLUS_INCLUDE) -I$(DAEMONCLIENT_INCLUDE) \
 		 -I$(DAEMONCORE_INCLUDE) -I$(CCB_INCLUDE) \
 		 $(CONFIGURE_DEFS) -D$(ARCH_FLAG)=$(ARCH_FLAG) \
 		 -D$(OS_FLAG)=$(OS_FLAG) $(SITE_C_FLAGS) \
-		 $(SECURITY_FLAGS) $(NETMAN_FLAGS) \
+		 $(SECURITY_FLAGS) \
 		 $(QUILL_FLAGS) $(TT_FLAGS) $(GCB_FLAGS) \
 		 $(LEASE_MANAGER_FLAGS) \
-		 $(CONFIGURE_CFLAGS) $(CONFIGURE_CPPFLAGS)
-
-
-/* This flag is a bad idea since when this stuff eventually goes truly obselete
-	we'll have to fix it anyway. */
-#if defined(IS_C_COMP_MAJOR_GCC_3) || defined(IS_C_COMP_MAJOR_GCC_4)
-GPP_VERS_FLAGS = -Wno-deprecated
-#else
-GPP_VERS_FLAGS =
-#endif
+		 $(CONFIGURE_CFLAGS) $(CONFIGURE_CPPFLAGS) $(PTHREAD_FLAG)
 
 /**
  * Special flags needed for OSX using gcc4
@@ -322,16 +315,14 @@ GPP_ARCH_FLAGS = -DTARGET_OS_MAC=1 -DTARGET_CPU_PPC=1
 GPP_ARCH_FLAGS =
 #endif
 
-GPP_SHARED_FLAGS = $(GPP_VERS_FLAGS) $(GPP_ARCH_FLAGS)
-
 /* Flags shared between C and C++ compilers */
-SHARED_COMPILER_FLAGS = $(VENDOR_C_FLAGS) $(COMP_DEBUG_FLAGS) $(CC_PIC_FLAG) PlatformFlags $(CCOMPILER_ID) $(GSOAP_FLAGS) $(PCRE_FLAGS) $(COREDUMPER_FLAGS)
+SHARED_COMPILER_FLAGS = $(VENDOR_C_FLAGS) $(COMP_DEBUG_FLAGS) $(CC_PIC_FLAG) PlatformFlags $(CCOMPILER_ID) $(GSOAP_FLAGS) $(PCRE_FLAGS) $(COREDUMPER_FLAGS) $(PTHREAD_FLAG)
 
 /* We use separate flag definitions for the C compiler and the C++ compiler.
 	These are the flags actually passed to the respective compilers. 
 	Don't forget to mix in flags specific to one compiler or the other. */
 STD_C_FLAGS = $(SHARED_COMPILER_FLAGS) $(GCC_DEBUG_FLAGS) PlatformGccFlags
-STD_C_PLUS_FLAGS = $(SHARED_COMPILER_FLAGS) $(GPP_DEBUG_FLAGS) $(GPP_SHARED_FLAGS) PlatformGppFlags 
+STD_C_PLUS_FLAGS = $(SHARED_COMPILER_FLAGS) $(GPP_DEBUG_FLAGS) $(GPP_ARCH_FLAGS) PlatformGppFlags 
 
 TESTSUITE_FLAGS_GCC =  $(STD_C_FLAGS)
 TESTSUITE_FLAGS_GPP = $(STD_C_PLUS_FLAGS)
@@ -350,7 +341,7 @@ CUTIL_LIB = ../condor_util_lib/util_lib.a
 CPLUS_LIB = ../condor_c++_util/cplus_lib.a
 PROCAPI_LIB = ../condor_procapi/libprocapi.a
 SYSAPI_LIB = ../condor_sysapi/libsysapi.a
-DAEMONCORE_LIB = ../condor_daemon_core.V6/daemon_core.a $(COREDUMPER_LINK_LIB) $(DAEMONCORE_WRAP_LDFLAGS)
+DAEMONCORE_LIB = ../condor_daemon_core.V6/daemon_core.a $(COREDUMPER_LINK_LIB) $(DAEMONCORE_WRAP_LDFLAGS) $(PTHREAD_LIB)
 PROCD_CLIENT_LIB = ../condor_procd/procd_client.a
 PRIVSEP_CLIENT_LIB = ../condor_privsep/privsep_client.a
 
@@ -364,7 +355,7 @@ COM_LDFLAGS_L =
 
 /* The various lists of needed ldflags for differing contexts */
 NOWRAP_LDFLAGS = $(COM_LDFLAGS_F) $(PLATFORM_LDFLAGS) $(COM_LDFLAGS_L)
-ALL_LDFLAGS = $(NOWRAP_LDFLAGS) $(WRAP_LDFLAGS)
+ALL_LDFLAGS = $(NOWRAP_LDFLAGS) $(WRAP_LDFLAGS) $(PTHREAD_LIB)
 TEST_LDFLAGS = $(COM_LDFLAGS_F) $(TEST_PLATFORM_LDFLAGS) $(COM_LDFLAGS_L)
 
 

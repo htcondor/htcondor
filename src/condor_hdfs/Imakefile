@@ -17,6 +17,6 @@ stripped:: all
 static:: all
 clean::
 
-gen_soapfiles(hdfs, condorHDFS)
+gen_soapfiles(hdfs,condorHDFS)
 
 testbin:: all

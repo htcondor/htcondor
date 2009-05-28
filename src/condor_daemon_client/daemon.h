@@ -273,32 +273,36 @@ public:
 		  Callers can optionally specify a timeout to use for the
 		  connect().  If there was a failure in connect(), we delete
 		  the object and return NULL.
-		  @param sec Number of seconds for the timeout on connect().
+		  @param timeout Number of seconds for the timeout on connect().
+		  @param deadline Time at which to give up (0 if never).
 		  @return A new ReliSock object connected to the daemon.  
 		  */
-	ReliSock* reliSock( int sec = 0, CondorError* errstack = 0,
-	                    bool non_blocking = false,
+	ReliSock* reliSock( int timeout = 0, time_t deadline = 0,
+						CondorError* errstack = 0, bool non_blocking = false,
 						bool ignore_timeout_multiplier = false );
 
 		/**	Create a new SafeSock object, connected to the daemon.
 		  Callers can optionally specify a timeout to use for the
 		  connect().  If there was a failure in connect(), we delete 
 		  the object and return NULL.
-		  @param sec Number of seconds for the timeout on connect().
+		  @param timeout Number of seconds for the timeout on connect().
+		  @param deadline Time at which to give up (0 if never).
 		  @return A new SafeSock object connected to the daemon.  
 		  */
-	SafeSock* safeSock( int sec = 0, CondorError* errstack = 0,
-	                    bool non_blocking = false );
+	SafeSock* safeSock( int timeout = 0, time_t deadline = 0,
+						CondorError* errstack = 0, bool non_blocking = false );
 
 		/**	Create a new Sock object connected to the daemon.
 		  Callers can optionally specify a timeout to use for the
 		  connect().  If there was a failure in connect(), we delete 
 		  the object and return NULL.
-		  @param sec Number of seconds for the timeout on connect().
+		  @param timeout Number of seconds for the timeout on connect().
+		  @param deadline Time at which to give up (0 if never).
 		  @return A new Sock object connected to the daemon.  
 		  */
 	Sock *makeConnectedSocket( Stream::stream_type st = Stream::reli_sock,
-							   int timeout = 0, CondorError* errstack = NULL,
+							   int timeout = 0, time_t deadline = 0,
+							   CondorError* errstack = NULL,
 							   bool non_blocking = false );
 
 		/**	Connects a socket to the daemon.

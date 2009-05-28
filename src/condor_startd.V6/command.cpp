@@ -1406,8 +1406,8 @@ accept_request_claim( Resource* rip )
 	}
 
 		// Figure out the hostname of our client.
-	if( ! (tmp = sin_to_hostname(sock->endpoint(), NULL)) ) {
-		char *sinful = sin_to_string(sock->endpoint());
+	if( ! (tmp = sin_to_hostname(sock->peer_addr(), NULL)) ) {
+		char *sinful = sin_to_string(sock->peer_addr());
 		char *ip = string_to_ipstr(sinful);
 		rip->dprintf( D_FULLDEBUG,
 					  "Can't find hostname of client machine %s\n", ip );
@@ -1489,7 +1489,7 @@ activate_claim( Resource* rip, Stream* stream )
 #endif
 	int starter;
 	Sock* sock = (Sock*)stream;
-	char* shadow_addr = strdup( sin_to_string( sock->endpoint() ));
+	char* shadow_addr = strdup( sin_to_string( sock->peer_addr() ));
 
 	if( rip->state() != claimed_state ) {
 		rip->dprintf( D_ALWAYS, "Not in claimed state, aborting.\n" );
@@ -1887,7 +1887,7 @@ caRequestCODClaim( Stream *s, char* cmd_str, ClassAd* req_ad )
 		// Stash some info about who made this request in the Claim  
 	claim->client()->setuser( owner );
 	claim->client()->setowner(owner );
-	claim->client()->sethost( rsock->endpoint_ip_str() );
+	claim->client()->sethost( rsock->peer_ip_str() );
 
 		// now, we just fill in the reply ad appropriately.  publish
 		// a complete resource ad (like what we'd send to the

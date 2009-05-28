@@ -1514,6 +1514,19 @@ ClassAd *CondorJob::buildSubmitAd()
 	bool cleared_environment = false;
 	bool cleared_arguments = false;
 
+		// Remove all remote_* attributes from the new ad before
+		// translating remote_* attributes from the original ad.
+		// See gittrac #376 for why we have two loops here.
+	const char *next_name;
+	submit_ad->ResetName();
+	while ( (next_name = submit_ad->NextNameOriginal()) != NULL ) {
+		if ( strncasecmp( next_name, "REMOTE_", 7 ) == 0 &&
+			 strlen( next_name ) > 7 ) {
+
+			submit_ad->Delete( next_name );
+		}
+	}
+
 	jobAd->ResetExpr();
 	while ( (next_expr = jobAd->NextExpr()) != NULL ) {
 		if ( strncasecmp( ((Variable*)next_expr->LArg())->Name(),
@@ -1554,7 +1567,6 @@ ClassAd *CondorJob::buildSubmitAd()
 				}
 			}
 
-			submit_ad->Delete( ((Variable*)next_expr->LArg())->Name() );
 			next_expr->RArg()->PrintToNewStr(&attr_value);
 			buf.sprintf( "%s = %s", attr_name,
 						 attr_value );

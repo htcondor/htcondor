@@ -20,11 +20,12 @@
 
 use CondorTest;
 
-$cmd = 'job_core_leaveinqueue-true_java.cmd';
-$testdesc =  'Condor submit with test for policy trigger of leave_in_queue - java U';
-$testname = "job_core_leaveinqueue_java";
+my $cmd = 'job_core_leaveinqueue-true_java.cmd';
+my $testdesc =  'Condor submit with test for policy trigger of leave_in_queue - java U';
+my $testname = "job_core_leaveinqueue_java";
 
 my $killedchosen = 0;
+my $debuglevel = 2;
 
 # truly const variables in perl
 sub IDLE{1};
@@ -41,7 +42,7 @@ $executed = sub
 	%info = @_;
 	$cluster = $info{"cluster"};
 
-	CondorTest::debug("Good. for leave_in_queue cluster $cluster must run first\n",1);
+	CondorTest::debug("Good. for leave_in_queue cluster $cluster must run first\n",$debuglevel);
 };
 
 $success = sub
@@ -49,16 +50,17 @@ $success = sub
 	my %info = @_;
 	my $cluster = $info{"cluster"};
 
-	CondorTest::debug("Good, job should be done but left in the queue!!!\n",1);
+	CondorTest::debug("Good, job should be done but left in the queue!!!\n",$debuglevel);
 	my $qstat = CondorTest::getJobStatus($cluster);
 	while($qstat == -1)
 	{
-		CondorTest::debug("Job status unknown - wait a bit\n",1);
+		CondorTest::debug("Job status unknown - wait a bit\n",$debuglevel);
 		sleep 2;
 		$qstat = CondorTest::getJobStatus($cluster);
 	}
 	if( $qstat != COMPLETED )
 	{
+		print "bad\n";
 		die "Job not still found in queue in completed state\n";
 	}
 	else
@@ -69,10 +71,11 @@ $success = sub
 		$status = CondorTest::runCondorTool($cmd,\@adarray,2);
 		if(!$status)
 		{
-			CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
+			CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",$debuglevel);
 			exit(1)
 		}
 	}
+	print "ok\n";
 
 };
 
@@ -81,9 +84,9 @@ $submitted = sub
 	my %info = @_;
 	my $cluster = $info{"cluster"};
 
-	CondorTest::debug("submitted: \n",1);
+	CondorTest::debug("submitted: \n",$debuglevel);
 	{
-		CondorTest::debug("good job $job expected submitted.\n",1);
+		CondorTest::debug("good job $job expected submitted.\n",$debuglevel);
 	}
 };
 
@@ -91,8 +94,10 @@ CondorTest::RegisterExecute($testname, $executed);
 CondorTest::RegisterExitedSuccess( $testname, $success );
 CondorTest::RegisterSubmit( $testname, $submitted );
 
+print "Leave in queue True - job should still be in the queue - ";
+
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	CondorTest::debug("$testname: SUCCESS\n",1);
+	CondorTest::debug("$testname: SUCCESS\n",$debuglevel);
 	exit(0);
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";

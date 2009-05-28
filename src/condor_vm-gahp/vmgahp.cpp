@@ -688,6 +688,10 @@ VMGahp::executeStart(VMRequest *req)
 		new_vm = new XenType(m_gahp_config->m_vm_script.Value(), 
 				vmworkingdir.Value(), m_jobAd);
 		ASSERT(new_vm);
+	}else if(strcasecmp(vmtype, CONDOR_VM_UNIVERSE_KVM) == 0) {
+	  new_vm = new KVMType(m_gahp_config->m_vm_script.Value(), 
+				vmworkingdir.Value(), m_jobAd);
+		ASSERT(new_vm);
 	}else 
 #endif
 	if(strcasecmp(vmtype, CONDOR_VM_UNIVERSE_VMWARE) == 0 ) {
@@ -1089,13 +1093,26 @@ VMGahp::killAllProcess()
 		if( m_jobAd && XenType::checkXenParams(m_gahp_config) ) {
 			MyString vmname;
 			if( VMType::createVMName(m_jobAd, vmname) ) {
-				XenType::killVMFast(m_gahp_config->m_vm_script.Value(), 
+				VirshType::killVMFast(m_gahp_config->m_vm_script.Value(), 
 						vmname.Value());
 				vmprintf( D_FULLDEBUG, "killVMFast is called\n");
 			}
 		}
 		set_priv(priv);
-	}else
+	} else if(strcasecmp(m_gahp_config->m_vm_type.Value(), 
+			     CONDOR_VM_UNIVERSE_KVM ) == 0 ) {
+		priv_state priv = set_root_priv();
+		if( m_jobAd && KVMType::checkXenParams(m_gahp_config) ) {
+			MyString vmname;
+			if( VMType::createVMName(m_jobAd, vmname) ) {
+				VirshType::killVMFast(m_gahp_config->m_vm_script.Value(), 
+						vmname.Value());
+				vmprintf( D_FULLDEBUG, "killVMFast is called\n");
+			}
+		}
+		set_priv(priv);
+
+	} else
 #endif
 	if( strcasecmp(m_gahp_config->m_vm_type.Value(), 
 				CONDOR_VM_UNIVERSE_VMWARE ) == 0 ) {

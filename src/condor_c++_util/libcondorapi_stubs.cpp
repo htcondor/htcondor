@@ -85,14 +85,8 @@ int param_integer(const char *, int default_value, int, int)
 	return default_value;
 }
 
-bool param_boolean( const char *, const bool default_value )
+bool param_boolean( const char *, const bool default_value, bool, ClassAd *, ClassAd * )
 {
-	return default_value;
-}
-
-bool param_boolean( const char *, const bool default_value, bool do_log )
-{
-	(void) do_log;
 	return default_value;
 }
 
@@ -162,6 +156,11 @@ void Stream::set_crypto_mode(bool enabled){not_impl();}
 bool Stream::get_encryption() const{not_impl();return false;}
 int Stream::put_secret( char const *s ){not_impl();return 0;}
 int Stream::get_secret( char *&s ){not_impl();return 0;}
+void Stream::set_deadline_timeout(int){not_impl();}
+void Stream::set_deadline(time_t){not_impl();}
+time_t Stream::get_deadline(){not_impl();return 0;}
+bool Stream::deadline_expired(){not_impl();return false;}
+
 
 /* stubs for generic query object */
 GenericQuery::GenericQuery(void) {}

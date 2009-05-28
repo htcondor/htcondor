@@ -11,7 +11,7 @@
 #endif
 
 #if HAVE_DLOPEN
-PLUGIN_OBJ = ClassAdLogPlugin.o LoadPlugins.o
+PLUGIN_OBJ = ClassAdLogPluginManager.o LoadPlugins.o
 #endif
 
 #if HAVE_CC_SHARED_FLAG
@@ -51,7 +51,7 @@ URL_OBJ = url_condor.o cbstp_url.o file_url.o http_url.o filter_url.o \
 	mailto_url.o cfilter_url.o ftp_url.o include_urls.o mkargv.o MapFile.o
 
 API_OBJ = generic_query.o condor_query.o condor_q.o ad_printmask.o \
-	condor_event.o user_log.o user_log_header.o \
+	condor_event.o write_user_log.o user_log_header.o \
 	read_user_log.o read_user_log_state.o \
 	strnewp.o stat_wrapper.o stat_wrapper_internal.o \
 	read_multiple_logs.o CondorError.o check_events.o tmp_dir.o
@@ -138,7 +138,7 @@ CONLIBAPI_OBJ = \
 	file_sql.o \
 	misc_utils.o \
 	user_log_header.o \
-	user_log.o \
+	write_user_log.o \
 	read_user_log.o \
 	read_user_log_state.o \
 	iso_dates.o \
@@ -191,7 +191,7 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o selector.o \
 	email_cpp.o env.o \
 	string_list.o net_string_list.o condor_event.o $(URL_OBJ) \
 	get_daemon_name.o \
-	user_log.o user_log_header.o \
+	write_user_log.o user_log_header.o \
 	read_user_log.o read_user_log_state.o \
 	config.o condor_config.o \
 	stringSpace.o condor_state.o condor_adtypes.o \
@@ -233,11 +233,11 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o selector.o \
 	set_user_priv_from_ad.o hook_utils.o classad_visa.o \
 	$(HIBERNATION_OBJS) \
 	ConcurrencyLimitUtils.o \
-	simple_arg.o \
 	dc_service.o \
 	condor_sinful.o \
 	link.o \
-	simple_arg.o
+	simple_arg.o \
+	condor_threads.o 
 
 library_target(cplus_lib.a,$(OBJ))
 library_target(liburl.a,$(URL_OBJ))
@@ -365,6 +365,33 @@ libcondorapi-release:: $(RELEASE_DIR)/include/read_user_log.h
 
 public_copy_target(write_user_log.h,include,write_user_log.h,TEXT_MODE)
 libcondorapi-release:: $(RELEASE_DIR)/include/write_user_log.h
+
+public_copy_target(iso_dates.h,include,iso_dates.h,TEXT_MODE)
+libcondorapi-release:: $(RELEASE_DIR)/include/iso_dates.h
+
+public_copy_target(../condor_includes/condor_classad.h,include,condor_classad.h,TEXT_MODE)
+libcondorapi-release:: $(RELEASE_DIR)/include/condor_classad.h
+
+public_copy_target(../condor_includes/condor_exprtype.h,include,condor_exprtype.h,TEXT_MODE)
+libcondorapi-release:: $(RELEASE_DIR)/include/condor_exprtype.h
+
+public_copy_target(../condor_includes/condor_astbase.h,include,condor_astbase.h,TEXT_MODE)
+libcondorapi-release:: $(RELEASE_DIR)/include/condor_astbase.h
+
+public_copy_target(../condor_includes/condor_ast.h,include,condor_ast.h,TEXT_MODE)
+libcondorapi-release:: $(RELEASE_DIR)/include/condor_ast.h
+
+public_copy_target(../condor_includes/condor_attrlist.h,include,condor_attrlist.h,TEXT_MODE)
+libcondorapi-release:: $(RELEASE_DIR)/include/condor_attrlist.h
+
+public_copy_target(../condor_includes/condor_parser.h,include,condor_parser.h,TEXT_MODE)
+libcondorapi-release:: $(RELEASE_DIR)/include/condor_parser.h
+
+public_copy_target(MyString.h,include,MyString.h,TEXT_MODE)
+libcondorapi-release:: $(RELEASE_DIR)/include/MyString.h
+
+public_copy_target(../condor_includes/condor_header_features.h,include,condor_header_features.h,TEXT_MODE)
+libcondorapi-release:: $(RELEASE_DIR)/include/condor_header_features.h
 
 condor_version.o: condor_version.cpp
 	$(CPlusPlus) $(C_PLUS_FLAGS) -c -DPLATFORM=$(PLATFORM) condor_version.cpp

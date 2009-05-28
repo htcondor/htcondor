@@ -11,3 +11,5 @@ release:: all
 stripped:: all
 static:: all
 testbin:: all
+clean::
+	rm -f *.o

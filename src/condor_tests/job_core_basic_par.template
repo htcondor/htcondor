@@ -1,10 +1,11 @@
 universe   = parallel
-executable = /bin/sleep
+executable = ./x_echostring.pl
 output = job_core_basic_par.out
 error = job_core_basic_par.err
 log = job_core_basic_par.log
-arguments = 30
-Notification = NEVER
+arguments =  machine $(NODE)
+Notification = never
++ParallelShutdownPolicy = "WAIT_FOR_ALL"
 machine_count = 4
 queue
 

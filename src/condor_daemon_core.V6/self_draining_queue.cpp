@@ -27,7 +27,8 @@
 
 SelfDrainingQueue::SelfDrainingQueue( const char* queue_name, int per )
 	: queue( 32, NULL ),
-	  m_hash( SelfDrainingHashItem::HashFn )
+	  m_hash( SelfDrainingHashItem::HashFn ),
+	  m_count_per_interval(1)
 {
 	if( queue_name ) {
 		name = strdup( queue_name );
@@ -110,6 +111,15 @@ SelfDrainingQueue::setPeriod( int new_period )
 	return true;
 }
 
+void
+SelfDrainingQueue::setCountPerInterval( int count )
+{
+	m_count_per_interval = count;
+	dprintf( D_FULLDEBUG, "Count per interval for SelfDrainingQueue "
+			 "%s set to %d\n", name, count );
+	ASSERT( count > 0 );
+}
+
 
 //--------------------------------------------------
 // Public interface
@@ -146,22 +156,26 @@ SelfDrainingQueue::timerHandler( void )
 {
 	dprintf( D_FULLDEBUG,
 			 "Inside SelfDrainingQueue::timerHandler() for %s\n", name );
-	ServiceData* d;
+
 	if( queue.IsEmpty() ) {
 		dprintf( D_FULLDEBUG, "SelfDrainingQueue %s is empty, "
 				 "timerHandler() has nothing to do\n", name );
 		cancelTimer();
 		return TRUE;
 	}
-	queue.dequeue(d);
+	int count;
+	for( count=0; count<m_count_per_interval && !queue.IsEmpty(); count++ ) {
+		ServiceData* d;
+		queue.dequeue(d);
 
-	SelfDrainingHashItem hash_item(d);
-	m_hash.remove(hash_item);
+		SelfDrainingHashItem hash_item(d);
+		m_hash.remove(hash_item);
 
-	if( handler_fn ) {
-		handler_fn( d );
-	} else if( handlercpp_fn && service_ptr ) {
-		(service_ptr->*handlercpp_fn)( d );
+		if( handler_fn ) {
+			handler_fn( d );
+		} else if( handlercpp_fn && service_ptr ) {
+			(service_ptr->*handlercpp_fn)( d );
+		}
 	}
 
 	if( queue.IsEmpty() ) {

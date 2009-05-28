@@ -347,6 +347,15 @@ ResState::eval( void )
 
 	case unclaimed_state:
 		if( Resource::DYNAMIC_SLOT == rip->get_feature() ) {
+#if HAVE_JOB_HOOKS
+				// If we're currently fetching we can't delete
+				// ourselves. If we do when the hook returns we won't
+				// be around to handle the response.
+			if( rip->isCurrentlyFetching() ) {
+				dprintf(D_ALWAYS, "State change: Unclaimed -> Deleted delayed for outstanding work fetch\n");
+				break;
+			}
+#endif
 			return change( delete_state );
 		}
 

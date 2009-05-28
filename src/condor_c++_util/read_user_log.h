@@ -2,13 +2,13 @@
  *
  * Copyright (C) 1990-2008, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -34,14 +34,13 @@
 /* Predeclare some classes */
 class FileLockBase;
 class FileLock;
-class UserLog;
 
 
 /** API for reading a log file.
 
     This class was written at the same time the ULogEvent class was written,
     so it does not contain the old deprecated functions and parameters that
-    the UserLog class is plagued with.
+    the WriteUserLog class is plagued with.
 
 	There is one know problem with the reader:
 	First, let's define 3 files:
@@ -106,7 +105,18 @@ class ReadUserLog
 		LOG_STATUS_ERROR = -1,
 		LOG_STATUS_NOCHANGE,
 		LOG_STATUS_GROWN,
-		LOG_STATUS_SHRUNK,
+		LOG_STATUS_SHRUNK
+	};
+
+	/** Simple error information
+	 */
+	enum ErrorType {
+		LOG_ERROR_NONE,					/* No error */
+		LOG_ERROR_NOT_INITIALIZED,		/* Reader not initialized */
+		LOG_ERROR_RE_INITIALIZE,		/* Attempt to re-initialize */
+		LOG_ERROR_FILE_NOT_FOUND,		/* Log file not found */
+		LOG_ERROR_FILE_OTHER,			/* Other file error */
+		LOG_ERROR_STATE_ERROR			/* Invalid state */
 	};
 
     /** Default constructor.
@@ -133,11 +143,11 @@ class ReadUserLog
 		@param Read only access to the file (locking disabled)
 	*/
     ReadUserLog( const FileState &state, bool read_only = false );
-                                      
+
     /** Destructor.
 	*/
     ~ReadUserLog() { releaseResources(); }
-                                      
+
     /** Detect whether the object has been initialized
 	*/
     bool isInitialized( void ) const { return m_initialized; };
@@ -207,7 +217,7 @@ class ReadUserLog
         @return the outcome of attempting to read the log
     */
     ULogEventOutcome readEvent (ULogEvent * & event);
-	
+
     /** Synchronize the log file if the last event read was an error.  This
         safe guard function should be called if there is some error reading an
         event, but there are events after it in the file.  Will skip over the
@@ -250,8 +260,14 @@ class ReadUserLog
 
     /** Check the status of the file - has it grown, shrunk, etc.
 		@return LOG_STATUS_{ERROR,NOCHANGE,GROWN,SHRUNK}
-	 */
-    FileStatus CheckFileStatus( void );
+	*/
+	FileStatus CheckFileStatus( void );	
+
+    /** Check the status of the file - has it grown, shrunk, etc.
+		@param reference: returned as true of the file is empty
+		@return LOG_STATUS_{ERROR,NOCHANGE,GROWN,SHRUNK}
+	*/
+	FileStatus CheckFileStatus( bool &is_emtpy );	
 
 	/** Set whether the log file should be treated as "old-style" (non-XML).
 	    The constructor will attempt to figure this out on its own.
@@ -267,6 +283,16 @@ class ReadUserLog
 		@return true if "old-style", false otherwise
 	*/
 	bool getIsOldLog( void ) const;
+
+	/** Get error data
+		@param error type
+		@param source line # where error was detected
+		@return void
+	 */
+	void getErrorInfo( ErrorType &error,
+					   const char *& error_str,
+					   unsigned &line_num ) const;
+
 
 	/** Methods to serialize the state.
 		Always use InitFileState() to initialize this structure.
@@ -328,7 +354,7 @@ class ReadUserLog
 		@return true on success
 	 */
 	bool SetFileState( const ReadUserLog::FileState &state );
-	
+
   private:
 
     /** Internal initializer from saved state.
@@ -339,10 +365,10 @@ class ReadUserLog
 		@param max_rotations max rotations value of the logs
         @return true for success
     */
-    bool InternalInitialize (const ReadUserLog::FileState &state,
-							 bool set_rotations,
-							 int max_rotations,
-							 bool read_only );
+    bool InternalInitialize ( const ReadUserLog::FileState &state,
+							  bool set_rotations,
+							  int max_rotations,
+							  bool read_only );
 
     /** Internal initializer.  This function will return false
         if it can't open the log file (among other things).
@@ -374,7 +400,7 @@ class ReadUserLog
 	 */
 	void Lock( bool verify_init );
 	void Unlock( bool verify_init );
-	
+
 	/** Set all members to their cleared values.
 	*/
 	void clear( void );
@@ -427,9 +453,10 @@ class ReadUserLog
     ULogEventOutcome readEventOld (ULogEvent * & event);
 
 	/** Reopen the log file
+		@param Restore from state?
 		@return the outcome of the re-open attempt
 	 */
-	ULogEventOutcome ReopenLogFile( void );
+	ULogEventOutcome ReopenLogFile( bool restore = false );
 
 	/** Find the previous log file starting with start
 		@param log file rotation # to start the search with
@@ -451,6 +478,13 @@ class ReadUserLog
 		@return true:success, false:failure
 	 */
 	bool CloseLogFile( bool force );
+
+	/** Report error
+		@param error type
+		@param line number where error was detected
+	*/
+	void Error( ErrorType error, unsigned line_num ) const
+		{ m_error = error; m_line_num = line_num; };
 
 
 	/** Class private data
@@ -474,6 +508,43 @@ class ReadUserLog
 	bool				 m_lock_enable;	/** Should we lock the file?  */
     FileLockBase		*m_lock;		/** The log file lock         */
 	int					 m_lock_rot;	/** Lock managing what rotation #? */
+
+	/* Error history data */
+	mutable ErrorType	 m_error;		/** Type of latest error (think errno) */
+	mutable unsigned	 m_line_num;	/** Line number of latest error */
+};
+
+
+// Provide access to parts of the user log state data
+class ReadUserLogFileState;
+class ReadUserLogStateAccess
+{
+public:
+	
+	ReadUserLogStateAccess(const ReadUserLog::FileState &state);
+	~ReadUserLogStateAccess(void);
+
+	// Valid?
+	bool isValid( void ) const;
+
+	// Positional difference between to states (this - other)
+	bool LogPositionDiff( const ReadUserLogStateAccess &other,
+						  long &diff ) const;
+
+	// # of events between to states (this - other)
+	bool EventNumberDiff( const ReadUserLogStateAccess &other,
+						  long &diff ) const;
+
+	// Get the unique ID and sequence # of the associated state file
+	bool UniqId( char *buf, int len ) const;
+	bool SequenceNumber( int &seqno ) const;
+
+	// Access to the state
+protected:
+	bool getState( const ReadUserLogFileState *&state ) const;
+
+private:
+	const ReadUserLogFileState	*m_state;
 };
 
 #endif /* __cplusplus */
@@ -482,6 +553,7 @@ class ReadUserLog
 
 /*
 ### Local Variables: ***
-### mode:C++ ***
-### End: **
+### mode:c++ ***
+### tab-width:4 ***
+### End: ***
 */

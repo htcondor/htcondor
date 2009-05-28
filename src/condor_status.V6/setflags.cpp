@@ -75,7 +75,7 @@ setPPstyle (ppOption pps, int i, char *argv)
 	if (setBy != 0 && i == 0)
 		return;
 
-    if ( PP_VERBOSE == pps || (ppStyle <= pps || setBy == 0) ) {
+    if ( (PP_XML == pps) || PP_VERBOSE == pps || (ppStyle <= pps || setBy == 0) ) {
         ppStyle = pps;
         setBy = i;
         setArg = argv;

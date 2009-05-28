@@ -2008,12 +2008,12 @@ write_requests_to_file(ReliSock * sock)
 	requestAd->InsertAttr("remote_user", sock->getFullyQualifiedUser() );
 
 	// Get remote submit host.
-	std::string submit_host = sin_to_string(sock->endpoint() );
+	std::string submit_host = sin_to_string(sock->peer_addr() );
 	requestAd->InsertAttr("submit_host", submit_host);
 
 	// Get this execute host.
 	struct sockaddr_in sin;
-	sock->mypoint(&sin);
+	sock->my_addr(&sin);
 	std::string execute_host = sin_to_string( &sin );
 	requestAd->InsertAttr("execute_host", execute_host);
 

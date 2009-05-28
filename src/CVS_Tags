@@ -1,3 +1,15 @@
+05/07/2009 V7_3_1
+ The official tag for 7.3.1, from V7_3_1-branch.
+ Version string: $CondorVersion: 7.3.1 May  5 2009 BuildID: 150675 $
+ Original build tag: BUILD-V7_3_1-branch-2009-5-5
+
+05/05/2009 V7_3_1-branch
+ Branch for 7.3.1 release
+
+04/27/2009 V7_3-dagspeed-branch
+ Branch for an optimization of dagman to use sets instead of lists for 
+ keeping edge dependencies.
+
 03/04/2009 V7_3-new_classads_benchmarks-branch
  Branch for benchmarking new ClassAds (based off V7_3-new_classads-branch)
 
@@ -18,6 +30,17 @@
 
 11/05/2008 V7_2-branch
   Branch for 7.1.4 and 7.2 series, based from the master.
+05/07/2009 V7_2_3-branch
+  Branch for the 7.2.3 release, based on V7_2-branch
+
+05/12/2009 V7_2_3
+  The official tag for 7.2.3, from the V7_2_3-branch.
+  Version String: $CondorVersion: 7.2.3 May 11 2009 BuildID: 151729 $
+  Original build tag: BUILD-V7_2_3-branch-2009-5-11
+
+04/02/2009 V7_2_2-branch
+  Branch for the 7.2.2 release; the branch is based on V7_2-branch.
+
 03/23/2009 V7_2-deb5-branch
   Branch used for the deb5 stduniv port, based from V7_2-branch.
 

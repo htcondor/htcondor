@@ -68,6 +68,7 @@ static struct saved_dprintf* saved_list_tail = NULL;
 
 extern	DLL_IMPORT_MAGIC int		errno;
 extern	int		DebugFlags;
+THREAD_LOCAL_STORAGE int CurrentTid;
 
 /*
    This is a global flag that tells us if we've successfully ran
@@ -113,6 +114,10 @@ int		LockFd = -1;
 
 static	int DprintfBroken = 0;
 static	int DebugUnlockBroken = 0;
+#if !defined(WIN32) && defined(HAVE_PTHREADS)
+#include <pthread.h>
+static pthread_mutex_t _condor_dprintf_critsec = PTHREAD_MUTEX_INITIALIZER;
+#endif
 #ifdef WIN32
 static CRITICAL_SECTION	*_condor_dprintf_critsec = NULL;
 static int lock_or_mutex_file(int fd, LOCK_TYPE type, int do_block);
@@ -189,6 +194,12 @@ _condor_dprintf_va( int flags, const char* fmt, va_list args )
 #ifdef va_copy
 	va_list copyargs;
 #endif
+	static int first_time = 1;
+
+	if ( first_time ) {
+		first_time = 0;
+		CurrentTid = 0;
+	}
 
 		/* DebugFP should be static initialized to stderr,
 	 	   but stderr is not a constant on all systems. */
@@ -216,26 +227,11 @@ _condor_dprintf_va( int flags, const char* fmt, va_list args )
 		return;
 	}
 
-#ifdef WIN32
-
-	// DaemonCore Create_Thread creates a real kernel thread on Win32,
-	// and dprintf is not thread-safe.  So, until such time that
-	// dprint is made thread safe, on Win32 we restrict access to one
-	// thread at a time via a critical section.  NOTE: we must enter
-	// the critical section _after_ we test DprintfBroken above,
-	// otherwise we could hang forever if _condor_dprintf_exit() is
-	// called and an EXCEPT handler tries to use dprintf.
-	if ( _condor_dprintf_critsec == NULL ) {
-		_condor_dprintf_critsec = 
-			(CRITICAL_SECTION *)malloc(sizeof(CRITICAL_SECTION));
-		InitializeCriticalSection(_condor_dprintf_critsec);
-	}
-	EnterCriticalSection(_condor_dprintf_critsec);
-#endif
 
 #if !defined(WIN32) /* signals and umasks don't exist in WIN32 */
 
 	/* Block any signal handlers which might try to print something */
+	/* Note: do this BEFORE grabbing the _condor_dprintf_critsec mutex */
 	sigfillset( &mask );
 	sigdelset( &mask, SIGABRT );
 	sigdelset( &mask, SIGBUS );
@@ -249,7 +245,22 @@ _condor_dprintf_va( int flags, const char* fmt, va_list args )
 		   and the remote job has tried to set its umask or
 		   something.  -Derek Wright 6/11/98 */
 	old_umask = umask( 022 );
+#endif
 
+	/* We want dprintf to be thread safe.  For now, we achieve this
+	 * with fairly coarse-grained mutex. On Unix, signals that may result
+	 * in a call to dprintf() had better be blocked by now, or deadlock may 
+	 * occur.
+	 */
+#ifdef WIN32
+	if ( _condor_dprintf_critsec == NULL ) {
+		_condor_dprintf_critsec = 
+			(CRITICAL_SECTION *)malloc(sizeof(CRITICAL_SECTION));
+		InitializeCriticalSection(_condor_dprintf_critsec);
+	}
+	EnterCriticalSection(_condor_dprintf_critsec);
+#elif defined(HAVE_PTHREADS)
+	pthread_mutex_lock(&_condor_dprintf_critsec);
 #endif
 
 	saved_errno = errno;
@@ -321,6 +332,13 @@ _condor_dprintf_va( int flags, const char* fmt, va_list args )
 						fprintf( DebugFP, "(pid:%d) ", my_pid );
 					}
 
+#ifdef HAVE_TLS
+					/* include tid if we are configured to use a thread pool */
+					if ( CurrentTid > 0 ) {
+						fprintf(DebugFP, "(tid:%d) ", CurrentTid );
+					}
+#endif  /* TODO --- if no TLS do something else */
+
 					if( DebugId ) {
 						(*DebugId)( DebugFP );
 					}
@@ -354,20 +372,22 @@ _condor_dprintf_va( int flags, const char* fmt, va_list args )
 	errno = saved_errno;
 	DebugFlags = saved_flags;
 
-#if !defined(WIN32) // signals and umasks don't exist in WIN32
-
+#if !defined(WIN32) // umasks don't exist in WIN32
 		/* restore umask */
 	(void)umask( old_umask );
-
-		/* Let them signal handlers go!! */
-	(void) sigprocmask( SIG_SETMASK, &omask, 0 );
-
 #endif
 
+	/* Release mutex.  Note: we MUST do this before we renable signals */
 #ifdef WIN32
 	LeaveCriticalSection(_condor_dprintf_critsec);
+#elif defined(HAVE_PTHREADS)
+	pthread_mutex_unlock(&_condor_dprintf_critsec);
 #endif
 
+#if !defined(WIN32) // signals don't exist in WIN32
+		/* Let them signal handlers go!! */
+	(void) sigprocmask( SIG_SETMASK, &omask, 0 );
+#endif
 }
 
 int
@@ -851,63 +871,71 @@ _condor_dprintf_exit( int error_code, const char* msg )
 	struct tm *tm;
 	time_t clock_now;
 
-	(void)time( &clock_now );
+		/* We might land here with DprintfBroken true if our call to
+		   dprintf_unlock() down below hits an error.  Since the
+		   "error" that it hit might simply be that there was no lock,
+		   we don't want to overwrite the original dprintf error
+		   message with a new one, so skip most of the following if
+		   DprintfBroken is already true.
+		*/
+	if( !DprintfBroken ) {
+		(void)time( &clock_now );
 
-	if ( DebugUseTimestamps ) {
-			// Casting clock_now to int to get rid of compile warning.
-			// Probably format should be %ld, and we should cast to long
-			// int, but I'm afraid of changing the output format.
-			// wenger 2009-02-24.
-		snprintf( header, sizeof(header), "(%d) ", (int)clock_now );
-	} else {
-		tm = localtime( &clock_now );
-		snprintf( header, sizeof(header), "%d/%d %02d:%02d:%02d ",
-				tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, 
-				tm->tm_min, tm->tm_sec );
-	}
-	snprintf( header, sizeof(header), "dprintf() had a fatal error in pid %d\n", (int)getpid() );
-	tail[0] = '\0';
-	if( error_code ) {
-		sprintf( tail, "errno: %d (%s)\n", error_code,
-				 strerror(error_code) );
-	}
+		if ( DebugUseTimestamps ) {
+				// Casting clock_now to int to get rid of compile warning.
+				// Probably format should be %ld, and we should cast to long
+				// int, but I'm afraid of changing the output format.
+				// wenger 2009-02-24.
+			snprintf( header, sizeof(header), "(%d) ", (int)clock_now );
+		} else {
+			tm = localtime( &clock_now );
+			snprintf( header, sizeof(header), "%d/%d %02d:%02d:%02d ",
+					  tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, 
+					  tm->tm_min, tm->tm_sec );
+		}
+		snprintf( header, sizeof(header), "dprintf() had a fatal error in pid %d\n", (int)getpid() );
+		tail[0] = '\0';
+		if( error_code ) {
+			sprintf( tail, "errno: %d (%s)\n", error_code,
+					 strerror(error_code) );
+		}
 #ifndef WIN32			
-	sprintf( buf, "euid: %d, ruid: %d\n", (int)geteuid(),
-			 (int)getuid() );
-	strcat( tail, buf );
+		sprintf( buf, "euid: %d, ruid: %d\n", (int)geteuid(),
+				 (int)getuid() );
+		strcat( tail, buf );
 #endif
 
-	tmp = param( "LOG" );
-	if( tmp ) {
-		snprintf( buf, sizeof(buf), "%s/dprintf_failure.%s",
-				  tmp, get_mySubSystemName() );
-		fail_fp = safe_fopen_wrapper( buf, "w",0644 );
-		if( fail_fp ) {
-			fprintf( fail_fp, "%s", header );
-			fprintf( fail_fp, "%s", msg );
-			if( tail[0] ) {
-				fprintf( fail_fp, "%s", tail );
-			}
-			fclose_wrapper( fail_fp, FCLOSE_RETRY_MAX );
-			wrote_warning = TRUE;
-		} 
-		free( tmp );
-	}
-	if( ! wrote_warning ) {
-		fprintf( stderr, "%s", header );
-		fprintf( stderr, "%s", msg );
-		if( tail[0] ) {
-			fprintf( stderr, "%s", tail );
+		tmp = param( "LOG" );
+		if( tmp ) {
+			snprintf( buf, sizeof(buf), "%s/dprintf_failure.%s",
+					  tmp, get_mySubSystemName() );
+			fail_fp = safe_fopen_wrapper( buf, "w",0644 );
+			if( fail_fp ) {
+				fprintf( fail_fp, "%s", header );
+				fprintf( fail_fp, "%s", msg );
+				if( tail[0] ) {
+					fprintf( fail_fp, "%s", tail );
+				}
+				fclose_wrapper( fail_fp, FCLOSE_RETRY_MAX );
+				wrote_warning = TRUE;
+			} 
+			free( tmp );
 		}
+		if( ! wrote_warning ) {
+			fprintf( stderr, "%s", header );
+			fprintf( stderr, "%s", msg );
+			if( tail[0] ) {
+				fprintf( stderr, "%s", tail );
+			}
 
+		}
+			/* First, set a flag so we know not to try to keep using
+			   dprintf during the rest of this */
+		DprintfBroken = 1;
+
+			/* Don't forget to unlock the log file, if possible! */
+		debug_unlock(0);
 	}
-
-		/* First, set a flag so we know not to try to keep using
-		   dprintf during the rest of this */
-	DprintfBroken = 1;
-
-		/* Don't forget to unlock the log file, if possible! */
-	debug_unlock(0);
 
 		/* If _EXCEPT_Cleanup is set for cleaning up during EXCEPT(),
 		   we call that here, as well. */
@@ -1111,6 +1139,11 @@ lock_or_mutex_file(int fd, LOCK_TYPE type, int do_block)
 		// non-deterministic.  Thus, we have observed processes
 		// starving to get the lock.  The Win32 mutex object,
 		// on the other hand, is FIFO --- thus starvation is avoided.
+
+		// If we're trying to lock NUL, just return success early
+	if (stricmp(DebugLock, "NUL") == 0) {
+		return 0;
+	}
 
 		// first, open a handle to the mutex if we haven't already
 	if ( debug_win32_mutex == NULL && DebugLock ) {

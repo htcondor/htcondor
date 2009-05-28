@@ -44,34 +44,34 @@ public:
 	/* Formats and prints a parameter and its value as a sub-point of input,
 	 * output_expected, or output_actual.  format can use printf formatting.
 	 */
-	void emit_param(char* pname, char* format, ...);
+	void emit_param(const char* pname, const char* format, ...);
 	
 	/* A version of emit_param() for return values. */
-	void emit_retval(char* format, ...);
+	void emit_retval(const char* format, ...);
 
 	/* Emits a heading and the function string.
 	 */
-	void emit_function(char* function);
+	void emit_function(const char* function);
 
 	/* Emits a heading and the object string.
 	 */
-	void emit_object(char* object);
+	void emit_object(const char* object);
 
 	/* Prints a comment indicating what the function does.
 	 */
-	void emit_comment(char* comment);
+	void emit_comment(const char* comment);
 
 	/* Prints a known problem of the function.
 	 */
-	void emit_problem(char* problem);
+	void emit_problem(const char* problem);
 
 	/* Shows exactly what is going to be tested.
 	 */
-	void emit_test(char* test);
+	void emit_test(const char* test);
 
 	/* Shows exactly what is going to be tested.
 	 */
-	void emit_skipped(char* skipped);
+	void emit_skipped(const char* skipped);
 
 	/* A header saying that the function's input is going to follow.
 	 */
@@ -105,7 +105,7 @@ public:
 	 * aborted or just a warning that something happened but the test will continue
 	 * anyway.
 	 */
-	void emit_alert(char* alert);
+	void emit_alert(const char* alert);
 
 	/* Emits a break between function tests.
 	 */

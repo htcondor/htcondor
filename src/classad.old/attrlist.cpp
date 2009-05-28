@@ -356,157 +356,6 @@ AttrList::AttrList(const char *AttrLists, char delimitor) : AttrListAbstract(ATT
 	return;
 }
 
-ExprTree* ProcToTree(char*, LexemeType, int, float, char*);
-
-#if 0 /* don't want to link with ProcObj class; we shouldn't need this */
-////////////////////////////////////////////////////////////////////////////////
-// Create a AttrList from a proc object.
-////////////////////////////////////////////////////////////////////////////////
-AttrList::AttrList(ProcObj* procObj) : AttrListAbstract(ATTRLISTENTITY)
-{
-	ExprTree*	tmpTree;	// trees converted from proc structure fields
-
-	seq = 0;
-	exprList = NULL;
-	hash = new HashTable<YourString, AttrListElem *>(hash_size, torekHash);
-	inside_insert = false;
-	chainedAttrs = NULL;
-	associatedList = NULL;
-	tail = NULL;
-	ptrExpr = NULL;
-	ptrName = NULL;
-    ptrExprInChain = false;
-    ptrNameInChain = false;
-
-
-	// Convert the fields in a proc structure into expression trees and insert
-	// into the classified ad.
-	tmpTree = ProcToTree("Status", LX_INTEGER, procObj->get_status(), 0, NULL);
-	if(!tmpTree)
-	{
-		EXCEPT("AttrList::AttrList(ProcObj*) : Status");
-	}
-	Insert(tmpTree);
-
-	tmpTree = ProcToTree("Prio", LX_INTEGER, procObj->get_prio(), 0, NULL);
-	if(!tmpTree)
-	{
-		EXCEPT("AttrList::AttrList(ProcObj*) : Prio");
-	}
-	Insert(tmpTree);
-
-	tmpTree = ProcToTree("ClusterId", LX_INTEGER, procObj->get_cluster_id(),
-						 0, NULL);
-	if(!tmpTree)
-	{
-		EXCEPT("AttrList::AttrList(ProcObj*) : ClusterId");
-	}
-	Insert(tmpTree);
-
-	tmpTree = ProcToTree("ProcId", LX_INTEGER, procObj->get_proc_id(), 0, NULL);
-	if(!tmpTree)
-	{
-		EXCEPT("AttrList::AttrList(ProcObj*) : ProcId");
-	}
-	Insert(tmpTree);
-
-	tmpTree = ProcToTree("LocalCPU", LX_FLOAT, 0, procObj->get_local_cpu(),
-						 NULL);
-	if(!tmpTree)
-	{
-		EXCEPT("AttrList::AttrList(ProcObj*) : LocalCPU");
-	}
-	Insert(tmpTree);
-
-	tmpTree = ProcToTree("RemoteCPU", LX_FLOAT, 0, procObj->get_remote_cpu(),
-						 NULL);
-	if(!tmpTree)
-	{
-		EXCEPT("AttrList::AttrList(ProcObj*) : RemoteCPU");
-	}
-	Insert(tmpTree);
-
-	tmpTree = ProcToTree("Owner", LX_STRING, 0, 0, procObj->get_owner());
-	if(!tmpTree)
-	{
-		EXCEPT("AttrList::AttrList(ProcObj*) : Owner");
-	}
-	Insert(tmpTree);
-
-	tmpTree = ProcToTree("Arch", LX_STRING, 0, 0, procObj->get_arch());
-	if(!tmpTree)
-	{
-		EXCEPT("AttrList::AttrList(ProcObj*) : Arch");
-	}
-	Insert(tmpTree);
-
-	tmpTree = ProcToTree("OpSys", LX_STRING, 0, 0, procObj->get_opsys());
-	if(!tmpTree)
-	{
-		EXCEPT("AttrList::AttrList(ProcObj*) : OpSys");
-	}
-	Insert(tmpTree);
-
-	tmpTree = ProcToTree("Requirements", LX_STRING, 0, 0,
-						 procObj->get_requirements());
-	if(!tmpTree)
-	{
-		EXCEPT("AttrList::AttrList(ProcObj*) : Requirements");
-	}
-	Insert(tmpTree);
-}
-#endif
-
-////////////////////////////////////////////////////////////////////////////////
-// Converts a (key word, value) pair from a proc structure to a tree.
-////////////////////////////////////////////////////////////////////////////////
-ExprTree* AttrList::ProcToTree(char* var, LexemeType t, int i, float f, char* s)
-{
-	ExprTree*	tmpVarTree;		// Variable node
-	ExprTree*	tmpTree;		// Value tree
-	char*		tmpStr;			// used to add "" to a string
-	char*		tmpVarStr;		// make a copy of "var"
-
-	tmpVarStr = new char[strlen(var)+1];
-	strcpy(tmpVarStr, var);
-	tmpVarTree = new Variable(tmpVarStr);
-	switch(t)
-	{
-		case LX_INTEGER :
-
-			tmpTree = new Integer(i);
-			break;
-
-		case LX_FLOAT :
-
-			tmpTree = new Float(f);
-			break;
-
-		case LX_STRING :
-
-			tmpStr = new char[strlen(s)+3];
-			sprintf(tmpStr, "\"%s\"", s);
-			tmpTree = new String(tmpStr);
-			break;
-
-		case LX_EXPR :
-
-			if(Parse(s, tmpTree) != 0)
-			{
-				delete tmpVarTree;
-				delete tmpTree;
-				return NULL;
-			}
-			break;
-		
-		default:
-
-			break;
-	}
-
-	return new AssignOp(tmpVarTree, tmpTree);
-}
-
 #if 0 // don't use CONTEXTs anymore
 ////////////////////////////////////////////////////////////////////////////////
 // Create a AttrList from a CONTEXT.
@@ -3000,7 +2849,11 @@ AttrList::CopyAttribute(char const *target_attr, char const *source_attr, AttrLi
 
 	ExprTree *e = source_ad->Lookup(source_attr);
 	if (e && e->MyType() == LX_ASSIGN && e->RArg()) {
+#ifdef USE_STRING_SPACE_IN_CLASSADS
+		ExprTree *lhs = new Variable((char *)target_attr);
+#else
 		ExprTree *lhs = new Variable(strnewp(target_attr));
+#endif
 		ExprTree *rhs = e->RArg()->DeepCopy();
 		ASSERT( lhs && rhs );
 		ExprTree *assign = new AssignOp(lhs,rhs);

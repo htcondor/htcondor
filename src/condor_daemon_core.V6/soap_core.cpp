@@ -27,10 +27,15 @@
 #include "condor_debug.h"
 #include "condor_socket_types.h"
 #include "subsystem_info.h"
-#include "httpget.h"
 #include "directory.h"
 #include "stdsoap2.h"
 #include "soap_core.h"
+
+#include "mimetypes.h"
+
+#ifdef WIN32
+#define realpath(P,B) _fullpath((B),(P),_MAX_PATH)
+#endif
 
 extern int soap_serve(struct soap *);
 
@@ -55,14 +60,7 @@ init_soap(struct soap *soap)
 	soap->send_timeout = 20;
 	soap->recv_timeout = 20;
 
-		// Register a plugin to handle HTTP GET messages.
-		// See httpget.c.
-		// Note: valgrind complains about a memory leak inside
-		// here, but Matt and Todd say it's not a problem because
-		// this is only called at initialization.  wenger 2006-06-22.
-	soap_register_plugin_arg(soap,http_get,(void*)http_get_handler);
-		// soap.accept_flags = SO_NOSIGPIPE;
-		// soap.accept_flags = MSG_NOSIGNAL;
+	soap->fget = get_handler;
 
 #ifdef COMPILE_SOAP_SSL
 	bool enable_soap_ssl = param_boolean("ENABLE_SOAP_SSL", false);
@@ -144,7 +142,7 @@ init_soap(struct soap *soap)
 			soap_init(ssl_soap);
 			soap_set_namespaces(ssl_soap, namespaces);
 
-			soap_register_plugin_arg(ssl_soap,http_get,(void*)http_get_handler);
+			ssl_soap->fget = get_handler;
 
 			ssl_soap->send_timeout = 20;
 			ssl_soap->recv_timeout = 20;
@@ -457,108 +455,140 @@ handle_soap_ssl_socket(Service *, Stream *stream)
 #endif
 }
 
+#define FILEEXT_BUF_SIZE 64
 
-////////////////////////////////////////////////////////////////////////////////
-//  Web server support
-////////////////////////////////////////////////////////////////////////////////
+static char *file_ext(const char *filename) {
+  static const char *err;
+  static int erroffset;
+  static pcre *pat = NULL;
 
-int check_authentication(struct soap *soap)
-{ if (!soap->userid
-   || !soap->passwd
-   // || strcmp(soap->userid, AUTH_USERID)
-   // || strcmp(soap->passwd, AUTH_PASSWD))
-   )
-    return 401; /* HTTP not authorized error */
-  return SOAP_OK;
+  if (pat == NULL) {
+    pat = pcre_compile(".*\\.(\\w+)$", 0, &err, &erroffset, NULL);
+  }
+
+  char ext[FILEEXT_BUF_SIZE];
+  int offsets[6];
+  int result;
+  
+  memset(ext, 0, sizeof(char) * FILEEXT_BUF_SIZE);
+  
+  result = pcre_exec(pat, NULL, filename, strlen(filename), 0, 0, offsets, 6);
+  
+  if (result != 2 || pcre_copy_substring(filename, offsets, 2, 1, ext, FILEEXT_BUF_SIZE) <= 0) {
+    return strdup("");
+  }
+  
+  return strdup(ext);
 }
 
-
-/******************************************************************************\
- *
- *	Copy static page
- *
-\******************************************************************************/
-
-int http_copy_file(struct soap *soap, const char *name, const char *type)
-{ FILE *fd;
+int serve_file(struct soap *soap, const char *name, const char *type) { 
+  FILE *fstr;
   size_t r;
 
-  char bbb[64000];
-
+  char bbb[4096];
+  
   char * web_root_dir = param("WEB_ROOT_DIR");
-  if (!web_root_dir) {
-	    return 404; /* HTTP not found */
-  }
-  char * full_name = dircat(web_root_dir,name);
-  fd = safe_fopen_wrapper(full_name, "rb"); /* open file to copy */
-  delete [] full_name;
-  free(web_root_dir);
-  if (!fd) {
-    return SOAP_EOF; /* return HTTP error? */
-  }
-  soap->http_content = type;
-  if (soap_begin_send(soap)
-   || soap_response(soap, SOAP_FILE)) /* OK HTTP response header */
-    return soap->error;
+  char * web_root_realpath;
 
-  for (;;)
-  //{ r = fread(soap->tmpbuf, 1, sizeof(soap->tmpbuf), fd);
-  { r = fread(bbb, 1, sizeof(bbb), fd);
-    if (!r)
-      break;
-    //if (soap_send_raw(soap, soap->tmpbuf, r))
-	if (soap_send_raw(soap, bbb, r))
-    { if (soap_end_send(soap)) { /* flush failed, already returning error */ }
-      fclose(fd);
-      return soap->error;
+  if (!web_root_dir) {
+    return 404;
+  } 
+  
+  web_root_realpath = realpath(web_root_dir, NULL);
+  free(web_root_dir);
+  
+  char * full_name = dircat(web_root_realpath,name);
+  char * full_name_realpath = realpath(full_name, NULL);
+
+  delete [] full_name;
+
+  if (full_name_realpath == NULL) {
+    return 404;
+  }
+
+  /* Ensure that the requested resource is contained
+     within the web root and that the requested 
+     resource is not a directory.
+
+     The calls to realpath (above) resolve any 
+     symbolic links and relative pathname components 
+     in web_root_realpath and full_name_realpath.
+
+     The strstr call ensures that the canonicalized 
+     web root path appears at the beginning of the 
+     canonical path for the requested file.
+  */
+  if (strstr(full_name_realpath, web_root_realpath) != full_name_realpath
+      || IsDirectory(full_name_realpath)) {
+    /* NB:  it might be nice to support an option 
+       to redirect to an index file or a dynamically-
+       generated index if the requested resource 
+       is a directory */
+    free(full_name_realpath);
+    free(web_root_realpath);
+    return 403;
+  }
+
+  fstr = safe_fopen_wrapper(full_name_realpath, "rb");
+
+  free(full_name_realpath);
+  free(web_root_realpath);
+
+  if (!fstr) {
+    return 404;
+  }
+
+  soap->http_content = type;
+
+  if (soap_begin_send(soap) || soap_response(soap, SOAP_FILE)) {
+    return soap->error;
+  }
+
+  while ((r = fread(bbb, 1, sizeof(bbb), fstr))) {
+    if (soap_send_raw(soap, bbb, r) != SOAP_OK) {
+      if (soap_end_send(soap) != SOAP_OK) {
+	fclose(fstr);
+	return soap->error;
+      }
     }
   }
-  fclose(fd);
-  if (soap_end_send(soap))
+
+  /* Did we break out of the above loop because 
+     of an error reading from fd? */
+  if (ferror(fstr)) {
+    fclose(fstr);
+    soap->error = SOAP_HTTP_ERROR;
+    return 500;
+  }
+
+  fclose(fstr);
+
+  if (soap_end_send(soap) != SOAP_OK) {
     return soap->error;
+  }
+
   return SOAP_OK;
-}
+}   
 
+int get_handler(struct soap *soap) {
+  const char *type;
+  char *ext;
 
-/******************************************************************************\
- *
- *	HTTP GET handler for plugin
- *
-\******************************************************************************/
+  soap_omode(soap, SOAP_IO_STORE);
 
-int http_get_handler(struct soap *soap)
-{ /* HTTP response choices: */
-  soap_omode(soap, SOAP_IO_STORE);  /* you have to buffer entire content when returning HTML pages to determine content length */
-  //soap_set_omode(soap, SOAP_IO_CHUNK); /* ... or use chunked HTTP content (faster) */
-#if 0
-  if (soap->zlib_out == SOAP_ZLIB_GZIP) /* client accepts gzip */
-    soap_set_omode(soap, SOAP_ENC_ZLIB); /* so we can compress content (gzip) */
-  soap->z_level = 9; /* best compression */
-#endif
-  /* Use soap->path (from request URL) to determine request: */
   dprintf(D_ALWAYS, "HTTP Request: %s\n", soap->endpoint);
-  /* Note: soap->path starts with '/' */
-  if (strchr(soap->path + 1, '/') || strchr(soap->path + 1, '\\'))	/* we don't like snooping in dirs */
-    return 403; /* HTTP forbidden */
-  if (!soap_tag_cmp(soap->path, "*.html"))
-    return http_copy_file(soap, soap->path + 1, "text/html");
-  if (!soap_tag_cmp(soap->path, "*.xml")
-   || !soap_tag_cmp(soap->path, "*.xsd")
-   || !soap_tag_cmp(soap->path, "*.wsdl"))
-    return http_copy_file(soap, soap->path + 1, "text/xml");
-  if (!soap_tag_cmp(soap->path, "*.jpg"))
-    return http_copy_file(soap, soap->path + 1, "image/jpeg");
-  if (!soap_tag_cmp(soap->path, "*.gif"))
-    return http_copy_file(soap, soap->path + 1, "image/gif");
-  if (!soap_tag_cmp(soap->path, "*.ico"))
-    return http_copy_file(soap, soap->path + 1, "image/ico");
-  // if (!strncmp(soap->path, "/calc?", 6))
-  //  return calc(soap);
-  /* Check requestor's authentication: */
-  //if (check_authentication(soap))
-  //  return 401;
-  /* Return Web server status */
-  //if (!strcmp(soap->path, "/"))
-  //   return info(soap);
-  return 404; /* HTTP not found */
+  
+  ext = file_ext(soap->path);
+  
+  if ((type = type_for_ext(ext)) == NULL) {
+    /* NB:  it might be nice to have a more
+       sensible default, e.g., sniffing 
+       text vs. non-text files */
+    type = "application/octet-stream";
+  }
+  
+
+  free(ext);
+
+  return serve_file(soap, soap->path + 1, type);
 }

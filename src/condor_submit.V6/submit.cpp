@@ -2159,7 +2159,11 @@ SetImageSize()
 		buffer.sprintf("%s = %s", ATTR_REQUEST_MEMORY, tmp);
 		free(tmp);
 	} else {
-		buffer.sprintf("%s = ceiling(%s/1024.0)", ATTR_REQUEST_MEMORY, ATTR_IMAGE_SIZE);
+		buffer.sprintf("%s = ceiling(ifThenElse(%s =!= UNDEFINED, %s, %s/1024.0))",
+					   ATTR_REQUEST_MEMORY,
+					   ATTR_JOB_VM_MEMORY,
+					   ATTR_JOB_VM_MEMORY,
+					   ATTR_IMAGE_SIZE);
 	}
 	InsertJobExpr(buffer);
 
@@ -6841,6 +6845,7 @@ log_submit()
 		jobSubmit.submitEventLogNotes = LogNotesVal;
 		LogNotesVal = NULL;
 	}
+
 	if( UserNotesVal ) {
 		jobSubmit.submitEventUserNotes = UserNotesVal;
 		UserNotesVal = NULL;
@@ -6853,6 +6858,7 @@ log_submit()
 				delete[] jobSubmit.submitEventLogNotes;
 			}
 			jobSubmit.submitEventLogNotes = strnewp( SubmitInfo[i].lognotes );
+
 			if( jobSubmit.submitEventUserNotes ) {
 				delete[] jobSubmit.submitEventUserNotes;
 			}
@@ -6860,15 +6866,24 @@ log_submit()
 			
 			// we don't know the gjid here, so pass in NULL as the last 
 			// parameter - epaulson 2/09/2007
-			usr_log.initialize(owner, ntdomain, simple_name, 0, 0, 0, NULL);
-			// Output the information
-			for (int j=SubmitInfo[i].firstjob; j<=SubmitInfo[i].lastjob; j++) {
-				usr_log.initialize(SubmitInfo[i].cluster, j, 0, NULL);
-				if( ! usr_log.writeEvent(&jobSubmit,job) ) {
-					fprintf(stderr, "\nERROR: Failed to log submit event.\n");
-				}
-				if( Quiet ) {
-					fprintf(stdout, ".");
+			if ( ! usr_log.initialize(owner, ntdomain, simple_name,
+						0, 0, 0, NULL) ) {
+				fprintf(stderr, "\nERROR: Failed to log submit event.\n");
+			} else {
+				// Output the information
+				for (int j=SubmitInfo[i].firstjob; j<=SubmitInfo[i].lastjob;
+							j++) {
+					if ( ! usr_log.initialize(SubmitInfo[i].cluster,
+								j, 0, NULL) ) {
+						fprintf(stderr, "\nERROR: Failed to log submit event.\n");
+					} else {
+						if( ! usr_log.writeEvent(&jobSubmit,job) ) {
+							fprintf(stderr, "\nERROR: Failed to log submit event.\n");
+						}
+						if( Quiet ) {
+							fprintf(stdout, ".");
+						}
+					}
 				}
 			}
 		}
@@ -7661,7 +7676,7 @@ SetVMParams()
 		free(vm_cdrom_files);
 	}
 
-	if( stricmp(VMType.Value(), CONDOR_VM_UNIVERSE_XEN) == MATCH ) {
+	if( (stricmp(VMType.Value(), CONDOR_VM_UNIVERSE_XEN) == MATCH) || (stricmp(VMType.Value(), CONDOR_VM_UNIVERSE_KVM) == MATCH) ) {
 		bool real_xen_kernel_file = false;
 		bool need_xen_root_device = false;
 

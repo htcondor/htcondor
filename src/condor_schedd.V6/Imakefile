@@ -14,7 +14,7 @@ QMGMT_LIB_OBJ = qmgmt_send_stubs.o qmgr_lib_support.o qmgmt_common.o \
 soapobjs(schedd)
 
 #if HAVE_DLOPEN
-ScheddPluginObj = ScheddPlugin.o
+ScheddPluginObj = ScheddPluginManager.o
 
 %-plugin.so: %.cpp
 	$(CPlusPlus) $(C_PLUS_FLAGS) -shared $< -o $@

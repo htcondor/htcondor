@@ -62,7 +62,7 @@ getScriptErrorString(const char* fname)
 	return err_msg;
 }
 
-XenType::XenType(const char* scriptname, const char* workingpath, 
+VirshType::VirshType(const char* scriptname, const char* workingpath, 
 		ClassAd* ad) : VMType("", scriptname, workingpath, ad)
 {
 	m_vmtype = CONDOR_VM_UNIVERSE_XEN;
@@ -73,7 +73,7 @@ XenType::XenType(const char* scriptname, const char* workingpath,
 	m_has_transferred_disk_file = false;
 }
 
-XenType::~XenType()
+VirshType::~VirshType()
 {
 	priv_state old_priv = set_user_priv();
 	Shutdown();
@@ -94,13 +94,15 @@ XenType::~XenType()
 }
 
 bool 
-XenType::Start()
+VirshType::Start()
 {
-	vmprintf(D_FULLDEBUG, "Inside XenType::Start\n");
+	vmprintf(D_FULLDEBUG, "Inside VirshType::Start\n");
 
 	if( (m_scriptname.Length() == 0) ||
 		(m_configfile.Length() == 0)) {
-		m_result_msg = VMGAHP_ERR_INTERNAL;
+	        
+	        m_result_msg = VMGAHP_ERR_INTERNAL;
+		vmprintf(D_FULLDEBUG, "Script name was not set or config file was not set\nscriptname: %s\nconfigfile: %s\n", m_scriptname.Value(), m_configfile.Value());
 		return false;
 	}
 
@@ -165,9 +167,9 @@ XenType::Start()
 }
 
 bool
-XenType::Shutdown()
+VirshType::Shutdown()
 {
-	vmprintf(D_FULLDEBUG, "Inside XenType::Shutdown\n");
+	vmprintf(D_FULLDEBUG, "Inside VirshType::Shutdown\n");
 
 	if( (m_scriptname.Length() == 0) ||
 		(m_configfile.Length() == 0)) {
@@ -238,9 +240,9 @@ XenType::Shutdown()
 }
 
 bool
-XenType::Checkpoint()
+VirshType::Checkpoint()
 {
-	vmprintf(D_FULLDEBUG, "Inside XenType::Checkpoint\n");
+	vmprintf(D_FULLDEBUG, "Inside VirshType::Checkpoint\n");
 
 	if( (m_scriptname.Length() == 0) ||
 		(m_configfile.Length() == 0)) {
@@ -262,7 +264,7 @@ XenType::Checkpoint()
 
 	if( m_xen_hw_vt && !m_allow_hw_vt_suspend ) {
 		// This VM uses hardware virtualization.
-		// However, Xen cannot suspend this type of VM yet.
+		// However, Virsh cannot suspend this type of VM yet.
 		// So we cannot checkpoint this VM.
 		vmprintf(D_ALWAYS, "Checkpoint of Hardware VT is not supported.\n");
 		m_result_msg = VMGAHP_ERR_VM_NO_SUPPORT_CHECKPOINT;
@@ -283,9 +285,9 @@ XenType::Checkpoint()
 }
 
 bool
-XenType::ResumeFromSoftSuspend(void)
+VirshType::ResumeFromSoftSuspend(void)
 {
-	vmprintf(D_FULLDEBUG, "Inside XenType::ResumeFromSoftSuspend\n");
+	vmprintf(D_FULLDEBUG, "Inside VirshType::ResumeFromSoftSuspend\n");
 	if( (m_scriptname.Length() == 0) ||
 		(m_configfile.Length() == 0)) {
 		return false;
@@ -301,7 +303,7 @@ XenType::ResumeFromSoftSuspend(void)
 		if( result != 0 ) {
 			// unpause failed.
 			vmprintf(D_ALWAYS, "Unpausing VM failed in "
-					"XenType::ResumeFromSoftSuspend\n");
+					"VirshType::ResumeFromSoftSuspend\n");
 			return false;
 		}
 		m_is_soft_suspended = false;
@@ -310,9 +312,9 @@ XenType::ResumeFromSoftSuspend(void)
 }
 
 bool 
-XenType::SoftSuspend()
+VirshType::SoftSuspend()
 {
-	vmprintf(D_FULLDEBUG, "Inside XenType::SoftSuspend\n");
+	vmprintf(D_FULLDEBUG, "Inside VirshType::SoftSuspend\n");
 
 	if( (m_scriptname.Length() == 0) ||
 		(m_configfile.Length() == 0)) {
@@ -348,9 +350,9 @@ XenType::SoftSuspend()
 }
 
 bool 
-XenType::Suspend()
+VirshType::Suspend()
 {
-	vmprintf(D_FULLDEBUG, "Inside XenType::Suspend\n");
+	vmprintf(D_FULLDEBUG, "Inside VirshType::Suspend\n");
 
 	if( (m_scriptname.Length() == 0) ||
 		(m_configfile.Length() == 0)) {
@@ -369,7 +371,7 @@ XenType::Suspend()
 
 	if( m_xen_hw_vt && !m_allow_hw_vt_suspend ) {
 		// This VM uses hardware virtualization.
-		// However, Xen cannot suspend this type of VM yet.
+		// However, Virsh cannot suspend this type of VM yet.
 		m_result_msg = VMGAHP_ERR_VM_NO_SUPPORT_SUSPEND;
 		return false;
 	}
@@ -408,9 +410,9 @@ XenType::Suspend()
 }
 
 bool 
-XenType::Resume()
+VirshType::Resume()
 {
-	vmprintf(D_FULLDEBUG, "Inside XenType::Resume\n");
+	vmprintf(D_FULLDEBUG, "Inside VirshType::Resume\n");
 
 	if( (m_scriptname.Length() == 0) ||
 		(m_configfile.Length() == 0)) {
@@ -465,9 +467,9 @@ XenType::Resume()
 }
 
 bool
-XenType::Status()
+VirshType::Status()
 {
-	vmprintf(D_FULLDEBUG, "Inside XenType::Status\n");
+	vmprintf(D_FULLDEBUG, "Inside VirshType::Status\n");
 
 	if( (m_scriptname.Length() == 0) ||
 		(m_configfile.Length() == 0)) {
@@ -649,6 +651,154 @@ XenType::Status()
 	return false;
 }
 
+/*
+ * Just so that we can get out of the habit of using "goto".
+ */
+void virshIOError(const char * filename, FILE * fp)
+{
+	vmprintf(D_ALWAYS, "failed to fprintf in CreateVirshConfigFile(%s:%s)\n",
+			filename, strerror(errno));
+	if( fp ) {
+		fclose(fp);
+	}
+	unlink(filename);
+
+}
+
+bool KVMType::CreateVirshConfigFile(const char * filename)
+{
+  MyString disk_string;
+  char* config_value = NULL;
+  MyString bridge_script;  
+  if(!filename) return false;
+
+  FILE * fp = safe_fopen_wrapper(filename, "w");
+  if(fp == NULL)
+    {
+      vmprintf(D_ALWAYS, "failed to safe_fopen_wrapper vm config file "
+	       "in write mode: safe_fopen_wrapper(%s) returns %s\n", 
+	       filename, strerror(errno));
+      return false;
+    }
+
+  if(fprintf(fp, "<domain type='kvm'>") < 0) 
+    {
+      virshIOError(filename, fp);
+      return false;
+    }
+  if(fprintf(fp, "<name>%s</name>", m_vm_name.Value()) < 0)
+    {
+      virshIOError(filename, fp);
+      return false;
+    }
+  if(fprintf(fp, "<memory>%d</memory>", m_vm_mem * 1024) < 0)
+    {
+      virshIOError(filename, fp);
+      return false;
+    }
+  if(fprintf(fp, "<vcpu>%d</vcpu>", m_vcpus) < 0)
+    {
+      virshIOError(filename, fp);
+      return false;
+    }
+  if(fprintf(fp, "<os><type>hvm</type></os>") < 0)
+    {
+      virshIOError(filename, fp);
+      return false;
+    }
+
+  if(fprintf(fp, "<devices>") < 0)
+    {
+      virshIOError(filename, fp);
+      return false;
+    }
+
+
+  if( m_vm_networking ) 
+    {
+      vmprintf(D_FULLDEBUG, "mac address is %s\n", m_vm_job_mac.Value());
+      if( m_vm_networking_type.find("nat") >= 0 ) {
+	if( fprintf(fp, "<interface type='network'>"
+		    "<source network='default'/>"
+		    "</interface>") < 0 ) {
+	  virshIOError(filename, fp);
+	  return false;
+	}
+      }
+      else 
+	{
+	  if( fprintf(fp, "<interface type='bridge'><source bridge='virbr0'/>") < 0 ) {
+	    virshIOError(filename, fp);
+	    return false;
+	  }
+	  config_value = param( "XEN_BRIDGE_SCRIPT" );
+	  if( !config_value ) {
+	    vmprintf(D_ALWAYS, "XEN_BRIDGE_SCRIPT is not defined in the "
+		     "vmgahp config file\n");
+	  }
+	  else
+	    {
+	      bridge_script = config_value;
+	      free(config_value); 
+	      config_value = NULL;
+	    }
+	  if (!bridge_script.IsEmpty()) {
+	    if( fprintf(fp, "<script path='%s'/>",
+			bridge_script.Value()) < 0 ) {
+	      virshIOError(filename, fp);
+	      return false;
+	    }
+	  }
+	  if(!m_vm_job_mac.IsEmpty())
+	    {
+	      if(fprintf(fp, "<mac address=\'%s\'/>", m_vm_job_mac.Value()) < 0) {
+		virshIOError(filename, fp);
+		return false;
+	      }
+	    }
+	  if( fprintf(fp, "</interface>") < 0 ) {
+	    virshIOError(filename, fp);
+	    return false;
+	  }
+	}
+    }
+  disk_string = makeVirshDiskString();
+  if(fprintf(fp, "%s", disk_string.Value()) < 0)
+    {
+      virshIOError(filename, fp);
+      return false;
+    }
+
+  if(fprintf(fp, "</devices></domain>") < 0 )
+    {
+      virshIOError(filename, fp);
+      return false;
+    }
+
+  
+
+  if (!write_local_settings_from_file(fp, XEN_LOCAL_SETTINGS_PARAM)) {
+    virshIOError(filename, fp);
+    return false;
+  }
+  
+  fclose(fp);
+  fp = NULL;
+  
+  if( m_use_script_to_create_config ) {
+    // We will call the script program 
+    // to create a configuration file for VM
+    
+    if( createConfigUsingScript(filename) == false ) {
+      unlink(filename);
+      return false;
+    }
+  }
+  
+  return true;
+}
+
+
 bool
 XenType::CreateVirshConfigFile(const char* filename)
 {
@@ -698,7 +848,7 @@ XenType::CreateVirshConfigFile(const char* filename)
 		goto virshwriteerror;
 	}
 
-	if( fprintf(fp, "<memory>%d</memory>", m_vm_mem) < 0 ) {
+	if( fprintf(fp, "<memory>%d</memory>", m_vm_mem * 1024) < 0 ) {
 		goto virshwriteerror;
 	}
 	if( fprintf(fp, "<vcpu>%d</vcpu>", m_vcpus) < 0 ) {
@@ -795,6 +945,7 @@ XenType::CreateVirshConfigFile(const char* filename)
 					goto virshwriteerror;
 				}
 			}
+			vmprintf(D_FULLDEBUG, "mac address is %s", m_vm_job_mac.Value());
 			if(!m_vm_job_mac.IsEmpty())
 			  {
 			    if(fprintf(fp, "<mac address=\'%s\'/>", m_vm_job_mac.Value()) < 0) {
@@ -807,7 +958,7 @@ XenType::CreateVirshConfigFile(const char* filename)
 		}
 	}
 
-	// Create disk parameter in Xen config file
+	// Create disk parameter in Virsh config file
 	disk_string = makeVirshDiskString();
 	if( fprintf(fp,"%s", disk_string.Value()) < 0 ) {
 		goto virshwriteerror;
@@ -851,20 +1002,20 @@ virshwriteerror:
 }
 
 bool
-XenType::CreateXenVMConfigFile(const char* filename)
+VirshType::CreateXenVMConfigFile(const char* filename)
 {
 	if( !filename ) {
 		return false;
 	}
-
-	return CreateVirshConfigFile(filename);
+	
+       	return CreateVirshConfigFile(filename);
 }
 
 bool
-XenType::CreateConfigFile()
+VirshType::CreateConfigFile()
 {
 	char *config_value = NULL;
-
+	vmprintf(D_FULLDEBUG, "In VirshType::CreateConfigFile()\n");
 	// Read common parameters for VM
 	// and create the name of this VM
 	if( parseCommonParamFromClassAd(true) == false ) {
@@ -872,11 +1023,11 @@ XenType::CreateConfigFile()
 	}
 
 	if( m_vm_mem < 32 ) {
-		// Allocating less than 32MBs is not recommended in Xen.
+		// Allocating less than 32MBs is not recommended in Virsh.
 		m_vm_mem = 32;
 	}
 
-	// Read the parameter of Xen kernel
+	// Read the parameter of Virsh kernel
 	if( m_classAd.LookupString( VMPARAM_XEN_KERNEL, m_xen_kernel_submit_param) != 1 ) {
 		vmprintf(D_ALWAYS, "%s cannot be found in job classAd\n", 
 							VMPARAM_XEN_KERNEL);
@@ -950,7 +1101,7 @@ XenType::CreateConfigFile()
 	}
 
 	if( m_xen_kernel_file.IsEmpty() == false ) {
-		// Read the parameter of Xen Root
+		// Read the parameter of Virsh Root
 		if( m_classAd.LookupString(VMPARAM_XEN_ROOT, m_xen_root) != 1 ) {
 			vmprintf(D_ALWAYS, "%s cannot be found in job classAd\n", 
 					VMPARAM_XEN_ROOT);
@@ -961,7 +1112,7 @@ XenType::CreateConfigFile()
 	}
 
 	MyString xen_disk;
-	// Read the parameter of Xen Disk
+	// Read the parameter of Virsh Disk
 	if( m_classAd.LookupString(VMPARAM_XEN_DISK, xen_disk) != 1 ) {
 		vmprintf(D_ALWAYS, "%s cannot be found in job classAd\n", 
 				VMPARAM_XEN_DISK);
@@ -976,12 +1127,12 @@ XenType::CreateConfigFile()
 		return false;
 	}
 
-	// Read the parameter of Xen Kernel Param
+	// Read the parameter of Virsh Kernel Param
 	if( m_classAd.LookupString(VMPARAM_XEN_KERNEL_PARAMS, m_xen_kernel_params) == 1 ) {
 		m_xen_kernel_params.trim();
 	}
 
-	// Read the parameter of Xen cdrom device
+	// Read the parameter of Virsh cdrom device
 	if( m_classAd.LookupString(VMPARAM_XEN_CDROM_DEVICE, m_xen_cdrom_device) == 1 ) {
 		m_xen_cdrom_device.trim();
 		m_xen_cdrom_device.lower_case();
@@ -1029,15 +1180,15 @@ XenType::CreateConfigFile()
 
 	// Here we check if this job actually can use checkpoint 
 	if( m_vm_checkpoint ) {
-		// For vm checkpoint in Xen
+		// For vm checkpoint in Virsh
 		// 1. all disk files should be in a shared file system
 		// 2. If a job uses CDROM files, it should be 
 		// 	  single ISO file and be in a shared file system
 		if( m_has_transferred_disk_file || m_local_iso ) {
-			// In this case, we cannot use vm checkpoint for Xen
-			// To use vm checkpoint in Xen, 
+			// In this case, we cannot use vm checkpoint for Virsh
+			// To use vm checkpoint in Virsh, 
 			// all disk and iso files should be in a shared file system
-			vmprintf(D_ALWAYS, "To use vm checkpint in Xen, "
+			vmprintf(D_ALWAYS, "To use vm checkpint in Virsh, "
 					"all disk and iso files should be "
 					"in a shared file system\n");
 			m_result_msg = VMGAHP_ERR_JOBCLASSAD_XEN_MISMATCHED_CHECKPOINT;
@@ -1050,7 +1201,7 @@ XenType::CreateConfigFile()
 	MyString tmp_config_name;
 	tmp_config_name.sprintf("%s%c%s",m_workingpath.Value(), 
 			DIR_DELIM_CHAR, XEN_CONFIG_FILE_NAME);
-
+	
 	if( CreateXenVMConfigFile(tmp_config_name.Value()) 
 			== false ) {
 		m_result_msg = VMGAHP_ERR_CRITICAL;
@@ -1063,7 +1214,7 @@ XenType::CreateConfigFile()
 }
 
 bool 
-XenType::parseXenDiskParam(const char *format)
+VirshType::parseXenDiskParam(const char *format)
 {
 	if( !format || (format[0] == '\0') ) {
 		return false;
@@ -1100,7 +1251,7 @@ XenType::parseXenDiskParam(const char *format)
 			return false;
 		}
 
-		// Every disk file for Xen must have full path name
+		// Every disk file for Virsh must have full path name
 		MyString disk_file;
 		if( filelist_contains_file(dfile.Value(), 
 					&working_files, true) ) {
@@ -1155,7 +1306,7 @@ XenType::parseXenDiskParam(const char *format)
 	}
 
 	if( m_disk_list.Number() == 0 ) {
-		vmprintf(D_ALWAYS, "No valid Xen disk\n");
+		vmprintf(D_ALWAYS, "No valid Virsh disk\n");
 		return false;
 	}
 
@@ -1163,9 +1314,9 @@ XenType::parseXenDiskParam(const char *format)
 }
 
 
-// This function should be called after parseXenDiskParam and createISO
+// This function should be called after parseVirshDiskParam and createISO
 MyString
-XenType::makeVirshDiskString(void)
+VirshType::makeVirshDiskString(void)
 {
 	MyString xendisk;
 	xendisk = "";
@@ -1208,7 +1359,7 @@ XenType::makeVirshDiskString(void)
 }
 
 bool 
-XenType::writableXenDisk(const char* file)
+VirshType::writableXenDisk(const char* file)
 {
 	if( !file ) {
 		return false;
@@ -1230,7 +1381,7 @@ XenType::writableXenDisk(const char* file)
 }
 
 void
-XenType::updateLocalWriteDiskTimestamp(time_t timestamp)
+VirshType::updateLocalWriteDiskTimestamp(time_t timestamp)
 {
 	char *tmp_file = NULL;
 	StringList working_files;
@@ -1240,7 +1391,7 @@ XenType::updateLocalWriteDiskTimestamp(time_t timestamp)
 
 	working_files.rewind();
 	while( (tmp_file = working_files.next()) != NULL ) {
-		// In Xen, disk file is generally used via loopback-mounted 
+		// In Virsh, disk file is generally used via loopback-mounted 
 		// file. However, mtime of those files is not updated 
 		// even after modification.
 		// So we manually update mtimes of writable disk files.
@@ -1253,7 +1404,7 @@ XenType::updateLocalWriteDiskTimestamp(time_t timestamp)
 }
 
 void
-XenType::updateAllWriteDiskTimestamp(time_t timestamp)
+VirshType::updateAllWriteDiskTimestamp(time_t timestamp)
 {
 	struct utimbuf timewrap;
 
@@ -1271,9 +1422,9 @@ XenType::updateAllWriteDiskTimestamp(time_t timestamp)
 }
 
 bool
-XenType::createCkptFiles(void)
+VirshType::createCkptFiles(void)
 {
-	vmprintf(D_FULLDEBUG, "Inside XenType::createCkptFiles\n");
+	vmprintf(D_FULLDEBUG, "Inside VirshType::createCkptFiles\n");
 
 	// This function will suspend a running VM.
 	if( getVMStatus() == VM_STOPPED ) {
@@ -1320,17 +1471,83 @@ XenType::createCkptFiles(void)
 	return false;
 }
 
+bool KVMType::checkXenParams(VMGahpConfig * config)
+{
+  char *config_value = NULL;
+  MyString fixedvalue;
+  if( !config ) {
+    return false;
+  }
+// find script program for Virsh
+  config_value = param("XEN_SCRIPT");
+  if( !config_value ) {
+    vmprintf(D_ALWAYS,
+	     "\nERROR: 'XEN_SCRIPT' not defined in configuration\n");
+    return false;
+  }
+  fixedvalue = delete_quotation_marks(config_value);
+  free(config_value);
+
+  struct stat sbuf;
+  if( stat(fixedvalue.Value(), &sbuf ) < 0 ) {
+    vmprintf(D_ALWAYS, "\nERROR: Failed to access the script "
+	     "program for Virsh:(%s:%s)\n", fixedvalue.Value(),
+	     strerror(errno));
+    return false;
+  }
+
+  // owner must be root
+  if( sbuf.st_uid != ROOT_UID ) {
+    vmprintf(D_ALWAYS, "\nFile Permission Error: "
+	     "owner of \"%s\" must be root\n", fixedvalue.Value());
+    return false;
+  }
+
+  // Other writable bit
+  if( sbuf.st_mode & S_IWOTH ) {
+    vmprintf(D_ALWAYS, "\nFile Permission Error: "
+	     "other writable bit is not allowed for \"%s\" "
+	     "due to security issues\n", fixedvalue.Value());
+    return false;
+  }
+
+  // is executable?
+  if( !(sbuf.st_mode & S_IXUSR) ) {
+    vmprintf(D_ALWAYS, "\nFile Permission Error: "
+	     "User executable bit is not set for \"%s\"\n", fixedvalue.Value());
+    return false;
+  }
+
+  // Can read script program?
+  if( check_vm_read_access_file(fixedvalue.Value(), true) == false ) {
+    return false;
+  }
+  config->m_vm_script = fixedvalue;
+
+  // Do we need to check for both read and write access?
+  if(check_vm_read_access_file("/dev/kvm", true) == false) {
+    vmprintf(D_ALWAYS, "\nFile Permission Error: Cannot read /dev/kvm as root\n");
+    return false;
+  }
+  if(check_vm_write_access_file("/dev/kvm", true) == false) {
+    vmprintf(D_ALWAYS, "\nFile Permission Error: Cannot write /dev/kvm as root\n");
+    return false;
+  }
+  return true;
+
+}
+
 bool 
 XenType::checkXenParams(VMGahpConfig* config)
 {
 	char *config_value = NULL;
 	MyString fixedvalue;
-
+	vmprintf(D_FULLDEBUG, "In XenType::checkXenParams()\n");
 	if( !config ) {
 		return false;
 	}
 
-	// find script program for Xen
+	// find script program for Virsh
 	config_value = param("XEN_SCRIPT");
 	if( !config_value ) {
 		vmprintf(D_ALWAYS,
@@ -1343,7 +1560,7 @@ XenType::checkXenParams(VMGahpConfig* config)
 	struct stat sbuf;
 	if( stat(fixedvalue.Value(), &sbuf ) < 0 ) {
 		vmprintf(D_ALWAYS, "\nERROR: Failed to access the script "
-				"program for Xen:(%s:%s)\n", fixedvalue.Value(),
+				"program for Virsh:(%s:%s)\n", fixedvalue.Value(),
 			   	strerror(errno));
 		return false;
 	}
@@ -1422,23 +1639,20 @@ XenType::checkXenParams(VMGahpConfig* config)
 }
 
 bool 
-XenType::testXen(VMGahpConfig* config)
+VirshType::testXen(VMGahpConfig* config)
 {
 	if( !config ) {
 		return false;
 	}
 
-	if( XenType::checkXenParams(config) == false ) {
-		return false;
-	}
-
+	
 	ArgList systemcmd;
 	systemcmd.AppendArg(config->m_vm_script);
 	systemcmd.AppendArg("check");
 
 	int result = systemCommand(systemcmd, true);
 	if( result != 0 ) {
-		vmprintf( D_ALWAYS, "Xen script check failed:\n" );
+		vmprintf( D_ALWAYS, "Virsh script check failed:\n" );
 		return false;
 	}
 
@@ -1446,7 +1660,7 @@ XenType::testXen(VMGahpConfig* config)
 }
 
 void
-XenType::makeNameofSuspendfile(MyString& name)
+VirshType::makeNameofSuspendfile(MyString& name)
 {
 	name.sprintf("%s%c%s", m_workingpath.Value(), DIR_DELIM_CHAR, 
 			XEN_MEM_SAVED_FILE);
@@ -1454,9 +1668,9 @@ XenType::makeNameofSuspendfile(MyString& name)
 
 // This function compares the timestamp of given file with 
 // that of writable disk files.
-// This function should be called after parseXenDiskParam()
+// This function should be called after parseVirshDiskParam()
 bool
-XenType::checkCkptSuspendFile(const char* file)
+VirshType::checkCkptSuspendFile(const char* file)
 {
 	if( !file || file[0] == '\0' ) {
 		return false;
@@ -1525,7 +1739,7 @@ XenType::checkCkptSuspendFile(const char* file)
 }
 
 bool
-XenType::findCkptConfigAndSuspendFile(MyString &vmconfig, MyString &suspendfile)
+VirshType::findCkptConfigAndSuspendFile(MyString &vmconfig, MyString &suspendfile)
 {
 	if( m_transfer_intermediate_files.isEmpty() ) {
 		return false;
@@ -1573,9 +1787,9 @@ XenType::findCkptConfigAndSuspendFile(MyString &vmconfig, MyString &suspendfile)
 }
 
 bool
-XenType::killVM()
+VirshType::killVM()
 {
-	vmprintf(D_FULLDEBUG, "Inside XenType::killVM\n");
+	vmprintf(D_FULLDEBUG, "Inside VirshType::killVM\n");
 
 	if( (m_scriptname.Length() == 0 ) || 
 			( m_vm_name.Length() == 0 ) ) {
@@ -1589,9 +1803,9 @@ XenType::killVM()
 }
 
 bool
-XenType::killVMFast(const char* script, const char* vmname)
+VirshType::killVMFast(const char* script, const char* vmname)
 {
-	vmprintf(D_FULLDEBUG, "Inside XenType::killVMFast\n");
+	vmprintf(D_FULLDEBUG, "Inside VirshType::killVMFast\n");
 	
 	if( !script || (script[0] == '\0') || 
 			!vmname || (vmname[0] == '\0') ) {
@@ -1611,9 +1825,9 @@ XenType::killVMFast(const char* script, const char* vmname)
 }
 
 bool
-XenType::createISO()
+VirshType::createISO()
 {
-	vmprintf(D_FULLDEBUG, "Inside XenType::createISO\n");
+	vmprintf(D_FULLDEBUG, "Inside VirshType::createISO\n");
 
 	m_iso_file = "";
 
@@ -1655,3 +1869,15 @@ XenType::createISO()
 	m_classAd.Assign("VMPARAM_ISO_NAME", condor_basename(m_iso_file.Value()));
 	return true;
 }
+
+
+XenType::XenType(const char * scriptname, const char * workingpath, ClassAd * ad)
+  : VirshType(scriptname, workingpath, ad)
+{
+}
+
+KVMType::KVMType(const char * scriptname, const char * workingpath, ClassAd * ad)
+  : VirshType(scriptname, workingpath, ad)
+{
+}
+

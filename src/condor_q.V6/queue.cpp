@@ -119,6 +119,9 @@ static QueryResult getQuillAddrFromCollector(char *quill_name, char *&quill_addr
 static  bool avgqueuetime = false;
 #endif
 
+/* Warn about schedd-wide limits that may confuse analysis code */
+void warnScheddLimits(const char *scheddName);
+
 /* directDBquery means we will just run a database query and return results directly to user */
 static  bool directDBquery = false;
 
@@ -2061,6 +2064,11 @@ show_queue_buffered( char* v1, char* v2, char* v3, char* v4, bool useDB )
 			short_header();
 		}
 
+		if (analyze) {
+			warnScheddLimits(scheddName);
+
+		}
+
 		if (!output_buffer_empty) {
 			for (i=0;i<=output_buffer->getlast(); i++) {
 				if ((*output_buffer)[i])
@@ -2284,6 +2292,8 @@ show_queue( char* v1, char* v2, char* v3, char* v4, bool useDB )
 			printf ("\n\n-- Submitter: %s : %s : %s\n", scheddName, 
 					scheddAddress, scheddMachine);	
 		}
+
+		warnScheddLimits(scheddName);
 
 		jobs.Open();
 		while( ( job = jobs.Next() ) ) {
@@ -3119,3 +3129,33 @@ static void exec_db_query(char *quill_name, char *db_ipAddr, char *db_name, char
 }
 
 #endif /* WANT_QUILL */
+
+void warnScheddLimits(const char *scheddName) {
+	Daemon schedd(DT_SCHEDD, scheddName, pool ? pool->addr() : NULL );
+	schedd.locate();
+	ClassAd *ad = schedd.daemonAd();
+	if (ad) {
+		bool exhausted = false;
+		ad->LookupBool("SwapSpaceExhausted", exhausted);
+		if (exhausted) {
+			fprintf(stderr, "WARNING -- this schedd is not running jobs because it believes that doing so\n");
+			fprintf(stderr, "           would exhaust swap space and cause thrashing.\n");
+			fprintf(stderr, "           Set RESERVED_SWAP to 0 to tell the scheduler to skip this check\n");
+			fprintf(stderr, "           Or add more swap space.\n");
+			fprintf(stderr, "           The analysis code does not take this into consideration\n");
+		}
+
+		int maxJobsRunning 	= -1;
+		int totalRunningJobs= -1;
+
+		ad->LookupInteger( ATTR_MAX_JOBS_RUNNING, maxJobsRunning);
+		ad->LookupInteger( ATTR_TOTAL_RUNNING_JOBS, totalRunningJobs);
+
+		if ((maxJobsRunning > -1) && (totalRunningJobs > -1) && 
+			(maxJobsRunning == totalRunningJobs)) { 
+			fprintf(stderr, "WARNING -- this schedd has hit the MAX_JOBS_RUNNING limit of %d\n", maxJobsRunning);
+			fprintf(stderr, "       to run more concurrent jobs, raise this limit in the config file\n");
+			fprintf(stderr, "       NOTE: the analysis software does not take the limit into consideration\n");
+		}
+	}
+}

@@ -507,8 +507,8 @@ OsProc::StartJob(FamilyInfo* family_info)
 			                                  create_process_errno );
 		}
 
-		EXCEPT("Create_Process(%s,%s, ...) failed",
-			JobName.Value(), args_string.Value() );
+		EXCEPT("Create_Process(%s,%s, ...) failed: %s",
+			JobName.Value(), args_string.Value(), (create_process_error ? create_process_error : ""));
 		return 0;
 	}
 

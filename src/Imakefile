@@ -25,16 +25,6 @@
 #define JobRouterProgs
 #endif
 
-#if WANT_NETMAN
-#define NetmanLibs netman
-#define Eventd eventd
-#define EventdTar eventd.tar
-#else
-#define NetmanLibs
-#define Eventd
-#define EventdTar
-#endif
-
 #if WANT_CLASSAD_ANALYSIS
 #define AnalysisLibs ClassAdAnalysis
 #else
@@ -75,7 +65,7 @@
 		procapi sysapi unit_tests ckpt_server \
 		master.V6 negotiator.V6 schedd.V6 prio q.V6 rm.V6 \
 		scripts startd.V6 StdUnvProgs submit.V6 status.V6 \
-		tools KbddProgs collector.V6 dagman userlog Eventd \
+		tools KbddProgs collector.V6 dagman userlog \
 		gridmanager starter.V6.1 shadow.V6.1 dcskel hdfs c-gahp had \
 		CreddProgs StorkProgs LeaseManagerProgs \
 		TTProgs DeploymentTools \
@@ -88,7 +78,7 @@
 		condor_procapi/libprocapi.a condor_sysapi/libsysapi.a	\
 		io condor_ckpt_server/ckpt_server_api.a			\
 		condor_schedd.V6/libqmgmt.a				\
-		StdUnvLibs NetmanLibs	\
+		StdUnvLibs	\
 		condor_procd/procd_client.a \
 		condor_privsep/privsep_client.a \
 		chirp AnalysisLibs
@@ -238,7 +228,7 @@ condor_object_target(unit_tests)
 condor_object_target(tools)
 condor_object_target(power)
 condor_object_target(examples)
-#if WANT_NETMAN
+#if 0 /* was WANT_NETMAN */
 condor_object_target(eventd)
 #endif
 condor_object_target(ckpt_server)
@@ -278,9 +268,6 @@ condor_object_target(eventd.V2)
 condor_object_target(ckpt)
 condor_object_target(syscall_lib)
 
-#if WANT_NETMAN
-condor_object_target(netman)
-#endif
 condor_object_target(io)
 object_target(target-ccb,ccb)
 object_target(target-classad.old,classad.old)

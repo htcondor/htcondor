@@ -522,11 +522,36 @@ public:
 	/// get timeout time for pending connect operation;
 	virtual time_t connect_timeout_time() = 0;
 
+	/// set timeout in seconds for sum of all socket operations
+	/// After this amount of time (from now), all operations on
+	/// this socket (including non-blocking read/write) will
+	/// immediately time out.  It is important that the user of
+	/// this socket check deadline_expired() in the handler for
+	/// daemonCore's Register_Socket(), since the socket might
+	/// not actually be ready for reading; it may have just run
+	/// out of time.
+	/// Any value < 0 indicates no deadline.
+	void set_deadline_timeout(int t);
+
+	/// set timeout time for sum of all socket operations
+	/// This is just like set_deadline_timeout() except it sets
+	/// the deadline as an absolute time rather than a relative
+	/// offset from now.
+	/// The special value 0 indicates no deadline.
+	void set_deadline(time_t t);
+
+	/// Returns the current deadline time.
+	/// The special value 0 indicates no deadline.
+	virtual time_t get_deadline();
+
+	/// returns true if the deadline timeout for this socket has expired
+	bool deadline_expired();
+
 	/// For stream types that support it, this returns the ip address we are connecting from.
-	virtual char const *sender_ip_str() = 0;
+	virtual char const *my_ip_str() = 0;
 
 	/// For stream types that support it, this returns the ip address we are connecting to.
-	virtual char const *endpoint_ip_str() = 0;
+	virtual char const *peer_ip_str() = 0;
 
 	/// For stream types that support it, this is the sinful address of peer.
 	virtual char const *default_peer_description() = 0;
@@ -695,6 +720,8 @@ protected:
 	char *m_peer_description_str;
 	bool m_crypto_state_before_secret;
 	CondorVersionInfo *m_peer_version;
+
+	time_t m_deadline_time;
 };
 
 

@@ -68,13 +68,24 @@ public:
 
 private:
 
-	// Hook definitions
-	char* m_hook_translate;
-	char* m_hook_update_job_info;
-	char* m_hook_job_exit;
-	char* m_hook_cleanup;
+	// Number of hooks used by the Job Router
+	const int NUM_HOOKS;
 
-	char* getHookPath(HookType hook_type);
+	// Constant char the denotes that a hook wasn't validated, as opposed
+	// to not being defined (NULL)
+	char* UNDEFINED;
+
+	char* m_default_hook_keyword;
+
+	// Hook definitions in a hash table.  Hook keyword is the hash key,
+	// and the validated hook paths are the value
+	HashTable<MyString, char**> m_hook_paths;
+
+	// Mapping of HookType sequential numbers that is used for
+	// storing/accessing the hooks for a specific keyword
+	std::map<HookType, int> m_hook_maps;
+
+	char* getHookPath(HookType hook_type, classad::ClassAd ad);
 	void clearHookPaths(void);
 
 };

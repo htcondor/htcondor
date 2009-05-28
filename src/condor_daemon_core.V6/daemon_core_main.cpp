@@ -1359,6 +1359,12 @@ int main( int argc, char** argv )
 	}
 	condor_main_argv[i] = NULL;
 
+#ifdef WIN32
+	/** Enable support of the %n format in the printf family 
+		of functions. */
+	_set_printf_count_output(TRUE);
+#endif
+
 #ifndef WIN32
 		// Set a umask value so we get reasonable permissions on the
 		// files we create.  Derek Wright <wright@cs.wisc.edu> 3/3/98
@@ -1914,6 +1920,11 @@ int main( int argc, char** argv )
 		 fcntl(daemonCore->async_pipe[0],F_SETFL,O_NONBLOCK) == -1 ||
 		 fcntl(daemonCore->async_pipe[1],F_SETFL,O_NONBLOCK) == -1 ) {
 			EXCEPT("Failed to create async pipe");
+	}
+#else
+	if ( daemonCore->async_pipe[1].connect_socketpair(daemonCore->async_pipe[0])==false )
+	{
+		EXCEPT("Failed to create async pipe socket pair");
 	}
 #endif
 

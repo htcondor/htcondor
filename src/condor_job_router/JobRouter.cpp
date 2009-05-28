@@ -743,6 +743,7 @@ RoutedJob::RoutedJob() {
 	submission_time = 0;
 	proxy_file_copy_chowned = false;
 	target_universe = CONDOR_UNIVERSE_GRID;
+	saw_dest_job = false;
 }
 RoutedJob::~RoutedJob() {
 }
@@ -1599,12 +1600,19 @@ JobRouter::FinishCheckSubmittedJobStatus(RoutedJob *job) {
 
 	if(!ad) {
 		int age = time(NULL) - job->submission_time;
-		if(age > m_max_job_mirror_update_lag) {
-			dprintf(D_ALWAYS,"JobRouter failure (%s): giving up, because submitted job is still not in job queue mirror (submitted %d seconds ago)\n",job->JobDesc().c_str(),age);
+		if(job->SawDestJob()) {
+				// we have seen the dest job before, but now it is gone,
+				// so it must have been removed
+			dprintf(D_ALWAYS,"JobRouter (%s): dest job was removed!\n",job->JobDesc().c_str());
 			GracefullyRemoveJob(job);
 			return;
 		}
-		dprintf(D_FULLDEBUG,"JobRouter (%s): submitted job has not yet appeared in job queue mirror or was removed by user (submitted %d seconds ago)\n",job->JobDesc().c_str(),age);
+		if(age > m_max_job_mirror_update_lag) {
+			dprintf(D_ALWAYS,"JobRouter failure (%s): giving up, because submitted job is still not in job queue mirror (submitted %d seconds ago).  Perhaps it has been removed?\n",job->JobDesc().c_str(),age);
+			GracefullyRemoveJob(job);
+			return;
+		}
+		dprintf(D_FULLDEBUG,"JobRouter (%s): submitted job has not yet appeared in job queue mirror or was removed (submitted %d seconds ago)\n",job->JobDesc().c_str(),age);
 		return;
 	}
 
@@ -2121,10 +2129,21 @@ JobRoute::AdjustFailureThrottles() {
 		new_throttle = THROTTLE_UPDATE_INTERVAL * m_failure_rate_threshold / failure_ratio;
 	}
 	else {
-		if (m_recent_jobs_succeeded) {
+        // heuristic for accelerating:
+        //   - if all jobs are succeeding, accel by x5
+        //   - if half are succeeding and half failing, accel x2.5
+        //   - if no failures or successes, accel x2.0
+        //   - if all jobs are failing, do not change
+        float accel = (3.0*m_recent_jobs_succeeded - 2.0*m_recent_jobs_failed);
+        if( accel > 0 ) {
+            accel /= (m_recent_jobs_succeeded + m_recent_jobs_failed);
+        }
+        accel += 2.0;
+		if( accel > 1.0 ) {
 				//Accelerate.
-			new_throttle *= 5;
+			new_throttle *= accel;
 		}
+
 		if( new_throttle > THROTTLE_UPDATE_INTERVAL * m_failure_rate_threshold * 10000 ) {
 				//Things seem to be going fine.  Remove throttle.
 			new_throttle = 0;
@@ -2349,4 +2368,5 @@ RoutedJob::SetDestJobAd(classad::ClassAd const *ad) {
 	// could get deleted before we are done with this ad.
 
 	ASSERT(dest_ad.CopyFromChain(*ad));
+	saw_dest_job = true;
 }

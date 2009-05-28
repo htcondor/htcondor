@@ -37,9 +37,7 @@
 
 #define LARGE_NUMBER_OF_CLASSADS 10000
 
-#ifdef USE_STRING_SPACE_IN_CLASSADS
 extern StringSpace classad_string_space; // for debugging only!
-#endif
 
 #define NUMBER_OF_CLASSAD_STRINGS (sizeof(classad_strings)/sizeof(char *))
 char *classad_strings[] = 
@@ -496,9 +494,7 @@ main(
 	*/
 
 	test_results.PrintResults();
-#ifdef USE_STRING_SPACE_IN_CLASSADS
 	//classad_string_space.dump();
-#endif
 
 #endif
 	// Clean up when we're done.

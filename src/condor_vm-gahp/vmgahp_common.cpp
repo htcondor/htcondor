@@ -46,6 +46,7 @@ uid_t job_user_gid = ROOT_UID;
 const char *support_vms_list[] = {
 #if defined(LINUX)
 CONDOR_VM_UNIVERSE_XEN,
+CONDOR_VM_UNIVERSE_KVM,
 #endif
 #if defined(LINUX) || defined(WIN32)
 CONDOR_VM_UNIVERSE_VMWARE,

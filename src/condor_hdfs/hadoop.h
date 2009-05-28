@@ -30,7 +30,9 @@ enum {
 enum {
     STATE_NULL,
     STATE_RUNNING,
-    STATE_REINIT
+    STATE_REINIT,
+    STATE_STOP_REQUESTED
+
 };
 
 
@@ -65,8 +67,15 @@ class Hadoop : public Service {
 
         int m_state;
 
-        //flag showing whether hadoop processes should be running
-        //or not.
+        int m_stdOut;
+
+        int m_adPubInterval;
+
+        ClassAd m_hdfsAd;
+
+        //keeps tracks of std output of our  hadoop process
+        MyString m_line;
+
         MyString m_java;
 
         //absoluate path to top level directory containingg hadoop installation.
@@ -78,6 +87,11 @@ class Hadoop : public Service {
         MyString m_nameNodeClass;
 
         MyString m_dataNodeClass;
+
+        //Name of hdfs's site configuration files differs among hadoop version
+        //Versions > 0.19 has hdfs-site.xml 
+        //versions < 0.19 has hadoop-site.xml
+        MyString m_siteFile;
 
         //contains path of all jar files required to run
         //hadoop services.
@@ -96,6 +110,12 @@ class Hadoop : public Service {
         void writeXMLParam(char *key, char *value, StringList *buff);
 
         void recurrBuildClasspath(const char *file);
+
+        void publishClassAd();
+
+        void stdoutHandler(int /*pipe*/);
+
+        bool getKeyValue(MyString line, MyString *key, MyString *value);
 };
 
 #endif

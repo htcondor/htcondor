@@ -579,7 +579,7 @@ const char*
 QmgmtPeer::endpoint_ip_str() const
 {
 	if ( sock ) {
-		return sock->endpoint_ip_str();
+		return sock->peer_ip_str();
 	} else {
 		return myendpoint;
 	}
@@ -589,7 +589,7 @@ const struct sockaddr_in*
 QmgmtPeer::endpoint() const
 {
 	if ( sock ) {
-		return sock->endpoint();
+		return sock->peer_addr();
 	} else {
 		return &sockaddr;
 	}
@@ -811,6 +811,15 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 				dprintf( D_ALWAYS,
 						 "Job %s has no %s attribute.  Removing....\n",
 						 tmp, ATTR_JOB_UNIVERSE );
+				JobQueue->DestroyClassAd( tmp );
+				continue;
+			}
+
+			if( universe <= CONDOR_UNIVERSE_MIN ||
+				universe >= CONDOR_UNIVERSE_MAX ) {
+				dprintf( D_ALWAYS,
+						 "Job %s has invalid %s = %d.  Removing....\n",
+						 tmp, ATTR_JOB_UNIVERSE, universe );
 				JobQueue->DestroyClassAd( tmp );
 				continue;
 			}
@@ -2377,6 +2386,10 @@ CloseConnection()
 		char *eventlog = param("EVENT_LOG");
 		if ( eventlog ) {
 			write_submit_events = true;
+				// don't write to the user log here, since
+				// hopefully condor_submit already did.
+			usr_log.setWriteUserLog(false);
+			usr_log.initialize(0,0,0,NULL);
 			free(eventlog);
 		}
 
@@ -2399,11 +2412,9 @@ CloseConnection()
 							// write submit event to global event log
 						if ( write_submit_events ) {
 							SubmitEvent jobSubmit;
-								// don't write to the user log here, since
-								// hopefully condor_submit already did.
-							usr_log.setWriteUserLog(false);
-							usr_log.initialize(cluster_id,i,0,NULL);
 							jobSubmit.initFromClassAd(procad);
+							usr_log.setGlobalCluster(cluster_id);
+							usr_log.setGlobalProc(i);
 							usr_log.writeEvent(&jobSubmit,procad);
 						}
 					}
@@ -3997,7 +4008,7 @@ void FindRunnableJob(PROC_ID & jobid, const ClassAd* my_match_ad,
 
 int Runnable(ClassAd *job)
 {
-	int status, universe, cur, max;
+	int status, universe, cur = 0, max = 1;
 
 	if ( job->LookupInteger(ATTR_JOB_STATUS, status) == 0 )
 	{
@@ -4034,18 +4045,9 @@ int Runnable(ClassAd *job)
 		return FALSE;
 	}
 
-	if ( job->LookupInteger(ATTR_CURRENT_HOSTS, cur) == 0 )
-	{
-		dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (no %s)\n",
-				ATTR_CURRENT_HOSTS);
-		return FALSE; 
-	}
-	if ( job->LookupInteger(ATTR_MAX_HOSTS, max) == 0 )
-	{
-		dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (no %s)\n",
-				ATTR_MAX_HOSTS);
-		return FALSE; 
-	}
+	job->LookupInteger(ATTR_CURRENT_HOSTS, cur);
+	job->LookupInteger(ATTR_MAX_HOSTS, max);
+
 	if (cur < max)
 	{
 		dprintf (D_FULLDEBUG | D_NOHEADER, " is runnable\n");

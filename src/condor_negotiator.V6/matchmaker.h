@@ -30,9 +30,6 @@
 
 /* FILESQL include */
 #include "file_sql.h"
-#ifdef WANT_NETMAN
-#include "../condor_netman/netman.h"
-#endif
 
 typedef struct MapEntry {
 	char *remoteHost;
@@ -70,9 +67,6 @@ class Matchmaker : public Service
 		int SET_LASTTIME_commandHandler(int, Stream*);
 		int GET_PRIORITY_commandHandler(int, Stream*);
 		int GET_RESLIST_commandHandler(int, Stream*);
-#ifdef WANT_NETMAN
-		int REQUEST_NETWORK_commandHandler(int, Stream*);
-#endif
 
 		// timeout handler (for periodic negotiations)
 		int negotiationTime ();
@@ -90,6 +84,7 @@ class Matchmaker : public Service
     protected:
 		char * NegotiatorName;
 		int update_interval;
+		
 
 	private:
 		ClassAd * publicAd;
@@ -122,19 +117,20 @@ class Matchmaker : public Service
 		**/
 		int negotiate( char const *scheddName, const ClassAd *scheddAd, 
 		   double priority, double share,
-		   int scheddLimit,
+		   int scheddLimit, double scheddLimitRW,
 		   ClassAdList &startdAds, ClaimIdHash &claimIds, 
 		   const CondorVersionInfo & scheddVersion,
-		   bool ignore_schedd_limit, time_t startTime, int &numMatched);
+		   bool ignore_schedd_limit, time_t startTime, 
+		   int &numMatched, double &limitRWUsed);
 
 		int negotiateWithGroup ( int untrimmed_num_startds,
 			ClassAdList& startdAds, 
 			ClaimIdHash& claimIds, ClassAdList& scheddAds, 
-			int groupQuota=INT_MAX, const char* groupAccountingName=NULL);
+			float groupQuota=INT_MAX, const char* groupAccountingName=NULL);
 
 		
 		ClassAd *matchmakingAlgorithm(const char*,const char*,ClassAd&,ClassAdList&,
-									  double=-1.0, double=1.0, bool=false);
+									  double=-1.0, double=1.0, double=0.0, double=0.0, bool=false);
 		int matchmakingProtocol(ClassAd &request, ClassAd *offer, 
 						ClaimIdHash &claimIds, Sock *sock,
 						const char* scheddName, const char* scheddAddr);
@@ -169,10 +165,14 @@ class Matchmaker : public Service
 		                          double maxAbsPrioValue,
 		                          double normalFactor,
 		                          double normalAbsFactor,
+								  float resourceWeight,
+								  double resourceWeightTotal,
 		                            /* result parameters: */
 		                          int &scheddLimit,
+								  double &scheddLimitRW,
 		                          int &scheddUsage,
-		                          double scheddShare,
+								  double &scheddUsageRW,
+		                          double &scheddShare,
 		                          double &scheddAbsShare,
 		                          double &scheddPrio,
 		                          double &scheddPrioFactor,
@@ -200,6 +200,7 @@ class Matchmaker : public Service
 		                              double maxAbsPrioValue,
 		                              double normalFactor,
 		                              double normalAbsFactor,
+									  double resourceWeightTotal,
 		                                   /* result parameters: */
 		                              int &userprioCrumbs );
 
@@ -218,6 +219,10 @@ class Matchmaker : public Service
 			// trim out startd ads that are not in the Unclaimed state.
 		int trimStartdAds(ClassAdList &startdAds);
 
+		float GetResourceWeight(ClassAd *candidate);
+		bool GroupQuotaPermits(ClassAd *candidate, double &used, double total);
+		double sumResourceWeights(ClassAdList &startdAds);
+
 		/* ODBC insert functions */
 		void insert_into_rejects(char const *userName, ClassAd& job);
 		void insert_into_matches(char const *userName, ClassAd& request, ClassAd& offer);
@@ -234,6 +239,7 @@ class Matchmaker : public Service
 		bool preemption_rank_unstable;
 		ExprTree *NegotiatorPreJobRank;  // rank applied before job rank
 		ExprTree *NegotiatorPostJobRank; // rank applied after job rank
+		bool useResourceWeights; // Should resource weights be used or do all machines count 1.
 		bool want_matchlist_caching;	// should we cache matches per autocluster?
 		bool ConsiderPreemption; // if false, negotiation is faster (default=true)
 		/// Should the negotiator inform startds of matches?
@@ -252,17 +258,12 @@ class Matchmaker : public Service
 		typedef HashTable<MyString, MapEntry*> AdHash;
 		AdHash *stashedAds;			
 
-		typedef HashTable<MyString, int> groupQuotasHashType;
+		typedef HashTable<MyString, float> groupQuotasHashType;
 		groupQuotasHashType *groupQuotasHash;
 
-		bool getGroupInfoFromUserId( const char *user, int & groupQuota, 
-			 int & groupUsage );
+		bool getGroupInfoFromUserId( const char *user, float & groupQuota, 
+			 float & groupUsage );
 		
-#ifdef WANT_NETMAN
-		// allocate network capacity
-		NetworkManager netman;
-		bool allocNetworkShares;
-#endif
 
 
 		// rank condition on matches
@@ -294,6 +295,7 @@ class Matchmaker : public Service
 		int rejPreemptForPrio;	//   - insufficient prio to preempt?
 		int rejPreemptForPolicy; //   - PREEMPTION_REQUIREMENTS == False?
 		int rejPreemptForRank;	//   - startd RANKs new job lower?
+		int rejForGroupQuota;   //   - not enough group quota?
 
 
 		// Class used to store each individual entry in the
@@ -331,7 +333,7 @@ class Matchmaker : public Service
 		class MatchListType
 		{
 		public:
-			
+
 			ClassAd* pop_candidate();
 			bool cache_still_valid(ClassAd &request,ExprTree *preemption_req,
 				ExprTree *preemption_rank,bool preemption_req_unstable, bool preemption_rank_unstable);
@@ -340,13 +342,15 @@ class Matchmaker : public Service
 					int & rejForConcurrencyLimit,
 					int & rejPreemptForPrio,
 					int & rejPreemptForPolicy,
-					int & rejPreemptForRank);
+					int & rejPreemptForRank,
+					int & rejForGroupQuota);
 			void set_diagnostics(int rejForNetwork,
 					int rejForNetworkShare,
 					int rejForConcurrencyLimit,
 					int rejPreemptForPrio,
 					int rejPreemptForPolicy,
-					int rejPreemptForRank);
+					int rejPreemptForRank,
+					int rejForGroupQuota);
 			void add_candidate(ClassAd* candidate,
 					double candidateRankValue,
 					double candidatePreJobRankValue,
@@ -358,7 +362,7 @@ class Matchmaker : public Service
 
 			MatchListType(int maxlen);
 			~MatchListType();
-			
+
 		private:
 
 			// AdListEntry* peek_candidate();
@@ -374,7 +378,9 @@ class Matchmaker : public Service
 			int m_rejForConcurrencyLimit;	//   - limited concurrency?
 			int m_rejPreemptForPrio;	//   - insufficient prio to preempt?
 			int m_rejPreemptForPolicy; //   - PREEMPTION_REQUIREMENTS == False?
-			int m_rejPreemptForRank;	//   - startd RANKs new job lower?
+			int m_rejPreemptForRank;    //   - startd RANKs new job lower?
+			int m_rejForGroupQuota;     //   - not enough group quota?
+			
 			
 		};
 		MatchListType* MatchList;
@@ -392,8 +398,9 @@ class Matchmaker : public Service
 			~SimpleGroupEntry();
 			char *groupName;
 			float prio;
-			int maxAllowed;
+			float maxAllowed;
 			int usage;
+			float usageRW;
 			ClassAdList submitterAds;			
 		};
 		static int groupSortCompare(const void*, const void*);

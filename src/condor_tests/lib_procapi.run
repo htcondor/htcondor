@@ -24,7 +24,7 @@ $testdesc =  'condor_procapi - runs prebuilt procapi tests from testbin_dir';
 $testname = "lib_procapi";
 $test = "../testbin_dir/condor_procapi";
 
-system("date");
+print scalar localtime() . "\n";
 
 
 open(ELOG,"$test 2>&1 |") || die "Could not run test<<$test>>: $!\n";

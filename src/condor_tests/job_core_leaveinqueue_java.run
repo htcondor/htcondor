@@ -23,8 +23,8 @@ use CondorTest;
 $testdesc =  'Condor LEAVE_IN_QUEUE policy test - java U';
 $testname = "job_core_leaveinqueue_java";
 
-my $nostatus = CondorTest::verbose_system("job_core_leaveinqueue-false_java.pl");
-my $willstatus = CondorTest::verbose_system("job_core_leaveinqueue-true_java.pl");
+my $nostatus = CondorTest::verbose_system("./job_core_leaveinqueue-false_java.pl");
+my $willstatus = CondorTest::verbose_system("./job_core_leaveinqueue-true_java.pl");
 
 if($nostatus != 0)
 {

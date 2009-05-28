@@ -40,6 +40,7 @@
 #include "stream_handler.h"
 #include "condor_vm_universe_types.h"
 #include "authentication.h"
+#include "condor_mkstemp.h"
 
 extern CStarter *Starter;
 ReliSock *syscall_sock = NULL;
@@ -533,8 +534,8 @@ JICShadow::reconnect( ReliSock* s, ClassAd* ad )
 		// Destroy our old DCShadow object and make a new one with the
 		// current info.
 	dprintf( D_ALWAYS, "Accepted request to reconnect from <%s:%d>\n",
-			 syscall_sock->endpoint_ip_str(), 
-			 syscall_sock->endpoint_port() );
+			 syscall_sock->peer_ip_str(), 
+			 syscall_sock->peer_port() );
 	dprintf( D_ALWAYS, "Ignoring old shadow %s\n", shadow->addr() );
 	delete shadow;
 	shadow = new DCShadow;
@@ -558,14 +559,14 @@ JICShadow::reconnect( ReliSock* s, ClassAd* ad )
 
 		// switch over to the new syscall_sock
 	dprintf( D_FULLDEBUG, "Closing old syscall sock <%s:%d>\n",
-			 syscall_sock->endpoint_ip_str(), 
-			 syscall_sock->endpoint_port() );
+			 syscall_sock->peer_ip_str(), 
+			 syscall_sock->peer_port() );
 	delete syscall_sock;
 	syscall_sock = s;
 	syscall_sock->timeout(param_integer( "STARTER_UPLOAD_TIMEOUT", 300));
 	dprintf( D_FULLDEBUG, "Using new syscall sock <%s:%d>\n",
-			 syscall_sock->endpoint_ip_str(), 
-			 syscall_sock->endpoint_port() );
+			 syscall_sock->peer_ip_str(), 
+			 syscall_sock->peer_port() );
 
 	initMatchSecuritySession();
 
@@ -1099,7 +1100,8 @@ JICShadow::initUserPriv( void )
 
        // first see if we define SLOTx_USER in the config file
         char *nobody_user = NULL;
-        char paramer[20];
+			// 20 is the longest param: len(VM_UNIV_NOBODY_USER) + 1
+        char nobody_param[20];
 		int slot = Starter->getMySlotNumber();
 		if( ! slot ) {
 			slot = 1;
@@ -1108,32 +1110,33 @@ JICShadow::initUserPriv( void )
 		if( job_universe == CONDOR_UNIVERSE_VM ) {
 			// If "VM_UNIV_NOBODY_USER" is defined in Condor configuration file, 
 			// we will use it. 
-        	nobody_user = param("VM_UNIV_NOBODY_USER");
+			snprintf( nobody_param, 20, "VM_UNIV_NOBODY_USER" );
+			nobody_user = param(nobody_param);
 			if( nobody_user == NULL ) {
 				// "VM_UNIV_NOBODY_USER" is NOT defined.
 				// Next, we will try to use SLOTx_VMUSER
-				sprintf( paramer, "SLOT%d_VMUSER", slot );
-				nobody_user = param(paramer);
+				snprintf( nobody_param, 20, "SLOT%d_VMUSER", slot );
+				nobody_user = param(nobody_param);
 			}
 		}
 		if( nobody_user == NULL ) {
-			sprintf( paramer, "SLOT%d_USER", slot );
-			nobody_user = param(paramer);
+			snprintf( nobody_param, 20, "SLOT%d_USER", slot );
+			nobody_user = param(nobody_param);
 			if (!nobody_user && param_boolean("ALLOW_VM_CRUFT", true)) {
-				sprintf( paramer, "VM%d_USER", slot );
-				nobody_user = param(paramer);
+				snprintf( nobody_param, 20, "VM%d_USER", slot );
+				nobody_user = param(nobody_param);
 			}
 		}
 
         if ( nobody_user != NULL ) {
             if ( strcmp(nobody_user, "root") == MATCH ) {
                 dprintf(D_ALWAYS, "WARNING: %s set to root, which is not "
-                       "allowed. Ignoring.\n", paramer);
+                       "allowed. Ignoring.\n", nobody_param);
                 free(nobody_user);
                 nobody_user = strdup("nobody");
             } else {
                 dprintf(D_ALWAYS, "%s set, so running job as %s\n",
-                        paramer, nobody_user);
+                        nobody_param, nobody_user);
             }
         } else {
             nobody_user = strdup("nobody");
@@ -1587,12 +1590,38 @@ updateX509Proxy(int cmd, ReliSock * rsock, const char * path)
 	rsock->timeout(10);
 	rsock->decode();
 
-	dprintf(D_FULLDEBUG, "Remote side requests to update X509 proxy at %s\n", path);
+	dprintf(D_FULLDEBUG,
+	        "Remote side requests to update X509 proxy at %s\n",
+	        path);
 
-	MyString tmp_path(path);
-	tmp_path += ".tmp";
-
-	rsock->decode();
+	MyString tmp_path;
+#if defined(LINUX)
+	GLExecPrivSepHelper* gpsh = Starter->glexecPrivSepHelper();
+#else
+	// dummy for non-linux platforms.
+	int* gpsh = NULL;
+#endif
+	if (gpsh != NULL) {
+		// in glexec mode, we may not have permission to write the
+		// new proxy directly into the sandbox, so we stage it into
+		// /tmp first, then use a GLExec helper script
+		//
+		char tmp[] = "/tmp/condor_proxy_XXXXXX";
+		int fd = condor_mkstemp(tmp);
+		if (fd == -1) {
+			dprintf(D_ALWAYS,
+			        "updateX509Proxy: error creating temp file "
+			            "for proxy: %s\n",
+			        strerror(errno));
+			return 0;
+		}
+		close(fd);
+		tmp_path = tmp;
+	}
+	else {
+		tmp_path = path;
+		tmp_path += ".tmp";
+	}
 
 	priv_state old_priv = set_priv(PRIV_USER);
 
@@ -1604,22 +1633,43 @@ updateX509Proxy(int cmd, ReliSock * rsock, const char * path)
 	} else if ( cmd == DELEGATE_GSI_CRED_STARTER ) {
 		rc = rsock->get_x509_delegation(&size,tmp_path.Value());
 	} else {
-		dprintf( D_ALWAYS, "unknown CEDAR command %d in updateX509Proxy\n",
-				 cmd );
+		dprintf( D_ALWAYS,
+		         "unknown CEDAR command %d in updateX509Proxy\n",
+		         cmd );
 		rc = -1;
 	}
 	if ( rc < 0 ) {
 			// transfer failed
 		reply = 0; // == failure
 	} else {
-			// transfer worked, now rename the file to final_proxy_path
-		if ( rotate_file(tmp_path.Value(), path) < 0 ) 
-		{
-				// the rename failed!!?!?!
-			dprintf( D_ALWAYS, "updateX509Proxy failed, could not rename file\n");
-			reply = 0; // == failure
-		} else {
-			reply = 1; // == success
+		if (gpsh != NULL) {
+#if defined(LINUX)
+			// use our glexec helper object, which will
+			// call out to GLExec
+			//
+			if (gpsh->update_proxy(tmp_path.Value())) {
+				reply = 1;
+			}
+			else {
+				reply = 0;
+			}
+#else
+			EXCEPT("not on a linux platform and encounterd GLEXEC code!");
+#endif
+		}
+		else {
+				// transfer worked, now rename the file to
+				// final_proxy_path
+			if ( rotate_file(tmp_path.Value(), path) < 0 ) 
+			{
+					// the rename failed!!?!?!
+				dprintf( D_ALWAYS,
+				         "updateX509Proxy failed, "
+				             "could not rename file\n");
+				reply = 0; // == failure
+			} else {
+				reply = 1; // == success
+			}
 		}
 	}
 	set_priv(old_priv);
@@ -1630,9 +1680,11 @@ updateX509Proxy(int cmd, ReliSock * rsock, const char * path)
 	rsock->eom();
 
 	if(reply) {
-		dprintf(D_FULLDEBUG, "Attempt to refresh X509 proxy succeeded.\n");
+		dprintf(D_FULLDEBUG,
+		        "Attempt to refresh X509 proxy succeeded.\n");
 	} else {
-		dprintf(D_ALWAYS, "Attempt to refresh X509 proxy FAILED.\n");
+		dprintf(D_ALWAYS,
+		        "Attempt to refresh X509 proxy FAILED.\n");
 	}
 	
 	return reply;

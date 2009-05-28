@@ -471,8 +471,8 @@ JobInfoCommunicator::allowRunAsOwner( bool default_allow, bool default_request )
 		// Eval as an expression so a policy such as this can be specified:
 		// TARGET.RunAsOwner =?= True
 
-	bool run_as_owner = param_boolean_expr( "STARTER_ALLOW_RUNAS_OWNER",
-	                                        default_allow, NULL, job_ad );
+	bool run_as_owner = param_boolean( "STARTER_ALLOW_RUNAS_OWNER",
+                                       default_allow, true, NULL, job_ad );
 
 		// Next check if the job has requested runas_owner
 	if( run_as_owner ) {

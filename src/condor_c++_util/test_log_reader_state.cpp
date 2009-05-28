@@ -81,7 +81,7 @@ struct FieldData
 	Field		 m_field;
 	DataType	 m_type;
 	int			 m_max_values;
-	char		*m_name;
+	const char	*m_name;
 };
 static const FieldData fieldList[] =
 {
@@ -313,8 +313,8 @@ DumpState( const Options &opts,
 		   const FieldData *wdata )
 {
 	ReadUserLogState	rstate( state, 60 );
-	const ReadUserLogState::FileState	*istate =
-		ReadUserLogState::GetFileStateConst( state );
+	const ReadUserLogState::FileState	*istate;
+	ReadUserLogState::convertState( state, istate );
 
 	if ( NULL == wdata ) {
 		wdata = opts.getField( );
@@ -572,8 +572,8 @@ int
 VerifyState(const Options &opts, const ReadUserLog::FileState &state )
 {
 	ReadUserLogState	rstate( state, 60 );
-	const ReadUserLogState::FileState	*istate =
-		ReadUserLogState::GetFileStateConst( state );
+	const ReadUserLogState::FileState	*istate;
+	ReadUserLogState::convertState( state, istate );
 
 	const FieldData	*wdata = opts.getField( );
 	if ( wdata == NULL ) {
@@ -928,3 +928,10 @@ Options::parseValue( const SimpleArg &arg )
 	}
 	return false;
 }
+
+/*
+### Local Variables: ***
+### mode:c++ ***
+### tab-width:4 ***
+### End: ***
+*/

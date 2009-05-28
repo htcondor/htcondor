@@ -22,6 +22,7 @@
  * Headers
  ***************************************************************/
 #include "condor_common.h"
+#include "condor_debug.h"
 #include "condor_attributes.h"
 #include "internet.h"
 #include "network_adapter.h"

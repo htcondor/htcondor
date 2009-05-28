@@ -160,7 +160,7 @@ static void WriteCompletionVisa(ClassAd* ad);
 
 int	WallClockCkptInterval = 0;
 static bool gridman_per_job = false;
-int STARTD_CONTACT_TIMEOUT = 45;
+int STARTD_CONTACT_TIMEOUT = 45;  // how long to potentially block
 
 #ifdef CARMI_OPS
 struct shadow_rec *find_shadow_by_cluster( PROC_ID * );
@@ -347,6 +347,8 @@ static const int USER_HASH_SIZE = 100;
 
 Scheduler::Scheduler() :
 	GridJobOwners(USER_HASH_SIZE, UserIdentity::HashFcn, updateDuplicateKeys),
+	stop_job_queue( "stop_job_queue" ),
+	act_on_job_myself_queue( "act_on_job_myself_queue" ),
 	job_is_finished_queue( "job_is_finished_queue", 1 )
 {
 	m_ad = NULL;
@@ -354,6 +356,8 @@ Scheduler::Scheduler() :
 	shadowCommandrsock = NULL;
 	shadowCommandssock = NULL;
 	QueueCleanInterval = 0; JobStartDelay = 0;
+	JobStopDelay = 0;
+	JobStopCount = 1;
 	RequestClaimTimeout = 0;
 	MaxJobsRunning = 0;
 	MaxJobsSubmitted = INT_MAX;
@@ -431,6 +435,14 @@ Scheduler::Scheduler() :
 	checkReconnectQueue_tid = -1;
 	num_pending_startd_contacts = 0;
 	max_pending_startd_contacts = 0;
+
+	act_on_job_myself_queue.
+		registerHandlercpp( (ServiceDataHandlercpp)
+							&Scheduler::actOnJobMyselfHandler, this );
+
+	stop_job_queue.
+		registerHandlercpp( (ServiceDataHandlercpp)
+							&Scheduler::actOnJobMyselfHandler, this );
 
 	job_is_finished_queue.
 		registerHandlercpp( (ServiceDataHandlercpp)
@@ -827,6 +839,8 @@ Scheduler::count_jobs()
 	sprintf(tmp, "%s = %d", ATTR_TOTAL_REMOVED_JOBS, JobsRemoved);
 	m_ad->Insert (tmp);
 
+	m_ad->Assign(ATTR_SCHEDD_SWAP_EXHAUSTED, (bool)SwapSpaceExhausted);
+
     daemonCore->publish(m_ad);
     daemonCore->monitor_data.ExportData(m_ad);
 	extra_ads.Publish( m_ad );
@@ -892,6 +906,7 @@ Scheduler::count_jobs()
 	sprintf(tmp, "%s = \"%s\"", ATTR_SCHEDD_NAME, Name);
 	m_ad->InsertOrUpdate(tmp);
 
+	m_ad->SetMyTypeName( SUBMITTER_ADTYPE );
 
 	for ( i=0; i<N_Owners; i++) {
 	  sprintf(tmp, "%s = %d", ATTR_RUNNING_JOBS, Owners[i].JobsRunning);
@@ -1071,6 +1086,8 @@ Scheduler::count_jobs()
 		  }
 	  }
 	}
+
+	m_ad->SetMyTypeName( SCHEDD_ADTYPE );
 
 	// If JobsIdle > 0, then we are asking the negotiator to contact us. 
 	// Record the earliest time we asked the negotiator to talk to us.
@@ -4383,13 +4400,103 @@ Scheduler::actOnJobs(int, Stream* s)
 		// Now that we know the events are logged and commited to
 		// the queue, we can do the final actions for these jobs,
 		// like killing shadows if needed...
+	for( i=0; i<num_matches; i++ ) {
+		enqueueActOnJobMyself( jobs[i], action, notify );
+	}
+	return TRUE;
+}
+
+class ActOnJobRec: public ServiceData {
+public:
+	ActOnJobRec(PROC_ID job_id, JobAction action, bool notify):
+		m_job_id(job_id.cluster,job_id.proc,-1), m_action(action), m_notify(notify) {}
+
+	CondorID m_job_id;
+	JobAction m_action;
+	bool m_notify;
+
+		/** These are not actually used, because we are
+		 *  using the all_dups option to SelfDrainingQueue. */
+	virtual int ServiceDataCompare( ServiceData const* other ) const;
+	virtual unsigned int HashFn( ) const;
+};
+
+int
+ActOnJobRec::ServiceDataCompare( ServiceData const* other ) const
+{
+	ActOnJobRec const *o = (ActOnJobRec const *)other;
+
+	if( m_notify < o->m_notify ) {
+		return -1;
+	}
+	else if( m_notify > o->m_notify ) {
+		return 1;
+	}
+	else if( m_action < o->m_action ) {
+		return -1;
+	}
+	else if( m_action > o->m_action ) {
+		return 1;
+	}
+	return m_job_id.ServiceDataCompare( &o->m_job_id );
+}
+
+unsigned int
+ActOnJobRec::HashFn( ) const
+{
+	return m_job_id.HashFn();
+}
+
+void
+Scheduler::enqueueActOnJobMyself( PROC_ID job_id, JobAction action, bool notify )
+{
+	ActOnJobRec *act_rec = new ActOnJobRec( job_id, action, notify );
+	bool stopping_job = false;
+
+	if( action == JA_HOLD_JOBS ||
+		action == JA_REMOVE_JOBS ||
+		action == JA_VACATE_JOBS ||
+		action == JA_VACATE_FAST_JOBS )
+	{
+		if( scheduler.FindSrecByProcID(job_id) ) {
+				// currently, only jobs with shadows are intended
+				// to be handled specially
+			stopping_job = true;
+		}
+	}
+
+	if( stopping_job ) {
+			// all of these actions are rate-limited via
+			// JOB_STOP_COUNT and JOB_STOP_DELAY
+		stop_job_queue.enqueue( act_rec );
+	}
+	else {
+			// these actions are not currently rate-limited, but it is
+			// still useful to handle them in a self draining queue, because
+			// this may help keep the schedd responsive to other things
+		act_on_job_myself_queue.enqueue( act_rec );
+	}
+}
+
+int
+Scheduler::actOnJobMyselfHandler( ServiceData* data )
+{
+	ActOnJobRec *act_rec = (ActOnJobRec *)data;
+
+	JobAction action = act_rec->m_action;
+	bool notify = act_rec->m_notify;
+	PROC_ID job_id;
+	job_id.cluster = act_rec->m_job_id._cluster;
+	job_id.proc = act_rec->m_job_id._proc;
+
+	delete act_rec;
+
 	switch( action ) {
 	case JA_HOLD_JOBS:
 	case JA_REMOVE_JOBS:
 	case JA_VACATE_JOBS:
-	case JA_VACATE_FAST_JOBS:
-		 for( i=0; i<num_matches; i++ ) {
- 			abort_job_myself( jobs[i], action, true, notify );		
+	case JA_VACATE_FAST_JOBS: {
+		abort_job_myself( job_id, action, true, notify );		
 #ifdef WIN32
 			/*	This is a small patch so when DAGMan jobs are removed
 				on Win32, jobs submitted by the DAGMan are removed as well.
@@ -4399,38 +4506,34 @@ Scheduler::actOnJobs(int, Stream* s)
 				was deemed to much code churning for a stable series, thus this
 				simpler but temporary patch.  -Todd 8/2006.
 			*/
-			int job_universe = CONDOR_UNIVERSE_MIN;
-			GetAttributeInt(jobs[i].cluster, jobs[i].proc, 
-								ATTR_JOB_UNIVERSE, &job_universe);
-			if ( job_universe == CONDOR_UNIVERSE_SCHEDULER ) {
-				MyString constraint;
-				constraint.sprintf( "%s == %d", ATTR_DAGMAN_JOB_ID,
-					jobs[i].cluster );
-				abortJobsByConstraint(constraint.Value(),
-					"removed because controlling DAGMan was removed",
-					true);
-			}
+		int job_universe = CONDOR_UNIVERSE_MIN;
+		GetAttributeInt(job_id.cluster, job_id.proc, 
+						ATTR_JOB_UNIVERSE, &job_universe);
+		if ( job_universe == CONDOR_UNIVERSE_SCHEDULER ) {
+			MyString constraint;
+			constraint.sprintf( "%s == %d", ATTR_DAGMAN_JOB_ID,
+								job_id.cluster );
+			abortJobsByConstraint(constraint.Value(),
+				"removed because controlling DAGMan was removed",
+				true);
+		}
 #endif
-		}
 		break;
-
-	case JA_RELEASE_JOBS:
-		for( i=0; i<num_matches; i++ ) {
-			WriteReleaseToUserLog( jobs[i] );		
-		}
+    }
+	case JA_RELEASE_JOBS: {
+		WriteReleaseToUserLog( job_id );
 		needReschedule();
 		break;
-
-	case JA_REMOVE_X_JOBS:
-		for( i=0; i<num_matches; i++ ) {		
-			if( !scheduler.WriteAbortToUserLog( jobs[i] ) ) {
-				dprintf( D_ALWAYS, 
-						 "Failed to write abort event to the user log\n" ); 
-			}
-			DestroyProc( jobs[i].cluster, jobs[i].proc );
+    }
+	case JA_REMOVE_X_JOBS: {
+		if( !scheduler.WriteAbortToUserLog( job_id ) ) {
+			dprintf( D_ALWAYS, 
+					 "Failed to write abort event to the user log\n" ); 
 		}
+		DestroyProc( job_id.cluster, job_id.proc );
 		break;
-
+    }
+	case JA_ERROR:
 	default:
 		EXCEPT( "impossible: unknown action (%d) at the end of actOnJobs()",
 				(int)action );
@@ -4629,7 +4732,7 @@ Scheduler::negotiate(int command, Stream* s)
 
 	if (FlockNegotiators) {
 		// first, check if this is our local negotiator
-		struct in_addr endpoint_addr = (sock->endpoint())->sin_addr;
+		struct in_addr endpoint_addr = (sock->peer_addr())->sin_addr;
 		struct hostent *hent;
 		bool match = false;
 		Daemon negotiator (DT_NEGOTIATOR);
@@ -4674,7 +4777,7 @@ Scheduler::negotiate(int command, Stream* s)
 		}
 		if (!match) {
 			dprintf(D_ALWAYS, "Unknown negotiator (%s).  "
-					"Aborting negotiation.\n", sin_to_string(sock->endpoint()));
+					"Aborting negotiation.\n", sock->peer_ip_str());
 			return (!(KEEP_STREAM));
 		}
 	}
@@ -5334,7 +5437,7 @@ Scheduler::release_claim(int, Stream *sock)
 	match_rec *mrec;
 
 	dprintf( D_ALWAYS, "Got RELEASE_CLAIM from %s\n", 
-			 sin_to_string(((Sock*)sock)->endpoint()) );
+			 sock->peer_description() );
 
 	if (!sock->get_secret(claim_id)) {
 		dprintf (D_ALWAYS, "Failed to get ClaimId\n");
@@ -6082,12 +6185,6 @@ Scheduler::StartJob(match_rec *rec)
 		return;
 	}
 
-#ifdef WANT_NETMAN
-	if (ManageBandwidth && ReactivatingMatch) {
-		RequestBandwidth(id.cluster, id.proc, rec);
-	}
-#endif
-
 	if(!(rec->shadowRec = StartJob(rec, &id))) {
                 
 			// Start job failed. Throw away the match. The reason being that we
@@ -6137,81 +6234,6 @@ Scheduler::StartJob(match_rec *rec)
 	rec->setStatus( M_ACTIVE );
 }
 
-
-#ifdef WANT_NETMAN
-void
-Scheduler::RequestBandwidth(int cluster, int proc, match_rec *rec)
-{
-	ClassAd request;
-	char source[100], dest[100], user[200], *str;
-	int executablesize = 0, universe = CONDOR_UNIVERSE_VANILLA, slot=1;
-
-	GetAttributeString( cluster, proc, ATTR_USER, user );	// TODDCORE 
-	request.Assign( ATTR_USER, user );
-	request.Assign(ATTR_FORCE, 1);
-	strcpy(dest, rec->peer+1);
-	str = strchr(dest, ':');
-	*str = '\0';
-	request.Assign(ATTR_DESTINATION, dest);
-	GetAttributeInt(cluster, proc, ATTR_EXECUTABLE_SIZE, &executablesize);
-	request.Assign(ATTR_REMOTE_HOST, rec->peer);
-	if (rec->my_match_ad) {
-		if (param_boolean("ALLOW_VM_CRUFT", true)) {
-			if (!rec->my_match_ad->LookupInteger(ATTR_SLOT_ID, slot)) {
-				rec->my_match_ad->LookupInteger(ATTR_VIRTUAL_MACHINE_ID, slot);
-			}
-		} else {
-			rec->my_match_ad->LookupInteger(ATTR_SLOT_ID, slot);
-		}
-	}
-	request.Assign(ATTR_SLOT_ID, slot);
-    
-    SafeSock sock;
-	sock.timeout(NEGOTIATOR_CONTACT_TIMEOUT);
-	Daemon negotiator (DT_NEGOTIATOR);
-	if (!sock.connect(negotiator.addr())) {
-		dprintf(D_FAILURE|D_ALWAYS, "Couldn't connect to negotiator!\n");
-		return;
-	}
-
-	negotiator.startCommand(REQUEST_NETWORK, &sock);
-
-	GetAttributeInt(cluster, proc, ATTR_JOB_UNIVERSE, &universe);
-	float cputime = 1.0;
-	GetAttributeFloat(cluster, proc, ATTR_JOB_REMOTE_USER_CPU, &cputime);
-	if (universe == CONDOR_UNIVERSE_STANDARD && cputime > 0.0) {
-		int ckptsize;
-		GetAttributeInt(cluster, proc, ATTR_IMAGE_SIZE, &ckptsize);
-		ckptsize -= executablesize;	// imagesize = ckptsize + executablesize
-		request.Assign(ATTR_REQUESTED_CAPACITY, (float)ckptsize*1024.0);
-		if ((GetAttributeString(cluster, proc,
-                                ATTR_LAST_CKPT_SERVER, source)) == 0) {
-			struct hostent *hp = condor_gethostbyname(source);
-			if (!hp) {
-				dprintf(D_FAILURE|D_ALWAYS, "DNS lookup for %s %s failed!\n",
-						ATTR_LAST_CKPT_SERVER, source);
-				return;
-			}
-			request.Assign(ATTR_SOURCE,
-						   inet_ntoa(*((struct in_addr *)hp->h_addr)));
-		} else {
-			request.Assign(ATTR_SOURCE,
-						   inet_ntoa(*(my_sin_addr())));
-		}
-		request.Assign(ATTR_TRANSFER_TYPE, "CheckpointRestart");
-		sock.put(2);
-		request.put(sock);
-	} else {
-		sock.put(1);
-	}
-
-	request.Assign(ATTR_TRANSFER_TYPE, "InitialCheckpoint");
-	request.Assign(ATTR_REQUESTED_CAPACITY, (float)executablesize*1024.0);
-	request.Assign(ATTR_SOURCE, inet_ntoa(*(my_sin_addr())));
-	request.put(sock);
-	sock.end_of_message();
-}
-#endif
 
 void
 Scheduler::StartLocalJobs()
@@ -8457,7 +8479,7 @@ void
 _mark_job_running(PROC_ID* job_id)
 {
 	int status;
-	int orig_max;
+	int orig_max = 1; // If it was not set this is the same default
 
 	GetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_STATUS, &status);
 	GetAttributeInt(job_id->cluster, job_id->proc, ATTR_MAX_HOSTS, &orig_max);
@@ -10471,6 +10493,11 @@ Scheduler::Init()
 	int int_val = param_integer( "JOB_IS_FINISHED_INTERVAL", 0, 0 );
 	job_is_finished_queue.setPeriod( int_val );	
 
+	JobStopDelay = param_integer( "JOB_STOP_DELAY", 0, 0 );
+	stop_job_queue.setPeriod( JobStopDelay );
+
+	JobStopCount = param_integer( "JOB_STOP_COUNT", 1, 1 );
+	stop_job_queue.setCountPerInterval( JobStopCount );
 
 		////////////////////////////////////////////////////////////////////
 		// Initialize the queue managment code
@@ -10822,7 +10849,7 @@ Scheduler::attempt_shutdown()
 {
 	if ( numShadows ) {
 		if( !daemonCore->GetPeacefulShutdown() ) {
-			preempt( 1 );
+			preempt( JobStopCount );
 		}
 		return;
 	}
@@ -10859,7 +10886,7 @@ Scheduler::shutdown_graceful()
  	 */
 	MaxJobsRunning = 0;
 	ExitWhenDone = TRUE;
-	daemonCore->Register_Timer( 0, MAX(JobStartDelay,1), 
+	daemonCore->Register_Timer( 0, MAX(JobStopDelay,1), 
 					(TimerHandlercpp)&Scheduler::attempt_shutdown,
 					"attempt_shutdown()", this );
 
@@ -11069,6 +11096,10 @@ Scheduler::sendReschedule()
 	Stream::stream_type st = negotiator->hasUDPCommandPort() ? Stream::safe_sock : Stream::reli_sock;
 	msg->setStreamType(st);
 	msg->setTimeout(NEGOTIATOR_CONTACT_TIMEOUT);
+
+	// since we may be sending reschedule periodically, make sure they do
+	// not pile up
+	msg->setDeadlineTimeout( 300 );
 
 	negotiator->sendMsg( msg.get() );
 
@@ -11417,6 +11448,9 @@ sendAlive( match_rec* mrec )
 
 	msg->setSuccessDebugLevel(D_PROTOCOL);
 	msg->setTimeout( STARTD_CONTACT_TIMEOUT );
+	// since we send these messages periodically, we do not want
+	// any single attempt to hang around forever and potentially pile up
+	msg->setDeadlineTimeout( 300 );
 	Stream::stream_type st = startd->hasUDPCommandPort() ? Stream::safe_sock : Stream::reli_sock;
 	msg->setStreamType( st );
 	msg->setSecSessionId( mrec->secSessionId() );

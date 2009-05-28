@@ -193,6 +193,7 @@ public:
 #endif /* HAVE_BACKFILL */
 
 #if HAVE_JOB_HOOKS
+	bool	isCurrentlyFetching( void ) { return m_currently_fetching; }
 	bool	tryFetchWork( void );
 	void	createOrUpdateFetchClaim( ClassAd* job_ad, float rank = 0 );
 	bool	spawnFetchedWork( void );

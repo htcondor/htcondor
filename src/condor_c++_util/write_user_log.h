@@ -70,11 +70,11 @@ class ReadUserLogHeader;
       ULogEvent object.
     </UL>
 */
-class UserLog
+class WriteUserLog
 {
   public:
     ///
-    UserLog( void );
+    WriteUserLog( void );
     
     /** Constructor
         @param owner Username of the person whose job is being logged
@@ -85,14 +85,14 @@ class UserLog
 		@param xml  make this true to write XML logs, false to use the old form
 		@param gjid global job ID
     */
-    UserLog(const char *owner, const char *domain, const char *file,
-			int clu, int proc, int subp, bool xml = XML_USERLOG_DEFAULT,
-			const char *gjid = NULL);
+    WriteUserLog(const char *owner, const char *domain, const char *file,
+				 int clu, int proc, int subp, bool xml = XML_USERLOG_DEFAULT,
+				 const char *gjid = NULL);
     
-    UserLog(const char *owner, const char *file,
-			int clu, int proc, int subp, bool xml = XML_USERLOG_DEFAULT);
+    WriteUserLog(const char *owner, const char *file,
+				 int clu, int proc, int subp, bool xml = XML_USERLOG_DEFAULT);
     ///
-    virtual ~UserLog();
+    virtual ~WriteUserLog();
     
     /** Initialize the log file, if not done by constructor.
         @param file the path name of the log file to be written (copied)
@@ -138,23 +138,35 @@ class UserLog
     bool initialize(int c, int p, int s, const char *gjid);
 
 	/** Read in the configuration parameters
+		@param force Force a reconfigure; otherwise Configure() will
+		  do nothing if the object is already configured
 		@return true on success
 	*/
-	bool Configure( void );
+	bool Configure( bool force = true );
 
 	void setUseXML(bool new_use_xml){ m_use_xml = new_use_xml; }
 
 	void setWriteUserLog(bool b){ m_userlog_enable = b; }
 	void setWriteGlobalLog(bool b){ m_global_enable = b; }
 
+	/** Verify that the event log is initialized
+		@return true on success
+	 */
+	bool isInitialized( void ) const {
+		return ( (m_fp != NULL) || (m_global_fp != NULL) );
+	};
+
     /** Write an event to the log file.  Caution: if the log file is
         not initialized, then no event will be written, and this function
         will return a successful value.
 
         @param event the event to be written
+		@param related job ad
+		@param was the event actually written (see above caution).
         @return false for failure, true for success
     */
-    bool writeEvent (ULogEvent *event, ClassAd *jobad = NULL);
+    bool writeEvent (ULogEvent *event, ClassAd *jobad = NULL,
+					 bool *written = NULL );
 
     /** Write an event to the global log file.  Caution: if the log file is
         not initialized, then no event will be written, and this function
@@ -218,6 +230,10 @@ class UserLog
 
 	///
     void Reset( void );
+    bool internalInitialize(int c, int p, int s, const char *gjid);
+	void FreeAllResources( void );
+	void FreeGlobalResources( void );
+	void FreeLocalResources( void );
 
 	// Write header event to global file
 	bool writeHeaderEvent ( const UserLogHeader &header );
@@ -274,7 +290,7 @@ class UserLog
 
     /** Copy of path to rotation lock*/  char     * m_rotation_lock_path;
     /** FD of the rotation lock      */  int        m_rotation_lock_fd;
-    /** The global log file lock     */  FileLock * m_rotation_lock;
+    /** The global log file lock     */  FileLockBase *m_rotation_lock;
 
 	/** Whether we use XML or not    */  bool       m_use_xml;
 
@@ -283,8 +299,12 @@ class UserLog
 	/** PrivSep: the user's GID      */  gid_t      m_privsep_gid;
 #endif
 	/** The GlobalJobID for this job */  char     * m_gjid;
+
+	/** Previously configured?       */  bool       m_configured;
 };
 
+// For backward compatibility, define UserLog
+typedef WriteUserLog UserLog;
 
 #endif /* __cplusplus */
 
