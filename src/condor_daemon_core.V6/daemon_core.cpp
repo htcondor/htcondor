@@ -88,6 +88,7 @@ static const int DC_PIPE_BUF_SIZE = 65536;
 #ifdef WIN32
 #include "exphnd.WIN32.h"
 #include "process_control.WINDOWS.h"
+#include "access_desktop.WINDOWS.h"
 #include "condor_fix_assert.h"
 typedef unsigned (__stdcall *CRT_THREAD_HANDLER) (void *);
 CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
@@ -6768,7 +6769,6 @@ int DaemonCore::Create_Process(
 		if (use_visible && (*use_visible=='T' || *use_visible=='t') ) {
 				// user wants visible desktop.
 				// place the user_token into the proper access control lists.
-			int GrantDesktopAccess(HANDLE hToken);	// prototype
 			if ( GrantDesktopAccess(user_token) == 0 ) {
 					// Success!!  The user now has permission to use
 					// the visible desktop, so change si.lpDesktop
