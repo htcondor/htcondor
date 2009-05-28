@@ -52,51 +52,51 @@ public:
       Const'rs
     */
 
-    HADStateMachine();
+    HADStateMachine(void);
 
     /*
       Destructor
     */
-    virtual ~HADStateMachine();
+    virtual ~HADStateMachine(void);
 
-    virtual void initialize();
+    virtual void initialize(void);
 
-    virtual int reinitialize();
+    virtual int reinitialize(void);
 	
-	bool isHardConfigurationNeeded();
-	int softReconfigure();
+	bool isHardConfigurationNeeded(void);
+	int softReconfigure(void);
 
 protected:
     /*
       step() - called each m_hadInterval, implements one state of the
       state machine.
     */
-    void  step();
+    void  step(void);
     
     /*
       cycle() - called MESSAGES_PER_INTERVAL_FACTOR times per m_hadInterval
     */
-    void  cycle();
+    void  cycle(void);
 
 
     /*
       sendCommandToOthers(int command) - send "ALIVE command" or
       "SEND ID command" to all HADs from HAD list.
     */
-    int sendCommandToOthers( int );
+    bool sendCommandToOthers( int );
 
     /*
       send "ALIVE command" or "SEND ID command" to all HADs from HAD list
       acconding to state
     */
-    int sendMessages();
+    bool sendMessages(void);
     
     /*
-      sendNegotiatorCmdToMaster(int) - snd "NEGOTIATOR ON" or "NEGOTIATOR OFF"
+      sendControlCmdToMaster(int) - snd "<subsys> ON" or "<subsys> OFF"
       to master.
       return TRUE in case of success or FALSE otherwise
     */
-    int sendNegotiatorCmdToMaster( int );
+    bool sendControlCmdToMaster( int );
 
     /*
       pushReceivedAlive(int id) - push to buffer id of HAD that
@@ -110,7 +110,7 @@ protected:
     */
     int pushReceivedId( int );
 
-    void commandHandler(int cmd,Stream *strm) ;
+    int commandHandlerHad(int cmd,Stream *strm) ;
 
     int m_state;   
     int m_stateMachineTimerID;
@@ -125,57 +125,65 @@ protected:
     int m_selfId;
     bool m_isPrimary;
     bool m_usePrimary;
-    StringList* m_otherHADIPs;
+    StringList m_otherHadIps;
+	StringList m_allHadIps;
     Daemon* m_masterDaemon;
+	char *m_controlleeName;
 
     List<int> receivedAliveList;
     List<int> receivedIdList;
 
-    static bool initializeHADList(char* , bool , StringList*, int* );
-    int  checkList(List<int>*);
+    static bool getHadList(const char* s,
+						   bool use_primary,
+						   StringList &other,
+						   StringList &all,
+						   int &selfId );
+    bool  checkList(List<int>*);
     static void removeAllFromList(List<int>*);
-    void clearBuffers();
+    void clearBuffers(void);
     void printStep(char *curState,char *nextState);
     //char* commandToString(int command);
 
-    void finalize();
-    void init();
+    void init(void);
+    void freeResources(void);
     
     /*
-        convertToSinfull(char* addr)
+        convertToSinful(char* addr)
         addr - address in one of the formats :
             <IP:port>,IP:port,<name:port>,name:port
         return address in the format <IP:port>
     */
-    //char* convertToSinfull(char* addr);
-    void printParamsInformation();
+    //char* convertToSinful(char* addr);
+    void printParamsInformation(void);
 
     //int myatoi(const char* str, bool* res);
 
     // debug information
     bool m_standAloneMode;
     static void my_debug_print_list(StringList* str);
-    void my_debug_print_buffers();
+    void my_debug_print_buffers(void);
 
 	// usage of replication, controlled by configuration parameter 
 	// USE_REPLICATION
 	bool m_useReplication;
 
-	int sendReplicationCommand( int );
-	void setReplicationDaemonSinfulString( );
+	bool sendReplicationCommand( int );
+	void setReplicationDaemonSinfulString( void );
 
-	char* replicationDaemonSinfulString;
-// classad-specific data members and functions
-    void initializeClassAd();
+	char* m_replicationDaemonSinfulString;
+	// classad-specific data members and functions
+    void initializeClassAd(void);
     // timer handler
-    void updateCollectors();
+    void updateCollectors(void);
     // updates collectors upon changing from/to leader state
     void updateCollectorsClassAd( const MyString& isHadActive );
 
-    ClassAd*       m_classAd;
+	MyString    m_name;
+	ClassAd		m_classAd;
+
     // info about our central manager
-    int            m_updateCollectorTimerId;
-    int            m_updateCollectorInterval;
+    int         m_updateCollectorTimerId;
+    int         m_updateCollectorInterval;
 };
 
 #endif // !HAD_StateMachine_H__

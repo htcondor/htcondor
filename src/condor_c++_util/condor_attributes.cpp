@@ -727,9 +727,10 @@ const char *ATTR_IS_VALID_CHECKPOINT_PLATFORM  = "IsValidCheckpointPlatform";
 
 const char *ATTR_WITHIN_RESOURCE_LIMITS  = "WithinResourceLimits";
 
-const char *ATTR_HAD_IS_ACTIVE = "HadIsActive";
-const char *ATTR_HAD_LIST      = "HadList";
-const char *ATTR_HAD_INDEX     = "HadIndex";
+const char *ATTR_HAD_IS_ACTIVE			= "HadIsActive";
+const char *ATTR_HAD_LIST   			= "HadList";
+const char *ATTR_HAD_INDEX   			= "HadIndex";
+const char *ATTR_HAD_CONTROLLEE_NAME    = "HadControlleeName";
 const char *ATTR_TERMINATION_PENDING	= "TerminationPending";
 const char *ATTR_TERMINATION_EXITREASON	= "TerminationExitReason";
 
