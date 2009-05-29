@@ -277,6 +277,7 @@ extern const char * ATTR_JOB_START;
 extern const char * ATTR_JOB_START_DATE;
 extern const char * ATTR_JOB_STATE;
 extern const char * ATTR_JOB_STATUS;
+extern const char * ATTR_LAST_JOB_STATUS;
 extern const char * ATTR_JOB_STATUS_ON_RELEASE;
 extern const char * ATTR_JOB_UNIVERSE;
 extern const char * ATTR_JOB_GRID_TYPE;

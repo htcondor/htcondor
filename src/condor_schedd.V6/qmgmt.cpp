@@ -1948,6 +1948,14 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 				stricmp( attr_name, ATTR_CRON_DAYS_OF_WEEK ) == 0 ) {
 		scheduler.addCronTabClusterId( cluster_id );				
 	}
+	else if ( stricmp( attr_name, ATTR_JOB_STATUS ) == 0 ) {
+			// If the status is being set, let's record the previous
+			// status. If there is no status we'll default to
+			// UNEXPANDED.
+		int status = UNEXPANDED;
+		GetAttributeInt( cluster_id, proc_id, ATTR_JOB_STATUS, &status );
+		SetAttributeInt( cluster_id, proc_id, ATTR_LAST_JOB_STATUS, status );
+	}
 
 	// If any of the attrs used to create the signature are
 	// changed, then delete the ATTR_AUTO_CLUSTER_ID, since
