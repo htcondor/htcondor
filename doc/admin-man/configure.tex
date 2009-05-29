@@ -5096,6 +5096,15 @@ These macros control the \Condor{schedd}.
   60 seconds.  A value of 0 prevents the \Condor{schedd} from
   performing the periodic evaluations.
 
+\label{param:MaxPeriodicExprInterval}
+\item[\Macro{MAX\_PERIODIC\_EXPR\_INTERVAL}]
+  This macro determines the maximum period,
+  in seconds, between evaluation of periodic job control expressions,
+  such as periodic\_hold, periodic\_release, and periodic\_remove,
+  given by the user in a Condor submit file. By default, this value is
+  1200 seconds.  If Condor is behind on processing events, the actual
+  period between evaluations may be higher than specified.
+
 \label{param:PeriodicExprTimeslice}
 \item[\Macro{PERIODIC\_EXPR\_TIMESLICE}]
   This macro is used to adapt the
@@ -5107,7 +5116,9 @@ These macros control the \Condor{schedd}.
   is 0.01, so the \Condor{schedd} will set the interval between
   evaluations so that it spends only 1\% of its time in this activity.
   The lower bound for the interval is configured by
-  \Macro{PERIODIC\_EXPR\_INTERVAL} (default 60 seconds).
+  \Macro{PERIODIC\_EXPR\_INTERVAL} (default 60 seconds) and the
+  upper bound is configured with \Macro{MAX\_PERIODIC\_EXPR\_INTERVAL}
+  (default 1200 seconds).
 
 \label{param:SystemPeriodicHold}
 \item[\Macro{SYSTEM\_PERIODIC\_HOLD}]

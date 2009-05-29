@@ -42,7 +42,10 @@ and \Condor{startd}.
 
 \begin{itemize}
 
-\item None.
+\item Added \Macro{MAX\_PERIODIC\_EXPR\_INTERVAL}.  The default is 1200
+seconds.  This is to prevent the time between evaluation of periodic
+expressions from becoming extremely large (e.g. many hours) due to the
+adaptive timing implied by \MacroNI{PERIODIC\_EXPR\_TIMESLICE}.
 
 \end{itemize}
 
