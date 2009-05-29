@@ -10409,6 +10409,8 @@ Scheduler::Init()
 
 	PeriodicExprInterval.setMinInterval( param_integer("PERIODIC_EXPR_INTERVAL", 60) );
 
+	PeriodicExprInterval.setMaxInterval( param_integer("MAX_PERIODIC_EXPR_INTERVAL", 1200) );
+
 	PeriodicExprInterval.setTimeslice( param_double("PERIODIC_EXPR_TIMESLICE", 0.01,0,1) );
 
 	if ( first_time_in_init ) {	  // cannot be changed on the fly
