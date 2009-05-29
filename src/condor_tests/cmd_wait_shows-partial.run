@@ -35,12 +35,9 @@ CondorTest::debug("current directory is $curcwd\n",$debuglevel);
 
 my $socketname = "cmd_wait";
 my $resultfile = $curcwd . "/" . $pid . "/results";
-<<<<<<< HEAD:src/condor_tests/cmd_wait_shows-partial.run
 my $outputfile = $curcwd . "/" . $pid . "/condor_wait.out";
 CondorTest::debug("condor_wait output is in $outputfile\n",$debuglevel);
 
-=======
->>>>>>> V7_3-testcruft-branch:src/condor_tests/cmd_wait_shows-partial.run
 my $flowlog = $curcwd . "/" . $pid . "/cmd_wait_shows-partial.log";
 my $writelog = "./x_write_joblog_events.exe";
 
@@ -63,12 +60,8 @@ system("$writelog $flowlog submit 4");
 print "Drop 4 submits into the log\n";
 
 # Start condor_wait
-<<<<<<< HEAD:src/condor_tests/cmd_wait_shows-partial.run
 my $spawncmd = "_CONDOR_TOOL_DEBUG=D_FULLDEBUG condor_wait -debug -num 2 $flowlog >$outputfile 2>&1";
 #my $spawncmd = "condor_wait -num 2 $flowlog";
-=======
-my $spawncmd = "condor_wait -num 2 $flowlog";
->>>>>>> V7_3-testcruft-branch:src/condor_tests/cmd_wait_shows-partial.run
 CondorTest::spawn_cmd($spawncmd, $resultfile);
 print "Have condor_wait wait for 2\n";
 
