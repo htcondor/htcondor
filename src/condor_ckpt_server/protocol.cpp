@@ -996,14 +996,28 @@ int send_restore_reply_pkt(restore_reply_pkt *rstrp, FDContext *fdc)
 	{
 		case FDC_32:
 			file_size_32 = rstrp->file_size;
+			
+			/* If there is the possibility of a type narrowing, then check
+				to see if bits were actually lost. */
+			if ((sizeof(file_size_32) < sizeof(rstrp->file_size)) &&
+				(uint64_t)file_size_32 != (uint64_t)rstrp->file_size)
+			{
+				Server::Log("restore_reply_pkt type narrowed from 64 to 32 "
+					"bits with known loss of data and the ckpt restore will "
+					"likely fail.");
+				return NET_WRITE_FAIL;
+			}
+
 			file_size_32 = 
 				host_uint32_t_order_to_network_uint32_t_order(file_size_32);
 			break;
+
 		case FDC_64:
 			file_size_64 = rstrp->file_size;
 			file_size_64 = 
 				host_uint64_t_order_to_network_uint64_t_order(file_size_64);
 			break;
+
 		default:
 			Server::Log("restore_reply_pkt type conversion error!");
 			return NET_WRITE_FAIL;
