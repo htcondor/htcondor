@@ -120,6 +120,8 @@ int recv_service_req_pkt(service_req_pkt *srq, FDContext *fdc)
 		called, since it figures it out! */
 	ASSERT(fdc->type == FDC_UNKNOWN);
 
+	memset(netpkt, 0, SREQ_PKTSIZE_MAX);
+
 	/* Read the *smallest* of the two possible structure
 		widths, this will ensure we don't deadlock reading more
 		bytes that will never come.
@@ -361,6 +363,8 @@ int send_service_reply_pkt(service_reply_pkt *srp, FDContext *fdc)
 
 	ASSERT(fdc->type != FDC_UNKNOWN);
 
+	memset(netpkt, 0, SREP_PKTSIZE_MAX);
+
 	/* get the right sized quantities I need depending upon what the client
 		needs.  Ensure to convert it to network byte order here too.
 	*/
@@ -394,7 +398,9 @@ int send_service_reply_pkt(service_reply_pkt *srp, FDContext *fdc)
 			break;
 	}
 
-	strcpy(capacity_free_ACD, srp->capacity_free_ACD);
+	memmove(capacity_free_ACD,
+			srp->capacity_free_ACD,
+			MAX_ASCII_CODED_DECIMAL_LENGTH);
 	
 	/* Assemble the packet according to what type of connection it is. 
 		Then send it. */
@@ -454,6 +460,8 @@ int recv_store_req_pkt(store_req_pkt *strq, FDContext *fdc)
 	/* We better not know what the client bit width is when this function is
 		called, since it figures it out! */
 	ASSERT(fdc->type == FDC_UNKNOWN);
+
+	memset(netpkt, 0, STREQ_PKTSIZE_MAX);
 
 	/* Read the *smallest* of the two possible structure
 		widths, this will ensure we don't deadlock reading more
@@ -672,6 +680,8 @@ int send_store_reply_pkt(store_reply_pkt *strp, FDContext *fdc)
 
 	ASSERT(fdc->type != FDC_UNKNOWN);
 
+	memset(netpkt, 0, STREP_PKTSIZE_MAX);
+
 	/* get the right sized quantities I need depending upon what the client
 		needs.  Ensure to convert it to network byte order here too.
 	*/
@@ -736,6 +746,8 @@ int recv_restore_req_pkt(restore_req_pkt *rstrq, FDContext *fdc)
 	/* We better not know what the client bit width is when this function is
 		called, since it figures it out! */
 	ASSERT(fdc->type == FDC_UNKNOWN);
+
+	memset(netpkt, 0, RSTREQ_PKTSIZE_MAX);
 
 	/* Read the *smallest* of the two possible structure
 		widths, this will ensure we don't deadlock reading more
@@ -981,6 +993,8 @@ int send_restore_reply_pkt(restore_reply_pkt *rstrp, FDContext *fdc)
 	int					ret = -1;
 
 	ASSERT(fdc->type != FDC_UNKNOWN);
+
+	memset(netpkt, 0, RSTREP_PKTSIZE_MAX);
 
 	/* get the right sized quantities I need depending upon what the client
 		needs.  Ensure to convert it to network byte order here too.
