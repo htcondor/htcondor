@@ -64,7 +64,7 @@ if($outsource eq "") {
 	exit(1);
 }
 
-( my $locconfig, my $scheddoneconfig) = split(':',$outsource);
+( my $locconfig, my $scheddoneconfig) = split('&',$outsource);
 CondorTest::debug("Two pools are $locconfig and $scheddoneconfig\n",$debuglevel);
 
 my $cmdstatus;
@@ -105,6 +105,8 @@ if($bail == 0) {
     	{
 			print "bad\n";
         	CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",$debuglevel);
+			CondorTest::KillPersonal($locconfig);
+			CondorTest::KillPersonal($scheddoneconfig);
         	exit(1)
     	}
 	

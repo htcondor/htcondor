@@ -223,7 +223,7 @@ sub SetUp
         sleep($count * 5);
     }
 
-	my $configreturn = $locconfig . ":" . $scheddoneconfig;
+	my $configreturn = $locconfig . "&" . $scheddoneconfig;
 
 	if($done != 1) {
 		return("");
