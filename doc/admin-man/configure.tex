@@ -2692,9 +2692,9 @@ These macros control the \Condor{master}.
   watchful eyes on.  The list is a comma or space separated list of
   subsystem names (listed in
   section~\ref{sec:Condor-Subsystem-Names}).  For example,
-  \begin{verbatim}
-    DAEMON_LIST = MASTER, STARTD, SCHEDD
-  \end{verbatim}
+\begin{verbatim}
+  DAEMON_LIST = MASTER, STARTD, SCHEDD
+\end{verbatim}
 
   \Note This configuration variable cannot be changed 
   by using \Condor{reconfig} or 
@@ -2710,20 +2710,21 @@ These macros control the \Condor{master}.
   
 \label{param:DCDaemonList}
 \item[\Macro{DC\_DAEMON\_LIST}]
-  This macro
+  A list delimited by commas and/or spaces that
   lists the daemons in \MacroNI{DAEMON\_LIST} which use the Condor
   DaemonCore library.  The \Condor{master} must differentiate between
-  daemons that use DaemonCore and those that don't so it uses the
-  appropriate inter-process communication mechanisms.  This list
-  currently includes all Condor daemons except the checkpoint server
+  daemons that use DaemonCore and those that do not,
+  so it uses the appropriate inter-process communication mechanisms.
+  This list currently includes all Condor daemons except the checkpoint server
   by default.
 
-  As of 7.2.1, you can append to the default DC\_DAEMON\_LIST list by
-  specifying a ``+'' as the first character in the DC\_DAEMON\_LIST
-  definition.  For example:
+  As of Condor version 7.2.1, a daemon may be appended to the default
+  \MacroNI{DC\_DAEMON\_LIST} value by placing the plus character
+  (\verb@+@) before the first entry in the \MacroNI{DC\_DAEMON\_LIST} 
+  definition.
+  For example:
 \begin{verbatim}
-DAEMON_LIST	= NEW_DAEMON
-DC_DAEMON_LIST	= +NEW_DAEMON
+  DC_DAEMON_LIST = +NEW_DAEMON
 \end{verbatim}
 
 \label{param:SUBSYS}
