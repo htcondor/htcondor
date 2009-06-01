@@ -3,6 +3,96 @@
 
 /* This code is part of a heinous backwards compatibity hack. */
 
+/* The reason for this hack is thus:
+
+	It came to pass that the "typedef unsigned long u_lint;"
+	in typedefs.h began to have a different size between x86 and
+	x86_64 machines. The original architecture of the checkpoint
+	server was such that the packets being sent from the clients
+	to the servers were in memory structures written in a raw form
+	straight to the socket (incuding all of the compiler padding
+	bytes and whatnot). These packets had typedefed quantities like
+	u_lint in them which caused size mismatches on the server side of
+	the client (in this case the schedd (to remove the checkpoints)
+	and the shadow (to schedule,store,restore them) was compiled 32
+	bits or 64 bits.
+
+	To continue, in flocking situations where the starter chooses
+	the checkpoint server, the flockers may be of arbitrary 32/64
+	bit width and so the set opposite the bit width of the ckpt
+	server at the execution site would fail.
+
+	Fixing the code with the obvious answer (which could have been
+	done by altering the typedefs to be known sized values for all
+	architectures, like uint64_t) would have fixed the code forever
+	forward, but not helped flockers and federations of pools since
+	it would have required all *flockers* to upgrade comming into the
+	various federated pools). Since the presenting customers wanting
+	the checkpoint server to handle both 32 and 64 bit clients are
+	exactly in this flocked/federated position, we must implement
+	backwards compatibility.
+
+	I had to "fix" three network protocols (SERVICE, STORE, RESTORE),
+	each one on a different well-known socket. The fourth protocol
+	REPLICATE is vestigal junk and should be removed--I did not
+	fix that protocol, and actively broke it, in fact, since it
+	is just yet another security problem waiting to happen. Each
+	protocol had two packets types which could be sent upon the wire,
+	a request packet, and a reply packet. The protcol at the time of
+	the writing of this comment was the client sent one request packet
+	(for the appropriate protocol on the appropriate socket), and the
+	server responded with one appriopriate reply packet to the client and
+	closed the connection.
+
+	The method I chose for fixing was the explicit offset method
+	since it is the most clear and manipulable if we have to touch
+	it again. I read the smaller of the two possible packet sizes
+	into a char buffer, determine if it is a 32 or 64 bit packet and
+	read the rest if 64, then unpack the information from the packet
+	(which was encoded in network byte order), put it into a real
+	structure for the higher level layer. The connection to the
+	client is abstracted via an FDContext structure which knows if
+	the client is 32/64 bit and later when I send the reply packet
+	it allows the sending functions to pack the results properly.
+
+	The packing/unpacking method reads and writes the fields necessary
+	from the binary blob using unaligned pointer reads/writes at
+	the specified offsets. I learned the sizes of the structures and
+	offsets of all fields by writing a piece of code which presented
+	them to me.
+
+	I didn't chose the overlay method of solving (which was defining
+	a known structure size and using a type cast on the binary blob)
+	because I looked around at gcc, and apparently some structure
+	padding changed recently, so I didn't want to mess with that
+	since it'd be almost impossible to make work if it broke.
+
+	If I were to continue this hack, I would go into
+	server_interface.cpp and manually pack a binary blob sent to
+	the server instead of writing the raw structure. This would
+	completely divorce the types in typedefs2.h from what is sent
+	on the wire and the packets just become bits with an specific
+	ordering and padding layout not related to what the compiler
+	deemed necessary. At this point, the network protocol could be
+	fixated to the 64 bit model and the request/reply *_pkt types
+	could all be easily updated/changed.
+
+	As this hack stands, the send_* / recv_* functions abstract
+	the network protocol so it is *MUCH* easier at the higher level
+	layer to talk to the client. Before this hack went in, it was
+	just a bloody mess of explicit writes of in-place modified
+	structures. At least now there is a semblance of maintainability.
+
+	If someone were to ever stop this backwards compatibility,
+	then keep the send_* / recv_* API, the FDContext, but dump the
+	implementation of them and do something sane. Also, redo the
+	server_interface.cpp codes.
+
+	06/01/2009
+	-pete
+*/
+
+/* The allowable types in a FDContext for the client fd. */
 enum {
 	FDC_UNKNOWN,
 	FDC_32, /* A 32 bit client */
@@ -233,6 +323,9 @@ enum {
 	
 };
 
+/* Instead of passing around an fd to the client, we set this up and
+	pass this around instead. It makes it easier to determine what to do
+	given the type of client to which we are talking. */
 typedef struct FDContext_s
 {
 	int fd;				/* the fd associated with this connection. */
@@ -241,13 +334,13 @@ typedef struct FDContext_s
 	int req_ID;			/* The reqid associated with this connection */
 } FDContext;
 
+/* When we try to convert a packet, this is what is can return. */
 enum {
 	/* The protocol packet conversion went ok */
 	PC_OK,
 	/* The protocol packet conversion did not go ok! */
 	PC_NOT_OK
 };
-
 
 enum read_result_t
 {
@@ -301,6 +394,8 @@ void pack_in_addr(char *pkt, size_t off, struct in_addr inaddr);
 void pack_char_array(char *pkt, size_t off, char *str, size_t len);
 
 /* endian garbage */
+/* The 64 bit ones are notable since they don't exactly work the way
+	one would think. Please see their comments. */
 uint16_t network_uint16_t_order_to_host_uint16_t_order(uint16_t val);
 uint32_t network_uint32_t_order_to_host_uint32_t_order(uint32_t val);
 uint64_t network_uint64_t_order_to_host_uint64_t_order(uint64_t val);

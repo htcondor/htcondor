@@ -486,13 +486,10 @@ void Server::HandleRequest(int req_sd,
 {
 	struct sockaddr_in shadow_sa;
 	int                shadow_sa_len;
-	int                req_len;
 	int                new_req_sd;
 	service_req_pkt    service_req;
 	store_req_pkt      store_req;
 	restore_req_pkt    restore_req;
-	replicate_req_pkt  replicate_req;
-	char*              buf_ptr;
 	char               log_msg[256];
 	FDContext			fdc;
 	int					ret;
