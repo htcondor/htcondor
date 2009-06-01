@@ -7476,13 +7476,13 @@ jobs within Condor.
 
 \item[\Macro{DAGMAN\_COPY\_TO\_SPOOL}]
 \label{param:DAGManCopyToSpool}
-  A boolean value that controls whether the condor\_dagman binary
-  is copied to the spool directory when a DAG is submitted.  The main
-  reason for setting this value to \Expr{true} is if you have
-  long-running DAGs that should survive a DAGMan version upgrade.
-  If you run large numbers of small DAGs, you should leave this
-  macro unset (or set it to \Expr{false}).  If not defined,
-  \MacroNI{DAGMAN\_AUTO\_RESCUE} defaults to \Expr{false}.
+  A boolean value that when \Expr{True} copies the \Condor{dagman} binary
+  to the spool directory when a DAG is submitted.
+  Setting this variable to \Expr{True} allows
+  long-running DAGs to survive a DAGMan version upgrade.
+  For running large numbers of small DAGs, leave this
+  variable unset or set it to \Expr{False}.
+  The default value if not defined is \Expr{False}.
 
 \end{description}
 
