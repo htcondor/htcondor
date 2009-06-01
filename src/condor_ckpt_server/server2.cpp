@@ -651,6 +651,15 @@ void Server::ProcessServiceReq(int             req_id,
 		client. */
 	ASSERT(fdc->type == FDC_32 || fdc->type == FDC_64);
 
+	/* give a base initialization to the reply structure which is adjusted
+		as needed in the control flow. */
+	service_reply.server_addr.s_addr = 0;
+	service_reply.port = 0;
+	service_reply.num_files = 0;
+	service_reply.req_status = BAD_SERVICE_TYPE;
+	memset(	service_reply.capacity_free_ACD, 0, MAX_ASCII_CODED_DECIMAL_LENGTH);
+
+	
 	if (service_req.ticket != AUTHENTICATION_TCKT) {
 		service_reply.server_addr.s_addr = 0;
 		service_reply.port = 0;
@@ -947,6 +956,9 @@ void Server::ProcessServiceReq(int             req_id,
 			service_reply.port = 0;
 			service_reply.num_files = 0;
 			service_reply.req_status = BAD_SERVICE_TYPE;
+			memset(	service_reply.capacity_free_ACD, 
+					0,
+					MAX_ASCII_CODED_DECIMAL_LENGTH);
 		}
 
 	if (send_service_reply_pkt(&service_reply, fdc) == NET_WRITE_FAIL) {
