@@ -59,12 +59,13 @@ description.
   \OptItem{\Opt{-force}}{Require \Condor{submit\_dag} to overwrite
      the files that it produces, if the files already exist.  Note that
      \File{dagman.out} will be appended to, not overwritten.  If
-     "new-style" rescue DAG mode (see section~\ref{sec:DAGRescueNew})
-     is in effect, and any "new-style" rescue DAGs exist, the \Opt{-force} flag
+     new-style rescue DAG mode
+     is in effect, and any new-style rescue DAGs exist, the \Opt{-force} flag
      will cause them to be renamed, and the original DAG will be run.
-     If "old-style" rescue DAG mode (see section~\ref{sec:DAGRescueOld})
-     is in effect, any existing "old-style" rescue DAGs will be deleted,
-     and the original DAG will be run.}
+     If old-style rescue DAG mode
+     is in effect, any existing old-style rescue DAGs will be deleted,
+     and the original DAG will be run. Section~\ref{sec:DAGMan-rescue}
+     details rescue DAGs.}
   \OptItem{\OptArg{-maxidle}{NumberOfJobs}}{Sets the maximum number of idle
      jobs allowed before \Condor{dagman} stops submitting more jobs.  Once
      idle jobs start to run, \Condor{dagman} will resume submitting jobs.
@@ -124,7 +125,7 @@ description.
      had been run in the directory containing that DAG file.  This option
      is most useful when running multiple DAGs in a single \Condor{dagman}.
      Note that the \Opt{-usedagdir} flag must not be used when running
-     an "old-style" rescue DAG (see section~\ref{sec:DAGRescueOld}).
+     an old-style rescue DAG (see section~\ref{sec:DAGMan-rescue}).
      }
   \OptItem{\OptArg{-outfile\_dir}{directory}}{
      Specifies the directory in which the \File{.dagman.out} file will
@@ -142,7 +143,7 @@ description.
      conflicts with a configuration file specified in any of the DAG
      files, if they specify one.  For more information about how
      \Condor{dagman} configuration files work, see
-     section~\ref{sec:DAGConfig}.
+     section~\ref{sec:DAG-configuration}.
      }
   \OptItem{\OptArg{-insert\_sub\_file}{FileName}}{
     Specifies a file to insert into the \File{.condor.sub} file created
@@ -169,7 +170,7 @@ description.
     conflict.
   }
   \OptItem{\OptArg{-oldrescue}{0|1}}{Whether to use "old-style" rescue
-    DAG naming (see section~\ref{sec:DAGRescueOld}) when creating a
+    DAG naming (see section~\ref{sec:DAGMan-rescue}) when creating a
     rescue DAG (0 = \Expr{false}, 1 = \Expr{true}).
   }
   \OptItem{\OptArg{-autorescue}{0|1}}{Whether to automatically run the
