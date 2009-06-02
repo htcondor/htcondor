@@ -503,7 +503,7 @@ dprintf(D_ALWAYS, "DEBUG: dest_file: '%s'\n", dest_file);
 						"reschedule source URL %s: "
 						"no dynamic destinations for protocol %s\n",
 						src_url, dest_protocol);
-				return DAP_ERROR;	// no transfer
+				return false;	// no transfer
 			} else {
 				dest_transfer_url = tmp;
 
@@ -613,13 +613,13 @@ dprintf(D_ALWAYS, "DEBUG: dest_file: '%s'\n", dest_file);
 		dap_queue.insert(dap_id, pid);
 		dprintf(D_ALWAYS,"GUC STARTED dapid=%s pid=%d src=%s dest=%s \n",
 			dap_id,pid,src_url,dest_url.c_str());
-		return DAP_SUCCESS;
+		return true;
 	}
 	else{
 		transfer_dap_reaper(NULL, 0 ,111); //executable not found!
 		dprintf(D_ALWAYS,"ERROR: GUC fork failed dapid=%s src=%s dest=%s\n",
 			dap_id,src_url,dest_url.c_str());
-		return DAP_ERROR;                  //--> Find a better soln!
+		return false;                  //--> Find a better soln!
 	}
 
 }
