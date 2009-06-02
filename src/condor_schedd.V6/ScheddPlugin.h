@@ -54,6 +54,10 @@ class ScheddPlugin
 
 	virtual ~ScheddPlugin();
 
+		// Called before the Scheduler is initialized
+	virtual void earlyInitialize() = 0;
+
+		// Called after the Scheduler is initialized
 	virtual void initialize() = 0;
 
 	virtual void shutdown() = 0;
@@ -65,6 +69,8 @@ class ScheddPlugin
 class ScheddPluginManager : public PluginManager<ScheddPlugin>
 {
   public:
+	static void EarlyInitialize();
+
 	static void Initialize();
 
 	static void Shutdown();

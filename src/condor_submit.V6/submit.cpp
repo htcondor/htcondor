@@ -3196,7 +3196,7 @@ SetJobStatus()
 
 	if( hold && (hold[0] == 'T' || hold[0] == 't') ) {
 		buffer.sprintf( "%s = %d", ATTR_JOB_STATUS, HELD);
-		InsertJobExpr (buffer);
+		InsertJobExpr (buffer, false);
 
 		buffer.sprintf( "%s=\"submitted on hold at user's request\"", 
 					   ATTR_HOLD_REASON );
@@ -3208,7 +3208,7 @@ SetJobStatus()
 	} else 
 	if ( Remote ) {
 		buffer.sprintf( "%s = %d", ATTR_JOB_STATUS, HELD);
-		InsertJobExpr (buffer);
+		InsertJobExpr (buffer, false);
 
 		buffer.sprintf( "%s=\"Spooling input data files\"", 
 					   ATTR_HOLD_REASON );
@@ -3219,7 +3219,7 @@ SetJobStatus()
 		InsertJobExpr( buffer );
 	} else {
 		buffer.sprintf( "%s = %d", ATTR_JOB_STATUS, IDLE);
-		InsertJobExpr (buffer);
+		InsertJobExpr (buffer, false);
 	}
 
 	buffer.sprintf( "%s = %d", ATTR_ENTERED_CURRENT_STATUS,
@@ -6926,11 +6926,23 @@ SaveClassAd ()
 		if( (lhs = tree->LArg()) ) { lhs->PrintToNewStr (&lhstr); }
 		if( (rhs = tree->RArg()) ) { rhs->PrintToNewStr (&rhstr); }
 		if( !lhs || !rhs || !lhstr || !rhstr) { retval = -1; }
+			// To facilitate processing of job status from the
+			// job_queue.log, the ATTR_JOB_STATUS attribute should not
+			// be stored within the cluster ad. Instead, it should be
+			// directly part of each job ad. This change represents an
+			// increase in size for the job_queue.log initially, but
+			// the ATTR_JOB_STATUS is guaranteed to be specialized for
+			// each job so the two approaches converge. Further
+			// optimization should focus on sending only the
+			// attributes required for the job to run. -matt 1 June 09
+		int tmpProcId = myprocid;
+		if( strcasecmp(lhstr, ATTR_JOB_STATUS) == 0 ) myprocid = ProcId;
 		if( SetAttribute(ClusterId, myprocid, lhstr, rhstr) == -1 ) {
 			fprintf( stderr, "\nERROR: Failed to set %s=%s for job %d.%d (%d)\n", 
 					 lhstr, rhstr, ClusterId, ProcId, errno );
 			retval = -1;
 		}
+		myprocid = tmpProcId;
 		free(lhstr);
 		free(rhstr);
 		if(retval == -1) {

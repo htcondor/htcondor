@@ -21,6 +21,12 @@
 struct ExampleScheddPlugin : public ScheddPlugin
 {
 	void
+	earlyInitialize()
+	{
+		printf("EarlyInit\n");
+	}
+
+	void
 	initialize()
 	{
 		printf("Init\n");

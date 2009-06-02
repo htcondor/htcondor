@@ -337,6 +337,7 @@ const char *ATTR_JOB_START                = "JobStart";
 const char *ATTR_JOB_START_DATE			 = "JobStartDate";
 const char *ATTR_JOB_STATE                = "JobState";
 const char *ATTR_JOB_STATUS               = "JobStatus";
+const char *ATTR_LAST_JOB_STATUS               = "LastJobStatus";
 const char *ATTR_JOB_STATUS_ON_RELEASE    = "JobStatusOnRelease";
 const char *ATTR_JOB_UNIVERSE             = "JobUniverse";
 const char *ATTR_JOB_GRID_TYPE			 = "JobGridType";

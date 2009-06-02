@@ -407,8 +407,9 @@ CCBServer::HandleRequestResultsMsg( CCBTarget *target )
 	if( !msg.initFromStream( *sock ) || !sock->end_of_message() ) {
 			// disconnect
 		dprintf(D_FULLDEBUG,
-				"CCB: received disconnect from %s.\n",
-				sock->peer_description() );
+				"CCB: received disconnect from target daemon %s "
+				"with ccbid %lu.\n",
+				sock->peer_description(), target->getCCBID() );
 		RemoveTarget( target );
 		return;
 	}
@@ -429,9 +430,10 @@ CCBServer::HandleRequestResultsMsg( CCBTarget *target )
 		MyString msg_str;
 		msg.sPrint(msg_str);
 		dprintf(D_ALWAYS,
-				"CCB: received reply from target %s without a valid request "
-				"id: %s\n",
+				"CCB: received reply from target daemon %s with ccbid %lu "
+				"without a valid request id: %s\n",
 				sock->peer_description(),
+				target->getCCBID(),
 				msg_str.Value());
 		RemoveTarget( target );
 		return;
@@ -451,16 +453,20 @@ CCBServer::HandleRequestResultsMsg( CCBTarget *target )
 	}
 
 	if( success ) {
-		dprintf(D_FULLDEBUG,"CCB: received 'success' from target %s for "
+		dprintf(D_FULLDEBUG,"CCB: received 'success' from target daemon %s "
+				"with ccbid %lu for "
 				"request %s from %s.\n",
 				sock->peer_description(),
+				target->getCCBID(),
 				reqid_str.Value(),
 				request_desc);
 	}
 	else {
-		dprintf(D_FULLDEBUG,"CCB: received error from target %s for "
+		dprintf(D_FULLDEBUG,"CCB: received error from target daemon %s "
+				"with ccbid %lu for "
 				"request %s from %s: %s\n",
 				sock->peer_description(),
+				target->getCCBID(),
 				reqid_str.Value(),
 				request_desc,
 				error_msg.Value());
@@ -472,20 +478,23 @@ CCBServer::HandleRequestResultsMsg( CCBTarget *target )
 			return;
 		}
 		dprintf( D_FULLDEBUG,
-				 "CCB: client for request %s to target %s disappeared "
-				 "before receiving error details.\n",
+				 "CCB: client for request %s to target daemon %s with ccbid "
+				 "%lu disappeared before receiving error details.\n",
 				 reqid_str.Value(),
-				 sock->peer_description());
+				 sock->peer_description(),
+				 target->getCCBID());
 		return;
 	}
 	if( connect_id != request->getConnectID() ) {
 		MyString msg_str;
 		msg.sPrint(msg_str);
 		dprintf( D_FULLDEBUG,
-				 "CCB: received wrong connect id (%s) from target %s for "
+				 "CCB: received wrong connect id (%s) from target daemon %s "
+				 "with ccbid %lu for "
 				 "request %s\n",
 				 connect_id.Value(),
 				 sock->peer_description(),
+				 target->getCCBID(),
 				 reqid_str.Value());
 		RemoveTarget( target );
 		return;
@@ -514,11 +523,11 @@ CCBServer::ForwardRequestToTarget( CCBServerRequest *request, CCBTarget *target 
 	if( !msg.put( *sock ) || !sock->end_of_message() ) {
 		dprintf(D_ALWAYS,
 				"CCB: failed to forward request id %lu from %s to target "
-				"ccbid %lu %s\n",
+				"daemon %s with ccbid %lu\n",
 				request->getRequestID(),
 				request->getSock()->peer_description(),
-				target->getCCBID(),
-				target->getSock()->peer_description());
+				target->getSock()->peer_description(),
+				target->getCCBID());
 
 		RequestFinished( request, false, "failed to forward request to target" );
 		return;
@@ -541,7 +550,7 @@ CCBServer::RequestReply( Sock *sock, bool success, char const *error_msg, CCBID 
 	if( !msg.put( *sock ) || !sock->end_of_message() ) {
 		dprintf(D_ALWAYS,
 				"CCB: failed to send result to request id %lu "
-				"%s target ccbid %lu: %s\n",
+				"%s target daemon with ccbid %lu: %s\n",
 				request_cid,
 				sock->peer_description(),
 				target_cid,
@@ -588,8 +597,8 @@ CCBServer::ReconnectTarget( CCBTarget *target, CCBID reconnect_cookie )
 	CCBReconnectInfo *reconnect_info = GetReconnectInfo(target->getCCBID());
 	if( !reconnect_info ) {
 		dprintf(D_ALWAYS,
-				"CCB: reconnect request from target %s for ccbid with "
-				"no reconnect info!  (ccbid=%lu)\n",
+				"CCB: reconnect request from target daemon %s with ccbid %lu"
+				", but this ccbid has no reconnect info!\n",
 				target->getSock()->peer_description(),
 				target->getCCBID());
 		return false;
@@ -600,8 +609,8 @@ CCBServer::ReconnectTarget( CCBTarget *target, CCBID reconnect_cookie )
 	if( strcmp(previous_ip,new_ip) )
 	{
 		dprintf(D_ALWAYS,
-				"CCB: reconnect request from target %s has wrong IP!  "
-				"(ccbid=%lu,expected IP=%s)\n",
+				"CCB: reconnect request from target daemon %s with ccbid %lu "
+				"has wrong IP!  (expected IP=%s)\n",
 				target->getSock()->peer_description(),
 				target->getCCBID(),
 				previous_ip);
@@ -611,8 +620,8 @@ CCBServer::ReconnectTarget( CCBTarget *target, CCBID reconnect_cookie )
 	if( reconnect_cookie != reconnect_info->getReconnectCookie() )
 	{
 		dprintf(D_ALWAYS,
-				"CCB: reconnect request from target %s has wrong cookie!  "
-				"(ccbid=%lu,cookie=%lu)\n",
+				"CCB: reconnect request from target daemon %s with ccbid %lu "
+				"has wrong cookie!  (cookie=%lu)\n",
 				target->getSock()->peer_description(),
 				target->getCCBID(),
 				reconnect_cookie);
@@ -626,7 +635,8 @@ CCBServer::ReconnectTarget( CCBTarget *target, CCBID reconnect_cookie )
 		// perhaps we haven't noticed yet that this existing target socket
 		// has become disconnected; get rid of it
 		dprintf(D_ALWAYS,
-				"CCB: replacing target %s (ccbid=%lu)\n",
+				"CCB: disconnecting existing connection from target daemon "
+				"%s with ccbid %lu because this daemon is reconnecting.\n",
 				existing->getSock()->peer_description(),
 				target->getCCBID());
 		RemoveTarget( existing );
