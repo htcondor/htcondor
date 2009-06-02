@@ -24,6 +24,17 @@
 
 
 void
+ScheddPluginManager::EarlyInitialize()
+{
+	ScheddPlugin *plugin;
+	SimpleList<ScheddPlugin *> plugins = getPlugins();
+	plugins.Rewind();
+	while (plugins.Next(plugin)) {
+		plugin->earlyInitialize();
+	}
+}
+
+void
 ScheddPluginManager::Initialize()
 {
 	ScheddPlugin *plugin;

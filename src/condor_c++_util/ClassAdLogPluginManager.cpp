@@ -24,6 +24,17 @@
 
 
 void
+ClassAdLogPluginManager::EarlyInitialize()
+{
+	ClassAdLogPlugin *plugin;
+	SimpleList<ClassAdLogPlugin *> plugins = getPlugins();
+	plugins.Rewind();
+	while (plugins.Next(plugin)) {
+		plugin->earlyInitialize();
+	}
+}
+
+void
 ClassAdLogPluginManager::Initialize()
 {
 	ClassAdLogPlugin *plugin;
