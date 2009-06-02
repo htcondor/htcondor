@@ -273,6 +273,8 @@ extern const char * ATTR_JOB_REMOTE_WALL_CLOCK;
 extern const char * ATTR_JOB_ROOT_DIR;
 extern const char * ATTR_JOB_RUN_COUNT;
 extern const char * ATTR_JOB_SANDBOX_JOBAD;
+extern const char * ATTR_JOB_SUBMISSION;
+extern const char * ATTR_JOB_SUBMISSION_ID;
 extern const char * ATTR_JOB_START;
 extern const char * ATTR_JOB_START_DATE;
 extern const char * ATTR_JOB_STATE;
