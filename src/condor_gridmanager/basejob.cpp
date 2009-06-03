@@ -449,7 +449,7 @@ void BaseJob::SetRemoteJobId( const char *job_id )
 	requestScheddUpdate( this );
 }
 
-void BaseJob::SetRemoteJobStatus( const char *job_status )
+bool BaseJob::SetRemoteJobStatus( const char *job_status )
 {
 	MyString old_job_status;
 	MyString new_job_status;
@@ -470,7 +470,7 @@ void BaseJob::SetRemoteJobStatus( const char *job_status )
 		new_job_status = job_status;
 	}
 	if ( old_job_status == new_job_status ) {
-		return;
+		return false;
 	}
 	if ( !old_job_status.IsEmpty() ) {
 		jobAd->AssignExpr( ATTR_GRID_JOB_STATUS, "Undefined" );
@@ -479,6 +479,7 @@ void BaseJob::SetRemoteJobStatus( const char *job_status )
 		jobAd->Assign( ATTR_GRID_JOB_STATUS, new_job_status.Value() );
 	}
 	requestScheddUpdate( this );
+	return true;
 }
 
 void BaseJob::SetJobLeaseTimers()
@@ -872,6 +873,7 @@ void BaseJob::CheckRemoteStatus()
 		jobAd->Assign( ATTR_CURRENT_STATUS_UNKNOWN, true );
 		requestScheddUpdate( this );
 		WriteJobStatusUnknownEventToUserLog( jobAd );
+		SetEvaluateState();
 	}
 }
 
