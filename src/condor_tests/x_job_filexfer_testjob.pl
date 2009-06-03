@@ -186,6 +186,8 @@ else
 	system("ls ..  >$out1");
 	system("ls ..  >$out2");
 	system("ls ..  >$out3");
+	print "We should see 3 files now:\n";
+	system("ls");
 	system("cp * ..");
 
 }
@@ -197,7 +199,11 @@ if( $long )
 {
 	# create and leave
 	system("touch $out4 $out5 $out6");
+	print "We should see 3 more files now:\n";
+	system("ls");
 	system("cp * ..");
+	print "Sandbox now contains:\n";
+	system("ls ..");
 	exit(0);
 }
 else
