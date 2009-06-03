@@ -35,6 +35,14 @@ enum {
 
 };
 
+enum {
+    AD_NULL,
+    AD_STRING,
+    AD_INT,
+    AD_DOUBLE,
+    AD_BOOLEAN
+};
+
 
 class Hadoop : public Service {
     public:
@@ -115,7 +123,7 @@ class Hadoop : public Service {
 
         void stdoutHandler(int /*pipe*/);
 
-        bool getKeyValue(MyString line, MyString *key, MyString *value);
+        int getKeyValue(MyString line, MyString *key, MyString *value);
 };
 
 #endif
