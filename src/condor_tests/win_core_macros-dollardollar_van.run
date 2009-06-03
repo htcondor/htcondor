@@ -24,7 +24,7 @@ use Sys::Hostname;
 
 $cmd = 'win_core_macros-dollardollar_van.cmd';
 $testdesc =  'condor_submit macros - vanilla U';
-$testname = "job_core_macros-dollardollar_van";
+$testname = "win_core_macros-dollardollar_van";
 
 
 $ExitSuccessBase = sub {
@@ -36,7 +36,7 @@ my @lines;
 
 sub load_up_lines
 {
-	open(IN,"<job_core_macros-dollardollar_van.out") || die "Can not open job_core_macros-dollardollar_van.out: $!\n";
+	open(IN,"<win_core_macros-dollardollar_van.out") || die "Can not open win_core_macros-dollardollar_van.out: $!\n";
 	while(<IN>)
 	{
 		CondorTest::fullchomp($_);
