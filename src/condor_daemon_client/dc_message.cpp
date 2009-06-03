@@ -668,11 +668,19 @@ ClassAdMsg::ClassAdMsg(int cmd,ClassAd &msg):
 bool
 ClassAdMsg::writeMsg( DCMessenger * /*messenger*/, Sock *sock )
 {
-	return m_msg.put( *sock );
+	if( !m_msg.put( *sock ) ) {
+		sockFailed( sock );
+		return false;
+	}
+	return true;
 }
 
 bool
 ClassAdMsg::readMsg( DCMessenger * /*messenger*/, Sock *sock )
 {
-	return m_msg.initFromStream( *sock );
+	if( !m_msg.initFromStream( *sock ) ) {
+		sockFailed( sock );
+		return false;
+	}
+	return true;
 }

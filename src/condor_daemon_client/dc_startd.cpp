@@ -107,6 +107,7 @@ ClaimStartdMsg::writeMsg( DCMessenger * /*messenger*/, Sock *sock ) {
 		dprintf(failureDebugLevel(),
 				"Couldn't encode request claim to startd %s\n",
 				description() );
+		sockFailed( sock );
 		return false;
 	}
 		// eom() is done by caller
@@ -133,6 +134,7 @@ ClaimStartdMsg::readMsg( DCMessenger * /*messenger*/, Sock *sock ) {
 		dprintf( failureDebugLevel(),
 				 "Response problem from startd when requesting claim %s.\n",
 				 description() );	
+		sockFailed( sock );
 		return false;
 	}
 
