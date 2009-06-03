@@ -103,6 +103,7 @@ typedef struct file_info_node
 
 
 
+/* Don't change the layout of this type. It affects protocol.cpp */
 typedef struct recv_req_pkt
 {
   u_lint file_size;
@@ -117,6 +118,7 @@ typedef struct recv_req_pkt
 
 
 
+/* Don't change the layout of this type. It affects protocol.cpp */
 typedef struct recv_reply_pkt
 {
   struct in_addr server_name;
@@ -127,6 +129,7 @@ typedef struct recv_reply_pkt
 
 
 
+/* Don't change the layout of this type. It affects protocol.cpp */
 typedef struct xmit_req_pkt
 {
   u_lint ticket;
@@ -139,6 +142,7 @@ typedef struct xmit_req_pkt
 
 
 
+/* Don't change the layout of this type. It affects protocol.cpp */
 typedef struct xmit_reply_pkt
 {
   struct in_addr server_name;
@@ -150,7 +154,7 @@ typedef struct xmit_reply_pkt
 
 
 
-/* This is an old crusty packet sent on the wire in the network protocol */
+/* Don't change the layout of this type. It affects protocol.cpp */
 typedef struct service_req_pkt
 {
   u_lint  ticket;
@@ -163,22 +167,7 @@ typedef struct service_req_pkt
 } service_req_pkt;
 
 
-/* This is the packet to be used internally in the codes, it admits both
-	32 and 64 bit values in a 32 bit process. */
-/* XXX not used yet */
-typedef struct host_service_req_pkt
-{
-  uint64_t  ticket;
-  uint16_t service;
-  uint64_t  key;
-  char    owner_name[MAX_NAME_LENGTH]; 
-  char    file_name[MAX_CONDOR_FILENAME_LENGTH];
-  char    new_file_name[MAX_CONDOR_FILENAME_LENGTH-4]; /* -4 to fit shadowIP */
-  struct in_addr shadow_IP;
-} host_service_req_pkt;
-
-
-
+/* Don't change the layout of this type. It affects protocol.cpp */
 typedef struct service_reply_pkt
 {
   u_short        req_status;
@@ -189,6 +178,8 @@ typedef struct service_reply_pkt
 } service_reply_pkt;
 
 
+/* This type is defunct and could be ripped out later, along with all of the
+	replication codes, which aren't used */
 typedef struct replicate_req_pkt
 {
   u_lint file_size;
