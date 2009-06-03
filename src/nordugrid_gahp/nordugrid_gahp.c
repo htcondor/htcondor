@@ -1868,9 +1868,9 @@ else {fprintf(stderr,"Didn't expect attr %s\n",next_attr);}
  status_all_done:
 	if ( !err_str ) {
 		int i;
-		int len = strlen( user_arg->cmd[1] ) + replies_len + 14;
+		int len = strlen( user_arg->cmd[1] ) + replies_len + 20;
 		output = globus_libc_malloc( len );
-		globus_libc_sprintf( output, "%s 0 %d", user_arg->cmd[1], num_jobs );
+		globus_libc_sprintf( output, "%s 0 NULL %d", user_arg->cmd[1], num_jobs );
 		for ( i = 0; replies[i]; i++ ) {
 			strcat( output, " " );
 			strcat( output, replies[i] );
@@ -1880,7 +1880,7 @@ else {fprintf(stderr,"Didn't expect attr %s\n",next_attr);}
 		char *esc = escape_spaces( err_str );
 		output = globus_libc_malloc( 10 + strlen( user_arg->cmd[1] ) +
 									 strlen( esc ) );
-		globus_libc_sprintf( output, "%s 1 %s", user_arg->cmd[1], esc );
+		globus_libc_sprintf( output, "%s 1 %s 0", user_arg->cmd[1], esc );
 		globus_libc_free( err_str );
 		globus_libc_free( esc );
 	}
