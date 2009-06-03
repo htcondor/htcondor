@@ -77,14 +77,23 @@ static const char *GMStateNames[] = {
 	"GM_START"
 };
 
+#define REMOTE_STATE_ACCEPTING		"ACCEPTING"
 #define REMOTE_STATE_ACCEPTED		"ACCEPTED"
 #define REMOTE_STATE_PREPARING		"PREPARING"
+#define REMOTE_STATE_PREPARED		"PREPARED"
 #define REMOTE_STATE_SUBMITTING		"SUBMITTING"
-#define REMOTE_STATE_INLRMS			"INLRMS"
-#define REMOTE_STATE_CANCELLING		"CANCELLING"
+#define REMOTE_STATE_INLRMS_R		"INLRMS: R"
+#define REMOTE_STATE_INLRMS_Q		"INLRMS: Q"
+#define REMOTE_STATE_INLRMS_S		"INLRMS: S"
+#define REMOTE_STATE_INLRMS_E		"INLRMS: E"
+#define REMOTE_STATE_INLRMS_O		"INLRMS: O"
+#define REMOTE_STATE_KILLING		"KILLING"
+#define REMOTE_STATE_EXECUTED		"EXECUTED"
 #define REMOTE_STATE_FINISHING		"FINISHING"
 #define REMOTE_STATE_FINISHED		"FINISHED"
-#define REMOTE_STATE_PENDING		"PENDING:PREPARING"
+#define REMOTE_STATE_FAILED			"FAILED"
+#define REMOTE_STATE_KILLED			"KILLED"
+#define REMOTE_STATE_DELETED		"DELETED"
 
 #define REMOTE_STDOUT_NAME	"_condor_stdout"
 #define REMOTE_STDERR_NAME	"_condor_stderr"
@@ -358,40 +367,30 @@ int NordugridJob::doEvaluateState()
 					executeLogged = true;
 				}
 
-				gmState = GM_RECOVER_QUERY;
+				if ( remoteJobState == "" ||
+					 remoteJobState == REMOTE_STATE_ACCEPTING ||
+					 remoteJobState == REMOTE_STATE_ACCEPTED ||
+					 remoteJobState == REMOTE_STATE_PREPARING ) {
+					gmState = GM_RECOVER_QUERY;
+				} else {
+					gmState = GM_SUBMITTED;
+				}
 			}
 			} break;
 		case GM_RECOVER_QUERY: {
 			if ( condorState == REMOVED || condorState == HELD ) {
 				gmState = GM_CANCEL;
 			} else {
-				char *new_status = NULL;
-				rc = gahp->nordugrid_status( resourceManagerString,
-											 remoteJobId, new_status );
-				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
-					 rc == GAHPCLIENT_COMMAND_PENDING ) {
-					break;
-				} else if ( rc != 0 ) {
-					// What to do about failure?
-					errorString = gahp->getErrorString();
-					dprintf( D_ALWAYS, "(%d.%d) job probe failed: %s\n",
-							 procID.cluster, procID.proc,
-							 errorString.Value() );
+				if ( m_lastRemoteStatusUpdate > enteredCurrentGmState ) {
+					if ( remoteJobState == REMOTE_STATE_ACCEPTING ||
+						 remoteJobState == REMOTE_STATE_ACCEPTED ||
+						 remoteJobState == REMOTE_STATE_PREPARING ) {
+						gmState = GM_STAGE_IN;
+					} else {
+						gmState = GM_SUBMITTED;
+					}
+				} else if ( m_currentStatusUnknown ) {
 					gmState = GM_CANCEL;
-					break;
-				} else {
-					remoteJobState = new_status;
-					SetRemoteJobStatus( new_status );
-				}
-				if ( new_status ) {
-					free( new_status );
-				}
-				lastProbeTime = now;
-				if ( remoteJobState == REMOTE_STATE_ACCEPTED ||
-					 remoteJobState == REMOTE_STATE_PREPARING ) {
-					gmState = GM_STAGE_IN;
-				} else {
-					gmState = GM_SUBMITTED;
 				}
 			}
 			} break;
@@ -509,7 +508,10 @@ int NordugridJob::doEvaluateState()
 			}
 			} break;
 		case GM_SUBMITTED: {
-			if ( remoteJobState == REMOTE_STATE_FINISHED ) {
+			if ( remoteJobState == REMOTE_STATE_FINISHED ||
+				 remoteJobState == REMOTE_STATE_FAILED ||
+				 remoteJobState == REMOTE_STATE_KILLED ||
+				 remoteJobState == REMOTE_STATE_DELETED ) {
 					gmState = GM_EXIT_INFO;
 			} else if ( condorState == REMOVED || condorState == HELD ) {
 				gmState = GM_CANCEL;
@@ -521,6 +523,7 @@ int NordugridJob::doEvaluateState()
 					lastProbeTime = 0;
 					probeNow = false;
 				}
+/*
 				if ( now >= lastProbeTime + probeInterval ) {
 					gmState = GM_PROBE_JOB;
 					break;
@@ -530,6 +533,7 @@ int NordugridJob::doEvaluateState()
 					delay = (lastProbeTime + probeInterval) - now;
 				}				
 				daemonCore->Reset_Timer( evaluateStateTid, delay );
+*/
 			}
 			} break;
 		case GM_PROBE_JOB: {
@@ -1192,4 +1196,25 @@ StringList *NordugridJob::buildStageOutLocalList( StringList *stage_list )
 	}
 
 	return stage_local_list;
+}
+
+void NordugridJob::NotifyNewRemoteStatus( const char *status )
+{
+	if ( SetRemoteJobStatus( status ) ) {
+		remoteJobState = status;
+		SetEvaluateState();
+
+		if ( condorState == IDLE &&
+			 ( remoteJobState == REMOTE_STATE_INLRMS_R ||
+			   remoteJobState == REMOTE_STATE_INLRMS_E ||
+			   remoteJobState == REMOTE_STATE_EXECUTED ||
+			   remoteJobState == REMOTE_STATE_FINISHING ||
+			   remoteJobState == REMOTE_STATE_FINISHED ||
+			   remoteJobState == REMOTE_STATE_FAILED ) ) {
+			JobRunning();
+		}
+	}
+	if ( gmState == GM_RECOVER_QUERY ) {
+		SetEvaluateState();
+	}
 }

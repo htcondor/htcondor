@@ -83,6 +83,17 @@ NordugridResource::NordugridResource( const char *resource_name,
 	gahp->setNotificationTimerId( pingTimerId );
 	gahp->setMode( GahpClient::normal );
 	gahp->setTimeout( NordugridJob::gahpCallTimeout );
+
+	m_jobStatusTid = daemonCore->Register_Timer( 0,
+							(TimerHandlercpp)&NordugridResource::DoJobStatus,
+							"NordugridResource::DoJobStatus", (Service*)this );
+
+	m_statusGahp = new GahpClient( buff.Value() );
+	m_statusGahp->setNotificationTimerId( m_jobStatusTid );
+	m_statusGahp->setMode( GahpClient::normal );
+	m_statusGahp->setTimeout( NordugridJob::gahpCallTimeout );
+
+	m_jobStatusActive = true;
 }
 
 NordugridResource::~NordugridResource()
@@ -93,6 +104,10 @@ NordugridResource::~NordugridResource()
 	}
 	if ( gahp ) {
 		delete gahp;
+	}
+	delete m_statusGahp;
+	if ( m_jobStatusTid != TIMER_UNSET ) {
+		daemonCore->Cancel_Timer( m_jobStatusTid );
 	}
 }
 
@@ -150,4 +165,93 @@ void NordugridResource::DoPing( time_t& ping_delay, bool& ping_complete,
 		ping_complete = true;
 		ping_succeeded = true;
 	}
+}
+
+int NordugridResource::DoJobStatus()
+{
+	if ( ( registeredJobs.IsEmpty() || resourceDown ) &&
+		 m_jobStatusActive == false ) {
+			// No jobs or we can't talk to the resource, so no point
+			// in polling
+		daemonCore->Reset_Timer( m_jobStatusTid, NordugridJob::probeInterval );
+		return 0;
+	}
+
+	if ( m_statusGahp->isStarted() == false ) {
+		if ( m_statusGahp->Startup() == false ) {
+				// Failed to start the gahp server. Don't do anything
+				// about it. The job objects will also fail on this call
+				// and should go on hold as a result.
+			daemonCore->Reset_Timer( m_jobStatusTid,
+									 NordugridJob::probeInterval );
+			return 0;
+		}
+	}
+
+	daemonCore->Reset_Timer( m_jobStatusTid, TIMER_NEVER );
+
+	StringList job_ids;
+	StringList statuses;
+
+	if ( m_jobStatusActive == false ) {
+
+			// start ldap status command
+		dprintf( D_FULLDEBUG, "Starting ldap poll: %s\n", resourceName );
+
+		int rc = m_statusGahp->nordugrid_status_all( resourceName, job_ids,
+													 statuses );
+		if ( rc != GAHPCLIENT_COMMAND_PENDING ) {
+			dprintf( D_ALWAYS,
+					 "gahp->nordugrid_status_all returned %d for resource %s\n",
+					 rc, resourceName );
+			EXCEPT( "nordugrid_status_all failed!" );
+		}
+		m_jobStatusActive = true;
+
+	} else {
+
+			// finish ldap status command
+		int rc = m_statusGahp->nordugrid_status_all( NULL, job_ids, statuses );
+
+		if ( rc == GAHPCLIENT_COMMAND_PENDING ) {
+			return 0;
+		} else if ( rc != 0 ) {
+			dprintf( D_ALWAYS,
+					 "gahp->nordugrid_status_all returned %d for resource %s: %s\n",
+					 rc, resourceName, m_statusGahp->getErrorString() );
+			dprintf( D_ALWAYS, "Requesting ping of resource\n" );
+			RequestPing( NULL );
+		}
+
+		if ( rc == 0 ) {
+			const char *next_job_id;
+			const char *next_status;
+			MyString key;
+
+			job_ids.rewind();
+			statuses.rewind();
+			while ( (next_job_id = job_ids.next()) &&
+					(next_status = statuses.next()) ) {
+
+				int rc2;
+				NordugridJob *job;
+				key.sprintf( "nordugrid %s %s", resourceName,
+							 strrchr( next_job_id, '/' ) + 1 );
+				rc2 = BaseJob::JobsByRemoteId.lookup( HashKey( key.Value() ),
+													  (BaseJob*&)job );
+				if ( rc2 == 0 ) {
+					job->NotifyNewRemoteStatus( next_status );
+				}
+			}
+
+		}
+
+		m_jobStatusActive = false;
+
+		dprintf( D_FULLDEBUG, "ldap poll complete: %s\n", resourceName );
+
+		daemonCore->Reset_Timer( m_jobStatusTid, NordugridJob::probeInterval );
+	}
+
+	return TRUE;
 }

@@ -65,6 +65,8 @@ class NordugridJob : public BaseJob
 	static void setConnectFailureRetry( int count )
 		{ maxConnectFailures = count; }
 
+	void NotifyNewRemoteStatus( const char *status );
+
 	int gmState;
 	time_t lastProbeTime;
 	bool probeNow;

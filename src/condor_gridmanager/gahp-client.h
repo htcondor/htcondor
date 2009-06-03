@@ -519,6 +519,10 @@ class GahpClient : public Service {
 						 char *&status);
 
 		int
+		nordugrid_status_all(const char *hostname, StringList &job_ids,
+							 StringList &statuses);
+
+		int
 		nordugrid_cancel(const char *hostname, const char *job_id);
 
 		int
