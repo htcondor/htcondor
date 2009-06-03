@@ -2692,9 +2692,9 @@ These macros control the \Condor{master}.
   watchful eyes on.  The list is a comma or space separated list of
   subsystem names (listed in
   section~\ref{sec:Condor-Subsystem-Names}).  For example,
-  \begin{verbatim}
-    DAEMON_LIST = MASTER, STARTD, SCHEDD
-  \end{verbatim}
+\begin{verbatim}
+  DAEMON_LIST = MASTER, STARTD, SCHEDD
+\end{verbatim}
 
   \Note This configuration variable cannot be changed 
   by using \Condor{reconfig} or 
@@ -2710,20 +2710,21 @@ These macros control the \Condor{master}.
   
 \label{param:DCDaemonList}
 \item[\Macro{DC\_DAEMON\_LIST}]
-  This macro
+  A list delimited by commas and/or spaces that
   lists the daemons in \MacroNI{DAEMON\_LIST} which use the Condor
   DaemonCore library.  The \Condor{master} must differentiate between
-  daemons that use DaemonCore and those that don't so it uses the
-  appropriate inter-process communication mechanisms.  This list
-  currently includes all Condor daemons except the checkpoint server
+  daemons that use DaemonCore and those that do not,
+  so it uses the appropriate inter-process communication mechanisms.
+  This list currently includes all Condor daemons except the checkpoint server
   by default.
 
-  As of 7.2.1, you can append to the default DC\_DAEMON\_LIST list by
-  specifying a ``+'' as the first character in the DC\_DAEMON\_LIST
-  definition.  For example:
+  As of Condor version 7.2.1, a daemon may be appended to the default
+  \MacroNI{DC\_DAEMON\_LIST} value by placing the plus character
+  (\verb@+@) before the first entry in the \MacroNI{DC\_DAEMON\_LIST} 
+  definition.
+  For example:
 \begin{verbatim}
-DAEMON_LIST	= NEW_DAEMON
-DC_DAEMON_LIST	= +NEW_DAEMON
+  DC_DAEMON_LIST = +NEW_DAEMON
 \end{verbatim}
 
 \label{param:SUBSYS}
@@ -7099,21 +7100,25 @@ Entries for DAGMan}
 These macros affect the operation of DAGMan and DAGMan
 jobs within Condor.
 
+Some of these configuration variables will be most appropriately set on
+a per DAG basis.
+Setting these is explained in section~\ref{sec:DAG-configuration}.
+
 \begin{description}
 \label{param:DAGManDebugCacheEnable}
 \item[\Macro{DAGMAN\_DEBUG\_CACHE\_ENABLE}]
-  A boolean value that determines if log line caching for the dagman.out
+  A boolean value that determines if log line caching for the \File{dagman.out}
   file should be enabled in the \Condor{dagman} process to increase
   performance (potentially by orders of magnitude) when writing the
-  dagman.out file to an NFS server. Currently, this cache is only utilized
-  in Recovery Mode.  
+  \File{dagman.out} file to an NFS server. 
+  Currently, this cache is only utilized in Recovery Mode.  
   If not defined, it defaults to \Expr{False}.
 
 \label{param:DAGManDebugCacheSize}
 \item[\Macro{DAGMAN\_DEBUG\_CACHE\_SIZE}]
-  An integer value in bytes which controls how many bytes of log lines are to
-  be stored in the log line cache. When the cache surpasses this number the
-  entries are written out in one call to the logging subsystem. A value of
+  An integer value representing the number of bytes of log lines to
+  be stored in the log line cache. When the cache surpasses this number,
+  the entries are written out in one call to the logging subsystem. A value of
   zero is not recommended since each log line would surpass the cache size 
   and be emitted in addition to bracketing log lines explaining that the 
   flushing was happening.
@@ -7158,11 +7163,11 @@ jobs within Condor.
 
 \label{param:DAGManStartupCycleDetect}
 \item[\Macro{DAGMAN\_STARTUP\_CYCLE\_DETECT}]
-  A boolean value that when \Expr{True}
+  A boolean value that defaults to \Expr{False}.
+  When \Expr{True},
   causes \Condor{dagman} to check for cycles in the DAG before
   submitting DAG node jobs,
   in addition to its run time cycle detection.
-  If not defined, it defaults to \Expr{False}.
 
 \label{param:DAGManRetrySubmitFirst}
 \item[\Macro{DAGMAN\_RETRY\_SUBMIT\_FIRST}]
@@ -7170,33 +7175,33 @@ jobs within Condor.
   (before any other submits) or last (after all other ready jobs are
   submitted).  If this value is set to \Expr{True}, when a job submit
   fails, the job is placed at the head of the queue of ready jobs, so
-  that it will be submitted again before any other jobs are submitted
-  (this has been the behavior of \Condor{dagman} up to this point).
+  that it will be submitted again before any other jobs are submitted.
+  This had been the behavior of \Condor{dagman}.
   If this value is set to \Expr{False}, when a job submit fails, the job
   is placed at the tail of the queue of ready jobs.
   If not defined, it defaults to \Expr{True}.
 
 \label{param:DAGManRetryNodeFirst}
 \item[\Macro{DAGMAN\_RETRY\_NODE\_FIRST}]
-  A boolean value that controls whether a failed node (with retries)
+  A boolean value that controls whether a failed node with retries
   is retried first (before any other ready nodes) or last (after all
   other ready nodes).  If this value is set to \Expr{True}, when a
-  node with retries fails (after the submit succeeded), the node is
+  node with retries fails after the submit succeeded, the node is
   placed at the head of the queue of ready nodes, so that it will be
   tried again before any other jobs are submitted.  If this value is
   set to \Expr{False}, when a node with retries fails, the node
-  is placed at the tail of the queue of ready nodes (this has been the
-  behavior of \Condor{dagman} up to this point).  If not defined, it
-  defaults to \Expr{False}.
+  is placed at the tail of the queue of ready nodes.
+  This had been the behavior of \Condor{dagman}.
+  If not defined, it defaults to \Expr{False}.
 
 \label{param:DAGManMaxJobsIdle}
 \item[\Macro{DAGMAN\_MAX\_JOBS\_IDLE}]
   An integer value that controls the maximum number of idle node jobs
   allowed within the DAG before \Condor{dagman} temporarily stops
   submitting jobs.  Once idle jobs start to run, \Condor{dagman} will
-  resume submitting jobs.  If both the command-line flag and the
-  configuration parameter are specified, the command-line flag overrides
-  the configuration parameter.  Unfortunately,
+  resume submitting jobs.  If both the command line option and the
+  configuration parameter are specified, the command line option overrides
+  the configuration variable.  Unfortunately,
   \MacroNI{DAGMAN\_MAX\_JOBS\_IDLE} currently counts each individual
   process within a cluster as a job, which is inconsistent with
   \MacroNI{DAGMAN\_MAX\_JOBS\_SUBMITTED}.  The default is that there is
@@ -7206,10 +7211,11 @@ jobs within Condor.
 \item[\Macro{DAGMAN\_MAX\_JOBS\_SUBMITTED}]
   An integer value that controls the maximum number of node jobs within the
   DAG that will  be submitted to Condor at one time.  Note that this
-  parameter is the same as the \OptArg{-maxjobs} command-line flag
-  to \Condor{submit\_dag}.  If both the command-line flag and the
-  configuration parameter are specified, the command-line flag overrides
-  the configuration parameter.  A single invocation of \Condor{submit}
+  variable has the same functionality as the \OptArg{-maxjobs} 
+  command line option to \Condor{submit\_dag}.
+  If both the command line option and the
+  configuration parameter are specified, the command line option overrides
+  the configuration variable.  A single invocation of \Condor{submit}
   counts as one job, even if the submit file produces a multi-job cluster.
   The default is that there is no limit on the maximum number of jobs
   run at one time.
@@ -7217,21 +7223,24 @@ jobs within Condor.
 \label{param:DAGManMungeNodeNames}
 \item[\Macro{DAGMAN\_MUNGE\_NODE\_NAMES}]
   A boolean value that controls whether \Condor{dagman} automatically
-  renames nodes when running multiple DAGs (the renaming is done to
-  avoid possible name conflicts).  If this value is set to \Expr{True},
-  all node names have the "DAG number" prepended to them.  For example,
-  the first DAG specified on the \Condor{submit\_dag} command line is
-  considered DAG number 0, the second is DAG number 1, etc.  So if
-  DAG number 2 has a node B, that node will internally be renamed
-  to "2.B".
+  renames nodes when running multiple DAGs.
+  The renaming is done to avoid possible name conflicts.
+  If this value is set to \Expr{True},
+  all node names have the DAG number followed by the period character
+  (\verb@.@) prepended to them.
+  For example, the first DAG specified on the \Condor{submit\_dag}
+  command line is considered DAG number 0, the second is DAG number 1, etc.
+  So if DAG number 2 has a node named B,
+  that node will internally be renamed to 2.B.
   If not defined, \MacroNI{DAGMAN\_MUNGE\_NODE\_NAMES} defaults to \Expr{True}.
 
 \label{param:DAGManIgnoreDuplicateJobExecution}
 \item[\Macro{DAGMAN\_IGNORE\_DUPLICATE\_JOB\_EXECUTION}]
-  This macro is no longer used. The improved functionality
+  This configuration variable is no longer used. The improved functionality
   of the \MacroNI{DAGMAN\_ALLOW\_EVENTS} macro eliminates the
   need for this variable.
 
+  For completeness, here is the definition for historical purposes: 
   A boolean value that controls
   whether \Condor{dagman} aborts or continues with a DAG
   in the rare case that Condor erroneously executes
@@ -7261,90 +7270,90 @@ jobs within Condor.
 
 \label{param:DAGManAllowEvents}
 \item[\Macro{DAGMAN\_ALLOW\_EVENTS}]
-  An integer that controls which "bad" events are considered
+  An integer that controls which bad events are considered
   fatal errors by \Condor{dagman}.  This macro replaces and expands
   upon the functionality of the
   \MacroNI{DAGMAN\_IGNORE\_DUPLICATE\_JOB\_EXECUTION} macro.
   If \MacroNI{DAGMAN\_ALLOW\_EVENTS} is set, it overrides the
   setting of \MacroNI{DAGMAN\_IGNORE\_DUPLICATE\_JOB\_EXECUTION}.
 
-  The \MacroNI{DAGMAN\_ALLOW\_EVENTS} value is a bitwise-OR of the
+  The \MacroNI{DAGMAN\_ALLOW\_EVENTS} value is a logical bitwise OR of the
   following values:
   \begin{description}
-  \item 0 = allow no "bad" events
-  \item 1 = allow almost all "bad" events (all except "job re-run after
-  terminated event")
+  \item 0 = allow no bad events
+  \item 1 = allow all bad events, \emph{except} the event
+    \AdStr{job re-run after terminated event}
   \item 2 = allow terminated/aborted event combination
-  \item 4 = allow "job re-run after terminated event" bug
-  \item 8 = allow garbage/orphan events
-  \item 16 = allow execute or terminate event before job's submit event
-  \item 32 = allow two terminated events per job (sometimes seen
-  with grid jobs)
+  \item 4 = allow a \AdStr{job re-run after terminated event} bug
+  \item 8 = allow garbage or orphan events
+  \item 16 = allow an execute or terminate event before job's submit event
+  \item 32 = allow two terminated events per job, as sometimes seen
+    with grid jobs
   \item 64 = allow duplicated events in general
   \end{description}
 
-  The default value is 114 (allow terminated/aborted event combination,
-  allow execute and/or terminated event before job's submit event, allow
-  double terminated events, and allow general duplicate events).
+  The default value is 114, which allows terminated/aborted event combination,
+  allows an execute and/or terminated event before job's submit event,
+  allows double terminated events, and allows general duplicate events.
 
-  For example, a value of 6 instructs \Condor{dagman} to allow both
-  the terminated/aborted event combination and the "job re-run
-  after terminated event" bug.  A value of 0 means that any "bad"
-  event will be considered a fatal error.
+  As examples, a value of 6 instructs \Condor{dagman} to allow both
+  the terminated/aborted event combination and the 
+  \AdStr{job re-run after terminated event} bug.
+  A value of 0 means that any bad event will be considered a fatal error.
 
-  A value of 5 (1 + 4) will never abort the DAG because of a "bad"
-  event -- but you should almost never use this setting, because
-  the "job re-run after terminated event" bug breaks the semantics of
-  the DAG.
-
-  This macro should almost always remain set to the default value!
+  A value of 5 will never abort the DAG because of a bad event.
+  But this value should almost never be used,
+  because the \AdStr{job re-run after terminated event} 
+  bug breaks the semantics of the DAG.
 
 \label{param:DAGManDebug}
 \item[\Macro{DAGMAN\_DEBUG}]
-  This macro is described in section~\ref{param:SubsysDebug} as
+  This variable is described in section~\ref{param:SubsysDebug} as
   \MacroNI{<SUBSYS>\_DEBUG}.
 
 \label{Param:MaxDAGManLog}
 \item[\Macro{MAX\_DAGMAN\_LOG}]
-  This macro is described in section~\ref{param:MaxSubsysLog} as
+  This variable is described in section~\ref{param:MaxSubsysLog} as
   \MacroNI{MAX\_<SUBSYS>\_LOG}.
 
 \label{param:DAGManCondorSubmitExe}
 \item[\Macro{DAGMAN\_CONDOR\_SUBMIT\_EXE}]
   The executable that \Condor{dagman} will use to submit Condor jobs.
-  If not defined, \Condor{dagman} looks for \Condor{submit} in the PATH.
+  If not defined, \Condor{dagman} looks for \Condor{submit} in the path.
 
 \label{param:DAGManStorkSubmitExe}
 \item[\Macro{DAGMAN\_STORK\_SUBMIT\_EXE}]
   The executable that \Condor{dagman} will use to submit Stork jobs.
-  If not defined, \Condor{dagman} looks for \Stork{submit} in the PATH.
+  If not defined, \Condor{dagman} looks for \Stork{submit} in the path.
 
 \label{param:DAGManCondorRmExe}
 \item[\Macro{DAGMAN\_CONDOR\_RM\_EXE}]
   The executable that \Condor{dagman} will use to remove Condor jobs.
-  If not defined, \Condor{dagman} looks for \Condor{rm} in the PATH.
+  If not defined, \Condor{dagman} looks for \Condor{rm} in the path.
 
 \label{param:DAGManStorkRmExe}
 \item[\Macro{DAGMAN\_STORK\_RM\_EXE}]
   The executable that \Condor{dagman} will use to remove Stork jobs.
-  If not defined, \Condor{dagman} looks for \Stork{rm} in the PATH.
+  If not defined, \Condor{dagman} looks for \Stork{rm} in the path.
 
 \label{param:DAGManProhibitMultiJobs}
 \item[\Macro{DAGMAN\_PROHIBIT\_MULTI\_JOBS}]
   A boolean value that controls whether \Condor{dagman} prohibits
-  node job submit files that queue multiple job procs (other than 
-  parallel universe).  If a DAG references such a submit file, the
+  node job submit description files that queue multiple job procs other than 
+  parallel universe.  If a DAG references such a submit file, the
   DAG will abort during the initialization process.  If not defined,
   \MacroNI{DAGMAN\_PROHIBIT\_MULTI\_JOBS} defaults to \Expr{False}.
 
 \label{param:DAGManLogOnNfsIsError}
 \item[\Macro{DAGMAN\_LOG\_ON\_NFS\_IS\_ERROR}]
   A boolean value that controls whether \Condor{dagman} prohibits
-  node job submit files with user log files on NFS.  If a DAG
-  references such a submit file and \MacroNI{DAGMAN\_LOG\_ON\_NFS\_IS\_ERROR}
-  is \Expr{True}, the DAG will abort during the initialization process. 
+  node job submit description files with user log files on NFS.
+  If a DAG references such a submit description file and
+  \MacroNI{DAGMAN\_LOG\_ON\_NFS\_IS\_ERROR} is \Expr{True},
+  the DAG will abort during the initialization process. 
   If \MacroNI{DAGMAN\_LOG\_ON\_NFS\_IS\_ERROR} is \Expr{False}, a warning
-  will be issued but the DAG will still be submitted.  It is \emph{strongly}
+  will be issued, but the DAG will still be submitted.
+  It is \emph{strongly}
   recommended that \MacroNI{DAGMAN\_LOG\_ON\_NFS\_IS\_ERROR}
   remain set to the default value, because running a DAG with node job
   log files on NFS will often cause errors.
@@ -7360,7 +7369,7 @@ jobs within Condor.
   the lock file does exist, and \MacroNI{DAGMAN\_ABORT\_DUPLICATES} is
   set to \Expr{True}, \Condor{dagman} checks whether a process with the
   given PID exists, and if so, it assumes that there is already another
-  instance of \Condor{dagman} running on the same DAG.  Note that this
+  instance of \Condor{dagman} running the same DAG.  Note that this
   test is not foolproof: it is possible that, if \Condor{dagman} crashes,
   the same PID gets reused by another process before \Condor{dagman}
   gets rerun on that DAG.  This should be quite rare, however.
@@ -7373,115 +7382,127 @@ jobs within Condor.
   in (more-or-less) depth first order, as opposed to breadth-first order.
   Setting \MacroNI{DAGMAN\_SUBMIT\_DEPTH\_FIRST} to \Expr{True} does
   \emph{not} override dependencies defined in the DAG.  Rather, it
-  causes newly-ready nodes to be added to the head, rather than the tail,
+  causes newly ready nodes to be added to the head, rather than the tail,
   of the ready node list.  If there are no PRE scripts in the DAG, this
   will cause the ready nodes to be submitted depth-first.  If there
   are PRE scripts, the order will not be strictly depth-first, but it
   will tend to favor depth rather than breadth in executing the DAG.
-  If you set \MacroNI{DAGMAN\_SUBMIT\_DEPTH\_FIRST} to \Expr{True},
-  you may also want to set \MacroNI{DAGMAN\_RETRY\_SUBMIT\_FIRST} and
+  If \MacroNI{DAGMAN\_SUBMIT\_DEPTH\_FIRST} is set to \Expr{True},
+  consider also setting \MacroNI{DAGMAN\_RETRY\_SUBMIT\_FIRST} and
   \Macro{DAGMAN\_RETRY\_NODE\_FIRST} to \Expr{True}.
   If not defined, \MacroNI{DAGMAN\_SUBMIT\_DEPTH\_FIRST} defaults to
-  \Expr{false}.
+  \Expr{False}.
 
 \label{param:DAGManOnExitRemove}
 \item[\Macro{DAGMAN\_ON\_EXIT\_REMOVE}]
-  The \Attr{OnExitRemove} expression put into the \Condor{dagman} submit
-  file by \Condor{submit\_dag}.
+  Defines the \Attr{OnExitRemove} ClassAd expression placed
+  into the \Condor{dagman} submit description file by \Condor{submit\_dag}.
   The default expression is designed to ensure that \Condor{dagman} is
-  automatically re-queued by the schedd if it exits abnormally or is
-  killed (e.g., during a reboot).  If this results in \Condor{dagman}
-  staying in the queue when it should exit, you may want to change
-  to a less restrictive expression, for example:
-  \begin{verbatim}
+  automatically re-queued by the \Condor{schedd} daemon if it exits abnormally
+  or is killed (for example, during a reboot).
+  If this results in \Condor{dagman}
+  staying in the queue when it should exit, consider changing 
+  to a less restrictive expression, as in the example
+\footnotesize
+\begin{verbatim}
   (ExitBySignal == false || ExitSignal =!= 9)
-  \end{verbatim}
+\end{verbatim}
+\normalsize
   If not defined, \MacroNI{DAGMAN\_ON\_EXIT\_REMOVE} defaults to
-  \begin{verbatim}
+  the expression
+\footnotesize
+\begin{verbatim}
   ( ExitSignal =?= 11 || (ExitCode =!= UNDEFINED && ExitCode >=0 && ExitCode <= 2))
-  \end{verbatim}
+\end{verbatim}
+\normalsize
 
 \item[\Macro{DAGMAN\_ABORT\_ON\_SCARY\_SUBMIT}]
 \label{param:DAGManAbortOnScarySubmit}
   A boolean value that controls whether to abort a DAG upon detection of
-  a ``scary'' submit event (one in which the Condor ID does not match
-  the expected value).  Note that in all versions prior to 6.9.3,
-  \Condor{dagman} has \emph{not} aborted a DAG upon detection of
-  a ``scary'' submit event (this behavior is what now happens if
-  \MacroNI{DAGMAN\_ABORT\_ON\_SCARY\_SUBMIT} is set to \Expr{false}).
+  a scary submit event.
+  An example of a scary submit event is one in which the Condor ID
+  does not match the expected value.
+  Note that in all Condor versions prior to 6.9.3,
+  \Condor{dagman} did \emph{not} abort a DAG upon detection of
+  a scary submit event.
+  This behavior is what now happens if
+  \MacroNI{DAGMAN\_ABORT\_ON\_SCARY\_SUBMIT} is set to \Expr{False}.
   If not defined, \MacroNI{DAGMAN\_ABORT\_ON\_SCARY\_SUBMIT} defaults to
-  \Expr{true}.
+  \Expr{True}.
 
 \label{param:DAGManPendingReportInterval}
 \item[\Macro{DAGMAN\_PENDING\_REPORT\_INTERVAL}]
-  An integer value (in seconds) that controls how often \Condor{dagman}
+  An integer value representing the number of seconds that controls
+  how often \Condor{dagman}
   will print a report of pending nodes to the \File{dagman.out} file.
-  Note that the report will only be printed if \Condor{dagman} has
+  The report will only be printed if \Condor{dagman} has
   been waiting at least \MacroNI{DAGMAN\_PENDING\_REPORT\_INTERVAL}
   seconds without seeing any node job user log events, in order to
-  avoid cluttering the \File{dagman.out} file.  (This feature is mainly
-  intended to help diagnose "stuck" \Condor{dagman} processes that
-  are waiting indefinitely for a job to finish.) If not defined,
+  avoid cluttering the \File{dagman.out} file.
+  This feature is mainly intended to help diagnose \Condor{dagman} processes 
+  that are stuck waiting indefinitely for a job to finish.
+  If not defined,
   \MacroNI{DAGMAN\_PENDING\_REPORT\_INTERVAL} defaults to 600 seconds
   (10 minutes).
 
 \label{param:DAGManInsertSubFile}
 \item[\Macro{DAGMAN\_INSERT\_SUB\_FILE}]
-  A file name of a file containing submit file commands to be inserted
-  into the \File{.condor.sub} file created by \Condor{submit\_dag}.
+  A file name of a file containing submit description file commands to be
+  inserted into the \File{.condor.sub} file created by \Condor{submit\_dag}.
   The specified file is inserted into the \File{.condor.sub} file before
   the \SubmitCmd{queue} command and before any commands specified with the
-  \Opt{-append} \Condor{submit\_dag} command-line option.
+  \Opt{-append} \Condor{submit\_dag} command line option.
   Note that the \MacroNI{DAGMAN\_INSERT\_SUB\_FILE} value can be overridden
-  by the \Opt{-insert\_sub\_file} \Condor{submit\_dag} command-line option.
+  by the \Condor{submit\_dag} \Opt{-insert\_sub\_file} command line option.
 
 \label{param:DAGManOldRescue}
 \item[\Macro{DAGMAN\_OLD\_RESCUE}]
-  A boolean value that controls whether \Condor{dagman} uses "old-style"
-  rescue DAG naming when creating a rescue DAG.  (With "old-style" rescue
-  DAG naming, if your DAG file is \File{my.dag}, the rescue DAG file will
-  be \File{my.dag.rescue}, and that file will be overwritten if you re-run
-  \File{my.dag} and it fails again.  With "new-style" rescue DAG naming,
+  A boolean value that controls whether \Condor{dagman} uses old-style
+  rescue DAG naming when creating a rescue DAG.
+  In the old-style rescue DAG naming,
+  if a DAG file named \File{my.dag}, the rescue DAG file will
+  be \File{my.dag.rescue}, and that file will be overwritten if the re-run
+  \File{my.dag} fails again.  
+  With the new-style rescue DAG naming,
   the first time a rescue DAG is created for \File{my.dag}, it will be
-  named \File{my.dag.rescue001},and subsequent failures of
+  named \File{my.dag.rescue001}, and subsequent failures of
   \File{my.dag} will produce rescue DAGs named \File{my.dag.rescue002},
-  \File{my.dag.rescue003}, etc.)
-  If not defined, \MacroNI{DAGMAN\_OLD\_RESCUE} defaults to
-  \Expr{false}.
+  \File{my.dag.rescue003}, etc.
+  If not defined, \MacroNI{DAGMAN\_OLD\_RESCUE} defaults to \Expr{False}.
 
 \label{param:DAGManAutoRescue}
 \item[\Macro{DAGMAN\_AUTO\_RESCUE}]
   A boolean value that controls whether \Condor{dagman} automatically
-  runs rescue DAGs.  If \MacroNI{DAGMAN\_AUTO\_RESCUE} is true and you
-  run the DAG file \File{my.dag}, if a rescue dag such as
-  \File{my.dag.rescue001}, \File{my.dag.rescue002}, etc., exists, the newest
-  (highest-numbered) such rescue DAG will be run.
-  If not defined, \MacroNI{DAGMAN\_AUTO\_RESCUE} defaults to
-  \Expr{true}.
+  runs rescue DAGs.  If \MacroNI{DAGMAN\_AUTO\_RESCUE} is \Expr{True},
+  and the DAG file \File{my.dag} is run,
+  if a rescue dag such as
+  \File{my.dag.rescue001}, \File{my.dag.rescue002}, etc. exists,
+  the newest (highest-numbered) such rescue DAG will be run.
+  If not defined, \MacroNI{DAGMAN\_AUTO\_RESCUE} defaults to \Expr{True}.
 
   Note: having \MacroNI{DAGMAN\_OLD\_RESCUE} and
-  \MacroNI{DAGMAN\_AUTO\_RESCUE} both set to \Expr{true} is a
-  fatal error.
+  \MacroNI{DAGMAN\_AUTO\_RESCUE} both set to \Expr{True} is a fatal error.
 
 \label{param:DAGManMaxRescueNum}
 \item[\Macro{DAGMAN\_MAX\_RESCUE\_NUM}]
-  An integer value that controls the maximum "new-style" rescue DAG
-  number that will be written (if \MacroNI{DAGMAN\_OLD\_RESCUE} is
-  \Expr{false}) or run (if \MacroNI{DAGMAN\_AUTO\_RESCUE} is
-  \Expr{true}).  The maximum legal value is 999; the minimum value
-  is 0 (which will prevent a rescue DAG from being written at all,
-  or automatically run).  If not defined,
-  \MacroNI{DAGMAN\_MAX\_RESCUE\_NUM} defaults to 100.
+  An integer value that controls the maximum new-style rescue DAG
+  number that will be written, 
+  in the case that \MacroNI{DAGMAN\_OLD\_RESCUE} is \Expr{False},
+  or run if \MacroNI{DAGMAN\_AUTO\_RESCUE} is \Expr{True}).
+  The maximum legal value is 999; the minimum value is 0,
+  which prevents a rescue DAG from being written at all,
+  or automatically run.
+  If not defined, \MacroNI{DAGMAN\_MAX\_RESCUE\_NUM} defaults to 100.
 
 \item[\Macro{DAGMAN\_COPY\_TO\_SPOOL}]
 \label{param:DAGManCopyToSpool}
-  A boolean value that controls whether the condor\_dagman binary
-  is copied to the spool directory when a DAG is submitted.  The main
-  reason for setting this value to \Expr{true} is if you have
-  long-running DAGs that should survive a DAGMan version upgrade.
-  If you run large numbers of small DAGs, you should leave this
-  macro unset (or set it to \Expr{false}).  If not defined,
-  \MacroNI{DAGMAN\_AUTO\_RESCUE} defaults to \Expr{false}.
+  A boolean value that when \Expr{True} copies the \Condor{dagman} binary
+  to the spool directory when a DAG is submitted.
+  Setting this variable to \Expr{True} allows
+  long-running DAGs to survive a DAGMan version upgrade.
+  For running large numbers of small DAGs, leave this
+  variable unset or set it to \Expr{False}.
+  The default value if not defined is \Expr{False}.
 
 \end{description}
 
