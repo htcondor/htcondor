@@ -42,16 +42,23 @@ and \Condor{startd}.
 
 \begin{itemize}
 
-\item Added \Macro{MAX\_PERIODIC\_EXPR\_INTERVAL}.  The default is 1200
-seconds.  This is to prevent the time between evaluation of periodic
-expressions from becoming extremely large (e.g. many hours) due to the
-adaptive timing implied by \MacroNI{PERIODIC\_EXPR\_TIMESLICE}.
+\item The new configuration variable \Macro{MAX\_PERIODIC\_EXPR\_INTERVAL}
+  implements a ceiling on the time between evaluation of periodic expressions,
+  due to the adaptive timing implied by the configuration variable
+  \MacroNI{PERIODIC\_EXPR\_TIMESLICE}.
+  See \ref{param:MaxPeriodicExprInterval} for more details.
 
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+% gittrac #504
+\item Fixed a bug in the Windows platform code that treats scripts as
+  executables.
+  Unknown file extensions were treated as an error,
+  rather than as a Windows executable.
 
 \item The \Condor{job\_router} sets the ClassAd attribute
 \Attr{EnteredCurrentStatus} to the current time when creating a new routed job.
