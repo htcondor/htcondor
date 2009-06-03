@@ -23,15 +23,16 @@ This occurs when all slots on a machine agree that a low power state
 is desired.
 
 A slot's readiness to hibernate is determined by the 
-evaluating the \Macro{HIBERNATE} configuration variable within 
-the context of the slot.
+evaluating the \Macro{HIBERNATE} configuration variable
+(see section~\ref{param:Hibernate} on page~\pageref{param:Hibernate})
+within the context of the slot.
 Readiness is evaluated at fixed intervals, 
 as determined by the \Macro{HIBERNATE\_CHECK\_INTERVAL} configuration variable.
-A non-zero value of this variables enables the power management facility.
+A non-zero value of this variable enables the power management facility.
 It is an integer value representing seconds,
-an it need not be a small value.
-There is a trade off between the accuracy of measurement and 
-the unnecessary computation of readiness.  
+and it need not be a small value.
+There is a trade off between the extra time not at a low power state
+and the unnecessary computation of readiness.  
 
 To put the machine in a low power state rapidly
 after it has become idle, consider checking each slot's state frequently,
@@ -52,18 +53,13 @@ determined by the \MacroNI{HIBERNATE} expression.
 Because this expression is evaluated in the context of each slot,
 and not on the machine as a whole, 
 any one slot can veto a change of power state.  
-The \MacroNI{HIBERNATE} expression may include a wide array of variables.
+The \MacroNI{HIBERNATE} expression may reference a wide array of variables.
 Possibilities include the change in power state if 
 none of the slots are claimed, or if the slots are not in the
 Owner state.
-See the description of \MacroNI{HIBERNATE} in
-section~\ref{param:Hibernate} on page~\pageref{param:Hibernate}
-for definitions of the values representing the different
-power states.
 
 Here is a concrete example.
-Assume that the \MacroNI{START} expression is not set to
-always be \Expr{True}.
+Assume that the \MacroNI{START} expression is not set to always be \Expr{True}.
 This permits an easy determination whether or not
 the machine is in an Unclaimed state through the use of
 an auxiliary macro called \MacroNI{ShouldHibernate}.
@@ -76,15 +72,15 @@ ShouldHibernate = ((KeyboardIdle > $(StartIdleTime)) \
 \end{verbatim}
 \normalsize
 
-This macro evaluates to \Expr{True} if
+This macro evaluates to \Expr{True} if the following are all \Expr{True}:
 \begin{itemize}
 \item The keyboard has been idle long enough.
-\item The CPU is idle
+\item The CPU is idle.
 \item The slot has been Unclaimed for more than 2 hours.
 \end{itemize}
 
-The \MacroNI{HIBERNATE} expression 
-that enters the power state called \verb@"RAM"@ if
+The sample \MacroNI{HIBERNATE} expression 
+that enters the power state called \verb@"RAM"@, if
 \MacroNI{ShouldHibernate} evaluates to \Expr{True},
 and remains in its current state otherwise is
 
@@ -95,7 +91,7 @@ HIBERNATE = ifThenElse($(ShouldHibernate), "RAM", "NONE" )
 \normalsize
 
 If any slot returns \verb@"NONE"@,
-it vetoes the decision to enter a low power state.
+that slot vetoes the decision to enter a low power state.
 Only when values returned by all slots are all non-zero 
 is there a decision to enter a low power state.
 If all agree to enter the low power state, but differ in which state to enter,
@@ -123,16 +119,14 @@ persistent ClassAd entry for each machine, once it has entered hibernation.
 
 To do this, define a log file using the \Macro{OFFLINE\_LOG}
 configuration variable.
-An optional an expiration time for each ClassAd can
+See section~\ref{param:OfflineLog} on
+page~\pageref{param:OfflineLog} for the definition.
+An optional expiration time for each ClassAd can
 be specified with \Macro{OFFLINE\_EXPIRE\_ADS\_AFTER}.
 The timing begins from the time the hibernating machine's ClassAd enters
 the \Condor{collector} daemon.
-A description of \MacroNI{OFFLINE\_LOG} is at
-section~\ref{param:OfflineLog} on
-page~\pageref{param:OfflineLog},
-and a description of \MacroNI{OFFLINE\_EXPIRE\_ADS\_AFTER} is at
-section~\ref{param:OfflineExpireAdsAfter} on
-page~\pageref{param:OfflineExpireAdsAfter}.
+See section~\ref{param:OfflineExpireAdsAfter} on
+page~\pageref{param:OfflineExpireAdsAfter} for the definition.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Linux Platform Details}
@@ -190,7 +184,7 @@ For hardware difficulties,
 the likely culprit is the configuration within the machine's BIOS,
 for which Condor can offer little guidance.
 For operating system difficulties,
-the Vista the \Prog{powercfg} tool can be used to discover the available 
+the Vista \Prog{powercfg} tool can be used to discover the available 
 power states on the machine.
 The following command demonstrates how to
 list all of the supported power states of the machine:

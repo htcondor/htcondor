@@ -59,6 +59,17 @@ a DAG in which any nodes had been retried.
 \item Xen-based virtual machines now have the correct amount of memory.
 Previously, the amount of memory was too small by a factor of 1024.
 
+%gittrack #509
+\item Fixed a bug in the handling of \texttt{\$\$(VARIABLE)} submit
+  file expressions.
+
+% gittrac #510
+\item Fixed a bug in the code related to \MacroNI{USE\_VISIBLE\_DESKTOP} 
+  that was causing the windows created by the job behave incorrectly.
+
+\item Fixed a bug that caused Stork to treat successful file transfers
+as failed.
+
 \end{itemize}
 
 \noindent Known Bugs:
