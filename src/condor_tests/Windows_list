@@ -97,12 +97,13 @@ job_filexfer_whento-base_van
 job_filexfer_whento-simpleinput_van
 job_filexfer_whento-withinput_van
 job_schedd_restart-holdjobs-ok
-job_dagman_comlog
-job_dagman_fullremove
+# must create a simpler log reader - cost 5 dag jobs
+#job_dagman_comlog needs x_read_joblog.exe
+#job_dagman_fullremove needs x_read_joblog.exe
 job_dagman_basic
 job_dagman_maxpostscripts
 job_dagman_maxprescripts
-job_dagman_retry
+#job_dagman_retry needs x_read_joblog.exe
 #job_dagman_throttle needs x_read_joblog.exe
-job_dagman_uncomlog
-job_dagman_unlessexit
+#job_dagman_uncomlog needs x_read_joblog.exe
+#job_dagman_unlessexit needs x_read_joblog.exe
