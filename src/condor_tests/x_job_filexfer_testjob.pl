@@ -24,6 +24,12 @@ use File::Path;
 use Getopt::Long;
 use Cwd;
 
+print "Called with:\n";
+foreach my $arg (@ARGV) {
+	print "$arg ";
+}
+print "\n";
+
 GetOptions (
 	'help' => \$help,
 	'noinput' => \$noinput,
@@ -35,12 +41,6 @@ GetOptions (
 	'job=i' => \$job,
 	'failok' => \$failok,
 );
-
-print "Called with:\n";
-foreach my $arg (@ARGV) {
-	print "$arg ";
-}
-print "\n";
 
 if ( $help )    { help() and exit(0); }
 
@@ -190,9 +190,10 @@ else
 {
 	# create 
 	#system("touch $out1 $out2 $out3");
-	system("ls ..  >$out1");
-	system("ls ..  >$out2");
-	system("ls ..  >$out3");
+	system("touch $out1 $out2 $out3");
+	#system("ls ..  >$out1");
+	#system("ls ..  >$out2");
+	#system("ls ..  >$out3");
 	print "We should see 3 files now:\n";
 	system("ls");
 	system("cp * ..");
