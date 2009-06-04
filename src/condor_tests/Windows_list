@@ -103,6 +103,6 @@ job_dagman_basic
 job_dagman_maxpostscripts
 job_dagman_maxprescripts
 job_dagman_retry
-job_dagman_throttle
+#job_dagman_throttle needs x_read_joblog.exe
 job_dagman_uncomlog
 job_dagman_unlessexit
