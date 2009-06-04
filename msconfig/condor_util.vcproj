@@ -2,8 +2,9 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="9.00"
-	Name="condor_util_lib"
+	Name="condor_util"
 	ProjectGUID="{91B6D608-B432-42F9-BBDD-A5FFFEC3783D}"
+	RootNamespace="condor_util"
 	TargetFrameworkVersion="0"
 	>
 	<Platforms>
@@ -69,7 +70,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\src\condor_util_lib\condor_util.lib"
+				OutputFile="$(OutDir)\$(ProjectName).lib"
 				SuppressStartupBanner="true"
 			/>
 			<Tool
@@ -143,7 +144,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\src\condor_util_lib\condor_util.lib"
+				OutputFile="$(OutDir)\$(ProjectName).lib"
 				SuppressStartupBanner="true"
 			/>
 			<Tool
@@ -217,7 +218,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\src\condor_util_lib\condor_util.lib"
+				OutputFile="$(OutDir)\$(ProjectName).lib"
 				SuppressStartupBanner="true"
 			/>
 			<Tool
@@ -293,7 +294,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\src\condor_util_lib\condor_util.lib"
+				OutputFile="$(OutDir)\$(ProjectName).lib"
 				SuppressStartupBanner="true"
 			/>
 			<Tool
@@ -1619,6 +1620,10 @@
 			</FileConfiguration>
 		</File>
 		<File
+			RelativePath="..\src\condor_util_lib\mark_thread.c"
+			>
+		</File>
+		<File
 			RelativePath="..\src\condor_util_lib\match_prefix.c"
 			>
 			<FileConfiguration
@@ -1797,10 +1802,6 @@
 					PreprocessorDefinitions=""
 				/>
 			</FileConfiguration>
-		</File>
-		<File
-			RelativePath="..\src\condor_util_lib\mark_thread.c"
-			>
 		</File>
 		<File
 			RelativePath="..\src\condor_util_lib\proc.c"

@@ -2,7 +2,7 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="9.00"
-	Name="condor_cpp_util"
+	Name="condor_cpp"
 	ProjectGUID="{0339DBEE-40FD-4624-A2F6-E49D84303379}"
 	RootNamespace="condor_cpp_util"
 	TargetFrameworkVersion="0"
@@ -69,7 +69,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile=".\..\Debug\condor_cpp_util.lib"
+				OutputFile="$(OutDir)\$(ProjectName).lib"
 				SuppressStartupBanner="true"
 			/>
 			<Tool
@@ -146,7 +146,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile=".\..\Release\condor_cpp_util.lib"
+				OutputFile="$(OutDir)\$(ProjectName).lib"
 				SuppressStartupBanner="true"
 			/>
 			<Tool
@@ -221,7 +221,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile=".\..\Debug\condor_cpp_util.lib"
+				OutputFile="$(OutDir)\$(ProjectName).lib"
 				SuppressStartupBanner="true"
 			/>
 			<Tool
@@ -298,7 +298,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile=".\..\Release\condor_cpp_util.lib"
+				OutputFile="$(OutDir)\$(ProjectName).lib"
 				SuppressStartupBanner="true"
 			/>
 			<Tool
@@ -352,6 +352,10 @@
 			>
 		</File>
 		<File
+			RelativePath="..\src\condor_c++_util\access.h"
+			>
+		</File>
+		<File
 			RelativePath="..\src\condor_c++_util\access_desktop.WINDOWS.cpp"
 			>
 		</File>
@@ -382,10 +386,6 @@
 					CompileAs="2"
 				/>
 			</FileConfiguration>
-		</File>
-		<File
-			RelativePath="..\src\condor_c++_util\access.h"
-			>
 		</File>
 		<File
 			RelativePath="..\src\condor_c++_util\ad_printmask.cpp"
@@ -1104,6 +1104,30 @@
 			</FileConfiguration>
 		</File>
 		<File
+			RelativePath="..\src\condor_c++_util\condor_common.cpp"
+			>
+			<FileConfiguration
+				Name="Debug (Express)|Win32"
+				>
+				<Tool
+					Name="VCCLCompilerTool"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions=""
+					CompileAs="2"
+				/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Release (Express)|Win32"
+				>
+				<Tool
+					Name="VCCLCompilerTool"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions=""
+					CompileAs="2"
+				/>
+			</FileConfiguration>
+		</File>
+		<File
 			RelativePath="..\src\condor_c++_util\condor_config.cpp"
 			>
 			<FileConfiguration
@@ -1742,6 +1766,38 @@
 					CompileAs="2"
 				/>
 			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug (Express)|Win32"
+				>
+				<Tool
+					Name="VCCLCompilerTool"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions=""
+					CompileAs="2"
+				/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Release (Express)|Win32"
+				>
+				<Tool
+					Name="VCCLCompilerTool"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions=""
+					CompileAs="2"
+				/>
+			</FileConfiguration>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\condor_threads.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\condor_timeslice.h"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\condor_url.cpp"
+			>
 			<FileConfiguration
 				Name="Debug (Express)|Win32"
 				>
@@ -4012,30 +4068,6 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\condor_common.cpp"
-			>
-			<FileConfiguration
-				Name="Debug (Express)|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					AdditionalIncludeDirectories=""
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Release (Express)|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					AdditionalIncludeDirectories=""
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-		</File>
-		<File
 			RelativePath="..\src\condor_c++_util\iso_dates.h"
 			>
 		</File>
@@ -4416,39 +4448,7 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\condor_timeslice.h"
-			>
-		</File>
-		<File
-			RelativePath="..\src\condor_c++_util\condor_url.cpp"
-			>
-			<FileConfiguration
-				Name="Debug (Express)|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					AdditionalIncludeDirectories=""
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Release (Express)|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					AdditionalIncludeDirectories=""
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-		</File>
-		<File
 			RelativePath="..\src\condor_c++_util\log_transaction.h"
-			>
-		</File>
-		<File
-			RelativePath="..\src\condor_c++_util\condor_threads.cpp"
 			>
 		</File>
 		<File
@@ -5546,6 +5546,54 @@
 		<File
 			RelativePath="..\src\condor_c++_util\read_multiple_logs.h"
 			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\read_user_log.c++.h"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\read_user_log.cpp"
+			>
+			<FileConfiguration
+				Name="Debug|Win32"
+				>
+				<Tool
+					Name="VCCLCompilerTool"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions=""
+					CompileAs="2"
+				/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Release|Win32"
+				>
+				<Tool
+					Name="VCCLCompilerTool"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions=""
+					CompileAs="2"
+				/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug (Express)|Win32"
+				>
+				<Tool
+					Name="VCCLCompilerTool"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions=""
+					CompileAs="2"
+				/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Release (Express)|Win32"
+				>
+				<Tool
+					Name="VCCLCompilerTool"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions=""
+					CompileAs="2"
+				/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\src\condor_c++_util\read_user_log.cpp"
@@ -6772,52 +6820,20 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\read_user_log.c++.h"
+			RelativePath="..\src\condor_c++_util\user_job_policy.h"
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\read_user_log.cpp"
+			RelativePath="..\src\condor_c++_util\user_log.c++.h"
 			>
-			<FileConfiguration
-				Name="Debug|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					AdditionalIncludeDirectories=""
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Release|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					AdditionalIncludeDirectories=""
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Debug (Express)|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					AdditionalIncludeDirectories=""
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Release (Express)|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					AdditionalIncludeDirectories=""
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\user_log_header.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\user_log_header.cpp"
+			>
 		</File>
 		<File
 			RelativePath="..\src\condor_c++_util\user_log_header.cpp"
@@ -6825,10 +6841,6 @@
 		</File>
 		<File
 			RelativePath="..\src\condor_c++_util\user_log_header.h"
-			>
-		</File>
-		<File
-			RelativePath="..\src\condor_c++_util\user_log_header.cpp"
 			>
 		</File>
 		<File
@@ -6886,18 +6898,6 @@
 					CompileAs="2"
 				/>
 			</FileConfiguration>
-		</File>
-		<File
-			RelativePath="..\src\condor_c++_util\user_job_policy.h"
-			>
-		</File>
-		<File
-			RelativePath="..\src\condor_c++_util\user_log.c++.h"
-			>
-		</File>
-		<File
-			RelativePath="..\src\condor_c++_util\user_log_header.cpp"
-			>
 		</File>
 		<File
 			RelativePath="..\src\condor_c++_util\waker.cpp"
