@@ -64,18 +64,6 @@ char* condor_dirname( const char* path );
 char* condor_url_dirname( const char* path );
 
 /*
-  DEPRECATED: because of non-const return value.
-
-  A basename() function that is happy on both Unix and NT.
-  It returns a pointer to the last element of the path it was given,
-  or the whole string, if there are no directory delimiters.  There's
-  no memory allocated, overwritten or changed in anyway.
-  PLEASE treat the return value as a _const_ char *!!!  It's only
-  declared char * to avoid conflict with the system basename() declaration.
-*/
-/* const*/ char* basename( const char* path );
-
-/*
   DEPRECATED: just in case we need changes along the lines of
   condor_basename() some time in the future.
 

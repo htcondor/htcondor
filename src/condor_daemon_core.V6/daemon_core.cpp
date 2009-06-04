@@ -2856,6 +2856,9 @@ void DaemonCore::Driver()
 					// that is doing a non-blocking connect
 					// CCBClient will eventually ensure that the
 					// socket's registered callback function is called
+					// We want to ignore the socket's deadline (below)
+					// because that is all taken care of by CCBClient.
+					continue;
 				}
 				else if ( (*sockTable)[i].is_connect_pending ) {
 						// we want to be woken when a non-blocking
