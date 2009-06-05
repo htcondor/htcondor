@@ -1586,6 +1586,15 @@ void nordugrid_exit_info_get_callback( void *arg,
 			 */
 		((char *)user_arg->buff)[user_arg->buff_filled] = '\0';
 
+		while ( strncmp( file, "WallTime", 8 ) ) {
+			file = strchr( file, '\n' );
+			if ( file == NULL ) {
+				break;
+			} else {
+				file += 1;
+			}
+		}
+		file = strchr( file, '\n' ) + 1;
 			/* Skip lines until we see 'Command' or 'WallTime'.
 			 * If we don't find what we're looking for, generate
 			 * an error.
