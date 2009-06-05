@@ -1793,80 +1793,83 @@ handle_nordugrid_status_all( char **input_line)
 	user_arg->cmd = input_line;
 	user_arg->cred = current_cred;
 
-	{
-		int rc;
-		LDAP *hdl;
-		char *server = user_arg->cmd[2];
-		int port = 2135;
-		char *search_base = "mds-vo-name=local,o=grid";
-		char *search_filter = "objectclass=nordugrid-job";
-		char *attrs[] = { "nordugrid-job-globalid", "nordugrid-job-status", NULL };
-		LDAPMessage *search_result;
-		LDAPMessage *next_entry;
-		int idx = 0;
+	int rc;
+	LDAP *hdl = NULL;
+	char *server = user_arg->cmd[2];
+	int port = 2135;
+	char *search_base = "mds-vo-name=local,o=grid";
+	char *search_filter = "objectclass=nordugrid-job";
+	char *attrs[] = { "nordugrid-job-globalid", "nordugrid-job-status", NULL };
+	LDAPMessage *search_result = NULL;
+	LDAPMessage *next_entry = NULL;
+	int idx = 0;
 
-		hdl = ldap_init( server, port );
-		if ( hdl == NULL ) {
-			err_str = strdup( "ldap_open failed" );
-			goto status_all_done;
-		}
+	hdl = ldap_init( server, port );
+	if ( hdl == NULL ) {
+		err_str = strdup( "ldap_open failed" );
+		goto status_all_done;
+	}
 
-			// This is the synchronous version
-		rc = ldap_simple_bind_s( hdl, NULL, NULL );
-		if ( rc != 0 ) {
-				// TODO free resources?
-				//ldap_perror( hdl, "ldap_simple_bind_s failed" );
-			err_str = strdup( "ldap_simple_bind_s failed" );
-			goto status_all_done;
-		}
+		// This is the synchronous version
+	rc = ldap_simple_bind_s( hdl, NULL, NULL );
+	if ( rc != 0 ) {
+			// TODO free resources?
+			//ldap_perror( hdl, "ldap_simple_bind_s failed" );
+		err_str = strdup( "ldap_simple_bind_s failed" );
+		goto status_all_done;
+	}
 
-			// This is the synchronous version
-		rc = ldap_search_s( hdl, search_base, LDAP_SCOPE_SUBTREE, search_filter,
-							attrs, 0, &search_result );
-		if ( rc != 0 ) {
-				// TODO free resources?
-				//ldap_perror( hdl, "ldap_search_s failed" );
-			err_str = strdup( "ldap_search_s failed" );
-			goto status_all_done;
-		}
+		// This is the synchronous version
+	rc = ldap_search_s( hdl, search_base, LDAP_SCOPE_SUBTREE, search_filter,
+						attrs, 0, &search_result );
+	if ( rc != 0 ) {
+			// TODO free resources?
+			//ldap_perror( hdl, "ldap_search_s failed" );
+		err_str = strdup( "ldap_search_s failed" );
+		goto status_all_done;
+	}
 
-		num_jobs = ldap_count_entries( hdl, search_result );
-		replies = (char **)globus_libc_malloc( (num_jobs * 2 + 1) * sizeof(char *) );
-		replies[num_jobs * 2] = NULL;
+	num_jobs = ldap_count_entries( hdl, search_result );
+	replies = (char **)globus_libc_malloc( (num_jobs * 2 + 1) * sizeof(char *) );
+	replies[num_jobs * 2] = NULL;
 
-		next_entry = ldap_first_entry( hdl, search_result );
-		while ( next_entry ) {
-			BerElement *ber;
-			const char *next_attr;
-			char *dn;
+	next_entry = ldap_first_entry( hdl, search_result );
+	while ( next_entry ) {
+		BerElement *ber;
+		const char *next_attr;
+		char *dn;
 
-//			dn = ldap_get_dn( hdl, next_entry );
-//			printf( "dn: %s\n", dn );
-//			ldap_memfree( dn );
+//		dn = ldap_get_dn( hdl, next_entry );
+//		printf( "dn: %s\n", dn );
+//		ldap_memfree( dn );
 
-			next_attr = ldap_first_attribute( hdl, next_entry, &ber );
-			while ( next_attr ) {
-				char **values;
-				int i;
+		next_attr = ldap_first_attribute( hdl, next_entry, &ber );
+		while ( next_attr ) {
+			char **values;
+			int i;
 
-				if ( !strcmp( next_attr, "nordugrid-job-globalid" ) ||
-					 !strcmp( next_attr, "nordugrid-job-status" ) ) {
-					values = ldap_get_values( hdl, next_entry, next_attr );
-					replies[idx++] = escape_spaces( values[0] );
-					replies_len += strlen( replies[idx-1] ) + 1;
+			if ( !strcmp( next_attr, "nordugrid-job-globalid" ) ||
+				 !strcmp( next_attr, "nordugrid-job-status" ) ) {
+				values = ldap_get_values( hdl, next_entry, next_attr );
+				replies[idx++] = escape_spaces( values[0] );
+				replies_len += strlen( replies[idx-1] ) + 1;
 
-					ldap_value_free( values );
-				}
-else {fprintf(stderr,"Didn't expect attr %s\n",next_attr);}
-				next_attr = ldap_next_attribute( hdl, next_entry, ber );
+				ldap_value_free( values );
 			}
-
-			ber_free( ber, 0 );
-			next_entry = ldap_next_entry( hdl, next_entry );
+			next_attr = ldap_next_attribute( hdl, next_entry, ber );
 		}
+
+		ber_free( ber, 0 );
+		next_entry = ldap_next_entry( hdl, next_entry );
 	}
 
  status_all_done:
+	if ( hdl ) {
+		ldap_unbind( hdl );
+	}
+	if ( search_result ) {
+		ldap_msgfree( search_result );
+	}
 	if ( !err_str ) {
 		int i;
 		int len = strlen( user_arg->cmd[1] ) + replies_len + 20;
