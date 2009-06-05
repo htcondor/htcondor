@@ -25,7 +25,7 @@
 ## mode.
 
 ## TO DO: add some stuff to verify that each node really only got
-## run once.
+## successfully run once.
 
 use CondorTest;
 
