@@ -419,7 +419,7 @@ void Hadoop::recurrBuildClasspath(const char *path) {
 
         const char *ctmp;
         while ( (ctmp = dir.Next())) {
-                char *match = strstr(ctmp, ".jar");
+                const char *match = strstr(ctmp, ".jar");
                 if (match && strlen(match) == 4) {
                         m_classpath.insert(dir.GetFullPath());
                 } else if (dir.IsDirectory()) {
