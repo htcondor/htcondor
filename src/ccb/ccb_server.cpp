@@ -542,19 +542,42 @@ CCBServer::ForwardRequestToTarget( CCBServerRequest *request, CCBTarget *target 
 void
 CCBServer::RequestReply( Sock *sock, bool success, char const *error_msg, CCBID request_cid, CCBID target_cid )
 {
+	if( success && sock->readReady() ) {
+			// the client must have disconnected (which is expected if
+			// the client has already received the reversed connection)
+		return;
+	}
+
 	ClassAd msg;
 	msg.Assign( ATTR_RESULT, success );
 	msg.Assign( ATTR_ERROR_STRING, error_msg );
 
 	sock->encode();
 	if( !msg.put( *sock ) || !sock->end_of_message() ) {
-		dprintf(D_ALWAYS,
-				"CCB: failed to send result to request id %lu "
-				"%s target daemon with ccbid %lu: %s\n",
+			// Would like to be completely quiet if success and the
+			// client has disconnected, since this is normal; however,
+			// the above write operations will generate noise when
+			// they fail, so at least in FULLDEBUG, we explain what's
+			// going on.  Note that most of the time, we should not get
+			// here for successful requests, because we either observe
+			// the client disconnect earlier, or the above check on
+			// the socket catches it.  Why bother sending a reply on
+			// success at all?  Because if the client has not yet
+			// seen the reverse connect and we just disconnect without
+			// telling it the request was successful, then it will
+			// think something has gone wrong.
+		dprintf(success ? D_FULLDEBUG : D_ALWAYS,
+				"CCB: failed to send result (%s) for request id %lu "
+				"from %s requesting a reversed connection to target daemon "
+				"with ccbid %lu: %s %s\n",
+				success ? "request succeeded" : "request failed",
 				request_cid,
 				sock->peer_description(),
 				target_cid,
-				error_msg );
+				error_msg,
+				success ? "(since the request was successful, it is expected "
+				          "that the client may disconnect before receiving "
+				          "results)" : "" );
 	}
 }
 
