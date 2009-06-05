@@ -95,6 +95,7 @@ static char *commands_list =
 "NORDUGRID_EXIT_INFO "
 "NORDUGRID_PING "
 "NORDUGRID_STATUS_ALL "
+"NORDUGRID_LDAP_QUERY "
 "INITIALIZE_FROM_FILE "
 "QUIT "
 "RESULTS "
@@ -290,6 +291,57 @@ void all_args_free( char ** );
 
 int process_string_arg( char *input_line, char **output_line);
 int process_int_arg( char *input_line, int *result );
+
+typedef struct my_string {
+	char *data;
+	int length;
+	int capacity;
+} my_string;
+
+my_string *
+my_string_malloc()
+{
+	my_string *str = (my_string *)malloc( sizeof(my_string) );
+	str->capacity = 1024;
+	str->data = (char *)malloc( str->capacity );
+	str->length = 0;
+	str->data[0] = '\0';
+	return str;
+}
+
+void 
+my_string_free( my_string *str ) {
+	if ( str ) {
+		free( str->data );
+		free( str );
+	}
+}
+
+char *
+my_string_convert( my_string *str ) {
+	char *rc = NULL;
+	if ( str ) {
+		rc = str->data;
+		free( str );
+	}
+	return rc;
+}
+
+void
+my_strcat( my_string *dst, const char *src )
+{
+	int src_len = strlen( src );
+	int new_capacity = dst->capacity;
+	while( dst->length + src_len >= new_capacity ) {
+		new_capacity *= 2;
+	}
+	if ( new_capacity > dst->capacity ) {
+		dst->data = realloc( dst->data, new_capacity );
+		dst->capacity = new_capacity;
+	}
+	strcpy( &dst->data[dst->length], src );
+	dst->length += src_len;
+}
 
 int
 gahp_printf(const char *format, ...)
@@ -1896,6 +1948,159 @@ handle_nordugrid_status_all( char **input_line)
 }
 
 int
+handle_nordugrid_ldap_query( char **input_line )
+{
+	user_arg_t *user_arg;
+	char *output;
+	char *err_str = NULL;
+	my_string *reply = NULL;
+	char *attrs_str = NULL;
+
+	if ( input_line[1] == NULL || input_line[2] == NULL ||
+		 input_line[3] == NULL || input_line[4] == NULL ||
+		 input_line[5] == NULL) {
+		HANDLE_SYNTAX_ERROR();
+		return 0;
+	}
+	 
+	gahp_printf("S\n");
+	gahp_sem_up(&print_control);
+
+	user_arg = malloc_user_arg();
+	user_arg->cmd = input_line;
+	user_arg->cred = current_cred;
+
+	int rc;
+	LDAP *hdl = NULL;
+	char *server = user_arg->cmd[2];
+	int port = 2135;
+	char *search_base = user_arg->cmd[3];
+	char *search_filter = user_arg->cmd[4];
+	char **attrs = NULL;
+	LDAPMessage *search_result = NULL;
+	LDAPMessage *next_entry = NULL;
+	int idx = 0;
+
+	process_string_arg( user_arg->cmd[5], &attrs_str );
+	if ( attrs_str && attrs_str[0] ) {
+		int num_attrs = 1;
+		char* next = attrs_str;
+		char *prev;
+		int i;
+		while ( (next = strchr( next, ',' )) ) {
+			num_attrs++;
+			next++;
+		}
+		attrs = (char **)malloc( (num_attrs + 1) * sizeof(char *) );
+		prev = attrs_str;
+		i = 0;
+		while ( (next = strchr( prev, ',' )) ) {
+			attrs[i] = prev;
+			*next = '\0';
+			prev = next + 1;
+			i++;
+		}
+		attrs[i] = prev;
+		attrs[i + 1] = NULL;
+	}
+
+	hdl = ldap_init( server, port );
+	if ( hdl == NULL ) {
+		err_str = strdup( "ldap_open failed" );
+		goto ldap_query_done;
+	}
+
+		// This is the synchronous version
+	rc = ldap_simple_bind_s( hdl, NULL, NULL );
+	if ( rc != 0 ) {
+			// TODO free resources?
+			//ldap_perror( hdl, "ldap_simple_bind_s failed" );
+		err_str = strdup( "ldap_simple_bind_s failed" );
+		goto ldap_query_done;
+	}
+
+		// This is the synchronous version
+	rc = ldap_search_s( hdl, search_base, LDAP_SCOPE_SUBTREE, search_filter,
+						attrs, 0, &search_result );
+	if ( rc != 0 ) {
+			// TODO free resources?
+			//ldap_perror( hdl, "ldap_search_s failed" );
+		err_str = strdup( "ldap_search_s failed" );
+		goto ldap_query_done;
+	}
+
+	reply = my_string_malloc();
+	my_strcat( reply, user_arg->cmd[1] );
+	my_strcat( reply, " 0 NULL" );
+
+	int first_entry = 1;
+	next_entry = ldap_first_entry( hdl, search_result );
+	while ( next_entry ) {
+		BerElement *ber;
+		const char *next_attr;
+		char *dn;
+
+		if ( !first_entry ) {
+			my_strcat( reply, " " );
+		}
+		first_entry = 0;
+
+//		dn = ldap_get_dn( hdl, next_entry );
+//		printf( "dn: %s\n", dn );
+//		ldap_memfree( dn );
+
+		next_attr = ldap_first_attribute( hdl, next_entry, &ber );
+		while ( next_attr ) {
+			char **values;
+			int i;
+			char *esc_str;
+
+			values = ldap_get_values( hdl, next_entry, next_attr );
+			for ( i = 0; values[i]; i++ ) {
+				my_strcat( reply, " " );
+				my_strcat( reply, next_attr );
+				my_strcat( reply, ":\\ " );
+				esc_str = escape_spaces( values[i] );
+				my_strcat( reply, esc_str );
+				free( esc_str );
+			}
+
+			ldap_value_free( values );
+
+			next_attr = ldap_next_attribute( hdl, next_entry, ber );
+		}
+
+		ber_free( ber, 0 );
+		next_entry = ldap_next_entry( hdl, next_entry );
+	}
+
+ ldap_query_done:
+	if ( hdl ) {
+		ldap_unbind( hdl );
+	}
+	if ( search_result ) {
+		ldap_msgfree( search_result );
+	}
+	free( attrs );
+	if ( !err_str ) {
+		output = my_string_convert( reply );
+	} else {
+		char *esc = escape_spaces( err_str );
+		output = globus_libc_malloc( 10 + strlen( user_arg->cmd[1] ) +
+									 strlen( esc ) );
+		globus_libc_sprintf( output, "%s 1 %s", user_arg->cmd[1], esc );
+		globus_libc_free( err_str );
+		globus_libc_free( esc );
+		my_string_free( reply );
+	}
+
+	enqueue_results(output);	
+
+	free_user_arg( user_arg );
+	return 0;
+}
+
+int
 handle_commands( char **input_line )
 {
 	gahp_printf("S %s\n", commands_list);
@@ -2528,6 +2733,7 @@ service_commands(void *arg,globus_io_handle_t* gio_handle,globus_result_t rest)
 		HANDLE_SYNC( nordugrid_exit_info ) else
 		HANDLE_SYNC( nordugrid_ping ) else
 		HANDLE_SYNC( nordugrid_status_all ) else
+		HANDLE_SYNC( nordugrid_ldap_query ) else
 		{
 			handle_bad_request(input_line);
 			result = 0;
