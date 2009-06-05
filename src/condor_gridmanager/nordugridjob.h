@@ -93,11 +93,6 @@ class NordugridJob : public BaseJob
 	StringList *stageList;
 	StringList *stageLocalList;
 
-		// These get set before file stage out, but don't get handed
-		// to JobTerminated() until after file stage out succeeds.
-	int exitCode;
-	bool normalExit;
-
 	MyString *buildSubmitRSL();
 	StringList *buildStageInList();
 	StringList *buildStageOutList();

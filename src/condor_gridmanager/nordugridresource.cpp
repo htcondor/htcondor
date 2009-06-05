@@ -190,16 +190,17 @@ int NordugridResource::DoJobStatus()
 
 	daemonCore->Reset_Timer( m_jobStatusTid, TIMER_NEVER );
 
-	StringList job_ids;
-	StringList statuses;
+	StringList results;
 
 	if ( m_jobStatusActive == false ) {
 
 			// start ldap status command
 		dprintf( D_FULLDEBUG, "Starting ldap poll: %s\n", resourceName );
 
-		int rc = m_statusGahp->nordugrid_status_all( resourceName, job_ids,
-													 statuses );
+		MyString filter;
+		filter.sprintf( "(&(objectclass=nordugrid-job)(nordugrid-job-globalowner=%s))", proxySubject );
+		int rc = m_statusGahp->nordugrid_ldap_query( resourceName, "mds-vo-name=local,o=grid", filter.Value(), "nordugrid-job-globalid,nordugrid-job-status",
+													 results );
 		if ( rc != GAHPCLIENT_COMMAND_PENDING ) {
 			dprintf( D_ALWAYS,
 					 "gahp->nordugrid_status_all returned %d for resource %s\n",
@@ -211,7 +212,7 @@ int NordugridResource::DoJobStatus()
 	} else {
 
 			// finish ldap status command
-		int rc = m_statusGahp->nordugrid_status_all( NULL, job_ids, statuses );
+		int rc = m_statusGahp->nordugrid_ldap_query( NULL, NULL, NULL, NULL, results );
 
 		if ( rc == GAHPCLIENT_COMMAND_PENDING ) {
 			return 0;
@@ -228,19 +229,23 @@ int NordugridResource::DoJobStatus()
 			const char *next_status;
 			MyString key;
 
-			job_ids.rewind();
-			statuses.rewind();
-			while ( (next_job_id = job_ids.next()) &&
-					(next_status = statuses.next()) ) {
+			results.rewind();
+			while ( (next_job_id = results.next()) &&
+					(next_status = results.next()) ) {
 
 				int rc2;
 				NordugridJob *job;
+				const char *dummy;
+				ASSERT( !strncmp( next_job_id, "nordugrid-job-globalid: ", 24 ) );
+				ASSERT( !strncmp( next_status, "nordugrid-job-status: ", 22 ) );
+				dummy = results.next();
+				ASSERT( dummy == NULL || *dummy == '\0' );
 				key.sprintf( "nordugrid %s %s", resourceName,
 							 strrchr( next_job_id, '/' ) + 1 );
 				rc2 = BaseJob::JobsByRemoteId.lookup( HashKey( key.Value() ),
 													  (BaseJob*&)job );
 				if ( rc2 == 0 ) {
-					job->NotifyNewRemoteStatus( next_status );
+					job->NotifyNewRemoteStatus( strchr( next_status, ' ' ) + 1 );
 				}
 			}
 

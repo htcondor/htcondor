@@ -564,14 +564,12 @@ int NordugridJob::doEvaluateState()
 			}
 			} break;
 		case GM_EXIT_INFO: {
-			bool normal_exit;
-			int exit_code;
-			float wallclock = 0;
-			float sys_cpu = 0;
-			float user_cpu = 0;
-			rc = gahp->nordugrid_exit_info( resourceManagerString, remoteJobId,
-											normal_exit, exit_code, wallclock,
-											sys_cpu, user_cpu );
+			MyString filter;
+			StringList reply;
+			filter.sprintf( "nordugrid-job-globalid=gsiftp://%s:2811/jobs/%s",
+							resourceManagerString, remoteJobId );
+
+			rc = gahp->nordugrid_ldap_query( resourceManagerString, "mds-vo-name=local,o=grid", filter.Value(), "nordugrid-job-usedcputime,nordugrid-job-usedwalltime,nordugrid-job-exitcode", reply );
 			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 				 rc == GAHPCLIENT_COMMAND_PENDING ) {
 				break;
@@ -581,18 +579,38 @@ int NordugridJob::doEvaluateState()
 						 procID.cluster, procID.proc, errorString.Value() );
 				gmState = GM_CANCEL;
 			} else {
-				normalExit = normal_exit;
-				exitCode = exit_code;
-				if ( normalExit ) {
-					jobAd->Assign( ATTR_ON_EXIT_BY_SIGNAL, false );
-					jobAd->Assign( ATTR_ON_EXIT_CODE, exitCode );
-				} else {
-					jobAd->Assign( ATTR_ON_EXIT_BY_SIGNAL, true );
-					jobAd->Assign( ATTR_ON_EXIT_SIGNAL, exitCode );
+				int exit_code = -1;
+				int wallclock = -1;
+				int cpu = -1;
+				const char *entry;
+				reply.rewind();
+				while ( (entry = reply.next()) ) {
+					if ( !strncmp( entry, "nordugrid-job-usedcputime: ", 27 ) ) {
+						entry = strchr( entry, ' ' ) + 1;
+						cpu = atoi( entry );
+					} else if ( !strncmp( entry, "nordugrid-job-usedwalltime: ", 28 ) ) {
+						entry = strchr( entry, ' ' ) + 1;
+						wallclock = atoi( entry );
+					} else if ( !strncmp( entry, "nordugrid-job-exitcode: ", 24 ) ) {
+						entry = strchr( entry, ' ' ) + 1;
+						exit_code = atoi( entry );
+					}
 				}
-				jobAd->Assign( ATTR_JOB_REMOTE_WALL_CLOCK, wallclock );
-				jobAd->Assign( ATTR_JOB_REMOTE_SYS_CPU, sys_cpu );
-				jobAd->Assign( ATTR_JOB_REMOTE_USER_CPU, user_cpu );
+				if ( exit_code < 0 || wallclock < 0 || cpu < 0 ) {
+					dprintf( D_ALWAYS, "(%d.%d) exit info missing\n",
+							 procID.cluster, procID.proc );
+					gmState = GM_CANCEL;
+					break;
+				}
+				if ( exit_code > 128 ) {
+					jobAd->Assign( ATTR_ON_EXIT_BY_SIGNAL, true );
+					jobAd->Assign( ATTR_ON_EXIT_SIGNAL, exit_code - 128 );
+				} else {
+					jobAd->Assign( ATTR_ON_EXIT_BY_SIGNAL, false );
+					jobAd->Assign( ATTR_ON_EXIT_CODE, exit_code );
+				}
+				jobAd->Assign( ATTR_JOB_REMOTE_WALL_CLOCK, wallclock * 60 );
+				jobAd->Assign( ATTR_JOB_REMOTE_USER_CPU, cpu * 60 );
 				gmState = GM_STAGE_OUT;
 			}
 			} break;
