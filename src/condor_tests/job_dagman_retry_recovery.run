@@ -20,13 +20,12 @@
 
 ## This tests recovery mode after node retries (see gittrac #481).
 
-## Note: this test doesn't work correctly right now -- it's kind of
-## a strange test -- part of the test is that the node C job puts
-## its own DAGMan on hold and then releases it -- the test scripts
-## don't deal with that correctly, and when the DAGMan goes on hold
-## the script thinks the test has failed.  For now, you can manually
-## test things by just running job_dagman_retry_recovery.dag -- if
-## the DAG completes with an exit value of 0, the test passes.
+## Note: this is a bit of a tricky test -- the node C job actually
+## puts DAGMan on hold and then releases it to force it into recovery
+## mode.
+
+## TO DO: add some stuff to verify that each node really only got
+## run once.
 
 use CondorTest;
 
@@ -37,7 +36,8 @@ $dagman_args = "-verbose";
 
 @logfiles = ("job_dagman_retry_recovery.dag.dagman.out");
 
-my $killedchosen = 0;
+my $dag_was_held = 0;
+my $dag_was_released = 0;
 
 # truly const variables in perl
 sub IDLE{1};
@@ -63,7 +63,14 @@ $aborted = sub
 
 $held = sub 
 {
-	die "Held event NOT expected\n";
+	CondorTest::debug("DAGMan was held -- good!\n");
+    $dag_was_held = 1;
+};
+
+$released = sub 
+{
+	CondorTest::debug("DAGMan was released -- good!\n");
+    $dag_was_released = 1;
 };
 
 $executed = sub
@@ -75,7 +82,7 @@ $executed = sub
 
 $submitted = sub
 {
-	CondorTest::debug("submitted: This test will see submit, executing and successful completion\n",1);
+	CondorTest::debug("submitted: This test will see submit, executing, held, released, and successful completion\n",1);
 };
 
 $success = sub
@@ -119,6 +126,7 @@ CondorTest::RegisterExecute($testname, $executed);
 CondorTest::RegisterExitedAbnormal( $testname, $abnormal );
 CondorTest::RegisterAbort( $testname, $aborted );
 CondorTest::RegisterHold( $testname, $held );
+CondorTest::RegisterRelease( $testname, $released );
 CondorTest::RegisterSubmit( $testname, $submitted );
 
 if( CondorTest::RunDagTest($testname, $cmd, 0, $dagman_args) ) {
