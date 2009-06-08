@@ -55,6 +55,10 @@
 #include "condor_open.h"
 #include "ickpt_share.h"
 
+#if HAVE_DLOPEN
+#include "ScheddPlugin.h"
+#endif
+
 #include "file_sql.h"
 extern FILESQL *FILEObj;
 
@@ -4190,6 +4194,10 @@ static void AppendHistory(ClassAd* ad)
   ad_size = ad_string.Length();
 
   MaybeRotateHistory(ad_size);
+
+#if HAVE_DLOPEN
+  ScheddPluginManager::Archive(ad);
+#endif
 
   if (FILEObj->file_newEvent("History", ad) == QUILL_FAILURE) {
 	  dprintf(D_ALWAYS, "AppendHistory Logging History Event --- Error\n");

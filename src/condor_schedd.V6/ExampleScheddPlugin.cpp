@@ -42,6 +42,11 @@ struct ExampleScheddPlugin : public ScheddPlugin
 	{
 		printf("update(%d, %s)\n", cmd, ad ? "Ad" : "(NULL)");
 	}
+
+	void archive(const ClassAd *ad)
+	{
+		printf("archive(%s)\n", ad ? "Ad" : "(NULL)");
+	}
 };
 
 static ExampleScheddPlugin instance;

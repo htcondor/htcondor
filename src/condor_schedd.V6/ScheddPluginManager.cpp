@@ -67,6 +67,17 @@ ScheddPluginManager::Update(int cmd, const ClassAd *ad)
 	}
 }
 
+void
+ScheddPluginManager::Archive(const ClassAd *ad)
+{
+	ScheddPlugin *plugin;
+	SimpleList<ScheddPlugin *> plugins = getPlugins();
+	plugins.Rewind();
+	while (plugins.Next(plugin)) {
+		plugin->archive(ad);
+	}
+}
+
 ScheddPlugin::ScheddPlugin()
 {
     if (PluginManager<ScheddPlugin>::registerPlugin(this)) {
