@@ -67,6 +67,10 @@ Previously, it copied this attribute from the original job.
 \item The \Condor{job\_router} emits a more friendly log message when it
 observes that the routed copy of the job was removed.
 
+\item A fix has been made for a problem seen in 7.3.1 in which Condor daemons
+using CCB to connect to other Condor daemons would sometimes consume
+large amounts of CPU time for no good reason.
+
 \end{itemize}
 
 \noindent Known Bugs:
