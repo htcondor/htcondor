@@ -6181,7 +6181,7 @@ Scheduler::StartJob(match_rec *rec)
 		dprintf(D_ALWAYS,
 				"match (%s) out of jobs; relinquishing\n",
 				rec->description() );
-		Relinquish(rec);
+		DelMrec(rec);
 		return;
 	}
 
@@ -6194,7 +6194,7 @@ Scheduler::StartJob(match_rec *rec)
 
 		dprintf(D_ALWAYS,"Failed to start job for %s; relinquishing\n",
 				rec->description());
-		Relinquish(rec);
+		DelMrec(rec);
 		mark_job_stopped( &id );
 
 			/* We want to send some email to the administrator
@@ -9389,7 +9389,6 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 				// JOB_NOT_CKPTED, so we're safe.
 		case JOB_NOT_STARTED:
 			if( !srec->removed && srec->match ) {
-				Relinquish(srec->match);
 				DelMrec(srec->match);
 			}
 			break;
@@ -11274,71 +11273,6 @@ Scheduler::FindSrecByProcID(PROC_ID proc)
 	return rec;
 }
 
-/*
- * Weiru
- * Inform the startd and the accountant of the relinquish of the resource.
- */
-void
-Scheduler::Relinquish(match_rec* mrec)
-{
-	if (!mrec) {
-		dprintf(D_ALWAYS, "Scheduler::Relinquish - mrec is NULL, can't relinquish\n");
-		return;
-	}
-
-#if 0
-	ReliSock	*sock;
-	int				flag = FALSE;
-
-	// inform the accountant
-	if(!AccountantName)
-	{
-		dprintf(D_PROTOCOL, "## 7. No accountant to relinquish\n");
-	}
-	else
-	{
-		Daemon d (AccountantName);
-		sock = d.startCommand (RELINQUISH_SERVICE,
-				Stream::reli_sock,
-				NEGOTIATOR_CONTACT_TIMEOUT);
-
-		sock->timeout(NEGOTIATOR_CONTACT_TIMEOUT);
-		sock->encode();
-		if(!sock) {
-			dprintf(D_ALWAYS,"Can't connect to accountant %s\n",
-					AccountantName);
-		}
-		else if(!sock->put(daemonCore->publicNetworkIpAddr()))
-		{
-			dprintf(D_ALWAYS,"Can't relinquish accountant. Match record is:\n");
-			dprintf(D_ALWAYS, "%s\t%s\n", mrec->publicClaimId(), mrec->peer);
-		}
-		else if(!sock->put(mrec->claimId()))
-		{
-			dprintf(D_ALWAYS,"Can't relinquish accountant. Match record is:\n");
-			dprintf(D_ALWAYS, "%s\t%s\n", mrec->publicClaimId(), mrec->peer);
-		}
-		else if(!sock->put(mrec->peer) || !sock->eom())
-		// This is not necessary to send except for being an extra checking
-		// because ClaimId uniquely identifies a match.
-		{
-			dprintf(D_ALWAYS,"Can't relinquish accountant. Match record is:\n");
-			dprintf(D_ALWAYS, "%s\t%s\n", mrec->publicClaimId(), mrec->peer);
-		}
-		else
-		{
-			dprintf(D_PROTOCOL,"## 7. Relinquished acntnt. Match record is:\n");
-			dprintf(D_PROTOCOL, "\t%s\t%s\n", mrec->publicClaimId(), mrec->peer);
-			flag = TRUE;
-		}
-		delete sock;
-	}
-
-#endif 
-
-	DelMrec(mrec);
-}
-
 match_rec *
 Scheduler::FindMrecByJobID(PROC_ID job_id) {
 	match_rec *match = NULL;
@@ -11617,7 +11551,7 @@ Scheduler::HadException( match_rec* mrec )
 		dprintf( D_FAILURE|D_ALWAYS, 
 				 "Match for cluster %d has had %d shadow exceptions, relinquishing.\n",
 				 mrec->cluster, mrec->num_exceptions );
-		Relinquish(mrec);
+		DelMrec(mrec);
 	}
 }
 
