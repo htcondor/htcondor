@@ -519,10 +519,6 @@ class GahpClient : public Service {
 						 char *&status);
 
 		int
-		nordugrid_status_all(const char *hostname, StringList &job_ids,
-							 StringList &statuses);
-
-		int
 		nordugrid_ldap_query(const char *hostname, const char *ldap_base,
 							 const char *ldap_filter, const char *ldap_attrs,
 							 StringList &results);

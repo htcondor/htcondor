@@ -203,9 +203,9 @@ int NordugridResource::DoJobStatus()
 													 results );
 		if ( rc != GAHPCLIENT_COMMAND_PENDING ) {
 			dprintf( D_ALWAYS,
-					 "gahp->nordugrid_status_all returned %d for resource %s\n",
+					 "gahp->nordugrid_ldap_query returned %d for resource %s\n",
 					 rc, resourceName );
-			EXCEPT( "nordugrid_status_all failed!" );
+			EXCEPT( "nordugrid_ldap_query failed!" );
 		}
 		m_jobStatusActive = true;
 
@@ -218,7 +218,7 @@ int NordugridResource::DoJobStatus()
 			return 0;
 		} else if ( rc != 0 ) {
 			dprintf( D_ALWAYS,
-					 "gahp->nordugrid_status_all returned %d for resource %s: %s\n",
+					 "gahp->nordugrid_ldap_query returned %d for resource %s: %s\n",
 					 rc, resourceName, m_statusGahp->getErrorString() );
 			dprintf( D_ALWAYS, "Requesting ping of resource\n" );
 			RequestPing( NULL );
