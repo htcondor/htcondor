@@ -657,6 +657,8 @@ handle_nordugrid_submit( char **input_line )
 		str = globus_rsl_unparse( rsl );
 		assert( str != NULL );
 
+		globus_rsl_free( rsl );
+
 		globus_libc_free( input_line[3] );
 		input_line[3] = str;
 	}
@@ -1843,7 +1845,7 @@ handle_nordugrid_status_all( char **input_line)
 
 	user_arg = malloc_user_arg();
 	user_arg->cmd = input_line;
-	user_arg->cred = current_cred;
+	user_arg->cred = NULL;
 
 	int rc;
 	LDAP *hdl = NULL;
@@ -1968,7 +1970,7 @@ handle_nordugrid_ldap_query( char **input_line )
 
 	user_arg = malloc_user_arg();
 	user_arg->cmd = input_line;
-	user_arg->cred = current_cred;
+	user_arg->cred = NULL;
 
 	int rc;
 	LDAP *hdl = NULL;
