@@ -127,7 +127,7 @@ osversion=`uname -v`
 # this is what ends up as "Architecture" in the Imakefiles, and is
 # used in a number of the IS_* #define's too.  luckily, we can use the
 # same thing in both places without confusion...
-_cv_arch=""
+_cv_arch="UNKNOWN_ARCH"
 
 # this is the opsys-specific string in the IS_* #define's
 _cv_opsys=""
