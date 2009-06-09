@@ -32,10 +32,12 @@ CondorTest::debug("current directory is $curcwd\n",1);
 
 my $socketname = "cmd_wait";
 my $resultfile = $curcwd . "/" . $pid . "/results";
+my $outputfile = $curcwd . "/" . $pid . "/condor_wait.out";
 my $flowlog = $curcwd . "/" . $pid . "/cmd_wait_shows.log";
 my $writelog = "./x_write_joblog_events.exe";
 
 CondorTest::debug("Result File is $resultfile\n",1);
+CondorTest::debug("condor_wait output is in $outputfile\n",1);
 
 system("chmod -R 777 .");
 
@@ -53,7 +55,7 @@ system("chmod -R 777 .");
 system("$writelog $flowlog submit 4");
 
 # Start condor_wait
-$spawncmd = "condor_wait -num 2 $flowlog";
+$spawncmd = "_CONDOR_TOOL_DEBUG=D_FULLDEBUG condor_wait -debug -num 2 $flowlog >$outputfile 2>&1";
 CondorTest::spawn_cmd($spawncmd, $resultfile);
 
 sleep(5);

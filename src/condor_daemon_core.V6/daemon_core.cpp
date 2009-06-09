@@ -88,6 +88,7 @@ static const int DC_PIPE_BUF_SIZE = 65536;
 #ifdef WIN32
 #include "exphnd.WIN32.h"
 #include "process_control.WINDOWS.h"
+#include "access_desktop.WINDOWS.h"
 #include "condor_fix_assert.h"
 typedef unsigned (__stdcall *CRT_THREAD_HANDLER) (void *);
 CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
@@ -1386,7 +1387,11 @@ int DaemonCore::Cancel_Socket( Stream* insock)
 
 	if ( i == -1 ) {
 		dprintf( D_ALWAYS,"Cancel_Socket: called on non-registered socket!\n");
-		dprintf( D_ALWAYS,"Offending socket number %d\n", i );
+        if( insock ) {
+            dprintf( D_ALWAYS,"Offending socket number %d to %s\n",
+                     ((Sock *)insock)->get_file_desc(),
+                     insock->peer_description());
+        }
 		DumpSocketTable( D_DAEMONCORE );
 		return FALSE;
 	}
@@ -2507,7 +2512,7 @@ void DaemonCore::Driver()
 	int			tmpErrno;
 	time_t		timeout;
 	int result;
-	time_t connect_timeout, min_connect_timeout;
+	time_t min_deadline;
 
 #ifndef WIN32
 	sigset_t fullset, emptyset;
@@ -2627,7 +2632,7 @@ void DaemonCore::Driver()
 		// every time because 1) some timeout handler may have removed/added
 		// sockets, and 2) it ain't that expensive....
 		selector.reset();
-		min_connect_timeout = 0;
+		min_deadline = 0;
 		for (i = 0; i < nSock; i++) {
 			if ( (*sockTable)[i].iosock ) {	// if a valid entry....
 					// Setup our fdsets
@@ -2638,29 +2643,30 @@ void DaemonCore::Driver()
 						// on success, or the exceptfd set on failure.
 					selector.add_fd( (*sockTable)[i].iosock->get_file_desc(), Selector::IO_WRITE );
 					selector.add_fd( (*sockTable)[i].iosock->get_file_desc(), Selector::IO_EXCEPT );
-
-					// If this connection attempt times out sooner than
-					// our select timeout, adjust the select timeout.
-					connect_timeout = (*sockTable)[i].iosock->connect_timeout_time();
-					if(connect_timeout) { // If non-zero, there is a timeout.
-						if(min_connect_timeout == 0 || \
-						   min_connect_timeout > connect_timeout) {
-							min_connect_timeout = connect_timeout;
-						}
-						connect_timeout -= time(NULL);
-						if(connect_timeout < timeout) {
-							if(connect_timeout < 0) connect_timeout = 0;
-							timeout = connect_timeout;
-						}
-					}
 				} else {
 						// we want to be woken when there is something
 						// to read.
 					selector.add_fd( (*sockTable)[i].iosock->get_file_desc(), Selector::IO_READ );
 				}
+
+					// If this socket times out sooner than
+					// our select timeout, adjust the select timeout.
+				time_t deadline = (*sockTable)[i].iosock->get_deadline();
+				if(deadline) { // If non-zero, there is a timeout.
+					if(min_deadline == 0 || min_deadline > deadline) {
+						min_deadline = deadline;
+					}
+				}
             }
 		}
 
+		if( min_deadline ) {
+			int deadline_timeout = min_deadline - time(NULL) + 1;
+			if(deadline_timeout < timeout) {
+				if(deadline_timeout < 0) deadline_timeout = 0;
+				timeout = deadline_timeout;
+			}
+		}
 
 #if !defined(WIN32)
 		// Add the registered pipe fds into the list of descriptors to
@@ -2746,9 +2752,15 @@ void DaemonCore::Driver()
 
 		if ( selector.has_ready() ||
 			 ( selector.timed_out() && 
-			   min_connect_timeout && min_connect_timeout < time(NULL) ) ) {
-			// No socket activity has happened, but a connection attempt
-			// has timed out, so do enter the following section.
+			   min_deadline && min_deadline < time(NULL) ) )
+		{
+			// Either socket activity has happened or a socket
+			// operation has timed out.
+
+			// To avoid repeated calls to time(), store it once
+			// for the following loop; all uses of it below should
+			// be ok if it drifts a little into the past.
+			time_t now = time(NULL);
 
 			bool recheck_status = false;
 			//bool call_soap_handler = false;
@@ -2760,17 +2772,16 @@ void DaemonCore::Driver()
 					// if the socket was doing a connect(), we check the
 					// writefds and excepfds.  otherwise, check readfds.
 					(*sockTable)[i].call_handler = false;
+					time_t deadline = (*sockTable)[i].iosock->get_deadline();
+					bool sock_timed_out = ( deadline && deadline < now );
+
 					if ( (*sockTable)[i].is_connect_pending ) {
 
-						connect_timeout =
-							(*sockTable)[i].iosock->connect_timeout_time();
-						bool connect_timed_out =
-							connect_timeout != 0 && connect_timeout < time(NULL);
 						if ( selector.fd_ready( (*sockTable)[i].iosock->get_file_desc(),
 												Selector::IO_WRITE ) ||
 							 selector.fd_ready( (*sockTable)[i].iosock->get_file_desc(),
 												Selector::IO_EXCEPT ) ||
-							 connect_timed_out )
+							 sock_timed_out )
 						{
 							// A connection pending socket has been
 							// set or the connection attempt has timed out.
@@ -2785,7 +2796,8 @@ void DaemonCore::Driver()
 						}
 					} else {
 						if ( selector.fd_ready( (*sockTable)[i].iosock->get_file_desc(),
-												Selector::IO_READ ) )
+												Selector::IO_READ ) ||
+							 sock_timed_out )
 						{
 							(*sockTable)[i].call_handler = true;
 						}
@@ -6757,7 +6769,6 @@ int DaemonCore::Create_Process(
 		if (use_visible && (*use_visible=='T' || *use_visible=='t') ) {
 				// user wants visible desktop.
 				// place the user_token into the proper access control lists.
-			int GrantDesktopAccess(HANDLE hToken);	// prototype
 			if ( GrantDesktopAccess(user_token) == 0 ) {
 					// Success!!  The user now has permission to use
 					// the visible desktop, so change si.lpDesktop
@@ -7014,19 +7025,25 @@ int DaemonCore::Create_Process(
 			switch( errno ) {
 
 			case ERRNO_EXEC_AS_ROOT:
-				dprintf( D_ALWAYS, "Create_Process: child failed because "
-						 "%s process was still root before exec()\n",
+				dprintf( D_ALWAYS, "Create_Process(%s): child "
+						 "failed because %s process was still root "
+						 "before exec()\n",
+						 executable,
 						 priv_to_string(priv) );
 				break;
 
 			case ERRNO_REGISTRATION_FAILED:
-				dprintf( D_ALWAYS, "Create_Process: child failed becuase "
-				         "it failed to register itself with the ProcD\n" );
+				dprintf( D_ALWAYS, "Create_Process(%s): child "
+						 "failed because it failed to register itself "
+						 "with the ProcD\n",
+						 executable );
 				break;
 
 			case ERRNO_EXIT:
-				dprintf( D_ALWAYS, "Create_Process: child failed becuase "
-				         "it called exit(%d).\n", child_status );
+				dprintf( D_ALWAYS, "Create_Process(%s): child "
+						 "failed because it called exit(%d).\n",
+						 executable,
+						 child_status );
 				break;
 
 			case ERRNO_PID_COLLISION:
@@ -7038,8 +7055,10 @@ int DaemonCore::Create_Process(
 					  before we give up, and if not, recursively
 					  re-try the whole call to Create_Process().
 					*/
-				dprintf( D_ALWAYS, "Create_Process: child failed because "
-						 "PID %d is still in use by DaemonCore\n",
+				dprintf( D_ALWAYS, "Create_Process(%s): child "
+						 "failed because PID %d is still in use by "
+						 "DaemonCore\n",
+						 executable,
 						 (int)newpid );
 				num_pid_collisions++;
 				max_pid_retry = param_integer( "MAX_PID_COLLISION_RETRY",
@@ -7078,8 +7097,10 @@ int DaemonCore::Create_Process(
 				break;
 
 			default:
-				dprintf( D_ALWAYS, "Create_Process: child failed with "
-						 "errno %d (%s) before exec()\n", errno,
+				dprintf( D_ALWAYS, "Create_Process(%s): child "
+						 "failed with errno %d (%s) before exec()\n",
+						 executable,
+						 errno,
 						 strerror(errno) );
 				break;
 
@@ -7103,7 +7124,9 @@ int DaemonCore::Create_Process(
 			set_priv( prev_priv );
 			if( rval == -1 ) {
 				return_errno = errno;
-				dprintf(D_ALWAYS, "Create_Process wait failed: %d (%s)\n",
+				dprintf(D_ALWAYS, 
+					"Create_Process wait for '%s' failed: %d (%s)\n",
+					executable,
 					errno, strerror (errno) );
 				newpid = FALSE;
 				goto wrapup;
@@ -7116,7 +7139,9 @@ int DaemonCore::Create_Process(
 	}
 	else if( newpid < 0 )// Error condition
 	{
-		dprintf(D_ALWAYS, "Create Process: fork() failed: %s (%d)\n",
+		dprintf(D_ALWAYS, "Create Process: fork() for '%s' "
+				"failed: %s (%d)\n",
+				executable,
 				strerror(errno), errno );
 		close(errorpipe[0]); close(errorpipe[1]);
 		newpid = FALSE;

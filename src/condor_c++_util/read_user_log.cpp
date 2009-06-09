@@ -414,10 +414,20 @@ ReadUserLog::InternalInitialize ( int max_rotations,
 ReadUserLog::FileStatus
 ReadUserLog::CheckFileStatus( void )
 {
+	bool		is_empty;
 	if ( !m_state ) {
 		return ReadUserLog::LOG_STATUS_ERROR;
 	}
-	return m_state->CheckFileStatus( m_fd );
+	return m_state->CheckFileStatus( m_fd, is_empty );
+}
+
+ReadUserLog::FileStatus
+ReadUserLog::CheckFileStatus( bool &is_empty )
+{
+	if ( !m_state ) {
+		return ReadUserLog::LOG_STATUS_ERROR;
+	}
+	return m_state->CheckFileStatus( m_fd, is_empty );
 }
 
 bool

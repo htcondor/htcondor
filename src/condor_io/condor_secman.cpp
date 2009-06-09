@@ -827,6 +827,8 @@ class SecManStartCommand: Service, public ClassyCountedPtr {
 		}
 		m_already_logged_startcommand = false;
 		m_negotiation = SecMan::SEC_REQ_UNDEFINED;
+
+		m_sock_had_no_deadline = false;
 	}
 
 	~SecManStartCommand() {
@@ -893,6 +895,7 @@ class SecManStartCommand: Service, public ClassyCountedPtr {
 	bool m_have_session;
 	bool m_new_session;
 	bool m_already_logged_startcommand;
+	bool m_sock_had_no_deadline;
 	ClassAd m_auth_info;
 	SecMan::sec_req m_negotiation;
 	MyString m_remote_version;
@@ -1015,7 +1018,13 @@ SecManStartCommand::doCallback( StartCommandResult result )
 		}
 	}
 
-
+	if(result != StartCommandInProgress) {
+		if( m_sock_had_no_deadline ) {
+				// There was no deadline on this socket, so restore
+				// it to that state.
+			m_sock->set_deadline( 0 );
+		}
+	}
 
 	if(result == StartCommandInProgress) {
 			// Do nothing.
@@ -1093,17 +1102,30 @@ SecManStartCommand::startCommand_inner()
 	m_already_logged_startcommand = true;
 
 
-	if( m_nonblocking && m_sock->is_connect_pending() ) {
+	if( m_sock->deadline_expired() ) {
+		MyString msg;
+		msg.sprintf("deadline for %s %s has expired.",
+					m_is_tcp && !m_sock->is_connected() ?
+					"connection to" : "security handshake with",
+					m_sock->peer_description());
+		dprintf(D_SECURITY,"SECMAN: %s\n", msg.Value());
+		m_errstack->pushf("SECMAN", SECMAN_ERR_CONNECT_FAILED,
+						  "%s", msg.Value());
+
+		return StartCommandFailed;
+	}
+	else if( m_nonblocking && m_sock->is_connect_pending() ) {
 		dprintf(D_SECURITY,"SECMAN: waiting for TCP connection to %s.\n",
 				m_sock->peer_description());
 		return WaitForSocketCallback();
 	}
 	else if( m_is_tcp && !m_sock->is_connected()) {
-		dprintf(D_SECURITY,"SECMAN: TCP connection to %s failed",
-				m_sock->peer_description());
+		MyString msg;
+		msg.sprintf("TCP connection to %s failed.",
+					m_sock->peer_description());
+		dprintf(D_SECURITY,"SECMAN: %s\n", msg.Value());
 		m_errstack->pushf("SECMAN", SECMAN_ERR_CONNECT_FAILED,
-		                "TCP connection to %s failed.",
-		                m_sock->peer_description());
+						  "%s", msg.Value());
 
 		return StartCommandFailed;
 	}
@@ -2024,7 +2046,7 @@ SecManStartCommand::DoTCPAuth_inner()
 
 	ASSERT(tcp_auth_sock);
 
-		// the timeout
+		// timeout on individual socket operations
 	int TCP_SOCK_TIMEOUT = param_integer("SEC_TCP_SESSION_TIMEOUT", 20);
 	tcp_auth_sock->timeout(TCP_SOCK_TIMEOUT);
 
@@ -2176,6 +2198,19 @@ SecManStartCommand::ResumeAfterTCPAuth(bool auth_succeeded)
 StartCommandResult
 SecManStartCommand::WaitForSocketCallback()
 {
+
+	if( m_sock->get_deadline() == 0 ) {
+			// Set a deadline for completion of this non-blocking operation
+			// and any that follow until StartCommand is done with it.
+			// One reason to do this here rather than once at the beginning
+			// of StartCommand is because m_sock->get_deadline() may return
+			// non-zero while the non-blocking connect is happening and then
+			// revert to 0 later.  Best to always check before Register_Socket.
+		int TCP_SESSION_DEADLINE = param_integer("SEC_TCP_SESSION_DEADLINE",120);
+		m_sock->set_deadline_timeout(TCP_SESSION_DEADLINE);
+		m_sock_had_no_deadline = true; // so we restore deadline to 0 when done
+	}
+
 	MyString req_description;
 	req_description.sprintf("SecManStartCommand::WaitForSocketCallback %s",
 							m_cmd_description.Value());
@@ -2212,6 +2247,8 @@ SecManStartCommand::SocketCallback( Stream *stream )
 {
 	daemonCoreSockAdapter.Cancel_Socket( stream );
 
+		// NOTE: startCommand_inner() is responsible for checking
+		// if our deadline had expired.
 	doCallback( startCommand_inner() );
 
 		// get rid of ref counted when callback was registered

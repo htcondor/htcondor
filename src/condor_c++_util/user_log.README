@@ -83,19 +83,20 @@ To restore the state, do something like this:
 
 3. Writing User Logs
 
-The UserLog class has the following interface:
+The WriteUserLog class has the following interface:
 
-  class UserLog
+  class WriteUserLog
   {
     public:
-      UserLog();
-      UserLog(const char *owner, const char *file, int clu, int proc, int sub);
-      ~UserLog();
+      WriteUserLog();
+      WriteUserLog(const char *owner, const char *file, int clu, int proc,
+                   int sub);
+      ~WriteUserLog();
       void initialize(const char *, const char *, int, int, int);
       int writeEvent (ULogEvent *);
   };
 
-UserLog objects can be initialized either through the provided
+WriteUserLog objects can be initialized either through the provided
 contructor or the initialize method.  To write an event to the log,
 create the appropriate ULogEvent subclass object, fill in the
 appropriate information, and pass a pointer to that object to the
@@ -103,14 +104,15 @@ writeEvent method.
 
 4. Final Details
 
-The UserLog class is defined in write_user_log.h and the ReadUserLog
+The WriteUserLog class is defined in write_user_log.h and the ReadUserLog
 class is defined in read_user_log.h.  ULogEventNumber,
 ULogEventOutcome, ULogEvent, and the event subclasses are defined in
 condor_event.h.  You need to include read_user_log.h and/or
 write_user_log.h in any code which uses the user log API and link with
 libcondorapi.a.  For backward compatibility, user_log.c++.h is
 distributed with Condor which includes write_user_log.h and
-read_user_log.h.
+read_user_log.h.  Also for backward compatibility, UserLog is provided as
+an alias type of WriteUserLog (via typedef).
 
 Also, please #include <sys/time.h> before bringing in the user log API
 header file. This brings in definitions needed by the user log header file.

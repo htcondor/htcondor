@@ -364,10 +364,6 @@
 			>
 		</File>
 		<File
-			RelativePath="$(OutDir)\user_log.obj"
-			>
-		</File>
-		<File
 			RelativePath="$(OutDir)\user_log_header.obj"
 			>
 		</File>
@@ -377,6 +373,10 @@
 		</File>
 		<File
 			RelativePath="$(OutDir)\value.obj"
+			>
+		</File>
+		<File
+			RelativePath="$(OutDir)\write_user_log.obj"
 			>
 		</File>
 		<File

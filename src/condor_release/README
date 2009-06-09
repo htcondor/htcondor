@@ -12,11 +12,19 @@ INSTALL	         - instructions on how to install Condor on your machines
 LICENSE-2.0.txt  - by installing Condor, you agree to the contents of
                    the LICENSE-2.0.txt file
 README	         - this file
+bin              - directory containing command-line tools
 condor_configure - perl script to install and configure Condor
+condor_install   - perl script to install Condor
+etc              - directory to contain configuration file
 examples         - directory containing C, Fortran and C++ example
                    programs to run with Condor
-release.tar      - tar file of the "release directory", which contains
-                   the Condor binaries and libraries
+include          - directory containing header files
+lib              - directory containing libraries
+libexec          - directory containing auxilliary files
+man              - directory containing man pages
+sbin             - directory containing daemon binaries and admin tools
+sql              - directory containing SQL commands for Quill
+src              - directory containing source for some interfaces
 
 A complete manual for Condor is available on the World Wide Web at
 http://www.cs.wisc.edu/condor/manual/.  You can also find various

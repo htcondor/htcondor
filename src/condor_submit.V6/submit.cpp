@@ -6766,6 +6766,7 @@ log_submit()
 		jobSubmit.submitEventLogNotes = LogNotesVal;
 		LogNotesVal = NULL;
 	}
+
 	if( UserNotesVal ) {
 		jobSubmit.submitEventUserNotes = UserNotesVal;
 		UserNotesVal = NULL;
@@ -6778,6 +6779,7 @@ log_submit()
 				delete[] jobSubmit.submitEventLogNotes;
 			}
 			jobSubmit.submitEventLogNotes = strnewp( SubmitInfo[i].lognotes );
+
 			if( jobSubmit.submitEventUserNotes ) {
 				delete[] jobSubmit.submitEventUserNotes;
 			}
@@ -6785,15 +6787,24 @@ log_submit()
 			
 			// we don't know the gjid here, so pass in NULL as the last 
 			// parameter - epaulson 2/09/2007
-			usr_log.initialize(owner, ntdomain, simple_name, 0, 0, 0, NULL);
-			// Output the information
-			for (int j=SubmitInfo[i].firstjob; j<=SubmitInfo[i].lastjob; j++) {
-				usr_log.initialize(SubmitInfo[i].cluster, j, 0, NULL);
-				if( ! usr_log.writeEvent(&jobSubmit,job) ) {
-					fprintf(stderr, "\nERROR: Failed to log submit event.\n");
-				}
-				if( Quiet ) {
-					fprintf(stdout, ".");
+			if ( ! usr_log.initialize(owner, ntdomain, simple_name,
+						0, 0, 0, NULL) ) {
+				fprintf(stderr, "\nERROR: Failed to log submit event.\n");
+			} else {
+				// Output the information
+				for (int j=SubmitInfo[i].firstjob; j<=SubmitInfo[i].lastjob;
+							j++) {
+					if ( ! usr_log.initialize(SubmitInfo[i].cluster,
+								j, 0, NULL) ) {
+						fprintf(stderr, "\nERROR: Failed to log submit event.\n");
+					} else {
+						if( ! usr_log.writeEvent(&jobSubmit,job) ) {
+							fprintf(stderr, "\nERROR: Failed to log submit event.\n");
+						}
+						if( Quiet ) {
+							fprintf(stdout, ".");
+						}
+					}
 				}
 			}
 		}

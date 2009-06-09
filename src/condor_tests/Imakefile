@@ -612,9 +612,9 @@ TESTCLASS(lib_eventlog-xml,core)
 TESTCLASS(lib_eventlog-xml,quick)
 TESTCLASS(lib_eventlog-xml,full)
 
-/* Test to verify that re-initialization of the eventlog does not cause
-   seg faults */
-DESC(lib_eventlog_base,"Test re-initialization of eventlog")
+/* Test to verify that re-initialization of the eventlog reader does not
+   cause seg faults */
+DESC(lib_eventlog_base,"Test re-initialization of eventlog reader")
 RUN(lib_eventlog_base)
 DEPS(lib_eventlog_base,lib_eventlog_base.exe)
 DEPS(lib_eventlog_base,lib_eventlog_base.exe)
@@ -1782,6 +1782,20 @@ TESTCLASS(job_dagman_splice-cat,quick)
 TESTCLASS(job_dagman_splice-cat,full)
 TESTCLASS(job_dagman_splice-cat,quicknolink)
 
+DESC(job_dagman_node_prio,"Test DAG node priorities")
+RUN(job_dagman_node_prio)
+TESTCLASS(job_dagman_node_prio,dagman)
+TESTCLASS(job_dagman_node_prio,quick)
+TESTCLASS(job_dagman_node_prio,full)
+TESTCLASS(job_dagman_node_prio,quicknolink)
+
+DESC(job_dagman_retry_recovery,"Test DAG node priorities")
+RUN(job_dagman_retry_recovery)
+TESTCLASS(job_dagman_retry_recovery,dagman)
+TESTCLASS(job_dagman_retry_recovery,quick)
+TESTCLASS(job_dagman_retry_recovery,full)
+TESTCLASS(job_dagman_retry_recovery,quicknolink)
+
 /* Sample performance tests */
 
 /*
@@ -1874,7 +1888,7 @@ TESTCLASS(job_rsc_binary-io_std,btdebug)
 */
 
 lib_eventlog_build.exe : lib_eventlog_base.cpp
-	$(CPlusPlus) $< -DLIBAPI_ONLY \
+	$(CPlusPlus) $< -ggdb -DLIBAPI_ONLY \
 	-I ../release_dir/include ../release_dir/lib/libcondorapi.a \
 	-lc -ldl -o $@
 

@@ -71,7 +71,8 @@ Stream :: Stream(stream_code c) :
 	decrypt_buf(NULL),
 	decrypt_buf_len(0),
 	m_peer_description_str(NULL),
-	m_peer_version(NULL)
+	m_peer_version(NULL),
+	m_deadline_time(0)
 {
 }
 
@@ -2260,4 +2261,37 @@ Stream::set_peer_version(CondorVersionInfo const *version)
 	if( version ) {
 		m_peer_version = new CondorVersionInfo(*version);
 	}
+}
+
+void
+Stream::set_deadline_timeout(int t)
+{
+	if( t < 0 ) {
+			// no deadline
+		m_deadline_time = 0;
+	}
+	else {
+		if( Sock::get_timeout_multiplier() > 0 ) {
+			t *= Sock::get_timeout_multiplier();
+		}
+		m_deadline_time = time(NULL) + t;
+	}
+}
+
+void
+Stream::set_deadline(time_t t)
+{
+	m_deadline_time = t;
+}
+
+time_t
+Stream::get_deadline()
+{
+	return m_deadline_time;
+}
+
+bool
+Stream::deadline_expired()
+{
+	return m_deadline_time != 0 && time(NULL) > m_deadline_time;
 }

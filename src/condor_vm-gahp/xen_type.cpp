@@ -698,7 +698,7 @@ XenType::CreateVirshConfigFile(const char* filename)
 		goto virshwriteerror;
 	}
 
-	if( fprintf(fp, "<memory>%d</memory>", m_vm_mem) < 0 ) {
+	if( fprintf(fp, "<memory>%d</memory>", m_vm_mem * 1024) < 0 ) {
 		goto virshwriteerror;
 	}
 	if( fprintf(fp, "<vcpu>%d</vcpu>", m_vcpus) < 0 ) {

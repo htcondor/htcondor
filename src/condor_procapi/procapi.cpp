@@ -811,7 +811,6 @@ ProcAPI::fillProcInfoEnv(piPTR pi)
 	int bytes_read_so_far = 0;
 	int fd;
 	char *env_buffer = NULL;
-	char *env_tmp;
 	int multiplier = 2;
 
 		// open the environment proc file
@@ -834,12 +833,10 @@ ProcAPI::fillProcInfoEnv(piPTR pi)
 					EXCEPT( "Procapi::getProcInfo: Out of memory!\n");
 				}
 			} else {
-				env_tmp = (char*)realloc(env_buffer, read_size * multiplier);
-				if ( env_tmp == NULL ) {
+				env_buffer = (char*)realloc(env_buffer, read_size * multiplier);
+				if ( env_buffer == NULL ) {
 					EXCEPT( "Procapi::getProcInfo: Out of memory!\n");
 				}
-				free(env_buffer);
-				env_buffer = env_tmp;
 				multiplier++;
 			}
 

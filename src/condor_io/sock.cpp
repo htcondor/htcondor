@@ -1173,6 +1173,22 @@ time_t Sock::connect_timeout_time()
 	return connect_state.this_try_timeout_time;
 }
 
+time_t
+Sock::get_deadline()
+{
+	time_t deadline = Stream::get_deadline();
+	if( is_connect_pending() ) {
+		time_t connect_deadline = connect_timeout_time();
+		if( connect_deadline ) {
+			if( deadline && deadline < connect_deadline ) {
+				return deadline;
+			}
+			return connect_deadline;
+		}
+	}
+	return deadline;
+}
+
 // Added for the HA Daemon
 void Sock::doNotEnforceMinimalCONNECT_TIMEOUT()
 {
