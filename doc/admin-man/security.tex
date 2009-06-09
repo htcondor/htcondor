@@ -2959,8 +2959,8 @@ For a sample machine with two compute slots,
 create two users that are intended only to be used by Condor.
 As an example, call them \Login{cndrusr1} and \Login{cndrusr2}.
 Tell Condor about these users
-with the \Macro{SLOTx\_USER} configuration variables,
-where x is replaced with the slot number.
+with the \Macro{SLOT<N>\_USER} configuration variables,
+where \MacroNI{<N>} is replaced with the slot number.
 In this example:
 
 \begin{verbatim}
@@ -2993,7 +2993,7 @@ standard universe jobs.  Normally, standard universe jobs do not
 create additional processes. }
 
 \item{
-On Windows, \MacroNI{SLOTx\_USER} will only work if the credential
+On Windows, \MacroNI{SLOT<N>\_USER} will only work if the credential
 of the specified user is stored on the execute machine
 using \Condor{store\_cred}.
 See the \Condor{store\_cred}

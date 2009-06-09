@@ -658,11 +658,11 @@ remote resource.Submission now takes one operation instead of three.
 
 \begin{itemize}
 
-\item Added \MacroNI{SLOTx\_EXECUTE}.  This allows the execute directory
+\item Added \MacroNI{SLOT<N>\_EXECUTE}.  This allows the execute directory
 to be configured independently for each batch slot.  You could use this,
 for example, to have jobs on a multi-CPU machine using scratch space on
 different disks so that there is less chance of them interfering with
-each other.  See page~\pageref{param:SlotXExecute} for more details.
+each other.  See page~\pageref{param:SlotNExecute} for more details.
 
 \item The semantics of \MacroNI{SLOT\_TYPE\_<N>} has changed slightly.
 Previously, any resource shares left undefined would default to a fractional
