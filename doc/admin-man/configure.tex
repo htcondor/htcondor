@@ -3774,12 +3774,13 @@ search for the corresponding attribute names using ``slot'', instead.
 
 \label{param:NumSlots}
 \item[\Macro{NUM\_SLOTS}]
-  If your SMP machine is being evenly divided, and the slot
-  type settings described above are not being used, this
-  macro controls how many slots will be reported.  
+  An integer value representing the number of slots reported when
+  the SMP machine is being evenly divided, and the slot
+  type settings described above are not being used.
   The default is one slot for each CPU.
   This setting can be used to reserve some CPUs on an SMP which would
-  not be reported to the Condor pool. You cannot use this parameter to
+  not be reported to the Condor pool.
+  This value cannot be used to
   make Condor advertise more slots than there are CPUs on the machine.
   To do that, use \Macro{NUM\_CPUS}.
 
