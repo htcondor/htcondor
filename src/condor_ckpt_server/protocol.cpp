@@ -13,6 +13,9 @@
 /* This doesn't nest, so be careful! */
 extern Alarm rt_alarm;
 
+/* This function is a debugging function and is only called when it is hand
+	inserted into the code flow to see what the binary of a packet looks like.
+*/
 void dump_pkt(char *netpkt, size_t size);
 
 /* This does a blocking read for size amount of bytes. However, there is
@@ -142,7 +145,15 @@ int recv_service_req_pkt(service_req_pkt *srq, FDContext *fdc)
 			break;
 
 		case NET_READ_OK:
-			/* do nothing */
+			/* ensure I read how much I meant to read */
+			if (bytes_recvd != SREQ_PKTSIZE_MIN) {
+				Server::Log("Short read while reading a possible 32-bit "
+							"service_req_pkt.");
+				return PC_NOT_OK;
+			}
+
+			/* all good, keep the control flow going */
+
 			break;
 
 		default:
@@ -175,7 +186,15 @@ int recv_service_req_pkt(service_req_pkt *srq, FDContext *fdc)
 				break;
 
 			case NET_READ_OK:
-				/* do nothing */
+				/* ensure I read how much I meant to read */
+				if (bytes_recvd != diff) {
+					Server::Log("Short read while reading the remainder of "
+								"a possible 64-bit service_req_pkt.");
+					return PC_NOT_OK;
+				}
+
+				/* all good, keep the control flow going */
+
 				break;
 
 			default:
@@ -482,7 +501,14 @@ int recv_store_req_pkt(store_req_pkt *strq, FDContext *fdc)
 			break;
 
 		case NET_READ_OK:
-			/* do nothing */
+			/* ensure I read how much I meant to read */
+			if (bytes_recvd != STREQ_PKTSIZE_MIN) {
+				Server::Log("Short read while reading a possible 32-bit "
+							"store_req_pkt.");
+				return PC_NOT_OK;
+			}
+
+			/* all good, keep the control flow going */
 			break;
 
 		default:
@@ -516,7 +542,14 @@ int recv_store_req_pkt(store_req_pkt *strq, FDContext *fdc)
 				break;
 
 			case NET_READ_OK:
-				/* do nothing */
+				/* ensure I read how much I meant to read */
+				if (bytes_recvd != diff) {
+					Server::Log("Short read while reading the remainder of "
+								"a possible 64-bit store_req_pkt.");
+					return PC_NOT_OK;
+				}
+
+				/* all good, keep the control flow going */
 				break;
 
 			default:
@@ -768,7 +801,14 @@ int recv_restore_req_pkt(restore_req_pkt *rstrq, FDContext *fdc)
 			break;
 
 		case NET_READ_OK:
-			/* do nothing */
+			/* ensure I read how much I meant to read */
+			if (bytes_recvd != RSTREQ_PKTSIZE_MIN) {
+				Server::Log("Short read while reading a possible 32-bit "
+							"restore_req_pkt.");
+				return PC_NOT_OK;
+			}
+
+			/* all good, keep the control flow going */
 			break;
 
 		default:
@@ -802,7 +842,14 @@ int recv_restore_req_pkt(restore_req_pkt *rstrq, FDContext *fdc)
 				break;
 
 			case NET_READ_OK:
-				/* do nothing */
+				/* ensure I read how much I meant to read */
+				if (bytes_recvd != diff) {
+					Server::Log("Short read while reading the remainder of "
+								"a possible 64-bit restore_req_pkt.");
+					return PC_NOT_OK;
+				}
+
+				/* all good, keep the control flow going */
 				break;
 
 			default:
@@ -1243,6 +1290,9 @@ void pack_char_array(char *pkt, size_t off, char *str, size_t len)
 /* ------------------------------------------------------------------------- */
 /* These are some utility functions */
 
+/* This function is a debugging function and is only called when it is hand
+	inserted into the code flow to see what the binary of a packet looks like.
+*/
 void dump_pkt(char *netpkt, size_t size)
 {
 	size_t r;
