@@ -93,8 +93,7 @@ CCBClient::ReverseConnect( CondorError *error, bool non_blocking )
 		// DaemonCore::Register_Socket() and wait for a callback.
 
 		m_ccb_contacts.rewind();
-		try_next_ccb();
-		return true;
+		return try_next_ccb();
 	}
 
 	return ReverseConnect_blocking( error );
@@ -425,12 +424,13 @@ public:
 	}
 };
 
-void
+bool
 CCBClient::try_next_ccb()
 {
 	// This function is called in ReverseConnect_nonblocking()
 	// initially and whenever we should try the next CCB server in the
 	// list (e.g. because all previous ones have failed).
+	// Returns true if non-blocking operation successfully initiated.
 
 	RegisterReverseConnectCallback();
 
@@ -441,13 +441,12 @@ CCBClient::try_next_ccb()
 				"reversed connection to %s; giving up.\n",
 				m_target_peer_description.Value());
 		ReverseConnectCallback(NULL);
-		return;
+		return false;
 	}
 
 	MyString ccbid;
 	if( !SplitCCBContact( ccb_contact, m_cur_ccb_address, ccbid, NULL ) ) {
-		try_next_ccb();
-		return;
+		return try_next_ccb();
 	}
 
 	char const *return_address = daemonCoreSockAdapter.publicNetworkIpAddr();
@@ -518,7 +517,7 @@ CCBClient::try_next_ccb()
 		if( !client_sock->connect_socketpair(*server_sock) ) {
 			dprintf(D_ALWAYS,"CCBClient: connect_socket_pair() failed.\n");
 			CCBResultsCallback(m_ccb_cb);
-			return;
+			return false;
 		}
 
 		classy_counted_ptr<DCMessenger> messenger=new DCMessenger(ccb_server);
@@ -528,12 +527,13 @@ CCBClient::try_next_ccb()
 			// bypass startCommand() and call the command handler directly
 			// this call will take care of deleting server_sock when done
 		daemonCoreSockAdapter.CallCommandHandler(CCB_REQUEST,server_sock);
-		return;
+	}
+	else {
+		ccb_server->sendMsg(msg.get());
 	}
 
-	ccb_server->sendMsg(msg.get());
-
 	// now wait for CCBResultsCallback and/or ReverseConnectCallback
+	return true;
 }
 
 void

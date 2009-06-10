@@ -60,7 +60,7 @@ class CCBClient: public Service, public ClassyCountedPtr {
 	bool AcceptReversedConnection();
 	bool HandleReversedConnectionRequestReply(CondorError *error);
 
-	void try_next_ccb();
+	bool try_next_ccb();
 	void CCBResultsCallback(DCMsgCallback *cb);
 	void ReverseConnectCallback(Sock *sock);
 	void RegisterReverseConnectCallback();
