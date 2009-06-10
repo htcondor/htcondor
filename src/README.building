@@ -21,16 +21,20 @@ We cannot make any claims about the ability to compile Condor with any
 other compilers or other versions of gcc.
 
 Building Condor on Unix also requires the following utilities:
-- GNU autoconf and autoheader (2.59 or greater)
+- GNU autoconf and autoheader (2.59 or greater), automake
 - GNU make
 - GNU tar (1.13 or higher)
 - gzip
 - perl (5.005_03 or greater)
 - patch (must support unified diffs, GNU patch is preferred)
 - strip (can be either GNU or the vendor's version)
-- lex
+- lex/flex
 - yacc (or bison)
-- some other typically-found utilities (for example, cut, awk, etc.)
+- curses5
+- X11 (if you want kbdd support)
+- awk (which can do the extended regular expression set (e.g., gawk, not mawk))
+- some other typically-found utilities (for example, cut, etc.)
+
 All of these tools need to be available in order to perform a build.
 
 For the remainder of this README, follow the instructions before for either
