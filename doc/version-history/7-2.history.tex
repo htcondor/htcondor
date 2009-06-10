@@ -74,6 +74,15 @@ as failed.
 \item Fixed several bugs in the user log reader in the handling of
   zero sized files.
 
+% gittrac #542
+\item Fixed a problem affecting parallel universe jobs with very short
+tasks.  If any of the parallel tasks exited before the first node
+started, the entire job was prematurely treated as though it had
+finished.  If \AdAttr{ParallelShutdownPolicy} was
+\AdStr{WAIT\_FOR\_ALL}, the job was prematurely treated as though it
+had finished if all stated tasks completed before the remaining tasks
+started.
+
 \end{itemize}
 
 \noindent Known Bugs:
