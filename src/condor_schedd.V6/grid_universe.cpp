@@ -446,12 +446,6 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 	}
 	free(gman_args);
 
-	if (cluster) {
-		dprintf( D_ALWAYS, "ERROR - gridman_per_job not supported!\n" );
-		free(gman_binary);
-		return NULL;
-	}
-
 	// build a constraint
 	if ( !owner ) {
 		dprintf(D_ALWAYS,"ERROR - missing owner field\n");
