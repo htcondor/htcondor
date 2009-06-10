@@ -48,6 +48,19 @@ The details of each version are described below.
 
 \begin{itemize}
 
+% gittrac #177
+\item Fixed a bug in the checkpoint server that caused failure of
+checkpoint image storage and retrieval if the requesting submission
+machine was running a 32 bit installation of Condor and the checkpoint
+server was from a 64 bit installation--or vice versa. The checkpoint
+image server, both the 32-bit and 64-bit installation, now handles both
+protocols. It is recommended that any checkpoint server installation which
+may be used in a flocking situation or other federated joining of pools
+use the 64-bit binary. This is due to the possibility that there could be
+a checkpoint image larger than what is representable in 32 bits. A 32-bit
+checkpoint image server will now notice if this situation occurs and emit
+a message in the log file explaining to upgrade to the 64-bit version.
+
 \item Fixed a bug that caused \Condor{procd} to sometimes fail when monitoring
 processes with environments larger than 1MB.
 
