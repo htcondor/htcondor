@@ -30,6 +30,9 @@
 
 11/05/2008 V7_2-branch
   Branch for 7.1.4 and 7.2 series, based from the master.
+04/27/2009 V7_2-fixckptprot-branch
+  Branch to hack a fix for 32/64 bit incompatibilities in ckpt server protocol
+  as per gittrac ticket #177.
 05/07/2009 V7_2_3-branch
   Branch for the 7.2.3 release, based on V7_2-branch
 
