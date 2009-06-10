@@ -64,13 +64,13 @@ $aborted = sub
 $held = sub 
 {
 	CondorTest::debug("DAGMan was held -- good!\n");
-    $dag_was_held = 1;
+	$dag_was_held = 1;
 };
 
 $released = sub 
 {
 	CondorTest::debug("DAGMan was released -- good!\n");
-    $dag_was_released = 1;
+	$dag_was_released = 1;
 };
 
 $executed = sub
@@ -87,6 +87,13 @@ $submitted = sub
 
 $success = sub
 {
+	if (!$dag_was_held) {
+		die "Error: DAGMan was not held\n";
+	}
+	if (!$dag_was_released) {
+		die "Error: DAGMan was not released\n";
+	}
+
 	CondorTest::debug("executed successfully\n",1);
 	CondorTest::debug("Verifying output\n",1);
 	$diditpass = 1;
