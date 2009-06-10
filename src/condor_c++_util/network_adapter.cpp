@@ -58,6 +58,11 @@ NetworkAdapterBase::createNetworkAdapter ( const char *sinful_or_name,
 										   bool is_primary )
 {
     NetworkAdapterBase *adapter = NULL;
+	if ( NULL == sinful_or_name ) {
+		dprintf( D_FULLDEBUG,
+				 "Warning: Can't create network adaptor: NULL sinful/name\n" );
+		return NULL;
+	}
 
 # if defined ( NETWORK_ADAPTER_TYPE_DEFINED )
 	if ( is_valid_sinful( sinful_or_name ) ) {
