@@ -41,6 +41,7 @@
 #include "condor_uid.h"
 #include "classad_collection.h"
 #include "daemon.h"
+#include "protocol.h"
 
 XferSummary	xfer_summary;
 
@@ -428,7 +429,7 @@ void Server::Execute()
 			UnblockSignals();
 		}
 		BlockSignals();
-		if (num_sds_ready < 0)
+		if (num_sds_ready < 0) {
 			if (errno == ECHILD) {
 				// Note: we shouldn't really get an ECHILD here, but
 				// we did (see condor-admin 14075).
@@ -439,6 +440,7 @@ void Server::Execute()
 						"%d (%s)\n", errno, strerror(errno));
 				exit(SELECT_ERROR);
 			}
+		}
 		current_time = time(NULL);
 		if (((unsigned int) current_time - (unsigned int) last_reclaim_time) 
 				>= (unsigned int) reclaim_interval) {
@@ -484,18 +486,13 @@ void Server::HandleRequest(int req_sd,
 {
 	struct sockaddr_in shadow_sa;
 	int                shadow_sa_len;
-	int                req_len;
 	int                new_req_sd;
 	service_req_pkt    service_req;
 	store_req_pkt      store_req;
 	restore_req_pkt    restore_req;
-	replicate_req_pkt  replicate_req;
-	store_reply_pkt    store_reply;
-	restore_reply_pkt  restore_reply;
-	char*              buf_ptr;
-	int                bytes_recvd=0;
-	int                temp_len;
 	char               log_msg[256];
+	FDContext			fdc;
+	int					ret;
 	
 	shadow_sa_len = sizeof(shadow_sa);
 	if ((new_req_sd=I_accept(req_sd, &shadow_sa, &shadow_sa_len)) == 
@@ -504,6 +501,13 @@ void Server::HandleRequest(int req_sd,
 		exit(ACCEPT_ERROR);
     }
 	req_ID++;
+
+	/* Set up our connection object */
+	fdc.fd = new_req_sd;
+	fdc.type = FDC_UNKNOWN;
+	fdc.who = shadow_sa.sin_addr;
+	fdc.req_ID = req_ID;
+
 	dprintf(D_ALWAYS, "----------------------------------------------------\n");
 	switch (req) {
         case SERVICE_REQ:
@@ -531,108 +535,101 @@ void Server::HandleRequest(int req_sd,
 	sprintf(log_msg, "%s%d%s", "Using descriptor ", new_req_sd, 
 			" to handle request");
 	Log(log_msg);
-	if ((req == STORE_REQ) || (req == RESTORE_REQ) || (req == REPLICATE_REQ)) {
-		if ((num_store_xfers+num_restore_xfers == max_xfers) ||
-			((req == STORE_REQ) && (num_store_xfers == max_store_xfers)) ||
-			((req == RESTORE_REQ) &&
-			 (num_restore_xfers == max_restore_xfers)) ||
-			((req == REPLICATE_REQ) &&
-			 (num_replicate_xfers == max_replicate_xfers))) {
-			if (req == STORE_REQ || req == REPLICATE_REQ) {
-				store_reply.server_name.s_addr = htonl(0);
-				store_reply.port = htons(0);
-				store_reply.req_status = htons(INSUFFICIENT_BANDWIDTH);
-				net_write(new_req_sd, (char*) &store_reply, 
-						  sizeof(store_reply_pkt));
-				sprintf(log_msg, "%s", 
-						"Request to store a file has been DENIED");
-			} else {
-				restore_reply.server_name.s_addr = htonl(0);
-				restore_reply.port = htons(0);
-				restore_reply.file_size = htonl(0);
-				restore_reply.req_status = htons(INSUFFICIENT_BANDWIDTH);
-				net_write(new_req_sd, (char*) &restore_reply, 
-						  sizeof(restore_reply_pkt));	      
-				sprintf(log_msg, "%s", 
-						"Request to restore a file has been DENIED");
-			}
-			Log(req_ID, log_msg);
-			Log("Configured maximum number of active transfers exceeded");
-			close(new_req_sd);
-			return;
-		} 
-    }
 
 	switch (req) {
         case SERVICE_REQ:
-		    req_len = sizeof(service_req_pkt);
-			buf_ptr = (char*) &service_req;
-			break;
-		case STORE_REQ:
-			req_len = sizeof(store_req_pkt);
-			buf_ptr = (char*) &store_req;
-			break;
-		case RESTORE_REQ:
-			req_len = sizeof(restore_req_pkt);
-			buf_ptr = (char*) &restore_req;
-			break;
-		case REPLICATE_REQ:
-			req_len = sizeof(replicate_req_pkt);
-			buf_ptr = (char*) &replicate_req;
-			break;
-	}
-
-	rt_alarm.SetAlarm(new_req_sd, REQUEST_TIMEOUT);
-
-	while (bytes_recvd < req_len) {
-		errno = 0;
-		temp_len = read(new_req_sd, buf_ptr+bytes_recvd, req_len-bytes_recvd);
-		if (temp_len <= 0) {
-			if (errno != EINTR) {
-				rt_alarm.ResetAlarm();
-				close(new_req_sd);
-				sprintf(log_msg,
-						"Incomplete request packet from %s [REJECTING]",
-						inet_ntoa(shadow_sa.sin_addr));
-				Log(req_ID, log_msg);
-				sprintf(log_msg,
-						"DEBUG: %d bytes recieved; %d bytes expected",
-						bytes_recvd, req_len);
-				Log(-1, log_msg);
+			ret = recv_service_req_pkt(&service_req, &fdc);
+			if (ret != PC_OK) {
+				Log(req_ID, "Unable to process SERVICE request! "
+					"Closing connection.");
+				close(fdc.fd);
 				return;
 			}
-		} else
-			bytes_recvd += temp_len;
-    }
-	rt_alarm.ResetAlarm();
-	switch (req) {
-    case SERVICE_REQ:
-		ProcessServiceReq(req_ID, new_req_sd, shadow_sa.sin_addr, service_req);
-		break;
-    case STORE_REQ:
-		ProcessStoreReq(req_ID, new_req_sd, shadow_sa.sin_addr, store_req);
-		break;
-    case RESTORE_REQ:
-		ProcessRestoreReq(req_ID, new_req_sd, shadow_sa.sin_addr, restore_req);
-		break;
-	case REPLICATE_REQ:
-		store_req.file_size = replicate_req.file_size;
-		store_req.ticket = replicate_req.ticket;
-		store_req.priority = replicate_req.priority;
-		store_req.time_consumed = replicate_req.time_consumed;
-		store_req.key = replicate_req.key;
-		strcpy(store_req.filename, replicate_req.filename);
-		strcpy(store_req.owner, replicate_req.owner);
-		ProcessStoreReq(req_ID, new_req_sd, replicate_req.shadow_IP,
-						store_req);
-		break;
-    }  
-	
+
+			ProcessServiceReq(req_ID, &fdc, shadow_sa.sin_addr, service_req);
+
+			return;
+
+			break;
+
+		case STORE_REQ:
+			ret = recv_store_req_pkt(&store_req, &fdc);
+			if (ret != PC_OK) {
+				Log(req_ID, "Unable to process STORE request! "
+					"Closing connection.");
+				close(fdc.fd);
+				return;
+			}
+
+			/* Reject the store request under certain conditions */
+			if (((num_store_xfers + num_restore_xfers) == max_xfers) ||
+				num_store_xfers == max_store_xfers)
+			{
+				store_reply_pkt store_reply;
+
+				store_reply.server_name.s_addr = 0;
+				store_reply.port = 0;
+				store_reply.req_status = INSUFFICIENT_BANDWIDTH;
+
+				send_store_reply_pkt(&store_reply, &fdc);
+
+				Log(req_ID, "Request to store a file has been DENIED");
+				Log("Configured maximum number of active transfers exceeded");
+
+				close(fdc.fd);
+				return;
+			}
+
+			ProcessStoreReq(req_ID, &fdc, shadow_sa.sin_addr, store_req);
+
+			return;
+			break;
+
+		case RESTORE_REQ:
+			ret = recv_restore_req_pkt(&restore_req, &fdc);
+			if (ret != PC_OK) {
+				Log(req_ID, "Unable to process RESTORE request! "
+					"Closing connection.");
+				close(fdc.fd);
+				return;
+			}
+
+			/* Reject the restore request under certain conditions */
+			if (((num_store_xfers + num_restore_xfers) == max_xfers) ||
+				 (num_restore_xfers == max_restore_xfers))
+			{
+				restore_reply_pkt restore_reply;
+
+				restore_reply.server_name.s_addr = 0;
+				restore_reply.port = 0;
+				restore_reply.file_size = 0;
+				restore_reply.req_status = INSUFFICIENT_BANDWIDTH;
+
+				send_restore_reply_pkt(&restore_reply, &fdc);
+
+				Log(req_ID, "Request to restore a file has been DENIED");
+				Log("Configured maximum number of active transfers exceeded");
+
+				close(fdc.fd);
+				return;
+			}
+
+			ProcessRestoreReq(req_ID, &fdc, shadow_sa.sin_addr, restore_req);
+
+			return;
+			break;
+
+		case REPLICATE_REQ:
+			Log(fdc.req_ID, "Ignoring REPLICATE_REQ. Feature not implemented.");
+
+			close(fdc.fd);
+			return;
+			break;
+	}
 }
 
-
 void Server::ProcessServiceReq(int             req_id,
-							   int             req_sd,
+							   FDContext       *fdc,
 							   struct in_addr  shadow_IP,
 							   service_req_pkt service_req)
 {  
@@ -646,21 +643,37 @@ void Server::ProcessServiceReq(int             req_id,
 	int                child_pid;
 	int                ret_code;
 
-	service_req.ticket = ntohl(service_req.ticket);
+	/* By the time we get to this place, we've already read the first packet
+		off of the wire, and know if we are talking to a 32bit or 64 bit
+		client. */
+	ASSERT(fdc->type == FDC_32 || fdc->type == FDC_64);
+
+	/* give a base initialization to the reply structure which is adjusted
+		as needed in the control flow. */
+	service_reply.server_addr.s_addr = 0;
+	service_reply.port = 0;
+	service_reply.num_files = 0;
+	service_reply.req_status = BAD_SERVICE_TYPE;
+	memset(	service_reply.capacity_free_ACD, 0, MAX_ASCII_CODED_DECIMAL_LENGTH);
+
+	
 	if (service_req.ticket != AUTHENTICATION_TCKT) {
-		service_reply.server_addr.s_addr = htonl(0);
-		service_reply.port = htons(0);
-		service_reply.req_status = htons(BAD_AUTHENTICATION_TICKET);
-		net_write(req_sd, (char*) &service_reply, sizeof(service_reply_pkt));
+		service_reply.server_addr.s_addr = 0;
+		service_reply.port = 0;
+		service_reply.req_status = BAD_AUTHENTICATION_TICKET;
+
+		send_service_reply_pkt(&service_reply, fdc);
+
 		sprintf(log_msg, "Request for service from %s DENIED:", 
 				inet_ntoa(shadow_IP));
 		Log(log_msg);
-		Log("Invalid authentication ticket used");
-		close(req_sd);
+		sprintf(log_msg, "Invalid authentication ticket [%lu] used", 
+			(unsigned long) service_req.ticket);
+		Log(log_msg);
+
+		close(fdc->fd);
 		return;
     }
-	service_req.service = ntohs(service_req.service);
-	service_req.key = ntohl(service_req.key);
 
 	switch (service_req.service) {
         case CKPT_SERVER_SERVICE_STATUS:
@@ -675,6 +688,13 @@ void Server::ProcessServiceReq(int             req_id,
 		case SERVICE_EXIST:
 			sprintf(log_msg, "Service: SERVICE_EXIST");
 			break;
+		default:
+			sprintf(log_msg, "Service: Unknown service requested from %s. "
+				"Closing connection.", inet_ntoa(shadow_IP));
+			Log(log_msg);
+			close(fdc->fd);
+			return;
+			break;
 		}
 	Log(log_msg);  
 	sprintf(log_msg, "Owner:   %s", service_req.owner_name);
@@ -687,81 +707,99 @@ void Server::ProcessServiceReq(int             req_id,
 		it if it is '.' '..' or contains a path separator. */
 
 	if (ValidateNoPathComponents(service_req.owner_name) == FALSE) {
-		service_reply.server_addr.s_addr = htonl(0);
-		service_reply.port = htons(0);
-		service_reply.req_status = htons(BAD_REQ_PKT);
-		net_write(req_sd, (char*) &service_reply, sizeof(service_reply_pkt));
+		service_reply.server_addr.s_addr = 0;
+		service_reply.port = 0;
+		service_reply.req_status = BAD_REQ_PKT;
+
+		send_service_reply_pkt(&service_reply, fdc);
+
 		sprintf(log_msg, "Owner field contans illegal path components!");
 		Log(log_msg);
 		sprintf(log_msg, "Service request DENIED!");
 		Log(log_msg);
-		close(req_sd);
+
+		close(fdc->fd);
 		return;
 	}
 
 	if (ValidateNoPathComponents(service_req.file_name) == FALSE) {
-		service_reply.server_addr.s_addr = htonl(0);
-		service_reply.port = htons(0);
-		service_reply.req_status = htons(BAD_REQ_PKT);
-		net_write(req_sd, (char*) &service_reply, sizeof(service_reply_pkt));
+		service_reply.server_addr.s_addr = 0;
+		service_reply.port = 0;
+		service_reply.req_status = BAD_REQ_PKT;
+
+		send_service_reply_pkt(&service_reply, fdc);
+
 		sprintf(log_msg, "Filename field contans illegal path components");
 		Log(log_msg);
 		sprintf(log_msg, "Service request DENIED!");
 		Log(log_msg);
-		close(req_sd);
+
+		close(fdc->fd);
 		return;
 	}
 
 	if (ValidateNoPathComponents(inet_ntoa(shadow_IP)) == FALSE) {
-		service_reply.server_addr.s_addr = htonl(0);
-		service_reply.port = htons(0);
-		service_reply.req_status = htons(BAD_REQ_PKT);
-		net_write(req_sd, (char*) &service_reply, sizeof(service_reply_pkt));
+		service_reply.server_addr.s_addr = 0;
+		service_reply.port = 0;
+		service_reply.req_status = BAD_REQ_PKT;
+
+		send_service_reply_pkt(&service_reply, fdc);
+
 		sprintf(log_msg, "ShadowIpAddr field contans illegal path components");
 		Log(log_msg);
 		sprintf(log_msg, "Service request DENIED!");
 		Log(log_msg);
-		close(req_sd);
+
+		close(fdc->fd);
 		return;
 	}
 
 	switch (service_req.service) {
         case CKPT_SERVER_SERVICE_STATUS:
+
+			/* XXX This code path appears never to be taken */
+
 		    num_files = imds.GetNumFiles();
-			service_reply.num_files = htonl(num_files);
+			service_reply.num_files = num_files;
+
 			if (num_files > 0) {
 				data_conn_sd = I_socket();
 				if (data_conn_sd == INSUFFICIENT_RESOURCES) {
-					service_reply.server_addr.s_addr = htonl(0);
-					service_reply.port = htons(0);
-					service_reply.req_status = 
-						htons(abs(INSUFFICIENT_RESOURCES));
-					net_write(req_sd, (char*) &service_reply, 
-							  sizeof(service_reply));
+					service_reply.server_addr.s_addr = 0;
+					service_reply.port = 0;
+					service_reply.req_status = abs(INSUFFICIENT_RESOURCES);
+
+					send_service_reply_pkt(&service_reply, fdc);
+
 					sprintf(log_msg, "Service request from %s DENIED:", 
 							inet_ntoa(shadow_IP));
 					Log(log_msg);
 					Log("Insufficient buffers/ports to handle request");
-					close(req_sd);
+
+					close(fdc->fd);
 					return;
+
 				} else if (data_conn_sd == CKPT_SERVER_SOCKET_ERROR) {
-					service_reply.server_addr.s_addr = htonl(0);
-					service_reply.port = htons(0);
-					service_reply.req_status = htons(abs(CKPT_SERVER_SOCKET_ERROR));
-					net_write(req_sd, (char*) &service_reply, 
-							  sizeof(service_reply));
+					service_reply.server_addr.s_addr = 0;
+					service_reply.port = 0;
+					service_reply.req_status = abs(CKPT_SERVER_SOCKET_ERROR);
+
+					send_service_reply_pkt(&service_reply, fdc);
+
 					sprintf(log_msg, "Service request from %s DENIED:", 
 							inet_ntoa(shadow_IP));
 					Log(log_msg);
 					Log("Cannot obtain a new socket from server");
-					close(req_sd);
+					close(fdc->fd);
 					return;
 				}
 				memset((char*) &server_sa, 0, sizeof(server_sa));
 				server_sa.sin_family = AF_INET;
+
                 // let OS choose address
 				//server_sa.sin_addr = server_addr;
 				//server_sa.sin_port = htons(0);
+
 				if ((ret_code=I_bind(data_conn_sd,&server_sa,FALSE)) != CKPT_OK)
 				{
 					dprintf( D_ALWAYS,
@@ -773,31 +811,38 @@ void Server::ProcessServiceReq(int             req_id,
 					dprintf(D_ALWAYS, "ERROR: I_listen() failed to listen\n");
 					exit(LISTEN_ERROR);
 				}
-				service_reply.server_addr = server_addr;
-		  // From the I_bind() call, the port should already be in network-byte
-		  //   order
-				service_reply.port = server_sa.sin_port;
+
+
+		  		// From the I_bind() call, the port & addr should already be in
+				// network-byte order. However, I need it in host order
+				// so the protocol layer does the right thing when I send
+				// the reply.
+				service_reply.server_addr.s_addr = ntohl(server_addr.s_addr);
+				service_reply.port = ntohs(server_sa.sin_port);
 			} else {
-				service_reply.server_addr.s_addr = htonl(0);
-				service_reply.port = htons(0);
+				service_reply.server_addr.s_addr = 0;
+				service_reply.port = 0;
 			}
-			service_reply.req_status = htons(CKPT_OK);
+
+			service_reply.req_status = CKPT_OK;
+
 			strcpy(service_reply.capacity_free_ACD, "0");
+
 	  		sprintf(log_msg, "STATUS service address: %s:%d", 
-	  			inet_ntoa(server_addr), ntohs(service_reply.port));
+	  			inet_ntoa(server_addr), service_reply.port);
 	  		Log(log_msg);
 			break;
 
 		case SERVICE_RENAME:
-			service_reply.server_addr.s_addr = htonl(0);
-			service_reply.port = htons(0);
-			service_reply.num_files = htons(0);
+			service_reply.server_addr.s_addr = 0;
+			service_reply.port = 0;
+			service_reply.num_files = 0;
+
 			if ((strlen(service_req.owner_name) == 0) || 
 				(strlen(service_req.file_name) == 0) || 
 				(strlen(service_req.new_file_name) == 0)) {
-				service_reply.req_status = htons(BAD_REQ_PKT);
+				service_reply.req_status = BAD_REQ_PKT;
 			} else {
-				service_req.key = ntohl(service_req.key);
 				if (transfers.GetKey(shadow_IP, service_req.owner_name, 
 								 service_req.file_name) == service_req.key) {
 					transfers.SetOverride(shadow_IP, 
@@ -811,10 +856,10 @@ void Server::ProcessServiceReq(int             req_id,
 										  service_req.new_file_name);
 				}
 				service_reply.req_status = 
-					htons(imds.RenameFile(shadow_IP, 
+						imds.RenameFile(shadow_IP, 
 										  service_req.owner_name, 
 										  service_req.file_name,
-										  service_req.new_file_name));
+										  service_req.new_file_name);
 				if (replication_level) {
 					ScheduleReplication(shadow_IP,
 										service_req.owner_name,
@@ -825,15 +870,14 @@ void Server::ProcessServiceReq(int             req_id,
 			break;
 
 		case SERVICE_COMMIT_REPLICATION:
-			service_reply.server_addr.s_addr = htonl(0);
-			service_reply.port = htons(0);
-			service_reply.num_files = htons(0);
+			service_reply.server_addr.s_addr = 0;
+			service_reply.port = 0;
+			service_reply.num_files = 0;
 			if ((strlen(service_req.owner_name) == 0) || 
 				(strlen(service_req.file_name) == 0) || 
 				(strlen(service_req.new_file_name) == 0)) {
-				service_reply.req_status = htons(BAD_REQ_PKT);
+				service_reply.req_status = BAD_REQ_PKT;
 			} else {
-				service_req.key = ntohl(service_req.key);
 				if (transfers.GetKey(service_req.shadow_IP,
 									 service_req.owner_name, 
 								 service_req.file_name) == service_req.key) {
@@ -849,10 +893,10 @@ void Server::ProcessServiceReq(int             req_id,
 										  service_req.new_file_name);
 				}
 				service_reply.req_status = 
-					htons(imds.RenameFile(service_req.shadow_IP, 
+						imds.RenameFile(service_req.shadow_IP, 
 										  service_req.owner_name, 
 										  service_req.file_name,
-										  service_req.new_file_name));
+										  service_req.new_file_name);
 			}
 			break;
 
@@ -861,17 +905,17 @@ void Server::ProcessServiceReq(int             req_id,
 			// no break == fall through to SERVICE_DELETE
 
 		case SERVICE_DELETE:
-			service_reply.server_addr.s_addr = htonl(0);
-			service_reply.port = htons(0);
-			service_reply.num_files = htons(0);
+			service_reply.server_addr.s_addr = 0;
+			service_reply.port = 0;
+			service_reply.num_files = 0;
 			if ((strlen(service_req.owner_name) == 0) || 
 				(strlen(service_req.file_name) == 0))
-				service_reply.req_status = htons(BAD_REQ_PKT);
+				service_reply.req_status = BAD_REQ_PKT;
 			else {
 				service_reply.req_status = 
-					htons(imds.RemoveFile(shadow_IP, 
+						imds.RemoveFile(shadow_IP, 
 										  service_req.owner_name, 
-										  service_req.file_name));
+										  service_req.file_name);
 				MyString key;
 				key.sprintf("%s/%s/%s", inet_ntoa(shadow_IP), 
 						service_req.owner_name, service_req.file_name);
@@ -882,12 +926,12 @@ void Server::ProcessServiceReq(int             req_id,
 			break;
 
 		case SERVICE_EXIST:
-			service_reply.server_addr.s_addr = htonl(0);
-			service_reply.port = htons(0);
-			service_reply.num_files = htons(0);
+			service_reply.server_addr.s_addr = 0;
+			service_reply.port = 0;
+			service_reply.num_files = 0;
 			if ((strlen(service_req.owner_name) == 0) || 
 				(strlen(service_req.file_name) == 0))
-				service_reply.req_status = htons(BAD_REQ_PKT);
+				service_reply.req_status = BAD_REQ_PKT;
 			else {
 				sprintf(pathname, "%s%s/%s/%s", LOCAL_DRIVE_PREFIX, 
 						inet_ntoa(shadow_IP), service_req.owner_name, 
@@ -898,28 +942,32 @@ void Server::ProcessServiceReq(int             req_id,
 				Log(log_msg);
 
 				if (stat(pathname, &chkpt_file_status) == 0) {
-						service_reply.req_status = htons(0);
+						service_reply.req_status = 0;
 				} else
-					service_reply.req_status = htons(DOES_NOT_EXIST);
+					service_reply.req_status = DOES_NOT_EXIST;
 			}
 			break;
 			
 		default:
-			service_reply.server_addr.s_addr = htonl(0);
-			service_reply.port = htons(0);
-			service_reply.num_files = htons(0);
-			service_reply.req_status = htons(BAD_SERVICE_TYPE);
+			service_reply.server_addr.s_addr = 0;
+			service_reply.port = 0;
+			service_reply.num_files = 0;
+			service_reply.req_status = BAD_SERVICE_TYPE;
+			memset(	service_reply.capacity_free_ACD, 
+					0,
+					MAX_ASCII_CODED_DECIMAL_LENGTH);
 		}
-			
-	if (net_write(req_sd, (char*) &service_reply, sizeof(service_reply)) < 0) {
-		close(req_sd);
+
+	if (send_service_reply_pkt(&service_reply, fdc) == NET_WRITE_FAIL) {
+		close(fdc->fd);
 		sprintf(log_msg, "Service request from %s DENIED:", 
 				inet_ntoa(shadow_IP));
 		Log(log_msg);
 		Log("Cannot sent IP/port to shadow (socket closed)");
     } else {
-		close(req_sd);
+		close(fdc->fd);
 		if (service_req.service == CKPT_SERVER_SERVICE_STATUS) {
+			/* XXX This code path appears never to be taken */
 			if (num_files == 0) {
 				Log("Request for server status GRANTED:");
 				Log("No files on checkpoint server");
@@ -941,16 +989,24 @@ void Server::ProcessServiceReq(int             req_id,
 					close(store_req_sd);
 					close(restore_req_sd);
 					close(service_req_sd);
+					/* XXX This call sends a raw file_state_info structure
+						down the wire to the other side. Since this code
+						doesn't seem to be ever called, I'm not making it
+						32/64 auto detecting and backwards compatible.
+						Since I already know the service packet connection
+						bit witdh that requested this reply, I could easily
+						pass the FDContext here instead which will tell me
+						what to send to the client. */
 					SendStatus(data_conn_sd);
 					exit(CHILDTERM_SUCCESS);
 				}
 			}
-		} else if (service_reply.req_status == htons(CKPT_OK))
+		} else if (service_reply.req_status == CKPT_OK)
 			Log("Service request successfully completed");
 		else {
 			Log("Service request cannot be completed:");
 			sprintf(log_msg, "Attempt returns error #%d", 
-					ntohs(service_reply.req_status));
+					service_reply.req_status);
 			Log(log_msg);
 		}
 	}
@@ -1288,9 +1344,9 @@ int ValidateNoPathComponents(char *path)
 }
 
 void Server::ProcessStoreReq(int            req_id,
-							 int            req_sd,
-							 struct in_addr shadow_IP,
-							 store_req_pkt  store_req)
+							FDContext *fdc,
+							struct in_addr shadow_IP,
+							store_req_pkt  store_req)
 {
 	int                ret_code;
 	store_reply_pkt    store_reply;
@@ -1300,30 +1356,38 @@ void Server::ProcessStoreReq(int            req_id,
 	char               pathname[MAX_PATHNAME_LENGTH];
 	char               log_msg[256];
 	int                err_code;
-	
-	store_req.ticket = ntohl(store_req.ticket);
+
+	ASSERT(fdc->type == FDC_32 || fdc->type == FDC_64);
+
 	if (store_req.ticket != AUTHENTICATION_TCKT) {
-		store_reply.server_name.s_addr = htonl(0);
-		store_reply.port = htons(0);
-		store_reply.req_status = htons(BAD_AUTHENTICATION_TICKET);
-		net_write(req_sd, (char*) &store_reply, sizeof(store_reply_pkt));
+		store_reply.server_name.s_addr = 0;
+		store_reply.port = 0;
+		store_reply.req_status = BAD_AUTHENTICATION_TICKET;
+
+		send_store_reply_pkt(&store_reply, fdc);
+
 		sprintf(log_msg, "Store request from %s DENIED:", 
 				inet_ntoa(shadow_IP));
 		Log(log_msg);
 		Log("Invalid authentication ticket used");
-		close(req_sd);
+
+		close(fdc->fd);
 		return;
     }
+
 	if ((strlen(store_req.filename) == 0) || (strlen(store_req.owner) == 0)) {
-		store_reply.server_name.s_addr = htonl(0);
-		store_reply.port = htons(0);
-		store_reply.req_status = htons(BAD_REQ_PKT);
-		net_write(req_sd, (char*) &store_reply, sizeof(store_reply_pkt));
+		store_reply.server_name.s_addr = 0;
+		store_reply.port = 0;
+		store_reply.req_status = BAD_REQ_PKT;
+
+		send_store_reply_pkt(&store_reply, fdc);
+
 		sprintf(log_msg, "Store request from %s DENIED:", 
 				inet_ntoa(shadow_IP));
 		Log(log_msg);
 		Log("Incomplete request packet");
-		close(req_sd);
+
+		close(fdc->fd);
 		return;
     }
 
@@ -1331,7 +1395,7 @@ void Server::ProcessStoreReq(int            req_id,
 	Log(log_msg);
 	sprintf(log_msg, "File name: %s", store_req.filename);
 	Log(log_msg);
-	sprintf(log_msg, "File size: %d", ntohl(store_req.file_size));
+	sprintf(log_msg, "File size: %lu", (unsigned long int)store_req.file_size);
 	Log(log_msg);
 
 	/* Make sure the various pieces we will be using from the client 
@@ -1339,68 +1403,82 @@ void Server::ProcessStoreReq(int            req_id,
 		it if it is '.' '..' or contains a path separator. */
 	
 	if (ValidateNoPathComponents(store_req.owner) == FALSE) {
-		store_reply.server_name.s_addr = htonl(0);
-		store_reply.port = htons(0);
-		store_reply.req_status = htons(BAD_REQ_PKT);
-		net_write(req_sd, (char*) &store_reply, sizeof(store_reply_pkt));
+		store_reply.server_name.s_addr = 0;
+		store_reply.port = 0;
+		store_reply.req_status = BAD_REQ_PKT;
+
+		send_store_reply_pkt(&store_reply, fdc);
+
 		sprintf(log_msg, "Owner field contans illegal path components!");
 		Log(log_msg);
 		sprintf(log_msg, "STORE request DENIED!");
 		Log(log_msg);
-		close(req_sd);
+
+		close(fdc->fd);
 		return;
 	}
 
 	if (ValidateNoPathComponents(store_req.filename) == FALSE) {
-		store_reply.server_name.s_addr = htonl(0);
-		store_reply.port = htons(0);
-		store_reply.req_status = htons(BAD_REQ_PKT);
-		net_write(req_sd, (char*) &store_reply, sizeof(store_reply_pkt));
+		store_reply.server_name.s_addr = 0;
+		store_reply.port = 0;
+		store_reply.req_status = BAD_REQ_PKT;
+
+		send_store_reply_pkt(&store_reply, fdc);
+
 		sprintf(log_msg, "Filename field contans illegal path components!");
 		Log(log_msg);
 		sprintf(log_msg, "STORE request DENIED!");
 		Log(log_msg);
-		close(req_sd);
+
+		close(fdc->fd);
 		return;
 	}
 
 	if (ValidateNoPathComponents(inet_ntoa(shadow_IP)) == FALSE) {
-		store_reply.server_name.s_addr = htonl(0);
-		store_reply.port = htons(0);
-		store_reply.req_status = htons(BAD_REQ_PKT);
-		net_write(req_sd, (char*) &store_reply, sizeof(store_reply_pkt));
+		store_reply.server_name.s_addr = 0;
+		store_reply.port = 0;
+		store_reply.req_status = BAD_REQ_PKT;
+
+		send_store_reply_pkt(&store_reply, fdc);
+
 		sprintf(log_msg, "ShadowIpAddr field contans illegal path components!");
 		Log(log_msg);
 		sprintf(log_msg, "STORE request DENIED!");
 		Log(log_msg);
-		close(req_sd);
+
+		close(fdc->fd);
 		return;
 	}
 
-
-	store_req.file_size = ntohl(store_req.file_size);
 	data_conn_sd = I_socket();
 	if (data_conn_sd == INSUFFICIENT_RESOURCES) {
-		store_reply.server_name.s_addr = htonl(0);
-		store_reply.port = htons(0);
-		store_reply.req_status = htons(abs(INSUFFICIENT_RESOURCES));
-		net_write(req_sd, (char*) &store_reply, sizeof(store_reply_pkt));
+		store_reply.server_name.s_addr = 0;
+		store_reply.port = 0;
+		store_reply.req_status = abs(INSUFFICIENT_RESOURCES);
+
+		send_store_reply_pkt(&store_reply, fdc);
+
 		sprintf(log_msg, "Store request from %s DENIED:", 
 				inet_ntoa(shadow_IP));
 		Log(log_msg);
 		Log("Insufficient buffers/ports to handle request");
-		close(req_sd);
+
+		close(fdc->fd);
 		return;
+
 	} else if (data_conn_sd == CKPT_SERVER_SOCKET_ERROR) {
-		store_reply.server_name.s_addr = htonl(0);
-		store_reply.port = htons(0);
-		store_reply.req_status = htons(abs(CKPT_SERVER_SOCKET_ERROR));
-		net_write(req_sd, (char*) &store_reply, sizeof(store_reply_pkt));
+		store_reply.server_name.s_addr = 0;
+		store_reply.port = 0;
+		store_reply.req_status = abs(CKPT_SERVER_SOCKET_ERROR);
+
+		send_store_reply_pkt(&store_reply, fdc);
+
 		sprintf(log_msg, "Store request from %s DENIED:", 
 				inet_ntoa(shadow_IP));
 		Log(log_msg);
 		Log("Cannot obtain a new socket from server");
-		close(req_sd);
+
+		close(fdc->fd);
 		return;
 	}
 
@@ -1424,17 +1502,21 @@ void Server::ProcessStoreReq(int            req_id,
 
 	imds.AddFile(shadow_IP, store_req.owner, store_req.filename, 
 				 store_req.file_size, NOT_PRESENT);
-	store_reply.server_name = server_addr;
-	// From the I_bind() call, the port should already be in network-byte
-		   //   order
-		   store_reply.port = server_sa.sin_port;  
-	store_reply.req_status = htons(CKPT_OK);
+
+
+	// From the I_bind() call, the port & addr should already be in
+	// network-byte order, so we undo it since it gets redone in the writing of
+	// the packet.
+	store_reply.server_name.s_addr = ntohl(server_addr.s_addr);
+	store_reply.port = ntohs(server_sa.sin_port);
+
+	store_reply.req_status = CKPT_OK;
 	sprintf(log_msg, "STORE service address: %s:%d", 
-		inet_ntoa(server_addr), ntohs(store_reply.port));
+		inet_ntoa(server_addr), store_reply.port);
 	Log(log_msg);
-	if (net_write(req_sd, (char*) &store_reply, 
-				  sizeof(store_reply_pkt)) < 0) {
-		close(req_sd);
+
+	if (send_store_reply_pkt(&store_reply, fdc) == NET_WRITE_FAIL) {
+		close(fdc->fd);
 		sprintf(log_msg, "Store request from %s DENIED:", 
 				inet_ntoa(shadow_IP));
 		Log(log_msg);
@@ -1442,7 +1524,7 @@ void Server::ProcessStoreReq(int            req_id,
 		imds.RemoveFile(shadow_IP, store_req.owner, store_req.filename);
 		close(data_conn_sd);
 	} else {
-		close(req_sd);
+		close(fdc->fd);
 
 		child_pid = fork();
 
@@ -1589,7 +1671,7 @@ void Server::ReceiveCheckpointFile(int         data_conn_sd,
 
 
 void Server::ProcessRestoreReq(int             req_id,
-							   int             req_sd,
+							   FDContext      *fdc,
 							   struct in_addr  shadow_IP,
 							   restore_req_pkt restore_req)
 {
@@ -1603,33 +1685,41 @@ void Server::ProcessRestoreReq(int             req_id,
 	int                preexist;
 	char               log_msg[256];
 	int                err_code;
+
+	ASSERT(fdc->type == FDC_32 || fdc->type == FDC_64);
 	
-	restore_req.ticket = ntohl(restore_req.ticket);
 	if (restore_req.ticket != AUTHENTICATION_TCKT) {
-		restore_reply.server_name.s_addr = htonl(0);
-		restore_reply.port = htons(0);
-		restore_reply.file_size = htonl(0);
-		restore_reply.req_status = htons(BAD_AUTHENTICATION_TICKET);
-		net_write(req_sd, (char*) &restore_reply, sizeof(restore_reply_pkt));
+		restore_reply.server_name.s_addr = 0;
+		restore_reply.port = 0;
+		restore_reply.file_size = 0;
+		restore_reply.req_status = BAD_AUTHENTICATION_TICKET;
+
+		send_restore_reply_pkt(&restore_reply, fdc);
+
 		sprintf(log_msg, "Restore request from %s DENIED:", 
 				inet_ntoa(shadow_IP));
 		Log(log_msg);
 		Log("Invalid authentication ticket used");
-		close(req_sd);
+
+		close(fdc->fd);
 		return;
     }
+
 	if ((strlen(restore_req.filename) == 0) || 
 		(strlen(restore_req.owner) == 0)) {
-		restore_reply.server_name.s_addr = htonl(0);
-		restore_reply.port = htons(0);
-		restore_reply.file_size = htonl(0);
-		restore_reply.req_status = htons(BAD_REQ_PKT);
-		net_write(req_sd, (char*) &restore_reply, sizeof(restore_reply_pkt));
+		restore_reply.server_name.s_addr = 0;
+		restore_reply.port = 0;
+		restore_reply.file_size = 0;
+		restore_reply.req_status = BAD_REQ_PKT;
+
+		send_restore_reply_pkt(&restore_reply, fdc);
+
 		sprintf(log_msg, "Restore request from %s DENIED:", 
 				inet_ntoa(shadow_IP));
 		Log(log_msg);
 		Log("Incomplete request packet");
-		close(req_sd);
+
+		close(fdc->fd);
 		return;
     }
 
@@ -1643,57 +1733,69 @@ void Server::ProcessRestoreReq(int             req_id,
 		it if it is '.' '..' or contains a path separator. */
 
 	if (ValidateNoPathComponents(restore_req.owner) == FALSE) {
-		restore_reply.server_name.s_addr = htonl(0);
-		restore_reply.port = htons(0);
-		restore_reply.req_status = htons(BAD_REQ_PKT);
-		net_write(req_sd, (char*) &restore_reply, sizeof(restore_reply_pkt));
+		restore_reply.server_name.s_addr = 0;
+		restore_reply.port = 0;
+		restore_reply.req_status = BAD_REQ_PKT;
+
+		send_restore_reply_pkt(&restore_reply, fdc);
+
 		sprintf(log_msg, "Owner field contans illegal path components!");
 		Log(log_msg);
 		sprintf(log_msg, "RESTORE request DENIED!");
 		Log(log_msg);
-		close(req_sd);
+
+		close(fdc->fd);
 		return;
 	}
 
 	if (ValidateNoPathComponents(restore_req.filename) == FALSE) {
-		restore_reply.server_name.s_addr = htonl(0);
-		restore_reply.port = htons(0);
-		restore_reply.req_status = htons(BAD_REQ_PKT);
-		net_write(req_sd, (char*) &restore_reply, sizeof(restore_reply_pkt));
+		restore_reply.server_name.s_addr = 0;
+		restore_reply.port = 0;
+		restore_reply.req_status = BAD_REQ_PKT;
+
+		send_restore_reply_pkt(&restore_reply, fdc);
+
 		sprintf(log_msg, "Filename field contans illegal path components!");
 		Log(log_msg);
 		sprintf(log_msg, "RESTORE request DENIED!");
 		Log(log_msg);
-		close(req_sd);
+
+		close(fdc->fd);
 		return;
 	}
 
 	if (ValidateNoPathComponents(inet_ntoa(shadow_IP)) == FALSE) {
-		restore_reply.server_name.s_addr = htonl(0);
-		restore_reply.port = htons(0);
-		restore_reply.req_status = htons(BAD_REQ_PKT);
-		net_write(req_sd, (char*) &restore_reply, sizeof(restore_reply_pkt));
+		restore_reply.server_name.s_addr = 0;
+		restore_reply.port = 0;
+		restore_reply.req_status = BAD_REQ_PKT;
+
+		send_restore_reply_pkt(&restore_reply, fdc);
+
 		sprintf(log_msg, "ShadowIpAddr field contans illegal path components!");
 		Log(log_msg);
 		sprintf(log_msg, "RESTORE request DENIED!");
 		Log(log_msg);
-		close(req_sd);
+
+		close(fdc->fd);
 		return;
 	}
 
 	sprintf(pathname, "%s%s/%s/%s", LOCAL_DRIVE_PREFIX, inet_ntoa(shadow_IP),
 			restore_req.owner, restore_req.filename);
 	if ((preexist=stat(pathname, &chkpt_file_status)) != 0) {
-		restore_reply.server_name.s_addr = htonl(0);
-		restore_reply.port = htons(0);
-		restore_reply.file_size = htonl(0);
-		restore_reply.req_status = htons(DESIRED_FILE_NOT_FOUND);
-		net_write(req_sd, (char*) &restore_reply, sizeof(restore_reply_pkt));
+		restore_reply.server_name.s_addr = 0;
+		restore_reply.port = 0;
+		restore_reply.file_size = 0;
+		restore_reply.req_status = DESIRED_FILE_NOT_FOUND;
+
+		send_restore_reply_pkt(&restore_reply, fdc);
+
 		sprintf(log_msg, "Restore request from %s DENIED:", 
 				inet_ntoa(shadow_IP));
 		Log(log_msg);
 		Log("Requested file does not exist on server");
-		close(req_sd);
+
+		close(fdc->fd);
 		return;
     } else if (preexist == 0) {
 		imds.AddFile(shadow_IP, restore_req.owner, restore_req.filename, 
@@ -1701,33 +1803,41 @@ void Server::ProcessRestoreReq(int             req_id,
 	}
       data_conn_sd = I_socket();
       if (data_conn_sd == INSUFFICIENT_RESOURCES) {
-		  restore_reply.server_name.s_addr = htonl(0);
-		  restore_reply.port = htons(0);
-		  restore_reply.file_size = htonl(0);
-		  restore_reply.req_status = htons(abs(INSUFFICIENT_RESOURCES));
-		  net_write(req_sd, (char*) &restore_reply, sizeof(restore_reply_pkt));
+		  restore_reply.server_name.s_addr = 0;
+		  restore_reply.port = 0;
+		  restore_reply.file_size = 0;
+		  restore_reply.req_status = abs(INSUFFICIENT_RESOURCES);
+
+		  send_restore_reply_pkt(&restore_reply, fdc);
+
 		  sprintf(log_msg, "Restore request from %s DENIED:", 
 				  inet_ntoa(shadow_IP));
 		  Log(log_msg);
 		  Log("Insufficient buffers/ports to handle request");
-		  close(req_sd);
+
+		  close(fdc->fd);
 		  return;
+
 	  } else if (data_conn_sd == CKPT_SERVER_SOCKET_ERROR) {
-		  restore_reply.server_name.s_addr = htonl(0);
-		  restore_reply.port = htons(0);
-		  restore_reply.file_size = htonl(0);
-		  restore_reply.req_status = htons(abs(CKPT_SERVER_SOCKET_ERROR));
-		  net_write(req_sd, (char*) &restore_reply, sizeof(restore_reply_pkt));
+
+		  restore_reply.server_name.s_addr = 0;
+		  restore_reply.port = 0;
+		  restore_reply.file_size = 0;
+		  restore_reply.req_status = abs(CKPT_SERVER_SOCKET_ERROR);
+
+		  send_restore_reply_pkt(&restore_reply, fdc);
+
 		  sprintf(log_msg, "Restore request from %s DENIED:", 
 				  inet_ntoa(shadow_IP));
 		  Log(log_msg);
 		  Log("Cannot botain a new socket from server");
-		  close(req_sd);
+
+		  close(fdc->fd);
 		  return;
 	  }
       memset((char*) &server_sa, 0, sizeof(server_sa));
       server_sa.sin_family = AF_INET;
-      //server_sa.sin_port = htons(0);
+      //server_sa.sin_port = 0;
       //server_sa.sin_addr = server_addr;
       if ((err_code=I_bind(data_conn_sd, &server_sa,FALSE)) != CKPT_OK) {
 		  sprintf(log_msg, "ERROR: I_bind() returns an error (#%d)", err_code);
@@ -1739,25 +1849,28 @@ void Server::ProcessRestoreReq(int             req_id,
 		  Log(0, log_msg);
 		  exit(LISTEN_ERROR);
 	  }
-      restore_reply.server_name = server_addr;
-      // From the I_bind() call, the port should already be in network-byte
-      //   order
-      restore_reply.port = server_sa.sin_port;  
-      restore_reply.file_size = htonl(chkpt_file_status.st_size);
-      restore_reply.req_status = htons(CKPT_OK);
+	  // From the I_bind() call, the port & addr should already be in
+	  // network-byte order, so we undo it since it gets redone in the
+	  // writing of the packet.
+	  restore_reply.server_name.s_addr = ntohl(server_addr.s_addr);
+      restore_reply.port = ntohs(server_sa.sin_port);  
+
+      restore_reply.file_size = chkpt_file_status.st_size;
+      restore_reply.req_status = CKPT_OK;
 	  sprintf(log_msg, "RESTORE service address: %s:%d", 
-	  	inet_ntoa(server_addr), ntohs(restore_reply.port));
+	  	inet_ntoa(server_addr), restore_reply.port);
 	  Log(log_msg);
-      if (net_write(req_sd, (char*) &restore_reply, 
-					sizeof(restore_reply_pkt)) < 0) {
-		  close(req_sd);
+
+	  if (send_restore_reply_pkt(&restore_reply, fdc) == NET_WRITE_FAIL) {
+
+		  close(fdc->fd);
 		  sprintf(log_msg, "Restore request from %s DENIED:", 
 				  inet_ntoa(shadow_IP));
 		  Log(log_msg);
 		  Log("Cannot send IP/port to shadow (socket closed)");
 		  close(data_conn_sd);
 	  } else {
-		  close(req_sd);
+		  close(fdc->fd);
 		  child_pid = fork();
 		  if (child_pid < 0) {
 			  close(data_conn_sd);
