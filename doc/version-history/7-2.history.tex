@@ -102,7 +102,17 @@ started.
 
 \begin{itemize}
 
-\item None.
+\item Occasionally, Condor daemons will, for unknown reasons, bind the
+  command socket to the invalid IP address of 0.0.0.0, resulting in
+  the daemon crashing or otherwise malfunctioning.  The command socket
+  address is always logged in the daemon's log, so the condition can
+  be detected by looking for a line like in the daemon's log header
+  with the address of 0.0.0.0 (as in the below example):
+\begin{verbatim}
+5/6 16:34:26 DaemonCore: Command Socket at <0.0.0.0:53795>
+\end{verbatim}
+  If you encounter this problem, please send an email as to
+  condor-admin@cs.wisc.edu with any relevant details.
 
 \end{itemize}
 
