@@ -657,7 +657,7 @@ CCBClient::RegisterReverseConnectCallback()
 	ASSERT( rc == 0 );
 }
 
-void
+int
 CCBClient::DeadlineExpired()
 {
 	dprintf(D_ALWAYS,
@@ -666,6 +666,7 @@ CCBClient::DeadlineExpired()
 
 	m_deadline_timer = -1;
 	CancelReverseConnect();
+	return 0;
 }
 
 void

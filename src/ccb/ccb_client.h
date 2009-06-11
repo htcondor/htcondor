@@ -68,7 +68,7 @@ class CCBClient: public Service, public ClassyCountedPtr {
 	void UnregisterReverseConnectCallback();
 	static int ReverseConnectCommandHandler(Service *,int cmd,Stream *stream);
 	MyString myName();
-	void DeadlineExpired();
+	int DeadlineExpired();
 
 
 };
