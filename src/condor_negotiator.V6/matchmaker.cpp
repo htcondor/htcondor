@@ -1153,7 +1153,7 @@ SimpleGroupEntry()
 {
 	groupName = NULL;
 	prio = 0;
-	maxAllowed = INT_MAX;
+	maxAllowed = (float) INT_MAX;
 }
 
 Matchmaker::SimpleGroupEntry::

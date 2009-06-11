@@ -27,9 +27,11 @@
 // right.
 //
 #if defined(WIN32)
+#ifdef __cplusplus
 #define OPEN_FLAGS_LINKAGE extern "C"
 #else
 #define OPEN_FLAGS_LINKAGE
+#endif
 #endif
 
 OPEN_FLAGS_LINKAGE int open_flags_encode(int old_flags);
