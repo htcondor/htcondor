@@ -53,6 +53,7 @@ class CCBClient: public Service, public ClassyCountedPtr {
 	ReliSock *m_listen_sock; // socket to listen for reversed connect
 	MyString m_connect_id;
 	DCMsgCallback *m_ccb_cb; // callback object for async CCB request
+	int m_deadline_timer;
 
 	bool ReverseConnect_blocking( CondorError *error );
 	bool SplitCCBContact( char const *ccb_contact, MyString &ccb_address, MyString &ccbid, CondorError *error );
@@ -67,6 +68,7 @@ class CCBClient: public Service, public ClassyCountedPtr {
 	void UnregisterReverseConnectCallback();
 	static int ReverseConnectCommandHandler(Service *,int cmd,Stream *stream);
 	MyString myName();
+	void DeadlineExpired();
 
 
 };

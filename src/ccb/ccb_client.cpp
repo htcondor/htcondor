@@ -44,7 +44,8 @@ CCBClient::CCBClient( char const *ccb_contact, ReliSock *target_sock ):
 	m_target_peer_description(m_target_sock->peer_description()),
 	m_ccb_sock(NULL),
 	m_listen_sock(NULL),
-	m_ccb_cb(NULL)
+	m_ccb_cb(NULL),
+	m_deadline_timer(-1)
 {
 	// balance load across the CCB servers by randomizing order
 	m_ccb_contacts.shuffle();
@@ -75,6 +76,10 @@ CCBClient::~CCBClient()
 	}
 	if( m_listen_sock ) {
 		delete m_listen_sock;
+	}
+	if( m_deadline_timer != -1 ) {
+		daemonCoreSockAdapter.Cancel_Timer(m_deadline_timer);
+		m_deadline_timer = -1;
 	}
 }
 
@@ -636,13 +641,41 @@ CCBClient::RegisterReverseConnectCallback()
 			ALLOW);
 	}
 
+	if( m_deadline_timer == -1 && m_target_sock->get_deadline() ) {
+		int timeout = m_target_sock->get_deadline() - time(NULL) + 1;
+		if( timeout < 0 ) {
+			timeout = 0;
+		}
+		m_deadline_timer = daemonCoreSockAdapter.Register_Timer (
+			timeout,
+			(TimerHandlercpp)&CCBClient::DeadlineExpired,
+			"CCBClient::DeadlineExpired",
+			this );
+	}
+
 	int rc = waiting_for_reverse_connect.insert( m_connect_id, this );
 	ASSERT( rc == 0 );
 }
 
 void
+CCBClient::DeadlineExpired()
+{
+	dprintf(D_ALWAYS,
+			"CCBClient: deadline expired for reverse connection to %s.\n ",
+			m_target_peer_description.Value());
+
+	m_deadline_timer = -1;
+	CancelReverseConnect();
+}
+
+void
 CCBClient::UnregisterReverseConnectCallback()
 {
+	if( m_deadline_timer != -1 ) {
+		daemonCoreSockAdapter.Cancel_Timer(m_deadline_timer);
+		m_deadline_timer = -1;
+	}
+
 	// Remove ourselves from the list of waiting CCB clients.
 	// Note that this could be removing the last reference
 	// to this class, so it may be destructed as a result.

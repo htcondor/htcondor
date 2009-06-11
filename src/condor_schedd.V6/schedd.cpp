@@ -5526,12 +5526,21 @@ Scheduler::contactStartd( ContactStartdArgs* args )
 
 	this->num_pending_startd_contacts++;
 
+	int deadline_timeout = -1;
+	if( RequestClaimTimeout > 0 ) {
+			// Add in a little slop time so that schedd has a chance
+			// to cancel operation before deadline runs out.
+			// This results in a slightly more friendly log message.
+		deadline_timeout = RequestClaimTimeout + 60;
+	}
+
 	startd->asyncRequestOpportunisticClaim(
 		jobAd,
 		description.Value(),
 		daemonCore->publicNetworkIpAddr(),
 		scheduler.aliveInterval(),
-		STARTD_CONTACT_TIMEOUT,
+		STARTD_CONTACT_TIMEOUT, // timeout on individual network ops
+		deadline_timeout,       // overall timeout on completing claim request
 		cb );
 
 	delete jobAd;
@@ -5546,11 +5555,12 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 	this->num_pending_startd_contacts--;
 	scheduler.rescheduleContactQueue();
 
-	if( msg->deliveryStatus() == DCMsg::DELIVERY_CANCELED ) {
-			// do nothing, because misc_data points to a deleted match_rec
+	match_rec *match = (match_rec *)cb->getMiscDataPtr();
+	if( msg->deliveryStatus() == DCMsg::DELIVERY_CANCELED && !match) {
+		// if match is NULL, then this message must have been canceled
+		// from within ~match_rec, in which case there is nothing to do
 		return;
 	}
-	match_rec *match = (match_rec *)cb->getMiscDataPtr();
 	ASSERT( match );
 
 		// Remove callback pointer from the match record, since the claim
