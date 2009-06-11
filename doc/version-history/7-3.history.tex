@@ -71,6 +71,9 @@ observes that the routed copy of the job was removed.
 using CCB to connect to other Condor daemons would sometimes consume
 large amounts of CPU time for no good reason.
 
+\item In rare failure cases, attempts to connect via CCB could stay in
+a pending state indefinitely.
+
 \end{itemize}
 
 \noindent Known Bugs:
