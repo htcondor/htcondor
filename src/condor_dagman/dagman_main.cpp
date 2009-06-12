@@ -322,6 +322,13 @@ Dagman::Config()
 	debug_printf( DEBUG_NORMAL, "DAGMAN_MAX_RESCUE_NUM setting: %d\n",
 				maxRescueDagNum );
 
+	char *debugSetting = param( "DAGMAN_DEBUG" );
+	debug_printf( DEBUG_NORMAL, "DAGMAN_DEBUG setting: %s\n",
+				debugSetting ? debugSetting : "" );
+	if ( debugSetting ) {
+		free( debugSetting );
+	}
+
 	// enable up the debug cache if needed
 	if (debug_cache_enabled) {
 		debug_cache_set_size(debug_cache_size);
