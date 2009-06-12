@@ -57,9 +57,10 @@
 
 /* Here is the version string - update before a public release */
 /* --- IMPORTANT!  THE FORMAT OF THE VERSION STRING IS VERY STRICT
-   BECAUSE IT IS PARSED AT RUNTIME.  DO NOT ALTER THE FORMAT OR ENTER
-   ANYTHING EXTRA BEFORE THE DATE.  IF YOU WISH TO ADD EXTRA INFORMATION,
-   DO SO _AFTER_ THE BUILDIDSTR AND BEFORE THE TRAILING '$' CHARACTER.
+   BECAUSE IT IS PARSED AT RUNTIME AND COMPILE-TIME.  DO NOT ALTER THE
+   FORMAT OR ENTER ANYTHING EXTRA BEFORE THE DATE.  IF YOU WISH TO ADD
+   EXTRA INFORMATION, DO SO _AFTER_ THE BUILDIDSTR AND BEFORE THE TRAILING
+   '$' CHARACTER.
    EXAMPLES:
        $CondorVersion: 6.9.5 " __DATE__ BUILDIDSTR " WinNTPreview $ [OK]
 	   $CondorVersion: 6.9.5 WinNTPreview " __DATE__ BUILDIDSTR " $ [WRONG!!!]
@@ -67,8 +68,7 @@
    will EXCEPT at startup time.  
 */
 
-static char* CondorVersionString =
-	"$CondorVersion: 7.2.5 " __DATE__ BUILDIDSTR " PRE-RELEASE-UWCS $";
+static char* CondorVersionString = "$CondorVersion: 7.2.5 " __DATE__ BUILDIDSTR " PRE-RELEASE-UWCS $";
 
 /* Here is the platform string.  You don't need to edit this */
 static char* CondorPlatformString = "$CondorPlatform: " xstr(PLATFORM) " $";
