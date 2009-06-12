@@ -3638,6 +3638,7 @@ int DaemonCore::HandleReq(Stream *insock)
 			//   3. increase size of send and receive buffers
 			//   4. set SO_KEEPALIVE [done automatically by CEDAR accept()]
 		cursoap->socket = ((Sock*)stream)->get_file_desc();
+		cursoap->peer = *((Sock*)stream)->endpoint();
 		cursoap->recvfd = soap->socket;
 		cursoap->sendfd = soap->socket;
 		if ( cursoap->recv_timeout > 0 ) {
