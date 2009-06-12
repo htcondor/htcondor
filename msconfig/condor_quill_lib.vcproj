@@ -2,8 +2,8 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="9.00"
-	Name="condor_tt"
-	ProjectGUID="{9FD328E7-098F-4E2D-9DC9-0C0442356717}"
+	Name="condor_quill"
+	ProjectGUID="{F084472A-E276-415B-9CE5-D9634ED8E94C}"
 	TargetFrameworkVersion="0"
 	>
 	<Platforms>
@@ -18,10 +18,9 @@
 			Name="Release|Win32"
 			OutputDirectory=".\..\Release"
 			IntermediateDirectory=".\..\Release"
-			ConfigurationType="1"
+			ConfigurationType="4"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="2"
 			BuildLogFile="$(IntDir)\BuildLogs\$(InputName).log.htm"
 			>
 			<Tool
@@ -38,8 +37,6 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
-				TypeLibraryName=".\..\Release/condor_tt.tlb"
-				HeaderFileName=""
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
@@ -65,32 +62,18 @@
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="NDEBUG"
 				Culture="1033"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
-				Name="VCLinkerTool"
-				AdditionalDependencies="$(OutDir)\condor_common.obj $(OutDir)\condor_common_c.obj $(CONDOR_LIB) $(CONDOR_LIBPATH) $(CONDOR_GSOAP_LIB) $(CONDOR_GSOAP_LIBPATH) $(CONDOR_KERB_LIB) $(CONDOR_KERB_LIBPATH) $(CONDOR_PCRE_LIB) $(CONDOR_PCRE_LIBPATH) $(CONDOR_OPENSSL_LIB) $(CONDOR_POSTGRESQL_LIB) $(CONDOR_OPENSSL_LIBPATH) $(CONDOR_POSTGRESQL_LIBPATH)"
-				OutputFile="$(OutDir)\condor_quill.exe"
-				LinkIncremental="2"
+				Name="VCLibrarianTool"
+				OutputFile="$(OutDir)\$(ProjectName).lib"
 				SuppressStartupBanner="true"
-				IgnoreDefaultLibraryNames="oleaut32.lib;ole32.lib;gdi32.lib;winspool.lib;comdlg32.lib;shell32.lib;odbc32.lib;odbccp32.lib"
-				GenerateDebugInformation="true"
-				GenerateMapFile="true"
-				MapFileName=".\..\Release/condor_quill.map"
-				SubSystem="1"
-				RandomizedBaseAddress="1"
-				DataExecutionPrevention="0"
-				TargetMachine="1"
 			/>
 			<Tool
 				Name="VCALinkTool"
-			/>
-			<Tool
-				Name="VCManifestTool"
 			/>
 			<Tool
 				Name="VCXDCMakeTool"
@@ -98,13 +81,10 @@
 			<Tool
 				Name="VCBscMakeTool"
 				SuppressStartupBanner="true"
-				OutputFile=".\..\Release/condor_tt.bsc"
+				OutputFile=".\..\Release/condor_quill.bsc"
 			/>
 			<Tool
 				Name="VCFxCopTool"
-			/>
-			<Tool
-				Name="VCAppVerifierTool"
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
@@ -115,23 +95,47 @@
 	</References>
 	<Files>
 		<File
-			RelativePath="..\src\condor_tt\condor_ttdb.cpp"
+			RelativePath="..\src\condor_quill\soap_quillC.cpp"
+			>
+			<FileConfiguration
+				Name="Release|Win32"
+				>
+				<Tool
+					Name="VCCLCompilerTool"
+					UsePrecompiledHeader="0"
+				/>
+			</FileConfiguration>
+		</File>
+		<File
+			RelativePath="..\src\condor_quill\soap_quillH.h"
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_tt\jobqueuecollection.cpp"
+			RelativePath="..\src\condor_quill\soap_quillServer.cpp"
 			>
+			<FileConfiguration
+				Name="Release|Win32"
+				>
+				<Tool
+					Name="VCCLCompilerTool"
+					UsePrecompiledHeader="0"
+				/>
+			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_tt\jobqueuedbmanager.cpp"
+			RelativePath="..\src\condor_quill\soap_quillStub.cpp"
 			>
+			<FileConfiguration
+				Name="Release|Win32"
+				>
+				<Tool
+					Name="VCCLCompilerTool"
+					UsePrecompiledHeader="0"
+				/>
+			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\src\condor_tt\tt_main.cpp"
-			>
-		</File>
-		<File
-			RelativePath="..\src\condor_tt\ttmanager.cpp"
+			RelativePath="..\src\condor_quill\soap_quillStub.h"
 			>
 		</File>
 	</Files>

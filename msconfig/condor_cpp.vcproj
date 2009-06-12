@@ -221,6 +221,22 @@
 			>
 		</File>
 		<File
+			RelativePath="..\src\condor_c++_util\classadlogentry.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\classadlogentry.h"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\classadlogparser.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\classadlogparser.h"
+			>
+		</File>
+		<File
 			RelativePath="..\src\condor_c++_util\command_strings.cpp"
 			>
 		</File>
@@ -997,6 +1013,14 @@
 		</File>
 		<File
 			RelativePath="..\src\condor_c++_util\print_wrapped_text.h"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\prober.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\prober.h"
 			>
 		</File>
 		<File
