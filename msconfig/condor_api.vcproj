@@ -205,6 +205,10 @@
 			>
 		</File>
 		<File
+			RelativePath="..\Release\lock_file.WINDOWS.obj"
+			>
+		</File>
+		<File
 			RelativePath="$(OutDir)\misc_utils.obj"
 			>
 		</File>

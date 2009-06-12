@@ -70,7 +70,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile=".\..\Release\condor_procd_client.lib"
+				OutputFile="$(OutDir)\$(ProjectName).lib"
 				SuppressStartupBanner="true"
 			/>
 			<Tool

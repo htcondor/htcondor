@@ -74,7 +74,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="$(OutDir)\condor_common.obj $(OutDir)\condor_common_c.obj $(CONDOR_LIB) $(CONDOR_LIBPATH) $(CONDOR_GSOAP_LIB) $(CONDOR_GSOAP_LIBPATH) $(CONDOR_KERB_LIB) $(CONDOR_KERB_LIBPATH) $(CONDOR_PCRE_LIB) $(CONDOR_PCRE_LIBPATH) $(CONDOR_OPENSSL_LIB) $(CONDOR_POSTGRESQL_LIB) $(CONDOR_OPENSSL_LIBPATH) $(CONDOR_POSTGRESQL_LIBPATH)"
-				OutputFile=".\..\Release/condor_wait.exe"
+				OutputFile="$(OutDir)\$(ProjectName).exe"
 				LinkIncremental="2"
 				SuppressStartupBanner="true"
 				IgnoreDefaultLibraryNames="oleaut32.lib;ole32.lib;gdi32.lib;winspool.lib;comdlg32.lib;shell32.lib;odbc32.lib;odbccp32.lib"

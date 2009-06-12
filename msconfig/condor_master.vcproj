@@ -76,7 +76,7 @@
 				Name="VCLinkerTool"
 				AdditionalOptions="/SWAPRUN:NET"
 				AdditionalDependencies="$(OutDir)\condor_common.obj $(OutDir)\condor_common_c.obj $(CONDOR_LIB) $(CONDOR_LIBPATH) $(CONDOR_GSOAP_LIB) $(CONDOR_GSOAP_LIBPATH) $(CONDOR_KERB_LIB) $(CONDOR_KERB_LIBPATH) $(CONDOR_PCRE_LIB) $(CONDOR_PCRE_LIBPATH) $(CONDOR_OPENSSL_LIB) $(CONDOR_POSTGRESQL_LIB) $(CONDOR_OPENSSL_LIBPATH) $(CONDOR_POSTGRESQL_LIBPATH)"
-				OutputFile=".\..\Release/condor_master.exe"
+				OutputFile="$(OutDir)\$(ProjectName).exe"
 				LinkIncremental="2"
 				SuppressStartupBanner="true"
 				UACExecutionLevel="0"
@@ -130,7 +130,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_master.V6\service.WIN32.cpp"
+			RelativePath="..\src\condor_master.V6\service.WINDOWS.cpp"
 			>
 		</File>
 		<File
@@ -166,18 +166,6 @@
 				<Tool
 					Name="VCCLCompilerTool"
 					UsePrecompiledHeader="0"
-				/>
-			</FileConfiguration>
-		</File>
-		<File
-			RelativePath="..\src\condor_util_lib\uuid_lib.WIN32.c"
-			>
-			<FileConfiguration
-				Name="Release|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PrecompiledHeaderFile="..\Release\condor_common_c.pch"
 				/>
 			</FileConfiguration>
 		</File>

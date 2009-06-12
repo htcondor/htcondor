@@ -48,7 +48,7 @@
 #include "condor_daemon_core.h"
 
 #ifdef WIN32
-#include "exphnd.WIN32.h"
+#include "exception_handling.WINDOWS.h"
 #endif
 #if HAVE_EXT_COREDUMPER
 #include "google/coredumper.h"

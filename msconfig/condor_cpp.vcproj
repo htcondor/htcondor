@@ -145,6 +145,14 @@
 			>
 		</File>
 		<File
+			RelativePath="..\src\ccb\ccb_listener.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\ccb\ccb_listener.h"
+			>
+		</File>
+		<File
 			RelativePath="..\src\condor_c++_util\check_events.cpp"
 			>
 		</File>
@@ -239,6 +247,18 @@
 		<File
 			RelativePath="..\src\condor_c++_util\condor_attributes.cpp"
 			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\condor_common.cpp"
+			>
+			<FileConfiguration
+				Name="Release|Win32"
+				>
+				<Tool
+					Name="VCCLCompilerTool"
+					UsePrecompiledHeader="1"
+				/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\src\condor_c++_util\condor_config.cpp"
@@ -668,6 +688,14 @@
 			>
 		</File>
 		<File
+			RelativePath="..\src\condor_c++_util\firewall.WINDOWS.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\firewall.WINDOWS.h"
+			>
+		</File>
+		<File
 			RelativePath="..\src\condor_c++_util\forkwork.cpp"
 			>
 		</File>
@@ -686,19 +714,6 @@
 		<File
 			RelativePath="..\src\condor_c++_util\gahp_common.cpp"
 			>
-			<FileConfiguration
-				Name="Release|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					AdditionalIncludeDirectories=""
-					PreprocessorDefinitions=""
-					UsePrecompiledHeader="1"
-					ObjectFile="..\Release/"
-					ProgramDataBaseFileName="..\Release/"
-					CompileAs="2"
-				/>
-			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\src\condor_c++_util\gahp_common.h"
@@ -837,11 +852,11 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\load_dll.cpp"
+			RelativePath="..\src\condor_c++_util\load_dll.WINDOWS.cpp"
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\load_dll.h"
+			RelativePath="..\src\condor_c++_util\load_dll.WINDOWS.h"
 			>
 		</File>
 		<File
@@ -950,6 +965,10 @@
 		</File>
 		<File
 			RelativePath="..\src\condor_c++_util\network_adapter.WINDOWS.h"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\ntsysinfo.cpp"
 			>
 		</File>
 		<File
@@ -1117,11 +1136,11 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\setup_api_dll.cpp"
+			RelativePath="..\src\condor_c++_util\setup_api_dll.WINDOWS.cpp"
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_c++_util\setup_api_dll.h"
+			RelativePath="..\src\condor_c++_util\setup_api_dll.WINDOWS.h"
 			>
 		</File>
 		<File
@@ -1342,14 +1361,6 @@
 		</File>
 		<File
 			RelativePath="..\src\condor_c++_util\which.h"
-			>
-		</File>
-		<File
-			RelativePath="..\src\condor_c++_util\windows_firewall.cpp"
-			>
-		</File>
-		<File
-			RelativePath="..\src\condor_c++_util\windows_firewall.h"
 			>
 		</File>
 		<File

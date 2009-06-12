@@ -114,7 +114,7 @@
 	</References>
 	<Files>
 		<File
-			RelativePath="..\src\condor_kbdd\NT-kbdd-dll.cpp"
+			RelativePath="..\src\condor_kbdd\kbdd.WINDOWS.cpp"
 			>
 		</File>
 	</Files>

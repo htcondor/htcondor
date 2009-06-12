@@ -16,8 +16,8 @@
 	<Configurations>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory=".\../Release"
-			IntermediateDirectory=".\../Release"
+			OutputDirectory=".\..\Release"
+			IntermediateDirectory=".\..\Release"
 			ConfigurationType="4"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
@@ -69,7 +69,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile=".\../Release\condor_daemon_core.lib"
+				OutputFile="$(OutDir)\$(ProjectName).lib"
 				SuppressStartupBanner="true"
 			/>
 			<Tool
@@ -151,11 +151,11 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_daemon_core.V6\exphnd.WIN32.cpp"
+			RelativePath="..\src\condor_daemon_core.V6\exception_handling.WINDOWS.cpp"
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_daemon_core.V6\exphnd.WIN32.h"
+			RelativePath="..\src\condor_daemon_core.V6\exception_handling.WINDOWS.h"
 			>
 		</File>
 		<File
@@ -192,11 +192,11 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_daemon_core.V6\pipe.WIN32.cpp"
+			RelativePath="..\src\condor_daemon_core.V6\pipe.WINDOWS.cpp"
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_daemon_core.V6\pipe.WIN32.h"
+			RelativePath="..\src\condor_daemon_core.V6\pipe.WINDOWS.h"
 			>
 		</File>
 		<File

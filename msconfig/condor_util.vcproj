@@ -118,16 +118,15 @@
 		<File
 			RelativePath="..\src\condor_util_lib\condor_common_c.c"
 			>
-      <FileConfiguration
+			<FileConfiguration
 				Name="Release|Win32"
 				>
-        <Tool
-          Name="VCCLCompilerTool"
-          UsePrecompiledHeader="1"
+				<Tool
+					Name="VCCLCompilerTool"
+					UsePrecompiledHeader="1"
 				/>
-      </FileConfiguration>
+			</FileConfiguration>
 		</File>
-    
 		<File
 			RelativePath="..\src\condor_util_lib\condor_create_id.c"
 			>
@@ -278,7 +277,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_util_lib\lock_file.WIN32.c"
+			RelativePath="..\src\condor_util_lib\lock_file.WINDOWS.c"
 			>
 		</File>
 		<File
@@ -303,6 +302,10 @@
 		</File>
 		<File
 			RelativePath="..\src\condor_util_lib\nullfile.c"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_util_lib\posix.WINDOWS.c"
 			>
 		</File>
 		<File
@@ -342,11 +345,7 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_util_lib\truncate.WIN32.c"
-			>
-		</File>
-		<File
-			RelativePath="..\src\condor_util_lib\win32_posix.c"
+			RelativePath="..\src\condor_util_lib\truncate.WINDOWS.c"
 			>
 		</File>
 	</Files>

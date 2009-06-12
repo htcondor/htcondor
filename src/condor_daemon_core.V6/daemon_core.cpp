@@ -86,7 +86,7 @@ static const int DC_PIPE_BUF_SIZE = 65536;
 #include "my_popen.h"
 #include "../condor_privsep/condor_privsep.h"
 #ifdef WIN32
-#include "exphnd.WIN32.h"
+#include "exception_handling.WINDOWS.h"
 #include "process_control.WINDOWS.h"
 #include "executable_scripts.WINDOWS.h"
 #include "access_desktop.WINDOWS.h"
