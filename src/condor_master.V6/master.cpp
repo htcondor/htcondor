@@ -55,7 +55,7 @@ void gcbBrokerDownCallback();
 
 #ifdef WIN32
 
-#include "windows_firewall.h"
+#include "firewall.WINDOWS.h"
 
 extern void register_service();
 extern void terminate(DWORD);

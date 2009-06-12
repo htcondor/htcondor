@@ -22,7 +22,7 @@
  ***************************************************************/
 
 #include "condor_common.h"
-#include "setup_api_dll.h"
+#include "setup_api_dll.WINDOWS.h"
 
 /***************************************************************
  * Static initialization

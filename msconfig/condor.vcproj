@@ -17,28 +17,6 @@
 	</ToolFiles>
 	<Configurations>
 		<Configuration
-			Name="Debug|Win32"
-			OutputDirectory="..\Debug"
-			IntermediateDirectory="..\Debug"
-			ConfigurationType="0"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			BuildLogFile="..\Debug\BuildLog.htm"
-			>
-			<Tool
-				Name="VCNMakeTool"
-				BuildCommandLine=""
-				ReBuildCommandLine=" "
-				CleanCommandLine="echo Nothing to do for this project"
-				Output="condor.exe"
-				PreprocessorDefinitions=""
-				IncludeSearchPath=""
-				ForcedIncludes=""
-				AssemblySearchPath=""
-				ForcedUsingAssemblies=""
-				CompileAsManaged=""
-			/>
-		</Configuration>
-		<Configuration
 			Name="Release|Win32"
 			OutputDirectory="..\Release"
 			IntermediateDirectory="..\Release"
@@ -48,52 +26,8 @@
 			>
 			<Tool
 				Name="VCNMakeTool"
-				BuildCommandLine=""
-				ReBuildCommandLine=" "
-				CleanCommandLine="echo Nothing to do for this project"
-				Output="condor.exe"
-				PreprocessorDefinitions=""
-				IncludeSearchPath=""
-				ForcedIncludes=""
-				AssemblySearchPath=""
-				ForcedUsingAssemblies=""
-				CompileAsManaged=""
-			/>
-		</Configuration>
-		<Configuration
-			Name="Debug (Express)|Win32"
-			OutputDirectory="$(ConfigurationName)"
-			IntermediateDirectory="$(ConfigurationName)"
-			ConfigurationType="0"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			BuildLogFile="..\Debug\BuildLog.htm"
-			>
-			<Tool
-				Name="VCNMakeTool"
-				BuildCommandLine=""
-				ReBuildCommandLine=" "
-				CleanCommandLine="echo Nothing to do for this project"
-				Output="condor.exe"
-				PreprocessorDefinitions=""
-				IncludeSearchPath=""
-				ForcedIncludes=""
-				AssemblySearchPath=""
-				ForcedUsingAssemblies=""
-				CompileAsManaged=""
-			/>
-		</Configuration>
-		<Configuration
-			Name="Release (Express)|Win32"
-			OutputDirectory="$(ConfigurationName)"
-			IntermediateDirectory="$(ConfigurationName)"
-			ConfigurationType="0"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			BuildLogFile="..\Release\BuildLog.htm"
-			>
-			<Tool
-				Name="VCNMakeTool"
-				BuildCommandLine=""
-				ReBuildCommandLine=" "
+				BuildCommandLine="echo Nothing to do for this project"
+				ReBuildCommandLine="echo Nothing to do for this project"
 				CleanCommandLine="echo Nothing to do for this project"
 				Output="condor.exe"
 				PreprocessorDefinitions=""

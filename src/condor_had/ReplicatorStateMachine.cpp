@@ -17,6 +17,7 @@
  *
  ***************************************************************/
 
+#include "condor_common.h"
 // for 'daemonCore'
 #include "condor_daemon_core.h"
 // for 'param' function

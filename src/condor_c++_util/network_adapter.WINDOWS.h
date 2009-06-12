@@ -26,7 +26,7 @@
 
 #include "network_adapter.h"
 #include "condor_constants.h"
-#include "setup_api_dll.h"
+#include "setup_api_dll.WINDOWS.h"
 #include <iptypes.h>
 
 /***************************************************************
