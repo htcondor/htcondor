@@ -7188,7 +7188,7 @@ int DaemonCore::Create_Process(
 		the	above checks determined that the given executable must be
 		either a binary executable or garbage. Either way, we treat it
 		as a binary and hope for the best. */
-	if ( binary_executable ) {
+	if ( binary_executable && !bIs16Bit ) {
 
 		/** append the arguments given in the submit file. */
 		first_arg_to_copy = 0;
