@@ -442,7 +442,10 @@ by the configuration variable \Macro{MAX\_NEXT\_JOB\_START\_DELAY}.
 %%% ClassAd attribute: NiceUser
 \index{ClassAd job attribute!NiceUser}
 \index{NiceUser!job ClassAd attribute}
-\item[\AdAttr{NiceUser}:]  Boolean value which indicates whether
+\item[\AdAttr{NiceUser}:]  Boolean value which when \Expr{True} indicates
+that this job is a \emph{nice} job, raising its user priority value, 
+thus causing it to run on a machine only when no other Condor jobs want 
+the machine.
 
 %%% ClassAd attribute: NTDomain
 \index{ClassAd job attribute!NTDomain}
