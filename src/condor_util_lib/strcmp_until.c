@@ -17,6 +17,8 @@
  *
  ***************************************************************/
 
+#include "condor_common.h"
+
 /** strcmp compares two strings the same as strcmp, but considers 
  *  the character 'until' to be the end of string.
  *  @param s1 first string in comparison.

@@ -19,7 +19,7 @@
 
 #include "condor_common.h"
 #include <tchar.h>
-#include "exphnd.WIN32.h"
+#include "exception_handling.WINDOWS.h"
 
 #include "condor_debug.h"
 

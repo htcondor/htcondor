@@ -20,7 +20,7 @@
 #ifndef _SETUP_API_DLL_H_
 #define _SETUP_API_DLL_H_
 
-#include "load_dll.h"
+#include "load_dll.WINDOWS.h"
 
 //
 // The following uses the #pragma pack(1) directive to tell the compiler 

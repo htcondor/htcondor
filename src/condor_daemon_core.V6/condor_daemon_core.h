@@ -63,7 +63,7 @@
 class ProcFamilyInterface;
 
 #if defined(WIN32)
-#include "pipe.WIN32.h"
+#include "pipe.WINDOWS.h"
 #endif
 
 #define DEBUG_SETTABLE_ATTR_LISTS 0

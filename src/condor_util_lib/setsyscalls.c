@@ -17,8 +17,7 @@
  *
  ***************************************************************/
 
-
- 
+#include "condor_common.h" 
 
 /* Dummy definition of SetSyscalls to be included in Condor libraries
    where needed. */

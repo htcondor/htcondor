@@ -86,7 +86,7 @@ static const int DC_PIPE_BUF_SIZE = 65536;
 #include "my_popen.h"
 #include "../condor_privsep/condor_privsep.h"
 #ifdef WIN32
-#include "exphnd.WIN32.h"
+#include "exception_handling.WINDOWS.h"
 #include "process_control.WINDOWS.h"
 #include "executable_scripts.WINDOWS.h"
 #include "access_desktop.WINDOWS.h"
@@ -4033,7 +4033,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 			//   3. increase size of send and receive buffers
 			//   4. set SO_KEEPALIVE [done automatically by CEDAR accept()]
 		cursoap->socket = ((Sock*)stream)->get_file_desc();
-		cursoap->peer = *((Sock*)stream)->endpoint();
+		cursoap->peer = *((Sock*)stream)->peer_addr();
 		cursoap->recvfd = soap->socket;
 		cursoap->sendfd = soap->socket;
 		if ( cursoap->recv_timeout > 0 ) {
