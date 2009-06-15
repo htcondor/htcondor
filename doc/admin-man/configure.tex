@@ -5828,24 +5828,26 @@ These macros affect the \Condor{collector}.
 
 \label{param:CollectorDaemonStats}
 \item[\Macro{COLLECTOR\_DAEMON\_STATS}]
-  This macro controls whether or not the Collector keeps update
-  statistics on incoming updates.  The default value is True.  If
-  this option is enabled, the collector will insert several attributes
-  into ClassAds that it stores and sends.  ClassAds without the
-  ``UpdateSequenceNumber'' and ``DaemonStartTime'' attributes will not
+  A boolean value that controls whether or not the \Condor{collector} daemon
+  keeps update statistics on incoming updates.  
+  The default value is \Expr{True}.
+  If enabled, the \Condor{collector} will insert several attributes
+  into the ClassAds that it stores and sends.  ClassAds without the
+  \Attr{UpdateSequenceNumber} and \Attr{DaemonStartTime} attributes will not
   be counted, and will not have attributes inserted (all modern Condor
   daemons which publish ClassAds publish these attributes).
 
-  \index{ClassAd attribute added by the \Condor{collector}!UpdatesTotal}
-  \index{ClassAd attribute added by the \Condor{collector}!UpdatesSequenced}
-  \index{ClassAd attribute added by the \Condor{collector}!UpdatesLost}
-  The attributes inserted are ``UpdatesTotal'', ``UpdatesSequenced'',
-  and ``UpdatesLost''.  ``UpdatesTotal'' is the total number of
-  updates (of this ad type) the Collector has received from this host.
-  ``UpdatesSequenced'' is the number of updates that the Collector
+  \index{ClassAd attribute added by the condor\_collector!UpdatesTotal}
+  \index{ClassAd attribute added by the condor\_collector!UpdatesSequenced}
+  \index{ClassAd attribute added by the condor\_collector!UpdatesLost}
+  The attributes inserted are \Attr{UpdatesTotal}, \Attr{UpdatesSequenced},
+  and \Attr{UpdatesLost}.  \Attr{UpdatesTotal} is the total number of
+  updates (of this ClassAd type) the \Condor{collector} has received 
+  from this host.
+  \Attr{UpdatesSequenced} is the number of updates that the \Condor{collector}
   could have as lost.  In particular, for the first update from a
-  daemon it is impossible to tell if any previous ones have been lost
-  or not.  ``UpdatesLost'' is the number of updates that the Collector
+  daemon, it is impossible to tell if any previous ones have been lost or not.
+  \Attr{UpdatesLost} is the number of updates that the \Condor{collector}
   has detected as being lost.
   See page~\pageref{sec:Collector-Added-Attributes} for more information on the
   added attributes.
@@ -5867,10 +5869,10 @@ These macros affect the \Condor{collector}.
   updates.  This macro is ignored if \MacroU{COLLECTOR\_DAEMON\_STATS}
   is not enabled.
 
-  \index{ClassAd attribute added by the \Condor{collector}!UpdatesHistory}
+  \index{ClassAd attribute added by the condor\_collector!UpdatesHistory}
   If this has a non-zero value, the Collector will insert
-  ``UpdatesHistory'' into the ClassAd (similar to ``UpdatesTotal''
-  above).  ``UpdatesHistory'' is a hexadecimal string which represents
+  \Attr{UpdatesHistory} into the ClassAd (similar to \Attr{UpdatesTotal}
+  above). Attr{UpdatesHistory} is a hexadecimal string which represents
   a bitmap of the last \Macro{COLLECTOR\_DAEMON\_HISTORY\_SIZE}
   updates.  The most significant bit (MSB) of the bitmap represents the
   most recent update, and the least significant bit (LSB) represents
