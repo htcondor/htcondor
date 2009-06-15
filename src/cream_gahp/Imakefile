@@ -1,0 +1,43 @@
+NAME = cream_gahp
+all_target($(NAME))
+
+/* We pick out the specific LIB targets we need to avoid accidently
+ * linking against any of the Condor libraries, which we don't want.
+ */
+C_PLUS_FLAGS = -pthread -I$(CREAM_DIR)/include -I$(GLOBUS_DIR)/include/$(GlobusThrFlavor) $(STD_C_PLUS_FLAGS)
+LIB = $(PRE_EXT_LIBS) \
+	$(CREAM_DIR)/lib/libglite_ce_cream_client_soap.a \
+	$(CREAM_DIR)/lib/libglite_ce_cream_client_util.a \
+	$(CREAM_DIR)/lib/libglite_security_gsoap_plugin_$(GlobusThrFlavor).a \
+	$(GLOBUS_DIR)/lib/libglobus_gss_assist_$(GlobusThrFlavor).a \
+	$(GLOBUS_DIR)/lib/libglobus_gssapi_gsi_$(GlobusThrFlavor).a \
+	$(GLOBUS_DIR)/lib/libglobus_gsi_proxy_core_$(GlobusThrFlavor).a \
+	$(GLOBUS_DIR)/lib/libglobus_gsi_credential_$(GlobusThrFlavor).a \
+	$(GLOBUS_DIR)/lib/libglobus_gsi_callback_$(GlobusThrFlavor).a \
+	$(GLOBUS_DIR)/lib/libglobus_gsi_sysconfig_$(GlobusThrFlavor).a \
+	$(GLOBUS_DIR)/lib/libglobus_oldgaa_$(GlobusThrFlavor).a \
+	$(GLOBUS_DIR)/lib/libglobus_gsi_cert_utils_$(GlobusThrFlavor).a \
+	$(GLOBUS_DIR)/lib/libglobus_openssl_$(GlobusThrFlavor).a \
+	$(GLOBUS_DIR)/lib/libglobus_openssl_error_$(GlobusThrFlavor).a \
+	$(GLOBUS_DIR)/lib/libglobus_proxy_ssl_$(GlobusThrFlavor).a \
+	$(GLOBUS_DIR)/lib/libglobus_callout_$(GlobusThrFlavor).a \
+	$(GLOBUS_DIR)/lib/libglobus_common_$(GlobusThrFlavor).a \
+	$(GLOBUS_DIR)/lib/libltdl_$(GlobusThrFlavor).a \
+	$(VOMS_DIR)/lib/libvomsapi_$(GlobusThrFlavor).a \
+	$(GLOBUS_DIR)/lib/libglobus_gss_assist_$(GlobusThrFlavor).a \
+	$(GLOBUS_DIR)/lib/libglobus_callout_$(GlobusThrFlavor).a \
+	$(CREAM_DIR)/lib/liblog4cpp.a \
+	$(CREAM_DIR)/lib/libgridsite.a \
+	$(CREAM_DIR)/lib/libares.a \
+	$(CREAM_DIR)/lib/libboost_thread-gcc-mt-d.a \
+	$(OPENSSL_DIR)/lib/libssl.a \
+	$(OPENSSL_DIR)/lib/libcrypto.a \
+	$(EXPAT_LIB) \
+	$(POST_EXT_LIBS) \
+	-lxml2 -lz -lpthread
+
+OBJ = cream_gahp_server.o
+
+public_c_plus_nowrap_target($(NAME),sbin,$(OBJ),$(LIB))
+
+testbin::

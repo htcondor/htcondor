@@ -1,0 +1,74 @@
+diff -u -r org.glite.ce.cream-client-api-c/configure.ac org.glite.ce.cream-client-api-c.patched/configure.ac
+--- org.glite.ce.cream-client-api-c/configure.ac	2008-10-30 08:21:44.000000000 -0500
++++ org.glite.ce.cream-client-api-c.patched/configure.ac	2009-06-10 10:32:36.000000000 -0500
+@@ -58,6 +58,7 @@
+ # Checks for library functions.
+ AC_HEADER_STDC
+ AC_CHECK_FUNCS([memset gettimeofday])
++AC_CHECK_FUNC(dlopen, ,AC_CHECK_LIB(dl, dlopen))
+ 
+ #have_classads=no
+ have_boost=no
+diff -u -r org.glite.ce.cream-client-api-c/interface/glite/ce/cream-client-api-c/CreamProxyFactory.h org.glite.ce.cream-client-api-c.patched/interface/glite/ce/cream-client-api-c/CreamProxyFactory.h
+--- org.glite.ce.cream-client-api-c/interface/glite/ce/cream-client-api-c/CreamProxyFactory.h	2008-09-03 07:11:25.000000000 -0500
++++ org.glite.ce.cream-client-api-c.patched/interface/glite/ce/cream-client-api-c/CreamProxyFactory.h	2009-06-12 15:46:10.000000000 -0500
+@@ -145,7 +145,7 @@
+ 	     \see ResultWrapper
+ 	     \see JobFilterWrapper
+ 	  */
+-	  static AbsCreamProxy* CreamProxyFactory::make_CreamProxyStart(const  JobFilterWrapper* param1, 
++	  static AbsCreamProxy* make_CreamProxyStart(const  JobFilterWrapper* param1, 
+ 									ResultWrapper* param2, 
+ 									const int timeout) throw()
+ 	  {
+diff -u -r org.glite.ce.cream-client-api-c/src/ConfigurationManager.cpp org.glite.ce.cream-client-api-c.patched/src/ConfigurationManager.cpp
+--- org.glite.ce.cream-client-api-c/src/ConfigurationManager.cpp	2008-06-17 03:25:33.000000000 -0500
++++ org.glite.ce.cream-client-api-c.patched/src/ConfigurationManager.cpp	2009-06-10 10:32:36.000000000 -0500
+@@ -24,7 +24,7 @@
+ #include <sys/types.h>
+ #include <sys/stat.h>
+ #include <unistd.h>
+-#include "classad_distribution.h"
++#include "classad/classad_distribution.h"
+ #include "glite/ce/cream-client-api-c/creamApiLogger.h"
+ #include "boost/algorithm/string.hpp"
+ #include "boost/regex.hpp"
+diff -u -r org.glite.ce.cream-client-api-c/src/Makefile.am org.glite.ce.cream-client-api-c.patched/src/Makefile.am
+--- org.glite.ce.cream-client-api-c/src/Makefile.am	2008-04-16 03:53:20.000000000 -0500
++++ org.glite.ce.cream-client-api-c.patched/src/Makefile.am	2009-06-10 10:32:36.000000000 -0500
+@@ -8,13 +8,13 @@
+ 
+ cream_service.h : $(GLITE_CREAM_WSDL_DEPS)
+ 	cd $(GLITE_LOCATION)/interface && \
+-	$(GSOAP_LOCATION)/bin/wsdl2h -o $(CURDIR)/cream_service.h -t $(top_srcdir)/config/typemap.dat \
++	$(GSOAP_LOCATION)/bin/wsdl2h -o $(CURDIR)/cream_service.h -t $(CURDIR)/../config/typemap.dat \
+ 	$(GLITE_CREAM_WSDL) $(GLITE_LOCATION)/interface/www.gridsite.org-delegation-2.0.0.wsdl
+-	sed 's|WS/stlvector.h|import/stlvector.h|g' cream_service.h > cream_service.h.tmp && \
++	sed 's|/.*/stlvector.h|stlvector.h|g' cream_service.h > cream_service.h.tmp && \
+ 	mv cream_service.h.tmp cream_service.h
+ 
+ autogen/CREAM_CLIENTClient.cpp : cream_service.h
+-	$(GSOAP_LOCATION)/bin/soapcpp2 -I$(GSOAP_LOCATION)/include \
++	$(GSOAP_LOCATION)/bin/soapcpp2 -I$(GSOAP_LOCATION)/include -I$(GSOAP_LOCATION)/share/gsoap/import \
+ 	-p CREAM_CLIENT -n -d autogen cream_service.h
+ 	sed 's|CREAM_CLIENTH.h|glite/ce/cream-client-api-c/cream_client_soapH.h|g' \
+ 	autogen/CREAM_CLIENT.nsmap > $(top_srcdir)/interface/glite/ce/cream-client-api-c/CREAM_CLIENT.nsmap
+@@ -22,7 +22,6 @@
+ 	sed 's|CREAM_CLIENTStub.h|glite/ce/cream-client-api-c/cream_client_soapStub.h|g' \
+ 	autogen/CREAM_CLIENTH.h > $(top_srcdir)/interface/glite/ce/cream-client-api-c/cream_client_soapH.h
+ 	cp cream_service.h $(top_srcdir)/interface/glite/ce/cream-client-api-c
+-	cp $(GSOAP_LOCATION)/src/stdsoap2.cpp autogen
+ 
+ lib_LTLIBRARIES = libglite_ce_cream_client_util.la libglite_ce_cream_client_soap.la
+ 
+diff -u -r org.glite.ce.cream-client-api-c/src/certUtil.cpp org.glite.ce.cream-client-api-c.patched/src/certUtil.cpp
+--- org.glite.ce.cream-client-api-c/src/certUtil.cpp	2008-06-10 02:21:55.000000000 -0500
++++ org.glite.ce.cream-client-api-c.patched/src/certUtil.cpp	2009-06-10 10:33:13.000000000 -0500
+@@ -31,6 +31,7 @@
+ #include <ctime>
+ #include <unistd.h>
+ #include <openssl/sha.h>
++#include <sys/time.h>
+ 
+ namespace soapProxy = glite::ce::cream_client_api::soap_proxy;
+ 
