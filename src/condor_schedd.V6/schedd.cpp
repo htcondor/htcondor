@@ -4149,6 +4149,16 @@ Scheduler::actOnJobs(int, Stream* s)
 					}
 				}
 				if( action == JA_HOLD_JOBS ) {
+					int old_status = IDLE;
+					GetAttributeInt( tmp_id.cluster, tmp_id.proc,
+									 ATTR_JOB_STATUS, &old_status );
+					if ( old_status == REMOVED &&
+						 SetAttributeInt( tmp_id.cluster, tmp_id.proc,
+										  ATTR_JOB_STATUS_ON_RELEASE,
+										  old_status ) < 0 ) {
+						results.record( tmp_id, AR_PERMISSION_DENIED );
+						continue;
+					}
 					if( SetAttributeInt( tmp_id.cluster, tmp_id.proc,
 										 ATTR_HOLD_REASON_CODE,
 										 CONDOR_HOLD_CODE_UserRequest ) < 0 ) {
