@@ -91,7 +91,7 @@ public:
     /** Returns the adapter's subnet
 		@return a string representation of the addapter's subnet mask
 	*/
-	virtual const char* subnet (void) const = 0;
+	virtual const char* subnetMask (void) const = 0;
 
     /** Is this the primary interface
 		@return a string representation of the addapter's subnet mask

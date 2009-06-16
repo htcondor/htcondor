@@ -7,7 +7,7 @@
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *	http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -20,6 +20,7 @@
 
 #include "condor_common.h"
 #include "udp_waker.h"
+#include "hibernator.WINDOWS.h"
 
 #include "condor_debug.h"
 #include "condor_fix_assert.h"
@@ -40,44 +41,53 @@ Constants
 
 /* error codes */
 enum {
-    E_NONE    =  0,  /* no error */
-    E_NOMEM   = -1,  /* not enough memory */
-    E_FOPEN   = -2,  /* cannot open file */
-    E_FREAD   = -3,  /* read error on file */
-    E_OPTION  = -4,  /* unknown option */
-    E_OPTARG  = -5,  /* missing option argument */
-    E_ARGCNT  = -6,  /* too few/many arguments */
-    E_NOWAKE  = -7,  /* failed to wake machine */
-    E_CLASSAD = -8,  /* error in class-ad (errno = %d)*/
-    E_UNKNOWN = -9   /* unknown error */
+	E_NONE	  =  0,  /* no error */
+	E_NOMEM   = -1,  /* not enough memory */
+	E_FOPEN   = -2,  /* cannot open file */
+	E_FREAD   = -3,  /* read error on file */
+	E_OPTION  = -4,  /* unknown option */
+	E_OPTARG  = -5,  /* missing option argument */
+	E_ARGCNT  = -6,  /* too few/many arguments */
+	E_NOWAKE  = -7,  /* failed to wake machine */
+	E_NOREST  = -8,  /* failed to switch the machine's power state */
+	E_CLASSAD = -9,  /* error in class-ad (errno = %d) */
+	E_UNKNOWN = -10  /* unknown error */
 };
 
 /* error messages */
 static const char *errmsgs[] = {
-  /* E_NONE     0 */  "no error%s.\n",
-  /* E_NOMEM   -1 */  "not enough memory for %s.\n",
-  /* E_FOPEN   -2 */  "cannot open file %s: %s (errno = %d).\n",
-  /* E_FREAD   -3 */  "read error on file %s.\n",
-  /* E_OPTION  -4 */  "unknown option -%c.\n",
-  /* E_OPTARG  -5 */  "missing option argument.\n",
-  /* E_ARGCNT  -6 */  "wrong number of arguments.\n",
-  /* E_NOWAKE  -7 */  "failed to sent wake packet.\n",
-  /* E_CLASSAD -8 */  "error in class-ad %s.\n",
-  /* E_UNKNOWN -9 */  "unknown error.\n"
+  /* E_NONE		 0 */  "no error%s.\n",
+  /* E_NOMEM    -1 */  "not enough memory for %s.\n",
+  /* E_FOPEN    -2 */  "cannot open file %s: %s (errno = %d).\n",
+  /* E_FREAD    -3 */  "read error on file %s.\n",
+  /* E_OPTION   -4 */  "unknown option -%c.\n",
+  /* E_OPTARG   -5 */  "missing option argument.\n",
+  /* E_ARGCNT   -6 */  "wrong number of arguments.\n",
+  /* E_NOWAKE   -7 */  "failed to sent wake packet.\n",
+  /* E_NOREST   -8 */  "failed to switch the machine's power state.\n",
+  /* E_CLASSAD  -9 */  "error in class-ad (errno = %d).\n",
+  /* E_UNKNOWN -10 */  "unknown error.\n"
 };
 
 /*
 Global Variables
 */
 
-static char      *program_name   = NULL; /* program name for error messages */
-static FILE      *in             = NULL; /* input file */
-static char      *fn_in          = NULL; /* name of input file */
-static char      *mac            = NULL; /* hardware address */
-static char      *subnet         = "255.255.255.255"; /* subnet to broadcast on */
-static int       port            = 9;    /* port number to use */
-static ClassAd   *ad             = NULL; /* machine class-ad */
-static WakerBase *waker          = NULL; /* waking mechanism */
+static char				*program_name	= NULL;  /* program name */
+static FILE				*in				= NULL;  /* input file */
+static FILE				*out			= NULL;  /* output file */
+static char				*fn_in			= NULL;  /* name of input file */
+static char				*fn_out			= NULL;  /* name of output file */
+static bool				interactive		= false; /* if true, use stdin as input */
+static bool				wake			= true;  /* are we waking the machine up, or putting it to sleep? */
+static bool				capabilities	= false;
+static char				*mac			= NULL;  /* hardware address */
+static char				*mask			= "255.255.255.255"; /* subnet to broadcast on */
+static int				port			= 9;	 /* port number to use */
+static int				level			= 5;	 /* hibernation level (S5) */
+static ClassAd			*ad				= NULL;  /* machine class-ad */
+static WakerBase		*waker			= NULL;  /* waking mechanism */
+static HibernatorBase	*hibernator		= NULL;  /* hibernation mechanism */
 
 /*
 Functions
@@ -86,26 +96,31 @@ Functions
 static void
 usage () {
 
-    fprintf ( stderr, "usage: %s [OPTIONS] [CLASS-AD-FILE]\n",
-        program_name );
-    fprintf ( stderr, "%s - %s\n", program_name, DESCRIPTION );
-    fprintf ( stderr, "\n" );
-    fprintf ( stderr, "-h       this message\n" );
-    fprintf ( stderr, "-m       hardware address (MAC address)\n" );
-    fprintf ( stderr, "-s       subnet (default: %s)\n", subnet );
-    /* fprintf ( stderr, "-p#      port (default: %d)\n", port ); */
-    fprintf ( stderr, "-d       turns debugging on\n" );
-    fprintf ( stderr, "\n" );
-    fprintf ( stderr, "With no CLASS-AD-FILE, read standard input.\n" );
-
-    exit ( 0 );
+	fprintf ( stderr, "usage: %s [OPTIONS] [INPUT-CLASS-AD-FILE] [OUTPUT]\n", program_name );
+	fprintf ( stderr, "%s - %s\n", program_name, DESCRIPTION );
+	fprintf ( stderr, "\n" );
+	fprintf ( stderr, "-h	   this message\n" );
+	fprintf ( stderr, "\n" );
+	fprintf ( stderr, "-d	   turns debugging on\n" );
+	fprintf ( stderr, "\n" );
+	fprintf ( stderr, "-c	   output capabilities\n" );
+	fprintf ( stderr, "-i	   interactive input\n" );
+	fprintf ( stderr, "-m	   hardware address (MAC address)\n" );
+	fprintf ( stderr, "-p	   port (default: %d)\n", port );
+	fprintf ( stderr, "-r	   hibernate the current machine (default: S%d)\n", level );
+	fprintf ( stderr, "-s	   subnet mask (default: %s)\n", mask );
+	fprintf ( stderr, "-w	   wake a remote machine (default action)\n" );
+	fprintf ( stderr, "\n" );
+	fprintf ( stderr, "With -i, read standard input.\n" );
+	
+	exit ( 0 );
 
 }
 
 static void
 enable_debug () {
 
-    Termlog = 1;
+	Termlog = 1;
 	dprintf_config ( "TOOL" );
 
 }
@@ -113,195 +128,277 @@ enable_debug () {
 static void
 error ( int code, ... ) {
 
-    va_list    args;
-    const char *msg;
+	va_list	args;
+	const char *msg;
 
-    assert ( program_name );
+	assert ( program_name );
 
-    if ( code < E_UNKNOWN ) {
-        code = E_UNKNOWN;
-    }
+	if ( code < E_UNKNOWN ) {
+		code = E_UNKNOWN;
+	}
 
-    if ( code < 0 ) {
+	if ( code < 0 ) {
 
-        msg = errmsgs[-code];
+		msg = errmsgs[-code];
 
-        if ( !msg ) {
-            msg = errmsgs[-E_UNKNOWN];
-        }
+		if ( !msg ) {
+			msg = errmsgs[-E_UNKNOWN];
+		}
 
-        fprintf ( stderr, "%s: ", program_name );
-        va_start ( args, code );
-        vfprintf ( stderr, msg, args );
-        va_end ( args );
+		fprintf ( stderr, "%s: ", program_name );
+		va_start ( args, code );
+		vfprintf ( stderr, msg, args );
+		va_end ( args );
 
-    }
+	}
 
-    if ( in  && ( in != stdin ) ) {
-        fclose ( in );
-    }
+	if ( in  && ( in != stdin ) ) {
+		fclose ( in );
+	}
 
-    if ( waker ) {
-        delete waker;
-        waker = NULL;
-    }
+	if ( waker ) {
+		delete waker;
+		waker = NULL;
+	}
 
-    if ( ad ) {
-        delete ad;
-        ad = NULL;
-    }
+	if ( ad ) {
+		delete ad;
+		ad = NULL;
+	}
 
-    exit ( code );
+	exit ( code );
 
 }
 
 static void
 parse_command_line ( int argc, char *argv[] ) {
 
-    int     i, j = 0;
-    char    *s;                 /* to traverse the options */
-    char    **argument = NULL;  /* option argument */	
+	int	 i, j = 0;
+	char	*s;					/* to traverse the options */
+	char	**argument = NULL;	/* option argument */	
 
-    for ( i = 1; i < argc; i++ ) {
+	for ( i = 1; i < argc; i++ ) {
 
-        s = argv[i];
+		s = argv[i];
 
-        if ( argument ) {
-            *argument = s;
-            argument = NULL;
-            continue;
-        }
+		if ( argument ) {
+			*argument = s;
+			argument = NULL;
+			continue;
+		}
 
-        if ( ( '-' == *s ) && *++s ) {
+		if ( ( '-' == *s ) && *++s ) {
 
-            /* we're looking at an option */
-            while ( *s ) {
+			/* we're looking at an option */
+			while ( *s ) {
 
-                /* determine which one it is */
-                switch ( *s++ ) {
-                    case 'd': enable_debug ();          break;
-                    case 'h': usage ();                 break;
-                    case 'm': argument = &mac;          break;
-                    case 's': argument = &subnet;       break;
-                    case 'p': port = (int) strtol ( s, &s, port ); break;
-                    default : error ( E_OPTION, *--s ); break;
-                }
+				/* determine which one it is */
+				switch ( *s++ ) {
+					case 'c': capabilities = true;		break;
+					case 'd': enable_debug ();			break;
+					case 'h': usage ();					break;
+					case 'i': interactive = true;		break;
+					case 'm': argument = &mac;			break;
+					case 'p': port = (int) strtol ( s, &s, port ); break;
+					case 'r': wake = false;	level = (int) strtol ( s, &s, level ); break;
+					case 's': argument = &mask;			break;
+					case 'w': wake = true;				break;
+					default : error ( E_OPTION, *--s );	break;
+				}
 
-                /* if there is an argument to this option, stash it */
-                if ( argument && *s ) {
-                    *argument = s;
-                    argument = NULL;
-                    break;
-                }
+				/* if there is an argument to this option, stash it */
+				if ( argument && *s ) {
+					*argument = s;
+					argument = NULL;
+					break;
+				}
 
-            }
+			}
 
-        } else {
+		} else {
 
-            /* we're looking at a file name */
-            switch ( j++ ) {
-                case  0: fn_in = s;          break;
-                default: error ( E_ARGCNT ); break;
-            }
+			/* we're looking at a file name */
+			switch ( j++ ) {
+				case  0: fn_in  = s;		 break;
+				case  1: fn_out = s;		 break;
+				default: error ( E_ARGCNT ); break;
+			}
 
-        }
+		}
 
-    }
+	}
 
- }
+}
+
+static void
+serialize_input () {
+
+	char sinful[16 + 10];
+	int  found_eof		= 0,
+		 found_error	= 0,
+		 empty			= 0;
+
+	/**	Determine if we are using the command-line options, a file,
+		or standard input as input */
+	if ( !interactive ) {
+
+		/**	Contrive a sinful string based on our IP address */
+		sprintf ( sinful, "<%s:1234>", my_ip_string () );
+
+		/**	We were give all the raw data, so we're going to create
+			a fake machine ad that we will use when invoking the waking
+			mechanism */
+		ad = new ClassAd ();
+		ad->SetMyTypeName ( STARTD_ADTYPE );
+		ad->SetTargetTypeName ( JOB_ADTYPE );
+		ad->Assign ( ATTR_HARDWARE_ADDRESS, mac );
+		ad->Assign ( ATTR_SUBNET_MASK, mask );
+		ad->Assign ( ATTR_PUBLIC_NETWORK_IP_ADDR, sinful );
+		ad->Assign ( ATTR_WOL_PORT, port );
+
+	} else {
+
+		/**	Open the machine ad file or read it from stdin */
+		if ( fn_in && *fn_in ) {
+			in = safe_fopen_wrapper ( fn_in, "r" );
+		} else {
+			in = stdin;
+			fn_in = "<stdin>";
+		}
+
+		if ( !in ) {
+			error (
+				E_FOPEN,
+				fn_in,
+				strerror ( errno ),
+				errno );
+		}
+
+		/**	Serialize the machine ad from a file */
+		ad = new ClassAd (
+			in,
+			"?$#%^&*@", /* sufficiently random garbage? */
+			found_eof,
+			found_error,
+			empty );
+
+		if ( found_error ) {
+			error (
+				E_CLASSAD,
+				found_error );
+		}
+
+	}
+
+}
+
+static void
+serialize_output () {
+
+	/**	Determine if we are using a file or standard output */
+	if ( !interactive ) {
+
+	} else {
+
+		/**	Open the machine ad file or read it from stdin */
+		if ( fn_in && *fn_in ) {
+			in = safe_fopen_wrapper ( fn_in, "r" );
+		} else {
+			in = stdin;
+			fn_in = "<stdin>";
+		}
+
+	}
+
+}
+
+static void
+wake_machine () {
+
+	/**	Create the waking mechanism. */
+	waker = WakerBase::createWaker ( ad );
+
+	if ( !waker ) {
+		error (
+			E_NOMEM,
+			"waker object." );
+	}
+
+	/**	Attempt to wake the remote machine */
+	if ( !waker->doWake () ) {
+		error (
+			E_NOWAKE );
+	}
+
+	fprintf (
+		stderr,
+		"Packet sent.\n" );
+
+	delete waker;
+
+}
+
+static void
+hibernate_machine () {
+
+	/**	Create the hibernation mechanism. */
+	hibernator = HibernatorBase::createHibernator ();
+
+	if ( !hibernator ) {
+		error (
+			E_NOMEM,
+			"hibernator object." );
+	}
+
+	/**	Try to put this machine into the requested power 
+	state. */
+	ok = hibernator->switchToState ( desired, actual );
+
+	if ( !ok || desired != actual ) {
+		error (
+			E_NOREST );
+	}
+
+	fprintf (
+		stderr,
+		"Power level change.\n" );
+
+	delete hibernator;
+
+}
 
 int
 main ( int argc, char *argv[] ) {
 
-    char    *name       = NULL,
-            sinful[16 + 10];
-    int     found_eof   = 0,
-            found_error = 0,
-            empty       = 0;
-    bool    sent_wake   = false;
+	char						*name	= NULL;
+	bool						ok		= false;
+	HibernatorBase::SLEEP_STATE	desired	= HibernatorBase::intToSleepState ( level ),
+								actual;
 
-    /* retrieve the program's name */
-    name = strrchr ( argv[0], DIR_DELIM_CHAR );
-    program_name = !name ? argv[0] : name + 1;
+	/**	Retrieve the program's name */
+	name = condor_basename ( argv[0] );
+	program_name = !name ? argv[0] : name + 1;
 
-    /* parse the command line and populate the global state */
-    parse_command_line ( argc, argv );
+	/**	Parse the command line and populate the global state */
+	parse_command_line ( argc, argv );
 
-    /* determine if we are using the command-line options, a file,
-    or standard input as input */
-    if ( mac && *mac ) {
+	/**	Grab the user's input */
+	serialize_input ();
 
-        /* contrive a sinful string based on our IP address */
-        sprintf ( sinful, "<%s:1234>", my_ip_string () );
+	if ( ad ) {
 
-        /* we were give all the raw data, so we're going to create
-        a fake machine ad that we will use when invoking the waking
-        mechanism */
-        ad = new ClassAd ();
-        ad->SetMyTypeName ( STARTD_ADTYPE );
-        ad->SetTargetTypeName ( JOB_ADTYPE );
-        ad->Assign ( ATTR_HARDWARE_ADDRESS, mac );
-        ad->Assign ( ATTR_SUBNET, subnet );
-        ad->Assign ( ATTR_PUBLIC_NETWORK_IP_ADDR, sinful );
+		if ( wake ) { 
+			
+			wake_machine ();
 
-    } else {
+		} else {
 
-        /* open the machine ad file or read it from stdin */
-        if ( fn_in && *fn_in ) {
-            in = safe_fopen_wrapper ( fn_in, "r" );
-        } else {
-            in = stdin;
-            fn_in = "<stdin>";
-        }
+			hibernate_machine ();
 
-        if ( !in ) {
-            error (
-                E_FOPEN,
-                fn_in,
-                strerror ( errno ),
-                errno );
-        }
+		}
 
-        /* serialize the machine ad from a file */
-        ad = new ClassAd (
-            in,
-            "?$#%^&*@", /* sufficiently random garbage? */
-            found_eof,
-            found_error,
-            empty );
+	}
 
-        if ( found_error ) {
-            error (
-                E_CLASSAD,
-                found_error );
-        }
-
-    }
-
-    if ( ad ) {
-
-        /* create the waking mechanism, and wake the machine */
-        waker = WakerBase::createWaker ( ad );
-
-        if ( !waker ) {
-            error (
-                E_NOMEM,
-                "waker object." );
-        }
-
-        sent_wake = waker->doWake ();
-
-    }
-
-    if ( !sent_wake ) {
-        error (
-            E_NOWAKE );
-    }
-
-    fprintf (
-        stderr,
-        "Packet sent.\n" );
-
-    return 0;
+	return 0;
 
 }

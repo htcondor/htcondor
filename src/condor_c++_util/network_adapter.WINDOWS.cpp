@@ -243,7 +243,7 @@ WindowsNetworkAdapter::ipAddress (void) const {
 }
 
 const char*
-WindowsNetworkAdapter::subnet (void) const {
+WindowsNetworkAdapter::subnetMask (void) const {
     return _subnet;
 }
 

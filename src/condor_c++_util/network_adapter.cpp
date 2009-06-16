@@ -97,7 +97,7 @@ NetworkAdapterBase::createNetworkAdapter ( const char *sinful_or_name,
 bool
 NetworkAdapterBase::doInitialize ( void )
 {
-	m_initialization_status = initialize( );
+	m_initialization_status = initialize ();
 	return m_initialization_status;
 }
 
@@ -105,7 +105,7 @@ void
 NetworkAdapterBase::publish ( ClassAd &ad )
 {
     ad.Assign ( ATTR_HARDWARE_ADDRESS, hardwareAddress () );
-    ad.Assign ( ATTR_SUBNET, subnet () );
+    ad.Assign ( ATTR_SUBNET_MASK, subnetMask () );
 	ad.Assign ( ATTR_IS_WAKE_SUPPORTED, isWakeSupported () );
 	ad.Assign ( ATTR_IS_WAKE_ENABLED, isWakeEnabled () );
 	ad.Assign ( ATTR_IS_WAKEABLE, isWakeable() );

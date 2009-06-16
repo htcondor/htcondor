@@ -35,13 +35,13 @@
  * Base Hibernator class
  ***************************************************************/
 
-HibernatorBase::HibernatorBase ( void ) throw () 
-		: m_states ( NONE )
+HibernatorBase::HibernatorBase () throw () 
+	: m_states ( NONE )
 {
 }
 
 
-HibernatorBase::~HibernatorBase ( void ) throw ()
+HibernatorBase::~HibernatorBase () throw ()
 {
 }
 
@@ -67,7 +67,7 @@ HibernatorBase::isStateValid ( SLEEP_STATE state )
 }
 
 bool
-HibernatorBase::isStateSupported( SLEEP_STATE state ) const
+HibernatorBase::isStateSupported ( SLEEP_STATE state ) const
 {
 	if ( NONE == state ) {
 		return true;
@@ -125,7 +125,7 @@ HibernatorBase::switchToState ( SLEEP_STATE level,
 }
 
 unsigned short 
-HibernatorBase::getStates ( void ) const
+HibernatorBase::getStates () const
 {
 	return m_states;
 }
@@ -143,10 +143,15 @@ HibernatorBase::addState ( SLEEP_STATE state )
 }
 
 void
-HibernatorBase::addState ( const char *statestr )
+HibernatorBase::addState ( const char *state )
 {
-	SLEEP_STATE state = stringToSleepState ( statestr );
-	m_states |= state;
+	m_states |= stringToSleepState ( state );
+}
+
+const char*
+HibernatorBase::getMethod () const
+{
+	return "default";
 }
 
 /***************************************************************
@@ -156,7 +161,7 @@ HibernatorBase::addState ( const char *statestr )
 /* factory method */
 
 HibernatorBase* 
-HibernatorBase::createHibernator ( void )
+HibernatorBase::createHibernator ()
 {
 	HibernatorBase *hibernator = NULL;
 
@@ -212,13 +217,13 @@ HibernatorBase::sleepStateToString ( HibernatorBase::SLEEP_STATE state )
 }
 
 HibernatorBase::SLEEP_STATE 
-HibernatorBase::stringToSleepState ( char const* name )
+HibernatorBase::stringToSleepState ( char const *name )
 {
 	return Lookup(name).state;
 }
 
-const HibernatorBase::StateLookup &
-HibernatorBase::Lookup( int n )
+const HibernatorBase::StateLookup&
+HibernatorBase::Lookup ( int n )
 {
 	if ( (n > 0)  &&  (n <= 5) ) {
 		return states[n];
@@ -226,8 +231,8 @@ HibernatorBase::Lookup( int n )
 	return states[0];
 }
 
-const HibernatorBase::StateLookup &
-HibernatorBase::Lookup( SLEEP_STATE state )
+const HibernatorBase::StateLookup&
+HibernatorBase::Lookup ( SLEEP_STATE state )
 {
 	for( int i = 0;  states[i].number >= 0;  i++ ) {
 		if ( states[i].state == state ) {
@@ -237,8 +242,8 @@ HibernatorBase::Lookup( SLEEP_STATE state )
 	return states[0];
 }
 
-const HibernatorBase::StateLookup &
-HibernatorBase::Lookup( const char *name )
+const HibernatorBase::StateLookup&
+HibernatorBase::Lookup ( const char *name )
 {
 	for( int i = 0;  states[i].number >= 0;  i++ ) {
 		const HibernatorBase::StateLookup	&state = states[i];

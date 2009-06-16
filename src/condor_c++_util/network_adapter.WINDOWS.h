@@ -61,25 +61,25 @@ public:
 	//@{
 
 	/** Returns the adapter's hardware address
-		@return a string representation of the addapter's hardware
+		@return a string representation of the adapter's's hardware
         address
 	*/
-	const char* hardwareAddress (void) const;
+	const char* hardwareAddress () const;
 
     /** Returns the adapter's IP address as a string
 		@return the adapter's IP address
 	*/
-	virtual unsigned ipAddress (void) const;
+	virtual unsigned ipAddress () const;
 
     /** Returns the adapter's hardware address
 		@return a string representation of the subnet mask
 	*/
-	const char* subnet (void) const;
+	const char* subnetMask () const;
 
 	/** Returns the adapter's logical name
 		@return a string with the logical name
 	*/
-	const char *interfaceName( void ) const { return _adapter_name; };
+	const char *interfaceName () const { return _adapter_name; };
 
     /** Checks that the adapter actually exists
         @returns true if the adapter exists on the machine;

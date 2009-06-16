@@ -28,6 +28,7 @@ class HibernatorBase
 {
 
 public:
+
 	struct StateLookup;
 
 	/* The following are the standard sleep states: doHibernate()
@@ -50,10 +51,10 @@ public:
 	//@{
 	
 	/// Constructor
-	HibernatorBase ( void ) throw ();
+	HibernatorBase () throw ();
 
 	/// Destructor
-	virtual ~HibernatorBase ( void ) throw (); 
+	virtual ~HibernatorBase () throw (); 
 
 	//@}
 
@@ -84,11 +85,11 @@ public:
 		@return a mask of the states supported by the OS.
 		@see SLEEP_STATE
 		*/
-	unsigned short getStates ( void ) const;
+	unsigned short getStates () const;
 
 	/** Is the given state supported?
 		@return true / false */
-	bool isStateSupported( SLEEP_STATE state ) const;
+	bool isStateSupported ( SLEEP_STATE state ) const;
 
     /** Set the supported sleep states 
         */
@@ -98,10 +99,10 @@ public:
         @see SLEEP_STATE
         */
     void addState ( SLEEP_STATE state );
-	void addState ( const char *statestr );
+	void addState ( const char *state );
 
 	/** Get the name of the hibernation method used */
-	virtual const char *getMethod( void ) const { return "default"; };
+	virtual const char* getMethod () const;
 
 	//@}
 
@@ -111,7 +112,7 @@ public:
 		@return if the OS is supported a valid HibernatorBase*; 
         otherwise NULL.
 	*/
-	static HibernatorBase* createHibernator ( void );
+	static HibernatorBase* createHibernator ();
 
 	
 	/** @name Conversion functions.
@@ -126,7 +127,7 @@ public:
 	static SLEEP_STATE intToSleepState ( int x );
 	static int sleepStateToInt ( SLEEP_STATE state );
 	static char const* sleepStateToString ( SLEEP_STATE state );
-	static SLEEP_STATE stringToSleepState ( char const* name );
+	static SLEEP_STATE stringToSleepState ( char const *name );
 
 	//@}
 
@@ -134,14 +135,14 @@ protected:
 
 	/* Override this to enter the given sleep state on a 
 	   particular OS */
-	virtual SLEEP_STATE enterStateStandBy(   bool force ) const = 0;
-	virtual SLEEP_STATE enterStateSuspend(   bool force ) const = 0;
-	virtual SLEEP_STATE enterStateHibernate( bool force ) const = 0;
-	virtual SLEEP_STATE enterStatePowerOff(  bool force ) const = 0;
+	virtual SLEEP_STATE enterStateStandBy ( bool force ) const = 0;
+	virtual SLEEP_STATE enterStateSuspend ( bool force ) const = 0;
+	virtual SLEEP_STATE enterStateHibernate ( bool force ) const = 0;
+	virtual SLEEP_STATE enterStatePowerOff ( bool force ) const = 0;
 
-	static const HibernatorBase::StateLookup &Lookup( int n );
-	static const HibernatorBase::StateLookup &Lookup( SLEEP_STATE state );
-	static const HibernatorBase::StateLookup &Lookup( const char *name );
+	static const HibernatorBase::StateLookup& Lookup ( int n );
+	static const HibernatorBase::StateLookup& Lookup ( SLEEP_STATE state );
+	static const HibernatorBase::StateLookup& Lookup ( const char *name );
 
 private:
 
