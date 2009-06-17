@@ -3085,7 +3085,7 @@ Matchmaker::calculateScheddLimit(
 	scheddLimit  = (int) rint(unroundedScheddLimit);
 	scheddLimitRoundoff = unroundedScheddLimit - scheddLimit;
 	if(scheddLimitRoundoff < 0.0) {
-		dprintf(D_ALWAYS, "Negative scheddLimitRoundoff: %.3f", scheddLimitRoundoff);
+		dprintf(D_ALWAYS, "Negative scheddLimitRoundoff: %.3f\n", scheddLimitRoundoff);
 	}
 
 		// calculate this schedd's absolute fair-share for allocating
