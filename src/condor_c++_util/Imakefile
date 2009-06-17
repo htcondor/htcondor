@@ -45,7 +45,8 @@ LIB = $(STD_LIBS)
 	is used by quill and the job router. Eventually the job_queue.log
 	readers/writers between the schedd and this should be unified into one
 	codebase. */
-JOB_QUEUE_LOG_PARSER_OBJ = classadlogentry.o classadlogparser.o prober.o
+JOB_QUEUE_LOG_PARSER_OBJ = classadlogentry.o classadlogparser.o prober.o \
+				JobLogReader.o classad_newold.o
 
 URL_OBJ = url_condor.o cbstp_url.o file_url.o http_url.o filter_url.o \
 	mailto_url.o cfilter_url.o ftp_url.o include_urls.o mkargv.o MapFile.o
