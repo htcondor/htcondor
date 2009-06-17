@@ -1230,6 +1230,10 @@ void NordugridJob::NotifyNewRemoteStatus( const char *status )
 			   remoteJobState == REMOTE_STATE_FINISHED ||
 			   remoteJobState == REMOTE_STATE_FAILED ) ) {
 			JobRunning();
+		} else if ( condorState == RUNNING &&
+					( remoteJobState == REMOTE_STATE_INLRMS_Q ||
+					  remoteJobState == REMOTE_STATE_INLRMS_S ) ) {
+			JobIdle();
 		}
 	}
 	if ( gmState == GM_RECOVER_QUERY ) {
