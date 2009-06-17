@@ -2516,6 +2516,13 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 	startdAds.Open ();
 	while ((candidate = startdAds.Next ())) {
 
+			// this will insert remote user priority information into the 
+			// startd ad (if it is currently running a job), which can then
+			// be referenced via the various PREEMPTION_REQUIREMENTS expressions.
+			// we now need to do this inside the inner loop because we insert
+			// usage information 
+		addRemoteUserPrios(candidate);
+
 			// the candidate offer and request must match
 		if( !( *candidate == request ) ) {
 				// they don't match; continue
