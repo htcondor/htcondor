@@ -165,7 +165,6 @@ class Matchmaker : public Service
 		                          double maxAbsPrioValue,
 		                          double normalFactor,
 		                          double normalAbsFactor,
-								  float resourceWeight,
 								  double resourceWeightTotal,
 		                            /* result parameters: */
 		                          int &scheddLimit,

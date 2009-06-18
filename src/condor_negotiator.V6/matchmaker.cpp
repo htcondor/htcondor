@@ -1310,10 +1310,6 @@ negotiateWithGroup ( int untrimmed_num_startds, ClassAdList& startdAds,
 			double scheddLimitRW = 0.0;
 			double scheddUsageRW = 0.0;
 
-			float resourceWeight = 1.0;
-			if(useResourceWeights) 
-				schedd->EvalFloat(ResourceWeightAttr.Value(), NULL, resourceWeight);
-
 			calculateScheddLimit(
 				scheddName.Value(),
 				groupAccountingName,
@@ -1323,7 +1319,6 @@ negotiateWithGroup ( int untrimmed_num_startds, ClassAdList& startdAds,
 				maxAbsPrioValue,
 				normalFactor,
 				normalAbsFactor,
-				resourceWeight,
 				resourceWeightTotal,
 					/* result parameters: */
 				scheddLimit,
@@ -3060,7 +3055,6 @@ Matchmaker::calculateScheddLimit(
 	double maxAbsPrioValue,
 	double normalFactor,
 	double normalAbsFactor,
-	float resourceWeight,
 	double resourceWeightTotal,
 		/* result parameters: */
 	int &scheddLimit,
@@ -3155,13 +3149,10 @@ Matchmaker::calculateUserPrioCrumbs(
 		double scheddPrioFactor = 0.0;
 		MyString scheddName;
 		double scheddLimitRoundoff = 0.0;
-		float resourceWeight = 1.0;
 		double scheddLimitRW = 0.0;
 		double scheddUsageRW = 0.0;
 
 		schedd->LookupString( ATTR_NAME, scheddName );
-		if(useResourceWeights)
-			schedd->EvalFloat(ResourceWeightAttr.Value(), NULL, resourceWeight);
 
 		calculateScheddLimit(
 			scheddName.Value(),
@@ -3172,7 +3163,6 @@ Matchmaker::calculateUserPrioCrumbs(
 			maxAbsPrioValue,
 			normalFactor,
 			normalAbsFactor,
-			resourceWeight,
 			resourceWeightTotal,
 				/* result parameters: */
 			scheddLimit,
