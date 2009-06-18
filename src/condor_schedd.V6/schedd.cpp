@@ -159,7 +159,6 @@ static void WriteCompletionVisa(ClassAd* ad);
 
 
 int	WallClockCkptInterval = 0;
-static bool gridman_per_job = false;
 int STARTD_CONTACT_TIMEOUT = 45;  // how long to potentially block
 
 #ifdef CARMI_OPS
@@ -168,9 +167,23 @@ struct shadow_rec *find_shadow_by_cluster( PROC_ID * );
 
 unsigned int UserIdentity::HashFcn(const UserIdentity & index)
 {
-	return index.m_username.Hash() + index.m_domain.Hash();
+	return index.m_username.Hash() + index.m_domain.Hash() + index.m_auxid.Hash();
 }
 
+UserIdentity::UserIdentity(const char *user, const char *domainname, 
+						   const ClassAd *ad):
+	m_username(user), 
+	m_domain(domainname),
+	m_auxid("")
+{
+	ExprTree *tree = (ExprTree *) scheduler.getGridParsedSelectionExpr();
+	EvalResult val;
+	if ( ad && tree && 
+		 tree->EvalTree(ad,&val) && val.type==LX_STRING && val.s )
+	{
+		m_auxid = val.s;
+	}
+}
 
 struct job_data_transfer_t {
 	int mode;
@@ -451,6 +464,8 @@ Scheduler::Scheduler() :
 	sent_shadow_failure_email = FALSE;
 	ManageBandwidth = false;
 	_gridlogic = NULL;
+	m_parsed_gridman_selection_expr = NULL;
+	m_unparsed_gridman_selection_expr = NULL;
 
 	CronMgr = NULL;
 
@@ -551,9 +566,15 @@ Scheduler::~Scheduler()
 		}
 	}
 
-	if (_gridlogic)
+	if (_gridlogic) {
 		delete _gridlogic;
-		
+	}
+	if ( m_parsed_gridman_selection_expr ) {
+		delete m_parsed_gridman_selection_expr;
+	}
+	if ( m_unparsed_gridman_selection_expr ) {
+		free(m_unparsed_gridman_selection_expr);
+	}
 		//
 		// Delete CronTab objects
 		//
@@ -1016,22 +1037,20 @@ Scheduler::count_jobs()
 
 	 // Tell our GridUniverseLogic class what we've seen in terms
 	 // of Globus Jobs per owner.
-	 // Don't bother if we are starting a gridmanager per job.
-	if ( !gridman_per_job ) {
-		GridJobOwners.startIterations();
-		UserIdentity userident("nobody","");
-		GridJobCounts gridcounts;
-		while( GridJobOwners.iterate(userident, gridcounts) ) {
-			if(gridcounts.GridJobs > 0) {
-				GridUniverseLogic::JobCountUpdate(
-						userident.username().Value(),
-						userident.domain().Value(),
-						NULL, NULL, 0, 0, 
-						gridcounts.GridJobs,
-						gridcounts.UnmanagedGridJobs);
-			}
+	GridJobOwners.startIterations();
+	UserIdentity userident;
+	GridJobCounts gridcounts;
+	while( GridJobOwners.iterate(userident, gridcounts) ) {
+		if(gridcounts.GridJobs > 0) {
+			GridUniverseLogic::JobCountUpdate(
+					userident.username().Value(),
+					userident.domain().Value(),
+					userident.auxid().Value(),m_unparsed_gridman_selection_expr, 0, 0, 
+					gridcounts.GridJobs,
+					gridcounts.UnmanagedGridJobs);
 		}
 	}
+
 
 	 // send info about deleted owners
 	 // put 0 for idle & running jobs
@@ -1342,7 +1361,7 @@ count( ClassAd *job )
 		// Don't count HELD jobs that aren't externally (gridmanager) managed
 		// Don't count jobs that the gridmanager has said it's completely
 		// done with.
-		UserIdentity userident(real_owner.Value(),domain.Value());
+		UserIdentity userident(real_owner.Value(),domain.Value(),job);
 		if ( ( status != HELD || job_managed != false ) &&
 			 job_managed_done == false ) 
 		{
@@ -1355,14 +1374,6 @@ count( ClassAd *job )
 			GridJobCounts * gridcounts = scheduler.GetGridJobCounts(userident);
 			ASSERT(gridcounts);
 			gridcounts->UnmanagedGridJobs++;
-		}
-		if ( gridman_per_job ) {
-			int cluster = 0;
-			int proc = 0;
-			job->LookupInteger(ATTR_CLUSTER_ID, cluster);
-			job->LookupInteger(ATTR_PROC_ID, proc);
-			GridUniverseLogic::JobCountUpdate(owner,domain.Value(),NULL,NULL,
-					cluster, proc, needs_management, job_managed ? 0 : 1);
 		}
 			// If we do not need to do matchmaking on this job (i.e.
 			// service this globus universe job), than we can bailout now.
@@ -1502,13 +1513,8 @@ handle_mirror_job_notification(ClassAd *job_ad, int mode, PROC_ID & job_id)
 			MyString domain;
 			job_ad->LookupString(ATTR_OWNER,owner);
 			job_ad->LookupString(ATTR_NT_DOMAIN,domain);
-			if ( gridman_per_job ) {
-				GridUniverseLogic::JobRemoved(owner.Value(),domain.Value(),mirror_schedd_name,
-					ATTR_MIRROR_SCHEDD,job_id.cluster,job_id.proc);
-			} else {
-				GridUniverseLogic::JobRemoved(owner.Value(),domain.Value(),mirror_schedd_name,
+			GridUniverseLogic::JobRemoved(owner.Value(),domain.Value(),mirror_schedd_name,
 					ATTR_MIRROR_SCHEDD,0,0);
-			}
 		}
 		free(mirror_schedd_name);
 		mirror_schedd_name = NULL;
@@ -1615,11 +1621,12 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold,
 			MyString domain;
 			job_ad->LookupString(ATTR_OWNER,owner);
 			job_ad->LookupString(ATTR_NT_DOMAIN,domain);
-			if ( gridman_per_job ) {
-				GridUniverseLogic::JobRemoved(owner.Value(),domain.Value(),NULL,NULL,job_id.cluster,job_id.proc);
-			} else {
-				GridUniverseLogic::JobRemoved(owner.Value(),domain.Value(),NULL,NULL,0,0);
-			}
+			UserIdentity userident(owner.Value(),domain.Value(),job_ad);
+			GridUniverseLogic::JobRemoved(userident.username().Value(),
+					userident.domain().Value(),
+					userident.auxid().Value(),
+					scheduler.getGridUnparsedSelectionExpr(),
+					0,0);
 			return;
 		}
 	}
@@ -10422,10 +10429,6 @@ Scheduler::Init()
 
 	PeriodicExprInterval.setTimeslice( param_double("PERIODIC_EXPR_TIMESLICE", 0.01,0,1) );
 
-	if ( first_time_in_init ) {	  // cannot be changed on the fly
-		gridman_per_job = param_boolean( "GRIDMANAGER_PER_JOB", false );
-	}
-
 	RequestClaimTimeout = param_integer("REQUEST_CLAIM_TIMEOUT",60*30);
 
 #ifdef WANT_QUILL
@@ -10844,6 +10847,51 @@ Scheduler::reconfig()
 
 	int max_saved_rotations = param_integer( "MAX_JOB_QUEUE_LOG_ROTATIONS", DEFAULT_MAX_JOB_QUEUE_LOG_ROTATIONS );
 	SetMaxHistoricalLogs(max_saved_rotations);
+
+		/* Code to handle GRIDMANAGER_SELECTION_EXPR.  If set, we need to (a) restart
+		 * running gridmanagers if the setting changed value, and (b) parse the
+		 * expression and stash the parsed form (so we don't reparse over and over).
+		 */
+	char * expr = param("GRIDMANAGER_SELECTION_EXPR");
+	if (m_parsed_gridman_selection_expr) {
+		delete m_parsed_gridman_selection_expr;
+		m_parsed_gridman_selection_expr = NULL;	
+	}
+	if ( expr ) {
+		MyString temp;
+		temp.sprintf("string(%s)",expr);
+		free(expr);
+		expr = temp.StrDup();
+		Parse(temp.Value(),m_parsed_gridman_selection_expr);	
+			// if the expression in the config file is not valid, 
+			// the m_parsed_gridman_selection_expr will still be NULL.  in this case,
+			// pretend like it isn't set at all in the config file.
+		if ( m_parsed_gridman_selection_expr == NULL ) {
+			dprintf(D_ALWAYS,
+				"ERROR: ignoring GRIDMANAGER_SELECTION_EXPR (%s) - failed to parse\n",
+				expr);
+			free(expr);
+			expr = NULL;
+		} 
+	}
+		/* If GRIDMANAGER_SELECTION_EXPR changed, we need to restart all running
+		 * gridmanager asap.  Be careful to consider not only a changed expr, but
+		 * also the presence of a expr when one did not exist before, and vice-versa.
+		 */
+	if ( (expr && !m_unparsed_gridman_selection_expr) ||
+		 (!expr && m_unparsed_gridman_selection_expr) ||
+		 (expr && m_unparsed_gridman_selection_expr && 
+		       strcmp(m_unparsed_gridman_selection_expr,expr)!=0) )
+	{
+			/* GRIDMANAGER_SELECTION_EXPR changed, we need to kill off all running
+			 * running gridmanagers asap so they can be restarted w/ the new expression.
+			 */
+		GridUniverseLogic::shutdown_fast();
+	}
+	if (m_unparsed_gridman_selection_expr) {
+		free(m_unparsed_gridman_selection_expr);
+	}
+	m_unparsed_gridman_selection_expr = expr;
 }
 
 // NOTE: this is likely unreachable now, and may be removed

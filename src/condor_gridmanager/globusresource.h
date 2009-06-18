@@ -28,6 +28,8 @@
 #include "baseresource.h"
 #include "gahp-client.h"
 
+#define DEFAULT_GM_DISABLE_LENGTH (60*60)
+
 class GlobusJob;
 class GlobusResource;
 
@@ -71,9 +73,16 @@ class GlobusResource : public BaseResource
 		{ enableGridMonitor = enable; }
 	static bool GridMonitorEnabled()
 		{ return enableGridMonitor; }
+	static void setGridMonitorDisableLength( int len )
+	{ monitorDisableLength = len; }
+
+	void gridMonitorCallback( int state, int errorcode );
 
 	// This should be private, but GlobusJob references it directly for now
 	static HashTable <HashKey, GlobusResource *> ResourcesByName;
+
+		// This is the gram job contact string for the grid monitor job.
+	char *monitorGramJobId;
 
  private:
 	void DoPing( time_t& ping_delay, bool& ping_complete,
@@ -117,6 +126,7 @@ class GlobusResource : public BaseResource
 		// When true, we'll try to run a grid monitor on each gt2
 		// gatekeeper.
 	static bool enableGridMonitor;
+	static int monitorDisableLength;
 	int checkMonitorTid;
 
 		// monitorStarting and monitorActive should not be true at the
@@ -148,20 +158,14 @@ class GlobusResource : public BaseResource
 		// again.
 	int monitorRetryTime;
 
-		// Very simily to logFileLastReadTime, but not updated every time the
-		// grid_monitor is resubmitted.  As a result it reliably reports on the
-		// last time we got some sort of result back.  Used for the "Thing have
-		// been failing over and over for too long" timeout.
-	int logFileTimeoutLastReadTime;
-
 		// This reports the time we saw a new complete job status file
 		// from the grid monitor (and therefore sent out job status
 		// updates to the job objects). This time is not updated when the
 		// grid-monitor is (re)submitted.
 	time_t jobStatusFileLastUpdate;
 
-		// This is the gram job contact string for the grid monitor job.
-	char *monitorGramJobId;
+	int monitorGramJobStatus;
+	int monitorGramErrorCode;
 
 	GahpClient *gahp;
 	GahpClient *monitorGahp;

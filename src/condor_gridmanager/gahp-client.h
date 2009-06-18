@@ -323,6 +323,9 @@ class GahpClient : public Service {
 		const char *
 			getGlobusGassServerUrl() { return server->globus_gass_server_url; }
 
+		const char *getGt2CallbackContact()
+			{ return server->globus_gt2_gram_callback_contact; }
+
 		/// cache it from the gahp
 		const char *
 		globus_gram_client_error_string(int error_code);
