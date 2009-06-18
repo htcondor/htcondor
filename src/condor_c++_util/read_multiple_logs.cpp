@@ -87,6 +87,13 @@ ReadMultipleUserLogs::ReadMultipleUserLogs(StringList &listLogFileNames) :
 
 ReadMultipleUserLogs::~ReadMultipleUserLogs()
 {
+#if LAZY_LOG_FILES
+	if (activeLogFileCount() != 0) {
+    	dprintf(D_ALWAYS, "Warning: ReadMultipleUserLogs destructor "
+					"called, but still monitoring %d log(s)!\n",
+					activeLogFileCount());
+	}
+#endif // LAZY_LOG_FILES
 	cleanup();
 }
 
@@ -1576,23 +1583,29 @@ ReadMultipleUserLogs::unmonitorLogFile( MyString logfile,
 	return true;
 }
 
+///////////////////////////////////////////////////////////////////////////////
+
 void
-ReadMultipleUserLogs::printAllLogMonitors( FILE *stream )
+ReadMultipleUserLogs::printAllLogMonitors( FILE *stream ) const
 {
 	fprintf( stream, "All log monitors:\n" );
 	printLogMonitors( stream, allLogFiles );
 }
 
+///////////////////////////////////////////////////////////////////////////////
+
 void
-ReadMultipleUserLogs::printActiveLogMonitors( FILE *stream )
+ReadMultipleUserLogs::printActiveLogMonitors( FILE *stream ) const
 {
 	fprintf( stream, "Active log monitors:\n" );
 	printLogMonitors( stream, activeLogFiles );
 }
 
+///////////////////////////////////////////////////////////////////////////////
+
 void
 ReadMultipleUserLogs::printLogMonitors( FILE *stream,
-			HashTable<StatStructInode, LogFileMonitor *> logTable )
+			HashTable<StatStructInode, LogFileMonitor *> logTable ) const
 {
 	logTable.startIterations();
 	StatStructInode	inode;

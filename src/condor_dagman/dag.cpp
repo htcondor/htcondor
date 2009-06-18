@@ -1,5 +1,7 @@
+//TEMPTEMP -- hmm -- I think I need to think at a higher level about when to monitor and unmonitor the log files
+//TEMPTEMP -- current problem in recovery is that we don't re-monitor the job's log file on the retry
+
 //TEMP -- recovery mode doesn't work yet...
-//TEMP -- hmm -- maybe have a check at the end that we're not monitoring any log files
 //TEMP -- job_dagman_splice-J.run fails
 //TEMP -- job_dagman_splice-M.run fails
 //TEMP -- job_dagman_splice-N.run fails
@@ -254,8 +256,6 @@ bool Dag::Bootstrap (bool recovery) {
     Job* job;
     ListIterator<Job> jobs (_jobs);
 
-	_recovery = recovery;
-
     // update dependencies for pre-completed jobs (jobs marked DONE in
     // the DAG input file)
     jobs.ToBeforeFirst();
@@ -268,6 +268,8 @@ bool Dag::Bootstrap (bool recovery) {
 				  NumNodesDone() );
     
     if (recovery) {
+		_recovery = true;
+
         debug_printf( DEBUG_NORMAL, "Running in RECOVERY mode...\n" );
 
 		// as we read the event log files, we emit lots of imformation into
@@ -279,6 +281,21 @@ bool Dag::Bootstrap (bool recovery) {
 		// debug_cache_stop_caching() are effectively noops.
 
 		debug_cache_start_caching();
+
+#if LAZY_LOG_FILES
+   		jobs.ToBeforeFirst();
+   		while( jobs.Next( job ) ) {
+			if ( job->CanSubmit() ) {
+				//TEMPTEMP -- check return value!!
+				job->MonitorLogFile( _condorLogRdr, _storkLogRdr,
+							_nfsLogIsError, recovery );
+			}
+		}
+#endif // LAZY_LOG_FILES
+
+			// Note: I just realized that this will almost certainly fail
+			// on a combination of Condor and Stork events -- we probably
+			// need a loop around the event processing.  wenger 2009-06-18.
 
 			//TEMP -- could use an active log file count here
 		if( CondorLogFileCount() > 0 ) {
@@ -310,6 +327,10 @@ bool Dag::Bootstrap (bool recovery) {
 		}
 
 		debug_cache_stop_caching();
+
+        debug_printf( DEBUG_NORMAL, "...done with RECOVERY mode\n" );
+
+		_recovery = false;
     }
 	
     if( DEBUG_LEVEL( DEBUG_DEBUG_2 ) ) {
@@ -325,8 +346,6 @@ bool Dag::Bootstrap (bool recovery) {
 		}
     }
 
-	_recovery = false;
-    
     return true;
 }
 
@@ -470,15 +489,22 @@ bool Dag::ProcessLogEvents (int logsource, bool recovery) {
 			_dapLogInitialized = _storkLogRdr.initialize(_storkLogFiles);
 		}
 	}
-#endif
+#endif // !LAZY_LOG_FILES
+
+#if LAZY_LOG_FILES
+	if ( logsource == CONDORLOG ) {
+		dprintf( DEBUG_VERBOSE, "Currently monitoring %d Condor "
+					"log file(s)\n", _condorLogRdr.activeLogFileCount() );
+	} else if ( logsource == DAPLOG ) {
+		dprintf( DEBUG_VERBOSE, "Currently monitoring %d Stork "
+					"log file(s)\n", _storkLogRdr.activeLogFileCount() );
+	}
+#endif // LAZY_LOG_FILES
 
 	bool done = false;  // Keep scanning until ULOG_NO_EVENT
 	bool result = true;
 
 	while (!done) {
-
-		//TEMP -- monitor log files of all ready jobs here in recovery mode?
-
 		ULogEvent* e = NULL;
 		ULogEventOutcome outcome = ULOG_NO_EVENT;
 
@@ -848,6 +874,7 @@ Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
 			//
 
 		} else if( job->GetRetries() < job->GetRetryMax() ) {
+			//TEMPTEMP -- remonitor log file here in recovery mode?
 			RestartNode( job, recovery );
 			return;
 
@@ -1287,6 +1314,7 @@ Dag::FindLogFiles( /* const */ StringList &dagFiles, bool useDagDir )
 bool
 Dag::StartNode( Job *node, bool isRetry )
 {
+debug_printf( DEBUG_QUIET, "DIAG Dag::StartNode(%s)\n", node->GetJobName() );//TEMPTEMP
     ASSERT( node != NULL );
 	if ( !node->CanSubmit() ) {
 		EXCEPT( "Node %s not ready to submit!", node->GetJobName() );
@@ -1970,10 +1998,12 @@ void Dag::WriteRescue (const char * rescue_file, const char * datafile)
 //===========================================================================
 
 //-------------------------------------------------------------------------
+//TEMPTEMP -- maybe we should unmonitor log files here and monitor them in StartNode... -- hell -- do we get here if node fails?  make sure we unmonitor log file when node fails... ah, hell, we don't get here if the node fails...
 void
 Dag::TerminateJob( Job* job, bool recovery )
 {
     ASSERT( job != NULL );
+debug_printf( DEBUG_QUIET, "DIAG Dag::TerminateJob(%s)\n", job->GetJobName() );//TEMPTEMP
 
 	job->TerminateSuccess();
 	if ( job->GetStatus() != Job::STATUS_DONE ) {
@@ -1992,9 +2022,16 @@ Dag::TerminateJob( Job* job, bool recovery )
         ASSERT( child != NULL );
         child->Remove(Job::Q_WAITING, job->GetJobID());
 		// if child has no more parents in its waiting queue, submit it
-		if( child->GetStatus() == Job::STATUS_READY &&
-			child->IsEmpty( Job::Q_WAITING ) && recovery == FALSE ) {
-			StartNode( child, false );
+		if ( child->GetStatus() == Job::STATUS_READY &&
+			child->IsEmpty( Job::Q_WAITING ) ) {
+			if ( recovery ) {
+#if LAZY_LOG_FILES
+				child->MonitorLogFile( _condorLogRdr, _storkLogRdr,
+							_nfsLogIsError, recovery );
+#endif // LAZY_LOG_FILES
+			} else {
+				StartNode( child, false );
+			}
 		}
 	}
 
@@ -2026,9 +2063,12 @@ PrintEvent( debug_level_t level, const ULogEvent* event, Job* node )
 }
 
 //-------------------------------------------------------------------------
+//TEMPTEMP -- when is this called?  do we need to monitor the log file?
+//TEMPTEMP - yeah, probably monitor the log file in recovery mode
 void
 Dag::RestartNode( Job *node, bool recovery )
 {
+debug_printf( DEBUG_QUIET, "DIAG Dag::RestartNode(%s)\n", node->GetJobName() );//TEMPTEMP
     ASSERT( node != NULL );
 	if ( node->_Status != Job::STATUS_ERROR ) {
 		EXCEPT( "Node %s is not in ERROR state", node->GetJobName() );
@@ -2048,16 +2088,25 @@ Dag::RestartNode( Job *node, bool recovery )
 		node->_scriptPre->_done = false;
 	}
 	strcpy( node->error_text, "" );
-	debug_printf( DEBUG_VERBOSE, "Retrying node %s (retry #%d of %d)...\n",
-				  node->GetJobName(), node->GetRetries(),
-				  node->GetRetryMax() );
+
 	if( !recovery ) {
+		debug_printf( DEBUG_VERBOSE, "Retrying node %s (retry #%d of %d)...\n",
+					node->GetJobName(), node->GetRetries(),
+					node->GetRetryMax() );
 		StartNode( node, true );
 	} else {
+		debug_printf( DEBUG_VERBOSE, "Looking for retry of node %s (retry "
+					"#%d of %d)...\n", node->GetJobName(), node->GetRetries(),
+					node->GetRetryMax() );
+
 		// Doing this fixes gittrac #481 (recovery fails on a DAG that
 		// has retried nodes).  (See SubmitNodeJob() for where this
 		// gets done during "normal" running.)
 		node->_CondorID = _defaultCondorId;
+#if LAZY_LOG_FILES
+		node->MonitorLogFile( _condorLogRdr, _storkLogRdr, _nfsLogIsError,
+					recovery );
+#endif // LAZY_LOG_FILES
 	}
 }
 

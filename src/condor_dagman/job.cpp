@@ -106,6 +106,9 @@ void Job::Init( const char* jobName, const char* directory,
     _cmdFile = strnewp (cmdFile);
 	_dagFile = NULL;
 	_throttleInfo = NULL;
+#if LAZY_LOG_FILES
+	_logIsMonitored = false;
+#endif // LAZY_LOG_FILES
 
 	if ( (_jobType == TYPE_CONDOR) && prohibitMultiJobs ) {
 		MyString	errorMsg;
@@ -747,6 +750,12 @@ Job::MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 {
 	bool result = false;
 
+	if ( _logIsMonitored ) {
+		debug_printf( DEBUG_QUIET, "Warning: log file for node "
+					"%s is already monitored\n", GetJobName() );
+		return true;
+	}
+
 	ReadMultipleUserLogs &logReader = (_jobType == TYPE_CONDOR) ?
 				condorLogReader : storkLogReader;
 
@@ -787,7 +796,8 @@ Job::MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 	} else {
 		delete [] _logFile; // temporary
 		_logFile = strnewp( logFileStr.Value() );
-		debug_printf( DEBUG_DEBUG_1, "Monitoring log file <%s> for node %s\n",
+		//TEMPTEMP debug_printf( DEBUG_DEBUG_1, "Monitoring log file <%s> for node %s\n",
+		debug_printf( DEBUG_NORMAL, "Monitoring log file <%s> for node %s\n",//TEMPTEMP
 					_logFile, GetJobName() );
 		CondorError errstack;
 			//TEMP -- should truncating the file depend on dagman.deleteOldLogs?
@@ -797,6 +807,10 @@ Job::MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 						"monitor log file for node %s", GetJobName() );
 			debug_printf( DEBUG_QUIET, "%s\n", errstack.getFullText() );
 		}
+	}
+
+	if ( result ) {
+		_logIsMonitored = true;
 	}
 
 	return result;
@@ -810,8 +824,18 @@ Job::UnmonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 	debug_printf( DEBUG_DEBUG_1, "Unmonitoring log file <%s> for node %s\n",
 				_logFile, GetJobName() );
 
+	if ( !_logIsMonitored ) {
+		debug_printf( DEBUG_QUIET, "Warning: log file for node "
+					"%s is already unmonitored\n", GetJobName() );
+		return true;
+	}
+
 	ReadMultipleUserLogs &logReader = (_jobType == TYPE_CONDOR) ?
 				condorLogReader : storkLogReader;
+
+	//TEMPTEMP debug_printf( DEBUG_DEBUG_1, "Unmonitoring log file <%s> for node %s\n",
+	debug_printf( DEBUG_NORMAL, "Unmonitoring log file <%s> for node %s\n",//TEMPTEMP
+				_logFile, GetJobName() );
 
 	CondorError errstack;
 	bool result = logReader.unmonitorLogFile( _logFile, errstack );
@@ -821,10 +845,12 @@ Job::UnmonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 		debug_printf( DEBUG_QUIET, "%s\n", errstack.getFullText() );
 	}
 
-#if LAZY_LOG_FILES
 	delete [] _logFile;
 	_logFile = NULL;
-#endif // LAZY_LOG_FILES
+
+	if ( result ) {
+		_logIsMonitored = false;
+	}
 
 	return result;
 }

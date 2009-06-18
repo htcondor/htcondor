@@ -1060,6 +1060,9 @@ ReadEventsLazy()
 		fflush(stdout);
 	}
 
+	printf("\nNote: we should get a warning here about log files still "
+				"being monitored...\n");
+
 	return isOkay;
 }
 

@@ -266,15 +266,20 @@ public:
 		*/
 	bool unmonitorLogFile(MyString logfile, CondorError &errstack);
 
+		/** Returns the number of log files we're actively monitoring
+			at the present time.
+		 */
+	int activeLogFileCount() const { return activeLogFiles.getNumElements(); }
+
 		/** Print information about all LogMonitor objects.
 			@param the stream to print to.
 		*/
-	void printAllLogMonitors( FILE *stream );
+	void printAllLogMonitors( FILE *stream ) const;
 
 		/** Print information about active LogMonitor objects.
 			@param the stream to print to.
 		*/
-	void printActiveLogMonitors( FILE *stream );
+	void printActiveLogMonitors( FILE *stream ) const;
 #endif // LAZY_LOG_FILES
 
 protected:
@@ -427,7 +432,7 @@ private:
 
 #if LAZY_LOG_FILES
 	void printLogMonitors(FILE *stream,
-				HashTable<StatStructInode, LogFileMonitor *> logTable);
+				HashTable<StatStructInode, LogFileMonitor *> logTable) const;
 #endif // LAZY_LOG_FILES
 
 };

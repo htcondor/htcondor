@@ -738,7 +738,7 @@ class Dag {
 #if LAZY_LOG_FILES
 	int CondorLogFileCount() { return _condorLogRdr.totalLogFileCount(); }
 
-	int StorkLogFileCount() { return _stockLogRdr.totalLogFileCount(); }
+	int StorkLogFileCount() { return _storkLogRdr.totalLogFileCount(); }
 #else
 	int CondorLogFileCount() { return _condorLogFiles.number(); }
 

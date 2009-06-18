@@ -195,8 +195,8 @@ class Job {
     */
     bool Add( const queue_t queue, const JobID_t jobID );
 
-    /** Returns true if this job is ready for submittion.
-        @return true if job is submitable, false if not
+    /** Returns true if this job is ready for submission.
+        @return true if job is submittable, false if not
     */
     inline bool CanSubmit () const {
         return (IsEmpty(Job::Q_WAITING) && _Status == STATUS_READY);
@@ -494,6 +494,10 @@ private:
 		// This node's category; points to an object "owned" by the
 		// ThrottleByCategory object.
 	ThrottleByCategory::ThrottleInfo *_throttleInfo;
+
+#if LAZY_LOG_FILES
+	bool _logIsMonitored;
+#endif // LAZY_LOG_FILES
 };
 
 /** A wrapper function for Job::Print which allows a NULL job pointer.
