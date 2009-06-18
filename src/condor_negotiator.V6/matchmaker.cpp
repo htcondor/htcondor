@@ -921,6 +921,8 @@ negotiationTime ()
     // Get number of available slots in any state.
     int numDynGroupSlots = untrimmed_num_startds;
 
+	double untrimmedResourceWeightTotal = sumResourceWeights(startdAds);
+
 	// Register a lookup function that passes through the list of all ads.
 	// ClassAdLookupRegister( lookup_global, &allAds );
 
@@ -1118,7 +1120,8 @@ negotiationTime ()
 			}
 			dprintf(D_ALWAYS,"Group %s - negotiating\n",
 				groupArray[i].groupName);
-			negotiateWithGroup( untrimmed_num_startds, startdAds, 
+			negotiateWithGroup( untrimmed_num_startds,
+								untrimmedResourceWeightTotal, startdAds, 
 				claimIds, groupArray[i].submitterAds, 
 				groupArray[i].maxAllowed, groupArray[i].groupName );
 		}
@@ -1156,7 +1159,7 @@ negotiationTime ()
 	} // if (groups)
 	
 		// negotiate w/ all users who do not belong to a group.
-	negotiateWithGroup(untrimmed_num_startds, startdAds, claimIds, scheddAds);
+	negotiateWithGroup(untrimmed_num_startds, untrimmedResourceWeightTotal, startdAds, claimIds, scheddAds);
 	
 	// ----- Done with the negotiation cycle
 	dprintf( D_ALWAYS, "---------- Finished Negotiation Cycle ----------\n" );
@@ -1181,7 +1184,9 @@ Matchmaker::SimpleGroupEntry::
 }
 
 int Matchmaker::
-negotiateWithGroup ( int untrimmed_num_startds, ClassAdList& startdAds,
+negotiateWithGroup ( int untrimmed_num_startds,
+					 double untrimmedResourceWeightTotal,
+					 ClassAdList& startdAds,
 					 ClaimIdHash& claimIds, 
 					 ClassAdList& scheddAds, 
 					 float groupQuota, const char* groupAccountingName)
@@ -1232,13 +1237,9 @@ negotiateWithGroup ( int untrimmed_num_startds, ClassAdList& startdAds,
 		if ( numStartdAds > groupQuota ) {
 			numStartdAds = groupQuota;
 		}
-		if(useResourceWeights) {
-			resourceWeightTotal = sumResourceWeights(startdAds);
-			if ( resourceWeightTotal > groupQuota ) {
-				resourceWeightTotal = groupQuota;
-			}
-		} else {
-			resourceWeightTotal = numStartdAds;
+		resourceWeightTotal = untrimmedResourceWeightTotal;
+		if ( resourceWeightTotal > groupQuota ) {
+			resourceWeightTotal = groupQuota;
 		}
 
 			// Calculate how many machines are left over after dishing out
@@ -3090,8 +3091,8 @@ Matchmaker::calculateScheddLimit(
 
 	if ( groupAccountingName ) {
 		int maxAllowed = groupQuota - accountant.GetResourcesUsed(groupAccountingName);
-		float maxAllowedRW = resourceWeightTotal 
-			- accountant.GetResourcesUsedFloat(groupAccountingName);
+		float maxAllowedRW =
+			groupQuota - accountant.GetResourcesUsedFloat(groupAccountingName);
 		if ( maxAllowed < 0 ) maxAllowed = 0;
 		if ( maxAllowedRW < 0 ) maxAllowedRW = 0.0;
 		if ( unroundedScheddLimit > maxAllowed ) {

@@ -124,6 +124,7 @@ class Matchmaker : public Service
 		   int &numMatched, double &limitRWUsed);
 
 		int negotiateWithGroup ( int untrimmed_num_startds,
+								 double untrimmedResourceWeightTotal,
 			ClassAdList& startdAds, 
 			ClaimIdHash& claimIds, ClassAdList& scheddAds, 
 			float groupQuota=INT_MAX, const char* groupAccountingName=NULL);
