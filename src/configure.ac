@@ -2803,7 +2803,7 @@ if test "x$_cv_ext_openssl_version" != x; then
   AC_DEFINE(HAVE_OPENSSL_SSL_H,1,[do we have openssl])
 
   # Globus 4.2.1 is dependent on an external version of openssl
-  CHECK_EXTERNAL([globus],[4.2.1], [soft])
+  CHECK_EXTERNAL([globus],[4.2.1-p1], [soft])
 fi
 
 if test -z "$_cv_ext_globus_version"; then
