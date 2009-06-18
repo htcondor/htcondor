@@ -3347,14 +3347,12 @@ addRemoteUserPrios( ClassAd	*ad )
 										temp_groupQuota,temp_groupUsage))
 			{
 					// this is a group, so enter group usage info
-				buffer.sprintf("%s%s = %d", slot_prefix.Value(), 
-					ATTR_REMOTE_GROUP_RESOURCES_IN_USE, 
-					temp_groupUsage);
-				ad->Insert( buffer.Value() );
-				buffer.sprintf("%s%s = %d", slot_prefix.Value(),
-					ATTR_REMOTE_GROUP_QUOTA, 
-					temp_groupQuota);
-				ad->Insert( buffer.Value() );
+				buffer.sprintf("%s%s", slot_prefix.Value(), 
+					ATTR_REMOTE_GROUP_RESOURCES_IN_USE);
+				ad->Assign( buffer.Value(), temp_groupUsage );
+				buffer.sprintf("%s%s", slot_prefix.Value(),
+					ATTR_REMOTE_GROUP_QUOTA);
+				ad->Assign( buffer.Value(), temp_groupQuota );
 			}
 		}	
 	}
