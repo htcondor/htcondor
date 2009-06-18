@@ -18,52 +18,47 @@
  ***************************************************************/
 
 
-#include "Scheduler.h"
+#include "JobLogMirror.h"
 #include "condor_config.h"
 #include "get_daemon_name.h"
 
-Scheduler::Scheduler() {
+JobLogMirror::JobLogMirror(const char *name_param):
+	m_name_param(name_param)
+{
 	log_reader_polling_timer = -1;
 	log_reader_polling_period = 10;
 	m_public_ad_update_timer = -1;
 	m_public_ad_update_interval = -1;
 }
 
-Scheduler::~Scheduler() {
+JobLogMirror::~JobLogMirror() {
 }
 
 void
-Scheduler::init() {
+JobLogMirror::init() {
 	config();
 }
 
 void
-Scheduler::stop() {
+JobLogMirror::stop() {
 	InvalidatePublicAd();
 }
 
 void
-Scheduler::InitPublicAd() {
+JobLogMirror::InitPublicAd() {
 	m_public_ad = ClassAd();
 
-	//TODO: this is the wrong ADTYPE.
-	//Use the new generic ad type when it becomes available.
-	//Until then, actual writes to the collector are disabled,
-	//because it conflicts with the schedd on the same host..
-
-	m_public_ad.SetMyTypeName( SCHEDD_ADTYPE );
+	m_public_ad.SetMyTypeName( GENERIC_ADTYPE );
 	m_public_ad.SetTargetTypeName( "" );
 
 	m_public_ad.Assign(ATTR_NAME,m_name.c_str());
 
-        // Publish all DaemonCore-specific attributes, which also handles
-        // SCHEDD_ATTRS for us.
     daemonCore->publish(&m_public_ad);
 }
 
 void
-Scheduler::config() {
-	char *name = param("JOB_ROUTER_NAME");
+JobLogMirror::config() {
+	char *name = param(m_name_param);
 	if(name) {
 		char *valid_name = build_valid_daemon_name(name);
 		m_name = valid_name;
@@ -107,8 +102,8 @@ Scheduler::config() {
 	log_reader_polling_timer = daemonCore->Register_Timer(
 		0, 
 		log_reader_polling_period,
-		(Eventcpp)&Scheduler::TimerHandler_JobLogPolling, 
-		"Scheduler::TimerHandler_JobLogPolling", this);
+		(Eventcpp)&JobLogMirror::TimerHandler_JobLogPolling, 
+		"JobLogMirror::TimerHandler_JobLogPolling", this);
 
 	InitPublicAd();
 
@@ -130,25 +125,25 @@ Scheduler::config() {
 		m_public_ad_update_timer = daemonCore->Register_Timer(
 			0,
 			m_public_ad_update_interval,
-			(Eventcpp)&Scheduler::TimerHandler_UpdateCollector,
-			"Scheduler::TimerHandler_UpdateCollector",
+			(Eventcpp)&JobLogMirror::TimerHandler_UpdateCollector,
+			"JobLogMirror::TimerHandler_UpdateCollector",
 			this);
 	}
 }
 
 void
-Scheduler::TimerHandler_JobLogPolling() {
+JobLogMirror::TimerHandler_JobLogPolling() {
 	dprintf(D_FULLDEBUG, "TimerHandler_JobLogPolling() called\n");
 	job_log_reader.poll(&ad_collection);
 	//DebugDisplayClassAdCollection(&ad_collection);
 }
 
 void
-Scheduler::TimerHandler_UpdateCollector() {
-	//daemonCore->sendUpdates(UPDATE_SCHEDD_AD, &m_public_ad);
+JobLogMirror::TimerHandler_UpdateCollector() {
+	daemonCore->sendUpdates(UPDATE_AD_GENERIC, &m_public_ad);
 }
 
 void
-Scheduler::InvalidatePublicAd() {
-	//daemonCore->sendUpdates(INVALIDATE_SCHEDD_ADS, &m_public_ad);
+JobLogMirror::InvalidatePublicAd() {
+	daemonCore->sendUpdates(INVALIDATE_ADS_GENERIC, &m_public_ad);
 }

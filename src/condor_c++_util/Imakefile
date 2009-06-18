@@ -251,6 +251,8 @@ shared_library_target(libcondorapi.so,$(CONLIBAPI_OBJ))
 libcondorapi.so: Makefile
 #endif
 
+all:: JobLogMirror.o
+
 c_plus_target(test_mapfile,test_mapfile.o,$(LIB))
 c_plus_target(test_locks,test_locks.o,$(LIB))
 c_plus_target(test_iso_dates,test_iso_dates.o,$(LIB))
