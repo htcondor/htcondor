@@ -6764,31 +6764,6 @@ These macros affect the \Condor{gridmanager}.
   jobs falls below the current limit.
   Defaults to 100.
 
-\label{param:GridmanagerMaxPendingSubmitsPerResource}
-\item[\Macro{GRIDMANAGER\_MAX\_PENDING\_SUBMITS\_PER\_RESOURCE}]
-  The maximum number of jobs
-  that can be in the process of being submitted at any time (that is,
-  how many \Procedure{globus\_gram\_client\_job\_request} calls are pending).
-  It is useful for controlling the number of new
-  connections/processes created at a given time.
-  The default value is 5.
-  This variable allows
-  you to set different limits for each resource.
-  After the first integer in the value
-  comes a list of resourcename/number pairs,
-  where each number is the limit for that resource.
-  If a resource is not in the list,
-  Condor uses the first integer.
-  An example usage:
-\begin{verbatim}
-  GRIDMANAGER_MAX_PENDING_SUBMITS_PER_RESOURCE=20,nostos,5,beak,50
-\end{verbatim}
-
-\label{param:GridmanagerMaxPendingSubmits}
-\item[\Macro{GRIDMANAGER\_MAX\_PENDING\_SUBMITS}]
-  Configuration variable still recognized, but the name has changed to be
-  \MacroNI{GRIDMANAGER\_MAX\_PENDING\_SUBMITS\_PER\_RESOURCE}.
-
 \label{param:GridmanagerMaxJobmanagersPerResource}
 \item[\Macro{GRIDMANAGER\_MAX\_JOBMANAGERS\_PER\_RESOURCE}]
   For grid jobs of type \SubmitCmd{gt2}, limits the number of globus-job-manager
@@ -7243,7 +7218,7 @@ These macros affect the \Prog{grid\_monitor}.
 
 \label{param:GridMonitorHeartbeatTimeout}
 \item[\Macro{GRID\_MONITOR\_HEARTBEAT\_TIMEOUT}]
-  If this many seconds pass without hearing from a \Prog{grid\_monitor}, it is
+  If this many seconds pass without hearing from a working \Prog{grid\_monitor}, it is
   assumed to be dead.  Defaults to 300 (5 minutes).  Increasing this number
   will improve the ability of the \Prog{grid\_monitor} to survive in the face of
   transient problems but will also increase the time before Condor notices a
@@ -7251,12 +7226,12 @@ These macros affect the \Prog{grid\_monitor}.
 
 \label{param:GridMonitorRetryDuration}
 \item[\Macro{GRID\_MONITOR\_RETRY\_DURATION}]
-  If something goes wrong with the \Prog{grid\_monitor} at a particular site
-  (like \MacroNI{GRID\_MONITOR\_HEARTBEAT\_TIMEOUT} expiring), Condor-G will
-  attempt to restart the \Prog{grid\_monitor} for this many seconds.  Defaults
-  to 900 (15 minutes).  If this duration passes without success the
-  \Prog{grid\_monitor} will be disabled for the site in question until 60
-  minutes have passed.
+  When Condor-G attempts to start the \Prog{grid\_monitor} at a particular
+  site, it will wait this many seconds to start hearing from the
+  \Prog{grid\_monitor}. Defaults to 900 (15 minutes).  If this duration
+  passes without success, the \Prog{grid\_monitor} will be disabled for the
+  site in question for a period of time (controlled by
+  \Macro{GRID\_MONITOR\_DISABLE\_TIME}).
 
 \label{param:GridMonitorNoStatusTimeout}
 \item[\Macro{GRID\_MONITOR\_NO\_STATUS\_TIMEOUT}]
@@ -7266,6 +7241,13 @@ These macros affect the \Prog{grid\_monitor}.
   sets the amount of time (in seconds) that a job can be absent before the
   \Condor{gridmanager} reacts by restarting the GRAM \Prog{jobmanager}.
   The default is 15 minutes.
+
+\label{param:GridMonitorDisableTime}
+\item[\Macro{GRID\_MONITOR\_DISABLE\_TIME}]
+  When an error occurs with a Grid Monitor job, this parameter controls
+  how long the \Condor{gridmanager} will wait before attempting to
+  start a new Grid Monitor job. The value is in seconds and the default
+  is 3600 (1 hour).
 
 \end{description}
 
