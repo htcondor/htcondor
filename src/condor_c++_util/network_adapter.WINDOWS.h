@@ -79,7 +79,7 @@ public:
 	/** Returns the adapter's logical name
 		@return a string with the logical name
 	*/
-	const char *interfaceName () const { return _adapter_name; };
+	const char* interfaceName () const;
 
     /** Checks that the adapter actually exists
         @returns true if the adapter exists on the machine;
@@ -114,7 +114,7 @@ private:
     CHAR        _ip_address[IP_STRING_BUF_SIZE],
                 _description[MAX_ADAPTER_DESCRIPTION_LENGTH + 4],
                 _hardware_address[32],
-                _subnet[IP_STRING_BUF_SIZE],
+                _subnet_mask[IP_STRING_BUF_SIZE],
                 _adapter_name[MAX_ADAPTER_NAME_LENGTH + 4];
     bool        _exists;
     SetupApiDLL _setup_dll;

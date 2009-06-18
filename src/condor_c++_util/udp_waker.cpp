@@ -52,7 +52,8 @@ UdpWakeOnLanWaker::UdpWakeOnLanWaker (
     char const     *mac,
     char const     *subnet,
     unsigned short port ) throw ()
-: WakerBase (), m_port ( port )
+	: WakerBase (), 
+	m_port ( port )
 {
 
     strncpy ( m_mac, mac, STRING_MAC_ADDRESS_LENGTH-1 );
@@ -63,8 +64,8 @@ UdpWakeOnLanWaker::UdpWakeOnLanWaker (
 }
 
 UdpWakeOnLanWaker::UdpWakeOnLanWaker (
-    ClassAd *ad ) throw()
-: WakerBase ()
+    ClassAd *ad ) throw ()
+	: WakerBase ()
 {
 
     int     found   = 0;
@@ -133,7 +134,7 @@ UdpWakeOnLanWaker::UdpWakeOnLanWaker (
 
 	/* retrieve the port number from the ad */
 	found = ad->LookupInteger (
-		ATTR_SUBNET,
+		ATTR_WOL_PORT,
 		m_port );
 
 	if ( !found ) {
@@ -221,7 +222,7 @@ UdpWakeOnLanWaker::initializePacket ()
 		"%2x:%2x:%2x:%2x:%2x:%2x",
 		&mac[0], &mac[1], &mac[2], &mac[3], &mac[4], &mac[5] );
 	
-	if ( c != 6 || strlen ( m_mac ) < STRING_MAC_ADDRESS_LENGTH - 1) {
+	if ( c != 6 || strlen ( m_mac ) < STRING_MAC_ADDRESS_LENGTH - 1 ) {
 
         dprintf (
             D_ALWAYS,
