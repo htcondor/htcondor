@@ -1751,6 +1751,12 @@ CRED_MIN_TIME_LEFT		= 120
 ENABLE_GRID_MONITOR = TRUE
 
 ##
+## When an error occurs with the GridMonitor, how long should the
+## gridmanager wait before trying to submit a new GridMonitor job?
+## The default is 1 hour (3600 seconds).
+#GRID_MONITOR_DISABLE_TIME = 3600
+
+##
 ## The location of the wrapper for invoking
 ## Condor GAHP server
 ##

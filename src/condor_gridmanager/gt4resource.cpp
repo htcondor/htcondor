@@ -27,7 +27,6 @@
 #include "gt4job.h"
 #include "gridmanager.h"
 
-#define DEFAULT_MAX_PENDING_SUBMITS_PER_RESOURCE	5
 #define DEFAULT_MAX_SUBMITTED_JOBS_PER_RESOURCE		100
 #define DEFAULT_MAX_WS_DESTROYS_PER_RESOURCE		5
 
