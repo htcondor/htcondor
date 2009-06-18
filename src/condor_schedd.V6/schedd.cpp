@@ -10601,6 +10601,55 @@ Scheduler::Init()
 	m_xfer_queue_mgr.InitAndReconfig();
 	m_xfer_queue_mgr.GetContactInfo(MyShadowSockName,m_xfer_queue_contact);
 
+	int max_saved_rotations = param_integer( "MAX_JOB_QUEUE_LOG_ROTATIONS", DEFAULT_MAX_JOB_QUEUE_LOG_ROTATIONS );
+	SetMaxHistoricalLogs(max_saved_rotations);
+
+		/* Code to handle GRIDMANAGER_SELECTION_EXPR.  If set, we need to (a) restart
+		 * running gridmanagers if the setting changed value, and (b) parse the
+		 * expression and stash the parsed form (so we don't reparse over and over).
+		 */
+	char * expr = param("GRIDMANAGER_SELECTION_EXPR");
+	if (m_parsed_gridman_selection_expr) {
+		delete m_parsed_gridman_selection_expr;
+		m_parsed_gridman_selection_expr = NULL;	
+	}
+	if ( expr ) {
+		MyString temp;
+		temp.sprintf("string(%s)",expr);
+		free(expr);
+		expr = temp.StrDup();
+		Parse(temp.Value(),m_parsed_gridman_selection_expr);	
+			// if the expression in the config file is not valid, 
+			// the m_parsed_gridman_selection_expr will still be NULL.  in this case,
+			// pretend like it isn't set at all in the config file.
+		if ( m_parsed_gridman_selection_expr == NULL ) {
+			dprintf(D_ALWAYS,
+				"ERROR: ignoring GRIDMANAGER_SELECTION_EXPR (%s) - failed to parse\n",
+				expr);
+			free(expr);
+			expr = NULL;
+		} 
+	}
+		/* If GRIDMANAGER_SELECTION_EXPR changed, we need to restart all running
+		 * gridmanager asap.  Be careful to consider not only a changed expr, but
+		 * also the presence of a expr when one did not exist before, and vice-versa.
+		 */
+	if ( (expr && !m_unparsed_gridman_selection_expr) ||
+		 (!expr && m_unparsed_gridman_selection_expr) ||
+		 (expr && m_unparsed_gridman_selection_expr && 
+		       strcmp(m_unparsed_gridman_selection_expr,expr)!=0) )
+	{
+			/* GRIDMANAGER_SELECTION_EXPR changed, we need to kill off all running
+			 * running gridmanagers asap so they can be restarted w/ the new expression.
+			 */
+		GridUniverseLogic::shutdown_fast();
+	}
+	if (m_unparsed_gridman_selection_expr) {
+		free(m_unparsed_gridman_selection_expr);
+	}
+	m_unparsed_gridman_selection_expr = expr;
+		/* End of support for  GRIDMANAGER_SELECTION_EXPR */
+
 	first_time_in_init = false;
 }
 
@@ -10830,9 +10879,17 @@ prio_compar(prio_rec* a, prio_rec* b)
 } // end of extern
 
 
-void
-Scheduler::reconfig()
-{
+void Scheduler::reconfig() {
+	/***********************************
+	 * WARNING!!  WARNING!! WARNING, WILL ROBINSON!!!!
+	 *
+	 * DO NOT PUT CALLS TO PARAM() HERE - YOU PROBABLY WANT TO PUT THEM IN
+	 * Scheduler::Init().  Note that reconfig() calls Init(), but Init() does
+	 * NOT call reconfig() !!!  So if you initalize settings via param() calls
+	 * in this function, likely the schedd will not work as you expect upon
+	 * startup until the poor confused user runs condor_reconfig!!
+	 ***************************************/
+
 	Init();
 
 	RegisterTimers();			// reset timers
@@ -10845,53 +10902,6 @@ Scheduler::reconfig()
 
 	timeout();
 
-	int max_saved_rotations = param_integer( "MAX_JOB_QUEUE_LOG_ROTATIONS", DEFAULT_MAX_JOB_QUEUE_LOG_ROTATIONS );
-	SetMaxHistoricalLogs(max_saved_rotations);
-
-		/* Code to handle GRIDMANAGER_SELECTION_EXPR.  If set, we need to (a) restart
-		 * running gridmanagers if the setting changed value, and (b) parse the
-		 * expression and stash the parsed form (so we don't reparse over and over).
-		 */
-	char * expr = param("GRIDMANAGER_SELECTION_EXPR");
-	if (m_parsed_gridman_selection_expr) {
-		delete m_parsed_gridman_selection_expr;
-		m_parsed_gridman_selection_expr = NULL;	
-	}
-	if ( expr ) {
-		MyString temp;
-		temp.sprintf("string(%s)",expr);
-		free(expr);
-		expr = temp.StrDup();
-		Parse(temp.Value(),m_parsed_gridman_selection_expr);	
-			// if the expression in the config file is not valid, 
-			// the m_parsed_gridman_selection_expr will still be NULL.  in this case,
-			// pretend like it isn't set at all in the config file.
-		if ( m_parsed_gridman_selection_expr == NULL ) {
-			dprintf(D_ALWAYS,
-				"ERROR: ignoring GRIDMANAGER_SELECTION_EXPR (%s) - failed to parse\n",
-				expr);
-			free(expr);
-			expr = NULL;
-		} 
-	}
-		/* If GRIDMANAGER_SELECTION_EXPR changed, we need to restart all running
-		 * gridmanager asap.  Be careful to consider not only a changed expr, but
-		 * also the presence of a expr when one did not exist before, and vice-versa.
-		 */
-	if ( (expr && !m_unparsed_gridman_selection_expr) ||
-		 (!expr && m_unparsed_gridman_selection_expr) ||
-		 (expr && m_unparsed_gridman_selection_expr && 
-		       strcmp(m_unparsed_gridman_selection_expr,expr)!=0) )
-	{
-			/* GRIDMANAGER_SELECTION_EXPR changed, we need to kill off all running
-			 * running gridmanagers asap so they can be restarted w/ the new expression.
-			 */
-		GridUniverseLogic::shutdown_fast();
-	}
-	if (m_unparsed_gridman_selection_expr) {
-		free(m_unparsed_gridman_selection_expr);
-	}
-	m_unparsed_gridman_selection_expr = expr;
 }
 
 // NOTE: this is likely unreachable now, and may be removed
