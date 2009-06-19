@@ -98,6 +98,7 @@ Dagman::Dagman() :
 	submit_delay (0),
 	max_submit_attempts (0),
 	max_submits_per_interval (1000), // so Coverity is happy
+	m_user_log_scan_interval (5),
 	primaryDagFile (""),
 	multiDags (false),
 	startup_cycle_detect (false), // so Coverity is happy
@@ -194,6 +195,10 @@ Dagman::Config()
 		param_integer( "DAGMAN_MAX_SUBMITS_PER_INTERVAL", 5, 1, 1000 );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_MAX_SUBMITS_PER_INTERVAL setting: %d\n",
 				max_submits_per_interval );
+	m_user_log_scan_interval =
+		param_integer( "DAGMAN_USER_LOG_SCAN_INTERVAL", 5, 1, INT_MAX);
+	debug_printf( DEBUG_NORMAL, "DAGMAN_USER_LOG_SCAN_INTERVAL setting: %d\n",
+				m_user_log_scan_interval );
 
 
 		// Event checking setup...
@@ -873,8 +878,8 @@ int main_init (int argc, char ** const argv) {
     }
 
     dprintf( D_ALWAYS, "Registering condor_event_timer...\n" );
-    daemonCore->Register_Timer( 1, 5, (TimerHandler)condor_event_timer,
-				"condor_event_timer" );
+    daemonCore->Register_Timer( 1, dagman.m_user_log_scan_interval, 
+				(TimerHandler)condor_event_timer, "condor_event_timer" );
 
 	dagman.dag->SetPendingNodeReportInterval(
 				dagman.pendingReportInterval );
