@@ -220,7 +220,7 @@ class Matchmaker : public Service
 		int trimStartdAds(ClassAdList &startdAds);
 
 		float GetResourceWeight(ClassAd *candidate);
-		bool GroupQuotaPermits(ClassAd *candidate, double &used, double total);
+		bool GroupQuotaPermits(ClassAd *candidate, double used, double total);
 		double sumResourceWeights(ClassAdList &startdAds);
 
 		/* ODBC insert functions */
@@ -319,6 +319,8 @@ class Matchmaker : public Service
 			ClassAd *ad;
 		};
 
+		void DeleteMatchList();
+
 		// List of matches.
 		// This list is essentially a list of sorted matching
 		// machine ads for a job ad of a given autocluster from
@@ -363,6 +365,8 @@ class Matchmaker : public Service
 			MatchListType(int maxlen);
 			~MatchListType();
 
+			void increment_rejForGroupQuota() { m_rejForGroupQuota++; }
+
 		private:
 
 			// AdListEntry* peek_candidate();
@@ -380,6 +384,7 @@ class Matchmaker : public Service
 			int m_rejPreemptForPolicy; //   - PREEMPTION_REQUIREMENTS == False?
 			int m_rejPreemptForRank;    //   - startd RANKs new job lower?
 			int m_rejForGroupQuota;     //   - not enough group quota?
+			float m_scheddLimitRW;
 			
 			
 		};

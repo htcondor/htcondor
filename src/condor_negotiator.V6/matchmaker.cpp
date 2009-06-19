@@ -1228,6 +1228,13 @@ negotiateWithGroup ( int untrimmed_num_startds,
 		spin_pie++;
 		hit_schedd_prio_limit = FALSE;
 		hit_network_prio_limit = FALSE;
+
+			// invalidate the MatchList cache, because even if it is valid
+			// for the next user+auto_cluster being considered, we might
+			// have thrown out matches due to ResourceWeight being too high
+			// given the schedd limit computed in the previous pie spin
+		DeleteMatchList();
+
 		calculateNormalizationFactor( scheddAds, maxPrioValue, normalFactor,
 									  maxAbsPrioValue, normalAbsFactor);
 		numStartdAds = untrimmed_num_startds;
@@ -2347,19 +2354,12 @@ GetResourceWeight(ClassAd *candidate)
 }
 
 bool Matchmaker::
-GroupQuotaPermits(ClassAd *candidate, double &used, double total) 
+GroupQuotaPermits(ClassAd *candidate, double used, double allowed) 
 {
 	float ResourceWeight = GetResourceWeight(candidate);
-	if((used + ResourceWeight) <= total) {
-		dprintf(D_FULLDEBUG, 
-				"GroupQuota available.  ResourceWeight: %.3f "
-				"Available: was %.3f, becomes %.3f\n", 
-				ResourceWeight, total - used, total - (used+ResourceWeight));
-		used += ResourceWeight;
+	if((used + ResourceWeight) <= allowed) {
 		return true;
-	} 
-	dprintf(D_FULLDEBUG, "GroupQuota not available.  ResourceWeight: %.3f "
-			"Available: %.3f\n", ResourceWeight, total - used);
+	}
 	return false;
 }
 
@@ -2461,7 +2461,12 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 	{
 		// we can use cached information.  pop off the best
 		// candidate from our sorted list.
-		cached_bestSoFar = MatchList->pop_candidate();
+		while( (cached_bestSoFar = MatchList->pop_candidate()) ) {
+			if( GroupQuotaPermits(cached_bestSoFar, limitRWUsed, scheddLimitRW) ) {
+				break;
+			}
+			MatchList->increment_rejForGroupQuota();
+		}
 		dprintf(D_FULLDEBUG,"Attempting to use cached MatchList: %s (MatchList length: %d, Autocluster: %d, Schedd Name: %s, Schedd Address: %s)\n",
 			cached_bestSoFar?"Succeeded.":"Failed",
 			MatchList->length(),
@@ -2489,19 +2494,7 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 		// we no longer are dealing with a job from the same autocluster.
 		// (someday we will store it in case we see another job with
 		// the same autocluster, but we aren't that smart yet...)
-	if ( MatchList ) { 
-		delete MatchList;
-		MatchList = NULL;
-		cachedAutoCluster = -1;
-		if ( cachedName ) {
-			free(cachedName);
-			cachedName = NULL;
-		}
-		if ( cachedAddr ) {
-			free(cachedAddr);
-			cachedAddr = NULL;
-		}
-	}
+	DeleteMatchList();
 
 		// Create a new MatchList cache if desired via config file,
 		// and the job ad contains autocluster info,
@@ -3591,6 +3584,23 @@ groupSortCompare(const void* elem1, const void* elem2)
 		return 0;
 	} 
 	return 1;
+}
+
+void Matchmaker::DeleteMatchList()
+{
+	if( MatchList ) {
+		delete MatchList;
+		MatchList = NULL;
+	}
+	cachedAutoCluster = -1;
+	if ( cachedName ) {
+		free(cachedName);
+		cachedName = NULL;
+	}
+	if ( cachedAddr ) {
+		free(cachedAddr);
+		cachedAddr = NULL;
+	}
 }
 
 int Matchmaker::MatchListType::
