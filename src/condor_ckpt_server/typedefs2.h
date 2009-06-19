@@ -103,6 +103,7 @@ typedef struct file_info_node
 
 
 
+/* Don't change the layout of this type. It affects protocol.cpp */
 typedef struct recv_req_pkt
 {
   u_lint file_size;
@@ -117,6 +118,7 @@ typedef struct recv_req_pkt
 
 
 
+/* Don't change the layout of this type. It affects protocol.cpp */
 typedef struct recv_reply_pkt
 {
   struct in_addr server_name;
@@ -127,6 +129,7 @@ typedef struct recv_reply_pkt
 
 
 
+/* Don't change the layout of this type. It affects protocol.cpp */
 typedef struct xmit_req_pkt
 {
   u_lint ticket;
@@ -139,6 +142,7 @@ typedef struct xmit_req_pkt
 
 
 
+/* Don't change the layout of this type. It affects protocol.cpp */
 typedef struct xmit_reply_pkt
 {
   struct in_addr server_name;
@@ -150,6 +154,7 @@ typedef struct xmit_reply_pkt
 
 
 
+/* Don't change the layout of this type. It affects protocol.cpp */
 typedef struct service_req_pkt
 {
   u_lint  ticket;
@@ -162,7 +167,7 @@ typedef struct service_req_pkt
 } service_req_pkt;
 
 
-
+/* Don't change the layout of this type. It affects protocol.cpp */
 typedef struct service_reply_pkt
 {
   u_short        req_status;
@@ -173,6 +178,8 @@ typedef struct service_reply_pkt
 } service_reply_pkt;
 
 
+/* This type is defunct and could be ripped out later, along with all of the
+	replication codes, which aren't used */
 typedef struct replicate_req_pkt
 {
   u_lint file_size;

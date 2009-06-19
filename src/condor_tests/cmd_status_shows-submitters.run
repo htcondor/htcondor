@@ -61,7 +61,7 @@ if($outsource eq "") {
     exit(1);
 }
 
-( my $locconfig, my $scheddoneconfig) = split(':',$outsource);
+( my $locconfig, my $scheddoneconfig) = split('&',$outsource);
 CondorTest::debug("Two pools are $locconfig and $scheddoneconfig\n",$debuglevel);
 
 my $stable = CondorCmdStatusWorker::IsSystemStable();
@@ -87,6 +87,8 @@ if($stable == 1) {
         if(!$cmdstatus)
         {
             CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",$debuglevel);
+			CondorTest::KillPersonal($locconfig);
+			CondorTest::KillPersonal($scheddoneconfig);
             exit(1)
         }
 
@@ -105,7 +107,7 @@ if($stable == 1) {
         }
 
         if($numclaimed >= 2) {
-            CondorTest::debug("Condor_status -claimed found the expected 4 slots\n",$debuglevel);
+            CondorTest::debug("Condor_status -claimed found $numclaimed slots\n",$debuglevel);
             $done = 1;
 			print "ok\n";
             last;
@@ -132,7 +134,7 @@ if($done == 1) {
 	my $jobcount = 0;
 	my $count = 0;
 
-	print "Looking for at least 4 jobs - ";
+	print "Looking for at least 2 jobs - ";
 	while($count < $nattempts) {
 		$cmd = "condor_status -submitters -format \"<%s:\" Name -format \"%s:\" Machine -format \"%d>\n\" RunningJobs";
 		#$cmd = "condor_status -submitters -l ";
@@ -142,10 +144,13 @@ if($done == 1) {
 	    if(!$cmdstatus)
 	    {
 	        CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",$debuglevel);
+			CondorTest::KillPersonal($locconfig);
+			CondorTest::KillPersonal($scheddoneconfig);
 	        exit(1)
 	    }
 		
 		# we know we have 2 jobs in each of the two pools
+		$jobcount = 0;
 		foreach my $line (@adarray) {
 			CondorTest::debug("-submitters: $line\n",$debuglevel);
 			if( $line =~ /^<(.*):(.*):(\d+)>$/ ) {
@@ -154,7 +159,7 @@ if($done == 1) {
 			}
 		}
 
-		if($jobcount == 4) {
+		if($jobcount >= 2) {
 			print "ok\n";
 			CondorTest::debug("SUCCESS: Found 4 running jobs from -submittors\n",$debuglevel);
 			last;
@@ -164,10 +169,10 @@ if($done == 1) {
 		sleep($count * 2);
 	}
 
-	if($jobcount != 4) {
-		print "bad<jobcount=$jobcount>\n";
+	if($jobcount < 2) {
+		print "bad\n";
 		$done = 0;
-		CondorTest::debug("Test failed because this submitter expected to have 4 running jobs not ($jobcount)\n",$debuglevel);
+		CondorTest::debug("Test failed because this submitter expected to have 2 or more running jobs not ($jobcount)\n",$debuglevel);
 	}
 
 }

@@ -1658,7 +1658,11 @@ sub CoreCheck {
 	my $fullpath = "";
 	
 	if($iswindows == 1) {
+		#print "CoreCheck for windows\n";
+		$logdir =~ s/\\/\//g;
+		#print "old log dir <$logdir>\n";
 		my $windowslogdir = `cygpath -m $logdir`;
+		#print "New windows path <$windowslogdir>\n";
 		fullchomp($windowslogdir);
 		$logdir = $windowslogdir;
 	}

@@ -107,6 +107,7 @@ ClaimStartdMsg::writeMsg( DCMessenger * /*messenger*/, Sock *sock ) {
 		dprintf(failureDebugLevel(),
 				"Couldn't encode request claim to startd %s\n",
 				description() );
+		sockFailed( sock );
 		return false;
 	}
 		// eom() is done by caller
@@ -133,6 +134,7 @@ ClaimStartdMsg::readMsg( DCMessenger * /*messenger*/, Sock *sock ) {
 		dprintf( failureDebugLevel(),
 				 "Response problem from startd when requesting claim %s.\n",
 				 description() );	
+		sockFailed( sock );
 		return false;
 	}
 
@@ -150,7 +152,7 @@ ClaimStartdMsg::readMsg( DCMessenger * /*messenger*/, Sock *sock ) {
 
 
 void
-DCStartd::asyncRequestOpportunisticClaim( ClassAd const *req_ad, char const *description, char const *scheduler_addr, int alive_interval, int timeout, classy_counted_ptr<DCMsgCallback> cb )
+DCStartd::asyncRequestOpportunisticClaim( ClassAd const *req_ad, char const *description, char const *scheduler_addr, int alive_interval, int timeout, int deadline_timeout, classy_counted_ptr<DCMsgCallback> cb )
 {
 	dprintf(D_FULLDEBUG|D_PROTOCOL,"Requesting claim %s\n",description);
 
@@ -170,6 +172,7 @@ DCStartd::asyncRequestOpportunisticClaim( ClassAd const *req_ad, char const *des
 	msg->setSecSessionId(cid.secSessionId());
 
 	msg->setTimeout(timeout);
+	msg->setDeadlineTimeout(deadline_timeout);
 	sendMsg(msg.get());
 }
 

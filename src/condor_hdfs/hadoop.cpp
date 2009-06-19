@@ -419,7 +419,7 @@ void Hadoop::recurrBuildClasspath(const char *path) {
 
         const char *ctmp;
         while ( (ctmp = dir.Next())) {
-                char *match = strstr(ctmp, ".jar");
+                const char *match = strstr(ctmp, ".jar");
                 if (match && strlen(match) == 4) {
                         m_classpath.insert(dir.GetFullPath());
                 } else if (dir.IsDirectory()) {
@@ -436,15 +436,17 @@ void Hadoop::publishClassAd() {
 }
 
 void Hadoop::stdoutHandler(int /*pipe*/) {
+        dprintf(D_FULLDEBUG, "stdoutHandler()\n");
         char buff[STDOUT_READBUF_SIZE];
         int bytes = 0;
+        int ad_type = AD_NULL;
 
         while ( (bytes = daemonCore->Read_Pipe(m_stdOut, buff, 
                   STDOUT_READBUF_SIZE)) > 0) {
              buff[bytes] = '\0';
              m_line += buff;
              int pos = m_line.FindChar('\n', 0);
-             if (pos > 0) {                
+             while (pos > 0) {                
                     //Here we get a newline terminated string to process.
                     MyString line = m_line.Substr(0, pos-1);
                     m_line = m_line.Substr(pos+1, m_line.Length());
@@ -452,45 +454,87 @@ void Hadoop::stdoutHandler(int /*pipe*/) {
                     if (line.find("START_AD") >= 0) {
                             MyString adKey, adValue;
 
-                            if (getKeyValue(line, &adKey, &adValue)) {
-                                    m_hdfsAd.Assign(adKey.Value(), adValue);
-                            }
+                            ad_type = getKeyValue(line, &adKey, &adValue);
+                            dprintf(D_FULLDEBUG, "AD: %s type=%d\n", line.Value(), ad_type);
 
-                    } 
+                            if (ad_type == AD_NULL) {
+                                    pos = m_line.FindChar('\n', 0);
+                                    continue;
+                            }
+                                    
+                            dprintf(D_FULLDEBUG, "AD: key %s, value %s\n", adKey.Value(), adValue.Value());                                        
+                            if (ad_type == AD_STRING)
+                                    m_hdfsAd.Assign(adKey.Value(), adValue);
+
+                            else if (ad_type == AD_INT || ad_type == AD_BOOLEAN)
+                                    m_hdfsAd.Assign(adKey.Value(), atoi(adValue.Value()));
+
+                            else if (ad_type == AD_DOUBLE)
+                                    m_hdfsAd.Assign(adKey.Value(), atof(adValue.Value()));
+                    }
+
+                    pos = m_line.FindChar('\n', 0);
              }
         }
 }
 
-bool Hadoop::getKeyValue(MyString line, MyString *key, MyString *value) {
-        bool isValid = true;
+//AD_NULL return value indicates an error in parsing the key-value from the input
+//otherwise it indicates the type field in the parsed string.
+
+int Hadoop::getKeyValue(MyString line, MyString *key, MyString *value) {
+        int type = AD_NULL;
         int tokenno = -1;
         char *s1 = 0;
 
         line.Tokenize();
+
         while( (s1 = const_cast<char*>(line.GetNextToken(" ", true))) != NULL) {
                 tokenno++;
 
+                if (strlen(s1) < 1)
+                        goto end;
+
+                //dprintf(D_FULLDEBUG, "Tokens %d: %s\n", tokenno, s1);
                 switch (tokenno) {
                         case 0:
                           if (strcmp(s1, "START_AD") != 0) 
-                                isValid = false;                                                    
+                              goto end;
 
                           break;
-                        case 1:
-                          *key = s1;
+
+                        case 1:                          
+
+                          if (s1[0] == 'S')
+                              type = AD_STRING;
+                          else if (s1[0] == 'I')
+                              type = AD_INT;
+                          else if (s1[0] == 'D')
+                              type = AD_DOUBLE;
+                          else if (s1[0] == 'B')
+                              type = AD_BOOLEAN;
+
                           break;
 
                         case 2:
-                          *value = s1;
+                          *key = s1;
                           break;
 
                         case 3:
+                          *value = s1;
+                          break;
+
+                        case 4:
                           if (strcmp(s1, "END_AD") != 0)
-                                  isValid = false;
+                                  type = AD_NULL;
                           
                           break;
                 }
         }
 
-        return isValid;        
+        //wrong number of tokens
+        if (tokenno < 4)
+                type = AD_NULL;
+
+end:
+        return type;
 }

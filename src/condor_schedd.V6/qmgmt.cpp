@@ -55,6 +55,10 @@
 #include "condor_open.h"
 #include "ickpt_share.h"
 
+#if HAVE_DLOPEN
+#include "ScheddPlugin.h"
+#endif
+
 #include "file_sql.h"
 extern FILESQL *FILEObj;
 
@@ -1947,6 +1951,14 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 				stricmp( attr_name, ATTR_CRON_MONTHS ) == 0 ||
 				stricmp( attr_name, ATTR_CRON_DAYS_OF_WEEK ) == 0 ) {
 		scheduler.addCronTabClusterId( cluster_id );				
+	}
+	else if ( stricmp( attr_name, ATTR_JOB_STATUS ) == 0 ) {
+			// If the status is being set, let's record the previous
+			// status. If there is no status we'll default to
+			// UNEXPANDED.
+		int status = UNEXPANDED;
+		GetAttributeInt( cluster_id, proc_id, ATTR_JOB_STATUS, &status );
+		SetAttributeInt( cluster_id, proc_id, ATTR_LAST_JOB_STATUS, status );
 	}
 
 	// If any of the attrs used to create the signature are
@@ -4182,6 +4194,10 @@ static void AppendHistory(ClassAd* ad)
   ad_size = ad_string.Length();
 
   MaybeRotateHistory(ad_size);
+
+#if HAVE_DLOPEN
+  ScheddPluginManager::Archive(ad);
+#endif
 
   if (FILEObj->file_newEvent("History", ad) == QUILL_FAILURE) {
 	  dprintf(D_ALWAYS, "AppendHistory Logging History Event --- Error\n");

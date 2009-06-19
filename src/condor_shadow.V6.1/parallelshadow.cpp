@@ -513,7 +513,7 @@ ParallelShadow::shutDown( int exitReason )
 			// If the policy is wait for all nodes to exit
 			// see if any are still running.  If so,
 			// just return, and wait for them all to go
-			if (r->getResourceState() == RR_EXECUTING) {
+			if (r->getResourceState() != RR_FINISHED) {
 				return;
 			}
 		}
@@ -521,7 +521,7 @@ ParallelShadow::shutDown( int exitReason )
 	}
 		// If node0 is still running, don't really shut down
 	RemoteResource *r =  ResourceList[0];
-	if (r->getResourceState() == RR_EXECUTING) {
+	if (r->getResourceState() != RR_FINISHED) {
 		return;
 	}
 	handleJobRemoval(0);

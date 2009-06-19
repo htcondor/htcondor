@@ -114,7 +114,7 @@ GetExecutableAndArgumentTemplateByExtention (
 
 		}
 
-        /* Because some file type have /n/ verb handlers, there is
+        /* Because some file types have /n/ verb handlers, there is
         no intelligent way we can choose which one to use.  The verb
         'Open' is the most common, but we allow the user define one
 		if they want. */

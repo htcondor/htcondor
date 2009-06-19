@@ -24,6 +24,12 @@ use File::Path;
 use Getopt::Long;
 use Cwd;
 
+print "Called with:\n";
+foreach my $arg (@ARGV) {
+	print "$arg ";
+}
+print "\n";
+
 GetOptions (
 	'help' => \$help,
 	'noinput' => \$noinput,
@@ -45,11 +51,8 @@ print "Working Directory is $workingdir\n";
 if ( $noinput )
 {
 	print "Trivial success\n";
+	print "Case noinput\n";
 	exit(0)
-}
-else
-{
-	print "Trivial success\n";
 }
 
 my $Idir = "job_"."$job"."_dir";
@@ -57,6 +60,7 @@ my $Idir = "job_"."$job"."_dir";
 # test for input = filenm
 if ( $noextrainput )
 {
+	print "Case noextrainput\n";
 	# test and leave
 	my $Ifile = "submit_filetrans_input"."$job".".txt";
 	print "Looking for input file $Ifile\n";
@@ -91,6 +95,7 @@ if ( $noextrainput )
 
 if( $extrainput )
 {
+	print "Case extrainput\n";
 	# test and leave
 	my $Ifile1 = "submit_filetrans_input"."$job"."a.txt";
 	my $Ifile2 = "submit_filetrans_input"."$job"."b.txt";
@@ -155,6 +160,7 @@ my $out6;
 
 if( defined($job) )
 {
+	print "JOB defined<$job>\n";
 	system("mkdir -p dir_$job");
 	chdir("dir_$job");
 	$out1 = "$out"."$job"."e.txt";
@@ -173,6 +179,7 @@ else
 
 if( $onesetout )
 {
+	print "Caes onesetout\n";
 	# create and leave
 	system("touch $out1 $out2 $out3");
 	system("cp * ..");
@@ -183,9 +190,12 @@ else
 {
 	# create 
 	#system("touch $out1 $out2 $out3");
-	system("ls ..  >$out1");
-	system("ls ..  >$out2");
-	system("ls ..  >$out3");
+	system("touch $out1 $out2 $out3");
+	#system("ls ..  >$out1");
+	#system("ls ..  >$out2");
+	#system("ls ..  >$out3");
+	print "We should see 3 files now:\n";
+	system("ls");
 	system("cp * ..");
 
 }
@@ -195,9 +205,14 @@ sleep 20;
 
 if( $long )
 {
+	print "Case long\n";
 	# create and leave
 	system("touch $out4 $out5 $out6");
+	print "We should see 3 more files now:\n";
+	system("ls");
 	system("cp * ..");
+	print "Sandbox now contains:\n";
+	system("ls ..");
 	exit(0);
 }
 else

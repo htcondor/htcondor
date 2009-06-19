@@ -229,6 +229,8 @@ int RequestRestore(const char*     owner,
 	key = getpid();
 	memset((void *)&req, 0, sizeof(req));
 	req.ticket = htonl(AUTHENTICATION_TCKT);
+	/* priority must stay zero for rsteq_is_32bit() and rsteq_is_64bit() 
+		to do the right thing for packet type determination. */
 	req.priority = htonl(0);
 	req.key = htonl(key);
 	strncpy(req.owner, owner, MAX_NAME_LENGTH-1);

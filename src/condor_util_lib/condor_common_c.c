@@ -18,3 +18,11 @@
  ***************************************************************/
 
 #include "condor_common.h"
+
+/**	Suppress:
+	warning LNK4221: no public symbols found; archive member 
+	will be inaccessible */
+int public_symbol () { 
+	return 0;
+}
+	

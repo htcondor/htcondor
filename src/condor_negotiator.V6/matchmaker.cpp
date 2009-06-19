@@ -1153,7 +1153,7 @@ SimpleGroupEntry()
 {
 	groupName = NULL;
 	prio = 0;
-	maxAllowed = INT_MAX;
+	maxAllowed = (float) INT_MAX;
 }
 
 Matchmaker::SimpleGroupEntry::
@@ -2516,6 +2516,13 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 	startdAds.Open ();
 	while ((candidate = startdAds.Next ())) {
 
+			// this will insert remote user priority information into the 
+			// startd ad (if it is currently running a job), which can then
+			// be referenced via the various PREEMPTION_REQUIREMENTS expressions.
+			// we now need to do this inside the inner loop because we insert
+			// usage information 
+		addRemoteUserPrios(candidate);
+
 			// the candidate offer and request must match
 		if( !( *candidate == request ) ) {
 				// they don't match; continue
@@ -3085,7 +3092,7 @@ Matchmaker::calculateScheddLimit(
 	scheddLimit  = (int) rint(unroundedScheddLimit);
 	scheddLimitRoundoff = unroundedScheddLimit - scheddLimit;
 	if(scheddLimitRoundoff < 0.0) {
-		dprintf(D_ALWAYS, "Negative scheddLimitRoundoff: %.3f", scheddLimitRoundoff);
+		dprintf(D_ALWAYS, "Negative scheddLimitRoundoff: %.3f\n", scheddLimitRoundoff);
 	}
 
 		// calculate this schedd's absolute fair-share for allocating

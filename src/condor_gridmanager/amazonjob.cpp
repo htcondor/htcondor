@@ -535,8 +535,6 @@ int AmazonJob::doEvaluateState()
 						break;
 					}
 
-					myResource->SubmitComplete( this );
-
 					if ( rc == 0 ) {
 						
 						ASSERT( instance_id != NULL );
@@ -615,7 +613,6 @@ int AmazonJob::doEvaluateState()
 					if ( is_running ) {
 
 						// there is a running VM instance corresponding to the given SSH keypair
-						myResource->SubmitComplete( this );
 						gmState = GM_SAVE_INSTANCE_ID;
 						// save the instance ID which will be used when delete VM instance
 						SetInstanceId( instance_id );

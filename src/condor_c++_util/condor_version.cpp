@@ -40,6 +40,8 @@
    define the correct platform string right in here. :( -Derek 12/3/99 
 */
 
+#include "condor_common.h"
+
 #define xstr(s) str(s)
 #define str(s) #s
 
@@ -57,9 +59,10 @@
 
 /* Here is the version string - update before a public release */
 /* --- IMPORTANT!  THE FORMAT OF THE VERSION STRING IS VERY STRICT
-   BECAUSE IT IS PARSED AT RUNTIME.  DO NOT ALTER THE FORMAT OR ENTER
-   ANYTHING EXTRA BEFORE THE DATE.  IF YOU WISH TO ADD EXTRA INFORMATION,
-   DO SO _AFTER_ THE BUILDIDSTR AND BEFORE THE TRAILING '$' CHARACTER.
+   BECAUSE IT IS PARSED AT RUNTIME AND COMPILE-TIME.  DO NOT ALTER THE
+   FORMAT OR ENTER ANYTHING EXTRA BEFORE THE DATE.  IF YOU WISH TO ADD
+   EXTRA INFORMATION, DO SO _AFTER_ THE BUILDIDSTR AND BEFORE THE TRAILING
+   '$' CHARACTER.
    EXAMPLES:
        $CondorVersion: 6.9.5 " __DATE__ BUILDIDSTR " WinNTPreview $ [OK]
 	   $CondorVersion: 6.9.5 WinNTPreview " __DATE__ BUILDIDSTR " $ [WRONG!!!]

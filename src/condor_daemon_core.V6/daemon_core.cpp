@@ -86,9 +86,10 @@ static const int DC_PIPE_BUF_SIZE = 65536;
 #include "my_popen.h"
 #include "../condor_privsep/condor_privsep.h"
 #ifdef WIN32
-#include "exphnd.WIN32.h"
+#include "exception_handling.WINDOWS.h"
 #include "process_control.WINDOWS.h"
 #include "executable_scripts.WINDOWS.h"
+#include "access_desktop.WINDOWS.h"
 #include "condor_fix_assert.h"
 typedef unsigned (__stdcall *CRT_THREAD_HANDLER) (void *);
 CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
@@ -265,6 +266,7 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 		&DaemonCore::Register_DataPtr,
 		&DaemonCore::GetDataPtr,
 		(DaemonCoreSockAdapterClass::Register_Timer_fnptr)&DaemonCore::Register_Timer,
+		&DaemonCore::Cancel_Timer,
 		&DaemonCore::TooManyRegisteredSockets,
 		&DaemonCore::incrementPendingSockets,
 		&DaemonCore::decrementPendingSockets,
@@ -2855,6 +2857,9 @@ void DaemonCore::Driver()
 					// that is doing a non-blocking connect
 					// CCBClient will eventually ensure that the
 					// socket's registered callback function is called
+					// We want to ignore the socket's deadline (below)
+					// because that is all taken care of by CCBClient.
+					continue;
 				}
 				else if ( (*sockTable)[i].is_connect_pending ) {
 						// we want to be woken when a non-blocking
@@ -4028,6 +4033,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 			//   3. increase size of send and receive buffers
 			//   4. set SO_KEEPALIVE [done automatically by CEDAR accept()]
 		cursoap->socket = ((Sock*)stream)->get_file_desc();
+		cursoap->peer = *((Sock*)stream)->peer_addr();
 		cursoap->recvfd = soap->socket;
 		cursoap->sendfd = soap->socket;
 		if ( cursoap->recv_timeout > 0 ) {
@@ -7183,7 +7189,7 @@ int DaemonCore::Create_Process(
 		the	above checks determined that the given executable must be
 		either a binary executable or garbage. Either way, we treat it
 		as a binary and hope for the best. */
-	if ( binary_executable ) {
+	if ( binary_executable && !bIs16Bit ) {
 
 		/** append the arguments given in the submit file. */
 		first_arg_to_copy = 0;
@@ -7257,7 +7263,6 @@ int DaemonCore::Create_Process(
 		if (use_visible && (*use_visible=='T' || *use_visible=='t') ) {
 				// user wants visible desktop.
 				// place the user_token into the proper access control lists.
-			int GrantDesktopAccess(HANDLE hToken);	// prototype
 			if ( GrantDesktopAccess(user_token) == 0 ) {
 					// Success!!  The user now has permission to use
 					// the visible desktop, so change si.lpDesktop

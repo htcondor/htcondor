@@ -697,21 +697,21 @@ printGridNormal(ClassAd *ad)
         // print header if necessary
         if (first)
         {
-            printf ("\n%-20.20s %-13.13s %-13.13s %-13.13s %-13.13s\n\n",
-				ATTR_NAME, 
-				"Job Limit", "Running", 
-				"Submit Limit", "In Progress" );
+            printf ("\n%-35.35s %-7.7s %-7.7s %-7.7s %-7.7s %-7.7s\n\n",
+				ATTR_NAME, "NumJobs", "Allowed", "Wanted", "Running", "Idle" );
 			
-			alpm.registerFormat("%-20.20s ", ATTR_NAME, 
-				"[??????????????????]" );
-			alpm.registerFormat ( "%-13d ", "JobLimit",
-				"[???????????] " );
-			alpm.registerFormat ( "%-13d ", ATTR_RUNNING_JOBS,
-				"[???????????] " );
-			alpm.registerFormat ( "%-13d ", "SubmitLimit",
-				"[???????????] " );
-			alpm.registerFormat ( "%-13d\n", "SubmitsInProgress",
-				"[???????????\n" );
+			alpm.registerFormat("%-35.35s ", ATTR_NAME, 
+				"[?????????????????????????????????]" );
+			alpm.registerFormat ( "%-7d ", "NumJobs",
+				"[?????] " );
+			alpm.registerFormat ( "%-7d ", "SubmitsAllowed",
+				"[?????] " );
+			alpm.registerFormat ( "%-7d ", "SubmitsWanted",
+				"[?????] " );
+			alpm.registerFormat ( "%-7d ", ATTR_RUNNING_JOBS,
+				"[?????] " );
+			alpm.registerFormat ( "%-7d\n", ATTR_IDLE_JOBS,
+				"[?????]\n" );
 
             first = false;
         }

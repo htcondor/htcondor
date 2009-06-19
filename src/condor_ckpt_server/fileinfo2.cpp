@@ -219,6 +219,18 @@ void FileInformation::TransferFileInfo(int socket_desc)
 	  buf_count++;
 	  ptr = ptr->next;
 	}
+
+	/* this code path appears never to be taken so I'm not doing the 32/64
+		bit backwards compatibility work for this structure being written
+		onto the socket. Why? Cause this is all a dirty hack. However, if
+		we do take this code path, we can dump out some information just
+		in case so the admin knows to send mail to condor-admin about it. 
+		The way to fix it is to propogate the FDContext down from SendStatus
+		to here and update protocol.cpp with the right send/recv functions. */
+	 dprintf(D_ALWAYS, "FileInformation::TransferFileInfo(): Calling "
+	 					"net_write() on a file_state_info structure. "
+						"This functionality needs 32/64 bit work!\n");
+
       temp_len = net_write(socket_desc, (char*) buffer, 
 			   sizeof(file_state_info) * buf_count);
       if (temp_len != (sizeof(file_state_info) * buf_count)) {

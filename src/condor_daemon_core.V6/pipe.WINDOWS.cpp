@@ -19,7 +19,7 @@
 
 
 #include "condor_common.h"
-#include "pipe.WIN32.h"
+#include "pipe.WINDOWS.h"
 #include "MyString.h"
 
 PipeEnd::PipeEnd(HANDLE handle, bool overlapped, bool nonblocking, int pipe_size) :

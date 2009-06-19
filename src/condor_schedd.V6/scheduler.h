@@ -165,27 +165,37 @@ class UserIdentity {
 			// The default constructor is not recommended as it
 			// has no real identity.  It only exists so
 			// we can put UserIdentities in various templates.
-		UserIdentity() : m_username(""), m_domain("") { }
-		UserIdentity(const char * user, const char * domainname)
-			: m_username(user), m_domain(domainname) { }
-		UserIdentity(const UserIdentity & src)
-			: m_username(src.m_username), m_domain(src.m_domain) { }
+		UserIdentity() : m_username(""), m_domain(""), m_auxid("") { }
+		UserIdentity(const char * user, const char * domainname, const char * auxid)
+			: m_username(user), m_domain(domainname), m_auxid(auxid) { }		
+		UserIdentity(const UserIdentity & src) {
+			m_username = src.m_username;
+			m_domain = src.m_domain;
+			m_auxid = src.m_auxid;			
+		}
+		UserIdentity(const char * user, const char * domainname, const ClassAd * ad);
 		const UserIdentity & operator=(const UserIdentity & src) {
 			m_username = src.m_username;
 			m_domain = src.m_domain;
+			m_auxid = src.m_auxid;
 			return *this;
 		}
 		bool operator==(const UserIdentity & rhs) {
-			return m_username == rhs.m_username && m_domain == rhs.m_domain;
+			return m_username == rhs.m_username && 
+				m_domain == rhs.m_domain && 
+				m_auxid == rhs.m_auxid;
 		}
 		MyString username() const { return m_username; }
 		MyString domain() const { return m_domain; }
+		MyString auxid() const { return m_auxid; }
 
 			// For use in HashTables
 		static unsigned int HashFcn(const UserIdentity & index);
+	
 	private:
 		MyString m_username;
 		MyString m_domain;
+		MyString m_auxid;
 };
 
 
@@ -391,6 +401,13 @@ class Scheduler : public Service
 	int				getJobsTotalAds() { return JobsTotalAds; };
 	int				getMaxJobsSubmitted() { return MaxJobsSubmitted; };
 
+		// Used by the UserIdentity class and some others
+	const ExprTree*	getGridParsedSelectionExpr() const 
+					{ return m_parsed_gridman_selection_expr; };
+	const char*		getGridUnparsedSelectionExpr() const
+					{ return m_unparsed_gridman_selection_expr; };
+
+
 		// Used by the DedicatedScheduler class
 	void 			swap_space_exhausted();
 	void			delete_shadow_rec(int);
@@ -543,6 +560,10 @@ private:
 		// deleting the pointer!
 	GridJobCounts * GetGridJobCounts(UserIdentity user_identity);
 
+		// (un)parsed expressions from condor_config GRIDMANAGER_SELECTION_EXPR
+	ExprTree* m_parsed_gridman_selection_expr;
+	char* m_unparsed_gridman_selection_expr;
+
 	// The object which manages the various transferds.
 	TDMan m_tdman;
 
@@ -632,7 +653,6 @@ private:
 										Env const *env, 
 										const char* name, bool is_dc,
 										bool wants_pipe );
-	void			Relinquish(match_rec*);
 	void			check_zombie(int, PROC_ID*);
 	void			kill_zombie(int, PROC_ID*);
 	int				is_alive(shadow_rec* srec);

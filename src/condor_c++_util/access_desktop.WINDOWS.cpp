@@ -25,6 +25,7 @@
 *************************************************************/
 
 #include "condor_common.h"
+#include "access_desktop.WINDOWS.h"
 
 #define RTN_OK     0
 #define RTN_ERROR 13

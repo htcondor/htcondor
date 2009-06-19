@@ -1820,6 +1820,13 @@ TESTCLASS(job_dagman_log_path,quick)
 TESTCLASS(job_dagman_log_path,full)
 TESTCLASS(job_dagman_log_path,quicknolink)
 
+DESC(job_dagman_retry_recovery,"Test DAG node priorities")
+RUN(job_dagman_retry_recovery)
+TESTCLASS(job_dagman_retry_recovery,dagman)
+TESTCLASS(job_dagman_retry_recovery,quick)
+TESTCLASS(job_dagman_retry_recovery,full)
+TESTCLASS(job_dagman_retry_recovery,quicknolink)
+
 /* Sample performance tests */
 
 /*

@@ -23,7 +23,7 @@
 #include "condor_common.h"
 #ifdef WIN32
 #include "condor_config.h"
-#include "windows_firewall.h"
+#include "firewall.WINDOWS.h"
 #include "basename.h"
 
 

@@ -126,10 +126,10 @@ main_init(int argc, char* argv[])
 	ScheddPluginManager::Load();
 
 		// Tell all ScheddPlugins to initialze themselves
-	ScheddPluginManager::Initialize();
+	ScheddPluginManager::EarlyInitialize();
 
 		// Tell all plugins to initialize themselves
-	ClassAdLogPluginManager::Initialize();
+	ClassAdLogPluginManager::EarlyInitialize();
 #endif
 	
 		// Initialize all the modules
@@ -185,6 +185,14 @@ main_init(int argc, char* argv[])
 
 		// Do a timeout now at startup to get the ball rolling...
 	scheduler.timeout();
+
+#if HAVE_DLOPEN
+		// Tell all ScheddPlugins to initialze themselves
+	ScheddPluginManager::Initialize();
+
+		// Tell all plugins to initialize themselves
+	ClassAdLogPluginManager::Initialize();
+#endif
 
 	return 0;
 } 
