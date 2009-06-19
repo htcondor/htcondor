@@ -151,7 +151,9 @@ void Job::Init( const char* jobName, const char* directory,
 	_hasNodePriority = false;
 	_nodePriority = 0;
 
-#if !LAZY_LOG_FILES
+#if LAZY_LOG_FILES
+    _logFile = NULL;
+#else
 		// Note: we use "" for the directory here because when this method
 		// is called we should *already* be in the directory from which
 		// this job is to be run.
@@ -796,8 +798,7 @@ Job::MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 	} else {
 		delete [] _logFile; // temporary
 		_logFile = strnewp( logFileStr.Value() );
-		//TEMPTEMP debug_printf( DEBUG_DEBUG_1, "Monitoring log file <%s> for node %s\n",
-		debug_printf( DEBUG_NORMAL, "Monitoring log file <%s> for node %s\n",//TEMPTEMP
+		debug_printf( DEBUG_DEBUG_1, "Monitoring log file <%s> for node %s\n",
 					_logFile, GetJobName() );
 		CondorError errstack;
 			//TEMP -- should truncating the file depend on dagman.deleteOldLogs?
@@ -833,8 +834,7 @@ Job::UnmonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 	ReadMultipleUserLogs &logReader = (_jobType == TYPE_CONDOR) ?
 				condorLogReader : storkLogReader;
 
-	//TEMPTEMP debug_printf( DEBUG_DEBUG_1, "Unmonitoring log file <%s> for node %s\n",
-	debug_printf( DEBUG_NORMAL, "Unmonitoring log file <%s> for node %s\n",//TEMPTEMP
+	debug_printf( DEBUG_DEBUG_1, "Unmonitoring log file <%s> for node %s\n",
 				_logFile, GetJobName() );
 
 	CondorError errstack;

@@ -1,13 +1,4 @@
 //TEMPTEMP -- hmm -- I think I need to think at a higher level about when to monitor and unmonitor the log files
-//TEMPTEMP -- current problem in recovery is that we don't re-monitor the job's log file on the retry
-
-//TEMP -- recovery mode doesn't work yet...
-//TEMP -- job_dagman_splice-J.run fails
-//TEMP -- job_dagman_splice-M.run fails
-//TEMP -- job_dagman_splice-N.run fails
-//TEMP -- job_dagman_splice-O.run fails
-//TEMP -- job_dagman_stork-file-file.run fails
-//TEMP -- job_dagman_stork-remove.run fails
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -907,11 +898,11 @@ Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
 			job->_Status = Job::STATUS_POSTRUN;
 			_postRunNodeCount++;
 
-			if( !recovery ) {
 #if LAZY_LOG_FILES
-				job->MonitorLogFile( _condorLogRdr, _storkLogRdr,
-							_nfsLogIsError, _recovery );
+			job->MonitorLogFile( _condorLogRdr, _storkLogRdr,
+						_nfsLogIsError, _recovery );
 #endif // LAZY_LOG_FILES
+			if( !recovery ) {
 				_postScriptQ->Run( job->_scriptPost );
 			}
 		}
