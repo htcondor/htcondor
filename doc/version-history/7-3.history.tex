@@ -46,6 +46,12 @@ improved.
 
 \begin{itemize}
 
+% gittrac 586
+\item The new configuration variable \Macro{DAGMAN\_USER\_LOG\_SCAN\_INTERVAL}
+controls how long \Condor{dagman} waits between checking job log files
+for status updates.
+See \ref{param:DAGManUserLogScanInterval} for more details.
+
 \item The new configuration variable \Macro{MAX\_PERIODIC\_EXPR\_INTERVAL}
   implements a ceiling on the time between evaluation of periodic expressions,
   due to the adaptive timing implied by the configuration variable

@@ -1,0 +1,339 @@
+<html>
+<head>
+<title>SOAR</title>
+</head>
+<body>
+<h1>SOAR - System of Automatic Runs</h1>
+
+<h2>Overview</h2>
+<!--
+what it is
+how it works in general
+how it helps us solve problems
+-->
+
+<p>
+SOAR is a framework which automates the execution of groups of jobs.
+These jobs form a DAG (directed acyclic graph), are run under Condor,
+and SOAR assembles the results within single directory.
+The system is flexible, 
+such that it can run all data sets at once,
+or it can keep track of completions,
+running new data sets on a periodic basis.
+It reports on the progress by both logging information
+and progressively plotting of the progress of the run
+in terms of how many jobs are running and how many are ready to run.
+The system becomes adapted and personalized for each project.
+</p>
+
+<h2>Likely Steps towards SOARing</h2>
+<!--
+to organize the process for the beginner
+-->
+
+<p>
+Each project will have its own unique steps leading to automation
+and maintenance of the automated jobs.
+Accounting for the unique nature of jobs,
+each initial SOAR setup will follow these steps:  
+</p>
+<ol>
+<li> download and unpack
+<li> (currently) edit <tt>fsconfig</tt> file to identify locations of 
+various aspects of the system
+<br>(planned) run the install script
+<li> Adapt the Project to SOAR
+     <br>possibly modify the program to be automated, such that
+it can be automated
+<li> Adapt SOAR to the Project 
+     (ready everything for the project):
+   <br>copy and modify existing sample scripts and ???
+   <br>stage input data sets and executables
+   <br>set up time-based submission
+<li> run condor_submit
+</ol>
+<p>
+Steps 3, 4, and 5 will be repeated for each new project to be
+automated.
+</p>
+
+<h2>Installation</h2>
+<!--
+step by step
+-->
+
+<h3>
+Software needed to run SOAR
+</h3>
+<ul>
+<li>
+Perl
+<li>
+Gnuplot 4.2 or newer ( for profiling )
+<li>
+Convert by ImageMagick ( for profiling )
+</ul>
+
+<!-- edited to this point in file -->
+
+
+<h2>Adapting a Project to SOAR</h2>
+<!--
+requirements for the system, so the scientist/admin has a good
+idea if their code CAN be adapted, and what will be required
+of their code
+-->
+<p>
+To effectively do multiple datasets in any system
+you want your application to either 
+accept command line arguments and read parameters from one or more files.
+Anything hard coded into the program you are running can not be easily varied.
+
+<h3>Configurable locations</h3>
+<!--
+why we have an fsconfig file, and what it does for us
+syntax of the file
+contents of the file
+when and why we will modify this file in the future
+-->
+<p>
+The SOAR system utilizes and organizes various components related
+to a project's runs.
+As these components may be kept in a variety of locations,
+the file <tt>fsconfig</tt> identifies the component locations.
+Each component listed is also the directory name.
+Within the directory, each project may have its own subdirectory
+for project-specific versions of the component.
+</p>
+<ul>
+<li>
+<tt>soar</tt>: Directory holds start up files for web interface
+<li>
+<tt>control</tt>: Where the master scripts are all located
+<li>
+<tt>source</tt>: Where project code and glue scripts live
+<li>
+<tt>results</tt>: Where results go on a per project basis
+<li>
+<tt>tarcache</tt>: Where large data sets are stored in compressed format for additional use.
+<li>
+<tt>condorruns</tt>: Space used to run the jobs and collect logs
+<li>
+<tt>imageruns</tt>: Places data sets can be found
+</ul>
+
+<p>
+Additionally, each project can have its data location specified in this file in the format:
+
+<p>
+	Project_name:Location_holding _data_in _project_name_folder
+
+<p>
+Soar is told where to 
+find datasets for your jobs. These will be folders with unique names with the 
+variable data for your jobs or folders named datasetXXXXXXX which  will contain the 
+unique job folders. The code and jobs folders under sources contain the unchanging 
+parts for the first and the glue scripts in the second.
+</p>
+
+<h2>Adapting SOAR to a Project</h2>
+<h3>Source Directory code</h3>
+
+<p>
+This directory gets all the sources to make your job run. It also gets the results of 
+compiling if that is something your job needs be it Matlab or some regular computer 
+language. For security purposes it must have an .htaccess file or the code will not 
+be placed where it needs to be for the job to find it. This is to ensure that the sources 
+on the web are only accessible by authorized persons.
+</p>
+
+<p>
+Normally all files in the code directory are copied to the submit location where the 
+job is started. However any file listed in the file SKIP will not be moved.
+</p>
+
+<p>
+Another file called BLACKLIST must exist. It contains a name which starts with a number, 
+a colon the word blacklist and then a reason within [  ]. Here follows an example:
+</p>
+<pre>
+1000: blacklist [ condensation ]
+</pre>
+
+<h3>
+Source Directory jobs
+</h3>
+
+<p>
+This directory holds the glue scripts which adapt SOAR to handling the data sets 
+and the code of your research.  The glue scripts tie together the data sets to 
+whatever processing you want to do.
+</p>
+
+<h3>
+Glue Scripts and Interfacing files
+</h3>
+
+<p>
+A basic job consists of a single node which submits to a pool and then another analysis job 
+which could be run if desired based on results. A faulty start can have us execute a null 
+piece of work for the first node and we usually do a null follow-up node. After all the 
+jobs have run we have a report node,  an optional clean node, an after the report mode 
+which preps the data collected if we are delivering it and a push the data node.
+</p>
+
+<p>
+There are a number of scripts that run before or after which can or should be customized:
+</p>
+<ul>
+<li>
+<tt>Prejob.pl</tt>:  Get data files to run directories and can do some basic sanity checks
+<li>
+<tt>Postjob.pl</tt>:  Decide if analysis node will run and saves the desired results into the results location. It is the perfect place to trim out large files unique to your job from the run directory after you save them in results of course.
+<li>
+<tt>Postreport.pl</tt>:  save additional information into results and perhaps zip all the results up for easy web download
+<li>
+<tt>Pushdata.pl</tt>:  job submitted to pushdata which can be used to deliver the data remotely
+</ul>
+
+<p>
+All the template files are filled in with variable data.
+</p>
+
+<ul>
+<li>
+<tt>Doextract.template</tt>:   this is a template of the submit file for the job and is close to what will be moved to the run location. This file tells Condor what the job to execute. This file gets moved automatically. The executable  is almost always a script which extracts the data, runs the real job and if needed packages the results. This file dictates what gets run, what gets moved and how to run the job. The final submit file is completed by Make_job_submits.pl.
+<li>
+<tt>Doextractnull.template</tt>:  when we discover issues in prejob.pl we substitute a dummy job so as to not waste a jobs which we know will fail. Job is classified as failing.
+<li>
+<tt>Holdnode.template</tt>
+<li>
+<tt>Postmovie.template</tt>:  This is a job which could do further work after the job runs. It is almost always replaced by do nothing job but provides a place for some extra work.
+<li>
+<tt>Postmovienull.template</tt>:  This is what we normally do after the job.
+<li>
+<tt>Postreport.template</tt>:  Runs the final report
+</ul>
+
+<p>
+There are some additional files which allow extra features.
+</p>
+
+<ul>
+<li>
+<tt>Make_pushdata_submits.pl</tt>:  produce a customized node to push data somewhere
+<li>
+<tt>Make_job_dag_text.pl</tt>: though we normally run a single piece of work, we can insert between the prenode and postnode an arbitrarily complex dag for the actual work. Interesting note here is that this file writes a file called PROFILE. The name within will be used to find error, log and output files for profiling and plotting current status.
+<li>
+<tt>Make_job_submits.pl</tt>:  produce all job submits files from templates.
+</ul>
+
+<h3>
+How the report gets generated
+</h3>
+
+Either your job or postjob.pl glue script generates a file called RESULT which holds a 
+number. When the report  process runs, it looks this number up in the file RESULTVALUES in 
+your job directory which holds the glue scripts. This file has three fields separated 
+by /. Field one is a number. Field two is either passed or failed. The last filed is 
+the message which will be used to classify that result.
+
+<h3>
+Using SOAR
+</h3>
+
+<h3>
+Time activated tasks
+</h3>
+
+The most convenient way to do production with SOAR is to place entries in a file which 
+condor manages the frequency of.  There are two included(per_runs and per_plotsand 
+reports). Per_runs fires off the commands in continuous.cron once a day and 
+per_plotsandreports fires off the commands in checkprogress.com every 5 minutes. 
+Setting this up is as easy as placing what you want done similar to the sample files 
+and submitting them with condor_submit(condor_submit per_runs). The first usually 
+contains usage of the control.pl script and kind=new so tracking of datasets already done 
+has only new datasets run. The second usually contains the usage of the status.pl script 
+with last as it then looks up the most recent run of the project and updates the profile 
+and the report.
+
+This way once you tie a project to do a particular job, you or the person doing the 
+research only need to worry about creating more data sets into the image location for 
+the project and pull results from the result location.
+
+<h3>
+ Control Scripts
+</h3>
+
+Control.pl
+
+* -b/--bail - Debug hook to stop just before submitting the dag which was built for the run
+* --code - used when one wants to change the contents of the code directory for a new version which uses the glue scripts from a previous version. 
+* --clean - A(ALL), D(DATA), C(CACHE), R(RESULTS), L(LOGS and misc in rundir) Be very careful with this as its intent is to save space after your results have been saved.
+* -h/--help - See this
+* -l/--limit=N - start this number of nodes in a Dag(acts like run)
+* --project=s - Run which project?
+* -n/--newproject=s - New project derived from existing
+* -v/--version=s - Run which version(name this version for install)?
+* --preversion=s - Based on this earlier version
+* -k/--kind=s - install, nightly, new else a label for web
+* -s/--softversion - print software version
+* -t/--type=s - One type of install is a new param.dat from the imagedir for the project to it's code location
+* -u/--update - Update the project ENVVARS file to the last run.
+
+<h3>
+Control.pl Examples
+</h3>
+
+./control --project=gravitropism --version=v3 --limit=10 --kind=oneoff --clean=A
+./control --project=gravitropism --version=v3 --kind=white --white=/tmp/whitelist
+./control --project=gravitropism --preversion=v3 --version=v4 --kind=install   --code=/tmp/code.tar.gz
+./control --project=gravitropism --version=v3 --kind=nightly # switches ENVVARS file
+./control --project=gravitropism --version=v3 --kind=new
+./control --project=gravitropism --version=v3 --kind=white --white=/tmp/whitelist
+./control.pl --project=natehighres --preversion=v1 --newproject=DanLewisArabidopsis --version=v1 --kind=install
+./control.pl --project=gravitropism --version=v3 --kind=install --type=param.dat
+
+Each project has a master file ENVVARS in the run directory which is used  various 
+things. It is changed out only for --kind=nightly and --kind=new for.   However if 
+it comes out of sync or to make it the last "oneoff"  simply go ./control.pl 
+--project=gravitropism --update:
+
+--kind=install            setup a new version of code and compile
+--kind=nightly            Change the production code
+--kind=new                do all the new data sets since the ones run by --kind=nightly 
+--kind='other text'       A full run unless limited with 'Other Text' labeling the web page for the run
+
+<h3>
+Status.pl
+</h3>
+            [-h/--help]                             See this
+            [-k/--kind]     summary(report), profile(plot), imagesz
+            [-e/--env]      run this environment file to find run
+            [-l/--last]     find mosr recent environment file to find run
+            [-p/--period]   sample interval
+			[-d/--display]  display report file in REPORT....
+
+    Usually run for you by framework at end of a job run.
+
+            
+<h3>
+Status.pl Examples
+</h3>
+
+./status.pl --project=gravitropism --kind=profile           #uses main project ENVVARS
+./status.pl --project=gravitropism --kind=profile --env=run15523_8_24_2008
+./status.pl --project=gravitropism --version --kind=summary #uses main project ENVVARS
+./status.pl --kind=summary --project=gravitropism --version=v3 --env=run6823_8_26_200
+
+<h2>Web Interface</h2>
+<!--
+what can be seen
+how to see it
+-->
+
+
+
+
+</body>
+</html>

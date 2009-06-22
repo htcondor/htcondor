@@ -7310,6 +7310,16 @@ a per DAG basis.
 Setting these is explained in section~\ref{sec:DAG-configuration}.
 
 \begin{description}
+
+\label{param:DAGManUserLogScanInterval}
+\item[\Macro{DAGMAN\_USER\_LOG\_SCAN\_INTERVAL}]
+  Time in integer seconds that \Condor{dagman} waits between checking
+  job log files for status updates. Setting this lower increases the CPU
+  time \Condor{dagman} spends checking files, perhaps fruitlessly, but
+  increases responsiveness to nodes completing or failing.
+  The legal range of values is 1 to INT\_MAX.
+  If not defined, it defaults to 5 seconds.
+
 \label{param:DAGManDebugCacheEnable}
 \item[\Macro{DAGMAN\_DEBUG\_CACHE\_ENABLE}]
   A boolean value that determines if log line caching for the \File{dagman.out}
