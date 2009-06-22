@@ -19,10 +19,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item The format of \Condor{status -grid} has been changed to provide more
+useful information.
 
 \end{itemize}
-
 
 \noindent New Features:
 
@@ -36,17 +36,38 @@ the \Condor{schedd} daemon now avoids unlimited stacking up of
 messages that it sends periodically to the \Condor{negotiator} 
 and \Condor{startd}.
 
+% gittrac #429
+\item The performance and failure handling of the Grid Monitor have been
+improved.
+
 \end{itemize}
 
 \noindent Configuration Variable Additions and Changes:
 
 \begin{itemize}
 
+% gittrac 586
+\item The new configuration variable \Macro{DAGMAN\_USER\_LOG\_SCAN\_INTERVAL}
+controls how long \Condor{dagman} waits between checking job log files
+for status updates.
+See \ref{param:DAGManUserLogScanInterval} for more details.
+
 \item The new configuration variable \Macro{MAX\_PERIODIC\_EXPR\_INTERVAL}
   implements a ceiling on the time between evaluation of periodic expressions,
   due to the adaptive timing implied by the configuration variable
   \MacroNI{PERIODIC\_EXPR\_TIMESLICE}.
   See \ref{param:MaxPeriodicExprInterval} for more details.
+
+% gittrac #207
+\item The configuration variable
+\Macro{GRIDMANAGER\_MAX\_PENDING\_SUBMITS\_PER\_RESOURCE} and the
+corresponding throttle have been removed.
+
+% gittrac #429
+\item The new configuration variable \Macro{GRID\_MONITOR\_DISABLE\_TIME}
+controls how long the \Condor{gridmanager} will wait after encountering
+an error before attempting to restart a Grid Monitor job.
+See \ref{param:GridMonitorDisableTime} for more details.
 
 \end{itemize}
 
