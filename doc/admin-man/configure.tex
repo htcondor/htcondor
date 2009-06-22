@@ -5322,6 +5322,23 @@ SYSTEM_PERIODIC_REMOVE = \
   number of the job id will be equal to the previous cluster number used
   plus the value of this setting.
 
+\label{param:GridManagerSelectionExpr}
+\item[\Macro{GRIDMANAGER\_SELECTION\_EXPR}]
+	By default, the schedd will start a new gridmanager process for each
+	discreet user that submits a grid universe job (i.e. for each discreet
+	value of job attribute \emph{Owner} across all grid universe job
+	classads).  For additional isolation and/or scalability of grid job
+	management, additional gridmanager processes can be spawned to share the
+	load; to do so, set this configuration parameter to equal a classad
+	expression.  The result of the evaluation of this expression in the
+	context of a grid universe job classad will be treated as a hash value.
+	All jobs that hash to the same value via this expression will go to the
+	same gridmanager. For instance, to spawn a seperate gridmanager process to
+	manage each unique remote site, put the following into the config file:
+\begin{verbatim}
+        GRIDMANAGER_SELECTION_EXPR = GridResource 
+\end{verbatim}
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
