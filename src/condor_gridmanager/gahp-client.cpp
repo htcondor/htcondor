@@ -4430,6 +4430,80 @@ GahpClient::nordugrid_status(const char *hostname, const char *job_id,
 }
 
 int
+GahpClient::nordugrid_ldap_query(const char *hostname, const char *ldap_base,
+								 const char *ldap_filter,
+								 const char *ldap_attrs, StringList &results)
+{
+	static const char* command = "NORDUGRID_LDAP_QUERY";
+
+		// Check if this command is supported
+	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+
+		// Generate request line
+	if (!hostname) hostname=NULLSTRING;
+	if (!ldap_base) ldap_base=NULLSTRING;
+	if (!ldap_filter) ldap_filter=NULLSTRING;
+	if (!ldap_attrs) ldap_attrs=NULLSTRING;
+	MyString reqline;
+	char *esc1 = strdup( escapeGahpString(hostname) );
+	char *esc2 = strdup( escapeGahpString(ldap_base) );
+	char *esc3 = strdup( escapeGahpString(ldap_filter) );
+	char *esc4 = strdup( escapeGahpString(ldap_attrs) );
+	bool x = reqline.sprintf("%s %s %s %s", esc1, esc2, esc3, esc4 );
+	free( esc1 );
+	free( esc2 );
+	free( esc3 );
+	free( esc4 );
+	ASSERT( x == true );
+	const char *buf = reqline.Value();
+
+		// Check if this request is currently pending.  If not, make
+		// it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one
+		// if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command,buf,deleg_proxy);
+	}
+
+		// If we made it here, command is pending.
+		
+		// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command,buf);
+	if ( result ) {
+		// command completed.
+		if (result->argc < 3) {
+			EXCEPT("Bad %s Result",command);
+		}
+		int rc = atoi(result->argv[1]);
+		if ( strcasecmp(result->argv[2], NULLSTRING) ) {
+			error_string = result->argv[2];
+		} else {
+			error_string = "";
+		}
+		for ( int i = 3; i < result->argc; i++ ) {
+			results.append( result->argv[i] );
+		}
+		delete result;
+		return rc;
+	}
+
+		// Now check if pending command timed out.
+	if ( check_pending_timeout(command,buf) ) {
+		// pending command timed out.
+		error_string.sprintf( "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+		// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;
+}
+
+int
 GahpClient::nordugrid_cancel(const char *hostname, const char *job_id)
 {
 	static const char* command = "NORDUGRID_CANCEL";

@@ -390,6 +390,13 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 	gman_node_t* gman_node;
 	int pid;
 
+		// If attr_value is an empty string, convert to NULL since code
+		// after this point expects that.
+	if ( attr_value && strlen(attr_value)==0 ) {
+		attr_value = NULL;
+		attr_name = NULL;
+	}
+
 	if ( (gman_node=lookupGmanByOwner(owner, attr_value, cluster, proc)) ) {
 		// found it
 		return gman_node;
@@ -439,12 +446,6 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 	}
 	free(gman_args);
 
-	if (cluster) {
-		dprintf( D_ALWAYS, "ERROR - gridman_per_job not supported!\n" );
-		free(gman_binary);
-		return NULL;
-	}
-
 	// build a constraint
 	if ( !owner ) {
 		dprintf(D_ALWAYS,"ERROR - missing owner field\n");
@@ -457,9 +458,16 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 						   ATTR_OWNER,owner,
 						   ATTR_JOB_UNIVERSE,CONDOR_UNIVERSE_GRID);
 	} else {
-		constraint.sprintf("(%s=?=\"%s\"&&%s=?=\"%s\")",
+		if ( stricmp(attr_name,ATTR_MIRROR_SCHEDD)==0 ) {
+			constraint.sprintf("(%s=?=\"%s\"&&%s=?=\"%s\")",
 						   ATTR_OWNER,owner,
 						   attr_name,attr_value);
+		} else {
+			constraint.sprintf("(%s=?=\"%s\"&&%s=?=\"%s\"&&%s==%d)",
+						   ATTR_OWNER,owner,
+						   attr_name,attr_value,
+						   ATTR_JOB_UNIVERSE,CONDOR_UNIVERSE_GRID);
+		}
 	}
 	args.AppendArg("-C");
 	args.AppendArg(constraint.Value());

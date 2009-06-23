@@ -36,6 +36,7 @@ $^W = 1; # same as -w, but -w doesn't work quite run under /usr/bin/env hack
 use strict;
 
 use POSIX ":sys_wait_h";
+use POSIX qw(:signal_h);
 use Fcntl;
 
 $| = 1;
@@ -127,6 +128,12 @@ my $force_agent_start = 1;
 # Hold PID of last started agent.
 my $last_started_agent_pid = 0;
 
+# Record whether we've previously tried a globus-url-copy
+my $first_transfer = 1;
+
+# Status of globus-url-copy, currently there is none
+my $last_guc_pid = 0;
+my $last_guc_status = -1;
 
 sub REAPER {
 	my $child;
@@ -136,41 +143,38 @@ sub REAPER {
 	#  -1 = No process exitted
 	#  0  = Processes running (some systems, including Linux)
 	#  >0 = Pid that exitted.
-	if (($child = waitpid(-1, WNOHANG)) <= 0) {
-		# system() call.  We get the signal, but not the wait.
+	while ( ($child = waitpid(-1, WNOHANG)) > 0 ) {
+		my $result = $?;
+		my $return = $result / 256;
 
-		# Probably no necessary, but just in case we're on a crusty SysV
-		# box, reset the signal handler.
-		$SIG{'CHLD'} = \&REAPER;
-		return;
-	}
-	my $result = $?;
-	my $return = $result / 256;
+		if ( $last_guc_pid > 0 && $child == $last_guc_pid ) {
+			$last_guc_status = $result;
+			next;
+		}
 
-	if($child != $last_started_agent_pid) {
-		report_info("Unknown child process pid $child exited with"
-			."$return result ($result).");
-		$SIG{'CHLD'} = \&REAPER;
-		return;
-	}
+		if($child != $last_started_agent_pid) {
+			report_info("Unknown child process pid $child exited with"
+						."$return result ($result).");
+			next;
+		}
 
-	my $AGENT_RESULT_TIMEOUT = 0;
-	my $AGENT_RESULT_ALREADY_RUNNING = 1;
-	if($return == $AGENT_RESULT_TIMEOUT) {
-		# The agent ran out of time.  Restart it.
-		$force_agent_start = 1;
-		report_info("$GRID_AGENT_NAME timed out.  Restarting");
-		$SIG{'CHLD'} = \&REAPER;
-		return;
+		my $AGENT_RESULT_TIMEOUT = 0;
+		my $AGENT_RESULT_ALREADY_RUNNING = 1;
+		if($return == $AGENT_RESULT_TIMEOUT) {
+			# The agent ran out of time.  Restart it.
+			$force_agent_start = 1;
+			report_info("$GRID_AGENT_NAME timed out.  Restarting");
+			next;
+		}
+		if($return == $AGENT_RESULT_ALREADY_RUNNING) {
+			# That's good, silently continue.
+			report_info("$GRID_AGENT_NAME already running.");
+			next;
+		}
+		fatal_error( $ERROR_AGENT_EXITED_BAD,
+					 "$GRID_AGENT_NAME (pid $child) exited with a $return result ($result).");
 	}
-	if($return == $AGENT_RESULT_ALREADY_RUNNING) {
-		# That's good, silently continue.
-		report_info("$GRID_AGENT_NAME already running.");
-		$SIG{'CHLD'} = \&REAPER;
-		return;
-	}
-	fatal_error( $ERROR_AGENT_EXITED_BAD,
-		"$GRID_AGENT_NAME (pid $child) exited with a $return result ($result).");
+	$SIG{'CHLD'} = \&REAPER;
 }
 
 $SIG{'CHLD'} = \&REAPER;
@@ -288,65 +292,83 @@ while(1)
 sub timeout_system {
 	my($timeout, @args) = @_;
 
-	my $result = -2;
-	eval {
-		# NB: \n required, otherwise filename/lineno is added
-		local $SIG{ALRM} = sub { die "TIMEOUT_SYSTEM_alarm\n" };
-		alarm $timeout;
-		$result = system(@args);
-		alarm 0;
-	};
-	if ($@) {
-		die unless $@ eq "TIMEOUT_SYSTEM_alarm\n";
-	}
-	return $result;
-}
+	my $result = 0;
+	my $time_limit = $timeout + time();
 
-################################################################################
-# The loop in question is loops on the timeout.
-sub looping_timeout_system {
-	my($loops, $timeout, @args) = @_;
-	while($loops) {
-		my $ret = timeout_system($timeout, @args);
-		if($ret != -2) { return $ret; }
-		$loops--;
+	$last_guc_status = -1;
+	safe_fork( $last_guc_pid );
+	if ( not defined $last_guc_pid ) {
+		return -1;
 	}
-	return -2;
+	if ( $last_guc_pid == 0 ) {
+		# Child process
+		exec( @args );
+		report_info( "Child: failed to exec " . join( " ", @args ) );
+		exit ( 1 );
+	}
+	# Parent process
+	while ( $last_guc_status < 0 ) {
+		if ( time() >= $next_update_time ) {
+			report_ok();
+			$next_update_time = time() + $MIN_TIME_BETWEEN_UPDATES;
+		}
+		if ( time() >= $time_limit && $result != -2 ) {
+			kill( 9, $last_guc_pid );
+			return -2;
+		}
+		my $sleep_for = $time_limit < $next_update_time ? $time_limit : $next_update_time;
+		$sleep_for -= time();
+		if ( $sleep_for <= 0 ) {
+			$sleep_for = 1;
+		}
+		sleep( $sleep_for );
+	}
+	if ( $result != -2 ) {
+		$result = $last_guc_status;
+	}
+
+	return $result;
 }
 
 ################################################################################
 sub send_file {
 	my($src_file, $dst_url) = @_;
 	my $src_url = "file://$src_file";
-	my $max_timeouts = 2;
 	my $size = -s $src_file;
 	my $timeout = $size / $MIN_BYTES_PER_SECOND;
 	if($timeout < $MIN_TIMEOUT) { $timeout = $MIN_TIMEOUT; }
-	my $ret = looping_timeout_system($max_timeouts, $timeout,
-		"$ENV{GLOBUS_LOCATION}/bin/globus-url-copy", $src_url, $dst_url);
-	if($ret != 0) {
-		# We have seen some sites where /etc/grid-security/certificates
-		# is no good, but $GL/share/certificates is. Give the second
-		# location a try before failing
-		$ENV{X509_CERT_DIR} = "$ENV{GLOBUS_LOCATION}/share/certificates";
-		report_info("Retrying globus-url-copy with X509_CERT_DIR=$ENV{X509_CERT_DIR}");
-		$ret = looping_timeout_system($max_timeouts, $timeout,
+	my $ret;
+	my $loops = 2;
+	while ( $loops ) {
+		$ret = timeout_system($timeout,
 			"$ENV{GLOBUS_LOCATION}/bin/globus-url-copy", $src_url, $dst_url);
+		$loops--;
+		last if ( $ret == 0 );
+		report_info("globus-url-copy attempt returned $ret" .
+					($loops ? ", will retry" : ""));
+		if ( $ret != -2 && $first_transfer ) {
+			# We have seen some sites where /etc/grid-security/certificates
+			# is no good, but $GL/share/certificates is. Give the second
+			# location a try before failing
+			$ENV{X509_CERT_DIR} = "$ENV{GLOBUS_LOCATION}/share/certificates";
+			report_info("Retrying globus-url-copy with X509_CERT_DIR=$ENV{X509_CERT_DIR}");
+		}
+		$first_transfer = 0;
 	}
 	if($ret == -1) {
 		fatal_error($ERROR_GUC_FAILED,
-			"Failed to execute globus-url-copy $src_url $dst_url "
-			."because of $!");
+					"Failed to execute globus-url-copy $src_url $dst_url "
+					."because of $!");
 	}
 	if($ret == -2) {
 		fatal_error($ERROR_GUC_FAILED,
-			"Timed out attempting globus-url-copy $src_url $dst_url ");
+					"Timed out attempting globus-url-copy $src_url $dst_url ");
 	}
 	if($ret != 0) {
 		my $real_ret = $ret / 256;
 		fatal_error($ERROR_GUC_FAILED,
-			"globus-url-copy $src_url $dst_url failed for unknown reason. "
-			."wait status is $ret, return value might be $real_ret");
+					"globus-url-copy $src_url $dst_url failed for unknown reason. "
+					."wait status is $ret, return value might be $real_ret");
 	}
 }
 
@@ -421,22 +443,44 @@ sub start_agent {
 			"Unable to set permissions on temporary file for "
 			."$GRID_AGENT_NAME ($filename)");
 
-	my $fork_result = fork();
-	if(not defined $fork_result) {
+	safe_fork( $last_started_agent_pid );
+	if(not defined $last_started_agent_pid) {
 		fatal_error($ERROR_NO_START_AGENT,
 			"Unable to fork to start $GRID_AGENT_NAME");
 	}
 
-	if($fork_result == 0) { # child
+	if($last_started_agent_pid == 0) { # child
 		exec $filename, @GRID_AGENT_ARGS, "--maxtime=${MAX_LIFE}s";
 		fatal_error($ERROR_NO_START_AGENT, "Failed to exec $filename");
 		#TODO: My parent will muddle on, perhaps kill it?
 	} else { # parent
-		report_info("Started $GRID_AGENT_NAME as $filename, pid $fork_result");
-		$last_started_agent_pid = $fork_result;
+		report_info("Started $GRID_AGENT_NAME as $filename, pid $last_started_agent_pid");
 	}
 }
 
+}
+
+################################################################################
+# Guarantee that the pid of the child process is stored in the parameter
+# passed in before any SIGCHLD is delivered. $_[0] is an alias, so the
+# variable passed in by the caller is modified.
+# We've seen the SIGCHLD handler invoked for the forked child before
+# fork() returns.
+sub safe_fork {
+	my $sigset = POSIX::SigSet->new(SIGCHLD);
+	my $old_sigset = POSIX::SigSet->new;
+
+	unless (defined sigprocmask(SIG_BLOCK, $sigset, $old_sigset)) {
+		die "Could not block SIGCHLD\n";
+	}
+
+	my $result = fork();
+	$_[0] = $result;
+
+	unless (defined sigprocmask(SIG_SETMASK, $old_sigset)) {
+		die "Could not unblock SIGCHLD\n";
+	}
+	return $result;
 }
 
 ################################################################################

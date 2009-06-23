@@ -82,6 +82,15 @@ if [ `uname` = "Darwin" ] ; then
     fi
  fi
 
+# Potential patch for gram client select() bug
+cd $PACKAGE_BUILD_DIR/$SOURCE_DIR/source-trees/gram/protocol/source
+patch -p0 -i $PACKAGE_BUILD_DIR/gram-reregister.patch
+if [ $? -ne 0 ]
+then
+    echo "patch gram-reregister.patch failed"
+    exit 1
+fi
+cd $PACKAGE_BUILD_DIR
 
 # These variables will make Globus link against our OpenSSL external,
 # rather than the system OpenSSL libraries.

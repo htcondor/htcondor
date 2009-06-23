@@ -802,7 +802,7 @@ UWCS_NEGOTIATOR_PRE_JOB_RANK = RemoteOwner =?= UNDEFINED
 ##  and the owner of the idle job has a better priority than the owner
 ##  of the running job.  This expression defaults to true.
 UWCS_PREEMPTION_REQUIREMENTS = ( $(StateTimer) > (1 * $(HOUR)) && \
-	RemoteUserPrio > SubmittorPrio * 1.2 ) || (MY.NiceUser == True)
+	RemoteUserPrio > SubmitterUserPrio * 1.2 ) || (MY.NiceUser == True)
 
 ##  The PREEMPTION_RANK expression is used in a case where preemption
 ##  is the only option and all other negotiation ranks are equal.  For
@@ -1749,6 +1749,12 @@ CRED_MIN_TIME_LEFT		= 120
 ## The GridMonitor allows you to submit many more jobs to a GT2 GRAM server
 ## than is normally possible.
 ENABLE_GRID_MONITOR = TRUE
+
+##
+## When an error occurs with the GridMonitor, how long should the
+## gridmanager wait before trying to submit a new GridMonitor job?
+## The default is 1 hour (3600 seconds).
+#GRID_MONITOR_DISABLE_TIME = 3600
 
 ##
 ## The location of the wrapper for invoking
