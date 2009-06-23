@@ -48,7 +48,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+% See gittrac #215
+\item Changed the check that \Condor{dagman} does for other DAGMans
+running the same DAG if it finds a lock file at startup -- now, if it's
+not sure whether the other DAGMan is alive, it continues, rather than
+exiting.
 
 \end{itemize}
 
