@@ -158,6 +158,21 @@ DIST_FLAG = Distribution
 #	define WANT_CLASSAD_ANALYSIS YES
 #endif
 
+/* For the static builds on linux, extra libraries have to be given on
+ * the link line for ldap, but which ones varies by distro. This ad-hoc
+ * check is ugly, but works.
+ */
+#if HAVE_LDAP_H
+# if defined(IS_LINUX) && defined(HAVE_LIBSASL)
+    LDAP_LIB = -lldap -llber -lsasl
+# elif defined(IS_LINUX) && defined(HAVE_LIBSASL2)
+    LDAP_LIB = -lldap -llber -lsasl2
+# else
+    LDAP_LIB = -lldap
+# endif
+#else
+  LDAP_LIB =
+#endif
 
 /**********************************************************************
 A whole bunch of settings related to things included in the Condor

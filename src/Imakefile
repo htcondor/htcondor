@@ -318,7 +318,7 @@ object_target(Stork,stork)
 #endif
 
 
-#if HAVE_EXT_GLOBUS
+#if HAVE_EXT_GLOBUS && HAVE_LDAP_H
 object_target(GT2_GAHP,gt2_gahp)
 object_target(GT4_GAHP,gt4_gahp)
 object_target(GT42_GAHP,gt42_gahp)
