@@ -865,7 +865,6 @@ Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
 			//
 
 		} else if( job->GetRetries() < job->GetRetryMax() ) {
-			//TEMPTEMP -- remonitor log file here in recovery mode?
 			RestartNode( job, recovery );
 			return;
 
