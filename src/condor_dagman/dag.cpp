@@ -277,9 +277,10 @@ bool Dag::Bootstrap (bool recovery) {
    		jobs.ToBeforeFirst();
    		while( jobs.Next( job ) ) {
 			if ( job->CanSubmit() ) {
-				//TEMPTEMP -- check return value!!
-				job->MonitorLogFile( _condorLogRdr, _storkLogRdr,
-							_nfsLogIsError, recovery );
+				if ( !job->MonitorLogFile( _condorLogRdr, _storkLogRdr,
+							_nfsLogIsError, recovery ) ) {
+					return false;
+				}
 			}
 		}
 #endif // LAZY_LOG_FILES
@@ -310,8 +311,10 @@ bool Dag::Bootstrap (bool recovery) {
 		while( jobs.Next( job ) ) {
 			if( job->GetStatus() == Job::STATUS_POSTRUN ) {
 #if LAZY_LOG_FILES
-				job->MonitorLogFile( _condorLogRdr, _storkLogRdr,
-							_nfsLogIsError, _recovery );
+				if ( !job->MonitorLogFile( _condorLogRdr, _storkLogRdr,
+							_nfsLogIsError, _recovery ) ) {
+					return false;
+				}
 #endif // LAZY_LOG_FILES
 				_postScriptQ->Run( job->_scriptPost );
 			}
@@ -386,7 +389,6 @@ Job * Dag::FindNodeByNodeID (const JobID_t jobID) const {
 
 //-------------------------------------------------------------------------
 //TEMP -- make sure lazy log file code works for Stork logs!
-//TEMP -- make sure lazy log file code works in recovery mode!
 //TEMP -- make sure NFS check still works with lazy log file code
 bool
 Dag::DetectCondorLogGrowth () {
@@ -848,7 +850,7 @@ Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
 
 #if LAZY_LOG_FILES
 	if ( job->_queuedNodeJobProcs == 0 ) {
-		job->UnmonitorLogFile( _condorLogRdr, _storkLogRdr );
+		(void)job->UnmonitorLogFile( _condorLogRdr, _storkLogRdr );
 	}
 #endif // LAZY_LOG_FILES
 
@@ -898,7 +900,7 @@ Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
 			_postRunNodeCount++;
 
 #if LAZY_LOG_FILES
-			job->MonitorLogFile( _condorLogRdr, _storkLogRdr,
+			(void)job->MonitorLogFile( _condorLogRdr, _storkLogRdr,
 						_nfsLogIsError, _recovery );
 #endif // LAZY_LOG_FILES
 			if( !recovery ) {
@@ -920,7 +922,7 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 
 	if( job ) {
 #if LAZY_LOG_FILES
-			job->UnmonitorLogFile( _condorLogRdr, _storkLogRdr );
+			(void)job->UnmonitorLogFile( _condorLogRdr, _storkLogRdr );
 #endif // LAZY_LOG_FILES
 
 			// Note: "|| recovery" below is somewhat of a "quick and dirty"
@@ -1304,7 +1306,6 @@ Dag::FindLogFiles( /* const */ StringList &dagFiles, bool useDagDir )
 bool
 Dag::StartNode( Job *node, bool isRetry )
 {
-debug_printf( DEBUG_QUIET, "DIAG Dag::StartNode(%s)\n", node->GetJobName() );//TEMPTEMP
     ASSERT( node != NULL );
 	if ( !node->CanSubmit() ) {
 		EXCEPT( "Node %s not ready to submit!", node->GetJobName() );
@@ -1988,12 +1989,10 @@ void Dag::WriteRescue (const char * rescue_file, const char * datafile)
 //===========================================================================
 
 //-------------------------------------------------------------------------
-//TEMPTEMP -- maybe we should unmonitor log files here and monitor them in StartNode... -- hell -- do we get here if node fails?  make sure we unmonitor log file when node fails... ah, hell, we don't get here if the node fails...
 void
 Dag::TerminateJob( Job* job, bool recovery )
 {
     ASSERT( job != NULL );
-debug_printf( DEBUG_QUIET, "DIAG Dag::TerminateJob(%s)\n", job->GetJobName() );//TEMPTEMP
 
 	job->TerminateSuccess();
 	if ( job->GetStatus() != Job::STATUS_DONE ) {
@@ -2016,7 +2015,7 @@ debug_printf( DEBUG_QUIET, "DIAG Dag::TerminateJob(%s)\n", job->GetJobName() );/
 			child->IsEmpty( Job::Q_WAITING ) ) {
 			if ( recovery ) {
 #if LAZY_LOG_FILES
-				child->MonitorLogFile( _condorLogRdr, _storkLogRdr,
+				(void)child->MonitorLogFile( _condorLogRdr, _storkLogRdr,
 							_nfsLogIsError, recovery );
 #endif // LAZY_LOG_FILES
 			} else {
@@ -2053,12 +2052,9 @@ PrintEvent( debug_level_t level, const ULogEvent* event, Job* node )
 }
 
 //-------------------------------------------------------------------------
-//TEMPTEMP -- when is this called?  do we need to monitor the log file?
-//TEMPTEMP - yeah, probably monitor the log file in recovery mode
 void
 Dag::RestartNode( Job *node, bool recovery )
 {
-debug_printf( DEBUG_QUIET, "DIAG Dag::RestartNode(%s)\n", node->GetJobName() );//TEMPTEMP
     ASSERT( node != NULL );
 	if ( node->_Status != Job::STATUS_ERROR ) {
 		EXCEPT( "Node %s is not in ERROR state", node->GetJobName() );
@@ -2094,8 +2090,8 @@ debug_printf( DEBUG_QUIET, "DIAG Dag::RestartNode(%s)\n", node->GetJobName() );/
 		// gets done during "normal" running.)
 		node->_CondorID = _defaultCondorId;
 #if LAZY_LOG_FILES
-		node->MonitorLogFile( _condorLogRdr, _storkLogRdr, _nfsLogIsError,
-					recovery );
+		(void)node->MonitorLogFile( _condorLogRdr, _storkLogRdr,
+					_nfsLogIsError, recovery );
 #endif // LAZY_LOG_FILES
 	}
 }
@@ -3041,8 +3037,10 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 	}
 
 #if LAZY_LOG_FILES
-	node->MonitorLogFile( _condorLogRdr, _storkLogRdr, _nfsLogIsError,
-				_recovery );
+	if ( !node->MonitorLogFile( _condorLogRdr, _storkLogRdr, _nfsLogIsError,
+				_recovery ) ) {
+		return SUBMIT_RESULT_NO_SUBMIT;
+	}
 #endif // LAZY_LOG_FILES
 
 		// Note: we're checking for a missing log file spec here instead of
@@ -3139,7 +3137,7 @@ Dag::ProcessFailedSubmit( Job *node, int max_submit_attempts )
 	_nextSubmitDelay *= 2;
 
 #if LAZY_LOG_FILES
-	node->UnmonitorLogFile( _condorLogRdr, _storkLogRdr );
+	(void)node->UnmonitorLogFile( _condorLogRdr, _storkLogRdr );
 #endif // LAZY_LOG_FILES
 
 	if ( node->_submitTries >= max_submit_attempts ) {
@@ -3170,7 +3168,7 @@ Dag::ProcessFailedSubmit( Job *node, int max_submit_attempts )
 			_postRunNodeCount++;
 			node->_scriptPost->_retValJob = DAG_ERROR_CONDOR_SUBMIT_FAILED;
 #if LAZY_LOG_FILES
-			node->MonitorLogFile( _condorLogRdr, _storkLogRdr,
+			(void)node->MonitorLogFile( _condorLogRdr, _storkLogRdr,
 						_nfsLogIsError, _recovery );
 #endif // LAZY_LOG_FILES
 			_postScriptQ->Run( node->_scriptPost );

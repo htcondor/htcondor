@@ -804,8 +804,9 @@ Job::MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 			//TEMP -- should truncating the file depend on dagman.deleteOldLogs?
 		result = logReader.monitorLogFile( _logFile, !recovery, errstack );
 		if ( !result ) {
-			errstack.pushf( "DAGMan::Job", 0/*TEMP*/, "ERROR: Unable to "
-						"monitor log file for node %s", GetJobName() );
+			errstack.pushf( "DAGMan::Job", DAGMAN_ERR_LOG_FILE,
+						"ERROR: Unable to monitor log file for node %s",
+						GetJobName() );
 			debug_printf( DEBUG_QUIET, "%s\n", errstack.getFullText() );
 		}
 	}
@@ -840,8 +841,9 @@ Job::UnmonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 	CondorError errstack;
 	bool result = logReader.unmonitorLogFile( _logFile, errstack );
 	if ( !result ) {
-		errstack.pushf( "DAGMan::Job", 0/*TEMP*/, "ERROR: Unable to "
-					"unmonitor log " "file for node %s", GetJobName() );
+		errstack.pushf( "DAGMan::Job", DAGMAN_ERR_LOG_FILE,
+					"ERROR: Unable to unmonitor log " "file for node %s",
+					GetJobName() );
 		debug_printf( DEBUG_QUIET, "%s\n", errstack.getFullText() );
 	}
 

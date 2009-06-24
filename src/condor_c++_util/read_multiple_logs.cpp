@@ -367,15 +367,15 @@ MultiLogFiles::InitializeFile(const char *filename, bool truncate,
 	if ( truncate ) flags |= O_TRUNC;
 	int fd = safe_create_keep_if_exists( filename, flags );
 	if ( fd < 0 ) {
-		errstack.pushf("MultiLogFiles", 0/*TEMP*/, "Error (%d, %s) opening "
-					"file %s for creation or truncation", errno,
-					strerror( errno ), filename );
+		errstack.pushf("MultiLogFiles", UTIL_ERR_OPEN_FILE,
+					"Error (%d, %s) opening file %s for creation "
+					"or truncation", errno, strerror( errno ), filename );
 		result = false;
 	} else {
 		if ( close( fd ) != 0 ) {
-			errstack.pushf("MultiLogFiles", 0/*TEMP*/, "Error (%d, %s) "
-						"closing file %s for creation or truncation",
-						errno, strerror( errno ), filename );
+			errstack.pushf("MultiLogFiles", UTIL_ERR_CLOSE_FILE,
+						"Error (%d, %s) closing file %s for creation "
+						"or truncation", errno, strerror( errno ), filename );
 			result = false;
 		}
 	}
@@ -725,7 +725,7 @@ MultiLogFiles::makePathAbsolute(MyString &filename, CondorError &errstack)
 		if ( getcwd(tmpCwd, PATH_MAX) ) {
 			currentDir = tmpCwd;
 		} else {
-			errstack.pushf( "MultiLogFiles", 0/*TEMP*/,
+			errstack.pushf( "MultiLogFiles", UTIL_ERR_GET_CWD,
 						"ERROR: getcwd() failed with errno %d (%s) at %s:%d\n",
 						errno, strerror(errno), __FILE__, __LINE__);
 			return false;
@@ -1377,7 +1377,7 @@ GetInode( const MyString &file, StatStructInode &inode,
 	if ( access( file.Value(), F_OK ) != 0 ) {
 		if ( !MultiLogFiles::InitializeFile( file.Value(),
 					false, errstack ) ) {
-			errstack.pushf( "ReadMultipleUserLogs", 0/*TEMP*/,
+			errstack.pushf( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
 						"Error initializing log file %s", file.Value() );
 			return false;
 		}
@@ -1385,7 +1385,7 @@ GetInode( const MyString &file, StatStructInode &inode,
 
 	StatWrapper swrap;
 	if ( swrap.Stat( file.Value() ) != 0 ) {
-		errstack.pushf( "ReadMultipleUserLogs", 0/*TEMP*/,
+		errstack.pushf( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
 					"Error getting inode for log file %s", file.Value() );
 		return false;
 	}
@@ -1410,7 +1410,7 @@ ReadMultipleUserLogs::monitorLogFile( MyString logfile,
 		// file getting referred to by different names (that will cause
 		// errors).
 	if ( !MultiLogFiles::makePathAbsolute( logfile, errstack ) ) {
-		errstack.push( "ReadMultipleUserLogs", 0/*TEMP*/,
+		errstack.push( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
 					"Error making log file path absolute in "
 					"monitorLogFile()\n" );
 		return false;
@@ -1418,7 +1418,7 @@ ReadMultipleUserLogs::monitorLogFile( MyString logfile,
 
 	StatStructInode inode;
 	if ( !GetInode( logfile, inode, errstack ) ) {
-		errstack.push( "ReadMultipleUserLogs", 0/*TEMP*/,
+		errstack.push( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
 					"Error getting inode in monitorLogFile()" );
 		return false;
 	}
@@ -1438,7 +1438,7 @@ ReadMultipleUserLogs::monitorLogFile( MyString logfile,
 			// exist, and be truncated if necessary.
 		if ( !MultiLogFiles::InitializeFile( logfile.Value(),
 					truncateIfFirst, errstack ) ) {
-			errstack.pushf( "ReadMultipleUserLogs", 0/*TEMP*/,
+			errstack.pushf( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
 						"Error initializing log file %s", logfile.Value() );
 			return false;
 		}
@@ -1448,7 +1448,7 @@ ReadMultipleUserLogs::monitorLogFile( MyString logfile,
 		dprintf( D_LOG_FILES, "ReadMultipleUserLogs: created LogFileMonitor "
 					"object for log file %s\n", logfile.Value() );
 		if ( allLogFiles.insert( inode, monitor ) != 0 ) {
-			errstack.pushf( "ReadMultipleUserLogs", 0/*TEMP*/,
+			errstack.pushf( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
 						"Error inserting %s into allLogFiles",
 						logfile.Value() );
 			return false;
@@ -1476,7 +1476,7 @@ ReadMultipleUserLogs::monitorLogFile( MyString logfile,
 		}
 
 		if ( activeLogFiles.insert( inode, monitor ) != 0 ) {
-			errstack.pushf( "ReadMultipleUserLogs", 0/*TEMP*/,
+			errstack.pushf( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
 						"Error inserting %s (%lu) into activeLogFiles",
 						logfile.Value(), inode );
 			return false;
@@ -1508,7 +1508,7 @@ ReadMultipleUserLogs::unmonitorLogFile( MyString logfile,
 		// file getting referred to by different names (that will cause
 		// errors).
 	if ( !MultiLogFiles::makePathAbsolute( logfile, errstack ) ) {
-		errstack.push( "ReadMultipleUserLogs", 0/*TEMP*/,
+		errstack.push( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
 					"Error making log file path absolute in "
 					"monitorLogFile()\n" );
 		return false;
@@ -1516,7 +1516,7 @@ ReadMultipleUserLogs::unmonitorLogFile( MyString logfile,
 
 	StatStructInode inode;
 	if ( !GetInode( logfile, inode, errstack ) ) {
-		errstack.push( "ReadMultipleUserLogs", 0/*TEMP*/,
+		errstack.push( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
 					"Error getting inode in unmonitorLogFile()" );
 		return false;
 	}
@@ -1539,15 +1539,19 @@ ReadMultipleUserLogs::unmonitorLogFile( MyString logfile,
 
 			if ( !monitor->state ) {
 				monitor->state = new ReadUserLog::FileState();
-				//TEMP -- check return value
-				ReadUserLog::InitFileState( *(monitor->state) );
+				if ( !ReadUserLog::InitFileState( *(monitor->state) ) ) {
+					errstack.pushf( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
+								"Unable to initialize ReadUserLog::FileState "
+								"object for log file %s", logfile.Value() );
+					return false;
+				}
 			}
 
 			if ( !monitor->readUserLog->GetFileState( *(monitor->state) ) ) {
-				errstack.pushf( "ReadMultipleUserLogs", 0/*TEMP*/,
+				errstack.pushf( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
 							"Error getting state for log file %s",
 							logfile.Value() );
-				return false;//TEMP?
+				return false;
 			}
 
 			delete monitor->readUserLog;
@@ -1557,7 +1561,7 @@ ReadMultipleUserLogs::unmonitorLogFile( MyString logfile,
 				// Now we remove this file from the "active" list, so
 				// we don't check it the next time we get an event.
 			if ( activeLogFiles.remove( inode ) != 0 ) {
-				errstack.pushf( "ReadMultipleUserLogs", 0/*TEMP*/,
+				errstack.pushf( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
 							"Error removing %s (%lu) from activeLogFiles",
 							logfile.Value(), inode );
 				return false;
@@ -1569,7 +1573,7 @@ ReadMultipleUserLogs::unmonitorLogFile( MyString logfile,
 		}
 
 	} else {
-		errstack.pushf( "ReadMultipleUserLogs", 0/*TEMP*/,
+		errstack.pushf( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
 					"Didn't find LogFileMonitor object for log "
 					"file %s (%lu)!\n", logfile.Value(), inode );
 		return false;
