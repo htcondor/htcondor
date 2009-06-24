@@ -366,7 +366,9 @@ FileLock::obtain( LOCK_TYPE t )
 		status = lock_file( m_fd, t, m_blocking );
 		time_t after = time(NULL);
 		if ( (after - before) > 5 ) {
-			dprintf( D_FULLDEBUG, "FileLock::obtain(%d): lock_file() took %d seconds\n",t);
+			dprintf( D_FULLDEBUG,
+					 "FileLock::obtain(%d): lock_file() took %ld seconds\n",
+					 t, (after-before) );
 		}
 		
 		if (m_fp)
