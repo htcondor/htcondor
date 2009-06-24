@@ -1,5 +1,3 @@
-//TEMP -- make sure this still works!!!
-//TEMP -- look for any other places that include the multi-log-reader code
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -65,8 +63,9 @@ int main(int argc, char **argv)
 	ReadMultipleUserLogs	ru(logFiles);
 #endif // !LAZY_LOG_FILES
 
-	int logCount = ru.getInitializedLogCount();
 	bool logsMissing = false;
+#if !LAZY_LOG_FILES
+	int logCount = ru.getInitializedLogCount();
 	if ( logCount == 0 ) {
 		fprintf( stderr, "Error: unable to initialize any log files\n"
 				"  Are log files read-only? (log reader needs write "
@@ -79,6 +78,7 @@ int main(int argc, char **argv)
 				"permission)\n" );
 		logsMissing = true;
 	}
+#endif // !LAZY_LOG_FILES
 
 	CheckEvents		ce;
 	int totalSubmitted = 0;
@@ -155,6 +155,19 @@ int main(int argc, char **argv)
 			break;
         }
 	}
+
+#if LAZY_LOG_FILES
+	logFiles.rewind();
+	while ( (filename = logFiles.next()) ) {
+		MyString filestring( filename );
+		CondorError errstack;
+		if ( !ru.unmonitorLogFile( filestring, errstack ) ) {
+			fprintf( stderr, "Error unmonitoring log file %s: %s\n", filename,
+						errstack.getFullText() );
+			result = 1;
+		}
+	}
+#endif // LAZY_LOG_FILES
 
 	MyString errorMsg;
 	CheckEvents::check_event_result_t checkAllResult =

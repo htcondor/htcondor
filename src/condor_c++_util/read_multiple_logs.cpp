@@ -295,7 +295,7 @@ ReadMultipleUserLogs::detectLogGrowth()
 
 ///////////////////////////////////////////////////////////////////////////////
 
-//TEMP -- this is used by condor_check_userlogs -- need to see what the heck it's doing, since this won't work in lazy mode
+#if !LAZY_LOG_FILES
 int
 ReadMultipleUserLogs::getInitializedLogCount() const
 {
@@ -303,17 +303,14 @@ ReadMultipleUserLogs::getInitializedLogCount() const
 
 	int result = 0;
 
-#if LAZY_LOG_FILES
-	//TEMP -- figure out what to do here
-#else
 	for ( int i = 0; i < iLogFileCount; ++i ) {
 		LogFileEntry &log = pLogFileEntries[i];
 		if ( log.isInitialized ) ++result;
 	}
-#endif // !LAZY_LOG_FILES
 
 	return result;
 }
+#endif // !LAZY_LOG_FILES
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -464,7 +461,6 @@ ReadMultipleUserLogs::LogGrew(LogFileEntry &log)
 				 log.strFilename.Value(), strerror( errno ) );
 		return false;
 	}
-	//TEMP -- make sure this is still right with Nick's latest changes
 	bool grew = ( fs != ReadUserLog::LOG_STATUS_NOCHANGE );
     dprintf( D_FULLDEBUG, "ReadMultipleUserLogs: %s\n",
 			 grew ? "log GREW!" : "no log growth..." );
@@ -491,7 +487,6 @@ ReadMultipleUserLogs::LogGrew( LogFileMonitor *monitor )
 				 monitor->logFile.Value(), strerror( errno ) );
 		return false;
 	}
-	//TEMP -- make sure this is still right with Nick's latest changes
 	bool grew = ( fs != ReadUserLog::LOG_STATUS_NOCHANGE );
     dprintf( D_FULLDEBUG, "ReadMultipleUserLogs: %s\n",
 			 grew ? "log GREW!" : "no log growth..." );

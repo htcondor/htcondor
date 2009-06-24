@@ -238,10 +238,12 @@ public:
 		 */
 	bool detectLogGrowth();
 
+#if !LAZY_LOG_FILES
 		/** Returns the number of user logs that have been successfully
 		 	initialized.
 		 */
 	int getInitializedLogCount() const;
+#endif // !LAZY_LOG_FILES
 
 		/** Returns the total number of user logs this object "knows
 			about".
