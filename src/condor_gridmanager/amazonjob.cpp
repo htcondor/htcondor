@@ -148,7 +148,7 @@ dprintf( D_ALWAYS, "================================>  AmazonJob::AmazonJob 1 \n
 	MyString error_string = "";
 	char *gahp_path = NULL;
 	char *gahp_log = NULL;
-	int gahp_worker_cnt = NULL;
+	int gahp_worker_cnt = 0;
 	char *gahp_debug = NULL;
 	ArgList args;
 	

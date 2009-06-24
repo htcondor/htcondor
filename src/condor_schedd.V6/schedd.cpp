@@ -10611,9 +10611,6 @@ Scheduler::Init()
 	m_xfer_queue_mgr.InitAndReconfig();
 	m_xfer_queue_mgr.GetContactInfo(MyShadowSockName,m_xfer_queue_contact);
 
-	int max_saved_rotations = param_integer( "MAX_JOB_QUEUE_LOG_ROTATIONS", DEFAULT_MAX_JOB_QUEUE_LOG_ROTATIONS );
-	SetMaxHistoricalLogs(max_saved_rotations);
-
 		/* Code to handle GRIDMANAGER_SELECTION_EXPR.  If set, we need to (a) restart
 		 * running gridmanagers if the setting changed value, and (b) parse the
 		 * expression and stash the parsed form (so we don't reparse over and over).
@@ -10912,6 +10909,10 @@ void Scheduler::reconfig() {
 
 	timeout();
 
+		// The SetMaxHistoricalLogs is initialized in main_init(), we just need to check here
+		// for changes.  
+	int max_saved_rotations = param_integer( "MAX_JOB_QUEUE_LOG_ROTATIONS", DEFAULT_MAX_JOB_QUEUE_LOG_ROTATIONS );
+	SetMaxHistoricalLogs(max_saved_rotations);
 }
 
 // NOTE: this is likely unreachable now, and may be removed

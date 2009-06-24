@@ -355,7 +355,6 @@ void BaseResource::RequestPing( BaseJob *job )
 
 bool BaseResource::RequestSubmit( BaseJob *job )
 {
-	bool already_allowed = false;
 	BaseJob *jobptr;
 
 	submitsWanted.Rewind();
@@ -368,23 +367,20 @@ bool BaseResource::RequestSubmit( BaseJob *job )
 	submitsAllowed.Rewind();
 	while ( submitsAllowed.Next( jobptr ) ) {
 		if ( jobptr == job ) {
-			already_allowed = true;
-			break;
+			return true;
 		}
 	}
 
-	if ( already_allowed == false ) {
-		if ( submitsAllowed.Length() < jobLimit &&
-			 submitsWanted.Length() > 0 ) {
-			EXCEPT("In BaseResource for %s, SubmitsWanted is not empty and SubmitsAllowed is not full\n",resourceName);
-		}
-		if ( submitsAllowed.Length() < jobLimit ) {
-			submitsAllowed.Append( job );
-			// proceed to see if submitLimit applies
-		} else {
-			submitsWanted.Append( job );
-			return false;
-		}
+	if ( submitsAllowed.Length() < jobLimit &&
+		 submitsWanted.Length() > 0 ) {
+		EXCEPT("In BaseResource for %s, SubmitsWanted is not empty and SubmitsAllowed is not full\n",resourceName);
+	}
+	if ( submitsAllowed.Length() < jobLimit ) {
+		submitsAllowed.Append( job );
+		return true;
+	} else {
+		submitsWanted.Append( job );
+		return false;
 	}
 }
 

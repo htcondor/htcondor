@@ -66,6 +66,13 @@ class Dagman {
 		// interval
     int max_submits_per_interval;
 
+		// How long dagman waits before checking the log files to see if
+		// some events happened. With very short running jobs in a linear
+		// dag, dagman spends a lot of its time waiting just to see that the
+		// job finished so it can submit the next one. This allows us to
+		// configure that to be much faster with a minimum of 1 second.
+	int m_user_log_scan_interval;
+
 		// "Primary" DAG file -- if we have multiple DAG files this is
 		// the first one.  The lock file name, rescue DAG name, etc., 
 		// are based on this name.
