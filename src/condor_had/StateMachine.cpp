@@ -358,6 +358,9 @@ HADStateMachine::initializeClassAd(void)
 	// publishing had's real index in list of hads
 	m_classAd.Assign( ATTR_HAD_INDEX, m_allHadIps.number() - 1 - m_selfId );
 
+	// publish my "self ID" 
+	m_classAd.Assign( ATTR_HAD_SELF_ID, m_selfId );
+
 	// publish all of the DC-specific attributes, SUBSYS_ATTRS, etc.
 	daemonCore->publish( &m_classAd );
 }
@@ -1005,7 +1008,7 @@ HADStateMachine::commandHandlerHad(int cmd, Stream *strm)
     }
 
     int new_id;
-	if ( !ad.LookupInteger( ATTR_HAD_INDEX, new_id ) ) {
+	if ( !ad.LookupInteger( ATTR_HAD_SELF_ID, new_id ) ) {
 		dprintf( D_ALWAYS, "commandHandler ERROR: ID not in ad received\n" );
 		return FALSE;
     }
