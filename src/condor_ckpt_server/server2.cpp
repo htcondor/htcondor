@@ -32,6 +32,9 @@
 #include "condor_netdb.h"
 #include "condor_fix_iostream.h"
 #include "condor_fix_fstream.h"
+#include "directory.h"
+#include "basename.h"
+#include "stat_info.h"
 
 #include "server2.h"
 #include "gen_lib.h"
@@ -69,6 +72,7 @@ int ValidateNoPathComponents(char *path);
 
 Server::Server()
 {
+	ckpt_server_dir = NULL;
 	more = 1;
 	req_ID = 0;
 		// We can't initialize this until Server::Init(), after
@@ -94,6 +98,10 @@ Server::Server()
 	reclaim_interval = 0;
 	replication_level = 0;
 	check_parent_interval = 0;
+
+	next_time_to_remove_stale_ckpt_files = 0;
+	remove_stale_ckptfile_interval = 0;
+	stale_ckptfile_age_cutoff = 0;
 }
 
 
@@ -107,13 +115,17 @@ Server::~Server()
 		close(service_req_sd);
 	if (replicate_req_sd >=0)
 		close(replicate_req_sd);
+	if (ckpt_server_dir != NULL) {
+		free(ckpt_server_dir);
+		ckpt_server_dir = NULL;
+	}
 	delete CkptClassAds;
 }
 
 
 void Server::Init()
 {
-	char		*ckpt_server_dir, *collection_log;
+	char		*collection_log;
 	char        log_msg[256];
 	char        hostname[100];
 	int         buf_size;
@@ -154,7 +166,6 @@ void Server::Init()
 		}
 		dprintf(D_ALWAYS, "CKPT_SERVER running in directory %s\n", 
 				ckpt_server_dir);
-		free( ckpt_server_dir );
 	}
 
 	replication_level = param_integer( "CKPT_SERVER_REPLICATION_LEVEL",0 );
@@ -169,6 +180,26 @@ void Server::Init()
 		delete CkptClassAds;
 		CkptClassAds = NULL;
 	}
+
+	// How long between periods of checking ckpt files for staleness and
+	// removing them.
+	// Defaults to never, since we don't want to change current behavior.
+	// This is really to be used A) in general, cause the ckpt server sucks,
+	// and B) with the new timeout code in the server interface. If suppose
+	// the checkpoint server goes down and the schedd can't remove the ckpt
+	// files, they are simply leaked into the checkpoint server, forever to
+	// consume space. This can prevent that. A good default to tell people
+	// for this would be 86400, or one day in seconds.
+	remove_stale_ckptfile_interval =
+		param_integer( "CKPT_SERVER_REMOVE_STALE_CKPT_INTERVAL", 0, 0, INT_MAX);
+
+	// How long a ckptfile's a_time hasn't been updated to be considered stale
+	// Defaults to 60 days.
+	stale_ckptfile_age_cutoff =
+		param_integer("CKPT_SERVER_STALE_CKPT_AGE_CUTOFF", 5184000, 1, INT_MAX);
+
+	// This has the effect of checking for stale stuff right away on start up 
+	next_time_to_remove_stale_ckpt_files = 0;
 
 	clean_interval = param_integer( "CKPT_SERVER_CLEAN_INTERVAL",CLEAN_INTERVAL );
 	check_parent_interval = param_integer( "CKPT_SERVER_CHECK_PARENT_INTERVAL",120);
@@ -360,6 +391,7 @@ void Server::Execute()
 	time_t         last_reclaim_time;
 	time_t		   last_clean_time;
 	time_t         last_check_parent_time;
+	time_t         last_remove_stale_time;
 	struct timeval poll;
 	int            ppid;
 	
@@ -378,9 +410,18 @@ void Server::Execute()
 	}
     xfer_summary.time_out(current_time, canon_name);
 
+	// determine if I need to clean up any files upon start up. This'll.
+	// ensure I don't get into a "start, leak, crash" problem which will
+	// consume the disk.
+	RemoveStaleCheckpointFiles(ckpt_server_dir);
+	// take into account that I grab the time AFTER I removed the state files
+	// this ensures I don't count the time it took to remove them.
+	last_remove_stale_time = time(NULL);
+
 	while (more) {                          // Continues until SIGUSR2 signal
 		poll.tv_sec = reclaim_interval - ((unsigned int)current_time -
 										  (unsigned int)last_reclaim_time);
+
 		poll.tv_usec = 0;
 
 		if( check_parent_interval > 0 ) {
@@ -393,6 +434,19 @@ void Server::Execute()
 			{
 				poll.tv_sec = check_parent_interval;
 			}
+		}
+
+		// if for whatever reason the user wants a very fast polling time to
+		// check for stale checkpoints, then allow it. This isn't exactly
+		// correct in that occasionally an event could be miscalculated because
+		// I'm not being more careful about the time left up until the next
+		// remove stale cycle. But this code is a hack, we don't have real
+		// timers, and I need to get it done. This should be "good enough" for
+		// now.
+		if ((remove_stale_ckptfile_interval > 0) &&
+			(remove_stale_ckptfile_interval < poll.tv_sec)) 
+		{
+			poll.tv_sec = remove_stale_ckptfile_interval;
 		}
 
 		errno = 0;
@@ -471,6 +525,15 @@ void Server::Execute()
 				}
 			}
 			last_check_parent_time = current_time;
+		}
+
+		// and clean up any stale stuff, but only as fast as required in case
+		// of a busy server.
+		if (remove_stale_ckptfile_interval > 0 &&
+			current_time-last_remove_stale_time>=remove_stale_ckptfile_interval)
+		{
+			RemoveStaleCheckpointFiles(ckpt_server_dir);
+			last_remove_stale_time = time(NULL);
 		}
     }
 	free( canon_name );
@@ -2182,6 +2245,129 @@ void Server::ChildComplete()
 	}
 }
 
+void Server::RemoveStaleCheckpointFiles(const char *directory)
+{
+	time_t now;
+	MyString str;
+
+	now = time(NULL);
+
+	if (directory == NULL) {
+		// nothing to do
+		return;
+	}
+
+	// Here we check to see if we need to clean stale ckpts out.
+	if ((remove_stale_ckptfile_interval == 0) ||
+		(now < next_time_to_remove_stale_ckpt_files))
+	{
+		// nothing to do....
+		return;
+	}
+
+	dprintf(D_ALWAYS, "----------------------------------------------------\n");
+	Log("Begin removing stale checkpoint files.");
+
+	StatInfo st(directory);
+
+	// do the dirty work.
+	RemoveStaleCheckpointFilesRecurse(directory,
+		now - stale_ckptfile_age_cutoff, st.GetAccessTime());
+
+	Log("Done removing stale checkpoint files.");
+
+	// set up the next time that I need to remove stale checkpoints 
+	// do this _after_ removing them so I don't count the removal
+	// time towards the interval to the next time I do it.
+	next_time_to_remove_stale_ckpt_files =
+		time(NULL) + remove_stale_ckptfile_interval;
+
+	str.sprintf("Next stale checkpoint file check in %lu seconds.",
+		(unsigned long)remove_stale_ckptfile_interval);
+
+	Log(str.Value());
+}
+
+void Server::RemoveStaleCheckpointFilesRecurse(const char *path, time_t cutoff_time, time_t a_time)
+{
+	MyString str;
+	const char *file = NULL;
+	const char *base = NULL;
+
+	if (path == NULL) {
+		// in case of this, do nothing and return.
+		return;
+	}
+
+	// We're going to do a small safety measure here and if the start of the
+	// path isn't the ckpt_server_dir, we immediately stop since we could have
+	// escaped that directory somehow and could be deleting who knows what
+	// as root. Not Cool.
+	if (
+		// path is shorter than ckpt_server_dir
+		(strlen(path) < strlen(ckpt_server_dir)) || 
+
+		// OR if path isn't a subdirectory of ckpt_server_dir
+		strncmp(path, ckpt_server_dir, strlen(ckpt_server_dir)) != MATCH ||
+
+		// OR if path is tricksy
+		((strlen(path) > strlen(ckpt_server_dir)) && 
+			path[strlen(ckpt_server_dir)] != '/'))
+	{
+		str.sprintf(
+			"WARNING: "
+			"Server::RemoveStaleCheckpointFilesRecurse(): "
+			"path name %s appears to be outside of the ckpt_server_dir of %s. "
+			"Not examining it.", path, ckpt_server_dir);
+		Log(str.Value());
+
+		return;
+	}
+
+	// if a directory, map myself over it 
+	if (IsDirectory(path)) {
+		Directory files(path);
+
+		// Iterate over the directory
+		while(files.Next()) {
+			file = files.GetFullPath();
+			RemoveStaleCheckpointFilesRecurse(file, cutoff_time,
+				files.GetAccessTime());
+		}
+
+		// all done with the directory.
+		return;
+	}
+
+	// otherwise is a file so check to see if we need to remove the file
+
+	// skip if any file, anywhere, named TransferLog is found
+	base = condor_basename(path);
+	if (strcmp(base, "TransferLog") == MATCH) {
+		// do nothing, don't even log it since it isn't worth it.
+		return;
+	}
+
+	/* everything else should be checked, though */
+
+	if (a_time <= cutoff_time) {
+		// Another safety rule is that I'll only remove files that are not
+		// symlinks and have "cluster" as a prefix. This should describe
+		// the entire set of files I need to worry about. Both checkpoints
+		// and temporary checkpoints that didn't get renamed for whatever
+		// reason.
+		base = condor_basename(path);
+		if (!IsSymlink(path) && 
+			strncmp(base, "cluster", strlen("cluster")) == MATCH)
+		{
+			dprintf(D_ALWAYS, "Removing stale file: %s\n", path);
+			if (unlink(path) < 0) {
+				dprintf(D_ALWAYS, "Failed to unlink %s because %d(%s)\n",
+					path, errno, strerror(errno));
+			}
+		}
+	}
+}
 
 void Server::NoMore(char const *reason)
 {
