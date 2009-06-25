@@ -61,6 +61,12 @@
 #define GlobusGahps
 #endif
 
+#if HAVE_EXT_GLOBUS && HAVE_LDAP_H
+#define NordugridGahp NORDUGRID_GAHP
+#else
+#define NordugridGahp
+#endif
+
 #define Programs \
 		procapi sysapi unit_tests ckpt_server \
 		master.V6 negotiator.V6 schedd.V6 prio q.V6 rm.V6 \
@@ -70,7 +76,7 @@
 		CreddProgs StorkProgs LeaseManagerProgs \
 		TTProgs DeploymentTools \
 		eventd.V2 transferd procd privsep vm-gahp EC2 \
-		JobRouterProgs GlobusGahps startd_factory \
+		JobRouterProgs GlobusGahps NordugridGahp startd_factory \
 		power
 
 #define Libraries \
