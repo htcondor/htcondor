@@ -5323,19 +5323,22 @@ SYSTEM_PERIODIC_REMOVE = \
 
 \label{param:GridManagerSelectionExpr}
 \item[\Macro{GRIDMANAGER\_SELECTION\_EXPR}]
-	By default, the schedd will start a new gridmanager process for each
-	discreet user that submits a grid universe job (i.e. for each discreet
-	value of job attribute \emph{Owner} across all grid universe job
-	ClassAds).  For additional isolation and/or scalability of grid job
-	management, additional gridmanager processes can be spawned to share the
-	load; to do so, set this configuration parameter to equal a classad
-	expression.  The result of the evaluation of this expression in the
-	context of a grid universe job classad will be treated as a hash value.
-	All jobs that hash to the same value via this expression will go to the
-	same gridmanager. For instance, to spawn a separate gridmanager process to
-	manage each unique remote site, put the following into the config file:
+  By default, the \Condor{schedd} daemon will start a new 
+  \Condor{gridmanager} process for each
+  discreet user that submits a grid universe job,
+  that is, for each discreet value of job attribute \Attr{Owner} across
+  all grid universe job ClassAds.
+  For additional isolation and/or scalability of grid job management,
+  additional \Condor{gridmanager} processes can be spawned to share the load;
+  to do so, set this variable to be a ClassAd expression.
+  The result of the evaluation of this expression in the
+  context of a grid universe job ClassAd will be treated as a hash value.
+  All jobs that hash to the same value via this expression will go to the
+  same \Condor{gridmanager}.
+  For instance, to spawn a separate \Condor{gridmanager} process to
+  manage each unique remote site, the following expression works:
 \begin{verbatim}
-        GRIDMANAGER_SELECTION_EXPR = GridResource 
+  GRIDMANAGER_SELECTION_EXPR = GridResource 
 \end{verbatim}
 
 \end{description}
@@ -7312,8 +7315,9 @@ Setting these is explained in section~\ref{sec:DAG-configuration}.
 
 \label{param:DAGManUserLogScanInterval}
 \item[\Macro{DAGMAN\_USER\_LOG\_SCAN\_INTERVAL}]
-  Time in integer seconds that \Condor{dagman} waits between checking
-  job log files for status updates. Setting this lower increases the CPU
+  An integer value representing the number of seconds that 
+  \Condor{dagman} waits between checking job log files for status updates.
+  Setting this value lower than the default increases the CPU
   time \Condor{dagman} spends checking files, perhaps fruitlessly, but
   increases responsiveness to nodes completing or failing.
   The legal range of values is 1 to INT\_MAX.
