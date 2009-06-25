@@ -5326,13 +5326,13 @@ SYSTEM_PERIODIC_REMOVE = \
 	By default, the schedd will start a new gridmanager process for each
 	discreet user that submits a grid universe job (i.e. for each discreet
 	value of job attribute \emph{Owner} across all grid universe job
-	classads).  For additional isolation and/or scalability of grid job
+	ClassAds).  For additional isolation and/or scalability of grid job
 	management, additional gridmanager processes can be spawned to share the
 	load; to do so, set this configuration parameter to equal a classad
 	expression.  The result of the evaluation of this expression in the
 	context of a grid universe job classad will be treated as a hash value.
 	All jobs that hash to the same value via this expression will go to the
-	same gridmanager. For instance, to spawn a seperate gridmanager process to
+	same gridmanager. For instance, to spawn a separate gridmanager process to
 	manage each unique remote site, put the following into the config file:
 \begin{verbatim}
         GRIDMANAGER_SELECTION_EXPR = GridResource 
@@ -7201,21 +7201,20 @@ This allows multiple instances of the
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:GridMonitor-Config-File-Entries}grid\_monitor
+\subsection{\label{sec:GridMonitor-Config-File-Entries}Grid Monitor
 Configuration File Entries}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\index{configuration!grid\_monitor configuration variables}
-These macros affect the \Prog{grid\_monitor}.
+\index{configuration!Grid Monitor configuration variables}
+These macros affect the Grid Monitor.
 \begin{description}
 
 \label{param:EnableGridMonitor}
 \item[\Macro{ENABLE\_GRID\_MONITOR}]
-  When set to \Expr{True} enables the \Prog{grid\_monitor} tool.  The
-  \Prog{grid\_monitor} tool is used to reduce load on Globus gatekeepers.
-  This parameter only affects 
-  grid jobs of type \SubmitCmd{gt2}.
-  \MacroNI{GRID\_MONITOR} must also be correctly configured.
+  A boolean value that when \Expr{True} enables the Grid Monitor.
+  The Grid Monitor is used to reduce load on Globus gatekeepers.
+  This parameter only affects grid jobs of type \SubmitCmd{gt2}.
+  The variable \MacroNI{GRID\_MONITOR} must also be correctly configured.
   Defaults to \Expr{False}.
   See section~\ref{sec:Condor-G-GridMonitor} on
   page~\pageref{sec:Condor-G-GridMonitor}
@@ -7223,9 +7222,9 @@ These macros affect the \Prog{grid\_monitor}.
 
 \label{param:GridMonitor}
 \item[\Macro{GRID\_MONITOR}]
-  The complete path name of the \Prog{grid\_monitor} tool used to reduce load on
-  Globus gatekeepers.  This parameter only affects 
-  grid jobs of type \SubmitCmd{gt2}.
+  The complete path name of the \Prog{grid\_monitor.sh} tool used to reduce
+  the load on Globus gatekeepers.
+  This parameter only affects grid jobs of type \SubmitCmd{gt2}.
   This parameter is not referenced unless
   \MacroNI{ENABLE\_GRID\_MONITOR} is set to \Expr{True}. 
   See section~\ref{sec:Condor-G-GridMonitor} on
@@ -7234,29 +7233,30 @@ These macros affect the \Prog{grid\_monitor}.
 
 \label{param:GridMonitorHeartbeatTimeout}
 \item[\Macro{GRID\_MONITOR\_HEARTBEAT\_TIMEOUT}]
-  If this many seconds pass without hearing from a working \Prog{grid\_monitor}, it is
-  assumed to be dead.  Defaults to 300 (5 minutes).  Increasing this number
-  will improve the ability of the \Prog{grid\_monitor} to survive in the face of
-  transient problems but will also increase the time before Condor notices a
-  problem.
+  The integer number of seconds that may pass without hearing from a 
+  working Grid Monitor before it is assumed to be dead.
+  Defaults to 300 (5 minutes).  Increasing this number
+  will improve the ability of the Grid Monitor to survive in the face of
+  transient problems,
+  but will also increase the time before Condor notices a problem.
 
 \label{param:GridMonitorRetryDuration}
 \item[\Macro{GRID\_MONITOR\_RETRY\_DURATION}]
-  When Condor-G attempts to start the \Prog{grid\_monitor} at a particular
+  When Condor-G attempts to start the Grid Monitor at a particular
   site, it will wait this many seconds to start hearing from the
-  \Prog{grid\_monitor}. Defaults to 900 (15 minutes).  If this duration
-  passes without success, the \Prog{grid\_monitor} will be disabled for the
-  site in question for a period of time (controlled by
-  \Macro{GRID\_MONITOR\_DISABLE\_TIME}).
+  Grid Monitor. Defaults to 900 (15 minutes).  If this duration
+  passes without success, the Grid Monitor will be disabled for the
+  site in question for the period of time set by
+  \Macro{GRID\_MONITOR\_DISABLE\_TIME}.
 
 \label{param:GridMonitorNoStatusTimeout}
 \item[\Macro{GRID\_MONITOR\_NO\_STATUS\_TIMEOUT}]
-  Jobs can disappear from the \Prog{grid\_monitor}'s status reports for
+  Jobs can disappear from the Grid Monitor's status reports for
   short periods of time under normal circumstances, but a prolonged
-  absence is often a sign of problems on the remote machine. This parameter
+  absence is often a sign of problems on the remote machine. This variable
   sets the amount of time (in seconds) that a job can be absent before the
   \Condor{gridmanager} reacts by restarting the GRAM \Prog{jobmanager}.
-  The default is 15 minutes.
+  The default is 900, which is 15 minutes.
 
 \label{param:GridMonitorDisableTime}
 \item[\Macro{GRID\_MONITOR\_DISABLE\_TIME}]
