@@ -49,10 +49,11 @@ The details of each version are described below.
 \begin{itemize}
 
 % See gittrac #215
-\item Changed the check that \Condor{dagman} does for other DAGMans
-running the same DAG if it finds a lock file at startup -- now, if it's
-not sure whether the other DAGMan is alive, it continues, rather than
-exiting.
+\item Changed the check that \Condor{dagman} does for other 
+\Condor{dagman} instances
+running the same DAG, if it finds a lock file at startup.
+Now, if \Condor{dagman} is not sure whether the other DAGMan is alive,
+it continues, rather than exiting.
 
 \end{itemize}
 
