@@ -128,6 +128,11 @@ class StringSpace
 	 *  don't have an SSString */
 	void disposeByIndex(int index);
 
+	/** Dispose of strings that look like the provided. This is useful
+	 *  when we don't have an SSString and you don't want to keep an
+	 *  index around. */
+	void dispose(const char *str);
+
 	/** Print the contents of the StringSpace to stdout */
 	void  dump ();			
 

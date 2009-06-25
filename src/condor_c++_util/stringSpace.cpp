@@ -162,6 +162,15 @@ disposeByIndex(int index)
 }
 
 
+void StringSpace::
+dispose(const char *str)
+{
+	int i = getCanonical(str);
+	disposeByIndex(i);
+	disposeByIndex(i);
+}
+
+
 SSString::
 SSString ()
 {
