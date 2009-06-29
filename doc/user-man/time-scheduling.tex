@@ -74,6 +74,7 @@ but immediately suspends it.
 \label{sec:JobDeferral-DeferralWindow}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{ClassAd job attribute!DeferralWindow}
+\index{submit commands!deferral\_window}
 
 If a job arrives at its execution machine
 after the deferral time passes,
@@ -111,6 +112,7 @@ has claimed the machine, but is not actually executing.
 Other jobs could execute during the interval when the job 
 waits for its deferral time.
 To make use of the wasted time,
+\index{submit commands!deferral\_prep\_time}
 a job defines a \SubmitCmd{deferral\_prep\_time}
 with an integer expression that evaluates to a
 number of seconds.
@@ -122,6 +124,7 @@ the job may be matched with a machine.
 \label{sec:JobDeferral-Examples}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\index{submit commands!deferral\_time}
 Here are examples of how the job deferral time,
 deferral window, and the preparation time may be used.
 
@@ -213,10 +216,13 @@ executing and a job that is waiting for its deferral time.
 \index{scheduling jobs!to execute periodically}
 
 Condor's CronTab scheduling functionality allows jobs to be 
-scheduled to executed periodically. 
+scheduled to execute periodically. 
 A job's execution schedule is defined by commands within
 the submit description file.
 The notation is much like that used by the Unix \Prog{cron} daemon. 
+As such, Condor developers are fond of refering to CronTab
+\index{Crondor}
+scheduling as \Term{Crondor}.
 The scheduling of jobs using Condor's CronTab feature 
 calculates and utilizes
 the \Attr{DeferralTime} ClassAd attribute. 
@@ -234,7 +240,7 @@ such that the job does not leave the queue until desired.
 \label{sec:CronTab-Semantics}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-A job's execution schedule is defined by a set specifications
+A job's execution schedule is defined by a set of specifications
 within the submit description file.
 Condor uses these to calculate a \Attr{DeferralTime} for the job.
 
@@ -246,6 +252,12 @@ Once one CronTab value is defined,
 the default for all the others uses 
 all the values in the allowed values ranges.
 
+\index{submit commands!cron\_minute}
+\index{submit commands!cron\_hour}
+\index{submit commands!cron\_day\_of\_month}
+\index{submit commands!cron\_month}
+\index{submit commands!cron\_day\_of\_week}
+
 \begin{table}
    \begin{center}
    \begin{tabular}{ll}
@@ -253,7 +265,7 @@ all the values in the allowed values ranges.
    \hline
    \SubmitCmd{cron\_minute} & 0 - 59 \\
    \SubmitCmd{cron\_hour} & 0 - 23 \\
-   \SubmitCmd{cron\_day\_of\_Month} & 1 - 31 \\
+   \SubmitCmd{cron\_day\_of\_month} & 1 - 31 \\
    \SubmitCmd{cron\_month} & 1 - 12 \\
    \SubmitCmd{cron\_day\_of\_week} & 0 - 7 (Sunday is 0 or 7)\\
    \end{tabular}
@@ -338,10 +350,14 @@ make necessary preparations before the deferral time occurs.
 
 Consider the submit description file example that includes 
 \begin{verbatim}
+   cron_minute = 0
    cron_hour = *
    cron_prep_time = 300
 \end{verbatim}
 The job is scheduled to begin execution at the top of every hour.
+Note that the setting of \SubmitCmd{cron\_hour} in this example
+is not required, as the default value will be \verb@*@, 
+specifying any and every hour of the day.
 The job will be matched and sent to an execution machine 
 no more than five minutes before the next deferral time. 
 For example, if a job is submitted at 9:30am, then the 
@@ -355,6 +371,7 @@ The submit command \SubmitCmd{cron\_window} is analogous to
 the submit command \SubmitCmd{deferral\_window}.
 Consider the submit description file example that includes 
 \begin{verbatim}
+   cron_minute = 0
    cron_hour = *
    cron_window = 360
 \end{verbatim}
