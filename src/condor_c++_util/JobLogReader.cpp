@@ -27,21 +27,36 @@
 #include <string>
 
 
-JobLogReader::JobLogReader() {
+JobLogReader::JobLogReader(JobLogConsumer *consumer):
+	m_consumer(consumer)
+{
+	m_consumer->SetJobLogReader(this);
+}
+
+JobLogReader::~JobLogReader()
+{
+	if (m_consumer) {
+		delete m_consumer;
+		m_consumer = NULL;
+	}
 }
 
 void
-JobLogReader::SetJobLogFileName(char const *fname) {
+JobLogReader::SetJobLogFileName(char const *fname)
+{
 	parser.setJobQueueName(fname);
 }
 
+
 char const *
-JobLogReader::GetJobLogFileName() {
+JobLogReader::GetJobLogFileName()
+{
 	return parser.getJobQueueName();
 }
 
+
 void
-JobLogReader::poll(classad::ClassAdCollection *ad_collection) {
+JobLogReader::Poll() {
 	ProbeResultType probe_st;
 	FileOpErrCode fst;
 
@@ -58,10 +73,10 @@ JobLogReader::poll(classad::ClassAdCollection *ad_collection) {
 	case INIT_QUILL:
 	case COMPRESSED:
 	case PROBE_ERROR:
-		success = BulkLoad(ad_collection);
+		success = BulkLoad();
 		break;
 	case ADDITION:
-		success = IncrementalLoad(ad_collection);
+		success = IncrementalLoad();
 		break;
 	case NO_CHANGE:
 		break;
@@ -74,26 +89,20 @@ JobLogReader::poll(classad::ClassAdCollection *ad_collection) {
 		prober.incrementProbeInfo();
 	}
 }
-static void ClearCollection(classad::ClassAdCollection *ad_collection) {
-	classad::LocalCollectionQuery query;
-	std::string key;
 
-	query.Bind(ad_collection);
-	query.Query("root", NULL);
-	query.ToFirst();
 
-	if(query.Current(key)) {
-		do {
-			ad_collection->RemoveClassAd(key);
-		}while(query.Next(key));
-	}
-}
-bool JobLogReader::BulkLoad(classad::ClassAdCollection *ad_collection) {
+bool
+JobLogReader::BulkLoad()
+{
 	parser.setNextOffset(0);
-	ClearCollection(ad_collection);
-	return IncrementalLoad(ad_collection);
+	m_consumer->Reset();
+	return IncrementalLoad();
 }
-bool JobLogReader::IncrementalLoad(classad::ClassAdCollection *ad_collection) {
+
+
+bool
+JobLogReader::IncrementalLoad()
+{
 	FileOpErrCode err;
 	do {
 		int op_type;
@@ -101,120 +110,43 @@ bool JobLogReader::IncrementalLoad(classad::ClassAdCollection *ad_collection) {
 		err = parser.readLogEntry(op_type);
 		if (err == FILE_READ_SUCCESS) {
 			//dprintf(D_ALWAYS, "Read op_type %d\n",op_type);
-			bool processed = ProcessLogEntry(parser.getCurCALogEntry(), ad_collection, &parser);
+			bool processed = ProcessLogEntry(parser.getCurCALogEntry(), &parser);
 			if(!processed) {
-				dprintf(D_ALWAYS, "ERROR reading %s: Failed to process log entry.\n",GetJobLogFileName());
+				dprintf(D_ALWAYS, "error reading %s: Failed to process log entry.\n",GetJobLogFileName());
 				return false;
 			}
 		}
 	}while(err == FILE_READ_SUCCESS);
 	if (err != FILE_READ_EOF) {
-		dprintf(D_ALWAYS, "Error reading from %s: %d, %d\n",GetJobLogFileName(),err,errno);
+		dprintf(D_ALWAYS, "error reading from %s: %d, %d\n",GetJobLogFileName(),err,errno);
 		return false;
 	}
 	return true;
 }
 
-/*! read the body of a log Entry; update a new ClassAd collection.
+
+/*! read the body of a log Entry.
  */
 bool
-JobLogReader::ProcessLogEntry( ClassAdLogEntry *log_entry, classad::ClassAdCollection *ad_collection, ClassAdLogParser * /*caLogParser*/ )
+JobLogReader::ProcessLogEntry(ClassAdLogEntry *log_entry,
+							  ClassAdLogParser */*caLogParser*/)
 {
 
 	switch(log_entry->op_type) {
-	case CondorLogOp_NewClassAd: {
-		classad::ClassAd* ad;
-		bool using_existing_ad = false;
-
-		ad = ad_collection->GetClassAd(log_entry->key);
-		if(ad && ad->size() == 0) {
-				//This is a cluster ad created in advance so that children
-				//could be chained from it.
-			using_existing_ad = true;
-		}
-		else {
-			ad = new classad::ClassAd();
-		}
-
-		//The following classad methods are deprecated.
-		//We may not need these anyway, so leave them commented out for now.
-		//ad->SetMyTypeName((const char *)log_entry->mytype);
-		//ad->SetTargetTypeName((const char *)log_entry->targettype);
-
-		//Chain this ad to its parent, if any.
-		PROC_ID proc = getProcByString(log_entry->key);
-		if(proc.proc >= 0) {
-			char cluster_key[PROC_ID_STR_BUFLEN];
-			//NOTE: cluster keys start with a 0: e.g. 021.-1
-			sprintf(cluster_key,"0%d.-1",proc.cluster);
-			classad::ClassAd* cluster_ad = ad_collection->GetClassAd(cluster_key);
-			if(!cluster_ad) {
-					// The cluster ad doesn't exist yet.  This is expected.
-					// For example, once the job queue is rewritten (i.e.
-					// truncated), the order of entries in it is arbitrary.
-				cluster_ad = new classad::ClassAd();
-				if(!ad_collection->AddClassAd(cluster_key,cluster_ad)) {
-					dprintf(D_ALWAYS,"ERROR processing %s: failed to add '%s' to ClassAd collection.\n",GetJobLogFileName(),cluster_key);
-					break;
-				}
-			}
-
-			ad->ChainToAd(cluster_ad);
-		}
-
-		if( !using_existing_ad ) {
-			if(!ad_collection->AddClassAd(log_entry->key,ad)) {
-				dprintf(D_ALWAYS,"ERROR processing %s: failed to add '%s' to ClassAd collection.\n",GetJobLogFileName(),log_entry->key);
-			}
-		}
-
-		break;
-	}
-	case CondorLogOp_DestroyClassAd: {
-		ad_collection->RemoveClassAd(log_entry->key);
-		break;
-	}
-	case CondorLogOp_SetAttribute: {	
-		classad::ClassAd *ad = ad_collection->GetClassAd(log_entry->key); //pointer to classad in collection
-		if(!ad) {
-			dprintf(D_ALWAYS, "ERROR reading %s: no such ad in collection: %s\n",GetJobLogFileName(),log_entry->key);
-			return false;
-		}
-		MyString new_classad_value, err_msg;
-		if( !old_classad_value_to_new_classad_value( log_entry->value, new_classad_value, &err_msg ) ) {
-			dprintf(D_ALWAYS, "ERROR reading %s: failed to convert expression from old to new ClassAd format: %s\n", GetJobLogFileName(), err_msg.Value() );
-			return false;
-		}
-
-		classad::ClassAdParser ad_parser;
-
-		classad::ExprTree *expr = ad_parser.ParseExpression(new_classad_value.Value());
-		if(!expr) {
-			dprintf(D_ALWAYS, "ERROR reading %s: failed to parse expression: %s\n",GetJobLogFileName(),log_entry->value);
-			ASSERT(expr);
-			return false;
-		}
-		ad->Insert(log_entry->name,expr);
-
-		break;
-	}
-	case CondorLogOp_DeleteAttribute: {
-		classad::ClassAd *ad = ad_collection->GetClassAd(log_entry->key);
-		if(!ad) {
-			dprintf(D_ALWAYS, "ERROR reading %s: no such ad in collection: %s\n",GetJobLogFileName(),log_entry->key);
-			return false;
-		}
-		ad->Delete(log_entry->name);
-
-		// The above will return false if the attribute doesn't exist
-		// in the ad.  However, this is expected, because the schedd
-		// sometimes will blindly delete attributes that do not exist
-		// (e.g. RemoteSlotID).  Therefore, we ignore the return
-		// value.
-
-		break;
-	}
-	case CondorLogOp_BeginTransaction:
+	case CondorLogOp_NewClassAd:
+		return m_consumer->NewClassAd(log_entry->key,
+									  log_entry->mytype,
+									  log_entry->targettype);
+	case CondorLogOp_DestroyClassAd:
+		return m_consumer->DestroyClassAd(log_entry->key);
+	case CondorLogOp_SetAttribute:
+		return m_consumer->SetAttribute(log_entry->key,
+										log_entry->name,
+										log_entry->value);
+	case CondorLogOp_DeleteAttribute:
+		return m_consumer->DeleteAttribute(log_entry->key,
+										   log_entry->name);
+ 	case CondorLogOp_BeginTransaction:
 		// Transactions may be ignored, because the transaction will either
 		// be completed eventually, or the log writer will backtrack
 		// and wipe out the transaction, which will cause us to do a
@@ -225,7 +157,7 @@ JobLogReader::ProcessLogEntry( ClassAdLogEntry *log_entry, classad::ClassAdColle
 	case CondorLogOp_LogHistoricalSequenceNumber:
 		break;
 	default:
-		dprintf(D_ALWAYS, "ERROR reading %s: Unsupported Job Queue Command\n",GetJobLogFileName());
+		dprintf(D_ALWAYS, "error reading %s: Unsupported Job Queue Command\n",GetJobLogFileName());
 		return false;
 	}
 	return true;

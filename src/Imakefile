@@ -56,9 +56,15 @@
 #endif
 
 #if HAVE_EXT_GLOBUS
-#define GlobusGahps GT2_GAHP NORDUGRID_GAHP GT4_GAHP GT42_GAHP
+#define GlobusGahps GT2_GAHP GT4_GAHP GT42_GAHP
 #else
 #define GlobusGahps
+#endif
+
+#if HAVE_EXT_GLOBUS && HAVE_LDAP_H
+#define NordugridGahp NORDUGRID_GAHP
+#else
+#define NordugridGahp
 #endif
 
 #define Programs \
@@ -70,7 +76,7 @@
 		CreddProgs StorkProgs LeaseManagerProgs \
 		TTProgs DeploymentTools \
 		eventd.V2 transferd procd privsep vm-gahp EC2 \
-		JobRouterProgs GlobusGahps startd_factory \
+		JobRouterProgs GlobusGahps NordugridGahp startd_factory \
 		power
 
 #define Libraries \
@@ -322,6 +328,9 @@ object_target(Stork,stork)
 object_target(GT2_GAHP,gt2_gahp)
 object_target(GT4_GAHP,gt4_gahp)
 object_target(GT42_GAHP,gt42_gahp)
+#endif
+
+#if HAVE_EXT_GLOBUS && HAVE_LDAP_H
 object_target(NORDUGRID_GAHP,nordugrid_gahp)
 #endif
 

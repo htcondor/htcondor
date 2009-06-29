@@ -2296,6 +2296,12 @@ AC_CHECK_HEADERS([resolv.h],[],[],[
 #include<netinet/in.h>
 #include<arpa/nameser.h>])
 AC_CHECK_HEADERS([pthread.h])
+AC_CHECK_HEADERS([ldap.h])
+
+AC_CHECK_LIB([sasl], [sasl_client_init],
+  AC_DEFINE([HAVE_LIBSASL], [1], [check for usable libsasl]))
+AC_CHECK_LIB([sasl2], [sasl_client_init],
+  AC_DEFINE([HAVE_LIBSASL2], [1], [check for usable libsasl2]))
 
 
 ############################################################

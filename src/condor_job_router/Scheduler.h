@@ -23,10 +23,23 @@
 #include "condor_common.h"
 
 #include "JobLogMirror.h"
+#include "NewClassAdJobLogConsumer.h"
 
 class Scheduler: virtual public JobLogMirror {
 public:
-	Scheduler(const char *name_param = "JOB_ROUTER_NAME"): JobLogMirror(name_param) {}
+	Scheduler(NewClassAdJobLogConsumer *_consumer,
+			  const char *name_param = "JOB_ROUTER_NAME"):
+		m_consumer(_consumer),
+		JobLogMirror(_consumer, name_param)
+	{ }
+
+	classad::ClassAdCollection *GetClassAds()
+	{
+		return m_consumer->GetClassAds();
+	}
+
+private:
+	NewClassAdJobLogConsumer *m_consumer;
 };
 
 #endif

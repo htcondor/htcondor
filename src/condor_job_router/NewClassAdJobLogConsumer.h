@@ -17,42 +17,46 @@
  *
  ***************************************************************/
 
-#ifndef _JOBLOGMIRROR_H_
-#define _JOBLOGMIRROR_H_
 
 #include "condor_common.h"
-#include "condor_daemon_core.h"
+#include "condor_debug.h"
+#include "classad_newold.h"
 
 #include "JobLogReader.h"
 
-class JobLogMirror: public Service {
-public:
-	JobLogMirror(JobLogConsumer *consumer,
-				 const char *name_param = "NAME");
-	void init();
-	void config();
-	void stop();
+#include <string>
 
-	char const *Name() const {return m_name.c_str();}
+#define WANT_CLASSAD_NAMESPACE
+#undef open
+#include "classad/classad_distribution.h"
 
+class NewClassAdJobLogConsumer: public JobLogConsumer
+{
 private:
-	std::string m_name;
-	const char *m_name_param;
 
-	ClassAd m_public_ad;
-	int m_public_ad_update_interval;
-	int m_public_ad_update_timer;
+	classad::ClassAdCollection m_collection;
+	JobLogReader *m_reader;
 
-	JobLogReader job_log_reader;
+public:
 
-	int log_reader_polling_timer;
-	int log_reader_polling_period;
+	NewClassAdJobLogConsumer();
 
-	virtual void InitPublicAd();
-	virtual void TimerHandler_UpdateCollector();
-	virtual void InvalidatePublicAd();
+	classad::ClassAdCollection *GetClassAds() {return &m_collection;}
 
-	void TimerHandler_JobLogPolling();
+	void Reset();
+
+	bool NewClassAd(const char *key,
+					const char */*type*/,
+					const char */*target*/);
+
+	bool DestroyClassAd(const char *key);
+
+	bool SetAttribute(const char *key,
+					  const char *name,
+					  const char *value);
+
+	bool DeleteAttribute(const char *key,
+						 const char *name);
+
+	void SetJobLogReader(JobLogReader *_reader) { m_reader = _reader; }
 };
-
-#endif
