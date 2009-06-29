@@ -285,46 +285,137 @@ Control.pl
 Control.pl Examples
 </h3>
 
-./control --project=gravitropism --version=v3 --limit=10 --kind=oneoff --clean=A
-./control --project=gravitropism --version=v3 --kind=white --white=/tmp/whitelist
-./control --project=gravitropism --preversion=v3 --version=v4 --kind=install   --code=/tmp/code.tar.gz
-./control --project=gravitropism --version=v3 --kind=nightly # switches ENVVARS file
-./control --project=gravitropism --version=v3 --kind=new
-./control --project=gravitropism --version=v3 --kind=white --white=/tmp/whitelist
+<ul>
+<li>
+<pre>
+./control.pl --project=gravitropism --version=v3 --limit=10 --kind=oneoff --clean=A
+</pre>
+This script ...
+<li>
+<pre>
+./control.pl --project=gravitropism --version=v3 --kind=white --white=/tmp/whitelist
+</pre>
+This script ...
+<li>
+<pre>
+./control.pl --project=gravitropism --preversion=v3 --version=v4 --kind=install   --code=/tmp/code.tar.gz
+</pre>
+This script ...
+<li>
+<pre>
+./control.pl --project=gravitropism --version=v3 --kind=nightly # switches ENVVARS file
+</pre>
+This script ...
+<li>
+<pre>
+./control.pl --project=gravitropism --version=v3 --kind=new
+</pre>
+This script ...
+<li>
+<pre>
+./control.pl --project=gravitropism --version=v3 --kind=white --white=/tmp/whitelist
+</pre>
+This script ...
+<li>
+<pre>
 ./control.pl --project=natehighres --preversion=v1 --newproject=DanLewisArabidopsis --version=v1 --kind=install
+</pre>
+<li>
+This script ...
+<pre>
 ./control.pl --project=gravitropism --version=v3 --kind=install --type=param.dat
+</pre>
+This script ...
+</ul>
 
-Each project has a master file ENVVARS in the run directory which is used  various 
-things. It is changed out only for --kind=nightly and --kind=new for.   However if 
-it comes out of sync or to make it the last "oneoff"  simply go ./control.pl 
---project=gravitropism --update:
-
---kind=install            setup a new version of code and compile
---kind=nightly            Change the production code
---kind=new                do all the new data sets since the ones run by --kind=nightly 
---kind='other text'       A full run unless limited with 'Other Text' labeling the web page for the run
+<p>
+Each project has a master file ENVVARS in the run directory,
+which is used  various things.
+It is changed out only for --kind=nightly and --kind=new for.
+However, if it comes out of sync or to make it the last "oneoff",
+the command is 
+<pre>
+./control.pl --project=gravitropism --update
+</pre>
+with one of the following additional command line options:
+<ul>
+<li>
+<pre>
+--kind=install
+</pre>
+to set up a new version of code and compile
+<li>
+<pre>
+--kind=nightly
+</pre>
+to change the production code
+<li>
+<pre>
+--kind=new
+</pre>
+to do all the new data sets since the ones run by <tt>--kind=nightly</tt> 
+<li>
+<pre>
+--kind='other text'
+</pre>
+to do a full run,
+unless limited with 'Other Text' labeling the web page for the run
+</ul>
 
 <h3>
 Status.pl
 </h3>
-            [-h/--help]                             See this
-            [-k/--kind]     summary(report), profile(plot), imagesz
-            [-e/--env]      run this environment file to find run
-            [-l/--last]     find mosr recent environment file to find run
-            [-p/--period]   sample interval
-			[-d/--display]  display report file in REPORT....
-
-    Usually run for you by framework at end of a job run.
+<p>
+The framework usually runs this script at end of a job run.
+</p>
+<p>
+Its command line options are
+<ul>
+<li>
+<tt>-h</tt> or <tt>--help</tt>
+<br>summarize the options and quit
+<li>
+<tt>-k</tt> or <tt>--kind</tt>
+<br>summary(report), profile(plot), imagesz
+<li>
+<tt>-e</tt> or <tt>--env</tt>
+<br>run this environment file to find run
+<li>
+<tt>-l</tt> or <tt>--last</tt>
+<br>find mosr recent environment file to find run
+<li>
+<tt>-p</tt> or <tt>--period</tt>
+<br>sample interval
+<li>
+<tt>-d</tt> or <tt>--display</tt>
+<br>display report file in REPORT....
+</ul>
 
             
 <h3>
 Status.pl Examples
 </h3>
 
-./status.pl --project=gravitropism --kind=profile           #uses main project ENVVARS
+<ul>
+<li>
+<pre>
+./status.pl --project=gravitropism --kind=profile
+</pre>
+This script uses ENVVARS, as set by the main project
+<li>
+<pre>
 ./status.pl --project=gravitropism --kind=profile --env=run15523_8_24_2008
-./status.pl --project=gravitropism --version --kind=summary #uses main project ENVVARS
+</pre>
+<li>
+<pre>
+./status.pl --project=gravitropism --version --kind=summary
+</pre>
+This script uses ENVVARS, as set by the main project
+<li>
+<pre>
 ./status.pl --kind=summary --project=gravitropism --version=v3 --env=run6823_8_26_200
+</pre>
+</ul>
 
 <h2>Web Interface</h2>
 <!--
