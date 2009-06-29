@@ -130,13 +130,18 @@ on page~\pageref{man-condor-userprio}.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Priorities and Preemption}
+\subsection{Priorities in Negotiation and Preemption}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{negotiation!priority}
+\index{matchmaking!priority}
 \index{preemption!priority}
 Priorities are used to ensure that users get their fair share of resources.  
-The priority values are used at allocation time.
-In addition, Condor may preempt a machine claim and reallocate it when
-conditions change.
+The priority values are used at allocation time, meaning during
+negotiation and matchmaking.
+Therefore, there are ClassAd attributes that take on defined values
+only during negotiation, making them ephemeral.
+In addition to allocation, Condor may preempt a machine claim 
+and reallocate it when conditions change.
 
 Too many preemptions lead to thrashing,
 a condition in which negotiation for a machine identifies a
@@ -150,7 +155,6 @@ occur.  It is usually defined to deny preemption if a current running
 job has been running for a relatively short period of time.  This
 effectively limits the number of preemptions per resource per time
 interval.
-
 Note that \MacroNI{PREEMPTION\_REQUIREMENTS} only applies to preemptions
 due to user priority.  It does not have any effect if the machine's 
 \MacroNI{RANK}
@@ -159,11 +163,19 @@ causes the job to vacate due to other activity on the machine.
 See section \ref{sec:Disabling Preemption} for a general discussion of
 limiting preemption.
 
-The following attributes may be used within the definition
-of \MacroNI{PREEMPTION\_REQUIREMENTS} and \MacroNI{PREEMPTION\_RANK}.
-In these attributes, those with names that begin with the
-string \Attr{Submitter} refer to characteristics about the candidate
-job's user; those with names that begin with the string \Attr{Remote}
+The following ephemeral attributes may be used within policy definitions.
+Care should be taken when using these attributes, 
+due to their ephemeral nature;
+they are not always defined, so the usage of an expression to 
+check if defined such as
+\begin{verbatim}
+  (RemoteUserPrio =?= UNDEFINED)
+\end{verbatim}
+is likely necessary.
+
+Within these attributes, those with names that contain the
+string \Attr{Submitter} refer to characteristics about the candidate job's user;
+those with names that contain the string \Attr{Remote}
 refer to characteristics about the user currently using the resource.
 Further,  those with names that end with the
 string \Attr{ResourcesInUse} have values that may change within
@@ -173,38 +185,44 @@ and and \Macro{PREEMPTION\_RANK\_STABLE} exist to inform the
 \Condor{negotiator} daemon that values may change.
 See section~\ref{param:PreemptionRequirementsStable} on
 page~\pageref{param:PreemptionRequirementsStable} for
-complete definitions.
+definitions of these configuration variables.
 
 \begin{description}
 
-\item[\AdAttr{SubmitterUserPrio}:] 
+\item[\index{ClassAd attribute, ephemeral!SubmitterUserPrio}\AdAttr{SubmitterUserPrio}:] 
   A floating point value representing the user priority of the 
   candidate job.
-\item[\AdAttr{SubmitterUserResourcesInUse}:] 
+\item[\index{ClassAd attribute, ephemeral!SubmitterUserResourcesInUse}\AdAttr{SubmitterUserResourcesInUse}:] 
   The integer number of slots currently utilized by the user
   submitting the candidate job.
-\item[\AdAttr{RemoteUserPrio}:]
+\item[\index{ClassAd attribute, ephemeral!RemoteUserPrio}\AdAttr{RemoteUserPrio}:]
   A floating point value representing the user priority of the 
   job currently running on the machine.
-\item[\AdAttr{RemoteUserResourcesInUse}:]
+  This version of the attribute, with no slot represented in the attribute name,
+  refers to the current slot being evaluated.
+\item[\index{ClassAd attribute, ephemeral!Slot<N>\_RemoteUserPrio}\AdAttr{Slot<N>\_RemoteUserPrio}:]
+  A floating point value representing the user priority of the 
+  job currently running on the particular slot represented
+  by \verb@<N>@ on the machine.
+\item[\index{ClassAd attribute, ephemeral!RemoteUserResourcesInUse}\AdAttr{RemoteUserResourcesInUse}:]
   The integer number of slots currently utilized by the user
   of the job currently running on the machine.
-\item[\AdAttr{SubmitterGroupResourcesInUse}:]
+\item[\index{ClassAd attribute, ephemeral!SubmitterGroupResourcesInUse}\AdAttr{SubmitterGroupResourcesInUse}:]
   If the owner of the candidate job is a member of a valid accounting group,
   with a defined group quota,
   then this attribute is the integer number of slots currently 
   utilized by the group.
-\item[\AdAttr{SubmitterGroupQuota}:]
+\item[\index{ClassAd attribute, ephemeral!SubmitterGroupQuota}\AdAttr{SubmitterGroupQuota}:]
   If the owner of the candidate job is a member of a valid accounting group,
   with a defined group quota,
   then this attribute is the integer number of slots defined as the
   group's quota.
-\item[\AdAttr{RemoteGroupResourcesInUse}:]
+\item[\index{ClassAd attribute, ephemeral!RemoteGroupResourcesInUse}\AdAttr{RemoteGroupResourcesInUse}:]
   If the owner of the currently running job is a member of a valid 
   accounting group, with a defined group quota,
   then this attribute is the integer number of slots currently 
   utilized by the group.
-\item[\AdAttr{RemoteGroupQuota}:]
+\item[\index{ClassAd attribute, ephemeral!RemoteGroupQuota}\AdAttr{RemoteGroupQuota}:]
   If the owner of the currently running job is a member of a valid 
   accounting group, with a defined group quota,
   then this attribute is the integer number of slots defined as the
@@ -384,7 +402,7 @@ have a 20\Percent\  better priority in order for preemption to succeed.
 If the job has no preferences as to what sort of machine it gets,
 matchmaking gives it the first idle resource to meet its requirements.
 
-This matchmaking cycle continues until the user has recieved all of the
+This matchmaking cycle continues until the user has received all of the
 machines in their pie slice.
 The matchmaker then contacts the next highest
 priority user and offers that user their pie slice worth of machines.
@@ -629,7 +647,7 @@ This configuration specifies that the \verb@group_physics@ users will
 get 20 machines and the \verb@group_chemistry@ users will get
 ten machines.  \verb@group_physics@ users will never get more than
 20 machines; however, \verb@group_chemistry@ users can potentially get
-more than ten machines because \Macro{GROUP\_AUTOREGROUP\_chemistry}
+more than ten machines because \MacroNI{GROUP\_AUTOREGROUP\_chemistry}
 is true.
 This could happen, for example, if there are only 15 jobs
 submitted by \verb@group_physics@ users.
