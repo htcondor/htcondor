@@ -66,6 +66,8 @@ extern char *Spool;
 extern char *Name;
 extern char* JobHistoryFileName;
 extern bool        DoHistoryRotation;
+extern bool        DoDailyHistoryRotation;
+extern bool        DoMonthlyHistoryRotation;
 extern filesize_t  MaxHistoryFileSize;
 extern int         NumberBackupHistoryFiles;
 extern char*       PerJobHistoryDir;
@@ -4294,7 +4296,48 @@ static void MaybeRotateHistory(int size_to_append)
         } else if (history_stat_info.Error() != SIGood) {
             dprintf(D_ALWAYS, "Couldn't stat history file, will not rotate.\n");
         } else {
+			bool mustRotate = false;
+
             if (history_file_size + size_to_append > MaxHistoryFileSize) {
+				mustRotate = true;
+			}
+
+
+			if (DoDailyHistoryRotation) {
+				time_t mod_tt = history_stat_info.GetModifyTime();
+				struct tm *mod_t = localtime(&mod_tt);
+				int mod_yday = mod_t->tm_yday;
+				int mod_year = mod_t->tm_year;
+
+				time_t now_tt = time(0);
+				struct tm *now_t = localtime(&now_tt);
+				int now_yday = now_t->tm_yday;
+				int now_year = now_t->tm_year;
+
+				if ((now_yday > mod_yday) ||
+					(now_year > mod_year)) {
+					mustRotate = true;
+				}
+			}
+
+			if (DoMonthlyHistoryRotation) {
+				time_t mod_tt = history_stat_info.GetModifyTime();
+				struct tm *mod_t = localtime(&mod_tt);
+				int mod_mon = mod_t->tm_mon;
+				int mod_year = mod_t->tm_year;
+
+				time_t now_tt = time(0);
+				struct tm *now_t = localtime(&now_tt);
+				int now_mon = now_t->tm_mon;
+				int now_year = now_t->tm_year;
+
+				if ((now_mon > mod_mon) ||
+					(now_year > mod_year)) {
+					mustRotate = true;
+				}
+			}
+
+			if (mustRotate) {
                 // Writing the new ClassAd will make the history file too 
                 // big, so we will rotate the history file after removing
                 // extra history files. 
