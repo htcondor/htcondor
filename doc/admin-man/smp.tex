@@ -158,7 +158,7 @@ available amount.
 
 The disk space allocated to each slot is taken from the disk partition
 containing the slots execute directory (configured with
-\Macro{EXECUTE} or \Macro{SLOTx\_EXECUTE}).  If every slot is in a
+\Macro{EXECUTE} or \Macro{SLOT<N>\_EXECUTE}).  If every slot is in a
 different partition, then each one may be defined with up to
 100\Percent for its disk share.  If some slots are in the same
 partition, then their total is not allowed to exceed 100\Percent.
@@ -468,10 +468,10 @@ can be configured on a per-slot basis.
 The \Condor{startd} daemon builds the list of items to
 advertise by combining the lists in this order:
 \begin{enumerate}
-\item{\Expr{STARTD\_ATTRS}}
-\item{\Expr{STARTD\_EXPRS}}
-\item{\Expr{SLOTx\_STARTD\_ATTRS}}
-\item{\Expr{SLOTx\_STARTD\_EXPRS}}
+\item{\MacroNI{STARTD\_ATTRS}}
+\item{\MacroNI{STARTD\_EXPRS}}
+\item{\MacroNI{SLOT<N>\_STARTD\_ATTRS}}
+\item{\MacroNI{SLOT<N>\_STARTD\_EXPRS}}
 \end{enumerate}
 
 For example, consider the following configuration:

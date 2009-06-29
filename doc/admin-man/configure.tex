@@ -777,15 +777,15 @@ File System Configuration File Entries''.
   \MacroNI{EXECUTE}, and the \Condor{startd} will not function if
   \MacroNI{EXECUTE} is undefined.  Normally, \MacroUNI{EXECUTE} is
   defined in terms of \MacroUNI{LOCAL\_DIR}.  To customize the execute
-  directory independently for each batch slot, use \MacroNI{SLOTx\_EXECUTE}.
+  directory independently for each batch slot, use \MacroNI{SLOT<N>\_EXECUTE}.
 
-\label{param:SlotXExecute}
-\item[\Macro{SLOTx\_EXECUTE}]
+\label{param:SlotNExecute}
+\item[\Macro{SLOT<N>\_EXECUTE}]
   Specifies an
-  execute directory for use by a specific batch slot.  (\emph{x}
-  should be the number of the batch slot, such as 1, 2, 3, etc.)  This
-  execute directory serves the same purpose as \Macro{EXECUTE}, but it
-  allows you to configure the directory independently for each batch
+  execute directory for use by a specific batch slot.
+  \MacroNI{<N>} represents the number of the batch slot, such as 1, 2, 3, etc.
+  This execute directory serves the same purpose as \Macro{EXECUTE}, but it
+  allows the configuration of the directory independently for each batch
   slot.  Having slots each using a different partition would be
   useful, for example, in preventing one job from filling up the same
   disk that other jobs are trying to write to.  If this parameter is
@@ -2447,14 +2447,14 @@ section~\ref{sec:shared-fs}.
   this check, set this configuration variable to \Expr{True}.
   Condor will then run the job under the user's UID.
 
-\label{param:SlotXUser}
-\item[\Macro{SLOTx\_USER}]
+\label{param:SlotNUser}
+\item[\Macro{SLOT<N>\_USER}]
   The name of a user for Condor to use instead of
   user nobody,
   as part of a solution that plugs a security hole whereby
   a lurker process can prey on a subsequent job run as user name nobody. 
-  \MacroNI{x} is an integer associated with slots.
-  On Windows, \MacroNI{SLOTx\_USER}
+  \MacroNI{<N>} is an integer associated with slots.
+  On Windows, \MacroNI{SLOT<N>\_USER}
   will only work if the credential of the specified
   user is stored on the execute machine using \Condor{store\_cred}.
   See Section~\ref{sec:RunAsNobody} for more information.
@@ -2463,7 +2463,7 @@ section~\ref{sec:shared-fs}.
 \item[\Macro{STARTER\_ALLOW\_RUNAS\_OWNER}]
   This is a boolean expression (evaluated with the job ad as the
   target) that determines whether the job may run under the job owner's
-  account (true) or whether it will run as \MacroNI{SLOTx\_USER} or
+  account (true) or whether it will run as \MacroNI{SLOT<N>\_USER} or
   nobody (false).  In Unix, this defaults to true.  In windows, it
   defaults to false.  The job ClassAd may also contain an attribute
   \Attr{RunAsOwner} which is logically ANDed with the starter's
@@ -2480,10 +2480,10 @@ section~\ref{sec:shared-fs}.
   matches the account name(s) that are dedicated to running condor
   jobs on the execute machine and which will never be used for more
   than one job at a time.  The default matches no account name.  If
-  you have configured \MacroNI{SLOTx\_USER} to be a \emph{different}
+  you have configured \MacroNI{SLOT<N>\_USER} to be a \emph{different}
   account for each Condor slot, and no non-condor processes will ever be
   run by these accounts, then this pattern should match the names of
-  all \MacroNI{SLOTx\_USER} accounts.  Jobs run under a dedicated
+  all \MacroNI{SLOT<N>\_USER} accounts.  Jobs run under a dedicated
   execute account are reliably tracked by Condor, whereas other jobs,
   may spawn processes that Condor fails to detect.  Therefore, a
   dedicated execution account provides more reliable tracking of CPU
@@ -2517,7 +2517,7 @@ Tracking process family by login "cndrusr1"
   A boolean value that defaults to \Expr{False}.  When \Expr{True},
   Condor knows that all jobs are being run by dedicated execution
   accounts (whether they are running as the job owner or as nobody or as
-  \MacroNI{SLOTx\_USER}).  Therefore, when the job exits, all processes
+  \MacroNI{SLOT<N>\_USER}).  Therefore, when the job exits, all processes
   running under the same account will be killed.
 
 \label{param:FilesystemDomain}
@@ -3916,12 +3916,13 @@ search for the corresponding attribute names using ``slot'', instead.
 
 \label{param:NumSlots}
 \item[\Macro{NUM\_SLOTS}]
-  If your SMP machine is being evenly divided, and the slot
-  type settings described above are not being used, this
-  macro controls how many slots will be reported.  
+  An integer value representing the number of slots reported when
+  the SMP machine is being evenly divided, and the slot
+  type settings described above are not being used.
   The default is one slot for each CPU.
   This setting can be used to reserve some CPUs on an SMP which would
-  not be reported to the Condor pool. You cannot use this parameter to
+  not be reported to the Condor pool.
+  This value cannot be used to
   make Condor advertise more slots than there are CPUs on the machine.
   To do that, use \Macro{NUM\_CPUS}.
 
@@ -5403,15 +5404,15 @@ These settings affect the \Condor{shadow}.
 
 \label{param:CompressPeriodicCkpt}
 \item[\Macro{COMPRESS\_PERIODIC\_CKPT}]
-  This boolean macro specifies
-  whether the shadow should instruct applications to compress periodic
-  checkpoints (when possible).  The default is \Expr{False}.
+  A boolean value that when \Expr{True}, directs the \Condor{shadow}
+  to instruct applications to compress periodic checkpoints when possible.
+  The default is \Expr{False}.
 
 \label{param:CompressVacateCkpt}
 \item[\Macro{COMPRESS\_VACATE\_CKPT}]
-  This boolean macro specifies
-  whether the shadow should instruct applications to compress vacate
-  checkpoints (when possible).  The default is \Expr{False}.
+  A boolean value that when \Expr{True}, directs the \Condor{shadow}
+  to instruct applications to compress vacate checkpoints when possible.
+  The default is \Expr{False}.
 
 \label{param:PeriodicMemorySync}
 \item[\Macro{PERIODIC\_MEMORY\_SYNC}]
@@ -6042,24 +6043,26 @@ These macros affect the \Condor{collector}.
 
 \label{param:CollectorDaemonStats}
 \item[\Macro{COLLECTOR\_DAEMON\_STATS}]
-  This macro controls whether or not the Collector keeps update
-  statistics on incoming updates.  The default value is True.  If
-  this option is enabled, the collector will insert several attributes
-  into ClassAds that it stores and sends.  ClassAds without the
-  ``UpdateSequenceNumber'' and ``DaemonStartTime'' attributes will not
+  A boolean value that controls whether or not the \Condor{collector} daemon
+  keeps update statistics on incoming updates.  
+  The default value is \Expr{True}.
+  If enabled, the \Condor{collector} will insert several attributes
+  into the ClassAds that it stores and sends.  ClassAds without the
+  \Attr{UpdateSequenceNumber} and \Attr{DaemonStartTime} attributes will not
   be counted, and will not have attributes inserted (all modern Condor
   daemons which publish ClassAds publish these attributes).
 
-  \index{ClassAd attribute added by the \Condor{collector}!UpdatesTotal}
-  \index{ClassAd attribute added by the \Condor{collector}!UpdatesSequenced}
-  \index{ClassAd attribute added by the \Condor{collector}!UpdatesLost}
-  The attributes inserted are ``UpdatesTotal'', ``UpdatesSequenced'',
-  and ``UpdatesLost''.  ``UpdatesTotal'' is the total number of
-  updates (of this ad type) the Collector has received from this host.
-  ``UpdatesSequenced'' is the number of updates that the Collector
+  \index{ClassAd attribute added by the condor\_collector!UpdatesTotal}
+  \index{ClassAd attribute added by the condor\_collector!UpdatesSequenced}
+  \index{ClassAd attribute added by the condor\_collector!UpdatesLost}
+  The attributes inserted are \Attr{UpdatesTotal}, \Attr{UpdatesSequenced},
+  and \Attr{UpdatesLost}.  \Attr{UpdatesTotal} is the total number of
+  updates (of this ClassAd type) the \Condor{collector} has received 
+  from this host.
+  \Attr{UpdatesSequenced} is the number of updates that the \Condor{collector}
   could have as lost.  In particular, for the first update from a
-  daemon it is impossible to tell if any previous ones have been lost
-  or not.  ``UpdatesLost'' is the number of updates that the Collector
+  daemon, it is impossible to tell if any previous ones have been lost or not.
+  \Attr{UpdatesLost} is the number of updates that the \Condor{collector}
   has detected as being lost.
   See page~\pageref{sec:Collector-Added-Attributes} for more information on the
   added attributes.
@@ -6081,10 +6084,10 @@ These macros affect the \Condor{collector}.
   updates.  This macro is ignored if \MacroU{COLLECTOR\_DAEMON\_STATS}
   is not enabled.
 
-  \index{ClassAd attribute added by the \Condor{collector}!UpdatesHistory}
+  \index{ClassAd attribute added by the condor\_collector!UpdatesHistory}
   If this has a non-zero value, the Collector will insert
-  ``UpdatesHistory'' into the ClassAd (similar to ``UpdatesTotal''
-  above).  ``UpdatesHistory'' is a hexadecimal string which represents
+  \Attr{UpdatesHistory} into the ClassAd (similar to \Attr{UpdatesTotal}
+  above). Attr{UpdatesHistory} is a hexadecimal string which represents
   a bitmap of the last \Macro{COLLECTOR\_DAEMON\_HISTORY\_SIZE}
   updates.  The most significant bit (MSB) of the bitmap represents the
   most recent update, and the least significant bit (LSB) represents

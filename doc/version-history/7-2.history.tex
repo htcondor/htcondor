@@ -16,6 +16,65 @@ New features will be added in the 7.3.x development series.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-7-2-5}Version 7.2.5}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Configuration Variable Additions and Changes:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+% See gittrac #215
+\item Changed the check that \Condor{dagman} does for other 
+\Condor{dagman} instances
+running the same DAG, if it finds a lock file at startup.
+Now, if \Condor{dagman} is not sure whether the other DAGMan is alive,
+it continues, rather than exiting.
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-7-2-4}Version 7.2.4}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -48,6 +107,19 @@ The details of each version are described below.
 
 \begin{itemize}
 
+% gittrac #177
+\item Fixed a bug in the checkpoint server that caused failure of
+checkpoint image storage and retrieval if the requesting submission
+machine was running a 32-bit installation of Condor and the checkpoint
+server was from a 64 bit installation, or vice versa. The checkpoint
+image server, both the 32-bit and 64-bit installation, now handles both
+protocols. It is recommended that any checkpoint server installation which
+may be used in a flocking situation or other federated joining of pools
+use the 64-bit binary. This is due to the possibility that there could be
+a checkpoint image larger than what is representable in 32 bits. A 32-bit
+checkpoint image server will now notice if this situation occurs and log
+a message suggesting an upgrade to the 64-bit version.
+
 \item Fixed a bug that caused \Condor{procd} to sometimes fail when monitoring
 processes with environments larger than 1MB.
 
@@ -70,13 +142,36 @@ Previously, the amount of memory was too small by a factor of 1024.
 \item Fixed a bug that caused Stork to treat successful file transfers
 as failed.
 
+% gittrac #337
+\item Fixed several bugs in the user log reader in the handling of
+  files of size zero.
+
+% gittrac #542
+\item Fixed a problem affecting parallel universe jobs with very short
+tasks.  If any of the parallel tasks exited before the first node
+started, the entire job was prematurely treated as though it had
+finished.  If the job ClassAd attribute \AdAttr{ParallelShutdownPolicy} was
+set to \AdStr{WAIT\_FOR\_ALL}, the job was prematurely treated as though it
+had finished if all stated tasks completed before the remaining tasks
+started.
+
 \end{itemize}
 
 \noindent Known Bugs:
 
 \begin{itemize}
 
-\item None.
+\item Occasionally, Condor daemons will, for unknown reasons, bind the
+  command socket to the invalid IP address of 0.0.0.0, resulting in
+  the daemon crashing or otherwise malfunctioning.  The command socket
+  address is always logged in the daemon's log, so the condition can
+  be detected by looking for a line like in the daemon's log header
+  with the address of 0.0.0.0 as in:
+\begin{verbatim}
+5/6 16:34:26 DaemonCore: Command Socket at <0.0.0.0:53795>
+\end{verbatim}
+  If you encounter this problem, please send an e-mail to
+  condor-admin@cs.wisc.edu with any relevant details.
 
 \end{itemize}
 
