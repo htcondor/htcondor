@@ -4838,31 +4838,30 @@ These macros control the \Condor{schedd}.
 
 \label{param:JobStopCount}
 \item[\Macro{JOB\_STOP\_COUNT}]
-  This macro works together with the \Macro{JOB\_STOP\_DELAY} macro to
-  throttle the rate at which jobs are stopped via \Condor{rm}, \Condor{hold},
-  or \Condor{vacate\_job}.  The default and minimum values for this
-  integer configuration variable are both 1.
+  An integer value representing the number of jobs operated on at one time
+  by the \Condor{schedd} daemon, when throttling the rate at which jobs
+  are stopped via \Condor{rm}, \Condor{hold}, or \Condor{vacate\_job}.  
+  The default and minimum values are both 1.
+  This variable is ignored for grid and scheduler universe jobs.
 
 \label{param:JobStopDelay}
 \item[\Macro{JOB\_STOP\_DELAY}]
-  This integer-valued macro works together with the
-  \Macro{JOB\_STOP\_COUNT} macro
-  to throttle the rate at which jobs are stopping via \Condor{rm},
-  \Condor{hold}, or \Condor{vacate\_job}.  The  \Condor{schedd} daemon stops
+  An integer value representing the number of seconds delay utilized by
+  the \Condor{schedd} daemon, when throttling the rate at which jobs
+  are stopped via \Condor{rm}, \Condor{hold}, or \Condor{vacate\_job}.  
+  The  \Condor{schedd} daemon stops
   \MacroUNI{JOB\_STOP\_COUNT} jobs at a time, then delays for
   \MacroUNI{JOB\_STOP\_DELAY} seconds before stopping the next set of jobs.
   This delay prevents a sudden, large load on resources required by
   the jobs when they are terminating.
-  The resulting job stop rate
-  averages as fast as
-  (\MacroUNI{JOB\_STOP\_COUNT}/\MacroUNI{JOB\_STOP\_DELAY}) jobs/second.
+  The resulting job stop rate averages as fast as
+  \Expr{JOB\_STOP\_COUNT/JOB\_STOP\_DELAY} jobs per second.
   This configuration variable is also used during the graceful shutdown of the
   \Condor{schedd} daemon.
   During graceful shutdown, this macro determines the wait time in
   between requesting each \Condor{shadow} daemon to gracefully shut down.  
-  It is defined in terms of seconds and defaults to 0, which means jobs
-  will be stopped as fast as possible.  These settings do not apply to grid
-  or scheduler universe jobs.
+  The default value is 0, which means jobs will be stopped as fast as possible.
+  This variable is ignored for grid and scheduler universe jobs.
 
 \label{param:JobIsFinishedInterval}
 \item[\Macro{JOB\_IS\_FINISHED\_INTERVAL}]
