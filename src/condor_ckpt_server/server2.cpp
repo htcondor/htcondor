@@ -2269,9 +2269,10 @@ void Server::RemoveStaleCheckpointFiles(const char *directory)
 	Log("Begin removing stale checkpoint files.");
 
 	StatInfo st(directory);
+	Directory dir(&st, PRIV_CONDOR);
 
 	// do the dirty work.
-	RemoveStaleCheckpointFilesRecurse(directory,
+	RemoveStaleCheckpointFilesRecurse(directory, &dir,
 		now - stale_ckptfile_age_cutoff, st.GetAccessTime());
 
 	Log("Done removing stale checkpoint files.");
@@ -2288,14 +2289,33 @@ void Server::RemoveStaleCheckpointFiles(const char *directory)
 	Log(str.Value());
 }
 
-void Server::RemoveStaleCheckpointFilesRecurse(const char *path, time_t cutoff_time, time_t a_time)
+void Server::RemoveStaleCheckpointFilesRecurse(const char *path, 
+	Directory *dir, time_t cutoff_time, time_t a_time)
 {
 	MyString str;
 	const char *file = NULL;
 	const char *base = NULL;
 
+	char real_path[PATH_MAX];
+	char real_ckpt_server_dir[PATH_MAX];
+
 	if (path == NULL) {
 		// in case of this, do nothing and return.
+		return;
+	}
+
+	if (realpath(path, real_path) < 0) {
+		str.sprintf("Server::RemoveStaleCheckpointFilesRecurse(): Could "
+			"not resolve %s into a real path: %d(%s). Ignoring.\n",
+			path, errno, strerror(errno));
+		return;
+	}
+
+	if (realpath(ckpt_server_dir, real_ckpt_server_dir) < 0) {
+		str.sprintf("Server::RemoveStaleCheckpointFilesRecurse(): Could "
+			"not resolve %s into a real path: %d(%s). Strange..ignoring "
+			"remove request for file under this directory.\n",
+			path, errno, strerror(errno));
 		return;
 	}
 
@@ -2305,20 +2325,22 @@ void Server::RemoveStaleCheckpointFilesRecurse(const char *path, time_t cutoff_t
 	// as root. Not Cool.
 	if (
 		// path is shorter than ckpt_server_dir
-		(strlen(path) < strlen(ckpt_server_dir)) || 
+		(strlen(real_path) < strlen(real_ckpt_server_dir)) || 
 
 		// OR if path isn't a subdirectory of ckpt_server_dir
-		strncmp(path, ckpt_server_dir, strlen(ckpt_server_dir)) != MATCH ||
+		strncmp(real_path, real_ckpt_server_dir,
+			strlen(real_ckpt_server_dir)) != MATCH ||
 
 		// OR if path is tricksy
-		((strlen(path) > strlen(ckpt_server_dir)) && 
-			path[strlen(ckpt_server_dir)] != '/'))
+		((strlen(real_path) > strlen(real_ckpt_server_dir)) && 
+			path[strlen(real_ckpt_server_dir)] != '/'))
 	{
 		str.sprintf(
 			"WARNING: "
 			"Server::RemoveStaleCheckpointFilesRecurse(): "
-			"path name %s appears to be outside of the ckpt_server_dir of %s. "
-			"Not examining it.", path, ckpt_server_dir);
+			"path name %s, whose real path is %s, appears to be outside "
+			"of the ckpt_server_dir of %s. "
+			"Ignoring it.", path, real_path, real_ckpt_server_dir);
 		Log(str.Value());
 
 		return;
@@ -2326,12 +2348,29 @@ void Server::RemoveStaleCheckpointFilesRecurse(const char *path, time_t cutoff_t
 
 	// if a directory, map myself over it 
 	if (IsDirectory(path)) {
-		Directory files(path);
+		Directory files(path, PRIV_CONDOR);
 
 		// Iterate over the directory
 		while(files.Next()) {
+
 			file = files.GetFullPath();
-			RemoveStaleCheckpointFilesRecurse(file, cutoff_time,
+
+			/* skip these files, especially so we don't recurse into
+				our parent directory.
+			*/
+			if (strcmp(file, ".") == MATCH ||
+				strcmp(file, "..") == MATCH) {
+				continue;
+			}
+
+			/* Here we pass a "back reference" to the directory object here
+				so we can delete the file using the mechanics of the
+				Directory object. A little clunky interface wise, 
+				but easy to implement. If somehow a directory is found
+				that leads outside of the ckpt_server_dir, the above code
+				will catch it.
+			*/
+			RemoveStaleCheckpointFilesRecurse(file, &files, cutoff_time,
 				files.GetAccessTime());
 		}
 
@@ -2351,19 +2390,23 @@ void Server::RemoveStaleCheckpointFilesRecurse(const char *path, time_t cutoff_t
 	/* everything else should be checked, though */
 
 	if (a_time <= cutoff_time) {
-		// Another safety rule is that I'll only remove files that are not
-		// symlinks and have "cluster" as a prefix. This should describe
-		// the entire set of files I need to worry about. Both checkpoints
+		// Another safety rule is that I'll only remove files that
+		// have "cluster" as a prefix. This should describe
+		// the entire set of files I need to worry about--checkpoints
 		// and temporary checkpoints that didn't get renamed for whatever
 		// reason.
 		base = condor_basename(path);
-		if (!IsSymlink(path) && 
-			strncmp(base, "cluster", strlen("cluster")) == MATCH)
+		// if for whatever reason path is a symlink, we'd end up just removing
+		// the link itself, which is ok, especially if it points to something
+		// outside of ckpt_server_dir. If it is inside it, and named right,
+		// then it'll get cleaned up properly in this or a later pass.
+		if (strncmp(base, "cluster", strlen("cluster")) == MATCH)
 		{
 			dprintf(D_ALWAYS, "Removing stale file: %s\n", path);
-			if (unlink(path) < 0) {
-				dprintf(D_ALWAYS, "Failed to unlink %s because %d(%s)\n",
-					path, errno, strerror(errno));
+			// reach back into a previous stack frame 
+			if (dir->Remove_Full_Path(path) == false) {
+				dprintf(D_ALWAYS, "Failed to remove stale file %s "
+					"(unknown why)\n", path);
 			}
 		}
 	}

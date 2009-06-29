@@ -97,6 +97,20 @@ do_connect_with_timeout( const char* host, const char* service,
 	if (timeout == 0) {
 		status = connect(fd,(struct sockaddr *)&sinful,sizeof(sinful));
 	} else {
+		// This code path is available if one calls this function with
+		// a timeout > 0. As of the writing of this comment, all invocations
+		// of this function used 0 for a timeout so this codepath never
+		// got called in practice. During the time previous to this comment,
+		// tcp_connect_timeout() was a broken piece of garabge which didn't
+		// work. However, I had to fix up that function into working state
+		// for an unrelated feature elsewhere in the code, and found this
+		// code path used it. Determining this code path's usage of
+		// tcp_connect_timeout() is beyond the scope of my changes which 
+		// led to this comment--hence, the EXCEPT. Your job is to figure
+		// out if tcp_connect_timeout() is being called corectly here and
+		// semantically does what you think it should in accordance to
+		// the surrounding code in this function. If not, the code in this
+		// function is likely the stuff to change.
 		EXCEPT("This is the first time this code path has been taken, please "
 			"ensure it does what you think it does.");
 		status = tcp_connect_timeout(fd, (struct sockaddr*)&sinful, 

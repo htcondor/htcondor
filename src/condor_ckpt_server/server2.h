@@ -32,6 +32,7 @@
 #include "list.h"
 #include "classad_collection.h"
 #include "protocol.h"
+#include "directory.h"
 
 
 class Server
@@ -98,7 +99,7 @@ class Server
     void SendStatus(int data_conn_sd);
 
 	void RemoveStaleCheckpointFiles(const char *directory);
-	void RemoveStaleCheckpointFilesRecurse(const char *path, 
+	void RemoveStaleCheckpointFilesRecurse(const char *path, Directory *dir,
 		time_t cutoff_time, time_t a_time);
 
   public:
