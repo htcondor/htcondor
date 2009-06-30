@@ -541,7 +541,7 @@ void Accountant::AddMatch(const MyString& CustomerName, ClassAd* ResourceAd)
   // there is a group record to update
   if ( update_group_info ) {
 	  // Update customer's group resource usage count
-	  GroupResourcesUsedRW += ResourceWeight * cpusPerSlot;
+	  GroupResourcesUsedRW += ResourceWeight;
 	  GroupResourcesUsed += cpusPerSlot;
 	  dprintf(D_ACCOUNTANT, "GroupResourcesUsedRW becomes: %.3f\n", GroupResourcesUsedRW);
 	  SetAttributeFloat(CustomerRecord+GroupName,ResourcesUsedRWAttr,GroupResourcesUsedRW);
