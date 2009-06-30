@@ -121,17 +121,18 @@ class Matchmaker : public Service
 		   ClassAdList &startdAds, ClaimIdHash &claimIds, 
 		   const CondorVersionInfo & scheddVersion,
 		   bool ignore_schedd_limit, time_t startTime, 
-		   int &numMatched, double &limitRWUsed);
+		   int &numMatched, double &limitRWUsed, double &pieLeft);
 
 		int negotiateWithGroup ( int untrimmed_num_startds,
 								 double untrimmedResourceWeightTotal,
+								 double minResourceWeight,
 			ClassAdList& startdAds, 
 			ClaimIdHash& claimIds, ClassAdList& scheddAds, 
 			float groupQuota=INT_MAX, const char* groupAccountingName=NULL);
 
 		
 		ClassAd *matchmakingAlgorithm(const char*,const char*,ClassAd&,ClassAdList&,
-									  double=-1.0, double=1.0, double=0.0, double=0.0, bool=false);
+									  double=-1.0, double=1.0, double=0.0, double=0.0, double=0.0, bool=false);
 		int matchmakingProtocol(ClassAd &request, ClassAd *offer, 
 						ClaimIdHash &claimIds, Sock *sock,
 						const char* scheddName, const char* scheddAddr);
@@ -202,7 +203,8 @@ class Matchmaker : public Service
 		                              double normalAbsFactor,
 									  double resourceWeightTotal,
 		                                   /* result parameters: */
-		                              int &userprioCrumbs );
+		                              int &userprioCrumbs,
+		                              double &pieLeft);
 
 		void MakeClaimIdHash(ClassAdList &startdPvtAdList, ClaimIdHash &claimIds);
 		char const *getClaimId (const char *, const char *, ClaimIdHash &, MyString &);
@@ -220,8 +222,8 @@ class Matchmaker : public Service
 		int trimStartdAds(ClassAdList &startdAds);
 
 		float GetResourceWeight(ClassAd *candidate);
-		bool GroupQuotaPermits(ClassAd *candidate, double used, double total);
-		double sumResourceWeights(ClassAdList &startdAds);
+		bool GroupQuotaPermits(ClassAd *candidate, double used, double allowed, double pieLeft);
+		double sumResourceWeights(ClassAdList &startdAds,double *minResourceWeight);
 
 		/* ODBC insert functions */
 		void insert_into_rejects(char const *userName, ClassAd& job);

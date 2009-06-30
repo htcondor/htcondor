@@ -921,7 +921,8 @@ negotiationTime ()
     // Get number of available slots in any state.
     int numDynGroupSlots = untrimmed_num_startds;
 
-	double untrimmedResourceWeightTotal = sumResourceWeights(startdAds);
+	double minResourceWeight = 0;
+	double untrimmedResourceWeightTotal = sumResourceWeights(startdAds,&minResourceWeight);
 
 	// Register a lookup function that passes through the list of all ads.
 	// ClassAdLookupRegister( lookup_global, &allAds );
@@ -1121,7 +1122,8 @@ negotiationTime ()
 			dprintf(D_ALWAYS,"Group %s - negotiating\n",
 				groupArray[i].groupName);
 			negotiateWithGroup( untrimmed_num_startds,
-								untrimmedResourceWeightTotal, startdAds, 
+								untrimmedResourceWeightTotal,
+								minResourceWeight, startdAds, 
 				claimIds, groupArray[i].submitterAds, 
 				groupArray[i].maxAllowed, groupArray[i].groupName );
 		}
@@ -1159,7 +1161,7 @@ negotiationTime ()
 	} // if (groups)
 	
 		// negotiate w/ all users who do not belong to a group.
-	negotiateWithGroup(untrimmed_num_startds, untrimmedResourceWeightTotal, startdAds, claimIds, scheddAds);
+	negotiateWithGroup(untrimmed_num_startds, untrimmedResourceWeightTotal, minResourceWeight, startdAds, claimIds, scheddAds);
 	
 	// ----- Done with the negotiation cycle
 	dprintf( D_ALWAYS, "---------- Finished Negotiation Cycle ----------\n" );
@@ -1186,6 +1188,7 @@ Matchmaker::SimpleGroupEntry::
 int Matchmaker::
 negotiateWithGroup ( int untrimmed_num_startds,
 					 double untrimmedResourceWeightTotal,
+					 double minResourceWeight,
 					 ClassAdList& startdAds,
 					 ClaimIdHash& claimIds, 
 					 ClassAdList& scheddAds, 
@@ -1206,6 +1209,9 @@ negotiateWithGroup ( int untrimmed_num_startds,
 	double		scheddShare = 0.0;
 	double		scheddAbsShare = 0.0;
 	double		scheddLimitRoundoff;
+	double		pieLeft;
+	double 		pieLeftOrig;
+	int         scheddAdsCountOrig;
 	int			scheddLimit;
 	int			scheddUsage;
 	int			totalTime;
@@ -1263,7 +1269,11 @@ negotiateWithGroup ( int untrimmed_num_startds,
 			normalAbsFactor,
 			resourceWeightTotal,
 				/* result parameters: */
-			userprioCrumbs );
+			userprioCrumbs,
+			pieLeft);
+
+		pieLeftOrig = pieLeft;
+		scheddAdsCountOrig = scheddAds.MyLength();
 
 		MaxscheddLimit = 0;
 		MaxscheddLimitRW = 0.0;
@@ -1271,6 +1281,8 @@ negotiateWithGroup ( int untrimmed_num_startds,
 		dprintf( D_ALWAYS, "Phase 4.%d:  Negotiating with schedds ...\n",
 			spin_pie );
 		dprintf (D_FULLDEBUG, "    NumStartdAds = %d\n", numStartdAds);
+		dprintf (D_FULLDEBUG, "    resourceWeightTotal = %f\n", resourceWeightTotal);
+		dprintf (D_FULLDEBUG, "    pieLeft = %.3f\n", pieLeft);
 		dprintf (D_FULLDEBUG, "    NormalFactor = %f\n", normalFactor);
 		dprintf (D_FULLDEBUG, "    MaxPrioValue = %f\n", maxPrioValue);
 		dprintf (D_FULLDEBUG, "    NumScheddAds = %d\n", scheddAds.MyLength());
@@ -1349,6 +1361,18 @@ negotiateWithGroup ( int untrimmed_num_startds,
 				scheddLimit++;
 			}
 
+			double scheddLimitRWStarved = 0;
+			if( scheddLimitRW > pieLeft ) {
+				// Somebody must have taken more than their fair share,
+				// so this schedd gets starved.  This assumes that
+				// none of the pie dished out so far was just shuffled
+				// around between the users in the current group.
+				// If that is not true, a subsequent spin of the pie
+				// will dish out some more.
+				scheddLimitRWStarved = scheddLimitRW - pieLeft;
+				scheddLimitRW = pieLeft;
+			}
+
 			if( scheddLimit > MaxscheddLimit ) {
 				MaxscheddLimit = scheddLimit;
 			}
@@ -1375,8 +1399,12 @@ negotiateWithGroup ( int untrimmed_num_startds,
 					userprioCrumbs, scheddLimit - scheddLimitWithoutCrumbs);
 				dprintf (D_FULLDEBUG, "    MaxscheddLimit   = %d\n",
 					MaxscheddLimit);
-				dprintf (D_FULLDEBUG, "    scheddLimitRW    = %f\n",
-					scheddLimitRW);
+				MyString starvation;
+				if( scheddLimitRWStarved > 0 ) {
+					starvation.sprintf(" (starved %f)",scheddLimitRWStarved);
+				}
+				dprintf (D_FULLDEBUG, "    scheddLimitRW    = %f%s\n",
+					scheddLimitRW, starvation.Value());
 				dprintf (D_FULLDEBUG, "    scheddUsageRW    = %f\n",
 					scheddUsageRW);
 				dprintf (D_FULLDEBUG, "    MaxscheddLimitRW = %f\n",
@@ -1414,7 +1442,7 @@ negotiateWithGroup ( int untrimmed_num_startds,
 					totalTime, MaxTimePerSubmitter);
 				result = MM_DONE;
 			} else {
-				if ( scheddLimit < 1 && spin_pie > 1 ) {
+				if ( (useResourceWeights ? (scheddLimitRW <= 0 || pieLeft < minResourceWeight) : scheddLimit < 1) && spin_pie > 1 ) {
 					result = MM_RESUME;
 				} else {
 					if ( spin_pie == 1 && ConsiderPreemption ) {
@@ -1429,7 +1457,7 @@ negotiateWithGroup ( int untrimmed_num_startds,
 								  scheddAbsShare, scheddLimit, scheddLimitRW,
 								  startdAds, claimIds, 
 								  scheddVersion, ignore_schedd_limit,
-								  startTime, numMatched, limitRWUsed);
+								  startTime, numMatched, limitRWUsed, pieLeft);
 					updateNegCycleEndTime(startTime, schedd);
 
 					if( numMatched > scheddLimitWithoutCrumbs ) {
@@ -1488,9 +1516,9 @@ negotiateWithGroup ( int untrimmed_num_startds,
 			}
 		}
 		scheddAds.Close();
-		// does MaxScheddLimit[RW] ever get updated in this loop?
 	} while ( (hit_schedd_prio_limit == TRUE || hit_network_prio_limit == TRUE)
-			  && ( useResourceWeights ? (MaxscheddLimitRW > 0.0) : (MaxscheddLimit > 0) )
+			  && ( useResourceWeights ? (pieLeft < pieLeftOrig || scheddAds.MyLength() < scheddAdsCountOrig) : (MaxscheddLimit > 0) )
+			  && (scheddAds.MyLength() > 0)
 			  && (startdAds.MyLength() > 0) );
 
 	return TRUE;
@@ -1588,17 +1616,22 @@ trimStartdAds(ClassAdList &startdAds)
 }
 
 double Matchmaker::
-sumResourceWeights(ClassAdList &startdAds)
+sumResourceWeights(ClassAdList &startdAds,double *minResourceWeight)
 {
 	ClassAd *ad = NULL;
 	double sum = 0.0;
 
+	if( minResourceWeight ) {
+		*minResourceWeight = 0;
+	}
+
 	startdAds.Open();
 	while( (ad=startdAds.Next()) ) {
-		float resourceWeight = 1.0;
-		if(useResourceWeights)
-			ad->EvalFloat(ResourceWeightAttr.Value(), NULL, resourceWeight);
+		float resourceWeight = GetResourceWeight(ad);
 		sum+=resourceWeight;
+		if( minResourceWeight && resourceWeight < *minResourceWeight ) {
+			*minResourceWeight = resourceWeight;
+		}
 	}
 	return sum;
 }
@@ -1896,7 +1929,7 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, dou
 		   ClassAdList &startdAds, ClaimIdHash &claimIds, 
 		   const CondorVersionInfo & scheddVersion,
 		   bool ignore_schedd_limit, time_t startTime, 
-		   int &numMatched, double &limitRWUsed)
+		   int &numMatched, double &limitRWUsed, double &pieLeft)
 {
 	ReliSock	*sock;
 	int			reply;
@@ -1907,6 +1940,7 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, dou
 	ClassAd		*offer;
 	bool		only_consider_startd_rank;
 	bool		display_overlimit = true;
+	bool		limited_by_scheddLimitRW = false;
 	char		remoteUser[128];
 	int negotiate_command = NEGOTIATE;
 
@@ -2093,8 +2127,11 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, dou
 				// So in this case, return MM_RESUME since there still may be 
 				// jobs which the schedd wants scheduled but have not been considered
 				// as candidates for no preemption or user priority preemption.
+				// Also, if we were limited by scheddLimitRW, resume
+				// in the next spin of the pie, because our limit might
+				// increase.
 			if ( useResourceWeights ) {
-				if( limitRWUsed >= scheddLimitRW ) {
+				if( limitRWUsed >= scheddLimitRW || limited_by_scheddLimitRW ) {
 					return MM_RESUME;
 				} else {
 					return MM_DONE;
@@ -2164,6 +2201,7 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, dou
 											 startdAds, priority,
 											 share, 
 											 limitRWUsed, scheddLimitRW,
+											 pieLeft,
 											 only_consider_startd_rank)))
 			{
 				int want_match_diagnostics = 0;
@@ -2173,6 +2211,9 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, dou
 				// no match found
 				dprintf(D_ALWAYS, "      Rejected %d.%d %s %s: ",
 						cluster, proc, scheddName, scheddAddr.Value());
+				if( rejForGroupQuota ) {
+					limited_by_scheddLimitRW = true;
+				}
 				if (rejForNetwork) {
 					diagnostic_message = "insufficient bandwidth";
 					dprintf(D_ALWAYS|D_NOHEADER, "%s\n",
@@ -2281,8 +2322,9 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, dou
 			startdAds.Delete (offer);
 		}	
 
-		limitRWUsed += GetResourceWeight(offer);
-
+		double ResourceWeight = GetResourceWeight(offer);
+		limitRWUsed += ResourceWeight;
+		pieLeft -= ResourceWeight;
 	}
 
 
@@ -2338,14 +2380,14 @@ float Matchmaker::
 GetResourceWeight(ClassAd *candidate) 
 {
 	float ResourceWeight = 1.0;
-	MyString candidateName;
 	if(!useResourceWeights) {
 		return ResourceWeight;
 	}
-	candidate->LookupString(ATTR_NAME, candidateName);
 	
 	if(candidate->EvalFloat(ResourceWeightAttr.Value(), NULL, 
-							  ResourceWeight) == 0) {
+							  ResourceWeight) == 0 || ResourceWeight<0) {
+		MyString candidateName;
+		candidate->LookupString(ATTR_NAME, candidateName);
 		dprintf(D_FULLDEBUG, "Can't get ResourceWeight for '%s'; using 1.0\n", 
 				candidateName.Value());
 		ResourceWeight = 1.0;
@@ -2354,10 +2396,27 @@ GetResourceWeight(ClassAd *candidate)
 }
 
 bool Matchmaker::
-GroupQuotaPermits(ClassAd *candidate, double used, double allowed) 
+GroupQuotaPermits(ClassAd *candidate, double used, double allowed, double pieLeft) 
 {
 	float ResourceWeight = GetResourceWeight(candidate);
-	if((used + ResourceWeight) <= allowed) {
+		// the use of a fudge-factor 0.99 in the following is to be
+		// generous in case of very small round-off differences
+		// that I have observed in tests
+	if((used + ResourceWeight) <= 0.99*allowed) {
+		return true;
+	}
+	if( used == 0 && allowed > 0 && pieLeft >= 0.99*ResourceWeight ) {
+
+		// Allow user to round up once per pie spin in order to avoid
+		// "crumbs" being left behind that couldn't be taken by anyone
+		// because they were split between too many users.  Only allow
+		// this if there is enough total pie left to dish out this
+		// resource in this round.  ("pie_left" is somewhat of a
+		// fiction, since users in the current group may be stealing
+		// pie from each other as well as other sources, but
+		// subsequent spins of the pie should deal with that
+		// inaccuracy.)
+
 		return true;
 	}
 	return false;
@@ -2374,6 +2433,7 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 					 ClassAdList &startdAds,
 					 double preemptPrio, double share,
 					 double limitRWUsed, double scheddLimitRW,
+					 double pieLeft,
 					 bool only_for_startdrank)
 {
 		// to store values pertaining to a particular candidate offer
@@ -2399,7 +2459,7 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 		// request attributes
 	int				requestAutoCluster = -1;
 
-	dprintf(D_FULLDEBUG, "matchmakingAlgorithm: limit %f used %f\n", scheddLimitRW, limitRWUsed);
+	dprintf(D_FULLDEBUG, "matchmakingAlgorithm: limit %f used %f pieLeft %f\n", scheddLimitRW, limitRWUsed, pieLeft);
 
 		// Check resource constraints requested by request
 	rejForConcurrencyLimit = 0;
@@ -2462,7 +2522,7 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 		// we can use cached information.  pop off the best
 		// candidate from our sorted list.
 		while( (cached_bestSoFar = MatchList->pop_candidate()) ) {
-			if( GroupQuotaPermits(cached_bestSoFar, limitRWUsed, scheddLimitRW) ) {
+			if( GroupQuotaPermits(cached_bestSoFar, limitRWUsed, scheddLimitRW, pieLeft) ) {
 				break;
 			}
 			MatchList->increment_rejForGroupQuota();
@@ -2622,7 +2682,7 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 		}
 
 		if(useResourceWeights && 
-		   !GroupQuotaPermits(candidate, limitRWUsed, scheddLimitRW)) {
+		   !GroupQuotaPermits(candidate, limitRWUsed, scheddLimitRW, pieLeft)) {
 			rejForGroupQuota++;
 			continue;
 		}
@@ -3121,7 +3181,8 @@ Matchmaker::calculateUserPrioCrumbs(
 	double normalAbsFactor,
 	double resourceWeightTotal,
 		/* result parameters: */
-	int &userprioCrumbs )
+	int &userprioCrumbs,
+	double &pieLeft)
 {
 	ClassAd *schedd;
 
@@ -3129,6 +3190,7 @@ Matchmaker::calculateUserPrioCrumbs(
 		// rounded integer shares of machines to each submitter.
 		// What's left are the user-prio "pie crumbs".
 	userprioCrumbs = 0;
+	pieLeft = 0;
 
 	double roundoff_sum = 0.0;
 
@@ -3169,6 +3231,7 @@ Matchmaker::calculateUserPrioCrumbs(
 			scheddPrioFactor,
 			scheddLimitRoundoff );
 		roundoff_sum += scheddLimitRoundoff;
+		pieLeft += scheddLimitRW;
 	}
 	scheddAds.Close();
 

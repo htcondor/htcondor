@@ -75,7 +75,7 @@ public:
   void ReportLimits(AttrList *attrList);
 
   AttrList* ReportState();
-  AttrList* ReportState(const MyString& CustomerName, int * NumResources = NULL);
+  AttrList* ReportState(const MyString& CustomerName, int * NumResources = NULL, float * NumResourcesRW = NULL);
                                                 
   void DisplayLog();
   void DisplayMatches();
