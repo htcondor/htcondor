@@ -39,9 +39,7 @@ each initial SOAR setup will follow these steps:
 </p>
 <ol>
 <li> download and unpack
-<li> (currently) edit <tt>fsconfig</tt> file to identify locations of 
-various aspects of the system
-<br>(planned) run the install script
+<li> Follow the "<b>Installation</b>" steps below.
 <li> Adapt the Project to SOAR
      <br>possibly modify the program to be automated, such that
 it can be automated
@@ -61,6 +59,35 @@ automated.
 <!--
 step by step
 -->
+<p>
+The first part to installing SOAR is deciding where to place things.
+See <b>Configurable locations</b> below. 
+</p>
+
+<ul>
+<li>
+Install Condor if you do not have it yet.
+<li>
+Get tar ball of SOAR distribution.
+<li>
+Configure a URL for the SOAR installation directory for Apache2.
+See SOAR.conf for an example in the top level of the SOAR tar ball.
+<li>
+Optionally configure a RUN url if you plan on locating the condorruns,
+tarcache and results folders other then in the installation directory.
+<li>
+Untar the tar ball and run ./soar_configure.pl --help to see current
+install options.
+<li>
+Run the base install ./soar_configure.pl --install-loc=/some/path 
+--soar-url=http://some path.
+<li>
+Edit per_plotsandreports per_runs so they have a good path and
+a valid CONDOR_CONFIG settings. Path has to include Condor
+binaries.
+
+</ul>
+
 
 <h3>
 Software needed to run SOAR
@@ -68,6 +95,10 @@ Software needed to run SOAR
 <ul>
 <li>
 Perl
+<li>
+PHP enabled for the web browser.
+<li>
+date/Manip.pm perl module
 <li>
 Gnuplot 4.2 or newer ( for profiling )
 <li>
@@ -126,7 +157,7 @@ for project-specific versions of the component.
 Additionally, each project can have its data location specified in this file in the format:
 
 <p>
-	Project_name:Location_holding _data_in _project_name_folder
+	Project_name,Location_holding _data_in _project_name_folder
 
 <p>
 Soar is told where to 
@@ -247,14 +278,13 @@ Time activated tasks
 </h3>
 
 The most convenient way to do production with SOAR is to place entries in a file which 
-condor manages the frequency of.  There are two included(per_runs and per_plotsand 
-reports). Per_runs fires off the commands in continuous.cron once a day and 
+condor manages the frequency of.  There are two included(per_runs and per_plotsandreports). Per_runs fires off the commands in continuous.cron once a day and 
 per_plotsandreports fires off the commands in checkprogress.com every 5 minutes. 
 Setting this up is as easy as placing what you want done similar to the sample files 
 and submitting them with condor_submit(condor_submit per_runs). The first usually 
-contains usage of the control.pl script and kind=new so tracking of datasets already done 
+contains usage of the control.pl script and --kind=new so tracking of datasets already done 
 has only new datasets run. The second usually contains the usage of the status.pl script 
-with last as it then looks up the most recent run of the project and updates the profile 
+with --last as it then looks up the most recent run of the project and updates the profile 
 and the report.
 
 This way once you tie a project to do a particular job, you or the person doing the 
@@ -267,19 +297,34 @@ the project and pull results from the result location.
 
 Control.pl
 
-* -b/--bail - Debug hook to stop just before submitting the dag which was built for the run
-* --code - used when one wants to change the contents of the code directory for a new version which uses the glue scripts from a previous version. 
-* --clean - A(ALL), D(DATA), C(CACHE), R(RESULTS), L(LOGS and misc in rundir) Be very careful with this as its intent is to save space after your results have been saved.
-* -h/--help - See this
-* -l/--limit=N - start this number of nodes in a Dag(acts like run)
-* --project=s - Run which project?
-* -n/--newproject=s - New project derived from existing
-* -v/--version=s - Run which version(name this version for install)?
-* --preversion=s - Based on this earlier version
-* -k/--kind=s - install, nightly, new else a label for web
-* -s/--softversion - print software version
-* -t/--type=s - One type of install is a new param.dat from the imagedir for the project to it's code location
-* -u/--update - Update the project ENVVARS file to the last run.
+<ul>
+<li>
+-b/--bail - Debug hook to stop just before submitting the dag which was built for the run
+<li>
+--code - used when one wants to change the contents of the code directory for a new version which uses the glue scripts from a previous version. 
+<li>
+--clean - A(ALL), D(DATA), C(CACHE), R(RESULTS), L(LOGS and misc in rundir) Be very careful with this as its intent is to save space after your results have been saved. Onlt safe options are
+<li>
+-h/--help - See this
+<li>
+-l/--limit=N - start this number of nodes in a Dag(acts like run)
+<li>
+--project=s - Run which project?
+<li>
+-n/--newproject=s - New project derived from existing
+<li>
+-v/--version=s - Run which version(name this version for install)?
+<li>
+--preversion=s - Based on this earlier version
+<li>
+-k/--kind=s - install, nightly, new else a label for web
+<li>
+-s/--softversion - print software version
+<li>
+-t/--type=s - One type of install is a new param.dat from the imagedir for the project to it's code location
+<li>
+-u/--update - Update the project ENVVARS file to the last run.
+</ul>
 
 <h3>
 Control.pl Examples
@@ -288,9 +333,11 @@ Control.pl Examples
 <ul>
 <li>
 <pre>
-./control.pl --project=gravitropism --version=v3 --limit=10 --kind=oneoff --clean=A
+./control.pl --project=gravitropism --version=v3 --limit=10 --kind=oneoff --clean=CL
 </pre>
-This script ...
+The above will run an arbitrary 10 jobs from the available data sets for project
+gravitropism version v3 and after will clean the run directory some and clear
+any use of the tarcache space. Results and data sets are not touched.
 <li>
 <pre>
 ./control.pl --project=gravitropism --version=v3 --kind=white --white=/tmp/whitelist
@@ -310,7 +357,10 @@ This script ...
 <pre>
 ./control.pl --project=gravitropism --version=v3 --kind=new
 </pre>
-This script ...
+This is the most basic use. Run only data sets of this project and version
+which have not been run yet. If run once a day, new data can be prepared
+and placed in the projects data location and the new data sets will all
+be run.
 <li>
 <pre>
 ./control.pl --project=gravitropism --version=v3 --kind=white --white=/tmp/whitelist
@@ -321,7 +371,9 @@ This script ...
 ./control.pl --project=natehighres --preversion=v1 --newproject=DanLewisArabidopsis --version=v1 --kind=install
 </pre>
 <li>
-This script ...
+The above will create a new project based on an existing projects and place the version
+at any level desired. This is how one might create tracking and data set freedom for
+a number of people running the same job but with different data and parameters.
 <pre>
 ./control.pl --project=gravitropism --version=v3 --kind=install --type=param.dat
 </pre>
@@ -399,22 +451,26 @@ Status.pl Examples
 <ul>
 <li>
 <pre>
-./status.pl --project=gravitropism --kind=profile
+./status.pl --project=gravitropism --kind=profile --last
 </pre>
-This script uses ENVVARS, as set by the main project
+Create the profile plot for the last or currently running set
+of jobs for this project.
 <li>
 <pre>
 ./status.pl --project=gravitropism --kind=profile --env=run15523_8_24_2008
 </pre>
+Create a profile plot for a particular run.
 <li>
 <pre>
-./status.pl --project=gravitropism --version --kind=summary
+./status.pl --project=gravitropism  --kind=summary --last
 </pre>
-This script uses ENVVARS, as set by the main project
+Create the report for the last or currently running set
+of jobs for this project.
 <li>
 <pre>
-./status.pl --kind=summary --project=gravitropism --version=v3 --env=run6823_8_26_200
+./status.pl --kind=summary --project=gravitropism --env=run6823_8_26_200
 </pre>
+Create a report for a particular run.
 </ul>
 
 <h2>Web Interface</h2>
@@ -422,8 +478,21 @@ This script uses ENVVARS, as set by the main project
 what can be seen
 how to see it
 -->
-
-
+<h3>Basics</h3>
+<p>
+The goal of the web interface is to inspect a run of data sets done
+as a single Condor DAG. One gets access to the run directory for the 
+DAG which has a subdirectory for each job, to the plot showing current progress
+of that DAG, a report which breaks out aspects of each job which has currently
+ended, and allows access to results for each job in the DAG when it completes.
+</p>
+<h3>index.html</h3>
+<p>
+This file sits at the top most level and has sample links to projects.php.
+These two files make it possible to have links created from the file
+<b>RUNS</b> in the top of the projects run directory which allow the links and access
+described above.
+</p>
 
 
 </body>
