@@ -21,7 +21,7 @@
 #include "string_funcs.h"
 
 #if ( !HAVE_STRCASESTR )
-/* Like strstr(), but case-insensitive */
+// Like strstr(), but case-insensitive
 char *
 strcasestr( const char *string, const char *pattern )
 {

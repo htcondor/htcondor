@@ -180,7 +180,6 @@ CONLIBAPI_OBJ = \
 	my_distribution.o \
 	$(CLASSAD_OBJ) \
 	../condor_util_lib/get_random_num.o \
-	../condor_util_lib/get_uc_first_underscore.o \
 	\
 	libcondorapi_stubs.o \
 	$(SETEUID_OBJ) \

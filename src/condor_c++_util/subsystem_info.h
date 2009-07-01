@@ -107,8 +107,6 @@ class SubsystemInfo
 	const char *setName( const char *subsystem_name );
 	const char *getName( void ) const
 		{ return (m_TempName == NULL) ? m_Name : m_TempName; };
-	const char *getNameUcFirst( void ) const
-		{ return m_NameUcFirst; };
 	bool nameMatch( const char *name ) const;
 	bool isNameValid( void ) const { return m_NameValid; };
 
@@ -143,7 +141,6 @@ class SubsystemInfo
 
   private:
 	const char					*m_Name;
-	const char					*m_NameUcFirst;
 	const char					*m_TempName;
 	bool						 m_NameValid;
 	SubsystemType				 m_Type;
@@ -177,7 +174,6 @@ extern SubsystemInfo* get_mySubSystem();
 BEGIN_C_DECLS
 
 const char* get_mySubSystemName(void);
-const char* get_mySubSystemNameUc(void);
 SubsystemType get_mySubSystemType(void);
 	
 END_C_DECLS

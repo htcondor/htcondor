@@ -300,7 +300,6 @@ SubsystemInfoTable::lookup( const char *_name ) const
 SubsystemInfo::SubsystemInfo( const char *_name, SubsystemType _type )
 {
 	m_Name = NULL;
-	m_NameUcFirst = NULL;
 	m_TempName = NULL;
 	m_LocalName = NULL;
 	m_Info = NULL;
@@ -319,10 +318,6 @@ SubsystemInfo::~SubsystemInfo( void )
 	if ( m_Name ) {
 		free( const_cast<char *>( m_Name ) );
 		m_Name = NULL;
-	}
-	if ( m_NameUcFirst ) {
-		free( const_cast<char *>( m_NameUcFirst ) );
-		m_NameUcFirst = NULL;
 	}
 	if ( m_TempName ) {
 		free( const_cast<char *>( m_TempName ) );
@@ -345,14 +340,8 @@ SubsystemInfo::setName( const char *_name )
 		free( const_cast<char *>( m_Name ) );
 		m_Name = NULL;
 	}
-	if ( m_NameUcFirst != NULL ) {
-		free( const_cast<char *>( m_NameUcFirst ) );
-		m_NameUcFirst = NULL;
-	}
-
 	if ( _name != NULL ) {
 		m_Name = strdup(_name);
-		m_NameUcFirst = getUcFirstUnderscore(_name);
 		m_NameValid = true ;
 	}
 	else {
@@ -504,17 +493,7 @@ SubsystemInfo::getString( void ) const
  * linkage.
  */
 extern "C" {
-	const char* get_mySubSystemName(void)
-	{
-		return get_mySubSystem()->getName();
-	}
-	const char* get_mySubSystemNameUc(void)
-	{
-		return get_mySubSystem()->getNameUcFirst();
-	}
-	SubsystemType get_mySubSystemType(void)
-	{
-		return get_mySubSystem()->getType();
-	}
+	const char* get_mySubSystemName(void) { return get_mySubSystem()->getName(); }
+	SubsystemType get_mySubSystemType(void)  { return get_mySubSystem()->getType(); }
 }
 

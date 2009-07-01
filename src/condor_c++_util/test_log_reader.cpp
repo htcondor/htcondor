@@ -541,12 +541,12 @@ ReadEvents(Options &opts, int &totalEvents)
 				char						puniq[256], nuniq[256];
 				int							pseq, nseq;
 
-				paccess.getLogPositionDiff( paccess, diff_pos );
-				paccess.getEventNumberDiff( paccess, diff_enum );
-				paccess.getUniqId( puniq, sizeof(puniq) );
-				paccess.getSequenceNumber( pseq );
-				naccess.getUniqId( nuniq, sizeof(nuniq) );
-				paccess.getSequenceNumber( nseq );
+				paccess.LogPositionDiff( paccess, diff_pos );
+				paccess.EventNumberDiff( paccess, diff_enum );
+				paccess.UniqId( puniq, sizeof(puniq) );
+				paccess.SequenceNumber( pseq );
+				naccess.UniqId( nuniq, sizeof(nuniq) );
+				paccess.SequenceNumber( nseq );
 				printf( "Missed: %ld bytes, %ld events\n"
 						"  Previous Uniq=%s, seq=%d\n"
 						"  Current  Uniq=%s, seq=%d\n",
