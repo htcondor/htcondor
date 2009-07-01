@@ -322,13 +322,14 @@ CheckArgs(int argc, const char **argv, Options &opts)
 }
 
 int
-ReadState(const Options &opts,
-		  ReadUserLog::FileState &state )
+ReadState(const Options				&opts,
+		  ReadUserLog::FileState	&state )
 {
 
 	// Create & initialize the state
 	ReadUserLog::InitFileState( state );
 
+	printf( "Reading state %s\n", opts.getFile() );
 	int	fd = safe_open_wrapper( opts.getFile(), O_RDONLY, 0 );
 	if ( fd < 0 ) {
 		fprintf( stderr, "Failed to read state file %s\n", opts.getFile() );
@@ -467,44 +468,48 @@ DumpState( const Options &opts,
 }
 
 int
-CheckState( const Options &opts,
+CheckState( const Options & /*opts*/,
 			const ReadUserLog::FileState &state )
 {
-	ReadUserLogStateAccess access1(state);
-	unsigned long	pos, num;
-	int				seq;
-	char			uniq_id[256];
+	ReadUserLogStateAccess	saccess(state);
+	unsigned long			pos = 0;
+	unsigned long			num = 0;
+	int						seq = 0;
+	char					uniq_id[256] = "\0";
+	int						errors = 0;
 
-	if (!state.getLogPosition(pos) ) {
-		fprintf( "Error getting log position\n" );
-		return -1;
+	if (!saccess.getLogPosition(pos) ) {
+		fprintf( stderr, "Error getting log position\n" );
+		errors++;
 	}
-	if (!state.getEventNumber(num) ) {
-		fprintf( "Error getting event number\n" );
-		return -1;
+	if (!saccess.getEventNumber(num) ) {
+		fprintf( stderr, "Error getting event number\n" );
+		errors++;
 	}
-	if (!state.getUniqId(uniq_id, sizeof(uniq_id)) ) {
-		fprintf( "Error getting uniq ID\n" );
-		return -1;
+	if (!saccess.getUniqId(uniq_id, sizeof(uniq_id)) ) {
+		fprintf( stderr, "Error getting uniq ID\n" );
+		errors++;
 	}
-	if (!state.getSequenceNumber(seq) ) {
-		fprintf( "Error getting sequence number\n" );
-		return -1;
+	if (!saccess.getSequenceNumber(seq) ) {
+		fprintf( stderr, "Error getting sequence number\n" );
+		errors++;
 	}
 
 	printf( "State:\n"
 			"  Initialized: %s\n"
 			"  Valid: %s\n"
-			"  Log Position: %ul\n"
-			"  Log Event #: %ul\n"
+			"  Log Position: %lu\n"
+			"  Log Event #: %lu\n"
 			"  UniqID: %s\n"
 			"  Sequence #: %d\n",
-			state.isInitialized(),
-			state.isValid(),
+			saccess.isInitialized() ? "True" : "False",
+			saccess.isValid() ? "True" : "False",
 			pos,
 			num,
 			uniq_id,
 			seq );
+
+	return errors ? -1 : 0;
 }
 
 int
@@ -512,9 +517,11 @@ DiffState( const Options &opts,
 		   const ReadUserLog::FileState &state1,
 		   const ReadUserLog::FileState &state2 )
 {
-	ReadUserLogStateAccess access1(state1);
-	ReadUserLogStateAccess access2(state2);
+	ReadUserLogStateAccess	access1(state1);
+	ReadUserLogStateAccess	access2(state2);
+	int						errors = 0;
 	
+	return errors ? -1 : 0;
 }
 
 bool
@@ -793,11 +800,12 @@ Options::Options( void )
 	m_usage =
 		"Usage: test_log_reader_state "
 		"[options] <command> [filename [field-name [value/min [max-value]]]]\n"
-		"  commands: dump verify list\n"
+		"  commands: dump diff verify check list\n"
 		"    dump/any: dump [what]\n"
 		"    diff: diff two state files [file2]\n"
 		"    verify/numeric: what min max\n"
 		"    verify/string:  what [value]\n"
+		"    check: simple checks\n"
 		"    list (list names of things)\n"
 		"  --numeric|-n: dump times as numeric\n"
 		"  --usage|--help|-h: print this message and exit\n"
@@ -917,8 +925,16 @@ Options::lookupCommand( const SimpleArg &arg )
 		m_command = CMD_DUMP;
 		return true;
 	}
+	else if ( 0 == strcasecmp( s, "diff" ) ) {
+		m_command = CMD_DIFF;
+		return true;
+	}
 	else if ( 'v' == c  ||  (0 == strcasecmp( s, "verify" )) ) {
 		m_command = CMD_VERIFY;
+		return true;
+	}
+	else if ( 'c' == c  ||  (0 == strcasecmp( s, "check" )) ) {
+		m_command = CMD_CHECK;
 		return true;
 	}
 	else if ( 'l' == c  ||  (0 == strcasecmp( s, "list" )) ) {
