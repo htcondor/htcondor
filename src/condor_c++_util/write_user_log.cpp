@@ -19,6 +19,7 @@
 
 #define _CONDOR_ALLOW_OPEN
 #include "condor_common.h"
+#include "condor_open.h"
 #include "condor_debug.h"
 #include "util_lib_proto.h"
 #include <stdarg.h>
