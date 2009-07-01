@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2008, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2009, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -537,7 +537,7 @@ public:
 
 	// Positional difference between to states (this - other)
 	bool getLogPositionDiff( const ReadUserLogStateAccess &other,
-						  long &diff ) const;
+							 long &diff ) const;
 
 	// Absolute event number
 	// Note: Can return an error if the result is too large
