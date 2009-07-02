@@ -28,21 +28,18 @@
 
 
 JICLocalFile::JICLocalFile( const char* classad_filename,
-							const char* machad_filename,
 							const char* keyword, 
 							int cluster, int proc, int subproc )
 	: JICLocalConfig( keyword, cluster, proc, subproc )
 {
-	initFilenames( classad_filename, machad_filename );
+	initFilenames( classad_filename );
 }
 
 
-JICLocalFile::JICLocalFile( const char* classad_filename,
-							const char* machad_filename,
-							int cluster, int proc, int subproc )
+JICLocalFile::JICLocalFile( const char* classad_filename, int cluster, int proc, int subproc )
 	: JICLocalConfig( cluster, proc, subproc )
 {
-	initFilenames( classad_filename, machad_filename );
+	initFilenames( classad_filename );
 }
 
 
@@ -51,14 +48,11 @@ JICLocalFile::~JICLocalFile()
 	if( job_filename ) {
 		free( job_filename );
 	}
-	if( mach_filename ) {
-		free( mach_filename );
-	}
 }
 
 
 void
-JICLocalFile::initFilenames( const char* jobad_path, const char* machad_path )
+JICLocalFile::initFilenames( const char* jobad_path )
 {
 	if( ! jobad_path ) {
 		EXCEPT( "Can't instantiate a JICLocalFile without a filename!" );
@@ -68,13 +62,6 @@ JICLocalFile::initFilenames( const char* jobad_path, const char* machad_path )
 		job_filename = NULL;
 	} else {
 		job_filename = strdup( jobad_path );
-	}
-
-	if( machad_path ) {
-		mach_filename = strdup( machad_path );
-	}
-	else {
-		mach_filename = NULL;
 	}
 }
 
@@ -90,18 +77,6 @@ JICLocalFile::getLocalJobAd( void )
 	} else { 
 		dprintf( D_ALWAYS, "Found ClassAd data in \"%s\"\n", jobAdFileName() );
 		found_some = true;
-	}
-
-	if( mach_filename ) {
-		dprintf( D_ALWAYS, "Reading machine ClassAd from \"%s\"\n", machAdFileName() );
-		if( ! readClassAdFromFile( mach_filename, mach_ad ) ) {
-			dprintf( D_ALWAYS, "No ClassAd data in \"%s\"\n", machAdFileName() );
-		} else {
-			dprintf( D_ALWAYS, "Found ClassAd data in \"%s\"\n", machAdFileName() );
-			dprintf( D_FULLDEBUG, "Machine Ad for this job:\n" );
-			mach_ad->dPrint(D_FULLDEBUG);
-			dprintf( D_FULLDEBUG, "End of Machine Ad\n" );
-		}
 	}
 
 		// if we weren't told on the command-line, see if there's a
@@ -133,16 +108,6 @@ JICLocalFile::jobAdFileName( void )
 	}
 	return "STDIN";
 } 
-
-
-char*
-JICLocalFile::machAdFileName( void )
-{
-	if( mach_filename ) {
-		return mach_filename;
-	}
-	return "NULL";
-}
 
 
 bool

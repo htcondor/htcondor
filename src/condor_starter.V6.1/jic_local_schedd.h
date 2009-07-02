@@ -39,13 +39,12 @@ public:
 
 		/** Constructor 
 			@param classad_filename Full path to the ClassAd, "-" if STDIN
-			@param machad_filename Full path to the Machine ClassAd
 			@param schedd_address Sinful string of the schedd's qmgmt port
 			@param cluster Cluster ID number (if any)
 			@param proc Proc ID number (if any)
 			@param subproc Subproc ID number (if any)
 		*/
-	JICLocalSchedd( const char* classad_filename, const char* machad_filename,
+	JICLocalSchedd( const char* classad_filename,
 					const char* schedd_address,
 					int cluster, int proc, int subproc );
 

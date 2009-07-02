@@ -37,7 +37,7 @@ class JICShadow : public JobInfoCommunicator
 {
 public:
 		/// Constructor
-	JICShadow( const char* shadow_name, const char* filename );
+	JICShadow( const char* shadow_name );
 
 		/// Destructor
 	~JICShadow();
@@ -244,8 +244,8 @@ private:
 		/// Do the RSC to get the job classad from the shadow
 	bool getJobAdFromShadow( void );
 
-		/// Get the machine classad from a file
-	bool getMachAdFromFile( void );
+		/// Get the machine classad from the given stream
+	bool receiveMachineAd( Stream *stream );
 
 		/** Initialize information about the shadow's version and
 			sinful string from the given ClassAd.  At startup, we just
@@ -399,8 +399,6 @@ private:
 
 		/// hostname (or whatever the startd gave us) of our shadow 
 	char* m_shadow_name;
-
-	char* machad_filename;
 
 	IOProxy io_proxy;
 

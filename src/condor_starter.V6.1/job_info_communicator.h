@@ -350,9 +350,6 @@ public:
 		/* Update Job ClassAd with checkpoint info and log it */
 	virtual void updateCkptInfo(void) {};
 
-		/* Returns true if limits should be enforced on the job */
-	bool enforceLimits();
-
 protected:
 
 		// // // // // // // // // // // //

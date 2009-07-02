@@ -41,17 +41,16 @@ public:
 
 		/** Constructor with a keyword on the command-line.
 			@param classad_filename Full path to the ClassAd, "-" if STDIN
-			@param machad_filename Fill path to the Machine ClassAd
 			@param keyword Config file keyword to find other attributes
 			@cluster Cluster ID number (if any)
 			@proc Proc ID number (if any)
 			@subproc Subproc ID number (if any)
 		*/
-	JICLocalFile( const char* classad_filename, const char* machad_filename,
+	JICLocalFile( const char* classad_filename,
 				  const char* keyword, int cluster, int proc, int subproc );
 
 		/// Constructor without a keyword on the command-line
-	JICLocalFile( const char* classad_filename, const char* machad_filename,
+	JICLocalFile( const char* classad_filename,
 				  int cluster, int proc, int subproc );
 
 		/// Destructor
@@ -71,7 +70,6 @@ public:
 	bool getLocalJobAd( void );
 
 	char* jobAdFileName( void );
-	char* machAdFileName( void );
 
 protected:
 
@@ -86,21 +84,18 @@ protected:
 	bool readClassAdFromFile( char* filename, ClassAd* ad );
 
 
-		/** Private helper to initialize our job_filename mach_filename
-			data members.  We use this since we have two
+		/** Private helper to initialize our job_filename
+			data member.  We use this since we have two
 			constructors, both of which need to do the same thing
 			with this info.
 		*/
-	void initFilenames( const char* jobad_path, const char* machad_path );
+	void initFilenames( const char* jobad_path );
 
 		/** The full path to the file we get our ClassAd from (or "-"
 			if we're reading it from STDIN).
 		*/
 	char* job_filename;
 
-		/** The full path to the file we get the MachineAd from
-		*/
-	char* mach_filename;
 };
 
 

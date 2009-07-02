@@ -56,8 +56,7 @@ extern const char* MACHINE_AD_FILENAME;
 #	define file_remove remove
 #endif
 
-JICShadow::JICShadow( const char* shadow_name, const char* filename )
-		 : JobInfoCommunicator()
+JICShadow::JICShadow( const char* shadow_name ) : JobInfoCommunicator()
 {
 	if( ! shadow_name ) {
 		EXCEPT( "Trying to instantiate JICShadow with no shadow name!" );
@@ -66,11 +65,6 @@ JICShadow::JICShadow( const char* shadow_name, const char* filename )
 
 	shadow = NULL;
 	shadow_version = NULL;
-	if( filename ) {
-		machad_filename = strdup( filename );
-	} else {
-		machad_filename = NULL;
-	}
 	filetrans = NULL;
 	m_filetrans_sec_session = NULL;
 	m_reconnect_sec_session = NULL;
@@ -132,10 +126,6 @@ JICShadow::~JICShadow()
 	if( fs_domain ) {
 		free( fs_domain );
 	}
-	if ( machad_filename )
-	{
-		free( machad_filename );
-	}
 	free(m_reconnect_sec_session);
 	free(m_filetrans_sec_session);
 }
@@ -153,11 +143,9 @@ JICShadow::init( void )
 		return false;
 	}
 
-	if ( machad_filename ) {
-		getMachAdFromFile();
-		dprintf( D_FULLDEBUG, "Machine Ad for this job:\n" );
-		mach_ad->dPrint(D_FULLDEBUG);
-		dprintf( D_FULLDEBUG, "End of Machine Ad\n" );
+	if ( m_job_startd_update_sock )
+	{
+		receiveMachineAd(m_job_startd_update_sock);
 	}
 
 		// stash a copy of the unmodified job ad in case we decide
@@ -260,7 +248,6 @@ JICShadow::config( void )
 		}			
 		free( tmp );
 	}
-	m_enforce_limits = param_boolean("ENFORCE_JOB_LIMITS", false);
 }
 
 
@@ -410,12 +397,10 @@ JICShadow::transferOutput( void )
 			filetrans->addFileToExeptionList(filename);
 		}
 
-			// remove the job and machine classad files from the
-			// ft list
-		if (enforceLimits()) {
-			filetrans->addFileToExeptionList(JOB_AD_FILENAME);
-			filetrans->addFileToExeptionList(MACHINE_AD_FILENAME);
-		}
+		// remove the job and machine classad files from the
+		// ft list
+		filetrans->addFileToExeptionList(JOB_AD_FILENAME);
+		filetrans->addFileToExeptionList(MACHINE_AD_FILENAME);
 	
 			// true if job exited on its own
 		bool final_transfer = (requested_exit == false);	
@@ -2095,31 +2080,25 @@ JICShadow::initMatchSecuritySession()
 }
 
 bool
-JICShadow::getMachAdFromFile()
+JICShadow::receiveMachineAd( Stream *stream )
 {
-	FILE* fp;
-	int atEOF, error, empty;
-	char delim[] = "--";
+        bool ret_val = true;
 
-	if( machad_filename ) {
-		fp = safe_fopen_wrapper( machad_filename, "r" );
-		if( ! fp ) {
-			dprintf( D_ALWAYS, "Failed to open \"%s\" for reading: %s "
-					"(errno %d)\n", machad_filename,
-					 strerror(errno), errno );
-			return false;
-		}
-	} else {
-		dprintf(D_FULLDEBUG, "No machine ad file defined\n");
-		return false;
-	}
+	dprintf(D_FULLDEBUG, "Entering JICShadow::receiveMachineAd\n");
+	mach_ad = new ClassAd();
 
-	if( mach_ad ) {
+	stream->decode();
+	if (!mach_ad->initFromStream(*stream))
+	{
+		dprintf(D_ALWAYS, "Received invalid machine ad.  Discarding\n");
 		delete mach_ad;
+		mach_ad = NULL;
+		ret_val = false;
 	}
-	mach_ad = new ClassAd(fp, delim, atEOF, error, empty);
+	else
+	{
+		mach_ad->dPrint(D_JOB);
+	}
 
-	fclose(fp);
-
-	return true;
+	return ret_val;
 }

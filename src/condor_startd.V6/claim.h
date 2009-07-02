@@ -264,12 +264,9 @@ public:
 		*/
 	bool writeJobAd( int fd );
 
-		/** Write out the machine ClassAd to the filename stored
-			in c_mach_filename.
+		/** Write out the machine ClassAd to the provided stream
  		*/
-	bool writeMachAd( int fd );
-	int genMachFilename( void );
-	const char* getMachFilename( void );
+	bool writeMachAd( Stream *stream );
 
 	void receiveJobClassAdUpdate( ClassAd &update_ad );
 

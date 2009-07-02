@@ -904,16 +904,3 @@ JobInfoCommunicator::getExitReasonString( void )
 	}
 	return "exit";
 }
-
-
-bool
-JobInfoCommunicator::enforceLimits()
-{
-	bool job_wants_ads = false;
-
-	if (job_ad) {
-		job_ad->LookupBool( ATTR_JOB_WANTS_ADS, job_wants_ads );
-	}
-
-	return (m_enforce_limits || job_wants_ads);
-}
