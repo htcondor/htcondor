@@ -40,6 +40,7 @@ struct LineRec {
   MyString Name;
   float Priority;
   int Res;
+  float wtRes;
   float AccUsage;
   float Factor;
   int BeginUsage;
@@ -534,12 +535,13 @@ int CompPrio(const void * ina, const void * inb)
 
 static void CollectInfo(int numElem, AttrList* ad, LineRec* LR)
 {
-  char  attrName[32], attrPrio[32], attrResUsed[32], attrFactor[32], attrBeginUsage[32], attrAccUsage[32];
+  char  attrName[32], attrPrio[32], attrResUsed[32], attrWtResUsed[32], attrFactor[32], attrBeginUsage[32], attrAccUsage[42];
   char  attrLastUsage[32];
   char  name[128];
   float priority, Factor, AccUsage;
   int   resUsed, BeginUsage;
   int   LastUsage;
+  float wtResUsed;
 
   for( int i=1; i<=numElem; i++) {
     LR[i-1].Priority=0;
@@ -547,10 +549,11 @@ static void CollectInfo(int numElem, AttrList* ad, LineRec* LR)
     sprintf( attrName , "Name%d", i );
     sprintf( attrPrio , "Priority%d", i );
     sprintf( attrResUsed , "ResourcesUsed%d", i );
+    sprintf( attrWtResUsed , "WeightedResourcesUsed%d", i );
     sprintf( attrFactor , "PriorityFactor%d", i );
     sprintf( attrBeginUsage , "BeginUsageTime%d", i );
     sprintf( attrLastUsage , "LastUsageTime%d", i );
-    sprintf( attrAccUsage , "AccumulatedUsage%d", i );
+    sprintf( attrAccUsage , "WeightedAccumulatedUsage%d", i );
 
     if( !ad->LookupString	( attrName, name ) 		|| 
 		!ad->LookupFloat	( attrPrio, priority ) )
@@ -563,11 +566,16 @@ static void CollectInfo(int numElem, AttrList* ad, LineRec* LR)
 		!ad->LookupInteger	( attrResUsed, resUsed ) ) 
 			DetailFlag=0;
 
+	if( !ad->LookupFloat( attrWtResUsed, wtResUsed ) ) {
+		wtResUsed = resUsed;
+	}
+
 	if (LastUsage==0) LastUsage=-1;
 
     LR[i-1].Name=name;
     LR[i-1].Priority=priority;
     LR[i-1].Res=resUsed;
+    LR[i-1].wtRes=wtResUsed;
     LR[i-1].Factor=Factor;
     LR[i-1].BeginUsage=BeginUsage;
     LR[i-1].LastUsage=LastUsage;
@@ -591,6 +599,7 @@ static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem)
 
   LineRec Totals;
   Totals.Res=0;
+  Totals.wtRes=0.0;
   Totals.BeginUsage=0;
   Totals.AccUsage=0;
   
@@ -599,9 +608,9 @@ static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem)
   char* Fmt3="Number of users shown: %-13d %14s\n";    // Totals line format
 
   if (DetailFlag==1) {
-    Fmt1="%-30s %14.2f %8.2f %12.2f %4d %12.2f %14s %14s\n"; 
+    Fmt1="%-30s %14.2f %8.2f %12.2f %4.0f %12.2f %14s %14s\n"; 
     Fmt2="%-30s %14s %8s %12s %4s %12s %14s %14s\n"; 
-    Fmt3="Number of users: %-13d %14s %8s %12s %4d %12.2f %14s %14s\n"; 
+    Fmt3="Number of users: %-13d %14s %8s %12s %4.0f %12.2f %14s %14s\n"; 
   }
   else if (DetailFlag==2) {
     Fmt1="%-30s %12.2f %14s %14s\n"; 
@@ -610,13 +619,13 @@ static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem)
   }
 
   if (DetailFlag==2) {
-    printf(Fmt2,"         ","Accumulated","     Usage    ","     Last     ");
-    printf(Fmt2,"User Name","Usage (hrs)","  Start Time  ","  Usage Time  ");
+    printf(Fmt2,"         ","Total Usage","     Usage    ","     Last     ");
+    printf(Fmt2,"User Name","(wghted-hrs)","  Start Time  ","  Usage Time  ");
     printf(Fmt2,"------------------------------","-----------","----------------","----------------");
   }
   else {
-    printf(Fmt2,"         ","Effective","  Real  ","  Priority  ","Res ","Accumulated","      Usage     ","      Last      ");
-    printf(Fmt2,"User Name","Priority ","Priority","   Factor   ","Used","Usage (hrs)","   Start Time   ","   Usage Time   ");
+    printf(Fmt2,"         ","Effective","  Real  ","  Priority  ","Res ","Total Usage","      Usage     ","      Last      ");
+    printf(Fmt2,"User Name","Priority ","Priority","   Factor   ","Used","(wghted-hrs)","   Start Time   ","   Usage Time   ");
     printf(Fmt2,"------------------------------","---------","--------","------------","----","-----------","----------------","----------------");
   }
 
@@ -629,8 +638,8 @@ static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem)
     if (DetailFlag==2)
       printf(Fmt1,LR[i].Name.Value(),LR[i].AccUsage/3600.0,format_date_year(LR[i].BeginUsage),LastUsageStr);
     else 
-      printf(Fmt1,LR[i].Name.Value(),LR[i].Priority,(LR[i].Priority/LR[i].Factor),LR[i].Factor,LR[i].Res,LR[i].AccUsage/3600.0,format_date_year(LR[i].BeginUsage),LastUsageStr);
-    Totals.Res+=LR[i].Res;
+      printf(Fmt1,LR[i].Name.Value(),LR[i].Priority,(LR[i].Priority/LR[i].Factor),LR[i].Factor,LR[i].wtRes,LR[i].AccUsage/3600.0,format_date_year(LR[i].BeginUsage),LastUsageStr);
+    Totals.wtRes+=LR[i].wtRes;
     Totals.AccUsage+=LR[i].AccUsage;
     if (LR[i].BeginUsage<Totals.BeginUsage || Totals.BeginUsage==0) Totals.BeginUsage=LR[i].BeginUsage;
   }
@@ -642,7 +651,7 @@ static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem)
   }
   else {
     printf(Fmt2,"------------------------------","---------","--------","------------","----","-----------","----------------","----------------");
-    printf(Fmt3,UserCount,"","","",Totals.Res,Totals.AccUsage/3600.0,format_date_year(Totals.BeginUsage),LastUsageStr);
+    printf(Fmt3,UserCount,"","","",Totals.wtRes,Totals.AccUsage/3600.0,format_date_year(Totals.BeginUsage),LastUsageStr);
   }
 
   return;

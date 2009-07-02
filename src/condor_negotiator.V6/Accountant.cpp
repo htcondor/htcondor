@@ -40,22 +40,24 @@ MyString Accountant::AcctRecord="Accountant.";
 MyString Accountant::CustomerRecord="Customer.";
 MyString Accountant::ResourceRecord="Resource.";
 
-MyString Accountant::PriorityAttr="Priority";
-MyString Accountant::ResourcesUsedAttr="ResourcesUsed";
-MyString Accountant::WeightedResourcesUsedAttr="WeightedResourcesUsed";
-MyString Accountant::UnchargedTimeAttr="UnchargedTime";
-MyString Accountant::AccumulatedUsageAttr="AccumulatedUsage";
-MyString Accountant::BeginUsageTimeAttr="BeginUsageTime";
-MyString Accountant::LastUsageTimeAttr="LastUsageTime"; 
-MyString Accountant::PriorityFactorAttr="PriorityFactor";
+static char const *PriorityAttr="Priority";
+static char const *ResourcesUsedAttr="ResourcesUsed";
+static char const *WeightedResourcesUsedAttr="WeightedResourcesUsed";
+static char const *UnchargedTimeAttr="UnchargedTime";
+static char const *WeightedUnchargedTimeAttr="WeightedUnchargedTime";
+static char const *AccumulatedUsageAttr="AccumulatedUsage";
+static char const *WeightedAccumulatedUsageAttr="WeightedAccumulatedUsage";
+static char const *BeginUsageTimeAttr="BeginUsageTime";
+static char const *LastUsageTimeAttr="LastUsageTime"; 
+static char const *PriorityFactorAttr="PriorityFactor";
 
-MyString Accountant::LastUpdateTimeAttr="LastUpdateTime";
+static char const *LastUpdateTimeAttr="LastUpdateTime";
 
-MyString Accountant::RemoteUserAttr="RemoteUser";
-MyString Accountant::StartTimeAttr="StartTime";
+static char const *RemoteUserAttr="RemoteUser";
+static char const *StartTimeAttr="StartTime";
 
 MyString Accountant::Cpus="Cpus";
-MyString Accountant::SlotWeightAttr=ATTR_SLOT_WEIGHT;
+static char const *SlotWeightAttr=ATTR_SLOT_WEIGHT;
 
 //------------------------------------------------------------------
 // Constructor - One time initialization
@@ -408,6 +410,7 @@ void Accountant::ResetAllUsage()
     if (strncmp(CustomerRecord.Value(),key,CustomerRecord.Length())) continue;
 	AcctLog->BeginTransaction();
     SetAttributeFloat(key,AccumulatedUsageAttr,0);
+    SetAttributeFloat(key,WeightedAccumulatedUsageAttr,0);
     SetAttributeInt(key,BeginUsageTimeAttr,T);
 	AcctLog->CommitTransaction();
   }
@@ -423,6 +426,7 @@ void Accountant::ResetAccumulatedUsage(const MyString& CustomerName)
   dprintf(D_ACCOUNTANT,"Accountant::ResetAccumulatedUsage - CustomerName=%s\n",CustomerName.Value());
   AcctLog->BeginTransaction();
   SetAttributeFloat(CustomerRecord+CustomerName,AccumulatedUsageAttr,0);
+  SetAttributeFloat(CustomerRecord+CustomerName,WeightedAccumulatedUsageAttr,0);
   SetAttributeInt(CustomerRecord+CustomerName,BeginUsageTimeAttr,time(0));
   AcctLog->CommitTransaction();
 }
@@ -471,7 +475,7 @@ void Accountant::SetPriority(const MyString& CustomerName, float Priority)
 void Accountant::SetAccumUsage(const MyString& CustomerName, float AccumulatedUsage) 
 {
   dprintf(D_ACCOUNTANT,"Accountant::SetAccumUsage - CustomerName=%s, Usage=%8.3f\n",CustomerName.Value(),AccumulatedUsage);
-  SetAttributeFloat(CustomerRecord+CustomerName,AccumulatedUsageAttr,AccumulatedUsage);
+  SetAttributeFloat(CustomerRecord+CustomerName,WeightedAccumulatedUsageAttr,AccumulatedUsage);
 }
 
 //------------------------------------------------------------------
@@ -519,7 +523,7 @@ void Accountant::AddMatch(const MyString& CustomerName, ClassAd* ResourceAd)
   }
 
   float SlotWeight=1.0;
-  if(ResourceAd->EvalFloat(SlotWeightAttr.Value(),NULL,SlotWeight) == 0) {
+  if(ResourceAd->EvalFloat(SlotWeightAttr,NULL,SlotWeight) == 0) {
 	  SlotWeight = 1.0;
   }
 
@@ -529,6 +533,8 @@ void Accountant::AddMatch(const MyString& CustomerName, ClassAd* ResourceAd)
   GetAttributeFloat(CustomerRecord+CustomerName,WeightedResourcesUsedAttr,WeightedResourcesUsed);
   int UnchargedTime=0;
   GetAttributeInt(CustomerRecord+CustomerName,UnchargedTimeAttr,UnchargedTime);
+  float WeightedUnchargedTime=0.0;
+  GetAttributeFloat(CustomerRecord+CustomerName,WeightedUnchargedTimeAttr,WeightedUnchargedTime);
 
 	// Determine if we need to update a second customer record w/ the group name.
   bool update_group_info = false;
@@ -536,6 +542,7 @@ void Accountant::AddMatch(const MyString& CustomerName, ClassAd* ResourceAd)
   int GroupResourcesUsed=0;
   float GroupWeightedResourcesUsed = 0.0;
   int GroupUnchargedTime=0;
+  float WeightedGroupUnchargedTime=0.0;
   if ( GroupNamesList ) {
 	  GroupName = CustomerName;
 	  int pos = GroupName.FindChar('.');	// '.' is the group seperater
@@ -549,6 +556,7 @@ void Accountant::AddMatch(const MyString& CustomerName, ClassAd* ResourceAd)
 			GetAttributeInt(CustomerRecord+GroupName,ResourcesUsedAttr,GroupResourcesUsed);
 			GetAttributeFloat(CustomerRecord+GroupName,WeightedResourcesUsedAttr,GroupWeightedResourcesUsed);
 			GetAttributeInt(CustomerRecord+GroupName,UnchargedTimeAttr,GroupUnchargedTime);
+			GetAttributeFloat(CustomerRecord+GroupName,WeightedUnchargedTimeAttr,WeightedGroupUnchargedTime);
 	  }
   }
 
@@ -564,7 +572,9 @@ void Accountant::AddMatch(const MyString& CustomerName, ClassAd* ResourceAd)
   SetAttributeFloat(CustomerRecord+CustomerName,WeightedResourcesUsedAttr,WeightedResourcesUsed);
   // add negative "uncharged" time if match starts after last update
   UnchargedTime-=T-LastUpdateTime;
+  WeightedUnchargedTime-=(T-LastUpdateTime)*SlotWeight;
   SetAttributeInt(CustomerRecord+CustomerName,UnchargedTimeAttr,UnchargedTime);
+  SetAttributeFloat(CustomerRecord+CustomerName,WeightedUnchargedTimeAttr,WeightedUnchargedTime);
 
   // Do everything we just to update the customer's record a second time if
   // there is a group record to update
@@ -577,7 +587,9 @@ void Accountant::AddMatch(const MyString& CustomerName, ClassAd* ResourceAd)
 	  SetAttributeInt(CustomerRecord+GroupName,ResourcesUsedAttr,GroupResourcesUsed);
 	  // add negative "uncharged" time if match starts after last update 
 	  GroupUnchargedTime-=T-LastUpdateTime;
+	  WeightedGroupUnchargedTime-=(T-LastUpdateTime)*SlotWeight;
 	  SetAttributeInt(CustomerRecord+GroupName,UnchargedTimeAttr,GroupUnchargedTime);
+	  SetAttributeFloat(CustomerRecord+GroupName,WeightedUnchargedTimeAttr,WeightedGroupUnchargedTime);
   }
 
   // Set reosurce's info: user, and start-time
@@ -620,6 +632,8 @@ void Accountant::RemoveMatch(const MyString& ResourceName, time_t T)
     GetAttributeInt(CustomerRecord+CustomerName,ResourcesUsedAttr,ResourcesUsed);
     int UnchargedTime=0;
     GetAttributeInt(CustomerRecord+CustomerName,UnchargedTimeAttr,UnchargedTime);
+    float WeightedUnchargedTime=0.0;
+    GetAttributeFloat(CustomerRecord+CustomerName,WeightedUnchargedTimeAttr,WeightedUnchargedTime);
     int cpusPerSlot=1;
     GetAttributeInt(ResourceRecord+ResourceName,Cpus,cpusPerSlot);
 
@@ -632,6 +646,7 @@ void Accountant::RemoveMatch(const MyString& ResourceName, time_t T)
 	int GroupResourcesUsed=0;
 	float GroupWeightedResourcesUsed=0.0;
 	int GroupUnchargedTime=0;
+	float WeightedGroupUnchargedTime=0.0;
 	if ( GroupNamesList ) {
 	  GroupName = CustomerName;
 	  int pos = GroupName.FindChar('.');	// '.' is the group seperater
@@ -645,6 +660,7 @@ void Accountant::RemoveMatch(const MyString& ResourceName, time_t T)
 			GetAttributeInt(CustomerRecord+GroupName,ResourcesUsedAttr,GroupResourcesUsed);
 			GetAttributeFloat(CustomerRecord+GroupName,WeightedResourcesUsedAttr,GroupWeightedResourcesUsed);
 			GetAttributeInt(CustomerRecord+GroupName,UnchargedTimeAttr,GroupUnchargedTime);
+			GetAttributeFloat(CustomerRecord+GroupName,WeightedUnchargedTimeAttr,WeightedGroupUnchargedTime);
 	  }
 	}
 
@@ -660,7 +676,9 @@ void Accountant::RemoveMatch(const MyString& ResourceName, time_t T)
     // update uncharged time
     if (StartTime<LastUpdateTime) StartTime=LastUpdateTime;
     UnchargedTime+=T-StartTime;
+    WeightedUnchargedTime+=(T-StartTime)*SlotWeight;
     SetAttributeInt(CustomerRecord+CustomerName,UnchargedTimeAttr,UnchargedTime);
+    SetAttributeFloat(CustomerRecord+CustomerName,WeightedUnchargedTimeAttr,WeightedUnchargedTime);
 
 	// Do everything we just to update the customer's record a second time if
 	// there is a group record to update
@@ -678,7 +696,9 @@ void Accountant::RemoveMatch(const MyString& ResourceName, time_t T)
 	  SetAttributeInt(CustomerRecord+GroupName,ResourcesUsedAttr,GroupResourcesUsed);
 	  // update uncharged time
 	  GroupUnchargedTime+=T-StartTime;
+	  WeightedGroupUnchargedTime+=(T-StartTime)*SlotWeight;
 	  SetAttributeInt(CustomerRecord+GroupName,UnchargedTimeAttr,GroupUnchargedTime);
+	  SetAttributeFloat(CustomerRecord+GroupName,WeightedUnchargedTimeAttr,WeightedGroupUnchargedTime);
 	}
 
 	DeleteClassAd(ResourceRecord+ResourceName);
@@ -726,7 +746,7 @@ void Accountant::DisplayMatches()
     if (strncmp(ResourceRecord.Value(),key,ResourceRecord.Length())) continue;
     ResourceName=key+ResourceRecord.Length();
     MyString RemoteUser;
-    ad->LookupString(RemoteUserAttr.Value(),RemoteUser);
+    ad->LookupString(RemoteUserAttr,RemoteUser);
     printf("Customer=%s , Resource=%s\n",RemoteUser.Value(),ResourceName.Value());
   }
 }
@@ -759,8 +779,11 @@ void Accountant::UpdatePriorities()
   ClassAd* ad;
   float Priority, OldPrio, PriorityFactor;
   int UnchargedTime;
+  float WeightedUnchargedTime;
   float AccumulatedUsage;
+  float WeightedAccumulatedUsage;
   float RecentUsage;
+  float WeightedRecentUsage;
   int ResourcesUsed;
   float WeightedResourcesUsed;
   int BeginUsageTime;
@@ -773,30 +796,36 @@ void Accountant::UpdatePriorities()
     if (strncmp(CustomerRecord.Value(),key,CustomerRecord.Length())) continue;
 
     // lookup values in the ad
-    if (ad->LookupFloat(PriorityAttr.Value(),Priority)==0) Priority=0;
+    if (ad->LookupFloat(PriorityAttr,Priority)==0) Priority=0;
 	if (Priority<MinPriority) Priority=MinPriority;
     OldPrio=Priority;
 
-    if (ad->LookupFloat(PriorityFactorAttr.Value(),PriorityFactor)==0) {
+    if (ad->LookupFloat(PriorityFactorAttr,PriorityFactor)==0) {
 	   	PriorityFactor = DefaultPriorityFactor;
 	}
 
-    if (ad->LookupInteger(UnchargedTimeAttr.Value(),UnchargedTime)==0) UnchargedTime=0;
-    if (ad->LookupFloat(AccumulatedUsageAttr.Value(),AccumulatedUsage)==0) AccumulatedUsage=0;
-    if (ad->LookupInteger(BeginUsageTimeAttr.Value(),BeginUsageTime)==0) BeginUsageTime=0;
-    if (ad->LookupInteger(ResourcesUsedAttr.Value(),ResourcesUsed)==0) ResourcesUsed=0;
-	if (ad->LookupFloat(WeightedResourcesUsedAttr.Value(),WeightedResourcesUsed)==0) WeightedResourcesUsed=0.0;
+    if (ad->LookupInteger(UnchargedTimeAttr,UnchargedTime)==0) UnchargedTime=0;
+    if (ad->LookupFloat(AccumulatedUsageAttr,AccumulatedUsage)==0) AccumulatedUsage=0;
+    if (ad->LookupFloat(WeightedUnchargedTimeAttr,WeightedUnchargedTime)==0) WeightedUnchargedTime=0;
+    if (ad->LookupFloat(WeightedAccumulatedUsageAttr,WeightedAccumulatedUsage)==0) WeightedAccumulatedUsage=AccumulatedUsage;
+    if (ad->LookupInteger(BeginUsageTimeAttr,BeginUsageTime)==0) BeginUsageTime=0;
+    if (ad->LookupInteger(ResourcesUsedAttr,ResourcesUsed)==0) ResourcesUsed=0;
+	if (ad->LookupFloat(WeightedResourcesUsedAttr,WeightedResourcesUsed)==0) WeightedResourcesUsed=0.0;
 
     RecentUsage=float(ResourcesUsed)+float(UnchargedTime)/TimePassed;
-    Priority=Priority*AgingFactor+RecentUsage*(1-AgingFactor);
+    WeightedRecentUsage=float(WeightedResourcesUsed)+float(WeightedUnchargedTime)/TimePassed;
+    Priority=Priority*AgingFactor+WeightedRecentUsage*(1-AgingFactor);
     AccumulatedUsage+=ResourcesUsed*TimePassed+UnchargedTime;
+    WeightedAccumulatedUsage+=WeightedResourcesUsed*TimePassed+WeightedUnchargedTime;
 
 	AcctLog->BeginTransaction();
     SetAttributeFloat(key,PriorityAttr,Priority);
     SetAttributeFloat(key,AccumulatedUsageAttr,AccumulatedUsage);
+    SetAttributeFloat(key,WeightedAccumulatedUsageAttr,WeightedAccumulatedUsage);
     if (AccumulatedUsage>0 && BeginUsageTime==0) SetAttributeInt(key,BeginUsageTimeAttr,T);
     if (RecentUsage>0) SetAttributeInt(key,LastUsageTimeAttr,T);
     SetAttributeInt(key,UnchargedTimeAttr,0);
+    SetAttributeFloat(key,WeightedUnchargedTimeAttr,0.0);
 
     if (Priority<MinPriority && ResourcesUsed==0 &&
 		   	AccumulatedUsage==0 && PriorityFactor==DefaultPriorityFactor ) {
@@ -806,7 +835,7 @@ void Accountant::UpdatePriorities()
 	AcctLog->CommitTransaction();
 	
     dprintf(D_ACCOUNTANT,"CustomerName=%s , Old Priority=%5.3f , New Priority=%5.3f , ResourcesUsed=%d , WeightedResourcesUsed=%f\n",key,OldPrio,Priority,ResourcesUsed,WeightedResourcesUsed);
-    dprintf(D_ACCOUNTANT,"RecentUsage=%8.3f, UnchargedTime=%d, AccumulatedUsage=%5.3f, BeginUsageTime=%d\n",RecentUsage,UnchargedTime,AccumulatedUsage,BeginUsageTime);
+    dprintf(D_ACCOUNTANT,"RecentUsage=%8.3f (unweighted %8.3f), UnchargedTime=%8.3f (unweighted %d), AccumulatedUsage=%5.3f (unweighted %5.3f), BeginUsageTime=%d\n",WeightedRecentUsage,RecentUsage,WeightedUnchargedTime,UnchargedTime,WeightedAccumulatedUsage,AccumulatedUsage,BeginUsageTime);
 
   }
 
@@ -874,7 +903,7 @@ void Accountant::CheckMatches(ClassAdList& ResourceList)
     }
 	else {
 		// Here we need to figure out the CustomerName.
-      ad->LookupString(RemoteUserAttr.Value(),CustomerName);
+      ad->LookupString(RemoteUserAttr,CustomerName);
       if (!CheckClaimedOrMatched(ResourceAd, CustomerName)) {
         dprintf(D_ACCOUNTANT,"Resource %s was not claimed by %s - removing match\n",ResourceName.Value(),CustomerName.Value());
         RemoveMatch(ResourceName);
@@ -925,21 +954,21 @@ AttrList* Accountant::ReportState(const MyString& CustomerName, int * NumResourc
     HK.sprint(key);
     if (strncmp(ResourceRecord.Value(),key,ResourceRecord.Length())) continue;
 
-    if (ResourceAd->LookupString(RemoteUserAttr.Value(),tmp)==0) continue;
+    if (ResourceAd->LookupString(RemoteUserAttr,tmp)==0) continue;
     if (CustomerName!=MyString(tmp)) continue;
 
     ResourceName=key+ResourceRecord.Length();
     sprintf(tmp,"Name%d = \"%s\"",ResourceNum,ResourceName.Value());
     ad->Insert(tmp);
 
-    if (ResourceAd->LookupInteger(StartTimeAttr.Value(),StartTime)==0) StartTime=0;
+    if (ResourceAd->LookupInteger(StartTimeAttr,StartTime)==0) StartTime=0;
     sprintf(tmp,"StartTime%d = %d",ResourceNum,StartTime);
     ad->Insert(tmp);
 
     ResourceNum++;
 	if( NumResourcesRW ) {
 		float SlotWeight = 1.0;
-		ResourceAd->LookupFloat(SlotWeightAttr.Value(),SlotWeight);
+		ResourceAd->LookupFloat(SlotWeightAttr,SlotWeight);
 		*NumResourcesRW += SlotWeight;
 	}
   }
@@ -965,9 +994,11 @@ AttrList* Accountant::ReportState() {
   MyString CustomerName;
   float PriorityFactor;
   float AccumulatedUsage;
+  float WeightedAccumulatedUsage;
   int BeginUsageTime;
   int LastUsageTime;
   int ResourcesUsed;
+  float WeightedResourcesUsed;
 
   AttrList* ad=new AttrList();
   char tmp[512];
@@ -992,23 +1023,31 @@ AttrList* Accountant::ReportState() {
     sprintf(tmp,"Priority%d = %f",OwnerNum,GetPriority(CustomerName));
     ad->Insert(tmp, false);
 
-    if (CustomerAd->LookupInteger(ResourcesUsedAttr.Value(),ResourcesUsed)==0) ResourcesUsed=0;
+    if (CustomerAd->LookupInteger(ResourcesUsedAttr,ResourcesUsed)==0) ResourcesUsed=0;
     sprintf(tmp,"ResourcesUsed%d = %d",OwnerNum,ResourcesUsed);
     ad->Insert(tmp, false);
 
-    if (CustomerAd->LookupFloat(AccumulatedUsageAttr.Value(),AccumulatedUsage)==0) AccumulatedUsage=0;
+    if (CustomerAd->LookupFloat(WeightedResourcesUsedAttr,WeightedResourcesUsed)==0) WeightedResourcesUsed=0;
+    sprintf(tmp,"WeightedResourcesUsed%d = %f",OwnerNum,WeightedResourcesUsed);
+    ad->Insert(tmp, false);
+
+    if (CustomerAd->LookupFloat(AccumulatedUsageAttr,AccumulatedUsage)==0) AccumulatedUsage=0;
     sprintf(tmp,"AccumulatedUsage%d = %f",OwnerNum,AccumulatedUsage);
     ad->Insert(tmp, false);
 
-    if (CustomerAd->LookupInteger(BeginUsageTimeAttr.Value(),BeginUsageTime)==0) BeginUsageTime=0;
+    if (CustomerAd->LookupFloat(WeightedAccumulatedUsageAttr,WeightedAccumulatedUsage)==0) WeightedAccumulatedUsage=0;
+    sprintf(tmp,"WeightedAccumulatedUsage%d = %f",OwnerNum,WeightedAccumulatedUsage);
+    ad->Insert(tmp, false);
+
+    if (CustomerAd->LookupInteger(BeginUsageTimeAttr,BeginUsageTime)==0) BeginUsageTime=0;
     sprintf(tmp,"BeginUsageTime%d = %d",OwnerNum,BeginUsageTime);
     ad->Insert(tmp, false);
 
-    if (CustomerAd->LookupInteger(LastUsageTimeAttr.Value(),LastUsageTime)==0) LastUsageTime=0;
+    if (CustomerAd->LookupInteger(LastUsageTimeAttr,LastUsageTime)==0) LastUsageTime=0;
     sprintf(tmp,"LastUsageTime%d = %d",OwnerNum,LastUsageTime);
     ad->Insert(tmp, false);
 
-    if (CustomerAd->LookupFloat(PriorityFactorAttr.Value(),PriorityFactor)==0) PriorityFactor=0;
+    if (CustomerAd->LookupFloat(PriorityFactorAttr,PriorityFactor)==0) PriorityFactor=0;
     sprintf(tmp,"PriorityFactor%d = %f",OwnerNum,PriorityFactor);
     ad->Insert(tmp, false);
 

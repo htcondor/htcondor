@@ -136,22 +136,7 @@ private:
   static MyString CustomerRecord;
   static MyString ResourceRecord;
 
-  static MyString PriorityAttr;
-  static MyString UnchargedTimeAttr;
-  static MyString ResourcesUsedAttr;
-  static MyString WeightedResourcesUsedAttr;
-  static MyString AccumulatedUsageAttr;
-  static MyString BeginUsageTimeAttr;
-  static MyString LastUsageTimeAttr;
-  static MyString PriorityFactorAttr;
-
-  static MyString LastUpdateTimeAttr;
-
-  static MyString RemoteUserAttr;
-  static MyString StartTimeAttr;
   static MyString Cpus;
-
-  static MyString SlotWeightAttr;
 
   //--------------------------------------------------------
   // Utility functions
