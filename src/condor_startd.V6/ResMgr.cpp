@@ -167,7 +167,7 @@ ResMgr::init_config_classad( void )
 #if HAVE_HIBERNATION
 	configInsert( config_classad, "HIBERNATE", false );
 #endif /* HAVE_HIBERNATION */
-	configInsert( config_classad, ATTR_RESOURCE_WEIGHT, false );
+	configInsert( config_classad, ATTR_SLOT_WEIGHT, false );
 
 		// Next, try the IS_OWNER expression.  If it's not there, give
 		// them a resonable default, instead of leaving it undefined. 

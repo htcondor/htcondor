@@ -61,7 +61,7 @@ typedef int (*lessThanFunc)(AttrList*, AttrList*, void*);
 
 static bool want_simple_matching = false;
 
-MyString ResourceWeightAttr = ATTR_RESOURCE_WEIGHT;
+MyString SlotWeightAttr = ATTR_SLOT_WEIGHT;
 
 //added by ameet - dirty hack - needs to be removed soon!!!
 //#include "../condor_c++_util/queuedbmanager.h"
@@ -381,7 +381,7 @@ reinitialize ()
 		free( preferred_collector );
 	}
 
-	useResourceWeights = param_boolean("NEGOTIATOR_USE_RESOURCE_WEIGHTS", false);
+	useSlotWeights = param_boolean("NEGOTIATOR_USE_SLOT_WEIGHTS", false);
 
 	want_simple_matching = param_boolean("NEGOTIATOR_SIMPLE_MATCHING",false);
 	want_matchlist_caching = param_boolean("NEGOTIATOR_MATCHLIST_CACHING",true);
@@ -921,8 +921,8 @@ negotiationTime ()
     // Get number of available slots in any state.
     int numDynGroupSlots = untrimmed_num_startds;
 
-	double minResourceWeight = 0;
-	double untrimmedResourceWeightTotal = sumResourceWeights(startdAds,&minResourceWeight);
+	double minSlotWeight = 0;
+	double untrimmedSlotWeightTotal = sumSlotWeights(startdAds,&minSlotWeight);
 
 	// Register a lookup function that passes through the list of all ads.
 	// ClassAdLookupRegister( lookup_global, &allAds );
@@ -1046,7 +1046,7 @@ negotiationTime ()
 			// fill in the info into the groupArray, so we can sort
 			// the groups into the order we want to negotiate them.
 			int usage  = accountant.GetResourcesUsed(groups);
-			float usageRW = accountant.GetResourcesUsedFloat(groups);
+			float usageRW = accountant.GetWeightedResourcesUsed(groups);
 			groupArray[i].groupName = groups;  // don't free this! (in groupList)
 			groupArray[i].maxAllowed = quota;
 			groupArray[i].usageRW = usageRW;
@@ -1100,7 +1100,7 @@ negotiationTime ()
 					groupArray[i].groupName);
 				continue;
 			}
-			if(useResourceWeights) {
+			if(useSlotWeights) {
 				if ( groupArray[i].usageRW >= groupArray[i].maxAllowed  &&
 					 !ConsiderPreemption ) 
 					{
@@ -1122,8 +1122,8 @@ negotiationTime ()
 			dprintf(D_ALWAYS,"Group %s - negotiating\n",
 				groupArray[i].groupName);
 			negotiateWithGroup( untrimmed_num_startds,
-								untrimmedResourceWeightTotal,
-								minResourceWeight, startdAds, 
+								untrimmedSlotWeightTotal,
+								minSlotWeight, startdAds, 
 				claimIds, groupArray[i].submitterAds, 
 				groupArray[i].maxAllowed, groupArray[i].groupName );
 		}
@@ -1161,7 +1161,7 @@ negotiationTime ()
 	} // if (groups)
 	
 		// negotiate w/ all users who do not belong to a group.
-	negotiateWithGroup(untrimmed_num_startds, untrimmedResourceWeightTotal, minResourceWeight, startdAds, claimIds, scheddAds);
+	negotiateWithGroup(untrimmed_num_startds, untrimmedSlotWeightTotal, minSlotWeight, startdAds, claimIds, scheddAds);
 	
 	// ----- Done with the negotiation cycle
 	dprintf( D_ALWAYS, "---------- Finished Negotiation Cycle ----------\n" );
@@ -1187,8 +1187,8 @@ Matchmaker::SimpleGroupEntry::
 
 int Matchmaker::
 negotiateWithGroup ( int untrimmed_num_startds,
-					 double untrimmedResourceWeightTotal,
-					 double minResourceWeight,
+					 double untrimmedSlotWeightTotal,
+					 double minSlotWeight,
 					 ClassAdList& startdAds,
 					 ClaimIdHash& claimIds, 
 					 ClassAdList& scheddAds, 
@@ -1237,7 +1237,7 @@ negotiateWithGroup ( int untrimmed_num_startds,
 
 			// invalidate the MatchList cache, because even if it is valid
 			// for the next user+auto_cluster being considered, we might
-			// have thrown out matches due to ResourceWeight being too high
+			// have thrown out matches due to SlotWeight being too high
 			// given the schedd limit computed in the previous pie spin
 		DeleteMatchList();
 
@@ -1250,7 +1250,7 @@ negotiateWithGroup ( int untrimmed_num_startds,
 		if ( numStartdAds > groupQuota ) {
 			numStartdAds = groupQuota;
 		}
-		resourceWeightTotal = untrimmedResourceWeightTotal;
+		resourceWeightTotal = untrimmedSlotWeightTotal;
 		if ( resourceWeightTotal > groupQuota ) {
 			resourceWeightTotal = groupQuota;
 		}
@@ -1442,7 +1442,7 @@ negotiateWithGroup ( int untrimmed_num_startds,
 					totalTime, MaxTimePerSubmitter);
 				result = MM_DONE;
 			} else {
-				if ( (useResourceWeights ? (scheddLimitRW <= 0 || pieLeft < minResourceWeight) : scheddLimit < 1) && spin_pie > 1 ) {
+				if ( (useSlotWeights ? (scheddLimitRW <= 0 || pieLeft < minSlotWeight) : scheddLimit < 1) && spin_pie > 1 ) {
 					result = MM_RESUME;
 				} else {
 					if ( spin_pie == 1 && ConsiderPreemption ) {
@@ -1517,7 +1517,7 @@ negotiateWithGroup ( int untrimmed_num_startds,
 		}
 		scheddAds.Close();
 	} while ( (hit_schedd_prio_limit == TRUE || hit_network_prio_limit == TRUE)
-			  && ( useResourceWeights ? (pieLeft < pieLeftOrig || scheddAds.MyLength() < scheddAdsCountOrig) : (MaxscheddLimit > 0) )
+			  && ( useSlotWeights ? (pieLeft < pieLeftOrig || scheddAds.MyLength() < scheddAdsCountOrig) : (MaxscheddLimit > 0) )
 			  && (scheddAds.MyLength() > 0)
 			  && (startdAds.MyLength() > 0) );
 
@@ -1616,21 +1616,21 @@ trimStartdAds(ClassAdList &startdAds)
 }
 
 double Matchmaker::
-sumResourceWeights(ClassAdList &startdAds,double *minResourceWeight)
+sumSlotWeights(ClassAdList &startdAds,double *minSlotWeight)
 {
 	ClassAd *ad = NULL;
 	double sum = 0.0;
 
-	if( minResourceWeight ) {
-		*minResourceWeight = 0;
+	if( minSlotWeight ) {
+		*minSlotWeight = 0;
 	}
 
 	startdAds.Open();
 	while( (ad=startdAds.Next()) ) {
-		float resourceWeight = GetResourceWeight(ad);
+		float resourceWeight = GetSlotWeight(ad);
 		sum+=resourceWeight;
-		if( minResourceWeight && resourceWeight < *minResourceWeight ) {
-			*minResourceWeight = resourceWeight;
+		if( minSlotWeight && resourceWeight < *minSlotWeight ) {
+			*minSlotWeight = resourceWeight;
 		}
 	}
 	return sum;
@@ -2057,7 +2057,7 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, dou
 
 
 		// Handle the case if we are over the scheddLimit
-		if(useResourceWeights) {
+		if(useSlotWeights) {
 			if( limitRWUsed >= scheddLimitRW ) {
 				if( ignore_schedd_limit ) {
 					only_consider_startd_rank = true;
@@ -2130,7 +2130,7 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, dou
 				// Also, if we were limited by scheddLimitRW, resume
 				// in the next spin of the pie, because our limit might
 				// increase.
-			if ( useResourceWeights ) {
+			if ( useSlotWeights ) {
 				if( limitRWUsed >= scheddLimitRW || limited_by_scheddLimitRW ) {
 					return MM_RESUME;
 				} else {
@@ -2322,9 +2322,9 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, dou
 			startdAds.Delete (offer);
 		}	
 
-		double ResourceWeight = GetResourceWeight(offer);
-		limitRWUsed += ResourceWeight;
-		pieLeft -= ResourceWeight;
+		double SlotWeight = GetSlotWeight(offer);
+		limitRWUsed += SlotWeight;
+		pieLeft -= SlotWeight;
 	}
 
 
@@ -2377,35 +2377,35 @@ EvalNegotiatorMatchRank(char const *expr_name,ExprTree *expr,
 }
 
 float Matchmaker::
-GetResourceWeight(ClassAd *candidate) 
+GetSlotWeight(ClassAd *candidate) 
 {
-	float ResourceWeight = 1.0;
-	if(!useResourceWeights) {
-		return ResourceWeight;
+	float SlotWeight = 1.0;
+	if(!useSlotWeights) {
+		return SlotWeight;
 	}
 	
-	if(candidate->EvalFloat(ResourceWeightAttr.Value(), NULL, 
-							  ResourceWeight) == 0 || ResourceWeight<0) {
+	if(candidate->EvalFloat(SlotWeightAttr.Value(), NULL, 
+							  SlotWeight) == 0 || SlotWeight<0) {
 		MyString candidateName;
 		candidate->LookupString(ATTR_NAME, candidateName);
-		dprintf(D_FULLDEBUG, "Can't get ResourceWeight for '%s'; using 1.0\n", 
+		dprintf(D_FULLDEBUG, "Can't get SlotWeight for '%s'; using 1.0\n", 
 				candidateName.Value());
-		ResourceWeight = 1.0;
+		SlotWeight = 1.0;
 	}
-	return ResourceWeight;
+	return SlotWeight;
 }
 
 bool Matchmaker::
 GroupQuotaPermits(ClassAd *candidate, double used, double allowed, double pieLeft) 
 {
-	float ResourceWeight = GetResourceWeight(candidate);
+	float SlotWeight = GetSlotWeight(candidate);
 		// the use of a fudge-factor 0.99 in the following is to be
 		// generous in case of very small round-off differences
 		// that I have observed in tests
-	if((used + ResourceWeight) <= 0.99*allowed) {
+	if((used + SlotWeight) <= 0.99*allowed) {
 		return true;
 	}
-	if( used == 0 && allowed > 0 && pieLeft >= 0.99*ResourceWeight ) {
+	if( used == 0 && allowed > 0 && pieLeft >= 0.99*SlotWeight ) {
 
 		// Allow user to round up once per pie spin in order to avoid
 		// "crumbs" being left behind that couldn't be taken by anyone
@@ -2681,7 +2681,7 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 			}
 		}
 
-		if(useResourceWeights && 
+		if(useSlotWeights && 
 		   !GroupQuotaPermits(candidate, limitRWUsed, scheddLimitRW, pieLeft)) {
 			rejForGroupQuota++;
 			continue;
@@ -3124,7 +3124,7 @@ Matchmaker::calculateScheddLimit(
 		// calculate the percentage of machines that this schedd can use
 	scheddPrio = accountant.GetPriority ( scheddName );
 	scheddUsage = accountant.GetResourcesUsed ( scheddName );
-	scheddUsageRW = accountant.GetResourcesUsedFloat( scheddName );
+	scheddUsageRW = accountant.GetWeightedResourcesUsed( scheddName );
 	scheddShare = maxPrioValue/(scheddPrio*normalFactor);
 	double unroundedScheddLimit;
 	if ( param_boolean("NEGOTIATOR_IGNORE_USER_PRIORITIES",false) ) {
@@ -3145,7 +3145,7 @@ Matchmaker::calculateScheddLimit(
 	if ( groupAccountingName ) {
 		int maxAllowed = groupQuota - accountant.GetResourcesUsed(groupAccountingName);
 		float maxAllowedRW =
-			groupQuota - accountant.GetResourcesUsedFloat(groupAccountingName);
+			groupQuota - accountant.GetWeightedResourcesUsed(groupAccountingName);
 		if ( maxAllowed < 0 ) maxAllowed = 0;
 		if ( maxAllowedRW < 0 ) maxAllowedRW = 0.0;
 		if ( unroundedScheddLimit > maxAllowed ) {

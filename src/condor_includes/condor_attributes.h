@@ -430,7 +430,7 @@ extern const char * ATTR_REMOVE_KILL_SIG;
 extern const char * ATTR_REMOVE_REASON;
 extern const char * ATTR_REQUEUE_REASON;
 extern const char * ATTR_REQUIREMENTS;
-extern const char * ATTR_RESOURCE_WEIGHT;
+extern const char * ATTR_SLOT_WEIGHT;
 extern const char * ATTR_RESULT;
 extern const char * ATTR_RSC_BYTES_SENT;
 extern const char * ATTR_RSC_BYTES_RECVD;

@@ -48,8 +48,8 @@ public:
 
   void Initialize();  // Configuration
 
-  int GetResourcesUsed(const MyString& CustomerName); // get # of used resources
-  float GetResourcesUsedFloat(const MyString& CustomerName); // same for float
+  int GetResourcesUsed(const MyString& CustomerName); // get # of used resources (unweighted by SlotWeight)
+  float GetWeightedResourcesUsed(const MyString& CustomerName);
   float GetPriority(const MyString& CustomerName); // get priority for a customer
   void SetPriority(const MyString& CustomerName, float Priority); // set priority for a customer
 
@@ -116,7 +116,7 @@ private:
   MyString LogFileName;      // Name of Log file
   int	MaxAcctLogSize;		// Max size of log file
   bool  DiscountSuspendedResources;
-  bool  UseResourceWeights; 
+  bool  UseSlotWeights; 
   StringList *GroupNamesList;
 
   //--------------------------------------------------------
@@ -139,7 +139,7 @@ private:
   static MyString PriorityAttr;
   static MyString UnchargedTimeAttr;
   static MyString ResourcesUsedAttr;
-  static MyString ResourcesUsedRWAttr;
+  static MyString WeightedResourcesUsedAttr;
   static MyString AccumulatedUsageAttr;
   static MyString BeginUsageTimeAttr;
   static MyString LastUsageTimeAttr;
@@ -151,7 +151,7 @@ private:
   static MyString StartTimeAttr;
   static MyString Cpus;
 
-  static MyString ResourceWeightAttr;
+  static MyString SlotWeightAttr;
 
   //--------------------------------------------------------
   // Utility functions

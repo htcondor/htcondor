@@ -124,8 +124,8 @@ class Matchmaker : public Service
 		   int &numMatched, double &limitRWUsed, double &pieLeft);
 
 		int negotiateWithGroup ( int untrimmed_num_startds,
-								 double untrimmedResourceWeightTotal,
-								 double minResourceWeight,
+								 double untrimmedSlotWeightTotal,
+								 double minSlotWeight,
 			ClassAdList& startdAds, 
 			ClaimIdHash& claimIds, ClassAdList& scheddAds, 
 			float groupQuota=INT_MAX, const char* groupAccountingName=NULL);
@@ -221,9 +221,9 @@ class Matchmaker : public Service
 			// trim out startd ads that are not in the Unclaimed state.
 		int trimStartdAds(ClassAdList &startdAds);
 
-		float GetResourceWeight(ClassAd *candidate);
+		float GetSlotWeight(ClassAd *candidate);
 		bool GroupQuotaPermits(ClassAd *candidate, double used, double allowed, double pieLeft);
-		double sumResourceWeights(ClassAdList &startdAds,double *minResourceWeight);
+		double sumSlotWeights(ClassAdList &startdAds,double *minSlotWeight);
 
 		/* ODBC insert functions */
 		void insert_into_rejects(char const *userName, ClassAd& job);
@@ -241,7 +241,7 @@ class Matchmaker : public Service
 		bool preemption_rank_unstable;
 		ExprTree *NegotiatorPreJobRank;  // rank applied before job rank
 		ExprTree *NegotiatorPostJobRank; // rank applied after job rank
-		bool useResourceWeights; // Should resource weights be used or do all machines count 1.
+		bool useSlotWeights; // Should slot weights be used or do all machines count 1.
 		bool want_matchlist_caching;	// should we cache matches per autocluster?
 		bool ConsiderPreemption; // if false, negotiation is faster (default=true)
 		/// Should the negotiator inform startds of matches?
