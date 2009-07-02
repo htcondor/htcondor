@@ -19,6 +19,19 @@
 
 #define _CONDOR_ALLOW_OPEN
 #include "condor_common.h"
+
+#if defined ( WIN32 )
+/*	Unfortunately, the trick used above for *nix does not work on
+	Windows, because we us "condor_common.h" as the pre-compiled
+	header, so it is a static entity by the time it is referenced
+	here.  Thus we bellow we try to mimic the equivalent of the
+	above.  If this happens again, then maybe this hack can be 
+	extracted and generalized to look a little nicer */
+#undef open
+#define _CONDOR_ALLOW_OPEN 1
+#include "condor_macros.h"
+#endif
+
 #include "condor_open.h"
 #include "condor_debug.h"
 #include "util_lib_proto.h"
