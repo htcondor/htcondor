@@ -664,7 +664,7 @@ int systemCommand( ArgList &args, bool is_root, StringList *cmd_out, StringList 
 		}
 	}
 
-#ifdef defined(WIN32)
+#if defined(WIN32)
 	result = my_pclose( fp );
 #else
 	// Why close first?  Just in case the child process is waiting
