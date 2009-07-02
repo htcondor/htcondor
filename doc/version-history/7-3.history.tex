@@ -46,6 +46,11 @@ job status information
 is now obtained using Nordugrid ARC's LDAP server, which should greatly
 improve performance. Also, Condor can now tell when these jobs are running.
 
+%gittrac #527
+\item Added a \Opt{-valgrind} flag to \Condor{submit\_dag}, which
+causes \Condor{submit\_dag} to generate a submit file that runs
+\emph{valgrind} on \Condor{dagman}.
+
 \end{itemize}
 
 \noindent Configuration Variable Additions and Changes:

@@ -31,6 +31,7 @@
 \oOpt{-update\_submit}
 \oOpt{-import\_env}
 \oOpt{-DumpRescue}
+\oOpt{-valgrind}
 \Arg{DAGInputFile1}
 \oArg{{DAGInputFile2} \Dots {DAGInputFileN} }
 
@@ -215,6 +216,11 @@ description.
      to immediately dump a rescue DAG and then exit, as opposed to
      actually running the DAG.  (This feature is mainly intended for
      testing.)
+  }
+  \OptItem{\Opt{-valgrind}}{This optional argument tells
+     \Condor{submit\_dag} to create a Condor submit file that runs
+     \emph{valgrind} on \Condor{dagman}.  (This feature is mainly intended
+     for testing.)
   }
   \end{Options}
 
