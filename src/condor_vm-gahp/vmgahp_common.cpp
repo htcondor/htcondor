@@ -34,6 +34,8 @@
 #include "vmgahp_error_codes.h"
 #include "condor_vm_universe_types.h"
 #include "../condor_privsep/condor_privsep.h"
+#include "sig_install.h"
+#include "../condor_privsep/privsep_fork_exec.h"
 
 MyString caller_name;
 MyString job_user_name;
@@ -510,7 +512,7 @@ bool canSwitchUid(void)
 	return can_switch_ids();
 }
 
-int systemCommand( ArgList &args, bool is_root, StringList *cmd_out,
+int systemCommand( ArgList &args, bool is_root, StringList *cmd_out, StringList * cmd_in,
 				   int want_stderr )
 {
 	int result = 0;
@@ -520,20 +522,116 @@ int systemCommand( ArgList &args, bool is_root, StringList *cmd_out,
 	StringList *my_cmd_out = cmd_out;
 
 	priv_state prev = PRIV_UNKNOWN;
+
+	int sockets[2];
+	int pid;
 	if( is_root ) {
 		prev = set_root_priv();
 	}else {
 		prev = set_user_priv();
 	}
-#if !defined(WIN32)
-	if ( privsep_enabled() && (job_user_uid != get_condor_uid())) {
-		fp = privsep_popen(args, "r", want_stderr, job_user_uid);
-	}
-	else {
-		fp = my_popen( args, "r", want_stderr );
-	}
-#else
+#if defined(WIN32)
+	if(cmd_in != NULL)
+	  {
+	    vmprintf(D_ALWAYS, "Invalid use of systemCommand() in Windows.\n");
+	    return -1;
+	  }
+	//if ( privsep_enabled() && (job_user_uid != get_condor_uid())) {
+	//	fp = privsep_popen(args, "r", want_stderr, job_user_uid);
+	//}
+	//else {
 	fp = my_popen( args, "r", want_stderr );
+	//}
+#else
+	// The old way of doing things (and the Win32 way of doing
+	//	things)
+	// fp = my_popen( args, "r", want_stderr );
+	PrivSepForkExec psforkexec;
+	char ** args_array = args.GetStringArray();
+	if(socketpair(AF_LOCAL, SOCK_STREAM, 0, sockets) < 0)
+	  {
+	    vmprintf(D_ALWAYS, "Error opening local socket: %s\n", strerror(errno));
+	    return -1;
+	  }
+
+	if ( privsep_enabled() && (job_user_uid != get_condor_uid())) {
+	  if(!psforkexec.init())
+	    {
+	      vmprintf(D_ALWAYS,
+		       "my_popenv failure on %s\n",
+		       args_array[0]);
+	      close(sockets[0]);
+	      close(sockets[1]);
+	      return -1;
+	    }
+	}
+	// Now fork and do what my_popen used to do
+	pid = fork();
+	if(pid < 0)
+	  {
+	    vmprintf(D_ALWAYS, "Error forking: %s\n", strerror(errno));
+	    return -1;
+	  }
+	if(pid == 0)
+	  {
+	    close(sockets[0]);
+	    dup2(sockets[1], STDOUT_FILENO);
+	    dup2(sockets[1], STDIN_FILENO);
+
+	    if(want_stderr) dup2(sockets[1], STDERR_FILENO);
+
+	    uid_t euid = geteuid();
+	    gid_t egid = getegid();
+	    seteuid( 0 );
+	    setgroups( 1, &egid );
+	    setgid( egid );
+	    setuid( euid );
+	    
+	    install_sig_handler(SIGPIPE, SIG_DFL);
+	    sigset_t sigs;
+	    sigfillset(&sigs);
+	    sigprocmask(SIG_UNBLOCK, &sigs, NULL);
+
+
+	    MyString cmd = args_array[0];
+
+	    if ( privsep_enabled() && (job_user_uid != get_condor_uid())) {
+	    
+	      ArgList al;
+	      psforkexec.in_child(cmd, al);
+	      args_array = al.GetStringArray();			
+	    }
+
+
+	    execv(args_array[0], args_array);
+	    // Something went horribly wrong!
+	    exit(-1);
+	  }
+	close(sockets[1]);
+	fp = fdopen(sockets[0], "r+");
+
+	if ( privsep_enabled() && (job_user_uid != get_condor_uid())) {
+	  FILE* _fp = psforkexec.parent_begin();
+	  privsep_exec_set_uid(_fp, job_user_uid);
+	  privsep_exec_set_path(_fp, args_array[0]);
+	  privsep_exec_set_args(_fp, args);
+	  Env env;
+	  env.MergeFrom(environ);
+	  privsep_exec_set_env(_fp, env);
+	  privsep_exec_set_iwd(_fp, ".");
+
+	  privsep_exec_set_inherit_fd(_fp, 1);
+	  privsep_exec_set_inherit_fd(_fp, 2);
+	  privsep_exec_set_inherit_fd(_fp, 0);
+	
+	  if (!psforkexec.parent_end()) {
+	    vmprintf(D_ALWAYS,
+		     "my_popenv failure on %s\n",
+		     args_array[0]);
+	    fclose(fp);
+	    return -1;
+	  }
+	}
 #endif
 	set_priv( prev );
 	if ( fp == NULL ) {
@@ -542,6 +640,16 @@ int systemCommand( ArgList &args, bool is_root, StringList *cmd_out,
 		vmprintf( D_ALWAYS, "Failed to execute command: %s\n",
 				  args_string.Value() );
 		return -1;
+	}
+
+	if(cmd_in != NULL) {
+	  cmd_in->rewind();
+	  char * tmp;
+	  while((tmp = cmd_in->next()) != NULL)
+	    {
+	      fprintf(fp, "%s\n", tmp);
+	      fflush(fp);
+	    }
 	}
 
 	if ( my_cmd_out == NULL ) {
@@ -556,8 +664,20 @@ int systemCommand( ArgList &args, bool is_root, StringList *cmd_out,
 		}
 	}
 
+#ifdef defined(WIN32)
 	result = my_pclose( fp );
-
+#else
+	// Why close first?  Just in case the child process is waiting
+	// on a read, and we have nothing more to send it.  It will
+	// now receive a SIGPIPE.
+	fclose(fp);
+	if(waitpid(pid, &result, 0) < 0)
+	  {
+	    vmprintf(D_ALWAYS, "Unable to wait: %s\n", strerror(errno));
+	   
+	    return -1;
+	  }
+#endif
 	if( result != 0 ) {
 		MyString args_string;
 		args.GetArgsStringForDisplay(&args_string,0);
