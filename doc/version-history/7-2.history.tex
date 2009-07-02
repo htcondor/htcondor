@@ -57,6 +57,14 @@ it continues, rather than exiting.
 
 \item Fixed a major file descriptor leak in the Stork daemon.
 
+% gittrac 593
+\item Fixed bug where multiple Machine ads in the
+\Condor{collector} with the same Name but different StartdIPAddrs
+would cause the \Condor{negotiator} to exit with an error.  This
+is unusual and should not happen in a typical Condor
+installation.  The most likely cause is using \Condor{advertise}
+to advertise custom ClassAds for grid matchmaking. 
+
 \end{itemize}
 
 \noindent Known Bugs:
