@@ -67,6 +67,24 @@ MyString ResourceWeightAttr = ATTR_RESOURCE_WEIGHT;
 //#include "../condor_c++_util/queuedbmanager.h"
 //QueueDBManager queueDBManager;
 
+static MyString MachineAdID(ClassAd * ad)
+{
+	ASSERT(ad);
+	MyString addr;
+	MyString name;
+
+	// We should always be passed an ad with an ATTR_NAME.
+	ASSERT(ad->LookupString(ATTR_NAME, name));
+	if(!ad->LookupString(ATTR_STARTD_IP_ADDR, addr)) {
+		addr = "<No Address>";
+	}
+
+	MyString ID(addr);
+	ID += " ";
+	ID += name;
+	return ID;
+}
+
 Matchmaker::
 Matchmaker ()
 {
@@ -1713,8 +1731,9 @@ obtainAdsFromCollector (
 			if( reevaluate_ad && newSequence != -1 ) {
 				oldAd = NULL;
 				oldAdEntry = NULL;
-				MyString rhost(remoteHost);
-				stashedAds->lookup( rhost, oldAdEntry);
+
+				MyString adID = MachineAdID(ad);
+				stashedAds->lookup( adID, oldAdEntry);
 				// if we find it...
 				oldSequence = -1;
 				if( oldAdEntry ) {
@@ -1769,13 +1788,13 @@ obtainAdsFromCollector (
 						delete(oldAdEntry->oldAd);
 						delete(oldAdEntry->remoteHost);
 						delete(oldAdEntry);
-						stashedAds->remove(rhost);
+						stashedAds->remove(adID);
 					}
 					MapEntry *me = new MapEntry;
 					me->sequenceNum = newSequence;
 					me->remoteHost = strdup(remoteHost);
 					me->oldAd = new ClassAd(*ad); 
-					stashedAds->insert(rhost, me); 
+					stashedAds->insert(adID, me); 
 				} else {
 					/*
 					  We have a stashed copy of this ad, and it's the
@@ -3357,15 +3376,13 @@ reeval(ClassAd *ad)
 {
 	int cur_matches;
 	MapEntry *oldAdEntry = NULL;
-	char    *remoteHost = NULL;
 	char    buffer[255];
 	
 	cur_matches = 0;
 	ad->EvalInteger("CurMatches", NULL, cur_matches);
 
-	ad->LookupString(ATTR_NAME, &remoteHost);
-	MyString rhost(remoteHost);
-	stashedAds->lookup( rhost, oldAdEntry);
+	MyString adID = MachineAdID(ad);
+	stashedAds->lookup( adID, oldAdEntry);
 		
 	cur_matches++;
 	snprintf(buffer, 255, "CurMatches = %d", cur_matches);
@@ -3374,7 +3391,6 @@ reeval(ClassAd *ad)
 		delete(oldAdEntry->oldAd);
 		oldAdEntry->oldAd = new ClassAd(*ad);
 	}
-    free(remoteHost);
 }
 
 unsigned int Matchmaker::HashFunc(const MyString &Key) {
