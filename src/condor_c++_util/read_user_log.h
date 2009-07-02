@@ -489,25 +489,25 @@ class ReadUserLog
 
 	/** Class private data
 	 */
-	bool				 m_initialized;	/** Are we initialized? */
-	bool				 m_missed_event; /** Need to report event lost? */
+	bool				 m_initialized;	  /** Are we initialized? */
+	bool				 m_missed_event;  /** Need to report event lost? */
 
-	ReadUserLogState	*m_state;		/** The state of the file     */
-	ReadUserLogMatch	*m_match;		/** Detects file matches */
+	ReadUserLogState	*m_state;		  /** The state of the file */
+	ReadUserLogMatch	*m_match;		  /** Detects file matches */
 
-    int    				 m_fd;			/** The log's file descriptor */
-    FILE				*m_fp;			/** The log's file pointer    */
+    int    				 m_fd;			  /** The log's file descriptor */
+    FILE				*m_fp;			  /** The log's file pointer */
 
-	bool				 m_close_file;	/** Close file between operations? */
-	bool				 m_enable_close; /** enable close operations? */
-	bool				 m_handle_rot;	/** Do we handle file rotation? */
+	bool				 m_close_file;	  /** Close file between operations? */
+	bool				 m_enable_close;  /** enable close operations? */
+	bool				 m_handle_rot;	  /** Do we handle file rotation? */
 	int					 m_max_rotations; /** Max rotation number */
-	bool				 m_read_header;	/** Read the file's header? */
-	bool				 m_read_only;	/** Open file read only? */
+	bool				 m_read_header;	  /** Read the file's header? */
+	bool				 m_read_only;	  /** Open file read only? */
 
-	bool				 m_lock_enable;	/** Should we lock the file?  */
-    FileLockBase		*m_lock;		/** The log file lock         */
-	int					 m_lock_rot;	/** Lock managing what rotation #? */
+	bool				 m_lock_enable;	  /** Should we lock the file? */
+    FileLockBase		*m_lock;		  /** The log file lock */
+	int					 m_lock_rot;	  /** Lock managing what rotation #? */
 
 	/* Error history data */
 	mutable ErrorType	 m_error;		/** Type of latest error (think errno) */
@@ -530,7 +530,25 @@ public:
 	// Is the buffer valid for use by the ReadUserLog::initialize()?
 	bool isValid( void ) const;
 
-	// Position in overall log
+	// Position in individual file
+	// Note: Can return an error if the result is too large
+	//  to be stored in a long
+	bool getFileOffset( unsigned long &pos ) const;
+
+	// Positional difference between to states (this - other)
+	bool getFileOffsetDiff( const ReadUserLogStateAccess &other,
+							long &diff ) const;
+
+	// Event number in individual file
+	// Note: Can return an error if the result is too large
+	//  to be stored in a long
+	bool getFileEventNum( unsigned long &num ) const;
+
+	// # of events between to states (this - other)
+	bool getFileEventNumDiff( const ReadUserLogStateAccess &other,
+							  long &diff ) const;
+
+	// Position OF THE CURRENT FILE in overall log
 	// Note: Can return an error if the result is too large
 	//  to be stored in a long
 	bool getLogPosition( unsigned long &pos ) const;
@@ -539,7 +557,7 @@ public:
 	bool getLogPositionDiff( const ReadUserLogStateAccess &other,
 							 long &diff ) const;
 
-	// Absolute event number
+	// Absolute event number OF THE FIRST EVENT IN THE CURRENT FILE
 	// Note: Can return an error if the result is too large
 	//  to be stored in a long
 	bool getEventNumber( unsigned long &num ) const;

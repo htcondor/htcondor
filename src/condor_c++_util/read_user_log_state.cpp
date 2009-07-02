@@ -89,6 +89,26 @@ ReadUserLogFileState::isValid( void ) const
 }
 
 bool
+ReadUserLogFileState::getFileOffset( int64_t &pos ) const
+{
+	if ( NULL == m_ro_state ) {
+		return false;
+	}
+	pos = m_ro_state->internal.m_offset.asint;
+	return true;
+}
+
+bool
+ReadUserLogFileState::getFileEventNum( int64_t &num ) const
+{
+	if ( NULL == m_ro_state ) {
+		return false;
+	}
+	num = m_ro_state->internal.m_event_num.asint;
+	return true;
+}
+
+bool
 ReadUserLogFileState::getLogPosition( int64_t &pos ) const
 {
 	if ( NULL == m_ro_state ) {
@@ -292,6 +312,8 @@ ReadUserLogState::Reset( ResetType type )
 	m_log_record = 0;
 
 	m_offset = 0;
+	m_event_num = 0;
+
 	m_log_type = LOG_TYPE_UNKNOWN;
 
 }
@@ -674,6 +696,7 @@ ReadUserLogState::GetState( ReadUserLog::FileState &state ) const
 	istate->m_size.asint    = m_stat_buf.st_size;
 
 	istate->m_offset.asint  = m_offset;
+	istate->m_event_num.asint = m_event_num;
 
 	istate->m_log_position.asint = m_log_position;
 	istate->m_log_record.asint   = m_log_record;
@@ -717,6 +740,7 @@ ReadUserLogState::SetState( const ReadUserLog::FileState &state )
 	m_stat_valid = true;
 
 	m_offset = istate->m_offset.asint;
+	m_event_num = istate->m_event_num.asint;
 
 	m_log_position = istate->m_log_position.asint;
 	m_log_record   = istate->m_log_record.asint;
@@ -743,11 +767,12 @@ ReadUserLogState::GetStateString( MyString &str, const char *label ) const
 		"  BasePath = %s\n"
 		"  CurPath = %s\n"
 		"  UniqId = %s, seq = %d\n"
-		"  rotation = %d; max = %d; offset = %ld; type = %d\n"
+		"  rotation = %d; max = %d; offset = %ld; event = %ld; type = %d\n"
 		"  inode = %u; ctime = %d; size = %ld\n",
 		m_base_path.Value(), m_cur_path.Value(),
 		m_uniq_id.Value(), m_sequence,
-		m_cur_rot, m_max_rotations, (long) m_offset, m_log_type,
+		m_cur_rot, m_max_rotations, (long) m_offset,
+		(long) m_event_num, m_log_type,
 		(unsigned)m_stat_buf.st_ino, (int)m_stat_buf.st_ctime,
 		(long)m_stat_buf.st_size );
 }
@@ -779,14 +804,17 @@ ReadUserLogState::GetStateString(
 		"  base path = '%s'\n"
 		"  cur path = '%s'\n"
 		"  UniqId = %s, seq = %d\n"
-		"  rotation = %d; max = %d; offset = "FILESIZE_T_FORMAT"; type = %d\n"
+		"  rotation = %d; max = %d; offset = "FILESIZE_T_FORMAT";"
+		" event num = "FILESIZE_T_FORMAT"; type = %d\n"
 		"  inode = %u; ctime = %ld; size = "FILESIZE_T_FORMAT"\n",
 		istate->m_signature, istate->m_version, istate->m_update_time,
 		istate->m_base_path,
 		CurPath(state),
 		istate->m_uniq_id, istate->m_sequence,
 		istate->m_rotation, istate->m_max_rotations,
-		istate->m_offset.asint, istate->m_log_type,
+		istate->m_offset.asint,
+		istate->m_event_num.asint,
+		istate->m_log_type,
 		(unsigned)istate->m_inode, istate->m_ctime, istate->m_size.asint );
 }
 
@@ -833,6 +861,15 @@ ReadUserLogState::Offset( const ReadUserLog::FileState &state ) const
 		return -1;
 	}
 	return (filesize_t) istate->m_offset.asint;
+}
+filesize_t
+ReadUserLogState::EventNum( const ReadUserLog::FileState &state ) const
+{
+	const ReadUserLogFileState::FileState *istate;
+	if ( ( !convertState(state, istate) ) || ( !istate->m_version ) ) {
+		return -1;
+	}
+	return (filesize_t) istate->m_event_num.asint;
 }
 filesize_t
 ReadUserLogState::LogPosition( const ReadUserLog::FileState &state ) const
@@ -882,6 +919,82 @@ bool
 ReadUserLogStateAccess::isValid( void ) const
 {
 	return m_state->isValid( );
+}
+
+// Log position of a state
+bool
+ReadUserLogStateAccess::getFileOffset(
+	unsigned long		&pos ) const
+{
+	int64_t	my_pos;
+	if ( !m_state->getFileOffset(my_pos) ) {
+		return false;
+	}
+
+	if ( my_pos > ULONG_MAX ) {
+		return false;
+	}
+	pos = (unsigned long) my_pos;
+	return true;
+}
+
+// Event number of a state
+bool
+ReadUserLogStateAccess::getFileEventNum(
+	unsigned long		&num ) const
+{
+	int64_t	my_num;
+	if ( !m_state->getFileEventNum(my_num) ) {
+		return false;
+	}
+
+	if ( my_num > ULONG_MAX ) {
+		return false;
+	}
+	num = (unsigned long) my_num;
+	return true;
+}
+
+// Event # difference between to states
+bool
+ReadUserLogStateAccess::getFileEventNumDiff(
+	const ReadUserLogStateAccess	&other,
+	long							&diff ) const
+{
+	const	ReadUserLogFileState	*ostate;
+	if ( !other.getState( ostate ) ) {
+		return false;
+	}
+	int64_t	my_num, other_num;
+	if ( !m_state->getFileEventNum(my_num) ||
+		 ! ostate->getFileEventNum(other_num) ) {
+		return false;
+	}
+
+	int64_t	idiff = my_num - other_num;
+	diff = (long) idiff;
+	return true;
+}
+
+// Positional difference between to states
+bool
+ReadUserLogStateAccess::getFileOffsetDiff(
+	const ReadUserLogStateAccess	&other,
+	long							&diff ) const
+{
+	const	ReadUserLogFileState	*ostate;
+	if ( !other.getState( ostate ) ) {
+		return false;
+	}
+	int64_t	my_pos, other_pos;
+	if ( !m_state->getFileOffset(my_pos) ||
+		 ! ostate->getFileOffset(other_pos) ) {
+		return false;
+	}
+
+	int64_t	idiff = my_pos - other_pos;
+	diff = (long) idiff;
+	return true;
 }
 
 // Log position of a state

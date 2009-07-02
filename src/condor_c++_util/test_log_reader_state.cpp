@@ -46,7 +46,7 @@ enum Command
 	CMD_DIFF,
 	CMD_LIST,
 	CMD_VERIFY,
-	CMD_CHECK
+	CMD_ACCESS
 };
 enum Field
 {
@@ -61,6 +61,7 @@ enum Field
 	FIELD_MAX_ROTATION,
 	FIELD_ROTATION,
 	FIELD_OFFSET,
+	FIELD_EVENT_NUM,
 	FIELD_GLOBAL_POSITION,
 	FIELD_GLOBAL_RECORD_NUM,
 	FIELD_INODE,
@@ -97,6 +98,7 @@ static const FieldData fieldList[] =
 	{ FIELD_MAX_ROTATION,		TYPE_INT,		2,  "max-rotation" },
 	{ FIELD_ROTATION,			TYPE_INT,		2,  "rotation" },
 	{ FIELD_OFFSET,				TYPE_FSIZE,		2,  "offset" },
+	{ FIELD_EVENT_NUM,			TYPE_FSIZE,		2,  "event-num" },
 	{ FIELD_GLOBAL_POSITION,	TYPE_FSIZE,		2,  "global-position" },
 	{ FIELD_GLOBAL_RECORD_NUM,	TYPE_FSIZE,		2,  "global-record" },
 	{ FIELD_INODE,				TYPE_INODE,		1,  "inode" },
@@ -182,8 +184,8 @@ int
 VerifyState(const Options &opts,
 			const ReadUserLog::FileState &state );
 int
-CheckState(const Options &opts,
-		   const ReadUserLog::FileState &state );
+CheckStateAccess(const Options &opts,
+				 const ReadUserLog::FileState &state );
 
 const char *timestr( struct tm &tm, char *buf = NULL, int bufsize = 0 );
 const char *timestr( time_t t, char *buf = NULL, int bufsize = 0 );
@@ -242,8 +244,8 @@ main(int argc, const char **argv)
 	case CMD_DIFF:
 		status = DiffState( opts, state, state2 );
 		break;
-	case CMD_CHECK:
-		status = CheckState( opts, state );
+	case CMD_ACCESS:
+		status = CheckStateAccess( opts, state );
 		break;
 	case CMD_VERIFY:
 		status = VerifyState( opts, state );
@@ -413,6 +415,11 @@ DumpState( const Options &opts,
 				wdata->m_name, istate->m_offset.asint );
 		break;
 
+	case FIELD_EVENT_NUM:
+		printf( "  %s: " FILESIZE_T_FORMAT "\n",
+				wdata->m_name, istate->m_event_num.asint );
+		break;
+
 	case FIELD_GLOBAL_POSITION:
 		printf( "  %s: " FILESIZE_T_FORMAT "\n",
 				wdata->m_name, istate->m_log_position.asint );
@@ -454,6 +461,7 @@ DumpState( const Options &opts,
 		DumpState( opts, state, opts.lookupField(FIELD_MAX_ROTATION) );
 		DumpState( opts, state, opts.lookupField(FIELD_ROTATION) );
 		DumpState( opts, state, opts.lookupField(FIELD_OFFSET) );
+		DumpState( opts, state, opts.lookupField(FIELD_EVENT_NUM) );
 		DumpState( opts, state, opts.lookupField(FIELD_GLOBAL_POSITION) );
 		DumpState( opts, state, opts.lookupField(FIELD_GLOBAL_RECORD_NUM) );
 		DumpState( opts, state, opts.lookupField(FIELD_INODE) );
@@ -468,21 +476,31 @@ DumpState( const Options &opts,
 }
 
 int
-CheckState( const Options & /*opts*/,
-			const ReadUserLog::FileState &state )
+CheckStateAccess( const Options & /*opts*/,
+				  const ReadUserLog::FileState &state )
 {
 	ReadUserLogStateAccess	saccess(state);
-	unsigned long			pos = 0;
-	unsigned long			num = 0;
+	unsigned long			foff = 0;
+	unsigned long			fnum = 0;
+	unsigned long			lpos = 0;
+	unsigned long			lnum = 0;
 	int						seq = 0;
 	char					uniq_id[256] = "\0";
 	int						errors = 0;
 
-	if (!saccess.getLogPosition(pos) ) {
+	if (!saccess.getFileOffset(foff) ) {
+		fprintf( stderr, "Error getting file offset\n" );
+		errors++;
+	}
+	if (!saccess.getFileEventNum(fnum) ) {
+		fprintf( stderr, "Error getting file event number\n" );
+		errors++;
+	}
+	if (!saccess.getLogPosition(lpos) ) {
 		fprintf( stderr, "Error getting log position\n" );
 		errors++;
 	}
-	if (!saccess.getEventNumber(num) ) {
+	if (!saccess.getEventNumber(lnum) ) {
 		fprintf( stderr, "Error getting event number\n" );
 		errors++;
 	}
@@ -498,14 +516,18 @@ CheckState( const Options & /*opts*/,
 	printf( "State:\n"
 			"  Initialized: %s\n"
 			"  Valid: %s\n"
-			"  Log Position: %lu\n"
-			"  Log Event #: %lu\n"
+			"  File offset: %lu\n"
+			"  File event #: %lu\n"
+			"  Log position: %lu\n"
+			"  Log event #: %lu\n"
 			"  UniqID: %s\n"
 			"  Sequence #: %d\n",
 			saccess.isInitialized() ? "True" : "False",
 			saccess.isValid() ? "True" : "False",
-			pos,
-			num,
+			foff,
+			fnum,
+			lpos,
+			lnum,
 			uniq_id,
 			seq );
 
@@ -721,6 +743,10 @@ VerifyState(const Options &opts, const ReadUserLog::FileState &state )
 		ok = CompareFsize( opts, istate->m_offset.asint );
 		break;
 
+	case FIELD_EVENT_NUM:
+		ok = CompareFsize( opts, istate->m_event_num.asint );
+		break;
+
 	case FIELD_GLOBAL_POSITION:
 		ok = CompareFsize( opts, istate->m_log_position.asint );
 		break;
@@ -805,7 +831,7 @@ Options::Options( void )
 		"    diff: diff two state files [file2]\n"
 		"    verify/numeric: what min max\n"
 		"    verify/string:  what [value]\n"
-		"    check: simple checks\n"
+		"    access: simple access API checks\n"
 		"    list (list names of things)\n"
 		"  --numeric|-n: dump times as numeric\n"
 		"  --usage|--help|-h: print this message and exit\n"
@@ -933,8 +959,8 @@ Options::lookupCommand( const SimpleArg &arg )
 		m_command = CMD_VERIFY;
 		return true;
 	}
-	else if ( 'c' == c  ||  (0 == strcasecmp( s, "check" )) ) {
-		m_command = CMD_CHECK;
+	else if ( 'a' == c  ||  (0 == strcasecmp( s, "access" )) ) {
+		m_command = CMD_ACCESS;
 		return true;
 	}
 	else if ( 'l' == c  ||  (0 == strcasecmp( s, "list" )) ) {
