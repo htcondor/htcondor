@@ -66,6 +66,7 @@ public:
   void AddMatch(const MyString& CustomerName, ClassAd* ResourceAd); // Add new match
   void RemoveMatch(const MyString& ResourceName); // remove a match
 
+  float GetSlotWeight(ClassAd *candidate);
   void UpdatePriorities(); // update all the priorities
 
   void CheckMatches(ClassAdList& ResourceList);  // Remove matches that are not claimed

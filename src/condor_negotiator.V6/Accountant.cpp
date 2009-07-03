@@ -166,7 +166,7 @@ void Accountant::Initialize()
 
   DiscountSuspendedResources = param_boolean(
                              "NEGOTIATOR_DISCOUNT_SUSPENDED_RESOURCES",false);
-  UseSlotWeights = param_boolean("NEGOTIATOR_USE_SLOT_WEIGHTS",false);
+  UseSlotWeights = param_boolean("NEGOTIATOR_USE_SLOT_WEIGHTS",true);
 
 
   dprintf(D_ACCOUNTANT,"PRIORITY_HALFLIFE=%f\n",HalfLifePeriod);
@@ -521,10 +521,7 @@ void Accountant::AddMatch(const MyString& CustomerName, ClassAd* ResourceAd)
     RemoveMatch(ResourceName,T);
   }
 
-  float SlotWeight=1.0;
-  if(ResourceAd->EvalFloat(SlotWeightAttr,NULL,SlotWeight) == 0) {
-	  SlotWeight = 1.0;
-  }
+  float SlotWeight = GetSlotWeight(ResourceAd);
 
   int ResourcesUsed=0;
   GetAttributeInt(CustomerRecord+CustomerName,ResourcesUsedAttr,ResourcesUsed);
@@ -1491,4 +1488,21 @@ void Accountant::DecrementLimits(const MyString& limits)
 		str = limit;
 		DecrementLimit(str);
 	}
+}
+
+float Accountant::GetSlotWeight(ClassAd *candidate) 
+{
+	float SlotWeight = 1.0;
+	if(!UseSlotWeights) {
+		return SlotWeight;
+	}
+
+	if(candidate->EvalFloat(SlotWeightAttr, NULL, SlotWeight) == 0 || SlotWeight<0) {
+		MyString candidateName;
+		candidate->LookupString(ATTR_NAME, candidateName);
+		dprintf(D_FULLDEBUG, "Can't get SlotWeight for '%s'; using 1.0\n", 
+				candidateName.Value());
+		SlotWeight = 1.0;
+	}
+	return SlotWeight;
 }
