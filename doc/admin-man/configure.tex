@@ -6197,7 +6197,27 @@ NegotiatorMatchExprNegotiatorName = "My Negotiator"
   The expressions inserted by the negotiator may be useful in startd
   policy expressions when the startd belongs to multiple Condor pools.
 
+\label{param:NegotiatorMatchlistCaching}
+\item[\Macro{NEGOTIATOR\_MATCHLIST\_CACHING}]
+  A boolean value that defaults to \Expr{True}.
+  When \Expr{True}, it enables an optimization in the \Condor{negotiator}
+  that works with auto clustering.
+  In determining the sorted list of machines that a job might use,
+  the job goes to the first machine off the top of the list. 
+  If \MacroNI{NEGOTIATOR\_MATCHLIST\_CACHING} is \Expr{True},
+  and if the next job is part of the same auto cluster,
+  meaning that it is a very similar job,
+  the \Condor{negotiator} will reuse the previous list of machines,
+  instead of recreating the list from scratch.
+
+  If matching grid resources, and the desire is for a
+  given resource to potentially match multiple times per \Condor{negotiator}
+  pass, \MacroNI{NEGOTIATOR\_MATCHLIST\_CACHING} should be \Expr{False}.
+  See section~\ref{sec:Grid-Matchmaking} on page~\pageref{sec:Grid-Matchmaking}
+  in the subsection on Advertising Grid Resources to Condor for an example.
+
 \end{description}
+
 The following configuration macros affect negotiation for group users.
 \begin{description}
 
