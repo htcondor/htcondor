@@ -56,7 +56,6 @@ static char const *LastUpdateTimeAttr="LastUpdateTime";
 static char const *RemoteUserAttr="RemoteUser";
 static char const *StartTimeAttr="StartTime";
 
-MyString Accountant::Cpus="Cpus";
 static char const *SlotWeightAttr=ATTR_SLOT_WEIGHT;
 
 //------------------------------------------------------------------
@@ -560,13 +559,10 @@ void Accountant::AddMatch(const MyString& CustomerName, ClassAd* ResourceAd)
 	  }
   }
 
-  int cpusPerSlot = 1;
-  if (ResourceAd->LookupInteger(Cpus.Value(), cpusPerSlot)==0) cpusPerSlot=1;
-
   AcctLog->BeginTransaction(); 
   
   // Update customer's resource usage count
-  ResourcesUsed += cpusPerSlot;
+  ResourcesUsed += 1;
   SetAttributeInt(CustomerRecord+CustomerName,ResourcesUsedAttr,ResourcesUsed);
   WeightedResourcesUsed += SlotWeight;
   SetAttributeFloat(CustomerRecord+CustomerName,WeightedResourcesUsedAttr,WeightedResourcesUsed);
@@ -581,7 +577,7 @@ void Accountant::AddMatch(const MyString& CustomerName, ClassAd* ResourceAd)
   if ( update_group_info ) {
 	  // Update customer's group resource usage count
 	  GroupWeightedResourcesUsed += SlotWeight;
-	  GroupResourcesUsed += cpusPerSlot;
+	  GroupResourcesUsed += 1;
 	  dprintf(D_ACCOUNTANT, "GroupWeightedResourcesUsed becomes: %.3f\n", GroupWeightedResourcesUsed);
 	  SetAttributeFloat(CustomerRecord+GroupName,WeightedResourcesUsedAttr,GroupWeightedResourcesUsed);
 	  SetAttributeInt(CustomerRecord+GroupName,ResourcesUsedAttr,GroupResourcesUsed);
@@ -594,7 +590,6 @@ void Accountant::AddMatch(const MyString& CustomerName, ClassAd* ResourceAd)
 
   // Set reosurce's info: user, and start-time
   SetAttributeString(ResourceRecord+ResourceName,RemoteUserAttr,CustomerName);
-  SetAttributeInt(ResourceRecord+ResourceName,Cpus,cpusPerSlot);
   SetAttributeFloat(ResourceRecord+ResourceName,SlotWeightAttr,SlotWeight);
   SetAttributeInt(ResourceRecord+ResourceName,StartTimeAttr,T);
 
@@ -634,8 +629,6 @@ void Accountant::RemoveMatch(const MyString& ResourceName, time_t T)
     GetAttributeInt(CustomerRecord+CustomerName,UnchargedTimeAttr,UnchargedTime);
     float WeightedUnchargedTime=0.0;
     GetAttributeFloat(CustomerRecord+CustomerName,WeightedUnchargedTimeAttr,WeightedUnchargedTime);
-    int cpusPerSlot=1;
-    GetAttributeInt(ResourceRecord+ResourceName,Cpus,cpusPerSlot);
 
 	float SlotWeight=1.0;
 	GetAttributeFloat(ResourceRecord+ResourceName,SlotWeightAttr,SlotWeight);
@@ -666,7 +659,7 @@ void Accountant::RemoveMatch(const MyString& ResourceName, time_t T)
 
 	AcctLog->BeginTransaction();
     // Update customer's resource usage count
-    if (ResourcesUsed>0) ResourcesUsed -= cpusPerSlot;
+    if (ResourcesUsed>0) ResourcesUsed -= 1;
     SetAttributeInt(CustomerRecord+CustomerName,ResourcesUsedAttr,ResourcesUsed);
     WeightedResourcesUsed -= SlotWeight;
     if( WeightedResourcesUsed < 0 ) {
@@ -684,7 +677,7 @@ void Accountant::RemoveMatch(const MyString& ResourceName, time_t T)
 	// there is a group record to update
 	if ( update_group_info ) {
 	  // Update customer's group resource usage count
-      GroupResourcesUsed -= cpusPerSlot;
+      GroupResourcesUsed -= 1;
       if (GroupResourcesUsed < 0) GroupResourcesUsed = 0;
 
       GroupWeightedResourcesUsed -= SlotWeight;

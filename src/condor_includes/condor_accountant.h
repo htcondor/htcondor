@@ -136,8 +136,6 @@ private:
   static MyString CustomerRecord;
   static MyString ResourceRecord;
 
-  static MyString Cpus;
-
   //--------------------------------------------------------
   // Utility functions
   //--------------------------------------------------------
