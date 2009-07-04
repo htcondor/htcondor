@@ -37,6 +37,9 @@
 #include "sig_install.h"
 #include "../condor_privsep/privsep_fork_exec.h"
 
+// FreeBSD 6, OS X 10.4, Solaris 5.9 don't automatically give you environ to work with
+extern DLL_IMPORT_MAGIC char **environ;
+
 MyString caller_name;
 MyString job_user_name;
 
@@ -548,7 +551,8 @@ int systemCommand( ArgList &args, bool is_root, StringList *cmd_out, StringList 
 	// fp = my_popen( args, "r", want_stderr );
 	PrivSepForkExec psforkexec;
 	char ** args_array = args.GetStringArray();
-	if(socketpair(AF_LOCAL, SOCK_STREAM, 0, sockets) < 0)
+		// AIX 5.2, Solaris 5.9, HPUX 11 don't have AF_LOCAL
+	if(socketpair(AF_UNIX, SOCK_STREAM, 0, sockets) < 0)
 	  {
 	    vmprintf(D_ALWAYS, "Error opening local socket: %s\n", strerror(errno));
 	    return -1;
