@@ -17,7 +17,10 @@
  *
  ***************************************************************/
 
-/* These are Globus routes included here for hack */
+/* This is a modified version of globus_gass_server_ez.c from the Globus
+ * Toolkit 4.2.1. It allows up to 20 new connections to be authenticated
+ * in parallel rather than just 1.
+ */
 
 /*
  * Copyright 1999-2006 University of Chicago

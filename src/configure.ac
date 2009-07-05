@@ -596,6 +596,20 @@ AC_ARG_ENABLE(bgd-support,
   [],
   [enable_bgd_support=no])
 
+# disabled by default for now, until I'm sure NMI has the required tools
+AC_ARG_ENABLE(checksum-md5,
+  [AS_HELP_STRING([--enable-checksum-md5],
+     [Enable production and validation of MD5 checksums for released packages.])],
+  [],
+  [enable_checksum_md5=no])
+
+# disabled by default for now, until I'm sure NMI has the required tools
+AC_ARG_ENABLE(checksum-sha1,
+  [AS_HELP_STRING([--enable-checksum-sha1],
+     [Enable production and validation of SHA1 checksums for released packages.])],
+  [],
+  [enable_checksum_sha1=no])
+
 AC_ARG_ENABLE(proper,
   [AS_HELP_STRING([--enable-proper],
      [Force this configure script to work in the proper (non-Condor) way (default: disabled)])],
@@ -2110,6 +2124,7 @@ else
 fi
 AC_SUBST(JAR,$ac_jar)
 
+# Test for md5sum
 AC_PATH_PROG(ac_md5sum,md5sum,no,[$PATH])
 if test $ac_md5sum = "no"; then
   AC_MSG_WARN( [md5sum not found] )
@@ -2118,13 +2133,32 @@ else
 fi
 AC_SUBST(MD5SUM,$ac_md5sum)
 
+# Test for sha1sum
 AC_PATH_PROG(ac_sha1sum,sha1sum,no,[$PATH])
 if test $ac_sha1sum = "no"; then
   AC_MSG_WARN( [sha1sum not found] )
 else
   AC_DEFINE([HAVE_SHA1SUM],[1],[Define if sha1sum is available])
 fi
-AC_SUBST(MD5SUM,$ac_sha1sum)
+AC_SUBST(SHA1SUM,$ac_sha1sum)
+
+# By default, we check to see if we can produce md5 integrity checks on the
+# released tarballs, rpms, and whatever else.
+if test "x$enable_checksum_md5" = "xyes"; then
+   # If this is defined to 1, then the checksums are *required* and produced.
+   # If it is undefined, then the checksum may or may not be produced
+   # depending upon what was available on the machine.
+   AC_DEFINE([ENABLE_CHECKSUM_MD5], [1], [Define if md5 checksums are required for released packages])
+fi
+
+# By default, we check to see if we can produce sha1 integrity checks on the
+# released tarballs, rpms, and whatever else.
+if test "x$enable_checksum_sha1" = "xyes"; then
+   # If this is defined to on, then the checksums are *required* and produced.
+   # If it is undefined, then the checksum may or may not be produced
+   # depending upon what was available on the machine.
+   AC_DEFINE([ENABLE_CHECKSUM_SHA1], [1], [Define if sha1 checksums are required for released packages])
+fi
 
 AC_ARG_ENABLE([rpm],
   AC_HELP_STRING([--enable-rpm],
@@ -2797,8 +2831,8 @@ CHECK_EXTERNAL([krb5], [1.4.3-p0], [soft],
                [use krb5 (provides Kerberos support)],
                MF_LIB_CHECK([krb5], [[krb5 krb5_free_principal]]))
 
-# CHECK_EXTERNAL([openssl],[0.9.8h],[soft])
-CHECK_EXTERNAL([openssl], [0.9.8h], [soft],
+# CHECK_EXTERNAL([openssl],[0.9.8h-p1],[soft])
+CHECK_EXTERNAL([openssl], [0.9.8h-p1], [soft],
                [use OpenSSL (provides authentication and encryption support)],
                MF_LIB_CHECK([openssl],
                             [[ssl SSL_connect], [crypto BF_encrypt]]))
@@ -2809,7 +2843,7 @@ if test "x$_cv_ext_openssl_version" != x; then
   AC_DEFINE(HAVE_OPENSSL_SSL_H,1,[do we have openssl])
 
   # Globus 4.2.1 is dependent on an external version of openssl
-  CHECK_EXTERNAL([globus],[4.2.1-p1], [soft])
+  CHECK_EXTERNAL([globus],[4.2.1-p2], [soft])
 fi
 
 if test -z "$_cv_ext_globus_version"; then
@@ -2851,7 +2885,7 @@ AS_IF([test "x$_cv_opsys" != xDARWIN -a "x$_cv_opsys" != xAIX -a "x$_cv_opsys" !
   [_cv_has_blahp=yes],
   [_cv_has_blahp=no])
 AC_MSG_RESULT([$_cv_has_blahp])
-CHECK_EXTERNAL([blahp], [1.12.2-p2], [soft])
+CHECK_EXTERNAL([blahp], [1.12.2-p3], [soft])
 
 # When --with-proper the detection of the man pages is a little
 # ugly. The value added to the end of $_dir must be what

@@ -68,6 +68,29 @@ else
 fi
 ])dnl
 
+dnl Check to see if perl supports a specific module
+dnl first argument is module name
+dnl second argument is the symbol you would like defined if true.
+AC_DEFUN([AC_CHECK_PERL_MODULE],[dnl
+# Make sure we have perl
+if test -z "$PERL"; then
+  AC_PATH_PROG(PERL,perl,no,[$PATH])
+fi
+# Check if version of Perl is sufficient
+ac_perl_module="$1"
+if test "$PERL" != "no"; then
+  AC_MSG_CHECKING(for perl module $ac_perl_module)
+  $PERL -e "use $ac_perl_module; exit 0;" > /dev/null 2>&1
+  if test $? -ne 0; then
+    AC_MSG_RESULT(no);
+  else
+    AC_MSG_RESULT(ok);
+	AC_DEFINE([$2], [1], [Do we have the perl module $1?])
+  fi
+else
+  AC_MSG_WARN(could not find perl)
+fi
+])dnl
 
 
 #

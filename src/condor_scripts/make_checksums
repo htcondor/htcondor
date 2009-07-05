@@ -1,0 +1,279 @@
+#!/usr/bin/env perl
+
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##	http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+# This script recurses into the target directory and produces md5/sha1 hashes
+# for all .tar.gz and .rpm or whatever else packaging files it finds.
+
+use strict;
+use warnings;
+use File::Find;
+
+use Getopt::Long;
+
+sub runcmd($$);
+sub print_usage();
+
+# Autoflush the output
+$| = 1;
+
+use vars qw/ @opt_help $opt_require_md5 $opt_require_sha1 @opt_md5sum @opt_sha1sum @opt_target/;
+
+GetOptions ( 'help'			  => \@opt_help,
+			 'require-md5!'   => \$opt_require_md5,
+			 'require-sha1!'  => \$opt_require_sha1,
+			 'md5sum=s'		  => \@opt_md5sum,
+			 'sha1sum=s'	  => \@opt_sha1sum,
+			 'target=s'		  => \@opt_target);
+
+sub main
+{
+	my $target;
+
+	check_args();
+
+	# for each target directory, create checksum files for the appropriate
+	# files underneath it.
+	foreach $target (@opt_target) {
+		print "Checking target: $target\n";
+
+		if (! -d $target) {
+			print "Target directory $target not found. Skipping...\n";
+			next;
+		} 
+
+		find(\&gen_checksum, $target);
+	}
+
+	return 0;
+}
+
+# This will be active while being in the directory of the file in question.
+sub gen_checksum
+{
+	my $file = $_;
+	my $sha1sum = $opt_sha1sum[0];
+
+	# if the file doesn't look like a .tar.gz or a .rpm, don't process it.
+	if ($file !~ /(\.tar\.gz|\.rpm)$/) {
+		return;
+	}
+
+	gen_md5_checksum($file);
+	gen_sha1_checksum($file);
+}
+
+sub gen_md5_checksum
+{
+	my $file = shift(@_);
+	my $md5sum = $opt_md5sum[0];
+	my @lines;
+
+	print "Generating md5 checksum for $file\n";
+
+	# make the md5 checksum
+	unlink("$file.md5"); # don't care if this fails.
+
+	# if required, we've already checked that this is executable, if not
+	# required, we'll check here too, cause if it doesn't work, we won't
+	# make a checksum file.
+	if (-x $md5sum) {
+
+		# die on this command if it fails and it is required to pass.
+		runcmd("$md5sum $file > $file.md5", 
+			$opt_require_md5 == 1 ? undef : 1);
+
+		# if a checksum file was produced, either it is of the correct
+		# form, or die or we remove it, depending on what we want.
+		@lines = `cat $file.md5`;
+		map {chomp $_;} @lines;
+		if ($lines[0] !~ /^[a-f0-9]{32} .*(\.tar\.gz|\.rpm)$/) {
+			if ($opt_require_md5 == 1) {
+				die "ERROR: Required md5 checksum file $file.md5 is corrupt!";
+			} else {
+				# get rid of it if it is wrong so it doesn't corrupt later
+				# pipelines in the build process.
+				print "WARNING: corrupt $file.md5 removed because it isn't " .
+					"required.\n";
+				if (unlink("$file.md5") == 0) {
+					die "ERROR: Couldn't unlink corrupt md5 file!";
+				}
+			}
+		}
+	} else {
+		unlink("$file.md5"); # don't care if this fails.
+		print "WARNING: $md5sum not executable and not required. Not " .
+			"producing an md5 checksum file.\n";
+	}
+}
+
+sub gen_sha1_checksum
+{
+	my $file = shift(@_);
+	my $sha1sum = $opt_sha1sum[0];
+	my @lines;
+
+	print "Generating sha1 checksum for $file\n";
+
+	# make the sha1 checksum
+	unlink("$file.sha1"); # don't care if this fails.
+
+	# if required, we've already checked that this is executable, if not
+	# required, we'll check here too, cause if it doesn't work, we won't
+	# make a checksum file.
+	if (-x $sha1sum) {
+
+		# die on this command if it fails and it is required to pass.
+		runcmd("$sha1sum $file > $file.sha1", 
+			$opt_require_sha1 == 1 ? undef : 1);
+
+		# if a checksum file was produced, either it is of the correct
+		# form, or die or we remove it, depending on what we want.
+		@lines = `cat $file.sha1`;
+		map {chomp $_;} @lines;
+		if ($lines[0] !~ /^[a-f0-9]{40} .*(\.tar\.gz|\.rpm)$/) {
+			if ($opt_require_sha1 == 1) {
+				die "ERROR: Required sha1 checksum file $file.sha1 is corrupt!";
+			} else {
+				# get rid of it if it is wrong so it doesn't corrupt later
+				# pipelines in the build process.
+				print "WARNING: corrupt $file.sha1 removed because it isn't " .
+					"required.\n";
+				if (unlink("$file.sha1") == 0) {
+					die "ERROR: Couldn't unlink corrupt sha1 file!";
+				}
+			}
+		}
+	} else {
+		unlink("$file.sha1"); # don't care if this fails.
+		print "WARNING: $sha1sum not executable and not required. Not " .
+			"producing an sha1 checksum file.\n";
+	}
+}
+
+sub check_args
+{
+	if (defined(@opt_help)) {
+		print_usage();
+		exit 0;
+	}
+
+	if (!defined(@opt_target)) {
+		print "Error: Please supply a --target option!\n";
+		print_usage();
+		exit 1;
+	}
+
+	if (!defined(@opt_md5sum)) {
+		@opt_md5sum = ("/usr/bin/md5sum");
+	}
+
+	if (!defined(@opt_sha1sum)) {
+		@opt_sha1sum = ("/usr/bin/sha1sum");
+	}
+
+	if (!defined($opt_require_md5)) {
+		$opt_require_md5 = 0;
+	}
+
+	if (!defined($opt_require_sha1)) {
+		$opt_require_sha1 = 0;
+	}
+
+	# check to see if the binaries are available, depending upon the
+	# requirements.
+
+	if ($opt_require_md5) {
+		if (! -x $opt_md5sum[0]) {
+			die "ERROR: Required md5sum program $opt_md5sum[0] is not " .
+				"present or executable!";
+		}
+	}
+
+	if ($opt_require_sha1) {
+		if (! -x $opt_sha1sum[0]) {
+			die "ERROR: Required sha1sum program $opt_sha1sum[0] is not " .
+				"present or executable!";
+		}
+	}
+}
+
+# The first argument is the command for the shell to execute.
+# The presence of the second argument, means don't die if the command fails.
+# Returns the output of the program, if any.
+sub runcmd($$) {
+	my ($cmd, $shouldnt_die) = @_;
+	my (@out);
+
+	die "Can't execute undefined command!"
+		if (!defined($cmd));
+
+	print "$cmd\n";
+	@out = `$cmd 2>&1`;
+
+	# check if the person who runs the command doesn't care if it succeeds
+	# or not.
+	if( ($? >> 8) != 0 ) {
+		if (!defined($shouldnt_die)) {
+			my $out = join("\n", @out);
+			die "ERROR: Required command failed -> $cmd: $out";
+		}
+	}
+
+	return @out;
+}
+
+
+sub print_usage() {
+
+	print <<END_USAGE;
+Usage:
+
+--help
+    This screen.
+
+--md5sum=<md5sum command with args>
+    The executable to produce the md5 checksums, defaults to /usr/bin/md5sum.
+
+--sha1cmd=<sha1sum command with args>
+    The executable to produce the sha1 checksums, defaults to /usr/bin/sha1sum.
+
+--target=<directory in which to recurse and make checksums>
+    This is a required flag.
+
+--require-md5
+	If we are unable to produce an md5 checksum, exit with failure.
+
+--no-require-md5
+	Don't worry about not being able to produce an md5 checksum. 
+    The last if this and the above option takes effect.
+	
+--require-sha1
+    If we are unable to produce a sha1 checksum, exit with failure.
+
+--no-require-sha1
+    Don't worry about not being able to produce an sha1 checksum. 
+    The last if this and the above option takes effect.
+
+END_USAGE
+}
+
+exit main();
+

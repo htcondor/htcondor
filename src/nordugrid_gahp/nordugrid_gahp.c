@@ -345,19 +345,19 @@ my_strcat( my_string *dst, const char *src )
 int
 gahp_printf(const char *format, ...)
 {
-	int ret_val;
+	int ret_val = 0;
 	va_list ap;
-	char buf[10000];
 
 	globus_libc_lock();
 
-	va_start(ap, format);
-	vsprintf(buf, format, ap);
-
 	if (ResponsePrefix) {
-		ret_val = printf("%s%s",ResponsePrefix,buf);
-	} else {
-		ret_val = printf("%s",buf);
+		ret_val = printf("%s",ResponsePrefix);
+	}
+
+	if ( ret_val >= 0 ) {
+		va_start(ap, format);
+		vprintf(format, ap);
+		va_end(ap);
 	}
 
 	fflush(stdout);
