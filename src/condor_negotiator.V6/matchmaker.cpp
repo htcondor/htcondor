@@ -1197,8 +1197,6 @@ negotiateWithGroup ( int untrimmed_num_startds,
 	double 		pieLeftOrig;
 	int         scheddAdsCountOrig;
 	int			totalTime;
-	int			hit_schedd_prio_limit;
-	int			hit_network_prio_limit;
 	bool ignore_schedd_limit;
 	int			num_idle_jobs;
 	time_t		startTime;
@@ -1211,8 +1209,6 @@ negotiateWithGroup ( int untrimmed_num_startds,
 	int spin_pie=0;
 	do {
 		spin_pie++;
-		hit_schedd_prio_limit = FALSE;
-		hit_network_prio_limit = FALSE;
 
 			// invalidate the MatchList cache, because even if it is valid
 			// for the next user+auto_cluster being considered, we might
@@ -1408,10 +1404,9 @@ negotiateWithGroup ( int untrimmed_num_startds,
 			{
 				case MM_RESUME:
 					// the schedd hit its resource limit.  must resume 
-					// negotiations at a later negotiation cycle.
+					// negotiations in next spin
 					dprintf(D_FULLDEBUG,
 							"  This submitter hit its submitterLimit.\n");
-					hit_schedd_prio_limit = TRUE;
 					break;
 				case MM_DONE: 
 					if (rejForNetworkShare) {
@@ -1419,8 +1414,7 @@ negotiateWithGroup ( int untrimmed_num_startds,
 							// jobs were rejected because this user
 							// exceeded her fair-share of network
 							// resources.  Resume negotiations for
-							// this user at a later cycle.
-						hit_network_prio_limit = TRUE;
+							// this user in next spin.
 					} else {
 							// the schedd got all the resources it
 							// wanted. delete this schedd ad.
@@ -1437,8 +1431,7 @@ negotiateWithGroup ( int untrimmed_num_startds,
 			}
 		}
 		scheddAds.Close();
-	} while ( (hit_schedd_prio_limit == TRUE || hit_network_prio_limit == TRUE)
-			  && ( pieLeft < pieLeftOrig || scheddAds.MyLength() < scheddAdsCountOrig )
+	} while ( ( pieLeft < pieLeftOrig || scheddAds.MyLength() < scheddAdsCountOrig )
 			  && (scheddAds.MyLength() > 0)
 			  && (startdAds.MyLength() > 0) );
 
