@@ -102,11 +102,11 @@ class Matchmaker : public Service
 			@param scheddAddr Sinful string of schedd for this submitter.
 			@param priority Priority of this user from the accountant.
 			@param share Priority w/o up-down (just relative prio factor).
-			@param scheddLimit Give away this many matches max
+			@param submitterLimit Give away this many matches max
 			@param startdAds
 			@param claimIds
 			@param scheddVersion
-			@param ignore_schedd_limit After hit scheddLimit, keep 
+			@param ignore_schedd_limit After hit submitterLimit, keep 
 					negotiating but only consider startd rank.
 			@param numMatched on return this is set to number of machines
 			        matched to this submitter.
@@ -117,7 +117,7 @@ class Matchmaker : public Service
 		**/
 		int negotiate( char const *scheddName, const ClassAd *scheddAd, 
 		   double priority, double share,
-		   double scheddLimit,
+		   double submitterLimit,
 		   ClassAdList &startdAds, ClaimIdHash &claimIds, 
 		   const CondorVersionInfo & scheddVersion,
 		   bool ignore_schedd_limit, time_t startTime, 
@@ -150,14 +150,14 @@ class Matchmaker : public Service
 			@param normalAbsFactor Normalization for prio factors
 			@param slotWeightTotal Size of the pie in this spin.
 
-			@param scheddLimit Resulting submitter share of this pie
-			@param scheddUsage Set to number of slots claimed by this submitter
-			@param scheddShare Resulting fractional share by prio and factor
-			@param scheddAbsShare Resulting fractional share by prio factor
-			@param scheddPrio User priority
-			@param scheddPrioFactor Result is this submitter's prio factor
+			@param submitterLimit Resulting submitter share of this pie
+			@param submitterUsage Set to number of slots claimed by this submitter
+			@param submitterShare Resulting fractional share by prio and factor
+			@param submitterAbsShare Resulting fractional share by prio factor
+			@param submitterPrio User priority
+			@param submitterPrioFactor Result is this submitter's prio factor
 		**/
-		void calculateScheddLimit(char const *scheddName,
+		void calculateSubmitterLimit(char const *scheddName,
 		                          char const *groupAccountingName,
 		                          float groupQuota,
 		                          double maxPrioValue,
@@ -166,12 +166,12 @@ class Matchmaker : public Service
 		                          double normalAbsFactor,
 								  double slotWeightTotal,
 		                            /* result parameters: */
-								  double &scheddLimit,
-								  double &scheddUsage,
-		                          double &scheddShare,
-		                          double &scheddAbsShare,
-		                          double &scheddPrio,
-		                          double &scheddPrioFactor);
+								  double &submitterLimit,
+								  double &submitterUsage,
+		                          double &submitterShare,
+		                          double &submitterAbsShare,
+		                          double &submitterPrio,
+		                          double &submitterPrioFactor);
 
 		/** Calculate how much pie might be dished out in this round.
 			@param quiet Do not emitt debug information about the calculation
@@ -182,7 +182,7 @@ class Matchmaker : public Service
 			@param maxAbsPrioValue Largest prio factor of any submitter
 			@param normalFactor Normalization for prio values
 			@param normalAbsFactor Normalization for prio factors
-			@param pieLeft Sum of scheddLimits
+			@param pieLeft Sum of submitterLimits
 		**/
 		void calculatePieLeft( ClassAdList &scheddAds,
 		                       char const *groupAccountingName,
@@ -210,7 +210,7 @@ class Matchmaker : public Service
 			// trim out startd ads that are not in the Unclaimed state.
 		int trimStartdAds(ClassAdList &startdAds);
 
-		bool GroupQuotaPermits(ClassAd *candidate, double used, double allowed, double pieLeft);
+		bool SubmitterLimitPermits(ClassAd *candidate, double used, double allowed, double pieLeft);
 		double sumSlotWeights(ClassAdList &startdAds,double *minSlotWeight);
 
 		/* ODBC insert functions */
@@ -285,7 +285,7 @@ class Matchmaker : public Service
 		int rejPreemptForPrio;	//   - insufficient prio to preempt?
 		int rejPreemptForPolicy; //   - PREEMPTION_REQUIREMENTS == False?
 		int rejPreemptForRank;	//   - startd RANKs new job lower?
-		int rejForGroupQuota;   //   - not enough group quota?
+		int rejForSubmitterLimit;   //   - not enough group quota?
 
 
 		// Class used to store each individual entry in the
@@ -335,14 +335,14 @@ class Matchmaker : public Service
 					int & rejPreemptForPrio,
 					int & rejPreemptForPolicy,
 					int & rejPreemptForRank,
-					int & rejForGroupQuota);
+					int & rejForSubmitterLimit);
 			void set_diagnostics(int rejForNetwork,
 					int rejForNetworkShare,
 					int rejForConcurrencyLimit,
 					int rejPreemptForPrio,
 					int rejPreemptForPolicy,
 					int rejPreemptForRank,
-					int rejForGroupQuota);
+					int rejForSubmitterLimit);
 			void add_candidate(ClassAd* candidate,
 					double candidateRankValue,
 					double candidatePreJobRankValue,
@@ -355,7 +355,7 @@ class Matchmaker : public Service
 			MatchListType(int maxlen);
 			~MatchListType();
 
-			void increment_rejForGroupQuota() { m_rejForGroupQuota++; }
+			void increment_rejForSubmitterLimit() { m_rejForSubmitterLimit++; }
 
 		private:
 
@@ -373,8 +373,8 @@ class Matchmaker : public Service
 			int m_rejPreemptForPrio;	//   - insufficient prio to preempt?
 			int m_rejPreemptForPolicy; //   - PREEMPTION_REQUIREMENTS == False?
 			int m_rejPreemptForRank;    //   - startd RANKs new job lower?
-			int m_rejForGroupQuota;     //   - not enough group quota?
-			float m_scheddLimit;
+			int m_rejForSubmitterLimit;     //  - not enough group quota?
+			float m_submitterLimit;
 			
 			
 		};
