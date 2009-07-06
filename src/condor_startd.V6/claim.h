@@ -317,7 +317,6 @@ private:
 	int			c_aliveint;		// Alive interval for this claim
 
 	char*		c_cod_keyword;	// COD keyword for this claim, if any
-	char*		c_mach_filename;
 	int			c_has_job_ad;	// Do we have a job ad for the COD claim?
 
 	ClaimState	c_state;		// the state of this claim
