@@ -4556,15 +4556,15 @@ These macros control the \Condor{schedd}.
   
 \label{param:MaxJobsRunning}
 \item[\Macro{MAX\_JOBS\_RUNNING}]
-  This macro limits the number of processes spawned by a given
-  \Condor{schedd}, for all job universes except the 
-  grid universe.  See section~\ref{sec:Choosing-Universe}.
+  An integer representing a limit on the number of processes
+  spawned by a given \Condor{schedd} daemon,
+  for all job universes except the grid universe. 
   This includes, but is not limited to \Condor{shadow} processes,
   and scheduler universe processes, including \Condor{dagman}.
-  The actual
-  number of \Condor{shadow}s may be less if you have reached
-  your \MacroUNI{RESERVED\_SWAP} limit.
-  This macro has a default value of 200.
+  The actual number of \Condor{shadow} daemons may be fewer,
+  if the amount of memory defined by \MacroNI{RESERVED\_SWAP} limits the
+  number of \Condor{shadow} daemons.
+  This default value is 200.
 
 \label{param:MaxJobsSubmitted}
 \item[\Macro{MAX\_JOBS\_SUBMITTED}]
