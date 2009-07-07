@@ -57,6 +57,17 @@ causes \Condor{submit\_dag} to generate a submit file that runs
 
 \begin{itemize}
 
+% gittrac 331
+\item The new configuration variable \Macro{SlotWeight} may be used to
+give a slot greater weight when calculating usage, computing fair
+shares, and enforcing group quotas.  For example, claiming a slot with
+\Expr{SlotWeight = 2} is equivalent to claiming two \Expr{SlotWeight =
+1} slots.  The default value is \AdAttr{Cpus}, the number of CPUs
+associated with the slot, which is 1 unless specially configured.  Any
+expression referring to attributes of the slot ClassAd and evaluating
+to a positive floating point number is valid.
+
+
 % gittrac 586
 \item The new configuration variable \Macro{DAGMAN\_USER\_LOG\_SCAN\_INTERVAL}
 controls how long \Condor{dagman} waits between checking job log files

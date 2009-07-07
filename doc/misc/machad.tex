@@ -194,6 +194,16 @@ For non-SMP machines with one slot, the value will be 1.
 \Note This attribute was added in Condor version 6.9.3.
 For older versions of Condor, see \AdAttr{VirtualMachineID} below.
 %
+\index{ClassAd machine attribute!SlotWeight}
+\item[\AdAttr{SlotWeight}:]
+  This specifies the weight of the slot when
+  calculating usage, computing fair shares, and enforcing group
+  quotas.  For example, claiming a slot with \Expr{SlotWeight = 2} is
+  equivalent to claiming two \Expr{SlotWeight = 1} slots.
+  See the description of \MacroNI{SlotWeight} on
+  page~\pageref{param:SlotWeight}.
+
+%
 \index{ClassAd machine attribute!StartdIpAddr}
 \item[\AdAttr{StartdIpAddr}:] String with the IP and port address of the
 \Condor{startd} daemon which is publishing this machine ClassAd.
