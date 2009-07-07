@@ -30,7 +30,7 @@
 use CondorTest;
 
 $cmd = 'job_dagman_retry_recovery.dag';
-$testdesc =  'Condor submit dag - node-priority test - scheduler U';
+$testdesc =  'Condor submit dag - retry-recovery test - scheduler U';
 $testname = "job_dagman_retry_recovery";
 $dagman_args = "-verbose";
 
