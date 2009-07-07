@@ -609,6 +609,9 @@ dprintf(D_ALWAYS, "DEBUG: dest_file: '%s'\n", dest_file);
 		 			 					// job_opt_mask = 0
 			);
 
+	// Close module file descriptors in parent process.
+	close_module_stdio( module_stdio);
+
 	if (pid > 0) {
 		dap_queue.insert(dap_id, pid);
 		dprintf(D_ALWAYS,"GUC STARTED dapid=%s pid=%d src=%s dest=%s \n",
