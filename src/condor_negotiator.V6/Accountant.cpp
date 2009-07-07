@@ -620,8 +620,10 @@ void Accountant::RemoveMatch(const MyString& ResourceName, time_t T)
     int StartTime=0;
     GetAttributeInt(ResourceRecord+ResourceName,StartTimeAttr,StartTime);
     int ResourcesUsed=0;
-    float WeightedResourcesUsed=0;
     GetAttributeInt(CustomerRecord+CustomerName,ResourcesUsedAttr,ResourcesUsed);
+    float WeightedResourcesUsed=0;
+    GetAttributeFloat(CustomerRecord+CustomerName,WeightedResourcesUsedAttr,WeightedResourcesUsed);
+
     int UnchargedTime=0;
     GetAttributeInt(CustomerRecord+CustomerName,UnchargedTimeAttr,UnchargedTime);
     float WeightedUnchargedTime=0.0;
