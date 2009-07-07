@@ -2030,7 +2030,10 @@ File descriptors are a system resource used for open files and for
 network connections.  Condor daemons that make many simultaneous
 network connections may require an increased number of file
 descriptors.  For example, see page~\pageref{sec:CCB} for information
-on file descriptor requirements of CCB.
+on file descriptor requirements of CCB.  Changes to this configuration
+variable require a restart of Condor in order to take effect.  Also note
+that only if Condor is running as root will it be able to increase the
+limit above the hard limit (on maximum open files) that it inherits.
 
 \label{param:NetworkInterface}
 \item[\Macro{NETWORK\_INTERFACE}]
