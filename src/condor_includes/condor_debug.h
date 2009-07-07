@@ -58,7 +58,7 @@
 #define D_SECURITY		(1<<17)
 #define D_DAEMONCORE	(1<<18)
 #define D_COMMAND		(1<<19)
-#define D_UNUSED3		(1<<20)
+#define D_MATCH			(1<<20)
 #define D_NETWORK		(1<<21)
 #define D_KEYBOARD		(1<<22)
 #define D_PROCFAMILY	(1<<23)
