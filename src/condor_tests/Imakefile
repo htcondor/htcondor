@@ -1796,6 +1796,15 @@ TESTCLASS(job_dagman_retry_recovery,quick)
 TESTCLASS(job_dagman_retry_recovery,full)
 TESTCLASS(job_dagman_retry_recovery,quicknolink)
 
+# This test fails as of 2009-07-07.
+#DESC(job_dagman_submit_fails_post,"Test submit failure on node w/ POST")
+#RUN(job_dagman_submit_fails_post)
+#TESTCLASS(job_dagman_submit_fails_post,dagman)
+#TESTCLASS(job_dagman_submit_fails_post,quick)
+#TESTCLASS(job_dagman_submit_fails_post,full)
+#TESTCLASS(job_dagman_submit_fails_post,quicknolink)
+
+
 /* Sample performance tests */
 
 /*
