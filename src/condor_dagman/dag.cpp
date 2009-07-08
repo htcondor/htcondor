@@ -1493,7 +1493,9 @@ Dag::PostScriptReaper( const char* nodeName, int status )
 			// would be better to just figure that out from the submit file,
 			// but this is a quick way to do it.  wenger 2005-04-29.)
 		ReadUserLog readLog( job->_logFile );
-		bool useXml = readLog.getIsXMLLog();
+			// Check for isInitialized() here fixes gittrac #435 (DAGMan
+			// core dumps if node has POST script and all submit attempts fail).
+		bool useXml = readLog.isInitialized() ? readLog.getIsXMLLog() : false;
 
 		UserLog ulog;
 		ulog.setUseXML( useXml );

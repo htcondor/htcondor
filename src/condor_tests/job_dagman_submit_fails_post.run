@@ -41,6 +41,10 @@ foreach $name (@logfiles) {
 	}
 }
 
+# We need to make sure this file doesn't exist for the test to work
+# correctly.
+system("rm -f job_dagman_submit_fails_post.log");
+
 $abnormal = sub 
 {
 	die "ERROR: Want to see only submit, execute and successful completion\n";
