@@ -1685,7 +1685,7 @@ sub CoreCheck {
 				$count += 1;
 			} else {
 				# do not try to read lock files.
-				if($fullpath =~ /^(.*)lock$/) { next; }
+				if($fullpath =~ /^(.*)\.lock$/) { next; }
 				debug("Checking <$fullpath> for test <$test> for ERROR\n",2);
 				$scancount = ScanForERROR($fullpath,$test,$tstart,$tend);
 				$count += $scancount;
