@@ -55,6 +55,22 @@ running the same DAG, if it finds a lock file at startup.
 Now, if \Condor{dagman} is not sure whether the other DAGMan is alive,
 it continues, rather than exiting.
 
+\item Fixed a major file descriptor leak in the Stork daemon.
+
+% gittrac 593
+\item Fixed bug in which multiple Machine ClassAds in the
+\Condor{collector} with the same \Attr{Name},
+but different \Attr{StartdIPAddr} attribute values
+would cause the \Condor{negotiator} to exit with an error.
+This is unusual and should not happen in a typical Condor installation.
+The most likely cause is using \Condor{advertise}
+to advertise custom ClassAds for grid matchmaking. 
+
+%gittrac #435
+\item Fixed a bug that caused \Condor{dagman} to core dump if all
+submit attempts failed on a DAG node having a POST script.  
+This bug has existed since Condor version 7.1.4.
+
 \end{itemize}
 
 \noindent Known Bugs:
@@ -182,6 +198,10 @@ started.
 \item Descriptions and definitions of all commands that may be placed within
   the submit description file have been moved from the \Condor{submit} 
   manual page to section~\ref{sec:submit-cmds}.
+
+\item Added a description of the configuration variable
+  \MacroNI{NEGOTIATOR\_MATCHLIST\_CACHING}.
+  See \ref{param:NegotiatorMatchlistCaching} for the definition.
 
 \end{itemize}
 

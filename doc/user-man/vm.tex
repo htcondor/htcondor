@@ -9,6 +9,7 @@ The \SubmitCmd{vm} universe facilitates a Condor job
 that matches and then lands a disk image on an execute machine
 within a Condor pool.
 This disk image is intended to be a virtual machine.
+In this manner, the virtual machine is the job to be executed.
 
 This section describes this Condor job.
 See section~\ref{sec:Config-VMs}
@@ -29,6 +30,8 @@ The \SubmitCmd{executable} command changes definition within a
 It no longer specifies an executable file, but instead
 provides a string that identifies the job for tools such
 as \Condor{q}.
+Other commands specific to the type of virtual machine software
+identify the disk image.
 
 Use of the \SubmitCmd{args} command creates a file named \File{condor.arg},
 which is added to the set of CD-ROM files.
@@ -130,7 +133,10 @@ Specific to VMware, the submit description file command
 \SubmitCmd{vmware\_dir} gives the path and directory
 (on the machine from which the job is submitted)
 where VMware-specific files and applications reside.
-Examples of these VMware-specific applications are VMDK and VMX.
+One example of a VMware-specific application is the VMDK files,
+which form a virtual hard drive (disk image) for the virtual machine.
+VMX files containing the primary configuration for the virtual
+machine would also be in this directory.
 
 Condor must be told whether or not the contents of the \SubmitCmd{vmware\_dir}
 directory must be transferred to the machine where the job is
@@ -165,6 +171,22 @@ being used, the \SubmitCmd{vmware\_dir} setting given in the submit
 file should not contain any symlink path components. This is to work
 around the issue discussed in the FAQ entry in section~
 \ref{sec:vmware-symlink-bug}.
+
+Here is a sample submit description file for a VMware virtual machine:
+\begin{verbatim}
+universe                     = vm
+executable                   = vmware_sample_job
+log                          = simple.vm.log.txt
+vm_type			     = vmware
+vm_memory		     = 64
+vmware_dir		     = C:\condor-test
+vmware_should_transfer_files = True
+queue
+\end{verbatim}
+This sample uses the \SubmitCmd{vmware\_dir} command to identify
+the location of the disk image to be executed as a Condor job.
+The contents of this directory are transferred to the machine assigned
+to execute the Condor job.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:vm-Xensubmitfile}Xen-Specific Submit Commands}
