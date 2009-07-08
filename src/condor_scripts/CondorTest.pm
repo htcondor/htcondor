@@ -987,8 +987,7 @@ sub getJobStatus
 	my $qstat = CondorTest::runCondorTool($cmd,\@status,0);
 	if(!$qstat)
 	{
-		print "Test failure due to Condor Tool Failure<$cmd>\n";
-	    return(1)
+		die "Test failure due to Condor Tool Failure<$cmd>\n";
 	}
 
 	foreach my $line (@status)
@@ -1000,7 +999,7 @@ sub getJobStatus
 		}
 		else
 		{
-			return(-1);
+			return("");
 		}
 	}
 }
@@ -1685,6 +1684,8 @@ sub CoreCheck {
 				AddFileTrace($fullpath,$filechange,$newname);
 				$count += 1;
 			} else {
+				# do not try to read lock files.
+				if($fullpath =~ /^(.*).lock$/) { next; }
 				debug("Checking <$fullpath> for test <$test> for ERROR\n",2);
 				$scancount = ScanForERROR($fullpath,$test,$tstart,$tend);
 				$count += $scancount;
