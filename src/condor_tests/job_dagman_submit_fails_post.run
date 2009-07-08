@@ -43,7 +43,10 @@ foreach $name (@logfiles) {
 
 # We need to make sure this file doesn't exist for the test to work
 # correctly.
-system("rm -f job_dagman_submit_fails_post.log");
+$name = "job_dagman_submit_fails_post.log";
+if (-e $name) {
+	system("rm -f $name");
+}
 
 $abnormal = sub 
 {
