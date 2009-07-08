@@ -65,6 +65,11 @@ is unusual and should not happen in a typical Condor
 installation.  The most likely cause is using \Condor{advertise}
 to advertise custom ClassAds for grid matchmaking. 
 
+%gittrac #435
+\item Fixed a bug that caused \Condor{dagman} to core dump if all
+submit attempts failed on a node having a POST script.  (This bug
+existed since version 7.1.4.)
+
 \end{itemize}
 
 \noindent Known Bugs:
