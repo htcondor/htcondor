@@ -126,7 +126,7 @@ limit( int resource, rlim_t new_limit, int kind, char const *resource_str )
 			resource limit to UINT_MAX if we are able. */
 
 		dprintf( D_ALWAYS, 
-			"Unexpected ermissions failure in setting %s limit for %s"
+			"Unexpected permissions failure in setting %s limit for %s"
 			"setrlimit(%d, new = [rlim_cur = %lu, rlim_max = %lu]) : "
 			"old = [rlim_cur = %lu, rlim_max = %lu], errno: %d(%s). Attempting "
 			"workaround.\n",

@@ -2247,6 +2247,13 @@ AS_IF([test "x$enable_kbdd" = xyes],
    AC_SUBST(X11_LIBS,"")
    AC_SUBST(X11_LDFLAGS, "")])
 
+AC_ARG_ENABLE([hdfs],
+  AC_HELP_STRING([--enable-hdfs],
+    [enable hadoop filesystem functionality (default: no)]),
+  [],
+  [enable_hdfs=no])
+AS_IF([test "x$enable_hdfs" = xyes],
+  [AC_DEFINE([WANT_HDFS], [1], [Define if enabling HDFS])])
 
 # Here we figure out whether or not the circumstances are correct for us
 # to be able to separate the debugging symbols from the executables and

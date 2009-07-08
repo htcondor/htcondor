@@ -607,7 +607,7 @@ int systemCommand( ArgList &args, bool is_root, StringList *cmd_out, StringList 
 	    }
 
 
-	    execv(args_array[0], args_array);
+	    execvp(args_array[0], args_array);
 	    // Something went horribly wrong!
 	    exit(-1);
 	  }

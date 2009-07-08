@@ -167,7 +167,10 @@ ResMgr::init_config_classad( void )
 #if HAVE_HIBERNATION
 	configInsert( config_classad, "HIBERNATE", false );
 #endif /* HAVE_HIBERNATION */
-	configInsert( config_classad, ATTR_RESOURCE_WEIGHT, false );
+
+	if( !configInsert( config_classad, ATTR_SLOT_WEIGHT, false ) ) {
+		config_classad->AssignExpr( ATTR_SLOT_WEIGHT, ATTR_CPUS );
+	}
 
 		// Next, try the IS_OWNER expression.  If it's not there, give
 		// them a resonable default, instead of leaving it undefined. 

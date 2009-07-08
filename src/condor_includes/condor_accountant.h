@@ -48,8 +48,8 @@ public:
 
   void Initialize();  // Configuration
 
-  int GetResourcesUsed(const MyString& CustomerName); // get # of used resources
-  float GetResourcesUsedFloat(const MyString& CustomerName); // same for float
+  int GetResourcesUsed(const MyString& CustomerName); // get # of used resources (unweighted by SlotWeight)
+  float GetWeightedResourcesUsed(const MyString& CustomerName);
   float GetPriority(const MyString& CustomerName); // get priority for a customer
   void SetPriority(const MyString& CustomerName, float Priority); // set priority for a customer
 
@@ -66,6 +66,7 @@ public:
   void AddMatch(const MyString& CustomerName, ClassAd* ResourceAd); // Add new match
   void RemoveMatch(const MyString& ResourceName); // remove a match
 
+  float GetSlotWeight(ClassAd *candidate);
   void UpdatePriorities(); // update all the priorities
 
   void CheckMatches(ClassAdList& ResourceList);  // Remove matches that are not claimed
@@ -75,7 +76,7 @@ public:
   void ReportLimits(AttrList *attrList);
 
   AttrList* ReportState();
-  AttrList* ReportState(const MyString& CustomerName, int * NumResources = NULL);
+  AttrList* ReportState(const MyString& CustomerName, int * NumResources = NULL, float * NumResourcesRW = NULL);
                                                 
   void DisplayLog();
   void DisplayMatches();
@@ -116,7 +117,7 @@ private:
   MyString LogFileName;      // Name of Log file
   int	MaxAcctLogSize;		// Max size of log file
   bool  DiscountSuspendedResources;
-  bool  UseResourceWeights; 
+  bool  UseSlotWeights; 
   StringList *GroupNamesList;
 
   //--------------------------------------------------------
@@ -135,23 +136,6 @@ private:
   static MyString AcctRecord;
   static MyString CustomerRecord;
   static MyString ResourceRecord;
-
-  static MyString PriorityAttr;
-  static MyString UnchargedTimeAttr;
-  static MyString ResourcesUsedAttr;
-  static MyString ResourcesUsedRWAttr;
-  static MyString AccumulatedUsageAttr;
-  static MyString BeginUsageTimeAttr;
-  static MyString LastUsageTimeAttr;
-  static MyString PriorityFactorAttr;
-
-  static MyString LastUpdateTimeAttr;
-
-  static MyString RemoteUserAttr;
-  static MyString StartTimeAttr;
-  static MyString Cpus;
-
-  static MyString ResourceWeightAttr;
 
   //--------------------------------------------------------
   // Utility functions

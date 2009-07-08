@@ -757,7 +757,8 @@ CCBClient::ReverseConnectCallback(Sock *sock)
 		// still haven't gotten the response from the CCB server.
 		// Don't care any longer, so cancel it.
 		m_ccb_cb->cancelCallback();
-		m_ccb_cb->cancelMessage();
+		const bool quiet = true;
+		m_ccb_cb->cancelMessage( quiet );
 		decRefCount();
 	}
 

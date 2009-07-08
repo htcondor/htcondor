@@ -654,9 +654,12 @@ DCMsgCallback::DCMsgCallback(CppFunction fn,Service *service,void *misc_data)
 }
 
 void
-DCMsgCallback::cancelMessage()
+DCMsgCallback::cancelMessage(bool quiet)
 {
 	if( m_msg.get() ) {
+		if( quiet ) {
+			m_msg->setCancelDebugLevel(0);
+		}
 		m_msg->cancelMessage();
 	}
 }

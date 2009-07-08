@@ -438,7 +438,10 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 	}
 	if( max_fds > 0 ) {
 		dprintf(D_ALWAYS,"Setting maximum file descriptors to %d.\n",max_fds);
+
+		priv_state priv = set_root_priv();
 		limit(RLIMIT_NOFILE,max_fds,CONDOR_REQUIRED_LIMIT,"MAX_FILE_DESCRIPTORS");
+		set_priv(priv);
 	}
 #endif
 
