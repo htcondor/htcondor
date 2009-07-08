@@ -896,9 +896,6 @@ the configuration variable \MacroNI{PERIODIC\_EXPR\_INTERVAL}.
 If it becomes true, the job will be placed on hold.
 If unspecified, the default value is \Expr{False}.
 
-See the Examples section for an example of a \AdAttr{periodic\_*}
-expression.
-
 \AdAttr{periodic\_*} expressions take
 precedence over \AdAttr{on\_exit\_*} expressions,
 and \AdAttr{*\_hold} expressions take
@@ -957,8 +954,9 @@ the configuration variable \MacroNI{PERIODIC\_EXPR\_INTERVAL}.
 If it becomes \Expr{True}, the job is removed from the queue.
 If unspecified, the default value is \Expr{False}.
 
-See the Examples section for an example of a \AdAttr{periodic\_*}
-expression.
+See section~\ref{condor-submit-examples},
+the Examples section of the \Condor{submit} manual page,
+for an example of a \AdAttr{periodic\_*} expression.
 
 \AdAttr{periodic\_*} expressions take
 precedence over \AdAttr{on\_exit\_*} expressions,
@@ -1741,7 +1739,7 @@ to another machine.
 %% vm_macaddr
 %%%%%%%%%%%%%%%%%%%
 \index{submit commands!vm\_macaddr}
-\item[vm\_macaddr = $<$MACaddr$>$]
+\item[vm\_macaddr = $<$MACAddr$>$]
 Defines that MAC address that the virtual machine's network interface
 should have,
 in the standard format of six groups of

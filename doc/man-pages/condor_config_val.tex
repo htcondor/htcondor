@@ -1,44 +1,39 @@
 \begin{ManPage}{\label{man-condor-config-val}\Condor{config\_val}}{1}
 {Query or set a given Condor configuration variable}
 \Synopsis \SynProg{\Condor{config\_val}}
-\oArg{options}
-\Arg{variable\Dots}
+\oOpt{options}
+\oOpt{-config}
+\oOpt{-verbose}
+\Arg{variable}
+\oArg{variable \Dots}
 
 \SynProg{\Condor{config\_val}}
-\oArg{options}
-\OptArg{-set}{string\Dots}
+\oOpt{options}
+\OptArg{-set}{string}
+\oArg{string \Dots}
 
 \SynProg{\Condor{config\_val}}
-\oArg{options}
-\OptArg{-rset}{string\Dots}
+\oOpt{options}
+\OptArg{-rset}{string}
+\oArg{string \Dots}
 
 \SynProg{\Condor{config\_val}}
-\oArg{options}
-\OptArg{-unset}{variable\Dots}
+\oOpt{options}
+\OptArg{-unset}{variable}
+\oArg{variable \Dots}
 
 \SynProg{\Condor{config\_val}}
-\oArg{options}
-\OptArg{-runset}{variable\Dots}
+\oOpt{options}
+\OptArg{-runset}{variable}
+\oArg{variable \Dots}
 
-\SynProg{\Condor{config\_val}}
-\oArg{options}
-\Opt{-tilde}
+\SynProg{\Condor{config\_val}} \oOpt{options} \Opt{-tilde}
 
-\SynProg{\Condor{config\_val}}
-\oArg{options}
-\Opt{-owner}
+\SynProg{\Condor{config\_val}} \oOpt{options} \Opt{-owner}
 
-\SynProg{\Condor{config\_val}}
-\oArg{options}
-\Opt{-config}
+\SynProg{\Condor{config\_val}} \oOpt{options} \Opt{-config}
 
-\SynProg{\Condor{config\_val}}
-\oArg{options}
-\Opt{-dump}
-
-\SynProg{\Condor{config\_val}}
-\oArg{options}
-\OptArg{-verbose}{variable\Dots}
+\SynProg{\Condor{config\_val}} \oOpt{options} \Opt{-dump}
 
 \index{Condor commands!condor\_config\_val}
 \index{condor\_config\_val command}
@@ -66,60 +61,63 @@ Administrators have more
 fine-grained control over which access levels can modify which
 settings.
 See section~\ref{sec:Config-Security} on
-page~\pageref{sec:Config-Security} for more details.
+page~\pageref{sec:Config-Security} for more details on security settings.
 
-\Note The changes will not take effect until you perform a
-\Condor{reconfig}.
+The \Opt{-verbose} option displays the configuration
+file name and line number where a configuration variable is defined.
 
-\Note It is generally wise to test a new configuration on a single
-machine to ensure you have no syntax or other errors in the
-configuration before you reconfigure many machines.  
+Any changes made by \Condor{config\_val} will not take effect
+until \Condor{reconfig} is invoked.
+
+It is generally wise to test a new configuration on a single
+machine to ensure that no syntax or other errors in the
+configuration have been made before the reconfiguration of many machines.  
 Having bad syntax or invalid configuration settings is a fatal error
 for Condor daemons, and they will exit.
-Far better to discover such a problem on a single machine than to
-cause all the Condor daemons in your pool to exit.
+It is far better to discover such a problem on a single machine than to
+cause all the Condor daemons in the pool to exit.
+
+The \Opt{-set} option sets one or more persistent configuration file entries.
+The \Arg{string} must be a single argument, so enclose it in double quote marks.
+A string must be of the form \Expr{"variable = value"}.
+
+The \Opt{-rset} option sets one or more runtime configuration file entries.
+The \Arg{string} must be a single argument, so enclose it in double quote marks.
+A string must be of the form \Expr{"variable = value"}.
+
+The \Opt{-unset} option changes one or more persistent configuration file
+entries to their previous value.
+
+The \Opt{-runset} option changes one or more runtime configuration file
+entries to their previous value.
+
+The \Opt{-tilde} option displays the path to the Condor home directory.
+
+The \Opt{-owner} option displays the owner of the \Condor{config\_val} process.
+
+The \Opt{-config} option displays the current configuration files in use.
+
+The \Opt{-dump} option displays a list of all of the defined macros
+in the configuration files found by \Condor{config\_val}, along with
+their values. If the \Opt{-verbose} option is supplied as well,
+then the specific configuration file which defined each macro,
+along with the line number of its definition is also printed. 
+\Note The output of this argument is likely to change 
+in a future revision of Condor.
 
 \begin{Options}
-	\OptItem{\OptArg{-name}{machine\_name}}{ Query the specified
-	machine's \Condor{master} daemon for its configuration. }
-	\OptItem{\OptArg{-pool}{centralmanagerhostname[:portnumber]}}
-	   { Use the given central manager and an optional port number
-	   to find daemons. }
-	\OptItem{\OptArg{-address}{\Sinful{ip:port}}}{ Connect to the
-	given ip/port. }
-	\OptItem{\Opt{-master \Bar -schedd \Bar -startd \Bar
-	-collector \Bar -negotiator}}{The daemon to query (if not
-	specified, master is default). }
-	\OptItem{\OptArg{-set}{string\Dots}} { Set a persistent
-	config file entry.
-	The string must be a single argument, so you should enclose it
-	in double quotes.
-	The string must be of the form ``variable = value''. }
-	\OptItem{\OptArg{-rset}{string\Dots}} { Set a runtime
-	config file entry.
-	See the description for \Opt{-set} for details about the
-	string to use. } 
-	\OptItem{\OptArg{-unset}{variable\Dots}} { Unset a persistent
-	config file variable. }
-	\OptItem{\OptArg{-runset}{variable\Dots}} { Unset a runtime
-	config file variable. }
-	\OptItem{\Opt{-tilde}}{ Return the path to the Condor home
-	directory. }
-	\OptItem{\Opt{-owner}}{ Return the owner of the
-	\Condor{config\_val} process. }
-	\OptItem{\Opt{-config}}{ Print the current configuration files
-	in use. }
-	\OptItem{\Opt{-dump}}{ Returns a list of all of the defined macros
-	in the configuration files found by \Condor{config\_val}, along with
-	their values. If the \Opt{-verbose} is suppled as well,
-	then the specific
-	configuration file which defined each macro, along with the line
-	number of its definition is also printed. 
-	\Note The output of this
-	argument is likely to change in a future revision of Condor. }
-	\OptItem{\OptArg{-verbose}{variable\Dots}}{ Returns the configuration
-	file name and line number where a configuration variable is defined.}
-	\OptItem{\Opt{variable\Dots}}{The variables to query. }
+  \OptItem{\OptArg{-name}{machine\_name}}{ Query the specified
+    machine's \Condor{master} daemon for its configuration. 
+    Does not function together with any of the options:
+    \Opt{-dump}, \Opt{-config}, or \Opt{-verbose}. }
+  \OptItem{\OptArg{-pool}{centralmanagerhostname[:portnumber]}}
+    { Use the given central manager and an optional port number
+    to find daemons. }
+  \OptItem{\OptArg{-address}{\Sinful{ip:port}}}
+    { Connect to the given IP address and port number. }
+  \OptItem{\Opt{-master \Bar -schedd \Bar -startd \Bar -collector \Bar -negotiator}}
+    {The specific daemon to query. 
+    If not specified, the master is the default. }
 \end{Options}
 
 \ExitStatus
@@ -129,59 +127,71 @@ and it will exit with the value 1 (one) upon failure.
 
 \Examples
 
-To request the schedd daemon on host perdita
-to give the value of the
-\MacroNI{MAX\_JOBS\_RUNNING}
-configuration variable:
+Here is a set of examples to show a sequence of operations using 
+\Condor{config\_val}.
+To request the \Condor{schedd} daemon on host perdita
+to display the value of the \MacroNI{MAX\_JOBS\_RUNNING} configuration variable:
+\footnotesize
 \begin{verbatim}
    % condor_config_val -name perdita -schedd MAX_JOBS_RUNNING
    500
 \end{verbatim}
+\normalsize
 
-To request the schedd daemon on host perdita
-to set the value of the 
-\MacroNI{MAX\_JOBS\_RUNNING}
-configuration variable
+To request the \Condor{schedd} daemon on host perdita
+to set the value of the \MacroNI{MAX\_JOBS\_RUNNING} configuration variable
 to the value 10.
+\footnotesize
 \begin{verbatim}
    % condor_config_val -name perdita -schedd -set "MAX_JOBS_RUNNING = 10"
    Successfully set configuration "MAX_JOBS_RUNNING = 10" on 
    schedd perdita.cs.wisc.edu <128.105.73.32:52067>.
 \end{verbatim}
+\normalsize
 
 A command that will implement the change just set in the previous
 example.
+\footnotesize
 \begin{verbatim}
    % condor_reconfig -schedd perdita
    Sent "Reconfig" command to schedd perdita.cs.wisc.edu
 \end{verbatim}
+\normalsize
 
 A re-check of the configuration variable reflects the change implemented:
+\footnotesize
 \begin{verbatim}
    % condor_config_val -name perdita -schedd MAX_JOBS_RUNNING
    10
 \end{verbatim}
+\normalsize
 
 To set the configuration variable \MacroNI{MAX\_JOBS\_RUNNING}
 back to what it was before the command to set it to 10:
+\footnotesize
 \begin{verbatim}
    % condor_config_val -name perdita -schedd -unset MAX_JOBS_RUNNING
    Successfully unset configuration "MAX_JOBS_RUNNING" on 
    schedd perdita.cs.wisc.edu <128.105.73.32:52067>.
 \end{verbatim}
+\normalsize
 
 A command that will implement the change just set in the previous
 example.
+\footnotesize
 \begin{verbatim}
    % condor_reconfig -schedd perdita
    Sent "Reconfig" command to schedd perdita.cs.wisc.edu
 \end{verbatim}
+\normalsize
 
 A re-check of the configuration variable reflects that variable
 has gone back to is value before initial set of the variable:
+\footnotesize
 \begin{verbatim}
    % condor_config_val -name perdita -schedd MAX_JOBS_RUNNING
    500
 \end{verbatim}
+\normalsize
 
 \end{ManPage}
