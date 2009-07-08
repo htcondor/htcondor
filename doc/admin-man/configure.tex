@@ -3936,14 +3936,18 @@ This set is to be used for all new applications.
 \label{param:StartdCronModulePrefix}
 \item[\Macro{STARTD\_CRON\_<ModuleName>\_PREFIX}]
   Specifies a string which is prepended by
-  Condor to all attribute names that the module generates.  For
-  example, if a prefix is ``xyz\_'', and an individual attribute is
-  named ``abc'', the resulting attribute would be ``xyz\_abc''.
-  Although it can be quoted, the prefix can contain only
-  alpha-numeric characters.
+  Condor to all attribute names that the module generates.
+  The use of prefixes avoids the conflicts that would be caused by
+  attributes of the same name generated and utilized by different
+  modules.
+  For example, if a module prefix is \verb@xyz_@,
+  and an individual attribute is named \verb@abc@,
+  then the resulting attribute name will be \verb@xyz_abc@.
+  Due to restrictions on ClassAd names, a prefix is only permitted to contain
+  alpha-numeric characters and the underscore character.
 
-  If \MacroNI{STARTD\_CRON\_NAME}
-  is defined, then this configuration macro name is changed from
+  If \MacroNI{STARTD\_CRON\_NAME} is defined,
+  then this configuration variable name is changed from
   \MacroNI{STARTD\_CRON\_<ModuleName>\_PREFIX} to
   \MacroNI{\MacroUNI{STARTD\_CRON\_NAME}\_<ModuleName>\_PREFIX}.
 
@@ -3970,7 +3974,7 @@ This set is to be used for all new applications.
   or in hours (append value with the character 'h').
   As an example, 5m starts the execution of the module every five minutes.
   If no character is appended to the value, seconds are used as a default.
-  For ``Wait For Exit'' mode, the value has a different meaning; in
+  In \Expr{Wait For Exit} mode, the value has a different meaning; in
   this case 
   the period specifies the length of time after the module ceases execution
   before it is restarted.
@@ -3984,8 +3988,8 @@ This set is to be used for all new applications.
 
 \label{param:StartdCronModuleMode}
 \item[\Macro{STARTD\_CRON\_<ModuleName>\_MODE}]
-  Used to specify the ``Mode'' in which the module operates.
-  Legal values are ``WaitForExit'' and ``Periodic'' (the
+  A string that specifies a mode within which the module operates.
+  Legal values are \Expr{WaitForExit} and \Expr{Periodic} (the
   default).  
 
   If \MacroNI{STARTD\_CRON\_NAME}
@@ -3993,52 +3997,51 @@ This set is to be used for all new applications.
   \MacroNI{STARTD\_CRON\_<ModuleName>\_MODE} to
   \MacroNI{\MacroUNI{STARTD\_CRON\_NAME}\_<ModuleName>\_MODE}.
 
-  The default ``Periodic'' mode is used for most modules.  In
+  The default \Expr{Periodic} mode is used for most modules.  In
   this mode, the module is expected to be started by the
   \Condor{startd} daemon, gather and publish its data, and then
   exit.
 
-  The ``WaitForExit'' mode is used to specify a module
-  which runs in the ``Wait For Exit'' mode.
-  In this mode, the \Condor{startd} daemon
-  interprets the ``period'' differently.  In this case, it
-  refers to the amount of time to wait after the module exits
+  The \Expr{WaitForExit} mode is used to specify a module
+  which runs in the \Expr{Wait For Exit} mode.
+  In this mode, the \Condor{startd} daemon interprets the period as defined by 
+  \MacroNI{STARTD\_CRON\_<ModuleName>\_PERIOD} differently.
+  In this case, it refers to the amount of time to wait after the module exits
   before restarting it.  With a value of 1, the module is kept
   running nearly continuously.
 
-  In general, ``Wait For Exit'' mode is for modules that produce
+  In general, \Expr{Wait For Exit} mode is for modules that produce
   a periodic stream of updated data, but it can be used for other
   purposes, as well.
 
 \label{param:StartdCronModuleReconfig}
 \item[\Macro{STARTD\_CRON\_<ModuleName>\_RECONFIG}]
-  The ``ReConfig'' macro is used to specify whether a module
-  can handle HUP signals, and should be sent a HUP signal when
-  the \Condor{startd} daemon is reconfigured.  The module is
-  expected to reread its configuration at that time.  A value
-  of ``True'' enables this setting, and ``False'' disables it.
+  A boolean value that when \Expr{True}, causes the \Condor{startd}
+  daemon to send an HUP signal when the \Condor{startd} daemon is reconfigured.
+  The module is expected to reread its configuration at that time.
 
   If \MacroNI{STARTD\_CRON\_NAME}
-  is defined, then this configuration macro name is changed from
+  is defined, then this configuration variable name is changed from
   \MacroNI{STARTD\_CRON\_<ModuleName>\_RECONFIG} to
   \MacroNI{\MacroUNI{STARTD\_CRON\_NAME}\_<ModuleName>\_RECONFIG}.
 
 \label{param:StartdCronModuleKill}
 \item[\Macro{STARTD\_CRON\_<ModuleName>\_KILL}]
-  The ``Kill'' macro is applicable on for modules running in the
-  ``Periodic'' mode.  Possible values are ``True'' and ``False'' (the
-  default).
+  A boolean value applicable only for modules that have
+  \Expr{STARTD\_CRON\_<ModuleName>\_MODE = Periodic}.
+  The default value is \Expr{False}.
 
   If \MacroNI{STARTD\_CRON\_NAME}
   is defined, then this configuration macro name is changed from
   \MacroNI{STARTD\_CRON\_<ModuleName>\_KILL} to
   \MacroNI{\MacroUNI{STARTD\_CRON\_NAME}\_<ModuleName>\_KILL}.
 
-  This macro controls the behavior of the \Condor{startd} when it
-  detects that the module's executable is still running when it is time
-  to start the module for a run. 	If enabled, the
-  \Condor{startd} will kill and restart the process in this
-  condition.  If not enabled, the existing process is allowed to
+  This variable controls the behavior of the \Condor{startd} when it
+  detects that an instance of the module's executable is still running
+  as it is time to invoke the module again.
+  If \Expr{True}, the \Condor{startd} will kill the module and then invoke
+  an new instance of the module.
+  If \Expr{False}, the existing module invocation is allowed to
   continue running. 
 
 \label{param:StartdCronModuleArgs}
@@ -4084,20 +4087,15 @@ This set is to be used for all new applications.
 
   \begin{itemize}
 
-	\item The ``WaitForExit'' option enables the ``Wait For Exit''
-	mode (see above).
+	\item The \Expr{WaitForExit} option enables the \Expr{WaitForExit} mode.
 
-	\item The ``ReConfig'' option enables the ``Reconfig'' setting
-	(see above).
+	\item The \Expr{ReConfig} option enables the \Expr{ReConfig} setting.
 
-	\item The ``NoReConfig'' option disables the ``Reconfig'' setting
-	(see above).
+	\item The \Expr{NoReConfig} option disables the \Expr{ReConfig} setting.
 
-	\item The ``Kill'' option enables the ``Kill'' setting (see
-	above).
+	\item The \Expr{Kill} option enables the \Expr{Kill} setting.
 
-	\item The ``NoKill'' option disables the ``Kill'' setting (see
-	above).
+	\item The \Expr{NoKill} option disables the \Expr{Kill} setting.
 
     \end{itemize}
 
@@ -4592,15 +4590,15 @@ These macros control the \Condor{schedd}.
   
 \label{param:MaxJobsRunning}
 \item[\Macro{MAX\_JOBS\_RUNNING}]
-  This macro limits the number of processes spawned by a given
-  \Condor{schedd}, for all job universes except the 
-  grid universe.  See section~\ref{sec:Choosing-Universe}.
+  An integer representing a limit on the number of processes
+  spawned by a given \Condor{schedd} daemon,
+  for all job universes except the grid universe. 
   This includes, but is not limited to \Condor{shadow} processes,
   and scheduler universe processes, including \Condor{dagman}.
-  The actual
-  number of \Condor{shadow}s may be less if you have reached
-  your \MacroUNI{RESERVED\_SWAP} limit.
-  This macro has a default value of 200.
+  The actual number of \Condor{shadow} daemons may be fewer,
+  if the amount of memory defined by \MacroNI{RESERVED\_SWAP} limits the
+  number of \Condor{shadow} daemons.
+  This default value is 200.
 
 \label{param:MaxJobsSubmitted}
 \item[\Macro{MAX\_JOBS\_SUBMITTED}]
@@ -6233,7 +6231,27 @@ NegotiatorMatchExprNegotiatorName = "My Negotiator"
   The expressions inserted by the negotiator may be useful in startd
   policy expressions when the startd belongs to multiple Condor pools.
 
+\label{param:NegotiatorMatchlistCaching}
+\item[\Macro{NEGOTIATOR\_MATCHLIST\_CACHING}]
+  A boolean value that defaults to \Expr{True}.
+  When \Expr{True}, it enables an optimization in the \Condor{negotiator}
+  that works with auto clustering.
+  In determining the sorted list of machines that a job might use,
+  the job goes to the first machine off the top of the list. 
+  If \MacroNI{NEGOTIATOR\_MATCHLIST\_CACHING} is \Expr{True},
+  and if the next job is part of the same auto cluster,
+  meaning that it is a very similar job,
+  the \Condor{negotiator} will reuse the previous list of machines,
+  instead of recreating the list from scratch.
+
+  If matching grid resources, and the desire is for a
+  given resource to potentially match multiple times per \Condor{negotiator}
+  pass, \MacroNI{NEGOTIATOR\_MATCHLIST\_CACHING} should be \Expr{False}.
+  See section~\ref{sec:Grid-Matchmaking} on page~\pageref{sec:Grid-Matchmaking}
+  in the subsection on Advertising Grid Resources to Condor for an example.
+
 \end{description}
+
 The following configuration macros affect negotiation for group users.
 \begin{description}
 
