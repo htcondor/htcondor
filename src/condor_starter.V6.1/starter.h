@@ -66,6 +66,9 @@ public:
 
 	virtual int SpawnJob( void );
 
+	virtual void WriteRecoveryFile( ClassAd *recovery_ad );
+	virtual void RemoveRecoveryFile();
+
 		/*************************************************************
 		 * Starter Commands
 		 * We now have two versions of the old commands that the Starter
@@ -298,6 +301,7 @@ private:
 	char *Execute;
 	MyString WorkingDir; // The iwd given to the job
 	char *orig_cwd;
+	MyString m_recoveryFile;
 	bool is_gridshell;
 	int ShuttingDown;
 	int starter_stdin_fd;
