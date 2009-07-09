@@ -5591,15 +5591,19 @@ do not specify their own with:
 
 \label{param:SubmitExprs}
 \item[\Macro{SUBMIT\_EXPRS}]
-  The given comma-separated, named expressions are inserted into all 
+  A comma-separated list of ClassAd attributes to be inserted into all 
   the job ClassAds that \Condor{submit} creates.  This is equivalent
-  to the ``+'' syntax in submit files.  See the
-  the \Condor{submit} manual page
-  on page~\pageref{man-condor-submit} for details on using the ``+''
-  syntax to add attributes to the job ClassAd.
-  Attributes defined in the submit description file with ``+'' will
-  override attributes defined in the config file with
+  to the \verb@"+"@ syntax in a submit description file.
+  Attributes defined in the submit description file with \verb@"+"@ will
+  override attributes defined in the configuration file with
   \MacroNI{SUBMIT\_EXPRS}. 
+  Note that adding an attribute to a job's ClassAd will \emph{not} function
+  as a method for specifying default values of submit description file commands
+  forgotten in a job's submit description file.
+  The command in the submit description file results in actions by
+  \Condor{submit},
+  while the use of \MacroNI{SUBMIT\_EXPRS} adds a job ClassAd attribute
+  at a later point in time.
 
 \label{param:LogOnNfsIsError}
 \item[\Macro{LOG\_ON\_NFS\_IS\_ERROR}]
