@@ -122,6 +122,7 @@ test_append_prereqs = java-1.5.0_03
 
 [
 platforms = x86_macos_10.4
+prereqs   = coreutils-5.2.1
 test_append_prereqs = java-1.4.2_09, coreutils-5.2.1
 x_test_platforms_x86_macos_10.4 = x86_64_macos_10.5
 ]
