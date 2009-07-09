@@ -25,6 +25,74 @@ and progressively plotting of the progress of the run
 in terms of how many jobs are running and how many are ready to run.
 The system becomes adapted and personalized for each project.
 </p>
+<h3>Theory</h3>
+<p>
+A single tie in so a program runs under SOAR does some things for you.
+It maps a location for data sources to a program. It make an easy way
+for you to either feed in new data sources or to create a new version
+of the program to run against the existing data sources. The third
+primary location(the tie to soar) is a set of scripts which fetch the data sources
+to the location needed for each job within the DAG and scrapes the expected
+results to the results location.
+</p>
+<h3>Web Interface</h3>
+<p>
+No matter how one starts the runs, the web interface allows four things:
+</p>
+<ul>
+<li>
+Access to where the DAG is running to inspect various things.
+<li>
+A profile showing the jobs ready vs currently running over time
+allowing one to estimate when all the results are available
+and the run completed.
+<li>
+A report showing current status of every job updated periodically
+just like the profile plot.
+<li>
+Access to where the results are stored so individual job's results
+can be looked at as soon as each job completes.
+</ul>
+<h3>Hey, I know how to submit clusters with one submit file, why do I want to use SOAR</h3>
+<p>
+There are some distinct advantages to using SOAR. And it very similar to
+having a folder with data(each in a distinct loaction) and a single submit
+file. The following are provided by SOAR only:
+</p>
+<ul>
+<li>
+Since SOAR uses DAGs and condor_dagman, a SOAR run can be adjusted 
+to have a minimal impact on your network and submit machine while
+making runs easier. An example is that you can submit 1000s, but throttle
+it back to a reasonable number and make the submit node's performane
+be good for all.
+<li>
+There is a process which every 5 minutes produces a profile of the current 
+set of jobs and a report of the status of each job. The profile is a plot
+which shows number of jobs ready to run and the average number currently
+running. This makes it a predictable task to know when all the results are ready
+to be evaluated.
+<li>
+As jobs complete, each successful job has its data collected in a web accessible location
+freeing the need to collect results by hand.
+<li>
+When all the runs are complete, a collection of all the results for a run
+are either tared or zipped up into a single package for easy web access.
+<li>
+You'll never have to write another submit files again.
+<li>
+It's easy to start a new person using a particular application. One simply 
+makes them their own project. You can even seed it with appropriate data sets.
+From their they simply have to either modify the application and analysis
+or feed the project a different set of data sets.
+<li>
+It changes the focus from "How do I make Condor do what I want" to
+"What data do I want to run?", "How do I want to change the analysis?" 
+and "How can I process the results the best?".
+<li>
+One gets to focus on the science!
+</ul>
+
 
 <h2>Likely Steps towards SOARing</h2>
 <!--
@@ -342,7 +410,8 @@ any use of the tarcache space. Results and data sets are not touched.
 <pre>
 ./control.pl --project=gravitropism --version=v3 --kind=white --white=/tmp/whitelist
 </pre>
-This script ...
+The above will run a predefined set of your data against a particular
+version of a particular project.
 <li>
 <pre>
 ./control.pl --project=gravitropism --preversion=v3 --version=v4 --kind=install   --code=/tmp/code.tar.gz
@@ -472,6 +541,48 @@ of jobs for this project.
 </pre>
 Create a report for a particular run.
 </ul>
+<h2>How do I ......</h2>
+<p>
+You probably have a project running in SOAR but you want one of the following changes:
+</p>
+<h3>Get someone else using the configured project</h3>
+<p>
+Base a new project on the current project.
+</p>
+<p>
+Let say you have a project <b>positioning</b> and the best version of it is
+<b>v3</b>. Your new user is <b>sam</b> and you want it to be called <b>
+sams_liquids</b>.
+</p>
+<ul>
+<li>
+Add a line in "control/fsconfig" to have a location for this persons
+data sets for their project. It would look like this: 
+<b>sams_liquids,/home/sam/imageruns</b>.
+<li>
+Enter the following command: <b>./control.pl --project=positioning --preversion=v3 
+--newproject=sams_liquisams_liquid --version=v1 --kind=install</b>
+</ul>
+<h3>Change how the application works(change the science)</h3>
+<p>
+Generate a new version of the code.
+</p>
+<p>
+This is very easy to do. If you make a new version you can name it 
+something meaningful to mimic why you created it. The new version
+now has access to all the project data allowing you to change the science
+you are doing. If the project is <b>positioning</b> and the old version
+is <b>v1</b> and you want the new version to be <b>surfaces</b> then
+go to "sources/positioning" and enter this command: <b>cp -r v1 surfaces</b>.
+</p>
+<p>
+Now simply place new binaries in "sources/positioning/surfaces/code".
+</p>
+<p>
+<i>NOTE if you change the behaiour and files needed or created you'll likely need
+need to change the scripts "prejob.pl, postjob.pl and pushdata.pl".</i>
+</p>
+
 
 <h2>Web Interface</h2>
 <!--
