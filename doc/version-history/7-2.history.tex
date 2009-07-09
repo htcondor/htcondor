@@ -71,6 +71,9 @@ to advertise custom ClassAds for grid matchmaking.
 submit attempts failed on a DAG node having a POST script.  
 This bug has existed since Condor version 7.1.4.
 
+\item Fixed a memory leak in the \Condor{schedd}, which occurred when
+the configuration variable \MacroNI{NEGOTIATOR\_MATCH\_EXPRS} was used.
+
 \end{itemize}
 
 \noindent Known Bugs:
