@@ -114,10 +114,7 @@ prereqs   = libtool-1.5.26
 # Platforms with no prereqs at all
 ########################################
 [
-platforms = \
-	x86_winnt_5.1, \
-	ppc64_sles_9, \
-	ps3_ydl_5.0
+platforms = x86_winnt_5.1, ppc64_sles_9, ps3_ydl_5.0
 ]
 
 
@@ -156,7 +153,7 @@ x_test_platforms_x86_macos_10.4 = x86_64_macos_10.5
 
 [
 platforms = x86_winnt_5.1
-x_test_platforms_x86_winnt_5.1 = x86_64_winnt_5.1
+x_test_platforms_x86_winnt_5.1 = x86_64_winnt_5.1, x86_winnt_6.0
 ]
 
 [
