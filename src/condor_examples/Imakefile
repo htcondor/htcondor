@@ -39,3 +39,4 @@ static::
 
 html:
 
+public_copy_target(condor_limits_wrapper.sh,libexec,condor_limits_wrapper.sh,EXECUTABLE_MODE)
