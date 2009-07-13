@@ -3060,6 +3060,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 						EXCEPT("Failed to store '%s=%s' into job ad %d.%d",
 						       match_exp_name.Value(), new_value, cluster_id, proc_id);
 					}
+					free( new_value );
 				}
 			}
 		}
