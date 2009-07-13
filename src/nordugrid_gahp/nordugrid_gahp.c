@@ -656,7 +656,7 @@ handle_nordugrid_submit( char **input_line )
 		str = globus_rsl_unparse( rsl );
 		assert( str != NULL );
 
-		globus_rsl_free( rsl );
+		globus_rsl_free_recursive( rsl );
 
 		globus_libc_free( input_line[3] );
 		input_line[3] = str;
