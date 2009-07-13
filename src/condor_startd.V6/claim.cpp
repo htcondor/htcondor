@@ -1324,7 +1324,7 @@ Claim::setStarter( Starter* s )
 
 
 void
-Claim::starterExited( void )
+Claim::starterExited( int status )
 {
 		// Now that the starter is gone, we need to change our state
 	changeState( CLAIM_IDLE );
@@ -1332,7 +1332,7 @@ Claim::starterExited( void )
 		// Notify our starter object that its starter exited, so it
 		// can cancel timers any pending timers, cleanup the starter's
 		// execute directory, and do any other cleanup. 
-	c_starter->exited();
+	c_starter->exited(status);
 	
 		// Now, clear out this claim with all the starter-specific
 		// info, including the starter object itself.

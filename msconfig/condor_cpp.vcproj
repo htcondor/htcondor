@@ -221,6 +221,14 @@
 			>
 		</File>
 		<File
+			RelativePath="..\src\condor_c++_util\classadHistory.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\classadHistory.h"
+			>
+		</File>
+		<File
 			RelativePath="..\src\condor_c++_util\classadlogentry.cpp"
 			>
 		</File>

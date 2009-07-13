@@ -60,17 +60,9 @@ extern  int     clear_autocluster_id( ClassAd *job );
 /* For daemonCore, etc. */
 DECL_SUBSYSTEM( "SCHEDD", SUBSYSTEM_TYPE_SCHEDD );
 
-// global variables to control the daemon's running and logging
-char*		Spool = NULL;							// spool directory
-char* 		JobHistoryFileName = NULL;
-char*		PerJobHistoryDir = NULL;
-char*		Name = NULL;
-char*		X509Directory = NULL;
-bool        DoHistoryRotation = true;
-bool        DoDailyHistoryRotation = true;
-bool        DoMonthlyHistoryRotation = true;
-filesize_t  MaxHistoryFileSize = 20 * 1024 * 1024; // 20MB
-int         NumberBackupHistoryFiles = 2; // In addition to history file, how many to keep?
+char*          Spool = NULL;
+char*          Name = NULL;
+char*          X509Directory = NULL;
 
 // global objects
 Scheduler	scheduler;

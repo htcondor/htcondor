@@ -222,7 +222,7 @@ public:
 		// starter-related functions
 	int	 spawnStarter( Stream* = NULL );
 	void setStarter( Starter* s );
-	void starterExited( void );
+	void starterExited( int status );
 	bool starterPidMatches( pid_t starter_pid );
 	bool isDeactivating( void );
 	bool isActive( void );

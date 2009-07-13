@@ -377,7 +377,7 @@ BOINC_BackfillMgr::reaper( int pid, int status )
 	}
 	
 		// tell our starter object its starter exited
-	m_boinc_starter->exited();
+	m_boinc_starter->exited(status);
 	delete m_boinc_starter;
 	m_boinc_starter = NULL;
 

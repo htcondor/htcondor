@@ -85,6 +85,7 @@
 #include "../condor_privsep/condor_privsep.h"
 #include "authentication.h"
 #include "setenv.h"
+#include "classadHistory.h"
 
 #if HAVE_DLOPEN
 #include "ScheddPlugin.h"
@@ -10128,52 +10129,7 @@ Scheduler::Init()
 		dprintf( D_FULLDEBUG, "No Accountant host specified in config file\n" );
 	}
 
-	CloseJobHistoryFile();
-	if( JobHistoryFileName ) free( JobHistoryFileName );
-	if( ! (JobHistoryFileName = param("HISTORY")) ) {
-		  dprintf(D_FULLDEBUG, "No history file specified in config file\n" );
-	}
-
-    // If history rotation is off, then the maximum file size and
-    // number of backup files is ignored. 
-    DoHistoryRotation = param_boolean("ENABLE_HISTORY_ROTATION", true);
-    DoDailyHistoryRotation = param_boolean("ROTATE_HISTORY_DAILY", false);
-    DoMonthlyHistoryRotation = param_boolean("ROTATE_HISTORY_MONTHLY", false);
-
-    MaxHistoryFileSize = param_integer("MAX_HISTORY_LOG", 
-                                       20 * 1024 * 1024); // 20MB is default
-    NumberBackupHistoryFiles = param_integer("MAX_HISTORY_ROTATIONS", 
-                                          2,  // default
-                                          1); // minimum
-
-    if (DoHistoryRotation) {
-        dprintf(D_ALWAYS, "History file rotation is enabled.\n");
-        dprintf(D_ALWAYS, "  Maximum history file size is: %d bytes\n", 
-                (int) MaxHistoryFileSize);
-        dprintf(D_ALWAYS, "  Number of rotated history files is: %d\n", 
-                NumberBackupHistoryFiles);
-    } else {
-        dprintf(D_ALWAYS, "WARNING: History file rotation is disabled and it "
-                "may grownq very large.\n");
-    }
-
-    if (PerJobHistoryDir != NULL) free(PerJobHistoryDir);
-    if ((PerJobHistoryDir = param("PER_JOB_HISTORY_DIR")) != NULL) {
-        StatInfo si(PerJobHistoryDir);
-        if (!si.IsDirectory()) {
-            dprintf(D_ALWAYS | D_FAILURE,
-                    "invalid PER_JOB_HISTORY_DIR (%s): must point to a "
-                    "valid directory; disabling per-job history output\n",
-                    PerJobHistoryDir);
-            free(PerJobHistoryDir);
-            PerJobHistoryDir = NULL;
-        }
-        else {
-            dprintf(D_ALWAYS,
-                    "Logging per-job history files to: %s\n",
-                    PerJobHistoryDir);
-        }
-    }
+	InitJobHistoryFile("HISTORY"); // or re-init it, as the case may be
 
 		//
 		// We keep a copy of the last interval

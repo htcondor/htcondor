@@ -34,6 +34,7 @@
 #include "my_popen.h"
 #include "basename.h"
 #include "dc_starter.h"
+#include "classadHistory.h"
 
 #if defined(LINUX)
 #include "glexec_starter.h"
@@ -596,8 +597,24 @@ Starter::spawn( time_t now, Stream* s )
 }
 
 void
-Starter::exited()
+Starter::exited(int status)
 {
+	if (s_claim->ad()) {
+		// First, patch up the ad a little bit 
+		s_claim->ad()->Assign(ATTR_COMPLETION_DATE, time(0));
+		int start = 0;
+		s_claim->ad()->LookupInteger(ATTR_JOB_START_DATE, start);
+		int runtime = time(0) - start;
+		
+		s_claim->ad()->Assign(ATTR_JOB_REMOTE_WALL_CLOCK, runtime);
+		int jobStatus = COMPLETED;
+		if (WIFSIGNALED(status)) {
+			jobStatus = REMOVED;
+		}
+		s_claim->ad()->Assign(ATTR_JOB_STATUS, jobStatus);
+		AppendHistory(s_claim->ad());
+		WritePerJobHistoryFile(s_claim->ad());
+	}
 		// Make sure our time isn't going to go off.
 	cancelKillTimer();
 
