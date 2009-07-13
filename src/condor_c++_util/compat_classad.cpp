@@ -22,6 +22,8 @@
 #include "condor_classad.h"
 #include "classad_oldnew.h"
 #include "condor_attributes.h"
+#include "classad/classad/xmlSink.h"
+//#include "condor_xml_classads.h"
 
 using namespace std;
 using namespace classad;
@@ -372,6 +374,71 @@ EvalString( const char *name, classad::ClassAd *target, char *value )
 	return rc;
 }
 
+/*
+ * Ensure that we allocate the value, so we have sufficient space
+ */
+int CompatClassAd::
+EvalString (const char *name, classad::ClassAd *target, char **value)
+{
+    
+	string strVal;
+    bool foundAttr = false;
+
+	if( target == this || target == NULL ) {
+		if( EvaluateAttrString( name, strVal ) ) {
+
+            *value = (char *)malloc(strlen(strVal.c_str()) + 1);
+            if(*value != NULL) {
+                strcpy( *value, strVal.c_str( ) );
+                return 1;
+            } else {
+                return 0;
+            }
+		}
+		return 0;
+	}
+
+	classad::MatchClassAd mad( this, target );
+
+    if( this->Lookup(name) ) {
+
+        if( this->EvaluateAttrString( name, strVal ) ) {
+            foundAttr = true;
+        }		
+    } else if( target->Lookup(name) ) {
+        if( this->EvaluateAttrString( name, strVal ) ) {
+            foundAttr = true;
+        }		
+    }
+
+    if(foundAttr)
+    {
+        *value = (char *)malloc(strlen(strVal.c_str()) + 1);
+        if(*value != NULL) {
+            strcpy( *value, strVal.c_str( ) );
+            mad.RemoveLeftAd( );
+            mad.RemoveRightAd( );
+            return 1;
+        }
+    }
+
+	mad.RemoveLeftAd( );
+	mad.RemoveRightAd( );
+	return 0;
+}
+
+int CompatClassAd::
+EvalString(const char *name, classad::ClassAd *target, MyString & value)
+{
+    char * pvalue = NULL;
+    //this one makes sure length is good
+    int ret = EvalString(name, target, &pvalue); 
+    if(ret == 0) { return ret; }
+    value = pvalue;
+    free(pvalue);
+    return ret;
+}
+
 int CompatClassAd::
 EvalInteger (const char *name, classad::ClassAd *target, int &value)
 {
@@ -618,6 +685,43 @@ sPrint( MyString &output )
 
 	return TRUE;
 }
+// Taken from the old classad's function. Got rid of incorrect documentation. 
+////////////////////////////////////////////////////////////////////////////////// Print an expression with a certain name into a buffer. 
+// The caller should pass the size of the buffer in buffersize.
+// If buffer is NULL, then space will be allocated with malloc(), and it needs
+// to be free-ed with free() by the user.
+////////////////////////////////////////////////////////////////////////////////
+char* CompatClassAd::
+sPrintExpr(char* buffer, unsigned int buffersize, const char* name)
+{
+    if(!name)
+    {
+        return NULL;
+    }
+
+    string tmpStr;
+
+    if(buffer)
+    {
+        if( EvaluateAttrString(name, tmpStr) )
+        {
+            strncpy(buffer,tmpStr.c_str(), buffersize);
+            buffer[buffersize - 1] = '\0';
+            // (from the old classads, incorrect since we don't return
+            //  TRUE or FALSE)
+            // Behavior is undefined if buffer is not big enough.
+            // Currently, we return TRUE.
+        }
+    } else {
+        if( (buffer = strdup(tmpStr.c_str() ) ) == NULL)
+        {
+            EXCEPT("Out of memory");
+        }
+    }
+
+    return buffer;
+
+}
 
 // ClassAd methods
 
@@ -667,6 +771,8 @@ ResetName()
 {
 	m_nameItr = begin();
 	m_nameItrInChain = false;
+
+    m_dirtyItr = dirtyBegin();
 }
 
 const char *CompatClassAd::
@@ -938,5 +1044,93 @@ AddExplicitTargetRefs( ExprTree *tree, set<string,CaseIgnLTStr> &definedAttrs )
 		return tree->Copy( );
 	}
 	}
+}
+
+// Determine if a value is valid to be written to the log. The value
+// is a RHS of an expression. According to LogSetAttribute::WriteBody,
+// the only invalid character is a '\n'.
+bool CompatClassAd::
+IsValidAttrValue(const char *value)
+{
+    //NULL value is not invalid, may translate to UNDEFINED
+    if(!value)
+    {
+        return true;
+    }
+
+    //According to the old classad's docs, LogSetAttribute::WriteBody
+    // says that the only invalid character for a value is '\n'.
+    // But then it also includes '\r', so whatever.
+    while (*value) {
+        if(((*value) == '\n') ||
+           ((*value) == '\r')) {
+            return false;
+        }
+        value++;
+    }
+
+    return true;
+}
+
+//provides a way to get the next dirty expression in the set of 
+//  dirty attributes.
+classad::ClassAd::ExprTree* CompatClassAd::
+NextDirtyExpr()
+{
+    classad::ClassAd::ExprTree* expr;
+    expr = NULL;
+
+    //get the next dirty attribute if we aren't past the end.
+    if(m_dirtyItr != classad::ClassAd::dirtyEnd() )
+    {
+        //figure out what exprtree it is related to
+        expr = classad::ClassAd::Lookup(*m_dirtyItr);
+
+        m_dirtyItr++;
+    }
+
+    return expr;
+
+}
+
+//////////////XML functions///////////
+
+int CompatClassAd::
+fPrintAsXML(FILE *fp)
+{
+    if(!fp)
+    {
+        return FALSE;
+    }
+
+    MyString out;
+    sPrintAsXML(out);
+    fprintf(fp, "%s", out.Value());
+    return TRUE;
+}
+
+int CompatClassAd::
+sPrintAsXML(MyString &output)
+{
+    ClassAdXMLUnParser     unparser;
+    std::string             xml;
+    unparser.SetCompactSpacing(false);
+    unparser.Unparse(xml,this);
+    output += xml.c_str();
+    return TRUE;
+}
+///////////// end XML functions /////////
+
+char const *
+CompatClassAd::EscapeStringValue(char const *val)
+{
+    Value tmpValue;
+    string stringToAppeaseUnparse(val);
+    ClassAdUnParser unparse;
+
+    tmpValue.SetStringValue(val);
+    unparse.Unparse(stringToAppeaseUnparse, tmpValue);
+
+    return stringToAppeaseUnparse.c_str();
 }
 

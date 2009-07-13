@@ -631,6 +631,12 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 				// Negotiator matches up private ad with public ad by
 				// using the following.
 			if( retVal ) {
+                //ExprTree *Lookup ( const std::string &attrName ) const;
+                //ExprTree *tmp = retVal.classad::ClassAd::Lookup(ATTR_MY_ADDRESS);
+                //Insert(ATTR_MY_NAME, tmp);
+                //
+                //tmp = retVal.classad::ClassAd::Lookup(ATTR_NAME);
+                //Insert(ATTR_NAME, tmp);
 				pvtAd->CopyAttribute( ATTR_MY_ADDRESS, retVal );
 				pvtAd->CopyAttribute( ATTR_NAME, retVal );
 			}

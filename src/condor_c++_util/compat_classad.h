@@ -170,6 +170,23 @@ class CompatClassAd : public classad::ClassAd
 		 */
 	int EvalString (const char *name, classad::ClassAd *target, char *value);
 
+        /** Same as EvalString, but ensures we have enough space for value first.
+		 *  @param name The name of the attribute
+		 *  @param target A ClassAd to resolve MY or other references
+		 *  @param value Where we the copy the string. We ensure there is enough space. 
+		 *  @return 1 on success, 0 if the attribute doesn't exist, or if it does exist 
+		 *  but is not a string.
+         */
+    int EvalString (const char *name, classad::ClassAd *target, char **value);
+        /** MyString version of EvalString()
+		 *  @param name The name of the attribute
+		 *  @param target A ClassAd to resolve MY or other references
+		 *  @param value A MyString where we the copy the string. We ensure there is enough space. 
+		 *  @return 1 on success, 0 if the attribute doesn't exist, or if it does exist 
+		 *  but is not a string.
+         */
+    int EvalString (const char *name, classad::ClassAd *target, MyString & value);
+
 		/** Lookup and evaluate an attribute in the ClassAd that is an integer
 		 *  @param name The name of the attribute
 		 *  @param target A ClassAd to resolve MY or other references
@@ -233,6 +250,26 @@ class CompatClassAd : public classad::ClassAd
 			@return TRUE
 		*/
 	int sPrint( MyString &output );
+        /** Prints an expression with a certain name into a buffer. 
+         *
+         *  @param buffer The buffer to place the named expression into. NOTE: if this is NULL, then the function returns some malloc'd memory. Free it.
+         *  @param buffersize The size of the buffer.
+         *  @param name The name to print into the buffer.
+         *  @return Returns the now-filled buffer.
+         */
+    char* sPrintExpr(char* buffer, unsigned int buffersize, const char* name);
+
+    /* Prints out the classad as xml to a file.
+     * @param fp The file to be printed to.
+     * @return TRUE as long as the file existed.
+     */
+    int fPrintAsXML(FILE *fp);
+
+    /* Prints the current classad as XML to a string. fPrintAsXML calls this.
+     * @param output The MyString to have filled with the XML-ified classad.
+     * @return TRUE
+     */
+    int sPrintAsXML(MyString &output);
 
 	void ResetName();
 	const char *NextNameOriginal();
@@ -243,6 +280,25 @@ class CompatClassAd : public classad::ClassAd
 
 	static bool ClassAdAttributeIsPrivate( char const *name );
 
+    /** Is this value valid for being written to the log? The value is a RHS of an expression. Only '\n' or '\r' are invalid.
+     *
+     * @param value The thing we check to see if valid.
+     * @return True, unless value had '\n' or '\r'.
+     */
+    bool IsValidAttrValue(const char *value);
+
+    /** Gets the next dirty expression tree
+     * @return The ExprTree associated with the next dirty attribute, or null if one does not exist.
+     */
+    classad::ClassAd::ExprTree* NextDirtyExpr();
+
+
+    /** Basically just calls an Unparser so we can escape strings
+     *  @param val The string we're escaping stuff in. 
+     *  @return The escaped string.
+     */
+    char const *EscapeStringValue(char const *val);
+
  private:
 	void evalFromEnvironment( const char *name, classad::Value val );
 	classad::ExprTree *AddExplicitConditionals( classad::ExprTree * );
@@ -251,6 +307,8 @@ class CompatClassAd : public classad::ClassAd
 
 	classad::ClassAd::iterator m_nameItr;
 	bool m_nameItrInChain;
+
+    classad::DirtyAttrList::iterator m_dirtyItr;
 };
 
 #endif
