@@ -377,17 +377,6 @@ EvalInteger (const char *name, classad::ClassAd *target, int &value)
 {
 	int rc = 0;
 
-	if( strcasecmp( name, "CurrentTime" ) == 0 ) {
-		time_t	now = time (NULL);
-		if (now == (time_t) -1) {
-			return 0;
-		}
-		else {
-			value = (int)now;
-			return 1;
-		}
-	}
-
 	if( target == this || target == NULL ) {
 		if( EvaluateAttrInt( name, value ) ) { 
 			return 1;
@@ -731,27 +720,6 @@ AddExplicitTargetRefs( )
 }
 
 
-
-// private methods
-void CompatClassAd::
-evalFromEnvironment( const char *name, Value val )
-{
-	if (strcmp (name, "CurrentTime") == 0)
-	{
-		time_t	now = time (NULL);
-		if (now == (time_t) -1)
-		{
-			val.SetErrorValue( );
-			return;
-		}
-		val.SetIntegerValue( ( int ) now );
-		return;
-	}
-
-	val.SetUndefinedValue( );
-	return;
-
-}
 
 classad::ExprTree *CompatClassAd::
 AddExplicitConditionals( ExprTree *expr )
