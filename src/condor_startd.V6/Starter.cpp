@@ -599,22 +599,44 @@ Starter::spawn( time_t now, Stream* s )
 void
 Starter::exited(int status)
 {
-	if (s_claim->ad()) {
-		// First, patch up the ad a little bit 
-		s_claim->ad()->Assign(ATTR_COMPLETION_DATE, (int)time(0));
-		int start = 0;
-		s_claim->ad()->LookupInteger(ATTR_JOB_START_DATE, start);
-		int runtime = time(0) - start;
-		
-		s_claim->ad()->Assign(ATTR_JOB_REMOTE_WALL_CLOCK, runtime);
-		int jobStatus = COMPLETED;
-		if (WIFSIGNALED(status)) {
-			jobStatus = REMOVED;
-		}
-		s_claim->ad()->Assign(ATTR_JOB_STATUS, jobStatus);
-		AppendHistory(s_claim->ad());
-		WritePerJobHistoryFile(s_claim->ad());
+	ClassAd *jobAd = NULL;
+	bool jobAdNeedsFree = true;
+
+	if (s_claim && s_claim->ad()) {
+		// real jobs in the startd have claims and job ads, boinc and perhaps others won't
+		jobAd = s_claim->ad();
+		jobAdNeedsFree = true;
+	} else {
+		// Dummy up an ad
+		jobAd = new ClassAd();
+		jobAd->SetMyTypeName("Job");
+		jobAd->SetTargetTypeName("Machine");
+		jobAd->Assign(ATTR_CLUSTER_ID, 1);
+		jobAd->Assign(ATTR_PROC_ID, 1);
+		jobAd->Assign(ATTR_OWNER, "boinc");
+		jobAd->Assign(ATTR_Q_DATE, s_birthdate);
+		jobAd->Assign(ATTR_JOB_PRIO, 0);
+		jobAd->Assign(ATTR_IMAGE_SIZE, 0);
+		jobAd->Assign(ATTR_JOB_CMD, "boinc");
 	}
+
+	// First, patch up the ad a little bit 
+	jobAd->Assign(ATTR_COMPLETION_DATE, (int)time(0));
+	int runtime = time(0) - s_birthdate;
+	
+	jobAd->Assign(ATTR_JOB_REMOTE_WALL_CLOCK, runtime);
+	int jobStatus = COMPLETED;
+	if (WIFSIGNALED(status)) {
+		jobStatus = REMOVED;
+	}
+	jobAd->Assign(ATTR_JOB_STATUS, jobStatus);
+	AppendHistory(jobAd);
+	WritePerJobHistoryFile(jobAd);
+
+	if (jobAdNeedsFree) {
+		delete jobAd;
+	}
+
 		// Make sure our time isn't going to go off.
 	cancelKillTimer();
 
