@@ -344,6 +344,7 @@ LookupBool( const char *name, bool &value ) const
 int CompatClassAd::
 EvalString( const char *name, classad::ClassAd *target, char *value )
 {
+	int rc = 0;
 	string strVal;
 
 	if( target == this || target == NULL ) {
@@ -355,20 +356,27 @@ EvalString( const char *name, classad::ClassAd *target, char *value )
 	}
 
 	classad::MatchClassAd mad( this, target );
-	if( EvaluateAttrString( name, strVal ) ) {
-		strcpy( value, strVal.c_str( ) );
-		mad.RemoveLeftAd( );
-		mad.RemoveRightAd( );
-		return 1;
-	}		
+	if( this->Lookup( name ) ) {
+		if( this->EvaluateAttrString( name, strVal ) ) {
+			strcpy( value, strVal.c_str( ) );
+			rc = 1;
+		}
+	} else if( target->Lookup( name ) ) {
+		if( target->EvaluateAttrString( name, strVal ) ) {
+			strcpy( value, strVal.c_str( ) );
+			rc = 1;
+		}
+	}
 	mad.RemoveLeftAd( );
 	mad.RemoveRightAd( );
-	return 0;
+	return rc;
 }
 
 int CompatClassAd::
 EvalInteger (const char *name, classad::ClassAd *target, int &value)
 {
+	int rc = 0;
+
 	if( strcasecmp( name, "CurrentTime" ) == 0 ) {
 		time_t	now = time (NULL);
 		if (now == (time_t) -1) {
@@ -388,19 +396,24 @@ EvalInteger (const char *name, classad::ClassAd *target, int &value)
 	}
 
 	classad::MatchClassAd mad( this, target );
-	if( EvaluateAttrInt( name, value ) ) { 
-		mad.RemoveLeftAd( );
-		mad.RemoveRightAd( );
-		return 1;
+	if( this->Lookup( name ) ) {
+		if( this->EvaluateAttrInt( name, value ) ) {
+			rc = 1;
+		}
+	} else if( target->Lookup( name ) ) {
+		if( target->EvaluateAttrInt( name, value ) ) {
+			rc = 1;
+		}
 	}
 	mad.RemoveLeftAd( );
 	mad.RemoveRightAd( );
-	return 0;
+	return rc;
 }
 
 int CompatClassAd::
 EvalFloat (const char *name, classad::ClassAd *target, float &value)
 {
+	int rc = 0;
 	Value val;
 	double doubleVal;
 	int intVal;
@@ -420,28 +433,38 @@ EvalFloat (const char *name, classad::ClassAd *target, float &value)
 	}
 
 	classad::MatchClassAd mad( this, target );
-	if( EvaluateAttr( name, val ) ) {
-		if( val.IsRealValue( doubleVal ) ) {
-			value = ( float )doubleVal;
-			mad.RemoveLeftAd( );
-			mad.RemoveRightAd( );
-			return 1;
+	if( this->Lookup( name ) ) {
+		if( this->EvaluateAttr( name, val ) ) {
+			if( val.IsRealValue( doubleVal ) ) {
+				value = ( float )doubleVal;
+				rc = 1;
+			}
+			if( val.IsIntegerValue( intVal ) ) {
+				value = ( float )intVal;
+				rc = 1;
+			}
 		}
-		if( val.IsIntegerValue( intVal ) ) {
-			value = ( float )intVal;
-			mad.RemoveLeftAd( );
-			mad.RemoveRightAd( );
-			return 1;
+	} else if( target->Lookup( name ) ) {
+		if( target->EvaluateAttr( name, val ) ) {
+			if( val.IsRealValue( doubleVal ) ) {
+				value = ( float )doubleVal;
+				rc = 1;
+			}
+			if( val.IsIntegerValue( intVal ) ) {
+				value = ( float )intVal;
+				rc = 1;
+			}
 		}
 	}
 	mad.RemoveLeftAd( );
 	mad.RemoveRightAd( );
-	return 0;
+	return rc;
 }
 
 int CompatClassAd::
 EvalBool  (const char *name, classad::ClassAd *target, int &value)
 {
+	int rc = 0;
 	Value val;
 	double doubleVal;
 	int intVal;
@@ -466,30 +489,41 @@ EvalBool  (const char *name, classad::ClassAd *target, int &value)
 	}
 
 	classad::MatchClassAd mad( this, target );
-	if( EvaluateAttr( name, val ) ) {
-		if( val.IsBooleanValue( boolVal ) ) {
-			value = boolVal ? 1 : 0;
-			mad.RemoveLeftAd( );
-			mad.RemoveRightAd( );
-			return 1;
+	if( this->Lookup( name ) ) {
+		if( this->EvaluateAttr( name, val ) ) {
+			if( val.IsBooleanValue( boolVal ) ) {
+				value = boolVal ? 1 : 0;
+				rc = 1;
+			}
+			if( val.IsIntegerValue( intVal ) ) {
+				value = intVal ? 1 : 0;
+				rc = 1;
+			}
+			if( val.IsRealValue( doubleVal ) ) {
+				value = doubleVal ? 1 : 0;
+				rc = 1;
+			}
 		}
-		if( val.IsIntegerValue( value ) ) {
-			value = intVal ? 1 : 0;
-			mad.RemoveLeftAd( );
-			mad.RemoveRightAd( );
-			return 1;
-		}
-		if( val.IsRealValue( doubleVal ) ) {
-			value = doubleVal ? 1 : 0;
-			mad.RemoveLeftAd( );
-			mad.RemoveRightAd( );
-			return 1;
+	} else if( target->Lookup( name ) ) {
+		if( target->EvaluateAttr( name, val ) ) {
+			if( val.IsBooleanValue( boolVal ) ) {
+				value = boolVal ? 1 : 0;
+				rc = 1;
+			}
+			if( val.IsIntegerValue( intVal ) ) {
+				value = intVal ? 1 : 0;
+				rc = 1;
+			}
+			if( val.IsRealValue( doubleVal ) ) {
+				value = doubleVal ? 1 : 0;
+				rc = 1;
+			}
 		}
 	}
 
 	mad.RemoveLeftAd( );
 	mad.RemoveRightAd( );
-	return 0;
+	return rc;
 }
 
         // shipping functions
