@@ -601,7 +601,7 @@ Starter::exited(int status)
 {
 	if (s_claim->ad()) {
 		// First, patch up the ad a little bit 
-		s_claim->ad()->Assign(ATTR_COMPLETION_DATE, time(0));
+		s_claim->ad()->Assign(ATTR_COMPLETION_DATE, (int)time(0));
 		int start = 0;
 		s_claim->ad()->LookupInteger(ATTR_JOB_START_DATE, start);
 		int runtime = time(0) - start;
