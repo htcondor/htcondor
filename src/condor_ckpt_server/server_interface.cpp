@@ -85,13 +85,7 @@ extern "C" int ConnectToServer(request_type type)
 	ckpt_server_retry = 
 		param_integer("CKPT_SERVER_CLIENT_TIMEOUT_RETRY", 1200, 0);
 
-	/* XXX TESTING CODE! */
-/*	if (strcmp(get_mySubSystemName(),"SCHEDD") == 0) {*/
-		/* have just the schedd timeout */
-/*		server_IP = (char*)&ddd;*/
-/*	} else {*/
-		server_IP = getserveraddr();
-/*	}*/
+	server_IP = getserveraddr();
 
 	if (server_IP == 0) {
 		return -1;
