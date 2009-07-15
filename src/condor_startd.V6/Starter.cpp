@@ -608,16 +608,20 @@ Starter::exited(int status)
 		jobAdNeedsFree = false;
 	} else {
 		// Dummy up an ad
+		int now = (int) time(0);
 		jobAd = new ClassAd();
 		jobAd->SetMyTypeName("Job");
 		jobAd->SetTargetTypeName("Machine");
-		jobAd->Assign(ATTR_CLUSTER_ID, 1);
+		jobAd->Assign(ATTR_CLUSTER_ID, now);
 		jobAd->Assign(ATTR_PROC_ID, 1);
 		jobAd->Assign(ATTR_OWNER, "boinc");
 		jobAd->Assign(ATTR_Q_DATE, (int)s_birthdate);
 		jobAd->Assign(ATTR_JOB_PRIO, 0);
 		jobAd->Assign(ATTR_IMAGE_SIZE, 0);
 		jobAd->Assign(ATTR_JOB_CMD, "boinc");
+		MyString gjid;
+		gjid.sprintf("%s#%d#%d#%d", my_hostname(), now, 1, now);
+		jobAd->Assign(ATTR_GLOBAL_JOB_ID, gjid);
 	}
 
 	// First, patch up the ad a little bit 
@@ -631,7 +635,7 @@ Starter::exited(int status)
 	}
 	jobAd->Assign(ATTR_JOB_STATUS, jobStatus);
 	AppendHistory(jobAd);
-	WritePerJobHistoryFile(jobAd);
+	WritePerJobHistoryFile(jobAd, true /* use gjid for filename*/);
 
 	if (jobAdNeedsFree) {
 		delete jobAd;

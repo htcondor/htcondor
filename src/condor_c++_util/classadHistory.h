@@ -30,7 +30,7 @@ extern char* JobHistoryFileName;
 
 class ClassAd;
 
-void WritePerJobHistoryFile(ClassAd*);
+void WritePerJobHistoryFile(ClassAd*, bool);
 void AppendHistory(ClassAd*);
 void InitJobHistoryFile(const char *);
 

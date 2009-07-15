@@ -533,7 +533,7 @@ static int findHistoryOffset(FILE *LogFile)
     return offset;
 }
 
-void WritePerJobHistoryFile(ClassAd* ad)
+void WritePerJobHistoryFile(ClassAd* ad, bool useGjid)
 {
 	if (PerJobHistoryDir == NULL) {
 		return;
@@ -552,7 +552,13 @@ void WritePerJobHistoryFile(ClassAd* ad)
 		return;
 	}
 	MyString file_name;
-	file_name.sprintf("%s/history.%d.%d", PerJobHistoryDir, cluster, proc);
+	if (useGjid) {
+		MyString gjid;
+		ad->LookupString(ATTR_GLOBAL_JOB_ID, gjid);
+		file_name.sprintf("%s/history.%s", PerJobHistoryDir, gjid);
+	} else {
+		file_name.sprintf("%s/history.%d.%d", PerJobHistoryDir, cluster, proc);
+	}
 
 	// write out the file
 	int fd = safe_open_wrapper(file_name.Value(), O_WRONLY | O_CREAT | O_EXCL, 0644);

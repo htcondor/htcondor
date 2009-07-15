@@ -1577,7 +1577,7 @@ int DestroyProc(int cluster_id, int proc_id)
 	AppendHistory(ad);
 
 	// Write a per-job history file (if PER_JOB_HISTORY_DIR param is set)
-	WritePerJobHistoryFile(ad);
+	WritePerJobHistoryFile(ad, false);
 
 #if HAVE_DLOPEN
   ScheddPluginManager::Archive(ad);
@@ -1689,7 +1689,7 @@ int DestroyCluster(int cluster_id, const char* reason)
   // save job ad to the log
 
 				// Write a per-job history file (if PER_JOB_HISTORY_DIR param is set)
-				WritePerJobHistoryFile(ad);
+				WritePerJobHistoryFile(ad, false);
 
 //				log = new LogDestroyClassAd(key);
 //				JobQueue->AppendLog(log);
