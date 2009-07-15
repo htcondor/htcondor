@@ -1,82 +1,45 @@
-/***************************************************************
- *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
- * University of Wisconsin-Madison, WI.
- * 
- * Licensed under the Apache License, Version 2.0 (the "License"); you
- * may not use this file except in compliance with the License.  You may
- * obtain a copy of the License at
- * 
- *    http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- ***************************************************************/
-
-
-// Birdwatcher.cpp : Defines the class behaviors for the application.
+// condor_birdwatcher.cpp : Defines the entry point for the application.
 //
-
+#pragma once
 #include "stdafx.h"
-#include "Birdwatcher.h"
+#include "birdwatcher.h"
+#define MAX_LOADSTRING 100
+HINSTANCE hInst;
+// Global Variables:
+TCHAR szTitle[MAX_LOADSTRING];					// The title bar text
+TCHAR szWindowClass[MAX_LOADSTRING];			// the main window class name
 
-#ifdef _DEBUG
-#define new DEBUG_NEW
-#undef THIS_FILE
-static char THIS_FILE[] = __FILE__;
-#endif
+// Forward declarations of functions included in this code module:
 
-/////////////////////////////////////////////////////////////////////////////
-// CBirdwatcherApp
-
-BEGIN_MESSAGE_MAP(CBirdwatcherApp, CWinApp)
-	//{{AFX_MSG_MAP(CBirdwatcherApp)
-		// NOTE - the ClassWizard will add and remove mapping macros here.
-		//    DO NOT EDIT what you see in these blocks of generated code!
-	//}}AFX_MSG
-	ON_COMMAND(ID_HELP, CWinApp::OnHelp)
-END_MESSAGE_MAP()
-
-/////////////////////////////////////////////////////////////////////////////
-// CBirdwatcherApp construction
-
-CBirdwatcherApp::CBirdwatcherApp()
+int APIENTRY wWinMain(HINSTANCE hInstance,
+                     HINSTANCE hPrevInstance,
+                     LPTSTR    lpCmdLine,
+                     int       nCmdShow)
 {
-	// TODO: add construction code here,
-	// Place all significant initialization in InitInstance
-}
+	MSG msg;
+	hInst = hInstance;
 
-/////////////////////////////////////////////////////////////////////////////
-// The one and only CBirdwatcherApp object
+	SystrayManager sysman;
+	HICON hFlying2 = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_CONDOR_FLYING2));
+	HICON hClaimed = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_CONDOR_CLAIMED));
 
-CBirdwatcherApp theApp;
-
-/////////////////////////////////////////////////////////////////////////////
-// CBirdwatcherApp initialization
-
-BOOL CBirdwatcherApp::InitInstance()
-{
-	// Standard initialization
-	// If you are not using these features and wish to reduce the size
-	//  of your final executable, you should remove from the following
-	//  the specific initialization routines you do not need.
-
-	HICON hFlying2 = LoadIcon(IDI_CONDOR_FLYING2);
-	HICON hClaimed = LoadIcon(IDI_CONDOR_CLAIMED);
-
-	sysman.init(LoadIcon(IDI_CONDOR_OFF),
-				LoadIcon(IDI_CONDOR_IDLE),
+	sysman.init(LoadIcon(hInstance, MAKEINTRESOURCE(IDI_CONDOR_OFF)),
+				LoadIcon(hInstance, MAKEINTRESOURCE(IDI_CONDOR_IDLE)),
 				hClaimed,
-				LoadIcon(IDI_CONDOR_FLYING1),
+				LoadIcon(hInstance, MAKEINTRESOURCE(IDI_CONDOR_FLYING1)),
 				hFlying2,
 				hFlying2,
-				LoadIcon(IDI_PREEMPTING)
+				LoadIcon(hInstance, MAKEINTRESOURCE(IDI_PREEMPTING))
 				);
-	m_pMainWnd = &sysman.notifyWnd;
+	
+	while(GetMessage(&msg, NULL, 0, 0))
+	{
+		if(birdwatcherDLG == 0 || !IsDialogMessage(birdwatcherDLG, &msg))
+		{
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
+		}
+	}
 
-	return TRUE;
+	return msg.wParam;
 }

@@ -17,7 +17,7 @@
  *
  ***************************************************************/
 
-#include <stdafx.h>
+//#include <stdafx.h>
 #include "systrayminimize.h"
 
 #define DEFAULT_RECT_WIDTH 150
@@ -117,6 +117,7 @@ VOID MinimizeWndToTray(HWND hWnd)
 
 VOID RestoreWndFromTray(HWND hWnd)
 {
+	
 	if(GetDoAnimateMinimize())
 	{
 		// Get the rect of the tray and the window. Note that the window rect
@@ -126,7 +127,13 @@ VOID RestoreWndFromTray(HWND hWnd)
 		GetWindowRect(hWnd,&rcTo);
 		
 		// Get the system to draw our animation for us
-		DrawAnimatedRects(hWnd,IDANI_CAPTION,&rcFrom,&rcTo);
+		if(!DrawAnimatedRects(hWnd,IDANI_CAPTION,&rcFrom,&rcTo))
+		{
+			DWORD temp = GetLastError();
+		WCHAR buffer[256];
+		_ltow(temp, buffer, 10);
+		OutputDebugString(buffer);
+		}
 	}
 	
 	// Show the window, and make sure we're the foreground window
