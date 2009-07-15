@@ -614,7 +614,7 @@ Starter::exited(int status)
 		jobAd->Assign(ATTR_CLUSTER_ID, 1);
 		jobAd->Assign(ATTR_PROC_ID, 1);
 		jobAd->Assign(ATTR_OWNER, "boinc");
-		jobAd->Assign(ATTR_Q_DATE, s_birthdate);
+		jobAd->Assign(ATTR_Q_DATE, (int)s_birthdate);
 		jobAd->Assign(ATTR_JOB_PRIO, 0);
 		jobAd->Assign(ATTR_IMAGE_SIZE, 0);
 		jobAd->Assign(ATTR_JOB_CMD, "boinc");
