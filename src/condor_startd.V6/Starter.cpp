@@ -605,7 +605,7 @@ Starter::exited(int status)
 	if (s_claim && s_claim->ad()) {
 		// real jobs in the startd have claims and job ads, boinc and perhaps others won't
 		jobAd = s_claim->ad();
-		jobAdNeedsFree = true;
+		jobAdNeedsFree = false;
 	} else {
 		// Dummy up an ad
 		jobAd = new ClassAd();
