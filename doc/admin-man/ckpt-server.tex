@@ -46,8 +46,8 @@ retrieved, and it will either have to be restarted from
 the beginning, or the job will wait for the server to come back online.
 This behavior is controlled with the
 \Macro{MAX\_DISCARDED\_RUN\_TIME} parameter in the config file (see
-section~\ref{Checkpoint-Server-Config-File-Entries} on
-page~\pageref{Checkpoint-Server-Config-File-Entries} for details).
+section~\ref{sec:Checkpoint-Server-Config-File-Entries} on
+page~\pageref{sec:Checkpoint-Server-Config-File-Entries} for details).
 This parameter represents the maximum amount of CPU time you are
 willing to discard by starting a job over from scratch if the
 checkpoint server is not responding to requests.
@@ -88,19 +88,14 @@ Installing the Checkpoint Server Module}
 Files relevant to a checkpoint server are
 \begin{verbatim}
         sbin/condor_ckpt_server
-        sbin/condor_cleanckpts
         etc/examples/condor_config.local.ckpt.server
 \end{verbatim}
+
 \File{\condor{ckpt\_server}} is the checkpoint server binary.
-\File{\condor{cleanckpts}} is a script that can be periodically run to
-remove stale checkpoint files from your server.  
-The checkpoint server normally cleans all old files itself.  
-However, in certain error situations, stale files can be left that are
-no longer needed.
-You may set up a cron job that calls
-\Condor{cleanckpts} every week or so to automate the cleaning up
-of any
-stale files.
+\File{\condor{condor\_config.local.ckpt.server}} is an example
+configuration for a checkpoint server. The settings embodied in this
+file must be customized in regards to site specific information.
+
 The example configuration file give with the module
 is described below.
 
@@ -175,7 +170,12 @@ Do this by sending a \Condor{restart} command from any machine
 with administrator access to your pool.
 See section~\ref{sec:Host-Security} on
 page~\pageref{sec:Host-Security} for full details about IP/host-based
-security in Condor.
+security in Condor. 
+
+\Note When the \Condor{ckpt\_server} starts up, it will immediately
+inspect any checkpoint files in the \Macro{CKPT\_SERVER\_DIR} and
+determine if any of them are stale. Stale checkpoint files will be
+removed.
 
 \item[Configure the Pool to Use the Checkpoint Server]
 
