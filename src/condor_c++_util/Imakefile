@@ -200,7 +200,7 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o selector.o \
 	$(API_OBJ) $(DAEMON_CLIENT_OBJ) ccb_client.o \
 	classad_hashtable.o classad_log.o log_transaction.o log.o \
 	classad_collection.o usagemon.o print_wrapped_text.o \
-	classad_helpers.o classad_merge.o classad_namedlist.o \
+	classad_helpers.o classad_merge.o classad_namedlist.o classadHistory.o \
 	ClassAdReevaluator.o \
 	linebuffer.o cron.o cronmgr.o cronjob.o cronjob_classad.o \
 	distribution.o \

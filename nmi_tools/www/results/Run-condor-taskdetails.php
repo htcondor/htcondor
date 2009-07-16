@@ -105,7 +105,8 @@ ORDER BY
 			$results_url = "<a href=\"http://$hostname/$resultspath\">".basename($resultspath)."</a>";
 		}
 
-
+	$resultval = $myrow["result"];
+	$test_results_url = "<a href=\"http://nmi.cs.wisc.edu/node/552\">".$resultval."</a>";
     echo "<P>";
     echo "<TABLE>";
 #    echo "<TR><TD>Run ID:</TD><TD><a href=\"http://$hostname/nmi/?page=results/runDetails&id=".$myrow["runid"] ."\">".$myrow["runid"]."</a></TD></TR>";
@@ -117,7 +118,8 @@ ORDER BY
     echo "<TR><TD>Start:</TD><TD>".$myrow["start"] ."</TD></TR>";
     echo "<TR><TD>Finish:</TD><TD> ".$myrow["finish"] ."</TD></TR>";
     echo "<TR><TD>Duration:</TD><TD> ".$myrow["duration"] ."</TD></TR>";
-    echo "<TR><TD>Result:</TD><TD> ".$myrow["result"] . "</TD></TR>";
+    #echo "<TR><TD>Result:</TD><TD> ".$myrow["result"] . "</TD></TR>";
+    echo "<TR><TD>Result:</TD><TD> $test_results_url </TD></TR>";
     echo "<TR><TD>Stdout:</TD><TD> $stdout_url </TD></TR>";
     echo "<TR><TD>Stderr:</TD><TD> $stderr_url</a></TD></TR>";
     echo "<TR><TD>Run Results:</TD><TD> $results_url</a></TD></TR>";

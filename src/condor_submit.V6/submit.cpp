@@ -326,6 +326,8 @@ const char    *ParallelScriptStarter = "parallel_script_starter";
 
 const char    *MaxJobRetirementTime = "max_job_retirement_time";
 
+const char    *JobWantsAds = "want_ads";
+
 //
 // Job Deferral Parameters
 //
@@ -6935,8 +6937,11 @@ SaveClassAd ()
 			// each job so the two approaches converge. Further
 			// optimization should focus on sending only the
 			// attributes required for the job to run. -matt 1 June 09
+			// Mostly the same rational for ATTR_JOB_SUBMISSION.
+			// -matt // 24 June 09
 		int tmpProcId = myprocid;
-		if( strcasecmp(lhstr, ATTR_JOB_STATUS) == 0 ) myprocid = ProcId;
+		if( strcasecmp(lhstr, ATTR_JOB_STATUS) == 0 ||
+			strcasecmp(lhstr, ATTR_JOB_SUBMISSION) == 0 ) myprocid = ProcId;
 		if( SetAttribute(ClusterId, myprocid, lhstr, rhstr) == -1 ) {
 			fprintf( stderr, "\nERROR: Failed to set %s=%s for job %d.%d (%d)\n", 
 					 lhstr, rhstr, ClusterId, ProcId, errno );
@@ -7456,7 +7461,6 @@ void SetVMRequirements()
 	JobRequirements = vmanswer;
 	InsertJobExpr (buffer);
 }
-
 
 void
 SetConcurrencyLimits()

@@ -1051,7 +1051,6 @@ sub CreateLocalConfig
 	print FIX "STARTD_DEBUG            = D_COMMAND\n";
 
 	print FIX "MAX_STARTER_LOG         = $logsize\n";
-	print FIX "STARTER_DEBUG           = D_NODATE\n";
 
 	print FIX "MAX_MASTER_LOG          = $logsize\n";
 	print FIX "MASTER_DEBUG            = D_COMMAND\n";

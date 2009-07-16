@@ -93,7 +93,7 @@ NordugridResource::NordugridResource( const char *resource_name,
 	m_statusGahp->setMode( GahpClient::normal );
 	m_statusGahp->setTimeout( NordugridJob::gahpCallTimeout );
 
-	m_jobStatusActive = true;
+	m_jobStatusActive = false;
 }
 
 NordugridResource::~NordugridResource()

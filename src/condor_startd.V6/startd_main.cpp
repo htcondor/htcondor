@@ -30,6 +30,7 @@
 #include "vm_common.h"
 #include "VMManager.h"
 #include "VMRegister.h"
+#include "classadHistory.h"
 
 #if HAVE_DLOPEN
 #include "StartdPlugin.h"
@@ -588,6 +589,8 @@ init_params( int /* first_time */)
 		free(tmp);
 	}
 
+	InitJobHistoryFile( "STARTD_HISTORY" );
+
 	return TRUE;
 }
 
@@ -724,7 +727,7 @@ reaper(Service *, int pid, int status)
 
 	foo = resmgr->getClaimByPid(pid);
 	if( foo ) {
-		foo->starterExited();
+		foo->starterExited(status);
 	}		
 	return TRUE;
 }

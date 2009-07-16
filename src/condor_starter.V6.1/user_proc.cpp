@@ -30,6 +30,7 @@
 
 extern CStarter *Starter;
 
+const char* JOB_WRAPPER_FAILURE_FILE = ".job_wrapper_failure";
 
 /* UserProc class implementation */
 
@@ -104,6 +105,34 @@ UserProc::initKillSigs( void )
 bool
 UserProc::JobReaper(int pid, int status)
 {
+	MyString line;
+	MyString error_txt;
+	MyString filename;
+	const char* dir = Starter->GetWorkingDir();
+	FILE* fp;
+
+	filename.sprintf("%s%c%s", dir, DIR_DELIM_CHAR, JOB_WRAPPER_FAILURE_FILE);
+	if (0 == access(filename.Value(), F_OK)) {
+		// The job wrapper failed, so read the contents of the file
+		// and EXCEPT, just as is done when an executable is unable
+		// to be run.  Ideally, both failure cases would propagate
+		// into the job ad
+		fp = safe_fopen_wrapper(filename.Value(), "r");
+		if (!fp) {
+			dprintf(D_ALWAYS, "Unable to open \"%s\" for reading: "
+					"%s (errno %d)\n", filename.Value(),
+					strerror(errno), errno);
+		} else {
+			while (line.readLine(fp))
+			{
+				error_txt += line;
+			}
+			fclose(fp);
+		}
+		error_txt.trim();
+		EXCEPT("The job wrapper failed to execute the job: %s", error_txt.Value());
+	}
+
 	if (JobPid == pid) {
 		m_proc_exited = true;
 		exit_status = status;

@@ -180,19 +180,7 @@ bool BaseResource::Invalidate () {
         "BaseResource::InvalidateResource: \n%s\n",
         line.Value() );
     
-    bool ok = false;
-	
-	/* invalidate the resource ad */
-	if ( CollectorObj ) {
-		ok = CollectorObj->sendUpdate ( 
-			INVALIDATE_GRID_ADS, 
-			&ad, 
-			NULL, 
-			true );
-	}
-
-	return ok;
-
+	return daemonCore->sendUpdates( INVALIDATE_GRID_ADS, &ad, NULL, true ) > 0;
 }
 
 bool BaseResource::SendUpdate () {
@@ -205,6 +193,8 @@ bool BaseResource::SendUpdate () {
     /* populate class ad with the relevant resource information */
     PublishResourceAd ( &ad );
 
+	daemonCore->publish( &ad );
+
     MyString tmp;
     ad.sPrint ( tmp );
     dprintf (
@@ -212,18 +202,7 @@ bool BaseResource::SendUpdate () {
         "BaseResource::UpdateResource: \n%s\n",
         tmp.Value() );
 
-    bool ok = false;
-	
-	/* Update the the Collector as to this resource's state */
-    if ( CollectorObj ) {
-		ok = CollectorObj->sendUpdate ( 
-			UPDATE_GRID_AD, 
-			&ad, 
-			NULL, 
-			true );
-	}
-	
-	return ok;
+	return daemonCore->sendUpdates( UPDATE_GRID_AD, &ad, NULL, true ) > 0;
 }
 
 int BaseResource::UpdateCollector () {
@@ -242,7 +221,7 @@ int BaseResource::UpdateCollector () {
 	}
 
 	/* Update the the Collector as to this resource's state */
-    if ( !SendUpdate () && CollectorObj ) {
+    if ( !SendUpdate () && !daemonCore->getCollectorList()->IsEmpty() ) {
 		dprintf (
 			D_FULLDEBUG,
 			"BaseResource::UpdateCollector: Updating Collector(s) "

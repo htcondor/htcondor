@@ -22,16 +22,15 @@
 #include "condor_config.h"
 #include "get_daemon_name.h"
 
-JobLogMirror::JobLogMirror(const char *name_param):
+JobLogMirror::JobLogMirror(JobLogConsumer *consumer,
+						   const char *name_param):
+	job_log_reader(consumer),
 	m_name_param(name_param)
 {
 	log_reader_polling_timer = -1;
 	log_reader_polling_period = 10;
 	m_public_ad_update_timer = -1;
 	m_public_ad_update_interval = -1;
-}
-
-JobLogMirror::~JobLogMirror() {
 }
 
 void
@@ -134,8 +133,7 @@ JobLogMirror::config() {
 void
 JobLogMirror::TimerHandler_JobLogPolling() {
 	dprintf(D_FULLDEBUG, "TimerHandler_JobLogPolling() called\n");
-	job_log_reader.poll(&ad_collection);
-	//DebugDisplayClassAdCollection(&ad_collection);
+	job_log_reader.Poll();
 }
 
 void

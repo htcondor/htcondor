@@ -309,6 +309,17 @@ VMProc::StartJob()
 	}
 	*/
 
+	ClassAd recovery_ad = *JobAd;
+	MyString vm_name;
+	if ( strcasecmp( m_vm_type.Value(), CONDOR_VM_UNIVERSE_KVM ) == MATCH ||
+		 strcasecmp( m_vm_type.Value(), CONDOR_VM_UNIVERSE_XEN ) == MATCH ) {
+		create_name_for_VM( JobAd, vm_name );
+	} else {
+		vm_name = Starter->GetWorkingDir();
+	}
+	recovery_ad.Assign( "JobVMId", vm_name.Value() );
+	Starter->WriteRecoveryFile( &recovery_ad );
+
 	// //
 	// Now everything is ready to start a vmgahp server 
 	// //

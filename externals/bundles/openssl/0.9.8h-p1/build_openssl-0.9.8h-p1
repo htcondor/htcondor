@@ -1,7 +1,13 @@
 #!/bin/sh
 ############# build_openssl-0.9.8h
 
-cd $PACKAGE_NAME
+cd $PACKAGE_SRC_NAME
+
+# Omitting the frame pointer makes debugging very difficult.
+# A quick test on a modern x86 linux machine showed a roughly 4%
+# slowdown when the frame pointer is left in place.
+sed 's/-fomit-frame-pointer//' Configure > Configure.new
+mv Configure.new Configure
 
 # Globus builds on some platforms fail in creating their shared libraies
 # if OpenSSL isn't built with -fPIC

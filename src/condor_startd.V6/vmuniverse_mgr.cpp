@@ -847,37 +847,13 @@ VMUniverseMgr::numOfRunningVM(void)
 }
 
 void
-VMUniverseMgr::killVM(VMStarterInfo *info)
+VMUniverseMgr::killVM(const char *matchstring)
 {
-	if( !info ) {
+	if ( !matchstring ) {
 		return;
 	}
 	if( !m_vm_type.Length() || !m_vmgahp_server.Length() ) {
 		return;
-	}
-
-	if( info->m_vm_pid > 0 ) {
-		dprintf( D_ALWAYS, "In VMUniverseMgr::killVM(), "
-				"Sending SIGKILL to Process[%d]\n", (int)info->m_vm_pid);
-		daemonCore->Send_Signal(info->m_vm_pid, SIGKILL);
-	}
-
-	MyString matchstring;
-	MyString workingdir;
-
-	workingdir.sprintf("%s%cdir_%ld", info->m_execute_dir.Value(),
-	                   DIR_DELIM_CHAR, (long)info->m_pid);
-
-	if( (strcasecmp(m_vm_type.Value(), CONDOR_VM_UNIVERSE_XEN ) == MATCH) || (strcasecmp(m_vm_type.Value(), CONDOR_VM_UNIVERSE_KVM) == 0)) {
-		if( create_name_for_VM(&info->m_job_ad, matchstring) == false ) {
-			dprintf(D_ALWAYS, "VMUniverseMgr::killVM() : "
-					"cannot make the name of VM\n");
-			return;
-		}
-	}else {
-		// Except Xen, we need the path of working directory of Starter
-		// in order to destroy VM.
-		matchstring = workingdir;
 	}
 
 	// vmgahp is daemonCore, so we need to add -f -t options of daemonCore.
@@ -915,12 +891,49 @@ VMUniverseMgr::killVM(VMStarterInfo *info)
 
 	if( ret == 0 ) {
 		dprintf( D_ALWAYS, "VMUniverseMgr::killVM() is called with "
-						"'%s'\n", matchstring.Value());
+						"'%s'\n", matchstring );
 	}else {
 		dprintf( D_ALWAYS, "VMUniverseMgr::killVM() failed!\n");
 	}
 
 	return;
+}
+
+void
+VMUniverseMgr::killVM(VMStarterInfo *info)
+{
+	if( !info ) {
+		return;
+	}
+	if( !m_vm_type.Length() || !m_vmgahp_server.Length() ) {
+		return;
+	}
+
+	if( info->m_vm_pid > 0 ) {
+		dprintf( D_ALWAYS, "In VMUniverseMgr::killVM(), "
+				"Sending SIGKILL to Process[%d]\n", (int)info->m_vm_pid);
+		daemonCore->Send_Signal(info->m_vm_pid, SIGKILL);
+	}
+
+	MyString matchstring;
+	MyString workingdir;
+
+	workingdir.sprintf("%s%cdir_%ld", info->m_execute_dir.Value(),
+	                   DIR_DELIM_CHAR, (long)info->m_pid);
+
+	if( (strcasecmp(m_vm_type.Value(), CONDOR_VM_UNIVERSE_XEN ) == MATCH) || (strcasecmp(m_vm_type.Value(), CONDOR_VM_UNIVERSE_KVM) == 0)) {
+		if( create_name_for_VM(&info->m_job_ad, matchstring) == false ) {
+			dprintf(D_ALWAYS, "VMUniverseMgr::killVM() : "
+					"cannot make the name of VM\n");
+			return;
+		}
+	}else {
+		// Except Xen, we need the path of working directory of Starter
+		// in order to destroy VM.
+		matchstring = workingdir;
+	}
+
+	killVM( matchstring.Value() );
 }
 
 bool 

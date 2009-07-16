@@ -46,7 +46,7 @@ public:
 	bool	kill(int);
 	bool	killpg(int);
 	void	killkids(int);
-	void	exited();
+	void	exited(int status);
 	pid_t	pid() {return s_pid;};
 	bool	is_dc() {return s_is_dc;};
 	ClaimType	claimType(); 

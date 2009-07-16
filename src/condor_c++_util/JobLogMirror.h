@@ -23,21 +23,16 @@
 #include "condor_common.h"
 #include "condor_daemon_core.h"
 
-#define WANT_CLASSAD_NAMESPACE
-#undef open
-#include "classad/classad_distribution.h"
-
 #include "JobLogReader.h"
 
 class JobLogMirror: public Service {
 public:
-	JobLogMirror(const char *name_param = "NAME");
-	virtual ~JobLogMirror();
+	JobLogMirror(JobLogConsumer *consumer,
+				 const char *name_param = "NAME");
 	void init();
 	void config();
 	void stop();
 
-	classad::ClassAdCollection *GetClassAds() {return &ad_collection;}
 	char const *Name() const {return m_name.c_str();}
 
 private:
@@ -48,7 +43,6 @@ private:
 	int m_public_ad_update_interval;
 	int m_public_ad_update_timer;
 
-	classad::ClassAdCollection ad_collection;
 	JobLogReader job_log_reader;
 
 	int log_reader_polling_timer;

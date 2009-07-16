@@ -112,7 +112,7 @@ JICLocal::init( void )
 void
 JICLocal::config( void ) 
 { 
-		// nothing to look up just for JICLocal
+	// Nothing for us to do
 }
 
 

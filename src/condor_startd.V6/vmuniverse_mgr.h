@@ -93,6 +93,8 @@ public:
 	void addIPForVM(pid_t s_pid, const char *ip);
 	const char *getIPForVM(pid_t s_pid);
 
+	void killVM(const char *matchstring);
+
 private:
 	bool testVMGahp(const char* vmgahppath, const char* vmtype);
 	void docheckVMUniverse(void);

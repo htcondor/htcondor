@@ -1324,7 +1324,7 @@ Claim::setStarter( Starter* s )
 
 
 void
-Claim::starterExited( void )
+Claim::starterExited( int status )
 {
 		// Now that the starter is gone, we need to change our state
 	changeState( CLAIM_IDLE );
@@ -1332,7 +1332,7 @@ Claim::starterExited( void )
 		// Notify our starter object that its starter exited, so it
 		// can cancel timers any pending timers, cleanup the starter's
 		// execute directory, and do any other cleanup. 
-	c_starter->exited();
+	c_starter->exited(status);
 	
 		// Now, clear out this claim with all the starter-specific
 		// info, including the starter object itself.
@@ -1918,6 +1918,18 @@ Claim::writeJobAd( int pipe_end )
 		len -= bytes_written;
 	}
 
+	return true;
+}
+
+bool
+Claim::writeMachAd( Stream* stream )
+{
+	dprintf(D_FULLDEBUG | D_JOB, "Sending Machine Ad to Starter\n");
+	c_rip->r_classad->dPrint(D_JOB);
+	if (!c_rip->r_classad->put(*stream) || !stream->end_of_message()) {
+		dprintf(D_ALWAYS, "writeMachAd: Failed to write machine ClassAd to stream\n");
+		return false;
+	}
 	return true;
 }
 
