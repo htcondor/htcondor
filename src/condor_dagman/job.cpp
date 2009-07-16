@@ -750,8 +750,6 @@ Job::MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 			ReadMultipleUserLogs &storkLogReader, bool nfsIsError,
 			bool recovery )
 {
-	bool result = false;
-
 	if ( _logIsMonitored ) {
 		debug_printf( DEBUG_QUIET, "Warning: log file for node "
 					"%s is already monitored\n", GetJobName() );
@@ -772,12 +770,12 @@ Job::MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 		if ( tmpResult != "" ) {
 			debug_printf( DEBUG_QUIET, "Error getting Stork log file: %s\n",
 						tmpResult.Value() );
-			result = false;
+			return false;
 		} else if ( logFiles.number() != 1 ) {
 			debug_printf( DEBUG_QUIET, "Error: %d Stork log files found "
 						"in submit file %s; we want 1\n",
 						logFiles.number(), _cmdFile );
-			result = false;
+			return false;
 		} else {
 			logFiles.rewind();
 			logFileStr = logFiles.next();
@@ -787,35 +785,32 @@ Job::MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 	if ( logFileStr == "" ) {
 		debug_printf( DEBUG_QUIET, "ERROR: Unable to get log file from "
 					"submit file %s (node %s)\n", _cmdFile, GetJobName() );
-		result = false;
+		return false;
 
 	} else if ( MultiLogFiles::logFileOnNFS( logFileStr.Value(),
 				nfsIsError ) ) {
 		debug_printf( DEBUG_QUIET, "Error: log file %s on NFS\n",
 					_logFile );
-		result = false;
-
-	} else {
-		delete [] _logFile; // temporary
-		_logFile = strnewp( logFileStr.Value() );
-		debug_printf( DEBUG_DEBUG_1, "Monitoring log file <%s> for node %s\n",
-					_logFile, GetJobName() );
-		CondorError errstack;
-			//TEMP -- should truncating the file depend on dagman.deleteOldLogs?
-		result = logReader.monitorLogFile( _logFile, !recovery, errstack );
-		if ( !result ) {
-			errstack.pushf( "DAGMan::Job", DAGMAN_ERR_LOG_FILE,
-						"ERROR: Unable to monitor log file for node %s",
-						GetJobName() );
-			debug_printf( DEBUG_QUIET, "%s\n", errstack.getFullText() );
-		}
+		return false;
 	}
 
-	if ( result ) {
-		_logIsMonitored = true;
+	delete [] _logFile;
+		// Saving log file here in case submit file gets changed.
+	_logFile = strnewp( logFileStr.Value() );
+	debug_printf( DEBUG_DEBUG_1, "Monitoring log file <%s> for node %s\n",
+				_logFile, GetJobName() );
+	CondorError errstack;
+	if ( !logReader.monitorLogFile( _logFile, !recovery, errstack ) ) {
+		errstack.pushf( "DAGMan::Job", DAGMAN_ERR_LOG_FILE,
+					"ERROR: Unable to monitor log file for node %s",
+					GetJobName() );
+		debug_printf( DEBUG_QUIET, "%s\n", errstack.getFullText() );
+		return false;
 	}
 
-	return result;
+	_logIsMonitored = true;
+
+	return true;
 }
 
 //---------------------------------------------------------------------------

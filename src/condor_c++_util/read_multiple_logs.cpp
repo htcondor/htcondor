@@ -1,3 +1,4 @@
+//TEMPTEMP run thru valgrind again
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -182,6 +183,9 @@ ReadMultipleUserLogs::readEvent (ULogEvent * & event)
 	LogFileMonitor *monitor;
 	while ( activeLogFiles.iterate( monitor ) ) {
 		ULogEventOutcome outcome = ULOG_OK;
+			// If monitor->lastLogEvent != null, we already have an
+			// unconsumed event from that log, so we don't need to
+			// actually read the log again.
 		if ( !monitor->lastLogEvent ) {
 			outcome = readEventFromLog( monitor );
 
@@ -209,7 +213,7 @@ ReadMultipleUserLogs::readEvent (ULogEvent * & event)
 	}
 
 	event = oldestEventMon->lastLogEvent;
-	oldestEventMon->lastLogEvent = NULL;
+	oldestEventMon->lastLogEvent = NULL; // event has been consumed
 #else
 	if (!iLogFileCount) {
 		return ULOG_UNK_ERROR;
@@ -274,6 +278,7 @@ ReadMultipleUserLogs::detectLogGrowth()
 	    // Note: we must go through the whole loop even after we find a
 		// log that grew, so we have the right log lengths for next time.
 		// wenger 2003-04-11.
+		// Note that reading an event does not update the known log size.
 #if LAZY_LOG_FILES
 	activeLogFiles.startIterations();
 	LogFileMonitor *monitor;
@@ -361,8 +366,6 @@ MultiLogFiles::InitializeFile(const char *filename, bool truncate,
 	dprintf( D_LOG_FILES, "MultiLogFiles::InitializeFile(%s, %d)\n",
 				filename, (int)truncate );
 
-	bool result = true;
-
 	int flags = O_WRONLY;
 	if ( truncate ) flags |= O_TRUNC;
 	int fd = safe_create_keep_if_exists( filename, flags );
@@ -370,14 +373,14 @@ MultiLogFiles::InitializeFile(const char *filename, bool truncate,
 		errstack.pushf("MultiLogFiles", UTIL_ERR_OPEN_FILE,
 					"Error (%d, %s) opening file %s for creation "
 					"or truncation", errno, strerror( errno ), filename );
-		result = false;
-	} else {
-		if ( close( fd ) != 0 ) {
-			errstack.pushf("MultiLogFiles", UTIL_ERR_CLOSE_FILE,
-						"Error (%d, %s) closing file %s for creation "
-						"or truncation", errno, strerror( errno ), filename );
-			result = false;
-		}
+		return false;
+	}
+
+	if ( close( fd ) != 0 ) {
+		errstack.pushf("MultiLogFiles", UTIL_ERR_CLOSE_FILE,
+					"Error (%d, %s) closing file %s for creation "
+					"or truncation", errno, strerror( errno ), filename );
+		return false;
 	}
 
 	return true;
@@ -1364,6 +1367,9 @@ MultiLogFiles::logFileOnNFS(const char *logFilename, bool nfsIsError)
 #if LAZY_LOG_FILES
 ///////////////////////////////////////////////////////////////////////////////
 
+// Note: this should be changed to get both st_ino and st_dev, to make
+// sure we don't goof up if log files aren't all on the same devise.
+// (See gittrac #328.)  wenger 2009-07-16
 bool
 GetInode( const MyString &file, StatStructInode &inode,
 			CondorError &errstack )
@@ -1405,17 +1411,6 @@ ReadMultipleUserLogs::monitorLogFile( MyString logfile,
 	dprintf( D_LOG_FILES, "ReadMultipleUserLogs::monitorLogFile(%s, %d)\n",
 				logfile.Value(), truncateIfFirst );
 
-//TEMP -- do we even need this anymore now that we're doing things by inode?
-		// Make sure path is absolute to reduce the chance of the same
-		// file getting referred to by different names (that will cause
-		// errors).
-	if ( !MultiLogFiles::makePathAbsolute( logfile, errstack ) ) {
-		errstack.push( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
-					"Error making log file path absolute in "
-					"monitorLogFile()\n" );
-		return false;
-	}
-
 	StatStructInode inode;
 	if ( !GetInode( logfile, inode, errstack ) ) {
 		errstack.push( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
@@ -1447,10 +1442,14 @@ ReadMultipleUserLogs::monitorLogFile( MyString logfile,
 		ASSERT( monitor );
 		dprintf( D_LOG_FILES, "ReadMultipleUserLogs: created LogFileMonitor "
 					"object for log file %s\n", logfile.Value() );
+			// Note: we're only putting a pointer to the LogFileMonitor
+			// object into the hash table; the actual LogFileMonitor should
+			// only be deleted in this object's destructor.
 		if ( allLogFiles.insert( inode, monitor ) != 0 ) {
 			errstack.pushf( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
 						"Error inserting %s into allLogFiles",
 						logfile.Value() );
+			delete monitor;
 			return false;
 		}
 	}
@@ -1460,13 +1459,19 @@ ReadMultipleUserLogs::monitorLogFile( MyString logfile,
 			// opened before).
 	
 		if ( monitor->state ) {
+				// If we get here, we've monitored this log file before,
+				// so restore the previous state.
 			monitor->readUserLog = new ReadUserLog( *(monitor->state) );
 		} else {
+				// Monitoring this log file for the first time, so create
+				// the log reader from scratch.
 			monitor->readUserLog =
 						new ReadUserLog( monitor->logFile.Value() );
 		}
 
 			// Workaround for gittrac #337.
+			//TEMPTEMP explain
+			//TEMPTEMP check if this is fixed
 		if ( LogGrew( monitor ) ) {
 			if ( !monitor->lastLogEvent ) {
 					// This will fail unless an event got written after the
@@ -1503,17 +1508,6 @@ ReadMultipleUserLogs::unmonitorLogFile( MyString logfile,
 	dprintf( D_LOG_FILES, "ReadMultipleUserLogs::unmonitorLogFile(%s)\n",
 				logfile.Value() );
 
-//TEMP -- do we even need this anymore now that we're doing things by inode?
-		// Make sure path is absolute to reduce the chance of the same
-		// file getting referred to by different names (that will cause
-		// errors).
-	if ( !MultiLogFiles::makePathAbsolute( logfile, errstack ) ) {
-		errstack.push( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
-					"Error making log file path absolute in "
-					"monitorLogFile()\n" );
-		return false;
-	}
-
 	StatStructInode inode;
 	if ( !GetInode( logfile, inode, errstack ) ) {
 		errstack.push( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
@@ -1522,61 +1516,63 @@ ReadMultipleUserLogs::unmonitorLogFile( MyString logfile,
 	}
 
 	LogFileMonitor *monitor;
-	if ( allLogFiles.lookup( inode, monitor ) == 0 ) {
-		dprintf( D_LOG_FILES, "ReadMultipleUserLogs: found "
-					"LogFileMonitor object for %s (%lu)\n",
-					logfile.Value(), inode );
-
-		monitor->refCount--;
-
-		if ( monitor->refCount < 1 ) {
-				// Okay, if we are no longer monitoring this file at all,
-				// we need to close it.  We do that by saving its state
-				// into a ReadUserLog::FileState object (so we can go back
-				// to the right place if we later monitor it again) and
-				// then deleting the ReadUserLog object.
-			dprintf( D_LOG_FILES, "Closing file <%s>\n", logfile.Value() );
-
-			if ( !monitor->state ) {
-				monitor->state = new ReadUserLog::FileState();
-				if ( !ReadUserLog::InitFileState( *(monitor->state) ) ) {
-					errstack.pushf( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
-								"Unable to initialize ReadUserLog::FileState "
-								"object for log file %s", logfile.Value() );
-					return false;
-				}
-			}
-
-			if ( !monitor->readUserLog->GetFileState( *(monitor->state) ) ) {
-				errstack.pushf( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
-							"Error getting state for log file %s",
-							logfile.Value() );
-				return false;
-			}
-
-			delete monitor->readUserLog;
-			monitor->readUserLog = NULL;
-
-
-				// Now we remove this file from the "active" list, so
-				// we don't check it the next time we get an event.
-			if ( activeLogFiles.remove( inode ) != 0 ) {
-				errstack.pushf( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
-							"Error removing %s (%lu) from activeLogFiles",
-							logfile.Value(), inode );
-				return false;
-			} else {
-				dprintf( D_LOG_FILES, "ReadMultipleUserLogs: removed "
-							"log file %s (%lu) from active list\n",
-							logfile.Value(), inode );
-			}
-		}
-
-	} else {
+	//TEMPTEMP why look up in allLogFiles as opposed to activeLogFiles?
+	//TEMPTEMP? if ( allLogFiles.lookup( inode, monitor ) != 0 ) {
+	if ( activeLogFiles.lookup( inode, monitor ) != 0 ) {//TEMPTEMP?
 		errstack.pushf( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
 					"Didn't find LogFileMonitor object for log "
 					"file %s (%lu)!\n", logfile.Value(), inode );
 		return false;
+	}
+
+	dprintf( D_LOG_FILES, "ReadMultipleUserLogs: found "
+				"LogFileMonitor object for %s (%lu)\n",
+				logfile.Value(), inode );
+
+	monitor->refCount--;
+
+	if ( monitor->refCount < 1 ) {
+			// Okay, if we are no longer monitoring this file at all,
+			// we need to close it.  We do that by saving its state
+			// into a ReadUserLog::FileState object (so we can go back
+			// to the right place if we later monitor it again) and
+			// then deleting the ReadUserLog object.
+		dprintf( D_LOG_FILES, "Closing file <%s>\n", logfile.Value() );
+
+		if ( !monitor->state ) {
+			monitor->state = new ReadUserLog::FileState();
+			if ( !ReadUserLog::InitFileState( *(monitor->state) ) ) {
+				errstack.pushf( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
+							"Unable to initialize ReadUserLog::FileState "
+							"object for log file %s", logfile.Value() );
+				//TEMPTEMP think about what state monitor object should be in here
+				return false;
+			}
+		}
+
+		if ( !monitor->readUserLog->GetFileState( *(monitor->state) ) ) {
+			errstack.pushf( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
+						"Error getting state for log file %s",
+						logfile.Value() );
+				//TEMPTEMP think about what state monitor object should be in here
+			return false;
+		}
+
+		delete monitor->readUserLog;
+		monitor->readUserLog = NULL;
+
+			// Now we remove this file from the "active" list, so
+			// we don't check it the next time we get an event.
+		if ( activeLogFiles.remove( inode ) != 0 ) {
+			errstack.pushf( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
+						"Error removing %s (%lu) from activeLogFiles",
+						logfile.Value(), inode );
+			return false;
+		}
+
+		dprintf( D_LOG_FILES, "ReadMultipleUserLogs: removed "
+					"log file %s (%lu) from active list\n",
+					logfile.Value(), inode );
 	}
 
 	return true;

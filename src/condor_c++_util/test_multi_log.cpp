@@ -591,6 +591,10 @@ ReadEvents(StringList &logFiles)
 #endif // !LAZY_LOG_FILES
 
 #if LAZY_LOG_FILES
+
+// Note: we should add something here to test a set of log files that
+// has files on more than one file system.  wenger 2009-07-16.
+
 // true == okay; false == error
 bool
 ReadEventsLazy()

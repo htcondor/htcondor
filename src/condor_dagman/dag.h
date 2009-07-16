@@ -85,7 +85,6 @@ class OwnedMaterials
 class Dag {
   public:
   
-	//TEMP -- findUserLogs should go away
     /** Create a DAG
 		@param dagFile the DAG file name
         @param maxJobsSubmitted the maximum number of jobs to submit to Condor
@@ -653,6 +652,7 @@ class Dag {
 	void PrintEvent( debug_level_t level, const ULogEvent* event,
 					 Job* node );
 
+	// Retry a node that we ran, but which failed.
 	void RestartNode( Job *node, bool recovery );
 
 	/* DFS number the jobs in the DAG in order to detect cycle*/

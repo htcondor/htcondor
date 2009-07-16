@@ -125,11 +125,12 @@ class Dagman {
 		// turn this off if their node names are globally unique.
 	bool mungeNodeNames;
 
-		//TEMP -- should this go away?
+#if !LAZY_LOG_FILES
 		// whether or not to remove any existing userlogs before
 		// starting to ensure we don't see events from previous
 		// instances of the same DAG and think they're ours
 	bool deleteOldLogs;
+#endif // !LAZY_LOG_FILES
 
 		// whether or not to prohibit multiple job proc submits (e.g.,
 		// node jobs that create more than one job proc)

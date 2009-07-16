@@ -1,4 +1,3 @@
-//TEMPTEMP -- hmm -- I think I need to think at a higher level about when to monitor and unmonitor the log files
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -274,6 +273,7 @@ bool Dag::Bootstrap (bool recovery) {
 		debug_cache_start_caching();
 
 #if LAZY_LOG_FILES
+			// Here we're monitoring the log files of all ready nodes.
    		jobs.ToBeforeFirst();
    		while( jobs.Next( job ) ) {
 			if ( job->CanSubmit() ) {
@@ -288,8 +288,6 @@ bool Dag::Bootstrap (bool recovery) {
 			// Note: I just realized that this will almost certainly fail
 			// on a combination of Condor and Stork events -- we probably
 			// need a loop around the event processing.  wenger 2009-06-18.
-
-			//TEMP -- could use an active log file count here
 		if( CondorLogFileCount() > 0 ) {
 			if( !ProcessLogEvents( CONDORLOG, recovery ) ) {
 				_recovery = false;
@@ -297,7 +295,6 @@ bool Dag::Bootstrap (bool recovery) {
 				return false;
 			}
 		}
-			//TEMP -- could use an active log file count here
 		if( StorkLogFileCount() > 0 ) {
 			if( !ProcessLogEvents( DAPLOG, recovery ) ) {
 				_recovery = false;
@@ -313,6 +310,7 @@ bool Dag::Bootstrap (bool recovery) {
 #if LAZY_LOG_FILES
 				if ( !job->MonitorLogFile( _condorLogRdr, _storkLogRdr,
 							_nfsLogIsError, _recovery ) ) {
+					debug_cache_stop_caching();
 					return false;
 				}
 #endif // LAZY_LOG_FILES
@@ -388,12 +386,9 @@ Job * Dag::FindNodeByNodeID (const JobID_t jobID) const {
 }
 
 //-------------------------------------------------------------------------
-//TEMP -- make sure lazy log file code works for Stork logs!
-//TEMP -- make sure NFS check still works with lazy log file code
 bool
 Dag::DetectCondorLogGrowth () {
 
-		//TEMP -- could use an active log file count here
 	if( CondorLogFileCount() <= 0 ) {
 		return false;
 	}
@@ -443,7 +438,6 @@ Dag::DetectCondorLogGrowth () {
 //-------------------------------------------------------------------------
 bool Dag::DetectDaPLogGrowth () {
 
-		//TEMP -- could use an active log file count here
 	if( StorkLogFileCount() <= 0 ) {
 		return false;
 	}

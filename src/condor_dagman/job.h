@@ -496,6 +496,7 @@ private:
 	ThrottleByCategory::ThrottleInfo *_throttleInfo;
 
 #if LAZY_LOG_FILES
+		// Whether this node's log file is currently being monitored.
 	bool _logIsMonitored;
 #endif // LAZY_LOG_FILES
 };
