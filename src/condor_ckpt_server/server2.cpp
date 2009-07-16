@@ -183,15 +183,17 @@ void Server::Init()
 
 	// How long between periods of checking ckpt files for staleness and
 	// removing them.
-	// Defaults to never, since we don't want to change current behavior.
-	// This is really to be used A) in general, cause the ckpt server sucks,
-	// and B) with the new timeout code in the server interface. If suppose
+	// Defaults to one day (86400) seconds.
+	// This is used because A) in general, the ckpt server sucks,
+	// and B) the new timeout code in the server interface. If suppose
 	// the checkpoint server goes down and the schedd can't remove the ckpt
 	// files, they are simply leaked into the checkpoint server, forever to
-	// consume space. This can prevent that. A good default to tell people
-	// for this would be 86400, or one day in seconds.
+	// consume space. This will prevent unbounded leakage.
+	// It was faster to implement this on a dying feature of Condor than
+	// to implement the checkpoint server calling back schedds to see if the
+	// job is still around.
 	remove_stale_ckptfile_interval =
-		param_integer( "CKPT_SERVER_REMOVE_STALE_CKPT_INTERVAL", 0, 0, INT_MAX);
+		param_integer("CKPT_SERVER_REMOVE_STALE_CKPT_INTERVAL", 86400, 0, INT_MAX);
 
 	// How long a ckptfile's a_time hasn't been updated to be considered stale
 	// Defaults to 60 days.
