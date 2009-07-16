@@ -353,8 +353,6 @@ OfflineCollectorPlugin::mergeClassAd (
 			continue;
 		}
 
-		dprintf(D_ALWAYS,"DAN DEBUG: Setting %s=%s\n",attr_name.Value(),new_val.Value());
-
 		_ads->SetAttribute(key, attr_name.Value(), new_val.Value());
 	}
 
