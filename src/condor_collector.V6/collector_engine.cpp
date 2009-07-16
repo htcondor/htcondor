@@ -1099,13 +1099,18 @@ updateClassAd (CollectorHashTable &hashTable,
 	MyString	buf;
 	time_t		now;
 
-	(void) time (&now);
-	if (now == (time_t) -1)
-	{
-		EXCEPT ("Error reading system time!");
-	}	
-	buf.sprintf( "%s = %d", ATTR_LAST_HEARD_FROM, (int)now);
-	ad->Insert ( buf.Value() );
+		// NOTE: LastHeardFrom will already be in ad if we are loading
+		// adds from the offline classad collection, so don't mess with
+		// it if it is already there
+	if( !ad->Lookup(ATTR_LAST_HEARD_FROM) ) {
+		(void) time (&now);
+		if (now == (time_t) -1)
+		{
+			EXCEPT ("Error reading system time!");
+		}	
+		buf.sprintf( "%s = %d", ATTR_LAST_HEARD_FROM, (int)now);
+		ad->Insert ( buf.Value() );
+	}
 
 	// this time stamped ad is the new ad
 	new_ad = ad;

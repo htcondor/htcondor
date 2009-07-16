@@ -288,6 +288,7 @@ void CollectorDaemon::Init()
     ClassAd *ad;
     offline_plugin_.rewind ();
     while ( offline_plugin_.iterate ( ad ) ) {
+		ad = new ClassAd(*ad);
 	    if ( !collector.collect ( UPDATE_STARTD_AD, ad, NULL, insert ) ) {
 		    
             if ( -3 == insert ) {
@@ -302,7 +303,7 @@ void CollectorDaemon::Init()
 				    "Received malformed ad. Ignoring.\n" );
 
 	        }
-
+			delete ad;
 	    }
 
     }
