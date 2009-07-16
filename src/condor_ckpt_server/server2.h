@@ -32,11 +32,13 @@
 #include "list.h"
 #include "classad_collection.h"
 #include "protocol.h"
+#include "directory.h"
 
 
 class Server
 {
   private:
+  	char		   *ckpt_server_dir;
     int            more;
     int            req_ID;
     int            store_req_sd;
@@ -62,6 +64,11 @@ class Server
 	int			   reclaim_interval;
 	int			   clean_interval;
 	int            check_parent_interval;
+
+	time_t         remove_stale_ckptfile_interval;
+	time_t         next_time_to_remove_stale_ckpt_files;
+	time_t         stale_ckptfile_age_cutoff;
+
 	ClassAdCollection	*CkptClassAds;
     int SetUpPort(u_short port);
 	void SetUpPeers();
@@ -90,6 +97,10 @@ class Server
 				const char* pathname,
 				int         file_size);
     void SendStatus(int data_conn_sd);
+
+	void RemoveStaleCheckpointFiles(const char *directory);
+	void RemoveStaleCheckpointFilesRecurse(const char *path, Directory *dir,
+		time_t cutoff_time, time_t a_time);
 
   public:
     Server();
