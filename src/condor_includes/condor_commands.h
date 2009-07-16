@@ -293,6 +293,7 @@ const int UPDATE_GRID_AD 	= 70;
 const int QUERY_GRID_ADS	= 71;
 const int INVALIDATE_GRID_ADS = 72;
 
+const int MERGE_STARTD_AD = 73;
 
 /*
 *** Commands to the starter

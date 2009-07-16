@@ -36,6 +36,7 @@ extern "C" void event_mgr (void);
 #include "condor_attributes.h"
 #include "condor_daemon_core.h"
 #include "file_sql.h"
+#include "classad_merge.h"
 
 extern FILESQL *FILEObj;
 
@@ -478,6 +479,7 @@ bool CollectorEngine::ValidateClassAd(int command,ClassAd *clientAd,Sock *sock)
 
 	char const *ipattr = NULL;
 	switch( command ) {
+	  case MERGE_STARTD_AD:
 	  case UPDATE_STARTD_AD:
 	  case UPDATE_STARTD_AD_WITH_ACK:
 		  ipattr = ATTR_STARTD_IP_ADDR;
@@ -670,6 +672,19 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 			delete clientAdToRepeat;
 			clientAdToRepeat = NULL;
 		}
+		break;
+
+	  case MERGE_STARTD_AD:
+		if (!makeStartdAdHashKey (hk, clientAd, from))
+		{
+			dprintf (D_ALWAYS, "Could not make hashkey --- ignoring ad\n");
+			insert = -3;
+			retVal = 0;
+			break;
+		}
+		hashString.Build( hk );
+		retVal=mergeClassAd (StartdAds, "StartdAd     ", "Start",
+							  clientAd, hk, hashString, insert, from );
 		break;
 
 #ifdef WANT_QUILL
@@ -1150,6 +1165,39 @@ updateClassAd (CollectorHashTable &hashTable,
 		insert = 0;
 		return old_ad;
 	}
+}
+
+ClassAd * CollectorEngine::
+mergeClassAd (CollectorHashTable &hashTable,
+			   const char *adType,
+			   const char *label,
+			   ClassAd *new_ad,
+			   AdNameHashKey &hk,
+			   const MyString &hashString,
+			   int  &insert,
+			   const sockaddr_in * /*from*/ )
+{
+	ClassAd		*old_ad = NULL;
+
+	insert = 0;
+
+	// check if it already exists in the hash table ...
+	if ( hashTable.lookup (hk, old_ad) == -1)
+    {	 	
+		dprintf (D_ALWAYS, "%s: Failed to merge update for ** \"%s\" because "
+				 "no existing ad matches.\n", adType, hashString.Value() );
+	}
+	else
+    {
+		// yes ... old ad must be updated
+		dprintf (D_FULLDEBUG, "%s: Merging update for ... \"%s\"\n",
+				 adType, hashString.Value() );
+
+		// Now, finally, merge the new ClassAd into the old one
+		MergeClassAds(old_ad,new_ad,true);
+	}
+	delete new_ad;
+	return old_ad;
 }
 
 #if 0
