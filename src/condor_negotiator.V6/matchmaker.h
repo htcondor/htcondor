@@ -217,6 +217,9 @@ class Matchmaker : public Service
 		void insert_into_rejects(char const *userName, ClassAd& job);
 		void insert_into_matches(char const *userName, ClassAd& request, ClassAd& offer);
 		
+
+		void RegisterAttemptedOfflineMatch( ClassAd *job_ad, ClassAd *startd_ad );
+
 		// configuration information
 		char *AccountantHost;		// who (if at all) is the accountant?
 		int  NegotiatorInterval;	// interval between negotiation cycles

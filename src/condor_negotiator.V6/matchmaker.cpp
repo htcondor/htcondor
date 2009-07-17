@@ -2085,12 +2085,27 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, dou
 		while (result == MM_BAD_MATCH) 
 		{
 			// 2e(i).  find a compatible offer
-			if (!(offer=matchmakingAlgorithm(scheddName, scheddAddr.Value(), request,
+			while( (offer=matchmakingAlgorithm(scheddName, scheddAddr.Value(), request,
 											 startdAds, priority,
 											 share, 
 											 limitUsed, submitterLimit,
 											 pieLeft,
 											 only_consider_startd_rank)))
+			{
+				int offline = 0;
+				if( offer->LookupInteger(ATTR_OFFLINE,offline) && offline > 0 )
+				{
+						// this startd is offline, so skip over it
+					RegisterAttemptedOfflineMatch( &request, offer );
+					startdAds.Delete( offer );
+				}
+				else {
+						// this startd is online, so go ahead and use it
+					break;
+				}
+			}
+
+			if( !offer )
 			{
 				int want_match_diagnostics = 0;
 				request.LookupBool (ATTR_WANT_MATCH_DIAGNOSTICS,
@@ -3779,4 +3794,35 @@ static int get_scheddname_from_gjid(const char * globaljobid, char * scheddname 
 	}
 
 	return -1;
+}
+
+void Matchmaker::RegisterAttemptedOfflineMatch( ClassAd *job_ad, ClassAd *startd_ad )
+{
+	if( DebugFlags & D_FULLDEBUG ) {
+		MyString name;
+		startd_ad->LookupString(ATTR_NAME,name);
+		MyString owner;
+		job_ad->LookupString(ATTR_OWNER,owner);
+		dprintf(D_FULLDEBUG,"Registering attempt to match offline machine %s by %s.\n",name.Value(),owner.Value());
+	}
+
+	ClassAd update_ad;
+
+		// Copy some stuff from the startd ad into the update ad so
+		// the collector can identify what ad to merge our update
+		// into.
+	update_ad.CopyAttribute(ATTR_NAME,ATTR_NAME,startd_ad);
+	update_ad.CopyAttribute(ATTR_SLOT_ID,ATTR_SLOT_ID,startd_ad);
+	update_ad.CopyAttribute(ATTR_STARTD_IP_ADDR,ATTR_STARTD_IP_ADDR,startd_ad);
+
+	update_ad.Assign(ATTR_LAST_MATCH_TIME,(int)time(NULL));
+
+	classy_counted_ptr<ClassAdMsg> msg = new ClassAdMsg(MERGE_STARTD_AD,update_ad);
+	classy_counted_ptr<DCCollector> collector = new DCCollector();
+
+	if( !collector->useTCPForUpdates() ) {
+		msg->setStreamType( Stream::safe_sock );
+	}
+
+	collector->sendMsg( msg.get() );
 }

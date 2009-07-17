@@ -51,8 +51,6 @@ my $args = "--job=$job --long ";
 my $alreadydone=0;
 
 my $spool = "";
-CondorTest::fullchomp($spool);
-CondorTest::debug("Spool is in --$spool--\n",1);
 
 my $job = $$;
 my $haveseenevict = 0;
@@ -132,6 +130,14 @@ $evicted = sub {
 
 	if(!(-f "$oute")) { 
 		print "$oute failed to arrive\n"; 
+
+		print "------------ Debugging the failed test -----------\n";
+		print "------ condor_q follows: -------------------------\n";
+		system("condor_q");
+		print "------ ls -CR SPOOL    : -------------------------\n";
+		system("ls -CRF $spool");
+		print "------ END  of DEBUG     -------------------------\n";
+
 		CondorTest::debug("removing $cluster\n",1);
 		my @adarray;
 		my $status = 1;

@@ -240,6 +240,8 @@ void CollectorDaemon::Init()
 
 	daemonCore->Register_Command(UPDATE_STARTD_AD,"UPDATE_STARTD_AD",
 		(CommandHandler)receive_update,"receive_update",NULL,ADVERTISE_STARTD_PERM);
+	daemonCore->Register_Command(MERGE_STARTD_AD,"MERGE_STARTD_AD",
+		(CommandHandler)receive_update,"receive_update",NULL,NEGOTIATOR);
 	daemonCore->Register_Command(UPDATE_SCHEDD_AD,"UPDATE_SCHEDD_AD",
 		(CommandHandler)receive_update,"receive_update",NULL,ADVERTISE_SCHEDD_PERM);
 	daemonCore->Register_Command(UPDATE_SUBMITTOR_AD,"UPDATE_SUBMITTOR_AD",
@@ -288,6 +290,7 @@ void CollectorDaemon::Init()
     ClassAd *ad;
     offline_plugin_.rewind ();
     while ( offline_plugin_.iterate ( ad ) ) {
+		ad = new ClassAd(*ad);
 	    if ( !collector.collect ( UPDATE_STARTD_AD, ad, NULL, insert ) ) {
 		    
             if ( -3 == insert ) {
@@ -302,7 +305,7 @@ void CollectorDaemon::Init()
 				    "Received malformed ad. Ignoring.\n" );
 
 	        }
-
+			delete ad;
 	    }
 
     }
