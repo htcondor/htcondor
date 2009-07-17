@@ -1,4 +1,3 @@
-//TEMPTEMP run thru valgrind again
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -1298,7 +1297,7 @@ ReadMultipleUserLogs::DuplicateLogExists(ULogEvent *event, LogFileEntry *log)
 
 	return result;
 }
-#endif // LAZY_LOG_FILES
+#endif // !LAZY_LOG_FILES
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -1461,23 +1460,20 @@ ReadMultipleUserLogs::monitorLogFile( MyString logfile,
 		if ( monitor->state ) {
 				// If we get here, we've monitored this log file before,
 				// so restore the previous state.
+			if ( monitor->stateError ) {
+				errstack.pushf( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
+							"Monitoring log file %s fails because of "
+							"previous error saving file state",
+							logfile.Value() );
+				return false;
+			}
+
 			monitor->readUserLog = new ReadUserLog( *(monitor->state) );
 		} else {
 				// Monitoring this log file for the first time, so create
 				// the log reader from scratch.
 			monitor->readUserLog =
 						new ReadUserLog( monitor->logFile.Value() );
-		}
-
-			// Workaround for gittrac #337.
-			//TEMPTEMP explain
-			//TEMPTEMP check if this is fixed
-		if ( LogGrew( monitor ) ) {
-			if ( !monitor->lastLogEvent ) {
-					// This will fail unless an event got written after the
-					// call to CreateOrTruncateFile() above (race condition).
-				(void)monitor->readUserLog->readEvent( monitor->lastLogEvent );
-			}
 		}
 
 		if ( activeLogFiles.insert( inode, monitor ) != 0 ) {
@@ -1516,9 +1512,7 @@ ReadMultipleUserLogs::unmonitorLogFile( MyString logfile,
 	}
 
 	LogFileMonitor *monitor;
-	//TEMPTEMP why look up in allLogFiles as opposed to activeLogFiles?
-	//TEMPTEMP? if ( allLogFiles.lookup( inode, monitor ) != 0 ) {
-	if ( activeLogFiles.lookup( inode, monitor ) != 0 ) {//TEMPTEMP?
+	if ( activeLogFiles.lookup( inode, monitor ) != 0 ) {
 		errstack.pushf( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
 					"Didn't find LogFileMonitor object for log "
 					"file %s (%lu)!\n", logfile.Value(), inode );
@@ -1545,7 +1539,9 @@ ReadMultipleUserLogs::unmonitorLogFile( MyString logfile,
 				errstack.pushf( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
 							"Unable to initialize ReadUserLog::FileState "
 							"object for log file %s", logfile.Value() );
-				//TEMPTEMP think about what state monitor object should be in here
+				monitor->stateError = true;
+				delete monitor->state;
+				monitor->state = NULL;
 				return false;
 			}
 		}
@@ -1554,7 +1550,9 @@ ReadMultipleUserLogs::unmonitorLogFile( MyString logfile,
 			errstack.pushf( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
 						"Error getting state for log file %s",
 						logfile.Value() );
-				//TEMPTEMP think about what state monitor object should be in here
+			monitor->stateError = true;
+			delete monitor->state;
+			monitor->state = NULL;
 			return false;
 		}
 

@@ -41,7 +41,7 @@
 // This allows us to gradually commit the code before it's fully
 // working without making a branch.  Only commit with this false
 // until the lazy log file code is fully working.  wenger 2008-12-19.
-#define LAZY_LOG_FILES 1//TEMPTEMP 0
+#define LAZY_LOG_FILES 0
 
 class MultiLogFiles
 {
@@ -316,7 +316,8 @@ private:
 #if LAZY_LOG_FILES
 	struct LogFileMonitor {
 		LogFileMonitor( const MyString &file ) : logFile(file), refCount(0),
-					readUserLog(NULL), state(NULL), lastLogEvent(NULL) {}
+					readUserLog(NULL), state(NULL), lastLogEvent(NULL),
+					stateError(false) {}
 
 		~LogFileMonitor() {
 			delete readUserLog;
@@ -346,6 +347,11 @@ private:
 			// Log reader state -- used to pick up where we left off if
 			// we close and re-open the same log file.
 		ReadUserLog::FileState	*state;
+
+			// True iff we got an error when trying to save log file
+			// state -- subsequent attempts to monitor this file should
+			// fail in that case.
+		bool stateError;
 
 			// The last event we read from this log.
 		ULogEvent	*lastLogEvent;
