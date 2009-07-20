@@ -91,8 +91,8 @@ $execute = sub {
 
 	CondorTest::debug("Looking for $oute, $outf, $outg ...\n",1);
 
+	sleep 20; # let output files get created
 	CondorTest::debug("Vacate $cluster Now\n",1);
-	sleep 2; # let output files get created
 	my @adarray;
 	my $status = 1;
 	my $cmd = "condor_vacate_job $cluster";
