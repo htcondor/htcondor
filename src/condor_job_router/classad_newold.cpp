@@ -44,6 +44,7 @@ bool new_to_old(classad::ClassAd & src, ClassAd & dst)
 	for(classad::ClassAd::dirtyIterator it = src.dirtyBegin();
 		it != src.dirtyEnd(); ++it) {
 		dst.SetDirtyFlag(it->c_str(), true);
+        //dst.MarkAttributeDirty(it->c_str());
 	}
 
 	return true;

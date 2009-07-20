@@ -1062,7 +1062,7 @@ int AttrList::UpdateExpr(ExprTree* attr)
 #endif
 
 void
-AttrList::ChainCollapse(bool with_deep_copy)
+AttrList::ChainCollapse()
 {
 	ExprTree *tmp;
 
@@ -1082,11 +1082,11 @@ AttrList::ChainCollapse(bool with_deep_copy)
 			// This is because we want attributes in our ad to have
 			// precedent over the chained (cluster) ad when we collapse.
 		if ( !Lookup(tmp->LArg()) ) {
-			if ( with_deep_copy ) {
-				tmp = tmp->DeepCopy();
-				ASSERT(tmp);
-			}
-			Insert(tmp,false);	// no need for Insert() to check for dups
+			
+            tmp = tmp->DeepCopy();
+			ASSERT(tmp);
+			
+            Insert(tmp,false);	// no need for Insert() to check for dups
 		}
 		chained = chained->next;
 	}

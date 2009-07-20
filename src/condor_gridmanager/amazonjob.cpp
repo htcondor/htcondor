@@ -385,6 +385,8 @@ int AmazonJob::doEvaluateState()
 		int should_crash = 0;
 		jobAd->Assign( "GMState", gmState );
 		jobAd->SetDirtyFlag( "GMState", false );
+        //jobAd->MarkAttributeClean( "GMState" );
+
 		if ( jobAd->EvalBool( "CrashGM", NULL, should_crash ) && should_crash ) {
 			EXCEPT( "Crashing gridmanager at the request of job %d.%d",
 					procID.cluster, procID.proc );

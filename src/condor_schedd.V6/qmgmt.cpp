@@ -2700,7 +2700,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 		// Copy attributes from chained parent ad into the expanded ad
 		// so if parent is deleted before caller is finished with this
 		// ad, things will still be ok.
-		expanded_ad->ChainCollapse(true);
+		expanded_ad->ChainCollapse();
 
 			// Make a stringlist of all attribute names in job ad.
 			// Note: ATTR_JOB_CMD must be first in AttrsToExpand...

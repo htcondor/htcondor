@@ -654,6 +654,8 @@ dprintf(D_FULLDEBUG,"    UpdateLeases: calc'ing new leases\n");
 			bool exists, dirty;
 			curr_job->jobAd->GetDirtyFlag( ATTR_JOB_LEASE_EXPIRATION,
 										   &exists, &dirty );
+            //dirty = curr_job->jobAd->IsAttributeDirty(ATTR_JOB_LEASE_EXPIRATION);
+            //exists = curr_job->jobAd->Lookup(ATTR_JOB_LEASE_EXPIRATION)  ? true : false;
 			if ( !exists ) {
 					// What!? The attribute disappeared? Forget about renewing
 					// the lease then

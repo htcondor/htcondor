@@ -299,6 +299,14 @@ class CompatClassAd : public classad::ClassAd
      */
     char const *EscapeStringValue(char const *val);
 
+    /** Takes the ad this is chained to, copies over all the 
+     *  attributes from the parent ad that aren't in this classad
+     *  (so attributes in both the parent ad and this ad retain the 
+     *  values from this ad), and then makes this ad not chained to
+     *  the parent.
+     */
+    void ChainCollapse();
+
  private:
 	void evalFromEnvironment( const char *name, classad::Value val );
 	classad::ExprTree *AddExplicitConditionals( classad::ExprTree * );

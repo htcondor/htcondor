@@ -341,7 +341,7 @@ fetchQueueFromDB (ClassAdList &list, char *&lastUpdate, char *dbconn, CondorErro
 	ad = getDBNextJobByConstraint(constraint, jqSnapshot);
 
 	while (ad != (ClassAd *) 0) {
-		ad->ChainCollapse(true);
+		ad->ChainCollapse();
 		list.Insert(ad);
 		ad = getDBNextJobByConstraint(constraint, jqSnapshot);
 	}	

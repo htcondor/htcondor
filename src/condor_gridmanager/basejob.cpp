@@ -590,6 +590,7 @@ dprintf(D_FULLDEBUG,"(%d.%d) UpdateJobLeaseReceived(%d)\n",procID.cluster,procID
 
 		jobAd->Assign( ATTR_TIMER_REMOVE_CHECK, new_expiration_time );
 		jobAd->SetDirtyFlag( ATTR_TIMER_REMOVE_CHECK, false );
+        //jobAd->MarkAttributeClean( ATTR_TIMER_REMOVE_CHECK );
 
 		SetJobLeaseTimers();
 	}
@@ -677,6 +678,7 @@ void BaseJob::JobAdUpdateFromSchedd( const ClassAd *new_ad )
 				jobAd->Delete( held_removed_update_attrs[i] );
 			}
 			jobAd->SetDirtyFlag( held_removed_update_attrs[i], false );
+            //jobAd->MarkAttributeClean( held_removed_update_attrs[i] );
 		}
 
 		if ( new_condor_state == HELD && writeUserLog && !holdLogged ) {
@@ -694,6 +696,7 @@ void BaseJob::JobAdUpdateFromSchedd( const ClassAd *new_ad )
 		if ( new_condor_state == REMOVED && condorState == HELD ) {
 			bool dirty;
 			jobAd->GetDirtyFlag( ATTR_JOB_STATUS, NULL, &dirty );
+            //dirty = jobAd->GetDirtyFlag(ATTR_JOB_STATUS);
 			if ( dirty ) {
 				jobAd->Assign( ATTR_JOB_STATUS_ON_RELEASE, REMOVED );
 			}
@@ -886,6 +889,7 @@ BaseJob::UpdateJobTime( float *old_run_time, bool *old_run_time_dirty )
   jobAd->LookupInteger(ATTR_SHADOW_BIRTHDATE,shadow_bday);
   jobAd->LookupFloat(ATTR_JOB_REMOTE_WALL_CLOCK,previous_run_time);
   jobAd->GetDirtyFlag(ATTR_JOB_REMOTE_WALL_CLOCK,NULL,old_run_time_dirty);
+  //old_run_time_dirty = jobAd->IsAttributeDirty(ATTR_JOB_REMOTE_WALL_CLOCK);
 
   if (old_run_time) {
 	  *old_run_time = previous_run_time;
@@ -906,6 +910,13 @@ BaseJob::RestoreJobTime( float old_run_time, bool old_run_time_dirty )
 {
   jobAd->Assign( ATTR_JOB_REMOTE_WALL_CLOCK, old_run_time );
   jobAd->SetDirtyFlag( ATTR_JOB_REMOTE_WALL_CLOCK, old_run_time_dirty );
+  //if(old_run_time_dirty)
+  //{
+  //    jobAd->MarkAttributeDirty(ATTR_JOB_REMOTE_WALL_CLOCK);
+  //} else 
+  //{
+  //    jobAd->MarkAttributeClean(ATTR_JOB_REMOTE_WALL_CLOCK);
+  //}
 }
 
 void BaseJob::RequestPing()

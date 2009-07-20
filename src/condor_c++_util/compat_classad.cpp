@@ -1134,3 +1134,40 @@ CompatClassAd::EscapeStringValue(char const *val)
     return stringToAppeaseUnparse.c_str();
 }
 
+void CompatClassAd::ChainCollapse()
+{
+    ExprTree *tmpExprTree;
+
+    ClassAd *parent = GetChainedParentAd();
+
+    if(!parent)
+    {   
+        //nothing chained, time to leave
+        return;
+    }
+
+    classad::AttrList::iterator itr; 
+
+    for(itr = parent->begin(); itr != parent->end(); itr++)
+    {
+        // Only move the value from our chained ad into our ad when it 
+        // does not already exist. Hence the Lookup(). 
+        // This means that the attributes in our classad takes precedence
+        // over the ones in the chained class ad.
+        if( !Lookup((*itr).first) )
+        {
+            tmpExprTree = (*itr).second;     
+
+            //deep copy it!
+            tmpExprTree = tmpExprTree->Copy(); 
+            ASSERT(tmpExprTree); 
+
+            //K, it's clear. Insert it!
+            Insert((*itr).first, tmpExprTree);
+        }
+    }
+
+    //We're done copying all the stuff from the parent's ad over.
+    //Time to sever the link between this classad and it!
+    Unchain();
+}
