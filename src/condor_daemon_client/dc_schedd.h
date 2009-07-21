@@ -236,6 +236,30 @@ public:
 						 action_result_type_t result_type = AR_TOTALS,
 						 bool notify_scheduler = true );
 
+		/** Get starter connection info for a running job.
+			@param jobid What job to act on
+			@param subproc For parallel jobs, which one (-1 if not specified)
+			@param session_info Security session parameters (e.g. encryption)
+			@param errstack Record of errors encountered
+			@param starter_addr Contact address of starter
+			@param starter_claim_id Security session info to use
+			@param slot_name Example: slot1@somehost.edu
+			@param error_msg Message for user describing why it failed
+			@param retry_is_sensible True if failed and sensible to retry
+			@return true on success; false on failure
+		*/
+	bool getJobConnectInfo( PROC_ID jobid,
+							int subproc,
+							char const *session_info,
+							int timeout,
+							CondorError *errstack,
+							MyString &starter_addr,
+							MyString &starter_claim_id,
+							MyString &starter_version,
+							MyString &slot_name,
+							MyString &error_msg,
+							bool &retry_is_sensible);
+
 
 		/** Request the schedd to initiate a negoitation cycle.
 			The request is sent via a SafeSock (UDP datagram).

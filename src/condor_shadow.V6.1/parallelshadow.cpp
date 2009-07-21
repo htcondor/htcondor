@@ -301,6 +301,11 @@ ParallelShadow::getResources( void )
 				gen_ckpt_name(0, job_cluster, 0, 0));
 			tmp_ad->Insert(buffer);
 
+				// Put the correct claim id into this ad's ClaimId attribute.
+				// Otherwise, it is the claim id of the master proc.
+				// This is how the starter finds out about the claim id.
+			tmp_ad->Assign(ATTR_CLAIM_ID,claim_id);
+
 			rr->setJobAd( tmp_ad );
 			nodenum++;
 

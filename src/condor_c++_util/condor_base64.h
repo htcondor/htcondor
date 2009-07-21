@@ -17,41 +17,18 @@
  *
  ***************************************************************/
 
+#ifndef CONDOR_BASE64_H
+#define CONDOR_BASE64_H
 
-#ifndef _CONDOR_JAVA_PROC_H
-#define _CONDOR_JAVA_PROC_H
+#ifdef HAVE_EXT_OPENSSL
 
-#include "vanilla_proc.h"
-#include "condor_classad.h"
+#define HAVE_CONDOR_BASE64 1
 
-typedef enum {
-	JAVA_EXIT_NORMAL,
-	JAVA_EXIT_EXCEPTION,
-	JAVA_EXIT_SYSTEM_ERROR
-} java_exit_mode_t;
+// Caller needs to free the returned pointer
+char* condor_base64_encode(const unsigned char *input, int length);
 
-class JavaProc : public VanillaProc
-{
-public:
-	JavaProc( ClassAd * jobAd, const char *execute_dir );
-	virtual ~JavaProc();
+// Caller needs to free *output if non-NULL
+void condor_base64_decode(const char *input,unsigned char **output, int *output_length);
 
-	virtual int  StartJob();
-	virtual bool JobReaper( int pid, int status );
-	virtual bool PublishUpdateAd( ClassAd *ad );
-	virtual char const *getArgv0();
-
-private:
-	int ParseExceptionLine( const char *line, MyString &name, MyString &type );
-	int ParseExceptionFile( FILE *file );
-	java_exit_mode_t ClassifyExit( int status );
-
-	char *execute_dir;
-	MyString startfile;
-	MyString endfile;
-	MyString ex_name;
-	MyString ex_type;
-	MyString ex_hier;
-};
-
+#endif
 #endif

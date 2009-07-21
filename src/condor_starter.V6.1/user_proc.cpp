@@ -50,6 +50,11 @@ UserProc::initialize( void )
 	requested_exit = false;
 	m_proc_exited = false;
 	job_universe = 0;  // we'll fill in a real value if we can...
+	int i;
+	for(i=0;i<3;i++) {
+		m_pre_defined_std_fds[i] = -1;
+		m_pre_defined_std_fnames[i] = NULL;
+	}
 	if( JobAd ) {
 		initKillSigs();
 		if( JobAd->LookupInteger( ATTR_JOB_UNIVERSE, job_universe ) < 1 ) {
@@ -283,7 +288,23 @@ UserProc::getStdFile( std_file_type type,
 		// Figure out what we're trying to open, if anything
 		///////////////////////////////////////////////////////
 
-	if( attr ) {
+	if( m_pre_defined_std_fds[type] != -1 ||
+		m_pre_defined_std_fnames[type] != NULL )
+	{
+		filename = m_pre_defined_std_fnames[type];
+		*out_fd = m_pre_defined_std_fds[type];
+		if( *out_fd != -1 ) {
+				// we must dup() the file descriptor because our caller
+				// will take ownership of it (i.e. they should close it)
+			*out_fd = dup(*out_fd);
+			if( *out_fd == -1 ) {
+				dprintf(D_ALWAYS,"Failed to dup fd %d for %s\n",
+						m_pre_defined_std_fds[type],phrase);
+				return false;
+			}
+		}
+		wants_stream = false;
+	} else if( attr ) {
 		filename = Starter->jic->getJobStdFile( attr );
 		wants_stream = Starter->jic->streamStdFile( attr );
 	} else {
@@ -303,7 +324,7 @@ UserProc::getStdFile( std_file_type type,
 		}
 	}
 
-	if( ! filename ) {
+	if( ! filename && *out_fd == -1) {
 			// If there's nothing specified, we always want to open
 			// the system-appropriate NULL file (/dev/null or NUL).
 			// Otherwise, we can mostly treat this as if the job
@@ -438,3 +459,26 @@ UserProc::openStdFile( std_file_type type,
 	return fd;
 }
 
+void
+UserProc::SetStdFiles(int std_fds[], char const *std_fnames[])
+{
+		// store the pre-defined std files for use by getStdFile()
+	int i;
+	for(i=0;i<3;i++) {
+		m_pre_defined_std_fds[i] = std_fds[i];
+		m_pre_defined_std_fname_buf[i] = std_fnames[i];
+		m_pre_defined_std_fnames[i] = std_fnames[i] ? m_pre_defined_std_fname_buf[i].Value() : NULL;
+	}
+}
+
+bool
+UserProc::ThisProcRunsAlongsideMainProc()
+{
+	return false;
+}
+
+char const *
+UserProc::getArgv0()
+{
+	return CONDOR_EXEC;
+}

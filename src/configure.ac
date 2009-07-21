@@ -2960,6 +2960,18 @@ if test "x$cv_ext_globus" = xyes; then
   AC_SUBST(globus_thr_flavor,$_cv_globus_thr_flavor)
 fi
 
+AC_ARG_ENABLE(ssh-to-job,
+  [AS_HELP_STRING([--enable-ssh-to-job],
+     [Support for condor_ssh_to_job])],
+  [SSH_TO_JOB=$enableval],
+  [if test "x$cv_ext_openssl" = xyes; then SSH_TO_JOB=yes; else SSH_TO_JOB=no; fi])
+if test $SSH_TO_JOB != no; then
+  if test "x$cv_ext_openssl" != xyes; then
+    AC_MSG_ERROR( [condor_ssh_to_job requires openssl (for base64)] )
+  fi
+  AC_DEFINE([HAVE_SSH_TO_JOB], [1], [Define to 1 to support condor_ssh_to_job])
+fi
+
 # The test for gsoap needs to happen after the openssl check, so
 # openssl libs, if found, will be in LIBS. Also, if we do not have
 # openssl, then we need to link with

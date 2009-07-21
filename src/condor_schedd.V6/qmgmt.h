@@ -109,4 +109,6 @@ extern void	FindRunnableJob(PROC_ID & jobid, const ClassAd* my_match_ad,
 extern int Runnable(PROC_ID*);
 extern int Runnable(ClassAd*);
 
+extern class ForkWork schedd_forker;
+
 #endif /* _QMGMT_H */

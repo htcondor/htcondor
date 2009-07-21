@@ -404,6 +404,7 @@ extern const char * ATTR_PREV_SEND_ESTIMATE;
 extern const char * ATTR_PREV_RECV_ESTIMATE;
 extern const char * ATTR_PRIO;
 extern const char * ATTR_PROC_ID;
+extern const char * ATTR_SUB_PROC_ID;
 extern const char * ATTR_PRIVATE_NETWORK_IP_ADDR;
 extern const char * ATTR_PRIVATE_NETWORK_NAME;
 extern const char * ATTR_PUBLIC_NETWORK_IP_ADDR;
@@ -755,6 +756,12 @@ extern const char *ATTR_DOWNLOADING;
 extern const char *ATTR_TIMEOUT;
 extern const char *ATTR_CCBID;
 extern const char *ATTR_REQUEST_ID;
+extern const char *ATTR_SESSION_INFO;
+extern const char *ATTR_SSH_PUBLIC_SERVER_KEY;
+extern const char *ATTR_SSH_PRIVATE_CLIENT_KEY;
+extern const char *ATTR_SHELL;
+extern const char *ATTR_RETRY;
+extern const char *ATTR_SSH_KEYGEN_ARGS;
 
 // Enumerate the ones that can't be constant strings..
 typedef enum
