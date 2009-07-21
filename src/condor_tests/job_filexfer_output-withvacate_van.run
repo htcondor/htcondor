@@ -47,7 +47,7 @@ my $outg = "$basefile"."g.txt";
 my $inputdir = "job_"."$job"."_dir";
 
 my $line = "";
-my $args = "--job=$job --long ";
+my $args = "--job=$job --forever ";
 my $alreadydone=0;
 
 my $spool = "";
