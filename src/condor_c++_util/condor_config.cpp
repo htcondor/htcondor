@@ -1420,7 +1420,8 @@ param_without_default( const char *name )
 
 char*
 param(const char* name) {
-	return param_with_default_abort(name, 1);
+	/* XXX this should ultimately go to true so we except */
+	return param_with_default_abort(name, 0);
 }
 
 char *
@@ -1434,7 +1435,7 @@ param_with_default_abort(const char *name, int abort) {
 
 	if( val == NULL ) {
 
-		printf("'%s' not found in config table, looking in param info table\n", subsysname);
+/*		dprintf(D_ALWAYS, "'%s' not found in config table, looking in param info table\n", subsysname);*/
 		//couldn't find subsys.param in config table
 		//look for subsys.param in param info table
 
@@ -1446,7 +1447,7 @@ param_with_default_abort(const char *name, int abort) {
 
 			if (val[0] != '\0') {
 
-				printf("'%s' found in param info table, adding to config table, value: '%s'\n", subsysname, val);
+/*				dprintf(D_ALWAYS, "'%s' found in param info table, adding to config table, value: '%s'\n", subsysname, val);*/
 				//found subsys.param in param info table
 
 			} else {
@@ -1456,33 +1457,33 @@ param_with_default_abort(const char *name, int abort) {
 				// it was set to empty specifically to clear this parameter for this
 				// specific subsystem.
 
-				printf("'%s' found in param info table, but it was empty, adding to config table\n", subsysname);
+				dprintf(D_ALWAYS, "'%s' found in param info table, but it was empty, adding to config table\n", subsysname);
 
 				return NULL;
 			}
 
 		} else {
 
-			printf("'%s' not found in param info table, looking for '%s' in config table\n", subsysname, name);
+/*			dprintf(D_ALWAYS, "'%s' not found in param info table, looking for '%s' in config table\n", subsysname, name);*/
 			//couldn't find subsys.param in param info table
 			//look for param in config table
 
 			val = lookup_macro( name, ConfigTab, TABLESIZE );
 			if (val != NULL) {
 
-				printf("'%s' found in config table\n", name);
+/*				dprintf(D_ALWAYS, "'%s' found in config table\n", name);*/
 				//found param in config table
 
 			} else {
 
-				printf("'%s' not found in config table, looking in param info table\n", name);
+/*				dprintf(D_ALWAYS, "'%s' not found in config table, looking in param info table\n", name);*/
 				//couldn't find param in config table
 				//look for param in param info table
 
 				val = param_default_string(name);
 				if (val != NULL) {
 
-					printf("'%s' found in param info table, adding to config table, value: '%s'\n", name, val);
+/*					dprintf(D_ALWAYS, "'%s' found in param info table, adding to config table, value: '%s'\n", name, val);*/
 					//found param in param info table
 
 					//add value to config table
@@ -1505,11 +1506,11 @@ param_with_default_abort(const char *name, int abort) {
 		// it was set to empty specifically to clear this parameter for this
 		// specific subsystem.
 
-		printf("'%s' found in config table, but it was empty\n", subsysname);
+/*		dprintf(D_ALWAYS, "'%s' found in config table, but it was empty\n", subsysname);*/
 
 		return NULL;
 	} else {
-		printf("'%s' found in config table\n", subsysname);
+/*		dprintf(D_ALWAYS, "'%s' found in config table\n", subsysname);*/
 	}
 
 	// Ok, now expand it out...

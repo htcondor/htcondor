@@ -47,10 +47,6 @@ param_info_hash_insert(param_info_hash_t param_info, param_info_t* p) {
 param_info_t*
 param_info_hash_lookup(param_info_hash_t param_info, const char* param) {
 
-	if(param_info == NULL) {
-		return NULL;
-	}
-	
 	unsigned int key;
 	bucket_t* b;
 

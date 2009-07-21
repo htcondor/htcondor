@@ -34,10 +34,11 @@ if (src) { \
 bucket_t** param_info;
 
 //static int num_entries;
+int first_time = 1;
 
 void
 param_info_init() {
-
+	first_time = 0;
 	param_info_hash_create(&param_info);
 
 #include "param_info_init.c"
@@ -63,7 +64,7 @@ param_info_insert(char* param,
 	param_info_t* p;
 	char* range_start;
 	char* range_end;
-
+	
 	if (!param) {
 		EXCEPT("param passed to param_info_insert was NULL");
 	}
@@ -92,23 +93,23 @@ param_info_insert(char* param,
 			p->default_val.int_val = strtol(value, NULL, 10);
 			compute_range(range, &range_start, &range_end);
 			if (!validate_integer_range_lower_bound(range_start, &(p->range_min.int_min))) {
-				dprintf(D_ALWAYS, "invalid lower limit of range for '%s', assuming no lower bound\n", param);
+/*				dprintf(D_ALWAYS, "invalid lower limit of range for '%s', assuming no lower bound\n", param);*/
 				p->range_valid = 0;
 			} else {
 				if (p->default_val.int_val < p->range_min.int_min) {
 					p->default_valid = 0;
 					p->default_val.int_val = p->range_min.int_min;
-					dprintf(D_ALWAYS, "default value for '%s': %d less than lower limit of: %d\n", param, p->default_val.int_val, p->range_min.int_min);
+/*					dprintf(D_ALWAYS, "default value for '%s': %d less than lower limit of: %d\n", param, p->default_val.int_val, p->range_min.int_min);*/
 				}
 			}
 			if (!validate_integer_range_upper_bound(range_end, &(p->range_max.int_max))) {
-				dprintf(D_ALWAYS, "invalid upper limit of range for '%s', assuming no uppper bound\n", param);
+/*				dprintf(D_ALWAYS, "invalid upper limit of range for '%s', assuming no uppper bound\n", param);*/
 				p->range_valid = 0;
 			} else {
 				if (p->default_val.int_val > p->range_max.int_max) {
 					p->default_valid = 0;
 					p->default_val.int_val = p->range_max.int_max;
-					dprintf(D_ALWAYS, "default value for '%s': %d greater than upper limit of: %d\n", param, p->default_val.int_val, p->range_max.int_max);
+/*					dprintf(D_ALWAYS, "default value for '%s': %d greater than upper limit of: %d\n", param, p->default_val.int_val, p->range_max.int_max);*/
 				}
 			}
 
@@ -129,23 +130,23 @@ param_info_insert(char* param,
 
 			compute_range(range, &range_start, &range_end);
 			if (!validate_double_range_lower_bound(range_start, &(p->range_min.dbl_min))) {
-				dprintf(D_ALWAYS, "invalid lower limit of range for '%s', assuming no lower bound\n", param);
+/*				dprintf(D_ALWAYS, "invalid lower limit of range for '%s', assuming no lower bound\n", param);*/
 				p->range_valid = 0;
 			} else {
 				if (p->default_val.dbl_val < p->range_min.dbl_min) {
 					p->default_valid = 0;
 					p->default_val.dbl_val = p->range_min.dbl_min;
-					dprintf(D_ALWAYS, "default value for '%s': %f less than lower limit of: %f\n", param, p->default_val.dbl_val, p->range_min.dbl_min);
+/*					dprintf(D_ALWAYS, "default value for '%s': %f less than lower limit of: %f\n", param, p->default_val.dbl_val, p->range_min.dbl_min);*/
 				}
 			}
 			if (!validate_double_range_upper_bound(range_end, &(p->range_max.dbl_max))) {
-				dprintf(D_ALWAYS, "invalid upper limit of range for '%s', assuming no uppper bound\n", param);
+/*				dprintf(D_ALWAYS, "invalid upper limit of range for '%s', assuming no uppper bound\n", param);*/
 				p->range_valid = 0;
 			} else {
 				if (p->default_val.dbl_val > p->range_max.dbl_max) {
 					p->default_valid = 0;
 					p->default_val.dbl_val = p->range_max.dbl_max;
-					dprintf(D_ALWAYS, "default value for '%s': %f greater than upper limit of: %f\n", param, p->default_val.dbl_val, p->range_max.dbl_max);
+/*					dprintf(D_ALWAYS, "default value for '%s': %f greater than upper limit of: %f\n", param, p->default_val.dbl_val, p->range_max.dbl_max);*/
 				}
 			}
 
@@ -156,14 +157,14 @@ param_info_insert(char* param,
 
 		default:
 
-			dprintf(D_ALWAYS, "Invalid type specified for parameter '%s', defaulting to string\n", param);
+/*			dprintf(D_ALWAYS, "Invalid type specified for parameter '%s', defaulting to string\n", param);*/
 
 		case TYPE_STRING:
 
 			if (validate_regex(range, value)) {
 				p->default_val.str_val = p->str_val;
 			} else {
-				dprintf(D_ALWAYS, "invalid default value: '%s', not in range '%s' for parameter '%s'\n", value, range, param);
+/*				dprintf(D_ALWAYS, "invalid default value: '%s', not in range '%s' for parameter '%s'\n", value, range, param);*/
 				p->default_valid = 0;
 			}
 
@@ -188,13 +189,19 @@ param_info_insert(char* param,
 char*
 param_default_string(const char* param) {
 
+	if(first_time) {
+		param_info_init();
+	}
+	
 	param_info_t* p;
 	char* ret = NULL;
 
 	p = param_info_hash_lookup(param_info, param);
 
-	if (p && p->default_valid && p->type == TYPE_STRING) {
-		ret = p->default_val.str_val;
+	// Don't check the type here, since this is used in param and is used
+	// to look up values for all types.
+	if (p && p->default_valid) {
+		ret = p->str_val;
 	}
 
 	return ret;
@@ -203,6 +210,10 @@ param_default_string(const char* param) {
 int
 param_default_integer(const char* param, int* valid) {
 
+	if(first_time) {
+		param_info_init();
+	}
+	
 	param_info_t* p;
 	int ret = 0;
 
@@ -226,6 +237,10 @@ param_default_boolean(const char* param, int* valid) {
 double
 param_default_double(const char* param, int* valid) {
 
+	if(first_time) {
+		param_info_init();
+	}
+	
 	param_info_t* p;
 	double ret = 0.0;
 
@@ -255,7 +270,9 @@ param_range_integer(const char* param, int* min, int* max) {
 		*min = p->range_min.int_min;
 		*max = p->range_max.int_max;
 	} else {
-		EXCEPT("range for param '%s' not found", param);
+		/* If the integer isn't known about, then don't assume a range for it */
+/*		EXCEPT("integer range for param '%s' not found", param);*/
+		return -1;
 	}
 	return 0;
 }
@@ -274,7 +291,9 @@ param_range_double(const char* param, double* min, double* max) {
 		*min = p->range_min.dbl_min;
 		*max = p->range_max.dbl_max;
 	} else {
-		EXCEPT("range for param '%s' not found", param);
+		/* If the double isn't known about, then don't assume a range for it */
+/*		EXCEPT("double range for param '%s' not found", param);*/
+		return -1;
 	}
 	return 0;
 }

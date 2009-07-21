@@ -69,6 +69,14 @@ char* param(const char *str)
 	return NULL;
 }
 
+char* param_without_default(const char *str)
+{
+	if(strcmp(str, "LOG") == 0) {
+		return strdup(".");
+	}
+	return NULL;
+}
+
 int param_integer(const char *, int default_value)
 {
 	return default_value;

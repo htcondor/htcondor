@@ -34,6 +34,9 @@ sub main {
 	# on_the_fly will cause &parse to call many reconstitute commands 
 	# "on the fly" as it parses the string. If it were called anyway, 
 	# then it would end up repeating output.  
+
+	# hack for our build system
+	`touch param_info.c`;
 }
 ##########################################################################
 use strict;
@@ -146,7 +149,7 @@ my $type_subs = {
 		return "STATE_".$state;
 	},
 	'param_type' => sub { 
-		my $type = enum($_[0],'STRING','INT','BOOL', 'FLOAT');
+		my $type = enum($_[0],'STRING','INT','BOOL', 'DOUBLE');
 		return "TYPE_".$type;
 	},
 	'is_macro_type' => sub {
