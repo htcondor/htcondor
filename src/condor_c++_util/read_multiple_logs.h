@@ -316,8 +316,8 @@ private:
 #if LAZY_LOG_FILES
 	struct LogFileMonitor {
 		LogFileMonitor( const MyString &file ) : logFile(file), refCount(0),
-					readUserLog(NULL), state(NULL), lastLogEvent(NULL),
-					stateError(false) {}
+					readUserLog(NULL), state(NULL), stateError(false),
+					lastLogEvent(NULL) {}
 
 		~LogFileMonitor() {
 			delete readUserLog;
