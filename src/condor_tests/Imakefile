@@ -881,6 +881,8 @@ TESTCLASS(job_schedd_job-tracking_van,full)
 TESTCLASS(job_schedd_job-tracking_van,quicknolink)
 #endif /* 0 -- test disabled */
 
+#if !defined(IS_IA64_LINUX_RHEL4) 
+
 DESC(job_core_err_java,"Java Universe: basic error test")
 RUN(job_core_err_java)
 TESTCLASS(job_core_err_java,core)
@@ -933,6 +935,8 @@ TESTCLASS(job_core_plus_java,full)
 TESTCLASS(job_core_plus_java,quicknolink)
 ***************************************************************
 */
+
+#endif
 
 /*
 Gnats bugs 723 and 724

@@ -47,10 +47,12 @@ my $outg = "$basefile"."g.txt";
 my $inputdir = "job_"."$job"."_dir";
 
 my $line = "";
-my $args = "--job=$job --long ";
+my $args = "--job=$job --forever ";
 my $alreadydone=0;
 
 my $spool = "";
+CondorTest::fullchomp($spool);
+CondorTest::debug("Spool is in --$spool--\n",1);
 
 my $job = $$;
 my $haveseenevict = 0;
@@ -89,8 +91,8 @@ $execute = sub {
 
 	CondorTest::debug("Looking for $oute, $outf, $outg ...\n",1);
 
+	sleep 20; # let output files get created
 	CondorTest::debug("Vacate $cluster Now\n",1);
-	sleep 2; # let output files get created
 	my @adarray;
 	my $status = 1;
 	my $cmd = "condor_vacate_job $cluster";
@@ -130,14 +132,6 @@ $evicted = sub {
 
 	if(!(-f "$oute")) { 
 		print "$oute failed to arrive\n"; 
-
-		print "------------ Debugging the failed test -----------\n";
-		print "------ condor_q follows: -------------------------\n";
-		system("condor_q");
-		print "------ ls -CR SPOOL    : -------------------------\n";
-		system("ls -CRF $spool");
-		print "------ END  of DEBUG     -------------------------\n";
-
 		CondorTest::debug("removing $cluster\n",1);
 		my @adarray;
 		my $status = 1;
