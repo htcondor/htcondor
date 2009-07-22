@@ -36,6 +36,7 @@ sub main {
 	# then it would end up repeating output.  
 
 	# hack for our build system
+	# This #includes param_info_init.c
 	`touch param_info.c`;
 }
 ##########################################################################

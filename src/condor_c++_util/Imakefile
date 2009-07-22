@@ -22,7 +22,10 @@ LIBCONDORAPI = libcondorapi.a
 TEST_LIBCONDORAPI = test_libcondorapi
 #endif
 
-all_target( cplus_lib.a liburl.a $(LIBCONDORAPI) $(TEST_LIBCONDORAPI) )
+all_target( param_info_init.c cplus_lib.a liburl.a $(LIBCONDORAPI) $(TEST_LIBCONDORAPI) )
+
+param_info_init.c: param_info.in param_info_c_generator.pl
+	./param_info_c_generator.pl
 
 testbin_target(test_libcondorapi,755)
 testbin_target(test_condor.log,644)
@@ -239,7 +242,7 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o selector.o \
 	condor_sinful.o \
 	link.o \
 	simple_arg.o \
-	condor_threads.o 
+	condor_threads.o
 
 library_target(cplus_lib.a,$(OBJ))
 library_target(liburl.a,$(URL_OBJ))
