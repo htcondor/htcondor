@@ -298,15 +298,18 @@ param_range_double(const char* param, double* min, double* max) {
 	return 0;
 }
 
+/* XXX This function probably needs a lot of work. */
 static void
 compute_range(const char* range, char** range_start, char** range_end) {
 
-	const char * c1, * c2, * c3;
+	const char * c1 = NULL, * c2 = NULL, * c3 = NULL;
 
 	for (c1=range; isspace(*c1); c1++);				//skip leading whitespace
+
 	for (c2=c1; *c2 && *c2!=','; c2++);				//find the first comma or null terminator
 
-	if (c1==c2) {
+	// if the same or they match the generalized anything operator, there is no range
+	if (c1==c2 || (strcmp(c1, ".*") == 0)) {
 		*range_start = malloc(sizeof(char));
 		**range_start = '\0';
 		*range_end = malloc(sizeof(char));
@@ -315,14 +318,14 @@ compute_range(const char* range, char** range_start, char** range_end) {
 
 		//find range_start
 		for (c3=c2-1; isspace(*c3); c3--);			//reverse over trailing whitespace
-		*range_start = malloc(sizeof(char)*(c3-c1+2));
+		*range_start = calloc((c3-c1+2), sizeof(char));
 		strncat(*range_start, c1, c3-c1+1);
 
 		//find range_end
 		for (c1=c2; *c1; c1++);						//find end of uppper limit, stopping at null terminator
 		for (c3=c1-1; isspace(*c3); c3--);			//reverse over trailing whitespace
 		for (c2++; c2<=c1 && isspace(*c2); c2++);	//skip leading whitespace
-		*range_end = malloc(sizeof(char)*(c3-c2+2));
+		*range_end = calloc((c3-c2+2), sizeof(char));
 		strncat(*range_end, c2, c3-c2+1);
 
 	}
