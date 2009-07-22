@@ -68,12 +68,12 @@ enum Field
 };
 enum DataType
 {
-	TYPE_STRING,
-	TYPE_INT,
-	TYPE_FSIZE,
-	TYPE_INODE,
-	TYPE_TIME,
-	TYPE_NONE,
+	DTYPE_STRING,
+	DTYPE_INT,
+	DTYPE_FSIZE,
+	DTYPE_INODE,
+	DTYPE_TIME,
+	DTYPE_NONE,
 };
 
 struct FieldData
@@ -85,23 +85,23 @@ struct FieldData
 };
 static const FieldData fieldList[] =
 {
-	{ FIELD_SIGNATURE,			TYPE_STRING,	1,  "signature" },
-	{ FIELD_VERSION,			TYPE_INT,		2,  "version" },
-	{ FIELD_UPDATE_TIME,		TYPE_TIME,		2,  "update-time" },
-	{ FIELD_BASE_PATH,			TYPE_STRING,	1,  "base-path" },
-	{ FIELD_CUR_PATH,			TYPE_STRING,	1,  "path" },
-	{ FIELD_UNIQ_ID,			TYPE_STRING,	1,  "uniq" },
-	{ FIELD_SEQUENCE,			TYPE_INT,		2,  "sequence" },
-	{ FIELD_MAX_ROTATION,		TYPE_INT,		2,  "max-rotation" },
-	{ FIELD_ROTATION,			TYPE_INT,		2,  "rotation" },
-	{ FIELD_OFFSET,				TYPE_FSIZE,		2,  "offset" },
-	{ FIELD_GLOBAL_POSITION,	TYPE_FSIZE,		2,  "global-position" },
-	{ FIELD_GLOBAL_RECORD_NUM,	TYPE_FSIZE,		2,  "global-record" },
-	{ FIELD_INODE,				TYPE_INODE,		1,  "inode" },
-	{ FIELD_CTIME,				TYPE_TIME,		2,  "ctime" },
-	{ FIELD_SIZE,				TYPE_FSIZE,		2,  "size" },
-	{ FIELD_ALL,				TYPE_NONE,		0,  "all" },
-	{ FIELD_NONE,				TYPE_NONE,		-1, NULL, },
+	{ FIELD_SIGNATURE,			DTYPE_STRING,	1,  "signature" },
+	{ FIELD_VERSION,			DTYPE_INT,		2,  "version" },
+	{ FIELD_UPDATE_TIME,		DTYPE_TIME,		2,  "update-time" },
+	{ FIELD_BASE_PATH,			DTYPE_STRING,	1,  "base-path" },
+	{ FIELD_CUR_PATH,			DTYPE_STRING,	1,  "path" },
+	{ FIELD_UNIQ_ID,			DTYPE_STRING,	1,  "uniq" },
+	{ FIELD_SEQUENCE,			DTYPE_INT,		2,  "sequence" },
+	{ FIELD_MAX_ROTATION,		DTYPE_INT,		2,  "max-rotation" },
+	{ FIELD_ROTATION,			DTYPE_INT,		2,  "rotation" },
+	{ FIELD_OFFSET,				DTYPE_FSIZE,		2,  "offset" },
+	{ FIELD_GLOBAL_POSITION,	DTYPE_FSIZE,		2,  "global-position" },
+	{ FIELD_GLOBAL_RECORD_NUM,	DTYPE_FSIZE,		2,  "global-record" },
+	{ FIELD_INODE,				DTYPE_INODE,		1,  "inode" },
+	{ FIELD_CTIME,				DTYPE_TIME,		2,  "ctime" },
+	{ FIELD_SIZE,				DTYPE_FSIZE,		2,  "size" },
+	{ FIELD_ALL,				DTYPE_NONE,		0,  "all" },
+	{ FIELD_NONE,				DTYPE_NONE,		-1, NULL, },
 };
 
 union IntVal { filesize_t asFsize; int asInt; time_t asTime; };
@@ -879,11 +879,11 @@ bool
 Options::parseValue( const SimpleArg &arg )
 {
 	const char *s = arg.Arg( );
-	if ( TYPE_STRING == m_field->m_type ) {
+	if ( DTYPE_STRING == m_field->m_type ) {
 		m_value.asStr = s;
 		return true;
 	}
-	if ( ( TYPE_INT == m_field->m_type ) && ( isdigit(*s) ) ) {
+	if ( ( DTYPE_INT == m_field->m_type ) && ( isdigit(*s) ) ) {
 		int		i = atoi(s);
 		if ( 0 == m_num_values ) {
 			m_value.asInt.asInt = i;
@@ -896,7 +896,7 @@ Options::parseValue( const SimpleArg &arg )
 		}
 		return true;
 	}
-	if ( ( TYPE_FSIZE == m_field->m_type ) && ( isdigit(*s) ) ) {
+	if ( ( DTYPE_FSIZE == m_field->m_type ) && ( isdigit(*s) ) ) {
 		filesize_t		i = (filesize_t) atol(s);
 		if ( 0 == m_num_values ) {
 			m_value.asInt.asFsize = i;
@@ -909,7 +909,7 @@ Options::parseValue( const SimpleArg &arg )
 		}
 		return true;
 	}
-	if ( ( TYPE_TIME == m_field->m_type ) && ( isdigit(*s) ) ) {
+	if ( ( DTYPE_TIME == m_field->m_type ) && ( isdigit(*s) ) ) {
 		time_t		i = (time_t) atol(s);
 		if ( 0 == m_num_values ) {
 			m_value.asInt.asTime = i;
@@ -922,7 +922,7 @@ Options::parseValue( const SimpleArg &arg )
 		}
 		return true;
 	}
-	if ( ( TYPE_INODE == m_field->m_type ) && ( isdigit(*s) ) ) {
+	if ( ( DTYPE_INODE == m_field->m_type ) && ( isdigit(*s) ) ) {
 		m_value.asInode = (StatStructInode) atol(s);
 		return true;
 	}
