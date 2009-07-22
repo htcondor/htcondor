@@ -1,9 +1,3 @@
-# XXX After some thought. This datafile should be writtin in Perl's native
-# data structure language format, this would enable a much smaller and less
-# complicated amount of code to be written for the translator.
-
-
-
 [MASTER_COLLECTOR_RECOVER_FACTOR]
 # XXX follows pattern of MASTER_%s_RECOVER_FACTOR
 aliases=
@@ -1727,7 +1721,8 @@ id=60
 
 [DAGMAN_ALLOW_EVENTS]
 aliases=
-default=
+# XXX 114 is really CheckEvents::ALLOW_TERM_ABORT | CheckEvents::ALLOW_EXEC_BEFORE_SUBMIT | CheckEvents::ALLOW_DOUBLE_TERMINATE | CheckEvents::ALLOW_DUPLICATE_EVENTS
+default=114
 version=0.0.0
 range=.*
 state=default
@@ -1791,7 +1786,7 @@ id=64
 
 [DAGMAN_DELETE_OLD_LOGS]
 aliases=
-default=
+default=true
 version=0.0.0
 range=.*
 state=default
@@ -1935,7 +1930,7 @@ id=73
 
 [DAGMAN_PENDING_REPORT_INTERVAL]
 aliases=
-default=
+default=600
 version=0.0.0
 range=.*
 state=default
@@ -1983,7 +1978,7 @@ id=76
 
 [CKPT_SERVER_INTERVAL]
 aliases=
-default=
+default=300
 version=0.0.0
 range=.*
 state=default
@@ -2015,7 +2010,7 @@ id=78
 
 [CKPT_SERVER_CLEAN_INTERVAL]
 aliases=
-default=
+default=86400
 version=0.0.0
 range=.*
 state=default
@@ -2047,7 +2042,7 @@ id=80
 
 [CKPT_SERVER_SOCKET_BUFSIZE]
 aliases=
-default=0
+default=65536
 version=0.0.0
 range=.*
 state=default
@@ -2063,7 +2058,7 @@ id=81
 
 [CKPT_SERVER_MAX_PROCESSES]
 aliases=
-default=
+default=50
 version=0.0.0
 range=.*
 state=default
@@ -2079,7 +2074,7 @@ id=82
 
 [CKPT_SERVER_MAX_STORE_PROCESSES]
 aliases=
-default=
+default=50
 version=0.0.0
 range=.*
 state=default
@@ -2095,7 +2090,7 @@ id=83
 
 [CKPT_SERVER_MAX_RESTORE_PROCESSES]
 aliases=
-default=
+default=50
 version=0.0.0
 range=.*
 state=default
@@ -2862,8 +2857,9 @@ tags=sysapi,reconfig
 id=131
 
 [STARTD_HAS_BAD_UTMP]
+# XXX This should be a bool
 aliases=
-default=
+default=0
 version=0.0.0
 range=.*
 state=default
@@ -2879,11 +2875,11 @@ id=132
 
 [RESERVE_AFS_CACHE]
 aliases=
-default=
+default=false
 version=0.0.0
 range=.*
 state=default
-type=int
+type=bool
 is_macro=false
 reconfig=true
 customization=seldom
@@ -3119,7 +3115,7 @@ id=147
 
 [MAX_TRANSFER_LIFETIME]
 aliases=
-default=
+default=300
 version=0.0.0
 range=.*
 state=default
@@ -3919,7 +3915,7 @@ id=197
 
 [COLLECTOR_STATS_SWEEP]
 aliases=
-default=
+default=14400
 version=0.0.0
 range=.*
 state=default
@@ -4511,7 +4507,7 @@ id=234
 
 [GRIDMANAGER_MAX_WS_DESTROYS_PER_RESOURCE]
 aliases=
-default=
+default=5
 version=0.0.0
 range=.*
 state=default
@@ -4607,7 +4603,7 @@ id=240
 
 [GRIDMANAGER_GLOBUS_COMMIT_TIMEOUT]
 aliases=
-default=
+default=600
 version=0.0.0
 range=.*
 state=default
@@ -4671,7 +4667,7 @@ id=244
 
 [GRIDMANAGER_GAHP_CALL_TIMEOUT_CONDOR]
 aliases=
-default=
+default=28800
 version=0.0.0
 range=.*
 state=default
@@ -5615,7 +5611,7 @@ id=303
 
 [STARTD_MAX_AVAIL_PERIOD_SAMPLES]
 aliases=
-default=
+default=100
 version=0.0.0
 range=.*
 state=default
@@ -6495,7 +6491,8 @@ id=358
 
 [MAX_XML_LOG]
 aliases=
-default=
+# XXX Um, how does this default work in terms of the emitted C?
+default=1900000000
 version=0.0.0
 range=.*
 state=default
@@ -6877,9 +6874,27 @@ url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
 tags=c++_util,condor_config
 id=380
 
-[USE_PROCD]
+[MASTER.USE_PROCD]
+# The master specifically wants a procd
 aliases=
-default=
+default=true
+version=0.0.0
+range=.*
+state=default
+type=bool
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Use Procd
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+tags=c++_util,proc_family_interface
+id=555
+
+[USE_PROCD]
+# All other daemons don't want a procd (except for the master, defined above)
+aliases=
+default=false
 version=0.0.0
 range=.*
 state=default
@@ -7743,7 +7758,7 @@ id=434
 
 [VM_STATUS_INTERVAL]
 aliases=
-default=
+default=60
 version=0.0.0
 range=.*
 state=default
@@ -7759,7 +7774,7 @@ id=435
 
 [VM_STATUS_MAX_ERROR]
 aliases=
-default=
+default=5
 version=0.0.0
 range=.*
 state=default
@@ -7775,7 +7790,7 @@ id=436
 
 [VM_GAHP_REQ_TIMEOUT]
 aliases=
-default=
+default=300
 version=0.0.0
 range=.*
 state=default
@@ -8895,7 +8910,7 @@ id=506
 
 [SCHED_UNIV_RENICE_INCREMENT]
 aliases=
-default=
+default=0
 version=0.0.0
 range=.*
 state=default
@@ -9055,7 +9070,7 @@ id=516
 
 [MAX_JOBS_SUBMITTED]
 aliases=
-default=
+default=2147483647
 version=0.0.0
 range=.*
 state=default
@@ -9199,7 +9214,7 @@ id=525
 
 [MAX_JOB_QUEUE_LOG_ROTATIONS]
 aliases=
-default=
+default=1
 version=0.0.0
 range=.*
 state=default
@@ -9967,6 +9982,7 @@ id=555
 
 [DEBUG_TIME_FORMAT]
 aliases=
+# The default has a trailing space...
 default=%m/%d %H:%M:%S 
 version=0.0.0
 range=.*
