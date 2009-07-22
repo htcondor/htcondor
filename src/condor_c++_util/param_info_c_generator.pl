@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#! /usr/bin/perl
 ##########################################################################
 # For information on command line options of this script, call it with -h 
 #
@@ -70,7 +70,7 @@ use constant {
 	ASSIGNMENT_EQUALS => ['\=?','assignment equals operator'],
 	ASSIGNMENT_COLON => ['\:?','assignment colon operator'],
 	ASSIGNMENT_HEREDOC => ['[A-Za-z]+', 'heredoc deliminator'],
-	PARAMETER_TITLE => ['[a-zA-Z0-9_]+','parameter title'],
+	PARAMETER_TITLE => ['[a-zA-Z0-9_\.]+','parameter title'],
 	PROPERTY_NAME => ['[a-zA-Z0-9_-]+','property name'],
 	PROPERTY_VALUE => ['[^\n]+','property value'],
 	DATACLASS_NAME => ['[a-zA-Z0-9_-]+','dataclass name'],
@@ -232,7 +232,10 @@ sub reconstitute {
 		sub escape {
 			my $input = shift;
 			return $input unless $input;
-			$input =~ s/\s+$// unless $i->{dont_trim}; # trim trailing whitespace
+			# trim trailing whitespace
+			if (exists($i->{dont_trim})) {
+				$input =~ s/\s+$// if $i->{dont_trim} != 1;
+			}
 			$input =~ s/\\/\\\\/g;
 			$input =~ s/\n/\\n/g;
 			$input =~ s/\t/\\t/g;
@@ -283,7 +286,39 @@ sub reconstitute {
 			# Get the property value; procesed, formatted, and ready for insertion
 			# by do_one_property().
 			$replace{"%$name%"}=do_one_property($sub_structure,$info,$name); 
+
+			# TYPECHECK: certain parameters types must have a non-empty default
+			if ($name eq "type")
+			{
+				# Integer parameters
+				if ($type_subs->{$info->{type}}(exists $sub_structure->{type} ? $sub_structure->{type} : $default_structure->{type}) eq "TYPE_INT")
+				{
+					if ($sub_structure->{'default'} eq "") {
+						print "ERROR: Integer parameter $param_name needs " .
+								"a default!\n";
+					}
+				}
+
+				# Boolean parameters
+				if ($type_subs->{$info->{type}}(exists $sub_structure->{type} ? $sub_structure->{type} : $default_structure->{type}) eq "TYPE_BOOL")
+				{
+					if ($sub_structure->{'default'} eq "") {
+						print "ERROR: Boolean parameter $param_name needs " .
+								"a default!\n";
+					}
+				}
+
+				# Double parameters
+				if ($type_subs->{$info->{type}}(exists $sub_structure->{type} ? $sub_structure->{type} : $default_structure->{type}) eq "TYPE_DOUBLE")
+				{
+					if ($sub_structure->{'default'} eq "") {
+						print "ERROR: Double parameter $param_name needs " .
+								"a default!\n";
+					}
+				}
+			}
 		}
+
 		# Here we actually apply the template and output the parameter.
 		continue_output(replace_by_hash(\%replace, RECONSTITUTE_TEMPLATE));
 	}
