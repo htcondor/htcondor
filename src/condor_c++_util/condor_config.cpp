@@ -1655,7 +1655,7 @@ param_integer( const char *name, int default_value,
 	int result;
 
 	param_integer( name, result, true, default_value,
-				   true, min_value, max_value, use_param_table );
+				   true, min_value, max_value, NULL, NULL, use_param_table );
 	return result;
 }
 
@@ -1780,7 +1780,7 @@ param_double( const char *name, double default_value,
 */
 
 bool
-param_boolean( const char *name, const bool default_value, bool do_log,
+param_boolean( const char *name, bool default_value, bool do_log,
 			   ClassAd *me, ClassAd *target,
 			   bool use_param_table )
 {
@@ -1883,21 +1883,9 @@ macro_expand( const char *str )
 */
 extern "C" int
 param_boolean_int( const char *name, int default_value ) {
-    return param_boolean_int_with_default(name);
-}
-
-extern "C" int
-param_boolean_int_with_default( const char* name ) {
-    return param_boolean_with_default(name) ? 1 : 0;
-}
-
-extern "C" int
-param_boolean_int_without_default( const char *name, int default_value ) {
-	
     bool default_bool;
     default_bool = default_value == 0 ? false : true;
     return param_boolean(name, default_bool) ? 1 : 0;
-
 }
 
 // Note that the line_number can be -1 if the filename isn't a real

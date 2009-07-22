@@ -94,6 +94,11 @@ int param_integer(const char *, int default_value, int, int, ClassAd *,
 	return default_value;
 }
 
+int param_integer(const char *, int default_value, int, int, bool)
+{
+	return default_value;
+}
+
 bool param_boolean( const char *, const bool default_value, bool, 
 	ClassAd *, ClassAd *, bool)
 {

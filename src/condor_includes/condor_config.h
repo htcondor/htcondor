@@ -119,7 +119,7 @@ class ParamValue {
                         ClassAd *me=NULL, ClassAd *target=NULL,
 						bool use_param_table = true );
 
-	bool param_boolean( const char *name, const bool default_value,
+	bool param_boolean( const char *name, bool default_value,
                         bool do_log = true,
 						ClassAd *me=NULL, ClassAd *target=NULL,
 						bool use_param_table = true );
@@ -127,14 +127,6 @@ class ParamValue {
 	bool param_get_location(const char *parameter, MyString &filename,
 							int &line_number);
 	
-	// New versions of these functions for the new param scheme
-	int param_integer_with_default( const char *name );
-	double param_double_with_default( const char *name );
-	bool param_boolean_with_default( const char *name, bool do_log = true );
-
-	// XXX does this go away?
-	bool param_boolean_expr_with_default( const char *name, ClassAd const *me, ClassAd const *target );
-
 	/** Look up a value by the name 'name' from the table 'table' which is table_size big.
 	
 	Values should have been inserted with insert() (above).
