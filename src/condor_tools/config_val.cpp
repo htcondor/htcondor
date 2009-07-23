@@ -229,7 +229,13 @@ main( int argc, char* argv[] )
 		} else if( match_prefix( argv[i], "-" ) ) {
 			usage();
 		} else {
-			params.append( strdup( argv[i] ) );
+			MyString str;
+			str = argv[i];
+			// remove any case sensitivity, this is done mostly so output
+			// later can look nice. The param() subsystem inherently assumes
+			// case insensitivity, so this is perfectly fine to do here.
+			str.upper_case();
+			params.append( strdup( str.Value() ) ) ;
 		}
 	}
 
