@@ -28,6 +28,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Added the STARTD\_HISTORY configuration parameter.  If set, this
+is a pathname to a history file, just like the condor\_schedd maintains,
+but only for jobs run on that startd.
+
 \item Added the JavaSpecificationVersion attribute to startds which
 support Java.  This allows users to request machines which support
 a particular major version of Java, without specifying the exact
