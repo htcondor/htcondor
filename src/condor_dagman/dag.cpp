@@ -279,6 +279,7 @@ bool Dag::Bootstrap (bool recovery) {
 			if ( job->CanSubmit() ) {
 				if ( !job->MonitorLogFile( _condorLogRdr, _storkLogRdr,
 							_nfsLogIsError, recovery ) ) {
+					debug_cache_stop_caching();
 					return false;
 				}
 			}

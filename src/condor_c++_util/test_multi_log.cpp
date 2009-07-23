@@ -621,6 +621,12 @@ ReadEventsLazy()
 		// This will be a sym link.
 	const char *file5b = "test_multi_log.log5b";
 	unlink( file5b );
+		// This will be a sym link.
+	const char *file5c = "test_multi_log.log5c";
+	unlink( file5c );
+		// These will be a hard link.
+	const char *file5d = "test_multi_log.log5d";
+	unlink( file5d );
 
 	ReadMultipleUserLogs lazyReader;
 	int totalLogCount;
@@ -1020,11 +1026,25 @@ ReadEventsLazy()
 		isOkay = false;
 	}
 
-	link( file5, file5b );
+		// Test links to log files.
+	symlink( file5, file5b );
 		// Note: monitoring the sym link to this log.
 	if (!monitorLogFile( lazyReader, file5b, true ) ) {
 		isOkay = false;
 	}
+
+	symlink( file5, file5c );
+		// Note: monitoring the sym link to this log.
+	if (!monitorLogFile( lazyReader, file5c, true ) ) {
+		isOkay = false;
+	}
+
+	link( file5, file5d );
+		// Note: monitoring the hard link to this log.
+	if (!monitorLogFile( lazyReader, file5d, true ) ) {
+		isOkay = false;
+	}
+
 	if ( (totalLogCount = lazyReader.totalLogFileCount()) != 4 ) {
 		fprintf( stderr, "lazyReader.totalLogFileCount() was %d; should "
 					"have been 4\n", totalLogCount );

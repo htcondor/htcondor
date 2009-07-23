@@ -41,7 +41,7 @@
 // This allows us to gradually commit the code before it's fully
 // working without making a branch.  Only commit with this false
 // until the lazy log file code is fully working.  wenger 2008-12-19.
-#define LAZY_LOG_FILES 0
+#define LAZY_LOG_FILES 1
 
 class MultiLogFiles
 {
@@ -361,7 +361,7 @@ private:
 		// we know about; activeLogFiles contains just the active ones
 		// (to make it easier to read events).  Note that active log files
 		// are in *both* hash tables.
-		// Note: these should be changed to STL hash tables, and should
+		// Note: these should be changed to STL maps, and should
 		// also index on a combination of st_ino and st_dev (see gittrac
 		// #328). wenger 2009-07-16.
 	HashTable<StatStructInode, LogFileMonitor *>	allLogFiles;
