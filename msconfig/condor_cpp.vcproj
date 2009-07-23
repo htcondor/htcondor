@@ -796,6 +796,14 @@
 			>
 		</File>
 		<File
+			RelativePath="..\src\condor_c++_util\historyFileFinder.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\historyFileFinder.h"
+			>
+		</File>
+		<File
 			RelativePath="..\src\condor_c++_util\historysnapshot.cpp"
 			>
 		</File>
