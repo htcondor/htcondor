@@ -9,7 +9,7 @@ param_info_hash(const char *str)
 	unsigned int hash = 5381;
 	unsigned char c;
 
-	while ((c = *str++) != 0) {
+	while ((c = toupper(*str++)) != 0) {
 		hash = (hash * 33) + c;
 	}
 
@@ -54,7 +54,7 @@ param_info_hash_lookup(param_info_hash_t param_info, const char* param) {
 
 	b = param_info[key];
 	while(b != NULL) {
-		if (strcmp(b->param->name,param) == 0) {
+		if (strcasecmp(b->param->name,param) == 0) {
 			return b->param;
 		}
 		b = b->next;
