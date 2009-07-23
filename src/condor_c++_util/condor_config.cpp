@@ -1488,6 +1488,11 @@ param_with_default_abort(const char *name, int abort) {
 
 					//add value to config table
 					insert(name, val, ConfigTab, TABLESIZE);
+					
+					// also add it to the lame extra-info table
+					if (extra_info != NULL) {
+						extra_info->AddInternalParam(name);
+					}
 
 				} else {
 
