@@ -119,6 +119,12 @@ printClassAd( void )
 			str = 0;
 			gotone++;
 		}
+		if(ad->LookupString("JavaSpecificationVersion",&str)) {
+			printf("JavaSpecificationVersion = \"%s\"\n",str);
+			free(str);
+			str = 0;
+			gotone++;
+		}
 		if(ad->LookupFloat(ATTR_JAVA_MFLOPS,mflops)) {
 			printf("%s = %f\n", ATTR_JAVA_MFLOPS,mflops);
 			gotone++;

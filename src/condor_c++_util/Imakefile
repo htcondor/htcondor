@@ -238,7 +238,8 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o selector.o \
 	condor_sinful.o \
 	link.o \
 	simple_arg.o \
-	condor_threads.o 
+	condor_threads.o \
+	historyFileFinder.o
 
 library_target(cplus_lib.a,$(OBJ))
 library_target(liburl.a,$(URL_OBJ))
