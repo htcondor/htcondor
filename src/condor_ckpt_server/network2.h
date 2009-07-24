@@ -107,7 +107,6 @@ extern "C" { char* GetIPName(struct in_addr machine_IP); }
 extern "C" { int I_bind(int socket_desc, 
 			 struct sockaddr_in* addr, int is_well_known); }
 extern "C" { char* gethostnamebyaddr(struct in_addr* addr); }
-extern "C" { char* getserveraddr(void); }
 extern "C" { int I_socket(void); }
 extern "C" { int I_listen(int socket_desc, int queue_len); }
 extern "C" { int I_accept(int                 socket_desc, 

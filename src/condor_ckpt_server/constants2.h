@@ -133,6 +133,7 @@
 #define BIND_ERROR                          28
 #define CKPT_SERVER_SOCKET_ERROR            -29
 #define BAD_SOCKET_DESC_ERROR               30
+#define CKPT_SERVER_TIMEOUT		            -30
 #define NOT_TCPIP                           31
 #define LISTEN_ERROR                        32
 #define SELECT_ERROR                        33

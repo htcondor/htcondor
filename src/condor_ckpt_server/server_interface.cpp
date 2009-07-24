@@ -25,15 +25,29 @@
 #include "network2.h"
 #include "internet.h"
 #include "condor_netdb.h"
+#include "subsystem_info.h"
+#include "MyString.h"
 #include <string.h>
+#include <map>
+
+using namespace std;
 
 static char* getserveraddr(void);
-void StripPrefix(const char* pathname,
-				char filename[MAX_CONDOR_FILENAME_LENGTH]);
 int get_ckpt_server_count(void);
 
+/* from condor_util_lib/do_connect.c */
+extern "C" {
+int tcp_connect_timeout(int sockfd, struct sockaddr *sinful, int len,
+						int timeout);
+}
 
-void StripPrefix(const char* pathname,
+
+/* NOTE: There is no particularly good reason why this codebase is C linkage.
+	It just saved me some time one day to keep it that way.
+*/
+
+
+extern "C" void StripPrefix(const char* pathname,
 				 char        filename[MAX_CONDOR_FILENAME_LENGTH])
 {
 	int start;
@@ -47,17 +61,76 @@ void StripPrefix(const char* pathname,
 }
 
 
-int ConnectToServer(request_type type)
+extern "C" int ConnectToServer(request_type type)
 {
 	int                conn_req_sd;
 	struct sockaddr_in server_sa;
 	char			   *server_IP;
 	int				   on = 1;
-	
+	MyString			str;
+	static				map<MyString, time_t> penalty_box;
+	map<MyString, time_t>::iterator it;
+	time_t				embargo_time;
+	time_t				ckpt_server_retry;
+	int					ckpt_server_timeout;
+	int					ret;
+	unsigned int		ddd = 0x0a00000a;
+	time_t				now;
+
+	now = time(NULL);
+
+	ckpt_server_timeout = 
+		param_integer("CKPT_SERVER_CLIENT_TIMEOUT", 20, 0);
+
+	ckpt_server_retry = 
+		param_integer("CKPT_SERVER_CLIENT_TIMEOUT_RETRY", 1200, 0);
+
 	server_IP = getserveraddr();
+
 	if (server_IP == 0) {
 		return -1;
 	}
+
+	/* Get a reasonable name for it. This next line is bad and wrong. */
+	str = inet_ntoa(*(struct in_addr*)server_IP);
+
+	/////////////////////////////////////////////////
+	// Check cache to see if this checkpoint server had timed out recently
+	/////////////////////////////////////////////////
+
+	if (ckpt_server_timeout != 0) {
+		it = penalty_box.find(str);
+
+		if (it != penalty_box.end()) {
+			/* This server is embargoed, let's see if we honor it or if it
+				has passed the embargoed time.
+			*/
+			embargo_time = (*it).second;
+
+			if (now < embargo_time) {
+				dprintf(D_ALWAYS, "Skipping connection to previously timed out "
+					"ckpt server: %s.\n", str.Value());
+				return CKPT_SERVER_TIMEOUT;
+			}
+
+			dprintf(D_ALWAYS, "Previously timed out ckpt server %s given "
+							"reprieve. Trying it again.\n",
+							str.Value());
+
+			penalty_box.erase(it);
+		}
+	} else {
+		/* if we want to block while talking to the ckpt server, then clean
+			out the hash table since we won't be needing it. If there was
+			something in there when the admin changed the timeout value to
+			0, then we'll assume the admin knows what he is doing and have
+			it take effect immediately. */
+		penalty_box.clear();
+	}
+
+	/////////////////////////////////////////////////
+	// Figure out request type and connect to the ckpt server
+	/////////////////////////////////////////////////
 
 	conn_req_sd = I_socket();
 	if (conn_req_sd == INSUFFICIENT_RESOURCES) {
@@ -72,7 +145,8 @@ int ConnectToServer(request_type type)
 	/* TRUE means this is an outgoing connection */
 	if( ! _condor_local_bind(TRUE, conn_req_sd) ) {
 		close( conn_req_sd );
-		dprintf( D_ALWAYS, "ERROR: unable to bind new socket to local interface\n");
+		dprintf( D_ALWAYS, "ERROR: unable to bind new socket to local "
+			"interface\n");
 		return CKPT_SERVER_SOCKET_ERROR;
 	}
 
@@ -100,17 +174,55 @@ int ConnectToServer(request_type type)
 			close(conn_req_sd);
 			return CKPT_SERVER_SOCKET_ERROR;
 		}
-	if (connect(conn_req_sd, (struct sockaddr*) &server_sa, 
-				sizeof(server_sa)) < 0) {
+
+	ret = tcp_connect_timeout(conn_req_sd, (struct sockaddr*) &server_sa,
+							sizeof(server_sa), ckpt_server_timeout);
+	
+	if (ret < 0) {
+
+		/* We don't need the fd anymore. */
 		close(conn_req_sd);
-		return CONNECT_ERROR;
+
+		switch(ret) {
+			case -2:
+				/* Timeout happened while connecting, so put it into the
+					hash table with a time into the future that will have 
+					to pass before it the connect can be attempted again.
+				*/
+				
+				/* In the clase of timeout == 0, this code path will
+					never happen
+				*/
+
+				dprintf(D_ALWAYS, "Skipping connect to checkpoint server "
+						"%s for %d seconds due to connection timeout.\n",
+						str.Value(), ckpt_server_retry);
+
+				embargo_time = now + ckpt_server_retry;
+
+				penalty_box.insert(
+					pair<MyString, time_t>(str, embargo_time) );
+
+				return CKPT_SERVER_TIMEOUT;
+				break;
+
+			case -1:
+				/* Error */
+				return CONNECT_ERROR;
+				break;
+
+			default:
+				EXCEPT("ConnectToServer(): Programmer error with "
+					"tcp_connect_timeout!\n");
+				break;
+		}
 	}
+
 	setsockopt(conn_req_sd,SOL_SOCKET,SO_KEEPALIVE,(char*)&on,sizeof(on));
 	return conn_req_sd;
 }
 
-
-int IsLocal(const char* path)
+extern "C" int IsLocal(const char* path)
 {
 	struct stat file_stat;
 	
@@ -122,7 +234,7 @@ int IsLocal(const char* path)
 }
 
 
-int FileExists(const char *filename, const char *owner, const char *schedd)
+extern "C" int FileExists(const char *filename, const char *owner, const char *schedd)
 {
 	int rval;
 
@@ -141,7 +253,7 @@ int FileExists(const char *filename, const char *owner, const char *schedd)
 }
 
 
-int RequestStore(const char*     owner,
+extern "C" int RequestStore(const char*     owner,
 				 const char*	 schedd,
 				 const char*     filename,
 				 size_t          len,
@@ -209,7 +321,7 @@ int RequestStore(const char*     owner,
 }
 
 
-int RequestRestore(const char*     owner,
+extern "C" int RequestRestore(const char*     owner,
 				   const char*	   schedd,
 				   const char*     filename,
 				   size_t*         len,
@@ -276,7 +388,7 @@ int RequestRestore(const char*     owner,
 }
 
 
-int RequestService(const char*     owner,
+extern "C" int RequestService(const char*     owner,
 				   const char*     schedd,
 				   const char*     filename,
 				   const char*     new_filename,
@@ -354,7 +466,7 @@ int RequestService(const char*     owner,
 }
 
 
-int FileOnServer(const char* owner,
+extern "C" int FileOnServer(const char* owner,
 				 const char* schedd,
 				 const char* filename)
 {
@@ -363,7 +475,7 @@ int FileOnServer(const char* owner,
 }
 
 
-int RemoveRemoteFile(const char* owner,
+extern "C" int RemoveRemoteFile(const char* owner,
 					 const char* schedd,
 					 const char* filename)
 {
@@ -372,7 +484,7 @@ int RemoveRemoteFile(const char* owner,
 }
 
 
-int RemoveLocalOrRemoteFile(const char* owner,
+extern "C" int RemoveLocalOrRemoteFile(const char* owner,
 							const char* schedd,
 							const char* filename)
 {
@@ -382,7 +494,7 @@ int RemoveLocalOrRemoteFile(const char* owner,
 }
 
 
-int RenameRemoteFile(const char* owner,
+extern "C" int RenameRemoteFile(const char* owner,
 					 const char* schedd,
 					 const char* filename,
 					 const char* new_filename)
@@ -393,7 +505,7 @@ int RenameRemoteFile(const char* owner,
 
 static char *server_host = NULL;
 
-int SetCkptServerHost(const char *host)
+extern "C" int SetCkptServerHost(const char *host)
 {
 	if (server_host) free(server_host);
 	if (host) {
@@ -447,7 +559,7 @@ static char* getserveraddr()
 
 static int ckpt_server_number;
 
-int
+extern "C" int
 set_ckpt_server_number(int new_server)
 {
 	int		rval;
@@ -458,7 +570,7 @@ set_ckpt_server_number(int new_server)
 }
 
 
-int
+extern "C" int
 get_ckpt_server_count()
 {
 	int		i;

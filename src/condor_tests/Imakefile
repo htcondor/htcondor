@@ -1824,7 +1824,7 @@ TESTCLASS(job_dagman_log_path,quick)
 TESTCLASS(job_dagman_log_path,full)
 TESTCLASS(job_dagman_log_path,quicknolink)
 
-DESC(job_dagman_retry_recovery,"Test DAG node priorities")
+DESC(job_dagman_retry_recovery,"Test DAG recovery w/ retried node")
 RUN(job_dagman_retry_recovery)
 TESTCLASS(job_dagman_retry_recovery,dagman)
 TESTCLASS(job_dagman_retry_recovery,quick)
@@ -1837,6 +1837,13 @@ TESTCLASS(job_dagman_submit_fails_post,dagman)
 TESTCLASS(job_dagman_submit_fails_post,quick)
 TESTCLASS(job_dagman_submit_fails_post,full)
 TESTCLASS(job_dagman_submit_fails_post,quicknolink)
+
+DESC(job_dagman_large_dag,"Test large DAG w/ recovery mode")
+RUN(job_dagman_large_dag)
+TESTCLASS(job_dagman_large_dag,dagman)
+TESTCLASS(job_dagman_large_dag,quick)
+TESTCLASS(job_dagman_large_dag,full)
+TESTCLASS(job_dagman_large_dag,quicknolink)
 
 
 /* Sample performance tests */
