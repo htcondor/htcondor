@@ -130,7 +130,6 @@ class JobRouter: public Service {
 	int m_periodic_timer_id;
 	int m_job_router_polling_period;
 
-	char* m_custom_attrs;
 	std::string m_job_router_name;
 
 	int m_poll_count;
