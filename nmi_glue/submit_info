@@ -22,7 +22,6 @@
 # x86_64_deb_5.0
 # x86_winnt_5.1
 # x86_winnt_6.0
-# x86_64_winnt_5.1
 # x86_macos_10.4
 # x86_freebsd_6
 # x86_64_rhas_3
@@ -36,6 +35,7 @@
 # x86_64_rhap_5
 
 # These platforms are not done being ported
+# x86_64_winnt_5.1
 
 # These platforms are in maintenance build only
 # x86_64_macos_10.5
@@ -152,10 +152,10 @@ x_test_platforms_x86_macos_10.4 = x86_64_macos_10.5
 #test_append_prereqs = java-1.5.0_13
 #]
 
-[
-platforms = x86_winnt_5.1
-x_test_platforms_x86_winnt_5.1 = x86_64_winnt_5.1
-]
+#[
+#platforms = x86_winnt_5.1
+#x_test_platforms_x86_winnt_5.1 = x86_64_winnt_5.1
+#]
 
 [
 platforms = ppc64_sles_9
