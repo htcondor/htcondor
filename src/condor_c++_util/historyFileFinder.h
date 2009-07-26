@@ -1,2 +1,2 @@
 
-extern char **findHistoryFiles(int *numHistoryFiles);
+extern char **findHistoryFiles(char *paramName, int *numHistoryFiles);

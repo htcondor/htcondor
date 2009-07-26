@@ -573,7 +573,17 @@ static void readHistoryFromFiles(char *JobHistoryFileName, char* constraint, Exp
         int numHistoryFiles;
         char **historyFiles;
 
-        historyFiles = findHistoryFiles(&numHistoryFiles);
+        historyFiles = findHistoryFiles("HISTORY", &numHistoryFiles);
+		if (!historyFiles) {
+			fprintf( stderr, "Error: No history file is defined\n");
+			fprintf(stderr, "\n");
+			print_wrapped_text("Extra Info: " 
+						   "The variable HISTORY is not defined in "
+						   "your config file. If you want Condor to "
+						   "keep a history of past jobs, you must "
+						   "define HISTORY in your config file", stderr );
+			exit(1);
+		}
         if (historyFiles && numHistoryFiles > 0) {
             int fileIndex;
             if (backwards) { // Reverse reading of history files array

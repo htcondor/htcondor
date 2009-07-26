@@ -27,23 +27,15 @@ static  char *BaseJobHistoryFileName = NULL;
 // Find all of the history files that the schedd created, and put them
 // in order by time that they were created. The time comes from a
 // timestamp in the file name.
-char **findHistoryFiles(int *numHistoryFiles)
+char **findHistoryFiles(char *paramName, int *numHistoryFiles)
 {
     int  fileIndex;
     char **historyFiles = NULL;
     char *historyDir;
 
-    BaseJobHistoryFileName = param("HISTORY");
+    BaseJobHistoryFileName = param(paramName);
 	if ( BaseJobHistoryFileName == NULL ) {
-		fprintf( stderr, "Error: No history file is defined\n");
-		fprintf(stderr, "\n");
-		print_wrapped_text("Extra Info: " 
-						   "The variable HISTORY is not defined in "
-						   "your config file. If you want Condor to "
-						   "keep a history of past jobs, you must "
-						   "define HISTORY in your config file", stderr );
-
-		exit( 1 );    
+		return NULL;
 	}
     historyDir = condor_dirname(BaseJobHistoryFileName);
 

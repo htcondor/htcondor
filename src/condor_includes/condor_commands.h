@@ -346,6 +346,9 @@ const int MERGE_STARTD_AD = 73;
 */
 
 #define DC_FETCH_LOG_TYPE_PLAIN 0
+#define DC_FETCH_LOG_TYPE_HISTORY 1
+#define DC_FETCH_LOG_TYPE_HISTORY_DIR 2
+#define DC_FETCH_LOG_TYPE_HISTORY_PURGE 3
   /* Add more type here... */
 
 /*

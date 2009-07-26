@@ -58,6 +58,8 @@ usage( char *cmd )
 	fprintf(stderr,"    STARTD\n");
 	fprintf(stderr,"    STARTER\n");
 	fprintf(stderr,"    KBDD\n");
+	fprintf(stderr,"    HISTORY\n");
+	fprintf(stderr,"    STARTD_HISTORY\n");
 	fprintf(stderr,"\nExample 1: %s -debug coral STARTD\n",cmd);
 	fprintf(stderr,"\nExample 2: %s -debug coral STARTER.slot2\n\n",cmd);
 }
@@ -156,7 +158,12 @@ int main( int argc, char *argv[] )
 		return 1;
 	}
 
-	sock->put( DC_FETCH_LOG_TYPE_PLAIN );
+	int commandType = DC_FETCH_LOG_TYPE_PLAIN;
+	if ((strcmp(log_name, "HISTORY") == 0) || (strcmp(log_name, "STARTD_HISTORY") == 0)) {
+		commandType = DC_FETCH_LOG_TYPE_HISTORY;
+	}
+
+	sock->put( commandType );
 	sock->put( log_name );
 	sock->end_of_message();
 
