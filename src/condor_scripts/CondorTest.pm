@@ -1043,9 +1043,9 @@ sub runCondorTool
 		close(PULL);
 		$status = $? >> 8;
 		debug("Status is $status after command\n",4);
-		if(( $status != 0 ) && ($attempts == ($count + 1)))
+		if( $status != 0 )
 		{
-				print "runCondorTool: $cmd timestamp $start_time failed!\n";
+				print "runCondorTool: $cmd timestamp $start_time failed with status $status ($?)!\n";
 				print "************* std out ***************\n";
 				foreach my $stdout (@tmparray) {
 					print "STDOUT: $stdout \n";
@@ -1062,8 +1062,6 @@ sub runCondorTool
 				print "************* GetQueue() ***************\n";
 				GetQueue();
 				print "************* GetQueue() DONE ***************\n";
-
-				return(0);
 		}
 
 		if ($status == 0) {
