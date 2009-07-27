@@ -1033,7 +1033,7 @@ sub runCondorTool
 		@{$arrayref} = (); #empty return array...
 		my @tmparray;
 		debug( "Try command <$cmd>\n",4);
-		open(PULL, "$cmd 2>$catch |");
+		open(PULL, "_condor_TOOL_TIMEOUT_MULTIPLIER=4 $cmd 2>$catch |");
 		while(<PULL>)
 		{
 			fullchomp($_);
