@@ -3,7 +3,7 @@
 <title>SOAR</title>
 </head>
 <body>
-<h1>SOAR - System of Automatic Runs</h1>
+<h1>SOAR - System of Automated Runs</h1>
 
 <h2>Overview</h2>
 <!--
@@ -56,7 +56,7 @@ can be looked at as soon as each job completes.
 <h3>Hey, I know how to submit clusters with one submit file, why do I want to use SOAR</h3>
 <p>
 There are some distinct advantages to using SOAR. And it very similar to
-having a folder with data(each in a distinct loaction) and a single submit
+having a folder with data(each in a distinct location) and a single submit
 file. The following are provided by SOAR only:
 </p>
 <ul>
@@ -64,7 +64,7 @@ file. The following are provided by SOAR only:
 Since SOAR uses DAGs and condor_dagman, a SOAR run can be adjusted 
 to have a minimal impact on your network and submit machine while
 making runs easier. An example is that you can submit 1000s, but throttle
-it back to a reasonable number and make the submit node's performane
+it back to a reasonable number and make the submit node's performance
 be good for all.
 <li>
 There is a process which every 5 minutes produces a profile of the current 
@@ -183,7 +183,7 @@ idea if their code CAN be adapted, and what will be required
 of their code
 -->
 <p>
-To effectively do multiple datasets in any system
+To effectively do multiple data sets in any system
 you want your application to either 
 accept command line arguments and read parameters from one or more files.
 Anything hard coded into the program you are running can not be easily varied.
@@ -229,7 +229,7 @@ Additionally, each project can have its data location specified in this file in 
 
 <p>
 Soar is told where to 
-find datasets for your jobs. These will be folders with unique names with the 
+find data sets for your jobs. These will be folders with unique names with the 
 variable data for your jobs or folders named datasetXXXXXXX which  will contain the 
 unique job folders. The code and jobs folders under sources contain the unchanging 
 parts for the first and the glue scripts in the second.
@@ -292,7 +292,7 @@ There are a number of scripts that run before or after which can or should be cu
 <li>
 <tt>Postreport.pl</tt>:  save additional information into results and perhaps zip all the results up for easy web download
 <li>
-<tt>Pushdata.pl</tt>:  job submitted to pushdata which can be used to deliver the data remotely
+<tt>Pushdata.pl</tt>:  job submitted to push data which can be used to deliver the data remotely
 </ul>
 
 <p>
@@ -350,8 +350,8 @@ condor manages the frequency of.  There are two included(per_runs and per_plotsa
 per_plotsandreports fires off the commands in checkprogress.com every 5 minutes. 
 Setting this up is as easy as placing what you want done similar to the sample files 
 and submitting them with condor_submit(condor_submit per_runs). The first usually 
-contains usage of the control.pl script and --kind=new so tracking of datasets already done 
-has only new datasets run. The second usually contains the usage of the status.pl script 
+contains usage of the control.pl script and --kind=new so tracking of data sets already done 
+has only new data sets run. The second usually contains the usage of the status.pl script 
 with --last as it then looks up the most recent run of the project and updates the profile 
 and the report.
 
@@ -371,7 +371,7 @@ Control.pl
 <li>
 --code - used when one wants to change the contents of the code directory for a new version which uses the glue scripts from a previous version. 
 <li>
---clean - A(ALL), D(DATA), C(CACHE), R(RESULTS), L(LOGS and misc in rundir) Be very careful with this as its intent is to save space after your results have been saved. Onlt safe options are
+--clean - A(ALL), D(DATA), C(CACHE), R(RESULTS), L(LOGS and misc in rundir) Be very careful with this as its intent is to save space after your results have been saved. Only safe options are
 <li>
 -h/--help - See this
 <li>
@@ -503,7 +503,7 @@ Its command line options are
 <br>run this environment file to find run
 <li>
 <tt>-l</tt> or <tt>--last</tt>
-<br>find mosr recent environment file to find run
+<br>find most recent environment file to find run
 <li>
 <tt>-p</tt> or <tt>--period</tt>
 <br>sample interval
@@ -579,7 +579,7 @@ go to "sources/positioning" and enter this command: <b>cp -r v1 surfaces</b>.
 Now simply place new binaries in "sources/positioning/surfaces/code".
 </p>
 <p>
-<i>NOTE if you change the behaiour and files needed or created you'll likely need
+<i>NOTE if you change the behavior and files needed or created you'll likely need
 need to change the scripts "prejob.pl, postjob.pl and pushdata.pl".</i>
 </p>
 
