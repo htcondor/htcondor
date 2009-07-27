@@ -29,6 +29,8 @@
 #include "command_strings.h"
 #include "condor_distribution.h"
 
+int handleHistoryDir(ReliSock *);
+
 void
 usage( char *cmd )
 {
@@ -163,9 +165,17 @@ int main( int argc, char *argv[] )
 		commandType = DC_FETCH_LOG_TYPE_HISTORY;
 	}
 
+	if ((strcmp(log_name, "STARTD.PER_JOB_HISTORY_DIR") == 0) || (strcmp(log_name, "STARTD.PER_JOB_HISTORY_DIR") == 0)) {
+		commandType = DC_FETCH_LOG_TYPE_HISTORY_DIR;
+	}
+
 	sock->put( commandType );
 	sock->put( log_name );
 	sock->end_of_message();
+
+	if (commandType == DC_FETCH_LOG_TYPE_HISTORY_DIR) {
+		return handleHistoryDir(sock);
+	}
 
 	int result = -1;
 	int exitcode = 1;
@@ -206,4 +216,29 @@ int main( int argc, char *argv[] )
 	}
 
 	return exitcode;
+}
+
+int handleHistoryDir(ReliSock *sock) {
+	int  result = -1;
+	filesize_t filesize;
+	char *filename = 0;
+
+	sock->decode();
+
+	sock->code(result);
+	while (result == 1) {
+			int fd = -1;
+			filename = NULL;
+			sock->code(filename);
+			fd = safe_open_wrapper(filename, O_CREAT | O_WRONLY);
+			if (fd < 0) {
+				printf("Can't open local file %s for writing\n", filename);
+				exit(1);
+			}
+			result = sock->get_file(&filesize,fd,0);
+			close(fd);
+			
+			sock->code(result);
+			free(filename);
+	}
 }

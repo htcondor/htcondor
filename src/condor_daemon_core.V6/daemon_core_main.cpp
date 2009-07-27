@@ -1027,10 +1027,6 @@ handle_fetch_log_history_dir(ReliSock *stream, char *paramName) {
 		return FALSE;
 	}
 
-	free(dirName);
-	result = DC_FETCH_LOG_RESULT_SUCCESS;
-	stream->code(result);
-
 	Directory d(dirName);
 	const char *filename;
 	int one=1;
@@ -1038,12 +1034,17 @@ handle_fetch_log_history_dir(ReliSock *stream, char *paramName) {
 	while ((filename = d.Next())) {
 		stream->code(one); // more data
 		stream->put(filename);
-		int fd = safe_open_wrapper(filename,O_RDONLY);
+		MyString fullPath(dirName);
+		fullPath += "/";
+		fullPath += filename;
+		int fd = safe_open_wrapper(fullPath.Value(),O_RDONLY);
 		if (fd > 0) {
 			filesize_t size;
 			stream->put_file(&size, fd);
 		}
 	}
+
+	free(dirName);
 
 	stream->code(zero); // no more data
 	stream->end_of_message();
