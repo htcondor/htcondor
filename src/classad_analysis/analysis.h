@@ -49,7 +49,7 @@ class ClassAdAnalyzer
 		/** Destructor */
 	~ClassAdAnalyzer( );
 
-	classad_analysis::result GetResult() { return *m_result; }
+	classad_analysis::job::result GetResult() { return *m_result; }
 
 		/** Analyze a job ClassAd requirements expression.
 		 *	@param request The job ClassAd
@@ -94,7 +94,7 @@ class ClassAdAnalyzer
 
  private:
 	
-	classad_analysis::result *m_result;
+	classad_analysis::job::result *m_result;
 
 	MultiProfile *jobReq;
 	classad::MatchClassAd mad;

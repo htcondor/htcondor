@@ -57,13 +57,22 @@ namespace classad_analysis {
   typedef std::map<matchmaking_failure_kind, std::vector<classad::ClassAd> > explanation;
   typedef std::list<suggestion> suggestions;
   
-  /* Result represents the diagnosis from a ClassAd analysis. 
-     
+  
+  namespace job {
+  /* 
+     job::result represents the diagnosis from a ClassAd analysis. 
+       
      Essentially, it represents a mapping from a machine ad to
      *explanations* and a list of *suggestions*.  An explanation is a
      mapping from reasons for rejection to lists of machine ads.  A
      suggestion is a string indicating a recommended change to job
      requirements.
+       
+     This class represents the analysis of a job in the context of
+     several machines.  It is in namespace classad_analysis::job
+     in order to distinguish it from an as-yet-unwritten machine::result
+     class that could represent the analysis of a machine in the context
+     of several jobs.
   */
   
   class result {
@@ -96,6 +105,8 @@ namespace classad_analysis {
   };
 
   std::ostream &operator<<(std::ostream &ostr, const result& oresult);
+    
+  }
 }
 
 #endif /* ANALYSIS_ANALYSISRESULT_H */

@@ -32,6 +32,7 @@
 
 using namespace std;
 using namespace classad_analysis;
+using namespace classad_analysis::job;
 
 ClassAdAnalyzer::
 ClassAdAnalyzer( ) :
@@ -206,7 +207,7 @@ AnalyzeJobReqToBuffer( ClassAd *request, ClassAdList &offers, string &buffer )
       delete m_result;
     }
 
-    m_result = new classad_analysis::result(*explicit_classad);
+    m_result = new classad_analysis::job::result(*explicit_classad);
 
     bool do_basic_analysis = NeedsBasicAnalysis(request);
     offers.Rewind();

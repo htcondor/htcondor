@@ -6,6 +6,19 @@
 
 namespace classad_analysis {
 
+  static std::string stringize_failure_kind(matchmaking_failure_kind k) {
+    switch (k) {
+    case MACHINES_REJECTED_BY_JOB_REQS: return ID_TO_STRING(MACHINES_REJECTED_BY_JOB_REQS);
+    case MACHINES_REJECTING_JOB: return ID_TO_STRING(MACHINES_REJECTING_JOB);
+    case MACHINES_AVAILABLE: return ID_TO_STRING(MACHINES_AVAILABLE);
+    case MACHINES_REJECTING_UNKNOWN: return ID_TO_STRING(MACHINES_REJECTING_UNKNOWN);
+    case PREEMPTION_REQUIREMENTS_FAILED: return ID_TO_STRING(PREEMPTION_REQUIREMENTS_FAILED);
+    case PREEMPTION_PRIORITY_FAILED: return ID_TO_STRING(PREEMPTION_PRIORITY_FAILED);
+    case PREEMPTION_FAILED_UNKNOWN: return ID_TO_STRING(PREEMPTION_FAILED_UNKNOWN);
+    default: return std::string("UNKNOWN_FAILURE_KIND");
+    }
+  }
+
   suggestion::suggestion(suggestion::kind k, const std::string &tgt, const std::string &val) : my_kind(k), target(tgt), value(val) { }
 
   suggestion::~suggestion() { }
@@ -34,8 +47,10 @@ namespace classad_analysis {
     }
   }
 
-  result::result(classad::ClassAd &a_job) : job(a_job), machines(), my_explanation(), my_suggestions() {}
+  namespace job {
 
+  result::result(classad::ClassAd &a_job) : job(a_job), machines(), my_explanation(), my_suggestions() {}
+    
   result::result(classad::ClassAd &a_job, std::list<classad::ClassAd> &some_machines) : job(a_job), machines(some_machines), my_explanation(), my_suggestions() {}
 
   result::~result() {}
@@ -74,19 +89,6 @@ namespace classad_analysis {
     return my_suggestions.end();
   }
 
-  static std::string stringize_failure_kind(matchmaking_failure_kind k) {
-    switch (k) {
-    case MACHINES_REJECTED_BY_JOB_REQS: return ID_TO_STRING(MACHINES_REJECTED_BY_JOB_REQS);
-    case MACHINES_REJECTING_JOB: return ID_TO_STRING(MACHINES_REJECTING_JOB);
-    case MACHINES_AVAILABLE: return ID_TO_STRING(MACHINES_AVAILABLE);
-    case MACHINES_REJECTING_UNKNOWN: return ID_TO_STRING(MACHINES_REJECTING_UNKNOWN);
-    case PREEMPTION_REQUIREMENTS_FAILED: return ID_TO_STRING(PREEMPTION_REQUIREMENTS_FAILED);
-    case PREEMPTION_PRIORITY_FAILED: return ID_TO_STRING(PREEMPTION_PRIORITY_FAILED);
-    case PREEMPTION_FAILED_UNKNOWN: return ID_TO_STRING(PREEMPTION_FAILED_UNKNOWN);
-    default: return std::string("UNKNOWN_FAILURE_KIND");
-    }
-  }
-
   std::ostream &operator<<(std::ostream &ostr, const result& oresult) {
     ostr << "Explanation of analysis results:" << std::endl;
     
@@ -117,5 +119,7 @@ namespace classad_analysis {
     }
 
     return ostr;
+  }
+
   }
 }
