@@ -2880,9 +2880,11 @@ CHECK_EXTERNAL([srb], [3.2.1-p2], [soft])
 
 CHECK_EXTERNAL([pcre], [7.6], [hard],
                [use PCRE (provides regular expression support)],
-               MF_LIB_CHECK([pcre], [[pcre pcre_compile]]))
+               MF_LIB_CHECK([pcre], [[pcre pcre_compile]], [PCRE]))
 AS_IF([test "x$cv_ext_pcre" = xyes],
   [AC_CHECK_HEADERS([pcre.h pcre/pcre.h])])
+AC_SUBST(PCRE_LDFLAGS, $PCRE_LDFLAGS)
+AC_SUBST(PCRE_CFLAGS, $PCRE_CFLAGS)
 
 # The auto-tools aren't working correctly on AIX
 # Solaris doesn't have the auto-tools on NMI
