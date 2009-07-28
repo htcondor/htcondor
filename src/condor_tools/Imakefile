@@ -13,9 +13,9 @@ PROGRAMS =  	condor_config_val condor_preen condor_stats \
 
 all_target( $(PROGRAMS) )
 
-CFLAGS = $(STD_C_FLAGS)
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(QUILL_INC) $(TT_INC) $(CONFIGURE_POSTGRESQL_CFLAGS) -I../condor_tt
-LIB = $(STD_LIBS) $(TT_LIB) $(CONFIGURE_POSTGRESQL_LDFLAGS)
+CFLAGS = $(STD_C_FLAGS) $(CONFIGURE_PCRE_CFLAGS)
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(QUILL_INC) $(TT_INC) $(CONFIGURE_POSTGRESQL_CFLAGS) -I../condor_tt $(CONFIGURE_PCRE_CFLAGS)
+LIB = $(STD_LIBS) $(TT_LIB) $(CONFIGURE_POSTGRESQL_LDFLAGS) $(CONFIGURE_PCRE_LDFLAGS)
 
 LH_OBJ = load_history.o ../condor_tt/condor_ttdb.o \
 	../condor_tt/jobqueuecollection.o
