@@ -22,16 +22,6 @@ LIBCONDORAPI = libcondorapi.a
 TEST_LIBCONDORAPI = test_libcondorapi
 #endif
 
-all_target( cplus_lib.a liburl.a $(LIBCONDORAPI) $(TEST_LIBCONDORAPI) )
-
-testbin_target(test_libcondorapi,755)
-testbin_target(test_condor.log,644)
-
-#if HAVE_CC_SHARED_FLAG
-testbin_target(test_libcondorapi_shared,755)
-testbin_target(libcondorapi.so,755)
-#endif
-
 C_PLUS_FLAGS =	\
 		$(STD_C_PLUS_FLAGS) \
 		New_classads_includes \
@@ -41,6 +31,17 @@ C_PLUS_FLAGS =	\
 
 CFLAGS = $(STD_C_FLAGS) New_classads_includes
 LIB = $(STD_LIBS) $(CONFIGURE_PCRE_LDFLAGS)
+
+
+all_target( cplus_lib.a liburl.a $(LIBCONDORAPI) $(TEST_LIBCONDORAPI) )
+
+testbin_target(test_libcondorapi,755)
+testbin_target(test_condor.log,644)
+
+#if HAVE_CC_SHARED_FLAG
+testbin_target(test_libcondorapi_shared,755)
+testbin_target(libcondorapi.so,755)
+#endif
 
 /* This is a seperate job_queue.log parser and a prober for changes object which
 	is used by quill and the job router. Eventually the job_queue.log
