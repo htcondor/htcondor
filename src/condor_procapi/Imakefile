@@ -1,8 +1,8 @@
 all_target(libprocapi.a condor_procapi)
 
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
-CFLAGS = $(STD_C_FLAGS)
-LIB = $(STD_LIBS)
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(CONFIGURE_PCRE_CFLAGS)
+CFLAGS = $(STD_C_FLAGS) $(CONFIGURE_PCRE_CFLAGS)
+LIB = $(STD_LIBS) $(CONFIGURE_PCRE_LDFLAGS)
 
 OBJ = procapi.o  processid.o procapi_killfamily.o
 
