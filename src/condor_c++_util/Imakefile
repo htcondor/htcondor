@@ -181,8 +181,7 @@ CONLIBAPI_OBJ = \
 	condor_open.o \
 	classad_merge.o \
 	condor_attributes.o \
-	simple_arg.o \
-	New_classads_newold
+	simple_arg.o
 
 DAEMON_CLIENT_OBJ = daemon.o daemon_types.o dc_shadow.o dc_startd.o \
 	dc_schedd.o dc_collector.o dc_starter.o daemon_list.o \
@@ -243,6 +242,7 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o selector.o \
 	link.o \
 	simple_arg.o \
 	condor_threads.o \
+	New_classads_newold \
 	historyFileFinder.o
 
 library_target(cplus_lib.a,$(OBJ))
