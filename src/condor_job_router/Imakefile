@@ -18,7 +18,7 @@ JOB_HOOKS_OBJS = JobRouterHookMgr.o
 
 soapobjs(job_router)
 
-OBJ = NewClassAdJobLogConsumer.o JobLogMirror.o submit_job.o VanillaToGrid.o JobRouter.o schedd_main.o schedd_v7_utils.o set_user_from_ad.o $(SOAP_OBJS) $(JOB_HOOKS_OBJS)
+OBJ = NewClassAdJobLogConsumer.o JobLogMirror.o submit_job.o VanillaToGrid.o JobRouter.o schedd_main.o schedd_v7_utils.o set_user_from_ad.o $(SOAP_OBJS) $(JOB_HOOKS_OBJS) classad_newold.o
 
 
 c_plus_target($(VANILLATOGRID),$(VANILLATOGRID_OBJS),$(VANILLATOGRID_LIB))
@@ -39,3 +39,4 @@ gen_soapfiles(job_router,condorJobRouter)
 
 IMPORT_LINKS = ../../config/import_links
 import_objs(../condor_c++_util,JobLogMirror.o)
+import_objs(../condor_c++_util,classad_newold.o)
