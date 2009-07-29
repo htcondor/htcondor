@@ -37,6 +37,7 @@ CompatClassAd::CompatClassAd()
 	AssignExpr( ATTR_CURRENT_TIME, "time()" );
 
 	ResetName();
+    ResetDirtyItr();
 }
 
 CompatClassAd::CompatClassAd( const CompatClassAd &ad )
@@ -44,6 +45,7 @@ CompatClassAd::CompatClassAd( const CompatClassAd &ad )
 	CopyFrom( ad );
 
 	ResetName();
+    ResetDirtyItr();
 }
 
 CompatClassAd::~CompatClassAd()
@@ -105,6 +107,7 @@ CompatClassAd( FILE *file, char *delimitor, int &isEOF, int&error, int &empty )
 	}
 
 	ResetName();
+    ResetDirtyItr();
 }
 
 bool CompatClassAd::
@@ -694,33 +697,34 @@ sPrint( MyString &output )
 char* CompatClassAd::
 sPrintExpr(char* buffer, unsigned int buffersize, const char* name)
 {
-    if(!name)
+
+	classad::ClassAdUnParser unp;
+    string parsedString;
+    ExprTree* expr;
+
+    expr = Lookup(name); 
+
+    if(!expr)
     {
         return NULL;
     }
 
-    string tmpStr;
+    unp.Unparse(parsedString, expr);
 
-    if(buffer)
+    if(!buffer)
     {
-        if( EvaluateAttrString(name, tmpStr) )
-        {
-            strncpy(buffer,tmpStr.c_str(), buffersize);
-            buffer[buffersize - 1] = '\0';
-            // (from the old classads, incorrect since we don't return
-            //  TRUE or FALSE)
-            // Behavior is undefined if buffer is not big enough.
-            // Currently, we return TRUE.
-        }
-    } else {
-        if( (buffer = strdup(tmpStr.c_str() ) ) == NULL)
-        {
-            EXCEPT("Out of memory");
-        }
-    }
+
+        buffersize = strlen(name) + parsedString.length() +
+                        3 +     // " = "
+                        1;      // null termination
+        buffer = (char*) malloc(buffersize);
+        
+    } 
+
+    snprintf(buffer, buffersize, "%s = %s", name, parsedString.c_str() );
+    buffer[buffersize - 1] = '\0';
 
     return buffer;
-
 }
 
 // ClassAd methods
@@ -767,12 +771,17 @@ GetTargetTypeName( )
 }
 
 void CompatClassAd::
+ResetDirtyItr()
+{
+    //this'll originally be null
+    m_dirtyItrInit = false;
+}
+
+void CompatClassAd::
 ResetName()
 {
 	m_nameItr = begin();
 	m_nameItrInChain = false;
-
-    m_dirtyItr = dirtyBegin();
 }
 
 const char *CompatClassAd::
@@ -1077,17 +1086,25 @@ IsValidAttrValue(const char *value)
 classad::ClassAd::ExprTree* CompatClassAd::
 NextDirtyExpr()
 {
-    classad::ClassAd::ExprTree* expr;
-    expr = NULL;
-
-    //get the next dirty attribute if we aren't past the end.
-    if(m_dirtyItr != classad::ClassAd::dirtyEnd() )
+    //this'll reset whenever ResetDirtyItr is called
+    if(!m_dirtyItrInit)
     {
-        //figure out what exprtree it is related to
-        expr = classad::ClassAd::Lookup(*m_dirtyItr);
-
-        m_dirtyItr++;
+        m_dirtyItr = dirtyBegin();
+        m_dirtyItrInit = true;
     }
+
+    classad::ExprTree* expr;
+    expr = NULL;
+    
+    //get the next dirty attribute if we aren't past the end.
+    if( m_dirtyItr == dirtyEnd() )
+    {
+        return NULL;
+    }
+    
+    //figure out what exprtree it is related to
+    expr = classad::ClassAd::Lookup(*m_dirtyItr);
+    m_dirtyItr++;
 
     return expr;
 
@@ -1124,8 +1141,11 @@ sPrintAsXML(MyString &output)
 char const *
 CompatClassAd::EscapeStringValue(char const *val)
 {
+    if(val == NULL)
+        return NULL;
+
     Value tmpValue;
-    string stringToAppeaseUnparse(val);
+    string stringToAppeaseUnparse;
     ClassAdUnParser unparse;
 
     tmpValue.SetStringValue(val);
@@ -1146,6 +1166,8 @@ void CompatClassAd::ChainCollapse()
         return;
     }
 
+    Unchain();
+
     classad::AttrList::iterator itr; 
 
     for(itr = parent->begin(); itr != parent->end(); itr++)
@@ -1154,6 +1176,7 @@ void CompatClassAd::ChainCollapse()
         // does not already exist. Hence the Lookup(). 
         // This means that the attributes in our classad takes precedence
         // over the ones in the chained class ad.
+
         if( !Lookup((*itr).first) )
         {
             tmpExprTree = (*itr).second;     
@@ -1169,5 +1192,4 @@ void CompatClassAd::ChainCollapse()
 
     //We're done copying all the stuff from the parent's ad over.
     //Time to sever the link between this classad and it!
-    Unchain();
 }

@@ -182,9 +182,27 @@ getOldClassAdNoTypes( Stream *sock, classad::ClassAd& ad )
  * defined.
  *
  * It should convert default IPs to SocketIPs.
+ *
+ * It should also do encryption now.
  */
 
 bool putOldClassAd ( Stream *sock, classad::ClassAd& ad )
+{
+    bool completion;
+    completion = _putOldClassAd(sock, ad, false);
+
+
+    //should be true by this point
+	return completion;
+}
+
+bool
+putOldClassAdNoTypes ( Stream *sock, classad::ClassAd& ad )
+{
+    return _putOldClassAd(sock, ad, true);
+}
+
+bool _putOldClassAd( Stream *sock, classad::ClassAd& ad, bool excludeTypes )
 {
 	classad::ClassAdUnParser	unp;
 	string						buf;
@@ -222,9 +240,19 @@ bool putOldClassAd ( Stream *sock, classad::ClassAd& ad )
 
         while( !itor.IsAfterLast( ) ) {
             itor.CurrentAttribute( buf, expr );
-            if( strcasecmp( "MyType", buf.c_str( ) ) != 0 && 
-                    strcasecmp( "TargetType", buf.c_str( ) ) != 0 ) {
-                numExprs++;
+
+
+            if(!CompatClassAd::ClassAdAttributeIsPrivate(buf.c_str()))
+            {
+                if(excludeTypes)
+                {
+                    if(strcasecmp( "MyType", buf.c_str() ) != 0 &&
+                        strcasecmp( "TargetType", buf.c_str() ) != 0)
+                    {
+                        numExprs++;
+                    }
+                }
+                else { numExprs++; }
             }
             itor.NextAttribute( buf, expr );
         }
@@ -264,9 +292,17 @@ bool putOldClassAd ( Stream *sock, classad::ClassAd& ad )
 
             attrItor.CurrentAttribute( buf, expr );
 
-            if( strcasecmp( "MyType", buf.c_str( ) ) == 0 || 
-                    strcasecmp( "TargetType", buf.c_str( ) ) == 0 ) {
+            //yea, these two if-statements could be combined into one, 
+            //but this is more readable.
+            if(CompatClassAd::ClassAdAttributeIsPrivate(buf.c_str())){
                 continue;
+            }
+
+            if(excludeTypes){
+                if(strcasecmp( "MyType", buf.c_str( ) ) == 0 || 
+                        strcasecmp( "TargetType", buf.c_str( ) ) == 0 ){
+                    continue;
+                }
             }
             //store the name for later
             string tmpAttrName(buf);
@@ -311,141 +347,24 @@ bool putOldClassAd ( Stream *sock, classad::ClassAd& ad )
         free(serverTimeStr);
     }
 
-	// Send the type
-	if (!ad.EvaluateAttrString("MyType",buf)) {
-		buf="(unknown type)";
-	}
-	if (!sock->put(buf.c_str())) {
-		return false;
-	}
-
-	if (!ad.EvaluateAttrString("TargetType",buf)) {
-		buf="(unknown type)";
-	}
-	if (!sock->put(buf.c_str())) {
-		return false;
-	}
-
-	return true;
-}
-
-bool
-putOldClassAdNoTypes ( Stream *sock, classad::ClassAd& ad )
-{
-	classad::ClassAdUnParser	unp;
-	string						buf;
-	const classad::ExprTree		*expr;
-    bool send_server_time = false;
-
-	int numExprs=0;
-	classad::ClassAdIterator itor(ad);
-
-    bool haveChainedAd = false;
-    
-    classad::ClassAd *chainedAd = ad.GetChainedParentAd();
-    
-    if(chainedAd){
-        haveChainedAd = true;
-    }
-
-    for(int pass = 0; pass < 2; pass++){
-
-        /* 
-        * Count the number of chained attributes on the first
-        *   pass (if any!), then the number of attrs in this classad on
-        *   pass number 2.
-        */
-        if(pass == 0){
-            if(!haveChainedAd){
-                continue;
-            }
-            itor.Initialize(*chainedAd);
+    //ok, so we're not really excluding it here, but...
+    if(excludeTypes)
+    {
+        // Send the type
+        if (!ad.EvaluateAttrString("MyType",buf)) {
+            buf="(unknown type)";
         }
-        else {
-            itor.Initialize(ad);
+        if (!sock->put(buf.c_str())) {
+            return false;
         }
 
-        while( !itor.IsAfterLast( ) ) {
-            numExprs++;
-            itor.NextAttribute( buf, expr );
+        if (!ad.EvaluateAttrString("TargetType",buf)) {
+            buf="(unknown type)";
+        }
+        if (!sock->put(buf.c_str())) {
+            return false;
         }
     }
 
-    if( publish_server_timeMangled ){
-        //add one for the ATTR_SERVER_TIME expr
-        numExprs++;
-        send_server_time = true;
-    }
-
-	sock->encode( );
-	if( !sock->code( numExprs ) ) {
-		return false;
-	}
-    
-    classad::ClassAdIterator attrItor; 
-    for(int pass = 0; pass < 2; pass++){
-        if(pass == 0) {
-            /* need to copy the chained attrs first, so if
-             *  there are duplicates, the non-chained attrs
-             *  will override them
-             */
-            if(!haveChainedAd){
-                continue;
-            }
-            attrItor.Initialize(*chainedAd);
-        } 
-        else {
-            attrItor.Initialize(ad);
-        }
-
-        char *exprString;
-        for( attrItor.ToFirst();
-            !attrItor.IsAfterLast();
-            attrItor.NextAttribute(buf, expr) ) {
-
-            attrItor.CurrentAttribute( buf, expr );
-
-            //store the name for later
-            string tmpAttrName(buf);
-            buf += " = ";
-            unp.Unparse( buf, expr );
-            
-            //get buf's c_str in an editable format
-            exprString = (char*)malloc(buf.size() + 1);
-            strncpy(exprString, buf.c_str(),buf.size() + 1 ); 
-            ConvertDefaultIPToSocketIP(tmpAttrName.c_str(),&exprString,*sock);
-            if( ! sock->prepare_crypto_for_secret_is_noop() &&
-                    CompatClassAd::ClassAdAttributeIsPrivate(tmpAttrName.c_str())) {
-                sock->put(SECRET_MARKER);
-
-                sock->put_secret(exprString);
-            }
-            else if (!sock->put(exprString) ){
-                free(exprString);
-                return false;
-            }
-            free(exprString);
-        }
-    }
-
-    if(send_server_time) {
-        //insert in the current time from the server's (Schedd) point of
-        //view. this is used so condor_q can compute some time values 
-        //based upon other attribute values without worrying about 
-        //the clocks being different on the condor_schedd machine
-        // -vs- the condor_q machine
-
-        char* serverTimeStr;
-        serverTimeStr = (char *) malloc(strlen(ATTR_SERVER_TIME)
-                                        + 3     //for " = "
-                                        + 12    // for integer
-                                        +1);    //for null termination
-        sprintf(serverTimeStr, "%s = %ld", ATTR_SERVER_TIME, (long)time(NULL) );
-        if(!sock->put(serverTimeStr)){
-            free(serverTimeStr);
-            return 0;
-        }
-        free(serverTimeStr);
-    }
 	return true;
 }

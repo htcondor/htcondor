@@ -254,7 +254,7 @@ class CompatClassAd : public classad::ClassAd
          *
          *  @param buffer The buffer to place the named expression into. NOTE: if this is NULL, then the function returns some malloc'd memory. Free it.
          *  @param buffersize The size of the buffer.
-         *  @param name The name to print into the buffer.
+         *  @param name The attr whose expr is to be printed into the buffer.
          *  @return Returns the now-filled buffer.
          */
     char* sPrintExpr(char* buffer, unsigned int buffersize, const char* name);
@@ -270,6 +270,8 @@ class CompatClassAd : public classad::ClassAd
      * @return TRUE
      */
     int sPrintAsXML(MyString &output);
+
+    void ResetDirtyItr();
 
 	void ResetName();
 	const char *NextNameOriginal();
@@ -317,6 +319,7 @@ class CompatClassAd : public classad::ClassAd
 	bool m_nameItrInChain;
 
     classad::DirtyAttrList::iterator m_dirtyItr;
+    bool m_dirtyItrInit;
 };
 
 #endif

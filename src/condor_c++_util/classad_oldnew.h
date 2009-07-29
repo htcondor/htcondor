@@ -36,5 +36,11 @@ bool getOldClassAd( Stream *sock, classad::ClassAd& ad );
 bool getOldClassAdNoTypes( Stream *sock, classad::ClassAd& ad );
 bool putOldClassAd ( Stream *sock, classad::ClassAd& ad );
 bool putOldClassAdNoTypes ( Stream *sock, classad::ClassAd& ad );
+//DO NOT CALL THIS, EXCEPT IN THE ABOVE TWO putOldClassAds*!
+//the bool exclude types tells the function whether to exclude 
+//  stuff about MyType and TargetType from being included.
+//  true is the same as the old putOldClassAd()
+//  false is the same as the putOldClassAdNoTypes()
+bool _putOldClassAd(Stream *sock, classad::ClassAd& ad, bool excludeTypes);
 
 #endif

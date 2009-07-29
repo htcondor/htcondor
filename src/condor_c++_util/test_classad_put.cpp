@@ -59,6 +59,7 @@ class DummyStream
         int code( int blah );
 
         int put(char *str);
+        int put(const char*);
         int put(int i);
 
     private:
@@ -88,6 +89,15 @@ int DummyStream::put(char *str)
     testVec.push_back(foo);
     return 1;
 }
+
+int DummyStream::put(const char *str)
+{
+    char* foo = new char[strlen(str) + 1];
+    strncpy(foo, str, strlen(str) + 1);
+    testVec.push_back(foo);
+    return 1;
+}
+
 
 int DummyStream::put(int i)
 {
@@ -139,10 +149,10 @@ void AttrList_setPublishServerTimeMangled2( bool publish)
 /* need to free exprString every time. Whatever put() does can deal with it
  *
  */
-bool putOldClassAd ( DummyStream *sock, classad::ClassAd& ad )
+bool putOldClassAd ( DummyStream *sock, classad::ClassAd& ad, bool excludeTypes )
 {
 	classad::ClassAdUnParser	unp;
-    std::string						buf;
+	string						buf;
 	const classad::ExprTree		*expr;
     bool send_server_time = false;
 
@@ -175,15 +185,21 @@ bool putOldClassAd ( DummyStream *sock, classad::ClassAd& ad )
             itor.Initialize(ad);
         }
 
-        /*
-        * Need to see if the attribute is invisible, and if so
-        *  don't add 1 to numExprs (just like in old classads)
-        */
         while( !itor.IsAfterLast( ) ) {
             itor.CurrentAttribute( buf, expr );
-            if( strcasecmp( "MyType", buf.c_str( ) ) != 0 && 
-                    strcasecmp( "TargetType", buf.c_str( ) ) != 0 ) {
-                numExprs++;
+
+
+            if(!CompatClassAd::ClassAdAttributeIsPrivate(buf.c_str()))
+            {
+                if(excludeTypes)
+                {
+                    if(strcasecmp( "MyType", buf.c_str() ) != 0 &&
+                        strcasecmp( "TargetType", buf.c_str() ) != 0)
+                    {
+                        numExprs++;
+                    }
+                }
+                else { numExprs++; }
             }
             itor.NextAttribute( buf, expr );
         }
@@ -223,9 +239,15 @@ bool putOldClassAd ( DummyStream *sock, classad::ClassAd& ad )
 
             attrItor.CurrentAttribute( buf, expr );
 
-            if( strcasecmp( "MyType", buf.c_str( ) ) == 0 || 
-                    strcasecmp( "TargetType", buf.c_str( ) ) == 0 ) {
+            if(CompatClassAd::ClassAdAttributeIsPrivate(buf.c_str())){
                 continue;
+            }
+
+            if(excludeTypes){
+                if(strcasecmp( "MyType", buf.c_str( ) ) == 0 || 
+                        strcasecmp( "TargetType", buf.c_str( ) ) == 0 ){
+                    continue;
+                }
             }
 
             //store the name for later
@@ -234,21 +256,22 @@ bool putOldClassAd ( DummyStream *sock, classad::ClassAd& ad )
             unp.Unparse( buf, expr );
             
             //get buf's c_str in an editable format
-            
             exprString = (char*)malloc(buf.size() + 1);
             strncpy(exprString, buf.c_str(),buf.size() + 1 ); 
-            
             //ConvertDefaultIPToSocketIP(tmpAttrName.c_str(),&exprString,*sock);
+            /*
+            if( ! sock->prepare_crypto_for_secret_is_noop() &&
+                    CompatClassAd::ClassAdAttributeIsPrivate(tmpAttrName.c_str())) {
+                sock->put(SECRET_MARKER);
 
-            if (!sock->put(exprString) ){
+                sock->put_secret(exprString);
+            }
+            else */ if (!sock->put(exprString) ){
                 free(exprString);
                 return false;
             }
-
-            //if (!sock->put(buf.c_str())) return false;
             free(exprString);
         }
-        
     }
 
     if(send_server_time) {
@@ -270,22 +293,26 @@ bool putOldClassAd ( DummyStream *sock, classad::ClassAd& ad )
         }
         free(serverTimeStr);
     }
-/*
-	// Send the type
-	if (!ad.EvaluateAttrString("MyType",buf)) {
-		buf="(unknown type)";
-	}
-	if (!sock->put(buf.c_str())) {
-		return false;
-	}
 
-	if (!ad.EvaluateAttrString("TargetType",buf)) {
-		buf="(unknown type)";
-	}
-	if (!sock->put(buf.c_str())) {
-		return false;
-	}
-*/
+    //ok, so we're not really excluding it here, but...
+    if(excludeTypes)
+    {
+        // Send the type
+        if (!ad.EvaluateAttrString("MyType",buf)) {
+            buf="(unknown type)";
+        }
+        if (!sock->put(buf.c_str())) {
+            return false;
+        }
+
+        if (!ad.EvaluateAttrString("TargetType",buf)) {
+            buf="(unknown type)";
+        }
+        if (!sock->put(buf.c_str())) {
+            return false;
+        }
+    }
+
 	return true;
 }
 //}}}
@@ -389,18 +416,19 @@ bool test_put_server_time(bool verbose)
     
         printf("----------------\n\n");
     }
+    /*
 
     printf("Putting CompClassAd1\n");
     ds.emptyVec();
 
     AttrList_setPublishServerTimeMangled2(true);
-    putOldClassAd(&ds, *compC1);
+    putOldClassAd(&ds, *compC1, false);
     ds.printContents();
     ds.emptyVec();
 
     printf("\nPutting CompClassAd2\n");
     AttrList_setPublishServerTimeMangled2(false);
-    putOldClassAd(&ds, *compC2);
+    putOldClassAd(&ds, *compC2, false);
     ds.printContents();
     ds.emptyVec();
 
@@ -408,7 +436,18 @@ bool test_put_server_time(bool verbose)
     AttrList_setPublishServerTimeMangled2(true);
 
     printf("Putting CompClassAd3\n");
-    putOldClassAd(&ds, *compC3);
+    putOldClassAd(&ds, *compC3, false);
+    ds.printContents();
+    ds.emptyVec();
+    */
+
+    printf("Trying out excludeTypes = false\n");
+    putOldClassAd(&ds, *compC3, false);
+    ds.printContents();
+    ds.emptyVec();
+
+    printf("Trying out excludeTypes = true\n");
+    putOldClassAd(&ds, *compC3, true);
     ds.printContents();
     ds.emptyVec();
 
@@ -447,13 +486,13 @@ bool test_put_chained_ads(bool verbose)
     ds.emptyVec();
 
     AttrList_setPublishServerTimeMangled2(true);
-    putOldClassAd(&ds, *compC1);
+    putOldClassAd(&ds, *compC1, false);
     ds.printContents();
     ds.emptyVec();
 
     printf("\nPutting CompClassAd2\n");
     AttrList_setPublishServerTimeMangled2(false);
-    putOldClassAd(&ds, *compC2);
+    putOldClassAd(&ds, *compC2, false);
     ds.printContents();
     ds.emptyVec();
 
@@ -461,10 +500,11 @@ bool test_put_chained_ads(bool verbose)
     AttrList_setPublishServerTimeMangled2(true);
 
     printf("Putting CompClassAd3\n");
-    putOldClassAd(&ds, *compC3);
+    putOldClassAd(&ds, *compC3, false);
     ds.printContents();
     ds.emptyVec();
 
+    
     return failed;
 }
 //}}}
@@ -486,7 +526,7 @@ int main(int argc, char **argv)
     test_put_server_time(verbose);
     printf("Server time complete.\n-----------------\nTesting chained ads.\n");
     
-    test_put_chained_ads(verbose);
+    //test_put_chained_ads(verbose);
 
     printf("chained ads complete.\n-----------------\n");
 }
