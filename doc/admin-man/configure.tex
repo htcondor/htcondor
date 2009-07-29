@@ -8030,6 +8030,9 @@ They specify items related to the \Condor{vm-gahp}.
 \item[\Macro{VM\_MAX\_NUMBER}]
   An integer limit on the number of executing virtual machines.
   When not defined, the default value is the same \MacroNI{NUM\_CPUS}.
+  When it evaluates to \Expr{Undefined},
+  as is the case when not defined with a numeric value,
+  no meaningful limit is imposed.
 
 \label{param:VMStatusInterval}
 \item[\Macro{VM\_STATUS\_INTERVAL}]
