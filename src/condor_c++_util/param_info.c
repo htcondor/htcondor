@@ -1,16 +1,11 @@
-
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "param_info.h"
-#include <ctype.h>
-
-#include <stdlib.h>
-#include <string.h>
-#include <pcre.h>
-#include <float.h>
-#include <limits.h>
-
-#include <stdio.h>
+#ifdef HAVE_PCRE_PCRE_H
+#  include "pcre/pcre.h"
+#else
+#  include "pcre.h"
+#endif
 
 #define CUSTOMIZATION_SELDOM 	0
 

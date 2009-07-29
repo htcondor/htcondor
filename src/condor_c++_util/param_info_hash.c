@@ -1,6 +1,4 @@
-
-#include <stdlib.h>
-#include <string.h>
+#include "condor_common.h"
 #include "param_info.h"
 
 static unsigned int
