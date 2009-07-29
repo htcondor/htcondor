@@ -18,14 +18,12 @@
 ##
 ##**************************************************************
 
-# Creates a large DAG for testing -- node jobs are all /bin/true except
-# for the last node, which does condor_hold/condor_release on the
+# Creates a large DAG for testing -- node jobs don't really do anything
+# except for the last node, which does condor_hold/condor_release on the
 # DAGMan job to force DAGMan into recovery mode.
 
 # This script was mainly created to make sure the new "lazy log file"
 # code works correctly on a large DAG with many log files.
-
-use strict;
 
 my $usage = "Usage: create_large_dag <name> <width> <depth> " .
 			"<unique logs> <maxjobs>";
@@ -121,8 +119,10 @@ sub WriteNode
 	my $submitfile = $nodename . ".cmd";
 
 	print DAGFILE "\nJOB $nodename $submitfile\n";
-	print DAGFILE "SCRIPT PRE $nodename /bin/true\n";
-	print DAGFILE "SCRIPT POST $nodename /bin/true\n";
+	print DAGFILE "SCRIPT PRE $nodename ../job_dagman_large_dag-node.pl " .
+				"PRE $nodename\n";
+	print DAGFILE "SCRIPT POST $nodename ../job_dagman_large_dag-node.pl " .
+				"POST $nodename\n";
 
 	open(SUBMITFILE, ">$submitfile") or die "Can't open/create submit " .
 				"file $submitfile $!\n";
@@ -137,7 +137,8 @@ sub WriteNode
 		print SUBMITFILE "arguments = \$(DAGManJobId)\n";
 
 	} else {
-		print SUBMITFILE "executable = /bin/true\n";
+		print SUBMITFILE "executable = ../job_dagman_large_dag-node.pl\n";
+		print SUBMITFILE "arguments = JOB $nodename\n";
 	}
 	print SUBMITFILE "universe = scheduler\n";
 	my $logfile;
