@@ -1,4 +1,4 @@
-#! /usr/bin/perl
+#! /usr/bin/env perl
 ##########################################################################
 # For information on command line options of this script, call it with -h 
 #
