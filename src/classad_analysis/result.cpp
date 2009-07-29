@@ -1,3 +1,6 @@
+#define _CONDOR_ALLOW_OPEN
+#include "condor_common.h"
+
 #include "result.h"
 #include <iostream>
 #include <sstream>
