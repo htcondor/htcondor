@@ -210,6 +210,11 @@ public:
 			@param proc_env The environment to publish to
 		*/
 	void PublishToEnv( Env* proc_env );
+
+		/** Set up the complete environment for the job.  This includes
+			STARTER_JOB_ENVIRONMENT, the job ClassAd, and PublishToEnv()
+		*/
+	bool GetJobEnv( ClassAd *jobad, Env *job_env, MyString *env_errors );
 	
 		/** Pointer to our JobInfoCommuniator object, which abstracts
 			away any details about our communications with whatever
@@ -239,6 +244,13 @@ public:
 	int classadCommand( int, Stream* );
 
 	int updateX509Proxy( int cmd, Stream* );
+
+	int createJobOwnerSecSession( int cmd, Stream* s );
+
+	int startSSHD( int /*cmd*/, Stream* s );
+	int SSHDFailed(Stream *s,char const *fmt,...) CHECK_PRINTF_FORMAT(3,4);
+	int SSHDRetry(Stream *s,char const *fmt,...) CHECK_PRINTF_FORMAT(3,4);
+	int vSSHDFailed(Stream *s,bool retry,char const *fmt,va_list args);
 
 		/** This will return NULL if we're not using either
 		    PrivSep or GLExec */
@@ -290,6 +302,18 @@ private:
 		   @see UserProc::PublishUpdateAd()
 		*/
 	bool publishJobInfoAd(List<UserProc>* proc_list, ClassAd* ad);
+
+		/*
+		  @param result Buffer in which to store fully-qualified user name of the job owner
+		  If no job owner can be found, substitute a suitable dummy user name.
+		 */
+	void getJobOwnerFQUOrDummy(MyString &result);
+
+		/*
+		  @param result Buffer in which to store claim id string from job.
+		  Returns false if no claim id could be found.
+		 */
+	bool getJobClaimId(MyString &result);
 
 
 		// // // // // // // //

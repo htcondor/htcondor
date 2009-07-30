@@ -4,12 +4,18 @@
 #define QuillProgs 
 #endif
 
+#if HAVE_SSH_TO_JOB
+#define SSH_TO_JOB_PROGS condor_ssh_to_job
+#else
+#define SSH_TO_JOB_PROGS
+#endif
+
 PROGRAMS =  	condor_config_val condor_preen condor_stats \
 		condor_userprio condor_history condor test_calc condor_transfer_data \
 		view_collection condor_qedit condor_advertise condor_version \
 		condor_fetchlog condor_findhost condor_cod condor_wait \
 		condor_store_cred QuillProgs  \
-		condor_ckpt_probe condor_test_auth
+		condor_ckpt_probe condor_test_auth $(SSH_TO_JOB_PROGS)
 
 all_target( $(PROGRAMS) )
 
@@ -46,6 +52,10 @@ strip_target(condor_history,bin,EXECUTABLE_MODE)
 static_target(condor_history,history.o,$(LIB) $(QUILL_LIB),bin)
 
 public_c_plus_target(condor_qedit,bin,qedit.o,$(LIB))
+
+#ifdef HAVE_SSH_TO_JOB
+public_c_plus_target(condor_ssh_to_job,bin,ssh_to_job.o,$(LIB))
+#endif
 
 public_c_plus_target(condor_transfer_data,bin,transfer_data.o,$(LIB))
 

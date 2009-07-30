@@ -45,6 +45,11 @@
 #include "exit.h"
 #include "condor_auth_x509.h"
 #include "setenv.h"
+#include "condor_claimid_parser.h"
+#include "condor_version.h"
+#include "sshd_proc.h"
+#include "condor_base64.h"
+#include "my_username.h"
 
 extern "C" int get_random_int();
 extern int main_shutdown_fast();
@@ -192,6 +197,19 @@ CStarter::Init( JobInfoCommunicator* my_jic, const char* original_cwd,
 						  "STARTER_HOLD_JOB",
 						  (CommandHandlercpp)&CStarter::remoteHoldCommand,
 						  "CStarter::remoteHoldCommand", this, DAEMON );
+	daemonCore->
+		Register_Command( CREATE_JOB_OWNER_SEC_SESSION,
+						  "CREATE_JOB_OWNER_SEC_SESSION",
+						  (CommandHandlercpp)&CStarter::createJobOwnerSecSession,
+						  "CStarter::createJobOwnerSecSession", this, DAEMON );
+
+		// Job-owner commands are registered at READ authorization level.
+		// Why?  See the explanation in createJobOwnerSecSession().
+	daemonCore->
+		Register_Command( START_SSHD,
+						  "START_SSHD",
+						  (CommandHandlercpp)&CStarter::startSSHD,
+						  "CStarter::startSSHD", this, READ );
 
 	sysapi_set_resource_limits();
 
@@ -503,6 +521,689 @@ CStarter::RemoteHold( int )
 		return ( true );
 	}	
 	return ( false );
+}
+
+int 
+CStarter::createJobOwnerSecSession( int /*cmd*/, Stream* s )
+{
+		// A Condor daemon on the submit side (e.g. schedd) wishes to
+		// create a security session for use by a user
+		// (e.g. condor_rsh_to_job).  Why doesn't the user's tool just
+		// connect and create a security session directly?  Because
+		// the starter is not necessarily set up to authenticate the
+		// owner of the job.  So the schedd authenticates the owner of
+		// the job and facilitates the creation of a security session
+		// between the starter and the tool.
+
+	MyString fqu;
+	getJobOwnerFQUOrDummy(fqu);
+	ASSERT( !fqu.IsEmpty() );
+
+	MyString error_msg;
+	ClassAd input;
+	s->decode();
+	if( !input.initFromStream(*s) || !s->eom() ) {
+		dprintf(D_ALWAYS,"Failed to read request in createJobOwnerSecSession()\n");
+		return FALSE;
+	}
+
+		// In order to ensure that we are really talking to the schedd
+		// that is managing this job, check that the schedd has provided
+		// the correct secret claim id.
+	MyString job_claim_id;
+	MyString input_claim_id;
+	getJobClaimId(job_claim_id);
+	input.LookupString(ATTR_CLAIM_ID,input_claim_id);
+	if( job_claim_id != input_claim_id || job_claim_id.IsEmpty() ) {
+		dprintf(D_ALWAYS,
+				"Claim ID provided to createJobOwnerSecSession does not match "
+				"expected value!  Rejecting connection from %s\n",
+				s->peer_description());
+		return FALSE;
+	}
+
+	char *session_id = Condor_Crypt_Base::randomHexKey();
+	char *session_key = Condor_Crypt_Base::randomHexKey();
+
+	MyString session_info;
+	input.LookupString(ATTR_SESSION_INFO,session_info);
+
+		// Create an authorization rule so that the job owner can
+		// access commands that the job owner should be able to
+		// access.  All such commands are registered at READ level.
+		// Why?  Because all such commands do a special check to make
+		// sure the authenticated name matches the job owner name.
+		// Therefore, to give the job owner as little power as
+		// necessary, these commands are registered as READ (rather
+		// than something more powerful such as DAEMON) and we leave
+		// it up to the job-owner commands themselves to be more
+		// selective about who gets to successfully run the command.
+		// Ideally, we would have a first-class OWNER access level
+		// instead.
+
+	IpVerify* ipv = daemonCore->getSecMan()->getIpVerify();
+	MyString auth_hole_id;
+	auth_hole_id.sprintf("%s/*",fqu.Value());
+	bool rc = ipv->PunchHole(READ, auth_hole_id);
+	if( !rc ) {
+		error_msg = "Starter failed to create authorization entry for job owner.";
+	}
+
+	if( rc ) {
+		rc = daemonCore->getSecMan()->CreateNonNegotiatedSecuritySession(
+			READ,
+			session_id,
+			session_key,
+			session_info.Value(),
+			fqu.Value(),
+			NULL,
+			0 );
+	}
+	if( rc ) {
+			// get the final session parameters that were chosen
+		session_info = "";
+		rc = daemonCore->getSecMan()->ExportSecSessionInfo(
+			session_id,
+			session_info );
+	}
+
+	ClassAd response;
+	response.Assign(ATTR_VERSION,CondorVersion());
+	if( !rc ) {
+		if( error_msg.IsEmpty() ) {
+			error_msg = "Failed to create security session.";
+		}
+		response.Assign(ATTR_RESULT,false);
+		response.Assign(ATTR_ERROR_STRING,error_msg);
+		dprintf(D_ALWAYS,
+				"createJobOwnerSecSession failed: %s\n", error_msg.Value());
+	}
+	else {
+		// We use a "claim id" string to hold the security session info,
+		// because it is a convenient container.
+
+		ClaimIdParser claimid(session_id,session_info.Value(),session_key);
+		response.Assign(ATTR_RESULT,true);
+		response.Assign(ATTR_CLAIM_ID,claimid.claimId());
+
+		dprintf(D_FULLDEBUG,"Created security session for job owner (%s).\n",
+				fqu.Value());
+	}
+
+	if( !response.put(*s) || !s->eom() ) {
+		dprintf(D_ALWAYS,
+				"createJobOwnerSecSession failed to send response\n");
+	}
+
+	free( session_id );
+	free( session_key );
+
+	return TRUE;
+}
+
+int
+CStarter::vSSHDFailed(Stream *s,bool retry,char const *fmt,va_list args)
+{
+	MyString error_msg;
+	error_msg.vsprintf( fmt, args );
+
+		// old classads cannot handle a string ending in a double quote
+		// followed by a newline, so strip off any trailing newline
+	error_msg.trim();
+
+	dprintf(D_ALWAYS,"START_SSHD failed: %s\n",error_msg.Value());
+
+	ClassAd response;
+	response.Assign(ATTR_RESULT,false);
+	response.Assign(ATTR_ERROR_STRING,error_msg);
+	if( retry ) {
+		response.Assign(ATTR_RETRY,retry);
+	}
+
+	s->encode();
+	if( !response.put(*s) || !s->eom() ) {
+		dprintf(D_ALWAYS,"Failed to send response to START_SSHD.\n");
+	}
+
+	return FALSE;
+}
+
+int
+CStarter::SSHDRetry(Stream *s,char const *fmt,...)
+{
+	va_list args;
+	va_start( args, fmt );
+	vSSHDFailed(s,true,fmt,args);
+	va_end( args );
+
+	return FALSE;
+}
+int
+CStarter::SSHDFailed(Stream *s,char const *fmt,...)
+{
+	va_list args;
+	va_start( args, fmt );
+	vSSHDFailed(s,false,fmt,args);
+	va_end( args );
+
+	return FALSE;
+}
+
+// The following functions are only needed if SSH_TO_JOB is supported.
+
+#if HAVE_SSH_TO_JOB
+
+// returns position of str in buffer or -1 if not found
+static int find_str_in_buffer(
+	char const *buffer,
+	int buffer_len,
+	char const *str)
+{
+	int str_len = strlen(str);
+    int i;
+	for(i=0; i+str_len <= buffer_len; i++) {
+		if( memcmp(buffer+i,str,str_len)==0 ) {
+			return i;
+		}
+	}
+	return -1;
+}
+
+static bool extract_delimited_data_as_base64(
+	char const *input_buffer,
+	int input_len,
+	char const *begin_marker,
+	char const *end_marker,
+	MyString &output_buffer,
+	MyString *error_msg)
+{
+	int start = find_str_in_buffer(input_buffer,input_len,begin_marker);
+	int end = find_str_in_buffer(input_buffer,input_len,end_marker);
+	if( start < 0 ) {
+		if( error_msg ) {
+			error_msg->sprintf("Failed to find '%s' in input: %.*s",
+							   begin_marker,input_len,input_buffer);
+		}
+		return false;
+	}
+	start += strlen(begin_marker);
+	if( end < 0 || end < start ) {
+		if( error_msg ) {
+			error_msg->sprintf("Failed to find '%s' in input: %.*s",
+							   end_marker,input_len,input_buffer);
+		}
+		return false;
+	}
+	char *encoded = condor_base64_encode((unsigned char const *)input_buffer+start,end-start);
+	output_buffer = encoded;
+	free(encoded);
+	return true;
+}
+
+
+static bool extract_delimited_data(
+	char const *input_buffer,
+	int input_len,
+	char const *begin_marker,
+	char const *end_marker,
+	MyString &output_buffer,
+	MyString *error_msg)
+{
+	int start = find_str_in_buffer(input_buffer,input_len,begin_marker);
+	int end = find_str_in_buffer(input_buffer,input_len,end_marker);
+	if( start < 0 ) {
+		if( error_msg ) {
+			error_msg->sprintf("Failed to find '%s' in input: %.*s",
+							   begin_marker,input_len,input_buffer);
+		}
+		return false;
+	}
+	start += strlen(begin_marker);
+	if( end < 0 || end < start ) {
+		if( error_msg ) {
+			error_msg->sprintf("Failed to find '%s' in input: %.*s",
+							   end_marker,input_len,input_buffer);
+		}
+		return false;
+	}
+	output_buffer.sprintf("%.*s",end-start,input_buffer+start);
+	return true;
+}
+
+#endif
+
+int
+CStarter::startSSHD( int /*cmd*/, Stream* s )
+{
+		// This command should only be allowed by the job owner.
+	MyString error_msg;
+	Sock *sock = (Sock*)s;
+	char const *fqu = sock->getFullyQualifiedUser();
+	MyString job_owner;
+	getJobOwnerFQUOrDummy(job_owner);
+	if( !fqu || job_owner != fqu ) {
+		dprintf(D_ALWAYS,"Unauthorized attempt to start sshd by '%s'\n",
+				fqu ? fqu : "");
+		return FALSE;
+	}
+
+	ClassAd input;
+	s->decode();
+	if( !input.initFromStream(*s) || !s->eom() ) {
+		dprintf(D_ALWAYS,"Failed to read request in START_SSHD.\n");
+		return FALSE;
+	}
+
+#if !defined(HAVE_SSH_TO_JOB)
+	return SSHDFailed(s,"This version of condor_starter does not support ssh access.");
+#else
+
+	ClassAd *jobad = NULL;
+	ClassAd *machinead = NULL;
+	if( jic ) {
+		jobad = jic->jobClassAd();
+		machinead = jic->machClassAd();
+	}
+
+	bool enabled = param_boolean("ENABLE_SSH_TO_JOB",true,true,jobad,machinead);
+	if( !enabled ) {
+		return SSHDFailed(s,"Rejecting request, because ENABLE_SSH_TO_JOB=false");
+	}
+
+	if( !jic || !jobad ) {
+		return SSHDRetry(s,"Rejecting request, because job not yet initialized.");
+	}
+	if( suspended ) {
+			// Better to reject them with a clear explanation rather
+			// than to allow them to connect and then immediately
+			// suspend them without any explanation.
+		return SSHDRetry(s,"This slot is currently suspended.");
+	}
+
+	MyString preferred_shells;
+	input.LookupString(ATTR_SHELL,preferred_shells);
+
+	MyString slot_name;
+	input.LookupString(ATTR_NAME,slot_name);
+
+	char const *username;
+	if( !jic->userPrivInitialized() ) {
+		username = NULL;
+	}
+	else if( condorPrivSepHelper() != NULL ) {
+		username = condorPrivSepHelper()->get_user_name();
+	}
+	else if( can_switch_ids() ) {
+		username = get_user_loginname();
+	}
+	else {
+		username = my_username();
+	}
+	if( !username ) {
+		return SSHDRetry(s,"Rejecting request, because job execution account not yet established.");
+	}
+
+	MyString libexec;
+	if( !param(libexec,"LIBEXEC") ) {
+		return SSHDFailed(s,"LIBEXEC not defined, so cannot find condor_ssh_to_job_sshd_setup");
+	}
+	MyString ssh_to_job_sshd_setup;
+	MyString ssh_to_job_shell_setup;
+	ssh_to_job_sshd_setup.sprintf(
+		"%s%ccondor_ssh_to_job_sshd_setup",libexec.Value(),DIR_DELIM_CHAR);
+	ssh_to_job_shell_setup.sprintf(
+		"%s%ccondor_ssh_to_job_shell_setup",libexec.Value(),DIR_DELIM_CHAR);
+
+	if( access(ssh_to_job_sshd_setup.Value(),X_OK)!=0 ) {
+		return SSHDFailed(s,"Cannot execute %s: %s",
+						  ssh_to_job_sshd_setup.Value(),strerror(errno));
+	}
+	if( access(ssh_to_job_shell_setup.Value(),X_OK)!=0 ) {
+		return SSHDFailed(s,"Cannot execute %s: %s",
+						  ssh_to_job_shell_setup.Value(),strerror(errno));
+	}
+
+	MyString sshd_config_template;
+	if( !param(sshd_config_template,"SSH_TO_JOB_SSHD_CONFIG_TEMPLATE") ) {
+		if( param(sshd_config_template,"LIB") ) {
+			sshd_config_template.sprintf_cat("%ccondor_ssh_to_job_sshd_config_template",DIR_DELIM_CHAR);
+		}
+		else {
+			return SSHDFailed(s,"SSH_TO_JOB_SSHD_CONFIG_TEMPLATE and LIB are not defined.  At least one of them is required.");
+		}
+	}
+	if( access(sshd_config_template.Value(),F_OK)!=0 ) {
+		return SSHDFailed(s,"%s does not exist!",sshd_config_template.Value());
+	}
+
+	MyString ssh_keygen;
+	MyString ssh_keygen_args;
+	ArgList ssh_keygen_arglist;
+	param(ssh_keygen,"SSH_TO_JOB_SSH_KEYGEN","/usr/bin/ssh-keygen");
+	param(ssh_keygen_args,"SSH_TO_JOB_SSH_KEYGEN_ARGS","\"-N '' -C '' -q -f %f\"");
+	ssh_keygen_arglist.AppendArg(ssh_keygen.Value());
+	if( !ssh_keygen_arglist.AppendArgsV2Quoted(ssh_keygen_args.Value(),&error_msg) ) {
+		return SSHDFailed(s,
+						  "SSH_TO_JOB_SSH_KEYGEN_ARGS is misconfigured: %s",
+						  error_msg.Value());
+	}
+
+	MyString client_keygen_args;
+	input.LookupString(ATTR_SSH_KEYGEN_ARGS,client_keygen_args);
+	if( !ssh_keygen_arglist.AppendArgsV2Raw(client_keygen_args.Value(),&error_msg) ) {
+		return SSHDFailed(s,
+						  "Failed to produce ssh-keygen arg list: %s",
+						  error_msg.Value());
+	}
+
+	MyString ssh_keygen_cmd;
+	if(!ssh_keygen_arglist.GetArgsStringSystem(&ssh_keygen_cmd,0,&error_msg)) {
+		return SSHDFailed(s,
+						  "Failed to produce ssh-keygen command string: %s",
+						  error_msg.Value());
+	}
+
+	int setup_pipe_fds[2];
+	setup_pipe_fds[0] = -1;
+	setup_pipe_fds[1] = -1;
+	if( !daemonCore->Create_Pipe(setup_pipe_fds) ) {
+		return SSHDFailed(
+			s,"Failed to create pipe for condor_ssh_to_job_sshd_setup.");
+	}
+	int setup_std_fds[3];
+	setup_std_fds[0] = 0;
+	setup_std_fds[1] = setup_pipe_fds[1]; // write end of pipe
+	setup_std_fds[2] = setup_pipe_fds[1];
+
+		// Pass the job environment to the sshd setup script.  It will
+		// save the environment so that it can be restored when the
+		// ssh session starts and our shell setup script is called.
+	Env setup_env;
+	if( !GetJobEnv( jobad, &setup_env, &error_msg ) ) {
+		return SSHDFailed(
+			s,"Failed to get job environment: %s",error_msg.Value());
+	}
+
+		// our sshd_shell_setup script uses this to cd to the job working dir
+	setup_env.SetEnv("_CONDOR_JOB_IWD",jic->jobRemoteIWD());
+
+	if( !slot_name.IsEmpty() ) {
+		setup_env.SetEnv("_CONDOR_SLOT_NAME",slot_name.Value());
+	}
+
+	if( !preferred_shells.IsEmpty() ) {
+		dprintf(D_FULLDEBUG,
+				"Checking preferred shells: %s\n",preferred_shells.Value());
+		StringList shells(preferred_shells.Value(),",");
+		shells.rewind();
+		char *shell;
+		while( (shell=shells.next()) ) {
+			if( access(shell,X_OK)==0 ) {
+				dprintf(D_FULLDEBUG,"Will use shell %s\n",shell);
+				setup_env.SetEnv("_CONDOR_SHELL",shell);
+				break;
+			}
+		}
+	}
+
+		// put the pid of the job in the environment
+	MyString job_pids;
+	UserProc *job;
+	m_job_list.Rewind();
+	while ((job = m_job_list.Next()) != NULL) {
+		if( ! job_pids.IsEmpty() ) {
+			job_pids += " ";
+		}
+		job_pids.sprintf_cat("%d",job->GetJobPid());
+	}
+	setup_env.SetEnv("_CONDOR_JOB_PIDS",job_pids);
+
+	ArgList setup_args;
+	setup_args.AppendArg(ssh_to_job_sshd_setup.Value());
+	setup_args.AppendArg(GetWorkingDir());
+	setup_args.AppendArg(ssh_to_job_shell_setup.Value());
+	setup_args.AppendArg(sshd_config_template.Value());
+	setup_args.AppendArg(ssh_keygen_cmd.Value());
+
+		// Would like to use my_popen here, but we need to support glexec.
+		// Use the default reaper, even though it doesn't know anything
+		// about this task.  We avoid needing to know the final exit status
+		// by checking for a magic success string at the end of the output.
+	int setup_reaper = 1;
+	int setup_pid;
+	if( privSepHelper() ) {
+		setup_pid = privSepHelper()->create_process(
+			ssh_to_job_sshd_setup.Value(),
+			setup_args,
+			setup_env,
+			GetWorkingDir(),
+			setup_std_fds,
+			NULL,
+			0,
+			NULL,
+			setup_reaper,
+			0,
+			NULL);
+	}
+	else {
+		setup_pid = daemonCore->Create_Process(
+			ssh_to_job_sshd_setup.Value(),
+			setup_args,
+			PRIV_USER_FINAL,
+			setup_reaper,
+			FALSE,
+			&setup_env,
+			GetWorkingDir(),
+			NULL,
+			NULL,
+			setup_std_fds);
+	}
+
+	daemonCore->Close_Pipe(setup_pipe_fds[1]); // write-end of pipe
+
+		// NOTE: the output from the script may contain binary data,
+		// so we can't just slurp it in as a C string.
+	char *setup_output = NULL;
+	int setup_output_len = 0;
+	char *pipe_buf[1024];
+	while( true ) {
+		int n = daemonCore->Read_Pipe(setup_pipe_fds[0],pipe_buf,1024);
+		if( n <= 0 ) {
+			break;
+		}
+		char *old_setup_output = setup_output;
+		setup_output = (char *)realloc(setup_output,setup_output_len+n+1);
+		if( !setup_output ) {
+			free( old_setup_output );
+			daemonCore->Close_Pipe(setup_pipe_fds[0]); // read-end of pipe
+			return SSHDFailed(s,"Out of memory");
+		}
+		memcpy(setup_output+setup_output_len,pipe_buf,n);
+		setup_output_len += n;
+			// for easier debugging, append a null to the end,
+			// so we can try to print the buffer as a string
+		setup_output[setup_output_len] = '\0';
+	}
+
+	daemonCore->Close_Pipe(setup_pipe_fds[0]); // read-end of pipe
+
+		// look for magic success string
+	if( find_str_in_buffer(setup_output,setup_output_len,"condor_ssh_to_job_sshd_setup SUCCESS") < 0 ) {
+		error_msg.sprintf("condor_ssh_to_job_sshd_setup failed: %s",
+						  setup_output);
+		free( setup_output );
+		return SSHDFailed(s,"%s",error_msg.Value());
+	}
+
+		// Since in privsep situations, we cannot directly access the
+		// ssh key files that sshd_setup prepared, we slurp them in
+		// from the pipe to sshd_setup.
+
+	bool rc = true;
+	MyString session_dir;
+	if( rc ) {
+		rc = extract_delimited_data(
+			setup_output,
+			setup_output_len,
+			"condor_ssh_to_job_sshd_setup SSHD DIR BEGIN\n",
+			"\ncondor_ssh_to_job_sshd_setup SSHD DIR END\n",
+			session_dir,
+			&error_msg);
+	}
+
+	MyString public_host_key;
+	if( rc ) {
+		rc = extract_delimited_data_as_base64(
+			setup_output,
+			setup_output_len,
+			"condor_ssh_to_job_sshd_setup PUBLIC SERVER KEY BEGIN\n",
+			"condor_ssh_to_job_sshd_setup PUBLIC SERVER KEY END\n",
+			public_host_key,
+			&error_msg);
+	}
+
+	MyString private_client_key;
+	if( rc ) {
+		rc = extract_delimited_data_as_base64(
+			setup_output,
+			setup_output_len,
+			"condor_ssh_to_job_sshd_setup AUTHORIZED CLIENT KEY BEGIN\n",
+			"condor_ssh_to_job_sshd_setup AUTHORIZED CLIENT KEY END\n",
+			private_client_key,
+			&error_msg);
+	}
+
+	free( setup_output );
+
+	if( !rc ) {
+		MyString msg;
+		return SSHDFailed(s,
+			"Failed to parse output of condor_ssh_to_job_sshd_setup: %s",
+			error_msg.Value());
+	}
+
+	dprintf(D_FULLDEBUG,"StartSSHD: session_dir='%s'\n",session_dir.Value());
+
+	MyString sshd_config_file;
+	sshd_config_file.sprintf("%s%csshd_config",session_dir.Value(),DIR_DELIM_CHAR);
+
+
+
+	MyString sshd;
+	param(sshd,"SSH_TO_JOB_SSHD","/usr/sbin/sshd");
+	if( access(sshd.Value(),X_OK)!=0 ) {
+		return SSHDFailed(s,"Failed, because sshd not correctly configured (SSH_TO_JOB_SSHD=%s): %s.",sshd.Value(),strerror(errno));
+	}
+
+	ArgList sshd_arglist;
+	MyString sshd_arg_string;
+	param(sshd_arg_string,"SSH_TO_JOB_SSHD_ARGS","\"-i -e -f %f\"");
+	if( !sshd_arglist.AppendArgsV2Quoted(sshd_arg_string.Value(),&error_msg) )
+	{
+		return SSHDFailed(s,"Invalid SSH_TO_JOB_SSHD_ARGS (%s): %s",
+						  sshd_arg_string.Value(),error_msg.Value());
+	}
+
+	char **argarray = sshd_arglist.GetStringArray();
+	sshd_arglist.Clear();
+	for(int i=0; argarray[i]; i++) {
+		char const *ptr;
+		MyString new_arg;
+		for(ptr=argarray[i]; *ptr; ptr++) {
+			if( *ptr == '%' ) {
+				ptr += 1;
+				if( *ptr == '%' ) {
+					new_arg += '%';
+				}
+				else if( *ptr == 'f' ) {
+					new_arg += sshd_config_file.Value();
+				}
+				else {
+					return SSHDFailed(s,
+							"Unexpected %%%c in SSH_TO_JOB_SSHD_ARGS: %s\n",
+							*ptr ? *ptr : ' ', sshd_arg_string.Value());
+				}
+			}
+			else {
+				new_arg += *ptr;
+			}
+		}
+		sshd_arglist.AppendArg(new_arg.Value());
+	}
+	deleteStringArray(argarray);
+	argarray = NULL;
+
+
+	ClassAd sshd_ad;
+	sshd_ad.CopyAttribute(ATTR_REMOTE_USER,jobad);
+	sshd_ad.CopyAttribute(ATTR_JOB_RUNAS_OWNER,jobad);
+	sshd_ad.Assign(ATTR_JOB_CMD,sshd.Value());
+	CondorVersionInfo ver_info;
+	if( !sshd_arglist.InsertArgsIntoClassAd(&sshd_ad,&ver_info,&error_msg) ) {
+		return SSHDFailed(s,
+			"Failed to insert args into sshd job description: %s",
+			error_msg.Value());
+	}
+		// Since sshd clenses the user's environment, it doesn't really
+		// matter what we pass here.  Instead, we depend on sshd_shell_init
+		// to restore the environment that was saved by sshd_setup.
+		// However, we may as well pass the desired environment.
+	if( !setup_env.InsertEnvIntoClassAd(&sshd_ad,&error_msg,NULL,&ver_info) ) {
+		return SSHDFailed(s,
+			"Failed to insert environment into sshd job description: %s",
+			error_msg.Value());
+	}
+
+
+
+		// Now send the expected ClassAd response to the caller.
+		// This is the last exchange before switching the connection
+		// over to the ssh protocol.
+	ClassAd response;
+	response.Assign(ATTR_RESULT,true);
+	response.Assign(ATTR_REMOTE_USER,username);
+	response.Assign(ATTR_SSH_PUBLIC_SERVER_KEY,public_host_key.Value());
+	response.Assign(ATTR_SSH_PRIVATE_CLIENT_KEY,private_client_key.Value());
+
+	s->encode();
+	if( !response.put(*s) || !s->eom() ) {
+		dprintf(D_ALWAYS,"Failed to send response to START_SSHD.\n");
+		return FALSE;
+	}
+
+
+
+	MyString sshd_log_fname;
+	sshd_log_fname.sprintf(
+		"%s%c%s",session_dir.Value(),DIR_DELIM_CHAR,"sshd.log");
+
+
+	int std[3];
+	char const *std_fname[3];
+	std[0] = sock->get_file_desc();
+	std_fname[0] = "stdin";
+	std[1] = sock->get_file_desc();
+	std_fname[1] = "stdout";
+	std[2] = -1;
+	std_fname[2] = sshd_log_fname.Value();
+
+
+	SSHDProc *proc = new SSHDProc(&sshd_ad);
+	if( !proc ) {
+		dprintf(D_ALWAYS,"Failed to create SSHDProc.\n");
+		return FALSE;
+	}
+	if( !proc->StartJob(std,std_fname) ) {
+		dprintf(D_ALWAYS,"Failed to start sshd.\n");
+		return FALSE;
+	}
+	m_job_list.Append(proc);
+	if( this->suspended ) {
+		proc->Suspend();
+	}
+
+	return TRUE;
+#endif
 }
 
 /**
@@ -1136,6 +1837,26 @@ CStarter::SpawnPreScript( void )
 	return SpawnJob();
 }
 
+void CStarter::getJobOwnerFQUOrDummy(MyString &result)
+{
+	ClassAd *jobAd = jic ? jic->jobClassAd() : NULL;
+	if( jobAd ) {
+		jobAd->LookupString(ATTR_USER,result);
+	}
+	if( result.IsEmpty() ) {
+		result = "job-owner@submit-domain";
+	}
+}
+
+bool CStarter::getJobClaimId(MyString &result)
+{
+	ClassAd *jobAd = jic ? jic->jobClassAd() : NULL;
+	if( jobAd ) {
+		return jobAd->LookupString(ATTR_CLAIM_ID,result);
+	}
+	return false;
+}
+
 /**
  * 
  * 
@@ -1708,7 +2429,38 @@ CStarter::publishPostScriptUpdateAd( ClassAd* ad )
 	}
 	return false;
 }
-	
+
+bool
+CStarter::GetJobEnv( ClassAd *jobad, Env *job_env, MyString *env_errors )
+{
+	char *env_str = param( "STARTER_JOB_ENVIRONMENT" );
+
+	ASSERT( jobad );
+	ASSERT( job_env );
+	if( !job_env->MergeFromV1RawOrV2Quoted(env_str,env_errors) ) {
+		if( env_errors ) {
+			env_errors->sprintf_cat(
+				" The full value for STARTER_JOB_ENVIRONMENT: %s\n",env_str);
+		}
+		free(env_str);
+		return false;
+	}
+	free(env_str);
+
+	if(!job_env->MergeFrom(jobad,env_errors)) {
+		if( env_errors ) {
+			env_errors->sprintf_cat(
+				" (This error was from the environment string in the job "
+				"ClassAd.)");
+		}
+		return false;
+	}
+
+		// Now, let the starter publish any env vars it wants to into
+		// the mainjob's env...
+	PublishToEnv( job_env );
+	return true;
+}	
 
 void
 CStarter::PublishToEnv( Env* proc_env )

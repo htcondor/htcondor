@@ -1411,6 +1411,22 @@
 			RelativePath="..\src\condor_c++_util\write_user_log.h"
 			>
 		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\condor_base64.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\condor_base64.h"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\socket_proxy.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\socket_proxy.h"
+			>
+		</File>
 	</Files>
 	<Globals>
 	</Globals>

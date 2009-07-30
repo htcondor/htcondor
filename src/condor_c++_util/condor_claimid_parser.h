@@ -34,6 +34,16 @@ class ClaimIdParser {
 		m_claim_id(claim_id),
 		m_suppress_session(false) {
 	}
+	ClaimIdParser(char const *session_id,char const *session_info,char const *session_key):
+		m_suppress_session(false)
+	{
+		m_claim_id.sprintf("%s#%s%s",
+						   session_id ? session_id : "",
+						   session_info ? session_info : "",
+						   session_key ? session_key : "");
+		ASSERT( !session_info || !strchr(session_info,'#') );
+		ASSERT( !session_key || !strchr(session_key,'#') );
+	}
 	void setClaimId(char const *claim_id) {
 		m_claim_id = claim_id;
 		m_sinful_part = "";

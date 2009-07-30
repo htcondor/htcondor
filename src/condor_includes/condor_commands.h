@@ -160,7 +160,7 @@
 #define TRANSFER_QUEUE_REQUEST (SCHED_VERS+107) // request to do file transfer
 
 #define SET_SHUTDOWN_PROGRAM (SCHED_VERS+108) // Master: Run program at shutdown
-
+#define GET_JOB_CONNECT_INFO (SCHED_VERS+109) // schedd: get connection information for starter running a job
 
 // HAD-related commands
 #define HAD_ALIVE_CMD                   (HAD_COMMANDS_BASE + 0)
@@ -301,6 +301,8 @@ const int MERGE_STARTD_AD = 73;
 
 #define STARTER_COMMANDS_BASE 1500
 #define STARTER_HOLD_JOB    (STARTER_COMMANDS_BASE+0)
+#define CREATE_JOB_OWNER_SEC_SESSION (STARTER_COMMANDS_BASE+1)
+#define START_SSHD (STARTER_COMMANDS_BASE+2)
 
 
 /*

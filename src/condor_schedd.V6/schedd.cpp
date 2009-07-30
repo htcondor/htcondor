@@ -54,6 +54,7 @@
 #include "dc_schedd.h"  // for JobActionResults class and enums we use  
 #include "dc_startd.h"
 #include "dc_collector.h"
+#include "dc_starter.h"
 #include "nullfile.h"
 #include "store_cred.h"
 #include "file_transfer.h"
@@ -86,6 +87,7 @@
 #include "authentication.h"
 #include "setenv.h"
 #include "classadHistory.h"
+#include "forkwork.h"
 
 #if HAVE_DLOPEN
 #include "ScheddPlugin.h"
@@ -10707,6 +10709,10 @@ Scheduler::Register()
 								  "get_myproxy_password", NULL, WRITE, D_FULLDEBUG  );
 
 
+	daemonCore->Register_Command( GET_JOB_CONNECT_INFO, "GET_JOB_CONNECT_INFO",
+								  (CommandHandlercpp)&Scheduler::get_job_connect_info_handler,
+								  "get_job_connect_info", this, WRITE );
+
 	 // reaper
 	shadowReaperId = daemonCore->Register_Reaper(
 		"reaper",
@@ -11694,6 +11700,234 @@ Scheduler::publish( ClassAd *cad ) {
 	return ( ret );
 }
 
+int
+Scheduler::get_job_connect_info_handler(int cmd, Stream* s) {
+		// This command does blocking network connects to the startd
+		// and starter.  For now, use fork to avoid blocking the schedd.
+		// Eventually, use threads.
+	ForkStatus fork_status;
+	fork_status = schedd_forker.NewJob();
+	if( fork_status == FORK_PARENT ) {
+		return TRUE;
+	}
+
+	int rc = get_job_connect_info_handler_implementation(cmd,s);
+	if( fork_status == FORK_CHILD ) {
+		schedd_forker.WorkerDone(); // never returns
+		ASSERT( false );
+	}
+	return rc;
+}
+
+int
+Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
+	Sock *sock = (Sock *)s;
+	ClassAd input;
+	ClassAd reply;
+	PROC_ID jobid;
+	MyString error_msg;
+	ClassAd *jobad;
+	int job_status = -1;
+	match_rec *mrec = NULL;
+	int universe = -1;
+	MyString startd_name;
+	MyString starter_addr;
+	MyString starter_claim_id;
+	MyString session_info;
+	MyString starter_version;
+	bool retry_is_sensible = false;
+	bool job_is_suitable = false;
+
+		// This command is called for example by condor_ssh_to_job
+		// in order to establish a security session for communication
+		// with the starter.  The caller must be authorized to act
+		// as the owner of the job, which is verified below.  The starter
+		// then checks that this schedd is indeed in possession of the
+		// secret claim id associated with this running job.
+
+
+		// force authentication
+	if( !sock->triedAuthentication() ) {
+		CondorError errstack;
+		if( ! SecMan::authenticate_sock(sock, WRITE, &errstack) ||
+			! sock->getFullyQualifiedUser() )
+		{
+			dprintf( D_ALWAYS,
+					 "GET_JOB_CONNECT_INFO: authentication failed: %s\n", 
+					 errstack.getFullText() );
+			return FALSE;
+		}
+	}
+
+	if( !input.initFromStream(*s) || !s->eom() ) {
+		dprintf(D_ALWAYS,
+				"Failed to receive input ClassAd for GET_JOB_CONNECT_INFO\n");
+		return FALSE;
+	}
+
+	if( !input.LookupInteger(ATTR_CLUSTER_ID,jobid.cluster) ||
+		!input.LookupInteger(ATTR_PROC_ID,jobid.proc) ) {
+		error_msg.sprintf("Job id missing from GET_JOB_CONNECT_INFO request");
+		goto error_wrapup;
+	}
+
+	input.LookupString(ATTR_SESSION_INFO,session_info);
+
+	jobad = GetJobAd(jobid.cluster,jobid.proc);
+	if( !jobad ) {
+		error_msg.sprintf("No such job: %d.%d", jobid.cluster, jobid.proc);
+		goto error_wrapup;
+	}
+
+	if( !OwnerCheck2(jobad,sock->getOwner()) ) {
+		error_msg.sprintf("%s is not authorized for access to the starter for job %d.%d",
+						  sock->getOwner(), jobid.cluster, jobid.proc);
+		goto error_wrapup;
+	}
+
+	jobad->LookupInteger(ATTR_JOB_STATUS,job_status);
+	jobad->LookupInteger(ATTR_JOB_UNIVERSE,universe);
+
+	job_is_suitable = false;
+	switch( universe ) {
+	case CONDOR_UNIVERSE_STANDARD:
+	case CONDOR_UNIVERSE_GRID:
+	case CONDOR_UNIVERSE_SCHEDULER:
+		break;
+	case CONDOR_UNIVERSE_PVM:
+	case CONDOR_UNIVERSE_MPI:
+	case CONDOR_UNIVERSE_PARALLEL:
+	{
+		MyString claim_ids;
+		MyString remote_hosts_string;
+		int subproc = -1;
+		if( jobad->LookupString(ATTR_CLAIM_IDS,claim_ids) &&
+			jobad->LookupString(ATTR_ALL_REMOTE_HOSTS,remote_hosts_string) ) {
+			StringList claim_idlist(claim_ids.Value(),",");
+			StringList remote_hosts(remote_hosts_string.Value(),",");
+			input.LookupInteger(ATTR_SUB_PROC_ID,subproc);
+			if( claim_idlist.number() == 1 && subproc == -1 ) {
+				subproc = 0;
+			}
+			if( subproc == -1 || subproc >= claim_idlist.number() ) {
+				error_msg.sprintf("This is a parallel job.  Please specify job %d.%d.X where X is an integer from 0 to %d.",jobid.cluster,jobid.proc,claim_idlist.number()-1);
+				goto error_wrapup;
+			}
+			else {
+				claim_idlist.rewind();
+				remote_hosts.rewind();
+				for(int sp=0;sp<subproc;sp++) {
+					claim_idlist.next();
+					remote_hosts.next();
+				}
+				mrec = dedicated_scheduler.FindMrecByClaimID(claim_idlist.next());
+				startd_name = remote_hosts.next();
+				if( mrec && mrec->peer ) {
+					job_is_suitable = true;
+				}
+			}
+		}
+		else if (job_status != RUNNING) {
+			retry_is_sensible = true;
+		}
+		break;
+	}
+	default:
+	{
+		mrec = FindMrecByJobID(jobid);
+		if( mrec && mrec->peer ) {
+			jobad->LookupString(ATTR_REMOTE_HOST,startd_name);
+			job_is_suitable = true;
+		}
+		else if (job_status != RUNNING) {
+			retry_is_sensible = true;
+		}
+		break;
+	}
+	}
+
+		// machine ad can't be reliably supplied (e.g. after reconnect),
+		// so best to never supply it here
+	if( job_is_suitable && 
+		!param_boolean("SCHEDD_ENABLE_SSH_TO_JOB",true,true,jobad,NULL) )
+	{
+		error_msg.sprintf("Job %d.%d is denied by SCHEDD_ENABLE_SSH_TO_JOB.",
+						  jobid.cluster,jobid.proc);
+		goto error_wrapup;
+	}
+
+
+	if( !job_is_suitable )
+	{
+		if( !retry_is_sensible ) {
+				// this must be a job universe that we don't support
+			error_msg.sprintf("Job %d.%d does not support remote access.",
+							  jobid.cluster,jobid.proc);
+		}
+		else {
+			error_msg.sprintf("Job %d.%d is not running.",
+							  jobid.cluster,jobid.proc);
+		}
+		goto error_wrapup;
+	}
+	else {
+		ClassAd starter_ad;
+		int timeout = 20;
+		MyString global_job_id;
+		MyString startd_addr = mrec->peer;
+
+		DCStartd startd(startd_name.Value(),NULL,startd_addr.Value(),mrec->secSessionId() );
+
+		jobad->LookupString(ATTR_GLOBAL_JOB_ID,global_job_id);
+
+		if( !startd.locateStarter(global_job_id.Value(),mrec->claimId(),daemonCore->publicNetworkIpAddr(),&starter_ad,timeout) )
+		{
+			error_msg = "Failed to get address of starter for this job";
+			goto error_wrapup;
+		}
+
+		starter_ad.LookupString(ATTR_STARTER_IP_ADDR,starter_addr);
+
+		DCStarter starter;
+		if( !starter.initFromClassAd(&starter_ad) ) {
+			error_msg = "Failed to read address of starter for this job";
+			goto error_wrapup;
+		}
+
+		if( !starter.createJobOwnerSecSession(timeout,mrec->claimId(),mrec->secSessionId(),session_info.Value(),starter_claim_id,error_msg,starter_version) ) {
+			goto error_wrapup; // error_msg already set
+		}
+	}
+
+	reply.Assign(ATTR_RESULT,true);
+	reply.Assign(ATTR_STARTER_IP_ADDR,starter_addr.Value());
+	reply.Assign(ATTR_CLAIM_ID,starter_claim_id.Value());
+	reply.Assign(ATTR_VERSION,starter_version.Value());
+	reply.Assign(ATTR_REMOTE_HOST,startd_name.Value());
+	if( !reply.put(*s) || !s->eom() ) {
+		dprintf(D_ALWAYS,
+				"Failed to send response to GET_JOB_CONNECT_INFO\n");
+	}
+
+	dprintf(D_FULLDEBUG,"Produced connect info for %s job %d.%d startd %s.\n",
+			sock->getFullyQualifiedUser(), jobid.cluster, jobid.proc,
+			starter_addr.Value() );
+
+	return TRUE;
+
+ error_wrapup:
+	dprintf(D_ALWAYS,"GET_JOB_CONNECT_INFO failed: %s\n",error_msg.Value());
+	reply.Assign(ATTR_RESULT,false);
+	reply.Assign(ATTR_ERROR_STRING,error_msg);
+	if( retry_is_sensible ) {
+		reply.Assign(ATTR_RETRY,retry_is_sensible);
+	}
+	if( !reply.put(*s) || !s->eom() ) {
+		dprintf(D_ALWAYS,
+				"Failed to send error response to GET_JOB_CONNECT_INFO\n");
+	}
+	return FALSE;
+}
 
 int
 Scheduler::dumpState(int, Stream* s) {

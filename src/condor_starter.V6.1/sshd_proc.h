@@ -18,40 +18,28 @@
  ***************************************************************/
 
 
-#ifndef _CONDOR_JAVA_PROC_H
-#define _CONDOR_JAVA_PROC_H
+#if !defined(_CONDOR_SSHD_PROC_H)
+#define _CONDOR_SSHD_PROC_H
 
 #include "vanilla_proc.h"
-#include "condor_classad.h"
 
-typedef enum {
-	JAVA_EXIT_NORMAL,
-	JAVA_EXIT_EXCEPTION,
-	JAVA_EXIT_SYSTEM_ERROR
-} java_exit_mode_t;
 
-class JavaProc : public VanillaProc
+class SSHDProc : public VanillaProc
 {
 public:
-	JavaProc( ClassAd * jobAd, const char *execute_dir );
-	virtual ~JavaProc();
+	SSHDProc(ClassAd* jobAd) : VanillaProc(jobAd) { }
 
-	virtual int  StartJob();
-	virtual bool JobReaper( int pid, int status );
-	virtual bool PublishUpdateAd( ClassAd *ad );
+	virtual int StartJob(int std_fds[],char const *std_fnames[]);
+
+	virtual bool JobExit( void );
+
+	virtual bool JobReaper(int pid, int status);
+
+	virtual bool PublishUpdateAd( ClassAd* ad );
+
+	virtual bool ThisProcRunsAlongsideMainProc();
+
 	virtual char const *getArgv0();
-
-private:
-	int ParseExceptionLine( const char *line, MyString &name, MyString &type );
-	int ParseExceptionFile( FILE *file );
-	java_exit_mode_t ClassifyExit( int status );
-
-	char *execute_dir;
-	MyString startfile;
-	MyString endfile;
-	MyString ex_name;
-	MyString ex_type;
-	MyString ex_hier;
 };
 
 #endif

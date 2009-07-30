@@ -62,6 +62,7 @@ API_OBJ = generic_query.o condor_query.o condor_q.o ad_printmask.o \
 
 #if HAVE_EXT_OPENSSL
 DH_OBJ = condor_dh.o
+BASE64_OBJ = condor_base64.o
 #endif
 
 /* Machines that do not have the seteuid call need this particular object file
@@ -217,7 +218,7 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o selector.o \
 	condor_md.o \
 	proc_id.o HashTable.o MyString.o \
 	KeyCache.o dc_stub.o which.o iso_dates.o java_config.o \
-	Regex.o my_distribution.o error_utils.o $(DH_OBJ) \
+	Regex.o my_distribution.o error_utils.o $(DH_OBJ) $(BASE64_OBJ) \
 	translation_utils.o command_strings.o enum_utils.o \
 	condor_parameters.o extra_param_info.o classad_command_util.o \
 	domain_tools.o CondorError.o utc_time.o status_string.o \
@@ -243,7 +244,8 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o selector.o \
 	simple_arg.o \
 	condor_threads.o \
 	New_classads_newold \
-	historyFileFinder.o
+	historyFileFinder.o \
+	socket_proxy.o
 
 library_target(cplus_lib.a,$(OBJ))
 library_target(liburl.a,$(URL_OBJ))

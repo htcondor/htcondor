@@ -112,7 +112,7 @@ static int 	MAX_PRIO_REC=INITIAL_MAX_PRIO_REC ;	// INITIAL_MAX_* in prio_rec.h
 
 const char HeaderKey[] = "0.0";
 
-static ForkWork forker;
+ForkWork schedd_forker;
 
 // Create a hash table which, given a cluster id, tells how
 // many procs are in the cluster
@@ -668,9 +668,9 @@ InitQmgmt()
 			);
 	}
 
-	forker.Initialize();
-	int max_forkers = param_integer ("SCHEDD_QUERY_WORKERS",3,0);
-	forker.setMaxWorkers( max_forkers );
+	schedd_forker.Initialize();
+	int max_schedd_forkers = param_integer ("SCHEDD_QUERY_WORKERS",3,0);
+	schedd_forker.setMaxWorkers( max_schedd_forkers );
 
 	cluster_initial_val = param_integer("SCHEDD_CLUSTER_INITIAL_VALUE",1,1);
 	cluster_increment_val = param_integer("SCHEDD_CLUSTER_INCREMENT_VALUE",1,1);
@@ -1296,7 +1296,7 @@ handle_q(Service *, int, Stream *sock)
 		rval = do_Q_request( Q_SOCK->getReliSock(), may_fork );
 
 		if( may_fork && fork_status == FORK_FAILED ) {
-			fork_status = forker.NewJob();
+			fork_status = schedd_forker.NewJob();
 
 			if( fork_status == FORK_PARENT ) {
 				break;
@@ -1309,7 +1309,7 @@ handle_q(Service *, int, Stream *sock)
 
 	if( fork_status == FORK_CHILD ) {
 		dprintf(D_FULLDEBUG, "QMGR forked query done\n");
-		forker.WorkerDone(); // never returns
+		schedd_forker.WorkerDone(); // never returns
 		EXCEPT("ForkWork::WorkDone() returned!");
 	}
 	else if( fork_status == FORK_PARENT ) {
