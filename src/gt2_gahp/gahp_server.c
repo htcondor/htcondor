@@ -99,13 +99,13 @@ typedef struct gahp_semaphore {
 typedef struct ptr_ref_count {
 	char *key;
 	volatile int count;
-	globus_gram_client_attr_t gram_attr;
 	gss_cred_id_t cred;
 } ptr_ref_count;
 
 typedef struct user_arg_struct {
 	char *req_id;
 	ptr_ref_count * cred;
+	globus_gram_client_attr_t gram_attr;
 } user_arg_t;
 
 /* These are internal Globus structures included here for hack */
@@ -208,8 +208,12 @@ void gahp_sem_init( gahp_semaphore *, int initial_value);
 void gahp_sem_up(  gahp_semaphore *);
 void gahp_sem_down( gahp_semaphore * );
 void unlink_ref_count( ptr_ref_count* , int );
+user_arg_t * new_gram_arg( const char *req_id, ptr_ref_count *cred );
+void delete_gram_arg( user_arg_t *gram_arg );
 
 void enqueue_results( char *result_line );
+
+int gahp_printf(const char *format, ...);
 
 /* Escape spaces replaces ' ' with '\ '. It allocates memory, and 
    puts the escaped string in that memory, and returns it. A NULL is
@@ -227,6 +231,47 @@ void all_args_free( void *);
 
 int process_string_arg( char *input_line, char **output_line);
 int process_int_arg( char *input_line, int *result );
+
+user_arg_t *
+new_gram_arg( const char *req_id, ptr_ref_count *cred )
+{
+	int result;
+	user_arg_t *gram_arg = globus_libc_malloc( sizeof(user_arg_t) );
+	if ( req_id ) {
+		gram_arg->req_id = strdup( req_id );
+	} else {
+		gram_arg->req_id = NULL;
+	}
+	gram_arg->cred = cred;
+	result = globus_gram_client_attr_init( &gram_arg->gram_attr );
+	if ( result != GLOBUS_SUCCESS ) {
+		gahp_printf( "F globus_gram_client_attr_init\\ failed!\n" );
+		_exit( 1 );
+	}
+	if ( cred ) {
+		result = globus_gram_client_attr_set_credential( gram_arg->gram_attr,
+														 cred->cred );
+		if ( result != GLOBUS_SUCCESS ) {
+			gahp_printf( "F globus_gram_client_attr_set_credential\\ failed!\n" );
+			_exit( 1 );
+		}
+		cred->count++;
+	}
+	return gram_arg;
+}
+
+void
+delete_gram_arg( user_arg_t *gram_arg )
+{
+	if ( gram_arg->req_id ) {
+		globus_libc_free( gram_arg->req_id );
+	}
+	if ( gram_arg->cred ) {
+		unlink_ref_count( gram_arg->cred, 1 );
+	}
+	globus_gram_client_attr_destroy( &gram_arg->gram_attr );
+	globus_libc_free( gram_arg );
+}
 
 int
 gahp_printf(const char *format, ...)
@@ -405,7 +450,6 @@ handle_gram_job_request(void * user_arg)
 	char **input_line = (char **) user_arg;
 	int result;
 	user_arg_t * gram_arg;
-	globus_gram_client_attr_t gram_attr = NULL;
 
 	// what the arguments get processed into
 	char *req_id, *resource_contact, *callback_contact, *delegation, *rsl;
@@ -438,20 +482,13 @@ handle_gram_job_request(void * user_arg)
 		return 0;
 	}
 
-	req_id = globus_libc_strdup( req_id );
-	gram_arg = globus_libc_malloc( sizeof(user_arg_t) );
-	gram_arg->req_id = req_id;
-	gram_arg->cred = current_cred;
-	if ( current_cred ) {
-		gram_attr = current_cred->gram_attr;
-		current_cred->count++;
-	}
+	gram_arg = new_gram_arg( req_id, current_cred );
 
 	gahp_printf("S\n");
 	gahp_sem_up(&print_control);
 	result = globus_gram_client_register_job_request(resource_contact, rsl, 
 							GLOBUS_GRAM_PROTOCOL_JOB_STATE_ALL, 
-							callback_contact, gram_attr,
+							callback_contact, gram_arg->gram_attr,
 							callback_gram_job_request, (void *)gram_arg);
 
 	if (result != GLOBUS_SUCCESS) {
@@ -469,25 +506,19 @@ callback_gram_job_request(void *arg,
 						  globus_gram_protocol_job_state_t job_state,
 						  globus_gram_protocol_error_t job_fc)
 {
-	char *req_id;
 	char *output;
 	user_arg_t * gram_arg;
 
 	gram_arg = (user_arg_t *)arg;
-	req_id = gram_arg->req_id;
-	if ( gram_arg->cred ) {
-		unlink_ref_count(gram_arg->cred,1);
-	}
-	globus_libc_free(gram_arg);
 
 	output = (char *)globus_libc_malloc(500);
 
-	globus_libc_sprintf(output, "%s %d %s", req_id, operation_fc,
+	globus_libc_sprintf(output, "%s %d %s", gram_arg->req_id, operation_fc,
 						job_contact ? job_contact : NULLSTRING);
 
 	enqueue_results(output);	
 
-	globus_libc_free( req_id );
+	delete_gram_arg( gram_arg );
 	return;
 }
 
@@ -501,7 +532,6 @@ handle_gram_job_signal(void * user_arg)
 	int signal;
 	char *req_id, *job_contact,  *signal_string;
 	user_arg_t * gram_arg;
-	globus_gram_client_attr_t gram_attr = NULL;
 
 	// reqid
 	if( !process_string_arg(input_line[1], &req_id) ) {
@@ -526,20 +556,13 @@ handle_gram_job_signal(void * user_arg)
 		return 0;
 	}
 	
-	req_id = globus_libc_strdup( req_id );
-	gram_arg = globus_libc_malloc( sizeof(user_arg_t) );
-	gram_arg->req_id = req_id;
-	gram_arg->cred = current_cred;
-	if ( current_cred ) {
-		gram_attr = current_cred->gram_attr;
-		current_cred->count++;
-	}
+	gram_arg = new_gram_arg( req_id, current_cred );
 
 	gahp_printf("S\n");
 	gahp_sem_up(&print_control);
 	result = globus_gram_client_register_job_signal(job_contact, signal,
 									signal_string,
-									gram_attr,
+									gram_arg->gram_attr,
 									callback_gram_job_signal, (void *)gram_arg);
 
 	if (result != GLOBUS_SUCCESS) {
@@ -557,25 +580,19 @@ callback_gram_job_signal(void *arg,
 						 globus_gram_protocol_job_state_t job_state,
 						 globus_gram_protocol_error_t job_fc)
 {
-	char *req_id;
 	char *output;
 	user_arg_t * gram_arg;
 
 	gram_arg = (user_arg_t *)arg;
-	req_id = gram_arg->req_id;
-	if ( gram_arg->cred ) {
-		unlink_ref_count(gram_arg->cred,1);
-	}
-	globus_libc_free(gram_arg);
 
 	output = (char *)globus_libc_malloc(500);
 
-	globus_libc_sprintf(output, "%s %d %d %d", req_id, operation_fc,
+	globus_libc_sprintf(output, "%s %d %d %d", gram_arg->req_id, operation_fc,
 						job_fc, job_state);
 
 	enqueue_results(output);	
 
-	globus_libc_free( req_id );
+	delete_gram_arg( gram_arg );
 	return;
 }
 
@@ -585,7 +602,6 @@ handle_gram_job_status(void * user_arg)
 	char **input_line = (char **) user_arg;
 	int result;
 	user_arg_t * gram_arg;
-	globus_gram_client_attr_t gram_attr = NULL;
 
 	// what the arguments get processed into
 	char *req_id, *job_contact;
@@ -600,19 +616,12 @@ handle_gram_job_status(void * user_arg)
 		return 0;
 	}
 
-	req_id = globus_libc_strdup( req_id );
-	gram_arg = globus_libc_malloc( sizeof(user_arg_t) );
-	gram_arg->req_id = req_id;
-	gram_arg->cred = current_cred;
-	if ( current_cred ) {
-		gram_attr = current_cred->gram_attr;
-		current_cred->count++;
-	}
+	gram_arg = new_gram_arg( req_id, current_cred );
 
 	gahp_printf("S\n");
 	gahp_sem_up(&print_control);
 	result = globus_gram_client_register_job_status(job_contact,
-									gram_attr,
+									gram_arg->gram_attr,
 									callback_gram_job_status, (void *)gram_arg);
 
 	if (result != GLOBUS_SUCCESS) {
@@ -630,25 +639,19 @@ callback_gram_job_status(void *arg,
 						 globus_gram_protocol_job_state_t job_state,
 						 globus_gram_protocol_error_t job_fc)
 {
-	char *req_id;
 	char *output;
 	user_arg_t * gram_arg;
 
 	gram_arg = (user_arg_t *)arg;
-	req_id = gram_arg->req_id;
-	if ( gram_arg->cred ) {
-		unlink_ref_count(gram_arg->cred,1);
-	}
-	globus_libc_free(gram_arg);
 
 	output = (char *)globus_libc_malloc(500);
 
-	globus_libc_sprintf(output, "%s %d %d %d", req_id, operation_fc,
+	globus_libc_sprintf(output, "%s %d %d %d", gram_arg->req_id, operation_fc,
 						job_fc, job_state);
 
 	enqueue_results(output);	
 
-	globus_libc_free( req_id );
+	delete_gram_arg( gram_arg );
 	return;
 }
 
@@ -658,7 +661,6 @@ handle_gram_job_cancel(void * user_arg)
 	char **input_line = (char **) user_arg;
 	int result;
 	user_arg_t * gram_arg;
-	globus_gram_client_attr_t gram_attr = NULL;
 
 	// what the arguments get processed into
 	char *req_id, *job_contact;
@@ -673,19 +675,12 @@ handle_gram_job_cancel(void * user_arg)
 		return 0;
 	}
 
-	req_id = globus_libc_strdup( req_id );
-	gram_arg = globus_libc_malloc( sizeof(user_arg_t) );
-	gram_arg->req_id = req_id;
-	gram_arg->cred = current_cred;
-	if ( current_cred ) {
-		gram_attr = current_cred->gram_attr;
-		current_cred->count++;
-	}
+	gram_arg = new_gram_arg( req_id, current_cred );
 
 	gahp_printf("S\n");
 	gahp_sem_up(&print_control);
 	result = globus_gram_client_register_job_cancel(job_contact,
-									gram_attr,
+									gram_arg->gram_attr,
 									callback_gram_job_cancel, (void *)gram_arg);
 
 	if (result != GLOBUS_SUCCESS) {
@@ -703,24 +698,18 @@ callback_gram_job_cancel(void *arg,
 						 globus_gram_protocol_job_state_t job_state,
 						 globus_gram_protocol_error_t job_fc)
 {
-	char *req_id;
 	char *output;
 	user_arg_t * gram_arg;
 
 	gram_arg = (user_arg_t *)arg;
-	req_id = gram_arg->req_id;
-	if ( gram_arg->cred ) {
-		unlink_ref_count(gram_arg->cred,1);
-	}
-	globus_libc_free(gram_arg);
 
 	output = (char *)globus_libc_malloc(500);
 
-	globus_libc_sprintf(output, "%s %d", req_id, operation_fc);
+	globus_libc_sprintf(output, "%s %d", gram_arg->req_id, operation_fc);
 
 	enqueue_results(output);	
 
-	globus_libc_free( req_id );
+	delete_gram_arg( gram_arg );
 	return;
 }
 
@@ -813,7 +802,6 @@ handle_gram_job_callback_register(void * user_arg)
 	char **input_line = (char **) user_arg;
 	int result;
 	user_arg_t * gram_arg;
-	globus_gram_client_attr_t gram_attr = NULL;
 
 	// what the arguments get processed into
 	char *req_id, *job_contact, *callback_contact;
@@ -833,14 +821,7 @@ handle_gram_job_callback_register(void * user_arg)
 		return 0;
 	}
 
-	req_id = globus_libc_strdup( req_id );
-	gram_arg = globus_libc_malloc( sizeof(user_arg_t) );
-	gram_arg->req_id = req_id;
-	gram_arg->cred = current_cred;
-	if ( current_cred ) {
-		gram_attr = current_cred->gram_attr;
-		current_cred->count++;
-	}
+	gram_arg = new_gram_arg( req_id, current_cred );
 
 	gahp_printf("S\n");
 	gahp_sem_up(&print_control);
@@ -849,7 +830,7 @@ handle_gram_job_callback_register(void * user_arg)
 									job_contact,
 									GLOBUS_GRAM_PROTOCOL_JOB_STATE_ALL,
 									callback_contact, 
-									gram_attr,
+									gram_arg->gram_attr,
 									callback_gram_job_callback_register,
 									(void *)gram_arg);
 
@@ -869,25 +850,19 @@ callback_gram_job_callback_register(void *arg,
 									globus_gram_protocol_job_state_t job_state,
 									globus_gram_protocol_error_t job_fc)
 {
-	char *req_id;
 	char *output;
 	user_arg_t * gram_arg;
 
 	gram_arg = (user_arg_t *)arg;
-	req_id = gram_arg->req_id;
-	if ( gram_arg->cred ) {
-		unlink_ref_count(gram_arg->cred,1);
-	}
-	globus_libc_free(gram_arg);
 
 	output = (char *)globus_libc_malloc(500);
 
-	globus_libc_sprintf(output, "%s %d %d %d", req_id, operation_fc,
+	globus_libc_sprintf(output, "%s %d %d %d", gram_arg->req_id, operation_fc,
 						job_fc, job_state);
 
 	enqueue_results(output);	
 
-	globus_libc_free( req_id );
+	delete_gram_arg( gram_arg );
 	return;
 }
 
@@ -898,8 +873,6 @@ handle_gram_ping(void * user_arg)
 	int result;
 	char *output, *req_id, *resource_contact;
 	user_arg_t * gram_arg;
-	globus_gram_client_attr_t gram_attr = NULL;
-
 
 	if( !process_string_arg(input_line[1], &req_id) ) {
 		HANDLE_SYNTAX_ERROR();
@@ -911,20 +884,13 @@ handle_gram_ping(void * user_arg)
 		return 0;
 	}
 
-	req_id = globus_libc_strdup( req_id );
-	gram_arg = globus_libc_malloc( sizeof(user_arg_t) );
-	gram_arg->req_id = req_id;
-	gram_arg->cred = current_cred;
-	if ( current_cred ) {
-		gram_attr = current_cred->gram_attr;
-		current_cred->count++;
-	}
+	gram_arg = new_gram_arg( req_id, current_cred );
 
 	gahp_printf("S\n");
 	gahp_sem_up(&print_control);
 	//result = globus_gram_client_ping(resource_contact);
 	result = globus_gram_client_register_ping(resource_contact,
-									gram_attr,
+									gram_arg->gram_attr,
 									callback_gram_ping, (void *)gram_arg);
 
 	if (result != GLOBUS_SUCCESS) {
@@ -943,24 +909,18 @@ callback_gram_ping(void *arg,
 						 globus_gram_protocol_job_state_t job_state,
 						 globus_gram_protocol_error_t job_fc)
 {
-	char *req_id;
 	char *output;
 	user_arg_t * gram_arg;
 
 	gram_arg = (user_arg_t *)arg;
-	req_id = gram_arg->req_id;
-	if ( gram_arg->cred ) {
-		unlink_ref_count(gram_arg->cred,1);
-	}
-	globus_libc_free(gram_arg);
 
 	output = (char *)globus_libc_malloc(500);
 
-	globus_libc_sprintf(output, "%s %d", req_id, operation_fc);
+	globus_libc_sprintf(output, "%s %d", gram_arg->req_id, operation_fc);
 
 	enqueue_results(output);	
 
-	globus_libc_free( req_id );
+	delete_gram_arg( gram_arg );
 	return;
 }
 
@@ -970,7 +930,6 @@ handle_gram_job_refresh_proxy(void * user_arg)
 	char **input_line = (char **) user_arg;
 	int result;
 	user_arg_t * gram_arg;
-	globus_gram_client_attr_t gram_attr = NULL;
 	gss_cred_id_t refreshing_cred = GSS_C_NO_CREDENTIAL;
 
 	// what the arguments get processed into
@@ -988,23 +947,16 @@ handle_gram_job_refresh_proxy(void * user_arg)
 		return 0;
 	}
 
-	req_id = globus_libc_strdup( req_id );
-	gram_arg = globus_libc_malloc( sizeof(user_arg_t) );
-	gram_arg->req_id = req_id;
-	gram_arg->cred = current_cred;
+	gram_arg = new_gram_arg( req_id, current_cred );
 	if ( current_cred ) {
-		gram_attr = current_cred->gram_attr;
-		if ( current_cred->cred ) {
-			refreshing_cred = current_cred->cred;
-		}
-		current_cred->count++;
+		refreshing_cred = current_cred->cred;
 	}
 
 	gahp_printf( "S\n" );
 	gahp_sem_up( &print_control );
 	result = globus_gram_client_register_job_refresh_credentials( job_contact,
 									refreshing_cred,
-									gram_attr,
+									gram_arg->gram_attr,
 									callback_gram_job_refresh_proxy,
 									(void *)gram_arg);
 
@@ -1023,24 +975,18 @@ callback_gram_job_refresh_proxy(void *arg,
 								globus_gram_protocol_job_state_t job_state,
 								globus_gram_protocol_error_t job_fc)
 {
-	char *req_id;
 	char *output;
 	user_arg_t * gram_arg;
 
 	gram_arg = (user_arg_t *)arg;
-	req_id = gram_arg->req_id;
-	if ( gram_arg->cred ) {
-		unlink_ref_count(gram_arg->cred,1);
-	}
-	globus_libc_free(gram_arg);
 
 	output = (char *)globus_libc_malloc(500);
 
-	globus_libc_sprintf(output, "%s %d", req_id, operation_fc);
+	globus_libc_sprintf(output, "%s %d", gram_arg->req_id, operation_fc);
 
 	enqueue_results(output);	
 
-	globus_libc_free( req_id );
+	delete_gram_arg( gram_arg );
 	return;
 }
 
@@ -1316,7 +1262,6 @@ handle_initialize_from_file(void * user_arg)
 void
 unlink_ref_count( ptr_ref_count* ptr, int decrement )
 {
-	gss_cred_id_t old_cred;
 	int result;
 
 	if (!ptr) return;
@@ -1326,14 +1271,12 @@ unlink_ref_count( ptr_ref_count* ptr, int decrement )
 		ptr->count = 0;
 	if ( ptr->key == NULL && ptr->count == 0 ) {
 		/* we are all done with this entry.  kill it. */
-		/* first, retrieve the cred from the gram_attr as a sanity check */
-		globus_gram_client_attr_get_credential(ptr->gram_attr,&old_cred);
-		if ( old_cred != ptr->cred || current_cred == ptr ) {
+		/* First, sanity-check that it's not the active credential. */
+		if ( current_cred == ptr ) {
 			gahp_printf("unlink_ref_count\\ failed\\ sanity\\ check!!!\n");
 			_exit(4);
 		}
-		globus_gram_client_attr_destroy(&(ptr->gram_attr));
-		gss_release_cred(&result,&old_cred);
+		gss_release_cred(&result,&ptr->cred);
 		globus_libc_free(ptr);
 	}
 }
@@ -1445,7 +1388,6 @@ handle_cache_proxy_from_file(void * user_arg)
 	gss_buffer_desc import_buf;
 	int min_stat;
 	gss_cred_id_t cred_handle;
-	globus_gram_client_attr_t gram_attr;
 	ptr_ref_count * ref;
 	char buf_value[4096];
 
@@ -1488,18 +1430,6 @@ handle_cache_proxy_from_file(void * user_arg)
 		goto cache_proxy_return;
 	}
 
-	result = globus_gram_client_attr_init(&gram_attr);
-	if ( result != GLOBUS_SUCCESS ) {
-		gahp_printf("F globus_gram_client_attr_init\\ failed\\ err=%d\n",result);
-		goto cache_proxy_return;
-	}
-
-	result = globus_gram_client_attr_set_credential(gram_attr,cred_handle);
-	if ( result != GLOBUS_SUCCESS ) {
-		gahp_printf("F globus_gram_client_attr_set_credential\\ failed\\ err=%d\n",result);
-		goto cache_proxy_return;
-	}
-
 	/* Clear this entry from our hash table */
 	uncache_proxy(id);
 
@@ -1507,7 +1437,6 @@ handle_cache_proxy_from_file(void * user_arg)
 	ref = (ptr_ref_count *) globus_libc_malloc( sizeof(ptr_ref_count) );
 	ref->key = globus_libc_strdup(id);
 	ref->count = 0;
-	ref->gram_attr = gram_attr;
 	ref->cred = cred_handle;
 	if ( globus_hashtable_insert(&handle_cache,ref->key,(void*)ref) < 0 )
 	{
