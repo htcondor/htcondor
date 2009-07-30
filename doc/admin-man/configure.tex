@@ -2612,19 +2612,10 @@ Tracking process family by login "cndrusr1"
 
 \index{configuration!checkpoint server configuration variables}
 These macros control whether or not Condor uses a checkpoint server.
-If you are using a checkpoint server, this section
-describes the settings that the checkpoint server itself needs
-defined.  A checkpoint server is installed
-separately. It is not included in the main Condor binary
-distribution or installation procedure.  See
-section~\ref{sec:Ckpt-Server} on Installing a Checkpoint Server
-for details on installing and running a checkpoint server for your
-pool.
-
-\Note If you are setting up a machine to join the UW-Madison CS
-Department Condor pool, you \emph{should} configure the machine to
-use a checkpoint server, and use ``condor-ckpt.cs.wisc.edu'' as the
-checkpoint server host (see below).
+This section
+describes the settings that the checkpoint server itself needs defined. 
+See section~\ref{sec:Ckpt-Server} on Installing a Checkpoint Server
+for details on installing and running a checkpoint server.
 
 \begin{description}
   
@@ -2643,35 +2634,37 @@ checkpoint server host (see below).
   
 \label{param:CkptServerDir}
 \item[\Macro{CKPT\_SERVER\_DIR}]
-  The checkpoint server needs this macro defined to the full path of the
-  directory the server should use to store checkpoint files.
-  Depending on the size of your pool and the size of the jobs your
-  users are submitting, this directory (and its subdirectories) might
+  The full path of the
+  directory the checkpoint server should use to store checkpoint files.
+  Depending on the size of the pool and the size of the jobs submitted,
+  this directory and its subdirectories might
   need to store many Mbytes of data.
 
 \label{param:UseCkptServer}
 \item[\Macro{USE\_CKPT\_SERVER}]
-  A boolean which determines if you want a given submit machine to use a
+  A boolean which determines if a given submit machine is to use a
   checkpoint server if one is available.  If a
-  checkpoint server isn't available or \MacroNI{USE\_CKPT\_SERVER} is set to
-  False, checkpoints will be written to the local \MacroUNI{SPOOL} directory on
+  checkpoint server is not available or the variable \MacroNI{USE\_CKPT\_SERVER}
+  is set to \Expr{False},
+  checkpoints will be written to the local \MacroUNI{SPOOL} directory on
   the submission machine.
 
 \label{param:MaxDiscardedRunTime}
 \item[\Macro{MAX\_DISCARDED\_RUN\_TIME}]
-  If the shadow is unable to read a
+  If the \Condor{shadow} daemon is unable to read a
   checkpoint file from the checkpoint server, it keeps trying only if
   the job has accumulated more than this many seconds of CPU usage.
-  Otherwise, the job is started from scratch.  Defaults to 3600 (1
-  hour). This setting is only used if \MacroUNI{USE\_CKPT\_SERVER} is
-  \Expr{True}.
+  Otherwise, the job is started from scratch.  
+  Defaults to 3600 (1 hour). 
+  This variable is only used if \MacroUNI{USE\_CKPT\_SERVER} is \Expr{True}.
 
 \label{param:CkptServerCheckParentInterval}
 \item[\Macro{CKPT\_SERVER\_CHECK\_PARENT\_INTERVAL}]
   This is the number of seconds between checks to see whether the parent
-  of the checkpoint server (i.e. the \Condor{master}) has died.  If the
-  parent has died, the checkpoint server shuts itself down.  The default
-  is 120 seconds.  A setting of 0 disables this check.
+  of the checkpoint server (usually the \Condor{master}) has died.  If the
+  parent has died, the checkpoint server shuts itself down.
+  The default is 120 seconds.
+  A setting of 0 disables this check.
 
 % This should be gotten rid of, that functionality is DEAD.
 %\label{param:CkptServerReplicationLevel}
@@ -2679,60 +2672,60 @@ checkpoint server host (see below).
 
 \label{param:CkptServerInterval}
 \item[\Macro{CKPT\_SERVER\_INTERVAL}]
-	This is the maximum number of seconds the checkpoint server
-	waits for activity on network sockets before performing other
-	tasks. The default is 300 seconds.
+  The maximum number of seconds the checkpoint server
+  waits for activity on network sockets before performing other
+  tasks. The default value is 300 seconds.
 
 \label{param:CkptServerClassadFile}
 \item[\Macro{CKPT\_SERVER\_CLASSAD\_FILE}]
-	This is a string that represents a file in the file system to which
-	ClassAds will be written. The ClassAds denote information about stored
-	checkpoint files, such as owner, shadow IP address, name of the
-	file, and size of the file. This information is also independently
-	recorded in the \File{TransferLog}. The default setting is undefined,
-	which means do not keep a checkpoint server classad file.
+  A string that represents a file in the file system to which
+  ClassAds will be written. The ClassAds denote information about stored
+  checkpoint files, such as owner, shadow IP address, name of the
+  file, and size of the file. This information is also independently
+  recorded in the \File{TransferLog}. The default setting is undefined,
+  which means a checkpoint server ClassAd file will not be kept.
 
 \label{param:CkptServerCleanInterval}
 \item[\Macro{CKPT\_SERVER\_CLEAN\_INTERVAL}]
-	This is the number of seconds that must pass until the classad log file
-	as described by the \Macro{CKPT\_SERVER\_CLASSAD\_FILE} variable gets
-	truncated. The default is 86400 seconds--one day.
+  The number of seconds that must pass until the ClassAd log file
+  as described by the \MacroNI{CKPT\_SERVER\_CLASSAD\_FILE} variable gets
+  truncated. The default is 86400 seconds, which is one day.
 
 \label{param:CkptServerRemoveStaleCkptInterval}
 \item[\Macro{CKPT\_SERVER\_REMOVE\_STALE\_CKPT\_INTERVAL}]
-	This is the number of seconds between attempts to discover and remove
-	stale checkpoint files. It defaults to 86400 seconds--one day.
+  The number of seconds between attempts to discover and remove
+  stale checkpoint files. It defaults to 86400 seconds, which is one day.
 
 \label{param:CkptServerSocketBufsize}
 \item[\Macro{CKPT\_SERVER\_SOCKET\_BUFSIZE}]
-	This is the number of bytes that represents the size of the TCP
-	send/recv buffer on the socket file descriptor related to moving
-	the checkpoint file to and from the checkpoint server. The default
-	is 0, meaning to let the operating system decide the size.
+  The number of bytes representing the size of the TCP
+  send/recv buffer on the socket file descriptor related to moving
+  the checkpoint file to and from the checkpoint server. 
+  The default value is 0, which allows the operating system to decide the size.
 
 \label{param:CkptServerMaxProcesses}
 \item[\Macro{CKPT\_SERVER\_MAX\_PROCESSES}]
-	This is the maximum number of child processes that could be working on
-	behalf of the checkpoint server. This includes store processes and
-	restore processes. The default is 50.
+  The maximum number of child processes that could be working on
+  behalf of the checkpoint server. This includes store processes and
+  restore processes. The default value is 50.
 
 \label{param:CkptServerMaxStoreProcesses}
 \item[\Macro{CKPT\_SERVER\_MAX\_STORE\_PROCESSES}]
-	This is the maximum number of child process strictly devoted
-	to the storage of checkpoints. The default is the value of
-	\Macro{CKPT\_SERVER\_MAX\_PROCESSES}.
+  The maximum number of child process strictly devoted
+  to the storage of checkpoints. 
+  The default is the value of \MacroNI{CKPT\_SERVER\_MAX\_PROCESSES}.
 
 \label{param:CkptServerMaxRestoreProcesses}
 \item[\Macro{CKPT\_SERVER\_MAX\_RESTORE\_PROCESSES}]
-	This is the maximum number of child process strictly devoted
-	to the restoring of checkpoints. The default is the value of
-	\Macro{CKPT\_SERVER\_MAX\_PROCESSES}.
+  The maximum number of child process strictly devoted
+  to the restoring of checkpoints. 
+  The default is the value of \MacroNI{CKPT\_SERVER\_MAX\_PROCESSES}.
 
 \label{param:CkptServerStaleCkptAgeCutoff}
 \item[\Macro{CKPT\_SERVER\_STALE\_CKPT\_AGE\_CUTOFF}]
-	This is the number of seconds that states if a checkpoint file hasn't
-	been accessed in N number of seconds, it is considered stale. The
-	default value is 5184000 seconds--sixty days.
+  The number of seconds after which if a checkpoint file has not
+  been accessed, it is considered stale.
+  The default value is 5184000 seconds, which is sixty days.
 
 % This is currently not used in the codebase, it is part of the NETMAN feature.
 %\label{param:ManageBandwidth}
