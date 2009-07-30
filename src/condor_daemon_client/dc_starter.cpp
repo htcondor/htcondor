@@ -297,6 +297,7 @@ bool DCStarter::startSSHD(char const *known_hosts_file,char const *private_clien
 
 #ifndef HAVE_SSH_TO_JOB
 	error_msg = "This version of Condor does not support ssh key exchange.";
+	return false;
 #else
 	if( !connectSock(&sock, timeout, NULL) ) {
 		error_msg = "Failed to connect to starter";
