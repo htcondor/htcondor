@@ -49,6 +49,7 @@
 #include "condor_version.h"
 #include "sshd_proc.h"
 #include "condor_base64.h"
+#include "my_username.h"
 
 extern "C" int get_random_int();
 extern int main_shutdown_fast();
