@@ -92,6 +92,16 @@ then
 fi
 cd $PACKAGE_BUILD_DIR
 
+# Patch for gsi memory leak (Bugzilla #6787)
+cd $PACKAGE_BUILD_DIR/$SOURCE_DIR/source-trees/gsi/gssapi/source
+patch -p0 -i $PACKAGE_BUILD_DIR/gsi-leak.patch
+if [ $? -ne 0 ]
+then
+    echo "patch gsi-leak.patch failed"
+    exit 1
+fi 
+cd $PACKAGE_BUILD_DIR
+
 # These variables will make Globus link against our OpenSSL external,
 # rather than the system OpenSSL libraries.
 CFLAGS=-I$EXT_INSTALL/$EXT_OPENSSL_VERSION/include

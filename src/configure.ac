@@ -2850,7 +2850,7 @@ if test "x$_cv_ext_openssl_version" != x; then
   AC_DEFINE(HAVE_OPENSSL_SSL_H,1,[do we have openssl])
 
   # Globus 4.2.1 is dependent on an external version of openssl
-  CHECK_EXTERNAL([globus],[4.2.1-p2], [soft])
+  CHECK_EXTERNAL([globus],[4.2.1-p3], [soft])
 fi
 
 if test -z "$_cv_ext_globus_version"; then
@@ -2894,7 +2894,7 @@ AS_IF([test "x$_cv_opsys" != xDARWIN -a "x$_cv_opsys" != xAIX -a "x$_cv_opsys" !
   [_cv_has_blahp=yes],
   [_cv_has_blahp=no])
 AC_MSG_RESULT([$_cv_has_blahp])
-CHECK_EXTERNAL([blahp], [1.12.2-p3], [soft])
+CHECK_EXTERNAL([blahp], [1.12.2-p4], [soft])
 
 # When --with-proper the detection of the man pages is a little
 # ugly. The value added to the end of $_dir must be what
