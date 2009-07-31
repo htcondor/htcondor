@@ -452,7 +452,8 @@ handle_gram_job_request(void * user_arg)
 	user_arg_t * gram_arg;
 
 	// what the arguments get processed into
-	char *req_id, *resource_contact, *callback_contact, *delegation, *rsl;
+	char *req_id, *resource_contact, *callback_contact, *rsl;
+	int limited_deleg;
 
 	// req id
 	if( !process_string_arg(input_line[1], &req_id ) ) {
@@ -471,8 +472,8 @@ handle_gram_job_request(void * user_arg)
 		return 0;
 	}
 	 
-	// use_full_delegation, which is not used...
-	if( !process_string_arg(input_line[4], &delegation ) ) {
+	// should delegated proxy be limited?
+	if( !process_int_arg(input_line[4], &limited_deleg ) ) {
 		HANDLE_SYNTAX_ERROR();
 		return 0;
 	}
@@ -483,6 +484,14 @@ handle_gram_job_request(void * user_arg)
 	}
 
 	gram_arg = new_gram_arg( req_id, current_cred );
+
+	if ( limited_deleg ) {
+		globus_gram_client_attr_set_delegation_mode( gram_arg->gram_attr,
+							GLOBUS_IO_SECURE_DELEGATION_MODE_LIMITED_PROXY );
+	} else {
+		globus_gram_client_attr_set_delegation_mode( gram_arg->gram_attr,
+							GLOBUS_IO_SECURE_DELEGATION_MODE_FULL_PROXY );
+	}
 
 	gahp_printf("S\n");
 	gahp_sem_up(&print_control);
@@ -934,6 +943,7 @@ handle_gram_job_refresh_proxy(void * user_arg)
 
 	// what the arguments get processed into
 	char *req_id, *job_contact;
+	int limited_deleg = 1;
 
 	// reqid
 	if( !process_string_arg(input_line[1], &req_id) ) {
@@ -947,9 +957,22 @@ handle_gram_job_refresh_proxy(void * user_arg)
 		return 0;
 	}
 
+	if( input_line[3] && !process_int_arg( input_line[3], &limited_deleg ) ) {
+		HANDLE_SYNTAX_ERROR();
+		return 0;
+	}
+
 	gram_arg = new_gram_arg( req_id, current_cred );
 	if ( current_cred ) {
 		refreshing_cred = current_cred->cred;
+	}
+
+	if ( limited_deleg ) {
+		globus_gram_client_attr_set_delegation_mode( gram_arg->gram_attr,
+							GLOBUS_IO_SECURE_DELEGATION_MODE_LIMITED_PROXY );
+	} else {
+		globus_gram_client_attr_set_delegation_mode( gram_arg->gram_attr,
+							GLOBUS_IO_SECURE_DELEGATION_MODE_FULL_PROXY );
 	}
 
 	gahp_printf( "S\n" );
