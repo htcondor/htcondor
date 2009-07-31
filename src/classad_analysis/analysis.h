@@ -36,6 +36,8 @@
 #include "boolValue.h"
 #include "conversion.h"
 
+#include "result.h"
+
 /// The analyzer object
 class ClassAdAnalyzer
 {
@@ -46,6 +48,8 @@ class ClassAdAnalyzer
 
 		/** Destructor */
 	~ClassAdAnalyzer( );
+
+	classad_analysis::job::result GetResult() { return *m_result; }
 
 		/** Analyze a job ClassAd requirements expression.
 		 *	@param request The job ClassAd
@@ -89,8 +93,16 @@ class ClassAdAnalyzer
 							  string &attr, string &buffer );
 
  private:
+	
+	classad_analysis::job::result *m_result;
+
 	MultiProfile *jobReq;
 	classad::MatchClassAd mad;
+
+	ExprTree* std_rank_condition;
+	ExprTree* preempt_rank_condition;
+	ExprTree* preempt_prio_condition;
+	ExprTree* preemption_req;
 
 	bool AnalyzeJobReqToBuffer( classad::ClassAd *request, ResourceGroup &offers,
 								string &buffer );
@@ -105,6 +117,9 @@ class ClassAdAnalyzer
 #if defined( COLLECTIONS )
 	bool MakeResourceGroup( classad::ClassAdCollectionServer &, ResourceGroup &result );
 #endif
+
+	bool NeedsBasicAnalysis( ClassAd *request );
+	void BasicAnalyze(ClassAd* request, ClassAd* offer);
 
 	bool SuggestCondition( MultiProfile *, ResourceGroup & );
 	bool SuggestConditionRemove( Profile *, ResourceGroup & );
