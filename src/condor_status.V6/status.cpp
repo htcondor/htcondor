@@ -182,6 +182,13 @@ main (int argc, char *argv[])
 	  case MODE_OTHER:
 			// tell the query object what the type we're querying is
 		query->setGenericQueryType(genericType);
+		if(genericType) {
+			sprintf( buffer, "TARGET.%s == \"%s\"", ATTR_TARGET_TYPE, genericType);
+			if (diagnose) {
+				printf ("Adding constraint [%s]\n", buffer);
+			}
+			query->addANDConstraint (buffer);
+		}
 		free(genericType);
 		genericType = NULL;
 		break;
@@ -233,7 +240,7 @@ main (int argc, char *argv[])
 		}
 		query->addANDConstraint (buffer);
 	}
-									
+
 	// second pass:  add regular parameters and constraints
 	if (diagnose) {
 		printf ("----------\n");

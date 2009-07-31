@@ -283,7 +283,8 @@ const int UPDATE_LEASE_MANAGER_AD		= 64;
 const int QUERY_LEASE_MANAGER_ADS		= 65;
 const int INVALIDATE_LEASE_MANAGER_ADS  = 66;
 
-const int QUERY_GENERIC_ADS = QUERY_ANY_ADS;	// == 48
+//const int QUERY_GENERIC_ADS = QUERY_ANY_ADS;	// == 48
+const int QUERY_GENERIC_ADS = 73;	// == 48
 
 const int CCB_REGISTER = 67;
 const int CCB_REQUEST = 68;

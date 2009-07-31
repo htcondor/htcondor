@@ -171,6 +171,8 @@ void CollectorDaemon::Init()
 		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
     daemonCore->Register_Command(QUERY_GRID_ADS,"QUERY_GRID_ADS",
 		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
+	daemonCore->Register_Command(QUERY_GENERIC_ADS,"QUERY_GENERIC_ADS",
+		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
 	
 		// // // // // // // // // // // // // // // // // // // // //
 		// WARNING!!!! If you add other invalidate commands here, you
@@ -500,13 +502,10 @@ CollectorDaemon::receive_query_public( int command )
 		whichAds = LEASE_MANAGER_AD;
 		break;
 
-#   if 0
-		// This is disabled because QUERY_GENERIC_ADS == QUERY_ANY_ADS
 	  case QUERY_GENERIC_ADS:
 		dprintf (D_FULLDEBUG,"Got QUERY_GENERIC_ADS\n");
-		whichAds = LEASE_MANAGER_AD;
+		whichAds = GENERIC_AD;
 		break;
-#   endif
 
 	  case QUERY_ANY_ADS:
 		dprintf (D_FULLDEBUG,"Got QUERY_ANY_ADS\n");
@@ -960,6 +959,7 @@ CollectorDaemon::sockCacheHandler( Service*, Stream* sock )
 	case INVALIDATE_LICENSE_ADS:
 	case INVALIDATE_STORAGE_ADS:
     case INVALIDATE_GRID_ADS:
+	case INVALIDATE_ADS_GENERIC:
 		return receive_invalidation( NULL, cmd, sock );
 		break;
 
@@ -1071,8 +1071,7 @@ void CollectorDaemon::process_invalidation (AdTypes whichAds, ClassAd &query, St
 	__numAds__ = 0;
 
 	// first set all the "LastHeardFrom" attributes to low values ...
-	AdTypes queryAds = (whichAds == GENERIC_AD) ? ANY_AD : whichAds;
-	collector.walkHashTable (queryAds, invalidation_scanFunc);
+	collector.walkHashTable (whichAds, invalidation_scanFunc);
 
 	// ... then invoke the housekeeper
 	collector.invokeHousekeeper (whichAds);

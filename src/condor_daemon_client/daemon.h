@@ -508,6 +508,13 @@ public:
 		 **/
 	bool getTimeOffsetRange( long &min_range, long &max_range );
 
+		/**
+		 * Set the name of the subsystem
+		 *
+		 * @param subsys - The subsystem string for this daemon
+		 **/
+	bool setSubsystem( const char* subsys );
+
 protected:
 	// Data members
 
@@ -553,11 +560,10 @@ protected:
 		  This does all the real work of finding the right address,
 		  port, ip_addr, etc.  We check for address files, and query
 		  the appropriate collector if that doesn't work.
-		  @param subsys The subsystem string for this daemon
 		  @param adtype The type of ClassAd we'll query.
 		  @parma query_collector Whether to query collector if all else fails
 		  */
-	bool getDaemonInfo( const char* subsys, AdTypes adtype, bool query_collector = true );
+	bool getDaemonInfo( AdTypes adtype, bool query_collector = true );
 
 		/** Helper for central manager daemons (collector and
 		  negotiator).  These are a special case since they have
