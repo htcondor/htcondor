@@ -64,6 +64,7 @@ print CONFIGFILE "DAGMAN_MAX_JOBS_SUBMITTED = $maxjobs\n";
 print CONFIGFILE "DAGMAN_MAX_SUBMITS_PER_INTERVAL = 100\n";
 # This only works in 7.3.2 and later.
 print CONFIGFILE "DAGMAN_USER_LOG_SCAN_INTERVAL = 1\n";
+print CONFIGFILE "DAGMAN_CONDOR_SUBMIT_EXE = ../dummy_condor_submit.pl\n";
 close(CONFIGFILE);
 
 #
@@ -120,9 +121,9 @@ sub WriteNode
 
 	print DAGFILE "\nJOB $nodename $submitfile\n";
 	print DAGFILE "SCRIPT PRE $nodename ../job_dagman_large_dag-node.pl " .
-				"PRE $nodename\n";
+				"Args: PRE $nodename\n";
 	print DAGFILE "SCRIPT POST $nodename ../job_dagman_large_dag-node.pl " .
-				"POST $nodename\n";
+				"Args: POST $nodename\n";
 
 	open(SUBMITFILE, ">$submitfile") or die "Can't open/create submit " .
 				"file $submitfile $!\n";
@@ -139,6 +140,7 @@ sub WriteNode
 	} else {
 		print SUBMITFILE "executable = ../job_dagman_large_dag-node.pl\n";
 		print SUBMITFILE "arguments = JOB $nodename\n";
+		print SUBMITFILE "events = sub exec term\n";
 	}
 	print SUBMITFILE "universe = scheduler\n";
 	my $logfile;
