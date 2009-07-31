@@ -101,8 +101,8 @@ job_schedd_restart-holdjobs-ok
 #job_dagman_comlog needs x_read_joblog.exe
 #job_dagman_fullremove needs x_read_joblog.exe
 job_dagman_basic
-job_dagman_maxpostscripts
-job_dagman_maxprescripts
+#job_dagman_maxpostscripts
+#job_dagman_maxprescripts
 #job_dagman_retry needs x_read_joblog.exe
 #job_dagman_throttle needs x_read_joblog.exe
 #job_dagman_uncomlog needs x_read_joblog.exe
