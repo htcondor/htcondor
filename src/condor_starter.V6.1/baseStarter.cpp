@@ -625,6 +625,7 @@ CStarter::createJobOwnerSecSession( int /*cmd*/, Stream* s )
 		ClaimIdParser claimid(session_id,session_info.Value(),session_key);
 		response.Assign(ATTR_RESULT,true);
 		response.Assign(ATTR_CLAIM_ID,claimid.claimId());
+		response.Assign(ATTR_STARTER_IP_ADDR,daemonCore->publicNetworkIpAddr());
 
 		dprintf(D_FULLDEBUG,"Created security session for job owner (%s).\n",
 				fqu.Value());

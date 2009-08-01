@@ -7523,6 +7523,17 @@ Scheduler::spawnLocalStarter( shadow_rec* srec )
 
 	BeginTransaction();
 	mark_job_running( job_id );
+
+		// add CLAIM_ID to this job ad so schedd can be authorized by
+		// starter by virtue of this shared secret (e.g. for
+		// CREATE_JOB_OWNER_SEC_SESSION
+	char *public_part = Condor_Crypt_Base::randomHexKey();
+	char *private_part = Condor_Crypt_Base::randomHexKey();
+	ClaimIdParser cidp(public_part,NULL,private_part);
+	SetAttributeString( job_id->cluster, job_id->proc, ATTR_CLAIM_ID, cidp.claimId() );
+	free( public_part );
+	free( private_part );
+
 	CommitTransaction();
 
 	Env starter_env;
@@ -11729,14 +11740,19 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 	ClassAd *jobad;
 	int job_status = -1;
 	match_rec *mrec = NULL;
+	MyString job_claimid_buf;
+	char const *job_claimid = NULL;
+	char const *match_sec_session_id = NULL;
 	int universe = -1;
 	MyString startd_name;
 	MyString starter_addr;
 	MyString starter_claim_id;
-	MyString session_info;
+	MyString job_owner_session_info;
 	MyString starter_version;
 	bool retry_is_sensible = false;
 	bool job_is_suitable = false;
+	ClassAd starter_ad;
+	int timeout = 20;
 
 		// This command is called for example by condor_ssh_to_job
 		// in order to establish a security session for communication
@@ -11771,7 +11787,7 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 		goto error_wrapup;
 	}
 
-	input.LookupString(ATTR_SESSION_INFO,session_info);
+	input.LookupString(ATTR_SESSION_INFO,job_owner_session_info);
 
 	jobad = GetJobAd(jobid.cluster,jobid.proc);
 	if( !jobad ) {
@@ -11793,7 +11809,7 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 	case CONDOR_UNIVERSE_STANDARD:
 	case CONDOR_UNIVERSE_GRID:
 	case CONDOR_UNIVERSE_SCHEDULER:
-		break;
+		break; // these universes not supported
 	case CONDOR_UNIVERSE_PVM:
 	case CONDOR_UNIVERSE_MPI:
 	case CONDOR_UNIVERSE_PARALLEL:
@@ -11829,6 +11845,30 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 		}
 		else if (job_status != RUNNING) {
 			retry_is_sensible = true;
+		}
+		break;
+	}
+	case CONDOR_UNIVERSE_LOCAL: {
+		shadow_rec *srec = FindSrecByProcID(jobid);
+		if( !srec ) {
+			retry_is_sensible = true;
+		}
+		else {
+			startd_name = my_full_hostname();
+				// NOTE: this does not get the CCB address of the starter.
+				// If there is one, we'll get it when we call the starter
+				// below.  (We don't need it ourself, because it is on the
+				// same machine, but our client might not be.)
+			starter_addr = daemonCore->InfoCommandSinfulString( srec->pid );
+			if( starter_addr.IsEmpty() ) {
+				retry_is_sensible = true;
+				break;
+			}
+			starter_ad.Assign(ATTR_STARTER_IP_ADDR,starter_addr);
+			jobad->LookupString(ATTR_CLAIM_ID,job_claimid_buf);
+			job_claimid = job_claimid_buf.Value();
+			match_sec_session_id = NULL; // no match sessions for local univ
+			job_is_suitable = true;
 		}
 		break;
 	}
@@ -11870,9 +11910,8 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 		}
 		goto error_wrapup;
 	}
-	else {
-		ClassAd starter_ad;
-		int timeout = 20;
+
+	if( mrec ) { // locate starter by calling startd
 		MyString global_job_id;
 		MyString startd_addr = mrec->peer;
 
@@ -11885,7 +11924,13 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 			error_msg = "Failed to get address of starter for this job";
 			goto error_wrapup;
 		}
+		job_claimid = mrec->claimId();
+		match_sec_session_id = mrec->secSessionId();
+	}
 
+		// now connect to the starter and create a security session for
+		// our client to use
+	{
 		starter_ad.LookupString(ATTR_STARTER_IP_ADDR,starter_addr);
 
 		DCStarter starter;
@@ -11894,7 +11939,7 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 			goto error_wrapup;
 		}
 
-		if( !starter.createJobOwnerSecSession(timeout,mrec->claimId(),mrec->secSessionId(),session_info.Value(),starter_claim_id,error_msg,starter_version) ) {
+		if( !starter.createJobOwnerSecSession(timeout,job_claimid,match_sec_session_id,job_owner_session_info.Value(),starter_claim_id,error_msg,starter_version,starter_addr) ) {
 			goto error_wrapup; // error_msg already set
 		}
 	}
