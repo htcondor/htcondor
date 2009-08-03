@@ -2,6 +2,7 @@
 \section{\label{sec:Parallel}Parallel Applications (Including MPI Applications)}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{parallel universe|(}
+\index{MPI application}
 
 Condor's Parallel universe supports a wide variety of parallel
 programming environments, and it encompasses the execution 
@@ -202,7 +203,7 @@ could satisfy the requirements.
 \subsection{\label{sec:parallel-mpi-submit}MPI Applications Within Condor's Parallel Universe}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{parallel universe!running MPI applications}
-\index{MPI application!under the dedicated scheduler}
+\index{MPI application}
 
 MPI applications utilize a single executable that is invoked in order to
 execute in parallel on one or more machines. 
@@ -333,9 +334,5 @@ Alternatively, a parallel universe job that sets the attribute
 in its submit description file changes the policy,
 such that Condor will wait until every node in the parallel 
 job has completed to consider the job finished. 
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\input{user-man/mpi.tex}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{parallel universe|)}

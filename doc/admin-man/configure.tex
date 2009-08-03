@@ -5294,14 +5294,6 @@ SYSTEM_PERIODIC_REMOVE = \
   backup file will be overwritten each time the \Condor{schedd}
   starts.  \Macro{SCHEDD\_BACKUP\_SPOOL} defaults to ``False''.
 
-\label{param:MPICondorRshPath}
-\item[\Macro{MPI\_CONDOR\_RSH\_PATH}]
-  The complete path to the
-  special version of \Prog{rsh} that is required to spawn MPI
-  jobs under Condor.
-  \MacroU{LIBEXEC} is the proper value for this 
-  configuration variable, required when running MPI dedicated jobs.
-
 \label{param:ScheddPreemptionRequirements}
 \item[\Macro{SCHEDD\_PREEMPTION\_REQUIREMENTS}]
   This boolean expression is
@@ -5341,9 +5333,9 @@ SYSTEM_PERIODIC_REMOVE = \
 
 \label{param:DedicatedSchedulerUseFifo}
 \item[\Macro{DEDICATED\_SCHEDULER\_USE\_FIFO}]
-  When this parameter is set to true (the default), parallel and mpi
+  When this parameter is set to true (the default), parallel 
   universe jobs will be scheduled in a first-in, first-out manner.
-  When set to false, parallel and mpi jobs are scheduled using a
+  When set to false, parallel jobs are scheduled using a
   best-fit algorithm. Using the best-fit algorithm is not recommended,
   as it can cause starvation.
 

@@ -432,7 +432,7 @@ one submit description file.
 
 \index{submit commands!universe}
 \item[universe = $<$vanilla \Bar\ standard \Bar\ scheduler
-\Bar\ local \Bar\ grid \Bar\ mpi \Bar\ java \Bar\ vm$>$]
+\Bar\ local \Bar\ grid \Bar\ java \Bar\ vm$>$]
 \label{man-condor-submit-universe}
 Specifies which Condor Universe to use when running this job.  The Condor
 Universe specifies a Condor execution environment.
@@ -450,8 +450,6 @@ The \SubmitCmd{grid} universe forwards the job to an external job
 management system.
 Further specification of the \SubmitCmd{grid} universe is done with the
 \SubmitCmd{grid\_resource} command.
-The \SubmitCmd{mpi} universe is
-for running mpi jobs made with the MPICH package.
 The \SubmitCmd{java} universe is for programs written to the Java Virtual Machine.
 The \SubmitCmd{vm} universe facilitates the execution of a virtual
 machine.
@@ -643,7 +641,7 @@ ignored on Windows machines.
 \index{submit commands!transfer\_executable}
 \item[transfer\_executable = $<$True \Bar\ False$>$]
 This command is applicable to jobs submitted to the grid,
-vanilla, and MPI universes.
+and vanilla universes.
 If \SubmitCmd{transfer\_executable} is set to
 \Expr{False}, then Condor looks for the executable on the remote machine, and
 does not transfer the executable over.
@@ -817,7 +815,7 @@ precedence over a \AdAttr{*\_remove} expressions.
 
 If left unspecified, this will default to \Expr{False}.
 
-This expression is available for the vanilla, java, parallel, mpi, grid,
+This expression is available for the vanilla, java, parallel, grid,
 local and scheduler universes.
 It is additionally available, when submitted from a Unix machine,
 for the standard universe.
@@ -873,7 +871,7 @@ precedence over \AdAttr{on\_exit\_*} expressions,
 and \AdAttr{*\_hold} expressions take
 precedence over a \AdAttr{*\_remove} expressions.
 
-This expression is available for the vanilla, java, parallel, mpi, grid,
+This expression is available for the vanilla, java, parallel, grid,
 local and scheduler universes.
 It
 is additionally available, when submitted from a Unix machine, for the
@@ -901,7 +899,7 @@ precedence over \AdAttr{on\_exit\_*} expressions,
 and \AdAttr{*\_hold} expressions take
 precedence over a \AdAttr{*\_remove} expressions.
 
-This expression is available for the vanilla, java, parallel, mpi, grid,
+This expression is available for the vanilla, java, parallel, grid,
 local and scheduler universes.
 It is additionally available, when submitted from a Unix machine,
 for the standard universe.  Note that the schedd, by default, only checks
@@ -933,7 +931,7 @@ If the expression becomes \Expr{True}, the job will be released.
 %So the short answer: by default, every SCHEDD_INTERVAL (5 minutes by
 %default) or more often as needed.
 
-This expression is available for the vanilla, java, parallel, mpi, grid,
+This expression is available for the vanilla, java, parallel, grid,
 local and scheduler universes.
 It is additionally available, when submitted from a Unix machine,
 for the standard universe.  Note that the \Condor{schedd} daemon,
@@ -966,7 +964,7 @@ So, the \AdAttr{periodic\_remove} expression takes precedent over
 the \AdAttr{on\_exit\_remove} expression,
 if the two describe conflicting actions.
 
-This expression is available for the vanilla, java, parallel, mpi, grid,
+This expression is available for the vanilla, java, parallel, grid,
 local and scheduler universes.
 It is additionally available, when submitted from a Unix machine,
 for the standard universe.  Note that the schedd, by default, only checks
@@ -1681,7 +1679,7 @@ and initial property values.
 
 \index{submit commands!machine\_count}
 \item[machine\_count = $<$max$>$] 
-For the parallel (and therefore, the mpi) universe,
+For the parallel universe,
 a single value (\Arg{max}) is required.
 It is neither a maximum or minimum, but 
 the number of machines to be dedicated toward running the job.
@@ -2133,11 +2131,11 @@ Also provides a directory
 (on the machine from which the job is submitted)
 for the user log, when a full path is not specified. 
 
-For vanilla or MPI universe jobs where there is a shared file system,
+For vanilla universe jobs where there is a shared file system,
 it is the current working directory on the machine where the
 job is executed.
 
-For vanilla, grid, or MPI universe jobs where file transfer mechanisms are
+For vanilla or grid universe jobs where file transfer mechanisms are
 utilized (there is \emph{not} a shared file system),
 it is the directory on the machine from which the job is submitted
 where the input files come from, and where the job's output
@@ -2414,8 +2412,8 @@ defined by lines in the form of
         <macro_name> = <string> 
 \end{verbatim} 
 Three pre-defined macros are supplied by the submit description file parser.
-The third of the pre-defined macros is only relevant to MPI universe
-jobs.
+The third of the pre-defined macros is only relevant to MPI applications
+under the parallel universe.
 The
 \MacroU{Cluster} macro supplies the value of the
 \index{ClassAd job attribute!ClusterId}
@@ -2432,7 +2430,8 @@ etc., for clusters with lots of jobs, and/or could be used to supply a
 Condor process with its own cluster and process numbers on the command
 line.
 The 
-\MacroU{Node} macro is defined only for MPI universe jobs.
+\MacroU{Node} macro is defined for MPI applications run
+as parallel universe jobs.
 It is a unique value assigned for the duration of the job
 that essentially identifies the machine on which a program is
 executing.
