@@ -2318,3 +2318,53 @@ LeaseManager.CLASSAD_LOG	= $(SPOOL)/LeaseManagerState
 #LeaseManager.QUERY_ADTYPE	= Any
 #LeaseManager.QUERY_CONSTRAINTS	= target.MyType == "SomeType"
 #LeaseManager.QUERY_CONSTRAINTS	= target.TargetType == "SomeType"
+
+##
+##--------------------------------------------------------------------
+##  condor_ssh_to_job
+##--------------------------------------------------------------------
+# NOTE: condor_ssh_to_job is not supported under Windows.
+
+# Tell the starter (execute side) whether to allow the job owner or
+# queue super user on the schedd from which the job was submitted to
+# use condor_ssh_to_job to access the job interactively (e.g. for
+# debugging).  TARGET is the job; MY is the machine.
+#ENABLE_SSH_TO_JOB = true
+
+# Tell the schedd (submit side) whether to allow the job owner or
+# queue super user to use condor_ssh_to_job to access the job
+# interactively (e.g. for debugging).  MY is the job; TARGET is not
+# defined.
+#SCHEDD_ENABLE_SSH_TO_JOB = true
+
+# Command condor_ssh_to_job should use to invoke the ssh client.
+# %h --> remote host
+# %i --> ssh key file
+# %k --> known hosts file
+# %u --> remote user
+# %x --> proxy command
+# %% --> %
+#SSH_TO_JOB_SSH_CMD = ssh -oUser=%u -oIdentityFile=%i -oStrictHostKeyChecking=yes -oUserKnownHostsFile=%k -oGlobalKnownHostsFile=%k -oProxyCommand=%x %h
+
+# Additional ssh clients may be configured.  They all have the same
+# default as ssh, except for scp, which omits the %h:
+#SSH_TO_JOB_SCP_CMD = scp -oUser=%u -oIdentityFile=%i -oStrictHostKeyChecking=yes -oUserKnownHostsFile=%k -oGlobalKnownHostsFile=%k -oProxyCommand=%x
+
+# Path to sshd
+#SSH_TO_JOB_SSHD = /usr/sbin/sshd
+
+# Arguments the starter should use to invoke sshd in inetd mode.
+# %f --> sshd config file
+# %% --> %
+#SSH_TO_JOB_SSHD_ARGS = "-i -e -f %f"
+
+# sshd configuration template used by condor_ssh_to_job_sshd_setup.
+#SSH_TO_JOB_SSHD_CONFIG_TEMPLATE = $(LIB)/condor_ssh_to_job_sshd_config_template
+
+# Path to ssh-keygen
+#SSH_TO_JOB_SSH_KEYGEN = /usr/bin/ssh-keygen
+
+# Arguments to ssh-keygen
+# %f --> key file to generate
+# %% --> %
+#SSH_TO_JOB_SSH_KEYGEN_ARGS = "-N '' -C '' -q -f %f"
