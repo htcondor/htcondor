@@ -10,7 +10,7 @@
 #define TYPE_DOUBLE				3
 
 
-typedef struct {
+typedef struct param_info_t_s {
 
 	char*	name;
     char* 	aliases;

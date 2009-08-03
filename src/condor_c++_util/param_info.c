@@ -182,15 +182,14 @@ param_info_insert(char* param,
 
 
 char*
-param_default_string(const char* param) {
+param_default_string(const char* param)
+{
+	param_info_t *p;
+	char* ret = NULL;
 
 	if(first_time) {
 		param_info_init();
 	}
-	
-	param_info_t* p;
-	char* ret = NULL;
-
 	p = param_info_hash_lookup(param_info, param);
 
 	// Don't check the type here, since this is used in param and is used
@@ -204,13 +203,12 @@ param_default_string(const char* param) {
 
 int
 param_default_integer(const char* param, int* valid) {
+	param_info_t* p;
+	int ret = 0;
 
 	if(first_time) {
 		param_info_init();
 	}
-	
-	param_info_t* p;
-	int ret = 0;
 
 	p = param_info_hash_lookup(param_info, param);
 
@@ -232,12 +230,13 @@ param_default_boolean(const char* param, int* valid) {
 double
 param_default_double(const char* param, int* valid) {
 
+
+	param_info_t* p;
+	double ret = 0.0;
+
 	if(first_time) {
 		param_info_init();
 	}
-	
-	param_info_t* p;
-	double ret = 0.0;
 
 	p = param_info_hash_lookup(param_info, param);
 
