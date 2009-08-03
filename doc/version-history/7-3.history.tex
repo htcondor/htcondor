@@ -65,6 +65,11 @@ scripts.
 \item Both the support and documentation for the MPI universe have been removed.
 MPI applications are supported through the use of the parallel universe.
 
+% gittrac #551
+\item When the VM universe is enabled but Condor's test of the VM software
+fails, Condor will periodically retry the VM software test until it
+succeeds.
+
 \end{itemize}
 
 \noindent Configuration Variable Additions and Changes:
