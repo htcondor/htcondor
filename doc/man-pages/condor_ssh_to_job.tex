@@ -1,0 +1,97 @@
+\begin{ManPage}
+{\label{man-condor-ssh-to-job}\Condor{ssh\_to\_job}}{1}
+{create an ssh session to a running job}
+\Synopsis \SynProg{\Condor{ssh\_to\_job}}
+\ToolDebugOption
+\oOptArg{-name}{schedd-name}
+\oOptArg{-pool}{pool-name}
+\oOptArg{-ssh}{ssh-command}
+\oOptArg{-keygen-options}{ssh-keygen-options}
+\oOptArg{-shells}{shell1,shell2,...}
+\oArg{-auto-retry}
+\Arg{\{cluster \Bar cluster.proc \Bar cluster.proc.sub-proc \}}
+\oArg{command}
+
+\index{Condor commands!condor\_ssh\_to\_job}
+\index{condor\_ssh\_to\_job command}
+
+\Description
+
+\Condor{ssh\_to\_job} creates an ssh session to a running job.  It is
+available in unix Condor distributions and works for vanilla, java,
+local, and parallel universe jobs.  The user must be the owner of the
+job or must be a queue super user, and both the schedd and starter
+must allow \Condor{ssh\_to\_job} access (true by default).  If no
+remote command is specified, an interactive shell is created.  An
+alternate ssh program may be specified, such as sftp for uploading and
+downloading files.
+
+The remote command or shell runs with the same user id as the running
+job and is initialized with the same working directory.  The
+environment is initialized to be the same as that of the job plus any
+changes made by the shell setup scripts and any environment variables
+passed by the ssh client.  In addition, the environment variable
+\Env{\_CONDOR\_JOB\_PIDS} is defined.  This is a space-separated list
+of PIDs associated with the job.  This list will at least contain the
+PID of the process that was started when the job was launched (first
+item in the list).  It \emph{may} contain additional pids of other
+processes that the job has created.
+
+The ssh session and all processes it creates are treated by Condor as
+though they are processes belonging to the job.  If the slot is
+preempted or suspended, the ssh session is killed or suspended along
+with the job.  If the job exits before the ssh session finishes, the
+slot remains in the Claimed Busy state and is treated as though not
+all job processes have exited until the ssh session is closed.
+
+\Condor{ssh\_to\_job} stores ssh keys in temporary files in a newly
+created and uniquely named directory in \Env{TMPDIR}.  When the ssh
+session is finished, this directory is removed.
+
+For details of how \Condor{ssh\_to\_job} works and administrative
+options for configuring it, see section~\ref{sec:Config-ssh-to-job}.
+
+\begin{Options}
+    \ToolDebugDesc
+    \OptItem{\OptArg{-name}{schedd-name}}{Specify an alternate schedd if the default (local) one is not desired}
+    \OptItem{\OptArg{-pool}{pool-name}}{Specify an alternate condor pool if the default one is not desired}
+    \OptItem{\OptArg{-ssh}{ssh-command}}{Specify an alternate ssh program to run in place of ssh (e.g. sftp or scp).  Additional ssh arguments may be specified in the ssh-command.  Since the arguments are delimited by spaces, you will need to put quotes around the whole command to prevent your shell from splitting it into multiple arguments to \Condor{ssh\_to\_job}.  If any ssh arguments must contain spaces, enclose them in single quotes.}
+    \OptItem{\OptArg{-keygen-options}{ssh\_key\_gen options}}{Specify additional options to ssh\_keygen for creating the ssh keypair that is used for the duration of the session.  For example, a different number of bits could be used or a different key type than the default.}
+    \OptItem{\OptArg{-shells}{shell1,shell2,...}}{Specify a comma-separated list of shells to try to launch.  If the first shell does not exist on the remote machine, the following ones in the list will be tried.  If none of the specified shells can be found, /bin/sh is used by default.  If this option is not specified, it defaults to the value of \Env{SHELL} in the environment of \Condor{ssh\_to\_job}.}
+    \OptItem{\Arg{auto-retry}}{Specifies that if the job is not yet running \Condor{ssh\_to\_job} should keep trying periodically until it succeeds or encounters some other error.}
+\end{Options}
+
+\Examples
+\footnotesize
+\begin{verbatim}
+% condor_ssh_to_job 32.0
+Welcome to slot2@tonic.cs.wisc.edu!
+Your condor job is running with pid(s) 65881.
+% gdb -p 65881
+(gdb) where
+...
+% logout
+Connection to condor-job.tonic.cs.wisc.edu closed.
+
+(How to upload/download files interactively.)
+% condor_ssh_to_job -ssh sftp 32.0
+Connecting to condor-job.tonic.cs.wisc.edu...
+sftp> ls
+...
+sftp> get outputfile.dat
+
+(How to upload/download with scp. Note use of arbitrarily chosen "remote" for hostname.)
+% condor_ssh_to_job -ssh scp 32 remote:outputfile.dat .
+
+(How to use rsync.  Note use of job id 32.0 in place of hostname.)
+rsync -v -e "condor_ssh_to_job" 32.0:outputfile.dat .
+\end{verbatim}
+\normalsize
+
+\ExitStatus
+
+\Condor{ssh\_to\_job} will exit with a non-zero status value if it fails
+to set up an ssh session.  If it succeeds, it will exit with the
+status value of the remote command or shell.
+
+\end{ManPage}
