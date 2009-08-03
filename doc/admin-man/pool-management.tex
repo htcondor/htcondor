@@ -6,183 +6,184 @@ Condor provides administrative tools to help with
 pool management.
 The following sections describe some of these various tasks.
 
-All of the commands described in this section must be run from an
-authorized machine. 
-An authorized machine is one that is listed in the 
-\Macro{HOSTALLOW\_ADMINISTRATOR} configuration variable,
-such that IP/host-based security allows the
-administrator commands to be serviced.
-See section~\ref{sec:Host-Security} on
-page~\pageref{sec:Host-Security} for full details about IP/host-based
-security in Condor.
+\Todo
+%All of the commands described in this section must be run from an
+%authorized machine. 
+%An authorized machine is one that is listed in the 
+%\Macro{HOSTALLOW\_ADMINISTRATOR} configuration variable,
+%such that IP/host-based security allows the
+%administrator commands to be serviced.
+%See section~\ref{sec:Host-Security} on
+%page~\pageref{sec:Host-Security} for full details about IP/host-based
+%security in Condor.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Pool-Shutdown-and-Restart}
 Shutting Down and Restarting a Condor Pool}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-The installation of new binaries is a situation in which the
-shutdown and restart of an entire Condor pool is appropriate.
-It is generally
-best to make sure no jobs are running, shut down Condor, and then
-install the new daemons.
+%The installation of new binaries is a situation in which the
+%shutdown and restart of an entire Condor pool is appropriate.
+%It is generally
+%best to make sure no jobs are running, shut down Condor, and then
+%install the new daemons.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Pool-Shutdown}Shutting Down a Condor Pool}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-The best way to shut down a pool is to take advantage of the remote
-administration capabilities of the \Condor{master}.
-The first step is to save the IP address and port of the
-\Condor{master} daemon on all of the machines to a file, so that 
-even if the case that the \Condor{collector} is shut down, one can still send
-administrator commands to the different machines.
-Use the following command:
-\footnotesize
-\begin{verbatim}
-  % condor_status -master -format "%s\n" MasterIpAddr > addresses
-\end{verbatim}
-\normalsize
+%The best way to shut down a pool is to take advantage of the remote
+%administration capabilities of the \Condor{master}.
+%The first step is to save the IP address and port of the
+%\Condor{master} daemon on all of the machines to a file, so that 
+%even if the case that the \Condor{collector} is shut down, one can still send
+%administrator commands to the different machines.
+%Use the following command:
+%\footnotesize
+%\begin{verbatim}
+  %% condor_status -master -format "%s\n" MasterIpAddr > addresses
+%\end{verbatim}
+%\normalsize
 
-The first step to shutting down the pool is to stop any currently
-running jobs, and give them a chance to produce a checkpoint.
-Depending on the size of the pool, the network infrastructure, and
-the image-size of the standard jobs running on the pool,
-this may logically be
-a slow process, only vacating one host at a time.
-Either shut down hosts that have jobs submitted (in which case
-all the jobs from that host will try to produce a checkpoint simultaneously),
-or shut down individual hosts that are running jobs.
-To shutdown a host, issue the command:
-\begin{verbatim}
-  % condor_off hostname
-\end{verbatim}
-where \Opt{hostname} is the name of the host to be shut down.
-This only works so long as the \Condor{collector} is still
-running.
-Once Condor is shut down on the central manager,
-rely on the \File{addresses} file already created.
-
-If all the running jobs have produced a checkpoint and stopped,
-or if not
-worried about the network load caused by shutting down
-everything at once, it is safe to turn off all daemons on all machines
-in the pool.
-Do this with a single command, issued from an authorized
-administrator machine:
-\begin{verbatim}
-  % condor_off -all
-\end{verbatim}
-
-\Condor{off} will shut down all the daemons, but leave the
-\Condor{master} running, so that a future \Condor{on} will work.
-
-Once all of the Condor daemons (except the \Condor{master}) on each
-host is turned off, all is done.
-It is now safe to install new binaries, move the checkpoint server
-to another host, or any other task that requires the pool to be
-shut down to successfully complete.
-
-If planning to install a new \Condor{master} binary, be
-sure to read the following section to learn of the special considerations 
-associated with
-this somewhat delicate task.
+%The first step to shutting down the pool is to stop any currently
+%running jobs, and give them a chance to produce a checkpoint.
+%Depending on the size of the pool, the network infrastructure, and
+%the image-size of the standard jobs running on the pool,
+%this may logically be
+%a slow process, only vacating one host at a time.
+%Either shut down hosts that have jobs submitted (in which case
+%all the jobs from that host will try to produce a checkpoint simultaneously),
+%or shut down individual hosts that are running jobs.
+%To shutdown a host, issue the command:
+%\begin{verbatim}
+  %% condor_off hostname
+%\end{verbatim}
+%where \Opt{hostname} is the name of the host to be shut down.
+%This only works so long as the \Condor{collector} is still
+%running.
+%Once Condor is shut down on the central manager,
+%rely on the \File{addresses} file already created.
+%
+%If all the running jobs have produced a checkpoint and stopped,
+%or if not
+%worried about the network load caused by shutting down
+%everything at once, it is safe to turn off all daemons on all machines
+%in the pool.
+%Do this with a single command, issued from an authorized
+%administrator machine:
+%\begin{verbatim}
+  %% condor_off -all
+%\end{verbatim}
+%
+%\Condor{off} will shut down all the daemons, but leave the
+%\Condor{master} running, so that a future \Condor{on} will work.
+%
+%Once all of the Condor daemons (except the \Condor{master}) on each
+%host is turned off, all is done.
+%It is now safe to install new binaries, move the checkpoint server
+%to another host, or any other task that requires the pool to be
+%shut down to successfully complete.
+%
+%If planning to install a new \Condor{master} binary, be
+%sure to read the following section to learn of the special considerations 
+%associated with
+%this somewhat delicate task.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:New-Master}Installing a New \Condor{master}}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-To install a new \Condor{master} binary, follow a
-a few more steps.
-When the \Condor{master} restarts, it will listen on a new port,
-so the \File{addresses} file will contain stale information.
-Moreover, when the \Condor{master} restarts,
-it does not know of the previously issued
-\Condor{off} command, and will just start up all the daemons
-it is configured to spawn.
-It must be explicitly told otherwise.
+%To install a new \Condor{master} binary, follow a
+%a few more steps.
+%When the \Condor{master} restarts, it will listen on a new port,
+%so the \File{addresses} file will contain stale information.
+%Moreover, when the \Condor{master} restarts,
+%it does not know of the previously issued
+%\Condor{off} command, and will just start up all the daemons
+%it is configured to spawn.
+%It must be explicitly told otherwise.
 
-If it is desired that the pool completely restart itself whenever the
-\Condor{master} notices its new binary, 
-then neither of these issues are of any
-concern: skip this (and the next) section.
-Just be sure installing the new \Condor{master} binary is the final step,
-and once the new binary is in place, the pool will
-restart itself over the next 5 minutes (whenever all the \Condor{master}
-daemons
-notice the new binary, which they each check for once every 5 minutes
-by default).
+%If it is desired that the pool completely restart itself whenever the
+%\Condor{master} notices its new binary, 
+%then neither of these issues are of any
+%concern: skip this (and the next) section.
+%Just be sure installing the new \Condor{master} binary is the final step,
+%and once the new binary is in place, the pool will
+%restart itself over the next 5 minutes (whenever all the \Condor{master}
+%daemons
+%notice the new binary, which they each check for once every 5 minutes
+%by default).
+%
+%However, to have absolute control over when the rest of
+%the daemons restart, take a few steps:
 
-However, to have absolute control over when the rest of
-the daemons restart, take a few steps:
-
-\begin{enumerate}
-\item Place the following in the global configuration file:
-\begin{verbatim}
-  START_DAEMONS = False
-\end{verbatim}
-This will make sure that when the master restarts itself, it 
-does not also start up the rest of its daemons.
-\item Install the new \Condor{master} binary.
-\item Start up Condor on the central manager machine.
-This is done manually by logging into the machine and
-sending commands locally.
-First, send a \Condor{restart} to make sure you have the new \Condor{master},
-then send a \Condor{on} to start up the other daemons (including, most
-importantly, the \Condor{collector}).
-\item Wait 5 minutes, such that all the \Condor{master} daemons have a chance to
-notice the new binary, restart themselves, and send an update with
-their new address.  Make sure that: 
-\begin{verbatim}
-  % condor_status -master
-\end{verbatim}
-lists all the machines in the pool.
-\item Remove the special setting from the global configuration file.
-\item Recreate the \File{addresses} file as described above:
-\footnotesize
-\begin{verbatim}
-  % condor_status -master -format "%s\n" MasterIpAddr > addresses
-\end{verbatim}
-\normalsize
-\end{enumerate}
-
-Once the new master is in place,
-and you are ready to start up the
-pool again, restart your whole pool by following the
-steps in the next section.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Pool-Restart}Restarting your Condor Pool}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-Once all preliminary tasks are done and
-it is time to restart the pool, send a
-\Condor{on} to all the \Condor{master} daemons on each host.
-Do this with a single command, issued from an authorized
-administrator machine:
-\begin{verbatim}
-  % condor_on `cat addresses`
-\end{verbatim}
-At this point, all the daemons should now be restarted, and the pool
-will be back on its way.
+%\begin{enumerate}
+%\item Place the following in the global configuration file:
+%\begin{verbatim}
+  %START_DAEMONS = False
+%\end{verbatim}
+%This will make sure that when the master restarts itself, it 
+%does not also start up the rest of its daemons.
+%\item Install the new \Condor{master} binary.
+%\item Start up Condor on the central manager machine.
+%This is done manually by logging into the machine and
+%sending commands locally.
+%First, send a \Condor{restart} to make sure you have the new \Condor{master},
+%then send a \Condor{on} to start up the other daemons (including, most
+%importantly, the \Condor{collector}).
+%\item Wait 5 minutes, such that all the \Condor{master} daemons have a chance to
+%notice the new binary, restart themselves, and send an update with
+%their new address.  Make sure that: 
+%\begin{verbatim}
+  %% condor_status -master
+%\end{verbatim}
+%lists all the machines in the pool.
+%\item Remove the special setting from the global configuration file.
+%\item Recreate the \File{addresses} file as described above:
+%\footnotesize
+%\begin{verbatim}
+  %% condor_status -master -format "%s\n" MasterIpAddr > addresses
+%\end{verbatim}
+%\normalsize
+%\end{enumerate}
+%
+%Once the new master is in place,
+%and you are ready to start up the
+%pool again, restart your whole pool by following the
+%steps in the next section.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Reconfigure-Pool}Reconfiguring A Condor Pool}
+\subsubsection{\label{sec:Pool-Restart}Restarting a Condor Pool}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-To change a global configuration file setting and have all the
-machines start to use the new setting, send a
-\Condor{reconfig} command to each host.
-Do this with a single command, issued from an authorized
-administrator machine:
-\begin{verbatim}
-  % condor_reconfig -all
-\end{verbatim}
+%Once all preliminary tasks are done and
+%it is time to restart the pool, send a
+%\Condor{on} to all the \Condor{master} daemons on each host.
+%Do this with a single command, issued from an authorized
+%administrator machine:
+%\begin{verbatim}
+  %% condor_on `cat addresses`
+%\end{verbatim}
+%At this point, all the daemons should now be restarted, and the pool
+%will be back on its way.
 
-If the global configuration file is not shared among all the machines
-(using a shared file system), the change must be made to each
-copy of the global configuration file before issuing the \Condor{reconfig}
-command.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Reconfigure-Pool}Reconfiguring a Condor Pool}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%To change a global configuration file setting and have all the
+%machines start to use the new setting, send a
+%\Condor{reconfig} command to each host.
+%Do this with a single command, issued from an authorized
+%administrator machine:
+%\begin{verbatim}
+  %% condor_reconfig -all
+%\end{verbatim}
+%
+%If the global configuration file is not shared among all the machines
+%(using a shared file system), the change must be made to each
+%copy of the global configuration file before issuing the \Condor{reconfig}
+%command.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
