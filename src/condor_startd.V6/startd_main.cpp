@@ -173,7 +173,7 @@ main_init( int, char* argv[] )
 		// Now starter has codes for vm universe.
 		resmgr->m_vmuniverse_mgr.setStarterAbility(true);
 		// check whether vm universe is available through vmgahp server
-		resmgr->m_vmuniverse_mgr.init();
+		resmgr->m_vmuniverse_mgr.checkVMUniverse();
 	}
 
 		// Read in global parameters from the config file.

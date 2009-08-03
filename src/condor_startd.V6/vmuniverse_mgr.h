@@ -65,8 +65,6 @@ public:
 	VMUniverseMgr();
 	~VMUniverseMgr();
 
-	bool init();
-
 	void publish(ClassAd* ad, amask_t mask );
 	void publishVMInfo(pid_t s_pid, ClassAd* ad, amask_t mask );
 	void printVMGahpInfo( int debug_level );
@@ -96,6 +94,8 @@ public:
 	void killVM(const char *matchstring);
 
 private:
+	bool init();
+
 	bool testVMGahp(const char* vmgahppath, const char* vmtype);
 	void docheckVMUniverse(void);
 	void killVM(VMStarterInfo *info);
