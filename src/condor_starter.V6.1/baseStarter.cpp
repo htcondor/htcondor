@@ -806,7 +806,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 		machinead = jic->machClassAd();
 	}
 
-	bool enabled = param_boolean("ENABLE_SSH_TO_JOB",true,true,jobad,machinead);
+	bool enabled = param_boolean("ENABLE_SSH_TO_JOB",true,true,machinead,jobad);
 	if( !enabled ) {
 		return SSHDFailed(s,"Rejecting request, because ENABLE_SSH_TO_JOB=false");
 	}
