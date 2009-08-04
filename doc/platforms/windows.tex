@@ -148,6 +148,7 @@ managed by Condor are encrypted and stored in a secure location within the
 Windows registry.  When Condor needs to perform an action as a
 particular user, it uses the securely stored password to do so.
 
+\index{submit commands!run\_as\_owner}
 By default, the secure password store is managed by the
 \Condor{schedd}.  This approach works in environments where
 the user's password is only needed on the submit machine, which
@@ -239,6 +240,7 @@ Any rows in the output with the ``UNDEF'' string indicate machines where
 secure communication is not working properly. Verify that the pool password
 is stored correctly on these machines.
 
+\index{submit commands!run\_as\_owner}
 Once these configuration changes are made and the pool password is
 distributed, a user that wants a job to run using their own account
 can simply set the \SubmitCmd{run\_as\_owner} macro in the job's
