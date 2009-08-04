@@ -1230,7 +1230,7 @@ int GlobusJob::doEvaluateState()
 				rc = gahp->globus_gram_client_job_request( 
 										resourceManagerString,
 										RSL->Value(),
-										param_boolean( "GSI_FULL_DELEGATION",
+										param_boolean( "DELEGATE_FULL_JOB_GSI_CREDENTIALS",
 													   false ) ? 0 : 1,
 										gramCallbackContact, &job_contact );
 				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
@@ -1396,7 +1396,7 @@ int GlobusJob::doEvaluateState()
 				CHECK_PROXY;
 				rc = gahp->globus_gram_client_job_refresh_credentials(
 										jobContact,
-										param_boolean( "GSI_FULL_DELEGATION",
+										param_boolean( "DELEGATE_FULL_JOB_GSI_CREDENTIALS",
 													   false ) ? 0 : 1 );
 				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
