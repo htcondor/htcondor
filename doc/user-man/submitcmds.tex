@@ -2387,6 +2387,18 @@ dynamic \Condor{startd} provisioning
 (see section~\ref{sec:SMP-dynamicprovisioning}),
 the amount of memory space requested for this job.
 
+%%%%%%%%%%%%%%%%%%%
+%% run_as_owner
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!run\_as\_owner}
+\item[run\_as\_owner = $<$True \Bar\ False$>$]
+For Windows platform jobs only,
+a boolean value that causes a correctly configured Windows platform
+machine to execute the job under the login of the submitter.
+May not be used with \SubmitCmd{load\_profile}.
+See section~\ref{sec:windows-run-as-owner} for administrative details.
+
 
 %%%%%%%%%%%%%%%%%%%
 % +
