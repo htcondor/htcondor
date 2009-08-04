@@ -17,7 +17,8 @@
  *
  ***************************************************************/
 
-
+#ifndef _watcherdlg_h_
+#define _watcherdlg_h_
 #if !defined(AFX_BIRDWATCHERDLG_H__2132927B_4970_46A0_A2D8_6F50BA17E681__INCLUDED_)
 #define AFX_BIRDWATCHERDLG_H__2132927B_4970_46A0_A2D8_6F50BA17E681__INCLUDED_
 
@@ -26,48 +27,13 @@
 #endif // _MSC_VER > 1000
 // BirdWatcherDlg.h : header file
 //
-#include "BirdWatcher.h"
+#include "birdwatcher.h"
 /////////////////////////////////////////////////////////////////////////////
 // CBirdWatcherDlg dialog
-
-class CBirdWatcherDlg : public CDialog
-{
-// Construction
-public:
-	CBirdWatcherDlg(CWnd* pParent = NULL);   // standard constructor
-
-	CString zCondorDir;
-
-// Dialog Data
-	//{{AFX_DATA(CBirdWatcherDlg)
-	enum { IDD = IDD_BIRDWATCHER_DIALOG };
-		// NOTE: the ClassWizard will add data members here
-	//}}AFX_DATA
-
-
-// Overrides
-	// ClassWizard generated virtual function overrides
-	//{{AFX_VIRTUAL(CBirdWatcherDlg)
-	protected:
-	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
-	//}}AFX_VIRTUAL
-
-// Implementation
-protected:
-
-	// Generated message map functions
-	//{{AFX_MSG(CBirdWatcherDlg)
-	afx_msg void OnSize(UINT nType, int cx, int cy);
-	afx_msg void OnTimer(UINT nIDEvent);
-	virtual BOOL OnInitDialog();
-	afx_msg void OnClose();
-	virtual void OnOK();
-	virtual void OnCancel();
-	//}}AFX_MSG
-	DECLARE_MESSAGE_MAP()
-};
-
-//{{AFX_INSERT_LOCATION}}
-// Microsoft Visual C++ will insert additional declarations immediately before the previous line.
+extern HWND parentHwnd;
+extern WCHAR *zCondorDir;
+INT_PTR CALLBACK DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam);
+void OnTimer(UINT nIDEvent);
 
 #endif // !defined(AFX_BIRDWATCHERDLG_H__2132927B_4970_46A0_A2D8_6F50BA17E681__INCLUDED_)
+#endif

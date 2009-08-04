@@ -165,6 +165,13 @@ VanillaProc::StartJob()
 	fi.max_snapshot_interval = param_integer("PID_SNAPSHOT_INTERVAL", 15);
 
 	char const *dedicated_account = Starter->jic->getExecuteAccountIsDedicated();
+	if( ThisProcRunsAlongsideMainProc() ) {
+			// If we track a secondary proc's family tree (such as
+			// sshd) using the same dedicated account as the job's
+			// family tree, we could end up killing the job when we
+			// clean up the secondary family.
+		dedicated_account = NULL;
+	}
 	if (dedicated_account) {
 			// using login-based family tracking
 		fi.login = dedicated_account;

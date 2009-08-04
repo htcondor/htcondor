@@ -2123,11 +2123,8 @@ newIdString( char** id_str_ptr )
 		// keylen is 20 in order to avoid generating claim ids that
 		// overflow the 80 byte buffer in pre-7.1.3 negotiators
 	const size_t keylen = 20;
-	unsigned char *keybuf = Condor_Crypt_Base::randomKey(keylen);
-	int i;
-	for(i=0;i<keylen;i++) {
-		id.sprintf_cat("%02x",keybuf[i]);
-	}
+	char *keybuf = Condor_Crypt_Base::randomHexKey(keylen);
+	id += keybuf;
 	free( keybuf );
 
 	*id_str_ptr = strdup( id.Value() );

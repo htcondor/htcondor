@@ -105,6 +105,14 @@
 			>
 		</File>
 		<File
+			RelativePath="..\src\classad_analysis\result.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\classad_analysis\result.h"
+			>
+		</File>
+		<File
 			RelativePath="..\src\classad_analysis\boolExpr.cpp"
 			>
 		</File>

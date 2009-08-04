@@ -133,8 +133,8 @@ $success = sub
 
 			} elsif( $line =~ /Event: ULOG_JOB_TERMINATED for Condor Node C/ ) {
 				CondorTest::debug("$name: $line\n",1);
-				if( $cache_state == 2 ) {
-					$cache_state = 3;
+				if( $cache_state == 2 or $cache_state == 3 ) {
+					$cache_state++;
 				} else {
 					CondorTest::debug("Got terminated event for Node C " .
 					   "in wrong sequence\n");
@@ -142,8 +142,8 @@ $success = sub
 
 			} elsif( $line =~ /Stopping the caching of log lines/ ) {
 				CondorTest::debug("$name: $line\n",1);
-				if( $cache_state == 3 ) {
-					$cache_state = 4;
+				if( $cache_state == 2 or $cache_state == 3 ) {
+					$cache_state++;
 				} else {
 					CondorTest::debug("Stopped dagman.out caching in " .
 								"wrong sequence\n");

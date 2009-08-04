@@ -882,6 +882,7 @@ processCommandLineArguments (int argc, char *argv[])
 			use_xml = 1;
 			verbose = 1;
 			summarize = 0;
+			customFormat = true;
 			attrs.clearAll();
 		}
 		else

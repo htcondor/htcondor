@@ -1,0 +1,32 @@
+#!/bin/sh
+
+# set up the environment that was saved by sshd_setup
+if [ "$1" != "" ]; then
+  . "$1"
+fi
+
+# go to the job's working directory
+for dir in "${_CONDOR_JOB_IWD}" "${_CONDOR_SCRATCH_DIR}"; do
+  if cd "${dir}"; then
+    break
+  fi
+done
+
+if [ "${SSH_ORIGINAL_COMMAND}" != "" ]; then
+  # run the command specified by the user
+  eval ${SSH_ORIGINAL_COMMAND}
+else
+  if [ "${_CONDOR_SLOT_NAME}" != "" ]; then
+    echo "Welcome to ${_CONDOR_SLOT_NAME}"'!'
+  fi
+  if [ "${_CONDOR_JOB_PIDS}" != "" ]; then
+    echo "Your condor job is running with pid(s) ${_CONDOR_JOB_PIDS}."
+  fi
+
+  # start a shell for the user
+  if [ "${_CONDOR_SHELL}" != "" ]; then
+    # use the shell preferred by the user
+    exec -l "${_CONDOR_SHELL}"
+  fi
+  exec -l "${SHELL}"
+fi

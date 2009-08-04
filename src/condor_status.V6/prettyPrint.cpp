@@ -183,8 +183,6 @@ prettyPrint (ClassAdList &adList, TrackTotals *totals)
 		printXML (NULL, true, true);
 	}
 
-	printf ("\n");
-
 	// if totals are required, display totals
 	if (adList.MyLength() > 0 && totals) totals->displayTotals(stdout, 20);
 }

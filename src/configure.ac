@@ -2850,7 +2850,7 @@ if test "x$_cv_ext_openssl_version" != x; then
   AC_DEFINE(HAVE_OPENSSL_SSL_H,1,[do we have openssl])
 
   # Globus 4.2.1 is dependent on an external version of openssl
-  CHECK_EXTERNAL([globus],[4.2.1-p2], [soft])
+  CHECK_EXTERNAL([globus],[4.2.1-p3], [soft])
 fi
 
 if test -z "$_cv_ext_globus_version"; then
@@ -2880,9 +2880,11 @@ CHECK_EXTERNAL([srb], [3.2.1-p2], [soft])
 
 CHECK_EXTERNAL([pcre], [7.6], [hard],
                [use PCRE (provides regular expression support)],
-               MF_LIB_CHECK([pcre], [[pcre pcre_compile]]))
+               MF_LIB_CHECK([pcre], [[pcre pcre_compile]], [PCRE]))
 AS_IF([test "x$cv_ext_pcre" = xyes],
   [AC_CHECK_HEADERS([pcre.h pcre/pcre.h])])
+AC_SUBST(PCRE_LDFLAGS, $PCRE_LDFLAGS)
+AC_SUBST(PCRE_CFLAGS, $PCRE_CFLAGS)
 
 # The auto-tools aren't working correctly on AIX
 # Solaris doesn't have the auto-tools on NMI
@@ -2892,7 +2894,7 @@ AS_IF([test "x$_cv_opsys" != xDARWIN -a "x$_cv_opsys" != xAIX -a "x$_cv_opsys" !
   [_cv_has_blahp=yes],
   [_cv_has_blahp=no])
 AC_MSG_RESULT([$_cv_has_blahp])
-CHECK_EXTERNAL([blahp], [1.12.2-p3], [soft])
+CHECK_EXTERNAL([blahp], [1.12.2-p4], [soft])
 
 # When --with-proper the detection of the man pages is a little
 # ugly. The value added to the end of $_dir must be what
@@ -2956,6 +2958,18 @@ if test "x$cv_ext_globus" = xyes; then
   AC_MSG_RESULT([$_cv_globus_flavor])
   AC_SUBST(globus_flavor,$_cv_globus_flavor)
   AC_SUBST(globus_thr_flavor,$_cv_globus_thr_flavor)
+fi
+
+AC_ARG_ENABLE(ssh-to-job,
+  [AS_HELP_STRING([--enable-ssh-to-job],
+     [Support for condor_ssh_to_job])],
+  [SSH_TO_JOB=$enableval],
+  [if test "x$cv_ext_openssl" = xyes; then SSH_TO_JOB=yes; else SSH_TO_JOB=no; fi])
+if test $SSH_TO_JOB != no; then
+  if test "x$cv_ext_openssl" != xyes; then
+    AC_MSG_ERROR( [condor_ssh_to_job requires openssl (for base64)] )
+  fi
+  AC_DEFINE([HAVE_SSH_TO_JOB], [1], [Define to 1 to support condor_ssh_to_job])
 fi
 
 # The test for gsoap needs to happen after the openssl check, so

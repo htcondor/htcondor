@@ -78,6 +78,10 @@ $submitted = sub {
 	$job = $info{"job"};
 	
 	CondorTest::debug("Good - Job $cluster.$job was submitted!\n",1);
+	##
+	## This callback is to put our job on hold
+	##
+	CondorTest::RegisterTimed($testname, $timed, 10);
 };	
 
 ##
@@ -228,10 +232,6 @@ CondorTest::RegisterSubmit( $testname, $submitted );
 CondorTest::RegisterExecute( $testname, $executed );
 CondorTest::RegisterHold( $testname, $held );
 CondorTest::RegisterAbort( $testname, $aborted );
-##
-## This callback is to put our job on hold
-##
-CondorTest::RegisterTimed($testname, $timed, 30);
 	
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
 	CondorTest::debug("$testname: SUCCESS\n",1);

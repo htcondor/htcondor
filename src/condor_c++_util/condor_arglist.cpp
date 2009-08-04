@@ -940,3 +940,23 @@ ArgList::SetArgV1SyntaxToCurrentPlatform()
 	v1_syntax = UNIX_ARGV1_SYNTAX;
 #endif
 }
+
+bool
+ArgList::GetArgsStringSystem(MyString *result,int skip_args,MyString *error_msg) const
+{
+#ifdef WIN32
+	return GetArgsStringWin32(result,skip_args,error_msg);
+#else
+	(void)error_msg;
+	SimpleListIterator<MyString> it(args_list);
+	ASSERT(result);
+	MyString *arg=NULL;
+	for(int i=0;it.Next(arg);i++) {
+		if(i<skip_args) continue;
+		result->sprintf_cat("%s\"%s\"",
+							result->IsEmpty() ? "" : " ",
+							arg->EscapeChars("\"\\$`",'\\').Value());
+	}
+	return true;
+#endif
+}

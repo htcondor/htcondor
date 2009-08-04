@@ -1,3 +1,6 @@
+07/30/09 V7_3-view_collector-hack-branch
+ Branch for removing static ARCH/OPSYS params from the ViewCollector.
+
 05/07/2009 V7_3_1
  The official tag for 7.3.1, from V7_3_1-branch.
  Version string: $CondorVersion: 7.3.1 May  5 2009 BuildID: 150675 $

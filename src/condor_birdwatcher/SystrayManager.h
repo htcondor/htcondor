@@ -25,7 +25,7 @@
 #include <string>
 #include <vector>
 
-class CBirdWatcherDlg;
+//class CBirdWatcherDlg;
 class SystrayManager;
 
 class SystrayManager : private WindowsMessageReceiverOwner
@@ -36,21 +36,22 @@ public:
 
 	void init(HICON hCondorOff, HICON hIdle, HICON hClaimed, HICON hRunningJob1, HICON hRunningJob2, HICON hSuspended, HICON hPreempting);
 
-	CWnd notifyWnd;
+	//Change to the win32 handle
+	//CWnd notifyWnd;
+	HWND notifyWnd;
 private:
 
 	struct BirdIcon
 	{
 		BirdIcon() { bIconActive = false; }
 		NOTIFYICONDATA nid;
-		std::string strTooltip;
+		WCHAR strTooltip[256];
 		bool bIconActive;
 		bool bRunningJob;
 	};
 	typedef std::vector<BirdIcon> BirdIconVector;
 	BirdIconVector vecIconsForEachCpu;
 
-	CBirdWatcherDlg *pDlg;
 	void setIcon(BirdIconVector::size_type iCpuId, HICON hToSet);
 	void removeIcon(BirdIconVector::size_type iCpuId);
 	

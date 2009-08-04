@@ -140,18 +140,14 @@ OsProc::StartJob(FamilyInfo* family_info)
 		// to successfully merge them with the additional wrapper args.
 	args.SetArgV1SyntaxToCurrentPlatform();
 
-		// First, put "condor_exec" at the front of Args, since that
-		// will become argv[0] of what we exec(), either the wrapper
-		// or the actual job.
-		//
-		// The Java universe cannot tolerate an incorrect argv[0].
-		// For Java, set it correctly.  In a future version, we
-		// may consider removing the CONDOR_EXEC feature entirely.
-		//
-	if( (job_universe == CONDOR_UNIVERSE_JAVA) ) {
+		// First, put "condor_exec" or whatever at the front of Args,
+		// since that will become argv[0] of what we exec(), either
+		// the wrapper or the actual job.
+
+	if( !getArgv0() ) {
 		args.AppendArg(JobName.Value());
 	} else {
-		args.AppendArg(CONDOR_EXEC);
+		args.AppendArg(getArgv0());
 	}
 	
 		// Support USER_JOB_WRAPPER parameter...
@@ -192,28 +188,12 @@ OsProc::StartJob(FamilyInfo* family_info)
 		// environment as needed.
 	Env job_env;
 
-	char *env_str = param( "STARTER_JOB_ENVIRONMENT" );
-
 	MyString env_errors;
-	if( ! job_env.MergeFromV1RawOrV2Quoted(env_str,&env_errors) ) {
-		dprintf( D_ALWAYS, "Aborting OSProc::StartJob: "
-				 "%s\nThe full value for STARTER_JOB_ENVIRONMENT: "
-				 "%s\n",env_errors.Value(),env_str);
-		free(env_str);
+	if( !Starter->GetJobEnv(JobAd,&job_env,&env_errors) ) {
+		dprintf( D_ALWAYS, "Aborting OSProc::StartJob: %s\n",
+				 env_errors.Value());
 		return 0;
 	}
-	free(env_str);
-
-	if(!job_env.MergeFrom(JobAd,&env_errors)) {
-		dprintf( D_ALWAYS, "Invalid environment found in JobAd.  "
-		         "Aborting OsProc::StartJob: %s\n",
-		         env_errors.Value());
-		return 0;
-	}
-
-		// Now, let the starter publish any env vars it wants to into
-		// the mainjob's env...
-	Starter->PublishToEnv( &job_env );
 
 
 		// // // // // // 
@@ -297,7 +277,9 @@ OsProc::StartJob(FamilyInfo* family_info)
 		// Misc + Exec
 		// // // // // // 
 
-	Starter->jic->notifyJobPreSpawn();
+	if( !ThisProcRunsAlongsideMainProc() ) {
+		Starter->jic->notifyJobPreSpawn();
+	}
 
 	// compute job's renice value by evaluating the machine's
 	// JOB_RENICE_INCREMENT in the context of the job ad...
@@ -536,14 +518,22 @@ OsProc::StartJob(FamilyInfo* family_info)
 			}
 			err_msg += ": ";
 			err_msg += create_process_error;
-			Starter->jic->notifyStarterError( err_msg.Value(),
-			                                  true,
-			                                  CONDOR_HOLD_CODE_FailedToCreateProcess,
-			                                  create_process_errno );
+			if( !ThisProcRunsAlongsideMainProc() ) {
+				Starter->jic->notifyStarterError( err_msg.Value(),
+			    	                              true,
+			        	                          CONDOR_HOLD_CODE_FailedToCreateProcess,
+			            	                      create_process_errno );
+			}
 		}
 
-		EXCEPT("Create_Process(%s,%s, ...) failed: %s",
-			JobName.Value(), args_string.Value(), (create_process_error ? create_process_error : ""));
+		if( !ThisProcRunsAlongsideMainProc() ) {
+			EXCEPT("Create_Process(%s,%s, ...) failed: %s",
+				JobName.Value(), args_string.Value(), (create_process_error ? create_process_error : ""));
+		}
+		else {
+			dprintf(D_ALWAYS,"Create_Process(%s,%s, ...) failed: %s",
+				JobName.Value(), args_string.Value(), (create_process_error ? create_process_error : ""));
+		}
 		return 0;
 	}
 
@@ -901,7 +891,9 @@ OsProc::WriteAdsToExeDir()
 						strerror(errno), errno);
 			ret_val = false;
 		}
+		ad->SetPrivateAttributesInvisible(true);
 		ad->fPrint(fp);
+		ad->SetPrivateAttributesInvisible(false);
 		fclose(fp);
 	}
 	else
@@ -923,7 +915,9 @@ OsProc::WriteAdsToExeDir()
 					strerror(errno), errno);
 			ret_val = false;
 		}
+		ad->SetPrivateAttributesInvisible(true);
 		ad->fPrint(fp);
+		ad->SetPrivateAttributesInvisible(false);
 		fclose(fp);
 	}
 

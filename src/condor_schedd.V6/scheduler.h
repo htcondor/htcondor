@@ -687,6 +687,11 @@ private:
 		// put state into ClassAd return it.  Used for condor_squawk
 	int	dumpState(int, Stream *);
 
+		// get connection info for creating sec session to a running job
+		// (e.g. condor_ssh_to_job)
+	int get_job_connect_info_handler(int, Stream* s);
+	int get_job_connect_info_handler_implementation(int, Stream* s);
+
 		// A bit that says wether or not we've sent email to the admin
 		// about a shadow not starting.
 	int sent_shadow_failure_email;

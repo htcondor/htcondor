@@ -1,9 +1,9 @@
 NAME = condor_rm
 all_target($(NAME))
 
-CFLAGS = $(STD_C_FLAGS)
-C_PLUS_FLAGS = -I../condor_schedd $(STD_C_PLUS_FLAGS)
-LIB = $(STD_LIBS)
+CFLAGS = $(STD_C_FLAGS) $(CONFIGURE_PCRE_CFLAGS)
+C_PLUS_FLAGS = -I../condor_schedd $(STD_C_PLUS_FLAGS) $(CONFIGURE_PCRE_CFLAGS)
+LIB = $(STD_LIBS) $(CONFIGURE_PCRE_LDFLAGS)
 
 OBJ = rm.o
 

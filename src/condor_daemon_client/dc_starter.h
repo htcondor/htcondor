@@ -76,6 +76,10 @@ public:
 	X509UpdateStatus updateX509Proxy(const char * filename, char const *sec_session_id);
 	X509UpdateStatus delegateX509Proxy(const char * filename, char const *sec_session_id);
 
+	bool createJobOwnerSecSession(int timeout,char const *job_claim_id,char const *starter_sec_session,char const *session_info,MyString &owner_claim_id,MyString &error_msg,MyString &starter_version,MyString &starter_addr);
+
+	bool startSSHD(char const *known_hosts_file,char const *private_client_key_file,char const *preferred_shells,char const *slot_name,char const *ssh_keygen_args,ReliSock &sock,int timeout,char const *sec_session_id,MyString &remote_user,MyString &error_msg,bool &retry_is_sensible);
+
  private:
 	bool is_initialized;
 
