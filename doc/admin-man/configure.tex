@@ -9457,8 +9457,9 @@ Individual arguments may be quoted with single quotes, using the same
 syntax as for arguments in a \Condor{submit} file.  Within the
 arguments, the characters \%f are replaced by the path to the key
 file to be generated and \%\% are replaced by \%.  The default is
-\verb|"-N '' -C '' -q -f %f"|.  If the user specifies additional
+\verb|"-N '' -C '' -q -f %f -t rsa"|.  If the user specifies additional
 arguments with \verb|condor_ssh_to_job -keygen-options|, those
-arguments are placed before the areguments specified here.
+arguments are placed after the areguments specified in
+\Macro{SSH\_TO\_JOB\_SSH\_KEYGEN\_ARGS}.
 
 \end{description}
