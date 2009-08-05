@@ -227,7 +227,7 @@ orphanCallbackHandler()
 	GlobusResource::ResourcesByName.startIterations();
 
 	while ( GlobusResource::ResourcesByName.iterate( next_resource ) != 0 ) {
-		if ( !strcmp( orphan->job_contact, next_resource->monitorGramJobId ) ) {
+		if ( next_resource->monitorGramJobId && !strcmp( orphan->job_contact, next_resource->monitorGramJobId ) ) {
 			next_resource->gridMonitorCallback( orphan->state,
 												orphan->errorcode );
 
@@ -268,7 +268,7 @@ gramCallbackHandler( void * /* user_arg */, char *job_contact, int state,
 	GlobusResource::ResourcesByName.startIterations();
 
 	while ( GlobusResource::ResourcesByName.iterate( next_resource ) != 0 ) {
-		if ( !strcmp( job_contact, next_resource->monitorGramJobId ) ) {
+		if ( next_resource->monitorGramJobId && !strcmp( job_contact, next_resource->monitorGramJobId ) ) {
 			next_resource->gridMonitorCallback( state, errorcode );
 			return;
 		}
