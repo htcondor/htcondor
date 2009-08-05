@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2008, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2009, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -559,7 +559,7 @@ ReadUserLog::OpenLogFile( bool do_seek, bool read_header )
 			path = temp_path.Value( );
 		}
 
-		// Finally, no path -- give up
+		// Now, try read the header
 		ReadUserLog			log_reader;
 		ReadUserLogHeader	header_reader;
 		if (  ( path ) &&
@@ -568,13 +568,17 @@ ReadUserLog::OpenLogFile( bool do_seek, bool read_header )
 			m_state->UniqId( header_reader.getId() );
 			m_state->Sequence( header_reader.getSequence() );
 			m_state->LogPosition( header_reader.getFileOffset() );
-			m_state->LogRecordNo( header_reader.getEventOffset() );
+			if ( header_reader.getEventOffset() ) {
+				m_state->LogRecordNo( header_reader.getEventOffset() );
+			}
 			dprintf( D_FULLDEBUG,
 					 "%s: Set UniqId to '%s', sequence to %d\n",
 					 m_state->CurPath(),
 					 header_reader.getId().Value(),
 					 header_reader.getSequence() );
 		}
+
+		// Finally, no path -- give up
 		else {
 			dprintf( D_FULLDEBUG, "%s: Failed to read file header\n",
 					 m_state->CurPath() );
@@ -852,6 +856,11 @@ ReadUserLog::readEvent (ULogEvent *& event, bool store_state )
 		return ULOG_MISSED_EVENT;
 	}
 
+	int starting_seq = m_state->Sequence( );
+	int starting_event = (int) m_state->EventNum( );
+	filesize_t starting_recno = m_state->LogRecordNo();
+
+
 	// If the file was closed on us, try to reopen it
 	if ( !m_fp ) {
 		ULogEventOutcome	status = ReopenLogFile( );
@@ -863,6 +872,8 @@ ReadUserLog::readEvent (ULogEvent *& event, bool store_state )
 	if ( !m_fp ) {
 		return ULOG_NO_EVENT;
 	}
+
+	filesize_t	starting_pos = m_state->Offset();
 
 	ULogEventOutcome	outcome = ULOG_OK;
 	if( m_state->IsLogType( ReadUserLogState::LOG_TYPE_UNKNOWN ) ) {
@@ -939,6 +950,13 @@ ReadUserLog::readEvent (ULogEvent *& event, bool store_state )
 		if ( pos > 0 ) {
 			m_state->Offset( pos );
 		}
+		filesize_t slp = m_state->LogPosition();
+		if ( ( m_state->Sequence() != starting_seq ) &&
+			 ( 0 == m_state->LogRecordNo() ) ) {
+			// Don't count the header record in the count below
+			m_state->LogRecordNo( starting_recno + starting_event - 1 );
+		}
+		m_state->EventNumInc();
 		m_state->StatFile( m_fd );
 	}
 

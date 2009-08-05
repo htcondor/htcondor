@@ -1412,6 +1412,14 @@
 			>
 		</File>
 		<File
+			RelativePath="..\src\condor_c++_util\write_user_log_state.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\write_user_log_state.h"
+			>
+		</File>
+		<File
 			RelativePath="..\src\condor_c++_util\condor_base64.cpp"
 			>
 		</File>
