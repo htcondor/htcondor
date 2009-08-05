@@ -1557,7 +1557,9 @@ param_integer( const char *name, int &value,
 			(param_range_integer(name, &min_value, &max_value)==-1) 
 				? false : true;
 
-		// if not found in the table, then use what was passed in.
+		// if found in the default table, then we overwrite the arguments
+		// to this function with the defaults from the table. This effectively
+		// nullifies the hard coded defaults in the higher level layers.
 		if (tbl_default_valid) {
 			use_default = true;
 			default_value = tbl_default_value;
@@ -1705,7 +1707,9 @@ param_double( const char *name, double default_value,
 		// if the min_value & max_value are changed, we use it.
 		param_range_double(name, &min_value, &max_value);
 
-		// if not found in the table, then use what was passed in.
+		// if found in the default table, then we overwrite the arguments
+		// to this function with the defaults from the table. This effectively
+		// nullifies the hard coded defaults in the higher level layers.
 		if (tbl_default_valid) {
 			default_value = tbl_default_value;
 		}
@@ -1794,7 +1798,9 @@ param_boolean( const char *name, bool default_value, bool do_log,
 		bool tbl_default_value = 
 			param_default_boolean( name, &tbl_default_valid );
 
-		// if not found in the table, then use what was passed in.
+		// if found in the default table, then we overwrite the arguments
+		// to this function with the defaults from the table. This effectively
+		// nullifies the hard coded defaults in the higher level layers.
 		if (tbl_default_valid) {
 			default_value = tbl_default_value;
 		}
