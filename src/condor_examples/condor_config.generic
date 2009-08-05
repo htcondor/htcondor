@@ -2367,4 +2367,4 @@ LeaseManager.CLASSAD_LOG	= $(SPOOL)/LeaseManagerState
 # Arguments to ssh-keygen
 # %f --> key file to generate
 # %% --> %
-#SSH_TO_JOB_SSH_KEYGEN_ARGS = "-N '' -C '' -q -f %f"
+#SSH_TO_JOB_SSH_KEYGEN_ARGS = "-N '' -C '' -q -f %f -t rsa"
