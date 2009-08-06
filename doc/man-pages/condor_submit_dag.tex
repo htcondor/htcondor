@@ -217,10 +217,11 @@ description.
      actually running the DAG.  (This feature is mainly intended for
      testing.)
   }
-  \OptItem{\Opt{-valgrind}}{This optional argument tells
-     \Condor{submit\_dag} to create a Condor submit file that runs
-     \emph{valgrind} on \Condor{dagman}.  (This feature is mainly intended
-     for testing.)
+  \OptItem{\Opt{-valgrind}}{This optional argument causes the submit
+     description file generated for the submission of \Condor{dagman}
+     to be modified. 
+     The executable becomes \Prog{valgrind} run on \Condor{dagman},
+     with a specific set of arguments intended for testing \Condor{dagman}.
   }
   \end{Options}
 
