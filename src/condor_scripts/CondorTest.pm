@@ -388,11 +388,6 @@ sub DoTest
 
 	AddRunningTest($handle);
 
-	if($iswindows) {
-		my $path = $ENV{PATH};
-		SweepPath($path);
-	}
-
     # submit the job and get the cluster id
 	debug( "Now submitting test job\n",4);
 	my $cluster = 0;
@@ -1104,37 +1099,74 @@ sub runCondorTool
 # Sometimes `which ...` is just plain broken due to stupid fringe vendor
 # not quite bourne shells. So, we have our own implementation that simply
 # looks in $ENV{"PATH"} for the program and return the "usual" response found
-# across unixies. As for windows, well, for now it just sucks.
-# You'll note a very strange path on windows created by SweepPath before we start
-# condor so we get The starter can use which concatenates a windows path
-# on to the end of the cygwin path. This combined with JOB_INHERITS_STARTER_ENVIRONMENT
-# gets us system calls of cygwin fnction for jobs. BUT the split on ':' mangles
-# the regular windows paths at the end.
-#
+# across unixies. As for windows, well, for now it just sucks, but it appears
+# to at least work.
 
+BEGIN {
+# A variable specific to the BEGIN block which retains its value across calls
+# to Which. I use this to memoize the mapping between unix and windows paths
+# via cygpath.
+my %memo;
 sub Which
 {
 	my $exe = shift(@_);
+	my $pexe;
+	my $origpath;
 
 	if(!( defined  $exe)) {
 		return "CT::Which called with no args\n";
 	}
 	my @paths;
+
+	# On unix, this does the right thing, mostly, on windows we are using
+	# cygwin, so it also mostly does the right thing initially.
 	@paths = split /:/, $ENV{PATH};
 
 	foreach my $path (@paths) {
 		fullchomp($path);
-		if($path =~ /^(.*)Program Files(.*)$/){
-			$path = $1 . "progra~1" . $2;
-		} else {
-			CondorTest::debug("Path DOES NOT contain Program Files\n",3);
+		$origpath = $path;
+
+		# Here we convert each path to a windows path 
+		# before we use it with cygwin.
+		if ($iswindows) {
+			if (!exists($memo{$path})) {
+				# XXX Stupid slow code.  The right solution is to abstract the
+				# $ENV{PATH} variable and its cygpath converted counterpart and
+				# deal with said abstraction everywhere in the codebase.  A
+				# less right solution is to memoize the arguments to this
+				# function call. Guess which one I chose.
+				my $cygconvert = `cygpath -m -p "$path"`;
+				fullchomp($cygconvert);
+				$memo{$path} = $cygconvert; # memoize it
+				$path = $cygconvert;
+			} else {
+				# grab the memoized copy.
+				$path = $memo{$path};
+			}
+
+			# XXX Why just for this and not for all names with spaces in them?
+			if($path =~ /^(.*)Program Files(.*)$/){
+				$path = $1 . "progra~1" . $2;
+			} else {
+				CondorTest::debug("Path DOES NOT contain Program Files\n",3);
+			}
 		}
-		if (-x "$path/$exe") {
-			return "$path/$exe";
+
+		$pexe = "$path/$exe";
+
+		if ($iswindows) {
+			# Stupid windows, do this to ensure the -x works.
+			$pexe =~ s#/#\\#g;
+		}
+
+		if (-x "$pexe") {
+			# stupid caller code expects the result in unix format".
+			return "$origpath/$exe";
 		}
 	}
 
 	return "$exe: command not found";
+}
 }
 
 # Lets be able to drop some extra information if runCondorTool
@@ -2024,20 +2056,6 @@ sub IsThisNightly
 	} else {
 		return(0);
 	}
-}
-
-sub SweepPath
-{
-	my $oldpath = shift;
-	my $newpath = "";
-	my $tmppath = $oldpath;
-	$tmppath =~ s/Program Files/progra~1/g;
-	my $cygconvert = `cygpath -m -p $tmppath`;
-	fullchomp($cygconvert);
-	$newpath = $oldpath . ":" . $cygconvert;
-	CondorTest::debug("SweepPath created <<$newpath>>\n",2);
-
-	$ENV{PATH} = $newpath;
 }
 
 1;
