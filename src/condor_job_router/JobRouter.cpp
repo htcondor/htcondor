@@ -406,7 +406,7 @@ JobRouter::InitPublicAd()
 		delete [] valid_name;
 	}
 	else {
-		char *default_name = default_daemon_name();
+		char *default_name = build_valid_daemon_name("jobrouter");
 		if(default_name) {
 			name = default_name;
 			delete [] default_name;

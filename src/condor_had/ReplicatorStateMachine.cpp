@@ -280,7 +280,7 @@ ReplicatorStateMachine::initializeClassAd()
     m_classAd->SetMyTypeName(GENERIC_ADTYPE);
     m_classAd->SetTargetTypeName("Replication");
 
-    name.sprintf( "%s@%s -p %d", my_username(), my_full_hostname( ),
+    name.sprintf( "replication@%s -p %d", my_full_hostname( ),
 				  daemonCore->InfoCommandPort( ) );
     line.sprintf( "%s = \"%s\"", ATTR_NAME, name.Value( ) );
     m_classAd->Insert(line.Value());
