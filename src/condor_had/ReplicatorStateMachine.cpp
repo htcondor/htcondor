@@ -22,6 +22,7 @@
 #include "condor_daemon_core.h"
 // for 'param' function
 #include "condor_config.h"
+#include "my_username.h"
 
 #include "ReplicatorStateMachine.h"
 //#include "HadCommands.h"
@@ -124,6 +125,9 @@ ReplicatorStateMachine::ReplicatorStateMachine()
    	m_newlyJoinedWaitingVersionInterval = -1;
    	m_lastHadAliveTime          = -1;
    	srand( time( NULL ) );
+	m_classAd = NULL;
+	m_updateCollectorTimerId = -1;
+	m_updateInterval = -1;
 }
 // finalizing the delta, belonging to this class only, since the data, belonging
 // to the base class is finalized implicitly
@@ -153,11 +157,19 @@ ReplicatorStateMachine::finalizeDelta( )
     utilCancelTimer(m_replicationTimerId);
     utilCancelTimer(m_versionRequestingTimerId);
     utilCancelTimer(m_versionDownloadingTimerId);
+    utilCancelTimer(m_updateCollectorTimerId);
     m_replicationInterval               = -1;
     m_hadAliveTolerance                 = -1;
     m_maxTransfererLifeTime             = -1;
     m_newlyJoinedWaitingVersionInterval = -1;
     m_lastHadAliveTime                  = -1;
+    m_updateInterval                    = -1;
+
+    if (m_classAd != NULL) {
+        daemonCore->sendUpdates(INVALIDATE_ADS_GENERIC, m_classAd);
+        delete m_classAd;
+        m_classAd = NULL;
+    }
 }
 void
 ReplicatorStateMachine::initialize( )
@@ -214,6 +226,20 @@ ReplicatorStateMachine::reinitialize()
     } else {
         utilCrucialError( utilNoParameterError( "HAD_LIST", "HAD" ).Value( ));
     }
+
+    initializeClassAd();
+    int updateInterval = param_integer ( "REPLICATION_UPDATE_INTERVAL", 300 );
+    if ( m_updateInterval != updateInterval ) {
+        m_updateInterval = updateInterval;
+
+        utilCancelTimer(m_updateCollectorTimerId);
+
+        m_updateCollectorTimerId = daemonCore->Register_Timer ( 0,
+               m_updateInterval,
+               (TimerHandlercpp) &ReplicatorStateMachine::updateCollectors,
+               "ReplicatorStateMachine::updateCollectors", this );
+    }
+
     // set a timer to replication routine
     dprintf( D_ALWAYS, "ReplicatorStateMachine::reinitialize setting "
                                       "replication timer\n" );
@@ -237,6 +263,52 @@ ReplicatorStateMachine::reinitialize()
 	printDataMembers( );
 	
 	beforePassiveStateHandler( );
+}
+
+void
+ReplicatorStateMachine::initializeClassAd()
+{
+    MyString name, line;
+
+    if( m_classAd != NULL) {
+        delete m_classAd;
+        m_classAd = NULL;
+    }
+
+    m_classAd = new ClassAd();
+
+    m_classAd->SetMyTypeName(GENERIC_ADTYPE);
+    m_classAd->SetTargetTypeName("Replication");
+
+    name.sprintf( "%s@%s -p %d", my_username(), my_full_hostname( ),
+				  daemonCore->InfoCommandPort( ) );
+    line.sprintf( "%s = \"%s\"", ATTR_NAME, name.Value( ) );
+    m_classAd->Insert(line.Value());
+
+    line.sprintf( "%s = \"%s\"", ATTR_MY_ADDRESS,
+                        daemonCore->InfoCommandSinfulString() );
+    m_classAd->Insert(line.Value());
+
+    // publish list of replication nodes
+    char* buffer = param( "REPLICATION_LIST" );
+    char* replAddress = NULL;
+    StringList replList;
+    MyString attrReplList;
+    MyString comma;
+
+    replList.initializeFromString( buffer );
+    replList.rewind( );
+
+    while( ( replAddress = replList.next() ) ) {
+        attrReplList += comma;
+        attrReplList += replAddress;
+        comma = ",";
+    }
+    line.sprintf( "%s = \"%s\"", ATTR_REPLICATION_LIST, attrReplList.Value( ) );
+    m_classAd->Insert(line.Value());
+
+    // publish DC attributes
+    daemonCore->publish(m_classAd);
 }
 // sends the version of the last execution time to all the replication daemons,
 // then asks the pool replication daemons to send their own versions to it,
@@ -897,4 +969,15 @@ ReplicatorStateMachine::versionDownloadingTimer( )
 	checkVersionSynchronization( );	
 
 	m_state = BACKUP;
+}
+
+/* Function    : updateCollectors
+ * Description : sends the classad update to collectors
+ */
+void
+ReplicatorStateMachine::updateCollectors()
+{
+    if (m_classAd) {
+       daemonCore->sendUpdates (UPDATE_AD_GENERIC, m_classAd);
+    }
 }

@@ -175,6 +175,9 @@ setType (char *dtype, int i, char *argv)
         } else
         if (strcmp(dtype, "ANY") == 0) {
 	        type = ANY_AD;
+        } else
+        if (strcmp(dtype, "HAD") == 0) {
+	        type = HAD_AD;
         } else {
             fprintf (stderr, "Error:  Unknown entity type: %s\n", dtype);
             exit (1);
@@ -318,6 +321,11 @@ setMode (Mode mod, int i, char *argv)
 
 		  case MODE_OTHER:
 			setType ("GENERIC", i, argv);
+			setPPstyle (PP_GENERIC, i, argv);
+			break;
+
+		  case MODE_HAD_NORMAL:
+			setType ("HAD", i, argv);
 			setPPstyle (PP_GENERIC, i, argv);
 			break;
 

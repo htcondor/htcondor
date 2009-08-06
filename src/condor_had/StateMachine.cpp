@@ -123,7 +123,9 @@ HADStateMachine::finalize()
 		free(replicationDaemonSinfulString);
     	replicationDaemonSinfulString = NULL;
     }
+
 	// classad finalizings
+    daemonCore->sendUpdates(INVALIDATE_HAD_ADS, m_classAd);
     if( m_classAd != NULL) {
 		delete m_classAd;
     	m_classAd = NULL;

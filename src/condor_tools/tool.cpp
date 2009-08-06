@@ -1081,6 +1081,9 @@ resolveNames( DaemonList* daemon_list, StringList* name_list )
 	case DT_GENERIC:
 		adtype = GENERIC_AD;
 		break;
+	case DT_HAD:
+		adtype = HAD_AD;
+		break;
 	default:
 			// TODO: can we do better than this?
 		fprintf( stderr, "Unrecognized daemon type while resolving names\n" );

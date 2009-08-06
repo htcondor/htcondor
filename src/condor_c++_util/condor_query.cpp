@@ -494,6 +494,10 @@ fetchAds (ClassAdList &adList, const char *poolName, CondorError* errstack)
         queryAd.SetTargetTypeName (GRID_ADTYPE);
         break;
 
+	  case HAD_AD:
+		queryAd.SetTargetTypeName (HAD_ADTYPE);
+		break;
+
 	  default:
 		return Q_INVALID_QUERY;
 	}

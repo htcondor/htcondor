@@ -678,6 +678,8 @@ extern const char * ATTR_HAD_INDEX;
 extern const char * ATTR_TERMINATION_PENDING;
 extern const char * ATTR_TERMINATION_EXITREASON;
 
+extern const char * ATTR_REPLICATION_LIST;
+
 extern const char * ATTR_TREQ_DIRECTION;
 extern const char * ATTR_TREQ_INVALID_REQUEST;
 extern const char * ATTR_TREQ_INVALID_REASON;

@@ -741,6 +741,8 @@ const char *ATTR_HAD_INDEX     = "HadIndex";
 const char *ATTR_TERMINATION_PENDING	= "TerminationPending";
 const char *ATTR_TERMINATION_EXITREASON	= "TerminationExitReason";
 
+const char *ATTR_REPLICATION_LIST      = "ReplicationList";
+
 // Attributes used in clasads that go back and forth between a submitting
 // client, the schedd, and the transferd while negotiating for a place to
 // put/get a sandbox of files and then for when actually putting/getting the

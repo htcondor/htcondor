@@ -115,6 +115,12 @@ protected:
     static int 
 	downloadReplicaTransfererReaper(Service* service, int pid, int exitStatus);
 private:
+    ClassAd*       m_classAd;
+    int            m_updateCollectorTimerId;
+    int            m_updateInterval;
+
+    void initializeClassAd();
+    void updateCollectors();
 // Managing stuck transferers
 	void killStuckDownloadingTransferer(time_t currentTime);
 	void killStuckUploadingTransferers (time_t currentTime);

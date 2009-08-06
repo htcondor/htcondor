@@ -177,6 +177,7 @@ main (int argc, char *argv[])
 	  case MODE_GENERIC_NORMAL:
 	  case MODE_ANY_NORMAL:
 	  case MODE_GRID_NORMAL:
+	  case MODE_HAD_NORMAL:
 		break;
 
 	  case MODE_OTHER:
@@ -334,7 +335,8 @@ main (int argc, char *argv[])
 		case MODE_GENERIC_NORMAL:
 		case MODE_ANY_NORMAL:
 		case MODE_OTHER:
-        case MODE_GRID_NORMAL:
+		case MODE_GRID_NORMAL:
+		case MODE_HAD_NORMAL:
 				// These have to go to the collector, anyway.
 			break;
 		default:
@@ -622,6 +624,9 @@ firstPass (int argc, char *argv[])
 			if (matchPrefix (argv[i], "generic", 7)) {
 				setMode (MODE_GENERIC_NORMAL, i, argv[i]);
 			} else
+			if (matchPrefix (argv[i], "had", 3)) {
+				setMode (MODE_HAD_NORMAL, i, argv[i]);
+			} else
 			if (*argv[i] == '-') {
 				fprintf(stderr, "%s: -subsystem requires another argument\n",
 						myName);
@@ -800,6 +805,7 @@ secondPass (int argc, char *argv[])
 			  case MODE_STARTD_AVAIL:
 			  case MODE_OTHER:
 			  case MODE_GRID_NORMAL:
+			  case MODE_HAD_NORMAL:
 			  	sprintf(buffer,"(TARGET.%s==\"%s\") || (TARGET.%s==\"%s\")",
 						ATTR_NAME, daemonname, ATTR_MACHINE, daemonname );
 				if (diagnose) {

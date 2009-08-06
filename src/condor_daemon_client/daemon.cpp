@@ -145,6 +145,9 @@ Daemon::Daemon( const ClassAd* tAd, daemon_t tType, const char* tPool )
 	case DT_GENERIC:
 		_subsys = strnewp( "GENERIC" );
 		break;
+	case DT_HAD:
+		_subsys = strnewp( "HAD" );
+		break;
 	default:
 		EXCEPT( "Invalid daemon_type %d (%s) in ClassAd version of "
 				"Daemon object", (int)_type, daemonString(_type) );
@@ -957,6 +960,9 @@ Daemon::locate( void )
 		setSubsystem( "LEASEMANAGER" );
 		rval = getDaemonInfo( LEASE_MANAGER_AD, true );
 		break;
+	case DT_HAD:
+		rval = getDaemonInfo( "HAD", HAD_AD );
+		break;
 	default:
 		EXCEPT( "Unknown daemon type (%d) in Daemon::init", (int)_type );
 	}
@@ -1172,7 +1178,8 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector )
 		ClassAd*			scan;
 		ClassAdList			ads;
 
-		if( _type == DT_STARTD && ! strchr(_name, '@') ) { 
+		if( (_type == DT_STARTD && ! strchr(_name, '@')) ||
+			_type == DT_HAD ) { 
 				/*
 				  So long as an SMP startd has only 1 command socket
 				  per startd, we want to take advantage of that and
