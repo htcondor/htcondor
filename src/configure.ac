@@ -2878,6 +2878,8 @@ CHECK_EXTERNAL([classads], [1.0.2], [soft],
 
 CHECK_EXTERNAL([srb], [3.2.1-p2], [soft])
 
+CHECK_EXTERNAL([voms], [1.8.9], [soft])
+
 CHECK_EXTERNAL([pcre], [7.6], [hard],
                [use PCRE (provides regular expression support)],
                MF_LIB_CHECK([pcre], [[pcre pcre_compile]], [PCRE]))
