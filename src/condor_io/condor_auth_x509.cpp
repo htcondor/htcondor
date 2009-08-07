@@ -916,7 +916,7 @@ MyString Condor_Auth_X509::get_VOMS_string(gss_cred_id_t cred_handle) {
 }
 
 void Condor_Auth_X509::setFQAN(MyString fqan) {
-	dprintf (D_FULLDEBUG, "ZKM: setting FQAN: %s\n", fqan.GetCStr());
+	dprintf (D_FULLDEBUG, "ZKM: setting FQAN: %s\n", fqan.Value());
 	m_fqan = fqan;
 }
 
