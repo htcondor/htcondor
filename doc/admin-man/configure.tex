@@ -468,6 +468,15 @@ determined automatically at run time but which can be overwritten.
   The operating system as reported by \Prog{uname}(2)'s \Code{sysname} field.
   Always the same as \MacroNI{OPSYS} on Windows.
 
+\label{param:DetectedMemory}
+\item[\MacroU{DETECTED\_MEMORY}]
+  Amount of detected physical memory (RAM) in megabytes.
+
+\label{param:DetectedCores}
+\item[\MacroU{DETECTED\_CORES}]
+  Number of detected CPU cores.  This includes hyperthreaded cores if there
+  are any.
+
 \label{param:Pid}
 \item[\MacroU{PID}]
   The process ID for the daemon or tool.
