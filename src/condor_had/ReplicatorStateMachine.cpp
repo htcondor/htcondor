@@ -153,7 +153,10 @@ ReplicatorStateMachine::finalize()
 void
 ReplicatorStateMachine::finalizeDelta( )
 {
-	dprintf( D_ALWAYS, "ReplicatorStateMachine::finalizeDelta started\n" );
+    ClassAd invalidate_ad;
+    MyString line;
+
+    dprintf( D_ALWAYS, "ReplicatorStateMachine::finalizeDelta started\n" );
     utilCancelTimer(m_replicationTimerId);
     utilCancelTimer(m_versionRequestingTimerId);
     utilCancelTimer(m_versionDownloadingTimerId);
@@ -165,11 +168,16 @@ ReplicatorStateMachine::finalizeDelta( )
     m_lastHadAliveTime                  = -1;
     m_updateInterval                    = -1;
 
-    if (m_classAd != NULL) {
-        daemonCore->sendUpdates(INVALIDATE_ADS_GENERIC, m_classAd);
+    if ( m_classAd != NULL ) {
         delete m_classAd;
         m_classAd = NULL;
     }
+
+    invalidate_ad.SetMyTypeName( QUERY_ADTYPE );
+    invalidate_ad.SetTargetTypeName( GENERIC_ADTYPE );
+    line.sprintf( "%s = %s == \"%s\"", ATTR_REQUIREMENTS, ATTR_NAME, m_name.Value( ) );
+    invalidate_ad.Insert( line.Value( ) );
+    daemonCore->sendUpdates( INVALIDATE_ADS_GENERIC, &invalidate_ad, NULL, false );
 }
 void
 ReplicatorStateMachine::initialize( )
@@ -268,7 +276,7 @@ ReplicatorStateMachine::reinitialize()
 void
 ReplicatorStateMachine::initializeClassAd()
 {
-    MyString name, line;
+    MyString line;
 
     if( m_classAd != NULL) {
         delete m_classAd;
@@ -280,9 +288,9 @@ ReplicatorStateMachine::initializeClassAd()
     m_classAd->SetMyTypeName(GENERIC_ADTYPE);
     m_classAd->SetTargetTypeName("Replication");
 
-    name.sprintf( "replication@%s -p %d", my_full_hostname( ),
+    m_name.sprintf( "replication@%s -p %d", my_full_hostname( ),
 				  daemonCore->InfoCommandPort( ) );
-    line.sprintf( "%s = \"%s\"", ATTR_NAME, name.Value( ) );
+    line.sprintf( "%s = \"%s\"", ATTR_NAME, m_name.Value( ) );
     m_classAd->Insert(line.Value());
 
     line.sprintf( "%s = \"%s\"", ATTR_MY_ADDRESS,

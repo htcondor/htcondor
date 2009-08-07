@@ -398,17 +398,15 @@ JobRouter::config() {
 void
 JobRouter::InitPublicAd()
 {
-	std::string name;
-
 	if (m_job_router_name.size() > 0) {
 		char *valid_name = build_valid_daemon_name(m_job_router_name.c_str());
-		name = valid_name;
+		daemonName = valid_name;
 		delete [] valid_name;
 	}
 	else {
 		char *default_name = build_valid_daemon_name("jobrouter");
 		if(default_name) {
-			name = default_name;
+			daemonName = default_name;
 			delete [] default_name;
 		}
 	}
@@ -418,7 +416,7 @@ JobRouter::InitPublicAd()
 	m_public_ad.SetMyTypeName(GENERIC_ADTYPE);
 	m_public_ad.SetTargetTypeName("Job_Router");
 
-	m_public_ad.Assign(ATTR_NAME,name.c_str());
+	m_public_ad.Assign(ATTR_NAME,daemonName.c_str());
 
 	daemonCore->publish(&m_public_ad);
 }
@@ -2130,7 +2128,15 @@ JobRouter::TimerHandler_UpdateCollector() {
 
 void
 JobRouter::InvalidatePublicAd() {
-	daemonCore->sendUpdates(INVALIDATE_ADS_GENERIC, &m_public_ad);
+	ClassAd invalidate_ad;
+	MyString line;
+
+	invalidate_ad.SetMyTypeName(QUERY_ADTYPE);
+	invalidate_ad.SetTargetTypeName(GENERIC_ADTYPE);
+
+	line.sprintf("%s = %s == \"%s\"", ATTR_REQUIREMENTS, ATTR_NAME, daemonName.c_str());
+	invalidate_ad.Insert(line.Value());
+	daemonCore->sendUpdates(INVALIDATE_ADS_GENERIC, &invalidate_ad, NULL, false);
 }
 
 JobRoute::JobRoute() {

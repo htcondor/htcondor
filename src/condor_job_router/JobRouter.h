@@ -135,6 +135,7 @@ class JobRouter: public Service {
 
 	char* m_custom_attrs;
 	std::string m_job_router_name;
+	std::string daemonName;
 
 	int m_poll_count;
 
