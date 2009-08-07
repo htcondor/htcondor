@@ -2025,7 +2025,6 @@ Daemons::AllReaper(int pid, int status)
 			return TRUE;
 		}
 	}
-	dprintf( D_ALWAYS, "Child %d died, but not a daemon -- Ignored\n", pid);
 	return TRUE;
 }
 
@@ -2043,7 +2042,6 @@ Daemons::DefaultReaper(int pid, int status)
 			return TRUE;
 		}
 	}
-	dprintf( D_ALWAYS, "Child %d died, but not a daemon -- Ignored\n", pid);
 	return TRUE;
 }
 
