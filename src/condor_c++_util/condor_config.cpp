@@ -1257,6 +1257,26 @@ fill_attributes()
 
 	insert( "subsystem", get_mySubSystem()->getName(), ConfigTab, TABLESIZE );
 	extra_info->AddInternalParam("subsystem");
+
+	MyString val;
+	val.sprintf("%d",sysapi_phys_memory_raw_no_param());
+	insert( "detected_memory", val.Value(), ConfigTab, TABLESIZE );
+	extra_info->AddInternalParam("detected_memory");
+
+		// Currently, num_hyperthread_cores is defined as everything
+		// in num_cores plus other junk, which on some systems may
+		// include non-hyperthreaded cores and on other systems may include
+		// hyperthreaded cores.  Since num_hyperthread_cpus is a super-set
+		// of num_cpus, we use it for NUM_CORES in the config.  Some day,
+		// we may want to break things out into NUM_HYPERTHREAD_CORES,
+		// NUM_PHYSICAL_CORES, and what-have-you.
+	int num_cpus=0;
+	int num_hyperthread_cpus=0;
+	sysapi_ncpus_raw_no_param(&num_cpus,&num_hyperthread_cpus);
+
+	val.sprintf("%d",num_hyperthread_cpus);
+	insert( "detected_cores", val.Value(), ConfigTab, TABLESIZE );
+	extra_info->AddInternalParam("detected_cores");
 }
 
 

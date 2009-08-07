@@ -55,6 +55,10 @@ int _sysapi_reserve_disk = 0;
 int _sysapi_startd_has_bad_utmp = FALSE;
 #endif
 
+#ifdef LINUX
+int _sysapi_count_hyperthread_cpus = FALSE;
+#endif
+
 /* needed by everyone, if this is false, then call sysapi_reconfig() */
 int _sysapi_config = 0;
 
@@ -156,6 +160,12 @@ sysapi_reconfig(void)
 	}
 
 	_sysapi_getload = param_boolean_int("SYSAPI_GET_LOADAVG",1);
+
+#ifdef LINUX
+	/* Should we count hyper threads? */
+	int _sysapi_count_hyperthread_cpus = 
+		param_boolean_int("COUNT_HYPERTHREAD_CPUS", 1);
+#endif
 
 	/* tell the library I have configured myself */
 	_sysapi_config = TRUE;
