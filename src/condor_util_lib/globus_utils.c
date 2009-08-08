@@ -34,11 +34,6 @@
 #     include "globus_gsi_proxy.h"
 #endif
 
-#if defined(HAVE_EXT_VOMS)
-#include "glite/security/voms/voms_apic.h"
-#endif
-
-
 #define DEFAULT_MIN_TIME_LEFT 8*60*60;
 
 
@@ -167,98 +162,6 @@ get_x509_proxy_filename( void )
 	return proxy_file;
 }
 
-char* extract_VOMS_attrs( globus_gsi_cred_handle_t handle, int *error) {
-
-#if !defined(HAVE_EXT_VOMS)
-	*error = 1;
-	return strdup("VOMS support not compiled into this build");
-#else
-
-   int ret;
-   struct vomsdata *voms_data = NULL;
-   struct voms **voms_cert  = NULL;
-   char **fqan = NULL;
-   int voms_err;
-   char *retfqan = 0;
-   int num_attrs = 0;
-   int fqan_len = 0;
-
-    STACK_OF(X509) *chain = NULL;
-	X509 *cert = NULL;
-
-	ret = globus_gsi_cred_get_cert_chain(handle, &chain);
-	if(ret != GLOBUS_SUCCESS) {
-		retfqan = strdup("Failed to get cert chain from credential");
-		*error = 1;
-		goto end;
-	}
-
-	ret = globus_gsi_cred_get_cert(handle, &cert);
-	if(ret != GLOBUS_SUCCESS) {
-		retfqan = strdup("Failed to get cert from credential");
-		*error = 1;
-		goto end;
-	}
-
-   voms_data = VOMS_Init(NULL, NULL);
-   if (voms_data == NULL) {
-		retfqan = strdup("Failed to read VOMS attributes, VOMS_Init() failed");
-	   *error = 1;
-		goto end;
-   }
-
-   ret = VOMS_Retrieve(cert, chain, RECURSE_CHAIN,
-                          voms_data, &voms_err);
-   if (ret == 0) {
-      if (voms_err == VERR_NOEXT) {
-     /* No VOMS extensions present, return silently */
-     *error = 0;
-     goto end;
-   } else {
-         retfqan = VOMS_ErrorMessage(voms_data, voms_err, NULL, 0);
-     	*error = 1;
-     goto end;
-      }
-   }
-
-
-   // skim through once to find the length
-   for (voms_cert = voms_data->data; voms_cert && *voms_cert; voms_cert++) {
-      for (fqan = (*voms_cert)->fqan; fqan && *fqan; fqan++) {
-          num_attrs++;
-          fqan_len += strlen(*fqan);
-      }
-   }
-
-   // enough room for the attrs, ':' separator and NULL terminator.
-   retfqan = (char*) malloc (fqan_len + num_attrs);
-   *retfqan = 0;
-
-   // now fill it all in
-   for (voms_cert = voms_data->data; voms_cert && *voms_cert; voms_cert++) {
-      for (fqan = (*voms_cert)->fqan; fqan && *fqan; fqan++) {
-          if (*retfqan) {
-              strcat (retfqan, ":");
-          }
-          strcat(retfqan, *fqan);
-      }
-   }
-
-   *error = 0;
-
-end:
-   if (voms_data)
-      VOMS_Destroy(voms_data);
-	if (cert)
-		X509_free(cert);
-	if(chain)
-		sk_X509_free(chain);
-
-   return retfqan;
-#endif
-
-}
-
 /* Return the subject name of a given proxy cert. 
   On error, return NULL.
   On success, return a pointer to a null-terminated string.
@@ -266,7 +169,7 @@ end:
   WITH free().
  */
 char *
-x509_proxy_subject_name( const char *proxy_file, int include_voms_fqan )
+x509_proxy_subject_name( const char *proxy_file )
 {
 #if !defined(HAVE_EXT_GLOBUS)
 	set_error_string( "This version of Condor doesn't support X509 credentials!" );
@@ -277,9 +180,6 @@ x509_proxy_subject_name( const char *proxy_file, int include_voms_fqan )
 	globus_gsi_cred_handle_attrs_t   handle_attrs = NULL;
 	char *subject_name = NULL;
 	char *my_proxy_file = NULL;
-	char *fqan = NULL;
-	char *combined_dn_and_fqan = NULL;
-	int error = 0;
 
 	if ( activate_globus_gsi() != 0 ) {
 		return NULL;
@@ -315,31 +215,6 @@ x509_proxy_subject_name( const char *proxy_file, int include_voms_fqan )
 		goto cleanup;
 	}
 
-	if (include_voms_fqan) {
-		fqan = extract_VOMS_attrs(handle, &error);
-		if (error) {
-			set_error_string(fqan);
-			free(fqan);
-			goto cleanup;
-		}
-
-		// if there are attributes, append them
-		if (fqan) {
-			combined_dn_and_fqan = (char*)malloc(strlen(subject_name) + strlen(fqan) + 2);
-			strcpy (combined_dn_and_fqan, subject_name);
-			strcat (combined_dn_and_fqan, ":");
-			strcat (combined_dn_and_fqan, fqan);
-			free(subject_name);
-			free(fqan);
-		} else {
-			// this is returned at the end.  caller of function must free it.
-			combined_dn_and_fqan = subject_name;
-		}
-	} else {
-		// this is returned at the end.  caller of function must free it.
-		combined_dn_and_fqan = subject_name;
-	}
-
  cleanup:
 	if (my_proxy_file) {
 		free(my_proxy_file);
@@ -353,7 +228,7 @@ x509_proxy_subject_name( const char *proxy_file, int include_voms_fqan )
 		globus_gsi_cred_handle_destroy(handle);
 	}
 
-	return combined_dn_and_fqan;
+	return subject_name;
 
 #endif /* !defined(GSS_AUTHENTICATION) */
 }
@@ -370,7 +245,7 @@ x509_proxy_subject_name( const char *proxy_file, int include_voms_fqan )
   WITH free().
  */
 char *
-x509_proxy_identity_name( const char *proxy_file, int include_voms_fqan )
+x509_proxy_identity_name( const char *proxy_file )
 {
 #if !defined(HAVE_EXT_GLOBUS)
 	set_error_string( "This version of Condor doesn't support X509 credentials!" );
@@ -381,9 +256,6 @@ x509_proxy_identity_name( const char *proxy_file, int include_voms_fqan )
 	globus_gsi_cred_handle_attrs_t   handle_attrs = NULL;
 	char *subject_name = NULL;
 	char *my_proxy_file = NULL;
-	char *fqan = NULL;
-	char *combined_dn_and_fqan = NULL;
-	int error = 0;
 
 	if ( activate_globus_gsi() != 0 ) {
 		return NULL;
@@ -419,31 +291,6 @@ x509_proxy_identity_name( const char *proxy_file, int include_voms_fqan )
 		goto cleanup;
 	}
 
-	if (include_voms_fqan) {
-		fqan = extract_VOMS_attrs(handle, &error);
-		if (error) {
-			set_error_string(fqan);
-			free(fqan);
-			goto cleanup;
-		}
-
-		// if there are attributes, append them
-		if (fqan) {
-			combined_dn_and_fqan = (char*)malloc(strlen(subject_name) + strlen(fqan) + 2);
-			strcpy (combined_dn_and_fqan, subject_name);
-			strcat (combined_dn_and_fqan, ":");
-			strcat (combined_dn_and_fqan, fqan);
-			free(subject_name);
-			free(fqan);
-		} else {
-			// this is returned at the end.  caller of function must free it.
-			combined_dn_and_fqan = subject_name;
-		}
-	} else {
-		// this is returned at the end.  caller of function must free it.
-		combined_dn_and_fqan = subject_name;
-	}
-
  cleanup:
 	if (my_proxy_file) {
 		free(my_proxy_file);
@@ -457,7 +304,7 @@ x509_proxy_identity_name( const char *proxy_file, int include_voms_fqan )
 		globus_gsi_cred_handle_destroy(handle);
 	}
 
-	return combined_dn_and_fqan;
+	return subject_name;
 
 #endif /* !defined(GSS_AUTHENTICATION) */
 }

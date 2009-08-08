@@ -5409,11 +5409,9 @@ SetGSICredentials()
 			/* Insert the proxy subject name into the ad */
 			char *proxy_subject;
 			if ( vi && !vi->built_since_version(6,7,3) ) {
-				// subject name with no VOMS attrs
-				proxy_subject = x509_proxy_subject_name(proxy_file, 0);
+				proxy_subject = x509_proxy_subject_name(proxy_file);
 			} else {
-				// identity with VOMS attrs
-				proxy_subject = x509_proxy_identity_name(proxy_file, 1);
+				proxy_subject = x509_proxy_identity_name(proxy_file);
 			}
 			if ( !proxy_subject ) {
 				fprintf( stderr, "\nERROR: %s\n", x509_error_string() );

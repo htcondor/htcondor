@@ -247,24 +247,15 @@ NOTE: we also need the same crap for libpcre.a...
 #endif
 
 /* Collect all the security-related variables into a single variable */
-SECURITY_FLAGS = $(VOMS_FLAGS) \
-		 $(KERBEROS_FLAG) \
+SECURITY_FLAGS = $(KERBEROS_FLAG) \
 		 $(OPENSSL_FLAGS) \
 		 $(GSI_FLAGS)
 SECURITY_LIB   = $(KERBEROS_LIB) \
-		 $(GSI_LIB) $(OPENSSL_LIB) $(VOMS_LIB)
+		 $(GSI_LIB) $(OPENSSL_LIB)
 
 #if HAVE_EXT_COREDUMPER
 COREDUMPER_FLAGS = -I$(COREDUMPER_INC)
 COREDUMPER_LINK_LIB = $(COREDUMPER_LIB)/libcoredumper.a
-#endif
-
-/* VOMS is sorta required everywhere at the moment */
-#if HAVE_EXT_VOMS
-#if HAS_EXTERNALS
-VOMS_FLAGS = -I$(VOMS_INC)
-VOMS_LIB = $(VOMS_DIR)/lib/libvomsapi.a $(VOMS_DIR)/lib/libvomsapi_nog.a -lexpat $(GLOBUS_DIR)/lib/libcrypto_gcc32dbg.a $(GLOBUS_DIR)/lib/libglobus_gss_assist_gcc32dbg.a
-#endif
 #endif
 
 /* PCRE is sorta required everywhere at the moment */
@@ -340,7 +331,7 @@ GPP_ARCH_FLAGS =
 #endif
 
 /* Flags shared between C and C++ compilers */
-SHARED_COMPILER_FLAGS = $(VENDOR_C_FLAGS) $(COMP_DEBUG_FLAGS) $(CC_PIC_FLAG) PlatformFlags $(CCOMPILER_ID) $(GSOAP_FLAGS) $(PCRE_FLAGS) $(VOMS_FLAGS) $(COREDUMPER_FLAGS) $(PTHREAD_FLAG)
+SHARED_COMPILER_FLAGS = $(VENDOR_C_FLAGS) $(COMP_DEBUG_FLAGS) $(CC_PIC_FLAG) PlatformFlags $(CCOMPILER_ID) $(GSOAP_FLAGS) $(PCRE_FLAGS) $(COREDUMPER_FLAGS) $(PTHREAD_FLAG)
 
 /* We use separate flag definitions for the C compiler and the C++ compiler.
 	These are the flags actually passed to the respective compilers. 
