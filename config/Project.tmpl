@@ -251,7 +251,7 @@ NOTE: we also need the same crap for libpcre.a...
 #if HAVE_EXT_VOMS
 #if HAS_EXTERNALS
 VOMS_FLAGS = -I$(VOMS_INC)
-VOMS_LIB = $(VOMS_DIR)/lib/libvomsapi.a $(VOMS_DIR)/lib/libvomsapi_nog.a -lexpat $(OPENSSL_DIR)/lib/libcrypto.a $(GLOBUS_DIR)/lib/libglobus_gss_assist_gcc32dbg.a
+VOMS_LIB = $(VOMS_DIR)/lib/libvomsapi.a $(VOMS_DIR)/lib/libvomsapi_nog.a -lexpat $(GLOBUS_DIR)/lib/libcrypto_gcc32dbg.a $(GLOBUS_DIR)/lib/libglobus_gss_assist_gcc32dbg.a
 #endif
 #endif
 
