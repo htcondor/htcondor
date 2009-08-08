@@ -435,20 +435,20 @@ void Authentication::map_authentication_name_to_canonical_name(int authenticatio
 	if (global_map_file) {
 		MyString canonical_user;
 
-		dprintf (D_ALWAYS, "ZKM: 1: attempting to map '%s'\n", auth_name_to_map.Value());
-		bool mapret = global_map_file->GetCanonicalization(method_string, auth_name_to_map.Value(), canonical_user);
-		dprintf (D_ALWAYS, "ZKM: 2: mapret: %i included_voms: %i canonical_user: %s\n", mapret, included_voms, canonical_user.Value());
+		dprintf (D_ALWAYS, "ZKM: 1: attempting to map '%s'\n", auth_name_to_map.GetCStr());
+		bool mapret = global_map_file->GetCanonicalization(method_string, auth_name_to_map.GetCStr(), canonical_user);
+		dprintf (D_ALWAYS, "ZKM: 2: mapret: %i included_voms: %i canonical_user: %s\n", mapret, included_voms, canonical_user.GetCStr());
 
 		// if it did not find a user, and we included voms attrs, try again without voms
 		if (mapret && included_voms) {
 			dprintf (D_ALWAYS, "ZKM: now attempting to map '%s'\n", authentication_name);
 			mapret = global_map_file->GetCanonicalization(method_string, authentication_name, canonical_user);
-			dprintf (D_ALWAYS, "ZKM: now 2: mapret: %i included_voms: %i canonical_user: %s\n", mapret, included_voms, canonical_user.Value());
+			dprintf (D_ALWAYS, "ZKM: now 2: mapret: %i included_voms: %i canonical_user: %s\n", mapret, included_voms, canonical_user.GetCStr());
 		}
 
 		if (!mapret) {
 			// returns true on failure?
-			dprintf (D_ALWAYS, "ZKM: successful mapping to %s\n", canonical_user.Value());
+			dprintf (D_ALWAYS, "ZKM: successful mapping to %s\n", canonical_user.GetCStr());
 
 			// there is a switch for GSI to use the default globus function for this, in
 			// case there is some custom globus mapping add-on, or the admin just wants
