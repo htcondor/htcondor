@@ -1189,7 +1189,5 @@ void CompatClassAd::ChainCollapse()
             Insert((*itr).first, tmpExprTree);
         }
     }
-
-    //We're done copying all the stuff from the parent's ad over.
-    //Time to sever the link between this classad and it!
 }
+

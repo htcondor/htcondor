@@ -1212,6 +1212,224 @@ _GetExternalReferences( const ExprTree *expr, ClassAd *ad,
     }
 }
 
+
+bool ClassAd::
+GetInternalReferences( const ExprTree *tree, References &refs, bool fullNames)
+{
+    EvalState state;
+    state.rootAd = this;
+    state.curAd = (ClassAd*)tree->GetParentScope();
+    if(!state.curAd) state.curAd = this;
+
+    return( _GetInternalReferences( tree, this, state, refs, fullNames) );
+}
+
+//this is closely modelled off of _GetExternalReferences in the new_classads.
+bool ClassAd::
+_GetInternalReferences( const ExprTree *expr, ClassAd *ad,
+        EvalState &state, References& refs, bool fullNames)
+{
+
+    switch( expr->GetKind() ){
+        //nothing to be found here!
+        case LITERAL_NODE:{
+            return true;
+        break;
+                          }
+
+        case ATTRREF_NODE:{
+            ClassAd         *start;
+            ExprTree        *tree, *result;
+            string          attr;
+            Value           val;
+            bool            abs;
+
+            ((AttributeReference*)expr)->GetComponents(tree,attr,abs);
+            //figuring out which state to base this off of
+            if( tree == NULL ){
+                start = abs ? state.rootAd : state.curAd;
+                //remove circularity
+                if( abs && (start == NULL) ) {
+                    return false;
+                }
+            } else {
+                if (!tree->Evaluate(state, val) ) {
+                    return false;
+                }
+
+                /*
+                 *
+                 * [
+                 * A = 3;
+                 * B = { 1, 3, 5};
+                 * C = D.A + 1;
+                 * D = [ A = E; B = 4; ];
+                 * E = 4;
+                 * ];
+                 */
+
+                //could try to get away with making this 
+                //"if( val.IsUndefinedValue() ) { return false; }" 
+                //  or something.
+                //
+                //If it's undefined, it's external. Which we don't want.
+                /*
+                if( !val.IsUndefinedValue() ) {
+                    if(fullNames) {
+                        string fullName;
+                        if(tree != NULL){
+                            ClassAdUnParser unparser;
+                            unparser.Unparse(fullName, tree);
+                            fullName += ".";
+                        }
+                        fullName += attr;
+                        refs.insert(fullName);
+                        //TODO: get the appropriate reference from Fullname.
+                        return  _GetInternalReferences(tree, ad, state, refs, fullNames);
+                        //return true;
+                    }
+                }
+                */
+
+                if( val.IsUndefinedValue() ) {
+                    return false;
+                }
+
+                if(fullNames) {
+                    string fullName;
+                    if(tree != NULL){
+                        ClassAdUnParser unparser;
+                        unparser.Unparse(fullName, tree);
+                        fullName += ".";
+                    }
+                    fullName += attr;
+                    refs.insert(fullName);
+                    //TODO: get the appropriate reference from Fullname.
+                    //return  _GetInternalReferences(tree, ad, state, refs, fullNames);
+                    return true;
+                }
+
+                //otherwise, if the tree didn't evaluate to a classad,
+                //we have a problemo, mon.
+                //TODO: but why?
+                if( !val.IsClassAdValue( start ) ) {
+                    return false;
+                }
+            }
+
+
+            ClassAd *curAd = state.curAd;
+            switch( start->LookupInScope( attr, result, state) ) {
+                case EVAL_ERROR:
+                    return false;
+                break;
+
+                //attr is external, so let's find the internals in that
+                //result
+                //JUST KIDDING
+                case EVAL_UNDEF:{
+                    
+                    //bool rval = _GetInternalReferences(result, ad, state, refs, fullNames);
+                    //state.curAd = curAd;
+                    return false;
+                break;
+                                }
+
+                case EVAL_OK:   {
+                    //whoo, it's internal.
+                    refs.insert(attr);
+                    state.curAd = curAd;
+                    return true;
+                break;
+                                }
+
+                default:
+                    // "enh??"
+                    return false;
+                break;
+            }
+
+        break;
+                          }
+    
+
+        case OP_NODE:{
+
+            //recurse on subtrees
+            Operation::OpKind       op;
+            ExprTree                *t1, *t2, *t3;
+            ((Operation*)expr)->GetComponents(op, t1, t2, t3);
+            if( t1 && !_GetInternalReferences(t1, ad, state, refs, fullNames)) {
+                return false;
+            }
+
+            if( t2 && !_GetInternalReferences(t2, ad, state, refs, fullNames)) {
+                return false;
+            }
+
+            if( t3 && !_GetInternalReferences(t3, ad, state, refs, fullNames)) {
+                return false;
+            }
+
+            return true;
+        break;
+        }
+
+        case FN_CALL_NODE:{
+            //recurse on the subtrees!
+            string                          fnName;
+            vector<ExprTree*>               args;
+            vector<ExprTree*>::iterator     itr;
+
+            ((FunctionCall*)expr)->GetComponents(fnName, args);
+            for( itr = args.begin(); itr != args.end(); itr++){
+                if( !_GetInternalReferences( *itr, ad, state, refs, fullNames) ) {
+                    return false;
+                }
+            }
+
+            return true;
+        break;
+                          }
+
+        case CLASSAD_NODE:{
+            //also recurse on subtrees...
+            vector< pair<string, ExprTree*> >               attrs;
+            vector< pair<string, ExprTree*> >:: iterator    itr;
+
+            ((ClassAd*)expr)->GetComponents(attrs);
+            for(itr = attrs.begin(); itr != attrs.end(); itr++){
+                if( !_GetInternalReferences(itr->second, ad, state, refs, fullNames)) {
+                    return false;
+                }
+            }
+
+            return true;
+        break;
+            }
+
+        case EXPR_LIST_NODE:{
+            vector<ExprTree*>               exprs;
+            vector<ExprTree*>::iterator     itr;
+
+            ((ExprList*)expr)->GetComponents(exprs);
+            for(itr = exprs.begin(); itr != exprs.end(); itr++){
+                if( !_GetInternalReferences(*itr, ad, state, refs, fullNames) ) {
+                    return false;
+                }
+            }
+
+            return true;
+        break;
+                            }
+
+        default:
+            return false;
+
+    }
+
+}
+
 #if defined( EXPERIMENTAL )
 
 bool ClassAd::

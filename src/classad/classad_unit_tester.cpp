@@ -460,6 +460,7 @@ static void test_classad(const Parameters &, Results &results)
                     have_seconds = false;
                     have_other = false;
                     for (iter = refs.begin(); iter != refs.end(); iter++) {
+                        printf("%s\n", (*iter).c_str());
                         if ((*iter).compare("other.Environment") == 0) {
                             have_environment = true;
                         } else if ((*iter).compare("other.Time") == 0) {

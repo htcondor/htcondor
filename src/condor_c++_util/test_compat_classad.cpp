@@ -46,6 +46,11 @@ bool test_EvalStringMyString(CompatClassAd *c1, CompatClassAd *c2, bool verbose)
 bool test_NextDirtyExpr(CompatClassAd *c1, bool verbose);
 bool test_EscapeStringValue(CompatClassAd *c1, bool verbose);
 
+bool test_EvalTree(CompatClassAd *c1, CompatClassAd *c2,bool verbose);
+
+bool test_GIR(bool verbose);
+bool gir_helper(classad::ClassAd* c, string attr, bool verbose, bool full = true);
+
 void setUpAndRun(bool verbose);
 
 char *classad_strings[] = 
@@ -175,7 +180,8 @@ bool test_sPrintExpr(CompatClassAd *c1, bool verbose)
         printf("buf == NULL test %s.\n", passedNull ? "passed" : "failed");
 
 
-    strcpy(buffer1, ""); //CLEAR!
+    free(buffer1);
+    //buffer1 = (char*) calloc(bufferSize, sizeof(char));
 
     buffer1 = c1->sPrintExpr(NULL, 0, "fred");
     if(buffer1 == NULL)
@@ -249,6 +255,7 @@ bool test_fPrintAsXML(CompatClassAd *c1, bool verbose)
     c1->fPrintAsXML(compC1XML);
 
     fclose(compC1XML);
+    if(verbose){}
 
     //uh...not sure how to test this.
     passed = true;
@@ -289,6 +296,7 @@ bool test_ChainCollapse(CompatClassAd *c2, CompatClassAd *c3, bool verbose)
 
     c2->ChainToAd(c3);
 
+    if(verbose){}
     /*
     if(verbose)
     {
@@ -449,8 +457,9 @@ bool test_EvalStringCharStarStar(CompatClassAd *c1, CompatClassAd *c2, bool verb
         printf("EvalStringChar** w/ real attr, this target, non-malloc'd value %s.\n", 
             passedTest[0] ? "passed" : "failed");
     
-
-    strcpy(tmpValue, "");
+    free(tmpValue);
+    //strcpy(tmpValue, "");
+    tmpValue = (char*)malloc(10 * sizeof(char));
 
     passedTest[1] = c1->EvalString((*itr).first.c_str(), c2, &tmpValue);
     
@@ -463,7 +472,9 @@ bool test_EvalStringCharStarStar(CompatClassAd *c1, CompatClassAd *c2, bool verb
         printf("EvalStringChar** w/ real attr, c2 target, malloc'd value %s.\n", 
             passedTest[1] ? "passed" : "failed");
 
-    strcpy(tmpValue, "");
+    free(tmpValue);
+    //strcpy(tmpValue, "");
+    tmpValue = (char*)malloc(10 * sizeof(char));
 
     esRetVal[0] = c1->EvalString("fred", c1, &tmpValue);
     
@@ -634,6 +645,7 @@ bool test_NextDirtyExpr(CompatClassAd *c1, bool verbose)
 }
 //}}}
 
+//{{{ test_EscapeStringValue
 bool test_EscapeStringValue(CompatClassAd *c1, bool verbose)
 {
     bool passed;
@@ -679,13 +691,279 @@ bool test_EscapeStringValue(CompatClassAd *c1, bool verbose)
     return passed;
 
 }
+//}}}
+
+//{{{ test_EvalTree
+bool test_EvalTree(CompatClassAd *c1, CompatClassAd *c2, bool verbose)
+{
+    bool passed = false;
+    bool passedShortHand = false, passedNullTarget = false;
+    bool passedReal = false, passedNullMine = false;
+    bool passedNullMineRealTarget = false;
+
+	classad::ClassAdUnParser unp;
+    string buf;
+   
+    classad::AttrList::iterator itr;
+    itr = c1->begin();
+
+    classad::Value tmpVal;
+
+    //should succeed
+    passedShortHand = EvalTree(itr->second, c1, &tmpVal);
+
+    if(passedShortHand)
+    {
+        unp.Unparse(buf, tmpVal);
+    }
+
+    if(verbose)
+    {
+        printf("First EvalTree (shorthand) %s.\n", passedShortHand ? "passed" : "failed");
+        if(passedShortHand)
+        {
+            printf("tmpVal is %s.\n", buf.c_str() ); 
+        }
+    }
+
+    tmpVal.Clear();
+    buf = "";
+    
+    //should succeed
+
+    passedNullTarget = EvalTree(itr->second, c1,NULL, &tmpVal);
+
+    if(passedNullTarget)
+    {
+        unp.Unparse(buf, tmpVal);
+    }
+
+    if(verbose)
+    {
+        printf("Second EvalTree (null target) %s.\n", passedNullTarget ? "passed" : "failed");
+        if(passedNullTarget)
+        {
+            printf("tmpVal is %s.\n", buf.c_str() ); 
+        }
+    }
+
+    buf = "";
+    tmpVal.Clear();
+
+    //should fail.
+    if(!EvalTree(itr->second, NULL,NULL, &tmpVal) )
+    {
+        passedNullMine = true;
+    }
+
+    if(verbose)
+    {
+        printf("Third EvalTree (null mine) %s.\n", passedNullMine ? "passed" : "failed");
+    }
+
+    tmpVal.Clear();
+
+    //this should also fail
+    if(!EvalTree(itr->second, NULL,c2, &tmpVal) )
+    {
+        passedNullMineRealTarget = true;
+    }
+
+    if(verbose)
+    {
+        printf("Fourth EvalTree (null mine) %s.\n", passedNullMineRealTarget
+                ? "passed" : "failed");
+    }
+
+    tmpVal.Clear();
+    itr = c2->begin();
+    itr++;
+    //should pass
+    passedReal = EvalTree(itr->second, c1, c2, &tmpVal);
+
+    if(passedReal)
+    {
+        unp.Unparse(buf, tmpVal);
+    }
+
+    bool wasRightNumber;
+
+    if(strcmp(buf.c_str(),"3"))
+    {
+        wasRightNumber = false; 
+    }
+    else
+    {
+        wasRightNumber = true;
+    }
+
+    if(verbose)
+    {
+        printf("Fifth EvalTree (Real) %s.\n", passedReal ? "passed" : "failed");
+        if(!wasRightNumber)
+        {
+            printf("But the number was not what was expected. Expected 3 and got %s.\n", buf.c_str());
+        }
+        else if(passedReal)
+        {
+            printf("tmpVal is %s.\n", buf.c_str() ); 
+        }
+
+    }
+
+    passed = passedShortHand && passedNullTarget && passedNullMine 
+                && passedNullMineRealTarget && passedReal;
+
+    return passed;
+}
+
+//}}}
+
+//{{{ GetInternalReferences
+bool test_GIR(bool verbose)
+{
+    bool passed = false;
+    classad::ClassAd* c;
+    classad::ClassAdParser parser;
+
+
+    // expr C is an opnode
+
+    string input_ref = "[ A = 3; B = {1,3,5}; C = D.A + 1; D = [A = E; B = 8;]; E = 4; ]";
+
+    c = parser.ParseClassAd(input_ref);
+
+    if(verbose && c == NULL)
+    {
+        printf("Classad couldn't be parsed!\n");
+        passed = false;
+    }
+
+    if(verbose)
+    {
+        printf("Working on 1st ref string. Fullname = true\n");
+        printf("ref string is %s.\n", input_ref.c_str());
+    }
+
+    passed = gir_helper(c, "A", verbose);
+    passed = gir_helper(c, "B", verbose);
+    passed = gir_helper(c, "C", verbose);
+    passed = gir_helper(c, "D", verbose);
+    passed = gir_helper(c, "E", verbose);
+
+    if(verbose) 
+    {
+        printf("Working on 1st ref string. Fullname = false\n");
+    }
+
+    passed = gir_helper(c, "A", verbose, false);
+    passed = gir_helper(c, "B", verbose, false);
+    passed = gir_helper(c, "C", verbose, false);
+    passed = gir_helper(c, "D", verbose, false);
+    passed = gir_helper(c, "E", verbose, false);
+
+
+    string input_ref2 = "[ A = 3; B = {1}; C = D.G; D = [A = B; B = 9;]; E = D.A + C; ]";
+
+    if(verbose)
+    {
+        printf("Working on 2nd ref string. Fullname = true\n");
+        printf("ref string is %s.\n", input_ref2.c_str());
+    }
+    c = parser.ParseClassAd(input_ref2);
+
+    if(verbose && c == NULL)
+    {
+        printf("Classad 2 couldn't be parsed!\n");
+        passed = false;
+    }
+
+    passed = gir_helper(c, "A", verbose);
+    passed = gir_helper(c, "B", verbose);
+    passed = gir_helper(c, "C", verbose);
+    passed = gir_helper(c, "D", verbose);
+    passed = gir_helper(c, "E", verbose);
+
+    if(verbose)
+    {
+        printf("Working on 2nd ref string. Fullname = false\n");
+    }
+
+    passed = gir_helper(c, "A", verbose, false);
+    passed = gir_helper(c, "B", verbose, false);
+    passed = gir_helper(c, "C", verbose, false);
+    passed = gir_helper(c, "D", verbose, false);
+    passed = gir_helper(c, "E", verbose, false);
+
+    delete c;
+    c = NULL;
+
+    return passed;
+}
+//}}}
+
+//{{{ GIR helper
+bool gir_helper(classad::ClassAd* c, string attr, bool verbose, bool full)
+{
+    bool passed = false;
+
+    classad::References refs;
+    classad::References::iterator iter;
+    classad::ExprTree *expr;
+
+    if(verbose)
+    {
+        printf("Attr \"%s\"\n", attr.c_str());
+    }
+    if( c != NULL )
+    {
+        expr = c->Lookup(attr);
+        if(expr != NULL)
+        {
+            bool have_references;
+            if(have_references = c->GetInternalReferences(expr, refs, full))
+            {
+                if(have_references)
+                {
+                    if(verbose)
+                    {
+                        for(iter = refs.begin(); iter != refs.end(); iter++)  
+                        {
+                            printf("%s\n", (*iter).c_str());
+                        }
+                    }
+
+                    passed = true;
+                }
+            }
+        }
+    }
+    return passed;
+}
+
+//}}}
+
+
 void setUpAndRun(bool verbose)
 {
     ClassAd *c1, *c2, *c3, *c4;
     FILE *c1FP, *c2FP, *c3FP, *c4FP;
+    /*
     bool sPrintExprPassed, isVAVPassed, fPrintAXPassed;//, sPrintAXPassed; 
     bool collapseChainPassed, evalStringCharStar, evalStringCharStarStar;
     bool evalStringMyString, nextDirtyExpr, escapeStringValue;
+    bool evalTree;
+    */
+
+    int numTests = 11;
+    bool passedTest[numTests];
+
+
+    for(int i = 0; i < numTests; i++)
+    {
+        passedTest[i] = false;
+    }
+
 
     setUpClassAds(c1, c2, c3, c4, c1FP, c2FP, c3FP, c4FP,verbose);
 
@@ -695,40 +973,90 @@ void setUpAndRun(bool verbose)
             c3FP, c4FP, verbose);
 
     printf("Testing sPrintExpr...\n");
-    sPrintExprPassed = test_sPrintExpr(compC1, verbose);
-    printf("sPrintExpr %s.\n", sPrintExprPassed ? "passed" : "failed");
+    passedTest[0] = test_sPrintExpr(compC1, verbose);
+    printf("sPrintExpr %s.\n", passedTest[0] ? "passed" : "failed");
+    printf("-------------\n");
 
     printf("Testing isValidAttrValue...\n");
-    isVAVPassed = test_IsValidAttrValue(compC1, verbose);
-    printf("IsValidAttrValue %s.\n", isVAVPassed ? "passed" : "failed");
+    passedTest[1] = test_IsValidAttrValue(compC1, verbose);
+    printf("IsValidAttrValue %s.\n", passedTest[1] ? "passed" : "failed");
+    printf("-------------\n");
+
 
     printf("Testing fPrintAsXML and sPrintAsXML...\n");
-    fPrintAXPassed = test_fPrintAsXML(compC1, verbose);
-    printf("fPrintAsXML and sPrintAsXML %s.\n", fPrintAXPassed ? "passed" : "failed");
+    passedTest[2] = test_fPrintAsXML(compC1, verbose);
+    printf("fPrintAsXML and sPrintAsXML %s.\n", passedTest[2] ? "passed" : "failed");
+    printf("-------------\n");
+
 
     printf("Testing ChainCollapse...\n");
-    collapseChainPassed = test_ChainCollapse(compC3, compC2, verbose);
-    printf("ChainCollapse %s.\n", collapseChainPassed ? "passed" : "failed");
+    passedTest[3] = test_ChainCollapse(compC3, compC2, verbose);
+    printf("ChainCollapse %s.\n", passedTest[3] ? "passed" : "failed");
+    printf("-------------\n");
+
 
     printf("Testing EvalStringChar*...\n");
-    evalStringCharStar = test_EvalStringCharStar(compC4, compC2, verbose);
-    printf("EvalStringChar* %s.\n", evalStringCharStar ? "passed" : "failed");
+    passedTest[4] = test_EvalStringCharStar(compC4, compC2, verbose);
+    printf("EvalStringChar* %s.\n", passedTest[4] ? "passed" : "failed");
+    printf("-------------\n");
+
 
     printf("Testing EvalStringChar**...\n");
-    evalStringCharStarStar = test_EvalStringCharStarStar(compC4, compC2, verbose);
-    printf("EvalStringChar** %s.\n", evalStringCharStarStar ? "passed" : "failed");
+    passedTest[5] = test_EvalStringCharStarStar(compC4, compC2, verbose);
+    printf("EvalStringChar** %s.\n", passedTest[5] ? "passed" : "failed");
+    printf("-------------\n");
+
 
     printf("Testing EvalStringMyString...\n");
-    evalStringMyString = test_EvalStringMyString(compC4, compC2, verbose);
-    printf("EvalStringMyString %s.\n", evalStringMyString ? "passed" : "failed");
+    passedTest[6] = test_EvalStringMyString(compC4, compC2, verbose);
+    printf("EvalStringMyString %s.\n", passedTest[6] ? "passed" : "failed");
+    printf("-------------\n");
+
 
     printf("Testing NextDirtyExpr...\n");
-    nextDirtyExpr = test_NextDirtyExpr(compC4, verbose);
-    printf("NextDirtyExpr %s.\n", nextDirtyExpr ? "passed" : "failed");
+    passedTest[7] = test_NextDirtyExpr(compC4, verbose);
+    printf("NextDirtyExpr %s.\n", passedTest[7] ? "passed" : "failed");
+    printf("-------------\n");
+
 
     printf("Testing EscapeStringValue...\n");
-    escapeStringValue = test_EscapeStringValue(compC4, verbose);
-    printf("Escape String Value %s.\n", escapeStringValue ? "passed" : "failed");
+    passedTest[8] = test_EscapeStringValue(compC4, verbose);
+    printf("Escape String Value %s.\n", passedTest[8] ? "passed" : "failed");
+    printf("-------------\n");
+
+
+    printf("Testing EvalTree...\n");
+    passedTest[9] = test_EvalTree(compC4,compC2, verbose);
+    printf("EvalTree %s.\n", passedTest[9] ? "passed" : "failed");
+    printf("-------------\n");
+
+    printf("Testing GetInternalReferences...\n");
+    passedTest[10] = test_GIR(verbose);
+    printf("GIR %s.\n", passedTest[10] ? "passed" : "failed");
+    printf("-------------\n");
+
+    bool allPassed = passedTest[0];
+    int numPassed = 0;
+
+    for(int i = 0; i < numTests; i++)
+    {
+        if(passedTest[i]) numPassed++;
+
+        allPassed = allPassed && passedTest[i]; 
+    }
+
+    if(allPassed)
+    {
+        printf("All tests passed.\n");
+    }
+    else
+    {
+        printf("%d of %d tests passed.\n", numPassed, numTests);
+    }
+
+
+    //delete c1; delete c2; delete c3;
+    delete compC1; delete compC2; delete compC3;
 }
 
 int main(int argc, char **argv)

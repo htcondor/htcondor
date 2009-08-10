@@ -32,6 +32,7 @@ using namespace std;
 #include "conversion.h"
 #include "compat_classad.h"
 
+
 static bool publish_server_timeMangled = false;
 void AttrList_setPublishServerTimeMangled( bool publish)
 {
@@ -347,7 +348,8 @@ bool _putOldClassAd( Stream *sock, classad::ClassAd& ad, bool excludeTypes )
         free(serverTimeStr);
     }
 
-    //ok, so we're not really excluding it here, but...
+    //ok, so the name of the bool doesn't really work here. It works
+    //  in the other places though.
     if(excludeTypes)
     {
         // Send the type
@@ -367,4 +369,40 @@ bool _putOldClassAd( Stream *sock, classad::ClassAd& ad, bool excludeTypes )
     }
 
 	return true;
+}
+
+
+bool EvalTree(classad::ExprTree* eTree, classad::ClassAd* mine, classad::Value* v)
+{
+    return EvalTree(eTree, mine, NULL, v);
+}
+
+
+bool EvalTree(classad::ExprTree* eTree, classad::ClassAd* mine, classad::ClassAd* target, classad::Value* v)
+{
+    if(!mine)
+    {
+        return false;
+    }
+
+    if(target)
+    {
+        classad::MatchClassAd mad(mine,target);
+
+        /*
+        classad::ExprTree* mTree = mad.Copy();     
+        mTree->SetParentScope(mine);
+        */
+        bool rval = eTree->Evaluate(*v);
+
+        mad.RemoveLeftAd( );
+        mad.RemoveRightAd( );
+
+        //delete mTree;
+        return rval;
+    }
+
+    eTree->SetParentScope(mine);
+
+    return eTree->Evaluate(*v);
 }

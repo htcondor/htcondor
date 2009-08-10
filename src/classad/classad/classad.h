@@ -549,6 +549,17 @@ e		*/
 		bool GetExternalReferences(const ExprTree *tree, PortReferences &refs);
 		//@}
 
+
+        /** Return a list of attribute references in the expression that are
+         *  contained within this ClassAd.
+         *  @param tree The ExprTree for the expression that has references 
+         *      that you wish to know about. 
+         *  @param refs The list of references
+         *  @param fullNames true if you want full names (like other.foo)
+         *  @return true on success, false on failure. 
+         */
+        bool GetInternalReferences( const ExprTree *tree, References &refs, bool fullNames);
+
 #if defined( EXPERIMENTAL )
 		bool AddRectangle( const ExprTree *tree, Rectangles &r, 
 					const std::string &allowed, const References &imported );
@@ -639,6 +650,9 @@ e		*/
 
 		bool _GetExternalReferences( const ExprTree *, ClassAd *, 
 					EvalState &, PortReferences& );
+
+        bool _GetInternalReferences(const ExprTree *expr, ClassAd *ad,
+            EvalState &state, References& refs, bool fullNames);
 #if defined( EXPERIMENTAL )
 		bool _MakeRectangles(const ExprTree*,const std::string&,Rectangles&, bool);
 		bool _CheckRef( ExprTree *, const std::string & );

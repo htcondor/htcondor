@@ -29,6 +29,11 @@
 #define WANT_CLASSAD_NAMESPACE
 #endif
 #include "classad/classad_distribution.h"
+
+#include "classad/value.h"
+#include "classad/matchClassad.h"
+
+
 using namespace std;
 
 classad::ClassAd* getOldClassAd( Stream *sock );
@@ -43,4 +48,10 @@ bool putOldClassAdNoTypes ( Stream *sock, classad::ClassAd& ad );
 //  false is the same as the putOldClassAdNoTypes()
 bool _putOldClassAd(Stream *sock, classad::ClassAd& ad, bool excludeTypes);
 
+//this is a shorthand version of EvalTree w/o a target ad.
+bool EvalTree(classad::ExprTree* eTree, classad::ClassAd* mine, classad::Value* v);
+
+// this will return false when `mine` doesn't exist, or if one of the inner
+// calls to Evaluate fails.
+bool EvalTree(classad::ExprTree* eTree, classad::ClassAd* mine, classad::ClassAd* target, classad::Value* v);
 #endif

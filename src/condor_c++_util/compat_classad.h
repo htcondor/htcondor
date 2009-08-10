@@ -309,6 +309,16 @@ class CompatClassAd : public classad::ClassAd
      */
     void ChainCollapse();
 
+
+    /*
+    bool GetInternalReferences( const ExprTree *tree, classad::References &refs, bool fullNames);
+
+
+    bool _GetInternalReferences( const ExprTree *expr, CompatClassAd *ad,
+            classad::EvalState &state, classad::References& refs, bool fullNames);
+
+    */
+
  private:
 	void evalFromEnvironment( const char *name, classad::Value val );
 	classad::ExprTree *AddExplicitConditionals( classad::ExprTree * );
