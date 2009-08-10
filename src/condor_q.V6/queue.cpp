@@ -49,6 +49,8 @@
 #include "string_list.h"
 #include "condor_version.h"
 #include "subsystem_info.h"
+#include "condor_xml_classads.h"
+
 
 #ifdef WANT_CLASSAD_ANALYSIS
 #include "../classad_analysis/analysis.h"
@@ -2064,6 +2066,14 @@ show_queue_buffered( char* v1, char* v2, char* v3, char* v4, bool useDB )
 		
 			short_header();
 		}
+		if( use_xml ) {
+				// keep this consistent with AttrListList::fPrintAttrListList()
+			ClassAdXMLUnparser  unparser;
+			MyString xml;
+			unparser.SetUseCompactSpacing(false);
+			unparser.AddXMLFileHeader(xml);
+			printf("%s\n", xml.Value());
+		}
 
 		if (analyze) {
 			warnScheddLimits(scheddName);
@@ -2086,6 +2096,14 @@ show_queue_buffered( char* v1, char* v2, char* v3, char* v4, bool useDB )
 			if (unexpanded>0) printf( ", %d unexpanded",unexpanded);
 			if (malformed>0) printf( ", %d malformed",malformed);
            	printf("\n");
+		}
+		if( use_xml ) {
+				// keep this consistent with AttrListList::fPrintAttrListList()
+			ClassAdXMLUnparser  unparser;
+			MyString xml;
+			unparser.SetUseCompactSpacing(false);
+			unparser.AddXMLFileFooter(xml);
+			printf("%s\n", xml.Value());
 		}
 	}
 
