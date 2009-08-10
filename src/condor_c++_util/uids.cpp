@@ -752,7 +752,11 @@ init_condor_ids()
 	const char	*envName = EnvGetName( ENV_UG_IDS ); 
 	if( (env_val = getenv(envName)) ) {
 		val = env_val;
-	} else if( (config_val = param(envName)) ) {
+	} else if( (config_val = param_without_default(envName)) ) {
+		// I had to change this to param_without_default because there's no way
+		// to put a default value of condor.condor in the default value table.
+		// In the future, there should be a way to call a function to find out
+		// the default value for a parameter, but for now this should work.
 		val = config_val;
 	}
 	if( val ) {  

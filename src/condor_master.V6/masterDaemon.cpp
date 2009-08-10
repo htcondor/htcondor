@@ -401,6 +401,8 @@ daemon::DoConfig( bool init )
 		}
 	}
 
+	// XXX These defaults look to be very wrong, compare with 
+	// MASTER_BACKOFF_*.
 	sprintf(buf, "MASTER_%s_BACKOFF_CONSTANT", name_in_config_file );
 	m_backoff_constant = param_integer( buf, master_backoff_constant, 1 );
 

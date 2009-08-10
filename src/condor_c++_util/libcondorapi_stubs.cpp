@@ -69,6 +69,14 @@ char* param(const char *str)
 	return NULL;
 }
 
+char* param_without_default(const char *str)
+{
+	if(strcmp(str, "LOG") == 0) {
+		return strdup(".");
+	}
+	return NULL;
+}
+
 int param_integer(const char *, int default_value)
 {
 	return default_value;
@@ -80,12 +88,19 @@ int param_boolean_int(const char *, int default_value)
 }
 
 END_C_DECLS
-int param_integer(const char *, int default_value, int, int)
+int param_integer(const char *, int default_value, int, int, ClassAd *, 
+	ClassAd *, bool)
 {
 	return default_value;
 }
 
-bool param_boolean( const char *, const bool default_value, bool, ClassAd *, ClassAd * )
+int param_integer(const char *, int default_value, int, int, bool)
+{
+	return default_value;
+}
+
+bool param_boolean( const char *, const bool default_value, bool, 
+	ClassAd *, ClassAd *, bool)
 {
 	return default_value;
 }

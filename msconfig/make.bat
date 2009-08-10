@@ -57,6 +57,10 @@ REM Make gsoap stubs, etc.
 call :MAKE_GSOAP
 if %ERRORLEVEL% neq 0 goto :GSOAP_FAIL
 
+REM Make param stubs
+call :MAKE_PARAM
+if %ERRORLEVEL% neq 0 goto :PARAM_FAIL
+
 REM ======================================================================
 REM NOTE: make_win32_externals.bat implicitly calls set_vars.bat, so just 
 REM run the build as long as the extenals built ok.
@@ -106,6 +110,9 @@ exit %INTERACTIVE% 1
 :GSOAP_FAIL
 echo *** gsoap stub generator failed ***
 exit %INTERACTIVE% 1
+:PARAM_FAIL
+echo *** param stub generator failed ***
+exit %INTERACTIVE% 1
 
 REM ======================================================================
 :GENERATE_SYSCALL_NUMBERS
@@ -149,6 +156,15 @@ REM ======================================================================
 REM Make gsoap stubs, etc.
 REM ======================================================================
 nmake /nologo /f gsoap.mak
+if %ERRORLEVEL% neq 0 exit /b 1
+exit /b 0
+
+REM ======================================================================
+:MAKE_PARAM
+REM ======================================================================
+REM Make param stubs
+REM ======================================================================
+nmake /nologo /f param.mak
 if %ERRORLEVEL% neq 0 exit /b 1
 exit /b 0
 
