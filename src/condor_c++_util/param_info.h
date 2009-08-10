@@ -73,27 +73,6 @@ BEGIN_C_DECLS
 
 END_C_DECLS
 
-/////////////////////
-//internal functions
-/////////////////////
-
-//parse the range and set range_start and range_end to pointers to strings
-//containing either the upper/lower bound of the range if valid or an empty
-//string if not valid
-static void compute_range(const char* range, char** range_start, char** range_end);
-
-//take a string representation of the upper/lower limit and a pointer to an int/double
-//to store the value extracted from the string or the min/max for int/double
-//assumes no upper/lower bound if the string is empty
-//return 1 if string represents a valid bound, 0 otherwise
-static int validate_integer_range_upper_bound(const char* range_end,   int* max);
-static int validate_integer_range_lower_bound(const char* range_start, int* min);
-static int validate_double_range_upper_bound(const char* range_end,   double* max);
-static int validate_double_range_lower_bound(const char* range_start, double* min);
-
-//return 1 if the entire string 'value' matches pattern 'pattern'
-static int validate_regex(char* pattern, char* subject);
-
 
 ///////////////////
 // hash table stuff
