@@ -125,7 +125,6 @@ HADStateMachine::finalize()
     }
 
 	// classad finalizings
-    daemonCore->sendUpdates(INVALIDATE_HAD_ADS, m_classAd);
     if( m_classAd != NULL) {
 		delete m_classAd;
     	m_classAd = NULL;
@@ -139,7 +138,16 @@ HADStateMachine::finalize()
 */
 HADStateMachine::~HADStateMachine()
 {
+    ClassAd invalidate_ad;
+    MyString line;
+
     finalize();
+
+    invalidate_ad.SetMyTypeName( QUERY_ADTYPE );
+    invalidate_ad.SetTargetTypeName( HAD_ADTYPE );
+    line.sprintf( "%s = %s == \"%s\"", ATTR_REQUIREMENTS, ATTR_NAME, m_daemonName.Value( ) );
+    invalidate_ad.Insert( line.Value( ) );
+    daemonCore->sendUpdates( INVALIDATE_HAD_ADS, &invalidate_ad, NULL, false );
 }
 
 
@@ -326,13 +334,12 @@ HADStateMachine::initializeClassAd()
     MyString line;
     // 'my_username' allocates dynamic string
     char* userName = my_username();
-    MyString name;
 
-    name.sprintf( "%s@%s -p %d", userName, my_full_hostname( ),
+    m_daemonName.sprintf( "%s@%s -p %d", userName, my_full_hostname( ),
 				  daemonCore->InfoCommandPort( ) );
     free( userName );
     // ATTR_NAME is mandatory in order to be accepted by collector
-    line.sprintf( "%s = \"%s\"", ATTR_NAME, name.Value( ) );
+    line.sprintf( "%s = \"%s\"", ATTR_NAME, m_daemonName.Value( ) );
     m_classAd->Insert(line.Value());
 
     line.sprintf( "%s = \"%s\"", ATTR_MY_ADDRESS,

@@ -127,6 +127,7 @@ protected:
     bool m_usePrimary;
     StringList* m_otherHADIPs;
     Daemon* m_masterDaemon;
+    MyString m_daemonName;
 
     List<int> receivedAliveList;
     List<int> receivedIdList;
