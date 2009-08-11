@@ -37,7 +37,7 @@ using the \Opt{-ssh} option for uploading and downloading files.
 The remote command or shell runs with the same user id as the running job,
 and it is initialized with the same working directory.
 The environment is initialized to be the same as that of the job,
-plus any changes made by the shell set up scripts
+plus any changes made by the shell setup scripts
 and any environment variables passed by the \Prog{ssh} client.
 In addition, the environment variable
 \Env{\_CONDOR\_JOB\_PIDS} is defined.  
@@ -53,14 +53,16 @@ If the slot is preempted or suspended,
 the \Prog{ssh} session is killed or suspended along with the job.
 If the job exits before the \Prog{ssh} session finishes,
 the slot remains in the Claimed Busy state and is treated as though not
-all job processes have exited until the \Prog{ssh} session is closed.
+all job processes have exited until all \Prog{ssh} session are closed.
+Multiple \Prog{ssh} sessions may be created to the same job at the
+same time.
 
 \Condor{ssh\_to\_job} stores ssh keys in temporary files within a newly
 created and uniquely named directory.
-An environment variable defines a value for \Env{TMPDIR}.
 The newly created directory will be within the directory defined
-by \Env{TMPDIR}.
-When the ssh session is finished, this directory is removed.
+by \Env{TMPDIR} (an environment variable).
+When the ssh session is finished, this directory and the ssh keys
+contained within it are removed.
 
 See section~\ref{sec:Config-ssh-to-job}
 for details of the configuration variables related to \Condor{ssh\_to\_job}.
@@ -154,8 +156,11 @@ sftp> get outputfile.dat
 \end{verbatim}
 \normalsize
 
-This example shows upload or download with \Prog{scp}.
+This example shows downloading a file from the job with \Prog{scp}.
 The string "remote" is used in place of a host name in this example.
+It is not necessary to insert the correct remote host name (or even
+a valid one), because the connection to the job is created automatically.
+Therefore, using "remote" is prefectly fine.
 \footnotesize
 \begin{verbatim}
 % condor_ssh_to_job -ssh scp 32 remote:outputfile.dat .
@@ -163,8 +168,11 @@ The string "remote" is used in place of a host name in this example.
 \normalsize
 
 This example uses \Condor{ssh\_to\_job} to accomplish the
-task of \Prog{rsync}.
-Job id 32.0 is used in place of host name in this example.
+task of running \Prog{rsync} to synchronize a local file with
+a remote file in the job's working directory.
+Job id 32.0 is used in place of a host name in this example.
+This causes \Prog{rsync} to insert the expected job id in the
+arguments to \Condor{ssh\_to\_job}.
 \footnotesize
 \begin{verbatim}
 % rsync -v -e "condor_ssh_to_job" 32.0:outputfile.dat .
