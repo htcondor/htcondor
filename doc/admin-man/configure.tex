@@ -3695,6 +3695,11 @@ WANT_HOLD_REASON = \
   behavior and know what they are doing.  
   It is disabled by default.
 
+  The default value is equal to \Macro{DETECTED\_CORES} minus
+  hyperthreaded cores if \Macro{COUNT\_HYPERTHREAD\_CPUS} is false.  If
+  that value exceeds \Macro{MAX\_NUM\_CPUS}, then the latter is used
+  instead.
+
   Note that this setting cannot be changed with a simple reconfigure, 
   either by sending a SIGHUP or by using the \Condor{reconfig} command.
   To change this, restart the \Condor{startd} daemon for the
@@ -3740,7 +3745,9 @@ WANT_HOLD_REASON = \
   Normally, Condor will automatically detect the amount of physical
   memory available on your machine.  Define \MacroNI{MEMORY} to tell
   Condor how much physical memory (in MB) your machine has, overriding
-  the value Condor computes automatically.
+  the value Condor computes automatically.  The actual amount of memory
+  detected by Condor is always available in the pre-defined configuration
+  macro \Macro{DETECTED\_MEMORY}.
 
 \label{param:ReservedMemory}
 \item[\Macro{RESERVED\_MEMORY}]
