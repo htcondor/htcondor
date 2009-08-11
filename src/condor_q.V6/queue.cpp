@@ -3089,7 +3089,8 @@ static char * getDBConnStr(char const *&quill_name,
                            char const *&databaseIp,
                            char const *&databaseName,
                            char const *&query_password) {
-	char            *host, *port, *dbconn, *ptr_colon;
+	char            *host, *port, *dbconn;
+	const char *ptr_colon;
 	char            *tmpquillname, *tmpdatabaseip, *tmpdatabasename, *tmpquerypassword;
 	int             len, tmp1, tmp2, tmp3;
 
@@ -3145,7 +3146,7 @@ static char * getDBConnStr(char const *&quill_name,
 
 		//here we break up the ipaddress:port string and assign the
 		//individual parts to separate string variables host and port
-	ptr_colon = strchr(databaseIp, ':');
+	ptr_colon = strchr((char *)databaseIp, ':');
 	strcpy(host, "host=");
 	strncat(host,
 			databaseIp+1,
