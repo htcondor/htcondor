@@ -73,6 +73,10 @@ but Condor's test of the virtual machine software fails,
 Condor will periodically retry the virtual machine software test until it
 succeeds.
 
+%gittrac #654
+\item The \SubmitCmd{nordugrid\_gahp} now limits the number of connections
+made to each NorduGrid ARC server and reuses connections when possible.
+
 \end{itemize}
 
 \noindent Configuration Variable Additions and Changes:
