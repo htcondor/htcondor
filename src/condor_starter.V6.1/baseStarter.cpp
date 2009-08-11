@@ -881,7 +881,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 	MyString ssh_keygen_args;
 	ArgList ssh_keygen_arglist;
 	param(ssh_keygen,"SSH_TO_JOB_SSH_KEYGEN","/usr/bin/ssh-keygen");
-	param(ssh_keygen_args,"SSH_TO_JOB_SSH_KEYGEN_ARGS","\"-N '' -C '' -q -f %f\"");
+	param(ssh_keygen_args,"SSH_TO_JOB_SSH_KEYGEN_ARGS","\"-N '' -C '' -q -f %f -t rsa\"");
 	ssh_keygen_arglist.AppendArg(ssh_keygen.Value());
 	if( !ssh_keygen_arglist.AppendArgsV2Quoted(ssh_keygen_args.Value(),&error_msg) ) {
 		return SSHDFailed(s,

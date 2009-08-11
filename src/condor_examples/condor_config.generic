@@ -478,6 +478,11 @@ GLIDEIN_SERVER_URLS = \
 ## By default, Condor will delegate rather than copy.
 #DELEGATE_JOB_GSI_CREDENTIALS = True
 
+## This setting controls whether Condor delegates a full or limited
+## X509 credential for jobs. Currently, this only affects grid-type
+## gt2 grid universe jobs. The default is False.
+#DELEGATE_FULL_JOB_GSI_CREDENTIALS = False
+
 ## This setting controls the default behaviour for the spooling of files
 ## into, or out of, the Condor system by such tools as condor_submit
 ## and condor_transfer_data. Here is the list of valid settings for this
@@ -2367,4 +2372,4 @@ LeaseManager.CLASSAD_LOG	= $(SPOOL)/LeaseManagerState
 # Arguments to ssh-keygen
 # %f --> key file to generate
 # %% --> %
-#SSH_TO_JOB_SSH_KEYGEN_ARGS = "-N '' -C '' -q -f %f"
+#SSH_TO_JOB_SSH_KEYGEN_ARGS = "-N '' -C '' -q -f %f -t rsa"
