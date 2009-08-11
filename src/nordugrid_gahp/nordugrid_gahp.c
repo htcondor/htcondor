@@ -644,8 +644,8 @@ handle_nordugrid_submit( char **input_line )
 			globus_list_t *new_list = NULL;
 			globus_rsl_value_t *new_value = NULL;
 			globus_rsl_value_t *parent_value = NULL;
-			globus_list_insert( &new_list, globus_rsl_value_make_literal( "" ) );
-			globus_list_insert( &new_list, globus_rsl_value_make_literal( STAGE_IN_COMPLETE_FILE ) );
+			globus_list_insert( &new_list, globus_rsl_value_make_literal( strdup( "" ) ) );
+			globus_list_insert( &new_list, globus_rsl_value_make_literal( strdup( STAGE_IN_COMPLETE_FILE ) ) );
 			new_value = globus_rsl_value_make_sequence( new_list );
 			parent_value = globus_rsl_relation_get_value_sequence( inputfiles_rsl );
 			parent_list = globus_rsl_value_sequence_get_value_list( parent_value );
