@@ -1606,7 +1606,8 @@ int Function::_EvalTree(const AttrList *attrlist1, const AttrList *attrlist2, Ev
 		 !strcasecmp(name,"stricmp") ||
 		 !strcasecmp(name,"toUpper") ||
 		 !strcasecmp(name,"toLower") ||
-		 !strcasecmp(name,"size") ) 
+		 !strcasecmp(name,"size") ||
+		 !strcasecmp(name,"eval") ) 
 	{
 		must_eval_to_strings = true;
 	}
@@ -1710,6 +1711,8 @@ int Function::_EvalTree(const AttrList *attrlist1, const AttrList *attrlist2, Ev
 		} else if (!strcasecmp(name, "debug")) {
 			*result = evaluated_args[0];
 			successful_eval = true;
+		} else if (!strcasecmp(name, "eval")) {
+			successful_eval = FunctionEval(attrlist1, attrlist2, number_of_args, evaluated_args, result);
 		}
 #ifdef HAVE_DLOPEN
         else {
@@ -3342,6 +3345,45 @@ int Function::FunctionFormatTime(
 	}
 
 	return TRUE;
+}
+
+
+int Function::FunctionEval(
+	AttrList const *attrlist1,
+	AttrList const *attrlist2,
+	int number_of_args,         // IN:  size of evaluated args array
+	EvalResult *evaluated_args, // IN:  the arguments to the function
+	EvalResult *result)         // OUT: the result of calling the function
+{
+	/*
+	  eval(string s) returns the result of the string s evaluated
+	  as a ClassAd expression.
+	*/
+
+	if ( number_of_args != 1 ) {
+		result->type = LX_ERROR;
+		return FALSE;
+	}
+
+	if( (evaluated_args[0].type != LX_STRING) ||
+		(evaluated_args[0].i < 0) ) 
+	{
+		result->type = LX_ERROR;
+		return FALSE;
+	}
+
+	char const *expr_str = evaluated_args[0].s;
+	ExprTree *expr_tree;
+	ParseClassAdRvalExpr(expr_str,expr_tree);
+	if( !expr_tree ) {
+		result->type = LX_ERROR;
+		return FALSE;
+	}
+
+	int rc = expr_tree->EvalTree(attrlist1,attrlist2,result);
+
+	delete expr_tree;
+	return rc;
 }
 
 
