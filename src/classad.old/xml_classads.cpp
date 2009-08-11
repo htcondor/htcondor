@@ -631,6 +631,9 @@ ClassAdXMLUnparser::Unparse(ClassAd *classad, MyString &buffer)
 	for (expression = classad->NextExpr(); 
 		 expression != NULL; 
 		 expression = classad->NextExpr()) {
+		if( expression->invisible ) {
+			continue;
+		}
 		Unparse(expression, buffer);
 	}
 	add_tag(buffer, tag_ClassAd, false);
