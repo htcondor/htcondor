@@ -1582,7 +1582,7 @@ AttrList::sPrintExpr(char *buffer, unsigned int buffersize, const char* name)
 // print the whole AttrList into a file. The expressions are in infix notation.
 // Returns FALSE if the file pointer is NULL; TRUE otherwise.
 ////////////////////////////////////////////////////////////////////////////////
-int AttrList::fPrint(FILE* f)
+int AttrList::fPrint(FILE* f,StringList *attr_white_list)
 {
     AttrListElem*	tmpElem;
     char			*tmpLine;
@@ -1602,6 +1602,9 @@ int AttrList::fPrint(FILE* f)
 			if( tmpElem->tree->invisible ) {
 				continue;
 			}
+			if( attr_white_list && !attr_white_list->contains_anycase(((VariableBase *)tmpElem->tree->LArg())->Name()) ) {
+				continue; // not in white-list
+			}
 			tmpElem->tree->PrintToNewStr(&tmpLine);
 			if (tmpLine != NULL) {
 				fprintf(f, "%s\n", tmpLine);
@@ -1615,6 +1618,9 @@ int AttrList::fPrint(FILE* f)
 		tmpLine = NULL;
 		if( tmpElem->tree->invisible ) {
 			continue;
+		}
+		if( attr_white_list && !attr_white_list->contains_anycase(((VariableBase *)tmpElem->tree->LArg())->Name()) ) {
+			continue; // not in white-list
 		}
         tmpElem->tree->PrintToNewStr(&tmpLine);
 		if (tmpLine != NULL) {
@@ -2065,7 +2071,7 @@ ExprTree* AttrListList::Lookup(const char* name)
 }
 
 
-void AttrListList::fPrintAttrListList(FILE* f, bool use_xml)
+void AttrListList::fPrintAttrListList(FILE* f, bool use_xml, StringList *attr_white_list)
 {
     AttrList            *tmpAttrList;
 	ClassAdXMLUnparser  unparser;
@@ -2083,11 +2089,11 @@ void AttrListList::fPrintAttrListList(FILE* f, bool use_xml)
 		switch(tmpAttrList->Type()) {
 		case ATTRLISTENTITY :
 			if (use_xml) {
-				unparser.Unparse((ClassAd *) tmpAttrList, xml);
+				unparser.Unparse((ClassAd *) tmpAttrList, xml, attr_white_list);
 				printf("%s\n", xml.Value());
 				xml = "";
 			} else {
-				tmpAttrList->fPrint(f);
+				tmpAttrList->fPrint(f,attr_white_list);
 			}
 			break;
 		}
