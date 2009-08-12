@@ -35,6 +35,8 @@
 int Parse(const char*, ExprTree*&);
 
 // parse an rval (i.e. anything that could appear on the rhs of an assignment)
+// if error occurs, ExprTree is NULL and return value is
+// position at which error occurred
 int ParseClassAdRvalExpr(const char*, ExprTree*&);
 
 #endif
