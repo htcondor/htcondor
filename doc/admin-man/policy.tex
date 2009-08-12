@@ -2013,45 +2013,48 @@ another machine becomes available.
 
 Condor may be configured with a policy that allows these potentially
 evicted jobs to be suspended instead.
-The policy utilizes two slots,
-one (called slot1 in the example) that only runs jobs identified
-as high priority jobs.
-The second slot (called slot2 in the example) is 
-set to run jobs according to the usual policy and to suspend them
-when slot1 is claimed.  A policy for a machine with more than one physical
-CPU may be adapted from this example.  Instead of having 2 slots,
-you would have 2 times the number of physical CPUs.  Half of the slots
-would be for high priority jobs and the other half would be for suspendable
-jobs.
+The policy utilizes two classes of slots,
+``normal slots'' and ``high priority'' slots.
 
 \footnotesize
 \begin{verbatim}
-# Lie to Condor, to achieve 2 slots with only a single CPU
-NUM_CPUS = 2
+# Lie to Condor, to achieve 2 slots for each real slot
+NUM_CPUS = $(DETECTED_CORES)*2
+# There is no good way to tell Condor that the two slots should be treated
+# as though they share the same real memory, so lie about how much
+# memory we have.
+MEMORY = $(DETECTED_MEMORY)*2
 
-# slot1 is the high-prio slot, while slot2 is the background slot...
-START = (SlotID == 1) && $(SLOT1_START) || \
-        (SlotID == 2) && $(SLOT2_START)
+# Slots 1 through DETECTED_CORES are normal and the rest are high-prio.
+IsHighPrioSlot = SlotID > $(DETECTED_CORES)
 
-# Only start jobs on slot1 if the job is marked as a high-priority job 
-SLOT1_START = (TARGET.IsHighPrioJob =?= TRUE)
+# If I am a normal slot, my corresponding high-prio slot is
+# my SlotID plus $(DETECTED_CORES)
+HighPrioSlotState = eval(strcat("slot",SlotID+$(DETECTED_CORES),"_State")
 
-# Only start jobs on slot2 if there is no job on slot1, and if the
-# machine is otherwise idle...  NOTE: the "Busy" activity is only in
-# the Claimed state, and only when there is an active job, so that is
-# good enough for our needs...
-SLOT2_START = ( (slot1_Activity != "Busy") && \ 
-                (KeyboardIdle > $(StartIdleTime)) && \
-	        ($(CPUIdle) || (State != "Unclaimed" && State != "Owner")) )
+# The above expression looks at slotX_State, so we need to add
+# State to the list of slot attributes to advertise.
+STARTD_SLOT_ATTRS = $(STARTD_SLOT_ATTRS) State
 
-# Only suspend jobs on slot2.  Suspend if there is keyboard activity or
-# if a job starts on slot1...
-SUSPEND = (SlotID == 2) && \
-          ( (slot1_Activity == "Busy") || ($(KeyboardBusy)) )
+# For convenience, advertise these expressions in the machine ad.
+STARTD_ATTRS = $(STARTD_ATTRS) IsHighPrioSlot HighPrioSlotState
 
-CONTINUE = (SlotID == 2) && \
-           (KeyboardIdle > $(ContinueIdleTime)) && \
-           (slot1_Activity != "Busy")
+MyHighPrioSlotIsIdle = \
+  (HighPrioSlotState =!= "Claimed" && HighPrioSlotState =!= "Preempting")
+
+# High-prio slots are always willing to start jobs.
+# Normal slots are only willing to start if the high prio slot is idle.
+START = \
+  IsHighPrioSlot && TARGET.IsHighPrioJob == True || \
+  IsHighPrioSlot!=True && $(MyHighPrioSlotIsIdle)
+
+# Suspend the normal slot if the high-prio slot is busy.
+SUSPEND = \
+  IsHighPrioSlot!=True && $(MyHighPrioSlotIsIdle)!=True
+
+WANT_SUSPEND = $(SUSPEND)
+
+CONTINUE = ($(SUSPEND)) != True
 
 \end{verbatim}
 \normalsize
@@ -2064,4 +2067,3 @@ The following line appears in the job's submit description file as
 \begin{verbatim}
 +IsHighPrioJob = True
 \end{verbatim}
-

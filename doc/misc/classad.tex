@@ -163,6 +163,16 @@ ReturnType FunctionName(ParameterType parameter1, ParameterType parameter2, ...)
 Optional parameters are given within square brackets.
 
 \begin{description}
+  \index{ClassAd functions!eval()}
+  \item[\Code{AnyType eval(AnyType Expr)}]
+  Evaluates \Expr{Expr} as a string and then returns the result of
+  evaluating the \emph{contents} of the string as a ClassAd expression.
+  This is useful when referring to an attribute such as \Expr{slotX\_State}
+  where \Expr{X} (the desired slot number) is a function, such as
+  \Expr{SlotID+10}.  In such a case, the value of the attribute can
+  be referrenced using the expression
+  \Expr{eval(strcat("slot",SlotID+10,"\_State"))}.
+
   \index{ClassAd functions!ifThenElse()}
   \item[\Code{AnyType ifThenElse(AnyType IfExpr,AnyType ThenExpr, AnyType ElseExpr)}]
     A conditional expression is described by \Expr{IfExpr}.
