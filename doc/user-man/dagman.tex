@@ -404,6 +404,9 @@ described by a single cluster number.
 At the present time DAGMan cannot deal with a submit file producing
 multiple job clusters.
 
+\emph{DAGMan enforces the dependencies within a DAG
+using the events recorded in the
+log file(s) produced by job submission to Condor.}
 At one time, DAGMan required that all jobs within all nodes
 specify the same, single log file.
 This is no longer the case.
@@ -413,48 +416,46 @@ Therefore, it is better to have
 fewer, or even only a single log file.
 Unfortunately,
 each Stork job currently requires a separate log file.
-DAGMan enforces the dependencies within a DAG
-using the events recorded in the
-log file(s) produced by job submission to Condor.
 
-As of version 7.3.2, DAGMan's handling of log files has
-significantly changed.  Prior to version 7.3.2, DAGMan has assembled
-a list of all relevant log files at startup (by looking at all of the
-node job submit files).  DAGMan then opened \emph{all} of the log files
-and kept them all open for the duration of the DAG.
+\index{DAGMan!lazy log file evaluation}
+As of Condor version 7.3.2, DAGMan's handling of log files has
+significantly changed to improve resource usage and efficiency.  
+Prior to version 7.3.2, 
+DAGMan assembled a list of all relevant log files at start up, 
+by looking at all of the submit description files for all of the nodes.
+It kept the log files open for the duration of the DAG.
+Beginning with Condor version 7.3.2, DAGMan delays opening and using 
+the submit description file until just before it is going to submit the job.
+At that point, DAGMan reads the submit description file to discover 
+the job's log file.
+And, DAGMan monitors only the log files that are relevant
+to the jobs currently queued, 
+or associated with nodes for which a POST script is running.
 
-In version 7.3.2 and later, DAGMan doesn't even look at the node job
-submit file at all until right before it's going to submit the job --
-at that point it reads the submit file to find out what the job's log
-file is.  Furthermore, DAGMan only monitors log files that are relevant
-to the jobs in the queue at the current time, or nodes for which a
-POST script is running.
-
-There are several advantages to the new "lazy log file evaluation"
-scheme:
+The advantages of the new "lazy log file evaluation" scheme are:
 
 \begin{itemize}
 
 \item The \Condor{dagman} executable uses fewer file descriptors.
 
-\item It is now much easier to have one node of a DAG write the
-submit file for a later node in the DAG.
+\item It is much easier to have one node of a DAG produce the
+submit description file for a descendant node in the DAG.
 
 \end{itemize}
 
-There are two known disadvantages at this time:
+There are two known disadvantages of the lazy log file evaluation scheme:
 
 \begin{itemize}
 
-\item If a submit file is missing a log file specification, the
-DAG will still fail, but the missing log file will not be noticed
-at the time the DAG is submitted.
+\item If a submit description file does not contain the necessary
+log file specification, the DAG will not fail at submission time.
+It will fail when the node is submitted.
 
 \item Because the log files are internally identified by inode
-numbers, it is possible that errors could arise if log files for
-a given DAG are spread across more than one device (that could
-allow two unique files to have the same inode number).  We hope
-to have this problem fixed soon.
+numbers, it is possible that errors may arise where log files for
+a given DAG are spread across more than one device.
+This permits two unique files to have the same inode number.
+We hope to have this problem fixed soon.
 
 \end{itemize}
 

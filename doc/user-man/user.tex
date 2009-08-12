@@ -355,7 +355,6 @@ universes for user jobs:
 \begin{itemize}
 	\item Standard
 	\item Vanilla
- 	\item MPI
 	\item Grid
 	\item Java
 	\item Scheduler
@@ -374,10 +373,6 @@ restrictions on the programs that can be run.
 \index{universe!vanilla}
 The vanilla universe provides fewer services, but has very few
 restrictions.
-\index{universe!MPI}
-The MPI universe is for programs written to the MPICH interface.
-See section~\ref{sec:MPI} for more about MPI and Condor. The MPI Universe
-has been superseded by the parallel universe.
 \index{universe!Grid}
 The grid universe allows users to submit 
 jobs using Condor's interface.
@@ -968,7 +963,7 @@ Submitting Jobs Using a Shared File System}
 \index{job!submission using a shared file system}
 \index{shared file system!submission of jobs}
 
-If vanilla, java, parallel (or MPI) universe
+If vanilla, java, or parallel universe
 jobs are submitted without using the File Transfer mechanism, 
 Condor must use a shared file system to access input and output
 files. 
@@ -1093,7 +1088,7 @@ needed.
 Therefore, the user does not need to change the submit description
 file if there is no shared file system.
 
-For the vanilla, java, MPI, and parallel universes, access to files (including
+For the vanilla, java, and parallel universes, access to files (including
 the executable) through a shared file system is presumed as a default
 on UNIX machines.
 If there is no shared file system, then Condor's file transfer

@@ -80,10 +80,18 @@ cause all the Condor daemons in the pool to exit.
 The \Opt{-set} option sets one or more persistent configuration file entries.
 The \Arg{string} must be a single argument, so enclose it in double quote marks.
 A string must be of the form \Expr{"variable = value"}.
+Use of the \Opt{-set} option implies the use of configuration variables
+\Macro{SETTABLE\_ATTRS\Dots} (see \ref{param:SettableAttrs}),
+\Macro{ENABLE\_PERSISTENT\_CONFIG} (see \ref{param:EnablePersistentConfig}),
+and \Macro{HOSTALLOW\Dots} (see \ref{param:HostAllow}).
 
 The \Opt{-rset} option sets one or more runtime configuration file entries.
 The \Arg{string} must be a single argument, so enclose it in double quote marks.
 A string must be of the form \Expr{"variable = value"}.
+Use of the \Opt{-rset} option implies the use of configuration variables
+\Macro{SETTABLE\_ATTRS\Dots} (see \ref{param:SettableAttrs}),
+\Macro{ENABLE\_RUNTIME\_CONFIG} (see \ref{param:EnableRuntimeConfig}),
+and \Macro{HOSTALLOW\Dots} (see \ref{param:HostAllow}).
 
 The \Opt{-unset} option changes one or more persistent configuration file
 entries to their previous value.

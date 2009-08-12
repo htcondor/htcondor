@@ -19,8 +19,8 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item The format of the output from \Condor{status} \Opt{-grid} has been 
-changed to provide more useful information.
+\item The format of the output from \Condor{status} with the \Opt{-grid} option
+has been changed to provide more useful information.
 
 \end{itemize}
 
@@ -28,11 +28,14 @@ changed to provide more useful information.
 
 \begin{itemize}
 
+\item The new \Condor{ssh\_to\_job} tool allows interactive debugging of running
+jobs.  See the manual page~\pageref{man-condor-ssh-to-job} for details.
+
 \item The \Condor{status} command is now substantially faster, 
 especially with the \Opt{-format} option.
 
 \item When low on file descriptors for creating new network sockets,
-the \Condor{schedd} daemon now avoids unlimited stacking up of
+the \Condor{schedd} daemon now avoids the unlimited stacking up of
 messages that it sends periodically to the \Condor{negotiator} 
 and \Condor{startd}.
 
@@ -47,17 +50,42 @@ is now obtained using Nordugrid ARC's LDAP server, which should greatly
 improve performance. Also, Condor can now tell when these jobs are running.
 
 %gittrac #527
-\item Added a \Opt{-valgrind} flag to \Condor{submit\_dag}, which
-causes \Condor{submit\_dag} to generate a submit file that runs
-\emph{valgrind} on \Condor{dagman}.
+\item The new \Opt{-valgrind} option to \Condor{submit\_dag}
+causes \Condor{submit\_dag} to generate a submit description file that
+uses \emph{valgrind} on \Condor{dagman}, instead of the \Condor{dagman}
+binary as its executable.
 
 %gittrac #328
 \item \Condor{dagman} now lazily evaluates and opens node job log files.
-In other words, instead of parsing all submit files at startup, and 
-immediately opening the specified log files, \Condor{dagman} now parses
-the node job submit files just before each job is submitted, and has each
-log file open only when relevant jobs are in the queue or executing POST
-scripts.
+Instead of parsing all submit description files and 
+immediately opening their specified log files at start up,
+\Condor{dagman} now parses
+the submit description files just before each job is submitted,
+and has each log file open only when relevant jobs are in the queue
+or executing POST scripts.
+
+\item Both the support and documentation for the MPI universe have been removed.
+MPI applications are supported through the use of the parallel universe.
+
+% gittrac #551
+\item When the \SubmitCmd{vm} universe is enabled,
+but Condor's test of the virtual machine software fails,
+Condor will periodically retry the virtual machine software test until it
+succeeds.
+
+%gittrac #654
+\item The \SubmitCmd{nordugrid\_gahp} now limits the number of connections
+made to each NorduGrid ARC server and reuses connections when possible.
+
+\item Added a ClassAd function \Code{eval()} which takes a string
+argument and evaluates the contents of the string as a ClassAd
+expression.  An example where this is useful is described in
+section~\ref{sec:Job-Suspension}.
+
+\item Added the option \Opt{-attributes} to \Condor{q} to limit the
+attributes which are displayed when using \Opt{-xml} or \Opt{-long}.
+Limiting the number of attributes also increases the efficiency of
+the query.
 
 \end{itemize}
 
@@ -71,28 +99,27 @@ give a slot greater weight when calculating usage, computing fair
 shares, and enforcing group quotas.  For example, claiming a slot with
 \Expr{SlotWeight = 2} is equivalent to claiming two \Expr{SlotWeight =
 1} slots.  The default value is \AdAttr{Cpus}, the number of CPUs
-associated with the slot, which is 1 unless specially configured.  Any
-expression referring to attributes of the slot ClassAd and evaluating
-to a positive floating point number is valid.
+associated with the slot, which is 1 unless otherwise configured.
+See \ref{param:SlotWeight} for the complete description.
 
 
 % gittrac 586
 \item The new configuration variable \Macro{DAGMAN\_USER\_LOG\_SCAN\_INTERVAL}
 controls how long \Condor{dagman} waits between checking job log files
 for status updates.
-See \ref{param:DAGManUserLogScanInterval} for more details.
+See \ref{param:DAGManUserLogScanInterval} for the complete description.
 
 \item The new configuration variable \Macro{MAX\_PERIODIC\_EXPR\_INTERVAL}
   implements a ceiling on the time between evaluation of periodic expressions,
   due to the adaptive timing implied by the configuration variable
   \MacroNI{PERIODIC\_EXPR\_TIMESLICE}.
-  See \ref{param:MaxPeriodicExprInterval} for more details.
+  See \ref{param:MaxPeriodicExprInterval} for the complete description.
 
 % gittrac #475
 \item The new configuration variable \Macro{GRIDMANAGER\_SELECTION\_EXPR}
 can be used to control how many \Condor{gridmanager} processes will be
 spawned to manage grid universe jobs. 
-See \ref{param:GridManagerSelectionExpr} for more details.
+See \ref{param:GridManagerSelectionExpr} for the complete description.
 
 % gittrac #207
 \item The configuration variable
@@ -104,7 +131,20 @@ have been removed.
 \item The new configuration variable \Macro{GRID\_MONITOR\_DISABLE\_TIME}
 controls how long the \Condor{gridmanager} will wait after encountering
 an error before attempting to restart a Grid Monitor job.
-See \ref{param:GridMonitorDisableTime} for more details.
+See \ref{param:GridMonitorDisableTime} for the complete description.
+
+\item The new pre-defined configuration macro \Macro{DETECTED\_MEMORY}
+indicates the amount of physical memory (RAM) detected by Condor.
+The number is in megabytes.
+
+\item The new pre-defined configuration macro \Macro{DETECTED\_CORES}
+indicates the number of CPU cores detected by Condor.
+
+%gittrac #621
+\item The new configuration macro \Macro{DELEGATE\_FULL\_JOB\_GSI\_CREDENTIALS}
+controls whether a full or limited x509 proxy is delegated for grid-type
+gt2 grid universe jobs. See \ref{param:DelegateFullJobGSICredentials}
+for the complete description.
 
 \item Removed the configuration variable
 \Macro{DAGMAN\_DELETE\_OLD\_LOGS}; new log file reading code makes it
@@ -122,7 +162,7 @@ obsolete.
   Unknown file extensions were treated as an error,
   rather than as a Windows executable.
 
-\item The \Condor{job\_router} sets the ClassAd attribute
+\item The \Condor{job\_router} now correctly sets the ClassAd attribute
 \Attr{EnteredCurrentStatus} to the current time when creating a new routed job.
 Previously, it copied this attribute from the original job.
 
@@ -137,13 +177,20 @@ large amounts of CPU time for no good reason.
 a pending state indefinitely.
 
 \item Condor daemons failed to start if
-\MacroNI{MAX\_FILE\_DESCRIPTORS} (UNIX only) was configured higher
+\MacroNI{MAX\_FILE\_DESCRIPTORS} (Unix only) was configured higher
 than the current hard limit inherited by Condor.  If Condor is running
 as root, this is no longer the case.
 
 % gittrac %627
-\item The \Condor{gridmanager} now advertises grid ads properly when there
-are multiple collectors.
+\item The \Condor{gridmanager} now advertises grid ClassAds properly when there
+are multiple \Condor{collector} daemons.
+
+%gittrack #647
+\item When using \Condor{q} \Opt{-xml} and \Opt{-format} together to
+limit the number of ClassAd attributes returned in the query, the XML
+\verb|<classads>| container tag was not generated.  This is fixed, but
+now the preferred way to limit the attributes which are returned is to
+use \Condor{q} \Opt{-attributes}.
 
 \end{itemize}
 
