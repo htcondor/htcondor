@@ -1737,6 +1737,50 @@ int Function::_EvalTree(const AttrList *attrlist1, const AttrList *attrlist2, Ev
 	return successful_eval;
 }
 
+void EvalResult::toString(bool force)
+{
+	switch(type) {
+		case LX_STRING:
+			break;
+		case LX_FLOAT: {
+			MyString buf;
+			buf.sprintf("%lf",f);
+			s = strnewp(buf.Value());
+			type = LX_STRING;
+			break;
+		}
+		case LX_BOOL:	
+			type = LX_STRING;
+			if (i) {
+				s = strnewp("TRUE");
+			} else {
+				s = strnewp("FALSE");
+			}	
+			break;
+		case LX_INTEGER: {
+			MyString buf;
+			buf.sprintf("%d",i);
+			s = strnewp(buf.Value());
+			type = LX_STRING;
+			break;
+		}
+		case LX_UNDEFINED:
+			if( force ) {
+				s = strnewp("UNDEFINED");
+				type = LX_STRING;
+			}
+			break;
+		case LX_ERROR:
+			if( force ) {
+				s = strnewp("ERROR");
+				type = LX_STRING;
+			}
+			break;
+		default:
+			ASSERT("Unknown classad result type");
+	}
+}
+
 int Function::EvaluateArgumentToString(
 	ExprTree *arg,
 	const AttrList *attrlist1,
@@ -1747,22 +1791,7 @@ int Function::EvaluateArgumentToString(
 
 	EvaluateArgument( arg, attrlist1, attrlist2, result );
 
-	if ( result->type != LX_STRING ) {
-		// if type is anything but string, return unparsed canonical form.
-		// note we cannot just call PrintToNewStr() here, since that function 
-		// allocates memory with malloc(), and result->s needs to be 
-		// allocated with new[].
-		char *tmp = NULL;
-		arg->PrintToNewStr(&tmp);
-		if (tmp) {
-			// convert from malloc buffer to new[] buffer, since
-			// the destructor in EvalResult calls delete[].
-			result->s = strnewp(tmp);
-			free(tmp);
-		} else {
-			result->type = LX_ERROR;
-		}
-	}
+	result->toString();
 
 	if ( result->type == LX_STRING ) {
 		return TRUE;
@@ -2081,39 +2110,10 @@ int Function::FunctionString(
 		return FALSE;
 	}
 
-	switch(evaluated_args[0].type) {
-		case LX_FLOAT:
-			result->s = new char[20];
-			sprintf(result->s,"%lf", evaluated_args[0].f);
-			result->type = LX_STRING;
-			break;
-		case LX_BOOL:	
-			result->s = new char[6];
-			result->type = LX_STRING;
-			if (evaluated_args[0].i) {
-				sprintf(result->s,"%s", "TRUE");
-			} else {
-				sprintf(result->s,"%s", "FALSE");
-			}	
-			break;
-		case LX_INTEGER:
-			result->s = new char[20];
-			sprintf(result->s,"%d", evaluated_args[0].i);
-			result->type = LX_STRING;
-			break;
-		case LX_STRING:
-			result->type = LX_STRING;
-			result->s = strnewp(evaluated_args[0].s);
-			break;
-		case LX_UNDEFINED:
-			result->type = LX_UNDEFINED;
-			break;
-		case LX_ERROR:
-			result->type = LX_ERROR;
-			return FALSE;
-			break;
-		default:
-			ASSERT("Unknown classad result type");
+	*result = evaluated_args[0];
+	result->toString();
+	if( result->type == LX_ERROR ) {
+		return FALSE;
 	}
 
 	return TRUE;

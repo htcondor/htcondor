@@ -84,6 +84,10 @@ class EvalResult
 
 	void fPrintResult(FILE *); // for debugging
 
+		/// convert to LX_STRING
+		/// if value is ERROR or UNDEFINED, do not convert unless force=true
+	void toString(bool force=false);
+
    	union
     	{
    	    int i;
