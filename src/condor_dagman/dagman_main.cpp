@@ -108,9 +108,6 @@ Dagman::Dagman() :
 	retrySubmitFirst (true), // so Coverity is happy
 	retryNodeFirst (false), // so Coverity is happy
 	mungeNodeNames (true), // so Coverity is happy
-#if !LAZY_LOG_FILES
-	deleteOldLogs (true),
-#endif // !LAZY_LOG_FILES
 	prohibitMultiJobs (false), // so Coverity is happy
 	abortDuplicates (true), // so Coverity is happy
 	submitDepthFirst (false), // so Coverity is happy
@@ -265,12 +262,6 @@ Dagman::Config()
 	mungeNodeNames = param_boolean( "DAGMAN_MUNGE_NODE_NAMES", true );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_MUNGE_NODE_NAMES setting: %d\n",
 				mungeNodeNames );
-
-#if !LAZY_LOG_FILES
-	deleteOldLogs = param_boolean( "DAGMAN_DELETE_OLD_LOGS", deleteOldLogs );
-	debug_printf( DEBUG_NORMAL, "DAGMAN_DELETE_OLD_LOGS setting: %d\n",
-				  deleteOldLogs );
-#endif // !LAZY_LOG_FILES
 
 	prohibitMultiJobs = param_boolean( "DAGMAN_PROHIBIT_MULTI_JOBS", false );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_PROHIBIT_MULTI_JOBS setting: %d\n",
@@ -864,10 +855,6 @@ int main_init (int argc, char ** const argv) {
 					// We should never get to here!
 				}
 			}
-#if !LAZY_LOG_FILES
-        } else {
-			dagman.dag->InitializeDagFiles( dagman.deleteOldLogs );
-#endif // !LAZY_LOG_FILES
         }
 
 			//

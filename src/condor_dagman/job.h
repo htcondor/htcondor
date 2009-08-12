@@ -336,7 +336,6 @@ class Job {
 		return _dagFile;
 	}
 
-#if LAZY_LOG_FILES
 	/** Monitor this node's Condor or Stork log file with the
 		multiple log reader.  (Must be called before this node's
 		job is submitted.)
@@ -356,7 +355,6 @@ class Job {
 	*/
 	bool UnmonitorLogFile( ReadMultipleUserLogs &logReader,
 				ReadMultipleUserLogs &storkLogReader );
-#endif // LAZY_LOG_FILES
 
     /** */ CondorID _CondorID;
     /** */ status_t _Status;
@@ -495,10 +493,8 @@ private:
 		// ThrottleByCategory object.
 	ThrottleByCategory::ThrottleInfo *_throttleInfo;
 
-#if LAZY_LOG_FILES
 		// Whether this node's log file is currently being monitored.
 	bool _logIsMonitored;
-#endif // LAZY_LOG_FILES
 };
 
 /** A wrapper function for Job::Print which allows a NULL job pointer.
