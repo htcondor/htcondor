@@ -82,6 +82,11 @@ argument and evaluates the contents of the string as a ClassAd
 expression.  An example where this is useful is described in
 section~\ref{sec:Job-Suspension}.
 
+\item Added the option \Opt{-attributes} to \Condor{q} to limit the
+attributes which are displayed when using \Opt{-xml} or \Opt{-long}.
+Limiting the number of attributes also increases the efficiency of
+the query.
+
 \end{itemize}
 
 \noindent Configuration Variable Additions and Changes:
@@ -175,6 +180,13 @@ as root, this is no longer the case.
 % gittrac %627
 \item The \Condor{gridmanager} now advertises grid ClassAds properly when there
 are multiple \Condor{collector} daemons.
+
+%gittrack #647
+\item When using \Condor{q} \Opt{-xml} and \Opt{-format} together to
+limit the number of ClassAd attributes returned in the query, the XML
+\verb|<classads>| container tag was not generated.  This is fixed, but
+now the preferred way to limit the attributes which are returned is to
+use \Condor{q} \Opt{-attributes}.
 
 \end{itemize}
 
