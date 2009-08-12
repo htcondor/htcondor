@@ -156,6 +156,7 @@ FunctionCall( )
 			// for compatibility with old classads:
 		functionTable["ifThenElse"  ] = (void*)ifThenElse;
 		functionTable["interval" ] = (void*)interval;
+		functionTable["eval"] = (void*)eval;
 
 		initialized = true;
 	}
@@ -2199,6 +2200,46 @@ ifThenElse( const char* name,const ArgumentList &argList,EvalState &state,
 	}
 
     return true;
+}
+
+bool FunctionCall::
+eval( const char* name,const ArgumentList &argList,EvalState &state,
+	  Value &result )
+{
+	Value arg,strarg;
+
+		// takes exactly one argument
+	if( argList.size() != 1 ) {
+		result.SetErrorValue( );
+		return true;
+	}
+	if( !argList[0]->Evaluate( state, arg ) ) {
+		result.SetErrorValue( );
+		return false;
+	}
+
+	string s;
+    if( !convertValueToStringValue(arg, strarg) ||
+		!strarg.IsStringValue( s ) )
+	{
+		result.SetErrorValue();
+		return true;
+	}
+
+	ClassAdParser parser;
+	ExprTree *expr = NULL;
+	if( !parser.ParseExpression( s.c_str(), expr, true ) || !expr ) {
+		result.SetErrorValue();
+		return true;
+	}
+
+	expr->SetParentScope( state.curAd );
+
+	if( !expr->Evaluate( result ) ) {
+		result.SetErrorValue();
+		return false;
+	}
+	return true;
 }
 
 bool FunctionCall::

@@ -265,3 +265,11 @@ same regexps("[abc]*([def]*)[ghi]*","aaaabbbbcccccdddeeefffggghhhiii","\\1"), "d
 same regexps("[abc]*([def]*)[ghi]*","abcdefghi","\\0"), "abcdefghi"
 same regexps("[abc]*([def]*)[ghi]*","abcdefghi","\\2"), error
 same regexps("[abc]*([def]*)[ghi]*","NO","\\0"), ""
+
+echo Testing eval
+same eval("1+1"), 2
+same eval(1+1), 2
+same eval("1+"), ERROR
+eval x = [ A = 1; B = 2; C = eval("A+B"); ]
+same $x.C, 3
+
