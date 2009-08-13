@@ -20,7 +20,6 @@
 
 #include "condor_common.h"
 #include "udp_waker.h"
-#include "hibernator.WINDOWS.h"
 
 #include "condor_debug.h"
 #include "condor_fix_assert.h"
@@ -69,8 +68,6 @@ static const char *errmsgs[] = {
 };
 
 /**	Typedefs */
-
-typedef HibernatorBase::SLEEP_STATE state_t;
 
 /**	Global Variables */
 
