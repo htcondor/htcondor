@@ -128,12 +128,8 @@ JobRouterHookMgr::getHookPath(HookType hook_type, classad::ClassAd ad)
 		dprintf(D_ALWAYS, "JobRouterHookMgr failure: Unable to get hook path for unknown hook type '%s'\n", getHookTypeString(hook_type));
 		return NULL;
 	}
-	if (false == ad.EvaluateAttrString(ATTR_HOOK_KEYWORD, keyword))
-	{
-		if ( m_default_hook_keyword ) {
-			keyword = m_default_hook_keyword;
-		}
-	}
+
+	keyword = getHookKeyword(ad);
 	if (0 == keyword.length())
 	{
 		return NULL;
@@ -168,6 +164,21 @@ JobRouterHookMgr::getHookPath(HookType hook_type, classad::ClassAd ad)
 }
 
 
+std::string
+JobRouterHookMgr::getHookKeyword(classad::ClassAd ad)
+{
+	std::string hook_keyword;
+
+	if (false == ad.EvaluateAttrString(ATTR_HOOK_KEYWORD, hook_keyword))
+	{
+		if ( m_default_hook_keyword ) {
+			hook_keyword = m_default_hook_keyword;
+		}
+	}
+	return hook_keyword;
+}
+
+
 int
 JobRouterHookMgr::hookTranslateJob(RoutedJob* r_job, std::string &route_info)
 {
@@ -180,7 +191,7 @@ JobRouterHookMgr::hookTranslateJob(RoutedJob* r_job, std::string &route_info)
 		dprintf(D_FULLDEBUG, "HOOK_TRANSLATE_JOB not configured.\n");
 		return 0;
 	}
-	
+
 	// Verify the translate hook hasn't already been spawned and that
 	// we're not waiting for it to return.
 	std::string key = r_job->src_key;
@@ -221,7 +232,6 @@ JobRouterHookMgr::hookTranslateJob(RoutedJob* r_job, std::string &route_info)
 				"ERROR in JobRouterHookMgr::hookTranslateJob: "
 				"failed to spawn HOOK_TRANSLATE_JOB (%s)\n", hook_translate);
 		return -1;
-
 	}
 	uninit_user_ids();
 	

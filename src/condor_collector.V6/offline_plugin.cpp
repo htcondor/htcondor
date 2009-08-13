@@ -146,7 +146,8 @@ OfflineCollectorPlugin::update (
 
 	/* make sure the command is relevant to us */
 	if ( UPDATE_STARTD_AD_WITH_ACK != command &&
-		 UPDATE_STARTD_AD != command ) {
+		 UPDATE_STARTD_AD != command &&
+		 MERGE_STARTD_AD != command ) {
 		 return;
 	}
 
@@ -164,13 +165,21 @@ OfflineCollectorPlugin::update (
 		return;
 
 	}
+	MyString s;
+	hashKey.sprint ( s );
+	compressSpaces ( s );
+	const char *key = s.Value ();
 
 	/* report whether this ad is "off-line" or not and update
 	   the ad accordingly. */		
 	int offline  = FALSE,
 		lifetime = 0;
 
-	if ( UPDATE_STARTD_AD_WITH_ACK == command ) {
+	if ( MERGE_STARTD_AD == command ) {
+		mergeClassAd( ad, key );
+		return;
+	}
+	else if ( UPDATE_STARTD_AD_WITH_ACK == command ) {
 		
 		/* set the off-line state of the machine */
 		offline = TRUE;
@@ -244,10 +253,6 @@ OfflineCollectorPlugin::update (
 	_ads->BeginTransaction ();
 
 	ClassAd *p;
-	MyString s;
-	hashKey.sprint ( s );
-	compressSpaces ( s );
-	const char *key = s.Value ();
 
 	/* if it is off-line then add it to the list; otherwise,
 	   remove it. */
@@ -305,6 +310,53 @@ OfflineCollectorPlugin::update (
 
 	_ads->CommitTransaction ();
 
+}
+
+void
+OfflineCollectorPlugin::mergeClassAd (
+	ClassAd &ad,
+	char const *key )
+{
+	ClassAd *old_ad;
+
+	_ads->BeginTransaction ();
+
+	if ( !_ads->LookupClassAd ( key, old_ad ) ) {
+		_ads->AbortTransaction ();
+		return;
+	}
+
+	ad.ResetExpr();
+	ExprTree *expr;
+	while ((expr=ad.NextExpr())!=NULL) {
+		MyString new_val;
+		MyString old_val;
+		MyString attr_name;
+
+		ASSERT( expr->LArg() && expr->RArg() );
+
+		expr->LArg()->PrintToStr( attr_name );
+		expr->RArg()->PrintToStr( new_val );
+
+		expr = old_ad->Lookup( attr_name.Value() );
+		if( expr && expr->RArg() ) {
+			expr->RArg()->PrintToStr( old_val );
+			if( new_val == old_val ) {
+				continue;
+			}
+		}
+
+			// filter out stuff we never want to mess with
+		if( attr_name == ATTR_MY_TYPE ||
+			attr_name == ATTR_TARGET_TYPE )
+		{
+			continue;
+		}
+
+		_ads->SetAttribute(key, attr_name.Value(), new_val.Value());
+	}
+
+	_ads->CommitTransaction ();
 }
 
 void

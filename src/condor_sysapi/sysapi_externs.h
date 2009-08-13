@@ -82,6 +82,11 @@ extern char* _sysapi_ckptpltfrm;
 /* needed by load_avg.c */
 extern int _sysapi_getload;
 
+#ifdef LINUX
+extern int _sysapi_count_hyperthread_cpus;
+#endif
+
+
 EXTERN_C_END
 
 #endif /* SYSAPI_EXTERNS_H */

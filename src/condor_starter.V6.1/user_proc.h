@@ -159,10 +159,24 @@ protected:
 	                 bool allow_dash,
 	                 const char* log_header);
 
+	void SetStdFiles(int std_fds[], char const *std_fnames[]);
+
+	virtual bool ThisProcRunsAlongsideMainProc();
+
+	virtual char const *getArgv0();
+
 private:
 
 	void initKillSigs( void );
 
+		// The following "pre defined" std fds and names are used
+		// to influence openStdFile() and getStdFile() to force
+		// them to use the specified fds or filenames in place of
+		// calling jic.  The fds stored here are not closed by
+		// UserProc.
+	int m_pre_defined_std_fds[3];            // -1 if not set
+	char const *m_pre_defined_std_fnames[3]; // NULL if not defined
+	MyString m_pre_defined_std_fname_buf[3];
 };
 
 #endif /* _CONDOR_USER_PROC_H */

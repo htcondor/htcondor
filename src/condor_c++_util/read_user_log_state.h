@@ -31,7 +31,7 @@
 	// This is the file state buffer that we generate for the init/get/set
 	// methods
 	// ********************************************************************
-#define FILESTATE_VERSION		103
+#define FILESTATE_VERSION		104
 
 class ReadUserLogFileState
 {
@@ -60,8 +60,8 @@ class ReadUserLogFileState
 		StatStructInode	m_inode;			// The log's inode #
 		time_t			m_ctime;			// The log's creation time
 		FileStateI64_t	m_size;				// The log's size (bytes)
-		FileStateI64_t	m_offset;			// Our offset in current log
-		FileStateI64_t	m_log_offset;		// UNUSED
+		FileStateI64_t	m_offset;			// Current offset in current file
+		FileStateI64_t	m_event_num;		// Current event # in the cur. file
 		FileStateI64_t	m_log_position;		// Our position in the whole log
 		FileStateI64_t	m_log_record;		// Cur record # in the whole log
 		time_t			m_update_time;		// Time of last struct update
@@ -78,6 +78,12 @@ class ReadUserLogFileState
 	ReadUserLogFileState( ReadUserLog::FileState &state );
 	ReadUserLogFileState( const ReadUserLog::FileState &state );
 	virtual ~ReadUserLogFileState( void );
+
+	// Is the state buffer initialized?
+	bool isInitialized( void ) const;
+
+	// Is the state buffer valid for use?
+	bool isValid( void ) const;
 
 	static bool InitState( ReadUserLog::FileState &state );
 	static bool UninitState( ReadUserLog::FileState &state );
@@ -120,6 +126,8 @@ class ReadUserLogFileState
 		{ return m_rw_state; };
 
 	// General accessors
+	bool getFileOffset( int64_t & ) const;
+	bool getFileEventNum( int64_t & ) const;
 	bool getLogPosition( int64_t & ) const;
 	bool getLogRecordNo( int64_t & ) const;
 	bool getSequenceNo( int & ) const;
@@ -160,6 +168,7 @@ public:
 	const char *CurPath( void ) const { return m_cur_path.Value( ); };
 	int Rotation( void ) const { return m_cur_rot; };
 	filesize_t Offset( void ) const { return m_offset; };
+	filesize_t EventNum( void ) const { return m_event_num; };
 	bool IsValid( void ) const { return (m_cur_rot >= 0); };
 
 	// Accessors for a "file state"
@@ -169,6 +178,7 @@ public:
 	filesize_t LogPosition( const ReadUserLog::FileState &state ) const;
 	filesize_t LogRecordNo( const ReadUserLog::FileState &state ) const;
 	filesize_t Offset( const ReadUserLog::FileState &state ) const;
+	filesize_t EventNum( const ReadUserLog::FileState &state ) const;
 
 	// Get/set maximum rotations
 	int MaxRotations( void ) { return m_max_rotations; }
@@ -182,6 +192,10 @@ public:
 				  bool initializing = false );
 	filesize_t Offset( filesize_t offset )
 		{ Update(); return m_offset = offset; };
+	filesize_t EventNum( filesize_t num )
+		{ Update(); return m_event_num = num; };
+	filesize_t EventNumInc( int num = 1 )
+		{ Update(); m_event_num += num; return m_event_num; };
 
 	// Get / set the uniq identifier
 	void UniqId( const MyString &id ) { Update(); m_uniq_id = id; };
@@ -196,9 +210,14 @@ public:
 	filesize_t LogPosition( void ) const { return m_log_position; };
 	filesize_t LogPosition( filesize_t pos )
 		{ Update(); return m_log_position = pos; };
+	filesize_t LogPositionAdd( filesize_t pos )
+		{ Update(); return m_log_position += pos; };
+
 	filesize_t LogRecordNo( void ) const { return m_log_record; };
 	filesize_t LogRecordNo( filesize_t num )
 		{ Update(); return m_log_record = num; };
+	filesize_t LogRecordInc( int num = 1 )
+		{ Update(); m_log_record += num; return m_log_record; };
 
 	// Compare the ID to the one stored
 	// 0==one (or both) are empty, 1=same, -1=different
@@ -284,6 +303,7 @@ private:
 
 	UserLogType		m_log_type;			// Type of this log
 	filesize_t		m_offset;			// Our current offset
+	filesize_t		m_event_num;		// Our current event #
 
 	int				m_max_rotations;	// Max rot #
 	int				m_recent_thresh;	// Max time for a stat to be "recent"

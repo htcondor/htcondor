@@ -25,27 +25,29 @@
 
 // IMPORTANT NOTE:  If you add a new enum value here, please add a new
 // case to PermString() in condor_perms.c (in the util lib).
+// There should be NO HOLES in the numerical values of this list,
+// because NEXT_PERM() assumes values are contiguous.
 // Also make any necessary updates to DCpermissionHierarchy.
 // Be sure to leave "LAST_PERM" last.  It's a place holder so 
 // we can iterate through all the permission levels, and know when to 
 // stop. 
 /// enum for Daemon Core socket/command/signal permissions
 typedef enum {
-  /** Place holder, must be 0 */             FIRST_PERM = 0,
+  /** Place holder, must be same as next */  FIRST_PERM = 0,
   /** Open to everyone */                    ALLOW = 0,
-  /** Able to read data */                   READ = 1,
-  /** Able to modify data (submit jobs) */   WRITE = 2,
-  /** From the negotiator */                 NEGOTIATOR = 3,
-  /** Administrative cmds (on, off, etc) */  ADMINISTRATOR = 5,
-  /** The machine owner (vacate) */          OWNER = 6,
-  /** Changing config settings remotely */   CONFIG_PERM = 7,
-  /** Daemon to daemon communcation     */   DAEMON = 8,
-  /** SOAP interface (http PUT) */			 SOAP_PERM = 9,
-  /** DEFAULT */                             DEFAULT_PERM = 10,
-  /** CLIENT */                              CLIENT_PERM = 11,
-  /** startd ad */                           ADVERTISE_STARTD_PERM = 12,
-  /** schedd ad */                           ADVERTISE_SCHEDD_PERM = 13,
-  /** master ad */                           ADVERTISE_MASTER_PERM = 14,
+  /** Able to read data */                   READ,
+  /** Able to modify data (submit jobs) */   WRITE,
+  /** From the negotiator */                 NEGOTIATOR,
+  /** Administrative cmds (on, off, etc) */  ADMINISTRATOR,
+  /** The machine owner (vacate) */          OWNER,
+  /** Changing config settings remotely */   CONFIG_PERM,
+  /** Daemon to daemon communcation     */   DAEMON,
+  /** SOAP interface (http PUT) */			 SOAP_PERM,
+  /** DEFAULT */                             DEFAULT_PERM,
+  /** CLIENT */                              CLIENT_PERM,
+  /** startd ad */                           ADVERTISE_STARTD_PERM,
+  /** schedd ad */                           ADVERTISE_SCHEDD_PERM,
+  /** master ad */                           ADVERTISE_MASTER_PERM,
   /** Place holder, must be last */          LAST_PERM
 } DCpermission;
 

@@ -28,13 +28,12 @@
 #include <sys/pstat.h>
 
 int
-sysapi_phys_memory_raw(void)
+sysapi_phys_memory_raw_no_param(void)
 {
 	struct pst_static s;
 	unsigned long pages, pagesz;
 	double size;
 						   
-	sysapi_internal_reconfig();
 	if (pstat_getstatic(&s, sizeof(s), (size_t)1, 0) != -1) {
 		pages = s.physical_memory;
 		pagesz = s.page_size >> 10;
@@ -57,13 +56,12 @@ sysapi_phys_memory_raw(void)
 #include <sys/sysmp.h>
 
 int
-sysapi_phys_memory_raw(void)
+sysapi_phys_memory_raw_no_param(void)
 {
 	struct rminfo rmstruct;
 	long pages, pagesz;
 	double size;
 
-	sysapi_internal_reconfig();
 	pagesz = (sysconf(_SC_PAGESIZE) >> 10);		// We want kbytes.
 	
 	if( (sysmp(MP_SAGET,MPSA_RMINFO,&rmstruct,sizeof(rmstruct)) < 0) ||
@@ -94,12 +92,11 @@ sysapi_phys_memory_raw(void)
 #include <unistd.h>
 
 int
-sysapi_phys_memory_raw(void)
+sysapi_phys_memory_raw_no_param(void)
 {
 	long pages, pagesz;
 	double hack, size;
 
-	sysapi_internal_reconfig();
 	pages = sysconf(_SC_PHYS_PAGES);
 	pagesz = (sysconf(_SC_PAGESIZE) >> 10);		// We want kbytes.
 
@@ -147,7 +144,7 @@ sysapi_phys_memory_raw(void)
 #include <stdio.h>
 
 int 
-sysapi_phys_memory_raw(void) 
+sysapi_phys_memory_raw_no_param(void) 
 {	
 
 	double bytes;
@@ -170,10 +167,9 @@ sysapi_phys_memory_raw(void)
 #elif defined(WIN32)
 
 int
-sysapi_phys_memory_raw(void)
+sysapi_phys_memory_raw_no_param(void)
 {
 	MEMORYSTATUSEX statex;		
-	sysapi_internal_reconfig();
 	
 	statex.dwLength = sizeof(statex);
 	
@@ -194,10 +190,10 @@ sysapi_phys_memory_raw(void)
 #include <sys/table.h>
 
 int
-sysapi_phys_memory_raw(void)
+sysapi_phys_memory_raw_no_param(void)
 {
 	struct tbl_pmemstats s;
-	sysapi_internal_reconfig();
+
 	if (table(TBL_PMEMSTATS,0,(void *)&s,1,sizeof(s)) < 0) {
 		return -1;
 	}
@@ -208,13 +204,11 @@ sysapi_phys_memory_raw(void)
 #elif defined(Darwin) || defined(CONDOR_FREEBSD)
 #include <sys/sysctl.h>
 int
-sysapi_phys_memory_raw(void)
+sysapi_phys_memory_raw_no_param(void)
 {
 	int megs;
 	uint64_t mem = 0;
 	size_t len = sizeof(mem);
-
-	sysapi_internal_reconfig();
 
 #ifdef Darwin
 	if (sysctlbyname("hw.memsize", &mem, &len, NULL, 0) < 0) 
@@ -235,12 +229,11 @@ sysapi_phys_memory_raw(void)
 }
 #elif defined(AIX)
 int
-sysapi_phys_memory_raw(void)
+sysapi_phys_memory_raw_no_param(void)
 {
 	CLASS_SYMBOL cuat;
 	struct CuAt mem_ent;
 	struct CuAt *mret = NULL;
-	sysapi_internal_reconfig();
 	unsigned long memory_size = 0;
 	char *path = NULL;
 
@@ -320,6 +313,12 @@ sysapi_phys_memory_raw(void)
 #error "sysapi.h: Please define a sysapi_phys_memory_raw() for this platform!"
 #endif
 
+
+int sysapi_phys_memory_raw(void)
+{
+	sysapi_internal_reconfig();
+	return sysapi_phys_memory_raw_no_param();
+}
 
 /* This is the cooked version of sysapi_phys_memory_raw(). Where as the raw
 	function gives you the raw number, this function can process the number

@@ -7,9 +7,9 @@
 #endif
 all_target(libdaemonclient.a)
 
-CFLAGS = $(STD_C_FLAGS) New_classads_includes
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(FIX_BROKEN_GCC) New_classads_includes
-LIB = $(STD_LIBS)
+CFLAGS = $(STD_C_FLAGS) New_classads_includes $(CONFIGURE_PCRE_CFLAGS)
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(FIX_BROKEN_GCC) New_classads_includes $(CONFIGURE_PCRE_CFLAGS)
+LIB = $(STD_LIBS) $(CONFIGURE_PCRE_LDFLAGS)
 
 ### NOTE!  If you add anything here, also add it to the
 ### DAEMON_CLIENT_OBJ line in condor_c++_util/Imakefile   

@@ -19,19 +19,48 @@
 
 
 #include "condor_common.h"
+#include "proc.h"              // for job statuses
+#include "condor_accountant.h" // for PriorityDelta
+#include "condor_config.h"
 #include "analysis.h"
 #include "list.h"
 #include "simplelist.h"
 #include "extArray.h"
 
 #include <iostream>
+#include <sstream>
 
 using namespace std;
+using namespace classad_analysis;
+using namespace classad_analysis::job;
 
 ClassAdAnalyzer::
-ClassAdAnalyzer( )
-{
-	jobReq = NULL;
+ClassAdAnalyzer( ) :
+  m_result(NULL), jobReq(NULL) { 
+
+  stringstream std_rank;
+  stringstream preempt_rank;
+  stringstream preempt_prio;
+  
+  std_rank << "MY." << ATTR_RANK << " > MY." << ATTR_CURRENT_RANK;
+  preempt_rank << "MY." << ATTR_RANK << " >= MY." << ATTR_CURRENT_RANK;
+  preempt_prio << "MY." << ATTR_REMOTE_USER_PRIO << " > TARGET." << ATTR_SUBMITTOR_PRIO << " + " << PriorityDelta;
+
+  Parse(std_rank.str().c_str(), std_rank_condition);
+  Parse(preempt_rank.str().c_str(), preempt_rank_condition);
+  Parse(preempt_prio.str().c_str(), preempt_prio_condition);
+  
+  char *preq;
+  if( NULL == ( preq = param( "PREEMPTION_REQUIREMENTS" ) ) ) {
+    // No PREEMPTION_REQUIREMENTS; defaulting to FALSE
+    Parse( "FALSE", preemption_req );
+  } else {
+    if( Parse( preq , preemption_req ) ) {
+      // Failed to parse PREEMPTION_REQUIREMENTS; defaulting to FALSE
+      Parse( "FALSE", preemption_req );
+    }
+    free( preq );
+  }
 }
 
 ClassAdAnalyzer::
@@ -40,6 +69,108 @@ ClassAdAnalyzer::
 	if( jobReq ) {
 		delete jobReq;
 	}
+	
+	if( m_result ) {
+	  delete m_result;
+	  m_result = NULL;
+	}
+}
+
+// Returns "true" if the job is not matched and IDLE, false otherwise
+bool ClassAdAnalyzer::
+NeedsBasicAnalysis( ClassAd *request ) {
+  int status;
+  int matched = false;
+
+  request->LookupInteger( ATTR_JOB_STATUS, status );
+  request->LookupInteger( ATTR_JOB_MATCHED, matched );
+
+  // XXX: are there cases where we need "basic" analysis even though
+  // we're matched?
+  if (matched) {
+    return false;
+  }
+  
+  switch(status) {
+  // XXX:  should we have "is_running/completed/removed" in m_result?
+  // XXX:  should we add "is_held" to m_result/include hold_reason?
+  case RUNNING:
+  case HELD:
+  case REMOVED:
+  case COMPLETED:
+    return false;
+  default:
+    return true;
+  }
+}
+
+void ClassAdAnalyzer::
+BasicAnalyze( ClassAd *request, ClassAd *offer ) {
+  // XXX: this code could/should be refactored out (from here and
+  // condor_q.V6/queue.cpp) and into an analysis library
+
+  char remote_user[128];
+  EvalResult eval_result;
+
+  bool satisfied_std_rank = std_rank_condition->EvalTree (offer, request, &eval_result) && eval_result.type == LX_INTEGER && eval_result.i == TRUE;
+  bool satisfied_preempt_prio = preempt_prio_condition->EvalTree( offer, request, &eval_result ) && eval_result.type == LX_INTEGER && eval_result.i == TRUE; 
+  bool satisfied_preempt_rank = preempt_rank_condition->EvalTree( offer, request, &eval_result ) && eval_result.type == LX_INTEGER && eval_result.i == TRUE;
+  bool satisfied_preempt_req = preemption_req->EvalTree( offer, request, &eval_result ) && eval_result.type == LX_INTEGER && eval_result.i == TRUE;
+
+  if (!((*offer) >= (*request))) {
+    m_result->add_explanation(classad_analysis::MACHINES_REJECTED_BY_JOB_REQS, offer);
+    return;
+  } 
+
+  if (!((*offer) <= (*request))) {
+    m_result->add_explanation(classad_analysis::MACHINES_REJECTING_JOB, offer);
+    return;
+  }
+
+  if (! offer->LookupString( ATTR_REMOTE_USER, remote_user )) {
+    if ( satisfied_std_rank )  {
+      // Machine satisfies job requirements, job satisfies machine
+      // constraints, no remote user
+      m_result->add_explanation(classad_analysis::MACHINES_AVAILABLE, offer);
+      return;
+    } else {
+      // Standard rank condition failed
+      m_result->add_explanation(classad_analysis::MACHINES_REJECTING_UNKNOWN, offer);
+      return;
+    }
+  }
+
+  if ( satisfied_preempt_prio )  {
+    if ( satisfied_std_rank ) {
+      // Satisfies preemption priority condition and standard rank
+      // condition; thus available
+      m_result->add_explanation(classad_analysis::MACHINES_AVAILABLE, offer);
+      return;      
+    } else {
+      if ( satisfied_preempt_rank ) {
+	// Satisfies preemption priority and rank conditions, and ...
+	if (satisfied_preempt_req) {
+	  // ... also satisfies PREEMPTION_REQUIREMENTS:  available
+	  m_result->add_explanation(classad_analysis::MACHINES_AVAILABLE, offer);
+	  return;      	  
+	} else {
+	  // ... doesn't satisfy PREEMPTION_REQUIREMENTS:  not available
+	  m_result->add_explanation(classad_analysis::PREEMPTION_REQUIREMENTS_FAILED, offer);
+	  return;
+	}
+      } else {
+	// The comments on the equivalent code path in condor_q
+	// indicate that this case usually implies "some unknown problem"
+	m_result->add_explanation(classad_analysis::PREEMPTION_FAILED_UNKNOWN, offer);
+	return;
+      }
+    }
+  } else {
+    // Failed preemption priority condition
+    m_result->add_explanation(classad_analysis::PREEMPTION_PRIORITY_FAILED, offer);
+    return;
+  }
+
 }
 
 bool ClassAdAnalyzer::
@@ -64,6 +195,33 @@ AnalyzeJobReqToBuffer( ClassAd *request, ClassAdList &offers, string &buffer )
 		return true;
 	}
     explicit_classad  = AddExplicitTargets( converted_classad );
+
+
+    
+    // set up result object
+    if (m_result != NULL) {
+      // Other parts of this code are written to assume that a
+      // ClassAdAnalyzer can be used to analyze multiple jobs; we make
+      // the same assumption here.  The overall interface of this code
+      // should be marked with a big FIXME.
+      delete m_result;
+    }
+
+    m_result = new classad_analysis::job::result(*explicit_classad);
+
+    bool do_basic_analysis = NeedsBasicAnalysis(request);
+    offers.Rewind();
+    ClassAd *ad;
+    while((ad = offers.Next())) {
+      classad::ClassAd *new_ad = toNewClassAd(ad);
+      m_result->add_machine(*new_ad);
+      delete new_ad;
+
+      if (do_basic_analysis) {
+	BasicAnalyze(request, ad);
+      }
+    }
+
 	success = AnalyzeJobReqToBuffer( explicit_classad, rg, buffer );
 
     delete converted_classad;
@@ -324,10 +482,12 @@ AnalyzeJobReqToBuffer( classad::ClassAd *request, ResourceGroup &offers, string 
 			switch( condition->explain.suggestion ) {
 			case ConditionExplain::REMOVE: {
 				sprintf( suggest, "REMOVE" );
+				m_result->add_suggestion(suggestion(suggestion::REMOVE_CONDITION, cond_s));
 				break;
 			}
 			case ConditionExplain::MODIFY: {
 				pp.Unparse( value_s, condition->explain.newValue );
+				m_result->add_suggestion(suggestion(suggestion::MODIFY_CONDITION, cond_s, value_s));
 				strncpy( value, value_s.c_str( ), 63 );
 				sprintf( suggest, "MODIFY TO %s", value );
 				break;
@@ -418,6 +578,7 @@ AnalyzeJobAttrsToBuffer( classad::ClassAd *request, ResourceGroup &offers,
 		string undefAttr = "";
 		adExplain.undefAttrs.Rewind( );
 		while( adExplain.undefAttrs.Next( undefAttr ) ) {
+		  m_result->add_suggestion(suggestion(suggestion::DEFINE_ATTRIBUTE, undefAttr));
 			buffer += undefAttr;
 			buffer += "\n";
 		}
@@ -488,6 +649,7 @@ AnalyzeJobAttrsToBuffer( classad::ClassAd *request, ResourceGroup &offers,
 				}
 				strncpy( suggest, suggest_s.c_str( ), 64 ); 
 				sprintf( formatted, "%-24s%s\n", attr, suggest );
+				m_result->add_suggestion(suggestion(suggestion::MODIFY_ATTRIBUTE, attr, suggest_s));
 				tempBuff += formatted;
 			}
 			default: { }

@@ -586,7 +586,7 @@ void ClassAdXMLUnparser::AddXMLFileFooter(MyString &buffer)
  *
  **************************************************************************/
 void 
-ClassAdXMLUnparser::Unparse(ClassAd *classad, MyString &buffer)
+ClassAdXMLUnparser::Unparse(ClassAd *classad, MyString &buffer, StringList *attr_white_list)
 {
 	ExprTree *expression;
 
@@ -598,7 +598,7 @@ ClassAdXMLUnparser::Unparse(ClassAd *classad, MyString &buffer)
 	// First get the MyType and TargetType expressions 
 	const char *mytype, *mytarget;
 
-	if (_output_type) {
+	if (_output_type && (!attr_white_list || attr_white_list->contains_anycase("MyType")) ) {
 		mytype = classad->GetMyTypeName();
 		if (*mytype != 0) {
 			MyString  type_expr_string("MyType = \"");
@@ -612,7 +612,7 @@ ClassAdXMLUnparser::Unparse(ClassAd *classad, MyString &buffer)
 		}
 	}
 
-	if (_output_target_type) {
+	if (_output_target_type && (!attr_white_list || attr_white_list->contains_anycase("TargetType"))) {
 		mytarget = classad->GetTargetTypeName();
 		if (*mytarget != 0) {
 			MyString  target_expr_string("TargetType = \"");
@@ -631,6 +631,12 @@ ClassAdXMLUnparser::Unparse(ClassAd *classad, MyString &buffer)
 	for (expression = classad->NextExpr(); 
 		 expression != NULL; 
 		 expression = classad->NextExpr()) {
+		if( expression->invisible ) {
+			continue;
+		}
+		if( attr_white_list && !attr_white_list->contains_anycase(((VariableBase*)expression->LArg())->Name()) ) {
+			continue; // not in white list
+		}
 		Unparse(expression, buffer);
 	}
 	add_tag(buffer, tag_ClassAd, false);

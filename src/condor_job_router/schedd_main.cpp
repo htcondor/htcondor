@@ -31,8 +31,9 @@
 DECL_SUBSYSTEM("JOB_ROUTER", SUBSYSTEM_TYPE_SCHEDD );	// used by Daemon Core
 
 
-Scheduler schedd;
+Scheduler *schedd;
 JobRouter *job_router;
+NewClassAdJobLogConsumer *log_consumer;
 
 //-------------------------------------------------------------
 
@@ -40,9 +41,13 @@ int main_init(int argc, char *argv[])
 {
 	dprintf(D_ALWAYS, "main_init() called\n");
 
-	schedd.init();
-	
-	job_router = new JobRouter(&schedd);
+	log_consumer = new NewClassAdJobLogConsumer();
+
+	schedd = new Scheduler(log_consumer);
+
+	schedd->init();
+
+	job_router = new JobRouter(schedd);
 	job_router->init();
 
 	return TRUE;
@@ -55,7 +60,7 @@ main_config( bool is_full )
 {
 	dprintf(D_ALWAYS, "main_config() called\n");
 
-	schedd.config();
+	schedd->config();
 	job_router->config();
 
 	return TRUE;
@@ -64,7 +69,9 @@ main_config( bool is_full )
 static void Stop()
 {
 	// JobRouter creates an instance lock, so delete it now to clean up.
-	schedd.stop();
+	schedd->stop();
+	delete schedd;
+	schedd = NULL;
 	delete job_router;
 	job_router = NULL;
 	DC_Exit(0);

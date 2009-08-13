@@ -1,0 +1,135 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+## This tests submit failure with post script (see gittrac #435).
+
+use CondorTest;
+
+$cmd = 'job_dagman_submit_fails_post.dag';
+$testdesc =  'Condor submit dag - submit failure on node w/ POST script test - scheduler U';
+$testname = "job_dagman_submit_fails_post";
+$dagman_args = "-verbose";
+
+@logfiles = ("job_dagman_submit_fails_post.dag.dagman.out");
+
+# truly const variables in perl
+sub IDLE{1};
+sub HELD{5};
+sub RUNNING{2};
+
+# Get rid of any existing log files.
+foreach $name (@logfiles) {
+	if (-e $name) {
+		system("rm -f $name");
+	}
+}
+
+# We need to make sure this file doesn't exist for the test to work
+# correctly.
+$name = "job_dagman_submit_fails_post.log";
+if (-e $name) {
+	system("rm -f $name");
+}
+
+$abnormal = sub 
+{
+	die "ERROR: Want to see only submit, execute and successful completion\n";
+};
+
+$aborted = sub 
+{
+	die "ERROR: Abort event NOT expected\n";
+};
+
+$held = sub 
+{
+	die "ERROR: Hold event NOT expected\n";
+};
+
+$released = sub 
+{
+	die "ERROR: Released event NOT expected\n";
+};
+
+$executed = sub
+{
+	my %info = @_;
+
+	CondorTest::debug("Good. We need the dag to run<$info{cluster}>\n",1);
+};
+
+$submitted = sub
+{
+	CondorTest::debug("submitted: This test will see submit, executing, held, released, and successful completion\n",1);
+};
+
+$success = sub
+{
+	CondorTest::debug("executed successfully\n",1);
+	CondorTest::debug("Verifying output\n",1);
+	$diditpass = 1;
+
+	foreach $name (@logfiles) {
+		$line = "";
+		$cache_state = 0;
+		$passed = 0;
+		$canopen = open(OUT,"<$name");
+		if( ! (defined $canopen)) {
+			CondorTest::debug("Can not open logfile<$name>:$!\n",1);
+			$diditpass = 0;
+		}
+		while(<OUT>) {
+			chomp();
+			$line = $_;
+
+			if( $line =~ /EXITING WITH STATUS 0/ ) {
+				$passed = 1;
+				CondorTest::debug("$name: $line\n",1);
+			}
+		}
+		close(OUT);
+		if($passed == 1 ) {
+			;
+		} else {
+			CondorTest::debug("failed $name: $line\n",1);
+			$diditpass = 0;
+		}
+	}
+
+	if($diditpass == 0) {
+		die "ERROR: All expected files and correct output failed\n";
+	}
+};
+
+CondorTest::RegisterExitedSuccess( $testname, $success);
+CondorTest::RegisterExecute($testname, $executed);
+CondorTest::RegisterExitedAbnormal( $testname, $abnormal );
+CondorTest::RegisterAbort( $testname, $aborted );
+CondorTest::RegisterHold( $testname, $held );
+CondorTest::RegisterRelease( $testname, $released );
+CondorTest::RegisterSubmit( $testname, $submitted );
+
+if( CondorTest::RunDagTest($testname, $cmd, 0, $dagman_args) ) {
+	CondorTest::debug("$testname: SUCCESS\n",1);
+	exit(0);
+} else {
+	die "$testname: CondorTest::RunDagTest() failed\n";
+}
+

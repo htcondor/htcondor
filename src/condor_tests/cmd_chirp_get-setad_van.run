@@ -1,0 +1,37 @@
+#!/usr/bin/perl
+use strict; use warnings;
+use CondorTest;
+use Digest::MD5 qw(md5_base64);
+use vars qw($fetchme_fn $removeme_fn $put_fn_0 $put_fn_1 $put_fn_2 $testname);
+
+my $testdesc = "chirp io tests using perl - vanilla U";
+my $testname = "cmd_chirp_get-setad_van";
+my $cmd_fn = "$testname.cmd";
+###########################################################
+
+sub on_completion { #on_completion scans the .log file to look for the string appended
+	my $success = 0; # by the .pl with the condor_chirp ulog command.
+	open (IN_FILE, "<$testname.log") or die "$testname: failed, cannot open user log.";
+	/^\d+ \(\d+\.\d+\.\d+\) \d+\/\d+ \d+:\d+:\d+ condor_chirp ulog test\n$/ 
+		and $success=1 and last while(<IN_FILE>); # scan file for the ulog test
+	close IN_FILE or die "$testname: failed can't close user log.";
+	die "$testname: ulog failed, ulog does not contain expected info." unless $success;
+}
+
+if (-e "$testname.log") {  # here we delete any old logs if they exist (for ulog test)
+	unlink "$testname.log" or warn("$testname: Cannot delete old log."); }
+
+CondorTest::RegisterExitedSuccess ($testname,\&on_completion);
+
+if( CondorTest::RunTest($testname, $cmd_fn, 0) ) {
+	print "Run test succeeded.\n";
+	CondorTest::debug("$testname: SUCCESS\n",1); 
+	exit(0);
+} else { 
+	print "Run test failed.\n";
+	die "$testname: CondorTest()::RunTest() failed";
+}
+
+
+
+

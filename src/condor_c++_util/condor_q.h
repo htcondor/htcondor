@@ -90,8 +90,8 @@ class CondorQ
 	// which pass the criterion specified by the constraints; default is
 	// from the local schedd
 	int fetchQueue (ClassAdList &, StringList &attrs, ClassAd * = 0, CondorError* errstack = 0);
-	int fetchQueueFromHost (ClassAdList &, StringList &attrs, char * = 0, CondorError* errstack = 0);
-	int fetchQueueFromHostAndProcess ( char *, StringList &attrs, process_function process_func, bool useFastPath, CondorError* errstack = 0);
+	int fetchQueueFromHost (ClassAdList &, StringList &attrs, const char * = 0, char const *schedd_version = 0,CondorError* errstack = 0);
+	int fetchQueueFromHostAndProcess ( const char *, StringList &attrs, process_function process_func, bool useFastPath, CondorError* errstack = 0);
 	
 		// fetch the job ads from database 	
 	int fetchQueueFromDB (ClassAdList &, char *&lastUpdate, char * = 0, CondorError* errstack = 0);

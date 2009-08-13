@@ -309,6 +309,10 @@
 			>
 		</File>
 		<File
+			RelativePath="$(OutDir)\write_user_log_state.obj"
+			>
+		</File>
+		<File
 			RelativePath="$(OutDir)\xml_classads.obj"
 			>
 		</File>

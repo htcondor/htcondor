@@ -33,29 +33,6 @@ const int MAX_RESCUE_DAG_DEFAULT = 100;
 	// is normally configured lower).
 const int ABS_MAX_RESCUE_DAG_NUM = 999;
 
-/** Get the log files from an entire set of DAGs, dealing with
-    DAG paths if necessary.
-	@param dagFiles: all of the DAG files we're using.
-	@param useDagDir: run DAGs in directories from DAG file paths 
-               if true
-	@param logFiles: a StringList to recieve the log file names.
-	@param errMsg: a MyString to receive any error message.
-	@return true if successful, false otherwise
-*/ 
-bool GetLogFiles(/* const */ StringList &dagFiles, bool useDagDir,
-			StringList &condorLogFiles, StringList &storkLogFiles,
-			MyString &errMsg);
-
-/** Determine whether any log files are on NFS, and this is configured
-	to be an error.
-	@param condorLogFiles: a list of the Condor log files
-	@param storkLogFiles: a list of the Stork log files
-	@return true iff a log file is on NFS, and this is configured to be
-		a fatal error (as opposed to a warning)
-*/
-bool LogFileNfsError(/* const */ StringList &condorLogFiles,
-			/* const */ StringList &storkLogFiles);
-
 /** Get the configuration file, if any, specified by the given list of
 	DAG files.  If more than one DAG file specifies a configuration file,
 	they must specify the same file.

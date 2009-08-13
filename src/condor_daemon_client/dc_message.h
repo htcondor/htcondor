@@ -372,9 +372,10 @@ class DCMsgCallback: public ClassyCountedPtr {
 
 		/* Call the message's cancelMessage() function.
 		   The callback (if any) will still be called.  The delivery status
-		   will be set to DELIVERY_CANCELED.
+		   will be set to DELIVERY_CANCELED.  If quiet=true, the message
+		   cancelation complaint will not be 
 		*/
-	void cancelMessage();
+	void cancelMessage( bool quiet=false );
 
 		/* When message finishes (or is canceled), do not call
 		   the callback function.  If the class object to which

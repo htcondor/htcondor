@@ -1,7 +1,7 @@
 all_target(privsep_client.a condor_root_switchboard)
 
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
-CFLAGS = $(STD_C_FLAGS)
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(CONFIGURE_PCRE_CFLAGS)
+CFLAGS = $(STD_C_FLAGS) $(CONFIGURE_PCRE_CFLAGS)
 
 CLIENT_OBJ = privsep_client.UNIX.o privsep_fork_exec.o privsep_dc.o
 library_target(privsep_client.a,$(CLIENT_OBJ))

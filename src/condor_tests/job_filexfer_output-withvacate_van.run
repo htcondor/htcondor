@@ -47,7 +47,7 @@ my $outg = "$basefile"."g.txt";
 my $inputdir = "job_"."$job"."_dir";
 
 my $line = "";
-my $args = "--job=$job --long ";
+my $args = "--job=$job --forever ";
 my $alreadydone=0;
 
 my $spool = "";
@@ -91,8 +91,8 @@ $execute = sub {
 
 	CondorTest::debug("Looking for $oute, $outf, $outg ...\n",1);
 
+	sleep 20; # let output files get created
 	CondorTest::debug("Vacate $cluster Now\n",1);
-	sleep 2; # let output files get created
 	my @adarray;
 	my $status = 1;
 	my $cmd = "condor_vacate_job $cluster";

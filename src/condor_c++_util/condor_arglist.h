@@ -209,6 +209,12 @@ class ArgList {
 		// Create an args string for windows CreateProcess().
 	bool GetArgsStringWin32(MyString *result,int skip_args,MyString *error_msg) const;
 
+		// Create args string for system()
+		// Every argument will be quoted so that it is treated literally
+		// and so that it is treated as a single argument even if it contains
+		// spaces.
+	bool GetArgsStringSystem(MyString *result,int skip_args,MyString *error_msg) const;
+
 	bool InputWasV1() {return input_was_unknown_platform_v1;}
 
 		// Return true if the string is a V2Quoted string.  Such

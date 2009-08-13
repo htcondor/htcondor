@@ -28,6 +28,7 @@
 #include "amazongahp_common.h"
 #include "amazonCommands.h"
 #include "thread_control.h"
+#include "condor_base64.h"
 
 // For gsoap
 #include <stdsoap2.h>
@@ -36,34 +37,6 @@
 #include <wsseapi.h>
 #include "AmazonEC2.nsmap"
 
-// For base64 encoding
-#include <openssl/sha.h>
-#include <openssl/hmac.h>
-#include <openssl/evp.h>
-#include <openssl/bio.h>
-#include <openssl/buffer.h>
-
-// Caller need to free the returned pointer
-static char* base64_encode(const unsigned char *input, int length)
-{
-	BIO *bmem, *b64;
-	BUF_MEM *bptr;
-
-	b64 = BIO_new(BIO_f_base64());
-	bmem = BIO_new(BIO_s_mem());
-	b64 = BIO_push(b64, bmem);
-	BIO_write(b64, input, length);
-	BIO_flush(b64);
-	BIO_get_mem_ptr(b64, &bptr);
-
-	char *buff = (char *)malloc(bptr->length);
-	ASSERT(buff);
-	memcpy(buff, bptr->data, bptr->length-1);
-	buff[bptr->length-1] = 0;
-	BIO_free_all(b64);
-
-	return buff;
-}
 
 void
 AmazonRequest::ParseSoapError(const char* callerstring) 
@@ -491,12 +464,12 @@ AmazonVMStart::gsoapRequest(void)
 				return false;
 			}
 	
-			base64_userdata = base64_encode((unsigned char*)readbuffer, file_size);
+			base64_userdata = condor_base64_encode((unsigned char*)readbuffer, file_size);
 			free(readbuffer); readbuffer = NULL;
 		}
 	}else {
 		if( user_data.IsEmpty() == false ) { 
-			base64_userdata = base64_encode((unsigned char*)user_data.Value(), user_data.Length());
+			base64_userdata = condor_base64_encode((unsigned char*)user_data.Value(), user_data.Length());
 		}
 	}
 

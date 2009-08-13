@@ -119,6 +119,7 @@ pushd %1\bin
 copy condor_rm.exe condor_hold.exe
 copy condor_rm.exe condor_release.exe
 copy condor_rm.exe condor_vacate_job.exe
+move condor_tool.exe condor.exe
 copy condor.exe condor_on.exe
 copy condor.exe condor_off.exe
 copy condor.exe condor_restart.exe

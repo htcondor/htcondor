@@ -65,6 +65,8 @@ class NordugridJob : public BaseJob
 	static void setConnectFailureRetry( int count )
 		{ maxConnectFailures = count; }
 
+	void NotifyNewRemoteStatus( const char *status );
+
 	int gmState;
 	time_t lastProbeTime;
 	bool probeNow;
@@ -90,11 +92,6 @@ class NordugridJob : public BaseJob
 		// Same as for RSL, but used by the file staging calls.
 	StringList *stageList;
 	StringList *stageLocalList;
-
-		// These get set before file stage out, but don't get handed
-		// to JobTerminated() until after file stage out succeeds.
-	int exitCode;
-	bool normalExit;
 
 	MyString *buildSubmitRSL();
 	StringList *buildStageInList();

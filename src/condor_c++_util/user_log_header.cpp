@@ -194,12 +194,14 @@ ReadUserLogHeader::Read(
 	if ( ULOG_OK != outcome ) {
 		::dprintf( D_FULLDEBUG,
 				   "ReadUserLogHeader::Read(): readEvent() failed\n" );
+		delete event;
 		return outcome;
 	}
 	if ( ULOG_GENERIC != event->eventNumber ) {
 		::dprintf( D_FULLDEBUG,
 				   "ReadUserLogHeader::Read(): event #%d should be %d\n",
 				   event->eventNumber, ULOG_GENERIC );
+		delete event;
 		return ULOG_NO_EVENT;
 	}
 

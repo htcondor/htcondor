@@ -244,6 +244,9 @@ private:
 		/// Do the RSC to get the job classad from the shadow
 	bool getJobAdFromShadow( void );
 
+		/// Get the machine classad from the given stream
+	bool receiveMachineAd( Stream *stream );
+
 		/** Initialize information about the shadow's version and
 			sinful string from the given ClassAd.  At startup, we just
 			pass the job ad, since that should have everything in it.

@@ -26,7 +26,6 @@
 #include "basejob.h"
 #include "gridmanager.h"
 
-#define DEFAULT_MAX_PENDING_SUBMITS_PER_RESOURCE	5
 #define DEFAULT_MAX_SUBMITTED_JOBS_PER_RESOURCE		100
 
 int BaseResource::probeInterval = 300;	// default value
@@ -46,7 +45,6 @@ BaseResource::BaseResource( const char *resource_name )
 	lastPing = 0;
 	lastStatusChange = 0;
 
-	submitLimit = DEFAULT_MAX_PENDING_SUBMITS_PER_RESOURCE;
 	jobLimit = DEFAULT_MAX_SUBMITTED_JOBS_PER_RESOURCE;
 
 	hasLeases = false;
@@ -95,36 +93,6 @@ void BaseResource::Reconfig()
 	tmp_int = param_integer( "GRIDMANAGER_RESOURCE_PROBE_INTERVAL", 5 * 60 );
 	setProbeInterval( tmp_int );
 
-	submitLimit = -1;
-	param_name.sprintf( "GRIDMANAGER_MAX_PENDING_SUBMITS_PER_RESOURCE_%s",
-						ResourceType() );
-	param_value = param( param_name.Value() );
-	if ( param_value == NULL ) {
-		param_value = param( "GRIDMANAGER_MAX_PENDING_SUBMITS_PER_RESOURCE" );
-	}
-	if ( param_value == NULL ) {
-		// Check old parameter name
-		param_value = param( "GRIDMANAGER_MAX_PENDING_SUBMITS" );
-	}
-	if ( param_value != NULL ) {
-		char *tmp1;
-		char *tmp2;
-		StringList limits( param_value );
-		limits.rewind();
-		if ( limits.number() > 0 ) {
-			submitLimit = atoi( limits.next() );
-			while ( (tmp1 = limits.next()) && (tmp2 = limits.next()) ) {
-				if ( strcmp( tmp1, resourceName ) == 0 ) {
-					submitLimit = atoi( tmp2 );
-				}
-			}
-		}
-		free( param_value );
-	}
-	if ( submitLimit <= 0 ) {
-		submitLimit = DEFAULT_MAX_PENDING_SUBMITS_PER_RESOURCE;
-	}
-
 	jobLimit = -1;
 	param_name.sprintf( "GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE_%s",
 						ResourceType() );
@@ -159,15 +127,6 @@ void BaseResource::Reconfig()
 		submitsWanted.Delete( wanted_job );
 		submitsAllowed.Append( wanted_job );
 		wanted_job->SetEvaluateState();
-	}
-
-	// If the submitLimit was widened, move jobs from Queued to In-Progress
-	while ( submitsInProgress.Length() < submitLimit &&
-			submitsQueued.Length() > 0 ) {
-		BaseJob *queued_job = submitsQueued.Head();
-		submitsQueued.Delete( queued_job );
-		submitsInProgress.Append( queued_job );
-		queued_job->SetEvaluateState();
 	}
 
 	_collectorUpdateInterval = param_integer ( 
@@ -221,19 +180,7 @@ bool BaseResource::Invalidate () {
         "BaseResource::InvalidateResource: \n%s\n",
         line.Value() );
     
-    bool ok = false;
-	
-	/* invalidate the resource ad */
-	if ( CollectorObj ) {
-		ok = CollectorObj->sendUpdate ( 
-			INVALIDATE_GRID_ADS, 
-			&ad, 
-			NULL, 
-			true );
-	}
-
-	return ok;
-
+	return daemonCore->sendUpdates( INVALIDATE_GRID_ADS, &ad, NULL, true ) > 0;
 }
 
 bool BaseResource::SendUpdate () {
@@ -246,6 +193,8 @@ bool BaseResource::SendUpdate () {
     /* populate class ad with the relevant resource information */
     PublishResourceAd ( &ad );
 
+	daemonCore->publish( &ad );
+
     MyString tmp;
     ad.sPrint ( tmp );
     dprintf (
@@ -253,18 +202,7 @@ bool BaseResource::SendUpdate () {
         "BaseResource::UpdateResource: \n%s\n",
         tmp.Value() );
 
-    bool ok = false;
-	
-	/* Update the the Collector as to this resource's state */
-    if ( CollectorObj ) {
-		ok = CollectorObj->sendUpdate ( 
-			UPDATE_GRID_AD, 
-			&ad, 
-			NULL, 
-			true );
-	}
-	
-	return ok;
+	return daemonCore->sendUpdates( UPDATE_GRID_AD, &ad, NULL, true ) > 0;
 }
 
 int BaseResource::UpdateCollector () {
@@ -283,7 +221,7 @@ int BaseResource::UpdateCollector () {
 	}
 
 	/* Update the the Collector as to this resource's state */
-    if ( !SendUpdate () && CollectorObj ) {
+    if ( !SendUpdate () && !daemonCore->getCollectorList()->IsEmpty() ) {
 		dprintf (
 			D_FULLDEBUG,
 			"BaseResource::UpdateCollector: Updating Collector(s) "
@@ -312,9 +250,6 @@ void BaseResource::PublishResourceAd( ClassAd *resource_ad )
 	resource_ad->Assign( ATTR_OWNER, myUserName );
 	resource_ad->Assign( "NumJobs", registeredJobs.Number() );
 	resource_ad->Assign( "JobLimit", jobLimit );
-	resource_ad->Assign( "SubmitLimit", submitLimit );
-	resource_ad->Assign( "SubmitsInProgress", submitsInProgress.Number() );
-	resource_ad->Assign( "SubmitsQueued", submitsQueued.Number() );
 	resource_ad->Assign( "SubmitsAllowed", submitsAllowed.Number() );
 	resource_ad->Assign( "SubmitsWanted", submitsWanted.Number() );
 	if ( resourceDown ) {
@@ -399,22 +334,7 @@ void BaseResource::RequestPing( BaseJob *job )
 
 bool BaseResource::RequestSubmit( BaseJob *job )
 {
-	bool already_allowed = false;
 	BaseJob *jobptr;
-
-	submitsQueued.Rewind();
-	while ( submitsQueued.Next( jobptr ) ) {
-		if ( jobptr == job ) {
-			return false;
-		}
-	}
-
-	submitsInProgress.Rewind();
-	while ( submitsInProgress.Next( jobptr ) ) {
-		if ( jobptr == job ) {
-			return true;
-		}
-	}
 
 	submitsWanted.Rewind();
 	while ( submitsWanted.Next( jobptr ) ) {
@@ -426,55 +346,21 @@ bool BaseResource::RequestSubmit( BaseJob *job )
 	submitsAllowed.Rewind();
 	while ( submitsAllowed.Next( jobptr ) ) {
 		if ( jobptr == job ) {
-			already_allowed = true;
-			break;
+			return true;
 		}
 	}
 
-	if ( already_allowed == false ) {
-		if ( submitsAllowed.Length() < jobLimit &&
-			 submitsWanted.Length() > 0 ) {
-			EXCEPT("In BaseResource for %s, SubmitsWanted is not empty and SubmitsAllowed is not full\n",resourceName);
-		}
-		if ( submitsAllowed.Length() < jobLimit ) {
-			submitsAllowed.Append( job );
-			// proceed to see if submitLimit applies
-		} else {
-			submitsWanted.Append( job );
-			return false;
-		}
+	if ( submitsAllowed.Length() < jobLimit &&
+		 submitsWanted.Length() > 0 ) {
+		EXCEPT("In BaseResource for %s, SubmitsWanted is not empty and SubmitsAllowed is not full\n",resourceName);
 	}
-
-	if ( submitsInProgress.Length() < submitLimit &&
-		 submitsQueued.Length() > 0 ) {
-		EXCEPT("In BaseResource for %s, SubmitsQueued is not empty and SubmitsToProgress is not full\n",resourceName);
-	}
-	if ( submitsInProgress.Length() < submitLimit ) {
-		submitsInProgress.Append( job );
+	if ( submitsAllowed.Length() < jobLimit ) {
+		submitsAllowed.Append( job );
 		return true;
 	} else {
-		submitsQueued.Append( job );
+		submitsWanted.Append( job );
 		return false;
 	}
-}
-
-void BaseResource::SubmitComplete( BaseJob *job )
-{
-	if ( submitsInProgress.Delete( job ) ) {
-		if ( submitsInProgress.Length() < submitLimit &&
-			 submitsQueued.Length() > 0 ) {
-			BaseJob *queued_job = submitsQueued.Head();
-			submitsQueued.Delete( queued_job );
-			submitsInProgress.Append( queued_job );
-			queued_job->SetEvaluateState();
-		}
-	} else {
-		// We only have to check submitsQueued if the job wasn't in
-		// submitsInProgress.
-		submitsQueued.Delete( job );
-	}
-
-	return;
 }
 
 void BaseResource::CancelSubmit( BaseJob *job )
@@ -492,8 +378,6 @@ void BaseResource::CancelSubmit( BaseJob *job )
 		// submitsAllowed.
 		submitsWanted.Delete( job );
 	}
-
-	SubmitComplete( job );
 
 	leaseUpdates.Delete( job );
 

@@ -44,6 +44,8 @@
 
 extern CStarter *Starter;
 ReliSock *syscall_sock = NULL;
+extern const char* JOB_AD_FILENAME;
+extern const char* MACHINE_AD_FILENAME;
 
 // Filenames are case insensitive on Win32, but case sensitive on Unix
 #ifdef WIN32
@@ -139,6 +141,11 @@ JICShadow::init( void )
 		dprintf( D_ALWAYS|D_FAILURE,
 				 "Failed to get job ad from shadow!\n" );
 		return false;
+	}
+
+	if ( m_job_startd_update_sock )
+	{
+		receiveMachineAd(m_job_startd_update_sock);
 	}
 
 		// stash a copy of the unmodified job ad in case we decide
@@ -389,6 +396,11 @@ JICShadow::transferOutput( void )
 		while ((filename = m_removed_output_files.next()) != NULL) {
 			filetrans->addFileToExeptionList(filename);
 		}
+
+		// remove the job and machine classad files from the
+		// ft list
+		filetrans->addFileToExeptionList(JOB_AD_FILENAME);
+		filetrans->addFileToExeptionList(MACHINE_AD_FILENAME);
 	
 			// true if job exited on its own
 		bool final_transfer = (requested_exit == false);	
@@ -2065,4 +2077,28 @@ JICShadow::initMatchSecuritySession()
 			m_filetrans_sec_session = strdup(filetrans_session_id.Value());
 		}
 	}
+}
+
+bool
+JICShadow::receiveMachineAd( Stream *stream )
+{
+        bool ret_val = true;
+
+	dprintf(D_FULLDEBUG, "Entering JICShadow::receiveMachineAd\n");
+	mach_ad = new ClassAd();
+
+	stream->decode();
+	if (!mach_ad->initFromStream(*stream))
+	{
+		dprintf(D_ALWAYS, "Received invalid machine ad.  Discarding\n");
+		delete mach_ad;
+		mach_ad = NULL;
+		ret_val = false;
+	}
+	else
+	{
+		mach_ad->dPrint(D_JOB);
+	}
+
+	return ret_val;
 }

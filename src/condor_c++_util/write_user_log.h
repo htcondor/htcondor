@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2008, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2009, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -16,8 +16,6 @@
  * limitations under the License.
  *
  ***************************************************************/
-
-
 #ifndef _CONDOR_WRITE_USER_LOG_CPP_H
 #define _CONDOR_WRITE_USER_LOG_CPP_H
 
@@ -44,6 +42,7 @@ class FileLockBase;
 class FileLock;
 class StatWrapper;
 class ReadUserLogHeader;
+class WriteUserLogState;
 
 
 /** API for writing a log file.  Since an API for reading a log file
@@ -186,13 +185,13 @@ class WriteUserLog
 	int getGlobalSequence( void ) const { return m_global_sequence; };
 
 
-	// Rotation callbacks -- for testing purposes only
+	// Rotation callbacks -- for testing purposes *ONLY*
 
 	/** Notification that the global log is about to be rotated
 		@param current size of the file
 		@return false to prevent rotation
 	*/
-	virtual bool globalRotationStarting( long /*filesize*/ )
+	virtual bool globalRotationStarting( unsigned long /*filesize*/ )
 		{ return true; };
 
 	/** Notification that number of events in the global log
@@ -224,7 +223,8 @@ class WriteUserLog
 
 	// Get the global log file and it's size
 	const char *getGlobalPath( void ) const { return m_global_path; };
-	long getGlobalLogSize( void ) const;
+	bool getGlobalLogSize( unsigned long &, bool use_fp );
+
 
   private:
 
@@ -259,6 +259,9 @@ class WriteUserLog
 	int doRotation( const char *path, FILE *&fp,
 					MyString &rotated, int max_rotations );
 
+
+	bool updateGlobalStat( void );
+
     
     /// Deprecated.  condorID cluster, proc & subproc of the next event.
     int 		m_cluster;
@@ -283,10 +286,10 @@ class WriteUserLog
 	/** Count event log events?      */  bool       m_global_count_events;
 	/** Max size of event log        */  long		m_global_max_filesize;
 	/** Max event log rotations      */  int		m_global_max_rotations;
-	/** Current global log file size */  long		m_global_filesize;
 	/** StatWrapper of global file   */  StatWrapper *m_global_stat;
     /** Enable global locking?       */  bool		m_global_locking;
 	/** Enable fsync() after writes? */  bool       m_global_fsync;
+	/** State of the log file        */  WriteUserLogState *m_global_state;
 
     /** Copy of path to rotation lock*/  char     * m_rotation_lock_path;
     /** FD of the rotation lock      */  int        m_rotation_lock_fd;

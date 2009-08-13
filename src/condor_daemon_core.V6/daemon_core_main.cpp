@@ -35,6 +35,7 @@
 #include "time_offset.h"
 #include "subsystem_info.h"
 #include "file_lock.h"
+#include "directory.h"
 #include "exit.h"
 
 #if HAVE_EXT_GCB
@@ -69,6 +70,9 @@ extern void main_pre_command_sock_init();
 // Internal protos
 void dc_reconfig( bool is_full );
 void dc_config_auth();       // Configuring GSI (and maybe other) authentication related stuff
+int handle_fetch_log_history(ReliSock *s, char *name);
+int handle_fetch_log_history_dir(ReliSock *s, char *name);
+int handle_fetch_log_history_purge(ReliSock *s);
 
 // Globals
 int		Foreground = 0;		// run in background by default
@@ -864,10 +868,9 @@ handle_reconfig( Service*, int cmd, Stream* stream )
 }
 
 int
-handle_fetch_log( Service *, int, Stream *s )
+handle_fetch_log( Service *, int, ReliSock *stream )
 {
 	char *name = NULL;
-	ReliSock *stream = (ReliSock*) s;
 	int  total_bytes = 0;
 	int result;
 	int type = -1;
@@ -882,13 +885,23 @@ handle_fetch_log( Service *, int, Stream *s )
 
 	stream->encode();
 
-	if(type!=DC_FETCH_LOG_TYPE_PLAIN) {
-		dprintf(D_ALWAYS,"DaemonCore: handle_fetch_log: I don't know about log type %d!\n",type);
-		result = DC_FETCH_LOG_RESULT_BAD_TYPE;
-		stream->code(result);
-		stream->end_of_message();
-        free(name);
-		return FALSE;
+	switch (type) {
+		case DC_FETCH_LOG_TYPE_PLAIN:
+			break; // handled below
+		case DC_FETCH_LOG_TYPE_HISTORY:
+			return handle_fetch_log_history(stream, name);
+		case DC_FETCH_LOG_TYPE_HISTORY_DIR:
+			return handle_fetch_log_history_dir(stream, name);
+		case DC_FETCH_LOG_TYPE_HISTORY_PURGE:
+			free(name);
+			return handle_fetch_log_history_purge(stream);
+		default:
+			dprintf(D_ALWAYS,"DaemonCore: handle_fetch_log: I don't know about log type %d!\n",type);
+			result = DC_FETCH_LOG_RESULT_BAD_TYPE;
+			stream->code(result);
+			stream->end_of_message();
+			free(name);
+			return FALSE;
 	}
 
 	char *pname = (char*)malloc (strlen(name) + 5);
@@ -955,6 +968,92 @@ handle_fetch_log( Service *, int, Stream *s )
 	free(name);
 
 	return total_bytes>=0;
+}
+
+int
+handle_fetch_log_history(ReliSock *stream, char *name) {
+	int result = DC_FETCH_LOG_RESULT_BAD_TYPE;
+
+	char *history_file_param = "HISTORY";
+	if (strcmp(name, "STARTD_HISTORY") == 0) {
+		history_file_param = "STARTD_HISTORY";
+	}
+
+	free(name);
+	char *history_file = param(history_file_param);
+
+	if (!history_file) {
+		dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log_history: no parameter named %s\n", history_file_param);
+		stream->code(result);
+		stream->end_of_message();
+		return FALSE;
+	}
+	int fd = safe_open_wrapper(history_file,O_RDONLY);
+	free(history_file);
+	if(fd<0) {
+		dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log_history: can't open history file\n");
+		result = DC_FETCH_LOG_RESULT_CANT_OPEN;
+		stream->code(result);
+		stream->end_of_message();
+		return FALSE;
+	}
+
+	result = DC_FETCH_LOG_RESULT_SUCCESS;
+	stream->code(result);
+
+	filesize_t size;
+	stream->put_file(&size, fd);
+
+	stream->end_of_message();
+
+	if(size<0) {
+		dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log_history: couldn't send all data!\n");
+	}
+
+	close(fd);
+	return TRUE;
+}
+
+int
+handle_fetch_log_history_dir(ReliSock *stream, char *paramName) {
+	int result = DC_FETCH_LOG_RESULT_BAD_TYPE;
+
+	free(paramName);
+	char *dirName = param("STARTD.PER_JOB_HISTORY_DIR"); 
+	if (!dirName) {
+		dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log_history_dir: no parameter named PER_JOB\n");
+		stream->code(result);
+		stream->end_of_message();
+		return FALSE;
+	}
+
+	Directory d(dirName);
+	const char *filename;
+	int one=1;
+	int zero=0;
+	while ((filename = d.Next())) {
+		stream->code(one); // more data
+		stream->put(filename);
+		MyString fullPath(dirName);
+		fullPath += "/";
+		fullPath += filename;
+		int fd = safe_open_wrapper(fullPath.Value(),O_RDONLY);
+		if (fd > 0) {
+			filesize_t size;
+			stream->put_file(&size, fd);
+		}
+	}
+
+	free(dirName);
+
+	stream->code(zero); // no more data
+	stream->end_of_message();
+	return 0;
+}
+
+int
+handle_fetch_log_history_purge(ReliSock *s) {
+	return 0;
 }
 
 

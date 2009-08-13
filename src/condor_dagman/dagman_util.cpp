@@ -211,9 +211,11 @@ int util_check_lock_file(const char *lockFileName) {
 
 			} else if ( status == PROCAPI_UNCERTAIN ) {
 				debug_printf( DEBUG_NORMAL,
-						"Duplicate DAGMan PID %d may be alive; this "
-						"DAGMan should abort.\n", procId->getPid() );
-				result = 1;
+						"Duplicate DAGMan PID %d *may* be alive; this "
+						"DAGMan is continuing, but this will cause "
+						"problems if the duplicate DAGMan is alive.\n",
+						procId->getPid() );
+				result = 0;
 
 			} else {
 				EXCEPT( "Illegal ProcAPI::isAlive() status value: %d",

@@ -438,7 +438,10 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 	}
 	if( max_fds > 0 ) {
 		dprintf(D_ALWAYS,"Setting maximum file descriptors to %d.\n",max_fds);
+
+		priv_state priv = set_root_priv();
 		limit(RLIMIT_NOFILE,max_fds,CONDOR_REQUIRED_LIMIT,"MAX_FILE_DESCRIPTORS");
+		set_priv(priv);
 	}
 #endif
 
@@ -2530,6 +2533,7 @@ DaemonCore::reconfig(void) {
 	bool enable_soap_ssl = param_boolean("ENABLE_SOAP_SSL", false);
 	bool subsys_enable_soap_ssl =
 		param_boolean((subsys + "_ENABLE_SOAP_SSL").Value(), false);
+
 	if (subsys_enable_soap_ssl ||
 		(enable_soap_ssl &&
 		 (!(NULL != param((subsys + "_ENABLE_SOAP_SSL").Value())) ||
@@ -4033,6 +4037,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 			//   3. increase size of send and receive buffers
 			//   4. set SO_KEEPALIVE [done automatically by CEDAR accept()]
 		cursoap->socket = ((Sock*)stream)->get_file_desc();
+		cursoap->peer = *((Sock*)stream)->peer_addr();
 		cursoap->recvfd = soap->socket;
 		cursoap->sendfd = soap->socket;
 		if ( cursoap->recv_timeout > 0 ) {
@@ -9722,12 +9727,13 @@ DaemonCore::InitSettableAttrsList( const char* subsys, int i )
 	MyString param_name;
 	char* tmp;
 
-	if( subsys ) {
-		param_name = subsys;
-		param_name += "_SETTABLE_ATTRS_";
-	} else {
+/* XXX Comment this out and let subsys.SETTABLE_ATTRS_* work instead */
+/*	if( subsys ) {*/
+/*		param_name = subsys;*/
+/*		param_name += "_SETTABLE_ATTRS_";*/
+/*	} else {*/
 		param_name = "SETTABLE_ATTRS_";
-	}
+/*	}*/
 	param_name += PermString((DCpermission)i);
 	tmp = param( param_name.Value() );
 	if( tmp ) {

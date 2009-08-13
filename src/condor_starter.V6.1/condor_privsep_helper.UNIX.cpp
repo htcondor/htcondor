@@ -31,6 +31,7 @@ CondorPrivSepHelper::CondorPrivSepHelper() :
 	m_user_initialized(false),
 	m_sandbox_initialized(false),
 	m_uid(0),
+	m_user_name(NULL),
 	m_sandbox_path(NULL),
 	m_sandbox_owned_by_user(false)
 {
@@ -42,6 +43,9 @@ CondorPrivSepHelper::~CondorPrivSepHelper()
 {
 	if (m_sandbox_path != NULL) {
 		free(m_sandbox_path);
+	}
+	if( m_user_name ) {
+		free(m_user_name);
 	}
 }
 
@@ -69,6 +73,19 @@ CondorPrivSepHelper::initialize_user(const char* name)
 		       name);
 	}
 	initialize_user(uid);
+}
+
+char const *
+CondorPrivSepHelper::get_user_name()
+{
+	if( !m_user_initialized ) {
+		return NULL;
+	}
+	if( m_user_name ) {
+		return m_user_name;
+	}
+	pcache()->get_user_name(m_uid,m_user_name);
+	return m_user_name;
 }
 
 void

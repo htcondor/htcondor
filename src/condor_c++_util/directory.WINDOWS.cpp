@@ -1830,7 +1830,7 @@ CondorRemoveDirectory ( PCSTR directory ) {
         w_directory = ProduceWFromA ( directory );
 
         dprintf ( 
-            D_MALLOC | D_FULLDEBUG, 
+            D_FULLDEBUG, 
             "CondorRemoveDirectory: Allocation of directory %s.",
             NULL != w_directory ? "succeeded" : "failed" );
 

@@ -170,7 +170,10 @@ ResMgr::init_config_classad( void )
 #if HAVE_HIBERNATION
 	configInsert( config_classad, "HIBERNATE", false );
 #endif /* HAVE_HIBERNATION */
-	configInsert( config_classad, ATTR_RESOURCE_WEIGHT, false );
+
+	if( !configInsert( config_classad, ATTR_SLOT_WEIGHT, false ) ) {
+		config_classad->AssignExpr( ATTR_SLOT_WEIGHT, ATTR_CPUS );
+	}
 
 		// Next, try the IS_OWNER expression.  If it's not there, give
 		// them a resonable default, instead of leaving it undefined.
@@ -2216,11 +2219,6 @@ ResMgr::disableResources( const MyString &state_str )
 	fact that we are sleeping */
 	m_hibernation_manager->setTargetState ( state_str.Value() );
 
-	/* disable all resource on this machine */
-	for ( i = 0; i < nresources; ++i ) {
-		resources[i]->disable();
-	}
-
 	/* update the CM */
 	bool ok = true;
 	for ( i = 0; i < nresources && ok; ++i ) {
@@ -2238,11 +2236,23 @@ ResMgr::disableResources( const MyString &state_str )
 	if ( !ok ) {
 		m_hibernation_manager->setTargetState (
 			HibernatorBase::NONE );
+	}
+	else {
+		/* Boot off any running jobs and disable all resource on this
+		   machine so we don't allow new jobs to start while we are in
+		   the middle of hibernating.  We disable _after_ sending our
+		   update_with_ack(), because we want our machine to still be
+		   matchable while offline.  The negotiator knows to treat this
+		   state specially. */
 		for ( i = 0; i < nresources; ++i ) {
-			resources[i]->enable();
-			resources[i]->update();
+			resources[i]->disable();
 		}
 	}
+
+	dprintf ( 
+		D_FULLDEBUG,
+		"All resources disabled: %s.\n", 
+		ok ? "yes" : "no" );
 
 	/* record if we we are hibernating or not */
 	m_hibernating = ok;

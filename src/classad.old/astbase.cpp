@@ -43,7 +43,7 @@ int ExprTree::string_space_references = 0;
 
 VariableBase::VariableBase(char* varName)
 {
-	this->stringSpaceIndex = string_space->getCanonical(varName, SS_DUP);
+	this->stringSpaceIndex = string_space->getCanonical((const char *&)varName);
 	// I apologize for casting away the const-ness of the char * here
 	// I'm trying to make minimal changes in the code to add string space,
 	// and it is safe. 
@@ -71,7 +71,7 @@ BooleanBase::BooleanBase(int v)
 
 StringBase::StringBase(char* str)
 {
-	stringSpaceIndex = string_space->getCanonical(str, SS_DUP);
+	stringSpaceIndex = string_space->getCanonical((const char *&)str);
 	// I apologize for casting away the const-ness of the char * here
 	// I'm trying to make minimal changes in the code to add string space,
 	// and it is safe. 
@@ -81,7 +81,7 @@ StringBase::StringBase(char* str)
 
 ISOTimeBase::ISOTimeBase(char* str)
 {
-	stringSpaceIndex = string_space->getCanonical(str, SS_DUP);
+	stringSpaceIndex = string_space->getCanonical((const char *&)str);
 	// I apologize for casting away the const-ness of the char * here
 	// I'm trying to make minimal changes in the code to add string space,
 	// and it is safe. 
@@ -1102,7 +1102,7 @@ int BooleanBase::Value()
 
 FunctionBase::FunctionBase(char *tName)
 {
-	this->stringSpaceIndex = string_space->getCanonical(tName, SS_DUP);
+	this->stringSpaceIndex = string_space->getCanonical((const char *&)tName);
 	// I apologize for casting away the const-ness of the char * here
 	// I'm trying to make minimal changes in the code to add string space,
 	// and it is safe. 

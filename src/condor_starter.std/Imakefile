@@ -4,8 +4,8 @@ all_target($(NAME))
 #ifndef DOES_CHECKPOINTING
 CKPT_FLAG = -DNO_CKPT
 #endif
-CFLAGS = $(STD_C_FLAGS) $(CKPT_FLAG) 
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(CKPT_FLAG)
+CFLAGS = $(STD_C_FLAGS) $(CKPT_FLAG) $(CONFIGURE_PCRE_CFLAGS)
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(CKPT_FLAG) $(CONFIGURE_PCRE_CFLAGS)
 
 IMPORT_LINKS = ../../config/import_links
 import_objs(../condor_syscall_lib,file_stream.o)
@@ -19,7 +19,7 @@ REMOTE_SYSCALL_OBJ = \
 	../condor_syscall_lib/syscall_numbers.o \
 	../condor_syscall_lib/xfer_file.o
 
-LIB = $(STD_LIBS)
+LIB = $(STD_LIBS) $(CONFIGURE_PCRE_LDFLAGS)
 
 CLASS_LIB_OBJ = alarm.o
 

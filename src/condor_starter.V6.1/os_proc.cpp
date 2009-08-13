@@ -43,6 +43,10 @@
 #endif
 
 extern CStarter *Starter;
+extern const char* JOB_WRAPPER_FAILURE_FILE;
+
+const char* JOB_AD_FILENAME = ".job.ad";
+const char* MACHINE_AD_FILENAME = ".machine.ad";
 
 
 /* OsProc class implementation */
@@ -136,18 +140,14 @@ OsProc::StartJob(FamilyInfo* family_info)
 		// to successfully merge them with the additional wrapper args.
 	args.SetArgV1SyntaxToCurrentPlatform();
 
-		// First, put "condor_exec" at the front of Args, since that
-		// will become argv[0] of what we exec(), either the wrapper
-		// or the actual job.
-		//
-		// The Java universe cannot tolerate an incorrect argv[0].
-		// For Java, set it correctly.  In a future version, we
-		// may consider removing the CONDOR_EXEC feature entirely.
-		//
-	if( (job_universe == CONDOR_UNIVERSE_JAVA) ) {
+		// First, put "condor_exec" or whatever at the front of Args,
+		// since that will become argv[0] of what we exec(), either
+		// the wrapper or the actual job.
+
+	if( !getArgv0() ) {
 		args.AppendArg(JobName.Value());
 	} else {
-		args.AppendArg(CONDOR_EXEC);
+		args.AppendArg(getArgv0());
 	}
 	
 		// Support USER_JOB_WRAPPER parameter...
@@ -188,28 +188,12 @@ OsProc::StartJob(FamilyInfo* family_info)
 		// environment as needed.
 	Env job_env;
 
-	char *env_str = param( "STARTER_JOB_ENVIRONMENT" );
-
 	MyString env_errors;
-	if( ! job_env.MergeFromV1RawOrV2Quoted(env_str,&env_errors) ) {
-		dprintf( D_ALWAYS, "Aborting OSProc::StartJob: "
-				 "%s\nThe full value for STARTER_JOB_ENVIRONMENT: "
-				 "%s\n",env_errors.Value(),env_str);
-		free(env_str);
+	if( !Starter->GetJobEnv(JobAd,&job_env,&env_errors) ) {
+		dprintf( D_ALWAYS, "Aborting OSProc::StartJob: %s\n",
+				 env_errors.Value());
 		return 0;
 	}
-	free(env_str);
-
-	if(!job_env.MergeFrom(JobAd,&env_errors)) {
-		dprintf( D_ALWAYS, "Invalid environment found in JobAd.  "
-		         "Aborting OsProc::StartJob: %s\n",
-		         env_errors.Value());
-		return 0;
-	}
-
-		// Now, let the starter publish any env vars it wants to into
-		// the mainjob's env...
-	Starter->PublishToEnv( &job_env );
 
 
 		// // // // // // 
@@ -293,7 +277,9 @@ OsProc::StartJob(FamilyInfo* family_info)
 		// Misc + Exec
 		// // // // // // 
 
-	Starter->jic->notifyJobPreSpawn();
+	if( !ThisProcRunsAlongsideMainProc() ) {
+		Starter->jic->notifyJobPreSpawn();
+	}
 
 	// compute job's renice value by evaluating the machine's
 	// JOB_RENICE_INCREMENT in the context of the job ad...
@@ -350,9 +336,39 @@ OsProc::StartJob(FamilyInfo* family_info)
 			// it, if they need to.
 		dprintf( D_ALWAYS, "Using wrapper %s to exec %s\n", JobName.Value(), 
 				 args_string.Value() );
+
+		MyString wrapper_err;
+		wrapper_err.sprintf("%s%c%s", Starter->GetWorkingDir(),
+				 	DIR_DELIM_CHAR,
+					JOB_WRAPPER_FAILURE_FILE);
+		if( ! job_env.SetEnv("_CONDOR_WRAPPER_ERROR_FILE", wrapper_err.Value()) ) {
+			dprintf( D_ALWAYS, "Failed to set _CONDOR_WRAPPER_ERROR_FILE environment variable\n");
+		}
 	} else {
 		dprintf( D_ALWAYS, "About to exec %s %s\n", JobName.Value(),
 				 args_string.Value() );
+	}
+
+	// Write the job and machine ClassAds to the execute directory
+	if ( ! WriteAdsToExeDir() ) {
+		dprintf ( D_ALWAYS, "OsProc::StartJob(): Failed to "
+			"write classad files.\n" );
+	}
+	else {
+		MyString path;
+		path.sprintf("%s%c%s", Starter->GetWorkingDir(),
+				 	DIR_DELIM_CHAR,
+					MACHINE_AD_FILENAME);
+		if( ! job_env.SetEnv("_CONDOR_MACHINE_AD", path.Value()) ) {
+			dprintf( D_ALWAYS, "Failed to set _CONDOR_MACHINE_AD environment variable\n");
+		}
+
+		path.sprintf("%s%c%s", Starter->GetWorkingDir(),
+				 	DIR_DELIM_CHAR,
+					JOB_AD_FILENAME);
+		if( ! job_env.SetEnv("_CONDOR_JOB_AD", path.Value()) ) {
+			dprintf( D_ALWAYS, "Failed to set _CONDOR_JOB_AD environment variable\n");
+		}
 	}
 
 		// Grab the full environment back out of the Env object 
@@ -502,14 +518,22 @@ OsProc::StartJob(FamilyInfo* family_info)
 			}
 			err_msg += ": ";
 			err_msg += create_process_error;
-			Starter->jic->notifyStarterError( err_msg.Value(),
-			                                  true,
-			                                  CONDOR_HOLD_CODE_FailedToCreateProcess,
-			                                  create_process_errno );
+			if( !ThisProcRunsAlongsideMainProc() ) {
+				Starter->jic->notifyStarterError( err_msg.Value(),
+			    	                              true,
+			        	                          CONDOR_HOLD_CODE_FailedToCreateProcess,
+			            	                      create_process_errno );
+			}
 		}
 
-		EXCEPT("Create_Process(%s,%s, ...) failed: %s",
-			JobName.Value(), args_string.Value(), (create_process_error ? create_process_error : ""));
+		if( !ThisProcRunsAlongsideMainProc() ) {
+			EXCEPT("Create_Process(%s,%s, ...) failed: %s",
+				JobName.Value(), args_string.Value(), (create_process_error ? create_process_error : ""));
+		}
+		else {
+			dprintf(D_ALWAYS,"Create_Process(%s,%s, ...) failed: %s",
+				JobName.Value(), args_string.Value(), (create_process_error ? create_process_error : ""));
+		}
 		return 0;
 	}
 
@@ -843,4 +867,59 @@ OsProc::makeCpuAffinityMask(int slotId) {
 	}
 
 	return mask;
+}
+
+bool
+OsProc::WriteAdsToExeDir()
+{
+	ClassAd* ad;
+	const char* dir = Starter->GetWorkingDir();
+	MyString ad_str, filename;
+	FILE* fp;
+	bool ret_val = true;
+
+	// Write the job ad first
+	ad = Starter->jic->jobClassAd();
+	if (ad != NULL)
+	{
+		filename.sprintf("%s%c%s", dir, DIR_DELIM_CHAR, JOB_AD_FILENAME);
+		fp = safe_fopen_wrapper(filename.Value(), "w");
+		if (!fp)
+		{
+			dprintf(D_ALWAYS, "Failed to open \"%s\" for to write job ad: "
+						"%s (errno %d)\n", filename.Value(),
+						strerror(errno), errno);
+			ret_val = false;
+		}
+		ad->SetPrivateAttributesInvisible(true);
+		ad->fPrint(fp);
+		ad->SetPrivateAttributesInvisible(false);
+		fclose(fp);
+	}
+	else
+	{
+		// If there is no job ad, this is a problem
+		ret_val = false;
+	}
+
+	// Write the machine ad
+	ad = Starter->jic->machClassAd();
+	if (ad != NULL)
+	{
+		filename.sprintf("%s%c%s", dir, DIR_DELIM_CHAR, MACHINE_AD_FILENAME);
+		fp = safe_fopen_wrapper(filename.Value(), "w");
+		if (!fp)
+		{
+			dprintf(D_ALWAYS, "Failed to open \"%s\" for to write machine "
+						"ad: %s (errno %d)\n", filename.Value(),
+					strerror(errno), errno);
+			ret_val = false;
+		}
+		ad->SetPrivateAttributesInvisible(true);
+		ad->fPrint(fp);
+		ad->SetPrivateAttributesInvisible(false);
+		fclose(fp);
+	}
+
+	return ret_val;
 }

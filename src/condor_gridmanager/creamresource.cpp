@@ -27,7 +27,6 @@
 #include "creamjob.h"
 #include "gridmanager.h"
 
-#define DEFAULT_MAX_PENDING_SUBMITS_PER_RESOURCE	5
 #define DEFAULT_MAX_SUBMITTED_JOBS_PER_RESOURCE		100
 
 
@@ -109,8 +108,6 @@ CreamResource::CreamResource( const char *resource_name,
 	delegationServiceUri = NULL;
 	gahp = NULL;
 	deleg_gahp = NULL;
-	submitLimit = DEFAULT_MAX_PENDING_SUBMITS_PER_RESOURCE;
-	jobLimit = DEFAULT_MAX_SUBMITTED_JOBS_PER_RESOURCE;
 
 	const char delegservice_name[] = "/ce-cream/services/gridsite-delegation";
 	const char *name_ptr;

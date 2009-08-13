@@ -467,6 +467,7 @@ const char *ATTR_PREV_SEND_ESTIMATE		 = "PrevSendEstimate";
 const char *ATTR_PREV_RECV_ESTIMATE		 = "PrevRecvEstimate";
 const char *ATTR_PRIO                     = "Prio";
 const char *ATTR_PROC_ID                  = "ProcId";
+const char *ATTR_SUB_PROC_ID              = "SubProcId";
 const char *ATTR_PRIVATE_NETWORK_IP_ADDR  = "PrivateNetworkIpAddr";
 const char *ATTR_PRIVATE_NETWORK_NAME     = "PrivateNetworkName";
 const char *ATTR_PUBLIC_NETWORK_IP_ADDR   = "PublicNetworkIpAddr";
@@ -493,7 +494,7 @@ const char *ATTR_REMOVE_KILL_SIG          = "RemoveKillSig";
 const char *ATTR_REMOVE_REASON            = "RemoveReason";
 const char *ATTR_REQUEUE_REASON           = "RequeueReason";
 const char *ATTR_REQUIREMENTS             = "Requirements";
-const char *ATTR_RESOURCE_WEIGHT          = "ResourceWeight";
+const char *ATTR_SLOT_WEIGHT              = "SlotWeight";
 const char *ATTR_RESULT                   = "Result";
 const char *ATTR_RSC_BYTES_SENT			 = "RSCBytesSent";
 const char *ATTR_RSC_BYTES_RECVD			 = "RSCBytesRecvd";
@@ -811,6 +812,12 @@ const char *ATTR_DOWNLOADING = "Downloading";
 const char *ATTR_TIMEOUT = "Timeout";
 const char *ATTR_CCBID = "CCBID";
 const char *ATTR_REQUEST_ID = "RequestID";
+const char *ATTR_SESSION_INFO = "SessionInfo";
+const char *ATTR_SSH_PUBLIC_SERVER_KEY = "SSHPublicServerKey";
+const char *ATTR_SSH_PRIVATE_CLIENT_KEY = "SSHPrivateClientKey";
+const char *ATTR_SHELL = "Shell";
+const char *ATTR_RETRY = "Retry";
+const char *ATTR_SSH_KEYGEN_ARGS = "SSHKeyGenArgs";
 
 
 //************* Added for Amazon Jobs ***************************//

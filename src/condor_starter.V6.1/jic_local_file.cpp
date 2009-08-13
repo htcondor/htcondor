@@ -27,42 +27,41 @@
 #include "jic_local_file.h"
 
 
-JICLocalFile::JICLocalFile( const char* classad_filename, 
+JICLocalFile::JICLocalFile( const char* classad_filename,
 							const char* keyword, 
 							int cluster, int proc, int subproc )
 	: JICLocalConfig( keyword, cluster, proc, subproc )
 {
-	initFilename( classad_filename );
+	initFilenames( classad_filename );
 }
 
 
-JICLocalFile::JICLocalFile( const char* classad_filename, 
-							int cluster, int proc, int subproc )
+JICLocalFile::JICLocalFile( const char* classad_filename, int cluster, int proc, int subproc )
 	: JICLocalConfig( cluster, proc, subproc )
 {
-	initFilename( classad_filename );
+	initFilenames( classad_filename );
 }
 
 
 JICLocalFile::~JICLocalFile()
 {
-	if( filename ) {
-		free( filename );
+	if( job_filename ) {
+		free( job_filename );
 	}
 }
 
 
 void
-JICLocalFile::initFilename( const char* path )
+JICLocalFile::initFilenames( const char* jobad_path )
 {
-	if( ! path ) {
+	if( ! jobad_path ) {
 		EXCEPT( "Can't instantiate a JICLocalFile without a filename!" );
 	}
-	if( path[0] == '-' && path[1] == '\0' ) {
+	if( jobad_path[0] == '-' && jobad_path[1] == '\0' ) {
 			// special case, treat '-' as STDIN
-		filename = NULL;
+		job_filename = NULL;
 	} else {
-		filename = strdup( path );
+		job_filename = strdup( jobad_path );
 	}
 }
 
@@ -71,12 +70,12 @@ bool
 JICLocalFile::getLocalJobAd( void )
 { 
 	bool found_some = false;
-	dprintf( D_ALWAYS, "Reading job ClassAd from \"%s\"\n", fileName() );
+	dprintf( D_ALWAYS, "Reading job ClassAd from \"%s\"\n", jobAdFileName() );
 
-	if( ! readClassAdFromFile() ) {
-		dprintf( D_ALWAYS, "No ClassAd data in \"%s\"\n", fileName() );
+	if( ! readClassAdFromFile( job_filename, job_ad ) ) {
+		dprintf( D_ALWAYS, "No ClassAd data in \"%s\"\n", jobAdFileName() );
 	} else { 
-		dprintf( D_ALWAYS, "Found ClassAd data in \"%s\"\n", fileName() );
+		dprintf( D_ALWAYS, "Found ClassAd data in \"%s\"\n", jobAdFileName() );
 		found_some = true;
 	}
 
@@ -102,17 +101,17 @@ JICLocalFile::getLocalJobAd( void )
 
 
 char*
-JICLocalFile::fileName( void )
+JICLocalFile::jobAdFileName( void )
 {
-	if( filename ) {
-		return filename;
+	if( job_filename ) {
+		return job_filename;
 	}
 	return "STDIN";
 } 
 
 
 bool
-JICLocalFile::readClassAdFromFile( void ) 
+JICLocalFile::readClassAdFromFile( char* filename, ClassAd* ad ) 
 {
 	bool read_something = false;
 	bool needs_close = true;
@@ -147,7 +146,7 @@ JICLocalFile::readClassAdFromFile( void )
 		if( DebugFlags & D_JOB ) {
 			dprintf( D_JOB, "FILE: %s\n", line.Value() );
 		} 
-        if( ! job_ad->Insert(line.Value()) ) {
+        if( ! ad->Insert(line.Value()) ) {
             dprintf( D_ALWAYS, "Failed to insert \"%s\" into ClassAd, "
                      "ignoring this line\n", line.Value() );
         }

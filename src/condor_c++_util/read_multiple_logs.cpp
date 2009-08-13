@@ -23,6 +23,7 @@
 #include "read_multiple_logs.h"
 #include "condor_string.h" // for strnewp()
 #include "tmp_dir.h"
+#include "stat_wrapper.h"
 #ifdef HAVE_EXT_CLASSADS
 #ifndef WANT_CLASSAD_NAMESPACE
 #define WANT_CLASSAD_NAMESPACE
@@ -36,7 +37,7 @@
 
 #define LOG_INFO_HASH_SIZE 37 // prime
 
-#define DEBUG_LOG_FILES 1 //TEMP
+#define DEBUG_LOG_FILES 0 //TEMP
 #if DEBUG_LOG_FILES
 #  define D_LOG_FILES D_ALWAYS
 #else
@@ -45,70 +46,31 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 
-ReadMultipleUserLogs::ReadMultipleUserLogs() :
-	logHash(LOG_HASH_SIZE, hashFuncJobID, rejectDuplicateKeys)
-#if LAZY_LOG_FILES
-	, allLogFiles(LOG_INFO_HASH_SIZE, MyStringHash, rejectDuplicateKeys),
-	activeLogFiles(LOG_INFO_HASH_SIZE, MyStringHash, rejectDuplicateKeys)
-#endif // LAZY_LOG_FILES
+unsigned int	InodeHash( const StatStructInode &inode )
 {
-	pLogFileEntries = NULL;
-	iLogFileCount = 0;
+	unsigned int result = inode & 0xffffffff;
+
+	return result;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-ReadMultipleUserLogs::ReadMultipleUserLogs(StringList &listLogFileNames) :
-	logHash(LOG_HASH_SIZE, hashFuncJobID, rejectDuplicateKeys)
-#if LAZY_LOG_FILES
-	, allLogFiles(LOG_INFO_HASH_SIZE, MyStringHash, rejectDuplicateKeys),
-	activeLogFiles(LOG_INFO_HASH_SIZE, MyStringHash, rejectDuplicateKeys)
-#endif // LAZY_LOG_FILES
+ReadMultipleUserLogs::ReadMultipleUserLogs() :
+	allLogFiles(LOG_INFO_HASH_SIZE, InodeHash, rejectDuplicateKeys),
+	activeLogFiles(LOG_INFO_HASH_SIZE, InodeHash, rejectDuplicateKeys)
 {
-	pLogFileEntries = NULL;
-	iLogFileCount = 0;
-	initialize(listLogFileNames);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
 ReadMultipleUserLogs::~ReadMultipleUserLogs()
 {
-	cleanup();
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
-bool
-ReadMultipleUserLogs::initialize(StringList &listLogFileNames)
-{
-    dprintf(D_FULLDEBUG, "ReadMultipleUserLogs::initialize()\n");
-
-	cleanup();
-
-	iLogFileCount = listLogFileNames.number();
-	if (iLogFileCount) {
-		pLogFileEntries = new LogFileEntry[iLogFileCount];
-		if( !pLogFileEntries ) {
-		    EXCEPT( "ERROR: out of memory!\n");
-		}
+	if (activeLogFileCount() != 0) {
+    	dprintf(D_ALWAYS, "Warning: ReadMultipleUserLogs destructor "
+					"called, but still monitoring %d log(s)!\n",
+					activeLogFileCount());
 	}
-
-	listLogFileNames.rewind();
-
-	for (int i = 0; i < iLogFileCount; i++) {
-		char *psFilename = listLogFileNames.next();
-		pLogFileEntries[i].isInitialized = FALSE;
-		pLogFileEntries[i].isValid = FALSE;
-		pLogFileEntries[i].haveReadEvent = FALSE;
-		pLogFileEntries[i].pLastLogEvent = NULL;
-		pLogFileEntries[i].strFilename = psFilename;
-		pLogFileEntries[i].logSize = 0;
-	}
-
-	bool result = initializeUninitializedLogs();
-
-	return result;
+	cleanup();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -153,48 +115,43 @@ ReadMultipleUserLogs::readEvent (ULogEvent * & event)
 {
     dprintf(D_FULLDEBUG, "ReadMultipleUserLogs::readEvent()\n");
 
-	if (!iLogFileCount) {
-		return ULOG_UNK_ERROR;
-	}
+	LogFileMonitor *oldestEventMon = NULL;
 
-    initializeUninitializedLogs();
+	activeLogFiles.startIterations();
+	LogFileMonitor *monitor;
+	while ( activeLogFiles.iterate( monitor ) ) {
+		ULogEventOutcome outcome = ULOG_OK;
+			// If monitor->lastLogEvent != null, we already have an
+			// unconsumed event from that log, so we don't need to
+			// actually read the log again.
+		if ( !monitor->lastLogEvent ) {
+			outcome = readEventFromLog( monitor );
 
-	int iOldestEventIndex = -1;
+			if ( outcome == ULOG_RD_ERROR || outcome == ULOG_UNK_ERROR ) {
+				// peter says always return an error immediately,
+				// then go on our merry way trying again if they
+				// call us again.
+				dprintf( D_ALWAYS, "ReadMultipleUserLogs: read error "
+							"on log %s\n", monitor->logFile.Value() );
+				return outcome;
+			}
+		}
 
-	for ( int i = 0; i < iLogFileCount; i++ ) {
-		LogFileEntry &log = pLogFileEntries[i];
-		if ( log.isInitialized && log.isValid ) {
-		    ULogEventOutcome eOutcome = ULOG_OK;
-		    if ( !log.pLastLogEvent ) {
-				eOutcome = readEventFromLog(log);
-
-		        if ( eOutcome == ULOG_RD_ERROR || eOutcome == ULOG_UNK_ERROR ) {
-			        // peter says always return an error immediately,
-			        // then go on our merry way trying again if they
-					// call us again.
-			        dprintf(D_ALWAYS, "ReadMultipleUserLogs: read error "
-								"on log %s\n",
-					    log.strFilename.Value());
-			        return eOutcome;
-		        }
-		    }
-
-		    if ( eOutcome != ULOG_NO_EVENT ) {
-			    if (iOldestEventIndex == -1 || 
-				        (pLogFileEntries[iOldestEventIndex].pLastLogEvent->eventTime >
-				        log.pLastLogEvent->eventTime)) {
-				    iOldestEventIndex = i;
-			    }
-		    }
+		if ( outcome != ULOG_NO_EVENT ) {
+			if ( oldestEventMon == NULL ||
+						(oldestEventMon->lastLogEvent->eventTime >
+						monitor->lastLogEvent->eventTime) ) {
+				oldestEventMon = monitor;
+			}
 		}
 	}
 
-	if ( iOldestEventIndex == -1 ) {
+	if ( oldestEventMon == NULL ) {
 		return ULOG_NO_EVENT;
 	}
-	
-	event = pLogFileEntries[iOldestEventIndex].pLastLogEvent;
-	pLogFileEntries[iOldestEventIndex].pLastLogEvent = NULL;
+
+	event = oldestEventMon->lastLogEvent;
+	oldestEventMon->lastLogEvent = NULL; // event has been consumed
 
 	return ULOG_OK;
 }
@@ -204,17 +161,18 @@ ReadMultipleUserLogs::readEvent (ULogEvent * & event)
 bool
 ReadMultipleUserLogs::detectLogGrowth()
 {
-    dprintf( D_FULLDEBUG, "ReadMultipleUserLogs::detectLogGrowth()\n");
-
-    initializeUninitializedLogs();
+    dprintf( D_FULLDEBUG, "ReadMultipleUserLogs::detectLogGrowth()\n" );
 
 	bool grew = false;
 
 	    // Note: we must go through the whole loop even after we find a
 		// log that grew, so we have the right log lengths for next time.
 		// wenger 2003-04-11.
-    for (int index = 0; index < iLogFileCount; index++) {
-	    if (LogGrew(pLogFileEntries[index])) {
+		// Note that reading an event does not update the known log size.
+	activeLogFiles.startIterations();
+	LogFileMonitor *monitor;
+	while ( activeLogFiles.iterate( monitor ) ) {
+	    if ( LogGrew( monitor ) ) {
 		    grew = true;
 		}
 	}
@@ -225,136 +183,70 @@ ReadMultipleUserLogs::detectLogGrowth()
 ///////////////////////////////////////////////////////////////////////////////
 
 int
-ReadMultipleUserLogs::getInitializedLogCount() const
+ReadMultipleUserLogs::totalLogFileCount() const
 {
-    dprintf( D_FULLDEBUG, "ReadMultipleUserLogs::getInitializedLogCount()\n");
-
-	int result = 0;
-
-	for ( int i = 0; i < iLogFileCount; ++i ) {
-		LogFileEntry &log = pLogFileEntries[i];
-		if ( log.isInitialized ) ++result;
-	}
-
-	return result;
+	return allLogFiles.getNumElements();
 }
 
-///////////////////////////////////////////////////////////////////////////////
-
-void
-MultiLogFiles::TruncateLogs(StringList &logFileNames)
-{
-    logFileNames.rewind();
-	char *filename;
-	while ( (filename = logFileNames.next()) ) {
-        if ( access( filename, F_OK) == 0 ) {
-		    dprintf( D_ALWAYS, "MultiLogFiles: truncating older "
-						"version of %s\n", filename);
-			int fd = safe_open_no_create( filename, O_WRONLY | O_TRUNC );
-			if (fd == -1) {
-		        dprintf( D_ALWAYS, "MultiLogFiles error: can't "
-							"truncate %s\n", filename );
-		    } else {
-				if (close( fd ) == -1) {
-		        	dprintf( D_ALWAYS, "MultiLogFiles error: can't "
-								"close %s\n", filename );
-				}
-			}
-		}
-	}
-}
-
-#if LAZY_LOG_FILES
 ///////////////////////////////////////////////////////////////////////////////
 
 bool
-MultiLogFiles::CreateOrTruncateFile(const char *filename,
+MultiLogFiles::InitializeFile(const char *filename, bool truncate,
 			CondorError &errstack)
 {
-	dprintf(D_LOG_FILES, "MultiLogFiles::CreateOrTruncateFile(%s)\n",
-				filename);
+	dprintf( D_LOG_FILES, "MultiLogFiles::InitializeFile(%s, %d)\n",
+				filename, (int)truncate );
 
-	bool result = true;
-
-	int fd = safe_create_keep_if_exists(filename, O_WRONLY | O_TRUNC );
+	int flags = O_WRONLY;
+	if ( truncate ) flags |= O_TRUNC;
+	int fd = safe_create_keep_if_exists( filename, flags );
 	if ( fd < 0 ) {
-		errstack.pushf("MultiLogFiles", 0/*TEMP*/, "Error (%d, %s) opening "
-					"file %s for creation or truncation", errno,
-					strerror( errno ), filename );
-		result = false;
-	} else {
-		if ( close( fd ) != 0 ) {
-			errstack.pushf("MultiLogFiles", 0/*TEMP*/, "Error (%d, %s) "
-						"closing file %s for creation or truncation",
-						errno, strerror( errno ), filename );
-			result = false;
-		}
+		errstack.pushf("MultiLogFiles", UTIL_ERR_OPEN_FILE,
+					"Error (%d, %s) opening file %s for creation "
+					"or truncation", errno, strerror( errno ), filename );
+		return false;
+	}
+
+	if ( close( fd ) != 0 ) {
+		errstack.pushf("MultiLogFiles", UTIL_ERR_CLOSE_FILE,
+					"Error (%d, %s) closing file %s for creation "
+					"or truncation", errno, strerror( errno ), filename );
+		return false;
 	}
 
 	return true;
 }
-#endif // LAZY_LOG_FILES
 
 ///////////////////////////////////////////////////////////////////////////////
 
 void
 ReadMultipleUserLogs::cleanup()
 {
-	if (pLogFileEntries == NULL) {
-		return;
-	}
+	activeLogFiles.clear();
 
-	for (int i = 0; i < iLogFileCount; i++) {
-		if (pLogFileEntries[i].pLastLogEvent) {
-			delete pLogFileEntries[i].pLastLogEvent;
-		}
+	allLogFiles.startIterations();
+	LogFileMonitor *monitor;
+	while ( allLogFiles.iterate( monitor ) ) {
+		delete monitor;
 	}
-	delete [] pLogFileEntries;
-	
-	pLogFileEntries = NULL;
-	iLogFileCount = 0;
+	allLogFiles.clear();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
 bool
-ReadMultipleUserLogs::initializeUninitializedLogs()
-{
-    bool result = false;
-
-	for (int index = 0; index < iLogFileCount; index++) {
-	    LogFileEntry &log = pLogFileEntries[index];
-		if (!log.isInitialized) {
-		    if (log.readUserLog.initialize(log.strFilename.Value())) {
-				log.isInitialized = true;
-				log.isValid = true;
-			    result = true;
-			}
-		}
-	}
-
-	return result;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
-bool
-ReadMultipleUserLogs::LogGrew(LogFileEntry &log)
+ReadMultipleUserLogs::LogGrew( LogFileMonitor *monitor )
 {
     dprintf( D_FULLDEBUG, "ReadMultipleUserLogs::LogGrew(%s)\n",
-			log.strFilename.Value());
+				monitor->logFile.Value() );
 
-	if ( !log.isInitialized || !log.isValid ) {
-	    return false;
-	}
-
-	ReadUserLog::FileStatus fs = log.readUserLog.CheckFileStatus( );
+	ReadUserLog::FileStatus fs = monitor->readUserLog->CheckFileStatus();
 
 	if ( ReadUserLog::LOG_STATUS_ERROR == fs ) {
 		dprintf( D_FULLDEBUG,
 				 "ReadMultipleUserLogs error: can't stat "
 				 "condor log (%s): %s\n",
-				 log.strFilename.Value(), strerror( errno ) );
+				 monitor->logFile.Value(), strerror( errno ) );
 		return false;
 	}
 	bool grew = ( fs != ReadUserLog::LOG_STATUS_NOCHANGE );
@@ -367,27 +259,13 @@ ReadMultipleUserLogs::LogGrew(LogFileEntry &log)
 ///////////////////////////////////////////////////////////////////////////////
 
 ULogEventOutcome
-ReadMultipleUserLogs::readEventFromLog(LogFileEntry &log)
+ReadMultipleUserLogs::readEventFromLog( LogFileMonitor *monitor )
 {
-    dprintf( D_FULLDEBUG, "ReadMultipleUserLogs::readEventFromLog()\n");
+	dprintf( D_FULLDEBUG, "ReadMultipleUserLogs::readEventFromLog(%s)\n",
+				monitor->logFile.Value() );
 
-	ULogEventOutcome	result;
-
-	result = log.readUserLog.readEvent(log.pLastLogEvent);
-
-   	if ( result == ULOG_OK ) {
-			// Check for duplicate logs.  We only need to do that the
-			// first time we've successfully read an event from this
-			// log.
-		if ( !log.haveReadEvent ) {
-			log.haveReadEvent = true;
-
-			if ( DuplicateLogExists(log.pLastLogEvent, &log) ) {
-				result = ULOG_NO_EVENT;
-				log.isValid = FALSE;
-			}
-		}
-	}
+	ULogEventOutcome	result =
+				monitor->readUserLog->readEvent( monitor->lastLogEvent );
 
 	return result;
 }
@@ -569,14 +447,14 @@ bool
 MultiLogFiles::makePathAbsolute(MyString &filename, CondorError &errstack)
 {
 	if ( !fullpath(filename.Value()) ) {
-			//TEMP -- I'd like to use realpath() here, but I'm not sure
+			// I'd like to use realpath() here, but I'm not sure
 			// if that's portable across all platforms.  wenger 2009-01-09.
 		MyString	currentDir;
 		char	tmpCwd[PATH_MAX];
 		if ( getcwd(tmpCwd, PATH_MAX) ) {
 			currentDir = tmpCwd;
 		} else {
-			errstack.pushf( "MultiLogFiles", 0/*TEMP*/,
+			errstack.pushf( "MultiLogFiles", UTIL_ERR_GET_CWD,
 						"ERROR: getcwd() failed with errno %d (%s) at %s:%d\n",
 						errno, strerror(errno), __FILE__, __LINE__);
 			return false;
@@ -795,187 +673,6 @@ MultiLogFiles::getQueueCountFromSubmitFile(const MyString &strSubFilename,
 
 ///////////////////////////////////////////////////////////////////////////////
 
-// Note: it would probably make sense to have this method use the new
-// getValuesFromFile() method in order to reduce more-or-less duplicate
-// code.  However, I'm just leaving it alone for now.  If
-// getJobLogsFromSubmitFiles() were to use getValuesFromFile(),
-// getValuesFromFile() would have to have another argument to specify
-// the number of tokens to skip between the keyword and the value.
-
-MyString
-MultiLogFiles::getJobLogsFromSubmitFiles(const MyString &strDagFileName,
-            const MyString &jobKeyword, const MyString &dirKeyword,
-			StringList &listLogFilenames)
-{
-	dprintf( D_FULLDEBUG, "MultiLogFiles::getJobLogsFromSubmitFiles(%s)\n",
-				strDagFileName.Value() );
-
-	MyString	errorMsg;
-	StringList	logicalLines;
-	if ( (errorMsg = fileNameToLogicalLines( strDagFileName,
-				logicalLines )) != "" ) {
-		return errorMsg;
-	}
-
-	const char *	logicalLine;
-	while ( (logicalLine = logicalLines.next()) ) {
-
-		if ( logicalLine && strcmp(logicalLine, "") ) {
-
-				// Note: StringList constructor removes leading
-				// whitespace from lines.
-			StringList	tokens(logicalLine, " \t");
-			tokens.rewind();
-
-			char *word = tokens.next();
-				// Treat a SUBDAG line like a JOB line, unless we're
-				// looking for DATA nodes.
-			if ( !stricmp(word, jobKeyword.Value()) ||
-						(!stricmp(word, "subdag") &&
-						stricmp(jobKeyword.Value(), "data")) ) {
-
-				if ( !stricmp(word, "subdag") &&
-							stricmp(jobKeyword.Value(), "data") ) {
-			   			// Get INLINE or EXTERNAL
-               	const char *inlineOrExt = tokens.next();
-                	if ( strcasecmp( inlineOrExt, "EXTERNAL" ) ) {
-						MyString result = MyString("ERROR: only SUBDAG ") +
-									"EXTERNAL is supported at this time " +
-									"(line <" + logicalLine + ">)";
-                    	dprintf(D_ALWAYS, "%s\n", result.Value());
-                    	return result;
-                	}
-				}
-
-					// Get the node submit file name.
-				const char *nodeName = tokens.next();
-				const char *submitFile = tokens.next();
-				if( !submitFile ) {
-					MyString result = "Improperly-formatted DAG file: "
-								"submit file missing from job line";
-					dprintf(D_ALWAYS, "MultiLogFiles error: %s\n",
-								result.Value());
-			    	return result;
-				}
-				MyString strSubFile(submitFile);
-
-					// Deal with nested DAGs specified with the "SUBDAG"
-					// keyword.
-				if ( !stricmp(word, "subdag") ) {
-					strSubFile += ".condor.sub";
-				}
-
-				const char *directory = "";
-				const char *nextTok = tokens.next();
-				if ( nextTok ) {
-					if ( !stricmp(nextTok, dirKeyword.Value()) ) {
-						directory = tokens.next();
-						if ( !directory ) {
-							MyString result = "No directory specified "
-									"after DIR keyword";
-							dprintf(D_ALWAYS, "MultiLogFiles error: %s\n",
-									result.Value());
-							return result;
-						}
-					}
-				}
-
-					// get the log = value from the sub file
-				MyString strLogFilename;
-				if ( !stricmp(jobKeyword.Value(), "data") ) {
-#ifdef HAVE_EXT_CLASSADS
-						// Warning!  For the moment we are only supporting
-						// one log file per Stork submit file.
-						// wenger 2006-01-17.
-					StringList tmpLogFiles;
-					MyString tmpResult = loadLogFileNamesFromStorkSubFile(
-								strSubFile, directory, tmpLogFiles);
-					if ( tmpResult != "" ) return tmpResult;
-					tmpLogFiles.rewind();
-					strLogFilename = tmpLogFiles.next();
-#else
-					return "Stork unavailable on this platform because "
-								"new classads are not yet supported";
-#endif
-				} else {
-					strLogFilename = loadLogFileNameFromSubFile(
-						strSubFile, directory);
-					
-				}
-				if (strLogFilename == "") {
-					MyString result = "No 'log =' value found in submit file "
-								+ strSubFile + " for node " + nodeName;
-					dprintf(D_ALWAYS, "MultiLogFiles: %s\n",
-								result.Value());
-					return result;
-				}
-			 
-					// Add the log file we just found to the log file list
-					// (if it's not already in the list -- we don't want
-					// duplicates).
-				listLogFilenames.rewind();
-				char *psLogFilename;
-				bool bAlreadyInList = false;
-				while ( (psLogFilename = listLogFilenames.next()) ) {
-					if (psLogFilename == strLogFilename) {
-						bAlreadyInList = true;
-					}
-				}
-
-				if (!bAlreadyInList) {
-						// Note: append copies the string here.
-					listLogFilenames.append(strLogFilename.Value());
-				}
-
-			// here we recurse into a splice to discover logfiles that it might
-			// bring in.
-			} else if ( !stricmp(word, "splice") )  {
-				TmpDir spliceDir;
-				MyString spliceName = tokens.next();
-				MyString spliceDagFile = tokens.next();
-				MyString dirTok = tokens.next();
-				MyString directory = ".";
-				MyString errMsg;
-
-				dirTok.upper_case(); // case insensitive...
-				if (dirTok == "DIR") { 
-					directory = tokens.next();
-					if (directory == "") {
-						errorMsg = "Failed to parse DIR directory.";
-					}
-				}
-
-				dprintf(D_FULLDEBUG, "getJobLogsFromSubmitFiles(): "
-					"Processing SPLICE %s %s\n",
-					spliceName.Value(), spliceDagFile.Value());
-				
-				// cd into directory specified by DIR, if any
-				if ( !spliceDir.Cd2TmpDir(directory.Value(), errMsg) ) {
-					errorMsg = "Unable to chdir into DIR directory.";
-				}
-
-				// Find all of the logs entries from the submit files.
-				errorMsg = getJobLogsFromSubmitFiles( spliceDagFile, 
-					jobKeyword, dirKeyword, listLogFilenames);
-
-				// cd back out
-				if ( !spliceDir.Cd2MainDir(errMsg) ) {
-					errorMsg = "Unable to chdir back out of DIR directory.";
-				}
-
-				if (errorMsg != "") {
-					return "Splice[" + spliceName + ":" + 
-						spliceDagFile + "]: " + errorMsg;
-				}
-			}
-		}
-	}	
-
-	return "";
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
 MyString
 MultiLogFiles::getValuesFromFile(const MyString &fileName, 
 			const MyString &keyword, StringList &values, int skipTokens)
@@ -1113,39 +810,6 @@ MultiLogFiles::CombineLines(StringList &listIn, char continuation,
 
 ///////////////////////////////////////////////////////////////////////////////
 
-bool
-ReadMultipleUserLogs::DuplicateLogExists(ULogEvent *event, LogFileEntry *log)
-{
-	bool	result = false;
-
-	CondorID	id(event->cluster, event->proc, event->subproc);
-
-	LogFileEntry *	oldLog;
-	if ( logHash.lookup(id, oldLog) == 0 ) {
-			// We already have an event for this job ID.  See whether
-			// the log matches the one we already have.
-		if ( log == oldLog ) {
-			result = false;
-		} else {
-			dprintf(D_FULLDEBUG,
-					"ReadMultipleUserLogs: found duplicate log\n");
-			result = true;
-		}
-	} else {
-			// First event for this job ID.  Insert the given log into
-			// the hash table.
-		if ( logHash.insert(id, log) != 0 ) {
-			dprintf(D_ALWAYS,
-					"ReadMultipleUserLogs: hash table insert error");
-		}
-		result = false;
-	}
-
-	return result;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
 unsigned int
 ReadMultipleUserLogs::hashFuncJobID(const CondorID &key)
 {
@@ -1156,27 +820,6 @@ ReadMultipleUserLogs::hashFuncJobID(const CondorID &key)
 	if ( result < 0 ) result = -result;
 
 	return (unsigned int)result;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
-bool
-MultiLogFiles::logFilesOnNFS(StringList &listLogFileNames, bool nfsIsError)
-{
-	int fileCount = listLogFileNames.number();
-	listLogFileNames.rewind();
-
-	for (int i = 0; i < fileCount; i++) {
-		char *logFilename = listLogFileNames.next();
-
-		if (logFileOnNFS(logFilename, nfsIsError)) {
-			return true;
-		}
-	}
-
-	// if we got here, we finished iterating and nothing was found to be 
-	// on NFS.
-	return false;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1206,69 +849,127 @@ MultiLogFiles::logFileOnNFS(const char *logFilename, bool nfsIsError)
 	return false;
 }
 
-#if LAZY_LOG_FILES
+///////////////////////////////////////////////////////////////////////////////
+
+// Note: this should be changed to get both st_ino and st_dev, to make
+// sure we don't goof up if log files aren't all on the same devise.
+// (See gittrac #328.)  wenger 2009-07-16
+bool
+GetInode( const MyString &file, StatStructInode &inode,
+			CondorError &errstack )
+{
+		// Make sure the log file exists.  Even though we may later call
+		// InitializeFile(), we have to do it here first so we make sure
+		// that the file exists and we can therefore get an inode for it.
+		// We *don't* want to truncate the file here, though, because
+		// we don't know for sure whether it's the first time we're seeing
+		// it.
+	if ( access( file.Value(), F_OK ) != 0 ) {
+		if ( !MultiLogFiles::InitializeFile( file.Value(),
+					false, errstack ) ) {
+			errstack.pushf( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
+						"Error initializing log file %s", file.Value() );
+			return false;
+		}
+	}
+
+	StatWrapper swrap;
+	if ( swrap.Stat( file.Value() ) != 0 ) {
+		errstack.pushf( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
+					"Error getting inode for log file %s", file.Value() );
+		return false;
+	}
+	inode = swrap.GetBuf()->st_ino;
+
+	return true;
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 
+// Note: logfile is not passed as a reference because we need a local
+// copy to modify anyhow.
 bool
-ReadMultipleUserLogs::monitorLogFile(const char *logfile,
-			bool truncateIfFirst, CondorError &errstack)
+ReadMultipleUserLogs::monitorLogFile( MyString logfile,
+			bool truncateIfFirst, CondorError &errstack )
 {
-	dprintf(D_LOG_FILES, "ReadMultipleUserLogs::monitorLogFile(%s, %d)\n",
-				logfile, truncateIfFirst);
+	dprintf( D_LOG_FILES, "ReadMultipleUserLogs::monitorLogFile(%s, %d)\n",
+				logfile.Value(), truncateIfFirst );
 
-	MyString file(logfile);
-
-		// Make sure path is absolute to reduce the chance of the same
-		// file getting referred to by different names (that will cause
-		// errors).
-	if ( !MultiLogFiles::makePathAbsolute( file, errstack ) ) {
-		errstack.push( "ReadMultipleUserLogs", 0/*TEMP*/,
-					"Error making log file path absolute in "
-					"monitorLogFile()\n" );
+	StatStructInode inode;
+	if ( !GetInode( logfile, inode, errstack ) ) {
+		errstack.push( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
+					"Error getting inode in monitorLogFile()" );
 		return false;
 	}
 
 	LogFileMonitor *monitor;
-	if ( allLogFiles.lookup( file, monitor ) == 0 ) {
-		dprintf(D_LOG_FILES, "ReadMultipleUserLogs: found "
-					"LogFileMonitor object for %s\n", logfile);
+	if ( allLogFiles.lookup( inode, monitor ) == 0 ) {
+		dprintf( D_LOG_FILES, "ReadMultipleUserLogs: found "
+					"LogFileMonitor object for %s (%lu)\n",
+					logfile.Value(), inode );
 
 	} else {
-		dprintf(D_LOG_FILES, "ReadMultipleUserLogs: didn't "
-					"find LogFileMonitor object for %s\n", logfile);
+		dprintf( D_LOG_FILES, "ReadMultipleUserLogs: didn't "
+					"find LogFileMonitor object for %s (%lu)\n",
+					logfile.Value(), inode );
 
-		if ( truncateIfFirst ) {
-			if ( !MultiLogFiles::CreateOrTruncateFile( logfile, errstack) ) {
-				errstack.pushf( "ReadMultipleUserLogs", 0/*TEMP*/,
-							"Error truncating log file %s", logfile );
-				return false;
-			}
+			// Make sure the log file is in the correct state -- it must
+			// exist, and be truncated if necessary.
+		if ( !MultiLogFiles::InitializeFile( logfile.Value(),
+					truncateIfFirst, errstack ) ) {
+			errstack.pushf( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
+						"Error initializing log file %s", logfile.Value() );
+			return false;
 		}
 
-		monitor = new LogFileMonitor();
+		monitor = new LogFileMonitor( logfile );
 		ASSERT( monitor );
-		dprintf(D_LOG_FILES, "ReadMultipleUserLogs: created LogFileMonitor "
-					"object for log file %s\n", logfile);
-
-		if ( allLogFiles.insert( file, monitor ) != 0 ) {
-			errstack.pushf( "ReadMultipleUserLogs", 0/*TEMP*/,
-						"Error inserting %s into allLogFiles", logfile );
+		dprintf( D_LOG_FILES, "ReadMultipleUserLogs: created LogFileMonitor "
+					"object for log file %s\n", logfile.Value() );
+			// Note: we're only putting a pointer to the LogFileMonitor
+			// object into the hash table; the actual LogFileMonitor should
+			// only be deleted in this object's destructor.
+		if ( allLogFiles.insert( inode, monitor ) != 0 ) {
+			errstack.pushf( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
+						"Error inserting %s into allLogFiles",
+						logfile.Value() );
+			delete monitor;
 			return false;
 		}
 	}
 
 	if ( monitor->refCount < 1 ) {
-		// open file
-		// seek to proper location -- need to add fseek() method to ReadUserLog class
+			// Open the log file (return to previous location if it was
+			// opened before).
+	
+		if ( monitor->state ) {
+				// If we get here, we've monitored this log file before,
+				// so restore the previous state.
+			if ( monitor->stateError ) {
+				errstack.pushf( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
+							"Monitoring log file %s fails because of "
+							"previous error saving file state",
+							logfile.Value() );
+				return false;
+			}
 
-		if ( activeLogFiles.insert( file, monitor ) != 0 ) {
-			errstack.pushf( "ReadMultipleUserLogs", 0/*TEMP*/,
-						"Error inserting %s into activeLogFiles", logfile );
+			monitor->readUserLog = new ReadUserLog( *(monitor->state) );
+		} else {
+				// Monitoring this log file for the first time, so create
+				// the log reader from scratch.
+			monitor->readUserLog =
+						new ReadUserLog( monitor->logFile.Value() );
+		}
+
+		if ( activeLogFiles.insert( inode, monitor ) != 0 ) {
+			errstack.pushf( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
+						"Error inserting %s (%lu) into activeLogFiles",
+						logfile.Value(), inode );
 			return false;
 		} else {
-			dprintf(D_LOG_FILES, "ReadMultipleUserLogs: added log "
-						"file %s to active list\n", logfile);
+			dprintf( D_LOG_FILES, "ReadMultipleUserLogs: added log "
+						"file %s (%lu) to active list\n", logfile.Value(),
+						inode );
 		}
 	}
 
@@ -1279,53 +980,119 @@ ReadMultipleUserLogs::monitorLogFile(const char *logfile,
 
 ///////////////////////////////////////////////////////////////////////////////
 
+// Note: logfile is not passed as a reference because we need a local
+// copy to modify anyhow.
 bool
-ReadMultipleUserLogs::unmonitorLogFile (const char *logfile,
-			CondorError &errstack)
+ReadMultipleUserLogs::unmonitorLogFile( MyString logfile,
+			CondorError &errstack )
 {
-	dprintf(D_LOG_FILES, "ReadMultipleUserLogs::unmonitorLogFile(%s)\n",
-				logfile);
+	dprintf( D_LOG_FILES, "ReadMultipleUserLogs::unmonitorLogFile(%s)\n",
+				logfile.Value() );
 
-	MyString file(logfile);
-
-		// Make sure path is absolute to reduce the chance of the same
-		// file getting referred to by different names (that will cause
-		// errors).
-	if ( !MultiLogFiles::makePathAbsolute( file, errstack ) ) {
-		errstack.push( "ReadMultipleUserLogs", 0/*TEMP*/,
-					"Error making log file path absolute in "
-					"monitorLogFile()\n" );
+	StatStructInode inode;
+	if ( !GetInode( logfile, inode, errstack ) ) {
+		errstack.push( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
+					"Error getting inode in unmonitorLogFile()" );
 		return false;
 	}
 
 	LogFileMonitor *monitor;
-	if ( allLogFiles.lookup( file, monitor ) == 0 ) {
-		dprintf(D_LOG_FILES, "ReadMultipleUserLogs: found "
-					"LogFileMonitor object for %s\n", logfile);
+	if ( activeLogFiles.lookup( inode, monitor ) != 0 ) {
+		errstack.pushf( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
+					"Didn't find LogFileMonitor object for log "
+					"file %s (%lu)!\n", logfile.Value(), inode );
+		return false;
+	}
 
-		monitor->refCount--;
+	dprintf( D_LOG_FILES, "ReadMultipleUserLogs: found "
+				"LogFileMonitor object for %s (%lu)\n",
+				logfile.Value(), inode );
 
-		if ( monitor->refCount < 1 ) {
-			// save current file offset -- need to add ftell() method to ReadUserLog class
-			// close file
+	monitor->refCount--;
 
-			if ( activeLogFiles.remove( file ) != 0 ) {
-				errstack.pushf( "ReadMultipleUserLogs", 0/*TEMP*/,
-							"Error removing %s from activeLogFiles", logfile );
+	if ( monitor->refCount < 1 ) {
+			// Okay, if we are no longer monitoring this file at all,
+			// we need to close it.  We do that by saving its state
+			// into a ReadUserLog::FileState object (so we can go back
+			// to the right place if we later monitor it again) and
+			// then deleting the ReadUserLog object.
+		dprintf( D_LOG_FILES, "Closing file <%s>\n", logfile.Value() );
+
+		if ( !monitor->state ) {
+			monitor->state = new ReadUserLog::FileState();
+			if ( !ReadUserLog::InitFileState( *(monitor->state) ) ) {
+				errstack.pushf( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
+							"Unable to initialize ReadUserLog::FileState "
+							"object for log file %s", logfile.Value() );
+				monitor->stateError = true;
+				delete monitor->state;
+				monitor->state = NULL;
 				return false;
-			} else {
-				dprintf(D_LOG_FILES, "ReadMultipleUserLogs: removed "
-							"log file %s from active list\n", logfile);
 			}
 		}
 
-	} else {
-		errstack.pushf( "ReadMultipleUserLogs", 0/*TEMP*/,
-					"Didn't find LogFileMonitor object for log file %s!\n",
-					logfile );
-		return false;
+		if ( !monitor->readUserLog->GetFileState( *(monitor->state) ) ) {
+			errstack.pushf( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
+						"Error getting state for log file %s",
+						logfile.Value() );
+			monitor->stateError = true;
+			delete monitor->state;
+			monitor->state = NULL;
+			return false;
+		}
+
+		delete monitor->readUserLog;
+		monitor->readUserLog = NULL;
+
+			// Now we remove this file from the "active" list, so
+			// we don't check it the next time we get an event.
+		if ( activeLogFiles.remove( inode ) != 0 ) {
+			errstack.pushf( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
+						"Error removing %s (%lu) from activeLogFiles",
+						logfile.Value(), inode );
+			return false;
+		}
+
+		dprintf( D_LOG_FILES, "ReadMultipleUserLogs: removed "
+					"log file %s (%lu) from active list\n",
+					logfile.Value(), inode );
 	}
 
 	return true;
 }
-#endif // LAZY_LOG_FILES
+
+///////////////////////////////////////////////////////////////////////////////
+
+void
+ReadMultipleUserLogs::printAllLogMonitors( FILE *stream ) const
+{
+	fprintf( stream, "All log monitors:\n" );
+	printLogMonitors( stream, allLogFiles );
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void
+ReadMultipleUserLogs::printActiveLogMonitors( FILE *stream ) const
+{
+	fprintf( stream, "Active log monitors:\n" );
+	printLogMonitors( stream, activeLogFiles );
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void
+ReadMultipleUserLogs::printLogMonitors( FILE *stream,
+			HashTable<StatStructInode, LogFileMonitor *> logTable ) const
+{
+	logTable.startIterations();
+	StatStructInode	inode;
+	LogFileMonitor *	monitor;
+	while ( logTable.iterate( inode,  monitor ) ) {
+		fprintf( stream, "  Inode: %lu\n", inode );
+		fprintf( stream, "    Monitor: %p\n", monitor );
+		fprintf( stream, "    Log file: <%s>\n", monitor->logFile.Value() );
+		fprintf( stream, "    refCount: %d\n", monitor->refCount );
+		fprintf( stream, "    lastLogEvent: %p\n", monitor->lastLogEvent );
+	}
+}

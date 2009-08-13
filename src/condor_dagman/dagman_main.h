@@ -66,6 +66,13 @@ class Dagman {
 		// interval
     int max_submits_per_interval;
 
+		// How long dagman waits before checking the log files to see if
+		// some events happened. With very short running jobs in a linear
+		// dag, dagman spends a lot of its time waiting just to see that the
+		// job finished so it can submit the next one. This allows us to
+		// configure that to be much faster with a minimum of 1 second.
+	int m_user_log_scan_interval;
+
 		// "Primary" DAG file -- if we have multiple DAG files this is
 		// the first one.  The lock file name, rescue DAG name, etc., 
 		// are based on this name.
@@ -117,11 +124,6 @@ class Dagman {
 		// sure they're unique.  The default is true, but the user can
 		// turn this off if their node names are globally unique.
 	bool mungeNodeNames;
-
-		// whether or not to remove any existing userlogs before
-		// starting to ensure we don't see events from previous
-		// instances of the same DAG and think they're ours
-	bool deleteOldLogs;
 
 		// whether or not to prohibit multiple job proc submits (e.g.,
 		// node jobs that create more than one job proc)

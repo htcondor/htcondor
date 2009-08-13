@@ -62,6 +62,7 @@ public:
 	static bool addKnownHook(const char* key, HookType hook);
 	static bool removeKnownHook(const char* key, HookType hook);
 	static void removeAllKnownHooks();
+	std::string getHookKeyword(classad::ClassAd ad);
 
 	// List of job ids and hooks currently running and awaiting output
 	static SimpleList<HOOK_RUN_INFO*> m_job_hook_list;

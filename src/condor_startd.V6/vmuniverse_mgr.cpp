@@ -814,10 +814,11 @@ VMUniverseMgr::checkVMUniverse(void)
 void 
 VMUniverseMgr::docheckVMUniverse(void)
 {
+	char *vm_type = param( "VM_TYPE" );
 	dprintf( D_ALWAYS, "VM universe will be tested "
-			"to check if it is still available\n");
-	if( init() == false ) {
-		// VM universe is not available
+			"to check if it is available\n");
+	if( init() == false && vm_type ) {
+		// VM universe is desired, but not available
 
 		// In VMware, some errors may be transient.
 		// For example, when VMware fails to start a new VM 
@@ -826,12 +827,22 @@ VMUniverseMgr::docheckVMUniverse(void)
 		// But after some time, we are able to run it again.
 		// So we register a timer to call this function later.
 		m_check_interval = param_integer("VM_RECHECK_INTERVAL", 600);
-		m_check_tid = daemonCore->Register_Timer(m_check_interval,
-				(TimerHandlercpp)&VMUniverseMgr::init,
-				"VMUniverseMgr::init", this);
+		if ( m_check_tid >= 0 ) {
+			daemonCore->Reset_Timer( m_check_tid, m_check_interval );
+		} else {
+			m_check_tid = daemonCore->Register_Timer(m_check_interval,
+				(TimerHandlercpp)&VMUniverseMgr::docheckVMUniverse,
+				"VMUniverseMgr::docheckVMUniverse", this);
+		}
 		dprintf( D_ALWAYS, "Started a timer to test VM universe after "
 			   "%d(seconds)\n", m_check_interval);
+	} else {
+		if ( m_check_tid >= 0 ) {
+			daemonCore->Cancel_Timer( m_check_tid );
+			m_check_tid = -1;
+		}
 	}
+	free( vm_type );
 }
 
 void 
@@ -847,37 +858,13 @@ VMUniverseMgr::numOfRunningVM(void)
 }
 
 void
-VMUniverseMgr::killVM(VMStarterInfo *info)
+VMUniverseMgr::killVM(const char *matchstring)
 {
-	if( !info ) {
+	if ( !matchstring ) {
 		return;
 	}
 	if( !m_vm_type.Length() || !m_vmgahp_server.Length() ) {
 		return;
-	}
-
-	if( info->m_vm_pid > 0 ) {
-		dprintf( D_ALWAYS, "In VMUniverseMgr::killVM(), "
-				"Sending SIGKILL to Process[%d]\n", (int)info->m_vm_pid);
-		daemonCore->Send_Signal(info->m_vm_pid, SIGKILL);
-	}
-
-	MyString matchstring;
-	MyString workingdir;
-
-	workingdir.sprintf("%s%cdir_%ld", info->m_execute_dir.Value(),
-	                   DIR_DELIM_CHAR, (long)info->m_pid);
-
-	if( (strcasecmp(m_vm_type.Value(), CONDOR_VM_UNIVERSE_XEN ) == MATCH) || (strcasecmp(m_vm_type.Value(), CONDOR_VM_UNIVERSE_KVM) == 0)) {
-		if( create_name_for_VM(&info->m_job_ad, matchstring) == false ) {
-			dprintf(D_ALWAYS, "VMUniverseMgr::killVM() : "
-					"cannot make the name of VM\n");
-			return;
-		}
-	}else {
-		// Except Xen, we need the path of working directory of Starter
-		// in order to destroy VM.
-		matchstring = workingdir;
 	}
 
 	// vmgahp is daemonCore, so we need to add -f -t options of daemonCore.
@@ -915,12 +902,49 @@ VMUniverseMgr::killVM(VMStarterInfo *info)
 
 	if( ret == 0 ) {
 		dprintf( D_ALWAYS, "VMUniverseMgr::killVM() is called with "
-						"'%s'\n", matchstring.Value());
+						"'%s'\n", matchstring );
 	}else {
 		dprintf( D_ALWAYS, "VMUniverseMgr::killVM() failed!\n");
 	}
 
 	return;
+}
+
+void
+VMUniverseMgr::killVM(VMStarterInfo *info)
+{
+	if( !info ) {
+		return;
+	}
+	if( !m_vm_type.Length() || !m_vmgahp_server.Length() ) {
+		return;
+	}
+
+	if( info->m_vm_pid > 0 ) {
+		dprintf( D_ALWAYS, "In VMUniverseMgr::killVM(), "
+				"Sending SIGKILL to Process[%d]\n", (int)info->m_vm_pid);
+		daemonCore->Send_Signal(info->m_vm_pid, SIGKILL);
+	}
+
+	MyString matchstring;
+	MyString workingdir;
+
+	workingdir.sprintf("%s%cdir_%ld", info->m_execute_dir.Value(),
+	                   DIR_DELIM_CHAR, (long)info->m_pid);
+
+	if( (strcasecmp(m_vm_type.Value(), CONDOR_VM_UNIVERSE_XEN ) == MATCH) || (strcasecmp(m_vm_type.Value(), CONDOR_VM_UNIVERSE_KVM) == 0)) {
+		if( create_name_for_VM(&info->m_job_ad, matchstring) == false ) {
+			dprintf(D_ALWAYS, "VMUniverseMgr::killVM() : "
+					"cannot make the name of VM\n");
+			return;
+		}
+	}else {
+		// Except Xen, we need the path of working directory of Starter
+		// in order to destroy VM.
+		matchstring = workingdir;
+	}
+
+	killVM( matchstring.Value() );
 }
 
 bool 
