@@ -361,6 +361,9 @@ walkHashTable (AdTypes adType, int (*scanFunction)(ClassAd *))
 		table = &LeaseManagerAds;
 		break;
 
+	  case GENERIC_AD:
+		return walkGenericTables(scanFunction);
+
 	  case ANY_AD:
 		return
 			StorageAds.walk(scanFunction) &&
@@ -923,6 +926,7 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
   	  case QUERY_HAD_ADS:
   	  case QUERY_XFER_SERVICE_ADS:
   	  case QUERY_LEASE_MANAGER_ADS:
+	  case QUERY_GENERIC_ADS:
 	  case INVALIDATE_STARTD_ADS:
 	  case INVALIDATE_SCHEDD_ADS:
 	  case INVALIDATE_MASTER_ADS:
@@ -934,6 +938,7 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 	  case INVALIDATE_HAD_ADS:
 	  case INVALIDATE_XFER_SERVICE_ADS:
 	  case INVALIDATE_LEASE_MANAGER_ADS:
+	  case INVALIDATE_ADS_GENERIC:
 		// these are not implemented in the engine, but we allow another
 		// daemon to detect that these commands have been given
 	    insert = -2;

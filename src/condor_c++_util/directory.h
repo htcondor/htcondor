@@ -344,7 +344,7 @@ bool recursive_chown(const char * path,
 #endif /* ! defined(WIN32) */
 
 
-char * create_temp_file();
+char * create_temp_file(bool create_as_subdirectory = false);
 
 /** Actual implementation of the recursive chown function that is called
     by the Directory::Recursive_Chown() member function. This function 

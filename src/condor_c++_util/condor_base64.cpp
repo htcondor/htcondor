@@ -22,31 +22,33 @@
 #include "condor_config.h"
 #include "condor_base64.h"
 
-// For base64 encoding
-#include <openssl/sha.h>
-#include <openssl/hmac.h>
-#include <openssl/evp.h>
-#include <openssl/bio.h>
-#include <openssl/buffer.h>
+// For base64 coding, we use functions in the gSOAP support library
+#include "stdsoap2.h"
 
 // Caller needs to free the returned pointer
 char* condor_base64_encode(const unsigned char *input, int length)
 {
-	BIO *bmem, *b64;
-	BUF_MEM *bptr;
+	char *buff = NULL;
 
-	b64 = BIO_new(BIO_f_base64());
-	bmem = BIO_new(BIO_s_mem());
-	b64 = BIO_push(b64, bmem);
-	BIO_write(b64, input, length);
-	BIO_flush(b64);
-	BIO_get_mem_ptr(b64, &bptr);
+	if ( length < 1 ) {
+		buff = (char *)malloc(1);
+		buff[0] = '\0';
+		return buff;
+	}
 
-	char *buff = (char *)malloc(bptr->length);
+	int buff_len = (length+2)/3*4+1;
+	buff = (char *)malloc(buff_len);
 	ASSERT(buff);
-	memcpy(buff, bptr->data, bptr->length-1);
-	buff[bptr->length-1] = 0;
-	BIO_free_all(b64);
+	memset(buff,0,buff_len);
+
+	struct soap soap;
+	soap_init(&soap);
+
+	soap_s2base64(&soap,input,buff,length);
+
+	soap_destroy(&soap);
+	soap_end(&soap);
+	soap_done(&soap);
 
 	return buff;
 }
@@ -54,28 +56,27 @@ char* condor_base64_encode(const unsigned char *input, int length)
 // Caller needs to free *output if non-NULL
 void condor_base64_decode(const char *input,unsigned char **output, int *output_length)
 {
-	BIO *b64, *bmem;
-
 	ASSERT( input );
 	ASSERT( output );
 	ASSERT( output_length );
-
 	int input_length = strlen(input);
 
-		// assuming output length is <= input_length
+		// safe to assume output length is <= input_length
 	*output = (unsigned char *)malloc(input_length);
 	ASSERT( *output );
 	memset(*output, 0, input_length);
 
-	b64 = BIO_new(BIO_f_base64());
-	bmem = BIO_new_mem_buf((void *)input, input_length);
-	bmem = BIO_push(b64, bmem);
+	struct soap soap;
+	soap_init(&soap);
 
-	*output_length = BIO_read(bmem, *output, input_length);
+	soap_base642s(&soap,input,(char*)(*output),input_length,output_length);
+
+	soap_destroy(&soap);
+	soap_end(&soap);
+	soap_done(&soap);
+
 	if( *output_length < 0 ) {
 		free( *output );
 		*output = NULL;
 	}
-
-	BIO_free_all(bmem);
 }

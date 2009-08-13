@@ -100,7 +100,7 @@ get_daemon_name( const char* name )
 // name@my_full_hostname().  We return the answer in a string which
 // should be deallocated w/ delete [].
 char*
-build_valid_daemon_name( char* name ) 
+build_valid_daemon_name( const char* name ) 
 {
 	char *tmp, *tmpname = NULL, *daemon_name = NULL;
 	int size;

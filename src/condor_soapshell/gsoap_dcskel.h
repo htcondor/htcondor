@@ -17,18 +17,19 @@
  *
  ***************************************************************/
 
-#ifndef CONDOR_BASE64_H
-#define CONDOR_BASE64_H
+//gsoap condor service name: condorSoapshell
 
-#ifdef HAVE_EXT_GSOAP
+#import "gsoap_daemon_core_types.h"
 
-#define HAVE_CONDOR_BASE64 1
+#import "gsoap_daemon_core.h"
 
-// Caller needs to free the returned pointer
-char* condor_base64_encode(const unsigned char *input, int length);
+int condor__runCommandWithClassAd(struct condor__ClassAdStruct ad,
+		struct condor__runCommandWithClassAdResponse {
+			struct condor__ClassAdStructAndStatus response;
+		} & result);
 
-// Caller needs to free *output if non-NULL
-void condor_base64_decode(const char *input,unsigned char **output, int *output_length);
 
-#endif
-#endif
+int condor__runCommandWithString(char *adSerializedToString, 
+		struct condor__runCommandWithStringResponse {
+			struct condor__StringAndStatus response;
+		} & result );

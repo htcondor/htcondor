@@ -51,6 +51,7 @@ int main_shutdown_graceful()
 
 int main_shutdown_fast()
 {
+	matchMaker.invalidateNegotiatorAd();
 #if HAVE_DLOPEN
 	NegotiatorPluginManager::Shutdown();
 #endif

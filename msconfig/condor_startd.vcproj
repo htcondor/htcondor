@@ -288,6 +288,14 @@
 			>
 		</File>
 		<File
+			RelativePath="..\src\condor_startd.V6\startd_hibernator.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_startd.V6\startd_hibernator.h"
+			>
+		</File>
+		<File
 			RelativePath="..\src\condor_startd.V6\startd_main.cpp"
 			>
 		</File>

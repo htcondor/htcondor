@@ -36,6 +36,7 @@ SimpleArg::SimpleArg( const char **argv, int argc, int index )
 	m_long = "";
 	m_error = false;
 	m_is_opt = false;
+	m_fixed = NULL;
 
 	// Define it as an 'option' if it starts with a '-'
 	if ( m_arg[0] == '-' ) {
@@ -68,6 +69,7 @@ SimpleArg::SimpleArg( const char **argv, int argc, int index )
 		// point m_opt at current argument
 		m_is_opt = false;
 		m_opt = m_arg;
+		m_fixed = m_arg;
 	}
 }
 
@@ -116,6 +118,16 @@ SimpleArg::Match( const char short_arg, const char *long_arg ) const
 	else {
 		return false;
 	}
+}
+
+bool
+SimpleArg::fixedMatch( const char *arg, bool consume )
+{
+	bool match = (! strcmp( m_arg, arg ) );
+	if ( match && consume ) {
+		ConsumeOpt( );
+	}
+	return match;
 }
 
 int
