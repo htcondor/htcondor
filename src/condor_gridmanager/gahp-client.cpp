@@ -1584,7 +1584,7 @@ int
 GahpClient::globus_gram_client_job_request(
 	const char * resource_manager_contact,
 	const char * description,
-	const int /* job_state_mask */,
+	const int limited_deleg,
 	const char * callback_contact,
 	char ** job_contact)
 {
@@ -1604,7 +1604,7 @@ GahpClient::globus_gram_client_job_request(
 	char *esc1 = strdup( escapeGahpString(resource_manager_contact) );
 	char *esc2 = strdup( escapeGahpString(callback_contact) );
 	char *esc3 = strdup( escapeGahpString(description) );
-	bool x = reqline.sprintf("%s %s 1 %s", esc1, esc2, esc3 );
+	bool x = reqline.sprintf("%s %s %d %s", esc1, esc2, limited_deleg, esc3 );
 	free( esc1 );
 	free( esc2 );
 	free( esc3 );
@@ -1953,7 +1953,8 @@ GahpClient::globus_gram_client_ping(const char * resource_contact)
 }
 
 int
-GahpClient::globus_gram_client_job_refresh_credentials(const char *job_contact)
+GahpClient::globus_gram_client_job_refresh_credentials(const char *job_contact,
+													   int limited_deleg)
 {
 	static const char* command = "GRAM_JOB_REFRESH_PROXY";
 
@@ -1965,7 +1966,7 @@ GahpClient::globus_gram_client_job_refresh_credentials(const char *job_contact)
 		// Generate request line
 	if (!job_contact) job_contact=NULLSTRING;
 	MyString reqline;
-	bool x = reqline.sprintf("%s",escapeGahpString(job_contact));
+	bool x = reqline.sprintf("%s %d",escapeGahpString(job_contact),limited_deleg);
 	ASSERT( x == true );
 	const char *buf = reqline.Value();
 

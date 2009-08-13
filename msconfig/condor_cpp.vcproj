@@ -1008,6 +1008,38 @@
 			>
 		</File>
 		<File
+			RelativePath="..\src\condor_c++_util\param_info.c"
+			>
+			<FileConfiguration
+				Name="Release|Win32"
+				>
+				<Tool
+					Name="VCCLCompilerTool"
+					UsePrecompiledHeader="0"
+					PrecompiledHeaderThrough=""
+					PrecompiledHeaderFile=""
+				/>
+			</FileConfiguration>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\param_info.h"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\param_info_hash.c"
+			>
+			<FileConfiguration
+				Name="Release|Win32"
+				>
+				<Tool
+					Name="VCCLCompilerTool"
+					UsePrecompiledHeader="0"
+					PrecompiledHeaderThrough=""
+					PrecompiledHeaderFile=""
+				/>
+			</FileConfiguration>
+		</File>
+		<File
 			RelativePath="..\src\condor_c++_util\perm.cpp"
 			>
 		</File>
@@ -1409,6 +1441,14 @@
 		</File>
 		<File
 			RelativePath="..\src\condor_c++_util\write_user_log.h"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\write_user_log_state.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\write_user_log_state.h"
 			>
 		</File>
 		<File

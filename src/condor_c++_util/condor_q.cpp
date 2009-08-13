@@ -257,7 +257,7 @@ fetchQueue (ClassAdList &list, StringList &attrs, ClassAd *ad, CondorError* errs
 }
 
 int CondorQ::
-fetchQueueFromHost (ClassAdList &list, StringList &attrs, char *host, CondorError* errstack)
+fetchQueueFromHost (ClassAdList &list, StringList &attrs, const char *host, char const *schedd_version, CondorError* errstack)
 {
 	Qmgr_connection *qmgr;
 	ClassAd 		filterAd;
@@ -282,8 +282,14 @@ fetchQueueFromHost (ClassAdList &list, StringList &attrs, char *host, CondorErro
 	if( !(qmgr = ConnectQ( host, connect_timeout, true, errstack)) )
 		return Q_SCHEDD_COMMUNICATION_ERROR;
 
+	bool useFastPath = false;
+	if( schedd_version && *schedd_version ) {
+		CondorVersionInfo v(schedd_version);
+		useFastPath = v.built_since_version(6,9,3);
+	}
+
 	// get the ads and filter them
-	result = getAndFilterAds (filterAd, attrs, list, false);
+	result = getAndFilterAds (filterAd, attrs, list, useFastPath);
 
 	DisconnectQ (qmgr);
 	return result;
@@ -353,7 +359,7 @@ fetchQueueFromDB (ClassAdList &list, char *&lastUpdate, char *dbconn, CondorErro
 }
 
 int CondorQ::
-fetchQueueFromHostAndProcess ( char *host, StringList &attrs, process_function process_func, bool useFastPath, CondorError* errstack)
+fetchQueueFromHostAndProcess ( const char *host, StringList &attrs, process_function process_func, bool useFastPath, CondorError* errstack)
 {
 	Qmgr_connection *qmgr;
 	ClassAd 		filterAd;
@@ -610,7 +616,7 @@ getAndFilterAds (ClassAd &queryad, StringList &attrs, ClassAdList &list, bool us
 	tree->RArg()->PrintToNewStr(&constraint);
 
 	if (useAllJobs) {
-	char *attrs_str = attrs.print_to_string();
+	char *attrs_str = attrs.print_to_delimed_string();
 	GetAllJobsByConstraint(constraint, attrs_str, list);
 	free(attrs_str);
 

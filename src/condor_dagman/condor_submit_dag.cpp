@@ -129,9 +129,6 @@ int runSubmit( const SubmitDagOptions &opts, const char *dagFile,
 			const char *directory );
 int setUpOptions( SubmitDagOptions &opts );
 void ensureOutputFilesExist(const SubmitDagOptions &opts);
-#if !LAZY_LOG_FILES
-int checkLogFiles( SubmitDagOptions &opts );
-#endif // !LAZY_LOG_FILES
 int getOldSubmitFlags( SubmitDagOptions &opts );
 int parseArgumentsLine( const MyString &subLine , SubmitDagOptions &opts );
 void writeSubmitFile(/* const */ SubmitDagOptions &opts);
@@ -181,10 +178,6 @@ int main(int argc, char *argv[])
 
 		// Make sure that all node jobs have log files, the files
 		// aren't on NFS, etc.
-#if !LAZY_LOG_FILES
-	tmpResult = checkLogFiles( opts );
-	if ( tmpResult != 0 ) return tmpResult;
-#endif
 
 		// Note that this MUST come after recursion, otherwise we'd
 		// pass down the "preserved" values from the current .condor.sub
@@ -512,56 +505,6 @@ setUpOptions( SubmitDagOptions &opts )
 
 	return 0;
 }
-
-#if !LAZY_LOG_FILES
-//---------------------------------------------------------------------------
-/** Make sure every node job has a log file, the log file isn't on
-    NFS, etc.
-	@param opts: the condor_submit_dag options
-	@return 0 if successful, 1 if failed
-*/
-int
-checkLogFiles( SubmitDagOptions &opts )
-{
-	printf("Checking all your submit files for log file names.\n");
-	printf("This might take a while... \n");
-
-	StringList	condorLogFiles;
-	StringList	storkLogFiles;
-
-	MyString	msg;
-	if ( !GetLogFiles( opts.dagFiles, opts.useDagDir, condorLogFiles,
-				storkLogFiles, msg ) ) {
-		fprintf( stderr, "ERROR: %s\n", msg.Value() );
-		if ( opts.bAllowLogError ) {
-			fprintf( stderr, "Continuing anyhow because of "
-						"-AllowLogError flag (beware!)\n" );
-		} else {
-			fprintf( stderr, "Aborting -- try again with the "
-						"-AllowLogError flag if you *really* think "
-						"this shouldn't be a fatal error\n" );
-			return 1;
-		}
-	} else if ( (condorLogFiles.number() + storkLogFiles.number()) < 1 ) {
-		const char *tail = (opts.dagFiles.number() > 1) ? "these DAGs" :
-					"this DAG";
-		fprintf( stderr, "ERROR: no log files found for the node "
-					"jobs of %s\n", tail );
-		return 1;
-	}
-
-	if (LogFileNfsError(condorLogFiles, storkLogFiles)) {
-		return 1;
-	}
-
-	condorLogFiles.rewind();
-	storkLogFiles.rewind();
-
-	printf("Done.\n");
-
-	return 0;
-}
-#endif // !LAZY_LOG_FILES
 
 //---------------------------------------------------------------------------
 /** Submit the DAGMan submit file unless the -no_submit option was given.

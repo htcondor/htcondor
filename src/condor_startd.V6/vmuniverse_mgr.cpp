@@ -814,10 +814,11 @@ VMUniverseMgr::checkVMUniverse(void)
 void 
 VMUniverseMgr::docheckVMUniverse(void)
 {
+	char *vm_type = param( "VM_TYPE" );
 	dprintf( D_ALWAYS, "VM universe will be tested "
-			"to check if it is still available\n");
-	if( init() == false ) {
-		// VM universe is not available
+			"to check if it is available\n");
+	if( init() == false && vm_type ) {
+		// VM universe is desired, but not available
 
 		// In VMware, some errors may be transient.
 		// For example, when VMware fails to start a new VM 
@@ -826,12 +827,22 @@ VMUniverseMgr::docheckVMUniverse(void)
 		// But after some time, we are able to run it again.
 		// So we register a timer to call this function later.
 		m_check_interval = param_integer("VM_RECHECK_INTERVAL", 600);
-		m_check_tid = daemonCore->Register_Timer(m_check_interval,
-				(TimerHandlercpp)&VMUniverseMgr::init,
-				"VMUniverseMgr::init", this);
+		if ( m_check_tid >= 0 ) {
+			daemonCore->Reset_Timer( m_check_tid, m_check_interval );
+		} else {
+			m_check_tid = daemonCore->Register_Timer(m_check_interval,
+				(TimerHandlercpp)&VMUniverseMgr::docheckVMUniverse,
+				"VMUniverseMgr::docheckVMUniverse", this);
+		}
 		dprintf( D_ALWAYS, "Started a timer to test VM universe after "
 			   "%d(seconds)\n", m_check_interval);
+	} else {
+		if ( m_check_tid >= 0 ) {
+			daemonCore->Cancel_Timer( m_check_tid );
+			m_check_tid = -1;
+		}
 	}
+	free( vm_type );
 }
 
 void 

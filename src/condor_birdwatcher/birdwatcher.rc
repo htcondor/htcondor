@@ -1,4 +1,4 @@
-//Microsoft Developer Studio generated resource script.
+// Microsoft Visual C++ generated resource script.
 //
 #include "resource.h"
 
@@ -7,7 +7,7 @@
 //
 // Generated from the TEXTINCLUDE 2 resource.
 //
-#include "afxres.h"
+#include "winres.h"
 
 /////////////////////////////////////////////////////////////////////////////
 #undef APSTUDIO_READONLY_SYMBOLS
@@ -27,18 +27,18 @@ LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 // TEXTINCLUDE
 //
 
-1 TEXTINCLUDE DISCARDABLE 
+1 TEXTINCLUDE 
 BEGIN
     "resource.h\0"
 END
 
-2 TEXTINCLUDE DISCARDABLE 
+2 TEXTINCLUDE 
 BEGIN
-    "#include ""afxres.h""\r\n"
+    "#include ""winres.h""\r\n"
     "\0"
 END
 
-3 TEXTINCLUDE DISCARDABLE 
+3 TEXTINCLUDE 
 BEGIN
     "#define _AFX_NO_SPLITTER_RESOURCES\r\n"
     "#define _AFX_NO_OLE_RESOURCES\r\n"
@@ -66,13 +66,13 @@ END
 
 // Icon with lowest ID value placed first to ensure application icon
 // remains consistent on all systems.
-IDR_MAINFRAME           ICON    DISCARDABLE     "res\\Birdwatcher.ico"
-IDI_CONDOR_CLAIMED      ICON    DISCARDABLE     "res\\ico00001.ico"
-IDI_CONDOR_FLYING1      ICON    DISCARDABLE     "res\\icon1.ico"
-IDI_CONDOR_FLYING2      ICON    DISCARDABLE     "res\\ico00002.ico"
-IDI_CONDOR_IDLE         ICON    DISCARDABLE     "res\\condor_s.ico"
-IDI_CONDOR_OFF          ICON    DISCARDABLE     "res\\condor_f.ico"
-IDI_PREEMPTING          ICON    DISCARDABLE     "res\\ico00003.ico"
+IDR_MAINFRAME           ICON                    "res\\Birdwatcher.ico"
+IDI_CONDOR_CLAIMED      ICON                    "res\\ico00001.ico"
+IDI_CONDOR_FLYING1      ICON                    "res\\icon1.ico"
+IDI_CONDOR_FLYING2      ICON                    "res\\ico00002.ico"
+IDI_CONDOR_IDLE         ICON                    "res\\condor_s.ico"
+IDI_CONDOR_OFF          ICON                    "res\\condor_f.ico"
+IDI_PREEMPTING          ICON                    "res\\ico00003.ico"
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -80,17 +80,13 @@ IDI_PREEMPTING          ICON    DISCARDABLE     "res\\ico00003.ico"
 //
 
 IDD_BIRDWATCHER_DIALOG DIALOGEX 0, 0, 413, 330
-STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
 EXSTYLE WS_EX_APPWINDOW
 CAPTION "Birdwatcher"
-FONT 8, "MS Sans Serif"
+FONT 8, "MS Sans Serif", 0, 0, 0x1
 BEGIN
-    EDITTEXT        IDC_EDIT_TOP_PANE,7,17,399,147,ES_MULTILINE | 
-                    ES_AUTOVSCROLL | ES_AUTOHSCROLL | ES_READONLY | 
-                    WS_VSCROLL | WS_HSCROLL
-    EDITTEXT        IDC_EDIT_BOTTOM_PANE,7,176,399,147,ES_MULTILINE | 
-                    ES_AUTOVSCROLL | ES_AUTOHSCROLL | ES_READONLY | 
-                    WS_VSCROLL | WS_HSCROLL
+    EDITTEXT        IDC_EDIT_TOP_PANE,7,17,399,147,ES_MULTILINE | ES_AUTOVSCROLL | ES_AUTOHSCROLL | ES_READONLY | WS_VSCROLL | WS_HSCROLL
+    EDITTEXT        IDC_EDIT_BOTTOM_PANE,7,176,399,147,ES_MULTILINE | ES_AUTOVSCROLL | ES_AUTOHSCROLL | ES_READONLY | WS_VSCROLL | WS_HSCROLL
     PUSHBUTTON      "OK",IDOK,289,119,50,14,NOT WS_VISIBLE
     PUSHBUTTON      "Cancel",IDCANCEL,293,171,50,14,NOT WS_VISIBLE
     LTEXT           "condor_q output:",IDC_STATIC,7,7,55,8
@@ -98,7 +94,6 @@ BEGIN
 END
 
 
-#ifndef _MAC
 /////////////////////////////////////////////////////////////////////////////
 //
 // Version
@@ -119,17 +114,15 @@ VS_VERSION_INFO VERSIONINFO
 BEGIN
     BLOCK "StringFileInfo"
     BEGIN
-        BLOCK "040904B0"
+        BLOCK "040904b0"
         BEGIN
-            VALUE "CompanyName", "\0"
-            VALUE "FileDescription", "Birdwatcher MFC Application\0"
-            VALUE "FileVersion", "1, 0, 0, 1\0"
-            VALUE "InternalName", "Birdwatcher\0"
-            VALUE "LegalCopyright", "Copyright (C) 2003\0"
-            VALUE "LegalTrademarks", "\0"
-            VALUE "OriginalFilename", "Birdwatcher.EXE\0"
-            VALUE "ProductName", "Birdwatcher Application\0"
-            VALUE "ProductVersion", "1, 0, 0, 1\0"
+            VALUE "FileDescription", "Birdwatcher Application"
+            VALUE "FileVersion", "1, 0, 0, 1"
+            VALUE "InternalName", "Birdwatcher"
+            VALUE "LegalCopyright", "Copyright (C) 2009"
+            VALUE "OriginalFilename", "Birdwatcher.EXE"
+            VALUE "ProductName", "Birdwatcher Application"
+            VALUE "ProductVersion", "1, 0, 0, 1"
         END
     END
     BLOCK "VarFileInfo"
@@ -138,8 +131,6 @@ BEGIN
     END
 END
 
-#endif    // !_MAC
-
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -147,7 +138,7 @@ END
 //
 
 #ifdef APSTUDIO_INVOKED
-GUIDELINES DESIGNINFO DISCARDABLE 
+GUIDELINES DESIGNINFO 
 BEGIN
     IDD_BIRDWATCHER_DIALOG, DIALOG
     BEGIN
@@ -180,7 +171,6 @@ LANGUAGE 9, 1
 #pragma code_page(1252)
 #endif //_WIN32
 #include "res\Birdwatcher.rc2"  // non-Microsoft Visual C++ edited resources
-#include "afxres.rc"         // Standard components
 #endif
 
 /////////////////////////////////////////////////////////////////////////////

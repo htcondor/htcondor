@@ -57,24 +57,36 @@ NetworkAdapterBase*
 NetworkAdapterBase::createNetworkAdapter ( const char *sinful_or_name,
 										   bool is_primary )
 {
-    NetworkAdapterBase *adapter = NULL;
+    
 	if ( NULL == sinful_or_name ) {
-		dprintf( D_FULLDEBUG,
-				 "Warning: Can't create network adaptor: NULL sinful/name\n" );
+		
+		dprintf (
+			D_FULLDEBUG,
+			"Warning: Can't create network adapter\n" );
+		
 		return NULL;
+
 	}
 
 # if defined ( NETWORK_ADAPTER_TYPE_DEFINED )
-	if ( is_valid_sinful( sinful_or_name ) ) {
-		adapter = new NetworkAdapter ( string_to_ipstr(sinful_or_name),
-									   string_to_ip(sinful_or_name)  );
+	
+	NetworkAdapterBase *adapter = NULL;
+	
+	if ( is_valid_sinful ( sinful_or_name ) ) {
+		
+		adapter = new NetworkAdapter ( 
+			string_to_ipstr ( sinful_or_name ),
+			string_to_ip ( sinful_or_name )  );
+
 	}
 	else {
+
 		adapter = new NetworkAdapter ( sinful_or_name );
+
 	}
 
 	// Try to initialize it; delete it if it fails
-	if ( !adapter->doInitialize( ) ) {
+	if ( !adapter->doInitialize () ) {
 
         dprintf ( 
             D_FULLDEBUG, 
@@ -82,9 +94,14 @@ NetworkAdapterBase::createNetworkAdapter ( const char *sinful_or_name,
             sinful_or_name );
 
 		delete adapter;
-		return NULL;
+		adapter = NULL;
+
+	} else {
+	
+		adapter->setIsPrimary ( is_primary );
+
 	}
-	adapter->setIsPrimary( is_primary );
+
 # endif
 
 	return adapter;
@@ -95,9 +112,9 @@ NetworkAdapterBase::createNetworkAdapter ( const char *sinful_or_name,
  * NetworkAdapterBase members 
  ***************************************************************/
 bool
-NetworkAdapterBase::doInitialize ( void )
+NetworkAdapterBase::doInitialize ()
 {
-	m_initialization_status = initialize( );
+	m_initialization_status = initialize ();
 	return m_initialization_status;
 }
 
@@ -105,24 +122,24 @@ void
 NetworkAdapterBase::publish ( ClassAd &ad )
 {
     ad.Assign ( ATTR_HARDWARE_ADDRESS, hardwareAddress () );
-    ad.Assign ( ATTR_SUBNET, subnet () );
+    ad.Assign ( ATTR_SUBNET_MASK, subnetMask () );
 	ad.Assign ( ATTR_IS_WAKE_SUPPORTED, isWakeSupported () );
 	ad.Assign ( ATTR_IS_WAKE_ENABLED, isWakeEnabled () );
 	ad.Assign ( ATTR_IS_WAKEABLE, isWakeable() );
 
-	MyString	tmp;
+	MyString tmp;
 	ad.Assign ( ATTR_WAKE_SUPPORTED_FLAGS, wakeSupportedString(tmp) );
 	ad.Assign ( ATTR_WAKE_ENABLED_FLAGS, wakeEnabledString(tmp) );
 }
 
 unsigned
-NetworkAdapterBase::wolSetBit( WOL_TYPE type, WOL_BITS bit )
+NetworkAdapterBase::wolSetBit ( WOL_TYPE type, WOL_BITS bit )
 {
 	if ( WOL_HW_SUPPORT == type ) {
-		return wolEnableSupportBit( bit );
+		return wolEnableSupportBit ( bit );
 	}
 	else if ( WOL_HW_ENABLED == type ) {
-		return wolEnableEnableBit( bit );
+		return wolEnableEnableBit ( bit );
 	}
 	return 0;
 }
@@ -145,8 +162,8 @@ static WolTable wol_table [] =
 
 };
 
-char *
-NetworkAdapterBase::getWolString(unsigned bits, char *buf, int bufsize) const
+char*
+NetworkAdapterBase::getWolString ( unsigned bits, char *buf, int bufsize ) const
 {
 	MyString	s;
 	getWolString( bits, s );
@@ -155,7 +172,7 @@ NetworkAdapterBase::getWolString(unsigned bits, char *buf, int bufsize) const
 	return buf;
 }
 
-MyString &
+MyString&
 NetworkAdapterBase::getWolString ( unsigned bits, MyString &s ) const
 {
 	s = "";
@@ -174,4 +191,104 @@ NetworkAdapterBase::getWolString ( unsigned bits, MyString &s ) const
 	}
 	return s;
 }
+
+bool 
+NetworkAdapterBase::setIsPrimary ( bool is_primary )
+{
+	return m_is_primary = is_primary;
+}
+
+bool 
+NetworkAdapterBase::isPrimary () const
+{
+	return m_is_primary;
+}
+
+bool 
+NetworkAdapterBase::isWakeSupported () const
+{
+	return (m_wol_support_bits & WOL_SUPPORTED) ? true : false;
+}
+
+unsigned 
+NetworkAdapterBase::wakeSupportedBits () const
+{
+	return m_wol_support_bits;
+}
+
+MyString& 
+NetworkAdapterBase::wakeSupportedString ( MyString &s ) const
+{
+	return getWolString ( m_wol_support_bits, s );
+}
+
+const char* 
+NetworkAdapterBase::wakeSupportedString () const
+{
+	static char buf[1024];
+	return getWolString( m_wol_support_bits, buf, sizeof(buf) );
+}
+
+bool 
+NetworkAdapterBase::isWakeEnabled () const
+{
+	return ( m_wol_enable_bits & WOL_SUPPORTED ) ? true : false;
+}
+
+unsigned 
+NetworkAdapterBase::wakeEnabledBits () const
+{
+	return m_wol_enable_bits;
+}
+
+MyString&
+NetworkAdapterBase::wakeEnabledString ( MyString &s ) const
+{
+	return getWolString ( m_wol_enable_bits, s );
+}
+
+const char* 
+NetworkAdapterBase::wakeEnabledString () const
+{
+	static char buf[1024];
+	return getWolString ( m_wol_enable_bits, buf, sizeof(buf) );
+}
+
+bool 
+NetworkAdapterBase::isWakeable () const
+{
+	return ( m_wol_support_bits & m_wol_enable_bits ) ? true : false;
+}
+
+bool 
+NetworkAdapterBase::getInitStatus ()
+{
+	return m_initialization_status;
+}
+
+void 
+NetworkAdapterBase::wolResetSupportBits ()
+{
+	m_wol_support_bits = 0;
+}
+
+unsigned 
+NetworkAdapterBase::wolEnableSupportBit ( WOL_BITS bit )
+{
+	m_wol_support_bits|= bit; return m_wol_support_bits;
+}
+
+void 
+NetworkAdapterBase::wolResetEnableBits ()
+{
+	m_wol_enable_bits = 0;
+}
+
+unsigned 
+NetworkAdapterBase::wolEnableEnableBit ( WOL_BITS bit )
+{
+	m_wol_enable_bits|= bit; return m_wol_enable_bits;
+}
+
+
 

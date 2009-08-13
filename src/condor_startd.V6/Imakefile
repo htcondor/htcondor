@@ -33,6 +33,10 @@ JOB_HOOKS_OBJS = StartdHookMgr.o
 GLEXEC_OBJ = glexec_starter.o
 #endif
 
+#if HAVE_HIBERNATION
+HIBERNATION_OBJS = startd_hibernator.o
+#endif
+
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(CONFIGURE_PCRE_CFLAGS)
 
 LIB= $(DAEMONCORE_LIB) $(STD_LIBS) $(CONFIGURE_GSOAP_LDFLAGS)
@@ -46,6 +50,7 @@ OBJ = IdDispenser.o \
 	setsyscalls.o  AvailStats.o cod_mgr.o \
 	vm_common.o VMManager.o VMRegister.o VMMachine.o vmuniverse_mgr.o \
 	$(PLUGIN_OBJ) \
+	$(HIBERNATION_OBJS) \
 	$(BACKFILL_OBJS) $(GLEXEC_OBJ) $(JOB_HOOKS_OBJS) $(SOAP_OBJS)
 
 

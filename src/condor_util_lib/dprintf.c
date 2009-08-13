@@ -599,8 +599,8 @@ debug_unlock(int debug_level)
 #endif
 		{
 			flock_errno = errno;
-			snprintf( msg_buf, sizeof(msg_buf), "Can't release exclusive lock on \"%s\"\n", 
-					 DebugLock );
+			snprintf( msg_buf, sizeof(msg_buf), "Can't release exclusive lock on \"%s\", LockFd=%d\n", 
+					 DebugLock, LockFd );
 			DebugUnlockBroken = 1;
 			_condor_dprintf_exit( flock_errno, msg_buf );
 		}

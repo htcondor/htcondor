@@ -361,19 +361,6 @@ parse_node( Dag *dag, Job::job_type_t nodeType, const char* nodeTypeKeyword,
 				"[DIR directory] [DONE]", nodeTypeKeyword, inlineOrExt,
 				submitOrDagFile );
 
-#if !LAZY_LOG_FILES
-		// If this is a DAP/DATA node, make sure we have a Stork log
-		// file specified.
-	if ( nodeType == Job::TYPE_STORK ) {
-		if ( dag->GetStorkLogCount() == 0 ) {
-			debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): DAP/DATA node, "
-						"but no Stork log file is specified (-Storklog "
-						"command-line argument)\n", dagFile, lineNum);
-			return false;
-		}
-	}
-#endif // !LAZY_LOG_FILES
-
 		// NOTE: fear not -- any missing tokens resulting in NULL
 		// strings will be error-handled correctly by AddNode()
 

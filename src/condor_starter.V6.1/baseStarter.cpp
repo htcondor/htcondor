@@ -625,6 +625,7 @@ CStarter::createJobOwnerSecSession( int /*cmd*/, Stream* s )
 		ClaimIdParser claimid(session_id,session_info.Value(),session_key);
 		response.Assign(ATTR_RESULT,true);
 		response.Assign(ATTR_CLAIM_ID,claimid.claimId());
+		response.Assign(ATTR_STARTER_IP_ADDR,daemonCore->publicNetworkIpAddr());
 
 		dprintf(D_FULLDEBUG,"Created security session for job owner (%s).\n",
 				fqu.Value());
@@ -805,7 +806,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 		machinead = jic->machClassAd();
 	}
 
-	bool enabled = param_boolean("ENABLE_SSH_TO_JOB",true,true,jobad,machinead);
+	bool enabled = param_boolean("ENABLE_SSH_TO_JOB",true,true,machinead,jobad);
 	if( !enabled ) {
 		return SSHDFailed(s,"Rejecting request, because ENABLE_SSH_TO_JOB=false");
 	}
@@ -880,7 +881,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 	MyString ssh_keygen_args;
 	ArgList ssh_keygen_arglist;
 	param(ssh_keygen,"SSH_TO_JOB_SSH_KEYGEN","/usr/bin/ssh-keygen");
-	param(ssh_keygen_args,"SSH_TO_JOB_SSH_KEYGEN_ARGS","\"-N '' -C '' -q -f %f\"");
+	param(ssh_keygen_args,"SSH_TO_JOB_SSH_KEYGEN_ARGS","\"-N '' -C '' -q -f %f -t rsa\"");
 	ssh_keygen_arglist.AppendArg(ssh_keygen.Value());
 	if( !ssh_keygen_arglist.AppendArgsV2Quoted(ssh_keygen_args.Value(),&error_msg) ) {
 		return SSHDFailed(s,

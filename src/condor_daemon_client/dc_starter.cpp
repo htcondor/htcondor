@@ -246,7 +246,7 @@ StarterHoldJobMsg::readMsg( DCMessenger * /*messenger*/, Sock *sock )
 }
 
 bool
-DCStarter::createJobOwnerSecSession(int timeout,char const *job_claim_id,char const *starter_sec_session,char const *session_info,MyString &owner_claim_id,MyString &error_msg,MyString &starter_version)
+DCStarter::createJobOwnerSecSession(int timeout,char const *job_claim_id,char const *starter_sec_session,char const *session_info,MyString &owner_claim_id,MyString &error_msg,MyString &starter_version,MyString &starter_addr)
 {
 	ReliSock sock;
 
@@ -287,6 +287,9 @@ DCStarter::createJobOwnerSecSession(int timeout,char const *job_claim_id,char co
 
 	reply.LookupString(ATTR_CLAIM_ID,owner_claim_id);
 	reply.LookupString(ATTR_VERSION,starter_version);
+		// get the full starter address from the starter in case it contains
+		// extra CCB info that we don't already know about
+	reply.LookupString(ATTR_STARTER_IP_ADDR,starter_addr);
 	return true;
 }
 

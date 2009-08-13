@@ -294,8 +294,8 @@ CollectorList::query(CondorQuery & cQuery, ClassAdList & adList, CondorError *er
 					dprintf( D_ALWAYS,
 					         "Collector %s %s is still being avoided if "
 					         "an alternative succeeds.\n",
-					         daemon->name(),
-					         daemon->addr() );
+					         daemon->name() ? daemon->name() : "unknown",
+					         daemon->addr() ? daemon->addr() : "unknown");
 					continue;
 				}
 			}
