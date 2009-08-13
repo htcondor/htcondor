@@ -145,8 +145,8 @@ HADStateMachine::~HADStateMachine()
 
     invalidate_ad.SetMyTypeName( QUERY_ADTYPE );
     invalidate_ad.SetTargetTypeName( HAD_ADTYPE );
-    line.sprintf( "%s = %s == \"%s\"", ATTR_REQUIREMENTS, ATTR_NAME, m_daemonName.Value( ) );
-    invalidate_ad.Insert( line.Value( ) );
+    line.sprintf( "%s == \"%s\"", ATTR_NAME, m_daemonName.Value( ) );
+    invalidate_ad.AssignExpr( ATTR_REQUIREMENTS, line.Value( ) );
     daemonCore->sendUpdates( INVALIDATE_HAD_ADS, &invalidate_ad, NULL, false );
 }
 
@@ -339,8 +339,7 @@ HADStateMachine::initializeClassAd()
 				  daemonCore->InfoCommandPort( ) );
     free( userName );
     // ATTR_NAME is mandatory in order to be accepted by collector
-    line.sprintf( "%s = \"%s\"", ATTR_NAME, m_daemonName.Value( ) );
-    m_classAd->Insert(line.Value());
+    m_classAd->Assign( ATTR_NAME, m_daemonName.Value( ) );
 
     line.sprintf( "%s = \"%s\"", ATTR_MY_ADDRESS,
                         daemonCore->InfoCommandSinfulString() );

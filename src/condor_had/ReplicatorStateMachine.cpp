@@ -175,8 +175,8 @@ ReplicatorStateMachine::finalizeDelta( )
 
     invalidate_ad.SetMyTypeName( QUERY_ADTYPE );
     invalidate_ad.SetTargetTypeName( GENERIC_ADTYPE );
-    line.sprintf( "%s = %s == \"%s\"", ATTR_REQUIREMENTS, ATTR_NAME, m_name.Value( ) );
-    invalidate_ad.Insert( line.Value( ) );
+    line.sprintf( "%s == \"%s\"", ATTR_NAME, m_name.Value( ) );
+    invalidate_ad.AssignExpr( ATTR_REQUIREMENTS, line.Value( ) );
     daemonCore->sendUpdates( INVALIDATE_ADS_GENERIC, &invalidate_ad, NULL, false );
 }
 void
@@ -276,8 +276,6 @@ ReplicatorStateMachine::reinitialize()
 void
 ReplicatorStateMachine::initializeClassAd()
 {
-    MyString line;
-
     if( m_classAd != NULL) {
         delete m_classAd;
         m_classAd = NULL;
@@ -290,12 +288,8 @@ ReplicatorStateMachine::initializeClassAd()
 
     m_name.sprintf( "replication@%s -p %d", my_full_hostname( ),
 				  daemonCore->InfoCommandPort( ) );
-    line.sprintf( "%s = \"%s\"", ATTR_NAME, m_name.Value( ) );
-    m_classAd->Insert(line.Value());
-
-    line.sprintf( "%s = \"%s\"", ATTR_MY_ADDRESS,
-                        daemonCore->InfoCommandSinfulString() );
-    m_classAd->Insert(line.Value());
+    m_classAd->Assign( ATTR_NAME, m_name.Value( ) );
+    m_classAd->Assign( ATTR_MY_ADDRESS, daemonCore->InfoCommandSinfulString( ) );
 
     // publish list of replication nodes
     char* buffer = param( "REPLICATION_LIST" );
@@ -312,8 +306,7 @@ ReplicatorStateMachine::initializeClassAd()
         attrReplList += replAddress;
         comma = ",";
     }
-    line.sprintf( "%s = \"%s\"", ATTR_REPLICATION_LIST, attrReplList.Value( ) );
-    m_classAd->Insert(line.Value());
+    m_classAd->Assign( ATTR_REPLICATION_LIST, attrReplList.Value( ) );
 
     // publish DC attributes
     daemonCore->publish(m_classAd);

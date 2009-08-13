@@ -2134,8 +2134,8 @@ JobRouter::InvalidatePublicAd() {
 	invalidate_ad.SetMyTypeName(QUERY_ADTYPE);
 	invalidate_ad.SetTargetTypeName(GENERIC_ADTYPE);
 
-	line.sprintf("%s = %s == \"%s\"", ATTR_REQUIREMENTS, ATTR_NAME, daemonName.c_str());
-	invalidate_ad.Insert(line.Value());
+	line.sprintf("%s == \"%s\"", ATTR_NAME, daemonName.c_str());
+	invalidate_ad.AssignExpr(ATTR_REQUIREMENTS, line.Value());
 	daemonCore->sendUpdates(INVALIDATE_ADS_GENERIC, &invalidate_ad, NULL, false);
 }
 
