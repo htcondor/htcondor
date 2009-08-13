@@ -168,10 +168,17 @@ Optional parameters are given within square brackets.
   Evaluates \Expr{Expr} as a string and then returns the result of
   evaluating the \emph{contents} of the string as a ClassAd expression.
   This is useful when referring to an attribute such as \Expr{slotX\_State}
-  where \Expr{X} (the desired slot number) is a function, such as
-  \Expr{SlotID+10}.  In such a case, the value of the attribute can
-  be referrenced using the expression
-  \Expr{eval(strcat("slot",SlotID+10,"\_State"))}.
+  where \Expr{X}, the desired slot number is an expression, such as
+  \Expr{SlotID+10}.  
+  In such a case, if attribute \Attr{SlotID} is 5,
+  the value of the attribute \Attr{slot15\_State} can
+  be referenced using the expression
+  \Expr{eval(strcat("slot", SlotID+10,"\_State"))}.
+  Function \Procedure{strcat} calls function \Procedure{string}
+  on the second parameter, which evaluates the expression,
+  and then converts the integer result 15 to the string "15."
+  The concatenated string returned by \Procedure{strcat} is
+  \verb@"slot15_State"@, and this string is then evaluated.
 
   \index{ClassAd functions!ifThenElse()}
   \item[\Code{AnyType ifThenElse(AnyType IfExpr,AnyType ThenExpr, AnyType ElseExpr)}]
