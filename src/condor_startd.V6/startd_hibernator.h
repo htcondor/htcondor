@@ -17,42 +17,31 @@
  *
  ***************************************************************/
 
-#ifndef _HIBERNATER_LINUX_H_
-#define _HIBERNATER_LINUX_H_
+#ifndef _STARTD_HIBERNATER_H_
+#define _STARTD_HIBERNATER_H_
 
 #include "hibernator.h"
 
 
 /***************************************************************
- * Linux Hibernator class
+ * Startd Hibernator class
  ***************************************************************/
 
-/* Do we have the ability to test WOL? */
-# if defined(LINUX)
-#   define HAVE_LINUX_HIBERNATION	1
-#   define HAVE_HIBERNATION			1
-# endif
-
-# if HAVE_LINUX_HIBERNATION
-
-// Internal class to implement the various ways of interacting with the
-// Linux hibernation methods
-class BaseLinuxHibernator;
-
-class LinuxHibernator : public HibernatorBase
+class StartdHibernator : public HibernatorBase
 {
   public:
 
-	LinuxHibernator(void) throw ();
-	virtual ~LinuxHibernator(void) throw ();
+	StartdHibernator(void) throw ();
+	virtual ~StartdHibernator(void) throw ();
 
 	/* Discover supported sleep states */
 	bool initialize( void );
 
-	bool setMethod( const char *method ) { m_method = method; return true; };
-	const char *getMethod(void) const;
+	const char *getMethod(void) const { return "STARTD"; };
+	bool update( void );
 
-protected:
+	// Private methods
+  private:
 
 	/* Override this to enter the given sleep state on a
 	   particular OS */
@@ -60,17 +49,17 @@ protected:
 	HibernatorBase::SLEEP_STATE enterStateSuspend(   bool force ) const;
 	HibernatorBase::SLEEP_STATE enterStateHibernate( bool force ) const;
 	HibernatorBase::SLEEP_STATE enterStatePowerOff(  bool force ) const;
+	HibernatorBase::SLEEP_STATE enterState( SLEEP_STATE state, bool force )
+		const;
 
-private:
-
-	BaseLinuxHibernator	*m_real_hibernator;
-	const char			*m_method;
-
+	// Private data
+  private:
+	MyString	 m_plugin_path;
+	StringList	*m_plugin_args;
+	ClassAd		 m_ad;
+	
 };
 
 #define HIBERNATOR_TYPE_DEFINED	1
-typedef LinuxHibernator	RealHibernator;
 
-#endif // HAVE_LINUX_HIBERNATION
-
-#endif // _HIBERNATER_LINUX_H_
+#endif // _STARTD_HIBERNATER_H_

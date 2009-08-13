@@ -1,14 +1,14 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2008, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2009, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,7 +16,7 @@
  * limitations under the License.
  *
  ***************************************************************/
- 
+
 /***************************************************************
  * Headers
  ***************************************************************/
@@ -35,17 +35,19 @@ extern "C" {
  * MsWindowsHibernator class
  ***************************************************************/
 
-MsWindowsHibernator::MsWindowsHibernator () throw () 
-: HibernatorBase () {
-	initStates ();
+MsWindowsHibernator::MsWindowsHibernator( void ) throw ()
+		: HibernatorBase ()
+{
 }
 
-MsWindowsHibernator::~MsWindowsHibernator () throw () {
+MsWindowsHibernator::~MsWindowsHibernator( void ) throw ()
+{
 }
 
-void
-MsWindowsHibernator::initStates () {
-	
+bool
+MsWindowsHibernator::initialize ( void )
+{
+
 	LONG                      status;
 	SYSTEM_POWER_CAPABILITIES capabilities;
 	USHORT					  states		= NONE;
@@ -56,14 +58,14 @@ MsWindowsHibernator::initStates () {
 
 	if ( !privileged ) {
 
-		dprintf ( 
-			D_ALWAYS, 
+		dprintf (
+			D_ALWAYS,
 			"MsWindowsHibernator::initStates: Failed to grant "
 			"Condor the ability to shutdown this machine. "
 			"(last-error = %d)\n",
 			GetLastError () );
 
-		return;
+		return false;
 
 	}
 
@@ -71,22 +73,22 @@ MsWindowsHibernator::initStates () {
 	setStates ( NONE );
 
 	/* retrieve power information */
-	status = CallNtPowerInformation ( 
-		SystemPowerCapabilities, 
-		NULL, 
-		0, 
-		&capabilities, 
+	status = CallNtPowerInformation (
+		SystemPowerCapabilities,
+		NULL,
+		0,
+		&capabilities,
 		sizeof ( SYSTEM_POWER_CAPABILITIES ) );
-	
+
 	if ( ERROR_SUCCESS != status ) {
-		
-		dprintf ( 
-			D_ALWAYS, 
+
+		dprintf (
+			D_ALWAYS,
 			"MsWindowsHibernator::initStates: Failed to retrieve "
 			"power information. (last-error = %d)\n",
 			GetLastError () );
 
-		return;
+		return false;
 	}
 
 	/* Finally, set the remaining supported states */
@@ -97,32 +99,34 @@ MsWindowsHibernator::initStates () {
 	states |= capabilities.SystemS5 << 4;
 	setStates ( states );
 
+	setInitialized( true );
+	return true;
 }
 
 bool
 MsWindowsHibernator::tryShutdown ( bool force ) const
 {
 	bool ok = ( TRUE == InitiateSystemShutdownEx (
-		NULL	/* local computer */, 
-		NULL	/* no warning message */, 
-		0		/* shutdown immediately */, 
-		force	/* should we force applications to close? */, 
-		FALSE	/* no reboot */, 
-		SHTDN_REASON_MAJOR_APPLICATION 
+		NULL	/* local computer */,
+		NULL	/* no warning message */,
+		0		/* shutdown immediately */,
+		force	/* should we force applications to close? */,
+		FALSE	/* no reboot */,
+		SHTDN_REASON_MAJOR_APPLICATION
 		| SHTDN_REASON_FLAG_PLANNED ) );
-	
+
 	if ( !ok ) {
 
 		DWORD last_error = GetLastError ();
-	
-		/* if the computer is already shutting down, we interpret 
+
+		/* if the computer is already shutting down, we interpret
 		   this as success... */
 		if ( ERROR_SHUTDOWN_IN_PROGRESS == last_error ) {
 			return true;
 		}
 
 		/* otherwise, it's an error and we'll tell the user so */
-		dprintf ( 
+		dprintf (
 			D_ALWAYS,
 			"MsWindowsHibernator::tryShutdown(): Shutdown failed. "
 			"(last-error = %d)\n",

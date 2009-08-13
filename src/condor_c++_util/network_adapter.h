@@ -1,6 +1,6 @@
 /***************************************************************
 *
-* Copyright (C) 1990-2008, Condor Team, Computer Sciences Department,
+* Copyright (C) 1990-2009, Condor Team, Computer Sciences Department,
 * University of Wisconsin-Madison, WI.
 * 
 * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -89,7 +89,7 @@ public:
 	*/
 	virtual unsigned ipAddress () const = 0;
 
-    /** Returns the adapter's subnet
+    /** Returns the adapter's subnet mask
 		@return a string representation of the adapter's's subnet mask
 	*/
 	virtual const char* subnetMask () const = 0;

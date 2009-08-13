@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2009, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -74,50 +74,45 @@ typedef HibernatorBase::SLEEP_STATE state_t;
 
 /**	Global Variables */
 
-static FILE				*in				= NULL;  /* input file */
-static FILE				*out			= NULL;  /* output file */
-static char				*fn_in			= NULL;  /* name of input file */
-static char				*fn_out			= NULL;  /* name of output file */
-static const char		*name			= NULL;  /* program name */
-static char				*mac			= NULL;  /* hardware address */
-static char				*mask			= "255.255.255.255"; /* subnet to broadcast on */
-static int				port			= 9;	 /* port number to use */
-static int				level			= 0;	 /* hibernation level (S0--running) */
-static bool				stdio			= false; /* if true, use stdin as input and stdout for output. */
-static bool				wake			= true;  /* are we waking the machine up, or putting it to sleep? */
-static bool				capabilities	= false; /* just print the things we need, as a machine, to be woken up. */
-static ClassAd			*ad				= NULL;  /* machine class-ad */
-static WakerBase		*waker			= NULL;  /* waking mechanism */
-static HibernatorBase	*hibernator		= NULL;  /* hibernation mechanism */
+static FILE				*in		= NULL;  /* input file */
+static char				*fn_in	= NULL;  /* name of input file */
+static char				*fn_out	= NULL;  /* name of output file */
+static const char		*name	= NULL;  /* program name */
+static char				*mac	= NULL;  /* hardware address */
+static char				*mask	= "255.255.255.255"; /*subnet to broadcast on*/
+static int				port	= 9;	 /* port number to use */
+static bool				stdio	= false; /* if true, use stdin and stdout. */
+static ClassAd			*ad		= NULL;  /* machine class-ad */
+static WakerBase		*waker	= NULL;  /* waking mechanism */
 
 /**	Functions */
 
 static void
-usage () {
+usage( void )
+{
 
-	fprintf ( stderr, "usage: %s [OPTIONS] [INPUT-CLASS-AD-FILE] [OUTPUT]\n", name );
+	fprintf ( stderr, "usage: %s [OPTIONS] [INPUT-CLASSAD-FILE] [OUTPUT]\n",
+			  name );
 	fprintf ( stderr, "%s - %s\n", name, DESCRIPTION );
 	fprintf ( stderr, "\n" );
-	fprintf ( stderr, "-h	   this message\n" );
+	fprintf ( stderr, "-h      This message\n" );
 	fprintf ( stderr, "\n" );
-	fprintf ( stderr, "-d	   enables debugging\n" );
+	fprintf ( stderr, "-d      Enables debugging\n" );
 	fprintf ( stderr, "\n" );
-	fprintf ( stderr, "-c	   output capabilities\n" );
-	fprintf ( stderr, "-i	   read and write to standard input and output\n" );
-	fprintf ( stderr, "-m	   hardware address (MAC address)\n" );
-	fprintf ( stderr, "-p	   port (default: %d)\n", port );
-	fprintf ( stderr, "-s	   subnet mask (default: %s)\n", mask );
-	fprintf ( stderr, "-H	   hibernate the current machine (default: S%d)\n", level );
-	fprintf ( stderr, "-W	   wake a remote machine (default action)\n" );
+	fprintf ( stderr, "-i      Use standard input and output\n" );
+	fprintf ( stderr, "-m      Hardware address (MAC address)\n" );
+	fprintf ( stderr, "-p      Port (default: %d)\n", port );
+	fprintf ( stderr, "-s      Subnet mask (default: %s)\n", mask );
 	fprintf ( stderr, "\n" );
 	fprintf ( stderr, "With -i, read standard input.\n" );
-	
+
 	exit ( 0 );
 
 }
 
 static void
-enable_debug () {
+enable_debug( void )
+{
 
 	Termlog = 1;
 	dprintf_config ( "TOOL" );
@@ -125,8 +120,8 @@ enable_debug () {
 }
 
 static void
-error ( int code, ... ) {
-
+error( int code, ... )
+{
 	va_list	args;
 	const char *msg;
 
@@ -170,11 +165,12 @@ error ( int code, ... ) {
 }
 
 static void
-parse_command_line ( int argc, char *argv[] ) {
+parse_command_line( int argc, char *argv[] )
+{
 
 	int		i, j = 0;
 	char	*s;					/* to traverse the options */
-	char	**argument = NULL;	/* option argument */	
+	char	**argument = NULL;	/* option argument */
 
 	for ( i = 1; i < argc; i++ ) {
 
@@ -193,15 +189,12 @@ parse_command_line ( int argc, char *argv[] ) {
 
 				/* determine which one it is */
 				switch ( *s++ ) {
-					case 'c': capabilities = true;		break;
 					case 'd': enable_debug ();			break;
 					case 'h': usage ();					break;
 					case 'i': stdio	= true;				break;
 					case 'm': argument = &mac;			break;
 					case 'p': port = (int) strtol ( s, &s, port ); break;
 					case 's': argument = &mask;			break;
-					case 'H': level = (int) strtol ( s, &s, level ); break;
-					case 'W': level = 0;				break;
 					default : error ( E_OPTION, *--s );	break;
 				}
 
@@ -230,7 +223,8 @@ parse_command_line ( int argc, char *argv[] ) {
 }
 
 static void
-serialize_input () {
+serialize_input( void )
+{
 
 	char sinful[16 + 10];
 	int  found_eof		= 0,
@@ -266,11 +260,7 @@ serialize_input () {
 		}
 
 		if ( !in ) {
-			error (
-				E_FOPEN,
-				fn_in,
-				strerror ( errno ),
-				errno );
+			error ( E_FOPEN, fn_in, strerror ( errno ), errno );
 		}
 
 		/**	Serialize the machine ad from a file */
@@ -292,86 +282,30 @@ serialize_input () {
 }
 
 static void
-serialize_output () {
-
-	/**	Determine if we are using a file or standard output */
-	if ( !stdio ) {
-
-	} else {
-
-		/**	Open the machine ad file or write to stdoutn */
-		if ( fn_out && *fn_out ) {
-			out = safe_fopen_wrapper ( fn_out, "w" );
-		} else {
-			out = stdout;
-			fn_out = "<stdout>";
-		}
-
-	}
-
-}
-
-static void
-wake_machine () {
+wake_machine( void )
+{
 
 	/**	Create the waking mechanism. */
 	waker = WakerBase::createWaker ( ad );
 
 	if ( !waker ) {
-		error (
-			E_NOMEM,
-			"waker object." );
+		error( E_NOMEM, "waker object." );
 	}
 
 	/**	Attempt to wake the remote machine */
 	if ( !waker->doWake () ) {
-		error (
-			E_NOWAKE );
+		error ( E_NOWAKE );
 	}
 
-	fprintf (
-		stderr,
-		"Packet sent.\n" );
+	fprintf ( stderr, "Packet sent.\n" );
 
 	delete waker;
 
 }
 
-static void
-hibernate_machine () {
-
-	bool	ok		= false;
-	state_t	desired	= HibernatorBase::intToSleepState ( level ),
-			actual;
-
-	/**	Create the hibernation mechanism. */
-	hibernator = HibernatorBase::createHibernator ();
-
-	if ( !hibernator ) {
-		error (
-			E_NOMEM,
-			"hibernator object." );
-	}
-
-	/**	Try to put this machine into the requested power 
-		state. */
-	ok = hibernator->switchToState ( desired, actual );
-
-	if ( !ok || desired != actual ) {
-		error (
-			E_NOREST );
-	}
-
-	fprintf (
-		stderr,
-		"Power level change.\n" );
-
-	delete hibernator;
-
-}
-
 int
-main ( int argc, char *argv[] ) {
+main( int argc, char *argv[] )
+{
 
 	/**	Retrieve the program's name */
 	name = condor_basename ( argv[0] );
@@ -386,17 +320,7 @@ main ( int argc, char *argv[] ) {
 	serialize_input ();
 
 	if ( ad ) {
-
-		if ( level > 0 ) { 
-			
-			hibernate_machine ();
-
-		} else {
-
-			wake_machine ();
-
-		}
-
+		wake_machine ();
 	}
 
 	return 0;
