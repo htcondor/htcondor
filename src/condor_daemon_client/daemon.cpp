@@ -961,7 +961,8 @@ Daemon::locate( void )
 		rval = getDaemonInfo( LEASE_MANAGER_AD, true );
 		break;
 	case DT_HAD:
-		rval = getDaemonInfo( "HAD", HAD_AD );
+		setSubsystem( "HAD" );
+		rval = getDaemonInfo( HAD_AD );
 		break;
 	default:
 		EXCEPT( "Unknown daemon type (%d) in Daemon::init", (int)_type );
