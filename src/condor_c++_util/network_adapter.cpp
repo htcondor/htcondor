@@ -102,9 +102,11 @@ NetworkAdapterBase::createNetworkAdapter ( const char *sinful_or_name,
 
 	}
 
+	return adapter;
+#else
+	return NULL;
 # endif
 
-	return adapter;
 }
 
 
