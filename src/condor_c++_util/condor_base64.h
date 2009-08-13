@@ -20,7 +20,7 @@
 #ifndef CONDOR_BASE64_H
 #define CONDOR_BASE64_H
 
-#ifdef HAVE_EXT_OPENSSL
+#ifdef HAVE_EXT_GSOAP
 
 #define HAVE_CONDOR_BASE64 1
 
