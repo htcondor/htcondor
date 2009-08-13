@@ -2046,8 +2046,8 @@ MyHighPrioSlotIsIdle = \
 # High-prio slots are always willing to start jobs.
 # Normal slots are only willing to start if the high prio slot is idle.
 START = \
-  IsHighPrioSlot && TARGET.IsHighPrioJob == True || \
-  IsHighPrioSlot!=True && $(MyHighPrioSlotIsIdle)
+  IsHighPrioSlot && IsHighPrioJob || \
+  IsHighPrioSlot!=True && IsHighPrioJob=!=True && $(MyHighPrioSlotIsIdle)
 
 # Suspend the normal slot if the high-prio slot is busy.
 SUSPEND = \
