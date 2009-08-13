@@ -180,6 +180,15 @@ Optional parameters are given within square brackets.
   The concatenated string returned by \Procedure{strcat} is
   \verb@"slot15_State"@, and this string is then evaluated.
 
+  Note that referring to attributes of a job from within the string
+  passed to \Procedure{eval} in the \AdAttr{Requirements} or
+  \AdAttr{Rank} expressions could cause inaccuracies in Condor's
+  automatic auto-clustering of jobs into equivalent groups for
+  matchmaking purposes.  This is because Condor needs to determine
+  which ClassAd attributes are significant for matchmaking purposes,
+  and indirect references from within the string passed to \Procedure{eval}
+  will not be counted.
+
   \index{ClassAd functions!ifThenElse()}
   \item[\Code{AnyType ifThenElse(AnyType IfExpr,AnyType ThenExpr, AnyType ElseExpr)}]
     A conditional expression is described by \Expr{IfExpr}.
