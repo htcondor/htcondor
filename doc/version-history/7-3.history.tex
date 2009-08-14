@@ -94,6 +94,13 @@ the query.
   perform the detection of available low power states and the
   switching to these low power states.
 
+%gittrac #483
+\item Added the ability to extract information from the user / event log
+  reader's state buffer to the user log reader.  This is implemented
+  through a new
+  ``ReadUserLogStateAccess'' C++ class (defined in
+  ``read\_user\_log.h'').
+
 \end{itemize}
 
 \noindent Configuration Variable Additions and Changes:
