@@ -107,6 +107,7 @@ void Job::Init( const char* jobName, const char* directory,
 	_dagFile = NULL;
 	_throttleInfo = NULL;
 	_logIsMonitored = false;
+	_useDefaultLog = false;
 
 	if ( (_jobType == TYPE_CONDOR) && prohibitMultiJobs ) {
 		MyString	errorMsg;
@@ -733,7 +734,7 @@ Job::SetDagFile(const char *dagFile)
 bool
 Job::MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 			ReadMultipleUserLogs &storkLogReader, bool nfsIsError,
-			bool recovery )
+			bool recovery, const char *defaultNodeLog )
 {
 	if ( _logIsMonitored ) {
 		debug_printf( DEBUG_QUIET, "Warning: log file for node "
@@ -755,11 +756,13 @@ Job::MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 		if ( tmpResult != "" ) {
 			debug_printf( DEBUG_QUIET, "Error getting Stork log file: %s\n",
 						tmpResult.Value() );
+			//TEMPTEMP -- mark node as failed (need to test)
 			return false;
 		} else if ( logFiles.number() != 1 ) {
 			debug_printf( DEBUG_QUIET, "Error: %d Stork log files found "
 						"in submit file %s; we want 1\n",
 						logFiles.number(), _cmdFile );
+			//TEMPTEMP -- mark node as failed (need to test)
 			return false;
 		} else {
 			logFiles.rewind();
@@ -767,15 +770,20 @@ Job::MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 		}
 	}
 
+//TEMPTEMP -- no log file is still a fatal error for Stork nodes -- can't specify log file on submit command line
 	if ( logFileStr == "" ) {
-		debug_printf( DEBUG_QUIET, "ERROR: Unable to get log file from "
-					"submit file %s (node %s)\n", _cmdFile, GetJobName() );
-		return false;
+		logFileStr = defaultNodeLog;
+		_useDefaultLog = true;
+		debug_printf( DEBUG_NORMAL, "Unable to get log file from "
+					"submit file %s (node %s); using default (%s)\n",
+					_cmdFile, GetJobName(), logFileStr.Value() );
+	}
 
-	} else if ( MultiLogFiles::logFileOnNFS( logFileStr.Value(),
+	if ( MultiLogFiles::logFileOnNFS( logFileStr.Value(),
 				nfsIsError ) ) {
 		debug_printf( DEBUG_QUIET, "Error: log file %s on NFS\n",
-					_logFile );
+					logFileStr.Value() );
+		//TEMPTEMP -- mark node as failed (need to test)
 		return false;
 	}
 
@@ -790,6 +798,7 @@ Job::MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 					"ERROR: Unable to monitor log file for node %s",
 					GetJobName() );
 		debug_printf( DEBUG_QUIET, "%s\n", errstack.getFullText() );
+		//TEMPTEMP -- mark node as failed (need to test)
 		return false;
 	}
 

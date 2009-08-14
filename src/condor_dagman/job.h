@@ -341,11 +341,13 @@ class Job {
 		job is submitted.)
 		@param logReader: the multiple log reader
 		@param recovery: whether we're in recovery mode
+		@param defaultNodeLog: the default log file to be used if the
+			node's submit file doesn't define a log file
 		@return true if successful, false if failed
 	*/
 	bool MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 				ReadMultipleUserLogs &storkLogReader, bool nfsIsError,
-				bool recovery );
+				bool recovery, const char *defaultNodeLog );
 
 	/** Unmonitor this node's Condor or Stork log file with the
 		multiple log reader.  (Must be called after everything is done
@@ -425,6 +427,9 @@ class Job {
 		// Node priority.  Higher number is better priority (submit first).
 	int _nodePriority;
 
+		//TEMPTEMP -- document
+	bool UsingDefaultLog() { return _useDefaultLog; }
+
 private:
 
 		// Note: Init moved to private section because calling int more than
@@ -495,6 +500,9 @@ private:
 
 		// Whether this node's log file is currently being monitored.
 	bool _logIsMonitored;
+
+		// Whether this node uses the default user log file.
+	bool _useDefaultLog;
 };
 
 /** A wrapper function for Job::Print which allows a NULL job pointer.

@@ -110,6 +110,8 @@ class Dag {
 			   job procs are prohibited
 		@param submitDepthFirst whether ready nodes should be submitted
 			   in depth-first (as opposed to breadth-first) order
+		@param The user log file to be used for nodes whose submit files do
+				not specify a log file.
 		@param findUserLogs whether or not log files for the submit files
 				should be recursively dug out of the dag file and any
 				splices it contains. Usually this is true for the root
@@ -124,7 +126,7 @@ class Dag {
 		 bool retryNodeFirst, const char *condorRmExe,
 		 const char *storkRmExe, const CondorID *DAGManJobId,
 		 bool prohibitMultiJobs, bool submitDepthFirst,
-		 bool findUserLogs = true );
+		 const char *defaultNodeLog, bool findUserLogs = true );
 
     ///
     ~Dag();
@@ -483,6 +485,8 @@ class Dag {
 	const CondorID* DAGManJobId(void) { return _DAGManJobId; }
 
 	bool SubmitDepthFirst(void) { return _submitDepthFirst; }
+
+	const char *DefaultNodeLog(void) { return _defaultNodeLog; }
 
 	StringList& DagFiles(void) { return _dagFiles; }
 
@@ -855,6 +859,10 @@ class Dag {
 		// Whether having node job log files on NFS is an error (vs.
 		// just a warning).
 	bool	_nfsLogIsError;
+
+		// The user log file to be used for nodes whose submit files do
+		// not specify a log file.
+	const char *_defaultNodeLog;
 
 };
 

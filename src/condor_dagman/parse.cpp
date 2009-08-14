@@ -1438,6 +1438,7 @@ parse_splice(
 							dag->DAGManJobId(),
 							dag->ProhibitMultiJobs(),
 							dag->SubmitDepthFirst(),
+							dag->DefaultNodeLog(),
 							false);
 	
 	// initialize whatever the DIR line was, or defaults to, here.
