@@ -87,6 +87,13 @@ attributes which are displayed when using \Opt{-xml} or \Opt{-long}.
 Limiting the number of attributes also increases the efficiency of
 the query.
 
+%gittrac #383
+\item Condor's power management capabilities are now implemented as a
+  ``plug in''.  In particular, the \Condor{startd} now runs an
+  external program (specified by \Macro{HIBERNATION\_PLUGIN}) to
+  perform the detection of available low power states and the
+  switching to these low power states.
+
 \end{itemize}
 
 \noindent Configuration Variable Additions and Changes:
@@ -149,6 +156,25 @@ for the complete description.
 \item Removed the configuration variable
 \Macro{DAGMAN\_DELETE\_OLD\_LOGS}; new log file reading code makes it
 obsolete.
+
+%gittrac #383
+\item The new configuration \Macro{HIBERNATION\_PLUGIN} specifies the
+  path to the ``plug in'' which the \Condor{startd} will use to detect
+  the low power state capabilities of a machine, and to switch the
+  machine to a low power state.
+
+%gittrac #383
+\item The new configuration \Macro{HIBERNATION\_PLUGIN\_ARGS}
+  specifies extra optional command line parameters which the
+  \Condor{startd} will pass to the ``plug in'' when invoking it to
+  switch the machine to a low power state.
+
+%gittrac #383
+\item The new configuration \Macro{HIBERNATION\_OVERRIDE\_WOL} can be
+  used to direct the \Condor{startd} to ignore ``wake on LAN'' (WOL)
+  capabilities of the machine's network interface, and to switch to a
+  low power state even if the interface does not support WOL, or if
+  WOL is disabled on it.
 
 \end{itemize}
 
