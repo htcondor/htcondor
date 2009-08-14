@@ -40,3 +40,12 @@ static::
 html:
 
 public_copy_target(condor_limits_wrapper.sh,libexec,condor_limits_wrapper.sh,EXECUTABLE_MODE)
+
+generate_xml: y.tab.c lex.yy.c
+	$(CC) $^ -o $@  -lfl
+
+y.tab.c: generic_xml.yacc
+	$(YACC) -d $<
+
+lex.yy.c: generic_xml.yy
+	$(LEX) $<

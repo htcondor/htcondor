@@ -31,6 +31,8 @@
 #include "xen_type.h"
 #include "vmgahp_error_codes.h"
 #include "condor_vm_universe_types.h"
+#include "my_popen.h"
+#include <string>
 
 #define XEN_CONFIG_FILE_NAME "xen_vm.config"
 #define XEN_CKPT_TIMESTAMP_FILE_SUFFIX ".timestamp"
@@ -149,6 +151,9 @@ VirshType::Start()
 	systemcmd.AppendArg(m_configfile);
 
 	int result = systemCommand(systemcmd, true, &cmd_out);
+	char * flarg = cmd_out.print_to_delimed_string("/");
+	vmprintf(D_FULLDEBUG, "%s\n", flarg);
+	free(flarg);
 	if( result != 0 ) {
 		// Read error output
 		char *temp = cmd_out.print_to_delimed_string("/");
@@ -282,6 +287,72 @@ VirshType::Checkpoint()
 	}
 
 	return true;
+}
+
+// I really need a good way to determine the type of a classad
+// attribute.  Right now I just try all four possibilities, which is a
+// horrible mess...
+bool VirshType::CreateVirshConfigFile(const char* filename)
+{
+  vmprintf(D_FULLDEBUG, "In VirshType::CreateVirshConfigFile\n");
+  //  std::string name;
+  char * name, line[1024];
+  char * tmp = param("LIBVIRT_XML_SCRIPT");
+  if(tmp == NULL)
+    {
+      vmprintf(D_ALWAYS, "Something went really bad, the xml helper command variable is not\
+                          configured (but it must be for this code to be reachable).\n");
+      return false;
+    }
+  // This probably needs some work...
+  ArgList args;
+  args.AppendArg(tmp);
+  free(tmp);
+
+  // We might want to have specific debugging output enabled in the
+  // helper script; however, it is not clear where that output should
+  // go.  This gives us a way to do so even in cases where the script
+  // is unable to read from condor_config (why would this ever
+  // happen?)
+  tmp = param("LIBVIRT_XML_SCRIPT_ARGS");
+  if(tmp != NULL) 
+    {
+      MyString errormsg;
+      args.AppendArgsV1RawOrV2Quoted(tmp, &errormsg);
+      free(tmp);
+    }
+  StringList input_strings, output_strings, error_strings;
+  MyString classad_string;
+  m_classAd.sPrint(classad_string);
+  input_strings.append(classad_string.Value());
+
+  int ret = systemCommand(args, true, &output_strings, &input_strings, &error_strings, false);
+  error_strings.rewind();
+  if(ret != 0)
+    {
+      vmprintf(D_ALWAYS, "XML helper script could not be executed\n");
+      output_strings.rewind();
+      // If there is any output from the helper, write it to the debug
+      // log.  Presumably, this is separate from the script's own
+      // debug log.
+      while((tmp = error_strings.next()) != NULL)
+	{
+	  vmprintf(D_FULLDEBUG, "Helper stderr output: %s\n", tmp);
+	}
+      return false;
+    }
+  while((tmp = error_strings.next()) != NULL)
+    {
+      vmprintf(D_ALWAYS, "Helper stderr output: %s\n", tmp);
+    }
+  output_strings.rewind();
+  FILE * xml_file = fopen(filename, "w");
+  while((tmp = output_strings.next()) != NULL)
+    {
+      fprintf(xml_file, "%s\n", tmp);
+    }
+  fclose(xml_file);
+  return true;
 }
 
 bool

@@ -515,18 +515,26 @@ bool canSwitchUid(void)
 	return can_switch_ids();
 }
 
+/**
+ * merge_stderr_with_stdout is intended for clients of this function
+ * that wish to have the old behavior, where stderr and stdout were
+ * both added to the same StringList.
+ */
 int systemCommand( ArgList &args, bool is_root, StringList *cmd_out, StringList * cmd_in,
-				   int want_stderr )
+		   StringList *cmd_err, bool merge_stderr_with_stdout)
 {
 	int result = 0;
 	FILE *fp = NULL;
+	FILE * fp_for_stdin = NULL;
+	FILE * childerr = NULL;
 	MyString line;
 	char buff[1024];
 	StringList *my_cmd_out = cmd_out;
 
 	priv_state prev = PRIV_UNKNOWN;
 
-	int sockets[2];
+	int stdout_pipes[2];
+	int stdin_pipes[2];
 	int pid;
 	if( is_root ) {
 		prev = set_root_priv();
@@ -534,7 +542,7 @@ int systemCommand( ArgList &args, bool is_root, StringList *cmd_out, StringList 
 		prev = set_user_priv();
 	}
 #if defined(WIN32)
-	if(cmd_in != NULL)
+	if((cmd_in != NULL) || (cmd_err != NULL))
 	  {
 	    vmprintf(D_ALWAYS, "Invalid use of systemCommand() in Windows.\n");
 	    return -1;
@@ -543,18 +551,33 @@ int systemCommand( ArgList &args, bool is_root, StringList *cmd_out, StringList 
 	//	fp = privsep_popen(args, "r", want_stderr, job_user_uid);
 	//}
 	//else {
-	fp = my_popen( args, "r", want_stderr );
+	fp = my_popen( args, "r", merge_stderr_with_stdout );
 	//}
 #else
 	// The old way of doing things (and the Win32 way of doing
 	//	things)
 	// fp = my_popen( args, "r", want_stderr );
+	if((cmd_err != NULL) && merge_stderr_with_stdout)
+	  {
+	    vmprintf(D_ALWAYS, "Invalid use of systemCommand().\n");
+	    return -1;
+	  }
+
 	PrivSepForkExec psforkexec;
 	char ** args_array = args.GetStringArray();
+	int error_pipe[2];
 		// AIX 5.2, Solaris 5.9, HPUX 11 don't have AF_LOCAL
-	if(socketpair(AF_UNIX, SOCK_STREAM, 0, sockets) < 0)
+
+	if(pipe(stdin_pipes) < 0)
 	  {
-	    vmprintf(D_ALWAYS, "Error opening local socket: %s\n", strerror(errno));
+	    vmprintf(D_ALWAYS, "Error creating pipe: %s\n", strerror(errno));
+	    return -1;
+	  }
+	if(pipe(stdout_pipes) < 0)
+	  {
+	    vmprintf(D_ALWAYS, "Error creating pipe: %s\n", strerror(errno));
+	    close(stdin_pipes[0]);
+	    close(stdin_pipes[1]);
 	    return -1;
 	  }
 
@@ -564,11 +587,26 @@ int systemCommand( ArgList &args, bool is_root, StringList *cmd_out, StringList 
 	      vmprintf(D_ALWAYS,
 		       "my_popenv failure on %s\n",
 		       args_array[0]);
-	      close(sockets[0]);
-	      close(sockets[1]);
+	      close(stdin_pipes[0]);
+	      close(stdin_pipes[1]);
+	      close(stdout_pipes[0]);
+	      close(stdout_pipes[1]);
 	      return -1;
 	    }
 	}
+
+	if(cmd_err != NULL)
+	  {
+	    if(pipe(error_pipe) < 0)
+	      {
+		vmprintf(D_ALWAYS, "Could not open pipe for error output: %s\n", strerror(errno));
+		close(stdin_pipes[0]);
+		close(stdin_pipes[1]);
+		close(stdout_pipes[0]);
+		close(stdout_pipes[1]);
+		return -1;
+	      }
+	  }
 	// Now fork and do what my_popen used to do
 	pid = fork();
 	if(pid < 0)
@@ -578,11 +616,18 @@ int systemCommand( ArgList &args, bool is_root, StringList *cmd_out, StringList 
 	  }
 	if(pid == 0)
 	  {
-	    close(sockets[0]);
-	    dup2(sockets[1], STDOUT_FILENO);
-	    dup2(sockets[1], STDIN_FILENO);
+	    close(stdout_pipes[0]);
+	    close(stdin_pipes[1]);
+	    dup2(stdout_pipes[1], STDOUT_FILENO);
+	    dup2(stdin_pipes[0], STDIN_FILENO);
 
-	    if(want_stderr) dup2(sockets[1], STDERR_FILENO);
+	    if(merge_stderr_with_stdout) dup2(stdout_pipes[1], STDERR_FILENO);
+	    else if(cmd_err != NULL) 
+	      {
+		close(error_pipe[0]);
+		dup2(error_pipe[1], STDERR_FILENO);
+	      }
+
 
 	    uid_t euid = geteuid();
 	    gid_t egid = getegid();
@@ -603,16 +648,31 @@ int systemCommand( ArgList &args, bool is_root, StringList *cmd_out, StringList 
 	    
 	      ArgList al;
 	      psforkexec.in_child(cmd, al);
-	      args_array = al.GetStringArray();			
+	      args_array = al.GetStringArray();
 	    }
 
 
 	    execvp(args_array[0], args_array);
-	    // Something went horribly wrong!
+	    vmprintf(D_ALWAYS, "Could not execute %s: %s\n", args_array[0], strerror(errno));
 	    exit(-1);
 	  }
-	close(sockets[1]);
-	fp = fdopen(sockets[0], "r+");
+	close(stdin_pipes[0]);
+	close(stdout_pipes[1]);
+	fp_for_stdin = fdopen(stdin_pipes[1], "w");
+	fp = fdopen(stdout_pipes[0], "r");
+	if(cmd_err != NULL)
+	  {
+	    close(error_pipe[1]);
+	    childerr = fdopen(error_pipe[0],"r");
+	    if(childerr == 0)
+	      {
+		vmprintf(D_ALWAYS, "Could not open pipe for reading child error output: %s\n", strerror(errno));
+		close(error_pipe[0]);
+		close(stdin_pipes[1]);
+		close(stdout_pipes[0]);
+		return -1;
+	      }
+	  }
 
 	if ( privsep_enabled() && (job_user_uid != get_condor_uid())) {
 	  FILE* _fp = psforkexec.parent_begin();
@@ -651,9 +711,12 @@ int systemCommand( ArgList &args, bool is_root, StringList *cmd_out, StringList 
 	  char * tmp;
 	  while((tmp = cmd_in->next()) != NULL)
 	    {
-	      fprintf(fp, "%s\n", tmp);
-	      fflush(fp);
+	      fprintf(fp_for_stdin, "%s\n", tmp);
+	      fflush(fp_for_stdin);
 	    }
+	  // So that we will not be waiting for output while the
+	  // script waits for stdin to be closed.
+	  fclose(fp_for_stdin);
 	}
 
 	if ( my_cmd_out == NULL ) {
@@ -668,6 +731,19 @@ int systemCommand( ArgList &args, bool is_root, StringList *cmd_out, StringList 
 		}
 	}
 
+	if(cmd_err != NULL)
+	  {
+	    while(fgets(buff, sizeof(buff), childerr) != NULL)
+	      {
+		line += buff;
+		if(line.chomp())
+		  {
+		    cmd_err->append(line.Value());
+		    line = "";
+		  }
+	      }
+	    fclose(childerr);
+	  }
 #if defined(WIN32)
 	result = my_pclose( fp );
 #else

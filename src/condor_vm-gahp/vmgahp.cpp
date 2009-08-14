@@ -683,8 +683,15 @@ VMGahp::executeStart(VMRequest *req)
 	}
 
 	VMType *new_vm = NULL;
+	char * tmp = param("LIBVIRT_XML_SCRIPT");
 #if defined(LINUX)
-	if(strcasecmp(vmtype, CONDOR_VM_UNIVERSE_XEN) == 0 ) {
+	if((tmp != NULL) && (strcasecmp(vmtype, CONDOR_VM_UNIVERSE_VMWARE) != 0))
+	  {
+	    new_vm = new VirshType(m_gahp_config->m_vm_script.Value(), 
+				   vmworkingdir.Value(), m_jobAd);
+		ASSERT(new_vm);
+	  }
+	else if(strcasecmp(vmtype, CONDOR_VM_UNIVERSE_XEN) == 0 ) {
 		new_vm = new XenType(m_gahp_config->m_vm_script.Value(), 
 				vmworkingdir.Value(), m_jobAd);
 		ASSERT(new_vm);
@@ -699,7 +706,8 @@ VMGahp::executeStart(VMRequest *req)
 				m_gahp_config->m_vm_script.Value(), 
 				vmworkingdir.Value(), m_jobAd);
 		ASSERT(new_vm);
-	}else {
+	}else 
+	  {
 		// We should not reach here
 		vmprintf(D_ALWAYS, "vmtype(%s) is not yet implemented\n", vmtype);
 		req->m_has_result = true;
