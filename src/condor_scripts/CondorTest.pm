@@ -27,6 +27,7 @@ package CondorTest;
 
 require 5.0;
 use Carp;
+use CondorUtils;
 use Condor;
 use CondorPersonal;
 use FileHandle;
@@ -78,7 +79,7 @@ my $isnightly = IsThisNightly($BaseDir);
 my $coredir = "$BaseDir/Cores";
 if(!(-d $coredir)) {
 	debug("Creating collection directory for cores\n",2);
-	system("mkdir -p $coredir");
+	runcmd("mkdir -p $coredir");
 }
 
 # set up for reading in core/ERROR exemptions
@@ -365,7 +366,7 @@ sub DoTest
 		print "\nCurrent date and load follow:\n";
 		print scalar localtime() . "\n";
 		if($iswindows == 0) {
-			system("uptime");
+			runcmd("uptime");
 		}
 		print "\n\n";
 	}
@@ -382,7 +383,7 @@ sub DoTest
 			print "Saving last config file<<<$lastconfig>>>\n";
 			$ENV{CONDOR_CONFIG} = $config;
 			print "CONDOR_CONFIG now <<$ENV{CONDOR_CONFIG}>>\n";
-			system("condor_config_val -config");
+			runcmd("condor_config_val -config");
 		}
 	}
 
@@ -459,7 +460,7 @@ sub DoTest
 		print "Current date and load follow:\n";
 		print scalar localtime() . "\n";
 		if($iswindows == 0) {
-			system("uptime");
+			runcmd("uptime");
 		}
 		print "\n\n";
 	}
@@ -763,56 +764,6 @@ sub IsFileEmpty
     return -z $file;
 }
 
-sub verbose_system 
-{
-	my $args = shift @_;
-
-
-	my $catch = "vsystem$$";
-	$args = $args . " 2>" . $catch;
-	my $rc = 0xffff & system $args;
-
-	if ($rc != 0) { 
-		printf "system(%s) returned %#04x: ", $args, $rc;
-	}
-
-	if ($rc == 0) 
-	{
-		#print "ran with normal exit\n";
-		return $rc;
-	}
-	elsif ($rc == 0xff00) 
-	{
-		print "command failed: $!\n";
-	}
-	elsif (($rc & 0xff) == 0) 
-	{
-		$rc >>= 8;
-		print "ran with non-zero exit status $rc\n";
-	}
-	else 
-	{
-		print "ran with ";
-		if ($rc &   0x80) 
-		{
-			$rc &= ~0x80;
-			print "coredump from ";
-		}
-		print "signal $rc\n"
-	}
-
-	if( !open( MACH, "<$catch" )) { 
-		warn "Can't look at command  output <$catch>:$!\n";
-	} else {
-    	while(<MACH>) {
-        	print "ERROR: $_";
-    	}
-    	close(MACH);
-	}
-
-	return $rc;
-}
-
 sub MergeOutputFiles
 {
 	my $Testhash = shift || croak "Missing Test hash to Merge Output\n";
@@ -1018,42 +969,28 @@ sub runCondorTool
 	my $force = "";
 	$force = shift;
 	my $count = 0;
-	my $catch = "runCTool$$";
 
 	# clean array before filling
 
 	my $attempts = 6;
 	$count = 0;
+	my $hashref;
 	while( $count < $attempts) {
 		@{$arrayref} = (); #empty return array...
 		my @tmparray;
 		debug( "Try command <$cmd>\n",4);
-		open(PULL, "_condor_TOOL_TIMEOUT_MULTIPLIER=4 $cmd 2>$catch |");
-		while(<PULL>)
-		{
-			fullchomp($_);
-			debug( "Process: $_\n",4);
-			push @tmparray, $_; # push @{$arrayref}, $_;
-		}
-		close(PULL);
-		$status = $? >> 8;
+		#open(PULL, "_condor_TOOL_TIMEOUT_MULTIPLIER=4 $cmd 2>$catch |");
+
+		$hashref = runcmd("_condor_TOOL_TIMEOUT_MULTIPLIER=4 $cmd");
+		my @output =  @{${$hashref}{"stdout"}};
+		my @error =  @{${$hashref}{"stderr"}};
+
+		$status = ${$hashref}{"exitcode"};
 		debug("Status is $status after command\n",4);
 		if( $status != 0 )
 		{
-				print "runCondorTool: $cmd timestamp $start_time failed with status $status ($?)!\n";
-				print "************* std out ***************\n";
-				foreach my $stdout (@tmparray) {
-					print "STDOUT: $stdout \n";
-				}
-				print "************* std err ***************\n";
-				if( !open( MACH, "<$catch" )) { 
-					warn "Can't look at command output <$catch>:$!\n";
-				} else {
-    				while(<MACH>) {
-        				print "ERROR: $_";
-    				}
-    				close(MACH);
-				}
+				#print "************* std out ***************\n";
+				#print "************* std err ***************\n";
 				print "************* GetQueue() ***************\n";
 				GetQueue();
 				print "************* GetQueue() DONE ***************\n";
@@ -1061,23 +998,21 @@ sub runCondorTool
 
 		if ($status == 0) {
 			my $line = "";
-			foreach my $value (@tmparray)
-			{
-				push @{$arrayref}, $value;
+			if(defined $output[0]) {
+				#have some info here
+				foreach my $value (@output)
+				{
+					push @{$arrayref}, $value;
+				}
 			}
 			$done = 1;
 			# There are times like the security tests when we want
 			# to see the stderr even when the command works.
-			if( (defined $force) && ($force ne "" )) {
-				if( !open( MACH, "<$catch" )) { 
-					warn "Can't look at command output <$catch>:$!\n";
-				} else {
-    				while(<MACH>) {
-						fullchomp($_);
-						$line = $_;
-						push @{$arrayref}, $line;
-    				}
-    				close(MACH);
+			if(defined $error[0]) {
+				#have some info here
+				foreach my $value (@error)
+				{
+					push @{$arrayref}, $value;
 				}
 			}
 			my $current_time = time;
@@ -1395,7 +1330,7 @@ sub spawn_cmd
 			open(LOG,">$mylog") || die "Can not open log: $mylog: $!\n";
 			$res = 0;
 			print LOG "Starting this cmd <$cmdtowatch>\n";
-			$res = system("$cmdtowatch");
+			$res = verbose_system("$cmdtowatch");
 			print LOG "Result from $cmdtowatch is <$res>\n";
 			print LOG "File to watch is <$resultfile>\n";
 			if($res != 0) {
@@ -1592,14 +1527,14 @@ sub findOutput
 		if($line =~ /^\s*[Ll]og\s+=\s+(.*)(\..*)$/){
 			$testname = $1;
 			my $previouslog = $1 . $2;
-			system("rm -f $previouslog");
+			runcmd("rm -f $previouslog");
 		}
 	}
 	close(SF);
 	print "findOutput returning <$testname>\n";
 	if($testname eq "UNKNOWN") {
 		print "failed to find testname in this submit file:$submitfile\n";
-		system("cat $submitfile");
+		runcmd("cat $submitfile");
 	}
 	return($testname);
 }
@@ -1832,7 +1767,7 @@ sub AddFileTrace
 	print NTF "$buildentry";
 	debug("\n$buildentry",2);
 	close(NTF);
-	system("mv $newtracefile $tracefile");
+	runcmd("mv $newtracefile $tracefile");
 
 }
 
@@ -1845,7 +1780,7 @@ sub MoveCoreFile
 	my $entries = CountFileTrace();
 	if($oldname =~ /^.*\/(core.*)\s*.*$/) {
 		$newname = $coredir . "/" . $1 . "_$entries";
-		system("mv $oldname $newname");
+		runcmd("mv $oldname $newname");
 		#system("rm $oldname");
 		return($newname);
 	} else {
@@ -1968,7 +1903,7 @@ sub FindControlFile
 		debug( "Running file test is <$runningfile>\n",$debuglevel);
 		if(!(-d $runningfile)) {
 			debug( "Creating control file directory<$runningfile>\n",$debuglevel);
-			system("mkdir -p $runningfile");
+			runcmd("mkdir -p $runningfile");
 		}
 	} else {
 		die "Lost relative to where <$RunningFile> is :-(\n";
@@ -1981,12 +1916,12 @@ sub CleanControlFile
 	my $controlfile = FindControlFile();
 	if( -d $controlfile) {
 		debug( "Cleaning old active test running file holding:\n",$debuglevel);
-		system("ls $controlfile");
-		system("rm -rf $controlfile");
+		runcmd("ls $controlfile");
+		runcmd("rm -rf $controlfile");
 	} else {
 		debug( "Creating new active test running file\n",$debuglevel);
 	}
-	system("mkdir -p $controlfile");
+	runcmd("mkdir -p $controlfile");
 }
 
 
@@ -2018,7 +1953,7 @@ sub AddRunningTest
 	my $tmpfile;
 	my $line = "";
 	debug( "Wanting to add <$test> to running tests\n",$debuglevel);
-	system("touch $runningfile/$test");
+	runcmd("touch $runningfile/$test");
 }
 
 sub RemoveRunningTest
@@ -2029,7 +1964,7 @@ sub RemoveRunningTest
 	my $tmpfile;
 	my $line = "";
 	debug( "Wanting to remove <$test> from running tests\n",$debuglevel);
-	system("rm -f $runningfile/$test");
+	runcmd("rm -f $runningfile/$test");
 }
 
 sub IsThisWindows

@@ -60,6 +60,7 @@ use File::Copy;
 use FileHandle;
 use POSIX "sys_wait_h";
 use Cwd;
+use CondorUtils;
 use CondorTest;
 use Time::Local;
 use strict;
@@ -361,9 +362,9 @@ if(!($wantcurrentdaemons)) {
 			$mcmd =~ s/\\/\//g;
 			debug( "Starting master like this:\n",2);
 			debug( "\"$mcmd\"\n",2);
-			CondorTest::verbose_system("$mcmd");
+			CondorTest::verbose_system("$mcmd",{emit_output=>0});
 		} else {
-			CondorTest::verbose_system("$installdir/sbin/condor_master @extracondorargs -f &");
+			CondorTest::verbose_system("$installdir/sbin/condor_master @extracondorargs -f &",{emit_output=>0});
 		}
 		debug("Done Starting Personal Condor\n",2);
 	}
@@ -518,7 +519,7 @@ if( $ignorefile ) {
 my $ResultDir;
 # set up base directory for storing test results
 if ($isXML){
-      CondorTest::verbose_system ("mkdir -p $BaseDir/results");
+      CondorTest::verbose_system ("mkdir -p $BaseDir/results",{emit_output=>0});
       $ResultDir = "$BaseDir/results";
       open( XML, ">$ResultDir/ncondor_testsuite.xml" ) || die "error opening \"ncondor_testsuite.xml\": $!\n";
       print XML "<\?xml version=\"1.0\" \?>\n<test_suite>\n";
@@ -546,7 +547,7 @@ foreach my $compiler (@compilers)
 
 	debug("Compiler/Directory <$compiler> has $testspercompiler tests\n",2); 
     if ($isXML){
-      CondorTest::verbose_system ("mkdir -p $ResultDir/$compiler");
+      CondorTest::verbose_system ("mkdir -p $ResultDir/$compiler",{emit_output=>0});
     } 
 	if($compiler ne "\.") {
 		# Meh, if the directory isn't there, just skip it instead of bailing.
@@ -1054,6 +1055,7 @@ sub CreateLocalConfig
 	print FIX "PERIODIC_EXPR_INTERVAL = 15\n";
 	print FIX "PERIODIC_EXPR_TIMESLICE = .95\n";
 	print FIX "NEGOTIATOR_INTERVAL = 20\n";
+	print FIX "DAGMAN_USER_LOG_SCAN_INTERVAL = 1\n";
 
 	# turn on soap for testing
 	print FIX "ENABLE_SOAP            	= TRUE\n";
@@ -1474,9 +1476,9 @@ sub DoChild
 	my $save = $testname . ".saveme";
 	my $piddir = $save . "/$$";
 	# make sure pid storage directory exists
-	CondorTest::verbose_system("mkdir -p $save");
+	verbose_system("mkdir -p $save",{emit_output=>0});
 	my $pidcmd = "mkdir -p " . $save . "/" . "$$";
-	CondorTest::verbose_system("$pidcmd");
+	verbose_system("$pidcmd",{emit_output=>0});
 
 	my $log = $testname . ".log";
 	my $cmd = $testname . ".cmd";
@@ -1487,7 +1489,7 @@ sub DoChild
 
 	# before starting test clean trace of earlier run
 	my $rmcmd = "rm -f $log $out $err $runout $cmdout";
-	CondorTest::verbose_system("$rmcmd");
+	CondorTest::verbose_system("$rmcmd",{emit_output=>0});
 
 	my $newlog =  $piddir . "/" . $log;
 	my $newcmd =  $piddir . "/" . $cmd;
