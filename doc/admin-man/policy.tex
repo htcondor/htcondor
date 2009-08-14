@@ -2044,6 +2044,10 @@ SLOT2_START = ( (slot1_Activity != "Busy") && \
                 (KeyboardIdle > $(StartIdleTime)) && \
 	        ($(CPUIdle) || (State != "Unclaimed" && State != "Owner")) )
 
+# The above expression looks at slot1_Activity, so we need to add
+# Activity to the list of slot attributes to advertise.
+STARTD_SLOT_ATTRS = $(STARTD_SLOT_ATTRS) Activity
+
 # Only suspend jobs on slot2.  Suspend if there is keyboard activity or
 # if a job starts on slot1...
 SUSPEND = (SlotID == 2) && \
