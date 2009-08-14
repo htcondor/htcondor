@@ -1848,7 +1848,7 @@ TESTCLASS(job_dagman_large_dag,quicknolink)
 #endif
 
 DESC(job_dagman_usedagdir,"Test DAG with -usedagdir flag")
-RUN(job_dagman_large_dag)
+RUN(job_dagman_usedagdir)
 TESTCLASS(job_dagman_usedagdir,dagman)
 TESTCLASS(job_dagman_usedagdir,quick)
 TESTCLASS(job_dagman_usedagdir,full)
