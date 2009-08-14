@@ -1,4 +1,4 @@
-PROGRAMS = condor_power power_state
+PROGRAMS = condor_power power_state condor_rooster
 all_target( $(PROGRAMS) )
 
 CFLAGS = $(STD_C_FLAGS) $(CLIPPED)
@@ -13,8 +13,6 @@ testbin:: all
 
 
 
-
-all_target( condor_rooster )
 
 ROOSTER_LIB = $(DAEMONCORE_LIB) $(STD_LIBS) $(CONFIGURE_GSOAP_LDFLAGS)
 

@@ -257,6 +257,7 @@ const char *ATTR_HIBERNATION_STATE        = "HibernationState";
 const char *ATTR_HIBERNATION_SUPPORTED_STATES = "HibernationSupportedStates";
 const char *ATTR_HIBERNATION_RAW_MASK     = "HibernationRawMask";
 const char *ATTR_HIBERNATION_METHOD       = "HibernationMethod";
+const char *ATTR_UNHIBERNATE              = "Unhibernate";
 const char *ATTR_HOLD_KILL_SIG            = "HoldKillSig";
 const char *ATTR_HOOK_KEYWORD             = "HookKeyword";
 const char *ATTR_IDLE_JOBS                = "IdleJobs";
