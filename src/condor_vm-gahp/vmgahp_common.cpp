@@ -526,6 +526,7 @@ int systemCommand( ArgList &args, bool is_root, StringList *cmd_out, StringList 
 	int result = 0;
 	FILE *fp = NULL;
 	FILE * fp_for_stdin = NULL;
+	FILE * childerr = NULL;
 	MyString line;
 	char buff[1024];
 	StringList *my_cmd_out = cmd_out;
@@ -659,7 +660,6 @@ int systemCommand( ArgList &args, bool is_root, StringList *cmd_out, StringList 
 	close(stdout_pipes[1]);
 	fp_for_stdin = fdopen(stdin_pipes[1], "w");
 	fp = fdopen(stdout_pipes[0], "r");
-	FILE * childerr;
 	if(cmd_err != NULL)
 	  {
 	    close(error_pipe[1]);
