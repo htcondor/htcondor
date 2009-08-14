@@ -46,7 +46,7 @@
 package CondorPersonal;
 require 5.0;
 use Net::Domain qw(hostfqdn);
-#use CondorPubLogdirs;
+use CondorUtils;
 use warnings;
 use strict;
 
@@ -246,13 +246,13 @@ sub StartCondor
 		$mpid = shift; # assign process id
 	}
 
-	system("mkdir -p $topleveldir");
+	runcmd("mkdir -p $topleveldir");
 	$topleveldir = $topleveldir . "/$testname" . ".saveme";
-	system("mkdir -p $topleveldir");
+	runcmd("mkdir -p $topleveldir");
 	$topleveldir = $topleveldir . "/" . $mpid;
-	system("mkdir -p $topleveldir");
+	runcmd("mkdir -p $topleveldir");
 	$topleveldir = $topleveldir . "/" . $mpid . $version;
-	system("mkdir -p $topleveldir");
+	runcmd("mkdir -p $topleveldir");
 
 	$procdaddress = $mpid . $version;
 
@@ -262,7 +262,7 @@ sub StartCondor
 	if(exists $personal_condor_params{"personaldir"}) {
 		$topleveldir = $personal_condor_params{"personaldir"};
 		debug( "SETTING $topleveldir as topleveldir\n",$debuglevel);
-		system("mkdir -p $topleveldir");
+		runcmd("mkdir -p $topleveldir");
 	}
 
 	# if we are wrapping tests, publish log location
@@ -585,10 +585,10 @@ sub InstallPersonalCondor
 
 			debug( "Sandbox started rooted here: $topleveldir\n",$debuglevel);
 
-			system("mkdir -p $topleveldir/execute");
-			system("mkdir -p $topleveldir/spool");
-			system("mkdir -p $topleveldir/log");
-			system("mkdir -p $topleveldir/log/tmp");
+			runcmd("mkdir -p $topleveldir/execute");
+			runcmd("mkdir -p $topleveldir/spool");
+			runcmd("mkdir -p $topleveldir/log");
+			runcmd("mkdir -p $topleveldir/log/tmp");
 		}
 		elsif( $condordistribution eq "nightlies" )
 		{
@@ -653,10 +653,10 @@ sub InstallPersonalCondor
 
 			debug( "Sandbox started rooted here: $topleveldir\n",$debuglevel);
 
-			system("mkdir -p $topleveldir/execute");
-			system("mkdir -p $topleveldir/spool");
-			system("mkdir -p $topleveldir/log");
-			system("mkdir -p $topleveldir/log/tmp");
+			runcmd("mkdir -p $topleveldir/execute");
+			runcmd("mkdir -p $topleveldir/spool");
+			runcmd("mkdir -p $topleveldir/log");
+			runcmd("mkdir -p $topleveldir/log/tmp");
 		}
 		elsif( -e $condordistribution )
 		{
@@ -673,10 +673,10 @@ sub InstallPersonalCondor
 				die "Relcation failed!\n";
 				exit(1);
 			}
-			system("mkdir -p $topleveldir/execute");
-			system("mkdir -p $topleveldir/spool");
-			system("mkdir -p $topleveldir/log");
-			system("tar -xf $home/$condordistribution");
+			runcmd("mkdir -p $topleveldir/execute");
+			runcmd("mkdir -p $topleveldir/spool");
+			runcmd("mkdir -p $topleveldir/log");
+			runcmd("tar -xf $home/$condordistribution");
 			$sbinloc = $topleveldir; # local_dir is here
 			chdir "$home";
 		}
@@ -709,7 +709,7 @@ sub InstallPersonalCondor
     if($personal_daemons =~ /.*quill.*/) {
         debug( "Yup it is a quill test..........copy in .pgpass file\n",$debuglevel);
         my $cmd = "cp $topleveldir/../pgpass $topleveldir/spool/.pgpass";
-        system("$cmd");
+        runcmd("$cmd");
     }
 	return($sbinloc);
 }
@@ -919,6 +919,8 @@ sub TunePersonalCondor
 
 	# Dan: Jan 30, '08 added D_NETWORK in order to debug condor_rm timeout
 	print NEW "ALL_DEBUG = D_FULLDEBUG\n";
+	# bill: 8/13/09 speed up dagman
+	print NEW "DAGMAN_USER_LOG_SCAN_INTERVAL = 1\n";
 
 	if($personal_daemons ne "")
 	{
@@ -1122,7 +1124,7 @@ sub StartPersonalCondor
 		#  not running with this config so treat it like a start case
 		debug("Condor state is off\n",$debuglevel);
 		debug( "start up the personal condor!--$personalmaster--\n",$debuglevel);
-		system($personalmaster);
+		runcmd($personalmaster);
 		#system("condor_config_val -v log");
 	} else {
 		die "Bad state for a new personal condor configuration!<<running :-(>>\n";
@@ -1559,7 +1561,7 @@ sub KillDaemonPids
 			$masterpid = $1;
 			if($iswindows == 1) {
 				$cmd = "/usr/bin/kill -f -s 3 $masterpid";
-				system($cmd);
+				runcmd($cmd);
 			} else {
 				$cnt = kill 3, $masterpid;
 			}
@@ -1599,7 +1601,7 @@ sub KillDaemonPids
 				debug("Kill MASTER PID <$thispid:$1>\n",$debuglevel);
 				if($iswindows == 1) {
 					$cmd = "/usr/bin/kill -f -s 15 $thispid";
-					system($cmd);
+					runcmd($cmd);
 				} else {
 					$cnt = kill 15, $thispid;
 				}
@@ -1607,7 +1609,7 @@ sub KillDaemonPids
 				debug("Kill non-MASTER PID <$thispid>\n",$debuglevel);
 				if($iswindows == 1) {
 					$cmd = "kill -f -s 15 $thispid";
-					system($cmd);
+					runcmd($cmd);
 				} else {
 					$cnt = kill 15, $thispid;
 				}
@@ -1798,59 +1800,21 @@ sub PersonalSystem
 	if(defined $dumpLogs) {
 		print "Dump Condor Logs if things go south\n";
 		print "Pid dir is  $mypid\n";
-		system("pwd");
+		runcmd("pwd");
 	}
 
+	my $hashref = runcmd($args);
 
-	my $catch = "vsystem$$";
-	$args = $args . " 2>" . $catch;
-	my $rc = 0xffff & system $args;
-
-	printf "system(%s) returned %#04x: ", $args, $rc;
-
-	if ($rc == 0) 
-	{
-		print "ran with normal exit\n";
-		system("pwd");
-		return $rc;
-	}
-	elsif ($rc == 0xff00) 
-	{
-		print "command failed: $!\n";
-	}
-	elsif (($rc & 0xff) == 0) 
-	{
-		$rc >>= 8;
-		print "ran with non-zero exit status $rc\n";
-	}
-	else 
-	{
-		print "ran with ";
-		if ($rc &   0x80) 
-		{
-			$rc &= ~0x80;
-			print "coredump from ";
-		}
-		print "signal $rc\n"
-	}
-
-	if( !open( MACH, "<$catch" )) { 
-		warn "Can't look at command  output <$catch>:$!\n";
-	} else {
-    	while(<MACH>) {
-        	print "ERROR: $_";
-    	}
-    	close(MACH);
-	}
+	my $rc = ${$hashref}{exitcode};
 
 	if(defined $dumpLogs) {
 		print "Dumping Condor Logs\n";
 		my $savedir = getcwd();
 		chdir("$mypid");
-		system("ls");
+		runcmd("ls");
 		PersonalDumpLogs($mypid);
 		chdir("$savedir");
-		system("pwd");
+		runcmd("pwd");
 	}
 
 	return $rc;
@@ -1909,55 +1873,6 @@ sub PersonalDumpCondorLogs
 	}
 	close(LD);
 	chdir("$now");
-}
-
-sub verbose_system 
-{
-	my $args = shift @_;
-
-	my $catch = "vsystem$$";
-	$args = $args . " 2>" . $catch;
-	my $rc = 0xffff & system $args;
-
-	if ($rc != 0) { 
-		printf "system(%s) returned %#04x: ", $args, $rc;
-	}
-
-	if ($rc == 0) 
-	{
-		#print "ran with normal exit\n";
-		return $rc;
-	}
-	elsif ($rc == 0xff00) 
-	{
-		print "command failed: $!\n";
-	}
-	elsif (($rc & 0xff) == 0) 
-	{
-		$rc >>= 8;
-		print "ran with non-zero exit status $rc\n";
-	}
-	else 
-	{
-		print "ran with ";
-		if ($rc &   0x80) 
-		{
-			$rc &= ~0x80;
-			print "coredump from ";
-		}
-		print "signal $rc\n"
-	}
-
-	if( !open( MACH, "<$catch" )) { 
-		warn "Can't look at command  output <$catch>:$!\n";
-	} else {
-    	while(<MACH>) {
-        	print "ERROR: $_";
-    	}
-    	close(MACH);
-	}
-
-	return $rc;
 }
 
 sub DisplayPartialLocalConfig

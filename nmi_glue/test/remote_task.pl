@@ -149,9 +149,9 @@ if( !($ENV{NMI_PLATFORM} =~ /winnt/) ) {
     if( $? >> 8 ) {
         c_die("Can't build CondorPersonal.pm\n");
     }
-    system( "make CondorPubLogdirs.pm" );
+    system( "make CondorUtils.pm" );
     if( $? >> 8 ) {
-        c_die("Can't build CondorPubLogdirs.pm\n");
+        c_die("Can't build CondorUtils.pm\n");
     }
 } else {
     my $scriptdir = $SrcDir . "/condor_scripts";
@@ -159,7 +159,7 @@ if( !($ENV{NMI_PLATFORM} =~ /winnt/) ) {
     copy_file("$scriptdir/Condor.pm", "Condor.pm");
     copy_file("$scriptdir/CondorTest.pm", "CondorTest.pm");
     copy_file("$scriptdir/CondorPersonal.pm", "CondorPersonal.pm");
-    copy_file("$scriptdir/CondorPubLogdirs.pm", "CondorPubLogdirs.pm");
+    copy_file("$scriptdir/CondorUtils.pm", "CondorUtils.pm");
 }
 print "About to run batch_test.pl\n";
 
