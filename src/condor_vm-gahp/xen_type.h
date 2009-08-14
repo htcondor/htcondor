@@ -62,7 +62,6 @@ public:
 	virtual bool CreateConfigFile();
 
 	virtual bool killVM();
-
 protected:
 	MyString makeVirshDiskString(void);
 	bool createISO();
@@ -77,7 +76,10 @@ protected:
 	bool checkCkptSuspendFile(const char* file);
 	bool ResumeFromSoftSuspend(void);
 	bool CreateXenVMConfigFile(const char* filename);
-	virtual bool CreateVirshConfigFile(const char* filename)=0;
+
+	// For the base class, this just prints out the classad
+	// attributes and the type for each attribute.
+	virtual bool CreateVirshConfigFile(const char* filename);
 
 	SimpleList<XenDisk*> m_disk_list;
 
