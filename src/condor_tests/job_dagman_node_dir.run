@@ -37,7 +37,7 @@ $dagman_args = "-verbose";
 	"job_dagman_node_dir-subdir/job_dagman_node_dir-NodeB.out",
 	"job_dagman_node_dir-NodeC-pre.out",
 	"job_dagman_node_dir-NodeC-post.out",
-	"job_dagman_node_dir-NodeC.out",
+	"job_dagman_node_dir-subdir/job_dagman_node_dir-NodeC.out",
 	"job_dagman_node_dir-NodeD-pre.out",
 	"job_dagman_node_dir-NodeD-post.out",
 	"job_dagman_node_dir-NodeD.out");
@@ -128,6 +128,9 @@ $success = sub
 			$diditpass = 0;
 		}
 	}
+
+	# Note: could add a check here to make sure correct events show
+	# up in the right log files.
 
 	if($diditpass == 0) {
 		die "All expected files and correct output failed\n";
