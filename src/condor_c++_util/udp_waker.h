@@ -122,14 +122,14 @@ protected:
 
 private:
 
-    char            m_mac[STRING_MAC_ADDRESS_LENGTH];
-    char            m_subnet[MAX_IP_ADDRESS_LENGTH];
-    char            m_public_ip[MAX_IP_ADDRESS_LENGTH];
-    unsigned char   m_raw_mac[RAW_MAC_ADDRESS_LENGTH];
-    sockaddr_in     m_broadcast;
-    unsigned short  m_port;
-    unsigned char   m_packet[WOL_PACKET_LENGTH];
-    bool            m_can_wake;
+    char			m_mac[STRING_MAC_ADDRESS_LENGTH];
+    char			m_subnet[MAX_IP_ADDRESS_LENGTH];
+    char			m_public_ip[MAX_IP_ADDRESS_LENGTH];
+    unsigned char	m_raw_mac[RAW_MAC_ADDRESS_LENGTH];
+    sockaddr_in		m_broadcast;
+    int				m_port;
+    unsigned char	m_packet[WOL_PACKET_LENGTH];
+    bool			m_can_wake;
 
 };
 

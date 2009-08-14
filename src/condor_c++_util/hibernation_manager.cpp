@@ -24,6 +24,7 @@
 #include "condor_common.h"
 #include "condor_config.h"
 #include "condor_daemon_core.h"
+#include "hibernator.h"
 #include "hibernation_manager.h"
 #include "network_adapter.h"
 
@@ -36,9 +37,10 @@
  * HibernationManager class
  ***************************************************************/
 
-HibernationManager::HibernationManager ( void ) throw ()
+HibernationManager::HibernationManager( HibernatorBase *hibernator )
+	throw ()
 		: m_primary_adapter( NULL ),
-		  m_hibernator ( HibernatorBase::createHibernator () ),
+		  m_hibernator ( hibernator ),
 		  m_interval ( 0 ),
 		  m_target_state ( HibernatorBase::NONE ),
 		  m_actual_state ( HibernatorBase::NONE )
@@ -54,6 +56,15 @@ HibernationManager::~HibernationManager ( void ) throw ()
 	for ( int i = 0;  i < m_adapters.getlast();  i++ ) {
 		delete m_adapters[i];
 	}
+}
+
+bool
+HibernationManager::initialize ( void )
+{
+	if ( m_hibernator ) {
+		return m_hibernator->initialize();
+	}
+	return true;
 }
 
 bool
@@ -77,6 +88,9 @@ HibernationManager::update( void )
 	if ( change ) {
 		dprintf ( D_ALWAYS, "HibernationManager: Hibernation is %s\n",
 			( m_interval > 0 ? "enabled" : "disabled" ) );
+	}
+	if ( m_hibernator ) {
+		m_hibernator->update( );
 	}
 }
 
@@ -106,15 +120,7 @@ HibernationManager::getSupportedStates(
 	states.truncate(-1);
 	if ( m_hibernator ) {
 		unsigned mask = m_hibernator->getStates( );
-		unsigned bit;
-		for ( bit = (unsigned)HibernatorBase::S1;
-			  bit <= (unsigned)HibernatorBase::S5;
-			  bit <<= 1 ) {
-			if ( bit & mask ) {
-				states.add( (HibernatorBase::SLEEP_STATE)bit );
-			}
-		}
-		return true;
+		return HibernatorBase::maskToStates( mask, states );
 	}
 	return false;
 }
@@ -122,19 +128,12 @@ HibernationManager::getSupportedStates(
 bool
 HibernationManager::getSupportedStates( MyString &str ) const
 {
-	ExtArray<HibernatorBase::SLEEP_STATE> states;
 	str = "";
-	if ( m_hibernator ) {
-		getSupportedStates( states );
-		for( int i = 0;  i <= states.getlast();  i++ ) {
-			if ( i ) {
-				str += ",";
-			}
-			str += HibernatorBase::sleepStateToString( states[i] );
-		}
-		return true;
+	ExtArray<HibernatorBase::SLEEP_STATE> states;
+	if ( !getSupportedStates( states ) ) {
+		return false;
 	}
-	return false;
+	return HibernatorBase::statesToString( states, str );
 }
 
 bool

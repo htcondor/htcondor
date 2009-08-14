@@ -31,6 +31,10 @@ public:
 	bool Error(void) const { return m_error; };
 	const char *Arg( void ) const { return m_arg; };
 	bool ArgIsOpt( void ) const { return m_is_opt; };
+	bool isOpt( void ) const { return m_is_opt; };
+
+	bool isFixed( void ) const { return !m_is_opt; };
+	bool fixedMatch( const char *arg, bool consume = true );
 
 	bool Match( const char short_arg ) const;
 	bool Match( const char *long_arg ) const;
@@ -77,6 +81,7 @@ private :
 	char		 m_short;
 	const char	*m_long;
 	const char	*m_opt;
+	const char	*m_fixed;
 
 	int			 m_argc;
 	const char	**m_argv;

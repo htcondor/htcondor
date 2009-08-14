@@ -1,14 +1,14 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2008, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2009, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -24,24 +24,21 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "hibernator.h"
+#include "string_list.h"
 
-#if defined ( WIN32 )
-#  include "hibernator.WINDOWS.h"
-#elif defined ( LINUX )
-#  include "hibernator.linux.h"
-#endif
 
 /***************************************************************
  * Base Hibernator class
  ***************************************************************/
 
-HibernatorBase::HibernatorBase ( void ) throw () 
-		: m_states ( NONE )
+HibernatorBase::HibernatorBase () throw ()
+		: m_states ( NONE ),
+		  m_initialized( false )
 {
 }
 
 
-HibernatorBase::~HibernatorBase ( void ) throw ()
+HibernatorBase::~HibernatorBase () throw ()
 {
 }
 
@@ -67,7 +64,7 @@ HibernatorBase::isStateValid ( SLEEP_STATE state )
 }
 
 bool
-HibernatorBase::isStateSupported( SLEEP_STATE state ) const
+HibernatorBase::isStateSupported ( SLEEP_STATE state ) const
 {
 	if ( NONE == state ) {
 		return true;
@@ -105,13 +102,13 @@ HibernatorBase::switchToState ( SLEEP_STATE level,
 	case S3:
 		new_level = enterStateSuspend( force );
 		break;
-		
+
 		/* S4 will all be treated as hibernate */
 	case S4:
 		new_level = enterStateHibernate( force );
 		break;
 
-		/* S5 will be treated as shutdown (soft-off) */		
+		/* S5 will be treated as shutdown (soft-off) */
 	case S5:
 		new_level = enterStatePowerOff( force );
 		break;
@@ -124,8 +121,8 @@ HibernatorBase::switchToState ( SLEEP_STATE level,
 	return true;
 }
 
-unsigned short 
-HibernatorBase::getStates ( void ) const
+unsigned short
+HibernatorBase::getStates () const
 {
 	return m_states;
 }
@@ -143,29 +140,22 @@ HibernatorBase::addState ( SLEEP_STATE state )
 }
 
 void
-HibernatorBase::addState ( const char *statestr )
+HibernatorBase::addState ( const char *state )
 {
-	SLEEP_STATE state = stringToSleepState ( statestr );
-	m_states |= state;
+	m_states |= stringToSleepState ( state );
+}
+
+const char*
+HibernatorBase::getMethod () const
+{
+	return "default";
 }
 
 /***************************************************************
- * Hibernator static members 
+ * Hibernator static members
  ***************************************************************/
 
 /* factory method */
-
-HibernatorBase* 
-HibernatorBase::createHibernator ( void )
-{
-	HibernatorBase *hibernator = NULL;
-
-# if ( HIBERNATOR_TYPE_DEFINED )
-	hibernator = new RealHibernator ();
-# endif
-
-	return hibernator;
-}
 
 /* conversion methods */
 struct HibernatorBase::StateLookup
@@ -177,9 +167,9 @@ struct HibernatorBase::StateLookup
 static const char *s0names[] = { "NONE", "0", NULL };
 static const char *s1names[] = { "S1",   "1", "standby", "sleep", NULL };
 static const char *s2names[] = { "S2",   "2", NULL};
-static const char *s3names[] = { "S3",   "3", "ram", "mem", NULL };
+static const char *s3names[] = { "S3",   "3", "ram", "mem", "suspend", NULL };
 static const char *s4names[] = { "S4",   "4", "disk", "hibernate", NULL };
-static const char *s5names[] = { "S5",   "5", "shutdown", NULL };
+static const char *s5names[] = { "S5",   "5", "shutdown", "off", NULL };
 static const char *sxnames[] = { NULL };
 static const HibernatorBase::StateLookup states[] =
 {
@@ -192,33 +182,116 @@ static const HibernatorBase::StateLookup states[] =
 	{ -1, HibernatorBase::NONE, sxnames, },
 };
 
-HibernatorBase::SLEEP_STATE 
+HibernatorBase::SLEEP_STATE
 HibernatorBase::intToSleepState ( int n )
 {
 	return Lookup(n).state;
 }
 
-int 
+int
 HibernatorBase::sleepStateToInt ( HibernatorBase::SLEEP_STATE state )
 {
 	return Lookup(state).number;
 }
 
-char const* 
+char const*
 HibernatorBase::sleepStateToString ( HibernatorBase::SLEEP_STATE state )
 {
 	int index = sleepStateToInt ( state );
 	return states[index].strings[0];
 }
 
-HibernatorBase::SLEEP_STATE 
-HibernatorBase::stringToSleepState ( char const* name )
+HibernatorBase::SLEEP_STATE
+HibernatorBase::stringToSleepState ( char const *name )
 {
 	return Lookup(name).state;
 }
 
-const HibernatorBase::StateLookup &
-HibernatorBase::Lookup( int n )
+bool
+HibernatorBase::maskToStates(
+	unsigned			   mask,
+	ExtArray<SLEEP_STATE> &_states )
+{
+	_states.truncate(-1);
+	unsigned bit;
+	for ( bit = (unsigned)S1;
+		  bit <= (unsigned)S5;
+		  bit <<= 1 ) {
+		if ( bit & mask ) {
+			_states.add( (SLEEP_STATE)bit );
+		}
+	}
+	return true;
+}
+
+bool
+HibernatorBase::statesToString( const ExtArray<SLEEP_STATE> &_states,
+								MyString &str )
+{
+	str = "";
+	for( int i = 0;  i <= _states.getlast();  i++ ) {
+		if ( i ) {
+			str += ",";
+		}
+		str += sleepStateToString( _states[i] );
+	}
+	return true;
+}
+
+bool
+HibernatorBase::maskToString( unsigned mask, MyString &str )
+{
+	ExtArray<SLEEP_STATE>	_states;
+	if( !maskToStates( mask, _states ) ) {
+		return false;
+	}
+	return statesToString( _states, str );
+}
+
+bool
+HibernatorBase::stringToStates( const char *str,
+								ExtArray<SLEEP_STATE> &_states )
+{
+	_states.truncate(-1);
+	StringList	strlist( str );
+	strlist.rewind();
+	const char	*name;
+	int			n = 0;
+	while( (name = strlist.next()) != NULL ) {
+		SLEEP_STATE state = stringToSleepState( name );
+		_states.add( state );
+		n++;
+	}
+	return (n >= 1);
+}
+
+bool
+HibernatorBase::statesToMask( const ExtArray<SLEEP_STATE> &_states,
+							  unsigned &mask )
+{
+	mask = 0x0;
+	for( int i = 0;  i <= _states.getlast();  i++ ) {
+		mask |= _states[i];
+	}
+	return true;
+}
+
+bool
+HibernatorBase::stringToMask( const char *str,
+							  unsigned &mask )
+{
+	mask = 0x0;
+
+	ExtArray<SLEEP_STATE> _states;
+	if( !stringToStates( str, _states ) ) {
+		return false;
+	}
+	return statesToMask( _states, mask );
+}
+
+
+const HibernatorBase::StateLookup&
+HibernatorBase::Lookup ( int n )
 {
 	if ( (n > 0)  &&  (n <= 5) ) {
 		return states[n];
@@ -226,8 +299,8 @@ HibernatorBase::Lookup( int n )
 	return states[0];
 }
 
-const HibernatorBase::StateLookup &
-HibernatorBase::Lookup( SLEEP_STATE state )
+const HibernatorBase::StateLookup&
+HibernatorBase::Lookup ( SLEEP_STATE state )
 {
 	for( int i = 0;  states[i].number >= 0;  i++ ) {
 		if ( states[i].state == state ) {
@@ -237,8 +310,8 @@ HibernatorBase::Lookup( SLEEP_STATE state )
 	return states[0];
 }
 
-const HibernatorBase::StateLookup &
-HibernatorBase::Lookup( const char *name )
+const HibernatorBase::StateLookup&
+HibernatorBase::Lookup ( const char *name )
 {
 	for( int i = 0;  states[i].number >= 0;  i++ ) {
 		const HibernatorBase::StateLookup	&state = states[i];

@@ -27,10 +27,9 @@
 
 class Scheduler: virtual public JobLogMirror {
 public:
-	Scheduler(NewClassAdJobLogConsumer *_consumer,
-			  const char *name_param = "JOB_ROUTER_NAME"):
-		m_consumer(_consumer),
-		JobLogMirror(_consumer, name_param)
+	Scheduler(NewClassAdJobLogConsumer *_consumer):
+		JobLogMirror(_consumer),
+		m_consumer(_consumer)
 	{ }
 
 	classad::ClassAdCollection *GetClassAds()

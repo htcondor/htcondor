@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2008, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2009, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -43,10 +43,13 @@ public:
 	//@{
 	
 	/// Constructor
-	HibernationManager ( void ) throw ();
+	HibernationManager( HibernatorBase *hibernator ) throw ();
 	
 	/// Destructor
-	virtual ~HibernationManager ( void ) throw ();
+	virtual ~HibernationManager( void ) throw ();
+
+	/// Initializer
+	bool initialize( void );
 	
 	//@}
 
@@ -73,7 +76,7 @@ public:
         @see switchToState()
         @see canWake()
         */
-    bool isStateSupported ( HibernatorBase::SLEEP_STATE state ) const;
+    bool isStateSupported( HibernatorBase::SLEEP_STATE state ) const;
 
 	/** Get bit-mask of supported states
 		@return true of successful, false otherwise

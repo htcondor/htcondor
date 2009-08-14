@@ -375,7 +375,7 @@ void Hadoop::startService(int type) {
                 arglist.AppendArg(log4jarg.Value());
 
                 MyString log_dir;
-                log_dir.sprintf("-Dhadoop.log.dir=%s", ldir);
+                log_dir.sprintf("-Dhadoop.log.dir=%s/HDFS_Logs", ldir);
                 arglist.AppendArg(log_dir.Value());
                 arglist.AppendArg("-Dhadoop.log.file=hdfs.log");
                 free(ldir);

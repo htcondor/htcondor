@@ -71,7 +71,8 @@ enum Mode {
     MODE_GENERIC_NORMAL,
     MODE_ANY_NORMAL,
     MODE_OTHER,
-    MODE_GENERIC
+    MODE_GENERIC,
+    MODE_HAD_NORMAL
 };
    
 #endif //__STATUS_TYPES_H__
