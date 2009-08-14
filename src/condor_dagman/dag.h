@@ -439,8 +439,9 @@ class Dag {
 		// are normal exe return codes, -1 to -64 represent catching
 		// exe signals 1 to 64, and -1000 and below represent DAGMan,
 		// batch-system, or other external errors
-	const int DAG_ERROR_CONDOR_SUBMIT_FAILED;
-	const int DAG_ERROR_CONDOR_JOB_ABORTED;
+	static const int DAG_ERROR_CONDOR_SUBMIT_FAILED;
+	static const int DAG_ERROR_CONDOR_JOB_ABORTED;
+	static const int DAG_ERROR_LOG_MONITOR_ERROR;
 
 		// The maximum signal we can deal with in the error-reporting
 		// code.
@@ -489,10 +490,6 @@ class Dag {
 	const char *DefaultNodeLog(void) { return _defaultNodeLog; }
 
 	StringList& DagFiles(void) { return _dagFiles; }
-
-		// The absolute maximum allowed rescue DAG number (the real maximum
-		// is normally configured lower).
-	static const int ABS_MAX_RESCUE_DAG_NUM;
 
 	// return same thing as HashTable.insert()
 	int InsertSplice(MyString spliceName, Dag *splice_dag);

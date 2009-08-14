@@ -25,6 +25,7 @@
 #include "dagman_main.h"
 #include "read_multiple_logs.h"
 #include "throttle_by_category.h"
+#include "dag.h"
 #include <set>
 
 //---------------------------------------------------------------------------
@@ -756,13 +757,13 @@ Job::MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 		if ( tmpResult != "" ) {
 			debug_printf( DEBUG_QUIET, "Error getting Stork log file: %s\n",
 						tmpResult.Value() );
-			//TEMPTEMP -- mark node as failed (need to test)
+			LogMonitorFailed();
 			return false;
 		} else if ( logFiles.number() != 1 ) {
 			debug_printf( DEBUG_QUIET, "Error: %d Stork log files found "
 						"in submit file %s; we want 1\n",
 						logFiles.number(), _cmdFile );
-			//TEMPTEMP -- mark node as failed (need to test)
+			LogMonitorFailed();
 			return false;
 		} else {
 			logFiles.rewind();
@@ -770,7 +771,6 @@ Job::MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 		}
 	}
 
-//TEMPTEMP -- no log file is still a fatal error for Stork nodes -- can't specify log file on submit command line
 	if ( logFileStr == "" ) {
 		logFileStr = defaultNodeLog;
 		_useDefaultLog = true;
@@ -783,7 +783,7 @@ Job::MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 				nfsIsError ) ) {
 		debug_printf( DEBUG_QUIET, "Error: log file %s on NFS\n",
 					logFileStr.Value() );
-		//TEMPTEMP -- mark node as failed (need to test)
+		LogMonitorFailed();
 		return false;
 	}
 
@@ -798,7 +798,7 @@ Job::MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 					"ERROR: Unable to monitor log file for node %s",
 					GetJobName() );
 		debug_printf( DEBUG_QUIET, "%s\n", errstack.getFullText() );
-		//TEMPTEMP -- mark node as failed (need to test)
+		LogMonitorFailed();
 		return false;
 	}
 
@@ -844,4 +844,20 @@ Job::UnmonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 	}
 
 	return result;
+}
+
+//---------------------------------------------------------------------------
+void
+Job::LogMonitorFailed()
+{
+	if ( _Status != Job::STATUS_ERROR ) {
+		_Status = Job::STATUS_ERROR;
+		snprintf( error_text, JOB_ERROR_TEXT_MAXLEN,
+					"Unable to monitor node job log file" );
+		retval = Dag::DAG_ERROR_LOG_MONITOR_ERROR;
+		if ( _scriptPost != NULL) {
+				// let the script know the job's exit status
+			_scriptPost->_retValJob = retval;
+		}
+	}
 }

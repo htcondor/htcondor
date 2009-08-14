@@ -53,6 +53,10 @@ using namespace std;
 
 const CondorID Dag::_defaultCondorId;
 
+const int Dag::DAG_ERROR_CONDOR_SUBMIT_FAILED = -1001;
+const int Dag::DAG_ERROR_CONDOR_JOB_ABORTED = -1002;
+const int Dag::DAG_ERROR_LOG_MONITOR_ERROR = -1003;
+
 //---------------------------------------------------------------------------
 void touch (const char * filename) {
     int fd = safe_open_wrapper(filename, O_RDWR | O_CREAT, 0600);
@@ -76,8 +80,6 @@ Dag::Dag( /* const */ StringList &dagFiles,
 		  const char *defaultNodeLog, bool findUserLogs) :
     _maxPreScripts        (maxPreScripts),
     _maxPostScripts       (maxPostScripts),
-	DAG_ERROR_CONDOR_SUBMIT_FAILED (-1001),
-	DAG_ERROR_CONDOR_JOB_ABORTED (-1002),
 	MAX_SIGNAL			  (64),
 	_splices              (200, hashFuncMyString, rejectDuplicateKeys),
 	_dagFiles             (dagFiles),
@@ -2903,12 +2905,12 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 
     	if( node->JobType() == Job::TYPE_CONDOR ) {
 	  		node->_submitTries++;
+			const char *logFile = node->UsingDefaultLog() ?
+						node->_logFile : NULL;
 				// Note: assigning the ParentListString() return value
 				// to a variable here, instead of just passing it directly
 				// to condor_submit(), fixes a memory leak(!).
 				// wenger 2008-12-18
-			const char *logFile = node->UsingDefaultLog() ?
-						node->_logFile : NULL;
 			MyString parents = ParentListString( node );
       		submit_success = condor_submit( dm, cmd_file.Value(), condorID,
 						node->GetJobName(), parents,

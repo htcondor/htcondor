@@ -427,7 +427,7 @@ class Job {
 		// Node priority.  Higher number is better priority (submit first).
 	int _nodePriority;
 
-		//TEMPTEMP -- document
+		// Whether this node is using the default node log file.
 	bool UsingDefaultLog() { return _useDefaultLog; }
 
 private:
@@ -437,6 +437,10 @@ private:
 	void Init( const char* jobName, const char *directory,
 				const char* cmdFile, bool prohibitMultiJobs );
   
+		// Mark this node as failed because of an error in monitoring
+		// the log file.
+  	void LogMonitorFailed();
+
         // strings for job_type_t (e.g., "Condor, "Stork", etc.)
     static const char* _job_type_names[];
 
