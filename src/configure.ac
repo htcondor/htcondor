@@ -2897,7 +2897,10 @@ CHECK_EXTERNAL([pcre], [7.6], [hard],
                [use PCRE (provides regular expression support)],
                MF_LIB_CHECK([pcre], [[pcre pcre_compile]], [PCRE]))
 AS_IF([test "x$cv_ext_pcre" = xyes],
-  [AC_CHECK_HEADERS([pcre.h pcre/pcre.h])])
+  [CPPFLAGS_save="$CPPFLAGS"
+   CPPFLAGS="$CPPFLAGS $PCRE_CFLAGS"
+   AC_CHECK_HEADERS([pcre.h pcre/pcre.h])
+   CPPFLAGS="$CPPFLAGS_save"])
 AC_SUBST(PCRE_LDFLAGS, $PCRE_LDFLAGS)
 AC_SUBST(PCRE_CFLAGS, $PCRE_CFLAGS)
 
