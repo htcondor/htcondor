@@ -3840,7 +3840,7 @@ void Matchmaker::RegisterAttemptedOfflineMatch( ClassAd *job_ad, ClassAd *startd
 	if( !startd_ad->LookupString("OfflinePrimarySlotName",slot1_name) ) {
 			// no primary slot name specified, so use slot1
 
-		char *at = strchr(name.Value(),'@');
+		const char *at = strchr(name.Value(),'@');
 		if( at ) {
 				// in case the slot prefix is something other than "slot"
 				// figure out the prefix
