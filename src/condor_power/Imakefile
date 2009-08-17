@@ -20,6 +20,6 @@ soapobjs(rooster)
 
 ROOSTER_OBJ = rooster_main.o rooster.o $(SOAP_OBJS)
 
-c_plus_target(condor_rooster,$(ROOSTER_OBJ),$(ROOSTER_LIB))
+public_c_plus_target(condor_rooster,libexec,$(ROOSTER_OBJ),$(ROOSTER_LIB))
 
 gen_soapfiles(rooster,condorRooster)

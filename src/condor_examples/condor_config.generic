@@ -538,6 +538,9 @@ MASTER_DEBUG		=
 MAX_JOB_ROUTER_LOG      = 1000000
 JOB_ROUTER_DEBUG        =
 
+MAX_ROOSTER_LOG         = 1000000
+ROOSTER_DEBUG           =
+
 # High Availability Logs
 MAX_HAD_LOG		= 1000000
 HAD_DEBUG		=
@@ -889,6 +892,7 @@ SHADOW_LOG	= $(LOG)/ShadowLog
 STARTD_LOG	= $(LOG)/StartLog
 STARTER_LOG	= $(LOG)/StarterLog
 JOB_ROUTER_LOG  = $(LOG)/JobRouterLog
+ROOSTER_LOG     = $(LOG)/RoosterLog
 # High Availability Logs
 HAD_LOG		= $(LOG)/HADLog
 REPLICATION_LOG	= $(LOG)/ReplicationLog
@@ -1025,6 +1029,7 @@ NEGOTIATOR			= $(SBIN)/condor_negotiator
 COLLECTOR			= $(SBIN)/condor_collector
 STARTER_LOCAL			= $(SBIN)/condor_starter
 JOB_ROUTER                      = $(LIBEXEC)/condor_job_router
+ROOSTER                         = $(LIBEXEC)/condor_rooster
 
 ##  When the master starts up, it can place it's address (IP and port)
 ##  into a file.  This way, tools running on the local machine don't
