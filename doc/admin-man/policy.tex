@@ -2007,13 +2007,20 @@ matched to jobs.
 As new jobs are submitted that receive a higher priority than
 currently executing jobs,
 the executing jobs may be preempted.
-These jobs lose whatever forward progress they have made,
+If the preempted jobs are not checkpointable, they lose whatever forward
+progress they have made,
 and are sent back to the job queue to await starting over again as
 another machine becomes available.
+An alternative to this is to use suspension to freeze a job while some
+other task runs and then unfreeze it so that it can continue on from
+where it left off.  This doesn't require any special handling in the job,
+unlike most checkpointing strategies.  However, it does require some
+special configuration of Condor.
 This example implements a policy that allows the job to decide
 whether it should be evicted or suspended.
 The jobs announce their choice through the use of an invented
-job ClassAd attribute that is also utilized in the configuration.
+job ClassAd attribute \Attr{IsSuspendableJob} that is also utilized in the
+configuration.
 
 The implementation of this policy utilizes two categories of slots,
 identified as suspendable or nonsuspendable.
@@ -2034,19 +2041,22 @@ identifies itself as suspendable or nonsuspendable.
   the two jobs.
   \item If both the currently running job and the potentially running job 
   identify themselves as suspendable,
-  then the policy set for preemption determines which will be running.
+  then the relative priorities of the users and the preemption policy determines whether the new job will replace the existing job.
   \item If both the currently running job and the potentially running job 
   identify themselves as nonsuspendable,
-  then the policy set for preemption determines which will be running.
+  then the relative priorities of the users and the preemption policy determines whether the new job will replace the existing job.
   \item If the currently running job is one that identifies 
   itself as nonsuspendable,
   and the potentially running job identifies itself as suspendable,
   the currently running job continues running.
   \end{enumerate}
-\item{What happens to a currently running job that is preempted.} 
-A job that identifies itself as suspendable will be suspended.
-A job that identifies itself as nonsuspendable goes back into the
-job queue.
+\item{What happens to a currently running job that is preempted.}
+A job that identifies itself as suspendable will be suspended, which
+means it is frozen in place and will later be unfrozen when the
+preempting job is finished.  A job that identifies itself as
+nonsuspendable is evicted, which means it is checkpointed (if possible)
+and killed.  It will return to the idle state in the job queue and can
+try to run again in the future.
 \end{itemize}
 
 
@@ -2060,32 +2070,33 @@ NUM_CPUS = $(DETECTED_CORES)*2
 # memory we have.
 MEMORY = $(DETECTED_MEMORY)*2
 
-# Slots 1 through DETECTED_CORES are normal and the rest are high-prio.
-IsHighPrioSlot = SlotID > $(DETECTED_CORES)
+# Slots 1 through DETECTED_CORES are nonsuspendable and the rest are
+# suspendable
+IsSuspendableSlot = SlotID > $(DETECTED_CORES)
 
-# If I am a normal slot, my corresponding high-prio slot is
+# If I am a suspendable slot, my corresponding nonsuspendable slot is
 # my SlotID plus $(DETECTED_CORES)
-HighPrioSlotState = eval(strcat("slot",SlotID+$(DETECTED_CORES),"_State")
+NonSuspendableSlotState = eval(strcat("slot",SlotID-$(DETECTED_CORES),"_State")
 
 # The above expression looks at slotX_State, so we need to add
 # State to the list of slot attributes to advertise.
 STARTD_SLOT_ATTRS = $(STARTD_SLOT_ATTRS) State
 
 # For convenience, advertise these expressions in the machine ad.
-STARTD_ATTRS = $(STARTD_ATTRS) IsHighPrioSlot HighPrioSlotState
+STARTD_ATTRS = $(STARTD_ATTRS) IsSuspendableSlot NonSuspendableSlotState
 
-MyHighPrioSlotIsIdle = \
-  (HighPrioSlotState =!= "Claimed" && HighPrioSlotState =!= "Preempting")
+MyNonSuspendableSlotIsIdle = \
+  (NonSuspendableSlotState =!= "Claimed" && NonSuspendableSlotState =!= "Preempting")
 
-# High-prio slots are always willing to start jobs.
-# Normal slots are only willing to start if the high prio slot is idle.
+# NonSuspendable slots are always willing to start jobs.
+# Suspendable slots are only willing to start if the NonSuspendable slot is idle.
 START = \
-  IsHighPrioSlot && IsHighPrioJob || \
-  IsHighPrioSlot!=True && IsHighPrioJob=!=True && $(MyHighPrioSlotIsIdle)
+  IsSuspendableSlot!=True && IsSuspendableJob=!=True || \
+  IsSuspendableSlot && IsSuspendableJob==True && $(MyNonSuspendableSlotIsIdle)
 
-# Suspend the normal slot if the high-prio slot is busy.
+# Suspend the suspendable slot if the other slot is busy.
 SUSPEND = \
-  IsHighPrioSlot!=True && $(MyHighPrioSlotIsIdle)!=True
+  IsSuspendableSlot && $(MyNonSuspendableSlotIsIdle)!=True
 
 WANT_SUSPEND = $(SUSPEND)
 
@@ -2094,12 +2105,12 @@ CONTINUE = ($(SUSPEND)) != True
 \end{verbatim}
 \normalsize
 
-Note that in this example, the job ClassAd attribute \Attr{IsHighPrioJob}
+Note that in this example, the job ClassAd attribute \Attr{IsSuspendableJob}
 has no special meaning to Condor.  It is an invented name chosen
 for this example.
 To take advantage of the policy, a job that wishes to be suspended
-must submit the job so that this attribute defined.
-The following line appears in the job's submit description file:
+must submit the job so that this attribute is defined.
+The following line should be placed in the job's submit description file:
 \begin{verbatim}
-+IsHighPrioJob = True
++IsSuspendableJob = True
 \end{verbatim}
