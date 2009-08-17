@@ -1646,6 +1646,10 @@ Resource::publish( ClassAd* cap, amask_t mask )
 
 		caInsert(cap, r_classad, ATTR_SLOT_WEIGHT);
 
+#if HAVE_HIBERNATION
+		caInsert(cap, r_classad, ATTR_UNHIBERNATE);
+#endif
+
 			// Include everything from STARTD_EXPRS.
 			// And then include everything from SLOTx_STARTD_EXPRS
 		daemonCore->publish(cap);

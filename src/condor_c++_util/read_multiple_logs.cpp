@@ -46,92 +46,32 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 
-#if LAZY_LOG_FILES
 unsigned int	InodeHash( const StatStructInode &inode )
 {
 	unsigned int result = inode & 0xffffffff;
 
 	return result;
 }
-#endif
 
 ///////////////////////////////////////////////////////////////////////////////
 
 ReadMultipleUserLogs::ReadMultipleUserLogs() :
-#if !LAZY_LOG_FILES
-	logHash(LOG_HASH_SIZE, hashFuncJobID, rejectDuplicateKeys)
-#else
 	allLogFiles(LOG_INFO_HASH_SIZE, InodeHash, rejectDuplicateKeys),
 	activeLogFiles(LOG_INFO_HASH_SIZE, InodeHash, rejectDuplicateKeys)
-#endif // LAZY_LOG_FILES
 {
-#if !LAZY_LOG_FILES
-	pLogFileEntries = NULL;
-	iLogFileCount = 0;
-#endif // !LAZY_LOG_FILES
 }
-
-///////////////////////////////////////////////////////////////////////////////
-
-#if !LAZY_LOG_FILES
-ReadMultipleUserLogs::ReadMultipleUserLogs(StringList &listLogFileNames) :
-	logHash(LOG_HASH_SIZE, hashFuncJobID, rejectDuplicateKeys)
-{
-	pLogFileEntries = NULL;
-	iLogFileCount = 0;
-	initialize(listLogFileNames);
-}
-#endif // !LAZY_LOG_FILES
 
 ///////////////////////////////////////////////////////////////////////////////
 
 ReadMultipleUserLogs::~ReadMultipleUserLogs()
 {
-#if LAZY_LOG_FILES
 	if (activeLogFileCount() != 0) {
     	dprintf(D_ALWAYS, "Warning: ReadMultipleUserLogs destructor "
 					"called, but still monitoring %d log(s)!\n",
 					activeLogFileCount());
 	}
-#endif // LAZY_LOG_FILES
 	cleanup();
 }
-
-///////////////////////////////////////////////////////////////////////////////
-
-#if !LAZY_LOG_FILES
-bool
-ReadMultipleUserLogs::initialize(StringList &listLogFileNames)
-{
-    dprintf(D_FULLDEBUG, "ReadMultipleUserLogs::initialize()\n");
-
-	cleanup();
-
-	iLogFileCount = listLogFileNames.number();
-	if (iLogFileCount) {
-		pLogFileEntries = new LogFileEntry[iLogFileCount];
-		if( !pLogFileEntries ) {
-		    EXCEPT( "ERROR: out of memory!\n");
-		}
-	}
-
-	listLogFileNames.rewind();
-
-	for (int i = 0; i < iLogFileCount; i++) {
-		char *psFilename = listLogFileNames.next();
-		pLogFileEntries[i].isInitialized = FALSE;
-		pLogFileEntries[i].isValid = FALSE;
-		pLogFileEntries[i].haveReadEvent = FALSE;
-		pLogFileEntries[i].pLastLogEvent = NULL;
-		pLogFileEntries[i].strFilename = psFilename;
-		pLogFileEntries[i].logSize = 0;
-	}
-
-	bool result = initializeUninitializedLogs();
-
-	return result;
-}
-#endif // !LAZY_LOG_FILES
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -175,7 +115,6 @@ ReadMultipleUserLogs::readEvent (ULogEvent * & event)
 {
     dprintf(D_FULLDEBUG, "ReadMultipleUserLogs::readEvent()\n");
 
-#if LAZY_LOG_FILES
 	LogFileMonitor *oldestEventMon = NULL;
 
 	activeLogFiles.startIterations();
@@ -213,50 +152,6 @@ ReadMultipleUserLogs::readEvent (ULogEvent * & event)
 
 	event = oldestEventMon->lastLogEvent;
 	oldestEventMon->lastLogEvent = NULL; // event has been consumed
-#else
-	if (!iLogFileCount) {
-		return ULOG_UNK_ERROR;
-	}
-
-    initializeUninitializedLogs();
-
-	int iOldestEventIndex = -1;
-
-	for ( int i = 0; i < iLogFileCount; i++ ) {
-		LogFileEntry &log = pLogFileEntries[i];
-		if ( log.isInitialized && log.isValid ) {
-		    ULogEventOutcome eOutcome = ULOG_OK;
-		    if ( !log.pLastLogEvent ) {
-				eOutcome = readEventFromLog(log);
-
-		        if ( eOutcome == ULOG_RD_ERROR || eOutcome == ULOG_UNK_ERROR ) {
-			        // peter says always return an error immediately,
-			        // then go on our merry way trying again if they
-					// call us again.
-			        dprintf(D_ALWAYS, "ReadMultipleUserLogs: read error "
-								"on log %s\n",
-					    log.strFilename.Value());
-			        return eOutcome;
-		        }
-		    }
-
-		    if ( eOutcome != ULOG_NO_EVENT ) {
-			    if (iOldestEventIndex == -1 || 
-				        (pLogFileEntries[iOldestEventIndex].pLastLogEvent->eventTime >
-				        log.pLastLogEvent->eventTime)) {
-				    iOldestEventIndex = i;
-			    }
-		    }
-		}
-	}
-
-	if ( iOldestEventIndex == -1 ) {
-		return ULOG_NO_EVENT;
-	}
-	
-	event = pLogFileEntries[iOldestEventIndex].pLastLogEvent;
-	pLogFileEntries[iOldestEventIndex].pLastLogEvent = NULL;
-#endif
 
 	return ULOG_OK;
 }
@@ -268,17 +163,12 @@ ReadMultipleUserLogs::detectLogGrowth()
 {
     dprintf( D_FULLDEBUG, "ReadMultipleUserLogs::detectLogGrowth()\n" );
 
-#if !LAZY_LOG_FILES
-    initializeUninitializedLogs();
-#endif // !LAZY_LOG_FILES
-
 	bool grew = false;
 
 	    // Note: we must go through the whole loop even after we find a
 		// log that grew, so we have the right log lengths for next time.
 		// wenger 2003-04-11.
 		// Note that reading an event does not update the known log size.
-#if LAZY_LOG_FILES
 	activeLogFiles.startIterations();
 	LogFileMonitor *monitor;
 	while ( activeLogFiles.iterate( monitor ) ) {
@@ -286,78 +176,20 @@ ReadMultipleUserLogs::detectLogGrowth()
 		    grew = true;
 		}
 	}
-#else
-    for (int index = 0; index < iLogFileCount; index++) {
-	    if (LogGrew(pLogFileEntries[index])) {
-		    grew = true;
-		}
-	}
-#endif
 
     return grew;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-#if !LAZY_LOG_FILES
-int
-ReadMultipleUserLogs::getInitializedLogCount() const
-{
-    dprintf( D_FULLDEBUG, "ReadMultipleUserLogs::getInitializedLogCount()\n");
-
-	int result = 0;
-
-	for ( int i = 0; i < iLogFileCount; ++i ) {
-		LogFileEntry &log = pLogFileEntries[i];
-		if ( log.isInitialized ) ++result;
-	}
-
-	return result;
-}
-#endif // !LAZY_LOG_FILES
-
-///////////////////////////////////////////////////////////////////////////////
-
 int
 ReadMultipleUserLogs::totalLogFileCount() const
 {
-#if LAZY_LOG_FILES
 	return allLogFiles.getNumElements();
-#else
-	return iLogFileCount;
-#endif // !LAZY_LOG_FILES
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-#if !LAZY_LOG_FILES
-void
-MultiLogFiles::TruncateLogs(StringList &logFileNames)
-{
-    logFileNames.rewind();
-	char *filename;
-	while ( (filename = logFileNames.next()) ) {
-        if ( access( filename, F_OK) == 0 ) {
-		    dprintf( D_ALWAYS, "MultiLogFiles: truncating older "
-						"version of %s\n", filename);
-			int fd = safe_open_no_create( filename, O_WRONLY | O_TRUNC );
-			if (fd == -1) {
-		        dprintf( D_ALWAYS, "MultiLogFiles error: can't "
-							"truncate %s\n", filename );
-		    } else {
-				if (close( fd ) == -1) {
-		        	dprintf( D_ALWAYS, "MultiLogFiles error: can't "
-								"close %s\n", filename );
-				}
-			}
-		}
-	}
-}
-#endif // !LAZY_LOG_FILES
-
-///////////////////////////////////////////////////////////////////////////////
-
-#if LAZY_LOG_FILES
 bool
 MultiLogFiles::InitializeFile(const char *filename, bool truncate,
 			CondorError &errstack)
@@ -384,15 +216,12 @@ MultiLogFiles::InitializeFile(const char *filename, bool truncate,
 
 	return true;
 }
-#endif // LAZY_LOG_FILES
 
 ///////////////////////////////////////////////////////////////////////////////
 
 void
 ReadMultipleUserLogs::cleanup()
 {
-
-#if LAZY_LOG_FILES
 	activeLogFiles.clear();
 
 	allLogFiles.startIterations();
@@ -401,79 +230,10 @@ ReadMultipleUserLogs::cleanup()
 		delete monitor;
 	}
 	allLogFiles.clear();
-#else
-	if (pLogFileEntries == NULL) {
-		return;
-	}
-
-	for (int i = 0; i < iLogFileCount; i++) {
-		if (pLogFileEntries[i].pLastLogEvent) {
-			delete pLogFileEntries[i].pLastLogEvent;
-		}
-	}
-	delete [] pLogFileEntries;
-	
-	pLogFileEntries = NULL;
-	iLogFileCount = 0;
-#endif // LAZY_LOG_FILES
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-#if !LAZY_LOG_FILES
-bool
-ReadMultipleUserLogs::initializeUninitializedLogs()
-{
-    bool result = false;
-
-	for (int index = 0; index < iLogFileCount; index++) {
-	    LogFileEntry &log = pLogFileEntries[index];
-		if (!log.isInitialized) {
-		    if (log.readUserLog.initialize(log.strFilename.Value())) {
-				log.isInitialized = true;
-				log.isValid = true;
-			    result = true;
-			}
-		}
-	}
-
-	return result;
-}
-#endif // !LAZY_LOG_FILES
-
-///////////////////////////////////////////////////////////////////////////////
-
-#if !LAZY_LOG_FILES
-bool
-ReadMultipleUserLogs::LogGrew(LogFileEntry &log)
-{
-    dprintf( D_FULLDEBUG, "ReadMultipleUserLogs::LogGrew(%s)\n",
-			log.strFilename.Value());
-
-	if ( !log.isInitialized || !log.isValid ) {
-	    return false;
-	}
-
-	ReadUserLog::FileStatus fs = log.readUserLog.CheckFileStatus( );
-
-	if ( ReadUserLog::LOG_STATUS_ERROR == fs ) {
-		dprintf( D_FULLDEBUG,
-				 "ReadMultipleUserLogs error: can't stat "
-				 "condor log (%s): %s\n",
-				 log.strFilename.Value(), strerror( errno ) );
-		return false;
-	}
-	bool grew = ( fs != ReadUserLog::LOG_STATUS_NOCHANGE );
-    dprintf( D_FULLDEBUG, "ReadMultipleUserLogs: %s\n",
-			 grew ? "log GREW!" : "no log growth..." );
-
-	return grew;
-}
-#endif // !LAZY_LOG_FILES
-
-///////////////////////////////////////////////////////////////////////////////
-
-#if LAZY_LOG_FILES
 bool
 ReadMultipleUserLogs::LogGrew( LogFileMonitor *monitor )
 {
@@ -495,41 +255,9 @@ ReadMultipleUserLogs::LogGrew( LogFileMonitor *monitor )
 
 	return grew;
 }
-#endif
 
 ///////////////////////////////////////////////////////////////////////////////
 
-#if !LAZY_LOG_FILES
-ULogEventOutcome
-ReadMultipleUserLogs::readEventFromLog(LogFileEntry &log)
-{
-    dprintf( D_FULLDEBUG, "ReadMultipleUserLogs::readEventFromLog()\n");
-
-	ULogEventOutcome	result;
-
-	result = log.readUserLog.readEvent(log.pLastLogEvent);
-
-   	if ( result == ULOG_OK ) {
-			// Check for duplicate logs.  We only need to do that the
-			// first time we've successfully read an event from this
-			// log.
-		if ( !log.haveReadEvent ) {
-			log.haveReadEvent = true;
-
-			if ( DuplicateLogExists(log.pLastLogEvent, &log) ) {
-				result = ULOG_NO_EVENT;
-				log.isValid = FALSE;
-			}
-		}
-	}
-
-	return result;
-}
-#endif // !LAZY_LOG_FILES
-
-///////////////////////////////////////////////////////////////////////////////
-
-#if LAZY_LOG_FILES
 ULogEventOutcome
 ReadMultipleUserLogs::readEventFromLog( LogFileMonitor *monitor )
 {
@@ -541,7 +269,6 @@ ReadMultipleUserLogs::readEventFromLog( LogFileMonitor *monitor )
 
 	return result;
 }
-#endif
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -946,189 +673,6 @@ MultiLogFiles::getQueueCountFromSubmitFile(const MyString &strSubFilename,
 
 ///////////////////////////////////////////////////////////////////////////////
 
-#if !LAZY_LOG_FILES
-// Note: it would probably make sense to have this method use the new
-// getValuesFromFile() method in order to reduce more-or-less duplicate
-// code.  However, I'm just leaving it alone for now.  If
-// getJobLogsFromSubmitFiles() were to use getValuesFromFile(),
-// getValuesFromFile() would have to have another argument to specify
-// the number of tokens to skip between the keyword and the value.
-
-MyString
-MultiLogFiles::getJobLogsFromSubmitFiles(const MyString &strDagFileName,
-            const MyString &jobKeyword, const MyString &dirKeyword,
-			StringList &listLogFilenames)
-{
-	dprintf( D_FULLDEBUG, "MultiLogFiles::getJobLogsFromSubmitFiles(%s)\n",
-				strDagFileName.Value() );
-
-	MyString	errorMsg;
-	StringList	logicalLines;
-	if ( (errorMsg = fileNameToLogicalLines( strDagFileName,
-				logicalLines )) != "" ) {
-		return errorMsg;
-	}
-
-	const char *	logicalLine;
-	while ( (logicalLine = logicalLines.next()) ) {
-
-		if ( logicalLine && strcmp(logicalLine, "") ) {
-
-				// Note: StringList constructor removes leading
-				// whitespace from lines.
-			StringList	tokens(logicalLine, " \t");
-			tokens.rewind();
-
-			char *word = tokens.next();
-				// Treat a SUBDAG line like a JOB line, unless we're
-				// looking for DATA nodes.
-			if ( !stricmp(word, jobKeyword.Value()) ||
-						(!stricmp(word, "subdag") &&
-						stricmp(jobKeyword.Value(), "data")) ) {
-
-				if ( !stricmp(word, "subdag") &&
-							stricmp(jobKeyword.Value(), "data") ) {
-			   			// Get INLINE or EXTERNAL
-               	const char *inlineOrExt = tokens.next();
-                	if ( strcasecmp( inlineOrExt, "EXTERNAL" ) ) {
-						MyString result = MyString("ERROR: only SUBDAG ") +
-									"EXTERNAL is supported at this time " +
-									"(line <" + logicalLine + ">)";
-                    	dprintf(D_ALWAYS, "%s\n", result.Value());
-                    	return result;
-                	}
-				}
-
-					// Get the node submit file name.
-				const char *nodeName = tokens.next();
-				const char *submitFile = tokens.next();
-				if( !submitFile ) {
-					MyString result = "Improperly-formatted DAG file: "
-								"submit file missing from job line";
-					dprintf(D_ALWAYS, "MultiLogFiles error: %s\n",
-								result.Value());
-			    	return result;
-				}
-				MyString strSubFile(submitFile);
-
-					// Deal with nested DAGs specified with the "SUBDAG"
-					// keyword.
-				if ( !stricmp(word, "subdag") ) {
-					strSubFile += ".condor.sub";
-				}
-
-				const char *directory = "";
-				const char *nextTok = tokens.next();
-				if ( nextTok ) {
-					if ( !stricmp(nextTok, dirKeyword.Value()) ) {
-						directory = tokens.next();
-						if ( !directory ) {
-							MyString result = "No directory specified "
-									"after DIR keyword";
-							dprintf(D_ALWAYS, "MultiLogFiles error: %s\n",
-									result.Value());
-							return result;
-						}
-					}
-				}
-
-					// get the log = value from the sub file
-				MyString strLogFilename;
-				if ( !stricmp(jobKeyword.Value(), "data") ) {
-#ifdef HAVE_EXT_CLASSADS
-						// Warning!  For the moment we are only supporting
-						// one log file per Stork submit file.
-						// wenger 2006-01-17.
-					StringList tmpLogFiles;
-					MyString tmpResult = loadLogFileNamesFromStorkSubFile(
-								strSubFile, directory, tmpLogFiles);
-					if ( tmpResult != "" ) return tmpResult;
-					tmpLogFiles.rewind();
-					strLogFilename = tmpLogFiles.next();
-#else
-					return "Stork unavailable on this platform because "
-								"new classads are not yet supported";
-#endif
-				} else {
-					strLogFilename = loadLogFileNameFromSubFile(
-						strSubFile, directory);
-					
-				}
-				if (strLogFilename == "") {
-					MyString result = "No 'log =' value found in submit file "
-								+ strSubFile + " for node " + nodeName;
-					dprintf(D_ALWAYS, "MultiLogFiles: %s\n",
-								result.Value());
-					return result;
-				}
-			 
-					// Add the log file we just found to the log file list
-					// (if it's not already in the list -- we don't want
-					// duplicates).
-				listLogFilenames.rewind();
-				char *psLogFilename;
-				bool bAlreadyInList = false;
-				while ( (psLogFilename = listLogFilenames.next()) ) {
-					if (psLogFilename == strLogFilename) {
-						bAlreadyInList = true;
-					}
-				}
-
-				if (!bAlreadyInList) {
-						// Note: append copies the string here.
-					listLogFilenames.append(strLogFilename.Value());
-				}
-
-			// here we recurse into a splice to discover logfiles that it might
-			// bring in.
-			} else if ( !stricmp(word, "splice") )  {
-				TmpDir spliceDir;
-				MyString spliceName = tokens.next();
-				MyString spliceDagFile = tokens.next();
-				MyString dirTok = tokens.next();
-				MyString directory = ".";
-				MyString errMsg;
-
-				dirTok.upper_case(); // case insensitive...
-				if (dirTok == "DIR") { 
-					directory = tokens.next();
-					if (directory == "") {
-						errorMsg = "Failed to parse DIR directory.";
-					}
-				}
-
-				dprintf(D_FULLDEBUG, "getJobLogsFromSubmitFiles(): "
-					"Processing SPLICE %s %s\n",
-					spliceName.Value(), spliceDagFile.Value());
-				
-				// cd into directory specified by DIR, if any
-				if ( !spliceDir.Cd2TmpDir(directory.Value(), errMsg) ) {
-					errorMsg = "Unable to chdir into DIR directory.";
-				}
-
-				// Find all of the logs entries from the submit files.
-				errorMsg = getJobLogsFromSubmitFiles( spliceDagFile, 
-					jobKeyword, dirKeyword, listLogFilenames);
-
-				// cd back out
-				if ( !spliceDir.Cd2MainDir(errMsg) ) {
-					errorMsg = "Unable to chdir back out of DIR directory.";
-				}
-
-				if (errorMsg != "") {
-					return "Splice[" + spliceName + ":" + 
-						spliceDagFile + "]: " + errorMsg;
-				}
-			}
-		}
-	}	
-
-	return "";
-}
-#endif // !LAZY_LOG_FILES
-
-///////////////////////////////////////////////////////////////////////////////
-
 MyString
 MultiLogFiles::getValuesFromFile(const MyString &fileName, 
 			const MyString &keyword, StringList &values, int skipTokens)
@@ -1266,41 +810,6 @@ MultiLogFiles::CombineLines(StringList &listIn, char continuation,
 
 ///////////////////////////////////////////////////////////////////////////////
 
-#if !LAZY_LOG_FILES
-bool
-ReadMultipleUserLogs::DuplicateLogExists(ULogEvent *event, LogFileEntry *log)
-{
-	bool	result = false;
-
-	CondorID	id(event->cluster, event->proc, event->subproc);
-
-	LogFileEntry *	oldLog;
-	if ( logHash.lookup(id, oldLog) == 0 ) {
-			// We already have an event for this job ID.  See whether
-			// the log matches the one we already have.
-		if ( log == oldLog ) {
-			result = false;
-		} else {
-			dprintf(D_FULLDEBUG,
-					"ReadMultipleUserLogs: found duplicate log\n");
-			result = true;
-		}
-	} else {
-			// First event for this job ID.  Insert the given log into
-			// the hash table.
-		if ( logHash.insert(id, log) != 0 ) {
-			dprintf(D_ALWAYS,
-					"ReadMultipleUserLogs: hash table insert error");
-		}
-		result = false;
-	}
-
-	return result;
-}
-#endif // !LAZY_LOG_FILES
-
-///////////////////////////////////////////////////////////////////////////////
-
 unsigned int
 ReadMultipleUserLogs::hashFuncJobID(const CondorID &key)
 {
@@ -1312,29 +821,6 @@ ReadMultipleUserLogs::hashFuncJobID(const CondorID &key)
 
 	return (unsigned int)result;
 }
-
-///////////////////////////////////////////////////////////////////////////////
-
-#if !LAZY_LOG_FILES
-bool
-MultiLogFiles::logFilesOnNFS(StringList &listLogFileNames, bool nfsIsError)
-{
-	int fileCount = listLogFileNames.number();
-	listLogFileNames.rewind();
-
-	for (int i = 0; i < fileCount; i++) {
-		char *logFilename = listLogFileNames.next();
-
-		if (logFileOnNFS(logFilename, nfsIsError)) {
-			return true;
-		}
-	}
-
-	// if we got here, we finished iterating and nothing was found to be 
-	// on NFS.
-	return false;
-}
-#endif // !LAZY_LOG_FILES
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -1363,7 +849,6 @@ MultiLogFiles::logFileOnNFS(const char *logFilename, bool nfsIsError)
 	return false;
 }
 
-#if LAZY_LOG_FILES
 ///////////////////////////////////////////////////////////////////////////////
 
 // Note: this should be changed to get both st_ino and st_dev, to make
@@ -1611,5 +1096,3 @@ ReadMultipleUserLogs::printLogMonitors( FILE *stream,
 		fprintf( stream, "    lastLogEvent: %p\n", monitor->lastLogEvent );
 	}
 }
-
-#endif // LAZY_LOG_FILES

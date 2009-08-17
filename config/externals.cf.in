@@ -42,6 +42,7 @@ EXT_POSTGRESQL_VERSION = @ext_postgresql_version@
 EXT_UNICOREGAHP_VERSION = @ext_unicoregahp_version@
 EXT_COREDUMPER_VERSION = @ext_coredumper_version@
 EXT_BLAHP_VERSION = @ext_blahp_version@
+EXT_CURL_VERSION = @ext_curl_version@
 
 #if HAVE_EXT_LINUXLIBCHEADERS 
 EXT_LINUXLIBCHEADERS_VERSION = @ext_linuxlibcheaders_version@
@@ -160,6 +161,12 @@ BLAHP_DIR = $(EXT_INSTALL)/$(EXT_BLAHP_VERSION)
 COREDUMPER_DIR = $(EXT_INSTALL)/$(EXT_COREDUMPER_VERSION)
 COREDUMPER_LIB = $(COREDUMPER_DIR)/lib
 COREDUMPER_INC = $(COREDUMPER_DIR)/include
+#endif
+
+#if HAVE_EXT_CURL
+CURL_DIR = $(EXT_INSTALL)/$(EXT_CURL_VERSION)
+CURL_LIB = $(CURL_DIR)/lib
+CURL_INC = $(CURL_DIR)/include
 #endif
 
 #else /* if not HAS_EXTERNALS */

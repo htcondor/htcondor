@@ -2983,6 +2983,9 @@ if test $SSH_TO_JOB != no; then
   AC_DEFINE([HAVE_SSH_TO_JOB], [1], [Define to 1 to support condor_ssh_to_job])
 fi
 
+# Look for the curl external library, used by the file transfer object
+CHECK_EXTERNAL([curl],[7.19.6],[soft])
+
 # The test for gsoap needs to happen after the openssl check, so
 # openssl libs, if found, will be in LIBS. Also, if we do not have
 # openssl, then we need to link with

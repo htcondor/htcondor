@@ -153,7 +153,7 @@ WindowsNetworkAdapter::initialize (void) {
                     /* we do exist! */
                     _exists = true;
 
-                    /* record the adpater GUID */
+                    /* record the adapter GUID */
                     strncpy (
                         _adapter_name, 
                         current->AdapterName, 
@@ -185,7 +185,7 @@ WindowsNetworkAdapter::initialize (void) {
 
                     /* copy over the adapter's subnet */
                     strncpy (
-                        _subnet,
+                        _subnet_mask,
                         current->IpAddressList.IpMask.String,
                         IP_STRING_BUF_SIZE );
 
@@ -242,9 +242,15 @@ WindowsNetworkAdapter::ipAddress (void) const {
     return 0; /* not used on Windows */
 }
 
+const char* 
+WindowsNetworkAdapter::interfaceName () const
+{
+	return _description; // _adapter_name;
+}
+
 const char*
-WindowsNetworkAdapter::subnet (void) const {
-    return _subnet;
+WindowsNetworkAdapter::subnetMask (void) const {
+    return _subnet_mask;
 }
 
 bool

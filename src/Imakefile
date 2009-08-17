@@ -467,6 +467,10 @@ ext_target(EXT_GCB_VERSION,$(NULL))
 ext_target(EXT_COREDUMPER_VERSION,$(NULL))
 #endif
 
+#if HAVE_EXT_CURL
+ext_target(EXT_CURL_VERSION,$(NULL))
+#endif
+
 #if HAVE_EXT_DRMAA
 ext_target(EXT_DRMAA_VERSION,$(NULL))
 #endif

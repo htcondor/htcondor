@@ -1,0 +1,27 @@
+#! /bin/sh
+
+. $EXTERNALS_CONFIG
+
+cd $PACKAGE_NAME
+
+LIBS=-ldl ./configure --prefix=$PACKAGE_INSTALL_DIR --disable-shared --with-ssl=$EXTERNALS_INSTALL_DIR/$EXT_OPENSSL_VERSION --with-zlib=$EXTERNALS_INSTALL_DIR/$EXT_ZLIB_DIR --disable-ipv6
+
+if [ $? -ne 0 ]
+then
+	echo "configure failed"
+	exit 1
+fi
+
+make
+if [ $? -ne 0 ]
+then
+	echo "make failed"
+	exit 1
+fi
+
+make install
+if [ $? -ne 0 ]
+then
+	echo "make failed"
+	exit 1
+fi

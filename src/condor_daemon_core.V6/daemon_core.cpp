@@ -6690,9 +6690,9 @@ int DaemonCore::Create_Process(
 
 	// First do whatever error checking we can that is not platform specific
 
-	// check reaper_id validity
-	if ( (reaper_id < 1) || (reaper_id > maxReap)
-		 || (reapTable[reaper_id - 1].num == 0) ) {
+	// check reaper_id validity.  note: reaper id of 0 means no reaper wanted.
+	if ( (reaper_id < 0) || (reaper_id > maxReap) ||
+		 ((reaper_id > 0) && (reapTable[reaper_id - 1].num == 0)) ) {
 		dprintf(D_ALWAYS,"Create_Process: invalid reaper_id\n");
 		goto wrapup;
 	}

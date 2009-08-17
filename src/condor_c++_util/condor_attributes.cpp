@@ -255,6 +255,9 @@ const char *ATTR_HELD_JOBS				 = "HeldJobs";
 const char *ATTR_HIBERNATION_LEVEL        = "HibernationLevel";
 const char *ATTR_HIBERNATION_STATE        = "HibernationState";
 const char *ATTR_HIBERNATION_SUPPORTED_STATES = "HibernationSupportedStates";
+const char *ATTR_HIBERNATION_RAW_MASK     = "HibernationRawMask";
+const char *ATTR_HIBERNATION_METHOD       = "HibernationMethod";
+const char *ATTR_UNHIBERNATE              = "Unhibernate";
 const char *ATTR_HOLD_KILL_SIG            = "HoldKillSig";
 const char *ATTR_HOOK_KEYWORD             = "HookKeyword";
 const char *ATTR_IDLE_JOBS                = "IdleJobs";
@@ -538,6 +541,7 @@ const char *ATTR_SUBMITTOR_PRIO           = "SubmittorPrio";   // old-style for 
 const char *ATTR_SUBMITTER_USER_PRIO	  = "SubmitterUserPrio";
 const char *ATTR_SUBMITTER_USER_RESOURCES_IN_USE = "SubmitterUserResourcesInUse";
 const char *ATTR_SUBNET                   = "Subnet";
+const char *ATTR_SUBNET_MASK              = "SubnetMask";
 const char *ATTR_SUSPEND                  = "Suspend";
 const char *ATTR_SUSPEND_JOB_AT_EXEC      = "SuspendJobAtExec";
 const char *ATTR_TARGET_TYPE				 = "TargetType";
@@ -606,6 +610,7 @@ const char *ATTR_VISA_DAEMON_TYPE         = "VisaDaemonType";
 const char *ATTR_VISA_DAEMON_PID          = "VisaDaemonPID";
 const char *ATTR_VISA_HOSTNAME            = "VisaHostname";
 const char *ATTR_VISA_IP                  = "VisaIpAddr";
+const char *ATTR_WOL_PORT                = "WakePort";
 const char *ATTR_WANT_CHECKPOINT		 	 = "WantCheckpoint";
 const char *ATTR_WANT_CLAIMING			 = "WantClaiming";
 const char *ATTR_WANT_IO_PROXY		= "WantIOProxy";
@@ -736,6 +741,8 @@ const char *ATTR_HAD_LIST      = "HadList";
 const char *ATTR_HAD_INDEX     = "HadIndex";
 const char *ATTR_TERMINATION_PENDING	= "TerminationPending";
 const char *ATTR_TERMINATION_EXITREASON	= "TerminationExitReason";
+
+const char *ATTR_REPLICATION_LIST      = "ReplicationList";
 
 // Attributes used in clasads that go back and forth between a submitting
 // client, the schedd, and the transferd while negotiating for a place to

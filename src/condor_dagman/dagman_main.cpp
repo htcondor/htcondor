@@ -108,9 +108,6 @@ Dagman::Dagman() :
 	retrySubmitFirst (true), // so Coverity is happy
 	retryNodeFirst (false), // so Coverity is happy
 	mungeNodeNames (true), // so Coverity is happy
-#if !LAZY_LOG_FILES
-	deleteOldLogs (true),
-#endif // !LAZY_LOG_FILES
 	prohibitMultiJobs (false), // so Coverity is happy
 	abortDuplicates (true), // so Coverity is happy
 	submitDepthFirst (false), // so Coverity is happy
@@ -121,7 +118,8 @@ Dagman::Dagman() :
 	doRescueFrom(0),
 	maxRescueDagNum(ABS_MAX_RESCUE_DAG_NUM),
 	rescueFileToRun(""),
-	dumpRescueDag(false)
+	dumpRescueDag(false),
+	_defaultNodeLog(NULL)
 {
 }
 
@@ -266,12 +264,6 @@ Dagman::Config()
 	debug_printf( DEBUG_NORMAL, "DAGMAN_MUNGE_NODE_NAMES setting: %d\n",
 				mungeNodeNames );
 
-#if !LAZY_LOG_FILES
-	deleteOldLogs = param_boolean( "DAGMAN_DELETE_OLD_LOGS", deleteOldLogs );
-	debug_printf( DEBUG_NORMAL, "DAGMAN_DELETE_OLD_LOGS setting: %d\n",
-				  deleteOldLogs );
-#endif // !LAZY_LOG_FILES
-
 	prohibitMultiJobs = param_boolean( "DAGMAN_PROHIBIT_MULTI_JOBS", false );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_PROHIBIT_MULTI_JOBS setting: %d\n",
 				prohibitMultiJobs );
@@ -330,6 +322,11 @@ Dagman::Config()
 				MAX_RESCUE_DAG_DEFAULT, 0, ABS_MAX_RESCUE_DAG_NUM );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_MAX_RESCUE_NUM setting: %d\n",
 				maxRescueDagNum );
+
+	free( _defaultNodeLog );
+	_defaultNodeLog = param( "DAGMAN_DEFAULT_NODE_LOG" );
+	debug_printf( DEBUG_NORMAL, "DAGMAN_DEFAULT_NODE_LOG setting: %s\n",
+				_defaultNodeLog ? _defaultNodeLog : "null" );
 
 	char *debugSetting = param( "ALL_DEBUG" );
 	debug_printf( DEBUG_NORMAL, "ALL_DEBUG setting: %s\n",
@@ -620,6 +617,27 @@ int main_init (int argc, char ** const argv) {
 	dagman.primaryDagFile = dagman.dagFiles.next();
 	dagman.multiDags = (dagman.dagFiles.number() > 1);
 
+	MyString tmpDefaultLog;
+	if ( dagman._defaultNodeLog != NULL ) {
+		tmpDefaultLog = dagman._defaultNodeLog;
+		free( dagman._defaultNodeLog );
+	} else {
+		tmpDefaultLog = dagman.primaryDagFile + ".nodes.log";
+	}
+
+		// Force default log file path to be absolute so it works
+		// with -usedagdir and DIR nodes.
+	CondorError errstack;
+	if ( !MultiLogFiles::makePathAbsolute( tmpDefaultLog, errstack) ) {
+       	debug_printf( DEBUG_SILENT, "Unable to convert default log "
+					"file name to absolute path: %s\n",
+					errstack.getFullText() );
+		DC_Exit( EXIT_ERROR );
+	}
+	dagman._defaultNodeLog = strdup( tmpDefaultLog.Value() );
+	debug_printf( DEBUG_NORMAL, "Default node log file is: <%s>\n",
+				dagman._defaultNodeLog);
+
     //
     // Check the arguments
     //
@@ -769,7 +787,8 @@ int main_init (int argc, char ** const argv) {
 						  dagman.maxIdle, dagman.retrySubmitFirst,
 						  dagman.retryNodeFirst, dagman.condorRmExe,
 						  dagman.storkRmExe, &dagman.DAGManJobId,
-						  dagman.prohibitMultiJobs, dagman.submitDepthFirst );
+						  dagman.prohibitMultiJobs, dagman.submitDepthFirst,
+						  dagman._defaultNodeLog );
 
     if( dagman.dag == NULL ) {
         EXCEPT( "ERROR: out of memory!\n");
@@ -864,10 +883,6 @@ int main_init (int argc, char ** const argv) {
 					// We should never get to here!
 				}
 			}
-#if !LAZY_LOG_FILES
-        } else {
-			dagman.dag->InitializeDagFiles( dagman.deleteOldLogs );
-#endif // !LAZY_LOG_FILES
         }
 
 			//

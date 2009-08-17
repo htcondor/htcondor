@@ -49,6 +49,8 @@
 #include "string_list.h"
 #include "condor_version.h"
 #include "subsystem_info.h"
+#include "condor_xml_classads.h"
+
 
 #ifdef WANT_CLASSAD_ANALYSIS
 #include "../classad_analysis/analysis.h"
@@ -91,14 +93,14 @@ static 	char * buffer_io_display (ClassAd *);
 static 	void displayJobShort (ClassAd *);
 static 	char * bufferJobShort (ClassAd *);
 
-/* if useDB is false, then v1 =scheddAddress, v2=scheddName, v3=scheddMachine, v4 ignored;
+/* if useDB is false, then v1 =scheddAddress, v2=scheddName, v3=scheddMachine, v4=scheddVersion;
    if useDB is true,  then v1 =quill_name,  v2=db_ipAddr,   v3=db_name, v4=db_password
 */
-static	bool show_queue (char* v1, char* v2, char* v3, char* v4, bool useDB);
-static	bool show_queue_buffered (char* v1, char* v2, char* v3, char* v4, bool useDB);
+static	bool show_queue (const char* v1, const char* v2, const char* v3, const char* v4, bool useDB);
+static	bool show_queue_buffered (const char* v1, const char* v2, const char* v3, const char* v4, bool useDB);
 
 /* a type used to point to one of the above two functions */
-typedef bool (*show_queue_fp)(char* v1, char* v2, char* v3, char* v4, bool useDB);
+typedef bool (*show_queue_fp)(const char* v1, const char* v2, const char* v3, const char* v4, bool useDB);
 
 static bool read_classad_file(const char *filename, ClassAdList &classads);
 
@@ -107,10 +109,10 @@ unsigned int process_direct_argument(char *arg);
 
 #ifdef WANT_QUILL
 /* execute a database query directly */ 
-static void exec_db_query(char *quill_name, char *db_ipAddr, char *db_name,char *query_password);
+static void exec_db_query(const char *quill_name, const char *db_ipAddr, const char *db_name,const char *query_password);
 
 /* build database connection string */
-static char * getDBConnStr(char *&, char *&, char *&, char *&);
+static char * getDBConnStr(char const *&, char const *&, char const *&, char const *&);
 
 /* get the quill address for the quill_name specified */
 static QueryResult getQuillAddrFromCollector(char *quill_name, char *&quill_addr);
@@ -303,6 +305,7 @@ int main (int argc, char **argv)
 	char		*scheddName=NULL;
 	char		daemonAdName[128];
 	char		scheddMachine[64];
+	MyString    scheddVersion;
 	char		*tmp;
 	bool        useDB; /* Is there a database to query for a schedd */
 	int         retval = 0;
@@ -363,6 +366,12 @@ int main (int argc, char **argv)
 				sprintf( scheddMachine, "%s", tmp );
 			} else {
 				sprintf( scheddMachine, "Unknown" );
+			}
+			if( (tmp = schedd.version()) ) {
+				scheddVersion = tmp;
+			}
+			else {
+				scheddVersion = "";
 			}
 			
 			if ( directDBquery ) {				
@@ -507,7 +516,7 @@ int main (int argc, char **argv)
 #endif /* WANT_QUILL */
 				case DIRECT_SCHEDD:
 					retval = sqfp(scheddAddr, scheddName, scheddMachine, 
-									NULL, FALSE);
+								  scheddVersion.Value(), FALSE);
 			
 					/* Hopefully I got the queue from the schedd... */
 					freeConnectionStrings();
@@ -627,7 +636,8 @@ int main (int argc, char **argv)
 		useDB = FALSE;
 		if ( ! (ad->LookupString(ATTR_SCHEDD_IP_ADDR, &scheddAddr)  &&
 				 ad->LookupString(ATTR_NAME, &scheddName)		&& 
-				 ad->LookupString(ATTR_MACHINE, scheddMachine) ) ) 
+				 ad->LookupString(ATTR_MACHINE, scheddMachine) &&
+				 ad->LookupString(ATTR_VERSION, scheddVersion) ) ) 
 		{
 			/* something is wrong with this schedd/quill ad, try the next one */
 			continue;
@@ -798,7 +808,7 @@ int main (int argc, char **argv)
 			case DIRECT_SCHEDD:
 				/* database not configured or could not be reached,
 					query the schedd daemon directly */
-				retval = sqfp(scheddAddr, scheddName, scheddMachine, NULL, FALSE);
+				retval = sqfp(scheddAddr, scheddName, scheddMachine, scheddVersion.Value(), FALSE);
 
 				break;
 
@@ -838,7 +848,8 @@ processCommandLineArguments (int argc, char *argv[])
 {
 	int i, cluster, proc;
 	char *arg, *at, *daemonname;
-	
+
+	bool custom_attributes = false;
 	attrs.initializeFromString("ClusterId\nProcID\nQDate\nRemoteUserCPU\nJobStatus\nServerTime\nShadowBday\nRemoteWallClockTime\nJobPrio\nImageSize\nOwner\nCmd\nArgs");
 
 	for (i = 1; i < argc; i++)
@@ -875,7 +886,9 @@ processCommandLineArguments (int argc, char *argv[])
 		if (match_prefix (arg, "long")) {
 			verbose = 1;
 			summarize = 0;
-			attrs.clearAll();
+			if( !custom_attributes ) {
+				attrs.clearAll();
+			}
 		} 
 		else
 		if (match_prefix (arg, "xml")) {
@@ -883,7 +896,9 @@ processCommandLineArguments (int argc, char *argv[])
 			verbose = 1;
 			summarize = 0;
 			customFormat = true;
-			attrs.clearAll();
+			if( !custom_attributes ) {
+				attrs.clearAll();
+			}
 		}
 		else
 		if (match_prefix (arg, "pool")) {
@@ -1120,6 +1135,25 @@ processCommandLineArguments (int argc, char *argv[])
 			querySchedds = true;
 		} 
 		else
+		if( match_prefix( arg, "attributes" ) ) {
+			if( argc <= i+1 ) {
+				fprintf( stderr, "Error: Argument -attributes requires "
+						 "a list of attributes to show\n" );
+				exit( 1 );
+			}
+			if( !custom_attributes ) {
+				custom_attributes = true;
+				attrs.clearAll();
+			}
+			StringList more_attrs(argv[i+1],",");
+			char const *s;
+			more_attrs.rewind();
+			while( (s=more_attrs.next()) ) {
+				attrs.append(s);
+			}
+			i++;
+		}
+		else
 		if( match_prefix( arg, "format" ) ) {
 				// make sure we have at least two more arguments
 			if( argc <= i+2 ) {
@@ -1128,8 +1162,8 @@ processCommandLineArguments (int argc, char *argv[])
 				exit( 1 );
 			}
 			verbose = 0;
-			if (customFormat == false) {
-				// first time here
+			if( !custom_attributes ) {
+				custom_attributes = true;
 				attrs.clearAll();
 			}
 			attrs.append(argv[i+2]);
@@ -1814,6 +1848,7 @@ usage (char *myName)
 		"\t\t-pool <host>\t\tUse host as the central manager to query\n"
 		"\t\t-long\t\t\tVerbose output (entire classads)\n"
 		"\t\t-xml\t\t\tDisplay entire classads, but in XML\n"
+		"\t\t-attributes X,Y,...\tAttributes to show in -xml and -long\n"
 		"\t\t-format <fmt> <attr>\tPrint attribute attr using format fmt\n"
 		"\t\t-analyze\t\tPerform schedulability analysis on jobs\n"
 #ifdef WANT_CLASSAD_ANALYSIS
@@ -1879,19 +1914,19 @@ output_sorter( const void * va, const void * vb ) {
    refer to the prototype of this function on the top of this file 
 */
 static bool
-show_queue_buffered( char* v1, char* v2, char* v3, char* v4, bool useDB )
+show_queue_buffered( const char* v1, const char* v2, const char* v3, const char* v4, bool useDB )
 {
 	static bool	setup_mask = false;
 	clusterProcString **the_output;
 
-	char *scheddAddress;
-	char *scheddName;
-	char *scheddMachine;
+	const char *scheddAddress;
+	const char *scheddName;
+	const char *scheddMachine;
 
-	char *quill_name;
-	char *db_ipAddr;
-	char *db_name;
-	char *query_password;
+	const char *quill_name;
+	const char *db_ipAddr;
+	const char *db_name;
+	const char *query_password;
 	char *dbconn=NULL;
 	int i;
 
@@ -1909,7 +1944,7 @@ show_queue_buffered( char* v1, char* v2, char* v3, char* v4, bool useDB )
 	else {
 		scheddAddress = v1;
 		scheddName = v2;
-		scheddMachine = v3;		
+		scheddMachine = v3;
 	}
 
 	output_buffer->setFiller( (clusterProcString *) NULL );
@@ -2064,6 +2099,14 @@ show_queue_buffered( char* v1, char* v2, char* v3, char* v4, bool useDB )
 		
 			short_header();
 		}
+		if( use_xml ) {
+				// keep this consistent with AttrListList::fPrintAttrListList()
+			ClassAdXMLUnparser  unparser;
+			MyString xml;
+			unparser.SetUseCompactSpacing(false);
+			unparser.AddXMLFileHeader(xml);
+			printf("%s\n", xml.Value());
+		}
 
 		if (analyze) {
 			warnScheddLimits(scheddName);
@@ -2086,6 +2129,14 @@ show_queue_buffered( char* v1, char* v2, char* v3, char* v4, bool useDB )
 			if (unexpanded>0) printf( ", %d unexpanded",unexpanded);
 			if (malformed>0) printf( ", %d malformed",malformed);
            	printf("\n");
+		}
+		if( use_xml ) {
+				// keep this consistent with AttrListList::fPrintAttrListList()
+			ClassAdXMLUnparser  unparser;
+			MyString xml;
+			unparser.SetUseCompactSpacing(false);
+			unparser.AddXMLFileFooter(xml);
+			printf("%s\n", xml.Value());
 		}
 	}
 
@@ -2178,7 +2229,8 @@ process_buffer_line( ClassAd *job )
 
 	if (use_xml) {
 		MyString s;
-		job->sPrintAsXML(s);
+		StringList *attr_white_list = attrs.isEmpty() ? NULL : &attrs;
+		job->sPrintAsXML(s,attr_white_list);
 		tempCPS->string = strnewp( s.Value() );
 	} else if( analyze ) {
 		tempCPS->string = strnewp( doRunAnalysisToBuffer( job ) );
@@ -2203,16 +2255,17 @@ process_buffer_line( ClassAd *job )
    refer to the prototype of this function on the top of this file 
 */
 static bool
-show_queue( char* v1, char* v2, char* v3, char* v4, bool useDB )
+show_queue( const char* v1, const char* v2, const char* v3, const char* v4, bool useDB )
 {
-	char *scheddAddress;
-	char *scheddName;
-	char *scheddMachine;
+	const char *scheddAddress;
+	const char *scheddName;
+	const char *scheddMachine;
+	const char *scheddVersion;
 
-	char *quill_name;
-	char *db_ipAddr;
-	char *db_name;
-	char *query_password;
+	const char *quill_name;
+	const char *db_ipAddr;
+	const char *db_name;
+	const char *query_password;
 
 	char *dbconn=NULL;
 
@@ -2224,6 +2277,7 @@ show_queue( char* v1, char* v2, char* v3, char* v4, bool useDB )
 	scheddAddress = v1;
 	scheddName = v2;
 	scheddMachine = v3;		
+	scheddVersion = v4;
 
 	char *lastUpdate;
 
@@ -2267,7 +2321,7 @@ show_queue( char* v1, char* v2, char* v3, char* v4, bool useDB )
 #endif /* WANT_QUILL */
 		} else {
 				// fetch queue from schedd	
-			if( Q.fetchQueueFromHost(jobs, attrs,scheddAddress, &errstack) != Q_OK ) {
+			if( Q.fetchQueueFromHost(jobs, attrs,scheddAddress, scheddVersion, &errstack) != Q_OK ) {
 				fprintf( stderr,
 					"\n-- Failed to fetch ads from: %s : %s\n%s\n",
 					scheddAddress, scheddMachine, errstack.getFullText(true) );
@@ -2324,7 +2378,8 @@ show_queue( char* v1, char* v2, char* v3, char* v4, bool useDB )
 		malformed = 0; idle = 0; running = 0; unexpanded = 0, held = 0;
 		
 		if( verbose || use_xml ) {
-			jobs.fPrintAttrListList( stdout, use_xml ? true : false);
+			StringList *attr_white_list = attrs.isEmpty() ? NULL : &attrs;
+			jobs.fPrintAttrListList( stdout, use_xml ? true : false, attr_white_list);
 		} else if( customFormat ) {
 			summarize = false;
 			mask.display( stdout, &jobs );
@@ -2588,6 +2643,7 @@ doRunAnalysisToBuffer( ClassAd *request )
 	int		fRankCond		= 0;
 	int		fPreemptPrioCond= 0;
 	int		fPreemptReqTest	= 0;
+	int     fOffline        = 0;
 	int		available		= 0;
 	int		totalMachines	= 0;
 
@@ -2666,7 +2722,12 @@ doRunAnalysisToBuffer( ClassAd *request )
 			continue;
 		}	
 
-			
+		int offline = 0;
+		if( offer->EvalBool( ATTR_OFFLINE, NULL, offline ) && offline ) {
+			fOffline++;
+			continue;
+		}
+
 		// 3. Is there a remote user?
 		if( !offer->LookupString( ATTR_REMOTE_USER, remoteUser ) ) {
 			if( stdRankCondition->EvalTree( offer, request, &eval_result ) &&
@@ -2756,6 +2817,7 @@ doRunAnalysisToBuffer( ClassAd *request )
 		 "  %5d match but are serving users with a better priority in the pool%s\n"
 		 "  %5d match but reject the job for unknown reasons\n"
 		 "  %5d match but will not currently preempt their existing job\n"
+         "  %5d match but are currently offline\n"
 		 "  %5d are available to run your job\n",
 		return_buff, cluster, proc, totalMachines,
 		fReqConstraint,
@@ -2763,6 +2825,7 @@ doRunAnalysisToBuffer( ClassAd *request )
 		fPreemptPrioCond, niceUser ? "(*)" : "",
 		fRankCond,
 		fPreemptReqTest,
+		fOffline,
 		available );
 
 	int last_match_time=0, last_rej_match_time=0;
@@ -3030,11 +3093,12 @@ static QueryResult getQuillAddrFromCollector(char *quill_name, char *&quill_addr
 }
 
 
-static char * getDBConnStr(char *&quill_name,
-                           char *&databaseIp,
-                           char *&databaseName,
-                           char *&query_password) {
-	char            *host, *port, *dbconn, *ptr_colon;
+static char * getDBConnStr(char const *&quill_name,
+                           char const *&databaseIp,
+                           char const *&databaseName,
+                           char const *&query_password) {
+	char            *host, *port, *dbconn;
+	const char *ptr_colon;
 	char            *tmpquillname, *tmpdatabaseip, *tmpdatabasename, *tmpquerypassword;
 	int             len, tmp1, tmp2, tmp3;
 
@@ -3061,9 +3125,10 @@ static char * getDBConnStr(char *&quill_name,
 	if(!databaseIp) {
 		if(tmpdatabaseip[0] != '<') {
 				//2 for the two brackets and 1 for the null terminator
-			databaseIp = (char *) malloc(strlen(tmpdatabaseip)+3);
-			sprintf(databaseIp, "<%s>", tmpdatabaseip);
+			char *tstr = (char *) malloc(strlen(tmpdatabaseip)+3);
+			sprintf(tstr, "<%s>", tmpdatabaseip);
 			free(tmpdatabaseip);
+			databaseIp = tstr;
 		}
 		else {
 			databaseIp = tmpdatabaseip;
@@ -3089,7 +3154,7 @@ static char * getDBConnStr(char *&quill_name,
 
 		//here we break up the ipaddress:port string and assign the
 		//individual parts to separate string variables host and port
-	ptr_colon = strchr(databaseIp, ':');
+	ptr_colon = strchr((char *)databaseIp, ':');
 	strcpy(host, "host=");
 	strncat(host,
 			databaseIp+1,
@@ -3112,7 +3177,7 @@ static char * getDBConnStr(char *&quill_name,
 	return dbconn;
 }
 
-static void exec_db_query(char *quill_name, char *db_ipAddr, char *db_name, char *query_password) {
+static void exec_db_query(const char *quill_name, const char *db_ipAddr, const char *db_name, const char *query_password) {
 	char *dbconn=NULL;
 	
 	dbconn = getDBConnStr(quill_name, db_ipAddr, db_name, query_password);

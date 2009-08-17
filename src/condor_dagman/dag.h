@@ -110,6 +110,8 @@ class Dag {
 			   job procs are prohibited
 		@param submitDepthFirst whether ready nodes should be submitted
 			   in depth-first (as opposed to breadth-first) order
+		@param The user log file to be used for nodes whose submit files do
+				not specify a log file.
 		@param findUserLogs whether or not log files for the submit files
 				should be recursively dug out of the dag file and any
 				splices it contains. Usually this is true for the root
@@ -124,7 +126,7 @@ class Dag {
 		 bool retryNodeFirst, const char *condorRmExe,
 		 const char *storkRmExe, const CondorID *DAGManJobId,
 		 bool prohibitMultiJobs, bool submitDepthFirst,
-		 bool findUserLogs = true );
+		 const char *defaultNodeLog, bool findUserLogs = true );
 
     ///
     ~Dag();
@@ -136,12 +138,6 @@ class Dag {
 	void SetAbortOnScarySubmit( bool abortOnScarySubmit ) {
 		_abortOnScarySubmit = abortOnScarySubmit;
 	}
-
-#if !LAZY_LOG_FILES
-	/** Initialize log files, lock files, etc.
-	*/
-	void InitializeDagFiles( bool deleteOldLogs );
-#endif // !LAZY_LOG_FILES
 
     /** Prepare DAG for initial run.  Call this function ONLY ONCE.
         @param recovery specifies if this is a recovery
@@ -424,13 +420,6 @@ class Dag {
 
 	int NumIdleJobProcs() const { return _numIdleJobProcs; }
 
-#if !LAZY_LOG_FILES
-		/** Get the number of Stork (nee DaP) log files.
-			@return The number of Stork log files (can be 0).
-		*/
-	int GetStorkLogCount() const { return _storkLogFiles.number(); }
-#endif // !LAZY_LOG_FILES
-
 		/** Print the number of deferrals during the run (caused
 		    by MaxJobs, MaxIdle, MaxPre, or MaxPost).
 			@param level: debug level for output.
@@ -450,8 +439,9 @@ class Dag {
 		// are normal exe return codes, -1 to -64 represent catching
 		// exe signals 1 to 64, and -1000 and below represent DAGMan,
 		// batch-system, or other external errors
-	const int DAG_ERROR_CONDOR_SUBMIT_FAILED;
-	const int DAG_ERROR_CONDOR_JOB_ABORTED;
+	static const int DAG_ERROR_CONDOR_SUBMIT_FAILED;
+	static const int DAG_ERROR_CONDOR_JOB_ABORTED;
+	static const int DAG_ERROR_LOG_MONITOR_ERROR;
 
 		// The maximum signal we can deal with in the error-reporting
 		// code.
@@ -497,11 +487,9 @@ class Dag {
 
 	bool SubmitDepthFirst(void) { return _submitDepthFirst; }
 
-	StringList& DagFiles(void) { return _dagFiles; }
+	const char *DefaultNodeLog(void) { return _defaultNodeLog; }
 
-		// The absolute maximum allowed rescue DAG number (the real maximum
-		// is normally configured lower).
-	static const int ABS_MAX_RESCUE_DAG_NUM;
+	StringList& DagFiles(void) { return _dagFiles; }
 
 	// return same thing as HashTable.insert()
 	int InsertSplice(MyString spliceName, Dag *splice_dag);
@@ -583,15 +571,6 @@ class Dag {
 	    @param The list of DAG files being run.
 	*/
 	void PrintDagFiles( /* const */ StringList &dagFiles );
-
-#if !LAZY_LOG_FILES
-	/** Find all Condor (not DaP) log files associated with this DAG.
-	    @param The list of DAG files being run.
-		@param useDagDir run DAGs in directories from DAG file paths
-		       if true
-	*/
-	void FindLogFiles( /* const */ StringList &dagFiles, bool useDagDir );
-#endif
 
     /* Prepares to submit job by running its PRE Script if one exists,
        otherwise adds job to _readyQ and calls SubmitReadyJobs()
@@ -702,31 +681,11 @@ class Dag {
 	// run DAGs in directories from DAG file paths if true
 	bool _useDagDir;
 
-#if !LAZY_LOG_FILES
-    // name of consolidated condor log
-	StringList _condorLogFiles;
-
-    //-->DAP
-		// The list of all Stork log files (generated from the relevant
-		// submit files).
-	StringList	_storkLogFiles;
-#endif // !LAZY_LOG_FILES
-
     // Documentation on ReadUserLog is present in condor_c++_util
 	ReadMultipleUserLogs _condorLogRdr;
 
 		// Object to read events from Stork logs.
 	ReadMultipleUserLogs	_storkLogRdr;
-
-#if !LAZY_LOG_FILES
-    //
-    bool          _condorLogInitialized;
-
-		// Whether the Stork (nee DaP) log(s) have been successfully
-		// initialized.
-    bool          _dapLogInitialized;
-    //<--DAP
-#endif // !LAZY_LOG_FILES
 
 		/** Get the total number of node job user log files we'll be
 			accessing.
@@ -735,15 +694,9 @@ class Dag {
 	int TotalLogFileCount() { return CondorLogFileCount() +
 				StorkLogFileCount(); }
 
-#if LAZY_LOG_FILES
 	int CondorLogFileCount() { return _condorLogRdr.totalLogFileCount(); }
 
 	int StorkLogFileCount() { return _storkLogRdr.totalLogFileCount(); }
-#else
-	int CondorLogFileCount() { return _condorLogFiles.number(); }
-
-	int StorkLogFileCount() { return _storkLogFiles.number(); }
-#endif // !LAZY_LOG_FILES
 
     /// List of Job objects
     List<Job>     _jobs;
@@ -900,11 +853,13 @@ class Dag {
 		// retry.
 	static const CondorID	_defaultCondorId;
 
-#if LAZY_LOG_FILES
 		// Whether having node job log files on NFS is an error (vs.
 		// just a warning).
 	bool	_nfsLogIsError;
-#endif // LAZY_LOG_FILES
+
+		// The user log file to be used for nodes whose submit files do
+		// not specify a log file.
+	const char *_defaultNodeLog;
 
 };
 

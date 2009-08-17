@@ -1013,7 +1013,7 @@ DAEMON_LIST			= MASTER, STARTD, SCHEDD
 #DC_DAEMON_LIST = \
 #MASTER, STARTD, SCHEDD, KBDD, COLLECTOR, NEGOTIATOR, EVENTD, \
 #VIEW_SERVER, CONDOR_VIEW, VIEW_COLLECTOR, HAWKEYE, CREDD, HAD, \
-#DBMSD, QUILL, JOB_ROUTER, LEASEMANAGER
+#DBMSD, QUILL, JOB_ROUTER, ROOSTER, LEASEMANAGER
 
 
 ##  Where are the binaries for these daemons?
@@ -2290,6 +2290,20 @@ XEN_SCRIPT = $(SBIN)/condor_vm_xen.sh
 ## The contents of this file will be added to the Xen virtual machine
 ## description that Condor writes.
 #XEN_LOCAL_SETTINGS_FILE = /path/to/file
+
+## This is the path to the XML helper command; the libvirt_simple_script.awk
+## script just reproduces what Condor already does for the kvm/xen VM
+## universe
+
+#LIBVIRT_XML_SCRIPT = $(SBIN)/libvirt_simple_script.awk 
+
+## This is the optional debugging output file for the xml helper
+## script.  Scripts that need to output debugging messages should
+## write them to the file specified by this argument, which will be
+## passed as the second command line argument when the script is
+## executed
+
+#LIBVRT_XML_SCRIPT_ARGS = /dev/stderr
 
 
 ##

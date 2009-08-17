@@ -485,8 +485,8 @@ void SetConcurrencyLimits();
 void SetVMParams();
 void SetVMRequirements();
 bool parse_vm_option(char *value, bool& onoff);
-void transfer_vm_file(const char *filename, const char *lhs );
-bool make_vm_file_path(const char *filename, const char* param, MyString& fixedname);
+void transfer_vm_file(const char *filename);
+bool make_vm_file_path(const char *filename, MyString& fixedname);
 bool validate_xen_disk_parm(const char *xen_disk, MyString &fixedname);
 
 char *owner = NULL;
@@ -1325,10 +1325,9 @@ reschedule()
  * paths.
  */
 int
-check_and_universalize_path( MyString &path, const char *lhs )
+check_and_universalize_path( MyString &path )
 {
 	(void) path;
-	(void) lhs;
 
 	int retval = 0;
 #ifdef WIN32
@@ -1467,7 +1466,7 @@ SetExecutable()
 		full_ename = ename;
 	}
 	if ( !ignore_it ) {
-		check_and_universalize_path(full_ename, Executable);
+		check_and_universalize_path(full_ename);
 	}
 
 	buffer.sprintf( "%s = \"%s\"", ATTR_JOB_CMD, full_ename.Value());
@@ -2260,7 +2259,7 @@ process_input_file_list(StringList * input_list, MyString *input_files, bool * f
 		while ( (tmp_ptr=input_list->next()) ) {
 			count++;
 			tmp = tmp_ptr;
-			if ( check_and_universalize_path(tmp,TransferInputFiles) != 0) {
+			if ( check_and_universalize_path(tmp) != 0) {
 				// path was universalized, so update the string list
 				input_list->deleteCurrent();
 				input_list->insert(tmp.Value());
@@ -2357,7 +2356,7 @@ SetTransferFiles()
 		while ( (tmp_ptr=output_file_list.next()) ) {
 			count++;
 			tmp = tmp_ptr;
-			if ( check_and_universalize_path(tmp,TransferOutputFiles) != 0) 
+			if ( check_and_universalize_path(tmp) != 0) 
 			{
 				// we universalized the path, so update the string list
 				output_file_list.deleteCurrent();
@@ -3137,7 +3136,7 @@ SetStdFile( int which_file )
 	}	
 
 	MyString tmp = macro_value;
-	if ( check_and_universalize_path(tmp, generic_name) != 0 ) {
+	if ( check_and_universalize_path(tmp) != 0 ) {
 		// we changed the value, so we have to update macro_value
 		free(macro_value);
 		macro_value = strdup(tmp.Value());
@@ -4184,7 +4183,7 @@ ComputeRootDir()
 		}
 
 		MyString rootdir_str = rootdir;
-		check_and_universalize_path(rootdir_str, RootDir);
+		check_and_universalize_path(rootdir_str);
 		JobRootdir = rootdir_str;
 		free(rootdir);
 	}
@@ -4259,19 +4258,19 @@ SetTDP( void )
 	if( tdp_cmd ) {
 		HasTDP = true;
 		path = tdp_cmd;
-		check_and_universalize_path( path, ATTR_TOOL_DAEMON_CMD );
+		check_and_universalize_path( path );
 		buf.sprintf( "%s = \"%s\"", ATTR_TOOL_DAEMON_CMD, path.Value() );
 		InsertJobExpr( buf.Value() );
 	}
 	if( tdp_input ) {
 		path = tdp_input;
-		check_and_universalize_path( path, ATTR_TOOL_DAEMON_INPUT );
+		check_and_universalize_path( path );
 		buf.sprintf( "%s = \"%s\"", ATTR_TOOL_DAEMON_INPUT, path.Value() );
 		InsertJobExpr( buf.Value() );
 	}
 	if( tdp_output ) {
 		path = tdp_output;
-		check_and_universalize_path( path, ATTR_TOOL_DAEMON_OUTPUT );
+		check_and_universalize_path( path );
 		buf.sprintf( "%s = \"%s\"", ATTR_TOOL_DAEMON_OUTPUT, path.Value() );
 		InsertJobExpr( buf.Value() );
 		free( tdp_output );
@@ -4279,7 +4278,7 @@ SetTDP( void )
 	}
 	if( tdp_error ) {
 		path = tdp_error;
-		check_and_universalize_path( path, ATTR_TOOL_DAEMON_ERROR );
+		check_and_universalize_path( path );
 		buf.sprintf( "%s = \"%s\"", ATTR_TOOL_DAEMON_ERROR, path.Value() );
 		InsertJobExpr( buf.Value() );
 		free( tdp_error );
@@ -4583,7 +4582,7 @@ ComputeIWD()
 	}
 
 	compress( iwd );
-	check_and_universalize_path(iwd, InitialDir);
+	check_and_universalize_path(iwd);
 	check_iwd( iwd.Value() );
 	JobIwd = iwd;
 
@@ -4670,7 +4669,7 @@ SetUserLog()
 			}
 		}
 
-		check_and_universalize_path(ulog, UserLogFile);
+		check_and_universalize_path(ulog);
 		buffer.sprintf( "%s = \"%s\"", ATTR_ULOG_FILE, ulog.Value());
 		InsertJobExpr(buffer);
 		UserLogSpecified = true;
@@ -7163,7 +7162,7 @@ isTrue( const char* attr )
 }
 
 // add a vm file to transfer_input_files
-void transfer_vm_file(const char *filename, const char *lhs ) 
+void transfer_vm_file(const char *filename) 
 {
 	MyString fixedname;
 	MyString buffer;
@@ -7190,7 +7189,7 @@ void transfer_vm_file(const char *filename, const char *lhs )
 
 	// we need to add it
 	char *tmp_ptr = NULL;
-	check_and_universalize_path(fixedname, lhs);
+	check_and_universalize_path(fixedname);
 	check_open(fixedname.Value(), O_RDONLY);
 	TransferInputSize += calc_image_size(fixedname.Value());
 
@@ -7217,7 +7216,7 @@ bool parse_vm_option(char *value, bool& onoff)
 // If a file is in transfer_input_files, the file will have just basename.
 // Otherwise, it will have full path. To get full path, iwd is used.
 bool 
-make_vm_file_path(const char *filename, const char* param, MyString& fixedname)
+make_vm_file_path(const char *filename, MyString& fixedname)
 {
 	if( filename == NULL ) {
 		return false;
@@ -7244,7 +7243,7 @@ make_vm_file_path(const char *filename, const char* param, MyString& fixedname)
 	// This file will not be transferred
 	// filename should have absolute path
 	fixedname = full_path(fixedname.Value());
-	check_and_universalize_path(fixedname, param);
+	check_and_universalize_path(fixedname);
 	//check_open(fixedname.Value(), O_RDONLY);
 	
 	// we need the same file system for this file
@@ -7291,7 +7290,7 @@ validate_xen_disk_parm(const char *xen_disk, MyString &fixed_disk)
 		filename.trim();
 
 		MyString fixedname;
-		if( make_vm_file_path(filename.Value(), "xen_disk", fixedname) 
+		if( make_vm_file_path(filename.Value(), fixedname) 
 				== false ) {
 			return false;
 		}else {
@@ -7659,11 +7658,11 @@ SetVMParams()
 
 			// convert file name to full path that uses iwd
 			cdrom_file = full_path(cdrom_file.Value());
-			check_and_universalize_path(cdrom_file,"vm_cdrom_files");
+			check_and_universalize_path(cdrom_file);
 
 			if( vm_should_transfer_cdrom_files ) {
 				// add this cdrom file to transfer_input_files
-				transfer_vm_file(cdrom_file.Value(), "vm_cdrom_files");
+				transfer_vm_file(cdrom_file.Value());
 			}
 
 			if( final_cdrom_files.Length() > 0 ) {
@@ -7718,10 +7717,10 @@ SetVMParams()
 				one_file.trim();
 				// convert file name to full path that uses iwd
 				one_file = full_path(one_file.Value());
-				check_and_universalize_path(one_file,"xen_transfer_files");
+				check_and_universalize_path(one_file);
 
 				// add this file to transfer_input_files
-				transfer_vm_file(one_file.Value(), "xen_transfer_files");
+				transfer_vm_file(one_file.Value());
 
 				if( final_output.Length() > 0 ) {
 					final_output += ",";
@@ -7772,7 +7771,7 @@ SetVMParams()
 				InsertJobExpr( buffer, false );
 			}else {
 				// real kernel file
-				if( make_vm_file_path(xen_kernel, "xen_kernel", fixedname) 
+				if( make_vm_file_path(xen_kernel, fixedname) 
 						== false ) {
 					DoCleanup(0,0,NULL);
 					exit(1);
@@ -7797,7 +7796,7 @@ SetVMParams()
 				exit(1);
 			}
 			MyString fixedname;
-			if( make_vm_file_path(xen_initrd, "xen_initrd", fixedname) 
+			if( make_vm_file_path(xen_initrd, fixedname) 
 					== false ) {
 				DoCleanup(0,0,NULL);
 				exit(1);
@@ -7973,7 +7972,7 @@ SetVMParams()
 		free(vmware_dir);
 
 		f_dirname = full_path(f_dirname.Value(), false);
-		check_and_universalize_path(f_dirname,"vmware_dir");
+		check_and_universalize_path(f_dirname);
 
 		buffer.sprintf( "%s = \"%s\"", VMPARAM_VMWARE_DIR, f_dirname.Value());
 		InsertJobExpr( buffer, false );
@@ -7999,7 +7998,7 @@ SetVMParams()
 
 			// add vmx file to transfer_input_files
 			// vmx file will be always transfered to an execute machine
-			transfer_vm_file(vmxfile.Value(), "vmware_vmx");
+			transfer_vm_file(vmxfile.Value());
 			buffer.sprintf( "%s = \"%s\"", VMPARAM_VMWARE_VMX_FILE,
 					condor_basename(vmxfile.Value()));
 			InsertJobExpr( buffer, false );
@@ -8015,7 +8014,7 @@ SetVMParams()
 			while( (tmp_file = vmdk_files.next() ) != NULL ) {
 				if( vmware_should_transfer_files ) {
 					// add vmdk files to transfer_input_files
-					transfer_vm_file(tmp_file, "vmware_vmdk");
+					transfer_vm_file(tmp_file);
 				}
 				if( vmdks.Length() > 0 ) {
 					vmdks += ",";
@@ -8033,7 +8032,7 @@ SetVMParams()
 		// transfer it
 		Directory d(f_dirname.Value());
 		if (d.Find_Named_Entry("nvram")) {
-			transfer_vm_file(d.GetFullPath(), "vmware_nvram");
+			transfer_vm_file(d.GetFullPath());
 		}
 	}
 

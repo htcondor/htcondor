@@ -2131,7 +2131,7 @@ static void test_function_stringlists(
 		}
 
 		if (classad->EvalBool("O4", NULL, integer) && (integer == 1)) {
-			printf("Passwd: Evaluating stringlistsize expected error arg 1 not string: %d in line %d\n", 
+			printf("Passed: Evaluating stringlistsize expected error arg 1 not string: %d in line %d\n", 
 				   integer, __LINE__);
 			results->AddResult(true);
 		} else {
@@ -3766,17 +3766,13 @@ static void test_function_strcmp(
 							"J0=strcmp(\"ABCDEFgxx\"; \"ABCDEFg\"):"
 							"J1=strcmp(\"BBBBBBBxx\"; \"CCCCCCC\"):"
 							"J2=strcmp(\"AbAbAbAb\"; \"AbAbAbAb\"):"
-							"J3=strcmp(44; \"ffgghh\"):"
-							"J4=strcmp(\"aBabcd\"; foobar):"
+							"J3=strcmp(1+1; \"2\"):"
+							"J4=strcmp(\"2\"; 1+1):"
 							"K0=stricmp(\"ABCDEFg\"; \"abcdefg\"):"
 							"K1=stricmp(\"ffgghh\"; \"aabbcc\"):"
 							"K2=stricmp(\"aBabcd\"; \"ffgghh\"):"
-							"K3=stricmp(44; \"ffgghh\"):"
-							"K4=stricmp(\"aBabcd\"; foobar):"
-							"E0=isError(K3):"
-							"E1=isError(K4):"
-							"E2=isError(J3):"
-							"E3=isError(J4):"
+							"K3=stricmp(1+1; \"2\"):"
+							"K4=stricmp(\"2\"; 1+1):"
 							"";
 
 	ClassAd  *classad;
@@ -3853,42 +3849,42 @@ static void test_function_strcmp(
 			results->AddResult(false);
 		}
 
-		if (classad->EvalBool("E0", NULL, integer) && (integer == 1)) {
-			printf("Passed: stricmp Caught non-string first arg) : %d in line %d\n", 
+		if (classad->EvalInteger("K3", NULL, integer) && (integer == 0)) {
+			printf("Passed: stricmp Converted int first arg to string) : %d in line %d\n", 
 				   integer, __LINE__);
 			results->AddResult(true);
 		} else {
-			printf("Failed: stricmp Missed non-string first arg) : %d in line %d\n", 
+			printf("Failed: stricmp did not convert int first arg to expected string) : %d in line %d\n", 
 				   integer, __LINE__);
 			results->AddResult(false);
 		}
 
-		if (classad->EvalBool("E1", NULL, integer) && (integer == 1)) {
-			printf("Passed: stricmp Caught non-string second arg) : %d in line %d\n", 
+		if (classad->EvalInteger("K4", NULL, integer) && (integer == 0)) {
+			printf("Passed: stricmp Converted int second arg to string) : %d in line %d\n", 
 				   integer, __LINE__);
 			results->AddResult(true);
 		} else {
-			printf("Failed: stricmp Missed non-string second arg) : %d in line %d\n", 
+			printf("Failed: stricmp did not convert int second arg to expected string) : %d in line %d\n", 
 				   integer, __LINE__);
 			results->AddResult(false);
 		}
 
-		if (classad->EvalBool("E2", NULL, integer) && (integer == 1)) {
-			printf("Passed: strcmp Caught non-string first arg) : %d in line %d\n", 
+		if (classad->EvalInteger("J3", NULL, integer) && (integer == 0)) {
+			printf("Passed: strcmp Converted int first arg to string) : %d in line %d\n", 
 				   integer, __LINE__);
 			results->AddResult(true);
 		} else {
-			printf("Failed: strcmp Missed non-string first arg) : %d in line %d\n", 
+			printf("Failed: strcmp did not convert int first arg to expected string) : %d in line %d\n", 
 				   integer, __LINE__);
 			results->AddResult(false);
 		}
 
-		if (classad->EvalBool("E3", NULL, integer) && (integer == 1)) {
-			printf("Passed: strcmp Caught non-string second arg) : %d in line %d\n", 
+		if (classad->EvalInteger("J4", NULL, integer) && (integer == 0)) {
+			printf("Passed: strcmp Converted int second arg to string) : %d in line %d\n", 
 				   integer, __LINE__);
 			results->AddResult(true);
 		} else {
-			printf("Failed: strcmp Missed non-string second arg) : %d in line %d\n", 
+			printf("Failed: strcmp did not convert int second arg to expected string) : %d in line %d\n", 
 				   integer, __LINE__);
 			results->AddResult(false);
 		}

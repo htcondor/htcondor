@@ -27,30 +27,17 @@
 
 class JobLogMirror: public Service {
 public:
-	JobLogMirror(JobLogConsumer *consumer,
-				 const char *name_param = "NAME");
+	JobLogMirror(JobLogConsumer *consumer);
 	void init();
 	void config();
 	void stop();
 
-	char const *Name() const {return m_name.c_str();}
 
 private:
-	std::string m_name;
-	const char *m_name_param;
-
-	ClassAd m_public_ad;
-	int m_public_ad_update_interval;
-	int m_public_ad_update_timer;
-
 	JobLogReader job_log_reader;
 
 	int log_reader_polling_timer;
 	int log_reader_polling_period;
-
-	virtual void InitPublicAd();
-	virtual void TimerHandler_UpdateCollector();
-	virtual void InvalidatePublicAd();
 
 	void TimerHandler_JobLogPolling();
 };

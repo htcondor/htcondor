@@ -47,7 +47,6 @@ int main(int argc, char **argv)
 	}
 	logFiles.rewind();
 
-#if LAZY_LOG_FILES
 	ReadMultipleUserLogs	ru;
 	char *filename;
 	while ( (filename = logFiles.next()) ) {
@@ -59,26 +58,8 @@ int main(int argc, char **argv)
 			result = 1;
 		}
 	}
-#else
-	ReadMultipleUserLogs	ru(logFiles);
-#endif // !LAZY_LOG_FILES
 
 	bool logsMissing = false;
-#if !LAZY_LOG_FILES
-	int logCount = ru.getInitializedLogCount();
-	if ( logCount == 0 ) {
-		fprintf( stderr, "Error: unable to initialize any log files\n"
-				"  Are log files read-only? (log reader needs write "
-				"permission)\n" );
-		return 1;
-	} else if ( logCount != logFiles.number() ) {
-		fprintf( stderr, "Only able to initialize %d of %d log files\n",
-				logCount, logFiles.number() );
-		fprintf( stderr, "  Are some read-only? (log reader needs write "
-				"permission)\n" );
-		logsMissing = true;
-	}
-#endif // !LAZY_LOG_FILES
 
 	CheckEvents		ce;
 	int totalSubmitted = 0;
@@ -156,7 +137,6 @@ int main(int argc, char **argv)
         }
 	}
 
-#if LAZY_LOG_FILES
 	logFiles.rewind();
 	while ( (filename = logFiles.next()) ) {
 		MyString filestring( filename );
@@ -167,7 +147,6 @@ int main(int argc, char **argv)
 			result = 1;
 		}
 	}
-#endif // LAZY_LOG_FILES
 
 	MyString errorMsg;
 	CheckEvents::check_event_result_t checkAllResult =

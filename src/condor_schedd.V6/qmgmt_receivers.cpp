@@ -827,7 +827,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 			return -1;
 		}
 		dprintf( D_SYSCALLS, "	constraint = %s\n", constraint );
-		dprintf( D_SYSCALLS, "	projection = %s\n", projection );
+		dprintf( D_SYSCALLS, "	projection = %s\n", projection ? projection : "");
 
 		assert( syscall_sock->end_of_message() );;
 

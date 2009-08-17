@@ -73,10 +73,10 @@ public:
 	*/
 	virtual unsigned ipAddress (void) const { return m_ip_addr; };
 
-    /** Returns the adapter's hardware address
+    /** Returns the adapter's subnet mask
 		@return a string representation of the subnet mask
 	*/
-	const char *subnet (void) const { return m_netmask_str; };
+	const char *subnetMask (void) const { return m_netmask_str; };
 
     /** Returns wether the interface was found or not
 		@return true if the interface is found

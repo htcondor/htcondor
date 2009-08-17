@@ -1006,7 +1006,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 		// so we can't just slurp it in as a C string.
 	char *setup_output = NULL;
 	int setup_output_len = 0;
-	char *pipe_buf[1024];
+	char pipe_buf[1024];
 	while( true ) {
 		int n = daemonCore->Read_Pipe(setup_pipe_fds[0],pipe_buf,1024);
 		if( n <= 0 ) {

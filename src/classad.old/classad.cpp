@@ -679,12 +679,12 @@ int ClassAd::fPrint(FILE* f)
 	return AttrList::fPrint(f);
 }
 
-int ClassAd::sPrintAsXML(MyString &output)
+int ClassAd::sPrintAsXML(MyString &output,StringList *attr_white_list)
 {
 	ClassAdXMLUnparser  unparser;
 	MyString            xml;
 	unparser.SetUseCompactSpacing(false);
-	unparser.Unparse(this, xml);
+	unparser.Unparse(this, xml, attr_white_list);
 	output += xml;
 	return TRUE;
 }
