@@ -1653,7 +1653,19 @@ Resource::publish( ClassAd* cap, amask_t mask )
 			// Include everything from STARTD_EXPRS.
 			// And then include everything from SLOTx_STARTD_EXPRS
 		daemonCore->publish(cap);
-		config_fill_ad( cap, r_id_str );
+
+        // config_fill_ad can not take strings with "." in it's prefix
+        // e.g. slot1.1, instead needs to be slot1
+        if ( strstr( r_id_str, ".") )
+        {
+            MyString tmp;
+            tmp.sprintf_cat( "slot%d", r_id );
+            config_fill_ad( cap, tmp.Value() );
+        }
+        else
+        {
+           config_fill_ad( cap, r_id_str );
+        }
 
 			// Also, include a slot ID attribute, since it's handy for
 			// defining expressions, and other things.
