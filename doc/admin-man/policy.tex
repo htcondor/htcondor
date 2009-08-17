@@ -2010,11 +2010,45 @@ the executing jobs may be preempted.
 These jobs lose whatever forward progress they have made,
 and are sent back to the job queue to await starting over again as
 another machine becomes available.
+This example implements a policy that allows the job to decide
+whether it should be evicted or suspended.
+The jobs announce their choice through the use of an invented
+job ClassAd attribute that is also utilized in the configuration.
 
-Condor may be configured with a policy that allows these potentially
-evicted jobs to be suspended instead.
-The policy utilizes two categories of slots,
-normal slots and high priority slots.
+The implementation of this policy utilizes two categories of slots,
+identified as suspendable or nonsuspendable.
+A job identifies which category of slot it wishes to run on.
+This affects two aspects of the policy:
+\begin{itemize}
+\item{Of two jobs that might run on a slot, which job is chosen.} 
+The four cases that may occur depend on
+whether the currently running job identifies itself as 
+suspendable or nonsuspendable, and whether the potentially running job
+identifies itself as suspendable or nonsuspendable.
+  \begin{enumerate}
+  \item If the currently running job is one that identifies 
+  itself as suspendable,
+  and the potentially running job identifies itself as nonsuspendable,
+  the currently running job is suspended, in favor of running the
+  nonsuspendable one.  This occurs independent of the user priority of
+  the two jobs.
+  \item If both the currently running job and the potentially running job 
+  identify themselves as suspendable,
+  then the policy set for preemption determines which will be running.
+  \item If both the currently running job and the potentially running job 
+  identify themselves as nonsuspendable,
+  then the policy set for preemption determines which will be running.
+  \item If the currently running job is one that identifies 
+  itself as nonsuspendable,
+  and the potentially running job identifies itself as suspendable,
+  the currently running job continues running.
+  \end{enumerate}
+\item{What happens to a currently running job that is preempted.} 
+A job that identifies itself as suspendable will be suspended.
+A job that identifies itself as nonsuspendable goes back into the
+job queue.
+\end{itemize}
+
 
 \index{ClassAd functions!eval()}
 \footnotesize
@@ -2062,9 +2096,10 @@ CONTINUE = ($(SUSPEND)) != True
 
 Note that in this example, the job ClassAd attribute \Attr{IsHighPrioJob}
 has no special meaning to Condor.  It is an invented name chosen
-for this example.  To take advantage of the policy, a user
-must submit high priority jobs with this attribute defined.
-The following line appears in the job's submit description file as
+for this example.
+To take advantage of the policy, a job that wishes to be suspended
+must submit the job so that this attribute defined.
+The following line appears in the job's submit description file:
 \begin{verbatim}
 +IsHighPrioJob = True
 \end{verbatim}
