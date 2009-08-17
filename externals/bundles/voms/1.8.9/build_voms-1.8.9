@@ -52,3 +52,7 @@ then
   exit 1
 fi
 
+if [ -d $PACKAGE_INSTALL_DIR/lib64 ] 
+then
+  ln -s lib64 $PACKAGE_INSTALL_DIR/lib
+fi
