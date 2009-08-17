@@ -256,7 +256,11 @@ EXPAT_FLAGS = -I$(EXPAT_INC)
 EXPAT_LIB = $(EXPAT_DIR)/lib/libexpat.a
 #endif /* expat */
 VOMS_FLAGS = $(EXPAT_FLAGS) -I$(VOMS_INC)
-VOMS_LIB = $(VOMS_DIR)/lib/libvomsapi.a $(VOMS_DIR)/lib/libvomsapi_nog.a $(EXPAT_LIB) $(OPENSSL_DIR)/lib/libcrypto.a $(GLOBUS_DIR)/lib/libglobus_gss_assist_gcc32dbg.a
+/* The only pthread calls here are pthread_self(), pthread_mutex_lock,
+ * and pthread_mutex_unlock(). This '-lpthread' should be removed
+ * once the threading support in Condor is merged in.
+ */
+VOMS_LIB = $(VOMS_DIR)/lib/libvomsapi_nog.a $(EXPAT_LIB) -lpthread
 #endif /* externals */
 #endif /* voms */
 
@@ -266,7 +270,7 @@ SECURITY_FLAGS = $(VOMS_FLAGS) \
 		 $(OPENSSL_FLAGS) \
 		 $(GSI_FLAGS)
 SECURITY_LIB   = $(KERBEROS_LIB) \
-		 $(GSI_LIB) $(OPENSSL_LIB) $(VOMS_LIB)
+		 $(GSI_LIB) $(VOMS_LIB) $(OPENSSL_LIB)
 
 #if HAVE_EXT_COREDUMPER
 COREDUMPER_FLAGS = -I$(COREDUMPER_INC)
@@ -346,7 +350,7 @@ GPP_ARCH_FLAGS =
 #endif
 
 /* Flags shared between C and C++ compilers */
-SHARED_COMPILER_FLAGS = $(VENDOR_C_FLAGS) $(COMP_DEBUG_FLAGS) $(CC_PIC_FLAG) PlatformFlags $(CCOMPILER_ID) $(GSOAP_FLAGS) $(PCRE_FLAGS) $(VOMS_FLAGS) $(COREDUMPER_FLAGS) $(PTHREAD_FLAG)
+SHARED_COMPILER_FLAGS = $(VENDOR_C_FLAGS) $(COMP_DEBUG_FLAGS) $(CC_PIC_FLAG) PlatformFlags $(CCOMPILER_ID) $(GSOAP_FLAGS) $(PCRE_FLAGS) $(COREDUMPER_FLAGS) $(PTHREAD_FLAG)
 
 /* We use separate flag definitions for the C compiler and the C++ compiler.
 	These are the flags actually passed to the respective compilers. 
