@@ -116,7 +116,8 @@ static	int DprintfBroken = 0;
 static	int DebugUnlockBroken = 0;
 #if !defined(WIN32) && defined(HAVE_PTHREADS)
 #include <pthread.h>
-static pthread_mutex_t _condor_dprintf_critsec = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t _condor_dprintf_critsec = 
+						PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
 #endif
 #ifdef WIN32
 static CRITICAL_SECTION	*_condor_dprintf_critsec = NULL;
@@ -260,7 +261,13 @@ _condor_dprintf_va( int flags, const char* fmt, va_list args )
 	}
 	EnterCriticalSection(_condor_dprintf_critsec);
 #elif defined(HAVE_PTHREADS)
-	pthread_mutex_lock(&_condor_dprintf_critsec);
+	/* On Win32 we always grab a mutex because we are always running
+	 * with mutiple threads.  But on Unix, lets bother w/ mutexes if and only
+	 * if we are running w/ threads.
+	 */
+	if ( CondorThreads_pool_size() ) {  /* will == 0 if no threads running */
+		pthread_mutex_lock(&_condor_dprintf_critsec);
+	}
 #endif
 
 	saved_errno = errno;
@@ -381,7 +388,9 @@ _condor_dprintf_va( int flags, const char* fmt, va_list args )
 #ifdef WIN32
 	LeaveCriticalSection(_condor_dprintf_critsec);
 #elif defined(HAVE_PTHREADS)
-	pthread_mutex_unlock(&_condor_dprintf_critsec);
+	if ( CondorThreads_pool_size() ) {  /* will == 0 if no threads running */
+		pthread_mutex_unlock(&_condor_dprintf_critsec);
+	}
 #endif
 
 #if !defined(WIN32) // signals don't exist in WIN32

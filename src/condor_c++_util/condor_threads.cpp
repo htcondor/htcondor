@@ -468,7 +468,9 @@ ThreadImplementation::yield()
 /*static*/ void
 ThreadImplementation::mutex_handle_lock()
 {
-	// TODO --- add some sort of reference counting on this mutex
+	// Note: This mutex is recursive, i.e. the kernel will peform
+	// referece counting for us so we won't deadlock if the same
+	// thread tries to grab the lock again.
 	if ( TI ) 
 		pthread_mutex_lock(&(TI->get_handle_lock));	
 }
@@ -476,7 +478,9 @@ ThreadImplementation::mutex_handle_lock()
 /*static*/ void
 ThreadImplementation::mutex_handle_unlock()
 {
-	// TODO --- add some sort of reference counting on this mutex
+	// Note: This mutex is recursive, i.e. the kernel will peform
+	// referece counting for us so we won't deadlock if the same
+	// thread tries to grab the lock again.
 	if ( TI ) 
 		pthread_mutex_unlock(&(TI->get_handle_lock));	
 }
@@ -660,9 +664,12 @@ ThreadImplementation::ThreadImplementation()
 	num_threads_ = 0;
 	num_threads_busy_ = 0;
 	next_tid_ = 0;
-	pthread_mutex_init(&big_lock,NULL);
-	pthread_mutex_init(&get_handle_lock,NULL);
-	pthread_mutex_init(&set_status_lock,NULL);
+	pthread_mutexattr_t mutex_attrs;
+	pthread_mutexattr_init(&mutex_attrs);
+	pthread_mutexattr_settype(&mutex_attrs,PTHREAD_MUTEX_RECURSIVE_NP);
+	pthread_mutex_init(&big_lock,&mutex_attrs);
+	pthread_mutex_init(&get_handle_lock,&mutex_attrs);
+	pthread_mutex_init(&set_status_lock,&mutex_attrs);
 	pthread_cond_init(&work_queue_cond,NULL);
 	pthread_cond_init(&workers_avail_cond,NULL);	
 }
