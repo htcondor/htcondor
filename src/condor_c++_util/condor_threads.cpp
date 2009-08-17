@@ -586,8 +586,37 @@ ThreadImplementation::get_handle(int tid)
 	return worker;
 }
 
-extern "C" {
-	extern THREAD_LOCAL_STORAGE int CurrentTid;
+int
+ThreadImplementation::get_tid()
+{
+	int return_val = 0;
+
+#ifdef WIN32
+	return_val = m_CurrentTid;
+#else
+	int *saved_tidp = (int *) pthread_getspecific(m_CurrentTidKey);
+	if ( saved_tidp ) {
+		return_val = *saved_tidp;
+	}
+#endif
+
+	return return_val;
+}
+
+void
+ThreadImplementation::setCurrentTid(int tid)
+{
+#ifdef WIN32
+	m_CurrentTid = tid;
+#else
+	int *saved_tidp = (int *) pthread_getspecific(m_CurrentTidKey);
+	if ( !saved_tidp ) {
+		saved_tidp = (int * )malloc(sizeof(int));
+		ASSERT(saved_tidp);
+		pthread_setspecific(m_CurrentTidKey,(void *)saved_tidp);
+	}
+	*saved_tidp = tid;
+#endif
 }
 
 ThreadStartFunc_t
@@ -610,9 +639,8 @@ ThreadImplementation::threadStart(void *)
 		// grab next work item
 		TI->work_queue.dequeue(item);
 
-#ifdef HAVE_TLS
-		CurrentTid = item->get_tid();
-#endif
+		// stash our current tid for speedy lookup 
+		TI->setCurrentTid( item->get_tid() );
 
 		mutex_handle_lock();
 		// map this thread to this work unit 
@@ -658,6 +686,23 @@ ThreadImplementation::threadStart(void *)
 	}
 }
 
+#ifndef WIN32
+	// Called by pthreads to deallocate m_CurrentTidKey data
+void free_CurrentTidKey(void *tidp)
+{
+	if ( tidp ) free(tidp);
+}
+#endif
+
+void
+ThreadImplementation::initCurrentTid()
+{
+#ifndef WIN32
+	pthread_key_create(&m_CurrentTidKey, free_CurrentTidKey);
+#endif
+	setCurrentTid(0);
+}
+
 ThreadImplementation::ThreadImplementation()
 	: hashThreadToWorker(hashFuncThreadInfo), hashTidToWorker(hashFuncInt)
 {
@@ -672,13 +717,17 @@ ThreadImplementation::ThreadImplementation()
 	pthread_mutex_init(&set_status_lock,&mutex_attrs);
 	pthread_cond_init(&work_queue_cond,NULL);
 	pthread_cond_init(&workers_avail_cond,NULL);	
+	initCurrentTid();
 }
 
 ThreadImplementation::~ThreadImplementation()
 {
+	// It is assumed no threads in the pool are active when 
+	// this dtor is invoked.
 	pthread_mutex_destroy(&big_lock);
 	pthread_mutex_destroy(&get_handle_lock);
 	pthread_mutex_destroy(&set_status_lock);
+	pthread_key_delete(m_CurrentTidKey);
 	// TODO pthread_cond_destroy ....
 }
 
@@ -721,7 +770,7 @@ ThreadImplementation::pool_init()
 	}
 
 	if ( num_threads_ > 0 ) {
-		CurrentTid = 1;
+		setCurrentTid(1);
 	}
 
 	return num_threads_;
@@ -869,6 +918,11 @@ int ThreadImplementation::yield()
 	return -1;
 }
 
+int ThreadImplementation::get_tid()
+{
+	return -1;
+}
+
 int ThreadImplementation::pool_init()
 {
 	return -1;
@@ -966,6 +1020,13 @@ CondorThreads::yield()
 	return TI->yield();
 }
 
+int 
+CondorThreads::get_tid()
+{
+	if (!TI) return -1;
+	return TI->get_tid();
+}
+
 const WorkerThreadPtr_t 
 CondorThreads::get_handle(int tid)
 {
@@ -982,7 +1043,7 @@ extern "C" {
 
 	int CondorThreads_gettid()
 	{
-		return CondorThreads::get_handle()->get_tid();
+		return CondorThreads::get_tid();
 
 	}
 }	// of extern C

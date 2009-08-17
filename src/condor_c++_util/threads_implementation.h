@@ -73,6 +73,7 @@ public:
 				 const char* descrip=NULL);
 	static const WorkerThreadPtr_t get_handle(int tid = 0);
 	int pool_size() { return num_threads_; }
+	int get_tid();
 
 	/****** HELPER METHODS *********/
 	static ThreadStartFunc_t threadStart(void *);
@@ -81,6 +82,8 @@ public:
 	void remove_tid(int tid);
 	static void mutex_handle_lock();
 	static void mutex_handle_unlock();
+	void setCurrentTid(int tid);
+	void initCurrentTid();
 
 	/****** DATA MEMBERS *******/
 	pthread_mutex_t big_lock;	// big lock protecting condor code
@@ -88,6 +91,12 @@ public:
 	pthread_mutex_t set_status_lock;	// lock protecting set_status() shared data
 	HashTable<ThreadInfo,WorkerThreadPtr_t> hashThreadToWorker;
 	HashTable<int,WorkerThreadPtr_t> hashTidToWorker;
+#ifdef WIN32
+	THREAD_LOCAL_STORAGE m_CurrentTid;
+#else
+	pthread_key_t m_CurrentTidKey;
+#endif
+
 		// Members dealing with our work pool
 	int num_threads_ , num_threads_busy_;	
 	pthread_cond_t workers_avail_cond;  // signalled when workers are available

@@ -49,6 +49,7 @@
 #include "execinfo.h"
 #endif
 #include "util_lib_proto.h"		// for mkargv() proto
+#include "condor_threads.h"
 
 FILE *debug_lock(int debug_level);
 FILE *open_debug_file( int debug_level, char flags[] );
@@ -68,7 +69,6 @@ static struct saved_dprintf* saved_list_tail = NULL;
 
 extern	DLL_IMPORT_MAGIC int		errno;
 extern	int		DebugFlags;
-THREAD_LOCAL_STORAGE int CurrentTid;
 
 /*
    This is a global flag that tells us if we've successfully ran
@@ -192,15 +192,10 @@ _condor_dprintf_va( int flags, const char* fmt, va_list args )
 	priv_state	priv;
 	int debug_level;
 	int my_pid;
+	int my_tid;
 #ifdef va_copy
 	va_list copyargs;
 #endif
-	static int first_time = 1;
-
-	if ( first_time ) {
-		first_time = 0;
-		CurrentTid = 0;
-	}
 
 		/* DebugFP should be static initialized to stderr,
 	 	   but stderr is not a constant on all systems. */
@@ -339,12 +334,11 @@ _condor_dprintf_va( int flags, const char* fmt, va_list args )
 						fprintf( DebugFP, "(pid:%d) ", my_pid );
 					}
 
-#ifdef HAVE_TLS
 					/* include tid if we are configured to use a thread pool */
-					if ( CurrentTid > 0 ) {
-						fprintf(DebugFP, "(tid:%d) ", CurrentTid );
+					my_tid = CondorThreads_gettid();
+					if ( my_tid > 0 ) {
+						fprintf(DebugFP, "(tid:%d) ", my_tid );
 					}
-#endif  /* TODO --- if no TLS do something else */
 
 					if( DebugId ) {
 						(*DebugId)( DebugFP );

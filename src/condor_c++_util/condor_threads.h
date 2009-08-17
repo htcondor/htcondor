@@ -104,6 +104,8 @@ public:
 			int* tid=NULL, const char* descrip=NULL);
 	static int pool_size();
 
+	static int get_tid();
+
 	static const WorkerThreadPtr_t get_handle(int tid = 0);
 
 	static int yield();

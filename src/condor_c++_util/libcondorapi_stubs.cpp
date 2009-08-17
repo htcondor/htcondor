@@ -265,3 +265,18 @@ void Generic_set_log_va(void(*app_log_va)(int level,char*fmt,va_list args))
 	(void) app_log_va;
 };
 END_C_DECLS
+
+// Condor Threads stubs - called in dprintf
+BEGIN_C_DECLS
+int
+CondorThreads_pool_size()
+{
+	return 0;
+}
+
+int
+CondorThreads_gettid(void)
+{
+	return -1;
+}
+END_C_DECLS
