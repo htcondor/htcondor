@@ -1,0 +1,33 @@
+diff -u -r voms-1.8.9/src/ac/create.cc voms-1.8.9-patched/src/ac/create.cc
+--- voms-1.8.9/src/ac/create.cc	2009-03-11 17:06:39.000000000 -0500
++++ voms-1.8.9-patched/src/ac/create.cc	2009-03-11 17:07:00.000000000 -0500
+@@ -19,6 +19,7 @@
+ #include <string>
+ 
+ extern "C" {
++#include <string.h>
+ #include <openssl/evp.h>
+ #include <openssl/x509.h>
+ #include <openssl/x509v3.h>
+diff -u -r voms-1.8.9/src/api/ccapi/cinterface.cc voms-1.8.9-patched/src/api/ccapi/cinterface.cc
+--- voms-1.8.9/src/api/ccapi/cinterface.cc	2008-12-22 11:51:07.000000000 -0600
++++ voms-1.8.9-patched/src/api/ccapi/cinterface.cc	2009-03-11 17:07:17.000000000 -0500
+@@ -21,6 +21,7 @@
+ #include "cinterface.h"
+ #include <stdlib.h>
+ #include <time.h>
++#include <string.h>
+ }
+ 
+ #include "realdata.h"
+diff -u -r voms-1.8.9/src/client/fqan.cc voms-1.8.9-patched/src/client/fqan.cc
+--- voms-1.8.9/src/client/fqan.cc	2008-12-22 11:51:07.000000000 -0600
++++ voms-1.8.9-patched/src/client/fqan.cc	2009-03-11 17:07:33.000000000 -0500
+@@ -15,6 +15,7 @@
+ 
+ #include "config.h"
+ 
++#include <stdlib.h>
+ #include <iostream>
+ #include "fqan.h"
+ 

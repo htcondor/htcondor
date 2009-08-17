@@ -36,6 +36,8 @@ EXT_CLASSADS_VERSION = @ext_classads_version@
 EXT_SRB_VERSION = @ext_srb_version@
 EXT_GSOAP_VERSION = @ext_gsoap_version@
 EXT_PCRE_VERSION = @ext_pcre_version@
+EXT_EXPAT_VERSION = @ext_expat_version@
+EXT_VOMS_VERSION = @ext_voms_version@
 EXT_POSTGRESQL_VERSION = @ext_postgresql_version@
 EXT_UNICOREGAHP_VERSION = @ext_unicoregahp_version@
 EXT_COREDUMPER_VERSION = @ext_coredumper_version@
@@ -136,6 +138,15 @@ GSOAP_NOSSL_LIB = $(GSOAP_DIR)/lib/libgsoap++.a $(ZLIB_LIB)/libz.a
 PCRE_DIR = $(EXT_INSTALL)/$(EXT_PCRE_VERSION)
 PCRE_INC = $(PCRE_DIR)/include
 #endif
+
+#if HAVE_EXT_VOMS
+VOMS_DIR = $(EXT_INSTALL)/$(EXT_VOMS_VERSION)
+VOMS_INC = $(VOMS_DIR)/include
+#if HAVE_EXT_EXPAT
+EXPAT_DIR = $(EXT_INSTALL)/$(EXT_EXPAT_VERSION)
+EXPAT_INC = $(EXPAT_DIR)/include
+#endif /* exapt */
+#endif /* voms */
 
 #if HAVE_EXT_UNICOREGAHP
 UNICOREGAHP_DIR = $(EXT_INSTALL)/$(EXT_UNICOREGAHP_VERSION)

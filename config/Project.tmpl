@@ -246,12 +246,27 @@ NOTE: we also need the same crap for libpcre.a...
     GSOAP_FLAGS = -DWITH_OPENSSL -DCOMPILE_SOAP_SSL
 #endif
 
+
+/* VOMS is sorta required everywhere at the moment */
+#if HAVE_EXT_VOMS
+#if HAS_EXTERNALS
+/* expat is require for VOMS */
+#if HAVE_EXT_EXPAT
+EXPAT_FLAGS = -I$(EXPAT_INC)
+EXPAT_LIB = $(EXPAT_DIR)/lib/libexpat.a
+#endif /* expat */
+VOMS_FLAGS = $(EXPAT_FLAGS) -I$(VOMS_INC)
+VOMS_LIB = $(VOMS_DIR)/lib/libvomsapi.a $(VOMS_DIR)/lib/libvomsapi_nog.a $(EXPAT_LIB) $(OPENSSL_DIR)/lib/libcrypto.a $(GLOBUS_DIR)/lib/libglobus_gss_assist_gcc32dbg.a
+#endif /* externals */
+#endif /* voms */
+
 /* Collect all the security-related variables into a single variable */
-SECURITY_FLAGS = $(KERBEROS_FLAG) \
+SECURITY_FLAGS = $(VOMS_FLAGS) \
+		 $(KERBEROS_FLAG) \
 		 $(OPENSSL_FLAGS) \
 		 $(GSI_FLAGS)
 SECURITY_LIB   = $(KERBEROS_LIB) \
-		 $(GSI_LIB) $(OPENSSL_LIB)
+		 $(GSI_LIB) $(OPENSSL_LIB) $(VOMS_LIB)
 
 #if HAVE_EXT_COREDUMPER
 COREDUMPER_FLAGS = -I$(COREDUMPER_INC)
@@ -331,7 +346,7 @@ GPP_ARCH_FLAGS =
 #endif
 
 /* Flags shared between C and C++ compilers */
-SHARED_COMPILER_FLAGS = $(VENDOR_C_FLAGS) $(COMP_DEBUG_FLAGS) $(CC_PIC_FLAG) PlatformFlags $(CCOMPILER_ID) $(GSOAP_FLAGS) $(PCRE_FLAGS) $(COREDUMPER_FLAGS) $(PTHREAD_FLAG)
+SHARED_COMPILER_FLAGS = $(VENDOR_C_FLAGS) $(COMP_DEBUG_FLAGS) $(CC_PIC_FLAG) PlatformFlags $(CCOMPILER_ID) $(GSOAP_FLAGS) $(PCRE_FLAGS) $(VOMS_FLAGS) $(COREDUMPER_FLAGS) $(PTHREAD_FLAG)
 
 /* We use separate flag definitions for the C compiler and the C++ compiler.
 	These are the flags actually passed to the respective compilers. 

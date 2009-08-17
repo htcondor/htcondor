@@ -95,6 +95,12 @@ class Condor_Auth_X509 : public Condor_Auth_Base {
     // RETURNS: -1 -- invalid
     //          >0 -- expiration time
     //------------------------------------------
+
+	MyString get_VOMS_string(gss_cred_id_t cred_handle);
+
+	void setFQAN(MyString fqan);
+	MyString getFQAN();
+
  private:
 
     int authenticate_self_gss(CondorError* errstack);
@@ -135,6 +141,7 @@ class Condor_Auth_X509 : public Condor_Auth_Base {
     int                 token_status;
     //X509_Credential *   my_credential;
     OM_uint32	        ret_flags ;
+	MyString			m_fqan;
 #ifdef WIN32
     typedef HashTable<MyString, MyString> Grid_Map_t;
     static Grid_Map_t * GridMap;
