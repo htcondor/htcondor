@@ -94,6 +94,11 @@ the query.
   perform the detection of available low power states and the
   switching to these low power states.
 
+\item A new Condor daemon \Condor{rooster} has been added to wake up
+hibernating machines when their \Macro{UNHIBERNATE} expression
+becomes true.  The configuration options for \Condor{rooster}
+are described in section~\ref{sec:Config-rooster}.
+
 %gittrac #483
 \item Added the ability to extract information from the user / event log
   reader's state buffer to the user log reader.  This is implemented
@@ -163,6 +168,15 @@ for the complete description.
 \item Removed the configuration variable
 \Macro{DAGMAN\_DELETE\_OLD\_LOGS}; new log file reading code makes it
 obsolete.
+
+%gittrack #383
+\item The new configuration variable \Macro{UNHIBERNATE} is used by
+the \Condor{startd} to advertise in its ClassAd a boolean expression
+specifying when the machine should be woken up (e.g. by
+\Condor{rooster}).  The default value is \Code{LastMatchTime=!=UNDEFINED}.
+The \Attr{LastMatchTime} attribute is a special attribute that is created
+in the offline startd ad when the a job would have been matched to it
+if it had been online.
 
 %gittrac #383
 \item The new configuration \Macro{HIBERNATION\_PLUGIN} specifies the
