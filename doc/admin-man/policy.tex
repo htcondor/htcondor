@@ -2007,20 +2007,21 @@ matched to jobs.
 As new jobs are submitted that receive a higher priority than
 currently executing jobs,
 the executing jobs may be preempted.
-If the preempted jobs are not checkpointable, they lose whatever forward
-progress they have made,
+If the preempted jobs are not capable of writing checkpoints,
+they lose whatever forward progress they have made,
 and are sent back to the job queue to await starting over again as
 another machine becomes available.
-An alternative to this is to use suspension to freeze a job while some
-other task runs and then unfreeze it so that it can continue on from
-where it left off.  This doesn't require any special handling in the job,
-unlike most checkpointing strategies.  However, it does require some
-special configuration of Condor.
+An alternative to this is to use suspension to freeze the job while some
+other task runs,
+and then unfreeze it so that it can continue on from where it left off.
+This does not require any special handling in the job,
+unlike most strategies that take checkpoints.
+However, it does require a special configuration of Condor.
 This example implements a policy that allows the job to decide
 whether it should be evicted or suspended.
-The jobs announce their choice through the use of an invented
-job ClassAd attribute \Attr{IsSuspendableJob} that is also utilized in the
-configuration.
+The jobs announce their choice through the use of the invented
+job ClassAd attribute \Attr{IsSuspendableJob},
+that is also utilized in the configuration.
 
 The implementation of this policy utilizes two categories of slots,
 identified as suspendable or nonsuspendable.
@@ -2041,22 +2042,26 @@ identifies itself as suspendable or nonsuspendable.
   the two jobs.
   \item If both the currently running job and the potentially running job 
   identify themselves as suspendable,
-  then the relative priorities of the users and the preemption policy determines whether the new job will replace the existing job.
+  then the relative priorities of the users and the preemption policy 
+  determines whether the new job will replace the existing job.
   \item If both the currently running job and the potentially running job 
   identify themselves as nonsuspendable,
-  then the relative priorities of the users and the preemption policy determines whether the new job will replace the existing job.
+  then the relative priorities of the users and the preemption policy 
+  determines whether the new job will replace the existing job.
   \item If the currently running job is one that identifies 
   itself as nonsuspendable,
   and the potentially running job identifies itself as suspendable,
   the currently running job continues running.
   \end{enumerate}
 \item{What happens to a currently running job that is preempted.}
-A job that identifies itself as suspendable will be suspended, which
-means it is frozen in place and will later be unfrozen when the
-preempting job is finished.  A job that identifies itself as
-nonsuspendable is evicted, which means it is checkpointed (if possible)
-and killed.  It will return to the idle state in the job queue and can
-try to run again in the future.
+A job that identifies itself as suspendable will be suspended,
+which means it is frozen in place,
+and will later be unfrozen when the preempting job is finished.
+A job that identifies itself as nonsuspendable is evicted,
+which means it writes a checkpoint, when possible,
+and then is killed.
+The job will return to the idle state in the job queue,
+and it can try to run again in the future.
 \end{itemize}
 
 
