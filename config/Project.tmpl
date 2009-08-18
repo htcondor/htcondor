@@ -246,12 +246,31 @@ NOTE: we also need the same crap for libpcre.a...
     GSOAP_FLAGS = -DWITH_OPENSSL -DCOMPILE_SOAP_SSL
 #endif
 
+
+/* VOMS is sorta required everywhere at the moment */
+#if HAVE_EXT_VOMS
+#if HAS_EXTERNALS
+/* expat is require for VOMS */
+#if HAVE_EXT_EXPAT
+EXPAT_FLAGS = -I$(EXPAT_INC)
+EXPAT_LIB = $(EXPAT_DIR)/lib/libexpat.a
+#endif /* expat */
+VOMS_FLAGS = $(EXPAT_FLAGS) -I$(VOMS_INC)
+/* The only pthread calls here are pthread_self(), pthread_mutex_lock,
+ * and pthread_mutex_unlock(). This '-lpthread' should be removed
+ * once the threading support in Condor is merged in.
+ */
+VOMS_LIB = $(VOMS_DIR)/lib/libvomsapi_nog.a $(EXPAT_LIB) -lpthread
+#endif /* externals */
+#endif /* voms */
+
 /* Collect all the security-related variables into a single variable */
-SECURITY_FLAGS = $(KERBEROS_FLAG) \
+SECURITY_FLAGS = $(VOMS_FLAGS) \
+		 $(KERBEROS_FLAG) \
 		 $(OPENSSL_FLAGS) \
 		 $(GSI_FLAGS)
 SECURITY_LIB   = $(KERBEROS_LIB) \
-		 $(GSI_LIB) $(OPENSSL_LIB)
+		 $(GSI_LIB) $(VOMS_LIB) $(OPENSSL_LIB)
 
 #if HAVE_EXT_COREDUMPER
 COREDUMPER_FLAGS = -I$(COREDUMPER_INC)
