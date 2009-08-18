@@ -143,6 +143,8 @@ class Authentication {
 	static void split_canonical_name(char const *can_name,char **user,char **domain);
 #endif
 
+	static void reconfigMapFile();
+
  private:
 #if !defined(SKIP_AUTHENTICATION)
     Authentication() {}; //should never be called, make private to help that!
