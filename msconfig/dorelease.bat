@@ -63,7 +63,7 @@ if not exist %1\examples\NUL mkdir %1\examples
 if not exist %1\examples\cpusoak\NUL mkdir %1\examples\cpusoak
 if not exist %1\examples\printname\NUL mkdir %1\examples\printname
 if not exist %1\examples\rc5\NUL mkdir %1\examples\rc5
-if not exist %1\libexec\NUL mkdir %1\libexec
+if not exist %1\hdfs\NUL mkdir %1\hdfs
 
 echo. & echo Copying root Condor files...
 copy ..\Release\*.exe %1\bin
