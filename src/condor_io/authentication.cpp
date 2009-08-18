@@ -377,6 +377,12 @@ int Authentication::authenticate_inner( char *hostAddr, const char* auth_methods
 #endif /* SKIP_AUTHENTICATION */
 }
 
+void Authentication::reconfigMapFile()
+{
+	global_map_file_load_attempted = false;
+}
+
+
 #if !defined(SKIP_AUTHENTICATION)
 // takes the type (as defined in handshake bitmask, CAUTH_*) and result of authentication,
 // and maps it to the cannonical condor name.
