@@ -451,6 +451,14 @@ ext_target(EXT_GSOAP_VERSION,$(EXT_TRIGGER)/$(EXT_OPENSSL_VERSION))
 ext_target(EXT_PCRE_VERSION,$(NULL))
 #endif
 
+#if HAVE_EXT_EXPAT
+ext_target(EXT_EXPAT_VERSION,$(NULL))
+#endif
+
+#if HAVE_EXT_VOMS
+ext_target(EXT_VOMS_VERSION,$(EXT_TRIGGER)/$(EXT_EXPAT_VERSION))
+#endif
+
 #if HAVE_EXT_GCB
 ext_target(EXT_GCB_VERSION,$(NULL))
 #endif
