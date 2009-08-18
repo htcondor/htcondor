@@ -34,9 +34,11 @@
  * http://www-oss.fnal.gov/~mengel/man_page_notes.html
  *
  **************************************************************************/
-#include <stream.h>
-#include <fstream.h>
+#include <iostream>
+#include <fstream>
 #include <string>
+#include <stdlib.h>
+#include <string.h>
 #include <assert.h>
 #include <ctype.h>
 #include <time.h>
