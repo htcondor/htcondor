@@ -33,7 +33,7 @@ checkpoint files. The configuration file parameters which describe this
 behavior are described below.
 
 \item The new \Condor{ssh\_to\_job} tool allows interactive debugging of running
-jobs.  See the manual page~\pageref{man-condor-ssh-to-job} for details.
+jobs.  See the manual page at~\pageref{man-condor-ssh-to-job} for details.
 
 \item The \Condor{status} command is now substantially faster, 
 especially with the \Opt{-format} option.
@@ -78,7 +78,7 @@ Condor will periodically retry the virtual machine software test until it
 succeeds.
 
 %gittrac #654
-\item The \SubmitCmd{nordugrid\_gahp} now limits the number of connections
+\item The \Prog{nordugrid\_gahp} now limits the number of connections
 made to each NorduGrid ARC server and reuses connections when possible.
 
 \item Added the ClassAd function \Code{eval()}, which takes a string
@@ -86,33 +86,35 @@ argument and evaluates the contents of the string as a ClassAd
 expression.  An policy example where this is useful is described in
 section~\ref{sec:Job-Suspension} on job suspension.
 
-\item Added the option \Opt{-attributes} to \Condor{q} to limit the
-attributes which are displayed when using \Opt{-xml} or \Opt{-long}.
-Limiting the number of attributes also increases the efficiency of
-the query.
+\item The new \Condor{q} option \Opt{-attributes} limits the
+attributes which are displayed when using the \Opt{-xml} or \Opt{-long}
+options.
+Limiting the number of attributes also increases the efficiency of the query.
 
 %gittrac #383
 \item Condor's power management capabilities are now implemented as a
-  ``plug in''.  In particular, the \Condor{startd} now runs an
-  external program (specified by \Macro{HIBERNATION\_PLUGIN}) to
-  perform the detection of available low power states and the
+  plug-in.  In particular, the \Condor{startd} now runs an
+  external program, as specified by the configuration variable
+  \Macro{HIBERNATION\_PLUGIN},
+  to perform the detection of available low power states and the
   switching to these low power states.
 
-\item A new Condor daemon \Condor{rooster} has been added to wake up
-hibernating machines when their \Macro{UNHIBERNATE} expression
-becomes true.  The configuration options for \Condor{rooster}
+\item The new Condor daemon \Condor{rooster} has been added to wake up
+hibernating machines when the expression defined by the configuration variable
+\Macro{UNHIBERNATE} becomes \Expr{True}.
+The configuration variables relating to \Condor{rooster}
 are described in section~\ref{sec:Config-rooster}.
 
 %gittrac #483
-\item Added the ability to extract information from the user / event log
+\item Added the ability to extract information from the user event log
   reader's state buffer to the user log reader.  This is implemented
-  through a new
-  ``ReadUserLogStateAccess'' C++ class (defined in
-  ``read\_user\_log.h'').
+  through a new \Code{ReadUserLogStateAccess} C++ class
+  as defined in \File{read\_user\_log.h}.
 
-\item Changes to the value of \MacroNI{CERTIFICATE\_MAPFILE} or the contents
+\item Changes to the value of the configuration variable
+\MacroNI{CERTIFICATE\_MAPFILE} or the contents
 of the file to which it refers no longer require a full restart of Condor.
-Instead, a reconfig will cause the changes to be utilized.
+Instead, the command \Condor{reconfig} will cause the changes to be utilized.
 
 \end{itemize}
 
@@ -124,35 +126,36 @@ Instead, a reconfig will cause the changes to be utilized.
 informs the \Condor{schedd} how long in seconds it is willing to wait
 to try and talk to a \Condor{ckpt\_server} process before declaring a
 \Condor{ckpt\_server} down.
-See section~\ref{param:CkptServerClientTimeout} for more information.
+See section~\ref{param:CkptServerClientTimeout} for the complete description.
 
 \item The new configuration variable
 \Macro{CKPT\_SERVER\_CLIENT\_TIMEOUT\_RETRY} informs the \Condor{schedd}
 that once a \Condor{ckpt\_server} is been marked as down, how may seconds
 must pass before the \Condor{schedd} will try and communicate with the
 \Condor{ckpt\_server} again.
-See section~\ref{param:CkptServerClientTimeoutRetry} for more information.
+See section~\ref{param:CkptServerClientTimeoutRetry} 
+for the complete description.
 
 \item The new configuration variable
 \Macro{CKPT\_SERVER\_REMOVE\_STALE\_CKPT\_INTERVAL} informs the
 \Condor{ckpt\_server} to begin removal of stale checkpoints at the specified
 interval in seconds.
-See section~\ref{param:CkptServerRemoveStaleCkptInterval} for more information.
+See section~\ref{param:CkptServerRemoveStaleCkptInterval} 
+for the complete description.
 
 \item The new configuration variable
 \Macro{CKPT\_SERVER\_STALE\_CKPT\_AGE\_CUTOFF} informs the
 \Condor{ckpt\_server} how old a checkpoint file's access time must be
-in order to be considered stale. This time is compared against ``now''
+in order to be considered stale. This time is compared against the
+current notion of now
 when the checkpoint server checks the checkpoint image file.
-See section~\ref{param:CkptServerStaleCkptAgeCutoff} for more information.
+See section~\ref{param:CkptServerStaleCkptAgeCutoff} 
+for the complete description.
 
 % gittrac 331
 \item The new configuration variable \Macro{SlotWeight} may be used to
 give a slot greater weight when calculating usage, computing fair
-shares, and enforcing group quotas.  For example, claiming a slot with
-\Expr{SlotWeight = 2} is equivalent to claiming two \Expr{SlotWeight =
-1} slots.  The default value is \AdAttr{Cpus}, the number of CPUs
-associated with the slot, which is 1 unless otherwise configured.
+shares, and enforcing group quotas.  
 See \ref{param:SlotWeight} for the complete description.
 
 
@@ -188,15 +191,17 @@ See \ref{param:GridMonitorDisableTime} for the complete description.
 
 \item The new pre-defined configuration macro \Macro{DETECTED\_MEMORY}
 indicates the amount of physical memory (RAM) detected by Condor.
-The number is in megabytes.
+The value is given in Mbytes.
 
 \item The new pre-defined configuration macro \Macro{DETECTED\_CORES}
 indicates the number of CPU cores detected by Condor.
 
 %gittrac #621
-\item The new configuration macro \Macro{DELEGATE\_FULL\_JOB\_GSI\_CREDENTIALS}
-controls whether a full or limited x509 proxy is delegated for grid-type
-gt2 grid universe jobs. See \ref{param:DelegateFullJobGSICredentials}
+\item The new configuration variable
+\Macro{DELEGATE\_FULL\_JOB\_GSI\_CREDENTIALS}
+controls whether a full or limited X.509 proxy is delegated for grid-type
+\SubmitCmd{gt2} \SubmitCmd{grid} universe jobs.
+See \ref{param:DelegateFullJobGSICredentials}
 for the complete description.
 
 \item Removed the configuration variable
@@ -206,27 +211,25 @@ obsolete.
 %gittrack #383
 \item The new configuration variable \Macro{UNHIBERNATE} is used by
 the \Condor{startd} to advertise in its ClassAd a boolean expression
-specifying when the machine should be woken up (e.g. by
-\Condor{rooster}).  The default value is \Code{LastMatchTime=!=UNDEFINED}.
-The \Attr{LastMatchTime} attribute is a special attribute that is created
-in the offline startd ad when the a job would have been matched to it
-if it had been online.
+specifying when the machine should be woken up, 
+for example by \Condor{rooster}.
+See \ref{param:Unhibernate} for the complete description.
 
 %gittrac #383
 \item The new configuration \Macro{HIBERNATION\_PLUGIN} specifies the
-  path to the ``plug in'' which the \Condor{startd} will use to detect
+  path to the plug-in which the \Condor{startd} will use to detect
   the low power state capabilities of a machine, and to switch the
   machine to a low power state.
 
 %gittrac #383
 \item The new configuration \Macro{HIBERNATION\_PLUGIN\_ARGS}
   specifies extra optional command line parameters which the
-  \Condor{startd} will pass to the ``plug in'' when invoking it to
+  \Condor{startd} will pass to the plug-in when invoking it to
   switch the machine to a low power state.
 
 %gittrac #383
 \item The new configuration \Macro{HIBERNATION\_OVERRIDE\_WOL} can be
-  used to direct the \Condor{startd} to ignore ``wake on LAN'' (WOL)
+  used to direct the \Condor{startd} to ignore Wake On LAN (WOL)
   capabilities of the machine's network interface, and to switch to a
   low power state even if the interface does not support WOL, or if
   WOL is disabled on it.
@@ -259,7 +262,7 @@ it continues, rather than exiting.
 % gittrac 593
 \item Fixed bug in which multiple Machine ClassAds in the
 \Condor{collector} with the same \Attr{Name},
-but different \Attr{StartdIPAddr} attribute values
+but different \Attr{StartdIPAddr} attribute values,
 would cause the \Condor{negotiator} to exit with an error.
 This is unusual and should not happen in a typical Condor installation.
 The most likely cause is using \Condor{advertise}
@@ -290,11 +293,11 @@ observes that the routed copy of the job was removed.
 using CCB to connect to other Condor daemons would sometimes consume
 large amounts of CPU time for no good reason.
 
-\item In rare failure cases, attempts to connect via CCB could stay in
-a pending state indefinitely.
+\item Fixed a rare failure case bug in which attempts to connect via
+CCB could stay in a pending state indefinitely.
 
-\item Condor daemons failed to start if
-\MacroNI{MAX\_FILE\_DESCRIPTORS} (Unix only) was configured higher
+\item A Unix only bug caused Condor daemons to fail to start if
+\MacroNI{MAX\_FILE\_DESCRIPTORS} was configured higher
 than the current hard limit inherited by Condor.  If Condor is running
 as root, this is no longer the case.
 
@@ -305,9 +308,9 @@ are multiple \Condor{collector} daemons.
 %gittrack #647
 \item When using \Condor{q} \Opt{-xml} and \Opt{-format} together to
 limit the number of ClassAd attributes returned in the query, the XML
-\verb|<classads>| container tag was not generated.  This is fixed, but
-now the preferred way to limit the attributes which are returned is to
-use \Condor{q} \Opt{-attributes}.
+\verb@<classads>@ container tag was not generated.  This is fixed, but
+now the preferred way to limit the returned attributes is to
+use \Condor{q} option \Opt{-attributes}.
 
 \end{itemize}
 
