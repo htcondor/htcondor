@@ -67,7 +67,7 @@
 #define NordugridGahp
 #endif
 
-#if WANT_HDFS
+#if HAVE_EXT_HADOOP
 #define hdfsProgs hdfs
 #else
 #define hdfsProgs
@@ -308,7 +308,7 @@ condor_object_target(procd)
 condor_object_target(privsep)
 condor_object_target(dcskel)
 
-#if WANT_HDFS
+#if HAVE_EXT_HADOOP
 condor_object_target(hdfs)
 #endif
 
@@ -480,6 +480,10 @@ ext_target(EXT_COREDUMPER_VERSION,$(NULL))
 
 #if HAVE_EXT_CURL
 ext_target(EXT_CURL_VERSION,$(NULL))
+#endif
+
+#if HAVE_EXT_HADOOP
+ext_target(EXT_HADOOP_VERSION,$(NULL))
 #endif
 
 #if HAVE_EXT_DRMAA

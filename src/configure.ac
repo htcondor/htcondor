@@ -2990,6 +2990,9 @@ fi
 # Look for the curl external library, used by the file transfer object
 CHECK_EXTERNAL([curl],[7.19.6],[soft])
 
+#Look for hadoop jars, required by HDFS daemon as well by hdfs file plugin
+CHECK_EXTERNAL([hadoop],[0.20.0-p1],[soft])
+
 # The test for gsoap needs to happen after the openssl check, so
 # openssl libs, if found, will be in LIBS. Also, if we do not have
 # openssl, then we need to link with
