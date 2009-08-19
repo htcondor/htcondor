@@ -51,6 +51,7 @@ class EnableParallel;		// forward declaration
 #define ScopedEnableParallel(m) counted_ptr<EnableParallel> _enableparallel(new EnableParallel( m ))
 
 typedef void (*condor_thread_func_t)(void*);
+typedef void (*condor_thread_switch_callback_t)(void* &);
 typedef counted_ptr<WorkerThread> WorkerThreadPtr_t;
 
 
@@ -75,7 +76,7 @@ public:
 	static const char* get_status_string(thread_status_t status);
 	const char* get_name() const {return name_;}
 	const condor_thread_func_t get_routine() const {return routine_;}
-	void* get_arg() const {return arg_;}
+	void* get_arg() const {return arg_;}  // get args to routine
 	int get_tid() const {return tid_;}
 
 	int operator== (const WorkerThread& r) {return tid_ == r.tid_; }
@@ -94,6 +95,7 @@ private:
 	bool enable_parallel_flag_;
 	int parallel_mode_count_;
 	thread_status_t status_;	// use set_status(), get_status()
+	void *user_pointer_;
 };
 
 class CondorThreads
@@ -103,6 +105,8 @@ public:
 	static int pool_add(condor_thread_func_t routine, void* arg, 
 			int* tid=NULL, const char* descrip=NULL);
 	static int pool_size();
+
+	static void set_switch_callback(condor_thread_switch_callback_t func);
 
 	static int get_tid();
 

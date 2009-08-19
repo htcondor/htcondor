@@ -227,6 +227,7 @@ WorkerThread::WorkerThread()
 	name_ = NULL;
 	routine_ = NULL;
 	arg_ = NULL;
+	user_pointer_ = NULL;
 	tid_ = 0;
 	enable_parallel_flag_ = false;
 	parallel_mode_count_ = 0;
@@ -238,6 +239,7 @@ WorkerThread::WorkerThread(const char* name, condor_thread_func_t routine, void*
 	name_ = NULL;
 	routine_ = NULL;
 	arg_ = NULL;
+	user_pointer_ = NULL;
 	tid_ = 0;
 	enable_parallel_flag_ = false;
 	parallel_mode_count_ = 0;
@@ -255,6 +257,7 @@ WorkerThread::~WorkerThread()
 {	
 	// note: do NOT delete arg_  !
 	if (name_) delete [] name_;
+	if (user_pointer_) delete user_pointer_;
 
 	// remove tid from our hash table
 	if ( tid_ &&  TI ) {
@@ -333,6 +336,12 @@ WorkerThread::set_status(thread_status_t newstatus)
 {
 	static int previous_ready_tid = 0;
 	static char previous_ready_message[200];
+	bool same_thread_running = false;
+
+	/* NOTE: IF newstatus == THREAD_RUNNING we assume we already have the 
+	 * big lock ! */
+
+	// TODO if ( newstatus == THREAD_RUNNING ) ASSERT have big lock
 
 		// THREAD_COMPLETED is a terminal state; don't allow any changes
 	if ( status_ == THREAD_COMPLETED  ) {		
@@ -356,27 +365,16 @@ WorkerThread::set_status(thread_status_t newstatus)
 		return;
 	}
 
-#if 0
-	dprintf(D_THREADS,
-		"Thread %d (%s) status change from %s to %s\n",mytid,get_name(),
-		get_status_string(currentstatus),get_status_string(newstatus));
-#endif
-
-#if 1
-
 		/* Print out a thread status change message to the log, BUT surpress
 		   printing out anything if the SAME thread is going from 
 		   RUNNING->READY->RUNNING.  To do this we save RUNNING->READY messages
-		   into and only print them if we see the tid change.
+		   into a buffer and only print them if we see the tid change.
 		   This is common if there is only one thread
 		   ready to run and it calls functions that are marked parallel safe.
 		*/
 
-
-
 		// grab mutex to protect static variables previous_ready_*
 	pthread_mutex_lock(&(TI->set_status_lock));
-
 
 	if ( (currentstatus == THREAD_RUNNING && newstatus == THREAD_READY))
 	{
@@ -388,32 +386,38 @@ WorkerThread::set_status(thread_status_t newstatus)
 	else 
 	if ( currentstatus == THREAD_READY && newstatus == THREAD_RUNNING ) 
 	{
-			if ( (mytid != previous_ready_tid)) {
-				if ( previous_ready_tid ) {
-					dprintf(D_THREADS,"%s\n",previous_ready_message);		
-				}
-				dprintf(D_THREADS,
-						"Thread %d (%s) status change from %s to %s\n",mytid,get_name(),
-						get_status_string(currentstatus),get_status_string(newstatus));
-			}
-			previous_ready_tid = 0;
-	}
-	else 
-	{
+		if ( (mytid != previous_ready_tid)) {
 			if ( previous_ready_tid ) {
 				dprintf(D_THREADS,"%s\n",previous_ready_message);		
 			}
-			previous_ready_tid = 0;
 			dprintf(D_THREADS,
-						"Thread %d (%s) status change from %s to %s\n",mytid,get_name(),
-						get_status_string(currentstatus),get_status_string(newstatus));
+				"Thread %d (%s) status change from %s to %s\n",mytid,get_name(),
+				get_status_string(currentstatus),get_status_string(newstatus));
+		} else {
+			same_thread_running = true;
+		}
+		previous_ready_tid = 0;
 	}
-
+	else 
+	{
+		if ( previous_ready_tid ) {
+			dprintf(D_THREADS,"%s\n",previous_ready_message);		
+		}
+		previous_ready_tid = 0;
+		dprintf(D_THREADS,
+			"Thread %d (%s) status change from %s to %s\n",mytid,get_name(),
+			get_status_string(currentstatus),get_status_string(newstatus));
+	}
 
 	pthread_mutex_unlock(&(TI->set_status_lock));
 
-#endif
-
+	if ( newstatus == THREAD_RUNNING && same_thread_running == false )
+	{
+		// If we are about to schedule a Condor thread, and it is not the same 
+		// thread we just ran, invoke the user-supplied callback. TODO.
+		if ( TI->switch_callback ) 
+			(*(TI->switch_callback))(user_pointer_);	
+	}
 }
 
 
@@ -456,18 +460,50 @@ ThreadImplementation::yield()
 	if ( get_handle()->status_ == WorkerThread::THREAD_RUNNING ) {
 		get_handle()->set_status( WorkerThread::THREAD_READY );
 	}
-	pthread_mutex_unlock(&big_lock);
+	mutex_biglock_unlock();
 
 	// and block until we can run again.
-	pthread_mutex_lock(&big_lock);
+	mutex_biglock_lock();
 	get_handle()->set_status( WorkerThread::THREAD_RUNNING );
 
 	return 0;
 }
 
 /*static*/ void
+ThreadImplementation::mutex_biglock_lock()
+{
+	// This lock protects Condor code.  Only one thread at a time
+	// will ever be permitted to have this lock.
+
+	if (! TI ) return;
+
+	// Note: This mutex is recursive, i.e. the kernel will peform
+	// referece counting for us so we won't deadlock if the same
+	// thread tries to grab the lock again.
+	pthread_mutex_lock(&(TI->big_lock));	
+
+}
+
+/*static*/ void
+ThreadImplementation::mutex_biglock_unlock()
+{
+	// This lock protects Condor code.  Only one thread at a time
+	// will ever be permitted to have this lock.
+	
+	if (! TI ) return;
+
+	// Note: This mutex is recursive, i.e. the kernel will peform
+	// referece counting for us so we won't deadlock if the same
+	// thread tries to grab the lock again.
+	pthread_mutex_unlock(&(TI->big_lock));	
+}
+
+/*static*/ void
 ThreadImplementation::mutex_handle_lock()
 {
+	// This lock protects the data members in the ThreadImplementation 
+	// class, in particular the data members needed by get_handle().
+	
 	// Note: This mutex is recursive, i.e. the kernel will peform
 	// referece counting for us so we won't deadlock if the same
 	// thread tries to grab the lock again.
@@ -478,6 +514,9 @@ ThreadImplementation::mutex_handle_lock()
 /*static*/ void
 ThreadImplementation::mutex_handle_unlock()
 {
+	// This lock protects the data members in the ThreadImplementation 
+	// class, in particular the data members needed by get_handle().
+	
 	// Note: This mutex is recursive, i.e. the kernel will peform
 	// referece counting for us so we won't deadlock if the same
 	// thread tries to grab the lock again.
@@ -586,6 +625,12 @@ ThreadImplementation::get_handle(int tid)
 	return worker;
 }
 
+void
+ThreadImplementation::set_switch_callback(condor_thread_switch_callback_t func)
+{
+	switch_callback = func;
+}
+
 int
 ThreadImplementation::get_tid()
 {
@@ -628,7 +673,7 @@ ThreadImplementation::threadStart(void *)
 
 	pthread_detach( pthread_info );
 
-	pthread_mutex_lock(&(TI->big_lock));
+	mutex_biglock_lock();
 	
 	for (;;) {				
 		while ( TI->work_queue.IsEmpty() ) {
@@ -709,6 +754,7 @@ ThreadImplementation::ThreadImplementation()
 	num_threads_ = 0;
 	num_threads_busy_ = 0;
 	next_tid_ = 0;
+	switch_callback = NULL;
 	pthread_mutexattr_t mutex_attrs;
 	pthread_mutexattr_init(&mutex_attrs);
 	pthread_mutexattr_settype(&mutex_attrs,PTHREAD_MUTEX_RECURSIVE_NP);
@@ -746,7 +792,7 @@ ThreadImplementation::pool_init()
 	// We need to grab the big lock _before_ we make
 	// our thread pool.  We only release the lock when
 	// we want to yield to another thread.
-	pthread_mutex_lock(&big_lock);
+	mutex_biglock_lock();
 
 	// initialize static variables for the main thread so that subsequent calls
 	// to get_handle() are thread safe.  also, perform a sanity
@@ -806,11 +852,11 @@ ThreadImplementation::start_thread_safe_block()
 	
 	if ( context->parallel_mode_count_ == 1 ) {
 		// lord help us.  release the big lock!
-		pthread_mutex_unlock(&big_lock);
+		mutex_biglock_unlock();
 	}
 #endif
 
-	pthread_mutex_unlock(&big_lock);
+	mutex_biglock_unlock();
 
 	return 0;
 }
@@ -843,16 +889,14 @@ ThreadImplementation::stop_thread_safe_block()
 	if ( context->parallel_mode_count_ == 0 ) {
 		context->set_status( WorkerThread::THREAD_READY );
 		// block until we can grab our big lock
-		pthread_mutex_lock(&big_lock);
+		mutex_biglock_lock();
 	}
 #endif
 
 	context->set_status( WorkerThread::THREAD_READY );
-	pthread_mutex_lock(&big_lock);
+	mutex_biglock_lock();
 
 	context->set_status( WorkerThread::THREAD_RUNNING );
-
-	// TODO -- restore global process state here?
 
 	return 0;
 }
@@ -921,6 +965,11 @@ int ThreadImplementation::yield()
 int ThreadImplementation::get_tid()
 {
 	return -1;
+}
+
+void ThreadImplementation::set_switch_callback(condor_thread_switch_callback_t )
+{
+	return;
 }
 
 int ThreadImplementation::pool_init()
@@ -1018,6 +1067,13 @@ CondorThreads::yield()
 {
 	if (!TI) return -1;
 	return TI->yield();
+}
+
+void 
+CondorThreads::set_switch_callback(condor_thread_switch_callback_t func)
+{
+	if (!TI) return;
+	TI->set_switch_callback(func);
 }
 
 int 
