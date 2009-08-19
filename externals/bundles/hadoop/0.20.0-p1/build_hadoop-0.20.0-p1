@@ -1,5 +1,6 @@
 #! /bin/sh
 
+set x
 . $EXTERNALS_CONFIG
 
 rm -rf hdfs
@@ -22,6 +23,13 @@ if [ $? -ne 0 ]
 then
 	echo "copy failed"
 	exit 1
+fi
+
+rm -rf $EXTERNALS_INSTALL_DIR/hdfs
+if [ $? -ne 0 ]
+then
+  echo "failed to remove old hdfs directory under externals_install dir"
+  exit 1
 fi
 
 mv hdfs $EXTERNALS_INSTALL_DIR
