@@ -28,6 +28,10 @@ has been changed to provide more useful information.
 
 \begin{itemize}
 
+\item The \Condor{ckpt\_server} will automatically clean up stale
+checkpoint files. The configuration file parameters which describe this
+behavior are described below.
+
 \item The new \Condor{ssh\_to\_job} tool allows interactive debugging of running
 jobs.  See the manual page~\pageref{man-condor-ssh-to-job} for details.
 
@@ -111,6 +115,32 @@ are described in section~\ref{sec:Config-rooster}.
 \noindent Configuration Variable Additions and Changes:
 
 \begin{itemize}
+
+\item The new configuration variable \Macro{CKPT\_SERVER\_CLIENT\_TIMEOUT}
+informs the \Condor{schedd} how long in seconds it is willing to wait
+to try and talk to a \Condor{ckpt\_server} process before declaring a
+\Condor{ckpt\_server} down.
+See section~\ref{param:CkptServerClientTimeout} for more information.
+
+\item The new configuration variable
+\Macro{CKPT\_SERVER\_CLIENT\_TIMEOUT\_RETRY} informs the \Condor{schedd}
+that once a \Condor{ckpt\_server} is been marked as down, how may seconds
+must pass before the \Condor{schedd} will try and communicate with the
+\Condor{ckpt\_server} again.
+See section~\ref{param:CkptServerClientTimeoutRetry} for more information.
+
+\item The new configuration variable
+\Macro{CKPT\_SERVER\_REMOVE\_STALE\_CKPT\_INTERVAL} informs the
+\Condor{ckpt\_server} to begin removal of stale checkpoints at the specified
+interval in seconds.
+See section~\ref{param:CkptServerRemoveStaleCkptInterval} for more information.
+
+\item The new configuration variable
+\Macro{CKPT\_SERVER\_STALE\_CKPT\_AGE\_CUTOFF} informs the
+\Condor{ckpt\_server} how old a checkpoint file's access time must be
+in order to be considered stale. This time is compared against ``now''
+when the checkpoint server checks the checkpoint image file.
+See section~\ref{param:CkptServerStaleCkptAgeCutoff} for more information.
 
 % gittrac 331
 \item The new configuration variable \Macro{SlotWeight} may be used to
@@ -202,6 +232,42 @@ if it had been online.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+% gitrac #552
+\item Fixed a bug where the \Condor{schedd} would block for very long
+periods of time while trying to connect to a down checkpoint server. Now
+the \Condor{schedd} will do a blocking connect with a timeout to the
+checkpoint server for a configurable number of seconds. If the connect
+fails, the \Condor{schedd} will put a moratorium on connecting to the
+checkpoint server until the configurable moratorium period passes. The
+configuration file variables that describe this behavior are described
+above.
+
+% See gittrac #215
+\item Changed the check that \Condor{dagman} does for other
+\Condor{dagman} instances
+running the same DAG, if it finds a lock file at startup.
+Now, if \Condor{dagman} is not sure whether the other DAGMan is alive,
+it continues, rather than exiting.
+
+\item Fixed a major file descriptor leak in the Stork daemon.
+
+% gittrac 593
+\item Fixed bug in which multiple Machine ClassAds in the
+\Condor{collector} with the same \Attr{Name},
+but different \Attr{StartdIPAddr} attribute values
+would cause the \Condor{negotiator} to exit with an error.
+This is unusual and should not happen in a typical Condor installation.
+The most likely cause is using \Condor{advertise}
+to advertise custom ClassAds for grid matchmaking.
+
+%gittrac #435
+\item Fixed a bug that caused \Condor{dagman} to core dump if all
+submit attempts failed on a DAG node having a POST script.
+This bug has existed since Condor version 7.1.4.
+
+\item Fixed a memory leak in the \Condor{schedd}, which occurred when
+the configuration variable \MacroNI{NEGOTIATOR\_MATCH\_EXPRS} was used.
 
 % gittrac #504
 \item Fixed a bug in the Windows platform code that treats scripts as
