@@ -53,11 +53,16 @@
 #define CKPT_SVR_RESTORE_REQ_PORT           5652
 #define CKPT_SVR_SERVICE_REQ_PORT           5653
 #define CKPT_SVR_REPLICATE_REQ_PORT			5654
+
+/* Changing this constant will result is total havoc with the backward 
+	compatibility code in protocol.cpp. If you do change it, it effectively
+	means a "different version" of the protocol. */
 #ifdef OSF1
 #define AUTHENTICATION_TCKT                 1637102411
 #else
 #define AUTHENTICATION_TCKT                 1637102411L
 #endif
+
 #define MAX_CONDOR_FILENAME_LENGTH          256
 #define MAX_MACHINE_NAME_LENGTH             50
 #define MAX_NAME_LENGTH                     50
@@ -128,6 +133,7 @@
 #define BIND_ERROR                          28
 #define CKPT_SERVER_SOCKET_ERROR            -29
 #define BAD_SOCKET_DESC_ERROR               30
+#define CKPT_SERVER_TIMEOUT		            -30
 #define NOT_TCPIP                           31
 #define LISTEN_ERROR                        32
 #define SELECT_ERROR                        33

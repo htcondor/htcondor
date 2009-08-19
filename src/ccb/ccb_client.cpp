@@ -44,7 +44,8 @@ CCBClient::CCBClient( char const *ccb_contact, ReliSock *target_sock ):
 	m_target_peer_description(m_target_sock->peer_description()),
 	m_ccb_sock(NULL),
 	m_listen_sock(NULL),
-	m_ccb_cb(NULL)
+	m_ccb_cb(NULL),
+	m_deadline_timer(-1)
 {
 	// balance load across the CCB servers by randomizing order
 	m_ccb_contacts.shuffle();
@@ -76,6 +77,10 @@ CCBClient::~CCBClient()
 	if( m_listen_sock ) {
 		delete m_listen_sock;
 	}
+	if( m_deadline_timer != -1 ) {
+		daemonCoreSockAdapter.Cancel_Timer(m_deadline_timer);
+		m_deadline_timer = -1;
+	}
 }
 
 
@@ -93,8 +98,7 @@ CCBClient::ReverseConnect( CondorError *error, bool non_blocking )
 		// DaemonCore::Register_Socket() and wait for a callback.
 
 		m_ccb_contacts.rewind();
-		try_next_ccb();
-		return true;
+		return try_next_ccb();
 	}
 
 	return ReverseConnect_blocking( error );
@@ -425,12 +429,13 @@ public:
 	}
 };
 
-void
+bool
 CCBClient::try_next_ccb()
 {
 	// This function is called in ReverseConnect_nonblocking()
 	// initially and whenever we should try the next CCB server in the
 	// list (e.g. because all previous ones have failed).
+	// Returns true if non-blocking operation successfully initiated.
 
 	RegisterReverseConnectCallback();
 
@@ -441,13 +446,12 @@ CCBClient::try_next_ccb()
 				"reversed connection to %s; giving up.\n",
 				m_target_peer_description.Value());
 		ReverseConnectCallback(NULL);
-		return;
+		return false;
 	}
 
 	MyString ccbid;
 	if( !SplitCCBContact( ccb_contact, m_cur_ccb_address, ccbid, NULL ) ) {
-		try_next_ccb();
-		return;
+		return try_next_ccb();
 	}
 
 	char const *return_address = daemonCoreSockAdapter.publicNetworkIpAddr();
@@ -518,7 +522,7 @@ CCBClient::try_next_ccb()
 		if( !client_sock->connect_socketpair(*server_sock) ) {
 			dprintf(D_ALWAYS,"CCBClient: connect_socket_pair() failed.\n");
 			CCBResultsCallback(m_ccb_cb);
-			return;
+			return false;
 		}
 
 		classy_counted_ptr<DCMessenger> messenger=new DCMessenger(ccb_server);
@@ -528,12 +532,13 @@ CCBClient::try_next_ccb()
 			// bypass startCommand() and call the command handler directly
 			// this call will take care of deleting server_sock when done
 		daemonCoreSockAdapter.CallCommandHandler(CCB_REQUEST,server_sock);
-		return;
+	}
+	else {
+		ccb_server->sendMsg(msg.get());
 	}
 
-	ccb_server->sendMsg(msg.get());
-
 	// now wait for CCBResultsCallback and/or ReverseConnectCallback
+	return true;
 }
 
 void
@@ -636,13 +641,42 @@ CCBClient::RegisterReverseConnectCallback()
 			ALLOW);
 	}
 
+	if( m_deadline_timer == -1 && m_target_sock->get_deadline() ) {
+		int timeout = m_target_sock->get_deadline() - time(NULL) + 1;
+		if( timeout < 0 ) {
+			timeout = 0;
+		}
+		m_deadline_timer = daemonCoreSockAdapter.Register_Timer (
+			timeout,
+			(TimerHandlercpp)&CCBClient::DeadlineExpired,
+			"CCBClient::DeadlineExpired",
+			this );
+	}
+
 	int rc = waiting_for_reverse_connect.insert( m_connect_id, this );
 	ASSERT( rc == 0 );
+}
+
+int
+CCBClient::DeadlineExpired()
+{
+	dprintf(D_ALWAYS,
+			"CCBClient: deadline expired for reverse connection to %s.\n ",
+			m_target_peer_description.Value());
+
+	m_deadline_timer = -1;
+	CancelReverseConnect();
+	return 0;
 }
 
 void
 CCBClient::UnregisterReverseConnectCallback()
 {
+	if( m_deadline_timer != -1 ) {
+		daemonCoreSockAdapter.Cancel_Timer(m_deadline_timer);
+		m_deadline_timer = -1;
+	}
+
 	// Remove ourselves from the list of waiting CCB clients.
 	// Note that this could be removing the last reference
 	// to this class, so it may be destructed as a result.
@@ -723,7 +757,8 @@ CCBClient::ReverseConnectCallback(Sock *sock)
 		// still haven't gotten the response from the CCB server.
 		// Don't care any longer, so cancel it.
 		m_ccb_cb->cancelCallback();
-		m_ccb_cb->cancelMessage();
+		const bool quiet = true;
+		m_ccb_cb->cancelMessage( quiet );
 		decRefCount();
 	}
 

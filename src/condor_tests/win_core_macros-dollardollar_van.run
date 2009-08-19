@@ -1,0 +1,109 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+use CondorTest;
+use Cwd;
+use Sys::Hostname;
+
+$cmd = 'win_core_macros-dollardollar_van.cmd';
+$testdesc =  'condor_submit macros - vanilla U';
+$testname = "win_core_macros-dollardollar_van";
+
+
+$ExitSuccessBase = sub {
+	my %info = @_;
+
+};
+
+my @lines;
+
+sub load_up_lines
+{
+	open(IN,"<win_core_macros-dollardollar_van.out") || die "Can not open win_core_macros-dollardollar_van.out: $!\n";
+	while(<IN>)
+	{
+		CondorTest::fullchomp($_);
+		push @lines, $_;
+	}
+};
+
+$success = sub
+{
+    my %args = @_;
+	my $cluster = $args{"cluster"};
+
+	load_up_lines();
+	foreach my $item ( @lines )
+	{
+		CondorTest::debug("ARG -$item-\n",2);
+	}
+
+	# Memory expected followed by machine name
+	CondorTest::ParseMachineAds( $lines[1] );
+	%ads = CondorTest::FetchMachineAds();
+	my $machinemem = CondorTest::FetchMachineAdValue("memory");
+	my $wontbethere = CondorTest::FetchMachineAdValue("wontbethere");
+
+	CondorTest::debug("Alternate value is ---$wontbethere---\n",1);
+	if( $machinemem ne undef)
+	{
+		if($machinemem eq $lines[0])
+		{
+			CondorTest::debug("Good macro and condor_status agree --$machinemem--!\n",1);
+			foreach my $item ( @lines ) {
+				if( $item =~ /^\s*MEMORY\s+=\s+(\d+)$/ )
+				{
+					CondorTest::debug("Memory = $1\n",1);
+					if( $1 eq $machinemem)
+					{
+						CondorTest::debug("We are happy......\n",1);
+					}
+					else
+					{
+						die "Memory via the environment failed\n";
+					}
+					last;
+				}
+			}
+		}
+		else
+		{
+			die "machine $machine MISMATCH $machinemem/$lines[0]\n";
+		}
+	}
+	else
+	{
+		die "Can't get memory Ad for machine $machine to compare to $lines[0]\n";
+	}
+
+};
+
+#CondorTest::RegisterExecute($testname, $execute);
+#CondorTest::RegisterExitedSuccess( $testname, \&CondorTest::DefaultOutputTest );
+CondorTest::RegisterExitedSuccess( $testname, $success );
+
+
+if( CondorTest::RunTest($testname, $cmd, 0) ) {
+	CondorTest::debug("$testname: SUCCESS\n",1);
+	exit(0);
+} else {
+	die "$testname: CondorTest::RunTest() failed\n";
+}
+

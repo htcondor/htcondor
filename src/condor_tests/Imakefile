@@ -881,6 +881,8 @@ TESTCLASS(job_schedd_job-tracking_van,full)
 TESTCLASS(job_schedd_job-tracking_van,quicknolink)
 #endif /* 0 -- test disabled */
 
+#if !defined(IS_IA64_LINUX_RHEL4) 
+
 DESC(job_core_err_java,"Java Universe: basic error test")
 RUN(job_core_err_java)
 TESTCLASS(job_core_err_java,core)
@@ -933,6 +935,8 @@ TESTCLASS(job_core_plus_java,full)
 TESTCLASS(job_core_plus_java,quicknolink)
 ***************************************************************
 */
+
+#endif
 
 /*
 Gnats bugs 723 and 724
@@ -1812,6 +1816,37 @@ TESTCLASS(job_dagman_depth_first,dagman)
 TESTCLASS(job_dagman_depth_first,quick)
 TESTCLASS(job_dagman_depth_first,full)
 TESTCLASS(job_dagman_depth_first,quicknolink)
+
+DESC(job_dagman_,"Test DAG tricky log file paths")
+RUN(job_dagman_log_path)
+TESTCLASS(job_dagman_log_path,dagman)
+TESTCLASS(job_dagman_log_path,quick)
+TESTCLASS(job_dagman_log_path,full)
+TESTCLASS(job_dagman_log_path,quicknolink)
+
+DESC(job_dagman_retry_recovery,"Test DAG recovery w/ retried node")
+RUN(job_dagman_retry_recovery)
+TESTCLASS(job_dagman_retry_recovery,dagman)
+TESTCLASS(job_dagman_retry_recovery,quick)
+TESTCLASS(job_dagman_retry_recovery,full)
+TESTCLASS(job_dagman_retry_recovery,quicknolink)
+
+DESC(job_dagman_submit_fails_post,"Test submit failure on node w/ POST")
+RUN(job_dagman_submit_fails_post)
+TESTCLASS(job_dagman_submit_fails_post,dagman)
+TESTCLASS(job_dagman_submit_fails_post,quick)
+TESTCLASS(job_dagman_submit_fails_post,full)
+TESTCLASS(job_dagman_submit_fails_post,quicknolink)
+
+#if !defined( IS_HPUX11 ) 
+DESC(job_dagman_large_dag,"Test large DAG w/ recovery mode")
+RUN(job_dagman_large_dag)
+TESTCLASS(job_dagman_large_dag,dagman)
+TESTCLASS(job_dagman_large_dag,quick)
+TESTCLASS(job_dagman_large_dag,full)
+TESTCLASS(job_dagman_large_dag,quicknolink)
+#endif
+
 
 /* Sample performance tests */
 

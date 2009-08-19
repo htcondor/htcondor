@@ -158,6 +158,21 @@ DIST_FLAG = Distribution
 #	define WANT_CLASSAD_ANALYSIS YES
 #endif
 
+/* For the static builds on linux, extra libraries have to be given on
+ * the link line for ldap, but which ones varies by distro. This ad-hoc
+ * check is ugly, but works.
+ */
+#if HAVE_LDAP_H
+# if defined(IS_LINUX) && defined(HAVE_LIBSASL)
+    LDAP_LIB = -lldap -llber -lsasl
+# elif defined(IS_LINUX) && defined(HAVE_LIBSASL2)
+    LDAP_LIB = -lldap -llber -lsasl2
+# else
+    LDAP_LIB = -lldap
+# endif
+#else
+  LDAP_LIB =
+#endif
 
 /**********************************************************************
 A whole bunch of settings related to things included in the Condor
@@ -321,8 +336,8 @@ SHARED_COMPILER_FLAGS = $(VENDOR_C_FLAGS) $(COMP_DEBUG_FLAGS) $(CC_PIC_FLAG) Pla
 /* We use separate flag definitions for the C compiler and the C++ compiler.
 	These are the flags actually passed to the respective compilers. 
 	Don't forget to mix in flags specific to one compiler or the other. */
-STD_C_FLAGS = $(SHARED_COMPILER_FLAGS) $(GCC_DEBUG_FLAGS) PlatformGccFlags
-STD_C_PLUS_FLAGS = $(SHARED_COMPILER_FLAGS) $(GPP_DEBUG_FLAGS) $(GPP_ARCH_FLAGS) PlatformGppFlags 
+STD_C_FLAGS = $(SHARED_COMPILER_FLAGS) $(GCC_DEBUG_FLAGS) PlatformGccFlags $(CONFIGURE_PCRE_CFLAGS)
+STD_C_PLUS_FLAGS = $(SHARED_COMPILER_FLAGS) $(GPP_DEBUG_FLAGS) $(GPP_ARCH_FLAGS) PlatformGppFlags $(CONFIGURE_PCRE_CFLAGS)
 
 TESTSUITE_FLAGS_GCC =  $(STD_C_FLAGS)
 TESTSUITE_FLAGS_GPP = $(STD_C_PLUS_FLAGS)
@@ -389,4 +404,5 @@ STD_LIBS = \
   $(POST_EXT_LIBS) \
   $(PROCD_CLIENT_LIB) \
   $(PRIVSEP_CLIENT_LIB) \
+  $(CONFIGURE_PCRE_LDFLAGS) \
   $(CUTIL_LIB)

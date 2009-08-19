@@ -20,14 +20,14 @@
 class Alarm
 {
   private:
-    int alarm_sd;
+	bool m_expired;
     
   public:
-    Alarm() { alarm_sd = 0; }
-    void SetAlarm(int socket_desc,
-		  int sec);
+    Alarm() { m_expired = false; }
+    void SetAlarm(int sec);
     void ResetAlarm();
     void Expired();
+    bool IsExpired(void);
 };
 
 

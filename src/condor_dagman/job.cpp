@@ -75,18 +75,18 @@ Job::~Job() {
 	delete _scriptPost;
 }
 
-Job::
-Job( const job_type_t jobType, const char* jobName, const char *directory,
-			const char* cmdFile, bool prohibitMultiJobs ) :
+//---------------------------------------------------------------------------
+Job::Job( const job_type_t jobType, const char* jobName,
+			const char *directory, const char* cmdFile,
+			bool prohibitMultiJobs ) :
 	_jobType( jobType )
 {
 	Init( jobName, directory, cmdFile, prohibitMultiJobs );
 }
 
-
-void Job::
-Init( const char* jobName, const char* directory, const char* cmdFile,
-			bool prohibitMultiJobs )
+//---------------------------------------------------------------------------
+void Job::Init( const char* jobName, const char* directory,
+			const char* cmdFile, bool prohibitMultiJobs )
 {
 	ASSERT( jobName != NULL );
 	ASSERT( cmdFile != NULL );
@@ -106,6 +106,7 @@ Init( const char* jobName, const char* directory, const char* cmdFile,
     _cmdFile = strnewp (cmdFile);
 	_dagFile = NULL;
 	_throttleInfo = NULL;
+	_logIsMonitored = false;
 
 	if ( (_jobType == TYPE_CONDOR) && prohibitMultiJobs ) {
 		MyString	errorMsg;
@@ -148,15 +149,7 @@ Init( const char* jobName, const char* directory, const char* cmdFile,
 	_hasNodePriority = false;
 	_nodePriority = 0;
 
-		// Note: we use "" for the directory here because when this method
-		// is called we should *already* be in the directory from which
-		// this job is to be run.
-    MyString logFile = MultiLogFiles::loadLogFileNameFromSubFile(_cmdFile, "");
-		// Note: _logFile is needed only for POST script events (as of
-		// 2005-06-23).
-		// This will go away once the lazy log file code is fully
-		// implemented.  wenger 2008-12-19.
-    _logFile = strnewp (logFile.Value());
+    _logFile = NULL;
 
 	varNamesFromDag = new List<MyString>;
 	varValsFromDag = new List<MyString>;
@@ -736,52 +729,110 @@ Job::SetDagFile(const char *dagFile)
 	_dagFile = strnewp( dagFile );
 }
 
-#if LAZY_LOG_FILES
 //---------------------------------------------------------------------------
 bool
-Job::MonitorLogFile( ReadMultipleUserLogs &logReader, bool recovery )
+Job::MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
+			ReadMultipleUserLogs &storkLogReader, bool nfsIsError,
+			bool recovery )
 {
-	bool result = false;
+	if ( _logIsMonitored ) {
+		debug_printf( DEBUG_QUIET, "Warning: log file for node "
+					"%s is already monitored\n", GetJobName() );
+		return true;
+	}
 
-    MyString logFileStr = MultiLogFiles::loadLogFileNameFromSubFile(
-				_cmdFile, _directory );
-	if ( logFileStr == "" ) {
-		debug_printf( DEBUG_QUIET, "ERROR: Unable to get log file from "
-					"submit file %s (node %s)\n", _cmdFile, GetJobName() );
-		result = false;
+	ReadMultipleUserLogs &logReader = (_jobType == TYPE_CONDOR) ?
+				condorLogReader : storkLogReader;
+
+    MyString logFileStr;
+	if ( _jobType == TYPE_CONDOR ) {
+    	logFileStr = MultiLogFiles::loadLogFileNameFromSubFile( _cmdFile,
+					_directory );
 	} else {
-		delete [] _logFile; // temporary
-		_logFile = strnewp( logFileStr.Value() );
-		CondorError errstack;
-		result = logReader.monitorLogFile( _logFile, !recovery, errstack );
-		if ( !result ) {
-			errstack.pushf( "DAGMan::Job", 0/*TEMP*/, "ERROR: Unable to "
-						"monitor log file for node %s", GetJobName() );
-			debug_printf( DEBUG_QUIET, "%s\n", errstack.getFullText() );
+		StringList logFiles;
+		MyString tmpResult = MultiLogFiles::loadLogFileNamesFromStorkSubFile(
+					_cmdFile, _directory, logFiles );
+		if ( tmpResult != "" ) {
+			debug_printf( DEBUG_QUIET, "Error getting Stork log file: %s\n",
+						tmpResult.Value() );
+			return false;
+		} else if ( logFiles.number() != 1 ) {
+			debug_printf( DEBUG_QUIET, "Error: %d Stork log files found "
+						"in submit file %s; we want 1\n",
+						logFiles.number(), _cmdFile );
+			return false;
+		} else {
+			logFiles.rewind();
+			logFileStr = logFiles.next();
 		}
 	}
 
-	return result;
+	if ( logFileStr == "" ) {
+		debug_printf( DEBUG_QUIET, "ERROR: Unable to get log file from "
+					"submit file %s (node %s)\n", _cmdFile, GetJobName() );
+		return false;
+
+	} else if ( MultiLogFiles::logFileOnNFS( logFileStr.Value(),
+				nfsIsError ) ) {
+		debug_printf( DEBUG_QUIET, "Error: log file %s on NFS\n",
+					_logFile );
+		return false;
+	}
+
+	delete [] _logFile;
+		// Saving log file here in case submit file gets changed.
+	_logFile = strnewp( logFileStr.Value() );
+	debug_printf( DEBUG_DEBUG_1, "Monitoring log file <%s> for node %s\n",
+				_logFile, GetJobName() );
+	CondorError errstack;
+	if ( !logReader.monitorLogFile( _logFile, !recovery, errstack ) ) {
+		errstack.pushf( "DAGMan::Job", DAGMAN_ERR_LOG_FILE,
+					"ERROR: Unable to monitor log file for node %s",
+					GetJobName() );
+		debug_printf( DEBUG_QUIET, "%s\n", errstack.getFullText() );
+		return false;
+	}
+
+	_logIsMonitored = true;
+
+	return true;
 }
 
 //---------------------------------------------------------------------------
 bool
-Job::UnmonitorLogFile( ReadMultipleUserLogs &logReader )
+Job::UnmonitorLogFile( ReadMultipleUserLogs &condorLogReader,
+			ReadMultipleUserLogs &storkLogReader )
 {
+	debug_printf( DEBUG_DEBUG_1, "Unmonitoring log file <%s> for node %s\n",
+				_logFile, GetJobName() );
+
+	if ( !_logIsMonitored ) {
+		debug_printf( DEBUG_QUIET, "Warning: log file for node "
+					"%s is already unmonitored\n", GetJobName() );
+		return true;
+	}
+
+	ReadMultipleUserLogs &logReader = (_jobType == TYPE_CONDOR) ?
+				condorLogReader : storkLogReader;
+
+	debug_printf( DEBUG_DEBUG_1, "Unmonitoring log file <%s> for node %s\n",
+				_logFile, GetJobName() );
+
 	CondorError errstack;
 	bool result = logReader.unmonitorLogFile( _logFile, errstack );
 	if ( !result ) {
-		errstack.pushf( "DAGMan::Job", 0/*TEMP*/, "ERROR: Unable to "
-					"unmonitor log " "file for node %s", GetJobName() );
+		errstack.pushf( "DAGMan::Job", DAGMAN_ERR_LOG_FILE,
+					"ERROR: Unable to unmonitor log " "file for node %s",
+					GetJobName() );
 		debug_printf( DEBUG_QUIET, "%s\n", errstack.getFullText() );
 	}
 
-#if 0 // uncomment once lazy log file code is fully implemented
 	delete [] _logFile;
 	_logFile = NULL;
-#endif
+
+	if ( result ) {
+		_logIsMonitored = false;
+	}
 
 	return result;
 }
-
-#endif // LAZY_LOG_FILES

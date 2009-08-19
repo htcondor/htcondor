@@ -59,7 +59,8 @@ lock_file_plain( int fd, LOCK_TYPE type, int do_block )
 		f.l_type = F_UNLCK;
 		break;
       default:
-			  /* unknown lock type, fail immediately */
+			  /* unknown lock type, set errno and fail immediately */
+		errno = EINVAL;
 		return -1;
 	}
 

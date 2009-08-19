@@ -3,7 +3,7 @@ job_core_onexithold_local
 job_core_onexitrem_local
 job_core_perhold_local
 job_core_perrelease_local
-#job_core_perremove_local
+job_core_perremove_local
 job_core_crontab_local
 job_core_time-deferral_local
 job_core_time-deferral-hold_local
@@ -62,3 +62,48 @@ job_filexfer_base_van
 job_filexfer_basic_van
 job_filexfer_input-onegone_van
 job_filexfer_minus1_van
+#tests added 2009
+job_core_time-deferral-hold_van
+job_core_time-deferral-remove_van
+job_core_time-deferral_van
+#job_core_output_java
+#job_core_err_java
+#job_core_hold_java
+#job_core_input_java
+#job_core_initialdir_java
+cmd_status_shows-any
+cmd_status_shows-submitters
+cmd_status_shows-negotiator
+cmd_status_shows-state
+cmd_status_shows-format
+cmd_status_shows-constraint
+cmd_status_shows-avail
+cmd_status_shows-claim
+cmd_status_shows-master
+cmd_status_shows-schedd
+cmd_status_shows-startd
+lib_auth_protocol-negot-prt2
+lib_auth_protocol-negot-prt3
+lib_auth_protocol-negot-prt4
+job_core_basic_par
+win_core_macros-dollardollar_van
+job_dagman_unlessexit
+job_filexfer_limitback_van
+job_filexfer_md5-remote_van
+job_filexfer_output-withvacate_van
+job_filexfer_output_van
+job_filexfer_streamout_van
+job_filexfer_whento-base_van
+job_filexfer_whento-simpleinput_van
+job_filexfer_whento-withinput_van
+job_schedd_restart-holdjobs-ok
+# must create a simpler log reader - cost 5 dag jobs
+#job_dagman_comlog needs x_read_joblog.exe
+#job_dagman_fullremove needs x_read_joblog.exe
+job_dagman_basic
+#job_dagman_maxpostscripts
+#job_dagman_maxprescripts
+#job_dagman_retry needs x_read_joblog.exe
+#job_dagman_throttle needs x_read_joblog.exe
+#job_dagman_uncomlog needs x_read_joblog.exe
+#job_dagman_unlessexit needs x_read_joblog.exe

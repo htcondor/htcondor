@@ -15,97 +15,6 @@
 	</ToolFiles>
 	<Configurations>
 		<Configuration
-			Name="Debug|Win32"
-			OutputDirectory=".\..\Debug"
-			IntermediateDirectory=".\..\Debug"
-			ConfigurationType="1"
-			UseOfMFC="0"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="2"
-			BuildLogFile="$(IntDir)\BuildLogs\$(InputName).log.htm"
-			>
-			<Tool
-				Name="VCPreBuildEventTool"
-			/>
-			<Tool
-				Name="VCCustomBuildTool"
-			/>
-			<Tool
-				Name="VCXMLDataGeneratorTool"
-			/>
-			<Tool
-				Name="VCWebServiceProxyGeneratorTool"
-			/>
-			<Tool
-				Name="VCMIDLTool"
-				TypeLibraryName=".\..\Debug/condor_procd.tlb"
-				HeaderFileName=""
-			/>
-			<Tool
-				Name="VCCLCompilerTool"
-				AdditionalOptions="$(CONDOR_DEFINE) $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE)"
-				Optimization="0"
-				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE"
-				MinimalRebuild="true"
-				BasicRuntimeChecks="3"
-				RuntimeLibrary="1"
-				PrecompiledHeaderFile=".\..\Debug/condor_procd.pch"
-				AssemblerListingLocation=".\..\Debug/"
-				ObjectFile=".\..\Debug/"
-				ProgramDataBaseFileName=".\..\Debug/"
-				WarningLevel="3"
-				SuppressStartupBanner="true"
-				DebugInformationFormat="4"
-			/>
-			<Tool
-				Name="VCManagedResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="_DEBUG"
-				Culture="1033"
-			/>
-			<Tool
-				Name="VCPreLinkEventTool"
-			/>
-			<Tool
-				Name="VCLinkerTool"
-				AdditionalDependencies="../Debug/condor_common.obj ..\Debug\condor_common_c.obj $(CONDOR_LIB) $(CONDOR_LIBPATH) $(CONDOR_GSOAP_LIB) $(CONDOR_GSOAP_LIBPATH) $(CONDOR_KERB_LIB) $(CONDOR_KERB_LIBPATH) $(CONDOR_PCRE_LIB) $(CONDOR_PCRE_LIBPATH) $(CONDOR_OPENSSL_LIB) $(CONDOR_POSTGRESQL_LIB) $(CONDOR_OPENSSL_LIBPATH) $(CONDOR_POSTGRESQL_LIBPATH)"
-				OutputFile=".\..\Debug/condor_procd.exe"
-				LinkIncremental="2"
-				SuppressStartupBanner="true"
-				GenerateDebugInformation="true"
-				ProgramDatabaseFile=".\..\Debug/condor_procd.pdb"
-				SubSystem="1"
-				RandomizedBaseAddress="1"
-				DataExecutionPrevention="0"
-				TargetMachine="1"
-			/>
-			<Tool
-				Name="VCALinkTool"
-			/>
-			<Tool
-				Name="VCManifestTool"
-			/>
-			<Tool
-				Name="VCXDCMakeTool"
-			/>
-			<Tool
-				Name="VCBscMakeTool"
-				SuppressStartupBanner="true"
-				OutputFile=".\..\Debug/condor_procd.bsc"
-			/>
-			<Tool
-				Name="VCFxCopTool"
-			/>
-			<Tool
-				Name="VCAppVerifierTool"
-			/>
-			<Tool
-				Name="VCPostBuildEventTool"
-			/>
-		</Configuration>
-		<Configuration
 			Name="Release|Win32"
 			OutputDirectory=".\..\Release"
 			IntermediateDirectory=".\..\Release"
@@ -163,191 +72,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="../Release/condor_common.obj ../Release/condor_common_c.obj $(CONDOR_LIB) $(CONDOR_LIBPATH) $(CONDOR_GSOAP_LIB) $(CONDOR_GSOAP_LIBPATH) $(CONDOR_KERB_LIB) $(CONDOR_KERB_LIBPATH) $(CONDOR_PCRE_LIB) $(CONDOR_PCRE_LIBPATH) $(CONDOR_OPENSSL_LIB) $(CONDOR_POSTGRESQL_LIB) $(CONDOR_OPENSSL_LIBPATH) $(CONDOR_POSTGRESQL_LIBPATH)"
-				OutputFile=".\..\Release/condor_procd.exe"
-				LinkIncremental="1"
-				SuppressStartupBanner="true"
-				GenerateDebugInformation="true"
-				GenerateMapFile="true"
-				MapFileName=".\..\Release/condor_procd.map"
-				SubSystem="1"
-				RandomizedBaseAddress="1"
-				DataExecutionPrevention="0"
-				TargetMachine="1"
-			/>
-			<Tool
-				Name="VCALinkTool"
-			/>
-			<Tool
-				Name="VCManifestTool"
-			/>
-			<Tool
-				Name="VCXDCMakeTool"
-			/>
-			<Tool
-				Name="VCBscMakeTool"
-				SuppressStartupBanner="true"
-				OutputFile=".\..\Release/condor_procd.bsc"
-			/>
-			<Tool
-				Name="VCFxCopTool"
-			/>
-			<Tool
-				Name="VCAppVerifierTool"
-			/>
-			<Tool
-				Name="VCPostBuildEventTool"
-			/>
-		</Configuration>
-		<Configuration
-			Name="Debug (Express)|Win32"
-			OutputDirectory="$(ConfigurationName)"
-			IntermediateDirectory="$(ConfigurationName)"
-			ConfigurationType="1"
-			UseOfMFC="0"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="2"
-			BuildLogFile="$(IntDir)\BuildLogs\$(InputName).log.htm"
-			>
-			<Tool
-				Name="VCPreBuildEventTool"
-			/>
-			<Tool
-				Name="VCCustomBuildTool"
-			/>
-			<Tool
-				Name="VCXMLDataGeneratorTool"
-			/>
-			<Tool
-				Name="VCWebServiceProxyGeneratorTool"
-			/>
-			<Tool
-				Name="VCMIDLTool"
-				TypeLibraryName=".\..\Debug/condor_procd.tlb"
-				HeaderFileName=""
-			/>
-			<Tool
-				Name="VCCLCompilerTool"
-				AdditionalOptions="$(CONDOR_DEFINE) $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE)"
-				Optimization="0"
-				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE"
-				MinimalRebuild="true"
-				BasicRuntimeChecks="3"
-				RuntimeLibrary="1"
-				PrecompiledHeaderFile=".\..\Debug/condor_procd.pch"
-				AssemblerListingLocation=".\..\Debug/"
-				ObjectFile=".\..\Debug/"
-				ProgramDataBaseFileName=".\..\Debug/"
-				WarningLevel="3"
-				SuppressStartupBanner="true"
-				DebugInformationFormat="4"
-			/>
-			<Tool
-				Name="VCManagedResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="_DEBUG"
-				Culture="1033"
-			/>
-			<Tool
-				Name="VCPreLinkEventTool"
-			/>
-			<Tool
-				Name="VCLinkerTool"
-				AdditionalDependencies="../Debug/condor_common.obj ..\Debug\condor_common_c.obj $(CONDOR_LIB) $(CONDOR_LIBPATH) $(CONDOR_GSOAP_LIB) $(CONDOR_GSOAP_LIBPATH) $(CONDOR_KERB_LIB) $(CONDOR_KERB_LIBPATH) $(CONDOR_PCRE_LIB) $(CONDOR_PCRE_LIBPATH) $(CONDOR_OPENSSL_LIB) $(CONDOR_POSTGRESQL_LIB) $(CONDOR_OPENSSL_LIBPATH) $(CONDOR_POSTGRESQL_LIBPATH)"
-				OutputFile=".\..\Debug/condor_procd.exe"
-				LinkIncremental="2"
-				SuppressStartupBanner="true"
-				GenerateDebugInformation="true"
-				ProgramDatabaseFile=".\..\Debug/condor_procd.pdb"
-				SubSystem="1"
-				RandomizedBaseAddress="1"
-				DataExecutionPrevention="0"
-				TargetMachine="1"
-			/>
-			<Tool
-				Name="VCALinkTool"
-			/>
-			<Tool
-				Name="VCManifestTool"
-			/>
-			<Tool
-				Name="VCXDCMakeTool"
-			/>
-			<Tool
-				Name="VCBscMakeTool"
-				SuppressStartupBanner="true"
-				OutputFile=".\..\Debug/condor_procd.bsc"
-			/>
-			<Tool
-				Name="VCFxCopTool"
-			/>
-			<Tool
-				Name="VCAppVerifierTool"
-			/>
-			<Tool
-				Name="VCPostBuildEventTool"
-			/>
-		</Configuration>
-		<Configuration
-			Name="Release (Express)|Win32"
-			OutputDirectory="$(ConfigurationName)"
-			IntermediateDirectory="$(ConfigurationName)"
-			ConfigurationType="1"
-			UseOfMFC="0"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="2"
-			BuildLogFile="$(IntDir)\BuildLogs\$(InputName).log.htm"
-			>
-			<Tool
-				Name="VCPreBuildEventTool"
-			/>
-			<Tool
-				Name="VCCustomBuildTool"
-			/>
-			<Tool
-				Name="VCXMLDataGeneratorTool"
-			/>
-			<Tool
-				Name="VCWebServiceProxyGeneratorTool"
-			/>
-			<Tool
-				Name="VCMIDLTool"
-				TypeLibraryName=".\..\Release/condor_procd.tlb"
-				HeaderFileName=""
-			/>
-			<Tool
-				Name="VCCLCompilerTool"
-				AdditionalOptions="$(CONDOR_DEFINE) $(CONDOR_INCLUDE) $(CONDOR_GSOAP_INCLUDE) $(CONDOR_KERB_INCLUDE) $(CONDOR_PCRE_INCLUDE) $(CONDOR_OPENSSL_INCLUDE) $(CONDOR_POSTGRESQL_INCLUDE)"
-				Optimization="1"
-				InlineFunctionExpansion="1"
-				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE"
-				StringPooling="true"
-				RuntimeLibrary="0"
-				EnableFunctionLevelLinking="true"
-				PrecompiledHeaderFile=".\..\Release/condor_procd.pch"
-				AssemblerListingLocation=".\..\Release/"
-				ObjectFile=".\..\Release/"
-				ProgramDataBaseFileName=".\..\Release/"
-				WarningLevel="3"
-				SuppressStartupBanner="true"
-				DebugInformationFormat="1"
-			/>
-			<Tool
-				Name="VCManagedResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="NDEBUG"
-				Culture="1033"
-			/>
-			<Tool
-				Name="VCPreLinkEventTool"
-			/>
-			<Tool
-				Name="VCLinkerTool"
-				AdditionalDependencies="../Release/condor_common.obj ../Release/condor_common_c.obj $(CONDOR_LIB) $(CONDOR_LIBPATH) $(CONDOR_GSOAP_LIB) $(CONDOR_GSOAP_LIBPATH) $(CONDOR_KERB_LIB) $(CONDOR_KERB_LIBPATH) $(CONDOR_PCRE_LIB) $(CONDOR_PCRE_LIBPATH) $(CONDOR_OPENSSL_LIB) $(CONDOR_POSTGRESQL_LIB) $(CONDOR_OPENSSL_LIBPATH) $(CONDOR_POSTGRESQL_LIBPATH)"
-				OutputFile=".\..\Release/condor_procd.exe"
+				OutputFile="$(OutDir)\$(ProjectName).exe"
 				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				GenerateDebugInformation="true"
@@ -389,122 +114,14 @@
 		<File
 			RelativePath="..\src\condor_c++_util\condor_open.cpp"
 			>
-			<FileConfiguration
-				Name="Debug|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Release|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Debug (Express)|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Release (Express)|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\src\condor_util_lib\condor_pidenvid.c"
 			>
-			<FileConfiguration
-				Name="Debug|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Release|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Debug (Express)|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Release (Express)|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\src\condor_procd\dprintf_lite.cpp"
 			>
-			<FileConfiguration
-				Name="Debug|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Release|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Debug (Express)|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Release (Express)|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\src\condor_procd\environment_tracker.h"
@@ -521,82 +138,10 @@
 		<File
 			RelativePath="..\src\condor_procd\local_server.WINDOWS.cpp"
 			>
-			<FileConfiguration
-				Name="Debug|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Release|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Debug (Express)|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Release (Express)|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\src\condor_procd\login_tracker.cpp"
 			>
-			<FileConfiguration
-				Name="Debug|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Release|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Debug (Express)|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Release (Express)|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\src\condor_procd\login_tracker.h"
@@ -605,82 +150,10 @@
 		<File
 			RelativePath="..\src\condor_c++_util\ntsysinfo.cpp"
 			>
-			<FileConfiguration
-				Name="Debug|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Release|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Debug (Express)|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Release (Express)|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\src\condor_procd\parent_tracker.cpp"
 			>
-			<FileConfiguration
-				Name="Debug|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Release|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Debug (Express)|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Release (Express)|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\src\condor_procd\parent_tracker.h"
@@ -693,42 +166,6 @@
 		<File
 			RelativePath="..\src\condor_procd\proc_family.cpp"
 			>
-			<FileConfiguration
-				Name="Debug|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Release|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Debug (Express)|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Release (Express)|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\src\condor_procd\proc_family.h"
@@ -741,42 +178,6 @@
 		<File
 			RelativePath="..\src\condor_procd\proc_family_member.cpp"
 			>
-			<FileConfiguration
-				Name="Debug|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Release|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Debug (Express)|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Release (Express)|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\src\condor_procd\proc_family_member.h"
@@ -785,42 +186,6 @@
 		<File
 			RelativePath="..\src\condor_procd\proc_family_monitor.cpp"
 			>
-			<FileConfiguration
-				Name="Debug|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Release|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Debug (Express)|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Release (Express)|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\src\condor_procd\proc_family_monitor.h"
@@ -829,42 +194,6 @@
 		<File
 			RelativePath="..\src\condor_procd\proc_family_server.cpp"
 			>
-			<FileConfiguration
-				Name="Debug|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Release|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Debug (Express)|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Release (Express)|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\src\condor_procd\proc_family_server.h"
@@ -873,42 +202,6 @@
 		<File
 			RelativePath="..\src\condor_procd\proc_family_tracker.cpp"
 			>
-			<FileConfiguration
-				Name="Debug|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Release|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Debug (Express)|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Release (Express)|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\src\condor_procd\proc_family_tracker.h"
@@ -917,42 +210,6 @@
 		<File
 			RelativePath="..\src\condor_procd\procd_common.cpp"
 			>
-			<FileConfiguration
-				Name="Debug|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Release|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Debug (Express)|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Release (Express)|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\src\condor_procd\procd_common.h"
@@ -961,82 +218,10 @@
 		<File
 			RelativePath="..\src\condor_procd\procd_main.cpp"
 			>
-			<FileConfiguration
-				Name="Debug|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Release|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Debug (Express)|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Release (Express)|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\src\condor_c++_util\process_control.WINDOWS.cpp"
 			>
-			<FileConfiguration
-				Name="Debug|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Release|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Debug (Express)|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Release (Express)|Win32"
-				>
-				<Tool
-					Name="VCCLCompilerTool"
-					PreprocessorDefinitions=""
-					CompileAs="2"
-				/>
-			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\src\condor_c++_util\process_control.WINDOWS.h"

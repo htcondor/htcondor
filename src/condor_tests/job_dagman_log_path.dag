@@ -1,0 +1,10 @@
+Job A job_dagman_log_path-nodeA.cmd
+
+Job B job_dagman_log_path-nodeB.cmd
+
+Job C job_dagman_log_path-nodeC.cmd
+
+Job D job_dagman_log_path-nodeD.cmd
+
+Parent A Child B C
+Parent B C Child D

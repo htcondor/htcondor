@@ -130,8 +130,12 @@ class JobRouter: public Service {
 	int m_periodic_timer_id;
 	int m_job_router_polling_period;
 
+	int m_public_ad_update_interval;
+	int m_public_ad_update_timer;
+
 	char* m_custom_attrs;
 	std::string m_job_router_name;
+	std::string daemonName;
 
 	int m_poll_count;
 
@@ -139,6 +143,7 @@ class JobRouter: public Service {
 	class FileLock *m_router_lock;
 	std::string m_router_lock_fname;
 
+	ClassAd m_public_ad;
 
 	// Count jobs being managed.  (Excludes RETIRED jobs.)
 	int NumManagedJobs();
@@ -222,6 +227,9 @@ class JobRouter: public Service {
 	// same name as this one.
 	void GetInstanceLock();
 
+	void InitPublicAd();
+	void TimerHandler_UpdateCollector();
+	void InvalidatePublicAd();
 };
 
 #endif

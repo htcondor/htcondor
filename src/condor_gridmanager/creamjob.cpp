@@ -719,7 +719,6 @@ int CreamJob::doEvaluateState()
 					break;
 				}
 				
-				myResource->SubmitComplete(this);
 				lastSubmitAttempt = time(NULL);
 				numSubmitAttempts++;
 				jmProxyExpireTime = jobProxy->expiration_time;

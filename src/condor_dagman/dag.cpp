@@ -81,8 +81,6 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	_splices              (200, hashFuncMyString, rejectDuplicateKeys),
 	_dagFiles             (dagFiles),
 	_useDagDir            (useDagDir),
-    _condorLogInitialized (false),
-    _dapLogInitialized    (false),             //<--DAP
 	_nodeNameHash		  (NODE_HASH_SIZE, MyStringHash, rejectDuplicateKeys),
 	_nodeIDHash			  (NODE_HASH_SIZE, hashFuncInt, rejectDuplicateKeys),
 	_condorIDHash		  (NODE_HASH_SIZE, hashFuncInt, rejectDuplicateKeys),
@@ -124,15 +122,6 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	if (findUserLogs == true) {
 		ASSERT( dagFiles.number() >= 1 );
 		PrintDagFiles( dagFiles );
-
-		FindLogFiles( dagFiles, _useDagDir );
-		if ( TotalLogFileCount() < 1 ) {
-			const char *tail = (_dagFiles.number() > 1) ? "these DAGs" :
-						"this DAG";
-			debug_error( 1, DEBUG_QUIET,
-						"ERROR: no log files found for the node "
-						"jobs of %s\n", tail );
-		}
 	}
 
  	_readyQ = new PrioritySimpleList<Job*>;
@@ -164,6 +153,8 @@ Dag::Dag( /* const */ StringList &dagFiles,
 		// recovery mode.
 	_pendingReportInterval = -1;
 
+	_nfsLogIsError = param_boolean( "DAGMAN_LOG_ON_NFS_IS_ERROR", true );
+
 	return;
 }
 
@@ -192,51 +183,9 @@ Dag::~Dag() {
 }
 
 //-------------------------------------------------------------------------
-void
-Dag::InitializeDagFiles( bool deleteOldLogs )
-{
-		// if there is an older version of the log files,
-		// we need to delete these.
-
-		// pfc: why in the world would this be a necessary or good
-		// thing?  apparently b/c old submit events from a
-		// previous run of the same dag will contain the same dag
-		// node names as those from current run, which will
-		// completely f0rk the event-processing process (dagman
-		// will see the events from the first run and think they
-		// are from this one)...
-
-		// instead of deleting the old logs, which seems evil,
-		// maybe what we need is to add the submitting dagman
-		// daemon's job id in each of the submit events in
-		// addition to the dag node name we already write, so that
-		// we can differentiate between identically-named nodes
-		// from different dag instances.  (to take this to the
-		// extreme, we might also want a unique schedd id in there
-		// too...)  Or, we can do as Doug Thain suggests, and
-		// have DAGMan keep its own log independant of
-		// Condor -- but Miron hates that idea...
-
-		// One note about this (see PR 813) -- adding DAGMan's Condor ID
-		// to the submit events could cause problems in recovery mode --
-		// DAGMan would have to know the Condor ID of the DAGMan that
-		// did the run that is being recovered...  wenger 2007-03-02
-
-	if( deleteOldLogs ) {
-	debug_printf( DEBUG_VERBOSE,
-				  "Truncating any older versions of log files...\n" );
-
-	MultiLogFiles::TruncateLogs( _condorLogFiles );
-	MultiLogFiles::TruncateLogs( _storkLogFiles );
-	}
-}
-
-//-------------------------------------------------------------------------
 bool Dag::Bootstrap (bool recovery) {
     Job* job;
     ListIterator<Job> jobs (_jobs);
-
-	_recovery = recovery;
 
     // update dependencies for pre-completed jobs (jobs marked DONE in
     // the DAG input file)
@@ -250,6 +199,8 @@ bool Dag::Bootstrap (bool recovery) {
 				  NumNodesDone() );
     
     if (recovery) {
+		_recovery = true;
+
         debug_printf( DEBUG_NORMAL, "Running in RECOVERY mode...\n" );
 
 		// as we read the event log files, we emit lots of imformation into
@@ -262,14 +213,29 @@ bool Dag::Bootstrap (bool recovery) {
 
 		debug_cache_start_caching();
 
-		if( _condorLogFiles.number() > 0 ) {
+			// Here we're monitoring the log files of all ready nodes.
+   		jobs.ToBeforeFirst();
+   		while( jobs.Next( job ) ) {
+			if ( job->CanSubmit() ) {
+				if ( !job->MonitorLogFile( _condorLogRdr, _storkLogRdr,
+							_nfsLogIsError, recovery ) ) {
+					debug_cache_stop_caching();
+					return false;
+				}
+			}
+		}
+
+			// Note: I just realized that this will almost certainly fail
+			// on a combination of Condor and Stork events -- we probably
+			// need a loop around the event processing.  wenger 2009-06-18.
+		if( CondorLogFileCount() > 0 ) {
 			if( !ProcessLogEvents( CONDORLOG, recovery ) ) {
 				_recovery = false;
 				debug_cache_stop_caching();
 				return false;
 			}
 		}
-		if( _storkLogFiles.number() > 0 ) {
+		if( StorkLogFileCount() > 0 ) {
 			if( !ProcessLogEvents( DAPLOG, recovery ) ) {
 				_recovery = false;
 				debug_cache_stop_caching();
@@ -281,14 +247,20 @@ bool Dag::Bootstrap (bool recovery) {
 		jobs.ToBeforeFirst();
 		while( jobs.Next( job ) ) {
 			if( job->GetStatus() == Job::STATUS_POSTRUN ) {
-#if LAZY_LOG_FILES
-				job->MonitorLogFile( _condorLogRdr, _recovery );
-#endif // LAZY_LOG_FILES
+				if ( !job->MonitorLogFile( _condorLogRdr, _storkLogRdr,
+							_nfsLogIsError, _recovery ) ) {
+					debug_cache_stop_caching();
+					return false;
+				}
 				_postScriptQ->Run( job->_scriptPost );
 			}
 		}
 
 		debug_cache_stop_caching();
+
+        debug_printf( DEBUG_NORMAL, "...done with RECOVERY mode\n" );
+
+		_recovery = false;
     }
 	
     if( DEBUG_LEVEL( DEBUG_DEBUG_2 ) ) {
@@ -304,8 +276,6 @@ bool Dag::Bootstrap (bool recovery) {
 		}
     }
 
-	_recovery = false;
-    
     return true;
 }
 
@@ -357,21 +327,9 @@ Job * Dag::FindNodeByNodeID (const JobID_t jobID) const {
 bool
 Dag::DetectCondorLogGrowth () {
 
-	if( _condorLogFiles.number() <= 0 ) {
+	if( CondorLogFileCount() <= 0 ) {
 		return false;
 	}
-
-    if (!_condorLogInitialized) {
-		_condorLogInitialized = _condorLogRdr.initialize( _condorLogFiles );
-		if( !_condorLogInitialized ) {
-				// this can be normal before we've actually submitted
-				// any jobs and the log doesn't yet exist, but is
-				// likely a problem if it persists...
-			debug_printf( DEBUG_VERBOSE, "ERROR: failed to initialize condor "
-						  "job log -- ignore unless error repeats\n");
-			return false;
-		}
-    }
 
 	bool growth = _condorLogRdr.detectLogGrowth();
     debug_printf( DEBUG_DEBUG_4, "%s\n",
@@ -403,21 +361,10 @@ Dag::DetectCondorLogGrowth () {
 
 //-------------------------------------------------------------------------
 bool Dag::DetectDaPLogGrowth () {
-	if( _storkLogFiles.number() <= 0 ) {
+
+	if( StorkLogFileCount() <= 0 ) {
 		return false;
 	}
-
-    if (!_dapLogInitialized) {
-		_dapLogInitialized = _storkLogRdr.initialize( _storkLogFiles );
-		if( !_dapLogInitialized ) {
-				// this can be normal before we've actually submitted
-				// any jobs and the log doesn't yet exist, but is
-				// likely a problem if it persists...
-			debug_printf( DEBUG_VERBOSE, "ERROR: failed to initialize Stork "
-						  "job log -- ignore unless error repeats\n");
-			return false;
-		}
-    }
 
 	bool growth = _storkLogRdr.detectLogGrowth();
     debug_printf( DEBUG_DEBUG_4, "%s\n",
@@ -430,20 +377,17 @@ bool Dag::DetectDaPLogGrowth () {
 bool Dag::ProcessLogEvents (int logsource, bool recovery) {
 
 	if ( logsource == CONDORLOG ) {
-		if ( !_condorLogInitialized ) {
-			_condorLogInitialized = _condorLogRdr.initialize(_condorLogFiles);
-		}
+		dprintf( DEBUG_VERBOSE, "Currently monitoring %d Condor "
+					"log file(s)\n", _condorLogRdr.activeLogFileCount() );
 	} else if ( logsource == DAPLOG ) {
-		if ( !_dapLogInitialized ) {
-			_dapLogInitialized = _storkLogRdr.initialize(_storkLogFiles);
-		}
+		dprintf( DEBUG_VERBOSE, "Currently monitoring %d Stork "
+					"log file(s)\n", _storkLogRdr.activeLogFileCount() );
 	}
 
 	bool done = false;  // Keep scanning until ULOG_NO_EVENT
 	bool result = true;
 
 	while (!done) {
-
 		ULogEvent* e = NULL;
 		ULogEventOutcome outcome = ULOG_NO_EVENT;
 
@@ -612,6 +556,7 @@ bool Dag::ProcessOneEvent (int logsource, ULogEventOutcome outcome,
 }
 
 
+//---------------------------------------------------------------------------
 void
 Dag::ProcessAbortEvent(const ULogEvent *event, Job *job,
 		bool recovery) {
@@ -793,9 +738,9 @@ Dag::RemoveBatchJob(Job *node) {
 void
 Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
 
-#if LAZY_LOG_FILES
-	job->UnmonitorLogFile( _condorLogRdr );
-#endif // LAZY_LOG_FILES
+	if ( job->_queuedNodeJobProcs == 0 ) {
+		(void)job->UnmonitorLogFile( _condorLogRdr, _storkLogRdr );
+	}
 
 	//
 	// Note: structure here should be cleaned up, but I'm leaving it for
@@ -842,10 +787,9 @@ Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
 			job->_Status = Job::STATUS_POSTRUN;
 			_postRunNodeCount++;
 
+			(void)job->MonitorLogFile( _condorLogRdr, _storkLogRdr,
+						_nfsLogIsError, _recovery );
 			if( !recovery ) {
-#if LAZY_LOG_FILES
-				job->MonitorLogFile( _condorLogRdr, _recovery );
-#endif // LAZY_LOG_FILES
 				_postScriptQ->Run( job->_scriptPost );
 			}
 		}
@@ -863,9 +807,7 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 		bool recovery) {
 
 	if( job ) {
-#if LAZY_LOG_FILES
-			job->UnmonitorLogFile( _condorLogRdr );
-#endif // LAZY_LOG_FILES
+			(void)job->UnmonitorLogFile( _condorLogRdr, _storkLogRdr );
 
 			// Note: "|| recovery" below is somewhat of a "quick and dirty"
 			// fix to Gnats PR 357.  The first part of the assert can fail
@@ -1199,50 +1141,6 @@ Dag::PrintDagFiles( /* const */ StringList &dagFiles )
 }
 
 //-------------------------------------------------------------------------
-void
-Dag::FindLogFiles( /* const */ StringList &dagFiles, bool useDagDir )
-{
-
-	MyString	msg;
-	if ( !GetLogFiles( dagFiles, useDagDir, _condorLogFiles, _storkLogFiles,
-				msg ) ) {
-		debug_printf( DEBUG_VERBOSE,
-				"Possible error when parsing DAG: %s ...\n", msg.Value());
-		if ( _allowLogError ) {
-			debug_printf( DEBUG_VERBOSE,
-					"...continuing anyhow because of -AllowLogError "
-					"flag (beware!)\n");
-		} else {
-			debug_printf( DEBUG_VERBOSE, "...exiting -- try again with "
-					"the '-AllowLogError' flag if you *really* think "
-					"this shouldn't be a fatal error\n");
-			DC_Exit( 1 );
-		}
-	}
-	
-	debug_printf( DEBUG_VERBOSE, "All DAG node user log files:\n");
-	if ( _condorLogFiles.number() > 0 ) {
-		_condorLogFiles.rewind();
-		const char *logfile;
-		while( (logfile = _condorLogFiles.next()) ) {
-			debug_printf( DEBUG_VERBOSE, "  %s (Condor)\n", logfile );
-		}
-	}
-
-	if ( LogFileNfsError( _condorLogFiles, _storkLogFiles ) ) {
-		DC_Exit( 1 );
-	}
-
-	if ( _storkLogFiles.number() > 0 ) {
-		_storkLogFiles.rewind();
-		const char *logfile;
-		while( (logfile = _storkLogFiles.next()) ) {
-			debug_printf( DEBUG_VERBOSE, "  %s (Stork)\n", logfile );
-		}
-	}
-}
-
-//-------------------------------------------------------------------------
 bool
 Dag::StartNode( Job *node, bool isRetry )
 {
@@ -1352,8 +1250,13 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 			deferredJobs.Prepend( job, -job->_nodePriority );
 			_catThrottleDeferredCount++;
 		} else {
-			if( dm.submit_delay == 0 && TotalLogFileCount() > 1 &&
-						!didLogSleep ) {
+				// The problem here is that we wouldn't need to sleep if
+				// we only have one total log file *after* we monitor the
+				// log file for the job we're going to submit.  I guess
+				// we could be smarter and move this test somewhere else,
+				// but I'm not going to deal with that right now.
+				// wenger 2009-05-27
+			if( dm.submit_delay == 0 && !didLogSleep ) {
 					// if we don't already have a submit_delay, sleep for one
 					// second here, so we can be sure that this job's submit
 					// event will be unambiguously later than the termination
@@ -1532,7 +1435,9 @@ Dag::PostScriptReaper( const char* nodeName, int status )
 			// would be better to just figure that out from the submit file,
 			// but this is a quick way to do it.  wenger 2005-04-29.)
 		ReadUserLog readLog( job->_logFile );
-		bool useXml = readLog.getIsXMLLog();
+			// Check for isInitialized() here fixes gittrac #435 (DAGMan
+			// core dumps if node has POST script and all submit attempts fail).
+		bool useXml = readLog.isInitialized() ? readLog.getIsXMLLog() : false;
 
 		UserLog ulog;
 		ulog.setUseXML( useXml );
@@ -1941,9 +1846,14 @@ Dag::TerminateJob( Job* job, bool recovery )
         ASSERT( child != NULL );
         child->Remove(Job::Q_WAITING, job->GetJobID());
 		// if child has no more parents in its waiting queue, submit it
-		if( child->GetStatus() == Job::STATUS_READY &&
-			child->IsEmpty( Job::Q_WAITING ) && recovery == FALSE ) {
-			StartNode( child, false );
+		if ( child->GetStatus() == Job::STATUS_READY &&
+			child->IsEmpty( Job::Q_WAITING ) ) {
+			if ( recovery ) {
+				(void)child->MonitorLogFile( _condorLogRdr, _storkLogRdr,
+							_nfsLogIsError, recovery );
+			} else {
+				StartNode( child, false );
+			}
 		}
 	}
 
@@ -1957,6 +1867,7 @@ Dag::TerminateJob( Job* job, bool recovery )
 	}
 }
 
+//-------------------------------------------------------------------------
 void Dag::
 PrintEvent( debug_level_t level, const ULogEvent* event, Job* node )
 {
@@ -1973,6 +1884,7 @@ PrintEvent( debug_level_t level, const ULogEvent* event, Job* node )
 	return;
 }
 
+//-------------------------------------------------------------------------
 void
 Dag::RestartNode( Job *node, bool recovery )
 {
@@ -1995,20 +1907,28 @@ Dag::RestartNode( Job *node, bool recovery )
 		node->_scriptPre->_done = false;
 	}
 	strcpy( node->error_text, "" );
-	debug_printf( DEBUG_VERBOSE, "Retrying node %s (retry #%d of %d)...\n",
-				  node->GetJobName(), node->GetRetries(),
-				  node->GetRetryMax() );
+
 	if( !recovery ) {
+		debug_printf( DEBUG_VERBOSE, "Retrying node %s (retry #%d of %d)...\n",
+					node->GetJobName(), node->GetRetries(),
+					node->GetRetryMax() );
 		StartNode( node, true );
 	} else {
+		debug_printf( DEBUG_VERBOSE, "Looking for retry of node %s (retry "
+					"#%d of %d)...\n", node->GetJobName(), node->GetRetries(),
+					node->GetRetryMax() );
+
 		// Doing this fixes gittrac #481 (recovery fails on a DAG that
 		// has retried nodes).  (See SubmitNodeJob() for where this
 		// gets done during "normal" running.)
 		node->_CondorID = _defaultCondorId;
+		(void)node->MonitorLogFile( _condorLogRdr, _storkLogRdr,
+					_nfsLogIsError, recovery );
 	}
 }
 
 
+//-------------------------------------------------------------------------
 // Number the nodes according to DFS order 
 void 
 Dag::DFSVisit (Job * job)
@@ -2034,6 +1954,7 @@ Dag::DFSVisit (Job * job)
 	job->_dfsOrder = DFS_ORDER;
 }		
 
+//-------------------------------------------------------------------------
 // Detects cycle and warns user about it
 bool 
 Dag::isCycle ()
@@ -2080,6 +2001,7 @@ Dag::isCycle ()
 	return cycle;
 }
 
+//-------------------------------------------------------------------------
 bool
 Dag::CheckForDagAbort(Job *job, const char *type)
 {
@@ -2099,6 +2021,7 @@ Dag::CheckForDagAbort(Job *job, const char *type)
 }
 
 
+//-------------------------------------------------------------------------
 const MyString
 Dag::ParentListString( Job *node, const char delim ) const
 {
@@ -2944,9 +2867,10 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 		sleep( dm.submit_delay );
 	}
 
-#if LAZY_LOG_FILES
-	node->MonitorLogFile( _condorLogRdr, _recovery );
-#endif // LAZY_LOG_FILES
+	if ( !node->MonitorLogFile( _condorLogRdr, _storkLogRdr, _nfsLogIsError,
+				_recovery ) ) {
+		return SUBMIT_RESULT_NO_SUBMIT;
+	}
 
 		// Note: we're checking for a missing log file spec here instead of
 		// inside the submit code because we don't want to re-try the submit
@@ -3041,9 +2965,7 @@ Dag::ProcessFailedSubmit( Job *node, int max_submit_attempts )
 	_nextSubmitTime = time(NULL) + thisSubmitDelay;
 	_nextSubmitDelay *= 2;
 
-#if LAZY_LOG_FILES
-			node->UnmonitorLogFile( _condorLogRdr );
-#endif // LAZY_LOG_FILES
+	(void)node->UnmonitorLogFile( _condorLogRdr, _storkLogRdr );
 
 	if ( node->_submitTries >= max_submit_attempts ) {
 			// We're out of submit attempts, treat this as a submit failure.
@@ -3072,9 +2994,8 @@ Dag::ProcessFailedSubmit( Job *node, int max_submit_attempts )
 			node->_Status = Job::STATUS_POSTRUN;
 			_postRunNodeCount++;
 			node->_scriptPost->_retValJob = DAG_ERROR_CONDOR_SUBMIT_FAILED;
-#if LAZY_LOG_FILES
-			node->MonitorLogFile( _condorLogRdr, _recovery );
-#endif // LAZY_LOG_FILES
+			(void)node->MonitorLogFile( _condorLogRdr, _storkLogRdr,
+						_nfsLogIsError, _recovery );
 			_postScriptQ->Run( node->_scriptPost );
 		} else {
 			node->_Status = Job::STATUS_ERROR;

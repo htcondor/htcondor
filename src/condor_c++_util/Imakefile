@@ -3,11 +3,13 @@
 #define New_classads_obj	credential.o X509credential.o classad_oldnew.o newclassad_stream.o
 #define New_classads_dc_obj	dc_credd.o dc_lease_manager.o dc_lease_manager_lease.o
 #define New_classads_lib	-L$(NEW_CLASSADS_LIB) -lclassad_ns
+#define New_classads_newold classad_newold.o
 #else
 #define New_classads_includes
 #define New_classads_obj
 #define New_classads_dc_obj
 #define New_classads_lib
+#define New_classads_newold
 #endif
 
 #if HAVE_DLOPEN
@@ -22,7 +24,10 @@ LIBCONDORAPI = libcondorapi.a
 TEST_LIBCONDORAPI = test_libcondorapi
 #endif
 
-all_target( cplus_lib.a liburl.a $(LIBCONDORAPI) $(TEST_LIBCONDORAPI) )
+all_target( param_info_init.c cplus_lib.a liburl.a $(LIBCONDORAPI) $(TEST_LIBCONDORAPI) )
+
+param_info_init.c: param_info.in param_info_c_generator.pl
+	./param_info_c_generator.pl
 
 testbin_target(test_libcondorapi,755)
 testbin_target(test_condor.log,644)
@@ -36,28 +41,35 @@ C_PLUS_FLAGS =	\
 		$(STD_C_PLUS_FLAGS) \
 		New_classads_includes \
 		$(QUILL_INC) \
+		$(CONFIGURE_PCRE_CFLAGS) \
 		$(TT_INC) -I../condor_tt
 
 CFLAGS = $(STD_C_FLAGS) New_classads_includes
-LIB = $(STD_LIBS)
+LIB = $(STD_LIBS) $(CONFIGURE_PCRE_LDFLAGS)
 
 /* This is a seperate job_queue.log parser and a prober for changes object which
 	is used by quill and the job router. Eventually the job_queue.log
 	readers/writers between the schedd and this should be unified into one
 	codebase. */
-JOB_QUEUE_LOG_PARSER_OBJ = classadlogentry.o classadlogparser.o prober.o
+JOB_QUEUE_LOG_PARSER_OBJ = classadlogentry.o classadlogparser.o prober.o \
+				JobLogReader.o
 
 URL_OBJ = url_condor.o cbstp_url.o file_url.o http_url.o filter_url.o \
 	mailto_url.o cfilter_url.o ftp_url.o include_urls.o mkargv.o MapFile.o
 
 API_OBJ = generic_query.o condor_query.o condor_q.o ad_printmask.o \
-	condor_event.o write_user_log.o user_log_header.o \
-	read_user_log.o read_user_log_state.o \
+	condor_event.o \
+	write_user_log.o \
+	write_user_log_state.o \
+	user_log_header.o \
+	read_user_log.o \
+	read_user_log_state.o \
 	strnewp.o stat_wrapper.o stat_wrapper_internal.o \
 	read_multiple_logs.o CondorError.o check_events.o tmp_dir.o
 
 #if HAVE_EXT_OPENSSL
 DH_OBJ = condor_dh.o
+BASE64_OBJ = condor_base64.o
 #endif
 
 /* Machines that do not have the seteuid call need this particular object file
@@ -139,6 +151,7 @@ CONLIBAPI_OBJ = \
 	misc_utils.o \
 	user_log_header.o \
 	write_user_log.o \
+	write_user_log_state.o \
 	read_user_log.o \
 	read_user_log_state.o \
 	iso_dates.o \
@@ -191,7 +204,9 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o selector.o \
 	email_cpp.o env.o \
 	string_list.o net_string_list.o condor_event.o $(URL_OBJ) \
 	get_daemon_name.o \
-	write_user_log.o user_log_header.o \
+	write_user_log.o \
+	write_user_log_state.o \
+	user_log_header.o \
 	read_user_log.o read_user_log_state.o \
 	config.o condor_config.o \
 	stringSpace.o condor_state.o condor_adtypes.o \
@@ -199,7 +214,7 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o selector.o \
 	$(API_OBJ) $(DAEMON_CLIENT_OBJ) ccb_client.o \
 	classad_hashtable.o classad_log.o log_transaction.o log.o \
 	classad_collection.o usagemon.o print_wrapped_text.o \
-	classad_helpers.o classad_merge.o classad_namedlist.o \
+	classad_helpers.o classad_merge.o classad_namedlist.o classadHistory.o \
 	ClassAdReevaluator.o \
 	linebuffer.o cron.o cronmgr.o cronjob.o cronjob_classad.o \
 	distribution.o \
@@ -213,8 +228,9 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o selector.o \
 	condor_md.o \
 	proc_id.o HashTable.o MyString.o \
 	KeyCache.o dc_stub.o which.o iso_dates.o java_config.o \
-	Regex.o my_distribution.o error_utils.o $(DH_OBJ) \
+	Regex.o my_distribution.o error_utils.o $(DH_OBJ) $(BASE64_OBJ) \
 	translation_utils.o command_strings.o enum_utils.o \
+	param_info.o param_info_hash.o \
 	condor_parameters.o extra_param_info.o classad_command_util.o \
 	domain_tools.o CondorError.o utc_time.o status_string.o \
 	time_offset.o condor_crontab.o date_util.o condor_user_policy.o \
@@ -237,7 +253,10 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o selector.o \
 	condor_sinful.o \
 	link.o \
 	simple_arg.o \
-	condor_threads.o 
+	condor_threads.o \
+	New_classads_newold \
+	historyFileFinder.o \
+	socket_proxy.o
 
 library_target(cplus_lib.a,$(OBJ))
 library_target(liburl.a,$(URL_OBJ))
@@ -249,6 +268,8 @@ libcondorapi.a: Makefile
 shared_library_target(libcondorapi.so,$(CONLIBAPI_OBJ))
 libcondorapi.so: Makefile
 #endif
+
+all:: JobLogMirror.o
 
 c_plus_target(test_mapfile,test_mapfile.o,$(LIB))
 c_plus_target(test_locks,test_locks.o,$(LIB))

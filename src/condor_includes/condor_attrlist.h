@@ -266,7 +266,7 @@ class AttrList : public AttrListAbstract
 		// output functions
 		int			fPrintExpr(FILE*, char*);	// print an expression
 		char*		sPrintExpr(char*, unsigned int, const char*); // print expression to buffer
-        virtual int	fPrint(FILE*);				// print the AttrList to a file
+        virtual int	fPrint(FILE*,StringList *attr_white_list=NULL);				// print the AttrList to a file
 		int         sPrint(MyString &output);   // put the AttrList in a string. 
 		void		dPrint( int );				// dprintf to given dprintf level
 
@@ -352,7 +352,7 @@ class AttrListList
       	void 	  	Insert(AttrList*);	// insert at the tail of the list
       	int			Delete(AttrList*); 	// delete a AttrList
 
-      	void  	  	fPrintAttrListList(FILE *, bool use_xml = false);// print out the list
+      	void  	  	fPrintAttrListList(FILE *, bool use_xml = false, StringList *attr_white_list=NULL );// print out the list
       	int 	  	MyLength() { return length; } 	// length of this list
       	ExprTree* 	BuildAgg(char*, LexemeType);	// build aggregate expr
 

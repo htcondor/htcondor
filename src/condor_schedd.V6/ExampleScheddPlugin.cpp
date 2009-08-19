@@ -21,6 +21,12 @@
 struct ExampleScheddPlugin : public ScheddPlugin
 {
 	void
+	earlyInitialize()
+	{
+		printf("EarlyInit\n");
+	}
+
+	void
 	initialize()
 	{
 		printf("Init\n");
@@ -35,6 +41,11 @@ struct ExampleScheddPlugin : public ScheddPlugin
 	void update(int cmd, const ClassAd *ad)
 	{
 		printf("update(%d, %s)\n", cmd, ad ? "Ad" : "(NULL)");
+	}
+
+	void archive(const ClassAd *ad)
+	{
+		printf("archive(%s)\n", ad ? "Ad" : "(NULL)");
 	}
 };
 

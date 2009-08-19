@@ -24,6 +24,17 @@
 
 
 void
+ScheddPluginManager::EarlyInitialize()
+{
+	ScheddPlugin *plugin;
+	SimpleList<ScheddPlugin *> plugins = getPlugins();
+	plugins.Rewind();
+	while (plugins.Next(plugin)) {
+		plugin->earlyInitialize();
+	}
+}
+
+void
 ScheddPluginManager::Initialize()
 {
 	ScheddPlugin *plugin;
@@ -53,6 +64,17 @@ ScheddPluginManager::Update(int cmd, const ClassAd *ad)
 	plugins.Rewind();
 	while (plugins.Next(plugin)) {
 		plugin->update(cmd, ad);
+	}
+}
+
+void
+ScheddPluginManager::Archive(const ClassAd *ad)
+{
+	ScheddPlugin *plugin;
+	SimpleList<ScheddPlugin *> plugins = getPlugins();
+	plugins.Rewind();
+	while (plugins.Next(plugin)) {
+		plugin->archive(ad);
 	}
 }
 

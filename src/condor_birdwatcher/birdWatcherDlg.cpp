@@ -22,119 +22,153 @@
 //
 
 #include "stdafx.h"
-#include "Birdwatcher.h"
+#include "birdwatcher.h"
 #include "BirdWatcherDlg.h"
 #include "systrayminimize.h"
 
 #ifdef _DEBUG
-#define new DEBUG_NEW
+//#define new DEBUG_NEW
 #undef THIS_FILE
 static char THIS_FILE[] = __FILE__;
 #endif
-
+RECT rc, rcDlg, rcOwner;
 /////////////////////////////////////////////////////////////////////////////
 // CBirdWatcherDlg dialog
 
-
-CBirdWatcherDlg::CBirdWatcherDlg(CWnd* pParent /*=NULL*/)
-	: CDialog(CBirdWatcherDlg::IDD, pParent)
+INT_PTR CALLBACK DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
-	//{{AFX_DATA_INIT(CBirdWatcherDlg)
-		// NOTE: the ClassWizard will add member initialization here
-	//}}AFX_DATA_INIT
+	switch(uMsg)
+	{
+	case WM_INITDIALOG:
+
+		if(!SetTimer(hwndDlg, 1000, 1000, NULL))
+		{
+			DWORD temp = GetLastError();
+			WCHAR buffer[256];
+			_ltow(temp, buffer, 10);
+			OutputDebugString(buffer);
+		}
+		
+		return true;
+
+	case WM_TIMER:
+		//OutputDebugString(L"Timer\n");
+		OnTimer(WM_TIMER);
+
+		return true;
+		break;
+	case WM_CLOSE:
+		MinimizeWndToTray(hwndDlg);
+
+		return true;
+		break;
+	case WM_COMMAND:
+		MinimizeWndToTray(hwndDlg);
+
+		return true;
+		break;
+	default:
+		return false;
+	}
 }
 
-
-void CBirdWatcherDlg::DoDataExchange(CDataExchange* pDX)
+void OnTimer(UINT nIDEvent)
 {
-	CDialog::DoDataExchange(pDX);
-	//{{AFX_DATA_MAP(CBirdWatcherDlg)
-		// NOTE: the ClassWizard will add DDX and DDV calls here
-	//}}AFX_DATA_MAP
-}
-
-
-BEGIN_MESSAGE_MAP(CBirdWatcherDlg, CDialog)
-	//{{AFX_MSG_MAP(CBirdWatcherDlg)
-	ON_WM_SIZE()
-	ON_WM_TIMER()
-	ON_WM_CLOSE()
-	//}}AFX_MSG_MAP
-END_MESSAGE_MAP()
-
-/////////////////////////////////////////////////////////////////////////////
-// CBirdWatcherDlg message handlers
-
-void CBirdWatcherDlg::OnSize(UINT nType, int cx, int cy) 
-{
-	CDialog::OnSize(nType, cx, cy);
-	
-	
-}
-
-void CBirdWatcherDlg::OnTimer(UINT nIDEvent) 
-{
-	if (!IsWindowVisible())
+	if (!IsWindowVisible(birdwatcherDLG))
 		return;
 
-	CFile infile;
-	if (infile.Open(zCondorDir + "birdq.tmp", CFile::modeRead))
+	HANDLE hBirdq_Rd;
+	HANDLE hBirdq_Wr;
+	HANDLE hBirdst_Rd;
+	HANDLE hBirdst_Wr;
+
+	BOOL bSuccess;
+
+	DWORD dwRead;
+	DWORD bufSize = 1024;
+
+	SECURITY_ATTRIBUTES saAttr;
+
+	saAttr.nLength = sizeof(SECURITY_ATTRIBUTES);
+	saAttr.bInheritHandle = TRUE;
+	saAttr.lpSecurityDescriptor = NULL;
+
+	if(!CreatePipe(&hBirdq_Rd, &hBirdq_Wr, &saAttr, 0))
 	{
-		UINT iLen = (UINT)infile.GetLength();
-		char *psBuf = new char[iLen+1];
-		infile.Read(psBuf, iLen);
-		psBuf[iLen] = 0;
-		
-		SetDlgItemText(IDC_EDIT_TOP_PANE, psBuf);
-		delete [] psBuf;
-		infile.Close();
-	}
-	if (infile.Open(zCondorDir + "birdstatus.tmp", CFile::modeRead))
-	{
-		UINT iLen = (UINT)infile.GetLength();
-		char *psBuf = new char[iLen+1];
-		infile.Read(psBuf, iLen);
-		psBuf[iLen] = 0;
-		
-		SetDlgItemText(IDC_EDIT_BOTTOM_PANE, psBuf);
-		delete [] psBuf;
-		infile.Close();
+		return;
 	}
 
-	CString zExec;
-	zExec = zCondorDir + "bin\\condor_q.exe > " + zCondorDir + "birdq.tmp";
-	WinExec(zExec, SW_HIDE);
-	zExec = zCondorDir + "bin\\condor_status.exe > " + zCondorDir + "birdstatus.tmp";
-	WinExec(zExec, SW_HIDE);
+	if(!SetHandleInformation(hBirdq_Rd, HANDLE_FLAG_INHERIT, 0))
+	{
+		return;
+	}
 
-	CDialog::OnTimer(nIDEvent);
-}
+	STARTUPINFO si[2];
+	PROCESS_INFORMATION pi[2];
 
-BOOL CBirdWatcherDlg::OnInitDialog() 
-{
-	CDialog::OnInitDialog();
-	SetIcon(LoadIcon(NULL, MAKEINTRESOURCE(IDR_MAINFRAME)), TRUE);
-	
-	char cLast = zCondorDir[zCondorDir.GetLength()-1];
-	if (cLast != '\\' && cLast != '/')
-		zCondorDir += '\\';
-		
-	SetTimer(1000, 1000, NULL);	
-	return TRUE;  // return TRUE unless you set the focus to a control
-	              // EXCEPTION: OCX Property Pages should return FALSE
-}
+	ZeroMemory(&si[0], sizeof(STARTUPINFO));
+	ZeroMemory(&si[1], sizeof(STARTUPINFO));
 
-void CBirdWatcherDlg::OnClose() 
-{
-	MinimizeWndToTray(m_hWnd);
-}
+	ZeroMemory(&pi[0], sizeof(PROCESS_INFORMATION));
+	ZeroMemory(&pi[1], sizeof(PROCESS_INFORMATION));
 
-void CBirdWatcherDlg::OnOK() 
-{
-	MinimizeWndToTray(m_hWnd);
-}
+	si[0].dwFlags |= STARTF_USESTDHANDLES;
+	si[0].hStdOutput = hBirdq_Wr;
+	si[0].cb = sizeof(si[0]);
 
-void CBirdWatcherDlg::OnCancel() 
-{
-	MinimizeWndToTray(m_hWnd);
+	bSuccess = CreateProcess(L"condor_q.exe", NULL, NULL, NULL, true, CREATE_NO_WINDOW, NULL, NULL, &si[0], &pi[0]);
+	if(bSuccess)
+	{
+		if(WaitForSingleObject(pi[0].hProcess, 2000) == WAIT_TIMEOUT)
+				TerminateProcess(pi[0].hProcess, 1);
+
+		if(CloseHandle(hBirdq_Wr))
+		{
+			char *psBuf = new char[bufSize];
+			ZeroMemory(psBuf, bufSize);
+			ReadFile(hBirdq_Rd, psBuf, bufSize, &dwRead, NULL);
+
+			SetDlgItemTextA(birdwatcherDLG, IDC_EDIT_TOP_PANE, psBuf);
+			delete [] psBuf;
+			CloseHandle(hBirdq_Rd);
+		}
+	}
+
+	CloseHandle(pi[0].hProcess);
+	CloseHandle(pi[0].hThread);
+
+	if(!CreatePipe(&hBirdst_Rd, &hBirdst_Wr, &saAttr, 0))
+	{
+		return;
+	}
+
+	if(!SetHandleInformation(hBirdst_Rd, HANDLE_FLAG_INHERIT, 0))
+	{
+		return;
+	}
+
+	si[1].dwFlags |= STARTF_USESTDHANDLES;
+	si[1].hStdOutput = hBirdst_Wr;
+	si[1].cb = sizeof(si[1]);
+
+	bSuccess = CreateProcess(L"condor_status.exe", NULL, NULL, NULL, true, CREATE_NO_WINDOW, NULL, NULL, &si[1], &pi[1]);
+	if(bSuccess)
+	{
+		if(WaitForSingleObject(pi[1].hProcess, 2000) == WAIT_TIMEOUT)
+				TerminateProcess(pi[1].hProcess, 1);
+
+		if(CloseHandle(hBirdst_Wr))
+		{
+			char *psBuf = new char[bufSize];
+			ZeroMemory(psBuf, bufSize);
+			ReadFile(hBirdst_Rd, psBuf, bufSize, &dwRead, NULL);
+
+			SetDlgItemTextA(birdwatcherDLG, IDC_EDIT_BOTTOM_PANE, psBuf);
+			delete [] psBuf;
+			CloseHandle(hBirdst_Rd);
+		}
+	}
+
+	CloseHandle(pi[1].hProcess);
+	CloseHandle(pi[1].hThread);
 }

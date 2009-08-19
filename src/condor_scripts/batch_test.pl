@@ -113,11 +113,6 @@ Condor::DebugLevel(1);
 #select(STDOUT); $| = 1;
 
 my $iswindows = CondorTest::IsThisWindows();
-if($iswindows == 1) {
-	# secure a path with cygwin paths and regular windows
-	# paths all in one.
-	CondorTest::SweepPath($ENV{PATH});
-}
 
 # configuration options
 my $test_retirement = 3600;	# seconds for an individual test timeout - 30 minutes
@@ -1051,7 +1046,6 @@ sub CreateLocalConfig
 	print FIX "STARTD_DEBUG            = D_COMMAND\n";
 
 	print FIX "MAX_STARTER_LOG         = $logsize\n";
-	print FIX "STARTER_DEBUG           = D_NODATE\n";
 
 	print FIX "MAX_MASTER_LOG          = $logsize\n";
 	print FIX "MASTER_DEBUG            = D_COMMAND\n";

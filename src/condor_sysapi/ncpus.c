@@ -41,14 +41,13 @@
 
 /* For Linux, the counting code is it's own chunk */
 #if defined(LINUX)
-static int ncpus_linux( void );
+static void ncpus_linux( int *num_cpus,int *num_hyperthread_cpus );
 #endif
 
 
-int
-sysapi_ncpus_raw(void)
+void
+sysapi_ncpus_raw_no_param(int *num_cpus,int *num_hyperthread_cpus)
 {
-	sysapi_internal_reconfig();
 
 	{
 #if defined(sequent)
@@ -64,35 +63,46 @@ sysapi_ncpus_raw(void)
 		if( tmp_ctl(TMP_QUERY,eng) == TMP_ENG_ONLINE )
 			cpus++;
 	}
-	return cpus;
+	if( num_cpus ) *num_cpus = cpus;
+	if( num_hyperthread_cpus ) *num_hyperthread_cpus = cpus;
 #elif defined(HPUX)
 	struct pst_dynamic d;
 	if ( pstat_getdynamic ( &d, sizeof(d), (size_t)1, 0) != -1 ) {
-		return d.psd_proc_cnt;
+		if( num_cpus ) *num_cpus = d.psd_proc_cnt;
+		if( num_hyperthread_cpus ) *num_hyperthread_cpus = d.psd_proc_cnt;
 	}
 	else {
-		return 0;
+		if( num_cpus ) *num_cpus = 0;
+		if( num_hyperthread_cpus ) *num_hyperthread_cpus = 0;
 	}
 #elif defined(Solaris) || defined(DUX)
-	return (int)sysconf(_SC_NPROCESSORS_ONLN);
+	int cpus = (int)sysconf(_SC_NPROCESSORS_ONLN);
+	if( num_cpus ) *num_cpus = cpus;
+	if( num_hyperthread_cpus ) *num_hyperthread_cpus = cpus;
 #elif defined(IRIX53) || defined(IRIX62) || defined(IRIX65)
-	return sysmp(MP_NPROCS);
+	int cpus = sysmp(MP_NPROCS);
+	if( num_cpus ) *num_cpus = cpus;
+	if( num_hyperthread_cpus ) *num_hyperthread_cpus = cpus;
 #elif defined(WIN32)
 	SYSTEM_INFO info;
 	GetSystemInfo(&info);
-	return info.dwNumberOfProcessors;
+	if( num_cpus ) *num_cpus = info.dwNumberOfProcessors;
+	if( num_hyperthread_cpus ) *num_hyperthread_cpus = info.dwNumberOfProcessors;
 #elif defined(LINUX)
-	return ncpus_linux( );
+	ncpus_linux(num_cpus,num_hyperthread_cpus );
 #elif defined(AIX)
-	return sysconf(_SC_NPROCESSORS_ONLN);
+	int cpus = sysconf(_SC_NPROCESSORS_ONLN);
+	if( num_cpus ) *num_cpus = cpus;
+	if( num_hyperthread_cpus ) *num_hyperthread_cpus = cpus;
 #elif defined(Darwin) || defined(CONDOR_FREEBSD)
-	int mib[2], maxproc;
+	int mib[2], cpus;
 	size_t len;
 	mib[0] = CTL_HW;
 	mib[1] = HW_NCPU;
-	len = sizeof(maxproc);
-	sysctl(mib, 2, &maxproc, &len, NULL, 0);
-	return(maxproc);
+	len = sizeof(cpus);
+	sysctl(mib, 2, &cpus, &len, NULL, 0);
+	if( num_cpus ) *num_cpus = cpus;
+	if( num_hyperthread_cpus ) *num_hyperthread_cpus = cpus;
 #else
 # error DO NOT KNOW HOW TO COMPUTE NUMBER OF CPUS ON THIS PLATFORM!
 #endif
@@ -100,6 +110,22 @@ sysapi_ncpus_raw(void)
 
 }
 
+int
+sysapi_ncpus_raw(void)
+{
+	int ncpus=0;
+	int nhyperthread_cpus=0;
+	sysapi_internal_reconfig();
+
+	sysapi_ncpus_raw_no_param(&ncpus,&nhyperthread_cpus);
+
+#ifdef LINUX
+	if( _sysapi_count_hyperthread_cpus ) {
+		return nhyperthread_cpus;
+	}
+#endif
+	return ncpus;
+}
 
 /* the cooked version */
 int
@@ -617,14 +643,10 @@ count_cpus( CpuInfo *cpuinfo, BOOLEAN count_hthreads )
 
 
 /* Linux specific code to count CPUs */
-static int
-ncpus_linux(void)
+static void
+ncpus_linux(int *num_cpus,int *num_hyperthread_cpus)
 {
 	CpuInfo		cpuinfo;		/* Info gathered from /proc/cpuinfo */
-
-	/* Should we count hyper threads? */
-	BOOLEAN		should_count_hthreads =
-		param_boolean_int("COUNT_HYPERTHREAD_CPUS", 1);
 
 	/* Read /proc/cpuinfo */
 	if ( read_proc_cpuinfo( &cpuinfo ) < 0 ) {
@@ -634,7 +656,7 @@ ncpus_linux(void)
 	}
 	/* Otherwise, count the CPUs */
 	else {
-		count_cpus( &cpuinfo, should_count_hthreads );
+		count_cpus( &cpuinfo, _sysapi_count_hyperthread_cpus );
 	}
 
 	/* Free up the processors array */
@@ -647,7 +669,8 @@ ncpus_linux(void)
 	_SysapiProcCpuinfo.found_hthreads = cpuinfo.num_hthreads;
 	_SysapiProcCpuinfo.found_ncpus = cpuinfo.num_cpus;
 
-	return cpuinfo.num_cpus;
+	if( num_cpus ) *num_cpus = cpuinfo.num_cpus;
+	if( num_hyperthread_cpus ) *num_hyperthread_cpus = cpuinfo.num_cpus + cpuinfo.num_hthreads;
 }
 
 #endif		/* defined(LINUX) */

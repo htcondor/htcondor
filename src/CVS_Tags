@@ -1,3 +1,6 @@
+07/30/09 V7_3-view_collector-hack-branch
+ Branch for removing static ARCH/OPSYS params from the ViewCollector.
+
 05/07/2009 V7_3_1
  The official tag for 7.3.1, from V7_3_1-branch.
  Version string: $CondorVersion: 7.3.1 May  5 2009 BuildID: 150675 $
@@ -30,6 +33,17 @@
 
 11/05/2008 V7_2-branch
   Branch for 7.1.4 and 7.2 series, based from the master.
+06/11/2009 V7_2_4-branch
+  Branch for the 7.2.4 release, based on V7_2-branch
+06/25/2009 V7_2_4
+  The official tag for 7.2.4, from the V7_2_4-branch.
+  Version String: $CondorVersion: 7.2.4 Jun 15 2009 BuildID: 159529 $
+  Original build tag: BUILD-V7_2_4-branch-2009-6-15
+
+04/27/2009 V7_2-fixckptprot-branch
+  Branch to hack a fix for 32/64 bit incompatibilities in ckpt server protocol
+  as per gittrac ticket #177.
+
 05/07/2009 V7_2_3-branch
   Branch for the 7.2.3 release, based on V7_2-branch
 

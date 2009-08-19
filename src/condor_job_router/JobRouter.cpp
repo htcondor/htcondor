@@ -37,6 +37,8 @@
 #include "file_lock.h"
 #include "classad_newold.h"
 #include "user_job_policy.h"
+#include "get_daemon_name.h"
+
 
 
 const char JR_ATTR_MAX_JOBS[] = "MaxJobs";
@@ -69,12 +71,14 @@ JobRouter::JobRouter(Scheduler *scheduler): m_jobs(5000,hashFuncStdString,reject
 	m_job_router_entries_refresh = 0;
 	m_job_router_refresh_timer = -1;
 
+        m_public_ad_update_timer = -1;
+        m_public_ad_update_interval = -1;
+
 	m_routes = AllocateRoutingTable();
 	m_poll_count = 0;
 
 	m_router_lock_fd = -1;
 	m_router_lock = NULL;
-	m_custom_attrs = NULL;
 
 #if HAVE_JOB_HOOKS
 	m_hook_mgr = NULL;
@@ -98,8 +102,11 @@ JobRouter::~JobRouter() {
 	if(m_router_lock_fd != -1) {
 		close(m_router_lock_fd);
 	}
-	if( m_job_router_refresh_timer >= 0 ) {
-		daemonCore->Cancel_Timer( m_job_router_refresh_timer );
+	if(m_job_router_refresh_timer >= 0) {
+		daemonCore->Cancel_Timer(m_job_router_refresh_timer);
+	}
+	if(m_public_ad_update_timer >= 0) {
+		daemonCore->Cancel_Timer(m_public_ad_update_timer);
 	}
 
 #if HAVE_JOB_HOOKS
@@ -108,6 +115,7 @@ JobRouter::~JobRouter() {
 		delete m_hook_mgr;
 	}
 #endif
+	InvalidatePublicAd();
 }
 
 #include "condor_new_classads.h"
@@ -321,8 +329,6 @@ JobRouter::config() {
 		// goes on hold
 	m_release_on_hold = param_boolean("JOB_ROUTER_RELEASE_ON_HOLD", true);
 
-	m_custom_attrs = param("JOB_ROUTER_ATTRS_TO_COPY");
-
 		// default is no maximum (-1)
 	m_max_jobs = param_integer("JOB_ROUTER_MAX_JOBS",-1);
 
@@ -330,6 +336,7 @@ JobRouter::config() {
 
 	Timeslice periodic_interval;
 	periodic_interval.setMinInterval(param_integer("PERIODIC_EXPR_INTERVAL", 60));
+	periodic_interval.setMaxInterval(param_integer("MAX_PERIODIC_EXPR_INTERVAL", 1200) );
 	periodic_interval.setTimeslice(param_double("PERIODIC_EXPR_TIMESLICE", 0.01, 0, 1));
 
 		// read the polling period and if one is not specified use 
@@ -366,9 +373,52 @@ JobRouter::config() {
 		m_job_router_name = name;
 		free(name);
 	}
-	else {
-		m_job_router_name = DaemonIdentityString();
+
+	InitPublicAd();
+
+	int update_interval = param_integer("UPDATE_INTERVAL", 60);
+	if(m_public_ad_update_interval != update_interval) {
+		m_public_ad_update_interval = update_interval;
+
+		if(m_public_ad_update_timer >= 0) {
+			daemonCore->Cancel_Timer(m_public_ad_update_timer);
+			m_public_ad_update_timer = -1;
+		}
+		dprintf(D_FULLDEBUG, "Setting update interval to %d\n",
+			m_public_ad_update_interval);
+		m_public_ad_update_timer = daemonCore->Register_Timer(
+			0,
+			m_public_ad_update_interval,
+			(Eventcpp)&JobRouter::TimerHandler_UpdateCollector,
+			"JobRouter::TimerHandler_UpdateCollector",
+			this);
 	}
+}
+
+void
+JobRouter::InitPublicAd()
+{
+	if (m_job_router_name.size() > 0) {
+		char *valid_name = build_valid_daemon_name(m_job_router_name.c_str());
+		daemonName = valid_name;
+		delete [] valid_name;
+	}
+	else {
+		char *default_name = build_valid_daemon_name("jobrouter");
+		if(default_name) {
+			daemonName = default_name;
+			delete [] default_name;
+		}
+	}
+
+	m_public_ad = ClassAd();
+
+	m_public_ad.SetMyTypeName(GENERIC_ADTYPE);
+	m_public_ad.SetTargetTypeName("Job_Router");
+
+	m_public_ad.Assign(ATTR_NAME,daemonName.c_str());
+
+	daemonCore->publish(&m_public_ad);
 }
 
 void
@@ -1215,12 +1265,14 @@ JobRouter::UpdateRouteStats() {
 	}
 }
 
+/*
 std::string
 JobRouter::DaemonIdentityString() {
 	std::string identity;
 	identity += m_scheduler->Name();
 	return identity;
 }
+*/
 
 void
 JobRouter::TakeOverJob(RoutedJob *job) {
@@ -1564,6 +1616,9 @@ void
 JobRouter::FinishCheckSubmittedJobStatus(RoutedJob *job) {
 	classad::ClassAdCollection *ad_collection = m_scheduler->GetClassAds();
 	classad::ClassAd *src_ad = ad_collection->GetClassAd(job->src_key);
+	std::string keyword;
+	std::string copy_attr_param;
+	char* custom_attrs = NULL;
 
 	if(!src_ad) {
 		dprintf(D_ALWAYS,"JobRouter (%s): failed to find src ad in job collection mirror.\n",job->JobDesc().c_str());
@@ -1617,7 +1672,15 @@ JobRouter::FinishCheckSubmittedJobStatus(RoutedJob *job) {
 	}
 
 	job->SetDestJobAd(ad);
-	if(!update_job_status(*src_ad,job->dest_ad,job->src_ad,m_custom_attrs)) {
+#if HAVE_JOB_HOOKS
+	keyword = m_hook_mgr->getHookKeyword(job->src_ad);
+	if(0 < keyword.length()) {
+		copy_attr_param = keyword;
+		copy_attr_param += "_ATTRS_TO_COPY";
+		custom_attrs = param(copy_attr_param.c_str());
+	}
+#endif
+	if(!update_job_status(*src_ad,job->dest_ad,job->src_ad,custom_attrs)) {
 		dprintf(D_ALWAYS,"JobRouter failure (%s): failed to update job status\n",job->JobDesc().c_str());
 	}
 	else if(ClassAdHasDirtyAttributes(&job->src_ad)) {
@@ -1625,12 +1688,24 @@ JobRouter::FinishCheckSubmittedJobStatus(RoutedJob *job) {
 			dprintf(D_ALWAYS,"JobRouter failure (%s): failed to update src job\n",job->JobDesc().c_str());
 
 			GracefullyRemoveJob(job);
+#if HAVE_JOB_HOOKS
+			if (custom_attrs != NULL) {
+				free(custom_attrs);
+				custom_attrs = NULL;
+			}
+#endif
 			return;
 		}
 		else {
 			dprintf(D_FULLDEBUG,"JobRouter (%s): updated job status\n",job->JobDesc().c_str());
 		}
 	}
+#if HAVE_JOB_HOOKS
+	if (custom_attrs != NULL) {
+		free(custom_attrs);
+		custom_attrs = NULL;
+	}
+#endif
 
 	job_status = 0;
 	if( !ad->EvaluateAttrInt( ATTR_JOB_STATUS, job_status ) ) {
@@ -2044,6 +2119,24 @@ JobRouter::CleanupRetiredJob(RoutedJob *job) {
 		RemoveJob(job);
 		return;
 	}
+}
+
+void
+JobRouter::TimerHandler_UpdateCollector() {
+	daemonCore->sendUpdates(UPDATE_AD_GENERIC, &m_public_ad);
+}
+
+void
+JobRouter::InvalidatePublicAd() {
+	ClassAd invalidate_ad;
+	MyString line;
+
+	invalidate_ad.SetMyTypeName(QUERY_ADTYPE);
+	invalidate_ad.SetTargetTypeName(GENERIC_ADTYPE);
+
+	line.sprintf("%s == \"%s\"", ATTR_NAME, daemonName.c_str());
+	invalidate_ad.AssignExpr(ATTR_REQUIREMENTS, line.Value());
+	daemonCore->sendUpdates(INVALIDATE_ADS_GENERIC, &invalidate_ad, NULL, false);
 }
 
 JobRoute::JobRoute() {

@@ -30,7 +30,7 @@ DCMsg::DCMsg(int cmd):
 	m_cmd_str( NULL ),
 	m_msg_success_debug_level( D_FULLDEBUG ),
 	m_msg_failure_debug_level( D_ALWAYS|D_FAILURE ),
-	m_msg_cancel_debug_level( 0 ),
+	m_msg_cancel_debug_level( D_ALWAYS|D_FAILURE ),
 	m_delivery_status( DELIVERY_PENDING ),
 	m_stream_type( Stream::reli_sock ),
 	m_timeout( DEFAULT_CEDAR_TIMEOUT ),
@@ -382,6 +382,9 @@ DCMessenger::connectCallback(bool success, Sock *sock, CondorError *, void *misc
 	self->m_pending_operation = NOTHING_PENDING;
 
 	if(!success) {
+		if( sock->deadline_expired() ) {
+			msg->addError( CEDAR_ERR_DEADLINE_EXPIRED, "deadline expired" );
+		}
 		msg->callMessageSendFailed( self );
 		self->doneWithSock(sock);
 	}
@@ -544,7 +547,14 @@ DCMessenger::cancelMessage( classy_counted_ptr<DCMsg> msg )
 		return;
 	}
 
-	if( m_callback_sock && m_callback_sock->get_file_desc() != INVALID_SOCKET ) {
+	if( m_callback_sock->is_reverse_connect_pending() ) {
+		// have to be careful, because if callback sock is doing a CCB
+		// reverse connect, close() will result in the socket callback
+		// handler getting called immediately and m_callback_sock
+		// getting set to NULL
+		m_callback_sock->close();
+	}
+	else if( m_callback_sock && m_callback_sock->get_file_desc() != INVALID_SOCKET) {
 		m_callback_sock->close();
 			// force callback now so everything gets cleaned up properly
 		daemonCoreSockAdapter.CallSocketHandler( m_callback_sock );
@@ -644,9 +654,12 @@ DCMsgCallback::DCMsgCallback(CppFunction fn,Service *service,void *misc_data)
 }
 
 void
-DCMsgCallback::cancelMessage()
+DCMsgCallback::cancelMessage(bool quiet)
 {
 	if( m_msg.get() ) {
+		if( quiet ) {
+			m_msg->setCancelDebugLevel(0);
+		}
 		m_msg->cancelMessage();
 	}
 }
@@ -668,11 +681,19 @@ ClassAdMsg::ClassAdMsg(int cmd,ClassAd &msg):
 bool
 ClassAdMsg::writeMsg( DCMessenger * /*messenger*/, Sock *sock )
 {
-	return m_msg.put( *sock );
+	if( !m_msg.put( *sock ) ) {
+		sockFailed( sock );
+		return false;
+	}
+	return true;
 }
 
 bool
 ClassAdMsg::readMsg( DCMessenger * /*messenger*/, Sock *sock )
 {
-	return m_msg.initFromStream( *sock );
+	if( !m_msg.initFromStream( *sock ) ) {
+		sockFailed( sock );
+		return false;
+	}
+	return true;
 }

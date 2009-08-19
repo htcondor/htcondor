@@ -1644,7 +1644,7 @@ Resource::publish( ClassAd* cap, amask_t mask )
 					"should be added by ResMgr!", ATTR_CPU_BUSY );
 		}
 
-		caInsert(cap, r_classad, ATTR_RESOURCE_WEIGHT);
+		caInsert(cap, r_classad, ATTR_SLOT_WEIGHT);
 
 			// Include everything from STARTD_EXPRS.
 			// And then include everything from SLOTx_STARTD_EXPRS

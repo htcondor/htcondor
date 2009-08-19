@@ -127,7 +127,7 @@ osversion=`uname -v`
 # this is what ends up as "Architecture" in the Imakefiles, and is
 # used in a number of the IS_* #define's too.  luckily, we can use the
 # same thing in both places without confusion...
-_cv_arch=""
+_cv_arch="UNKNOWN_ARCH"
 
 # this is the opsys-specific string in the IS_* #define's
 _cv_opsys=""
@@ -595,6 +595,20 @@ AC_ARG_ENABLE(bgd-support,
      [Enable support for HTC mode on the BlueGene machine.])],
   [],
   [enable_bgd_support=no])
+
+# disabled by default for now, until I'm sure NMI has the required tools
+AC_ARG_ENABLE(checksum-md5,
+  [AS_HELP_STRING([--enable-checksum-md5],
+     [Enable production and validation of MD5 checksums for released packages.])],
+  [],
+  [enable_checksum_md5=no])
+
+# disabled by default for now, until I'm sure NMI has the required tools
+AC_ARG_ENABLE(checksum-sha1,
+  [AS_HELP_STRING([--enable-checksum-sha1],
+     [Enable production and validation of SHA1 checksums for released packages.])],
+  [],
+  [enable_checksum_sha1=no])
 
 AC_ARG_ENABLE(proper,
   [AS_HELP_STRING([--enable-proper],
@@ -2110,6 +2124,7 @@ else
 fi
 AC_SUBST(JAR,$ac_jar)
 
+# Test for md5sum
 AC_PATH_PROG(ac_md5sum,md5sum,no,[$PATH])
 if test $ac_md5sum = "no"; then
   AC_MSG_WARN( [md5sum not found] )
@@ -2118,13 +2133,32 @@ else
 fi
 AC_SUBST(MD5SUM,$ac_md5sum)
 
+# Test for sha1sum
 AC_PATH_PROG(ac_sha1sum,sha1sum,no,[$PATH])
 if test $ac_sha1sum = "no"; then
   AC_MSG_WARN( [sha1sum not found] )
 else
   AC_DEFINE([HAVE_SHA1SUM],[1],[Define if sha1sum is available])
 fi
-AC_SUBST(MD5SUM,$ac_sha1sum)
+AC_SUBST(SHA1SUM,$ac_sha1sum)
+
+# By default, we check to see if we can produce md5 integrity checks on the
+# released tarballs, rpms, and whatever else.
+if test "x$enable_checksum_md5" = "xyes"; then
+   # If this is defined to 1, then the checksums are *required* and produced.
+   # If it is undefined, then the checksum may or may not be produced
+   # depending upon what was available on the machine.
+   AC_DEFINE([ENABLE_CHECKSUM_MD5], [1], [Define if md5 checksums are required for released packages])
+fi
+
+# By default, we check to see if we can produce sha1 integrity checks on the
+# released tarballs, rpms, and whatever else.
+if test "x$enable_checksum_sha1" = "xyes"; then
+   # If this is defined to on, then the checksums are *required* and produced.
+   # If it is undefined, then the checksum may or may not be produced
+   # depending upon what was available on the machine.
+   AC_DEFINE([ENABLE_CHECKSUM_SHA1], [1], [Define if sha1 checksums are required for released packages])
+fi
 
 AC_ARG_ENABLE([rpm],
   AC_HELP_STRING([--enable-rpm],
@@ -2213,6 +2247,13 @@ AS_IF([test "x$enable_kbdd" = xyes],
    AC_SUBST(X11_LIBS,"")
    AC_SUBST(X11_LDFLAGS, "")])
 
+AC_ARG_ENABLE([hdfs],
+  AC_HELP_STRING([--enable-hdfs],
+    [enable hadoop filesystem functionality (default: no)]),
+  [],
+  [enable_hdfs=no])
+AS_IF([test "x$enable_hdfs" = xyes],
+  [AC_DEFINE([WANT_HDFS], [1], [Define if enabling HDFS])])
 
 # Here we figure out whether or not the circumstances are correct for us
 # to be able to separate the debugging symbols from the executables and
@@ -2296,6 +2337,12 @@ AC_CHECK_HEADERS([resolv.h],[],[],[
 #include<netinet/in.h>
 #include<arpa/nameser.h>])
 AC_CHECK_HEADERS([pthread.h])
+AC_CHECK_HEADERS([ldap.h])
+
+AC_CHECK_LIB([sasl], [sasl_client_init],
+  AC_DEFINE([HAVE_LIBSASL], [1], [check for usable libsasl]))
+AC_CHECK_LIB([sasl2], [sasl_client_init],
+  AC_DEFINE([HAVE_LIBSASL2], [1], [check for usable libsasl2]))
 
 
 ############################################################
@@ -2791,8 +2838,8 @@ CHECK_EXTERNAL([krb5], [1.4.3-p0], [soft],
                [use krb5 (provides Kerberos support)],
                MF_LIB_CHECK([krb5], [[krb5 krb5_free_principal]]))
 
-# CHECK_EXTERNAL([openssl],[0.9.8h],[soft])
-CHECK_EXTERNAL([openssl], [0.9.8h], [soft],
+# CHECK_EXTERNAL([openssl],[0.9.8h-p1],[soft])
+CHECK_EXTERNAL([openssl], [0.9.8h-p1], [soft],
                [use OpenSSL (provides authentication and encryption support)],
                MF_LIB_CHECK([openssl],
                             [[ssl SSL_connect], [crypto BF_encrypt]]))
@@ -2803,7 +2850,7 @@ if test "x$_cv_ext_openssl_version" != x; then
   AC_DEFINE(HAVE_OPENSSL_SSL_H,1,[do we have openssl])
 
   # Globus 4.2.1 is dependent on an external version of openssl
-  CHECK_EXTERNAL([globus],[4.2.1], [soft])
+  CHECK_EXTERNAL([globus],[4.2.1-p3], [soft])
 fi
 
 if test -z "$_cv_ext_globus_version"; then
@@ -2833,9 +2880,11 @@ CHECK_EXTERNAL([srb], [3.2.1-p2], [soft])
 
 CHECK_EXTERNAL([pcre], [7.6], [hard],
                [use PCRE (provides regular expression support)],
-               MF_LIB_CHECK([pcre], [[pcre pcre_compile]]))
+               MF_LIB_CHECK([pcre], [[pcre pcre_compile]], [PCRE]))
 AS_IF([test "x$cv_ext_pcre" = xyes],
   [AC_CHECK_HEADERS([pcre.h pcre/pcre.h])])
+AC_SUBST(PCRE_LDFLAGS, $PCRE_LDFLAGS)
+AC_SUBST(PCRE_CFLAGS, $PCRE_CFLAGS)
 
 # The auto-tools aren't working correctly on AIX
 # Solaris doesn't have the auto-tools on NMI
@@ -2845,7 +2894,7 @@ AS_IF([test "x$_cv_opsys" != xDARWIN -a "x$_cv_opsys" != xAIX -a "x$_cv_opsys" !
   [_cv_has_blahp=yes],
   [_cv_has_blahp=no])
 AC_MSG_RESULT([$_cv_has_blahp])
-CHECK_EXTERNAL([blahp], [1.12.2-p2], [soft])
+CHECK_EXTERNAL([blahp], [1.12.2-p4], [soft])
 
 # When --with-proper the detection of the man pages is a little
 # ugly. The value added to the end of $_dir must be what
@@ -2910,6 +2959,21 @@ if test "x$cv_ext_globus" = xyes; then
   AC_SUBST(globus_flavor,$_cv_globus_flavor)
   AC_SUBST(globus_thr_flavor,$_cv_globus_thr_flavor)
 fi
+
+AC_ARG_ENABLE(ssh-to-job,
+  [AS_HELP_STRING([--enable-ssh-to-job],
+     [Support for condor_ssh_to_job])],
+  [SSH_TO_JOB=$enableval],
+  [if test "x$cv_ext_openssl" = xyes; then SSH_TO_JOB=yes; else SSH_TO_JOB=no; fi])
+if test $SSH_TO_JOB != no; then
+  if test "x$cv_ext_openssl" != xyes; then
+    AC_MSG_ERROR( [condor_ssh_to_job requires openssl (for base64)] )
+  fi
+  AC_DEFINE([HAVE_SSH_TO_JOB], [1], [Define to 1 to support condor_ssh_to_job])
+fi
+
+# Look for the curl external library, used by the file transfer object
+CHECK_EXTERNAL([curl],[7.19.6],[soft])
 
 # The test for gsoap needs to happen after the openssl check, so
 # openssl libs, if found, will be in LIBS. Also, if we do not have

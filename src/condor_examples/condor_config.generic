@@ -478,6 +478,11 @@ GLIDEIN_SERVER_URLS = \
 ## By default, Condor will delegate rather than copy.
 #DELEGATE_JOB_GSI_CREDENTIALS = True
 
+## This setting controls whether Condor delegates a full or limited
+## X509 credential for jobs. Currently, this only affects grid-type
+## gt2 grid universe jobs. The default is False.
+#DELEGATE_FULL_JOB_GSI_CREDENTIALS = False
+
 ## This setting controls the default behaviour for the spooling of files
 ## into, or out of, the Condor system by such tools as condor_submit
 ## and condor_transfer_data. Here is the list of valid settings for this
@@ -524,7 +529,6 @@ MAX_STARTD_LOG		= 1000000
 STARTD_DEBUG		= 
 
 MAX_STARTER_LOG		= 1000000
-STARTER_DEBUG		= D_NODATE
 
 MAX_MASTER_LOG		= 1000000
 MASTER_DEBUG		= 
@@ -802,7 +806,7 @@ UWCS_NEGOTIATOR_PRE_JOB_RANK = RemoteOwner =?= UNDEFINED
 ##  and the owner of the idle job has a better priority than the owner
 ##  of the running job.  This expression defaults to true.
 UWCS_PREEMPTION_REQUIREMENTS = ( $(StateTimer) > (1 * $(HOUR)) && \
-	RemoteUserPrio > SubmittorPrio * 1.2 ) || (MY.NiceUser == True)
+	RemoteUserPrio > SubmitterUserPrio * 1.2 ) || (MY.NiceUser == True)
 
 ##  The PREEMPTION_RANK expression is used in a case where preemption
 ##  is the only option and all other negotiation ranks are equal.  For
@@ -1751,6 +1755,12 @@ CRED_MIN_TIME_LEFT		= 120
 ENABLE_GRID_MONITOR = TRUE
 
 ##
+## When an error occurs with the GridMonitor, how long should the
+## gridmanager wait before trying to submit a new GridMonitor job?
+## The default is 1 hour (3600 seconds).
+#GRID_MONITOR_DISABLE_TIME = 3600
+
+##
 ## The location of the wrapper for invoking
 ## Condor GAHP server
 ##
@@ -2313,3 +2323,53 @@ LeaseManager.CLASSAD_LOG	= $(SPOOL)/LeaseManagerState
 #LeaseManager.QUERY_ADTYPE	= Any
 #LeaseManager.QUERY_CONSTRAINTS	= target.MyType == "SomeType"
 #LeaseManager.QUERY_CONSTRAINTS	= target.TargetType == "SomeType"
+
+##
+##--------------------------------------------------------------------
+##  condor_ssh_to_job
+##--------------------------------------------------------------------
+# NOTE: condor_ssh_to_job is not supported under Windows.
+
+# Tell the starter (execute side) whether to allow the job owner or
+# queue super user on the schedd from which the job was submitted to
+# use condor_ssh_to_job to access the job interactively (e.g. for
+# debugging).  TARGET is the job; MY is the machine.
+#ENABLE_SSH_TO_JOB = true
+
+# Tell the schedd (submit side) whether to allow the job owner or
+# queue super user to use condor_ssh_to_job to access the job
+# interactively (e.g. for debugging).  MY is the job; TARGET is not
+# defined.
+#SCHEDD_ENABLE_SSH_TO_JOB = true
+
+# Command condor_ssh_to_job should use to invoke the ssh client.
+# %h --> remote host
+# %i --> ssh key file
+# %k --> known hosts file
+# %u --> remote user
+# %x --> proxy command
+# %% --> %
+#SSH_TO_JOB_SSH_CMD = ssh -oUser=%u -oIdentityFile=%i -oStrictHostKeyChecking=yes -oUserKnownHostsFile=%k -oGlobalKnownHostsFile=%k -oProxyCommand=%x %h
+
+# Additional ssh clients may be configured.  They all have the same
+# default as ssh, except for scp, which omits the %h:
+#SSH_TO_JOB_SCP_CMD = scp -oUser=%u -oIdentityFile=%i -oStrictHostKeyChecking=yes -oUserKnownHostsFile=%k -oGlobalKnownHostsFile=%k -oProxyCommand=%x
+
+# Path to sshd
+#SSH_TO_JOB_SSHD = /usr/sbin/sshd
+
+# Arguments the starter should use to invoke sshd in inetd mode.
+# %f --> sshd config file
+# %% --> %
+#SSH_TO_JOB_SSHD_ARGS = "-i -e -f %f"
+
+# sshd configuration template used by condor_ssh_to_job_sshd_setup.
+#SSH_TO_JOB_SSHD_CONFIG_TEMPLATE = $(LIB)/condor_ssh_to_job_sshd_config_template
+
+# Path to ssh-keygen
+#SSH_TO_JOB_SSH_KEYGEN = /usr/bin/ssh-keygen
+
+# Arguments to ssh-keygen
+# %f --> key file to generate
+# %% --> %
+#SSH_TO_JOB_SSH_KEYGEN_ARGS = "-N '' -C '' -q -f %f -t rsa"

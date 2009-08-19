@@ -17,11 +17,27 @@
  *
  ***************************************************************/
 
+#define _CONDOR_ALLOW_OPEN
 #include "condor_common.h"
+
+#if defined ( WIN32 )
+/*	Unfortunately, the trick used above for *nix does not work on
+	Windows, because we us "condor_common.h" as the pre-compiled
+	header, so it is a static entity by the time it is referenced
+	here.  Thus we bellow we try to mimic the equivalent of the
+	above.  If this happens again, then maybe this hack can be 
+	extracted and generalized to look a little nicer */
+#undef open
+#define _CONDOR_ALLOW_OPEN 1
+#include "condor_macros.h"
+#endif
+
+#include "condor_open.h"
 #include "condor_debug.h"
 #include "util_lib_proto.h"
 #include <stdarg.h>
 #include "write_user_log.h"
+#include "write_user_log_state.h"
 #include "read_user_log.h"
 #include <time.h>
 #include "condor_uid.h"
@@ -210,6 +226,7 @@ WriteUserLog::Configure( bool force )
 		return true;
 	}
 	m_global_stat = new StatWrapper( m_global_path, StatWrapper::STATOP_NONE );
+	m_global_state = new WriteUserLogState( );
 	m_rotation_lock_path = param( "EVENT_LOG_ROTATION_LOCK" );
 	if ( NULL == m_rotation_lock_path ) {
 		int len = strlen(m_global_path) + 6;
@@ -219,10 +236,24 @@ WriteUserLog::Configure( bool force )
 	}
 
 	// Make sure the global lock exists
-	int fd = safe_open_wrapper( m_rotation_lock_path, O_WRONLY|O_CREAT );
+	int	fd = -1;
+	for ( int loop = 0;  ( (fd < 0) && (loop < 10) );  loop++ ) {
+		fd = open( m_rotation_lock_path, O_WRONLY|O_CREAT );
+		if ( fd < 0 ) {
+			dprintf( D_ALWAYS,
+					 "Warning: Failed to open event rotation lock file %s:"
+					 " %d (%s)\n",
+					 m_rotation_lock_path, errno, strerror(errno) );
+			if ( (loop/3) > 0 ) {
+				sleep( loop/3 );
+			}
+		}
+	}
+
 	if ( fd < 0 ) {
 		dprintf( D_ALWAYS,
-				 "Unable to open event rotation lock file %s\n",
+				 "WARNING: Failed to open event rotation lock file %s "
+				 "after 10 attempts\n",
 				 m_rotation_lock_path );
 		m_rotation_lock_fd = -1;
 		m_rotation_lock = new FakeFileLock( );
@@ -271,6 +302,7 @@ WriteUserLog::Reset( void )
 	m_global_fp = NULL;
 	m_global_lock = NULL;
 	m_global_stat = NULL;
+	m_global_state = NULL;
 
 	m_rotation_lock = NULL;
 	m_rotation_lock_fd = -1;
@@ -285,7 +317,6 @@ WriteUserLog::Reset( void )
 	m_global_count_events = false;
 	m_global_max_filesize = 1000000;
 	m_global_max_rotations = 1;
-	m_global_filesize = 0;
 	m_global_locking = true;
 	m_global_fsync = false;
 
@@ -528,8 +559,6 @@ WriteUserLog::initializeGlobalLog( const UserLogHeader &header )
 bool
 WriteUserLog::checkGlobalLogRotation( void )
 {
-	long		current_filesize = 0L;
-
 	if (!m_global_fp) return false;
 	if (!m_global_path) return false;
 	if ( !m_global_lock ||
@@ -544,21 +573,22 @@ WriteUserLog::checkGlobalLogRotation( void )
 	}
 
 	// Check the size of the log file
-	current_filesize = getGlobalLogSize( );
-	if ( current_filesize < 0 ) {
+	if ( !updateGlobalStat() ) {
 		return false;			// What should we do here????
 	}
 
 	// Header reader for later use
 	ReadUserLogHeader	header_reader;
 
-	// File has shrunk?  Another process rotated it
-	if ( current_filesize < m_global_filesize ) {
+	// New file?  Another process rotated it
+	if ( m_global_state->isNewFile(*m_global_stat) ) {
 		globalLogRotated( header_reader );
 		return true;
 	}
+	m_global_state->Update( *m_global_stat );
+
 	// Less than the size limit -- nothing to do
-	else if ( current_filesize <= m_global_max_filesize ) {
+	if ( !m_global_state->isOverSize(m_global_max_filesize) ) {
 		return false;
 	}
 
@@ -575,18 +605,21 @@ WriteUserLog::checkGlobalLogRotation( void )
 #if ROTATION_TRACE
 	UtcTime	stat_time( true );
 #endif
-	current_filesize = getGlobalLogSize( );
-	if ( current_filesize < 0 ) {
+	if ( !updateGlobalStat() ) {
 		return false;			// What should we do here????
 	}
 
-	// File has shrunk?  Another process rotated it
-	if ( current_filesize < m_global_filesize ) {
+	// New file?  Another process rotated it
+	if ( m_global_state->isNewFile(*m_global_stat) ) {
+		m_rotation_lock->release( );
 		globalLogRotated( header_reader );
 		return true;
 	}
+	m_global_state->Update( *m_global_stat );
+
 	// Less than the size limit -- nothing to do
-	else if ( current_filesize <= m_global_max_filesize ) {
+	// Note: This should never be true, but checking just in case
+	if ( !m_global_state->isOverSize(m_global_max_filesize) ) {
 		m_rotation_lock->release( );
 		return false;
 	}
@@ -594,20 +627,31 @@ WriteUserLog::checkGlobalLogRotation( void )
 
 	// Now, we have the rotation lock *and* the file is over the limit
 	// Let's get down to the business of rotating it
+	filesize_t	current_filesize = 0;
+	StatWrapper	sbuf;
+	if ( sbuf.Stat( fileno(m_global_fp) ) ) {
+		dprintf( D_ALWAYS, "Failed to stat file handle\n" );
+	}
+	else {
+		current_filesize = sbuf.GetBuf()->st_size;
+	}
+
 
 	// First, call the rotation starting callback
-	if ( !globalRotationStarting( current_filesize ) ) {
+	if ( !globalRotationStarting( (unsigned long) current_filesize ) ) {
 		m_rotation_lock->release( );
 		return false;
 	}
 
 #if ROTATION_TRACE
-	StatWrapper	swrap( m_global_path );
-	UtcTime	start_time( true );
-	dprintf( D_FULLDEBUG, "Rotating inode #%ld @ %.6f (stat @ %.6f)\n",
-			 (long)swrap.GetBuf()->st_ino, start_time.combined(),
-			 stat_time.combined() );
-	m_global_lock->display();
+	{
+		StatWrapper	swrap( m_global_path );
+		UtcTime	start_time( true );
+		dprintf( D_FULLDEBUG, "Rotating inode #%ld @ %.6f (stat @ %.6f)\n",
+				 (long)swrap.GetBuf()->st_ino, start_time.combined(),
+				 stat_time.combined() );
+		m_global_lock->display();
+	}
 #endif
 
 	// Read the old header, use it to write an updated one
@@ -710,8 +754,9 @@ WriteUserLog::checkGlobalLogRotation( void )
 									rotated, m_global_max_rotations );
 	if ( num_rotations ) {
 		dprintf(D_FULLDEBUG,
-				"Rotated event log %s to %s at size %ld bytes\n",
-				m_global_path, rotated.Value(), current_filesize);
+				"Rotated event log %s to %s at size %lu bytes\n",
+				m_global_path, rotated.Value(),
+				(unsigned long) current_filesize);
 	}
 
 # if ROTATION_TRACE
@@ -743,13 +788,37 @@ WriteUserLog::checkGlobalLogRotation( void )
 
 }
 
-long
-WriteUserLog::getGlobalLogSize( void ) const
+bool
+WriteUserLog::updateGlobalStat( void )
 {
 	if ( (NULL == m_global_stat) || (m_global_stat->Stat()) ) {
-		return -1L;			// What should we do here????
+		return false;
 	}
-	return m_global_stat->GetBuf()->st_size;
+	if ( NULL == m_global_stat->GetBuf() ) {
+		return false;
+	}
+	return true;
+}
+
+bool
+WriteUserLog::getGlobalLogSize( unsigned long &size, bool use_fp )
+{
+	StatWrapper	stat;
+	if ( use_fp ) {
+		if ( !m_global_fp ) {
+			return false;
+		}
+		if ( stat.Stat(fileno(m_global_fp)) ) {
+			return false;
+		}
+	}
+	else {
+		if ( stat.Stat(m_global_path) ) {
+			return false;
+		}
+	}
+	size = (unsigned long) stat.GetBuf()->st_size;
+	return true;
 }
 
 bool
@@ -762,8 +831,12 @@ WriteUserLog::globalLogRotated( ReadUserLogHeader &reader )
 	initializeGlobalLog( reader );
 	if ( m_global_lock ) {
 		m_global_lock->obtain(WRITE_LOCK);
-		fseek (m_global_fp, 0, SEEK_END);
-		m_global_filesize = ftell(m_global_fp);
+		if ( !updateGlobalStat() ) {
+			m_global_state->Clear( );
+		}
+		else {
+			m_global_state->Update( *m_global_stat );
+		}
 	}
 	return true;
 }

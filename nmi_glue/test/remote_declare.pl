@@ -63,6 +63,7 @@ if( -f "$RuncountFile") {
 }
 # file which contains the list of tests to run on Windows
 my $WinTestList = "$SrcDir/condor_tests/Windows_list";
+my $ShortWinTestList = "$SrcDir/condor_tests/Windows_shortlist";
 
 # Figure out what testclasses we should declare based on our
 # command-line arguments.  If none are given, we declare the testclass
@@ -183,23 +184,31 @@ if( !($ENV{NMI_PLATFORM} =~ /winnt/) ) {
 	}
 } else {
     # eat the file Windows_list into tasklist hash
-    print "****************************************************\n";
-    print "**** Finding tests for file \"$WinTestList\"\n";
-    print "****************************************************\n";
-    open( WINDOWSTESTS, "<$WinTestList" ) || die "Can't open $WinTestList: $!\n";
-    $class = $WinTestList;
-    $total_tests = 0;
-    $testnm = "";
-    while(<WINDOWSTESTS>) {
-        chomp();
-        $testnm = $_;
-        if( $testnm =~ /^\s*#.*/) {
-            # skip the comment
-        } else {
-            $total_tests += 1;
-            $tasklist{$testnm} = 1;
-        }
-    }
+	foreach $class (@classlist) {
+    	print "****************************************************\n";
+    	print "**** Finding Windows tests \"$class\"\n";
+    	print "****************************************************\n";
+		if($class eq "quick") {
+    		open( WINDOWSTESTS, "<$WinTestList" ) || die "Can't open $WinTestList: $!\n";
+		} elsif($class eq "short") {
+    		open( WINDOWSTESTS, "<$ShortWinTestList" ) || die "Can't open $ShortWinTestList: $!\n";
+		} else {
+			# if things got confused just run the hourly tests
+    		open( WINDOWSTESTS, "<$ShortWinTestList" ) || die "Can't open $ShortWinTestList: $!\n";
+		}
+    	$total_tests = 0;
+    	$testnm = "";
+    	while(<WINDOWSTESTS>) {
+        	chomp();
+        	$testnm = $_;
+        	if( $testnm =~ /^\s*#.*/) {
+            	# skip the comment
+        	} else {
+            	$total_tests += 1;
+            	$tasklist{$testnm} = 1;
+        	}
+    	}
+	}
 }
 
 if( $total_tests == 1) {
@@ -207,7 +216,7 @@ if( $total_tests == 1) {
 } else {
 	$word = "tests";
 }
-print "-- Found $total_tests $word for \"$class\" in all " .
+print "-- Found $total_tests $word in all " .
 	"directories\n";
 
 print "****************************************************\n";

@@ -55,7 +55,7 @@ void gcbBrokerDownCallback();
 
 #ifdef WIN32
 
-#include "windows_firewall.h"
+#include "firewall.WINDOWS.h"
 
 extern void register_service();
 extern void terminate(DWORD);
@@ -1324,110 +1324,202 @@ void init_firewall_exceptions() {
 	bool add_exception;
 	char *master_image_path, *schedd_image_path, *startd_image_path,
 		 *dbmsd_image_path, *quill_image_path, *dagman_image_path, 
-		 *bin_path;
+		 *negotiator_image_path, *collector_image_path, *starter_image_path,
+		 *shadow_image_path, *gridmanager_image_path, *gahp_image_path,
+		 *gahp_worker_image_path, *credd_image_path, 
+		 *vmgahp_image_path, *bin_path;
 	const char* dagman_exe = "condor_dagman.exe";
 
 	WindowsFirewallHelper wfh;
 	
 	add_exception = param_boolean("ADD_WINDOWS_FIREWALL_EXCEPTION", true);
 
-	if ( add_exception ) {
-
-		// We use getExecPath() here instead of param() since it's
-		// possible the the Windows Service Control Manager
-		// (SCM) points to one location for the master (which
-		// is exec'd), while MASTER points to something else
-		// (and ignored).
-		
-		master_image_path = getExecPath();
-		
-		// We want to add exceptions for the SCHEDD and the STARTD
-		// so that (1) shadows can accept incoming connections on their 
-		// command port and (2) so starters can do the same.
-	
-		schedd_image_path = param("SCHEDD");
-		startd_image_path = param("STARTD");
-
-		// We to also add exceptions for Quill and DBMSD
-
-		quill_image_path = param("QUILL");
-		dbmsd_image_path = param("DBMSD");
-
-		// We also want to add exceptions for the DAGMan we ship
-		// with Condor:
-
-		bin_path = param ( "BIN" );
-		if ( bin_path ) {
-			dagman_image_path = (char*) malloc (
-				strlen ( bin_path ) + strlen ( dagman_exe ) + 2 );
-			if ( dagman_image_path ) {
-				sprintf ( dagman_image_path, "%s\\%s", bin_path, dagman_exe );
-			}
-			free ( bin_path );
-		}
-
-		if ( master_image_path ) {
-
-			if ( !wfh.addTrusted(master_image_path) ) {
-				dprintf(D_FULLDEBUG, "WinFirewall: unable to add %s to the "
-						"windows firewall exception list.\n",
-						master_image_path);
-			}
-
-			if ( (! (daemons.GetIndex("SCHEDD") < 0) ) && schedd_image_path ) {
-				if ( !wfh.addTrusted(schedd_image_path) ) {
-					dprintf(D_FULLDEBUG, "WinFirewall: unable to add %s to the "
-						"windows firewall exception list.\n",
-						schedd_image_path);
-				}
-			}
-
-			if ( (! (daemons.GetIndex("STARTD") < 0) ) && startd_image_path ) {
-				if ( !wfh.addTrusted(startd_image_path) ) {
-					dprintf(D_FULLDEBUG, "WinFirewall: unable to add %s to the "
-						"windows firewall exception list.\n",
-						startd_image_path);
-				}
-			}
-
-			if ( (! (daemons.GetIndex("QUILL") < 0) ) && quill_image_path ) {
-				if ( !wfh.addTrusted(quill_image_path) ) {
-					dprintf(D_FULLDEBUG, "WinFirewall: unable to add %s to the "
-						"windows firewall exception list.\n",
-						quill_image_path);
-				}
-			}
-
-			if ( (! (daemons.GetIndex("DBMSD") < 0) ) && dbmsd_image_path ) {
-				if ( !wfh.addTrusted(dbmsd_image_path) ) {
-					dprintf(D_FULLDEBUG, "WinFirewall: unable to add %s to the "
-						"windows firewall exception list.\n",
-						dbmsd_image_path);
-				}
-			}
-
-			if ( dagman_image_path ) {
-				if ( !wfh.addTrusted (dagman_image_path) ) {
-					dprintf(D_FULLDEBUG, "WinFirewall: unable to add %s to "
-						"the windows firewall exception list.\n",
-						dagman_image_path);
-				}
-			}
-
-			if ( schedd_image_path ) { free(schedd_image_path); }
-			if ( startd_image_path ) { free(startd_image_path); }
-			if ( quill_image_path )  { free(quill_image_path); }
-			if ( dbmsd_image_path )  { free(dbmsd_image_path); }
-			if ( dagman_image_path ) { free(dagman_image_path); }
-			free(master_image_path);
-
-		} else {
-			dprintf(D_ALWAYS, 
-					"WARNING: Failed to get condor_master image path.\n"
-					"Condor will not be excepted from the Windows firewall.\n");
-		}
-		
+	if ( add_exception == false ) {
+		dprintf(D_FULLDEBUG, "ADD_WINDOWS_FIREWALL_EXCEPTION is false, skipping\n");
+		return;
 	}
+
+	// We use getExecPath() here instead of param() since it's
+	// possible the the Windows Service Control Manager
+	// (SCM) points to one location for the master (which
+	// is exec'd), while MASTER points to something else
+	// (and ignored).
+	
+	master_image_path = getExecPath();
+	if ( !master_image_path ) {	
+		dprintf(D_ALWAYS, 
+				"WARNING: Failed to get condor_master image path.\n"
+				"Condor will not be excepted from the Windows firewall.\n");
+		return;
+	}
+
+	// We want to add exceptions for the SCHEDD and the STARTD
+	// so that (1) shadows can accept incoming connections on their 
+	// command port and (2) so starters can do the same.
+
+	schedd_image_path = param("SCHEDD");
+	startd_image_path = param("STARTD");
+
+	// We to also add exceptions for Quill and DBMSD
+
+	quill_image_path = param("QUILL");
+	dbmsd_image_path = param("DBMSD");
+
+	// And add exceptions for all the other daemons, since they very well
+	// may need to open a listen port for mechanisms like CCB, or HTTPS
+	negotiator_image_path = param("NEGOTIATOR");
+	collector_image_path = param("COLLECTOR");
+	starter_image_path = param("STARTER");
+	shadow_image_path = param("SHADOW");
+	gridmanager_image_path = param("GRIDMANAGER");
+	gahp_image_path = param("CONDOR_GAHP");
+	gahp_worker_image_path = param("CONDOR_GAHP_WORKER");
+	credd_image_path = param("CREDD");
+	vmgahp_image_path = param("VM_GAHP_SERVER");
+	
+	// We also want to add exceptions for the DAGMan we ship
+	// with Condor:
+
+	bin_path = param ( "BIN" );
+	if ( bin_path ) {
+		dagman_image_path = (char*) malloc (
+			strlen ( bin_path ) + strlen ( dagman_exe ) + 2 );
+		if ( dagman_image_path ) {
+			sprintf ( dagman_image_path, "%s\\%s", bin_path, dagman_exe );
+		}
+		free ( bin_path );
+	}
+
+	// Insert the master
+	if ( !wfh.addTrusted(master_image_path) ) {
+		dprintf(D_FULLDEBUG, "WinFirewall: unable to add %s to the "
+				"windows firewall exception list.\n",
+				master_image_path);
+	}
+
+	// Insert daemons needed on a central manager
+	if ( (! (daemons.GetIndex("NEGOTIATOR") < 0) ) && negotiator_image_path ) {
+		if ( !wfh.addTrusted(negotiator_image_path) ) {
+			dprintf(D_FULLDEBUG, "WinFirewall: unable to add %s to the "
+				"windows firewall exception list.\n",
+				negotiator_image_path);
+		}
+	}
+	if ( (! (daemons.GetIndex("COLLECTOR") < 0) ) && collector_image_path ) {
+		if ( !wfh.addTrusted(collector_image_path) ) {
+			dprintf(D_FULLDEBUG, "WinFirewall: unable to add %s to the "
+				"windows firewall exception list.\n",
+				collector_image_path);
+		}
+	}
+
+	// Insert daemons needed on a submit node
+	if ( (! (daemons.GetIndex("SCHEDD") < 0) ) && schedd_image_path ) {
+		// put in schedd
+		if ( !wfh.addTrusted(schedd_image_path) ) {
+			dprintf(D_FULLDEBUG, "WinFirewall: unable to add %s to the "
+				"windows firewall exception list.\n",
+				schedd_image_path);
+		}
+		// put in shadow
+		if ( shadow_image_path && !wfh.addTrusted(shadow_image_path) ) {
+			dprintf(D_FULLDEBUG, "WinFirewall: unable to add %s to the "
+				"windows firewall exception list.\n",
+				shadow_image_path);
+		}
+		// put in gridmanager
+		if ( gridmanager_image_path && !wfh.addTrusted(gridmanager_image_path) ) {
+			dprintf(D_FULLDEBUG, "WinFirewall: unable to add %s to the "
+				"windows firewall exception list.\n",
+				gridmanager_image_path);
+		}
+		// put in condor gahp
+		if ( gahp_image_path && !wfh.addTrusted(gahp_image_path) ) {
+			dprintf(D_FULLDEBUG, "WinFirewall: unable to add %s to the "
+				"windows firewall exception list.\n",
+				gahp_image_path);
+		}
+		// put in condor worker gahp
+		if ( gahp_worker_image_path && !wfh.addTrusted(gahp_worker_image_path) ) {
+			dprintf(D_FULLDEBUG, "WinFirewall: unable to add %s to the "
+				"windows firewall exception list.\n",
+				gahp_worker_image_path);
+		}
+	}
+
+	// Insert daemons needed on a execute node.
+	// Note we include the starter and friends seperately, since the
+	// starter could run on either execute or submit nodes (think 
+	// local universe jobs).
+	if ( (! (daemons.GetIndex("STARTD") < 0) ) && startd_image_path ) {
+		if ( !wfh.addTrusted(startd_image_path) ) {
+			dprintf(D_FULLDEBUG, "WinFirewall: unable to add %s to the "
+				"windows firewall exception list.\n",
+				startd_image_path);
+		}
+	}
+
+	if ( (! (daemons.GetIndex("QUILL") < 0) ) && quill_image_path ) {
+		if ( !wfh.addTrusted(quill_image_path) ) {
+			dprintf(D_FULLDEBUG, "WinFirewall: unable to add %s to the "
+				"windows firewall exception list.\n",
+				quill_image_path);
+		}
+	}
+
+	if ( (! (daemons.GetIndex("DBMSD") < 0) ) && dbmsd_image_path ) {
+		if ( !wfh.addTrusted(dbmsd_image_path) ) {
+			dprintf(D_FULLDEBUG, "WinFirewall: unable to add %s to the "
+				"windows firewall exception list.\n",
+				dbmsd_image_path);
+		}
+	}
+
+	if ( starter_image_path ) {
+		if ( !wfh.addTrusted(starter_image_path) ) {
+			dprintf(D_FULLDEBUG, "WinFirewall: unable to add %s to the "
+				"windows firewall exception list.\n",
+				starter_image_path);
+		}
+	}
+
+	if ( (! (daemons.GetIndex("CREDD") < 0) ) && credd_image_path ) {
+		if ( !wfh.addTrusted(credd_image_path) ) {
+			dprintf(D_FULLDEBUG, "WinFirewall: unable to add %s to the "
+				"windows firewall exception list.\n",
+				credd_image_path);
+		}
+	}
+
+	if ( vmgahp_image_path ) {
+		if ( !wfh.addTrusted(vmgahp_image_path) ) {
+			dprintf(D_FULLDEBUG, "WinFirewall: unable to add %s to the "
+				"windows firewall exception list.\n",
+				vmgahp_image_path);
+		}
+	}
+
+	if ( dagman_image_path ) {
+		if ( !wfh.addTrusted (dagman_image_path) ) {
+			dprintf(D_FULLDEBUG, "WinFirewall: unable to add %s to "
+				"the windows firewall exception list.\n",
+				dagman_image_path);
+		}
+	}
+
+	if ( master_image_path ) { free(master_image_path); }
+	if ( schedd_image_path ) { free(schedd_image_path); }
+	if ( startd_image_path ) { free(startd_image_path); }
+	if ( quill_image_path )  { free(quill_image_path); }
+	if ( dbmsd_image_path )  { free(dbmsd_image_path); }
+	if ( dagman_image_path ) { free(dagman_image_path); }
+	if ( negotiator_image_path ) { free(negotiator_image_path); }
+	if ( collector_image_path ) { free(collector_image_path); }
+	if ( shadow_image_path ) { free(shadow_image_path); }
+	if ( gridmanager_image_path ) { free(gridmanager_image_path); }
+	if ( gahp_image_path ) { free(gahp_image_path); }	
+	if ( credd_image_path ) { free(credd_image_path); }	
+	if ( vmgahp_image_path ) { free(vmgahp_image_path); }		
 #endif
 }
 

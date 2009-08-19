@@ -195,8 +195,8 @@ class Job {
     */
     bool Add( const queue_t queue, const JobID_t jobID );
 
-    /** Returns true if this job is ready for submittion.
-        @return true if job is submitable, false if not
+    /** Returns true if this job is ready for submission.
+        @return true if job is submittable, false if not
     */
     inline bool CanSubmit () const {
         return (IsEmpty(Job::Q_WAITING) && _Status == STATUS_READY);
@@ -336,7 +336,6 @@ class Job {
 		return _dagFile;
 	}
 
-#if LAZY_LOG_FILES
 	/** Monitor this node's Condor or Stork log file with the
 		multiple log reader.  (Must be called before this node's
 		job is submitted.)
@@ -344,7 +343,9 @@ class Job {
 		@param recovery: whether we're in recovery mode
 		@return true if successful, false if failed
 	*/
-	bool MonitorLogFile( ReadMultipleUserLogs &logReader, bool recovery );
+	bool MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
+				ReadMultipleUserLogs &storkLogReader, bool nfsIsError,
+				bool recovery );
 
 	/** Unmonitor this node's Condor or Stork log file with the
 		multiple log reader.  (Must be called after everything is done
@@ -352,8 +353,8 @@ class Job {
 		@param logReader: the multiple log reader
 		@return true if successful, false if failed
 	*/
-	bool UnmonitorLogFile( ReadMultipleUserLogs &logReader );
-#endif // LAZY_LOG_FILES
+	bool UnmonitorLogFile( ReadMultipleUserLogs &logReader,
+				ReadMultipleUserLogs &storkLogReader );
 
     /** */ CondorID _CondorID;
     /** */ status_t _Status;
@@ -491,6 +492,9 @@ private:
 		// This node's category; points to an object "owned" by the
 		// ThrottleByCategory object.
 	ThrottleByCategory::ThrottleInfo *_throttleInfo;
+
+		// Whether this node's log file is currently being monitored.
+	bool _logIsMonitored;
 };
 
 /** A wrapper function for Job::Print which allows a NULL job pointer.

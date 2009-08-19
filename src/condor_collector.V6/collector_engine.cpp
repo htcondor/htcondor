@@ -36,6 +36,7 @@ extern "C" void event_mgr (void);
 #include "condor_attributes.h"
 #include "condor_daemon_core.h"
 #include "file_sql.h"
+#include "classad_merge.h"
 
 extern FILESQL *FILEObj;
 
@@ -360,6 +361,9 @@ walkHashTable (AdTypes adType, int (*scanFunction)(ClassAd *))
 		table = &LeaseManagerAds;
 		break;
 
+	  case GENERIC_AD:
+		return walkGenericTables(scanFunction);
+
 	  case ANY_AD:
 		return
 			StorageAds.walk(scanFunction) &&
@@ -478,6 +482,7 @@ bool CollectorEngine::ValidateClassAd(int command,ClassAd *clientAd,Sock *sock)
 
 	char const *ipattr = NULL;
 	switch( command ) {
+	  case MERGE_STARTD_AD:
 	  case UPDATE_STARTD_AD:
 	  case UPDATE_STARTD_AD_WITH_ACK:
 		  ipattr = ATTR_STARTD_IP_ADDR;
@@ -670,6 +675,19 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 			delete clientAdToRepeat;
 			clientAdToRepeat = NULL;
 		}
+		break;
+
+	  case MERGE_STARTD_AD:
+		if (!makeStartdAdHashKey (hk, clientAd, from))
+		{
+			dprintf (D_ALWAYS, "Could not make hashkey --- ignoring ad\n");
+			insert = -3;
+			retVal = 0;
+			break;
+		}
+		hashString.Build( hk );
+		retVal=mergeClassAd (StartdAds, "StartdAd     ", "Start",
+							  clientAd, hk, hashString, insert, from );
 		break;
 
 #ifdef WANT_QUILL
@@ -908,6 +926,7 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
   	  case QUERY_HAD_ADS:
   	  case QUERY_XFER_SERVICE_ADS:
   	  case QUERY_LEASE_MANAGER_ADS:
+	  case QUERY_GENERIC_ADS:
 	  case INVALIDATE_STARTD_ADS:
 	  case INVALIDATE_SCHEDD_ADS:
 	  case INVALIDATE_MASTER_ADS:
@@ -919,6 +938,7 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 	  case INVALIDATE_HAD_ADS:
 	  case INVALIDATE_XFER_SERVICE_ADS:
 	  case INVALIDATE_LEASE_MANAGER_ADS:
+	  case INVALIDATE_ADS_GENERIC:
 		// these are not implemented in the engine, but we allow another
 		// daemon to detect that these commands have been given
 	    insert = -2;
@@ -1099,13 +1119,18 @@ updateClassAd (CollectorHashTable &hashTable,
 	MyString	buf;
 	time_t		now;
 
-	(void) time (&now);
-	if (now == (time_t) -1)
-	{
-		EXCEPT ("Error reading system time!");
-	}	
-	buf.sprintf( "%s = %d", ATTR_LAST_HEARD_FROM, (int)now);
-	ad->Insert ( buf.Value() );
+		// NOTE: LastHeardFrom will already be in ad if we are loading
+		// adds from the offline classad collection, so don't mess with
+		// it if it is already there
+	if( !ad->Lookup(ATTR_LAST_HEARD_FROM) ) {
+		(void) time (&now);
+		if (now == (time_t) -1)
+		{
+			EXCEPT ("Error reading system time!");
+		}	
+		buf.sprintf( "%s = %d", ATTR_LAST_HEARD_FROM, (int)now);
+		ad->Insert ( buf.Value() );
+	}
 
 	// this time stamped ad is the new ad
 	new_ad = ad;
@@ -1145,6 +1170,39 @@ updateClassAd (CollectorHashTable &hashTable,
 		insert = 0;
 		return old_ad;
 	}
+}
+
+ClassAd * CollectorEngine::
+mergeClassAd (CollectorHashTable &hashTable,
+			   const char *adType,
+			   const char *label,
+			   ClassAd *new_ad,
+			   AdNameHashKey &hk,
+			   const MyString &hashString,
+			   int  &insert,
+			   const sockaddr_in * /*from*/ )
+{
+	ClassAd		*old_ad = NULL;
+
+	insert = 0;
+
+	// check if it already exists in the hash table ...
+	if ( hashTable.lookup (hk, old_ad) == -1)
+    {	 	
+		dprintf (D_ALWAYS, "%s: Failed to merge update for ** \"%s\" because "
+				 "no existing ad matches.\n", adType, hashString.Value() );
+	}
+	else
+    {
+		// yes ... old ad must be updated
+		dprintf (D_FULLDEBUG, "%s: Merging update for ... \"%s\"\n",
+				 adType, hashString.Value() );
+
+		// Now, finally, merge the new ClassAd into the old one
+		MergeClassAds(old_ad,new_ad,true);
+	}
+	delete new_ad;
+	return old_ad;
 }
 
 #if 0

@@ -155,22 +155,35 @@ sub SetUp
 	print "Wait for job 1.1 to be running - ";
 	$qstat = CondorTest::getJobStatus(1.1);
 	CondorTest::debug("local cluster 1.1 status is $qstat\n",$debuglevel);
+	my $limit = 360;
+	my $counter = 0;
 	while($qstat != RUNNING)
 	{
 		CondorTest::debug("local Job status 1.1 not RUNNING - wait a bit\n",$debuglevel);
-		sleep 4;
+		sleep 1;
 		$qstat = CondorTest::getJobStatus(1.1);
+		if($counter >= $limit) {
+			die "local Job status 1.1 failed 6 minutes to running test\n";
+		} else {
+			$counter += 1;
+		}
 	}
 	print "ok\n";
 
 	print "Wait for job 1.0 to be running - ";
 	$qstat = CondorTest::getJobStatus(1.0);
 	CondorTest::debug("local cluster 1.0 status is $qstat\n",$debuglevel);
+	$counter = 0;
 	while($qstat != RUNNING)
 	{
 		CondorTest::debug("local Job status 1.0 not RUNNING - wait a bit\n",$debuglevel);
-		sleep 4;
+		sleep 1;
 		$qstat = CondorTest::getJobStatus(1.0);
+		if($counter >= $limit) {
+			die "local Job status 1.1 failed 6 minutes to running test\n";
+		} else {
+			$counter += 1;
+		}
 	}
 	print "ok\n\n";
 
@@ -223,7 +236,7 @@ sub SetUp
         sleep($count * 5);
     }
 
-	my $configreturn = $locconfig . ":" . $scheddoneconfig;
+	my $configreturn = $locconfig . "&" . $scheddoneconfig;
 
 	if($done != 1) {
 		return("");

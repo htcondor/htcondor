@@ -361,17 +361,6 @@ parse_node( Dag *dag, Job::job_type_t nodeType, const char* nodeTypeKeyword,
 				"[DIR directory] [DONE]", nodeTypeKeyword, inlineOrExt,
 				submitOrDagFile );
 
-		// If this is a DAP/DATA node, make sure we have a Stork log
-		// file specified.
-	if ( nodeType == Job::TYPE_STORK ) {
-		if ( dag->GetStorkLogCount() == 0 ) {
-			debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): DAP/DATA node, "
-						"but no Stork log file is specified (-Storklog "
-						"command-line argument)\n", dagFile, lineNum);
-			return false;
-		}
-	}
-
 		// NOTE: fear not -- any missing tokens resulting in NULL
 		// strings will be error-handled correctly by AddNode()
 
@@ -1336,6 +1325,13 @@ parse_category(
 	return true;
 }
 
+//-----------------------------------------------------------------------------
+// 
+// Function: parse_splice
+// Purpose:  Parses a splice (subdag internal) line.
+//           The format of this line must be
+//           SPLICE <SpliceName> <SpliceFileName> [DIR <directory>]
+//-----------------------------------------------------------------------------
 static bool
 parse_splice(
 	Dag *dag,

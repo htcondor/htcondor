@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2008, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2009, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -174,7 +174,7 @@ class ReadUserLog
 					 bool read_only = false );
 
     /** Initialize the log file.  Similar to above, but takes an integer
-		as it's second parameter. This function will return false
+		as its second parameter. This function will return false
         if it can't open the log file (among other problems).
         @param file the file to read from
 		@param max_rotation sets max rotation file # the reader will
@@ -322,7 +322,7 @@ class ReadUserLog
 		  read( fd, statebuf.buf, statebuf.size );
 
 		  ReadUserLog  				reader;
-		  status = userlog.initialize( statebuf );
+		  status = reader.initialize( statebuf );
 
 		  status = UninitFileState( statebuf );
 		  ....
@@ -489,25 +489,25 @@ class ReadUserLog
 
 	/** Class private data
 	 */
-	bool				 m_initialized;	/** Are we initialized? */
-	bool				 m_missed_event; /** Need to report event lost? */
+	bool				 m_initialized;	  /** Are we initialized? */
+	bool				 m_missed_event;  /** Need to report event lost? */
 
-	ReadUserLogState	*m_state;		/** The state of the file     */
-	ReadUserLogMatch	*m_match;		/** Detects file matches */
+	ReadUserLogState	*m_state;		  /** The state of the file */
+	ReadUserLogMatch	*m_match;		  /** Detects file matches */
 
-    int    				 m_fd;			/** The log's file descriptor */
-    FILE				*m_fp;			/** The log's file pointer    */
+    int    				 m_fd;			  /** The log's file descriptor */
+    FILE				*m_fp;			  /** The log's file pointer */
 
-	bool				 m_close_file;	/** Close file between operations? */
-	bool				 m_enable_close; /** enable close operations? */
-	bool				 m_handle_rot;	/** Do we handle file rotation? */
+	bool				 m_close_file;	  /** Close file between operations? */
+	bool				 m_enable_close;  /** enable close operations? */
+	bool				 m_handle_rot;	  /** Do we handle file rotation? */
 	int					 m_max_rotations; /** Max rotation number */
-	bool				 m_read_header;	/** Read the file's header? */
-	bool				 m_read_only;	/** Open file read only? */
+	bool				 m_read_header;	  /** Read the file's header? */
+	bool				 m_read_only;	  /** Open file read only? */
 
-	bool				 m_lock_enable;	/** Should we lock the file?  */
-    FileLockBase		*m_lock;		/** The log file lock         */
-	int					 m_lock_rot;	/** Lock managing what rotation #? */
+	bool				 m_lock_enable;	  /** Should we lock the file? */
+    FileLockBase		*m_lock;		  /** The log file lock */
+	int					 m_lock_rot;	  /** Lock managing what rotation #? */
 
 	/* Error history data */
 	mutable ErrorType	 m_error;		/** Type of latest error (think errno) */
@@ -524,20 +524,51 @@ public:
 	ReadUserLogStateAccess(const ReadUserLog::FileState &state);
 	~ReadUserLogStateAccess(void);
 
-	// Valid?
+	// Is the buffer initialized?
+	bool isInitialized( void ) const;
+
+	// Is the buffer valid for use by the ReadUserLog::initialize()?
 	bool isValid( void ) const;
 
+	// Position in individual file
+	// Note: Can return an error if the result is too large
+	//  to be stored in a long
+	bool getFileOffset( unsigned long &pos ) const;
+
 	// Positional difference between to states (this - other)
-	bool LogPositionDiff( const ReadUserLogStateAccess &other,
-						  long &diff ) const;
+	bool getFileOffsetDiff( const ReadUserLogStateAccess &other,
+							long &diff ) const;
+
+	// Event number in individual file
+	// Note: Can return an error if the result is too large
+	//  to be stored in a long
+	bool getFileEventNum( unsigned long &num ) const;
 
 	// # of events between to states (this - other)
-	bool EventNumberDiff( const ReadUserLogStateAccess &other,
+	bool getFileEventNumDiff( const ReadUserLogStateAccess &other,
+							  long &diff ) const;
+
+	// Position OF THE CURRENT FILE in overall log
+	// Note: Can return an error if the result is too large
+	//  to be stored in a long
+	bool getLogPosition( unsigned long &pos ) const;
+
+	// Positional difference between to states (this - other)
+	bool getLogPositionDiff( const ReadUserLogStateAccess &other,
+							 long &diff ) const;
+
+	// Absolute event number OF THE FIRST EVENT IN THE CURRENT FILE
+	// Note: Can return an error if the result is too large
+	//  to be stored in a long
+	bool getEventNumber( unsigned long &num ) const;
+
+	// # of events between to states (this - other)
+	bool getEventNumberDiff( const ReadUserLogStateAccess &other,
 						  long &diff ) const;
 
 	// Get the unique ID and sequence # of the associated state file
-	bool UniqId( char *buf, int len ) const;
-	bool SequenceNumber( int &seqno ) const;
+	bool getUniqId( char *buf, int len ) const;
+	bool getSequenceNumber( int &seqno ) const;
 
 	// Access to the state
 protected:

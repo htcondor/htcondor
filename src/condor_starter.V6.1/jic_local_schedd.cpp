@@ -36,7 +36,7 @@
 extern CStarter *Starter;
 
 
-JICLocalSchedd::JICLocalSchedd( const char* classad_filename, 
+JICLocalSchedd::JICLocalSchedd( const char* classad_filename,
 								const char* schedd_address, 
 								int cluster, int proc, int subproc )
 	: JICLocalFile( classad_filename, cluster, proc, subproc )

@@ -86,9 +86,10 @@ static const int DC_PIPE_BUF_SIZE = 65536;
 #include "my_popen.h"
 #include "../condor_privsep/condor_privsep.h"
 #ifdef WIN32
-#include "exphnd.WIN32.h"
+#include "exception_handling.WINDOWS.h"
 #include "process_control.WINDOWS.h"
 #include "executable_scripts.WINDOWS.h"
+#include "access_desktop.WINDOWS.h"
 #include "condor_fix_assert.h"
 typedef unsigned (__stdcall *CRT_THREAD_HANDLER) (void *);
 CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
@@ -265,6 +266,7 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 		&DaemonCore::Register_DataPtr,
 		&DaemonCore::GetDataPtr,
 		(DaemonCoreSockAdapterClass::Register_Timer_fnptr)&DaemonCore::Register_Timer,
+		&DaemonCore::Cancel_Timer,
 		&DaemonCore::TooManyRegisteredSockets,
 		&DaemonCore::incrementPendingSockets,
 		&DaemonCore::decrementPendingSockets,
@@ -436,7 +438,10 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 	}
 	if( max_fds > 0 ) {
 		dprintf(D_ALWAYS,"Setting maximum file descriptors to %d.\n",max_fds);
+
+		priv_state priv = set_root_priv();
 		limit(RLIMIT_NOFILE,max_fds,CONDOR_REQUIRED_LIMIT,"MAX_FILE_DESCRIPTORS");
+		set_priv(priv);
 	}
 #endif
 
@@ -2528,6 +2533,7 @@ DaemonCore::reconfig(void) {
 	bool enable_soap_ssl = param_boolean("ENABLE_SOAP_SSL", false);
 	bool subsys_enable_soap_ssl =
 		param_boolean((subsys + "_ENABLE_SOAP_SSL").Value(), false);
+
 	if (subsys_enable_soap_ssl ||
 		(enable_soap_ssl &&
 		 (!(NULL != param((subsys + "_ENABLE_SOAP_SSL").Value())) ||
@@ -2855,6 +2861,9 @@ void DaemonCore::Driver()
 					// that is doing a non-blocking connect
 					// CCBClient will eventually ensure that the
 					// socket's registered callback function is called
+					// We want to ignore the socket's deadline (below)
+					// because that is all taken care of by CCBClient.
+					continue;
 				}
 				else if ( (*sockTable)[i].is_connect_pending ) {
 						// we want to be woken when a non-blocking
@@ -4028,6 +4037,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 			//   3. increase size of send and receive buffers
 			//   4. set SO_KEEPALIVE [done automatically by CEDAR accept()]
 		cursoap->socket = ((Sock*)stream)->get_file_desc();
+		cursoap->peer = *((Sock*)stream)->peer_addr();
 		cursoap->recvfd = soap->socket;
 		cursoap->sendfd = soap->socket;
 		if ( cursoap->recv_timeout > 0 ) {
@@ -6680,9 +6690,9 @@ int DaemonCore::Create_Process(
 
 	// First do whatever error checking we can that is not platform specific
 
-	// check reaper_id validity
-	if ( (reaper_id < 1) || (reaper_id > maxReap)
-		 || (reapTable[reaper_id - 1].num == 0) ) {
+	// check reaper_id validity.  note: reaper id of 0 means no reaper wanted.
+	if ( (reaper_id < 0) || (reaper_id > maxReap) ||
+		 ((reaper_id > 0) && (reapTable[reaper_id - 1].num == 0)) ) {
 		dprintf(D_ALWAYS,"Create_Process: invalid reaper_id\n");
 		goto wrapup;
 	}
@@ -7183,7 +7193,7 @@ int DaemonCore::Create_Process(
 		the	above checks determined that the given executable must be
 		either a binary executable or garbage. Either way, we treat it
 		as a binary and hope for the best. */
-	if ( binary_executable ) {
+	if ( binary_executable && !bIs16Bit ) {
 
 		/** append the arguments given in the submit file. */
 		first_arg_to_copy = 0;
@@ -7257,7 +7267,6 @@ int DaemonCore::Create_Process(
 		if (use_visible && (*use_visible=='T' || *use_visible=='t') ) {
 				// user wants visible desktop.
 				// place the user_token into the proper access control lists.
-			int GrantDesktopAccess(HANDLE hToken);	// prototype
 			if ( GrantDesktopAccess(user_token) == 0 ) {
 					// Success!!  The user now has permission to use
 					// the visible desktop, so change si.lpDesktop
@@ -9718,12 +9727,13 @@ DaemonCore::InitSettableAttrsList( const char* subsys, int i )
 	MyString param_name;
 	char* tmp;
 
-	if( subsys ) {
-		param_name = subsys;
-		param_name += "_SETTABLE_ATTRS_";
-	} else {
+/* XXX Comment this out and let subsys.SETTABLE_ATTRS_* work instead */
+/*	if( subsys ) {*/
+/*		param_name = subsys;*/
+/*		param_name += "_SETTABLE_ATTRS_";*/
+/*	} else {*/
 		param_name = "SETTABLE_ATTRS_";
-	}
+/*	}*/
 	param_name += PermString((DCpermission)i);
 	tmp = param( param_name.Value() );
 	if( tmp ) {

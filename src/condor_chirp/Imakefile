@@ -2,8 +2,9 @@ NAME=Chirp.jar
 LIBNAME = libchirp_client.a
 LIBOBJ = chirp_client.o
 
-CFLAGS = $(STD_C_FLAGS)
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
+CFLAGS = $(STD_C_FLAGS) $(CONFIGURE_PCRE_CFLAGS)
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(CONFIGURE_PCRE_CFLAGS)
+LIB = $(LIBNAME) $(STD_LIBS) $(CONFIGURE_PCRE_LDFLAGS)
 
 CONDOR_CHIRP_NAME=condor_chirp
 CONDOR_CHIRP_OBJ=condor_chirp.o
@@ -27,6 +28,6 @@ html_target( ChirpClient.java ChirpInputStream.java ChirpOutputStream.java )
 
 /* chirp isn't (for now) going to be linked with GCB, so we don't want
 to include the --wrap options on the link-line for it */
-public_c_plus_nowrap_target($(CONDOR_CHIRP_NAME),libexec,$(CONDOR_CHIRP_OBJ),$(LIBNAME) $(STD_LIBS))
+public_c_plus_nowrap_target($(CONDOR_CHIRP_NAME),libexec,$(CONDOR_CHIRP_OBJ),$(LIB))
 
 testbin:: all

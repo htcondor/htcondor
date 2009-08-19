@@ -60,15 +60,9 @@ extern  int     clear_autocluster_id( ClassAd *job );
 /* For daemonCore, etc. */
 DECL_SUBSYSTEM( "SCHEDD", SUBSYSTEM_TYPE_SCHEDD );
 
-// global variables to control the daemon's running and logging
-char*		Spool = NULL;							// spool directory
-char* 		JobHistoryFileName = NULL;
-char*		PerJobHistoryDir = NULL;
-char*		Name = NULL;
-char*		X509Directory = NULL;
-bool        DoHistoryRotation = true;
-filesize_t  MaxHistoryFileSize = 20 * 1024 * 1024; // 20MB
-int         NumberBackupHistoryFiles = 2; // In addition to history file, how many to keep?
+char*          Spool = NULL;
+char*          Name = NULL;
+char*          X509Directory = NULL;
 
 // global objects
 Scheduler	scheduler;
@@ -126,10 +120,10 @@ main_init(int argc, char* argv[])
 	ScheddPluginManager::Load();
 
 		// Tell all ScheddPlugins to initialze themselves
-	ScheddPluginManager::Initialize();
+	ScheddPluginManager::EarlyInitialize();
 
 		// Tell all plugins to initialize themselves
-	ClassAdLogPluginManager::Initialize();
+	ClassAdLogPluginManager::EarlyInitialize();
 #endif
 	
 		// Initialize all the modules
@@ -185,6 +179,14 @@ main_init(int argc, char* argv[])
 
 		// Do a timeout now at startup to get the ball rolling...
 	scheduler.timeout();
+
+#if HAVE_DLOPEN
+		// Tell all ScheddPlugins to initialze themselves
+	ScheddPluginManager::Initialize();
+
+		// Tell all plugins to initialize themselves
+	ClassAdLogPluginManager::Initialize();
+#endif
 
 	return 0;
 } 

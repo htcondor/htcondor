@@ -44,9 +44,6 @@
 #include "env.h"
 #include "condor_classad_util.h"
 #include "condor_ver_info.h"
-#include "directory.h"      // for StatInfo
-#include "util_lib_proto.h" // for rotate_file
-#include "iso_dates.h"
 #include "condor_scanner.h"	// for Token, etc.
 #include "condor_string.h" // for strnewp, etc.
 #include "utc_time.h"
@@ -54,22 +51,19 @@
 #include "forkwork.h"
 #include "condor_open.h"
 #include "ickpt_share.h"
+#include "classadHistory.h"
+
+#if HAVE_DLOPEN
+#include "ScheddPlugin.h"
+#endif
 
 #include "file_sql.h"
 extern FILESQL *FILEObj;
 
 extern char *Spool;
 extern char *Name;
-extern char* JobHistoryFileName;
-extern bool        DoHistoryRotation;
-extern filesize_t  MaxHistoryFileSize;
-extern int         NumberBackupHistoryFiles;
-extern char*       PerJobHistoryDir;
 extern Scheduler scheduler;
 extern DedicatedScheduler dedicated_scheduler;
-
-static FILE *HistoryFile_fp = NULL;
-static int HistoryFile_RefCount = 0;
 
 extern "C" {
 	int	prio_compar(prio_rec*, prio_rec*);
@@ -99,6 +93,7 @@ static time_t xact_start_time = 0;	// time at which the current transaction was 
 static int cluster_initial_val = 1;		// first cluster number to use
 static int cluster_increment_val = 1;	// increment for cluster numbers of successive submissions 
 
+static void AddOwnerHistory(const MyString &user);
 
 class Service;
 
@@ -117,18 +112,7 @@ static int 	MAX_PRIO_REC=INITIAL_MAX_PRIO_REC ;	// INITIAL_MAX_* in prio_rec.h
 
 const char HeaderKey[] = "0.0";
 
-static ForkWork forker;
-
-static void AddOwnerHistory(const MyString &user);
-static void AppendHistory(ClassAd*);
-static void MaybeRotateHistory(int size_to_append);
-static void RemoveExtraHistoryFiles(void);
-static int MaybeDeleteOneHistoryBackup(void);
-static bool IsHistoryFilename(const char *filename, time_t *backup_time);
-static void RotateHistory(void);
-static int findHistoryOffset(FILE *LogFile);
-
-static void WritePerJobHistoryFile(ClassAd*);
+ForkWork schedd_forker;
 
 // Create a hash table which, given a cluster id, tells how
 // many procs are in the cluster
@@ -684,9 +668,9 @@ InitQmgmt()
 			);
 	}
 
-	forker.Initialize();
-	int max_forkers = param_integer ("SCHEDD_QUERY_WORKERS",3,0);
-	forker.setMaxWorkers( max_forkers );
+	schedd_forker.Initialize();
+	int max_schedd_forkers = param_integer ("SCHEDD_QUERY_WORKERS",3,0);
+	schedd_forker.setMaxWorkers( max_schedd_forkers );
 
 	cluster_initial_val = param_integer("SCHEDD_CLUSTER_INITIAL_VALUE",1,1);
 	cluster_increment_val = param_integer("SCHEDD_CLUSTER_INCREMENT_VALUE",1,1);
@@ -1312,7 +1296,7 @@ handle_q(Service *, int, Stream *sock)
 		rval = do_Q_request( Q_SOCK->getReliSock(), may_fork );
 
 		if( may_fork && fork_status == FORK_FAILED ) {
-			fork_status = forker.NewJob();
+			fork_status = schedd_forker.NewJob();
 
 			if( fork_status == FORK_PARENT ) {
 				break;
@@ -1325,7 +1309,7 @@ handle_q(Service *, int, Stream *sock)
 
 	if( fork_status == FORK_CHILD ) {
 		dprintf(D_FULLDEBUG, "QMGR forked query done\n");
-		forker.WorkerDone(); // never returns
+		schedd_forker.WorkerDone(); // never returns
 		EXCEPT("ForkWork::WorkDone() returned!");
 	}
 	else if( fork_status == FORK_PARENT ) {
@@ -1593,8 +1577,17 @@ int DestroyProc(int cluster_id, int proc_id)
 	AppendHistory(ad);
 
 	// Write a per-job history file (if PER_JOB_HISTORY_DIR param is set)
-	WritePerJobHistoryFile(ad);
+	WritePerJobHistoryFile(ad, false);
 
+#if HAVE_DLOPEN
+  ScheddPluginManager::Archive(ad);
+#endif
+
+  if (FILEObj->file_newEvent("History", ad) == QUILL_FAILURE) {
+	  dprintf(D_ALWAYS, "AppendHistory Logging History Event --- Error\n");
+  }
+
+  // save job ad to the log
 	bool already_in_transaction = InTransaction();
 	if( !already_in_transaction ) {
 		BeginTransaction(); // for performance
@@ -1685,9 +1678,18 @@ int DestroyCluster(int cluster_id, const char* reason)
 
 				// Apend to history file
 				AppendHistory(ad);
+#if HAVE_DLOPEN
+				ScheddPluginManager::Archive(ad);
+#endif
+
+				if (FILEObj->file_newEvent("History", ad) == QUILL_FAILURE) {
+			  		dprintf(D_ALWAYS, "AppendHistory Logging History Event --- Error\n");
+		  		}
+
+  // save job ad to the log
 
 				// Write a per-job history file (if PER_JOB_HISTORY_DIR param is set)
-				WritePerJobHistoryFile(ad);
+				WritePerJobHistoryFile(ad, false);
 
 //				log = new LogDestroyClassAd(key);
 //				JobQueue->AppendLog(log);
@@ -1947,6 +1949,14 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 				stricmp( attr_name, ATTR_CRON_MONTHS ) == 0 ||
 				stricmp( attr_name, ATTR_CRON_DAYS_OF_WEEK ) == 0 ) {
 		scheduler.addCronTabClusterId( cluster_id );				
+	}
+	else if ( stricmp( attr_name, ATTR_JOB_STATUS ) == 0 ) {
+			// If the status is being set, let's record the previous
+			// status. If there is no status we'll default to
+			// UNEXPANDED.
+		int status = UNEXPANDED;
+		GetAttributeInt( cluster_id, proc_id, ATTR_JOB_STATUS, &status );
+		SetAttributeInt( cluster_id, proc_id, ATTR_LAST_JOB_STATUS, status );
 	}
 
 	// If any of the attrs used to create the signature are
@@ -3046,6 +3056,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 						EXCEPT("Failed to store '%s=%s' into job ad %d.%d",
 						       match_exp_name.Value(), new_value, cluster_id, proc_id);
 					}
+					free( new_value );
 				}
 			}
 		}
@@ -4116,450 +4127,6 @@ void FindPrioJob(PROC_ID & job_id)
 	job_id.proc = PrioRec[0].id.proc;
 	job_id.cluster = PrioRec[0].id.cluster;
 }
-
-static FILE *
-OpenHistoryFile() {
-		// Note that we are passing O_LARGEFILE, which lets us deal
-		// with files that are larger than 2GB. On systems where
-		// O_LARGEFILE isn't defined, the Condor source defines it to
-		// be 0 which has no effect. So we'll take advantage of large
-		// files where we can, but not where we can't.
-	if( !HistoryFile_fp ) {
-		int fd = safe_open_wrapper(JobHistoryFileName,
-                O_RDWR|O_CREAT|O_APPEND|O_LARGEFILE,
-                0644);
-		if( fd < 0 ) {
-			dprintf(D_ALWAYS,"ERROR opening history file (%s): %s\n",
-					JobHistoryFileName, strerror(errno));
-			return NULL;
-		}
-		HistoryFile_fp = fdopen(fd, "r+");
-		if ( !HistoryFile_fp ) {
-			dprintf(D_ALWAYS,"ERROR opening history file fp (%s): %s\n",
-					JobHistoryFileName, strerror(errno));
-			return NULL;
-		}
-	}
-	HistoryFile_RefCount++;
-	return HistoryFile_fp;
-}
-
-void
-CloseJobHistoryFile() {
-	ASSERT( HistoryFile_RefCount == 0 );
-	if( HistoryFile_fp ) {
-		fclose( HistoryFile_fp );
-		HistoryFile_fp = NULL;
-	}
-}
-
-static void
-RelinquishHistoryFile(FILE *fp) {
-	if( fp ) {
-		HistoryFile_RefCount--;
-	}
-		// keep the file open
-}
-
-// --------------------------------------------------------------------------
-// Write job ads to history file when they're destroyed
-// --------------------------------------------------------------------------
-
-static void AppendHistory(ClassAd* ad)
-{
-  bool failed = false;
-  static bool sent_mail_about_bad_history = false;
-
-  if (!JobHistoryFileName) return;
-  dprintf(D_FULLDEBUG, "Saving classad to history file\n");
-
-  // First we serialize the ad. If history file rotation is on,
-  // we'll need to know how big the ad is before we write it to the 
-  // history file. 
-  MyString ad_string;
-  int ad_size;
-  ad->sPrint(ad_string);
-  ad_size = ad_string.Length();
-
-  MaybeRotateHistory(ad_size);
-
-  if (FILEObj->file_newEvent("History", ad) == QUILL_FAILURE) {
-	  dprintf(D_ALWAYS, "AppendHistory Logging History Event --- Error\n");
-  }
-
-  // save job ad to the log
-  FILE *LogFile = OpenHistoryFile();
-  if (!LogFile) {
-	  dprintf(D_ALWAYS,"ERROR saving to history file (%s): %s\n",
-			  JobHistoryFileName, strerror(errno));
-	  failed = true;
-  } else {
-	  int offset = findHistoryOffset(LogFile);
-	  if (!ad->fPrint(LogFile)) {
-		  dprintf(D_ALWAYS, 
-				  "ERROR: failed to write job class ad to history file %s\n",
-				  JobHistoryFileName);
-		  fclose(LogFile);
-		  failed = true;
-	  } else {
-		  int cluster, proc, completion;
-		  MyString owner;
-
-		  if (!ad->LookupInteger("ClusterId", cluster)) {
-			  cluster = -1;
-		  }
-		  if (!ad->LookupInteger("ProcId", proc)) {
-			  proc = -1;
-		  }
-		  if (!ad->LookupInteger("CompletionDate", completion)) {
-			  completion = -1;
-		  }
-		  if (!ad->LookupString("Owner", owner)) {
-			  owner = "?";
-		  }
-		  fprintf(LogFile,
-                      "*** Offset = %d ClusterId = %d ProcId = %d Owner = \"%s\" CompletionDate = %d\n",
-				  offset, cluster, proc, owner.Value(), completion);
-		  fflush( LogFile );
-		  RelinquishHistoryFile( LogFile );
-      }
-  }
-
-  if ( failed ) {
-	  if ( !sent_mail_about_bad_history ) {
-		  FILE* email_fp = email_admin_open("Failed to write to HISTORY file");
-		  if ( email_fp ) {
-			sent_mail_about_bad_history = true;
-			fprintf(email_fp,
-			 "Failed to write completed job class ad to HISTORY file:\n"
-			 "      %s\n"
-			 "If you do not wish for Condor to save completed job ClassAds\n"
-			 "for later viewing via the condor_history command, you can \n"
-			 "remove the 'HISTORY' parameter line specified in the condor_config\n"
-			 "file(s) and issue a condor_reconfig command.\n"
-			 ,JobHistoryFileName);
-			email_close(email_fp);
-		  }
-	  }
-  } else {
-	  // did not fail, reset our email flag.
-	  sent_mail_about_bad_history = false;
-  }
-  
-  return;
-}
-
-// --------------------------------------------------------------------------
-// Decide if we should rotate the history file, and do the rotation if 
-// necessary.
-// --------------------------------------------------------------------------
-static void MaybeRotateHistory(int size_to_append)
-{
-    if (!JobHistoryFileName) {
-        // We aren't writing to the history file, so we will
-        // not rotate it.
-        return;
-    } else if (!DoHistoryRotation) {
-        // The user, for some reason, decided to turn off history
-        // file rotation. 
-        return;
-    } else {
-		FILE *fp = OpenHistoryFile();
-		if( !fp ) {
-			return;
-		}
-        filesize_t  history_file_size;
-        StatInfo    history_stat_info(fileno(fp));
-		history_file_size = history_stat_info.GetFileSize();
-		RelinquishHistoryFile( fp );
-
-        if (history_stat_info.Error() == SINoFile) {
-            ; // Do nothing, the history file doesn't exist
-        } else if (history_stat_info.Error() != SIGood) {
-            dprintf(D_ALWAYS, "Couldn't stat history file, will not rotate.\n");
-        } else {
-            if (history_file_size + size_to_append > MaxHistoryFileSize) {
-                // Writing the new ClassAd will make the history file too 
-                // big, so we will rotate the history file after removing
-                // extra history files. 
-                dprintf(D_ALWAYS, "Will rotate history file.\n");
-                RemoveExtraHistoryFiles();
-                RotateHistory();
-            }
-        }
-    }
-    return;
-    
-}
-
-// --------------------------------------------------------------------------
-// We only keep a certain number of history files, so before we rotate the 
-// history file, we need to make sure that we get rid of any old ones, so we
-// don't go over the max once we do the rotation. 
-//
-// Our algorithm is simple (easy to debug) but might have pathological behavior.
-// We walk through the directory that the history file is in, count how many
-// history files there are, and if there are >= max, we delete the oldest. 
-// If we need to delete more than one (perhaps someone changed the configured
-// max to be smaller), then we walk through the whole directory more than once. 
-// I am willing to bet that this is rare enough that it's not worth making this
-// more complicated. 
-// --------------------------------------------------------------------------
-static void RemoveExtraHistoryFiles(void)
-{
-    int num_backups;
-
-    do {
-        num_backups = MaybeDeleteOneHistoryBackup();
-    } while (num_backups >= NumberBackupHistoryFiles);
-    return;
-}
-
-// --------------------------------------------------------------------------
-// Count the number of history file backups. Delete the oldest one if we
-// are at the maximum. See RemoveExtraHistoryFiles();
-// --------------------------------------------------------------------------
-static int MaybeDeleteOneHistoryBackup(void)
-{
-    int num_backups = 0;
-    char *history_dir = condor_dirname(JobHistoryFileName);
-
-    if (history_dir != NULL) {
-        Directory dir(history_dir);
-        const char *current_filename;
-        time_t current_time;
-        char *oldest_history_filename = NULL;
-        time_t oldest_time = 0;
-
-        // Find number of backups and oldest backup
-        for (current_filename = dir.Next(); 
-             current_filename != NULL; 
-             current_filename = dir.Next()) {
-            
-            if (IsHistoryFilename(current_filename, &current_time)) {
-                num_backups++;
-                if (oldest_history_filename == NULL 
-                    || current_time < oldest_time) {
-
-                    if (oldest_history_filename != NULL) {
-                        free(oldest_history_filename);
-                    }
-                    oldest_history_filename = strdup(current_filename);
-                    oldest_time = current_time;
-                }
-            }
-        }
-
-        // If we have too many backups, delete the oldest
-        if (oldest_history_filename != NULL && num_backups >= NumberBackupHistoryFiles) {
-            dprintf(D_ALWAYS, "Before rotation, deleting old history file %s\n",
-                    oldest_history_filename);
-            num_backups--;
-
-            if (dir.Find_Named_Entry(oldest_history_filename)) {
-                if (!dir.Remove_Current_File()) {
-                    dprintf(D_ALWAYS, "Failed to delete %s\n", oldest_history_filename);
-                    num_backups = 0; // prevent looping forever
-                }
-            } else {
-                dprintf(D_ALWAYS, "Failed to find/delete %s\n", oldest_history_filename);
-                num_backups = 0; // prevent looping forever
-            }
-        }
-        free(history_dir);
-		free(oldest_history_filename);
-    }
-    return num_backups;
-}
-
-// --------------------------------------------------------------------------
-// A history file should being with the base that the user specified, 
-// and it should end with an ISO time. We check both, and return the time
-// specified by the ISO time. 
-// --------------------------------------------------------------------------
-static bool IsHistoryFilename(const char *filename, time_t *backup_time)
-{
-    bool       is_history_filename;
-    const char *history_base;
-    int        history_base_length;
-
-    is_history_filename = false;
-    history_base        = condor_basename(JobHistoryFileName);
-    history_base_length = strlen(history_base);
-
-    if (   !strncmp(filename, history_base, history_base_length)
-        && filename[history_base_length] == '.') {
-        // The filename begins correctly, now see if it ends in an 
-        // ISO time
-        struct tm file_time;
-        bool is_utc;
-
-        iso8601_to_time(filename + history_base_length + 1, &file_time, &is_utc);
-        if (   file_time.tm_year != -1 && file_time.tm_mon != -1 
-            && file_time.tm_mday != -1 && file_time.tm_hour != -1
-            && file_time.tm_min != -1  && file_time.tm_sec != -1
-            && !is_utc) {
-            // This appears to be a proper history file backup.
-            is_history_filename = true;
-            *backup_time = mktime(&file_time);
-        }
-    }
-
-    return is_history_filename;
-}
-
-// --------------------------------------------------------------------------
-// Rotate the history file. This is called by MaybeRotateHistory()
-// --------------------------------------------------------------------------
-static void RotateHistory(void)
-{
-    // The job history will be named with the current time. 
-    // I hate timestamps of seconds, because they aren't readable by 
-    // humans, so we'll use ISO 8601, which is easily machine and human
-    // readable, and it sorts nicely. So first we create a representation
-    // for the current time.
-    time_t     current_time;
-    struct tm  *local_time;
-    char       *iso_time;
-
-    current_time = time(NULL);
-    local_time = localtime(&current_time);
-    iso_time = time_to_iso8601(*local_time, ISO8601_BasicFormat, 
-                               ISO8601_DateAndTime, false);
-
-    // First, select a name for the rotated history file
-    MyString   rotated_history_name(JobHistoryFileName);
-    rotated_history_name += '.';
-    rotated_history_name += iso_time;
-    free(iso_time); // It was malloced by time_to_iso8601()
-
-	CloseJobHistoryFile();
-
-    // Now rotate the file
-    if (rotate_file(JobHistoryFileName, rotated_history_name.Value())) {
-        dprintf(D_ALWAYS, "Failed to rotate history file to %s\n",
-                rotated_history_name.Value());
-        dprintf(D_ALWAYS, "Because rotation failed, the history file may get very large.\n");
-    }
-
-    return;
-}
-
-// --------------------------------------------------------------------------
-// Figure out how far from the end the beginning of the last line in the
-// history file is. We assume that the file is open. We reset the file pointer
-// to the end of the file when we are done.
-// --------------------------------------------------------------------------
-static int findHistoryOffset(FILE *LogFile)
-{
-    int offset;
-    int file_size;
-    const int JUMP = 200;
-
-    fseek(LogFile, 0, SEEK_END);
-    file_size = ftell(LogFile);
-    if (file_size == 0 || file_size == -1) {
-        // If there is nothing in the file, the offset of the previous
-        // line is 0. 
-        offset = 0;
-    } else {
-        bool found = false;
-        char *buffer = (char *) malloc(JUMP + 1);
-        int current_offset; 
-
-        // We need to skip the last newline
-        if (file_size > 1) {
-            file_size--;
-        }
-
-        current_offset = file_size;
-        while (!found) {
-            current_offset -= JUMP;
-            if (current_offset < 0) {
-                current_offset = 0;
-            }
-            memset(buffer, 0, JUMP+1);
-            if (fseek(LogFile, current_offset, SEEK_SET)) {
-                // We failed for some reason
-                offset = -1;
-                break;
-            }
-            int n = fread(buffer, 1, JUMP, LogFile);
-            if (n < JUMP) {
-                // We failed for some reason: we know we should 
-                // be able to read this much. 
-                offset = -1;
-                break;
-            }
-            // Look for the newline, backwards through this buffer
-            for (int i = JUMP-1; i >= 0; i--) {
-                if (buffer[i] == '\n') {
-                    found = true;
-                    offset = current_offset + i + 1;
-                    break;
-                }
-            }
-            if (current_offset == 0) {
-                // We read all the way back to the beginning
-                if (!found) {
-                    offset = 0;
-                    found = true;
-                }
-                break;
-            }
-        }
-		free(buffer);
-    }
-	
-    fseek(LogFile, 0, SEEK_END);
-    return offset;
-}
-
-static void WritePerJobHistoryFile(ClassAd* ad)
-{
-	if (PerJobHistoryDir == NULL) {
-		return;
-	}
-
-	// construct the name (use cluster.proc)
-	int cluster, proc;
-	if (!ad->LookupInteger(ATTR_CLUSTER_ID, cluster)) {
-		dprintf(D_ALWAYS | D_FAILURE,
-		        "not writing per-job history file: no cluster id in ad\n");
-		return;
-	}
-	if (!ad->LookupInteger(ATTR_PROC_ID, proc)) {
-		dprintf(D_ALWAYS | D_FAILURE,
-		        "not writing per-job history file: no proc id in ad\n");
-		return;
-	}
-	MyString file_name;
-	file_name.sprintf("%s/history.%d.%d", PerJobHistoryDir, cluster, proc);
-
-	// write out the file
-	int fd = safe_open_wrapper(file_name.Value(), O_WRONLY | O_CREAT | O_EXCL, 0644);
-	if (fd == -1) {
-		dprintf(D_ALWAYS | D_FAILURE,
-		        "error %d (%s) opening per-job history file for job %d.%d\n",
-		        errno, strerror(errno), cluster, proc);
-		return;
-	}
-	FILE* fp = fdopen(fd, "w");
-	if (fp == NULL) {
-		dprintf(D_ALWAYS | D_FAILURE,
-		        "error %d (%s) opening file stream for per-job history for job %d.%d\n",
-		        errno, strerror(errno), cluster, proc);
-		close(fd);
-		return;
-	}
-	if (!ad->fPrint(fp)) {
-		dprintf(D_ALWAYS | D_FAILURE,
-		        "error writing per-job history file for job %d.%d\n",
-		        cluster, proc);
-	}
-	fclose(fp);
-}
-
 
 void
 dirtyJobQueue()

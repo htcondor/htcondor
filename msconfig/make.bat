@@ -57,6 +57,10 @@ REM Make gsoap stubs, etc.
 call :MAKE_GSOAP
 if %ERRORLEVEL% neq 0 goto :GSOAP_FAIL
 
+REM Make param stubs
+call :MAKE_PARAM
+if %ERRORLEVEL% neq 0 goto :PARAM_FAIL
+
 REM ======================================================================
 REM NOTE: make_win32_externals.bat implicitly calls set_vars.bat, so just 
 REM run the build as long as the extenals built ok.
@@ -64,6 +68,10 @@ REM ======================================================================
 
 REM Launch the Visual Studio IDE
 call :RUN_BUILD
+if %ERRORLEVEL% neq 0 goto :FAIL
+
+REM Make some aliases...
+call :MAKE_ALIASES
 if %ERRORLEVEL% neq 0 goto :FAIL
 
 REM We're done, let's get out of here
@@ -101,6 +109,9 @@ echo *** Failed to put vsprops file in place ***
 exit %INTERACTIVE% 1
 :GSOAP_FAIL
 echo *** gsoap stub generator failed ***
+exit %INTERACTIVE% 1
+:PARAM_FAIL
+echo *** param stub generator failed ***
 exit %INTERACTIVE% 1
 
 REM ======================================================================
@@ -149,6 +160,15 @@ if %ERRORLEVEL% neq 0 exit /b 1
 exit /b 0
 
 REM ======================================================================
+:MAKE_PARAM
+REM ======================================================================
+REM Make param stubs
+REM ======================================================================
+nmake /nologo /f param.mak
+if %ERRORLEVEL% neq 0 exit /b 1
+exit /b 0
+
+REM ======================================================================
 :RUN_BUILD
 REM ======================================================================
 REM Build condor (build order is now preserved in project)
@@ -157,5 +177,29 @@ echo. & echo *** Current Environment & echo.
 set
 echo. & echo *** Building Condor & echo.
 msbuild condor.sln /nologo /m /t:condor /p:Configuration="%CONFIGURATION%";VCBuildUseEnvironment="true"
+if %ERRORLEVEL% neq 0 exit /b 1
+exit /b 0
+
+REM ======================================================================
+:MAKE_ALIASES
+REM ======================================================================
+REM Make gsoap stubs, etc.
+REM ======================================================================
+echo. & echo *** Making some aliases...
+pushd %cd%\..\Release
+copy condor_rm.exe condor_hold.exe
+copy condor_rm.exe condor_release.exe
+copy condor_rm.exe condor_vacate_job.exe
+move condor_tool.exe condor.exe
+copy condor.exe condor_on.exe
+copy condor.exe condor_off.exe
+copy condor.exe condor_restart.exe
+copy condor.exe condor_reconfig.exe
+copy condor.exe condor_reschedule.exe
+copy condor.exe condor_vacate.exe
+copy condor.exe condor_set_shutdown.exe
+copy condor.exe condor_squawk.exe
+copy condor_cod.exe condor_cod_request.exe
+popd
 if %ERRORLEVEL% neq 0 exit /b 1
 exit /b 0

@@ -63,7 +63,7 @@
 class ProcFamilyInterface;
 
 #if defined(WIN32)
-#include "pipe.WIN32.h"
+#include "pipe.WINDOWS.h"
 #endif
 
 #define DEBUG_SETTABLE_ATTR_LISTS 0
@@ -976,7 +976,8 @@ class DaemonCore : public Service
                used as argv[0].
         @param priv The priv state to change into right before
                the exec.  Default = no action.
-        @param reaper_id The reaper number to use.  Default = 1.
+        @param reaper_id The reaper number to use.  Default = 1. If a
+			   reaper_id of 0 is used, no reaper callback will be invoked.
         @param want_command_port Well, do you?  Default = TRUE.  If
 			   want_command_port it TRUE, the child process will be
 			   born with a daemonCore command socket on a dynamic port.

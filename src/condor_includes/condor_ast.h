@@ -84,6 +84,10 @@ class EvalResult
 
 	void fPrintResult(FILE *); // for debugging
 
+		/// convert to LX_STRING
+		/// if value is ERROR or UNDEFINED, do not convert unless force=true
+	void toString(bool force=false);
+
    	union
     	{
    	    int i;
@@ -479,6 +483,10 @@ class Function: public FunctionBase
 						EvalResult *result);
 	int FunctionFormatTime(int number_of_args, EvalResult *evaluated_args, 
 						EvalResult *result);
+
+	int FunctionEval(AttrList const *attrlist1, AttrList const *attrlist2,
+					 int number_of_args, EvalResult *evaluated_args,
+					 EvalResult *result);
 };
 
 #endif

@@ -1,10 +1,13 @@
 #! /usr/bin/env perl
 
-my $file = "job_dagman_retry_recovery-nodeB.works";
+my @files = ("job_dagman_retry_recovery-nodeB.works",
+		"job_dagman_retry_recovery-nodeB2.works");
 
-if (-e $file) {
-	unlink $file or die "Unlink failed: $!";
-	print "Unlinked $file\n";
+foreach $file (@files) {
+	if (-e $file) {
+		unlink $file or die "Unlink failed: $!";
+		print "Unlinked $file\n";
+	}
 }
 
 print "Node A succeeded\n";

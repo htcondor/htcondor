@@ -118,6 +118,7 @@ HADStateMachine::freeResources(void)
 		free(m_replicationDaemonSinfulString);
 		m_replicationDaemonSinfulString = NULL;
     }
+
 	// classad finalizings
 	utilCancelTimer( m_updateCollectorTimerId );
     m_updateCollectorInterval = -1;
@@ -128,7 +129,17 @@ HADStateMachine::freeResources(void)
 */
 HADStateMachine::~HADStateMachine(void)
 {
+
+    ClassAd invalidate_ad;
+    MyString line;
+
     freeResources();
+
+    invalidate_ad.SetMyTypeName( QUERY_ADTYPE );
+    invalidate_ad.SetTargetTypeName( HAD_ADTYPE );
+    line.sprintf( "%s == \"%s\"", ATTR_NAME, m_name.Value( ) );
+    invalidate_ad.AssignExpr( ATTR_REQUIREMENTS, line.Value( ) );
+    daemonCore->sendUpdates( INVALIDATE_HAD_ADS, &invalidate_ad, NULL, false );
 }
 
 

@@ -86,7 +86,7 @@ VMGahpServer::VMGahpServer(const char *vmgahpserver,
 	m_include_gahp_log = false;
 #endif
 
-	m_send_all_classad = param_boolean("VM_GAHP_SEND_ALL_CLASSAD", false);
+	m_send_all_classad = param_boolean("VM_GAHP_SEND_ALL_CLASSAD", true);
 
 	if( m_send_all_classad ) {
 		dprintf( D_FULLDEBUG, "Will send the entire job ClassAd to vmgahp\n");

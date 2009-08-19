@@ -323,6 +323,9 @@ class GahpClient : public Service {
 		const char *
 			getGlobusGassServerUrl() { return server->globus_gass_server_url; }
 
+		const char *getGt2CallbackContact()
+			{ return server->globus_gt2_gram_callback_contact; }
+
 		/// cache it from the gahp
 		const char *
 		globus_gram_client_error_string(int error_code);
@@ -338,7 +341,7 @@ class GahpClient : public Service {
 		int 
 		globus_gram_client_job_request(const char * resource_manager_contact,
 			const char * description,
-			const int job_state_mask,
+			const int limited_deleg,
 			const char * callback_contact,
 			char ** job_contact);
 
@@ -380,7 +383,8 @@ class GahpClient : public Service {
 
 		///
 		int
-		globus_gram_client_job_refresh_credentials(const char *job_contact);
+		globus_gram_client_job_refresh_credentials(const char *job_contact,
+												   int limited_deleg);
 
 		///
 		int
@@ -517,6 +521,11 @@ class GahpClient : public Service {
 		int
 		nordugrid_status(const char *hostname, const char *job_id,
 						 char *&status);
+
+		int
+		nordugrid_ldap_query(const char *hostname, const char *ldap_base,
+							 const char *ldap_filter, const char *ldap_attrs,
+							 StringList &results);
 
 		int
 		nordugrid_cancel(const char *hostname, const char *job_id);

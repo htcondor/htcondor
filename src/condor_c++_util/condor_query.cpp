@@ -463,7 +463,7 @@ fetchAds (ClassAdList &adList, const char *poolName, CondorError* errstack)
 	  case GENERIC_AD:
 		  // For now, at least, there is no separate QUERY_GENERIC_ADS
 		  // command, so send the ANY_ADTYPE
-		queryAd.SetTargetTypeName (ANY_ADTYPE);
+		queryAd.SetTargetTypeName (GENERIC_ADTYPE);
 		break;
 
 	  case XFER_SERVICE_AD:
@@ -493,6 +493,10 @@ fetchAds (ClassAdList &adList, const char *poolName, CondorError* errstack)
       case GRID_AD:
         queryAd.SetTargetTypeName (GRID_ADTYPE);
         break;
+
+	  case HAD_AD:
+		queryAd.SetTargetTypeName (HAD_ADTYPE);
+		break;
 
 	  default:
 		return Q_INVALID_QUERY;
