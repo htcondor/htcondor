@@ -119,6 +119,11 @@ Instead, the command \Condor{reconfig} will cause the changes to be utilized.
 \item \Condor{dagman} now automatically generates a default user log
 file for any node job that does not specify one.
 
+\item The \Condor{master} daemon will now print the path and arguments
+  to any daemons it starts if D\_FULLDEBUG is enabled.  Previously,
+  there was no way to get it to display the arguments with which it
+  was starting a daemon.
+
 \end{itemize}
 
 \noindent Configuration Variable Additions and Changes:
