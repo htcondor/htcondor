@@ -1,0 +1,25 @@
+NAME = condor_hdfs_io
+all_target( $(NAME) )
+
+JAVA_HOME=/s/java/i386_cent40/
+HDFS_LIB = /scratch/faisal_2/CONDOR_SRC/src/condor_hdfs/libhdfs/libhdfs.so 
+LIB =  $(HDFS_LIB) $(STD_LIBS)
+
+HDFS_FLAGS = -I$(JAVA_HOME)/include -I$(JAVA_HOME)/include/linux 
+CFLAGS = -g $(STD_C_FLAGS)
+LDFLAGS = -L$(JAVA_HOME)/jre/lib/i386/server -L. -ljvm -lhdfs -lpthread
+C_PLUS_FLAGS = -g $(HDFS_FLAGS) $(STD_C_PLUS_FLAGS)
+
+OBJ = condor_hdfs_io.o io_test.o
+
+public_c_plus_target($(NAME), sbin, $(OBJ),$(LIB))
+
+html:
+release:: all
+stripped:: all
+static:: all
+clean::
+
+gen_soapfiles(hdfs, condorHDFS)
+
+testbin:: all
