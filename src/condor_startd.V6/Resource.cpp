@@ -1660,10 +1660,10 @@ Resource::publish( ClassAd* cap, amask_t mask )
 		int iPeriodPos = szTmp.find(".");
 
 		if ( iPeriodPos >=0 ) {
-                      szTmp.setChar ( iPeriodPos,  '\0' );
-               }
-
-               config_fill_ad( cap, szTmp.Value() );
+			szTmp.setChar ( iPeriodPos,  '\0' );
+		}
+		
+		config_fill_ad( cap, szTmp.Value() );
 
 			// Also, include a slot ID attribute, since it's handy for
 			// defining expressions, and other things.
