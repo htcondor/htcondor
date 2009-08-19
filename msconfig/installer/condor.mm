@@ -60,6 +60,9 @@
 <$Property "VMMEMORY" VALUE="256">
 <$Property "VMMAXNUMBER" VALUE="$(NUM_CPUS)">
 <$Property "VMNETWORKING" VALUE="N">
+<$Property "USEHDFS" VALUE="N">
+<$Property "HDFSPORT" VALUE="9000">
+<$Property "HDFSWEBPORT" VALUE="8000">
 
 ;---------------------------------------------------------------------------
 ;--- Persistent values -----------------------------------------------------
@@ -253,8 +256,8 @@
 	#)
 
 	<$DialogEntry Property="NAMENODE" Label="Primary Name Node:" ToolTip="Hostname or IP Address of primary name node." Width=100 Blank="Y">
-	<$DialogEntry Property="NNODEPORT" Label="Name Node Port:" ToolTip="Port of primary name node." Width=100 Blank="N" Value="9000">
-	<$DialogEntry Property="NNODEWEBPORT" Label="Name Node Web Port:" ToolTip="Port of primary name node web interface." Width=100 Blank="N" Value="8000">
+	<$DialogEntry Property="HDFSPORT" Label="Name Node Port:" ToolTip="Port of primary name node." Width=100 Blank="N">
+	<$DialogEntry Property="HDFSWEBPORT" Label="Name Node Web Port:" ToolTip="Port of primary name node web interface." Width=100 Blank="N">
 <$/Dialog>
 
 <$Table "ControlCondition">
@@ -282,11 +285,13 @@
 <$Component "CreateLogFolder" Create="Y" Directory_="LOGDIR">
 	<$DirectoryTree Key="LOGDIR" Dir="[INSTALLDIR]\log" MAKE="Y">
 <$/Component>
-<$Component "CreateHDFSNameFolder" Create="Y" Directory_="LOGDIR">
-	<$DirectoryTree Key="LOGDIR" Dir="[INSTALLDIR]\log" MAKE="Y">
+
+;--- Create directories for HDFS if needed ----------------------------------
+<$Component "CreateHDFSNameFolder" Create="Y" Directory_="HDFSNAMEDIR" Condition=^USEHDFS = "Y"^>
+	<$DirectoryTree Key="HDFSNAMEDIR" Dir="[INSTALLDIR]\hdfs\hadoop_name" MAKE="Y">
 <$/Component>
-<$Component "CreateHDFSDataFolder" Create="Y" Directory_="LOGDIR">
-	<$DirectoryTree Key="LOGDIR" Dir="[INSTALLDIR]\log" MAKE="Y">
+<$Component "CreateHDFSDataFolder" Create="Y" Directory_="HDFSDATADIR" Condition=^USEHDFS = "Y"^>
+	<$DirectoryTree Key="HDFSDATADIR" Dir="[INSTALLDIR]\hdfs\hadoop_data" MAKE="Y">
 <$/Component>
 
 

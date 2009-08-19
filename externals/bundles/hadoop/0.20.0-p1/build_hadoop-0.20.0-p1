@@ -1,0 +1,43 @@
+#! /bin/sh
+
+set x
+. $EXTERNALS_CONFIG
+
+rm -rf hdfs
+
+mkdir hdfs
+mkdir hdfs/lib
+mkdir hdfs/conf
+
+if [ $? -ne 0 ]
+then
+    echo "mkdir failed"
+    exit 1
+fi   
+
+cp -r $PACKAGE_NAME/lib hdfs/lib
+cp $PACKAGE_NAME/hadoop-0.20.0-p1-core.jar hdfs/lib/
+cp $PACKAGE_NAME/src/hdfs/hdfs-default.xml hdfs/conf/
+
+if [ $? -ne 0 ]
+then
+	echo "copy failed"
+	exit 1
+fi
+
+rm -rf $EXTERNALS_INSTALL_DIR/hdfs
+if [ $? -ne 0 ]
+then
+  echo "failed to remove old hdfs directory under externals_install dir"
+  exit 1
+fi
+
+rm -rf $EXTERNALS_INSTALL_DIR/$PACKAGE_NAME
+mkdir $EXTERNALS_INSTALL_DIR/$PACKAGE_NAME
+mv hdfs $EXTERNALS_INSTALL_DIR/$PACKAGE_NAME/
+
+if [ $? -ne 0 ]
+then
+	echo "install failed"
+	exit 1
+fi

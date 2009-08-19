@@ -2889,6 +2889,10 @@ else
 	AC_MSG_RESULT([$_cv_including_voms])
 fi
 
+if test "x$_cv_linux_distro" = "xRHEL5" -o "x$_cv_linux_distro" = "xRHEL3" -a "$_cv_arch" = "xI386" ; then
+  CHECK_EXTERNAL([cream],[1.10.1], [soft])
+fi
+
 CHECK_EXTERNAL([pcre], [7.6], [hard],
                [use PCRE (provides regular expression support)],
                MF_LIB_CHECK([pcre], [[pcre pcre_compile]], [PCRE]))
@@ -2985,6 +2989,9 @@ fi
 
 # Look for the curl external library, used by the file transfer object
 CHECK_EXTERNAL([curl],[7.19.6],[soft])
+
+#Look for hadoop jars, required by HDFS daemon as well by hdfs file plugin
+CHECK_EXTERNAL([hadoop],[0.20.0-p1],[soft])
 
 # The test for gsoap needs to happen after the openssl check, so
 # openssl libs, if found, will be in LIBS. Also, if we do not have

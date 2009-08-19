@@ -1753,6 +1753,7 @@ SetUniverse()
 			//   people who care about the old value. This changed happend in
 			//   Condor 6.7.12.
 			if ((stricmp (JobGridType, "gt2") == MATCH) ||
+				(stricmp (JobGridType, "gt5") == MATCH) ||
 				(stricmp (JobGridType, "gt4") == MATCH) ||
 				(stricmp (JobGridType, "infn") == MATCH) ||
 				(stricmp (JobGridType, "blah") == MATCH) ||
@@ -4886,6 +4887,7 @@ SetGlobusParams()
 
 		if ( stricmp (JobGridType, "gt2") == MATCH ||
 			 stricmp (JobGridType, "gt4") == MATCH ||
+			 stricmp (JobGridType, "gt5") == MATCH ||
 			 stricmp (JobGridType, "oracle") == MATCH ) {
 
 			char * jobmanager_type;
@@ -5102,6 +5104,7 @@ SetGlobusParams()
 	if ( !unified_syntax && JobGridType &&
 		 ( stricmp (JobGridType, "gt2") == MATCH ||
 		   stricmp (JobGridType, "gt4") == MATCH ||
+		   stricmp (JobGridType, "gt5") == MATCH ||
 		   stricmp (JobGridType, "oracle") == MATCH ||
 		   stricmp (JobGridType, "nordugrid") == MATCH ) ) {
 
@@ -5113,6 +5116,7 @@ SetGlobusParams()
 	if ( JobGridType == NULL ||
 		 stricmp (JobGridType, "gt2") == MATCH ||
 		 stricmp (JobGridType, "gt4") == MATCH ||
+		 stricmp (JobGridType, "gt5") == MATCH ||
 		 stricmp (JobGridType, "oracle") == MATCH ||
 		 stricmp (JobGridType, "nordugrid") == MATCH ) {
 
@@ -5137,6 +5141,7 @@ SetGlobusParams()
 
 	if ( JobGridType == NULL ||
 		 stricmp (JobGridType, "gt2") == MATCH ||
+		 stricmp (JobGridType, "gt5") == MATCH ||
 		 stricmp (JobGridType, "gt4") == MATCH ) {
 
 		buffer.sprintf( "%s = %d", ATTR_GLOBUS_STATUS,
@@ -5360,6 +5365,7 @@ SetGSICredentials()
 		 JobGridType != NULL &&
 		 (stricmp (JobGridType, "gt2") == MATCH ||
 		  stricmp (JobGridType, "gt4") == MATCH ||
+		  stricmp (JobGridType, "gt5") == MATCH ||
 		  stricmp (JobGridType, "cream") == MATCH ||
 		  stricmp (JobGridType, "nordugrid") == MATCH)) {
 

@@ -67,10 +67,16 @@
 #define NordugridGahp
 #endif
 
-#if WANT_HDFS
+#if HAVE_EXT_HADOOP
 #define hdfsProgs hdfs
 #else
 #define hdfsProgs
+#endif
+
+#if HAVE_EXT_CREAM
+#define CreamGahp CREAM_GAHP
+#else
+#define CreamGahp
 #endif
 
 #define Programs \
@@ -83,7 +89,7 @@
 		TTProgs DeploymentTools \
 		eventd.V2 transferd procd privsep vm-gahp EC2 \
 		JobRouterProgs GlobusGahps NordugridGahp startd_factory \
-		power
+		CreamGahp power
 
 #define Libraries \
 		util_lib target-ccb daemon_core.V6 daemon_client target-classad.old c++_util	\
@@ -302,7 +308,7 @@ condor_object_target(procd)
 condor_object_target(privsep)
 condor_object_target(dcskel)
 
-#if WANT_HDFS
+#if HAVE_EXT_HADOOP
 condor_object_target(hdfs)
 #endif
 
@@ -427,6 +433,11 @@ ext_target(EXT_OPENSSL_VERSION,$(NULL))
 ext_target(EXT_GLOBUS_VERSION,$(EXT_TRIGGER)/$(EXT_OPENSSL_VERSION))
 #endif
 
+#if HAVE_EXT_CREAM
+ext_target(EXT_CREAM_VERSION,$(EXT_TRIGGER)/$(EXT_GLOBUS_VERSION) $(EXT_TRIGGER)/$(EXT_VOMS_VERSION))
+object_target(CREAM_GAHP,cream_gahp)
+#endif
+
 #if HAVE_EXT_UNICOREGAHP
 ext_target(EXT_UNICOREGAHP_VERSION,$(NULL))
 #endif
@@ -469,6 +480,10 @@ ext_target(EXT_COREDUMPER_VERSION,$(NULL))
 
 #if HAVE_EXT_CURL
 ext_target(EXT_CURL_VERSION,$(NULL))
+#endif
+
+#if HAVE_EXT_HADOOP
+ext_target(EXT_HADOOP_VERSION,$(NULL))
 #endif
 
 #if HAVE_EXT_DRMAA
