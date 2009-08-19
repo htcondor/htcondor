@@ -172,6 +172,10 @@ class Dagman {
 		// DAG(s).
 	bool dumpRescueDag;
 
+		// The default log file for node jobs that don't specify a
+		// log file.
+	char * _defaultNodeLog;
+
     bool Config();
 };
 

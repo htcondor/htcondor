@@ -2643,6 +2643,7 @@ doRunAnalysisToBuffer( ClassAd *request )
 	int		fRankCond		= 0;
 	int		fPreemptPrioCond= 0;
 	int		fPreemptReqTest	= 0;
+	int     fOffline        = 0;
 	int		available		= 0;
 	int		totalMachines	= 0;
 
@@ -2721,7 +2722,12 @@ doRunAnalysisToBuffer( ClassAd *request )
 			continue;
 		}	
 
-			
+		int offline = 0;
+		if( offer->EvalBool( ATTR_OFFLINE, NULL, offline ) && offline ) {
+			fOffline++;
+			continue;
+		}
+
 		// 3. Is there a remote user?
 		if( !offer->LookupString( ATTR_REMOTE_USER, remoteUser ) ) {
 			if( stdRankCondition->EvalTree( offer, request, &eval_result ) &&
@@ -2811,6 +2817,7 @@ doRunAnalysisToBuffer( ClassAd *request )
 		 "  %5d match but are serving users with a better priority in the pool%s\n"
 		 "  %5d match but reject the job for unknown reasons\n"
 		 "  %5d match but will not currently preempt their existing job\n"
+         "  %5d match but are currently offline\n"
 		 "  %5d are available to run your job\n",
 		return_buff, cluster, proc, totalMachines,
 		fReqConstraint,
@@ -2818,6 +2825,7 @@ doRunAnalysisToBuffer( ClassAd *request )
 		fPreemptPrioCond, niceUser ? "(*)" : "",
 		fRankCond,
 		fPreemptReqTest,
+		fOffline,
 		available );
 
 	int last_match_time=0, last_rej_match_time=0;

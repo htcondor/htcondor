@@ -538,6 +538,9 @@ MASTER_DEBUG		=
 MAX_JOB_ROUTER_LOG      = 1000000
 JOB_ROUTER_DEBUG        =
 
+MAX_ROOSTER_LOG         = 1000000
+ROOSTER_DEBUG           =
+
 # High Availability Logs
 MAX_HAD_LOG		= 1000000
 HAD_DEBUG		=
@@ -794,12 +797,13 @@ UWCS_NEGOTIATOR_PRE_JOB_RANK = RemoteOwner =?= UNDEFINED
 ##  resources that are equally preferred by the job.
 ##  The following example expression steers jobs toward
 ##  faster machines and tends to fill a cluster of multi-processors
-##  breadth-first instead of depth-first.  In this example,
+##  breadth-first instead of depth-first.  It also prefers online
+##  machines over offline (hibernating) ones.  In this example,
 ##  the expression is chosen to have no effect when preemption
 ##  would take place, allowing control to pass on to
 ##  PREEMPTION_RANK.
-#UWCS_NEGOTIATOR_POST_JOB_RANK = \
-# (RemoteOwner =?= UNDEFINED) * (KFlops - SlotID)
+UWCS_NEGOTIATOR_POST_JOB_RANK = \
+ (RemoteOwner =?= UNDEFINED) * (KFlops - SlotID - 1.0e10*(Offline=?=True))
 
 ##  The negotiator will not preempt a job running on a given machine
 ##  unless the PREEMPTION_REQUIREMENTS expression evaluates to true
@@ -889,6 +893,7 @@ SHADOW_LOG	= $(LOG)/ShadowLog
 STARTD_LOG	= $(LOG)/StartLog
 STARTER_LOG	= $(LOG)/StarterLog
 JOB_ROUTER_LOG  = $(LOG)/JobRouterLog
+ROOSTER_LOG     = $(LOG)/RoosterLog
 # High Availability Logs
 HAD_LOG		= $(LOG)/HADLog
 REPLICATION_LOG	= $(LOG)/ReplicationLog
@@ -1013,7 +1018,7 @@ DAEMON_LIST			= MASTER, STARTD, SCHEDD
 #DC_DAEMON_LIST = \
 #MASTER, STARTD, SCHEDD, KBDD, COLLECTOR, NEGOTIATOR, EVENTD, \
 #VIEW_SERVER, CONDOR_VIEW, VIEW_COLLECTOR, HAWKEYE, CREDD, HAD, \
-#DBMSD, QUILL, JOB_ROUTER, LEASEMANAGER
+#DBMSD, QUILL, JOB_ROUTER, ROOSTER, LEASEMANAGER
 
 
 ##  Where are the binaries for these daemons?
@@ -1025,6 +1030,7 @@ NEGOTIATOR			= $(SBIN)/condor_negotiator
 COLLECTOR			= $(SBIN)/condor_collector
 STARTER_LOCAL			= $(SBIN)/condor_starter
 JOB_ROUTER                      = $(LIBEXEC)/condor_job_router
+ROOSTER                         = $(LIBEXEC)/condor_rooster
 
 ##  When the master starts up, it can place it's address (IP and port)
 ##  into a file.  This way, tools running on the local machine don't
@@ -2290,6 +2296,20 @@ XEN_SCRIPT = $(SBIN)/condor_vm_xen.sh
 ## The contents of this file will be added to the Xen virtual machine
 ## description that Condor writes.
 #XEN_LOCAL_SETTINGS_FILE = /path/to/file
+
+## This is the path to the XML helper command; the libvirt_simple_script.awk
+## script just reproduces what Condor already does for the kvm/xen VM
+## universe
+
+#LIBVIRT_XML_SCRIPT = $(SBIN)/libvirt_simple_script.awk 
+
+## This is the optional debugging output file for the xml helper
+## script.  Scripts that need to output debugging messages should
+## write them to the file specified by this argument, which will be
+## passed as the second command line argument when the script is
+## executed
+
+#LIBVRT_XML_SCRIPT_ARGS = /dev/stderr
 
 
 ##

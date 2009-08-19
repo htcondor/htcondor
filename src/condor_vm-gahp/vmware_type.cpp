@@ -416,6 +416,9 @@ VMwareType::VMwareType(const char* prog_for_script, const char* scriptname,
 	VMType(prog_for_script, scriptname, workingpath, ad)
 {
 	m_vmtype = CONDOR_VM_UNIVERSE_VMWARE;
+
+	//m_cputime_before_suspend = 0;
+
 	m_need_snapshot = false;
 	m_restart_with_ckpt = false;
 	m_vmware_transfer = false;
@@ -1123,6 +1126,7 @@ VMwareType::Start()
 
 	setVMStatus(VM_RUNNING);
 	m_start_time.getTime();
+    //m_cpu_time = 0;
 	return true;
 }
 
@@ -1381,6 +1385,8 @@ VMwareType::Suspend()
 	// Suspend succeeds. So there is no process for VM.
 	m_vm_pid = 0;
 	setVMStatus(VM_SUSPENDED);
+	//m_cputime_before_suspend += m_cpu_time;
+	//m_cpu_time = 0;
 	return true;
 }
 
@@ -1506,6 +1512,7 @@ VMwareType::Status()
 
 	MyString vm_status;
 	int vm_pid = 0;
+	float cputime = 0;
 	cmd_out.rewind();
 	while( (next_line = cmd_out.next()) != NULL ) {
 		one_line = next_line;
@@ -1522,6 +1529,14 @@ VMwareType::Status()
 
 		parse_param_string(one_line.Value(), name, value, true);
 		if( !name.Length() || !value.Length() ) {
+			continue;
+		}
+		
+		if( !strcasecmp(name.Value(), VMGAHP_STATUS_COMMAND_CPUTIME)) {
+			cputime = (float)strtod(value.Value(), (char **)NULL);
+			if( cputime <= 0 ) {
+				cputime = 0;
+			}
 			continue;
 		}
 
@@ -1597,6 +1612,17 @@ VMwareType::Status()
 		m_result_msg += VMGAHP_STATUS_COMMAND_PID;
 		m_result_msg += "=";
 		m_result_msg += m_vm_pid;
+		if( cputime > 0 ) {
+			// Update vm running time
+			m_cpu_time = cputime;
+
+			m_result_msg += " ";
+			m_result_msg += VMGAHP_STATUS_COMMAND_CPUTIME;
+			m_result_msg += "=";
+			m_result_msg += m_cpu_time;
+			//m_result_msg += (double)(m_cpu_time + m_cputime_before_suspend);
+		}
+
 		return true;
 
 	}else if( strcasecmp(vm_status.Value(), "Suspended") == 0 ) {

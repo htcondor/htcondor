@@ -2092,8 +2092,8 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, dou
 											 pieLeft,
 											 only_consider_startd_rank)))
 			{
-				int offline = 0;
-				if( offer->LookupInteger(ATTR_OFFLINE,offline) && offline > 0 )
+				int offline = false;
+				if( offer->EvalBool(ATTR_OFFLINE,NULL,offline) && offline )
 				{
 						// this startd is offline, so skip over it
 					RegisterAttemptedOfflineMatch( &request, offer );
@@ -3812,10 +3812,10 @@ void Matchmaker::RegisterAttemptedOfflineMatch( ClassAd *job_ad, ClassAd *startd
 		// the collector can identify what ad to merge our update
 		// into.
 	update_ad.CopyAttribute(ATTR_NAME,ATTR_NAME,startd_ad);
-	update_ad.CopyAttribute(ATTR_SLOT_ID,ATTR_SLOT_ID,startd_ad);
 	update_ad.CopyAttribute(ATTR_STARTD_IP_ADDR,ATTR_STARTD_IP_ADDR,startd_ad);
 
-	update_ad.Assign(ATTR_LAST_MATCH_TIME,(int)time(NULL));
+	time_t now = time(NULL);
+	update_ad.Assign(ATTR_LAST_MATCH_TIME,(int)now);
 
 	classy_counted_ptr<ClassAdMsg> msg = new ClassAdMsg(MERGE_STARTD_AD,update_ad);
 	classy_counted_ptr<DCCollector> collector = new DCCollector();
@@ -3825,4 +3825,48 @@ void Matchmaker::RegisterAttemptedOfflineMatch( ClassAd *job_ad, ClassAd *startd
 	}
 
 	collector->sendMsg( msg.get() );
+
+		// also insert slotX_LastMatchTime into the slot1 ad so that
+		// the match info about all slots is available in one place
+	MyString name;
+	MyString slot1_name;
+	int slot_id = -1;
+	startd_ad->LookupString(ATTR_NAME,name);
+	startd_ad->LookupInteger(ATTR_SLOT_ID,slot_id);
+
+		// Undocumented feature in case we ever need it:
+		// If OfflinePrimarySlotName is defined, it specifies which
+		// slot should collect all the slotX_LastMatchTime attributes.
+	if( !startd_ad->LookupString("OfflinePrimarySlotName",slot1_name) ) {
+			// no primary slot name specified, so use slot1
+
+		const char *at = strchr(name.Value(),'@');
+		if( at ) {
+				// in case the slot prefix is something other than "slot"
+				// figure out the prefix
+			int prefix_len = strcspn(name.Value(),"0123456789");
+			if( prefix_len < at - name.Value() ) {
+				slot1_name.sprintf("%.*s1%s",prefix_len,name.Value(),at);
+			}
+		}
+	}
+
+	if( !slot1_name.IsEmpty() && slot_id >= 0 ) {
+		ClassAd slot1_update_ad;
+
+		slot1_update_ad.Assign(ATTR_NAME,slot1_name);
+		slot1_update_ad.CopyAttribute(ATTR_STARTD_IP_ADDR,ATTR_STARTD_IP_ADDR,startd_ad);
+		MyString slotX_last_match_time;
+		slotX_last_match_time.sprintf("slot%d_%s",slot_id,ATTR_LAST_MATCH_TIME);
+		slot1_update_ad.Assign(slotX_last_match_time.Value(),(int)now);
+
+		classy_counted_ptr<ClassAdMsg> msg = \
+			new ClassAdMsg(MERGE_STARTD_AD, slot1_update_ad);
+
+		if( !collector->useTCPForUpdates() ) {
+			msg->setStreamType( Stream::safe_sock );
+		}
+
+		collector->sendMsg( msg.get() );
+	}
 }

@@ -59,7 +59,7 @@ void write_to_daemoncore_pipe(int pipefd, const char* str, int len);
 void write_to_daemoncore_pipe(const char* fmt, ... ) CHECK_PRINTF_FORMAT(1,2);
 int write_stderr_to_pipe();
 int systemCommand( ArgList &args, bool is_root, StringList *cmd_out = NULL, StringList * cmd_in = NULL,
-				   int want_stderr = 1 );
+		   StringList * cmd_err = NULL, bool merge_stderr_with_stdout = true);
 MyString makeErrorMessage(const char* err_string);
 
 void initialize_uids(void);

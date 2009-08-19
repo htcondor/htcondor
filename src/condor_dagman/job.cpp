@@ -25,6 +25,7 @@
 #include "dagman_main.h"
 #include "read_multiple_logs.h"
 #include "throttle_by_category.h"
+#include "dag.h"
 #include <set>
 
 //---------------------------------------------------------------------------
@@ -107,6 +108,7 @@ void Job::Init( const char* jobName, const char* directory,
 	_dagFile = NULL;
 	_throttleInfo = NULL;
 	_logIsMonitored = false;
+	_useDefaultLog = false;
 
 	if ( (_jobType == TYPE_CONDOR) && prohibitMultiJobs ) {
 		MyString	errorMsg;
@@ -733,7 +735,7 @@ Job::SetDagFile(const char *dagFile)
 bool
 Job::MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 			ReadMultipleUserLogs &storkLogReader, bool nfsIsError,
-			bool recovery )
+			bool recovery, const char *defaultNodeLog )
 {
 	if ( _logIsMonitored ) {
 		debug_printf( DEBUG_QUIET, "Warning: log file for node "
@@ -755,11 +757,13 @@ Job::MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 		if ( tmpResult != "" ) {
 			debug_printf( DEBUG_QUIET, "Error getting Stork log file: %s\n",
 						tmpResult.Value() );
+			LogMonitorFailed();
 			return false;
 		} else if ( logFiles.number() != 1 ) {
 			debug_printf( DEBUG_QUIET, "Error: %d Stork log files found "
 						"in submit file %s; we want 1\n",
 						logFiles.number(), _cmdFile );
+			LogMonitorFailed();
 			return false;
 		} else {
 			logFiles.rewind();
@@ -768,14 +772,18 @@ Job::MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 	}
 
 	if ( logFileStr == "" ) {
-		debug_printf( DEBUG_QUIET, "ERROR: Unable to get log file from "
-					"submit file %s (node %s)\n", _cmdFile, GetJobName() );
-		return false;
+		logFileStr = defaultNodeLog;
+		_useDefaultLog = true;
+		debug_printf( DEBUG_NORMAL, "Unable to get log file from "
+					"submit file %s (node %s); using default (%s)\n",
+					_cmdFile, GetJobName(), logFileStr.Value() );
+	}
 
-	} else if ( MultiLogFiles::logFileOnNFS( logFileStr.Value(),
+	if ( MultiLogFiles::logFileOnNFS( logFileStr.Value(),
 				nfsIsError ) ) {
 		debug_printf( DEBUG_QUIET, "Error: log file %s on NFS\n",
-					_logFile );
+					logFileStr.Value() );
+		LogMonitorFailed();
 		return false;
 	}
 
@@ -790,6 +798,7 @@ Job::MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 					"ERROR: Unable to monitor log file for node %s",
 					GetJobName() );
 		debug_printf( DEBUG_QUIET, "%s\n", errstack.getFullText() );
+		LogMonitorFailed();
 		return false;
 	}
 
@@ -835,4 +844,20 @@ Job::UnmonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 	}
 
 	return result;
+}
+
+//---------------------------------------------------------------------------
+void
+Job::LogMonitorFailed()
+{
+	if ( _Status != Job::STATUS_ERROR ) {
+		_Status = Job::STATUS_ERROR;
+		snprintf( error_text, JOB_ERROR_TEXT_MAXLEN,
+					"Unable to monitor node job log file" );
+		retval = Dag::DAG_ERROR_LOG_MONITOR_ERROR;
+		if ( _scriptPost != NULL) {
+				// let the script know the job's exit status
+			_scriptPost->_retValJob = retval;
+		}
+	}
 }

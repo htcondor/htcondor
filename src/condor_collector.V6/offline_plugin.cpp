@@ -175,12 +175,17 @@ OfflineCollectorPlugin::update (
 	int offline  = FALSE,
 		lifetime = 0;
 
+	bool offline_explicit = false;
+	if( ad.EvalBool( ATTR_OFFLINE, NULL, offline ) ) {
+		offline_explicit = true;
+	}
+
 	if ( MERGE_STARTD_AD == command ) {
 		mergeClassAd( ad, key );
 		return;
 	}
-	else if ( UPDATE_STARTD_AD_WITH_ACK == command ) {
-		
+	else if ( UPDATE_STARTD_AD_WITH_ACK == command && !offline_explicit ) {
+
 		/* set the off-line state of the machine */
 		offline = TRUE;
 
@@ -219,37 +224,19 @@ OfflineCollectorPlugin::update (
 
 		/* any others? */
 
-	} else {
 
-		/* try and determine if the ad has an offline attribute. 
-		If not, don't consider it a fatal error, we'll just set
-		the ad to be "on-line" bellow. */
-		ad.LookupInteger ( ATTR_OFFLINE, offline );
+		dprintf ( 
+			D_FULLDEBUG, 
+			"Machine ad lifetime: %d\n",
+			lifetime );
 
-		/* if the ad was offline, then put it back in the game */
-		if ( TRUE == offline ) {
-
-			/* flag the ad as back "on-line" */
-			offline = FALSE;
-			
-			/* set a sane ad lifetime */
-			lifetime = 30; /* from collector_engine.cpp */
-
+			/* record the new values as specified above */
+		ad.Assign ( ATTR_OFFLINE, (bool)offline );
+		if ( lifetime > 0 ) {
+			ad.Assign ( ATTR_CLASSAD_LIFETIME, lifetime );
 		}
-
 	}
 
-	dprintf ( 
-		D_FULLDEBUG, 
-		"Machine ad lifetime: %d\n",
-		lifetime );
-
-	/* record the new values as specified above */
-	ad.Assign ( ATTR_OFFLINE, offline );
-	if ( lifetime > 0 ) {
-		ad.Assign ( ATTR_CLASSAD_LIFETIME, lifetime );
-	}
-	
 	_ads->BeginTransaction ();
 
 	ClassAd *p;
@@ -258,12 +245,20 @@ OfflineCollectorPlugin::update (
 	   remove it. */
 	if ( offline > 0 ) {
 
-		/* don't try to add duplicate ads */
+		/* replace duplicate ads */
 		if ( _ads->LookupClassAd ( key, p ) ) {
 			
-			_ads->AbortTransaction ();
-			return;
+			if ( !_ads->DestroyClassAd ( key ) ) {
+				dprintf (
+					D_FULLDEBUG,
+					"OfflineCollectorPlugin::update: "
+					"failed remove existing off-line ad from the persistent "
+					"store.\n" );
 
+				_ads->AbortTransaction ();
+				return;
+			}
+			dprintf(D_FULLDEBUG, "Replacing existing offline ad.\n");
 		}
 
 		/* try to add the new ad */

@@ -4,7 +4,7 @@
 
 cd $PACKAGE_NAME
 
-./configure --prefix=$PACKAGE_INSTALL_DIR --disable-shared --with-ssl=$EXTERNALS_INSTALL_DIR/$EXT_OPENSSL_VERSION --with-zlib=$EXTERNALS_INSTALL_DIR/$EXT_ZLIB_DIR --disable-ipv6
+LIBS=-ldl ./configure --prefix=$PACKAGE_INSTALL_DIR --disable-shared --with-ssl=$EXTERNALS_INSTALL_DIR/$EXT_OPENSSL_VERSION --with-zlib=$EXTERNALS_INSTALL_DIR/$EXT_ZLIB_DIR --disable-ipv6
 
 if [ $? -ne 0 ]
 then

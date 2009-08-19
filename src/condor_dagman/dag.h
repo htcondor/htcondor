@@ -110,6 +110,8 @@ class Dag {
 			   job procs are prohibited
 		@param submitDepthFirst whether ready nodes should be submitted
 			   in depth-first (as opposed to breadth-first) order
+		@param The user log file to be used for nodes whose submit files do
+				not specify a log file.
 		@param findUserLogs whether or not log files for the submit files
 				should be recursively dug out of the dag file and any
 				splices it contains. Usually this is true for the root
@@ -124,7 +126,7 @@ class Dag {
 		 bool retryNodeFirst, const char *condorRmExe,
 		 const char *storkRmExe, const CondorID *DAGManJobId,
 		 bool prohibitMultiJobs, bool submitDepthFirst,
-		 bool findUserLogs = true );
+		 const char *defaultNodeLog, bool findUserLogs = true );
 
     ///
     ~Dag();
@@ -437,8 +439,9 @@ class Dag {
 		// are normal exe return codes, -1 to -64 represent catching
 		// exe signals 1 to 64, and -1000 and below represent DAGMan,
 		// batch-system, or other external errors
-	const int DAG_ERROR_CONDOR_SUBMIT_FAILED;
-	const int DAG_ERROR_CONDOR_JOB_ABORTED;
+	static const int DAG_ERROR_CONDOR_SUBMIT_FAILED;
+	static const int DAG_ERROR_CONDOR_JOB_ABORTED;
+	static const int DAG_ERROR_LOG_MONITOR_ERROR;
 
 		// The maximum signal we can deal with in the error-reporting
 		// code.
@@ -484,11 +487,9 @@ class Dag {
 
 	bool SubmitDepthFirst(void) { return _submitDepthFirst; }
 
-	StringList& DagFiles(void) { return _dagFiles; }
+	const char *DefaultNodeLog(void) { return _defaultNodeLog; }
 
-		// The absolute maximum allowed rescue DAG number (the real maximum
-		// is normally configured lower).
-	static const int ABS_MAX_RESCUE_DAG_NUM;
+	StringList& DagFiles(void) { return _dagFiles; }
 
 	// return same thing as HashTable.insert()
 	int InsertSplice(MyString spliceName, Dag *splice_dag);
@@ -855,6 +856,10 @@ class Dag {
 		// Whether having node job log files on NFS is an error (vs.
 		// just a warning).
 	bool	_nfsLogIsError;
+
+		// The user log file to be used for nodes whose submit files do
+		// not specify a log file.
+	const char *_defaultNodeLog;
 
 };
 

@@ -262,7 +262,7 @@ AcquireProxy( const ClassAd *job_ad, MyString &error, int notify_tid )
 			error.sprintf( "Failed to get expiration time of proxy" );
 			return NULL;
 		}
-		subject_name = x509_proxy_identity_name( proxy_path.Value() );
+		subject_name = x509_proxy_identity_name( proxy_path.Value(), 1 );
 		if ( subject_name == NULL ) {
 			dprintf( D_ALWAYS, "Failed to get identity of proxy %s\n",
 					 proxy_path.Value() );

@@ -42,13 +42,15 @@
 	@param names the names of any parameters for this node
 	@param vals the values of any parameters for this node
     @param directory the directory in which to run this job
+	@param log file to force this job to use (should be null if submit
+		file specifies log file)
     @return true on success, false on failure
 */
 
 bool condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 					const char* DAGNodeName, MyString DAGParentNodeNames,
 					List<MyString>* names, List<MyString>* vals,
-					const char* directory);
+					const char* directory, const char *logFile);
 
 bool stork_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 				   const char* DAGNodeName, const char* directory );

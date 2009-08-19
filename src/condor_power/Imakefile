@@ -1,4 +1,4 @@
-PROGRAMS = condor_power power_state
+PROGRAMS = condor_power power_state condor_rooster
 all_target( $(PROGRAMS) )
 
 CFLAGS = $(STD_C_FLAGS) $(CLIPPED)
@@ -14,14 +14,12 @@ testbin:: all
 
 
 
-all_target( condor_rooster )
-
 ROOSTER_LIB = $(DAEMONCORE_LIB) $(STD_LIBS) $(CONFIGURE_GSOAP_LDFLAGS)
 
 soapobjs(rooster)
 
 ROOSTER_OBJ = rooster_main.o rooster.o $(SOAP_OBJS)
 
-c_plus_target(condor_rooster,$(ROOSTER_OBJ),$(ROOSTER_LIB))
+public_c_plus_target(condor_rooster,libexec,$(ROOSTER_OBJ),$(ROOSTER_LIB))
 
 gen_soapfiles(rooster,condorRooster)

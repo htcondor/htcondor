@@ -71,6 +71,7 @@ class HashTable {
   */
   int lookup(const Index &index, Value &value) const;
   int lookup(const Index &index, Value* &value) const;
+	  // returns 0 if exists, -1 otherwise
   int exists(const Index &index) const;
   int getNext(Index &index, void *current, Value &value,
 	      void *&next) const;

@@ -57,6 +57,7 @@ int main( int argc, char *argv[] )
 	int command=-1;
 	int i;
 	bool use_tcp = false;
+	bool with_ack = false;
 
 
 	myDistro->Init( argc, argv );
@@ -110,6 +111,16 @@ int main( int argc, char *argv[] )
 	Daemon *collector;
 	Sock *sock;
 	int eof,error,empty;
+
+	switch( command ) {
+	case UPDATE_STARTD_AD_WITH_ACK:
+		with_ack = true;
+		break;
+	}
+
+	if( with_ack ) {
+		use_tcp =  true;
+	}
 
 	if(!filename || !strcmp(filename,"-")) {
 		file = stdin;
@@ -187,6 +198,17 @@ int main( int argc, char *argv[] )
 			had_error = true;
 			delete sock;
 			continue;
+		}
+
+		if( with_ack ) {
+			sock->decode();
+			int ok = 0;
+			if( !sock->get(ok) || !sock->end_of_message() ) {
+				fprintf(stderr,"failed to get ack from %s\n",collector->addr());
+				had_error = true;
+				delete sock;
+				continue;
+			}
 		}
 
 		delete sock;

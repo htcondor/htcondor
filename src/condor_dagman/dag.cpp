@@ -53,6 +53,10 @@ using namespace std;
 
 const CondorID Dag::_defaultCondorId;
 
+const int Dag::DAG_ERROR_CONDOR_SUBMIT_FAILED = -1001;
+const int Dag::DAG_ERROR_CONDOR_JOB_ABORTED = -1002;
+const int Dag::DAG_ERROR_LOG_MONITOR_ERROR = -1003;
+
 //---------------------------------------------------------------------------
 void touch (const char * filename) {
     int fd = safe_open_wrapper(filename, O_RDWR | O_CREAT, 0600);
@@ -72,11 +76,10 @@ Dag::Dag( /* const */ StringList &dagFiles,
 		  bool useDagDir, int maxIdleJobProcs, bool retrySubmitFirst,
 		  bool retryNodeFirst, const char *condorRmExe,
 		  const char *storkRmExe, const CondorID *DAGManJobID,
-		  bool prohibitMultiJobs, bool submitDepthFirst, bool findUserLogs) :
+		  bool prohibitMultiJobs, bool submitDepthFirst,
+		  const char *defaultNodeLog, bool findUserLogs) :
     _maxPreScripts        (maxPreScripts),
     _maxPostScripts       (maxPostScripts),
-	DAG_ERROR_CONDOR_SUBMIT_FAILED (-1001),
-	DAG_ERROR_CONDOR_JOB_ABORTED (-1002),
 	MAX_SIGNAL			  (64),
 	_splices              (200, hashFuncMyString, rejectDuplicateKeys),
 	_dagFiles             (dagFiles),
@@ -105,7 +108,8 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	_maxIdleDeferredCount (0),
 	_catThrottleDeferredCount (0),
 	_prohibitMultiJobs	  (prohibitMultiJobs),
-	_submitDepthFirst	  (submitDepthFirst)
+	_submitDepthFirst	  (submitDepthFirst),
+	_defaultNodeLog		  (defaultNodeLog)
 {
 
 	// If this dag is a splice, then it may have been specified with a DIR
@@ -218,7 +222,7 @@ bool Dag::Bootstrap (bool recovery) {
    		while( jobs.Next( job ) ) {
 			if ( job->CanSubmit() ) {
 				if ( !job->MonitorLogFile( _condorLogRdr, _storkLogRdr,
-							_nfsLogIsError, recovery ) ) {
+							_nfsLogIsError, recovery, _defaultNodeLog ) ) {
 					debug_cache_stop_caching();
 					return false;
 				}
@@ -248,7 +252,7 @@ bool Dag::Bootstrap (bool recovery) {
 		while( jobs.Next( job ) ) {
 			if( job->GetStatus() == Job::STATUS_POSTRUN ) {
 				if ( !job->MonitorLogFile( _condorLogRdr, _storkLogRdr,
-							_nfsLogIsError, _recovery ) ) {
+							_nfsLogIsError, _recovery, _defaultNodeLog ) ) {
 					debug_cache_stop_caching();
 					return false;
 				}
@@ -788,7 +792,7 @@ Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
 			_postRunNodeCount++;
 
 			(void)job->MonitorLogFile( _condorLogRdr, _storkLogRdr,
-						_nfsLogIsError, _recovery );
+						_nfsLogIsError, _recovery, _defaultNodeLog );
 			if( !recovery ) {
 				_postScriptQ->Run( job->_scriptPost );
 			}
@@ -1850,7 +1854,7 @@ Dag::TerminateJob( Job* job, bool recovery )
 			child->IsEmpty( Job::Q_WAITING ) ) {
 			if ( recovery ) {
 				(void)child->MonitorLogFile( _condorLogRdr, _storkLogRdr,
-							_nfsLogIsError, recovery );
+							_nfsLogIsError, recovery, _defaultNodeLog );
 			} else {
 				StartNode( child, false );
 			}
@@ -1923,7 +1927,7 @@ Dag::RestartNode( Job *node, bool recovery )
 		// gets done during "normal" running.)
 		node->_CondorID = _defaultCondorId;
 		(void)node->MonitorLogFile( _condorLogRdr, _storkLogRdr,
-					_nfsLogIsError, recovery );
+					_nfsLogIsError, recovery, _defaultNodeLog );
 	}
 }
 
@@ -2868,14 +2872,20 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 	}
 
 	if ( !node->MonitorLogFile( _condorLogRdr, _storkLogRdr, _nfsLogIsError,
-				_recovery ) ) {
+				_recovery, _defaultNodeLog ) ) {
 		return SUBMIT_RESULT_NO_SUBMIT;
 	}
 
 		// Note: we're checking for a missing log file spec here instead of
 		// inside the submit code because we don't want to re-try the submit
 		// if the log file spec is missing in the submit file.  wenger
-	if ( !_allowLogError && !node->CheckForLogFile() ) {
+
+		// We now only check for missing log files for Stork jobs because
+		// of the default log file feature; that doesn't work for Stork
+		// jobs because we can't specify the log file on the command
+		// line.  wenger 2009-08-14
+	if ( !_allowLogError && node->JobType() == Job::TYPE_STORK &&
+				!node->CheckForLogFile() ) {
 		debug_printf( DEBUG_NORMAL, "ERROR: No 'log =' value found in "
 					"submit file %s for node %s\n", node->GetCmdFile(),
 					node->GetJobName() );
@@ -2895,6 +2905,8 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 
     	if( node->JobType() == Job::TYPE_CONDOR ) {
 	  		node->_submitTries++;
+			const char *logFile = node->UsingDefaultLog() ?
+						node->_logFile : NULL;
 				// Note: assigning the ParentListString() return value
 				// to a variable here, instead of just passing it directly
 				// to condor_submit(), fixes a memory leak(!).
@@ -2903,7 +2915,7 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
       		submit_success = condor_submit( dm, cmd_file.Value(), condorID,
 						node->GetJobName(), parents,
 						node->varNamesFromDag, node->varValsFromDag,
-						node->GetDirectory() );
+						node->GetDirectory(), logFile );
     	} else if( node->JobType() == Job::TYPE_STORK ) {
 	  		node->_submitTries++;
       		submit_success = stork_submit( dm, cmd_file.Value(), condorID,
@@ -2995,7 +3007,7 @@ Dag::ProcessFailedSubmit( Job *node, int max_submit_attempts )
 			_postRunNodeCount++;
 			node->_scriptPost->_retValJob = DAG_ERROR_CONDOR_SUBMIT_FAILED;
 			(void)node->MonitorLogFile( _condorLogRdr, _storkLogRdr,
-						_nfsLogIsError, _recovery );
+						_nfsLogIsError, _recovery, _defaultNodeLog );
 			_postScriptQ->Run( node->_scriptPost );
 		} else {
 			node->_Status = Job::STATUS_ERROR;

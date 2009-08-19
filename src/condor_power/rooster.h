@@ -36,10 +36,14 @@ class Rooster: public Service {
 	void stop();
 
 	void poll(); // do the periodic checks of offline startds
+	bool wakeUp(ClassAd *startd_ad);
 
  private:
 	int m_polling_interval; // delay between checks of offline startds
 	int m_polling_timer;
+	MyString m_unhibernate_constraint;
+	MyString m_wakeup_cmd;
+	ArgList m_wakeup_args;
 };
 
 

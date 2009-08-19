@@ -234,6 +234,39 @@
 	<$Row Dialog_="VMUniverseSettings" Control_="Entry.6" Action="Disable" Condition=^USEVMUNIVERSE = "N"^>
 <$/Table>
 
+<$Dialog "HDFS Settings" Description="Enable HDFS support?" Dialog="HDFSSettings" INSERT="VMUniverseSettings">
+	#data 'RadioButton_USEHDFS'	         
+	         'N' 'N&o' '' ''
+		 'Y' '&Yes (Requires Java)' '' ''
+	#data
+	#(
+	<$DialogEntry Property="USEHDFS" Label="Enable HDFS support:" 
+		Control="RB">
+	#)
+	#data 'RadioButton_HDFSMODE'	         
+	         'N' 'N&ame Node' '' ''
+		 'D' '&Data Node' '' ''
+	#data
+	#(
+	<$DialogEntry Property="HDFSMODE" Label="Select HDFS mode:" 
+		Control="RB">
+	#)
+
+	<$DialogEntry Property="NAMENODE" Label="Primary Name Node:" ToolTip="Hostname or IP Address of primary name node." Width=100 Blank="Y">
+	<$DialogEntry Property="NNODEPORT" Label="Name Node Port:" ToolTip="Port of primary name node." Width=100 Blank="N" Value="9000">
+	<$DialogEntry Property="NNODEWEBPORT" Label="Name Node Web Port:" ToolTip="Port of primary name node web interface." Width=100 Blank="N" Value="8000">
+<$/Dialog>
+
+<$Table "ControlCondition">
+	<$Row Dialog_="HDFSSettings" Control_="Entry.2" Action="Enable" Condition=^USEHDFS = "Y"^>	
+	<$Row Dialog_="HDFSSETTINGS" Control_="Entry.2" Action="Disable" Condition=^USEHDFS = "N"^>
+	<$Row Dialog_="HDFSSETTINGS" Control_="Entry.3" Action="Enable" Condition=^USEHDFS = "Y"^>	
+	<$Row Dialog_="HDFSSETTINGS" Control_="Entry.3" Action="Disable" Condition=^USEHDFS = "N"^>
+	<$Row Dialog_="HDFSSETTINGS" Control_="Entry.4" Action="Enable" Condition=^USEHDFS = "Y"^>	
+	<$Row Dialog_="HDFSSETTINGS" Control_="Entry.4" Action="Disable" Condition=^USEHDFS = "N"^>
+	<$Row Dialog_="HDFSSETTINGS" Control_="Entry.5" Action="Enable" Condition=^USEHDFS = "Y"^>	
+	<$Row Dialog_="HDFSSETTINGS" Control_="Entry.5" Action="Disable" Condition=^USEHDFS = "N"^>
+<$/Table>
 
 ;--- Create INSTALLDIR ------------------------------------------------------
 <$DirectoryTree Key="INSTALLDIR" Dir="c:\condor" CHANGE="\" PrimaryFolder="Y">
@@ -247,6 +280,12 @@
 	<$DirectoryTree Key="SPOOLDIR" Dir="[INSTALLDIR]\spool" MAKE="Y">
 <$/Component>
 <$Component "CreateLogFolder" Create="Y" Directory_="LOGDIR">
+	<$DirectoryTree Key="LOGDIR" Dir="[INSTALLDIR]\log" MAKE="Y">
+<$/Component>
+<$Component "CreateHDFSNameFolder" Create="Y" Directory_="LOGDIR">
+	<$DirectoryTree Key="LOGDIR" Dir="[INSTALLDIR]\log" MAKE="Y">
+<$/Component>
+<$Component "CreateHDFSDataFolder" Create="Y" Directory_="LOGDIR">
 	<$DirectoryTree Key="LOGDIR" Dir="[INSTALLDIR]\log" MAKE="Y">
 <$/Component>
 
