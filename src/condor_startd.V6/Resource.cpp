@@ -1654,17 +1654,16 @@ Resource::publish( ClassAd* cap, amask_t mask )
 			// And then include everything from SLOTx_STARTD_EXPRS
 		daemonCore->publish(cap);
 
-               // config_fill_ad can not take strings with "." in it's prefix
-               // e.g. slot1.1, instead needs to be slot1
-	       MyString szTmp(r_id_str);
-	       int iPeriodPos = szTmp.find(".");
+		// config_fill_ad can not take strings with "." in it's prefix
+		// e.g. slot1.1, instead needs to be slot1
+		MyString szTmp(r_id_str);
+		int iPeriodPos = szTmp.find(".");
 
-	       if ( iPeriodPos )
-               {
-                   szTmp.setChar ( iPeriodPos,  '\0' );
+		if ( iPeriodPos >=0 ) {
+                      szTmp.setChar ( iPeriodPos,  '\0' );
                }
 
-	       config_fill_ad( cap, szTmp.Value() );
+               config_fill_ad( cap, szTmp.Value() );
 
 			// Also, include a slot ID attribute, since it's handy for
 			// defining expressions, and other things.
