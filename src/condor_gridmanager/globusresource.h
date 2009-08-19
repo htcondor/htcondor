@@ -36,7 +36,8 @@ class GlobusResource;
 class GlobusResource : public BaseResource
 {
  protected:
-	GlobusResource( const char *resource_name, const char *proxy_subject );
+	GlobusResource( const char *resource_name, const char *proxy_subject,
+					bool is_gt5 );
 	~GlobusResource();
 
  public:
@@ -44,6 +45,8 @@ class GlobusResource : public BaseResource
 	const char *ResourceType();
 	void Reconfig();
 	void UnregisterJob( GlobusJob *job );
+
+	bool IsGt5() { return m_isGt5; }
 
 	bool RequestJM( GlobusJob *job, bool is_submit );
 	void JMComplete( GlobusJob *job );
@@ -60,7 +63,8 @@ class GlobusResource : public BaseResource
 								 const char *proxy_subject );
 
 	static GlobusResource *FindOrCreateResource( const char *resource_name,
-												 const char *proxy_subject );
+												 const char *proxy_subject,
+												 bool is_gt5 );
 
 	const char *GetHashName();
 
@@ -101,6 +105,8 @@ class GlobusResource : public BaseResource
 
 	char *proxySubject;
 	static int gahpCallTimeout;
+
+	bool m_isGt5;
 
 	// We limit the number of jobmanagers we're willing to run at a time
 	// on each resource. We keep seperate queues for initial job
