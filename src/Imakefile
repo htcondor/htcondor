@@ -73,6 +73,12 @@
 #define hdfsProgs
 #endif
 
+#if HAVE_EXT_CREAM
+#define CreamGahp CREAM_GAHP
+#else
+#define CreamGahp
+#endif
+
 #define Programs \
 		procapi sysapi unit_tests ckpt_server \
 		master.V6 negotiator.V6 schedd.V6 prio q.V6 rm.V6 \
@@ -83,7 +89,7 @@
 		TTProgs DeploymentTools \
 		eventd.V2 transferd procd privsep vm-gahp EC2 \
 		JobRouterProgs GlobusGahps NordugridGahp startd_factory \
-		power
+		CreamGahp power
 
 #define Libraries \
 		util_lib target-ccb daemon_core.V6 daemon_client target-classad.old c++_util	\
@@ -425,6 +431,11 @@ ext_target(EXT_OPENSSL_VERSION,$(NULL))
 
 #if HAVE_EXT_GLOBUS
 ext_target(EXT_GLOBUS_VERSION,$(EXT_TRIGGER)/$(EXT_OPENSSL_VERSION))
+#endif
+
+#if HAVE_EXT_CREAM
+ext_target(EXT_CREAM_VERSION,$(EXT_TRIGGER)/$(EXT_GLOBUS_VERSION) $(EXT_TRIGGER)/$(EXT_VOMS_VERSION))
+object_target(CREAM_GAHP,cream_gahp)
 #endif
 
 #if HAVE_EXT_UNICOREGAHP

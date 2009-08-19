@@ -340,6 +340,7 @@ const int QUERY_GENERIC_ADS = 74;
 #define DC_OFF_PEACEFUL     (DC_BASE+15)
 #define DC_SET_PEACEFUL_SHUTDOWN (DC_BASE+16)
 #define DC_TIME_OFFSET      (DC_BASE+17)
+#define DC_PURGE_LOG        (DC_BASE+18)
 
 /*
 *** Log type supported by DC_FETCH_LOG

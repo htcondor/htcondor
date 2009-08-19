@@ -131,27 +131,31 @@ sub build_from_source {
 	}
 
 	# untar the package itself
-	$cmd = "gunzip -c $bundle_workspace/$package_src_name.tar.gz | tar xvf -";
-	print LOG "** $cmd \n";
-	if( ! open(CMD, "$cmd 2>&1 |") ) { 
-	    print LOG "ERROR: unable to untar $bundle_workspace/$package_src_name.bundle/$package_name.tar.gz into $bundle_workspace\n";
-	    print LOG "ERROR: aborting the build of $package_src_name\n";
-	    return;
-	}
-	# turn autoflush on for the CMD file handle
-	$old_fh = select(CMD);
-	$| = 1;
-	select( $old_fh);
-	while( <CMD> ) {
-		print LOG;
-	}
-	close CMD;
-	if ($?) {
-	    $status = $? >> 8;
-	    print LOG "ERROR: tar returned: $status\n";
-	    print LOG "ERROR: unable to untar $bundle_workspace/$package_name.bundle/$package_name.tar.gz into $bundle_workspace\n";
-	    print LOG "ERROR: aborting the build of $package_name\n";
-	    return;
+	# Some externals may not have a tarball named <external>-<verison>.tar.gz
+	# But if they do, we'll untar it for them.
+	if ( -r "$bundle_workspace/$package_src_name.tar.gz" ) {
+		$cmd = "gunzip -c $bundle_workspace/$package_src_name.tar.gz | tar xvf -";
+		print LOG "** $cmd \n";
+		if( ! open(CMD, "$cmd 2>&1 |") ) { 
+			print LOG "ERROR: unable to untar $bundle_workspace/$package_src_name.bundle/$package_name.tar.gz into $bundle_workspace\n";
+			print LOG "ERROR: aborting the build of $package_src_name\n";
+			return;
+		}
+		# turn autoflush on for the CMD file handle
+		$old_fh = select(CMD);
+		$| = 1;
+		select( $old_fh);
+		while( <CMD> ) {
+			print LOG;
+		}
+		close CMD;
+		if ($?) {
+			$status = $? >> 8;
+			print LOG "ERROR: tar returned: $status\n";
+			print LOG "ERROR: unable to untar $bundle_workspace/$package_name.bundle/$package_name.tar.gz into $bundle_workspace\n";
+			print LOG "ERROR: aborting the build of $package_name\n";
+			return;
+		}
 	}
 
 	# run the build script from the bundle.

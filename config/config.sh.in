@@ -35,6 +35,8 @@ EXT_UNICOREGAHP_VERSION=@ext_unicoregahp_version@
 
 EXT_BLAHP_VERSION=@ext_blahp_version@
 
+EXT_CREAM_VERSION=@ext_cream_version@
+
 WANT_COREDUMPER=@want_coredumper@
 EXT_COREDUMPER_VERSION=@ext_coredumper_version@
 

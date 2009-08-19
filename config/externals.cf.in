@@ -43,6 +43,7 @@ EXT_UNICOREGAHP_VERSION = @ext_unicoregahp_version@
 EXT_COREDUMPER_VERSION = @ext_coredumper_version@
 EXT_BLAHP_VERSION = @ext_blahp_version@
 EXT_CURL_VERSION = @ext_curl_version@
+EXT_CREAM_VERSION = @ext_cream_version@
 
 #if HAVE_EXT_LINUXLIBCHEADERS 
 EXT_LINUXLIBCHEADERS_VERSION = @ext_linuxlibcheaders_version@
@@ -155,6 +156,10 @@ UNICOREGAHP_DIR = $(EXT_INSTALL)/$(EXT_UNICOREGAHP_VERSION)
 
 #if HAVE_EXT_BLAHP
 BLAHP_DIR = $(EXT_INSTALL)/$(EXT_BLAHP_VERSION)
+#endif
+
+#if HAVE_EXT_CREAM
+CREAM_DIR = $(EXT_INSTALL)/$(EXT_CREAM_VERSION)
 #endif
 
 #if HAVE_EXT_COREDUMPER
