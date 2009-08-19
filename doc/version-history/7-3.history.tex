@@ -110,6 +110,10 @@ are described in section~\ref{sec:Config-rooster}.
   ``ReadUserLogStateAccess'' C++ class (defined in
   ``read\_user\_log.h'').
 
+\item Changes to the value of \MacroNI{CERTIFICATE\_MAPFILE} or the contents
+of the file to which it refers no longer require a full restart of Condor.
+Instead, a reconfig will cause the changes to be utilized.
+
 \end{itemize}
 
 \noindent Configuration Variable Additions and Changes:
