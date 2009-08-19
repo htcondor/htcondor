@@ -44,6 +44,7 @@ EXT_COREDUMPER_VERSION = @ext_coredumper_version@
 EXT_BLAHP_VERSION = @ext_blahp_version@
 EXT_CURL_VERSION = @ext_curl_version@
 EXT_CREAM_VERSION = @ext_cream_version@
+EXT_HADOOP_VERSION = @ext_hadoop_version@
 
 #if HAVE_EXT_LINUXLIBCHEADERS 
 EXT_LINUXLIBCHEADERS_VERSION = @ext_linuxlibcheaders_version@
@@ -172,6 +173,10 @@ COREDUMPER_INC = $(COREDUMPER_DIR)/include
 CURL_DIR = $(EXT_INSTALL)/$(EXT_CURL_VERSION)
 CURL_LIB = $(CURL_DIR)/lib
 CURL_INC = $(CURL_DIR)/include
+#endif
+
+#if HAVE_EXT_HADOOP
+HADOOP_DIR = $(EXT_INSTALL)/$(EXT_HADOOP_VERSION)
 #endif
 
 #else /* if not HAS_EXTERNALS */
