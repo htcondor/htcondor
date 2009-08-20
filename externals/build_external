@@ -366,7 +366,17 @@ if ($result) {
 	$exit_status = 0;
 } else {
 	print "$package_name: FAILED! (see $log)\n";
-	system("tail -50 $log");
+
+	# XXX Hack. On some platforms tail -50 is wrong and needs to be tail -n 50.
+	# So instead of doing this right, I'm just going to check the return value
+	# of system here and keep calling one until it works. This is because
+	# there is no one syntax which works everywhere.
+
+	$num = 50;
+	system("tail -$num $log") == 0 
+	or system("tail -n $num $log") == 0 
+	or print "WARNING: Unable to provide last $num lines of log. Sorry.\n";
+
 	$exit_status = 1;
 }
 
