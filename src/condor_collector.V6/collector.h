@@ -127,6 +127,7 @@ protected:
 
 	static ClassAd *ad;
 	static DCCollector* updateCollector;
+	static DCCollector* updateRemoteCollector;
 	static int UpdateTimerId;
 
 	static ForkWork forkQuery;
