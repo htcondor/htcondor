@@ -124,6 +124,10 @@ file for any node job that does not specify one.
   there was no way to get it to display the arguments with which it
   was starting a daemon.
 
+\item The \Condor{had} daemon now has the ability to control daemons
+  other than the \Condor{negotiator}.  This is controlled via the
+  \MacroNI{HAD\_CONTROLLEE} macro.
+
 \end{itemize}
 
 \noindent Configuration Variable Additions and Changes:
@@ -245,6 +249,11 @@ See \ref{param:Unhibernate} for the complete description.
 \item The new configuration variable \Macro{DAGMAN\_DEFAULT\_NODE\_LOG} can
 be used to override the default log file name for the new \Condor{dagman}
 default node log file feature.
+
+\item The new configuration variable \Macro{HAD\_CONTROLLEE} is used
+  to specify the name of the daemon which the \Condor{had} controls.
+  This name should match the daemon name in the \Condor{master}'s
+  \MacroNI{DAEMON\_LIST}.
 
 \end{itemize}
 

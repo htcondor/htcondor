@@ -8776,6 +8776,13 @@ MASTER_NEGOTIATOR_CONTROLLER = HAD
   a primary central manager.
   Defaults to \Expr{False}.
 
+\label{param:HADControllee}
+\item[\Macro{HAD\_CONTROLLEE}]
+  This macro is used to specify the name of the daemon which the
+  \Condor{had} daemon controls.   This name should match the daemon
+  name in the \Condor{master}'s \MacroNI{DAEMON\_LIST}.  The default
+  value of \MacroNI{HAD\_CONTROLLEE} is ``NEGOTIATOR''.
+
 \label{param:HADConnectionTimeout}
 \item[\Macro{HAD\_CONNECTION\_TIMEOUT}]
   The time (in seconds) that the \Condor{had} daemon waits before giving
