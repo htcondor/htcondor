@@ -41,7 +41,7 @@ set VC_BIN=%VC_DIR%\bin
 set PERL_DIR=%SystemDrive%\Perl\bin;%SystemDrive%\Perl64\bin
 set SDK_DIR=%ProgramFiles%\Microsoft Platform SDK
 set DBG_DIR=%ProgramFiles%\Debugging Tools for Windows (x86);%ProgramFiles%\Debugging Tools for Windows (x64)
-set DOTNET_DIR=%SystemRoot%\Microsoft.NET\Framework\v3.5
+set DOTNET_DIR=%SystemRoot%\Microsoft.NET\Framework\v3.5;%SystemRoot%\Microsoft.NET\Framework\v2.0.50727
 
 REM For some reason this is not defined whilst in some environments
 if "A%VS90COMNTOOLS%"=="A" set VS90COMNTOOLS=%VS_DIR%\Common7\Tools\
@@ -91,7 +91,7 @@ REM ====== THIS SHOULD BE REMOVED WHEN Win2K IS NO LONGER SUPPORTED ======
 REM ======================================================================
 
 REM Configure Visual C++
-call vcvarsall.bat x86
+call "%VC_DIR%\vcvarsall.bat" x86
 if not defined INCLUDE ( echo. && echo *** Failed to run vcvarsall.bat! Is Microsoft Visual Studio installed? && exit /B 1 )
 
 REM ======================================================================
@@ -103,14 +103,14 @@ REM ====== THIS SHOULD BE REMOVED WHEN Win2K IS NO LONGER SUPPORTED ======
 REM ======================================================================
 
 REM Configure the Platform SDK environment
-call setenv /2000 /RETAIL
+call "%SDK_DIR%\SetEnv.Cmd" /2000 /RETAIL
 if not defined MSSDK ( echo. && echo *** Failed to run setenv.cmd! Are the Microsoft Platform SDK installed? && exit /B 1 )
 
 REM ======================================================================
 REM ====== THIS SHOULD BE REMOVED WHEN Win2K IS NO LONGER SUPPORTED ======
-set INCLUDE=%ProgramFiles%\Microsoft Platform SDK\Include;%VC_DIR%\ATLMFC\INCLUDE;%VC_DIR%\INCLUDE;
-set LIB=%ProgramFiles%\Microsoft Platform SDK\Lib;%VC_DIR%\ATLMFC\LIB;%VC_DIR%\LIB;
-set LIBPATH=%SystemRoot%\Microsoft.NET\Framework\v3.5;%SystemRoot%\Microsoft.NET\Framework\v2.0.50727;%VC_DIR%\ATLMFC\LIB;%VC_DIR%\LIB;
+set INCLUDE=%SDK_DIR%\Include;%VC_DIR%\ATLMFC\INCLUDE;%VC_DIR%\INCLUDE;
+set LIB=%SDK_DIR%\Lib;%VC_DIR%\ATLMFC\LIB;%VC_DIR%\LIB;
+set LIBPATH=%DOTNET_DIR%;%VC_DIR%\ATLMFC\LIB;%VC_DIR%\LIB;
 REM ====== THIS SHOULD BE REMOVED WHEN Win2K IS NO LONGER SUPPORTED ======
 REM ======================================================================
 
