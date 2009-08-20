@@ -47,7 +47,8 @@ HashTable <HashKey, GlobusResource *>
 static unsigned int g_MonitorUID = 0;
 
 GlobusResource *GlobusResource::FindOrCreateResource( const char *resource_name,
-													  const char *proxy_subject )
+													  const char *proxy_subject,
+													  bool is_gt5 )
 {
 	int rc;
 	GlobusResource *resource = NULL;
@@ -60,7 +61,7 @@ GlobusResource *GlobusResource::FindOrCreateResource( const char *resource_name,
 
 	rc = ResourcesByName.lookup( HashKey( hash_name ), resource );
 	if ( rc != 0 ) {
-		resource = new GlobusResource( canonical_name, proxy_subject );
+		resource = new GlobusResource( canonical_name, proxy_subject, is_gt5 );
 		ASSERT(resource);
 		if ( resource->Init() == false ) {
 			delete resource;
@@ -76,11 +77,13 @@ GlobusResource *GlobusResource::FindOrCreateResource( const char *resource_name,
 }
 
 GlobusResource::GlobusResource( const char *resource_name,
-								const char *proxy_subject )
+								const char *proxy_subject, bool is_gt5 )
 	: BaseResource( resource_name )
 {
 	initialized = false;
 	proxySubject = strdup( proxy_subject );
+
+	m_isGt5 = is_gt5;
 
 	submitJMLimit = DEFAULT_MAX_JOBMANAGERS_PER_RESOURCE / 2;
 	restartJMLimit = DEFAULT_MAX_JOBMANAGERS_PER_RESOURCE - submitJMLimit;
@@ -256,6 +259,10 @@ bool GlobusResource::RequestJM( GlobusJob *job, bool is_submit )
 {
 	GlobusJob *jobptr;
 
+	if ( m_isGt5 ) {
+		return true;
+	}
+
 	if ( is_submit ) {
 		submitJMsWanted.Rewind();
 		while ( submitJMsWanted.Next( jobptr ) ) {
@@ -307,6 +314,10 @@ bool GlobusResource::RequestJM( GlobusJob *job, bool is_submit )
 
 void GlobusResource::JMComplete( GlobusJob *job )
 {
+	if ( m_isGt5 ) {
+		return;
+	}
+
 	// If the job was in one of the Allowed queues, check whether we
 	// should promote a job from the Wanted queues to take its place.
 	// Also perform the check if NULL is passed.
@@ -351,7 +362,9 @@ void GlobusResource::JMComplete( GlobusJob *job )
 
 void GlobusResource::JMAlreadyRunning( GlobusJob *job )
 {
-	restartJMsAllowed.Append( job );
+	if ( !m_isGt5 ) {
+		restartJMsAllowed.Append( job );
+	}
 }
 
 void GlobusResource::DoPing( time_t& ping_delay, bool& ping_complete,
@@ -400,6 +413,12 @@ GlobusResource::CheckMonitor()
 	daemonCore->Reset_Timer( checkMonitorTid, TIMER_NEVER );
 	dprintf(D_FULLDEBUG, "grid_monitor for %s entering CheckMonitor\n",
 		resourceName);
+
+	if ( m_isGt5 ) {
+		dprintf( D_FULLDEBUG, "Disabling grid_monitor for GRAM5 server %s\n",
+				 resourceName );
+		return TRUE;
+	}
 
 	if ( monitorGahp->isInitialized() == false ) {
 		dprintf( D_ALWAYS, "GAHP server not initialized yet, not submitting "

@@ -32,7 +32,10 @@ then
   exit 1
 fi
 
-mv hdfs $EXTERNALS_INSTALL_DIR
+rm -rf $EXTERNALS_INSTALL_DIR/$PACKAGE_NAME
+mkdir $EXTERNALS_INSTALL_DIR/$PACKAGE_NAME
+mv hdfs $EXTERNALS_INSTALL_DIR/$PACKAGE_NAME/
+
 if [ $? -ne 0 ]
 then
 	echo "install failed"
