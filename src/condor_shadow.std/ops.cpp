@@ -22,6 +22,7 @@
 #include "condor_debug.h"
 #include "fileno.h"
 #include "condor_io.h"
+#include "structproc.h"
 
 FILE	*fdopen();
 

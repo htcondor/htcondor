@@ -283,12 +283,6 @@ void unsetQSock();
 int rusage_to_float(struct rusage, float *, float *);
 int float_to_rusage(float, float, struct rusage *);
 
-/* These are here for compatibility with old code which uses the PROC
-   structure to ease porting.  Use of these functions is discouraged! */
-#if defined(NEW_PROC)
-int GetProc(int, int, PROC *);
-#endif
-
 bool Reschedule();
 
 #define SetAttributeExpr(cl, pr, name, val) SetAttribute(cl, pr, name, val);
