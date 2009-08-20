@@ -426,6 +426,7 @@ the library routine which parses the configuration files.
   \item \verb@DBMSD@
   \item \verb@JOB_ROUTER@
   \item \verb@LEASEMANAGER@
+  \item \verb@ROOSTER@
     \label{list:subsystem names}
   \end{itemize}
 
@@ -4654,36 +4655,41 @@ Power Management for more details.
   $n$ from S$n$ notation was adopted because at this junction in time 
   it appears to be the standard naming scheme for power states on several
   popular Operating Systems, including various flavors of Windows and Linux
-  distributions.  The other strings (``RAM'', ``DISK'', etc.) are
+  distributions.  The other strings ("RAM", "DISK", etc.) are
   provided for ease of configuration.
 
   Since this expression is evaluated in the context of each slot on the
   machine, any one slot has veto power over the other slots.  If the 
-  evaluation of \MacroNI{HIBERNATE} in one slot evaluates to ``NONE''
-  or ``0'', then the machine will not be placed into a low power
+  evaluation of \MacroNI{HIBERNATE} in one slot evaluates to "NONE"
+  or "0", then the machine will not be placed into a low power
   state.  On the other 
   hand, if all slots evaluate to a non-zero value, but differ in value, 
   then the largest value is used as the representative power state.
 
   Strings that do not match any in the table above are treated as
-  ``NONE''.
+  "NONE".
 
 \label{param:Unhibernate}
 \item[\Macro{UNHIBERNATE}]
-A boolean expression that specifies when an offline machine should be
-woken up.  The default value is \Code{LastMatchTime=!=UNDEFINED}.
-This expression doesn't do anything unless there is an instance of
-\Condor{rooster} running (or something else that evalutes the
-\Attr{Unhibernate} expression in offline machine ads).  The special attribute
-\Attr{LastMatchTime} is updated in the ClassAds of offline machines
-when a job would have been matched to the machine if it had been online.
-For multi-slot machines, the slot1 offline ad will also contain
-\Attr{slot<X>\_LastMatchTime} attributes where \MacroNI{X} is replaced by the
-slot id of the other slots that would have been matched while offline.
-This allows the slot1 \Macro{UNHIBERNATE} expression to refer to
-all of the slots on the machine in case that is necessary.  By default,
-\Condor{rooster} will wake up a machine if any slot on the machine has
-its \Macro{UNHIBERNATE} expression evaluate to true.
+  A boolean expression that specifies when an offline machine should be
+  woken up.
+  The default value is \Expr{LastMatchTime =!= UNDEFINED}.
+  This expression does not do anything,
+  unless there is an instance of \Condor{rooster} running,
+  or another program that evaluates the
+  \Attr{Unhibernate} expression of offline machine ClassAds.
+  The special attribute
+  \Attr{LastMatchTime} is updated in the ClassAds of offline machines
+  when a job would have been matched to the machine if it had been on line.
+  For multi-slot machines, the offline ClassAd for slot1 will also contain
+  the attributes \Attr{slot<X>\_LastMatchTime},
+  where \MacroNI{X} is replaced by the
+  slot id of the other slots that would have been matched while offline.
+  This allows the slot1 \Macro{UNHIBERNATE} expression to refer to
+  all of the slots on the machine, in case that is necessary.
+  By default,
+  \Condor{rooster} will wake up a machine if any slot on the machine has
+  its \Macro{UNHIBERNATE} expression evaluate to \Expr{True}.
 
 \label{param:LinuxHibernationMethod}
 \item[\Macro{LINUX\_HIBERNATION\_METHOD}]
@@ -9501,40 +9507,46 @@ section~\ref{man-condor-ssh-to-job}.
 \subsection{\label{sec:Config-rooster}\Condor{rooster} Configuration File Macros}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\index{configuration!Rooster configuration variables}
-
+\index{configuration!condor\_rooster configuration variables}
 \Condor{rooster} is an optional daemon that may be added to the
-master's \Macro{DAEMON\_LIST}.  It is responsible for waking up
+\Condor{master} daemon's \MacroNI{DAEMON\_LIST}.
+It is responsible for waking up
 hibernating machines when their \Macro{UNHIBERNATE} expression becomes
-true.  A typical case would be to run a single instance of
-\Condor{rooster} on the central manager.  However, if the network
-topology requires that wake-on-lan packets be sent to some machines
-from a different location, \Condor{rooster} can be run from any
-machine(s) that can read from the pool collector.
+\Expr{True}.
+In the typical case, a pool runs a single instance of
+\Condor{rooster} on the central manager.
+However, if the network topology requires that 
+Wake On LAN packets be sent to specific machines from different locations,
+\Condor{rooster} can be run on any
+machine that can read from the pool's \Condor{collector} daemon.
 
 \begin{description}
 
 \label{param:RoosterInterval}
 \item[\Macro{ROOSTER\_INTERVAL}]
-This is the number of seconds between checks for offline machines that
-should be woken up.  The default is 300.
+  The integer number of seconds between checks for offline machines that
+  should be woken.  The default value is 300.
 
 \label{param:RoosterUnhibernate}
 \item[\Macro{ROOSTER\_UNHIBERNATE}]
-This is a boolean expression that specifies which machines should be
-woken up.  The default is \Code{Offline \&\& Unhibernate}.  If network
-topology or other considerations demand that some machines in a pool be woken
-up by one instance of \Condor{rooster} and others be woken up by
-a different instance, \Macro{ROOSTER\_UNHIBERNATE} could be set to be
-different for the two instances of rooster so that they will only ever
-try to wake up their respective subset of the pool.
+  A boolean expression that specifies which machines should be woken up.
+  The default expression is \Expr{Offline \&\& Unhibernate}.
+  If network topology or other considerations demand that some machines
+  in a pool be woken up by one instance of \Condor{rooster}, 
+  while others be woken up by a different instance,
+  \Macro{ROOSTER\_UNHIBERNATE} may be set locally such that it is
+  different for the two instances of \Condor{rooster}.
+  In this way, the different instances will only
+  try to wake up their respective subset of the pool.
 
 \label{param:RoosterWakeupCmd}
 \item[\Macro{ROOSTER\_WAKEUP\_CMD}]
-This is the command to execute to wake up a machine.  The command and
-any arguments should be enclosed in double quotes, as in the ``new''
-arguments syntax in condor submit description files.  The default is
-\Code{"\$(BIN)/condor\_power -d -i"}.  The command is expected to read
-from its standard input a ClassAd representing the offline machine.
+  A string representing the command line invoked by \Condor{rooster}
+  that is to wake up a machine.
+  The command and any arguments should be enclosed in double quote marks,
+  the same as \SubmitCmd{arguments} syntax in a Condor submit description file.
+  The default value is \verb@"$(BIN)/condor_power -d -i"@.
+  The command is expected to read
+  from its standard input a ClassAd representing the offline machine.
 
 \end{description}
