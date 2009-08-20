@@ -116,7 +116,9 @@ Level values and what they produce is described as
        (see section~\ref{param:DAGManAllowEvents}).}
     \OptItem{\Opt{-allowlogerror}}{This optional argument has 
        \Condor{dagman} try to run the specified DAG, even in the case
-       of detected errors in the user log specification. }
+       of detected errors in the user log specification.
+       (As of version 7.3.2, this argument only has any effect on
+       DAGs containing Stork nodes.)}
     \OptItem{\Opt{-usedagdir}}{This optional argument causes
        \Condor{dagman} to run each specified DAG as if the directory
        containing that DAG file was the current working directory.  This

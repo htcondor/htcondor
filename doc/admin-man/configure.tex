@@ -7868,6 +7868,12 @@ Setting these is explained in section~\ref{sec:DAG-configuration}.
   variable unset or set it to \Expr{False}.
   The default value if not defined is \Expr{False}.
 
+\label{param:DAGManDefaultNodeLog}
+\item[\Macro{DAGMAN\_DEFAULT\_NODE\_LOG}]
+  The name of a file to be used as a user log by any node jobs that
+  do not define their own log files.
+  The default value if not defined is \Arg{DagFile}.nodes.log.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

@@ -443,13 +443,9 @@ submit description file for a descendant node in the DAG.
 
 \end{itemize}
 
-There are two known disadvantages of the lazy log file evaluation scheme:
+There is one known disadvantage of the lazy log file evaluation scheme:
 
 \begin{itemize}
-
-\item If a submit description file does not contain the necessary
-log file specification, the DAG will not fail at submission time.
-It will fail when the node is submitted.
 
 \item Because the log files are internally identified by inode
 numbers, it is possible that errors may arise where log files for
@@ -458,6 +454,16 @@ This permits two unique files to have the same inode number.
 We hope to have this problem fixed soon.
 
 \end{itemize}
+
+Another new feature in version 7.3.2 is default node job user logs.
+In the past it was a fatal error if the submit file for a node job did
+not specify a log file.  However, starting with version 7.3.2,
+DAGMan specifies a default user log file for the job in this case.
+The file used as the default node log is controlled by the
+\MacroNI{DAGMAN\_DEFAULT\_NODE\_LOG} configuration variable (see 
+section~\ref{param:DAGManDefaultNodeLog}).
+Nodes specifying a log file and other nodes using the default log
+file can be mixed in a single DAG.
 
 Here is a modified version of the DAG input file
 for the diamond-shaped DAG. 

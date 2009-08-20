@@ -116,6 +116,9 @@ are described in section~\ref{sec:Config-rooster}.
 of the file to which it refers no longer require a full restart of Condor.
 Instead, the command \Condor{reconfig} will cause the changes to be utilized.
 
+\item \Condor{dagman} now automatically generates a default user log
+file for any node job that does not specify one.
+
 \end{itemize}
 
 \noindent Configuration Variable Additions and Changes:
@@ -216,23 +219,27 @@ for example by \Condor{rooster}.
 See \ref{param:Unhibernate} for the complete description.
 
 %gittrac #383
-\item The new configuration \Macro{HIBERNATION\_PLUGIN} specifies the
+\item The new configuration variable \Macro{HIBERNATION\_PLUGIN} specifies the
   path to the plug-in which the \Condor{startd} will use to detect
   the low power state capabilities of a machine, and to switch the
   machine to a low power state.
 
 %gittrac #383
-\item The new configuration \Macro{HIBERNATION\_PLUGIN\_ARGS}
+\item The new configuration variable \Macro{HIBERNATION\_PLUGIN\_ARGS}
   specifies extra optional command line parameters which the
   \Condor{startd} will pass to the plug-in when invoking it to
   switch the machine to a low power state.
 
 %gittrac #383
-\item The new configuration \Macro{HIBERNATION\_OVERRIDE\_WOL} can be
+\item The new configuration variable \Macro{HIBERNATION\_OVERRIDE\_WOL} can be
   used to direct the \Condor{startd} to ignore Wake On LAN (WOL)
   capabilities of the machine's network interface, and to switch to a
   low power state even if the interface does not support WOL, or if
   WOL is disabled on it.
+
+\item The new configuration variable \Macro{DAGMAN\_DEFAULT\_NODE\_LOG} can
+be used to override the default log file name for the new \Condor{dagman}
+default node log file feature.
 
 \end{itemize}
 
