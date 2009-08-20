@@ -53,7 +53,7 @@ init_soap(struct soap *soap)
 	MyString subsys = MyString(get_mySubSystem()->getName() );
 
 		// KEEP-ALIVE should be turned OFF, not ON.
-	soap_init(soap);
+	//soap_init(soap);
 	soap_set_namespaces(soap, namespaces);
 		//soap_init2(&soap, SOAP_IO_KEEPALIVE, SOAP_IO_KEEPALIVE);
 
