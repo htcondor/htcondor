@@ -738,14 +738,25 @@ int daemon::RealStart( )
 		dprintf(D_FULLDEBUG, "start recover timer (%d)\n", recover_tid);
 	}
 
-	if (command_port) {
+	const char	*proc_type = command_port ? "DaemonCore " : "";
+	if ( DebugFlags & D_FULLDEBUG ) {
+		MyString	 args_string, tmp;
+		args.GetArgsStringForDisplay( &tmp, 1 );
+		if( tmp.Length() ) {
+			args_string  = " ";
+			args_string += tmp;
+		}
+		else {
+			args_string = tmp;
+		}
 		dprintf( D_FAILURE|D_ALWAYS,
-				 "Started DaemonCore process \"%s\", pid and pgroup = %d\n",
-				 process_name, pid );
-	} else {
-		dprintf( D_ALWAYS,
-				 "Started process \"%s\", pid and pgroup = %d\n",
-				 process_name, pid );
+				 "Started %sprocess \"%s%s\", pid and pgroup = %d\n",
+				 proc_type, process_name, args_string.Value(), pid );
+	}
+	else {
+		dprintf( D_FAILURE|D_ALWAYS,
+				 "Started %sprocess \"%s\", pid and pgroup = %d\n",
+				 proc_type, process_name, pid );
 	}
 	
 		// Make sure we've got the current timestamp for updates, etc.

@@ -330,7 +330,8 @@ bool GlobusJobAdMatch( const ClassAd *job_ad ) {
 	if ( job_ad->LookupInteger( ATTR_JOB_UNIVERSE, universe ) &&
 		 universe == CONDOR_UNIVERSE_GRID &&
 		 job_ad->LookupString( ATTR_GRID_RESOURCE, resource ) &&
-		 strncasecmp( resource.Value(), "gt2 ", 4 ) == 0 ) {
+		 ( strncasecmp( resource.Value(), "gt2 ", 4 ) == 0 ||
+		   strncasecmp( resource.Value(), "gt5 ", 4 ) == 0  ) ) {
 
 		return true;
 	}
@@ -629,6 +630,7 @@ GlobusJob::GlobusJob( ClassAd *classad )
 	MyString error_string = "";
 	char *gahp_path = NULL;
 	ArgList gahp_args;
+	bool is_gt5 = false;
 
 	RSL = NULL;
 	callbackRegistered = false;
@@ -736,9 +738,13 @@ GlobusJob::GlobusJob( ClassAd *classad )
 		grid_resource.Tokenize();
 
 		token = grid_resource.GetNextToken( " ", false );
-		if ( !token || stricmp( token, "gt2" ) ) {
-			error_string.sprintf( "%s not of type gt2", ATTR_GRID_RESOURCE );
+		if ( !token || ( stricmp( token, "gt2" ) && stricmp( token, "gt5" ) ) ) {
+			error_string.sprintf( "%s not of type gt2 or gt5",
+								  ATTR_GRID_RESOURCE );
 			goto error_exit;
+		}
+		if ( !stricmp( token, "gt5" ) ) {
+			is_gt5 = true;
 		}
 
 		token = grid_resource.GetNextToken( " ", false );
@@ -763,9 +769,13 @@ GlobusJob::GlobusJob( ClassAd *classad )
 		grid_job_id.Tokenize();
 
 		token = grid_job_id.GetNextToken( " ", false );
-		if ( !token || stricmp( token, "gt2" ) ) {
-			error_string.sprintf( "%s not of type gt2", ATTR_GRID_JOB_ID );
+		if ( !token || ( stricmp( token, "gt2" ) && stricmp( token, "gt5" ) ) ) {
+			error_string.sprintf( "%s not of type gt2 or gt5",
+								  ATTR_GRID_JOB_ID );
 			goto error_exit;
+		}
+		if ( !stricmp( token, "gt5" ) ) {
+			is_gt5 = true;
 		}
 
 		token = grid_job_id.GetNextToken( " ", false );
@@ -781,7 +791,8 @@ GlobusJob::GlobusJob( ClassAd *classad )
 
 	// Find/create an appropriate GlobusResource for this job
 	myResource = GlobusResource::FindOrCreateResource( resourceManagerString,
-													   jobProxy->subject->subject_name);
+													   jobProxy->subject->subject_name,
+													   is_gt5 );
 	if ( myResource == NULL ) {
 		error_string = "Failed to initialized GlobusResource object";
 		goto error_exit;
@@ -2829,7 +2840,8 @@ void GlobusJob::SetRemoteJobId( const char *job_id )
 
 	MyString full_job_id;
 	if ( job_id ) {
-		full_job_id.sprintf( "gt2 %s %s", resourceManagerString, job_id );
+		full_job_id.sprintf( "%s %s %s", myResource->IsGt5() ? "gt5" : "gt2",
+							 resourceManagerString, job_id );
 	}
 	BaseJob::SetRemoteJobId( full_job_id.Value() );
 }
@@ -3516,6 +3528,9 @@ GlobusJob::JmShouldSleep()
 		}
 	}
 	if ( condorState != IDLE && condorState != RUNNING ) {
+		return false;
+	}
+	if ( myResource->IsGt5() ) {
 		return false;
 	}
 	if ( GlobusResource::GridMonitorEnabled() == false ) {

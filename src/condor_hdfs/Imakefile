@@ -18,5 +18,6 @@ static:: all
 clean::
 
 gen_soapfiles(hdfs,condorHDFS)
+release_recursive_copy_target($(HADOOP_DIR)/hdfs,libexec/hdfs)
 
 testbin:: all
