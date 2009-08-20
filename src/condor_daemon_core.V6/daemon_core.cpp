@@ -540,7 +540,9 @@ DaemonCore::~DaemonCore()
 
 #ifdef HAVE_EXT_GSOAP
 	if( soap ) {
-		delete soap;
+		soap_destroy(soap);
+		soap_end(soap);
+		soap_free(soap);
 		soap = NULL;
 	}
 #endif
@@ -2358,13 +2360,16 @@ DaemonCore::reconfig(void) {
 	if( param_boolean("ENABLE_SOAP",false) ||
 		param_boolean("ENABLE_WEB_SERVER",false) )
 	{
-			// Only allocate soap structure if we need it, because
-			// it is big.
-		if( !soap ) {
-			soap = new struct soap;
-				// SETUP SOAP SOCKET
-			init_soap(soap);
+		// tstclair: reconfigure the soap object
+		if( soap ) {
+			soap_destroy(soap);
+			soap_end(soap);
+			soap_free(soap);
 		}
+
+		soap = soap_new(); 
+		init_soap(soap);
+		
 	}
 	else {
 		// Do not have to deallocate soap if it was enabled and has
