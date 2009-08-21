@@ -336,6 +336,7 @@ void
 WorkerThread::set_status(thread_status_t newstatus)
 {
 	static int previous_ready_tid = 0;
+	static int previous_running_tid = 0;
 	static char previous_ready_message[200];
 	bool same_thread_running = false;
 
@@ -377,6 +378,22 @@ WorkerThread::set_status(thread_status_t newstatus)
 		// grab mutex to protect static variables previous_ready_*
 	pthread_mutex_lock(&(TI->set_status_lock));
 
+		// put the thread that used to be running into READY state
+	if ( previous_running_tid > 0 && newstatus == THREAD_RUNNING && 
+		 mytid != previous_running_tid ) 
+	{
+		WorkerThreadPtr_t context = CondorThreads::get_handle(previous_running_tid);
+		if ( !context.is_null() ) {
+			if ( context->status_ == THREAD_RUNNING ) {
+				context->status_ = THREAD_READY;
+				dprintf(D_THREADS,
+					"Thread %d (%s) status change from %s to %s\n",previous_running_tid,
+					context->get_name(),
+					get_status_string(THREAD_RUNNING),get_status_string(THREAD_READY));
+			}
+		}
+	}
+
 	if ( (currentstatus == THREAD_RUNNING && newstatus == THREAD_READY))
 	{
 		snprintf(previous_ready_message,sizeof(previous_ready_message),
@@ -410,14 +427,19 @@ WorkerThread::set_status(thread_status_t newstatus)
 			get_status_string(currentstatus),get_status_string(newstatus));
 	}
 
+	if ( newstatus == THREAD_RUNNING ) {
+		previous_running_tid = mytid;
+	}
+
 	pthread_mutex_unlock(&(TI->set_status_lock));
 
 	if ( newstatus == THREAD_RUNNING && same_thread_running == false )
 	{
 		// If we are about to schedule a Condor thread, and it is not the same 
-		// thread we just ran, invoke the user-supplied callback. TODO.
-		if ( TI->switch_callback ) 
+		// thread we just ran, invoke the user-supplied callback.
+		if ( TI->switch_callback ) {
 			(*(TI->switch_callback))(user_pointer_);	
+		}
 	}
 }
 
@@ -549,6 +571,7 @@ ThreadImplementation::pool_add(condor_thread_func_t routine, void* arg,
 		if ( next_tid_ == INT_MAX ) next_tid_ = 2;	// we wrapped!
 	} while ( hashTidToWorker.exists(next_tid_) == 0 );	
 	int mytid = next_tid_;
+	hashTidToWorker.insert(mytid,newthread);
 	mutex_handle_unlock();
 	
 	newthread->tid_ = mytid;
@@ -857,6 +880,9 @@ ThreadImplementation::start_thread_safe_block()
 	}
 #endif
 
+	// TODO - once set_status is for certain thread safe, perhaps
+	// we should set the status of the thread to IO.
+	
 	mutex_biglock_unlock();
 
 	return 0;
@@ -894,10 +920,9 @@ ThreadImplementation::stop_thread_safe_block()
 	}
 #endif
 
-	context->set_status( WorkerThread::THREAD_READY );
 	mutex_biglock_lock();
-
-	context->set_status( WorkerThread::THREAD_RUNNING );
+		// don't use context anymore, we are now in a different thread!
+	get_handle()->set_status( WorkerThread::THREAD_RUNNING );
 
 	return 0;
 }
