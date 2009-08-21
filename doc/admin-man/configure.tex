@@ -7912,7 +7912,9 @@ Setting these is explained in section~\ref{sec:DAG-configuration}.
 \item[\Macro{DAGMAN\_DEFAULT\_NODE\_LOG}]
   The name of a file to be used as a user log by any node jobs that
   do not define their own log files.
-  The default value if not defined is \Arg{DagFile}.nodes.log.
+  The default value if not defined is \File{<DagFile>.nodes.log},
+  where \verb@<DagFile>@ is replaced by the command line argument
+  to \Condor{submit\_dag} that specifies the DAG input file.
 
 \end{description}
 

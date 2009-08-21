@@ -455,13 +455,16 @@ We hope to have this problem fixed soon.
 
 \end{itemize}
 
-Another new feature in version 7.3.2 is default node job user logs.
-In the past it was a fatal error if the submit file for a node job did
-not specify a log file.  However, starting with version 7.3.2,
-DAGMan specifies a default user log file for the job in this case.
+\index{DAGMan!default log file specification}
+Another new feature in version 7.3.2 is the use of default node job user logs.
+Previously, it was a fatal error if the submit description
+file for a node job did not specify a log file.
+Starting with Condor version 7.3.2,
+DAGMan specifies a default user log file for any job that does not specify
+a log file.
 The file used as the default node log is controlled by the
-\MacroNI{DAGMAN\_DEFAULT\_NODE\_LOG} configuration variable (see 
-section~\ref{param:DAGManDefaultNodeLog}).
+\MacroNI{DAGMAN\_DEFAULT\_NODE\_LOG} configuration variable.
+A complete description is at section~\ref{param:DAGManDefaultNodeLog}.
 Nodes specifying a log file and other nodes using the default log
 file can be mixed in a single DAG.
 
