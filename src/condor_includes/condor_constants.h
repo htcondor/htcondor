@@ -100,18 +100,15 @@ static const char NiceUserName[] = "nice-user";
  * a variable be stored as thread-local-storage.
  */
 #if defined(WIN32)
-	/* We know Windows has TLS */
-	#define HAVE_TLS 1
+	/* We know Windows has TLS and it works well */
 	#define THREAD_LOCAL_STORAGE __declspec( thread ) 
-#elif defined(HAVE_TLS) && defined(HAVE_PTHREADS)
-	/* In this case, configure tells us we have TLS and PTHREADS */
-	#define THREAD_LOCAL_STORAGE TLS
-#else
-	/* In this case, we are missing either TLS or PTHREADS */
+#elif 
+	/* On Unix-like platforms, we have had very bad luck w/ TLS.
+	 * For example, when using TLS, we could not build binaries
+	 * on 32bit RHEL3 that would not crash on 64bit RHEL4. See
+	 * gittrac #482.  So for now, THREAD_LOCAL_STORAGE is non-Win32
+	 * platforms is a no-op. */
 	#define THREAD_LOCAL_STORAGE /* Blank */
-	#ifdef HAVE_TLS		/* TLS w/o PTHREADS is dead to us */
-		#undef HAVE_TLS
-	#endif
 #endif
 
 /* Max space needed to hold an IP string, as
