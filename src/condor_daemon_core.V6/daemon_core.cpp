@@ -224,8 +224,8 @@ int ZZZ_always_increase() {
 
 static int _condor_exit_with_exec = 0;
 
-THREAD_LOCAL_STORAGE void **curr_dataptr;
-THREAD_LOCAL_STORAGE void **curr_regdataptr;
+void **curr_dataptr;
+void **curr_regdataptr;
 
 #ifdef HAVE_EXT_GSOAP
 extern int soap_serve(struct soap*);
@@ -2442,6 +2442,74 @@ DaemonCore::refreshDNS() {
 	getSecMan()->getIpVerify()->refreshDNS();
 }
 
+class DCThreadState : public Service {
+ public:
+	DCThreadState(int tid) 
+		{m_tid=tid; m_dataptr=NULL; m_regdataptr=NULL;}
+	int get_tid() { return m_tid; }
+	void* *m_dataptr;
+	void* *m_regdataptr;
+ private:
+	int m_tid;
+};
+
+void 
+DaemonCore::thread_switch_callback(void* & incoming_contextVP)
+{
+	static int last_tid = 1;	// tid of 1 is the main thread
+	DCThreadState *outgoing_context = NULL;
+	DCThreadState *incoming_context = (DCThreadState *) incoming_contextVP;
+	int current_tid = CondorThreads::get_tid();
+
+		// Here we need to: (a) store state into the context of the
+		// thread we are leaving, and (b) restore state from the
+		// context of the thread we are starting.
+	
+	dprintf(D_THREADS,"DaemonCore context switch from tid %d to %d\n",
+			last_tid, current_tid);
+
+	if (!incoming_context) {
+			// Must be a new thread; allocate a new context.
+			// This context will be deleted by CondorThreads
+			// when this thread is deallocated.
+		incoming_context = new DCThreadState(current_tid);
+		ASSERT(incoming_context);
+		incoming_contextVP = (void *) incoming_context;
+	}
+
+		// We were passed the context of the thread being started;
+		// so now lets fetch the context of the thread we were running
+		// before.
+		// Note in the tricky startup case where current_tid and
+		// last_tid are both 1, incoming_context and outgoing_context
+		// point to the same place, which is why we must first
+		// allocate an incoming context above before panicing about
+		// no outgoing context.  Whew.
+	WorkerThreadPtr_t context = CondorThreads::get_handle(last_tid);
+	if ( !context.is_null() ) {
+		outgoing_context = (DCThreadState *) context->user_pointer_;
+		if (!outgoing_context) {
+				EXCEPT("ERROR: daemonCore - no thread context for tid %d\n",
+						last_tid);
+		}
+	}
+
+		// Stash our current state into the outgoing context.
+	if ( outgoing_context ) {
+		ASSERT(outgoing_context->get_tid() == last_tid);
+		outgoing_context->m_dataptr = curr_dataptr;
+		outgoing_context->m_regdataptr = curr_regdataptr;
+	}
+
+		// Restore our state from the incoming context.
+	ASSERT(incoming_context->get_tid() == current_tid);
+	curr_dataptr = incoming_context->m_dataptr;
+	curr_regdataptr = incoming_context->m_regdataptr;
+
+		// Record the current tid as the last tid.
+	last_tid = current_tid;
+}
+
 void
 DaemonCore::reconfig(void) {
 	// NOTE: this function is always called on initial startup, as well
@@ -2642,6 +2710,8 @@ DaemonCore::reconfig(void) {
 	// stop_thread_safe().
 	_mark_thread_safe_callback(CondorThreads::start_thread_safe_block,
 							   CondorThreads::stop_thread_safe_block);
+	// Supply a callback to daemonCore upon thread context switch.
+	CondorThreads::set_switch_callback( thread_switch_callback );
 }
 
 
