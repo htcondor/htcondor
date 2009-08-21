@@ -4642,9 +4642,9 @@ Power Management for more details.
   \item[] "NONE", "0": No-op: do not enter a low power state
   \item[] "S1",   "1", "STANDBY", "SLEEP": On Windows, Sleep (standby)
   \item[] "S2",   "2": On Windows, Sleep (standby)
-  \item[] "S3",   "3", "RAM", "MEM": Sleep (standby)
+  \item[] "S3",   "3", "RAM", "MEM", "SUSPEND": Sleep (standby)
   \item[] "S4",   "4", "DISK", "HIBERNATE": Hibernate
-  \item[] "S5",   "5", "SHUTDOWN": Shutdown (soft-off)
+  \item[] "S5",   "5", "SHUTDOWN", "OFF": Shutdown (soft-off)
   \end{itemize}
   
   The \MacroNI{HIBERNATE} expression is written in terms of the S-states
@@ -4691,11 +4691,45 @@ Power Management for more details.
   \Condor{rooster} will wake up a machine if any slot on the machine has
   its \Macro{UNHIBERNATE} expression evaluate to \Expr{True}.
 
+\label{param:HibernationPlugin}
+\item[\Macro{HIBERNATE\_PLUGIN}]
+  A string which specifies the path to the hibernation ``plug in''
+  that the \Condor{startd} should use in the detection of low power
+  states and switching to the low power states.  The default value is
+  The default value is \File{\$(LIBEXEC)/power\_state}.  A default
+  executable in that location which meets these specifications is
+  shipped with Condor. The executable will be invoked in either one of
+  two modes:
+  \begin{enumerate}
+  \item ``power\_state ad'':  In this mode, the program is expected to
+    output a ClassAd to it's standard output stream.  The
+    \Condor{startd} will use this ClassAd to determine what low power
+  \item ``power\_state set $<$mode$>$'': In this mode, the program is
+    expected switch to the specified low power mode.
+  \end{enumerate}
+  The ClassAd that the program prints to standard output in ``ad''
+  mode can specify the following attributes:
+  \begin{enumerate}
+  \item HibernationSupportedStates - {\it Required} This is a comma
+    separated list of low power modes that are available.  The
+    recognized mode strings are the same as those in the table for
+    \MacroNI{HIBERNATE}.
+  \item HibernationMethod - {\it Optional} This is a text string which
+    describes the mechanism used by the program.  The Linux program
+    will produce ``NONE'', ``/sys'', ``/proc'', or ``pm-utils''.
+  \item HibernationRawMask - {\it Optional} This is an integer which
+    represents the bit mask of the modes detected.
+  \end{enumerate}
+  In ``set'' mode, the program will be passed one of the following
+  strings representing a low power state: ``S1'', ``S2'', ``S3'',
+  ``S4'', ``S5''.
+
 \label{param:LinuxHibernationMethod}
 \item[\Macro{LINUX\_HIBERNATION\_METHOD}]
   A string that can be used to override the default search used by
   Condor on Linux platforms to detect the hibernation method to use.
-  The default behavior orders its search with:
+  This is used by the default hibernation plugin executable that is
+  shipped with Condor.  The default behavior orders its search with:
   \begin{enumerate}
   \item Detect and use the \Prog{pm-utils} command line tools.
     The corresponding string is defined with \verb@"pm-utils"@. 
