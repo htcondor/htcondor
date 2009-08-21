@@ -127,7 +127,6 @@ TESTCLASS(job_ligo_x86-64-chkpttst,core)
 TESTCLASS(job_ligo_x86-64-chkpttst,quick)
 TESTCLASS(job_ligo_x86-64-chkpttst,full)
 TESTCLASS(job_ligo_x86-64-chkpttst,quicknolink)
-TESTCLASS(job_ligo_x86-64-chkpttst,btdebug)
 #endif
 
 DESC(job_dagman_splice-A,"Simple Dagman Splice A")
@@ -136,7 +135,6 @@ TESTCLASS(job_dagman_splice-A,core)
 TESTCLASS(job_dagman_splice-A,quick)
 TESTCLASS(job_dagman_splice-A,full)
 TESTCLASS(job_dagman_splice-A,quicknolink)
-TESTCLASS(job_dagman_splice-A,btdebug)
 
 DESC(job_dagman_splice-B,"Simple Dagman Splice B")
 RUN(job_dagman_splice-B)
@@ -144,7 +142,6 @@ TESTCLASS(job_dagman_splice-B,core)
 TESTCLASS(job_dagman_splice-B,quick)
 TESTCLASS(job_dagman_splice-B,full)
 TESTCLASS(job_dagman_splice-B,quicknolink)
-TESTCLASS(job_dagman_splice-B,btdebug)
 
 DESC(job_dagman_splice-C,"Simple Dagman Splice C")
 RUN(job_dagman_splice-C)
@@ -152,7 +149,6 @@ TESTCLASS(job_dagman_splice-C,core)
 TESTCLASS(job_dagman_splice-C,quick)
 TESTCLASS(job_dagman_splice-C,full)
 TESTCLASS(job_dagman_splice-C,quicknolink)
-TESTCLASS(job_dagman_splice-C,btdebug)
 
 DESC(job_dagman_splice-D,"Simple Dagman Splice D")
 RUN(job_dagman_splice-D)
@@ -160,7 +156,6 @@ TESTCLASS(job_dagman_splice-D,core)
 TESTCLASS(job_dagman_splice-D,quick)
 TESTCLASS(job_dagman_splice-D,full)
 TESTCLASS(job_dagman_splice-D,quicknolink)
-TESTCLASS(job_dagman_splice-D,btdebug)
 
 DESC(job_dagman_splice-E,"Simple Dagman Splice E")
 RUN(job_dagman_splice-E)
@@ -168,7 +163,6 @@ TESTCLASS(job_dagman_splice-E,core)
 TESTCLASS(job_dagman_splice-E,quick)
 TESTCLASS(job_dagman_splice-E,full)
 TESTCLASS(job_dagman_splice-E,quicknolink)
-TESTCLASS(job_dagman_splice-E,btdebug)
 
 DESC(job_dagman_splice-F,"Simple Dagman Splice F")
 RUN(job_dagman_splice-F)
@@ -176,7 +170,6 @@ TESTCLASS(job_dagman_splice-F,core)
 TESTCLASS(job_dagman_splice-F,quick)
 TESTCLASS(job_dagman_splice-F,full)
 TESTCLASS(job_dagman_splice-F,quicknolink)
-TESTCLASS(job_dagman_splice-F,btdebug)
 
 DESC(job_dagman_splice-G,"Simple Dagman Splice G")
 RUN(job_dagman_splice-G)
@@ -184,7 +177,6 @@ TESTCLASS(job_dagman_splice-G,core)
 TESTCLASS(job_dagman_splice-G,quick)
 TESTCLASS(job_dagman_splice-G,full)
 TESTCLASS(job_dagman_splice-G,quicknolink)
-TESTCLASS(job_dagman_splice-G,btdebug)
 
 DESC(job_dagman_splice-H,"Simple Dagman Splice H")
 RUN(job_dagman_splice-H)
@@ -192,7 +184,6 @@ TESTCLASS(job_dagman_splice-H,core)
 TESTCLASS(job_dagman_splice-H,quick)
 TESTCLASS(job_dagman_splice-H,full)
 TESTCLASS(job_dagman_splice-H,quicknolink)
-TESTCLASS(job_dagman_splice-H,btdebug)
 
 DESC(job_dagman_splice-I,"Simple Dagman Splice I")
 RUN(job_dagman_splice-I)
@@ -200,7 +191,6 @@ TESTCLASS(job_dagman_splice-I,core)
 TESTCLASS(job_dagman_splice-I,quick)
 TESTCLASS(job_dagman_splice-I,full)
 TESTCLASS(job_dagman_splice-I,quicknolink)
-TESTCLASS(job_dagman_splice-I,btdebug)
 
 /*	This test is commented out until we fix Condor.pm to allow multiple
 	dag files to be submitted with condor_submit_dag in TestSubmitDagman
@@ -213,7 +203,6 @@ TESTCLASS(job_dagman_splice-J,core)
 TESTCLASS(job_dagman_splice-J,quick)
 TESTCLASS(job_dagman_splice-J,full)
 TESTCLASS(job_dagman_splice-J,quicknolink)
-TESTCLASS(job_dagman_splice-J,btdebug)
 */
 
 DESC(job_dagman_splice-K,"Simple Dagman Splice K")
@@ -222,7 +211,6 @@ TESTCLASS(job_dagman_splice-K,core)
 TESTCLASS(job_dagman_splice-K,quick)
 TESTCLASS(job_dagman_splice-K,full)
 TESTCLASS(job_dagman_splice-K,quicknolink)
-TESTCLASS(job_dagman_splice-K,btdebug)
 
 DESC(job_dagman_splice-L,"Simple Dagman Splice L")
 RUN(job_dagman_splice-L)
@@ -230,7 +218,6 @@ TESTCLASS(job_dagman_splice-L,core)
 TESTCLASS(job_dagman_splice-L,quick)
 TESTCLASS(job_dagman_splice-L,full)
 TESTCLASS(job_dagman_splice-L,quicknolink)
-TESTCLASS(job_dagman_splice-L,btdebug)
 
 DESC(job_dagman_splice-M,"Simple Dagman Splice M")
 RUN(job_dagman_splice-M)
@@ -238,7 +225,6 @@ TESTCLASS(job_dagman_splice-M,core)
 TESTCLASS(job_dagman_splice-M,quick)
 TESTCLASS(job_dagman_splice-M,full)
 TESTCLASS(job_dagman_splice-M,quicknolink)
-TESTCLASS(job_dagman_splice-M,btdebug)
 
 DESC(job_dagman_splice-N,"Simple Dagman Splice N")
 RUN(job_dagman_splice-N)
@@ -246,7 +232,6 @@ TESTCLASS(job_dagman_splice-N,core)
 TESTCLASS(job_dagman_splice-N,quick)
 TESTCLASS(job_dagman_splice-N,full)
 TESTCLASS(job_dagman_splice-N,quicknolink)
-TESTCLASS(job_dagman_splice-N,btdebug)
 
 DESC(job_dagman_splice-O,"Simple Dagman Splice O")
 RUN(job_dagman_splice-O)
@@ -254,7 +239,6 @@ TESTCLASS(job_dagman_splice-O,core)
 TESTCLASS(job_dagman_splice-O,quick)
 TESTCLASS(job_dagman_splice-O,full)
 TESTCLASS(job_dagman_splice-O,quicknolink)
-TESTCLASS(job_dagman_splice-O,btdebug)
 
 /* vmuniverse tests in larg repository */
 
@@ -265,14 +249,12 @@ TESTCLASS(job_vmu_basic,core)
 TESTCLASS(job_vmu_basic,quick)
 TESTCLASS(job_vmu_basic,full)
 TESTCLASS(job_vmu_basic,quicknolink)
-TESTCLASS(job_vmu_basic,btdebug)
 DESC(job_vmu_cdrom,"VM Universe CD-ROM test")
 RUN(job_vmu_cdrom)
 TESTCLASS(job_vmu_cdrom,core)
 TESTCLASS(job_vmu_cdrom,quick)
 TESTCLASS(job_vmu_cdrom,full)
 TESTCLASS(job_vmu_cdrom,quicknolink)
-TESTCLASS(job_vmu_cdrom,btdebug)
 
 /* This one is flakey for unknown reasons
 DESC(job_vmu_network,"VM Universe networking test")
@@ -281,7 +263,6 @@ TESTCLASS(job_vmu_network,core)
 TESTCLASS(job_vmu_network,quick)
 TESTCLASS(job_vmu_network,full)
 TESTCLASS(job_vmu_network,quicknolink)
-TESTCLASS(job_vmu_network,btdebug)
 */
 
 DESC(job_vmu_ckpt,"VM Universe checkpoint test")
@@ -290,7 +271,6 @@ TESTCLASS(job_vmu_ckpt,core)
 TESTCLASS(job_vmu_ckpt,quick)
 TESTCLASS(job_vmu_ckpt,full)
 TESTCLASS(job_vmu_ckpt,quicknolink)
-TESTCLASS(job_vmu_ckpt,btdebug)
 #endif 
 
 /* We're not building OpenSSL on HPUX */
@@ -308,14 +288,12 @@ TESTCLASS(job_flocking_to,core)
 TESTCLASS(job_flocking_to,quick)
 TESTCLASS(job_flocking_to,full)
 TESTCLASS(job_flocking_to,quicknolink)
-TESTCLASS(job_flocking_to,btdebug)
 
 DESC(fetch_work-basic,"work fetch smoke test")
 RUN(fetch_work-basic)
 TESTCLASS(fetch_work-basic,core)
 TESTCLASS(fetch_work-basic,quick)
 TESTCLASS(fetch_work-basic,quicknolink)
-TESTCLASS(fetch_work-basic,btdebug)
 
 /*
 **
@@ -326,7 +304,6 @@ TESTCLASS(lib_sysapi,core)
 TESTCLASS(lib_sysapi,quick)
 TESTCLASS(lib_sysapi,full)
 TESTCLASS(lib_sysapi,quicknolink)
-TESTCLASS(lib_sysapi,btdebug)
 
 DESC(lib_procapi,"Run ProcApi Tests")
 RUN(lib_procapi)
@@ -334,7 +311,6 @@ TESTCLASS(lib_procapi,core)
 TESTCLASS(lib_procapi,quick)
 TESTCLASS(lib_procapi,full)
 TESTCLASS(lib_procapi,quicknolink)
-TESTCLASS(lib_procapi,btdebug)
 */
 
 DESC(lib_unit_tests,"Run Unit Tests Tests")
@@ -343,7 +319,6 @@ TESTCLASS(lib_unit_tests,core)
 TESTCLASS(lib_unit_tests,quick)
 TESTCLASS(lib_unit_tests,full)
 TESTCLASS(lib_unit_tests,quicknolink)
-TESTCLASS(lib_unit_tests,btdebug)
 
 DESC(lib_auth_config,"Run Authorization Config Tests")
 RUN(lib_auth_config)
@@ -351,7 +326,6 @@ TESTCLASS(lib_auth_config,core)
 TESTCLASS(lib_auth_config,quick)
 TESTCLASS(lib_auth_config,full)
 TESTCLASS(lib_auth_config,quicknolink)
-TESTCLASS(lib_auth_config,btdebug)
 
 DESC(lib_classads,"Run ClassAd Tests")
 RUN(lib_classads)
@@ -359,7 +333,6 @@ TESTCLASS(lib_classads,core)
 TESTCLASS(lib_classads,quick)
 TESTCLASS(lib_classads,full)
 TESTCLASS(lib_classads,quicknolink)
-TESTCLASS(lib_classads,btdebug)
 
 DESC(lib_auth_protocol-fs,"FS authentication test")
 RUN(lib_auth_protocol-fs)
@@ -806,7 +779,6 @@ TESTCLASS(job_quill_basic,core)
 TESTCLASS(job_quill_basic,quick)
 TESTCLASS(job_quill_basic,full)
 TESTCLASS(job_quill_basic,quicknolink)
-TESTCLASS(job_quill_basic,btdebug)
 #endif
 
 DESC(job_core_basic_par,"Basic Parallel Universe")
@@ -1006,7 +978,6 @@ TESTCLASS(lib_procapi_cputracking-snapshot,core)
 TESTCLASS(lib_procapi_cputracking-snapshot,quick)
 TESTCLASS(lib_procapi_cputracking-snapshot,full)
 TESTCLASS(lib_procapi_cputracking-snapshot,quicknolink)
-TESTCLASS(lib_procapi_cputracking-snapshot,btdebug)
 #endif
 **
 */
@@ -1682,7 +1653,6 @@ RUN(cmd_wait_shows-timeout)
 TESTCLASS(cmd_wait_shows-timeout,quick)
 TESTCLASS(cmd_wait_shows-timeout,full)
 TESTCLASS(cmd_wait_shows-timeout,quicknolink)
-TESTCLASS(cmd_wait_shows-timeout,btdebug)
 
 /* Dagman Tests */
 
@@ -1949,7 +1919,6 @@ TESTCLASS(job_rsc_binary-io_std,framework)
 TESTCLASS(job_rsc_binary-io_std,quick)
 TESTCLASS(job_rsc_binary-io_std,full)
 TESTCLASS(job_rsc_binary-io_std,quicknolink)
-TESTCLASS(job_rsc_binary-io_std,btdebug)
 
 #endif /* ! IS_CLIPPED */
 /* This test fails constantly and is off for now

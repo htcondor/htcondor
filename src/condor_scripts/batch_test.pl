@@ -362,9 +362,9 @@ if(!($wantcurrentdaemons)) {
 			$mcmd =~ s/\\/\//g;
 			debug( "Starting master like this:\n",2);
 			debug( "\"$mcmd\"\n",2);
-			CondorTest::verbose_system("$mcmd",{emit_output=>0});
+			CondorTest::verbose_system("$mcmd",{emit_output=>0,use_system=>1});
 		} else {
-			CondorTest::verbose_system("$installdir/sbin/condor_master @extracondorargs -f &",{emit_output=>0});
+			CondorTest::verbose_system("$installdir/sbin/condor_master @extracondorargs -f &",{emit_output=>0,use_system=>1});
 		}
 		debug("Done Starting Personal Condor\n",2);
 	}
