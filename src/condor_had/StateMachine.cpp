@@ -136,7 +136,7 @@ HADStateMachine::~HADStateMachine(void)
 
     invalidate_ad.SetMyTypeName( QUERY_ADTYPE );
     invalidate_ad.SetTargetTypeName( HAD_ADTYPE );
-    line.sprintf( "%s == \"%s\"", ATTR_NAME, m_daemonName.Value( ) );
+    line.sprintf( "%s == \"%s\"", ATTR_NAME, m_name.Value( ) );
     invalidate_ad.AssignExpr( ATTR_REQUIREMENTS, line.Value( ) );
     daemonCore->sendUpdates( INVALIDATE_HAD_ADS, &invalidate_ad, NULL, false );
 }
