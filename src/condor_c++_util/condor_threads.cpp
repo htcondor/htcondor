@@ -555,7 +555,11 @@ ThreadImplementation::pool_add(condor_thread_func_t routine, void* arg,
 	// ASSERT big_lock ?
 
 	// If we are out of threads, yield here until some are available.
+	dprintf(D_THREADS,"Queing work to thread pool - w=%d tbusy=%d tmax=%d\n",
+			work_queue.Length(),num_threads_busy_,num_threads_);
 	while ( num_threads_busy_ >= num_threads_ ) {
+		dprintf(D_ALWAYS,"WARNING: thread pool full - w=%d tbusy=%d tmax=%d\n",
+			work_queue.Length(),num_threads_busy_,num_threads_);
 		pthread_cond_wait(&workers_avail_cond,&big_lock);
 	}
 
