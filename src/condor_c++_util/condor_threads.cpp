@@ -39,10 +39,31 @@
 #if defined(WIN32) && !defined(HAVE_PTHREADS)
 
 #define HAVE_PTHREADS 1
+
+// Some definitions to translate types from pthread to Win32
 typedef CRITICAL_SECTION pthread_mutex_t;
 typedef DWORD pthread_t;
-typedef void pthread_mutexattr_t;
-typedef void pthread_condattr_t;
+
+// Some no-op definitions of pthread types we don't support on Win32.
+typedef int pthread_mutexattr_t;
+typedef int pthread_condattr_t;
+typedef int pthread_key_t;
+#define PTHREAD_MUTEX_RECURSIVE_NP 1
+#define PTHREAD_MUTEX_RECURSIVE 2
+
+static int
+pthread_mutexattr_init(pthread_mutexattr_t *)
+{
+	// not implemented on Win32
+	return 0;	// init always returns 0 according to the man page
+}
+
+static int
+pthread_mutexattr_settype(pthread_mutexattr_t *, int)
+{
+	// not implemented on Win32
+	return -1;
+}
 
 static pthread_t
 pthread_self()
@@ -215,6 +236,10 @@ pthread_cond_signal (pthread_cond_t *cv)
 	template class HashTable<ThreadInfo,WorkerThreadPtr_t>;
 	template class HashTable<int,WorkerThreadPtr_t>;
 	template class Queue<WorkerThreadPtr_t>;
+#endif
+
+#ifdef WIN32
+	int ThreadImplementation::m_CurrentTid = 0;
 #endif
 
 static ThreadImplementation* TI = NULL;
@@ -801,7 +826,9 @@ ThreadImplementation::~ThreadImplementation()
 	pthread_mutex_destroy(&big_lock);
 	pthread_mutex_destroy(&get_handle_lock);
 	pthread_mutex_destroy(&set_status_lock);
+#ifndef WIN32
 	pthread_key_delete(m_CurrentTidKey);
+#endif
 	// TODO pthread_cond_destroy ....
 }
 

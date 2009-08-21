@@ -95,10 +95,9 @@ public:
 	HashTable<ThreadInfo,WorkerThreadPtr_t> hashThreadToWorker;
 	HashTable<int,WorkerThreadPtr_t> hashTidToWorker;
 	condor_thread_switch_callback_t switch_callback;
-#ifdef WIN32
-	THREAD_LOCAL_STORAGE m_CurrentTid;
-#else
 	pthread_key_t m_CurrentTidKey;
+#ifdef WIN32
+	static THREAD_LOCAL_STORAGE int m_CurrentTid;
 #endif
 
 		// Members dealing with our work pool
