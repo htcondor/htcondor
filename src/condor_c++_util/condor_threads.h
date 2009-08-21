@@ -82,6 +82,8 @@ public:
 	int operator== (const WorkerThread& r) {return tid_ == r.tid_; }
 	int operator< (const WorkerThread& r) {return tid_ < r.tid_; }
 
+	void *user_pointer_;
+
 private:
 	// Ctors are private since only the ThreadImplementation class
 	// should create WorkerThread objects.
@@ -95,7 +97,6 @@ private:
 	bool enable_parallel_flag_;
 	int parallel_mode_count_;
 	thread_status_t status_;	// use set_status(), get_status()
-	void *user_pointer_;
 };
 
 class CondorThreads

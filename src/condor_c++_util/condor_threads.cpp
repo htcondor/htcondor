@@ -25,6 +25,7 @@
 #include "Queue.h"
 #include "HashTable.h"
 #include "condor_string.h"	// for strnewp()
+#include "dc_service.h"		// for class Service
 
 
 /**********************************************************************/
@@ -257,7 +258,7 @@ WorkerThread::~WorkerThread()
 {	
 	// note: do NOT delete arg_  !
 	if (name_) delete [] name_;
-	if (user_pointer_) delete user_pointer_;
+	if (user_pointer_) delete (Service *)user_pointer_;
 
 	// remove tid from our hash table
 	if ( tid_ &&  TI ) {
