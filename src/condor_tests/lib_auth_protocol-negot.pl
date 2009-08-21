@@ -90,7 +90,7 @@ $executed = sub
 	my @adarray;
 	my $status = 1;
 	my $cmd = "condor_q -debug";
-	$status = CondorTest::runCondorTool($cmd,\@adarray,2,"Security");
+	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
 	if(!$status) {
 		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 		exit(1);

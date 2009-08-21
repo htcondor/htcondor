@@ -1,9 +1,14 @@
 #! /usr/bin/env perl
 use strict;
 use warnings;
+use CondorTest;
 use CondorUtils;
 
-my $hashref = runcmd("touch foo",{expect_result=>\&FAIL});
+my @aarray;
+my $cmd = "ls ..";
+
+#my $status = CondorTest::runCondorTool($cmd,\@aarray,2);
+my $hashref = runcmd("ls ..",{expect_result=>\&PASS,cmnt=>"bug 23456"});
 #print "verbose_system returned\n";
 #foreach my $key (keys %{$hashref}) {
 	#print "${$hashref}{$key}\n";

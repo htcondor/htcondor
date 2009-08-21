@@ -1124,7 +1124,8 @@ sub StartPersonalCondor
 		#  not running with this config so treat it like a start case
 		debug("Condor state is off\n",$debuglevel);
 		debug( "start up the personal condor!--$personalmaster--\n",$debuglevel);
-		runcmd($personalmaster);
+		# when open3 is used it sits and waits forever
+		runcmd($personalmaster,{use_system=>1});
 		#system("condor_config_val -v log");
 	} else {
 		die "Bad state for a new personal condor configuration!<<running :-(>>\n";
@@ -1543,6 +1544,8 @@ sub KillDaemonPids
 	my $masterpid = 0;
 	my $cnt = 0;
 	my $cmd;
+	my $saveddebuglevel = $debuglevel;
+	$debuglevel = 1;
 
 	if($isnightly) {
 		DisplayPartialLocalConfig($desiredconfig);
@@ -1587,6 +1590,7 @@ sub KillDaemonPids
 			}
 		}
 	}
+
 	if($cnt == 0) {
 		debug("Gentle kill for master <$thispid> worked!\n",$debuglevel);
 	} else {
@@ -1609,7 +1613,7 @@ sub KillDaemonPids
 				debug("Kill non-MASTER PID <$thispid>\n",$debuglevel);
 				if($iswindows == 1) {
 					$cmd = "kill -f -s 15 $thispid";
-					runcmd($cmd);
+					runcmd($cmd,{expect_result=>\&ANY});
 				} else {
 					$cnt = kill 15, $thispid;
 				}
@@ -1625,6 +1629,7 @@ sub KillDaemonPids
 
 	# reset config to whatever it was.
 	$ENV{CONDOR_CONFIG} = $oldconfig;
+	$debuglevel = $saveddebuglevel;
 }
 
 #################################################################
@@ -1650,30 +1655,30 @@ sub IsThisWindows
 # looks in $ENV{"PATH"} for the program and return the "usual" response found
 # across unicies. As for windows, well, for now it just sucks.
 
-sub Which
-{
-	my $exe = shift(@_);
+#sub Which
+#{
+#	my $exe = shift(@_);
 
-	if(!( defined  $exe)) {
-		return "CP::Which called with no args\n";
-	}
-	my @paths;
-	my $path;
+#	if(!( defined  $exe)) {
+#		return "CP::Which called with no args\n";
+#	}
+#	my @paths;
+#	my $path;
 
-	if( exists $ENV{PATH}) {
-		@paths = split /:/, $ENV{PATH};
-		foreach my $path (@paths) {
-			chomp $path;
-			if (-x "$path/$exe") {
-				return "$path/$exe";
-			}
-		}
-	} else {
-		#print "Who is calling CondorPersonal::Which($exe)\n";
-	}
+#	if( exists $ENV{PATH}) {
+#		@paths = split /:/, $ENV{PATH};
+#		foreach my $path (@paths) {
+#			chomp $path;
+#			if (-x "$path/$exe") {
+#				return "$path/$exe";
+#			}
+#		}
+#	} else {
+#		#print "Who is calling CondorPersonal::Which($exe)\n";
+#	}
 
-	return "$exe: command not found";
-}
+#	return "$exe: command not found";
+#}
 
 #
 # Cygwin's perl chomp does not remove cntrl-m but this one will

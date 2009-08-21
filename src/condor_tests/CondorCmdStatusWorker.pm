@@ -36,6 +36,7 @@ sub reset
 }
 
 # truly const variables in perl
+sub NOINFO{0};
 sub IDLE{1};
 sub HELD{5};
 sub RUNNING{2};
@@ -47,7 +48,9 @@ sub SetUp
 	my $cmdstatus;
 	my @adarray;
 
-	print "worker for test $testname\n";
+	my $pid = $$;
+	my $unique = "$pid$testname";
+	print "worker for test $testname pid $pid(search on $unique\n";
 	my $currenthost = CondorTest::getFqdnHost();
 	chomp($currenthost);
 	my $primarycollector = $currenthost;
@@ -105,7 +108,15 @@ sub SetUp
 	$ENV{CONDOR_CONFIG} = $scheddoneconfig;
 
 	# start two jobs which run till killed
-	$cmd = "condor_submit ./x_cmdrunforever.cmd2";
+	$cmd = "./x_cmdrunforever.pl A$unique";
+	$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
+	if(!$cmdstatus)
+	{
+		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",$debuglevel);
+		exit(1)
+	}
+
+	$cmd = "./x_cmdrunforever.pl B$unique";
 	$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
 	if(!$cmdstatus)
 	{
@@ -114,14 +125,14 @@ sub SetUp
 	}
 
 	print "Wait for jobs running on remote schedd.\n";
-	print "Wait for job 1.1 to be running - ";
-	my $qstat = CondorTest::getJobStatus(1.1);
-	CondorTest::debug("remote cluster 1.1 status is $qstat\n",$debuglevel);
+	print "Wait for job 2.0 to be running - ";
+	my $qstat = CondorTest::getJobStatus(2.0);
+	CondorTest::debug("remote cluster 2.0 status is $qstat\n",$debuglevel);
 	while($qstat != RUNNING)
 	{
-		CondorTest::debug("remote Job status 1.1 not RUNNING - wait a bit\n",$debuglevel);
+		CondorTest::debug("remote Job status 2.0 not RUNNING - wait a bit\n",$debuglevel);
 		sleep 4;
-		$qstat = CondorTest::getJobStatus(1.1);
+		$qstat = CondorTest::getJobStatus(2.0);
 	}
 	print "ok\n";
 
@@ -143,7 +154,16 @@ sub SetUp
 	#system("condor_status");
 
 	# start two jobs which run till killed
-	$cmd = "condor_submit ./x_cmdrunforever.cmd2";
+	#$cmd = "condor_submit ./x_cmdrunforever.cmd2";
+	$cmd = "./x_cmdrunforever.pl C$unique";
+	$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
+	if(!$cmdstatus)
+	{
+		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",$debuglevel);
+		exit(1)
+	}
+
+	$cmd = "./x_cmdrunforever.pl D$unique";
 	$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
 	if(!$cmdstatus)
 	{
@@ -152,18 +172,18 @@ sub SetUp
 	}
 
 	print "Wait for jobs running on local schedd.\n";
-	print "Wait for job 1.1 to be running - ";
-	$qstat = CondorTest::getJobStatus(1.1);
-	CondorTest::debug("local cluster 1.1 status is $qstat\n",$debuglevel);
+	print "Wait for job 2.0 to be running - ";
+	$qstat = CondorTest::getJobStatus(2.0);
+	CondorTest::debug("local cluster 2.0 status is $qstat\n",$debuglevel);
 	my $limit = 360;
 	my $counter = 0;
 	while($qstat != RUNNING)
 	{
-		CondorTest::debug("local Job status 1.1 not RUNNING - wait a bit\n",$debuglevel);
+		CondorTest::debug("local Job status 2.0 not RUNNING - wait a bit\n",$debuglevel);
 		sleep 1;
-		$qstat = CondorTest::getJobStatus(1.1);
+		$qstat = CondorTest::getJobStatus(2.0);
 		if($counter >= $limit) {
-			die "local Job status 1.1 failed 6 minutes to running test\n";
+			die "local Job status 2.0 failed 6 minutes to running test\n";
 		} else {
 			$counter += 1;
 		}
@@ -180,7 +200,7 @@ sub SetUp
 		sleep 1;
 		$qstat = CondorTest::getJobStatus(1.0);
 		if($counter >= $limit) {
-			die "local Job status 1.1 failed 6 minutes to running test\n";
+			die "local Job status 1.0 failed 6 minutes to running test\n";
 		} else {
 			$counter += 1;
 		}

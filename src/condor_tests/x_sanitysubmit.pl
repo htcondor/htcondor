@@ -20,13 +20,35 @@
 
 use CondorTest;
 
+my $pid = $ARGV[0];
 
-$cmd = 'x_sanitysubmit.cmd';
+my $testdesc =  'sanity submit test - vanilla U';
+my $testname = "x_sanitysubmit";
+my $cmd = "x_sanitysubmit$pid.cmd";
+my $template = 'x_sanitysubmit.template';
+
+
+my $line = "";
+open(TEMPLATE,"<$template") or die "Can not open $template: $!\n";
+open(CMD,">$cmd") or die "Can not open $cmd: $!\n";
+while(<TEMPLATE>) {
+	chomp();
+	$line = $_;
+	if($line =~ /^\s*log\s*=.*$/) {
+		print CMD "log = $testname$pid.log\n";
+	} elsif($line =~ /^\s*error\s*=.*$/) {
+		print CMD "error = $testname$pid.err\n";
+	} elsif($line =~ /^\s*output\s*=.*$/) {
+		print CMD "output = $testname$pid.out\n";
+	} else {
+		print CMD "$line\n";
+	}
+}
+close(TEMPLATE);
+close(CMD);
 
 CondorTest::debug("Submit file for this test is $cmd\n",1);
 
-$testdesc =  'sanity submit test - vanilla U';
-$testname = "x_sanitysubmit";
 
 $aborted = sub {
 	my %info = @_;

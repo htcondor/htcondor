@@ -10,7 +10,7 @@ our $VERSION = '1.00';
 
 use base 'Exporter';
 
-our @EXPORT = qw(runcmd FAIL PASS ANY SIGNALED SIGNAL verbose_system TRUE FALSE);
+our @EXPORT = qw(runcmd FAIL PASS ANY SIGNALED SIGNAL verbose_system Which TRUE FALSE);
 
 sub TRUE{1};
 sub FALSE{0};
@@ -59,7 +59,17 @@ sub SIGNAL {
 	return sub
 	{
 		my ($signaled, $signal, $ret) = @_;
-		if($signaled && grep {$signal == $_} @exsig) {
+		my $matches = scalar(grep(/^\Q$signal\E$/, @exsig));
+
+		#if ($matches == 0) {
+    		#print "Not found\n";
+		#} elsif ($matches == 1) {
+    		#print "Found\n";
+		#} else {
+    		#die "Errant regex specification, matched too many!";
+		#}
+
+		if($signaled && ($matches == 1)) {
 			return( 1 );
 		}
 
@@ -121,19 +131,6 @@ sub runcmd {
 		#print "$key\n";
 	#}
 
-	# is someone running a daemon  with  & open3 will hang forever collecting output
-	my $donotwait = 0;
-	if((index $args,"&") != -1) {
-		$donotwait = 1;
-	}
-	# quill test getting schedd info
-	if((index $args,"-direct schedd") != -1) {
-		$donotwait = 1;
-	}
-	if((index $args,"-direct rdbms") != -1) {
-		$donotwait = 1;
-	}
-
 	my $rc = 0;
 	my @outlines;
 	my @errlines;
@@ -143,24 +140,79 @@ sub runcmd {
 		PrintStart($date,$args);
 	}
 
-	if($donotwait) {
-		$rc = system("$args");
-	} else {
-		$childpid = IPC::Open3::open3(\*IN, \*OUT, \*ERR, "/bin/sh -c \'$args\'");
-	}
 
 	$t1 = [Time::HiRes::gettimeofday];
 
-	if($donotwait == 1) {
-		# a task was started running in backgroud
-	}else{
-		waitpid($childpid, 0);
-		@outlines = <OUT>;
-		@errlines = <ERR>;
-		close(OUT);
-		close(ERR);
+	if(${$options}{use_system} == TRUE) {
+		print "Request to bypass open3<use_system=>TRUE>\n";
+		$rc = system("$args");
+		$t1 = [Time::HiRes::gettimeofday];
+	} else {
+		$childpid = IPC::Open3::open3(\*IN, \*OUT, \*ERR, "/bin/sh -c \'$args\'");
+		$t1 = [Time::HiRes::gettimeofday];
 
+		my $bulkout = "";
+		my $bulkerror = "";
+		my $tmpout = "";
+		my $tmperr = "";
+		my $rin = '';
+		my $rout = '';
+		my $readstdout = TRUE;
+		my $readstderr = TRUE;
+		my $readsize = 1024;
+		my $bytesread = 0;
+
+		while( $readstdout == TRUE || $readstderr == TRUE) {
+			$rin = '';
+			$rout = '';
+			# drain data slowly
+			if($readstderr == TRUE) {
+				vec($rin, fileno(ERR), 1) = 1;
+			}
+			if($readstdout == TRUE) {
+				vec($rin, fileno(OUT), 1) = 1;
+			}
+			my $nfound = select($rout=$rin, undef, undef, 0.5);
+			if( $nfound != -1) {
+				#print "select triggered $nfound\n";
+				if($readstderr == TRUE) {
+					if( vec($rout, fileno(ERR), 1)) {
+						#print "Read err\n";
+						$bytesread = sysread(ERR, $tmperr, $readsize);
+						#print "Read $bytesread from stderr\n";
+						if($bytesread == 0) {
+							$readstderr = FALSE;
+							close(ERR);
+						} else {
+							$bulkerror .= $tmperr;
+						}
+						#print "$tmperr\n";
+					} 
+				}
+				if($readstdout == TRUE) {
+					if( vec($rout, fileno(OUT), 1)) {
+						#print "Read out\n";
+						$bytesread = sysread(OUT, $tmpout, $readsize);
+						#print "Read $bytesread from stdout\n";
+						if($bytesread == 0) {
+							$readstdout = FALSE;
+							close(OUT);
+						} else {
+							$bulkout .= $tmpout;
+						}
+						#print "$tmpout\n";
+					}
+				}
+			} else {
+				print "Select error in runcmd:$!\n";
+			}
+		}
+
+		@outlines = split /[\r\n]+/, $bulkout;
+		@errlines = split /[\r\n]+/, $bulkerror;
+		waitpid($childpid, 0);
 		$rc = $? & 0xffff;
+
 	}
 
 	my $elapsed = Time::HiRes::tv_interval($t0, $t1);
@@ -171,6 +223,10 @@ sub runcmd {
 	$returnthings{"signal"} = $signal;
 
 	if(${$options}{emit_output} == TRUE) {
+		PrintDone($rc, $signal, $elapsed);
+		if(exists ${$options}{cmnt}) {
+			PrintComment(${$options}{cmnt});
+		}
 		my $sz = $#outlines;
 		if($sz != -1) {
 			PrintStdOut(\@outlines);
@@ -179,10 +235,6 @@ sub runcmd {
 		if($sz != -1) {
 			PrintStdOut(\@errlines);
 		}
-	}
-
-	if(${$options}{emit_output} == TRUE) {
-		PrintDone($rc, $signal, $elapsed);
 		PrintLine();
 	}
 
@@ -242,6 +294,11 @@ sub SetDefaults {
 		${$options}{emit_output} = TRUE;
 	}
 
+	# use_system
+	if(!(exists ${$options}{use_system})) {
+		${$options}{use_system} = FALSE;
+	}
+
 }
 
 sub PrintStdOut {
@@ -249,9 +306,9 @@ sub PrintStdOut {
 	if( defined @{$arrayref}[0]) {
 		print "+ BEGIN STDOUT\n";
 		foreach my $line (@{$arrayref}) {
-			print "$line";
+			print "$line\n";
 		}
-		print "\n+ END STDOUT\n";
+		print "+ END STDOUT\n";
 	}
 }
 
@@ -260,14 +317,19 @@ sub PrintStdErr {
 	if( defined @{$arrayref}[0]) {
 		print "+ BEGIN STDERR\n";
 		foreach my $line (@{$arrayref}) {
-			print "$line";
+			print "$line\n";
 		}
-		print "\n+ END STDERR\n";
+		print "+ END STDERR\n";
 	}
 }
 
 sub PrintLine {
-	print "+-----------------------------------------------------------------------------------\n";
+	print "\n+-----------------------------------------------------------------------------------\n";
+}
+
+sub PrintComment {
+	my $comment = shift;
+	print "+ COMMENT: $comment\n";
 }
 
 sub PrintStart {
@@ -303,5 +365,109 @@ sub verbose_system {
 	my $hashref = runcmd( $cmd, $options );
 	return ${$hashref}{exitcode};
 }
+
+# Sometimes `which ...` is just plain broken due to stupid fringe vendor
+# not quite bourne shells. So, we have our own implementation that simply
+# looks in $ENV{"PATH"} for the program and return the "usual" response found
+# across unicies. As for windows, well, for now it just sucks.
+
+sub Which
+{
+	my $exe = shift(@_);
+
+	if(!( defined  $exe)) {
+		return "CP::Which called with no args\n";
+	}
+	my @paths;
+	my $path;
+
+	if( exists $ENV{PATH}) {
+		@paths = split /:/, $ENV{PATH};
+		foreach my $path (@paths) {
+			chomp $path;
+			if (-x "$path/$exe") {
+				return "$path/$exe";
+			}
+		}
+	} else {
+		#print "Who is calling CondorPersonal::Which($exe)\n";
+	}
+
+	return "$exe: command not found";
+}
+
+# Sometimes `which ...` is just plain broken due to stupid fringe vendor
+# not quite bourne shells. So, we have our own implementation that simply
+# looks in $ENV{"PATH"} for the program and return the "usual" response found
+# across unixies. As for windows, well, for now it just sucks, but it appears
+# to at least work.
+
+#BEGIN {
+## A variable specific to the BEGIN block which retains its value across calls
+## to Which. I use this to memoize the mapping between unix and windows paths
+## via cygpath.
+#my %memo;
+#sub Which
+#{
+#	my $exe = shift(@_);
+#	my $pexe;
+#	my $origpath;
+
+#	if(!( defined  $exe)) {
+#		return "CT::Which called with no args\n";
+#	}
+#	my @paths;
+
+#	# On unix, this does the right thing, mostly, on windows we are using
+#	# cygwin, so it also mostly does the right thing initially.
+#	@paths = split /:/, $ENV{PATH};
+
+#	foreach my $path (@paths) {
+#		fullchomp($path);
+#		$origpath = $path;
+
+#		# Here we convert each path to a windows path 
+#		# before we use it with cygwin.
+#		if ($iswindows) {
+#			if (!exists($memo{$path})) {
+#				# XXX Stupid slow code.  The right solution is to abstract the
+#				# $ENV{PATH} variable and its cygpath converted counterpart and
+#				# deal with said abstraction everywhere in the codebase.  A
+#				# less right solution is to memoize the arguments to this
+#				# function call. Guess which one I chose.
+#				my $cygconvert = `cygpath -m -p "$path"`;
+#				fullchomp($cygconvert);
+#				$memo{$path} = $cygconvert; # memoize it
+#				$path = $cygconvert;
+#			} else {
+#				# grab the memoized copy.
+#				$path = $memo{$path};
+#			}
+
+#			# XXX Why just for this and not for all names with spaces in them?
+#			if($path =~ /^(.*)Program Files(.*)$/){
+#				$path = $1 . "progra~1" . $2;
+#			} else {
+#				CondorTest::debug("Path DOES NOT contain Program Files\n",3);
+#			}
+#		}
+
+#		$pexe = "$path/$exe";
+
+#		if ($iswindows) {
+#			# Stupid windows, do this to ensure the -x works.
+#			$pexe =~ s#/#\\#g;
+#		}
+
+#		if (-x "$pexe") {
+#			# stupid caller code expects the result in unix format".
+#			return "$origpath/$exe";
+#		}
+#	}
+
+#	return "$exe: command not found";
+#}
+#}
+
 
 1;
