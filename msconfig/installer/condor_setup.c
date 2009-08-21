@@ -370,7 +370,7 @@ void set_hdfs() {
 		temp = malloc(sizeof(char)*MAX_PATH);
 		ZeroMemory(temp, ARRAYSIZE(temp));
 		strcat_s(temp, MAX_PATH, Opt.namenode);
-		strcat_s(temp, MAX_PATH, ':');
+		strcat_s(temp, MAX_PATH, ":");
 		strcat_s(temp, MAX_PATH, Opt.nameport);
 		set_option("HDFS_NAMENODE", temp);
 		free(temp);
@@ -380,7 +380,7 @@ void set_hdfs() {
 		temp = malloc(sizeof(char)*MAX_PATH);
 		ZeroMemory(temp, ARRAYSIZE(temp));
 		strcat_s(temp, MAX_PATH, Opt.namenode);
-		strcat_s(temp, MAX_PATH, ':');
+		strcat_s(temp, MAX_PATH, ":");
 		strcat_s(temp, MAX_PATH, Opt.namewebport);
 		set_option("HDFS_NAMENODE", temp);
 		free(temp);
