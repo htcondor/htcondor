@@ -102,7 +102,7 @@ static const char NiceUserName[] = "nice-user";
 #if defined(WIN32)
 	/* We know Windows has TLS and it works well */
 	#define THREAD_LOCAL_STORAGE __declspec( thread ) 
-#elif 
+#else
 	/* On Unix-like platforms, we have had very bad luck w/ TLS.
 	 * For example, when using TLS, we could not build binaries
 	 * on 32bit RHEL3 that would not crash on 64bit RHEL4. See
