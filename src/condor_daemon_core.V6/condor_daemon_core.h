@@ -222,7 +222,6 @@ int BindAnyCommandPort(ReliSock *rsock, SafeSock *ssock);
 bool InitCommandSockets(int port, ReliSock *rsock, SafeSock *ssock,
 						bool fatal);
 
-
 class DCSignalMsg: public DCMsg {
  public:
 	DCSignalMsg(pid_t pid, int s): DCMsg(DC_RAISESIGNAL)
@@ -1706,6 +1705,9 @@ class DaemonCore : public Service
 
 	// misc helper functions
 	void CheckPrivState( void );
+
+		// invoked by CondorThreads upon thread context switch
+	static void thread_switch_callback(void* & ptr);
 
 		// Call the registered socket handler for this socket
 		// i - index of registered socket
