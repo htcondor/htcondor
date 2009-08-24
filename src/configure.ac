@@ -2988,7 +2988,9 @@ fi
 CHECK_EXTERNAL([curl],[7.19.6],[soft])
 
 #Look for hadoop jars, required by HDFS daemon as well by hdfs file plugin
-CHECK_EXTERNAL([hadoop],[0.20.0-p2],[soft])
+# Only build hadoop external if hdfs is enabled
+AS_IF([test "x$enable_hdfs" = xyes], 
+  CHECK_EXTERNAL([hadoop],[0.20.0-p2],[soft]))
 
 # The test for gsoap needs to happen after the openssl check, so
 # openssl libs, if found, will be in LIBS. Also, if we do not have
