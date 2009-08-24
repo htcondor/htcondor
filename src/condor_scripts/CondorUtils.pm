@@ -136,7 +136,7 @@ sub runcmd {
 	my @errlines;
 
 	if(${$options}{emit_output} == TRUE) {
-		PrintLine();
+		PrintHeader();
 		PrintStart($date,$args);
 	}
 
@@ -235,7 +235,7 @@ sub runcmd {
 		if($sz != -1) {
 			PrintStdOut(\@errlines);
 		}
-		PrintLine();
+		PrintFooter();
 	}
 
 	$returnthings{"success"} = $rc;
@@ -323,8 +323,12 @@ sub PrintStdErr {
 	}
 }
 
-sub PrintLine {
+sub PrintHeader {
 	print "\n+-----------------------------------------------------------------------------------\n";
+}
+
+sub PrintFooter {
+	print "+-----------------------------------------------------------------------------------\n";
 }
 
 sub PrintComment {
