@@ -35,7 +35,7 @@
 	#else
 		typedef long unsigned int pthread_t;
 	#endif
-	#ifndef LINUX
+	#ifndef HAVE_PTHREADS
 		pthread_t pthread_self() { return (pthread_t) 1; }
 	#endif
 #endif
