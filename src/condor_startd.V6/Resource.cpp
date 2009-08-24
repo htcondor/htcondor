@@ -1274,7 +1274,7 @@ Resource::wants_suspend( void )
 int
 Resource::wants_pckpt( void )
 {
-	int want_pckpt;
+	int want_pckpt; 
 
 	if( (r_cur->universe() != CONDOR_UNIVERSE_STANDARD) &&
 			(r_cur->universe() != CONDOR_UNIVERSE_VM)) {
@@ -1283,7 +1283,7 @@ Resource::wants_pckpt( void )
 
 	if( r_classad->EvalBool( "PERIODIC_CHECKPOINT",
 				r_cur->ad(),
-				want_pckpt ) == 0) {
+				want_pckpt ) == 0) { 
 		// Default to no, if not defined.
 		want_pckpt = 0;
 	}
@@ -1680,7 +1680,7 @@ Resource::publish( ClassAd* cap, amask_t mask )
 			cap->AssignExpr(ATTR_SLOT_DYNAMIC, "TRUE");
 			break;
 		}
-	}
+	}		
 
 	if( IS_PUBLIC(mask) && IS_UPDATE(mask) ) {
 			// If we're claimed or preempting, handle anything listed
@@ -1737,7 +1737,7 @@ Resource::publish( ClassAd* cap, amask_t mask )
 
 #if HAVE_JOB_HOOKS
 	if (IS_PUBLIC(mask)) {
-		cap->Assign( ATTR_LAST_FETCH_WORK_SPAWNED,
+		cap->Assign( ATTR_LAST_FETCH_WORK_SPAWNED, 
 					 (int)m_last_fetch_work_spawned );
 		cap->Assign( ATTR_LAST_FETCH_WORK_COMPLETED,
 					 (int)m_last_fetch_work_completed );
@@ -1774,7 +1774,7 @@ void
 Resource::publish_private( ClassAd *ad )
 {
 		// Needed by the collector to correctly respond to queries
-		// for private ads.  As of 7.2.0, the
+		// for private ads.  As of 7.2.0, the 
 	ad->SetMyTypeName( STARTD_ADTYPE );
 
 		// For backward compatibility with pre 7.2.0 collectors, send
@@ -1809,7 +1809,7 @@ Resource::publish_private( ClassAd *ad )
 		ad->Assign( ATTR_CAPABILITY, r_pre->id() );
 	} else if( r_cur ) {
 		ad->Assign( ATTR_CAPABILITY, r_cur->id() );
-	}
+	}		
 }
 
 void
