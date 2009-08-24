@@ -246,11 +246,7 @@ testonly_append_prereqs = java-1.5.0_08, perl-5.8.5
 [
 testplatforms = ia64_rhas_4, x86_64_rhas_4, x86_64_fc_4
 testprereqs = tar-1.14, make-3.80
-<<<<<<< HEAD:nmi_glue/submit_info
 testonly_append_prereqs = java-1.4.2_05, perl-5.8.5
-=======
-testonly_append_prereqs = java-1.4.2_05, perl-5,8,5
->>>>>>> V7_3_2-branch:nmi_glue/submit_info
 ]
 
 [
