@@ -208,8 +208,18 @@ sub runcmd {
 			}
 		}
 
-		@outlines = split /[\r\n]+/, $bulkout;
-		@errlines = split /[\r\n]+/, $bulkerror;
+		#print "$bulkout\n";
+		#print "\n++++++++++++++++++++++++++\n";
+		$bulkout =~ s/\\r\\n/\n/g;
+		#print "$bulkout\n";
+		#print "\n++++++++++++++++++++++++++\n";
+		@outlines = split /\n/, $bulkout;
+		map {$_.= "\n"} @outlines;
+
+		$bulkerror =~ s/\\r\\n/\n/g;
+		@errlines = split /\n/, $bulkerror;
+		map {$_.= "\n"} @errlines;
+
 		waitpid($childpid, 0);
 		$rc = $? & 0xffff;
 
@@ -306,7 +316,7 @@ sub PrintStdOut {
 	if( defined @{$arrayref}[0]) {
 		print "+ BEGIN STDOUT\n";
 		foreach my $line (@{$arrayref}) {
-			print "$line\n";
+			print "$line";
 		}
 		print "+ END STDOUT\n";
 	}
@@ -317,7 +327,7 @@ sub PrintStdErr {
 	if( defined @{$arrayref}[0]) {
 		print "+ BEGIN STDERR\n";
 		foreach my $line (@{$arrayref}) {
-			print "$line\n";
+			print "$line";
 		}
 		print "+ END STDERR\n";
 	}

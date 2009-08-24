@@ -1974,7 +1974,7 @@ sub RemoveRunningTest
 sub IsThisWindows
 {
 	my $path = CondorTest::Which("cygpath");
-	debug("Path return from which cygpath: $path\n",2);
+	#debug("Path return from which cygpath: $path\n",2);
 	if($path =~ /^.*\/bin\/cygpath.*$/ ) {
 		#print "This IS windows\n";
 		return(1);
