@@ -49,6 +49,7 @@
 #include "execinfo.h"
 #endif
 #include "util_lib_proto.h"		// for mkargv() proto
+#include "condor_threads.h"
 
 FILE *debug_lock(int debug_level);
 FILE *open_debug_file( int debug_level, char flags[] );
@@ -68,7 +69,6 @@ static struct saved_dprintf* saved_list_tail = NULL;
 
 extern	DLL_IMPORT_MAGIC int		errno;
 extern	int		DebugFlags;
-THREAD_LOCAL_STORAGE int CurrentTid;
 
 /*
    This is a global flag that tells us if we've successfully ran
@@ -116,7 +116,8 @@ static	int DprintfBroken = 0;
 static	int DebugUnlockBroken = 0;
 #if !defined(WIN32) && defined(HAVE_PTHREADS)
 #include <pthread.h>
-static pthread_mutex_t _condor_dprintf_critsec = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t _condor_dprintf_critsec = 
+						PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
 #endif
 #ifdef WIN32
 static CRITICAL_SECTION	*_condor_dprintf_critsec = NULL;
@@ -191,15 +192,10 @@ _condor_dprintf_va( int flags, const char* fmt, va_list args )
 	priv_state	priv;
 	int debug_level;
 	int my_pid;
+	int my_tid;
 #ifdef va_copy
 	va_list copyargs;
 #endif
-	static int first_time = 1;
-
-	if ( first_time ) {
-		first_time = 0;
-		CurrentTid = 0;
-	}
 
 		/* DebugFP should be static initialized to stderr,
 	 	   but stderr is not a constant on all systems. */
@@ -260,7 +256,13 @@ _condor_dprintf_va( int flags, const char* fmt, va_list args )
 	}
 	EnterCriticalSection(_condor_dprintf_critsec);
 #elif defined(HAVE_PTHREADS)
-	pthread_mutex_lock(&_condor_dprintf_critsec);
+	/* On Win32 we always grab a mutex because we are always running
+	 * with mutiple threads.  But on Unix, lets bother w/ mutexes if and only
+	 * if we are running w/ threads.
+	 */
+	if ( CondorThreads_pool_size() ) {  /* will == 0 if no threads running */
+		pthread_mutex_lock(&_condor_dprintf_critsec);
+	}
 #endif
 
 	saved_errno = errno;
@@ -332,12 +334,11 @@ _condor_dprintf_va( int flags, const char* fmt, va_list args )
 						fprintf( DebugFP, "(pid:%d) ", my_pid );
 					}
 
-#ifdef HAVE_TLS
 					/* include tid if we are configured to use a thread pool */
-					if ( CurrentTid > 0 ) {
-						fprintf(DebugFP, "(tid:%d) ", CurrentTid );
+					my_tid = CondorThreads_gettid();
+					if ( my_tid > 0 ) {
+						fprintf(DebugFP, "(tid:%d) ", my_tid );
 					}
-#endif  /* TODO --- if no TLS do something else */
 
 					if( DebugId ) {
 						(*DebugId)( DebugFP );
@@ -381,7 +382,9 @@ _condor_dprintf_va( int flags, const char* fmt, va_list args )
 #ifdef WIN32
 	LeaveCriticalSection(_condor_dprintf_critsec);
 #elif defined(HAVE_PTHREADS)
-	pthread_mutex_unlock(&_condor_dprintf_critsec);
+	if ( CondorThreads_pool_size() ) {  /* will == 0 if no threads running */
+		pthread_mutex_unlock(&_condor_dprintf_critsec);
+	}
 #endif
 
 #if !defined(WIN32) // signals don't exist in WIN32

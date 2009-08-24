@@ -2276,23 +2276,17 @@ fi
 ############################################################
 
 # Currently in Condor, threading in daemon core on Unix requires
-# both pthreads and thread local storage.  HACK: for right now
-# we know that only Linux meets that requirement, and furthermore
-# that TLS exists but is broken on ia64 (the compiler blows up).  So for now
-# we only want pthreads defined on Linux that is not ia64.  Once we 
-# remove the requirement on TLS in the code, we can safely remove 
-# this hack.
-#     if test $os = "Linux" && test $arch != "ia64"; then
-# Actually, until TLS is out of the code, don't compile it anywhere.
-if test $os = "FOOBAR" && test $arch != "ia64"; then
+# both pthreads.
+# HACK: for now the code uses Linux-specific code to implement
+# recursive mutexes, so instead of using threads wheverever we have
+# pthreads, we limit testing for pthreads to just Linux.
+if test $os = "Linux"; then
 	AC_CHECK_LIB([pthread], [pthread_create],
   		[ac_pthreads=yes
    		AC_DEFINE([HAVE_PTHREADS],[1],[Define if pthreads are available])
 		AC_DEFINE([HAS_PTHREADS],[1],[Define if pthreads are available for DRMAA])
 		],
   		[ac_pthreads=no])
-	# Check if this system support Thread Local Storage class.
-	AX_TLS
 fi
 
 ############################################################
