@@ -274,6 +274,9 @@ my $success = sub {
 		my @result;
 		my $historyfile = `condor_config_val history`;
 		CondorTest::fullchomp($historyfile);
+		print "WARNING: workaround for bug condor wiki #683 \n";
+		# There should never be a job finished and out of the queue
+		# and not already in the EXISTING history file.
 		while(!(-f $historyfile)) {
 			# wait for history file to exist
 			sleep(1);
