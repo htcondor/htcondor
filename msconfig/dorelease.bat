@@ -116,7 +116,7 @@ for %%f in (master startd quill dbmsd had credd schedd collector negotiator shad
 )
 
 echo. & echo Copying hadoop files...
-cp -r ..\externals\install\hdfs %1\
+xcopy ..\externals\install\hdfs %1\hdfs /E
 
 echo. & echo Making some aliases...
 pushd %1\bin
