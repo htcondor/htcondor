@@ -41,6 +41,8 @@
 #include "condor_holdcodes.h"
 #include "file_transfer_db.h"
 #include "subsystem_info.h"
+#include "condor_url.h"
+#include "my_popen.h"
 
 #define COMMIT_FILENAME ".ccommit.con"
 
@@ -513,6 +515,11 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 	if(IsServer() && !spooling_output) {
 		if(!InitDownloadFilenameRemaps(Ad)) return 0;
 	}
+
+	CondorError e;
+	I_support_filetransfer_plugins = false;
+	plugin_table = NULL;
+	InitializePlugins(e);
 
 	int spool_completion_time = 0;
 	Ad->LookupInteger(ATTR_STAGE_IN_FINISH,spool_completion_time);
@@ -1574,7 +1581,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		if( !reply ) {
 			break;
 		}
-		if (reply == 1 || reply == 4) {
+		if (reply == 1 || reply == 4 || reply == 5) {
 			s->set_crypto_mode(socket_default_crypto);
 		} else if (reply == 2) {
 			s->set_crypto_mode(true);
@@ -1682,7 +1689,26 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		// not bother to fsync every file.
 //		dprintf(D_FULLDEBUG,"TODD filetransfer DoDownload fullname=%s\n",fullname.Value());
 		start = time(NULL);
-		if ( reply == 4 ) {
+		if (reply == 5) {
+			// new filetransfer command.  5 means that the next file is a
+			// 3rd party transfer.  cedar will not send the file itself,
+			// and instead will send the URL over the wire.  the receiving
+			// side must then retreive the URL using one of the configured
+			// filetransfer plugins.
+
+			MyString URL;
+			// receive the URL from the wire
+			if (!s->code(URL)) {
+				dprintf(D_FULLDEBUG,"DoDownload: exiting at %d\n",__LINE__);
+				return_and_resetpriv( -1 );
+			}
+
+			dprintf( D_ALWAYS, "ZKM: doing a URL transfer: (%s) to (%s)\n", URL.Value(), fullname.Value());
+
+			CondorError e;
+			rc = InvokeFileTransferPlugin(e, URL.Value(), fullname.Value());
+
+		} else if ( reply == 4 ) {
 			if ( PeerDoesGoAhead || s->end_of_message() ) {
 				rc = s->get_x509_delegation( &bytes, fullname.Value() );
 				dprintf( D_FULLDEBUG,
@@ -2199,17 +2225,30 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 
 		dprintf(D_FULLDEBUG,"DoUpload: send file %s\n",filename);
 
-		if( filename[0] != '/' && filename[0] != '\\' && filename[1] != ':' ){
+		// reset this for each file
+		bool is_url;
+		is_url = false;
+
+		if( IsUrl(filename) ) {
+			// looks like a URL
+			is_url = true;
+			fullname = filename;
+			dprintf(D_ALWAYS, "ZKM: sending as URL!\n");
+		} else if( filename[0] != '/' && filename[0] != '\\' && filename[1] != ':' ){
+			// looks like a relative path
 			fullname.sprintf("%s%c%s",Iwd,DIR_DELIM_CHAR,filename);
 		} else {
+			// looks like an unix absolute path or a windows path
 			fullname = filename;
 		}
 
 		// check for read permission on this file, if we are supposed to check.
 		// do not check the executable, since it is likely sitting in the SPOOL
 		// directory.
+		//
+		// also, don't check URLs
 #ifdef WIN32
-		if( perm_obj && !is_the_executable &&
+		if( !is_url && perm_obj && !is_the_executable &&
 			(perm_obj->read_access(fullname.Value()) != 1) ) {
 			// we do _not_ have permission to read this file!!
 			upload_success = false;
@@ -2239,6 +2278,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 		// 2 - force encryption on for next file.
 		// 3 - force encryption off for next file.
 		// 4 - do an x509 credential delegation (using the socket default)
+		// 5 - send a URL and have the other side fetch it
 
 		// default to the socket default
 		int file_command = 1;
@@ -2265,6 +2305,10 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			file_command = 4;
 		}
 
+		if ( is_url ) {
+			file_command = 5;
+		}
+
 		dprintf ( D_SECURITY, "FILETRANSFER: outgoing file_command is %i for %s\n",
 				file_command, filename );
 
@@ -2278,7 +2322,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 		}
 
 		// now enable the crypto decision we made:
-		if (file_command == 1 || file_command == 4) {
+		if (file_command == 1 || file_command == 4 || file_command == 5) {
 			s->set_crypto_mode(socket_default_crypto);
 		} else if (file_command == 2) {
 			s->set_crypto_mode(true);
@@ -2296,6 +2340,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			basefilename = strdup( condor_basename(filename) );		//de-const
 		}
 
+		// ZKM: basename work okay with URLs?
 		if( !s->code(basefilename) ) {
 			free( basefilename );					//b/c of de-consting
 			dprintf(D_FULLDEBUG,"DoUpload: exiting at %d\n",__LINE__);
@@ -2339,6 +2384,10 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			} else {
 				rc = -1;
 			}
+		} else if (file_command == 5) {
+			rc = s->code((unsigned char*)fullname.Value());
+
+			// we don't know how many bytes 
 		} else if ( TransferFilePermissions ) {
 			rc = s->put_file_with_permissions( &bytes, fullname.Value() );
 		} else {
@@ -3037,4 +3086,145 @@ void FileTransfer::setSecuritySession(char const *session_id) {
 	free(m_sec_session_id);
 	m_sec_session_id = NULL;
 	m_sec_session_id = session_id ? strdup(session_id) : NULL;
+}
+
+
+int FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* URL, const char* dest) {
+
+	// find the type of transfer
+	char* colon = strchr(URL, ':');
+
+	if (!colon) {
+		e.pushf("FILETRANSFER", 1, "Specified URL does not contain a ':' (%s)", URL);
+		return 1;
+	}
+
+	char* method = (char*) malloc(1 + (colon-URL));
+	strncpy(method, URL, (colon-URL));
+	method[(colon-URL)] = '\0';
+
+
+	// look up the method in our hash table
+	MyString plugin;
+	if (!plugin_table->lookup((MyString)method, plugin)) {
+		// no plugin for this type!!!
+		// TODO: push onto CondorError e
+		free(method);
+		return 1;
+	}
+
+	// invoke the proper plugin using my_gregs_popen();
+	MyString cmd_line = plugin.Value();
+	cmd_line += " ";
+	cmd_line += URL;
+	cmd_line += " ";
+	cmd_line += dest;
+	dprintf(D_ALWAYS, "ZKM: invoking: %s\n", cmd_line.Value());
+	int retval = system( cmd_line.Value() );
+
+	// clean up
+	free(method);
+
+	return retval;
+}
+
+
+int FileTransfer::InitializePlugins(CondorError &e) {
+
+	plugin_table = new PluginHashTable(7, compute_filename_hash);
+
+	char* plugin_list_string = param("FILETRANSFER_PLUGINS");
+	if (!plugin_list_string) {
+		I_support_filetransfer_plugins = false;
+		return 0;
+	}
+
+	StringList plugin_list (plugin_list_string);
+	plugin_list.rewind();
+
+	char *p;
+	while ((p = plugin_list.next())) {
+		// see what it supports and map it
+		dprintf(D_ALWAYS, "ZKM: examining %s\n", p);
+		MyString methods = DeterminePluginMethods(e, p);
+		if (!methods.IsEmpty()) {
+			// we support at least one plugin type
+			I_support_filetransfer_plugins = true;
+			InsertPluginMappings(methods, p);
+		}
+	}
+
+	return 0;
+}
+
+
+MyString
+FileTransfer::DeterminePluginMethods( CondorError &e, const char* path )
+{
+    FILE* fp;
+    char *args[] = {const_cast<char*>(path), "-classad", NULL};
+    char buf[1024];
+
+        // first, try to execute the given path with a "-classad"
+        // option, and grab the output as a ClassAd
+    fp = my_popenv( args, "r", FALSE );
+
+    if( ! fp ) {
+        dprintf( D_ALWAYS, "Failed to execute %s, ignoring\n", path );
+		e.pushf("FILETRANSFER", 1, "Failed to execute %s, ignoring\n", path );
+        return "";
+    }
+    ClassAd* ad = new ClassAd;
+    bool read_something = false;
+    while( fgets(buf, 1024, fp) ) {
+        read_something = true;
+        if( ! ad->Insert(buf) ) {
+            dprintf( D_ALWAYS, "Failed to insert \"%s\" into ClassAd, "
+                     "ignoring invalid plugin\n", buf );
+            delete( ad );
+            pclose( fp );
+			e.pushf("FILETRANSFER", 1, "Received invalid input '%s', ignoring\n", buf );
+            return "";
+        }
+    }
+    my_pclose( fp );
+    if( ! read_something ) {
+        dprintf( D_ALWAYS,
+                 "\"%s -classad\" did not produce any output, ignoring\n",
+                 path );
+        delete( ad );
+		e.pushf("FILETRANSFER", 1, "\"%s -classad\" did not produce any output, ignoring\n", path );
+        return "";
+    }
+
+	// verify that plugin type is FileTransfer
+	// TODO
+	// e.pushf("FILETRANSFER", 1, "\"%s -classad\" is not plugin type FileTransfer, ignoring\n", path );
+
+	// extract the info we care about
+	char* methods = NULL;
+	if (ad->LookupString( "SupportedMethods", &methods)) {
+		// free the memory, return a MyString
+		MyString m = methods;
+		free(methods);
+		return m;
+	}
+
+	// TODO: push error onto CondorError e
+	e.pushf("FILETRANSFER", 1, "\"%s -classad\" does not support any methods, ignoring\n", path );
+	return "";
+}
+
+
+void
+FileTransfer::InsertPluginMappings(MyString methods, MyString p)
+{
+	StringList method_list(methods.Value());
+
+	char* m;
+
+	method_list.rewind();
+	while((m = method_list.next())) {
+		plugin_table->insert(m, p);
+	}
 }
