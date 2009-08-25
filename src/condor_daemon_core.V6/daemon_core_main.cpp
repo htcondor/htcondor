@@ -1770,7 +1770,7 @@ int main( int argc, char** argv )
 			}
 			// Close the /dev/null descriptor _IF_ it's not stdin/out/err
 			if ( fd_null > 2 ) {
-				close( fd );
+				close( fd_null );
 			}
 		}
 		// and detach from the controlling tty
