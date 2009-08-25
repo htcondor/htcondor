@@ -1477,7 +1477,7 @@ param_with_default_abort(const char *name, int abort) {
 				// it was set to empty specifically to clear this parameter for this
 				// specific subsystem.
 
-/*				dprintf(D_ALWAYS, "'%s' found in param info table, but it was empty, adding to config table\n", subsysname);*/
+				dprintf(D_ALWAYS, "'%s' found in param info table, but it was empty, adding to config table\n", subsysname);
 
 				return NULL;
 			}
