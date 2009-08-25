@@ -32,26 +32,29 @@
 #include <stdlib.h>
 using namespace std;
 
-bool test_sPrintExpr(CompatClassAd *c1, bool verbose);
-bool test_IsValidAttrValue(CompatClassAd *c1, bool verbose);
-bool test_fPrintAsXML(CompatClassAd *c1, bool verbose);
-bool test_sPrintAsXML(bool verbose); //I guess if fPrintAsXML works, 
+bool test_sPrintExpr(CompatClassAd *c1, int verbose);
+bool test_IsValidAttrValue(CompatClassAd *c1, int verbose);
+bool test_fPrintAsXML(CompatClassAd *c1, int verbose);
+bool test_sPrintAsXML(int verbose); //I guess if fPrintAsXML works, 
                                      //this does too
 
-bool test_ChainCollapse(CompatClassAd *c2, CompatClassAd *c3, bool verbose);
-bool test_EvalStringCharStar(CompatClassAd *c1, CompatClassAd *c2, bool verbose);
-bool test_EvalStringCharStarStar(CompatClassAd *c1, CompatClassAd *c2, bool verbose);
-bool test_EvalStringMyString(CompatClassAd *c1, CompatClassAd *c2, bool verbose);
+bool test_ChainCollapse(CompatClassAd *c2, CompatClassAd *c3, int verbose);
+bool test_EvalStringCharStar(CompatClassAd *c1, CompatClassAd *c2, int verbose);
+bool test_EvalStringCharStarStar(CompatClassAd *c1, CompatClassAd *c2, int verbose);
+bool test_EvalStringMyString(CompatClassAd *c1, CompatClassAd *c2, int verbose);
 
-bool test_NextDirtyExpr(CompatClassAd *c1, bool verbose);
-bool test_EscapeStringValue(CompatClassAd *c1, bool verbose);
+bool test_NextDirtyExpr(CompatClassAd *c1, int verbose);
+bool test_EscapeStringValue(CompatClassAd *c1, int verbose);
 
-bool test_EvalTree(CompatClassAd *c1, CompatClassAd *c2,bool verbose);
+bool test_EvalTree(CompatClassAd *c1, CompatClassAd *c2,int verbose);
 
-bool test_GIR(bool verbose);
-bool gir_helper(classad::ClassAd* c, string attr, bool verbose, bool full = true);
+bool test_GIR(int verbose);
+classad::References* gir_helper(classad::ClassAd* c, string attr, int verbose, bool full = true);
 
-void setUpAndRun(bool verbose);
+bool correctRefs(classad::References* ref, std::vector<string> expected);
+bool runAndCheckGIR(classad::ClassAd* c, string attr, string listString, bool full, int verbose );
+
+void setUpAndRun(int verbose);
 
 char *classad_strings[] = 
 {
@@ -62,8 +65,9 @@ char *classad_strings[] =
 };
 
 //{{{ setUpClassAds
-void setUpClassAds(ClassAd* c1, ClassAd* c2, ClassAd* c3, ClassAd* c4, FILE* c1FP, FILE* c2FP, FILE* c3FP, FILE* c4FP, bool verbose)
+void setUpClassAds(/*ClassAd* c1, ClassAd* c2, ClassAd* c3, ClassAd* c4,*/ FILE* c1FP, FILE* c2FP, FILE* c3FP, FILE* c4FP, int verbose)
 {
+    ClassAd *c1, *c2, *c3, *c4;
     if(verbose)
         printf("Creating ClassAds\n");
 
@@ -104,6 +108,11 @@ void setUpClassAds(ClassAd* c1, ClassAd* c2, ClassAd* c3, ClassAd* c4, FILE* c1F
     c4->fPrint(c4FP);
 
     fclose(c1FP); fclose(c2FP); fclose(c3FP); fclose(c4FP);
+    delete c1;
+    delete c2; 
+    delete c3;
+    delete c4;
+
 }
 //}}}
 
@@ -111,7 +120,7 @@ void setUpClassAds(ClassAd* c1, ClassAd* c2, ClassAd* c3, ClassAd* c4, FILE* c1F
 void setUpCompatClassAds(CompatClassAd** compC1, CompatClassAd** compC2,
         CompatClassAd** compC3, CompatClassAd** compC4, 
         FILE* c1FP, FILE* c2FP, FILE* c3FP, FILE* c4FP,
-        bool verbose)
+        int verbose)
 {
     c1FP = fopen("c1FPcompat.txt", "r+");
     c2FP = fopen("c2FPcompat.txt", "r+");
@@ -142,7 +151,7 @@ void setUpCompatClassAds(CompatClassAd** compC1, CompatClassAd** compC2,
 //}}}
 
 //{{{ test_sPrintExpr
-bool test_sPrintExpr(CompatClassAd *c1, bool verbose)
+bool test_sPrintExpr(CompatClassAd *c1, int verbose)
 {
     /* c1 should have 2 attributes:
      *  A = 1
@@ -202,7 +211,7 @@ bool test_sPrintExpr(CompatClassAd *c1, bool verbose)
 //}}}
 
 //{{{test_IsValidAttrValue
-bool test_IsValidAttrValue(CompatClassAd *c1, bool verbose)
+bool test_IsValidAttrValue(CompatClassAd *c1, int verbose)
 {
     bool passedReal = false, passedSlashN = false, passed = false;
     bool passedNonReal = false;
@@ -246,7 +255,7 @@ bool test_IsValidAttrValue(CompatClassAd *c1, bool verbose)
 //}}}
 
 //{{{test_fPrintAsXML
-bool test_fPrintAsXML(CompatClassAd *c1, bool verbose)
+bool test_fPrintAsXML(CompatClassAd *c1, int verbose)
 {
     bool passed = false;
     FILE* compC1XML;
@@ -265,7 +274,7 @@ bool test_fPrintAsXML(CompatClassAd *c1, bool verbose)
 //}}}
 
 //{{{test_sPrintAsXML
-bool test_sPrintAsXML(bool verbose)
+bool test_sPrintAsXML(int verbose)
 {
     /* it's tested in fPrintAsXML */
     bool passed = false;
@@ -280,7 +289,7 @@ bool test_sPrintAsXML(bool verbose)
 //}}}
 
 //{{{ test_ChainCollapse
-bool test_ChainCollapse(CompatClassAd *c2, CompatClassAd *c3, bool verbose)
+bool test_ChainCollapse(CompatClassAd *c2, CompatClassAd *c3, int verbose)
 {
     /* ok, so this test sucks. It doesn't really check to see if 
      *  the ChainCollapse worked, it just checks to see if 
@@ -347,7 +356,7 @@ bool test_ChainCollapse(CompatClassAd *c2, CompatClassAd *c3, bool verbose)
 //}}}
 
 //{{{test_EvalStringCharStar
-bool test_EvalStringCharStar(CompatClassAd *c1, CompatClassAd *c2, bool verbose)
+bool test_EvalStringCharStar(CompatClassAd *c1, CompatClassAd *c2, int verbose)
 {
     bool passed = false;
     bool passedTest[4];
@@ -429,7 +438,7 @@ bool test_EvalStringCharStar(CompatClassAd *c1, CompatClassAd *c2, bool verbose)
 //}}}
 
 //{{{test_EvalStringCharStarStar
-bool test_EvalStringCharStarStar(CompatClassAd *c1, CompatClassAd *c2, bool verbose)
+bool test_EvalStringCharStarStar(CompatClassAd *c1, CompatClassAd *c2, int verbose)
 {
     bool passed = false;
     bool passedTest[4];
@@ -511,7 +520,7 @@ bool test_EvalStringCharStarStar(CompatClassAd *c1, CompatClassAd *c2, bool verb
 //}}}
 
 //{{{test_EvalStringMyString
-bool test_EvalStringMyString(CompatClassAd *c1, CompatClassAd *c2, bool verbose)
+bool test_EvalStringMyString(CompatClassAd *c1, CompatClassAd *c2, int verbose)
 {
     bool passed = false;
     bool passedTest[4];
@@ -584,7 +593,7 @@ bool test_EvalStringMyString(CompatClassAd *c1, CompatClassAd *c2, bool verbose)
 //}}}
 
 //{{{NextDirtyExpr
-bool test_NextDirtyExpr(CompatClassAd *c1, bool verbose)
+bool test_NextDirtyExpr(CompatClassAd *c1, int verbose)
 {
     /* this depends on there only being 2 attrs per classad!
      */
@@ -619,7 +628,7 @@ bool test_NextDirtyExpr(CompatClassAd *c1, bool verbose)
     if(!c1->NextDirtyExpr())
     {
         passedTest[2] = true;
-        if(verbose)
+        if(verbose == 2)
             printf("Good. Returned NULL.\n");
     }
 
@@ -630,7 +639,7 @@ bool test_NextDirtyExpr(CompatClassAd *c1, bool verbose)
     if(c1->NextDirtyExpr())
     {
         passedTest[3] = true;
-        if(verbose)
+        if(verbose == 2)
             printf("Good, After resetting itr, it worked.\n");
     }
 
@@ -646,7 +655,7 @@ bool test_NextDirtyExpr(CompatClassAd *c1, bool verbose)
 //}}}
 
 //{{{ test_EscapeStringValue
-bool test_EscapeStringValue(CompatClassAd *c1, bool verbose)
+bool test_EscapeStringValue(CompatClassAd *c1, int verbose)
 {
     bool passed;
     bool passedTest[2];
@@ -668,7 +677,7 @@ bool test_EscapeStringValue(CompatClassAd *c1, bool verbose)
         passedTest[0] = true;
     }
 
-    if(verbose)
+    if(verbose == 2)
         printf("Expected %s and EscapeStringValue returned %s.\n", "\"hello\"", tmp); 
 
     tmp2 = c1->EscapeStringValue(NULL);
@@ -677,13 +686,13 @@ bool test_EscapeStringValue(CompatClassAd *c1, bool verbose)
     {
         printf("%s\n", tmp2);
 
-        if(verbose)
+        if(verbose == 2)
             printf("Bad. Passed in NULL and got something back.\n");
     }
     else
     {
         passedTest[1] = true;
-        if(verbose)
+        if(verbose == 2)
             printf("Good. Passed in NULL and got NULL back.\n");
     }   
 
@@ -694,7 +703,7 @@ bool test_EscapeStringValue(CompatClassAd *c1, bool verbose)
 //}}}
 
 //{{{ test_EvalTree
-bool test_EvalTree(CompatClassAd *c1, CompatClassAd *c2, bool verbose)
+bool test_EvalTree(CompatClassAd *c1, CompatClassAd *c2, int verbose)
 {
     bool passed = false;
     bool passedShortHand = false, passedNullTarget = false;
@@ -720,7 +729,7 @@ bool test_EvalTree(CompatClassAd *c1, CompatClassAd *c2, bool verbose)
     if(verbose)
     {
         printf("First EvalTree (shorthand) %s.\n", passedShortHand ? "passed" : "failed");
-        if(passedShortHand)
+        if(passedShortHand && verbose == 2)
         {
             printf("tmpVal is %s.\n", buf.c_str() ); 
         }
@@ -741,7 +750,7 @@ bool test_EvalTree(CompatClassAd *c1, CompatClassAd *c2, bool verbose)
     if(verbose)
     {
         printf("Second EvalTree (null target) %s.\n", passedNullTarget ? "passed" : "failed");
-        if(passedNullTarget)
+        if(passedNullTarget && verbose == 2)
         {
             printf("tmpVal is %s.\n", buf.c_str() ); 
         }
@@ -804,7 +813,7 @@ bool test_EvalTree(CompatClassAd *c1, CompatClassAd *c2, bool verbose)
         {
             printf("But the number was not what was expected. Expected 3 and got %s.\n", buf.c_str());
         }
-        else if(passedReal)
+        else if(passedReal && verbose == 2)
         {
             printf("tmpVal is %s.\n", buf.c_str() ); 
         }
@@ -820,12 +829,15 @@ bool test_EvalTree(CompatClassAd *c1, CompatClassAd *c2, bool verbose)
 //}}}
 
 //{{{ GetInternalReferences
-bool test_GIR(bool verbose)
+bool test_GIR(int verbose)
 {
     bool passed = false;
+    bool passedFull1 = false, passedNonFull1 = false;
+    bool passedFull2 = false, passedNonFull2 = false;
+    bool passedFull3 = false, passedNonFull3 = false;
+    
     classad::ClassAd* c;
     classad::ClassAdParser parser;
-
 
     // expr C is an opnode
 
@@ -839,37 +851,49 @@ bool test_GIR(bool verbose)
         passed = false;
     }
 
-    if(verbose)
+    if(verbose == 2)
     {
         printf("Working on 1st ref string. Fullname = true\n");
         printf("ref string is %s.\n", input_ref.c_str());
     }
 
-    passed = gir_helper(c, "A", verbose);
-    passed = gir_helper(c, "B", verbose);
-    passed = gir_helper(c, "C", verbose);
-    passed = gir_helper(c, "D", verbose);
-    passed = gir_helper(c, "E", verbose);
+    passedFull1 = runAndCheckGIR(c, "A", "", true, verbose);
+    passedFull1 = runAndCheckGIR(c, "B", "", true, verbose);
+    passedFull1 = runAndCheckGIR(c, "C", "D.A", true, verbose);
+    passedFull1 = runAndCheckGIR(c, "D", "E", true, verbose);
+    passedFull1 = runAndCheckGIR(c, "E", "", true, verbose);
 
-    if(verbose) 
+    if(verbose)
+    {
+        printf("GIR with Fullname = true on ref1 %s.\n", passedFull1 ? "passed" : "failed");
+    }
+
+    if(verbose == 2) 
     {
         printf("Working on 1st ref string. Fullname = false\n");
     }
 
-    passed = gir_helper(c, "A", verbose, false);
-    passed = gir_helper(c, "B", verbose, false);
-    passed = gir_helper(c, "C", verbose, false);
-    passed = gir_helper(c, "D", verbose, false);
-    passed = gir_helper(c, "E", verbose, false);
-
-
-    string input_ref2 = "[ A = 3; B = {1}; C = D.G; D = [A = B; B = 9;]; E = D.A + C; ]";
+    passedNonFull1 = runAndCheckGIR(c, "A", "", false, verbose);
+    passedNonFull1 = runAndCheckGIR(c, "B", "", false, verbose);
+    passedNonFull1 = runAndCheckGIR(c, "C", "A", false, verbose);
+    passedNonFull1 = runAndCheckGIR(c, "D", "E", false, verbose);
+    passedNonFull1 = runAndCheckGIR(c, "E", "", false, verbose);
 
     if(verbose)
+    {
+        printf("GIR with Fullname = false on ref1 %s.\n", passedNonFull1 ? "passed" : "failed");
+    }
+
+    string input_ref2 = "[ A = 3; B = {1}; C = G.F; D = [A = B; B = 9;]; E = D.A + C; ]";
+
+    if(verbose == 2)
     {
         printf("Working on 2nd ref string. Fullname = true\n");
         printf("ref string is %s.\n", input_ref2.c_str());
     }
+    //redo!
+    delete c;
+
     c = parser.ParseClassAd(input_ref2);
 
     if(verbose && c == NULL)
@@ -878,75 +902,230 @@ bool test_GIR(bool verbose)
         passed = false;
     }
 
-    passed = gir_helper(c, "A", verbose);
-    passed = gir_helper(c, "B", verbose);
-    passed = gir_helper(c, "C", verbose);
-    passed = gir_helper(c, "D", verbose);
-    passed = gir_helper(c, "E", verbose);
+    passedFull2 = runAndCheckGIR(c, "A", "", true, verbose);
+    passedFull2 = runAndCheckGIR(c, "B", "", true, verbose);
+    passedFull2 = runAndCheckGIR(c, "C", "", true, verbose);
+    passedFull2 = runAndCheckGIR(c, "D", "B", true, verbose);
+    passedFull2 = runAndCheckGIR(c, "E", "D.A,C", true, verbose);
 
     if(verbose)
+    {
+        printf("GIR with Fullname = true on ref2 %s.\n", passedFull2 ? "passed" : "failed");
+    }
+
+    if(verbose == 2)
     {
         printf("Working on 2nd ref string. Fullname = false\n");
     }
 
-    passed = gir_helper(c, "A", verbose, false);
-    passed = gir_helper(c, "B", verbose, false);
-    passed = gir_helper(c, "C", verbose, false);
-    passed = gir_helper(c, "D", verbose, false);
-    passed = gir_helper(c, "E", verbose, false);
+    passedNonFull2 = runAndCheckGIR(c, "A", "", false, verbose);
+    passedNonFull2 = runAndCheckGIR(c, "B", "", false, verbose);
+    passedNonFull2 = runAndCheckGIR(c, "C", "", false, verbose);
+    passedNonFull2 = runAndCheckGIR(c, "D", "B", false, verbose);
+    passedNonFull2 = runAndCheckGIR(c, "E", "A,C", false, verbose);
+
+    if(verbose)
+    {
+        printf("GIR with Fullname = false on ref2 %s.\n", passedNonFull2 ? "passed" : "failed");
+    }
+
+    string input_ref3 = "[ A = G.B; B = {5}; C = A + D.B; D = [A = 2; B = E.C;]; E = [C = 7;]; ]";
+
+    if(verbose == 2)
+    {
+        printf("Working on 3nd ref string. Fullname = true\n");
+        printf("ref string is %s.\n", input_ref3.c_str());
+    }
+    //redo!
+    delete c;
+
+    c = parser.ParseClassAd(input_ref3);
+
+    if(verbose && c == NULL)
+    {
+        printf("Classad 3 couldn't be parsed!\n");
+        passed = false;
+    }
+    passedFull3 = runAndCheckGIR(c, "A", "", true, verbose);
+    passedFull3 = runAndCheckGIR(c, "B", "", true, verbose);
+    passedFull3 = runAndCheckGIR(c, "C", "A,D.B", true, verbose);
+    passedFull3 = runAndCheckGIR(c, "D", "E.C", true, verbose);
+    passedFull3 = runAndCheckGIR(c, "E", "", true, verbose);
+
+    if(verbose)
+    {
+        printf("GIR with Fullname = true on ref3 %s.\n", passedFull3 ? "passed" : "failed");
+    }
+
+    if(verbose == 2)
+    {
+        printf("Working on 3nd ref string. Fullname = false\n");
+    }
+
+    passedNonFull3 = runAndCheckGIR(c, "A", "", false, verbose);
+    passedNonFull3 = runAndCheckGIR(c, "B", "", false, verbose);
+    passedNonFull3 = runAndCheckGIR(c, "C", "A,B", false, verbose);
+    passedNonFull3 = runAndCheckGIR(c, "D", "C", false, verbose);
+    passedNonFull3 = runAndCheckGIR(c, "E", "", false, verbose);
+
+    if(verbose)
+    {
+        printf("GIR with Fullname = false on ref3 %s.\n", passedNonFull3 ? "passed" : "failed");
+    }
 
     delete c;
     c = NULL;
 
+    passed = passedFull1 && passedNonFull1 && passedFull2 && passedNonFull2 && passedFull3 && passedNonFull3;
     return passed;
 }
 //}}}
 
 //{{{ GIR helper
-bool gir_helper(classad::ClassAd* c, string attr, bool verbose, bool full)
+classad::References* gir_helper(classad::ClassAd* c, string attr, int verbose, bool full)
 {
-    bool passed = false;
+    //bool passed = false;
 
-    classad::References refs;
+    classad::References* refs = new classad::References();
     classad::References::iterator iter;
     classad::ExprTree *expr;
 
-    if(verbose)
-    {
-        printf("Attr \"%s\"\n", attr.c_str());
-    }
     if( c != NULL )
     {
         expr = c->Lookup(attr);
         if(expr != NULL)
         {
             bool have_references;
-            if(have_references = c->GetInternalReferences(expr, refs, full))
+            if(have_references = c->GetInternalReferences(expr, *refs, full))
             {
                 if(have_references)
                 {
-                    if(verbose)
+                    if(verbose == 2)
                     {
-                        for(iter = refs.begin(); iter != refs.end(); iter++)  
+                        if(refs->size() > 0)
                         {
-                            printf("%s\n", (*iter).c_str());
+                            printf("Returned refs: \n");
+                            for(iter = refs->begin(); iter != refs->end(); iter++)  
+                            {
+                                printf("%s\n", (*iter).c_str());
+                            }
                         }
                     }
 
-                    passed = true;
+                    //passed = true;
                 }
             }
         }
     }
-    return passed;
+    return refs;
+    //return passed;
 }
 
 //}}}
 
-
-void setUpAndRun(bool verbose)
+//{{{ correctRefs
+bool correctRefs(classad::References* ref, std::vector<string> expected)
 {
-    ClassAd *c1, *c2, *c3, *c4;
+    bool passed = false;
+
+    classad::References::iterator itr;
+    std::vector<string>::iterator vecItr;
+
+    //refs didn't have anything 
+    if(ref->size() == 0 && expected.size() == 0)
+    {
+        return true;
+    }
+    else if(ref == NULL)
+    {
+        return false;
+    }
+
+    //make sure they're the same size...
+    if(ref->size() != expected.size())
+    {
+        return false;
+    }
+
+    bool foundOne;
+    for(itr = ref->begin(); itr != ref->end(); itr++)
+    {
+        foundOne = false;
+        for(vecItr = expected.begin(); vecItr != expected.end(); vecItr++)
+        {
+            if( !( (*itr).compare( (*vecItr) ) ) )
+            {
+                foundOne = true;
+            }
+        }
+
+        if(!foundOne)
+        {
+            passed = false; 
+            return passed;
+        }
+    }
+
+    //if we got here, they must all be the same.
+    passed = true;
+
+    return passed;
+}
+//}}}
+
+//{{{ runAndCheckGIR
+bool runAndCheckGIR(classad::ClassAd* c, string attr, string listString, bool full, int verbose )
+{
+    bool passed = false;
+    bool passedTest = false;
+
+    classad::References* retRefs;
+    std::vector<string> expectedVec;
+
+    int subStrStart = 0;
+    int subStrEnd = 0;
+
+    //if "," doesn't exist, then skip the splitting-stage.
+    bool singleAttr = (listString.find(",") == string::npos);
+
+    if(!singleAttr)
+    {
+        for(int i = 0; i < listString.size(); i++)
+        {
+            if(listString[i] == ',' || i == (listString.size() - 1))
+            {
+                subStrEnd = i;
+                expectedVec.push_back(listString.substr(subStrStart, subStrEnd));
+                subStrStart = i + 1;
+            }
+        }
+    }
+    else if(listString.size() > 0)
+    {
+        expectedVec.push_back(listString); 
+    }
+
+
+    retRefs = gir_helper(c, attr, verbose, full);
+    passedTest = correctRefs(retRefs, expectedVec);
+
+    expectedVec.clear();
+
+    if(verbose == 2)
+    {
+        printf("Attr \"%s\" %s.\n", attr.c_str(), passedTest ? "passed" : "failed");
+    }
+
+    delete retRefs;
+    passed = passedTest;
+
+    return passed;
+}
+//}}}
+
+
+void setUpAndRun(int verbose)
+{
     FILE *c1FP, *c2FP, *c3FP, *c4FP;
     /*
     bool sPrintExprPassed, isVAVPassed, fPrintAXPassed;//, sPrintAXPassed; 
@@ -965,7 +1144,7 @@ void setUpAndRun(bool verbose)
     }
 
 
-    setUpClassAds(c1, c2, c3, c4, c1FP, c2FP, c3FP, c4FP,verbose);
+    setUpClassAds(c1FP, c2FP, c3FP, c4FP,verbose);
 
     CompatClassAd *compC1, *compC2, *compC3, *compC4;
 
@@ -1054,22 +1233,23 @@ void setUpAndRun(bool verbose)
         printf("%d of %d tests passed.\n", numPassed, numTests);
     }
 
-
-    //delete c1; delete c2; delete c3;
-    delete compC1; delete compC2; delete compC3;
+    delete compC1; 
+    delete compC2; 
+    delete compC3;
+    delete compC4;
 }
 
 int main(int argc, char **argv)
 {
-    bool verbose;
+    int verbose = 0;
 
     if(argc > 1 && !strcmp(argv[1], "-v"))
     {
-        verbose = true;
+        verbose = 1;
     }
-    else
+    else if( argc > 1 && !strcmp(argv[1], "-vv"))
     {
-        verbose = false;
+        verbose = 2;
     }
 
     setUpAndRun(verbose);

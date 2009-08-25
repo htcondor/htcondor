@@ -384,25 +384,27 @@ bool EvalTree(classad::ExprTree* eTree, classad::ClassAd* mine, classad::ClassAd
     {
         return false;
     }
+    const classad::ClassAd* tmp = eTree->GetParentScope(); 
+    eTree->SetParentScope(mine);
 
     if(target)
     {
         classad::MatchClassAd mad(mine,target);
 
-        /*
-        classad::ExprTree* mTree = mad.Copy();     
-        mTree->SetParentScope(mine);
-        */
         bool rval = eTree->Evaluate(*v);
 
         mad.RemoveLeftAd( );
         mad.RemoveRightAd( );
+        
+        //restore the old scope
+        eTree->SetParentScope(tmp);
 
-        //delete mTree;
         return rval;
     }
 
-    eTree->SetParentScope(mine);
+
+    //restore the old scope
+    eTree->SetParentScope(tmp);
 
     return eTree->Evaluate(*v);
 }
