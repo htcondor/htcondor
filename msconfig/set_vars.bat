@@ -41,7 +41,7 @@ set VC_BIN=%VC_DIR%\bin
 set PERL_DIR=%SystemDrive%\Perl\bin;%SystemDrive%\Perl64\bin
 set SDK_DIR=%ProgramFiles%\Microsoft Platform SDK
 set DBG_DIR=%ProgramFiles%\Debugging Tools for Windows (x86);%ProgramFiles%\Debugging Tools for Windows (x64)
-set DOTNET_DIR=%SystemRoot%\Microsoft.NET\Framework\v3.5
+set DOTNET_DIR=%SystemRoot%\Microsoft.NET\Framework\v3.5;%SystemRoot%\Microsoft.NET\Framework\v2.0.50727
 
 REM For some reason this is not defined whilst in some environments
 if "A%VS90COMNTOOLS%"=="A" set VS90COMNTOOLS=%VS_DIR%\Common7\Tools\
@@ -69,9 +69,11 @@ set EXT_POSTGRESQL_VERSION=postgresql-8.0.2
 set EXT_KERBEROS_VERSION=krb5-1.4.3-p0
 set EXT_PCRE_VERSION=pcre-7.6
 set EXT_DRMAA_VERSION=drmaa-1.6
+set EXT_CURL_VERSION=curl-7.19.6
+set EXT_HADOOP_VERSION=hadoop-0.20.0-p2
 
 REM Now tell the build system what externals we need built.
-set EXTERNALS_NEEDED=%EXT_GSOAP_VERSION% %EXT_OPENSSL_VERSION% %EXT_KERBEROS_VERSION% %EXT_PCRE_VERSION% %EXT_POSTGRESQL_VERSION% %EXT_DRMAA_VERSION%
+set EXTERNALS_NEEDED=%EXT_GSOAP_VERSION% %EXT_OPENSSL_VERSION% %EXT_KERBEROS_VERSION% %EXT_PCRE_VERSION% %EXT_POSTGRESQL_VERSION% %EXT_DRMAA_VERSION% %EXT_CURL_VERSION% %EXT_HADOOP_VERSION%
 
 REM Put msconfig in the PATH, since it's got lots of stuff we need
 REM like awk, gunzip, tar, bison, yacc...
@@ -90,7 +92,7 @@ REM ====== THIS SHOULD BE REMOVED WHEN Win2K IS NO LONGER SUPPORTED ======
 REM ======================================================================
 
 REM Configure Visual C++
-call vcvarsall.bat x86
+call "%VC_DIR%\vcvarsall.bat" x86
 if not defined INCLUDE ( echo. && echo *** Failed to run vcvarsall.bat! Is Microsoft Visual Studio installed? && exit /B 1 )
 
 REM ======================================================================
@@ -102,14 +104,14 @@ REM ====== THIS SHOULD BE REMOVED WHEN Win2K IS NO LONGER SUPPORTED ======
 REM ======================================================================
 
 REM Configure the Platform SDK environment
-call setenv /2000 /RETAIL
+call "%SDK_DIR%\SetEnv.Cmd" /2000 /RETAIL
 if not defined MSSDK ( echo. && echo *** Failed to run setenv.cmd! Are the Microsoft Platform SDK installed? && exit /B 1 )
 
 REM ======================================================================
 REM ====== THIS SHOULD BE REMOVED WHEN Win2K IS NO LONGER SUPPORTED ======
-set INCLUDE=%ProgramFiles%\Microsoft Platform SDK\Include;%VC_DIR%\ATLMFC\INCLUDE;%VC_DIR%\INCLUDE;
-set LIB=%ProgramFiles%\Microsoft Platform SDK\Lib;%VC_DIR%\ATLMFC\LIB;%VC_DIR%\LIB;
-set LIBPATH=%SystemRoot%\Microsoft.NET\Framework\v3.5;%SystemRoot%\Microsoft.NET\Framework\v2.0.50727;%VC_DIR%\ATLMFC\LIB;%VC_DIR%\LIB;
+set INCLUDE=%SDK_DIR%\Include;%VC_DIR%\ATLMFC\INCLUDE;%VC_DIR%\INCLUDE;
+set LIB=%SDK_DIR%\Lib;%VC_DIR%\ATLMFC\LIB;%VC_DIR%\LIB;
+set LIBPATH=%DOTNET_DIR%;%VC_DIR%\ATLMFC\LIB;%VC_DIR%\LIB;
 REM ====== THIS SHOULD BE REMOVED WHEN Win2K IS NO LONGER SUPPORTED ======
 REM ======================================================================
 

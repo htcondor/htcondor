@@ -38,8 +38,8 @@ static	TimerManager*	_t = NULL;
 	*/	
 const int MAX_FIRES_PER_TIMEOUT = 3;
 
-extern THREAD_LOCAL_STORAGE void **curr_dataptr;
-extern THREAD_LOCAL_STORAGE void **curr_regdataptr;
+extern void **curr_dataptr;
+extern void **curr_regdataptr;
 
 
 TimerManager::TimerManager()

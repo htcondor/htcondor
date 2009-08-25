@@ -101,8 +101,8 @@ my $PREP_TIME = 90;
 ## the time that the job should actually start running over on the
 ## Starter
 ##
-my $DEFERRAL_TIME;
-my $LAST_DEFERRAL_TIME;
+my $DEFERRAL_TIME = 0;
+my $LAST_DEFERRAL_TIME = 0;
 
 ##
 ## This is the difference in seconds that one job should be scheduled
@@ -141,15 +141,15 @@ my $executed = sub {
 	## might have overwritten it
 	##
 	my @result;
-	my $q_cmd = "_CONDOR_TOOL_DEBUG=D_ALL condor_q $cluster.$job -debug -format %d DeferralTime";
+	#my $q_cmd = "_CONDOR_TOOL_DEBUG=D_ALL condor_q $cluster.$job -debug -format %d DeferralTime\n";
+	my $q_cmd = "_CONDOR_TOOL_DEBUG=D_ALL condor_q $cluster.$job -format %d DeferralTime\n";
 	if ( ! CondorTest::runCondorTool($q_cmd, \@result, 3) ) {
 		CondorTest::debug("ERROR: Unable to get DeferralTime due to Condor Tool Failure<$q_cmd>\n",$debuglevel);
 	    exit(1);
 	}
-    CondorTest::debug("Stderr with debug info for condor_q follows\n",$debuglevel);
-    system("cat runCTool$$");
 
 	$DEFERRAL_TIME = "@result";	
+	print "DEFERRAL_TIME = <$DEFERRAL_TIME>\n";
 	##
 	## We're screwed if we can't get out the time
 	##
@@ -272,6 +272,15 @@ my $success = sub {
 	my $h_runcount = -1;
 	while ($try-- > 0 && $h_runcount == -1) {
 		my @result;
+		my $historyfile = `condor_config_val history`;
+		CondorTest::fullchomp($historyfile);
+		print "WARNING: workaround for bug condor wiki #683 \n";
+		# There should never be a job finished and out of the queue
+		# and not already in the EXISTING history file.
+		while(!(-f $historyfile)) {
+			# wait for history file to exist
+			sleep(1);
+		}
 		my $h_cmd = "condor_history -l $cluster.$job";
 		if ( ! CondorTest::runCondorTool($h_cmd, \@result, 3) ) {
 			CondorTest::debug("ERROR: Unable to get JobRunCount due to Condor Tool Failure<$h_cmd>\n",$debuglevel);

@@ -1,0 +1,483 @@
+Index: src/hdfs/org/apache/hadoop/hdfs/server/datanode/DataXceiverServer.java
+===================================================================
+--- src/hdfs/org/apache/hadoop/hdfs/server/datanode/DataXceiverServer.java	(revision 805139)
++++ src/hdfs/org/apache/hadoop/hdfs/server/datanode/DataXceiverServer.java	(working copy)
+@@ -21,6 +21,7 @@
+ import java.net.ServerSocket;
+ import java.net.Socket;
+ import java.net.SocketTimeoutException;
++import java.net.InetAddress;
+ import java.util.Collections;
+ import java.util.HashMap;
+ import java.util.Iterator;
+@@ -32,7 +33,7 @@
+ import org.apache.hadoop.hdfs.server.balancer.Balancer;
+ import org.apache.hadoop.util.Daemon;
+ import org.apache.hadoop.util.StringUtils;
+-
++import org.apache.hadoop.security.HostAndIPFilter;
+ /**
+  * Server used for receiving/sending a block of data.
+  * This is created to listen for requests from clients or 
+@@ -128,9 +129,22 @@
+     while (datanode.shouldRun) {
+       try {
+         Socket s = ss.accept();
+-        s.setTcpNoDelay(true);
+-        new Daemon(datanode.threadGroup, 
+-            new DataXceiver(s, datanode, this)).start();
++        InetAddress addr = s.getInetAddress();
++        String hostAddress = "*Unkonw*";
++        if (addr != null) {
++          hostAddress = addr.getHostAddress();
++        }
++
++        if (!HostAndIPFilter.apply(hostAddress)) {
++	  s.setTcpNoDelay(true);
++          new Daemon(datanode.threadGroup, 
++              new DataXceiver(s, datanode, this)).start();
++	} else {
++          LOG.info("Rejected connection from " + hostAddress);
++          try {
++            s.close();
++	  } catch (Exception e) {}
++	}
+       } catch (SocketTimeoutException ignored) {
+         // wake up to see if should continue to run
+       } catch (IOException ie) {
+Index: src/core/org/apache/hadoop/http/HttpServer.java
+===================================================================
+--- src/core/org/apache/hadoop/http/HttpServer.java	(revision 805139)
++++ src/core/org/apache/hadoop/http/HttpServer.java	(working copy)
+@@ -38,6 +38,7 @@
+ import org.apache.hadoop.conf.Configuration;
+ import org.apache.hadoop.log.LogLevel;
+ import org.apache.hadoop.util.ReflectionUtils;
++import org.apache.hadoop.security.JettyAccessHandler;
+ 
+ import org.mortbay.jetty.Connector;
+ import org.mortbay.jetty.Handler;
+@@ -109,10 +110,12 @@
+     ContextHandlerCollection contexts = new ContextHandlerCollection();
+     webServer.setHandler(contexts);
+ 
++    JettyAccessHandler ipHostVerify = new JettyAccessHandler();
+     webAppContext = new WebAppContext();
+     webAppContext.setContextPath("/");
+     webAppContext.setWar(appDir + "/" + name);
+     webServer.addHandler(webAppContext);
++    webAppContext.setSecurityHandler(ipHostVerify);
+ 
+     addDefaultApps(contexts, appDir);
+ 
+Index: src/core/org/apache/hadoop/security/HostAndIPFilter.java
+===================================================================
+--- src/core/org/apache/hadoop/security/HostAndIPFilter.java	(revision 0)
++++ src/core/org/apache/hadoop/security/HostAndIPFilter.java	(revision 0)
+@@ -0,0 +1,289 @@
++/**
++ * Licensed to the Apache Software Foundation (ASF) under one
++ * or more contributor license agreements.  See the NOTICE file
++ * distributed with this work for additional information
++ * regarding copyright ownership.  The ASF licenses this file
++ * to you under the Apache License, Version 2.0 (the
++ * "License"); you may not use this file except in compliance
++ * with the License.  You may obtain a copy of the License at
++ *
++ *     http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++package org.apache.hadoop.security;
++
++import org.apache.hadoop.conf.Configuration;
++
++import org.apache.commons.logging.Log;
++import org.apache.commons.logging.LogFactory;
++
++import java.util.ArrayList;
++import java.util.regex.Pattern;
++import java.util.regex.Matcher;
++import java.util.StringTokenizer;
++import java.util.HashSet;
++import java.net.InetAddress;
++import java.net.UnknownHostException;
++/**
++ * It provides static method to verify the host and/or ip-address 
++ *  class for checking access control related issues.
++ */
++public final class HostAndIPFilter {
++
++  private static final Log LOG = LogFactory.getLog(SecurityUtil.class);
++
++  //Required by {@link java.io.Serializable}.
++  private static final long serialVersionUID = 1L;
++
++  //stores the allow and deny pattern os ip and host.
++  private static ArrayList<String> allow_list_ipmask = new ArrayList<String>();
++  private static ArrayList<String> deny_list_ipmask = new ArrayList<String>();
++  private static ArrayList<Pattern> allow_list = new ArrayList<Pattern>();
++  private static ArrayList<Pattern> deny_list = new ArrayList<Pattern>();
++
++  private static Pattern allNumbers = Pattern.compile("^\\d+$");
++
++  //if false any un-resolved IP addressess will be denied. 
++  //This will be turned off if allow and deny list doesn't contain
++  //any host based entry e.g like *.example.com
++  private static boolean unResolvedHostAllowed = true;
++
++  static {
++    Configuration conf = new Configuration();
++    //one time build of allow list
++    String list[] = conf.getStrings("dfs.net.allow");
++    add(list, false);
++    //one time build of deny list
++    list = conf.getStrings("dfs.net.deny");
++    add(list, true);
++  }
++
++  public static boolean apply(String ipAddress) {
++    if (allow_list.size() <= 0 && deny_list.size() <=0  
++        && allow_list_ipmask.size() <=0 && deny_list_ipmask.size() <= 0)
++
++      return false;
++
++    if (ipAddress == null || ipAddress.equals("*Unknonw*")) {
++      LOG.warn(ipAddress + " illegal IP?");
++      return true;
++    }
++  
++    InetAddress inetAddr = null;
++    String hostName = null;
++    try {
++      inetAddr = InetAddress.getByName(ipAddress);
++      hostName = inetAddr.getHostName();
++    } catch (UnknownHostException e) {  }
++
++    if (hostName == null && !unResolvedHostAllowed)
++      return true;
++
++    for (Pattern p: deny_list) {
++      Matcher ip = p.matcher(ipAddress);
++      Matcher host = p.matcher(hostName);
++      if (ip.matches() || host.matches()) {
++        LOG.debug("IP=" + ipAddress + " Host=" + hostName + " Access=Denied Pattern=" + p.toString());
++        return true;
++      }
++    }
++
++    String ipToBin = "";
++    if (deny_list_ipmask.size() > 0 || allow_list_ipmask.size() > 0) {     
++      ipToBin = toBinary(ipAddress, 0);
++    }
++
++    for (String mask : deny_list_ipmask) {   
++      if (ipToBin.startsWith(mask)) {
++        LOG.debug("IP=" + ipAddress + " Access=Denied Pattern=" + mask);
++        return true;
++      }
++    }
++
++    //given ip wasn't in deny list. A non-empty allow_list
++    //means that each ip should be explicitly allowed
++ 
++    if (allow_list.size() == 0 && allow_list_ipmask.size() == 0) {
++      LOG.debug("Empty Allow list: IP=" + ipAddress + " Host=" + hostName + " Access=OK");
++      return false;
++    }
++    
++    for (Pattern p : allow_list) {
++      Matcher ip = p.matcher(ipAddress);
++      Matcher host = p.matcher(hostName);
++      if (ip.matches() || host.matches()) {
++        LOG.debug("IP=" + ipAddress + " Host=" + hostName + " Access=OK Pattern=" + p.toString());
++	return false;
++      }
++    }    
++
++    for (String mask : allow_list_ipmask) {
++      if (ipToBin.startsWith(mask)) {
++        LOG.debug("IP=" + ipAddress + " Host=" + hostName + " Access=OK Pattern=" + mask);
++        return false;
++      }
++    }
++    //deny everything else
++    LOG.debug("Deny list: IP=" + ipAddress + " Host=" + hostName + " Access=Denied");
++    return true;
++  }  
++
++  private static void add(String net[], boolean deny) {
++    if (net == null)
++      return;
++
++    for (int i=0; i<net.length; i++) {
++      StringTokenizer st = new StringTokenizer(net[i], "/");
++      if (st.countTokens() == 2) {
++        addSubnet(st.nextToken(), st.nextToken(), deny);        
++        return;
++      }
++
++      String newPattern = translate(net[i]);
++      if (newPattern == null) {
++        LOG.warn("Invalid filter: " + net[i]);
++        return;
++      }
++      
++      if (deny) {
++        LOG.debug("Host/IP deny list " + net[i]);
++        deny_list.add(Pattern.compile( newPattern, Pattern.CASE_INSENSITIVE));
++      }
++      else {
++        LOG.debug("Host/IP deny list " + net[i]);
++        allow_list.add(Pattern.compile( newPattern, Pattern.CASE_INSENSITIVE));
++      }
++    }
++  }
++
++  private static boolean isInetNumericPattern(String net) {
++    Matcher m = allNumbers.matcher(net.replace(".", ""));
++    if (m.matches())
++      return true;
++
++    return false;
++  }
++
++  private static void addSubnet(String ip, String mask, boolean deny) {
++    int maskbits = -1;
++    //desired pattern of bits to match
++    String ipPattern = "";
++
++    StringTokenizer st = new StringTokenizer(mask, ".");
++    if (st.countTokens() <= 1) 
++      maskbits = toInt(mask);
++    else {
++      int count = 0;
++      while (st.hasMoreElements()) {
++        String octet = st.nextToken();
++        if (octet.equals("255")) 
++          count += 8;
++        else {
++          //count number of 1's in this portion of subnet
++          int num = toInt(octet);
++          if (num == -1) {
++            LOG.warn("Invalid filter:" + ip + "/" + mask);
++            return;
++	  }
++
++          String bits = Integer.toBinaryString(num);
++          for (int i=0; i<bits.length(); i++) {
++            char c = bits.charAt(i);
++            if (c == '1')
++              count++;
++            else
++              break;
++	  }           
++ 
++          break;
++	}
++      }   
++      maskbits = count;
++    }
++ 
++    if (maskbits <= -1) {
++      LOG.warn("Invalid filter: " + ip + "/" + mask);
++      return;
++    }
++
++    String ipToBin = toBinary(ip, maskbits);
++
++    if (deny)
++      deny_list_ipmask.add(ipToBin);
++    else
++      allow_list_ipmask.add(ipToBin);
++  }
++
++
++  private static int toInt(String i) {
++    int num = -1;
++    try {
++      num = Integer.parseInt(i);
++    } catch(NumberFormatException nfe) {    }
++
++    return num;
++  }
++
++  private static String toBinary(String ip, int mask) {
++    StringTokenizer st = new StringTokenizer(ip, ".");
++    StringBuffer sb = new StringBuffer();
++
++    while (st.hasMoreElements()) {
++      String octet = st.nextToken();
++      int  num = toInt(octet);
++      String binaryOct = Integer.toBinaryString(num);
++      for (int j=0; j<(8-binaryOct.length()); j++)
++        sb.append("0");
++
++      sb.append(binaryOct);      
++    }
++
++    if (mask > 0)
++      sb.setLength(mask);
++
++    return sb.toString();
++  }
++
++  private static String translate(String net) {
++    StringBuffer newPattern = new StringBuffer("^");
++
++    boolean numeric = isInetNumericPattern(net);
++    if (!numeric && unResolvedHostAllowed)
++      unResolvedHostAllowed = false;
++
++    outer:
++    for (int j=0; j<net.length(); j++) {
++      char c = net.charAt(j);
++      switch(c) {
++	case '*':
++	  newPattern.append(numeric ? "[\\d*.]*" : "[\\p{Graph}]*");
++	  break;
++
++	case '.':
++	  newPattern.append("\\.");
++	  break;
++
++        case ' ':
++          break;
++
++        case '\t':
++          break;
++ 
++        case '/':
++          return null;
++
++	default:
++	  newPattern.append(c);
++      }
++    }
++    newPattern.append("$");
++
++    LOG.debug("Host/IP filter pattern " + net + " --> " + newPattern.toString());
++    return newPattern.toString();
++  }
++}
+Index: src/core/org/apache/hadoop/security/JettyAccessHandler.java
+===================================================================
+--- src/core/org/apache/hadoop/security/JettyAccessHandler.java	(revision 0)
++++ src/core/org/apache/hadoop/security/JettyAccessHandler.java	(revision 0)
+@@ -0,0 +1,74 @@
++/**
++ * Licensed to the Apache Software Foundation (ASF) under one
++ * or more contributor license agreements.  See the NOTICE file
++ * distributed with this work for additional information
++ * regarding copyright ownership.  The ASF licenses this file
++ * to you under the Apache License, Version 2.0 (the
++ * "License"); you may not use this file except in compliance
++ * with the License.  You may obtain a copy of the License at
++ *
++ *     http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package org.apache.hadoop.security;
++
++import javax.servlet.ServletException;
++import javax.servlet.http.HttpServletRequest;
++import javax.servlet.http.HttpServletResponse;
++
++import org.mortbay.jetty.Handler;
++import org.mortbay.jetty.HttpConnection;
++import org.mortbay.jetty.HttpHeaders;
++import org.mortbay.jetty.Request;
++import org.mortbay.jetty.Response;
++import org.mortbay.jetty.handler.ContextHandler;
++import org.mortbay.jetty.security.SecurityHandler;
++import org.mortbay.resource.Resource;
++import org.mortbay.util.StringUtil;
++import org.mortbay.util.URIUtil;
++
++import org.apache.commons.logging.Log;
++import org.apache.commons.logging.LogFactory;
++
++import java.io.IOException;
++/* ------------------------------------------------------------ */
++/**
++ * Handler to check access based on requester's host and ip address
++ * 
++ */
++public class JettyAccessHandler extends SecurityHandler
++{
++    private static final Log LOG = LogFactory.getLog(JettyAccessHandler.class);
++
++    /* ------------------------------------------------------------ */
++    /**
++     * {@inheritDoc}
++     * 
++     * @see org.mortbay.jetty.Handler#handle(java.lang.String,
++     *      javax.servlet.http.HttpServletRequest,
++     *      javax.servlet.http.HttpServletResponse, int)
++     */
++    public void handle(String target, HttpServletRequest request, HttpServletResponse response, int dispatch) throws IOException, ServletException
++    {
++        Request base_request=(request instanceof Request)?(Request)request:HttpConnection.getCurrentConnection().getRequest();
++        Response base_response=(response instanceof Response)?(Response)response:HttpConnection.getCurrentConnection().getResponse();
++
++        if (HostAndIPFilter.apply(request.getRemoteAddr())) {
++          LOG.warn("Denying access to IP/Host " + request.getRemoteAddr());
++	  response.sendError(HttpServletResponse.SC_FORBIDDEN);
++	  base_request.setHandled(true);
++	  return;
++	}
++
++	if (getHandler()!=null)	{
++		getHandler().handle(target,request,response,dispatch);
++	}
++    }
++}
++
+Index: src/core/org/apache/hadoop/ipc/Server.java
+===================================================================
+--- src/core/org/apache/hadoop/ipc/Server.java	(revision 805139)
++++ src/core/org/apache/hadoop/ipc/Server.java	(working copy)
+@@ -67,6 +67,7 @@
+ import org.apache.hadoop.util.StringUtils;
+ import org.apache.hadoop.ipc.metrics.RpcMetrics;
+ import org.apache.hadoop.security.authorize.AuthorizationException;
++import org.apache.hadoop.security.HostAndIPFilter;
+ 
+ /** An abstract IPC service.  IPC calls take a single {@link Writable} as a
+  * parameter, and return a {@link Writable} as their value.  A service runs on
+@@ -396,6 +397,25 @@
+         SelectionKey readKey = channel.register(selector, SelectionKey.OP_READ);
+         c = new Connection(readKey, channel, System.currentTimeMillis());
+         readKey.attach(c);
++
++        if (HostAndIPFilter.apply(c.getHostAddress())) {
++          Call authFailedCall = new Call(-1, null, null);
++	  ByteArrayOutputStream authFailedResponse = new ByteArrayOutputStream();
++	  authFailedCall.connection = c;
++	  setupResponse(authFailedResponse, authFailedCall, 
++			Status.FATAL, null, 
++			this.getClass().getName(), "Request deined due to an ip based filter");
++	  responder.doRespond(authFailedCall);
++          try {
++	    c.close();
++          } catch (Exception e) { }
++           finally {
++	    LOG.info("Rejected connection from " + c.getHostAddress());
++            return;
++	  }
++	}
++        LOG.info("Accepted connection from " + c.getHostAddress());       
++
+         synchronized (connectionList) {
+           connectionList.add(numConnections, c);
+           numConnections++;

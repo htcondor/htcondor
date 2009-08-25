@@ -31,7 +31,7 @@ sub RUNNING{2};
 my $testdesc =  'cmd_status_shows-submitters';
 my $testname = "cmd_status_shows-submitters";
 my $corename = "cmd_status_shows-submitters";
-my $debuglevel = 1;
+my $debuglevel = 2;
 
 print scalar localtime() . "\n";
 
@@ -98,7 +98,6 @@ if($stable == 1) {
         $numclaimed = 0;
         foreach my $line (@adarray) {
             if($line =~ /^\s*slot(\d+)[@]master.*@.*$/) {
-                #print "found claimed slot: $line\n";
                 $numclaimed = $numclaimed + 1;;
                 CondorTest::debug("found claimed slot: $numclaimed of 4\n",$debuglevel);
             } else {
@@ -153,8 +152,8 @@ if($done == 1) {
 		$jobcount = 0;
 		foreach my $line (@adarray) {
 			CondorTest::debug("-submitters: $line\n",$debuglevel);
-			if( $line =~ /^<(.*):(.*):(\d+)>$/ ) {
-				$jobcount = $jobcount + $3;
+			if( $line =~ /^<(.*):(.*):(\d+)>.*$/ ) {
+				$jobcount = $jobcount + 1;
 				CondorTest::debug("JobCount up to $jobcount.\n",$debuglevel);
 			}
 		}

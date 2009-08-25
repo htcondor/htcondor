@@ -37,6 +37,7 @@ CondorTest::fullchomp($currenthost);
 
 print scalar localtime() . "\n";
 my $mypid = $$;
+print "my PID = $mypid\n";
 my $mysaveme = $corename . ".saveme";
 
 if($mypid == 0) {
@@ -107,7 +108,7 @@ my $bail = 0;
 $ENV{CONDOR_CONFIG} = $scheddoneconfig;
 
 print "Start a job from the remote schedd - ";
-my $forever = CondorTest::verbose_system("./x_cmdrunforever.pl");
+my $forever = CondorTest::verbose_system("./x_cmdrunforever.pl $mypid");
 if($forever != 0) {
 	print "bad\n";
 	CondorTest::debug("Bailing because running job failed to submit\n",$debuglevel);
@@ -121,7 +122,7 @@ $ENV{CONDOR_CONFIG} = $locconfig;
 print "Start a job on hold in the pool from the central manager node - ";
 my $holdone;
 if($bail != 1) {
-	my $holdone = CondorTest::verbose_system("./x_cmdstartonhold.pl");
+	my $holdone = CondorTest::verbose_system("./x_cmdstartonhold.pl $mypid");
 	if($holdone != 0) {
 		print "bad\n";
 		CondorTest::debug("Bailing because running job failed to submit\n",$debuglevel);

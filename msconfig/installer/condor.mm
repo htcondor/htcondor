@@ -60,6 +60,9 @@
 <$Property "VMMEMORY" VALUE="256">
 <$Property "VMMAXNUMBER" VALUE="$(NUM_CPUS)">
 <$Property "VMNETWORKING" VALUE="N">
+<$Property "USEHDFS" VALUE="N">
+<$Property "HDFSPORT" VALUE="9000">
+<$Property "HDFSWEBPORT" VALUE="8000">
 
 ;---------------------------------------------------------------------------
 ;--- Persistent values -----------------------------------------------------
@@ -234,6 +237,39 @@
 	<$Row Dialog_="VMUniverseSettings" Control_="Entry.6" Action="Disable" Condition=^USEVMUNIVERSE = "N"^>
 <$/Table>
 
+<$Dialog "HDFS Settings" Description="Enable HDFS support?" Dialog="HDFSSETTINGS" INSERT="VMUniverseSettings">
+	#data 'RadioButton_USEHDFS'	         
+	         'N' 'N&o' '' ''
+		 'Y' '&Yes (Requires Java)' '' ''
+	#data
+	#(
+	<$DialogEntry Property="USEHDFS" Label="Enable HDFS support:" 
+		Control="RB">
+	#)
+	#data 'RadioButton_HDFSMODE'	         
+	         'HDFS_DATANODE' '&Data Node' '' ''
+		 'HDFS_NAMENODE' 'N&ame Node' '' ''
+	#data
+	#(
+	<$DialogEntry Property="HDFSMODE" Label="Select HDFS mode:" 
+		Control="RB">
+	#)
+
+	<$DialogEntry Property="NAMENODE" Label="Primary Name Node:" ToolTip="Hostname or IP Address of primary name node." Width=100 Blank="Y">
+	<$DialogEntry Property="HDFSPORT" Label="Name Node Port:" ToolTip="Port of primary name node." Width=100 Blank="N">
+	<$DialogEntry Property="HDFSWEBPORT" Label="Name Node Web Port:" ToolTip="Port of primary name node web interface." Width=100 Blank="N">
+<$/Dialog>
+
+<$Table "ControlCondition">
+	<$Row Dialog_="HDFSSETTINGS" Control_="Entry.2" Action="Enable" Condition=^USEHDFS = "Y"^>	
+	<$Row Dialog_="HDFSSETTINGS" Control_="Entry.2" Action="Disable" Condition=^USEHDFS = "N"^>
+	<$Row Dialog_="HDFSSETTINGS" Control_="Entry.3" Action="Enable" Condition=^USEHDFS = "Y"^>	
+	<$Row Dialog_="HDFSSETTINGS" Control_="Entry.3" Action="Disable" Condition=^USEHDFS = "N"^>
+	<$Row Dialog_="HDFSSETTINGS" Control_="Entry.4" Action="Enable" Condition=^USEHDFS = "Y"^>	
+	<$Row Dialog_="HDFSSETTINGS" Control_="Entry.4" Action="Disable" Condition=^USEHDFS = "N"^>
+	<$Row Dialog_="HDFSSETTINGS" Control_="Entry.5" Action="Enable" Condition=^USEHDFS = "Y"^>	
+	<$Row Dialog_="HDFSSETTINGS" Control_="Entry.5" Action="Disable" Condition=^USEHDFS = "N"^>
+<$/Table>
 
 ;--- Create INSTALLDIR ------------------------------------------------------
 <$DirectoryTree Key="INSTALLDIR" Dir="c:\condor" CHANGE="\" PrimaryFolder="Y">
@@ -248,6 +284,14 @@
 <$/Component>
 <$Component "CreateLogFolder" Create="Y" Directory_="LOGDIR">
 	<$DirectoryTree Key="LOGDIR" Dir="[INSTALLDIR]\log" MAKE="Y">
+<$/Component>
+
+;--- Create directories for HDFS if needed ----------------------------------
+<$Component "CreateHDFSNameFolder" Create="Y" Directory_="HDFSNAMEDIR" Condition=^USEHDFS = "Y"^>
+	<$DirectoryTree Key="HDFSNAMEDIR" Dir="[INSTALLDIR]\hdfs\hadoop_name" MAKE="Y">
+<$/Component>
+<$Component "CreateHDFSDataFolder" Create="Y" Directory_="HDFSDATADIR" Condition=^USEHDFS = "Y"^>
+	<$DirectoryTree Key="HDFSDATADIR" Dir="[INSTALLDIR]\hdfs\hadoop_data" MAKE="Y">
 <$/Component>
 
 
@@ -329,7 +373,8 @@ Args=^
 -c "[CONDOREMAIL]"
 -e "[HOSTALLOWREAD]"
 -t "[HOSTALLOWWRITE]"
--i "[HOSTALLOWADMINISTRATOR]"^ 
+-i "[HOSTALLOWADMINISTRATOR]"
+-q "[USEHDFS]"^
 WorkDir=^INSTALLDIR^   
 Condition="<$CONDITION_EXCEPT_UNINSTALL>" 
 Seq="InstallServices-"
@@ -365,9 +410,26 @@ Args=^
 -x "[VMVERSION]"
 -y "[VMMEMORY]"
 -z "[VMNETWORKING]"
--l "[PERLLOCATION]"^ 
+-l "[PERLLOCATION]"^
 WorkDir=^INSTALLDIR^   
 Condition="<$CONDITION_EXCEPT_UNINSTALL>" 
+Seq="InstallServices-"
+Rc0="N"       ;; On Vista this app will not return any useful results
+Type="System" ;; run as the System account	
+>
+#)
+
+;--- HDFS configuration, only run if HDFS option is elected -
+#(
+<$ExeCa EXE=^[INSTALLDIR]condor_setup.exe^
+Args=^
+-f "[NAMENODE]"
+-k "[HDFSMODE]"
+-g "[HDFSPORT]"
+-b "[HDFSWEBPORT]"
+^
+WorkDir=^INSTALLDIR^   
+Condition=^(<$CONDITION_EXCEPT_UNINSTALL>) AND (USEHDFS = "Y")^ 
 Seq="InstallServices-"
 Rc0="N"       ;; On Vista this app will not return any useful results
 Type="System" ;; run as the System account	

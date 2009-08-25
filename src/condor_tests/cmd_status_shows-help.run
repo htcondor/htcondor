@@ -54,7 +54,7 @@ while($count < $nattempts) {
 	my $found1 = 0;
 	my $cmd = "condor_status -help";
 	# forth arg places stderr into passed array
-	my $cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2,"usage");
+	my $cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
     if(!$cmdstatus)
     {
         CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",$debuglevel);

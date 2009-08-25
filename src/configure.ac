@@ -2276,23 +2276,17 @@ fi
 ############################################################
 
 # Currently in Condor, threading in daemon core on Unix requires
-# both pthreads and thread local storage.  HACK: for right now
-# we know that only Linux meets that requirement, and furthermore
-# that TLS exists but is broken on ia64 (the compiler blows up).  So for now
-# we only want pthreads defined on Linux that is not ia64.  Once we 
-# remove the requirement on TLS in the code, we can safely remove 
-# this hack.
-#     if test $os = "Linux" && test $arch != "ia64"; then
-# Actually, until TLS is out of the code, don't compile it anywhere.
-if test $os = "FOOBAR" && test $arch != "ia64"; then
+# both pthreads.
+# HACK: for now the code uses Linux-specific code to implement
+# recursive mutexes, so instead of using threads wheverever we have
+# pthreads, we limit testing for pthreads to just Linux.
+if test $os = "Linux"; then
 	AC_CHECK_LIB([pthread], [pthread_create],
   		[ac_pthreads=yes
    		AC_DEFINE([HAVE_PTHREADS],[1],[Define if pthreads are available])
 		AC_DEFINE([HAS_PTHREADS],[1],[Define if pthreads are available for DRMAA])
 		],
   		[ac_pthreads=no])
-	# Check if this system support Thread Local Storage class.
-	AX_TLS
 fi
 
 ############################################################
@@ -2878,11 +2872,29 @@ CHECK_EXTERNAL([classads], [1.0.2], [soft],
 
 CHECK_EXTERNAL([srb], [3.2.1-p2], [soft])
 
+AC_MSG_CHECKING([if VOMS should be compiled (linux only)])
+if test "$_cv_opsys" = "LINUX" ; then
+	_cv_including_voms=yes
+	AC_MSG_RESULT([$_cv_including_voms])
+	CHECK_EXTERNAL([expat], [2.0.1], [soft])
+	CHECK_EXTERNAL([voms], [1.8.9], [soft])
+else
+	_cv_including_voms=no
+	AC_MSG_RESULT([$_cv_including_voms])
+fi
+
+if test "x$_cv_linux_distro" = "xRHEL5" -o "x$_cv_linux_distro" = "xRHEL3" -a "$_cv_arch" = "xI386" ; then
+  CHECK_EXTERNAL([cream],[1.10.1], [soft])
+fi
+
 CHECK_EXTERNAL([pcre], [7.6], [hard],
                [use PCRE (provides regular expression support)],
                MF_LIB_CHECK([pcre], [[pcre pcre_compile]], [PCRE]))
 AS_IF([test "x$cv_ext_pcre" = xyes],
-  [AC_CHECK_HEADERS([pcre.h pcre/pcre.h])])
+  [CPPFLAGS_save="$CPPFLAGS"
+   CPPFLAGS="$CPPFLAGS $PCRE_CFLAGS"
+   AC_CHECK_HEADERS([pcre.h pcre/pcre.h])
+   CPPFLAGS="$CPPFLAGS_save"])
 AC_SUBST(PCRE_LDFLAGS, $PCRE_LDFLAGS)
 AC_SUBST(PCRE_CFLAGS, $PCRE_CFLAGS)
 
@@ -2974,6 +2986,11 @@ fi
 
 # Look for the curl external library, used by the file transfer object
 CHECK_EXTERNAL([curl],[7.19.6],[soft])
+
+#Look for hadoop jars, required by HDFS daemon as well by hdfs file plugin
+# Only build hadoop external if hdfs is enabled
+AS_IF([test "x$enable_hdfs" = xyes], 
+  CHECK_EXTERNAL([hadoop],[0.20.0-p2],[soft]))
 
 # The test for gsoap needs to happen after the openssl check, so
 # openssl libs, if found, will be in LIBS. Also, if we do not have

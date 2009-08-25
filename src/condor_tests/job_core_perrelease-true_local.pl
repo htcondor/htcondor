@@ -209,14 +209,11 @@ $release = sub {
 	my $status = 1;
 	#$ENV{_CONDOR_TOOL_DEBUG}="D_ALL";
 	my $cmd = "_CONDOR_TOOL_DEBUG=D_ALL condor_reschedule -d";
-	$status = CondorTest::runCondorTool($cmd,\@adarray,2, 1, 1);
+	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
 	if (!$status) {
 		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 		exit(1);
 	}
-
-	CondorTest::debug("Stderr with debug info for condor_reschedule follows\n",1);
-	system("cat runCTool$$");
 };
 
 CondorTest::RegisterSubmit($testname, $submit);

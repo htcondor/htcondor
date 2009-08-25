@@ -11,7 +11,7 @@ reconfig=true
 customization=seldom
 friendly_name=Collector Environment
 usage=
-url=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=
 id=572
 
@@ -29,7 +29,7 @@ reconfig=true
 customization=seldom
 friendly_name=Master Environment
 usage=
-url=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=
 id=572
 
@@ -46,7 +46,7 @@ reconfig=true
 customization=seldom
 friendly_name=Master Flag
 usage=
-url=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=
 id=572
 
@@ -63,7 +63,7 @@ reconfig=true
 customization=seldom
 friendly_name=Collector Flag
 usage=
-url=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=
 id=572
 
@@ -79,7 +79,7 @@ reconfig=true
 customization=seldom
 friendly_name=Shutdown Fast Timeout
 usage=
-url=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=
 id=572
 
@@ -95,7 +95,7 @@ reconfig=true
 customization=seldom
 friendly_name=Preen Interval
 usage=
-url=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=
 id=572
 
@@ -111,7 +111,7 @@ reconfig=true
 customization=seldom
 friendly_name=Master New Binary Delay
 usage=
-url=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=
 id=572
 
@@ -127,7 +127,7 @@ reconfig=true
 customization=seldom
 friendly_name=Master Check New Exec Interval
 usage=
-url=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=
 id=572
 
@@ -143,7 +143,7 @@ reconfig=true
 customization=seldom
 friendly_name=Master Update Interval
 usage=
-url=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=
 id=572
 
@@ -159,7 +159,7 @@ reconfig=true
 customization=seldom
 friendly_name=Master Recover Ceiling
 usage=
-url=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=
 id=572
 
@@ -175,7 +175,7 @@ reconfig=true
 customization=seldom
 friendly_name=Master Backoff Factor
 usage=
-url=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=
 id=572
 
@@ -191,7 +191,7 @@ reconfig=true
 customization=seldom
 friendly_name=Master Backoff Ceiling
 usage=
-url=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=
 id=572
 
@@ -208,7 +208,7 @@ reconfig=true
 customization=seldom
 friendly_name=Master Backoff Constant
 usage=
-url=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=
 id=572
 
@@ -224,7 +224,7 @@ reconfig=true
 customization=seldom
 friendly_name=Master SQL Log
 usage=
-url=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=
 id=572
 
@@ -240,7 +240,7 @@ reconfig=true
 customization=seldom
 friendly_name=CCB Address
 usage=
-url=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=
 id=572
 
@@ -257,7 +257,7 @@ reconfig=true
 customization=seldom
 friendly_name=Settable Attribute Advertise Master
 usage=
-url=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=
 id=572
 
@@ -274,7 +274,7 @@ reconfig=true
 customization=seldom
 friendly_name=Settable Attribute Advertise Schedd
 usage=
-url=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=
 id=572
 
@@ -291,7 +291,7 @@ reconfig=true
 customization=seldom
 friendly_name=Settable Attribute Advertise Startd
 usage=
-url=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=
 id=572
 
@@ -308,7 +308,7 @@ reconfig=true
 customization=seldom
 friendly_name=Settable Attribute Client
 usage=
-url=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=
 id=572
 
@@ -325,7 +325,7 @@ reconfig=true
 customization=seldom
 friendly_name=Settable Attribute Default
 usage=
-url=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=
 id=572
 
@@ -342,7 +342,7 @@ reconfig=true
 customization=seldom
 friendly_name=Settable Attribute Soap
 usage=
-url=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=
 id=572
 
@@ -359,7 +359,7 @@ reconfig=true
 customization=seldom
 friendly_name=Settable Attribute Daemon
 usage=
-url=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=
 id=572
 
@@ -376,7 +376,7 @@ reconfig=true
 customization=seldom
 friendly_name=Settable Attribute Config
 usage=
-url=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=
 id=572
 
@@ -393,7 +393,7 @@ reconfig=true
 customization=seldom
 friendly_name=Settable Attribute Owner
 usage=
-url=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=
 id=572
 
@@ -410,7 +410,7 @@ reconfig=true
 customization=seldom
 friendly_name=Settable Attribute Administrator
 usage=
-url=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=
 id=572
 
@@ -427,7 +427,7 @@ reconfig=true
 customization=seldom
 friendly_name=Settable Attribute Negotiator
 usage=
-url=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=
 id=572
 
@@ -444,7 +444,7 @@ reconfig=true
 customization=seldom
 friendly_name=Settable Attribute Write
 usage=
-url=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=
 id=570
 
@@ -461,7 +461,7 @@ reconfig=true
 customization=seldom
 friendly_name=Settable Attribute Read
 usage=
-url=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=
 id=568
 
@@ -478,7 +478,7 @@ reconfig=true
 customization=seldom
 friendly_name=Master Timeout Multiplier
 usage=
-url=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=
 id=566
 
@@ -494,7 +494,7 @@ reconfig=true
 customization=seldom
 friendly_name=DNS Cache Refresh
 usage=
-url=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=
 id=565
 
@@ -510,7 +510,7 @@ reconfig=true
 customization=seldom
 friendly_name=Instance Lock File
 usage=
-url=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=
 id=564
 
@@ -526,7 +526,7 @@ reconfig=true
 customization=seldom
 friendly_name=Daemon Ad File
 usage=
-url=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=
 id=563
 
@@ -542,7 +542,7 @@ reconfig=true
 customization=seldom
 friendly_name=Soap SSL Port
 usage=
-url=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=
 id=562
 
@@ -558,7 +558,7 @@ reconfig=true
 customization=seldom
 friendly_name=Soap SSL Port
 usage=
-url=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=
 id=561
 
@@ -574,7 +574,7 @@ reconfig=true
 customization=seldom
 friendly_name=Condor Credential Directory
 usage=
-url=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=
 id=560
 
@@ -590,7 +590,7 @@ reconfig=true
 customization=seldom
 friendly_name=Query Timeout
 usage=
-url=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=
 id=559
 
@@ -606,7 +606,7 @@ reconfig=true
 customization=seldom
 friendly_name=GSI Daemon Directory
 usage=
-url=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=
 id=558
 
@@ -622,7 +622,7 @@ reconfig=true
 customization=seldom
 friendly_name=GSI Daemon Proxy
 usage=
-url=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=
 id=557
 
@@ -638,7 +638,7 @@ reconfig=true
 customization=seldom
 friendly_name=GSI Daemon Cert
 usage=
-url=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=
 id=556
 
@@ -654,7 +654,7 @@ reconfig=true
 customization=seldom
 friendly_name=GSI Daemon Key
 usage=
-url=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=
 id=559
 
@@ -670,7 +670,7 @@ reconfig=true
 customization=seldom
 friendly_name=Vmware Networking Type
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=vm-gahp,vmware_type
 id=0
 
@@ -686,7 +686,7 @@ reconfig=true
 customization=seldom
 friendly_name=Vmware Perl
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=vm-gahp,vmware_type
 id=1
 
@@ -702,7 +702,7 @@ reconfig=true
 customization=seldom
 friendly_name=Vmware Script
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=vm-gahp,vmware_type
 id=2
 
@@ -718,7 +718,7 @@ reconfig=true
 customization=seldom
 friendly_name=Vm Gahp Server
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=vm-gahp,vmgahp
 id=3
 
@@ -734,7 +734,7 @@ reconfig=true
 customization=seldom
 friendly_name=Vm Gahp Log
 usage=VM_GAHP_LOG	= $(LOG)/VMGahpLogs/VMGahpLog.$(USERNAME)
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=vm-gahp,vmgahp_main
 id=4
 
@@ -750,7 +750,7 @@ reconfig=true
 customization=seldom
 friendly_name=Xen Vt Vif
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=vm-gahp,xen_type
 id=5
 
@@ -766,7 +766,7 @@ reconfig=true
 customization=seldom
 friendly_name=Xen Vif Parameter
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=vm-gahp,xen_type
 id=6
 
@@ -782,7 +782,7 @@ reconfig=true
 customization=seldom
 friendly_name=Xen Bridge Script
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=vm-gahp,xen_type
 id=7
 
@@ -798,7 +798,7 @@ reconfig=true
 customization=seldom
 friendly_name=Xen Controller
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=vm-gahp,xen_type
 id=8
 
@@ -814,7 +814,7 @@ reconfig=true
 customization=seldom
 friendly_name=Xen Default Kernel
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=vm-gahp,xen_type
 id=9
 
@@ -830,7 +830,7 @@ reconfig=true
 customization=seldom
 friendly_name=Xen Default Initrd
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=vm-gahp,xen_type
 id=10
 
@@ -846,7 +846,7 @@ reconfig=true
 customization=seldom
 friendly_name=Xen Bootloader
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=vm-gahp,xen_type
 id=11
 
@@ -862,7 +862,7 @@ reconfig=true
 customization=seldom
 friendly_name=Xen Allow Hardware Vt Suspend
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=vm-gahp,xen_type
 id=12
 
@@ -878,7 +878,7 @@ reconfig=true
 customization=seldom
 friendly_name=Xen Image Io Type
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=vm-gahp,xen_type
 id=13
 
@@ -894,7 +894,7 @@ reconfig=true
 customization=seldom
 friendly_name=Xen Device Type For Vt
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=vm-gahp,xen_type
 id=14
 
@@ -910,7 +910,7 @@ reconfig=true
 customization=seldom
 friendly_name=Xen Script
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=vm-gahp,xen_type
 id=15
 
@@ -926,7 +926,7 @@ reconfig=true
 customization=seldom
 friendly_name=Allow Users
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=vm-gahp,vmgahp_config
 id=16
 
@@ -942,7 +942,7 @@ reconfig=true
 customization=seldom
 friendly_name=Vm Type
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=vm-gahp,vmgahp_config
 id=17
 
@@ -958,7 +958,7 @@ reconfig=true
 customization=seldom
 friendly_name=Vm Version
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=vm-gahp,vmgahp_config
 id=18
 
@@ -974,7 +974,7 @@ reconfig=true
 customization=seldom
 friendly_name=Vm Max Memory
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=vm-gahp,vmgahp_config
 id=19
 
@@ -990,7 +990,7 @@ reconfig=true
 customization=seldom
 friendly_name=Vm Networking
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=vm-gahp,vmgahp_config
 id=20
 
@@ -1006,7 +1006,7 @@ reconfig=true
 customization=seldom
 friendly_name=Vm Networking Type
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=vm-gahp,vmgahp_config
 id=21
 
@@ -1022,7 +1022,7 @@ reconfig=true
 customization=seldom
 friendly_name=Vm Networking Default Type
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=vm-gahp,vmgahp_config
 id=22
 
@@ -1038,7 +1038,7 @@ reconfig=true
 customization=seldom
 friendly_name=Vm Networking Mac Prefix
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=vm-gahp,vmgahp_config
 id=23
 
@@ -1054,7 +1054,7 @@ reconfig=true
 customization=seldom
 friendly_name=Vm Hardware Vt
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=vm-gahp,vmgahp_config
 id=24
 
@@ -1070,7 +1070,7 @@ reconfig=true
 customization=seldom
 friendly_name=Use Script To Create Config
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=vm-gahp,vm_type
 id=25
 
@@ -1086,7 +1086,7 @@ reconfig=true
 customization=seldom
 friendly_name=Procd Address
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=starter,user_proc
 id=26
 
@@ -1102,7 +1102,7 @@ reconfig=true
 customization=seldom
 friendly_name=Bind All Interfaces
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=starter,user_proc
 id=27
 
@@ -1118,7 +1118,7 @@ reconfig=true
 customization=seldom
 friendly_name=Execute
 usage=Pathnames
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=starter,starter
 id=28
 
@@ -1134,7 +1134,7 @@ reconfig=true
 customization=seldom
 friendly_name=Uid Domain
 usage=to specify that each machine has its own UID space.
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=starter,starter
 id=29
 
@@ -1150,7 +1150,7 @@ reconfig=true
 customization=seldom
 friendly_name=Trust Uid Domain
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=starter,starter
 id=30
 
@@ -1166,7 +1166,7 @@ reconfig=true
 customization=seldom
 friendly_name=Starter Local Logging
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=starter,starter
 id=31
 
@@ -1182,7 +1182,7 @@ reconfig=true
 customization=seldom
 friendly_name=Filesystem Domain
 usage=to specify that each machine has its own file system.
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=starter,starter
 id=32
 
@@ -1198,7 +1198,7 @@ reconfig=true
 customization=seldom
 friendly_name=Ckpt Server Host
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=starter,starter
 id=33
 
@@ -1214,7 +1214,7 @@ reconfig=true
 customization=seldom
 friendly_name=Arch
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=starter,starter
 id=34
 
@@ -1230,7 +1230,7 @@ reconfig=true
 customization=seldom
 friendly_name=Opsys
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=starter,starter
 id=35
 
@@ -1246,7 +1246,7 @@ reconfig=true
 customization=seldom
 friendly_name=Starter Log
 usage=Log files
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=starter,starter_common
 id=36
 
@@ -1262,7 +1262,7 @@ reconfig=true
 customization=seldom
 friendly_name=Starter Debug
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=starter,starter_common
 id=37
 
@@ -1278,7 +1278,7 @@ reconfig=true
 customization=seldom
 friendly_name=User Job Wrapper
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=starter,starter_common
 id=38
 
@@ -1294,7 +1294,7 @@ reconfig=true
 customization=seldom
 friendly_name=Soft Uid Domain
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=starter,starter_common
 id=39
 
@@ -1310,7 +1310,7 @@ reconfig=true
 customization=seldom
 friendly_name=Allow Vm Cruft
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=starter,starter_common
 id=40
 
@@ -1326,7 +1326,7 @@ reconfig=true
 customization=seldom
 friendly_name=Event List
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=eventd,eventd
 id=41
 
@@ -1342,7 +1342,7 @@ reconfig=true
 customization=seldom
 friendly_name=Eventd Interval
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=eventd,eventd
 id=42
 
@@ -1358,7 +1358,7 @@ reconfig=true
 customization=seldom
 friendly_name=Eventd Max Preparation
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=eventd,eventd
 id=43
 
@@ -1374,7 +1374,7 @@ reconfig=true
 customization=seldom
 friendly_name=Eventd Shutdown Slow Start Interval
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=eventd,scheduled_event
 id=44
 
@@ -1390,7 +1390,7 @@ reconfig=true
 customization=seldom
 friendly_name=Eventd Routing Info
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=eventd,scheduled_event
 id=45
 
@@ -1406,7 +1406,7 @@ reconfig=true
 customization=seldom
 friendly_name=Eventd Capacity Info
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=eventd,scheduled_event
 id=46
 
@@ -1422,7 +1422,7 @@ reconfig=true
 customization=seldom
 friendly_name=Eventd Simulate Shutdowns
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=eventd,scheduled_event
 id=47
 
@@ -1438,7 +1438,7 @@ reconfig=true
 customization=seldom
 friendly_name=Update Interval
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=eventd,scheduled_event
 id=48
 
@@ -1454,7 +1454,7 @@ reconfig=true
 customization=seldom
 friendly_name=Eventd Min Reschedule Interval
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=eventd,scheduled_event
 id=49
 
@@ -1470,7 +1470,7 @@ reconfig=true
 customization=seldom
 friendly_name=Eventd Shutdown Cleanup Interval
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=eventd,scheduled_event
 id=50
 
@@ -1486,7 +1486,7 @@ reconfig=true
 customization=seldom
 friendly_name=Dagman Log On Nfs Is Error
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=dagman,dagman_multi_dag
 id=51
 
@@ -1502,7 +1502,7 @@ reconfig=true
 customization=seldom
 friendly_name=Dagman Reset Retries Upon Rescue
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=dagman,dag
 id=52
 
@@ -1518,7 +1518,7 @@ reconfig=true
 customization=seldom
 friendly_name=Dagman Insert Sub File
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=dagman,condor_submit_dag
 id=53
 
@@ -1534,7 +1534,7 @@ reconfig=true
 customization=seldom
 friendly_name=Dagman Old Rescue
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=dagman,condor_submit_dag
 id=54
 
@@ -1550,7 +1550,7 @@ reconfig=true
 customization=seldom
 friendly_name=Dagman Auto Rescue
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=dagman,condor_submit_dag
 id=55
 
@@ -1566,7 +1566,7 @@ reconfig=true
 customization=seldom
 friendly_name=Dagman On Exit Remove
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=dagman,condor_submit_dag
 id=56
 
@@ -1582,7 +1582,7 @@ reconfig=true
 customization=seldom
 friendly_name=Dagman Config File
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=dagman,dagman_main
 id=57
 
@@ -1598,7 +1598,7 @@ reconfig=true
 customization=seldom
 friendly_name=Dagman Debug Cache Enable
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=dagman,dagman_main
 id=58
 
@@ -1614,7 +1614,7 @@ reconfig=true
 customization=seldom
 friendly_name=Dagman Startup Cycle Detect
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=dagman,dagman_main
 id=59
 
@@ -1630,7 +1630,7 @@ reconfig=true
 customization=seldom
 friendly_name=Dagman Ignore Duplicate Job Execution
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=dagman,dagman_main
 id=60
 
@@ -1647,7 +1647,7 @@ reconfig=true
 customization=seldom
 friendly_name=Dagman Allow Events
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=dagman,dagman_main
 id=61
 
@@ -1663,7 +1663,7 @@ reconfig=true
 customization=seldom
 friendly_name=Dagman Retry Submit First
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=dagman,dagman_main
 id=62
 
@@ -1679,7 +1679,7 @@ reconfig=true
 customization=seldom
 friendly_name=Dagman Retry Node First
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=dagman,dagman_main
 id=63
 
@@ -1695,7 +1695,7 @@ reconfig=true
 customization=seldom
 friendly_name=Dagman Munge Node Names
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=dagman,dagman_main
 id=64
 
@@ -1711,7 +1711,7 @@ reconfig=true
 customization=seldom
 friendly_name=Dagman Delete Old Logs
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=dagman,dagman_main
 id=65
 
@@ -1727,7 +1727,7 @@ reconfig=true
 customization=seldom
 friendly_name=Dagman Prohibit Multi Jobs
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=dagman,dagman_main
 id=66
 
@@ -1743,7 +1743,7 @@ reconfig=true
 customization=seldom
 friendly_name=Dagman Submit Depth First
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=dagman,dagman_main
 id=67
 
@@ -1759,7 +1759,7 @@ reconfig=true
 customization=seldom
 friendly_name=Dagman Condor Submit Exe
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=dagman,dagman_main
 id=68
 
@@ -1775,7 +1775,7 @@ reconfig=true
 customization=seldom
 friendly_name=Dagman Condor Rm Exe
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=dagman,dagman_main
 id=69
 
@@ -1791,7 +1791,7 @@ reconfig=true
 customization=seldom
 friendly_name=Dagman Stork Submit Exe
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=dagman,dagman_main
 id=70
 
@@ -1807,7 +1807,7 @@ reconfig=true
 customization=seldom
 friendly_name=Dagman Stork Rm Exe
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=dagman,dagman_main
 id=71
 
@@ -1823,7 +1823,7 @@ reconfig=true
 customization=seldom
 friendly_name=Dagman Abort Duplicates
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=dagman,dagman_main
 id=72
 
@@ -1839,7 +1839,7 @@ reconfig=true
 customization=seldom
 friendly_name=Dagman Abort On Scary Submit
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=dagman,dagman_main
 id=73
 
@@ -1855,7 +1855,7 @@ reconfig=true
 customization=seldom
 friendly_name=Dagman Pending Report Interval
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=dagman,dagman_main
 id=74
 
@@ -1871,7 +1871,7 @@ reconfig=true
 customization=seldom
 friendly_name=Ckpt Server Dir
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=ckpt_server,server2
 id=75
 
@@ -1887,7 +1887,7 @@ reconfig=true
 customization=seldom
 friendly_name=Ckpt Server Replication Level
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=ckpt_server,server2
 id=76
 
@@ -1903,7 +1903,7 @@ reconfig=true
 customization=seldom
 friendly_name=Ckpt Server Interval
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=ckpt_server,server2
 id=77
 
@@ -1919,7 +1919,7 @@ reconfig=true
 customization=seldom
 friendly_name=Ckpt Server Classad File
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=ckpt_server,server2
 id=78
 
@@ -1935,7 +1935,7 @@ reconfig=true
 customization=seldom
 friendly_name=Ckpt Server Clean Interval
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=ckpt_server,server2
 id=79
 
@@ -1951,7 +1951,7 @@ reconfig=true
 customization=seldom
 friendly_name=Ckpt Server Check Parent Interval
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=ckpt_server,server2
 id=80
 
@@ -1967,7 +1967,7 @@ reconfig=true
 customization=seldom
 friendly_name=Ckpt Server Socket Bufsize
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=ckpt_server,server2
 id=81
 
@@ -1983,7 +1983,7 @@ reconfig=true
 customization=seldom
 friendly_name=Ckpt Server Max Processes
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=ckpt_server,server2
 id=82
 
@@ -1999,7 +1999,7 @@ reconfig=true
 customization=seldom
 friendly_name=Ckpt Server Max Store Processes
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=ckpt_server,server2
 id=83
 
@@ -2015,7 +2015,7 @@ reconfig=true
 customization=seldom
 friendly_name=Ckpt Server Max Restore Processes
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=ckpt_server,server2
 id=84
 
@@ -2031,7 +2031,7 @@ reconfig=true
 customization=seldom
 friendly_name=Manage Bandwidth
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=ckpt_server,server2
 id=85
 
@@ -2047,7 +2047,7 @@ reconfig=true
 customization=seldom
 friendly_name=Network Horizon
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=ckpt_server,server2
 id=86
 
@@ -2063,7 +2063,7 @@ reconfig=true
 customization=seldom
 friendly_name=Ckpt Server Hosts
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=ckpt_server,server2
 id=87
 
@@ -2079,7 +2079,7 @@ reconfig=true
 customization=seldom
 friendly_name=Stork Tmp Cred Dir
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=stork,dap_server
 id=88
 
@@ -2095,7 +2095,7 @@ reconfig=true
 customization=seldom
 friendly_name=Stork Module Dir
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=stork,dap_server
 id=89
 
@@ -2111,7 +2111,7 @@ reconfig=true
 customization=seldom
 friendly_name=Libexec
 usage=Pathnames
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=stork,dap_server
 id=90
 
@@ -2127,7 +2127,7 @@ reconfig=true
 customization=seldom
 friendly_name=Log
 usage=Pathnames
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=stork,dap_server
 id=91
 
@@ -2143,7 +2143,7 @@ reconfig=true
 customization=seldom
 friendly_name=Stork Enable Deprecated Userlog
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=stork,dap_logger
 id=92
 
@@ -2159,7 +2159,7 @@ reconfig=true
 customization=seldom
 friendly_name=Xauthority Users
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=kbdd,XInterface
 id=93
 
@@ -2175,7 +2175,7 @@ reconfig=true
 customization=seldom
 friendly_name=Tools Provide Old Messages
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=rm,rm
 id=94
 
@@ -2191,7 +2191,7 @@ reconfig=true
 customization=seldom
 friendly_name=Group Names
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=accountant,Accountant
 id=95
 
@@ -2207,7 +2207,7 @@ reconfig=true
 customization=seldom
 friendly_name=Priority Halflife
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=accountant,Accountant
 id=96
 
@@ -2223,7 +2223,7 @@ reconfig=true
 customization=seldom
 friendly_name=Nice User Prio Factor
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=accountant,Accountant
 id=97
 
@@ -2239,7 +2239,7 @@ reconfig=true
 customization=seldom
 friendly_name=Remote Prio Factor
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=accountant,Accountant
 id=98
 
@@ -2255,7 +2255,7 @@ reconfig=true
 customization=seldom
 friendly_name=Default Prio Factor
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=accountant,Accountant
 id=99
 
@@ -2271,7 +2271,7 @@ reconfig=true
 customization=seldom
 friendly_name=Accountant Local Domain
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=accountant,Accountant
 id=100
 
@@ -2287,7 +2287,7 @@ reconfig=true
 customization=seldom
 friendly_name=Max Accountant Database Size
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=accountant,Accountant
 id=101
 
@@ -2303,7 +2303,7 @@ reconfig=true
 customization=seldom
 friendly_name=Spool
 usage=Pathnames
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=accountant,Accountant
 id=102
 
@@ -2319,7 +2319,7 @@ reconfig=true
 customization=seldom
 friendly_name=Negotiator Discount Suspended Resources
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=accountant,Accountant
 id=103
 
@@ -2335,7 +2335,7 @@ reconfig=true
 customization=seldom
 friendly_name=Concurrency Limit Default
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=accountant,Accountant
 id=104
 
@@ -2351,7 +2351,7 @@ reconfig=true
 customization=seldom
 friendly_name=Quill Enabled
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=q,queue
 id=105
 
@@ -2367,7 +2367,7 @@ reconfig=true
 customization=seldom
 friendly_name=Quill Name
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=q,queue
 id=106
 
@@ -2383,7 +2383,7 @@ reconfig=true
 customization=seldom
 friendly_name=Quill Db Ip Addr
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=q,queue
 id=107
 
@@ -2399,7 +2399,7 @@ reconfig=true
 customization=seldom
 friendly_name=Quill Db Name
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=q,queue
 id=108
 
@@ -2415,7 +2415,7 @@ reconfig=true
 customization=seldom
 friendly_name=Quill Db Query Password
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=q,queue
 id=109
 
@@ -2431,7 +2431,7 @@ reconfig=true
 customization=seldom
 friendly_name=Real Time Job Suspend Updates
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=q,queue
 id=110
 
@@ -2447,7 +2447,7 @@ reconfig=true
 customization=seldom
 friendly_name=Preemption Requirements
 usage=(e.g. if a job is in the pre-empting stage for too long)
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=q,queue
 id=111
 
@@ -2463,7 +2463,7 @@ reconfig=true
 customization=seldom
 friendly_name=Glexec Starter
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=shadow,remoteresource
 id=112
 
@@ -2479,7 +2479,7 @@ reconfig=true
 customization=seldom
 friendly_name=Sec Enable Match Password Authentication
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=shadow,remoteresource
 id=113
 
@@ -2495,7 +2495,7 @@ reconfig=true
 customization=seldom
 friendly_name=Delegate Job Gsi Credentials
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=shadow,remoteresource
 id=114
 
@@ -2511,7 +2511,7 @@ reconfig=true
 customization=seldom
 friendly_name=Use Afs
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=shadow,pseudo_ops
 id=115
 
@@ -2527,7 +2527,7 @@ reconfig=true
 customization=seldom
 friendly_name=Use Nfs
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=shadow,pseudo_ops
 id=116
 
@@ -2543,7 +2543,7 @@ reconfig=true
 customization=seldom
 friendly_name=Use Ckpt Server
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=shadow,baseshadow
 id=117
 
@@ -2559,7 +2559,7 @@ reconfig=true
 customization=seldom
 friendly_name=Reconnect Backoff Ceiling
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=shadow,baseshadow
 id=118
 
@@ -2575,7 +2575,7 @@ reconfig=true
 customization=seldom
 friendly_name=Shadow Max Job Cleanup Retries
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=shadow,baseshadow
 id=119
 
@@ -2591,7 +2591,7 @@ reconfig=true
 customization=seldom
 friendly_name=Shadow Job Cleanup Retry Delay
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=shadow,baseshadow
 id=120
 
@@ -2607,7 +2607,7 @@ reconfig=true
 customization=seldom
 friendly_name=Shadow Lazy Queue Update
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=shadow,baseshadow
 id=121
 
@@ -2623,7 +2623,7 @@ reconfig=true
 customization=seldom
 friendly_name=Reserved Swap
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=shadow,baseshadow
 id=122
 
@@ -2639,7 +2639,7 @@ reconfig=true
 customization=seldom
 friendly_name=Quill Manage Vacuum
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=quill,jobqueuedbmanager
 id=123
 
@@ -2655,7 +2655,7 @@ reconfig=true
 customization=seldom
 friendly_name=Quill Polling Period
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=quill,jobqueuedbmanager
 id=124
 
@@ -2671,7 +2671,7 @@ reconfig=true
 customization=seldom
 friendly_name=Quill History Duration
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=quill,jobqueuedbmanager
 id=125
 
@@ -2687,7 +2687,7 @@ reconfig=true
 customization=seldom
 friendly_name=Quill History Cleaning Interval
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=quill,jobqueuedbmanager
 id=126
 
@@ -2703,7 +2703,7 @@ reconfig=true
 customization=seldom
 friendly_name=Quill Should Reindex
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=quill,jobqueuedbmanager
 id=127
 
@@ -2719,7 +2719,7 @@ reconfig=true
 customization=seldom
 friendly_name=Schedd Name
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=quill,jobqueuedbmanager
 id=128
 
@@ -2735,7 +2735,7 @@ reconfig=true
 customization=seldom
 friendly_name=Quill Is Remotely Queryable
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=quill,jobqueuedbmanager
 id=129
 
@@ -2751,7 +2751,7 @@ reconfig=true
 customization=seldom
 friendly_name=Count Hyperthread Cpus
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=sysapi,test
 id=130
 
@@ -2767,7 +2767,7 @@ reconfig=true
 customization=seldom
 friendly_name=Console Devices
 usage="/dev/" portion of the pathname.
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=sysapi,reconfig
 id=131
 
@@ -2784,7 +2784,7 @@ reconfig=true
 customization=seldom
 friendly_name=Startd Has Bad Utmp
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=sysapi,reconfig
 id=132
 
@@ -2800,7 +2800,7 @@ reconfig=true
 customization=seldom
 friendly_name=Reserve Afs Cache
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=sysapi,reconfig
 id=133
 
@@ -2816,7 +2816,7 @@ reconfig=true
 customization=seldom
 friendly_name=Checkpoint Platform
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=sysapi,reconfig
 id=134
 
@@ -2832,7 +2832,7 @@ reconfig=true
 customization=seldom
 friendly_name=Sysapi Get Loadavg
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=sysapi,reconfig
 id=135
 
@@ -2848,7 +2848,7 @@ reconfig=true
 customization=seldom
 friendly_name=Ckpt Probe
 usage=executable will be here: $(LIBEXEC)/condor_ckpt_probe
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=,
 id=136
 
@@ -2864,7 +2864,7 @@ reconfig=true
 customization=seldom
 friendly_name=Release Dir
 usage=Where have you installed the bin, sbin and lib condor directories?
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=,
 id=137
 
@@ -2880,7 +2880,7 @@ reconfig=true
 customization=seldom
 friendly_name=Privsep Enabled
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=privsep,privsep_client.WINDOWS
 id=138
 
@@ -2896,7 +2896,7 @@ reconfig=true
 customization=seldom
 friendly_name=Privsep Switchboard
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=privsep,privsep_client.UNIX
 id=139
 
@@ -2912,7 +2912,7 @@ reconfig=true
 customization=seldom
 friendly_name=Had Use Primary
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=had,StateMachine
 id=140
 
@@ -2928,7 +2928,7 @@ reconfig=true
 customization=seldom
 friendly_name=Had List
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=had,StateMachine
 id=141
 
@@ -2944,7 +2944,7 @@ reconfig=true
 customization=seldom
 friendly_name=Had Stand Alone Debug
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=had,StateMachine
 id=142
 
@@ -2960,7 +2960,7 @@ reconfig=true
 customization=seldom
 friendly_name=Had Connection Timeout
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=had,StateMachine
 id=143
 
@@ -2976,7 +2976,7 @@ reconfig=true
 customization=seldom
 friendly_name=Had Use Replication
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=had,StateMachine
 id=144
 
@@ -2992,7 +2992,7 @@ reconfig=true
 customization=seldom
 friendly_name=Had Update Interval
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=had,StateMachine
 id=145
 
@@ -3008,7 +3008,7 @@ reconfig=true
 customization=seldom
 friendly_name=Replication List
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=had,StateMachine
 id=146
 
@@ -3024,7 +3024,7 @@ reconfig=true
 customization=seldom
 friendly_name=Negotiator State File
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=had,AbstractReplicatorStateMachine
 id=147
 
@@ -3040,7 +3040,7 @@ reconfig=true
 customization=seldom
 friendly_name=Max Transfer Lifetime
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=had,BaseReplicaTransferer
 id=148
 
@@ -3056,7 +3056,7 @@ reconfig=true
 customization=seldom
 friendly_name=Startd Factory Script Available Partitions
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=startd_factory,startd_factory
 id=149
 
@@ -3072,7 +3072,7 @@ reconfig=true
 customization=seldom
 friendly_name=Startd Factory Script Query Work Loads
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=startd_factory,startd_factory
 id=150
 
@@ -3088,7 +3088,7 @@ reconfig=true
 customization=seldom
 friendly_name=Startd Factory Script Generate Partition
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=startd_factory,startd_factory
 id=151
 
@@ -3104,7 +3104,7 @@ reconfig=true
 customization=seldom
 friendly_name=Startd Factory Script Destroy Partition
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=startd_factory,startd_factory
 id=152
 
@@ -3120,7 +3120,7 @@ reconfig=true
 customization=seldom
 friendly_name=Startd Factory Script Boot Partition
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=startd_factory,startd_factory
 id=153
 
@@ -3136,7 +3136,7 @@ reconfig=true
 customization=seldom
 friendly_name=Startd Factory Script Shutdown Partition
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=startd_factory,startd_factory
 id=154
 
@@ -3152,7 +3152,7 @@ reconfig=true
 customization=seldom
 friendly_name=Startd Factory Script Back Partition
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=startd_factory,startd_factory
 id=155
 
@@ -3168,7 +3168,7 @@ reconfig=true
 customization=seldom
 friendly_name=Enable Soap Ssl
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=daemon_core,soap_core
 id=156
 
@@ -3184,7 +3184,7 @@ reconfig=true
 customization=seldom
 friendly_name=Soap Ssl Server Keyfile
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=,
 id=157
 
@@ -3200,7 +3200,7 @@ reconfig=true
 customization=seldom
 friendly_name=Soap Ssl Server Keyfile Password
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=daemon_core,soap_core
 id=158
 
@@ -3216,7 +3216,7 @@ reconfig=true
 customization=seldom
 friendly_name=Soap Ssl Ca File
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=daemon_core,soap_core
 id=159
 
@@ -3232,7 +3232,7 @@ reconfig=true
 customization=seldom
 friendly_name=Soap Ssl Ca Dir
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=daemon_core,soap_core
 id=160
 
@@ -3248,7 +3248,7 @@ reconfig=true
 customization=seldom
 friendly_name=Soap Ssl Dh File
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=daemon_core,soap_core
 id=161
 
@@ -3264,7 +3264,7 @@ reconfig=true
 customization=seldom
 friendly_name=Web Root Dir
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=daemon_core,soap_core
 id=162
 
@@ -3280,7 +3280,7 @@ reconfig=true
 customization=seldom
 friendly_name=Pid Snapshot Interval
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=daemon_core,HookClientMgr
 id=163
 
@@ -3296,7 +3296,7 @@ reconfig=true
 customization=seldom
 friendly_name=Sec Debug Print Keys
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=daemon_core,daemon_core
 id=164
 
@@ -3312,7 +3312,7 @@ reconfig=true
 customization=seldom
 friendly_name=Want Udp Command Socket
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=daemon_core,daemon_core
 id=165
 
@@ -3328,7 +3328,7 @@ reconfig=true
 customization=seldom
 friendly_name=Network Max Pending Connects
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=daemon_core,daemon_core
 id=166
 
@@ -3344,7 +3344,7 @@ reconfig=true
 customization=seldom
 friendly_name=Tcp Forwarding Host
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=daemon_core,daemon_core
 id=167
 
@@ -3360,7 +3360,7 @@ reconfig=true
 customization=seldom
 friendly_name=Private Network Interface
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=daemon_core,daemon_core
 id=168
 
@@ -3376,7 +3376,7 @@ reconfig=true
 customization=seldom
 friendly_name=Private Network Name
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=daemon_core,daemon_core
 id=169
 
@@ -3392,7 +3392,7 @@ reconfig=true
 customization=seldom
 friendly_name=Use Clone To Create Processes
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=daemon_core,daemon_core
 id=170
 
@@ -3408,7 +3408,7 @@ reconfig=true
 customization=seldom
 friendly_name=Sec Invalidate Sessions Via Tcp
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=daemon_core,daemon_core
 id=171
 
@@ -3424,7 +3424,7 @@ reconfig=true
 customization=seldom
 friendly_name=Enable Soap
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=daemon_core,daemon_core
 id=172
 
@@ -3440,7 +3440,7 @@ reconfig=true
 customization=seldom
 friendly_name=Enable Web Server
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=daemon_core,daemon_core
 id=173
 
@@ -3456,7 +3456,7 @@ reconfig=true
 customization=seldom
 friendly_name=Certificate Mapfile
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=daemon_core,daemon_core
 id=174
 
@@ -3472,7 +3472,7 @@ reconfig=true
 customization=seldom
 friendly_name=User Mapfile
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=daemon_core,daemon_core
 id=175
 
@@ -3488,7 +3488,7 @@ reconfig=true
 customization=seldom
 friendly_name=Fake Create Thread
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=daemon_core,daemon_core
 id=176
 
@@ -3504,7 +3504,7 @@ reconfig=true
 customization=seldom
 friendly_name=Not Responding Timeout
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=daemon_core,daemon_core
 id=177
 
@@ -3520,7 +3520,7 @@ reconfig=true
 customization=seldom
 friendly_name=Enable Stdout Testing
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=daemon_core,daemon_core
 id=178
 
@@ -3536,7 +3536,7 @@ reconfig=true
 customization=seldom
 friendly_name=Except On Error
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=daemon_core,daemon_core
 id=179
 
@@ -3552,7 +3552,7 @@ reconfig=true
 customization=seldom
 friendly_name=Disable Authentication Ip Check
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=daemon_core,daemon_core
 id=180
 
@@ -3568,7 +3568,7 @@ reconfig=true
 customization=seldom
 friendly_name=Sec Session Duration Slop
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=daemon_core,daemon_core
 id=181
 
@@ -3584,7 +3584,7 @@ reconfig=true
 customization=seldom
 friendly_name=Glexec Job
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=daemon_core,daemon_core
 id=182
 
@@ -3600,7 +3600,7 @@ reconfig=true
 customization=seldom
 friendly_name=Windows Softkill
 usage=is not enabled) to help when sending soft kills.
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=daemon_core,daemon_core
 id=183
 
@@ -3616,7 +3616,7 @@ reconfig=true
 customization=seldom
 friendly_name=Use Process Groups
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=daemon_core,daemon_core
 id=184
 
@@ -3632,7 +3632,7 @@ reconfig=true
 customization=seldom
 friendly_name=Use Visible Desktop
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=daemon_core,daemon_core
 id=185
 
@@ -3648,7 +3648,7 @@ reconfig=true
 customization=seldom
 friendly_name=Max Pid Collision Retry
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=daemon_core,daemon_core
 id=186
 
@@ -3664,7 +3664,7 @@ reconfig=true
 customization=seldom
 friendly_name=Negotiator Socket Bufsize
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=daemon_core,daemon_core
 id=187
 
@@ -3680,7 +3680,7 @@ reconfig=true
 customization=seldom
 friendly_name=Touch Log Interval
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=daemon_core,daemon_core_main
 id=188
 
@@ -3696,7 +3696,7 @@ reconfig=true
 customization=seldom
 friendly_name=Bin
 usage=Pathnames
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=daemon_core,daemon_core_main
 id=189
 
@@ -3712,7 +3712,7 @@ reconfig=true
 customization=seldom
 friendly_name=Create Core Files
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=daemon_core,daemon_core_main
 id=190
 
@@ -3728,7 +3728,7 @@ reconfig=true
 customization=seldom
 friendly_name=Drop Core On Reconfig
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=daemon_core,daemon_core_main
 id=191
 
@@ -3744,7 +3744,7 @@ reconfig=true
 customization=seldom
 friendly_name=Shutdown Graceful Timeout
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=daemon_core,daemon_core_main
 id=192
 
@@ -3760,7 +3760,7 @@ reconfig=true
 customization=seldom
 friendly_name=Sec Default Session Duration
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=daemon_core,daemon_core_main
 id=193
 
@@ -3776,7 +3776,7 @@ reconfig=true
 customization=seldom
 friendly_name=Quill Use Sql Log
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=daemon_core,daemon_core_main
 id=194
 
@@ -3792,7 +3792,7 @@ reconfig=true
 customization=seldom
 friendly_name=Collector Name
 usage=the UW-Madison Computer Science Condor Pool is ``UW-Madison CS''.
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=collector,collector
 id=195
 
@@ -3808,7 +3808,7 @@ reconfig=true
 customization=seldom
 friendly_name=Collector Update Interval
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=collector,collector
 id=196
 
@@ -3824,7 +3824,7 @@ reconfig=true
 customization=seldom
 friendly_name=Condor View Host
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=collector,collector
 id=197
 
@@ -3840,7 +3840,7 @@ reconfig=true
 customization=seldom
 friendly_name=Collector Stats Sweep
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=collector,collector
 id=198
 
@@ -3856,7 +3856,7 @@ reconfig=true
 customization=seldom
 friendly_name=Condor Admin
 usage=the email?
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=collector,collector
 id=199
 
@@ -3872,7 +3872,7 @@ reconfig=true
 customization=seldom
 friendly_name=Collector Repeat Startd Ads
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=collector,collector_engine
 id=200
 
@@ -3888,7 +3888,7 @@ reconfig=true
 customization=seldom
 friendly_name=Keep Pool History
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=collector,view_server
 id=201
 
@@ -3904,7 +3904,7 @@ reconfig=true
 customization=seldom
 friendly_name=Pool History Sampling Interval
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=collector,view_server
 id=202
 
@@ -3920,7 +3920,7 @@ reconfig=true
 customization=seldom
 friendly_name=Pool History Max Storage
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=collector,view_server
 id=203
 
@@ -3936,7 +3936,7 @@ reconfig=true
 customization=seldom
 friendly_name=Pool History Dir
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=collector,view_server
 id=204
 
@@ -3952,7 +3952,7 @@ reconfig=true
 customization=seldom
 friendly_name=Local Dir
 usage=LOCAL_DIR		= $(TILDE)
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=collector,view_server
 id=205
 
@@ -3968,7 +3968,7 @@ reconfig=true
 customization=seldom
 friendly_name=Cred Super Users
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=credd,credd
 id=206
 
@@ -3984,7 +3984,7 @@ reconfig=true
 customization=seldom
 friendly_name=Credd Host
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=credd,win_credd
 id=207
 
@@ -4000,7 +4000,7 @@ reconfig=true
 customization=seldom
 friendly_name=String
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=unit_tests,FTEST_string_to_port
 id=208
 
@@ -4016,7 +4016,7 @@ reconfig=true
 customization=seldom
 friendly_name=Ip
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=unit_tests,FTEST_string_to_ip
 id=209
 
@@ -4032,7 +4032,7 @@ reconfig=true
 customization=seldom
 friendly_name=Host
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=unit_tests,FTEST_host_in_domain
 id=210
 
@@ -4048,7 +4048,7 @@ reconfig=true
 customization=seldom
 friendly_name=Domain
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=unit_tests,FTEST_host_in_domain
 id=211
 
@@ -4064,7 +4064,7 @@ reconfig=true
 customization=seldom
 friendly_name=Sinful
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=unit_tests,FTEST_is_valid_sinful
 id=212
 
@@ -4080,7 +4080,7 @@ reconfig=true
 customization=seldom
 friendly_name=Gridmanager Gahpclient Debug
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager,gahp-client
 id=213
 
@@ -4096,7 +4096,7 @@ reconfig=true
 customization=seldom
 friendly_name=Gridmanager Gahpclient Debug Size
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager,gahp-client
 id=214
 
@@ -4112,7 +4112,7 @@ reconfig=true
 customization=seldom
 friendly_name=Gahp Use Xml Classads
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager,gahp-client
 id=215
 
@@ -4128,7 +4128,7 @@ reconfig=true
 customization=seldom
 friendly_name=Gridmanager Max Pending Requests
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager,gahp-client
 id=216
 
@@ -4144,7 +4144,7 @@ reconfig=true
 customization=seldom
 friendly_name=Gahp
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager,gahp-client
 id=217
 
@@ -4160,7 +4160,7 @@ reconfig=true
 customization=seldom
 friendly_name=Gahp Args
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager,gahp-client
 id=218
 
@@ -4176,7 +4176,7 @@ reconfig=true
 customization=seldom
 friendly_name=Glite Location
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager,gahp-client
 id=219
 
@@ -4192,7 +4192,7 @@ reconfig=true
 customization=seldom
 friendly_name=Amazon Http Proxy
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager,gahp-client
 id=220
 
@@ -4208,7 +4208,7 @@ reconfig=true
 customization=seldom
 friendly_name=Nordugrid Gahp
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager,nordugridjob
 id=221
 
@@ -4224,7 +4224,7 @@ reconfig=true
 customization=seldom
 friendly_name=Full Hostname
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager,nordugridjob
 id=222
 
@@ -4240,7 +4240,7 @@ reconfig=true
 customization=seldom
 friendly_name=Gridmanager Contact Schedd Delay
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager,gridmanager
 id=223
 
@@ -4256,7 +4256,7 @@ reconfig=true
 customization=seldom
 friendly_name=Job Proxy Override File
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager,proxymanager
 id=224
 
@@ -4272,7 +4272,7 @@ reconfig=true
 customization=seldom
 friendly_name=Oracle Home
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager,oraclejob
 id=225
 
@@ -4288,7 +4288,7 @@ reconfig=true
 customization=seldom
 friendly_name=Condor Gahp
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager,condorresource
 id=226
 
@@ -4304,7 +4304,7 @@ reconfig=true
 customization=seldom
 friendly_name=Java Extra Arguments
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager,unicore_gahp_wrapper
 id=227
 
@@ -4320,7 +4320,7 @@ reconfig=true
 customization=seldom
 friendly_name=Gridftp Url Base
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager,gridftpmanager
 id=228
 
@@ -4336,7 +4336,7 @@ reconfig=true
 customization=seldom
 friendly_name=Gridftp Server
 usage=GRIDFTP_URL_BASE = gsiftp://$(FULL_HOSTNAME)
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager,gridftpmanager
 id=229
 
@@ -4352,7 +4352,7 @@ reconfig=true
 customization=seldom
 friendly_name=Gridftp Server Wrapper
 usage=GRIDFTP_URL_BASE = gsiftp://$(FULL_HOSTNAME)
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager,gridftpmanager
 id=230
 
@@ -4368,7 +4368,7 @@ reconfig=true
 customization=seldom
 friendly_name=Gridmanager Connect Failure Retry Count
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager,mirrorjob
 id=231
 
@@ -4384,7 +4384,7 @@ reconfig=true
 customization=seldom
 friendly_name=Mirror Job Lease Interval
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager,mirrorjob
 id=232
 
@@ -4400,7 +4400,7 @@ reconfig=true
 customization=seldom
 friendly_name=Mirror Gahp
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager,mirrorjob
 id=233
 
@@ -4416,7 +4416,7 @@ reconfig=true
 customization=seldom
 friendly_name=Periodic Expr Interval
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager,basejob
 id=234
 
@@ -4432,7 +4432,7 @@ reconfig=true
 customization=seldom
 friendly_name=Gridmanager Max Ws Destroys Per Resource
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager,gt4resource
 id=235
 
@@ -4448,7 +4448,7 @@ reconfig=true
 customization=seldom
 friendly_name=Amazon Gahp
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager,amazonresource
 id=236
 
@@ -4464,7 +4464,7 @@ reconfig=true
 customization=seldom
 friendly_name=Enable Grid Monitor
 usage=than is normally possible.
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager,globusjob
 id=237
 
@@ -4480,7 +4480,7 @@ reconfig=true
 customization=seldom
 friendly_name=Gridmanager Jm Exit Limit
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager,globusjob
 id=238
 
@@ -4496,7 +4496,7 @@ reconfig=true
 customization=seldom
 friendly_name=Gridmanager Connect Failure Retry Interval
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager,globusjob
 id=239
 
@@ -4512,7 +4512,7 @@ reconfig=true
 customization=seldom
 friendly_name=Gridshell
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager,globusjob
 id=240
 
@@ -4528,7 +4528,7 @@ reconfig=true
 customization=seldom
 friendly_name=Gridmanager Globus Commit Timeout
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager,globusjob
 id=241
 
@@ -4544,7 +4544,7 @@ reconfig=true
 customization=seldom
 friendly_name=Gridmanager Max Pending Submits Per Resource
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager,baseresource
 id=242
 
@@ -4560,7 +4560,7 @@ reconfig=true
 customization=seldom
 friendly_name=Gridmanager Max Pending Submits
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager,baseresource
 id=243
 
@@ -4576,7 +4576,7 @@ reconfig=true
 customization=seldom
 friendly_name=Gridmanager Max Submitted Jobs Per Resource
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager,baseresource
 id=244
 
@@ -4592,7 +4592,7 @@ reconfig=true
 customization=seldom
 friendly_name=Gridmanager Gahp Call Timeout Condor
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager,condorjob
 id=245
 
@@ -4608,7 +4608,7 @@ reconfig=true
 customization=seldom
 friendly_name=Condorc Attrs To Copy
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager,condorjob
 id=246
 
@@ -4624,7 +4624,7 @@ reconfig=true
 customization=seldom
 friendly_name=Cream Gahp
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager,creamjob
 id=247
 
@@ -4640,7 +4640,7 @@ reconfig=true
 customization=seldom
 friendly_name=Amazon Gahp Log
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager,amazonjob
 id=248
 
@@ -4656,7 +4656,7 @@ reconfig=true
 customization=seldom
 friendly_name=Amazon Gahp Worker Min Num
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager,amazonjob
 id=249
 
@@ -4672,7 +4672,7 @@ reconfig=true
 customization=seldom
 friendly_name=Amazon Gahp Worker Max Num
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager,amazonjob
 id=250
 
@@ -4688,7 +4688,7 @@ reconfig=true
 customization=seldom
 friendly_name=Amazon Gahp Debug
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager,amazonjob
 id=251
 
@@ -4704,7 +4704,7 @@ reconfig=true
 customization=seldom
 friendly_name=Collector Host
 usage=COLLECTOR_HOST = $(CONDOR_HOST):1234
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager,amazonjob
 id=252
 
@@ -4720,7 +4720,7 @@ reconfig=true
 customization=seldom
 friendly_name=Unicore Gahp
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager,unicorejob
 id=253
 
@@ -4736,7 +4736,7 @@ reconfig=true
 customization=seldom
 friendly_name=Gridmanager Max Jobmanagers Per Resource
 usage=many jobmanagers run causes severe load on the headnode.
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager,globusresource
 id=254
 
@@ -4752,7 +4752,7 @@ reconfig=true
 customization=seldom
 friendly_name=Grid Monitor Heartbeat Timeout
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager,globusresource
 id=255
 
@@ -4768,7 +4768,7 @@ reconfig=true
 customization=seldom
 friendly_name=Grid Monitor Retry Duration
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager,globusresource
 id=256
 
@@ -4784,7 +4784,7 @@ reconfig=true
 customization=seldom
 friendly_name=Grid Monitor
 usage=Where is the GridManager binary installed?
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager,globusresource
 id=257
 
@@ -4800,7 +4800,7 @@ reconfig=true
 customization=seldom
 friendly_name=No Dns
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=,
 id=258
 
@@ -4816,7 +4816,7 @@ reconfig=true
 customization=seldom
 friendly_name=Network Interface
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=,
 id=259
 
@@ -4832,7 +4832,7 @@ reconfig=true
 customization=seldom
 friendly_name=Default Domain Name
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=,
 id=260
 
@@ -4848,7 +4848,7 @@ reconfig=true
 customization=seldom
 friendly_name=Out Lowport
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=,
 id=261
 
@@ -4864,7 +4864,7 @@ reconfig=true
 customization=seldom
 friendly_name=In Lowport
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=,
 id=262
 
@@ -4880,7 +4880,7 @@ reconfig=true
 customization=seldom
 friendly_name=Cred Min Time Left
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=,
 id=263
 
@@ -4896,7 +4896,7 @@ reconfig=true
 customization=seldom
 friendly_name=All Debug
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=,
 id=264
 
@@ -4912,7 +4912,7 @@ reconfig=true
 customization=seldom
 friendly_name=Net Remap Enable
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=,
 id=265
 
@@ -4928,7 +4928,7 @@ reconfig=true
 customization=seldom
 friendly_name=Logs Use Timestamp
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=,
 id=266
 
@@ -4944,7 +4944,7 @@ reconfig=true
 customization=seldom
 friendly_name=File Lock Via Mutex
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=,
 id=267
 
@@ -4960,7 +4960,7 @@ reconfig=true
 customization=seldom
 friendly_name=Ignore Nfs Lock Errors
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=,
 id=268
 
@@ -4976,7 +4976,7 @@ reconfig=true
 customization=seldom
 friendly_name=Mail
 usage=means you want to specify a subject:
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=MAIL,
 id=269
 
@@ -4992,7 +4992,7 @@ reconfig=true
 customization=seldom
 friendly_name=Smtp Server
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=,
 id=270
 
@@ -5008,7 +5008,7 @@ reconfig=true
 customization=seldom
 friendly_name=Condor Support Email
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=,
 id=271
 
@@ -5024,7 +5024,7 @@ reconfig=true
 customization=seldom
 friendly_name=Startd Resource Prefix
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=startd,Resource
 id=272
 
@@ -5040,7 +5040,7 @@ reconfig=true
 customization=seldom
 friendly_name=Startd Job Hook Keyword
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=startd,Resource
 id=273
 
@@ -5056,7 +5056,7 @@ reconfig=true
 customization=seldom
 friendly_name=Starter List
 usage=Where are the various condor_starter binaries installed?
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=startd,starter_mgr
 id=274
 
@@ -5072,7 +5072,7 @@ reconfig=true
 customization=seldom
 friendly_name=Sbin
 usage=Pathnames
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=startd,starter_mgr
 id=275
 
@@ -5088,7 +5088,7 @@ reconfig=true
 customization=seldom
 friendly_name=Glexec
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=startd,glexec_starter
 id=276
 
@@ -5104,7 +5104,7 @@ reconfig=true
 customization=seldom
 friendly_name=Glexec User Dir
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=startd,command
 id=277
 
@@ -5120,7 +5120,7 @@ reconfig=true
 customization=seldom
 friendly_name=Startd Sends Alives
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=startd,command
 id=278
 
@@ -5136,7 +5136,7 @@ reconfig=true
 customization=seldom
 friendly_name=Vm Gahp Config
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=startd,vmuniverse_mgr
 id=279
 
@@ -5152,7 +5152,7 @@ reconfig=true
 customization=seldom
 friendly_name=Vm Max Number
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=startd,vmuniverse_mgr
 id=280
 
@@ -5168,7 +5168,7 @@ reconfig=true
 customization=seldom
 friendly_name=Vm Memory
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=startd,vmuniverse_mgr
 id=281
 
@@ -5184,7 +5184,7 @@ reconfig=true
 customization=seldom
 friendly_name=Vm Recheck Interval
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=startd,vmuniverse_mgr
 id=282
 
@@ -5200,7 +5200,7 @@ reconfig=true
 customization=seldom
 friendly_name=Lock
 usage=manual for details on this.
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=startd,Starter
 id=283
 
@@ -5216,7 +5216,7 @@ reconfig=true
 customization=seldom
 friendly_name=Vm Killing Timeout
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=startd,Starter
 id=284
 
@@ -5232,7 +5232,7 @@ reconfig=true
 customization=seldom
 friendly_name=Runbenchmarks
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=startd,startd_main
 id=285
 
@@ -5248,7 +5248,7 @@ reconfig=true
 customization=seldom
 friendly_name=Polling Interval
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=startd,startd_main
 id=286
 
@@ -5264,7 +5264,7 @@ reconfig=true
 customization=seldom
 friendly_name=Accountant Host
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=startd,startd_main
 id=287
 
@@ -5280,7 +5280,7 @@ reconfig=true
 customization=seldom
 friendly_name=Match Timeout
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=startd,startd_main
 id=288
 
@@ -5296,7 +5296,7 @@ reconfig=true
 customization=seldom
 friendly_name=Killing Timeout
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=startd,startd_main
 id=289
 
@@ -5312,7 +5312,7 @@ reconfig=true
 customization=seldom
 friendly_name=Max Claim Alives Missed
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=startd,startd_main
 id=290
 
@@ -5328,7 +5328,7 @@ reconfig=true
 customization=seldom
 friendly_name=Startd Job Exprs
 usage=by commenting out this setting (there is no default).
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=startd,startd_main
 id=291
 
@@ -5344,7 +5344,7 @@ reconfig=true
 customization=seldom
 friendly_name=Startd Slot Attrs
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=startd,startd_main
 id=292
 
@@ -5360,7 +5360,7 @@ reconfig=true
 customization=seldom
 friendly_name=Startd Slot Exprs
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=startd,startd_main
 id=293
 
@@ -5376,7 +5376,7 @@ reconfig=true
 customization=seldom
 friendly_name=Startd Vm Attrs
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=startd,startd_main
 id=294
 
@@ -5392,7 +5392,7 @@ reconfig=true
 customization=seldom
 friendly_name=Startd Vm Exprs
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=startd,startd_main
 id=295
 
@@ -5408,7 +5408,7 @@ reconfig=true
 customization=seldom
 friendly_name=Keyboard Cpus
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=startd,startd_main
 id=296
 
@@ -5424,7 +5424,7 @@ reconfig=true
 customization=seldom
 friendly_name=Disconnected Keyboard Idle Boost
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=startd,startd_main
 id=297
 
@@ -5440,7 +5440,7 @@ reconfig=true
 customization=seldom
 friendly_name=Startd Noclaim Shutdown
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=startd,startd_main
 id=298
 
@@ -5456,7 +5456,7 @@ reconfig=true
 customization=seldom
 friendly_name=Startd Compute Avail Stats
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=startd,startd_main
 id=299
 
@@ -5472,7 +5472,7 @@ reconfig=true
 customization=seldom
 friendly_name=Startd Name
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=startd,startd_main
 id=300
 
@@ -5488,7 +5488,7 @@ reconfig=true
 customization=seldom
 friendly_name=Valid Cod Users
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=startd,startd_main
 id=301
 
@@ -5504,7 +5504,7 @@ reconfig=true
 customization=seldom
 friendly_name=Vmp Host Machine
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=startd,startd_main
 id=302
 
@@ -5520,7 +5520,7 @@ reconfig=true
 customization=seldom
 friendly_name=Vmp Vm List
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=startd,startd_main
 id=303
 
@@ -5536,7 +5536,7 @@ reconfig=true
 customization=seldom
 friendly_name=Startd Max Avail Period Samples
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=startd,AvailStats
 id=304
 
@@ -5552,7 +5552,7 @@ reconfig=true
 customization=seldom
 friendly_name=Startd Should Write Claim Id File
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=startd,claim
 id=305
 
@@ -5568,7 +5568,7 @@ reconfig=true
 customization=seldom
 friendly_name=Start
 usage=When is this machine willing to start a job?
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=startd,Reqexp
 id=306
 
@@ -5584,7 +5584,7 @@ reconfig=true
 customization=seldom
 friendly_name=Is Valid Checkpoint Platform
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=startd,Reqexp
 id=307
 
@@ -5600,7 +5600,7 @@ reconfig=true
 customization=seldom
 friendly_name=Enable Backfill
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=startd,ResMgr
 id=308
 
@@ -5616,7 +5616,7 @@ reconfig=true
 customization=seldom
 friendly_name=Backfill System
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=startd,ResMgr
 id=309
 
@@ -5632,7 +5632,7 @@ reconfig=true
 customization=seldom
 friendly_name=Max Virtual Machine Types
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=startd,ResMgr
 id=310
 
@@ -5648,7 +5648,7 @@ reconfig=true
 customization=seldom
 friendly_name=Max Slot Types
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=startd,ResMgr
 id=311
 
@@ -5664,7 +5664,7 @@ reconfig=true
 customization=seldom
 friendly_name=Startd Cron Name
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=startd,startd_cronmgr
 id=312
 
@@ -5680,7 +5680,7 @@ reconfig=true
 customization=seldom
 friendly_name=Startd Cron Autopublish
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=startd,startd_cronmgr
 id=313
 
@@ -5696,7 +5696,7 @@ reconfig=true
 customization=seldom
 friendly_name=Classad Lib Path
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=classad,ast
 id=314
 
@@ -5712,7 +5712,7 @@ reconfig=true
 customization=seldom
 friendly_name=Classad Cache Size
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=classad,classad_lookup
 id=315
 
@@ -5728,7 +5728,7 @@ reconfig=true
 customization=seldom
 friendly_name=Classad Cache Lifetime
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=classad,classad_lookup
 id=316
 
@@ -5744,7 +5744,7 @@ reconfig=true
 customization=seldom
 friendly_name=Quill Maintain Db Conn
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=tt,ttmanager
 id=317
 
@@ -5760,7 +5760,7 @@ reconfig=true
 customization=seldom
 friendly_name=Quill Maintain Soft State
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=tt,ttmanager
 id=318
 
@@ -5776,7 +5776,7 @@ reconfig=true
 customization=seldom
 friendly_name=Quill Use Temp Table
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=tt,ttmanager
 id=319
 
@@ -5792,7 +5792,7 @@ reconfig=true
 customization=seldom
 friendly_name=Want Xml Log
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=tt,ttmanager
 id=320
 
@@ -5808,7 +5808,7 @@ reconfig=true
 customization=seldom
 friendly_name=Quill Db User
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=tt,jobqueuedbmanager
 id=321
 
@@ -5824,7 +5824,7 @@ reconfig=true
 customization=seldom
 friendly_name=Submit Skip Filechecks
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit,submit
 id=322
 
@@ -5840,7 +5840,7 @@ reconfig=true
 customization=seldom
 friendly_name=Submit Send Reschedule
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit,submit
 id=323
 
@@ -5856,7 +5856,7 @@ reconfig=true
 customization=seldom
 friendly_name=Default Universe
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit,submit
 id=324
 
@@ -5872,7 +5872,7 @@ reconfig=true
 customization=seldom
 friendly_name=Pvmd
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit,submit
 id=325
 
@@ -5888,7 +5888,7 @@ reconfig=true
 customization=seldom
 friendly_name=Default Io Buffer Size
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit,submit
 id=326
 
@@ -5904,7 +5904,7 @@ reconfig=true
 customization=seldom
 friendly_name=Default Io Buffer Block Size
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit,submit
 id=327
 
@@ -5920,7 +5920,7 @@ reconfig=true
 customization=seldom
 friendly_name=Submiteventnotes
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit,submit
 id=328
 
@@ -5936,7 +5936,7 @@ reconfig=true
 customization=seldom
 friendly_name=Schedd Interval
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit,submit
 id=329
 
@@ -5952,7 +5952,7 @@ reconfig=true
 customization=seldom
 friendly_name=Default Rank Standard
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit,submit
 id=330
 
@@ -5968,7 +5968,7 @@ reconfig=true
 customization=seldom
 friendly_name=Append Rank Standard
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit,submit
 id=331
 
@@ -5984,7 +5984,7 @@ reconfig=true
 customization=seldom
 friendly_name=Default Rank Vanilla
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit,submit
 id=332
 
@@ -6000,7 +6000,7 @@ reconfig=true
 customization=seldom
 friendly_name=Append Rank Vanilla
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit,submit
 id=333
 
@@ -6016,7 +6016,7 @@ reconfig=true
 customization=seldom
 friendly_name=Default Rank
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit,submit
 id=334
 
@@ -6032,7 +6032,7 @@ reconfig=true
 customization=seldom
 friendly_name=Append Rank
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit,submit
 id=335
 
@@ -6048,7 +6048,7 @@ reconfig=true
 customization=seldom
 friendly_name=Log On Nfs Is Error
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit,submit
 id=336
 
@@ -6064,7 +6064,7 @@ reconfig=true
 customization=seldom
 friendly_name=Job Lease Duration
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit,submit
 id=337
 
@@ -6080,7 +6080,7 @@ reconfig=true
 customization=seldom
 friendly_name=Submit Exprs
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit,submit
 id=338
 
@@ -6096,7 +6096,7 @@ reconfig=true
 customization=seldom
 friendly_name=Append Req Vanilla
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit,submit
 id=339
 
@@ -6112,7 +6112,7 @@ reconfig=true
 customization=seldom
 friendly_name=Append Req Standard
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit,submit
 id=340
 
@@ -6128,7 +6128,7 @@ reconfig=true
 customization=seldom
 friendly_name=Append Req Vm
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit,submit
 id=341
 
@@ -6144,7 +6144,7 @@ reconfig=true
 customization=seldom
 friendly_name=Append Requirements
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit,submit
 id=342
 
@@ -6160,7 +6160,7 @@ reconfig=true
 customization=seldom
 friendly_name=Flavor
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit,submit
 id=343
 
@@ -6176,7 +6176,7 @@ reconfig=true
 customization=seldom
 friendly_name=Sandbox Transfer Method
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit,submit
 id=344
 
@@ -6192,7 +6192,7 @@ reconfig=true
 customization=seldom
 friendly_name=Warn On Unused Submit File Macros
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit,submit
 id=345
 
@@ -6208,7 +6208,7 @@ reconfig=true
 customization=seldom
 friendly_name=Vm No Output Vm
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit,submit
 id=346
 
@@ -6224,7 +6224,7 @@ reconfig=true
 customization=seldom
 friendly_name=Vm Cdrom Files
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit,submit
 id=347
 
@@ -6240,7 +6240,7 @@ reconfig=true
 customization=seldom
 friendly_name=Vm Should Transfer Cdrom Files
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit,submit
 id=348
 
@@ -6256,7 +6256,7 @@ reconfig=true
 customization=seldom
 friendly_name=Xen Transfer Files
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit,submit
 id=349
 
@@ -6272,7 +6272,7 @@ reconfig=true
 customization=seldom
 friendly_name=Xen Kernel
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit,submit
 id=350
 
@@ -6288,7 +6288,7 @@ reconfig=true
 customization=seldom
 friendly_name=Xen Initrd
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit,submit
 id=351
 
@@ -6304,7 +6304,7 @@ reconfig=true
 customization=seldom
 friendly_name=Xen Root
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit,submit
 id=352
 
@@ -6320,7 +6320,7 @@ reconfig=true
 customization=seldom
 friendly_name=Xen Disk
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit,submit
 id=353
 
@@ -6336,7 +6336,7 @@ reconfig=true
 customization=seldom
 friendly_name=Xen Kernel Params
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit,submit
 id=354
 
@@ -6352,7 +6352,7 @@ reconfig=true
 customization=seldom
 friendly_name=Xen Cdrom Device
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit,submit
 id=355
 
@@ -6368,7 +6368,7 @@ reconfig=true
 customization=seldom
 friendly_name=Vmware Should Transfer Files
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit,submit
 id=356
 
@@ -6384,7 +6384,7 @@ reconfig=true
 customization=seldom
 friendly_name=Vmware Snapshot Disk
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit,submit
 id=357
 
@@ -6400,7 +6400,7 @@ reconfig=true
 customization=seldom
 friendly_name=Vmware Dir
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit,submit
 id=358
 
@@ -6417,7 +6417,7 @@ reconfig=true
 customization=seldom
 friendly_name=Max Xml Log
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=c++_util,file_xml
 id=359
 
@@ -6433,7 +6433,7 @@ reconfig=true
 customization=seldom
 friendly_name=Quill Db Type
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=c++_util,jobqueuesnapshot
 id=360
 
@@ -6449,7 +6449,7 @@ reconfig=true
 customization=seldom
 friendly_name=Windows Firewall Failure Retry
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=c++_util,windows_firewall
 id=361
 
@@ -6465,7 +6465,7 @@ reconfig=true
 customization=seldom
 friendly_name=Credd Cache Locally
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=c++_util,uids
 id=362
 
@@ -6481,7 +6481,7 @@ reconfig=true
 customization=seldom
 friendly_name=Q Query Timeout
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=c++_util,condor_q
 id=363
 
@@ -6497,7 +6497,7 @@ reconfig=true
 customization=seldom
 friendly_name=Procd Log
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=c++_util,proc_family_proxy
 id=364
 
@@ -6513,7 +6513,7 @@ reconfig=true
 customization=seldom
 friendly_name=Procd
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=c++_util,proc_family_proxy
 id=365
 
@@ -6529,7 +6529,7 @@ reconfig=true
 customization=seldom
 friendly_name=Procd Max Snapshot Interval
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=c++_util,proc_family_proxy
 id=366
 
@@ -6545,7 +6545,7 @@ reconfig=true
 customization=seldom
 friendly_name=Procd Debug
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=c++_util,proc_family_proxy
 id=367
 
@@ -6561,7 +6561,7 @@ reconfig=true
 customization=seldom
 friendly_name=Use Gid Process Tracking
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=c++_util,proc_family_proxy
 id=368
 
@@ -6577,7 +6577,7 @@ reconfig=true
 customization=seldom
 friendly_name=Min Tracking Gid
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=c++_util,proc_family_proxy
 id=369
 
@@ -6593,7 +6593,7 @@ reconfig=true
 customization=seldom
 friendly_name=Max Tracking Gid
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=c++_util,proc_family_proxy
 id=370
 
@@ -6609,7 +6609,7 @@ reconfig=true
 customization=seldom
 friendly_name=Restart Procd On Error
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=c++_util,proc_family_proxy
 id=371
 
@@ -6625,7 +6625,7 @@ reconfig=true
 customization=seldom
 friendly_name=Net Remap Service
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=c++_util,condor_config
 id=372
 
@@ -6641,7 +6641,7 @@ reconfig=true
 customization=seldom
 friendly_name=Net Remap Inagent
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=c++_util,condor_config
 id=373
 
@@ -6657,7 +6657,7 @@ reconfig=true
 customization=seldom
 friendly_name=Net Remap Route
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=c++_util,condor_config
 id=374
 
@@ -6673,7 +6673,7 @@ reconfig=true
 customization=seldom
 friendly_name=Local Config Dir
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=c++_util,condor_config
 id=375
 
@@ -6689,7 +6689,7 @@ reconfig=true
 customization=seldom
 friendly_name=Abort On Exception
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=c++_util,condor_config
 id=376
 
@@ -6705,7 +6705,7 @@ reconfig=true
 customization=seldom
 friendly_name=Require Local Config File
 usage=If not specificed, the default is True
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=c++_util,condor_config
 id=377
 
@@ -6721,7 +6721,7 @@ reconfig=true
 customization=seldom
 friendly_name=Require Local Config File
 usage=The location of the local config file(s) to use, comma or space delimited
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=c++_util,condor_config
 id=377
 
@@ -6737,7 +6737,7 @@ reconfig=true
 customization=seldom
 friendly_name=Enable Runtime Config
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=c++_util,condor_config
 id=378
 
@@ -6753,7 +6753,7 @@ reconfig=true
 customization=seldom
 friendly_name=Runtime Config Admin
 usage=
-url=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=c++_util,condor_config
 
 
@@ -6769,7 +6769,7 @@ reconfig=true
 customization=seldom
 friendly_name=Enable Persistent Config
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=c++_util,condor_config
 id=379
 
@@ -6785,7 +6785,7 @@ reconfig=true
 customization=seldom
 friendly_name=Persistent Config Dir
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=c++_util,condor_config
 id=380
 
@@ -6802,7 +6802,7 @@ reconfig=true
 customization=seldom
 friendly_name=Use Procd
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=c++_util,proc_family_interface
 id=555
 
@@ -6819,7 +6819,7 @@ reconfig=true
 customization=seldom
 friendly_name=Use Procd
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=c++_util,proc_family_interface
 id=381
 
@@ -6835,7 +6835,7 @@ reconfig=true
 customization=seldom
 friendly_name=Plugins
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=c++_util,LoadPlugins
 id=382
 
@@ -6851,7 +6851,7 @@ reconfig=true
 customization=seldom
 friendly_name=Plugin Dir
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=c++_util,LoadPlugins
 id=383
 
@@ -6867,7 +6867,7 @@ reconfig=true
 customization=seldom
 friendly_name=Java
 usage=empty or incorrect.
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=c++_util,java_config
 id=384
 
@@ -6883,7 +6883,7 @@ reconfig=true
 customization=seldom
 friendly_name=Java Maxheap Argument
 usage=typically 64 MB.  The default (-Xmx) works with the Sun JVM.
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=c++_util,java_config
 id=385
 
@@ -6899,7 +6899,7 @@ reconfig=true
 customization=seldom
 friendly_name=Java Classpath Argument
 usage=used to introduce a new classpath:
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=c++_util,java_config
 id=386
 
@@ -6915,7 +6915,7 @@ reconfig=true
 customization=seldom
 friendly_name=Java Classpath Separator
 usage=one path element from another:
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=c++_util,java_config
 id=387
 
@@ -6931,7 +6931,7 @@ reconfig=true
 customization=seldom
 friendly_name=Java Classpath Default
 usage=needs them.
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=c++_util,java_config
 id=388
 
@@ -6947,7 +6947,7 @@ reconfig=true
 customization=seldom
 friendly_name=Tmp Dir
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=c++_util,directory
 id=389
 
@@ -6963,7 +6963,7 @@ reconfig=true
 customization=seldom
 friendly_name=Temp Dir
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=c++_util,directory
 id=390
 
@@ -6979,7 +6979,7 @@ reconfig=true
 customization=seldom
 friendly_name=Ssh Keygen
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=c++_util,sshd_wrapper
 id=391
 
@@ -6995,7 +6995,7 @@ reconfig=true
 customization=seldom
 friendly_name=Ssh Keygen Args
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=c++_util,sshd_wrapper
 id=392
 
@@ -7011,7 +7011,7 @@ reconfig=true
 customization=seldom
 friendly_name=Sshd
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=c++_util,sshd_wrapper
 id=393
 
@@ -7027,7 +7027,7 @@ reconfig=true
 customization=seldom
 friendly_name=Sshd Args
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=c++_util,sshd_wrapper
 id=394
 
@@ -7043,7 +7043,7 @@ reconfig=true
 customization=seldom
 friendly_name=Scp
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=c++_util,sshd_wrapper
 id=395
 
@@ -7059,7 +7059,7 @@ reconfig=true
 customization=seldom
 friendly_name=Enable Userlog Locking
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=c++_util,read_user_log
 id=396
 
@@ -7075,7 +7075,7 @@ reconfig=true
 customization=seldom
 friendly_name=Always Close Userlog
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=c++_util,read_user_log
 id=397
 
@@ -7091,7 +7091,7 @@ reconfig=true
 customization=seldom
 friendly_name=Event Log
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=c++_util,user_log
 id=398
 
@@ -7107,7 +7107,7 @@ reconfig=true
 customization=seldom
 friendly_name=Event Log Use Xml
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=c++_util,user_log
 id=399
 
@@ -7123,7 +7123,7 @@ reconfig=true
 customization=seldom
 friendly_name=Max Event Log
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=c++_util,user_log
 id=400
 
@@ -7139,7 +7139,7 @@ reconfig=true
 customization=seldom
 friendly_name=Event Log Job Ad Information Attrs
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=c++_util,user_log
 id=401
 
@@ -7155,7 +7155,7 @@ reconfig=true
 customization=seldom
 friendly_name=Reuse Condor Run Account
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=c++_util,dynuser
 id=402
 
@@ -7171,7 +7171,7 @@ reconfig=true
 customization=seldom
 friendly_name=Passwd Cache Refresh
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=c++_util,passwd_cache
 id=403
 
@@ -7187,7 +7187,7 @@ reconfig=true
 customization=seldom
 friendly_name=Startd Claim Id File
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=c++_util,misc_utils
 id=404
 
@@ -7203,7 +7203,7 @@ reconfig=true
 customization=seldom
 friendly_name=Sec Password File
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=c++_util,store_cred
 id=405
 
@@ -7219,7 +7219,7 @@ reconfig=true
 customization=seldom
 friendly_name=Email Domain
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=c++_util,email
 id=406
 
@@ -7235,7 +7235,7 @@ reconfig=true
 customization=seldom
 friendly_name=Eventd Shutdown Time
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=eventd,admin_event
 id=407
 
@@ -7251,7 +7251,7 @@ reconfig=true
 customization=seldom
 friendly_name=Eventd Admin Megabits Sec
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=eventd,admin_event
 id=408
 
@@ -7267,7 +7267,7 @@ reconfig=true
 customization=seldom
 friendly_name=Eventd Shutdown Constraint
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=eventd,admin_event
 id=409
 
@@ -7283,7 +7283,7 @@ reconfig=true
 customization=seldom
 friendly_name=Sec Tcp Session Timeout
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=io,condor_secman
 id=410
 
@@ -7299,7 +7299,7 @@ reconfig=true
 customization=seldom
 friendly_name=Sec Claimtobe User
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=io,condor_auth_claim
 id=411
 
@@ -7315,7 +7315,7 @@ reconfig=true
 customization=seldom
 friendly_name=Sec Claimtobe Include Domain
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=io,condor_auth_claim
 id=412
 
@@ -7331,7 +7331,7 @@ reconfig=true
 customization=seldom
 friendly_name=Fs Remote Dir
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=io,condor_auth_fs
 id=413
 
@@ -7347,7 +7347,7 @@ reconfig=true
 customization=seldom
 friendly_name=Fs Local Dir
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=io,condor_auth_fs
 id=414
 
@@ -7363,7 +7363,7 @@ reconfig=true
 customization=seldom
 friendly_name=Fs Allow Unsafe
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=io,condor_auth_fs
 id=415
 
@@ -7379,7 +7379,7 @@ reconfig=true
 customization=seldom
 friendly_name=Kerberos Map File
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=io,condor_auth_kerberos
 id=416
 
@@ -7395,7 +7395,7 @@ reconfig=true
 customization=seldom
 friendly_name=Encrypt Secrets
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=io,cedar_no_ckpt
 id=417
 
@@ -7411,7 +7411,7 @@ reconfig=true
 customization=seldom
 friendly_name=Condor Gatekeeper
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=io,credential
 id=418
 
@@ -7427,7 +7427,7 @@ reconfig=true
 customization=seldom
 friendly_name=Gsi Daemon Name
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=io,condor_auth_x509
 id=419
 
@@ -7443,7 +7443,7 @@ reconfig=true
 customization=seldom
 friendly_name=Starter Upload Timeout
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=starter,jic_shadow
 id=420
 
@@ -7459,7 +7459,7 @@ reconfig=true
 customization=seldom
 friendly_name=Always Vm Univ Use Nobody
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=starter,jic_shadow
 id=421
 
@@ -7475,7 +7475,7 @@ reconfig=true
 customization=seldom
 friendly_name=Vm Univ Nobody User
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=starter,jic_shadow
 id=422
 
@@ -7491,7 +7491,7 @@ reconfig=true
 customization=seldom
 friendly_name=Vm Gahp Send All Classad
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=starter,vm_gahp_server
 id=423
 
@@ -7507,7 +7507,7 @@ reconfig=true
 customization=seldom
 friendly_name=Starter Initial Update Interval
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=starter,job_info_communicator
 id=424
 
@@ -7523,7 +7523,7 @@ reconfig=true
 customization=seldom
 friendly_name=Encrypt Execute Directory
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=starter,starter
 id=425
 
@@ -7539,7 +7539,7 @@ reconfig=true
 customization=seldom
 friendly_name=Starter Job Environment
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=starter,os_proc
 id=426
 
@@ -7555,7 +7555,7 @@ reconfig=true
 customization=seldom
 friendly_name=Job Renice Increment
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=starter,os_proc
 id=427
 
@@ -7571,7 +7571,7 @@ reconfig=true
 customization=seldom
 friendly_name=Job Inherits Starter Environment
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=starter,os_proc
 id=428
 
@@ -7587,7 +7587,7 @@ reconfig=true
 customization=seldom
 friendly_name=Mpi Condor Rsh Path
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=starter,mpi_master_proc
 id=429
 
@@ -7603,7 +7603,7 @@ reconfig=true
 customization=seldom
 friendly_name=Local Universe Max Job Cleanup Retries
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=starter,jic_local_schedd
 id=430
 
@@ -7619,7 +7619,7 @@ reconfig=true
 customization=seldom
 friendly_name=Local Universe Job Cleanup Retry Delay
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=starter,jic_local_schedd
 id=431
 
@@ -7635,7 +7635,7 @@ reconfig=true
 customization=seldom
 friendly_name=Starter Job Hook Keyword
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=starter,StarterHookMgr
 id=432
 
@@ -7651,7 +7651,7 @@ reconfig=true
 customization=seldom
 friendly_name=Execute Login Is Dedicated
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=starter,tool_daemon_proc
 id=433
 
@@ -7667,7 +7667,7 @@ reconfig=true
 customization=seldom
 friendly_name=Java Benchmark Time
 usage=If this time is zero or undefined, no Java benchmarks will be run.
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=starter,java_detect
 id=434
 
@@ -7683,7 +7683,7 @@ reconfig=true
 customization=seldom
 friendly_name=Vm Status Interval
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=starter,vm_proc
 id=435
 
@@ -7699,7 +7699,7 @@ reconfig=true
 customization=seldom
 friendly_name=Vm Status Max Error
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=starter,vm_proc
 id=436
 
@@ -7715,7 +7715,7 @@ reconfig=true
 customization=seldom
 friendly_name=Vm Gahp Req Timeout
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=starter,vm_proc
 id=437
 
@@ -7731,7 +7731,7 @@ reconfig=true
 customization=seldom
 friendly_name=Vm Soft Suspend
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=starter,vm_proc
 id=438
 
@@ -7747,7 +7747,7 @@ reconfig=true
 customization=seldom
 friendly_name=Condor Gahp Worker
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=c-gahp,io_loop
 id=439
 
@@ -7763,7 +7763,7 @@ reconfig=true
 customization=seldom
 friendly_name=Negotiator Interval
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=negotiator,matchmaker
 id=440
 
@@ -7779,7 +7779,7 @@ reconfig=true
 customization=seldom
 friendly_name=Negotiator Timeout
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=negotiator,matchmaker
 id=441
 
@@ -7795,7 +7795,7 @@ reconfig=true
 customization=seldom
 friendly_name=Negotiator Max Time Per Submitter
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=negotiator,matchmaker
 id=442
 
@@ -7811,7 +7811,7 @@ reconfig=true
 customization=seldom
 friendly_name=Negotiator Max Time Per Piespin
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=negotiator,matchmaker
 id=443
 
@@ -7827,7 +7827,7 @@ reconfig=true
 customization=seldom
 friendly_name=Negotiator Match Exprs
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=negotiator,matchmaker
 id=444
 
@@ -7843,7 +7843,7 @@ reconfig=true
 customization=seldom
 friendly_name=Preemption Rank
 usage=(e.g. if a job is in the pre-empting stage for too long)
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=negotiator,matchmaker
 id=445
 
@@ -7859,7 +7859,7 @@ reconfig=true
 customization=seldom
 friendly_name=Negotiator Pre Job Rank
 usage=(e.g. if a job is in the pre-empting stage for too long)
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=negotiator,matchmaker
 id=446
 
@@ -7875,7 +7875,7 @@ reconfig=true
 customization=seldom
 friendly_name=Negotiator Post Job Rank
 usage=(e.g. if a job is in the pre-empting stage for too long)
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=negotiator,matchmaker
 id=447
 
@@ -7891,7 +7891,7 @@ reconfig=true
 customization=seldom
 friendly_name=Negotiator Simple Matching
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=negotiator,matchmaker
 id=448
 
@@ -7907,7 +7907,7 @@ reconfig=true
 customization=seldom
 friendly_name=Negotiator Matchlist Caching
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=negotiator,matchmaker
 id=449
 
@@ -7923,7 +7923,7 @@ reconfig=true
 customization=seldom
 friendly_name=Negotiator Consider Preemption
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=negotiator,matchmaker
 id=450
 
@@ -7939,7 +7939,7 @@ reconfig=true
 customization=seldom
 friendly_name=Negotiator Inform Startd
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=negotiator,matchmaker
 id=451
 
@@ -7955,7 +7955,7 @@ reconfig=true
 customization=seldom
 friendly_name=Negotiator Use Nonblocking Startd Contact
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=negotiator,matchmaker
 id=452
 
@@ -7971,7 +7971,7 @@ reconfig=true
 customization=seldom
 friendly_name=Group Dynamic Mach Constraint
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=negotiator,matchmaker
 id=453
 
@@ -7987,7 +7987,7 @@ reconfig=true
 customization=seldom
 friendly_name=Group Autoregroup
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=negotiator,matchmaker
 id=454
 
@@ -8003,7 +8003,7 @@ reconfig=true
 customization=seldom
 friendly_name=Startd Ad Reeval Expr
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=negotiator,matchmaker
 id=455
 
@@ -8019,7 +8019,7 @@ reconfig=true
 customization=seldom
 friendly_name=Negotiator Ignore User Priorities
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=negotiator,matchmaker
 id=456
 
@@ -8035,7 +8035,7 @@ reconfig=true
 customization=seldom
 friendly_name=Tcp Collector Host
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=daemon_client,dc_collector
 id=457
 
@@ -8051,7 +8051,7 @@ reconfig=true
 customization=seldom
 friendly_name=Nonblocking Collector Update
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=daemon_client,dc_collector
 id=458
 
@@ -8067,7 +8067,7 @@ reconfig=true
 customization=seldom
 friendly_name=Tcp Update Collectors
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=daemon_client,dc_collector
 id=459
 
@@ -8083,7 +8083,7 @@ reconfig=true
 customization=seldom
 friendly_name=Update Collector With Tcp
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=daemon_client,dc_collector
 id=460
 
@@ -8099,7 +8099,7 @@ reconfig=true
 customization=seldom
 friendly_name=Update Collectors With Tcp
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=daemon_client,dc_collector
 id=461
 
@@ -8115,7 +8115,7 @@ reconfig=true
 customization=seldom
 friendly_name=Dead Collector Max Avoidance Time
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=daemon_client,dc_collector
 id=462
 
@@ -8131,7 +8131,7 @@ reconfig=true
 customization=seldom
 friendly_name=Cm Ip Addr
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=daemon_client,daemon
 id=463
 
@@ -8147,7 +8147,7 @@ reconfig=true
 customization=seldom
 friendly_name=History
 usage=will be created.
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=tools,preen
 id=464
 
@@ -8163,7 +8163,7 @@ reconfig=true
 customization=seldom
 friendly_name=Preen Admin
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=tools,preen
 id=465
 
@@ -8179,7 +8179,7 @@ reconfig=true
 customization=seldom
 friendly_name=Valid Spool Files
 usage=What files should condor_preen leave in the spool directory?
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=tools,preen
 id=466
 
@@ -8195,7 +8195,7 @@ reconfig=true
 customization=seldom
 friendly_name=Invalid Log Files
 usage=What files should condor_preen remove from the log directory?
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=tools,preen
 id=467
 
@@ -8211,7 +8211,7 @@ reconfig=true
 customization=seldom
 friendly_name=Lib
 usage=Pathnames
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=tools,version
 id=468
 
@@ -8227,7 +8227,7 @@ reconfig=true
 customization=seldom
 friendly_name=Sec Password Domain
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=tools,store_cred_main
 id=469
 
@@ -8243,7 +8243,7 @@ reconfig=true
 customization=seldom
 friendly_name=Starter Chooses Ckpt Server
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=shadow,shadow
 id=470
 
@@ -8259,7 +8259,7 @@ reconfig=true
 customization=seldom
 friendly_name=Max Discarded Run Time
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=shadow,shadow
 id=471
 
@@ -8275,7 +8275,7 @@ reconfig=true
 customization=seldom
 friendly_name=Compress Periodic Ckpt
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=shadow,shadow
 id=472
 
@@ -8291,7 +8291,7 @@ reconfig=true
 customization=seldom
 friendly_name=Periodic Memory Sync
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=shadow,shadow
 id=473
 
@@ -8307,7 +8307,7 @@ reconfig=true
 customization=seldom
 friendly_name=Compress Vacate Ckpt
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=shadow,shadow
 id=474
 
@@ -8323,7 +8323,7 @@ reconfig=true
 customization=seldom
 friendly_name=Slow Ckpt Speed
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=shadow,shadow
 id=475
 
@@ -8339,7 +8339,7 @@ reconfig=true
 customization=seldom
 friendly_name=Shadow Allow Unsafe Remote Exec
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=shadow,pseudo_ops
 id=476
 
@@ -8355,7 +8355,7 @@ reconfig=true
 customization=seldom
 friendly_name=Email Notification Cc
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=shadow,shadow_common
 id=477
 
@@ -8371,7 +8371,7 @@ reconfig=true
 customization=seldom
 friendly_name=Dbmsmanager Name
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=dbmsd,DBMSManager
 id=478
 
@@ -8387,7 +8387,7 @@ reconfig=true
 customization=seldom
 friendly_name=Database Purge Interval
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=dbmsd,DBMSManager
 id=479
 
@@ -8403,7 +8403,7 @@ reconfig=true
 customization=seldom
 friendly_name=Database Reindex Interval
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=dbmsd,DBMSManager
 id=480
 
@@ -8419,7 +8419,7 @@ reconfig=true
 customization=seldom
 friendly_name=Quill Resource History Duration
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=dbmsd,ManagedDatabase
 id=481
 
@@ -8435,7 +8435,7 @@ reconfig=true
 customization=seldom
 friendly_name=Quill Run History Duration
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=dbmsd,ManagedDatabase
 id=482
 
@@ -8451,7 +8451,7 @@ reconfig=true
 customization=seldom
 friendly_name=Quill Job History Duration
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=dbmsd,ManagedDatabase
 id=483
 
@@ -8467,7 +8467,7 @@ reconfig=true
 customization=seldom
 friendly_name=Quill Dbsize Limit
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=dbmsd,ManagedDatabase
 id=484
 
@@ -8483,7 +8483,7 @@ reconfig=true
 customization=seldom
 friendly_name=Job Router Source Job Constraint
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=schedd,JobRouter
 id=485
 
@@ -8499,7 +8499,7 @@ reconfig=true
 customization=seldom
 friendly_name=Max Job Mirror Update Lag
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=schedd,JobRouter
 id=486
 
@@ -8515,7 +8515,7 @@ reconfig=true
 customization=seldom
 friendly_name=Job Router Polling Period
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=schedd,JobRouter
 id=487
 
@@ -8531,7 +8531,7 @@ reconfig=true
 customization=seldom
 friendly_name=Job Router Name
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=schedd,JobRouter
 id=488
 
@@ -8547,7 +8547,7 @@ reconfig=true
 customization=seldom
 friendly_name=Polling Period
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=schedd,Scheduler
 id=489
 
@@ -8563,7 +8563,7 @@ reconfig=true
 customization=seldom
 friendly_name=Transferd
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=schedd,tdman
 id=490
 
@@ -8579,7 +8579,7 @@ reconfig=true
 customization=seldom
 friendly_name=Queue Super Users
 usage=By default, this only includes root.
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=schedd,qmgmt
 id=491
 
@@ -8595,7 +8595,7 @@ reconfig=true
 customization=seldom
 friendly_name=Queue All Users Trusted
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=schedd,qmgmt
 id=492
 
@@ -8611,7 +8611,7 @@ reconfig=true
 customization=seldom
 friendly_name=Global Job Id With Time
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=schedd,qmgmt
 id=493
 
@@ -8627,7 +8627,7 @@ reconfig=true
 customization=seldom
 friendly_name=Biotech
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=schedd,qmgmt
 id=494
 
@@ -8643,7 +8643,7 @@ reconfig=true
 customization=seldom
 friendly_name=Claim Recycling Consider Limits
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=schedd,qmgmt
 id=495
 
@@ -8659,7 +8659,7 @@ reconfig=true
 customization=seldom
 friendly_name=Unused Claim Timeout
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=schedd,dedicated_scheduler
 id=496
 
@@ -8675,7 +8675,7 @@ reconfig=true
 customization=seldom
 friendly_name=Schedd Preemption Requirements
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=schedd,dedicated_scheduler
 id=497
 
@@ -8691,7 +8691,7 @@ reconfig=true
 customization=seldom
 friendly_name=Schedd Preemption Rank
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=schedd,dedicated_scheduler
 id=498
 
@@ -8707,7 +8707,7 @@ reconfig=true
 customization=seldom
 friendly_name=Dedicated Scheduler Use Fifo
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=schedd,dedicated_scheduler
 id=499
 
@@ -8723,7 +8723,7 @@ reconfig=true
 customization=seldom
 friendly_name=Mpi Master Ip
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=schedd,dedicated_scheduler
 id=500
 
@@ -8739,7 +8739,7 @@ reconfig=true
 customization=seldom
 friendly_name=Shadow List
 usage=Where are the various shadow binaries installed?
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=schedd,shadow_mgr
 id=501
 
@@ -8755,7 +8755,7 @@ reconfig=true
 customization=seldom
 friendly_name=Soap Leave In Queue
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=schedd,soap_scheddStub
 id=502
 
@@ -8771,7 +8771,7 @@ reconfig=true
 customization=seldom
 friendly_name=Shadow
 usage=Where are the various shadow binaries installed?
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=schedd,schedd
 id=503
 
@@ -8787,7 +8787,7 @@ reconfig=true
 customization=seldom
 friendly_name=Shadow Renice Increment
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=schedd,schedd
 id=504
 
@@ -8803,7 +8803,7 @@ reconfig=true
 customization=seldom
 friendly_name=Starter Local
 usage=Where are the various condor_starter binaries installed?
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=schedd,schedd
 id=505
 
@@ -8819,7 +8819,7 @@ reconfig=true
 customization=seldom
 friendly_name=Local Univ Execute
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=schedd,schedd
 id=506
 
@@ -8835,7 +8835,7 @@ reconfig=true
 customization=seldom
 friendly_name=Sched Univ Renice Increment
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=schedd,schedd
 id=507
 
@@ -8851,7 +8851,7 @@ reconfig=true
 customization=seldom
 friendly_name=Schedd Send Vacate Via Tcp
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=schedd,schedd
 id=508
 
@@ -8867,7 +8867,7 @@ reconfig=true
 customization=seldom
 friendly_name=Keep Output Sandbox
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=schedd,schedd
 id=509
 
@@ -8883,7 +8883,7 @@ reconfig=true
 customization=seldom
 friendly_name=Enable History Rotation
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=schedd,schedd
 id=510
 
@@ -8899,7 +8899,7 @@ reconfig=true
 customization=seldom
 friendly_name=Per Job History Dir
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=schedd,schedd
 id=511
 
@@ -8915,7 +8915,7 @@ reconfig=true
 customization=seldom
 friendly_name=Schedd Min Interval
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=schedd,schedd
 id=512
 
@@ -8931,7 +8931,7 @@ reconfig=true
 customization=seldom
 friendly_name=Job Start Delay
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=schedd,schedd
 id=513
 
@@ -8947,7 +8947,7 @@ reconfig=true
 customization=seldom
 friendly_name=Max Jobs Running
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=schedd,schedd
 id=514
 
@@ -8963,7 +8963,7 @@ reconfig=true
 customization=seldom
 friendly_name=Start Local Universe
 usage=When should a local universe job be allowed to start?
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=schedd,schedd
 id=515
 
@@ -8979,7 +8979,7 @@ reconfig=true
 customization=seldom
 friendly_name=Start Scheduler Universe
 usage=When should a scheduler universe job be allowed to start?
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=schedd,schedd
 id=516
 
@@ -8995,7 +8995,7 @@ reconfig=true
 customization=seldom
 friendly_name=Max Jobs Submitted
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=schedd,schedd
 id=517
 
@@ -9011,7 +9011,7 @@ reconfig=true
 customization=seldom
 friendly_name=Negotiate All Jobs In Cluster
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=schedd,schedd
 id=518
 
@@ -9027,7 +9027,7 @@ reconfig=true
 customization=seldom
 friendly_name=Startd Contact Timeout
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=schedd,schedd
 id=519
 
@@ -9043,7 +9043,7 @@ reconfig=true
 customization=seldom
 friendly_name=Flock Collector Hosts
 usage=the FLOCK_NEGOTIATOR_HOSTS list.
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=schedd,schedd
 id=520
 
@@ -9059,7 +9059,7 @@ reconfig=true
 customization=seldom
 friendly_name=Flock Hosts
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=schedd,schedd
 id=521
 
@@ -9075,7 +9075,7 @@ reconfig=true
 customization=seldom
 friendly_name=Flock Negotiator Hosts
 usage=the FLOCK_NEGOTIATOR_HOSTS list.
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=schedd,schedd
 id=522
 
@@ -9091,7 +9091,7 @@ reconfig=true
 customization=seldom
 friendly_name=Shadow Size Estimate
 usage=Specified in kilobytes.
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=schedd,schedd
 id=523
 
@@ -9107,7 +9107,7 @@ reconfig=true
 customization=seldom
 friendly_name=Max Shadow Exceptions
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=schedd,schedd
 id=524
 
@@ -9123,7 +9123,7 @@ reconfig=true
 customization=seldom
 friendly_name=Gridmanager Per Job
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=schedd,schedd
 id=525
 
@@ -9139,7 +9139,7 @@ reconfig=true
 customization=seldom
 friendly_name=Max Job Queue Log Rotations
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=schedd,schedd
 id=526
 
@@ -9155,7 +9155,7 @@ reconfig=true
 customization=seldom
 friendly_name=Gridmanager
 usage=Where is the GridManager binary installed?
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=schedd,grid_universe
 id=527
 
@@ -9171,7 +9171,7 @@ reconfig=true
 customization=seldom
 friendly_name=Gridmanager Args
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=schedd,grid_universe
 id=528
 
@@ -9187,7 +9187,7 @@ reconfig=true
 customization=seldom
 friendly_name=Schedd Cron Name
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=schedd,schedd_cronmgr
 id=529
 
@@ -9203,7 +9203,7 @@ reconfig=true
 customization=seldom
 friendly_name=Schedd Backup Spool
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=schedd,schedd_main
 id=530
 
@@ -9219,7 +9219,7 @@ reconfig=true
 customization=seldom
 friendly_name=X Runs Here
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=master,daemon
 id=531
 
@@ -9235,7 +9235,7 @@ reconfig=true
 customization=seldom
 friendly_name=Ha Lock Url
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=master,daemon
 id=532
 
@@ -9251,7 +9251,7 @@ reconfig=true
 customization=seldom
 friendly_name=Ha Lock Hold Time
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=master,daemon
 id=533
 
@@ -9267,7 +9267,7 @@ reconfig=true
 customization=seldom
 friendly_name=Ha Poll Period
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=master,daemon
 id=534
 
@@ -9283,7 +9283,7 @@ reconfig=true
 customization=seldom
 friendly_name=Master Name
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=master,master
 id=535
 
@@ -9299,7 +9299,7 @@ reconfig=true
 customization=seldom
 friendly_name=Start Master
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=master,master
 id=536
 
@@ -9315,7 +9315,7 @@ reconfig=true
 customization=seldom
 friendly_name=Start Daemons
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=master,master
 id=537
 
@@ -9331,7 +9331,7 @@ reconfig=true
 customization=seldom
 friendly_name=Publish Obituaries
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=master,master
 id=538
 
@@ -9347,7 +9347,7 @@ reconfig=true
 customization=seldom
 friendly_name=Obituary Log Length
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=master,master
 id=539
 
@@ -9363,7 +9363,7 @@ reconfig=true
 customization=seldom
 friendly_name=Allow Admin Commands
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=master,master
 id=540
 
@@ -9379,7 +9379,7 @@ reconfig=true
 customization=seldom
 friendly_name=Preen
 usage=want preen to run at all, just comment out this setting.
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=master,master
 id=541
 
@@ -9395,7 +9395,7 @@ reconfig=true
 customization=seldom
 friendly_name=Master Gcb Reconnect Timeout
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=master,master
 id=542
 
@@ -9411,7 +9411,7 @@ reconfig=true
 customization=seldom
 friendly_name=Dc Daemon List
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=master,master
 id=543
 
@@ -9427,7 +9427,7 @@ reconfig=true
 customization=seldom
 friendly_name=Master Ha List
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=master,master
 id=544
 
@@ -9443,7 +9443,7 @@ reconfig=true
 customization=seldom
 friendly_name=Daemon List
 usage=Daemons you want the master to keep running for you:
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=master,master
 id=545
 
@@ -9459,7 +9459,7 @@ reconfig=true
 customization=seldom
 friendly_name=Preen Args
 usage=one from this setting.
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=master,master
 id=546
 
@@ -9475,7 +9475,7 @@ reconfig=true
 customization=seldom
 friendly_name=Config Server File
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=master,master
 id=547
 
@@ -9491,7 +9491,7 @@ reconfig=true
 customization=seldom
 friendly_name=Config Server Port
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=master,master
 id=548
 
@@ -9507,7 +9507,7 @@ reconfig=true
 customization=seldom
 friendly_name=Master Waits For Gcb Broker
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=master,master
 id=549
 
@@ -9523,7 +9523,7 @@ reconfig=true
 customization=seldom
 friendly_name=Master Log
 usage=Log files
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=master,master
 id=550
 
@@ -9539,7 +9539,7 @@ reconfig=true
 customization=seldom
 friendly_name=Add Windows Firewall Exception
 usage=
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=master,master
 id=551
 
@@ -9555,7 +9555,7 @@ reconfig=true
 customization=seldom
 friendly_name=Schedd
 usage=Where are the binaries for these daemons?
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=master,master
 id=552
 
@@ -9571,7 +9571,7 @@ reconfig=true
 customization=seldom
 friendly_name=Startd
 usage=Where are the binaries for these daemons?
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=master,master
 id=553
 
@@ -9587,7 +9587,7 @@ reconfig=true
 customization=seldom
 friendly_name=Quill
 usage=Where is the Quill binary installed and what arguments should be passed?
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=master,master
 id=554
 
@@ -9603,7 +9603,7 @@ reconfig=true
 customization=seldom
 friendly_name=Dbmsd
 usage=Where is the DBMSd binary installed and what arguments should be passed?
-url=http://cs.wisc.edu/condor/manual/v7.1/3_3Configuration.html#SECTION
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=master,master
 id=555
 
@@ -9619,7 +9619,7 @@ reconfig=true
 customization=seldom
 friendly_name=CCB Polling Timeslice
 usage=What's the maximum amount of time the CCB should be run?
-url=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=ccb,ccb
 id=555
 
@@ -9635,7 +9635,7 @@ reconfig=true
 customization=seldom
 friendly_name=CCB Polling Interval
 usage=Try to run this often
-url=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=ccb,ccb
 id=555
 
@@ -9651,7 +9651,7 @@ reconfig=true
 customization=seldom
 friendly_name=CCB Polling Maximum Interval
 usage=Run at least this often
-url=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=ccb,ccb
 id=555
 
@@ -9667,7 +9667,7 @@ reconfig=true
 customization=seldom
 friendly_name=CCB Server Read Buffer
 usage=
-url=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=ccb,ccb
 id=555
 
@@ -9683,7 +9683,7 @@ reconfig=true
 customization=seldom
 friendly_name=CCB Server Write Buffer
 usage=
-url=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=ccb,ccb
 id=555
 
@@ -9699,7 +9699,7 @@ reconfig=true
 customization=seldom
 friendly_name=CCB Sweep Interval
 usage=
-url=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=ccb,ccb
 id=555
 
@@ -9715,7 +9715,7 @@ reconfig=true
 customization=seldom
 friendly_name=CCB Reconnect File
 usage=
-url=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=ccb,ccb
 id=555
 
@@ -9731,7 +9731,7 @@ reconfig=true
 customization=seldom
 friendly_name=Gridmap file
 usage=
-url=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=ccb,ccb
 id=555
 
@@ -9747,7 +9747,7 @@ reconfig=true
 customization=seldom
 friendly_name=GSI Daemon Trusted Certificate Authority Directory
 usage=the directory that contains the public keys and signing policies of trusted certificate authorities
-url=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=ccb,ccb
 id=555
 
@@ -9763,7 +9763,7 @@ reconfig=true
 customization=seldom
 friendly_name=Truncate Master Log on Open
 usage=true if the MasterLog should be truncated when it is opened, false otherwise
-url=http://www.cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=ccb,ccb
 id=555
 
@@ -9779,7 +9779,7 @@ reconfig=true
 customization=seldom
 friendly_name=Truncate Negotiator Log on Open
 usage=true if the NegotiatorLog should be truncated when it is opened, false otherwise
-url=http://www.cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=ccb,ccb
 id=555
 
@@ -9795,7 +9795,7 @@ reconfig=true
 customization=seldom
 friendly_name=Truncate Collector Log on Open
 usage=true if the CollectorLog should be truncated when it is opened, false otherwise
-url=http://www.cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=ccb,ccb
 id=555
 
@@ -9811,7 +9811,7 @@ reconfig=true
 customization=seldom
 friendly_name=Truncate Sched Log on Open
 usage=true if the SchedLog should be truncated when it is opened, false otherwise
-url=http://www.cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=ccb,ccb
 id=555
 
@@ -9827,7 +9827,7 @@ reconfig=true
 customization=seldom
 friendly_name=Truncate Starter Log on Open
 usage=true if the StarterLog should be truncated when it is opened, false otherwise
-url=http://www.cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=ccb,ccb
 id=555
 
@@ -9843,7 +9843,7 @@ reconfig=true
 customization=seldom
 friendly_name=Truncate Shadow Log on Open
 usage=true if the ShadowLog should be truncated when it is opened, false otherwise
-url=http://www.cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=ccb,ccb
 id=555
 
@@ -9859,7 +9859,7 @@ reconfig=true
 customization=seldom
 friendly_name=Truncate Match Log on Open
 usage=true if the MatchLog should be truncated when it is opened, false otherwise
-url=http://www.cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=ccb,ccb
 id=555
 
@@ -9875,7 +9875,7 @@ reconfig=true
 customization=seldom
 friendly_name=Lock file for locking the shadow log file
 usage=
-url=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=ccb,ccb
 id=555
 
@@ -9891,7 +9891,7 @@ reconfig=true
 customization=seldom
 friendly_name=Lock file for locking the master log file
 usage=
-url=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=ccb,ccb
 id=555
 
@@ -9908,7 +9908,7 @@ reconfig=true
 customization=seldom
 friendly_name=Debug Log Time Format
 usage=Time Format for the various debug logs
-url=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=ccb,ccb
 id=555
 
@@ -9924,7 +9924,7 @@ reconfig=true
 customization=seldom
 friendly_name=Master Debug Wait
 usage=True if the master should wait for a debugger to attach before doing anything
-url=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=ccb,ccb
 id=555
 
@@ -9940,7 +9940,7 @@ reconfig=true
 customization=seldom
 friendly_name=Shadow Debug Wait
 usage=True if the shadow should wait for a debugger to attach before doing anything
-url=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=ccb,ccb
 id=555
 
@@ -9956,7 +9956,7 @@ reconfig=true
 customization=seldom
 friendly_name=Sched Debug Wait
 usage=True if the schedd should wait for a debugger to attach before doing anything
-url=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=ccb,ccb
 id=555
 
@@ -9972,7 +9972,7 @@ reconfig=true
 customization=seldom
 friendly_name=Starter Debug Wait
 usage=True if the starter should wait for a debugger to attach before doing anything
-url=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=ccb,ccb
 id=555
 
@@ -9988,7 +9988,7 @@ reconfig=true
 customization=seldom
 friendly_name=Collector Debug Wait
 usage=True if the collector should wait for a debugger to attach before doing anything
-url=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=ccb,ccb
 id=555
 
@@ -10004,6 +10004,6 @@ reconfig=true
 customization=seldom
 friendly_name=Negotiator Debug Wait
 usage=True if the negotiator should wait for a debugger to attach before doing anything
-url=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=ccb,ccb
 id=555
