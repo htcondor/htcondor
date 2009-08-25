@@ -51,11 +51,20 @@ if (src) { \
 bucket_t** param_info;
 
 //static int num_entries;
-int first_time = 1;
 
 void
-param_info_init() {
-	first_time = 0;
+param_info_init() 
+{
+	static int done_once = 0;
+
+	// guard against multiple initializations of the default table.
+	if (done_once == 1) {
+		return;
+	}
+
+	// if I get here, I've done this task ONCE.
+	done_once = 1;
+
 	param_info_hash_create(&param_info);
 
 #include "param_info_init.c"
@@ -209,9 +218,7 @@ param_default_string(const char* param)
 	param_info_t *p;
 	char* ret = NULL;
 
-	if(first_time) {
-		param_info_init();
-	}
+	param_info_init();
 	p = param_info_hash_lookup(param_info, param);
 
 	// Don't check the type here, since this is used in param and is used
@@ -228,9 +235,7 @@ param_default_integer(const char* param, int* valid) {
 	param_info_t* p;
 	int ret = 0;
 
-	if(first_time) {
-		param_info_init();
-	}
+	param_info_init();
 
 	p = param_info_hash_lookup(param_info, param);
 
@@ -256,9 +261,7 @@ param_default_double(const char* param, int* valid) {
 	param_info_t* p;
 	double ret = 0.0;
 
-	if(first_time) {
-		param_info_init();
-	}
+	param_info_init();
 
 	p = param_info_hash_lookup(param_info, param);
 
@@ -499,6 +502,8 @@ validate_regex(char* pattern, char* subject) {
 	}
 
 	free(ovector);
+
+	pcre_free(re);
 
 	return is_valid;
 }
