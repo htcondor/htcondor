@@ -1320,6 +1320,8 @@ init_config(bool wantExtraInfo  /* = true */)
 	} else {
 		extra_info = new DummyExtraParamTable();
 	}
+
+	// Initialize the default table.
 	param_info_init();
 
 	return;
