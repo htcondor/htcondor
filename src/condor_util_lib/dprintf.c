@@ -1059,14 +1059,14 @@ _condor_save_dprintf_line( int flags, const char* fmt, va_list args )
 		return;
 	}
 		/* make a buffer to hold it and print it there */
-	buf = malloc( sizeof(char) * (len + 1) );
+	buf = (char *)malloc( sizeof(char) * (len + 1) );
 	if( ! buf ) {
 		EXCEPT( "Out of memory!" );
 	}
 	vsnprintf( buf, len, fmt, args );
 
 		/* finally, make a new node in our list and save the line */
-	new_node = malloc( sizeof(struct saved_dprintf) );
+	new_node = (struct saved_dprintf *)malloc( sizeof(struct saved_dprintf) );
 	if( saved_list == NULL ) {
 		saved_list = new_node;
 	} else {

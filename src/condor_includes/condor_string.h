@@ -25,17 +25,10 @@
 
 BEGIN_C_DECLS
 
-#if defined(__STDC__) || (__cplusplus)
 char* strupr( char *str );
 char* strlwr( char *str );
 char * getline ( FILE *fp );
 char * ltrunc ( register char *str );
-#else
-char* strupr();
-char* strlwr();
-char * getline();
-char * ltrunc ();
-#endif
 
 char * chomp( char *buffer );
 

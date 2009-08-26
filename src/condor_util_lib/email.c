@@ -77,7 +77,7 @@ email_open( const char *email_addr, const char *subject )
 	if ( subject ) {
 		size_t prolog_length = strlen(EMAIL_SUBJECT_PROLOG);
 		size_t subject_length = strlen(subject);
-		FinalSubject = malloc(prolog_length + subject_length + 1);
+		FinalSubject = (char *)malloc(prolog_length + subject_length + 1);
 		memcpy(FinalSubject, EMAIL_SUBJECT_PROLOG, prolog_length);
 		memcpy(&FinalSubject[prolog_length], subject, subject_length);
 		FinalSubject[prolog_length + subject_length] = '\0';
@@ -150,7 +150,7 @@ email_open( const char *email_addr, const char *subject )
 	}
 
 	/* construct the argument vector for the mailer */
-	final_args = malloc((8 + num_addresses) * sizeof(char*));
+	final_args = (char **)malloc((8 + num_addresses) * sizeof(char*));
 	if (final_args == NULL) {
 		EXCEPT("Out of memory");
 	}

@@ -180,9 +180,7 @@ multi_stream_file_xfer( int src_fd, int dst_fd_cnt, int *dst_fd_list,
 
 
 int
-create_socket(sa_in, listen_count)
-struct sockaddr_in *sa_in;
-int             listen_count;
+create_socket(struct sockaddr_in *sa_in, int listen_count)
 {
 	int             socket_fd;
     struct sockaddr_in *tmp;
@@ -212,9 +210,7 @@ int             listen_count;
 
 
 int
-create_socket_url(url_buf, listen_count)
-char	*url_buf;
-int		listen_count;
+create_socket_url(char *url_buf, int listen_count)
 {
 	struct sockaddr_in	sa_in;
 	int		sock_fd;
@@ -228,10 +224,7 @@ int		listen_count;
 
 
 int
-wait_for_connections(sock_fd, count, return_list)
-int		sock_fd;
-int		count;
-int		*return_list;
+wait_for_connections(int sock_fd, int count, int *return_list)
 {
 	int		i;
 	struct sockaddr from;
