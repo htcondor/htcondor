@@ -238,31 +238,18 @@ WriteUserLog::Configure( bool force )
 	}
 
 	// Make sure the global lock exists
-	int	fd = -1;
-	for ( int loop = 0;  ( (fd < 0) && (loop < 10) );  loop++ ) {
-		fd = open( m_rotation_lock_path, O_WRONLY|O_CREAT );
-		if ( fd < 0 ) {
-			dprintf( D_ALWAYS,
-					 "Warning: Failed to open event rotation lock file %s:"
-					 " %d (%s)\n",
-					 m_rotation_lock_path, errno, strerror(errno) );
-			if ( (loop/3) > 0 ) {
-				sleep( loop/3 );
-			}
-		}
-	}
-
-	if ( fd < 0 ) {
+	m_rotation_lock_fd = open( m_rotation_lock_path, O_WRONLY|O_CREAT, 0666 );
+	if ( m_rotation_lock_fd < 0 ) {
 		dprintf( D_ALWAYS,
-				 "WARNING: Failed to open event rotation lock file %s "
-				 "after 10 attempts\n",
-				 m_rotation_lock_path );
-		m_rotation_lock_fd = -1;
+				 "Warning: Failed to open event rotation lock file %s:"
+				 " %d (%s)\n",
+				 m_rotation_lock_path, errno, strerror(errno) );
 		m_rotation_lock = new FakeFileLock( );
 	}
 	else {
-		m_rotation_lock_fd = fd;
-		m_rotation_lock = new FileLock( fd, NULL, m_rotation_lock_path );
+		m_rotation_lock = new FileLock( m_rotation_lock_fd,
+										NULL,
+										m_rotation_lock_path );
 		dprintf( D_FULLDEBUG, "Created rotation lock %s @ %p\n",
 				 m_rotation_lock_path, m_rotation_lock );
 	}
