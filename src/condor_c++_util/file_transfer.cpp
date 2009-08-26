@@ -3092,7 +3092,7 @@ void FileTransfer::setSecuritySession(char const *session_id) {
 int FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* URL, const char* dest) {
 
 	// find the type of transfer
-	char* colon = strchr(URL, ':');
+	const char* colon = strchr(URL, ':');
 
 	if (!colon) {
 		e.pushf("FILETRANSFER", 1, "Specified URL does not contain a ':' (%s)", URL);
