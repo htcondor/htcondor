@@ -1220,11 +1220,11 @@ void CollectorDaemon::Config()
     if (CollectorName) free (CollectorName);
     CollectorName = param("COLLECTOR_NAME");
 
-    // handle params for Collector updates
-    if ( UpdateTimerId >= 0 ) {
-            daemonCore->Cancel_Timer(UpdateTimerId);
-            UpdateTimerId = -1;
-    }
+	// handle params for Collector updates
+	if ( UpdateTimerId >= 0 ) {
+		daemonCore->Cancel_Timer(UpdateTimerId);
+		UpdateTimerId = -1;
+	}
 
 	if( updateCollector ) {
 		delete updateCollector;
@@ -1255,10 +1255,6 @@ void CollectorDaemon::Config()
 	free( tmp );
 	
 	int i = param_integer("COLLECTOR_UPDATE_INTERVAL",900); // default 15 min
-	if( UpdateTimerId > 0 ) {
-		daemonCore->Cancel_Timer( UpdateTimerId );
-		UpdateTimerId = -1;
-	}
 	if( UpdateTimerId < 0 ) {
 		UpdateTimerId = daemonCore->
 			Register_Timer( 1, i, (TimerHandler)sendCollectorAd,
@@ -1389,6 +1385,10 @@ void CollectorDaemon::Exit()
 	// because the collector will be shutdown and the daemonCore
 	// object deleted by the time the worker cleanup is attempted.
 	forkQuery.DeleteAll( );
+	if ( UpdateTimerId >= 0 ) {
+		daemonCore->Cancel_Timer(UpdateTimerId);
+		UpdateTimerId = -1;
+	}
 	return;
 }
 
@@ -1403,6 +1403,10 @@ void CollectorDaemon::Shutdown()
 	// because the collector will be shutdown and the daemonCore
 	// object deleted by the time the worker cleanup is attempted.
 	forkQuery.DeleteAll( );
+	if ( UpdateTimerId >= 0 ) {
+		daemonCore->Cancel_Timer(UpdateTimerId);
+		UpdateTimerId = -1;
+	}
 	return;
 }
 
