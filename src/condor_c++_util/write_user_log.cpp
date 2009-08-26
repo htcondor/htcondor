@@ -24,12 +24,12 @@
 /*	Unfortunately, the trick used above for *nix does not work on
 	Windows, because we us "condor_common.h" as the pre-compiled
 	header, so it is a static entity by the time it is referenced
-	here.  Thus we bellow we try to mimic the equivalent of the
+	here.  Thus below we try to mimic the equivalent of the
 	above.  If this happens again, then maybe this hack can be 
 	extracted and generalized to look a little nicer */
-#undef open
-#define _CONDOR_ALLOW_OPEN 1
-#include "condor_macros.h"
+# undef open
+# define _CONDOR_ALLOW_OPEN 1
+# include "condor_macros.h"
 #endif
 
 #include "condor_open.h"
@@ -82,7 +82,7 @@ class UserLogFilesize_t : public UserLogInt64_t
 
 
 // ***************************
-//   WriteUserLog constructors
+//  WriteUserLog constructors
 // ***************************
 WriteUserLog::WriteUserLog( void )
 {
@@ -128,9 +128,9 @@ WriteUserLog::~WriteUserLog()
 }
 
 
-// ********************************
-//   WriteUserLog initialize() methods
-// ********************************
+// ***********************************
+//  WriteUserLog initialize() methods
+// ***********************************
 
 bool
 WriteUserLog::initialize( const char *owner, const char *domain,
@@ -191,7 +191,7 @@ WriteUserLog::internalInitialize( int c, int p, int s, const char *gjid )
 	m_proc = p;
 	m_subproc = s;
 
-		// Important for performance : note we do not re-open the global log
+		// Important for performance: We do not re-open the global log
 		// if we already have done so (i.e. if m_global_fp is not NULL).
 	if ( m_global_enable && !m_global_fp ) {
 		priv_state priv = set_condor_priv();
@@ -204,6 +204,7 @@ WriteUserLog::internalInitialize( int c, int p, int s, const char *gjid )
 		m_gjid = strdup(gjid);
 	}
 
+	m_initialized = true;
 	return true;
 }
 
@@ -268,8 +269,8 @@ WriteUserLog::Configure( bool force )
 	m_global_use_xml = param_boolean( "EVENT_LOG_USE_XML", false );
 	m_global_count_events = param_boolean( "EVENT_LOG_COUNT_EVENTS", false );
 	m_global_max_rotations = param_integer( "EVENT_LOG_MAX_ROTATIONS", 1, 0 );
-	m_global_fsync = param_boolean( "EVENT_LOG_FSYNC", false );
-	m_global_locking = param_boolean( "EVENT_LOG_LOCKING", true );
+	m_global_fsync_enable = param_boolean( "EVENT_LOG_FSYNC", false );
+	m_global_lock_enable = param_boolean( "EVENT_LOG_LOCKING", true );
 
 	m_global_max_filesize = param_integer( "EVENT_LOG_MAX_SIZE", -1 );
 	if ( m_global_max_filesize < 0 ) {
@@ -285,6 +286,7 @@ WriteUserLog::Configure( bool force )
 void
 WriteUserLog::Reset( void )
 {
+	m_initialized = false;
 	m_configured = false;
 
 	m_cluster = -1;
@@ -317,8 +319,8 @@ WriteUserLog::Reset( void )
 	m_global_count_events = false;
 	m_global_max_filesize = 1000000;
 	m_global_max_rotations = 1;
-	m_global_locking = true;
-	m_global_fsync = false;
+	m_global_lock_enable = true;
+	m_global_fsync_enable = false;
 
 	MyString	base;
 	base = "";
@@ -488,7 +490,6 @@ WriteUserLog::openFile(
 	return true;
 }
 
-
 bool
 WriteUserLog::initializeGlobalLog( const UserLogHeader &header )
 {
@@ -508,17 +509,21 @@ WriteUserLog::initializeGlobalLog( const UserLogHeader &header )
 	}
 
 	priv_state priv = set_condor_priv();
-	ret_val = openFile( m_global_path, false, m_global_locking, true,
+	ret_val = openFile( m_global_path, false, m_global_lock_enable, true,
 						m_global_lock, m_global_fp);
 
 	if ( ! ret_val ) {
 		set_priv( priv );
 		return false;
 	}
+	if (!m_global_lock->obtain(WRITE_LOCK) ) {
+		dprintf( D_ALWAYS, "Failed to grab global event log lock\n" );
+		return false;
+	}
 
 	StatWrapper		statinfo;
-	if (  ( !(statinfo.Stat(m_global_path))   )  &&
-		  ( !(statinfo.GetBuf()->st_size) )  ) {
+	if (  ( !(statinfo.Stat(m_global_path))    )  &&
+		  ( 0 == statinfo.GetBuf()->st_size )  )  {
 
 		// Generate a header event
 		WriteUserLogHeader writer( header );
@@ -547,6 +552,10 @@ WriteUserLog::initializeGlobalLog( const UserLogHeader &header )
 		// in the previous file, and we can't (other processes
 		// could write to it, too) without manually counting them
 		// all.
+	}
+
+	if (!m_global_lock->release() ) {
+		dprintf( D_ALWAYS, "Failed to release global lock\n" );
 	}
 
 	set_priv( priv );
@@ -892,7 +901,8 @@ WriteUserLog::doRotation( const char *path, FILE *&fp,
 
 
 int
-WriteUserLog::writeGlobalEvent( ULogEvent &event, FILE *fp,
+WriteUserLog::writeGlobalEvent( ULogEvent &event,
+								FILE *fp,
 								bool is_header_event )
 {
 	if ( NULL == fp ) {
@@ -1000,7 +1010,7 @@ WriteUserLog::doWriteEvent( ULogEvent *event,
 	// Now that we have flushed the stdio stream, sync to disk
 	// *before* we release our write lock!
 	// For now, for performance, do not sync the global event log.
-	if ( (   is_global_event  && m_global_fsync ) ||
+	if ( (   is_global_event  && m_global_fsync_enable ) ||
 		 ( (!is_global_event) && m_enable_fsync ) ) {
 		before = time(NULL);
 		if ( fsync( fileno( fp ) ) != 0 ) {
@@ -1085,7 +1095,7 @@ WriteUserLog::writeEvent ( ULogEvent *event,
 	}
 
 	// the the log is not initialized, don't bother --- just return OK
-	if ( !m_fp && !m_global_fp ) {
+	if ( !m_initialized ) {
 		dprintf( D_FULLDEBUG,
 				 "WriteUserLog: not initialized @ writeEvent()\n" );
 		return true;

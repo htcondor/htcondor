@@ -167,20 +167,6 @@ class WriteUserLog
     bool writeEvent (ULogEvent *event, ClassAd *jobad = NULL,
 					 bool *written = NULL );
 
-    /** Write an event to the global log file.  Caution: if the log file is
-        not initialized, then no event will be written, and this function
-        will return a successful value.  This is a specialized method
-		for designed internal use in the writing of the event log header.
-
-        @param event the event to be written
-        @param file pointer to write event to (or NULL for default global FP)
-        @param Seek to the start of the file before writing event?
-        @return 0 for failure, 1 for success
-    */
-    int writeGlobalEvent ( ULogEvent &event,
-						   FILE *fp,
-						   bool is_header_event = true );
-
 	/** APIs for testing */
 	int getGlobalSequence( void ) const { return m_global_sequence; };
 
@@ -209,6 +195,24 @@ class WriteUserLog
 										 int /*sequence*/,
 										 const MyString & /*id*/ )
 		{ return; };
+
+
+	// Methods for internal use *ONLY*:
+
+    /** Write an event to the global log file.  Caution: if the log
+        file is not initialized, then no event will be written, and
+        this function will return a successful value.  This is a
+        specialized method designed for internal use in the writing of
+        the event log header.
+
+        @param event the event to be written
+        @param file pointer to write event to (or NULL for default global FP)
+        @param Seek to the start of the file before writing event?
+        @return 0 for failure, 1 for success
+    */
+    int writeGlobalEvent ( ULogEvent &event,
+						   FILE *fp,
+						   bool is_header_event = true );
 
 
 	// Accessor methods for testing *ONLY*:
@@ -287,8 +291,8 @@ class WriteUserLog
 	/** Max size of event log        */  long		m_global_max_filesize;
 	/** Max event log rotations      */  int		m_global_max_rotations;
 	/** StatWrapper of global file   */  StatWrapper *m_global_stat;
-    /** Enable global locking?       */  bool		m_global_locking;
-	/** Enable fsync() after writes? */  bool       m_global_fsync;
+    /** Enable global locking?       */  bool		m_global_lock_enable;
+	/** Enable fsync() after writes? */  bool       m_global_fsync_enable;
 	/** State of the log file        */  WriteUserLogState *m_global_state;
 
     /** Copy of path to rotation lock*/  char     * m_rotation_lock_path;
@@ -304,6 +308,7 @@ class WriteUserLog
 	/** The GlobalJobID for this job */  char     * m_gjid;
 
 	/** Previously configured?       */  bool       m_configured;
+	/** Initialized?                 */  bool       m_initialized;
 };
 
 // For backward compatibility, define UserLog
