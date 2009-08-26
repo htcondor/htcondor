@@ -259,7 +259,9 @@ class WriteUserLog
 
 	bool checkGlobalLogRotation(void);
 	bool globalLogRotated( ReadUserLogHeader &reader );
-	bool initializeGlobalLog(const UserLogHeader &header );
+	bool openGlobalLog( bool reopen );
+	bool openGlobalLog( bool reopen, const UserLogHeader &header );
+	bool closeGlobalLog( void);
 	int doRotation( const char *path, FILE *&fp,
 					MyString &rotated, int max_rotations );
 
@@ -280,6 +282,7 @@ class WriteUserLog
     /** Enable locking?              */  bool		m_enable_locking;
 	/** Enable fsync() after writes? */  bool       m_enable_fsync;
 
+	/** Enable close after writes    */  bool       m_global_close;
 	/** Write to the global log? */		 bool		m_global_enable;
     /** Copy of path to global log   */  char     * m_global_path;
     /** The global log file          */  FILE     * m_global_fp;
