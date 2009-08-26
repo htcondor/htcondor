@@ -1082,6 +1082,13 @@ sub RunReader( $$$$$ )
 		$cmd .= join( " ", @valgrind ) . " ";
 		$cmd .= " --log-file=$vg_full ";
     }
+	elsif ( $settings{strace_reader} ) {
+		my $strace_out = sprintf( "strace-reader-%02d.out", $loop );
+		my $strace_full = "$dir/$strace_out";
+		$cmd .= join( " ", @strace ) . " ";
+		$cmd .= " -o $strace_full ";
+    }
+
     $cmd .= join(" ", @reader_args );
 	if ( exists $opts->{"stop"} ) {
 		$cmd .= " --stop";
