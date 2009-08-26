@@ -4693,42 +4693,52 @@ Power Management for more details.
 
 \label{param:HibernationPlugin}
 \item[\Macro{HIBERNATION\_PLUGIN}]
-  A string which specifies the path to the hibernation ``plug in''
-  that the \Condor{startd} should use in the detection of low power
-  states and switching to the low power states.  The default value is
-  The default value is \File{\$(LIBEXEC)/power\_state}.  A default
-  executable in that location which meets these specifications is
-  shipped with Condor. The executable will be invoked in either one of
-  two modes:
-  \begin{enumerate}
-  \item ``power\_state ad'':  In this mode, the program is expected to
-    output a ClassAd to it's standard output stream.  The
-    \Condor{startd} will use this ClassAd to determine what low power
-  \item ``power\_state set $<$mode$>$'': In this mode, the program is
-    expected switch to the specified low power mode.
-  \end{enumerate}
-  The ClassAd that the program prints to standard output in ``ad''
-  mode can specify the following attributes:
-  \begin{enumerate}
-  \item HibernationSupportedStates - {\it Required} This is a comma
-    separated list of low power modes that are available.  The
-    recognized mode strings are the same as those in the table for
-    \MacroNI{HIBERNATE}.
-  \item HibernationMethod - {\it Optional} This is a text string which
-    describes the mechanism used by the program.  The Linux program
-    will produce ``NONE'', ``/sys'', ``/proc'', or ``pm-utils''.
-  \item HibernationRawMask - {\it Optional} This is an integer which
-    represents the bit mask of the modes detected.
-  \end{enumerate}
-  In ``set'' mode, the program will be passed one of the following
-  strings representing a low power state: ``S1'', ``S2'', ``S3'',
-  ``S4'', ``S5''.
+  A string which specifies the path and executable name of 
+  the hibernation plug-in that the \Condor{startd} should use 
+  in the detection of low power states and switching to the low power states.
+  The default value is \File{\$(LIBEXEC)/power\_state}.  
+  A default executable in that location which meets these specifications is
+  shipped with Condor. 
+
+  The \Condor{startd} initially invokes this plug-in with the argument
+  \Arg{ad}, and expects the plug-in to output a ClassAd to
+  its standard output stream.
+  The \Condor{startd} will use this ClassAd to determine what low power
+  setting to use on further invocations of the plug-in.
+  To that end, the ClassAd must contain the attribute
+  \Attr{HibernationSupportedStates}, a comma separated list of
+  low power modes that are available.  
+  The recognized mode strings are the same as those in the table for
+  the configuration variable \MacroNI{HIBERNATE}.
+  The optional attribute \Attr{HibernationMethod} specifies a string 
+  which describes the mechanism used by the plug-in.
+  The default Linux plug-in shipped with Condor will produce 
+  one of the strings
+  \verb@NONE@, \verb@/sys@, \verb@/proc@, or \verb@pm-utils@.
+  The optional attribute \Attr{HibernationRawMask}
+  is an integer which represents the bit mask of the modes detected.
+
+\label{param:HibernationPluginArgs}
+\item[\Macro{HIBERNATION\_PLUGIN\_ARGS}]
+  Command line arguments appended to the command that invokes the plug-in.
+  Used only when the \Condor{startd} is \emph{not} initially invoking the
+  plug-in to determine the low power states supported.
+
+\label{param:HibernationOverrideWOL}
+\item[\Macro{HIBERNATION\_OVERRIDE\_WOL}]
+  A boolean value that defaults to \Expr{False}.
+  When \Expr{True}, it causes the \Condor{startd} daemon's detection of
+  the whether or not the network interface handles WOL packets to be ignored.
+  When \Expr{False}, hibernation is disabled if the network interface
+  does not use WOL packets to wake from hibernation.
+  Therefore, when \Expr{True} hibernation can be enabled despite
+  the fact that WOL packets are not used to wake machines.
 
 \label{param:LinuxHibernationMethod}
 \item[\Macro{LINUX\_HIBERNATION\_METHOD}]
   A string that can be used to override the default search used by
   Condor on Linux platforms to detect the hibernation method to use.
-  This is used by the default hibernation plugin executable that is
+  This is used by the default hibernation plug-in executable that is
   shipped with Condor.  The default behavior orders its search with:
   \begin{enumerate}
   \item Detect and use the \Prog{pm-utils} command line tools.

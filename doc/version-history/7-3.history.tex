@@ -229,15 +229,17 @@ See \ref{param:Unhibernate} for the complete description.
 
 %gittrac #383
 \item The new configuration variable \Macro{HIBERNATION\_PLUGIN} specifies the
-  path to the plug-in which the \Condor{startd} will use to detect
-  the low power state capabilities of a machine, and to switch the
+  path to the plug-in which the \Condor{startd} uses both to detect
+  the low power state capabilities of a machine and to switch the
   machine to a low power state.
+  See \ref{param:HibernationPlugin} for the complete description.
 
 %gittrac #383
 \item The new configuration variable \Macro{HIBERNATION\_PLUGIN\_ARGS}
-  specifies extra optional command line parameters which the
+  specifies additional command line arguments which the
   \Condor{startd} will pass to the plug-in when invoking it to
   switch the machine to a low power state.
+  See \ref{param:HibernationPluginArgs} for the complete description.
 
 %gittrac #383
 \item The new configuration variable \Macro{HIBERNATION\_OVERRIDE\_WOL} can be
@@ -245,6 +247,7 @@ See \ref{param:Unhibernate} for the complete description.
   capabilities of the machine's network interface, and to switch to a
   low power state even if the interface does not support WOL, or if
   WOL is disabled on it.
+  See \ref{param:HibernationOverrideWOL} for the complete description.
 
 \item The new configuration variable \Macro{DAGMAN\_DEFAULT\_NODE\_LOG} sets
 the default log file name for the new \Condor{dagman}
