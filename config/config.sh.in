@@ -44,6 +44,10 @@ EXT_CURL_VERSION=@ext_curl_version@
 
 EXT_HADOOP_VERSION=@ext_hadoop_version@
 
+EXT_LIBXML2_VERSION=@ext_libxml2_version@
+
+EXT_LIBVIRT_VERSION=@ext_libvirt_version@
+
 WANT_EXT_LINUXLIBCHEADERS=@want_ext_linuxlibcheaders@
 EXT_LINUXLIBCHEADERS_VERSION=@ext_linuxlibcheaders_version@
 

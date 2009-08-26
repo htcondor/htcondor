@@ -2993,6 +2993,14 @@ CHECK_EXTERNAL([curl],[7.19.6],[soft])
 AS_IF([test "x$enable_hdfs" = xyes], 
   [CHECK_EXTERNAL([hadoop],[0.20.0-p2],[soft])])
 
+if test "x$_cv_opsys" = "xLINUX" ; then
+  CHECK_EXTERNAL([libxml2],[2.7.3],[soft])
+fi
+
+if test "x$_cv_opsys" = "xLINUX" ; then
+  CHECK_EXTERNAL([libvirt],[0.6.2],[soft])
+fi
+
 # The test for gsoap needs to happen after the openssl check, so
 # openssl libs, if found, will be in LIBS. Also, if we do not have
 # openssl, then we need to link with

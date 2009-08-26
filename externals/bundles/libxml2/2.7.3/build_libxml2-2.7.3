@@ -1,0 +1,26 @@
+#! /bin/sh
+
+. $EXTERNALS_CONFIG
+
+cd $PACKAGE_NAME
+
+./configure --prefix=$PACKAGE_INSTALL_DIR --disable-shared
+if [ $? -ne 0 ]
+then
+	echo "configure failed"
+	exit 1
+fi
+
+make
+if [ $? -ne 0 ]
+then
+	echo "make failed"
+	exit 1
+fi
+
+make install
+if [ $? -ne 0 ]
+then
+	echo "make failed"
+	exit 1
+fi
