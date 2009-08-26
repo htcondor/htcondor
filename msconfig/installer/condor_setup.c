@@ -314,7 +314,7 @@ set_daemonlist() {
 	char buf[1024];
 
 	if ( Opt.newpool && Opt.submitjobs && Opt.runjobs ) {
-		snprintf(buf, 1024, "MASTER %s %s %s", 
+		snprintf(buf, 1024, "MASTER %s %s %s %s", 
 				(Opt.newpool == 'Y') ? "COLLECTOR NEGOTIATOR" : "",
 				(Opt.submitjobs == 'Y') ? "SCHEDD" : "",
 				(Opt.runjobs == 'A' ||

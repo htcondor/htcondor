@@ -2285,6 +2285,7 @@ if test $os = "Linux"; then
   		[ac_pthreads=yes
    		AC_DEFINE([HAVE_PTHREADS],[1],[Define if pthreads are available])
 		AC_DEFINE([HAS_PTHREADS],[1],[Define if pthreads are available for DRMAA])
+		AC_SEARCH_LIBS(pthread_sigmask,pthread,AC_DEFINE([HAVE_PTHREAD_SIGMASK],[1],[Define to 1 of you have the pthread_sigmask function]))
 		],
   		[ac_pthreads=no])
 fi

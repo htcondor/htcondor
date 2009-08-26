@@ -4,7 +4,12 @@
 
 cd $PACKAGE_NAME
 
-LIBS=-ldl ./configure --prefix=$PACKAGE_INSTALL_DIR --disable-shared --with-ssl=$EXTERNALS_INSTALL_DIR/$EXT_OPENSSL_VERSION --with-zlib=$EXTERNALS_INSTALL_DIR/$EXT_ZLIB_DIR --disable-ipv6
+if [ `uname` = SunOS ]
+then
+LIBS=-ldl ./configure --prefix=$PACKAGE_INSTALL_DIR --disable-shared --without-ssl --with-zlib=$EXTERNALS_INSTALL_DIR/$EXT_ZLIB_DIR --disable-ipv6
+else
+./configure --prefix=$PACKAGE_INSTALL_DIR --disable-shared --without-ssl --with-zlib=$EXTERNALS_INSTALL_DIR/$EXT_ZLIB_DIR --disable-ipv6
+fi
 
 if [ $? -ne 0 ]
 then
