@@ -783,7 +783,7 @@ x509_send_delegation( const char *source_file,
 		goto cleanup;
 	}
 
-	if ( recv_data_func( recv_data_ptr, &buffer, &buffer_len ) != 0 ) {
+	if ( recv_data_func( recv_data_ptr, (void **)&buffer, (size_t *)&buffer_len ) != 0 ) {
 		rc = -1;
 		error_line = __LINE__;
 		goto cleanup;
@@ -1000,7 +1000,7 @@ x509_receive_delegation( const char *destination_file,
 	free( buffer );
 	buffer = NULL;
 
-	if ( recv_data_func( recv_data_ptr, &buffer, &buffer_len ) != 0 ) {
+	if ( recv_data_func( recv_data_ptr, (void **)&buffer, (size_t*)&buffer_len ) != 0 ) {
 		rc = -1;
 		error_line = __LINE__;
 		goto cleanup;

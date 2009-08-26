@@ -1,6 +1,8 @@
 all_target( util_lib.a stub_gen )
 
 CFLAGS = $(STD_C_FLAGS)
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
+
 
 #if MALLOC_DEBUG
 MALLOC_OBJ = malloc.o

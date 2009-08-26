@@ -31,8 +31,7 @@
 **  place.
 */
 char *
-ltrunc(str)
-register char *str;
+ltrunc(char *str)
 {
 	register char * ptr;
 
