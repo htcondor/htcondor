@@ -1376,11 +1376,29 @@ void CollectorDaemon::Config()
 
 void CollectorDaemon::Exit()
 {
+	// Clean up any workers that have exited but haven't been reaped yet.
+	// This can occur if the collector receives a query followed
+	// immediately by a shutdown command.  The worker will exit but
+	// not be reaped because the SIGTERM from the shutdown command will
+	// be processed before the SIGCHLD from the worker process exit.
+	// Allowing the stack to clean up worker processes is problematic
+	// because the collector will be shutdown and the daemonCore
+	// object deleted by the time the worker cleanup is attempted.
+	forkQuery.DeleteAll( );
 	return;
 }
 
 void CollectorDaemon::Shutdown()
 {
+	// Clean up any workers that have exited but haven't been reaped yet.
+	// This can occur if the collector receives a query followed
+	// immediately by a shutdown command.  The worker will exit but
+	// not be reaped because the SIGTERM from the shutdown command will
+	// be processed before the SIGCHLD from the worker process exit.
+	// Allowing the stack to clean up worker processes is problematic
+	// because the collector will be shutdown and the daemonCore
+	// object deleted by the time the worker cleanup is attempted.
+	forkQuery.DeleteAll( );
 	return;
 }
 
