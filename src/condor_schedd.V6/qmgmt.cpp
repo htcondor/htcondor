@@ -927,7 +927,7 @@ DestroyJobQueue( void )
 	// Allowing the stack to clean up child processes is problematic
 	// because the schedd will be shutdown and the daemonCore
 	// object deleted by the time the child cleanup is attempted.
-	forker.DeleteAll( );
+	schedd_forker.DeleteAll( );
 
 	if (JobQueueDirty) {
 			// We can't destroy it until it's clean.
