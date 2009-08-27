@@ -4,11 +4,12 @@
 
 #include "condor_common.h"
 
-#define TYPE_STRING				0
-#define TYPE_INT				1
-#define TYPE_BOOL				2
-#define TYPE_DOUBLE				3
-
+typedef enum param_info_t_type_e {
+	TYPE_STRING = 0,
+	TYPE_INT = 1,
+	TYPE_BOOL = 2,
+	TYPE_DOUBLE = 3
+} param_info_t_type_t;
 
 typedef struct param_info_t_s {
 
@@ -37,7 +38,7 @@ typedef struct param_info_t_s {
     char* 	version;
     int 	state;
     char*   friendly_name;
-    int  	type;
+    param_info_t_type_t  	type;
     int		id;
     char*   usage;
     char*   url;
