@@ -4,12 +4,6 @@
 
 #include "condor_common.h"
 
-#define TYPE_STRING				0
-#define TYPE_INT				1
-#define TYPE_BOOL				2
-#define TYPE_DOUBLE				3
-
-
 typedef struct param_info_t_s {
 
 	char*	name;
