@@ -256,11 +256,7 @@ EXPAT_FLAGS = -I$(EXPAT_INC)
 EXPAT_LIB = $(EXPAT_DIR)/lib/libexpat.a
 #endif /* expat */
 VOMS_FLAGS = $(EXPAT_FLAGS) -I$(VOMS_INC)
-/* The only pthread calls here are pthread_self(), pthread_mutex_lock,
- * and pthread_mutex_unlock(). This '-lpthread' should be removed
- * once the threading support in Condor is merged in.
- */
-VOMS_LIB = $(VOMS_DIR)/lib/libvomsapi_nog.a $(EXPAT_LIB) -lpthread
+VOMS_LIB = $(VOMS_DIR)/lib/libvomsapi_nog.a $(EXPAT_LIB)
 #endif /* externals */
 #endif /* voms */
 
