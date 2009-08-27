@@ -29,6 +29,11 @@ typedef struct JNIEnv_ JNIEnv;
 
 #define SUBSYSTEM_STRING strdup("hdfs")
 
+template <class Key, class Value> class HashTable;
+typedef HashTable <MyString, hdfsFS> ConnectionHash;
+
+//int my_hash_func(const MyString &key);
+
 class HdfsIO {
 
 public:
@@ -51,6 +56,8 @@ private:
         MyString m_nameServer;
 
         static int refCount;
+
+        ConnectionHash *connection_hash;
 
         //initialize and 
         int validate(const char * /*url*/, const char * /* url2 */, CondorError &error);

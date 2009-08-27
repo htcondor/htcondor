@@ -18,10 +18,11 @@
  *
  ***************************************************************/
 
-#include "condor_hdfs_io.h"
+#include "hdfs_plugin.h"
 #include "condor_common.h"
 #include "condor_config.h"
 #include "directory.h"
+#include "HashTable.h"
 
 #include "hdfs.h"
 #include "hdfsJniHelper.h"
@@ -33,11 +34,17 @@
 
 hdfsFS HdfsIO::HDFS = NULL;
 hdfsFS HdfsIO::LFS = NULL;
+
 int HdfsIO::refCount = 0;
+
+unsigned int my_hash_func(const MyString &key) {
+        return key.Hash();
+}
 
 HdfsIO::HdfsIO() {
         m_nameServer = NULL;
         refCount++;
+        connection_hash = new ConnectionHash(10, my_hash_func); 
 }
 
 HdfsIO::~HdfsIO() {
@@ -49,6 +56,8 @@ HdfsIO::~HdfsIO() {
             HDFS = NULL;
             LFS = NULL;
         }
+
+        delete connection_hash;
 
         //We can make destroy JVM call here in case we are sure that
         //all JVM operations are made through the JNIEnv object created
@@ -92,18 +101,35 @@ int HdfsIO::put_file(const char *src_url, const char *hdfs_url, CondorError &err
 }
 
 int HdfsIO::validate(const char *url1, const char *url2, CondorError &error) {
-        if (!HDFS) {
-                //ip:port of name-server
-                char *nameS = param("HDFS_NAMENODE");
-                if (nameS == NULL) {
-                        error.push(SUBSYSTEM_STRING, 1,
-                            strdup("Missing HDFS_NAMENODE in config file"));
-                        return 1;
-                }
-                StringList sl(nameS, ":");
-                free(nameS);
+        if (!url1 || !url2) {
+                error.push(SUBSYSTEM_STRING, 1, 
+                     strdup("Requested src and/or dest URL was NULL"));
+                return 1;
+        }
 
-                //CLASSPATH variable is required. 
+        StringList host_in_url(url1, "/");
+        host_in_url.rewind();
+        char *protocol = host_in_url.next();
+        if (protocol == NULL && strcmp(protocol, "hdfs:") != 0) {
+                error.push(SUBSYSTEM_STRING, 1, 
+                                strdup("Invalid Protocol in source url"));
+                return 1;
+        }
+        char *nameS = host_in_url.next();
+        if (nameS == NULL) {
+                error.push(SUBSYSTEM_STRING, 1,
+                                strdup("Invalid source URL"));
+                return 1;
+        }
+
+        //if there exist already a connection for given server
+        MyString key(nameS);
+        connection_hash->lookup(key, HDFS);
+        if (!HDFS) {
+                //first parse the url for getting a host:port string
+               StringList sl(nameS, ":");
+
+                //CLASSPATH variable is required.
                 char *home = param("HDFS_HOME");
                 if (home == NULL) {
                         error.push(SUBSYSTEM_STRING, 1, 
@@ -129,6 +155,8 @@ int HdfsIO::validate(const char *url1, const char *url2, CondorError &error) {
                             strdup("Failed to create remote file system object"));
                         return 1;
                 }            
+
+                connection_hash->insert(key, HDFS);
         }
 
         if (!LFS) {
@@ -138,12 +166,6 @@ int HdfsIO::validate(const char *url1, const char *url2, CondorError &error) {
                              strdup("Failed to create a local file system object"));
                         return 1;
                 }
-        }
-
-        if (!url1 || !url2) {
-                error.push(SUBSYSTEM_STRING, 1, 
-                     strdup("Requested src and/or dest URL was NULL"));
-                return 1;
         }
 
         return 0;
