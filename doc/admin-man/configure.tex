@@ -4718,6 +4718,11 @@ Power Management for more details.
   The optional attribute \Attr{HibernationRawMask}
   is an integer which represents the bit mask of the modes detected.
 
+  Subsequent \Condor{startd} invocations of the plug-in have command
+  line arguments \OptArg{set}{<power-mode>}, where \Arg{<power-mode>}
+  is one of the supported states as given in the attribute
+  \Attr{HibernationSupportedStates}.
+
 \label{param:HibernationPluginArgs}
 \item[\Macro{HIBERNATION\_PLUGIN\_ARGS}]
   Command line arguments appended to the command that invokes the plug-in.
