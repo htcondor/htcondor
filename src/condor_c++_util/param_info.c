@@ -7,11 +7,6 @@
 #  include "pcre.h"
 #endif
 
-#define TYPE_STRING				0
-#define TYPE_INT				1
-#define TYPE_BOOL				2
-#define TYPE_DOUBLE				3
-
 // parse the range and set range_start and range_end to pointers to strings
 // containing either the upper/lower bound of the range if valid or an empty
 // string if not valid
