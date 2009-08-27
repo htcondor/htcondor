@@ -1647,6 +1647,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 			fullname.sprintf("%s%c%s",TmpSpoolSpace,DIR_DELIM_CHAR,filename.Value());
 		}
 
+		dprintf (D_ALWAYS, "PDGA1: %i, pgaa: %i, Igaa: %i\n", PeerDoesGoAhead, peer_goes_ahead_always, I_go_ahead_always);
 		if( PeerDoesGoAhead ) {
 			if( !s->end_of_message() ) {
 				dprintf(D_FULLDEBUG,"DoDownload: failed on eom before GoAhead: exiting at %d\n",__LINE__);
@@ -1696,9 +1697,11 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 			// side must then retreive the URL using one of the configured
 			// filetransfer plugins.
 
+			dprintf( D_ALWAYS, "ZKM: got command 5\n");
+
 			MyString URL;
 			// receive the URL from the wire
-			if (!s->code(URL)) {
+			if (!s->code(URL) || !s->end_of_message() ) {
 				dprintf(D_FULLDEBUG,"DoDownload: exiting at %d\n",__LINE__);
 				return_and_resetpriv( -1 );
 			}
@@ -2348,6 +2351,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 		}
 		free( basefilename );						//b/c of de-consting
 
+		dprintf (D_ALWAYS, "PDGA2: %i, pgaa: %i, Igaa: %i\n", PeerDoesGoAhead, peer_goes_ahead_always, I_go_ahead_always);
 		if( PeerDoesGoAhead ) {
 			if( !s->end_of_message() ) {
 				dprintf(D_FULLDEBUG, "DoUpload: failed on eom before GoAhead; exiting at %d\n",__LINE__);
@@ -2385,9 +2389,16 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 				rc = -1;
 			}
 		} else if (file_command == 5) {
-			rc = s->code((unsigned char*)fullname.Value());
+			if(!s->code((unsigned char*)fullname.Value())) {
+				rc = -1;
+			} else if (!s->end_of_message()) {
+				rc = -1;
+			} else {
+				rc = 0;
+			}
 
-			// we don't know how many bytes 
+			// we don't know how many bytes it was, so don't add any.
+
 		} else if ( TransferFilePermissions ) {
 			rc = s->put_file_with_permissions( &bytes, fullname.Value() );
 		} else {
@@ -3151,6 +3162,8 @@ int FileTransfer::InitializePlugins(CondorError &e) {
 			// we support at least one plugin type
 			I_support_filetransfer_plugins = true;
 			InsertPluginMappings(methods, p);
+		} else {
+			dprintf(D_ALWAYS, "ZKM: empty method list returned!\n");
 		}
 	}
 
@@ -3207,11 +3220,15 @@ FileTransfer::DeterminePluginMethods( CondorError &e, const char* path )
 		// free the memory, return a MyString
 		MyString m = methods;
 		free(methods);
+        delete( ad );
 		return m;
 	}
 
 	// TODO: push error onto CondorError e
+	dprintf(D_ALWAYS, "\"%s -classad\" does not contain SupportedMethods, ignoring\n", path );
 	e.pushf("FILETRANSFER", 1, "\"%s -classad\" does not support any methods, ignoring\n", path );
+
+	delete( ad );
 	return "";
 }
 
@@ -3219,12 +3236,15 @@ FileTransfer::DeterminePluginMethods( CondorError &e, const char* path )
 void
 FileTransfer::InsertPluginMappings(MyString methods, MyString p)
 {
+	dprintf(D_ALWAYS, "ZKM: FILETRANSFER: %s handled by %s\n", methods.Value(), p.Value());
+
 	StringList method_list(methods.Value());
 
 	char* m;
 
 	method_list.rewind();
 	while((m = method_list.next())) {
+		dprintf(D_ALWAYS, "ZKM: FILETRANSFER: %s handled by %s\n", m, p.Value());
 		plugin_table->insert(m, p);
 	}
 }
