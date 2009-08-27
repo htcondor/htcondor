@@ -129,10 +129,6 @@
 			>
 		</File>
 		<File
-			RelativePath="$(OutDir)\classifiedjobs.obj"
-			>
-		</File>
-		<File
 			RelativePath="$(OutDir)\condor_attributes.obj"
 			>
 		</File>

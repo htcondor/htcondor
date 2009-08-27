@@ -123,10 +123,6 @@
 			>
 		</File>
 		<File
-			RelativePath="..\src\classad.old\classifiedjobs.cpp"
-			>
-		</File>
-		<File
 			RelativePath="..\src\condor_includes\condor_ast.h"
 			>
 		</File>
@@ -156,10 +152,6 @@
 		</File>
 		<File
 			RelativePath="..\src\condor_includes\condor_classad_util.h"
-			>
-		</File>
-		<File
-			RelativePath="..\src\condor_includes\condor_classifiedjobs.h"
 			>
 		</File>
 		<File
