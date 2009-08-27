@@ -123,7 +123,6 @@ CLASSAD_OBJ = \
 	../classad.old/attrlist.o \
 	../classad.old/buildtable.o \
 	../classad.old/classad.o \
-	../classad.old/classifiedjobs.o \
 	../classad.old/environment.o \
 	../classad.old/evaluateOperators.o \
 	../classad.old/operators.o \
