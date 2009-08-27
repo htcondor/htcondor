@@ -21,7 +21,7 @@ VM_GAHP_SERVER_OBJ = vmgahp_main.o pbuffer.o vm_request.o vm_type.o vmgahp.o vmg
 public_c_plus_target($(VM_GAHP_SERVER),sbin,$(VM_GAHP_SERVER_OBJ),$(LIB))
 public_copy_target(condor_vm_xen.sh,sbin,condor_vm_xen.sh,EXECUTABLE_MODE)
 public_copy_target(condor_vm_vmware.pl,sbin,condor_vm_vmware.pl,EXECUTABLE_MODE)
-public_copy_target(libvirt_simple_script.awk,sbin,libvirt_simple_script.awk,EXECUTABLE_MODE)
+public_copy_target(libvirt_simple_script.awk,libexec,libvirt_simple_script.awk,EXECUTABLE_MODE)
 
 html:
 testbin:: all
