@@ -279,4 +279,17 @@ CondorThreads_gettid(void)
 {
 	return -1;
 }
+
+#if defined(HAVE_PTHREAD_SIGMASK) && defined(sigprocmask)
+	/* Deal with the fact that dprintf.o may be calling pthread_sigmask,
+	 * and yet we don't want to require anybody using libcondorapi.a to 
+	 * have to drag in all of pthreads. 
+	 */
+#undef sigprocmask
+int pthread_sigmask(int how, const sigset_t *newmask, sigset_t *oldmask)
+{
+	return sigprocmask(how,newmask,oldmask);
+}
+#endif
+
 END_C_DECLS
