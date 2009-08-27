@@ -2249,9 +2249,9 @@ AS_IF([test "x$enable_kbdd" = xyes],
 
 AC_ARG_ENABLE([hdfs],
   AC_HELP_STRING([--enable-hdfs],
-    [enable hadoop filesystem functionality (default: no)]),
+    [enable hadoop filesystem functionality (default: yes)]),
   [],
-  [enable_hdfs=no])
+  [enable_hdfs=yes])
 AS_IF([test "x$enable_hdfs" = xyes],
   [AC_DEFINE([WANT_HDFS], [1], [Define if enabling HDFS])])
 
@@ -2990,8 +2990,9 @@ CHECK_EXTERNAL([curl],[7.19.6],[soft])
 
 #Look for hadoop jars, required by HDFS daemon as well by hdfs file plugin
 # Only build hadoop external if hdfs is enabled
-AS_IF([test "x$enable_hdfs" = xyes], 
-  CHECK_EXTERNAL([hadoop],[0.20.0-p2],[soft]))
+if test "x$enable_hdfs" = xyes ; then
+  CHECK_EXTERNAL([hadoop],[0.20.0-p2],[soft])
+fi
 
 # The test for gsoap needs to happen after the openssl check, so
 # openssl libs, if found, will be in LIBS. Also, if we do not have
