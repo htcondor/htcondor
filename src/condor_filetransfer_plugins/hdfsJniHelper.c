@@ -417,7 +417,7 @@ JNIEnv* getJNIEnv(void)
 			UNLOCK_JVM_MUTEX();
 			return NULL;
 		} 
-		*hadoopClassPathVMArg = "-Djava.class.path=";
+		hadoopClassPathVMArg = "-Djava.class.path=";
 		optHadoopClassPathLen = strlen(hadoopClassPath) + 
 			strlen(hadoopClassPathVMArg) + 1;
 		optHadoopClassPath = malloc(sizeof(char)*optHadoopClassPathLen);
