@@ -253,6 +253,12 @@ do_process_request(const ClassAd *inputAd, ClassAd *resultAd, const int req_numb
 	char *auth_commands = param("SOAPSHELL_AUTHORIZED_COMMANDS");
 	StringList auth_list(auth_commands,",");
 	if ( auth_commands ) free(auth_commands);
+		// Each command needs four tuples; anything else is a misconfiguration
+	if ( auth_list.number() % 4 != 0 ) {
+		handle_process_request_error("Service is misconfigured: SOAPSHELL_AUTHORIZED_COMMANDS malformed",req_number,resultAd);
+		return;
+	}
+
 	if ( auth_list.contains_anycase(UnmappedJobName.Value()) == TRUE ) {
 		JobName = auth_list.next();
 	}
