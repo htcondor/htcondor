@@ -33,6 +33,73 @@
 
 //-------------------------------------------------------------
 
+	/* Here we have base64 coding routines based on gSOAP, as the one
+	 * currently in the c++_util_lib based on OpenSSL are very flakey.
+	 * Once they are fixed/improved, these should go away.
+	 */
+
+// For base64 coding, we use functions in the gSOAP support library
+#include "stdsoap2.h"
+
+// Caller needs to free the returned pointer
+char* condor_base64_encode(const unsigned char *input, int length)
+{
+	char *buff = NULL;
+
+	if ( length < 1 ) {
+		buff = (char *)malloc(1);
+		buff[0] = '\0';
+		return buff;
+	}
+
+	int buff_len = (length+2)/3*4+1;
+	buff = (char *)malloc(buff_len);
+	ASSERT(buff);
+	memset(buff,0,buff_len);
+
+	struct soap soap;
+	soap_init(&soap);
+
+	soap_s2base64(&soap,input,buff,length);
+
+	soap_destroy(&soap);
+	soap_end(&soap);
+	soap_done(&soap);
+
+	return buff;
+}
+
+// Caller needs to free *output if non-NULL
+void condor_base64_decode(const char *input,unsigned char **output, int *output_length)
+{
+	ASSERT( input );
+	ASSERT( output );
+	ASSERT( output_length );
+	int input_length = strlen(input);
+
+		// safe to assume output length is <= input_length
+	*output = (unsigned char *)malloc(input_length);
+	ASSERT( *output );
+	memset(*output, 0, input_length);
+
+	struct soap soap;
+	soap_init(&soap);
+
+	soap_base642s(&soap,input,(char*)(*output),input_length,output_length);
+
+	soap_destroy(&soap);
+	soap_end(&soap);
+	soap_done(&soap);
+
+	if( *output_length < 0 ) {
+		free( *output );
+		*output = NULL;
+	}
+}
+
+
+//-------------------------------------------------------------
+
 // about self
 DECL_SUBSYSTEM("SOAPSHELL", SUBSYSTEM_TYPE_DAEMON );	// used by Daemon Core
 
