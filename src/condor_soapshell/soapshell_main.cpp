@@ -118,24 +118,30 @@ stash_output_file(ClassAd* resultAd, const char* filename, const char* attrname)
     fseek (fp, 0 , SEEK_END);
     long file_size = ftell (fp);
     rewind (fp);
-    
-    /* allocate memory to contain the whole file */
-    char *buffer = (char*) malloc (file_size);
-	ASSERT(buffer);
-    
-    /* read the file into the buffer. */
-    fread(buffer,1,file_size,fp);    
+   
+	char *buffer = NULL;
+	if ( file_size > 0 ) {
+		/* allocate memory to contain the whole file */
+		buffer = (char*) malloc (file_size);
+		ASSERT(buffer);
+		
+		/* read the file into the buffer. */
+		fread(buffer,1,file_size,fp);    
 
-	/* Encode - note caller needs to free the returned pointer */
-	char* encoded_data = condor_base64_encode((const unsigned char*)buffer, file_size);
+		/* Encode - note caller needs to free the returned pointer */
+		char* encoded_data = condor_base64_encode((const unsigned char*)buffer, file_size);
 
-	/* Shove into ad */
-	if ( encoded_data ) {
-		resultAd->Assign(attrname,encoded_data);
-		free(encoded_data);
+		/* Shove into ad */
+		if ( encoded_data ) {
+			resultAd->Assign(attrname,encoded_data);
+			free(encoded_data);
+		}
+	} else {
+		resultAd->Assign(attrname,"");
 	}
 
-	free(buffer);
+	if (buffer) free(buffer);
+	fclose(fp);
 
 	return true;
 }
@@ -519,6 +525,7 @@ int main_init(int  argc , char *  argv  [])
             fprintf( stderr, "ERROR:  Out of memory\n" );
             DC_Exit( 1 );
         }
+		fclose(fp);
 		if ( ErrorFlag || EmptyFlag ) {
 			fprintf( stderr, "ERROR - file %s does not contain a parseable ClassAd\n",
 					 testfile);
