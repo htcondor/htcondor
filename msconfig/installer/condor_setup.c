@@ -152,6 +152,7 @@ int WINAPI WinMain( HINSTANCE hInstance,
   set_mailoptions ();
   set_hostpermissions ();
   set_vmuniverse();
+  set_hdfs();
   
   /* the following options go in the vmgahp config file */
   if ( 'Y' == Opt.enablevmuniverse ) {
@@ -313,7 +314,7 @@ set_daemonlist() {
 	char buf[1024];
 
 	if ( Opt.newpool && Opt.submitjobs && Opt.runjobs ) {
-		snprintf(buf, 1024, "MASTER %s %s %s", 
+		snprintf(buf, 1024, "MASTER %s %s %s %s", 
 				(Opt.newpool == 'Y') ? "COLLECTOR NEGOTIATOR" : "",
 				(Opt.submitjobs == 'Y') ? "SCHEDD" : "",
 				(Opt.runjobs == 'A' ||
@@ -358,7 +359,7 @@ set_vmuniverse() {
 }
 
 void set_hdfs() {
-	char *temp;
+	char buf[MAX_PATH];
 	if ( Opt.namedata ) {
 		set_option("HDFS_SERVICES", Opt.namedata);
 		set_option("HDFS_NAMENODE_DIR", "$(RELEASE_DIR)/HDFS/hadoop_name");
@@ -367,23 +368,13 @@ void set_hdfs() {
 	}
 
 	if ( Opt.namenode && Opt.nameport ) {
-		temp = malloc(sizeof(char)*MAX_PATH);
-		ZeroMemory(temp, ARRAYSIZE(temp));
-		strcat_s(temp, MAX_PATH, Opt.namenode);
-		strcat_s(temp, MAX_PATH, ":");
-		strcat_s(temp, MAX_PATH, Opt.nameport);
-		set_option("HDFS_NAMENODE", temp);
-		free(temp);
+		snprintf(buf, MAX_PATH, "%s%s%s", Opt.namenode, ":", Opt.nameport);
+		set_option("HDFS_NAMENODE", buf);
 	}
 
 	if ( Opt.namenode && Opt.namewebport ) {
-		temp = malloc(sizeof(char)*MAX_PATH);
-		ZeroMemory(temp, ARRAYSIZE(temp));
-		strcat_s(temp, MAX_PATH, Opt.namenode);
-		strcat_s(temp, MAX_PATH, ":");
-		strcat_s(temp, MAX_PATH, Opt.namewebport);
-		set_option("HDFS_NAMENODE", temp);
-		free(temp);
+		snprintf(buf, MAX_PATH, "%s%s%s", Opt.namenode, ":", Opt.namewebport);
+		set_option("HDFS_NAMENODE_WEB", buf);
 	}
 }
 
