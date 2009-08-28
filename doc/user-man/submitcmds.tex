@@ -764,9 +764,9 @@ page~\pageref{sec:file-transfer}.
 
 \index{submit commands!hold}
 \item[hold = $<$True \Bar\ False$>$] If \SubmitCmd{hold} is set to
-\Expr{True}, then the job will be submitted in the hold state.  Jobs in
-the hold state will not run until released by \Condor{release}.
-Defaults to false.
+\Expr{True}, then the submitted job will be placed into the Hold state.
+Jobs in the Hold state will not run until released by \Condor{release}.
+Defaults to \Expr{False}.
 
 %%%%%%%%%%%%%%%%%%%
 %% leave_in_queue
@@ -789,8 +789,10 @@ become \Expr{False}.
 %%%%%%%%%%%%%%%%%%%
 
 \index{submit commands!on\_exit\_hold}
-\item[on\_exit\_hold = $<$ClassAd Boolean Expression$>$] This expression
-is checked when the job exits and if true, places the job on hold. If false
+\item[on\_exit\_hold = $<$ClassAd Boolean Expression$>$] 
+The ClassAd expression is checked when the job exits, and if \Expr{True},
+places the job into the Hold state.
+If \Expr{False} (the default value when not defined),
 then nothing happens and the \AdAttr{on\_exit\_remove} expression is
 checked to determine if that needs to be applied.
 
@@ -800,9 +802,11 @@ If the job exits after less than an hour, the job should be placed on
 hold and an e-mail notification sent,
 instead of being allowed to leave the queue.
 
+\footnotesize
 \begin{verbatim}
-        on_exit_hold = (CurrentTime - JobStartDate) < (60 * $(MINUTE))
+  on_exit_hold = (CurrentTime - JobStartDate) < (60 * $(MINUTE))
 \end{verbatim}
+\normalsize
 
 This expression places the job on hold if it exits for any reason
 before running for an hour. An e-mail will be sent to the user explaining
@@ -813,8 +817,7 @@ precedence over \AdAttr{on\_exit\_*} expressions,
 and \AdAttr{*\_hold} expressions take
 precedence over a \AdAttr{*\_remove} expressions.
 
-If left unspecified, this will default to \Expr{False}.
-
+Only job ClassAd attributes will be defined for use by this ClassAd expression.
 This expression is available for the vanilla, java, parallel, grid,
 local and scheduler universes.
 It is additionally available, when submitted from a Unix machine,
@@ -825,56 +828,59 @@ for the standard universe.
 %%%%%%%%%%%%%%%%%%%
 
 \index{submit commands!on\_exit\_remove}
-\item[on\_exit\_remove = $<$ClassAd Boolean Expression$>$] This expression
-is checked when the job exits and if true, then it allows the job to leave the
-queue normally. If false, then the job is placed back into the Idle state.
+\item[on\_exit\_remove = $<$ClassAd Boolean Expression$>$] 
+The ClassAd expression is checked when the job exits, and if \Expr{True}
+(the default value when undefined),
+then it allows the job to leave the queue normally.
+If \Expr{False}, then the job is placed back into the Idle state.
 If the user job runs under the vanilla universe,
 then the job restarts from the beginning.
 If the user job runs under the standard universe,
 then it continues from where it left off, using the last checkpoint.
 
 For example,
-suppose you have a job that occasionally segfaults,
-but you know if you run the job again with the same data,
-chances are that the will finish successfully.
-This is
-how you would represent that with \AdAttr{on\_exit\_remove}
-(assuming the signal identifier for segmentation fault is 11 on the
-platform where your job will be running):
-
+suppose a job occasionally segfaults,
+but chances are that the job will finish successfully
+if the job is run again with the same data.
+The \SubmitCmd{on\_exit\_remove} expression can cause the job
+to run again with the following command.
+Assume that the signal identifier for the segmentation fault is 11 on the
+platform where the job will be running.
+\footnotesize
 \begin{verbatim}
-        on_exit_remove = (ExitBySignal == False) || (ExitSignal != 11)
+  on_exit_remove = (ExitBySignal == False) || (ExitSignal != 11)
 \end{verbatim}
-This expression will only let the job leave the queue if the job was
-not killed by a signal (it exited normally on its own) or if it was
-killed by a signal other than 11 (representing segmentation fault).
-So, if it was killed by signal 11, it will stay in the job queue.
+\normalsize
+This expression lets the job leave the queue if the job was
+not killed by a signal or if it was
+killed by a signal other than 11, representing segmentation fault in
+this example.
+So, if the exited due to signal 11, it will stay in the job queue.
 In any other case of the job exiting,
 the job will leave the queue as it normally would have done.
 
 As another example,
-if your job should only leave the queue if it exited on its own with
+if the job should only leave the queue if it exited on its own with
 status 0,
-you would use this \AdAttr{on\_exit\_remove} expression:
+this \SubmitCmd{on\_exit\_remove} expression works well:
 
+\footnotesize
+\normalsize
 \begin{verbatim}
-        on_exit_remove = (ExitBySignal == False) && (ExitCode == 0)
+  on_exit_remove = (ExitBySignal == False) && (ExitCode == 0)
 \end{verbatim}
 If the job was killed by a signal or exited with a non-zero exit
 status, Condor would leave the job in the queue to run again.
-
-If left unspecified, the \AdAttr{on\_exit\_remove} expression will
-default to \Expr{True}.
 
 \AdAttr{periodic\_*} expressions take
 precedence over \AdAttr{on\_exit\_*} expressions,
 and \AdAttr{*\_hold} expressions take
 precedence over a \AdAttr{*\_remove} expressions.
 
+Only job ClassAd attributes will be defined for use by this ClassAd expression.
 This expression is available for the vanilla, java, parallel, grid,
 local and scheduler universes.
-It
-is additionally available, when submitted from a Unix machine, for the
+It is additionally available, when submitted from a Unix machine, for the
 standard universe.  Note that the \Condor{schedd} daemon,
 by default, only checks
 these periodic expressions once every 300 seconds.  The period of
@@ -891,7 +897,7 @@ these evaluations can be adjusted by setting the
 This expression is checked periodically at an interval of
 the number of seconds set by
 the configuration variable \MacroNI{PERIODIC\_EXPR\_INTERVAL}.
-If it becomes true, the job will be placed on hold.
+If it becomes \Expr{True}, the job will be placed on hold.
 If unspecified, the default value is \Expr{False}.
 
 \AdAttr{periodic\_*} expressions take
@@ -899,11 +905,13 @@ precedence over \AdAttr{on\_exit\_*} expressions,
 and \AdAttr{*\_hold} expressions take
 precedence over a \AdAttr{*\_remove} expressions.
 
+Only job ClassAd attributes will be defined for use by this ClassAd expression.
 This expression is available for the vanilla, java, parallel, grid,
 local and scheduler universes.
 It is additionally available, when submitted from a Unix machine,
-for the standard universe.  Note that the schedd, by default, only checks
-periodic expressions once every 300 seconds.  The period of
+for the standard universe.  Note that the \Condor{schedd} daemon,
+by default, only checks
+these periodic expressions once every 300 seconds.  The period of
 these evaluations can be adjusted by setting the
 \MacroNI{PERIODIC\_EXPR\_INTERVAL} configuration macro.
 
@@ -931,6 +939,7 @@ If the expression becomes \Expr{True}, the job will be released.
 %So the short answer: by default, every SCHEDD_INTERVAL (5 minutes by
 %default) or more often as needed.
 
+Only job ClassAd attributes will be defined for use by this ClassAd expression.
 This expression is available for the vanilla, java, parallel, grid,
 local and scheduler universes.
 It is additionally available, when submitted from a Unix machine,
@@ -954,7 +963,7 @@ If unspecified, the default value is \Expr{False}.
 
 See section~\ref{condor-submit-examples},
 the Examples section of the \Condor{submit} manual page,
-for an example of a \AdAttr{periodic\_*} expression.
+for an example of a \SubmitCmd{periodic\_remove} expression.
 
 \AdAttr{periodic\_*} expressions take
 precedence over \AdAttr{on\_exit\_*} expressions,
@@ -964,10 +973,12 @@ So, the \AdAttr{periodic\_remove} expression takes precedent over
 the \AdAttr{on\_exit\_remove} expression,
 if the two describe conflicting actions.
 
+Only job ClassAd attributes will be defined for use by this ClassAd expression.
 This expression is available for the vanilla, java, parallel, grid,
 local and scheduler universes.
 It is additionally available, when submitted from a Unix machine,
-for the standard universe.  Note that the schedd, by default, only checks
+for the standard universe.  Note that the \Condor{schedd} daemon,
+by default, only checks
 periodic expressions once every 300 seconds.  The period of
 these evaluations can be adjusted by setting the
 \MacroNI{PERIODIC\_EXPR\_INTERVAL} configuration macro.
@@ -982,8 +993,16 @@ This expression specifies the number of seconds to delay after starting up
 this job before the next job is started.  The maximum
 allowed delay is specified by the Condor configuration variable
 \Macro{MAX\_NEXT\_JOB\_START\_DELAY}, which defaults to 10 minutes.
-Currently, this command does not apply to \SubmitCmd{scheduler}
+This command does not apply to \SubmitCmd{scheduler}
 or \SubmitCmd{local} universe jobs.
+
+This command has been historically used to implement a form
+of job start throttling from the job submitter's perspective.
+It was effective for the case of multiple job submission where
+the transfer of extremely large input data sets to the execute
+machine caused machine performance to suffer.
+This command is no longer useful, as throttling should be
+accomplished through configuration of the \Condor{schedd} daemon.
 
 \end{description} 
 
