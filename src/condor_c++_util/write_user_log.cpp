@@ -84,9 +84,10 @@ class UserLogFilesize_t : public UserLogInt64_t
 // ***************************
 //  WriteUserLog constructors
 // ***************************
-WriteUserLog::WriteUserLog( void )
+WriteUserLog::WriteUserLog( bool disable_event_log )
 {
 	Reset( );
+	m_global_disable = disable_event_log;
 }
 
 /* This constructor is just like the constructor below, except
@@ -193,7 +194,7 @@ WriteUserLog::internalInitialize( int c, int p, int s, const char *gjid )
 
 		// Important for performance: We do not re-open the global log
 		// if we already have done so (i.e. if m_global_fp is not NULL).
-	if ( m_global_enable && !m_global_fp ) {
+	if ( !m_global_disable && m_global_path && !m_global_fp ) {
 		priv_state priv = set_condor_priv();
 		openGlobalLog( true );
 		set_priv( priv );
@@ -223,10 +224,8 @@ WriteUserLog::Configure( bool force )
 
 	m_global_path = param( "EVENT_LOG" );
 	if ( NULL == m_global_path ) {
-		m_global_enable = false;
 		return true;
 	}
-	m_global_enable = true;
 	m_global_stat = new StatWrapper( m_global_path, StatWrapper::STATOP_NONE );
 	m_global_state = new WriteUserLogState( );
 	m_rotation_lock_path = param( "EVENT_LOG_ROTATION_LOCK" );
@@ -310,7 +309,7 @@ WriteUserLog::Reset( void )
 	m_use_xml = XML_USERLOG_DEFAULT;
 	m_gjid = NULL;
 
-	m_global_enable = false;
+	m_global_disable = false;
 	m_global_use_xml = false;
 	m_global_count_events = false;
 	m_global_max_filesize = 1000000;
@@ -499,7 +498,7 @@ WriteUserLog::openGlobalLog( bool reopen )
 bool
 WriteUserLog::openGlobalLog( bool reopen, const UserLogHeader &header )
 {
-	if ( ! m_global_enable ) {
+	if ( m_global_disable || (NULL==m_global_path) ) {
 		return true;
 	}
 
@@ -556,7 +555,16 @@ WriteUserLog::openGlobalLog( bool reopen, const UserLogHeader &header )
 		// in the previous file, and we can't (other processes
 		// could write to it, too) without manually counting them
 		// all.
+
+		if (!updateGlobalStat() ) {
+			dprintf( D_ALWAYS,
+					 "Failed to update global stat after header write\n" );
+		}
+		else {
+			m_global_state->Update( *m_global_stat );
+		}
 	}
+
 
 	if (!m_global_lock->release() ) {
 		dprintf( D_ALWAYS, "Failed to release global lock\n" );
@@ -589,7 +597,7 @@ WriteUserLog::checkGlobalLogRotation( void )
 	if (!m_global_fp) {
 		return false;
 	}
-	if (!m_global_enable) {
+	if ( m_global_disable || (NULL==m_global_path) ) {
 		return false;
 	}
 	if ( !m_global_lock ||
@@ -1104,7 +1112,7 @@ WriteUserLog::writeEvent ( ULogEvent *event,
 	event->setGlobalJobId(m_gjid);
 
 	// write global event
-	if ( m_global_enable ) {
+	if ( !m_global_disable && m_global_path ) {
 		if ( ! doWriteEvent(event, true, false, param_jobad)  ) {
 			dprintf( D_ALWAYS, "WriteUserLog: global doWriteEvent()!\n" );
 			return false;
@@ -1112,7 +1120,7 @@ WriteUserLog::writeEvent ( ULogEvent *event,
 	}
 
 	char *attrsToWrite = param("EVENT_LOG_JOB_AD_INFORMATION_ATTRS");
-	if ( m_global_enable && attrsToWrite ) {
+	if ( !m_global_disable && m_global_path && attrsToWrite ) {
 		ExprTree *tree;
 		EvalResult result;
 		char *curr;
