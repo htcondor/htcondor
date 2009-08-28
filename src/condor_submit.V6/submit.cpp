@@ -28,7 +28,7 @@
 #include "basename.h"
 #include "condor_getcwd.h"
 #include <time.h>
-#include "read_user_log.h"
+#include "write_user_log.h"
 #include "condor_classad.h"
 #include "condor_attributes.h"
 #include "condor_adtypes.h"
@@ -6827,14 +6827,13 @@ void
 log_submit()
 {
 	 char	 *simple_name;
-	 UserLog usr_log;
-	 SubmitEvent jobSubmit;
-
-	 usr_log.setUseXML(UseXMLInLog);
 
 		// don't write to the EVENT_LOG in condor_submit; that is done by 
 		// the condor_schedd (since submit likely does not have permission).
-	 usr_log.setWriteGlobalLog(false);
+	 WriteUserLog usr_log(true);
+	 SubmitEvent jobSubmit;
+
+	 usr_log.setUseXML(UseXMLInLog);
 
 	if( Quiet ) {
 		fprintf(stdout, "Logging submit event(s)");

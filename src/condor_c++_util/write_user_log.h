@@ -73,7 +73,7 @@ class WriteUserLog
 {
   public:
     ///
-    WriteUserLog( void );
+    WriteUserLog( bool disable_event_log = false );
     
     /** Constructor
         @param owner Username of the person whose job is being logged
@@ -146,7 +146,7 @@ class WriteUserLog
 	void setUseXML(bool new_use_xml){ m_use_xml = new_use_xml; }
 
 	void setWriteUserLog(bool b){ m_userlog_enable = b; }
-	void setWriteGlobalLog(bool b){ m_global_enable = b; }
+	void setWriteGlobalLog(bool b){ m_global_disable = !b; }
 
 	/** Verify that the event log is initialized
 		@return true on success
@@ -283,7 +283,7 @@ class WriteUserLog
 	/** Enable fsync() after writes? */  bool       m_enable_fsync;
 
 	/** Enable close after writes    */  bool       m_global_close;
-	/** Write to the global log? */		 bool		m_global_enable;
+	/** Write to the global log? */		 bool		m_global_disable;
     /** Copy of path to global log   */  char     * m_global_path;
     /** The global log file          */  FILE     * m_global_fp;
     /** The global log file lock     */  FileLockBase *m_global_lock;
