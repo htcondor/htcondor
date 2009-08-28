@@ -23,6 +23,7 @@
 #define WANT_CLASSAD_NAMESPACE
 #include "classad/classad_distribution.h"
 #include "classad_oldnew.h"
+#include "classad_newold.h"
 #include "conversion.h"
 #include "compat_classad.h"
 
@@ -30,6 +31,10 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <sstream>
+#include <vector>
+#include <utility>
+
 using namespace std;
 
 bool test_sPrintExpr(compat_classad::ClassAd *c1, int verbose);
@@ -48,94 +53,182 @@ bool test_EscapeStringValue(compat_classad::ClassAd *c1, int verbose);
 
 bool test_EvalTree(compat_classad::ClassAd *c1, compat_classad::ClassAd *c2,int verbose);
 
+void setAllFalse(bool* b);
+
 bool test_GIR(int verbose);
 classad::References* gir_helper(classad::ClassAd* c, string attr, int verbose, bool full = true);
 
 bool correctRefs(classad::References* ref, std::vector<string> expected);
 bool runAndCheckGIR(classad::ClassAd* c, string attr, string listString, bool full, int verbose );
 
+void printExprType(classad::ClassAd* c, string attr);
+
 void setUpAndRun(int verbose);
 
-char *classad_strings[] = 
+class GIRTestCase
 {
-    "A = 1, B = 2",
-    "A = 1, B = 3",
-    "B = 1241, C = 3, D = 4",
-    "A = \"hello\", E = 5"
+    private:
+        const int numTests;
+        int testNumber;
+        string refString;
+        vector< pair<string, string> > attrExpectedValPair;
+        int verbose;
+        bool dontRun;
+
+    public:
+        GIRTestCase();
+        GIRTestCase(int _numTests, string _refString, vector< pair<string, string> > _attrExpectedValPair, int _verbosity, int _testNumber);
+
+        bool runTests(void);
+
 };
 
-//{{{ setUpClassAds
-void setUpClassAds(/*ClassAd* c1, ClassAd* c2, ClassAd* c3, ClassAd* c4,*/ FILE* c1FP, FILE* c2FP, FILE* c3FP, FILE* c4FP, int verbose)
+GIRTestCase::GIRTestCase() : numTests(0)
 {
-    ClassAd *c1, *c2, *c3, *c4;
-    if(verbose)
-        printf("Creating ClassAds\n");
+    refString = "";
+    testNumber = 0;
+}
 
-    c1 = new ClassAd(classad_strings[0], ',');
-    c2 = new ClassAd(classad_strings[1], ',');
-    c3 = new ClassAd(classad_strings[2], ',');
-    c4 = new ClassAd(classad_strings[3], ',');
+GIRTestCase::GIRTestCase(int _numTests, string _refString, 
+            vector< pair<string, string> > _attrExpectedValPair,
+            int _verbosity, int _testNumber)
+            : numTests(_numTests)
+{
 
-    c1->SetMyTypeName("c1");
-    c2->SetMyTypeName("c2");
-    c3->SetMyTypeName("c3");
-    c4->SetMyTypeName("c4");
+    //numTests = _numTests;
+    testNumber = _testNumber;
+    refString = _refString;
+    verbose = _verbosity;
+    attrExpectedValPair = _attrExpectedValPair;
 
-    c1->SetTargetTypeName("not c1!");
-    c2->SetTargetTypeName("not c2!");
-    c3->SetTargetTypeName("not c3!");
-    c4->SetTargetTypeName("not c4!");
-
-    /*
-    if(verbose)
+    if((unsigned)(numTests * 2) != attrExpectedValPair.size())
     {
-        printf("C1:\n"); c1->fPrint(stdout); printf("\n");
-        printf("C2:\n"); c2->fPrint(stdout); printf("\n");
-        printf("C3:\n"); c3->fPrint(stdout); printf("\n");
+        printf("ERROR: Number of attr/expected val pairs needs to be 2 times the number of tests.\n");
+        dontRun = true;
     }
-    */
-
-    //ugh, converting old classads into compat_classad::ClassAds, in probably the 
-    //  worst possible way. Ever. But it should work.
-    c1FP = fopen("c1FPcompat.txt", "w+");
-    c2FP = fopen("c2FPcompat.txt", "w+");
-    c3FP = fopen("c3FPcompat.txt", "w+");
-    c4FP = fopen("c4FPcompat.txt", "w+");
-
-    c1->fPrint(c1FP);
-    c2->fPrint(c2FP);
-    c3->fPrint(c3FP);
-    c4->fPrint(c4FP);
-
-    fclose(c1FP); fclose(c2FP); fclose(c3FP); fclose(c4FP);
-    delete c1;
-    delete c2; 
-    delete c3;
-    delete c4;
+    else
+    {
+        dontRun = false;
+    }
 
 }
-//}}}
+
+
+bool 
+GIRTestCase::runTests(void)
+{
+    if(dontRun) return false;
+
+    bool testResultsIndividual[2][numTests];
+    bool testResult[2];
+
+    bool passed = false;
+
+    for(int i = 0; i < numTests; i++)
+    {
+        testResultsIndividual[0][i] = false;
+        testResultsIndividual[1][i] = false;
+    }
+
+    classad::ClassAd* c;
+    classad::ClassAdParser parser;
+
+    c = parser.ParseClassAd(refString);
+
+    if(verbose && c == NULL)
+    {
+        printf("Classad couldn't be parsed!\n");
+        passed = false;
+        return passed;
+    }
+
+    if(verbose == 2)
+    {
+        printf("Working on ref string number %d. Fullname = true\n", testNumber);
+        printf("ref string is %s.\n", refString.c_str());
+    }
+
+    for(int i = 0; i < numTests; i++)
+    {
+        testResultsIndividual[0][i] = runAndCheckGIR(c, attrExpectedValPair[i].first, 
+                                        attrExpectedValPair[i].second,
+                                        true,
+                                        verbose);
+    }
+
+    testResult[0] = testResultsIndividual[0][0];
+
+    for(int i = 1; i < numTests; i++)
+    {
+        testResult[0] = testResult[0] && testResultsIndividual[0][i];
+    }
+
+    if(verbose)
+    {
+
+        printf("GIR with Fullname = true on ref number %d %s.\n", testNumber, testResult[0] ? "passed" : "failed");
+    }
+
+    if(verbose == 2) 
+    {
+        printf("Working on ref string number %d. Fullname = false\n", testNumber);
+    }
+
+    for(int i = 0; i < numTests; i++)
+    {
+        testResultsIndividual[1][i] = runAndCheckGIR(c, attrExpectedValPair[i+numTests].first, 
+                                        attrExpectedValPair[i+numTests].second,
+                                        false,
+                                        verbose);
+    }
+
+    testResult[1] = testResultsIndividual[1][0];
+
+    for(int i = 1; i < numTests; i++)
+    {
+        testResult[1] = testResult[1] && testResultsIndividual[1][i];
+    }
+
+    if(verbose)
+    {
+        printf("GIR with Fullname = false on ref number %d %s.\n", testNumber, testResult[1] ? "passed" : "failed");
+    }
+
+    delete c;
+
+    passed = testResult[0] && testResult[1];
+
+    return passed;
+}
 
 //{{{setUpCompatClassAd()
 void setUpCompatClassAds(compat_classad::ClassAd** compC1, compat_classad::ClassAd** compC2,
-        compat_classad::ClassAd** compC3, compat_classad::ClassAd** compC4, 
-        FILE* c1FP, FILE* c2FP, FILE* c3FP, FILE* c4FP,
+        compat_classad::ClassAd** compC3, compat_classad::ClassAd** compC4,
         int verbose)
 {
-    c1FP = fopen("c1FPcompat.txt", "r+");
-    c2FP = fopen("c2FPcompat.txt", "r+");
-    c3FP = fopen("c3FPcompat.txt", "r+");
-    c4FP = fopen("c4FPcompat.txt", "r+");
 
     if(verbose)
         printf("creating compatclassads\n");
 
-    int eofCheck, errorCheck, emptyCheck; 
-    (*compC1) = new compat_classad::ClassAd(c1FP, ",", eofCheck, errorCheck, emptyCheck); 
-    (*compC2)= new compat_classad::ClassAd(c2FP, ",", eofCheck, errorCheck, emptyCheck); 
-    (*compC3) = new compat_classad::ClassAd(c3FP, ",", eofCheck, errorCheck, emptyCheck); 
-    (*compC4) = new compat_classad::ClassAd(c4FP, ",", eofCheck, errorCheck, emptyCheck); 
-    fclose(c1FP); fclose(c2FP); fclose(c3FP); fclose(c4FP);
+    classad::ClassAdParser parser;
+
+    classad::ClassAd* c;
+    
+    c = parser.ParseClassAd("[A = 1; B = 2;]");
+    (*compC1) = new compat_classad::ClassAd(*c);
+    delete c;
+    
+    c = parser.ParseClassAd("[A = 1; B = 3;]");
+    (*compC2) = new compat_classad::ClassAd(*c);
+    delete c;
+
+    c = parser.ParseClassAd("[B = 1241; C = 3; D = 4;]");
+    (*compC3) = new compat_classad::ClassAd(*c);
+    delete c;
+
+    c = parser.ParseClassAd("[A = \"hello\";E = 5; ]");
+    (*compC4) = new compat_classad::ClassAd(*c);
+    delete c;
 
     (*compC1)->SetMyTypeName("compC1");
     (*compC2)->SetMyTypeName("compC2");
@@ -834,151 +927,150 @@ bool test_EvalTree(compat_classad::ClassAd *c1, compat_classad::ClassAd *c2, int
 bool test_GIR(int verbose)
 {
     bool passed = false;
-    bool passedFull1 = false, passedNonFull1 = false;
-    bool passedFull2 = false, passedNonFull2 = false;
-    bool passedFull3 = false, passedNonFull3 = false;
-    
+
+    const static int numTests = 6;
+
+    bool passedTest[numTests];
+
+    GIRTestCase *testcase[numTests];
+
     classad::ClassAd* c;
     classad::ClassAdParser parser;
 
     // expr C is an opnode
 
-    string input_ref = "[ A = 3; B = {1,3,5}; C = D.A + 1; D = [A = E; B = 8;]; E = 4; ]";
+    string input_ref = "[ A = 3; B = {1,3,5}; C = 1 + D.A; D = [A = E; B = 8;]; E = 4; ]";
 
-    c = parser.ParseClassAd(input_ref);
+    vector<pair<string, string> > expected;
+    
+    expected.push_back(make_pair("A", ""));
+    expected.push_back(make_pair("B", ""));
+    expected.push_back(make_pair("C", "D.A E"));
+    expected.push_back(make_pair("D", "E"));
+    expected.push_back(make_pair("E", ""));
 
-    if(verbose && c == NULL)
+    expected.push_back(make_pair("A", ""));
+    expected.push_back(make_pair("B", ""));
+    expected.push_back(make_pair("C", "D E"));
+    expected.push_back(make_pair("D", "E"));
+    expected.push_back(make_pair("E", ""));
+
+    testcase[0] = new GIRTestCase(5, input_ref, expected, verbose, 1);
+    passedTest[0] = testcase[0]->runTests();
+
+
+    expected.clear();
+    
+    //test case 2
+
+    string input_ref2 = "[ A = 3; B = {1}; C = G.F; D = [A = B; B = 9;]; E = C + D.A; ]";
+
+    expected.push_back(make_pair("A", ""));
+    expected.push_back(make_pair("B", ""));
+    expected.push_back(make_pair("C", ""));
+    expected.push_back(make_pair("D", "B"));
+    expected.push_back(make_pair("E", "D.A B C"));
+
+    expected.push_back(make_pair("A", ""));
+    expected.push_back(make_pair("B", ""));
+    expected.push_back(make_pair("C", ""));
+    expected.push_back(make_pair("D", "B"));
+    expected.push_back(make_pair("E", "D B C"));
+
+    testcase[1] = new GIRTestCase(5, input_ref2, expected, verbose, 2);
+    passedTest[1] = testcase[1]->runTests();
+
+
+    expected.clear();
+
+    string input_ref3 = "[ A = G.B; B = {5}; C = D.B + A; D = [A = 2; B = E.C;]; E = [C = 7;]; ]";
+
+    expected.push_back(make_pair("A", ""));
+    expected.push_back(make_pair("B", ""));
+    expected.push_back(make_pair("C", "A D.B E.C"));
+    expected.push_back(make_pair("D", "E.C"));
+    expected.push_back(make_pair("E", ""));
+
+    expected.push_back(make_pair("A", ""));
+    expected.push_back(make_pair("B", ""));
+    expected.push_back(make_pair("C", "A D E"));
+    expected.push_back(make_pair("D", "E"));
+    expected.push_back(make_pair("E", ""));
+
+    testcase[2] = new GIRTestCase(5, input_ref3, expected, verbose, 3);
+    passedTest[2] = testcase[2]->runTests();
+
+
+    expected.clear();
+
+    string input_ref4 = "[ A = G.B; B = {5}; C = A + D.B; D = [A = 2; B = E.C;]; E = [C = A;]; ]";
+
+    expected.push_back(make_pair("A", ""));
+    expected.push_back(make_pair("B", ""));
+    expected.push_back(make_pair("C", "A D.B E.C"));
+    expected.push_back(make_pair("D", "A E.C"));
+    expected.push_back(make_pair("E", "A"));
+
+    expected.push_back(make_pair("A", ""));
+    expected.push_back(make_pair("B", ""));
+    expected.push_back(make_pair("C", "A D E"));
+    expected.push_back(make_pair("D", "E A"));
+    expected.push_back(make_pair("E", "A"));
+
+    testcase[3] = new GIRTestCase(5, input_ref4, expected, verbose, 4);
+    passedTest[3] = testcase[3]->runTests();
+
+    expected.clear();
+
+    string input_ref5 = "[ A = G.B; B = [X = A; Y = D.A;]; C = A + D.B.G; D = [A = 2; B = [A = 3; G = E;]]; E = [C = A;]; ]";
+
+    //these are non-sensical for now.
+    expected.push_back(make_pair("A", ""));
+    expected.push_back(make_pair("B", "A D.A"));
+    expected.push_back(make_pair("C", "A D.B.G E ")); // A D.B.G C ?
+    expected.push_back(make_pair("D", "E A")); //B.G A ?
+    expected.push_back(make_pair("E", "A"));
+
+    expected.push_back(make_pair("A", ""));
+    expected.push_back(make_pair("B", "A D"));
+    expected.push_back(make_pair("C", "A D C"));
+    expected.push_back(make_pair("D", "E A"));
+    expected.push_back(make_pair("E", "A"));
+
+    testcase[4] = new GIRTestCase(5, input_ref5, expected, verbose, 5);
+    passedTest[4] = testcase[4]->runTests();
+
+    expected.clear();
+
+    string input_ref6 = "[ A = G.B; B = [X = A; Y = D.A;]; C = A + D.B; D = [A = 2; B = E.C;]; E = [C = B.Y;]; ]";
+
+    //these are non-sensical for now.
+    expected.push_back(make_pair("A", ""));
+    expected.push_back(make_pair("B", ""));
+    expected.push_back(make_pair("C", "A D.B E.C"));
+    expected.push_back(make_pair("D", "A E.C"));
+    expected.push_back(make_pair("E", "A"));
+
+    expected.push_back(make_pair("A", ""));
+    expected.push_back(make_pair("B", ""));
+    expected.push_back(make_pair("C", "A D E"));
+    expected.push_back(make_pair("D", "E A"));
+    expected.push_back(make_pair("E", "A"));
+
+    testcase[5] = new GIRTestCase(5, input_ref6, expected, verbose, 6);
+    passedTest[5] = testcase[5]->runTests();
+
+
+    passed = passedTest[0];
+
+    for(int i = 0; i < numTests; i++)
     {
-        printf("Classad couldn't be parsed!\n");
-        passed = false;
+        delete testcase[i];
+        passed = passed && passedTest[i];
     }
 
-    if(verbose == 2)
-    {
-        printf("Working on 1st ref string. Fullname = true\n");
-        printf("ref string is %s.\n", input_ref.c_str());
-    }
-
-    passedFull1 = runAndCheckGIR(c, "A", "", true, verbose);
-    passedFull1 = runAndCheckGIR(c, "B", "", true, verbose);
-    passedFull1 = runAndCheckGIR(c, "C", "D.A", true, verbose);
-    passedFull1 = runAndCheckGIR(c, "D", "E", true, verbose);
-    passedFull1 = runAndCheckGIR(c, "E", "", true, verbose);
-
-    if(verbose)
-    {
-        printf("GIR with Fullname = true on ref1 %s.\n", passedFull1 ? "passed" : "failed");
-    }
-
-    if(verbose == 2) 
-    {
-        printf("Working on 1st ref string. Fullname = false\n");
-    }
-
-    passedNonFull1 = runAndCheckGIR(c, "A", "", false, verbose);
-    passedNonFull1 = runAndCheckGIR(c, "B", "", false, verbose);
-    passedNonFull1 = runAndCheckGIR(c, "C", "A", false, verbose);
-    passedNonFull1 = runAndCheckGIR(c, "D", "E", false, verbose);
-    passedNonFull1 = runAndCheckGIR(c, "E", "", false, verbose);
-
-    if(verbose)
-    {
-        printf("GIR with Fullname = false on ref1 %s.\n", passedNonFull1 ? "passed" : "failed");
-    }
-
-    string input_ref2 = "[ A = 3; B = {1}; C = G.F; D = [A = B; B = 9;]; E = D.A + C; ]";
-
-    if(verbose == 2)
-    {
-        printf("Working on 2nd ref string. Fullname = true\n");
-        printf("ref string is %s.\n", input_ref2.c_str());
-    }
-    //redo!
-    delete c;
-
-    c = parser.ParseClassAd(input_ref2);
-
-    if(verbose && c == NULL)
-    {
-        printf("Classad 2 couldn't be parsed!\n");
-        passed = false;
-    }
-
-    passedFull2 = runAndCheckGIR(c, "A", "", true, verbose);
-    passedFull2 = runAndCheckGIR(c, "B", "", true, verbose);
-    passedFull2 = runAndCheckGIR(c, "C", "", true, verbose);
-    passedFull2 = runAndCheckGIR(c, "D", "B", true, verbose);
-    passedFull2 = runAndCheckGIR(c, "E", "D.A,C", true, verbose);
-
-    if(verbose)
-    {
-        printf("GIR with Fullname = true on ref2 %s.\n", passedFull2 ? "passed" : "failed");
-    }
-
-    if(verbose == 2)
-    {
-        printf("Working on 2nd ref string. Fullname = false\n");
-    }
-
-    passedNonFull2 = runAndCheckGIR(c, "A", "", false, verbose);
-    passedNonFull2 = runAndCheckGIR(c, "B", "", false, verbose);
-    passedNonFull2 = runAndCheckGIR(c, "C", "", false, verbose);
-    passedNonFull2 = runAndCheckGIR(c, "D", "B", false, verbose);
-    passedNonFull2 = runAndCheckGIR(c, "E", "A,C", false, verbose);
-
-    if(verbose)
-    {
-        printf("GIR with Fullname = false on ref2 %s.\n", passedNonFull2 ? "passed" : "failed");
-    }
-
-    string input_ref3 = "[ A = G.B; B = {5}; C = A + D.B; D = [A = 2; B = E.C;]; E = [C = 7;]; ]";
-
-    if(verbose == 2)
-    {
-        printf("Working on 3nd ref string. Fullname = true\n");
-        printf("ref string is %s.\n", input_ref3.c_str());
-    }
-    //redo!
-    delete c;
-
-    c = parser.ParseClassAd(input_ref3);
-
-    if(verbose && c == NULL)
-    {
-        printf("Classad 3 couldn't be parsed!\n");
-        passed = false;
-    }
-    passedFull3 = runAndCheckGIR(c, "A", "", true, verbose);
-    passedFull3 = runAndCheckGIR(c, "B", "", true, verbose);
-    passedFull3 = runAndCheckGIR(c, "C", "A,D.B", true, verbose);
-    passedFull3 = runAndCheckGIR(c, "D", "E.C", true, verbose);
-    passedFull3 = runAndCheckGIR(c, "E", "", true, verbose);
-
-    if(verbose)
-    {
-        printf("GIR with Fullname = true on ref3 %s.\n", passedFull3 ? "passed" : "failed");
-    }
-
-    if(verbose == 2)
-    {
-        printf("Working on 3nd ref string. Fullname = false\n");
-    }
-
-    passedNonFull3 = runAndCheckGIR(c, "A", "", false, verbose);
-    passedNonFull3 = runAndCheckGIR(c, "B", "", false, verbose);
-    passedNonFull3 = runAndCheckGIR(c, "C", "A,B", false, verbose);
-    passedNonFull3 = runAndCheckGIR(c, "D", "C", false, verbose);
-    passedNonFull3 = runAndCheckGIR(c, "E", "", false, verbose);
-
-    if(verbose)
-    {
-        printf("GIR with Fullname = false on ref3 %s.\n", passedNonFull3 ? "passed" : "failed");
-    }
-
-    delete c;
-    c = NULL;
-
-    passed = passedFull1 && passedNonFull1 && passedFull2 && passedNonFull2 && passedFull3 && passedNonFull3;
+    passed = passedTest[0] && passedTest[1] && 
+        passedTest[2] && passedTest[3] && passedTest[4];
     return passed;
 }
 //}}}
@@ -986,7 +1078,6 @@ bool test_GIR(int verbose)
 //{{{ GIR helper
 classad::References* gir_helper(classad::ClassAd* c, string attr, int verbose, bool full)
 {
-    //bool passed = false;
 
     classad::References* refs = new classad::References();
     classad::References::iterator iter;
@@ -1031,6 +1122,7 @@ bool correctRefs(classad::References* ref, std::vector<string> expected)
     bool passed = false;
 
     classad::References::iterator itr;
+    classad::References::iterator itr2;
     std::vector<string>::iterator vecItr;
 
     //refs didn't have anything 
@@ -1040,12 +1132,15 @@ bool correctRefs(classad::References* ref, std::vector<string> expected)
     }
     else if(ref == NULL)
     {
+        printf("ERROR: ref was null\n");
         return false;
     }
 
     //make sure they're the same size...
     if(ref->size() != expected.size())
     {
+        printf("ERROR: size mismatch. ref size: %d expected size: %d\n", 
+                ref->size(), expected.size());
         return false;
     }
 
@@ -1058,11 +1153,18 @@ bool correctRefs(classad::References* ref, std::vector<string> expected)
             if( !( (*itr).compare( (*vecItr) ) ) )
             {
                 foundOne = true;
+                continue;
             }
         }
 
         if(!foundOne)
         {
+            printf("ERROR: didn't find \"%s\" in expected list. ", (*itr).c_str());
+            for(vecItr = expected.begin(); vecItr != expected.end(); vecItr++)
+            {
+                printf("%s ", (*vecItr).c_str());
+            }
+            printf("\n");
             passed = false; 
             return passed;
         }
@@ -1076,7 +1178,8 @@ bool correctRefs(classad::References* ref, std::vector<string> expected)
 //}}}
 
 //{{{ runAndCheckGIR
-bool runAndCheckGIR(classad::ClassAd* c, string attr, string listString, bool full, int verbose )
+bool 
+runAndCheckGIR(classad::ClassAd* c, string attr, string listString, bool full, int verbose )
 {
     bool passed = false;
     bool passedTest = false;
@@ -1088,25 +1191,29 @@ bool runAndCheckGIR(classad::ClassAd* c, string attr, string listString, bool fu
     int subStrEnd = 0;
 
     //if "," doesn't exist, then skip the splitting-stage.
-    bool singleAttr = (listString.find(",") == string::npos);
+    bool singleAttr = (listString.find(" ") == string::npos);
 
     if(!singleAttr)
     {
-        for(int i = 0; i < listString.size(); i++)
+    
+        string word;
+        istringstream iss(listString, istringstream::in);
+
+        while ( iss >> word )
         {
-            if(listString[i] == ',' || i == (listString.size() - 1))
-            {
-                subStrEnd = i;
-                expectedVec.push_back(listString.substr(subStrStart, subStrEnd));
-                subStrStart = i + 1;
-            }
+            expectedVec.push_back(word);
         }
+
     }
     else if(listString.size() > 0)
     {
         expectedVec.push_back(listString); 
     }
 
+    if(verbose == 2)
+    {
+        printf("Working on attr \"%s\".\n", attr.c_str());
+    }
 
     retRefs = gir_helper(c, attr, verbose, full);
     passedTest = correctRefs(retRefs, expectedVec);
@@ -1125,16 +1232,119 @@ bool runAndCheckGIR(classad::ClassAd* c, string attr, string listString, bool fu
 }
 //}}}
 
+char* getType(classad::ExprTree* expr)
+{
+    enum{
+        LITERAL_NODE,
+        ATTRREF_NODE,
+        OP_NODE,
+        FN_CALL_NODE,
+        CLASSAD_NODE,
+        EXPR_LIST_NODE
+    };
+
+    switch(expr->GetKind())
+    {
+        case LITERAL_NODE:
+            return "LITERAL NODE";
+        break;
+
+        case ATTRREF_NODE:
+            return "ATTRREF_NODE";
+        break;
+
+        case OP_NODE:
+            return "OP_NODE";
+        break;
+
+        case FN_CALL_NODE:
+            return "FN_CALL_NODE";
+        break;
+
+        case CLASSAD_NODE:
+            return "CLASSAD_NODE";
+        break;
+
+        case EXPR_LIST_NODE:
+            return "EXPR_LIST_NODE";
+        break;
+
+
+    }
+
+    return "Huh?";
+}
+
+void printExprType(classad::ClassAd* c, string attr)
+{
+
+    enum{
+        LITERAL_NODE,
+        ATTRREF_NODE,
+        OP_NODE,
+        FN_CALL_NODE,
+        CLASSAD_NODE,
+        EXPR_LIST_NODE
+    };
+    classad::ExprTree *expr;
+
+    if(c != NULL)
+    {
+        expr = c->Lookup(attr);
+        if(expr != NULL)
+        {
+            switch(expr->GetKind() )
+            {
+                case LITERAL_NODE:
+                    printf("attr \"%s\" is a LITERAL_NODE\n", attr.c_str());
+                break;
+
+                case ATTRREF_NODE:
+                    printf("attr \"%s\" is an ATTRREF_NODE\n", attr.c_str());
+                break;
+
+                case OP_NODE:
+                    printf("attr \"%s\" is an OP_NODE\n", attr.c_str());
+                break;
+
+                case FN_CALL_NODE:
+                    printf("attr \"%s\" is an FN_CALL_NODE\n", attr.c_str());
+                break;
+
+                case CLASSAD_NODE:
+                    {
+                    printf("attr \"%s\" is an CLASSAD_NODE\n", attr.c_str());
+                    vector< pair<string, classad::ExprTree*> >               attrs;
+                    vector< pair<string, classad::ExprTree*> >:: iterator    itr; 
+
+                    ((classad::ClassAd*)expr)->GetComponents(attrs);
+                    for(itr = attrs.begin(); itr != attrs.end(); itr++){
+                        printf("subattr of \"%s\" is \"%s\", with type %s.\n", attr.c_str(), (itr->first).c_str(), getType(itr->second) );
+                    }
+                    }
+                break;
+
+                case EXPR_LIST_NODE:
+                    printf("attr \"%s\" is an EXPR_LIST_NODE\n", attr.c_str());
+                break;
+
+                default:
+                    printf("No clue what attr \"%s\" is.\n", attr.c_str());
+            }
+        }
+    }
+}
+
+void setAllFalse(bool* b)
+{
+    for(int i = 0; i < 5; i++)
+    {
+        b[i] = false;
+    }
+}
 
 void setUpAndRun(int verbose)
 {
-    FILE *c1FP, *c2FP, *c3FP, *c4FP;
-    /*
-    bool sPrintExprPassed, isVAVPassed, fPrintAXPassed;//, sPrintAXPassed; 
-    bool collapseChainPassed, evalStringCharStar, evalStringCharStarStar;
-    bool evalStringMyString, nextDirtyExpr, escapeStringValue;
-    bool evalTree;
-    */
 
     int numTests = 11;
     bool passedTest[numTests];
@@ -1146,12 +1356,10 @@ void setUpAndRun(int verbose)
     }
 
 
-    setUpClassAds(c1FP, c2FP, c3FP, c4FP,verbose);
 
     compat_classad::ClassAd *compC1, *compC2, *compC3, *compC4;
 
-    setUpCompatClassAds(&compC1, &compC2, &compC3, &compC4, c1FP, c2FP, 
-            c3FP, c4FP, verbose);
+    setUpCompatClassAds(&compC1, &compC2, &compC3, &compC4, verbose);
 
     printf("Testing sPrintExpr...\n");
     passedTest[0] = test_sPrintExpr(compC1, verbose);

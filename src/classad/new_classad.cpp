@@ -1246,6 +1246,7 @@ _GetInternalReferences( const ExprTree *expr, ClassAd *ad,
             bool            abs;
 
             ((AttributeReference*)expr)->GetComponents(tree,attr,abs);
+
             //figuring out which state to base this off of
             if( tree == NULL ){
                 start = abs ? state.rootAd : state.curAd;
@@ -1269,45 +1270,44 @@ _GetInternalReferences( const ExprTree *expr, ClassAd *ad,
                  * ];
                  */
 
-                //could try to get away with making this 
-                //"if( val.IsUndefinedValue() ) { return false; }" 
-                //  or something.
-                //
-                //If it's undefined, it's external. Which we don't want.
-                /*
-                if( !val.IsUndefinedValue() ) {
-                    if(fullNames) {
-                        string fullName;
-                        if(tree != NULL){
-                            ClassAdUnParser unparser;
-                            unparser.Unparse(fullName, tree);
-                            fullName += ".";
-                        }
-                        fullName += attr;
-                        refs.insert(fullName);
-                        //TODO: get the appropriate reference from Fullname.
-                        return  _GetInternalReferences(tree, ad, state, refs, fullNames);
-                        //return true;
-                    }
-                }
-                */
-
                 if( val.IsUndefinedValue() ) {
                     return false;
                 }
 
-                if(fullNames) {
-                    string fullName;
-                    if(tree != NULL){
-                        ClassAdUnParser unparser;
-                        unparser.Unparse(fullName, tree);
-                        fullName += ".";
+                string nameToAddToRefs = "";
+
+                string prefixStr;
+
+                if(tree != NULL)
+                {
+                    ClassAdUnParser unparser;
+                    //TODO: figure out how this would handle "B.D.G"
+                    unparser.Unparse(prefixStr, tree);
+                    //fullNameCpy = prefixStr;
+                    nameToAddToRefs = prefixStr;
+
+                    if(fullNames)
+                    {
+                        nameToAddToRefs += ".";
+                        nameToAddToRefs += attr;
                     }
-                    fullName += attr;
-                    refs.insert(fullName);
-                    //TODO: get the appropriate reference from Fullname.
-                    //return  _GetInternalReferences(tree, ad, state, refs, fullNames);
-                    return true;
+                }
+
+                //WOULD INSERT "" IF tree == NULL! BAD! FIXME
+                refs.insert(nameToAddToRefs);
+
+                ExprTree *followRef;
+                ExprTree *innerAttr;
+                //TODO: If we get to this point, must there be a prefix?
+                //  FIGURE OUT WHAT A SIMPLE / ABSOLUTE ATTR IS
+                followRef = ad->Lookup(prefixStr);
+                //this is checking to see if the prefix is in
+                //  this classad or not.
+                // if not, then we just let the loop continue
+                if(followRef != NULL)
+                {
+                    return _GetInternalReferences(followRef, ad,
+                                        state, refs, fullNames);
                 }
 
                 //otherwise, if the tree didn't evaluate to a classad,
@@ -1317,7 +1317,6 @@ _GetInternalReferences( const ExprTree *expr, ClassAd *ad,
                     return false;
                 }
             }
-
 
             ClassAd *curAd = state.curAd;
             switch( start->LookupInScope( attr, result, state) ) {
@@ -1339,6 +1338,7 @@ _GetInternalReferences( const ExprTree *expr, ClassAd *ad,
                 case EVAL_OK:   {
                     //whoo, it's internal.
                     refs.insert(attr);
+                    //TODO: Does this actually matter?
                     state.curAd = curAd;
                     return true;
                 break;
