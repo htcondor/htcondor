@@ -152,7 +152,6 @@ int WINAPI WinMain( HINSTANCE hInstance,
   set_mailoptions ();
   set_hostpermissions ();
   set_vmuniverse();
-  set_hdfs();
   
   /* the following options go in the vmgahp config file */
   if ( 'Y' == Opt.enablevmuniverse ) {
@@ -359,22 +358,32 @@ set_vmuniverse() {
 }
 
 void set_hdfs() {
-	char buf[MAX_PATH];
+	char *temp;
 	if ( Opt.namedata ) {
 		set_option("HDFS_SERVICES", Opt.namedata);
 		set_option("HDFS_NAMENODE_DIR", "$(RELEASE_DIR)/HDFS/hadoop_name");
 		set_option("HDFS_DATANODE_DIR", "$(RELEASE_DIR)/HDFS/hadoop_data");
-		set_option("HDFS_HOME", "$(RELEASE_DIR)/HDFS");
+		set_option("HDFS_HOME", "$(RELEASE_DIR)/HDFS/bin");
 	}
 
 	if ( Opt.namenode && Opt.nameport ) {
-		snprintf(buf, MAX_PATH, "%s%s%s", Opt.namenode, ":", Opt.nameport);
-		set_option("HDFS_NAMENODE", buf);
+		temp = malloc(sizeof(char)*MAX_PATH);
+		ZeroMemory(temp, ARRAYSIZE(temp));
+		strcat_s(temp, MAX_PATH, Opt.namenode);
+		strcat_s(temp, MAX_PATH, ":");
+		strcat_s(temp, MAX_PATH, Opt.nameport);
+		set_option("HDFS_NAMENODE", temp);
+		free(temp);
 	}
 
 	if ( Opt.namenode && Opt.namewebport ) {
-		snprintf(buf, MAX_PATH, "%s%s%s", Opt.namenode, ":", Opt.namewebport);
-		set_option("HDFS_NAMENODE_WEB", buf);
+		temp = malloc(sizeof(char)*MAX_PATH);
+		ZeroMemory(temp, ARRAYSIZE(temp));
+		strcat_s(temp, MAX_PATH, Opt.namenode);
+		strcat_s(temp, MAX_PATH, ":");
+		strcat_s(temp, MAX_PATH, Opt.namewebport);
+		set_option("HDFS_NAMENODE", temp);
+		free(temp);
 	}
 }
 

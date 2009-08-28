@@ -115,8 +115,8 @@ for %%f in (master startd quill dbmsd had credd schedd collector negotiator shad
     copy ..\Release\condor_%%f.pdb %1\bin
 )
 
-echo. & echo Copying hadoop files...
-cp -r ..\externals\install\hdfs %1\
+REM echo. & echo Copying hadoop files...
+REM xcopy ..\externals\bundle\hadoop %1\hdfs /e
 
 echo. & echo Making some aliases...
 pushd %1\bin
