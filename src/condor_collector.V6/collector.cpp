@@ -88,7 +88,7 @@ int CollectorDaemon::machinesOwner;
 ForkWork CollectorDaemon::forkQuery;
 
 ClassAd* CollectorDaemon::ad;
-DCCollector* CollectorDaemon::updateCollector;
+CollectorList* CollectorDaemon::updateCollectors;
 DCCollector* CollectorDaemon::updateRemoteCollector;
 int CollectorDaemon::UpdateTimerId;
 
@@ -126,7 +126,7 @@ void CollectorDaemon::Init()
 	view_sock=NULL;
 	UpdateTimerId=-1;
 	sock_cache = NULL;
-	updateCollector = NULL;
+	updateCollectors = NULL;
 	updateRemoteCollector = NULL;
 	Config();
 
@@ -1226,11 +1226,11 @@ void CollectorDaemon::Config()
 		UpdateTimerId = -1;
 	}
 
-	if( updateCollector ) {
-		delete updateCollector;
-		updateCollector = NULL;
+	if( updateCollectors ) {
+		delete updateCollectors;
+		updateCollectors = NULL;
 	}
-	updateCollector = new DCCollector( NULL, DCCollector::UDP );
+	updateCollectors = CollectorList::create( NULL );
 
 	tmp = param ("CONDOR_DEVELOPERS_COLLECTOR");
 	if (tmp == NULL) {
@@ -1460,16 +1460,12 @@ int CollectorDaemon::sendCollectorAd()
 	collectorStats.publishGlobal( ad );
 
 	// Send the ad
-	char *update_addr = updateCollector->addr();
-	if (!update_addr) update_addr = "(null)";
-	if( ! updateCollector->sendUpdate(UPDATE_COLLECTOR_AD, ad, NULL, false) ) {
-		dprintf( D_ALWAYS, "Can't send UPDATE_COLLECTOR_AD to collector "
-				 "(%s): %s\n", update_addr,
-				 updateCollector->error() );
-		return 0;
+	int num_updated = updateCollectors->sendUpdates(UPDATE_COLLECTOR_AD, ad, NULL, false);
+	if ( num_updated != updateCollectors->number() ) {
+		dprintf( D_ALWAYS, "Unable to send UPDATE_COLLECTOR_AD to all configured collectors\n");
 	}
 
-	update_addr = updateRemoteCollector->addr();
+	char *update_addr = updateRemoteCollector->addr();
 	if (!update_addr) update_addr = "(null)";
 	if ( updateRemoteCollector ) {
 		if( ! updateRemoteCollector->sendUpdate(UPDATE_COLLECTOR_AD, ad, NULL, false) ) {
