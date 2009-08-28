@@ -289,7 +289,6 @@ do_process_request(const ClassAd *inputAd, ClassAd *resultAd, const int req_numb
 		if(!job_env.MergeFromV1RawOrV2Quoted(env_str,NULL) ) {
 			dprintf(D_ALWAYS,"ERROR: SOAPSHELL_ENVIRONMENT config macro invalid\n");
 		}
-		free(env_str);
 	} else if(!job_env.MergeFrom(inputAd,NULL)) {
 		// bad environment string in job ad!
 		handle_process_request_error("Request has faulty environment string",req_number,resultAd);
