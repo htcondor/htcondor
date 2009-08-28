@@ -247,7 +247,7 @@
 		Control="RB">
 	#)
 	#data 'RadioButton_HDFSMODE'	         
-	         'HDFS_DATANODE' '&Data Node' '' ''
+	         'HDFS_DATANODE' '&Data Node (Requires Cygwin)' '' ''
 		 'HDFS_NAMENODE' 'N&ame Node' '' ''
 	#data
 	#(
