@@ -46,7 +46,7 @@
 	shared library goo we need. Also, sometimes we can't build these files with
 	-fstack-protect, so we turn that off on some platforms. */
 %-pic.o: %.c
-	$(CC) $(CC_PIC_FLAGS) $(STD_C_FLAGS) $(GCC_NO_STACK_PROTECTOR) -c $< -o $@
+	$(CC) $(CC_PIC_FLAGS) $(CFLAGS) $(GCC_NO_STACK_PROTECTOR) -c $< -o $@
 
 %-pic.o: %.cpp
 	$(CPlusPlus) $(CC_PIC_FLAGS) $(C_PLUS_FLAGS) $(GCC_NO_STACK_PROTECTOR) -c $< -o $@
