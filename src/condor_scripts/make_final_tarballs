@@ -628,7 +628,7 @@ foreach my $name ( sort keys %modules ) {
 
 		# Pre cleanup
 		print "Making sure that $skel/$release is clean\n";
-		my $clean_cmd = "/bin/rm -fr ";
+		my $clean_cmd = "rm -fr ";
 		foreach my $dir ( @clean_dirs ) {
 			$clean_cmd .= "$skel/$release/$dir ";
 		}

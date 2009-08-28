@@ -105,7 +105,7 @@ done
 
 # clean up files
 sshd_cleanup
-/bin/rm -f machines
+rm -f machines
 
 # clean up lam
 lamhalt

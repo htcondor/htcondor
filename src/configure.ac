@@ -666,7 +666,7 @@ AC_SUBST(_cv_libc_is_kind,$_cv_libc_is_kind)
 # AS_DIRNAME to strip off the "src" part of `/bin/pwd`.  This should
 # get things right, even if there are weird symlinks going on.
 #########
-_src_dir=`/bin/pwd`
+_src_dir=`pwd`
 _root_dir=`AS_DIRNAME(["$_src_dir"])`
 
 CONDOR_VERIFY_CONFIG_DIR([$_root_dir/config],

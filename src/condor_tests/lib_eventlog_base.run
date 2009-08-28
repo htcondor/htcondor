@@ -89,7 +89,7 @@ my $exe = "./lib_eventlog_".$settings{name}.".exe";
 my $fulldir = getcwd() . "/$dir";
 if ( -d $dir  and  $settings{force} )
 {
-    system( "/bin/rm", "-fr", $dir );
+    system( "rm", "-fr", $dir );
 }
 if ( -d $dir )
 {

@@ -55,13 +55,13 @@ ToUpper:
 static:: $(STATIC_DIR)/sbin/condor_kbdd $(STATIC_UNSTRIP_DIR)/sbin/condor_kbdd
 
 $(STATIC_DIR)/sbin/condor_kbdd: condor_kbdd.static
-	/bin/rm -f $(STATIC_DIR)/sbin/condor_kbdd
+	rm -f $(STATIC_DIR)/sbin/condor_kbdd
 	cp condor_kbdd.static $(STATIC_DIR)/sbin/condor_kbdd
 	chmod EXECUTABLE_MODE $(STATIC_DIR)/sbin/condor_kbdd
 	$(STRIP) $(STATIC_DIR)/sbin/condor_kbdd
 
 $(STATIC_UNSTRIP_DIR)/sbin/condor_kbdd: condor_kbdd.static
-	/bin/rm -f $(STATIC_UNSTRIP_DIR)/sbin/condor_kbdd
+	rm -f $(STATIC_UNSTRIP_DIR)/sbin/condor_kbdd
 	cp condor_kbdd.static $(STATIC_UNSTRIP_DIR)/sbin/condor_kbdd
 	chmod EXECUTABLE_MODE $(STATIC_UNSTRIP_DIR)/sbin/condor_kbdd
 

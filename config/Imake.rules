@@ -362,7 +362,7 @@ strip_copy_target(service.wsdl,lib/webservice,service.wsdl,TEXT_MODE) @@\
 static_copy_target(service.wsdl,lib/webservice,service.wsdl,TEXT_MODE) @@\
 	@@\
 clean:: @@\
-	/bin/rm -f service.nsmap Concat(soapname(daemon),H).h Concat(soapname(daemon),Stub).h service.wsdl Concat(soapname(daemon),C).cpp Concat(soapname(daemon),Server).cpp soapfiles @@\
+	rm -f service.nsmap Concat(soapname(daemon),H).h Concat(soapname(daemon),Stub).h service.wsdl Concat(soapname(daemon),C).cpp Concat(soapname(daemon),Server).cpp soapfiles @@\
 XCOMM Specifically add a dependancy from the generated .cpp files to the @@\
 XCOMM .o files. Otherwise, the suffix rules do not get the dependencies @@\
 XCOMM right. @@\
@@ -387,7 +387,7 @@ $(SOAP_SRC): soapfiles
 #define testbin_target(file,mode)		@@\
 XCOMM Begin translation of func(testbin_target) @@\
 $(TESTBIN_DIR)/file: file			@@\
-	/bin/rm -f $(TESTBIN_DIR)/file	@@\
+	rm -f $(TESTBIN_DIR)/file	@@\
 	cp file $(TESTBIN_DIR)			@@\
 	chmod mode $(TESTBIN_DIR)/file	@@\
 testbin:: $(TESTBIN_DIR)/file			@@\
@@ -409,7 +409,7 @@ XCOMM End translation of func(testbin_target)
 #define release_target(file,dir,mode)		@@\
 XCOMM Begin translation of func(release_target) @@\
 $(RELEASE_DIR)/dir/file: file			@@\
-	/bin/rm -f $(RELEASE_DIR)/dir/file	@@\
+	rm -f $(RELEASE_DIR)/dir/file	@@\
 	ln file $(RELEASE_DIR)/dir 2>/dev/null || cp file $(RELEASE_DIR)/dir			@@\
 	chmod mode $(RELEASE_DIR)/dir/file	@@\
 release:: $(RELEASE_DIR)/dir/file			@@\
@@ -451,7 +451,7 @@ XCOMM Begin translation of func(release_symlink_target) @@\
 release:: $(RELEASE_DIR)/dir/dest			@@\
 							@@\
 $(RELEASE_DIR)/dir/dest: 			@@\
-	/bin/rm -f $(RELEASE_DIR)/dir/dest	@@\
+	rm -f $(RELEASE_DIR)/dir/dest	@@\
 	ln -s src $(RELEASE_DIR)/dir/dest			@@\
 XCOMM End translation of func(release_symlink_target)
 #endif /* release_symlink_target */
@@ -464,10 +464,10 @@ XCOMM End translation of func(release_symlink_target)
 XCOMM Begin translation of func(release_plain_symlink_target) @@\
 release:: dest					@@\
 dest: 						@@\
-	/bin/rm -f dest				@@\
+	rm -f dest				@@\
 	ln -s src dest				@@\
 clean::						@@\
-	/bin/rm -f dest		@@\
+	rm -f dest		@@\
 XCOMM End translation of func(release_plain_symlink_target)
 #endif /* release_plain_symlink_target */
 
@@ -480,7 +480,7 @@ XCOMM Begin translation of func(release_link_target) @@\
 release:: $(RELEASE_DIR)/dir/dest		@@\
 						@@\
 $(RELEASE_DIR)/dir/dest: $(RELEASE_DIR)/dir/src	@@\
-	/bin/rm -f $(RELEASE_DIR)/dir/dest	@@\
+	rm -f $(RELEASE_DIR)/dir/dest	@@\
 	ln $(RELEASE_DIR)/dir/src $(RELEASE_DIR)/dir/dest	@@\
 XCOMM End translation of func(release_link_target)
 #endif /* release_link_target */
@@ -495,7 +495,7 @@ XCOMM Begin translation of func(release_copy_target) @@\
 release:: $(RELEASE_DIR)/dir/dest		@@\
 							@@\
 $(RELEASE_DIR)/dir/dest: src			@@\
-	/bin/rm -f $(RELEASE_DIR)/dir/dest	@@\
+	rm -f $(RELEASE_DIR)/dir/dest	@@\
 	cp src $(RELEASE_DIR)/dir/dest		@@\
 	chmod mode $(RELEASE_DIR)/dir/dest	@@\
 XCOMM End translation of func(release_copy_target)
@@ -512,7 +512,7 @@ XCOMM Begin translation of func(release_recursive_copy_target) @@\
 release:: $(RELEASE_DIR)/dest	       			@@\
 							@@\
 $(RELEASE_DIR)/dest: src				@@\
-	/bin/rm -rf $(RELEASE_DIR)/dest		@@\
+	rm -rf $(RELEASE_DIR)/dest		@@\
 	$(CP_CMD) src $(RELEASE_DIR)/dest	@@\
 XCOMM End translation of func(release_recursive_copy_target)
 #endif /* release_recursive_copy_target */
@@ -555,7 +555,7 @@ XCOMM End translation of func(release_recursive_copy_target)
 #define strip_target(file,dir,mode)			@@\
 XCOMM Begin translation of func(strip_target) @@\
 $(STRIP_DIR)/dir/file: file			@@\
-	/bin/rm -f $(STRIP_DIR)/dir/file		@@\
+	rm -f $(STRIP_DIR)/dir/file		@@\
 	cp file $(STRIP_DIR)/dir			@@\
 	strip_file($(STRIP_DIR)/dir/file) @@\
 	chmod mode $(STRIP_DIR)/dir/file		@@\
@@ -599,7 +599,7 @@ XCOMM End translation of func(strip_shared_library)
 #define strip_copy_target(src,dir,file,mode)	@@\
 XCOMM Begin translation of func(strip_copy_target) @@\
 $(STRIP_DIR)/dir/file: src			@@\
-	/bin/rm -f $(STRIP_DIR)/dir/file		@@\
+	rm -f $(STRIP_DIR)/dir/file		@@\
 	cp src $(STRIP_DIR)/dir/file		@@\
 	chmod mode $(STRIP_DIR)/dir/file		@@\
 stripped:: $(STRIP_DIR)/dir/file		@@\
@@ -616,7 +616,7 @@ XCOMM Begin translation of func(strip_recursive_copy_target)	@@\
 stripped:: $(STRIP_DIR)/dest					@@\
 								@@\
 $(STRIP_DIR)/dest: src						@@\
-	/bin/rm -rf $(STRIP_DIR)/dest				@@\
+	rm -rf $(STRIP_DIR)/dest				@@\
 	$(CP_CMD) src $(STRIP_DIR)/dest				@@\
 XCOMM End translation of func(strip_recursive_copy_target)
 #endif /* strip_recursive_copy_target */
@@ -631,7 +631,7 @@ XCOMM Begin translation of func(strip_link_target) @@\
 stripped:: $(STRIP_DIR)/dir/dest		@@\
 						@@\
 $(STRIP_DIR)/dir/dest: $(STRIP_DIR)/dir/src	@@\
-	/bin/rm -f $(STRIP_DIR)/dir/dest	@@\
+	rm -f $(STRIP_DIR)/dir/dest	@@\
 	ln $(STRIP_DIR)/dir/src $(STRIP_DIR)/dir/dest	@@\
 XCOMM End translation of func(strip_link_target)
 #endif /* strip_link_target */
@@ -647,7 +647,7 @@ XCOMM Begin translation of func(strip_symlink_target) @@\
 stripped:: $(STRIP_DIR)/dir/dest		@@\
 							@@\
 $(STRIP_DIR)/dir/dest: 			@@\
-	/bin/rm -f $(STRIP_DIR)/dir/dest		@@\
+	rm -f $(STRIP_DIR)/dir/dest		@@\
 	ln -s src $(STRIP_DIR)/dir/dest		@@\
 XCOMM End translation of func(strip_symlink_target)
 #endif /* strip_symlink_target */
@@ -674,7 +674,7 @@ XCOMM End translation of func(strip_symlink_target)
 #define static_target_real(program,objlist,libs,dir,ldflags)	@@\
 XCOMM Begin translation of func(static_target_real)		@@\
 $(STATIC_DIR)/dir/program: program.static			@@\
-	/bin/rm -f $(STATIC_DIR)/dir/program			@@\
+	rm -f $(STATIC_DIR)/dir/program			@@\
 	cp program.static $(STATIC_DIR)/dir/program		@@\
 	chmod EXECUTABLE_MODE $(STATIC_DIR)/dir/program		@@\
 	strip_file($(STATIC_DIR)/dir/program)			@@\
@@ -758,7 +758,7 @@ XCOMM End translation of func(static_shared_library)
 #define static_copy_target(src,dir,file,mode)	@@\
 XCOMM Begin translation of func(static_copy_target) @@\
 $(STATIC_DIR)/dir/file: src			@@\
-	/bin/rm -f $(STATIC_DIR)/dir/file	@@\
+	rm -f $(STATIC_DIR)/dir/file	@@\
 	cp src $(STATIC_DIR)/dir/file		@@\
 	chmod mode $(STATIC_DIR)/dir/file	@@\
 static:: $(STATIC_DIR)/dir/file	@@\
@@ -781,7 +781,7 @@ XCOMM End translation of func(static_copy_target)
 XCOMM Begin translation of func(static_recursive_copy_target)	@@\
 static:: $(STATIC_DIR)/dest @@\
 $(STATIC_DIR)/dest: src						@@\
-	/bin/rm -rf $(STATIC_DIR)/dest				@@\
+	rm -rf $(STATIC_DIR)/dest				@@\
 	$(CP_CMD) src $(STATIC_DIR)/dest			@@\
 XCOMM End translation of func(static_recursive_copy_target)
 #else  /* ! HAS_STATIC */
@@ -803,7 +803,7 @@ XCOMM Begin translation of func(static_link_target) @@\
 static:: $(STATIC_DIR)/dir/dest	@@\
 						@@\
 $(STATIC_DIR)/dir/dest: $(STATIC_DIR)/dir/src	@@\
-	/bin/rm -f $(STATIC_DIR)/dir/dest	@@\
+	rm -f $(STATIC_DIR)/dir/dest	@@\
 	ln $(STATIC_DIR)/dir/src $(STATIC_DIR)/dir/dest	@@\
 XCOMM End translation of func(static_link_target)
 #else  /* ! HAS_STATIC */
@@ -823,7 +823,7 @@ XCOMM End translation of func(static_link_target)
 XCOMM Begin translation of func(static_symlink_target) @@\
 static:: $(STATIC_DIR)/dir/dest @@\
 $(STATIC_DIR)/dir/dest: 			@@\
-	/bin/rm -f $(STATIC_DIR)/dir/dest	@@\
+	rm -f $(STATIC_DIR)/dir/dest	@@\
 	ln -s src $(STATIC_DIR)/dir/dest	@@\
 XCOMM End translation of func(static_symlink_target)
 #else  /* ! HAS_STATIC */
@@ -964,10 +964,10 @@ XCOMM End translation of func(public_library)
 XCOMM Begin translation of func(all_link_target) @@\
 all:: dest					@@\
 dest: src					@@\
-	/bin/rm -f dest				@@\
+	rm -f dest				@@\
 	ln src dest				@@\
 clean::						@@\
-	/bin/rm -f dest			@@\
+	rm -f dest			@@\
 XCOMM End translation of func(all_link_target)
 #endif /* all_link_target */
 
@@ -977,10 +977,10 @@ XCOMM End translation of func(all_link_target)
 XCOMM Begin translation of func(all_symlink_target) @@\
 all:: dest					@@\
 dest: src					@@\
-	/bin/rm -f dest				@@\
+	rm -f dest				@@\
 	ln -s src dest				@@\
 clean::						@@\
-	/bin/rm -f dest			@@\
+	rm -f dest			@@\
 XCOMM End translation of func(all_symlink_target)
 #endif /* all_symlink_target */
 
@@ -990,10 +990,10 @@ XCOMM End translation of func(all_symlink_target)
 XCOMM Begin translation of func(all_copy_target) @@\
 all:: dest					@@\
 dest: src					@@\
-	/bin/rm -f dest				@@\
+	rm -f dest				@@\
 	cp src dest				@@\
 clean::						@@\
-	/bin/rm -f dest			@@\
+	rm -f dest			@@\
 XCOMM End translation of func(all_copy_target)
 #endif /* all_copy_target */
 
@@ -1058,7 +1058,7 @@ XCOMM Begin translation of func(strip_full_tarball) @@\
 name:: prestrip(type)/name			@@\
 							@@\
 prestrip(type)/name: stripped			@@\
-	/bin/rm -f prestrip(type)/name		@@\
+	rm -f prestrip(type)/name		@@\
 	cd prestrip(type); $(TAR_CMD) -cvf name files	@@\
 XCOMM End translation of func(strip_full_tarball)
 #endif /* strip_full_tarball */
@@ -1071,7 +1071,7 @@ XCOMM Begin translation of func(static_full_tarball) @@\
 name:: prestatic(type)/name			@@\
 							@@\
 prestatic(type)/name: static			@@\
-	/bin/rm -f prestatic(type)/name		@@\
+	rm -f prestatic(type)/name		@@\
 	cd prestatic(type); $(TAR_CMD) -cvf name files	@@\
 XCOMM End translation of func(static_full_tarball)
 #else 
@@ -1236,7 +1236,7 @@ compiledir: 							@@\
 	mkdir compiledir					@@\
 								@@\
 compiledir/Imakefile:	CImakefile				@@\
-	cd compiledir; /bin/rm -f Imakefile			@@\
+	cd compiledir; rm -f Imakefile			@@\
 	cd compiledir; ln -s ../CImakefile Imakefile		@@\
 								@@\
 compiledir/Makefile: compiledir compiledir/Imakefile		@@\
@@ -1265,7 +1265,7 @@ compiledir: 							@@\
 	mkdir compiledir					@@\
 								@@\
 compiledir/Imakefile: CPPImakefile				@@\
-	cd compiledir; /bin/rm -f Imakefile			@@\
+	cd compiledir; rm -f Imakefile			@@\
 	cd compiledir; ln -s ../CPPImakefile Imakefile		@@\
 								@@\
 compiledir/Makefile: compiledir compiledir/Imakefile		@@\
@@ -1294,7 +1294,7 @@ compiledir:							@@\
 	mkdir compiledir					@@\
 								@@\
 compiledir/Imakefile: FImakefile				@@\
-	cd compiledir; /bin/rm -f Imakefile			@@\
+	cd compiledir; rm -f Imakefile			@@\
 	cd compiledir; ln -s ../FImakefile Imakefile		@@\
 								@@\
 compiledir/Makefile: compiledir compiledir/Imakefile	@@\
@@ -1324,7 +1324,7 @@ compiledir:							@@\
 	mkdir compiledir					@@\
 								@@\
 compiledir/Imakefile: F90Imakefile				@@\
-	cd compiledir; /bin/rm -f Imakefile			@@\
+	cd compiledir; rm -f Imakefile			@@\
 	cd compiledir; ln -s ../F90Imakefile Imakefile		@@\
 								@@\
 compiledir/Makefile: compiledir compiledir/Imakefile	@@\
@@ -1398,7 +1398,7 @@ name:: file				@@\
        @$(TRUE)				@@\
 all:: file				@@\
 file::					@@\
-	/bin/rm -f file 		@@\
+	rm -f file 		@@\
 	ln -s ../file file		@@\
 XCOMM End translation of func(DEP_SYMLINK)
 #else /* ! defined(FLAGS_MACRO_NAME) */
@@ -1563,7 +1563,7 @@ XCOMM End translation of func(DESC)
 #define html_target(files)					@@\
 XCOMM Begin translation of func(html_target) @@\
 html: files							@@\
-	/bin/rm -rf html					@@\
+	rm -rf html					@@\
 	DocCompiler -H -d html -u -g -l -j -p       \           @@\
 		-m -f -B ../html/condor_banner.html \		@@\
 		files @@\
@@ -1787,7 +1787,7 @@ manpage_dependency=man-current
 XCOMM BEGIN translation of func(man_full_target)		@@\
 manpages:: sufdir(type)/man/man1/name				@@\
 sufdir(type)/man/man1/name: $(manpage_dependency)		@@\
-	/bin/rm -f sufdir(type)/man/man1/name			@@\
+	rm -f sufdir(type)/man/man1/name			@@\
 	cp $(MAN_DIR)/man1/name sufdir(type)/man/man1/name	@@\
 	chmod 0644 sufdir(type)/man/man1/name			@@\
 XCOMM End translation of func(man_full_target)

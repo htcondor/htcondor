@@ -30,7 +30,7 @@ c: io.remote loop.remote registers.remote
 fortran: printer.remote reader.remote fortIO.remote
 
 clean:
-	/bin/rm *.remote *.out *.err *.log *.output core* tmp
+	rm *.remote *.out *.err *.log *.output core* tmp
 
 env.remote: env.C
 	condor_compile $(C++) -o env.remote env.C

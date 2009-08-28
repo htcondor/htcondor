@@ -507,7 +507,7 @@ sub InstallModules ( )
 	{
 	    print STDERR
 		"$Module does not appear to be a valid module file\n";
-	    system "/bin/rm *";
+	    system "rm *";
 	    next;
 	}
 
@@ -580,7 +580,7 @@ sub InstallModules ( )
 	}
 
 	# Clean up
-	system( "/bin/rm *" );
+	system( "rm *" );
 
     }
 
@@ -596,7 +596,7 @@ sub InstallModules ( )
 
     # Final clean-up
     chdir $OrigDir;
-    system "/bin/rm -fr $TmpDir";
+    system "rm -fr $TmpDir";
 
     # Summary
     if ( $#Ok >= 0 )

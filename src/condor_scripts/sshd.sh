@@ -22,7 +22,7 @@
 
 
 sshd_cleanup() {
-	/bin/rm -f $hostkey ${hostkey}.pub ${idkey} ${idkey}.pub sshd.out $_CONDOR_SCRATCH_DIR/contact
+	rm -f $hostkey ${hostkey}.pub ${idkey} ${idkey}.pub sshd.out $_CONDOR_SCRATCH_DIR/contact
 }
 
 trap sshd_cleanup 15
@@ -46,7 +46,7 @@ mkdir $_CONDOR_SCRATCH_DIR/tmp
 # Create the host key. 
 
 hostkey=$_CONDOR_SCRATCH_DIR/tmp/hostkey
-/bin/rm -f $hostkey $hostkey.pub
+rm -f $hostkey $hostkey.pub
 $KEYGEN -q -f $hostkey -t rsa -N '' 
 
 if [ $? -ne 0 ]
@@ -99,7 +99,7 @@ fi
 done
 
 # Don't need this anymore
-/bin/rm sshd.out
+rm sshd.out
 
 # create contact file
 hostname=`hostname`
@@ -128,7 +128,7 @@ then
 	# reported in
 	while [ $done -eq 0 ]
 	do
-			/bin/rm -f contact
+			rm -f contact
 			$CONDOR_CHIRP fetch $_CONDOR_REMOTE_SPOOL_DIR/contact $_CONDOR_SCRATCH_DIR/contact
 			lines=`grep -c $thisrun $_CONDOR_SCRATCH_DIR/contact`
 			if [ $lines -eq $_CONDOR_NPROCS ]

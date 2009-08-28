@@ -519,7 +519,7 @@ ext_target(EXT_DRMAA_VERSION,$(NULL))
 ext_target(EXT_POSTGRESQL_VERSION,$(NULL))
 
 testbin_dir/$(EXT_POSTGRESQL_VERSION): $(EXT_TRIGGER)/$(EXT_POSTGRESQL_VERSION)
-	/bin/rm -rf testbin_dir/$(EXT_POSTGRESQL_VERSION)
+	rm -rf testbin_dir/$(EXT_POSTGRESQL_VERSION)
 	cp -r $(EXT_INSTALL)/$(EXT_POSTGRESQL_VERSION) testbin_dir
 testbin:: testbin_dir/$(EXT_POSTGRESQL_VERSION)
 #endif
@@ -530,7 +530,7 @@ clean::
 	rm -rf $(PURE_DIR)
 
 today:
-	/bin/rm -f condor_c++_util/condor_version.o
+	rm -f condor_c++_util/condor_version.o
 	cd condor_c++_util; $(MAKE)
 
 

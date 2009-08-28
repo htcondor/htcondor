@@ -17,20 +17,20 @@ clean::
 release:: $(RELEASE_DIR)/etc/examples/README
 
 $(RELEASE_DIR)/etc/examples/README: 
-	/bin/cp -f $(FILES) $(RELEASE_DIR)/etc/examples
+	cp -f $(FILES) $(RELEASE_DIR)/etc/examples
 	perl ./customize $(RELEASE_DIR)
 
 stripped:: $(STRIP_DIR)/etc/examples/README
 
 $(STRIP_DIR)/etc/examples/README: 
-	/bin/cp -f $(FILES) $(STRIP_DIR)/etc/examples
+	cp -f $(FILES) $(STRIP_DIR)/etc/examples
 	perl ./customize $(STRIP_DIR)
 
 #if HAS_STATIC
 static:: $(STATIC_DIR)/etc/examples/README
 
 $(STATIC_DIR)/etc/examples/README:
-	/bin/cp -f $(FILES) $(STATIC_DIR)/etc/examples
+	cp -f $(FILES) $(STATIC_DIR)/etc/examples
 	perl ./customize $(STATIC_DIR)
 
 #else  /* ! HAS_STATIC */

@@ -544,7 +544,7 @@ AC_DEFUN([CONDOR_TRY_CP_RECURSIVE_SYMLINK_FLAG],
    fi
  fi
  # either way, clean up our test files
- /bin/rm -f conftest_base conftest_link conftest_file > /dev/null 2>&1
+ rm -f conftest_base conftest_link conftest_file > /dev/null 2>&1
 ])
 
 

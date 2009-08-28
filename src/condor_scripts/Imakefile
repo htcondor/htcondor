@@ -12,7 +12,7 @@ XCOMM Begin translation of func(release_version_target) @@\
 release:: $(RELEASE_DIR)/dir/dest		@@\
 							@@\
 $(RELEASE_DIR)/dir/dest: src			@@\
-	/bin/rm -f $(RELEASE_DIR)/dir/dest	@@\
+	rm -f $(RELEASE_DIR)/dir/dest	@@\
 	./condor_version_filt src $(RELEASE_DIR)/dir/dest	@@\
 	chmod mode $(RELEASE_DIR)/dir/dest	@@\
 XCOMM End translation of func(release_version_target)
@@ -25,7 +25,7 @@ XCOMM End translation of func(release_version_target)
 #define strip_version_target(src,dir,file,mode)	@@\
 XCOMM Begin translation of func(strip_version_target) @@\
 $(STRIP_DIR)/dir/file: src			@@\
-	/bin/rm -f $(STRIP_DIR)/dir/file		@@\
+	rm -f $(STRIP_DIR)/dir/file		@@\
 	./condor_version_filt src $(STRIP_DIR)/dir/file	@@\
 	chmod mode $(STRIP_DIR)/dir/file		@@\
 stripped:: $(STRIP_DIR)/dir/file		@@\
@@ -40,7 +40,7 @@ XCOMM End translation of func(strip_version_target)
 #define static_version_target(src,dir,file,mode)	@@\
 XCOMM Begin translation of func(static_version_target) @@\
 $(STATIC_DIR)/dir/file: src			@@\
-	/bin/rm -f $(STATIC_DIR)/dir/file	@@\
+	rm -f $(STATIC_DIR)/dir/file	@@\
 	./condor_version_filt src > $(STATIC_DIR)/dir/file	@@\
 	chmod mode $(STATIC_DIR)/dir/file	@@\
 static:: $(STATIC_DIR)/dir/file	@@\

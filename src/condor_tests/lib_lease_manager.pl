@@ -363,7 +363,7 @@ if ( $settings{use_pid} ) {
 
 my $fulldir = getcwd() . "/$dir";
 if ( -d $dir  and  $settings{force} ) {
-    system( "/bin/rm", "-fr", $dir );
+    system( "rm", "-fr", $dir );
 }
 if ( -d $dir ) {
     die "Test directory $dir already exists! (try --force?)";

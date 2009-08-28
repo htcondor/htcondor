@@ -139,7 +139,7 @@ TMP_DIR = tmp_dir
 tmp_dir:
 	mkdir tmp_dir; chmod 755 tmp_dir
 clean::
-	/bin/rm -rf tmp_dir
+	rm -rf tmp_dir
 
 #if IS_HPUX
 SIGNAL.o :  $(SIMPLE_LIBC)  ToUpper

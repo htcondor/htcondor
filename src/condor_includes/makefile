@@ -22,7 +22,7 @@ PROGS =  test.constants test.debug test.config test.expressions test.xdr test.jo
 All: $(PROGS)
 
 clean: ALWAYS
-	/bin/rm -f $(PROGS) *.o
+	rm -f $(PROGS) *.o
 
 test.constants: ALWAYS
 	$(CC) $(CFLAGS) -o test.constants test.constants.c

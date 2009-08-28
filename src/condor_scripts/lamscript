@@ -86,7 +86,7 @@ sort -n -k 1 < $CONDOR_CONTACT_FILE | awk '{print $2}' > machines
 # Remove the contact file, so if we are held and released
 # it can be recreated anew
 
-/bin/rm -f $CONDOR_CONTACT_FILE
+rm -f $CONDOR_CONTACT_FILE
 
 # start the lam environment
 # For older versions of lam you may need to remove the -ssi boot rsh line
@@ -110,7 +110,7 @@ done
 
 # clean up files
 sshd_cleanup
-/bin/rm -f machines
+rm -f machines
 
 # clean up lam
 lamhalt

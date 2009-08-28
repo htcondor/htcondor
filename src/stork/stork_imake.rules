@@ -35,7 +35,7 @@ XCOMM End translation of func(contrib_target)
 #define stork_contrib_release_target(file,dir,mode)		@@\
 XCOMM Begin translation of func(stork_contrib_release_target) @@\
 $(STORK_CONTRIB_RELEASE_DIR)/dir/file: file			@@\
-	/bin/rm -f $(STORK_CONTRIB_RELEASE_DIR)/dir/file	@@\
+	rm -f $(STORK_CONTRIB_RELEASE_DIR)/dir/file	@@\
 	cp file $(STORK_CONTRIB_RELEASE_DIR)/dir			@@\
 	chmod mode $(STORK_CONTRIB_RELEASE_DIR)/dir/file	@@\
 contrib-release:: $(STORK_CONTRIB_RELEASE_DIR)/dir/file			@@\
@@ -46,7 +46,7 @@ XCOMM End translation of func(stork_contrib_release_target)
 #define stork_contrib_strip_target(file,dir,mode)			@@\
 XCOMM Begin translation of func(stork_contrib_strip_target) @@\
 $(STORK_CONTRIB_STRIP_DIR)/dir/file: file			@@\
-	/bin/rm -f $(STORK_CONTRIB_STRIP_DIR)/dir/file		@@\
+	rm -f $(STORK_CONTRIB_STRIP_DIR)/dir/file		@@\
 	cp file $(STORK_CONTRIB_STRIP_DIR)/dir			@@\
 	$(STRIP) $(STORK_CONTRIB_STRIP_DIR)/dir/file		@@\
 	chmod mode $(STORK_CONTRIB_STRIP_DIR)/dir/file		@@\
@@ -60,7 +60,7 @@ XCOMM Begin translation of func(stork_module_release_link_target) @@\
 contrib-release:: $(STORK_CONTRIB_RELEASE_DIR)/dir/dest		@@\
 							@@\
 $(STORK_CONTRIB_RELEASE_DIR)/dir/dest: src			@@\
-	/bin/rm -f $(STORK_CONTRIB_RELEASE_DIR)/dir/dest	@@\
+	rm -f $(STORK_CONTRIB_RELEASE_DIR)/dir/dest	@@\
 	ln src $(STORK_CONTRIB_RELEASE_DIR)/dir/dest		@@\
 XCOMM End translation of func(stork_module_release_link_target)
 #endif /* stork_module_release_link_target */
@@ -71,7 +71,7 @@ XCOMM Begin translation of func(stork_module_strip_link_target) @@\
 contrib-stripped:: $(STORK_CONTRIB_STRIP_DIR)/dir/dest		@@\
 							@@\
 $(STORK_CONTRIB_STRIP_DIR)/dir/dest: src			@@\
-	/bin/rm -f $(STORK_CONTRIB_STRIP_DIR)/dir/dest		@@\
+	rm -f $(STORK_CONTRIB_STRIP_DIR)/dir/dest		@@\
 	ln src $(STORK_CONTRIB_STRIP_DIR)/dir/dest		@@\
 XCOMM End translation of func(stork_module_strip_link_target)
 #endif /* stork_module_strip_link_target */
