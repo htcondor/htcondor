@@ -273,12 +273,11 @@ do_process_request(const ClassAd *inputAd, ClassAd *resultAd, const int req_numb
 	args.SetArgV1SyntaxToCurrentPlatform();
 	args.AppendArg(JobName.Value());	// set argv[0] to command
 	char *soapshell_args = auth_list.next();
-	if (soapshell_args) {
+	if ( soapshell_args && strcmp(soapshell_args,"*") ) {
 		if(!args.AppendArgsV1RawOrV2Quoted(soapshell_args,NULL)) {
 			dprintf( D_ALWAYS, "ERROR: SOAPSHELL_ARGS config macro invalid\n" );
 		}
-	}
-	if(!args.AppendArgsFromClassAd(inputAd,NULL)) {
+	} else if(!args.AppendArgsFromClassAd(inputAd,NULL)) {
 		handle_process_request_error("Failed to setup CMD arguments",req_number,resultAd);
 		return;
 	}
@@ -286,13 +285,12 @@ do_process_request(const ClassAd *inputAd, ClassAd *resultAd, const int req_numb
 		// handle the environment.
 	Env job_env;
 	char *env_str = auth_list.next();
-	if ( env_str ) {
+	if ( env_str && strcmp(env_str,"*") ) {
 		if(!job_env.MergeFromV1RawOrV2Quoted(env_str,NULL) ) {
 			dprintf(D_ALWAYS,"ERROR: SOAPSHELL_ENVIRONMENT config macro invalid\n");
 		}
 		free(env_str);
-	}
-	if(!job_env.MergeFrom(inputAd,NULL)) {
+	} else if(!job_env.MergeFrom(inputAd,NULL)) {
 		// bad environment string in job ad!
 		handle_process_request_error("Request has faulty environment string",req_number,resultAd);
 		return;
