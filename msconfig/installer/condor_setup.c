@@ -41,7 +41,8 @@ struct Options {
 	char runjobs;    /* N/A/I/C (Never/Always/Idle/Cpu+Idle */
 	char vacatejobs; /* Y/N */
 	char enablevmuniverse; /* Y/N */
-	char vmnetworking; /* N/A/B/C (None/NAT/Bridge/NAT and Bridge) */	
+	char vmnetworking; /* N/A/B/C (None/NAT/Bridge/NAT and Bridge) */
+	char hadoop;     /* N/Y */
 
 	char *poolhostname;
 	char *poolname; 
@@ -57,10 +58,14 @@ struct Options {
 	char *vmmaxnumber;
 	char *vmversion;
 	char *vmmemory;
-} Opt = { '\0', '\0', '\0', '\0', '\0','\0', NULL, NULL, NULL, NULL, NULL, 
-	NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+	char *namedata;
+	char *namenode;
+	char *nameport;
+	char *namewebport;
+} Opt = { '\0', '\0', '\0', '\0', '\0','\0', '\0', NULL, NULL, NULL, NULL, NULL, 
+	NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
 
-const char *short_options = ":c:d:e:i:j:v:n:p:o:r:a:s:t:m:u:l:w:x:y:z:h";
+const char *short_options = ":c:d:e:i:j:v:n:p:o:r:a:s:t:m:u:l:w:x:y:z:q:f:k:g:b:h";
 static struct option long_options[] =
 { 
 	{"acctdomain",              required_argument, 0, 'a'},
@@ -83,6 +88,11 @@ static struct option long_options[] =
 	{"vmversion",               required_argument, 0, 'x'},
 	{"vmmemory",                required_argument, 0, 'y'},
 	{"vmnetworking",            required_argument, 0, 'z'},
+	{"hadoop",					required_argument, 0, 'q'},
+	{"namenode",				required_argument, 0, 'f'},
+	{"namedata",				required_argument, 0, 'k'},
+	{"nameport",				required_argument, 0, 'g'},
+	{"namewebport",				required_argument, 0, 'b'},
 	{"help",                    no_argument,       0, 'h'},
    	{0, 0, 0, 0}
 };
@@ -114,6 +124,7 @@ void set_vmgahpoptions();
 void set_mailoptions();
 void set_hostpermissions();
 void set_vmuniverse();
+void set_hdfs();
 
 int WINAPI WinMain( HINSTANCE hInstance, 
 		    HINSTANCE hPrevInstance, 
@@ -141,6 +152,7 @@ int WINAPI WinMain( HINSTANCE hInstance,
   set_mailoptions ();
   set_hostpermissions ();
   set_vmuniverse();
+  set_hdfs();
   
   /* the following options go in the vmgahp config file */
   if ( 'Y' == Opt.enablevmuniverse ) {
@@ -302,12 +314,13 @@ set_daemonlist() {
 	char buf[1024];
 
 	if ( Opt.newpool && Opt.submitjobs && Opt.runjobs ) {
-		snprintf(buf, 1024, "MASTER %s %s %s", 
+		snprintf(buf, 1024, "MASTER %s %s %s %s", 
 				(Opt.newpool == 'Y') ? "COLLECTOR NEGOTIATOR" : "",
 				(Opt.submitjobs == 'Y') ? "SCHEDD" : "",
 				(Opt.runjobs == 'A' ||
 				 Opt.runjobs == 'I' ||
-				 Opt.runjobs == 'C') ? "STARTD" : "");
+				 Opt.runjobs == 'C') ? "STARTD" : "",
+				(Opt.hadoop == 'Y') ? "HDFS" : "");
 
 		set_option("DAEMON_LIST", buf);
 	}
@@ -343,6 +356,26 @@ set_vmuniverse() {
 		set_option("VM_NETWORKING", "TRUE");	  
 	}
 	
+}
+
+void set_hdfs() {
+	char buf[MAX_PATH];
+	if ( Opt.namedata ) {
+		set_option("HDFS_SERVICES", Opt.namedata);
+		set_option("HDFS_NAMENODE_DIR", "$(RELEASE_DIR)/HDFS/hadoop_name");
+		set_option("HDFS_DATANODE_DIR", "$(RELEASE_DIR)/HDFS/hadoop_data");
+		set_option("HDFS_HOME", "$(RELEASE_DIR)/HDFS");
+	}
+
+	if ( Opt.namenode && Opt.nameport ) {
+		snprintf(buf, MAX_PATH, "%s%s%s", Opt.namenode, ":", Opt.nameport);
+		set_option("HDFS_NAMENODE", buf);
+	}
+
+	if ( Opt.namenode && Opt.namewebport ) {
+		snprintf(buf, MAX_PATH, "%s%s%s", Opt.namenode, ":", Opt.namewebport);
+		set_option("HDFS_NAMENODE_WEB", buf);
+	}
 }
 
 bool 
@@ -480,6 +513,36 @@ parse_args(int argc, char** argv) {
 					Opt.vmnetworking = toupper(my_optarg[0]);
 				}
 			break;
+
+			case 'q':
+				if ( my_optarg ) {
+					Opt.hadoop = toupper(my_optarg[0]);
+				}
+				break;
+
+			case 'f':
+				if( !isempty(my_optarg) ) {
+					Opt.namenode = strdup(my_optarg);
+				}
+				break;
+
+			case 'k':
+				if( !isempty(my_optarg) ) {
+					Opt.namedata = strdup(my_optarg);
+				}
+				break;
+
+			case 'g':
+				if( !isempty(my_optarg) ) {
+					Opt.nameport = strdup(my_optarg);
+				}
+				break;
+
+			case 'b':
+				if( !isempty(my_optarg) ) {
+					Opt.namewebport = strdup(my_optarg);
+				}
+				break;
 			
 			case 'h':
 			default:
