@@ -136,7 +136,7 @@ these functions.
 \subsection{\label{sec:Condor-Daemons}The Condor Daemons}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{Condor daemon!descriptions}
-\index{daemons!descriptions}
+\index{daemon!descriptions}
 
 The following list describes all the daemons and programs that could
 be started under Condor and what they do:
@@ -196,7 +196,7 @@ manipulate the job queue (such as \Condor{submit}, \Condor{q}, or
 \Condor{rm}) all must connect to the schedd to do their work.  If the
 schedd is down on a given machine, none of these commands will work.  
 
-The schedd advertises the number of waiting jobs in its job queue and
+The \Condor{schedd} advertises the number of waiting jobs in its job queue and
 is responsible for claiming available resources to serve those
 requests.  Once a schedd has been matched with a given resource, the
 schedd spawns a \Condor{shadow} (described below) to serve that
@@ -328,6 +328,13 @@ assists the \Condor{had} daemon by keeping an updated copy of the
 pool's state. This state provides a better transition
 from one machine to the next, in the event 
 that the central manager machine stops working.
+
+\index{Condor daemon!condor\_transferer@\Condor{transferer}}
+\index{daemon!condor\_transferer@\Condor{transferer}}
+\index{condor\_transferer daemon}
+\item[\Condor{transferer}] This short lived daemon is invoked by
+the \Condor{replication} daemon to accomplish the task of transfering
+a state file before exiting.
 
 \index{Condor daemon!condor\_procd@\Condor{procd}}
 \index{daemon!condor\_procd@\Condor{procd}}
