@@ -237,7 +237,7 @@
 	<$Row Dialog_="VMUniverseSettings" Control_="Entry.6" Action="Disable" Condition=^USEVMUNIVERSE = "N"^>
 <$/Table>
 
-<$Dialog "HDFS Settings" Description="Enable HDFS support?" Dialog="HDFSSETTINGS" INSERT="VMUniverseSettings">
+<$Dialog "HDFS Settings" Description="Enable HDFS support?" Dialog="HDFSSettings" INSERT="VMUniverseSettings">
 	#data 'RadioButton_USEHDFS'	         
 	         'N' 'N&o' '' ''
 		 'Y' '&Yes (Requires Java)' '' ''
@@ -247,8 +247,8 @@
 		Control="RB">
 	#)
 	#data 'RadioButton_HDFSMODE'	         
-	         'HDFS_DATANODE' '&Data Node' '' ''
-		 'HDFS_NAMENODE' 'N&ame Node' '' ''
+	         'N' 'N&ame Node' '' ''
+		 'D' '&Data Node' '' ''
 	#data
 	#(
 	<$DialogEntry Property="HDFSMODE" Label="Select HDFS mode:" 
@@ -261,7 +261,7 @@
 <$/Dialog>
 
 <$Table "ControlCondition">
-	<$Row Dialog_="HDFSSETTINGS" Control_="Entry.2" Action="Enable" Condition=^USEHDFS = "Y"^>	
+	<$Row Dialog_="HDFSSettings" Control_="Entry.2" Action="Enable" Condition=^USEHDFS = "Y"^>	
 	<$Row Dialog_="HDFSSETTINGS" Control_="Entry.2" Action="Disable" Condition=^USEHDFS = "N"^>
 	<$Row Dialog_="HDFSSETTINGS" Control_="Entry.3" Action="Enable" Condition=^USEHDFS = "Y"^>	
 	<$Row Dialog_="HDFSSETTINGS" Control_="Entry.3" Action="Disable" Condition=^USEHDFS = "N"^>
@@ -373,8 +373,7 @@ Args=^
 -c "[CONDOREMAIL]"
 -e "[HOSTALLOWREAD]"
 -t "[HOSTALLOWWRITE]"
--i "[HOSTALLOWADMINISTRATOR]"
--q "[USEHDFS]"^
+-i "[HOSTALLOWADMINISTRATOR]"^ 
 WorkDir=^INSTALLDIR^   
 Condition="<$CONDITION_EXCEPT_UNINSTALL>" 
 Seq="InstallServices-"
@@ -410,26 +409,9 @@ Args=^
 -x "[VMVERSION]"
 -y "[VMMEMORY]"
 -z "[VMNETWORKING]"
--l "[PERLLOCATION]"^
+-l "[PERLLOCATION]"^ 
 WorkDir=^INSTALLDIR^   
 Condition="<$CONDITION_EXCEPT_UNINSTALL>" 
-Seq="InstallServices-"
-Rc0="N"       ;; On Vista this app will not return any useful results
-Type="System" ;; run as the System account	
->
-#)
-
-;--- HDFS configuration, only run if HDFS option is elected -
-#(
-<$ExeCa EXE=^[INSTALLDIR]condor_setup.exe^
-Args=^
--f "[NAMENODE]"
--k "[HDFSMODE]"
--g "[HDFSPORT]"
--b "[HDFSWEBPORT]"
-^
-WorkDir=^INSTALLDIR^   
-Condition=^(<$CONDITION_EXCEPT_UNINSTALL>) AND (USEHDFS = "Y")^ 
 Seq="InstallServices-"
 Rc0="N"       ;; On Vista this app will not return any useful results
 Type="System" ;; run as the System account	
