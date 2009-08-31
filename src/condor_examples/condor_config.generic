@@ -2408,13 +2408,12 @@ LeaseManager.CLASSAD_LOG	= $(SPOOL)/LeaseManagerState
 ## is under 'libexec' directory. The directory pointed by HDFS_HOME 
 ## should contain a lib folder that contains all the required Jars necessary
 ## to run HDFS name and data nodes. 
-HDFS_HOME = $(RELEASE_DIR)/libexec/hdfs
+#HDFS_HOME = $(RELEASE_DIR)/libexec/hdfs
 
 ## The host and port for hadoop's name node. If this machine is the
 ## name node (see HDFS_SERVICES) then the specified port will be used
 ## to run name node. 
 HDFS_NAMENODE = example.com:9000
-HDFS_NAMENODE_WEB = example.com:8000
 
 ## You need to pick one machine as name node by setting this parameter
 ## to HDFS_NAMENODE. The remaining machines in a storage cluster will

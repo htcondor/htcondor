@@ -364,7 +364,7 @@ void set_hdfs() {
 		set_option("HDFS_SERVICES", Opt.namedata);
 		set_option("HDFS_NAMENODE_DIR", "$(RELEASE_DIR)/HDFS/hadoop_name");
 		set_option("HDFS_DATANODE_DIR", "$(RELEASE_DIR)/HDFS/hadoop_data");
-		set_option("HDFS_HOME", "$(RELEASE_DIR)/HDFS");
+		set_option("HDFS_HOME", "$(RELEASE_DIR)/HDFS/bin");
 	}
 
 	if ( Opt.namenode && Opt.nameport ) {
