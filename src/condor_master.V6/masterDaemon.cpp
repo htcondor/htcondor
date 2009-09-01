@@ -1863,7 +1863,10 @@ Daemons::CleanupBeforeRestart()
 		// Also not wanted for stderr, since we might be logging
 		// to that.  No real need for stdin or stdout either.
 	for (int i=3; i < max_fds; i++) {
-		fcntl(i,F_SETFD,1);
+		int flag = fcntl(i,F_GETFD,0);
+		if( flag != -1 ) {
+			fcntl(i,F_SETFD,flag | 1);
+		}
 	}
 #endif
 
