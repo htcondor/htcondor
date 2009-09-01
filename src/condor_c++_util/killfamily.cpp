@@ -488,7 +488,7 @@ KillFamily::currentfamily( pid_t* & ptr  )
 
 	if( family_size <= 0 ) {
 		dprintf( D_ALWAYS,
-				 "KillFamily::currentfamily: ERROR: family_size is 0\n" );
+				 "KillFamily::currentfamily: ERROR: family_size is non-positive (%d)\n", family_size);
 		ptr = NULL;
 		return 0;
 	}
