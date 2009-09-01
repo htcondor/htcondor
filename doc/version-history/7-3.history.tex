@@ -338,6 +338,10 @@ limit the number of ClassAd attributes returned in the query, the XML
 now the preferred way to limit the returned attributes is to
 use \Condor{q} option \Opt{-attributes}.
 
+\item The unix \Condor{master} failed when trying to restart itself if
+\MacroNI{MASTER\_LOCK} was defined or if it was invoked with
+\Opt{-t}.  This bug has existed since 7.0 and likely much earlier.
+
 \end{itemize}
 
 \noindent Known Bugs:
