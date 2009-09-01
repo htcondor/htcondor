@@ -252,20 +252,21 @@ An example uses PRE and POST scripts to stage files
 that are stored on tape.
 The PRE script reads compressed input files from the tape drive,
 and it uncompresses them, placing the input files in the current directory.
-The cluster of Condor jobs reads these input files.
+The cluster of Condor jobs reads these input files
 and produces output files.
 The POST script compresses the output files, writes them out to
 the tape, and then removes both the staged input files and the output files.
 
 DAGMan takes note of the exit value of the
-scripts as well as the job.
+scripts as well as the job or jobs within the cluster.
 A script with an exit value not equal to 0 fails.
 % See gnats PR 606.
 If the PRE script fails, then neither the job nor
 the POST script runs, and the node fails.
 
 If the PRE script succeeds, the Condor or Stork job is submitted. 
-If the job fails and there is no POST script,
+If the job or any one of the jobs within the single cluster
+fails and there is no POST script,
 the DAG node is marked as failed.
 An exit value not equal to 0 indicates program failure.
 It is therefore important that a successful program return the exit
@@ -310,11 +311,24 @@ The variables are often utilized in the arguments passed
 to a PRE or POST script.
 The variable \Env{\$JOB} evaluates to the (case sensitive) string
 defined for \Arg{JobName}.
+\index{DAGMan!Return@\verb^$RETURN^ value}
 For use as an argument to POST scripts,
 the \Env{\$RETURN} variable evaluates to the return value of the 
-Condor or Stork job.
+Condor or Stork job, if there is a single job within a cluster.
+With multiple jobs within the same cluster,
+there are two cases to consider.
+In the first case, all jobs within the cluster are successful;
+the value of \Env{\$RETURN} will be 0, indicating success.
+In the second case,
+one or more jobs from the cluster fail.
+When \Condor{dagman} sees the first terminated event for a job that failed,
+it assigns that job's return value as the value
+of \Env{\$RETURN}, and attempts to remove all remaining jobs within the cluster.
+Therefore, if multiple jobs in the cluster fail with different exit codes,
+a race condition determines which exit code gets assigned to \Env{\$RETURN}.
+
 A job that dies due to a signal is reported with a \Env{\$RETURN} value
-representing the negative signal number.
+representing the additive inverse of the signal number.
 For example, SIGKILL (signal 9) is reported as -9.
 A job whose batch system submission fails is reported as -1001.
 A job that is externally removed from the batch system queue
