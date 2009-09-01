@@ -4835,6 +4835,13 @@ These macros control the \Condor{schedd}.
   \SubmitCmd{local} universe, but without utilizing the newer, provided
   configuration files.
 
+\label{param:LocalUnivExecute}
+\item[\Macro{LOCAL\_UNIV\_EXECUTE}]
+  A string value specifying the execute location for local
+  universe jobs.  Each running local universe job will receive a
+  uniquely named subdirectory within this directory.
+  If not specified, it defaults to \File{\$(SPOOL)/local\_univ\_execute}.
+
 \label{param:StartSchedulerUniverse}
 \item[\Macro{START\_SCHEDULER\_UNIVERSE}]
   A boolean value that defaults to \Expr{True}.
