@@ -42,7 +42,7 @@ struct Options {
 	char vacatejobs; /* Y/N */
 	char enablevmuniverse; /* Y/N */
 	char vmnetworking; /* N/A/B/C (None/NAT/Bridge/NAT and Bridge) */
-	char hadoop; /* N/Y */
+	char hadoop;     /* N/Y */
 
 	char *poolhostname;
 	char *poolname; 
@@ -62,8 +62,8 @@ struct Options {
 	char *namenode;
 	char *nameport;
 	char *namewebport;
-} Opt = { '\0', '\0', '\0', '\0', '\0','\0', '\0', '\0', NULL, NULL, NULL, NULL, NULL, 
-	NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+} Opt = { '\0', '\0', '\0', '\0', '\0','\0', '\0', NULL, NULL, NULL, NULL, NULL, 
+	NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
 
 const char *short_options = ":c:d:e:i:j:v:n:p:o:r:a:s:t:m:u:l:w:x:y:z:q:f:k:g:b:h";
 static struct option long_options[] =
@@ -364,7 +364,7 @@ void set_hdfs() {
 		set_option("HDFS_SERVICES", Opt.namedata);
 		set_option("HDFS_NAMENODE_DIR", "$(RELEASE_DIR)/HDFS/hadoop_name");
 		set_option("HDFS_DATANODE_DIR", "$(RELEASE_DIR)/HDFS/hadoop_data");
-		set_option("HDFS_HOME", "$(RELEASE_DIR)/HDFS/bin");
+		set_option("HDFS_HOME", "$(RELEASE_DIR)/HDFS");
 	}
 
 	if ( Opt.namenode && Opt.nameport ) {
@@ -518,31 +518,31 @@ parse_args(int argc, char** argv) {
 				if ( my_optarg ) {
 					Opt.hadoop = toupper(my_optarg[0]);
 				}
-			break;
+				break;
 
 			case 'f':
 				if( !isempty(my_optarg) ) {
 					Opt.namenode = strdup(my_optarg);
 				}
-			break;
-			
+				break;
+
 			case 'k':
 				if( !isempty(my_optarg) ) {
 					Opt.namedata = strdup(my_optarg);
 				}
-			break;
-			
+				break;
+
 			case 'g':
 				if( !isempty(my_optarg) ) {
 					Opt.nameport = strdup(my_optarg);
 				}
-			break;
-			
+				break;
+
 			case 'b':
 				if( !isempty(my_optarg) ) {
 					Opt.namewebport = strdup(my_optarg);
 				}
-			break;
+				break;
 			
 			case 'h':
 			default:

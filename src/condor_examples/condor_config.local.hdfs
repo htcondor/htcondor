@@ -28,6 +28,7 @@
 ## name node (see HDFS_SERVICES) then the specified port will be used
 ## to run name node. 
 HDFS_NAMENODE = example.com:9000
+HDFS_NAMENODE_WEB = example.com:8000
 
 ## You need to pick one machine as name node by setting this parameter
 ## to HDFS_NAMENODE. The remaining machines in a storage cluster will

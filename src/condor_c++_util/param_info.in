@@ -9879,22 +9879,6 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=ccb,ccb
 id=555
 
-[MASTER_LOCK]
-aliases=
-default=$(LOCK)/MasterLock
-version=0.0.0
-range=.*
-state=default
-type=bool
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Lock file for locking the master log file
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=ccb,ccb
-id=555
-
 [DEBUG_TIME_FORMAT]
 aliases=
 # The default has a trailing space...
