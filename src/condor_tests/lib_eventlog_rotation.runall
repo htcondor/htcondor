@@ -75,6 +75,8 @@ qw (
     w_20_rotations_2_loops
     w_20_rotations_20_loops
 
+    close_log
+
     reader_simple
     reader_old_rotations
     reader_old_rotations_2_loops

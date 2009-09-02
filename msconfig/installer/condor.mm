@@ -247,8 +247,8 @@
 		Control="RB">
 	#)
 	#data 'RadioButton_HDFSMODE'	         
-	         'HDFS_DATANODE' '&Data Node' '' ''
-		 'HDFS_NAMENODE' 'N&ame Node' '' ''
+	         'N' 'N&ame Node' '' ''
+		 'D' '&Data Node (Requires Cygwin)' '' ''
 	#data
 	#(
 	<$DialogEntry Property="HDFSMODE" Label="Select HDFS mode:" 
@@ -410,7 +410,7 @@ Args=^
 -x "[VMVERSION]"
 -y "[VMMEMORY]"
 -z "[VMNETWORKING]"
--l "[PERLLOCATION]"^
+-l "[PERLLOCATION]"^ 
 WorkDir=^INSTALLDIR^   
 Condition="<$CONDITION_EXCEPT_UNINSTALL>" 
 Seq="InstallServices-"
@@ -435,7 +435,6 @@ Rc0="N"       ;; On Vista this app will not return any useful results
 Type="System" ;; run as the System account	
 >
 #)
-
 
 ;--- Set directory Permissions ----------------------------------------------
 #(

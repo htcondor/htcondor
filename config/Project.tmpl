@@ -256,11 +256,7 @@ EXPAT_FLAGS = -I$(EXPAT_INC)
 EXPAT_LIB = $(EXPAT_DIR)/lib/libexpat.a
 #endif /* expat */
 VOMS_FLAGS = $(EXPAT_FLAGS) -I$(VOMS_INC)
-/* The only pthread calls here are pthread_self(), pthread_mutex_lock,
- * and pthread_mutex_unlock(). This '-lpthread' should be removed
- * once the threading support in Condor is merged in.
- */
-VOMS_LIB = $(VOMS_DIR)/lib/libvomsapi_nog.a $(EXPAT_LIB) -lpthread
+VOMS_LIB = $(VOMS_DIR)/lib/libvomsapi_nog.a $(EXPAT_LIB)
 #endif /* externals */
 #endif /* voms */
 
@@ -350,13 +346,13 @@ GPP_ARCH_FLAGS =
 #endif
 
 /* Flags shared between C and C++ compilers */
-SHARED_COMPILER_FLAGS = $(VENDOR_C_FLAGS) $(COMP_DEBUG_FLAGS) $(CC_PIC_FLAG) PlatformFlags $(CCOMPILER_ID) $(GSOAP_FLAGS) $(PCRE_FLAGS) $(COREDUMPER_FLAGS) $(PTHREAD_FLAG)
+SHARED_COMPILER_FLAGS = $(VENDOR_C_FLAGS) $(COMP_DEBUG_FLAGS) $(CC_PIC_FLAG) PlatformFlags $(CCOMPILER_ID) $(GSOAP_FLAGS) $(PCRE_FLAGS) $(COREDUMPER_FLAGS) $(PTHREAD_FLAG) $(CONFIGURE_PCRE_CFLAGS)
 
 /* We use separate flag definitions for the C compiler and the C++ compiler.
 	These are the flags actually passed to the respective compilers. 
 	Don't forget to mix in flags specific to one compiler or the other. */
-STD_C_FLAGS = $(SHARED_COMPILER_FLAGS) $(GCC_DEBUG_FLAGS) PlatformGccFlags $(CONFIGURE_PCRE_CFLAGS)
-STD_C_PLUS_FLAGS = $(SHARED_COMPILER_FLAGS) $(GPP_DEBUG_FLAGS) $(GPP_ARCH_FLAGS) PlatformGppFlags $(CONFIGURE_PCRE_CFLAGS)
+STD_C_FLAGS = $(SHARED_COMPILER_FLAGS) $(GCC_DEBUG_FLAGS) PlatformGccFlags
+STD_C_PLUS_FLAGS = $(SHARED_COMPILER_FLAGS) $(GPP_DEBUG_FLAGS) $(GPP_ARCH_FLAGS) PlatformGppFlags
 
 TESTSUITE_FLAGS_GCC =  $(STD_C_FLAGS)
 TESTSUITE_FLAGS_GPP = $(STD_C_PLUS_FLAGS)

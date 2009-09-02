@@ -4,19 +4,19 @@ Examine cluster 1
 Job Submited.........
 Job Ad Information.........
 JobStatus is 1
-BillString is Good
+BillString is 'Good'
 BillInt is 69
 BillBool is 1
 Job Executed.........
 Job Ad Information.........
 JobStatus is 2
-BillString is Good
+BillString is 'Good'
 BillInt is 69
 BillBool is 1
 Job Terminated.........
 Job Ad Information.........
 JobStatus is 2
-BillString is Good
+BillString is 'Good'
 BillInt is 69
 BillBool is 1
 DONE

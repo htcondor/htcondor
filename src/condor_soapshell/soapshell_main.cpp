@@ -33,6 +33,73 @@
 
 //-------------------------------------------------------------
 
+	/* Here we have base64 coding routines based on gSOAP, as the one
+	 * currently in the c++_util_lib based on OpenSSL are very flakey.
+	 * Once they are fixed/improved, these should go away.
+	 */
+
+// For base64 coding, we use functions in the gSOAP support library
+#include "stdsoap2.h"
+
+// Caller needs to free the returned pointer
+char* condor_base64_encode(const unsigned char *input, int length)
+{
+	char *buff = NULL;
+
+	if ( length < 1 ) {
+		buff = (char *)malloc(1);
+		buff[0] = '\0';
+		return buff;
+	}
+
+	int buff_len = (length+2)/3*4+1;
+	buff = (char *)malloc(buff_len);
+	ASSERT(buff);
+	memset(buff,0,buff_len);
+
+	struct soap soap;
+	soap_init(&soap);
+
+	soap_s2base64(&soap,input,buff,length);
+
+	soap_destroy(&soap);
+	soap_end(&soap);
+	soap_done(&soap);
+
+	return buff;
+}
+
+// Caller needs to free *output if non-NULL
+void condor_base64_decode(const char *input,unsigned char **output, int *output_length)
+{
+	ASSERT( input );
+	ASSERT( output );
+	ASSERT( output_length );
+	int input_length = strlen(input);
+
+		// safe to assume output length is <= input_length
+	*output = (unsigned char *)malloc(input_length);
+	ASSERT( *output );
+	memset(*output, 0, input_length);
+
+	struct soap soap;
+	soap_init(&soap);
+
+	soap_base642s(&soap,input,(char*)(*output),input_length,output_length);
+
+	soap_destroy(&soap);
+	soap_end(&soap);
+	soap_done(&soap);
+
+	if( *output_length < 0 ) {
+		free( *output );
+		*output = NULL;
+	}
+}
+
+
+//-------------------------------------------------------------
+
 // about self
 DECL_SUBSYSTEM("SOAPSHELL", SUBSYSTEM_TYPE_DAEMON );	// used by Daemon Core
 
@@ -51,24 +118,30 @@ stash_output_file(ClassAd* resultAd, const char* filename, const char* attrname)
     fseek (fp, 0 , SEEK_END);
     long file_size = ftell (fp);
     rewind (fp);
-    
-    /* allocate memory to contain the whole file */
-    char *buffer = (char*) malloc (file_size);
-	ASSERT(buffer);
-    
-    /* read the file into the buffer. */
-    fread(buffer,1,file_size,fp);    
+   
+	char *buffer = NULL;
+	if ( file_size > 0 ) {
+		/* allocate memory to contain the whole file */
+		buffer = (char*) malloc (file_size);
+		ASSERT(buffer);
+		
+		/* read the file into the buffer. */
+		fread(buffer,1,file_size,fp);    
 
-	/* Encode - note caller needs to free the returned pointer */
-	char* encoded_data = condor_base64_encode((const unsigned char*)buffer, file_size);
+		/* Encode - note caller needs to free the returned pointer */
+		char* encoded_data = condor_base64_encode((const unsigned char*)buffer, file_size);
 
-	/* Shove into ad */
-	if ( encoded_data ) {
-		resultAd->Assign(attrname,encoded_data);
-		free(encoded_data);
+		/* Shove into ad */
+		if ( encoded_data ) {
+			resultAd->Assign(attrname,encoded_data);
+			free(encoded_data);
+		}
+	} else {
+		resultAd->Assign(attrname,"");
 	}
 
-	free(buffer);
+	if (buffer) free(buffer);
+	fclose(fp);
 
 	return true;
 }
@@ -180,6 +253,12 @@ do_process_request(const ClassAd *inputAd, ClassAd *resultAd, const int req_numb
 	char *auth_commands = param("SOAPSHELL_AUTHORIZED_COMMANDS");
 	StringList auth_list(auth_commands,",");
 	if ( auth_commands ) free(auth_commands);
+		// Each command needs four tuples; anything else is a misconfiguration
+	if ( auth_list.number() % 4 != 0 ) {
+		handle_process_request_error("Service is misconfigured: SOAPSHELL_AUTHORIZED_COMMANDS malformed",req_number,resultAd);
+		return;
+	}
+
 	if ( auth_list.contains_anycase(UnmappedJobName.Value()) == TRUE ) {
 		JobName = auth_list.next();
 	}
@@ -194,12 +273,11 @@ do_process_request(const ClassAd *inputAd, ClassAd *resultAd, const int req_numb
 	args.SetArgV1SyntaxToCurrentPlatform();
 	args.AppendArg(JobName.Value());	// set argv[0] to command
 	char *soapshell_args = auth_list.next();
-	if (soapshell_args) {
+	if ( soapshell_args && strcmp(soapshell_args,"*") ) {
 		if(!args.AppendArgsV1RawOrV2Quoted(soapshell_args,NULL)) {
 			dprintf( D_ALWAYS, "ERROR: SOAPSHELL_ARGS config macro invalid\n" );
 		}
-	}
-	if(!args.AppendArgsFromClassAd(inputAd,NULL)) {
+	} else if(!args.AppendArgsFromClassAd(inputAd,NULL)) {
 		handle_process_request_error("Failed to setup CMD arguments",req_number,resultAd);
 		return;
 	}
@@ -207,13 +285,11 @@ do_process_request(const ClassAd *inputAd, ClassAd *resultAd, const int req_numb
 		// handle the environment.
 	Env job_env;
 	char *env_str = auth_list.next();
-	if ( env_str ) {
+	if ( env_str && strcmp(env_str,"*") ) {
 		if(!job_env.MergeFromV1RawOrV2Quoted(env_str,NULL) ) {
 			dprintf(D_ALWAYS,"ERROR: SOAPSHELL_ENVIRONMENT config macro invalid\n");
 		}
-		free(env_str);
-	}
-	if(!job_env.MergeFrom(inputAd,NULL)) {
+	} else if(!job_env.MergeFrom(inputAd,NULL)) {
 		// bad environment string in job ad!
 		handle_process_request_error("Request has faulty environment string",req_number,resultAd);
 		return;
@@ -452,6 +528,7 @@ int main_init(int  argc , char *  argv  [])
             fprintf( stderr, "ERROR:  Out of memory\n" );
             DC_Exit( 1 );
         }
+		fclose(fp);
 		if ( ErrorFlag || EmptyFlag ) {
 			fprintf( stderr, "ERROR - file %s does not contain a parseable ClassAd\n",
 					 testfile);

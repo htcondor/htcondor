@@ -42,7 +42,7 @@ struct Options {
 	char vacatejobs; /* Y/N */
 	char enablevmuniverse; /* Y/N */
 	char vmnetworking; /* N/A/B/C (None/NAT/Bridge/NAT and Bridge) */
-	char hadoop; /* N/Y */
+	char hadoop;     /* N/Y */
 
 	char *poolhostname;
 	char *poolname; 
@@ -62,8 +62,8 @@ struct Options {
 	char *namenode;
 	char *nameport;
 	char *namewebport;
-} Opt = { '\0', '\0', '\0', '\0', '\0','\0', '\0', '\0', NULL, NULL, NULL, NULL, NULL, 
-	NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+} Opt = { '\0', '\0', '\0', '\0', '\0','\0', '\0', NULL, NULL, NULL, NULL, NULL, 
+	NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
 
 const char *short_options = ":c:d:e:i:j:v:n:p:o:r:a:s:t:m:u:l:w:x:y:z:q:f:k:g:b:h";
 static struct option long_options[] =
@@ -314,7 +314,7 @@ set_daemonlist() {
 	char buf[1024];
 
 	if ( Opt.newpool && Opt.submitjobs && Opt.runjobs ) {
-		snprintf(buf, 1024, "MASTER %s %s %s", 
+		snprintf(buf, 1024, "MASTER %s %s %s %s", 
 				(Opt.newpool == 'Y') ? "COLLECTOR NEGOTIATOR" : "",
 				(Opt.submitjobs == 'Y') ? "SCHEDD" : "",
 				(Opt.runjobs == 'A' ||
@@ -518,31 +518,31 @@ parse_args(int argc, char** argv) {
 				if ( my_optarg ) {
 					Opt.hadoop = toupper(my_optarg[0]);
 				}
-			break;
+				break;
 
 			case 'f':
 				if( !isempty(my_optarg) ) {
 					Opt.namenode = strdup(my_optarg);
 				}
-			break;
-			
+				break;
+
 			case 'k':
 				if( !isempty(my_optarg) ) {
 					Opt.namedata = strdup(my_optarg);
 				}
-			break;
-			
+				break;
+
 			case 'g':
 				if( !isempty(my_optarg) ) {
 					Opt.nameport = strdup(my_optarg);
 				}
-			break;
-			
+				break;
+
 			case 'b':
 				if( !isempty(my_optarg) ) {
 					Opt.namewebport = strdup(my_optarg);
 				}
-			break;
+				break;
 			
 			case 'h':
 			default:

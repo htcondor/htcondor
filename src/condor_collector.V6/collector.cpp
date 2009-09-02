@@ -88,7 +88,8 @@ int CollectorDaemon::machinesOwner;
 ForkWork CollectorDaemon::forkQuery;
 
 ClassAd* CollectorDaemon::ad;
-DCCollector* CollectorDaemon::updateCollector;
+CollectorList* CollectorDaemon::updateCollectors;
+DCCollector* CollectorDaemon::updateRemoteCollector;
 int CollectorDaemon::UpdateTimerId;
 
 ClassAd *CollectorDaemon::query_any_result;
@@ -125,7 +126,8 @@ void CollectorDaemon::Init()
 	view_sock=NULL;
 	UpdateTimerId=-1;
 	sock_cache = NULL;
-	updateCollector = NULL;
+	updateCollectors = NULL;
+	updateRemoteCollector = NULL;
 	Config();
 
     // setup routine to report to condor developers
@@ -1218,49 +1220,47 @@ void CollectorDaemon::Config()
     if (CollectorName) free (CollectorName);
     CollectorName = param("COLLECTOR_NAME");
 
-    // handle params for Collector updates
-    if ( UpdateTimerId >= 0 ) {
-            daemonCore->Cancel_Timer(UpdateTimerId);
-            UpdateTimerId = -1;
-    }
+	// handle params for Collector updates
+	if ( UpdateTimerId >= 0 ) {
+		daemonCore->Cancel_Timer(UpdateTimerId);
+		UpdateTimerId = -1;
+	}
 
-    tmp = param ("CONDOR_DEVELOPERS_COLLECTOR");
-    if (tmp == NULL) {
-            tmp = strdup("condor.cs.wisc.edu");
-    }
-    if (stricmp(tmp,"NONE") == 0 ) {
-            free(tmp);
-            tmp = NULL;
-    }
-	int i = param_integer("COLLECTOR_UPDATE_INTERVAL",900); // default 15 min
+	if( updateCollectors ) {
+		delete updateCollectors;
+		updateCollectors = NULL;
+	}
+	updateCollectors = CollectorList::create( NULL );
 
-    if ( tmp && i ) {
-		if( updateCollector ) {
-				// we should just delete it.  since we never use TCP
-				// for these updates, we don't really loose anything
-				// by destroying the object and recreating it...
-			delete updateCollector;
-			updateCollector = NULL;
-        }
-		updateCollector = new DCCollector( tmp, DCCollector::UDP );
-		if( UpdateTimerId < 0 ) {
-			UpdateTimerId = daemonCore->
-				Register_Timer( 1, i, (TimerHandler)sendCollectorAd,
-								"sendCollectorAd" );
-		}
-    } else {
-		if( updateCollector ) {
-			delete updateCollector;
-			updateCollector = NULL;
-		}
-		if( UpdateTimerId > 0 ) {
-			daemonCore->Cancel_Timer( UpdateTimerId );
-			UpdateTimerId = -1;
-		}
+	tmp = param ("CONDOR_DEVELOPERS_COLLECTOR");
+	if (tmp == NULL) {
+		tmp = strdup("condor.cs.wisc.edu");
+	}
+	if (stricmp(tmp,"NONE") == 0 ) {
+		free(tmp);
+		tmp = NULL;
+	}
+
+	if( updateRemoteCollector ) {
+		// we should just delete it.  since we never use TCP
+		// for these updates, we don't really loose anything
+		// by destroying the object and recreating it...
+		delete updateRemoteCollector;
+		updateRemoteCollector = NULL;
+	}
+	if ( tmp ) {
+		updateRemoteCollector = new DCCollector( tmp, DCCollector::UDP );
 	}
 
 	free( tmp );
 	
+	int i = param_integer("COLLECTOR_UPDATE_INTERVAL",900); // default 15 min
+	if( UpdateTimerId < 0 ) {
+		UpdateTimerId = daemonCore->
+			Register_Timer( 1, i, (TimerHandler)sendCollectorAd,
+							"sendCollectorAd" );
+	}
+
 	tmp = param(COLLECTOR_REQUIREMENTS);
 	MyString collector_req_err;
 	if( !collector.setCollectorRequirements( tmp, collector_req_err ) ) {
@@ -1376,11 +1376,37 @@ void CollectorDaemon::Config()
 
 void CollectorDaemon::Exit()
 {
+	// Clean up any workers that have exited but haven't been reaped yet.
+	// This can occur if the collector receives a query followed
+	// immediately by a shutdown command.  The worker will exit but
+	// not be reaped because the SIGTERM from the shutdown command will
+	// be processed before the SIGCHLD from the worker process exit.
+	// Allowing the stack to clean up worker processes is problematic
+	// because the collector will be shutdown and the daemonCore
+	// object deleted by the time the worker cleanup is attempted.
+	forkQuery.DeleteAll( );
+	if ( UpdateTimerId >= 0 ) {
+		daemonCore->Cancel_Timer(UpdateTimerId);
+		UpdateTimerId = -1;
+	}
 	return;
 }
 
 void CollectorDaemon::Shutdown()
 {
+	// Clean up any workers that have exited but haven't been reaped yet.
+	// This can occur if the collector receives a query followed
+	// immediately by a shutdown command.  The worker will exit but
+	// not be reaped because the SIGTERM from the shutdown command will
+	// be processed before the SIGCHLD from the worker process exit.
+	// Allowing the stack to clean up worker processes is problematic
+	// because the collector will be shutdown and the daemonCore
+	// object deleted by the time the worker cleanup is attempted.
+	forkQuery.DeleteAll( );
+	if ( UpdateTimerId >= 0 ) {
+		daemonCore->Cancel_Timer(UpdateTimerId);
+		UpdateTimerId = -1;
+	}
 	return;
 }
 
@@ -1433,16 +1459,23 @@ int CollectorDaemon::sendCollectorAd()
 	// Collector engine stats, too
 	collectorStats.publishGlobal( ad );
 
-    // Send the ad
-	char *update_addr = updateCollector->addr();
+	// Send the ad
+	int num_updated = updateCollectors->sendUpdates(UPDATE_COLLECTOR_AD, ad, NULL, false);
+	if ( num_updated != updateCollectors->number() ) {
+		dprintf( D_ALWAYS, "Unable to send UPDATE_COLLECTOR_AD to all configured collectors\n");
+	}
+
+	char *update_addr = updateRemoteCollector->addr();
 	if (!update_addr) update_addr = "(null)";
-	if( ! updateCollector->sendUpdate(UPDATE_COLLECTOR_AD, ad, NULL, false) ) {
-		dprintf( D_ALWAYS, "Can't send UPDATE_COLLECTOR_AD to collector "
-				 "(%s): %s\n", update_addr,
-				 updateCollector->error() );
-		return 0;
-    }
-    return 1;
+	if ( updateRemoteCollector ) {
+		if( ! updateRemoteCollector->sendUpdate(UPDATE_COLLECTOR_AD, ad, NULL, false) ) {
+			dprintf( D_ALWAYS, "Can't send UPDATE_COLLECTOR_AD to collector "
+					 "(%s): %s\n", update_addr,
+					 updateRemoteCollector->error() );
+			return 0;
+		}
+	}
+	return 1;
 }
 
 void CollectorDaemon::init_classad(int interval)

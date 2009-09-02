@@ -541,6 +541,9 @@ JOB_ROUTER_DEBUG        =
 MAX_ROOSTER_LOG         = 1000000
 ROOSTER_DEBUG           =
 
+MAX_HDFS_LOG            = 1000000
+HDFS_DEBUG              =
+
 # High Availability Logs
 MAX_HAD_LOG		= 1000000
 HAD_DEBUG		=
@@ -898,6 +901,7 @@ ROOSTER_LOG     = $(LOG)/RoosterLog
 HAD_LOG		= $(LOG)/HADLog
 REPLICATION_LOG	= $(LOG)/ReplicationLog
 TRANSFERER_LOG	= $(LOG)/TransfererLog
+HDFS_LOG	= $(LOG)/HDFSLog
 
 ##  Lock files
 SHADOW_LOCK	= $(LOCK)/ShadowLock
@@ -1031,7 +1035,7 @@ COLLECTOR			= $(SBIN)/condor_collector
 STARTER_LOCAL			= $(SBIN)/condor_starter
 JOB_ROUTER                      = $(LIBEXEC)/condor_job_router
 ROOSTER                         = $(LIBEXEC)/condor_rooster
-HDFS                            = $(SBIN)/condor_hdfs
+HDFS				= $(LIBEXEC)/condor_hdfs
 
 ##  When the master starts up, it can place it's address (IP and port)
 ##  into a file.  This way, tools running on the local machine don't
@@ -2395,10 +2399,21 @@ LeaseManager.CLASSAD_LOG	= $(SPOOL)/LeaseManagerState
 # %% --> %
 #SSH_TO_JOB_SSH_KEYGEN_ARGS = "-N '' -C '' -q -f %f -t rsa"
 
+######################################################################
 ##
-##--------------------------------------------------------------------
-##  condor_hdfs
-##--------------------------------------------------------------------
+##  Condor HDFS
+##
+##  This is the default local configuration file for configuring Condor
+##  daemon responsible for running services related to hadoop 
+##  distributed storage system.You should copy this file to the
+##  appropriate location and customize it for your needs.  
+##
+##  Unless otherwise specified, settings that are commented out show
+##  the defaults that are used if you don't define a value.  Settings
+##  that are defined here MUST BE DEFINED since they have no default
+##  value.
+##
+######################################################################
 
 ######################################################################
 ## FOLLOWING MUST BE CHANGED
@@ -2408,7 +2423,7 @@ LeaseManager.CLASSAD_LOG	= $(SPOOL)/LeaseManagerState
 ## is under 'libexec' directory. The directory pointed by HDFS_HOME 
 ## should contain a lib folder that contains all the required Jars necessary
 ## to run HDFS name and data nodes. 
-HDFS_HOME = $(RELEASE_DIR)/libexec/hdfs
+#HDFS_HOME = $(RELEASE_DIR)/libexec/hdfs
 
 ## The host and port for hadoop's name node. If this machine is the
 ## name node (see HDFS_SERVICES) then the specified port will be used

@@ -919,6 +919,16 @@ CleanJobQueue()
 void
 DestroyJobQueue( void )
 {
+	// Clean up any children that have exited but haven't been reaped
+	// yet.  This can occur if the schedd receives a query followed
+	// immediately by a shutdown command.  The child will exit but
+	// not be reaped because the SIGTERM from the shutdown command will
+	// be processed before the SIGCHLD from the child process exit.
+	// Allowing the stack to clean up child processes is problematic
+	// because the schedd will be shutdown and the daemonCore
+	// object deleted by the time the child cleanup is attempted.
+	schedd_forker.DeleteAll( );
+
 	if (JobQueueDirty) {
 			// We can't destroy it until it's clean.
 		CleanJobQueue();

@@ -1856,12 +1856,17 @@ Daemons::CleanupBeforeRestart()
 	}
 	(void)close( MasterLockFD );
 
-		// Now close all sockets and fds so our new invocation of
+		// Now set close-on-exec on all fds so our new invocation of
 		// condor_master does not inherit them.
 		// Note: Not needed (or wanted) on Win32, as CEDAR creates 
 		//		Winsock sockets as non-inheritable by default.
-	for (int i=0; i < max_fds; i++) {
-		close(i);
+		// Also not wanted for stderr, since we might be logging
+		// to that.  No real need for stdin or stdout either.
+	for (int i=3; i < max_fds; i++) {
+		int flag = fcntl(i,F_GETFD,0);
+		if( flag != -1 ) {
+			fcntl(i,F_SETFD,flag | 1);
+		}
 	}
 #endif
 

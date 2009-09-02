@@ -50,8 +50,7 @@ int		DontDisplayTime;
 #define DAY		(24 * HOUR)
 
 char	*
-format_time( fp_secs )
-float		fp_secs;
+format_time( float fp_secs )
 {
 	int		days;
 	int		hours;

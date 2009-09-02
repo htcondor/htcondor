@@ -140,8 +140,6 @@ int main(int argc, char* argv[])
 
     ULogEvent* e = NULL;
 	int myjobstatus = 0;
-	bool mybool = 0;
-	char whichattr[512];
 	char *eventtestval;
 
 	while( !done ) {
@@ -152,6 +150,7 @@ int main(int argc, char* argv[])
 		  case ULOG_NO_EVENT:
 		  case ULOG_RD_ERROR:
 		  case ULOG_UNK_ERROR:
+		  case ULOG_MISSED_EVENT:
 			done++;
 			break;
 		  case ULOG_OK:
@@ -245,22 +244,53 @@ int main(int argc, char* argv[])
 					printf("Job Generic.........\n");
 					break;
 				  case ULOG_JOB_AD_INFORMATION:
+				  {
 					printf("Job Ad Information.........\n");
+
+					JobAdInformationEvent	*info =
+						dynamic_cast<JobAdInformationEvent*>( e );
+					if ( !info ) {
+						printf( "Event isn't a JobAdInformationEvent!!!\n" );
+						break;
+					}
+
 					// print a attribute which is always there
-					strcpy(whichattr, "JobStatus");
-					((JobAdInformationEvent*)e)->LookupInteger(whichattr,myjobstatus);
-					printf("JobStatus is %d\n",myjobstatus);
-					strcpy(whichattr, "BillString");
-					((JobAdInformationEvent*)e)->LookupString(whichattr,&eventtestval);
-					printf("BillString is %s\n",eventtestval);
-					free(eventtestval);
-					strcpy(whichattr, "BillInt");
-					((JobAdInformationEvent*)e)->LookupInteger(whichattr,myjobstatus);
-					printf("BillInt is %d\n",myjobstatus);
-					strcpy(whichattr, "BillBool");
-					((JobAdInformationEvent*)e)->LookupInteger(whichattr,myjobstatus);
-					printf("BillBool is %d\n",myjobstatus);
+					const char *attr;
+					attr = "JobStatus";
+					if ( !info->LookupInteger(attr, myjobstatus) ) {
+						printf( "%s not found!\n", attr );
+					}
+					else {
+						printf("%s is %d\n", attr, myjobstatus);
+					}
+
+					attr = "BillString";
+					if ( !info->LookupString(attr, &eventtestval) ) {
+						printf( "%s not found!\n", attr );
+					}
+					else {
+						printf("%s is '%s'\n", attr, eventtestval );
+						free( eventtestval );
+					}
+
+					attr = "BillInt";
+					if ( !info->LookupInteger(attr, myjobstatus) ) {
+						printf( "%s not found!\n", attr );
+					}
+					else {
+						printf("%s is %d\n", attr, myjobstatus);
+					}
+
+					attr = "BillBool";
+					if ( !info->LookupInteger(attr, myjobstatus) ) {
+						printf( "%s not found!\n", attr );
+					}
+					else {
+						printf("%s is %d\n", attr, myjobstatus);
+					}
 					break;
+				  }
+
 				  case ULOG_JOB_ABORTED:
 					printf("Job ABORTED by user.........\n");
 					break;

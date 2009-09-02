@@ -56,7 +56,7 @@ cd boost_1_33_1/tools/build/jam_src
 PATH=`pwd`/`ls -d bin.*/`:$PATH
 export PATH
 cd ../../..
-bjam -sTOOLS=gcc --prefix=$stage_dir install
+bjam -sNO_COMPRESSION=1 -sTOOLS=gcc --prefix=$stage_dir install
 mv $stage_dir/include/boost-*/boost $stage_dir/include
 cd ..
 

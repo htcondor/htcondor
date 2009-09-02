@@ -176,6 +176,23 @@ my @tests =
 		 },
      },
 
+	 # Test with force close enabled
+     {
+		 name => "close_log",
+		 config => {
+			 "EVENT_LOG"				=> "EventLog",
+			 "EVENT_LOG_COUNT_EVENTS"	=> "TRUE",
+			 "EVENT_LOG_MAX_ROTATIONS"	=> 2,
+			 "EVENT_LOG_MAX_SIZE"		=> 10000,
+			 "EVENT_LOG_FORCE_CLOSE"	=> "TRUE",
+			 "ENABLE_USERLOG_LOCKING"	=> "FALSE",
+			 "ENABLE_USERLOG_FSYNC"		=> "FALSE",
+		 },
+		 auto				=> 1,
+		 writer => {
+		 },
+     },
+
 	 # ##########################
 	 # Reader tests start here
 	 # ##########################
@@ -316,6 +333,8 @@ sub usage( )
 		"  -s|--stop     stop after errors\n" .
 		"  --vg-writer   run writer under valgrind\n" .
 		"  --vg-reader   run reader under valgrind\n" .
+		"  --strace-writer run writer under strace\n" .
+		"  --strace-reader run reader under strace\n" .
 		"  --strace      strace myself\n" .
 		"  --no-strace   don't strace myself\n" .
 		"  --version     print version information and exit\n" .
@@ -343,6 +362,8 @@ my %settings =
  stop				=> 0,
  strace				=> 0,
  force				=> 0,
+ strace_writer		=> 0,
+ strace_reader		=> 0,
  valgrind_writer	=> 0,
  valgrind_reader	=> 0,
  );
@@ -376,6 +397,12 @@ foreach my $arg ( @ARGV ) {
     }
     elsif ( $arg eq "--no-strace" ) {
 		$settings{strace} = 0;
+    }
+    elsif ( $arg eq "--strace-writer" ) {
+		$settings{strace_writer} = 1;
+    }
+    elsif ( $arg eq "--strace-reader" ) {
+		$settings{strace_reader} = 1;
     }
     elsif ( $arg eq "--vg-writer" ) {
 		$settings{valgrind_writer} = 1;
@@ -721,6 +748,7 @@ else {
 
 my @valgrind = ( "valgrind", "--tool=memcheck", "--num-callers=24",
 				 "-v", "-v", "--leak-check=full", "--track-fds=yes" );
+my @strace = ( "strace", "-e trace=file" );
 
 my $start = time( );
 my $timestr = localtime($start);
@@ -950,12 +978,21 @@ sub RunWriter( $$$$$$ )
 	}
 
     my $cmd = "";
+
     my $vg_out = sprintf( "valgrind-writer-%02d.out", $loop );
     my $vg_full = "$dir/$vg_out";
+
     if ( $settings{valgrind_writer} ) {
 		$cmd .= join( " ", @valgrind ) . " ";
 		$cmd .= " --log-file=$vg_full ";
     }
+	elsif ( $settings{strace_writer} ) {
+		my $strace_out = sprintf( "strace-writer-%02d.out", $loop );
+		my $strace_full = "$dir/$strace_out";
+		$cmd .= join( " ", @strace ) . " ";
+		$cmd .= " -o $strace_full ";
+    }
+
     $cmd .= join(" ", @writer_args );
 
 	# Prevent rotations on the final loop;
@@ -1045,6 +1082,13 @@ sub RunReader( $$$$$ )
 		$cmd .= join( " ", @valgrind ) . " ";
 		$cmd .= " --log-file=$vg_full ";
     }
+	elsif ( $settings{strace_reader} ) {
+		my $strace_out = sprintf( "strace-reader-%02d.out", $loop );
+		my $strace_full = "$dir/$strace_out";
+		$cmd .= join( " ", @strace ) . " ";
+		$cmd .= " -o $strace_full ";
+    }
+
     $cmd .= join(" ", @reader_args );
 	if ( exists $opts->{"stop"} ) {
 		$cmd .= " --stop";
