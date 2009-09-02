@@ -1467,6 +1467,14 @@
 			RelativePath="..\src\condor_c++_util\socket_proxy.h"
 			>
 		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\simple_arg.h"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\simple_arg.cpp"
+			>
+		</File>
 	</Files>
 	<Globals>
 	</Globals>
