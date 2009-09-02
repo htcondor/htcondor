@@ -271,6 +271,9 @@ AnalyzeJobAttrsToBuffer( ClassAd *request, ClassAdList &offers,
 		return true;
 	}
     explicit_classad  = AddExplicitTargets( converted_classad );
+	if( !m_result ) {
+		m_result = new classad_analysis::job::result(*explicit_classad);
+	}
 	success = AnalyzeJobAttrsToBuffer( explicit_classad, rg, buffer );
 
     delete converted_classad;
