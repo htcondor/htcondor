@@ -38,14 +38,6 @@ jobs.  See the manual page at~\pageref{man-condor-ssh-to-job} for details.
 \item The \Condor{status} command is now substantially faster, 
 especially with the \Opt{-format} option.
 
-% gittrac #676
-\item Grid universe grid-type \Opt{gt5} has been added for submission to
-the new Globus GRAM5 service. When a GRAM service is identified as
-\Opt{gt5}, jobmanager throttling and the grid-monitor are not used.
-
-\item Grid universe grid-type \Opt{cream} has been added for submission
-to the CREAM job service of gLite.
-
 \item When low on file descriptors for creating new network sockets,
 the \Condor{schedd} daemon now avoids the unlimited stacking up of
 messages that it sends periodically to the \Condor{negotiator} 
@@ -135,14 +127,6 @@ file for any node job that does not specify one.
 \item The \Condor{had} daemon now has the ability to control daemons
   other than the \Condor{negotiator}.  This is controlled via the
   \MacroNI{HAD\_CONTROLLEE} macro.
-
-%gittrac #514
-\item The \Condor{startd} can now cleanup stranded VMs following a
-crash of Condor or its host OS.
-
-%gittrac #301
-\item Following a crash, the \Condor{gridmanager} no longer restarts all
-of the jobmanagers for gt2 jobs. This should improve recovery time.
 
 \end{itemize}
 
@@ -350,14 +334,6 @@ limit the number of ClassAd attributes returned in the query, the XML
 \verb@<classads>@ container tag was not generated.  This is fixed, but
 now the preferred way to limit the returned attributes is to
 use \Condor{q} option \Opt{-attributes}.
-
-%gittrac #575
-\item Fixed a significant memory leak in the \Opt{gahp\_server}. This
-leak was only present in previous Condor 7.3.x releases.
-
-%gittrac #570
-\item Fixed a bug that can cause a removed job that is held and then
-released to return to idle status.
 
 \end{itemize}
 
