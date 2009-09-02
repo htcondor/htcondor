@@ -122,7 +122,7 @@ static  bool avgqueuetime = false;
 #endif
 
 /* Warn about schedd-wide limits that may confuse analysis code */
-void warnScheddLimits(const char *scheddName);
+void warnScheddLimits(Daemon *schedd,ClassAd *job,MyString &result_buf);
 
 /* directDBquery means we will just run a database query and return results directly to user */
 static  bool directDBquery = false;
@@ -153,6 +153,8 @@ static	CondorQuery	scheddQuery(SCHEDD_AD);
 static	CondorQuery submittorQuery(SUBMITTOR_AD);
 
 static	ClassAdList	scheddList;
+
+static  Daemon *g_cur_schedd_for_process_buffer_line = NULL;
 
 #ifdef WANT_CLASSAD_ANALYSIS
 static  ClassAdAnalyzer analyzer;
@@ -203,8 +205,8 @@ static CollectorList * Collectors = NULL;
 static  int			findSubmittor( char * );
 static	void 		setupAnalysis();
 static 	void		fetchSubmittorPrios();
-static	void		doRunAnalysis( ClassAd* );
-static	char *		doRunAnalysisToBuffer( ClassAd* );
+static	void		doRunAnalysis( ClassAd*, Daemon* );
+static	char *		doRunAnalysisToBuffer( ClassAd*, Daemon* );
 struct 	PrioEntry { MyString name; float prio; };
 static 	bool		analyze	= false;
 static  bool        better_analyze = false;
@@ -2025,6 +2027,11 @@ show_queue_buffered( const char* v1, const char* v2, const char* v3, const char*
 		summarize = false;
 	}
 
+	if( g_cur_schedd_for_process_buffer_line ) {
+		delete g_cur_schedd_for_process_buffer_line;
+		g_cur_schedd_for_process_buffer_line = NULL;
+	}
+
 	CondorError errstack;
 
 		/* get the job ads from database if database can be queried */
@@ -2059,6 +2066,9 @@ show_queue_buffered( const char* v1, const char* v2, const char* v3, const char*
 			CondorVersionInfo v(version);
 			useFastPath = v.built_since_version(6,9,3);
 		}
+
+			// stash the schedd daemon object for use by process_buffer_line
+		g_cur_schedd_for_process_buffer_line = new Daemon( schedd );
 
 		if( Q.fetchQueueFromHostAndProcess( scheddAddress, attrs,
 											process_buffer_line,
@@ -2106,11 +2116,6 @@ show_queue_buffered( const char* v1, const char* v2, const char* v3, const char*
 			unparser.SetUseCompactSpacing(false);
 			unparser.AddXMLFileHeader(xml);
 			printf("%s\n", xml.Value());
-		}
-
-		if (analyze) {
-			warnScheddLimits(scheddName);
-
 		}
 
 		if (!output_buffer_empty) {
@@ -2233,7 +2238,7 @@ process_buffer_line( ClassAd *job )
 		job->sPrintAsXML(s,attr_white_list);
 		tempCPS->string = strnewp( s.Value() );
 	} else if( analyze ) {
-		tempCPS->string = strnewp( doRunAnalysisToBuffer( job ) );
+		tempCPS->string = strnewp( doRunAnalysisToBuffer( job, g_cur_schedd_for_process_buffer_line ) );
 	} else if ( show_io ) {
 		tempCPS->string = strnewp( buffer_io_display( job ) );
 	} else if ( usingPrintMask ) {
@@ -2348,11 +2353,12 @@ show_queue( const char* v1, const char* v2, const char* v3, const char* v4, bool
 					scheddAddress, scheddMachine);	
 		}
 
-		warnScheddLimits(scheddName);
+		Daemon schedd_daemon(DT_SCHEDD,scheddName,pool ? pool->addr() : NULL);
+		schedd_daemon.locate();
 
 		jobs.Open();
 		while( ( job = jobs.Next() ) ) {
-			doRunAnalysis( job );
+			doRunAnalysis( job, &schedd_daemon );
 		}
 		jobs.Close();
 
@@ -2618,13 +2624,13 @@ fetchSubmittorPrios()
 
 
 static void
-doRunAnalysis( ClassAd *request )
+doRunAnalysis( ClassAd *request, Daemon *schedd )
 {
-	printf("%s", doRunAnalysisToBuffer( request) );
+	printf("%s", doRunAnalysisToBuffer( request, schedd ) );
 }
 
 static char *
-doRunAnalysisToBuffer( ClassAd *request )
+doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 {
 	char	owner[128];
 	char	remoteUser[128];
@@ -2648,6 +2654,12 @@ doRunAnalysisToBuffer( ClassAd *request )
 	int		totalMachines	= 0;
 
 	return_buff[0]='\0';
+
+	if( schedd ) {
+		MyString buf;
+		warnScheddLimits(schedd,request,buf);
+		snprintf( return_buff, sizeof(return_buff), "%s", buf.Value() );
+	}
 
 	if( !request->LookupString( ATTR_OWNER , owner ) ) return "Nothing here.\n";
 	if( !request->LookupInteger( ATTR_NICE_USER , niceUser ) ) niceUser = 0;
@@ -3196,19 +3208,22 @@ static void exec_db_query(const char *quill_name, const char *db_ipAddr, const c
 
 #endif /* WANT_QUILL */
 
-void warnScheddLimits(const char *scheddName) {
-	Daemon schedd(DT_SCHEDD, scheddName, pool ? pool->addr() : NULL );
-	schedd.locate();
-	ClassAd *ad = schedd.daemonAd();
+void warnScheddLimits(Daemon *schedd,ClassAd *job,MyString &result_buf) {
+	if( !schedd ) {
+		return;
+	}
+	ASSERT( job );
+
+	ClassAd *ad = schedd->daemonAd();
 	if (ad) {
 		bool exhausted = false;
 		ad->LookupBool("SwapSpaceExhausted", exhausted);
 		if (exhausted) {
-			fprintf(stderr, "WARNING -- this schedd is not running jobs because it believes that doing so\n");
-			fprintf(stderr, "           would exhaust swap space and cause thrashing.\n");
-			fprintf(stderr, "           Set RESERVED_SWAP to 0 to tell the scheduler to skip this check\n");
-			fprintf(stderr, "           Or add more swap space.\n");
-			fprintf(stderr, "           The analysis code does not take this into consideration\n");
+			result_buf.sprintf_cat("WARNING -- this schedd is not running jobs because it believes that doing so\n");
+			result_buf.sprintf_cat("           would exhaust swap space and cause thrashing.\n");
+			result_buf.sprintf_cat("           Set RESERVED_SWAP to 0 to tell the scheduler to skip this check\n");
+			result_buf.sprintf_cat("           Or add more swap space.\n");
+			result_buf.sprintf_cat("           The analysis code does not take this into consideration\n");
 		}
 
 		int maxJobsRunning 	= -1;
@@ -3219,9 +3234,46 @@ void warnScheddLimits(const char *scheddName) {
 
 		if ((maxJobsRunning > -1) && (totalRunningJobs > -1) && 
 			(maxJobsRunning == totalRunningJobs)) { 
-			fprintf(stderr, "WARNING -- this schedd has hit the MAX_JOBS_RUNNING limit of %d\n", maxJobsRunning);
-			fprintf(stderr, "       to run more concurrent jobs, raise this limit in the config file\n");
-			fprintf(stderr, "       NOTE: the analysis software does not take the limit into consideration\n");
+			result_buf.sprintf_cat("WARNING -- this schedd has hit the MAX_JOBS_RUNNING limit of %d\n", maxJobsRunning);
+			result_buf.sprintf_cat("       to run more concurrent jobs, raise this limit in the config file\n");
+			result_buf.sprintf_cat("       NOTE: the matchmaking analysis does not take the limit into consideration\n");
+		}
+
+		int status = -1;
+		job->LookupInteger(ATTR_JOB_STATUS,status);
+		if( status != RUNNING ) {
+
+			int universe = -1;
+			job->LookupInteger(ATTR_JOB_UNIVERSE,universe);
+
+			char const *schedd_requirements_attr = NULL;
+			switch( universe ) {
+			case CONDOR_UNIVERSE_SCHEDULER:
+				schedd_requirements_attr = ATTR_START_SCHEDULER_UNIVERSE;
+				break;
+			case CONDOR_UNIVERSE_LOCAL:
+				schedd_requirements_attr = ATTR_START_LOCAL_UNIVERSE;
+				break;
+			}
+
+			if( schedd_requirements_attr ) {
+				MyString schedd_requirements_expr;
+				ExprTree *expr = ad->Lookup(schedd_requirements_attr);
+				if( expr ) {
+					expr->PrintToStr(schedd_requirements_expr);
+				}
+				else {
+					schedd_requirements_expr = "UNDEFINED";
+				}
+
+				int req = 0;
+				if( !ad->EvalBool(schedd_requirements_attr,job,req) ) {
+					result_buf.sprintf_cat("WARNING -- this schedd's policy %s failed to evalute for this job.\n",schedd_requirements_expr.Value());
+				}
+				else if( !req ) {
+					result_buf.sprintf_cat("WARNING -- this schedd's policy %s evalutes to false for this job.\n",schedd_requirements_expr.Value());
+				}
+			}
 		}
 	}
 }
