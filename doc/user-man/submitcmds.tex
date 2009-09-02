@@ -1413,7 +1413,8 @@ there are further type-specific values that must specified.
 This submit description file command allows each to
 be given in a space-separated list.
 Allowable \SubmitCmd{grid-type-string} values are
-\SubmitCmd{amazon}, \SubmitCmd{gt2}, \SubmitCmd{gt4}, \SubmitCmd{condor}, 
+\SubmitCmd{amazon}, \SubmitCmd{condor}, \SubmitCmd{cream}, 
+\SubmitCmd{gt2}, \SubmitCmd{gt4}, \SubmitCmd{gt5},
 \SubmitCmd{lsf}, \SubmitCmd{nordugrid}, \SubmitCmd{pbs},
 and \SubmitCmd{unicore}.
 See section~\ref{sec:GridUniverse} for details on the variety of 
@@ -1430,6 +1431,10 @@ The second parameter is the name of the pool to which the remote
 \Condor{schedd} daemon belongs.
 See section~\ref{sec:Condor-C-Submit} for details.
 
+For a \SubmitCmd{grid-type-string} of \SubmitCmd{cream},
+% more needed here!
+see section~\ref{sec:CREAM} for details.
+
 For a \SubmitCmd{grid-type-string} of \SubmitCmd{gt2},
 the single parameter is the name of the pre-WS GRAM resource to be used.
 See section~\ref{sec:Using-gt2} for details.
@@ -1439,6 +1444,10 @@ the first parameter is the name of the WS GRAM service to be used.
 The second parameter is the name of WS resource to be used (usually the
 name of the back-end scheduler).
 See section~\ref{sec:Using-gt4} for details.
+
+For a \SubmitCmd{grid-type-string} of \SubmitCmd{gt5},
+% more needed here!
+see section~\ref{sec:Using-gt5} for details.
 
 For a \SubmitCmd{grid-type-string} of \SubmitCmd{lsf}, no additional
 parameters are used.
