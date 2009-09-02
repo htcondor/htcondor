@@ -39,12 +39,12 @@ jobs.  See the manual page at~\pageref{man-condor-ssh-to-job} for details.
 especially with the \Opt{-format} option.
 
 % gittrac #676
-\item Grid universe grid-type \Opt{gt5} has been added for submission to
+\item Grid universe grid type \Opt{gt5} has been added for submission to
 the new Globus GRAM5 service. When a GRAM service is identified as
-\Opt{gt5}, jobmanager throttling and the grid-monitor are not used.
+\SubmitCmd{gt5}, jobmanager throttling and the Grid Monitor are not used.
 
-\item Grid universe grid-type \Opt{cream} has been added for submission
-to the CREAM job service of gLite.
+\item Grid universe grid type \Opt{cream} has been added for submission
+to the CREAM job service of \Prog{gLite}.
 
 \item When low on file descriptors for creating new network sockets,
 the \Condor{schedd} daemon now avoids the unlimited stacking up of
@@ -137,13 +137,13 @@ file for any node job that does not specify one.
   \MacroNI{HAD\_CONTROLLEE} macro.
 
 %gittrac #161
-\item Condor now recognizes VOMS extensions in X509 proxies. The VOMS
-attributes are encoded in the \MacroNI{X509UserProxySubject} job
-atrribute.
+\item Condor now recognizes VOMS extensions in X.509 proxies.
+The VOMS attributes are encoded in the job ClassAd attribute
+\Attr{X509UserProxySubject}.
 
 %gittrac #514
-\item The \Condor{startd} can now cleanup stranded VMs following a
-crash of Condor or its host OS.
+\item The \Condor{startd} can now clean up stranded virtual machines,
+following a crash of Condor or its host operating system.
 
 %gittrac #301
 \item Following a crash, the \Condor{gridmanager} no longer restarts all
@@ -232,7 +232,7 @@ indicates the number of CPU cores detected by Condor.
 %gittrac #621
 \item The new configuration variable
 \Macro{DELEGATE\_FULL\_JOB\_GSI\_CREDENTIALS}
-controls whether a full or limited X.509 proxy is delegated for grid-type
+controls whether a full or limited X.509 proxy is delegated for grid type
 \SubmitCmd{gt2} \SubmitCmd{grid} universe jobs.
 See \ref{param:DelegateFullJobGSICredentials}
 for the complete description.
