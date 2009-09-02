@@ -6790,9 +6790,9 @@ tags=c++_util,condor_config
 id=380
 
 [MASTER.USE_PROCD]
-# The master specifically wants a procd
+# The master specifically does not want a procd
 aliases=
-default=true
+default=false
 version=0.0.0
 range=.*
 state=default
@@ -6807,9 +6807,9 @@ tags=c++_util,proc_family_interface
 id=555
 
 [USE_PROCD]
-# All other daemons don't want a procd (except for the master, defined above)
+# All daemons want a procd (except for the master, defined above)
 aliases=
-default=false
+default=true
 version=0.0.0
 range=.*
 state=default
