@@ -85,16 +85,16 @@ int
 param_info_hash_dump_value(param_info_t* param_value, void* unused) {
 	printf("%s:  default=", param_value->name);
 	switch (param_value->type) {
-		case TYPE_STRING:
+		case PARAM_TYPE_STRING:
 			printf("%s", param_value->default_val.str_val);
 			break;
-		case TYPE_DOUBLE:
+		case PARAM_TYPE_DOUBLE:
 			printf("%f", param_value->default_val.dbl_val);
 			break;
-		case TYPE_INT:
+		case PARAM_TYPE_INT:
 			printf("%d", param_value->default_val.int_val);
 			break;
-		case TYPE_BOOL:
+		case PARAM_TYPE_BOOL:
 			printf("%s", param_value->default_val.int_val == 0 ? "false" : "true");
 			break;
 	}

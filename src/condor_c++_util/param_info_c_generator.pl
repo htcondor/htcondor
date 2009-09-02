@@ -171,7 +171,7 @@ my $type_subs = {
 	},
 	'param_type' => sub { 
 		my $type = enum($_[0],'STRING','INT','BOOL', 'DOUBLE');
-		return "TYPE_".$type;
+		return "PARAM_TYPE_".$type;
 	},
 	'is_macro_type' => sub {
 		my $is_macro = enum($_[0],'true','false');
@@ -312,7 +312,7 @@ sub reconstitute {
 			if ($name eq "type")
 			{
 				# Integer parameters
-				if ($type_subs->{$info->{type}}(exists $sub_structure->{type} ? $sub_structure->{type} : $default_structure->{type}) eq "TYPE_INT")
+				if ($type_subs->{$info->{type}}(exists $sub_structure->{type} ? $sub_structure->{type} : $default_structure->{type}) eq "PARAM_TYPE_INT")
 				{
 					if ($sub_structure->{'default'} eq "") {
 						print "ERROR: Integer parameter $param_name needs " .
@@ -321,7 +321,7 @@ sub reconstitute {
 				}
 
 				# Boolean parameters
-				if ($type_subs->{$info->{type}}(exists $sub_structure->{type} ? $sub_structure->{type} : $default_structure->{type}) eq "TYPE_BOOL")
+				if ($type_subs->{$info->{type}}(exists $sub_structure->{type} ? $sub_structure->{type} : $default_structure->{type}) eq "PARAM_TYPE_BOOL")
 				{
 					if ($sub_structure->{'default'} eq "") {
 						print "ERROR: Boolean parameter $param_name needs " .
@@ -330,7 +330,7 @@ sub reconstitute {
 				}
 
 				# Double parameters
-				if ($type_subs->{$info->{type}}(exists $sub_structure->{type} ? $sub_structure->{type} : $default_structure->{type}) eq "TYPE_DOUBLE")
+				if ($type_subs->{$info->{type}}(exists $sub_structure->{type} ? $sub_structure->{type} : $default_structure->{type}) eq "PARAM_TYPE_DOUBLE")
 				{
 					if ($sub_structure->{'default'} eq "") {
 						print "ERROR: Double parameter $param_name needs " .
