@@ -894,6 +894,7 @@ Daemon::locate( void )
 	case DT_ANY:
 		// don't do anything
 		rval = true;
+		break;
 	case DT_GENERIC:
 		rval = getDaemonInfo( GENERIC_AD );
 		break;
