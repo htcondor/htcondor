@@ -545,7 +545,7 @@ sub DoTest
     		return $retval;
 		} else {
 			# oops found a problem fail test
-			print "\nTest being marked as FAILEF from discovery of core file or ERROR in logs\n";
+			print "\nTest being marked as FAILED from discovery of core file or ERROR in logs\n";
 			print "Time, Log, message are stored in condor_tests/Cores/core_error_trace\n\n";
     		return 0;
 		}
