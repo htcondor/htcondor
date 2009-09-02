@@ -143,8 +143,8 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				OutputFile="$(OutDir)\$(ProjectName).dll"
 				AdditionalDependencies="$(CONDOR_JDK_LIB) $(CONDOR_JDK_LIBPATH)"
+				OutputFile="$(OutDir)\$(ProjectName).dll"
 				LinkIncremental="2"
 				SuppressStartupBanner="true"
 				SubSystem="2"
@@ -184,6 +184,14 @@
 		<File
 			RelativePath="..\src\condor_filetransfer_plugins\dllmain.c"
 			>
+			<FileConfiguration
+				Name="Release|Win32"
+				>
+				<Tool
+					Name="VCCLCompilerTool"
+					GeneratePreprocessedFile="0"
+				/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\src\condor_filetransfer_plugins\hashwin32.h"

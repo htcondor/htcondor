@@ -1,4 +1,3 @@
-
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -18,11 +17,12 @@
  *
  ***************************************************************/
 
-#include "hdfs_plugin.h"
 #include "condor_common.h"
+#include "hdfs_plugin.h"
 #include "condor_config.h"
 #include "directory.h"
 #include "HashTable.h"
+#include "setenv.h"
 
 #include "hdfs.h"
 #include "hdfsJniHelper.h"
@@ -143,7 +143,7 @@ int HdfsIO::validate(const char *url1, const char *url2, CondorError &error) {
                 recurrBuildClasspath(buff.Value());
                 free(home);
 
-                setenv("CLASSPATH", m_classpath.Value(), 0);
+                SetEnv("CLASSPATH", m_classpath.Value());
 
                 sl.rewind();
                 char *host = sl.next();
@@ -265,7 +265,7 @@ void HdfsIO::recurrBuildClasspath(const char *path) {
 
         const char *ctmp;
         while ( (ctmp = dir.Next())) {
-                char *match = strstr(ctmp, ".jar");
+                const char *match = strstr(ctmp, ".jar");
                 if (match && strlen(match) == 4) {
                         m_classpath += classpath_seperator;
                         m_classpath += dir.GetFullPath();

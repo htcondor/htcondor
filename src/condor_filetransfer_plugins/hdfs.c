@@ -544,7 +544,7 @@ hdfsFile hdfsOpenFile(hdfsFS fs, const char* path, int flags,
 		return NULL;
 	}
 	file->file = (*env)->NewGlobalRef(env, jVal.l);
-	file->type = (((flags & O_WRONLY) == 0) ? INPUT : OUTPUT);
+	file->type = (((flags & O_WRONLY) == 0) ? HINPUT : HOUTPUT);
 
 	destroyLocalReference(env, jVal.l);
 
@@ -591,7 +591,7 @@ int hdfsCloseFile(hdfsFS fs, hdfsFile file)
 	}
 
 	//The interface whose 'close' method to be called
-	interf = (file->type == INPUT) ? 
+	interf = (file->type == HINPUT) ? 
 HADOOP_ISTRM : HADOOP_OSTRM;
 
 	if (invokeMethod(env, NULL, &jExc, INSTANCE, jStream, interf,
@@ -677,7 +677,7 @@ tSize hdfsRead(hdfsFS fs, hdfsFile f, void* buffer, tSize length)
 	}
 
 	//Error checking... make sure that this file is 'readable'
-	if (f->type != INPUT) {
+	if (f->type != HINPUT) {
 		fprintf(stderr, "Cannot read from a non-InputStream object!\n");
 		errno = EINVAL;
 		return -1;
@@ -746,7 +746,7 @@ tSize hdfsPread(hdfsFS fs, hdfsFile f, tOffset position,
 	}
 
 	//Error checking... make sure that this file is 'readable'
-	if (f->type != INPUT) {
+	if (f->type != HINPUT) {
 		fprintf(stderr, "Cannot read from a non-InputStream object!\n");
 		errno = EINVAL;
 		return -1;
@@ -818,7 +818,7 @@ tSize hdfsWrite(hdfsFS fs, hdfsFile f, const void* buffer, tSize length)
 	}
 
 	//Error checking... make sure that this file is 'writable'
-	if (f->type != OUTPUT) {
+	if (f->type != HOUTPUT) {
 		fprintf(stderr, "Cannot write into a non-OutputStream object!\n");
 		errno = EINVAL;
 		return -1;
@@ -871,7 +871,7 @@ int hdfsSeek(hdfsFS fs, hdfsFile f, tOffset desiredPos)
 	jExc = NULL;
 
 	//Sanity check
-	if (!f || f->type != INPUT) {
+	if (!f || f->type != HINPUT) {
 		errno = EBADF;
 		return -1;
 	}
@@ -915,7 +915,7 @@ tOffset hdfsTell(hdfsFS fs, hdfsFile f)
 		return -1;
 	}
 
-	interf = (f->type == INPUT) ?
+	interf = (f->type == HINPUT) ?
 HADOOP_ISTRM : HADOOP_OSTRM;
 
 	currentPos  = -1;
@@ -957,7 +957,7 @@ int hdfsFlush(hdfsFS fs, hdfsFile f)
 	jExc = NULL;
 
 	//Sanity check
-	if (!f || f->type != OUTPUT) {
+	if (!f || f->type != HOUTPUT) {
 		errno = EBADF;
 		return -1;
 	}
@@ -1001,7 +1001,7 @@ int hdfsAvailable(hdfsFS fs, hdfsFile f)
 	jExc = NULL;
 
 	//Sanity check
-	if (!f || f->type != INPUT) {
+	if (!f || f->type != HINPUT) {
 		errno = EBADF;
 		return -1;
 	}

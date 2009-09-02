@@ -1,3 +1,22 @@
+/***************************************************************
+*
+* Copyright (C) 1990-2009, Condor Team, Computer Sciences Department,
+* University of Wisconsin-Madison, WI.
+* 
+* Licensed under the Apache License, Version 2.0 (the "License"); you
+* may not use this file except in compliance with the License.  You may
+* obtain a copy of the License at
+* 
+*    http://www.apache.org/licenses/LICENSE-2.0
+* 
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+*
+***************************************************************/
+
 // dllmain.cpp : Defines the entry point for the DLL application.
 #include "hdfsJniHelper.h"
 
@@ -30,7 +49,7 @@ BOOL APIENTRY DllMain( HMODULE hModule,
 
 int hcreate(size_t size)
 {
-	if(tree = (BUCKET**)calloc(size, sizeof(BUCKET*)))
+	if(tree = (BUCK**)calloc(size, sizeof(BUCK*)))
 	{
 		HASHSIZE = size;
 		count = 0;
@@ -42,9 +61,9 @@ int hcreate(size_t size)
 
 void hdestroy()
 {
-	BUCKET *iterator;
+	BUCK *iterator;
 	size_t index;
-	BUCKET *prev;
+	BUCK *prev;
 	if(tree)
 	{
 		for(index = 0; index < HASHSIZE; ++index)
@@ -64,11 +83,11 @@ void hdestroy()
 	}
 }
 
-struct ENTRY *hsearch(ENTRY e, enum ACTION a)
+ENTRY *hsearch(ENTRY e, enum ACTION a)
 {
 	unsigned int index;
-	BUCKET *bucket;
-	BUCKET *prev;
+	BUCK *bucket;
+	BUCK *prev;
 	char *k;
 
 	index = hash(e.key);
@@ -80,7 +99,7 @@ struct ENTRY *hsearch(ENTRY e, enum ACTION a)
 			if(count < HASHSIZE)
 			{
 				k = (char*)malloc(strlen(e.key));
-				bucket = (BUCKET*)malloc(sizeof(BUCKET));
+				bucket = (BUCK*)malloc(sizeof(BUCK));
 				strcpy(k, e.key);
 				bucket->entry.key = k;
 				bucket->entry.data = e.data;
@@ -110,7 +129,7 @@ struct ENTRY *hsearch(ENTRY e, enum ACTION a)
 			if(count < HASHSIZE)
 			{
 				k = (char*)malloc(strlen(e.key));
-				bucket = (BUCKET*)malloc(sizeof(BUCKET));
+				bucket = (BUCK*)malloc(sizeof(BUCK));
 				strcpy(k, e.key);
 				bucket->entry.key = k;
 				bucket->entry.data = e.data;

@@ -26,7 +26,7 @@
 #include <stdio.h>
 #include <string.h>
 #ifdef WIN32
-#include "stdint.h"
+#include "stdint-msvc.h"
 #else
 #include <stdint.h>
 #endif
@@ -93,8 +93,8 @@ extern  "C" {
 	enum hdfsStreamType
 	{
 		UNINITIALIZED = 0,
-		INPUT = 1,
-		OUTPUT = 2,
+		HINPUT = 1,
+		HOUTPUT = 2,
 	};
 
 
