@@ -166,9 +166,9 @@ Central Manager}
 
 The Condor high availability mechanisms discussed in this section
 currently do not work well in configurations involving flocking.
-The individual problems listed interact to make the situation
+The individual problems listed listed below interact to make the situation
 worse.
-Because of these problems, we advice against the use of
+Because of these problems, we advise against the use of
 flocking to pools with high availability mechanisms enabled.
 
 \begin{itemize}
@@ -220,10 +220,11 @@ these are the idle central managers.
 All submit and execute machines are configured to report
 to all potential central manager machines.
 
+\index{Condor daemon!condor\_had@\Condor{had}}
+\index{daemon!condor\_had@\Condor{had}}
+\index{condor\_had daemon}
 Each potential central manager machine runs the high
 availability daemon, \Condor{had}.
-\index{Condor daemon!\Condor{had}}
-\index{daemon!\Condor{had}}
 These daemons communicate with each other,
 constantly monitoring the pool to ensure that one active central
 manager is available.
@@ -290,11 +291,26 @@ to replicate this file on all potential central manager machines.
 This daemon promulgates the file in a way that is safe from error,
 and more secure than dependence on a shared file system copy.
 
+\index{Condor daemon!condor\_replication@\Condor{replication}}
+\index{daemon!condor\_replication@\Condor{replication}}
+\index{condor\_replication daemon}
+\index{Condor daemon!condor\_transferer@\Condor{transferer}}
+\index{daemon!condor\_transferer@\Condor{transferer}}
+\index{condor\_transferer daemon}
 The \Condor{replication} daemon runs on each
 potential central manager machine as well as on
 the active central manager machine.
 There is a unidirectional communication between the \Condor{had}
 daemon and the \Condor{replication} daemon on each machine.
+To properly do its job, the \Condor{replication} daemon must
+transfer state files.
+When it needs to transfer a file,
+the \Condor{replication} daemons at both the sending and receiving
+ends of the transfer invoke the \Condor{transferer} daemon.
+These short lived daemons do the task of file transfer and then exit.
+Do not place \MacroNI{TRANSFERER} into \MacroNI{DAEMON\_LIST},
+as it is not a daemon that the \Condor{master} should invoke or
+watch over.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:HA-configuration} Configuration} 
@@ -355,7 +371,7 @@ In these cases, the \Condor{master} will kill the \Condor{had} after
 the \Condor{negotiator} exists, wait a short period, then restart
 \Condor{had}.  The \Condor{had} will then win the election, so
 the secondary \Condor{negotiator} will be killed, and the primary
-will be restarted, only to exit again.  If this happens to quickly,
+will be restarted, only to exit again.  If this happens too quickly,
 neither \Condor{negotiator} will run long enough to complete a negotiation
 cycle, resulting in no jobs getting started.  Increasing this value
 via \Macro{MASTER\_HAD\_BACKOFF\_CONSTANT}
@@ -366,7 +382,7 @@ To run a high availability pool without the replication feature,
 do the following operations:
 \begin{enumerate}
   \item Set the \Macro{HAD\_USE\_REPLICATION} configuration 
-  variable to \Expr{false},
+  variable to \Expr{False},
   and thus disable the replication on configuration level.
 
   \item Remove \Expr{REPLICATION} from both \MacroNI{DAEMON\_LIST} and

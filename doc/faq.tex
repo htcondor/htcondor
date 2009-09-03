@@ -660,74 +660,6 @@ If supplied it with an empty file, the \Condor{master} works fine.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{I'm at the University of Wisconsin-Madison Computer Science Dept., and I am having problems!}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-Please see the web page \URL{http://www.cs.wisc.edu/condor/uwcs}.
-As
-it explains, your home directory is in AFS, which by default has
-access control restrictions which can prevent Condor jobs from running
-properly.
-The above URL will explain how to solve the problem.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{I'm getting a lot of e-mail from Condor.  Can I just delete it all?}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-Generally you shouldn't ignore \Bold{all} of the mail Condor sends,
-but you can reduce the amount you get by telling Condor that you don't
-want to be notified every time a job successfully completes, only when
-a job experiences an error.
-To do this, include a line in your submit file like the following:
-
-\begin{verbatim}
-Notification = Error
-\end{verbatim}
-
-See the Notification parameter in the \Condor{q} man page on
-page~\pageref{man-condor-submit-notification} of this manual for more
-information.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{Why will my vanilla jobs only run on the machine where I submitted them from?}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-Check the following:
-\begin {enumerate}
-
-\item{Did you submit the job from a local file system that other
-computers can't access?}
-
-See Section~\ref{sec:Shared-Filesystem-Config-File-Entries}, on
-page~\pageref{sec:Shared-Filesystem-Config-File-Entries}.
-
-\item{Did you set a special requirements expression for 
-vanilla jobs that's preventing them from running but not other jobs?}
-
-See Section~\ref{sec:Shared-Filesystem-Config-File-Entries}, on
-page~\pageref{sec:Shared-Filesystem-Config-File-Entries}.
-
-\item{Is Condor running as a non-root user?}
-
-See Section~\ref{sec:Non-Root}, on page~\pageref{sec:Non-Root}.
-
-\end{enumerate}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{My job starts but exits right away with signal 9.}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{job!exiting with signal 9 \(Unix\)}
-
-
-This can occur when the machine your job is running on is missing a
-shared library required by your program.
-One solution is to install the shared library on all machines the job
-may execute on.
-Another, easier, solution is to try to re-link your program statically
-so it contains all the routines it needs.
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{Why aren't any or all of my jobs running?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -828,6 +760,74 @@ and then send a \Condor{restart} to the submit machine.
 \end{enumerate}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{I'm at the University of Wisconsin-Madison Computer Science Dept., and I am having problems!}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Please see the web page \URL{http://www.cs.wisc.edu/condor/uwcs}.
+As
+it explains, your home directory is in AFS, which by default has
+access control restrictions which can prevent Condor jobs from running
+properly.
+The above URL will explain how to solve the problem.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{I'm getting a lot of e-mail from Condor.  Can I just delete it all?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Generally you shouldn't ignore \Bold{all} of the mail Condor sends,
+but you can reduce the amount you get by telling Condor that you don't
+want to be notified every time a job successfully completes, only when
+a job experiences an error.
+To do this, include a line in your submit file like the following:
+
+\begin{verbatim}
+Notification = Error
+\end{verbatim}
+
+See the Notification parameter in the \Condor{q} man page on
+page~\pageref{man-condor-submit-notification} of this manual for more
+information.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{Why will my vanilla jobs only run on the machine where I submitted them from?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Check the following:
+\begin {enumerate}
+
+\item{Did you submit the job from a local file system that other
+computers can't access?}
+
+See Section~\ref{sec:Shared-Filesystem-Config-File-Entries}, on
+page~\pageref{sec:Shared-Filesystem-Config-File-Entries}.
+
+\item{Did you set a special requirements expression for 
+vanilla jobs that's preventing them from running but not other jobs?}
+
+See Section~\ref{sec:Shared-Filesystem-Config-File-Entries}, on
+page~\pageref{sec:Shared-Filesystem-Config-File-Entries}.
+
+\item{Is Condor running as a non-root user?}
+
+See Section~\ref{sec:Non-Root}, on page~\pageref{sec:Non-Root}.
+
+\end{enumerate}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{My job starts but exits right away with signal 9.}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{job!exiting with signal 9 \(Unix\)}
+
+
+This can occur when the machine your job is running on is missing a
+shared library required by your program.
+One solution is to install the shared library on all machines the job
+may execute on.
+Another, easier, solution is to try to re-link your program statically
+so it contains all the routines it needs.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{Why does the \Attr{requirements} expression for the job I submitted\\
 have extra things that I did not put in my submit description file?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -910,63 +910,6 @@ For a Linux platform, the supported compiler
 is the default compiler that came with the distribution.
 It is often found in the directory \File{/usr/bin}.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{Can I submit my standard universe SPARC Solaris 2.6 jobs and have them run on a SPARC Solaris 2.7 machine?}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{Solaris26}
-\index{Solaris27}
-
-No. You may only use binary compatibility between SPARC Solaris 2.5.1
-and SPARC Solaris 2.6 and between SPARC Solaris 2.7 and SPARC Solaris
-2.8, but not between SPARC Solaris 2.6 and SPARC Solaris 2.7.  We may
-implement support for this feature in a future release of Condor.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{Can I submit my standard universe SPARC Solaris 2.8 jobs and have them run on a SPARC Solaris 2.9 machine?}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-No.  Although normal executables are binary compatible, technical details
-of taking checkpoints currently prevents this particular combination.
-Note that this applies to standard universe jobs only.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{Why have standard universe jobs in Condor 6.6.x have begun unexpectedly segmentation faulting during a checkpoint after an upgrade of Redhat Enterprise Linux 3 to current update levels?}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-Redhat has apparently back-ported a 2.6 kernel feature called
-``exec\_shield'' to the current patch levels of the RHEL3 product line. 
-This feature is designed to make buffer overflow attacks incredibly difficult
-to exploit. 
-However, it has the unfortunate side effect of completely breaking all
-user land checkpointing algorithms including the one Condor utilizes.
-The solution is to turn off the kernel feature for each execution of a 
-standard universe job in the Condor system.
-The method employed to do this is with \Expr{USER\_JOB\_WRAPPER} and a shell
-script that looks much like this one:
-
-\begin{verbatim}
-#! /bin/sh
-
-sa="/usr/bin/setarch"
-
-if [ -f $sa ]; then
-    exec $sa i386 ${1+"$@"}
-fi
-
-exec ${1+"$@"}
-\end{verbatim}
-
-Place this shell script into the \Expr{\$(SBIN)} directory of your Condor
-installation with the name of \Prog{fix\_std\_univ} and make sure to 
-\Prog{chmod 755 fix\_std\_univ} it. 
-Then, set \Expr{USER\_JOB\_WRAPPER = \$(SBIN)/fix\_std\_univ} in your
-global config file(or the config files which will affect your Linux install
-of Condor).
-Then do a \Condor{reconfig} of your pool.
-When a standard universe job is run on a machine, if the \Prog{setarch} 
-program is available (under Linux with the ``exec\_shield'' feature), then it
-will run the executable in the i386 personality, which turns off the 
-``exec\_shield'' kernel feature.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{Why do my vanilla jobs keep cycling between suspended and unsuspended?}
