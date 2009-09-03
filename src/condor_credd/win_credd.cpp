@@ -224,7 +224,8 @@ CredDaemon::get_passwd_handler(int i, Stream *s)
 	password = getStoredCredential(user,domain);
 	if (!password) {
 		dprintf(D_ALWAYS,
-			"Failed to fetch password for %s@%s for %s@%s at %s\n",
+			"Failed to fetch password for %s@%s requested by %s@%s at %s\n",
+			user,domain,
 			client_user,client_domain,client_ipaddr);
 		goto bail_out;
 	}
@@ -248,7 +249,7 @@ CredDaemon::get_passwd_handler(int i, Stream *s)
 	SecureZeroMemory(password,strlen(password));
 
 	dprintf(D_ALWAYS,
-			"Fetched user %s@%s password for %s@%s at %s\n",
+			"Fetched user %s@%s password requested by %s@%s at %s\n",
 			user,domain,client_user,client_domain,client_ipaddr);
 
 bail_out:
