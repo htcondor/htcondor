@@ -325,7 +325,7 @@ elif test $os = "Linux" ; then
      "4.0" )
        _cv_linux_distro="DEBIAN40"
        ;;
-     "5.0*" )
+     5.0* )
        _cv_linux_distro="DEBIAN50"
        ;;
      * )
