@@ -2544,6 +2544,14 @@ CStarter::PublishToEnv( Env* proc_env )
 		env_name += "LOWPORT";
 		proc_env->SetEnv( env_name.Value(), tmp_port_number.Value() );
     }
+
+		// set environment variables for temporary directories
+		// Condor will clean these up on job exits, and there's
+		// no chance of file collisions with other running slots
+
+	proc_env->SetEnv("TMPDIR", GetWorkingDir());
+	proc_env->SetEnv("TEMP", GetWorkingDir()); // Windows
+	proc_env->SetEnv("TMP", GetWorkingDir()); // Windows
 }
 
 
