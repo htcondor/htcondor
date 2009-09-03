@@ -32,6 +32,7 @@ enum exit_value {
 };
 
 int main_shutdown_rescue( int exitVal );
+void print_status();
 
 class Dagman {
   public:

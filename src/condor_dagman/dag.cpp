@@ -205,7 +205,8 @@ bool Dag::Bootstrap (bool recovery) {
     if (recovery) {
 		_recovery = true;
 
-        debug_printf( DEBUG_NORMAL, "Running in RECOVERY mode...\n" );
+        debug_printf( DEBUG_NORMAL, "Running in RECOVERY mode... "
+					">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n" );
 
 		// as we read the event log files, we emit lots of imformation into
 		// the logfile. If this is on NFS, then we pay a *very* large price
@@ -262,7 +263,9 @@ bool Dag::Bootstrap (bool recovery) {
 
 		debug_cache_stop_caching();
 
-        debug_printf( DEBUG_NORMAL, "...done with RECOVERY mode\n" );
+        debug_printf( DEBUG_NORMAL, "...done with RECOVERY mode "
+					"<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n" );
+		print_status();
 
 		_recovery = false;
     }
