@@ -36,6 +36,7 @@ $testname = "job_dagman_recovery_event_check";
 $dagman_args = "-verbose";
 
 @logfiles = ("job_dagman_recovery_event_check.dag.dagman.out");
+$rescue_file = "job_dagman_recovery_event_check.dag.rescue001";
 
 my $dag_was_held = 0;
 my $dag_was_released = 0;
@@ -52,6 +53,11 @@ foreach $name (@logfiles) {
 	}
 }
 
+# Get rid of the first rescue DAG files if it exists.
+if (-e $rescue_file) {
+	system("rm -f $rescue_file");
+}
+
 $abnormal = sub 
 {
 	CondorTest::debug("DIAG abnormal\n");
@@ -63,6 +69,11 @@ $failure = sub
 	CondorTest::debug("DAG failed as it should\n");
 	CondorTest::debug("Verifying output\n");
 	$diditpass = 1;
+
+	if( -e $rescue_file ) {
+		CondorTest::debug("There should be no rescue dag generated (found $rescue_file)!\n");
+		$diditpass = 0;
+	}
 
 	foreach $name (@logfiles) {
 		$line = "";
