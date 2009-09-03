@@ -6,9 +6,9 @@ while (<OUTPUT>) {
 }
 close (OUTPUT) or die "Condor_hold failed: $?";
 
-# Remove the log of the first node, so that when we go into recovery
-# mode, we'll get events that violate the DAG semantics.
-system("rm -f job_dagman_recovery_event_check-nodeA.log");
+# job_dagman_recovery_event_check.log.dummy has events for nodes B1 and
+# B2, but not node A, so it violates the DAG semantics.
+system("cp -f job_dagman_recovery_event_check.log.dummy job_dagman_recovery_event_check.log");
 
 sleep 60;
 
