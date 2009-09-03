@@ -1868,6 +1868,13 @@ TESTCLASS(job_dagman_default_log,quick)
 TESTCLASS(job_dagman_default_log,full)
 TESTCLASS(job_dagman_default_log,quicknolink)
 
+DESC(job_dagman_recovery_event_check,"Test DAG bad events in recovery mode")
+RUN(job_dagman_recovery_event_check)
+TESTCLASS(job_dagman_recovery_event_check,dagman)
+TESTCLASS(job_dagman_recovery_event_check,quick)
+TESTCLASS(job_dagman_recovery_event_check,full)
+TESTCLASS(job_dagman_recovery_event_check,quicknolink)
+
 
 /* Sample performance tests */
 
