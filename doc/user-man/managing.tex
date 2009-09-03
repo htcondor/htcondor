@@ -266,16 +266,32 @@ do not impact user priorities.  They are only a mechanism for the user to
 identify the relative importance of jobs among all the jobs submitted by the
 user to that specific queue.
 
-\subsection{Why does the job not run?}
+\subsection{Why is the job not running?}
 \index{job!analysis}
 \index{job!not running}
-Users sometimes find that their jobs do not run.  There are several reasons why
-a specific job does not run.  These reasons include failed job or machine
-constraints, bias due to preferences, insufficient priority, and the preemption
-throttle that is implemented by the \Condor{negotiator} to prevent
-thrashing.  Many of these reasons can be diagnosed by using the \Arg{-analyze}
-option of \Condor{q}.
+Users occasionally find that their jobs do not run.
+There are many possible reasons why a specific job is not running.
+The following prose attempts to identify some of the potential issues
+behind why a job is not running.
+
+At the most basic level, the user knows the status of a job by
+using \Condor{q} to see that the job is not running.
+By far, the most common reason (to the novice Condor job submitter)
+why the job is not running is that Condor has not yet 
+been through its periodic negotiation cycle,
+in which queued jobs are assigned to machines within the pool 
+and begin their execution.
+This periodic event occurs by default once every 5 minutes,
+implying that the user ought to wait a few minutes before
+searching for reasons why the job is not running.
+
+Further inquiries are dependent on whether the job has 
+never run at all, or has run for at least a little bit.
+
+For jobs that have never run,
 \index{Condor commands!condor\_q}
+many problems can be diagnosed by using the \Opt{-analyze}
+or the \Opt{-better-analyze} option of the \Condor{q} command.
 For example, a job (assigned the cluster.process value of
 331228.2359) submitted to the local pool at UW-Madison
 is not running.
@@ -525,7 +541,7 @@ have been received for 15 minutes.
 
 \noindent\Bold{Event Number:} 030 \\
 \Bold{Event Name:} The job's remote status is known again \\
-\Bold{Event Description:} An update has been recevied for a job whose
+\Bold{Event Description:} An update has been received for a job whose
 remote status was previous logged as unknown.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%e
