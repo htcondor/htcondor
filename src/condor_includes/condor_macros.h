@@ -28,6 +28,17 @@
 #define MAX(a,b) ((a)>(b)?(a):(b))
 #endif
 
+	/* When using pthreads, pthread_sigmask() in place of sigprocmask(),
+	 * except in the ckpt or remote syscall code (which doesn't deal
+	 * with pthreads anyhow).
+	 */
+#if !defined(IN_CKPT_LIB) && !defined(REMOTE_SYSCALLS) && defined(HAVE_PTHREAD_SIGMASK)
+#	ifdef sigprocmask
+#		undef sigprocmask
+#	endif
+#	define sigprocmask pthread_sigmask
+#endif
+
 	/* Don't prevent calls to open() or fopen() in the ckpt or 
 	 * remote syscalls code.
 	 */

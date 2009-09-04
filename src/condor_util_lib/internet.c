@@ -271,8 +271,7 @@ sin_to_hostname( const struct sockaddr_in *from, char ***aliases)
 
 
 void
-display_from( from )
-struct sockaddr_in  *from;
+display_from( struct sockaddr_in *from )
 {
     struct hostent  *hp;
     struct sockaddr_in caddr;
@@ -838,8 +837,8 @@ in_same_net(uint32_t ipA, uint32_t ipB)
     unsigned char *byteA, *fA, *byteB;
     int i, index_to;
 
-    fA = byteA = (char *)&ipA;
-    byteB = (char *)&ipB;
+    fA = byteA = (unsigned char *)&ipA;
+    byteB = (unsigned char *)&ipB;
 
     if (*fA < 128) { // A class
         index_to = 1;

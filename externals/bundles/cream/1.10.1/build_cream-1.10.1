@@ -1,0 +1,159 @@
+#!/bin/sh
+
+# Get dynamic config discovered by the build system.
+. $EXTERNALS_CONFIG
+
+# org.glite.ce.cream-client-api-c.tar.gz:
+#   http://jra1mw.cvs.cern.ch:8180/cgi-bin/jra1mw.cgi/org.glite.ce.cream-client-api-c.tar.gz?view=tar&pathrev=glite-ce-cream-client-api-c_R_1_10_1_0
+# org.glite.security.gsoap-plugin.tar.gz:
+#   http://jra1mw.cvs.cern.ch:8180/cgi-bin/jra1mw.cgi/org.glite.security.gsoap-plugin.tar.gz?view=tar&pathrev=glite-security-gsoap-plugin_R_1_5_4_2
+# org.glite.ce.wsdl.tar.gz:
+#   http://jra1mw.cvs.cern.ch:8180/cgi-bin/jra1mw.cgi/org.glite.ce.wsdl.tar.gz?view=tar&pathrev=glite-ce-wsdl_R_1_11_1_3
+# log4cpp-1.0-3.tar.gz:
+#   http://eticssoft.web.cern.ch/eticssoft/repository/externals/log4cpp/1.0/src/log4cpp-1.0-3.tar.gz
+# boost_1_33_1.tar.gz:
+#   http://voxel.dl.sourceforge.net/sourceforge/boost/boost_1_33_1.tar.gz
+# ares.tar.gz:
+#   http://eticssoft.web.cern.ch/eticssoft/repository/externals/ares/1.1.1/src/ares.tar.gz
+# gridsite-1.6.0.src.tar.gz:
+#   http://www.gridsite.org/download/sources/gridsite-1.6.0.src.tar.gz
+# gsoap_2.7.6b.tar.gz:
+#   http://downloads.sourceforge.net/gsoap2/gsoap_2.7.6b.tar.gz?use_mirror=voxel
+
+# The following files were taken from this URL:
+#   http://jra1mw.cvs.cern.ch:8180/cgi-bin/jra1mw.cgi/org.glite.tar.gz?view=tar&pathrev=glite_R_3_0_0
+# boost.m4
+# classads.m4		Modified
+# glite.m4
+# globus.m4		Modified
+# gsoap.m4
+# log4cpp.m4
+# optimize.m4
+
+# The following file was taken from this URL:
+#   http://jra1mw.cvs.cern.ch:8180/cgi-bin/jra1mw.cgi/org.glite.ce.tar.gz?view=tar&pathrev=glite-ce_R_1_7_29_0
+# glite_ce_wsdl.m4	Modified
+
+set -e -x
+
+cd $PACKAGE_BUILD_DIR
+stage_dir=$PACKAGE_BUILD_DIR/install
+mkdir $stage_dir
+
+# Build gsoap-2.7.6b
+tar zxvf gsoap_2.7.6b.tar.gz
+cd gsoap-2.7
+./configure --prefix=$stage_dir
+make
+make install
+cp soapcpp2/wsdl/stlvector.h $stage_dir/include
+cd ..
+
+# Build boost
+tar zxvf boost_1_33_1.tar.gz
+cd boost_1_33_1/tools/build/jam_src
+./build.sh
+PATH=`pwd`/`ls -d bin.*/`:$PATH
+export PATH
+cd ../../..
+bjam -sNO_COMPRESSION=1 -sTOOLS=gcc --prefix=$stage_dir install
+mv $stage_dir/include/boost-*/boost $stage_dir/include
+cd ..
+
+# Build log4cpp
+tar zxvf log4cpp-1.0-3.tar.gz
+cd log4cpp-1.0
+./configure --prefix=$stage_dir
+make
+make check
+make install
+cd ..
+
+# Build gridsite
+# May have issues with differeing versions of openssl and kerberos
+# between system and externals
+tar zxvf gridsite-1.6.0.src.tar.gz
+cd org.gridsite.core/src
+make libgridsite.a
+cp libgridsite.a $stage_dir/lib
+cp ../interface/*.h $stage_dir/include
+cd ../..
+
+# Build ares
+tar zxvf ares.tar.gz
+cd ares-1.1.1
+./configure --prefix=$stage_dir
+make
+make install
+cd ..
+
+# Build gsoap-plugin
+tar zxvf org.glite.security.gsoap-plugin.tar.gz
+cd org.glite.security.gsoap-plugin/src
+ln -s stdsoap2_2.7.6b.c stdsoap2.c
+ln -s stdsoap2_2.7.6b.h stdsoap2.h
+head stdsoap2.h | perl -ne '/^\s*stdsoap2.h\s+([0-9])\.([0-9])\.(\S+)\s.*/ && printf "#define GSOAP_VERSION %d%02d%02d\n#define GSOAP_MIN_VERSION \"$3\"\n#ident \"soap_version.h $1.$2.$3\"\n",$1,$2,$3' >soap_version.h
+gcc -I. -I../interface -DWITH_NONAMESPACES \
+   -I$stage_dir/include -D_GNU_SOURCE \
+   -I$EXTERNALS_INSTALL_DIR/$EXT_GLOBUS_VERSION/include/$GLOBUS_THR_FLAVOR \
+   -fPIC -DPIC -o glite_gss.thr.o -c glite_gss.c
+gcc -I. -I../interface -DWITH_NONAMESPACES \
+   -I$stage_dir/include -D_GNU_SOURCE \
+   -I$EXTERNALS_INSTALL_DIR/$EXT_GLOBUS_VERSION/include/$GLOBUS_THR_FLAVOR \
+   -fPIC -DPIC -o glite_gsplugin.thr.o -c glite_gsplugin.c
+
+gcc -I. -I../interface -DWITH_NONAMESPACES \
+   -I$stage_dir/include -D_GNU_SOURCE \
+   -I$EXTERNALS_INSTALL_DIR/$EXT_GLOBUS_VERSION/include/$GLOBUS_THR_FLAVOR \
+   -fPIC -DPIC -o stdsoap2.thr.o -c stdsoap2.c
+
+ar crv libglite_security_gsoap_plugin_${GLOBUS_THR_FLAVOR}.a glite_gss.thr.o \
+   glite_gsplugin.thr.o stdsoap2.thr.o
+ranlib libglite_security_gsoap_plugin_${GLOBUS_THR_FLAVOR}.a
+
+cp libglite_security_gsoap_plugin_${GLOBUS_THR_FLAVOR}.a $stage_dir/lib
+cp stdsoap2.h $stage_dir/include
+mkdir -p $stage_dir/include/glite/security
+cp ../interface/*.h $stage_dir/include/glite/security
+
+cd ../..
+
+# Build org.glite.ce.wsdl
+tar zxvf org.glite.ce.wsdl.tar.gz
+cd org.glite.ce.wsdl
+project/install.sh $stage_dir $stage_dir 1.10.1 2.0.0
+cd ..
+
+# Build cream api...
+tar zxvf org.glite.ce.cream-client-api-c.tar.gz
+patch -p0 -i cream.patch
+cp *.m4 org.glite.ce.cream-client-api-c/project
+cd org.glite.ce.cream-client-api-c
+./bootstrap
+./configure --prefix=$stage_dir \
+    --with-globus-prefix=$EXTERNALS_INSTALL_DIR/$EXT_GLOBUS_VERSION \
+    --with-globus-thr-flavor=$GLOBUS_THR_FLAVOR \
+    --with-globus-nothr-flavor=$GLOBUS_FLAVOR \
+    --with-openssl-prefix=$EXTERNALS_INSTALL_DIR/$EXT_OPENSSL_VERSION \
+    --with-voms-prefix=$EXTERNALS_INSTALL_DIR/$EXT_VOMS_VERSION \
+    --with-boost-prefix=$stage_dir \
+    --with-classads-prefix=$EXTERNALS_INSTALL_DIR/$EXT_CLASSADS_VERSION \
+    --with-log4cpp-prefix=$stage_dir \
+    --with-gsoap-location=$stage_dir \
+    --with-glite-location=$stage_dir \
+    --with-ce-wsdl-version=1.10.1 \
+    --with-delegation-wsdl-version=2.0.0
+make
+make install
+cd ..
+
+# Copy to install directory
+cd $stage_dir
+mkdir $PACKAGE_INSTALL_DIR $PACKAGE_INSTALL_DIR/include $PACKAGE_INSTALL_DIR/lib
+cp -r include/boost include/glite include/log4cpp include/stdsoap2.h \
+    $PACKAGE_INSTALL_DIR/include
+cp -r lib/libares.a lib/libboost_thread*.a \
+    lib/libglite_ce_cream_client_soap.a lib/libglite_ce_cream_client_util.a \
+    lib/libglite_security_gsoap_plugin_${GLOBUS_THR_FLAVOR}.a \
+    lib/libgridsite.a lib/liblog4cpp.a \
+    $PACKAGE_INSTALL_DIR/lib

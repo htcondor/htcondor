@@ -290,7 +290,7 @@ cleanup_execute_dir(int pid, char const *exec_path)
 	dynuser nobody_login;
 
 	if ( nobody_login.reuse_accounts() == false ) {
-	// before removing subdir, remove any nobody-user account associtated
+	// before removing subdir, remove any nobody-user account associated
 	// with this starter pid.  this account might have been left around
 	// if the starter did not clean up completely.
 	//sprintf(buf,"condor-run-dir_%d",pid);

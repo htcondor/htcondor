@@ -26,6 +26,7 @@
 #include "condor_attributes.h"
 #include "condor_qmgr.h"
 #include "metric_units.h"
+#include "structproc.h"
 
 /*
 This module serves to store and recall job summary info that will be

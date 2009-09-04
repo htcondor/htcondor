@@ -265,3 +265,31 @@ void Generic_set_log_va(void(*app_log_va)(int level,char*fmt,va_list args))
 	(void) app_log_va;
 };
 END_C_DECLS
+
+// Condor Threads stubs - called in dprintf
+BEGIN_C_DECLS
+int
+CondorThreads_pool_size()
+{
+	return 0;
+}
+
+int
+CondorThreads_gettid(void)
+{
+	return -1;
+}
+
+#if defined(HAVE_PTHREAD_SIGMASK) && defined(sigprocmask)
+	/* Deal with the fact that dprintf.o may be calling pthread_sigmask,
+	 * and yet we don't want to require anybody using libcondorapi.a to 
+	 * have to drag in all of pthreads. 
+	 */
+#undef sigprocmask
+int pthread_sigmask(int how, const sigset_t *newmask, sigset_t *oldmask)
+{
+	return sigprocmask(how,newmask,oldmask);
+}
+#endif
+
+END_C_DECLS

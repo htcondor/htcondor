@@ -41,7 +41,6 @@ HookClient::~HookClient() {
 		m_hook_path = NULL;
 	}
 	if (m_pid != -1 && !m_has_exited) {
-		daemonCore->Close_Stdin_Pipe(m_pid);	
 			// TODO
 			// kill -9 m_pid
 	}
@@ -83,8 +82,5 @@ HookClient::hookExited(int exit_status) {
 	MyString* std_err = daemonCore->Read_Std_Pipe(m_pid, 2);
 	if (std_err) {
 		m_std_err = *std_err;
-	}
-	if (m_pid != -1) {
-		daemonCore->Close_Stdin_Pipe(m_pid);
 	}
 }

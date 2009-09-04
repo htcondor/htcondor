@@ -36,11 +36,15 @@ EXT_CLASSADS_VERSION = @ext_classads_version@
 EXT_SRB_VERSION = @ext_srb_version@
 EXT_GSOAP_VERSION = @ext_gsoap_version@
 EXT_PCRE_VERSION = @ext_pcre_version@
+EXT_EXPAT_VERSION = @ext_expat_version@
+EXT_VOMS_VERSION = @ext_voms_version@
 EXT_POSTGRESQL_VERSION = @ext_postgresql_version@
 EXT_UNICOREGAHP_VERSION = @ext_unicoregahp_version@
 EXT_COREDUMPER_VERSION = @ext_coredumper_version@
 EXT_BLAHP_VERSION = @ext_blahp_version@
 EXT_CURL_VERSION = @ext_curl_version@
+EXT_CREAM_VERSION = @ext_cream_version@
+EXT_HADOOP_VERSION = @ext_hadoop_version@
 
 #if HAVE_EXT_LINUXLIBCHEADERS 
 EXT_LINUXLIBCHEADERS_VERSION = @ext_linuxlibcheaders_version@
@@ -138,12 +142,25 @@ PCRE_DIR = $(EXT_INSTALL)/$(EXT_PCRE_VERSION)
 PCRE_INC = $(PCRE_DIR)/include
 #endif
 
+#if HAVE_EXT_VOMS
+VOMS_DIR = $(EXT_INSTALL)/$(EXT_VOMS_VERSION)
+VOMS_INC = $(VOMS_DIR)/include
+#if HAVE_EXT_EXPAT
+EXPAT_DIR = $(EXT_INSTALL)/$(EXT_EXPAT_VERSION)
+EXPAT_INC = $(EXPAT_DIR)/include
+#endif /* exapt */
+#endif /* voms */
+
 #if HAVE_EXT_UNICOREGAHP
 UNICOREGAHP_DIR = $(EXT_INSTALL)/$(EXT_UNICOREGAHP_VERSION)
 #endif
 
 #if HAVE_EXT_BLAHP
 BLAHP_DIR = $(EXT_INSTALL)/$(EXT_BLAHP_VERSION)
+#endif
+
+#if HAVE_EXT_CREAM
+CREAM_DIR = $(EXT_INSTALL)/$(EXT_CREAM_VERSION)
 #endif
 
 #if HAVE_EXT_COREDUMPER
@@ -156,6 +173,10 @@ COREDUMPER_INC = $(COREDUMPER_DIR)/include
 CURL_DIR = $(EXT_INSTALL)/$(EXT_CURL_VERSION)
 CURL_LIB = $(CURL_DIR)/lib
 CURL_INC = $(CURL_DIR)/include
+#endif
+
+#if HAVE_EXT_HADOOP
+HADOOP_DIR = $(EXT_INSTALL)/$(EXT_HADOOP_VERSION)
 #endif
 
 #else /* if not HAS_EXTERNALS */

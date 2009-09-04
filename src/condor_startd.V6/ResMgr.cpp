@@ -169,6 +169,11 @@ ResMgr::init_config_classad( void )
 #endif /* HAVE_JOB_HOOKS */
 #if HAVE_HIBERNATION
 	configInsert( config_classad, "HIBERNATE", false );
+	if( !configInsert( config_classad, ATTR_UNHIBERNATE, false ) ) {
+		MyString default_expr;
+		default_expr.sprintf("%s =!= UNDEFINED",ATTR_LAST_MATCH_TIME);
+		config_classad->AssignExpr( ATTR_UNHIBERNATE, default_expr.Value() );
+	}
 #endif /* HAVE_HIBERNATION */
 
 	if( !configInsert( config_classad, ATTR_SLOT_WEIGHT, false ) ) {

@@ -369,6 +369,7 @@ walkHashTable (AdTypes adType, int (*scanFunction)(ClassAd *))
 			StorageAds.walk(scanFunction) &&
 			CkptServerAds.walk(scanFunction) &&
 			LicenseAds.walk(scanFunction) &&
+			CollectorAds.walk(scanFunction) &&
 			StartdAds.walk(scanFunction) &&
 			ScheddAds.walk(scanFunction) &&
 			MasterAds.walk(scanFunction) &&

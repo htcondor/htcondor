@@ -51,8 +51,10 @@ int hardlink_or_copy_file(const char *old_filename, const char *new_filename);
 
 void schedule_event ( int month, int day, int hour, int minute, int second, void (*func)(void) );
 void event_mgr ( void );
+/*
 void StartRecording ( void );
 void CompleteRecording ( long numberOfBytes );
+*/
 void ProcessLogging ( int request, int extraInteger );
 void detach ( void );
 int do_connect ( const char *host, const char *service, u_short port );
@@ -64,10 +66,6 @@ void _EXCEPT_ ( const char *fmt, ... ) CHECK_PRINTF_FORMAT(1,2);
 void condor_except_should_dump_core( int flag );
 int getdtablesize ( void );
 
-#ifndef WIN32  // on WIN32, it messes with our macro in condor_sys_nt.h
-char* strupr( char* );
-#endif
-
 #ifndef WIN32	// on WIN32, it messes with our getwd macro in condor_sys_nt.h
 char * getwd ( char *path );
 #endif
@@ -76,10 +74,7 @@ char * ltrunc ( register char *str );
 int set_machine_status ( int status );
 int get_machine_status ( void );
 int mkargv ( int *argc, char *argv[], char *line );
-int display_proc_short ( PROC *proc );
 char * format_time ( float fp_secs );
-int display_proc_long ( PROC *proc );
-int display_v2_proc_long ( PROC *proc );
 
 int display_status_line ( STATUS_LINE *line, FILE *fp );
 char * shorten ( char *state );
@@ -90,8 +85,6 @@ const char * substr ( char *string, char *pattern );
 void update_rusage( register struct rusage *ru1, register struct rusage *ru2 );
 int sysapi_swap_space ( void );
 int sysapi_disk_space(const char *filename);
-int calc_disk_needed( PROC * proc );
-PROC *ConstructProc( int, PROC *);
 
 #else /* HAS_PROTO */
 
@@ -141,8 +134,6 @@ char * substr ();
 int update_rusage ();
 int sysapi_swap_space ();
 int sysapi_disk_space();
-int calc_disk_needed();
-PROC *ConstructProc();
 
 #endif /* HAS_PROTO */
 #endif /* __CEXTRACT__ */

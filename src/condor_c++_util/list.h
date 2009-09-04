@@ -134,6 +134,8 @@ public:
 	/// Append() instead
 	void	Insert( ObjType & obj );
 	void	Insert( ObjType * obj );
+	void	InsertHead( ObjType & obj );
+	void	InsertHead( ObjType * obj );
 	bool	IsEmpty() const;
 	int		Number() const;
 	int		Length() const { return Number(); };
@@ -341,6 +343,24 @@ List<ObjType>::Insert( ObjType * obj )
 	current->prev = item;
 	item->next = current;
 	num_elem++;
+}
+
+/* Insert an element at the head */
+template <class ObjType>
+void
+List<ObjType>::InsertHead( ObjType& obj )
+{
+	InsertHead(&obj);
+}
+
+/* Insert an element before the current element */
+template <class ObjType>
+void
+List<ObjType>::InsertHead( ObjType * obj )
+{
+	Rewind( );
+	Next( );
+	Insert( obj );
 }
 
 /*

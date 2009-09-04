@@ -233,6 +233,7 @@ const struct Translation CollectorTranslation[] = {
 	{ "UPDATE_GRID_AD", UPDATE_GRID_AD },
 	{ "QUERY_GRID_ADS", QUERY_GRID_ADS },
 	{ "INVALIDATE_GRID_ADS", INVALIDATE_GRID_ADS },
+	{ "MERGE_STARTD_AD", MERGE_STARTD_AD },
 	{ NULL, 0 }
 };
 

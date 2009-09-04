@@ -23,8 +23,33 @@ use strict;
 use warnings;
 
 
-my $cmd = 'x_cmdrunforever.cmd';
 my $debuglevel = 2;
+my $pid = $ARGV[0];
+
+
+my $testdesc =  'Condor-C A & B test - vanilla U';
+my $testname = "x_cmdrunforever";
+my $cmd = "x_cmdrunforever$pid.cmd";
+my $template = 'x_cmdrunforever.template';
+
+my $line = "";
+open(TEMPLATE,"<$template") or die "Can not open $template: $!\n";
+open(CMD,">$cmd") or die "Can not open $cmd: $!\n";
+while(<TEMPLATE>) {
+	chomp();
+	$line = $_;
+	if($line =~ /^\s*log\s*=.*$/) {
+		print CMD "log = $testname$pid.log\n";
+	} elsif($line =~ /^\s*error\s*=.*$/) {
+		print CMD "error = $testname$pid.err\n";
+	} elsif($line =~ /^\s*output\s*=.*$/) {
+		print CMD "output = $testname$pid.out\n";
+	} else {
+		print CMD "$line\n";
+	}
+}
+close(TEMPLATE);
+close(CMD);
 
 
 # truly const variables in perl
@@ -37,8 +62,6 @@ CondorTest::debug("Submit file for this test is $cmd\n",$debuglevel);
 my $condor_config = $ENV{CONDOR_CONFIG};
 CondorTest::debug("CONDOR_CONFIG = $condor_config\n",$debuglevel);
 
-my $testdesc =  'Condor-C A & B test - vanilla U';
-my $testname = "x_cmdrunforever";
 
 my $submitted = sub {
 	CondorTest::debug("Run forever Job submitted\n",$debuglevel);

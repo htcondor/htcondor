@@ -1053,7 +1053,38 @@ handle_fetch_log_history_dir(ReliSock *stream, char *paramName) {
 
 int
 handle_fetch_log_history_purge(ReliSock *s) {
-	return 0;
+
+	int result = 0;
+	time_t cutoff = 0;
+	s->code(cutoff);
+	s->end_of_message();
+
+	s->encode();
+
+	char *dirName = param("STARTD.PER_JOB_HISTORY_DIR"); 
+	if (!dirName) {
+		dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log_history_dir: no parameter named PER_JOB\n");
+		s->code(result);
+		s->end_of_message();
+		return FALSE;
+	}
+
+	Directory d(dirName);
+	const char *filename;
+
+	result = 1;
+	while ((filename = d.Next())) {
+		time_t last = d.GetModifyTime();
+		if (last < cutoff) {
+			d.Remove_Current_File();
+		}
+	}
+
+    free(dirName);
+
+    s->code(result); // no more data
+    s->end_of_message();
+    return 0;
 }
 
 
@@ -1872,7 +1903,7 @@ int main( int argc, char** argv )
 			}
 			// Close the /dev/null descriptor _IF_ it's not stdin/out/err
 			if ( fd_null > 2 ) {
-				close( fd );
+				close( fd_null );
 			}
 		}
 		// and detach from the controlling tty
@@ -2157,6 +2188,10 @@ int main( int argc, char** argv )
 	daemonCore->Register_Command( DC_FETCH_LOG, "DC_FETCH_LOG",
 								  (CommandHandler)handle_fetch_log,
 								  "handle_fetch_log()", 0, ADMINISTRATOR );
+
+	daemonCore->Register_Command( DC_PURGE_LOG, "DC_PURGE_LOG",
+								  (CommandHandler)handle_fetch_log_history_purge,
+								  "handle_fetch_log_history_purge()", 0, ADMINISTRATOR );
 
 	daemonCore->Register_Command( DC_INVALIDATE_KEY, "DC_INVALIDATE_KEY",
 								  (CommandHandler)handle_invalidate_key,

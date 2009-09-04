@@ -27,6 +27,7 @@ TEST_LIBCONDORAPI = test_libcondorapi
 all_target( param_info_init.c cplus_lib.a liburl.a $(LIBCONDORAPI) $(TEST_LIBCONDORAPI) )
 
 param_info_init.c: param_info.in param_info_c_generator.pl
+	chmod u+x param_info_c_generator.pl
 	./param_info_c_generator.pl
 
 testbin_target(test_libcondorapi,755)
@@ -123,7 +124,6 @@ CLASSAD_OBJ = \
 	../classad.old/attrlist.o \
 	../classad.old/buildtable.o \
 	../classad.old/classad.o \
-	../classad.old/classifiedjobs.o \
 	../classad.old/environment.o \
 	../classad.old/evaluateOperators.o \
 	../classad.old/operators.o \

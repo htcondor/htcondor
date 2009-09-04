@@ -1,14 +1,14 @@
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
- * University of Wisconsin-Madison, WI.
- * 
+ * University of Wisconsin-Madison,
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -45,13 +45,13 @@
 #define MESSAGES_PER_INTERVAL_FACTOR (2)
 #define DEFAULT_HAD_UPDATE_INTERVAL  (5 * MINUTE)
 
-extern int main_shutdown_graceful();
+extern int main_shutdown_graceful(void);
 
 
 /***********************************************************
   Function :
 */
-HADStateMachine::HADStateMachine()
+HADStateMachine::HADStateMachine(void)
 {
     init();
 }
@@ -60,11 +60,11 @@ HADStateMachine::HADStateMachine()
   Function :
 */
 void
-HADStateMachine::init()
+HADStateMachine::init(void)
 {
     m_state = PRE_STATE;
-    m_otherHADIPs = NULL;
     m_masterDaemon = NULL;
+	m_controlleeName = NULL;
     m_isPrimary = false;
     m_usePrimary = false;
     m_standAloneMode = false;
@@ -77,31 +77,26 @@ HADStateMachine::init()
 
 	// replication-specific initializations
     m_useReplication = false;
-    replicationDaemonSinfulString = NULL;
+    m_replicationDaemonSinfulString = NULL;
     // classad-specific initializations
-    m_classAd = NULL;
     m_updateCollectorTimerId = -1;
     m_updateCollectorInterval = -1;
 }
+
 /***********************************************************
-  Function :  finalize() - free all resources
-*/	
+  Function :  freeResources() - free all resources
+*/
 void
-HADStateMachine::finalize()
+HADStateMachine::freeResources(void)
 {
     m_state = PRE_STATE;
     m_connectionTimeout = DEFAULT_SEND_COMMAND_TIMEOUT;
-    
-    if( m_otherHADIPs != NULL ){
-        delete m_otherHADIPs;
-		// since m_otherHADIPs is StringList it frees all its elements
-        m_otherHADIPs = NULL;
-    }
+
     if( m_masterDaemon != NULL ){
-        // always kill leader when HAD dies - if I am leader I should 
-        // kill my Negotiator.If I am not a leader - my Negotiator
-        // should not be on anyway
-        sendNegotiatorCmdToMaster( CHILD_OFF_FAST );
+        // always kill leader when HAD dies - if I am leader I should
+        // kill my "controlled daemon".  If I am not a leader - my
+		// controllee should not be on anyway
+        sendControlCmdToMaster( CHILD_OFF_FAST );
         delete m_masterDaemon;
         m_masterDaemon = NULL;
     }
@@ -118,17 +113,13 @@ HADStateMachine::finalize()
 
 	// replication-specific finalizings
     m_useReplication = false;
-	
-	if( replicationDaemonSinfulString != NULL ) {
-		free(replicationDaemonSinfulString);
-    	replicationDaemonSinfulString = NULL;
+
+	if( m_replicationDaemonSinfulString != NULL ) {
+		free(m_replicationDaemonSinfulString);
+		m_replicationDaemonSinfulString = NULL;
     }
 
 	// classad finalizings
-    if( m_classAd != NULL) {
-		delete m_classAd;
-    	m_classAd = NULL;
-	}
 	utilCancelTimer( m_updateCollectorTimerId );
     m_updateCollectorInterval = -1;
 }
@@ -136,46 +127,61 @@ HADStateMachine::finalize()
 /***********************************************************
   Function :
 */
-HADStateMachine::~HADStateMachine()
+HADStateMachine::~HADStateMachine(void)
 {
+
     ClassAd invalidate_ad;
     MyString line;
 
-    finalize();
+    freeResources();
 
     invalidate_ad.SetMyTypeName( QUERY_ADTYPE );
     invalidate_ad.SetTargetTypeName( HAD_ADTYPE );
-    line.sprintf( "%s == \"%s\"", ATTR_NAME, m_daemonName.Value( ) );
+    line.sprintf( "%s == \"%s\"", ATTR_NAME, m_name.Value( ) );
     invalidate_ad.AssignExpr( ATTR_REQUIREMENTS, line.Value( ) );
     daemonCore->sendUpdates( INVALIDATE_HAD_ADS, &invalidate_ad, NULL, false );
 }
 
 
-bool 
-HADStateMachine::isHardConfigurationNeeded()
+bool
+HADStateMachine::isHardConfigurationNeeded(void)
 {
-	char*       buffer          = NULL;
-	bool        usePrimaryCopy  = false;
-	StringList* otherHADIPsCopy = NULL;
-	int         selfIdCopy;
+	char		*tmp      = NULL;
+	char		 controllee[128];
+	bool    	 usePrimary  = false;
+	int     	 selfId;
+	StringList	 allHadIps;
 
-	buffer = param( "HAD_USE_PRIMARY" );
+	tmp = param( "HAD_CONTROLLEE" );
+	if ( tmp ) {
+		strncpy( controllee, tmp, sizeof(controllee) );
+        free( tmp );
+	}
+	else {
+		strncpy( controllee, daemonString(DT_NEGOTIATOR), sizeof(controllee) );
+	}
+	if ( strcasecmp(controllee, m_controlleeName) ) {
+		return true;
+	}
 
-    if( buffer ) {
-        if( strncasecmp( buffer, "true", strlen( "true" ) ) == 0 ) {
-          usePrimaryCopy = true;
+	tmp = param( "HAD_USE_PRIMARY" );
+	if( tmp ) {
+        if( strncasecmp( tmp, "true", strlen("true") ) == 0 ) {
+			usePrimary = true;
         }
-        free( buffer );
+        free( tmp );
     }
+	if ( usePrimary != m_usePrimary ) {
+		return true;
+	}
 
-    buffer = param( "HAD_LIST" );
-
-    if ( buffer ) {
-		otherHADIPsCopy = new StringList( );
+    tmp = param( "HAD_LIST" );
+    if ( tmp ) {
+		StringList	otherHadIps;
        	// we do not care for the return value here, so there is no importance
 		// whether we use the 'usePrimaryCopy' or 'm_usePrimary'
-		initializeHADList( buffer, m_usePrimary, otherHADIPsCopy, &selfIdCopy );
-        free( buffer );
+		getHadList( tmp, usePrimary, otherHadIps, allHadIps, selfId );
+        free( tmp );
     } else {
 		utilCrucialError( utilNoParameterError( "HAD_LIST", "HAD" ).Value() );
     }
@@ -183,52 +189,42 @@ HADStateMachine::isHardConfigurationNeeded()
 	// if either the HAD_LIST length has changed or the index of the local
 	// HAD in the list has changed or the rest of remote HAD sinful strings
 	// has changed their order or value, we do need the hard reconfiguration
-	if( m_usePrimary             != usePrimaryCopy ||
-		m_selfId                 != selfIdCopy     ||
-		m_otherHADIPs->number( ) != otherHADIPsCopy->number( ) ) {
-		delete otherHADIPsCopy;
-
+	if(  ( m_selfId     != selfId              )  ||
+		 ( !m_allHadIps.identical(m_allHadIps) )   ) {
 		return true;
 	}
-
-	char* address     = NULL;
-	char* addressCopy = NULL;
-
-	while( ( address     = m_otherHADIPs->next( ) ) && 
-		   ( addressCopy = otherHADIPsCopy->next( ) ) ) {
-		dprintf( D_ALWAYS, "Addresses to compare %s and %s\n", address,
-				 addressCopy );
-		if( strcmp( address, addressCopy ) != 0 ) {
-			delete otherHADIPsCopy;
-
-			return true;
-		}	
-	}
-	delete otherHADIPsCopy;
 
 	return false;
 }
 
-int 
-HADStateMachine::softReconfigure()
+int
+HADStateMachine::softReconfigure(void)
 {
 	// initializing necessary data members to prepare for the reconfiguration
 	m_standAloneMode          = false;
 	m_connectionTimeout       = DEFAULT_SEND_COMMAND_TIMEOUT;
 	m_hadInterval             = -1;
 	m_useReplication          = false;
-	m_updateCollectorInterval = -1;	
+	m_updateCollectorInterval = -1;
 
-	if( replicationDaemonSinfulString != NULL ) {
-		free( replicationDaemonSinfulString );
-		replicationDaemonSinfulString = NULL;
+	if( m_replicationDaemonSinfulString != NULL ) {
+		free( m_replicationDaemonSinfulString );
+		m_replicationDaemonSinfulString = NULL;
 	}
-	if( m_classAd != NULL) {
-		delete m_classAd;
-    	m_classAd = NULL;
-	}
+
 	// reconfiguration
-	char* buffer = NULL;
+	char		*buffer = NULL;
+	const char	*tmp;
+
+    // 'my_username' allocates dynamic string
+    buffer = my_username();
+	tmp = buffer ? buffer : "UNKNOWN";
+    m_name.sprintf( "%s@%s -p %d",
+					tmp, my_full_hostname( ),
+					daemonCore->InfoCommandPort( ) );
+	if ( buffer ) {
+		free( buffer );
+	}
 
 	buffer = param( "HAD_STAND_ALONE_DEBUG" );
 
@@ -241,18 +237,18 @@ HADStateMachine::softReconfigure()
     }
 
 	buffer = param( "HAD_CONNECTION_TIMEOUT" );
-    
+
 	if( buffer ) {
         bool res = false;
-        
+
 		m_connectionTimeout = utilAtoi(buffer, &res);
-        
+
 		if( ! res || m_connectionTimeout <= 0 ) {
             free( buffer );
-            utilCrucialError( utilConfigurationError( 
+            utilCrucialError( utilConfigurationError(
 								"HAD_CONNECTION_TIMEOUT", "HAD" ).Value( ) );
         }
-    
+
         free( buffer );
     } else {
         dprintf( D_ALWAYS, "No HAD_CONNECTION_TIMEOUT in config file,"
@@ -260,37 +256,39 @@ HADStateMachine::softReconfigure()
     }
     // calculate m_hadInterval
     int safetyFactor = 1;
-            
+
     // timeoutNumber
     // connect + startCommand(sock.code() and sock.eom() aren't blocking)
     int timeoutNumber = 2;
-    
-    int time_to_send_all = (m_connectionTimeout*timeoutNumber);   
-    time_to_send_all *= (m_otherHADIPs->number() + 1); //otherHads + master
-	
+
+    int time_to_send_all = (m_connectionTimeout*timeoutNumber);
+    time_to_send_all *= (m_otherHadIps.number() + 1); //otherHads + master
+
 	m_hadInterval = (time_to_send_all + safetyFactor)*
                   (MESSAGES_PER_INTERVAL_FACTOR);
-#if IS_REPLICATION_USED  
+#if IS_REPLICATION_USED
     // setting the replication usage permissions
     buffer = param( "HAD_USE_REPLICATION" );
-    
+
 	if ( buffer && ! strncasecmp( buffer, "true", strlen("true") ) ) {
         m_useReplication = true;
         free( buffer );
     }
     setReplicationDaemonSinfulString( );
-#endif   
+#endif
 
-	dprintf(D_ALWAYS, "HADStateMachine::softReconfigure classad information\n");
+	dprintf(D_ALWAYS,
+			"HADStateMachine::softReconfigure classad information\n");
     initializeClassAd( );
     m_updateCollectorInterval = param_integer ("HAD_UPDATE_INTERVAL",
                                              DEFAULT_HAD_UPDATE_INTERVAL );
-    /*buffer = param( "HAD_UPDATE_INTERVAL" );
+# if 0
+    buffer = param( "HAD_UPDATE_INTERVAL" );
     if( buffer ) {
         bool res = false;
-        
+
 		m_updateCollectorInterval = utilAtoi(buffer, &res);
-        
+
 		if( ! res || m_updateCollectorInterval <= 0 ) {
             free( buffer );
             utilCrucialError( utilConfigurationError(
@@ -300,7 +298,8 @@ HADStateMachine::softReconfigure()
     } else {
         utilCrucialError( utilNoParameterError(
                             "HAD_UPDATE_INTERVAL", "HAD" ).Value( ) );
-    }*/
+    }
+# endif
 	printParamsInformation();
 
 	return TRUE;
@@ -310,75 +309,65 @@ HADStateMachine::softReconfigure()
   Function :
 */
 void
-HADStateMachine::initialize()
+HADStateMachine::initialize(void)
 {
     reinitialize ();
-    daemonCore->Register_Command ( HAD_ALIVE_CMD, "ALIVE command",
-            (CommandHandlercpp) &HADStateMachine::commandHandler,
-            "commandHandler", (Service*) this, DAEMON );
+    daemonCore->Register_Command (
+		HAD_ALIVE_CMD, "ALIVE command",
+		(CommandHandlercpp) &HADStateMachine::commandHandlerHad,
+		"commandHandler", (Service*) this, DAEMON );
 
-    daemonCore->Register_Command ( HAD_SEND_ID_CMD, "SEND ID command",
-            (CommandHandlercpp) &HADStateMachine::commandHandler,
-            "commandHandler", (Service*) this, DAEMON );
-
+    daemonCore->Register_Command (
+		HAD_SEND_ID_CMD, "SEND ID command",
+		(CommandHandlercpp) &HADStateMachine::commandHandlerHad,
+		"commandHandler", (Service*) this, DAEMON );
 }
 
 void
-HADStateMachine::initializeClassAd()
+HADStateMachine::initializeClassAd(void)
 {
-    m_classAd = new ClassAd();
+	char	*buffer;
 
-    m_classAd->SetMyTypeName(HAD_ADTYPE);
-    m_classAd->SetTargetTypeName("");
+	m_classAd.clear();
+
+    m_classAd.SetMyTypeName(HAD_ADTYPE);
+    m_classAd.SetTargetTypeName("");
 
     MyString line;
-    // 'my_username' allocates dynamic string
-    char* userName = my_username();
 
-    m_daemonName.sprintf( "%s@%s -p %d", userName, my_full_hostname( ),
-				  daemonCore->InfoCommandPort( ) );
-    free( userName );
     // ATTR_NAME is mandatory in order to be accepted by collector
-    m_classAd->Assign( ATTR_NAME, m_daemonName.Value( ) );
-
-    line.sprintf( "%s = \"%s\"", ATTR_MY_ADDRESS,
-                        daemonCore->InfoCommandSinfulString() );
-    m_classAd->Insert(line.Value());
+    m_classAd.Assign( ATTR_NAME, m_name );
+    m_classAd.Assign( ATTR_MY_ADDRESS,
+					  daemonCore->InfoCommandSinfulString() );
 
 	// declaring boolean attributes this way, no need for \"False\"
-    line.sprintf( "%s = False", ATTR_HAD_IS_ACTIVE );
-    m_classAd->Insert(line.Value());
+    m_classAd.Assign( ATTR_HAD_IS_ACTIVE, false );
 
 	// publishing list of hads in classad
-	char*      buffer     = param( "HAD_LIST" );
-	char*      hadAddress = NULL;
-	StringList hadList; 
-	MyString   attrHadList;
-	MyString   comma;
-
-	hadList.initializeFromString( buffer );
-	hadList.rewind( );
-
-	while( ( hadAddress = hadList.next() ) ) {
-		attrHadList += comma;
-		attrHadList += hadAddress;
-		comma = ",";
+	buffer = m_allHadIps.print_to_string( );
+	if ( !buffer ) {
+		m_classAd.Assign( ATTR_HAD_LIST, "UNKNOWN" );
 	}
-	line.sprintf( "%s = \"%s\"", ATTR_HAD_LIST, attrHadList.Value( ) );
-	m_classAd->Insert(line.Value());
+	else {
+		m_classAd.Assign( ATTR_HAD_LIST, buffer );
+		free( buffer );
+	}
 
-	free( buffer );
+	// Publish the "controllee" name
+	m_classAd.Assign( ATTR_HAD_CONTROLLEE_NAME, m_controlleeName );
 
 	// publishing had's real index in list of hads
-	line.sprintf( "%s = \"%d\"", ATTR_HAD_INDEX, hadList.number() - 1 - m_selfId);
-	m_classAd->Insert(line.Value());
+	m_classAd.Assign( ATTR_HAD_INDEX, m_allHadIps.number() - 1 - m_selfId );
+
+	// publish my "self ID" 
+	m_classAd.Assign( ATTR_HAD_SELF_ID, m_selfId );
 
 	// publish all of the DC-specific attributes, SUBSYS_ATTRS, etc.
-	daemonCore->publish(m_classAd);
+	daemonCore->publish( &m_classAd );
 }
 
 /***********************************************************
-  Function : reinitialize - 
+  Function : reinitialize -
     delete all previuosly alocated memory, read all config params from
     config_file again and init all relevant parameters
 
@@ -396,55 +385,67 @@ HADStateMachine::initializeClassAd()
     In case of any of this errors we should exit with error.
 */
 int
-HADStateMachine::reinitialize()
+HADStateMachine::reinitialize(void)
 {
     char* tmp;
-    finalize(); // DELETE all and start everything over from the scratch
+    freeResources(); // DELETE all and start everything over from the scratch
     m_masterDaemon = new Daemon( DT_MASTER );
+
+	// Find the name of the controllee, default to negotiator
+	tmp = param( "HAD_CONTROLLEE" );
+	if ( tmp ) {
+		m_controlleeName = tmp;
+	}
+	else {
+		m_controlleeName = strdup( daemonString(DT_NEGOTIATOR) );
+	}
 
 	// reconfiguring data members, on which the negotiator location inside the
 	// pool depends
-    tmp=param( "HAD_USE_PRIMARY" );
+    tmp = param( "HAD_USE_PRIMARY" );
     if( tmp ) {
         if(strncasecmp(tmp,"true",strlen("true")) == 0) {
           m_usePrimary = true;
         }
         free( tmp );
     }
-    
-    m_otherHADIPs = new StringList();
-    tmp=param( "HAD_LIST" );
+
+    tmp = param( "HAD_LIST" );
     if ( tmp ) {
-        m_isPrimary = initializeHADList( tmp, m_usePrimary, m_otherHADIPs, &m_selfId );
+        m_isPrimary = getHadList( tmp, m_usePrimary,
+								  m_otherHadIps, m_allHadIps,
+								  m_selfId );
         free( tmp );
     } else {
-        utilCrucialError("HAD CONFIGURATION ERROR: no HAD_LIST in config file");
+        utilCrucialError("HAD CONFIGURATION ERROR:"
+						 " no HAD_LIST in config file");
     }
 	// reconfiguring the rest of the data members: those, which do not affect
 	// the negotiator's location
 	softReconfigure( );
-   
-	// initializing the timers 
-    m_stateMachineTimerID = daemonCore->Register_Timer ( 0,
-                                    (TimerHandlercpp) &HADStateMachine::cycle,
-                                    "Time to check HAD", this);
-    dprintf( D_ALWAYS,"** Register on m_stateMachineTimerID , interval = %d\n",
+
+	// initializing the timers
+    m_stateMachineTimerID = daemonCore->Register_Timer (
+		0,
+		(TimerHandlercpp) &HADStateMachine::cycle,
+		"Time to check HAD", this);
+    dprintf( D_ALWAYS,"** Register on m_stateMachineTimerID, interval = %d\n",
             m_hadInterval/(MESSAGES_PER_INTERVAL_FACTOR));
 	m_updateCollectorTimerId = daemonCore->Register_Timer (
         0, m_updateCollectorInterval,
         (TimerHandlercpp) &HADStateMachine::updateCollectors,
         "Update collector", this );
-             
+
     if( m_standAloneMode ) {
          //printParamsInformation();
          return TRUE;
     }
- 
+
     if( m_masterDaemon == NULL ||
-        sendNegotiatorCmdToMaster(CHILD_OFF_FAST) == FALSE ) {
-         utilCrucialError("HAD ERROR: unable to send NEGOTIATOR_OFF command");
+        sendControlCmdToMaster(CHILD_OFF_FAST) == false ) {
+         utilCrucialError("HAD ERROR: unable to send CHILD_OFF_FAST command");
     }
- 
+
     //printParamsInformation();
     return TRUE;
 }
@@ -456,17 +457,18 @@ HADStateMachine::reinitialize()
     once in m_hadInterval call step() functions - step of HAD state machine
 */
 void
-HADStateMachine::cycle(){
+HADStateMachine::cycle(void)
+{
     dprintf( D_FULLDEBUG, "-------------- > Timer m_stateMachineTimerID"
         " is called\n");
-    
+
     utilCancelTimer( m_stateMachineTimerID );
 	m_stateMachineTimerID = daemonCore->Register_Timer (
-                                m_hadInterval/(MESSAGES_PER_INTERVAL_FACTOR),
-                                (TimerHandlercpp) &HADStateMachine::cycle,
-                                "Time to check HAD",
-                                 this);
-                                
+		m_hadInterval/(MESSAGES_PER_INTERVAL_FACTOR),
+		(TimerHandlercpp) &HADStateMachine::cycle,
+		"Time to check HAD",
+		this);
+
     if(m_callsCounter == 0){ //  once in m_hadInterval
         // step of HAD state machine
         step();
@@ -481,16 +483,15 @@ HADStateMachine::cycle(){
   Function :  step()
     called each m_hadInterval, implements one state of the
     state machine.
-  
 */
 void
-HADStateMachine::step()
+HADStateMachine::step(void)
 {
 
     my_debug_print_buffers();
     switch( m_state ) {
         case PRE_STATE:
-//            sendReplicationCommand( HAD_BEFORE_PASSIVE_STATE );
+			//sendReplicationCommand( HAD_BEFORE_PASSIVE_STATE );
             m_state = PASSIVE_STATE;
             printStep("PRE_STATE","PASSIVE_STATE");
             break;
@@ -515,7 +516,7 @@ HADStateMachine::step()
             }
 
             // command ALIVE isn't received
-            if( checkList(&receivedIdList) == FALSE ) {
+            if( checkList(&receivedIdList) == false ) {
                 // id bigger than m_selfId is received
                 m_state = PASSIVE_STATE;
                 printStep("ELECTION_STATE","PASSIVE_STATE");
@@ -534,7 +535,7 @@ HADStateMachine::step()
             }
 
 			// no leader in the system and this HAD has biggest id
-            int returnValue = sendNegotiatorCmdToMaster(CHILD_ON);
+            int returnValue = sendControlCmdToMaster(CHILD_ON);
 
             if( returnValue == TRUE && m_useReplication) {
                 sendReplicationCommand( HAD_AFTER_ELECTION_STATE );
@@ -546,9 +547,10 @@ HADStateMachine::step()
             } else {
                 // TO DO : what with this case ? stay in election case ?
                 // return to passive ?
-                // may be call sendNegotiatorCmdToMaster(CHILD_ON)in a loop?
-                dprintf( D_FULLDEBUG,"id %d , cannot send NEGOTIATOR_ON cmd,"
-                    " stay in ELECTION state\n",
+                // may be call sendControlCmdToMaster(CHILD_ON)in a loop?
+                dprintf( D_FULLDEBUG,
+						 "id %d, cannot send CHILD_ON cmd,"
+						 " stay in ELECTION state\n",
                     daemonCore->getpid() );
                 utilCrucialError("");
             }
@@ -557,8 +559,8 @@ HADStateMachine::step()
 		}
         case LEADER_STATE:
     		if( ! receivedAliveList.IsEmpty() &&
-                  checkList(&receivedAliveList) == FALSE ) {
-                // send to master "negotiator_off"
+                  checkList(&receivedAliveList) == false ) {
+                // send to master "child_off"
                 printStep( "LEADER_STATE","PASSIVE_STATE" );
                 m_state = PASSIVE_STATE;
                 updateCollectorsClassAd( "False" );
@@ -567,7 +569,7 @@ HADStateMachine::step()
                     sendReplicationCommand( HAD_AFTER_LEADER_STATE );
                 }
                 if( ! m_standAloneMode ) {
-                    sendNegotiatorCmdToMaster( CHILD_OFF_FAST );
+                    sendControlCmdToMaster( CHILD_OFF_FAST );
                 }
 
                 break;
@@ -585,34 +587,34 @@ HADStateMachine::step()
 /***********************************************************
   Function :
 */
-int
-HADStateMachine::sendMessages()
+bool
+HADStateMachine::sendMessages(void)
 {
    switch( m_state ) {
-        case ELECTION_STATE:
-            return sendCommandToOthers( HAD_SEND_ID_CMD );
-        case LEADER_STATE:
-            return sendCommandToOthers( HAD_ALIVE_CMD ) ;
-        default :
-            return FALSE;
+   case ELECTION_STATE:
+	   return sendCommandToOthers( HAD_SEND_ID_CMD );
+   case LEADER_STATE:
+	   return sendCommandToOthers( HAD_ALIVE_CMD ) ;
+   default :
+	   return false;
    }
-  
+
 }
 
 /***********************************************************
   Function :  sendCommandToOthers( int comm )
     send command "comm" to all HADs in HAD_LIST
 */
-int
+bool
 HADStateMachine::sendCommandToOthers( int comm )
 {
 
     char* addr;
-    m_otherHADIPs->rewind();
-    while( (addr = m_otherHADIPs->next()) ) {
+    m_otherHadIps.rewind();
+    while( (addr = m_otherHadIps.next()) ) {
 
         dprintf( D_FULLDEBUG, "send command %s(%d) to %s\n",
-                        utilToString(comm),comm,addr);
+				 utilToString(comm),comm,addr);
 
         Daemon d( DT_ANY, addr );
         ReliSock sock;
@@ -621,35 +623,30 @@ HADStateMachine::sendCommandToOthers( int comm )
         sock.doNotEnforceMinimalCONNECT_TIMEOUT();
 
         // blocking with timeout m_connectionTimeout
-        if(!sock.connect( addr,0,false )) {
-            dprintf( D_ALWAYS,"cannot connect to addr %s\n",addr );
+        if(!sock.connect( addr, 0, false )) {
+            dprintf( D_ALWAYS,"cannot connect to addr %s\n", addr );
             sock.close();
             continue;
         }
 
         int cmd = comm;
         // startCommand - max timeout is m_connectionTimeout sec
-        if( !d.startCommand(cmd,&sock,m_connectionTimeout ) ) {
+        if( !d.startCommand( cmd, &sock, m_connectionTimeout ) ) {
             dprintf( D_ALWAYS,"cannot start command %s(%d) to addr %s\n",
-                utilToString(comm),cmd,addr);
+					 utilToString(comm),cmd,addr);
             sock.close();
             continue;
         }
- 
-        char stringId[256];
-        sprintf( stringId,"%d",m_selfId );
 
-        char* subsys = (char*)stringId;
-
-        if(!sock.code( subsys ) || !sock.eom()) {
-            dprintf( D_ALWAYS,"sock.code false \n");
+        if(! m_classAd.put(sock) || !sock.eom()) {
+            dprintf( D_ALWAYS, "Failed to send classad to peer\n");
         } else {
-            dprintf( D_FULLDEBUG,"sock.code true \n");
-        }               
-        sock.close();   
+            dprintf( D_FULLDEBUG, "Sent classad to peer\n");
+        }
+        sock.close();
     }
 
-    return TRUE;
+    return true;
 }
 
 /* Function    : sendReplicationCommand
@@ -657,7 +654,7 @@ HADStateMachine::sendCommandToOthers( int comm )
  * Return value: success/failure value
  * Description : sends specified command to local replication daemon
  */
-int
+bool
 HADStateMachine::sendReplicationCommand( int command )
 {
     ReliSock sock;
@@ -666,44 +663,51 @@ HADStateMachine::sendReplicationCommand( int command )
     sock.doNotEnforceMinimalCONNECT_TIMEOUT();
 
     // blocking with timeout m_connectionTimeout
-    if(!sock.connect( replicationDaemonSinfulString, 0,false) ) {
-        dprintf( D_ALWAYS,"cannot connect to replication daemon , addr %s\n",
-                    replicationDaemonSinfulString );
+	if ( !m_replicationDaemonSinfulString ) {
+		EXCEPT( "HAD: Replication sinful string invalid!" );
+	}
+    if(!sock.connect( m_replicationDaemonSinfulString, 0, false) ) {
+        dprintf( D_ALWAYS,
+				 "cannot connect to replication daemon, addr %s\n",
+				 m_replicationDaemonSinfulString );
         sock.close();
 
-        return FALSE;
+        return false;
     }
 
     int cmd = command;
-    dprintf( D_FULLDEBUG,"send command %s(%d) to replication daemon %s\n",
-                utilToString(cmd), cmd, replicationDaemonSinfulString );
+    dprintf( D_FULLDEBUG,
+			 "send command %s(%d) to replication daemon %s\n",
+			 utilToString(cmd), cmd, m_replicationDaemonSinfulString );
 
     // startCommand - max timeout is m_connectionTimeout sec
     if(! (m_masterDaemon->startCommand(cmd,&sock,m_connectionTimeout )) ) {
-        dprintf( D_ALWAYS,"cannot start command %s, addr %s\n",
-                    utilToString(cmd), replicationDaemonSinfulString );
+        dprintf( D_ALWAYS,
+				 "cannot start command %s, addr %s\n",
+				 utilToString(cmd), m_replicationDaemonSinfulString );
         sock.close();
 
-        return FALSE;
+        return false;
     }
 
-    char* subsys = (char*)daemonCore->InfoCommandSinfulString( );
+    char* subsys = const_cast<char*>( daemonCore->InfoCommandSinfulString( ) );
 
     if( !sock.code(subsys) || !sock.eom() ) {
         dprintf( D_ALWAYS, "send to replication daemon, !sock.code false \n");
         sock.close();
 
-        return FALSE;
+        return false;
     } else {
-        dprintf( D_FULLDEBUG, "send to replication daemon, !sock.code true \n");
+        dprintf( D_FULLDEBUG,
+				 "send to replication daemon, !sock.code true \n");
     }
     sock.close();
 
-    return TRUE;
+    return true;
 }
 
 void
-HADStateMachine::setReplicationDaemonSinfulString( )
+HADStateMachine::setReplicationDaemonSinfulString( void )
 {
     if( ! m_useReplication ) {
         return ;
@@ -731,28 +735,32 @@ HADStateMachine::setReplicationDaemonSinfulString( )
         char* sinfulAddress     = utilToSinful( replicationAddress );
 
         if( sinfulAddress == 0 ) {
-            sprintf( buffer, "HADStateMachine::setReplicationDaemonSinfulString"
-                             " invalid address %s\n", replicationAddress );
+            sprintf( buffer,
+					 "HADStateMachine::setReplicationDaemonSinfulString"
+					 " invalid address %s\n",
+					 replicationAddress );
             utilCrucialError( buffer );
 
             //continue;
         }
         char* sinfulAddressHost = getHostFromAddr( sinfulAddress );
 
-        if( replicationDaemonIndex == m_selfId && 
-			strcmp( sinfulAddressHost,  host ) == 0 ) {
-            replicationDaemonSinfulString = sinfulAddress;
+        if(  (replicationDaemonIndex == m_selfId)     &&
+			 (strcmp( sinfulAddressHost, host ) == 0)  ) {
+            m_replicationDaemonSinfulString = sinfulAddress;
             free( sinfulAddressHost );
 			dprintf( D_ALWAYS,
 					"HADStateMachine::setReplicationDaemonSinfulString "
-					"corresponding replication daemon - %s\n", sinfulAddress );
+					"corresponding replication daemon - %s\n",
+					 sinfulAddress );
             // not freeing 'sinfulAddress', since its referent is pointed by
             // 'replicationDaemonSinfulString' too
             break;
         } else if( replicationDaemonIndex == m_selfId ) {
-			sprintf( buffer, "HADStateMachine::setReplicationDaemonSinfulString"
-			         		 "host names of machine and replication daemon do "
-							 "not match: %s vs. %s\n", host, sinfulAddressHost);
+			sprintf( buffer,
+					 "HADStateMachine::setReplicationDaemonSinfulString"
+					 "host names of machine and replication daemon do "
+					 "not match: %s vs. %s\n", host, sinfulAddressHost);
 			utilCrucialError( buffer );
 		}
 
@@ -764,21 +772,22 @@ HADStateMachine::setReplicationDaemonSinfulString( )
 
     // if failed to found the replication daemon in REPLICATION_LIST, just
     // switch off the replication feature
-    if( replicationDaemonSinfulString == 0 )
+    if( NULL == m_replicationDaemonSinfulString )
     {
-        dprintf( D_ALWAYS, "HADStateMachine::setReplicationDaemonSinfulString "
-                "local replication daemon not found in REPLICATION_LIST, "
-                "switching the replication off\n" );
+        dprintf( D_ALWAYS,
+				 "HADStateMachine::setReplicationDaemonSinfulString "
+				 "local replication daemon not found in REPLICATION_LIST, "
+				 "switching the replication off\n" );
         m_useReplication = false;
     }
 }
 
 /***********************************************************
-  Function : sendNegotiatorCmdToMaster( int comm )
+  Function : sendControlCmdToMaster( int comm )
     send command "comm" to master
 */
-int
-HADStateMachine::sendNegotiatorCmdToMaster( int comm )
+bool
+HADStateMachine::sendControlCmdToMaster( int comm )
 {
 
     ReliSock sock;
@@ -787,40 +796,39 @@ HADStateMachine::sendNegotiatorCmdToMaster( int comm )
     sock.doNotEnforceMinimalCONNECT_TIMEOUT();
 
     // blocking with timeout m_connectionTimeout
-    if(!sock.connect( m_masterDaemon->addr(),0,false) ) {
-        dprintf( D_ALWAYS,"cannot connect to master , addr %s\n",
-                    m_masterDaemon->addr() );
+    if(!sock.connect( m_masterDaemon->addr(), 0, false ) ) {
+        dprintf( D_ALWAYS,
+				 "cannot connect to master, addr %s\n",
+				 m_masterDaemon->addr() );
         sock.close();
-        return FALSE;
+        return false;
     }
 
     int cmd = comm;
-    char* subsys = strdup( daemonString( DT_NEGOTIATOR ) );
-    dprintf( D_FULLDEBUG,"send command %s(%d) [%s] to master %s\n",
-                utilToString(cmd), cmd, subsys, m_masterDaemon->addr() );
+    dprintf( D_FULLDEBUG,
+			 "send command %s(%d) [%s] to master %s\n",
+			 utilToString(cmd), cmd, m_controlleeName,
+			 m_masterDaemon->addr() );
 
     // startCommand - max timeout is m_connectionTimeout sec
-    if(! (m_masterDaemon->startCommand(cmd,&sock,m_connectionTimeout )) ) {
+    if(! m_masterDaemon->startCommand( cmd, &sock, m_connectionTimeout )  ) {
         dprintf( D_ALWAYS,"cannot start command %s, addr %s\n",
-                    utilToString(cmd), m_masterDaemon->addr() );
+				 utilToString(cmd), m_masterDaemon->addr() );
         sock.close();
-		free( subsys );
-        return FALSE;
+        return false;
     }
 
-    if( !sock.code(subsys) || !sock.eom() ) {
-        dprintf( D_ALWAYS,"send to master , !sock.code false \n");
+    if( !sock.code(m_controlleeName) || !sock.eom() ) {
+        dprintf( D_ALWAYS, "Failed to send controllee name to master\n");
         sock.close();
-		free( subsys );
-        return FALSE;
+        return false;
     } else {
-        dprintf( D_FULLDEBUG,"send to master , !sock.code true \n");
+        dprintf( D_FULLDEBUG, "Controllee name sent to master\n");
     }
-	free( subsys );
-    sock.close();     
-    return TRUE;      
+    sock.close();
+    return true;
 }
-    
+
 /***********************************************************
   Function :
 */
@@ -838,24 +846,27 @@ HADStateMachine::pushReceivedAlive( int id )
 int
 HADStateMachine::pushReceivedId( int id )
 {
-         int* alloc_id = new int[1];
-         *alloc_id = id;
-         return (receivedIdList.Append( alloc_id ));
+	int* alloc_id = new int[1];
+	*alloc_id = id;
+	return (receivedIdList.Append( alloc_id ));
 }
 
 /***********************************************************
-  Function :
-  Sets selfId's referent according to my index in the HAD_LIST (in reverse order)
-  Initializes otherIps
-  Returns m_isPrimary according to m_usePrimary and first index in HAD_LIST
-  Returns the dynamically allocated list of remote HAD daemons sinful strings
-  in third parameter and index of itself in fourth parameter
+ *  Function :
+ * Sets selfId's referent according to my index in the HAD_LIST
+ *  ( in reverse order )
+ * Initializes otherIps
+ *  ( Returns m_isPrimary according to m_usePrimary and first index
+ *    in HAD_LIST )
+ * Returns the dynamically allocated list of remote HAD daemons sinful
+ *  strings in third parameter and index of itself in fourth parameter
 */
 bool
-HADStateMachine::initializeHADList( char* str, 
-									bool usePrimary,
-									StringList* otherIps, 
-									int* selfId )
+HADStateMachine::getHadList( const char *str,
+							 bool usePrimary,
+							 StringList &otherIps,
+							 StringList &allIps,
+							 int &selfId )
 {
     StringList had_list;
     int counter        = 0;  // priority counter
@@ -864,51 +875,61 @@ HADStateMachine::initializeHADList( char* str,
     //   initializeFromString() and rewind() return void
     had_list.initializeFromString( str );
     counter = had_list.number() - 1;
-    
+
     char* try_address;
     had_list.rewind();
 
     bool iAmPresent = false;
     while( (try_address = had_list.next()) ) {
-        char* sinfull_addr = utilToSinful( try_address );
+        char *sinful_addr = utilToSinful( try_address );
+		const char *my_sinful = daemonCore->InfoCommandSinfulString();
+		if ( NULL == my_sinful ) {
+			EXCEPT( "HADStateMachine::initializeHADList():"
+					" No sinful from daemonCore!" );
+		}
+		dprintf(D_ALWAYS,
+				"HADStateMachine::initializeHADList my address %s "
+				"vs. next address in the list%s\n",
+				my_sinful, sinful_addr );
+        if( sinful_addr == NULL ) {
+            dprintf( D_ALWAYS,
+					 "HAD CONFIGURATION ERROR: pid %d", daemonCore->getpid() );
+            dprintf( D_ALWAYS,"not valid address %s\n", try_address );
 
-		dprintf(D_ALWAYS, "HADStateMachine::initializeHADList my address %s "
-						  "vs. next address in the list%s\n", 
-				daemonCore->InfoCommandSinfulString(), sinfull_addr );
-        if(sinfull_addr == NULL) {
-            dprintf(D_ALWAYS,"HAD CONFIGURATION ERROR: pid %d",
-                daemonCore->getpid());
-            dprintf(D_ALWAYS,"not valid address %s\n", try_address);
-            
             utilCrucialError( "" );
             continue;
         }
-        if(strcmp( sinfull_addr,
-                daemonCore->InfoCommandSinfulString()) == 0 ){
-                  
+		allIps.insert( sinful_addr );
+        if(strcmp( sinful_addr, my_sinful ) == 0 ) {
             iAmPresent = true;
-            // HAD id of each HAD is just the index of its <ip:port> 
+            // HAD id of each HAD is just the index of its <ip:port>
             // in HAD_LIST in reverse order
-            *selfId = counter;
-            
+            selfId = counter;
+
             if(usePrimary && counter == (had_list.number() - 1)){
-              // I am primary
-              // Primary is the first one in the HAD_LIST
-              // That way primary gets the highest id of all
-              isPrimaryCopy = true;
+				// I am primary
+				// Primary is the first one in the HAD_LIST
+				// That way primary gets the highest id of all
+				isPrimaryCopy = true;
             }
         } else {
-            otherIps->insert( sinfull_addr );
+            otherIps.insert( sinful_addr );
         }
-	// put attention to release memory allocated by malloc with free and by 
-	// new with delete here utilToSinful returns memory allocated by malloc
-        free( sinfull_addr );
+
+		// put attention to release memory allocated by malloc with
+		// free and by new with delete here utilToSinful returns
+		// memory allocated by malloc
+        free( sinful_addr );
         counter-- ;
     } // end while
 
     if( !iAmPresent ) {
-        utilCrucialError( "HAD CONFIGURATION ERROR :  my address is "
-        "not present in HAD_LIST" );
+		char	buf[1024];
+		snprintf( buf, sizeof(buf),
+				  "HAD CONFIGURATION ERROR:  my address '%s'"
+				  "is not present in HAD_LIST '%s'",
+				  daemonCore->InfoCommandSinfulString(), str );
+        utilCrucialError( buf );
     }
 
 	return isPrimaryCopy;
@@ -922,7 +943,7 @@ HADStateMachine::initializeHADList( char* str,
     the highest id of all and therefore will always
     win in checkList election process
 */
-int
+bool
 HADStateMachine::checkList( List<int>* list )
 {
     int id;
@@ -930,16 +951,17 @@ HADStateMachine::checkList( List<int>* list )
     list->Rewind();
     while(list->Next( id ) ) {
         if(id > m_selfId){
-            return FALSE;
+            return false;
         }
     }
-    return TRUE;
+    return true;
 }
 
 /***********************************************************
   Function :
 */
-void HADStateMachine::removeAllFromList( List<int>* list )
+void
+HADStateMachine::removeAllFromList( List<int>* list )
 {
     int* elem;
     list->Rewind();
@@ -954,7 +976,8 @@ void HADStateMachine::removeAllFromList( List<int>* list )
 /***********************************************************
     Function :
 */
-void HADStateMachine::clearBuffers()
+void
+HADStateMachine::clearBuffers(void)
 {
     removeAllFromList( &receivedAliveList );
     removeAllFromList( &receivedIdList );
@@ -964,54 +987,79 @@ void HADStateMachine::clearBuffers()
   Function :   commandHandler(int cmd,Stream *strm)
     cmd can be HAD_ALIVE_CMD or HAD_SEND_ID_CMD
 */
-void
-HADStateMachine::commandHandler(int cmd,Stream *strm)
+int
+HADStateMachine::commandHandlerHad(int cmd, Stream *strm)
 {
- 
+	char	buf[1024];
+
     dprintf( D_FULLDEBUG, "commandHandler command %s(%d) is received\n",
-            utilToString(cmd),cmd);
-    
-    char* subsys = NULL;
+			 utilToString(cmd), cmd);
+
     strm->timeout( m_connectionTimeout );
-    
+
+    ClassAd	ad;
     strm->decode();
-    if( ! strm->code(subsys) ) {
-        dprintf( D_ALWAYS, "commandHandler -  can't read subsystem name\n" );
-        return;
+    if( ! ad.initFromStream(*strm) ) {
+        dprintf( D_ALWAYS, "commandHandler ERROR -  can't read classad\n" );
+        return FALSE;
     }
     if( ! strm->end_of_message() ) {
-        dprintf( D_ALWAYS, "commandHandler -  can't read end_of_message\n" );
-        free( subsys );
-        return;
+        dprintf( D_ALWAYS, "commandHandlerHad ERROR -  can't read EOM\n" );
+        return FALSE;
     }
 
-
-    bool res = false;
-    int new_id = utilAtoi(subsys,&res);
-    if(!res){
-          dprintf( D_ALWAYS,"commandHandler received invalid id %s\n",
-                 subsys );
-        
+    int new_id;
+	if ( !ad.LookupInteger( ATTR_HAD_SELF_ID, new_id ) ) {
+		dprintf( D_ALWAYS, "commandHandler ERROR: ID not in ad received\n" );
+		return FALSE;
     }
-    free( subsys );
-    
+
+	if ( !ad.LookupString( ATTR_HAD_CONTROLLEE_NAME, buf, sizeof(buf) ) ) {
+		dprintf( D_ALWAYS, "commandHandler ERROR:"
+				 " controllee not in ad received\n" );
+		return FALSE;
+	}
+	if ( strcasecmp(buf, m_controlleeName) ) {
+		dprintf( D_ALWAYS,
+				 "ERROR: controllee different me='%s' other='%s'\n",
+				 m_controlleeName, buf);
+		return FALSE;
+	}
+
+	if ( !ad.LookupString( ATTR_HAD_LIST, buf, sizeof(buf) ) ) {
+		dprintf( D_ALWAYS,
+				 "commandHandler ERROR: HADLlist not in ad received\n" );
+		return FALSE;
+	}
+	StringList	had_ips( buf );
+	if ( ! m_allHadIps.identical( had_ips ) ) {
+		char	*cur_str = m_allHadIps.print_to_string( );
+		dprintf( D_ALWAYS,
+				 "commandHandler: WARNING: HAD IP list different!\n"
+				 "\tme='%s'\n"
+				 "\tother='%s'\n",
+				 cur_str ? cur_str : "NULL", buf );
+		if ( cur_str ) {
+			free( cur_str );
+		}
+	}
 
     switch(cmd){
-        case HAD_ALIVE_CMD:
-            dprintf( D_FULLDEBUG,
-                    "commandHandler received HAD_ALIVE_CMD with id %d\n",
-                    new_id);
-            pushReceivedAlive( new_id );
-            break;
+	case HAD_ALIVE_CMD:
+		dprintf( D_FULLDEBUG,
+				 "commandHandler received HAD_ALIVE_CMD with id %d\n",
+				 new_id);
+		pushReceivedAlive( new_id );
+		break;
 
-        case HAD_SEND_ID_CMD:
-            dprintf( D_FULLDEBUG,
-                    "commandHandler received HAD_SEND_ID_CMD with id %d\n",
-                    new_id);
-            pushReceivedId( new_id );
-            break;
+	case HAD_SEND_ID_CMD:
+		dprintf( D_FULLDEBUG,
+				 "commandHandler received HAD_SEND_ID_CMD with id %d\n",
+				 new_id);
+		pushReceivedId( new_id );
+		break;
     }
-
+	return TRUE;
 
 }
 
@@ -1022,7 +1070,7 @@ void
 HADStateMachine::printStep( char *curState,char *nextState )
 {
       dprintf( D_FULLDEBUG,
-                "State mashine step : pid <%d> port <%d> "
+                "State machine step : pid <%d> port <%d> "
                 "priority <%d> was <%s> go to <%s>\n",
                 daemonCore->getpid(),
                 daemonCore->InfoCommandPort(),
@@ -1038,7 +1086,7 @@ HADStateMachine::my_debug_print_list( StringList* str )
 {
     str->rewind();
     char* elem;
-    dprintf( D_FULLDEBUG, "----> begin print list , id %d\n",
+    dprintf( D_FULLDEBUG, "----> begin print list, id %d\n",
                 daemonCore->getpid() );
     while( (elem = str->next()) ) {
         dprintf( D_FULLDEBUG, "----> %s\n",elem );
@@ -1071,25 +1119,37 @@ HADStateMachine::my_debug_print_buffers()
   Function :
 */
 void
-HADStateMachine::printParamsInformation()
+HADStateMachine::printParamsInformation(void)
 {
-     dprintf( D_ALWAYS,"** HAD_ID   %d\n",m_selfId);
-     dprintf( D_ALWAYS,"** HAD_CYCLE_INTERVAL   %d\n",m_hadInterval);
-     dprintf( D_ALWAYS,"** HAD_CONNECTION_TIMEOUT   %d\n",m_connectionTimeout);
-     dprintf( D_ALWAYS,"** HAD_USE_PRIMARY(true/false)   %d\n",m_usePrimary);
-     dprintf( D_ALWAYS,"** AM I PRIMARY ?(true/false)   %d\n",m_isPrimary);
+     dprintf( D_ALWAYS,"** HAD_ID:                 %d\n",
+			  m_selfId );
+     dprintf( D_ALWAYS,"** HAD_CONTROLLEE:         %s\n",
+			  m_controlleeName );
+     dprintf( D_ALWAYS,"** HAD_CYCLE_INTERVAL:     %d\n",
+			  m_hadInterval );
+     dprintf( D_ALWAYS,"** HAD_CONNECTION_TIMEOUT: %d\n",
+			  m_connectionTimeout );
+     dprintf( D_ALWAYS,"** HAD_USE_PRIMARY:        %s\n",
+			  m_usePrimary ? "True":"False" );
+     dprintf( D_ALWAYS,"** AM I PRIMARY:           %s\n",
+			  m_isPrimary ? "True":"False" );
      dprintf( D_ALWAYS,"** HAD_LIST(others only)\n");
-	 dprintf( D_ALWAYS,"** HAD_UPDATE_INTERVAL   %d\n",m_updateCollectorInterval);
-	 dprintf( D_ALWAYS,"** Is replication used (true/false) %d\n", 
-			  			m_useReplication);     
+	 dprintf( D_ALWAYS,"** HAD_UPDATE_INTERVAL:    %d\n",
+			  m_updateCollectorInterval );
+	 dprintf( D_ALWAYS,"** Is replication used:    %s\n",
+			  m_useReplication ? "True":"False" );
+	 if ( m_useReplication ) {
+		 dprintf( D_ALWAYS,"** Replication sinful:     %s\n",
+				  m_replicationDaemonSinfulString );
+	 }
 
 	 char* addr = NULL;
-     m_otherHADIPs->rewind();
-     while( (addr = m_otherHADIPs->next()) ) {
-           dprintf( D_ALWAYS,"**    %s\n",addr);
+     m_otherHadIps.rewind();
+     while( (addr = m_otherHadIps.next()) ) {
+		 dprintf( D_ALWAYS,"**    %s\n",addr);
      }
-     dprintf( D_ALWAYS,"** HAD_STAND_ALONE_DEBUG(true/false)    %d\n",
-        m_standAloneMode);
+     dprintf( D_ALWAYS,"** HAD_STAND_ALONE_DEBUG   %s\n",
+			  m_standAloneMode ? "True":"False" );
 
 }
 /* Function    : updateCollectors
@@ -1097,13 +1157,15 @@ HADStateMachine::printParamsInformation()
  *                      for later updates
  */
 void
-HADStateMachine::updateCollectors()
+HADStateMachine::updateCollectors(void)
 {
     dprintf(D_FULLDEBUG, "HADStateMachine::updateCollectors started\n");
 
-    if (m_classAd) {
+	// If the ad is valid, publish it
+	int		index;
+    if ( m_classAd.LookupInteger(ATTR_HAD_INDEX, index) ) {
         int successfulUpdatesNumber =
-            daemonCore->sendUpdates (UPDATE_HAD_AD, m_classAd, NULL, true);
+            daemonCore->sendUpdates (UPDATE_HAD_AD, &m_classAd, NULL, true);
         dprintf( D_ALWAYS, "HADStateMachine::updateCollectors %d "
                     "successful updates\n", successfulUpdatesNumber);
     }
@@ -1111,12 +1173,12 @@ HADStateMachine::updateCollectors()
     // Reset the timer for sending classads updates to collectors
     utilCancelTimer( m_updateCollectorTimerId );
     m_updateCollectorTimerId = daemonCore->Register_Timer (
-                                m_updateCollectorInterval,
-                                (TimerHandlercpp) &HADStateMachine::updateCollectors,
-                                "Update collector", this);
+		m_updateCollectorInterval,
+		(TimerHandlercpp) &HADStateMachine::updateCollectors,
+		"Update collector", this);
 }
 /* Function  : updateCollectorsClassAd
- * Arguments : isHadActive - designates whether the current HAD is active 
+ * Arguments : isHadActive - designates whether the current HAD is active
  * 							 or not, may be equal to either "FALSE" or "TRUE"
  * Description: updates the local classad with information about whether the
  *              HAD is active or not and sends the update to collectors
@@ -1126,12 +1188,10 @@ HADStateMachine::updateCollectorsClassAd(const MyString& isHadActive)
 {
     MyString line;
 
-    line.sprintf( "%s = %s", ATTR_HAD_IS_ACTIVE, isHadActive.Value( ) );
-    m_classAd->InsertOrUpdate( line.Value( ) );
+    m_classAd.Assign( ATTR_HAD_IS_ACTIVE, isHadActive );
 
     int successfulUpdatesNumber =
-        daemonCore->sendUpdates ( UPDATE_HAD_AD, m_classAd, NULL, true );
+        daemonCore->sendUpdates ( UPDATE_HAD_AD, &m_classAd, NULL, true );
     dprintf( D_ALWAYS, "HADStateMachine::updateCollectorsClassAd %d "
                     "successful updates\n", successfulUpdatesNumber);
 }
-

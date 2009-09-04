@@ -1006,7 +1006,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 		// so we can't just slurp it in as a C string.
 	char *setup_output = NULL;
 	int setup_output_len = 0;
-	char *pipe_buf[1024];
+	char pipe_buf[1024];
 	while( true ) {
 		int n = daemonCore->Read_Pipe(setup_pipe_fds[0],pipe_buf,1024);
 		if( n <= 0 ) {
@@ -2544,6 +2544,14 @@ CStarter::PublishToEnv( Env* proc_env )
 		env_name += "LOWPORT";
 		proc_env->SetEnv( env_name.Value(), tmp_port_number.Value() );
     }
+
+		// set environment variables for temporary directories
+		// Condor will clean these up on job exits, and there's
+		// no chance of file collisions with other running slots
+
+	proc_env->SetEnv("TMPDIR", GetWorkingDir());
+	proc_env->SetEnv("TEMP", GetWorkingDir()); // Windows
+	proc_env->SetEnv("TMP", GetWorkingDir()); // Windows
 }
 
 

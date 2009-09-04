@@ -1,14 +1,34 @@
+/***************************************************************
+ *
+ * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * University of Wisconsin-Madison, WI.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License"); you
+ * may not use this file except in compliance with the License.  You may
+ * obtain a copy of the License at
+ * 
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ ***************************************************************/
+
 
 #ifndef __PARAM_INFO_H__
 #define __PARAM_INFO_H__
 
 #include "condor_common.h"
 
-#define TYPE_STRING				0
-#define TYPE_INT				1
-#define TYPE_BOOL				2
-#define TYPE_DOUBLE				3
-
+typedef enum param_info_t_type_e {
+	PARAM_TYPE_STRING = 0,
+	PARAM_TYPE_INT = 1,
+	PARAM_TYPE_BOOL = 2,
+	PARAM_TYPE_DOUBLE = 3
+} param_info_t_type_t;
 
 typedef struct param_info_t_s {
 
@@ -37,7 +57,7 @@ typedef struct param_info_t_s {
     char* 	version;
     int 	state;
     char*   friendly_name;
-    int  	type;
+    param_info_t_type_t  	type;
     int		id;
     char*   usage;
     char*   url;

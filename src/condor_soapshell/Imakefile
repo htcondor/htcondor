@@ -1,13 +1,13 @@
-NAME = condor_dcskel
+NAME = condor_soapshell
 all_target( $(NAME) )
 
 CFLAGS = $(STD_C_FLAGS)
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
 LIB = $(DAEMONCORE_LIB) $(STD_LIBS) $(CONFIGURE_GSOAP_LDFLAGS)
 
-soapobjs(dcskel)
+soapobjs(soapshell)
 
-OBJ = dcskel_main.o $(SOAP_OBJS)
+OBJ = soapshell_main.o $(SOAP_OBJS)
 
 c_plus_target($(NAME),$(OBJ),$(LIB))
 
@@ -17,6 +17,6 @@ stripped:: all
 static:: all
 clean::
 
-gen_soapfiles(dcskel,condorDcskel)
+gen_soapfiles(soapshell,condorSoapshell)
 
 testbin:: all

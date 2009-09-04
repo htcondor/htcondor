@@ -738,14 +738,25 @@ int daemon::RealStart( )
 		dprintf(D_FULLDEBUG, "start recover timer (%d)\n", recover_tid);
 	}
 
-	if (command_port) {
+	const char	*proc_type = command_port ? "DaemonCore " : "";
+	if ( DebugFlags & D_FULLDEBUG ) {
+		MyString	 args_string, tmp;
+		args.GetArgsStringForDisplay( &tmp, 1 );
+		if( tmp.Length() ) {
+			args_string  = " ";
+			args_string += tmp;
+		}
+		else {
+			args_string = tmp;
+		}
 		dprintf( D_FAILURE|D_ALWAYS,
-				 "Started DaemonCore process \"%s\", pid and pgroup = %d\n",
-				 process_name, pid );
-	} else {
-		dprintf( D_ALWAYS,
-				 "Started process \"%s\", pid and pgroup = %d\n",
-				 process_name, pid );
+				 "Started %sprocess \"%s%s\", pid and pgroup = %d\n",
+				 proc_type, process_name, args_string.Value(), pid );
+	}
+	else {
+		dprintf( D_FAILURE|D_ALWAYS,
+				 "Started %sprocess \"%s\", pid and pgroup = %d\n",
+				 proc_type, process_name, pid );
 	}
 	
 		// Make sure we've got the current timestamp for updates, etc.
@@ -1845,12 +1856,17 @@ Daemons::CleanupBeforeRestart()
 	}
 	(void)close( MasterLockFD );
 
-		// Now close all sockets and fds so our new invocation of
+		// Now set close-on-exec on all fds so our new invocation of
 		// condor_master does not inherit them.
 		// Note: Not needed (or wanted) on Win32, as CEDAR creates 
 		//		Winsock sockets as non-inheritable by default.
-	for (int i=0; i < max_fds; i++) {
-		close(i);
+		// Also not wanted for stderr, since we might be logging
+		// to that.  No real need for stdin or stdout either.
+	for (int i=3; i < max_fds; i++) {
+		int flag = fcntl(i,F_GETFD,0);
+		if( flag != -1 ) {
+			fcntl(i,F_SETFD,flag | 1);
+		}
 	}
 #endif
 

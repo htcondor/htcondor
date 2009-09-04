@@ -59,13 +59,13 @@ do_connect_with_timeout( const char* host, const char* service,
 	struct hostent		*hostentp;
 	int					status;
 	int					fd;
-	int					true = 1;
+	int					True = 1;
 
 	if( (fd=socket(AF_INET,SOCK_STREAM,0)) < 0 ) {
 		EXCEPT( "socket" );
 	}
 
-	if( setsockopt(fd,SOL_SOCKET,SO_KEEPALIVE,(const char *)&true,sizeof(true)) < 0 ) {
+	if( setsockopt(fd,SOL_SOCKET,SO_KEEPALIVE,(const char *)&True,sizeof(True)) < 0 ) {
 		close(fd);
 		EXCEPT( "setsockopt( SO_KEEPALIVE )" );
 	}

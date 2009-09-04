@@ -1,3 +1,23 @@
+/***************************************************************
+ *
+ * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * University of Wisconsin-Madison, WI.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License"); you
+ * may not use this file except in compliance with the License.  You may
+ * obtain a copy of the License at
+ * 
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ ***************************************************************/
+
+
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "param_info.h"
@@ -51,11 +71,20 @@ if (src) { \
 bucket_t** param_info;
 
 //static int num_entries;
-int first_time = 1;
 
 void
-param_info_init() {
-	first_time = 0;
+param_info_init() 
+{
+	static int done_once = 0;
+
+	// guard against multiple initializations of the default table.
+	if (done_once == 1) {
+		return;
+	}
+
+	// if I get here, I've done this task ONCE.
+	done_once = 1;
+
 	param_info_hash_create(&param_info);
 
 #include "param_info_init.c"
@@ -105,7 +134,7 @@ param_info_insert(char* param,
 	p->default_valid = 1;
 	switch (type) {
 
-		case TYPE_INT:
+		case PARAM_TYPE_INT:
 
 			p->default_val.int_val = strtol(value, NULL, 10);
 			compute_range(range, &range_start, &range_end);
@@ -135,13 +164,13 @@ param_info_insert(char* param,
 
 			break;
 
-		case TYPE_BOOL:
+		case PARAM_TYPE_BOOL:
 
 			p->default_val.int_val = strtol(value, NULL, 10) != 0;
 
 			break;
 
-		case TYPE_DOUBLE:
+		case PARAM_TYPE_DOUBLE:
 
 			p->default_val.dbl_val = strtod(value, NULL);
 
@@ -176,7 +205,7 @@ param_info_insert(char* param,
 
 /*			dprintf(D_ALWAYS, "Invalid type specified for parameter '%s', defaulting to string\n", param);*/
 
-		case TYPE_STRING:
+		case PARAM_TYPE_STRING:
 
 			if (validate_regex(range, value)) {
 				p->default_val.str_val = p->str_val;
@@ -209,9 +238,7 @@ param_default_string(const char* param)
 	param_info_t *p;
 	char* ret = NULL;
 
-	if(first_time) {
-		param_info_init();
-	}
+	param_info_init();
 	p = param_info_hash_lookup(param_info, param);
 
 	// Don't check the type here, since this is used in param and is used
@@ -228,15 +255,13 @@ param_default_integer(const char* param, int* valid) {
 	param_info_t* p;
 	int ret = 0;
 
-	if(first_time) {
-		param_info_init();
-	}
+	param_info_init();
 
 	p = param_info_hash_lookup(param_info, param);
 
 	if (p) {
 		ret = p->default_val.int_val;
-		*valid = p->default_valid && (p->type == TYPE_INT || p->type == TYPE_BOOL);
+		*valid = p->default_valid && (p->type == PARAM_TYPE_INT || p->type == PARAM_TYPE_BOOL);
 	} else {
 		*valid = 0;
 	}
@@ -256,15 +281,13 @@ param_default_double(const char* param, int* valid) {
 	param_info_t* p;
 	double ret = 0.0;
 
-	if(first_time) {
-		param_info_init();
-	}
+	param_info_init();
 
 	p = param_info_hash_lookup(param_info, param);
 
 	if (p) {
 		ret = p->default_val.dbl_val;
-		*valid = p->default_valid && (p->type == TYPE_DOUBLE);
+		*valid = p->default_valid && (p->type == PARAM_TYPE_DOUBLE);
 	} else {
 		*valid = 0;
 	}
@@ -280,7 +303,7 @@ param_range_integer(const char* param, int* min, int* max) {
 	p = param_info_hash_lookup(param_info, param);
 
 	if (p) {
-		if(p->type != TYPE_INT) {
+		if(p->type != PARAM_TYPE_INT) {
 			return -1;
 		}
 		*min = p->range_min.int_min;
@@ -301,7 +324,7 @@ param_range_double(const char* param, double* min, double* max) {
 	p = param_info_hash_lookup(param_info, param);
 
 	if (p) {
-		if(p->type != TYPE_DOUBLE) {
+		if(p->type != PARAM_TYPE_DOUBLE) {
 			return -1;
 		}
 		*min = p->range_min.dbl_min;
@@ -499,6 +522,8 @@ validate_regex(char* pattern, char* subject) {
 	}
 
 	free(ovector);
+
+	pcre_free(re);
 
 	return is_valid;
 }

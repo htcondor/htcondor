@@ -894,6 +894,7 @@ Daemon::locate( void )
 	case DT_ANY:
 		// don't do anything
 		rval = true;
+		break;
 	case DT_GENERIC:
 		rval = getDaemonInfo( GENERIC_AD );
 		break;
@@ -1316,9 +1317,29 @@ Daemon::getCmInfo( const char* subsys )
 
 
 	if( ! host  || !host[0] ) {
-			// this is just a fancy wrapper for param()...
 		free( host );
-		host = getCmHostFromConfig( subsys );
+		host = NULL;
+
+			// this is just a fancy wrapper for param()...
+		char *hostnames = getCmHostFromConfig( subsys );
+		char *itr, *full_name, *host_name, *local_name;
+		StringList host_list;
+
+		full_name = my_full_hostname();
+		local_name = localName();
+		host_list.initializeFromString(hostnames);
+		host_list.rewind();
+		itr = NULL;
+		while ((itr = host_list.next()) != NULL) {
+			host_name = getHostFromAddr( itr );
+			if ((strlen(full_name) == strlen(host_name) ||
+				(strlen(local_name) == strlen(host_name))) &&
+				((strcmp(full_name, host_name) == 0) ||
+				(strcmp(local_name, host_name) == 0))) {
+				host = strnewp(itr);
+			}
+		}
+		free( hostnames );
 	}
 
 	if( ! host || !host[0]) {

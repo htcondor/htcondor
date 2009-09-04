@@ -53,8 +53,7 @@ int pseudo_getwd( char *&path );
 int pseudo_send_a_file( const char *path, mode_t mode );
 int pseudo_get_file( const char *name );
 #if !defined(PVM_RECEIVE)
-int
-pseudo_work_request( PROC *p, char *&a_out, char *&targ, char *&orig, int *kill_sig );
+//int pseudo_work_request( PROC *p, char *&a_out, char *&targ, char *&orig, int *kill_sig );
 #endif
 int pseudo_rename(char *from, char *to);
 int pseudo_get_file_stream(

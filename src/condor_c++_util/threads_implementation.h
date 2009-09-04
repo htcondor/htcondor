@@ -73,14 +73,20 @@ public:
 				 const char* descrip=NULL);
 	static const WorkerThreadPtr_t get_handle(int tid = 0);
 	int pool_size() { return num_threads_; }
+	int get_tid();
+	void set_switch_callback(condor_thread_switch_callback_t func);
 
 	/****** HELPER METHODS *********/
 	static ThreadStartFunc_t threadStart(void *);
 	static unsigned int hashFuncThreadInfo(const ThreadInfo & mythread);
 	static const WorkerThreadPtr_t get_main_thread_ptr();
 	void remove_tid(int tid);
+	static void mutex_biglock_lock();
+	static void mutex_biglock_unlock();
 	static void mutex_handle_lock();
 	static void mutex_handle_unlock();
+	void setCurrentTid(int tid);
+	void initCurrentTid();
 
 	/****** DATA MEMBERS *******/
 	pthread_mutex_t big_lock;	// big lock protecting condor code
@@ -88,6 +94,12 @@ public:
 	pthread_mutex_t set_status_lock;	// lock protecting set_status() shared data
 	HashTable<ThreadInfo,WorkerThreadPtr_t> hashThreadToWorker;
 	HashTable<int,WorkerThreadPtr_t> hashTidToWorker;
+	condor_thread_switch_callback_t switch_callback;
+	pthread_key_t m_CurrentTidKey;
+#ifdef WIN32
+	static THREAD_LOCAL_STORAGE int m_CurrentTid;
+#endif
+
 		// Members dealing with our work pool
 	int num_threads_ , num_threads_busy_;	
 	pthread_cond_t workers_avail_cond;  // signalled when workers are available

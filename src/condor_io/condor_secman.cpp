@@ -2523,6 +2523,7 @@ void
 SecMan::reconfig()
 {
 	m_ipverify.reconfig();
+	Authentication::reconfigMapFile();
 }
 
 IpVerify *

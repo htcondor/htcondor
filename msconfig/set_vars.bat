@@ -41,7 +41,7 @@ set VC_BIN=%VC_DIR%\bin
 set PERL_DIR=%SystemDrive%\Perl\bin;%SystemDrive%\Perl64\bin
 set SDK_DIR=%ProgramFiles%\Microsoft Platform SDK
 set DBG_DIR=%ProgramFiles%\Debugging Tools for Windows (x86);%ProgramFiles%\Debugging Tools for Windows (x64)
-set DOTNET_DIR=%SystemRoot%\Microsoft.NET\Framework\v3.5
+set DOTNET_DIR=%SystemRoot%\Microsoft.NET\Framework\v3.5;%SystemRoot%\Microsoft.NET\Framework\v2.0.50727
 
 REM For some reason this is not defined whilst in some environments
 if "A%VS90COMNTOOLS%"=="A" set VS90COMNTOOLS=%VS_DIR%\Common7\Tools\
@@ -69,9 +69,11 @@ set EXT_POSTGRESQL_VERSION=postgresql-8.0.2
 set EXT_KERBEROS_VERSION=krb5-1.4.3-p0
 set EXT_PCRE_VERSION=pcre-7.6
 set EXT_DRMAA_VERSION=drmaa-1.6
+set EXT_CURL_VERSION=curl-7.19.6
+set EXT_HADOOP_VERSION=hadoop-0.20.0-p2
 
 REM Now tell the build system what externals we need built.
-set EXTERNALS_NEEDED=%EXT_GSOAP_VERSION% %EXT_OPENSSL_VERSION% %EXT_KERBEROS_VERSION% %EXT_PCRE_VERSION% %EXT_POSTGRESQL_VERSION% %EXT_DRMAA_VERSION%
+set EXTERNALS_NEEDED=%EXT_GSOAP_VERSION% %EXT_OPENSSL_VERSION% %EXT_KERBEROS_VERSION% %EXT_PCRE_VERSION% %EXT_POSTGRESQL_VERSION% %EXT_DRMAA_VERSION% %EXT_CURL_VERSION% %EXT_HADOOP_VERSION%
 
 REM Put msconfig in the PATH, since it's got lots of stuff we need
 REM like awk, gunzip, tar, bison, yacc...
@@ -90,7 +92,7 @@ REM ====== THIS SHOULD BE REMOVED WHEN Win2K IS NO LONGER SUPPORTED ======
 REM ======================================================================
 
 REM Configure Visual C++
-call vcvarsall.bat x86
+call "%VC_DIR%\vcvarsall.bat" x86
 if not defined INCLUDE ( echo. && echo *** Failed to run vcvarsall.bat! Is Microsoft Visual Studio installed? && exit /B 1 )
 
 REM ======================================================================
@@ -102,14 +104,14 @@ REM ====== THIS SHOULD BE REMOVED WHEN Win2K IS NO LONGER SUPPORTED ======
 REM ======================================================================
 
 REM Configure the Platform SDK environment
-call setenv /2000 /RETAIL
+call "%SDK_DIR%\SetEnv.Cmd" /2000 /RETAIL
 if not defined MSSDK ( echo. && echo *** Failed to run setenv.cmd! Are the Microsoft Platform SDK installed? && exit /B 1 )
 
 REM ======================================================================
 REM ====== THIS SHOULD BE REMOVED WHEN Win2K IS NO LONGER SUPPORTED ======
-set INCLUDE=%ProgramFiles%\Microsoft Platform SDK\Include;%VC_DIR%\ATLMFC\INCLUDE;%VC_DIR%\INCLUDE;
-set LIB=%ProgramFiles%\Microsoft Platform SDK\Lib;%VC_DIR%\ATLMFC\LIB;%VC_DIR%\LIB;
-set LIBPATH=%SystemRoot%\Microsoft.NET\Framework\v3.5;%SystemRoot%\Microsoft.NET\Framework\v2.0.50727;%VC_DIR%\ATLMFC\LIB;%VC_DIR%\LIB;
+set INCLUDE=%SDK_DIR%\Include;%VC_DIR%\ATLMFC\INCLUDE;%VC_DIR%\INCLUDE;
+set LIB=%SDK_DIR%\Lib;%VC_DIR%\ATLMFC\LIB;%VC_DIR%\LIB;
+set LIBPATH=%DOTNET_DIR%;%VC_DIR%\ATLMFC\LIB;%VC_DIR%\LIB;
 REM ====== THIS SHOULD BE REMOVED WHEN Win2K IS NO LONGER SUPPORTED ======
 REM ======================================================================
 
@@ -132,9 +134,14 @@ if exist BUILD-ID. (
 echo Using build-id: %BID% & echo.
 popd
 
+REM Determine the number of processor we can run concurrent jobs on.  We base
+REM this number on the count of cores or CPUs kept by the OS:
+if "A%NUMBER_OF_PROCESSORS%"=="A" set PROCESSORS=1
+set PROCESSORS=%NUMBER_OF_PROCESSORS%
+
 set CONDOR_NOWARN=/D_CRT_SECURE_NO_DEPRECATE /D_CRT_SECURE_NO_WARNINGS /D_CRT_NONSTDC_NO_WARNINGS /D_CRT_NON_CONFORMING_SWPRINTFS
 REM /D_CONST_RETURN
-set CONDOR_CPPARGS=/GR /MP4
+set CONDOR_CPPARGS=/GR /MP%PROCESSORS%
 set CONDOR_DEFINE=/DHAVE_CONFIG_H /DBUILDID=%BID% %CONDOR_CPPARGS% %CONDOR_NOWARN%
 set CONDOR_INCLUDE=/I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /I "..\src\condor_daemon_client" /I "..\src\condor_daemon_core.V6" /I "..\src\condor_schedd.V6" /I "..\src\condor_classad.V6" /I "..\src\ccb"
 set CONDOR_LIB=crypt32.lib mpr.lib psapi.lib mswsock.lib netapi32.lib imagehlp.lib ws2_32.lib powrprof.lib iphlpapi.lib userenv.lib

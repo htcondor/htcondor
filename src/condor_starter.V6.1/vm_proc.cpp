@@ -1209,6 +1209,11 @@ VMProc::PublishUpdateAd( ClassAd* ad )
 		unsigned long max_image = 0;
 
 		getUsageOfVM(sys_time, user_time, max_image);
+		
+		// Added to update CPU Usage of VM in ESX
+		if ( (long)m_vm_cputime > user_time ) {
+			user_time = m_vm_cputime;
+		}
 
 		// Publish it into the ad.
 		ad->Assign(ATTR_JOB_REMOTE_SYS_CPU, (float)sys_time );

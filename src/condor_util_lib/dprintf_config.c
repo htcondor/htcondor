@@ -89,7 +89,7 @@ void
 dprintf_config( const char *subsys )
 {
 	char pname[ BUFSIZ ];
-	char *pval, *param();
+	char *pval;
 	static int first_time = 1;
 	int want_truncate;
 	int debug_level;

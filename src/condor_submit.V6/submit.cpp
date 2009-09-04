@@ -28,7 +28,7 @@
 #include "basename.h"
 #include "condor_getcwd.h"
 #include <time.h>
-#include "read_user_log.h"
+#include "write_user_log.h"
 #include "condor_classad.h"
 #include "condor_attributes.h"
 #include "condor_adtypes.h"
@@ -1753,6 +1753,7 @@ SetUniverse()
 			//   people who care about the old value. This changed happend in
 			//   Condor 6.7.12.
 			if ((stricmp (JobGridType, "gt2") == MATCH) ||
+				(stricmp (JobGridType, "gt5") == MATCH) ||
 				(stricmp (JobGridType, "gt4") == MATCH) ||
 				(stricmp (JobGridType, "infn") == MATCH) ||
 				(stricmp (JobGridType, "blah") == MATCH) ||
@@ -4886,6 +4887,7 @@ SetGlobusParams()
 
 		if ( stricmp (JobGridType, "gt2") == MATCH ||
 			 stricmp (JobGridType, "gt4") == MATCH ||
+			 stricmp (JobGridType, "gt5") == MATCH ||
 			 stricmp (JobGridType, "oracle") == MATCH ) {
 
 			char * jobmanager_type;
@@ -5102,6 +5104,7 @@ SetGlobusParams()
 	if ( !unified_syntax && JobGridType &&
 		 ( stricmp (JobGridType, "gt2") == MATCH ||
 		   stricmp (JobGridType, "gt4") == MATCH ||
+		   stricmp (JobGridType, "gt5") == MATCH ||
 		   stricmp (JobGridType, "oracle") == MATCH ||
 		   stricmp (JobGridType, "nordugrid") == MATCH ) ) {
 
@@ -5113,6 +5116,7 @@ SetGlobusParams()
 	if ( JobGridType == NULL ||
 		 stricmp (JobGridType, "gt2") == MATCH ||
 		 stricmp (JobGridType, "gt4") == MATCH ||
+		 stricmp (JobGridType, "gt5") == MATCH ||
 		 stricmp (JobGridType, "oracle") == MATCH ||
 		 stricmp (JobGridType, "nordugrid") == MATCH ) {
 
@@ -5137,6 +5141,7 @@ SetGlobusParams()
 
 	if ( JobGridType == NULL ||
 		 stricmp (JobGridType, "gt2") == MATCH ||
+		 stricmp (JobGridType, "gt5") == MATCH ||
 		 stricmp (JobGridType, "gt4") == MATCH ) {
 
 		buffer.sprintf( "%s = %d", ATTR_GLOBUS_STATUS,
@@ -5360,6 +5365,7 @@ SetGSICredentials()
 		 JobGridType != NULL &&
 		 (stricmp (JobGridType, "gt2") == MATCH ||
 		  stricmp (JobGridType, "gt4") == MATCH ||
+		  stricmp (JobGridType, "gt5") == MATCH ||
 		  stricmp (JobGridType, "cream") == MATCH ||
 		  stricmp (JobGridType, "nordugrid") == MATCH)) {
 
@@ -5408,9 +5414,11 @@ SetGSICredentials()
 			/* Insert the proxy subject name into the ad */
 			char *proxy_subject;
 			if ( vi && !vi->built_since_version(6,7,3) ) {
-				proxy_subject = x509_proxy_subject_name(proxy_file);
+				// subject name with no VOMS attrs
+				proxy_subject = x509_proxy_subject_name(proxy_file, 0);
 			} else {
-				proxy_subject = x509_proxy_identity_name(proxy_file);
+				// identity with VOMS attrs
+				proxy_subject = x509_proxy_identity_name(proxy_file, 1);
 			}
 			if ( !proxy_subject ) {
 				fprintf( stderr, "\nERROR: %s\n", x509_error_string() );
@@ -6819,14 +6827,13 @@ void
 log_submit()
 {
 	 char	 *simple_name;
-	 UserLog usr_log;
-	 SubmitEvent jobSubmit;
-
-	 usr_log.setUseXML(UseXMLInLog);
 
 		// don't write to the EVENT_LOG in condor_submit; that is done by 
 		// the condor_schedd (since submit likely does not have permission).
-	 usr_log.setWriteGlobalLog(false);
+	 WriteUserLog usr_log(true);
+	 SubmitEvent jobSubmit;
+
+	 usr_log.setUseXML(UseXMLInLog);
 
 	if( Quiet ) {
 		fprintf(stdout, "Logging submit event(s)");

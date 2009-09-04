@@ -1,4 +1,24 @@
 #! /usr/bin/env perl
+
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
 ##########################################################################
 # For information on command line options of this script, call it with -h 
 #
@@ -151,7 +171,7 @@ my $type_subs = {
 	},
 	'param_type' => sub { 
 		my $type = enum($_[0],'STRING','INT','BOOL', 'DOUBLE');
-		return "TYPE_".$type;
+		return "PARAM_TYPE_".$type;
 	},
 	'is_macro_type' => sub {
 		my $is_macro = enum($_[0],'true','false');
@@ -292,7 +312,7 @@ sub reconstitute {
 			if ($name eq "type")
 			{
 				# Integer parameters
-				if ($type_subs->{$info->{type}}(exists $sub_structure->{type} ? $sub_structure->{type} : $default_structure->{type}) eq "TYPE_INT")
+				if ($type_subs->{$info->{type}}(exists $sub_structure->{type} ? $sub_structure->{type} : $default_structure->{type}) eq "PARAM_TYPE_INT")
 				{
 					if ($sub_structure->{'default'} eq "") {
 						print "ERROR: Integer parameter $param_name needs " .
@@ -301,7 +321,7 @@ sub reconstitute {
 				}
 
 				# Boolean parameters
-				if ($type_subs->{$info->{type}}(exists $sub_structure->{type} ? $sub_structure->{type} : $default_structure->{type}) eq "TYPE_BOOL")
+				if ($type_subs->{$info->{type}}(exists $sub_structure->{type} ? $sub_structure->{type} : $default_structure->{type}) eq "PARAM_TYPE_BOOL")
 				{
 					if ($sub_structure->{'default'} eq "") {
 						print "ERROR: Boolean parameter $param_name needs " .
@@ -310,7 +330,7 @@ sub reconstitute {
 				}
 
 				# Double parameters
-				if ($type_subs->{$info->{type}}(exists $sub_structure->{type} ? $sub_structure->{type} : $default_structure->{type}) eq "TYPE_DOUBLE")
+				if ($type_subs->{$info->{type}}(exists $sub_structure->{type} ? $sub_structure->{type} : $default_structure->{type}) eq "PARAM_TYPE_DOUBLE")
 				{
 					if ($sub_structure->{'default'} eq "") {
 						print "ERROR: Double parameter $param_name needs " .

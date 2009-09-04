@@ -63,6 +63,7 @@ if not exist %1\examples\NUL mkdir %1\examples
 if not exist %1\examples\cpusoak\NUL mkdir %1\examples\cpusoak
 if not exist %1\examples\printname\NUL mkdir %1\examples\printname
 if not exist %1\examples\rc5\NUL mkdir %1\examples\rc5
+if not exist %1\hdfs\NUL mkdir %1\hdfs
 
 echo. & echo Copying root Condor files...
 copy ..\Release\*.exe %1\bin
@@ -113,6 +114,9 @@ echo. & echo Copying symbol files...
 for %%f in (master startd quill dbmsd had credd schedd collector negotiator shadow starter) do (
     copy ..\Release\condor_%%f.pdb %1\bin
 )
+
+echo. & echo Copying hadoop files...
+xcopy ..\externals\install\hdfs %1\hdfs /E
 
 echo. & echo Making some aliases...
 pushd %1\bin
