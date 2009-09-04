@@ -423,6 +423,7 @@ email_close(FILE *mailer)
 	char *temp;
 	mode_t prev_umask;
 	priv_state priv;
+	char *customSig;
 
 	if ( mailer == NULL ) {
 		return;
@@ -431,22 +432,31 @@ email_close(FILE *mailer)
 	/* Want the letter to come from "condor" if possible */
 	priv = set_condor_priv();
 
-	/* Put a signature on the bottom of the email */
-	fprintf( mailer, "\n\n-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=\n" );
-	fprintf( mailer, "Questions about this message or Condor in general?\n" );
+	customSig = NULL;
+	if (customSig = param("EMAIL_SIGNATURE")) {
+		fprintf( mailer, "\n\n");
+		fprintf( mailer, customSig);
+		fprintf( mailer, "\n");
+		free(customSig);
+	} else {
+		
+		/* Put a signature on the bottom of the email */
+		fprintf( mailer, "\n\n-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=\n" );
+		fprintf( mailer, "Questions about this message or Condor in general?\n" );
 
-		/* See if there's an address users should use for help */
-	temp = param( "CONDOR_SUPPORT_EMAIL" );
-	if( ! temp ) {
-		temp = param( "CONDOR_ADMIN" );
+			/* See if there's an address users should use for help */
+		temp = param( "CONDOR_SUPPORT_EMAIL" );
+		if( ! temp ) {
+			temp = param( "CONDOR_ADMIN" );
+		}
+		if( temp ) {
+			fprintf( mailer, "Email address of the local Condor administrator: "
+					 "%s\n", temp );
+			free( temp );
+		}
+		fprintf( mailer, "The Official Condor Homepage is "
+				 "http://www.cs.wisc.edu/condor\n" );
 	}
-	if( temp ) {
-		fprintf( mailer, "Email address of the local Condor administrator: "
-				 "%s\n", temp );
-		free( temp );
-	}
-	fprintf( mailer, "The Official Condor Homepage is "
-			 "http://www.cs.wisc.edu/condor\n" );
 
 	fflush(mailer);
 	/* there are some oddities with how pclose can close a file. In some
