@@ -1,0 +1,12 @@
+#TEMPTEMP -- add pre and post scripts
+#TEMPTEMP -- use VARS to echo node name, etc.
+Job nodeA job_dagman_multi_dag-node.cmd
+
+Job nodeB job_dagman_multi_dag-node.cmd
+
+Job nodeC2 job_dagman_multi_dag-node.cmd
+
+Job nodeD2 job_dagman_multi_dag-node.cmd
+
+Parent nodeA Child nodeB nodeC2
+Parent nodeB nodeC2 Child nodeD2

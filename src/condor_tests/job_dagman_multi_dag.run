@@ -1,0 +1,191 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+## This tests recovery mode after node retries (see gittrac #481).
+
+## Note: this is a bit of a tricky test -- the node C job actually
+## puts DAGMan on hold and then releases it to force it into recovery
+## mode.
+
+## TO DO: add some stuff to verify that each node really only got
+## successfully run once.
+
+use CondorTest;
+
+#TEMPTEMP -- will this work?
+@cmdTEMP = ("job_dagman_multi_dag-dag1.dag", "job_dagman_multi_dag-dag2.dag");
+$cmd = \@cmdTEMP;
+$testdesc =  'Condor submit dag - multi-DAG test - scheduler U';
+$testname = "job_dagman_multi_dag";
+$dagman_args = "-verbose";
+
+@logfiles = ("job_dagman_multi_dag-dag1.dag.dagman.out");
+
+my $dag_was_held = 0;
+my $dag_was_released = 0;
+
+# truly const variables in perl
+sub IDLE{1};
+sub HELD{5};
+sub RUNNING{2};
+
+# Get rid of any existing log files.
+foreach $name (@logfiles) {
+	if (-e $name) {
+		system("rm -f $name");
+	}
+}
+
+$abnormal = sub 
+{
+	die "Want to see only submit, execute and successful completion\n";
+};
+
+$aborted = sub 
+{
+	die "Abort event NOT expected\n";
+};
+
+$held = sub 
+{
+	CondorTest::debug("DAGMan was held -- good!\n");
+	$dag_was_held = 1;
+};
+
+$released = sub 
+{
+	CondorTest::debug("DAGMan was released -- good!\n");
+	$dag_was_released = 1;
+};
+
+$executed = sub
+{
+	my %info = @_;
+
+	CondorTest::debug("Good. We need the dag to run<$info{cluster}>\n",1);
+};
+
+$submitted = sub
+{
+	CondorTest::debug("submitted: This test will see submit, executing, held, released, and successful completion\n",1);
+};
+
+$success = sub
+{
+	if (!$dag_was_held) {
+		die "Error: DAGMan was not held\n";
+	}
+	if (!$dag_was_released) {
+		die "Error: DAGMan was not released\n";
+	}
+
+	CondorTest::debug("executed successfully\n",1);
+	CondorTest::debug("Verifying output\n",1);
+	$diditpass = 1;
+
+	foreach $name (@logfiles) {
+		$line = "";
+		$cache_state = 0;
+		$passed = 0;
+		$canopen = open(OUT,"<$name");
+		if( ! (defined $canopen)) {
+			CondorTest::debug("Can not open logfile<$name>:$!\n",1);
+			$diditpass = 0;
+		}
+		while(<OUT>) {
+			chomp();
+			$line = $_;
+
+			if( $line =~ /Starting to cache log lines/ ) {
+				CondorTest::debug("$name: $line\n",1);
+				if( $cache_state == 0 ) {
+					$cache_state = 1;
+				} else {
+					CondorTest::debug("Started dagman.out caching in " .
+								"wrong sequence\n");
+				}
+
+			} elsif( $line =~ /Event: ULOG_SUBMIT for Condor Node A/ ) {
+				CondorTest::debug("$name: $line\n",1);
+				if( $cache_state == 0 ) {
+					# Pre-recovery -- okay.
+				} elsif( $cache_state == 1 ) {
+					$cache_state = 2;
+				} else {
+					CondorTest::debug("Got submit event for Node A in " .
+								"wrong sequence\n");
+				}
+
+			} elsif( $line =~ /Event: ULOG_JOB_TERMINATED for Condor Node C/ ) {
+				CondorTest::debug("$name: $line\n",1);
+				if( $cache_state == 2 or $cache_state == 3 ) {
+					$cache_state++;
+				} else {
+					CondorTest::debug("Got terminated event for Node C " .
+					   "in wrong sequence\n");
+				}
+
+			} elsif( $line =~ /Stopping the caching of log lines/ ) {
+				CondorTest::debug("$name: $line\n",1);
+				if( $cache_state == 2 or $cache_state == 3 ) {
+					$cache_state++;
+				} else {
+					CondorTest::debug("Stopped dagman.out caching in " .
+								"wrong sequence\n");
+				}
+
+			} elsif( $line =~ /EXITING WITH STATUS 0/ ) {
+				CondorTest::debug("$name: $line\n",1);
+				if( $cache_state == 4 ) {
+					$passed = 1;
+				} else {
+					CondorTest::debug("Got EXITING line in wrong sequence\n");
+				}
+			}
+		}
+		close(OUT);
+		if($passed == 1 ) {
+			;
+		} else {
+			CondorTest::debug("failed $name: $line\n",1);
+			$diditpass = 0;
+		}
+	}
+
+	if($diditpass == 0) {
+		die "All expected files and correct output failed\n";
+	}
+};
+
+CondorTest::RegisterExitedSuccess( $testname, $success);
+CondorTest::RegisterExecute($testname, $executed);
+CondorTest::RegisterExitedAbnormal( $testname, $abnormal );
+CondorTest::RegisterAbort( $testname, $aborted );
+CondorTest::RegisterHold( $testname, $held );
+CondorTest::RegisterRelease( $testname, $released );
+CondorTest::RegisterSubmit( $testname, $submitted );
+
+if( CondorTest::RunDagTest($testname, cmd, 0, $dagman_args) ) {
+	CondorTest::debug("$testname: SUCCESS\n",1);
+	exit(0);
+} else {
+	die "$testname: CondorTest::RunDagTest() failed\n";
+}
+
