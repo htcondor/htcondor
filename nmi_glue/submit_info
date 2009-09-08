@@ -22,7 +22,6 @@
 # x86_64_deb_5.0
 # x86_winnt_5.1
 # x86_macos_10.4
-# x86_freebsd_6
 # x86_64_rhas_3
 # ia64_rhas_3
 # hppa_hpux_11
@@ -84,10 +83,10 @@ x_test_platforms_x86_rhas_3 =  x86_rhas_4, \
 # FreeBSD
 # We don't need patch or byacc
 ########################################
-[
-platforms = x86_freebsd_6
-prereqs   = tar-1.14, m4-1.4.1, flex-2.5.4a, make-3.80, bison-1.25, perl-5.8.5, wget-1.9.1, coreutils-5.2.1
-]
+#[
+#platforms = x86_freebsd_6
+#prereqs   = tar-1.14, m4-1.4.1, flex-2.5.4a, make-3.80, bison-1.25, perl-5.8.5, wget-1.9.1, coreutils-5.2.1
+#]
 
 ########################################
 # Platforms with no prereqs at all
@@ -141,10 +140,10 @@ platforms = ppc64_sles_9
 test_append_prereqs = java-1.4.2
 ]
 
-[
-platforms = x86_freebsd_6
-test_append_prereqs = java-1.4.2
-]
+#[
+#platforms = x86_freebsd_6
+#test_append_prereqs = java-1.4.2
+#]
 
 [
 platforms = x86_deb_4.0
