@@ -8297,6 +8297,7 @@ CkptWallClock()
 	int first_time = 1;
 	int current_time = (int)time(0); // bad cast, but ClassAds only know ints
 	ClassAd *ad;
+	bool began_transaction = false;
 	while( (ad = GetNextJob(first_time)) ) {
 		first_time = 0;
 		int status = IDLE;
@@ -8309,10 +8310,19 @@ CkptWallClock()
 				int cluster, proc;
 				ad->LookupInteger(ATTR_CLUSTER_ID, cluster);
 				ad->LookupInteger(ATTR_PROC_ID, proc);
+
+				if( !began_transaction ) {
+					began_transaction = true;
+					BeginTransaction();
+				}
+
 				SetAttributeInt(cluster, proc, ATTR_JOB_WALL_CLOCK_CKPT,
 								run_time);
 			}
 		}
+	}
+	if( began_transaction ) {
+		CommitTransaction();
 	}
 }
 
