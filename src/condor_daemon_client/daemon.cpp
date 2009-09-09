@@ -1337,6 +1337,8 @@ Daemon::getCmInfo( const char* subsys )
 				((strcmp(full_name, host_name) == 0) ||
 				(strcmp(local_name, host_name) == 0))) {
 				host = strnewp(itr);
+				free( host_name );
+				break;
 			}
 			free( host_name );
 		}
