@@ -224,6 +224,10 @@ description.
      to be modified. 
      The executable becomes \Prog{valgrind} run on \Condor{dagman},
      with a specific set of arguments intended for testing \Condor{dagman}.
+     \emph{Note: this argument is intended for testing only.  If you specify
+     the \Opt{-valgrind} argument, your DAG will fail unless you have
+     the Valgrind software installed on your system.  If your DAG does
+     run, it will run many times more slowly than normal.}
   }
   \end{Options}
 
