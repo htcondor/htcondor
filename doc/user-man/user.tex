@@ -657,8 +657,8 @@ in the
 
 \subsubsection{Example 1} 
 
-Example 1 is the simplest submit description
-file possible. It queues up one copy of the program \Prog{foo}
+Example 1 is one of the simplest submit description
+files possible. It queues up one copy of the program \Prog{foo}
 (which had been created by \Condor{compile})
 for execution by Condor.
 Since no platform is specified, Condor will use its default,
@@ -688,8 +688,9 @@ happened to your jobs.
   #                                                                       
   ####################                                                    
                                                                           
-  Executable     = foo                                                    
-  Log            = foo.log                                                    
+  Executable   = foo                                                    
+  Universe     = standard                                                    
+  Log          = foo.log                                                    
   Queue    
 \end{verbatim}
 
@@ -717,17 +718,17 @@ and/or object code to program \Prog{mathematica} is not available.
   #                                        
   ####################                    
                                          
-  Executable     = mathematica          
-  Universe = vanilla                   
-  input   = test.data                
-  output  = loop.out                
-  error   = loop.error             
-  Log     = loop.log                                                    
+  Executable = mathematica          
+  Universe   = vanilla                   
+  input      = test.data                
+  output     = loop.out                
+  error      = loop.error             
+  Log        = loop.log                                                    
                                   
-  Initialdir     = run_1         
+  Initialdir = run_1         
   Queue                         
                                
-  Initialdir     = run_2      
+  Initialdir = run_2      
   Queue                     
 \end{verbatim}
 
@@ -752,8 +753,8 @@ of the program,
 and \File{err.1} for the second run of the program, and so forth.
 A log file containing entries
 about when and where Condor runs, checkpoints, and migrates processes for
-the 150 queued programs
-will be written into file \File{foo.log}.
+all the 150 queued programs
+will be written into the single file \File{foo.log}.
 \begin{verbatim}
   ####################                    
   #
@@ -762,15 +763,16 @@ will be written into file \File{foo.log}.
   #
   ####################                                                    
 
-  Executable     = foo                                                    
-  Requirements   = Memory >= 32 && OpSys == "SOLARIS28" && Arch =="SUN4u"     
-  Rank		 = Memory >= 64
-  Image_Size     = 28 Meg                                                 
+  Executable    = foo                                                    
+  Universe      = standard                                                    
+  Requirements  = Memory >= 32 && OpSys == "SOLARIS28" && Arch =="SUN4u"     
+  Rank          = Memory >= 64
+  Image_Size    = 28 Meg                                                 
 
   Error   = err.$(Process)                                                
   Input   = in.$(Process)                                                 
   Output  = out.$(Process)                                                
-  Log = foo.log
+  Log     = foo.log
 
   Queue 150
 \end{verbatim}
