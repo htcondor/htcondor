@@ -491,7 +491,7 @@ AbstractReplicatorStateMachine::updateVersionsList( Version& newVersion )
     dprintf( D_FULLDEBUG,
         "AbstractReplicatorStateMachine::updateVersionsList appending %s\n",
          newVersion.toString( ).Value( ) );
-    m_versionsList.Append( newVersion );
+    m_versionsList.Append( &newVersion );
     m_versionsList.Rewind( );
 // End of TODO: Atomic operation
 }

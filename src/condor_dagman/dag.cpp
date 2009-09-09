@@ -2470,7 +2470,7 @@ bool Dag::Add( Job& job )
 	insertResult = _nodeIDHash.insert( job.GetJobID(), &job );
 	ASSERT( insertResult == 0 );
 
-	return _jobs.Append(job);
+	return _jobs.Append(&job);
 }
 
 

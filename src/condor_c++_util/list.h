@@ -47,13 +47,13 @@
        working like an Append, which you'd expect).
        The only ways to read items from the list are Next, Current,
 	   and Head.  
-	2. Two versions of Append are supplied.  One takes a reference to an
-	   object, and is useful for objects allocated on the stack or
-	   in global data space.  The other takes a pointer to an object,
-	   and is useful for objects allocated on the heap, and other objects
-	   which are most natural to deal with as pointers such as strings.
-	3. Two versions of Next are also supplied, again one is for dealing
-	   with pointers to objects while the other is for references.
+	2. Append and Insert save a pointer to passed object.  No copying
+	   or memory management is done. When an object is removed or the
+	   list deleted, none of the objects in the list will be deallocated.
+	3. Two versions of Next, Current, and Head are supplied. The version
+	   that takes a reference to an object will copy the appropriate
+	   object via the assignment operator. This will cause problems for
+	   certain types of objects, so be careful.
 	4. The DeleteCurrent operator deletes the element at the scan pointer
 	   from the list.  It should only be called when the scan pointer is
 	   valid, i.e. not on an empty list or after a rewind.
@@ -62,7 +62,7 @@
 			element in the list.
 		List - The list constructor places the scan in the "rewound" condition.
 		Next - The next operator moves the scan pointer one element forward
-			and returns a pointer or reference to the element at the new
+			and returns a pointer to or copy of the element at the new
 			location.
 		Append - The scan pointer is placed at the newly entered item in the
 			list.
@@ -76,39 +76,34 @@
 			same result as if the DeleteCurrent had not been called.
 	Examples:
 
-			// To build a list containing 'a', 'b', 'c' using references:
-		List<char>	foo;
-		foo.Append( 'a' );
-		foo.Append( 'b' );
-		foo.Append( 'c' );
+			// To build a list of objects of some class:
+		class MyClass;
 
-			// To "read" the list:
-		char x;
+		List<MyClass>	foo;
+		foo.Append( new MyClass(1) );
+		foo.Append( new MyClass(2) );
+		foo.Append( new MyClass(3) );
+
+			// To "read" the list, making copies of the entries:
+		MyClass x;
 		foo.Rewind();
 		while( foo.Next(x) ) {
 			cout << "Found element " << x << endl;
 		}
 
-			// To remove every element from the list - but not delete it
+			// To remove every element from the list, deleting as we go.
 			// Note the the DeleteCurrent operator has no effect on the
 			// subsequent call to Next.
+		MyClass *y;
 		foo.Rewind();
-		while( foo.Next(x) ) {
-			cout << "Removing element " << x << endl;
+		while( foo.Next(y) ) {
+			cout << "Removing element " << *y << endl;
 			foo.DeleteCurrent();
+			delete y;
 		}
 		assert( foo.IsEmpty );
 
-			// To build a list containing "alpha", "bravo", "charlie" using
-			// pointers.
-		List<char> bar;
-		bar.Append( "alpha" );
-		bar.Append( "bravo" );
-		bar.Append( "charlie" );
-
-			// To scan this list
-		for( bar.Rewind(); x = bar.Next(); cout << x << endl )
-			; */
+*/
 
 #ifndef LIST_H
 #define LIST_H
@@ -125,14 +120,12 @@ public:
 	List();
 
 	virtual ~List();
-	bool	Append( ObjType & obj );
 	bool	Append( ObjType * obj );
 
     /// Insert an element before the current element
 	/// Warning: if AtEnd(), Insert() will add the element before the
 	/// last element, not at the end of the list.  In that case, use
 	/// Append() instead
-	void	Insert( ObjType & obj );
 	void	Insert( ObjType * obj );
 	void	InsertHead( ObjType & obj );
 	void	InsertHead( ObjType * obj );
@@ -290,18 +283,6 @@ List<ObjType>::~List()
 }
 
 /*
-  Append an object given a reference to it.  Since items always
-  contain pointers and not references, we generate a pointer to the
-  object.  The scan pointer is left at the new item.
-*/
-template <class ObjType>
-bool
-List<ObjType>::Append( ObjType & obj )
-{
-	return Append(&obj);
-}
-
-/*
   Append an object given a pointer to it.  The scan pointer is left at
   the new item.
 */
@@ -321,14 +302,6 @@ List<ObjType>::Append( ObjType * obj )
 	current = item;
 	num_elem++;
     return true;
-}
-
-/* Insert an element before the current element */
-template <class ObjType>
-void
-List<ObjType>::Insert( ObjType& obj )
-{
-	Insert(&obj);
 }
 
 /* Insert an element before the current element */
