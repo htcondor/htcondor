@@ -45,6 +45,7 @@ class SimpleList
 
     // General
     virtual bool Append (const ObjType &);
+    virtual bool Insert (const ObjType &);
 	virtual bool Prepend (const ObjType &);
     inline bool IsEmpty() const { return (size == 0); }
 	inline int Number(void) const { return size; }
@@ -98,6 +99,25 @@ Append (const ObjType &item)
 	}
 
     items[size++] = item;
+    return true;
+}
+
+template <class ObjType>
+bool SimpleList<ObjType>::
+Insert (const ObjType &item)
+{
+    if (size >= maximum_size)
+	{
+		if (!resize (2*maximum_size))
+			return false;
+	}
+
+	for (int i=size;i>current;i--) {
+		items[i]=items[i-1];
+	}
+    items[current] = item;
+	current++;
+	size++;
     return true;
 }
 
