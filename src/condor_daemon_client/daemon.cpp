@@ -1338,6 +1338,7 @@ Daemon::getCmInfo( const char* subsys )
 				(strcmp(local_name, host_name) == 0))) {
 				host = strnewp(itr);
 			}
+			free( host_name );
 		}
 		free( hostnames );
 	}
