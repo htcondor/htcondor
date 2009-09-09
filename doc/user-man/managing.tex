@@ -339,15 +339,24 @@ While the analyzer can diagnose most common problems, there are some situations
 that it cannot reliably detect due to the instantaneous and local nature of the
 information it uses to detect the problem.  Thus, it may be that the analyzer
 reports that resources are available to service the request, but the job still 
-does not run.  In most of these situations, the delay is transient, and the
-job will run during the next negotiation cycle.
+has not run.  In most of these situations, the delay is transient, and the
+job will run following the next negotiation cycle.
 
-If the problem persists and the analyzer is unable to detect the situation, it
-may be that the job begins to run but immediately terminates due to some 
-problem.  Viewing the job's error and log files
-(specified in the submit command file) and Condor's \Macro{SHADOW\_LOG} file
-may assist in tracking down the problem.  If the cause is still unclear, please
-contact your system administrator.
+A second class of problems represents jobs that do or did run,
+for at least a short while, but are no longer running.
+The first issue is identifying whether the job is in this category.
+The \Condor{q} command is not enough; it only tells the
+current state of the job.
+The needed information will be in the \SubmitCmd{log} file 
+or the \SubmitCmd{error} file, as defined in the submit description file
+for the job.
+If these files are not defined, then there is little hope of
+determining if the job ran at all.
+For a job that ran, even for the briefest amount of time,
+the \SubmitCmd{log} file will contain an event of type 1,
+which will contain the string
+\verb@Job executing on host@.
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:job-log-events}In the log file}
