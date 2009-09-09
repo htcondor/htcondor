@@ -4734,6 +4734,7 @@ Scheduler::negotiate(int command, Stream* s)
 	m_need_reschedule = false;
 	if( m_send_reschedule_timer != -1 ) {
 		daemonCore->Cancel_Timer( m_send_reschedule_timer );
+		m_send_reschedule_timer = -1;
 	}
 
 		// set stop/start times on the negotiate timeslice object
@@ -11143,6 +11144,7 @@ Scheduler::sendReschedule()
 
 	if( m_send_reschedule_timer != -1 ) {
 		daemonCore->Cancel_Timer( m_send_reschedule_timer );
+		m_send_reschedule_timer = -1;
 	}
 
 	dprintf( D_FULLDEBUG, "Sending RESCHEDULE command to negotiator(s)\n" );
