@@ -201,13 +201,13 @@ test_append_prereqs = java-1.4.2_05
 platforms = x86_rhap_5
 test_append_prereqs = java-1.4.2_05
 x_test_platforms_x86_rhap_5 = unmanaged-x86_rhap_5, x86_64_fc_5, x86_fc_5, \
-		x86_64_fc_8, x86_64_fedora_9
+		x86_64_fedora_8, x86_64_fedora_9
 ]
 
 [
 platforms = x86_64_rhap_5
 test_append_prereqs = java-1.4.2_05
-x_test_platforms_x86_64_rhap_5 = x86_64_fc_8, x86_64_fedora_9
+x_test_platforms_x86_64_rhap_5 = x86_64_fedora_8, x86_64_fedora_9
 ]
 
 [
@@ -236,7 +236,7 @@ testplatforms = unmanaged-x86_rhap_5
 
 [
 testplatforms = x86_fc_5, x86_rhap_5.1, x86_64_fc_5, \
-		x86_64_fc_8
+		x86_64_fedora_8
 testprereqs = tar-1.14, make-3.80
 testonly_append_prereqs = java-1.5.0_08, perl-5.8.5
 ]
