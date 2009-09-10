@@ -1,46 +1,18 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{\label{sec:gotchas}Upgrade Surprises}
+\section{\label{sec:gotchas}Upgrading to a New Version of Condor}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{upgrading!items to be aware of}
-Occasional changes to Condor can cause unexpected errors or results
-to users.
-Here is a list of changes to note and be aware of.
+Upgrading from the 7.2 series of Condor to this 7.4 series will
+bring many new features.
+Here is a list of new features,
+to help avoid combing through the lengthy 7.3 developer
+series to become aware of the new features.
+
 
 \begin{itemize}
 
-\item 
-We believe that Condor 7.2.x and 7.0.x are wire-compatible,
-and can be freely mixed between computers in a Condor pool. 
-However, we do not regularly test this compatibility and cannot guarantee it. 
-Therefore, we recommend using a single release of Condor when possible. 
-Please note that although Condor 7.2.x and 7.0.x may be mixed within a pool, 
-they ought not to be mixed them on a single computer. 
-That is, a \Condor{master} daemon running 7.0.x cannot run Condor daemons 
-from version 7.2.x, or vice-versa.
-
-% these items are too old to be placed here
-% \item When upgrading from 6.6.x 6.7.x,
-%   jobs that rely on the environment variable \Env{CONDOR\_SCRATCH\_DIR}
-%   need to be changed to use \Env{\_CONDOR\_SCRATCH\_DIR}.
-%   An underscore was added to the beginning of this variable.
-
-% \item A necessary change was introduced in version 6.7.15, such that
-%   standard universe jobs are better identified and have more
-%   correct resumption semantics on other machines with proper platform
-%   identification signatures (which contain things such as operating system,
-%   OS distribution, and kernel memory model). This change affects all
-%   standard universe jobs that remain in the job queue across an upgrade
-%   from any Condor release previous to 6.7.15 to any Condor release of
-%   6.7.15 or more recent.
-
-%   The resulting policy changes are documented in
-%   section~\ref{sec:Is-Valid-Checkpoint-Platform}.
-
-%   Suggestions for dealing with this backwards compatibility issue
-%   are given in the Frequently Asked Questions in
-%   section~\ref{sec:checkpoint-platform-faq}.
-
+\item  None yet. 
 
 \end{itemize}
 
