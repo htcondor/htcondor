@@ -10040,10 +10040,22 @@ DaemonCore::UpdateLocalAd(ClassAd *daemonAd)
             daemonAd->fPrint(AD_FILE);
             fclose( AD_FILE );
 			if( rotate_file(newLocalAdFile.Value(),localAdFile)!=0 ) {
+					// Under windows, rotate_file() sometimes failes with
+					// system error 5 (access denied).  This is believed
+					// to be expected in the case where some other process
+					// has the target file open for reading, so only
+					// report this as a WARNING under windows.
+#ifdef WIN32
+				dprintf( D_ALWAYS,
+						 "DaemonCore: WARNING: failed to rotate %s to %s\n",
+						 newLocalAdFile.Value(),
+						 localAdFile);
+#else
 				dprintf( D_ALWAYS,
 						 "DaemonCore: ERROR: failed to rotate %s to %s\n",
 						 newLocalAdFile.Value(),
 						 localAdFile);
+#endif
 			}
         } else {
             dprintf( D_ALWAYS,
