@@ -382,6 +382,7 @@ const char *ATTR_LAST_HOLD_REASON_SUBCODE = "LastHoldReasonSubCode";
 const char *ATTR_LAST_JOB_LEASE_RENEWAL   = "LastJobLeaseRenewal";
 const char *ATTR_LAST_JOB_LEASE_RENEWAL_FAILED= "LastJobLeaseRenewalFailed";
 const char *ATTR_LAST_MATCH_TIME			 = "LastMatchTime";
+const char *ATTR_MACHINE_LAST_MATCH_TIME			 = "MachineLastMatchTime";
 const char *ATTR_LAST_MATCH_LIST_PREFIX   = "LastMatchName";
 const char *ATTR_LAST_MATCH_LIST_LENGTH   = "LastMatchListLength";
 const char *ATTR_LAST_REJ_MATCH_TIME		 = "LastRejMatchTime";

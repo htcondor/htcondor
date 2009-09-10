@@ -171,7 +171,7 @@ ResMgr::init_config_classad( void )
 	configInsert( config_classad, "HIBERNATE", false );
 	if( !configInsert( config_classad, ATTR_UNHIBERNATE, false ) ) {
 		MyString default_expr;
-		default_expr.sprintf("%s =!= UNDEFINED",ATTR_LAST_MATCH_TIME);
+		default_expr.sprintf("%s =!= UNDEFINED",ATTR_MACHINE_LAST_MATCH_TIME);
 		config_classad->AssignExpr( ATTR_UNHIBERNATE, default_expr.Value() );
 	}
 #endif /* HAVE_HIBERNATION */
