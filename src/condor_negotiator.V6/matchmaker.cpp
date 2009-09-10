@@ -3815,7 +3815,7 @@ void Matchmaker::RegisterAttemptedOfflineMatch( ClassAd *job_ad, ClassAd *startd
 	update_ad.CopyAttribute(ATTR_STARTD_IP_ADDR,ATTR_STARTD_IP_ADDR,startd_ad);
 
 	time_t now = time(NULL);
-	update_ad.Assign(ATTR_LAST_MATCH_TIME,(int)now);
+	update_ad.Assign(ATTR_MACHINE_LAST_MATCH_TIME,(int)now);
 
 	classy_counted_ptr<ClassAdMsg> msg = new ClassAdMsg(MERGE_STARTD_AD,update_ad);
 	classy_counted_ptr<DCCollector> collector = new DCCollector();
@@ -3857,7 +3857,7 @@ void Matchmaker::RegisterAttemptedOfflineMatch( ClassAd *job_ad, ClassAd *startd
 		slot1_update_ad.Assign(ATTR_NAME,slot1_name);
 		slot1_update_ad.CopyAttribute(ATTR_STARTD_IP_ADDR,ATTR_STARTD_IP_ADDR,startd_ad);
 		MyString slotX_last_match_time;
-		slotX_last_match_time.sprintf("slot%d_%s",slot_id,ATTR_LAST_MATCH_TIME);
+		slotX_last_match_time.sprintf("slot%d_%s",slot_id,ATTR_MACHINE_LAST_MATCH_TIME);
 		slot1_update_ad.Assign(slotX_last_match_time.Value(),(int)now);
 
 		classy_counted_ptr<ClassAdMsg> msg = \
