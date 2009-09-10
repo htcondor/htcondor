@@ -113,7 +113,9 @@ underlying Web Services standards.
 An installation of the Globus Toolkit version 4 may also
 include the the pre-web services GRAM.
 \item[gt5]
-           \MoreTodo
+This new GRAM5 protocol is still in alpha testing.
+It is an extension of the pre-WS GRAM protocol,
+and it attempts to fix lingering problems.
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -471,7 +473,7 @@ the Globus Toolkit version 4, which speak a protocol called
 WS GRAM.
 Please note that this Globus Toolkit version
 is \emph{not} compatible with the Globus Toolkit version 3.0 or 3.2.
-Glbous Toolkit versions 4.0 and 4.2 use slightly different (and
+Globus Toolkit versions 4.0 and 4.2 use slightly different (and
 incompatible) versions of WS GRAM, due to a change in the underlying
 Web Services standards. Condor is able to detect the difference and
 use the appropriate version for each remote resource automatically.
@@ -565,7 +567,17 @@ for the complete description of the configuration variable \MacroNI{JAVA}.
 \index{universe!grid, grid type gt5}
 \index{grid computing!submitting jobs to gt5}
 
-\Todo
+The Globus GRAM5 protocol works the same as the gt2 grid type.
+Its implementation differs from gt2 in the following 3 items:
+\begin{itemize}
+\item
+The Grid Monitor is disabled.
+\item
+Globus job managers are not stopped and restarted. 
+\item
+The configuration variable \Macro{GRIDMANAGER\_MAX\_JOBMANAGERS\_PER\_RESOURCE} 
+is not applied (for gt5 jobs).
+\end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:My-Proxy}Credential Management with \Prog{MyProxy}}

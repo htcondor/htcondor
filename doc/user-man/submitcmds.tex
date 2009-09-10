@@ -1432,8 +1432,13 @@ The second parameter is the name of the pool to which the remote
 See section~\ref{sec:Condor-C-Submit} for details.
 
 For a \SubmitCmd{grid-type-string} of \SubmitCmd{cream},
-% more needed here!
-see section~\ref{sec:CREAM} for details.
+there are three parameters.
+The first parameter is the web services address of the CREAM server.
+The second parameter is the 
+name of the batch system that sits behind the CREAM server.
+The third parameter identifies a site-specific queue
+within the batch system.
+See section~\ref{sec:CREAM} for details.
 
 For a \SubmitCmd{grid-type-string} of \SubmitCmd{gt2},
 the single parameter is the name of the pre-WS GRAM resource to be used.
@@ -1446,8 +1451,9 @@ name of the back-end scheduler).
 See section~\ref{sec:Using-gt4} for details.
 
 For a \SubmitCmd{grid-type-string} of \SubmitCmd{gt5},
-% more needed here!
-see section~\ref{sec:Using-gt5} for details.
+the single parameter is the name of the pre-WS GRAM resource to be used,
+which is the same as for the \SubmitCmd{grid-type-string} of \SubmitCmd{gt2}.
+See section~\ref{sec:Using-gt5} for details.
 
 For a \SubmitCmd{grid-type-string} of \SubmitCmd{lsf}, no additional
 parameters are used.
