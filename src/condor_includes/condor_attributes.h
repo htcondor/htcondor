@@ -320,6 +320,7 @@ extern const char * ATTR_LAST_HOLD_REASON_SUBCODE;
 extern const char * ATTR_LAST_JOB_LEASE_RENEWAL;
 extern const char * ATTR_LAST_JOB_LEASE_RENEWAL_FAILED;
 extern const char * ATTR_LAST_MATCH_TIME;
+extern const char * ATTR_MACHINE_LAST_MATCH_TIME;
 extern const char * ATTR_LAST_MATCH_LIST_PREFIX;
 extern const char * ATTR_LAST_MATCH_LIST_LENGTH;
 extern const char * ATTR_LAST_REJ_MATCH_TIME;
