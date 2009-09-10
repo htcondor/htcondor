@@ -283,6 +283,12 @@ x509_proxy_subject_name( const char *proxy_file, int include_voms_fqan )
 	char *combined_dn_and_fqan = NULL;
 	int error = 0;
 
+#if !defined(HAVE_EXT_VOMS)
+	// If we don't have VOMS, pretend the proxy doesn't have any VOMS
+	// extensions.
+	include_voms_fqan = 0;
+#endif
+
 	if ( activate_globus_gsi() != 0 ) {
 		return NULL;
 	}
@@ -386,6 +392,12 @@ x509_proxy_identity_name( const char *proxy_file, int include_voms_fqan )
 	char *fqan = NULL;
 	char *combined_dn_and_fqan = NULL;
 	int error = 0;
+
+#if !defined(HAVE_EXT_VOMS)
+	// If we don't have VOMS, pretend the proxy doesn't have any VOMS
+	// extensions.
+	include_voms_fqan = 0;
+#endif
 
 	if ( activate_globus_gsi() != 0 ) {
 		return NULL;
