@@ -303,7 +303,8 @@ GT4Job::GT4Job( ClassAd *classad )
 		jobAd->AssignExpr( ATTR_HOLD_REASON, "Undefined" );
 	}
 
-	jobProxy = AcquireProxy( jobAd, error_string, evaluateStateTid );
+	jobProxy = AcquireProxy( jobAd, error_string,
+							 (Eventcpp)&GT4Job::ProxyCallback, this );
 	if ( jobProxy == NULL ) {
 		if ( error_string == "" ) {
 			error_string.sprintf( "%s is not set in the job ad",
@@ -504,7 +505,7 @@ GT4Job::~GT4Job()
 		free( localError );
 	}
 	if ( jobProxy ) {
-		ReleaseProxy( jobProxy, evaluateStateTid );
+		ReleaseProxy( jobProxy, (Eventcpp)&GT4Job::ProxyCallback, this );
 	}
 	if ( gramCallbackContact ) {
 		free( gramCallbackContact );
@@ -525,6 +526,14 @@ void GT4Job::Reconfig()
 {
 	BaseJob::Reconfig();
 	gahp->setTimeout( gahpCallTimeout );
+}
+
+int GT4Job::ProxyCallback()
+{
+	if ( gmState == GM_PROXY_EXPIRED ) {
+		SetEvaluateState();
+	}
+	return 0;
 }
 
 int GT4Job::doEvaluateState()

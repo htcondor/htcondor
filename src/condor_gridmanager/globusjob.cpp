@@ -697,7 +697,8 @@ GlobusJob::GlobusJob( ClassAd *classad )
 		jobAd->AssignExpr( ATTR_HOLD_REASON, "Undefined" );
 	}
 
-	jobProxy = AcquireProxy( jobAd, error_string, evaluateStateTid );
+	jobProxy = AcquireProxy( jobAd, error_string,
+							 (Eventcpp)&GlobusJob::ProxyCallback, this );
 	if ( jobProxy == NULL ) {
 		if ( error_string == "" ) {
 			error_string.sprintf( "%s is not set in the job ad",
@@ -907,7 +908,7 @@ GlobusJob::~GlobusJob()
 		free( localError );
 	}
 	if ( jobProxy ) {
-		ReleaseProxy( jobProxy, evaluateStateTid );
+		ReleaseProxy( jobProxy, (Eventcpp)&GlobusJob::ProxyCallback, this );
 	}
 	if ( gassServerUrl ) {
 		free( gassServerUrl );
@@ -925,6 +926,16 @@ void GlobusJob::Reconfig()
 {
 	BaseJob::Reconfig();
 	gahp->setTimeout( gahpCallTimeout );
+}
+
+int GlobusJob::ProxyCallback()
+{
+	if ( ( gmState == GM_JOBMANAGER_ASLEEP && !JmShouldSleep() ) ||
+		 ( gmState == GM_SUBMITTED && jmProxyExpireTime < jobProxy->expiration_time ) ||
+		 gmState == GM_PROXY_EXPIRED ) {
+		SetEvaluateState();
+	}
+	return 0;
 }
 
 int GlobusJob::doEvaluateState()
