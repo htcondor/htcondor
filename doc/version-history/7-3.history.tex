@@ -22,15 +22,32 @@ The details of each version are described below.
 \item The format of the output from \Condor{status} with the \Opt{-grid} option
 has been changed to provide more useful information.
 
+% gittrac #12
+\item Removed unconditional newline printed at the bottom of \Condor{status}
+\Opt{-format}. Code which parses the output of this command should be careful
+if blindly trimming the last line altogether.
+
 \end{itemize}
 
 \noindent New Features:
 
 \begin{itemize}
 
+\item \Condor{fetchlog} may now fetch history files from a \Condor{schedd}.
+
+\item The history file kept by the \Condor{schedd} may now be rotated daily or
+monthly.
+
 \item The \Condor{ckpt\_server} will automatically clean up stale
 checkpoint files. The configuration file parameters which describe this
 behavior are described below.
+
+% gittrac #177
+\item The \Condor{ckpt\_server} (either the 32-bit or 64-bit) executable
+will now communicate correctly between 32-bit and 64-bit submit nodes.
+If by some chance bit width issues arise in file sizes and whatnot in the
+checkpoint protocol, clear error messages are logged in the checkpoint
+server logs.
 
 \item The new \Condor{ssh\_to\_job} tool allows interactive debugging of running
 jobs.  See the manual page at~\pageref{man-condor-ssh-to-job} for details.
@@ -149,11 +166,22 @@ following a crash of Condor or its host operating system.
 \item Following a crash, the \Condor{gridmanager} no longer restarts all
 of the jobmanagers for gt2 jobs. This should improve recovery time.
 
+\item Condor works more fluidly with the concept of ``generic classads'' in
+the \Condor{collector}. Various daemons that register themselves with 
+generic ads can have tools which use the \Opt{-subsystem} option manipulate
+their ads properly.
+
 \end{itemize}
 
 \noindent Configuration Variable Additions and Changes:
 
 \begin{itemize}
+
+\item The new configuration variable \Macro{EMAIL\_SIGNATURE} specifies
+a custom signature to be added to the bottom of emails sent by the
+Condor system.  If defined, then this custom signature replaces the
+default one specified internally in Condor. The default for this variable
+is undefined.
 
 \item The new configuration variable \Macro{CKPT\_SERVER\_CLIENT\_TIMEOUT}
 informs the \Condor{schedd} how long in seconds it is willing to wait
@@ -186,11 +214,10 @@ See section~\ref{param:CkptServerStaleCkptAgeCutoff}
 for the complete description.
 
 % gittrac 331
-\item The new configuration variable \Macro{SlotWeight} may be used to
+\item The new configuration variable \Macro{SLOTWEIGHT} may be used to
 give a slot greater weight when calculating usage, computing fair
 shares, and enforcing group quotas.  
 See \ref{param:SlotWeight} for the complete description.
-
 
 % gittrac 586
 \item The new configuration variable \Macro{DAGMAN\_USER\_LOG\_SCAN\_INTERVAL}
@@ -207,7 +234,10 @@ See \ref{param:DAGManUserLogScanInterval} for the complete description.
 % gittrac #475
 \item The new configuration variable \Macro{GRIDMANAGER\_SELECTION\_EXPR}
 can be used to control how many \Condor{gridmanager} processes will be
-spawned to manage grid universe jobs. 
+spawned to manage grid universe jobs. As a part of this change, removed
+the configuration variable and supporting code for 
+\Macro{GRIDMANAGER\_PER\_JOB} since the new configuration variable
+supersedes it.
 See \ref{param:GridManagerSelectionExpr} for the complete description.
 
 % gittrac #207
@@ -276,6 +306,7 @@ default node log file feature.
 See \ref{param:DAGManDefaultNodeLog}
 for the complete description.
 
+% gittrac #308
 \item The new configuration variable \Macro{HAD\_CONTROLLEE} is used
   to specify the name of the daemon which the \Condor{had} controls.
   This name should match the daemon name in the \Condor{master}'s
@@ -286,6 +317,89 @@ for the complete description.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Fixed a bug in ClassAd functions where arguments which should have been
+correctly coerced into strings instead evaluated to ERROR.
+
+\item Added support for adding a custom email signature to the administrative
+email messages produced by Condor. 
+
+\item Fixed a confusing diagnostic message with the JobRouter which happened
+when a job was removed within 5 minutes of being submitted.
+
+\item Fixed the behavior of the job ClassAd attribute
+\Attr{EnteredCurrentStatus} to be reset when the job is routed instead
+of copied over verbatim from the original job.
+
+% from 7.5.2
+% gittrac #581
+\item Fixed a bug with dynamic slots where it was possible to lose the 
+\Attr{SLOTx\_STARTD\_ATTRS} machine classad attribute in the slots.
+
+% gittrac #510
+\item Fixed a bug in the Windows port where windows of an application running
+under Condor may never receive a paint message.
+
+\item Fixed a crash in \Condor{q} \Opt{-analyze} when there is no 
+\Condor{schedd} daemon ad file.
+
+\item Fixed a \Condor{procd} crash when the environment of a monitored process
+exceeded 1MB in /proc.
+
+% gittrac #708
+\item Fixed a bug which could cause the \Condor{credd} to crash on windows if
+a credential is requested which is not in the password store.
+
+\item Fixed a bug that caused the \Condor{master} to fail to re-execute itself
+when it noticed a new binary which happened when defining a value for the
+\Macro{MASTER\_LOCK} configuration file parameter.
+
+% gittrac #535
+\item Fixed a bug that was causing the job event log rotation lock to be
+created with incorrect permissions.
+
+% gittrac #601
+\item Fixed a bug in the rotation of the job event log which could cause it
+never to be rotated in the Windows port of Condor.
+
+% gittrac #691
+\item Fixed a potential race condition in the job event log initialization.
+
+% gittrac #695
+\item Fixed race condition which could cause a crash in the \Condor{collector}
+and \Condor{schedd} on shutdown.
+
+% gittrac #690
+\item Fixed a bug where \Condor{master} would sometimes die and produce
+a \File{dprintf\_failure.MASTER} file when either restarting due to new
+binary timestamps or when started initially.
+
+% This is from the unreleased 7.2.5.
+\item Fixed a memory leak concerning some SOAP configuration file variables
+when Condor was reconfigured.
+
+% This is from the unreleased 7.2.5
+\item Fixed a bug where in the submit description file,
+\Attr{cron\_day\_of\_week} was erroneously ignored.
+
+% gittrac #580
+\item Fixed bug where \Macro{MAX\_JOB\_QUEUE\_LOG\_ROTATIONS} and
+\Macro{GRIDMANAGER\_SELECTION\_EXPR} config settings would not work
+properly at startup, but only worked after a reconfig.
+
+\item Fixed a bug where SOAP operations were being incorrectly authorized
+with peer IP ``0.0.0.0''.
+
+\item Fixed a bug where not all daemons were trusted by the Windows firewall
+feature.
+
+\item Fixed a race condition in the parallel universe.
+
+\item Fixed shutdown race condition in \Condor{master} with
+high availability daemons.
+
+\item Fixed a bug where a condor daemon incorrectly determined it was
+out of socket descriptors.
 
 % gitrac #552
 \item Fixed a bug where the \Condor{schedd} would block for very long
@@ -305,6 +419,11 @@ Now, if \Condor{dagman} is not sure whether the other DAGMan is alive,
 it continues, rather than exiting.
 
 \item Fixed a major file descriptor leak in the Stork daemon.
+
+\item Fixed a bug in Stork which marked successful transfers as failed.
+
+\item Fixed an uncommon memory leak in the user event log file reading code
+when reading badly formatted events.
 
 % gittrac 593
 \item Fixed bug in which multiple Machine ClassAds in the
@@ -478,6 +597,10 @@ further explanation.
 \noindent Configuration Variable Additions and Changes:
 
 \begin{itemize}
+
+\item Added the STARTD\_HISTORY configuration parameter.  If set, this
+is a pathname to a history file, just like the condor\_schedd maintains,
+but only for jobs run on that startd.
 
 \item The new configuration variable \Macro{UPDATE\_OFFSET} 
   causes the \Condor{startd} to
