@@ -455,12 +455,12 @@ are offline (i.e. hibernating).
 
 \begin{description}
 
-\index{ClassAd machine attribute (when offline)!LastMatchTime}
-\item[\AdAttr{LastMatchTime}:] The Unix epoch time when this offline ad
+\index{ClassAd machine attribute (when offline)!MachineLastMatchTime}
+\item[\AdAttr{MachineLastMatchTime}:] The Unix epoch time when this offline ad
 would have been matched to a job if the machine were online.  In addition,
-the slot1 ad of a multi-slot machine will have \AdAttr{slot<X>\_LastMatchTime}
+the slot1 ad of a multi-slot machine will have \AdAttr{slot<X>\_MachineLastMatchTime}
 where \MacroNI{X} is replaced by the slot id of each of the slots
-with \AdAttr{LastMatchTime} defined.
+with \AdAttr{MachineLastMatchTime} defined.
 
 \index{ClassAd machine attribute (when offline)!Offline}
 \item[\AdAttr{Offline}:] true for ads that are in an offline state
