@@ -17,11 +17,9 @@
  *
  ***************************************************************/
 
-
 #ifndef _USER_LOG_HEADER_H
 #define _USER_LOG_HEADER_H
 
-#include "condor_common.h"
 #include <time.h>
 #include "MyString.h"
 #include "read_user_log_state.h"
