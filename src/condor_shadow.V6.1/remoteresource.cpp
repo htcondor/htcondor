@@ -86,6 +86,7 @@ RemoteResource::RemoteResource( BaseShadow *shad )
 	lease_duration = -1;
 	already_killed_graceful = false;
 	already_killed_fast = false;
+	m_eval_periodic_exprs_timer = -1;
 }
 
 
@@ -1064,9 +1065,36 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 		// periodic user policy again, since we have new information
 		// and something might now evaluate to true which we should
 		// act on.
-	shadow->evalPeriodicUserPolicy();
+
+		// There is risk of a 3-way deadlock here since evaluating the
+		// policy might cause the job to go on hold or get removed,
+		// which would require us to connect to the startd, which may
+		// try to talk to the starter, while the starter is waiting
+		// for us to respond to the syscall.  Therefore, do the
+		// evaluation from a 0 second timer so we can return first.
+
+	setTimerToEvalPeriodicUserPolicy();
 }
 
+void
+RemoteResource::setTimerToEvalPeriodicUserPolicy()
+{
+	if( m_eval_periodic_exprs_timer == -1 ) {
+		m_eval_periodic_exprs_timer = daemonCore->Register_Timer(
+			0,
+			(TimerHandlercpp)&RemoteResource::timeToEvalPeriodicUserPolicy,
+			"RemoteResource::timeToEvalPeriodicUserPolicy",
+			this );
+	}
+}
+
+void
+RemoteResource::timeToEvalPeriodicUserPolicy()
+{
+	dprintf(D_FULLDEBUG,"In RemoteResource::timeToEvalPeriodicUserPolicy()\n");
+	m_eval_periodic_exprs_timer = -1;
+	shadow->evalPeriodicUserPolicy();
+}
 
 bool
 RemoteResource::recordSuspendEvent( ClassAd* update_ad )

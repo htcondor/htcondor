@@ -451,6 +451,10 @@ private:
 	int next_reconnect_tid;
 	int proxy_check_tid;
 
+	void setTimerToEvalPeriodicUserPolicy();
+	void timeToEvalPeriodicUserPolicy();
+
+	int m_eval_periodic_exprs_timer;
 	MyString proxy_path;
 	time_t last_proxy_timestamp;
 
