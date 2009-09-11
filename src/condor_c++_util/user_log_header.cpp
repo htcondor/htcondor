@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2008, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2009, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -40,6 +40,7 @@ UserLogHeader::UserLogHeader( void )
 	m_num_events = 0;
 	m_file_offset = 0;
 	m_event_offset = 0;
+	m_max_rotation = -1;
 	m_valid = false;
 }
 
@@ -53,6 +54,8 @@ UserLogHeader::UserLogHeader( const UserLogHeader &other )
 	setNumEvents(   other.getNumEvents() );
 	setFileOffset(  other.getFileOffset() );
 	setEventOffset( other.getEventOffset() );
+	setMaxRotation( other.getMaxRotation() );
+	setCreatorName( other.getCreatorName() );
 
 	m_valid = other.IsValid( );
 }
@@ -84,28 +87,42 @@ UserLogHeader::ExtractEvent( const ULogEvent *event )
 	}
 
 	char		 id[256];
+	char		 name[256];
 	int			 ctime;
 
 	int n = sscanf( generic->info,
-					"Global JobLog: "
-					"ctime=%d "
-					"id=%255s "
-					"sequence=%d "
-					"size="FILESIZE_T_FORMAT" "
-					"events=%"PRId64" "
-					"offset="FILESIZE_T_FORMAT" "
-					"event_off=%"PRId64" ",
+					"Global JobLog:"
+					" ctime=%d"
+					" id=%255s"
+					" sequence=%d"
+					" size="FILESIZE_T_FORMAT""
+					" events=%"PRId64""
+					" offset="FILESIZE_T_FORMAT""
+					" event_off=%"PRId64""
+					" max_rotation=%d"
+					" creator_name=\"%255[^\"]\"",
 					&ctime,
 					id,
 					&m_sequence,
 					&m_size,
 					&m_num_events,
 					&m_file_offset,
-					&m_event_offset );
+					&m_event_offset,
+					&m_max_rotation,
+					name
+					);
 	if ( n >= 3 ) {
 		m_ctime = ctime;
 		m_id = id;
 		m_valid = true;
+
+		if ( n >= 8 ) {
+			m_creator_name = name;
+		}
+		else {
+			m_creator_name = "";
+			m_max_rotation = -1;
+		}
 
 		if ( DebugFlags & D_FULLDEBUG ) {
 			dprint( D_FULLDEBUG, "UserLogHeader::ExtractEvent(): parsed ->" );
@@ -125,24 +142,25 @@ void
 UserLogHeader::sprint_cat( MyString &buf ) const
 {
 	if ( m_valid ) {
-		const char	*id = "";
-		if ( m_id.Length() ) {
-			id = m_id.Value();
-		}
 		buf.sprintf_cat( "id=%s"
 						 " seq=%d"
 						 " ctime=%lu"
 						 " size="FILESIZE_T_FORMAT
 						 " num=%"PRIi64
 						 " file_offset="FILESIZE_T_FORMAT
-						 " event_offset=%" PRIi64,
-						 id,
+						 " event_offset=%"PRIi64
+						 " max_rotation=%d"
+						 " creator_name=\"%s\"",
+						 m_id.Value(),
 						 m_sequence,
 						 (unsigned long) m_ctime,
 						 m_size,
 						 m_num_events,
 						 m_file_offset,
-						 m_event_offset );
+						 m_event_offset,
+						 m_max_rotation,
+						 m_creator_name.Value()
+						 );
 	}
 	else {
 		buf += "invalid";
@@ -237,21 +255,26 @@ bool
 WriteUserLogHeader::GenerateEvent( GenericEvent &event )
 {
 	snprintf( event.info, sizeof(event.info),
-			  "Global JobLog: "
-			  "ctime=%d "
-			  "id=%s "
-			  "sequence=%d "
-			  "size="FILESIZE_T_FORMAT" "
-			  "events=%"PRId64" "
-			  "offset="FILESIZE_T_FORMAT" "
-			  "event_off=%"PRId64" ",
+			  "Global JobLog:"
+			  " ctime=%d"
+			  " id=%s"
+			  " sequence=%d"
+			  " size="FILESIZE_T_FORMAT""
+			  " events=%"PRId64""
+			  " offset="FILESIZE_T_FORMAT""
+			  " event_off=%"PRId64""
+			  " max_rotation=%d"
+			  " creator_name=\"%s\"",
 			  (int) getCtime(),
 			  getId().Value(),
 			  getSequence(),
 			  getSize(),
 			  getNumEvents(),
 			  getFileOffset(),
-			  getEventOffset() );
+			  getEventOffset(),
+			  getMaxRotation(),
+			  getCreatorName().Value()
+			  );
 	::dprintf( D_FULLDEBUG, "Generated log header: '%s'\n", event.info );
 	int		len = strlen( event.info );
 	while( len < 256 ) {

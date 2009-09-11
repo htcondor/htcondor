@@ -6875,7 +6875,7 @@ log_submit()
 			// we don't know the gjid here, so pass in NULL as the last 
 			// parameter - epaulson 2/09/2007
 			if ( ! usr_log.initialize(owner, ntdomain, simple_name,
-						0, 0, 0, NULL) ) {
+									  0, 0, 0, NULL) ) {
 				fprintf(stderr, "\nERROR: Failed to log submit event.\n");
 			} else {
 				// Output the information

@@ -309,6 +309,8 @@ WriteUserLog::Reset( void )
 	m_use_xml = XML_USERLOG_DEFAULT;
 	m_gjid = NULL;
 
+	m_creator_name = NULL;
+
 	m_global_disable = false;
 	m_global_use_xml = false;
 	m_global_count_events = false;
@@ -383,6 +385,7 @@ WriteUserLog::FreeGlobalResources( void )
 		delete m_rotation_lock;
 		m_rotation_lock = NULL;
 	}
+
 }
 
 void
@@ -409,6 +412,23 @@ WriteUserLog::FreeLocalResources( void )
 	if (m_lock) {
 		delete m_lock;
 		m_lock = NULL;
+	}
+
+	if (m_creator_name) {
+		free( m_creator_name );
+		m_creator_name = NULL;
+	}
+}
+
+void
+WriteUserLog::setCreatorName( const char *name )
+{
+	if ( name ) {
+		if ( m_creator_name ) {
+			free( const_cast<char*>(m_creator_name) );
+			m_creator_name = NULL;
+		}
+		m_creator_name = strdup( name );
 	}
 }
 
@@ -542,6 +562,12 @@ WriteUserLog::openGlobalLog( bool reopen, const UserLogHeader &header )
 
 		writer.addEventOffset( writer.getNumEvents() );
 		writer.setNumEvents( 0 );
+
+		writer.setMaxRotation( m_global_max_rotations );
+
+		if ( m_creator_name ) {
+			writer.setCreatorName( m_creator_name );
+		}
 
 		ret_val = writer.Write( *this );
 
@@ -756,6 +782,10 @@ WriteUserLog::checkGlobalLogRotation( void )
 				 m_global_path, errno, strerror(errno) );
 	}
 	WriteUserLogHeader	header_writer( header_reader );
+	header_writer.setMaxRotation( m_global_max_rotations );
+	if ( m_creator_name ) {
+		header_writer.setCreatorName( m_creator_name );
+	}
 
 	MyString	s;
 	s.sprintf( "checkGlobalLogRotation(): %s", m_global_path );

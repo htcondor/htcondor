@@ -337,7 +337,7 @@ class Scheduler : public Service
 	bool			availableTransferd( int cluster, int proc, 
 						TransferDaemon *&td_ref ); 
 	bool			startTransferd( int cluster, int proc ); 
-	UserLog*		InitializeUserLog( PROC_ID job_id );
+	WriteUserLog*	InitializeUserLog( PROC_ID job_id );
 	bool			WriteAbortToUserLog( PROC_ID job_id );
 	bool			WriteHoldToUserLog( PROC_ID job_id );
 	bool			WriteReleaseToUserLog( PROC_ID job_id );

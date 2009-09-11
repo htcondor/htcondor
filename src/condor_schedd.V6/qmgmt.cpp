@@ -2401,7 +2401,8 @@ CloseConnection()
 		bool write_submit_events = false;
 			// keep usr_log in outer scope so we don't open/close the 
 			// event log over and over.
-		UserLog usr_log;	
+		WriteUserLog usr_log;
+		usr_log.setCreatorName( Name );
 
 		char *eventlog = param("EVENT_LOG");
 		if ( eventlog ) {

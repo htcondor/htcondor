@@ -2657,12 +2657,12 @@ jobIsFinishedDone( int cluster, int proc, void*, int )
 }
 
 
-// Initialize a UserLog object for a given job and return a pointer to
-// the UserLog object created.  This object can then be used to write
+// Initialize a WriteUserLog object for a given job and return a pointer to
+// the WriteUserLog object created.  This object can then be used to write
 // events and must be deleted when you're done.  This returns NULL if
-// the user didn't want a UserLog, so you must check for NULL before
+// the user didn't want a WriteUserLog, so you must check for NULL before
 // using the pointer you get back.
-UserLog*
+WriteUserLog*
 Scheduler::InitializeUserLog( PROC_ID job_id ) 
 {
 	MyString logfilename;
@@ -2688,7 +2688,7 @@ Scheduler::InitializeUserLog( PROC_ID job_id )
 			 "Writing record to user logfile=%s owner=%s\n",
 			 logfilename.Value(), owner.Value() );
 
-	UserLog* ULog=new UserLog();
+	WriteUserLog* ULog=new WriteUserLog();
 	if (0 <= GetAttributeBool(job_id.cluster, job_id.proc,
 							  ATTR_ULOG_USE_XML, &use_xml)
 		&& 1 == use_xml) {
@@ -2696,6 +2696,7 @@ Scheduler::InitializeUserLog( PROC_ID job_id )
 	} else {
 		ULog->setUseXML(false);
 	}
+	ULog->setCreatorName( Name );
 	if (ULog->initialize(owner.Value(), domain.Value(), logfilename.Value(), job_id.cluster, job_id.proc, 0, gjid.Value())) {
 		return ULog;
 	} else {
@@ -2710,7 +2711,7 @@ Scheduler::InitializeUserLog( PROC_ID job_id )
 bool
 Scheduler::WriteAbortToUserLog( PROC_ID job_id )
 {
-	UserLog* ULog = this->InitializeUserLog( job_id );
+	WriteUserLog* ULog = this->InitializeUserLog( job_id );
 	if( ! ULog ) {
 			// User didn't want log
 		return true;
@@ -2743,7 +2744,7 @@ Scheduler::WriteAbortToUserLog( PROC_ID job_id )
 bool
 Scheduler::WriteHoldToUserLog( PROC_ID job_id )
 {
-	UserLog* ULog = this->InitializeUserLog( job_id );
+	WriteUserLog* ULog = this->InitializeUserLog( job_id );
 	if( ! ULog ) {
 			// User didn't want log
 		return true;
@@ -2793,7 +2794,7 @@ Scheduler::WriteHoldToUserLog( PROC_ID job_id )
 bool
 Scheduler::WriteReleaseToUserLog( PROC_ID job_id )
 {
-	UserLog* ULog = this->InitializeUserLog( job_id );
+	WriteUserLog* ULog = this->InitializeUserLog( job_id );
 	if( ! ULog ) {
 			// User didn't want log
 		return true;
@@ -2826,7 +2827,7 @@ Scheduler::WriteReleaseToUserLog( PROC_ID job_id )
 bool
 Scheduler::WriteExecuteToUserLog( PROC_ID job_id, const char* sinful )
 {
-	UserLog* ULog = this->InitializeUserLog( job_id );
+	WriteUserLog* ULog = this->InitializeUserLog( job_id );
 	if( ! ULog ) {
 			// User didn't want log
 		return true;
@@ -2857,7 +2858,7 @@ Scheduler::WriteExecuteToUserLog( PROC_ID job_id, const char* sinful )
 bool
 Scheduler::WriteEvictToUserLog( PROC_ID job_id, bool checkpointed ) 
 {
-	UserLog* ULog = this->InitializeUserLog( job_id );
+	WriteUserLog* ULog = this->InitializeUserLog( job_id );
 	if( ! ULog ) {
 			// User didn't want log
 		return true;
@@ -2880,7 +2881,7 @@ Scheduler::WriteEvictToUserLog( PROC_ID job_id, bool checkpointed )
 bool
 Scheduler::WriteTerminateToUserLog( PROC_ID job_id, int status ) 
 {
-	UserLog* ULog = this->InitializeUserLog( job_id );
+	WriteUserLog* ULog = this->InitializeUserLog( job_id );
 	if( ! ULog ) {
 			// User didn't want log
 		return true;
@@ -2923,7 +2924,7 @@ Scheduler::WriteTerminateToUserLog( PROC_ID job_id, int status )
 bool
 Scheduler::WriteRequeueToUserLog( PROC_ID job_id, int status, const char * reason ) 
 {
-	UserLog* ULog = this->InitializeUserLog( job_id );
+	WriteUserLog* ULog = this->InitializeUserLog( job_id );
 	if( ! ULog ) {
 			// User didn't want log
 		return true;
@@ -5826,7 +5827,7 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 		startd_principal = NULL;
 	}
 
-	UserLog* ULog = this->InitializeUserLog( *job );
+	WriteUserLog* ULog = this->InitializeUserLog( *job );
 	if ( ULog ) {
 		JobDisconnectedEvent event;
 		const char* txt = "Local schedd and job shadow died, "
