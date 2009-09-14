@@ -77,13 +77,11 @@ deactivate_claim(Stream *stream, Resource *rip, bool graceful)
 {
 	int rval;
 	bool claim_is_closing = rip->curClaimIsClosing();
-	if(graceful) {
-		rval = rip->deactivate_claim();
-	}
-	else {
-		rval = rip->deactivate_claim_forcibly();
-	}
 
+		// send response to shadow before killing starter to avoid a
+		// 3-way deadlock (under windows) where startd blocks trying to
+		// authenticate DC_RAISESIGNAL to starter while starter is
+		// blocking trying to send update to shadow.
 	stream->encode();
 
 	ClassAd response_ad;
@@ -93,15 +91,23 @@ deactivate_claim(Stream *stream, Resource *rip, bool graceful)
 			// Prior to 7.0.5, no response ClassAd was expected.
 			// Anyway, failure to send it is not (currently) critical
 			// in any way.
+
+		claim_is_closing = false;
+	}
+
+	if(graceful) {
+		rval = rip->deactivate_claim();
 	}
 	else {
-		if( claim_is_closing && rip->r_cur ) {
-				// We told the submit-side this claim is closing, so there is
-				// no need to exchange RELEASE_CLAIM messages.  Behave as
-				// though the schedd has already sent us RELEASE_CLAIM.
-			rip->r_cur->scheddClosedClaim();
-			rip->release_claim();
-		}
+		rval = rip->deactivate_claim_forcibly();
+	}
+
+	if( claim_is_closing && rip->r_cur ) {
+			// We told the submit-side this claim is closing, so there is
+			// no need to exchange RELEASE_CLAIM messages.  Behave as
+			// though the schedd has already sent us RELEASE_CLAIM.
+		rip->r_cur->scheddClosedClaim();
+		rip->release_claim();
 	}
 
 	return rval;
