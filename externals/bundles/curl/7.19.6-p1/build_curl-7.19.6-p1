@@ -2,10 +2,11 @@
 
 . $EXTERNALS_CONFIG
 
-cd $PACKAGE_NAME
+cd $PACKAGE_SRC_NAME
 
-# Solaris curl external needs -ldl on the command line for ssl linking
-if [ `uname` = "SunOS" ] ; then
+# On Solaris and some linuxes, we need -ldl on the command line for ssl
+# linking. Hpux breaks if you try to include it.
+if [ `uname` != "HP-UX" ] ; then
     LIBS=-ldl ./configure --prefix=$PACKAGE_INSTALL_DIR --disable-shared --with-ssl=$EXTERNALS_INSTALL_DIR/$EXT_OPENSSL_VERSION --with-zlib=$EXTERNALS_INSTALL_DIR/$EXT_ZLIB_DIR --disable-ipv6
 else
     ./configure --prefix=$PACKAGE_INSTALL_DIR --disable-shared --with-ssl=$EXTERNALS_INSTALL_DIR/$EXT_OPENSSL_VERSION --with-zlib=$EXTERNALS_INSTALL_DIR/$EXT_ZLIB_DIR --disable-ipv6

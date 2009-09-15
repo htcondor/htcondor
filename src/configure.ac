@@ -2986,7 +2986,7 @@ if test $SSH_TO_JOB != no; then
 fi
 
 # Look for the curl external library, used by the file transfer object
-CHECK_EXTERNAL([curl],[7.19.6],[soft])
+CHECK_EXTERNAL([curl],[7.19.6-p1],[soft])
 
 #Look for hadoop jars, required by HDFS daemon as well by hdfs file plugin
 # Only build hadoop external if hdfs is enabled
