@@ -486,6 +486,14 @@ ext_target(EXT_CURL_VERSION,$(NULL))
 ext_target(EXT_HADOOP_VERSION,$(NULL))
 #endif
 
+#if HAVE_EXT_LIBXML2
+ext_target(EXT_LIBXML2_VERSION,$(NULL))
+#endif
+
+#if HAVE_EXT_LIBVIRT
+ext_target(EXT_LIBVIRT_VERSION,$(EXT_TRIGGER)/$(EXT_LIBXML2_VERSION))
+#endif
+
 #if HAVE_EXT_DRMAA
 ext_target(EXT_DRMAA_VERSION,$(NULL))
 #endif

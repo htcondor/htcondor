@@ -33,6 +33,8 @@
 #include "condor_vm_universe_types.h"
 #include "my_popen.h"
 #include <string>
+#include <libvirt/libvirt.h>
+#include <libvirt/virterror.h>
 
 #define XEN_CONFIG_FILE_NAME "xen_vm.config"
 #define XEN_CKPT_TIMESTAMP_FILE_SUFFIX ".timestamp"
@@ -142,25 +144,21 @@ VirshType::Start()
 			// Keep going..
 		}
 	}
+	vmprintf(D_FULLDEBUG, "Trying XML: %s\n", m_xml.Value());
+	virDomainPtr vm = virDomainCreateXML(m_libvirt_connection, m_xml.Value(), 0);
 
-	StringList cmd_out;
+	if(vm == NULL)
+	  {
+	    // Error in creating the vm; let's find out what the error
+	    // was
+	    virErrorPtr err = virConnGetLastError(m_libvirt_connection);
+	    vmprintf(D_ALWAYS, "Failed to create libvirt domain: %s\n", err->message);
+	    //virFreeError(err);
+	    return false;
+	  }
 
-	ArgList systemcmd;
-	systemcmd.AppendArg(m_scriptname);
-	systemcmd.AppendArg("start");
-	systemcmd.AppendArg(m_configfile);
 
-	int result = systemCommand(systemcmd, true, &cmd_out);
-	char * flarg = cmd_out.print_to_delimed_string("/");
-	vmprintf(D_FULLDEBUG, "%s\n", flarg);
-	free(flarg);
-	if( result != 0 ) {
-		// Read error output
-		char *temp = cmd_out.print_to_delimed_string("/");
-		m_result_msg = temp;
-		free( temp );
-		return false;
-	}
+	virDomainFree(vm);
 
 	setVMStatus(VM_RUNNING);
 	m_start_time.getTime();
@@ -223,12 +221,15 @@ VirshType::Shutdown()
 	ResumeFromSoftSuspend();
 
 	if( getVMStatus() == VM_RUNNING ) {
-		ArgList systemcmd;
-		systemcmd.AppendArg(m_scriptname);
-		systemcmd.AppendArg("stop");
-		systemcmd.AppendArg(m_configfile);
-
-		int result = systemCommand(systemcmd, true);
+                virDomainPtr dom = virDomainLookupByName(m_libvirt_connection, m_vm_name.Value());
+		if(dom == NULL)
+		  {
+		    virErrorPtr err = virConnGetLastError(m_libvirt_connection);
+		    vmprintf(D_ALWAYS, "Error finding domain %s: %s\n", m_vm_name.Value(), err->message);
+		    return false;
+		  }
+		int result = virDomainShutdown(dom);
+		virDomainFree(dom);
 		if( result != 0 ) {
 			// system error happens
 			// killing VM by force
@@ -318,14 +319,13 @@ bool VirshType::CreateVirshConfigFile(const char* filename)
   if(tmp != NULL) 
     {
       MyString errormsg;
-      args.AppendArgsV1RawOrV2Quoted(tmp, &errormsg);
+      args.AppendArgsV1RawOrV2Quoted(tmp,&errormsg);
       free(tmp);
     }
   StringList input_strings, output_strings, error_strings;
   MyString classad_string;
   m_classAd.sPrint(classad_string);
   input_strings.append(classad_string.Value());
-
   int ret = systemCommand(args, true, &output_strings, &input_strings, &error_strings, false);
   error_strings.rewind();
   if(ret != 0)
@@ -345,13 +345,10 @@ bool VirshType::CreateVirshConfigFile(const char* filename)
     {
       vmprintf(D_ALWAYS, "Helper stderr output: %s\n", tmp);
     }
-  output_strings.rewind();
-  FILE * xml_file = fopen(filename, "w");
   while((tmp = output_strings.next()) != NULL)
     {
-      fprintf(xml_file, "%s\n", tmp);
+      m_xml += tmp;
     }
-  fclose(xml_file);
   return true;
 }
 
@@ -365,12 +362,23 @@ VirshType::ResumeFromSoftSuspend(void)
 	}
 
 	if( m_is_soft_suspended ) {
-		ArgList systemcmd;
-		systemcmd.AppendArg(m_scriptname);
-		systemcmd.AppendArg("unpause");
-		systemcmd.AppendArg(m_configfile);
+		// ArgList systemcmd;
+// 		systemcmd.AppendArg(m_scriptname);
+// 		systemcmd.AppendArg("unpause");
+// 		systemcmd.AppendArg(m_configfile);
 
-		int result = systemCommand(systemcmd, true);
+// 		int result = systemCommand(systemcmd, true);
+
+		virDomainPtr dom = virDomainLookupByName(m_libvirt_connection, m_vm_name.Value());
+		if(dom == NULL)
+		  {
+		    virErrorPtr err = virConnGetLastError(m_libvirt_connection);
+		    vmprintf(D_ALWAYS, "Error finding domain %s: %s\n", m_vm_name.Value(), err->message);
+		    return false;
+		  }
+	
+		int result = virDomainResume(dom);
+		virDomainFree(dom);
 		if( result != 0 ) {
 			// unpause failed.
 			vmprintf(D_ALWAYS, "Unpausing VM failed in "
@@ -402,12 +410,23 @@ VirshType::SoftSuspend()
 		return false;
 	}
 
-	ArgList systemcmd;
-	systemcmd.AppendArg(m_scriptname);
-	systemcmd.AppendArg("pause");
-	systemcmd.AppendArg(m_configfile);
+// 	ArgList systemcmd;
+// 	systemcmd.AppendArg(m_scriptname);
+// 	systemcmd.AppendArg("pause");
+// 	systemcmd.AppendArg(m_configfile);
 
-	int result = systemCommand(systemcmd, true);
+// 	int result = systemCommand(systemcmd, true);
+
+	virDomainPtr dom = virDomainLookupByName(m_libvirt_connection, m_vm_name.Value());
+	if(dom == NULL)
+	  {
+	    virErrorPtr err = virConnGetLastError(m_libvirt_connection);
+	    vmprintf(D_ALWAYS, "Error finding domain %s: %s\n", m_vm_name.Value(), err->message);
+	    return false;
+	  }
+	
+	int result = virDomainSuspend(dom);
+	virDomainFree(dom);
 	if( result == 0 ) {
 		// pause succeeds.
 		m_is_soft_suspended = true;
@@ -454,20 +473,31 @@ VirshType::Suspend()
 	makeNameofSuspendfile(tmpfilename);
 	unlink(tmpfilename.Value());
 
-	StringList cmd_out;
+// 	StringList cmd_out;
 
-	ArgList systemcmd;
-	systemcmd.AppendArg(m_scriptname);
-	systemcmd.AppendArg("suspend");
-	systemcmd.AppendArg(m_configfile);
-	systemcmd.AppendArg(tmpfilename);
+// 	ArgList systemcmd;
+// 	systemcmd.AppendArg(m_scriptname);
+// 	systemcmd.AppendArg("suspend");
+// 	systemcmd.AppendArg(m_configfile);
+// 	systemcmd.AppendArg(tmpfilename);
 
-	int result = systemCommand(systemcmd, true, &cmd_out);
+// 	int result = systemCommand(systemcmd, true, &cmd_out);
+
+	virDomainPtr dom = virDomainLookupByName(m_libvirt_connection, m_vm_name.Value());
+	if(dom == NULL)
+	  {
+	    virErrorPtr err = virConnGetLastError(m_libvirt_connection);
+	    vmprintf(D_ALWAYS, "Error finding domain %s: %s\n", m_vm_name.Value(), err->message);
+	    return false;
+	  }
+	
+	int result = virDomainSave(dom, tmpfilename.Value());
+	virDomainFree(dom);
 	if( result != 0 ) {
 		// Read error output
-		char *temp = cmd_out.print_to_delimed_string("/");
-		m_result_msg = temp;
-		free( temp );
+// 		char *temp = cmd_out.print_to_delimed_string("/");
+// 		m_result_msg = temp;
+// 		free( temp );
 		unlink(tmpfilename.Value());
 		return false;
 	}
@@ -512,19 +542,22 @@ VirshType::Resume()
 		return false;
 	}
 
-	StringList cmd_out;
+// 	StringList cmd_out;
 
-	ArgList systemcmd;
-	systemcmd.AppendArg(m_scriptname);
-	systemcmd.AppendArg("resume");
-	systemcmd.AppendArg(m_suspendfile);
+// 	ArgList systemcmd;
+// 	systemcmd.AppendArg(m_scriptname);
+// 	systemcmd.AppendArg("resume");
+// 	systemcmd.AppendArg(m_suspendfile);
 
-	int result = systemCommand(systemcmd, true, &cmd_out);
+// 	int result = systemCommand(systemcmd, true, &cmd_out);
+
+	int result = virDomainRestore(m_libvirt_connection, m_suspendfile.Value());
+
 	if( result != 0 ) {
 		// Read error output
-		char *temp = cmd_out.print_to_delimed_string("/");
-		m_result_msg = temp;
-		free( temp );
+// 		char *temp = cmd_out.print_to_delimed_string("/");
+// 		m_result_msg = temp;
+// 		free( temp );
 		return false;
 	}
 
@@ -542,183 +575,119 @@ VirshType::Status()
 {
 	vmprintf(D_FULLDEBUG, "Inside VirshType::Status\n");
 
-	if( (m_scriptname.Length() == 0) ||
-		(m_configfile.Length() == 0)) {
-		m_result_msg = VMGAHP_ERR_INTERNAL;
-		return false;
-	}
+ 	if( (m_scriptname.Length() == 0) ||
+ 		(m_configfile.Length() == 0)) {
+ 		m_result_msg = VMGAHP_ERR_INTERNAL;
+ 		return false;
+ 	}
 
-	if( m_is_soft_suspended ) {
-		// If a VM is softly suspended,
-		// we cannot get info about the VM by using script
-		m_result_msg = VMGAHP_STATUS_COMMAND_STATUS;
-		m_result_msg += "=";
-		m_result_msg += "SoftSuspended";
-		return true;
-	}
+//      This is no longer needed, because we are not getting the
+//      information from the script.
 
-	// Check the last time when we executed status.
-	// If the time is in 10 seconds before current time, 
-	// We will not execute status again.
-	// Maybe this case may happen when it took long time 
-	// to execute the last status.
-	UtcTime cur_time;
-	long diff_seconds = 0;
+//  	if( m_is_soft_suspended ) {
+//  		// If a VM is softly suspended,
+//  		// we cannot get info about the VM by using script
+//  		m_result_msg = VMGAHP_STATUS_COMMAND_STATUS;
+//  		m_result_msg += "=";
+// 		m_result_msg += "SoftSuspended";
+// 		return true;
+// 	}
 
-	cur_time.getTime();
-	diff_seconds = cur_time.seconds() - m_last_status_time.seconds();
+//      Why was this ever here?  This is also no longer needed; we can
+//      query libvirt for the information as many times as we want,
+//      and it should not take a long time...
 
-	if( (diff_seconds < 10) && !m_last_status_result.IsEmpty() ) {
-		m_result_msg = m_last_status_result;
-		return true;
-	}
+// 	// Check the last time when we executed status.
+// 	// If the time is in 10 seconds before current time, 
+// 	// We will not execute status again.
+// 	// Maybe this case may happen when it took long time 
+// 	// to execute the last status.
+// 	UtcTime cur_time;
+// 	long diff_seconds = 0;
 
-	StringList cmd_out;
+// 	cur_time.getTime();
+// 	diff_seconds = cur_time.seconds() - m_last_status_time.seconds();
 
-	ArgList systemcmd;
-	systemcmd.AppendArg(m_scriptname);
-	if( m_vm_networking ) {
-		systemcmd.AppendArg("getvminfo");
-	}else {
-		systemcmd.AppendArg("status");
-	}
-	systemcmd.AppendArg(m_configfile);
+// 	if( (diff_seconds < 10) && !m_last_status_result.IsEmpty() ) {
+// 		m_result_msg = m_last_status_result;
+// 		return true;
+// 	}
 
-	int result = systemCommand(systemcmd, true, &cmd_out);
-	if( result != 0 ) {
-		// Read error output
-		// TODO Should we grab more than just the first line?
-		char *temp = cmd_out.print_to_delimed_string("/");
-		m_result_msg = temp;
-		free( temp );
-		return false;
-	}
+ 	m_result_msg = "";
 
-	// Got result
-	cmd_out.rewind();
+ 	if( m_vm_networking ) {
+ 		if( m_vm_mac.IsEmpty() == false ) {
+ 			if( m_result_msg.IsEmpty() == false ) {
+ 				m_result_msg += " ";
+ 			}
+ 			m_result_msg += VMGAHP_STATUS_COMMAND_MAC;
+ 			m_result_msg += "=";
+ 			m_result_msg += m_vm_mac;
+ 		}
 
-	const char *next_line;
-	MyString one_line;
-	MyString name;
-	MyString value;
+ 		if( m_vm_ip.IsEmpty() == false ) {
+ 			if( m_result_msg.IsEmpty() == false ) {
+ 				m_result_msg += " ";
+ 			}
+ 			m_result_msg += VMGAHP_STATUS_COMMAND_IP;
+ 			m_result_msg += "=";
+ 			m_result_msg += m_vm_ip;
+ 		}
+ 	}
 
-	MyString vm_status;
-	float cputime = 0;
+ 	if( m_result_msg.IsEmpty() == false ) {
+ 		m_result_msg += " ";
+ 	}
 
-	while( (next_line = cmd_out.next()) != NULL ) {
-		one_line = next_line;
-		one_line.trim();
+ 	m_result_msg += VMGAHP_STATUS_COMMAND_STATUS;
+ 	m_result_msg += "=";
 
-		if( one_line.Length() == 0 ) {
-			continue;
-		}
-
-		if( one_line[0] == '#' ) {
-			/* Skip over comments */
-			continue;
-		}
-
-		parse_param_string(one_line.Value(), name, value, true);
-		if( !name.Length() || !value.Length() ) {
-			continue;
-		}
-
-		if( !strcasecmp(name.Value(), VMGAHP_STATUS_COMMAND_STATUS) ) {
-			vm_status = value;
-			continue;
-		}
-		if( !strcasecmp(name.Value(), VMGAHP_STATUS_COMMAND_CPUTIME) ) {
-			cputime = (float)strtod(value.Value(), (char **)NULL);
-			if( cputime <= 0 ) {
-				cputime = 0;
-			}
-			continue;
-		}
-		if( m_vm_networking ) {
-			if( !strcasecmp(name.Value(), VMGAHP_STATUS_COMMAND_MAC) ) {
-				m_vm_mac = value;
-				continue;
-			}
-			if( !strcasecmp(name.Value(), VMGAHP_STATUS_COMMAND_IP) ) {
-				m_vm_ip = value;
-				continue;
-			}
-		}
-	}
-
-	if( !vm_status.Length() ) {
-		m_result_msg = VMGAHP_ERR_INTERNAL;
-		return false;
-	}
-
-	m_result_msg = "";
-
-	if( m_vm_networking ) {
-		if( m_vm_mac.IsEmpty() == false ) {
-			if( m_result_msg.IsEmpty() == false ) {
-				m_result_msg += " ";
-			}
-			m_result_msg += VMGAHP_STATUS_COMMAND_MAC;
-			m_result_msg += "=";
-			m_result_msg += m_vm_mac;
-		}
-
-		if( m_vm_ip.IsEmpty() == false ) {
-			if( m_result_msg.IsEmpty() == false ) {
-				m_result_msg += " ";
-			}
-			m_result_msg += VMGAHP_STATUS_COMMAND_IP;
-			m_result_msg += "=";
-			m_result_msg += m_vm_ip;
-		}
-	}
-
-	if( m_result_msg.IsEmpty() == false ) {
-		m_result_msg += " ";
-	}
-
-	m_result_msg += VMGAHP_STATUS_COMMAND_STATUS;
-	m_result_msg += "=";
-
-	if( strcasecmp(vm_status.Value(), "Running") == 0 ) {
-		// VM is still running
-		setVMStatus(VM_RUNNING);
-		m_result_msg += "Running";
-
-		if( cputime > 0 ) {
-			// Update vm running time	
-			m_cpu_time = cputime;
-
-			m_result_msg += " ";
-			m_result_msg += VMGAHP_STATUS_COMMAND_CPUTIME;
-			m_result_msg += "=";
-			m_result_msg += (double)(m_cpu_time + m_cputime_before_suspend);
-		}
-		return true;
-	} else if( strcasecmp(vm_status.Value(), "Stopped") == 0 ) {
-		// VM is stopped
-		if( getVMStatus() == VM_SUSPENDED ) {
-			if( m_suspendfile.IsEmpty() == false) {
-				m_result_msg += "Suspended";
-				return true;
-			}
-		}
-
-		if( getVMStatus() == VM_RUNNING ) {
-			m_self_shutdown = true;
-		}
-
-		m_result_msg += "Stopped";
-		if( getVMStatus() != VM_STOPPED ) {
-			setVMStatus(VM_STOPPED);
-			m_stop_time.getTime();
-		}
-		return true;
-	}else {
-		// Woops, something is wrong
-		m_result_msg = VMGAHP_ERR_INTERNAL;
-		return false;
-	}
+	virDomainPtr dom = virDomainLookupByName(m_libvirt_connection, m_vm_name.Value());
+	if(dom == NULL)
+	  {
+	    virErrorPtr err = virConnGetLastError(m_libvirt_connection);
+	    vmprintf(D_ALWAYS, "Error finding domain %s: %s\n", m_vm_name.Value(), err->message);
+	    return false;
+	  }
+	virDomainInfo _info;
+	virDomainInfoPtr info = &_info;
+	if(virDomainGetInfo(dom, info) < 0)
+	  {
+	    virErrorPtr err = virConnGetLastError(m_libvirt_connection);
+	    vmprintf(D_ALWAYS, "Error finding domain %s: %s\n", m_vm_name.Value(), err->message);
+	    return false;
+	  }
+	if(info->state == VIR_DOMAIN_RUNNING)
+	  {
+	    setVMStatus(VM_RUNNING);
+	    // libvirt reports cputime in nanoseconds
+	    m_cpu_time = info->cpuTime / 1000000000.0;
+	    m_result_msg += "Running";
+	    virDomainFree(dom);
+	    return true;
+	  }
+	else if(info->state == VIR_DOMAIN_PAUSED)
+	  {
+	    m_result_msg += "Suspended";
+	    virDomainFree(dom);
+	    return true;
+	  }
+	else 
+	  {
+	    if(getVMStatus() == VM_RUNNING)
+	      {
+		m_self_shutdown = true;
+	      }
+	    if(getVMStatus() != VM_STOPPED)
+	      {
+		setVMStatus(VM_STOPPED);
+		m_stop_time.getTime();
+	      }
+	    m_result_msg += "Stopped";
+	    virDomainFree(dom);
+	    return true;
+	  }
+	virDomainFree(dom);
 	return false;
 }
 
@@ -742,66 +711,32 @@ bool KVMType::CreateVirshConfigFile(const char * filename)
   char* config_value = NULL;
   MyString bridge_script;  
   if(!filename) return false;
-
-  FILE * fp = safe_fopen_wrapper(filename, "w");
-  if(fp == NULL)
-    {
-      vmprintf(D_ALWAYS, "failed to safe_fopen_wrapper vm config file "
-	       "in write mode: safe_fopen_wrapper(%s) returns %s\n", 
-	       filename, strerror(errno));
-      return false;
-    }
-
-  if(fprintf(fp, "<domain type='kvm'>") < 0) 
-    {
-      virshIOError(filename, fp);
-      return false;
-    }
-  if(fprintf(fp, "<name>%s</name>", m_vm_name.Value()) < 0)
-    {
-      virshIOError(filename, fp);
-      return false;
-    }
-  if(fprintf(fp, "<memory>%d</memory>", m_vm_mem * 1024) < 0)
-    {
-      virshIOError(filename, fp);
-      return false;
-    }
-  if(fprintf(fp, "<vcpu>%d</vcpu>", m_vcpus) < 0)
-    {
-      virshIOError(filename, fp);
-      return false;
-    }
-  if(fprintf(fp, "<os><type>hvm</type></os>") < 0)
-    {
-      virshIOError(filename, fp);
-      return false;
-    }
-
-  if(fprintf(fp, "<devices>") < 0)
-    {
-      virshIOError(filename, fp);
-      return false;
-    }
+  
+  // The old way of doing things was to write the XML directly to a
+  // file; the new way is to store it in m_xml.
 
 
+  m_xml += "<domain type='kvm'>";
+  m_xml += "<name>";
+  m_xml += m_vm_name;
+  m_xml += "</name>";
+  m_xml += "<memory>";
+  m_xml += m_vm_mem;
+  m_xml += "</memory>";
+  m_xml += "<vcpu>";
+  m_xml += m_vcpus;
+  m_xml += "</vcpu>";
+  m_xml += "<os><type>hvm</type></os>";
+  m_xml += "<devices>";
   if( m_vm_networking ) 
     {
       vmprintf(D_FULLDEBUG, "mac address is %s\n", m_vm_job_mac.Value());
       if( m_vm_networking_type.find("nat") >= 0 ) {
-	if( fprintf(fp, "<interface type='network'>"
-		    "<source network='default'/>"
-		    "</interface>") < 0 ) {
-	  virshIOError(filename, fp);
-	  return false;
-	}
+	m_xml += "<interface type='network'><source network='default'/></interface>";
       }
       else 
 	{
-	  if( fprintf(fp, "<interface type='bridge'><source bridge='virbr0'/>") < 0 ) {
-	    virshIOError(filename, fp);
-	    return false;
-	  }
+	  m_xml += "<interface type='bridge'><source bridge='virbr0'/>";
 	  config_value = param( "XEN_BRIDGE_SCRIPT" );
 	  if( !config_value ) {
 	    vmprintf(D_ALWAYS, "XEN_BRIDGE_SCRIPT is not defined in the "
@@ -814,57 +749,29 @@ bool KVMType::CreateVirshConfigFile(const char * filename)
 	      config_value = NULL;
 	    }
 	  if (!bridge_script.IsEmpty()) {
-	    if( fprintf(fp, "<script path='%s'/>",
-			bridge_script.Value()) < 0 ) {
-	      virshIOError(filename, fp);
-	      return false;
-	    }
+	    m_xml += "<script path='";
+	    m_xml += bridge_script;
+	    m_xml += "'/>";
 	  }
 	  if(!m_vm_job_mac.IsEmpty())
 	    {
-	      if(fprintf(fp, "<mac address=\'%s\'/>", m_vm_job_mac.Value()) < 0) {
-		virshIOError(filename, fp);
-		return false;
-	      }
+	      m_xml += "<mac address='";
+	      m_xml += m_vm_job_mac;
+	      m_xml += "'/>";
 	    }
-	  if( fprintf(fp, "</interface>") < 0 ) {
-	    virshIOError(filename, fp);
-	    return false;
-	  }
+	  m_xml += "</interface>";
 	}
     }
   disk_string = makeVirshDiskString();
-  if(fprintf(fp, "%s", disk_string.Value()) < 0)
-    {
-      virshIOError(filename, fp);
-      return false;
-    }
 
-  if(fprintf(fp, "</devices></domain>") < 0 )
-    {
-      virshIOError(filename, fp);
-      return false;
-    }
-
+  m_xml += disk_string;
+  m_xml += "</devices></domain>";
   
-
-  if (!write_local_settings_from_file(fp, XEN_LOCAL_SETTINGS_PARAM)) {
-    virshIOError(filename, fp);
-    return false;
-  }
-  
-  fclose(fp);
-  fp = NULL;
-  
-  if( m_use_script_to_create_config ) {
-    // We will call the script program 
-    // to create a configuration file for VM
-    
-    if( createConfigUsingScript(filename) == false ) {
-      unlink(filename);
-      return false;
-    }
-  }
+  // This should no longer be necessary
+//   if (!write_local_settings_from_file(fp, XEN_LOCAL_SETTINGS_PARAM)) {
+//     virshIOError(filename, fp);
+//     return false;
+//   }
   
   return true;
 }
@@ -880,17 +787,6 @@ XenType::CreateVirshConfigFile(const char* filename)
 	if( !filename ) {
 		return false;
 	}
-
-	FILE *fp = NULL;
-
-	fp = safe_fopen_wrapper(filename, "w");
-	if( !fp ) {
-		vmprintf(D_ALWAYS, "failed to safe_fopen_wrapper vm config file "
-				"in write mode: safe_fopen_wrapper(%s) returns %s\n", 
-				filename, strerror(errno));
-		return false;
-	}
-
 	config_value = param( "XEN_BRIDGE_SCRIPT" );
 	if( !config_value ) {
 		vmprintf(D_ALWAYS, "XEN_BRIDGE_SCRIPT is not defined in the "
@@ -911,165 +807,87 @@ XenType::CreateVirshConfigFile(const char* filename)
 		config_value = NULL;
 	}
 
-	if( fprintf(fp, "<domain type='xen'>") < 0 ) {
-		goto virshwriteerror;
-	}
-
-	if( fprintf(fp, "<name>%s</name>", m_vm_name.Value()) < 0 ) {
-		goto virshwriteerror;
-	}
-
-	if( fprintf(fp, "<memory>%d</memory>", m_vm_mem * 1024) < 0 ) {
-		goto virshwriteerror;
-	}
-	if( fprintf(fp, "<vcpu>%d</vcpu>", m_vcpus) < 0 ) {
-	  goto virshwriteerror;
-	}
-
-	if( fprintf(fp, "<os>") < 0 ) {
-		goto virshwriteerror;
-	}
-
-	if( fprintf(fp, "<type>linux</type>") < 0 ) {
-		goto virshwriteerror;
-	}
+	m_xml += "<domain type='xen'>";
+	m_xml += "<name>";
+	m_xml += m_vm_name;
+	m_xml += "</name>";
+	m_xml += "<memory>";
+	m_xml += m_vm_mem;
+	m_xml += "</memory>";
+	m_xml += "<vcpu>";
+	m_xml += m_vcpus;
+	m_xml += "</vcpu>";
+	m_xml += "<os><type>linux</type>";
 
 	if( m_xen_kernel_file.IsEmpty() == false ) {
 		MyString tmp_fullname;
-
-		if( fprintf(fp, "<kernel>") < 0 ) {
-			goto virshwriteerror;
-		}
+		m_xml += "<kernel>";
 		if( isTransferedFile(m_xen_kernel_file.Value(), 
 					tmp_fullname) ) {
 			// this file is transferred
 			// we need a full path
 			m_xen_kernel_file = tmp_fullname;
 		}
-		if( fprintf(fp, "%s", m_xen_kernel_file.Value()) < 0 ) {
-			goto virshwriteerror;
-		}
-		if( fprintf(fp, "</kernel>") < 0 ) {
-			goto virshwriteerror;
-		}
 
+		m_xml += m_xen_kernel_file;
+		m_xml += "</kernel>";
 		if( m_xen_initrd_file.IsEmpty() == false ) {
-			if( fprintf(fp, "<initrd>") < 0 ) {
-				goto virshwriteerror;
-			}
+		        m_xml += "<initrd>";
 			if( isTransferedFile(m_xen_initrd_file.Value(), 
 						tmp_fullname) ) {
 				// this file is transferred
 				// we need a full path
 				m_xen_initrd_file = tmp_fullname;
 			}
-			if( fprintf(fp, "%s", m_xen_initrd_file.Value()) < 0 ) {
-				goto virshwriteerror;
-			}
-			if( fprintf(fp, "</initrd>") < 0 ) {
-				goto virshwriteerror;
-			}
+			m_xml += m_xen_initrd_file;
+			m_xml += "</initrd>";
 		}
 		if( m_xen_root.IsEmpty() == false ) {
-			if( fprintf(fp,"<root>%s</root>", m_xen_root.Value()) < 0 ) {
-				goto virshwriteerror;
-			}
+			m_xml += "<root>";
+			m_xml += m_xen_root;
+			m_xml += "</root>";
 		}
 
 		if( m_xen_kernel_params.IsEmpty() == false ) {
-			if( fprintf(fp,"<cmdline>%s</cmdline>", 
-						m_xen_kernel_params.Value()) < 0 ) {
-				goto virshwriteerror;
-			}
+			m_xml += "<cmdline>";
+			m_xml += m_xen_kernel_params;
+			m_xml += "</cmdline>";
 		}
 	}
 
-
-	if( fprintf(fp, "</os>") < 0 ) {
-		goto virshwriteerror;
-	}
-
+	m_xml += "</os>";
 	if( strcasecmp(m_xen_kernel_submit_param.Value(), XEN_KERNEL_INCLUDED) == 0) {
-		if( fprintf(fp, "<bootloader>%s</bootloader>", m_xen_bootloader.Value()) < 0 ) {
-			goto virshwriteerror;
-		}
+		m_xml += "<bootloader>";
+		m_xml += m_xen_bootloader;
+		m_xml += "</bootloader>";
 	}
-
-	if( fprintf(fp, "<devices>") < 0 ) {
-		goto virshwriteerror;
-	}
-
+	m_xml += "<devices>";
 	if( m_vm_networking ) {
 		if( m_vm_networking_type.find("nat") >= 0 ) {
-			if( fprintf(fp, "<interface type='network'>"
-						"<source network='default'/>"
-						"</interface>") < 0 ) {
-				goto virshwriteerror;
-			}
+			m_xml += "<interface type='network'><source network='default'/></interface>";
 		} else {
-			if( fprintf(fp, "<interface type='bridge'>") < 0 ) {
-				goto virshwriteerror;
-			}
+		        m_xml += "<interface type='bridge'>";
 			if (!bridge_script.IsEmpty()) {
-				if( fprintf(fp, "<script path='%s'/>",
-							bridge_script.Value()) < 0 ) {
-					goto virshwriteerror;
-				}
+				m_xml += "<script path='";
+				m_xml += bridge_script;
+				m_xml += "'/>";
 			}
 			vmprintf(D_FULLDEBUG, "mac address is %s", m_vm_job_mac.Value());
 			if(!m_vm_job_mac.IsEmpty())
 			  {
-			    if(fprintf(fp, "<mac address=\'%s\'/>", m_vm_job_mac.Value()) < 0) {
-			      goto virshwriteerror;
-			    }
+			    m_xml += "<mac address='";
+			    m_xml += m_vm_job_mac;
+			    m_xml += "'/>";
 			  }
-			if( fprintf(fp, "</interface>") < 0 ) {
-				goto virshwriteerror;
-			}
+			m_xml += "</interface>";
 		}
 	}
 
 	// Create disk parameter in Virsh config file
 	disk_string = makeVirshDiskString();
-	if( fprintf(fp,"%s", disk_string.Value()) < 0 ) {
-		goto virshwriteerror;
-	}
-
-	if( fprintf(fp, "</devices>") < 0 ) {
-		goto virshwriteerror;
-	}
-
-	if( fprintf(fp, "</domain>") < 0 ) {
-		goto virshwriteerror;
-	}
-
-	if (!write_local_settings_from_file(fp, XEN_LOCAL_SETTINGS_PARAM)) {
-		goto virshwriteerror;
-	}
-
-	fclose(fp);
-	fp = NULL;
-
-	if( m_use_script_to_create_config ) {
-		// We will call the script program 
-		// to create a configuration file for VM
-		
-		if( createConfigUsingScript(filename) == false ) {
-			unlink(filename);
-			return false;
-		}
-	}
-
+	m_xml += disk_string;
+	m_xml += "</devices></domain>";
 	return true;
-
-virshwriteerror:
-	vmprintf(D_ALWAYS, "failed to fprintf in CreateVirshConfigFile(%s:%s)\n",
-			filename, strerror(errno));
-	if( fp ) {
-		fclose(fp);
-	}
-	unlink(filename);
-	return false;
 }
 
 bool
@@ -1870,7 +1688,18 @@ VirshType::killVM()
 	// If a VM is soft suspended, resume it first.
 	ResumeFromSoftSuspend();
 
-	return killVMFast(m_scriptname.Value(), m_vm_name.Value());
+	//	return killVMFast(m_scriptname.Value(), m_vm_name.Value());
+	virDomainPtr dom = virDomainLookupByName(m_libvirt_connection, m_vm_name.Value());
+	if(dom == NULL)
+	  {
+	    virErrorPtr err = virConnGetLastError(m_libvirt_connection);
+	    vmprintf(D_ALWAYS, "Error finding domain %s: %s\n", m_vm_name.Value(), err->message);
+	    return false;
+	  }
+	
+	bool ret = (virDomainDestroy(dom) == 0);
+	virDomainFree(dom);
+	return ret;
 }
 
 bool
@@ -1882,7 +1711,7 @@ VirshType::killVMFast(const char* script, const char* vmname)
 			!vmname || (vmname[0] == '\0') ) {
 		return false;
 	}
-
+	/*
 	ArgList systemcmd;
 	systemcmd.AppendArg(script);
 	systemcmd.AppendArg("killvm");
@@ -1891,7 +1720,7 @@ VirshType::killVMFast(const char* script, const char* vmname)
 	int result = systemCommand(systemcmd, true);
 	if( result != 0 ) {
 		return false;
-	}
+		}*/
 	return true;
 }
 
@@ -1945,10 +1774,23 @@ VirshType::createISO()
 XenType::XenType(const char * scriptname, const char * workingpath, ClassAd * ad)
   : VirshType(scriptname, workingpath, ad)
 {
+  m_libvirt_connection = virConnectOpen("xen:///");
+  if(m_libvirt_connection == NULL)
+    {
+      vmprintf(D_ALWAYS, "Failed to get libvirt connection.\n");
+      exit(-1);
+    }
 }
 
 KVMType::KVMType(const char * scriptname, const char * workingpath, ClassAd * ad)
   : VirshType(scriptname, workingpath, ad)
 {
+  m_libvirt_connection = virConnectOpen("qemu:///session");
+  if(m_libvirt_connection == NULL)
+    {
+      virErrorPtr err = virGetLastError();
+      vmprintf(D_ALWAYS, "Failed to get libvirt connection: %s\n", err->message);
+      exit(-1);
+    }
 }
 

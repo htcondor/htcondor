@@ -27,6 +27,7 @@
 #include "gahp_common.h"
 #include "vmgahp.h"
 #include "vm_type.h"
+#include <libvirt/libvirt.h>
 
 class XenDisk {
 	public:
@@ -98,6 +99,9 @@ protected:
 	bool m_allow_hw_vt_suspend;
 	bool m_restart_with_ckpt;
 	bool m_has_transferred_disk_file;
+
+	MyString m_xml;
+	virConnectPtr m_libvirt_connection;
 };
 
 class XenType : public VirshType

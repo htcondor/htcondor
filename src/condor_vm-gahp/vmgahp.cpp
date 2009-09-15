@@ -33,7 +33,9 @@
 #include "vmgahp.h"
 #include "vm_type.h"
 #include "vmware_type.h"
-#include "xen_type.h"
+#if defined(LINUX)
+#  include "xen_type.h"
+#endif
 #include "vmgahp_error_codes.h"
 
 #define QUIT_FAST_TIME				30		// 30 seconds
