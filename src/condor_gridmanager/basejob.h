@@ -31,7 +31,7 @@
 
 class BaseResource;
 
-class BaseJob
+class BaseJob : public Service
 {
  public:
 	BaseJob( ClassAd *ad );
