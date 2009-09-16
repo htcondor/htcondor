@@ -1838,12 +1838,12 @@ TESTCLASS(job_dagman_default_log,quick)
 TESTCLASS(job_dagman_default_log,full)
 TESTCLASS(job_dagman_default_log,quicknolink)
 
-# DESC(job_dagman_abnormal_term_recovery_retries,"Test DAGMan in recovery mode on abnormally-terminated node job with retries")
-# RUN(job_dagman_abnormal_term_recovery_retries)
-# TESTCLASS(job_dagman_abnormal_term_recovery_retries,dagman)
-# TESTCLASS(job_dagman_abnormal_term_recovery_retries,quick)
-# TESTCLASS(job_dagman_abnormal_term_recovery_retries,full)
-# TESTCLASS(job_dagman_abnormal_term_recovery_retries,quicknolink)
+DESC(job_dagman_abnormal_term_recovery_retries,"Test DAGMan in recovery mode on abnormally-terminated node job with retries")
+RUN(job_dagman_abnormal_term_recovery_retries)
+TESTCLASS(job_dagman_abnormal_term_recovery_retries,dagman)
+TESTCLASS(job_dagman_abnormal_term_recovery_retries,quick)
+TESTCLASS(job_dagman_abnormal_term_recovery_retries,full)
+TESTCLASS(job_dagman_abnormal_term_recovery_retries,quicknolink)
 
 /* Sample performance tests */
 
