@@ -52,6 +52,11 @@ The details of each version are described below.
 job periodic hold or remove policy to become true, there was a 20-second
 deadlock between the shadow, startd, and starter.
 
+% gittrac #744
+\item Fixed a bug that could cause \Condor{dagman} to abort if it saw
+a combination of a terminated and an aborted event on a node with
+retries.
+
 \end{itemize}
 
 \noindent Known Bugs:
