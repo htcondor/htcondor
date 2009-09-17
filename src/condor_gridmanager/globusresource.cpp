@@ -880,7 +880,8 @@ GlobusResource::ReadMonitorJobStatusFile()
 	GlobusJob *next_job;
 	registeredJobs.Rewind();
 	while ( (next_job = (GlobusJob *)registeredJobs.Next()) != NULL ) {
-		if ( now > next_job->lastRemoteStatusUpdate + limit ) {
+		if ( next_job->jobContact &&
+			 now > next_job->lastRemoteStatusUpdate + limit ) {
 			next_job->SetEvaluateState();
 		}
 	}
