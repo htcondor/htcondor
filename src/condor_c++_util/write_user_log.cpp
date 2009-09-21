@@ -1109,18 +1109,24 @@ WriteUserLog::doWriteEvent( FILE *fp, ULogEvent *event, bool use_xml )
 	bool success = true;
 
 	if( use_xml ) {
-		dprintf( D_ALWAYS, "Asked to write event of number %d.\n",
-				 event->eventNumber);
 
 		eventAd = event->toClassAd();	// must delete eventAd eventually
-		MyString adXML;
 		if (!eventAd) {
+			dprintf( D_ALWAYS,
+					 "Failed to convert event type # %d to classAd.\n",
+					 event->eventNumber);
 			success = false;
 		} else {
+			MyString adXML;
 			ClassAdXMLUnparser xmlunp;
 			xmlunp.SetUseCompactSpacing(false);
 			xmlunp.SetOutputTargetType(false);
 			xmlunp.Unparse(eventAd, adXML);
+			if ( adXML.Length() < 1 ) {
+				dprintf( D_ALWAYS,
+						 "Failed to convert event type # %d to XML.\n",
+						 event->eventNumber);
+			}
 			if (fprintf ( fp, adXML.Value()) < 0) {
 				success = false;
 			} else {

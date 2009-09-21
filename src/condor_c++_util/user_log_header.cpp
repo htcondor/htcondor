@@ -41,6 +41,7 @@ UserLogHeader::UserLogHeader( void )
 	m_file_offset = 0;
 	m_event_offset = 0;
 	m_max_rotation = -1;
+	m_creator_name = "";
 	m_valid = false;
 }
 
@@ -100,7 +101,7 @@ UserLogHeader::ExtractEvent( const ULogEvent *event )
 					" offset="FILESIZE_T_FORMAT""
 					" event_off=%"PRId64""
 					" max_rotation=%d"
-					" creator_name=\"%255[^\"]\"",
+					" creator_name=<%255[^<]>",
 					&ctime,
 					id,
 					&m_sequence,
@@ -150,7 +151,7 @@ UserLogHeader::sprint_cat( MyString &buf ) const
 						 " file_offset="FILESIZE_T_FORMAT
 						 " event_offset=%"PRIi64
 						 " max_rotation=%d"
-						 " creator_name=\"%s\"",
+						 " creator_name=<%s>",
 						 m_id.Value(),
 						 m_sequence,
 						 (unsigned long) m_ctime,
@@ -264,7 +265,7 @@ WriteUserLogHeader::GenerateEvent( GenericEvent &event )
 			  " offset="FILESIZE_T_FORMAT""
 			  " event_off=%"PRId64""
 			  " max_rotation=%d"
-			  " creator_name=\"%s\"",
+			  " creator_name=<%s>",
 			  (int) getCtime(),
 			  getId().Value(),
 			  getSequence(),

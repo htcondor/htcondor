@@ -1105,11 +1105,11 @@ GenericEvent::toClassAd(void)
 {
 	ClassAd* myad = ULogEvent::toClassAd();
 	if( !myad ) return NULL;
-	char buf0[512];
+	char buf0[2048];
 
 	if( info[0] ) {
-		snprintf(buf0, 512, "Info = \"%s\"", info);
-		buf0[511] = 0;
+		snprintf(buf0, sizeof(buf0), "Info = \"%s\"", info);
+		buf0[sizeof(buf0)-1] = 0;
 		if( !myad->Insert(buf0) ) return NULL;
 	}
 
@@ -1123,8 +1123,8 @@ GenericEvent::initFromClassAd(ClassAd* ad)
 
 	if( !ad ) return;
 
-	if( ad->LookupString("Info", info, 128) ) {
-		info[127] = 0;
+	if( ad->LookupString("Info", info, sizeof(info)-1 ) ) {
+		info[ sizeof(info) - 1 ] = '\0';
 	}
 }
 
