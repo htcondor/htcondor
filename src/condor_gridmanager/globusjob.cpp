@@ -947,7 +947,8 @@ int GlobusJob::doEvaluateState()
 	bool reevaluate_state = true;
 	time_t now = time(NULL);
 
-	bool done;
+	bool attr_exists;
+	bool attr_dirty;
 	int rc;
 	int status;
 	int error;
@@ -1318,8 +1319,9 @@ int GlobusJob::doEvaluateState()
 			if ( condorState == REMOVED || condorState == HELD ) {
 				gmState = GM_CANCEL;
 			} else {
-				done = requestScheddUpdate( this );
-				if ( !done ) {
+				jobAd->GetDirtyFlag( ATTR_GRID_JOB_ID, &attr_exists, &attr_dirty );
+				if ( attr_exists && attr_dirty ) {
+					requestScheddUpdate( this, true );
 					break;
 				}
 				gmState = GM_SUBMIT_COMMIT;
@@ -1631,8 +1633,9 @@ int GlobusJob::doEvaluateState()
 
 			JobTerminated();
 			if ( condorState == COMPLETED ) {
-				done = requestScheddUpdate( this );
-				if ( !done ) {
+				jobAd->GetDirtyFlag( ATTR_JOB_STATUS, &attr_exists, &attr_dirty );
+				if ( attr_exists && attr_dirty ) {
+					requestScheddUpdate( this, true );
 					break;
 				}
 			}
@@ -1877,8 +1880,9 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 			} break;
 		case GM_RESTART_SAVE: {
 			// Save the restarted jobmanager's contact string on the schedd.
-			done = requestScheddUpdate( this );
-			if ( !done ) {
+			jobAd->GetDirtyFlag( ATTR_GRID_JOB_ID, &attr_exists, &attr_dirty );
+			if ( attr_exists && attr_dirty ) {
+				requestScheddUpdate( this, true );
 				break;
 			}
 			gmState = GM_RESTART_COMMIT;
@@ -1917,7 +1921,7 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 					jobAd->Assign( ATTR_GLOBUS_STATUS, status );
 					SetRemoteJobStatus( GlobusJobStatusName( status ) );
 					enteredCurrentGlobusState = time(NULL);
-					requestScheddUpdate( this );
+					requestScheddUpdate( this, false );
 				}
 				// Do an active status call after the restart.
 				// This is part of a workaround for Globus bug 3411
@@ -2098,7 +2102,7 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 				myResource->JMComplete( this );
 				jmDown = false;
 				SetRemoteJobId( NULL );
-				requestScheddUpdate( this );
+				requestScheddUpdate( this, false );
 
 				if ( condorState == REMOVED ) {
 					gmState = GM_DELETE;
@@ -2213,8 +2217,9 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 			// through. However, since we registered update events the
 			// first time, requestScheddUpdate won't return done until
 			// they've been committed to the schedd.
-			done = requestScheddUpdate( this );
-			if ( !done ) {
+			jobAd->ResetExpr();
+			if ( jobAd->NextDirtyExpr() ) {
+				requestScheddUpdate( this, true );
 				break;
 			}
 			DeleteOutput();
@@ -2641,7 +2646,7 @@ void GlobusJob::NotifyResourceDown()
 
 	if (!time_of_death) {
 		jobAd->Assign(ATTR_GLOBUS_RESOURCE_UNAVAILABLE_TIME,(int)now);
-		requestScheddUpdate( this );
+		requestScheddUpdate( this, false );
 	}
 }
 
@@ -2661,7 +2666,7 @@ void GlobusJob::NotifyResourceUp()
 	jobAd->LookupInteger( ATTR_GLOBUS_RESOURCE_UNAVAILABLE_TIME, time_of_death );
 	if ( time_of_death ) {
 		jobAd->AssignExpr(ATTR_GLOBUS_RESOURCE_UNAVAILABLE_TIME,"Undefined");
-		requestScheddUpdate( this );
+		requestScheddUpdate( this, false );
 	}
 }
 
@@ -2769,7 +2774,7 @@ void GlobusJob::UpdateGlobusState( int new_state, int new_error_code )
 		globusStateErrorCode = new_error_code;
 		enteredCurrentGlobusState = time(NULL);
 
-		requestScheddUpdate( this );
+		requestScheddUpdate( this, false );
 
 		SetEvaluateState();
 	}
