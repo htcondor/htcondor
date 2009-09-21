@@ -816,36 +816,36 @@ int	DaemonCore::Reset_Reaper(int rid, const char* reap_descrip,
 int	DaemonCore::Register_Timer(unsigned deltawhen, Event event,
 				const char *event_descrip, Service* s)
 {
-	return( t.NewTimer(s, deltawhen, event, event_descrip, 0, -1) );
+	return( t.NewTimer(s, deltawhen, event, event_descrip, 0) );
 }
 
 int	DaemonCore::Register_Timer(unsigned deltawhen, Event event,
 							   Release release, const char *event_descrip, Service* s)
 {
-	return( t.NewTimer(s, deltawhen, event, release, event_descrip, 0, -1) );
+	return( t.NewTimer(s, deltawhen, event, release, event_descrip, 0) );
 }
 
 int	DaemonCore::Register_Timer(unsigned deltawhen, unsigned period,
 				Event event, const char *event_descrip, Service* s)
 {
-	return( t.NewTimer(s, deltawhen, event, event_descrip, period, -1) );
+	return( t.NewTimer(s, deltawhen, event, event_descrip, period) );
 }
 
 int	DaemonCore::Register_Timer(unsigned deltawhen, Eventcpp eventcpp,
 				const char *event_descrip, Service* s)
 {
-	return( t.NewTimer(s, deltawhen, eventcpp, event_descrip, 0, -1) );
+	return( t.NewTimer(s, deltawhen, eventcpp, event_descrip, 0) );
 }
 
 int	DaemonCore::Register_Timer(unsigned deltawhen, unsigned period,
 				Eventcpp event, const char *event_descrip, Service* s )
 {
-	return( t.NewTimer(s, deltawhen, event, event_descrip, period, -1) );
+	return( t.NewTimer(s, deltawhen, event, event_descrip, period) );
 }
 
 int DaemonCore::Register_Timer (const Timeslice &timeslice,Eventcpp event,const char * event_descrip,Service* s)
 {
-	return t.NewTimer(s, timeslice, event, event_descrip, -1 );
+	return t.NewTimer(s, timeslice, event, event_descrip );
 }
 
 int	DaemonCore::Cancel_Timer( int id )

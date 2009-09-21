@@ -62,37 +62,37 @@ TimerManager::~TimerManager()
 }
 
 int TimerManager::NewTimer(Service* s, unsigned deltawhen, Event event, const char* event_descrip,
-						   unsigned period, int id)
+						   unsigned period)
 {
-	return( NewTimer(s,deltawhen,event,(Eventcpp)NULL,(Release)NULL,(Releasecpp)NULL,event_descrip,period,NULL,id) );
+	return( NewTimer(s,deltawhen,event,(Eventcpp)NULL,(Release)NULL,(Releasecpp)NULL,event_descrip,period,NULL,-1) );
 }
 
 int TimerManager::NewTimer(Service* s, unsigned deltawhen, Event event, 
 						   Release release, const char* event_descrip,
-						   unsigned period, int id)
+						   unsigned period)
 {
-	return( NewTimer(s,deltawhen,event,(Eventcpp)NULL,release,(Releasecpp)NULL,event_descrip,period,NULL,id) );
+	return( NewTimer(s,deltawhen,event,(Eventcpp)NULL,release,(Releasecpp)NULL,event_descrip,period,NULL,-1) );
 }
 
 int TimerManager::NewTimer(unsigned deltawhen, Event event, const char* event_descrip,
-						   unsigned period, int id)
+						   unsigned period)
 {
-	return( NewTimer((Service *)NULL,deltawhen,event,(Eventcpp)NULL,(Release)NULL,(Releasecpp)NULL,event_descrip,period,NULL,id) );
+	return( NewTimer((Service *)NULL,deltawhen,event,(Eventcpp)NULL,(Release)NULL,(Releasecpp)NULL,event_descrip,period,NULL,-1) );
 }
 
 int TimerManager::NewTimer(Service* s, unsigned deltawhen, Eventcpp event, const char* event_descrip,
-						   unsigned period, int id)
+						   unsigned period)
 {
 	if ( !s ) {
 		dprintf( D_DAEMONCORE,"DaemonCore NewTimer() called with c++ pointer & NULL Service*\n");
 		return -1;
 	}
-	return( NewTimer(s,deltawhen,(Event)NULL,event,(Release)NULL,(Releasecpp)NULL,event_descrip,period,NULL,id) );
+	return( NewTimer(s,deltawhen,(Event)NULL,event,(Release)NULL,(Releasecpp)NULL,event_descrip,period,NULL,-1) );
 }
 
-int TimerManager::NewTimer (Service* s,const Timeslice &timeslice,Eventcpp event,const char * event_descrip,int id)
+int TimerManager::NewTimer (Service* s,const Timeslice &timeslice,Eventcpp event,const char * event_descrip)
 {
-	return NewTimer(s,0,(Event)NULL,event,(Release)NULL,(Releasecpp)NULL,event_descrip,0,&timeslice,id);
+	return NewTimer(s,0,(Event)NULL,event,(Release)NULL,(Releasecpp)NULL,event_descrip,0,&timeslice,-1);
 }
 
 

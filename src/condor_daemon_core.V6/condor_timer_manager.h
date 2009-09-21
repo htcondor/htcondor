@@ -122,8 +122,7 @@ class TimerManager
                  unsigned     deltawhen,
                  Event        event,
                  const char * event_descrip,
-                 unsigned     period          =  0,
-                 int          id              = -1);
+                 unsigned     period          =  0);
 
     /** Not_Yet_Documented.
         @param deltawhen      Not_Yet_Documented.
@@ -139,8 +138,7 @@ class TimerManager
                  Event        event,
                  Release      release,
                  const char * event_descrip, 
-                 unsigned     period          =  0,
-                 int          id              = -1);
+                 unsigned     period          =  0);
 
 	/** Not_Yet_Documented.
         @param deltawhen      Not_Yet_Documented.
@@ -153,8 +151,7 @@ class TimerManager
     int NewTimer(unsigned     deltawhen,
                  Event        event,
                  const char * event_descrip, 
-                 unsigned     period          =  0,
-                 int          id              = -1);
+                 unsigned     period          =  0);
 
     /** Not_Yet_Documented.
         @param s              Not_Yet_Documented.
@@ -167,8 +164,7 @@ class TimerManager
                   unsigned     deltawhen,
                   Eventcpp     event,
                   const char * event_descrip,
-                  unsigned     period          =  0,
-                  int          id              = -1);
+                  unsigned     period          =  0);
 
     /** Create a timer using a timeslice object to control interval.
         @param s              Service object of which function is a member.
@@ -180,8 +176,7 @@ class TimerManager
     int NewTimer (Service*     s,
                   const Timeslice &timeslice,
                   Eventcpp     event,
-                  const char * event_descrip,
-                  int          id              = -1);
+                  const char * event_descrip);
 
     /** Not_Yet_Documented.
         @param id The ID of the timer
