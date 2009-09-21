@@ -885,7 +885,7 @@ class DaemonCore : public Service
         @param s               Service object of which function is a member.
         @return                Timer id or -1 on error
     */
-    int Register_Timer (Timeslice    timeslice,
+    int Register_Timer (const Timeslice &timeslice,
                         Eventcpp     event,
                         const char * event_descrip,
                         Service*     s);
