@@ -2326,7 +2326,6 @@ AC_CHECK_HEADERS([sys/mount.h],[],[],[
 #endif])
 AC_CHECK_HEADERS([ustat.h])
 AC_CHECK_HEADERS([dlfcn.h])
-AC_CHECK_HEADERS([valgrind.h])
 AC_CHECK_HEADERS([resolv.h],[],[],[
 #include<sys/types.h>
 #include<netinet/in.h>
