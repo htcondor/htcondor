@@ -1441,9 +1441,18 @@ param_without_default( const char *name )
 }
 
 char*
-param(const char* name) {
-	/* XXX this should ultimately go to true so we except */
-	return param_with_default_abort(name, 0);
+param(const char* name) 
+{
+	CondorVersionInfo cvi;
+
+	if (cvi.built_since_version(7,5,0) == true) {
+		/* This uses the new default table for the 7.5 series and beyond. */
+		/* The zero means return NULL on not found instead of EXCEPT */
+		return param_with_default_abort(name, 0);
+	}
+
+	/* This is the original behavior of param, for the 7.4 series. */
+	return param_without_default(name);
 }
 
 char *
@@ -1571,7 +1580,9 @@ param_integer( const char *name, int &value,
 			   ClassAd *me, ClassAd *target,
 			   bool use_param_table )
 {
-	if(use_param_table) {
+	CondorVersionInfo cvi;
+
+	if(use_param_table && cvi.built_since_version(7,5,0)) {
 		int tbl_default_valid;
 		int tbl_default_value = 
 			param_default_integer( name, &tbl_default_valid );
@@ -1721,7 +1732,9 @@ param_double( const char *name, double default_value,
 			  ClassAd *me, ClassAd *target,
 			  bool use_param_table )
 {
-	if(use_param_table) {
+	CondorVersionInfo cvi;
+
+	if(use_param_table && cvi.built_since_version(7,5,0)) {
 		int tbl_default_valid;
 		double tbl_default_value = 
 			param_default_double( name, &tbl_default_valid );
@@ -1815,7 +1828,9 @@ param_boolean( const char *name, bool default_value, bool do_log,
 			   ClassAd *me, ClassAd *target,
 			   bool use_param_table )
 {
-	if(use_param_table) {
+	CondorVersionInfo cvi;
+
+	if(use_param_table && cvi.built_since_version(7,5,0)) {
 		int tbl_default_valid;
 		bool tbl_default_value = 
 			param_default_boolean( name, &tbl_default_valid );
