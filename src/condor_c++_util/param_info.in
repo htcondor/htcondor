@@ -8169,7 +8169,7 @@ id=465
 
 [VALID_SPOOL_FILES]
 aliases=
-default=job_queue.log, job_queue.log.tmp, history, \
+default=job_queue.log, job_queue.log.tmp, history, Accountant.log, Accountantnew.log, local_univ_execute, .quillwritepassword, .pgpass, .schedd_address, .schedd_classad
 version=0.0.0
 range=.*
 state=default
