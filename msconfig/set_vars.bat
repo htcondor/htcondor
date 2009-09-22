@@ -69,7 +69,7 @@ set EXT_POSTGRESQL_VERSION=postgresql-8.0.2
 set EXT_KERBEROS_VERSION=krb5-1.4.3-p0
 set EXT_PCRE_VERSION=pcre-7.6
 set EXT_DRMAA_VERSION=drmaa-1.6
-set EXT_CURL_VERSION=curl-7.19.6
+set EXT_CURL_VERSION=curl-7.19.6-p1
 set EXT_HADOOP_VERSION=hadoop-0.20.0-p2
 
 REM Now tell the build system what externals we need built.

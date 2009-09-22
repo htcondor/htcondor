@@ -133,8 +133,13 @@ sub build_from_source {
 	# untar the package itself
 	# Some externals may not have a tarball named <external>-<verison>.tar.gz
 	# But if they do, we'll untar it for them.
+	my $cmd = "";
 	if ( -r "$bundle_workspace/$package_src_name.tar.gz" ) {
 		$cmd = "gunzip -c $bundle_workspace/$package_src_name.tar.gz | tar xvf -";
+	} elsif ( -r "$bundle_workspace/$package_src_name.tar.bz2" ) {
+		$cmd = "bunzip2 -c $bundle_workspace/$package_src_name.tar.bz2 | tar xvf -";
+	}
+	if ( $cmd ne "" ) {
 		print LOG "** $cmd \n";
 		if( ! open(CMD, "$cmd 2>&1 |") ) { 
 			print LOG "ERROR: unable to untar $bundle_workspace/$package_src_name.bundle/$package_name.tar.gz into $bundle_workspace\n";

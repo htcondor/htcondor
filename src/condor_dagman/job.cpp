@@ -751,6 +751,7 @@ Job::MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
     	logFileStr = MultiLogFiles::loadLogFileNameFromSubFile( _cmdFile,
 					_directory );
 	} else {
+#ifdef HAVE_EXT_CLASSADS
 		StringList logFiles;
 		MyString tmpResult = MultiLogFiles::loadLogFileNamesFromStorkSubFile(
 					_cmdFile, _directory, logFiles );
@@ -769,6 +770,13 @@ Job::MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 			logFiles.rewind();
 			logFileStr = logFiles.next();
 		}
+#else
+			// XXX
+		debug_printf( DEBUG_NORMAL,
+					  "Error: Stork log files not supported. "
+					  "Condor was built without new classad support\n" );
+		return false;
+#endif
 	}
 
 	if ( logFileStr == "" ) {

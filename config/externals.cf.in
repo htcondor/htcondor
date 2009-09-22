@@ -45,6 +45,8 @@ EXT_BLAHP_VERSION = @ext_blahp_version@
 EXT_CURL_VERSION = @ext_curl_version@
 EXT_CREAM_VERSION = @ext_cream_version@
 EXT_HADOOP_VERSION = @ext_hadoop_version@
+EXT_LIBXML2_VERSION = @ext_libxml2_version@
+EXT_LIBVIRT_VERSION = @ext_libvirt_version@
 
 #if HAVE_EXT_LINUXLIBCHEADERS 
 EXT_LINUXLIBCHEADERS_VERSION = @ext_linuxlibcheaders_version@
@@ -177,6 +179,16 @@ CURL_INC = $(CURL_DIR)/include
 
 #if HAVE_EXT_HADOOP
 HADOOP_DIR = $(EXT_INSTALL)/$(EXT_HADOOP_VERSION)
+#endif
+
+#if HAVE_EXT_LIBXML2
+LIBXML2_DIR = $(EXT_INSTALL)/$(EXT_LIBXML2_VERSION)
+#endif
+
+#if HAVE_EXT_LIBVIRT
+LIBVIRT_DIR = $(EXT_INSTALL)/$(EXT_LIBVIRT_VERSION)
+LIBVIRT_LIB = $(LIBVIRT_DIR)/lib
+LIBVIRT_INC = $(LIBVIRT_DIR)/include
 #endif
 
 #else /* if not HAS_EXTERNALS */

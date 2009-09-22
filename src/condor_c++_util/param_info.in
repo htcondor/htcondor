@@ -6052,7 +6052,7 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit,submit
 id=336
 
-[job_lease_duration]
+[JOB_LEASE_DURATION]
 aliases=
 default=ATTR_JOB_LEASE_DURATION
 version=0.0.0
@@ -6196,7 +6196,7 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit,submit
 id=345
 
-[vm_no_output_vm]
+[VM_NO_OUTPUT_VM]
 aliases=
 default=
 version=0.0.0
@@ -6212,7 +6212,7 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit,submit
 id=346
 
-[vm_cdrom_files]
+[VM_CDROM_FILES]
 aliases=
 default=
 version=0.0.0
@@ -6228,7 +6228,7 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit,submit
 id=347
 
-[vm_should_transfer_cdrom_files]
+[VM_SHOULD_TRANSFER_CDROM_FILES]
 aliases=
 default=
 version=0.0.0
@@ -6244,7 +6244,7 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit,submit
 id=348
 
-[xen_transfer_files]
+[XEN_TRANSFER_FILES]
 aliases=
 default=
 version=0.0.0
@@ -6260,7 +6260,7 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit,submit
 id=349
 
-[xen_kernel]
+[XEN_KERNEL]
 aliases=
 default=
 version=0.0.0
@@ -6276,7 +6276,7 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit,submit
 id=350
 
-[xen_initrd]
+[XEN_INITRD]
 aliases=
 default=
 version=0.0.0
@@ -6292,7 +6292,7 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit,submit
 id=351
 
-[xen_root]
+[XEN_ROOT]
 aliases=
 default=
 version=0.0.0
@@ -6308,7 +6308,7 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit,submit
 id=352
 
-[xen_disk]
+[XEN_DISK]
 aliases=
 default=
 version=0.0.0
@@ -6324,7 +6324,7 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit,submit
 id=353
 
-[xen_kernel_params]
+[XEN_KERNEL_PARAMS]
 aliases=
 default=
 version=0.0.0
@@ -6340,7 +6340,7 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit,submit
 id=354
 
-[xen_cdrom_device]
+[XEN_CDROM_DEVICE]
 aliases=
 default=
 version=0.0.0
@@ -6356,7 +6356,7 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit,submit
 id=355
 
-[vmware_should_transfer_files]
+[VMWARE_SHOULD_TRANSFER_FILES]
 aliases=
 default=
 version=0.0.0
@@ -6372,7 +6372,7 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit,submit
 id=356
 
-[vmware_snapshot_disk]
+[VMWARE_SNAPSHOT_DISK]
 aliases=
 default=
 version=0.0.0
@@ -6388,7 +6388,7 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit,submit
 id=357
 
-[vmware_dir]
+[VMWARE_DIR]
 aliases=
 default=
 version=0.0.0
@@ -7143,7 +7143,7 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=c++_util,user_log
 id=401
 
-[reuse_condor_run_account]
+[REUSE_CONDOR_RUN_ACCOUNT]
 aliases=
 default=
 version=0.0.0
@@ -8169,7 +8169,7 @@ id=465
 
 [VALID_SPOOL_FILES]
 aliases=
-default=job_queue.log, job_queue.log.tmp, history, \
+default=job_queue.log, job_queue.log.tmp, history, Accountant.log, Accountantnew.log, local_univ_execute, .quillwritepassword, .pgpass, .schedd_address, .schedd_classad
 version=0.0.0
 range=.*
 state=default
@@ -8711,7 +8711,7 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=schedd,dedicated_scheduler
 id=499
 
-[mpi_master_ip]
+[MPI_MASTER_IP]
 aliases=
 default=
 version=0.0.0
