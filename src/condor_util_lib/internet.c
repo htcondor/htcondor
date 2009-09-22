@@ -202,7 +202,7 @@ sock_to_string(SOCKET sockd)
 
 	addr_len = sizeof(addr);
 
-	if (getsockname(sockd, (struct sockaddr *)&addr, &addr_len) < 0) 
+	if (getsockname(sockd, (struct sockaddr *)&addr, &addr_len) < 0 || addr_len==0) 
 		return mynull;
 
 	return ( sin_to_string( &addr ) );

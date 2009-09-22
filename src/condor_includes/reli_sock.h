@@ -53,6 +53,7 @@ class ReliSock : public Sock {
 public:
 
 	friend class DaemonCore;
+	friend class SharedPortEndpoint;
 
 	/*
 	**	Methods
@@ -78,13 +79,17 @@ public:
 
 	virtual void cancel_reverse_connect();
 
+	virtual int do_shared_port_local_connect( char const *shared_port_id, bool nonblocking );
+
 		/** Connect this socket to another socket (s).
 			An implementation of socketpair() that works on windows as well
 			as unix (by using the loopback interface).
 			@param sock - the socket to connect this socket to
+			@param use_standard_interface - if true, do not use loopback,
+			                                use normal interface
 			@returns true on success, false on failure.
 		 */
-	bool connect_socketpair(ReliSock &dest);
+	bool connect_socketpair(ReliSock &dest,bool use_standard_interface=false);
 
     ///
 	ReliSock();
@@ -293,6 +298,13 @@ protected:
 	int is_client;
 	char *hostAddr;
 	classy_counted_ptr<class CCBClient> m_ccb_client; // for reverse connects
+
+		// after connecting, request to be routed to this daemon
+	char *m_target_shared_port_id;
+
+	virtual void setTargetSharedPortID( char const *id );
+	virtual bool sendTargetSharedPortID();
+	char const *getTargetSharedPortID() { return m_target_shared_port_id; }
 };
 
 #endif

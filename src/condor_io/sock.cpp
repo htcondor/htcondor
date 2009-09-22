@@ -354,6 +354,10 @@ int Sock::assign(SOCKET sockd)
 		_sock = sockd;		/* Could we check for correct protocol ? */
 		_state = sock_assigned;
 
+		memset(&_who, 0, sizeof(struct sockaddr_in));
+		SOCKET_LENGTH_TYPE addrlen = sizeof(_who);
+		getpeername(_sock,(struct sockaddr *)&_who,&addrlen);
+
 		if ( _timeout > 0 ) {
 			timeout_no_timeout_multiplier( _timeout );
 		}
@@ -722,8 +726,11 @@ int Sock::do_connect(
 
 	// now that we have set _who (useful for getting informative
 	// peer_description), see if we should do a reverse connect
-	// instead of a forward connect
-	int retval=reverse_connect(host,port,non_blocking_flag);
+	// instead of a forward connect.  Also see if we are connecting
+	// to a shared port (SharedPortServer) that needs further information
+	// to route us to the final destination.
+
+	int retval=special_connect(host,port,non_blocking_flag);
 	if( retval != CEDAR_ENOCCB ) {
 		return retval;
 	}
@@ -798,7 +805,6 @@ Sock::do_connect_finish()
 
 		if( _state == sock_bound ) {
 			if ( do_connect_tryit() ) {
-				_state = sock_connect;
 				return TRUE;
 			}
 
@@ -890,16 +896,11 @@ Sock::do_connect_finish()
 				break; // done with select() loop
 			}
 			else {
-				_state = sock_connect;
-				if( DebugFlags & D_NETWORK ) {
-					dprintf( D_NETWORK, "CONNECT src=%s fd=%d dst=%s\n",
-							 get_sinful(), _sock, get_sinful_peer() );
-				}
 				if ( connect_state.old_timeout_value != _timeout ) {
 						// Restore old timeout
 					timeout_no_timeout_multiplier(connect_state.old_timeout_value);			
 				}
-				return true;
+				return enter_connected_state();
 			}
 		}
 
@@ -962,6 +963,23 @@ Sock::do_connect_finish()
 	return FALSE;
 }
 
+bool
+Sock::enter_connected_state(char const *op)
+{
+	_state = sock_connect;
+	if( DebugFlags & D_NETWORK ) {
+		dprintf( D_NETWORK, "%s bound to %s fd=%d peer=%s\n",
+				 op, get_sinful(), _sock, get_sinful_peer() );
+	}
+		// if we are connecting to a shared port, send the id of
+		// the daemon we want to be routed to
+	if( !sendTargetSharedPortID() ) {
+		connect_state.connect_refused = true;
+		setConnectFailureReason("Failed to send shared port id.");
+		return false;
+	}
+	return true;
+}
 
 void
 Sock::setConnectFailureReason(char const *reason)
@@ -1087,12 +1105,7 @@ bool Sock::do_connect_tryit()
 			return false;
 		}
 
-		_state = sock_connect;
-		if( DebugFlags & D_NETWORK ) {
-			dprintf( D_NETWORK, "CONNECT src=%s fd=%d dst=%s\n",
-					 get_sinful(), _sock, get_sinful_peer() );
-		}
-		return true;
+		return enter_connected_state();
 	}
 
 #if defined(WIN32)
@@ -1260,7 +1273,7 @@ int Sock::close()
 
 	if (_state == sock_virgin) return FALSE;
 
-	if (type() == Stream::reli_sock) {
+	if (type() == Stream::reli_sock && (DebugFlags & D_NETWORK)) {
 		dprintf( D_NETWORK, "CLOSE %s fd=%d\n", 
 						sock_to_string(_sock), _sock );
 	}

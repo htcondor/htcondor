@@ -43,6 +43,7 @@
 #include "store_cred.h"
 #include "setenv.h"
 #include "file_lock.h"
+#include "shared_port_server.h"
 
 #if HAVE_DLOPEN
 #include "MasterPlugin.h"
@@ -136,7 +137,7 @@ char	*default_daemon_list[] = {
 char	default_dc_daemon_list[] =
 "MASTER, STARTD, SCHEDD, KBDD, COLLECTOR, NEGOTIATOR, EVENTD, "
 "VIEW_SERVER, CONDOR_VIEW, VIEW_COLLECTOR, CREDD, HAD, "
-"REPLICATION, DBMSD, QUILL, JOB_ROUTER, ROOSTER";
+"REPLICATION, DBMSD, QUILL, JOB_ROUTER, ROOSTER, SHARED_PORT";
 
 // create an object of class daemons.
 class Daemons daemons;
@@ -849,6 +850,14 @@ init_daemon_list()
 			daemon_names.insert( "COLLECTOR" );
 		}
 
+			// start shared_port first for a cleaner startup
+		if( daemon_names.contains("SHARED_PORT") ) {
+			daemon_names.deleteCurrent();
+			daemon_names.rewind();
+			daemon_names.next();
+			daemon_names.insert( "SHARED_PORT" );
+		}
+
 		daemon_names.rewind();
 		while( (daemon_name = daemon_names.next()) ) {
 			if(daemons.GetIndex(daemon_name) < 0) {
@@ -920,15 +929,9 @@ init_classad()
 		delete [] default_name;
 	}
 
-		// CRUFT
-	ad->Assign(ATTR_MASTER_IP_ADDR, daemonCore->InfoCommandSinfulString());
-
 #if !defined(WIN32)
 	ad->Assign(ATTR_REAL_UID, (int)getuid());
 #endif
-
-		// Initialize all the DaemonCore-provided attributes
-	daemonCore->publish( ad ); 	
 }
 
 #ifndef WIN32
@@ -1274,6 +1277,17 @@ main_pre_command_sock_init()
 		}
 	}
 #endif
+
+	MyString daemon_list;
+	if( param(daemon_list,"DAEMON_LIST") ) {
+		StringList sl(daemon_list.Value());
+		if( sl.contains("SHARED_PORT") ) {
+				// in case a shared port address file got left behind by an
+				// unclean shutdown, clean it up now before we create our
+				// command socket to avoid confusion
+			SharedPortServer::RemoveDeadAddressFile();
+		}
+	}
 }
 
 

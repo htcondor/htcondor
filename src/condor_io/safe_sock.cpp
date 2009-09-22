@@ -282,7 +282,7 @@ int SafeSock::connect(
 	// now that we have set _who (useful for getting informative
 	// peer_description), see if we should do a reverse connect
 	// instead of a forward connect
-	int retval=reverse_connect(host,port,true);
+	int retval=special_connect(host,port,true);
 	if( retval != CEDAR_ENOCCB ) {
 		return retval;
 	}
@@ -889,4 +889,22 @@ void SafeSock::dumpSock()
 
 void
 SafeSock::cancel_reverse_connect() {
+}
+
+void
+SafeSock::setTargetSharedPortID( char const *id)
+{
+	if( id ) {
+		dprintf(D_ALWAYS,
+			"WARNING: UDP does not support connecting to a shared port! "
+			"(requested address is %s with SharedPortID=%s)\n",
+			peer_description(), id);
+	}
+}
+
+bool
+SafeSock::sendTargetSharedPortID()
+{
+		// do nothing; shared ports are not currently supported by UDP
+	return true;
 }

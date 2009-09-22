@@ -2110,11 +2110,13 @@ newIdString( char** id_str_ptr )
 	MyString id;
 	// Keeping with tradition, we insert the startd's address in
 	// the claim id.  As of condor 7.2, nothing relies on this.
-	// Using privateNetworkIpAddr() because public sinful string
-	// may contain CCB stuff and other junk that might contain
-	// special characters such as '#'.
+	// Strip out CCB and other special info so we don't get any
+	// '#' characters in the address.
 
-	char const *my_addr = daemonCore->privateNetworkIpAddr();
+	Sinful my_sin( daemonCore->publicNetworkIpAddr() );
+	my_sin.clearParams();
+	char const *my_addr = my_sin.getSinful();
+
 	ASSERT( my_addr && !strchr(my_addr,'#') );
 
 	id += my_addr;

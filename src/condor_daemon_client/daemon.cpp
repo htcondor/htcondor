@@ -2000,6 +2000,10 @@ Daemon::New_addr( char* str )
 			// UDP port.
 			m_has_udp_command_port = false;
 		}
+		if( addr.getSharedPortID() ) {
+			// SharedPort does not handle UDP
+			m_has_udp_command_port = false;
+		}
 	}
 
 	return str;
@@ -2060,7 +2064,13 @@ Daemon::checkAddr( void )
 			// _error will already be set appropriately
 		return false;
 	}
-	if( _port == 0 ) {
+	if( _port == 0 && Sinful(_addr).getSharedPortID()) {
+			// This is an address with a shared port id but no
+			// SharedPortServer address, so it is only good for
+			// local connections on the same machine.
+		return true;
+	}
+	else if( _port == 0 ) {
 			// if we didn't *just* try locating, we should try again,
 			// in case the address file for the thing we're trying to
 			// talk to has now been written.

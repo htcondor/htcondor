@@ -818,6 +818,7 @@ const char * const ATTR_SSH_PRIVATE_CLIENT_KEY = "SSHPrivateClientKey";
 const char * const ATTR_SHELL = "Shell";
 const char * const ATTR_RETRY = "Retry";
 const char * const ATTR_SSH_KEYGEN_ARGS = "SSHKeyGenArgs";
+const char * const ATTR_SOCK = "sock";
 
 
 //************* Added for Amazon Jobs ***************************//

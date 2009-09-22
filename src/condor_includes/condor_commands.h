@@ -294,6 +294,8 @@ const int INVALIDATE_GRID_ADS = 72;
 const int MERGE_STARTD_AD = 73;
 const int QUERY_GENERIC_ADS = 74;
 
+const int SHARED_PORT_CONNECT = 75;
+const int SHARED_PORT_PASS_SOCK = 76;
 
 /*
 *** Commands to the starter

@@ -65,6 +65,7 @@ public:
 	virtual int do_reverse_connect(char const *ccb_contact,bool nonblocking);
 
 	virtual void cancel_reverse_connect();
+	virtual int do_shared_port_local_connect( char const *shared_port_id, bool nonblocking );
 
 	/// my IP address, string version (e.g. "128.105.101.17")
 	virtual const char* my_ip_str();
@@ -124,6 +125,9 @@ public:
 
 // next line should be uncommented after testing
 protected:
+
+	virtual void setTargetSharedPortID( char const *id );
+	virtual bool sendTargetSharedPortID();
 
     bool init_MD(CONDOR_MD_MODE mode, KeyInfo * key, const char * keyId);
     bool set_encryption_id(const char * keyId);

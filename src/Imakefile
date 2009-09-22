@@ -79,6 +79,12 @@
 #define CreamGahp
 #endif
 
+#if HAVE_SHARED_PORT
+#define SHARED_PORT_PROGS shared_port
+#else
+#define SHARED_PORT_PROGS
+#endif
+
 #define Programs \
 		procapi sysapi unit_tests ckpt_server \
 		master.V6 negotiator.V6 schedd.V6 prio q.V6 rm.V6 \
@@ -89,7 +95,7 @@
 		TTProgs DeploymentTools \
 		eventd.V2 transferd procd privsep vm-gahp EC2 \
 		JobRouterProgs GlobusGahps NordugridGahp startd_factory \
-		CreamGahp power
+		CreamGahp power SHARED_PORT_PROGS
 
 #define Libraries \
 		util_lib target-ccb daemon_core.V6 daemon_client target-classad.old c++_util	\
@@ -250,6 +256,9 @@ condor_object_target(sysapi)
 condor_object_target(unit_tests)
 condor_object_target(tools)
 condor_object_target(power)
+#if HAVE_SHARED_PORT
+condor_object_target(shared_port)
+#endif
 condor_object_target(examples)
 #if 0 /* was WANT_NETMAN */
 condor_object_target(eventd)

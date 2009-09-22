@@ -1344,7 +1344,7 @@ void CollectorDaemon::Config()
 		m_ccb_server = NULL;
 	}
 
-    return;
+	return;
 }
 
 void CollectorDaemon::Exit()

@@ -158,10 +158,12 @@ typedef enum {
 
 const int DCJOBOPT_SUSPEND_ON_EXEC  = (1<<1);
 const int DCJOBOPT_NO_ENV_INHERIT   = (1<<2);
+const int DCJOBOPT_NEVER_USE_SHARED_PORT   = (1<<3);
 
 #define HAS_DCJOBOPT_SUSPEND_ON_EXEC(mask)  ((mask)&DCJOBOPT_SUSPEND_ON_EXEC)
 #define HAS_DCJOBOPT_NO_ENV_INHERIT(mask)  ((mask)&DCJOBOPT_NO_ENV_INHERIT)
 #define HAS_DCJOBOPT_ENV_INHERIT(mask)  (!(HAS_DCJOBOPT_NO_ENV_INHERIT(mask)))
+#define HAS_DCJOBOPT_NEVER_USE_SHARED_PORT(mask) ((mask)&DCJOBOPT_NEVER_USE_SHARED_PORT)
 
 // structure to be used as an argument to Create_Process for tracking process
 // families
@@ -1298,7 +1300,7 @@ class DaemonCore : public Service
     SelfMonitorData monitor_data;
 
 	char 	*localAdFile;
-	void	UpdateLocalAd(ClassAd *daemonAd); 
+	void	UpdateLocalAd(ClassAd *daemonAd,char const *fname=NULL); 
 
 		/**
 		   Publish all DC-specific attributes into the given ClassAd.
@@ -1356,6 +1358,12 @@ class DaemonCore : public Service
 			available.
 		*/
 	void HandleReqAsync(Stream *stream);
+
+		/** Force a reload of the shared port server address.
+			Called, for example, after the master has started up the
+			shared port server.
+		*/
+	void ReloadSharedPortServerAddr();
 
   private:      
 
@@ -1605,8 +1613,8 @@ class DaemonCore : public Service
 		LONG deallocate;
 		HANDLE watcherEvent;
 #endif
-        char sinful_string[28];
-        char parent_sinful_string[28];
+        MyString sinful_string;
+        MyString parent_sinful_string;
         int is_local;
         int parent_is_local;
         int reaper_id;
@@ -1619,6 +1627,7 @@ class DaemonCore : public Service
 		/* the environment variables which allow me the track the pidfamily
 			of this pid (where applicable) */
 		PidEnvID penvid;
+		MyString shared_port_fname;
     };
 
 	int m_refresh_dns_timer;
@@ -1784,10 +1793,13 @@ class DaemonCore : public Service
 	char* m_private_network_name;
 
 	class CCBListeners *m_ccb_listeners;
+	class SharedPortEndpoint *m_shared_port_endpoint;
 	Sinful m_sinful;     // full contact info (public, private, ccb, etc.)
 	bool m_dirty_sinful; // true if m_sinful needs to be reinitialized
 
 	bool CommandNumToTableIndex(int cmd,int *cmd_index);
+
+	void InitSharedPort();
 };
 
 #ifndef _NO_EXTERN_DAEMON_CORE
