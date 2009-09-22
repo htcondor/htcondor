@@ -74,9 +74,9 @@ copy Microsoft.VC90.CRT.manifest %1\bin
 copy msvcm90.dll %1\bin
 copy msvcp90.dll %1\bin
 copy msvcr90.dll %1\bin
+copy mkisofs.bat %1\bin
+copy cdmake.exe %1\bin
 copy ..\src\condor_vm-gahp\condor_vm_vmware.pl %1\bin
-copy ..\src\condor_vm-gahp\*.dll %1\bin
-copy ..\src\condor_vm-gahp\mkisofs.exe %1\bin
 
 echo. & echo Copying Chirp files...
 copy ..\src\condor_starter.V6.1\*.class %1\lib

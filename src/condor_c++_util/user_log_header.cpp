@@ -247,6 +247,9 @@ WriteUserLogHeader::Write( UserLog &writer, FILE *fp )
 {
 	GenericEvent	event;
 
+	if ( 0 == m_ctime ) {
+		m_ctime = time( NULL );
+	}
 	if ( !GenerateEvent( event ) ) {
 		return ULOG_UNK_ERROR;
 	}

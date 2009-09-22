@@ -562,6 +562,7 @@ WriteUserLog::openGlobalLog( bool reopen, const UserLogHeader &header )
 
 		writer.addEventOffset( writer.getNumEvents() );
 		writer.setNumEvents( 0 );
+		writer.setCtime( time(NULL) );
 
 		writer.setMaxRotation( m_global_max_rotations );
 
