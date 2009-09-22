@@ -183,7 +183,7 @@ class TimerManager
 		@param release_data_ptr True if the timer's data_ptr should be freed
         @return 0 if successful, -1 on failure (timer not found)
     */
-    int CancelTimer(int id, bool release_data_ptr = true);
+    int CancelTimer(int id);
 
     /** Not_Yet_Documented.
         @param tid The ID of the timer
@@ -217,14 +217,18 @@ class TimerManager
 				  Releasecpp releasecpp,
                   const char *event_descrip,
                   unsigned   period          =  0,
-				  const Timeslice *timeslice = NULL,
-                  int        id              = -1);
+				  const Timeslice *timeslice = NULL);
+
+	void RemoveTimer( Timer *timer, Timer *prev );
+	void InsertTimer( Timer *new_timer );
+	void DeleteTimer( Timer *timer );
 
     Timer*  timer_list;
 	Timer*  list_tail;
     int     timer_ids;
-    int     in_timeout;
-    int     did_reset;
+    Timer*  in_timeout;
+    bool    did_reset;
+	bool    did_cancel;
 };
 
 #endif
