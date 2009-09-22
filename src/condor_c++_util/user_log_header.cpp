@@ -91,6 +91,8 @@ UserLogHeader::ExtractEvent( const ULogEvent *event )
 	char		 name[256];
 	int			 ctime;
 
+	id[0] = '\0';
+	name[0] = '\0';
 	int n = sscanf( generic->info,
 					"Global JobLog:"
 					" ctime=%d"
@@ -101,7 +103,7 @@ UserLogHeader::ExtractEvent( const ULogEvent *event )
 					" offset="FILESIZE_T_FORMAT""
 					" event_off=%"PRId64""
 					" max_rotation=%d"
-					" creator_name=<%255[^<]>",
+					" creator_name=<%255[^>]>",
 					&ctime,
 					id,
 					&m_sequence,
