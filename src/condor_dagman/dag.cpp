@@ -1130,9 +1130,19 @@ Job * Dag::FindNodeByEventID (int logsource, const CondorID condorID) const {
 
 	if ( node ) {
 		if ( condorID._cluster != node->_CondorID._cluster ) {
-			EXCEPT( "Searched for node for cluster %d; got %d!!",
-						condorID._cluster,
-						node->_CondorID._cluster );
+			if ( node->_CondorID._cluster != _defaultCondorId._cluster ) {
+			 	EXCEPT( "Searched for node for cluster %d; got %d!!",
+						 	condorID._cluster,
+						 	node->_CondorID._cluster );
+			} else {
+					// Note: we can get here if we get an aborted event
+					// after a terminated event for the same job (see
+					// gittrac #744 and the
+					// job_dagman_abnormal_term_recovery_retries test).
+				dprintf( D_ALWAYS, "Warning: searched for node for "
+							"cluster %d; got %d!!\n", condorID._cluster,
+							node->_CondorID._cluster );
+			}
 		}
 	}
 

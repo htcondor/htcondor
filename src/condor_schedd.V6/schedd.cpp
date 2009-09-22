@@ -338,8 +338,9 @@ match_rec::setStatus( int stat )
 {
 	status = stat;
 	entered_current_status = (int)time(0);
-	if( status == M_CLAIMED ) {
-			// We have successfully claimed this startd, so we need to
+	if( status == M_CLAIMED ||
+		status == M_STARTD_CONTACT_LIMBO ) {
+			// We may have successfully claimed this startd, so we need to
 			// release it later.
 		needs_release_claim = true;
 	}

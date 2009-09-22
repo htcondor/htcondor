@@ -4,8 +4,8 @@ PROGRAMS = $(VM_GAHP_SERVER)
 
 all_target( $(PROGRAMS) condor_vm_xen.sh condor_vm_vmware.pl libvirt_simple_script.awk)
 
-#if IS_LINUX
-#  if HAVE_EXT_LIBVIRT
+#if IS_LINUX && HAVE_EXT_LIBVIRT
+#  if HAS_EXTERNALS
 LIBVIRT_CFLAGS = -I$(LIBVIRT_INC)
 LIBVIRT_LIBS = $(LIBVIRT_LIB)/libvirt.a $(LIBXML2_DIR)/lib/libxml2.a -lz
 #  else

@@ -27,7 +27,7 @@
 
 class BaseJob;
 
-class BaseResource
+class BaseResource : public Service
 {
  public:
 
