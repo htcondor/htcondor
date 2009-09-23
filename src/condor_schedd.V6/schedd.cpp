@@ -5057,8 +5057,10 @@ Scheduler::negotiate(int command, Stream* s)
 					 }
 					 dprintf(D_FULLDEBUG, "Job %d.%d rejected: %s\n",
 							 id.cluster, id.proc, diagnostic_message);
-					 cad->Assign(ATTR_LAST_REJ_MATCH_REASON,
-								 diagnostic_message);
+					 SetAttributeString(
+						id.cluster,id.proc,
+						ATTR_LAST_REJ_MATCH_REASON,
+						diagnostic_message,NONDURABLE);
 					 free(diagnostic_message);
 				 }
 					 // don't break: fall through to REJECTED case
@@ -5069,7 +5071,9 @@ Scheduler::negotiate(int command, Stream* s)
 					}
 					host_cnt = max_hosts + 1;
 					JobsRejected++;
-					cad->Assign(ATTR_LAST_REJ_MATCH_TIME,(int)time(0));
+					SetAttributeInt(
+						id.cluster,id.proc,
+						ATTR_LAST_REJ_MATCH_TIME,(int)time(0),NONDURABLE);
 					break;
 				case SEND_JOB_INFO: {
 						// The Negotiator wants us to send it a job. 
@@ -5119,7 +5123,9 @@ Scheduler::negotiate(int command, Stream* s)
 					 */
 					dprintf ( D_FULLDEBUG, "In case PERMISSION_AND_AD\n" );
 
-					cad->Assign(ATTR_LAST_MATCH_TIME,(int)time(0));
+					SetAttributeInt(
+						id.cluster,id.proc,
+						ATTR_LAST_MATCH_TIME,(int)time(0),NONDURABLE);
 
 					if( !s->get_secret(claim_id) ) {
 						dprintf( D_ALWAYS,
@@ -5164,9 +5170,8 @@ Scheduler::negotiate(int command, Stream* s)
 							// list will be rotated with a max length defined
 							// by attribute ATTR_JOB_LAST_MATCH_LIST_LENGTH, which
 							// has a default of 0 (i.e. don't keep this info).
-						int c = -1;
-						int p = -1;
 						int list_len = 0;
+						bool in_transaction = false;
 						cad->LookupInteger(ATTR_LAST_MATCH_LIST_LENGTH,list_len);
 						if ( list_len > 0 ) {								
 							int list_index;
@@ -5182,14 +5187,13 @@ Scheduler::negotiate(int command, Stream* s)
 								snprintf(attr_buf,100,"%s%d",
 									ATTR_LAST_MATCH_LIST_PREFIX,list_index);
 								cad->LookupString(attr_buf,&last_match);
-								if ( c == -1 ) {
-									cad->LookupInteger(ATTR_CLUSTER_ID, c);
-									cad->LookupInteger(ATTR_PROC_ID, p);
-									ASSERT( c != -1 );
-									ASSERT( p != -1 );
+								if( !in_transaction ) {
+									in_transaction = true;
 									BeginTransaction();
 								}
-								SetAttributeString(c,p,attr_buf,curr_match);
+								SetAttributeString(
+									id.cluster,id.proc,
+									attr_buf,curr_match);
 								free(curr_match);
 							}
 							if (last_match) free(last_match);
@@ -5198,14 +5202,14 @@ Scheduler::negotiate(int command, Stream* s)
 						int num_matches = 0;
 						cad->LookupInteger(ATTR_NUM_MATCHES,num_matches);
 						num_matches++;
-							// If a transaction is already open, may as well
-							// use it to store ATTR_NUM_MATCHES.  If not,
-							// don't bother --- just update in RAM.
-						if ( c != -1 && p != -1 ) {
-							SetAttributeInt(c,p,ATTR_NUM_MATCHES,num_matches);
-							CommitTransaction();
-						} else {
-							cad->Assign(ATTR_NUM_MATCHES,num_matches);
+
+						SetAttributeInt(
+							id.cluster,id.proc,
+							ATTR_NUM_MATCHES,num_matches,NONDURABLE);
+
+						if( in_transaction ) {
+							in_transaction = false;
+							CommitTransaction(NONDURABLE);
 						}
 					}
 
@@ -5228,8 +5232,12 @@ Scheduler::negotiate(int command, Stream* s)
 							EXCEPT("Negotiator messed up - gave null ClaimId & no match ad");
 						}
 						// Update matched attribute in job ad
-						cad->Assign(ATTR_JOB_MATCHED,true);
-						cad->Assign(ATTR_CURRENT_HOSTS,1);
+						SetAttribute(
+							id.cluster,id.proc,
+							ATTR_JOB_MATCHED,"True",NONDURABLE);
+						SetAttributeInt(
+							id.cluster,id.proc,
+							ATTR_CURRENT_HOSTS,1,NONDURABLE);
 						// Break before we fall into the Claiming Logic section below...
 						FREE( claim_id );
 						claim_id = NULL;

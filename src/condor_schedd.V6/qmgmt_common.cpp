@@ -42,18 +42,18 @@ SetAttributeInt(int cl, int pr, const char *name, int val, SetAttributeFlags_t f
 }
 
 int
-SetAttributeFloat(int cl, int pr, const char *name, float val)
+SetAttributeFloat(int cl, int pr, const char *name, float val, SetAttributeFlags_t flags )
 {
 	char buf[100];
 	int rval;
 
 	snprintf(buf,100,"%f",val);
-	rval = SetAttribute(cl,pr,name,buf);
+	rval = SetAttribute(cl,pr,name,buf,flags);
 	return(rval);
 }
 
 int
-SetAttributeString(int cl, int pr, const char *name, const char *val)
+SetAttributeString(int cl, int pr, const char *name, const char *val, SetAttributeFlags_t flags )
 {
 	MyString buf;
 	MyString escape_buf;
@@ -64,7 +64,7 @@ SetAttributeString(int cl, int pr, const char *name, const char *val)
 	buf += '"';
 	buf +=  val;
 	buf += '"';
-	rval = SetAttribute(cl,pr,name,buf.Value());
+	rval = SetAttribute(cl,pr,name,buf.Value(),flags);
 	return(rval);
 }
 

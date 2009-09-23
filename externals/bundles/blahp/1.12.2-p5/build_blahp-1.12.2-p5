@@ -36,6 +36,9 @@ patch -i env_free.patch -p0
 # Fix a bad free of regbuf
 patch -i regbuf.patch -p0
 
+# Disable job registry, which requires extra configuration
+patch -i registry.patch -p0
+
 # Check that we have libtool installed.
 libtool_path=`which libtool`
 if [ x$libtool_path = x ] ; then
