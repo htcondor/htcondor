@@ -914,6 +914,16 @@ File System Configuration File Entries''.
   If this setting is not defined, Condor will use the address
   specified in \MacroNI{CONDOR\_ADMIN} (described above).
 
+\label{param:EmailSignature}
+\item[\Macro{EMAIL\_SIGNATURE}]
+  Every email sent by Condor includes a short signature line appended
+  to the body.  By default, this signature includes the URL to the
+  global condor project website.  If \MacroNI{EMAIL\_SIGNATURE} is set,
+  the value of this parameter is used instead.  Note that the value
+  can only be one line in length.  This could be used to direct users
+  to look at local web site with information specific to the installation
+  of Condor.
+
 \label{param:Mail}
 \item[\Macro{MAIL}]
   The full path to a mail
