@@ -137,6 +137,12 @@ AC_ARG_WITH(sysname,
   [SYSNAME=$withval],
   [SYSNAME=""])
 
+AC_ARG_WITH(platform,
+  [AS_HELP_STRING([--with-platform],
+     [Specify the platform name that Condor will be built with])],
+  [_cv_platform=$withval],
+  [_cv_platform=""])
+
 
 # on Darwin on intel, uname will *always* report i386 when in reality it may
 # be an x86_64 machine. Here we determine if sysctl is available, and then
@@ -567,6 +573,10 @@ AC_SUBST(_cv_sysname,$_cv_sysname)
 AC_MSG_CHECKING([kernel revision])
 AC_MSG_RESULT([$_cv_kernel_rev])
 AC_SUBST(_cv_kernel_rev,$_cv_kernel_rev)
+
+AC_MSG_CHECKING([platform name])
+AC_MSG_RESULT([$_platform])
+AC_SUBST(_cv_platform,$_cv_platform)
 
 # check out the libc
 if test "$_cv_opsys" = "LINUX" ; then
