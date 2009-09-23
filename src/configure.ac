@@ -107,6 +107,37 @@ fi
 # Figure out what platform we're being run on
 ############################################################
 
+AC_ARG_WITH(arch,
+  [AS_HELP_STRING([--with-arch],
+     [Specify the architecture string that Condor will be built with])],
+  [ARCH=$withval],
+  [ARCH=""])
+
+AC_ARG_WITH(os,
+  [AS_HELP_STRING([--with-os],
+     [Specify the operating system string that Condor will be built with])],
+  [OS=$withval],
+  [OS=""])
+
+AC_ARG_WITH(kernel,
+  [AS_HELP_STRING([--with-kernel],
+     [Specify the kernel version string that Condor will be built with])],
+  [KERNEL=$withval],
+  [KERNEL=""])
+
+AC_ARG_WITH(osver,
+  [AS_HELP_STRING([--with-osver],
+     [Specify the O/S version string that Condor will be built with])],
+  [OSVER=$withval],
+  [OSVER=""])
+
+AC_ARG_WITH(sysname,
+  [AS_HELP_STRING([--with-sysname],
+     [Specify the system name string that Condor will be built with])],
+  [SYSNAME=$withval],
+  [SYSNAME=""])
+
+
 # on Darwin on intel, uname will *always* report i386 when in reality it may
 # be an x86_64 machine. Here we determine if sysctl is available, and then
 # later we'll use it to figure out the actual platform.
@@ -154,7 +185,22 @@ _cv_kernel_rev="XXX"
 
 os=`uname -s`
 
-if test "$os" = "HP-UX"; then
+if test "$ARCH" != "" && test "$SYSNAME" != "" &&
+   test "$OS"   != "" && test "$KERNEL"  != "" && test "$OSVER" != "" ; then
+  AC_MSG_NOTICE([Using system information from command line])
+  _cv_with_os="YES"
+  _cv_arch="$ARCH"
+  _cv_opsys_vers="$OSVER"
+  _cv_op_sys="$OS"
+  _cv_opsys="$OS"
+  _cv_sysname="$SYSNAME"
+  _cv_kernel_rev="$KERNEL"
+
+elif test "$ARCH" != "" || test "$SYSNAME" != "" ||
+     test "$OS" != ""   || test "$KERNEL" != ""  || test "$OSVER" != "" ; then
+    AC_MSG_ERROR([Not all of --with-(arch,os,osver,kernel,sysname) specified])
+
+elif test "$os" = "HP-UX"; then
   _cv_op_sys="HPUX"
   _cv_opsys="HPUX"
   if test "$osrelease" = "B.10.20" ; then
