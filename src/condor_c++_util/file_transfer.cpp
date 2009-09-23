@@ -1688,7 +1688,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		// time of the file we just wrote backwards in time by a few
 		// minutes!  MLOP!! Since we are doing this, we may as well
 		// not bother to fsync every file.
-//		dprintf(D_FULLDEBUG,"TODD filetransfer DoDownload fullname=%s\n",fullname.Value());
+		dprintf(D_FULLDEBUG,"TODD filetransfer DoDownload fullname=%s\n",fullname.Value());
 		start = time(NULL);
 		if (reply == 5) {
 			// new filetransfer command.  5 means that the next file is a
@@ -1701,7 +1701,12 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 
 			MyString URL;
 			// receive the URL from the wire
-			if (!s->code(URL) || !s->end_of_message() ) {
+
+			int test_int;
+			s->code(test_int);
+			dprintf(D_ALWAYS,"ZKM: recvd test_int: %i\n", test_int);
+
+			if (!s->code(URL)) {
 				dprintf(D_FULLDEBUG,"DoDownload: exiting at %d\n",__LINE__);
 				return_and_resetpriv( -1 );
 			}
@@ -2232,7 +2237,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 		bool is_url;
 		is_url = false;
 
-		if( IsUrl(filename) ) {
+		if( param_boolean("ENABLE_URL_TRANSFERS", false) && IsUrl(filename) ) {
 			// looks like a URL
 			is_url = true;
 			fullname = filename;
@@ -2389,11 +2394,15 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 				rc = -1;
 			}
 		} else if (file_command == 5) {
-			if(!s->code((unsigned char*)fullname.Value())) {
+			int test_int = 9876;
+			if(!s->code(test_int)) {
+				dprintf( D_ALWAYS, "ZKM: failed to send test_int: %i\n", test_int);
 				rc = -1;
-			} else if (!s->end_of_message()) {
+			} else if(!s->code(fullname)) {
+				dprintf( D_ALWAYS, "ZKM: failed to send fullname: %s\n", fullname.Value());
 				rc = -1;
 			} else {
+				dprintf( D_ALWAYS, "ZKM: sent fullname and NO eom: %s\n", fullname.Value());
 				rc = 0;
 			}
 
@@ -3117,11 +3126,18 @@ int FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* URL, cons
 
 	// look up the method in our hash table
 	MyString plugin;
-	if (!plugin_table->lookup((MyString)method, plugin)) {
+
+	// HASHTABLE RETURN ZERO if found!!!
+	if (plugin_table->lookup((MyString)method, plugin)) {
 		// no plugin for this type!!!
 		// TODO: push onto CondorError e
+		dprintf (D_FULLDEBUG, "ZKM: plugin for type %s not found!\n", method);
 		free(method);
 		return 1;
+	}
+
+	if (plugin == "" || plugin[0] != '/') {
+		dprintf(D_ALWAYS, "ZKM: NOT invoking malformed plugin named \"%s\"\n", plugin.Value());
 	}
 
 	// invoke the proper plugin using my_gregs_popen();
@@ -3132,6 +3148,7 @@ int FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* URL, cons
 	cmd_line += dest;
 	dprintf(D_ALWAYS, "ZKM: invoking: %s\n", cmd_line.Value());
 	int retval = system( cmd_line.Value() );
+	dprintf (D_ALWAYS, "ZKM: plugin returned %i\n", retval);
 
 	// clean up
 	free(method);
@@ -3248,3 +3265,4 @@ FileTransfer::InsertPluginMappings(MyString methods, MyString p)
 		plugin_table->insert(m, p);
 	}
 }
+
