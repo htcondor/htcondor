@@ -3000,10 +3000,12 @@ if test "x$_cv_opsys" = "xLINUX" ; then
 fi
 
 if test "x$_cv_opsys" = "xLINUX" ; then
+  AC_CHECK_HEADER([libvirt/libvirt.h], [have_libvirt_h=yes])
   CHECK_EXTERNAL([libvirt],[0.6.2],[soft],
                  [libvirt for Xen/KVM/etc support on Linux],
-                 [MF_LIB_CHECK([libvirt],
-                               [[virt virGetVersion]], [libvirt])])
+                 [AS_IF([test "x$have_libvirt_h" =  xyes],
+                   [MF_LIB_CHECK([libvirt], [[virt virGetVersion]], [libvirt])],
+                   [cv_ext_libvirt=no])])
 fi
 
 # The test for gsoap needs to happen after the openssl check, so
