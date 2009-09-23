@@ -3846,7 +3846,7 @@ id=198
 
 [CONDOR_ADMIN]
 aliases=
-default=michaelb@cs.wisc.edu
+default=
 version=0.0.0
 range=.*
 state=default
