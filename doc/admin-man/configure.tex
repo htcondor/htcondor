@@ -3461,6 +3461,15 @@ WANT_HOLD_REASON = \
   by its owner.
   Job ClassAd attributes are not used in defining \MacroNI{IS\_OWNER},
   as they would be \Expr{Undefined}.
+
+\label{param:StartdHistory}
+\item[\Macro{STARTD\_HISTORY}]
+	If this parameter is set to a file name, then the startd will
+	maintain a job history file in the same way that the schedd
+	does.  It will be rotated in the same way the schedd history
+	file is, and the same parameters that apply to schedd history
+	rotation apply to the startd history as well.
+
 \end{description}
 
 
