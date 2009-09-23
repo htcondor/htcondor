@@ -101,8 +101,11 @@ void sysapi_test_dump_internal_vars(void);
 void sysapi_test_dump_functions(void);
 
 /* tranlate between uname-type or LDAP entry values and Condor values */
-char * sysapi_translate_arch( char *machine, char *sysname );
-char *sysapi_translate_opsys( char *sysname, char *release, char *version );
+const char *sysapi_translate_arch( const char *machine,
+								   const char *sysname );
+const char *sysapi_translate_opsys( const char *sysname,
+									const char *release,
+									const char *version );
 
 /* set appropriate resource limits on each platform */
 void sysapi_set_resource_limits( void );

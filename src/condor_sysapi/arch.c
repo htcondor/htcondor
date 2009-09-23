@@ -1,14 +1,14 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2009, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -23,7 +23,7 @@
 #include "match_prefix.h"
 #include "sysapi.h"
 
-/* ok, here's the deal with these. For some reason, gcc on IRIX is just old 
+/* ok, here's the deal with these. For some reason, gcc on IRIX is just old
 	enough to where it doesn't understand things like static const FALSE = 0.
 	So these two things used to be defined as the above, but it would fail with
 	a 'initializer element is not constant' during compile. I have defined
@@ -38,9 +38,9 @@
 
 #if defined(WIN32)
 
-// Names of all the architectures supported for Windows (Only some of 
+// Names of all the architectures supported for Windows (Only some of
 // these are relevant to us; however, listing them all simplifies lookup).
-static char const *windows_architectures[] = { 
+static char const *windows_architectures[] = {
 	"INTEL",
 	"MIPS",
 	"ALPHA",
@@ -59,11 +59,11 @@ static char const *windows_architectures[] = {
 static char const *unknown_architecture = "unknown";
 
 const char *
-sysapi_condor_arch()
+sysapi_condor_arch(void)
 {
 	SYSTEM_INFO info;
 	GetSystemInfo(&info);
-	if (   info.wProcessorArchitecture >= PROCESSOR_ARCHITECTURE_INTEL 
+	if (   info.wProcessorArchitecture >= PROCESSOR_ARCHITECTURE_INTEL
 		&& info.wProcessorArchitecture <= PROCESSOR_ARCHITECTURE_IA32_ON_WIN64 ) {
 		return windows_architectures[info.wProcessorArchitecture];
 	} else {
@@ -73,21 +73,21 @@ sysapi_condor_arch()
 
 
 const char *
-sysapi_uname_arch() 
+sysapi_uname_arch(void)
 {
 	return sysapi_condor_arch();
 }
 
 
 const char *
-sysapi_uname_opsys() 
+sysapi_uname_opsys(void)
 {
 	return sysapi_opsys();
 }
 
 
 const char *
-sysapi_opsys()
+sysapi_opsys(void)
 {
 	static char answer[1024];
 	OSVERSIONINFO info;
@@ -114,26 +114,26 @@ sysapi_opsys()
 	return answer;
 }
 
-#else 
+#else
 
 static int arch_inited = FALSE;
-static char* arch = NULL;
-static char* uname_arch = NULL;
-static char* opsys = NULL;
-static char* uname_opsys = NULL;
+static const char* arch = NULL;
+static const char* uname_arch = NULL;
+static const char* opsys = NULL;
+static const char* uname_opsys = NULL;
 
 #ifdef HPUX
-char* get_hpux_arch();
+const char* get_hpux_arch();
 #endif
 
 #ifdef AIX
-char* get_aix_arch( struct utsname* );
+const char* get_aix_arch( struct utsname* );
 #endif
 
 void
-init_arch(void) 
+init_arch(void)
 {
-	struct utsname buf;	
+	struct utsname buf;
 
 	if( uname(&buf) < 0 ) {
 		return;
@@ -157,8 +157,8 @@ init_arch(void)
 	}
 }
 
-char *
-sysapi_translate_arch( char *machine, char *sysname )
+const char *
+sysapi_translate_arch( const char *machine, const char *sysname )
 {
 	char tmp[64];
 	char *tmparch;
@@ -167,7 +167,7 @@ sysapi_translate_arch( char *machine, char *sysname )
 	/* AIX machines have a ton of different models encoded into the uname
 		structure, so go to some other function to decode and group the
 		architecture together */
-	struct utsname buf;	
+	struct utsname buf;
 
 	if( uname(&buf) < 0 ) {
 		return NULL;
@@ -184,19 +184,19 @@ sysapi_translate_arch( char *machine, char *sysname )
 		//mikeu: I modified this to also accept values from Globus' LDAP server
 	if( !strcmp(machine, "alpha") ) {
 		sprintf( tmp, "ALPHA" );
-	} 
+	}
 	else if( !strcmp(machine, "i86pc") ) {
 		sprintf( tmp, "INTEL" );
-	} 
+	}
 	else if( !strcmp(machine, "i686") ) {
 		sprintf( tmp, "INTEL" );
-	} 
+	}
 	else if( !strcmp(machine, "i586") ) {
 		sprintf( tmp, "INTEL" );
-	} 
+	}
 	else if( !strcmp(machine, "i486") ) {
 		sprintf( tmp, "INTEL" );
-	} 
+	}
 	else if( !strcmp(machine, "i386") ) { //LDAP entry
 /* force INTEL only for now, until I resolve what to do about the mess
 between I386 and X86_64 detection on macosx. */
@@ -237,34 +237,34 @@ between I386 and X86_64 detection on macosx. */
 	}
 	else if( !strncmp( sysname, "IRIX", 4 ) ) {
 		sprintf( tmp, "SGI" );
-	} 
+	}
 	else if( !strcmp(machine, "mips") ) { //LDAP entry
 		sprintf( tmp, "SGI" );
-	} 
+	}
 	else if( !strcmp(machine, "sun4u") ) {
 		sprintf( tmp, "SUN4u" );
-	} 
+	}
 	else if( !strcmp(machine, "sun4m") ) {
 		sprintf( tmp, "SUN4x" );
-	} 
+	}
 	else if( !strcmp(machine, "sun4c") ) {
 		sprintf( tmp, "SUN4x" );
-	} 
+	}
 	else if( !strcmp(machine, "sparc") ) { //LDAP entry
 		sprintf( tmp, "SUN4x" );
-	} 
+	}
 	else if( !strcmp(machine, "Power Macintosh") ) { //LDAP entry
 		sprintf( tmp, "PPC" );
-	} 
+	}
 	else if( !strcmp(machine, "ppc") ) {
 		sprintf( tmp, "PPC" );
-	} 
+	}
 	else if( !strcmp(machine, "ppc32") ) {
 		sprintf( tmp, "PPC" );
-	} 
+	}
 	else if( !strcmp(machine, "ppc64") ) {
 		sprintf( tmp, "PPC64" );
-	} 
+	}
 	else {
 			// Unknown, just use what uname gave:
 		sprintf( tmp, machine );
@@ -278,8 +278,10 @@ between I386 and X86_64 detection on macosx. */
 #endif /* if HPUX else */
 }
 
-char *
-sysapi_translate_opsys( char *sysname, char *release, char *version )
+const char *
+sysapi_translate_opsys( const char *sysname,
+						const char *release,
+						const char *version )
 {
 	char tmp[64];
 	char *tmpopsys;
@@ -287,12 +289,12 @@ sysapi_translate_opsys( char *sysname, char *release, char *version )
 		// Get OPSYS
 	if( !strcmp(sysname, "Linux") ) {
 		sprintf( tmp, "LINUX" );
-	} 
+	}
 	else if( !strcmp(sysname, "linux") ) { //LDAP entry
 		sprintf( tmp, "LINUX" );
-	} 
+	}
 
-	else if( !strcmp(sysname, "SunOS") 
+	else if( !strcmp(sysname, "SunOS")
 		|| !strcmp(sysname, "solaris" ) ) //LDAP entry
 	{
 		if ( !strcmp(release, "2.10") //LDAP entry
@@ -304,55 +306,55 @@ sysapi_translate_opsys( char *sysname, char *release, char *version )
 			|| !strcmp(release, "5.9") )
 		{
 			sprintf( tmp, "SOLARIS29" );
-		} 
+		}
 		else if ( !strcmp(release, "2.8") //LDAP entry
 			|| !strcmp(release, "5.8") )
 		{
 			sprintf( tmp, "SOLARIS28" );
-		} 
+		}
 		else if ( !strcmp(release, "2.7") //LDAP entry
 			|| !strcmp(release, "5.7") )
 		{
 			sprintf( tmp, "SOLARIS27" );
-		} 
-		else if( !strcmp(release, "5.6") 
+		}
+		else if( !strcmp(release, "5.6")
 			||  !strcmp(release, "2.6") ) //LDAP entry
 		{
 			sprintf( tmp, "SOLARIS26" );
-		} 
-		else if ( !strcmp(release, "5.5.1") 
+		}
+		else if ( !strcmp(release, "5.5.1")
 			|| !strcmp(release, "2.5.1") ) //LDAP entry
 		{
 			sprintf( tmp, "SOLARIS251" );
-		} 
-		else if ( !strcmp(release, "5.5") 
+		}
+		else if ( !strcmp(release, "5.5")
 			|| !strcmp(release, "2.5") ) //LDAP entry
 		{
 			sprintf( tmp, "SOLARIS25" );
-		} 
+		}
 		else {
 			sprintf( tmp, "SOLARIS%s", release );
 		}
-	} 
+	}
 
 	else if( !strcmp(sysname, "OSF1") ) {
 		sprintf( tmp, "OSF1" );
-	} 
+	}
 	else if( !strcmp(sysname, "HP-UX") ) {
 		if( !strcmp(release, "B.10.20") ) {
 			sprintf( tmp, "HPUX10" );
-		} 
+		}
 		else if( !strcmp(release, "B.11.00") ) {
 			sprintf( tmp, "HPUX11" );
-		} 
+		}
 		else if( !strcmp(release, "B.11.11") ) {
 			sprintf( tmp, "HPUX11" );
-		} 
+		}
 		else {
 			sprintf( tmp, "HPUX%s", release );
 		}
-	} 
-	else if( !strncmp(sysname, "IRIX", 4 ) 
+	}
+	else if( !strncmp(sysname, "IRIX", 4 )
 		|| !strcmp( sysname, "irix" ))  //LDAP entry
 	{
 		if( !strcmp( release, "6.5" ) ) {
@@ -360,11 +362,11 @@ sysapi_translate_opsys( char *sysname, char *release, char *version )
 		}
 		else if( !strcmp( release, "6.2" ) ) {
 			sprintf( tmp, "IRIX62" );
-		} 
+		}
 		else {
 			sprintf( tmp, "IRIX%s", release );
 		}
-	} 
+	}
 	else if ( !strncmp(sysname, "Darwin", 6) ) {
 			//  there's no reason to differentiate across versions of
 			//  OSX, since jobs can freely run on any version, etc.
@@ -394,7 +396,7 @@ sysapi_translate_opsys( char *sysname, char *release, char *version )
 
 
 const char *
-sysapi_condor_arch()
+sysapi_condor_arch(void)
 {
 	if( ! arch_inited ) {
 		init_arch();
@@ -404,7 +406,7 @@ sysapi_condor_arch()
 
 
 const char *
-sysapi_opsys()
+sysapi_opsys(void)
 {
 	if( ! arch_inited ) {
 		init_arch();
@@ -414,7 +416,7 @@ sysapi_opsys()
 
 
 const char *
-sysapi_uname_arch()
+sysapi_uname_arch(void)
 {
 	if( ! arch_inited ) {
 		init_arch();
@@ -424,7 +426,7 @@ sysapi_uname_arch()
 
 
 const char *
-sysapi_uname_opsys()
+sysapi_uname_opsys(void)
 {
 	if( ! arch_inited ) {
 		init_arch();
@@ -434,15 +436,15 @@ sysapi_uname_opsys()
 
 
 #if defined(HPUX)
-char*
-get_hpux_arch( )
+const char*
+get_hpux_arch( void )
 {
 	/* As of 3/22/2006, it has been ten years since HP has made
 		a HPPA1 machine.  Just assume that this is a HPPA2 machine,
-		and if it is not the user can force the setting in the 
+		and if it is not the user can force the setting in the
 		ARCH config file setting
    	*/
-#if defined(IS_IA64_HPUX)	
+#if defined(IS_IA64_HPUX)
 	return strdup("IA64");
 #else
 	return strdup("HPPA2");
@@ -453,7 +455,7 @@ get_hpux_arch( )
 
 #ifdef AIX
 
-char*
+const char*
 get_aix_arch( struct utsname *buf )
 {
 	char *ret = "UNK";
@@ -470,7 +472,7 @@ get_aix_arch( struct utsname *buf )
 	/* ok, group the model numbers into processor families: */
 	switch(model)
 	{
-	  case 0x10:  
+	  case 0x10:
 		/* Model 530/730 */
 		break;
 
