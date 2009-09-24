@@ -14,7 +14,9 @@ CPP=cl.exe
 #	use LEX=flex -l or LEX=lex
 LEX=flex -l
 #	use YACC=bison or YACC=yacc
-YACC=bison
+YACC=bison.exe -d -v
+MKDIR=mkdir.exe -p
+REN=mv.exe
 #	use LIBS=-lfl with flex or LIBS=-ll with lex
 #	and use -ly with yacc
 #LIBS=-lfl
@@ -30,15 +32,15 @@ TEMP = C:\temp\\
 soapcpp2:	soapcpp2.h soapcpp2_yacc.o symbol2.o error2.o lex.yy.o init2.o soapcpp2.o
 		$(CC) symbol2.obj error2.obj soapcpp2_yacc.obj lex.yy.obj init2.obj soapcpp2.obj $(LIBS) -o $@
 soapcpp2_yacc.c:	soapcpp2_yacc.y soapcpp2.h error2.h
-		$(YACC) -d -v soapcpp2_yacc.y
-		ren soapcpp2_yacc.tab.h soapcpp2_yacc.h
-		ren soapcpp2_yacc.tab.c soapcpp2_yacc.c
+		$(YACC) soapcpp2_yacc.y
+		$(REN) soapcpp2_yacc.tab.h soapcpp2_yacc.h
+		$(REN) soapcpp2_yacc.tab.c soapcpp2_yacc.c
 lex.yy.c:	soapcpp2_yacc.h soapcpp2_yacc.c soapcpp2_lex.l
 		$(LEX) soapcpp2_lex.l
 .c.o:		soapcpp2.h soapcpp2_yacc.h error2.h
 		$(CC) $(CFLAGS) /c $<
 install: 
-	"mkdir" -p $(PACKAGE_INSTALL_DIR)\src
+	$(MKDIR) $(PACKAGE_INSTALL_DIR)\src
 	cp soapcpp2.exe $(PACKAGE_INSTALL_DIR)
 	cp ..\stdsoap2.cpp $(PACKAGE_INSTALL_DIR)\src
 	cp ..\stdsoap2.h $(PACKAGE_INSTALL_DIR)\src
