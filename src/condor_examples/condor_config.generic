@@ -1845,6 +1845,9 @@ UNICORE_GAHP = $(SBIN)/unicore_gahp
 ##
 NORDUGRID_GAHP = $(SBIN)/nordugrid_gahp
 
+## The location of the CREAM GAHP server
+CREAM_GAHP = $(SBIN)/cream_gahp
+
 ## Condor-G and CredD can use MyProxy to refresh GSI proxies which are
 ## about to expire.
 #MYPROXY_GET_DELEGATION = /path/to/myproxy-get-delegation
