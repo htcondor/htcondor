@@ -316,6 +316,7 @@ sysapi_test_dump_all(int argc, char** argv)
 
 	if ((tests & CKPTPLTFRM) == CKPTPLTFRM) {
 		dprintf(D_ALWAYS, "SysAPI: BEGIN SysAPI DUMP!\n");
+		sysapi_ckptpltfrm();
 		sysapi_test_dump_internal_vars();
 		sysapi_reconfig();
 		sysapi_test_dump_internal_vars();
