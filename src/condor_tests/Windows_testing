@@ -8,7 +8,7 @@ Install Condor Source Tree
 
 Create a file in your LOCAL_DIR called exe_switch.bat that contains the one line:
 
-  @c:\perl\bin\perl.exe \...\src\condor_scripts\exe_switch.pl %*
+  @perl.exe \...\src\condor_scripts\exe_switch.pl %*
 
 In condor_config.local, set:
 
