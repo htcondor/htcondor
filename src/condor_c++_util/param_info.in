@@ -5700,38 +5700,6 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=classad,ast
 id=314
 
-[CLASSAD_CACHE_SIZE]
-aliases=
-default=127
-version=0.0.0
-range=.*
-state=default
-type=int
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Classad Cache Size
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=classad,classad_lookup
-id=315
-
-[CLASSAD_CACHE_LIFETIME]
-aliases=
-default=300
-version=0.0.0
-range=.*
-state=default
-type=int
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Classad Cache Lifetime
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=classad,classad_lookup
-id=316
-
 [QUILL_MAINTAIN_DB_CONN]
 aliases=
 default=true
