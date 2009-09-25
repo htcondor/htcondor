@@ -2019,22 +2019,6 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=ckpt_server,server2
 id=84
 
-[MANAGE_BANDWIDTH]
-aliases=
-default=
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Manage Bandwidth
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=ckpt_server,server2
-id=85
-
 [NETWORK_HORIZON]
 aliases=
 default=300
@@ -4369,40 +4353,8 @@ customization=seldom
 friendly_name=Gridmanager Connect Failure Retry Count
 usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=gridmanager,mirrorjob
+tags=gridmanager,globusjob
 id=231
-
-[MIRROR_JOB_LEASE_INTERVAL]
-aliases=
-default=1800
-version=0.0.0
-range=.*
-state=default
-type=int
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Mirror Job Lease Interval
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=gridmanager,mirrorjob
-id=232
-
-[MIRROR_GAHP]
-aliases=
-default=
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Mirror Gahp
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=gridmanager,mirrorjob
-id=233
 
 [PERIODIC_EXPR_INTERVAL]
 aliases=
@@ -5700,38 +5652,6 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=classad,ast
 id=314
 
-[CLASSAD_CACHE_SIZE]
-aliases=
-default=127
-version=0.0.0
-range=.*
-state=default
-type=int
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Classad Cache Size
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=classad,classad_lookup
-id=315
-
-[CLASSAD_CACHE_LIFETIME]
-aliases=
-default=300
-version=0.0.0
-range=.*
-state=default
-type=int
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Classad Cache Lifetime
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=classad,classad_lookup
-id=316
-
 [QUILL_MAINTAIN_DB_CONN]
 aliases=
 default=true
@@ -6147,22 +6067,6 @@ usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit,submit
 id=342
-
-[FLAVOR]
-aliases=
-default=
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Flavor
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=submit,submit
-id=343
 
 [SANDBOX_TRANSFER_METHOD]
 aliases=
@@ -9462,38 +9366,6 @@ usage=one from this setting.
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=master,master
 id=546
-
-[CONFIG_SERVER_FILE]
-aliases=
-default=
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Config Server File
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=master,master
-id=547
-
-[CONFIG_SERVER_PORT]
-aliases=
-default=
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Config Server Port
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=master,master
-id=548
 
 [MASTER_WAITS_FOR_GCB_BROKER]
 aliases=

@@ -42,6 +42,7 @@ set PERL_DIR=%SystemDrive%\Perl\bin;%SystemDrive%\Perl64\bin;%SystemDrive%\prere
 set SDK_DIR=%ProgramFiles%\Microsoft Platform SDK
 set DBG_DIR=%ProgramFiles%\Debugging Tools for Windows (x86);%ProgramFiles%\Debugging Tools for Windows (x64)
 set DOTNET_DIR=%SystemRoot%\Microsoft.NET\Framework\v3.5;%SystemRoot%\Microsoft.NET\Framework\v2.0.50727
+set JDK_DIR="E:\Program Files\Java\jdk1.6.0_16"
 
 REM For some reason this is not defined whilst in some environments
 if "A%VS90COMNTOOLS%"=="A" set VS90COMNTOOLS=%VS_DIR%\Common7\Tools\
@@ -77,7 +78,7 @@ set EXTERNALS_NEEDED=%EXT_GSOAP_VERSION% %EXT_OPENSSL_VERSION% %EXT_KERBEROS_VER
 
 REM Put msconfig in the PATH, since it's got lots of stuff we need
 REM like awk, gunzip, tar, bison, yacc...
-set PATH=%cd%;%SystemRoot%;%SystemRoot%\system32;%PERL_DIR%;%VS_DIR%;%VC_DIR%;%VC_BIN%;%SDK_DIR%;%DOTNET_DIR%;%DBG_DIR%
+set PATH=%cd%;%SystemRoot%;%SystemRoot%\system32;%PERL_DIR%;%VS_DIR%;%VC_DIR%;%VC_BIN%;%SDK_DIR%;%DOTNET_DIR%;%DBG_DIR%;%JDK_LIB%
 
 REM ======================================================================
 REM ====== THIS SHOULD BE REMOVED WHEN Win2K IS NO LONGER SUPPORTED ======
@@ -177,6 +178,11 @@ REM ** PCRE
 set CONDOR_PCRE_INCLUDE=/I %EXT_INSTALL%\%EXT_PCRE_VERSION%\include
 set CONDOR_PCRE_LIB=libpcre.lib
 set CONDOR_PCRE_LIBPATH=/LIBPATH:%EXT_INSTALL%\%EXT_PCRE_VERSION%\lib
+
+REM ** JDK
+set CONDOR_JDK_INCLUDE=/I %JDK_DIR%\include /I %JDK_DIR%\include\win32
+set CONDOR_JDK_LIB=jvm.lib
+set CONDOR_JDK_LIBPATH=/LIBPATH:%JDK_DIR%\lib
 
 REM Dump the Windows build environment at this point
 REM echo ----------------------- WIN ENV DUMP ----------------------

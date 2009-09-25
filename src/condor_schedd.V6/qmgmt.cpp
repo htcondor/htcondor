@@ -3671,15 +3671,6 @@ int mark_idle(ClassAd *job)
 		return 1;
 	}
 
-	int mirror_active = 0;
-	job->LookupBool(ATTR_MIRROR_ACTIVE, mirror_active);
-	if ( mirror_active ) {
-		// Don't touch a job that has an active mirror.  Once we are in count jobs, we will
-		// startup a gridmanager for this job that will retrieve the current job status from
-		// our schedd mirror.
-		return 1;
-	}
-
 	job->LookupInteger(ATTR_CLUSTER_ID, cluster);
 	job->LookupInteger(ATTR_PROC_ID, proc);
     job->LookupInteger(ATTR_JOB_STATUS, status);

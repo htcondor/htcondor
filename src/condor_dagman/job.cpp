@@ -739,7 +739,7 @@ Job::MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 			bool recovery, const char *defaultNodeLog )
 {
 	if ( _logIsMonitored ) {
-		debug_printf( DEBUG_QUIET, "Warning: log file for node "
+		debug_printf( DEBUG_DEBUG_1, "Warning: log file for node "
 					"%s is already monitored\n", GetJobName() );
 		return true;
 	}
@@ -825,7 +825,7 @@ Job::UnmonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 				_logFile, GetJobName() );
 
 	if ( !_logIsMonitored ) {
-		debug_printf( DEBUG_QUIET, "Warning: log file for node "
+		debug_printf( DEBUG_DEBUG_1, "Warning: log file for node "
 					"%s is already unmonitored\n", GetJobName() );
 		return true;
 	}

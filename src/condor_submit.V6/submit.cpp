@@ -107,7 +107,6 @@ ClassAd  *job = NULL;
 char	*OperatingSystem;
 char	*Architecture;
 char	*Spool;
-char	*Flavor;
 char	*ScheddName = NULL;
 char	*PoolName = NULL;
 DCSchedd* MySchedd = NULL;
@@ -297,7 +296,6 @@ const char	*StreamError = "stream_error";
 
 const char	*CopyToSpool = "copy_to_spool";
 const char	*LeaveInQueue = "leave_in_queue";
-const char	*MirrorSchedd = "mirror_schedd";
 
 const char	*PeriodicHoldCheck = "periodic_hold";
 const char	*PeriodicReleaseCheck = "periodic_release";
@@ -3372,36 +3370,7 @@ void
 SetLeaveInQueue()
 {
 	char *erc = condor_param(LeaveInQueue, ATTR_JOB_LEAVE_IN_QUEUE);
-	char *mirror_schedd = condor_param(MirrorSchedd,ATTR_MIRROR_SCHEDD);
 	MyString buffer;
-
-	if ( mirror_schedd ) {
-		
-		if ( erc ) {
-			fprintf( stderr, 
-				"\nERROR: %s may not be specified alongside %s - the mirroring"
-				" mechanism relies on setting %s itself\n",
-				 LeaveInQueue, MirrorSchedd, LeaveInQueue);
-			DoCleanup(0,0,NULL);
-			exit(1);
-		}
-		
-			// schedd job mirroring is being used
-			// set the mirrored schedd attribute
-		buffer.sprintf("%s = \"%s\"", ATTR_MIRROR_SCHEDD,mirror_schedd);
-		InsertJobExpr( buffer );
-		free(mirror_schedd);
-
-			// set default WantMatching for mirrored jobs
-		buffer.sprintf("%s = %s =?= False", ATTR_WANT_MATCHING,
-			ATTR_MIRROR_RELEASED);
-		InsertJobExpr( buffer );
-
-			// set default LeaveInQueue for mirrored jobs (erc is used below)
-		buffer.sprintf("%s =?= \"%s\"",ATTR_JOB_MANAGED, MANAGED_EXTERNAL);
-		erc = strdup(buffer.Value());
-	}
-
 
 	if (erc == NULL)
 	{
@@ -6738,11 +6707,6 @@ init_params()
 		fprintf(stderr,"SPOOL not specified in config file\n" );
 		DoCleanup(0,0,NULL);
 		exit( 1 );
-	}
-
-	Flavor = param( "FLAVOR" );
-	if( Flavor == NULL ) {
-		Flavor = strdup("none");
 	}
 
 	My_fs_domain = param( "FILESYSTEM_DOMAIN" );

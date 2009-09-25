@@ -56,6 +56,7 @@ struct CatalogEntry {
 typedef HashTable <MyString, FileTransfer *> TranskeyHashTable;
 typedef HashTable <int, FileTransfer *> TransThreadHashTable;
 typedef HashTable <MyString, CatalogEntry *> FileCatalogHashTable;
+typedef HashTable <MyString, MyString> PluginHashTable;
 
 typedef int		(Service::*FileTransferHandler)(FileTransfer *);
 
@@ -218,6 +219,11 @@ class FileTransfer {
 
 	void setTransferQueueContactInfo(char const *contact);
 
+	void InsertPluginMappings(MyString methods, MyString p);
+	MyString DeterminePluginMethods( CondorError &e, const char* path );
+	int InitializePlugins(CondorError &e);
+	int InvokeFileTransferPlugin(CondorError &e, const char* URL, const char* dest);
+
   protected:
 
 	int Download(ReliSock *s, bool blocking);
@@ -282,6 +288,8 @@ class FileTransfer {
 	FileTransferHandler ClientCallback;
 	Service* ClientCallbackClass;
 	FileTransferInfo Info;
+	PluginHashTable* plugin_table;
+	bool I_support_filetransfer_plugins;
 #ifdef WIN32
 	perm* perm_obj;
 #endif		

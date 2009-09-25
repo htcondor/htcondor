@@ -2011,7 +2011,7 @@ bool
 GahpClient::is_pending(const char *command, const char * /* buf */) 
 {
 		// note: do _NOT_ check pending reqid here.
-// MirrorResource doesn't exactly recreate all the arguments when checking
+// Some callers don't exactly recreate all the arguments when checking
 // the status of a pending command, so relax our check here. Current users
 // of GahpClient are careful to purge potential outstanding commands before
 // issuing new ones, so this shouldn't be a problem. 

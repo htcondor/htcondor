@@ -315,9 +315,6 @@ void CollectorDaemon::Init()
     }
 #endif
 
-	// ClassAd evaluations use this function to resolve names
-	// ClassAdLookupRegister( process_global_query, this );
-
 	forkQuery.Initialize( );
 }
 
@@ -1004,31 +1001,6 @@ int CollectorDaemon::select_by_match( ClassAd *cad )
 	}
 	return 1;
 }
-
-/*
-This function is called by the global reference mechanism.
-It convert the constraint string into a query ad, and runs
-a global query, returning a duplicate of the ad matched.
-On failure, it returns 0.
-*/
-
-#if 0
-ClassAd * CollectorDaemon::process_global_query( const char *constraint, void *arg )
-{
-	CondorQuery query(ANY_AD);
-
-       	query.addANDConstraint(constraint);
-	query.getQueryAd(query_any_request);
-	query_any_request.SetTargetTypeName (ANY_ADTYPE);
-	query_any_result = 0;
-
-	if(!collector.walkHashTable(ANY_AD,select_by_match)) {
-		return new ClassAd(*query_any_result);
-	} else {
-		return 0;
-	}
-}
-#endif
 
 void CollectorDaemon::process_query_public (AdTypes whichAds,
 											ClassAd *query,

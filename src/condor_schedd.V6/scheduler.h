@@ -682,7 +682,6 @@ private:
 	int				leaseAliveInterval;  
 	int				aliveid;	// timer id for sending keepalives to startd
 	int				MaxExceptions;	 // Max shadow excep. before we relinquish
-	bool			ManageBandwidth;
 
 		// put state into ClassAd return it.  Used for condor_squawk
 	int	dumpState(int, Stream *);

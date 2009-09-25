@@ -28,7 +28,6 @@
 #include "condor_config.h"
 #include "condor_attributes.h"
 #include "condor_api.h"
-#include "condor_classad_lookup.h"
 #include "condor_query.h"
 #include "daemon.h"
 #include "daemon_types.h"
