@@ -1380,12 +1380,6 @@ ClassAd *CondorJob::buildSubmitAd()
 	submit_ad->Delete( ATTR_GRID_RESOURCE );
 	submit_ad->Delete( ATTR_JOB_MATCHED );
 	submit_ad->Delete( ATTR_JOB_MANAGED );
-	submit_ad->Delete( ATTR_MIRROR_ACTIVE );
-	submit_ad->Delete( ATTR_MIRROR_JOB_ID );
-	submit_ad->Delete( ATTR_MIRROR_LEASE_TIME );
-	submit_ad->Delete( ATTR_MIRROR_RELEASED );
-	submit_ad->Delete( ATTR_MIRROR_REMOTE_LEASE_TIME );
-	submit_ad->Delete( ATTR_MIRROR_SCHEDD );
 	submit_ad->Delete( ATTR_STAGE_IN_FINISH );
 	submit_ad->Delete( ATTR_STAGE_IN_START );
 	submit_ad->Delete( ATTR_SCHEDD_BIRTHDATE );
