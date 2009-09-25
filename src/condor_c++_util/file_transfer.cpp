@@ -1647,7 +1647,6 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 			fullname.sprintf("%s%c%s",TmpSpoolSpace,DIR_DELIM_CHAR,filename.Value());
 		}
 
-		dprintf (D_ALWAYS, "PDGA1: %i, pgaa: %i, Igaa: %i\n", PeerDoesGoAhead, peer_goes_ahead_always, I_go_ahead_always);
 		if( PeerDoesGoAhead ) {
 			if( !s->end_of_message() ) {
 				dprintf(D_FULLDEBUG,"DoDownload: failed on eom before GoAhead: exiting at %d\n",__LINE__);
@@ -1688,7 +1687,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		// time of the file we just wrote backwards in time by a few
 		// minutes!  MLOP!! Since we are doing this, we may as well
 		// not bother to fsync every file.
-		dprintf(D_FULLDEBUG,"TODD filetransfer DoDownload fullname=%s\n",fullname.Value());
+//		dprintf(D_FULLDEBUG,"TODD filetransfer DoDownload fullname=%s\n",fullname.Value());
 		start = time(NULL);
 		if (reply == 5) {
 			// new filetransfer command.  5 means that the next file is a
@@ -1697,23 +1696,19 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 			// side must then retreive the URL using one of the configured
 			// filetransfer plugins.
 
-			dprintf( D_ALWAYS, "ZKM: got command 5\n");
-
 			MyString URL;
 			// receive the URL from the wire
-
-			int test_int;
-			s->code(test_int);
-			dprintf(D_ALWAYS,"ZKM: recvd test_int: %i\n", test_int);
 
 			if (!s->code(URL)) {
 				dprintf(D_FULLDEBUG,"DoDownload: exiting at %d\n",__LINE__);
 				return_and_resetpriv( -1 );
 			}
 
-			dprintf( D_ALWAYS, "ZKM: doing a URL transfer: (%s) to (%s)\n", URL.Value(), fullname.Value());
+			dprintf( D_FULLDEBUG, "DoDownload: doing a URL transfer: (%s) to (%s)\n", URL.Value(), fullname.Value());
 
 			CondorError e;
+			// TODO: do something useful with the error stack
+
 			rc = InvokeFileTransferPlugin(e, URL.Value(), fullname.Value());
 
 		} else if ( reply == 4 ) {
@@ -2237,11 +2232,11 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 		bool is_url;
 		is_url = false;
 
-		if( param_boolean("ENABLE_URL_TRANSFERS", false) && IsUrl(filename) ) {
+		if( param_boolean("ENABLE_URL_TRANSFERS", true) && IsUrl(filename) ) {
 			// looks like a URL
 			is_url = true;
 			fullname = filename;
-			dprintf(D_ALWAYS, "ZKM: sending as URL!\n");
+			dprintf(D_FULLDEBUG, "DoUpload: sending %s as URL.\n", filename);
 		} else if( filename[0] != '/' && filename[0] != '\\' && filename[1] != ':' ){
 			// looks like a relative path
 			fullname.sprintf("%s%c%s",Iwd,DIR_DELIM_CHAR,filename);
@@ -2317,7 +2312,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			file_command = 5;
 		}
 
-		dprintf ( D_SECURITY, "FILETRANSFER: outgoing file_command is %i for %s\n",
+		dprintf ( D_FULLDEBUG, "FILETRANSFER: outgoing file_command is %i for %s\n",
 				file_command, filename );
 
 		if( !s->snd_int(file_command,FALSE) ) {
@@ -2345,10 +2340,11 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 		} else {
 			// this file is _not_ the job executable
 			is_the_executable = false;
+
+			// condor_basename works for URLs
 			basefilename = strdup( condor_basename(filename) );		//de-const
 		}
 
-		// ZKM: basename work okay with URLs?
 		if( !s->code(basefilename) ) {
 			free( basefilename );					//b/c of de-consting
 			dprintf(D_FULLDEBUG,"DoUpload: exiting at %d\n",__LINE__);
@@ -2356,7 +2352,6 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 		}
 		free( basefilename );						//b/c of de-consting
 
-		dprintf (D_ALWAYS, "PDGA2: %i, pgaa: %i, Igaa: %i\n", PeerDoesGoAhead, peer_goes_ahead_always, I_go_ahead_always);
 		if( PeerDoesGoAhead ) {
 			if( !s->end_of_message() ) {
 				dprintf(D_FULLDEBUG, "DoUpload: failed on eom before GoAhead; exiting at %d\n",__LINE__);
@@ -2394,19 +2389,25 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 				rc = -1;
 			}
 		} else if (file_command == 5) {
-			int test_int = 9876;
-			if(!s->code(test_int)) {
-				dprintf( D_ALWAYS, "ZKM: failed to send test_int: %i\n", test_int);
-				rc = -1;
-			} else if(!s->code(fullname)) {
-				dprintf( D_ALWAYS, "ZKM: failed to send fullname: %s\n", fullname.Value());
+			// send the URL and that's it for now.
+			// TODO: this should probably be a classad
+			if(!s->code(fullname)) {
+				dprintf( D_FULLDEBUG, "DoUpload: failed to send fullname: %s\n", fullname.Value());
 				rc = -1;
 			} else {
-				dprintf( D_ALWAYS, "ZKM: sent fullname and NO eom: %s\n", fullname.Value());
+				dprintf( D_FULLDEBUG, "DoUpload: sent fullname and NO eom: %s\n", fullname.Value());
 				rc = 0;
 			}
 
-			// we don't know how many bytes it was, so don't add any.
+			// on the sending side, we don't know how many bytes the actual
+			// file was, since we aren't the ones downloading it.  to find out
+			// the length, we'd have to make a connection to some server (via a
+			// plugin, for which no API currently exists) and ask it, and i
+			// don't want to add that latency.
+			// 
+			// instead we add the length of the URL itself, since that's what
+			// we sent.
+			bytes = fullname.Length();
 
 		} else if ( TransferFilePermissions ) {
 			rc = s->put_file_with_permissions( &bytes, fullname.Value() );
@@ -3115,10 +3116,13 @@ int FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* URL, cons
 	const char* colon = strchr(URL, ':');
 
 	if (!colon) {
+		// in theory, this should never happen -- then sending side should only
+		// send URLS after having checked this.  however, trust but verify.
 		e.pushf("FILETRANSFER", 1, "Specified URL does not contain a ':' (%s)", URL);
 		return 1;
 	}
 
+	// extract the protocol/method
 	char* method = (char*) malloc(1 + (colon-URL));
 	strncpy(method, URL, (colon-URL));
 	method[(colon-URL)] = '\0';
@@ -3127,28 +3131,34 @@ int FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* URL, cons
 	// look up the method in our hash table
 	MyString plugin;
 
-	// HASHTABLE RETURN ZERO if found!!!
+	// hashtable returns zero if found.
 	if (plugin_table->lookup((MyString)method, plugin)) {
 		// no plugin for this type!!!
 		// TODO: push onto CondorError e
-		dprintf (D_FULLDEBUG, "ZKM: plugin for type %s not found!\n", method);
+		dprintf (D_FULLDEBUG, "FILETRANSFER: plugin for type %s not found!\n", method);
 		free(method);
 		return 1;
 	}
 
-	if (plugin == "" || plugin[0] != '/') {
-		dprintf(D_ALWAYS, "ZKM: NOT invoking malformed plugin named \"%s\"\n", plugin.Value());
+	
+/*	
+	// TODO: check validity of plugin name.  should always be an absolute path
+	if (absolute_path_check() ) {
+		dprintf(D_ALWAYS, "FILETRANSFER: NOT invoking malformed plugin named \"%s\"\n", plugin.Value());
+		FAIL();
 	}
+*/
 
-	// invoke the proper plugin using my_gregs_popen();
+	// TODO: invoke the proper plugin using my_gregs_popen() and the new API.
+
 	MyString cmd_line = plugin.Value();
 	cmd_line += " ";
 	cmd_line += URL;
 	cmd_line += " ";
 	cmd_line += dest;
-	dprintf(D_ALWAYS, "ZKM: invoking: %s\n", cmd_line.Value());
+	dprintf(D_FULLDEBUG, "FILETRANSFER: invoking: %s\n", cmd_line.Value());
 	int retval = system( cmd_line.Value() );
-	dprintf (D_ALWAYS, "ZKM: plugin returned %i\n", retval);
+	dprintf (D_ALWAYS, "FILETRANSFER: plugin returned %i\n", retval);
 
 	// clean up
 	free(method);
@@ -3159,7 +3169,11 @@ int FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* URL, cons
 
 int FileTransfer::InitializePlugins(CondorError &e) {
 
-	plugin_table = new PluginHashTable(7, compute_filename_hash);
+	// see if this is explicitly disabled
+	if (!param_boolean("ENABLE_URL_TRANSFERS", true)) {
+		I_support_filetransfer_plugins = false;
+		return 0;
+	}
 
 	char* plugin_list_string = param("FILETRANSFER_PLUGINS");
 	if (!plugin_list_string) {
@@ -3167,20 +3181,23 @@ int FileTransfer::InitializePlugins(CondorError &e) {
 		return 0;
 	}
 
+	// plugin_table is a member variable
+	plugin_table = new PluginHashTable(7, compute_filename_hash);
+
 	StringList plugin_list (plugin_list_string);
 	plugin_list.rewind();
 
 	char *p;
 	while ((p = plugin_list.next())) {
-		// see what it supports and map it
-		dprintf(D_ALWAYS, "ZKM: examining %s\n", p);
+		// TODO: plugin must be an absolute path (win and unix)
+
 		MyString methods = DeterminePluginMethods(e, p);
 		if (!methods.IsEmpty()) {
 			// we support at least one plugin type
 			I_support_filetransfer_plugins = true;
 			InsertPluginMappings(methods, p);
 		} else {
-			dprintf(D_ALWAYS, "ZKM: empty method list returned!\n");
+			dprintf(D_ALWAYS, "FILETRANSFER: failed to add plugin \"%s\" because: %s\n", p, e.getFullText());
 		}
 	}
 
@@ -3200,7 +3217,7 @@ FileTransfer::DeterminePluginMethods( CondorError &e, const char* path )
     fp = my_popenv( args, "r", FALSE );
 
     if( ! fp ) {
-        dprintf( D_ALWAYS, "Failed to execute %s, ignoring\n", path );
+        dprintf( D_ALWAYS, "FILETRANSFER: Failed to execute %s, ignoring\n", path );
 		e.pushf("FILETRANSFER", 1, "Failed to execute %s, ignoring\n", path );
         return "";
     }
@@ -3209,7 +3226,7 @@ FileTransfer::DeterminePluginMethods( CondorError &e, const char* path )
     while( fgets(buf, 1024, fp) ) {
         read_something = true;
         if( ! ad->Insert(buf) ) {
-            dprintf( D_ALWAYS, "Failed to insert \"%s\" into ClassAd, "
+            dprintf( D_ALWAYS, "FILETRANSFER: Failed to insert \"%s\" into ClassAd, "
                      "ignoring invalid plugin\n", buf );
             delete( ad );
             pclose( fp );
@@ -3220,15 +3237,14 @@ FileTransfer::DeterminePluginMethods( CondorError &e, const char* path )
     my_pclose( fp );
     if( ! read_something ) {
         dprintf( D_ALWAYS,
-                 "\"%s -classad\" did not produce any output, ignoring\n",
+                 "FILETRANSFER: \"%s -classad\" did not produce any output, ignoring\n",
                  path );
         delete( ad );
 		e.pushf("FILETRANSFER", 1, "\"%s -classad\" did not produce any output, ignoring\n", path );
         return "";
     }
 
-	// verify that plugin type is FileTransfer
-	// TODO
+	// TODO: verify that plugin type is FileTransfer
 	// e.pushf("FILETRANSFER", 1, "\"%s -classad\" is not plugin type FileTransfer, ignoring\n", path );
 
 	// extract the info we care about
@@ -3241,8 +3257,7 @@ FileTransfer::DeterminePluginMethods( CondorError &e, const char* path )
 		return m;
 	}
 
-	// TODO: push error onto CondorError e
-	dprintf(D_ALWAYS, "\"%s -classad\" does not contain SupportedMethods, ignoring\n", path );
+	dprintf(D_ALWAYS, "FILETRANSFER output of \"%s -classad\" does not contain SupportedMethods, ignoring\n", path );
 	e.pushf("FILETRANSFER", 1, "\"%s -classad\" does not support any methods, ignoring\n", path );
 
 	delete( ad );
@@ -3253,16 +3268,13 @@ FileTransfer::DeterminePluginMethods( CondorError &e, const char* path )
 void
 FileTransfer::InsertPluginMappings(MyString methods, MyString p)
 {
-	dprintf(D_ALWAYS, "ZKM: FILETRANSFER: %s handled by %s\n", methods.Value(), p.Value());
-
 	StringList method_list(methods.Value());
 
 	char* m;
 
 	method_list.rewind();
 	while((m = method_list.next())) {
-		dprintf(D_ALWAYS, "ZKM: FILETRANSFER: %s handled by %s\n", m, p.Value());
+		dprintf(D_FULLDEBUG, "FILETRANSFER: protocol \"%s\" handled by \"%s\"\n", m, p.Value());
 		plugin_table->insert(m, p);
 	}
 }
-
