@@ -52,6 +52,13 @@ The details of each version are described below.
 job periodic hold or remove policy to become true, there was a 20-second
 deadlock between the shadow, startd, and starter.
 
+%gittrac #622
+\item Fixed a bug that could cause \Condor{dagman} to generate an
+illegal rescue DAG if it read events incorrectly in recovery mode
+(\Condor{dagman} now checks for events that violate DAG semantics
+when reading events in recovery mode, and exits without creating a
+rescue DAG if it reads such an event).
+
 % gittrac #744
 \item Fixed a bug that could cause \Condor{dagman} to abort if it saw
 a combination of a terminated and an aborted event on a node with
