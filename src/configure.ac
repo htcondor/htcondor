@@ -2388,7 +2388,11 @@ AC_CHECK_HEADERS([resolv.h],[],[],[
 #include<netinet/in.h>
 #include<arpa/nameser.h>])
 AC_CHECK_HEADERS([pthread.h])
-AC_CHECK_HEADERS([ldap.h])
+AC_CHECK_HEADERS([lber.h])
+AC_CHECK_HEADERS([ldap.h],[],[],[
+#if HAVE_LBER_H
+# include <lber.h>
+#endif])
 
 AC_CHECK_LIB([sasl], [sasl_client_init],
   AC_DEFINE([HAVE_LIBSASL], [1], [check for usable libsasl]))
@@ -2594,6 +2598,22 @@ AC_CHECK_DECLS([SIOCETHTOOL,SIOCGIFCONF],,, [[#include <linux/sockios.h>]])
 
 # Does net/if.h define struct ifreq ?
 AC_CHECK_TYPES([struct ifreq,struct ifconf],[],[],[#include <net/if.h>])
+
+dnl
+dnl if sigwait() takes 1 or 2 arguments
+dnl
+AC_MSG_CHECKING([number of arguments to sigwait()])
+AC_TRY_COMPILE([#include <signal.h>
+#include <unistd.h>], [sigset_t set;
+sigwait(&set);],[
+  AC_MSG_RESULT([1])
+  AC_DEFINE(SIGWAIT_ARGS, 1, [Number of arguments to sigwait()])],[
+  AC_TRY_COMPILE([#include <signal.h>
+#include <unistd.h>], [sigset_t set; int sig; sigwait(&set, &sig);],[
+    AC_MSG_RESULT([2])
+    AC_DEFINE(SIGWAIT_ARGS, 2, [Number of arguments to sigwait()])],[
+    AC_MSG_RESULT(unknown)
+    AC_MSG_ERROR([unable to determine number of arguments to sigwait()])])])
 
 # we don't actually want to add -lgen to our link line, but we do want
 # HAVE_LIBGEN defined correctly for our test suite builds...
