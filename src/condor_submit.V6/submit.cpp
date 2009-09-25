@@ -5868,7 +5868,11 @@ queue(int num)
 				init_job_ad();
 			}
 			IsFirstExecutable = false;
-			ProcId = -1;
+			if ( !IsFirstExecutable && DumpClassAdToFile ) {
+					ProcId = 1;
+			} else {
+				ProcId = -1;
+			}
 			ClusterAdAttrs.clear();
 		}
 
