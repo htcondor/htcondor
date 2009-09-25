@@ -458,16 +458,10 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 						   ATTR_OWNER,owner,
 						   ATTR_JOB_UNIVERSE,CONDOR_UNIVERSE_GRID);
 	} else {
-		if ( stricmp(attr_name,ATTR_MIRROR_SCHEDD)==0 ) {
-			constraint.sprintf("(%s=?=\"%s\"&&%s=?=\"%s\")",
-						   ATTR_OWNER,owner,
-						   attr_name,attr_value);
-		} else {
-			constraint.sprintf("(%s=?=\"%s\"&&%s=?=\"%s\"&&%s==%d)",
+		constraint.sprintf("(%s=?=\"%s\"&&%s=?=\"%s\"&&%s==%d)",
 						   ATTR_OWNER,owner,
 						   attr_name,attr_value,
 						   ATTR_JOB_UNIVERSE,CONDOR_UNIVERSE_GRID);
-		}
 	}
 	args.AppendArg("-C");
 	args.AppendArg(constraint.Value());
