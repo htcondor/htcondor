@@ -107,7 +107,6 @@ ClassAd  *job = NULL;
 char	*OperatingSystem;
 char	*Architecture;
 char	*Spool;
-char	*Flavor;
 char	*ScheddName = NULL;
 char	*PoolName = NULL;
 DCSchedd* MySchedd = NULL;
@@ -6708,11 +6707,6 @@ init_params()
 		fprintf(stderr,"SPOOL not specified in config file\n" );
 		DoCleanup(0,0,NULL);
 		exit( 1 );
-	}
-
-	Flavor = param( "FLAVOR" );
-	if( Flavor == NULL ) {
-		Flavor = strdup("none");
 	}
 
 	My_fs_domain = param( "FILESYSTEM_DOMAIN" );

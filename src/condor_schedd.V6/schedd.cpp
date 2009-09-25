@@ -468,7 +468,6 @@ Scheduler::Scheduler() :
 							&Scheduler::jobIsFinishedHandler, this );
 
 	sent_shadow_failure_email = FALSE;
-	ManageBandwidth = false;
 	_gridlogic = NULL;
 	m_parsed_gridman_selection_expr = NULL;
 	m_unparsed_gridman_selection_expr = NULL;
@@ -10338,8 +10337,6 @@ Scheduler::Init()
 	}
 
 	MaxExceptions = param_integer("MAX_SHADOW_EXCEPTIONS", 5);
-
-	ManageBandwidth = param_boolean("MANAGE_BANDWIDTH", false);
 
 	PeriodicExprInterval.setMinInterval( param_integer("PERIODIC_EXPR_INTERVAL", 60) );
 
