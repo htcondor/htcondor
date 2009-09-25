@@ -208,7 +208,7 @@ Job::CheckForLogFile() const
 }
 
 //---------------------------------------------------------------------------
-void Job::Dump () const {
+void Job::Dump ( const Dag *dag ) const {
     dprintf( D_ALWAYS, "---------------------- Job ----------------------\n");
     dprintf( D_ALWAYS, "      Node Name: %s\n", _jobName );
     dprintf( D_ALWAYS, "         NodeID: %d\n", _jobID );
@@ -241,7 +241,8 @@ void Job::Dump () const {
 
 		set<JobID_t>::const_iterator qit;
 		for (qit = _queues[i].begin(); qit != _queues[i].end(); qit++) {
-			dprintf( D_ALWAYS | D_NOHEADER, "%d, ", *qit );
+			Job *node = dag->Dag::FindNodeByNodeID( *qit );
+			dprintf( D_ALWAYS | D_NOHEADER, "%s, ", node->GetJobName() );
 		}
         dprintf( D_ALWAYS | D_NOHEADER, "<END>\n" );
     }
