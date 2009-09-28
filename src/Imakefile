@@ -350,6 +350,10 @@ object_target(GT42_GAHP,gt42_gahp)
 object_target(NORDUGRID_GAHP,nordugrid_gahp)
 #endif
 
+#if HAVE_EXT_CREAM
+object_target(CREAM_GAHP,cream_gahp)
+#endif
+
 object_target(DeploymentTools,deployment_tools)
 
 single_target(condor_procapi,libprocapi.a)
@@ -435,7 +439,6 @@ ext_target(EXT_GLOBUS_VERSION,$(EXT_TRIGGER)/$(EXT_OPENSSL_VERSION))
 
 #if HAVE_EXT_CREAM
 ext_target(EXT_CREAM_VERSION,$(EXT_TRIGGER)/$(EXT_GLOBUS_VERSION) $(EXT_TRIGGER)/$(EXT_VOMS_VERSION) $(EXT_TRIGGER)/$(EXT_CLASSADS_VERSION))
-object_target(CREAM_GAHP,cream_gahp)
 #endif
 
 #if HAVE_EXT_UNICOREGAHP
