@@ -3009,6 +3009,7 @@ int
 Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 {
 	ExtArray<PROC_ID> *jobs;
+		// These two lists must be kept in synch!
 	const char *AttrsToModify[] = { 
 		ATTR_JOB_CMD,
 		ATTR_JOB_INPUT,
@@ -3019,6 +3020,15 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 		ATTR_ULOG_FILE,
 		ATTR_X509_USER_PROXY,
 		NULL };		// list must end with a NULL
+	const bool AttrIsList[] = {
+		false,
+		false,
+		false,
+		false,
+		true,
+		true,
+		false,
+		false };
 
 
 	dprintf(D_FULLDEBUG,"spoolJobFilesReaper tid=%d status=%d\n",
@@ -3124,8 +3134,13 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 			}
 				// Create new value - deal with the fact that
 				// some of these attributes contain a list of pathnames
-			StringList old_paths(buf,",");
+			StringList old_paths(NULL,",");
 			StringList new_paths(NULL,",");
+			if ( AttrIsList[i] ) {
+				old_paths.initializeFromString(buf);
+			} else {
+				old_paths.insert(buf);
+			}
 			old_paths.rewind();
 			char *old_path_buf;
 			bool changed = false;
