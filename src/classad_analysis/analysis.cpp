@@ -35,8 +35,8 @@ using namespace classad_analysis;
 using namespace classad_analysis::job;
 
 ClassAdAnalyzer::
-ClassAdAnalyzer( ) :
-  m_result(NULL), jobReq(NULL) { 
+ClassAdAnalyzer( bool ras ) :
+  result_as_struct(ras), m_result(NULL), jobReq(NULL) { 
 
   stringstream std_rank;
   stringstream preempt_rank;
@@ -109,6 +109,12 @@ BasicAnalyze( ClassAd *request, ClassAd *offer ) {
   // XXX: this code could/should be refactored out (from here and
   // condor_q.V6/queue.cpp) and into an analysis library
 
+  // NB:  for now, we only use this "basic analysis" if we're
+  // generating a result struct; so return otherwise.  Be sure to
+  // eliminate this check if this code is used elsewhere!
+
+  if (!result_as_struct) { return; }
+
   char remote_user[128];
   EvalResult eval_result;
 
@@ -118,12 +124,12 @@ BasicAnalyze( ClassAd *request, ClassAd *offer ) {
   bool satisfied_preempt_req = preemption_req->EvalTree( offer, request, &eval_result ) && eval_result.type == LX_INTEGER && eval_result.i == TRUE;
 
   if (!((*offer) >= (*request))) {
-    m_result->add_explanation(classad_analysis::MACHINES_REJECTED_BY_JOB_REQS, offer);
+    result_add_explanation(classad_analysis::MACHINES_REJECTED_BY_JOB_REQS, offer);
     return;
   } 
 
   if (!((*offer) <= (*request))) {
-    m_result->add_explanation(classad_analysis::MACHINES_REJECTING_JOB, offer);
+    result_add_explanation(classad_analysis::MACHINES_REJECTING_JOB, offer);
     return;
   }
 
@@ -131,11 +137,11 @@ BasicAnalyze( ClassAd *request, ClassAd *offer ) {
     if ( satisfied_std_rank )  {
       // Machine satisfies job requirements, job satisfies machine
       // constraints, no remote user
-      m_result->add_explanation(classad_analysis::MACHINES_AVAILABLE, offer);
+      result_add_explanation(classad_analysis::MACHINES_AVAILABLE, offer);
       return;
     } else {
       // Standard rank condition failed
-      m_result->add_explanation(classad_analysis::MACHINES_REJECTING_UNKNOWN, offer);
+      result_add_explanation(classad_analysis::MACHINES_REJECTING_UNKNOWN, offer);
       return;
     }
   }
@@ -144,30 +150,30 @@ BasicAnalyze( ClassAd *request, ClassAd *offer ) {
     if ( satisfied_std_rank ) {
       // Satisfies preemption priority condition and standard rank
       // condition; thus available
-      m_result->add_explanation(classad_analysis::MACHINES_AVAILABLE, offer);
+      result_add_explanation(classad_analysis::MACHINES_AVAILABLE, offer);
       return;      
     } else {
       if ( satisfied_preempt_rank ) {
 	// Satisfies preemption priority and rank conditions, and ...
 	if (satisfied_preempt_req) {
 	  // ... also satisfies PREEMPTION_REQUIREMENTS:  available
-	  m_result->add_explanation(classad_analysis::MACHINES_AVAILABLE, offer);
+	  result_add_explanation(classad_analysis::MACHINES_AVAILABLE, offer);
 	  return;      	  
 	} else {
 	  // ... doesn't satisfy PREEMPTION_REQUIREMENTS:  not available
-	  m_result->add_explanation(classad_analysis::PREEMPTION_REQUIREMENTS_FAILED, offer);
+	  result_add_explanation(classad_analysis::PREEMPTION_REQUIREMENTS_FAILED, offer);
 	  return;
 	}
       } else {
 	// The comments on the equivalent code path in condor_q
 	// indicate that this case usually implies "some unknown problem"
-	m_result->add_explanation(classad_analysis::PREEMPTION_FAILED_UNKNOWN, offer);
+	result_add_explanation(classad_analysis::PREEMPTION_FAILED_UNKNOWN, offer);
 	return;
       }
     }
   } else {
     // Failed preemption priority condition
-    m_result->add_explanation(classad_analysis::PREEMPTION_PRIORITY_FAILED, offer);
+    result_add_explanation(classad_analysis::PREEMPTION_PRIORITY_FAILED, offer);
     return;
   }
 
@@ -182,7 +188,6 @@ ensure_result_initialized(classad::ClassAd *request) {
     // the same assumption here.  The overall interface of this code
     // should be marked with a big FIXME.
 
-
     if (!result_as_struct) return;
 
     if (m_result != NULL && !(m_result->job_ad()).SameAs(request)) {
@@ -194,6 +199,39 @@ ensure_result_initialized(classad::ClassAd *request) {
       m_result = new classad_analysis::job::result(*request);
     }
 }
+
+void ClassAdAnalyzer::
+result_add_suggestion(suggestion s) {
+  if (!result_as_struct) return;
+  ASSERT(m_result);
+  
+  m_result->add_suggestion(s);
+}
+
+void ClassAdAnalyzer::
+result_add_explanation(matchmaking_failure_kind mfk, classad::ClassAd resource) {
+  if (!result_as_struct) return;
+  ASSERT(m_result);
+  
+  m_result->add_explanation(mfk, resource);
+}
+
+void ClassAdAnalyzer::
+result_add_explanation(matchmaking_failure_kind mfk, ClassAd *resource) {
+  if (!result_as_struct) return;
+  ASSERT(m_result);
+  
+  m_result->add_explanation(mfk, resource);
+}
+
+void ClassAdAnalyzer::
+result_add_machine(classad::ClassAd resource) {
+  if (!result_as_struct) return;
+  ASSERT(m_result);
+  
+  m_result->add_machine(resource);
+}
+
 
 bool ClassAdAnalyzer::
 AnalyzeJobReqToBuffer( ClassAd *request, ClassAdList &offers, string &buffer )
@@ -225,7 +263,7 @@ AnalyzeJobReqToBuffer( ClassAd *request, ClassAdList &offers, string &buffer )
     ClassAd *ad;
     while((ad = offers.Next())) {
       classad::ClassAd *new_ad = toNewClassAd(ad);
-      m_result->add_machine(*new_ad);
+      result_add_machine(*new_ad);
       delete new_ad;
 
       if (do_basic_analysis) {
@@ -494,12 +532,12 @@ AnalyzeJobReqToBuffer( classad::ClassAd *request, ResourceGroup &offers, string 
 			switch( condition->explain.suggestion ) {
 			case ConditionExplain::REMOVE: {
 				sprintf( suggest, "REMOVE" );
-				m_result->add_suggestion(suggestion(suggestion::REMOVE_CONDITION, cond_s));
+				result_add_suggestion(suggestion(suggestion::REMOVE_CONDITION, cond_s));
 				break;
 			}
 			case ConditionExplain::MODIFY: {
 				pp.Unparse( value_s, condition->explain.newValue );
-				m_result->add_suggestion(suggestion(suggestion::MODIFY_CONDITION, cond_s, value_s));
+				result_add_suggestion(suggestion(suggestion::MODIFY_CONDITION, cond_s, value_s));
 				strncpy( value, value_s.c_str( ), 63 );
 				sprintf( suggest, "MODIFY TO %s", value );
 				break;
@@ -590,7 +628,7 @@ AnalyzeJobAttrsToBuffer( classad::ClassAd *request, ResourceGroup &offers,
 		string undefAttr = "";
 		adExplain.undefAttrs.Rewind( );
 		while( adExplain.undefAttrs.Next( undefAttr ) ) {
-		  m_result->add_suggestion(suggestion(suggestion::DEFINE_ATTRIBUTE, undefAttr));
+		  result_add_suggestion(suggestion(suggestion::DEFINE_ATTRIBUTE, undefAttr));
 			buffer += undefAttr;
 			buffer += "\n";
 		}
@@ -661,7 +699,7 @@ AnalyzeJobAttrsToBuffer( classad::ClassAd *request, ResourceGroup &offers,
 				}
 				strncpy( suggest, suggest_s.c_str( ), 64 ); 
 				sprintf( formatted, "%-24s%s\n", attr, suggest );
-				m_result->add_suggestion(suggestion(suggestion::MODIFY_ATTRIBUTE, attr, suggest_s));
+				result_add_suggestion(suggestion(suggestion::MODIFY_ATTRIBUTE, attr, suggest_s));
 				tempBuff += formatted;
 			}
 			default: { }
