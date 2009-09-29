@@ -3252,6 +3252,22 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=daemon_core,soap_core
 id=162
 
+[MASTER.PID_SNAPSHOT_INTERVAL]
+aliases=
+default=60
+version=0.0.0
+range=.*
+state=default
+type=int
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Master Pid Snapshot Interval
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=daemon_core,HookClientMgr
+id=163
+
 [PID_SNAPSHOT_INTERVAL]
 aliases=
 default=15
