@@ -104,6 +104,8 @@ class ClassAdAnalyzer
 	ExprTree* preempt_prio_condition;
 	ExprTree* preemption_req;
 
+	void ensure_result_initialized(classad::ClassAd *request);
+
 	bool AnalyzeJobReqToBuffer( classad::ClassAd *request, ResourceGroup &offers,
 								string &buffer );
 	bool AnalyzeJobAttrsToBuffer( classad::ClassAd *request, ResourceGroup &offers,

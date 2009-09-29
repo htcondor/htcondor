@@ -173,6 +173,28 @@ BasicAnalyze( ClassAd *request, ClassAd *offer ) {
 
 }
 
+void ClassAdAnalyzer::
+ensure_result_initialized(classad::ClassAd *request) {
+    // Set up result object, only if necessary
+
+    // Other parts of this code are written to assume that a
+    // ClassAdAnalyzer can be used to analyze multiple jobs; we make
+    // the same assumption here.  The overall interface of this code
+    // should be marked with a big FIXME.
+
+
+    if (!result_as_struct) return;
+
+    if (m_result != NULL && !(m_result->job_ad()).SameAs(request)) {
+      delete m_result;
+      m_result = NULL;
+    }
+
+    if (m_result == NULL) {
+      m_result = new classad_analysis::job::result(*request);
+    }
+}
+
 bool ClassAdAnalyzer::
 AnalyzeJobReqToBuffer( ClassAd *request, ClassAdList &offers, string &buffer )
 {
@@ -196,19 +218,8 @@ AnalyzeJobReqToBuffer( ClassAd *request, ClassAdList &offers, string &buffer )
 	}
     explicit_classad  = AddExplicitTargets( converted_classad );
 
-
+    ensure_result_initialized(explicit_classad);
     
-    // set up result object
-    if (m_result != NULL) {
-      // Other parts of this code are written to assume that a
-      // ClassAdAnalyzer can be used to analyze multiple jobs; we make
-      // the same assumption here.  The overall interface of this code
-      // should be marked with a big FIXME.
-      delete m_result;
-    }
-
-    m_result = new classad_analysis::job::result(*explicit_classad);
-
     bool do_basic_analysis = NeedsBasicAnalysis(request);
     offers.Rewind();
     ClassAd *ad;
@@ -271,9 +282,7 @@ AnalyzeJobAttrsToBuffer( ClassAd *request, ClassAdList &offers,
 		return true;
 	}
     explicit_classad  = AddExplicitTargets( converted_classad );
-	if( !m_result ) {
-		m_result = new classad_analysis::job::result(*explicit_classad);
-	}
+    ensure_result_initialized(explicit_classad);
 	success = AnalyzeJobAttrsToBuffer( explicit_classad, rg, buffer );
 
     delete converted_classad;
