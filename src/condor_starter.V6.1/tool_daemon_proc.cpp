@@ -103,6 +103,49 @@ ToolDaemonProc::StartJob()
 		}
 	}
 
+	// compute job's renice value by evaluating the machine's
+	// JOB_RENICE_INCREMENT in the context of the job ad...
+
+    char* ptmp = param( "JOB_RENICE_INCREMENT" );
+	if( ptmp ) {
+			// insert renice expr into our copy of the job ad
+		MyString reniceAttr = "Renice = ";
+		reniceAttr += ptmp;
+		if( !JobAd->Insert( reniceAttr.Value() ) ) {
+			dprintf( D_ALWAYS, "ERROR: failed to insert JOB_RENICE_INCREMENT "
+				"into job ad, Aborting ToolDaemonProc::StartJob...\n" );
+			free( ptmp );
+			return 0;
+		}
+			// evaluate
+		if( JobAd->EvalInteger( "Renice", NULL, nice_inc ) ) {
+			dprintf( D_ALWAYS, "Renice expr \"%s\" evaluated to %d\n",
+					 ptmp, nice_inc );
+		} else {
+			dprintf( D_ALWAYS, "WARNING: job renice expr (\"%s\") doesn't "
+					 "eval to int!  Using default of 10...\n", ptmp );
+			nice_inc = 10;
+		}
+
+			// enforce valid ranges for nice_inc
+		if( nice_inc < 0 ) {
+			dprintf( D_FULLDEBUG, "WARNING: job renice value (%d) is too "
+					 "low: adjusted to 0\n", nice_inc );
+			nice_inc = 0;
+		}
+		else if( nice_inc > 19 ) {
+			dprintf( D_FULLDEBUG, "WARNING: job renice value (%d) is too "
+					 "high: adjusted to 19\n", nice_inc );
+			nice_inc = 19;
+		}
+
+		ASSERT( ptmp );
+		free( ptmp );
+		ptmp = NULL;
+	} else {
+			// if JOB_RENICE_INCREMENT is undefined, default to 10
+		nice_inc = 10;
+	}
 
 		// // // // // // 
 		// Arguments
@@ -226,8 +269,6 @@ ToolDaemonProc::StartJob()
 		        "Tracking process family by login \"%s\"\n",
 		        fi.login);
 	}
-
-	nice_inc = param_integer( "JOB_RENICE_INCREMENT", 0 );
 
 	MyString args_string;
 	DaemonArgs.GetArgsStringForDisplay(&args_string);
