@@ -111,6 +111,10 @@ namespace classad_analysis {
     return my_suggestions.end();
   }
 
+  const classad::ClassAd& result::job_ad() const {
+    return job;
+  }
+
   std::ostream &operator<<(std::ostream &ostr, const result& oresult) {
     ostr << "Explanation of analysis results:" << std::endl;
     

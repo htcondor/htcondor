@@ -116,6 +116,7 @@ namespace classad_analysis {
     explanation::const_iterator last_explanation() const;
     suggestions::const_iterator last_suggestion() const; 
 
+    const classad::ClassAd& job_ad() const;
   private:
     classad::ClassAd job;
     std::list<classad::ClassAd> machines;
