@@ -54,8 +54,10 @@ struct Offset * ProcAPI::offsets	= NULL;
 int ProcAPI::MAX_SAMPLES = 5;
 int ProcAPI::DEFAULT_PRECISION_RANGE = 4;
 
-#ifdef LINUX
-double ProcAPI::TIME_UNITS_PER_SEC = (double)HZ;
+#if defined(HZ)
+double ProcAPI::TIME_UNITS_PER_SEC = (double) HZ;
+#elif defined(_SC_CLK_TCK)
+double ProcAPI::TIME_UNITS_PER_SEC = (double) sysconf(_SC_CLK_TCK);
 #else // not linux
 double ProcAPI::TIME_UNITS_PER_SEC = 1.0;
 #endif
@@ -587,9 +589,17 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi, int &status )
 
 		// convert system time and user time into seconds from jiffies
 		// and calculate cpu time
-	pi->user_time   = procRaw.user_time_1 / HZ;
-	pi->sys_time    = procRaw.sys_time_1  / HZ;
-	double cpu_time = (procRaw.user_time_1 + procRaw.sys_time_1) / (double)HZ;
+	long	hertz;
+# if defined(HZ)
+	hertz = HZ;
+# elif defined(_SC_CLK_TCK)
+	hertz = sysconf(_SC_CLK_TCK);
+# else
+#   error "Unable to determine system clock"
+# endif
+	pi->user_time   = procRaw.user_time_1 / hertz;
+	pi->sys_time    = procRaw.sys_time_1  / hertz;
+	double cpu_time = (procRaw.user_time_1 + procRaw.sys_time_1) / (double)hertz;
 
 		// use the raw value (which is in jiffies since boot time)
 		// as the birthday, which is useful for comparing whether
@@ -608,7 +618,7 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi, int &status )
 	}
 	
 		// 2. Convert from jiffies to seconds
-	long bday_secs = procRaw.creation_time / HZ;
+	long bday_secs = procRaw.creation_time / hertz;
 	
 		// 3. Convert from seconds since boot to seconds since epoch
 	pi->creation_time = bday_secs + boottime;
