@@ -307,7 +307,7 @@ void GlobusJobReconfig()
 	tmp_int = param_integer("GRIDMANAGER_CONNECT_FAILURE_RETRY_COUNT",3);
 	GlobusJob::setConnectFailureRetry( tmp_int );
 
-	tmp_bool = param_boolean("ENABLE_GRID_MONITOR",false);
+	tmp_bool = param_boolean("ENABLE_GRID_MONITOR",true);
 	GlobusResource::setEnableGridMonitor( tmp_bool );
 
 	tmp_int = param_integer("GRID_MONITOR_DISABLE_TIME",
