@@ -81,6 +81,11 @@ ResMgr::ResMgr()
 	new_type_nums = NULL;
 	is_shutting_down = false;
 	cur_time = last_in_use = time( NULL );
+
+	max_types = 0;
+	num_updates = 0;
+	startTime = 0;
+	type_strings = NULL;
 }
 
 
