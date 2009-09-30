@@ -2358,9 +2358,7 @@ AC_CHECK_HEADERS([stdint.h])
 AC_CHECK_HEADERS([inttypes.h])
 AC_CHECK_HEADERS([os_types.h])
 AC_CHECK_HEADERS([sys/personality.h])
-AC_CHECK_HEADERS([linux/personality.h])
 AC_CHECK_HEADERS([linux/magic.h])
-AC_CHECK_HEADERS([linux/nfsd/const.h])
 AC_CHECK_HEADERS([linux/sockios.h])
 AC_CHECK_HEADERS([linux/types.h])
 AC_CHECK_HEADERS([linux/ethtool.h],[],[],[
@@ -2384,7 +2382,9 @@ AC_CHECK_HEADERS([ustat.h])
 AC_CHECK_HEADERS([dlfcn.h])
 AC_CHECK_HEADERS([valgrind.h])
 AC_CHECK_HEADERS([resolv.h],[],[],[
-#include<sys/types.h>
+#if HAVE_SYS_TYPES_H
+# include<sys/types.h>
+#endif
 #include<netinet/in.h>
 #include<arpa/nameser.h>])
 AC_CHECK_HEADERS([pthread.h])
@@ -2393,6 +2393,44 @@ AC_CHECK_HEADERS([ldap.h],[],[],[
 #if HAVE_LBER_H
 # include <lber.h>
 #endif])
+
+AC_MSG_CHECKING([Checking if linux/nfs_fs.h is present and usable])
+AC_COMPILE_IFELSE([
+AC_LANG_SOURCE([
+#include <unistd.h>
+#ifdef HAVE_SYS_TYPES_H
+# include <sys/types.h>
+#endif
+#ifdef HAVE_SYS_PARAM_H
+# include <sys/param.h>
+#endif
+#if HAVE_LINUX_TYPES_H
+# include <linux/types.h>
+#endif
+#include <linux/nfs_fs.h>
+])],
+[AC_MSG_RESULT([yes]),
+ AC_DEFINE(HAVE_LINUX_NFS_FS_H,[1],[Define to 1 if <linux/nfs_fs.h> is present and usable])],
+[AC_MSG_RESULT([no])])
+
+AC_MSG_CHECKING([Checking if linux/nfsd/const.h is present and usable])
+AC_COMPILE_IFELSE([
+AC_LANG_SOURCE([
+#include <unistd.h>
+#ifdef HAVE_SYS_TYPES_H
+# include <sys/types.h>
+#endif
+#ifdef HAVE_SYS_PARAM_H
+# include <sys/param.h>
+#endif
+#if HAVE_LINUX_TYPES_H
+# include <linux/types.h>
+#endif
+#include <linux/nfsd/const.h>
+])],
+[AC_MSG_RESULT([yes]),
+ AC_DEFINE(HAVE_LINUX_NFSD_CONST_H,[1],[Define to 1 if <linux/nfsd/const.h> is present and usable])],
+[AC_MSG_RESULT([no])])
 
 AC_CHECK_LIB([sasl], [sasl_client_init],
   AC_DEFINE([HAVE_LIBSASL], [1], [check for usable libsasl]))
@@ -2592,6 +2630,7 @@ if test "$ac_cv_func_statfs" = yes ; then
       AC_MSG_RESULT(unknown)
       AC_MSG_ERROR([unable to determine number of arguments to statfs()])])])
 fi dnl test "$ac_cv_func_statfs" = yes
+
 
 # Do we have the "ethtool" and similar declarations?
 AC_CHECK_DECLS([SIOCETHTOOL,SIOCGIFCONF],,, [[#include <linux/sockios.h>]])
