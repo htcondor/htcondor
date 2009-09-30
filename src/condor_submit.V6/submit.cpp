@@ -6897,7 +6897,11 @@ SaveClassAd ()
 		rhstr = NULL;
 		if( (lhs = tree->LArg()) ) { lhs->PrintToNewStr (&lhstr); }
 		if( (rhs = tree->RArg()) ) { rhs->PrintToNewStr (&rhstr); }
-		if( !lhs || !rhs || !lhstr || !rhstr) { retval = -1; }
+		if( !lhs || !rhs || !lhstr || !rhstr) { 
+			fprintf( stderr, "\nERROR: Null attribute name or value for job %d.%d\n",
+					 ClusterId, ProcId );
+			retval = -1;
+		} else {
 			// To facilitate processing of job status from the
 			// job_queue.log, the ATTR_JOB_STATUS attribute should not
 			// be stored within the cluster ad. Instead, it should be
@@ -6909,15 +6913,16 @@ SaveClassAd ()
 			// attributes required for the job to run. -matt 1 June 09
 			// Mostly the same rational for ATTR_JOB_SUBMISSION.
 			// -matt // 24 June 09
-		int tmpProcId = myprocid;
-		if( strcasecmp(lhstr, ATTR_JOB_STATUS) == 0 ||
-			strcasecmp(lhstr, ATTR_JOB_SUBMISSION) == 0 ) myprocid = ProcId;
-		if( SetAttribute(ClusterId, myprocid, lhstr, rhstr) == -1 ) {
-			fprintf( stderr, "\nERROR: Failed to set %s=%s for job %d.%d (%d)\n", 
-					 lhstr, rhstr, ClusterId, ProcId, errno );
-			retval = -1;
+			int tmpProcId = myprocid;
+			if( strcasecmp(lhstr, ATTR_JOB_STATUS) == 0 ||
+				strcasecmp(lhstr, ATTR_JOB_SUBMISSION) == 0 ) myprocid = ProcId;
+			if( SetAttribute(ClusterId, myprocid, lhstr, rhstr) == -1 ) {
+				fprintf( stderr, "\nERROR: Failed to set %s=%s for job %d.%d (%d)\n", 
+						 lhstr, rhstr, ClusterId, ProcId, errno );
+				retval = -1;
+			}
+			myprocid = tmpProcId;
 		}
-		myprocid = tmpProcId;
 		free(lhstr);
 		free(rhstr);
 		if(retval == -1) {
