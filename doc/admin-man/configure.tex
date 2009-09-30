@@ -916,11 +916,13 @@ File System Configuration File Entries''.
 
 \label{param:EmailSignature}
 \item[\Macro{EMAIL\_SIGNATURE}]
-  Every email sent by Condor includes a short signature line appended
+  Every e-mail sent by Condor includes a short signature line appended
   to the body.  By default, this signature includes the URL to the
-  global condor project website.  If \MacroNI{EMAIL\_SIGNATURE} is set,
-  the value of this parameter is used instead.  Note that the value
-  can only be one line in length.  This could be used to direct users
+  global Condor project website.  
+  When set, this variable defines an alternative signature line to be
+  used instead of the default. 
+  Note that the value can only be one line in length.
+  This variable could be used to direct users
   to look at local web site with information specific to the installation
   of Condor.
 
@@ -3464,11 +3466,12 @@ WANT_HOLD_REASON = \
 
 \label{param:StartdHistory}
 \item[\Macro{STARTD\_HISTORY}]
-	If this parameter is set to a file name, then the startd will
-	maintain a job history file in the same way that the schedd
-	does.  It will be rotated in the same way the schedd history
-	file is, and the same parameters that apply to schedd history
-	rotation apply to the startd history as well.
+  A file name where the \Condor{startd} daemon will
+  maintain a job history file in an analogous way to that of the 
+  history file defined by the configuration variable \MacroNI{HISTORY}.
+  It will be rotated in the same way,
+  and the same parameters that apply to the \MacroNI{HISTORY} file
+  rotation apply to the \Condor{startd} daemon history as well.
 
 \end{description}
 
