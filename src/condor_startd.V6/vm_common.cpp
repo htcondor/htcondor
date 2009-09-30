@@ -188,6 +188,7 @@ vmapi_get_host_classAd(void)
 	return vmregister->host_classad;
 }
 
+// XXX: Refactor for use with calls like _requestVMRegister
 bool 
 vmapi_sendCommand(char *addr, int cmd, void *data)
 {
