@@ -1743,7 +1743,7 @@ SetUniverse()
 		}
 		if ( JobGridType ) {
 			// Validate
-			// Valid values are (as of 6.7): nordugrid, oracle, globus,
+			// Valid values are (as of 6.7): nordugrid, globus,
 			//    gt2, infn, condor
 
 			// CRUFT: grid-type 'blah' is deprecated. Now, the specific batch
@@ -1763,7 +1763,6 @@ SetUniverse()
 				(stricmp (JobGridType, "nordugrid") == MATCH) ||
 				(stricmp (JobGridType, "amazon") == MATCH) ||	// added for amazon job
 				(stricmp (JobGridType, "unicore") == MATCH) ||
-				(stricmp (JobGridType, "oracle") == MATCH) ||
 				(stricmp (JobGridType, "cream") == MATCH)){
 				// We're ok	
 				// Values are case-insensitive for gridmanager, so we don't need to change case			
@@ -1774,7 +1773,7 @@ SetUniverse()
 			} else {
 
 				fprintf( stderr, "\nERROR: Invalid value '%s' for grid_type\n", JobGridType );
-				fprintf( stderr, "Must be one of: globus, gt2, gt4, condor, nordugrid, unicore, or oracle\n" );
+				fprintf( stderr, "Must be one of: globus, gt2, gt4, condor, nordugrid, unicore, or cream\n" );
 				exit( 1 );
 			}
 		}			
@@ -4856,8 +4855,7 @@ SetGlobusParams()
 
 		if ( stricmp (JobGridType, "gt2") == MATCH ||
 			 stricmp (JobGridType, "gt4") == MATCH ||
-			 stricmp (JobGridType, "gt5") == MATCH ||
-			 stricmp (JobGridType, "oracle") == MATCH ) {
+			 stricmp (JobGridType, "gt5") == MATCH ) {
 
 			char * jobmanager_type;
 			jobmanager_type = condor_param ( GlobusJobmanagerType );
@@ -5074,7 +5072,6 @@ SetGlobusParams()
 		 ( stricmp (JobGridType, "gt2") == MATCH ||
 		   stricmp (JobGridType, "gt4") == MATCH ||
 		   stricmp (JobGridType, "gt5") == MATCH ||
-		   stricmp (JobGridType, "oracle") == MATCH ||
 		   stricmp (JobGridType, "nordugrid") == MATCH ) ) {
 
 		buffer.sprintf( "%s = \"%s\"", ATTR_GLOBUS_CONTACT_STRING,
@@ -5086,7 +5083,6 @@ SetGlobusParams()
 		 stricmp (JobGridType, "gt2") == MATCH ||
 		 stricmp (JobGridType, "gt4") == MATCH ||
 		 stricmp (JobGridType, "gt5") == MATCH ||
-		 stricmp (JobGridType, "oracle") == MATCH ||
 		 stricmp (JobGridType, "nordugrid") == MATCH ) {
 
 		if( (tmp = condor_param(GlobusResubmit,ATTR_GLOBUS_RESUBMIT_CHECK)) ) {
