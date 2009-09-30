@@ -297,12 +297,9 @@ MachAttributes::publish( ClassAd* cp, amask_t how_much)
 
 	if( IS_TIMEOUT(how_much) || IS_PUBLIC(how_much) ) {
 
-		char line[100];
-		snprintf( line, 100, "%s=%.2f", ATTR_TOTAL_LOAD_AVG, m_load );
-		cp->Insert(line);
+		cp->Assign( ATTR_TOTAL_LOAD_AVG, rint(m_load * 100) / 100.0);
 		
-		snprintf( line, 100, "%s=%.2f", ATTR_TOTAL_CONDOR_LOAD_AVG, m_condor_load );
-		cp->Insert(line);
+		cp->Assign( ATTR_TOTAL_CONDOR_LOAD_AVG, rint(m_condor_load * 100) / 100.0);
 		
 		cp->Assign( ATTR_CLOCK_MIN, m_clock_min );
 
@@ -493,8 +490,6 @@ CpuAttributes::attach( Resource* res_ip )
 void
 CpuAttributes::publish( ClassAd* cp, amask_t how_much )
 {
-	char line[100];
-
 	if( IS_UPDATE(how_much) || IS_PUBLIC(how_much) ) {
 
 		cp->Assign( ATTR_VIRTUAL_MEMORY, (int)c_virt_mem );
@@ -506,12 +501,9 @@ CpuAttributes::publish( ClassAd* cp, amask_t how_much )
 
 	if( IS_TIMEOUT(how_much) || IS_PUBLIC(how_much) ) {
 
-		snprintf( line, 100, "%s=%.2f", ATTR_CONDOR_LOAD_AVG, c_condor_load );
-		cp->Insert(line);
+		cp->Assign( ATTR_CONDOR_LOAD_AVG, rint(c_condor_load * 100) / 100.0 );
 
-		snprintf( line, 100, "%s=%.2f", ATTR_LOAD_AVG, 
-				  (c_owner_load + c_condor_load) );
-		cp->Insert(line);
+		cp->Assign( ATTR_LOAD_AVG, rint((c_owner_load + c_condor_load) * 100) / 100.0 );
 
 		cp->Assign( ATTR_KEYBOARD_IDLE, (int)c_idle );
   
