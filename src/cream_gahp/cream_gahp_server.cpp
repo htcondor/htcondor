@@ -185,6 +185,7 @@ int gahp_printf(const char *format, ...)
   
 	va_start(ap, format);
 	vsprintf(buf, format, ap);
+	va_end(ap);
   
 	pthread_mutex_lock( &outputLock );
 
