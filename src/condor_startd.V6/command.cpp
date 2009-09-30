@@ -1493,7 +1493,7 @@ activate_claim( Resource* rip, Stream* stream )
 	int len = sizeof frm;	
 	StartdRec stRec;
 #endif
-	int starter;
+	int starter = MAX_STARTERS;
 	Sock* sock = (Sock*)stream;
 	char* shadow_addr = strdup( sin_to_string( sock->peer_addr() ));
 
