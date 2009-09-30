@@ -159,7 +159,7 @@ Resource::~Resource()
 		m_next_fetch_work_tid = -1;
 	}
 	if (m_hook_keyword) {
-		free(m_hook_keyword);
+		free(m_hook_keyword); m_hook_keyword = NULL;
 	}
 #endif /* HAVE_JOB_HOOKS */
 
@@ -184,21 +184,21 @@ Resource::~Resource()
 		m_id_dispenser = NULL;
 	}
 
-	delete r_state;
-	delete r_classad;
-	delete r_cur;
+	delete r_state; r_state = NULL;
+	delete r_classad; r_classad = NULL;
+	delete r_cur; r_cur = NULL;
 	if( r_pre ) {
-		delete r_pre;
+		delete r_pre; r_pre = NULL;
 	}
 	if( r_pre_pre ) {
-		delete r_pre_pre;
+		delete r_pre_pre; r_pre_pre = NULL;
 	}
-	delete r_cod_mgr;
-	delete r_reqexp;
-	delete r_attr;
-	delete r_load_queue;
-	free( r_name );
-	free( r_id_str );
+	delete r_cod_mgr; r_cod_mgr = NULL;
+	delete r_reqexp; r_reqexp = NULL;
+	delete r_attr; r_attr = NULL;
+	delete r_load_queue; r_load_queue = NULL;
+	free( r_name ); r_name = NULL;
+	free( r_id_str ); r_id_str = NULL;
 }
 
 
