@@ -1916,6 +1916,7 @@ handle_nordugrid_ldap_query( char **input_line )
 	LDAPMessage *search_result = NULL;
 	LDAPMessage *next_entry = NULL;
 	int idx = 0;
+	int first_entry = 1;
 
 	process_string_arg( user_arg->cmd[5], &attrs_str );
 	if ( attrs_str && attrs_str[0] ) {
@@ -1969,7 +1970,7 @@ handle_nordugrid_ldap_query( char **input_line )
 	my_strcat( reply, user_arg->cmd[1] );
 	my_strcat( reply, " 0 NULL" );
 
-	int first_entry = 1;
+	first_entry = 1;
 	next_entry = ldap_first_entry( hdl, search_result );
 	while ( next_entry ) {
 		BerElement *ber;
