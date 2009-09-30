@@ -2877,7 +2877,7 @@ if test "$_cv_opsys" = "LINUX" ; then
 	_cv_including_voms=yes
 	AC_MSG_RESULT([$_cv_including_voms])
 	CHECK_EXTERNAL([expat], [2.0.1], [soft])
-	CHECK_EXTERNAL([voms], [1.8.9], [soft])
+	CHECK_EXTERNAL([voms], [1.8.9-p1], [soft])
 else
 	_cv_including_voms=no
 	AC_MSG_RESULT([$_cv_including_voms])
