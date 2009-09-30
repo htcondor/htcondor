@@ -316,6 +316,7 @@ ResMgr::backfillConfig()
 				dprintf( D_ALWAYS, "BackfillMgr still has cleanup to "
 						 "perform, postponing delete\n" );
 				m_backfill_shutdown_pending = true;
+				free( new_system );
 				return true;
 			}
 		}
