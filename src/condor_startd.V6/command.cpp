@@ -1355,7 +1355,7 @@ abort_accept_claim( Resource* rip, Stream* stream )
 bool
 accept_request_claim( Resource* rip )
 {
-	int interval;
+	int interval = -1;
 	char *client_addr = NULL, *client_host, *full_client_host, *tmp;
 	char RemoteOwner[512];
 	RemoteOwner[0] = '\0';
