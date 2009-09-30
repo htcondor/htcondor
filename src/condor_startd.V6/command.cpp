@@ -232,14 +232,18 @@ command_x_event( Service*, int, Stream* s )
 int
 command_give_state( Service*, int, Stream* stream ) 
 {
+	int rval = TRUE;
 	char* tmp;
 	dprintf( D_FULLDEBUG, "command_give_state() called.\n" );
 	stream->encode();
 	tmp = strdup( state_to_string(resmgr->state()) );
-	stream->code( tmp );
-	stream->end_of_message();
+	if ( ! stream->code( tmp ) ||
+		 ! stream->end_of_message() ) {
+		dprintf( D_FULLDEBUG, "command_give_state(): failed to send state\n" );
+		rval = FALSE;
+	}
 	free( tmp );
-	return TRUE;
+	return rval;
 }
 
 int
