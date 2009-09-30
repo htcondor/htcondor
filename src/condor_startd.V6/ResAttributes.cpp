@@ -486,6 +486,11 @@ CpuAttributes::CpuAttributes( MachAttributes* map_arg,
 	c_console_idle = -1;
 	c_disk = 0;
 	c_total_disk = 0;
+
+	c_condor_load = -1.0;
+	c_owner_load = -1.0;
+	c_virt_mem = 0;
+	rip = NULL;
 }
 
 
