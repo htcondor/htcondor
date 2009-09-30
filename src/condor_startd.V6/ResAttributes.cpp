@@ -38,6 +38,15 @@ MachAttributes::MachAttributes()
 	m_idle_interval = -1;
 	m_ckptpltfrm = NULL;
 
+	m_clock_day = -1;
+	m_clock_min = -1;
+	m_condor_load = -1.0;
+	m_console_idle = 0;
+	m_idle = 0;
+	m_load = -1.0;
+	m_owner_load = -1.0;
+	m_virt_mem = 0;
+
 		// Number of CPUs.  Since this is used heavily by the ResMgr
 		// instantiation and initialization, we need to have a real
 		// value for this as soon as the MachAttributes object exists.
