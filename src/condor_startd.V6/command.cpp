@@ -1441,7 +1441,7 @@ accept_request_claim( Resource* rip )
 				 ATTR_USER );
 		RemoteOwner[0] = '\0';
 	}
-	if( RemoteOwner ) {
+	if( '\0' != RemoteOwner[0] ) {
 		rip->r_cur->client()->setowner( RemoteOwner );
 			// For now, we say the remote user is the same as the
 			// remote owner.  In the future, we might decide to leave
