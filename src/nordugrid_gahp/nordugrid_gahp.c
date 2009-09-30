@@ -1705,12 +1705,14 @@ void nordugrid_exit_info_get_callback( void *arg,
 				file += 1;
 			}
 		}
-		file = strchr( file, '\n' ) + 1;
+		if ( file ) {
+			file = strchr( file, '\n' ) + 1;
+		}
 			/* Skip lines until we see 'Command' or 'WallTime'.
 			 * If we don't find what we're looking for, generate
 			 * an error.
 			 */
-		while ( strncmp( file, "Command", 7 ) &&
+		while ( file && strncmp( file, "Command", 7 ) &&
 				strncmp( file, "WallTime", 8 ) ) {
 			file = strchr( file, '\n' );
 			if ( file == NULL ) {
