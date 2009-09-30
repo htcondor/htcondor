@@ -25,6 +25,8 @@
 #include "VMMachine.h"
 #include "vm_common.h"
 
+extern VMManager *vmmanager;
+
 int vm_register_interval = 60; //seconds
 
 bool 

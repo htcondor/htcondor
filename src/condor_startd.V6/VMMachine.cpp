@@ -21,6 +21,7 @@
 #include "condor_common.h"
 #include "startd.h"
 #include "VMMachine.h"
+#include "VMManager.h"
 #include "vm_common.h"
 
 /* Interfaces for class VMMachine */
