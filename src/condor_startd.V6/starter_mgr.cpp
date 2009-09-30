@@ -68,7 +68,7 @@ StarterMgr::init( void )
 	}
 	bool new_config = true;
 
-	char *tmp, *starter_path;
+	char *tmp, *starter_path = NULL;
 	tmp = param( "STARTER_LIST" );
 	if( ! tmp ) {
 			// Not defined, give them a default
@@ -106,6 +106,7 @@ StarterMgr::init( void )
 						 "in STARTER_LIST more than once, ignoring.\n", 
 						 tmp, starter_path );
 			}
+			free(starter_path);
 			continue;
 		}
 		
