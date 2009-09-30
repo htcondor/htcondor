@@ -39,6 +39,7 @@ Hadoop::Hadoop() {
         m_state          = STATE_NULL;
         m_adPubInterval  = 5;
         m_hadoopHome     = NULL;
+        m_timer          = -1;
 }
 
 void Hadoop::initialize() {
