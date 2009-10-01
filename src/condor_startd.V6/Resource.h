@@ -41,6 +41,7 @@ public:
 	int		retire_claim( void );	// Gracefully finish job and release claim
 	void	void_retire_claim( void ) { (void)retire_claim(); }
 	int		release_claim( void );	// Send softkill to starter; release claim
+	void	void_release_claim( void ) { (void)release_claim(); }
 	int		kill_claim( void );		// Quickly kill starter and release claim
 	int		got_alive( void );		// You got a keep alive command
 	int 	periodic_checkpoint( void );	// Do a periodic checkpoint

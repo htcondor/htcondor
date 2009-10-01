@@ -107,7 +107,7 @@ deactivate_claim(Stream *stream, Resource *rip, bool graceful)
 			// no need to exchange RELEASE_CLAIM messages.  Behave as
 			// though the schedd has already sent us RELEASE_CLAIM.
 		rip->r_cur->scheddClosedClaim();
-		rip->release_claim();
+		rip->void_release_claim();
 	}
 
 	return rval;
