@@ -102,7 +102,6 @@ public:
 	// functions that take a rip as an arg.  The second takes Resource
 	// member functions that take no args.  The third takes a Resource
 	// member function that takes an amask_t as its only arg.
-	void	walk( int(*)(Resource*) );
 	void	walk( ResourceMember );
 	void	walk( VoidResourceMember );
 	void	walk( ResourceMaskMember, amask_t );
