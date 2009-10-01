@@ -1071,10 +1071,21 @@ ResMgr::walk( VoidResourceMember memberfunc )
 	if( ! resources ) {
 		return;
 	}
-	int i;
-	for( i = 0; i < nresources; i++ ) {
-		(resources[i]->*(memberfunc))();
+
+		// Because the memberfunc might be an eval function, it can
+		// result in resources being deleted. This means a straight
+		// for loop on nresources will miss one resource for every one
+		// deleted. To combat that, we copy the array and nresources
+		// and iterate over it instead.
+	int ncache = nresources;
+	Resource **cache = new Resource*[ncache];
+	memcpy((void*)cache, (void*)resources, (sizeof(Resource*)*ncache));
+
+	for( int i = 0; i < ncache; i++ ) {
+		(cache[i]->*(memberfunc))();
 	}
+
+	delete [] cache;
 }
 
 
