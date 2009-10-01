@@ -179,7 +179,7 @@ Machine        = "Example1_Gatekeeper"
 Both give the fully qualified host name for the resource.
 The \Attr{Name} may be different on an SMP machine,
 where the individual CPUs are given names that can
-be distiguished from each other.
+be distinguished from each other.
 Each separate grid resource must have a unique name.
 
 Where the job depends on the resource to specify the
@@ -231,7 +231,7 @@ that it will accept are given as
 Requirements     = (TARGET.JobUniverse == 9)
 \end{verbatim}
 \normalsize
-This set of requirments state that any job is
+This set of requirements state that any job is
 required to be for the \SubmitCmd{grid} universe.
 
 The attributes
@@ -241,7 +241,7 @@ Rank             = 0.000000
 CurrentRank      = 0.000000
 \end{verbatim}
 \normalsize
-are both necessary for Condor's negotiation to procede,
+are both necessary for Condor's negotiation to proceed,
 but are not relevant to grid matchmaking.
 Set both to the floating point value 0.0.
 
@@ -363,9 +363,12 @@ allows you to specify a numerical ranking for different matches. When
 combined with \Opt{match\_list\_length}, you can prefer to avoid sites that
 you have already run at. 
 
-In addition, \Condor{submit} has two options to help you control
-grid universe job resubmissions and rematching.  See \Opt{globus\_resubmit} and
-\Opt{globus\_rematch} on page \pageref{man-condor-submit-globus-rematch} in the \Condor{submit} command page.
+In addition, \Condor{submit} has two options to help control
+grid universe job resubmissions and rematching.  
+See the definitions of the submit description file commands
+\Opt{globus\_resubmit} and \Opt{globus\_rematch} at 
+page \pageref{condor-submit-globus-rematch} and
+page \pageref{condor-submit-globus-resubmit}.
 These options are independent of \Opt{match\_list\_length}.
 
 There are some new attributes that will be added to the Job ClassAd,
