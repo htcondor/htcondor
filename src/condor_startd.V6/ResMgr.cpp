@@ -1117,20 +1117,6 @@ ResMgr::walk( ResourceMaskMember memberfunc, amask_t mask )
 }
 
 
-int
-ResMgr::sum( ResourceMember memberfunc )
-{
-	if( ! resources ) {
-		return 0;
-	}
-	int i, tot = 0;
-	for( i = 0; i < nresources; i++ ) {
-		tot += (resources[i]->*(memberfunc))();
-	}
-	return tot;
-}
-
-
 float
 ResMgr::sum( ResourceFloatMember memberfunc )
 {

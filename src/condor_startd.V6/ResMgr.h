@@ -107,10 +107,9 @@ public:
 	void	walk( VoidResourceMember );
 	void	walk( ResourceMaskMember, amask_t );
 
-	// These functions walk through the array of rip pointers, calls
+	// This function walks through the array of rip pointers, calls
 	// the specified function on each one, sums the resulting return
 	// values, and returns the total.
-	int		sum( ResourceMember );
 	float	sum( ResourceFloatMember );
 
 	// Sort our Resource pointer array with the given comparison
