@@ -891,10 +891,13 @@ OsProc::WriteAdsToExeDir()
 						strerror(errno), errno);
 			ret_val = false;
 		}
-		ad->SetPrivateAttributesInvisible(true);
-		ad->fPrint(fp);
-		ad->SetPrivateAttributesInvisible(false);
-		fclose(fp);
+		else
+		{
+			ad->SetPrivateAttributesInvisible(true);
+			ad->fPrint(fp);
+			ad->SetPrivateAttributesInvisible(false);
+			fclose(fp);
+		}
 	}
 	else
 	{
@@ -915,10 +918,13 @@ OsProc::WriteAdsToExeDir()
 					strerror(errno), errno);
 			ret_val = false;
 		}
-		ad->SetPrivateAttributesInvisible(true);
-		ad->fPrint(fp);
-		ad->SetPrivateAttributesInvisible(false);
-		fclose(fp);
+		else
+		{
+			ad->SetPrivateAttributesInvisible(true);
+			ad->fPrint(fp);
+			ad->SetPrivateAttributesInvisible(false);
+			fclose(fp);
+		}
 	}
 
 	return ret_val;
