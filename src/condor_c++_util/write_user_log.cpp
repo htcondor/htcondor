@@ -327,6 +327,12 @@ WriteUserLog::Reset( void )
 	m_global_close = false;
 # endif
 
+	// For PrivSep:
+#if !defined(WIN32)
+	m_privsep_uid = 0;
+	m_privsep_gid = 0;
+#endif
+
 	MyString	base;
 	base = "";
 	base += getuid();
@@ -371,6 +377,10 @@ WriteUserLog::FreeGlobalResources( void )
 	if (m_global_stat != NULL) {
 		delete m_global_stat;
 		m_global_stat = NULL;
+	}
+	if (m_global_state != NULL) {
+		delete m_global_state;
+		m_global_state = NULL;
 	}
 
 	if (m_rotation_lock_path) {
