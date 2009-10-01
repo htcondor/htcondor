@@ -902,11 +902,10 @@ Resource::reconfig( void )
 }
 
 
-int
+void
 Resource::update( void )
 {
 	int timeout = 3;
-	int ret_value = TRUE;
 
 	if ( update_tid == -1 ) {
 			// Send no more than 16 ClassAds per second to help
@@ -929,10 +928,7 @@ Resource::update( void )
 	if ( update_tid < 0 ) {
 		// Somehow, the timer could not be set.  Ick!
 		update_tid = -1;
-		ret_value = FALSE;
 	}
-
-	return ret_value;
 }
 
 int

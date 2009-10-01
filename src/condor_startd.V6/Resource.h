@@ -165,7 +165,7 @@ public:
 	int		force_benchmark( void );
 	void	reconfig( void );
 
-	int		update( void );		// Schedule to update the central manager.
+	void	update( void );		// Schedule to update the central manager.
 	int		do_update( void );			// Actually update the CM
     int     update_with_ack( void );    // Actually update the CM and wait for an ACK
     void    publish_for_update ( ClassAd *public_ad ,ClassAd *private_ad );
