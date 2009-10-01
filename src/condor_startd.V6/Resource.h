@@ -81,7 +81,7 @@ public:
 	int		change_state( State s , Activity a ) {return r_state->change(s, a);};
 	State		state( void )		{return r_state->state();};
 	Activity	activity( void )	{return r_state->activity();};
-	int		eval_state( void )		{return r_state->eval();};
+	void		eval_state( void )		{r_state->eval();};
 		// does this resource need polling frequency for compute/eval?
 	bool	needsPolling( void );
 	bool	hasOppClaim( void );
