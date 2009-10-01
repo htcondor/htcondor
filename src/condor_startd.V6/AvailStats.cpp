@@ -262,8 +262,14 @@ AvailStats::checkpoint()
 			if( (int)fwrite(state.Value(), sizeof(char), state.Length(),
 							fp) == state.Length() ) {
 				fclose(fp);
-				rotate_file(tmp_ckpt_filename.Value(),
-							ckpt_filename.Value());
+				if ( rotate_file(tmp_ckpt_filename.Value(),
+								 ckpt_filename.Value()) < 0 ) {
+					dprintf( D_ALWAYS,
+							 "AvailStats::checkpoint() failed to rotate "
+							 "%s to %s\n",
+							 tmp_ckpt_filename.Value(),
+							 ckpt_filename.Value() );
+				}
 			} else {
 				fclose(fp);
 			}

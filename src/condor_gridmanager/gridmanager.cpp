@@ -36,10 +36,6 @@
 
 #include "globusjob.h"
 
-#if defined(ORACLE_UNIVERSE)
-#include "oraclejob.h"
-#endif
-
 #include "nordugridjob.h"
 #include "unicorejob.h"
 #include "condorjob.h"
@@ -317,16 +313,6 @@ Init()
 	}
 
 	JobType *new_type;
-
-#if defined(ORACLE_UNIVERSE)
-	new_type = new JobType;
-	new_type->Name = strdup( "Oracle" );
-	new_type->InitFunc = OracleJobInit;
-	new_type->ReconfigFunc = OracleJobReconfig;
-	new_type->AdMatchFunc = OracleJobAdMatch;
-	new_type->CreateFunc = OracleJobCreate;
-	jobTypes.Append( new_type );
-#endif
 
 #if !defined(WIN32)
 	new_type = new JobType;

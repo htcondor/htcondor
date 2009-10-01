@@ -571,6 +571,7 @@ int systemCommand( ArgList &args, bool is_root, StringList *cmd_out, StringList 
 	if(pipe(stdin_pipes) < 0)
 	  {
 	    vmprintf(D_ALWAYS, "Error creating pipe: %s\n", strerror(errno));
+		deleteStringArray( args_array );
 	    return -1;
 	  }
 	if(pipe(stdout_pipes) < 0)
@@ -578,6 +579,7 @@ int systemCommand( ArgList &args, bool is_root, StringList *cmd_out, StringList 
 	    vmprintf(D_ALWAYS, "Error creating pipe: %s\n", strerror(errno));
 	    close(stdin_pipes[0]);
 	    close(stdin_pipes[1]);
+		deleteStringArray( args_array );
 	    return -1;
 	  }
 
@@ -591,6 +593,7 @@ int systemCommand( ArgList &args, bool is_root, StringList *cmd_out, StringList 
 	      close(stdin_pipes[1]);
 	      close(stdout_pipes[0]);
 	      close(stdout_pipes[1]);
+		  deleteStringArray( args_array );
 	      return -1;
 	    }
 	}
@@ -604,6 +607,7 @@ int systemCommand( ArgList &args, bool is_root, StringList *cmd_out, StringList 
 		close(stdin_pipes[1]);
 		close(stdout_pipes[0]);
 		close(stdout_pipes[1]);
+		deleteStringArray( args_array );
 		return -1;
 	      }
 	  }
@@ -612,6 +616,7 @@ int systemCommand( ArgList &args, bool is_root, StringList *cmd_out, StringList 
 	if(pid < 0)
 	  {
 	    vmprintf(D_ALWAYS, "Error forking: %s\n", strerror(errno));
+		deleteStringArray( args_array );
 	    return -1;
 	  }
 	if(pid == 0)
@@ -670,6 +675,7 @@ int systemCommand( ArgList &args, bool is_root, StringList *cmd_out, StringList 
 		close(error_pipe[0]);
 		close(stdin_pipes[1]);
 		close(stdout_pipes[0]);
+		deleteStringArray( args_array );
 		return -1;
 	      }
 	  }
@@ -693,9 +699,12 @@ int systemCommand( ArgList &args, bool is_root, StringList *cmd_out, StringList 
 		     "my_popenv failure on %s\n",
 		     args_array[0]);
 	    fclose(fp);
+		deleteStringArray( args_array );
 	    return -1;
 	  }
 	}
+
+	deleteStringArray( args_array );
 #endif
 	set_priv( prev );
 	if ( fp == NULL ) {

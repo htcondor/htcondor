@@ -87,8 +87,21 @@ param_info_init()
 
 	param_info_hash_create(&param_info);
 
+	// due to #793 coupled with the fact that the new param code is disabled for
+	// the 7.4 series, and enabled for the 7.5 series, we short circuit the
+	// initialization of the table for the 7.4 series to save on ram in the
+	// shadow process.
+
+	// Normally, I'd use the CondorVersionInfo object here, but since this is
+	// A C file and I don't want to have to implement a C interface to the
+	// CondorVersionInfo object, this next line is commented out in the
+	// trunk, which represents the 7.5 series at the writing of this comment.
+	goto after_data_insertion;
+
 #include "param_info_init.c"
 
+	after_data_insertion:
+		;
 }
 
 void

@@ -3010,6 +3010,7 @@ int
 Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 {
 	ExtArray<PROC_ID> *jobs;
+		// These three lists must be kept in sync!
 	const char *AttrsToModify[] = { 
 		ATTR_JOB_CMD,
 		ATTR_JOB_INPUT,
@@ -3020,7 +3021,24 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 		ATTR_ULOG_FILE,
 		ATTR_X509_USER_PROXY,
 		NULL };		// list must end with a NULL
-
+	const bool AttrIsList[] = {
+		false,
+		false,
+		false,
+		false,
+		true,
+		true,
+		false,
+		false };
+	const char *AttrXferBool[] = {
+		ATTR_TRANSFER_EXECUTABLE,
+		ATTR_TRANSFER_INPUT,
+		ATTR_TRANSFER_OUTPUT,
+		ATTR_TRANSFER_ERROR,
+		NULL,
+		NULL,
+		NULL,
+		NULL };
 
 	dprintf(D_FULLDEBUG,"spoolJobFilesReaper tid=%d status=%d\n",
 			tid,exit_status);
@@ -3112,6 +3130,7 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 		index = -1;
 		while ( AttrsToModify[++index] ) {
 				// Lookup original value
+			bool xfer_it;
 			if (buf) free(buf);
 			buf = NULL;
 			job_ad->LookupString(AttrsToModify[index],&buf);
@@ -3123,10 +3142,21 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 				// null file -- no need to modify it
 				continue;
 			}
+			if ( AttrXferBool[i] &&
+				 job_ad->LookupBool( AttrXferBool[i], xfer_it ) && !xfer_it ) {
+					// ad says not to transfer this file, so no need
+					// to modify it
+				continue;
+			}
 				// Create new value - deal with the fact that
 				// some of these attributes contain a list of pathnames
-			StringList old_paths(buf,",");
+			StringList old_paths(NULL,",");
 			StringList new_paths(NULL,",");
+			if ( AttrIsList[i] ) {
+				old_paths.initializeFromString(buf);
+			} else {
+				old_paths.insert(buf);
+			}
 			old_paths.rewind();
 			char *old_path_buf;
 			bool changed = false;

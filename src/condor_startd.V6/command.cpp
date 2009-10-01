@@ -232,14 +232,18 @@ command_x_event( Service*, int, Stream* s )
 int
 command_give_state( Service*, int, Stream* stream ) 
 {
+	int rval = TRUE;
 	char* tmp;
 	dprintf( D_FULLDEBUG, "command_give_state() called.\n" );
 	stream->encode();
 	tmp = strdup( state_to_string(resmgr->state()) );
-	stream->code( tmp );
-	stream->end_of_message();
+	if ( ! stream->code( tmp ) ||
+		 ! stream->end_of_message() ) {
+		dprintf( D_FULLDEBUG, "command_give_state(): failed to send state\n" );
+		rval = FALSE;
+	}
 	free( tmp );
-	return TRUE;
+	return rval;
 }
 
 int
@@ -1355,7 +1359,7 @@ abort_accept_claim( Resource* rip, Stream* stream )
 bool
 accept_request_claim( Resource* rip )
 {
-	int interval;
+	int interval = -1;
 	char *client_addr = NULL, *client_host, *full_client_host, *tmp;
 	char RemoteOwner[512];
 	RemoteOwner[0] = '\0';
@@ -1441,7 +1445,7 @@ accept_request_claim( Resource* rip )
 				 ATTR_USER );
 		RemoteOwner[0] = '\0';
 	}
-	if( RemoteOwner ) {
+	if( '\0' != RemoteOwner[0] ) {
 		rip->r_cur->client()->setowner( RemoteOwner );
 			// For now, we say the remote user is the same as the
 			// remote owner.  In the future, we might decide to leave
@@ -1493,7 +1497,7 @@ activate_claim( Resource* rip, Stream* stream )
 	int len = sizeof frm;	
 	StartdRec stRec;
 #endif
-	int starter;
+	int starter = MAX_STARTERS;
 	Sock* sock = (Sock*)stream;
 	char* shadow_addr = strdup( sin_to_string( sock->peer_addr() ));
 

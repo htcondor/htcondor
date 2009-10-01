@@ -1,0 +1,34 @@
+diff -u -r voms-1.8.9/src/api/ccapi/voms_api.cc voms-1.8.9-patched/src/api/ccapi/voms_api.cc
+--- voms-1.8.9/src/api/ccapi/voms_api.cc	2008-12-22 11:51:07.000000000 -0600
++++ voms-1.8.9-patched/src/api/ccapi/voms_api.cc	2009-09-29 13:31:59.000000000 -0500
+@@ -177,7 +177,7 @@
+ #endif
+ }
+ 
+-vomsdata::Initializer vomsdata::init;
++vomsdata::Initializer *vomsdata::init = NULL;
+ //bool vomsdata::initialized = false;
+ 
+ void vomsdata::seterror(verror_type err, std::string message)
+@@ -208,6 +208,9 @@
+ #ifndef NOGLOBUS
+    (void)globus_thread_once(&l_globus_once_control, l_init_globus_once_func);
+ #endif
++  if (this->init == NULL) {
++    this->init = new Initializer();
++  }
+ 
+   if (voms_cert_dir.empty()) {
+     char *v;
+diff -u -r voms-1.8.9/src/api/ccapi/voms_api.h voms-1.8.9-patched/src/api/ccapi/voms_api.h
+--- voms-1.8.9/src/api/ccapi/voms_api.h	2008-12-22 11:51:07.000000000 -0600
++++ voms-1.8.9-patched/src/api/ccapi/voms_api.h	2009-09-29 13:32:01.000000000 -0500
+@@ -176,7 +176,7 @@
+   };
+ 
+   private:
+-  static Initializer init;
++  static Initializer *init;
+   std::string ca_cert_dir;
+   std::string voms_cert_dir;
+   int duration;

@@ -21,7 +21,6 @@
 #define _VM_MACHINE_H
 
 #include "condor_common.h"
-#include "VMManager.h"
 
 class VMManager;
 class VMMachine {

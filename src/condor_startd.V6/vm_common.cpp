@@ -25,6 +25,8 @@
 #include "VMMachine.h"
 #include "vm_common.h"
 
+extern VMManager *vmmanager;
+
 int vm_register_interval = 60; //seconds
 
 bool 
@@ -186,6 +188,7 @@ vmapi_get_host_classAd(void)
 	return vmregister->host_classad;
 }
 
+// XXX: Refactor for use with calls like _requestVMRegister
 bool 
 vmapi_sendCommand(char *addr, int cmd, void *data)
 {
@@ -208,8 +211,16 @@ vmapi_sendCommand(char *addr, int cmd, void *data)
 	}
 
 	buffer = strdup(daemonCore->InfoCommandSinfulString());
+	ASSERT(buffer);
 
-	ssock.code(buffer);
+	if ( !ssock.code(buffer) ) {
+		dprintf( D_FULLDEBUG,
+				 "Failed to send command(%s)'s arguments to "
+				 "VM startd %s: %s\n",
+				 getCommandString(cmd), addr, buffer );
+		free(buffer);
+		return FALSE;
+	}
 
 	if( data ) {
 		// need to implement in future
