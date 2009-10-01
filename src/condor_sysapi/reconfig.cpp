@@ -38,11 +38,9 @@
 #include "sysapi_externs.h"
 
 /* needed by idle_time.C and last_x_event.c */
-#ifndef WIN32
 StringList *_sysapi_console_devices = NULL;
-#endif
 /* this is not configured here, but is global, look in last_x_event.c */
-int _sysapi_last_x_event = 0;
+time_t _sysapi_last_x_event = 0;
 
 /* needed by free_fs_blocks.c */
 #ifndef WIN32

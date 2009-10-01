@@ -55,8 +55,11 @@ extern StringList *_sysapi_console_devices;
 #endif
 
 EXTERN_C_BEGIN
-
+#ifdef WIN32
+extern time_t _sysapi_last_x_event;
+#else
 extern int _sysapi_last_x_event;
+#endif
 
 /* needed by free_fs_blocks.c */
 extern int _sysapi_reserve_afs_cache;

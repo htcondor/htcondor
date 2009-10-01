@@ -94,41 +94,7 @@ static time_t solaris_mouse_idle(void);
 void
 calc_idle_time_cpp( time_t * user_idle, time_t * console_idle)
 {
-	LASTINPUTINFO lii;
-	static POINT previous_pos = { 0, 0 };   // stored position of cursor
-	static DWORD previous_input_tick = 0;
     time_t now = time( 0 );
-	
-	
-	lii.cbSize = sizeof(LASTINPUTINFO);
-	lii.dwTime = 0;
-	
-	if ( !GetLastInputInfo(&lii) ) {
-		dprintf(D_ALWAYS, "calc_idle_time: GetLastInputInfo()"
-			" failed with err=%d\n", GetLastError());
-	}
-	
-	if ( lii.dwTime != previous_input_tick ) {
-		_sysapi_last_x_event = now;
-		previous_input_tick = lii.dwTime;
-	} else {
-		// no keypress detected, test if mouse moved
-		CURSORINFO cursor_inf;
-		cursor_inf.cbSize = sizeof(CURSORINFO);
-		if ( ! GetCursorInfo(&cursor_inf) ) {
-			dprintf(D_ALWAYS,"GetCursorInfo() failed (err=%li)\n",
-				GetLastError());
-		} else {
-			if ( (cursor_inf.ptScreenPos.x != previous_pos.x) || 
-				(cursor_inf.ptScreenPos.y != previous_pos.y) ) {
-				// the mouse has moved!
-				// stash new position
-				previous_pos.x = cursor_inf.ptScreenPos.x; 
-				previous_pos.y = cursor_inf.ptScreenPos.y; 
-				_sysapi_last_x_event = now;
-			}
-		}
-	}
 	
 	*user_idle = now - _sysapi_last_x_event;
 	*console_idle = *user_idle;
