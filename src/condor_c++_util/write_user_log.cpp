@@ -376,6 +376,10 @@ WriteUserLog::FreeGlobalResources( void )
 		delete m_global_stat;
 		m_global_stat = NULL;
 	}
+	if (m_global_state != NULL) {
+		delete m_global_state;
+		m_global_state = NULL;
+	}
 
 	if (m_rotation_lock_path) {
 		free(m_rotation_lock_path);
