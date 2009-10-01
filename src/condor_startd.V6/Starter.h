@@ -39,7 +39,7 @@ public:
 	~Starter();
 
 
-	void	dprintf( int, char* ... );
+	void	dprintf( int, const char* ... );
 
 	char*	path() {return s_path;};
 	time_t	birthdate( void ) {return s_birthdate;};

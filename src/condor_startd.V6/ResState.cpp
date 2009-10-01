@@ -74,7 +74,7 @@ ResState::publish( ClassAd* cp, amask_t how_much )
 }
 
 
-int
+void
 ResState::change( State new_state, Activity new_act )
 {
 	bool statechange = false, actchange = false;
@@ -87,14 +87,14 @@ ResState::change( State new_state, Activity new_act )
 		actchange = true;
 	}
 	if( ! (actchange || statechange) ) {
-		return TRUE;   // If we're not changing anything, return
+		return;   // If we're not changing anything, return
 	}
 
 		// leave_action and enter_action return TRUE if they result in
 		// a state or activity change.  In these cases, we want to
 		// abort the current state change.
 	if( leave_action( r_state, r_act, new_state, new_act, statechange ) ) {
-		return TRUE;
+		return;
 	}
 
 	if( statechange && !actchange ) {
@@ -135,7 +135,7 @@ ResState::change( State new_state, Activity new_act )
 	}
 
 	if( enter_action( r_state, r_act, statechange, actchange ) ) {
-		return TRUE;
+		return;
 	}
 
 		// Update resource availability statistics on state changes
@@ -155,7 +155,7 @@ ResState::change( State new_state, Activity new_act )
 		  if we're in Backfill, we can immediately return now...
 		*/
 	if( r_state == backfill_state ) {
-		return TRUE;
+		return;
 	}
 #endif /* HAVE_BACKFILL */
 
@@ -165,30 +165,30 @@ ResState::change( State new_state, Activity new_act )
 		this->eval();
 	}
 
-	return TRUE;
+	return;
 }
 
 
-int
+void
 ResState::change( Activity new_act )
 {
-	return change( r_state, new_act );
+	change( r_state, new_act );
 }
 
 
-int
+void
 ResState::change( State new_state )
 {
 	if( new_state == preempting_state ) {
 			// wants_vacate dprintf's about what it decides and the
 			// implications on state changes...
 		if( !rip->preemptWasTrue() || rip->wants_vacate() ) {
-			return change( new_state, vacating_act );
+			change( new_state, vacating_act );
 		} else {
-			return change( new_state, killing_act );
+			change( new_state, killing_act );
 		}
 	} else {
-		return change( new_state, idle_act );
+		change( new_state, idle_act );
 	}
 }
 
@@ -238,7 +238,8 @@ ResState::eval( void )
 					// change to the preempting state.
 				dprintf( D_ALWAYS, "State change: claim retirement ended/expired\n" );
 				// STATE TRANSITION #18
-				return change( preempting_state );
+				change( preempting_state );
+				return TRUE; // XXX: change TRUE
 			}
 		}
 		want_suspend = rip->wants_suspend();
@@ -265,18 +266,21 @@ ResState::eval( void )
 			if( rip->mayUnretire() ) {
 				dprintf( D_ALWAYS, "State change: unretiring because no preempting claim exists\n" );
 				// STATE TRANSITION #13
-				return change( busy_act );
+				change( busy_act );
+				return TRUE; // XXX: change TRUE
 			}
 			if( rip->retirementExpired() ) {
 				dprintf( D_ALWAYS, "State change: retirement ended/expired\n" );
-				return change( preempting_state );
+				change( preempting_state );
+				return TRUE; // XXX: change TRUE
 			}
 		}
 		if( (r_act == busy_act || r_act == retiring_act) && want_suspend ) {
 			if( rip->eval_suspend() ) {
 				// STATE TRANSITION #14 or #17
 				dprintf( D_ALWAYS, "State change: SUSPEND is TRUE\n" );
-				return change( suspended_act );
+				change( suspended_act );
+				return TRUE; // XXX: change TRUE
 			}
 		}
 		if( r_act == suspended_act ) {
@@ -284,11 +288,13 @@ ResState::eval( void )
 				// STATE TRANSITION #15
 				dprintf( D_ALWAYS, "State change: CONTINUE is TRUE\n" );
 				if( !rip->inRetirement() ) {
-					return change( busy_act );
+					change( busy_act );
+					return TRUE; // XXX: change TRUE
 				}
 				else {
 					// STATE TRANSITION #16
-					return change( retiring_act );
+					change( retiring_act );
+					return TRUE; // XXX: change TRUE
 				}
 			}
 		}
@@ -296,11 +302,13 @@ ResState::eval( void )
 			dprintf( D_ALWAYS, "State change: retiring due to preempting claim\n" );
 			// reversible retirement (e.g. if preempting claim goes away)
 			// STATE TRANSITION #12
-			return change( retiring_act );
+			change( retiring_act );
+			return TRUE; // XXX: change TRUE
 		}
 		if( (r_act == idle_act) && rip->hasPreemptingClaim() ) {
 			dprintf( D_ALWAYS, "State change: preempting idle claim\n" );
-			return change( preempting_state );
+			change( preempting_state );
+			return TRUE; // XXX: change TRUE
 		}
 		if( (r_act == idle_act) && (rip->eval_start() == 0) ) {
 				// START evaluates to False, so return to the owner
@@ -310,11 +318,13 @@ ResState::eval( void )
 				// we're in the claimed state, so we'll have a job ad
 				// to evaluate against.
 			dprintf( D_ALWAYS, "State change: START is false\n" );
-			return change( preempting_state ); 
+			change( preempting_state ); 
+			return TRUE; // XXX: change TRUE
 		}
 		if( (r_act == idle_act) && rip->claimWorklifeExpired() ) {
 			dprintf( D_ALWAYS, "State change: idle claim shutting down due to CLAIM_WORKLIFE\n" );
-			return change( preempting_state );
+			change( preempting_state );
+			return TRUE; // XXX: change TRUE
 		}
 		if( (r_act == busy_act || r_act == retiring_act) && (rip->wants_pckpt()) ) {
 			rip->periodic_checkpoint();
@@ -340,7 +350,8 @@ ResState::eval( void )
 			if( rip->eval_kill() ) {
 				dprintf( D_ALWAYS, "State change: KILL is TRUE\n" );
 					// STATE TRANSITION #19
-				return change( killing_act );
+				change( killing_act );
+				return TRUE; // XXX: change TRUE
 			}
 		}
 		break;	// case preempting_state:
@@ -356,13 +367,15 @@ ResState::eval( void )
 				break;
 			}
 #endif
-			return change( delete_state );
+			change( delete_state );
+			return TRUE; // XXX: change TRUE
 		}
 
 		// See if we should be owner or unclaimed
 		if( rip->eval_is_owner() ) {
 			dprintf( D_ALWAYS, "State change: IS_OWNER is TRUE\n" );
-			return change( owner_state );
+			change( owner_state );
+			return TRUE; // XXX: change TRUE
 		}
 			// Check to see if we should run benchmarks
 		deal_with_benchmarks( rip );
@@ -380,7 +393,8 @@ ResState::eval( void )
 			// instantiated, and b) START_BACKFILL evals to TRUE
 		if( resmgr->m_backfill_mgr && rip->eval_start_backfill() > 0 ) {
 			dprintf( D_ALWAYS, "State change: START_BACKFILL is TRUE\n" );
-			return change( backfill_state, idle_act );
+			change( backfill_state, idle_act );
+			return TRUE; // XXX: change TRUE
 		}
 #endif /* HAVE_BACKFILL */
 
@@ -438,7 +452,8 @@ ResState::eval( void )
 			if( r_act == idle_act ) {
 					// no sense going to killing if we're already
 					// idle, go to owner immediately.
-				return change( owner_state );
+				change( owner_state );
+				return TRUE; // XXX: change TRUE
 			}
 				// we can change into Backfill/Killing then set our
 				// destination, since set_dest() won't take any
@@ -546,7 +561,8 @@ ResState::leave_action( State cur_s, Activity cur_a, State new_s,
 						  previous attempt to change into owner_state
 						  to continue...
 						*/
-					return change( owner_state );
+					change( owner_state );
+					return TRUE; // XXX: change TRUE
 				} else {
 					return FALSE;
 				}
@@ -596,7 +612,8 @@ ResState::enter_action( State s, Activity a,
 		if( ! rip->eval_is_owner() ) {
 				// Really want to be in unclaimed.
 			dprintf( D_ALWAYS, "State change: IS_OWNER is false\n" );
-			return change( unclaimed_state );
+			change( unclaimed_state );
+			return TRUE; // XXX: change TRUE
 		}
 		rip->r_reqexp->restore();		
 		break;
@@ -615,7 +632,8 @@ ResState::enter_action( State s, Activity a,
 				rip->r_cur->starterKillPg( SIGKILL );
 				dprintf( D_ALWAYS,
 						 "State change: Error sending signals to starter\n" );
-				return change( owner_state );
+				change( owner_state );
+				return TRUE; // XXX: change TRUE
 			}
 		}
 		else if (a == busy_act) {
@@ -627,14 +645,16 @@ ResState::enter_action( State s, Activity a,
 				// suspension) and there is a preempting claim or we
 				// are in irreversible retirement, so retire.
 
-				return change( retiring_act );
+				change( retiring_act );
+				return TRUE; // XXX: change TRUE
 			}
 		}
 		else if (a == retiring_act) {
 			if( ! rip->claimIsActive() ) {
 				// The starter exited by the time we got here.
 				// No need to wait around in retirement.
-				return change( preempting_state );
+				change( preempting_state );
+				return TRUE; // XXX: change TRUE
 			}
 		}
 #if HAVE_JOB_HOOKS
@@ -721,7 +741,8 @@ ResState::enter_action( State s, Activity a,
 						// to the starter's process group.
 					dprintf( D_ALWAYS,
 							 "State change: Error sending signals to starter\n" );
-					return change( owner_state );
+					change( owner_state );
+					return TRUE; // XXX: change TRUE
 				}
 			} else {
 				rip->leave_preempting_state();
@@ -738,7 +759,8 @@ ResState::enter_action( State s, Activity a,
 					rip->r_cur->starterKillPg( SIGKILL );
 					dprintf( D_ALWAYS,
 							 "State change: Error sending signals to starter\n" );
-					return change( owner_state );
+					change( owner_state );
+					return TRUE; // XXX: change TRUE
 				}
 			} else {
 				rip->leave_preempting_state();
@@ -768,7 +790,7 @@ ResState::enter_action( State s, Activity a,
 
 
 void
-ResState::dprintf( int flags, char* fmt, ... )
+ResState::dprintf( int flags, const char* fmt, ... )
 {
 	va_list args;
 	va_start( args, fmt );
@@ -890,7 +912,8 @@ ResState::starterExited( void )
 			// for all 3 of these, once the starter is gone, we can
 			// enter the destination directly.
 		dprintf( D_ALWAYS, "State change: starter exited\n" );
-		return change( r_destination );
+		change( r_destination );
+		return TRUE; // XXX: change TRUE
 		break;
 
 	case claimed_state:
@@ -904,7 +927,8 @@ ResState::starterExited( void )
 			return TRUE;
 		} else {
 			r_destination = no_state;
-			return change( owner_state );
+			change( owner_state );
+			return TRUE; // XXX: change TRUE
 		}
 		break;
 
@@ -937,7 +961,8 @@ ResState::starterExited( void )
 			return FALSE;
 		}
 		dprintf( D_ALWAYS, "State change: Backfill starter exited\n" );
-		return change( idle_act );
+		change( idle_act );
+		return TRUE; // XXX: change TRUE
 		break;
 #endif /* HAVE_BACKFILL */
 

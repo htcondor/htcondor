@@ -41,7 +41,7 @@ string_to_state(const char* state_string)
 }
 
 
-char*
+const char*
 state_to_string( State state )
 {
 	if( state < _state_threshold_ ) {
@@ -65,7 +65,7 @@ string_to_activity( const char* act_string )
 }
 
 
-char*
+const char*
 activity_to_string( Activity act )
 {
 	if( act < _act_threshold_ ) {
