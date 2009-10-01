@@ -1,4 +1,3 @@
 #! /usr/bin/env perl
 
-#TEMPTEMP -- change this...
-print "Node ? succeeded\n";
+print "Node $ARGV[0] succeeded\n";
