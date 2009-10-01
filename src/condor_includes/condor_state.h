@@ -34,7 +34,7 @@ enum Activity { no_act=0, idle_act, busy_act, retiring_act, vacating_act,
 				suspended_act, benchmarking_act, killing_act,
 				_act_threshold_, _error_act_ };
 
-char* state_to_string(State);
+const char* state_to_string(State);
 State string_to_state(const char*);
 const char* activity_to_string(Activity);
 Activity string_to_activity(const char*);

@@ -41,7 +41,7 @@ string_to_state(const char* state_string)
 }
 
 
-char*
+const char*
 state_to_string( State state )
 {
 	if( state < _state_threshold_ ) {
