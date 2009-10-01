@@ -431,7 +431,7 @@ Resource::shutdownAllClaims( bool graceful )
 	if( graceful ) {
 		void_retire_claim();
 	} else {
-		kill_claim();
+		void_kill_claim();
 	}
 
 		// Tell the negotiator not to match any new jobs to this slot,
@@ -2496,7 +2496,7 @@ void Resource::disable()
 {
 
     /* kill the claim */
-	kill_claim ();
+	void_kill_claim ();
 
 	/* let the negotiator know not to match any new jobs to
     this slot */

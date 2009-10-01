@@ -196,7 +196,7 @@ command_vacate_all( Service*, int cmd, Stream* )
 		break;
 	case VACATE_ALL_FAST:
 		dprintf( D_ALWAYS, "State change: received VACATE_ALL_FAST command\n" );
-		resmgr->walk( &Resource::kill_claim );
+		resmgr->walk( &Resource::void_kill_claim );
 		break;
 	default:
 		EXCEPT( "Unknown command (%d) in command_vacate_all", cmd );
