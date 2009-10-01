@@ -1109,7 +1109,7 @@ Starter::active()
 	
 
 void
-Starter::dprintf( int flags, char* fmt, ... )
+Starter::dprintf( int flags, const char* fmt, ... )
 {
 	va_list args;
 	va_start( args, fmt );

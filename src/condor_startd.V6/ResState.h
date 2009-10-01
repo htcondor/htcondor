@@ -29,15 +29,15 @@ public:
 	State	state( void ) { return r_state; };
 	Activity activity( void ) { return r_act; };
 	void	publish( ClassAd*, amask_t );
-	int		change( Activity );
-	int		change( State );
-	int		change( State, Activity );
+	void	change( Activity );
+	void	change( State );
+	void	change( State, Activity );
 	int 	eval( void );
 	void	set_destination( State );
 	int		starterExited( void );
 	State	destination( void ) { return r_destination; };
 
-	void	dprintf( int, char*, ... );
+	void	dprintf( int, const char*, ... );
 private:
 	Resource*	rip;
 	State 		r_state;

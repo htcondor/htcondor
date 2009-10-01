@@ -634,7 +634,7 @@ CpuAttributes::show_totals( int dflag )
 
 
 void
-CpuAttributes::dprintf( int flags, char* fmt, ... )
+CpuAttributes::dprintf( int flags, const char* fmt, ... )
 {
 	va_list args;
 	va_start( args, fmt );

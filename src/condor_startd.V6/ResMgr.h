@@ -53,7 +53,6 @@
 #endif /* HAVE_BACKFILL */
 
 
-typedef int (Resource::*ResourceMember)();
 typedef float (Resource::*ResourceFloatMember)();
 typedef void (Resource::*ResourceMaskMember)(amask_t);
 typedef void (Resource::*VoidResourceMember)();
@@ -102,22 +101,13 @@ public:
 	// functions that take a rip as an arg.  The second takes Resource
 	// member functions that take no args.  The third takes a Resource
 	// member function that takes an amask_t as its only arg.
-	void	walk( int(*)(Resource*) );
-	void	walk( ResourceMember );
 	void	walk( VoidResourceMember );
 	void	walk( ResourceMaskMember, amask_t );
 
-	// These functions walk through the array of rip pointers, calls
+	// This function walks through the array of rip pointers, calls
 	// the specified function on each one, sums the resulting return
 	// values, and returns the total.
-	int		sum( ResourceMember );
 	float	sum( ResourceFloatMember );
-
-	// This function walks through the array of rip pointers, calls
-	// the specified function (which should return an int) on each
-	// one, finds the Resource that gave the maximum value of the
-	// function, and returns a pointer to that Resource.
-	Resource*	res_max( ResourceMember, int* val = NULL );
 
 	// Sort our Resource pointer array with the given comparison
 	// function.  

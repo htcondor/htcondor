@@ -107,7 +107,7 @@ deactivate_claim(Stream *stream, Resource *rip, bool graceful)
 			// no need to exchange RELEASE_CLAIM messages.  Behave as
 			// though the schedd has already sent us RELEASE_CLAIM.
 		rip->r_cur->scheddClosedClaim();
-		rip->release_claim();
+		rip->void_release_claim();
 	}
 
 	return rval;
@@ -192,11 +192,11 @@ command_vacate_all( Service*, int cmd, Stream* )
 	switch( cmd ) {
 	case VACATE_ALL_CLAIMS:
 		dprintf( D_ALWAYS, "State change: received VACATE_ALL_CLAIMS command\n" );
-		resmgr->walk( &Resource::retire_claim );
+		resmgr->walk( &Resource::void_retire_claim );
 		break;
 	case VACATE_ALL_FAST:
 		dprintf( D_ALWAYS, "State change: received VACATE_ALL_FAST command\n" );
-		resmgr->walk( &Resource::kill_claim );
+		resmgr->walk( &Resource::void_kill_claim );
 		break;
 	default:
 		EXCEPT( "Unknown command (%d) in command_vacate_all", cmd );
@@ -210,7 +210,7 @@ int
 command_pckpt_all( Service*, int, Stream* ) 
 {
 	dprintf( D_ALWAYS, "command_pckpt_all() called.\n" );
-	resmgr->walk( &Resource::periodic_checkpoint );
+	resmgr->walk( &Resource::void_periodic_checkpoint );
 	return TRUE;
 }
 

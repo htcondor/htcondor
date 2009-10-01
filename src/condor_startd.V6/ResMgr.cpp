@@ -1066,41 +1066,26 @@ ResMgr::compute_phys_mem( float share )
 
 
 void
-ResMgr::walk( int(*func)(Resource*) )
-{
-	if( ! resources ) {
-		return;
-	}
-	int i;
-	for( i = 0; i < nresources; i++ ) {
-		func(resources[i]);
-	}
-}
-
-
-void
-ResMgr::walk( ResourceMember memberfunc )
-{
-	if( ! resources ) {
-		return;
-	}
-	int i;
-	for( i = 0; i < nresources; i++ ) {
-		(resources[i]->*(memberfunc))();
-	}
-}
-
-
-void
 ResMgr::walk( VoidResourceMember memberfunc )
 {
 	if( ! resources ) {
 		return;
 	}
-	int i;
-	for( i = 0; i < nresources; i++ ) {
-		(resources[i]->*(memberfunc))();
+
+		// Because the memberfunc might be an eval function, it can
+		// result in resources being deleted. This means a straight
+		// for loop on nresources will miss one resource for every one
+		// deleted. To combat that, we copy the array and nresources
+		// and iterate over it instead.
+	int ncache = nresources;
+	Resource **cache = new Resource*[ncache];
+	memcpy((void*)cache, (void*)resources, (sizeof(Resource*)*ncache));
+
+	for( int i = 0; i < ncache; i++ ) {
+		(cache[i]->*(memberfunc))();
 	}
+
+	delete [] cache;
 }
 
 
@@ -1117,20 +1102,6 @@ ResMgr::walk( ResourceMaskMember memberfunc, amask_t mask )
 }
 
 
-int
-ResMgr::sum( ResourceMember memberfunc )
-{
-	if( ! resources ) {
-		return 0;
-	}
-	int i, tot = 0;
-	for( i = 0; i < nresources; i++ ) {
-		tot += (resources[i]->*(memberfunc))();
-	}
-	return tot;
-}
-
-
 float
 ResMgr::sum( ResourceFloatMember memberfunc )
 {
@@ -1143,29 +1114,6 @@ ResMgr::sum( ResourceFloatMember memberfunc )
 		tot += (resources[i]->*(memberfunc))();
 	}
 	return tot;
-}
-
-
-Resource*
-ResMgr::res_max( ResourceMember memberfunc, int* val )
-{
-	if( ! resources ) {
-		return NULL;
-	}
-	Resource* rip = NULL;
-	int i, tmp, max = INT_MIN;
-
-	for( i = 0; i < nresources; i++ ) {
-		tmp = (resources[i]->*(memberfunc))();
-		if( tmp > max ) {
-			max = tmp;
-			rip = resources[i];
-		}
-	}
-	if( val ) {
-		*val = max;
-	}
-	return rip;
 }
 
 

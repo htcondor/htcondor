@@ -132,7 +132,7 @@ public:
 	void publishCOD( ClassAd* );
 	void publishStateTimes( ClassAd* );
 
-	void dprintf( int, char* ... );
+	void dprintf( int, const char* ... );
 
 	void refuseClaimRequest();
 
