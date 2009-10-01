@@ -846,7 +846,7 @@ Resource::leave_preempting_state( void )
 }
 
 
-int
+void
 Resource::init_classad( void )
 {
 	ASSERT( resmgr->config_classad );
@@ -859,8 +859,6 @@ Resource::init_classad( void )
 		// init_classad is being called, we don't necessarily have
 		// classads for the other slots, yet we'll publish the SHARED_SLOT
 		// attrs after this...
-
-	return TRUE;
 }
 
 

@@ -157,7 +157,7 @@ public:
 	void	leave_preempting_state( void );
 
 		// Methods to initialize and refresh the resource classads.
-	int		init_classad( void );		
+	void	init_classad( void );		
 	void	refresh_classad( amask_t mask );	
 	int		force_benchmark( void );
 	void	reconfig( void );
