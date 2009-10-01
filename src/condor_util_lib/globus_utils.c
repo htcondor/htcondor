@@ -212,13 +212,13 @@ char* extract_VOMS_attrs( globus_gsi_cred_handle_t handle, int *error) {
                           voms_data, &voms_err);
    if (ret == 0) {
       if (voms_err == VERR_NOEXT) {
-     /* No VOMS extensions present, return silently */
-     *error = 0;
-     goto end;
-   } else {
+         /* No VOMS extensions present, return silently */
+         *error = 0;
+         goto end;
+      } else {
          retfqan = VOMS_ErrorMessage(voms_data, voms_err, NULL, 0);
      	*error = 1;
-     goto end;
+        goto end;
       }
    }
 
