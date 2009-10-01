@@ -234,16 +234,16 @@ Resource::retire_claim( void )
 			}
 		}
 		change_state( retiring_act );
-		return TRUE; // XXX: change TRUE
+		break;
 	case matched_state:
 		change_state( owner_state );
-		return TRUE; // XXX: change TRUE
+		break;
 #if HAVE_BACKFILL
 	case backfill_state:
 			// we don't want retirement to mean anything special for
 			// backfill jobs... they should be killed immediately
 		set_destination_state( owner_state );
-		return TRUE;
+		break;
 #endif /* HAVE_BACKFILL */
 	default:
 			// For good measure, try directly killing the starter if
