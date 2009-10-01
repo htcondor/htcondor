@@ -262,20 +262,19 @@ Resource::release_claim( void )
 	switch( state() ) {
 	case claimed_state:
 		change_state( preempting_state, vacating_act );
-		return TRUE; // XXX: change TRUE
+		break;
 	case preempting_state:
 		if( activity() != killing_act ) {
 			change_state( preempting_state, vacating_act );
-			return TRUE; // XXX: change TRUE
 		}
 		break;
 	case matched_state:
 		change_state( owner_state );
-		return TRUE; // XXX: change TRUE
+		break;
 #if HAVE_BACKFILL
 	case backfill_state:
 		set_destination_state( owner_state );
-		return TRUE;
+		break;
 #endif /* HAVE_BACKFILL */
 	default:
 		return (int)r_cur->starterKillHard();
