@@ -1146,29 +1146,6 @@ ResMgr::sum( ResourceFloatMember memberfunc )
 }
 
 
-Resource*
-ResMgr::res_max( ResourceMember memberfunc, int* val )
-{
-	if( ! resources ) {
-		return NULL;
-	}
-	Resource* rip = NULL;
-	int i, tmp, max = INT_MIN;
-
-	for( i = 0; i < nresources; i++ ) {
-		tmp = (resources[i]->*(memberfunc))();
-		if( tmp > max ) {
-			max = tmp;
-			rip = resources[i];
-		}
-	}
-	if( val ) {
-		*val = max;
-	}
-	return rip;
-}
-
-
 void
 ResMgr::resource_sort( ComparisonFunc compar )
 {

@@ -113,12 +113,6 @@ public:
 	int		sum( ResourceMember );
 	float	sum( ResourceFloatMember );
 
-	// This function walks through the array of rip pointers, calls
-	// the specified function (which should return an int) on each
-	// one, finds the Resource that gave the maximum value of the
-	// function, and returns a pointer to that Resource.
-	Resource*	res_max( ResourceMember, int* val = NULL );
-
 	// Sort our Resource pointer array with the given comparison
 	// function.  
 	void resource_sort( ComparisonFunc );
