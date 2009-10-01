@@ -169,11 +169,10 @@ ResState::change( State new_state, Activity new_act )
 }
 
 
-int
+void
 ResState::change( Activity new_act )
 {
 	change( r_state, new_act );
-	return TRUE; // XXX: change TRUE
 }
 
 
@@ -267,7 +266,8 @@ ResState::eval( void )
 			if( rip->mayUnretire() ) {
 				dprintf( D_ALWAYS, "State change: unretiring because no preempting claim exists\n" );
 				// STATE TRANSITION #13
-				return change( busy_act );
+				change( busy_act );
+				return TRUE; // XXX: change TRUE
 			}
 			if( rip->retirementExpired() ) {
 				dprintf( D_ALWAYS, "State change: retirement ended/expired\n" );
@@ -279,7 +279,8 @@ ResState::eval( void )
 			if( rip->eval_suspend() ) {
 				// STATE TRANSITION #14 or #17
 				dprintf( D_ALWAYS, "State change: SUSPEND is TRUE\n" );
-				return change( suspended_act );
+				change( suspended_act );
+				return TRUE; // XXX: change TRUE
 			}
 		}
 		if( r_act == suspended_act ) {
@@ -287,11 +288,13 @@ ResState::eval( void )
 				// STATE TRANSITION #15
 				dprintf( D_ALWAYS, "State change: CONTINUE is TRUE\n" );
 				if( !rip->inRetirement() ) {
-					return change( busy_act );
+					change( busy_act );
+					return TRUE; // XXX: change TRUE
 				}
 				else {
 					// STATE TRANSITION #16
-					return change( retiring_act );
+					change( retiring_act );
+					return TRUE; // XXX: change TRUE
 				}
 			}
 		}
@@ -299,7 +302,8 @@ ResState::eval( void )
 			dprintf( D_ALWAYS, "State change: retiring due to preempting claim\n" );
 			// reversible retirement (e.g. if preempting claim goes away)
 			// STATE TRANSITION #12
-			return change( retiring_act );
+			change( retiring_act );
+			return TRUE; // XXX: change TRUE
 		}
 		if( (r_act == idle_act) && rip->hasPreemptingClaim() ) {
 			dprintf( D_ALWAYS, "State change: preempting idle claim\n" );
@@ -346,7 +350,8 @@ ResState::eval( void )
 			if( rip->eval_kill() ) {
 				dprintf( D_ALWAYS, "State change: KILL is TRUE\n" );
 					// STATE TRANSITION #19
-				return change( killing_act );
+				change( killing_act );
+				return TRUE; // XXX: change TRUE
 			}
 		}
 		break;	// case preempting_state:
@@ -640,7 +645,8 @@ ResState::enter_action( State s, Activity a,
 				// suspension) and there is a preempting claim or we
 				// are in irreversible retirement, so retire.
 
-				return change( retiring_act );
+				change( retiring_act );
+				return TRUE; // XXX: change TRUE
 			}
 		}
 		else if (a == retiring_act) {
@@ -955,7 +961,8 @@ ResState::starterExited( void )
 			return FALSE;
 		}
 		dprintf( D_ALWAYS, "State change: Backfill starter exited\n" );
-		return change( idle_act );
+		change( idle_act );
+		return TRUE; // XXX: change TRUE
 		break;
 #endif /* HAVE_BACKFILL */
 

@@ -29,7 +29,7 @@ public:
 	State	state( void ) { return r_state; };
 	Activity activity( void ) { return r_act; };
 	void	publish( ClassAd*, amask_t );
-	int		change( Activity );
+	void	change( Activity );
 	void	change( State );
 	void	change( State, Activity );
 	int 	eval( void );

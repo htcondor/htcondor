@@ -77,7 +77,7 @@ public:
 	void	set_destination_state( State s ) { r_state->set_destination(s);};
 	State	destination_state( void ) {return r_state->destination();};
 	void	change_state( State s ) {r_state->change(s);};
-	int		change_state( Activity a) {return r_state->change(a);};
+	int		change_state( Activity a) {r_state->change(a); return TRUE;}; // XXX: change TRUE
 	void	change_state( State s , Activity a ) {r_state->change(s, a);};
 	State		state( void )		{return r_state->state();};
 	Activity	activity( void )	{return r_state->activity();};
