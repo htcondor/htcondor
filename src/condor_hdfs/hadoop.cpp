@@ -39,6 +39,7 @@ Hadoop::Hadoop() {
         m_state          = STATE_NULL;
         m_adPubInterval  = 5;
         m_hadoopHome     = NULL;
+        m_timer          = -1;
 }
 
 void Hadoop::initialize() {
@@ -244,7 +245,9 @@ void Hadoop::writeConfigFile() {
                         allow_list.append(hdfs_allow);
                         free(hdfs_allow);
                 }
-                writeXMLParam("dfs.net.allow", allow_list.print_to_delimed_string(","), &xml);
+                char *tmp_str = allow_list.print_to_delimed_string(",");
+                writeXMLParam("dfs.net.allow", tmp_str, &xml);
+                free(tmp_str);
         }
 
         char *hdfs_deny = param("HDFS_DENY");
@@ -263,7 +266,9 @@ void Hadoop::writeConfigFile() {
                         deny_list.append(hdfs_deny); 
                         free(hdfs_deny);
                 }
-                writeXMLParam("dfs.net.deny", deny_list.print_to_delimed_string(","), &xml);
+                char *tmp_str = deny_list.print_to_delimed_string(",");
+                writeXMLParam("dfs.net.deny", tmp_str, &xml);
+                free(tmp_str);
         }
 
         //TODO these shouldn't be hard-coded

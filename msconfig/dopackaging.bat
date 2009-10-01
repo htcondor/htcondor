@@ -59,11 +59,15 @@ REM Create the MSI package
 pushd installer
 gmake -e
 popd
-
-REM Finally, make the zipfile.
 if not A%ERRORLEVEL%==A0 (exit /b 1)
 set PATH=%PATH_SAVE%
-izip -r condor.zip %CONDORRELEASEDIR%
+
+REM Finally, make the zipfile. 
+REM CD into the releasedir first, so the zip file does not store
+REM the full path to the releasedir.
+set CONFIGDIR=%CD%
+pushd %CONDORRELEASEDIR%
+%CONFIGDIR%\izip -9 -r condor.zip *.*
 move /y condor.zip %CONDOROUTPUTDIR%
 
 REM Rename the zip file to match that of the msi. This assumes

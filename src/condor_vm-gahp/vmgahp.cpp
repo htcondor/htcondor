@@ -717,6 +717,7 @@ VMGahp::executeStart(VMRequest *req)
 		req->m_result = VMGAHP_ERR_NO_SUPPORTED_VM_TYPE;
 		return; 
 	}
+	free( tmp );
 
 	if( new_vm->CreateConfigFile() == false ) {
 		req->m_has_result = true;
