@@ -592,11 +592,11 @@ ReadUserLogState::CheckFileStatus( int fd, bool &is_empty )
 	StatWrapper	sb;
 
 	if ( fd >= 0 ) {
-		sb.Stat( fd );
+		(void) sb.Stat( fd );
 	}
 
 	if ( m_cur_path.Length() && !sb.IsBufValid() ) {
-		sb.Stat( m_cur_path.Value() );
+		(void) sb.Stat( m_cur_path.Value() );
 	}
 
 	if ( sb.GetRc() ) {
