@@ -259,10 +259,12 @@ Resource::release_claim( void )
 {
 	switch( state() ) {
 	case claimed_state:
-		return change_state( preempting_state, vacating_act );
+		change_state( preempting_state, vacating_act );
+		return TRUE; // XXX: change TRUE
 	case preempting_state:
 		if( activity() != killing_act ) {
-			return change_state( preempting_state, vacating_act );
+			change_state( preempting_state, vacating_act );
+			return TRUE; // XXX: change TRUE
 		}
 		break;
 	case matched_state:
@@ -288,7 +290,8 @@ Resource::kill_claim( void )
 			// We might be in preempting/vacating, in which case we'd
 			// still want to do the activity change into killing...
 			// Added 4/26/00 by Derek Wright <wright@cs.wisc.edu>
-		return change_state( preempting_state, killing_act );
+		change_state( preempting_state, killing_act );
+		return TRUE; // XXX: change TRUE
 	case matched_state:
 		return change_state( owner_state );
 #if HAVE_BACKFILL
