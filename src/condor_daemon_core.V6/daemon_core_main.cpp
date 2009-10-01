@@ -1070,10 +1070,9 @@ handle_fetch_log_history_purge(ReliSock *s) {
 	}
 
 	Directory d(dirName);
-	const char *filename;
 
 	result = 1;
-	while ((filename = d.Next())) {
+	while (d.Next()) {
 		time_t last = d.GetModifyTime();
 		if (last < cutoff) {
 			d.Remove_Current_File();
