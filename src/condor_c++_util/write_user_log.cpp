@@ -325,6 +325,12 @@ WriteUserLog::Reset( void )
 	m_global_close = false;
 # endif
 
+	// For PrivSep:
+#if !defined(WIN32)
+	m_privsep_uid = 0;
+	m_privsep_gid = 0;
+#endif
+
 	MyString	base;
 	base = "";
 	base += getuid();
