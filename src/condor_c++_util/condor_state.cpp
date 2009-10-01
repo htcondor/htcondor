@@ -65,7 +65,7 @@ string_to_activity( const char* act_string )
 }
 
 
-char*
+const char*
 activity_to_string( Activity act )
 {
 	if( act < _act_threshold_ ) {
