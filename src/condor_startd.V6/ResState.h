@@ -31,7 +31,7 @@ public:
 	void	publish( ClassAd*, amask_t );
 	int		change( Activity );
 	int		change( State );
-	int		change( State, Activity );
+	void	change( State, Activity );
 	int 	eval( void );
 	void	set_destination( State );
 	int		starterExited( void );

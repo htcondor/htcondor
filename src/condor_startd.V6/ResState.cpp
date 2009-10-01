@@ -74,7 +74,7 @@ ResState::publish( ClassAd* cp, amask_t how_much )
 }
 
 
-int
+void
 ResState::change( State new_state, Activity new_act )
 {
 	bool statechange = false, actchange = false;
@@ -87,14 +87,14 @@ ResState::change( State new_state, Activity new_act )
 		actchange = true;
 	}
 	if( ! (actchange || statechange) ) {
-		return TRUE;   // If we're not changing anything, return
+		return;   // If we're not changing anything, return
 	}
 
 		// leave_action and enter_action return TRUE if they result in
 		// a state or activity change.  In these cases, we want to
 		// abort the current state change.
 	if( leave_action( r_state, r_act, new_state, new_act, statechange ) ) {
-		return TRUE;
+		return;
 	}
 
 	if( statechange && !actchange ) {
@@ -135,7 +135,7 @@ ResState::change( State new_state, Activity new_act )
 	}
 
 	if( enter_action( r_state, r_act, statechange, actchange ) ) {
-		return TRUE;
+		return;
 	}
 
 		// Update resource availability statistics on state changes
@@ -155,7 +155,7 @@ ResState::change( State new_state, Activity new_act )
 		  if we're in Backfill, we can immediately return now...
 		*/
 	if( r_state == backfill_state ) {
-		return TRUE;
+		return;
 	}
 #endif /* HAVE_BACKFILL */
 
@@ -165,14 +165,15 @@ ResState::change( State new_state, Activity new_act )
 		this->eval();
 	}
 
-	return TRUE;
+	return;
 }
 
 
 int
 ResState::change( Activity new_act )
 {
-	return change( r_state, new_act );
+	change( r_state, new_act );
+	return TRUE; // XXX: change TRUE
 }
 
 
@@ -183,12 +184,15 @@ ResState::change( State new_state )
 			// wants_vacate dprintf's about what it decides and the
 			// implications on state changes...
 		if( !rip->preemptWasTrue() || rip->wants_vacate() ) {
-			return change( new_state, vacating_act );
+			change( new_state, vacating_act );
+			return TRUE; // XXX: change TRUE
 		} else {
-			return change( new_state, killing_act );
+			change( new_state, killing_act );
+			return TRUE; // XXX: change TRUE
 		}
 	} else {
-		return change( new_state, idle_act );
+		change( new_state, idle_act );
+		return TRUE; // XXX: change TRUE
 	}
 }
 
@@ -380,7 +384,8 @@ ResState::eval( void )
 			// instantiated, and b) START_BACKFILL evals to TRUE
 		if( resmgr->m_backfill_mgr && rip->eval_start_backfill() > 0 ) {
 			dprintf( D_ALWAYS, "State change: START_BACKFILL is TRUE\n" );
-			return change( backfill_state, idle_act );
+			change( backfill_state, idle_act );
+			return TRUE; // XXX: change TRUE
 		}
 #endif /* HAVE_BACKFILL */
 
