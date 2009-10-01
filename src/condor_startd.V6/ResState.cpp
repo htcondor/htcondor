@@ -790,7 +790,7 @@ ResState::enter_action( State s, Activity a,
 
 
 void
-ResState::dprintf( int flags, char* fmt, ... )
+ResState::dprintf( int flags, const char* fmt, ... )
 {
 	va_list args;
 	va_start( args, fmt );

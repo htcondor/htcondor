@@ -37,7 +37,7 @@ public:
 	int		starterExited( void );
 	State	destination( void ) { return r_destination; };
 
-	void	dprintf( int, char*, ... );
+	void	dprintf( int, const char*, ... );
 private:
 	Resource*	rip;
 	State 		r_state;
