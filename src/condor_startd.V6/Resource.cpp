@@ -235,7 +235,8 @@ Resource::retire_claim( void )
 		}
 		return change_state( retiring_act );
 	case matched_state:
-		return change_state( owner_state );
+		change_state( owner_state );
+		return TRUE; // XXX: change TRUE
 #if HAVE_BACKFILL
 	case backfill_state:
 			// we don't want retirement to mean anything special for
@@ -268,7 +269,8 @@ Resource::release_claim( void )
 		}
 		break;
 	case matched_state:
-		return change_state( owner_state );
+		change_state( owner_state );
+		return TRUE; // XXX: change TRUE
 #if HAVE_BACKFILL
 	case backfill_state:
 		set_destination_state( owner_state );
@@ -293,7 +295,8 @@ Resource::kill_claim( void )
 		change_state( preempting_state, killing_act );
 		return TRUE; // XXX: change TRUE
 	case matched_state:
-		return change_state( owner_state );
+		change_state( owner_state );
+		return TRUE; // XXX: change TRUE
 #if HAVE_BACKFILL
 	case backfill_state:
 		set_destination_state( owner_state );
