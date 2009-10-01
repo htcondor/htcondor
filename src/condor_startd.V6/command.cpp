@@ -192,7 +192,7 @@ command_vacate_all( Service*, int cmd, Stream* )
 	switch( cmd ) {
 	case VACATE_ALL_CLAIMS:
 		dprintf( D_ALWAYS, "State change: received VACATE_ALL_CLAIMS command\n" );
-		resmgr->walk( &Resource::retire_claim );
+		resmgr->walk( &Resource::void_retire_claim );
 		break;
 	case VACATE_ALL_FAST:
 		dprintf( D_ALWAYS, "State change: received VACATE_ALL_FAST command\n" );

@@ -429,7 +429,7 @@ Resource::shutdownAllClaims( bool graceful )
 	r_cod_mgr->shutdownAllClaims( graceful );
 
 	if( graceful ) {
-		retire_claim();
+		void_retire_claim();
 	} else {
 		kill_claim();
 	}
