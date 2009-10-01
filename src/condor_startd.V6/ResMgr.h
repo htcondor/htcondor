@@ -53,7 +53,6 @@
 #endif /* HAVE_BACKFILL */
 
 
-typedef int (Resource::*ResourceMember)();
 typedef float (Resource::*ResourceFloatMember)();
 typedef void (Resource::*ResourceMaskMember)(amask_t);
 typedef void (Resource::*VoidResourceMember)();
@@ -102,7 +101,6 @@ public:
 	// functions that take a rip as an arg.  The second takes Resource
 	// member functions that take no args.  The third takes a Resource
 	// member function that takes an amask_t as its only arg.
-	void	walk( ResourceMember );
 	void	walk( VoidResourceMember );
 	void	walk( ResourceMaskMember, amask_t );
 

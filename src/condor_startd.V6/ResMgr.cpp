@@ -1066,19 +1066,6 @@ ResMgr::compute_phys_mem( float share )
 
 
 void
-ResMgr::walk( ResourceMember memberfunc )
-{
-	if( ! resources ) {
-		return;
-	}
-	int i;
-	for( i = 0; i < nresources; i++ ) {
-		(resources[i]->*(memberfunc))();
-	}
-}
-
-
-void
 ResMgr::walk( VoidResourceMember memberfunc )
 {
 	if( ! resources ) {
