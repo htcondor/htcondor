@@ -873,8 +873,6 @@ ReadUserLog::readEvent (ULogEvent *& event, bool store_state )
 		return ULOG_NO_EVENT;
 	}
 
-	filesize_t	starting_pos = m_state->Offset();
-
 	ULogEventOutcome	outcome = ULOG_OK;
 	if( m_state->IsLogType( ReadUserLogState::LOG_TYPE_UNKNOWN ) ) {
 	    if( !determineLogType() ) {
@@ -950,7 +948,7 @@ ReadUserLog::readEvent (ULogEvent *& event, bool store_state )
 		if ( pos > 0 ) {
 			m_state->Offset( pos );
 		}
-		filesize_t slp = m_state->LogPosition();
+
 		if ( ( m_state->Sequence() != starting_seq ) &&
 			 ( 0 == m_state->LogRecordNo() ) ) {
 			// Don't count the header record in the count below
@@ -1412,6 +1410,7 @@ ReadUserLog::clear( void )
 	m_lock_rot = -1;
 
 	m_close_file = false;
+	m_read_only = false;
 	m_enable_close = true;
 	m_handle_rot = false;
 	m_lock_enable = false;

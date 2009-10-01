@@ -463,6 +463,11 @@ GT4Job::GT4Job( ClassAd *classad )
 		}
 	}
 
+		// Trigger recreation of the empty scratch directory for
+		// already-submitted jobs, in case it was deleted. This is
+		// a simple-but-crude way to fix this problem.
+	getDummyJobScratchDir();
+
 	return;
 
  error_exit:
@@ -2114,29 +2119,32 @@ GT4Job::getDummyJobScratchDir() {
 	const int dir_mode = 0500;
 	const char *return_val = NULL;
 	static MyString dirname;
+	static time_t last_check = 0;
 
-	if ( dirname != "" ) {
+	if ( dirname != "" && time(NULL) < last_check + 60 ) {
 		return dirname.Value();
 	}
 
-	char *prefix = temp_dir_path();
-	ASSERT( prefix );
+	if ( dirname == "" ) {
+		char *prefix = temp_dir_path();
+		ASSERT( prefix );
 #ifndef WIN32 
-	dirname.sprintf ("%s%ccondor_g_empty_dir_u%d", // <scratch>/condorg_empty_dir_u<uid>
-					 prefix,
-					 DIR_DELIM_CHAR,
-					 geteuid());
+		dirname.sprintf ("%s%ccondor_g_empty_dir_u%d", // <scratch>/condorg_empty_dir_u<uid>
+						 prefix,
+						 DIR_DELIM_CHAR,
+						 geteuid());
 #else // Windows
-	char *user = my_username();
-	dirname.sprintf ("%s%ccondor_g_empty_dir_u%s", // <scratch>\empty_dir_u<username>
-					 prefix, 
-					 DIR_DELIM_CHAR,
-					 user);
-	free(user);
-	user = NULL;
+		char *user = my_username();
+		dirname.sprintf ("%s%ccondor_g_empty_dir_u%s", // <scratch>\empty_dir_u<username>
+						 prefix, 
+						 DIR_DELIM_CHAR,
+						 user);
+		free(user);
+		user = NULL;
 #endif
-	free( prefix );
-	
+		free( prefix );
+	}
+
 	StatInfo *dir_stat = new StatInfo( dirname.Value() );
 
 	if ( dir_stat->Error() == SINoFile ) {
@@ -2180,6 +2188,8 @@ GT4Job::getDummyJobScratchDir() {
 	}
 
 	return_val = dirname.Value();
+
+	last_check = time(NULL);
 
  error_exit:
 	if ( dir_stat ) {

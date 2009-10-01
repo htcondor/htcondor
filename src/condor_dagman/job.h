@@ -35,6 +35,7 @@
 using namespace std;
 
 class ThrottleByCategory;
+class Dag;
 
 //
 // Local DAGMan includes
@@ -267,9 +268,9 @@ class Job {
 	bool RemoveDependency( queue_t queue, JobID_t job, MyString &whynot );
  
     /** Dump the contents of this Job to stdout for debugging purposes.
-        @param level Only do the dump if the current debug level is >= level
-    */
-    void Dump () const;
+		@param the current DAG (used to translate node ID to node object)
+	*/
+    void Dump ( const Dag *dag ) const;
   
     /** Print the identification info for this Job to stdout.
         @param condorID If true, also print the job's CondorID

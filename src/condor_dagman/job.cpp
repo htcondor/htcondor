@@ -208,7 +208,7 @@ Job::CheckForLogFile() const
 }
 
 //---------------------------------------------------------------------------
-void Job::Dump () const {
+void Job::Dump ( const Dag *dag ) const {
     dprintf( D_ALWAYS, "---------------------- Job ----------------------\n");
     dprintf( D_ALWAYS, "      Node Name: %s\n", _jobName );
     dprintf( D_ALWAYS, "         NodeID: %d\n", _jobID );
@@ -241,7 +241,8 @@ void Job::Dump () const {
 
 		set<JobID_t>::const_iterator qit;
 		for (qit = _queues[i].begin(); qit != _queues[i].end(); qit++) {
-			dprintf( D_ALWAYS | D_NOHEADER, "%d, ", *qit );
+			Job *node = dag->Dag::FindNodeByNodeID( *qit );
+			dprintf( D_ALWAYS | D_NOHEADER, "%s, ", node->GetJobName() );
 		}
         dprintf( D_ALWAYS | D_NOHEADER, "<END>\n" );
     }
@@ -738,7 +739,7 @@ Job::MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 			bool recovery, const char *defaultNodeLog )
 {
 	if ( _logIsMonitored ) {
-		debug_printf( DEBUG_QUIET, "Warning: log file for node "
+		debug_printf( DEBUG_DEBUG_1, "Warning: log file for node "
 					"%s is already monitored\n", GetJobName() );
 		return true;
 	}
@@ -751,6 +752,7 @@ Job::MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
     	logFileStr = MultiLogFiles::loadLogFileNameFromSubFile( _cmdFile,
 					_directory );
 	} else {
+#ifdef HAVE_EXT_CLASSADS
 		StringList logFiles;
 		MyString tmpResult = MultiLogFiles::loadLogFileNamesFromStorkSubFile(
 					_cmdFile, _directory, logFiles );
@@ -769,6 +771,13 @@ Job::MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 			logFiles.rewind();
 			logFileStr = logFiles.next();
 		}
+#else
+			// XXX
+		debug_printf( DEBUG_NORMAL,
+					  "Error: Stork log files not supported. "
+					  "Condor was built without new classad support\n" );
+		return false;
+#endif
 	}
 
 	if ( logFileStr == "" ) {
@@ -816,7 +825,7 @@ Job::UnmonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 				_logFile, GetJobName() );
 
 	if ( !_logIsMonitored ) {
-		debug_printf( DEBUG_QUIET, "Warning: log file for node "
+		debug_printf( DEBUG_DEBUG_1, "Warning: log file for node "
 					"%s is already unmonitored\n", GetJobName() );
 		return true;
 	}

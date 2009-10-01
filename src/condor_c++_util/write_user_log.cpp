@@ -325,6 +325,12 @@ WriteUserLog::Reset( void )
 	m_global_close = false;
 # endif
 
+	// For PrivSep:
+#if !defined(WIN32)
+	m_privsep_uid = 0;
+	m_privsep_gid = 0;
+#endif
+
 	MyString	base;
 	base = "";
 	base += getuid();
@@ -542,6 +548,7 @@ WriteUserLog::openGlobalLog( bool reopen, const UserLogHeader &header )
 
 		writer.addEventOffset( writer.getNumEvents() );
 		writer.setNumEvents( 0 );
+		writer.setCtime( time(NULL) );
 
 		ret_val = writer.Write( *this );
 

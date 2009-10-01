@@ -64,21 +64,21 @@ VMStarterInfo::updateUsageOfVM(void)
 	}
 
 	int proc_status = PROCAPI_OK;
-	struct procInfo pinfo;
-	memset(&pinfo, 0, sizeof(pinfo));
 
-	piPTR pi = &pinfo;
+	piPTR pi = NULL;
 	if( ProcAPI::getProcInfo(m_vm_pid, pi, proc_status) == 
 			PROCAPI_SUCCESS ) {
-		memcpy(&m_vm_alive_pinfo, &pinfo, sizeof(pinfo));
+		memcpy(&m_vm_alive_pinfo, pi, sizeof(struct procInfo));
 		if( (DebugFlags & D_FULLDEBUG) && (DebugFlags & D_LOAD) ) {
 			dprintf(D_FULLDEBUG,"Usage of process[%d] for a VM is updated\n", 
 					m_vm_pid);
 			dprintf(D_FULLDEBUG,"sys_time=%lu, user_time=%lu, image_size=%lu\n", 
-					pinfo.sys_time, pinfo.user_time, get_image_size(pinfo));
+					pi->sys_time, pi->user_time, get_image_size(*pi));
 		}
+		delete pi;
 		return true;
 	}
+	if (pi) delete pi;
 	return false;
 }
 

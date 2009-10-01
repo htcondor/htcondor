@@ -29,7 +29,6 @@
 #include "condor_ast.h"
 #include "condor_classad.h"
 #include "condor_buildtable.h"
-#include "condor_classad_lookup.h"
 #include "condor_string.h"
 
 #include "Regex.h"
@@ -395,31 +394,6 @@ int Variable::_EvalTreeRecursive( const char *adName, const AttrList* my_classad
 		} else if(!strcasecmp(prefix.Value(),"TARGET")) {
 			return _EvalTreeRecursive(rest.Value(),target_classad,my_classad,val, true);
         }
-        /*
-         * This code has been deprecated. 
-         * It was written by Doug Thain for research relating to his
-         * paper titled "Gathering at the Well: Creating Communities for 
-         * Grid I/O". It hasn't been used since, and the fact that this 
-         * causes ClassAds to need to talk to Daemons is causing linking
-         * problems for libcondorapi.a, so we're just ditching it. 
-		} else {
-			ExprTree *expr;
-			char expr_string[ATTRLIST_MAX_EXPRESSION];
-			if (target_classad) {
-				expr = target_classad->Lookup(prefix);
-				if(expr) {
-					expr_string[0] = 0;
-					expr->RArg()->PrintToStr(expr_string);
-					other_classad = ClassAdLookupGlobal(expr_string);
-					if(other_classad) {
-						result = _EvalTreeRecursive(rest,other_classad,other_classad,val);
-						delete other_classad;
-						return result;
-					}
-				}
-			}
-		}
-        */
 	} else {
 		return this->_EvalTreeSimple(rest.Value(),my_classad,target_classad,val, restrict_search);
 	}

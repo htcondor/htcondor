@@ -1,0 +1,18 @@
+#!/bin/env perl
+
+
+if ($ARGV[0] eq "-classad") {
+	print "PluginType = \"FileTransfer\"\n";
+	print "SupportedURLs = \"http,ftp,file\"\n";
+	exit 0;
+}
+
+$cmd = "curl " . $ARGV[0] . " -o " . $ARGV[1];
+
+print "cmd; $cmd\n";
+system($cmd);
+
+$retval = $?;
+print "retval: $retval\n";
+
+exit $retval;

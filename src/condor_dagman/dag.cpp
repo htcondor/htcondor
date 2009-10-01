@@ -942,6 +942,22 @@ Dag::ProcessSubmitEvent(Job *job, bool recovery, bool &submitEventIsSane) {
 		return;
 	}
 
+	if ( !job->IsEmpty( Job::Q_WAITING ) ) {
+		debug_printf( DEBUG_QUIET, "Error: DAG semantics violated!  "
+					"Node %s was submitted but has unfinished parents!\n",
+					job->GetJobName() );
+		_dagFiles.rewind();
+		char *dagFile = _dagFiles.next();
+		debug_printf( DEBUG_QUIET, "This may indicate log file corruption; "
+					"you may want to check the log files and re-run the "
+					"DAG in recovery mode by giving the command "
+					"'condor_submit %s.condor.sub'\n", dagFile );
+		job->Dump( this );
+			// We do NOT want to create a rescue DAG here, because it
+			// would probably be invalid.
+		DC_Exit( EXIT_ERROR );
+	}
+
 		//
 		// If we got an "insane" submit event for a node that currently
 		// has a job in the queue, we don't want to increment
@@ -1471,7 +1487,7 @@ void Dag::PrintJobList() const {
     Job * job;
     ListIterator<Job> iList (_jobs);
     while ((job = iList.Next()) != NULL) {
-        job->Dump();
+        job->Dump( this );
     }
     dprintf( D_ALWAYS, "---------------------------------------\t<END>\n" );
 }
@@ -1484,7 +1500,7 @@ Dag::PrintJobList( Job::status_t status ) const
     ListIterator<Job> iList( _jobs );
     while( ( job = iList.Next() ) != NULL ) {
 		if( job->GetStatus() == status ) {
-			job->Dump();
+			job->Dump( this );
 		}
     }
     dprintf( D_ALWAYS, "---------------------------------------\t<END>\n" );
@@ -3353,11 +3369,11 @@ Dag::AssumeOwnershipofNodes(OwnedMaterials *om)
 				key.Value());
 			debug_printf(DEBUG_QUIET, "Trying to insert key %s, node:\n",
 				key.Value());
-			(*nodes)[i]->Dump();
+			(*nodes)[i]->Dump( this );
 			debug_printf(DEBUG_QUIET, "but it collided with key %s, node:\n", 
 				key.Value());
 			if (_nodeNameHash.lookup(key, job) == 0) {
-				job->Dump();
+				job->Dump( this );
 			} else {
 				debug_error(1, DEBUG_QUIET, "What? This is impossible!\n");
 			}

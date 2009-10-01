@@ -1845,6 +1845,9 @@ UNICORE_GAHP = $(SBIN)/unicore_gahp
 ##
 NORDUGRID_GAHP = $(SBIN)/nordugrid_gahp
 
+## The location of the CREAM GAHP server
+CREAM_GAHP = $(SBIN)/cream_gahp
+
 ## Condor-G and CredD can use MyProxy to refresh GSI proxies which are
 ## about to expire.
 #MYPROXY_GET_DELEGATION = /path/to/myproxy-get-delegation
@@ -2305,8 +2308,7 @@ XEN_SCRIPT = $(SBIN)/condor_vm_xen.sh
 ## This is the path to the XML helper command; the libvirt_simple_script.awk
 ## script just reproduces what Condor already does for the kvm/xen VM
 ## universe
-
-#LIBVIRT_XML_SCRIPT = $(SBIN)/libvirt_simple_script.awk 
+LIBVIRT_XML_SCRIPT = $(LIBEXEC)/libvirt_simple_script.awk
 
 ## This is the optional debugging output file for the xml helper
 ## script.  Scripts that need to output debugging messages should

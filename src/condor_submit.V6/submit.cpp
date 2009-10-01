@@ -107,7 +107,6 @@ ClassAd  *job = NULL;
 char	*OperatingSystem;
 char	*Architecture;
 char	*Spool;
-char	*Flavor;
 char	*ScheddName = NULL;
 char	*PoolName = NULL;
 DCSchedd* MySchedd = NULL;
@@ -297,7 +296,6 @@ const char	*StreamError = "stream_error";
 
 const char	*CopyToSpool = "copy_to_spool";
 const char	*LeaveInQueue = "leave_in_queue";
-const char	*MirrorSchedd = "mirror_schedd";
 
 const char	*PeriodicHoldCheck = "periodic_hold";
 const char	*PeriodicReleaseCheck = "periodic_release";
@@ -1745,7 +1743,7 @@ SetUniverse()
 		}
 		if ( JobGridType ) {
 			// Validate
-			// Valid values are (as of 6.7): nordugrid, oracle, globus,
+			// Valid values are (as of 6.7): nordugrid, globus,
 			//    gt2, infn, condor
 
 			// CRUFT: grid-type 'blah' is deprecated. Now, the specific batch
@@ -1765,7 +1763,6 @@ SetUniverse()
 				(stricmp (JobGridType, "nordugrid") == MATCH) ||
 				(stricmp (JobGridType, "amazon") == MATCH) ||	// added for amazon job
 				(stricmp (JobGridType, "unicore") == MATCH) ||
-				(stricmp (JobGridType, "oracle") == MATCH) ||
 				(stricmp (JobGridType, "cream") == MATCH)){
 				// We're ok	
 				// Values are case-insensitive for gridmanager, so we don't need to change case			
@@ -1776,7 +1773,7 @@ SetUniverse()
 			} else {
 
 				fprintf( stderr, "\nERROR: Invalid value '%s' for grid_type\n", JobGridType );
-				fprintf( stderr, "Must be one of: globus, gt2, gt4, condor, nordugrid, unicore, or oracle\n" );
+				fprintf( stderr, "Must be one of: globus, gt2, gt4, condor, nordugrid, unicore, or cream\n" );
 				exit( 1 );
 			}
 		}			
@@ -3372,36 +3369,7 @@ void
 SetLeaveInQueue()
 {
 	char *erc = condor_param(LeaveInQueue, ATTR_JOB_LEAVE_IN_QUEUE);
-	char *mirror_schedd = condor_param(MirrorSchedd,ATTR_MIRROR_SCHEDD);
 	MyString buffer;
-
-	if ( mirror_schedd ) {
-		
-		if ( erc ) {
-			fprintf( stderr, 
-				"\nERROR: %s may not be specified alongside %s - the mirroring"
-				" mechanism relies on setting %s itself\n",
-				 LeaveInQueue, MirrorSchedd, LeaveInQueue);
-			DoCleanup(0,0,NULL);
-			exit(1);
-		}
-		
-			// schedd job mirroring is being used
-			// set the mirrored schedd attribute
-		buffer.sprintf("%s = \"%s\"", ATTR_MIRROR_SCHEDD,mirror_schedd);
-		InsertJobExpr( buffer );
-		free(mirror_schedd);
-
-			// set default WantMatching for mirrored jobs
-		buffer.sprintf("%s = %s =?= False", ATTR_WANT_MATCHING,
-			ATTR_MIRROR_RELEASED);
-		InsertJobExpr( buffer );
-
-			// set default LeaveInQueue for mirrored jobs (erc is used below)
-		buffer.sprintf("%s =?= \"%s\"",ATTR_JOB_MANAGED, MANAGED_EXTERNAL);
-		erc = strdup(buffer.Value());
-	}
-
 
 	if (erc == NULL)
 	{
@@ -4887,8 +4855,7 @@ SetGlobusParams()
 
 		if ( stricmp (JobGridType, "gt2") == MATCH ||
 			 stricmp (JobGridType, "gt4") == MATCH ||
-			 stricmp (JobGridType, "gt5") == MATCH ||
-			 stricmp (JobGridType, "oracle") == MATCH ) {
+			 stricmp (JobGridType, "gt5") == MATCH ) {
 
 			char * jobmanager_type;
 			jobmanager_type = condor_param ( GlobusJobmanagerType );
@@ -5105,7 +5072,6 @@ SetGlobusParams()
 		 ( stricmp (JobGridType, "gt2") == MATCH ||
 		   stricmp (JobGridType, "gt4") == MATCH ||
 		   stricmp (JobGridType, "gt5") == MATCH ||
-		   stricmp (JobGridType, "oracle") == MATCH ||
 		   stricmp (JobGridType, "nordugrid") == MATCH ) ) {
 
 		buffer.sprintf( "%s = \"%s\"", ATTR_GLOBUS_CONTACT_STRING,
@@ -5117,7 +5083,6 @@ SetGlobusParams()
 		 stricmp (JobGridType, "gt2") == MATCH ||
 		 stricmp (JobGridType, "gt4") == MATCH ||
 		 stricmp (JobGridType, "gt5") == MATCH ||
-		 stricmp (JobGridType, "oracle") == MATCH ||
 		 stricmp (JobGridType, "nordugrid") == MATCH ) {
 
 		if( (tmp = condor_param(GlobusResubmit,ATTR_GLOBUS_RESUBMIT_CHECK)) ) {
@@ -5899,7 +5864,11 @@ queue(int num)
 				init_job_ad();
 			}
 			IsFirstExecutable = false;
-			ProcId = -1;
+			if ( !IsFirstExecutable && DumpClassAdToFile ) {
+					ProcId = 1;
+			} else {
+				ProcId = -1;
+			}
 			ClusterAdAttrs.clear();
 		}
 
@@ -6740,11 +6709,6 @@ init_params()
 		exit( 1 );
 	}
 
-	Flavor = param( "FLAVOR" );
-	if( Flavor == NULL ) {
-		Flavor = strdup("none");
-	}
-
 	My_fs_domain = param( "FILESYSTEM_DOMAIN" );
 		// Will always return something, since config() will put in a
 		// value (full hostname) if it's not in the config file.  
@@ -6933,7 +6897,11 @@ SaveClassAd ()
 		rhstr = NULL;
 		if( (lhs = tree->LArg()) ) { lhs->PrintToNewStr (&lhstr); }
 		if( (rhs = tree->RArg()) ) { rhs->PrintToNewStr (&rhstr); }
-		if( !lhs || !rhs || !lhstr || !rhstr) { retval = -1; }
+		if( !lhs || !rhs || !lhstr || !rhstr) { 
+			fprintf( stderr, "\nERROR: Null attribute name or value for job %d.%d\n",
+					 ClusterId, ProcId );
+			retval = -1;
+		} else {
 			// To facilitate processing of job status from the
 			// job_queue.log, the ATTR_JOB_STATUS attribute should not
 			// be stored within the cluster ad. Instead, it should be
@@ -6945,15 +6913,16 @@ SaveClassAd ()
 			// attributes required for the job to run. -matt 1 June 09
 			// Mostly the same rational for ATTR_JOB_SUBMISSION.
 			// -matt // 24 June 09
-		int tmpProcId = myprocid;
-		if( strcasecmp(lhstr, ATTR_JOB_STATUS) == 0 ||
-			strcasecmp(lhstr, ATTR_JOB_SUBMISSION) == 0 ) myprocid = ProcId;
-		if( SetAttribute(ClusterId, myprocid, lhstr, rhstr) == -1 ) {
-			fprintf( stderr, "\nERROR: Failed to set %s=%s for job %d.%d (%d)\n", 
-					 lhstr, rhstr, ClusterId, ProcId, errno );
-			retval = -1;
+			int tmpProcId = myprocid;
+			if( strcasecmp(lhstr, ATTR_JOB_STATUS) == 0 ||
+				strcasecmp(lhstr, ATTR_JOB_SUBMISSION) == 0 ) myprocid = ProcId;
+			if( SetAttribute(ClusterId, myprocid, lhstr, rhstr) == -1 ) {
+				fprintf( stderr, "\nERROR: Failed to set %s=%s for job %d.%d (%d)\n", 
+						 lhstr, rhstr, ClusterId, ProcId, errno );
+				retval = -1;
+			}
+			myprocid = tmpProcId;
 		}
-		myprocid = tmpProcId;
 		free(lhstr);
 		free(rhstr);
 		if(retval == -1) {

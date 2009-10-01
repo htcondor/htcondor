@@ -163,7 +163,7 @@ sysapi_reconfig(void)
 
 #ifdef LINUX
 	/* Should we count hyper threads? */
-	int _sysapi_count_hyperthread_cpus = 
+	_sysapi_count_hyperthread_cpus = 
 		param_boolean_int("COUNT_HYPERTHREAD_CPUS", 1);
 #endif
 

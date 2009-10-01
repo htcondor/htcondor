@@ -95,12 +95,6 @@ void	restart_everyone();
 
 extern "C" int	DoCleanup(int,int,char*);
 
-#if 0
-int		GetConfig(char*, char*);
-void	StartConfigServer();
-char*			configServer;
-#endif
-
 // Global variables
 ClassAd	*ad = NULL;				// ClassAd to send to collector
 int		MasterLockFD;
@@ -1112,41 +1106,6 @@ RestartMaster()
 	daemons.RestartMaster();
 }
 
-
-#if 0
-void StartConfigServer()
-{
-	daemon*			newDaemon;
-	
-	newDaemon = new daemon("CONFIG_SERVER");
-	newDaemon->process_name = param(newDaemon->name_in_config_file);
-	if(newDaemon->process_name == NULL && newDaemon->runs_here)
-	{
-		dprintf(D_ALWAYS, "Process not found in config file: %s\n",
-				newDaemon->name_in_config_file);
-		EXCEPT("Can't continue...");
-	}
-	newDaemon->config_info_file = param("CONFIG_SERVER_FILE");
-	newDaemon->port = param("CONFIG_SERVER_PORT");
-
-	// check that log file is necessary
-	if(newDaemon->log_filename_in_config_file != NULL)
-	{
-		newDaemon->log_name = param(newDaemon->log_filename_in_config_file);
-		if(newDaemon->log_name == NULL && newDaemon->runs_here)
-		{
-			dprintf(D_ALWAYS, "Log file not found in config file: %s\n",
-					newDaemon->log_filename_in_config_file);
-		}
-	}
-
-	newDaemon->StartDaemon();
-	
-	// sleep for a while because we want the config server to stable down
-	// before doing anything else
-	sleep(5); 
-}
-#endif
 
 #if HAVE_EXT_GCB
 void
