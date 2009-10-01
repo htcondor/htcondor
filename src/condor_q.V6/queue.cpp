@@ -2079,10 +2079,6 @@ show_queue_buffered( const char* v1, const char* v2, const char* v3, const char*
 				scheddAddress, scheddMachine, errstack.getFullText(true) );
 
 			delete output_buffer;
-
-			if(dbconn) {
-				free(dbconn);
-			}
 			return false;
 		}
 	}
