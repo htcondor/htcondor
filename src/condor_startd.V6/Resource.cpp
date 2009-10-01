@@ -885,7 +885,7 @@ Resource::force_benchmark( void )
 }
 
 
-int
+void
 Resource::reconfig( void )
 {
 #if HAVE_JOB_HOOKS
@@ -895,8 +895,6 @@ Resource::reconfig( void )
 	}
 	m_hook_keyword_initialized = false;
 #endif /* HAVE_JOB_HOOKS */
-	// This bogus return makes the prototype happy for ResMgr::walk().
-	return TRUE;
 }
 
 

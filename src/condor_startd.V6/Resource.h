@@ -160,7 +160,7 @@ public:
 	int		init_classad( void );		
 	void	refresh_classad( amask_t mask );	
 	int		force_benchmark( void );
-	int		reconfig( void );
+	void	reconfig( void );
 
 	int		update( void );		// Schedule to update the central manager.
 	int		do_update( void );			// Actually update the CM
