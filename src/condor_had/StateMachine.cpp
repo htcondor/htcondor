@@ -152,11 +152,11 @@ HADStateMachine::isHardConfigurationNeeded(void)
 
 	tmp = param( "HAD_CONTROLLEE" );
 	if ( tmp ) {
-		strncpy( controllee, tmp, sizeof(controllee) );
+		strncpy( controllee, tmp, sizeof(controllee) - 1 );
         free( tmp );
 	}
 	else {
-		strncpy( controllee, daemonString(DT_NEGOTIATOR), sizeof(controllee) );
+		strncpy( controllee, daemonString(DT_NEGOTIATOR), sizeof(controllee) - 1 );
 	}
 	if ( strcasecmp(controllee, m_controlleeName) ) {
 		return true;
