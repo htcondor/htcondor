@@ -208,6 +208,13 @@ char* extract_VOMS_attrs( globus_gsi_cred_handle_t handle, int *error) {
 		goto end;
    }
 
+   ret = VOMS_SetVerificationType( VERIFY_NONE, voms_data, &voms_err );
+   if (ret == 0) {
+      retfqan = VOMS_ErrorMessage(voms_data, voms_err, NULL, 0);
+      *error = 1;
+      goto end;
+   }
+
    ret = VOMS_Retrieve(cert, chain, RECURSE_CHAIN,
                           voms_data, &voms_err);
    if (ret == 0) {
