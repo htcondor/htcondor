@@ -210,7 +210,7 @@ int
 command_pckpt_all( Service*, int, Stream* ) 
 {
 	dprintf( D_ALWAYS, "command_pckpt_all() called.\n" );
-	resmgr->walk( &Resource::periodic_checkpoint );
+	resmgr->walk( &Resource::void_periodic_checkpoint );
 	return TRUE;
 }
 
