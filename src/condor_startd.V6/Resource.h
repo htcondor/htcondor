@@ -65,9 +65,9 @@ public:
 	void	remove_pre( void );	// If r_pre is set, refuse and delete it.
 
 		// Shutdown methods that deal w/ opportunistic *and* COD claims
-	int		shutdownAllClaims( bool graceful );
-	int		releaseAllClaims( void );
-	int		killAllClaims( void );
+	void	shutdownAllClaims( bool graceful );
+	void	releaseAllClaims( void );
+	void	killAllClaims( void );
 
         // Enable/Disable claims for hibernation
     void    disable ();

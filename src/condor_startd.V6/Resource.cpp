@@ -402,21 +402,21 @@ Resource::removeClaim( Claim* c )
 }
 
 
-int
+void
 Resource::releaseAllClaims( void )
 {
-	return shutdownAllClaims( true );
+	shutdownAllClaims( true );
 }
 
 
-int
+void
 Resource::killAllClaims( void )
 {
-	return shutdownAllClaims( false );
+	shutdownAllClaims( false );
 }
 
 
-int
+void
 Resource::shutdownAllClaims( bool graceful )
 {
 		// shutdown the COD claims
@@ -432,8 +432,6 @@ Resource::shutdownAllClaims( bool graceful )
 		// since they would just be rejected by the startd anyway.
 	r_reqexp->unavail();
 	update();
-
-	return TRUE;
 }
 
 bool
