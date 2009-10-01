@@ -233,7 +233,8 @@ Resource::retire_claim( void )
 				r_cur->setRetirePeacefully(true);
 			}
 		}
-		return change_state( retiring_act );
+		change_state( retiring_act );
+		return TRUE; // XXX: change TRUE
 	case matched_state:
 		change_state( owner_state );
 		return TRUE; // XXX: change TRUE
@@ -506,7 +507,8 @@ Resource::suspendForCOD( void )
     case CLAIM_RUNNING:
 		dprintf( D_ALWAYS, "State change: Suspending because a COD "
 				 "job is now running\n" );
-		did_update = change_state( suspended_act );
+		change_state( suspended_act );
+		did_update = TRUE;
 		break;
 
     case CLAIM_VACATING:
@@ -569,7 +571,8 @@ Resource::resumeForCOD( void )
     case CLAIM_SUSPENDED:
 		dprintf( D_ALWAYS, "State Change: No running COD job, "
 				 "resuming opportunistic claim\n" );
-		did_update = change_state( busy_act );
+		change_state( busy_act );
+		did_update = TRUE;
 		break;
 
     case CLAIM_IDLE:
