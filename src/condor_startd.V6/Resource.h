@@ -76,7 +76,7 @@ public:
     // Resource state methods
 	void	set_destination_state( State s ) { r_state->set_destination(s);};
 	State	destination_state( void ) {return r_state->destination();};
-	int		change_state( State s ) {return r_state->change(s);};
+	int		change_state( State s ) {r_state->change(s); return TRUE;}; // XXX: change TRUE
 	int		change_state( Activity a) {return r_state->change(a);};
 	void	change_state( State s , Activity a ) {r_state->change(s, a);};
 	State		state( void )		{return r_state->state();};
