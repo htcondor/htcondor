@@ -1924,7 +1924,7 @@ Resource::compute( amask_t mask )
 
 
 void
-Resource::dprintf_va( int flags, char* fmt, va_list args )
+Resource::dprintf_va( int flags, const char* fmt, va_list args )
 {
 	if( resmgr->is_smp() ) {
 		MyString fmt_str( r_id_str );
@@ -1938,7 +1938,7 @@ Resource::dprintf_va( int flags, char* fmt, va_list args )
 
 
 void
-Resource::dprintf( int flags, char* fmt, ... )
+Resource::dprintf( int flags, const char* fmt, ... )
 {
 	va_list args;
 	va_start( args, fmt );

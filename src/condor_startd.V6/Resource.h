@@ -118,8 +118,8 @@ public:
 		// dprintf() functions add the CPU id to the header of each
 		// message for SMP startds (single CPU machines get no special
 		// header and it works just like regular dprintf())
-	void	dprintf( int, char*, ... );
-	void	dprintf_va( int, char*, va_list );
+	void	dprintf( int, const char*, ... );
+	void	dprintf_va( int, const char*, va_list );
 
 		// Helper functions to log that we're ignoring a command that
 		// came in while we were in an unexpected state, or while

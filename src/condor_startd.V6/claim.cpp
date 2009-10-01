@@ -461,7 +461,7 @@ Claim::publishStateTimes( ClassAd* cad )
 
 
 void
-Claim::dprintf( int flags, char* fmt, ... )
+Claim::dprintf( int flags, const char* fmt, ... )
 {
 	va_list args;
 	va_start( args, fmt );
