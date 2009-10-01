@@ -293,14 +293,14 @@ Resource::kill_claim( void )
 			// still want to do the activity change into killing...
 			// Added 4/26/00 by Derek Wright <wright@cs.wisc.edu>
 		change_state( preempting_state, killing_act );
-		return TRUE; // XXX: change TRUE
+		break;
 	case matched_state:
 		change_state( owner_state );
-		return TRUE; // XXX: change TRUE
+		break;
 #if HAVE_BACKFILL
 	case backfill_state:
 		set_destination_state( owner_state );
-		return TRUE;
+		break;
 #endif /* HAVE_BACKFILL */
 	default:
 			// In other states, try direct kill.  See above.
