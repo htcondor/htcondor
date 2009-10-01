@@ -166,7 +166,7 @@ public:
 	int		do_update( void );			// Actually update the CM
     int     update_with_ack( void );    // Actually update the CM and wait for an ACK
     void    publish_for_update ( ClassAd *public_ad ,ClassAd *private_ad );
-	int		eval_and_update( void );	// Evaluate state and update CM. 
+	void	eval_and_update( void );	// Evaluate state and update CM. 
 	void	final_update( void );		// Send a final update to the CM
 									    // with Requirements = False.
 

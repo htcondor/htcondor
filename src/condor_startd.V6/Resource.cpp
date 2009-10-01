@@ -1117,7 +1117,7 @@ Resource::update_with_ack( void )
 }
 
 
-int
+void
 Resource::eval_and_update( void )
 {
 		// Evaluate the state of this resource.
@@ -1126,8 +1126,6 @@ Resource::eval_and_update( void )
 		// If we didn't update b/c of the eval_state, we need to
 		// actually do the update now.
 	update();
-
-	return TRUE;
 }
 
 void
