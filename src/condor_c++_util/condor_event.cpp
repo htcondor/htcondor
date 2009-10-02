@@ -415,6 +415,7 @@ ULogEvent::toClassAd(void)
 		myad->SetMyTypeName("JobAdInformationEvent");
 		break;
 	  default:
+		delete myad;
 		return NULL;
 	}
 
@@ -425,27 +426,40 @@ ULogEvent::toClassAd(void)
 		MyString buf1;
 		buf1.sprintf("EventTime = \"%s\"", eventTimeStr);
 		free(eventTimeStr);
-		if( !myad->Insert(buf1.Value()) ) return NULL;
+		if( !myad->Insert(buf1.Value()) ) {
+			delete myad;
+			return NULL;
+		}
 	} else {
+		delete myad;
 		return NULL;
 	}
 
 	if( cluster >= 0 ) {
 		snprintf(buf0, 128, "Cluster = %d", cluster);
 		buf0[127] = 0;
-		if( !myad->Insert(buf0) ) return NULL;
+		if( !myad->Insert(buf0) ) {
+			delete myad;
+			return NULL;
+		}
 	}
 
 	if( proc >= 0 ) {
 		snprintf(buf0, 128, "Proc = %d", proc);
 		buf0[127] = 0;
-		if( !myad->Insert(buf0) ) return NULL;
+		if( !myad->Insert(buf0) ) {
+			delete myad;
+			return NULL;
+		}
 	}
 
 	if( subproc >= 0 ) {
 		snprintf(buf0, 128, "Subproc = %d", subproc);
 		buf0[127] = 0;
-		if( !myad->Insert(buf0) ) return NULL;
+		if( !myad->Insert(buf0) ) {
+			delete myad;
+			return NULL;
+		}
 	}
 
 	return myad;
