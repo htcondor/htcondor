@@ -1455,7 +1455,28 @@ void
 ResMgr::update_all( void )
 {
 	num_updates = 0;
-	walk( &Resource::eval_and_update );
+
+		// NOTE: We do *NOT* eval_state and update in the same walk
+		// over the resources. The reason we do not is the eval_state
+		// may result in the deletion of a resource, e.g. if it ends
+		// up in the delete_state. In such a case we'll be calling
+		// eval_state on a resource we delete and then call update on
+		// the same resource. As a result, you might be lucky enough
+		// to get a SEGV immediately, but if you aren't you'll get a
+		// SEGV later on when the timer Resource::update registers
+		// fires. That delay will make it rather difficult to find the
+		// root cause of the SEGV, believe me. Generally, nothing
+		// should mess with a resource immediately after eval_state is
+		// called on it. To avoid this problem, the eval and update
+		// process is split here. The Resource::update will only be
+		// called on resources that are still alive. - matt 1 Oct 09
+
+		// Evaluate the state of this resource.
+	walk( &Resource::eval_state );
+		// If we didn't update b/c of the eval_state, we need to
+		// actually do the update now.
+	walk( &Resource::update );
+
 	report_updates();
 	check_polling();
 	check_use();

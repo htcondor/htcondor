@@ -1114,18 +1114,6 @@ Resource::update_with_ack( void )
 
 }
 
-
-void
-Resource::eval_and_update( void )
-{
-		// Evaluate the state of this resource.
-	eval_state();
-
-		// If we didn't update b/c of the eval_state, we need to
-		// actually do the update now.
-	update();
-}
-
 void
 Resource::hold_job( )
 {
