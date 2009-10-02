@@ -2883,7 +2883,7 @@ else
 	AC_MSG_RESULT([$_cv_including_voms])
 fi
 
-if test "x$_cv_linux_distro" = "xRHEL5" -o "x$_cv_linux_distro" = "xRHEL3" -a "$_cv_arch" = "xI386" ; then
+if test "x$_cv_linux_distro" = "xRHEL5" -o "x$_cv_linux_distro" = "xRHEL3" -a "x$_cv_arch" = "xI386" ; then
   CHECK_EXTERNAL([cream],[1.10.1], [soft])
 fi
 
