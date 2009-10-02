@@ -59,10 +59,10 @@ void Hadoop::initialize() {
                 m_hadoopHome = MyString(hh);
                 free(hh);
         } else {
-                char * rd = param("RELEASE_DIR");
+                char * rd = param("LIBEXEC");
                 if (rd != NULL) {
                         MyString tmp;
-                        tmp.sprintf("%s/libexec/hdfs", rd);
+                        tmp.sprintf("%s/hdfs", rd);
                         m_hadoopHome = tmp;                
                         free(rd);
                 }                                 
