@@ -7969,6 +7969,7 @@ DaemonCore::Create_Thread(ThreadStartFunc start_func, void *arg, Stream *sock,
 		priv_state saved_priv = get_priv();
 		int exit_status = start_func(arg,s);
 
+		if (s) delete s;
 #ifndef WIN32
 			// In unix, we need to make exit_status like wait waitpid() returns
 		exit_status = exit_status<<8;
