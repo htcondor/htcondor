@@ -946,22 +946,6 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=vm-gahp,vmgahp_config
 id=17
 
-[VM_VERSION]
-aliases=
-default=
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Vm Version
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=vm-gahp,vmgahp_config
-id=18
-
 [VM_MAX_MEMORY]
 aliases=
 default=0

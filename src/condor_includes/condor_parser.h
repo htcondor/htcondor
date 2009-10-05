@@ -32,11 +32,11 @@
 #include "condor_ast.h"
 
 // parse an assignment expression: name = expression
-int Parse(const char*, ExprTree*&);
+int Parse(const char*, ExprTree*&, int *pos = NULL);
 
 // parse an rval (i.e. anything that could appear on the rhs of an assignment)
 // if error occurs, ExprTree is NULL and return value is
 // position at which error occurred
-int ParseClassAdRvalExpr(const char*, ExprTree*&);
+int ParseClassAdRvalExpr(const char*, ExprTree*&, int *pos = NULL);
 
 #endif

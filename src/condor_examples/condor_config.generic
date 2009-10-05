@@ -2141,10 +2141,6 @@ MAX_VM_GAHP_LOG	= 1000000
 ## The two options are vmware and xen.  (Required)
 #VM_TYPE = vmware
 
-## Which version of the above virtual machine program is installed? (Required)
-## This is advertised in the machine ad.
-#VM_VERSION = server1.0
-
 ## How much memory can be used for the VM universe? (Required)
 ## This value is the maximum amount of memory that can be used by the 
 ## virtual machine program.
