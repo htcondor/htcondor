@@ -103,6 +103,12 @@ WriteUserLog::WriteUserLog (const char *owner,
 {
 	Reset( );
 	m_use_xml = xml;
+	
+	// For PrivSep:
+#if !defined(WIN32)
+	m_privsep_uid = 0;
+	m_privsep_gid = 0;
+#endif
 
 	initialize (owner, NULL, file, c, p, s, NULL);
 }
@@ -118,6 +124,12 @@ WriteUserLog::WriteUserLog (const char *owner,
 {
 	Reset();
 	m_use_xml = xml;
+
+	// For PrivSep:
+#if !defined(WIN32)
+	m_privsep_uid = 0;
+	m_privsep_gid = 0;
+#endif
 
 	initialize (owner, domain, file, c, p, s, gjid);
 }
