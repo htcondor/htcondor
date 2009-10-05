@@ -42,8 +42,10 @@
 #include "config.h"
 
 #if HAVE_SYS_PERSONALITY_H
-#include <sys/personality.h>
-#include <sys/syscall.h>
+# include <sys/personality.h>
+#endif
+#if HAVE_SYS_SYSCALL_H
+# include <sys/syscall.h>
 #endif
 
 #include "safe.h"
