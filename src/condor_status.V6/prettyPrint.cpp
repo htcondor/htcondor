@@ -211,8 +211,8 @@ printStartdNormal (ClassAd *ad)
 		// instead of ATTR_MEMORY
 		opsys_name = "VMType";
 		opsys_attr = ATTR_VM_TYPE;
-		arch_name = "Ver";
-		arch_attr = ATTR_VM_VERSION;	
+		arch_name = "Network";
+		arch_attr = ATTR_VM_NETWORKING_TYPES;
 		mem_name = "VMMem";
 		mem_attr = ATTR_VM_MEMORY;
 	} else {
@@ -263,19 +263,6 @@ printStartdNormal (ClassAd *ad)
 			printf("%s", format_time(actvty));
 		} else {
 			printf("   [Unknown]");
-		}
-
-		if( vmMode ) {
-			bool vm_networking = false;
-			MyString networking_types;
-
-			ad->LookupBool(ATTR_VM_NETWORKING, vm_networking);
-			if( vm_networking && ( ad->LookupString( ATTR_VM_NETWORKING_TYPES,
-							networking_types) == 1 )) {
-				printf( " %s", networking_types.Value());
-			}else {
-				printf(" [Not-Supported]");
-			}
 		}
 
 		printf("\n");
@@ -373,8 +360,8 @@ printRun (ClassAd *ad)
 	} else if(vmMode) {
 		opsys_name = "VMType";
 		opsys_attr = ATTR_VM_TYPE;
-		arch_name = "Ver";
-		arch_attr = ATTR_VM_VERSION;	
+		arch_name = "Network";
+		arch_attr = ATTR_VM_NETWORKING_TYPES;
 	} else {
 		opsys_name = opsys_attr = ATTR_OPSYS;
 		arch_name = arch_attr = ATTR_ARCH;
@@ -386,11 +373,11 @@ printRun (ClassAd *ad)
 		if (first)
 		{
 			if(vmMode) {
-				printf ("\n%-13.13s %-11.11s %-6.6s %-6.6s %-20.20s %-15.15s\n\n",
+				printf ("\n%-13.13s %-6.6s %-11.11s %-6.6s %-20.20s %-15.15s\n\n",
 						ATTR_NAME, opsys_name, arch_name, ATTR_LOAD_AVG,
 						ATTR_REMOTE_USER, ATTR_CLIENT_MACHINE);
 			}else {
-				printf ("\n%-13.13s %-6.6s %-11.11s %-6.6s %-20.20s %-15.15s\n\n",
+				printf ("\n%-13.13s %-11.11s %-6.6s %-6.6s %-20.20s %-15.15s\n\n",
 						ATTR_NAME, opsys_name, arch_name, ATTR_LOAD_AVG,
 						ATTR_REMOTE_USER, ATTR_CLIENT_MACHINE);
 			}

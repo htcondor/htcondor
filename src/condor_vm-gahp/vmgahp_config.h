@@ -35,7 +35,6 @@ class VMGahpConfig {
 		bool init(const char* vmtype);
 
 		MyString m_vm_type;
-		MyString m_vm_version;
 
 		int m_vm_max_memory;
 
