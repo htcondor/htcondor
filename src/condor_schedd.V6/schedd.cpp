@@ -10859,8 +10859,10 @@ void Scheduler::reconfig() {
 
 	timeout();
 
-		// The SetMaxHistoricalLogs is initialized in main_init(), we just need to check here
-		// for changes.  
+		// The following use of param() is ok, despite the warning at the
+		// top of this function that this function is not called at init time.
+		// SetMaxHistoricalLogs is initialized in main_init(), we just need
+		// to check here for changes.  
 	int max_saved_rotations = param_integer( "MAX_JOB_QUEUE_LOG_ROTATIONS", DEFAULT_MAX_JOB_QUEUE_LOG_ROTATIONS );
 	SetMaxHistoricalLogs(max_saved_rotations);
 }
