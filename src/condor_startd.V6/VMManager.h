@@ -22,17 +22,12 @@
 
 #include "condor_common.h"
 #include "simplelist.h"
-#include "VMMachine.h"
 
 bool vmapi_is_host_machine(void);
 void vmapi_create_vmmanager(char *);
 void vmapi_destroy_vmmanager(void);
 
-class VMManager;
-extern VMManager *vmmanager;
-
 class VMMachine;
-
 class VMManager : public Service {
 public:
 	VMManager();

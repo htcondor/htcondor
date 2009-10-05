@@ -690,38 +690,6 @@ GET_RESLIST_commandHandler (int, Stream *strm)
 }
 
 
-/*
-Look for an ad matching the given constraint string
-in the table given by arg.  Return a duplicate on success.
-Otherwise, return 0.
-*/
-#if 0
-static ClassAd * lookup_global( const char *constraint, void *arg )
-{
-	ClassAdList *list = (ClassAdList*) arg;
-	ClassAd *ad;
-	ClassAd queryAd;
-
-	if ( want_simple_matching ) {
-		return 0;
-	}
-
-	CondorQuery query(ANY_AD);
-	query.addANDConstraint(constraint);
-	query.getQueryAd(queryAd);
-	queryAd.SetTargetTypeName (ANY_ADTYPE);
-
-	list->Open();
-	while( (ad = list->Next()) ) {
-		if(queryAd <= *ad) {
-			return new ClassAd(*ad);
-		}
-	}
-
-	return 0;
-}
-#endif
-
 char *
 Matchmaker::
 compute_significant_attrs(ClassAdList & startdAds)
@@ -921,9 +889,6 @@ negotiationTime ()
 
 	double minSlotWeight = 0;
 	double untrimmedSlotWeightTotal = sumSlotWeights(startdAds,&minSlotWeight);
-
-	// Register a lookup function that passes through the list of all ads.
-	// ClassAdLookupRegister( lookup_global, &allAds );
 
 	// Compute the significant attributes to pass to the schedd, so
 	// the schedd can do autoclustering to speed up the negotiation cycles.
@@ -3815,7 +3780,7 @@ void Matchmaker::RegisterAttemptedOfflineMatch( ClassAd *job_ad, ClassAd *startd
 	update_ad.CopyAttribute(ATTR_STARTD_IP_ADDR,ATTR_STARTD_IP_ADDR,startd_ad);
 
 	time_t now = time(NULL);
-	update_ad.Assign(ATTR_LAST_MATCH_TIME,(int)now);
+	update_ad.Assign(ATTR_MACHINE_LAST_MATCH_TIME,(int)now);
 
 	classy_counted_ptr<ClassAdMsg> msg = new ClassAdMsg(MERGE_STARTD_AD,update_ad);
 	classy_counted_ptr<DCCollector> collector = new DCCollector();
@@ -3857,7 +3822,7 @@ void Matchmaker::RegisterAttemptedOfflineMatch( ClassAd *job_ad, ClassAd *startd
 		slot1_update_ad.Assign(ATTR_NAME,slot1_name);
 		slot1_update_ad.CopyAttribute(ATTR_STARTD_IP_ADDR,ATTR_STARTD_IP_ADDR,startd_ad);
 		MyString slotX_last_match_time;
-		slotX_last_match_time.sprintf("slot%d_%s",slot_id,ATTR_LAST_MATCH_TIME);
+		slotX_last_match_time.sprintf("slot%d_%s",slot_id,ATTR_MACHINE_LAST_MATCH_TIME);
 		slot1_update_ad.Assign(slotX_last_match_time.Value(),(int)now);
 
 		classy_counted_ptr<ClassAdMsg> msg = \

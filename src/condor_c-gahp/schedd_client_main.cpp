@@ -160,7 +160,7 @@ void
 Reconfig()
 {
 	contact_schedd_interval = 
-		param_integer ("C_GAHP_CONTACT_SCHEDD_DELAY", 20);
+		param_integer ("C_GAHP_CONTACT_SCHEDD_DELAY", 5);
 
 	useXMLClassads = param_boolean( "GAHP_USE_XML_CLASSADS", false );
 

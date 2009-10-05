@@ -229,44 +229,6 @@ protected:
 	UCHAR*						m_pBuffer;
 };
 
-//////////////////////////////////////////////////////////////////////////////////////
-//
-// SystemThreadInformation
-//
-//////////////////////////////////////////////////////////////////////////////////////
-
-class SystemThreadInformation : public INtDll
-{
-public:
-	typedef struct _THREAD_INFORMATION
-		{
-		DWORD		ProcessId;
-		DWORD		ThreadId;
-		HANDLE		ThreadHandle;	
-		} THREAD_INFORMATION;
-
-	
-	typedef struct _BASIC_THREAD_INFORMATION {
-		DWORD u1;
-		DWORD u2;
-		DWORD u3;
-		DWORD ThreadId;
-		DWORD u5;
-		DWORD u6;
-		DWORD u7;
-	} BASIC_THREAD_INFORMATION;
-
-public:
-	SystemThreadInformation( DWORD pID = (DWORD)-1, BOOL bRefresh = FALSE );
-
-	BOOL Refresh();
-
-public:
-	// CList< THREAD_INFORMATION, THREAD_INFORMATION& > m_ThreadInfos;
-	List<THREAD_INFORMATION> m_ThreadInfos;
-	DWORD m_processId;
-};
-
 
 //////////////////////////////////////////////////////////////////////////////////////
 //
@@ -377,87 +339,6 @@ public:
 
 protected:
 	MyString	m_strTypeFilter;
-};
-
-//////////////////////////////////////////////////////////////////////////////////////
-//
-// SystemModuleInformation
-//
-//////////////////////////////////////////////////////////////////////////////////////
-
-class SystemModuleInformation
-{
-public:
-	typedef struct _MODULE_INFO
-	{
-		DWORD	ProcessId;
-		TCHAR	FullPath[_MAX_PATH];
-		HMODULE Handle;
-	} MODULE_INFO;
-
-public:
-	typedef DWORD (WINAPI *PEnumProcessModules)(
-				HANDLE hProcess,      // handle to process
-				HMODULE *lphModule,   // array of module handles
-				DWORD cb,             // size of array
-				LPDWORD lpcbNeeded    // number of bytes required
-			);
-
-	typedef DWORD (WINAPI *PGetModuleFileNameEx)(
-				HANDLE hProcess,    // handle to process
-				HMODULE hModule,    // handle to module
-				LPTSTR lpFilename,  // path buffer
-				DWORD nSize         // maximum characters to retrieve
-			);
-
-public:
-	SystemModuleInformation( DWORD pID = (DWORD)-1, BOOL bRefresh = FALSE );
-
-	BOOL Refresh();
-
-protected:
-	void GetModuleListForProcess( DWORD processID );
-
-public:
-	DWORD m_processId;
-	// CList< MODULE_INFO, MODULE_INFO& > m_ModuleInfos;
-	List<MODULE_INFO> m_ModuleInfos;
-
-protected:
-	PEnumProcessModules		m_EnumProcessModules;
-	PGetModuleFileNameEx	m_GetModuleFileNameEx;
-};
-
-//////////////////////////////////////////////////////////////////////////////////////
-//
-// SystemWindowInformation
-//
-//////////////////////////////////////////////////////////////////////////////////////
-
-class SystemWindowInformation
-{
-public:
-	enum { MaxCaptionSize = 1024 };
-
-	typedef struct _WINDOW_INFO
-	{
-		DWORD	ProcessId;
-		TCHAR	Caption[MaxCaptionSize];
-		HWND	hWnd;
-	} WINDOW_INFO;
-
-public:
-	SystemWindowInformation( DWORD pID = (DWORD)-1, BOOL bRefresh = FALSE );
-
-	BOOL Refresh();
-
-protected:
-	static BOOL CALLBACK EnumerateWindows( HWND hwnd, LPARAM lParam );
-	
-public:
-	DWORD m_processId;
-	// CList< WINDOW_INFO, WINDOW_INFO& > m_WindowInfos;
-	List<WINDOW_INFO> m_WindowInfos;
 };
 
 #endif

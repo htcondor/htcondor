@@ -24,10 +24,10 @@
 #include "condor_common.h"
 
 typedef enum param_info_t_type_e {
-	TYPE_STRING = 0,
-	TYPE_INT = 1,
-	TYPE_BOOL = 2,
-	TYPE_DOUBLE = 3
+	PARAM_TYPE_STRING = 0,
+	PARAM_TYPE_INT = 1,
+	PARAM_TYPE_BOOL = 2,
+	PARAM_TYPE_DOUBLE = 3
 } param_info_t_type_t;
 
 typedef struct param_info_t_s {

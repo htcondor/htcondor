@@ -107,9 +107,7 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 #include "basename.h"
 #include "condor_threads.h"
 
-#if defined(HAVE_VALGRIND_H)
 #include "valgrind.h"
-#endif
 
 #if defined ( HAVE_SCHED_SETAFFINITY ) && !defined ( WIN32 )
 #include <sched.h>
@@ -2568,12 +2566,10 @@ DaemonCore::reconfig(void) {
 	else {
 		m_use_clone_to_create_processes = param_boolean("USE_CLONE_TO_CREATE_PROCESSES", true);
 	}
-#if defined(HAVE_VALGRIND_H)
 	if (RUNNING_ON_VALGRIND) {
 		dprintf(D_ALWAYS, "Looks like we are under valgrind, forcing USE_CLONE_TO_CREATE_PROCESSES to FALSE.\n");
 		m_use_clone_to_create_processes = false;
 	}
-#endif
 
 #endif /* HAVE CLONE */
 
@@ -10040,10 +10036,22 @@ DaemonCore::UpdateLocalAd(ClassAd *daemonAd)
             daemonAd->fPrint(AD_FILE);
             fclose( AD_FILE );
 			if( rotate_file(newLocalAdFile.Value(),localAdFile)!=0 ) {
+					// Under windows, rotate_file() sometimes failes with
+					// system error 5 (access denied).  This is believed
+					// to be expected in the case where some other process
+					// has the target file open for reading, so only
+					// report this as a WARNING under windows.
+#ifdef WIN32
+				dprintf( D_ALWAYS,
+						 "DaemonCore: WARNING: failed to rotate %s to %s\n",
+						 newLocalAdFile.Value(),
+						 localAdFile);
+#else
 				dprintf( D_ALWAYS,
 						 "DaemonCore: ERROR: failed to rotate %s to %s\n",
 						 newLocalAdFile.Value(),
 						 localAdFile);
+#endif
 			}
         } else {
             dprintf( D_ALWAYS,

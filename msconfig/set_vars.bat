@@ -38,10 +38,11 @@ REM Set paths to Visual C++, the Platform SDKs, and Perl
 set VS_DIR=%PROGRAMS_DIR%\Microsoft Visual Studio 9.0
 set VC_DIR=%VS_DIR%\VC
 set VC_BIN=%VC_DIR%\bin
-set PERL_DIR=%SystemDrive%\Perl\bin;%SystemDrive%\Perl64\bin
+set PERL_DIR=%SystemDrive%\Perl\bin;%SystemDrive%\Perl64\bin;%SystemDrive%\prereq\ActivePerl-5.10.1\bin
 set SDK_DIR=%ProgramFiles%\Microsoft Platform SDK
 set DBG_DIR=%ProgramFiles%\Debugging Tools for Windows (x86);%ProgramFiles%\Debugging Tools for Windows (x64)
 set DOTNET_DIR=%SystemRoot%\Microsoft.NET\Framework\v3.5;%SystemRoot%\Microsoft.NET\Framework\v2.0.50727
+set JDK_DIR="E:\Program Files\Java\jdk1.6.0_16"
 
 REM For some reason this is not defined whilst in some environments
 if "A%VS90COMNTOOLS%"=="A" set VS90COMNTOOLS=%VS_DIR%\Common7\Tools\
@@ -69,7 +70,7 @@ set EXT_POSTGRESQL_VERSION=postgresql-8.0.2
 set EXT_KERBEROS_VERSION=krb5-1.4.3-p0
 set EXT_PCRE_VERSION=pcre-7.6
 set EXT_DRMAA_VERSION=drmaa-1.6
-set EXT_CURL_VERSION=curl-7.19.6
+set EXT_CURL_VERSION=curl-7.19.6-p1
 set EXT_HADOOP_VERSION=hadoop-0.20.0-p2
 
 REM Now tell the build system what externals we need built.
@@ -77,7 +78,7 @@ set EXTERNALS_NEEDED=%EXT_GSOAP_VERSION% %EXT_OPENSSL_VERSION% %EXT_KERBEROS_VER
 
 REM Put msconfig in the PATH, since it's got lots of stuff we need
 REM like awk, gunzip, tar, bison, yacc...
-set PATH=%cd%;%SystemRoot%;%SystemRoot%\system32;%PERL_DIR%;%VS_DIR%;%VC_DIR%;%VC_BIN%;%SDK_DIR%;%DOTNET_DIR%;%DBG_DIR%
+set PATH=%cd%;%SystemRoot%;%SystemRoot%\system32;%PERL_DIR%;%VS_DIR%;%VC_DIR%;%VC_BIN%;%SDK_DIR%;%DOTNET_DIR%;%DBG_DIR%;%JDK_LIB%
 
 REM ======================================================================
 REM ====== THIS SHOULD BE REMOVED WHEN Win2K IS NO LONGER SUPPORTED ======
@@ -177,6 +178,11 @@ REM ** PCRE
 set CONDOR_PCRE_INCLUDE=/I %EXT_INSTALL%\%EXT_PCRE_VERSION%\include
 set CONDOR_PCRE_LIB=libpcre.lib
 set CONDOR_PCRE_LIBPATH=/LIBPATH:%EXT_INSTALL%\%EXT_PCRE_VERSION%\lib
+
+REM ** JDK
+set CONDOR_JDK_INCLUDE=/I %JDK_DIR%\include /I %JDK_DIR%\include\win32
+set CONDOR_JDK_LIB=jvm.lib
+set CONDOR_JDK_LIBPATH=/LIBPATH:%JDK_DIR%\lib
 
 REM Dump the Windows build environment at this point
 REM echo ----------------------- WIN ENV DUMP ----------------------

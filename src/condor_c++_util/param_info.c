@@ -87,8 +87,21 @@ param_info_init()
 
 	param_info_hash_create(&param_info);
 
+	// due to #793 coupled with the fact that the new param code is disabled for
+	// the 7.4 series, and enabled for the 7.5 series, we short circuit the
+	// initialization of the table for the 7.4 series to save on ram in the
+	// shadow process.
+
+	// Normally, I'd use the CondorVersionInfo object here, but since this is
+	// A C file and I don't want to have to implement a C interface to the
+	// CondorVersionInfo object, this next line is commented out in the
+	// trunk, which represents the 7.5 series at the writing of this comment.
+/*	goto after_data_insertion;*/
+
 #include "param_info_init.c"
 
+	after_data_insertion:
+		;
 }
 
 void
@@ -134,7 +147,7 @@ param_info_insert(char* param,
 	p->default_valid = 1;
 	switch (type) {
 
-		case TYPE_INT:
+		case PARAM_TYPE_INT:
 
 			p->default_val.int_val = strtol(value, NULL, 10);
 			compute_range(range, &range_start, &range_end);
@@ -164,13 +177,13 @@ param_info_insert(char* param,
 
 			break;
 
-		case TYPE_BOOL:
+		case PARAM_TYPE_BOOL:
 
 			p->default_val.int_val = strtol(value, NULL, 10) != 0;
 
 			break;
 
-		case TYPE_DOUBLE:
+		case PARAM_TYPE_DOUBLE:
 
 			p->default_val.dbl_val = strtod(value, NULL);
 
@@ -205,7 +218,7 @@ param_info_insert(char* param,
 
 /*			dprintf(D_ALWAYS, "Invalid type specified for parameter '%s', defaulting to string\n", param);*/
 
-		case TYPE_STRING:
+		case PARAM_TYPE_STRING:
 
 			if (validate_regex(range, value)) {
 				p->default_val.str_val = p->str_val;
@@ -261,7 +274,7 @@ param_default_integer(const char* param, int* valid) {
 
 	if (p) {
 		ret = p->default_val.int_val;
-		*valid = p->default_valid && (p->type == TYPE_INT || p->type == TYPE_BOOL);
+		*valid = p->default_valid && (p->type == PARAM_TYPE_INT || p->type == PARAM_TYPE_BOOL);
 	} else {
 		*valid = 0;
 	}
@@ -287,7 +300,7 @@ param_default_double(const char* param, int* valid) {
 
 	if (p) {
 		ret = p->default_val.dbl_val;
-		*valid = p->default_valid && (p->type == TYPE_DOUBLE);
+		*valid = p->default_valid && (p->type == PARAM_TYPE_DOUBLE);
 	} else {
 		*valid = 0;
 	}
@@ -303,7 +316,7 @@ param_range_integer(const char* param, int* min, int* max) {
 	p = param_info_hash_lookup(param_info, param);
 
 	if (p) {
-		if(p->type != TYPE_INT) {
+		if(p->type != PARAM_TYPE_INT) {
 			return -1;
 		}
 		*min = p->range_min.int_min;
@@ -324,7 +337,7 @@ param_range_double(const char* param, double* min, double* max) {
 	p = param_info_hash_lookup(param_info, param);
 
 	if (p) {
-		if(p->type != TYPE_DOUBLE) {
+		if(p->type != PARAM_TYPE_DOUBLE) {
 			return -1;
 		}
 		*min = p->range_min.dbl_min;

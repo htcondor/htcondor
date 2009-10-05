@@ -233,14 +233,19 @@ CStarter::Init( JobInfoCommunicator* my_jic, const char* original_cwd,
 void
 CStarter::StarterExit( int code )
 {
-	RemoveRecoveryFile();
-	removeTempExecuteDir();
+	FinalCleanup();
 #if !defined(WIN32)
 	if ( GetEnv( "CONDOR_GLEXEC_STARTER_CLEANUP_FLAG" ) ) {
 		exitAfterGlexec( code );
 	}
 #endif
 	DC_Exit( code );
+}
+
+void CStarter::FinalCleanup()
+{
+	RemoveRecoveryFile();
+	removeTempExecuteDir();
 }
 
 
@@ -2544,6 +2549,14 @@ CStarter::PublishToEnv( Env* proc_env )
 		env_name += "LOWPORT";
 		proc_env->SetEnv( env_name.Value(), tmp_port_number.Value() );
     }
+
+		// set environment variables for temporary directories
+		// Condor will clean these up on job exits, and there's
+		// no chance of file collisions with other running slots
+
+	proc_env->SetEnv("TMPDIR", GetWorkingDir());
+	proc_env->SetEnv("TEMP", GetWorkingDir()); // Windows
+	proc_env->SetEnv("TMP", GetWorkingDir()); // Windows
 }
 
 

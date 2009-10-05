@@ -60,6 +60,16 @@ public:
 		*/
 	virtual void StarterExit( int code );
 
+		/** Do any potential cleanup before exiting. Used both in 
+		    successful exits (StarterExit()) and EXCEPT()ions.
+			Do not call this function lightly!
+
+			It is conceivable that this function will be called
+			several times if, say, an EXCEPT()ion happens while
+			shutting down, so be careful in the implementation.
+		*/
+	virtual void FinalCleanup();
+
 		/** Params for "EXECUTE" and other useful stuff 
 		 */
 	virtual void Config();

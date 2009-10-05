@@ -103,6 +103,12 @@ WriteUserLog::WriteUserLog (const char *owner,
 {
 	Reset( );
 	m_use_xml = xml;
+	
+	// For PrivSep:
+#if !defined(WIN32)
+	m_privsep_uid = 0;
+	m_privsep_gid = 0;
+#endif
 
 	initialize (owner, NULL, file, c, p, s, NULL);
 }
@@ -118,6 +124,12 @@ WriteUserLog::WriteUserLog (const char *owner,
 {
 	Reset();
 	m_use_xml = xml;
+
+	// For PrivSep:
+#if !defined(WIN32)
+	m_privsep_uid = 0;
+	m_privsep_gid = 0;
+#endif
 
 	initialize (owner, domain, file, c, p, s, gjid);
 }
@@ -309,6 +321,8 @@ WriteUserLog::Reset( void )
 	m_use_xml = XML_USERLOG_DEFAULT;
 	m_gjid = NULL;
 
+	m_creator_name = NULL;
+
 	m_global_disable = false;
 	m_global_use_xml = false;
 	m_global_count_events = false;
@@ -324,6 +338,12 @@ WriteUserLog::Reset( void )
 # else
 	m_global_close = false;
 # endif
+
+	// For PrivSep:
+#if !defined(WIN32)
+	m_privsep_uid = 0;
+	m_privsep_gid = 0;
+#endif
 
 	MyString	base;
 	base = "";
@@ -370,6 +390,10 @@ WriteUserLog::FreeGlobalResources( void )
 		delete m_global_stat;
 		m_global_stat = NULL;
 	}
+	if (m_global_state != NULL) {
+		delete m_global_state;
+		m_global_state = NULL;
+	}
 
 	if (m_rotation_lock_path) {
 		free(m_rotation_lock_path);
@@ -383,6 +407,7 @@ WriteUserLog::FreeGlobalResources( void )
 		delete m_rotation_lock;
 		m_rotation_lock = NULL;
 	}
+
 }
 
 void
@@ -409,6 +434,23 @@ WriteUserLog::FreeLocalResources( void )
 	if (m_lock) {
 		delete m_lock;
 		m_lock = NULL;
+	}
+
+	if (m_creator_name) {
+		free( m_creator_name );
+		m_creator_name = NULL;
+	}
+}
+
+void
+WriteUserLog::setCreatorName( const char *name )
+{
+	if ( name ) {
+		if ( m_creator_name ) {
+			free( const_cast<char*>(m_creator_name) );
+			m_creator_name = NULL;
+		}
+		m_creator_name = strdup( name );
 	}
 }
 
@@ -542,6 +584,13 @@ WriteUserLog::openGlobalLog( bool reopen, const UserLogHeader &header )
 
 		writer.addEventOffset( writer.getNumEvents() );
 		writer.setNumEvents( 0 );
+		writer.setCtime( time(NULL) );
+
+		writer.setMaxRotation( m_global_max_rotations );
+
+		if ( m_creator_name ) {
+			writer.setCreatorName( m_creator_name );
+		}
 
 		ret_val = writer.Write( *this );
 
@@ -756,6 +805,10 @@ WriteUserLog::checkGlobalLogRotation( void )
 				 m_global_path, errno, strerror(errno) );
 	}
 	WriteUserLogHeader	header_writer( header_reader );
+	header_writer.setMaxRotation( m_global_max_rotations );
+	if ( m_creator_name ) {
+		header_writer.setCreatorName( m_creator_name );
+	}
 
 	MyString	s;
 	s.sprintf( "checkGlobalLogRotation(): %s", m_global_path );
@@ -1079,18 +1132,24 @@ WriteUserLog::doWriteEvent( FILE *fp, ULogEvent *event, bool use_xml )
 	bool success = true;
 
 	if( use_xml ) {
-		dprintf( D_ALWAYS, "Asked to write event of number %d.\n",
-				 event->eventNumber);
 
 		eventAd = event->toClassAd();	// must delete eventAd eventually
-		MyString adXML;
 		if (!eventAd) {
+			dprintf( D_ALWAYS,
+					 "Failed to convert event type # %d to classAd.\n",
+					 event->eventNumber);
 			success = false;
 		} else {
+			MyString adXML;
 			ClassAdXMLUnparser xmlunp;
 			xmlunp.SetUseCompactSpacing(false);
 			xmlunp.SetOutputTargetType(false);
 			xmlunp.Unparse(eventAd, adXML);
+			if ( adXML.Length() < 1 ) {
+				dprintf( D_ALWAYS,
+						 "Failed to convert event type # %d to XML.\n",
+						 event->eventNumber);
+			}
 			if (fprintf ( fp, adXML.Value()) < 0) {
 				success = false;
 			} else {

@@ -190,7 +190,7 @@ GahpServer::~GahpServer()
 		daemonCore->Cancel_Timer( poll_tid );
 	}
 	if ( master_proxy != NULL ) {
-		ReleaseProxy( master_proxy->proxy );
+		ReleaseProxy( master_proxy->proxy, proxy_check_tid );
 		delete master_proxy;
 	}
 	if ( proxy_check_tid != TIMER_UNSET ) {
@@ -201,7 +201,7 @@ GahpServer::~GahpServer()
 
 		ProxiesByFilename->startIterations();
 		while ( ProxiesByFilename->iterate( gahp_proxy ) != 0 ) {
-			ReleaseProxy( gahp_proxy->proxy );
+			ReleaseProxy( gahp_proxy->proxy, proxy_check_tid );
 			delete gahp_proxy;
 		}
 
@@ -1159,7 +1159,7 @@ GahpServer::UnregisterProxy( Proxy *proxy )
 	if ( gahp_proxy->num_references == 0 ) {
 		ProxiesByFilename->remove( HashKey( gahp_proxy->proxy->proxy_filename ) );
 		uncacheProxy( gahp_proxy );
-		ReleaseProxy( gahp_proxy->proxy );
+		ReleaseProxy( gahp_proxy->proxy, proxy_check_tid );
 		delete gahp_proxy;
 	}
 }
@@ -2011,7 +2011,7 @@ bool
 GahpClient::is_pending(const char *command, const char * /* buf */) 
 {
 		// note: do _NOT_ check pending reqid here.
-// MirrorResource doesn't exactly recreate all the arguments when checking
+// Some callers don't exactly recreate all the arguments when checking
 // the status of a pending command, so relax our check here. Current users
 // of GahpClient are careful to purge potential outstanding commands before
 // issuing new ones, so this shouldn't be a problem. 

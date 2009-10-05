@@ -1,0 +1,159 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+## This tests getting events in recovery mode that violate the
+## semantics of the DAG (see gittrac #622).
+
+## Note: this is a bit of a tricky test -- the node C job actually
+## puts DAGMan on hold and then releases it to force it into recovery
+## mode.
+
+## TO DO: add some stuff to verify that each node really only got
+## successfully run once.
+
+use CondorTest;
+
+$cmd = 'job_dagman_recovery_event_check.dag';
+$testdesc =  'Condor submit dag - recovery event checking test - scheduler U';
+$testname = "job_dagman_recovery_event_check";
+$dagman_args = "-verbose";
+
+@logfiles = ("job_dagman_recovery_event_check.dag.dagman.out");
+$rescue_file = "job_dagman_recovery_event_check.dag.rescue001";
+
+my $dag_was_held = 0;
+my $dag_was_released = 0;
+
+# truly const variables in perl
+sub IDLE{1};
+sub HELD{5};
+sub RUNNING{2};
+
+# Get rid of any existing log files.
+foreach $name (@logfiles) {
+	if (-e $name) {
+		system("rm -f $name");
+	}
+}
+
+# Get rid of the first rescue DAG files if it exists.
+if (-e $rescue_file) {
+	system("rm -f $rescue_file");
+}
+
+$abnormal = sub 
+{
+	CondorTest::debug("DIAG abnormal\n");
+	die "Want to see only submit, execute and successful completion\n";
+};
+
+$failure = sub 
+{
+	CondorTest::debug("DAG failed as it should\n");
+	CondorTest::debug("Verifying output\n");
+	$diditpass = 1;
+
+	if( -e $rescue_file ) {
+		CondorTest::debug("There should be no rescue dag generated (found $rescue_file)!\n");
+		$diditpass = 0;
+	}
+
+	foreach $name (@logfiles) {
+		$line = "";
+		$passed = 0;
+		$canopen = open(OUT,"<$name");
+		if( ! (defined $canopen)) {
+			CondorTest::debug("Can not open logfile<$name>:$!\n",1);
+			$diditpass = 0;
+		}
+		while(<OUT>) {
+			chomp();
+			$line = $_;
+
+			if( $line =~ /Error: DAG semantics violated/ ) {
+				CondorTest::debug("$name: $line\n",1);
+				$passed = 1;
+			}
+		}
+
+		close(OUT);
+		if($passed == 1 ) {
+			;
+		} else {
+			CondorTest::debug("failed $name: $line\n",1);
+			$diditpass = 0;
+		}
+	}
+
+	if($diditpass == 0) {
+		die "All expected files and correct output failed\n";
+	}
+};
+
+$aborted = sub 
+{
+	die "Abort event NOT expected\n";
+};
+
+$held = sub 
+{
+	CondorTest::debug("DAGMan was held -- good!\n");
+	$dag_was_held = 1;
+};
+
+$released = sub 
+{
+	CondorTest::debug("DAGMan was released -- good!\n");
+	$dag_was_released = 1;
+};
+
+$executed = sub
+{
+	my %info = @_;
+
+	CondorTest::debug("Good. We need the dag to run<$info{cluster}>\n",1);
+};
+
+$submitted = sub
+{
+	CondorTest::debug("submitted: This test will see submit, executing, held, released, and successful completion\n",1);
+};
+
+$success = sub
+{
+	die "Error: DAG should fail!\n";
+};
+
+CondorTest::RegisterExitedSuccess( $testname, $success);
+CondorTest::RegisterExecute($testname, $executed);
+CondorTest::RegisterExitedAbnormal( $testname, $abnormal );
+CondorTest::RegisterExitedFailure( $testname, $failure );
+CondorTest::RegisterAbort( $testname, $aborted );
+CondorTest::RegisterHold( $testname, $held );
+CondorTest::RegisterRelease( $testname, $released );
+CondorTest::RegisterSubmit( $testname, $submitted );
+
+if( CondorTest::RunDagTest($testname, $cmd, 0, $dagman_args) ) {
+	CondorTest::debug("$testname: SUCCESS\n",1);
+	exit(0);
+} else {
+	die "$testname: CondorTest::RunDagTest() failed\n";
+}
+

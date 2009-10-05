@@ -1613,7 +1613,9 @@ SecManStartCommand::receiveAuthInfo_inner()
 				// set this input/output parameter to reflect
 				m_peer_can_negotiate = false;
 
-				if (m_negotiation == SecMan::SEC_REQ_REQUIRED) {
+				if (m_negotiation == SecMan::SEC_REQ_REQUIRED ||
+					m_cmd == DC_AUTHENTICATE )
+				{
 					dprintf ( D_ALWAYS, "SECMAN: no classad from server, failing\n");
 					m_errstack->push( "SECMAN", SECMAN_ERR_COMMUNICATIONS_ERROR,
 						"Failed to end classad message." );
@@ -1635,6 +1637,12 @@ SecManStartCommand::receiveAuthInfo_inner()
 						"TCP connection to %s failed.", tcp_addr.Value());
 					return StartCommandFailed;
 				}
+
+				dprintf( D_ALWAYS, "SECMAN: reconnected to %s from port %d to send unauthenticated command %d %s\n",
+						 m_sock->peer_description(),
+						 m_sock->get_port(),
+						 m_cmd,
+						 m_cmd_description.Value());
 
 				m_sock->encode();
 				if( !m_sock->code(m_cmd) ) {

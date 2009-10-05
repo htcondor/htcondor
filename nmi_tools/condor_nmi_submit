@@ -94,6 +94,7 @@ use vars qw/ $opt_build $opt_test
     $opt_submit_xtests $opt_configure $opt_src_tag $opt_other_tag
     $opt_nightly $opt_externals $opt_without_tests
     $opt_clear_externals_cache $opt_use_externals_cache
+    $opt_clear_externals_cache_weekly
     $opt_externals_only $opt_release_only $opt_version_buildid
 	$opt_skip_doc $opt_sha1
     $opt_buildid $opt_test_src $opt_test_timeout $opt_test_args
@@ -402,6 +403,8 @@ sub parseOptions
            'use-externals-cache' => \$opt_use_externals_cache,
            'clear_externals_cache' => \$opt_clear_externals_cache,
            'clear-externals-cache' => \$opt_clear_externals_cache,
+           'clear_externals_cache_weekly' => \$opt_clear_externals_cache_weekly,
+           'clear-externals-cache-weekly' => \$opt_clear_externals_cache_weekly,
            'externals-only' => \$opt_externals_only,
 			'release-only' => \$opt_release_only,
            'version-buildid=s' => \$opt_version_buildid,
@@ -481,6 +484,10 @@ sub parseOptions
         }
         if( defined($opt_clear_externals_cache) ) {
             print "ERROR: --clear-externals-cache is not valid with --test\n";
+            printUsage( 1 );
+        }
+        if( defined($opt_clear_externals_cache_weekly) ) {
+            print "ERROR: --clear-externals-cache-weekly is not valid with --test\n";
             printUsage( 1 );
         }
         if( defined($opt_externals_only) ) {
@@ -1105,6 +1112,9 @@ sub writeBuildGlue
     }
     if( defined($opt_clear_externals_cache) ) {
 	$pre_args .= ' --clear_externals_cache';
+    }
+    if( defined($opt_clear_externals_cache_weekly) ) {
+	$pre_args .= ' --clear-externals-cache-weekly';
     }
     if( $pre_args ) {
 	print $fh "remote_pre_args = $pre_args\n";

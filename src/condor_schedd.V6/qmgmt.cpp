@@ -123,6 +123,11 @@ typedef HashTable<int, int> ClusterSizeHashTable_t;
 static ClusterSizeHashTable_t *ClusterSizeHashTable = 0;
 static int TotalJobsCount = 0;
 
+static int flush_job_queue_log_timer_id = -1;
+static int flush_job_queue_log_delay = 0;
+static int HandleFlushJobQueueLogTimer(Service *);
+static void ScheduleJobQueueLogFlush();
+
 static bool qmgmt_all_users_trusted = false;
 static char	**super_users = NULL;
 static int	num_super_users = 0;
@@ -617,7 +622,8 @@ QmgmtPeer::isAuthenticated() const
 
 
 // Read out any parameters from the config file that we need and
-// initialize our internal data structures.
+// initialize our internal data structures.  This is also called
+// on reconfig.
 void
 InitQmgmt()
 {
@@ -674,6 +680,8 @@ InitQmgmt()
 
 	cluster_initial_val = param_integer("SCHEDD_CLUSTER_INITIAL_VALUE",1,1);
 	cluster_increment_val = param_integer("SCHEDD_CLUSTER_INCREMENT_VALUE",1,1);
+
+	flush_job_queue_log_delay = param_integer("SCHEDD_JOB_QUEUE_LOG_FLUSH_DELAY",5,0);
 }
 
 void
@@ -2110,10 +2118,34 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 
 	if( flags & NONDURABLE ) {
 		JobQueue->DecNondurableCommitLevel( old_nondurable_level );
+
+		ScheduleJobQueueLogFlush();
 	}
 
 	JobQueueDirty = true;
 
+	return 0;
+}
+
+void
+ScheduleJobQueueLogFlush()
+{
+		// Flush the log after a short delay so that we avoid spending
+		// a lot of time waiting for the disk but we also make things
+		// visible to JobRouter and Quill within a maximum delay.
+	if( flush_job_queue_log_timer_id == -1 ) {
+		flush_job_queue_log_timer_id = daemonCore->Register_Timer(
+			flush_job_queue_log_delay,
+			HandleFlushJobQueueLogTimer,
+			"HandleFlushJobQueueLogTimer");
+	}
+}
+
+int
+HandleFlushJobQueueLogTimer(Service *)
+{
+	flush_job_queue_log_timer_id = -1;
+	JobQueue->FlushLog();
 	return 0;
 }
 
@@ -2320,6 +2352,7 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */)
 {
 	if( flags & NONDURABLE ) {
 		JobQueue->CommitNondurableTransaction();
+		ScheduleJobQueueLogFlush();
 	}
 	else {
 		JobQueue->CommitTransaction();
@@ -2401,7 +2434,8 @@ CloseConnection()
 		bool write_submit_events = false;
 			// keep usr_log in outer scope so we don't open/close the 
 			// event log over and over.
-		UserLog usr_log;	
+		WriteUserLog usr_log;
+		usr_log.setCreatorName( Name );
 
 		char *eventlog = param("EVENT_LOG");
 		if ( eventlog ) {
@@ -3634,15 +3668,6 @@ int mark_idle(ClassAd *job)
 		// thing!!!  the gridmanager or schedd-on-the-side is
 		// in control.  stay out of its way!  -Todd 9/13/02
 		// -amended by Jaime 10/4/05
-		return 1;
-	}
-
-	int mirror_active = 0;
-	job->LookupBool(ATTR_MIRROR_ACTIVE, mirror_active);
-	if ( mirror_active ) {
-		// Don't touch a job that has an active mirror.  Once we are in count jobs, we will
-		// startup a gridmanager for this job that will retrieve the current job status from
-		// our schedd mirror.
 		return 1;
 	}
 

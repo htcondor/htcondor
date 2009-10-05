@@ -1,0 +1,33 @@
+#! /bin/sh
+
+. $EXTERNALS_CONFIG
+
+patch -p0 -i no_gnutls.patch
+if [ $? -ne 0 ]
+then
+	echo "patch no_gnutls.patch failed"
+	exit 1
+fi
+
+cd $PACKAGE_NAME
+
+./configure --prefix=$PACKAGE_INSTALL_DIR --disable-shared --without-python --without-xen --without-libvirtd --without-remote --without-test --without-uml --without-openvz --without-avahi --without-selinux --without-sasl --with-libxml=$EXT_INSTALL/$EXT_LIBXML2_VERSION
+if [ $? -ne 0 ]
+then
+	echo "configure failed"
+	exit 1
+fi
+
+make
+if [ $? -ne 0 ]
+then
+	echo "make failed"
+	exit 1
+fi
+
+make install
+if [ $? -ne 0 ]
+then
+	echo "make failed"
+	exit 1
+fi

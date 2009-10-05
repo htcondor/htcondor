@@ -721,6 +721,7 @@ int exception_cleanup(int,int,char*errmsg)
 	_EXCEPT_Cleanup = NULL;
 	Starter->jic->notifyStarterError(errmsg,true,0,0);
 	Starter->RemoteShutdownFast(0);
+	Starter->FinalCleanup();
 	return 0;
 }
 

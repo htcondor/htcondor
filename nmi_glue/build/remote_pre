@@ -29,7 +29,11 @@ use Getopt::Long;
 use vars qw/ $opt_use_externals_cache $opt_clear_externals_cache /;
 GetOptions(
             'use_externals_cache' => \$opt_use_externals_cache,
+            'use-externals-cache' => \$opt_use_externals_cache,
             'clear_externals_cache' => \$opt_clear_externals_cache,
+            'clear-externals-cache' => \$opt_clear_externals_cache,
+            'clear_externals_cache_weekly' => \$opt_clear_externals_cache_weekly,
+            'clear-externals-cache-weekly' => \$opt_clear_externals_cache_weekly,
 );
 
 
@@ -168,6 +172,16 @@ print "Checking externals cache in '$old'...\n";
 (! -d "$old") &&
     print "'$old' is a file, not a directory\n" &&
     goto bail;
+
+if (defined($opt_clear_externals_cache_weekly)) {
+	print "Should we do weekly clearing of $old?\n";
+	@now = localtime;
+	@then = localtime( (stat( $old ))[9] );
+	if ( ($now[7] - $now[6]) != ($then[7] - $then[6]) ) {
+		print "Doing weekly cache clearing\n";
+		$opt_clear_externals_cache = 1;
+	}
+}
 
 # If we want to clear the cache or if the script used to build
 # externals changes we better clear the cache

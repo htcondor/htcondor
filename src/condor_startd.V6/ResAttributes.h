@@ -186,7 +186,7 @@ public:
 	int	type() { return c_type; };
 
 	void display( amask_t );
-	void dprintf( int, char*, ... );
+	void dprintf( int, const char*, ... );
 	void show_totals( int );
 
 	float get_disk() { return c_disk; }

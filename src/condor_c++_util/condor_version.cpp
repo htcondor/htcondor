@@ -70,7 +70,7 @@
    will EXCEPT at startup time.  
 */
 
-static char* CondorVersionString = "$CondorVersion: 7.3.3 " __DATE__ BUILDIDSTR " PRE-RELEASE-UWCS $";
+static char* CondorVersionString = "$CondorVersion: 7.5.0 " __DATE__ BUILDIDSTR " $";
 
 /* Here is the platform string.  You don't need to edit this */
 static char* CondorPlatformString = "$CondorPlatform: " xstr(PLATFORM) " $";

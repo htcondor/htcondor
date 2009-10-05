@@ -77,13 +77,11 @@ deactivate_claim(Stream *stream, Resource *rip, bool graceful)
 {
 	int rval;
 	bool claim_is_closing = rip->curClaimIsClosing();
-	if(graceful) {
-		rval = rip->deactivate_claim();
-	}
-	else {
-		rval = rip->deactivate_claim_forcibly();
-	}
 
+		// send response to shadow before killing starter to avoid a
+		// 3-way deadlock (under windows) where startd blocks trying to
+		// authenticate DC_RAISESIGNAL to starter while starter is
+		// blocking trying to send update to shadow.
 	stream->encode();
 
 	ClassAd response_ad;
@@ -93,15 +91,23 @@ deactivate_claim(Stream *stream, Resource *rip, bool graceful)
 			// Prior to 7.0.5, no response ClassAd was expected.
 			// Anyway, failure to send it is not (currently) critical
 			// in any way.
+
+		claim_is_closing = false;
+	}
+
+	if(graceful) {
+		rval = rip->deactivate_claim();
 	}
 	else {
-		if( claim_is_closing && rip->r_cur ) {
-				// We told the submit-side this claim is closing, so there is
-				// no need to exchange RELEASE_CLAIM messages.  Behave as
-				// though the schedd has already sent us RELEASE_CLAIM.
-			rip->r_cur->scheddClosedClaim();
-			rip->release_claim();
-		}
+		rval = rip->deactivate_claim_forcibly();
+	}
+
+	if( claim_is_closing && rip->r_cur ) {
+			// We told the submit-side this claim is closing, so there is
+			// no need to exchange RELEASE_CLAIM messages.  Behave as
+			// though the schedd has already sent us RELEASE_CLAIM.
+		rip->r_cur->scheddClosedClaim();
+		rip->void_release_claim();
 	}
 
 	return rval;
@@ -186,11 +192,11 @@ command_vacate_all( Service*, int cmd, Stream* )
 	switch( cmd ) {
 	case VACATE_ALL_CLAIMS:
 		dprintf( D_ALWAYS, "State change: received VACATE_ALL_CLAIMS command\n" );
-		resmgr->walk( &Resource::retire_claim );
+		resmgr->walk( &Resource::void_retire_claim );
 		break;
 	case VACATE_ALL_FAST:
 		dprintf( D_ALWAYS, "State change: received VACATE_ALL_FAST command\n" );
-		resmgr->walk( &Resource::kill_claim );
+		resmgr->walk( &Resource::void_kill_claim );
 		break;
 	default:
 		EXCEPT( "Unknown command (%d) in command_vacate_all", cmd );
@@ -204,7 +210,7 @@ int
 command_pckpt_all( Service*, int, Stream* ) 
 {
 	dprintf( D_ALWAYS, "command_pckpt_all() called.\n" );
-	resmgr->walk( &Resource::periodic_checkpoint );
+	resmgr->walk( &Resource::void_periodic_checkpoint );
 	return TRUE;
 }
 
@@ -226,14 +232,18 @@ command_x_event( Service*, int, Stream* s )
 int
 command_give_state( Service*, int, Stream* stream ) 
 {
+	int rval = TRUE;
 	char* tmp;
 	dprintf( D_FULLDEBUG, "command_give_state() called.\n" );
 	stream->encode();
 	tmp = strdup( state_to_string(resmgr->state()) );
-	stream->code( tmp );
-	stream->end_of_message();
+	if ( ! stream->code( tmp ) ||
+		 ! stream->end_of_message() ) {
+		dprintf( D_FULLDEBUG, "command_give_state(): failed to send state\n" );
+		rval = FALSE;
+	}
 	free( tmp );
-	return TRUE;
+	return rval;
 }
 
 int
@@ -1349,7 +1359,7 @@ abort_accept_claim( Resource* rip, Stream* stream )
 bool
 accept_request_claim( Resource* rip )
 {
-	int interval;
+	int interval = -1;
 	char *client_addr = NULL, *client_host, *full_client_host, *tmp;
 	char RemoteOwner[512];
 	RemoteOwner[0] = '\0';
@@ -1435,7 +1445,7 @@ accept_request_claim( Resource* rip )
 				 ATTR_USER );
 		RemoteOwner[0] = '\0';
 	}
-	if( RemoteOwner ) {
+	if( '\0' != RemoteOwner[0] ) {
 		rip->r_cur->client()->setowner( RemoteOwner );
 			// For now, we say the remote user is the same as the
 			// remote owner.  In the future, we might decide to leave
@@ -1487,7 +1497,7 @@ activate_claim( Resource* rip, Stream* stream )
 	int len = sizeof frm;	
 	StartdRec stRec;
 #endif
-	int starter;
+	int starter = MAX_STARTERS;
 	Sock* sock = (Sock*)stream;
 	char* shadow_addr = strdup( sin_to_string( sock->peer_addr() ));
 

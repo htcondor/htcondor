@@ -205,7 +205,8 @@ bool Dag::Bootstrap (bool recovery) {
     if (recovery) {
 		_recovery = true;
 
-        debug_printf( DEBUG_NORMAL, "Running in RECOVERY mode...\n" );
+        debug_printf( DEBUG_NORMAL, "Running in RECOVERY mode... "
+					">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n" );
 
 		// as we read the event log files, we emit lots of imformation into
 		// the logfile. If this is on NFS, then we pay a *very* large price
@@ -262,7 +263,9 @@ bool Dag::Bootstrap (bool recovery) {
 
 		debug_cache_stop_caching();
 
-        debug_printf( DEBUG_NORMAL, "...done with RECOVERY mode\n" );
+        debug_printf( DEBUG_NORMAL, "...done with RECOVERY mode "
+					"<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n" );
+		print_status();
 
 		_recovery = false;
     }
@@ -942,6 +945,22 @@ Dag::ProcessSubmitEvent(Job *job, bool recovery, bool &submitEventIsSane) {
 		return;
 	}
 
+	if ( !job->IsEmpty( Job::Q_WAITING ) ) {
+		debug_printf( DEBUG_QUIET, "Error: DAG semantics violated!  "
+					"Node %s was submitted but has unfinished parents!\n",
+					job->GetJobName() );
+		_dagFiles.rewind();
+		char *dagFile = _dagFiles.next();
+		debug_printf( DEBUG_QUIET, "This may indicate log file corruption; "
+					"you may want to check the log files and re-run the "
+					"DAG in recovery mode by giving the command "
+					"'condor_submit %s.condor.sub'\n", dagFile );
+		job->Dump( this );
+			// We do NOT want to create a rescue DAG here, because it
+			// would probably be invalid.
+		DC_Exit( EXIT_ERROR );
+	}
+
 		//
 		// If we got an "insane" submit event for a node that currently
 		// has a job in the queue, we don't want to increment
@@ -1111,9 +1130,19 @@ Job * Dag::FindNodeByEventID (int logsource, const CondorID condorID) const {
 
 	if ( node ) {
 		if ( condorID._cluster != node->_CondorID._cluster ) {
-			EXCEPT( "Searched for node for cluster %d; got %d!!",
-						condorID._cluster,
-						node->_CondorID._cluster );
+			if ( node->_CondorID._cluster != _defaultCondorId._cluster ) {
+			 	EXCEPT( "Searched for node for cluster %d; got %d!!",
+						 	condorID._cluster,
+						 	node->_CondorID._cluster );
+			} else {
+					// Note: we can get here if we get an aborted event
+					// after a terminated event for the same job (see
+					// gittrac #744 and the
+					// job_dagman_abnormal_term_recovery_retries test).
+				dprintf( D_ALWAYS, "Warning: searched for node for "
+							"cluster %d; got %d!!\n", condorID._cluster,
+							node->_CondorID._cluster );
+			}
 		}
 	}
 
@@ -1461,7 +1490,7 @@ void Dag::PrintJobList() const {
     Job * job;
     ListIterator<Job> iList (_jobs);
     while ((job = iList.Next()) != NULL) {
-        job->Dump();
+        job->Dump( this );
     }
     dprintf( D_ALWAYS, "---------------------------------------\t<END>\n" );
 }
@@ -1474,7 +1503,7 @@ Dag::PrintJobList( Job::status_t status ) const
     ListIterator<Job> iList( _jobs );
     while( ( job = iList.Next() ) != NULL ) {
 		if( job->GetStatus() == status ) {
-			job->Dump();
+			job->Dump( this );
 		}
     }
     dprintf( D_ALWAYS, "---------------------------------------\t<END>\n" );
@@ -2451,7 +2480,7 @@ bool Dag::Add( Job& job )
 	insertResult = _nodeIDHash.insert( job.GetJobID(), &job );
 	ASSERT( insertResult == 0 );
 
-	return _jobs.Append(job);
+	return _jobs.Append(&job);
 }
 
 
@@ -3343,11 +3372,11 @@ Dag::AssumeOwnershipofNodes(OwnedMaterials *om)
 				key.Value());
 			debug_printf(DEBUG_QUIET, "Trying to insert key %s, node:\n",
 				key.Value());
-			(*nodes)[i]->Dump();
+			(*nodes)[i]->Dump( this );
 			debug_printf(DEBUG_QUIET, "but it collided with key %s, node:\n", 
 				key.Value());
 			if (_nodeNameHash.lookup(key, job) == 0) {
-				job->Dump();
+				job->Dump( this );
 			} else {
 				debug_error(1, DEBUG_QUIET, "What? This is impossible!\n");
 			}

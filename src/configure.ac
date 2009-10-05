@@ -325,7 +325,7 @@ elif test $os = "Linux" ; then
      "4.0" )
        _cv_linux_distro="DEBIAN40"
        ;;
-     "5.0" )
+     5.0* )
        _cv_linux_distro="DEBIAN50"
        ;;
      * )
@@ -2326,7 +2326,6 @@ AC_CHECK_HEADERS([sys/mount.h],[],[],[
 #endif])
 AC_CHECK_HEADERS([ustat.h])
 AC_CHECK_HEADERS([dlfcn.h])
-AC_CHECK_HEADERS([valgrind.h])
 AC_CHECK_HEADERS([resolv.h],[],[],[
 #include<sys/types.h>
 #include<netinet/in.h>
@@ -2878,13 +2877,13 @@ if test "$_cv_opsys" = "LINUX" ; then
 	_cv_including_voms=yes
 	AC_MSG_RESULT([$_cv_including_voms])
 	CHECK_EXTERNAL([expat], [2.0.1], [soft])
-	CHECK_EXTERNAL([voms], [1.8.9], [soft])
+	CHECK_EXTERNAL([voms], [1.8.9-p1], [soft])
 else
 	_cv_including_voms=no
 	AC_MSG_RESULT([$_cv_including_voms])
 fi
 
-if test "x$_cv_linux_distro" = "xRHEL5" -o "x$_cv_linux_distro" = "xRHEL3" -a "$_cv_arch" = "xI386" ; then
+if test "x$_cv_linux_distro" = "xRHEL5" -o "x$_cv_linux_distro" = "xRHEL3" -a "x$_cv_arch" = "xI386" ; then
   CHECK_EXTERNAL([cream],[1.10.1], [soft])
 fi
 
@@ -2907,7 +2906,7 @@ AS_IF([test "x$_cv_opsys" != xDARWIN -a "x$_cv_opsys" != xAIX -a "x$_cv_opsys" !
   [_cv_has_blahp=yes],
   [_cv_has_blahp=no])
 AC_MSG_RESULT([$_cv_has_blahp])
-CHECK_EXTERNAL([blahp], [1.12.2-p4], [soft])
+CHECK_EXTERNAL([blahp], [1.12.2-p5], [soft])
 
 # When --with-proper the detection of the man pages is a little
 # ugly. The value added to the end of $_dir must be what
@@ -2986,12 +2985,28 @@ if test $SSH_TO_JOB != no; then
 fi
 
 # Look for the curl external library, used by the file transfer object
-CHECK_EXTERNAL([curl],[7.19.6],[soft])
+CHECK_EXTERNAL([curl],[7.19.6-p1],[soft])
 
 #Look for hadoop jars, required by HDFS daemon as well by hdfs file plugin
 # Only build hadoop external if hdfs is enabled
 AS_IF([test "x$enable_hdfs" = xyes], 
   [CHECK_EXTERNAL([hadoop],[0.20.0-p2],[soft])])
+
+if test "x$_cv_opsys" = "xLINUX" ; then
+  CHECK_EXTERNAL([libxml2],[2.7.3],[soft],
+                 [libxml2 for libvirt],
+                 [MF_LIB_CHECK([libxml2],
+                               [[xml2 xmlInitGlobals]], [libxml2])])
+fi
+
+if test "x$_cv_opsys" = "xLINUX" ; then
+  AC_CHECK_HEADER([libvirt/libvirt.h], [have_libvirt_h=yes])
+  CHECK_EXTERNAL([libvirt],[0.6.2],[soft],
+                 [libvirt for Xen/KVM/etc support on Linux],
+                 [AS_IF([test "x$have_libvirt_h" =  xyes],
+                   [MF_LIB_CHECK([libvirt], [[virt virGetVersion]], [libvirt])],
+                   [cv_ext_libvirt=no])])
+fi
 
 # The test for gsoap needs to happen after the openssl check, so
 # openssl libs, if found, will be in LIBS. Also, if we do not have

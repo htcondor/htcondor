@@ -33,7 +33,9 @@
 #include "vmgahp.h"
 #include "vm_type.h"
 #include "vmware_type.h"
-#include "xen_type.h"
+#if defined(LINUX)
+#  include "xen_type.h"
+#endif
 #include "vmgahp_error_codes.h"
 
 #define QUIT_FAST_TIME				30		// 30 seconds
@@ -715,6 +717,7 @@ VMGahp::executeStart(VMRequest *req)
 		req->m_result = VMGAHP_ERR_NO_SUPPORTED_VM_TYPE;
 		return; 
 	}
+	free( tmp );
 
 	if( new_vm->CreateConfigFile() == false ) {
 		req->m_has_result = true;

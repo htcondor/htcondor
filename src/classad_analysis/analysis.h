@@ -44,12 +44,12 @@ class ClassAdAnalyzer
  public:
 
 		/** Default Constructor */
-	ClassAdAnalyzer( );
+	ClassAdAnalyzer( bool result_as_struct = false );
 
 		/** Destructor */
 	~ClassAdAnalyzer( );
 
-	classad_analysis::job::result GetResult() { return *m_result; }
+	classad_analysis::job::result GetResult() { return (result_as_struct && m_result) ? *m_result : classad_analysis::job::result(); }
 
 		/** Analyze a job ClassAd requirements expression.
 		 *	@param request The job ClassAd
@@ -93,7 +93,7 @@ class ClassAdAnalyzer
 							  string &attr, string &buffer );
 
  private:
-	
+	bool result_as_struct;
 	classad_analysis::job::result *m_result;
 
 	MultiProfile *jobReq;
@@ -103,6 +103,14 @@ class ClassAdAnalyzer
 	ExprTree* preempt_rank_condition;
 	ExprTree* preempt_prio_condition;
 	ExprTree* preemption_req;
+
+	void ensure_result_initialized(classad::ClassAd *request);
+
+	// wrapper functions to add information to the result only if we're generating one
+	void result_add_suggestion(classad_analysis::suggestion s);
+	void result_add_explanation(classad_analysis::matchmaking_failure_kind mfk, classad::ClassAd resource);
+	void result_add_explanation(classad_analysis::matchmaking_failure_kind mfk, ClassAd *resource);
+	void result_add_machine(classad::ClassAd resource);
 
 	bool AnalyzeJobReqToBuffer( classad::ClassAd *request, ResourceGroup &offers,
 								string &buffer );

@@ -39,10 +39,14 @@ public:
 
 		// Public methods that can be called from command handlers
 	int		retire_claim( void );	// Gracefully finish job and release claim
+	void	void_retire_claim( void ) { (void)retire_claim(); }
 	int		release_claim( void );	// Send softkill to starter; release claim
+	void	void_release_claim( void ) { (void)release_claim(); }
 	int		kill_claim( void );		// Quickly kill starter and release claim
+	void	void_kill_claim( void ) { (void)kill_claim(); }
 	int		got_alive( void );		// You got a keep alive command
 	int 	periodic_checkpoint( void );	// Do a periodic checkpoint
+	void	void_periodic_checkpoint( void ) { (void)periodic_checkpoint(); }
 
 		// Multi-shadow wants to run more processes.  Send a SIGHUP to
 		// the starter
@@ -65,9 +69,9 @@ public:
 	void	remove_pre( void );	// If r_pre is set, refuse and delete it.
 
 		// Shutdown methods that deal w/ opportunistic *and* COD claims
-	int		shutdownAllClaims( bool graceful );
-	int		releaseAllClaims( void );
-	int		killAllClaims( void );
+	void	shutdownAllClaims( bool graceful );
+	void	releaseAllClaims( void );
+	void	killAllClaims( void );
 
         // Enable/Disable claims for hibernation
     void    disable ();
@@ -76,12 +80,12 @@ public:
     // Resource state methods
 	void	set_destination_state( State s ) { r_state->set_destination(s);};
 	State	destination_state( void ) {return r_state->destination();};
-	int		change_state( State s ) {return r_state->change(s);};
-	int		change_state( Activity a) {return r_state->change(a);};
-	int		change_state( State s , Activity a ) {return r_state->change(s, a);};
+	void	change_state( State s ) {r_state->change(s);};
+	void	change_state( Activity a) {r_state->change(a);};
+	void	change_state( State s , Activity a ) {r_state->change(s, a);};
 	State		state( void )		{return r_state->state();};
 	Activity	activity( void )	{return r_state->activity();};
-	int		eval_state( void )		{return r_state->eval();};
+	void		eval_state( void )		{r_state->eval();};
 		// does this resource need polling frequency for compute/eval?
 	bool	needsPolling( void );
 	bool	hasOppClaim( void );
@@ -114,8 +118,8 @@ public:
 		// dprintf() functions add the CPU id to the header of each
 		// message for SMP startds (single CPU machines get no special
 		// header and it works just like regular dprintf())
-	void	dprintf( int, char*, ... );
-	void	dprintf_va( int, char*, va_list );
+	void	dprintf( int, const char*, ... );
+	void	dprintf_va( int, const char*, va_list );
 
 		// Helper functions to log that we're ignoring a command that
 		// came in while we were in an unexpected state, or while
@@ -157,16 +161,15 @@ public:
 	void	leave_preempting_state( void );
 
 		// Methods to initialize and refresh the resource classads.
-	int		init_classad( void );		
+	void	init_classad( void );		
 	void	refresh_classad( amask_t mask );	
 	int		force_benchmark( void );
-	int		reconfig( void );
+	void	reconfig( void );
 
-	int		update( void );		// Schedule to update the central manager.
+	void	update( void );		// Schedule to update the central manager.
 	int		do_update( void );			// Actually update the CM
     int     update_with_ack( void );    // Actually update the CM and wait for an ACK
     void    publish_for_update ( ClassAd *public_ad ,ClassAd *private_ad );
-	int		eval_and_update( void );	// Evaluate state and update CM. 
 	void	final_update( void );		// Send a final update to the CM
 									    // with Requirements = False.
 

@@ -338,8 +338,9 @@ match_rec::setStatus( int stat )
 {
 	status = stat;
 	entered_current_status = (int)time(0);
-	if( status == M_CLAIMED ) {
-			// We have successfully claimed this startd, so we need to
+	if( status == M_CLAIMED ||
+		status == M_STARTD_CONTACT_LIMBO ) {
+			// We may have successfully claimed this startd, so we need to
 			// release it later.
 		needs_release_claim = true;
 	}
@@ -467,7 +468,6 @@ Scheduler::Scheduler() :
 							&Scheduler::jobIsFinishedHandler, this );
 
 	sent_shadow_failure_email = FALSE;
-	ManageBandwidth = false;
 	_gridlogic = NULL;
 	m_parsed_gridman_selection_expr = NULL;
 	m_unparsed_gridman_selection_expr = NULL;
@@ -1262,29 +1262,6 @@ count( ClassAd *job )
 	// this function makes its own copies of the memory passed in 
 	int OwnerNum = scheduler.insert_owner( owner );
 
-	// make certain gridmanager has a copy of mirrored jobs
-	char *mirror_schedd_name = NULL;
-	job->LookupString(ATTR_MIRROR_SCHEDD,&mirror_schedd_name);
-	if ( mirror_schedd_name ) {
-			// We have a mirrored job
-		bool job_managed = jobExternallyManaged(job);
-		bool needs_management = true;
-			// if job is held or completed and not managaged, don't worry about it.
-		if ( ( status==HELD || status==COMPLETED || status==REMOVED ) &&
-			 (job_managed==false ) ) 
-		{
-			needs_management = false;
-		}
-		if ( needs_management ) {
-			GridUniverseLogic::JobCountUpdate(real_owner.Value(),
-				domain.Value(),mirror_schedd_name,ATTR_MIRROR_SCHEDD,
-				0, 0, 1, job_managed ? 0 : 1);
-		}
-		free(mirror_schedd_name);
-		mirror_schedd_name = NULL;
-	}
-
-
 	if ( (universe != CONDOR_UNIVERSE_GRID) &&	// handle Globus below...
 		 (!service_this_universe(universe,job))  ) 
 	{
@@ -1484,49 +1461,6 @@ static bool IsLocalUniverse( shadow_rec* srec );
 extern "C" {
 
 void
-handle_mirror_job_notification(ClassAd *job_ad, int mode, PROC_ID & job_id)
-{
-		// Handle Mirrored Job removal/completion/hold.  
-		// For a mirrored job, we want to notify the gridmanager if it is being
-		// managed or if there is a remote job id, and then do whatever
-		// else we would usually do.
-	if (!job_ad) return;
-	char *mirror_schedd_name = NULL;
-	job_ad->LookupString(ATTR_MIRROR_SCHEDD,&mirror_schedd_name);
-	if ( mirror_schedd_name ) {
-			// We have a mirrored job
-		bool job_managed = jobExternallyManaged(job_ad);
-			// If job_managed is true, then notify the gridmanager.
-			// Special case: if job_managed is false, but the job is being removed
-			// still has a mirror job id,
-			// then consider the job still "managed" so
-			// that the gridmanager will be notified.  
-		if (!job_managed && mode==REMOVED ) {
-			char tmp_str[2];
-			tmp_str[0] = '\0';
-			job_ad->LookupString(ATTR_MIRROR_JOB_ID,tmp_str,sizeof(tmp_str));
-			if ( tmp_str[0] )
-			{
-				// looks like the mirror job id is still valid,
-				// so there is still a job submitted remotely somewhere.
-				// fire up the gridmanager to try and really clean it up!
-				job_managed = true;
-			}
-		}
-		if ( job_managed  ) {
-			MyString owner;
-			MyString domain;
-			job_ad->LookupString(ATTR_OWNER,owner);
-			job_ad->LookupString(ATTR_NT_DOMAIN,domain);
-			GridUniverseLogic::JobRemoved(owner.Value(),domain.Value(),mirror_schedd_name,
-					ATTR_MIRROR_SCHEDD,0,0);
-		}
-		free(mirror_schedd_name);
-		mirror_schedd_name = NULL;
-	}
-}
-
-void
 abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold,
 				  bool notify )
 {
@@ -1575,9 +1509,6 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold,
 	int job_universe = CONDOR_UNIVERSE_STANDARD;
 	job_ad->LookupInteger(ATTR_JOB_UNIVERSE,job_universe);
 
-
-		// Handle Mirror Job
-	handle_mirror_job_notification(job_ad, mode, job_id);
 
 		// If a non-grid job is externally managed, it's been grabbed by
 		// the schedd-on-the-side and we don't want to touch it.
@@ -2657,12 +2588,12 @@ jobIsFinishedDone( int cluster, int proc, void*, int )
 }
 
 
-// Initialize a UserLog object for a given job and return a pointer to
-// the UserLog object created.  This object can then be used to write
+// Initialize a WriteUserLog object for a given job and return a pointer to
+// the WriteUserLog object created.  This object can then be used to write
 // events and must be deleted when you're done.  This returns NULL if
-// the user didn't want a UserLog, so you must check for NULL before
+// the user didn't want a WriteUserLog, so you must check for NULL before
 // using the pointer you get back.
-UserLog*
+WriteUserLog*
 Scheduler::InitializeUserLog( PROC_ID job_id ) 
 {
 	MyString logfilename;
@@ -2688,7 +2619,7 @@ Scheduler::InitializeUserLog( PROC_ID job_id )
 			 "Writing record to user logfile=%s owner=%s\n",
 			 logfilename.Value(), owner.Value() );
 
-	UserLog* ULog=new UserLog();
+	WriteUserLog* ULog=new WriteUserLog();
 	if (0 <= GetAttributeBool(job_id.cluster, job_id.proc,
 							  ATTR_ULOG_USE_XML, &use_xml)
 		&& 1 == use_xml) {
@@ -2696,6 +2627,7 @@ Scheduler::InitializeUserLog( PROC_ID job_id )
 	} else {
 		ULog->setUseXML(false);
 	}
+	ULog->setCreatorName( Name );
 	if (ULog->initialize(owner.Value(), domain.Value(), logfilename.Value(), job_id.cluster, job_id.proc, 0, gjid.Value())) {
 		return ULog;
 	} else {
@@ -2710,7 +2642,7 @@ Scheduler::InitializeUserLog( PROC_ID job_id )
 bool
 Scheduler::WriteAbortToUserLog( PROC_ID job_id )
 {
-	UserLog* ULog = this->InitializeUserLog( job_id );
+	WriteUserLog* ULog = this->InitializeUserLog( job_id );
 	if( ! ULog ) {
 			// User didn't want log
 		return true;
@@ -2743,7 +2675,7 @@ Scheduler::WriteAbortToUserLog( PROC_ID job_id )
 bool
 Scheduler::WriteHoldToUserLog( PROC_ID job_id )
 {
-	UserLog* ULog = this->InitializeUserLog( job_id );
+	WriteUserLog* ULog = this->InitializeUserLog( job_id );
 	if( ! ULog ) {
 			// User didn't want log
 		return true;
@@ -2793,7 +2725,7 @@ Scheduler::WriteHoldToUserLog( PROC_ID job_id )
 bool
 Scheduler::WriteReleaseToUserLog( PROC_ID job_id )
 {
-	UserLog* ULog = this->InitializeUserLog( job_id );
+	WriteUserLog* ULog = this->InitializeUserLog( job_id );
 	if( ! ULog ) {
 			// User didn't want log
 		return true;
@@ -2826,7 +2758,7 @@ Scheduler::WriteReleaseToUserLog( PROC_ID job_id )
 bool
 Scheduler::WriteExecuteToUserLog( PROC_ID job_id, const char* sinful )
 {
-	UserLog* ULog = this->InitializeUserLog( job_id );
+	WriteUserLog* ULog = this->InitializeUserLog( job_id );
 	if( ! ULog ) {
 			// User didn't want log
 		return true;
@@ -2857,7 +2789,7 @@ Scheduler::WriteExecuteToUserLog( PROC_ID job_id, const char* sinful )
 bool
 Scheduler::WriteEvictToUserLog( PROC_ID job_id, bool checkpointed ) 
 {
-	UserLog* ULog = this->InitializeUserLog( job_id );
+	WriteUserLog* ULog = this->InitializeUserLog( job_id );
 	if( ! ULog ) {
 			// User didn't want log
 		return true;
@@ -2880,7 +2812,7 @@ Scheduler::WriteEvictToUserLog( PROC_ID job_id, bool checkpointed )
 bool
 Scheduler::WriteTerminateToUserLog( PROC_ID job_id, int status ) 
 {
-	UserLog* ULog = this->InitializeUserLog( job_id );
+	WriteUserLog* ULog = this->InitializeUserLog( job_id );
 	if( ! ULog ) {
 			// User didn't want log
 		return true;
@@ -2923,7 +2855,7 @@ Scheduler::WriteTerminateToUserLog( PROC_ID job_id, int status )
 bool
 Scheduler::WriteRequeueToUserLog( PROC_ID job_id, int status, const char * reason ) 
 {
-	UserLog* ULog = this->InitializeUserLog( job_id );
+	WriteUserLog* ULog = this->InitializeUserLog( job_id );
 	if( ! ULog ) {
 			// User didn't want log
 		return true;
@@ -3078,6 +3010,7 @@ int
 Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 {
 	ExtArray<PROC_ID> *jobs;
+		// These three lists must be kept in sync!
 	const char *AttrsToModify[] = { 
 		ATTR_JOB_CMD,
 		ATTR_JOB_INPUT,
@@ -3088,7 +3021,24 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 		ATTR_ULOG_FILE,
 		ATTR_X509_USER_PROXY,
 		NULL };		// list must end with a NULL
-
+	const bool AttrIsList[] = {
+		false,
+		false,
+		false,
+		false,
+		true,
+		true,
+		false,
+		false };
+	const char *AttrXferBool[] = {
+		ATTR_TRANSFER_EXECUTABLE,
+		ATTR_TRANSFER_INPUT,
+		ATTR_TRANSFER_OUTPUT,
+		ATTR_TRANSFER_ERROR,
+		NULL,
+		NULL,
+		NULL,
+		NULL };
 
 	dprintf(D_FULLDEBUG,"spoolJobFilesReaper tid=%d status=%d\n",
 			tid,exit_status);
@@ -3180,6 +3130,7 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 		index = -1;
 		while ( AttrsToModify[++index] ) {
 				// Lookup original value
+			bool xfer_it;
 			if (buf) free(buf);
 			buf = NULL;
 			job_ad->LookupString(AttrsToModify[index],&buf);
@@ -3191,10 +3142,21 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 				// null file -- no need to modify it
 				continue;
 			}
+			if ( AttrXferBool[i] &&
+				 job_ad->LookupBool( AttrXferBool[i], xfer_it ) && !xfer_it ) {
+					// ad says not to transfer this file, so no need
+					// to modify it
+				continue;
+			}
 				// Create new value - deal with the fact that
 				// some of these attributes contain a list of pathnames
-			StringList old_paths(buf,",");
+			StringList old_paths(NULL,",");
 			StringList new_paths(NULL,",");
+			if ( AttrIsList[i] ) {
+				old_paths.initializeFromString(buf);
+			} else {
+				old_paths.insert(buf);
+			}
 			old_paths.rewind();
 			char *old_path_buf;
 			bool changed = false;
@@ -4734,6 +4696,7 @@ Scheduler::negotiate(int command, Stream* s)
 	m_need_reschedule = false;
 	if( m_send_reschedule_timer != -1 ) {
 		daemonCore->Cancel_Timer( m_send_reschedule_timer );
+		m_send_reschedule_timer = -1;
 	}
 
 		// set stop/start times on the negotiate timeslice object
@@ -5054,8 +5017,10 @@ Scheduler::negotiate(int command, Stream* s)
 					 }
 					 dprintf(D_FULLDEBUG, "Job %d.%d rejected: %s\n",
 							 id.cluster, id.proc, diagnostic_message);
-					 cad->Assign(ATTR_LAST_REJ_MATCH_REASON,
-								 diagnostic_message);
+					 SetAttributeString(
+						id.cluster,id.proc,
+						ATTR_LAST_REJ_MATCH_REASON,
+						diagnostic_message,NONDURABLE);
 					 free(diagnostic_message);
 				 }
 					 // don't break: fall through to REJECTED case
@@ -5066,7 +5031,9 @@ Scheduler::negotiate(int command, Stream* s)
 					}
 					host_cnt = max_hosts + 1;
 					JobsRejected++;
-					cad->Assign(ATTR_LAST_REJ_MATCH_TIME,(int)time(0));
+					SetAttributeInt(
+						id.cluster,id.proc,
+						ATTR_LAST_REJ_MATCH_TIME,(int)time(0),NONDURABLE);
 					break;
 				case SEND_JOB_INFO: {
 						// The Negotiator wants us to send it a job. 
@@ -5116,7 +5083,9 @@ Scheduler::negotiate(int command, Stream* s)
 					 */
 					dprintf ( D_FULLDEBUG, "In case PERMISSION_AND_AD\n" );
 
-					cad->Assign(ATTR_LAST_MATCH_TIME,(int)time(0));
+					SetAttributeInt(
+						id.cluster,id.proc,
+						ATTR_LAST_MATCH_TIME,(int)time(0),NONDURABLE);
 
 					if( !s->get_secret(claim_id) ) {
 						dprintf( D_ALWAYS,
@@ -5161,9 +5130,8 @@ Scheduler::negotiate(int command, Stream* s)
 							// list will be rotated with a max length defined
 							// by attribute ATTR_JOB_LAST_MATCH_LIST_LENGTH, which
 							// has a default of 0 (i.e. don't keep this info).
-						int c = -1;
-						int p = -1;
 						int list_len = 0;
+						bool in_transaction = false;
 						cad->LookupInteger(ATTR_LAST_MATCH_LIST_LENGTH,list_len);
 						if ( list_len > 0 ) {								
 							int list_index;
@@ -5179,14 +5147,13 @@ Scheduler::negotiate(int command, Stream* s)
 								snprintf(attr_buf,100,"%s%d",
 									ATTR_LAST_MATCH_LIST_PREFIX,list_index);
 								cad->LookupString(attr_buf,&last_match);
-								if ( c == -1 ) {
-									cad->LookupInteger(ATTR_CLUSTER_ID, c);
-									cad->LookupInteger(ATTR_PROC_ID, p);
-									ASSERT( c != -1 );
-									ASSERT( p != -1 );
+								if( !in_transaction ) {
+									in_transaction = true;
 									BeginTransaction();
 								}
-								SetAttributeString(c,p,attr_buf,curr_match);
+								SetAttributeString(
+									id.cluster,id.proc,
+									attr_buf,curr_match);
 								free(curr_match);
 							}
 							if (last_match) free(last_match);
@@ -5195,14 +5162,14 @@ Scheduler::negotiate(int command, Stream* s)
 						int num_matches = 0;
 						cad->LookupInteger(ATTR_NUM_MATCHES,num_matches);
 						num_matches++;
-							// If a transaction is already open, may as well
-							// use it to store ATTR_NUM_MATCHES.  If not,
-							// don't bother --- just update in RAM.
-						if ( c != -1 && p != -1 ) {
-							SetAttributeInt(c,p,ATTR_NUM_MATCHES,num_matches);
-							CommitTransaction();
-						} else {
-							cad->Assign(ATTR_NUM_MATCHES,num_matches);
+
+						SetAttributeInt(
+							id.cluster,id.proc,
+							ATTR_NUM_MATCHES,num_matches,NONDURABLE);
+
+						if( in_transaction ) {
+							in_transaction = false;
+							CommitTransaction(NONDURABLE);
 						}
 					}
 
@@ -5225,8 +5192,12 @@ Scheduler::negotiate(int command, Stream* s)
 							EXCEPT("Negotiator messed up - gave null ClaimId & no match ad");
 						}
 						// Update matched attribute in job ad
-						cad->Assign(ATTR_JOB_MATCHED,true);
-						cad->Assign(ATTR_CURRENT_HOSTS,1);
+						SetAttribute(
+							id.cluster,id.proc,
+							ATTR_JOB_MATCHED,"True",NONDURABLE);
+						SetAttributeInt(
+							id.cluster,id.proc,
+							ATTR_CURRENT_HOSTS,1,NONDURABLE);
 						// Break before we fall into the Claiming Logic section below...
 						FREE( claim_id );
 						claim_id = NULL;
@@ -5825,7 +5796,7 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 		startd_principal = NULL;
 	}
 
-	UserLog* ULog = this->InitializeUserLog( *job );
+	WriteUserLog* ULog = this->InitializeUserLog( *job );
 	if ( ULog ) {
 		JobDisconnectedEvent event;
 		const char* txt = "Local schedd and job shadow died, "
@@ -8297,6 +8268,7 @@ CkptWallClock()
 	int first_time = 1;
 	int current_time = (int)time(0); // bad cast, but ClassAds only know ints
 	ClassAd *ad;
+	bool began_transaction = false;
 	while( (ad = GetNextJob(first_time)) ) {
 		first_time = 0;
 		int status = IDLE;
@@ -8309,10 +8281,19 @@ CkptWallClock()
 				int cluster, proc;
 				ad->LookupInteger(ATTR_CLUSTER_ID, cluster);
 				ad->LookupInteger(ATTR_PROC_ID, proc);
+
+				if( !began_transaction ) {
+					began_transaction = true;
+					BeginTransaction();
+				}
+
 				SetAttributeInt(cluster, proc, ATTR_JOB_WALL_CLOCK_CKPT,
 								run_time);
 			}
 		}
+	}
+	if( began_transaction ) {
+		CommitTransaction();
 	}
 }
 
@@ -9812,9 +9793,6 @@ Scheduler::check_zombie(int pid, PROC_ID* job_id)
 					 "Failed to write hold event to the user log for job %d.%d\n",
 					 job_id->cluster, job_id->proc );
 		}
-		handle_mirror_job_notification(
-					GetJobAd(job_id->cluster,job_id->proc),
-					status, *job_id);
 		break;
 	case REMOVED:
 		if( !scheduler.WriteAbortToUserLog(*job_id)) {
@@ -9824,9 +9802,6 @@ Scheduler::check_zombie(int pid, PROC_ID* job_id)
 		}
 			// No break, fall through and do the deed...
 	case COMPLETED:
-		handle_mirror_job_notification(
-					GetJobAd(job_id->cluster,job_id->proc),
-					status, *job_id);
 		DestroyProc( job_id->cluster, job_id->proc );
 		break;
 	default:
@@ -10403,8 +10378,6 @@ Scheduler::Init()
 	}
 
 	MaxExceptions = param_integer("MAX_SHADOW_EXCEPTIONS", 5);
-
-	ManageBandwidth = param_boolean("MANAGE_BANDWIDTH", false);
 
 	PeriodicExprInterval.setMinInterval( param_integer("PERIODIC_EXPR_INTERVAL", 60) );
 
@@ -11143,6 +11116,7 @@ Scheduler::sendReschedule()
 
 	if( m_send_reschedule_timer != -1 ) {
 		daemonCore->Cancel_Timer( m_send_reschedule_timer );
+		m_send_reschedule_timer = -1;
 	}
 
 	dprintf( D_FULLDEBUG, "Sending RESCHEDULE command to negotiator(s)\n" );

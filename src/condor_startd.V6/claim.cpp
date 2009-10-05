@@ -84,6 +84,8 @@ Claim::Claim( Resource* res_ip, ClaimType claim_type, int lease_duration )
 	c_retire_peacefully = false;
 	c_preempt_was_true = false;
 	c_schedd_closed_claim = false;
+
+	c_last_state = CLAIM_UNCLAIMED;
 }
 
 
@@ -459,7 +461,7 @@ Claim::publishStateTimes( ClassAd* cad )
 
 
 void
-Claim::dprintf( int flags, char* fmt, ... )
+Claim::dprintf( int flags, const char* fmt, ... )
 {
 	va_list args;
 	va_start( args, fmt );
@@ -929,7 +931,7 @@ Claim::sendAlive()
 int
 Claim::sendAliveConnectHandler(Stream *s)
 {
-	char* c_addr = "(unknown)";
+	const char* c_addr = "(unknown)";
 	if ( c_client ) {
 		c_addr = c_client->addr();
 	}
@@ -1010,7 +1012,7 @@ int
 Claim::sendAliveResponseHandler( Stream *sock )
 {
 	int reply;
-	char* c_addr = "(unknown)";
+	const char* c_addr = "(unknown)";
 
 	if ( c_client ) {
 		c_addr = c_client->addr();

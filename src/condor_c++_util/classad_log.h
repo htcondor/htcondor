@@ -81,6 +81,13 @@ public:
 		// if == 0, resume durable commits
 	void DecNondurableCommitLevel(int old_level );
 
+		// Flush the log output buffer (but do not fsync).
+		// This is useful if non-durable events have been recently logged.
+		// Flushing will allow other processes that read the log to see
+		// the events that might otherwise hang around in the output buffer
+		// for a long time.
+	void FlushLog();
+
 	bool AdExistsInTableOrTransaction(const char *key);
 
 	// returns 1 and sets val if corresponding SetAttribute found
