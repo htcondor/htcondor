@@ -6986,12 +6986,13 @@ InsertJobExpr (const char *expr, bool clustercheck)
 		}
 	}
 
-	int retval = Parse (expr, tree);
+	int pos = 0;
+	int retval = Parse (expr, tree, &pos);
 
 	if (retval)
 	{
 		fprintf (stderr, "\nERROR: Parse error in expression: \n\t%s\n\t", expr);
-		while (retval--) {
+		while (pos--) {
 			fputc( ' ', stderr );
 		}
 		fprintf (stderr, "^^^\n");

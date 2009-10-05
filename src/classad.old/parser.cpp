@@ -631,9 +631,10 @@ ParseExpr(const char *& s, ExprTree*& newTree, int& count)
 }
 
 int 
-ParseClassAdRvalExpr(const char* s, ExprTree*& tree)
+ParseClassAdRvalExpr(const char* s, ExprTree*& tree, int *pos)
 {
 	int    count;
+	int rc = 0;
 
 	tree = NULL;
 
@@ -645,9 +646,13 @@ ParseClassAdRvalExpr(const char* s, ExprTree*& tree)
     } else if (tree != NULL) {
 		delete tree;
 		tree = NULL;
+		rc = 1;
 	}
 	nextToken().reset();
-    return count;
+	if ( pos ) {
+		*pos = count;
+	}
+    return rc;
 }
 
 int 
@@ -690,9 +695,10 @@ ParseAssignExpr(const char *& s, ExprTree*& newTree, int& count)
 }
 
 int 
-Parse(const char* s, ExprTree*& tree)
+Parse(const char* s, ExprTree*& tree, int *pos)
 {
 	int    count;
+    int rc = 0;
 
 	tree = NULL;
 
@@ -704,7 +710,11 @@ Parse(const char* s, ExprTree*& tree)
     } else if (tree != NULL) {
 		delete tree;
 		tree = NULL;
+		rc = 1;
 	}
 	nextToken().reset();
-    return count;
+	if ( pos ) {
+		*pos = count;
+	}
+    return rc;
 }
