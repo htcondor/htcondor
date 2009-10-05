@@ -37,6 +37,8 @@
 #include "vm_univ_utils.h"
 #include "setenv.h"
 
+extern ResMgr* resmgr;
+
 static unsigned long get_image_size(procInfo& pi)
 {
 #if defined(WIN32)
@@ -271,6 +273,7 @@ VMUniverseMgr::init( void )
 		m_vm_type = "";
 		return false;
 	}
+
 	return true;
 }
 
@@ -840,6 +843,12 @@ VMUniverseMgr::docheckVMUniverse(void)
 		if ( m_check_tid >= 0 ) {
 			daemonCore->Cancel_Timer( m_check_tid );
 			m_check_tid = -1;
+
+			// in the case where we had to use the timer,
+			// make certain we publish our changes.  
+			if( resmgr ) {
+				resmgr->eval_and_update_all();
+			}	
 		}
 	}
 	free( vm_type );

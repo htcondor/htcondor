@@ -233,14 +233,19 @@ CStarter::Init( JobInfoCommunicator* my_jic, const char* original_cwd,
 void
 CStarter::StarterExit( int code )
 {
-	RemoveRecoveryFile();
-	removeTempExecuteDir();
+	FinalCleanup();
 #if !defined(WIN32)
 	if ( GetEnv( "CONDOR_GLEXEC_STARTER_CLEANUP_FLAG" ) ) {
 		exitAfterGlexec( code );
 	}
 #endif
 	DC_Exit( code );
+}
+
+void CStarter::FinalCleanup()
+{
+	RemoveRecoveryFile();
+	removeTempExecuteDir();
 }
 
 
