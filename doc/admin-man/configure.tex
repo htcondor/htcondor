@@ -9282,10 +9282,12 @@ Configuration File Macros Affecting APIs}
 
 \label{param:SoapLeaveInQueue}
 \item[\Macro{SOAP\_LEAVE\_IN\_QUEUE}]
-  A boolean value that when \Expr{True},
+  A boolean expression that when \Expr{True},
   causes a job in the completed state to remain in the queue,
   instead of being removed based on the completion of file transfer.
-  There is no default value.
+  If provided, this expression will be logically ANDed with the
+  default behavior of leaving the job in the queue until \Expr{FilesRetrieved}
+  becomes \Expr{True}.
 
 \label{param:WebRootDir}
 \item[\Macro{WEB\_ROOT\_DIR}]
