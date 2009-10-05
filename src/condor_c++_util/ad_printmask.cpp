@@ -215,10 +215,9 @@ display (AttrList *al, AttrList *target /* = NULL */)
 				switch( fmt_type ) {
 				case PFT_STRING:
 					if( attr_is_expr ) {
-						if( tree->EvalTree (al, target, &result) ) {
-							if( result.type == LX_STRING && result.s ) {
-								retval.sprintf_cat(fmt->printfFmt, result.s);
-							}
+						if( tree->EvalTree (al, target, &result) &&
+							result.type == LX_STRING && result.s ) {
+							retval.sprintf_cat(fmt->printfFmt, result.s);
 						} else {
 							// couldn't eval
 							if( alt ) {
