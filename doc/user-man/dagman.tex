@@ -1441,7 +1441,8 @@ Figure~\ref{fig:dagman-splice-s1} illustrates the resulting DAG.
   # Define dependencies
   # A must complete before the initial nodes in X1 can start
   PARENT A CHILD X1
-  # All final nodes in X1 must finish before the initial nodes in X2 can begin
+  # All final nodes in X1 must finish before 
+  # the initial nodes in X2 can begin
   PARENT X1 CHILD X2
   # All final nodes in X2 must finish before B may begin.
   PARENT X2 CHILD B

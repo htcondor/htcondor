@@ -333,15 +333,13 @@ public download alongside the binary distributions.
 \begin{tabular}{|p{6cm}p{7cm}|} \hline
 \emph{Architecture} & \emph{Operating System} \\ \hline \hline
 Hewlett Packard PA-RISC (both PA7000 and PA8000 series) & - HPUX 11.00 (clipped) \\ \hline
-Sun SPARC Sun4m, Sun4c, Sun UltraSPARC & - Solaris 8, 9 (clipped) \\
+Sun SPARC Sun4m, Sun4c, Sun UltraSPARC & - Solaris 9 (clipped) \\
  & - Solaris 10 (clipped) (Using the Solaris 9 binaries) \\ \hline
-Intel x86 & - Red Hat Linux 9 \\
- & - RedHat Enterprise Linux 3 \\
+Intel x86 & - RedHat Enterprise Linux 3 \\
  & - RedHat Enterprise Linux 4 (Using RHEL3 binaries) \\
  & - RedHat Enterprise Linux 5 \\
- & - Fedora Core 1, 2, 3, 4, 5 (Using RHEL3 binaries) \\
- & - Debian Linux 3.1 (sarge) (Using RHEL3 binaries) \\
- & - Debian Linux 4.0 (etch) \\
+ & - Fedora Core 1 - 11 (Using RHEL3 binaries) \\
+ & - Debian Linux 4.0 (etch) (clipped) \\
  & - Debian Linux 5.0 (lenny) \\
  & - Windows 2000 Professional and Server (Win NT 5.0) (clipped) \\
  & - Windows 2003 Server (Win NT 5.2) (clipped) \\
@@ -350,7 +348,7 @@ Intel x86 & - Red Hat Linux 9 \\
  & - Windows Vista (Win NT 6.0) (clipped) \\
  & - Macintosh OS X 10.4 (clipped) \\ \hline
 PowerPC & - Macintosh OS X 10.4 (clipped) \\
- & - AIX 5.2, 5.3 (clipped) \\
+ & - AIX 5.2, 5.3 (clipped) (Using the AIX 5.2 binaries) \\
  & - Yellowdog Linux 5.0 (clipped) \\
  & - SuSE Linux Enterprise Server 9 (clipped) \\ \hline
 Itanium IA64 & - Red Hat Enterprise Linux 3 (clipped) \\ \hline
@@ -407,11 +405,9 @@ Other compilers may work, but are not supported.
 \textbf{Platform} & \textbf{Compiler} & \textbf{Notes}\\ \hline \hline
 Red Hat Enterprise Linux 3, 4, 5 on x86 & gcc, g++, and g77 & as shipped  \\ 
 \hline
-Red Hat Debian Linux 3.1 (sarge) on x86 & gcc up to version 3.4.1 &  \\ 
-\hline
 Red Hat Debian Linux 5.0 (lenny) on x86 and x86\_64 & gcc, g++, gfortran as shipped &  \\ 
 \hline
-Fedora Core 1, 2, 3, 4, 5, 6, 7 on x86 & gcc, g++, and g77 & as shipped  \\ 
+Fedora Core 1 - 11 on x86 & gcc, g++, and g77 & as shipped  \\ 
 \hline
 \end{tabular}
 \caption{\label{supported-compile}Supported compilers under Condor \VersionNotice\ }
@@ -432,9 +428,9 @@ supported, the support is automatic.
 \begin{tabular}{|lc|} \hline
 \emph{Platform} & \emph{Large File Transfer Supported?} \\ \hline \hline
 Hewlett Packard PA-RISC with HPUX 11.00 & Yes \\ \hline
-Sun SPARC Sun4m,Sun4c, Sun UltraSPARC with Solaris 8, 9 & Yes \\ \hline
-Intel x86 with Red Hat Enterprise Linux 3, 4, 5, Debian Linux 3.1, 4.0, 5.0 & Yes \\ 
-Intel x86 with Fedora Core 1, 2, 3, 4, 5, 6, 7 & Yes \\
+Sun SPARC Sun4m,Sun4c, Sun UltraSPARC with Solaris 9 & Yes \\ \hline
+Intel x86 with Red Hat Enterprise Linux 3, 4, 5, Debian Linux 4.0, 5.0 & Yes \\ 
+Intel x86 with Fedora Core 1 - 11 & Yes \\
 Intel x86 with Windows 2000 Professional and Server  & Yes \\ 
 Intel x86 with 2003 Server (Win NT 5.0) & Yes \\ 
 Intel x86 with Windows XP Professional (Win NT 5.1) & Yes \\ \hline

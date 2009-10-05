@@ -914,6 +914,18 @@ File System Configuration File Entries''.
   If this setting is not defined, Condor will use the address
   specified in \MacroNI{CONDOR\_ADMIN} (described above).
 
+\label{param:EmailSignature}
+\item[\Macro{EMAIL\_SIGNATURE}]
+  Every e-mail sent by Condor includes a short signature line appended
+  to the body.  By default, this signature includes the URL to the
+  global Condor project website.  
+  When set, this variable defines an alternative signature line to be
+  used instead of the default. 
+  Note that the value can only be one line in length.
+  This variable could be used to direct users
+  to look at local web site with information specific to the installation
+  of Condor.
+
 \label{param:Mail}
 \item[\Macro{MAIL}]
   The full path to a mail
@@ -3451,6 +3463,16 @@ WANT_HOLD_REASON = \
   by its owner.
   Job ClassAd attributes are not used in defining \MacroNI{IS\_OWNER},
   as they would be \Expr{Undefined}.
+
+\label{param:StartdHistory}
+\item[\Macro{STARTD\_HISTORY}]
+  A file name where the \Condor{startd} daemon will
+  maintain a job history file in an analogous way to that of the 
+  history file defined by the configuration variable \MacroNI{HISTORY}.
+  It will be rotated in the same way,
+  and the same parameters that apply to the \MacroNI{HISTORY} file
+  rotation apply to the \Condor{startd} daemon history as well.
+
 \end{description}
 
 
@@ -4674,16 +4696,16 @@ Power Management for more details.
 \item[\Macro{UNHIBERNATE}]
   A boolean expression that specifies when an offline machine should be
   woken up.
-  The default value is \Expr{LastMatchTime =!= UNDEFINED}.
+  The default value is \Expr{MachineLastMatchTime =!= UNDEFINED}.
   This expression does not do anything,
   unless there is an instance of \Condor{rooster} running,
   or another program that evaluates the
   \Attr{Unhibernate} expression of offline machine ClassAds.
   The special attribute
-  \Attr{LastMatchTime} is updated in the ClassAds of offline machines
+  \Attr{MachineLastMatchTime} is updated in the ClassAds of offline machines
   when a job would have been matched to the machine if it had been on line.
   For multi-slot machines, the offline ClassAd for slot1 will also contain
-  the attributes \Attr{slot<X>\_LastMatchTime},
+  the attributes \Attr{slot<X>\_MachineLastMatchTime},
   where \MacroNI{X} is replaced by the
   slot id of the other slots that would have been matched while offline.
   This allows the slot1 \Macro{UNHIBERNATE} expression to refer to

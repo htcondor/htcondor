@@ -1617,9 +1617,11 @@ the clause \verb@(HasFileTransfer)@.
   same \Attr{FileSystemDomain} as the submit machine.
 
 \item \verb@should_transfer_files = IF_NEEDED@ results in the addition of
+\footnotesize
 \begin{verbatim}
   (HasFileTransfer || (TARGET.FileSystemDomain == MY.FileSystemDomain))
 \end{verbatim}
+\normalsize
   If Condor will optionally transfer files, it must require
   that the machine is \emph{either} capable of transferring files
   \emph{or} in the same file system domain.
@@ -1645,17 +1647,21 @@ over transferring files,
 \index{submit commands!rank}
 files), the \Attr{rank} expression works well.  Use:
 
+\footnotesize
 \begin{verbatim}
 rank = (TARGET.FileSystemDomain == MY.FileSystemDomain)
 \end{verbatim}
+\normalsize
 
 The \Attr{rank} expression is a floating point number, so if 
 other items are considered in ranking the possible machines this job
 may run on, add the items:
 
+\footnotesize
 \begin{verbatim}
 rank = kflops + (TARGET.FileSystemDomain == MY.FileSystemDomain)
 \end{verbatim}
+\normalsize
 
 The value of \Attr{kflops} can vary widely among machines,
 so this \Attr{rank} expression will likely not do as it intends.
@@ -1665,9 +1671,11 @@ but still consider kflops among the machines in the file system domain,
 weight the part of the rank expression that is matching the file system domains.
 For example: 
 
+\footnotesize
 \begin{verbatim}
 rank = kflops + (10000 * (TARGET.FileSystemDomain == MY.FileSystemDomain))
 \end{verbatim}
+\normalsize
 
 %%%%%%%%%%%% 
 \subsection{Environment Variables}

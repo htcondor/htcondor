@@ -865,10 +865,10 @@ status 0,
 this \SubmitCmd{on\_exit\_remove} expression works well:
 
 \footnotesize
-\normalsize
 \begin{verbatim}
   on_exit_remove = (ExitBySignal == False) && (ExitCode == 0)
 \end{verbatim}
+\normalsize
 If the job was killed by a signal or exited with a non-zero exit
 status, Condor would leave the job in the queue to run again.
 
@@ -1032,6 +1032,7 @@ job executable, such that the process id of the executable is the
 same as that of the shell script.
 Here is an example script that gets a copy of a machine-specific
 executable before the \Prog{exec}.
+\footnotesize
 \begin{verbatim} 
    #! /bin/sh
 
@@ -1045,6 +1046,7 @@ executable before the \Prog{exec}.
    # The PID MUST stay the same, so exec the new standard universe process.
    exec executable ${1+"$@"}
 \end{verbatim} 
+\normalsize
 If this command is not present (defined), then the value
 defaults to false.
 
@@ -1900,9 +1902,11 @@ The second field specifies the device, and
 the third field specifies permissions.
 
 An example that specifies two disk files:
+\footnotesize
 \begin{verbatim}
 xen_disk = /myxen/diskfile.img:sda1:w,/myxen/swap.img:sda2:w
 \end{verbatim}
+\normalsize
 
 %%%%%%%%%%%%%%%%%%%
 %% xen_initrd
