@@ -667,8 +667,11 @@ ProcFamilyClient::dump(pid_t pid,
 		dprintf(D_ALWAYS,
 		        "ProcFamilyClient: "
 			    "failed to start connection with ProcD\n");
+
+		free(buffer);
 		return false;
 	}
+	free(buffer);
 
 	proc_family_error_t err;
 	if (!m_client->read_data(&err, sizeof(proc_family_error_t))) {
