@@ -125,8 +125,8 @@ AC_ARG_WITH(kernel,
   [KERNEL=$withval],
   [KERNEL=""])
 
-AC_ARG_WITH(osver,
-  [AS_HELP_STRING([--with-osver],
+AC_ARG_WITH(os-version,
+  [AS_HELP_STRING([--with-os-version],
      [Specify the O/S version string that Condor will be built with])],
   [OSVER=$withval],
   [OSVER=""])
@@ -136,6 +136,12 @@ AC_ARG_WITH(sysname,
      [Specify the system name string that Condor will be built with])],
   [SYSNAME=$withval],
   [SYSNAME=""])
+
+AC_ARG_WITH(libc,
+  [AS_HELP_STRING([--with-libc],
+     [Specify the libc name & version that Condor will be built with])],
+  [LIBC=$withval],
+  [LIBC=""])
 
 AC_ARG_WITH(platform,
   [AS_HELP_STRING([--with-platform],
@@ -191,20 +197,9 @@ _cv_kernel_rev="XXX"
 
 os=`uname -s`
 
-if test "$ARCH" != "" && test "$SYSNAME" != "" &&
+if test "$ARCH" != "" && test "$SYSNAME" != "" && test "$LIBC" != ""  &&
    test "$OS"   != "" && test "$KERNEL"  != "" && test "$OSVER" != "" ; then
-  AC_MSG_NOTICE([Using system information from command line])
-  _cv_with_os="YES"
-  _cv_arch="$ARCH"
-  _cv_opsys_vers="$OSVER"
-  _cv_op_sys="$OS"
-  _cv_opsys="$OS"
-  _cv_sysname="$SYSNAME"
-  _cv_kernel_rev="$KERNEL"
-
-elif test "$ARCH" != "" || test "$SYSNAME" != "" ||
-     test "$OS" != ""   || test "$KERNEL" != ""  || test "$OSVER" != "" ; then
-    AC_MSG_ERROR([Not all of --with-(arch,os,osver,kernel,sysname) specified])
+  AC_MSG_NOTICE([Skipping system information checks])
 
 elif test "$os" = "HP-UX"; then
   _cv_op_sys="HPUX"
@@ -551,6 +546,44 @@ elif test $os = "FreeBSD" ; then
 
 else
   AC_MSG_ERROR([Condor has not been ported to this platform])
+fi
+
+if test "$ARCH" != "" ; then
+  AC_MSG_NOTICE([Using architecture \"$ARCH\" from command line])
+  _cv_arch="$ARCH"
+fi
+
+if test "$OS" != "" ; then
+  AC_MSG_NOTICE([Using operating system \"$OS\" from command line])
+  _cv_with_os="YES"
+  _cv_op_sys="$OS"
+  _cv_opsys="$OS"
+fi
+
+if test "$OSVER" != "" ; then
+  AC_MSG_NOTICE([Using operating system version \"$OSVER\" from command line])
+  _cv_opsys_vers="$OSVER"
+fi
+
+if test "$SYSNAME" != "" ; then
+  AC_MSG_NOTICE([Using system name \"$SYSNAME\" from command line])
+  _cv_sysname="$SYSNAME"
+fi
+
+if test "$KERNEL"  != "" ; then
+  AC_MSG_NOTICE([Using kernel version \"$OSVER\" from command line])
+  _cv_kernel_rev="$KERNEL"
+fi
+
+if test "$LIBC" != "" ; then
+  AC_MSG_NOTICE([Using libc \"$LIBC\" from command line])
+  _cv_libc_kind=`echo $LIBC | $CUT -f1 -d-`
+  _cv_libc_major=`echo $LIBC | cut -f2 -d- | $CUT -f1 -d.`
+  _cv_libc_minor=`echo $LIBC | cut -f2 -d- | $CUT -f2 -d.`
+  _cv_libc_patch=`echo $LIBC | cut -f2 -d- | $CUT -f3 -d.`
+  _cv_libc_full=`echo $_cv_libc_kind $_cv_libc_major $_cv_libc_minor $_cv_libc_patch|$PERL -ane 'print "#define IS_".join('_',@F)." YES";'`
+  _cv_libc_majmin="#define IS_$_cv_libc_kind$_cv_libc_major$_cv_libc_minor YES"
+  _cv_libc_is_kind="#define IS_$_cv_libc_kind YES"
 fi
 
 AC_MSG_CHECKING([architecture])

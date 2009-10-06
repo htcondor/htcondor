@@ -492,12 +492,26 @@ if( ! $sys ) {
     $sys=`sys`;
     chomp($sys);
 }
-if( ( !defined $arch )  or  ( !defined $opsys )  or  ( !defined $libc ) ) {
-	die "sysname '$sys' not in the tables" if ( !exists $archname{$sys} );
+if( ( !defined $platform )  or  ( $platform eq "" ) ) {
+	if ( !exists $archname{$sys} ) {
+		my @t;
+		push( @t, "platform" )         if ( !defined $platform );
+		push( @t, "architecture" )     if ( !defined $arch );
+		push( @t, "libc" )             if ( !defined $libc );
+		push( @t, "operating system" ) if ( !defined $opsys );
+		if ( scalar @t ) {
+			die join(", ", @t ) . " not defined and '$sys' not in the tables";
+		}
+	}
 
 	$arch = $archname{$sys}   if( !defined $arch );
 	$opsys = $opsysname{$sys} if( !defined $opsys );
 	$libc = $libcname{$sys}   if( !defined $libc );
+
+	$platform="$opsys-$arch";
+	if( $libc ne "" ) {
+		$platform .= "-$libc";
+	}
 }
 
 if( ! $tar_cmd ) {
@@ -619,16 +633,7 @@ foreach my $name ( sort keys %modules ) {
 		print runcmd( $clean_cmd, undef );
 
 		# Figure out what our filenames should look like.
-		my $full;
-		if ( defined $platform  and  $platform ne "" ) {
-			$full = $platform;
-		}
-		else {
-			$full="$opsys-$arch";
-			if( $libc ne "" ) {
-				$full .= "-$libc";
-			}
-		}
+		my $full = $platform;
 		if( $linktype =~ /dynamic/ ) {
 	    	$full .= "-dynamic";
 		}
