@@ -83,6 +83,12 @@ transferring the file.
 \MacroNI{COUNT\_HYPERTHREAD\_CPUS} was ignored and was effectively
 treated as False in all cases.
 
+\item JobRouter was not able to see matchmaking diagnostic attributes
+such as \Attr{LastRejMatchTime}.  Therefore, when evaluating policy
+expressions that referred to these attributes, they were effectively
+treated as though undefined.  Quill was also not able to see these
+attributes.
+
 \end{itemize}
 
 \noindent Known Bugs:
