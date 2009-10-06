@@ -1064,7 +1064,9 @@ Claim::leaseExpired()
 		if( removeClaim(false) ) {
 				// There is no starter, so remove immediately.
 				// Otherwise, we will be removed when starter exits.
-			getCODMgr()->removeClaim(this);
+			CODMgr* pCODMgr = getCODMgr();
+			if (pCODMgr)
+				pCODMgr->removeClaim(this);
 		}
 		return TRUE;
 	}
