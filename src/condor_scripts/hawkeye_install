@@ -201,7 +201,7 @@ sub Main( )
 	print "You should set HAWKEYE_CONFIG=$ConfigOut\n"
 	    if (  ( ! exists $ENV{HAWKEYE_CONFIG} ) ||
 		  ( $ENV{HAWKEYE_CONFIG} ne $ConfigOut )  );
-	print "You should review the setting of the HOSTALLOW_WRITE" .
+	print "You should review the setting of the ALLOW_WRITE" .
 	    " parameter of your configuration\n".
 	    " $ConfigOut line $HostallowWriteLine\n" .
 	    " Current value is \"$HostallowWriteValue\"\n";
@@ -260,12 +260,12 @@ sub DoConfig( $$$ )
 	    next;
 	}
 
-	# HOSTALLOW_WRITE
-	elsif ( /^HOSTALLOW_WRITE\s+=/ )
+	# ALLOW_WRITE
+	elsif ( /^ALLOW_WRITE\s+=/ )
 	{
 	    my $Domain = $Hostname;
 	    $Domain =~ s/^[^\.]*/\*/;
-	    print OUT "HOSTALLOW_WRITE = $Domain\n";
+	    print OUT "ALLOW_WRITE = $Domain\n";
 	    $HostallowWriteLine = $.;
 	    $HostallowWriteValue = $Domain;
 	    next;

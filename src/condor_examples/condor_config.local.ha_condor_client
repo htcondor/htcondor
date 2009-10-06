@@ -20,9 +20,9 @@ COLLECTOR_HOST = $(CENTRAL_MANAGER1),$(CENTRAL_MANAGER2)
 
 ##  Negotiator access.  Machines listed here are trusted central
 ##  managers.  You should normally not need to change this.
-HOSTALLOW_NEGOTIATOR = $(COLLECTOR_HOST)
+ALLOW_NEGOTIATOR = $(COLLECTOR_HOST)
 
 ##  Now, with flocking (and HA) we need to let the SCHEDD trust the other 
 ##  negotiators we are flocking with as well.  You should normally 
 ##  not need to change this.
-HOSTALLOW_NEGOTIATOR_SCHEDD = $(COLLECTOR_HOST)
+ALLOW_NEGOTIATOR_SCHEDD = $(COLLECTOR_HOST)

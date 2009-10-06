@@ -87,9 +87,9 @@ use Sys::Hostname;
                     "-unset start_daemons";
    $CONDOR_STATUS = "$BIN/condor_status -pool $CONDOR_POOL -direct";
  $CONDOR_RECONFIG = "$SBIN/condor_reconfig -pool $CONDOR_POOL";
-$CONDOR_HOSTALLOW = "$BIN/condor_config_val -pool $CONDOR_POOL "; 
-  $CONDOR_DBALLOW = "-name db31 hostallow_administrator";
-  $CONDOR_CCALLOW = "-name c33 hostallow_administrator";
+$CONDOR_ALLOW = "$BIN/condor_config_val -pool $CONDOR_POOL "; 
+  $CONDOR_DBALLOW = "-name db31 allow_administrator";
+  $CONDOR_CCALLOW = "-name c33 allow_administrator";
   $CCLUSTER_CONST = " -c 'IsComputeCluster==TRUE'";
  $DBCLUSTER_CONST = " -c 'IsDBCluster==TRUE'";
    $GIGABIT_CONST = " -c 'HasGigabit==TRUE'";
@@ -212,8 +212,8 @@ sub usage()
 
 sub check_auth()
 {
-    $DBCHECK = $CONDOR_HOSTALLOW . $CONDOR_DBALLOW;
-    $CCCHECK = $CONDOR_HOSTALLOW . $CONDOR_CCALLOW;
+    $DBCHECK = $CONDOR_ALLOW . $CONDOR_DBALLOW;
+    $CCCHECK = $CONDOR_ALLOW . $CONDOR_CCALLOW;
 
     $db_auth_hosts = `$DBCHECK`;
 	#print "$DBCHECK\n";

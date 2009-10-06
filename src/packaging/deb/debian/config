@@ -39,8 +39,8 @@ if [ -e $CONFIGFILE ]; then
 	db_set condor/filesystemdomain $FSD || true 
 	RESERVEDMEM=`grep -e "^[ \t]*RESERVED_MEMORY" $CONFIGFILE |cut -d"=" -f2|tr -d " "`
 	db_set condor/reservedmemory $RESERVEDMEM || true 
-	HOSTALLOWWRITE=`grep -e "^[ \t]*HOSTALLOW_WRITE" $CONFIGFILE |cut -d"=" -f2|tr -d " "`
-	db_set condor/hostallowmrite $HOSTALLOWWRITE || true 
+	ALLOWWRITE=`grep -e "^[ \t]*ALLOW_WRITE" $CONFIGFILE |cut -d"=" -f2|tr -d " "`
+	db_set condor/allowmrite $ALLOWWRITE || true 
 fi
 
 # start state machine
@@ -75,7 +75,7 @@ while [ "$STATE" != 0 -a "$STATE" != 8 ]; do
     ;;
     7)
 	if [ "$ISPERSONAL" = "false" ]; then
-		db_input medium condor/hostallowwrite || true
+		db_input medium condor/allowwrite || true
 	fi
     ;;
     8)

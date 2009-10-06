@@ -76,12 +76,12 @@ HAD_USE_PRIMARY = true
 ##  machine(s) where whoever is the condor administrator(s) works
 ##  (assuming you trust all the users who log into that/those
 ##  machine(s), since this is machine-wide access you're granting).
-HOSTALLOW_ADMINISTRATOR = $(COLLECTOR_HOST) 
+ALLOW_ADMINISTRATOR = $(COLLECTOR_HOST) 
 
 
 ##  Negotiator access.  Machines listed here are trusted central
 ##  managers.  You should normally not have to change this.
-HOSTALLOW_NEGOTIATOR = $(COLLECTOR_HOST)
+ALLOW_NEGOTIATOR = $(COLLECTOR_HOST)
 
 
 ###################################################################

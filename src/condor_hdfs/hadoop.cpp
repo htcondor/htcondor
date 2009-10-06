@@ -234,12 +234,22 @@ void Hadoop::writeConfigFile() {
                 free(hdfs_allow);
         } else {
                 StringList allow_list;
+                hdfs_allow = param("ALLOW_READ");
+                if (hdfs_allow != NULL) {
+                        allow_list.append(hdfs_allow);
+                        free(hdfs_allow);
+                }
                 hdfs_allow = param("HOSTALLOW_READ");
                 if (hdfs_allow != NULL) {
                         allow_list.append(hdfs_allow);
                         free(hdfs_allow);
                 }
 
+                hdfs_allow = param("ALLOW_WRITE");
+                if(hdfs_allow != NULL) {
+                        allow_list.append(hdfs_allow);
+                        free(hdfs_allow);
+                }
                 hdfs_allow = param("HOSTALLOW_WRITE");
                 if(hdfs_allow != NULL) {
                         allow_list.append(hdfs_allow);
