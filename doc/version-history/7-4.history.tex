@@ -38,7 +38,13 @@ following:
 
 \begin{itemize}
 
-\item None.
+\item Added \MacroNI{SCHEDD\_JOB\_QUEUE\_LOG\_FLUSH\_DELAY} to set an
+upper bound in seconds on how long it takes for changes to the job
+ad to be visible to JobRouter and Quill.  The default is 5.
+Previously, there was no upper limit.  Typically, other activity in
+the job queue, such as jobs being submitted or completed would cause
+buffered data to be flushed to disk, so the effective upper bound was
+a function of how busy the job queue was.
 
 \end{itemize}
 
