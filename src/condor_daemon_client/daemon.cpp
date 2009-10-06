@@ -1343,6 +1343,7 @@ Daemon::getCmInfo( const char* subsys )
 			free( host_name );
 		}
 		free( hostnames );
+		delete [] local_name;
 	}
 
 	if( ! host || !host[0]) {
