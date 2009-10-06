@@ -2443,7 +2443,7 @@ AC_LANG_SOURCE([
 #endif
 #include <linux/nfs_fs.h>
 ])],
-[AC_MSG_RESULT([yes]),
+[AC_MSG_RESULT([yes])
  AC_DEFINE(HAVE_LINUX_NFS_FS_H,[1],[Define to 1 if <linux/nfs_fs.h> is present and usable])],
 [AC_MSG_RESULT([no])])
 
@@ -2462,7 +2462,7 @@ AC_LANG_SOURCE([
 #endif
 #include <linux/nfsd/const.h>
 ])],
-[AC_MSG_RESULT([yes]),
+[AC_MSG_RESULT([yes])
  AC_DEFINE(HAVE_LINUX_NFSD_CONST_H,[1],[Define to 1 if <linux/nfsd/const.h> is present and usable])],
 [AC_MSG_RESULT([no])])
 

@@ -19,4 +19,6 @@ if ( !defined $configure ) {
 
 print "Found configure line:\n$configure\n";
 system( "./build_init" );
+die "build_init failed" if ( $? );
 system( $configure );
+die "configure failed" if ( $? );
