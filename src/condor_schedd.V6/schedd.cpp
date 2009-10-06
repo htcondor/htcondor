@@ -9205,6 +9205,7 @@ Scheduler::child_exit(int pid, int status)
 	bool            srec_keep_claim_attributes;
 
 	srec = FindSrecByPid(pid);
+	ASSERT(srec);
 	job_id.cluster = srec->job_id.cluster;
 	job_id.proc = srec->job_id.proc;
 
