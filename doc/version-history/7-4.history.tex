@@ -79,6 +79,10 @@ Condor was running as root, and transfer-files mode was being used,
 Condor failed to automatically turn on execute permission after
 transferring the file.
 
+\item Fixed a bug from 7.3.2.  The configuration variable
+\MacroNI{COUNT\_HYPERTHREAD\_CPUS} was ignored and was effectively
+treated as False in all cases.
+
 \end{itemize}
 
 \noindent Known Bugs:
