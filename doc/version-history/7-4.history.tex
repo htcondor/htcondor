@@ -73,6 +73,11 @@ retries.
 \item Changed some log file warnings in \Condor{dagman} to not be
 printed at the default verbosity setting.
 
+\item As of 7.1.4, when a user submitted a job with an executable that
+did not have execute permission enabled, and Condor was running as root,
+and transfer-files mode was being used, Condor failed to automatically
+turn on execute permission after transferring the file.  This has been fixed.
+
 \end{itemize}
 
 \noindent Known Bugs:
