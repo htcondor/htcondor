@@ -1,0 +1,24 @@
+#! /usr/bin/env perl
+use strict;
+use warnings;
+
+my $configure;
+open( LOG, "config.log" ) or die "Can't read config.log";
+while( <LOG> ) {
+    chomp;
+    if ( m|\$\s*(\./configure.*)| ) {
+	$configure = $1;
+	last;
+    }
+}
+close( LOG );
+
+if ( !defined $configure ) {
+    die "No configure line found in config.log";
+}
+
+print "Found configure line:\n$configure\n";
+system( "./build_init" );
+die "build_init failed" if ( $? );
+system( $configure );
+die "configure failed" if ( $? );

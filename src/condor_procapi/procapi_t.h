@@ -51,8 +51,8 @@ const int BUSY_WORK_TIME = 100000000;
 const int PROC_INFO_BREADTH = 3;
 const int PROC_INFO_DEPTH = 3;
 // the leniency to give the rss value returned compared to the expected value
-// (20%)
-const float PROC_INFO_RSS_MARGIN = .35f;
+// (50%)
+const float PROC_INFO_RSS_MARGIN = .50f;
 
 //constants for set_t///////////////////////////////////
 const int SET_INFO_DEPTH = 3;
