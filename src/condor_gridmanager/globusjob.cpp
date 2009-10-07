@@ -785,7 +785,7 @@ GlobusJob::GlobusJob( ClassAd *classad )
 								  ATTR_GRID_JOB_ID );
 			goto error_exit;
 		}
-		SetRemoteJobId( token );
+		SetRemoteJobId( token, is_gt5 );
 		job_already_submitted = true;
 	}
 
@@ -2815,7 +2815,7 @@ BaseResource *GlobusJob::GetResource()
 	return (BaseResource *)myResource;
 }
 
-void GlobusJob::SetRemoteJobId( const char *job_id )
+void GlobusJob::SetRemoteJobId( const char *job_id, bool is_gt5 )
 {
 		// We need to maintain a hashtable based on job contact strings with
 		// the port number stripped. This is because the port number in the
@@ -2838,9 +2838,12 @@ void GlobusJob::SetRemoteJobId( const char *job_id )
 		jobContact = NULL;
 	}
 
+	if ( myResource ) {
+		is_gt5 = myResource->IsGt5();
+	}
 	MyString full_job_id;
 	if ( job_id ) {
-		full_job_id.sprintf( "%s %s %s", myResource->IsGt5() ? "gt5" : "gt2",
+		full_job_id.sprintf( "%s %s %s", is_gt5 ? "gt5" : "gt2",
 							 resourceManagerString, job_id );
 	}
 	BaseJob::SetRemoteJobId( full_job_id.Value() );
