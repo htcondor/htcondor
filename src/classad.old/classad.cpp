@@ -160,7 +160,7 @@ ClassAd::updateBoundVariables() {
     }
 
 	// Make a parse tree that contains the variable MyType
-    Parse("MyType", tree);
+    ParseClassAdRvalExpr("MyType", tree);
 	// Evaluate this variable within the classad, to see if it
 	// is defined.
     tree->EvalTree(this, val);
@@ -199,7 +199,7 @@ ClassAd::updateBoundVariables() {
 	val = new EvalResult;
 
 	// Make a parse tree that contains the variable TargetType
-    Parse("TargetType", tree);
+    ParseClassAdRvalExpr("TargetType", tree);
 	// Evaluate this variable within the classad, to see if it
 	// is defined.
     tree->EvalTree(this, val);
@@ -555,7 +555,7 @@ int ClassAd::IsAMatch(ClassAd* temp)
         EXCEPT("Warning : you ran out of memory -- quitting !");
     }
 
-    if (reqsTree == 0) Parse("MY.Requirements", reqsTree);       // convention.
+    if (reqsTree == 0) ParseClassAdRvalExpr("MY.Requirements", reqsTree);       // convention.
 
     reqsTree->EvalTree(this, temp, val);         // match in one direction.
     if(!val || val->type != LX_INTEGER)
@@ -618,7 +618,7 @@ bool operator>= (ClassAd &lhs, ClassAd &rhs)
 		EXCEPT("Out of memory -- quitting");
 	}
 
-	if (reqsTree == 0) Parse ("MY.Requirements", reqsTree);
+	if (reqsTree == 0) ParseClassAdRvalExpr ("MY.Requirements", reqsTree);
 	reqsTree -> EvalTree (&rhs, &lhs, val);
 	if (!val || val->type != LX_INTEGER)
 	{

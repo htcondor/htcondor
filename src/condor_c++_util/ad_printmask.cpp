@@ -194,7 +194,7 @@ display (AttrList *al, AttrList *target /* = NULL */)
 						// drat, we couldn't find it. Maybe it's an
 						// expression?
 					tree = NULL;
-					if( Parse(attr, tree) != 0 ) {
+					if( ParseClassAdRvalExpr(attr, tree) != 0 ) {
 						delete tree;
 
 							// drat, still no luck.  if there's an

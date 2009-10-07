@@ -10572,7 +10572,7 @@ Scheduler::Init()
 		temp.sprintf("string(%s)",expr);
 		free(expr);
 		expr = temp.StrDup();
-		Parse(temp.Value(),m_parsed_gridman_selection_expr);	
+		ParseClassAdRvalExpr(temp.Value(),m_parsed_gridman_selection_expr);	
 			// if the expression in the config file is not valid, 
 			// the m_parsed_gridman_selection_expr will still be NULL.  in this case,
 			// pretend like it isn't set at all in the config file.

@@ -31,7 +31,7 @@
 
 #include "condor_ast.h"
 
-// Parse an expression, either assignment or non-assignment.
+// Parse an assignment expression, i.e. variable = expression
 // On success, 0 is returned and tree is set to the resulting ExprTree.
 // On failure, non-0 is returned, tree is set to NULL, and if pos is
 // non-NULL, the location it points to is set to the position at which

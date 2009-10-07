@@ -2541,22 +2541,22 @@ setupAnalysis()
 
 	// setup condition expressions
     sprintf( buffer, "MY.%s > MY.%s", ATTR_RANK, ATTR_CURRENT_RANK );
-    Parse( buffer, stdRankCondition );
+    ParseClassAdRvalExpr( buffer, stdRankCondition );
 
     sprintf( buffer, "MY.%s >= MY.%s", ATTR_RANK, ATTR_CURRENT_RANK );
-    Parse( buffer, preemptRankCondition );
+    ParseClassAdRvalExpr( buffer, preemptRankCondition );
 
 	sprintf( buffer, "MY.%s > TARGET.%s + %f", ATTR_REMOTE_USER_PRIO, 
 			ATTR_SUBMITTOR_PRIO, PriorityDelta );
-	Parse( buffer, preemptPrioCondition ) ;
+	ParseClassAdRvalExpr( buffer, preemptPrioCondition ) ;
 
 	// setup preemption requirements expression
 	if( !( preq = param( "PREEMPTION_REQUIREMENTS" ) ) ) {
 		fprintf( stderr, "\nWarning:  No PREEMPTION_REQUIREMENTS expression in"
 					" config file --- assuming FALSE\n\n" );
-		Parse( "FALSE", preemptionReq );
+		ParseClassAdRvalExpr( "FALSE", preemptionReq );
 	} else {
-		if( Parse( preq , preemptionReq ) ) {
+		if( ParseClassAdRvalExpr( preq , preemptionReq ) ) {
 			fprintf( stderr, "\nError:  Failed parse of "
 				"PREEMPTION_REQUIREMENTS expression: \n\t%s\n", preq );
 			exit( 1 );

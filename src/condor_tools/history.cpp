@@ -296,7 +296,7 @@ main(int argc, char* argv[])
   if (i<argc) Usage(argv[0]);
   
   
-  if( constraint && Parse( constraint, constraintExpr ) ) {
+  if( constraint && ParseClassAdRvalExpr( constraint, constraintExpr ) ) {
 	  fprintf( stderr, "Error:  could not parse constraint %s\n", constraint );
 	  exit( 1 );
   }

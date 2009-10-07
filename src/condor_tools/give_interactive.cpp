@@ -474,9 +474,9 @@ main(int argc, char *argv[])
 
 	// initialize some global expressions
 	sprintf (buffer, "MY.%s > MY.%s", ATTR_RANK, ATTR_CURRENT_RANK);
-	Parse (buffer, rankCondStd);
+	ParseClassAdRvalExpr (buffer, rankCondStd);
 	sprintf (buffer, "MY.%s >= MY.%s", ATTR_RANK, ATTR_CURRENT_RANK);
-	Parse (buffer, rankCondPrioPreempt);
+	ParseClassAdRvalExpr (buffer, rankCondPrioPreempt);
 
 	// get PreemptionReq expression from config file
 	PreemptionReq = NULL;

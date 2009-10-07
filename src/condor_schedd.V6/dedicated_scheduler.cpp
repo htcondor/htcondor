@@ -2619,8 +2619,8 @@ DedicatedScheduler::computeSchedule( void )
 			// running jobs
 
 		if( (param1 != NULL) && (param2 != NULL)) {
-			Parse(param1, preemption_req);
-			Parse(param2, preemption_rank);
+			ParseClassAdRvalExpr(param1, preemption_req);
+			ParseClassAdRvalExpr(param2, preemption_rank);
 		}
 		if( param1 ) {
 			free(param1);

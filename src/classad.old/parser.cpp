@@ -662,7 +662,7 @@ ParseAssignExpr(const char *& s, ExprTree*& newTree, int& count)
     ExprTree* 	lArg = NULL;
     ExprTree* 	rArg = NULL;
 
-    if(ParseExpr(s, lArg, count))
+    if(ParseExpr(s, lArg, count) && lArg->MyType() == LX_VARIABLE)
     {
 		t = LookToken(s);
 		if(t->type == LX_ASSIGN)
@@ -683,11 +683,6 @@ ParseAssignExpr(const char *& s, ExprTree*& newTree, int& count)
 				newTree = new AssignOp(lArg, rArg);
 				return FALSE;
 			}
-		}
-		else if(t->type == LX_EOF)
-		{
-			newTree = lArg;
-			return TRUE;
 		}
     }
     newTree = lArg;
