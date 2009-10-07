@@ -865,6 +865,12 @@ Scheduler::count_jobs()
 	sprintf(tmp, "%s = %d", ATTR_TOTAL_REMOVED_JOBS, JobsRemoved);
 	m_ad->Insert (tmp);
 
+	m_ad->Assign(ATTR_TOTAL_LOCAL_IDLE_JOBS, LocalUniverseJobsIdle);
+	m_ad->Assign(ATTR_TOTAL_LOCAL_RUNNING_JOBS, LocalUniverseJobsRunning);
+	
+	m_ad->Assign(ATTR_TOTAL_SCHEDULER_IDLE_JOBS, SchedUniverseJobsIdle);
+	m_ad->Assign(ATTR_TOTAL_SCHEDULER_RUNNING_JOBS, SchedUniverseJobsRunning);
+
 	m_ad->Assign(ATTR_SCHEDD_SWAP_EXHAUSTED, (bool)SwapSpaceExhausted);
 
     daemonCore->publish(m_ad);
@@ -929,6 +935,11 @@ Scheduler::count_jobs()
 	m_ad->Delete (ATTR_TOTAL_HELD_JOBS);
 	m_ad->Delete (ATTR_TOTAL_FLOCKED_JOBS);
 	m_ad->Delete (ATTR_TOTAL_REMOVED_JOBS);
+	m_ad->Delete (ATTR_TOTAL_LOCAL_IDLE_JOBS);
+	m_ad->Delete (ATTR_TOTAL_LOCAL_RUNNING_JOBS);
+	m_ad->Delete (ATTR_TOTAL_SCHEDULER_IDLE_JOBS);
+	m_ad->Delete (ATTR_TOTAL_SCHEDULER_RUNNING_JOBS);
+
 	sprintf(tmp, "%s = \"%s\"", ATTR_SCHEDD_NAME, Name);
 	m_ad->InsertOrUpdate(tmp);
 
