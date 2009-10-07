@@ -158,7 +158,7 @@ externals::
 
 help::
 	@echo "object: all release stripped static testbin libs externals public"
-	@echo "special: h makefiles Directories Libraries examples"
+	@echo "special: h makefiles examples"
 	@echo "clean: clean reallyclean/really-clean/clean-up"
 
 simple_dir_target(testbin_dir)
