@@ -40,7 +40,7 @@ sub print_usage();
 # Autoflush the output
 $| = 1;
 
-use vars qw/ $opt_help $opt_sys $opt_version $opt_libc $opt_tarcmd $opt_cpcmd $opt_slinkcmd $opt_target $opt_linktype/;
+use vars qw/ $opt_help $opt_sys $opt_version $opt_libc $opt_tarcmd $opt_cpcmd $opt_slinkcmd $opt_target $opt_linktype $opt_arch $opt_opsys $opt_platform /;
 
 GetOptions ( 'help'              => \$opt_help,
              'sys=s'             => \$opt_sys,
@@ -50,11 +50,16 @@ GetOptions ( 'help'              => \$opt_help,
              'cpcmd=s'           => \$opt_cpcmd,
              'slinkcmd=s'        => \$opt_slinkcmd,
              'linktype=s'        => \$opt_linktype,
-             'target=s'          => \$opt_target);
+             'target=s'          => \$opt_target,
+             'arch=s'            => \$opt_arch,
+             'opsys=s'           => \$opt_opsys,
+             'platform=s'        => \$opt_platform,
+			 );
 
 # Deal with any command-line args we are passed:
 
-my ($sys, $versarg, $libc, $tar_cmd, $cp_cmd, $slink_cmd, $target);
+my ( $sys, $versarg, $libc, $tar_cmd, $cp_cmd, $slink_cmd, $target,
+	 $arch, $opsys, $platform );
 
 if (defined($opt_help)) {
     print_usage(); exit 0;
@@ -79,6 +84,15 @@ if (defined($opt_slinkcmd)) {
 }
 if (defined($opt_target)) {
     $target = $opt_target;
+}
+if (defined($opt_arch)) {
+    $arch = $opt_arch;
+}
+if (defined($opt_opsys)) {
+    $opsys = $opt_opsys;
+}
+if (defined($opt_platform)) {
+    $platform = $opt_platform;
 }
 
 my @linktypes;
@@ -289,7 +303,8 @@ my %opsysname = (
   "x86_64_macosx105"   => "MacOSX10.5",
   "x86_64_rhel3"  => "linux",
   "x86_64_rhel4"  => "linux",
-  "x86_64_rhel5"  => "linux"
+  "x86_64_rhel5"  => "linux",
+  "x86_64_rhel51" => "linux",
 );
 
 my %archname = (
@@ -363,7 +378,8 @@ my %archname = (
   "x86_64_rhel3"  => "x86_64",
   "x86_64_rhel4"  => "x86_64",
   "x86_64_rhel51"  => "x86_64",
-  "x86_64_rhel5"  => "x86_64"
+  "x86_64_rhel5"  => "x86_64",
+  "x86_64_rhel51"  => "x86_64",
 );
 
 
@@ -413,10 +429,51 @@ my %libcname = (
   "x86_64_fc4"     => "fedoracore4",
   "x86_64_fc5"     => "fedoracore5",
   "x86_64_fc6"     => "fedoracore6",
-  "x86_64_rhel3"  => "rhel3",
-  "x86_64_rhel4"  => "rhel4",
-  "x86_64_rhel5"  => "rhel5"
+  "x86_64_rhel3"   => "rhel3",
+  "x86_64_rhel4"   => "rhel4",
+  "x86_64_rhel5"   => "rhel5",
+  "x86_64_rhel51"  => "rhel51",
 );
+
+# #########################
+# Sanity check the tables
+# #########################
+my %sysnames;
+foreach my $key ( keys %opsysname, keys %archname, keys %libcname ) {
+	$sysnames{$key} = 1;
+}
+
+my $errors = 0;
+foreach my $key ( keys %sysnames ) {
+	if ( !exists $archname{$key} ) {
+		print STDERR "'$key' not in archname table\n";
+		$errors++;
+	}
+	if ( !exists $opsysname{$key} ) {
+		print STDERR "'$key' not in opsysname table\n";
+		$errors++;
+	}
+	if ( !exists $libcname{$key} ) {
+		$libcname{$key} = "";
+	}
+}
+foreach my $key ( keys %sysnames ) {
+	foreach my $key2 ( keys %sysnames ) {
+		if( ( $key ne $key2 )  and
+			( exists $archname{$key} ) and
+			( exists $archname{$key2} ) and
+			( exists $libcname{$key} ) and
+			( exists $libcname{$key2} ) and
+			( $libcname{$key} ne "" ) and
+			( $archname{$key} eq $archname{$key2} ) and
+			( $libcname{$key} eq $libcname{$key2} ) ) {
+			print STDERR
+				"Duplicate libc for '$key' and '$key2' '$libcname{$key}'\n";
+			$errors++;
+		}
+	}
+}
+die "$errors table error(s) found\n" if( $errors );
 
 
 umask(022);
@@ -434,10 +491,28 @@ if( ! $target) {
 if( ! $sys ) {
     $sys=`sys`;
     chomp($sys);
-} 
-my $arch = $archname{$sys};
-my $opsys = $opsysname{$sys};
-$libc = $libcname{$sys};
+}
+if( ( !defined $platform )  or  ( $platform eq "" ) ) {
+	if ( !exists $archname{$sys} ) {
+		my @t;
+		push( @t, "platform" )         if ( !defined $platform );
+		push( @t, "architecture" )     if ( !defined $arch );
+		push( @t, "libc" )             if ( !defined $libc );
+		push( @t, "operating system" ) if ( !defined $opsys );
+		if ( scalar @t ) {
+			die join(", ", @t ) . " not defined and '$sys' not in the tables";
+		}
+	}
+
+	$arch = $archname{$sys}   if( !defined $arch );
+	$opsys = $opsysname{$sys} if( !defined $opsys );
+	$libc = $libcname{$sys}   if( !defined $libc );
+
+	$platform="$opsys-$arch";
+	if( $libc ne "" ) {
+		$platform .= "-$libc";
+	}
+}
 
 if( ! $tar_cmd ) {
     $tar_cmd = "tar --owner=root --group=root";
@@ -558,15 +633,12 @@ foreach my $name ( sort keys %modules ) {
 		print runcmd( $clean_cmd, undef );
 
 		# Figure out what our filenames should look like.
-		my $platform="$opsys-$arch";
-		if( $libc ) {
-	    	$platform .= "-$libc";
-		}
+		my $full = $platform;
 		if( $linktype =~ /dynamic/ ) {
-	    	$platform .= "-dynamic";
+	    	$full .= "-dynamic";
 		}
 		if( $linktype =~ /unstripped/ ) {
-	    	$platform .= "-unstripped";
+	    	$full .= "-unstripped";
 		}
 
 		# List of directories to clean up
@@ -607,7 +679,7 @@ foreach my $name ( sort keys %modules ) {
 
 		print "Renaming tarball to archecture specific name.\n";
 		runcmd("date && ".
-			   "time mv $skel/$release.tar $skel/$release-$platform.tar",
+			   "time mv $skel/$release.tar $skel/$release-$full.tar",
 			   undef);
 	
 		# Figure out where we want put this tarball
@@ -625,7 +697,7 @@ foreach my $name ( sort keys %modules ) {
 	    	print "mkdir($targetdir, 0777)\n";
 	    	mkdir( $targetdir, 0777 ) || die "Can't mkdir $targetdir: $!\n";
 		}
-		my $targetfile = "$targetdir/$release-$platform.tar";
+		my $targetfile = "$targetdir/$release-$full.tar";
 
 		# Make sure there's nothing in the way where we want to put it.
 		runcmd("unlink $targetfile", 1);
@@ -638,10 +710,10 @@ foreach my $name ( sort keys %modules ) {
 		# we already check for gzip (but not compress) on our build
 		# machines @ configure time, and some of our platforms don't
 		# put compress in a reasonable location... :(
-		runcmd("date && time gzip $skel/$release-$platform.tar", undef);
+		runcmd("date && time gzip $skel/$release-$full.tar", undef);
 
-		print "Moving $release-$platform.tar.gz into $targetdir\n";
-		runcmd("date && time mv $skel/$release-$platform.tar.gz $targetdir",
+		print "Moving $release-$full.tar.gz into $targetdir\n";
+		runcmd("date && time mv $skel/$release-$full.tar.gz $targetdir",
 			   undef);
 		print "done.\n";
 	}
@@ -699,6 +771,12 @@ This screen
 
 --linktype=<a set of one or more of:
    static, dynamic, unstripped-dynamic>
+
+--arch=<architecture>
+
+--opsys=<operating system name>
+
+--platform=<platform name string>
 
 END_USAGE
 }

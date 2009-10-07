@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <signal.h>
+#include "../config.h"
 
 volatile int signalcaught = 0;
 
@@ -31,14 +32,13 @@ struct sigaction old;
 
 void catchsig( int sig )
 {
-		printf("Generate lots of output.................\n");
-        printf("%d\n",sig);
-		fflush(stdout);
-		fsync(stdout);
-		printf("%d\n",sig);
-		fflush(stdout);
-		signalcaught = sig;
-		/*exit(sig);*/
+	printf("Generate lots of output.................\n");
+	printf("%d\n",sig);
+	fflush(stdout);
+	printf("%d\n",sig);
+	fflush(stdout);
+	signalcaught = sig;
+	/*exit(sig);*/
 }
 
 int main(int argc, char **argv)
@@ -137,7 +137,14 @@ int main(int argc, char **argv)
 	{
 		printf("failed to replace handler intr 14\n");
 	}
-	sigwait(&set,&caughtsig);
+
+# if (SIGWAIT_ARGS == 2)
+	sigwait( &set, &caughtsig );
+# elif (STATFS_ARGS == 1)
+	caughtsig = sigwait( &set );
+# else
+#  error "Unknown sigwait() implemenation"
+# endif
 	sleep(1);
 	printf("%d\n",caughtsig);
 	fflush(stdout);

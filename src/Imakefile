@@ -156,6 +156,11 @@ testbin:: release
 libs:: h h_all externals condor_includes makefiles Directories Libraries
 externals::
 
+help::
+	@echo "object: all release stripped static testbin libs externals public"
+	@echo "special: h makefiles examples"
+	@echo "clean: clean reallyclean/really-clean/clean-up"
+
 simple_dir_target(testbin_dir)
 simple_dir_target(release_dir)
 simple_dir_target(release_dir/bin)
@@ -572,7 +577,7 @@ SHA1Constraint = --no-require-sha1
 
 public: release all_tarballs
 	if test ! -d ../public; then mkdir ../public; fi
-	perl condor_scripts/make_final_tarballs --sys=$(SYSNAME) --tarcmd="$(TAR_CMD)" --cpcmd="$(CP_CMD)" --target=../public
+	perl condor_scripts/make_final_tarballs --sys=$(SYSNAME) --platform=$(MFT_PLATFORM) --tarcmd="$(TAR_CMD)" --cpcmd="$(CP_CMD)" --target=../public
 	$(MakeRPMs)
 	perl condor_scripts/make_checksums --target=../public --md5sum="$(MD5SUM)" --sha1sum="$(SHA1SUM)" $(MD5Constraint) $(SHA1Constraint)
 
