@@ -1923,6 +1923,8 @@ Daemons::ExecMaster()
 	argv[i++] = NULL;
 
 	(void)execv(daemon_ptr[master]->process_name, argv);
+
+	free(argv);
 }
 
 // Function that actually does the restart of the master.

@@ -461,7 +461,7 @@ Claim::publishStateTimes( ClassAd* cad )
 
 
 void
-Claim::dprintf( int flags, char* fmt, ... )
+Claim::dprintf( int flags, const char* fmt, ... )
 {
 	va_list args;
 	va_start( args, fmt );
@@ -931,7 +931,7 @@ Claim::sendAlive()
 int
 Claim::sendAliveConnectHandler(Stream *s)
 {
-	char* c_addr = "(unknown)";
+	const char* c_addr = "(unknown)";
 	if ( c_client ) {
 		c_addr = c_client->addr();
 	}
@@ -1012,7 +1012,7 @@ int
 Claim::sendAliveResponseHandler( Stream *sock )
 {
 	int reply;
-	char* c_addr = "(unknown)";
+	const char* c_addr = "(unknown)";
 
 	if ( c_client ) {
 		c_addr = c_client->addr();
@@ -1064,7 +1064,9 @@ Claim::leaseExpired()
 		if( removeClaim(false) ) {
 				// There is no starter, so remove immediately.
 				// Otherwise, we will be removed when starter exits.
-			getCODMgr()->removeClaim(this);
+			CODMgr* pCODMgr = getCODMgr();
+			if (pCODMgr)
+				pCODMgr->removeClaim(this);
 		}
 		return TRUE;
 	}

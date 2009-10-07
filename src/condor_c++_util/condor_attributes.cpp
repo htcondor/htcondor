@@ -776,7 +776,6 @@ const char * const ATTR_TERMINATION_REASON	= "TerminationReason";
 
 // VM universe
 const char * const ATTR_VM_TYPE    = "VM_Type";
-const char * const ATTR_VM_VERSION = "VM_Version";
 const char * const ATTR_VM_MEMORY = "VM_Memory";
 const char * const ATTR_VM_NETWORKING = "VM_Networking";
 const char * const ATTR_VM_NETWORKING_TYPES = "VM_Networking_Types";

@@ -484,7 +484,9 @@ Starter::reallykill( int signo, int type )
 		if( sig != SIGSTOP && sig != SIGCONT && sig != SIGKILL ) {
 			if( type == 1 ) { 
 				ret = ::kill( -(s_pid), SIGCONT );
-			} else if( type == 0 ) {
+			} else if( type == 0 && 
+						!daemonCore->ProcessExitedButNotReaped(s_pid)) 
+			{
 				ret = ::kill( (s_pid), SIGCONT );
 			}
 		}
@@ -506,7 +508,9 @@ Starter::reallykill( int signo, int type )
 		} 
 #ifndef WIN32
 		else {
-			ret = ::kill( (s_pid), sig );
+			if (!daemonCore->ProcessExitedButNotReaped(s_pid)) {
+				ret = ::kill( (s_pid), sig );
+			}
 			break;
 		}
 #endif /* ! WIN32 */
@@ -1109,7 +1113,7 @@ Starter::active()
 	
 
 void
-Starter::dprintf( int flags, char* fmt, ... )
+Starter::dprintf( int flags, const char* fmt, ... )
 {
 	va_list args;
 	va_start( args, fmt );

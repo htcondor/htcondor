@@ -946,22 +946,6 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=vm-gahp,vmgahp_config
 id=17
 
-[VM_VERSION]
-aliases=
-default=
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Vm Version
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=vm-gahp,vmgahp_config
-id=18
-
 [VM_MAX_MEMORY]
 aliases=
 default=0
@@ -3459,22 +3443,6 @@ usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=daemon_core,daemon_core
 id=175
-
-[FAKE_CREATE_THREAD]
-aliases=
-default=true
-version=0.0.0
-range=.*
-state=default
-type=bool
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Fake Create Thread
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=daemon_core,daemon_core
-id=176
 
 [NOT_RESPONDING_TIMEOUT]
 aliases=

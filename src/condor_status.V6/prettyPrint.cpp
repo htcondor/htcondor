@@ -211,8 +211,8 @@ printStartdNormal (ClassAd *ad)
 		// instead of ATTR_MEMORY
 		opsys_name = "VMType";
 		opsys_attr = ATTR_VM_TYPE;
-		arch_name = "Ver";
-		arch_attr = ATTR_VM_VERSION;	
+		arch_name = "Network";
+		arch_attr = ATTR_VM_NETWORKING_TYPES;
 		mem_name = "VMMem";
 		mem_attr = ATTR_VM_MEMORY;
 	} else {
@@ -237,20 +237,20 @@ printStartdNormal (ClassAd *ad)
 						ATTR_LOAD_AVG, mem_name, "ActvtyTime");
 			}
 		
-			alpm.registerFormat("%-18.18s ", ATTR_NAME, "[???????????] ");
+			alpm.registerFormat("%-18.18s ", ATTR_NAME, "[????????????????] ");
 
 			if( vmMode ) {
 				alpm.registerFormat("%-6.6s " , opsys_attr, "[????] ");
 				alpm.registerFormat("%-10.10s " , arch_attr, "[????????] ");
 			}else {
-				alpm.registerFormat("%-10.10s " , opsys_attr, "[?????????] ");
+				alpm.registerFormat("%-10.10s " , opsys_attr, "[????????] ");
 				alpm.registerFormat("%-6.6s " , arch_attr, "[????] ");
 			}
 
-			alpm.registerFormat("%-9.9s ",  ATTR_STATE), "[????????] ";
-			alpm.registerFormat("%-8.8s ",  ATTR_ACTIVITY, "[????????] ");
+			alpm.registerFormat("%-9.9s ",  ATTR_STATE, "[???????] ");
+			alpm.registerFormat("%-8.8s ",  ATTR_ACTIVITY, "[??????] ");
 			alpm.registerFormat("%.3f  ",  ATTR_LOAD_AVG, "[???]  ");
-			alpm.registerFormat("%4d",  mem_attr, "[??]  ");
+			alpm.registerFormat("%4d",  mem_attr, "[??]");
 
 			first = false;
 		}
@@ -263,19 +263,6 @@ printStartdNormal (ClassAd *ad)
 			printf("%s", format_time(actvty));
 		} else {
 			printf("   [Unknown]");
-		}
-
-		if( vmMode ) {
-			bool vm_networking = false;
-			MyString networking_types;
-
-			ad->LookupBool(ATTR_VM_NETWORKING, vm_networking);
-			if( vm_networking && ( ad->LookupString( ATTR_VM_NETWORKING_TYPES,
-							networking_types) == 1 )) {
-				printf( " %s", networking_types.Value());
-			}else {
-				printf(" [Not-Supported]");
-			}
 		}
 
 		printf("\n");
@@ -304,7 +291,7 @@ printServer (ClassAd *ad)
 			alpm.registerFormat("%-6.6s " , ATTR_ARCH, "[????] ");
 			alpm.registerFormat("%.3f  ",  ATTR_LOAD_AVG, "[???]  ");
 			alpm.registerFormat("%6d  ",  ATTR_MEMORY, "[????]  ");
-			alpm.registerFormat("%7d ",  ATTR_DISK, "[?????]");
+			alpm.registerFormat("%7d ",  ATTR_DISK, "[?????] ");
 			alpm.registerFormat("%10d ", ATTR_MIPS, "[????????] ");
 			alpm.registerFormat("%10d\n", ATTR_KFLOPS, "[????????]\n");
 
@@ -334,20 +321,20 @@ printState (ClassAd *ad)
 				ATTR_ACTIVITY, "ActvtyTime");
 		
 			alpm.registerFormat("%-10.10s ", ATTR_NAME, "[????????] ");
-			alpm.registerFormat("%3d " , ATTR_CPUS, "[??] ");
+			alpm.registerFormat("%3d " , ATTR_CPUS, "[?] ");
 			alpm.registerFormat("%5d " , ATTR_MEMORY, "[???] ");
-			alpm.registerFormat("%.3f ", ATTR_LOAD_AVG, "[???]  ");
+			alpm.registerFormat("%.3f ", ATTR_LOAD_AVG, "[???] ");
 			alpm.registerFormat( (IntCustomFmt) format_time,
 									ATTR_KEYBOARD_IDLE,
-									"[??????????] ");
-			alpm.registerFormat(" %-7.7s ",  ATTR_STATE, "[????????]  ");
+									"[??????????]");
+			alpm.registerFormat(" %-7.7s ",  ATTR_STATE, " [?????] ");
 			alpm.registerFormat( (IntCustomFmt) formatElapsedTime,
 									ATTR_ENTERED_CURRENT_STATE,
-									"[??????????] ");
-			alpm.registerFormat(" %-4.4s ",  ATTR_ACTIVITY, "[????????]  ");
+									"[??????????]");
+			alpm.registerFormat(" %-4.4s ",  ATTR_ACTIVITY, " [??] ");
 			alpm.registerFormat( (IntCustomFmt) formatElapsedTime,
 									ATTR_ENTERED_CURRENT_ACTIVITY,
-									"[??????????] ");
+									"[??????????]");
 			alpm.registerFormat("\n", "*bogus*", "\n");  // force newline
 
 			first = false;
@@ -373,8 +360,8 @@ printRun (ClassAd *ad)
 	} else if(vmMode) {
 		opsys_name = "VMType";
 		opsys_attr = ATTR_VM_TYPE;
-		arch_name = "Ver";
-		arch_attr = ATTR_VM_VERSION;	
+		arch_name = "Network";
+		arch_attr = ATTR_VM_NETWORKING_TYPES;
 	} else {
 		opsys_name = opsys_attr = ATTR_OPSYS;
 		arch_name = arch_attr = ATTR_ARCH;
@@ -386,11 +373,11 @@ printRun (ClassAd *ad)
 		if (first)
 		{
 			if(vmMode) {
-				printf ("\n%-13.13s %-11.11s %-6.6s %-6.6s %-20.20s %-15.15s\n\n",
+				printf ("\n%-13.13s %-6.6s %-11.11s %-6.6s %-20.20s %-15.15s\n\n",
 						ATTR_NAME, opsys_name, arch_name, ATTR_LOAD_AVG,
 						ATTR_REMOTE_USER, ATTR_CLIENT_MACHINE);
 			}else {
-				printf ("\n%-13.13s %-6.6s %-11.11s %-6.6s %-20.20s %-15.15s\n\n",
+				printf ("\n%-13.13s %-11.11s %-6.6s %-6.6s %-20.20s %-15.15s\n\n",
 						ATTR_NAME, opsys_name, arch_name, ATTR_LOAD_AVG,
 						ATTR_REMOTE_USER, ATTR_CLIENT_MACHINE);
 			}
@@ -650,8 +637,8 @@ printCkptSrvrNormal(ClassAd *ad)
 		{
 			printf ("\n%-20.20s %-9.9s %-11.11s\n\n", ATTR_NAME,
 					"AvailDisk", ATTR_SUBNET);
-			alpm.registerFormat("%-20.20s ", ATTR_NAME, "[??????????????????]");
-			alpm.registerFormat("%9d ", ATTR_DISK, "[?????]");
+			alpm.registerFormat("%-20.20s ", ATTR_NAME, "[??????????????????] ");
+			alpm.registerFormat("%9d ", ATTR_DISK, "[???????] ");
 			alpm.registerFormat("%-11s\n", ATTR_SUBNET, "[?????]\n");
 			first = false;
 		}
@@ -674,8 +661,8 @@ printStorageNormal(ClassAd *ad)
 		{
 			printf ("\n%-30.30s %-9.9s %-11.11s\n\n", ATTR_NAME,
 					"AvailDisk", ATTR_SUBNET);
-			alpm.registerFormat("%-30.30s ", ATTR_NAME, "[??????????????????]");
-			alpm.registerFormat("%9d ", ATTR_DISK, "[?????]");
+			alpm.registerFormat("%-30.30s ", ATTR_NAME, "[????????????????????????????] ");
+			alpm.registerFormat("%9d ", ATTR_DISK, "[???????] ");
 			alpm.registerFormat("%-11s\n", ATTR_SUBNET, "[?????]\n");
 			first = false;
 		}
@@ -699,7 +686,7 @@ printGridNormal(ClassAd *ad)
 				ATTR_NAME, "NumJobs", "Allowed", "Wanted", "Running", "Idle" );
 			
 			alpm.registerFormat("%-35.35s ", ATTR_NAME, 
-				"[?????????????????????????????????]" );
+				"[?????????????????????????????????] " );
 			alpm.registerFormat ( "%-7d ", "NumJobs",
 				"[?????] " );
 			alpm.registerFormat ( "%-7d ", "SubmitsAllowed",

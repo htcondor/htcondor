@@ -752,7 +752,7 @@ do_cleanup(int,int,char*)
 			// If the machine is already free, we can exit right away.
 		startd_check_free();		
 			// Otherwise, quickly kill all the active starters.
-		resmgr->walk( &Resource::kill_claim );
+		resmgr->walk( &Resource::void_kill_claim );
 		dprintf( D_FAILURE|D_ALWAYS, "startd exiting because of fatal exception.\n" );
 	}
 
