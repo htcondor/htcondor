@@ -3201,6 +3201,7 @@ int FileTransfer::InitializePlugins(CondorError &e) {
 		}
 	}
 
+	free(plugin_list_string);
 	return 0;
 }
 
