@@ -31,6 +31,7 @@
 #include "enum_utils.h"
 #include "condor_holdcodes.h"
 #include "classad_helpers.h"
+#include "classad_merge.h"
 
 #include <math.h>
 
@@ -1138,7 +1139,7 @@ BaseShadow::evalPeriodicUserPolicy( void )
 		if( ConnectQ( scheddAddr, SHADOW_QMGMT_TIMEOUT ) ) {
 			ClassAd *new_ad = GetJobAd(cluster, proc);
 			if ( new_ad ) {
-				jobAd->ExchangeExpressions( new_ad );
+				MergeClassAds( jobAd, new_ad, true );
 				delete new_ad;
 			} else {
 				dprintf( D_ALWAYS, "Failed to fetch updated ad!\n" );
