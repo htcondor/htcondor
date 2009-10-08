@@ -44,10 +44,6 @@ static	SortFunctionType SortSmallerThan;
 static	void* SortInfo;
 static  const char *empty_string = "";
 
-#if defined(USE_XDR)
-extern "C" int xdr_mywrapstring (XDR *, char **);
-#endif
-
 // useful when debugging (std* are macros)
 FILE *__stdin__  = stdin;
 FILE *__stdout__ = stdout;
@@ -99,36 +95,7 @@ ClassAd::ClassAd() : AttrList()
 {
 	myType = NULL;
 	targetType = NULL;
-	// SetRankExpr ("Rank = 0");
-	// SetRequirements ("Requirements = TRUE");
 }
-
-#if 0 /* don't want to link with ProcObj class; we shouldn't need this */
-ClassAd::ClassAd(class ProcObj* procObj) : AttrList(procObj)
-{
-	myType = NULL;
-	targetType = NULL;
-	// SetRankExpr ("Rank = 0");
-	// SetRequirements ("Requirements = TRUE");
-}
-#endif
-
-#if 0 // dont use CONTEXTs anymore
-ClassAd::ClassAd(const CONTEXT* context) : AttrList((CONTEXT *) context)
-{
-	myType = NULL;
-	targetType = NULL;
-	if (!Lookup ("Requirements"))
-	{
-		SetRequirements ("Requirements = TRUE");
-	}
-
-	if (!Lookup ("Rank"))
-	{
-    	SetRankExpr ("Rank = 0");
-	}
-}
-#endif
 
 ClassAd::
 ClassAd(FILE* f, char* d, int& i, int &err, int &empty) 
@@ -429,92 +396,6 @@ int ClassAd::GetTargetTypeNumber()
     {
         return targetType->number;
     }
-}
-
-
-// Requirement expression management functions
-#if 0
-int ClassAd::
-SetRequirements (char *expr)
-{
-	ExprTree *tree;
-	int result = Parse (expr, tree);
-	if (result != 0)
-	{
-		delete tree;
-		return -1;		
-	}
-	SetRequirements (tree);	
-	return 0;
-}
-
-void ClassAd::
-SetRequirements (ExprTree *tree)
-{
-	if (!AttrList::Insert (tree))
-	{
-		AttrList::UpdateExpr (tree);
-		delete tree;
-	}
-}
-#endif
-
-ExprTree *ClassAd::
-GetRequirements (void)
-{
-	return Lookup (ATTR_REQUIREMENTS);
-}
-
-//
-// Implementation of rank expressions is same as the requirement --RR
-//
-#if 0
-int ClassAd::
-SetRankExpr (char *expr)
-{
-    ExprTree *tree;
-    int result = Parse (expr, tree);
-    if (result != 0)
-    {
-        delete tree;
-        return -1;     
-    }
-    SetRankExpr (tree); 
-    return 0;
-}
-
-void ClassAd::
-SetRankExpr (ExprTree *tree)
-{
-	if (!AttrList::Insert (tree))
-	{
-		AttrList::UpdateExpr (tree);
-		delete tree;
-	}
-}
-#endif
-
-ExprTree *ClassAd::
-GetRankExpr (void)
-{
-    return Lookup (ATTR_RANK);
-}
-
-
-//
-// Set and get sequence numbers --- stored in the attrlist
-//
-void ClassAd::
-SetSequenceNumber (int num)
-{
-	seq = num;
-}
-
-
-int ClassAd::
-GetSequenceNumber (void)
-{
-	return seq;
 }
 
 
@@ -840,68 +721,6 @@ ClassAd::initFromStream(Stream& s)
 }
 
 
-#if defined(USE_XDR)
-int ClassAd::put (XDR *xdrs)
-{
-	char*	tmp = NULL;
-
-	xdrs->x_op = XDR_ENCODE;
-
-	if (!AttrList::put (xdrs))
-		return 0;
-
-	if(myType)
-	{
-		if (!xdr_mywrapstring (xdrs, &myType->name))
-			return 0;
-	}
-	else
-	{
-		if (!xdr_mywrapstring (xdrs, &tmp))
-			return 0;
-	}
-
-	if(targetType)
-	{
-		if (!xdr_mywrapstring (xdrs, &targetType->name))
-			return 0;
-	}
-	else
-	{
-		if (!xdr_mywrapstring (xdrs, &tmp))
-			return 0;
-	}
-
-	return 1;
-}
-
-
-int ClassAd::get (XDR *xdrs)
-{
-	char buf[100];
-	char *line = buf;
-
-	if (!line) return 0;
-
-	xdrs->x_op = XDR_DECODE;
-
-	if (!AttrList::get (xdrs)) 
-		return 0;
-
-	if (!xdr_mywrapstring (xdrs, &line)) 
-		return 0;
-
-	SetMyTypeName (line);
-
-	if (!xdr_mywrapstring (xdrs, &line)) 
-		return 0;
-
-	SetTargetTypeName (line);
-
-	return 1;
-}
-#endif
-
 void ClassAd::
 ExchangeExpressions (ClassAd *ad)
 {
@@ -921,7 +740,6 @@ ExchangeExpressions (ClassAd *ad)
     SWAP(tail, ad->tail, tmp1);
     SWAP(ptrExpr, ad->ptrExpr, tmp1);
     SWAP(ptrName, ad->ptrName, tmp1);
-    SWAP(seq, ad->seq, tmp3);                      // this is an int
 
     // undefine macro to decrease name-space pollution
 #   undef SWAP
