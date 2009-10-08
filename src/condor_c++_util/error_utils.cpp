@@ -59,7 +59,7 @@ printNoCollectorContact( FILE* fp, const char* addr, bool verbose )
 		fprintf( fp, "\n" );
 		snprintf( error_message, 1000,
 				 "If you are the system administrator, check that the "
-				 "condor_collector is running on %s, check the HOSTALLOW "
+				 "condor_collector is running on %s, check the ALLOW/DENY "
 				 "configuration in your condor_config, and check the "
 				 "MasterLog and CollectorLog files in your log directory "
 				 "for possible clues as to why the condor_collector "

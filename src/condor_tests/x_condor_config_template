@@ -161,21 +161,21 @@ FLOCK_COLLECTOR_HOSTS = $(FLOCK_TO)
 ##  machine(s) where whoever is the condor administrator(s) works
 ##  (assuming you trust all the users who log into that/those
 ##  machine(s), since this is machine-wide access you're granting).
-HOSTALLOW_ADMINISTRATOR = $(CONDOR_HOST)
+ALLOW_ADMINISTRATOR = $(CONDOR_HOST)
 
 ##  If there are no machines that should have administrative access 
 ##  to your pool (for example, there's no machine where only trusted
 ##  users have accounts), you can uncomment this setting.
 ##  Unfortunately, this will mean that administering your pool will 
 ##  be more difficult.
-#HOSTDENY_ADMINISTRATOR = *
+#DENY_ADMINISTRATOR = *
 
 ##  What machines should have "owner" access to your machines, meaning
 ##  they can issue commands that a machine owner should be able to
 ##  issue to their own machine (like condor_vacate).  This defaults to
 ##  machines with administrator access, and the local machine.  This
 ##  is probably what you want.
-HOSTALLOW_OWNER = $(FULL_HOSTNAME), $(HOSTALLOW_ADMINISTRATOR)
+ALLOW_OWNER = $(FULL_HOSTNAME), $(ALLOW_ADMINISTRATOR)
 
 ##  Read access.  Machines listed as allow (and/or not listed as deny)
 ##  can view the status of your pool, but cannot join your pool 
@@ -187,43 +187,43 @@ HOSTALLOW_OWNER = $(FULL_HOSTNAME), $(HOSTALLOW_ADMINISTRATOR)
 ##  will be able to view the status of your pool and more easily help
 ##  you install, configure or debug your Condor installation.
 ##  It is important to have this defined.
-HOSTALLOW_READ = * 
-#HOSTALLOW_READ = *.your.domain, *.cs.wisc.edu
-#HOSTDENY_READ = *.bad.subnet, bad-machine.your.domain, 144.77.88.*
+ALLOW_READ = * 
+#ALLOW_READ = *.your.domain, *.cs.wisc.edu
+#DENY_READ = *.bad.subnet, bad-machine.your.domain, 144.77.88.*
 
 ##  Write access.  Machines listed here can join your pool, submit
 ##  jobs, etc.  Note: Any machine which has WRITE access must
 ##  also be granted READ access.  Granting WRITE access below does
 ##  not also automatically grant READ access; you must change
-##  HOSTALLOW_READ above as well.
+##  ALLOW_READ above as well.
 ##  If you leave it as it is, it will be unspecified, and effectively
 ##  it will be allowing anyone to write to your pool.
-HOSTALLOW_WRITE = *
-#HOSTALLOW_WRITE = *.your.domain, your-friend's-machine.other.domain
-#HOSTDENY_WRITE = bad-machine.your.domain
+ALLOW_WRITE = *
+#ALLOW_WRITE = *.your.domain, your-friend's-machine.other.domain
+#DENY_WRITE = bad-machine.your.domain
 
 ##  Negotiator access.  Machines listed here are trusted central
 ##  managers.  You should normally not have to change this.
-HOSTALLOW_NEGOTIATOR = $(NEGOTIATOR_HOST)
+ALLOW_NEGOTIATOR = $(NEGOTIATOR_HOST)
 ##  Now, with flocking we need to let the SCHEDD trust the other 
 ##  negotiators we are flocking with as well.  You should normally 
 ##  not have to change this either.
-HOSTALLOW_NEGOTIATOR_SCHEDD = $(NEGOTIATOR_HOST), $(FLOCK_NEGOTIATOR_HOSTS)
+ALLOW_NEGOTIATOR_SCHEDD = $(NEGOTIATOR_HOST), $(FLOCK_NEGOTIATOR_HOSTS)
 
 ##  Config access.  Machines listed here can use the condor_config_val
 ##  tool to modify all daemon configurations except those specified in
 ##  the condor_config.root file.  This level of host-wide access
 ##  should only be granted with extreme caution.  By default, config
 ##  access is denied from all hosts.
-#HOSTALLOW_CONFIG = trusted-host.your.domain
+#ALLOW_CONFIG = trusted-host.your.domain
 
 ##  Flocking Configs.  These are the real things that Condor looks at,
 ##  but we set them from the FLOCK_FROM/TO macros above.  It is safe
 ##  to leave these unchanged.
-HOSTALLOW_WRITE_COLLECTOR = $(HOSTALLOW_WRITE), $(FLOCK_FROM)
-HOSTALLOW_WRITE_STARTD    = $(HOSTALLOW_WRITE), $(FLOCK_FROM)
-HOSTALLOW_READ_COLLECTOR  = $(HOSTALLOW_READ), $(FLOCK_FROM)
-HOSTALLOW_READ_STARTD     = $(HOSTALLOW_READ), $(FLOCK_FROM)
+ALLOW_WRITE_COLLECTOR = $(ALLOW_WRITE), $(FLOCK_FROM)
+ALLOW_WRITE_STARTD    = $(ALLOW_WRITE), $(FLOCK_FROM)
+ALLOW_READ_COLLECTOR  = $(ALLOW_READ), $(FLOCK_FROM)
+ALLOW_READ_STARTD     = $(ALLOW_READ), $(FLOCK_FROM)
 
 ##--------------------------------------------------------------------
 ##  Security parameters for setting configuration values remotely:
@@ -237,7 +237,7 @@ HOSTALLOW_READ_STARTD     = $(HOSTALLOW_READ), $(FLOCK_FROM)
 ##  defined, no attributes can be set with condor_config_val.
 
 ##  Attributes that can be set by hosts with "CONFIG" permission (as
-##  defined with HOSTALLOW_CONFIG and HOSTDENY_CONFIG above).
+##  defined with ALLOW_CONFIG and DENY_CONFIG above).
 ##  The commented-out value here was the default behavior of Condor
 ##  prior to version 6.3.3.  If you don't need this behavior, you
 ##  should leave this commented out.

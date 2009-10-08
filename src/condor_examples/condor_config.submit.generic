@@ -88,7 +88,7 @@ FILESYSTEM_DOMAIN	= your.domain
 ##--------------------------------------------------------------------
 ##  If you would like to run your jobs in other pools, add the central
 ##  manager hosts for those pools here.  You must also add
-##  $(FLOCK_HOSTS) to HOSTALLOW_NEGOTIATOR_SCHEDD below.
+##  $(FLOCK_HOSTS) to ALLOW_NEGOTIATOR_SCHEDD below.
 #FLOCK_HOSTS = condor.friendly.domain, condor.cs.wisc.edu
 
 ##--------------------------------------------------------------------
@@ -102,14 +102,14 @@ FILESYSTEM_DOMAIN	= your.domain
 ##  machine(s) where whoever is the condor administrator(s) works
 ##  (assuming you trust all the users who log into that/those
 ##  machine(s), since this is machine-wide access you're granting).
-HOSTALLOW_ADMINISTRATOR = $(CONDOR_HOST)
+ALLOW_ADMINISTRATOR = $(CONDOR_HOST)
 
 ##  If there are no machines that should have administrative access 
 ##  to your pool (for example, there's no machine where only trusted
 ##  users have accounts), you can uncomment this setting.
 ##  Unfortunately, this will mean that administering your pool will 
 ##  be more difficult.
-#HOSTDENY_ADMINISTRATOR = *
+#DENY_ADMINISTRATOR = *
 
 ##  Read access.  Machines listed as allow (and/or not listed as deny)
 ##  can view the status of your pool, etc.
@@ -119,18 +119,18 @@ HOSTALLOW_ADMINISTRATOR = $(CONDOR_HOST)
 ##  grant read access to "*.cs.wisc.edu", so the Condor developers
 ##  will be able to view the status of your pool and more easily help
 ##  you install, configure or debug your Condor installation.
-#HOSTALLOW_READ = *.your.domain, *.cs.wisc.edu
-#HOSTDENY_READ = *.bad.subnet, bad-machine.your.domain, 144.77.88.*
+#ALLOW_READ = *.your.domain, *.cs.wisc.edu
+#DENY_READ = *.bad.subnet, bad-machine.your.domain, 144.77.88.*
 
 ##  Write access.  Machines listed here can join your pool, submit
 ##  jobs, etc.
-#HOSTALLOW_WRITE = *.your.domain, your-friend's-machine.other.domain
-#HOSTDENY_WRITE = bad-machine.your.domain
+#ALLOW_WRITE = *.your.domain, your-friend's-machine.other.domain
+#DENY_WRITE = bad-machine.your.domain
 
 ##  Negotiator access.  Machines listed here are trusted central
 ##  managers.
-HOSTALLOW_NEGOTIATOR = $(CONDOR_HOST)
-#HOSTALLOW_NEGOTIATOR_SCHEDD = $(CONDOR_HOST), $(FLOCK_HOSTS)
+ALLOW_NEGOTIATOR = $(CONDOR_HOST)
+#ALLOW_NEGOTIATOR_SCHEDD = $(CONDOR_HOST), $(FLOCK_HOSTS)
 
 ##--------------------------------------------------------------------
 ##  Network filesystem parameters:

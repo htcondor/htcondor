@@ -228,7 +228,7 @@ int main(int argc, char *argv[]) {
 				printf("    Make sure you have CONFIG access to the target Master.\n");
 			}
 			else {
-				printf("    Make sure your HOSTALLOW_WRITE setting includes this host.\n");
+				printf("    Make sure your ALLOW_WRITE setting includes this host.\n");
 			}
 			break;
 
