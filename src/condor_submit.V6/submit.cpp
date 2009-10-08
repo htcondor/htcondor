@@ -5783,6 +5783,7 @@ set_condor_param( const char *name, const char *value )
 	char *tval = strdup( value );
 
 	insert( name, tval, ProcVars, PROCVARSIZE );
+	free(tval);
 }
 
 void
