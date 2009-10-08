@@ -530,11 +530,8 @@ int CollectorDaemon::receive_invalidation(Service* /*s*/,
 										  int command,
 										  Stream* sock)
 {
-    struct sockaddr_in *from;
 	AdTypes whichAds;
 	ClassAd cad;
-
-	from = ((Sock*)sock)->peer_addr();
 
 	sock->decode();
 	sock->timeout(ClientTimeout);
@@ -711,6 +708,9 @@ int CollectorDaemon::receive_update(Service* /*s*/, int command, Stream* sock)
 				"Received malformed ad from command (%d). Ignoring.\n",
 				command);
 		}
+
+		return FALSE;
+
 	}
 
 #if ( HAVE_HIBERNATION )
