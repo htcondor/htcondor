@@ -258,6 +258,7 @@ UserProc::expand_exec_name( int &on_this_host )
 	free( m_a_out );
 	m_a_out = strdup( tmp );
 	FREE( tmp );
+	free(a_out);
 			
 
 	if( on_this_host ) {
