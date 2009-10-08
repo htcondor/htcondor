@@ -63,7 +63,7 @@
 class ProcFamilyInterface;
 
 #if defined(WIN32)
-#include "pipe.WIN32.h"
+#include "pipe.WINDOWS.h"
 #endif
 
 #define DEBUG_SETTABLE_ATTR_LISTS 0
@@ -221,7 +221,6 @@ int BindAnyCommandPort(ReliSock *rsock, SafeSock *ssock);
  */
 bool InitCommandSockets(int port, ReliSock *rsock, SafeSock *ssock,
 						bool fatal);
-
 
 class DCSignalMsg: public DCMsg {
  public:
@@ -765,12 +764,21 @@ class DaemonCore : public Service
 	*/
 	int Close_Pipe(int pipe_end);
 
+	int Get_Max_Pipe_Buffer() { return maxPipeBuffer; };
+
 #if !defined(WIN32)
 	/** Get the FD underlying the given pipe end. Returns FALSE
 	 *  if not given a valid pipe end.
 	*/
 	int Get_Pipe_FD(int pipe_end, int* fd);
 #endif
+
+	/** Close an anonymous pipe or file depending on its value
+		relative to PIPE_INDEX_OFFSET.  If the fd's value is 
+		>= PIPE_INDEX_OFFSET then it is a pipe; otherwise, it
+		is an file.
+		*/
+	int Close_FD(int fd);
 
 	/**
 	   Gain access to data written to a given DC process's std(out|err) pipe.
@@ -786,7 +794,7 @@ class DaemonCore : public Service
 
 	/**
 	   Write data to the given DC process's stdin pipe.
-	   @see Write_Pipe()
+	   @see pipeFullWrite()
 	*/
 	int Write_Stdin_Pipe(int pid, const void* buffer, int len);
 
@@ -814,6 +822,19 @@ class DaemonCore : public Service
     */
     int Register_Timer (unsigned     deltawhen,
                         Event        event,
+                        const char * event_descrip, 
+                        Service*     s = NULL);
+
+	/** Not_Yet_Documented
+        @param deltawhen       Not_Yet_Documented
+        @param event           Not_Yet_Documented
+        @param event_descrip   Not_Yet_Documented
+        @param s               Not_Yet_Documented
+        @return Not_Yet_Documented
+    */
+    int Register_Timer (unsigned     deltawhen,
+                        Event        event,
+						Release      release,
                         const char * event_descrip, 
                         Service*     s = NULL);
     
@@ -954,7 +975,8 @@ class DaemonCore : public Service
                used as argv[0].
         @param priv The priv state to change into right before
                the exec.  Default = no action.
-        @param reaper_id The reaper number to use.  Default = 1.
+        @param reaper_id The reaper number to use.  Default = 1. If a
+			   reaper_id of 0 is used, no reaper callback will be invoked.
         @param want_command_port Well, do you?  Default = TRUE.  If
 			   want_command_port it TRUE, the child process will be
 			   born with a daemonCore command socket on a dynamic port.
@@ -1326,6 +1348,8 @@ class DaemonCore : public Service
 		*/
 	void WantSendChildAlive( bool send_alive )
 		{ m_want_send_child_alive = send_alive; }
+	
+	void Wake_up_select();
 
 		/** Registers a socket for read and then calls HandleReq to
 			process a command on the socket once one becomes
@@ -1347,8 +1371,8 @@ class DaemonCore : public Service
 	void InitDCCommandSocket( int command_port );  // called in main()
 
     int HandleSigCommand(int command, Stream* stream);
-    int HandleReq(int socki);
-	int HandleReq(Stream *insock);
+    int HandleReq(int socki, Stream* accepted_sock=NULL);
+	int HandleReq(Stream *insock, Stream* accepted_sock=NULL);
 	int HandleReqSocketTimerHandler();
 	int HandleReqSocketHandler(Stream *stream);
     int HandleSig(int command, int sig);
@@ -1490,10 +1514,13 @@ class DaemonCore : public Service
 		bool			is_connect_pending;
 		bool			is_reverse_connect_pending;
 		bool			call_handler;
+		int				servicing_tid;	// tid servicing this socket
+		bool			remove_asap;	// remove when being_serviced==false
     };
     void              DumpSocketTable(int, const char* = NULL);
     int               maxSocket;  // number of socket handlers to start with
-    int               nSock;      // number of socket handlers used
+    int               nSock;      // number of socket handler slots in use use
+	int				  nRegisteredSocks; // number of sockets registered, always < nSock
 	int               nPendingSockets; // number of sockets waiting on timers or any other callbacks
     ExtArray<SockEnt> *sockTable; // socket table; grows dynamically if needed
     int               initial_command_sock;  
@@ -1516,6 +1543,7 @@ class DaemonCore : public Service
 	int pipeHandleTableInsert(PipeHandle);
 	void pipeHandleTableRemove(int);
 	int pipeHandleTableLookup(int, PipeHandle* = NULL);
+	int maxPipeBuffer;
 
 	// this table is for dispatching registered pipes
 	class PidEntry;  // forward reference
@@ -1563,6 +1591,7 @@ class DaemonCore : public Service
 		PidEntry();
 		~PidEntry();
 		int pipeHandler(int pipe_fd);
+		void pipeFullWrite(int pipe_fd);
 
         pid_t pid;
         int new_process_group;
@@ -1585,6 +1614,7 @@ class DaemonCore : public Service
         int was_not_responding;
         int std_pipes[3];  // Pipe handles for automagic DC std pipes.
         MyString* pipe_buf[3];  // Buffers for data written to DC std pipes.
+        int stdin_offset;
 
 		/* the environment variables which allow me the track the pidfamily
 			of this pid (where applicable) */
@@ -1637,9 +1667,13 @@ class DaemonCore : public Service
     int SetFDInheritFlag(int fd, int flag);
 #endif
 
+	// Setup an async_pipe, used to wake up select from another thread.
+	// Implemented on Unix via a pipe, on Win32 via a pair of connected tcp sockets.
 #ifndef WIN32
     int async_pipe[2];  // 0 for reading, 1 for writing
     volatile int async_sigs_unblocked;
+#else
+	ReliSock async_pipe[2];  // 0 for reading, 1 for writing
 #endif
 	volatile bool async_pipe_empty;
 
@@ -1672,6 +1706,9 @@ class DaemonCore : public Service
 	// misc helper functions
 	void CheckPrivState( void );
 
+		// invoked by CondorThreads upon thread context switch
+	static void thread_switch_callback(void* & ptr);
+
 		// Call the registered socket handler for this socket
 		// i - index of registered socket
 		// default_to_HandleCommand - true if HandleCommand() should be called
@@ -1679,15 +1716,14 @@ class DaemonCore : public Service
 		// On return, i may be modified so that when incremented,
 		// it will index the next registered socket.
 	void CallSocketHandler( int &i, bool default_to_HandleCommand );
+	static void CallSocketHandler_worker_demarshall(void *args);
+	void CallSocketHandler_worker( int i, bool default_to_HandleCommand, Stream* asock );
+	
 
 		// Returns index of registered socket or -1 if not found.
 	int GetRegisteredSocketIndex( Stream *sock );
 
-    // these need to be in thread local storage someday
-    void **curr_dataptr;
-    void **curr_regdataptr;
     int inServiceCommandSocket_flag;
-    // end of thread local storage
         
 #ifndef WIN32
     static char **ParseArgsString(const char *env);

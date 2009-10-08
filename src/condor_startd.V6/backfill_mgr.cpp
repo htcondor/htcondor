@@ -29,6 +29,8 @@
 BackfillSlot::BackfillSlot( int slot_id )
 {
 	m_slot_id = slot_id;
+	m_activity = no_act;
+	m_entered_current_activity = 0;
 }
 
 

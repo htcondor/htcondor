@@ -1,0 +1,22 @@
+Job NodeA job_dagman_usedagdir-node.cmd
+Vars NodeA nodename="$(JOB)"
+Script pre NodeA job_dagman_usedagdir-pre.pl $JOB
+Script post NodeA job_dagman_usedagdir-post.pl $JOB $RETURN
+
+Job NodeB job_dagman_usedagdir-node.cmd
+Vars NodeB nodename="$(JOB)"
+Script pre NodeB job_dagman_usedagdir-pre.pl $JOB
+Script post NodeB job_dagman_usedagdir-post.pl $JOB $RETURN
+
+Job NodeC job_dagman_usedagdir-node.cmd
+Vars NodeC nodename="$(JOB)"
+Script pre NodeC job_dagman_usedagdir-pre.pl $JOB
+Script post NodeC job_dagman_usedagdir-post.pl $JOB $RETURN
+
+Job NodeD job_dagman_usedagdir-nodeD.cmd
+Vars NodeD nodename="$(JOB)"
+Script pre NodeD job_dagman_usedagdir-pre.pl $JOB
+Script post NodeD job_dagman_usedagdir-post.pl $JOB $RETURN
+
+Parent NodeA Child NodeB NodeC
+Parent NodeB NodeC Child NodeD

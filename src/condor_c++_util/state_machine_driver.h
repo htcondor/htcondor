@@ -17,13 +17,6 @@
  *
  ***************************************************************/
 
-/* 
-** Copyright 1993 by Miron Livny, and Mike Litzkow
-** 
-** All rights reserved except as provided by specific written agreement.
-** 
-*/ 
-
 #ifndef FSA_H
 #define FSA_H
 

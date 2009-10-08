@@ -57,7 +57,7 @@ private:
 	time_t			as_start_avail;
 	int				as_avail_estimate;
 	float			as_avail_confidence;
-	List<int>		as_avail_periods;
+	SimpleList<int>	as_avail_periods;
 	int				as_last_avail_interval;
 	float			as_avail_time;
 	int				as_num_avail_periods;

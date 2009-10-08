@@ -39,7 +39,7 @@ $mycmdfile = "lib_auth_protocol-pw.cmd";
 $currenthost = CondorTest::getFqdnHost();
 CondorTest::fullchomp($currenthost);
 
-system("date");
+print scalar localtime() . "\n";
 $myvariation = 1;
 
 $mypid = $$;
@@ -161,7 +161,7 @@ if( -e "$mysubmitnmlog" )
 # Turn off condor
 
 CondorTest::KillPersonal($secconfig);
-system("date");
+print scalar localtime() . "\n";
 
 if($result != 0)
 {

@@ -55,6 +55,10 @@ BEGIN {
 	printf "## For Condor on Win32 we need to specify an SMTP server so\n"
 	printf "## that Condor is able to send email.\n"
 	printf "SMTP_SERVER =\n\n"
+	printf "## For Condor on Win32 we may need to specify a \"from\"\n"
+	printf "## address so that a valid address is used in the from\n"
+	printf "## field.\n"
+	printf "MAIL_FROM =\n\n"
 	next
 }
 /^SMTP_SERVER/ {
@@ -118,11 +122,6 @@ BEGIN {
 # to in the installer. 
 /^#VM_TYPE/ {
 	print "VM_TYPE ="
-	next
-}
-/^#VM_VERSION/ {
-	print "#VM_VERSION = server1.0"
-	print "VM_VERSION ="
 	next
 }
 /^#VM_MAX_NUMBER/ {

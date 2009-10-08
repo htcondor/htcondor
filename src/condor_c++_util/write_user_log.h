@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2008, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2009, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -16,8 +16,6 @@
  * limitations under the License.
  *
  ***************************************************************/
-
-
 #ifndef _CONDOR_WRITE_USER_LOG_CPP_H
 #define _CONDOR_WRITE_USER_LOG_CPP_H
 
@@ -44,6 +42,7 @@ class FileLockBase;
 class FileLock;
 class StatWrapper;
 class ReadUserLogHeader;
+class WriteUserLogState;
 
 
 /** API for writing a log file.  Since an API for reading a log file
@@ -70,11 +69,11 @@ class ReadUserLogHeader;
       ULogEvent object.
     </UL>
 */
-class UserLog
+class WriteUserLog
 {
   public:
     ///
-    UserLog( void );
+    WriteUserLog( bool disable_event_log = false );
     
     /** Constructor
         @param owner Username of the person whose job is being logged
@@ -85,14 +84,14 @@ class UserLog
 		@param xml  make this true to write XML logs, false to use the old form
 		@param gjid global job ID
     */
-    UserLog(const char *owner, const char *domain, const char *file,
-			int clu, int proc, int subp, bool xml = XML_USERLOG_DEFAULT,
-			const char *gjid = NULL);
+    WriteUserLog(const char *owner, const char *domain, const char *file,
+				 int clu, int proc, int subp, bool xml = XML_USERLOG_DEFAULT,
+				 const char *gjid = NULL);
     
-    UserLog(const char *owner, const char *file,
-			int clu, int proc, int subp, bool xml = XML_USERLOG_DEFAULT);
+    WriteUserLog(const char *owner, const char *file,
+				 int clu, int proc, int subp, bool xml = XML_USERLOG_DEFAULT);
     ///
-    virtual ~UserLog();
+    virtual ~WriteUserLog();
     
     /** Initialize the log file, if not done by constructor.
         @param file the path name of the log file to be written (copied)
@@ -138,49 +137,48 @@ class UserLog
     bool initialize(int c, int p, int s, const char *gjid);
 
 	/** Read in the configuration parameters
+		@param force Force a reconfigure; otherwise Configure() will
+		  do nothing if the object is already configured
 		@return true on success
 	*/
-	bool Configure( void );
+	bool Configure( bool force = true );
 
 	void setUseXML(bool new_use_xml){ m_use_xml = new_use_xml; }
 
 	void setWriteUserLog(bool b){ m_userlog_enable = b; }
-	void setWriteGlobalLog(bool b){ m_global_enable = b; }
+	void setWriteGlobalLog(bool b){ m_global_disable = !b; }
+	void setCreatorName(const char *);
+
+	/** Verify that the event log is initialized
+		@return true on success
+	 */
+	bool isInitialized( void ) const {
+		return ( (m_fp != NULL) || (m_global_fp != NULL) );
+	};
 
     /** Write an event to the log file.  Caution: if the log file is
         not initialized, then no event will be written, and this function
         will return a successful value.
 
         @param event the event to be written
+		@param related job ad
+		@param was the event actually written (see above caution).
         @return false for failure, true for success
     */
-    bool writeEvent (ULogEvent *event, ClassAd *jobad = NULL);
-
-    /** Write an event to the global log file.  Caution: if the log file is
-        not initialized, then no event will be written, and this function
-        will return a successful value.  This is a specialized method
-		for designed internal use in the writing of the event log header.
-
-        @param event the event to be written
-        @param file pointer to write event to (or NULL for default global FP)
-        @param Seek to the start of the file before writing event?
-        @return 0 for failure, 1 for success
-    */
-    int writeGlobalEvent ( ULogEvent &event,
-						   FILE *fp,
-						   bool is_header_event = true );
+    bool writeEvent (ULogEvent *event, ClassAd *jobad = NULL,
+					 bool *written = NULL );
 
 	/** APIs for testing */
 	int getGlobalSequence( void ) const { return m_global_sequence; };
 
 
-	// Rotation callbacks -- for testing purposes only
+	// Rotation callbacks -- for testing purposes *ONLY*
 
 	/** Notification that the global log is about to be rotated
 		@param current size of the file
 		@return false to prevent rotation
 	*/
-	virtual bool globalRotationStarting( long /*filesize*/ )
+	virtual bool globalRotationStarting( unsigned long /*filesize*/ )
 		{ return true; };
 
 	/** Notification that number of events in the global log
@@ -200,6 +198,24 @@ class UserLog
 		{ return; };
 
 
+	// Methods for internal use *ONLY*:
+
+    /** Write an event to the global log file.  Caution: if the log
+        file is not initialized, then no event will be written, and
+        this function will return a successful value.  This is a
+        specialized method designed for internal use in the writing of
+        the event log header.
+
+        @param event the event to be written
+        @param file pointer to write event to (or NULL for default global FP)
+        @param Seek to the start of the file before writing event?
+        @return 0 for failure, 1 for success
+    */
+    int writeGlobalEvent ( ULogEvent &event,
+						   FILE *fp,
+						   bool is_header_event = true );
+
+
 	// Accessor methods for testing *ONLY*:
 
 	//  get/set cluster/proc/subproc values
@@ -212,12 +228,17 @@ class UserLog
 
 	// Get the global log file and it's size
 	const char *getGlobalPath( void ) const { return m_global_path; };
-	long getGlobalLogSize( void ) const;
+	bool getGlobalLogSize( unsigned long &, bool use_fp );
+
 
   private:
 
 	///
     void Reset( void );
+    bool internalInitialize(int c, int p, int s, const char *gjid);
+	void FreeAllResources( void );
+	void FreeGlobalResources( void );
+	void FreeLocalResources( void );
 
 	// Write header event to global file
 	bool writeHeaderEvent ( const UserLogHeader &header );
@@ -239,9 +260,14 @@ class UserLog
 
 	bool checkGlobalLogRotation(void);
 	bool globalLogRotated( ReadUserLogHeader &reader );
-	bool initializeGlobalLog(const UserLogHeader &header );
+	bool openGlobalLog( bool reopen );
+	bool openGlobalLog( bool reopen, const UserLogHeader &header );
+	bool closeGlobalLog( void);
 	int doRotation( const char *path, FILE *&fp,
 					MyString &rotated, int max_rotations );
+
+
+	bool updateGlobalStat( void );
 
     
     /// Deprecated.  condorID cluster, proc & subproc of the next event.
@@ -257,7 +283,8 @@ class UserLog
     /** Enable locking?              */  bool		m_enable_locking;
 	/** Enable fsync() after writes? */  bool       m_enable_fsync;
 
-	/** Write to the global log? */		 bool		m_global_enable;
+	/** Enable close after writes    */  bool       m_global_close;
+	/** Write to the global log? */		 bool		m_global_disable;
     /** Copy of path to global log   */  char     * m_global_path;
     /** The global log file          */  FILE     * m_global_fp;
     /** The global log file lock     */  FileLockBase *m_global_lock;
@@ -267,14 +294,14 @@ class UserLog
 	/** Count event log events?      */  bool       m_global_count_events;
 	/** Max size of event log        */  long		m_global_max_filesize;
 	/** Max event log rotations      */  int		m_global_max_rotations;
-	/** Current global log file size */  long		m_global_filesize;
 	/** StatWrapper of global file   */  StatWrapper *m_global_stat;
-    /** Enable global locking?       */  bool		m_global_locking;
-	/** Enable fsync() after writes? */  bool       m_global_fsync;
+    /** Enable global locking?       */  bool		m_global_lock_enable;
+	/** Enable fsync() after writes? */  bool       m_global_fsync_enable;
+	/** State of the log file        */  WriteUserLogState *m_global_state;
 
     /** Copy of path to rotation lock*/  char     * m_rotation_lock_path;
     /** FD of the rotation lock      */  int        m_rotation_lock_fd;
-    /** The global log file lock     */  FileLock * m_rotation_lock;
+    /** The global log file lock     */  FileLockBase *m_rotation_lock;
 
 	/** Whether we use XML or not    */  bool       m_use_xml;
 
@@ -283,8 +310,14 @@ class UserLog
 	/** PrivSep: the user's GID      */  gid_t      m_privsep_gid;
 #endif
 	/** The GlobalJobID for this job */  char     * m_gjid;
+
+	/** Previously configured?       */  bool       m_configured;
+	/** Initialized?                 */  bool       m_initialized;
+	/** Creator Name (schedd name)   */  char     * m_creator_name;
 };
 
+// For backward compatibility, define UserLog
+typedef WriteUserLog UserLog;
 
 #endif /* __cplusplus */
 

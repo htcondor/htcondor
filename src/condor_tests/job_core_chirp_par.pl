@@ -19,54 +19,49 @@
 ##**************************************************************
 
 use CondorTest;
+use strict;
+use warnings;
 
 
-$cmd = $ARGV[0];
+my $cmd = $ARGV[0];
+my $debuglevel = 2;
 
-CondorTest::debug("Submit file for this test is $cmd\n",1);
-#print "looking at env for condor config\n";
-#system("printenv | grep CONDOR_CONFIG");
+CondorTest::debug("Submit file for this test is $cmd\n",$debuglevel);
 
-$testdesc =  'Basic Parallel - Parallel U';
-$testname = "job_core_chirp_par";
+my $testdesc =  'Basic Parallel - Parallel U';
+my $testname = "job_core_chirp_par";
 
-$aborted = sub {
+my $aborted = sub {
 	my %info = @_;
 	my $done;
-	CondorTest::debug("Abort event not expected!\n",1);
+	die "Abort event not expected!\n";
 };
 
-$held = sub {
+my $held = sub {
 	my %info = @_;
 	my $cluster = $info{"cluster"};
 
-	CondorTest::debug("Held event not expected.....\n",1);
+	die "Held event not expected.....\n";
 };
 
-$executed = sub
+my $executed = sub
 {
 	my %args = @_;
 	my $cluster = $args{"cluster"};
 
-	CondorTest::RegisterTimed($testname, $timed, 600);
-	CondorTest::debug("Parallel job executed\n",1);
+	CondorTest::debug("Parallel job executed\n",$debuglevel);
 };
 
-$timed = sub
+my $success = sub
 {
-	die "Test took too long!!!!!!!!!!!!!!!\n";
-};
-
-$success = sub
-{
-	CondorTest::debug("Success: Parallel Test ok\n",1);
+	CondorTest::debug("Success: Parallel Test ok\n",$debuglevel);
 };
 
 CondorTest::RegisterExitedSuccess( $testname, $success);
 CondorTest::RegisterExecute($testname, $executed);
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	CondorTest::debug("$testname: SUCCESS\n",1);
+	CondorTest::debug("$testname: SUCCESS\n",$debuglevel);
 	exit(0);
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";

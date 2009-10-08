@@ -549,7 +549,25 @@ CronTab::matchFields( int *curTime, int *match, int attribute_idx, bool useFirst
 			// and convert the days of the week range into
 			// days of the month
 			//
-		curRange = new ExtArray<int>( *this->ranges[attribute_idx] );
+			
+			//Issue here is that range for dom will be 1-31
+			//for * and if one doesn't specify day_of_month in a job file
+		if (this->ranges[attribute_idx]->length()==CRONTAB_DAY_OF_MONTH_MAX){	
+			if ((this->ranges[CRONTAB_DOW_IDX]->length()==CRONTAB_DAY_OF_WEEK_MAX)||
+			   (this->ranges[CRONTAB_DOW_IDX]->length()==0)){ 
+				//if both wildcards, use month range
+				//if DOW range empty use DOM range
+				curRange = new ExtArray<int>( *this->ranges[attribute_idx] );
+			} else {
+				//only wildcard in month, so use day of week range
+				//this isn't quite right
+				curRange = new ExtArray<int>( CRONTAB_DAY_OF_MONTH_MAX );
+			}
+		}else{
+		      // get to here means DOM was specified
+		      curRange = new ExtArray<int>( *this->ranges[attribute_idx] );
+		}
+		
 		int firstDay = dayOfWeek( match[CRONTAB_MONTHS_IDX],
 								  1,
 								  match[CRONTAB_YEARS_IDX] );
@@ -586,7 +604,7 @@ CronTab::matchFields( int *curTime, int *match, int attribute_idx, bool useFirst
 		//
 	bool ret = false;
 	int range_idx, cnt;
-	for ( range_idx = 0, cnt = this->ranges[attribute_idx]->getlast();
+	for ( range_idx = 0, cnt = curRange->getlast();
 		  range_idx <= cnt;
 		  range_idx++ ) {
 			//
@@ -602,7 +620,7 @@ CronTab::matchFields( int *curTime, int *match, int attribute_idx, bool useFirst
 			//	   level, when they call us again they'll ask
 			//	   us to just use the first value that we can
 			//
-		int value = this->ranges[attribute_idx]->getElementAt( range_idx );
+		int value = curRange->getElementAt( range_idx );
 		if ( useFirst || value >= curTime[attribute_idx] ) {
 				//
 				// If this value is greater than the current time value,

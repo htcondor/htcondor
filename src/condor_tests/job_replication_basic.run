@@ -57,7 +57,7 @@ my $currentIp   = &GetMyIpAddress();
 my $pId         = $$;
 # End of operating system environment variables of the test
 
-system("date");
+print scalar localtime() . "\n";
 
 # create the skeleton of testing system
 my $savemeDirectory         = "$topDirectory/$coreName.saveme";
@@ -344,7 +344,7 @@ while($time - $startTimer <= $configurationTable{RUN_TIME})
 &MoveAllToSaveDirectory();
 
 #CondorTest::KillPersonal($quillconfig);
-system("date");
+print scalar localtime() . "\n";
 
 CondorTest::debug("$coreName test SUCCESS!\n",1);
 exit(0);

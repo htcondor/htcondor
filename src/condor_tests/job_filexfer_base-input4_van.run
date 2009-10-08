@@ -20,10 +20,12 @@
 
 use CondorTest;
 
-$testdesc =  'Jobs run with imput when transfer_input = false - vanilla U';
-$testname = "job_filexfer_base-input4_van";
+my $testdesc =  'Jobs run with imput when transfer_input = false - vanilla U';
+my $testname = "job_filexfer_base-input4_van";
+my $pid = $$;
 
-my $sanestatus = CondorTest::verbose_system("./x_sanitysubmit.pl");
+print "Test: $testname has pid $pid\n";
+my $sanestatus = CondorTest::verbose_system("./x_sanitysubmit.pl $pid");
 my $teststatus = CondorTest::verbose_system("./job_filexfer_base-input4_van.pl");
 
 if($sanestatus != 0)

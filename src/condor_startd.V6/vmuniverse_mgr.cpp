@@ -37,6 +37,8 @@
 #include "vm_univ_utils.h"
 #include "setenv.h"
 
+extern ResMgr* resmgr;
+
 static unsigned long get_image_size(procInfo& pi)
 {
 #if defined(WIN32)
@@ -64,21 +66,21 @@ VMStarterInfo::updateUsageOfVM(void)
 	}
 
 	int proc_status = PROCAPI_OK;
-	struct procInfo pinfo;
-	memset(&pinfo, 0, sizeof(pinfo));
 
-	piPTR pi = &pinfo;
+	piPTR pi = NULL;
 	if( ProcAPI::getProcInfo(m_vm_pid, pi, proc_status) == 
 			PROCAPI_SUCCESS ) {
-		memcpy(&m_vm_alive_pinfo, &pinfo, sizeof(pinfo));
+		memcpy(&m_vm_alive_pinfo, pi, sizeof(struct procInfo));
 		if( (DebugFlags & D_FULLDEBUG) && (DebugFlags & D_LOAD) ) {
 			dprintf(D_FULLDEBUG,"Usage of process[%d] for a VM is updated\n", 
 					m_vm_pid);
 			dprintf(D_FULLDEBUG,"sys_time=%lu, user_time=%lu, image_size=%lu\n", 
-					pinfo.sys_time, pinfo.user_time, get_image_size(pinfo));
+					pi->sys_time, pi->user_time, get_image_size(*pi));
 		}
+		delete pi;
 		return true;
 	}
+	if (pi) delete pi;
 	return false;
 }
 
@@ -271,6 +273,7 @@ VMUniverseMgr::init( void )
 		m_vm_type = "";
 		return false;
 	}
+
 	return true;
 }
 
@@ -416,7 +419,7 @@ VMUniverseMgr::testVMGahp(const char* gahppath, const char* vmtype)
 #endif
 
 	priv_state prev_priv;
-	if( strcasecmp(vmtype, CONDOR_VM_UNIVERSE_XEN) == MATCH ) {
+	if( (strcasecmp(vmtype, CONDOR_VM_UNIVERSE_XEN) == MATCH) || (strcasecmp(vmtype, CONDOR_VM_UNIVERSE_KVM) == MATCH) ) {
 		// Xen requires root privilege
 		prev_priv = set_root_priv();
 	}else {
@@ -451,11 +454,23 @@ VMUniverseMgr::testVMGahp(const char* gahppath, const char* vmtype)
 		dprintf( D_ALWAYS, 
 				 "Warning: '%s' did not produce any valid output.\n", 
 				 args_string.Value());
-		if( strcasecmp(vmtype, CONDOR_VM_UNIVERSE_XEN) == 0 ) {
+		if( (strcasecmp(vmtype, CONDOR_VM_UNIVERSE_XEN) == 0) ) {
 			MyString err_msg;
 			err_msg += "\n#######################################################\n";
 			err_msg += "##### Make sure the followings ";
 			err_msg += "to use VM universe for Xen\n";
+			err_msg += "### - The owner of script progrm like ";
+			err_msg += "'condor_vm_xen.sh' must be root\n";
+			err_msg += "### - The script program must be executable\n";
+			err_msg += "### - Other writable bit for the above files is ";
+			err_msg += "not allowed.\n";
+			err_msg += "#########################################################\n";
+			dprintf( D_ALWAYS, "%s", err_msg.Value());
+		} else if( (strcasecmp(vmtype, CONDOR_VM_UNIVERSE_KVM) == 0)) {
+		        MyString err_msg;
+			err_msg += "\n#######################################################\n";
+			err_msg += "##### Make sure the followings ";
+			err_msg += "to use VM universe for KVM\n";
 			err_msg += "### - The owner of script progrm like ";
 			err_msg += "'condor_vm_xen.sh' must be root\n";
 			err_msg += "### - The script program must be executable\n";
@@ -802,10 +817,11 @@ VMUniverseMgr::checkVMUniverse(void)
 void 
 VMUniverseMgr::docheckVMUniverse(void)
 {
+	char *vm_type = param( "VM_TYPE" );
 	dprintf( D_ALWAYS, "VM universe will be tested "
-			"to check if it is still available\n");
-	if( init() == false ) {
-		// VM universe is not available
+			"to check if it is available\n");
+	if( init() == false && vm_type ) {
+		// VM universe is desired, but not available
 
 		// In VMware, some errors may be transient.
 		// For example, when VMware fails to start a new VM 
@@ -814,12 +830,28 @@ VMUniverseMgr::docheckVMUniverse(void)
 		// But after some time, we are able to run it again.
 		// So we register a timer to call this function later.
 		m_check_interval = param_integer("VM_RECHECK_INTERVAL", 600);
-		m_check_tid = daemonCore->Register_Timer(m_check_interval,
-				(TimerHandlercpp)&VMUniverseMgr::init,
-				"VMUniverseMgr::init", this);
+		if ( m_check_tid >= 0 ) {
+			daemonCore->Reset_Timer( m_check_tid, m_check_interval );
+		} else {
+			m_check_tid = daemonCore->Register_Timer(m_check_interval,
+				(TimerHandlercpp)&VMUniverseMgr::docheckVMUniverse,
+				"VMUniverseMgr::docheckVMUniverse", this);
+		}
 		dprintf( D_ALWAYS, "Started a timer to test VM universe after "
 			   "%d(seconds)\n", m_check_interval);
+	} else {
+		if ( m_check_tid >= 0 ) {
+			daemonCore->Cancel_Timer( m_check_tid );
+			m_check_tid = -1;
+
+			// in the case where we had to use the timer,
+			// make certain we publish our changes.  
+			if( resmgr ) {
+				resmgr->eval_and_update_all();
+			}	
+		}
 	}
+	free( vm_type );
 }
 
 void 
@@ -835,37 +867,13 @@ VMUniverseMgr::numOfRunningVM(void)
 }
 
 void
-VMUniverseMgr::killVM(VMStarterInfo *info)
+VMUniverseMgr::killVM(const char *matchstring)
 {
-	if( !info ) {
+	if ( !matchstring ) {
 		return;
 	}
 	if( !m_vm_type.Length() || !m_vmgahp_server.Length() ) {
 		return;
-	}
-
-	if( info->m_vm_pid > 0 ) {
-		dprintf( D_ALWAYS, "In VMUniverseMgr::killVM(), "
-				"Sending SIGKILL to Process[%d]\n", (int)info->m_vm_pid);
-		daemonCore->Send_Signal(info->m_vm_pid, SIGKILL);
-	}
-
-	MyString matchstring;
-	MyString workingdir;
-
-	workingdir.sprintf("%s%cdir_%ld", info->m_execute_dir.Value(),
-	                   DIR_DELIM_CHAR, (long)info->m_pid);
-
-	if( strcasecmp(m_vm_type.Value(), CONDOR_VM_UNIVERSE_XEN ) == MATCH ) {
-		if( create_name_for_VM(&info->m_job_ad, matchstring) == false ) {
-			dprintf(D_ALWAYS, "VMUniverseMgr::killVM() : "
-					"cannot make the name of VM\n");
-			return;
-		}
-	}else {
-		// Except Xen, we need the path of working directory of Starter
-		// in order to destroy VM.
-		matchstring = workingdir;
 	}
 
 	// vmgahp is daemonCore, so we need to add -f -t options of daemonCore.
@@ -903,12 +911,49 @@ VMUniverseMgr::killVM(VMStarterInfo *info)
 
 	if( ret == 0 ) {
 		dprintf( D_ALWAYS, "VMUniverseMgr::killVM() is called with "
-						"'%s'\n", matchstring.Value());
+						"'%s'\n", matchstring );
 	}else {
 		dprintf( D_ALWAYS, "VMUniverseMgr::killVM() failed!\n");
 	}
 
 	return;
+}
+
+void
+VMUniverseMgr::killVM(VMStarterInfo *info)
+{
+	if( !info ) {
+		return;
+	}
+	if( !m_vm_type.Length() || !m_vmgahp_server.Length() ) {
+		return;
+	}
+
+	if( info->m_vm_pid > 0 ) {
+		dprintf( D_ALWAYS, "In VMUniverseMgr::killVM(), "
+				"Sending SIGKILL to Process[%d]\n", (int)info->m_vm_pid);
+		daemonCore->Send_Signal(info->m_vm_pid, SIGKILL);
+	}
+
+	MyString matchstring;
+	MyString workingdir;
+
+	workingdir.sprintf("%s%cdir_%ld", info->m_execute_dir.Value(),
+	                   DIR_DELIM_CHAR, (long)info->m_pid);
+
+	if( (strcasecmp(m_vm_type.Value(), CONDOR_VM_UNIVERSE_XEN ) == MATCH) || (strcasecmp(m_vm_type.Value(), CONDOR_VM_UNIVERSE_KVM) == 0)) {
+		if( create_name_for_VM(&info->m_job_ad, matchstring) == false ) {
+			dprintf(D_ALWAYS, "VMUniverseMgr::killVM() : "
+					"cannot make the name of VM\n");
+			return;
+		}
+	}else {
+		// Except Xen, we need the path of working directory of Starter
+		// in order to destroy VM.
+		matchstring = workingdir;
+	}
+
+	killVM( matchstring.Value() );
 }
 
 bool 

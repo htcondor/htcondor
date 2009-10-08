@@ -288,7 +288,8 @@ BOINC_BackfillMgr::start( int slot_id )
 		// object for this slot, change to Backfill/BOINC
 	dprintf( D_ALWAYS, "State change: BOINC client running for slot%d\n",
 			 slot_id ); 
-	return rip->change_state( busy_act );
+	rip->change_state( busy_act );
+	return TRUE; // XXX: change TRUE
 }
 
 
@@ -377,7 +378,7 @@ BOINC_BackfillMgr::reaper( int pid, int status )
 	}
 	
 		// tell our starter object its starter exited
-	m_boinc_starter->exited();
+	m_boinc_starter->exited(status);
 	delete m_boinc_starter;
 	m_boinc_starter = NULL;
 

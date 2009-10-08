@@ -1,14 +1,14 @@
 NAME = condor_negotiator
 all_target($(NAME))
 
-CFLAGS = $(STD_C_FLAGS)
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
-LIB = $(DAEMONCORE_LIB) $(NETMAN_LIB) $(STD_LIBS) $(CONFIGURE_GSOAP_LDFLAGS)
+CFLAGS = $(STD_C_FLAGS) $(CONFIGURE_PCRE_CFLAGS)
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(CONFIGURE_PCRE_CFLAGS)
+LIB = $(DAEMONCORE_LIB) $(STD_LIBS) $(CONFIGURE_GSOAP_LDFLAGS) $(CONFIGURE_PCRE_LDFLAGS)
 
 soapobjs(negotiator)
 
 #if HAVE_DLOPEN
-PLUGIN_OBJ = NegotiatorPlugin.o
+PLUGIN_OBJ = NegotiatorPluginManager.o
 
 %-plugin.so: %.cpp
 	$(CPlusPlus) $(C_PLUS_FLAGS) -shared $< -o $@

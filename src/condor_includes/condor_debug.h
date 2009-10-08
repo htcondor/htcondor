@@ -42,7 +42,7 @@
 #define D_SYSCALLS		(1<<1)
 #define D_CKPT			(1<<2)
 #define D_HOSTNAME		(1<<3)
-#define D_MALLOC		(1<<4)
+#define D_UNUSED1		(1<<4)
 #define D_LOAD			(1<<5)
 #define D_EXPR			(1<<6)
 #define D_PROC			(1<<7)
@@ -51,21 +51,19 @@
 #define D_FULLDEBUG	 	(1<<10)
 #define D_NFS			(1<<11)
 #define D_CONFIG        (1<<12)
-// D_AFS seems to not be used anywhere in Condor. Therefore I decided to recycle
-// this. -- Sonny.
-#define D_NET_REMAP       (1<<13)
+#define D_UNUSED2       (1<<13)
 #define D_PREEMPT		(1<<14)
 #define D_PROTOCOL		(1<<15)
 #define D_PRIV			(1<<16)
 #define D_SECURITY		(1<<17)
 #define D_DAEMONCORE	(1<<18)
 #define D_COMMAND		(1<<19)
-#define D_BANDWIDTH		(1<<20)
+#define D_MATCH			(1<<20)
 #define D_NETWORK		(1<<21)
 #define D_KEYBOARD		(1<<22)
 #define D_PROCFAMILY	(1<<23)
 #define D_IDLE			(1<<24)
-#define D_MATCH			(1<<25)
+#define D_THREADS		(1<<25)
 #define D_ACCOUNTANT	(1<<26)
 #define D_FAILURE	(1<<27)
 /* 
@@ -74,8 +72,7 @@
 */ 
 #define D_PID           (1<<28)
 #define D_FDS           (1<<29)
-/* D_SECONDS is no longer used */
-#define D_SECONDS       (1<<30)
+#define D_UNUSED3       (1<<30)
 #define D_NOHEADER      (1<<31)
 #define D_ALL           (~(0) & (~(D_NOHEADER)))
 

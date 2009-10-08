@@ -17,10 +17,12 @@
  *
  ***************************************************************/
 
+#include "condor_common.h"
 // for 'daemonCore'
 #include "condor_daemon_core.h"
 // for 'param' function
 #include "condor_config.h"
+#include "my_username.h"
 
 #include "ReplicatorStateMachine.h"
 //#include "HadCommands.h"
@@ -123,6 +125,9 @@ ReplicatorStateMachine::ReplicatorStateMachine()
    	m_newlyJoinedWaitingVersionInterval = -1;
    	m_lastHadAliveTime          = -1;
    	srand( time( NULL ) );
+	m_classAd = NULL;
+	m_updateCollectorTimerId = -1;
+	m_updateInterval = -1;
 }
 // finalizing the delta, belonging to this class only, since the data, belonging
 // to the base class is finalized implicitly
@@ -148,15 +153,31 @@ ReplicatorStateMachine::finalize()
 void
 ReplicatorStateMachine::finalizeDelta( )
 {
-	dprintf( D_ALWAYS, "ReplicatorStateMachine::finalizeDelta started\n" );
+    ClassAd invalidate_ad;
+    MyString line;
+
+    dprintf( D_ALWAYS, "ReplicatorStateMachine::finalizeDelta started\n" );
     utilCancelTimer(m_replicationTimerId);
     utilCancelTimer(m_versionRequestingTimerId);
     utilCancelTimer(m_versionDownloadingTimerId);
+    utilCancelTimer(m_updateCollectorTimerId);
     m_replicationInterval               = -1;
     m_hadAliveTolerance                 = -1;
     m_maxTransfererLifeTime             = -1;
     m_newlyJoinedWaitingVersionInterval = -1;
     m_lastHadAliveTime                  = -1;
+    m_updateInterval                    = -1;
+
+    if ( m_classAd != NULL ) {
+        delete m_classAd;
+        m_classAd = NULL;
+    }
+
+    invalidate_ad.SetMyTypeName( QUERY_ADTYPE );
+    invalidate_ad.SetTargetTypeName( GENERIC_ADTYPE );
+    line.sprintf( "%s == \"%s\"", ATTR_NAME, m_name.Value( ) );
+    invalidate_ad.AssignExpr( ATTR_REQUIREMENTS, line.Value( ) );
+    daemonCore->sendUpdates( INVALIDATE_ADS_GENERIC, &invalidate_ad, NULL, false );
 }
 void
 ReplicatorStateMachine::initialize( )
@@ -213,6 +234,20 @@ ReplicatorStateMachine::reinitialize()
     } else {
         utilCrucialError( utilNoParameterError( "HAD_LIST", "HAD" ).Value( ));
     }
+
+    initializeClassAd();
+    int updateInterval = param_integer ( "REPLICATION_UPDATE_INTERVAL", 300 );
+    if ( m_updateInterval != updateInterval ) {
+        m_updateInterval = updateInterval;
+
+        utilCancelTimer(m_updateCollectorTimerId);
+
+        m_updateCollectorTimerId = daemonCore->Register_Timer ( 0,
+               m_updateInterval,
+               (TimerHandlercpp) &ReplicatorStateMachine::updateCollectors,
+               "ReplicatorStateMachine::updateCollectors", this );
+    }
+
     // set a timer to replication routine
     dprintf( D_ALWAYS, "ReplicatorStateMachine::reinitialize setting "
                                       "replication timer\n" );
@@ -236,6 +271,50 @@ ReplicatorStateMachine::reinitialize()
 	printDataMembers( );
 	
 	beforePassiveStateHandler( );
+}
+
+void
+ReplicatorStateMachine::initializeClassAd()
+{
+    if( m_classAd != NULL) {
+        delete m_classAd;
+        m_classAd = NULL;
+    }
+
+    m_classAd = new ClassAd();
+
+    m_classAd->SetMyTypeName(GENERIC_ADTYPE);
+    m_classAd->SetTargetTypeName("Replication");
+
+    m_name.sprintf( "replication@%s -p %d", my_full_hostname( ),
+				  daemonCore->InfoCommandPort( ) );
+    m_classAd->Assign( ATTR_NAME, m_name.Value( ) );
+    m_classAd->Assign( ATTR_MY_ADDRESS,
+					   daemonCore->InfoCommandSinfulString( ) );
+
+    // publish list of replication nodes
+    char* buffer = param( "REPLICATION_LIST" );
+	if ( NULL == buffer ) {
+		EXCEPT( "ReplicatorStateMachine: No replication list!!\n" );
+	}
+    char* replAddress = NULL;
+    StringList replList;
+    MyString attrReplList;
+    MyString comma;
+
+    replList.initializeFromString( buffer );
+    replList.rewind( );
+
+    while( ( replAddress = replList.next() ) ) {
+        attrReplList += comma;
+        attrReplList += replAddress;
+        comma = ",";
+    }
+    m_classAd->Assign( ATTR_REPLICATION_LIST, attrReplList.Value( ) );
+
+    // publish DC attributes
+    daemonCore->publish(m_classAd);
+	free(buffer);
 }
 // sends the version of the last execution time to all the replication daemons,
 // then asks the pool replication daemons to send their own versions to it,
@@ -562,7 +641,7 @@ ReplicatorStateMachine::onSolicitVersionReply( Stream* stream )
  * Description: handler of REPLICATION_NEWLY_JOINED_VERSION command; void by now
  */
 void
-ReplicatorStateMachine::onNewlyJoinedVersion( Stream* stream )
+ReplicatorStateMachine::onNewlyJoinedVersion( Stream* /*stream*/ )
 {
     dprintf(D_ALWAYS, "ReplicatorStateMachine::onNewlyJoinedVersion started\n");
     
@@ -579,7 +658,7 @@ ReplicatorStateMachine::onNewlyJoinedVersion( Stream* stream )
  *				state)
  */
 void
-ReplicatorStateMachine::onGivingUpVersion( Stream* stream )
+ReplicatorStateMachine::onGivingUpVersion( Stream* /*stream*/ )
 {
     dprintf( D_ALWAYS, "ReplicatorStateMachine::onGivingUpVersion started\n" );
     
@@ -896,4 +975,15 @@ ReplicatorStateMachine::versionDownloadingTimer( )
 	checkVersionSynchronization( );	
 
 	m_state = BACKUP;
+}
+
+/* Function    : updateCollectors
+ * Description : sends the classad update to collectors
+ */
+void
+ReplicatorStateMachine::updateCollectors()
+{
+    if (m_classAd) {
+       daemonCore->sendUpdates (UPDATE_AD_GENERIC, m_classAd);
+    }
 }

@@ -22,11 +22,10 @@
 #include "signal2.h"
 
 
-void Alarm::SetAlarm(int socket_desc,
-		     int sec)
+void Alarm::SetAlarm(int sec)
 {
   BlockSignal(SIGALRM);
-  alarm_sd = socket_desc;
+  m_expired = false;
   alarm(sec);
   UnblockSignal(SIGALRM);
 }
@@ -36,14 +35,19 @@ void Alarm::ResetAlarm()
 {
   BlockSignal(SIGALRM);
   alarm(0);
+  m_expired = false;
   UnblockSignal(SIGALRM);
 }
-
 
 void Alarm::Expired()
 {
   BlockSignal(SIGALRM);
-  if (alarm_sd != 0)
-    close(alarm_sd);
+  m_expired = true;
   UnblockSignal(SIGALRM);
 }
+
+bool Alarm::IsExpired(void)
+{
+	return m_expired;
+}
+

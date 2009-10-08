@@ -50,8 +50,7 @@ int		DontDisplayTime;
 #define DAY		(24 * HOUR)
 
 char	*
-format_time( fp_secs )
-float		fp_secs;
+format_time( float fp_secs )
 {
 	int		days;
 	int		hours;
@@ -123,104 +122,4 @@ getJobStatusNum( const char* name )
 	return -1;
 }
 
-
-#if defined(NEW_PROC) && !defined(WIN32)
-/*
-  Functions for building and deleteing a version 3 proc structure.
-  ConstructProc returns a proc with all fields except cmd, args, in, out,
-  err, remote_usage, exit_status.
-*/
-
-PROC	*
-ConstructProc( n_cmds, proc_template )
-int		n_cmds;
-PROC	*proc_template;
-{
-	PROC	*proc;
-
-	proc = (PROC *) MALLOC( sizeof(PROC) );
-	if ( proc == NULL ) {
-		return NULL;
-	}
-
-	if ( proc_template != NULL ) {
-		*proc = *proc_template;
-	}
-
-	proc->n_cmds = n_cmds;
-	proc->cmd = (char **) MALLOC( sizeof( char *) * n_cmds );
-	if ( proc->cmd == NULL) {
-		FREE( proc );
-		return NULL;
-	}
-	proc->args_v1or2 = (char **) MALLOC( sizeof( char *) * n_cmds );
-	if ( proc->args_v1or2 == NULL) {
-		FREE( proc->cmd );
-		FREE( proc );
-		return NULL;
-	}
-	proc->in = (char **) MALLOC( sizeof( char *) * n_cmds );
-	if ( proc->in == NULL) {
-		FREE( proc->cmd );
-		FREE( proc->args_v1or2 );
-		FREE( proc );
-		return NULL;
-	}
-	proc->out = (char **) MALLOC( sizeof( char *) * n_cmds );
-	if ( proc->out == NULL) {
-		FREE( proc->cmd );
-		FREE( proc->args_v1or2 );
-		FREE( proc->in );
-		FREE( proc );
-		return NULL;
-	}
-	proc->err = (char **) MALLOC( sizeof( char *) * n_cmds );
-	if ( proc->err == NULL) {
-		FREE( proc->cmd );
-		FREE( proc->args_v1or2 );
-		FREE( proc->in );
-		FREE( proc->out );
-		FREE( proc );
-		return NULL;
-	}
-	proc->remote_usage = (struct rusage *) MALLOC( sizeof(struct rusage) * 
-												  n_cmds );
-	if ( proc->remote_usage == NULL) {
-		FREE( proc->cmd );
-		FREE( proc->args_v1or2 );
-		FREE( proc->in );
-		FREE( proc->out );
-		FREE( proc->err );
-		FREE( proc );
-		return NULL;
-	}
-	proc->exit_status = (int *) MALLOC( sizeof(int) * n_cmds ); 
-
-	if ( proc->err == NULL) {
-		FREE( proc->cmd );
-		FREE( proc->args_v1or2 );
-		FREE( proc->in );
-		FREE( proc->out );
-		FREE( proc->err );
-		FREE( proc->remote_usage );
-		FREE( proc );
-		return NULL;
-	}
-	return proc;
-}
-
-void
-DestructProc( proc )
-PROC	*proc;
-{
-	FREE( proc->cmd );
-	FREE( proc->args_v1or2 );
-	FREE( proc->in );
-	FREE( proc->out );
-	FREE( proc->err );
-	FREE( proc->remote_usage );
-	FREE( proc );
-}
-
-#endif /* NEW_PROC */
 

@@ -20,51 +20,19 @@
 
 // Birdwatcher.h : main header file for the BIRDWATCHER application
 //
-
+#pragma once
+#ifndef _BIRDWATCHER_H_
+#define _BIRDWATCHER_H_
 #if !defined(AFX_BIRDWATCHER_H__48E19F6C_ED69_4718_8BBA_D281C8649091__INCLUDED_)
 #define AFX_BIRDWATCHER_H__48E19F6C_ED69_4718_8BBA_D281C8649091__INCLUDED_
-
-#if _MSC_VER > 1000
-#pragma once
-#endif // _MSC_VER > 1000
-
-#ifndef __AFXWIN_H__
-	#error include 'stdafx.h' before including this file for PCH
-#endif
 
 #include "resource.h"		// main symbols
 #include "SystrayManager.h"
 
 class SystrayManager;
 
-/////////////////////////////////////////////////////////////////////////////
-// CBirdwatcherApp:
-// See Birdwatcher.cpp for the implementation of this class
-//
-
-class CBirdwatcherApp : public CWinApp
-{
-public:
-	CBirdwatcherApp();
-
-// Overrides
-	// ClassWizard generated virtual function overrides
-	//{{AFX_VIRTUAL(CBirdwatcherApp)
-	public:
-	virtual BOOL InitInstance();
-	//}}AFX_VIRTUAL
-
-// Implementation
-	SystrayManager sysman;
-	CWnd wnd;
-
-	//{{AFX_MSG(CBirdwatcherApp)
-		// NOTE - the ClassWizard will add and remove member functions here.
-		//    DO NOT EDIT what you see in these blocks of generated code !
-	//}}AFX_MSG
-	DECLARE_MESSAGE_MAP()
-};
-
+extern HINSTANCE hInst;								// current instance
+extern HWND birdwatcherDLG;
 
 /////////////////////////////////////////////////////////////////////////////
 
@@ -72,3 +40,4 @@ public:
 // Microsoft Visual C++ will insert additional declarations immediately before the previous line.
 
 #endif // !defined(AFX_BIRDWATCHER_H__48E19F6C_ED69_4718_8BBA_D281C8649091__INCLUDED_)
+#endif

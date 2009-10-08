@@ -24,6 +24,7 @@
 #include "condor_common.h"
 #include "condor_config.h"
 #include "condor_daemon_core.h"
+#include "hibernator.h"
 #include "hibernation_manager.h"
 #include "network_adapter.h"
 
@@ -36,9 +37,10 @@
  * HibernationManager class
  ***************************************************************/
 
-HibernationManager::HibernationManager ( void ) throw ()
+HibernationManager::HibernationManager( HibernatorBase *hibernator )
+	throw ()
 		: m_primary_adapter( NULL ),
-		  m_hibernator ( HibernatorBase::createHibernator () ),
+		  m_hibernator ( hibernator ),
 		  m_interval ( 0 ),
 		  m_target_state ( HibernatorBase::NONE ),
 		  m_actual_state ( HibernatorBase::NONE )
@@ -54,6 +56,15 @@ HibernationManager::~HibernationManager ( void ) throw ()
 	for ( int i = 0;  i < m_adapters.getlast();  i++ ) {
 		delete m_adapters[i];
 	}
+}
+
+bool
+HibernationManager::initialize ( void )
+{
+	if ( m_hibernator ) {
+		return m_hibernator->initialize();
+	}
+	return true;
 }
 
 bool
@@ -78,6 +89,9 @@ HibernationManager::update( void )
 		dprintf ( D_ALWAYS, "HibernationManager: Hibernation is %s\n",
 			( m_interval > 0 ? "enabled" : "disabled" ) );
 	}
+	if ( m_hibernator ) {
+		m_hibernator->update( );
+	}
 }
 
 bool
@@ -87,6 +101,39 @@ HibernationManager::isStateSupported( HibernatorBase::SLEEP_STATE state ) const
 		return m_hibernator->isStateSupported( state );
 	}
 	return false;
+}
+
+bool
+HibernationManager::getSupportedStates( unsigned & mask ) const
+{
+	if ( m_hibernator ) {
+		mask = m_hibernator->getStates( );
+		return true;
+	}
+	return false;
+}
+
+bool
+HibernationManager::getSupportedStates(
+	ExtArray<HibernatorBase::SLEEP_STATE> &states ) const
+{
+	states.truncate(-1);
+	if ( m_hibernator ) {
+		unsigned mask = m_hibernator->getStates( );
+		return HibernatorBase::maskToStates( mask, states );
+	}
+	return false;
+}
+
+bool
+HibernationManager::getSupportedStates( MyString &str ) const
+{
+	str = "";
+	ExtArray<HibernatorBase::SLEEP_STATE> states;
+	if ( !getSupportedStates( states ) ) {
+		return false;
+	}
+	return HibernatorBase::statesToString( states, str );
 }
 
 bool
@@ -245,6 +292,10 @@ HibernationManager::publish ( ClassAd &ad )
 	const char *state = sleepStateToString( m_target_state );
     ad.Assign ( ATTR_HIBERNATION_LEVEL, level );
     ad.Assign ( ATTR_HIBERNATION_STATE, state );
+
+	MyString	states;
+	getSupportedStates( states );
+    ad.Assign ( ATTR_HIBERNATION_SUPPORTED_STATES, states );
 
     /* publish whether or not we can enter a state of hibernation */
     ad.Assign ( ATTR_CAN_HIBERNATE, canHibernate () );

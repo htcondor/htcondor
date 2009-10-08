@@ -1,0 +1,18 @@
+Config job_dagman_default_log.config
+
+Job NodeA job_dagman_default_log-nodeA.cmd Dir job_dagman_default_log-subdir
+Script Pre NodeA job_dagman_default_log-nodeA-pre.pl
+Script Post NodeA job_dagman_default_log-nodeA-post.pl $RETURN
+
+Job NodeB1 job_dagman_default_log-nodeB1.cmd
+Script Pre NodeB1 job_dagman_default_log-nodeB-pre.pl
+Script Post NodeB1 job_dagman_default_log-nodeB-post.pl $RETURN
+
+Job NodeB2 job_dagman_default_log-nodeB2.cmd
+Script Pre NodeB2 job_dagman_default_log-nodeB-pre.pl
+Script Post NodeB2 job_dagman_default_log-nodeB-post.pl $RETURN
+
+Job NodeC job_dagman_default_log-nodeC.cmd
+
+Parent NodeA Child NodeB1 NodeB2
+Parent NodeB1 NodeB2 Child NodeC

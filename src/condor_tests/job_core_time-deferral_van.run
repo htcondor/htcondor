@@ -33,7 +33,7 @@ $corename = "job_core_time-deferral_van";
 $currenthost = CondorTest::getFqdnHost();
 CondorTest::fullchomp($currenthost);
 
-system("date");
+print scalar localtime() . "\n";
 
 $mypid = $$;
 $mysaveme = $corename . ".saveme";
@@ -69,7 +69,7 @@ $ENV{CONDOR_CONFIG} = $timedeferlocconfig;
 
 CondorTest::debug("Set config to $timedeferlocconfig\n",1);
 
-my $result = system("./job_core_time-deferral.pl vanilla");
+my $result = system("./job_core_time-deferral.pl van");
 CondorTest::debug("Result of job_core_time-deferral.pl local test  job is  $result\n",1);
 
 
@@ -91,7 +91,7 @@ if( -e "$mysubmitnmlog" )
 }
 
 CondorTest::KillPersonal($timedeferlocconfig);
-system("date");
+print scalar localtime() . "\n";
 
 if( $result != 0 )
 {

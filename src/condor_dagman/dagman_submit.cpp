@@ -222,7 +222,7 @@ bool
 condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 			   const char* DAGNodeName, MyString DAGParentNodeNames,
 			   List<MyString>* names, List<MyString>* vals,
-			   const char* directory )
+			   const char* directory, const char *logFile )
 {
 	TmpDir		tmpDir;
 	MyString	errMsg;
@@ -271,6 +271,13 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 	MyString submitEventNotes = MyString(
 				"submit_event_notes = DAG Node: " ) + DAGNodeName;
 	args.AppendArg( submitEventNotes.Value() );
+
+	if ( logFile ) {
+		args.AppendArg( "-a" );
+		MyString logFileArg = MyString(
+					"log = " ) + logFile;
+		args.AppendArg( logFileArg.Value() );
+	}
 
 	ArgList parentNameArgs;
 	parentNameArgs.AppendArg( "-a" );

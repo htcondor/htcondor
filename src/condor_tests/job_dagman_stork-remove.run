@@ -33,7 +33,7 @@ CondorTest::debug("Working Directory is $topdir\n",1);
 $currenthost = CondorTest::getFqdnHost();
 CondorTest::fullchomp($currenthost);
 
-system("date");
+print scalar localtime() . "\n";
 
 $mypid = $$;
 $mysaveme = $corename . ".saveme";
@@ -147,9 +147,9 @@ if(!$status)
     exit(1)
 }
 
-system("date");
+print scalar localtime() . "\n";
 sleep(30); #allow settling time for dag removal ????? how to know remove command has finished?
-system("date");
+print scalar localtime() . "\n";
 
 $cmd = "stork_status $cluster";
 $status = CondorTest::runCondorTool($cmd,\@adarray,2);
@@ -187,7 +187,7 @@ if( -e "$mysubmitnmlog" )
 }
 
 CondorTest::KillPersonal($locconfig);
-system("date");
+print scalar localtime() . "\n";
 
 if( $run_result != 0 )
 {

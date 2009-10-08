@@ -21,73 +21,83 @@
 use CondorTest;
 use Cwd;
 #use Time::localtime;
+use strict;
+use warnings;
 
-$cmd = "cmd_wait_shows.cmd";
+my $cmd = "cmd_wait_shows.cmd";
+my $debuglevel = 2;
 
 my $pid = $$;
 system("rm -rf $pid");
 system("mkdir $pid");
 my $curcwd = getcwd();
-CondorTest::debug("current directory is $curcwd\n",1);
+CondorTest::debug("current directory is $curcwd\n",$debuglevel);
 
 my $socketname = "cmd_wait";
 my $resultfile = $curcwd . "/" . $pid . "/results";
-my $flowlog = $curcwd . "/" . $pid . "/cmd_wait_shows.log";
+my $flowlog = $curcwd . "/" . $pid . "/cmd_wait_shows-timeout.log";
 my $writelog = "./x_write_joblog_events.exe";
 
-CondorTest::debug("Result File is $resultfile\n",1);
+CondorTest::debug("Result File is $resultfile\n",$debuglevel);
 
 ####################################################################
 ####################################################################
 #
-# Base operation of having one cluster in the userlog
-# and telling condor_wait to wait. Then post execute
-# and terminated events and expect a happy result.
 #
 ####################################################################
 ####################################################################
 
 # seed log with 1 runs
 system("$writelog $flowlog submit 1");
+print "Drop a submit event\n";
 
 # Start condor_wait
-$spawncmd = "condor_wait -wait 10 $flowlog";
+my $spawncmd = "condor_wait -wait 10 $flowlog";
 CondorTest::spawn_cmd($spawncmd, $resultfile);
+print "Call condor_wait with 10 second timeout\n";
 
+print "Sleep 20\n";
 sleep(20);
 # start 1 runs
 system("$writelog $flowlog execute 1");
 
 # end 1 runs
 system("$writelog $flowlog terminated 1");
+print "Drop execute and terminate event into the log\n";
 
+print "Waiting for rersults - ";
 while(!(-f $resultfile)) {
-	CondorTest::debug("Waiting for $resultfile to exist\n",1);
+	CondorTest::debug("Waiting for $resultfile to exist\n",$debuglevel);
 	sleep(2);
 }
 
-CondorTest::debug("$resultfile exits!\n",1);
+CondorTest::debug("$resultfile exits!\n",$debuglevel);
 
 while( (-s $resultfile) == 0 ) {
-	CondorTest::debug("Waiting for results\n",1);
+	CondorTest::debug("Waiting for results\n",$debuglevel);
 	sleep(2);
 }
 
-CondorTest::debug("$resultfile not empty!\n",1);
+CondorTest::debug("$resultfile not empty!\n",$debuglevel);
+print "ok\n";
 
+print "Check results status - ";
 open(RES,"<$resultfile") || die "Can not open <$resultfile>:$!\n";
-$line = "";
+my $line = "";
 while(<RES>) {
 	$line = $_;
 	if($line =~ /^Exit\s+(\d+).*$/) {
 		if($1 != 0) {
-			CondorTest::debug("Exit status $1 != 0 expected. Good!\n",1);
+			CondorTest::debug("Exit status $1 != 0 expected. Good!\n",$debuglevel);
+			print "ok\n";
 			exit(0);
 		} else {
-			CondorTest::debug("Exit status $1 == 0 not expected. bad!\n",1);
+			print "bad\n";
+			CondorTest::debug("Exit status $1 == 0 not expected. bad!\n",$debuglevel);
 			exit(1);
 		}
 	} else {
+			print "bad\n";
 			exit(1);
 	}
 }

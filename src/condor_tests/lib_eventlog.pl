@@ -24,8 +24,6 @@ use CondorTest;
 $cmd = $ARGV[0];
 
 CondorTest::debug("Submit file for this test is $cmd\n",1);
-#print "looking at env for condor config\n";
-#system("printenv | grep CONDOR_CONFIG");
 
 $testdesc =  'Basic EventLog Test';
 $testname = "lib_eventlog";

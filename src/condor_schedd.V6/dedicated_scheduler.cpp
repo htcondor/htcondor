@@ -1100,7 +1100,7 @@ DedicatedScheduler::negotiateRequest( ClassAd* req, Stream* s,
 							 ATTR_LAST_MATCH_TIME, (int)time(0) );
 #endif
 
-			if( !s->get(claim_id) ) {
+			if( !s->get_secret(claim_id) ) {
 				dprintf( D_ALWAYS, "Can't receive ClaimId from mgr\n" ); 
 				return NR_ERROR;
 			}
@@ -2619,8 +2619,8 @@ DedicatedScheduler::computeSchedule( void )
 			// running jobs
 
 		if( (param1 != NULL) && (param2 != NULL)) {
-			Parse(param1, preemption_req);
-			Parse(param2, preemption_rank);
+			ParseClassAdRvalExpr(param1, preemption_req);
+			ParseClassAdRvalExpr(param2, preemption_rank);
 		}
 		if( param1 ) {
 			free(param1);

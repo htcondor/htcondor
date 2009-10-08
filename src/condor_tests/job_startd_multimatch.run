@@ -34,7 +34,7 @@ $jobcount = 5;
 $currenthost = CondorTest::getFqdnHost();
 CondorTest::fullchomp($currenthost);
 
-system("date");
+print scalar localtime() . "\n";
 
 $mypid = $$;
 $mysaveme = $corename . ".saveme";
@@ -114,7 +114,7 @@ if( -e "$mysubmitnmlog" )
 }
 
 CondorTest::KillPersonal($multimatchconfig);
-system("date");
+print scalar localtime() . "\n";
 
 if($result != 0)
 {

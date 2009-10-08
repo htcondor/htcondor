@@ -48,7 +48,8 @@ public:
 
   void Initialize();  // Configuration
 
-  int GetResourcesUsed(const MyString& CustomerName); // get # of used resources
+  int GetResourcesUsed(const MyString& CustomerName); // get # of used resources (unweighted by SlotWeight)
+  float GetWeightedResourcesUsed(const MyString& CustomerName);
   float GetPriority(const MyString& CustomerName); // get priority for a customer
   void SetPriority(const MyString& CustomerName, float Priority); // set priority for a customer
 
@@ -65,6 +66,7 @@ public:
   void AddMatch(const MyString& CustomerName, ClassAd* ResourceAd); // Add new match
   void RemoveMatch(const MyString& ResourceName); // remove a match
 
+  float GetSlotWeight(ClassAd *candidate);
   void UpdatePriorities(); // update all the priorities
 
   void CheckMatches(ClassAdList& ResourceList);  // Remove matches that are not claimed
@@ -74,10 +76,12 @@ public:
   void ReportLimits(AttrList *attrList);
 
   AttrList* ReportState();
-  AttrList* ReportState(const MyString& CustomerName, int * NumResources = NULL);
+  AttrList* ReportState(const MyString& CustomerName, int * NumResources = NULL, float * NumResourcesRW = NULL);
                                                 
   void DisplayLog();
   void DisplayMatches();
+
+  ClassAd* GetClassAd(const MyString& Key);
 
 private:
 
@@ -112,7 +116,8 @@ private:
   float HalfLifePeriod;     // The time in sec in which the priority is halved by aging
   MyString LogFileName;      // Name of Log file
   int	MaxAcctLogSize;		// Max size of log file
-  bool   DiscountSuspendedResources;
+  bool  DiscountSuspendedResources;
+  bool  UseSlotWeights; 
   StringList *GroupNamesList;
 
   //--------------------------------------------------------
@@ -132,20 +137,6 @@ private:
   static MyString CustomerRecord;
   static MyString ResourceRecord;
 
-  static MyString PriorityAttr;
-  static MyString UnchargedTimeAttr;
-  static MyString ResourcesUsedAttr;
-  static MyString AccumulatedUsageAttr;
-  static MyString BeginUsageTimeAttr;
-  static MyString LastUsageTimeAttr;
-  static MyString PriorityFactorAttr;
-
-  static MyString LastUpdateTimeAttr;
-
-  static MyString RemoteUserAttr;
-  static MyString StartTimeAttr;
-  static MyString Cpus;
-
   //--------------------------------------------------------
   // Utility functions
   //--------------------------------------------------------
@@ -157,7 +148,6 @@ private:
   static ClassAd* FindResourceAd(const MyString& ResourceName, ClassAdList& ResourceList);
   static MyString GetDomain(const MyString& CustomerName);
 
-  ClassAd* GetClassAd(const MyString& Key);
   bool DeleteClassAd(const MyString& Key);
 
   void SetAttributeInt(const MyString& Key, const MyString& AttrName, int AttrValue);

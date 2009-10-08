@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2008, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2009, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -25,6 +25,7 @@
  ***************************************************************/
 
 #include "extArray.h"
+#include "MyString.h"
 #include "hibernator.h"
 #include "network_adapter.h"
 
@@ -42,10 +43,13 @@ public:
 	//@{
 	
 	/// Constructor
-	HibernationManager ( void ) throw ();
+	HibernationManager( HibernatorBase *hibernator ) throw ();
 	
 	/// Destructor
-	virtual ~HibernationManager ( void ) throw ();
+	virtual ~HibernationManager( void ) throw ();
+
+	/// Initializer
+	bool initialize( void );
 	
 	//@}
 
@@ -72,7 +76,17 @@ public:
         @see switchToState()
         @see canWake()
         */
-    bool isStateSupported ( HibernatorBase::SLEEP_STATE state ) const;
+    bool isStateSupported( HibernatorBase::SLEEP_STATE state ) const;
+
+	/** Get bit-mask of supported states
+		@return true of successful, false otherwise
+        @see isStateSupported()
+        @see setTargetState()
+	*/
+	bool getSupportedStates( unsigned & mask ) const;
+	bool getSupportedStates( MyString &states ) const;
+	bool getSupportedStates(
+		ExtArray<HibernatorBase::SLEEP_STATE> &states ) const;
 
     /** Set which hibernation level the computer should enter
         @param the hibernation state to place machine into
@@ -95,7 +109,6 @@ public:
 	bool switchToTargetState ( void );
 
 	/** Switch to the specified state
-		@param The target state
 		@return true if the machine will enter hibernation; otherwise, false.
 		@see canHibernate
 		@see wantsHibernate

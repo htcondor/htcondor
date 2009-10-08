@@ -1,4 +1,6 @@
 universe   = vanilla
+# Insure that we only run once, that we don't restart after vacation
+requirements = isUndefined(My.NumShadowStarts) || (My.NumShadowStarts < 2)
 executable = ./x_job_filexfer_testjob.pl
 log = job_filexfer_output-withvacate_van.log
 output = job_filexfer_output-withvacate_van.out

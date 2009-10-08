@@ -2,12 +2,25 @@ VM_GAHP_SERVER = condor_vm-gahp
 
 PROGRAMS = $(VM_GAHP_SERVER)
 
-all_target( $(PROGRAMS) condor_vm_xen.sh condor_vm_vmware.pl)
+all_target( $(PROGRAMS) condor_vm_xen.sh condor_vm_vmware.pl libvirt_simple_script.awk)
 
-CFLAGS = $(STD_C_FLAGS)
+#if IS_LINUX && HAVE_EXT_LIBVIRT
+#  if HAS_EXTERNALS
+LIBVIRT_CFLAGS = -I$(LIBVIRT_INC)
+LIBVIRT_LIBS = $(LIBVIRT_LIB)/libvirt.a $(LIBXML2_DIR)/lib/libxml2.a -lz
+#  else
+LIBVIRT_CFLAGS =
+LIBVIRT_LIBS = -lvirt
+#  endif
+#else
+LIBVIRT_CFLAGS = 
+LIBVIRT_LIBS =
+#endif
 
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
-LIB = $(DAEMONCORE_LIB) $(STD_LIBS) $(CONFIGURE_GSOAP_LDFLAGS)
+CFLAGS = $(STD_C_FLAGS) $(LIBVIRT_CFLAGS)
+
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(LIBVIRT_CFLAGS)
+LIB = $(LIBVIRT_LIBS) $(DAEMONCORE_LIB) $(STD_LIBS) $(CONFIGURE_GSOAP_LDFLAGS)
 
 soapobjs(vmgahp)
 
@@ -21,6 +34,7 @@ VM_GAHP_SERVER_OBJ = vmgahp_main.o pbuffer.o vm_request.o vm_type.o vmgahp.o vmg
 public_c_plus_target($(VM_GAHP_SERVER),sbin,$(VM_GAHP_SERVER_OBJ),$(LIB))
 public_copy_target(condor_vm_xen.sh,sbin,condor_vm_xen.sh,EXECUTABLE_MODE)
 public_copy_target(condor_vm_vmware.pl,sbin,condor_vm_vmware.pl,EXECUTABLE_MODE)
+public_copy_target(libvirt_simple_script.awk,libexec,libvirt_simple_script.awk,EXECUTABLE_MODE)
 
 html:
 testbin:: all

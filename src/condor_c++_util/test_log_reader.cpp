@@ -51,8 +51,10 @@ struct Options
 	bool			missedCheck;
 	bool			exitAfterInit;
 	bool			isEventLog;
+	bool			checkFileStatus;
 	int				maxExec;
 	bool			exit;
+	int				stop;
 	int				sleep;
 	int				term;
 	Verbosity		verbosity;
@@ -61,8 +63,11 @@ struct Options
 Status
 CheckArgs(int argc, const char **argv, Options &opts);
 
-int // 0 == okay, 1 == error
+Status
 ReadEvents( Options &opts, int &numEvents );
+
+void
+ReportError( const ReadUserLog &reader );
 
 const char *timestr( struct tm &tm );
 
@@ -93,21 +98,30 @@ main(int argc, const char **argv)
 
 	Options	opts;
 	Status tmpStatus = CheckArgs(argc, argv, opts);
+	if ( STATUS_CANCEL == tmpStatus ) {
+		exit( 0 );
+	}
+	else if ( STATUS_OK != tmpStatus ) {
+		printf( "Error parsing command line\n" );
+		exit( 1 );
+	}
 
-	if ( tmpStatus == STATUS_OK ) {
-		result = ReadEvents(opts, events);
-	} else if ( tmpStatus == STATUS_ERROR ) {
+	tmpStatus = ReadEvents(opts, events);
+	if ( tmpStatus == STATUS_ERROR ) {
+		printf( "Error from ReadEvents: %d\n", (int)tmpStatus );
 		result = 1;
 	}
 
 	if ( opts.verbosity >= VERB_INFO ) {
-		printf( "Read %d events\n", events );
+		printf( "Total of %d events read\n", events );
 	}
 
 	if ( result != 0 && opts.verbosity >= VERB_ERROR ) {
-		fprintf(stderr, "test_log_reader FAILED\n");
+		printf( "test_log_reader FAILED\n" );
 	}
 
+	printf( "test_log_reader: exiting with status %d\n", result );
+	exit( result );
 	return result;
 }
 
@@ -131,9 +145,12 @@ CheckArgs(int argc, const char **argv, Options &opts)
 		"  --init-only: exit after initialization\n"
 		"  --rotation|-r <n>: enable rotation handling, set max #\n"
 		"  --no-rotation: disable rotation handling\n"
+		"  --no-sleep: No sleep between events\n"
 		"  --sleep <number>: how many seconds to sleep between events\n"
-		"  --exit|-x: Exit when no event available\n"
+		"  --stop: Send myself a SIGSTOP when no events available\n"
+		"  --exit|-x: Exit when no events available\n"
 		"  --eventlog|-e: Setup to read the EventLog\n"
+		"  --check-file-status: Check the file status, print when changed\n"
 		"  --ro: Read-only access to log file (disables locking)\n"
 		"  --no-term: No limit on terminte events\n"
 		"  --term <number>: number of terminate events to exit after\n"
@@ -151,8 +168,10 @@ CheckArgs(int argc, const char **argv, Options &opts)
 	opts.readOnly = false;
 	opts.maxExec = 0;
 	opts.isEventLog = false;
+	opts.checkFileStatus = false;
 	opts.exit = false;
 	opts.sleep = 5;
+	opts.stop = 0;
 	opts.term = 1;
 	opts.verbosity = VERB_ERROR;
 	opts.rotation = false;
@@ -161,7 +180,8 @@ CheckArgs(int argc, const char **argv, Options &opts)
 	opts.dumpState = false;
 	opts.missedCheck = false;
 
-	for ( int argno = 1; argno < argc; ++argno ) {
+	int		argno = 1;
+	while ( (argno < argc) & (status == STATUS_OK) ) {
 		SimpleArg	arg( argv, argc, argno );
 
 		if ( arg.Error() ) {
@@ -171,8 +191,9 @@ CheckArgs(int argc, const char **argv, Options &opts)
 
 		if ( arg.Match('d', "debug") ) {
 			if ( arg.hasOpt() ) {
-				set_debug_flags( const_cast<char *>(arg.getOpt()) );
-				argno = arg.ConsumeOpt( );
+				const char	*flags;
+				arg.getOpt( flags );
+				set_debug_flags( const_cast<char *>(flags) );
 			} else {
 				fprintf(stderr, "Value needed for '%s'\n", arg.Arg() );
 				printf("%s", usage);
@@ -211,6 +232,9 @@ CheckArgs(int argc, const char **argv, Options &opts)
 			opts.dumpState = true;
 #     endif
 
+		} else if ( arg.Match("check-file-status") ) {
+			opts.checkFileStatus = true;
+
 		} else if ( arg.Match("init-only") ) {
 			opts.exitAfterInit = true;
 
@@ -224,6 +248,9 @@ CheckArgs(int argc, const char **argv, Options &opts)
 
 		} else if ( arg.Match( 'x', "exit") ) {
 			opts.exit = true;
+
+		} else if ( arg.Match("stop") ) {
+			opts.stop++;
 
 		} else if ( arg.Match( 'r', "rotation") ) {
 			if ( arg.getOpt( opts.maxRotations ) ) {
@@ -241,6 +268,9 @@ CheckArgs(int argc, const char **argv, Options &opts)
 				printf("%s", usage);
 				status = STATUS_ERROR;
 			}
+
+		} else if ( arg.Match("no-sleep") ) {
+			opts.sleep = 0;
 
 		} else if ( arg.Match("no-term") ) {
 			opts.term = -1;
@@ -307,13 +337,14 @@ CheckArgs(int argc, const char **argv, Options &opts)
 			opts.writePersist = true;
 
 		} else if ( !arg.ArgIsOpt() ) {
-			opts.logFile = arg.Arg();
+			arg.getOpt(opts.logFile);
 
 		} else {
 			fprintf(stderr, "Unrecognized argument: '%s'\n", arg.Arg() );
 			printf("%s", usage);
 			status = STATUS_ERROR;
 		}
+		argno = arg.Index( );
 	}
 
 	if ( status == STATUS_OK &&
@@ -328,13 +359,14 @@ CheckArgs(int argc, const char **argv, Options &opts)
 	return status;
 }
 
-int
-ReadEvents(Options &opts, int &numEvents)
+Status
+ReadEvents(Options &opts, int &totalEvents)
 {
-	int		result = 0;
+	Status					 result = STATUS_OK;
+	int						 numEvents = 0;
 
 	// No events yet!
-	numEvents = 0;
+	totalEvents = 0;
 
 	// Create & initialize the state
 	ReadUserLog::FileState	state;
@@ -364,6 +396,7 @@ ReadEvents(Options &opts, int &numEvents)
 			}
 			if ( ! istatus ) {
 				fprintf( stderr, "Failed to initialize from state\n" );
+				ReportError( reader );
 				return STATUS_ERROR;
 			}
 			printf( "Initialized log reader from state %s\n",
@@ -384,21 +417,34 @@ ReadEvents(Options &opts, int &numEvents)
 
 	// If, after the above, the reader isn't initialized, do so now
 	if ( !reader.isInitialized() ) {
+		bool		 istatus = false;
+		const char	*type = "None";
+		char		 buf[64];
 		if ( opts.isEventLog ) {
-			if ( !reader.initialize( ) ) {
-				fprintf( stderr, "Failed to initialize with EventLog\n" );
-				return STATUS_ERROR;
-			}
+			istatus = reader.initialize( );
+			type = "EventLog";
+		}
+		else if ( opts.maxRotations <= 1 ) {
+			istatus = reader.initialize( opts.logFile,
+										 opts.rotation,
+										 opts.rotation );
+			type = opts.rotation ? "file (rotation)" : "file (no rotations)";
 		}
 		else {
-			if ( !reader.initialize( opts.logFile,
-									 opts.maxRotations,
-									 opts.rotation,
-									 opts.readOnly ) ) {
-				fprintf( stderr, "Failed to initialize with file\n" );
-				return STATUS_ERROR;
-			}
+			istatus = reader.initialize( opts.logFile,
+										 opts.maxRotations,
+										 opts.rotation,
+										 opts.readOnly );
+			snprintf( buf, sizeof(buf), "file (%s/%d)",
+					  opts.rotation ? "rotation" : "no rotations",
+					  opts.maxRotations );
+			type = buf;
 		}
+		if ( !istatus ) {
+			fprintf( stderr, "Failed to initialize with %s\n", type );
+			return STATUS_ERROR;
+		}
+		printf( "Initialized with %s\n", type );
 	}
 
 	// --init-only ?
@@ -411,35 +457,60 @@ ReadEvents(Options &opts, int &numEvents)
 	signal( SIGQUIT, handle_sig );
 	signal( SIGINT, handle_sig );
 
-	int		execEventCount = 0;
-	int		termEventCount = 0;
-	bool	done = (opts.term == 0);
-	bool	missedLast = false;
-	int		prevCluster=999, prevProc=999, prevSubproc=999;
-
+	int						execEventCount = 0;
+	int						termEventCount = 0;
+	bool					done = (opts.term == 0);
+	bool					missedLast = false;
+	int						prevCluster=999;
+	int						prevProc=999;
+	int						prevSubproc=999;
+	ReadUserLog::FileStatus	prevFstatus = (ReadUserLog::FileStatus) 999;
 
 	while ( !done && !global_done ) {
-		ULogEvent	*event = NULL;
+		bool	empty = false;
+		if ( opts.checkFileStatus ) {
+			ReadUserLog::FileStatus	fstatus = reader.CheckFileStatus( empty );
+			if ( fstatus != prevFstatus ) {
+				char	*s;
+				switch( fstatus ) {
+				case ReadUserLog::LOG_STATUS_ERROR:
+					s = "ERROR";
+					break;
+				case ReadUserLog::LOG_STATUS_NOCHANGE:
+					s = "NOCHANGE";
+					break;
+				case ReadUserLog::LOG_STATUS_GROWN:
+					s = "GROWN";
+					break;
+				case ReadUserLog::LOG_STATUS_SHRUNK:
+					s = "SHRUNK";
+					break;
+				default:
+					s = "unknown";
+					break;
+				}
+				if ( opts.verbosity >= VERB_INFO ) {
+					printf( "New status: %d/%s%s\n",
+							(int) fstatus, s, empty ? " [empty]" : "" );
+				}
+				prevFstatus = fstatus;
+			}
+		}
 
-		ULogEventOutcome	outcome = reader.readEvent(event);
+		ULogEvent			*event = NULL;
+		ULogEventOutcome	 outcome;
+		if ( empty ) {
+			outcome = ULOG_NO_EVENT;
+		}
+		else {
+			outcome = reader.readEvent(event);
+		}
+
 		if ( outcome == ULOG_OK ) {
 			if ( opts.verbosity >= VERB_ALL ) {
 				printf( "Got an event from %d.%d.%d @ %s",
 						event->cluster, event->proc, event->subproc,
 						timestr(event->eventTime) );
-			}
-
-			// Store off the persisted state
-			if ( opts.writePersist && reader.GetFileState( state ) ) {
-				int	fd = safe_open_wrapper( opts.persistFile,
-											O_WRONLY|O_CREAT,
-											S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP );
-				if ( fd >= 0 ) {
-					if ( write( fd, state.buf, state.size ) != state.size ) {
-						fprintf( stderr, "Failed writing persistent file\n" );
-					}
-					close( fd );
-				}
 			}
 
 			if (opts.missedCheck ) {
@@ -460,7 +531,32 @@ ReadEvents(Options &opts, int &numEvents)
 			prevProc = event->proc;
 			prevSubproc = event->subproc;
 
+			if ( missedLast ) {
+				ReadUserLogStateAccess		paccess( state );
+				ReadUserLog::FileState		nstate;
+				ReadUserLog::InitFileState( nstate );
+				ReadUserLogStateAccess		naccess( nstate );
+
+				long						diff_pos, diff_enum;
+				char						puniq[256], nuniq[256];
+				int							pseq, nseq;
+
+				paccess.getLogPositionDiff( paccess, diff_pos );
+				paccess.getEventNumberDiff( paccess, diff_enum );
+				paccess.getUniqId( puniq, sizeof(puniq) );
+				paccess.getSequenceNumber( pseq );
+				naccess.getUniqId( nuniq, sizeof(nuniq) );
+				paccess.getSequenceNumber( nseq );
+				printf( "Missed: %ld bytes, %ld events\n"
+						"  Previous Uniq=%s, seq=%d\n"
+						"  Current  Uniq=%s, seq=%d\n",
+						diff_pos, diff_enum,
+						puniq, pseq,
+						nuniq, nseq );
+			}
+
 			numEvents++;
+			totalEvents++;
 			switch ( event->eventNumber ) {
 			case ULOG_SUBMIT:
 				if ( opts.verbosity >= VERB_ALL ) {
@@ -479,7 +575,7 @@ ReadEvents(Options &opts, int &numEvents)
 						fprintf(stderr, "Maximum number of execute "
 								"events (%d) exceeded\n", opts.maxExec);
 					}
-					result = 1;
+					result = STATUS_ERROR;
 					done = true;
 				}
 				missedLast = false;
@@ -530,8 +626,36 @@ ReadEvents(Options &opts, int &numEvents)
 
 			}
 
+			// Store off the persisted state
+			if ( opts.writePersist && reader.GetFileState( state ) ) {
+				int	fd = safe_open_wrapper( opts.persistFile,
+											O_WRONLY|O_CREAT,
+											S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP );
+				if ( fd >= 0 ) {
+					if ( write( fd, state.buf, state.size ) != state.size ) {
+						fprintf( stderr, "Failed writing persistent file\n" );
+					}
+					close( fd );
+				}
+			}
+
 		} else if ( outcome == ULOG_NO_EVENT ) {
-			if ( opts.exit ) {
+			if ( opts.verbosity >= VERB_ALL ) {
+				printf( "No events available\n" );
+			}
+			if ( opts.stop > 0 ) {
+				if ( opts.verbosity >= VERB_INFO ) {
+					printf( "Read %d events\n", numEvents );
+				}
+				printf( "\n*** Sending SIGSTOP to myself (PID %d) ***\n",
+						getpid() );
+				fflush( stdout );
+				kill( getpid(), SIGSTOP );
+				opts.stop--;
+				numEvents = 0;
+				printf( "\n*** Continued after stop ***\n");
+			}
+			else if ( opts.exit ) {
 				done = true;
 			}
 			else {
@@ -540,14 +664,15 @@ ReadEvents(Options &opts, int &numEvents)
 			missedLast = false;
 
 		} else if ( outcome == ULOG_MISSED_EVENT ) {
-			printf( "\n*** Missed event ***\n" );
+			printf( "\n*** Missed event(s) ***\n" );
 			missedLast = true;
 
 		} else if ( outcome == ULOG_RD_ERROR || outcome == ULOG_UNK_ERROR ) {
 			if ( opts.verbosity >= VERB_ERROR ) {
-				fprintf(stderr, "Error reading event\n");
+				fprintf(stderr, "Error reading event @ # %d / %d\n",
+						numEvents, totalEvents );
 			}
-			result = 1;
+			result = STATUS_ERROR;
 		}
 
 		delete event;
@@ -579,7 +704,24 @@ ReadEvents(Options &opts, int &numEvents)
 	}
 
 	ReadUserLog::UninitFileState( state );
+
+	if ( opts.verbosity >= VERB_INFO ) {
+		printf( "Read %d events\n", numEvents );
+	}
+
 	return result;
+}
+
+void
+ReportError( const ReadUserLog &reader )
+{
+	ReadUserLog::ErrorType	 error;
+	const char				*error_str;
+	unsigned				 line_num;
+
+	reader.getErrorInfo( error, error_str, line_num );
+	fprintf( stderr, "  %s (#%d) @ line %d\n",
+			 error_str, error, line_num );
 }
 
 const char *timestr( struct tm &t )
@@ -593,3 +735,9 @@ const char *timestr( struct tm &t )
 	return tbuf;
 }
 
+/*
+### Local Variables: ***
+### mode:c++ ***
+### tab-width:4 ***
+### End: ***
+*/

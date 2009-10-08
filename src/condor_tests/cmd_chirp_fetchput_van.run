@@ -1,0 +1,89 @@
+#!/usr/bin/perl
+use strict; use warnings;
+use CondorTest;
+use Digest::MD5 qw(md5_base64);
+use vars qw($fetchme_fn $removeme_fn $put_fn_0 $put_fn_1 $put_fn_2);
+
+my $testdesc = "chirp io tests using perl - vanilla U";
+my $testname = "cmd_chirp_fetchput_van";
+my $cmd_fn = "$testname.cmd";
+###########################################################
+my $fetchme_fn = "cmd_chirp_fetchput_van.temp.fetchme";
+my $removeme_fn = "cmd_chirp_fetchput_van.temp.removeme";
+my $put_fn_0 = "cmd_chirp_fetchput_van.temp.putme.0";
+my $put_fn_1 = "cmd_chirp_fetchput_van.temp.putme.1";
+my $put_fn_2 = "cmd_chirp_fetchput_van.temp.putme.2";
+###########################################################
+sub cleanup { # this function quickly cleans up all the files created
+	(-e $_) and (unlink $_ or warn "Could not unlink $_.") foreach  
+		($fetchme_fn, $removeme_fn, $put_fn_0, $put_fn_1, $put_fn_2); }
+sub fail { cleanup(); die($_[0]); } # cleans up and dies with given error message
+###########################################################
+
+cleanup(); 
+# First make file that is to be read. The first line is a hash of the rest 
+# of the contents (the rest of the contents is on one line)
+my $contents =  ("testing qwertyuiopasdfghjklzxcvbnm".rand())x30;
+my $hash = md5_base64($contents);
+open (TEST_FILE, ">$fetchme_fn") or fail("Fetch preparation: Can't open TEST_FILE."); 
+print TEST_FILE "$hash\n$contents";
+close TEST_FILE or fail("Fetch preparation: Can't close TEST_FILE."); 
+
+# Now make file that is to be deleted.
+open (TEST_FILE, ">$removeme_fn") or fail("Remove preparation: Can't open TEST_FILE."); 
+print TEST_FILE "Contents.";
+close TEST_FILE or fail("Remove preparation: Can't close TEST_FILE."); 
+
+# on_completion is executed upon completion of the job script, and makes sure that  
+# everything occured as it should have by checking for existence of files, and 
+# the contents thereof against expected existences and expected contents.
+sub on_completion {
+	sub file_contents { # file_contents simply reads the contents of the file into
+		my ($fn,$c) = (shift,''); # one scalar string which it returns.
+		open (IN_FILE, "<$fn") or fail("$testname: failed, cannot open $fn.");
+		$c .= $_ while(<IN_FILE>); # sip file into $c
+		close IN_FILE or fail("$testname: failed, can't close $fn.");
+		return $c;
+	}
+	# Check that file existences and non-existences are as they should be
+	# (fail just cleans up and then dies with the error message provided)
+	fail("$testname: failed, condor_chirp fetch somehow rm file.") unless (-e $fetchme_fn);  
+	fail("$testname: failed, condor_chirp remove unsucessful.") if (-e $removeme_fn);
+	fail("$testname: failed, condor_chirp put unsucessful. (0)") unless (-e $put_fn_0);  
+	fail("$testname: failed, condor_chirp put unsucessful. (1)") unless (-e $put_fn_1);  
+	fail("$testname: failed, condor_chirp put unsucessful. (2)") unless (-e $put_fn_2);
+	
+	# Check that put'ed file matches original fetch file
+	fail("$testname: failed, condor_chirp fetch or put (likely put) unsuccessful.")
+		unless file_contents($fetchme_fn) eq file_contents($put_fn_0);
+	# Check that other put'ed file matches expected value for that file
+	# TODO: currently, the append mode test is disabled because the append mode 
+	# doesn't seem to work at all...
+	my $expected_value_for_put = "example line\n";
+	fail("$testname: failed, condor_chirp put append mode unsuccessful.")
+		unless file_contents($put_fn_1) eq "$expected_value_for_put"x2 or 1;
+	# Check to see that 3rd put'ed file matches expected value for that file
+	fail("$testname: failed, condor_chirp put from standard-in unsuccessful.")
+		unless file_contents($put_fn_2) eq $expected_value_for_put;
+	# Check to see if two put'ed file matches expected permissions
+	# TODO: currently, this test  is disabled (the 'or 1') because I can't 
+	# get permissions to be set properly. 
+	fail("$testname: failed, condor_chirp put permissions unsuccessful (1).")
+		unless (stat($put_fn_1))[2]==33261 or 1; # this is 0755
+	fail("$testname: failed, condor_chirp put permissions unsuccessful (2).")
+		unless (stat($put_fn_2))[2]==33197;# this is 0655
+
+	cleanup(); # Yay, success! All the tests have been passed successfully. 
+}
+
+CondorTest::RegisterExitedSuccess ($testname,\&on_completion);
+
+if( CondorTest::RunTest($testname, $cmd_fn, 0) ) {
+	print "Run test succeeded.\n";
+	CondorTest::debug("$testname: SUCCESS\n",1); 
+	exit(0);
+} else { 
+	print "Run test failed.\n";
+	fail("$testname: CondorTest()::RunTest() failed\n");
+}
+

@@ -676,7 +676,7 @@ main( int argc, char *argv[] )
 						subsys_arg = *tmp;
 						dt = stringToDaemonType(subsys_arg);
 						if( dt == DT_NONE ) {
-							dt = DT_ANY;
+							dt = DT_GENERIC;
 						}
 					} else {
 						fprintf( stderr, 
@@ -723,7 +723,7 @@ main( int argc, char *argv[] )
 		// that we know the true target daemon type for whatever
 		// command we're using, want the real string to use.
 	if( subsys ) {
-		if( dt == DT_ANY && subsys_arg ) {
+		if( (dt == DT_ANY || dt == DT_GENERIC) && subsys_arg ) {
 			subsys = subsys_arg; 
 		} else { 
 			subsys = daemonString( dt );
@@ -896,6 +896,9 @@ doCommands(int /*argc*/,char * argv[],char *MyName)
 			// to talk to a remote pool, they just want to send their
 			// command to the local host. 
 		Daemon local_d( real_dt, NULL );
+		if( real_dt == DT_GENERIC ) {
+			local_d.setSubsystem( subsys );
+		}
 		if( ! local_d.locate() ) {
 			if( IgnoreMissingDaemon ) {
 				return 0;
@@ -933,6 +936,9 @@ doCommands(int /*argc*/,char * argv[],char *MyName)
 		// Now, send commands to all the daemons we know about.
 	daemons.rewind();	
 	while( daemons.next(d) ) {
+		if( real_dt == DT_GENERIC ) {
+			d->setSubsystem( subsys );
+		}
 		doCommand( d );
 	}
 	return 0;
@@ -1054,6 +1060,30 @@ resolveNames( DaemonList* daemon_list, StringList* name_list )
 	case DT_SCHEDD:
 		adtype = SCHEDD_AD;
 		break;
+	case DT_CLUSTER:
+		adtype = CLUSTER_AD;
+		break;
+	case DT_COLLECTOR:
+		adtype = COLLECTOR_AD;
+		break;
+	case DT_NEGOTIATOR:
+		adtype = NEGOTIATOR_AD;
+		break;
+	case DT_CREDD:
+		adtype = CREDD_AD;
+		break;
+	case DT_QUILL:
+		adtype = QUILL_AD;
+		break;
+	case DT_LEASE_MANAGER:
+		adtype = LEASE_MANAGER_AD;
+		break;
+	case DT_GENERIC:
+		adtype = GENERIC_AD;
+		break;
+	case DT_HAD:
+		adtype = HAD_AD;
+		break;
 	default:
 			// TODO: can we do better than this?
 		fprintf( stderr, "Unrecognized daemon type while resolving names\n" );
@@ -1067,6 +1097,14 @@ resolveNames( DaemonList* daemon_list, StringList* name_list )
 
 	CondorError errstack;
 	QueryResult q_result;
+	MyString buffer;
+
+	if (adtype == GENERIC_AD) {
+		query.setGenericQueryType(subsys);
+		buffer.sprintf("TARGET.%s == \"%s\"", ATTR_TARGET_TYPE, subsys);
+		query.addANDConstraint(buffer.Value());
+	}
+
 	if (pool_addr) {
 		q_result = query.fetchAds(ads, pool_addr, &errstack);
 	} else {
@@ -1472,6 +1510,9 @@ handleAll()
 	Daemon* d;
 	daemons.rewind();	
 	while( daemons.next(d) ) {
+		if( real_dt == DT_GENERIC ) {
+			d->setSubsystem( subsys );
+		}
 		doCommand( d );
 	}
 }
@@ -1702,6 +1743,9 @@ doSquawkReconnect( char *addr ) {
 		}
 	}
 	Daemon d( dt, hostname, pool ? pool->addr() : NULL );
+	if( real_dt == DT_GENERIC ) {
+		d.setSubsystem( subsys );
+	}
 	if( ! d.locate() ) {
 		printf ( "Failed to contact daemon.\n" );
 		return FALSE;

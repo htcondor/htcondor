@@ -26,7 +26,10 @@
 #include "MyString.h"
 #include "string_list.h"
 #include "simplelist.h"
+#include "extArray.h"
 #endif
+
+#include "param_info.h"
 
 #define CONDOR_GCB_INVALID_BROKER "0.0.0.1"
 
@@ -101,19 +104,29 @@ class ParamValue {
 	ExtArray<ParamValue>* param_all(void);
 	char* param_or_except( const char *name );
     int param_integer( const char *name, int default_value,
-					   int min_value = INT_MIN, int max_value = INT_MAX );
+					   int min_value = INT_MIN, int max_value = INT_MAX, bool use_param_table = true );
 	// Alternate param_integer():
 	bool param_integer( const char *name, int &value,
 						bool use_default, int default_value,
 						bool check_ranges = true,
-						int min_value = INT_MIN, int max_value = INT_MAX );
-    double param_double( const char *name, double default_value,
-					   double min_value = DBL_MIN, double max_value = DBL_MAX );
-	bool param_boolean( const char *name, const bool default_value, bool do_log = true );
-	bool param_boolean_expr( const char *name, bool default_value, ClassAd const *me, ClassAd const *target );
+						int min_value = INT_MIN, int max_value = INT_MAX,
+                        ClassAd *me=NULL, ClassAd *target=NULL,
+						bool use_param_table = true );
+
+
+	double param_double(const char *name, double default_value,
+                        double min_value = -DBL_MAX, double max_value = DBL_MAX,
+                        ClassAd *me=NULL, ClassAd *target=NULL,
+						bool use_param_table = true );
+
+	bool param_boolean( const char *name, bool default_value,
+                        bool do_log = true,
+						ClassAd *me=NULL, ClassAd *target=NULL,
+						bool use_param_table = true );
+
 	bool param_get_location(const char *parameter, MyString &filename,
 							int &line_number);
-
+	
 	/** Look up a value by the name 'name' from the table 'table' which is table_size big.
 	
 	Values should have been inserted with insert() (above).
@@ -127,6 +140,9 @@ class ParamValue {
 	  has already been converted to the canonical lowercase form.*/
 	char * lookup_macro_lower( const char *name, BUCKET **table, int table_size );
 
+	/* A convenience function that calls param() with a MyString buffer. */
+	bool param(MyString &buf,char const *param_name,char const *default_value=NULL);
+
 /* here we provide C linkage to C++ defined functions. This seems a bit
 	odd since if a .c file includes this, these prototypes technically don't
 	exist.... */
@@ -136,8 +152,9 @@ extern "C" {
 	void config_fill_ad( ClassAd*, const char *prefix = NULL );
 	void condor_net_remap_config( bool force_param=false );
 	int param_integer_c( const char *name, int default_value,
-					   int min_value, int max_value);
-    int  param_boolean_int( const char *name, int default_value );
+					   int min_value, int max_value, bool use_param_table = true );
+    //int  param_boolean_int( const char *name, int default_value, bool use_param_table = true );
+    int  param_boolean_int_with_default( const char *name );
 	int  set_persistent_config(char *admin, char *config);
 	int  set_runtime_config(char *admin, char *config);
 	/** Expand parameter references of the form "left$(middle)right".  
@@ -239,6 +256,8 @@ BEGIN_C_DECLS
 
 	char * get_tilde(void);
 	char * param ( const char *name );
+	char * param_without_default(const char *name);
+	char * param_with_default_abort(const char *name, int abort);
 	/** Insert a value into a hash table.
 
 	The value of 'value' is associated with the name 'name'.  This is
@@ -260,7 +279,16 @@ BEGIN_C_DECLS
 	void clear_config ( void );
 	void set_debug_flags( const char * );
 	void config_insert( const char*, const char* );
-	int  param_boolean_int( const char *name, int default_value );  
+	int  param_boolean_int( const char *name, int default_value );
+	int  param_boolean_int_with_default( const char* name );
+	int  param_boolean_int_without_default( const char* name, int default_value );
+	
+	// Write out a config file of non-default values.
+	// Returns 0 on success and -1 on failure.
+	int write_config_file( const char* pathname );
+	// Helper function, of form to iterate over the hash table of parameter
+	// information.  Returns 0 to continue, -1 to stop (i.e. on an error).
+	int write_config_variable(param_info_t* value, void* file_desc);
 
 /* This function initialize GSI (maybe other) authentication related
    stuff Daemons that should use the condor daemon credentials should

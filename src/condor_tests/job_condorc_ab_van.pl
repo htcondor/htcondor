@@ -19,29 +19,30 @@
 ##**************************************************************
 
 use CondorTest;
-
+use strict;
+use warnings;
 
 #$cmd = 'job_condorc_ab_van.cmd';
-$cmd = $ARGV[0];
+my $cmd = $ARGV[0];
 
-CondorTest::debug("Submit file for this test is $cmd\n",1);
-CondorTest::debug("looking at env for condor config\n",1);
-system("printenv | grep CONDOR_CONFIG");
+my $testdesc =  'Condor-C A & B test - vanilla U';
+my $testname = $ARGV[1];
+my $debuglevel = 2;
 
-$condor_config = $ENV{CONDOR_CONFIG};
-CondorTest::debug("CONDOR_CONFIG = $condor_config\n",1);
+CondorTest::debug("Submit file for this test is $cmd\n",$debuglevel);
+CondorTest::debug("looking at env for condor config\n",$debuglevel);
 
-$testdesc =  'Condor-C A & B test - vanilla U';
-$testname = $ARGV[1];
+my $condor_config = $ENV{CONDOR_CONFIG};
+CondorTest::debug("CONDOR_CONFIG = $condor_config\n",$debuglevel);
 
-$aborted = sub {
+my $aborted = sub {
 	my %info = @_;
 	my $done;
 	CondorTest::debug("Abort event not expected!\n",1);
 	#die "Want to see only submit, release and successful completion events for periodic release test\n";
 };
 
-$held = sub {
+my $held = sub {
 	my %info = @_;
 	my $cluster = $info{"cluster"};
 	my $holdreason = $info{"holdreason"};
@@ -55,63 +56,77 @@ $held = sub {
 	exit(1);
 };
 
-$executed = sub
+my $executed = sub
 {
 	my %args = @_;
 	my $cluster = $args{"cluster"};
+	print "Condor-C job is currently executing.\n";
 };
 
-$timed = sub
-{
-	die "Test took too long!!!!!!!!!!!!!!!\n";
-};
-
-$success = sub
+my $success = sub
 {
 	my %info = @_;
-
+	print "Condor-C completed, checking results - ";
 	# Verify that output file contains expected "Done" line
-	my $founddone - 0;
-	$output = $info{"transfer_output_files"};
+	my $founddone = 0;
+	my $output = $info{"transfer_output_files"};
 	open( OUTPUT, "< $output" );
-	@output_lines = <OUTPUT>;
+	CondorTest::debug("Opening output file <$output>\n",$debuglevel);
+	my @output_lines = <OUTPUT>;
+	my @chomped_output;
 	close OUTPUT;
-	foreach $res (@output_lines) {
-		CondorTest::debug("res: $res\n",1);
+	foreach my $res (@output_lines) {
+		CondorTest::fullchomp($res);
+		push @chomped_output, $res;
+		CondorTest::debug("res: $res\n",$debuglevel);
 		if($res =~ /^.*Done.*$/) {
 			$founddone = 1;
 			last;
 		}
 	}
 	if( $founddone != 1 ) {
+		print "bad\n";
 	    die "Output file $output is missing \"Done\"!\n";
 	}
 
+	# chomp results
+	my @chomped_output;
+	print "Result File:\n";
+	foreach my $res (@output_lines) {
+		CondorTest::fullchomp($res);
+		push  @chomped_output, $res;
+		print "out: <$res>\n";
+	}
 	# Verify that output file contains the contents of the
 	# input file.
-	$input = $info{"input"};
+	my $input = $info{"transfer_input_files"};
+	CondorTest::debug("Opening input file <$input>\n",$debuglevel);
 	open( INPUT, "< $input" );
-	@input_lines = <INPUT>;
+	my @input_lines = <INPUT>;
 	close INPUT;
 	for my $input_line (@input_lines) {
-	    if( !grep($_ eq $input_line,@output_lines) ) {
-		die "Output file is missing echoed input!\n";
+		CondorTest::fullchomp($input_line);
+		CondorTest::debug("checking for this entry in output:<$input_line>\n",$debuglevel);
+	    if( !grep($_ eq $input_line,@chomped_output) ) {
+			print "bad\n";
+			die "Output file is missing echoed input!\n";
 	    }
 	}
+	print "ok\n";
 
-	CondorTest::debug("Success: ok\n",1);
+	CondorTest::debug("Success: ok\n",$debuglevel);
 };
 
-$release = sub
+my $release = sub
 {
-	CondorTest::debug("Release expected.........\n",1);
+	CondorTest::debug("Release expected.........\n",$debuglevel);
 	my @adarray;
 	my $status = 1;
 	my $cmd = "condor_reschedule";
 	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
 	if(!$status)
 	{
-		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
+		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",$debuglevel);
 		exit(1)
 	}
 };
@@ -120,10 +135,9 @@ CondorTest::RegisterExitedSuccess( $testname, $success);
 CondorTest::RegisterExecute($testname, $executed);
 CondorTest::RegisterRelease( $testname, $release );
 CondorTest::RegisterHold( $testname, $held );
-#CondorTest::RegisterTimed($testname, $timed, 900);
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	CondorTest::debug("$testname: SUCCESS\n",1);
+	CondorTest::debug("$testname: SUCCESS\n",$debuglevel);
 	exit(0);
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";

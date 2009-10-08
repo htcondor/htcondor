@@ -37,7 +37,7 @@ my @adarray;
 
 CondorTest::fullchomp($currenthost);
 
-system("date");
+print scalar localtime() . "\n";
 
 $mypid = $$;
 $mysaveme = $corename . ".saveme";
@@ -124,13 +124,13 @@ if( -e "$mysubmitnmlog" )
 
 CondorTest::KillPersonal($locconfig);
 CondorTest::KillPersonal($flocktoconfig);
-system("date");
+print scalar localtime() . "\n";
 
 if( $flockstatus != 0 )
 {
 	# actual test failed but we allowed cleanup
 	CondorTest::debug("job_flocking_to FAILED\n",1);
-	system("date");
+	print scalar localtime() . "\n";
 	exit(1);
 }
 

@@ -39,7 +39,7 @@ my $numberoferrors = 0;
 $currenthost = CondorTest::getFqdnHost();
 CondorTest::fullchomp($currenthost);
 
-system("date");
+print scalar localtime() . "\n";
 $myvariation = 1;
 
 $pid = $mypid = $$;
@@ -61,7 +61,7 @@ while(<DF>) {
 	#}
 	$myvariation = $myvariation + 1;
 	CondorTest::debug("Condor for this run in $mypid\n",1);
-	system("date");
+	print scalar localtime() . "\n";
 	$line = $_;
 	if($line =~ /^(x_secneg.*_secprepostsrc)\s(.*)$/ ) {
 		CondorTest::debug("Negotiation is $1 and Expected result $2\n",1);
@@ -140,10 +140,10 @@ while(<DF>) {
 	}
 
 	CondorTest::KillPersonal($secconfig);
-	system("date");
+	print scalar localtime() . "\n";
 }
 
-system("date");
+print scalar localtime() . "\n";
 
 if( $mynumberoferrors != 0 )
 {

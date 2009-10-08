@@ -23,6 +23,7 @@
 
 #define CONDOR_VM_UNIVERSE_XEN "xen"
 #define CONDOR_VM_UNIVERSE_VMWARE "vmware"
+#define CONDOR_VM_UNIVERSE_KVM "kvm"
 
 
 #define VM_CKPT_FILE_EXTENSION	".cckpt"

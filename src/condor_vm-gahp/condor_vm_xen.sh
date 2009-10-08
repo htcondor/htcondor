@@ -480,6 +480,9 @@ case "$1" in
   createconfig)
 	createconfig "$2"
 	;;
+  virsh)
+	check
+	;;
    *)
 	usage
 esac

@@ -1,14 +1,14 @@
 NAME = condor_collector
 all_target(collector_engine.a $(NAME))
 
-CFLAGS = $(STD_C_FLAGS)
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
-LIB = collector_engine.a $(DAEMONCORE_LIB) $(STD_LIBS) $(CONFIGURE_GSOAP_LDFLAGS)
+CFLAGS = $(STD_C_FLAGS) $(CONFIGURE_PCRE_CFLAGS)
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(CONFIGURE_PCRE_CFLAGS)
+LIB = collector_engine.a $(DAEMONCORE_LIB) $(STD_LIBS) $(CONFIGURE_GSOAP_LDFLAGS) $(CONFIGURE_PCRE_LDFLAGS)
 
 ENGINE_OBJ = hashkey.o collector_engine.o
 
 #if HAVE_DLOPEN
-# define PluginObj CollectorPlugin.o offline_plugin.o
+# define PluginObj CollectorPluginManager.o offline_plugin.o
 #else
 # define PluginObj
 #endif

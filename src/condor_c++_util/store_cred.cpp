@@ -605,7 +605,7 @@ void store_pool_cred_handler(void *, int  /*i*/, Stream *s)
 
 		if (on_credd_host) {
 				// we're the CREDD_HOST; make sure the source address matches ours
-			const char *addr = ((ReliSock*)s)->endpoint_ip_str();
+			const char *addr = ((ReliSock*)s)->peer_ip_str();
 			if (!addr || strcmp(my_ip_string(), addr)) {
 				dprintf(D_ALWAYS, "ERROR: attempt to set pool password remotely\n");
 				free(credd_host);

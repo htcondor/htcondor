@@ -219,7 +219,7 @@ bool
 LocalUserLog::logStarterError( const char* err_msg, bool critical )
 {
 	if( ! is_initialized ) {
-		EXCEPT( "LocalUserLog::logStarterError() called before init()" );
+		EXCEPT( "LocalUserLog::logStarterError(%s) called before init()",err_msg );
 	}
 	if( ! should_log ) {
 		return true;

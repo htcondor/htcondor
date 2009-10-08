@@ -31,7 +31,7 @@
 
 class BaseResource;
 
-class BaseJob
+class BaseJob : public Service
 {
  public:
 	BaseJob( ClassAd *ad );
@@ -56,7 +56,7 @@ class BaseJob
 	void JobRemoved( const char *remove_reason );
 
 	virtual void SetRemoteJobId( const char *job_id );
-	void SetRemoteJobStatus( const char *job_status );
+	bool SetRemoteJobStatus( const char *job_status );
 
 	void UpdateJobLeaseSent( int new_expiration_time );
 	void UpdateJobLeaseReceived( int new_expiration_time );

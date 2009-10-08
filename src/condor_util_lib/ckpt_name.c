@@ -40,11 +40,7 @@
 #include "util_lib_proto.h"
 
 char *
-gen_ckpt_name( directory, cluster, proc, subproc )
-char	*directory;
-int		cluster;
-int		proc;
-int		subproc;
+gen_ckpt_name( char *directory, int cluster, int proc, int subproc )
 {
 	static char	answer[ MAXPATHLEN ];
 
@@ -69,10 +65,7 @@ int		subproc;
 }
 
 char *
-gen_exec_name( cluster, proc, subproc )
-int		cluster;
-int		proc;
-int		subproc;
+gen_exec_name( int cluster, int proc, int subproc )
 {
 	static char	answer[ MAXPATHLEN ];
 

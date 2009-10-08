@@ -541,8 +541,8 @@ int CondorJob::doEvaluateState()
 			// another one.
 			if ( now >= lastSubmitAttempt + submitInterval ) {
 				// Once RequestSubmit() is called at least once, you must
-				// CancelSubmit() or SubmitComplete() once you're done with
-				// the request call
+				// call CancelSubmit() when there's no job left on the
+				// remote host and you don't plan to submit one.
 				if ( myResource->RequestSubmit(this) == false ) {
 					break;
 				}
@@ -568,7 +568,6 @@ int CondorJob::doEvaluateState()
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
 				}
-				myResource->SubmitComplete(this);
 				lastSubmitAttempt = time(NULL);
 				numSubmitAttempts++;
 				if ( rc == GLOBUS_SUCCESS ) {
@@ -1381,12 +1380,6 @@ ClassAd *CondorJob::buildSubmitAd()
 	submit_ad->Delete( ATTR_GRID_RESOURCE );
 	submit_ad->Delete( ATTR_JOB_MATCHED );
 	submit_ad->Delete( ATTR_JOB_MANAGED );
-	submit_ad->Delete( ATTR_MIRROR_ACTIVE );
-	submit_ad->Delete( ATTR_MIRROR_JOB_ID );
-	submit_ad->Delete( ATTR_MIRROR_LEASE_TIME );
-	submit_ad->Delete( ATTR_MIRROR_RELEASED );
-	submit_ad->Delete( ATTR_MIRROR_REMOTE_LEASE_TIME );
-	submit_ad->Delete( ATTR_MIRROR_SCHEDD );
 	submit_ad->Delete( ATTR_STAGE_IN_FINISH );
 	submit_ad->Delete( ATTR_STAGE_IN_START );
 	submit_ad->Delete( ATTR_SCHEDD_BIRTHDATE );
@@ -1514,6 +1507,19 @@ ClassAd *CondorJob::buildSubmitAd()
 	bool cleared_environment = false;
 	bool cleared_arguments = false;
 
+		// Remove all remote_* attributes from the new ad before
+		// translating remote_* attributes from the original ad.
+		// See gittrac #376 for why we have two loops here.
+	const char *next_name;
+	submit_ad->ResetName();
+	while ( (next_name = submit_ad->NextNameOriginal()) != NULL ) {
+		if ( strncasecmp( next_name, "REMOTE_", 7 ) == 0 &&
+			 strlen( next_name ) > 7 ) {
+
+			submit_ad->Delete( next_name );
+		}
+	}
+
 	jobAd->ResetExpr();
 	while ( (next_expr = jobAd->NextExpr()) != NULL ) {
 		if ( strncasecmp( ExprTreeAssignmentName( next_expr ),
@@ -1553,7 +1559,6 @@ ClassAd *CondorJob::buildSubmitAd()
 				}
 			}
 
-			submit_ad->Delete( ExprTreeAssignmentName( next_expr ) );
 			buf.sprintf( "%s = %s", attr_name,
 						 ExprTreeAssignmentValue( next_expr ) );
 			submit_ad->Insert( buf.Value() );

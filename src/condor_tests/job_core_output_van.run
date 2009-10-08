@@ -20,10 +20,10 @@
 
 use CondorTest;
 
-$cmd = 'job_core_output_van.cmd';
-$testdesc =  'condor_submit output works - vanilla U';
-$testname = "job_core_output_van";
-
+my $cmd = 'job_core_output_van.cmd';
+my $testdesc =  'condor_submit output works - vanilla U';
+my $testname = "job_core_output_van";
+my $debuglevel = 2;
 
 my @expected_output =
 (
@@ -35,23 +35,23 @@ my @expected_output =
 
 CondorTest::SetExpected(\@expected_output);
 
+print "Setting expected output - ";
+
 $ExitSuccess = sub {
 	my %info = @_;
 
-
-	$output = $info{"output"};
-	open(IN, "<$output" ) || die "Can't open $output: $!\n";
-
+	my $output = $info{"output"};
+	open(IN, "<$output" ) || die "bad\nCan't open $output: $!\n";
 };
 
-
 CondorTest::RegisterExitedSuccess( $testname, \&CondorTest::DefaultOutputTest );
-#CondorTest::RegisterExitedSuccess( $testname, $ExitSuccess );
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	CondorTest::debug("$testname: SUCCESS\n",1);
+	print "ok\n";
+	CondorTest::debug("$testname: SUCCESS\n",$debuglevel);
 	exit(0);
 } else {
+	print "bad\n";
 	die "$testname: CondorTest::RunTest() failed\n";
 }
 

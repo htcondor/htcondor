@@ -28,13 +28,16 @@
 #include "baseresource.h"
 #include "gahp-client.h"
 
+#define DEFAULT_GM_DISABLE_LENGTH (60*60)
+
 class GlobusJob;
 class GlobusResource;
 
 class GlobusResource : public BaseResource
 {
  protected:
-	GlobusResource( const char *resource_name, const char *proxy_subject );
+	GlobusResource( const char *resource_name, const char *proxy_subject,
+					bool is_gt5 );
 	~GlobusResource();
 
  public:
@@ -42,6 +45,8 @@ class GlobusResource : public BaseResource
 	const char *ResourceType();
 	void Reconfig();
 	void UnregisterJob( GlobusJob *job );
+
+	bool IsGt5() { return m_isGt5; }
 
 	bool RequestJM( GlobusJob *job, bool is_submit );
 	void JMComplete( GlobusJob *job );
@@ -51,13 +56,15 @@ class GlobusResource : public BaseResource
 
 	bool GridJobMonitorActive() { return monitorActive; }
 	int LastGridJobMonitorUpdate() { return jobStatusFileLastUpdate; }
+	bool GridMonitorFirstStartup() { return monitorFirstStartup; }
 
 	static const char *CanonicalName( const char *name );
 	static const char *HashName( const char *resource_name,
 								 const char *proxy_subject );
 
 	static GlobusResource *FindOrCreateResource( const char *resource_name,
-												 const char *proxy_subject );
+												 const char *proxy_subject,
+												 bool is_gt5 );
 
 	const char *GetHashName();
 
@@ -70,9 +77,16 @@ class GlobusResource : public BaseResource
 		{ enableGridMonitor = enable; }
 	static bool GridMonitorEnabled()
 		{ return enableGridMonitor; }
+	static void setGridMonitorDisableLength( int len )
+	{ monitorDisableLength = len; }
+
+	void gridMonitorCallback( int state, int errorcode );
 
 	// This should be private, but GlobusJob references it directly for now
 	static HashTable <HashKey, GlobusResource *> ResourcesByName;
+
+		// This is the gram job contact string for the grid monitor job.
+	char *monitorGramJobId;
 
  private:
 	void DoPing( time_t& ping_delay, bool& ping_complete,
@@ -91,6 +105,8 @@ class GlobusResource : public BaseResource
 
 	char *proxySubject;
 	static int gahpCallTimeout;
+
+	bool m_isGt5;
 
 	// We limit the number of jobmanagers we're willing to run at a time
 	// on each resource. We keep seperate queues for initial job
@@ -116,6 +132,7 @@ class GlobusResource : public BaseResource
 		// When true, we'll try to run a grid monitor on each gt2
 		// gatekeeper.
 	static bool enableGridMonitor;
+	static int monitorDisableLength;
 	int checkMonitorTid;
 
 		// monitorStarting and monitorActive should not be true at the
@@ -131,6 +148,7 @@ class GlobusResource : public BaseResource
 		// When true, a gram job request is in progress to launch the
 		// grid monitor.
 	bool monitorSubmitActive;
+	bool monitorFirstStartup;
 
 	char *monitorDirectory;
 	char *monitorJobStatusFile;
@@ -146,20 +164,14 @@ class GlobusResource : public BaseResource
 		// again.
 	int monitorRetryTime;
 
-		// Very simily to logFileLastReadTime, but not updated every time the
-		// grid_monitor is resubmitted.  As a result it reliably reports on the
-		// last time we got some sort of result back.  Used for the "Thing have
-		// been failing over and over for too long" timeout.
-	int logFileTimeoutLastReadTime;
-
 		// This reports the time we saw a new complete job status file
 		// from the grid monitor (and therefore sent out job status
 		// updates to the job objects). This time is not updated when the
 		// grid-monitor is (re)submitted.
 	time_t jobStatusFileLastUpdate;
 
-		// This is the gram job contact string for the grid monitor job.
-	char *monitorGramJobId;
+	int monitorGramJobStatus;
+	int monitorGramErrorCode;
 
 	GahpClient *gahp;
 	GahpClient *monitorGahp;

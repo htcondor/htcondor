@@ -71,7 +71,8 @@ Stream :: Stream(stream_code c) :
 	decrypt_buf(NULL),
 	decrypt_buf_len(0),
 	m_peer_description_str(NULL),
-	m_peer_version(NULL)
+	m_peer_version(NULL),
+	m_deadline_time(0)
 {
 }
 
@@ -446,33 +447,6 @@ Stream::code(PROC_ID &id)
 
 	return TRUE;
 }
-
-#if 0	// hopefully we won't neet to port the PROC structure
-
-/* extern int stream_proc_vers2( Stream *s, V2_PROC *proc ); */
-extern int stream_proc_vers3( Stream *s, PROC *proc );
-
-int 
-Stream::code(PROC &proc)
-{
-	if (!code(proc.version_num))
-		return FALSE;
-	switch( proc.version_num ) {
-/*		case 2:
-			return stream_proc_vers2( this, &proc );
-			break; */
-		case 3:
-			return stream_proc_vers3( this, &proc );
-			break;
-		default:
-			dprintf(D_ALWAYS, "Incorrect PROC version number (%d)\n",
-					proc.version_num );
-			return FALSE;
-	}
-	return TRUE;
-}
-
-#endif
 
 int 
 Stream::code(STARTUP_INFO &start)
@@ -2260,4 +2234,37 @@ Stream::set_peer_version(CondorVersionInfo const *version)
 	if( version ) {
 		m_peer_version = new CondorVersionInfo(*version);
 	}
+}
+
+void
+Stream::set_deadline_timeout(int t)
+{
+	if( t < 0 ) {
+			// no deadline
+		m_deadline_time = 0;
+	}
+	else {
+		if( Sock::get_timeout_multiplier() > 0 ) {
+			t *= Sock::get_timeout_multiplier();
+		}
+		m_deadline_time = time(NULL) + t;
+	}
+}
+
+void
+Stream::set_deadline(time_t t)
+{
+	m_deadline_time = t;
+}
+
+time_t
+Stream::get_deadline()
+{
+	return m_deadline_time;
+}
+
+bool
+Stream::deadline_expired()
+{
+	return m_deadline_time != 0 && time(NULL) > m_deadline_time;
 }

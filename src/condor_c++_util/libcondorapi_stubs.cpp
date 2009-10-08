@@ -69,6 +69,14 @@ char* param(const char *str)
 	return NULL;
 }
 
+char* param_without_default(const char *str)
+{
+	if(strcmp(str, "LOG") == 0) {
+		return strdup(".");
+	}
+	return NULL;
+}
+
 int param_integer(const char *, int default_value)
 {
 	return default_value;
@@ -80,19 +88,20 @@ int param_boolean_int(const char *, int default_value)
 }
 
 END_C_DECLS
-int param_integer(const char *, int default_value, int, int)
+int param_integer(const char *, int default_value, int, int, ClassAd *, 
+	ClassAd *, bool)
 {
 	return default_value;
 }
 
-bool param_boolean( const char *, const bool default_value )
+int param_integer(const char *, int default_value, int, int, bool)
 {
 	return default_value;
 }
 
-bool param_boolean( const char *, const bool default_value, bool do_log )
+bool param_boolean( const char *, const bool default_value, bool, 
+	ClassAd *, ClassAd *, bool)
 {
-	(void) do_log;
 	return default_value;
 }
 
@@ -162,6 +171,11 @@ void Stream::set_crypto_mode(bool enabled){not_impl();}
 bool Stream::get_encryption() const{not_impl();return false;}
 int Stream::put_secret( char const *s ){not_impl();return 0;}
 int Stream::get_secret( char *&s ){not_impl();return 0;}
+void Stream::set_deadline_timeout(int){not_impl();}
+void Stream::set_deadline(time_t){not_impl();}
+time_t Stream::get_deadline(){not_impl();return 0;}
+bool Stream::deadline_expired(){not_impl();return false;}
+
 
 /* stubs for generic query object */
 GenericQuery::GenericQuery(void) {}
@@ -250,4 +264,32 @@ void Generic_set_log_va(void(*app_log_va)(int level,char*fmt,va_list args))
 {
 	(void) app_log_va;
 };
+END_C_DECLS
+
+// Condor Threads stubs - called in dprintf
+BEGIN_C_DECLS
+int
+CondorThreads_pool_size()
+{
+	return 0;
+}
+
+int
+CondorThreads_gettid(void)
+{
+	return -1;
+}
+
+#if defined(HAVE_PTHREAD_SIGMASK) && defined(sigprocmask)
+	/* Deal with the fact that dprintf.o may be calling pthread_sigmask,
+	 * and yet we don't want to require anybody using libcondorapi.a to 
+	 * have to drag in all of pthreads. 
+	 */
+#undef sigprocmask
+int pthread_sigmask(int how, const sigset_t *newmask, sigset_t *oldmask)
+{
+	return sigprocmask(how,newmask,oldmask);
+}
+#endif
+
 END_C_DECLS

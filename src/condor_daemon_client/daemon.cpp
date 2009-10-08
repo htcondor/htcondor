@@ -124,6 +124,30 @@ Daemon::Daemon( const ClassAd* tAd, daemon_t tType, const char* tPool )
 	case DT_SCHEDD:
 		_subsys = strnewp( "SCHEDD" );
 		break;
+	case DT_CLUSTER:
+		_subsys = strnewp( "CLUSTERD" );
+		break;
+	case DT_COLLECTOR:
+		_subsys = strnewp( "COLLECTOR" );
+		break;
+	case DT_NEGOTIATOR:
+		_subsys = strnewp( "NEGOTIATOR" );
+		break;
+	case DT_CREDD:
+		_subsys = strnewp( "CREDD" );
+		break;
+	case DT_QUILL:
+		_subsys = strnewp( "QUILL" );
+		break;
+	case DT_LEASE_MANAGER:
+		_subsys = strnewp( "LEASE_MANAGER" );
+		break;
+	case DT_GENERIC:
+		_subsys = strnewp( "GENERIC" );
+		break;
+	case DT_HAD:
+		_subsys = strnewp( "HAD" );
+		break;
 	default:
 		EXCEPT( "Invalid daemon_type %d (%s) in ClassAd version of "
 				"Daemon object", (int)_type, daemonString(_type) );
@@ -201,11 +225,6 @@ Daemon::deepCopy( const Daemon &copy )
 		delete [] _subsys;
 	}
 	_subsys = strnewp( copy._subsys );
-
-	if( _subsys ) {
-        delete [] _subsys;
-    }
-    _subsys = strnewp( copy._subsys );
 
 	_port = copy._port;
 	_type = copy._type;
@@ -345,6 +364,8 @@ Daemon::idStr( void )
 	const char* dt_str;
 	if( _type == DT_ANY ) {
 		dt_str = "daemon";
+	} else if( _type == DT_GENERIC ) {
+		dt_str = _subsys;
 	} else {
 		dt_str = daemonString(_type);
 	}
@@ -411,7 +432,7 @@ Daemon::display( FILE* fp )
 //////////////////////////////////////////////////////////////////////
 
 ReliSock*
-Daemon::reliSock( int sec, CondorError* errstack, bool non_blocking, bool ignore_timeout_multiplier )
+Daemon::reliSock( int timeout, time_t deadline, CondorError* errstack, bool non_blocking, bool ignore_timeout_multiplier )
 {
 	if( !checkAddr() ) {
 			// this already deals w/ _error for us...
@@ -420,7 +441,9 @@ Daemon::reliSock( int sec, CondorError* errstack, bool non_blocking, bool ignore
 	ReliSock* sock;
 	sock = new ReliSock();
 
-	if( !connectSock(sock,sec,errstack,non_blocking,ignore_timeout_multiplier) )
+	sock->set_deadline( deadline );
+
+	if( !connectSock(sock,timeout,errstack,non_blocking,ignore_timeout_multiplier) )
 	{
 		delete sock;
 		return NULL;
@@ -430,7 +453,7 @@ Daemon::reliSock( int sec, CondorError* errstack, bool non_blocking, bool ignore
 }
 
 SafeSock*
-Daemon::safeSock( int sec, CondorError* errstack, bool non_blocking )
+Daemon::safeSock( int timeout, time_t deadline, CondorError* errstack, bool non_blocking )
 {
 	if( !checkAddr() ) {
 			// this already deals w/ _error for us...
@@ -439,7 +462,9 @@ Daemon::safeSock( int sec, CondorError* errstack, bool non_blocking )
 	SafeSock* sock;
 	sock = new SafeSock();
 
-	if( !connectSock(sock,sec,errstack,non_blocking) )
+	sock->set_deadline( deadline );
+
+	if( !connectSock(sock,timeout,errstack,non_blocking) )
 	{
 		delete sock;
 		return NULL;
@@ -524,14 +549,14 @@ Daemon::startCommand( int cmd, Sock* sock, int timeout, CondorError *errstack, S
 
 Sock *
 Daemon::makeConnectedSocket( Stream::stream_type st,
-							 int timeout, CondorError* errstack,
-							 bool non_blocking )
+							 int timeout, time_t deadline,
+							 CondorError* errstack, bool non_blocking )
 {
 	switch( st ) {
 	case Stream::reli_sock:
-		return reliSock(timeout, errstack, non_blocking);
+		return reliSock(timeout, deadline, errstack, non_blocking);
 	case Stream::safe_sock:
-		return safeSock(timeout, errstack, non_blocking);
+		return safeSock(timeout, deadline, errstack, non_blocking);
 	}
 
 	EXCEPT( "Unknown stream_type (%d) in Daemon::makeConnectedSocket",
@@ -551,7 +576,7 @@ Daemon::startCommand( int cmd, Stream::stream_type st,Sock **sock,int timeout, C
 	// Also, there's no one to delete the Sock.
 	ASSERT(!nonblocking || callback_fn);
 
-	*sock = makeConnectedSocket(st,timeout,errstack,nonblocking);
+	*sock = makeConnectedSocket(st,timeout,0,errstack,nonblocking);
 	if( ! *sock ) {
 		if ( callback_fn ) {
 			(*callback_fn)( false, NULL, errstack, misc_data );
@@ -870,17 +895,24 @@ Daemon::locate( void )
 		// don't do anything
 		rval = true;
 		break;
+	case DT_GENERIC:
+		rval = getDaemonInfo( GENERIC_AD );
+		break;
 	case DT_CLUSTER:
-		rval = getDaemonInfo( "CLUSTER", CLUSTER_AD );
+		setSubsystem( "CLUSTER" );
+		rval = getDaemonInfo( CLUSTER_AD );
 		break;
 	case DT_SCHEDD:
-		rval = getDaemonInfo( "SCHEDD", SCHEDD_AD );
+		setSubsystem( "SCHEDD" );
+		rval = getDaemonInfo( SCHEDD_AD );
 		break;
 	case DT_STARTD:
-		rval = getDaemonInfo( "STARTD", STARTD_AD );
+		setSubsystem( "STARTD" );
+		rval = getDaemonInfo( STARTD_AD );
 		break;
 	case DT_MASTER:
-		rval = getDaemonInfo( "MASTER", MASTER_AD );
+		setSubsystem( "MASTER" );
+		rval = getDaemonInfo( MASTER_AD );
 		break;
 	case DT_COLLECTOR:
 		rval = getCmInfo( "COLLECTOR" );
@@ -896,14 +928,17 @@ Daemon::locate( void )
 		} else {
 				// cool, no NEGOTIATOR_HOST, we can treat it just like
 				// any other daemon 
-			rval = getDaemonInfo ( "NEGOTIATOR", NEGOTIATOR_AD );
+	  		setSubsystem( "NEGOTIATOR" );
+			rval = getDaemonInfo ( NEGOTIATOR_AD );
 		}
 		break;
 	case DT_CREDD:
-	  rval = getDaemonInfo( "CREDD", CREDD_AD );
+	  setSubsystem( "CREDD" );
+	  rval = getDaemonInfo( CREDD_AD );
 	  break;
 	case DT_STORK:
-	  rval = getDaemonInfo( "STORK", ANY_AD, false );
+	  setSubsystem( "STORK" );
+	  rval = getDaemonInfo( ANY_AD, false );
 	  break;
 	case DT_VIEW_COLLECTOR:
 		if( (rval = getCmInfo("CONDOR_VIEW")) ) {
@@ -915,13 +950,20 @@ Daemon::locate( void )
 		rval = getCmInfo( "COLLECTOR" ); 
 		break;
 	case DT_QUILL:
-		rval = getDaemonInfo( "QUILL", SCHEDD_AD );
+		setSubsystem( "QUILL" );
+		rval = getDaemonInfo( SCHEDD_AD );
 		break;
 	case DT_TRANSFERD:
-		rval = getDaemonInfo( "TRANSFERD", ANY_AD );
+		setSubsystem( "TRANSFERD" );
+		rval = getDaemonInfo( ANY_AD );
 		break;
 	case DT_LEASE_MANAGER:
-		rval = getDaemonInfo( "LEASEMANAGER", LEASE_MANAGER_AD, true );
+		setSubsystem( "LEASEMANAGER" );
+		rval = getDaemonInfo( LEASE_MANAGER_AD, true );
+		break;
+	case DT_HAD:
+		setSubsystem( "HAD" );
+		rval = getDaemonInfo( HAD_AD );
 		break;
 	default:
 		EXCEPT( "Unknown daemon type (%d) in Daemon::init", (int)_type );
@@ -957,17 +999,29 @@ Daemon::locate( void )
 
 
 bool
-Daemon::getDaemonInfo( const char* subsys, AdTypes adtype, bool query_collector)
+Daemon::setSubsystem( const char* subsys )
+{
+	if( _subsys ) {
+		delete [] _subsys;
+	}
+	_subsys = strnewp( subsys );
+
+	return true;
+}
+
+
+bool
+Daemon::getDaemonInfo( AdTypes adtype, bool query_collector )
 {
 	MyString			buf;
 	char				*tmp, *my_name;
 	char				*host = NULL;
 	bool				nameHasPort = false;
 
-	if( _subsys ) {
-		delete [] _subsys;
+	if ( ! _subsys ) {
+		dprintf( D_ALWAYS, "Unable to get daemon information because no subsystem specified\n");
+		return false;
 	}
-	_subsys = strnewp( subsys );
 
 	if( _addr && is_valid_sinful(_addr) ) {
 		dprintf( D_HOSTNAME, "Already have address, no info to locate\n" );
@@ -978,7 +1032,7 @@ Daemon::getDaemonInfo( const char* subsys, AdTypes adtype, bool query_collector)
 		// If we were not passed a name or an addr, check the
 		// config file for a subsystem_HOST, e.g. SCHEDD_HOST=XXXX
 	if( ! _name  && !_pool ) {
-		buf.sprintf( "%s_HOST", subsys );
+		buf.sprintf( "%s_HOST", _subsys );
 		char *specified_host = param( buf.Value() );
 		if ( specified_host ) {
 				// Found an entry.  Use this name.
@@ -1109,9 +1163,9 @@ Daemon::getDaemonInfo( const char* subsys, AdTypes adtype, bool query_collector)
 		// address of the daemon in question.
 
 	if( _is_local ) {
-		bool foundLocalAd = readLocalClassAd( subsys );
+		bool foundLocalAd = readLocalClassAd( _subsys );
 		if(!foundLocalAd) {
-			readAddressFile( subsys );
+			readAddressFile( _subsys );
 		}
 	}
 
@@ -1126,7 +1180,8 @@ Daemon::getDaemonInfo( const char* subsys, AdTypes adtype, bool query_collector)
 		ClassAd*			scan;
 		ClassAdList			ads;
 
-		if( _type == DT_STARTD && ! strchr(_name, '@') ) { 
+		if( (_type == DT_STARTD && ! strchr(_name, '@')) ||
+			_type == DT_HAD ) { 
 				/*
 				  So long as an SMP startd has only 1 command socket
 				  per startd, we want to take advantage of that and
@@ -1148,6 +1203,10 @@ Daemon::getDaemonInfo( const char* subsys, AdTypes adtype, bool query_collector)
 				  -Derek Wright 2005-03-09
 				*/
 			buf.sprintf( "%s == \"%s\"", ATTR_MACHINE, _full_hostname ); 
+			query.addANDConstraint( buf.Value() );
+		} else if ( _type == DT_GENERIC ) {
+			query.setGenericQueryType(_subsys);
+			buf.sprintf("TARGET.%s == \"%s\"", ATTR_TARGET_TYPE, _subsys);
 			query.addANDConstraint( buf.Value() );
 		} else if ( _name ) {
 			buf.sprintf( "%s == \"%s\"", ATTR_NAME, _name ); 
@@ -1216,10 +1275,7 @@ Daemon::getCmInfo( const char* subsys )
 	char* tmp;
 	struct in_addr sin_addr;
 
-	if( _subsys ) {
-		delete [] _subsys;
-	}
-	_subsys = strnewp( subsys );
+	setSubsystem( subsys );
 
 	if( _addr && is_valid_sinful(_addr) ) {
 			// only consider addresses w/ a non-zero port "valid"...
@@ -1261,9 +1317,33 @@ Daemon::getCmInfo( const char* subsys )
 
 
 	if( ! host  || !host[0] ) {
-			// this is just a fancy wrapper for param()...
 		free( host );
-		host = getCmHostFromConfig( subsys );
+		host = NULL;
+
+			// this is just a fancy wrapper for param()...
+		char *hostnames = getCmHostFromConfig( subsys );
+		char *itr, *full_name, *host_name, *local_name;
+		StringList host_list;
+
+		full_name = my_full_hostname();
+		local_name = localName();
+		host_list.initializeFromString(hostnames);
+		host_list.rewind();
+		itr = NULL;
+		while ((itr = host_list.next()) != NULL) {
+			host_name = getHostFromAddr( itr );
+			if ((strlen(full_name) == strlen(host_name) ||
+				(strlen(local_name) == strlen(host_name))) &&
+				((strcmp(full_name, host_name) == 0) ||
+				(strcmp(local_name, host_name) == 0))) {
+				host = strnewp(itr);
+				free( host_name );
+				break;
+			}
+			free( host_name );
+		}
+		free( hostnames );
+		delete [] local_name;
 	}
 
 	if( ! host || !host[0]) {

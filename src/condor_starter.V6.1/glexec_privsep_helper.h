@@ -47,6 +47,10 @@ public:
 	//
 	void chown_sandbox_to_condor();
 
+	// drop an updated proxy into the job sandbox
+	//
+	bool update_proxy(const char* tmp_proxy);
+
 	// launch the job as the user
 	//
 	int create_process(const char* path,
@@ -95,6 +99,7 @@ private:
 	MyString m_setup_script;
 	MyString m_run_script;
 	MyString m_wrapper_script;
+	MyString m_proxy_update_script;
 	MyString m_cleanup_script;
 
 	// tracks current ownership of the sandbox

@@ -72,6 +72,35 @@ foreach $file (@ARGV)
 	$foundcondortest = 0;
 	my $line = "";
 	next if $file =~ /^\.\.?$/;
+	print "Currently scanning $file for system date usage\n";
+	open(FILE,"<$file") || die "Can not open $file for reading: $!\n";
+	open(NEW,">$file.tmp") || die "Can not open Temp file: $!\n";
+	print "$file opened OK!\n";
+	while(<FILE>)	
+	{		
+		chomp();
+		$line = $_;
+		if($line =~ /^(\s*)system\(\"date\"\)(.*)$/) {
+			# do nothing if going to a file
+			#print "Found <$1system(\"date\")$2>\n";
+			print NEW "$1print scalar localtime() . \"\\n\";\n";
+		} else {
+			print NEW "$line\n";
+		};
+	}	
+	close(FILE);
+	close(NEW);
+	system("cp $file.tmp $file");
+	system("chmod 755 $file");
+	system("rm -f $file.tmp");
+}
+exit(0);
+
+foreach $file (@ARGV)
+{	
+	$foundcondortest = 0;
+	my $line = "";
+	next if $file =~ /^\.\.?$/;
 	next if $file eq $dbtimelog;
 	next if $file eq "x_striplines.pl";
 	next if $file eq "x_globaledit.pl";
@@ -109,8 +138,6 @@ foreach $file (@ARGV)
 	system("cp $file.tmp $file");
 	system("chmod 755 $file");
 }
-exit(0);
-
 ############################################################################
 
 my $targetdir = '.';

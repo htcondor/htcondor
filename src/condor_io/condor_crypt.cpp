@@ -101,6 +101,18 @@ unsigned char * Condor_Crypt_Base :: randomKey(int length)
     return key;
 }
 
+char *Condor_Crypt_Base::randomHexKey(int length)
+{
+	unsigned char *bytes = randomKey(length);
+	char *hex = (char *)malloc(length*2+1);
+	int i;
+	for(i=0; i<length; i++) {
+		sprintf(hex+i*2,"%02x",bytes[i]);
+	}
+	free(bytes);
+	return hex;
+}
+
 unsigned char * Condor_Crypt_Base :: oneWayHashKey(const char * initialKey)
 {
 #ifdef HAVE_EXT_OPENSSL

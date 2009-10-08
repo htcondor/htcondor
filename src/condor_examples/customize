@@ -34,8 +34,6 @@ $target = $ARGV[0];
 &get_platform_defaults();
 &customize_config_file( "condor_config.generic",
 		       "$target/etc/examples/condor_config.generic" );
-&customize_config_file( "condor_config.root.generic",
-		       "$target/etc/examples/condor_config.root.generic" );
 &customize_config_file( "condor_config.submit.generic",
 		       "$target/etc/examples/condor_config.submit.generic" );
 &customize_config_file( "condor_config.local.central.manager",

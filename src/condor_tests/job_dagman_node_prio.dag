@@ -1,0 +1,67 @@
+config job_dagman_node_prio.config
+
+Job A job_dagman_node_prio-nodeA.cmd
+Vars A nodename="$(JOB)"
+
+Job B1 job_dagman_node_prio.cmd
+Priority B1 5
+Vars B1 nodename="$(JOB)"
+Parent A Child B1
+
+Job B2 job_dagman_node_prio.cmd
+Priority B2 3
+Vars B2 nodename="$(JOB)"
+Parent A Child B2
+
+Job B3 job_dagman_node_prio.cmd
+Priority B3 8
+Vars B3 nodename="$(JOB)"
+Parent A Child B3
+
+Job B4 job_dagman_node_prio.cmd
+Priority B4 6
+Vars B4 nodename="$(JOB)"
+Parent A Child B4
+
+Job B5 job_dagman_node_prio.cmd
+Priority B5 10
+Vars B5 nodename="$(JOB)"
+Parent A Child B5
+
+Job B6 job_dagman_node_prio.cmd
+Priority B6 1
+Vars B6 nodename="$(JOB)"
+Parent A Child B6
+
+Job B7 job_dagman_node_prio.cmd
+Priority B7 9
+Vars B7 nodename="$(JOB)"
+Parent A Child B7
+
+Job B8 job_dagman_node_prio.cmd
+Priority B8 2
+Vars B8 nodename="$(JOB)"
+Parent A Child B8
+
+Job B9 job_dagman_node_prio.cmd
+Priority B9 7
+Vars B9 nodename="$(JOB)"
+Parent A Child B9
+
+Job B10 job_dagman_node_prio.cmd
+Priority B10 4
+Vars B10 nodename="$(JOB)"
+Parent A Child B10
+
+Job C job_dagman_node_prio.cmd
+Vars C nodename="$(JOB)"
+Parent B1 Child C
+Parent B2 Child C
+Parent B3 Child C
+Parent B4 Child C
+Parent B5 Child C
+Parent B6 Child C
+Parent B7 Child C
+Parent B8 Child C
+Parent B9 Child C
+Parent B10 Child C

@@ -20,6 +20,7 @@
 
 #include "condor_common.h"
 #include "condor_classad.h"
+#include "condor_debug.h"
 #include "condor_config.h"
 #include "condor_qmgr.h"
 #include "match_prefix.h"
@@ -34,7 +35,7 @@
 void
 usage(char name[])
 {
-	fprintf(stderr, "Usage: %s [-n schedd-name] [-pool pool-name] { cluster | cluster.proc | owner | -constraint constraint } attribute-name attribute-value ...\n", name);
+	fprintf(stderr, "Usage: %s [-debug] [-n schedd-name] [-pool pool-name] { cluster | cluster.proc | owner | -constraint constraint } attribute-name attribute-value ...\n", name);
 	exit(1);
 }
 
@@ -52,7 +53,6 @@ ProtectedAttribute(char attr[])
 int
 main(int argc, char *argv[])
 {
-	MyString DaemonName;
 	MyString constraint;
 	Qmgr_connection *q;
 	int nextarg = 1, cluster, proc;
@@ -71,7 +71,15 @@ main(int argc, char *argv[])
 		usage(argv[0]);
 	}
 
-	// if it is present, it must be first
+	// if -debug is present, it must be first. sigh.
+	if (argv[nextarg][0] == '-' && argv[nextarg][1] == 'd') {
+		// output dprintf messages to stderror at TOOL_DEBUG level
+		Termlog = 1;
+		dprintf_config ("TOOL");
+		nextarg++;
+	}
+
+	// if it is present, it must be first after debug.
 	if (argv[nextarg][0] == '-' && argv[nextarg][1] == 'n') {
 		nextarg++;
 		// use the given name as the schedd name to connect to
@@ -121,10 +129,10 @@ main(int argc, char *argv[])
 	}
 
 	// Open job queue 
-	q = ConnectQ( DaemonName.Value() );
+	q = ConnectQ( schedd.addr() );
 	if( !q ) {
 		fprintf( stderr, "Failed to connect to queue manager %s\n", 
-				 DaemonName.Value() );
+				 schedd.addr() );
 		exit(1);
 	}
 

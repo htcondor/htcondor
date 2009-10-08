@@ -29,6 +29,7 @@ bool CondorPrivSepHelper::s_instantiated = false;
 
 CondorPrivSepHelper::CondorPrivSepHelper() :
 	m_user_initialized(false),
+	m_user_name(NULL),
 	m_sandbox_initialized(false),
 	m_sandbox_path(NULL)
 {
@@ -41,11 +42,16 @@ CondorPrivSepHelper::~CondorPrivSepHelper()
 	if (m_sandbox_path != NULL) {
 		free(m_sandbox_path);
 	}
+	if( m_user_name ) {
+		free(m_user_name);
+	}
 }
 
 void
 CondorPrivSepHelper::initialize_user(const char* name)
 {
+	m_user_name = strdup(name);
+
 	EXCEPT("CondorPrivSepHelper: Windows support not implemented");
 }
 

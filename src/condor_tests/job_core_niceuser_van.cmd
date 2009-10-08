@@ -1,5 +1,5 @@
 universe   = vanilla
-executable = job_core_niceuser.pl
+executable = x_do_niceuser.pl
 output = job_core_niceuser_van.out
 error = job_core_niceuser_van.err
 log = job_core_niceuser_van.log

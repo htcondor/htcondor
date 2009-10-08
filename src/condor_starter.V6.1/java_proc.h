@@ -39,6 +39,7 @@ public:
 	virtual int  StartJob();
 	virtual bool JobReaper( int pid, int status );
 	virtual bool PublishUpdateAd( ClassAd *ad );
+	virtual char const *getArgv0();
 
 private:
 	int ParseExceptionLine( const char *line, MyString &name, MyString &type );

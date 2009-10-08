@@ -1,14 +1,14 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2008, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2009, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,7 +16,7 @@
  * limitations under the License.
  *
  ***************************************************************/
- 
+
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_config.h"
@@ -91,7 +91,7 @@ protected:
 class PmUtilLinuxHibernator : public BaseLinuxHibernator
 {
 public:
-	PmUtilLinuxHibernator( LinuxHibernator &hibernator) 
+	PmUtilLinuxHibernator( LinuxHibernator &hibernator)
 			: BaseLinuxHibernator( hibernator ) { };
 	virtual ~PmUtilLinuxHibernator(void) { };
 
@@ -108,7 +108,7 @@ private:
 class SysIfLinuxHibernator : public BaseLinuxHibernator
 {
 public:
-	SysIfLinuxHibernator( LinuxHibernator &hibernator) 
+	SysIfLinuxHibernator( LinuxHibernator &hibernator)
 			: BaseLinuxHibernator( hibernator ) { };
 	~SysIfLinuxHibernator(void) { };
 
@@ -123,7 +123,7 @@ public:
 class ProcIfLinuxHibernator : public BaseLinuxHibernator
 {
 public:
-	ProcIfLinuxHibernator( LinuxHibernator &hibernator) 
+	ProcIfLinuxHibernator( LinuxHibernator &hibernator)
 			: BaseLinuxHibernator( hibernator ) { };
 	virtual ~ProcIfLinuxHibernator(void) { };
 
@@ -137,13 +137,14 @@ public:
 
 
 // Publich Linux hibernator class methods
-LinuxHibernator::LinuxHibernator ( void ) throw () 
-		: HibernatorBase ()
+LinuxHibernator::LinuxHibernator( void ) throw ()
+		: HibernatorBase (),
+		  m_real_hibernator( NULL ),
+		  m_method( NULL )
 {
-	initStates ();
 }
 
-LinuxHibernator::~LinuxHibernator ( void) throw ()
+LinuxHibernator::~LinuxHibernator( void ) throw ()
 {
 	if ( m_real_hibernator ) {
 		delete m_real_hibernator;
@@ -160,8 +161,8 @@ LinuxHibernator::getMethod( void ) const
 	return "NONE";
 }
 
-void
-LinuxHibernator::initStates( void )
+bool
+LinuxHibernator::initialize( void )
 {
 
  	// set defaults: no sleep
@@ -169,7 +170,13 @@ LinuxHibernator::initStates( void )
 	m_real_hibernator = NULL;
 
 	// Specific method configured?
-	const char	*method = param( "LINUX_HIBERNATION_METHOD" );
+	const char	*method;
+	if ( m_method ) {
+		method = strdup( m_method );
+	}
+	else {
+		method = param( "LINUX_HIBERNATION_METHOD" );
+	}
 	if ( method ) {
 		dprintf( D_FULLDEBUG, "LinuxHibernator: Trying method '%s'\n",method );
 	}
@@ -200,8 +207,7 @@ LinuxHibernator::initStates( void )
 
 		// If method name specified, does this one match?
 		if ( ! lh->nameMatch(method) ) {
-			dprintf( D_FULLDEBUG,
-					 "hibernator: skipping '%s'\n", name );
+			dprintf( D_FULLDEBUG, "hibernator: skipping '%s'\n", name );
 			delete lh;
 		}
 
@@ -209,12 +215,12 @@ LinuxHibernator::initStates( void )
 		else if ( lh->Detect() ) {
 			lh->setDetected( true );
 			m_real_hibernator = lh;
-			dprintf( D_FULLDEBUG,
-					 "hibernator: '%s' detected\n", name );
+			dprintf( D_FULLDEBUG, "hibernator: '%s' detected\n", name );
 			if ( method ) {
 				free( const_cast<char *>(method) );
 			}
-			return;
+			setInitialized( true );
+			return true;
 		}
 
 		// We failed to detect it... go on to the next one
@@ -222,14 +228,13 @@ LinuxHibernator::initStates( void )
 			delete lh;
 			if ( method ) {
 				dprintf( D_ALWAYS,
-						 "hibernator: '%s' not detected;"
-						 " hibernation disabled\n",
+						 "hibernator: '%s' not detected; "
+						 "hibernation disabled\n",
 						 name );
 				free( const_cast<char *>(method) );
-				return;
+				return false;
 			}
-			dprintf( D_FULLDEBUG,
-					 "hibernator: '%s' not detected\n", name );
+			dprintf( D_FULLDEBUG, "hibernator: '%s' not detected\n", name );
 		}
 	}
 	if ( method ) {
@@ -241,6 +246,7 @@ LinuxHibernator::initStates( void )
 	dprintf( D_FULLDEBUG,
 			 "  methods tried: %s\n",
 			 methods.Length() ? methods.Value() : "<NONE>" );
+	return false;
 }
 
 HibernatorBase::SLEEP_STATE
@@ -276,8 +282,6 @@ LinuxHibernator::enterStatePowerOff( bool force ) const
 HibernatorBase::SLEEP_STATE
 BaseLinuxHibernator::StandBy ( bool force ) const
 {
-	(void) force;
-
 	HibernatorBase::SLEEP_STATE new_state;
 
 	new_state = Suspend( force );
@@ -289,9 +293,8 @@ BaseLinuxHibernator::StandBy ( bool force ) const
 
 // Default method to power off
 HibernatorBase::SLEEP_STATE
-BaseLinuxHibernator::PowerOff ( bool force ) const
+BaseLinuxHibernator::PowerOff ( bool /*force*/ ) const
 {
-	(void) force;
 	MyString	command;
 
 	command = POWER_OFF;
@@ -302,7 +305,7 @@ BaseLinuxHibernator::PowerOff ( bool force ) const
 	return HibernatorBase::NONE;
 };
 
-bool 
+bool
 BaseLinuxHibernator::writeSysFile ( const char *file, const char *str ) const
 {
 	// Write to the "/sys or /proc" file(s)
@@ -390,16 +393,15 @@ PmUtilLinuxHibernator::RunCmd ( const char *command ) const
 	}
 	else {
 		dprintf( D_ALWAYS, "LinuxHibernator: '%s' failed: %s exit=%d!\n",
-				 command, strerror(errno), WEXITSTATUS(status) );
+				 command, errno ? strerror(errno) : "", WEXITSTATUS(status) );
 		return false;
 	}
 
 }
 
 HibernatorBase::SLEEP_STATE
-PmUtilLinuxHibernator::Suspend ( bool force ) const
+PmUtilLinuxHibernator::Suspend ( bool /*force*/ ) const
 {
-	(void) force;
 	if ( RunCmd( PM_UTIL_SUSPEND ) ) {
 		return HibernatorBase::S3;
 	}
@@ -409,10 +411,8 @@ PmUtilLinuxHibernator::Suspend ( bool force ) const
 }
 
 HibernatorBase::SLEEP_STATE
-PmUtilLinuxHibernator::Hibernate ( bool force ) const
+PmUtilLinuxHibernator::Hibernate ( bool /*force*/ ) const
 {
-	(void) force;
-
 	if ( RunCmd( PM_UTIL_HIBERNATE ) ) {
 		return HibernatorBase::S3;
 	}
@@ -482,9 +482,8 @@ SysIfLinuxHibernator::Detect ( void )
 }
 
 HibernatorBase::SLEEP_STATE
-SysIfLinuxHibernator::Suspend ( bool force ) const
+SysIfLinuxHibernator::Suspend ( bool /*force*/ ) const
 {
-	(void) force;
 	if ( ! writeSysFile( SYS_POWER_FILE, "mem" ) ) {
 		return HibernatorBase::NONE;
 	}
@@ -492,9 +491,8 @@ SysIfLinuxHibernator::Suspend ( bool force ) const
 }
 
 HibernatorBase::SLEEP_STATE
-SysIfLinuxHibernator::Hibernate ( bool force ) const
+SysIfLinuxHibernator::Hibernate ( bool /*force*/ ) const
 {
-	(void) force;
 	if ( ! writeSysFile( SYS_DISK_FILE, "platform" ) ) {
 		return HibernatorBase::NONE;
 	}
@@ -534,9 +532,8 @@ ProcIfLinuxHibernator::Detect ( void )
 }
 
 HibernatorBase::SLEEP_STATE
-ProcIfLinuxHibernator::Suspend ( bool force ) const
+ProcIfLinuxHibernator::Suspend ( bool /*force*/ ) const
 {
-	(void) force;
 	if ( ! writeSysFile( PROC_POWER_FILE, "3" ) ) {
 		return HibernatorBase::NONE;
 	}
@@ -544,9 +541,8 @@ ProcIfLinuxHibernator::Suspend ( bool force ) const
 }
 
 HibernatorBase::SLEEP_STATE
-ProcIfLinuxHibernator::Hibernate ( bool force ) const
+ProcIfLinuxHibernator::Hibernate ( bool /*force*/ ) const
 {
-	(void) force;
 	if ( ! writeSysFile( PROC_POWER_FILE, "4" ) ) {
 		return HibernatorBase::NONE;
 	}
@@ -554,9 +550,8 @@ ProcIfLinuxHibernator::Hibernate ( bool force ) const
 }
 
 HibernatorBase::SLEEP_STATE
-ProcIfLinuxHibernator::PowerOff ( bool force ) const
+ProcIfLinuxHibernator::PowerOff ( bool /*force*/ ) const
 {
-	(void) force;
 	if ( ! writeSysFile( PROC_POWER_FILE, "5" ) ) {
 		return HibernatorBase::NONE;
 	}

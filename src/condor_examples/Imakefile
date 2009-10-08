@@ -4,7 +4,6 @@ FILES = README condor_config.local.central.manager \
 	condor_config.local.ckpt.server \
 	condor_config.local.ha_condor_client \
 	condor_config.local.ha_condor_had \
-	condor_config.local.root.ckpt.server \
 	condor_config.local.view_server \
 	lamscript \
 	mp1script \
@@ -40,3 +39,13 @@ static::
 
 html:
 
+public_copy_target(condor_limits_wrapper.sh,libexec,condor_limits_wrapper.sh,EXECUTABLE_MODE)
+
+generate_xml: y.tab.c lex.yy.c
+	$(CC) $^ -o $@  -lfl
+
+y.tab.c: generic_xml.yacc
+	$(YACC) -d $<
+
+lex.yy.c: generic_xml.yy
+	$(LEX) $<

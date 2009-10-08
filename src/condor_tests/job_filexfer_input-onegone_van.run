@@ -20,10 +20,13 @@
 
 use CondorTest;
 
-$testdesc =  'Jobs casues submit error from a missing specified input file- vanilla U';
-$testname = "job_filexfer_input-onegone_van";
+my $testdesc =  'Jobs casues submit error from a missing specified input file- vanilla U';
+my $testname = "job_filexfer_input-onegone_van";
+my $pid = $$;
 
-my $sanestatus = CondorTest::verbose_system("./x_sanitysubmit.pl");
+print "Test: job_filexfer_input-onegone_van has PID $pid\n";
+
+my $sanestatus = CondorTest::verbose_system("./x_sanitysubmit.pl $pid");
 my $teststatus = CondorTest::verbose_system("./job_filexfer_input-onegone_van.pl");
 
 if($sanestatus != 0)

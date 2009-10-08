@@ -1,6 +1,8 @@
 all_target( util_lib.a stub_gen )
 
 CFLAGS = $(STD_C_FLAGS)
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
+
 
 #if MALLOC_DEBUG
 MALLOC_OBJ = malloc.o
@@ -70,7 +72,7 @@ FDPASS_OBJ = fdpass.o
 	get_exec_path.o exit_utils.o condor_blkng_full_disk_io.o \
 	condor_full_io.o condor_pidenvid.o condor_create_id.o \
 	condor_netdb.o fs_util.o condor_mkstemp.o $(PERS_OBJ) \
-	$(FDPASS_OBJ)
+	$(FDPASS_OBJ) mark_thread.o
 
 test: test.o util_lib.a
 	$(CC) $(CFLAGS) -o test test.o util_lib.a

@@ -2,13 +2,13 @@
  *
  * Copyright (C) 1990-2008, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -26,16 +26,123 @@
 #include "MyString.h"
 #include "stat_wrapper.h"
 
-// Internal verion of the file state
-class ReadUserLogState
-{
-public:
 
+	// ********************************************************************
+	// This is the file state buffer that we generate for the init/get/set
+	// methods
+	// ********************************************************************
+#define FILESTATE_VERSION		104
+
+class ReadUserLogFileState
+{
+  public:
 	// Log file type
 	enum UserLogType {
 		LOG_TYPE_UNKNOWN = 0, LOG_TYPE_OLD, LOG_TYPE_XML
 	};
-	struct FileState;
+
+	// Make things 8 bytes
+	union FileStateI64_t {
+		char		bytes[8];
+		int64_t		asint;
+	};
+
+	// The structure itself
+	struct FileState {
+		char			m_signature[64];	// File state signature
+		int				m_version;			// Version #
+		char			m_base_path[512];	// The log's base path
+		char			m_uniq_id[128];		// File's uniq identifier
+		int				m_sequence;			// File's sequence number
+		int				m_rotation;			// 0 == the "current" file
+		int				m_max_rotations;	// Max rotation level
+		UserLogType		m_log_type;			// The log's type
+		StatStructInode	m_inode;			// The log's inode #
+		time_t			m_ctime;			// The log's creation time
+		FileStateI64_t	m_size;				// The log's size (bytes)
+		FileStateI64_t	m_offset;			// Current offset in current file
+		FileStateI64_t	m_event_num;		// Current event # in the cur. file
+		FileStateI64_t	m_log_position;		// Our position in the whole log
+		FileStateI64_t	m_log_record;		// Cur record # in the whole log
+		time_t			m_update_time;		// Time of last struct update
+	};
+
+
+	// "Public" view of the file state
+	typedef union {
+		FileState	internal;
+		char		filler [2048];
+	} FileStatePub;
+
+	ReadUserLogFileState( void );
+	ReadUserLogFileState( ReadUserLog::FileState &state );
+	ReadUserLogFileState( const ReadUserLog::FileState &state );
+	virtual ~ReadUserLogFileState( void );
+
+	// Is the state buffer initialized?
+	bool isInitialized( void ) const;
+
+	// Is the state buffer valid for use?
+	bool isValid( void ) const;
+
+	static bool InitState( ReadUserLog::FileState &state );
+	static bool UninitState( ReadUserLog::FileState &state );
+
+	// Convert an application file state to an "internal" state pointer
+	static bool convertState(
+		const ReadUserLog::FileState				&state,
+		const ReadUserLogFileState::FileStatePub	*&pub
+		);
+	static bool convertState(
+		ReadUserLog::FileState						&state,
+		ReadUserLogFileState::FileStatePub			*&pub
+		);
+	static bool convertState(
+		const ReadUserLog::FileState				&state,
+		const ReadUserLogFileState::FileState		*&internal
+		);
+	static bool convertState(
+		ReadUserLog::FileState						&state,
+		ReadUserLogFileState::FileState				*&internal
+		);
+
+	// Get the size of the internal data structure
+	int getSize( void ) const
+		{ return sizeof(FileState); };
+
+	// Get the state (in various forms)
+	const FileState *getState( void ) {
+		if (!m_ro_state) return NULL;
+		return &(m_ro_state->internal);
+	};
+	const FileStatePub *getPubState( void ) {
+		return m_ro_state;
+	};
+	FileState *getRwState( void ) {
+		if (!m_rw_state) return NULL; 
+		return &(m_rw_state->internal);
+	};
+	FileStatePub *getPubRwState( void )
+		{ return m_rw_state; };
+
+	// General accessors
+	bool getFileOffset( int64_t & ) const;
+	bool getFileEventNum( int64_t & ) const;
+	bool getLogPosition( int64_t & ) const;
+	bool getLogRecordNo( int64_t & ) const;
+	bool getSequenceNo( int & ) const;
+	bool getUniqId( char *buf, int len ) const;
+
+  private:
+	FileStatePub		*m_rw_state;
+	const FileStatePub	*m_ro_state;
+};
+
+
+// Internal verion of the file state
+class ReadUserLogState : public ReadUserLogFileState
+{
+public:
 	// Reset type
 	enum ResetType {
 		RESET_FILE, RESET_FULL, RESET_INIT,
@@ -61,6 +168,7 @@ public:
 	const char *CurPath( void ) const { return m_cur_path.Value( ); };
 	int Rotation( void ) const { return m_cur_rot; };
 	filesize_t Offset( void ) const { return m_offset; };
+	filesize_t EventNum( void ) const { return m_event_num; };
 	bool IsValid( void ) const { return (m_cur_rot >= 0); };
 
 	// Accessors for a "file state"
@@ -70,6 +178,7 @@ public:
 	filesize_t LogPosition( const ReadUserLog::FileState &state ) const;
 	filesize_t LogRecordNo( const ReadUserLog::FileState &state ) const;
 	filesize_t Offset( const ReadUserLog::FileState &state ) const;
+	filesize_t EventNum( const ReadUserLog::FileState &state ) const;
 
 	// Get/set maximum rotations
 	int MaxRotations( void ) { return m_max_rotations; }
@@ -83,6 +192,10 @@ public:
 				  bool initializing = false );
 	filesize_t Offset( filesize_t offset )
 		{ Update(); return m_offset = offset; };
+	filesize_t EventNum( filesize_t num )
+		{ Update(); return m_event_num = num; };
+	filesize_t EventNumInc( int num = 1 )
+		{ Update(); m_event_num += num; return m_event_num; };
 
 	// Get / set the uniq identifier
 	void UniqId( const MyString &id ) { Update(); m_uniq_id = id; };
@@ -97,9 +210,14 @@ public:
 	filesize_t LogPosition( void ) const { return m_log_position; };
 	filesize_t LogPosition( filesize_t pos )
 		{ Update(); return m_log_position = pos; };
+	filesize_t LogPositionAdd( filesize_t pos )
+		{ Update(); return m_log_position += pos; };
+
 	filesize_t LogRecordNo( void ) const { return m_log_record; };
 	filesize_t LogRecordNo( filesize_t num )
 		{ Update(); return m_log_record = num; };
+	filesize_t LogRecordInc( int num = 1 )
+		{ Update(); m_log_record += num; return m_log_record; };
 
 	// Compare the ID to the one stored
 	// 0==one (or both) are empty, 1=same, -1=different
@@ -117,7 +235,7 @@ public:
 	void Update( void ) { m_update_time = time(NULL); };
 
 	// Has the log file grown?
-	ReadUserLog::FileStatus CheckFileStatus( int fd = -1 );
+	ReadUserLog::FileStatus CheckFileStatus( int fd, bool &is_emtpy );
 
 	// Get / set the log file type
 	// Method to generate log path
@@ -129,9 +247,12 @@ public:
 	int ScoreFile( const char *path = NULL, int rot = -1 ) const;
 	int ScoreFile( const StatStructType &statbuf, int rot = -1 ) const;
 
-	UserLogType LogType( void ) const { return m_log_type; };
-	UserLogType LogType( UserLogType t ) { Update(); return m_log_type = t; };
-	bool IsLogType( UserLogType t ) const { return m_log_type == t; };
+	ReadUserLogFileState::UserLogType LogType( void ) const
+		{ return m_log_type; };
+	void LogType( ReadUserLogFileState::UserLogType t )
+		{ Update(); m_log_type = t; };
+	bool IsLogType( ReadUserLogFileState::UserLogType t ) const
+		{ return m_log_type == t; };
 
 	// Set the score factors
 	enum ScoreFactors {
@@ -145,8 +266,6 @@ public:
 
 
 	// Generate an external file state structure
-	static bool InitState( ReadUserLog::FileState &state );
-	static bool UninitState( ReadUserLog::FileState &state );
 	bool GetState( ReadUserLog::FileState &state ) const;
 	bool SetState( const ReadUserLog::FileState &state );
 
@@ -156,59 +275,11 @@ public:
 	void GetStateString( const ReadUserLog::FileState &state,
 						 MyString &str, const char *label = NULL ) const;
 
-	// Get the file state
-	static const ReadUserLogState::FileState *
-		GetFileStateConst( const ReadUserLog::FileState &state );
-
-
-	// ********************************************************************
-	// This is the file state buffer that we generate for the init/get/set
-	// methods
-	// ********************************************************************
-#define FILESTATE_VERSION		103
-
-	// Make things 8 bytes
-	union FileStateI64_t {
-		char		bytes[8];
-		int64_t		asint;
-	};
-
-	// The structure itself
-	struct FileState {
-		char			m_signature[64];	// File state signature
-		int				m_version;			// Version #
-		char			m_base_path[512];	// The log's base path
-		char			m_uniq_id[128];		// File's uniq identifier
-		int				m_sequence;			// File's sequence number
-		int				m_rotation;			// 0 == the "current" file
-		int				m_max_rotations;	// Max rotation level
-		UserLogType		m_log_type;			// The log's type
-		StatStructInode	m_inode;			// The log's inode #
-		time_t			m_ctime;			// The log's creation time
-		FileStateI64_t	m_size;				// The log's size (bytes)
-		FileStateI64_t	m_offset;			// Our offset in current log
-		FileStateI64_t	m_log_offset;		// UNUSED
-		FileStateI64_t	m_log_position;		// Our position in the whole log
-		FileStateI64_t	m_log_record;		// Cur record # in the whole log
-		time_t			m_update_time;		// Time of last struct update
-	};
-
-	// "Public" view of the file state
-	typedef union {
-		FileState	actual_state;
-		char		filler [2048];
-	} FileStatePub;
-		
-
 private:
 	// Private methods
 	void Clear( bool init = false );
 	int StatFile( StatStructType &statbuf ) const;
 	int StatFile( const char *path, StatStructType &statbuf ) const;
-
-	// Get the "internal" state pointer from the application file state
-	static ReadUserLogState::FileState *
-		GetFileState( ReadUserLog::FileState &state );
 
 	// Private data
 	bool			m_init_error;		// Error initializing?
@@ -232,6 +303,7 @@ private:
 
 	UserLogType		m_log_type;			// Type of this log
 	filesize_t		m_offset;			// Our current offset
+	filesize_t		m_event_num;		// Our current event #
 
 	int				m_max_rotations;	// Max rot #
 	int				m_recent_thresh;	// Max time for a stat to be "recent"
@@ -245,3 +317,10 @@ private:
 };
 
 #endif
+
+/*
+### Local Variables: ***
+### mode:c++ ***
+### tab-width:4 ***
+### End: ***
+*/

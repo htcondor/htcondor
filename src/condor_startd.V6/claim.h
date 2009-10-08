@@ -132,7 +132,7 @@ public:
 	void publishCOD( ClassAd* );
 	void publishStateTimes( ClassAd* );
 
-	void dprintf( int, char* ... );
+	void dprintf( int, const char* ... );
 
 	void refuseClaimRequest();
 
@@ -222,7 +222,7 @@ public:
 		// starter-related functions
 	int	 spawnStarter( Stream* = NULL );
 	void setStarter( Starter* s );
-	void starterExited( void );
+	void starterExited( int status );
 	bool starterPidMatches( pid_t starter_pid );
 	bool isDeactivating( void );
 	bool isActive( void );
@@ -263,6 +263,10 @@ public:
 			for other things, too.
 		*/
 	bool writeJobAd( int fd );
+
+		/** Write out the machine ClassAd to the provided stream
+ 		*/
+	bool writeMachAd( Stream *stream );
 
 	void receiveJobClassAdUpdate( ClassAd &update_ad );
 

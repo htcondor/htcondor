@@ -24,6 +24,7 @@
 #define USER_PROC_H
 
 #include "env.h"
+#include "proc.h"
 
 	// Reason user process exited (or didn't execute)
 typedef enum {

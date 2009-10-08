@@ -49,6 +49,14 @@ ExpandArgumentTemplate (
 * Functions
 ***************************************************************/
 
+/** The code bellow should probably be changed to use:
+	RegOpenUserClassesRoot() when impersonating a user, and
+	HKLM\Software\Classes instead of HKEY_CLASSES_ROOT.
+
+	For reasons explained here:
+	http://blogs.msdn.com/larryosterman/archive/2004/10/20/245172.aspx
+	*/
+
 /** Finds the executable and parameter list associated with the
     provided extension. */
 BOOL 
@@ -106,7 +114,7 @@ GetExecutableAndArgumentTemplateByExtention (
 
 		}
 
-        /* Because some file type have /n/ verb handlers, there is
+        /* Because some file types have /n/ verb handlers, there is
         no intelligent way we can choose which one to use.  The verb
         'Open' is the most common, but we allow the user define one
 		if they want. */

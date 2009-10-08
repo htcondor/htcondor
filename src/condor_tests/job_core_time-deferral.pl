@@ -56,13 +56,20 @@
 use CondorTest;
 use POSIX;
 
-$testdesc =  'Job Deferral Testing - ';
-$testname = "job_core_time-deferral";
-
 ##
 ## Universe
 ## 
-my $universe = ($ARGV[0] ? $ARGV[0] : "vanilla");
+my $universe = $ARGV[0];
+my $longuniverse = "";
+
+if($universe eq "van") {
+	$longuniverse = "vanilla";
+} else {
+	$longuniverse = $universe;
+}
+
+$testdesc =  'Job Deferral Testing - ';
+$testname = "job_core_time-deferral" . "_$universe";
 $baseCmd = "job_core_deferral" . "_" .$universe; 
 
 ##
@@ -197,7 +204,7 @@ for ( $ctr = 0, $cnt = scalar(@deltas); $ctr < $cnt; $ctr++ ) {
 	open(FILE, "> $cmdFile") || die("Failed to open command file '$cmdFile' for writing");
 	print FILE "Executable = ./x_time.pl\n";
 	print FILE "Notification = NEVER\n";
-	print FILE "Universe = $universe\n";
+	print FILE "Universe = $longuniverse\n";
 	
 
 	##

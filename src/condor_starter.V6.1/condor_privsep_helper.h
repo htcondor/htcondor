@@ -55,6 +55,10 @@ public:
 	uid_t get_uid();
 #endif
 
+	// get the name of the user (NULL if not set)
+	//
+	char const *get_user_name();
+
 	// change ownership of the sandbox to the user
 	//
 	void chown_sandbox_to_user();
@@ -99,6 +103,7 @@ private:
 	//
 	uid_t m_uid;
 #endif
+	char* m_user_name;
 
 	// the sandbox directory name
 	//

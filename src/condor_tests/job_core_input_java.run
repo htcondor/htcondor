@@ -36,46 +36,25 @@ my @expected_output =
 CondorTest::SetExpected(\@expected_output);
 
 
-
-$ExitSuccess = sub {
-#	my %info = @_;
-
-#	# Pull out requested environment values
-#	my $args   = $info{"arguments"};
-#	if(!defined($args)) {
-#		die "Can't pull arguments from submit file";
-#	}
-#	CondorTest::fullchomp($args);
-#	my(@args_reqd) = split / /, $args;
-
-#	$output = $info{"output"};
-#	open(IN, "<$output" ) || die "Can't open $output: $!\n";
-
-#	# snarf up file in one huge chunk
-#	local $/;
-#	my $file = <IN>;
-#	close IN;
-
-#	# see which actual values were passed along
-#	my(@args_found) = split /\n/, $file;
-#	
-#	if(scalar(@args_reqd) != scalar(@args_found)) {
-#		die "Args reqd has " . scalar(@args_reqd) . " items but " .
-#		    "Args found has " . scalar(@args_found) . "items.\n";
-#	}
-#	my $i;
-#	for($i = 0; $i < scalar(@args_reqd); $i++) {
-#		print "Checking $args_reqd[$i]...\n";
-#		if($args_reqd[$i] ne $args_found[$i]) {
-#			die "Argument " . $args_reqd[$i] . " was mangled into " .
-#			    $args_found[$i] . "\n";
-#		}
-#}
+$submitted = sub
+{
+    my %info = @_;
+    my $name = $info{"error"};
+    CondorTest::debug("job_core_input_java job submitted\n",1);
 };
 
+$execute = sub
+{
+    my %info = @_;
+    my $cluster = $info{"cluster"};
+    my $name = $info{"error"};
+    CondorTest::debug("job_core_input_java job executing\n",1);
+};
+
+CondorTest::RegisterExecute($testname, $execute);
+CondorTest::RegisterSubmit( $testname, $submitted );
 
 CondorTest::RegisterExitedSuccess( $testname, \&CondorTest::DefaultOutputTest );
-#CondorTest::RegisterExitedSuccess( $testname, $ExitSuccess );
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
 	CondorTest::debug("$testname: SUCCESS\n",1);

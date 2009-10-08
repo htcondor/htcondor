@@ -29,7 +29,7 @@ my $opsys = $ARGV[0];
 my $sleeptime = $ARGV[1];
 my $testname =  $ARGV[2];
 
-system("date");
+print scalar localtime() . "\n";
 
 print "OPSYS = $opsys\n";
 print "SLEEP = $sleeptime\n";
@@ -131,7 +131,7 @@ while ($count < 3)
 
 close(POUT);
 sleep $sleeptime;
-system("date");
+print scalar localtime() . "\n";
 
 exit 0;
 

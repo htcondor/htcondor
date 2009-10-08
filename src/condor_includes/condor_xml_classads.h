@@ -132,9 +132,10 @@ class ClassAdXMLUnparser
 	 * parameters for compact spacing and compact names. 
 	 * @param classsad The ClassAd to represent in XML.
 	 * @param buffer The string to append the ClassAd to.
+	 * @param attr_white_list List of attributes to show (all if NULL)
 	 * @see SetUseCompactNames().
 	 * @see SetUseCompactSpacing(). */
-	void Unparse(ClassAd *classad, MyString &buffer);
+	void Unparse(ClassAd *classad, MyString &buffer, StringList *attr_white_list=NULL);
 
  private:
 	void Unparse(ExprTree *expression, MyString &buffer);

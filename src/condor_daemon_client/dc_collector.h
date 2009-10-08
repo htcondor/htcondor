@@ -121,6 +121,8 @@ public:
 	void blacklistMonitorQueryStarted();
 	void blacklistMonitorQueryFinished( bool success );
 
+	bool useTCPForUpdates() { return use_tcp; }
+
   protected:
 		// Get the ad sequence manager (for copy constructor)
 	const DCCollectorAdSeqMan &getAdSeqMan( void ) const

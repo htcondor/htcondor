@@ -1,14 +1,14 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2008, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2009, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -32,10 +32,211 @@
 
 static const char FileStateSignature[] = "UserLogReader::FileState";
 
+
+// ******************************
+// ReadUserLogFileState methods
+// ******************************
+
+// C-tors and D-tors
+ReadUserLogFileState::ReadUserLogFileState( void )
+{
+	m_rw_state = NULL;
+	m_ro_state = NULL;
+}
+
+ReadUserLogFileState::ReadUserLogFileState(
+	ReadUserLog::FileState &state )
+{
+	convertState( state, m_rw_state );
+	m_ro_state = m_rw_state;
+}
+
+ReadUserLogFileState::ReadUserLogFileState(
+	const ReadUserLog::FileState &state )
+{
+	m_rw_state = NULL;
+	convertState( state, m_ro_state );
+}
+
+ReadUserLogFileState::~ReadUserLogFileState( void )
+{
+}
+
+// Is the state initialized?
+bool
+ReadUserLogFileState::isInitialized( void ) const
+{
+	if ( NULL == m_ro_state ) {
+		return false;
+	}
+	if ( strcmp( m_ro_state->internal.m_signature, FileStateSignature ) ) {
+		return false;
+	}
+	return true;
+}
+
+// Is the state valid for use?
+bool
+ReadUserLogFileState::isValid( void ) const
+{
+	if ( !isInitialized() ) {
+		return false;
+	}
+	if ( 0 == strlen(m_ro_state->internal.m_base_path) ) {
+		return false;
+	}
+	return true;
+}
+
+bool
+ReadUserLogFileState::getFileOffset( int64_t &pos ) const
+{
+	if ( NULL == m_ro_state ) {
+		return false;
+	}
+	pos = m_ro_state->internal.m_offset.asint;
+	return true;
+}
+
+bool
+ReadUserLogFileState::getFileEventNum( int64_t &num ) const
+{
+	if ( NULL == m_ro_state ) {
+		return false;
+	}
+	num = m_ro_state->internal.m_event_num.asint;
+	return true;
+}
+
+bool
+ReadUserLogFileState::getLogPosition( int64_t &pos ) const
+{
+	if ( NULL == m_ro_state ) {
+		return false;
+	}
+	pos = m_ro_state->internal.m_log_position.asint;
+	return true;
+}
+
+bool
+ReadUserLogFileState::getLogRecordNo( int64_t &recno ) const
+{
+	if ( NULL == m_ro_state ) {
+		return false;
+	}
+	recno = m_ro_state->internal.m_log_record.asint;
+	return true;
+}
+
+bool
+ReadUserLogFileState::getSequenceNo( int &seqno ) const
+{
+	if ( NULL == m_ro_state ) {
+		return false;
+	}
+	seqno = m_ro_state->internal.m_sequence;
+	return true;
+}
+
+bool
+ReadUserLogFileState::getUniqId( char *buf, int len ) const
+{
+	if ( NULL == m_ro_state ) {
+		return false;
+	}
+	strncpy( buf, m_ro_state->internal.m_uniq_id, len );
+	buf[len-1] = '\0';
+	return true;
+}
+
+// Static
+bool
+ReadUserLogFileState::InitState( ReadUserLog::FileState &state )
+{
+	state.buf  = (void *) new ReadUserLogState::FileStatePub;
+	state.size = sizeof( ReadUserLogState::FileStatePub );
+
+	ReadUserLogFileState::FileState	*istate;
+	if ( !convertState(state, istate)  ) {
+		return false;
+	}
+
+	memset( istate, 0, sizeof(ReadUserLogState::FileStatePub) );
+	istate->m_log_type = LOG_TYPE_UNKNOWN;
+
+	strncpy( istate->m_signature,
+			 FileStateSignature,
+			 sizeof(istate->m_signature) );
+	istate->m_signature[sizeof(istate->m_signature) - 1] = '\0';
+	istate->m_version = FILESTATE_VERSION;
+
+	return true;
+}
+
+// Static
+bool
+ReadUserLogFileState::UninitState( ReadUserLog::FileState &state )
+{
+	ReadUserLogState::FileStatePub	*istate =
+		(ReadUserLogState::FileStatePub *) state.buf;
+	
+	delete istate;
+	state.buf = NULL;
+	state.size = 0;
+
+	return true;
+}
+
+// Static
+bool
+ReadUserLogFileState::convertState(
+	const ReadUserLog::FileState				&state,
+	const ReadUserLogFileState::FileStatePub	*&pub )
+{
+	pub = (const ReadUserLogFileState::FileStatePub *) state.buf;
+	return true;
+}
+// Static
+bool
+ReadUserLogFileState::convertState(
+	ReadUserLog::FileState				&state,
+	ReadUserLogFileState::FileStatePub	*&pub )
+{
+	pub = (ReadUserLogFileState::FileStatePub *) state.buf;
+	return true;
+}
+// Static
+bool
+ReadUserLogFileState::convertState(
+	const ReadUserLog::FileState			&state,
+	const ReadUserLogFileState::FileState	*&internal )
+{
+	const ReadUserLogFileState::FileStatePub	*pub;
+	convertState(state, pub);
+	internal = &(pub->internal);
+	return true;
+}
+// Static
+bool
+ReadUserLogFileState::convertState(
+	ReadUserLog::FileState			&state,
+	ReadUserLogFileState::FileState	*&internal )
+{
+	ReadUserLogFileState::FileStatePub	*pub;
+	convertState(state, pub);
+	internal = &(pub->internal);
+	return true;
+}
+
+
+// ******************************
+// ReadUserLogState methods
+// ******************************
 ReadUserLogState::ReadUserLogState(
 	const char		*path,
 	int				 max_rotations,
 	int				 recent_thresh )
+	: ReadUserLogFileState( )
 {
 	Reset( RESET_INIT );
 	m_max_rotations = max_rotations;
@@ -49,14 +250,19 @@ ReadUserLogState::ReadUserLogState(
 ReadUserLogState::ReadUserLogState(
 	const ReadUserLog::FileState	&state,
 	int								 recent_thresh )
+	: ReadUserLogFileState( state )
 {
 	Reset( RESET_INIT );
 	m_recent_thresh = recent_thresh;
 
 	// Sets m_initialized and m_init_error as appropriate
-	SetState( state );
+	if ( !SetState( state ) ) {
+		dprintf( D_FULLDEBUG, "::ReadUserLogState: failed to set state from buffer\n" );
+		m_init_error = true;
+	}
 }
 ReadUserLogState::ReadUserLogState( void )
+	: ReadUserLogFileState( )
 {
 	Reset( RESET_INIT );
 }
@@ -106,6 +312,8 @@ ReadUserLogState::Reset( ResetType type )
 	m_log_record = 0;
 
 	m_offset = 0;
+	m_event_num = 0;
+
 	m_log_type = LOG_TYPE_UNKNOWN;
 
 }
@@ -137,7 +345,7 @@ ReadUserLogState::Rotation( int rotation, bool store_stat, bool initializing )
 int
 ReadUserLogState::Rotation( int rotation,
 							StatStructType &statbuf,
-							bool initializing ) 
+							bool initializing )
 {
 	// If we're not initializing and we're not initialized, something is wrong
 	if ( !initializing && !m_initialized ) {
@@ -379,16 +587,16 @@ ReadUserLogState::SetScoreFactor( enum ScoreFactors which, int factor )
 }
 
 ReadUserLog::FileStatus
-ReadUserLogState::CheckFileStatus( int fd )
+ReadUserLogState::CheckFileStatus( int fd, bool &is_empty )
 {
 	StatWrapper	sb;
 
 	if ( fd >= 0 ) {
-		sb.Stat( fd );
+		(void) sb.Stat( fd );
 	}
 
 	if ( m_cur_path.Length() && !sb.IsBufValid() ) {
-		sb.Stat( m_cur_path.Value() );
+		(void) sb.Stat( m_cur_path.Value() );
 	}
 
 	if ( sb.GetRc() ) {
@@ -399,6 +607,16 @@ ReadUserLogState::CheckFileStatus( int fd )
 	filesize_t				size = sb.GetBuf()->st_size;
 	ReadUserLog::FileStatus status;
 
+	// Special case for zero size file
+	if ( 0 == size ) {
+		is_empty = true;
+		if ( m_status_size < 0 ) {
+			m_status_size = 0;
+		}
+	}
+	else {
+		is_empty = false;
+	}
 	if ( (m_status_size < 0) || (size > m_status_size) ) {
 		status = ReadUserLog::LOG_STATUS_GROWN;
 	}
@@ -428,45 +646,10 @@ ReadUserLogState::CompareUniqId( const MyString &id ) const
 }
 
 bool
-ReadUserLogState::InitState( ReadUserLog::FileState &state )
-{
-	state.buf  = (void *) new ReadUserLogState::FileStatePub;
-	state.size = sizeof( ReadUserLogState::FileStatePub );
-
-	ReadUserLogState::FileState	*istate = GetFileState( state );
-	if ( !istate ) {
-		return false;
-	}
-
-	memset( istate, 0, sizeof(ReadUserLogState::FileStatePub) );
-	istate->m_log_type = LOG_TYPE_UNKNOWN;
-
-	strncpy( istate->m_signature,
-			 FileStateSignature,
-			 sizeof(istate->m_signature) );
-	istate->m_signature[sizeof(istate->m_signature) - 1] = '\0';
-	istate->m_version = FILESTATE_VERSION;
-
-	return true;
-}
-
-bool
-ReadUserLogState::UninitState( ReadUserLog::FileState &state )
-{
-	ReadUserLogState::FileStatePub	*istate =
-		(ReadUserLogState::FileStatePub *) state.buf;
-	
-	delete istate;
-	state.buf = NULL;
-	state.size = 0;
-
-	return true;
-}
-
-bool
 ReadUserLogState::GetState( ReadUserLog::FileState &state ) const
 {
-	ReadUserLogState::FileState *istate = GetFileState( state );
+	ReadUserLogFileState			 fstate( state );
+	ReadUserLogFileState::FileState *istate = fstate.getRwState();
 	if ( !istate ) {
 		return false;
 	}
@@ -481,7 +664,7 @@ ReadUserLogState::GetState( ReadUserLog::FileState &state ) const
 
 	// The paths shouldn't change... copy them only the first time
 	if( !strlen( istate->m_base_path ) ) {
-		memset( istate->m_base_path, sizeof(istate->m_base_path), 0 );
+		memset( istate->m_base_path, 0, sizeof(istate->m_base_path) );
 		if ( m_base_path.Value() ) {
 			strncpy( istate->m_base_path,
 					 m_base_path.Value(),
@@ -513,6 +696,7 @@ ReadUserLogState::GetState( ReadUserLog::FileState &state ) const
 	istate->m_size.asint    = m_stat_buf.st_size;
 
 	istate->m_offset.asint  = m_offset;
+	istate->m_event_num.asint = m_event_num;
 
 	istate->m_log_position.asint = m_log_position;
 	istate->m_log_record.asint   = m_log_record;
@@ -525,8 +709,8 @@ ReadUserLogState::GetState( ReadUserLog::FileState &state ) const
 bool
 ReadUserLogState::SetState( const ReadUserLog::FileState &state )
 {
-	const ReadUserLogState::FileState *istate = GetFileStateConst( state );
-	if ( !istate ) {
+	const ReadUserLogFileState::FileState *istate;
+	if ( !convertState(state, istate) ) {
 		return false;
 	}
 
@@ -556,6 +740,7 @@ ReadUserLogState::SetState( const ReadUserLog::FileState &state )
 	m_stat_valid = true;
 
 	m_offset = istate->m_offset.asint;
+	m_event_num = istate->m_event_num.asint;
 
 	m_log_position = istate->m_log_position.asint;
 	m_log_record   = istate->m_log_record.asint;
@@ -582,28 +767,14 @@ ReadUserLogState::GetStateString( MyString &str, const char *label ) const
 		"  BasePath = %s\n"
 		"  CurPath = %s\n"
 		"  UniqId = %s, seq = %d\n"
-		"  rotation = %d; max = %d; offset = %ld; type = %d\n"
+		"  rotation = %d; max = %d; offset = %ld; event = %ld; type = %d\n"
 		"  inode = %u; ctime = %d; size = %ld\n",
 		m_base_path.Value(), m_cur_path.Value(),
 		m_uniq_id.Value(), m_sequence,
-		m_cur_rot, m_max_rotations, (long) m_offset, m_log_type,
+		m_cur_rot, m_max_rotations, (long) m_offset,
+		(long) m_event_num, m_log_type,
 		(unsigned)m_stat_buf.st_ino, (int)m_stat_buf.st_ctime,
 		(long)m_stat_buf.st_size );
-}
-
-const ReadUserLogState::FileState *
-ReadUserLogState::GetFileStateConst( const ReadUserLog::FileState &state )
-{
-	const ReadUserLogState::FileStatePub *buf =
-		(const ReadUserLogState::FileStatePub *) state.buf;
-	return &buf->actual_state;
-}
-ReadUserLogState::FileState *
-ReadUserLogState::GetFileState( ReadUserLog::FileState &state )
-{
-	ReadUserLogState::FileStatePub *buf =
-		(ReadUserLogState::FileStatePub *) state.buf;
-	return &buf->actual_state;
 }
 
 void
@@ -613,8 +784,8 @@ ReadUserLogState::GetStateString(
 	const char						*label
   ) const
 {
-	const ReadUserLogState::FileState *istate = GetFileStateConst( state );
-	if ( ( !istate ) || ( !istate->m_version ) ) {
+	const ReadUserLogFileState::FileState *istate;
+	if ( ( !convertState(state, istate) ) || ( !istate->m_version ) ) {
 		if ( label ) {
 			str.sprintf( "%s: no state", label );
 		}
@@ -633,14 +804,17 @@ ReadUserLogState::GetStateString(
 		"  base path = '%s'\n"
 		"  cur path = '%s'\n"
 		"  UniqId = %s, seq = %d\n"
-		"  rotation = %d; max = %d; offset = "FILESIZE_T_FORMAT"; type = %d\n"
+		"  rotation = %d; max = %d; offset = "FILESIZE_T_FORMAT";"
+		" event num = "FILESIZE_T_FORMAT"; type = %d\n"
 		"  inode = %u; ctime = %ld; size = "FILESIZE_T_FORMAT"\n",
 		istate->m_signature, istate->m_version, istate->m_update_time,
 		istate->m_base_path,
 		CurPath(state),
 		istate->m_uniq_id, istate->m_sequence,
 		istate->m_rotation, istate->m_max_rotations,
-		istate->m_offset.asint, istate->m_log_type,
+		istate->m_offset.asint,
+		istate->m_event_num.asint,
+		istate->m_log_type,
 		(unsigned)istate->m_inode, istate->m_ctime, istate->m_size.asint );
 }
 
@@ -648,8 +822,8 @@ ReadUserLogState::GetStateString(
 const char *
 ReadUserLogState::BasePath( const ReadUserLog::FileState &state ) const
 {
-	const ReadUserLogState::FileState *istate = GetFileStateConst( state );
-	if ( ( !istate ) || ( !istate->m_version ) ) {
+	const ReadUserLogFileState::FileState *istate;
+	if ( ( !convertState(state, istate) ) || ( !istate->m_version ) ) {
 		return NULL;
 	}
 	return istate->m_base_path;
@@ -658,8 +832,8 @@ ReadUserLogState::BasePath( const ReadUserLog::FileState &state ) const
 const char *
 ReadUserLogState::CurPath( const ReadUserLog::FileState &state ) const
 {
-	const ReadUserLogState::FileState *istate = GetFileStateConst( state );
-	if ( ( !istate ) || ( !istate->m_version ) ) {
+	const ReadUserLogFileState::FileState *istate;
+	if ( ( !convertState(state, istate) ) || ( !istate->m_version ) ) {
 		return NULL;
 	}
 
@@ -673,8 +847,8 @@ ReadUserLogState::CurPath( const ReadUserLog::FileState &state ) const
 int
 ReadUserLogState::Rotation( const ReadUserLog::FileState &state ) const
 {
-	const ReadUserLogState::FileState *istate = GetFileStateConst( state );
-	if ( ( !istate ) || ( !istate->m_version ) ) {
+	const ReadUserLogFileState::FileState *istate;
+	if ( ( !convertState(state, istate) ) || ( !istate->m_version ) ) {
 		return -1;
 	}
 	return istate->m_rotation;
@@ -682,17 +856,26 @@ ReadUserLogState::Rotation( const ReadUserLog::FileState &state ) const
 filesize_t
 ReadUserLogState::Offset( const ReadUserLog::FileState &state ) const
 {
-	const ReadUserLogState::FileState *istate = GetFileStateConst( state );
-	if ( ( !istate ) || ( !istate->m_version ) ) {
+	const ReadUserLogFileState::FileState *istate;
+	if ( ( !convertState(state, istate) ) || ( !istate->m_version ) ) {
 		return -1;
 	}
 	return (filesize_t) istate->m_offset.asint;
 }
 filesize_t
+ReadUserLogState::EventNum( const ReadUserLog::FileState &state ) const
+{
+	const ReadUserLogFileState::FileState *istate;
+	if ( ( !convertState(state, istate) ) || ( !istate->m_version ) ) {
+		return -1;
+	}
+	return (filesize_t) istate->m_event_num.asint;
+}
+filesize_t
 ReadUserLogState::LogPosition( const ReadUserLog::FileState &state ) const
 {
-	const ReadUserLogState::FileState *istate = GetFileStateConst( state );
-	if ( ( !istate ) || ( !istate->m_version ) ) {
+	const ReadUserLogFileState::FileState *istate;
+	if ( ( !convertState(state, istate) ) || ( !istate->m_version ) ) {
 		return -1;
 	}
 	return (filesize_t) istate->m_log_position.asint;
@@ -700,9 +883,219 @@ ReadUserLogState::LogPosition( const ReadUserLog::FileState &state ) const
 filesize_t
 ReadUserLogState::LogRecordNo( const ReadUserLog::FileState &state ) const
 {
-	const ReadUserLogState::FileState *istate = GetFileStateConst( state );
-	if ( ( !istate ) || ( !istate->m_version ) ) {
+	const ReadUserLogFileState::FileState *istate;
+	if ( ( !convertState(state, istate) ) || ( !istate->m_version ) ) {
 		return -1;
 	}
 	return (filesize_t) istate->m_log_record.asint;
 }
+
+
+// **********************************
+// ReadUserLogStateAccess methods
+// **********************************
+
+// Constructor
+ReadUserLogStateAccess::ReadUserLogStateAccess(
+	const ReadUserLog::FileState &state)
+{
+	m_state = new ReadUserLogFileState(state);
+}
+
+ReadUserLogStateAccess::~ReadUserLogStateAccess(void)
+{
+	delete m_state;
+}
+
+// Is the state buffer initialized?
+bool
+ReadUserLogStateAccess::isInitialized( void ) const
+{
+	return m_state->isInitialized( );
+}
+
+// Is the state buffer valid for use?
+bool
+ReadUserLogStateAccess::isValid( void ) const
+{
+	return m_state->isValid( );
+}
+
+// Log position of a state
+bool
+ReadUserLogStateAccess::getFileOffset(
+	unsigned long		&pos ) const
+{
+	int64_t	my_pos;
+	if ( !m_state->getFileOffset(my_pos) ) {
+		return false;
+	}
+
+	if ( my_pos > ULONG_MAX ) {
+		return false;
+	}
+	pos = (unsigned long) my_pos;
+	return true;
+}
+
+// Event number of a state
+bool
+ReadUserLogStateAccess::getFileEventNum(
+	unsigned long		&num ) const
+{
+	int64_t	my_num;
+	if ( !m_state->getFileEventNum(my_num) ) {
+		return false;
+	}
+
+	if ( my_num > ULONG_MAX ) {
+		return false;
+	}
+	num = (unsigned long) my_num;
+	return true;
+}
+
+// Event # difference between to states
+bool
+ReadUserLogStateAccess::getFileEventNumDiff(
+	const ReadUserLogStateAccess	&other,
+	long							&diff ) const
+{
+	const	ReadUserLogFileState	*ostate;
+	if ( !other.getState( ostate ) ) {
+		return false;
+	}
+	int64_t	my_num, other_num;
+	if ( !m_state->getFileEventNum(my_num) ||
+		 ! ostate->getFileEventNum(other_num) ) {
+		return false;
+	}
+
+	int64_t	idiff = my_num - other_num;
+	diff = (long) idiff;
+	return true;
+}
+
+// Positional difference between to states
+bool
+ReadUserLogStateAccess::getFileOffsetDiff(
+	const ReadUserLogStateAccess	&other,
+	long							&diff ) const
+{
+	const	ReadUserLogFileState	*ostate;
+	if ( !other.getState( ostate ) ) {
+		return false;
+	}
+	int64_t	my_pos, other_pos;
+	if ( !m_state->getFileOffset(my_pos) ||
+		 ! ostate->getFileOffset(other_pos) ) {
+		return false;
+	}
+
+	int64_t	idiff = my_pos - other_pos;
+	diff = (long) idiff;
+	return true;
+}
+
+// Log position of a state
+bool
+ReadUserLogStateAccess::getLogPosition(
+	unsigned long		&pos ) const
+{
+	int64_t	my_pos;
+	if ( !m_state->getLogPosition(my_pos) ) {
+		return false;
+	}
+
+	if ( my_pos > ULONG_MAX ) {
+		return false;
+	}
+	pos = (unsigned long) my_pos;
+	return true;
+}
+
+// Positional difference between to states
+bool
+ReadUserLogStateAccess::getLogPositionDiff(
+	const ReadUserLogStateAccess	&other,
+	long							&diff ) const
+{
+	const	ReadUserLogFileState	*ostate;
+	if ( !other.getState( ostate ) ) {
+		return false;
+	}
+	int64_t	my_pos, other_pos;
+	if ( !m_state->getLogPosition(my_pos) ||
+		 ! ostate->getLogPosition(other_pos) ) {
+		return false;
+	}
+
+	int64_t	idiff = my_pos - other_pos;
+	diff = (long) idiff;
+	return true;
+}
+
+// Event number of a state
+bool
+ReadUserLogStateAccess::getEventNumber(
+	unsigned long		&event_no ) const
+{
+	int64_t	my_event_no;
+	if ( !m_state->getLogRecordNo(my_event_no) ) {
+		return false;
+	}
+
+	if ( my_event_no > ULONG_MAX ) {
+		return false;
+	}
+	event_no = (unsigned long) my_event_no;
+	return true;
+}
+
+// # of events between to states
+bool
+ReadUserLogStateAccess::getEventNumberDiff(
+	const ReadUserLogStateAccess	&other,
+	long							&diff) const
+{
+	const	ReadUserLogFileState	*ostate;
+	if ( !other.getState( ostate ) ) {
+		return false;
+	}
+	int64_t	my_recno, other_recno;
+	if ( !m_state->getLogRecordNo(my_recno) ||
+		 ! ostate->getLogRecordNo(other_recno) ) {
+		return false;
+	}
+
+	int64_t	idiff = my_recno - other_recno;
+	diff = (long) idiff;
+	return true;
+}
+
+// Get the unique ID and sequence # of the associated state file
+bool
+ReadUserLogStateAccess::getUniqId( char *buf, int len ) const
+{
+	return m_state->getUniqId( buf, len );
+}
+
+bool
+ReadUserLogStateAccess::getSequenceNumber( int &seqno ) const
+{
+	return m_state->getSequenceNo( seqno );
+}
+
+bool
+ReadUserLogStateAccess::getState( const ReadUserLogFileState *&state ) const
+{
+	state = m_state;
+	return true;
+}
+
+/*
+### Local Variables: ***
+### mode:c++ ***
+### tab-width:4 ***
+### End: ***
+*/

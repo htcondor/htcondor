@@ -146,7 +146,8 @@ OfflineCollectorPlugin::update (
 
 	/* make sure the command is relevant to us */
 	if ( UPDATE_STARTD_AD_WITH_ACK != command &&
-		 UPDATE_STARTD_AD != command ) {
+		 UPDATE_STARTD_AD != command &&
+		 MERGE_STARTD_AD != command ) {
 		 return;
 	}
 
@@ -164,87 +165,100 @@ OfflineCollectorPlugin::update (
 		return;
 
 	}
+	MyString s;
+	hashKey.sprint ( s );
+	compressSpaces ( s );
+	const char *key = s.Value ();
 
 	/* report whether this ad is "off-line" or not and update
 	   the ad accordingly. */		
 	int offline  = FALSE,
 		lifetime = 0;
 
-	if ( UPDATE_STARTD_AD_WITH_ACK == command ) {
-		
+	bool offline_explicit = false;
+	if( ad.EvalBool( ATTR_OFFLINE, NULL, offline ) ) {
+		offline_explicit = true;
+	}
+
+	if ( MERGE_STARTD_AD == command ) {
+		mergeClassAd( ad, key );
+		return;
+	}
+	else if ( UPDATE_STARTD_AD_WITH_ACK == command && !offline_explicit ) {
+
 		/* set the off-line state of the machine */
 		offline = TRUE;
 
 		/* get the off-line expiry time (default to INT_MAX) */
-		param_integer ( 
-			"OFFLINE_EXPIRE_AD_AFTER",
-			lifetime,
-			0,
+		lifetime = param_integer ( 
+			"OFFLINE_EXPIRE_ADS_AFTER",
 			INT_MAX );
 
 		/* reset any values in the ad that may interfere with
 		a match in the future */
 
 		/* Reset Condor state */
-		int now = static_cast<int> ( time ( NULL ) );
 		ad.Assign ( ATTR_STATE, state_to_string ( unclaimed_state ) );
 		ad.Assign ( ATTR_ACTIVITY, activity_to_string ( idle_act ) );
-		ad.Assign ( ATTR_ENTERED_CURRENT_STATE, now );
-		ad.Assign ( ATTR_ENTERED_CURRENT_ACTIVITY, now );
+		ad.Assign ( ATTR_ENTERED_CURRENT_STATE, 0 );
+		ad.Assign ( ATTR_ENTERED_CURRENT_ACTIVITY, 0 );
+
+		/* Set the heart-beat time */
+		int now = static_cast<int> ( time ( NULL ) );
+		ad.Assign ( ATTR_MY_CURRENT_TIME, now );
+		ad.Assign ( ATTR_LAST_HEARD_FROM, now );
 
 		/* Reset machine load */
+		ad.Assign ( ATTR_LOAD_AVG, 0.0 );
+		ad.Assign ( ATTR_CONDOR_LOAD_AVG, 0.0 );		
 		ad.Assign ( ATTR_TOTAL_LOAD_AVG, 0.0 );
-
+		ad.Assign ( ATTR_TOTAL_CONDOR_LOAD_AVG, 0.0 );
+		
 		/* Reset CPU load */
 		ad.Assign ( ATTR_CPU_IS_BUSY, false );
 		ad.Assign ( ATTR_CPU_BUSY_TIME, 0 );
 
+		/* Reset keyboard and mouse times */
+		ad.Assign ( ATTR_KEYBOARD_IDLE, INT_MAX );
+		ad.Assign ( ATTR_CONSOLE_IDLE, INT_MAX );		
+
 		/* any others? */
 
-	} else {
 
-		/* try and determine if the ad has an offline attribute. 
-		If not, don't consider it a fatal error, we'll just set
-		the ad to be "on-line" bellow. */
-		ad.LookupInteger ( ATTR_OFFLINE, offline );
+		dprintf ( 
+			D_FULLDEBUG, 
+			"Machine ad lifetime: %d\n",
+			lifetime );
 
-		/* if the ad was offline, then put it back in the game */
-		if ( TRUE == offline ) {
-
-			/* flag the ad as back "on-line" */
-			offline = FALSE;
-			
-			/* set a sane ad lifetime */
-			lifetime = 30; /* from collector_engine.cpp */
-
+			/* record the new values as specified above */
+		ad.Assign ( ATTR_OFFLINE, (bool)offline );
+		if ( lifetime > 0 ) {
+			ad.Assign ( ATTR_CLASSAD_LIFETIME, lifetime );
 		}
-
 	}
 
-	/* record the new values as specified above */
-	ad.Assign ( ATTR_OFFLINE, offline );
-	if ( lifetime > 0 ) {
-		ad.Assign ( ATTR_CLASSAD_LIFETIME, lifetime );
-	}
-	
 	_ads->BeginTransaction ();
 
 	ClassAd *p;
-	MyString s;
-	hashKey.sprint ( s );
-	compressSpaces ( s );
-	const char *key = s.Value ();
 
 	/* if it is off-line then add it to the list; otherwise,
 	   remove it. */
 	if ( offline > 0 ) {
 
-		/* don't try to add duplicate ads */
+		/* replace duplicate ads */
 		if ( _ads->LookupClassAd ( key, p ) ) {
 			
-			_ads->AbortTransaction ();
-			return;
+			if ( !_ads->DestroyClassAd ( key ) ) {
+				dprintf (
+					D_FULLDEBUG,
+					"OfflineCollectorPlugin::update: "
+					"failed remove existing off-line ad from the persistent "
+					"store.\n" );
 
+				_ads->AbortTransaction ();
+				return;
+			}
+			dprintf(D_FULLDEBUG, "Replacing existing offline ad.\n");
 		}
 
 		/* try to add the new ad */
@@ -291,6 +305,53 @@ OfflineCollectorPlugin::update (
 
 	_ads->CommitTransaction ();
 
+}
+
+void
+OfflineCollectorPlugin::mergeClassAd (
+	ClassAd &ad,
+	char const *key )
+{
+	ClassAd *old_ad;
+
+	_ads->BeginTransaction ();
+
+	if ( !_ads->LookupClassAd ( key, old_ad ) ) {
+		_ads->AbortTransaction ();
+		return;
+	}
+
+	ad.ResetExpr();
+	ExprTree *expr;
+	while ((expr=ad.NextExpr())!=NULL) {
+		MyString new_val;
+		MyString old_val;
+		MyString attr_name;
+
+		ASSERT( expr->LArg() && expr->RArg() );
+
+		expr->LArg()->PrintToStr( attr_name );
+		expr->RArg()->PrintToStr( new_val );
+
+		expr = old_ad->Lookup( attr_name.Value() );
+		if( expr && expr->RArg() ) {
+			expr->RArg()->PrintToStr( old_val );
+			if( new_val == old_val ) {
+				continue;
+			}
+		}
+
+			// filter out stuff we never want to mess with
+		if( attr_name == ATTR_MY_TYPE ||
+			attr_name == ATTR_TARGET_TYPE )
+		{
+			continue;
+		}
+
+		_ads->SetAttribute(key, attr_name.Value(), new_val.Value());
+	}
+
+	_ads->CommitTransaction ();
 }
 
 void

@@ -131,7 +131,7 @@ public:
 	// used by tracker classes to make associations between
 	// processes and families we're monitoring
 	//
-	bool add_member_to_family(ProcFamily*, procInfo*, char*);
+	bool add_member_to_family(ProcFamily*, procInfo*, const char*);
 
 private:
 	// the tree structure for the families we're tracking

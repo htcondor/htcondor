@@ -35,6 +35,8 @@ my @expected_output =
 
 CondorTest::SetExpected(\@expected_output);
 
+print "Setting expected out from test - ";
+
 $ExitSuccess = sub {
 };
 
@@ -43,9 +45,11 @@ CondorTest::RegisterExitedSuccess( $testname, \&CondorTest::DefaultOutputTest );
 #CondorTest::RegisterExitedSuccess( $testname, $ExitSuccess );
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	CondorTest::debug("$testname: SUCCESS\n",1);
+	print "ok\n";
+	CondorTest::debug("$testname: SUCCESS\n",2);
 	exit(0);
 } else {
+	print "bad\n";
 	die "$testname: CondorTest::RunTest() failed\n";
 }
 

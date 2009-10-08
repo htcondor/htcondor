@@ -103,14 +103,14 @@ int mkstemp(char *template)
  * This will restrict the permissions on the created file to only the owner.
  * Use fchmod() or fchown() to change the permissions, and owner/group.
  */
-int condor_mkstemp(char *template)
+int condor_mkstemp(char *Template)
 {
 #if !defined(WIN32)
 	mode_t savedUmask = umask(S_IRWXG|S_IRWXO);
-	int fd = mkstemp(template);
+	int fd = mkstemp(Template);
 	umask(savedUmask);
 #else
-	int fd = mkstemp(template);
+	int fd = mkstemp(Template);
 #endif
 	
 	return fd;

@@ -26,6 +26,7 @@
 #include "sqlquery.h"
 #include "jobqueuedatabase.h"
 #include "quill_enums.h"
+#include "MyString.h"
 
 #ifndef MAX_FIXED_SQL_STR_LENGTH
 #define MAX_FIXED_SQL_STR_LENGTH 2048

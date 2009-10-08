@@ -29,7 +29,7 @@ $corename = "job_core_perrelease_local";
 $currenthost = CondorTest::getFqdnHost();
 CondorTest::fullchomp($currenthost);
 
-system("date");
+print scalar localtime() . "\n";
 
 $mypid = $$;
 $mysaveme = $corename . ".saveme";
@@ -71,7 +71,7 @@ if($willstatus != 0)
 system("cp job_core_perrelease-false_local* job_core_perrelease-true_local* job_core_perrelease_local.* $mysaveme");
 
 CondorTest::KillPersonal($personalconfig);
-system("date");
+print scalar localtime() . "\n";
 
 if(($willstatus != 0) || ($nostatus != 0))
 {

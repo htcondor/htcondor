@@ -42,7 +42,13 @@ class Condor_Crypt_Base {
     // RETURNS: None
     //------------------------------------------
 
+		// Returns an array of random bytes.
+		// Caller should free returned buffer when done.
     static unsigned char * randomKey(int length = 24);
+		// Same as randomKey(), but returns string encoded as hex number.
+		// The supplied length specifies the number of random bytes,
+		// not the number of hex digits (which is twice the number of bytes).
+	static char *randomHexKey(int length = 24);
     static unsigned char * oneWayHashKey(const char * initialKey);
     //------------------------------------------
     // PURPOSE: Generate a random key

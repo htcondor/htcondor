@@ -17,6 +17,7 @@
  *
  ***************************************************************/
 
+#include "condor_common.h"
 #include "condor_daemon_core.h"
 #include "subsystem_info.h"
 

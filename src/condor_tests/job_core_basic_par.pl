@@ -19,54 +19,80 @@
 ##**************************************************************
 
 use CondorTest;
+use strict;
+use warnings;
 
+my $cmd = $ARGV[0];
+my $pid = $ARGV[1];
 
-$cmd = $ARGV[0];
+my $testdesc =  'Basic Parallel - Parallel U';
+my $testname = "job_core_basic_par";
+my $debuglevel = 2;
+my $outputbase = "job_core_basic_par$pid.out";
 
-CondorTest::debug("Submit file for this test is $cmd\n",1);
-#print "looking at env for condor config\n";
-#system("printenv | grep CONDOR_CONFIG");
+CondorTest::debug("Submit file for this test is $cmd\n",$debuglevel);
 
-$testdesc =  'Basic Parallel - Parallel U';
-$testname = "job_core_basic_par";
-
-$aborted = sub {
+my $aborted = sub {
 	my %info = @_;
 	my $done;
-	CondorTest::debug("Abort event not expected!\n",1);
+	die "Abort event not expected!\n";
 };
 
-$held = sub {
+my $held = sub {
 	my %info = @_;
 	my $cluster = $info{"cluster"};
-
-	CondorTest::debug("Held event not expected.....\n",1);
+	die "Held event not expected.....\n"
 };
 
-$executed = sub
+my $executed = sub
 {
 	my %args = @_;
 	my $cluster = $args{"cluster"};
 
-	CondorTest::RegisterTimed($testname, $timed, 600);
-	CondorTest::debug("Parallel job executed\n",1);
+	CondorTest::debug("Parallel job executed\n",$debuglevel);
 };
 
-$timed = sub
+my $success = sub
 {
-	die "Test took too long!!!!!!!!!!!!!!!\n";
-};
+	my $max = 4;
+	my $foundcount = 0;
+	my $count = 0;
+	my $fullfile = "";
 
-$success = sub
-{
-	CondorTest::debug("Success: Parallel Test ok\n",1);
+	print "Checking for expected job output - ";
+
+	while ($count < $max) {
+		$fullfile = $outputbase . $count;
+		my $line = "";
+		#print "$fullfile\n";
+		#system("cat $fullfile");
+		open(OUT,"<$fullfile") or die "Can not open <$fullfile>:$!\n";
+		while(<OUT>) {
+			chomp();
+			$line = $_;
+			if($line =~ /^machine $count/) {
+				$foundcount += 1;
+				#print $line;
+			}
+		}
+		close(OUT);
+		$count += 1;
+	}
+	if($foundcount != $max) {
+		print "bad\n";
+		print "Only correct output in $foundcount output files\n";
+		exit(1);
+	} else {
+		print "ok\n";
+	}
+	CondorTest::debug("Success: Parallel Test ok\n",$debuglevel);
 };
 
 CondorTest::RegisterExitedSuccess( $testname, $success);
 CondorTest::RegisterExecute($testname, $executed);
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	CondorTest::debug("$testname: SUCCESS\n",1);
+	CondorTest::debug("$testname: SUCCESS\n",$debuglevel);
 	exit(0);
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";

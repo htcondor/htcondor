@@ -19,6 +19,8 @@
 ##**************************************************************
 
 use CondorTest;
+use strict;
+use warnings;
 
 
 # truly const variables in perl
@@ -26,39 +28,42 @@ sub IDLE{1};
 sub HELD{5};
 sub RUNNING{2};
 
-$testdesc =  'job_amazon_basic';
-$testname = "job_amazon_basic";
-$corename = "job_amazon_basic";
+my $testdesc =  'job_amazon_basic';
+my $testname = "job_amazon_basic";
+my $corename = "job_amazon_basic";
+my $debuglevel = 2;
+my $done = 0;
 
 # where am I running
-$currenthost = `hostname`;
+my $currenthost = `hostname`;
 chomp($currenthost);
-$primarycollector = $currenthost;
+my $primarycollector = $currenthost;
 my @adarray;
 
 CondorTest::fullchomp($currenthost);
 
-system("date");
+print scalar localtime() . "\n";
 
-$mypid = $$;
-$mysaveme = $corename . ".saveme";
+my $mypid = $$;
+my $mysaveme = $corename . ".saveme";
 
 if($mypid == 0) {
 	die "Saveme setup for test failed\n";
 }
 
-$submit_file = $corename . ".cmd";
+my $submit_file = $corename . ".cmd";
 
-CondorTest::debug("Master PID is $mypid\n",1);
-CondorTest::debug("Master PID submit file is $submit_file\n",1);
+CondorTest::debug("Master PID is $mypid\n",$debuglevel);
+CondorTest::debug("Master PID submit file is $submit_file\n",$debuglevel);
 
-$ec2_sim_port = 0;
-$ec2_sim = "../testbin_dir/ec2_sim";
+my $ec2_sim_port = 0;
+my $ec2_sim = "../testbin_dir/ec2_sim";
 if ( ! -x $ec2_sim ) {
 	die("$ec2_sim isn't executable!\n");
 }
 # Start ec2_sim
-$ec2_sim_pid = fork();
+print "fire up EC2 Simulator - ";
+my $ec2_sim_pid = fork();
 if ( $ec2_sim_pid == 0 ) {
 	# Child
 	# It's important not to have shell meta-characters in our exec() line.
@@ -69,9 +74,10 @@ if ( $ec2_sim_pid == 0 ) {
 	open STDERR, ">ec2_sim.out";
 	exec( "$ec2_sim -p 0" ) or die "Failed to exec $ec2_sim\n";
 } elsif ( $ec2_sim_pid > 0 ) {
-	for ( my $i = 0; $i < 5 && $ec2_sim_port == 0; $i++ ) {
+	for ( my $i = 0; $i < 10 && $ec2_sim_port == 0; $i++ ) {
 		sleep 1;
 		if ( waitpid( $ec2_sim_pid, &POSIX::WNOHANG ) == $ec2_sim_pid ) {
+			print "bad\n";
 			die( "$ec2_sim died unexpectedly!\n" );
 		}
 		open EC2_OUT, "<ec2_sim.out" or next;
@@ -83,12 +89,18 @@ if ( $ec2_sim_pid == 0 ) {
 		}
 		close EC2_OUT;
 	}
-	if ( $ec2_sim_port == 0 ) { die("Failed to find port for $ec2_sim\n"); }
+	if ( $ec2_sim_port == 0 ) { 
+		print "bad\n";
+		die("Failed to find port for $ec2_sim\n"); 
+	} else {
+		print "ok\n";
+	}
 } else {
+	print "bad\n";
 	die( "Failed to fork() to spawn $ec2_sim!\n" );
 }
 
-CondorTest::debug("Starting personal condor\n",1);
+CondorTest::debug("Starting personal condor\n",$debuglevel);
 
 # Modify our config file suffix to include port of ec2_sim
 open(CFGSRC,"<x_amazon_configpostsrc.template") || die "Could not open x_amazon_configpostsrc.template: $!\n";
@@ -100,57 +112,61 @@ while(<CFGSRC>) {
 close(CFGSRC);
 close(CFGDST);
 
+print "Start up a configured personal condor pool - ";
 # get a local scheduler running (side a)
 my $configloc = CondorTest::StartPersonal( "job_amazon_basic", "x_param.amazon", "amazon");
 my @local = split /\+/, $configloc;
 my $locconfig = shift @local;
 my $locport = shift @local;
 
-CondorTest::debug("---local config is $locconfig and local port is $locport---\n",1);
+print "ok\n";
+
+CondorTest::debug("---local config is $locconfig and local port is $locport---\n",$debuglevel);
 
 $ENV{CONDOR_CONFIG} = $locconfig;
 
 if($done != 0) {
-	CondorTest::debug("We failed already, allow cleanup\n",1);
+	CondorTest::debug("We failed already, allow cleanup\n",$debuglevel);
 } else {
-	$test_cmd = "./job_amazon_basic.pl $submit_file";
-	CondorTest::debug("About to run Amazon EC2 basic test: $test_cmd\n",1);
-	system("date");
+	my $test_cmd = "./job_amazon_basic.pl $submit_file";
+	CondorTest::debug("About to run Amazon EC2 basic test: $test_cmd\n",$debuglevel);
+	print scalar localtime() . "\n";
 
+	print "Submit test - ";
 	$done = system("$test_cmd");
 }
 
-CondorTest::debug("Killing ec2_sim pid $ec2_sim_pid\n",1);
+if($done != 0) {
+	print "bad\n";
+} else {
+	print "ok\n";
+}
+
+CondorTest::debug("Killing ec2_sim pid $ec2_sim_pid\n",$debuglevel);
 kill 15, $ec2_sim_pid;
-if ( waitpid( $ec2_sim_pid, undef ) != $ec2_sim_pid ) {
-	CondorTest::debug("Failed to reap ec2_sim\n",1);
+if ( waitpid( $ec2_sim_pid, 0 ) != $ec2_sim_pid ) {
+	CondorTest::debug("Failed to reap ec2_sim\n",$debuglevel);
 } elsif ( $? != 0 ) {
-	CondorTest::debug("ec2_sim exited with non-zero status $?\n",1);
+	CondorTest::debug("ec2_sim exited with non-zero status $?\n",$debuglevel);
 	$done = 1;
 }
 # TODO: checkout ec2_sim output "ec2_sim.out"
 
-CondorTest::debug("Saving things and cleaning up.... done with return $done\n",1);
+CondorTest::debug("Saving things and cleaning up.... done with return $done\n",$debuglevel);
 
 system("cp *job_amazon_basic* *ec2_sim* $mysaveme");
 
-$cmd = "condor_off -fast -master";
-$status = CondorTest::runCondorTool($cmd,\@adarray,2);
-if(!$status)
-{
-	CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
-	exit(1)
-}
+CondorTest::KillPersonal($locconfig);
 
-system("date");
+print scalar localtime() . "\n";
 
 if( $done != 0 )
 {
-	CondorTest::debug("job_amazon_basic FAILED\n",1);
+	CondorTest::debug("job_amazon_basic FAILED\n",$debuglevel);
 	# actual test failed but we allowed cleanup
 	exit(1);
 }
 
-CondorTest::debug("job_amazon_basic SUCCESS\n",1);
-system("date");
+CondorTest::debug("job_amazon_basic SUCCESS\n",$debuglevel);
+print scalar localtime() . "\n";
 exit(0);

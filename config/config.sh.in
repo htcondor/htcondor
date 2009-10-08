@@ -13,6 +13,7 @@ EXT_OPENSSL_VERSION=@ext_openssl_version@
 
 EXT_GLOBUS_VERSION=@ext_globus_version@
 GLOBUS_FLAVOR=@globus_flavor@
+GLOBUS_THR_FLAVOR=@globus_thr_flavor@
 
 EXT_ZLIB_VERSION=@ext_zlib_version@
 
@@ -24,14 +25,28 @@ EXT_GSOAP_VERSION=@ext_gsoap_version@
 
 EXT_PCRE_VERSION=@ext_pcre_version@
 
+EXT_EXPAT_VERSION=@ext_expat_version@
+
+EXT_VOMS_VERSION=@ext_voms_version@
+
 EXT_POSTGRESQL_VERSION=@ext_postgresql_version@
 
 EXT_UNICOREGAHP_VERSION=@ext_unicoregahp_version@
 
 EXT_BLAHP_VERSION=@ext_blahp_version@
 
+EXT_CREAM_VERSION=@ext_cream_version@
+
 WANT_COREDUMPER=@want_coredumper@
 EXT_COREDUMPER_VERSION=@ext_coredumper_version@
+
+EXT_CURL_VERSION=@ext_curl_version@
+
+EXT_HADOOP_VERSION=@ext_hadoop_version@
+
+EXT_LIBXML2_VERSION=@ext_libxml2_version@
+
+EXT_LIBVIRT_VERSION=@ext_libvirt_version@
 
 WANT_EXT_LINUXLIBCHEADERS=@want_ext_linuxlibcheaders@
 EXT_LINUXLIBCHEADERS_VERSION=@ext_linuxlibcheaders_version@

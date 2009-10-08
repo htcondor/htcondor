@@ -106,7 +106,9 @@ hostname=`hostname`
 currentDir=`pwd`
 user=`whoami`
 
-echo "$_CONDOR_PROCNO $hostname $PORT $user $currentDir"  |
+thisrun=`$CONDOR_CHIRP get_job_attr EnteredCurrentStatus`
+
+echo "$_CONDOR_PROCNO $hostname $PORT $user $currentDir $thisrun"  |
 	$CONDOR_CHIRP put -mode cwa - $_CONDOR_REMOTE_SPOOL_DIR/contact 
 
 if [ $? -ne 0 ]
@@ -120,6 +122,7 @@ fi
 if [ $_CONDOR_PROCNO -eq 0 ]
 then
 	done=0
+	count=0
 
 	# Need to poll the contact file until all nodes have
 	# reported in
@@ -127,7 +130,7 @@ then
 	do
 			/bin/rm -f contact
 			$CONDOR_CHIRP fetch $_CONDOR_REMOTE_SPOOL_DIR/contact $_CONDOR_SCRATCH_DIR/contact
-			lines=`wc -l $_CONDOR_SCRATCH_DIR/contact | awk '{print $1}'`
+			lines=`wc -l $_CONDOR_SCRATCH_DIR/contact | awk "/$thisrun/"' {print $1}'`
 			if [ $lines -eq $_CONDOR_NPROCS ]
 			then
 				done=1
@@ -148,6 +151,11 @@ then
 				$CONDOR_CHIRP remove $_CONDOR_REMOTE_SPOOL_DIR/contact
 			else
 				sleep 1
+			fi
+			count=`expr $count + 1`
+			if [ $count -eq 1200 ]
+			then
+				exit 1
 			fi
 	done
 fi

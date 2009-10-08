@@ -27,6 +27,7 @@ package CondorTest;
 
 require 5.0;
 use Carp;
+use CondorUtils;
 use Condor;
 use CondorPersonal;
 use FileHandle;
@@ -53,6 +54,7 @@ my $TRUE = 1;
 my $FALSE = 0;
 my $teststrt = 0;
 my $teststop = 0;
+my $debuglevel = 2;
 
 
 my $MAX_CHECKPOINTS = 2;
@@ -71,12 +73,13 @@ my $lastconfig;
 my $handle; #actually the test name.
 my $BaseDir = getcwd();
 my $iswindows = IsThisWindows();
+my $isnightly = IsThisNightly($BaseDir);
 
 # we want to process and track the collection of cores
 my $coredir = "$BaseDir/Cores";
 if(!(-d $coredir)) {
 	debug("Creating collection directory for cores\n",2);
-	system("mkdir -p $coredir");
+	runcmd("mkdir -p $coredir");
 }
 
 # set up for reading in core/ERROR exemptions
@@ -111,7 +114,7 @@ sub SetExpected
 {
 	my $expected_ref = shift;
 	foreach my $line (@{$expected_ref}) {
-		debug( "$line\n", 1);
+		debug( "$line\n", 2);
 	}
 	@expected_output = @{$expected_ref};
 }
@@ -120,7 +123,7 @@ sub SetSkipped
 {
 	my $skipped_ref = shift;
 	foreach my $line (@{$skipped_ref}) {
-		debug( "$line\n", 1);
+		debug( "$line\n", 2);
 	}
 	@skipped_output_lines = @{$skipped_ref};
 }
@@ -335,7 +338,7 @@ sub DoTest
 		die "DoTest must get at least 3 args!!!!!\n";
 	}
 
-	print "RunTest says test is<<$handle>>\n";
+	debug("RunTest says test is<<$handle>>\n",2);;
 	# moved the reset to preserve callback registrations which includes
 	# an error callback at submit time..... Had to change timing
 	CondorTest::Reset();
@@ -359,12 +362,14 @@ sub DoTest
 
 	CheckRegistrations();
 
-	print "\nCurrent date and load follow:\n";
-	system("date");
-	if($iswindows == 0) {
-		system("uptime");
+	if($isnightly == 1) {
+		print "\nCurrent date and load follow:\n";
+		print scalar localtime() . "\n";
+		if($iswindows == 0) {
+			runcmd("uptime");
+		}
+		print "\n\n";
 	}
-	print "\n\n";
 
 	my $wrap_test = $ENV{WRAP_TESTS};
 
@@ -378,7 +383,7 @@ sub DoTest
 			print "Saving last config file<<<$lastconfig>>>\n";
 			$ENV{CONDOR_CONFIG} = $config;
 			print "CONDOR_CONFIG now <<$ENV{CONDOR_CONFIG}>>\n";
-			system("condor_config_val -config");
+			runcmd("condor_config_val -config");
 		}
 	}
 
@@ -391,10 +396,10 @@ sub DoTest
 	$teststrt = time();;
     # submit the job and get the cluster id
 	if(!(defined $dagman_args)) {
-		print "Regular Test....\n";
+		#print "Regular Test....\n";
     	$cluster = Condor::TestSubmit( $submit_file );
 	} else {
-		print "Dagman Test....\n";
+		#print "Dagman Test....\n";
     	$cluster = Condor::TestSubmitDagman( $submit_file, $dagman_args );
 	}
     
@@ -450,14 +455,15 @@ sub DoTest
 	$teststop = time();
 	my $timediff = $teststop - $teststrt;
 
-	print "Test started <$teststrt> ended <$teststop> taking <$timediff> seconds\n";
-
-	print "\nCurrent date and load follow:\n";
-	system("date");
-	if($iswindows == 0) {
-		system("uptime");
+	if($isnightly == 1) {
+		print "Test started <$teststrt> ended <$teststop> taking <$timediff> seconds\n";
+		print "Current date and load follow:\n";
+		print scalar localtime() . "\n";
+		if($iswindows == 0) {
+			runcmd("uptime");
+		}
+		print "\n\n";
 	}
-	print "\n\n";
 
 	##############################################################
 	#
@@ -495,7 +501,7 @@ sub DoTest
 	#
 	##############################################################
 	if(ShouldCheck_coreERROR() == 1){
-		debug("Want to Check core and ERROR!!!!!!!!!!!!!!!!!!\n\n",1);
+		debug("Want to Check core and ERROR!!!!!!!!!!!!!!!!!!\n\n",2);
 		# running in TestingPersonalCondor
 		my $logdir = `condor_config_val log`;
 		fullchomp($logdir);
@@ -539,7 +545,7 @@ sub DoTest
     		return $retval;
 		} else {
 			# oops found a problem fail test
-			print "\nTest being marked as FAILEF from discovery of core file or ERROR in logs\n";
+			print "\nTest being marked as FAILED from discovery of core file or ERROR in logs\n";
 			print "Time, Log, message are stored in condor_tests/Cores/core_error_trace\n\n";
     		return 0;
 		}
@@ -693,8 +699,9 @@ sub CompareText
     my $linenum = 0;
 	my $line;
 	my $expectline;
+	my $debuglevel = 4;
 
-	debug("opening file $file to compare to array of expected results\n",4);
+	debug("opening file $file to compare to array of expected results\n",$debuglevel);
     open( FILE, "<$file" ) || die "error opening $file: $!\n";
     
     while( <FILE> )
@@ -703,11 +710,11 @@ sub CompareText
 	$line = $_;
 	$linenum++;
 
-	debug("linenum $linenum\n",4);
-	debug("\$line: $line\n",4);
-	debug("\$\$aref[0] = $$aref[0]\n",4);
+	debug("linenum $linenum\n",$debuglevel);
+	debug("\$line: $line\n",$debuglevel);
+	debug("\$\$aref[0] = $$aref[0]\n",$debuglevel);
 
-	debug("skiplines = \"@skiplines\"\n",4);
+	debug("skiplines = \"@skiplines\"\n",$debuglevel);
 	#print "grep returns ", grep( /^$linenum$/, @skiplines ), "\n";
 
 	next if grep /^$linenum$/, @skiplines;
@@ -719,7 +726,7 @@ sub CompareText
 	}
 	fullchomp($expectline);
 
-	debug("\$expectline: $expectline\n",4);
+	debug("\$expectline: $expectline\n",$debuglevel);
 
 	# if they match, go on
 	next if $expectline eq $line;
@@ -747,7 +754,7 @@ sub CompareText
 	croak "invalid skipline argument ($num)" if $num < 1;
     }
     
-	debug("CompareText successful\n",4);
+	debug("CompareText successful\n",$debuglevel);
     return 1;
 }
 
@@ -755,56 +762,6 @@ sub IsFileEmpty
 {
     my $file = shift || croak "missing file argument";
     return -z $file;
-}
-
-sub verbose_system 
-{
-	my $args = shift @_;
-
-
-	my $catch = "vsystem$$";
-	$args = $args . " 2>" . $catch;
-	my $rc = 0xffff & system $args;
-
-	if ($rc != 0) { 
-		printf "system(%s) returned %#04x: ", $args, $rc;
-	}
-
-	if ($rc == 0) 
-	{
-		#print "ran with normal exit\n";
-		return $rc;
-	}
-	elsif ($rc == 0xff00) 
-	{
-		print "command failed: $!\n";
-	}
-	elsif (($rc & 0xff) == 0) 
-	{
-		$rc >>= 8;
-		print "ran with non-zero exit status $rc\n";
-	}
-	else 
-	{
-		print "ran with ";
-		if ($rc &   0x80) 
-		{
-			$rc &= ~0x80;
-			print "coredump from ";
-		}
-		print "signal $rc\n"
-	}
-
-	if( !open( MACH, "<$catch" )) { 
-		warn "Can't look at command  output <$catch>:$!\n";
-	} else {
-    	while(<MACH>) {
-        	print "ERROR: $_";
-    	}
-    	close(MACH);
-	}
-
-	return $rc;
 }
 
 sub MergeOutputFiles
@@ -976,8 +933,7 @@ sub getJobStatus
 	my $qstat = CondorTest::runCondorTool($cmd,\@status,0);
 	if(!$qstat)
 	{
-		print "Test failure due to Condor Tool Failure<$cmd>\n";
-	    return(1)
+		die "Test failure due to Condor Tool Failure<$cmd>\n";
 	}
 
 	foreach my $line (@status)
@@ -989,14 +945,19 @@ sub getJobStatus
 		}
 		else
 		{
-			return(-1);
+			print "No job status????\n";
+			runcmd("condor_q");
+			return("0");
 		}
 	}
+	print "No job status????\n";
+	runcmd("condor_q");
+	return("0");
 }
 
 #
 # Run a condor tool and look for exit value. Apply multiplier
-# upon failure and return 1 on failure.
+# upon failure and return 0 on failure.
 #
 
 sub runCondorTool
@@ -1010,74 +971,52 @@ sub runCondorTool
 	my $arrayref = shift;
 	# use unused third arg to skip the noise like the time
 	my $quiet = shift;
-	my $force = "";
-	$force = shift;
+	my $options = shift;
 	my $count = 0;
-	my $catch = "runCTool$$";
 
 	# clean array before filling
-	if($quiet != 0) {
-		system("date");
-	}
 
 	my $attempts = 6;
 	$count = 0;
+	my $hashref;
 	while( $count < $attempts) {
 		@{$arrayref} = (); #empty return array...
 		my @tmparray;
 		debug( "Try command <$cmd>\n",4);
-		open(PULL, "$cmd 2>$catch |");
-		while(<PULL>)
-		{
-			fullchomp($_);
-			debug( "Process: $_\n",4);
-			push @tmparray, $_; # push @{$arrayref}, $_;
-		}
-		close(PULL);
-		$status = $? >> 8;
+		#open(PULL, "_condor_TOOL_TIMEOUT_MULTIPLIER=4 $cmd 2>$catch |");
+
+		$hashref = runcmd("_condor_TOOL_TIMEOUT_MULTIPLIER=4 $cmd", $options);
+		my @output =  @{${$hashref}{"stdout"}};
+		my @error =  @{${$hashref}{"stderr"}};
+
+		$status = ${$hashref}{"exitcode"};
 		debug("Status is $status after command\n",4);
-		if(( $status != 0 ) && ($attempts == ($count + 1)))
-		{
-				print "runCondorTool: $cmd timestamp $start_time failed!\n";
-				print "************* std out ***************\n";
-				foreach my $stdout (@tmparray) {
-					print "STDOUT: $stdout \n";
-				}
-				print "************* std err ***************\n";
-				if( !open( MACH, "<$catch" )) { 
-					warn "Can't look at command output <$catch>:$!\n";
-				} else {
-    				while(<MACH>) {
-        				print "ERROR: $_";
-    				}
-    				close(MACH);
-				}
+		if( $status != 0 ) {
+				#print "************* std out ***************\n";
+				#print "************* std err ***************\n";
 				print "************* GetQueue() ***************\n";
 				GetQueue();
 				print "************* GetQueue() DONE ***************\n";
+		} else {
 
-				return(0);
-		}
-
-		if ($status == 0) {
 			my $line = "";
-			foreach my $value (@tmparray)
-			{
-				push @{$arrayref}, $value;
+			if(defined $output[0]) {
+				#have some info here
+				foreach my $value (@output)
+				{
+					#print "adding <$value> to passed array ref(runCondorTool)\n";
+					push @{$arrayref}, $value;
+				}
 			}
 			$done = 1;
 			# There are times like the security tests when we want
 			# to see the stderr even when the command works.
-			if( (defined $force) && ($force ne "" )) {
-				if( !open( MACH, "<$catch" )) { 
-					warn "Can't look at command output <$catch>:$!\n";
-				} else {
-    				while(<MACH>) {
-						fullchomp($_);
-						$line = $_;
-						push @{$arrayref}, $line;
-    				}
-    				close(MACH);
+			if(defined $error[0]) {
+				#have some info here
+				foreach my $value (@error)
+				{
+					#print "adding <$value> to passed array ref(runCondorTool)(stderr)\n";
+					push @{$arrayref}, $value;
 				}
 			}
 			my $current_time = time;
@@ -1089,7 +1028,7 @@ sub runCondorTool
 		debug("runCondorTool: iteration<$count> failed sleep 10 * $count \n",1);
 		sleep((10*$count));
 	}
-	debug( "runCondorTool: $cmd worked!\n",4);
+	debug( "runCondorTool: $cmd failed!\n",1);
 
 	return(0);
 }
@@ -1097,25 +1036,75 @@ sub runCondorTool
 # Sometimes `which ...` is just plain broken due to stupid fringe vendor
 # not quite bourne shells. So, we have our own implementation that simply
 # looks in $ENV{"PATH"} for the program and return the "usual" response found
-# across unicies. As for windows, well, for now it just sucks.
-sub Which
-{
-	my $exe = shift(@_);
+# across unixies. As for windows, well, for now it just sucks, but it appears
+# to at least work.
 
-	if(!( defined  $exe)) {
-		return "CT::Which called with no args\n";
-	}
-	my @paths = split /:/, $ENV{PATH};
+#BEGIN {
+## A variable specific to the BEGIN block which retains its value across calls
+## to Which. I use this to memoize the mapping between unix and windows paths
+## via cygpath.
+#my %memo;
+#sub Which
+#{
+#	my $exe = shift(@_);
+#	my $pexe;
+#	my $origpath;
 
-	foreach my $path (@paths) {
-		fullchomp($path);
-		if (-x "$path/$exe") {
-			return "$path/$exe";
-		}
-	}
+#	if(!( defined  $exe)) {
+#		return "CT::Which called with no args\n";
+#	}
+#	my @paths;
 
-	return "$exe: command not found";
-}
+#	# On unix, this does the right thing, mostly, on windows we are using
+#	# cygwin, so it also mostly does the right thing initially.
+#	@paths = split /:/, $ENV{PATH};
+
+#	foreach my $path (@paths) {
+#		fullchomp($path);
+#		$origpath = $path;
+
+#		# Here we convert each path to a windows path 
+#		# before we use it with cygwin.
+#		if ($iswindows) {
+#			if (!exists($memo{$path})) {
+#				# XXX Stupid slow code.  The right solution is to abstract the
+#				# $ENV{PATH} variable and its cygpath converted counterpart and
+#				# deal with said abstraction everywhere in the codebase.  A
+#				# less right solution is to memoize the arguments to this
+#				# function call. Guess which one I chose.
+#				my $cygconvert = `cygpath -m -p "$path"`;
+#				fullchomp($cygconvert);
+#				$memo{$path} = $cygconvert; # memoize it
+#				$path = $cygconvert;
+#			} else {
+#				# grab the memoized copy.
+#				$path = $memo{$path};
+#			}
+
+#			# XXX Why just for this and not for all names with spaces in them?
+#			if($path =~ /^(.*)Program Files(.*)$/){
+#				$path = $1 . "progra~1" . $2;
+#			} else {
+#				CondorTest::debug("Path DOES NOT contain Program Files\n",3);
+#			}
+#		}
+
+#		$pexe = "$path/$exe";
+
+#		if ($iswindows) {
+#			# Stupid windows, do this to ensure the -x works.
+#			$pexe =~ s#/#\\#g;
+#		}
+
+#		if (-x "$pexe") {
+#			# stupid caller code expects the result in unix format".
+#			return "$origpath/$exe";
+#		}
+#	}
+
+#	return "$exe: command not found";
+#}
+#}
 
 # Lets be able to drop some extra information if runCondorTool
 # can not do what it is supposed to do....... short and full
@@ -1345,7 +1334,7 @@ sub spawn_cmd
 			open(LOG,">$mylog") || die "Can not open log: $mylog: $!\n";
 			$res = 0;
 			print LOG "Starting this cmd <$cmdtowatch>\n";
-			$res = system("$cmdtowatch");
+			$res = verbose_system("$cmdtowatch");
 			print LOG "Result from $cmdtowatch is <$res>\n";
 			print LOG "File to watch is <$resultfile>\n";
 			if($res != 0) {
@@ -1424,11 +1413,11 @@ sub PersonalSearchLog
 
     #my $logloc = $pid . "/" . $pid . $personal . "/log/" . $logname;
     my $logloc = $logdir . "/" . $logname;
-    CondorTest::debug("Search this log <$logloc> for <$searchfor>\n",1);
+    CondorTest::debug("Search this log <$logloc> for <$searchfor>\n",2);
     open(LOG,"<$logloc") || die "Can not open logfile<$logloc>: $!\n";
     while(<LOG>) {
         if( $_ =~ /$searchfor/) {
-            CondorTest::debug("FOUND IT! $_",1);
+            CondorTest::debug("FOUND IT! $_",2);
             return(0);
         }
     }
@@ -1456,7 +1445,7 @@ sub PersonalPolicySearchLog
 
     #my $logloc = $pid . "/" . $pid . $personal . "/log/" . $logname;
     my $logloc = $logdir . "/" . $logname;
-    debug("Search this log <$logloc> for <$policyitem>\n",1);
+    debug("Search this log <$logloc> for <$policyitem>\n",2);
     open(LOG,"<$logloc") || die "Can not open logfile<$logloc>: $!\n";
     while(<LOG>) {
         if( $_ =~ /^.*Security Policy.*$/) {
@@ -1464,7 +1453,7 @@ sub PersonalPolicySearchLog
                 if( $_ =~ /^\s*$policyitem\s*=\s*\"(\w+)\"\s*$/ ) {
                     #print "FOUND IT! $1\n";
                     if(!defined $securityoptions{$1}){
-                        debug("Returning <<$1>>\n",1);
+                        debug("Returning <<$1>>\n",2);
                         return($1);
                     }
                 }
@@ -1478,15 +1467,15 @@ sub OuterPoolTest
 {
 	my $cmd = "condor_config_val log";
 	my $locconfig = "";
-    debug( "Running this command: <$cmd> \n",1);
+    debug( "Running this command: <$cmd> \n",2);
     # shhhhhhhh third arg 0 makes it hush its output
 	my $logdir = `condor_config_val log`;
 	fullchomp($logdir);
-	debug( "log dir is<$logdir>\n",1);
+	debug( "log dir is<$logdir>\n",2);
 	if($logdir =~ /^.*condor_tests.*$/){
 		print "Running within condor_tests\n";
 		if($logdir =~ /^.*TestingPersonalCondor.*$/){
-			debug( "Running with outer testing personal condor\n",1);
+			debug( "Running with outer testing personal condor\n",2);
 			return(1);
 		}
 	} else {
@@ -1520,7 +1509,7 @@ sub PersonalCondorTest
 			$locconfig = shift @local;
 			my $locport = shift @local;
 			
-			debug("---local config is $locconfig and local port is $locport---\n",1);
+			debug("---local config is $locconfig and local port is $locport---\n",2);
 
 			#$ENV{CONDOR_CONFIG} = $locconfig;
 		}
@@ -1542,14 +1531,14 @@ sub findOutput
 		if($line =~ /^\s*[Ll]og\s+=\s+(.*)(\..*)$/){
 			$testname = $1;
 			my $previouslog = $1 . $2;
-			system("rm -f $previouslog");
+			runcmd("rm -f $previouslog");
 		}
 	}
 	close(SF);
 	print "findOutput returning <$testname>\n";
 	if($testname eq "UNKNOWN") {
 		print "failed to find testname in this submit file:$submitfile\n";
-		system("cat $submitfile");
+		runcmd("cat $submitfile");
 	}
 	return($testname);
 }
@@ -1579,7 +1568,7 @@ sub StartPersonal
     my $version = shift;
 	
 	$handle = $testname;
-    debug("Starting Perosnal($$) for $testname/$paramfile/$version\n",1);
+    debug("Starting Perosnal($$) for $testname/$paramfile/$version\n",2);
 
     my $configloc = CondorPersonal::StartCondor( $testname, $paramfile ,$version);
     return($configloc);
@@ -1590,13 +1579,13 @@ sub KillPersonal
 	my $personal_config = shift;
 	my $logdir = "";
 	if($personal_config =~ /^(.*[\\\/])(.*)$/) {
-		print "LOG dir is $1/log\n";
+		debug("LOG dir is $1/log\n",$debuglevel);
 		$logdir = $1 . "/log";
 	} else {
-		debug("KillPersonal passed this config<<$personal_config>>\n",1);
+		debug("KillPersonal passed this config<<$personal_config>>\n",2);
 		die "Can not extract log directory\n";
 	}
-	debug("Doing core ERROR check in  KillPersonal\n",1);
+	debug("Doing core ERROR check in  KillPersonal\n",2);
 	$failed_coreERROR = CoreCheck($handle, $logdir, $teststrt, $teststop);
 	CondorPersonal::KillDaemonPids($personal_config);
 }
@@ -1617,13 +1606,13 @@ sub ShouldCheck_coreERROR
 		return(0);
 	}
 	my $saveme = $handle . ".saveme";
-	debug("Not /TestingPersonalCondor/ based, saveme is $saveme\n",1);
-	debug("Logdir is $logdir\n",1);
+	debug("Not /TestingPersonalCondor/ based, saveme is $saveme\n",2);
+	debug("Logdir is $logdir\n",2);
 	if($logdir =~ /$saveme/) {
 		# no because KillPersonal will do it
 		return(0);
 	}
-	debug("Does not look like its in a personal condor\n",1);
+	debug("Does not look like its in a personal condor\n",2);
 	return(1);
 }
 
@@ -1636,7 +1625,17 @@ sub CoreCheck {
 	my $scancount = 0;
 	my $fullpath = "";
 	
-	debug("Checking <$logdir> for test <$test>\n",1);
+	if($iswindows == 1) {
+		#print "CoreCheck for windows\n";
+		$logdir =~ s/\\/\//g;
+		#print "old log dir <$logdir>\n";
+		my $windowslogdir = `cygpath -m $logdir`;
+		#print "New windows path <$windowslogdir>\n";
+		fullchomp($windowslogdir);
+		$logdir = $windowslogdir;
+	}
+
+	debug("Checking <$logdir> for test <$test>\n",2);
 	my @files = `ls $logdir`;
 	foreach my $perp (@files) {
 		fullchomp($perp);
@@ -1654,13 +1653,15 @@ sub CoreCheck {
 				AddFileTrace($fullpath,$filechange,$newname);
 				$count += 1;
 			} else {
+				# do not try to read lock files.
+				if($fullpath =~ /^(.*)\.lock$/) { next; }
 				debug("Checking <$fullpath> for test <$test> for ERROR\n",2);
 				$scancount = ScanForERROR($fullpath,$test,$tstart,$tend);
 				$count += $scancount;
 				debug("After ScanForERROR error count <$scancount>\n",2);
 			}
 		} else {
-			debug( "Not File: $fullpath\n",1);
+			debug( "Not File: $fullpath\n",2);
 		}
 	}
 	
@@ -1770,7 +1771,7 @@ sub AddFileTrace
 	print NTF "$buildentry";
 	debug("\n$buildentry",2);
 	close(NTF);
-	system("mv $newtracefile $tracefile");
+	runcmd("mv $newtracefile $tracefile");
 
 }
 
@@ -1783,7 +1784,7 @@ sub MoveCoreFile
 	my $entries = CountFileTrace();
 	if($oldname =~ /^.*\/(core.*)\s*.*$/) {
 		$newname = $coredir . "/" . $1 . "_$entries";
-		system("mv $oldname $newname");
+		runcmd("mv $oldname $newname");
 		#system("rm $oldname");
 		return($newname);
 	} else {
@@ -1808,16 +1809,16 @@ sub CountFileTrace
 sub LoadExemption
 {
 	my $line = shift;
-	debug("LoadExemption: <$line>\n",1);
+	debug("LoadExemption: <$line>\n",2);
     my ($test, $required, $message) = split /,/, $line;
     my $save = $required . "," . $message;
     if(exists $exemptions{$test}) {
         push @{$exemptions{$test}}, $save;
-		debug("LoadExemption: added another for test $test\n",1);
+		debug("LoadExemption: added another for test $test\n",2);
     } else {
         $exemptions{$test} = ();
         push @{$exemptions{$test}}, $save;
-		debug("LoadExemption: added new for test $test\n",1);
+		debug("LoadExemption: added new for test $test\n",2);
     }
 }
 
@@ -1839,13 +1840,13 @@ sub IgnoreError
 	} else {
 		die "Time string into IgnoreError: Bad Format: $errortime\n";
 	}
-	debug("Start <$tstart> ERROR <$timeloc> End <$tend>\n",1);
+	debug("Start <$tstart> ERROR <$timeloc> End <$tend>\n",2);
 
 	# First item we care about is if this ERROR hapened during this test
 	if(($tstart == 0) && ($tend == 0)) {
 		# this is happening within a personal condor so do not ignore
 	} elsif( ($timeloc < $tstart) || ($timeloc > $tend)) {
-		debug("IgnoreError: Did not happen during test\n",1);
+		debug("IgnoreError: Did not happen during test\n",2);
 		return(1); # not on our watch so ignore
 	}
 
@@ -1860,7 +1861,7 @@ sub IgnoreError
 			my $quoted = quotemeta($partialstr);
 			debug("Looking for <$quoted> in this error <$errorstring>\n",2);
 			if($errorstring =~ m/$quoted/) {
-				debug("IgnoreError: Valid exemption\n",1);
+				debug("IgnoreError: Valid exemption\n",2);
 				debug("IgnoreError: Ignore ******** <<$quoted>> ******** \n",2);
 				return(1);
 			} 
@@ -1894,7 +1895,6 @@ sub DropExemptions
 # my $UNLOCK = 8;
 # my $TRUE = 1;
 # my $FALSE = 0;
-my $debuglevel = 1;
 
 sub FindControlFile
 {
@@ -1907,7 +1907,7 @@ sub FindControlFile
 		debug( "Running file test is <$runningfile>\n",$debuglevel);
 		if(!(-d $runningfile)) {
 			debug( "Creating control file directory<$runningfile>\n",$debuglevel);
-			system("mkdir -p $runningfile");
+			runcmd("mkdir -p $runningfile");
 		}
 	} else {
 		die "Lost relative to where <$RunningFile> is :-(\n";
@@ -1920,12 +1920,12 @@ sub CleanControlFile
 	my $controlfile = FindControlFile();
 	if( -d $controlfile) {
 		debug( "Cleaning old active test running file holding:\n",$debuglevel);
-		system("ls $controlfile");
-		system("rm -rf $controlfile");
+		runcmd("ls $controlfile");
+		runcmd("rm -rf $controlfile");
 	} else {
 		debug( "Creating new active test running file\n",$debuglevel);
 	}
-	system("mkdir -p $controlfile");
+	runcmd("mkdir -p $controlfile");
 }
 
 
@@ -1943,7 +1943,7 @@ sub CountRunningTests
 		next if $file =~ /^\.\.?$/;
 		next if (-d $file) ;
 		$count += 1;
-		debug("Counting this test<$file> count now <$count>\n",1);
+		debug("Counting this test<$file> count now <$count>\n",2);
 	}
 	chdir($here);
 	return($count);
@@ -1957,7 +1957,7 @@ sub AddRunningTest
 	my $tmpfile;
 	my $line = "";
 	debug( "Wanting to add <$test> to running tests\n",$debuglevel);
-	system("touch $runningfile/$test");
+	runcmd("touch $runningfile/$test");
 }
 
 sub RemoveRunningTest
@@ -1968,13 +1968,13 @@ sub RemoveRunningTest
 	my $tmpfile;
 	my $line = "";
 	debug( "Wanting to remove <$test> from running tests\n",$debuglevel);
-	system("rm -f $runningfile/$test");
+	runcmd("rm -f $runningfile/$test");
 }
 
 sub IsThisWindows
 {
 	my $path = CondorTest::Which("cygpath");
-	debug("Path return from which cygpath: $path\n",2);
+	#debug("Path return from which cygpath: $path\n",2);
 	if($path =~ /^.*\/bin\/cygpath.*$/ ) {
 		#print "This IS windows\n";
 		return(1);
@@ -1983,6 +1983,16 @@ sub IsThisWindows
 	return(0);
 }
 
+sub IsThisNightly
+{
+	my $mylocation = shift;
 
+	debug("IsThisNightly passed <$mylocation>\n",2);
+	if($mylocation =~ /^.*(\/execute\/).*$/) {
+		return(1);
+	} else {
+		return(0);
+	}
+}
 
 1;

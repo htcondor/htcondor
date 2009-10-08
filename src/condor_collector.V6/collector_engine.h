@@ -110,6 +110,15 @@ class CollectorEngine : public Service
 						   ClassAd*,AdNameHashKey&, const MyString &, int &, 
 						   const sockaddr_in * );
 
+	ClassAd * mergeClassAd (CollectorHashTable &hashTable,
+							const char *adType,
+							const char *label,
+							ClassAd *new_ad,
+							AdNameHashKey &hk,
+							const MyString &hashString,
+							int  &insert,
+							const sockaddr_in * /*from*/ );
+
 	// support for dynamically created tables
 	CollectorHashTable *findOrCreateTable(MyString &str);
 

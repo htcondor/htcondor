@@ -107,7 +107,6 @@ HookClientMgr::spawn(HookClient* client, ArgList* args, MyString *hook_stdin, pr
     if (hook_stdin && hook_stdin->Length()) {
 		daemonCore->Write_Stdin_Pipe(pid, hook_stdin->Value(),
 									 hook_stdin->Length());
-		daemonCore->Close_Stdin_Pipe(pid);
 	}
 
 	if (wants_output) {

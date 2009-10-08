@@ -20,7 +20,6 @@
 
 
 ######################################################################
-# $Id: remote_task,v 1.3 2007-11-08 22:53:44 nleroy Exp $
 # Perform a given build task, and return the status of that task
 # 0 = success
 # 1 = build failed
@@ -39,8 +38,8 @@ if ($ENV{NMI_PLATFORM} =~ /winnt/) {
     $SrcDir = "$BaseDir\\src";
     $msconfigDir = "$BaseDir\\msconfig";
     $PublicDir = "$BaseDir\\public";
-    $ENV{USERPROFILE} = "c:\\temp";
-    $ENV{TMP} = "c:\\temp";
+    $ENV{USERPROFILE} = "$BaseDir";
+    $ENV{TMP} = "$BaseDir";
     $ENV{PATH} .= ";$msconfigDir";
 }
 

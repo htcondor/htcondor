@@ -19,6 +19,7 @@
 
 
 #include "condor_common.h"
+#include "condor_debug.h"
 #include "udp_waker.h"
 
 #include "condor_classad.h"
@@ -51,7 +52,8 @@ UdpWakeOnLanWaker::UdpWakeOnLanWaker (
     char const     *mac,
     char const     *subnet,
     unsigned short port ) throw ()
-: WakerBase (), m_port ( port )
+	: WakerBase (), 
+	m_port ( port )
 {
 
     strncpy ( m_mac, mac, STRING_MAC_ADDRESS_LENGTH-1 );
@@ -62,8 +64,8 @@ UdpWakeOnLanWaker::UdpWakeOnLanWaker (
 }
 
 UdpWakeOnLanWaker::UdpWakeOnLanWaker (
-    ClassAd *ad ) throw()
-: WakerBase ()
+    ClassAd *ad ) throw ()
+	: WakerBase ()
 {
 
     int     found   = 0;
@@ -116,7 +118,7 @@ UdpWakeOnLanWaker::UdpWakeOnLanWaker (
 
     /* retrieve the subnet from the ad */
     found = ad->LookupString (
-        ATTR_SUBNET,
+        ATTR_SUBNET_MASK,
         m_subnet,
         MAX_IP_ADDRESS_LENGTH-1 );
 
@@ -130,8 +132,17 @@ UdpWakeOnLanWaker::UdpWakeOnLanWaker (
 
     }
 
-    /* auto-detect the port number to use */
-    m_port = detect_port;
+	/* retrieve the port number from the ad */
+	found = ad->LookupInteger (
+		ATTR_WOL_PORT,
+		m_port );
+
+	if ( !found ) {
+
+		/* no error, just auto-detect the port number */
+		m_port = detect_port;
+
+	}
 
     /* initialize the internal structures */
     if ( !initialize () ) {
@@ -144,12 +155,12 @@ UdpWakeOnLanWaker::UdpWakeOnLanWaker (
 
     }
 
-    /* if we made it here, then initialization succeded */
+    /* if we made it here, then initialization succeeded */
     m_can_wake = true;
 
 }
 
-UdpWakeOnLanWaker::~UdpWakeOnLanWaker (void) throw ()
+UdpWakeOnLanWaker::~UdpWakeOnLanWaker () throw ()
 {
 }
 
@@ -158,7 +169,7 @@ UdpWakeOnLanWaker::~UdpWakeOnLanWaker (void) throw ()
  ***************************************************************/
 
 bool
-UdpWakeOnLanWaker::initialize (void)
+UdpWakeOnLanWaker::initialize ()
 {
 
     if ( !initializePacket () ) {
@@ -200,18 +211,18 @@ UdpWakeOnLanWaker::initialize (void)
 }
 
 bool
-UdpWakeOnLanWaker::initializePacket (void)
+UdpWakeOnLanWaker::initializePacket ()
 {
 	
 	int i, c, offset;
 
 	/* parse the hardware address */
-	unsigned	mac[6];
+	unsigned mac[6];
 	c = sscanf ( m_mac,
 		"%2x:%2x:%2x:%2x:%2x:%2x",
 		&mac[0], &mac[1], &mac[2], &mac[3], &mac[4], &mac[5] );
 	
-	if ( c != 6 || strlen ( m_mac ) < STRING_MAC_ADDRESS_LENGTH - 1) {
+	if ( c != 6 || strlen ( m_mac ) < STRING_MAC_ADDRESS_LENGTH - 1 ) {
 
         dprintf (
             D_ALWAYS,
@@ -223,7 +234,7 @@ UdpWakeOnLanWaker::initializePacket (void)
 
 	}
 	for ( i = 0;  i < 6;  i++ ) {
-		m_raw_mac[i] = (unsigned char)mac[i];
+		m_raw_mac[i] = (unsigned char) mac[i];
 	}
 	
 	/* pad the start of the packet */
@@ -242,12 +253,12 @@ UdpWakeOnLanWaker::initializePacket (void)
 }
 
 bool
-UdpWakeOnLanWaker::initializePort (void)
+UdpWakeOnLanWaker::initializePort ()
 {
 
     /* if we've been given a zero value, then look-up the
        port number to use */
-    if ( m_port == 0 ) {
+    if ( detect_port == m_port ) {
         servent *sp = getservbyname ( "discard", "udp" );
         if ( sp ) {
             m_port = ntohs ( sp->s_port );
@@ -261,7 +272,7 @@ UdpWakeOnLanWaker::initializePort (void)
 }
 
 bool
-UdpWakeOnLanWaker::initializeBroadcastAddress (void)
+UdpWakeOnLanWaker::initializeBroadcastAddress ()
 {
     bool        ok = false;
     sockaddr_in public_ip_address;
@@ -337,7 +348,7 @@ Cleanup:
 }
 
 void
-UdpWakeOnLanWaker::printLastSocketError (void) const
+UdpWakeOnLanWaker::printLastSocketError () const
 {
 
 #if defined ( WIN32 )
@@ -413,7 +424,7 @@ UdpWakeOnLanWaker::printLastSocketError (void) const
 #endif
 
 bool
-UdpWakeOnLanWaker::doWake (void) const
+UdpWakeOnLanWaker::doWake () const
 {
 
     /* bail-out early if we were not fully initialized */

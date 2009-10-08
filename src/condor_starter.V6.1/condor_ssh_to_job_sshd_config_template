@@ -1,0 +1,18 @@
+
+HostKey _INSERT_HOST_KEY_
+AuthorizedKeysFile _INSERT_AUTHORIZED_KEYS_FILE_
+
+# The following option is not supported by all recent versions of OpenSSH,
+# so instead we rely on injection of the shell setup command in the authorized
+# keys file.
+#ForceCommand _INSERT_FORCE_COMMAND_
+
+# as a convenience to users, allow remote setting of environment
+# since sshd is running as the job uid, there isn't really a security concern
+AcceptEnv *
+
+Subsystem       sftp    /usr/libexec/sftp-server
+
+# prevent sshd from freaking out about reading files from inside
+# a tmp-like directory
+StrictModes no

@@ -43,8 +43,10 @@ enum Command
 {
 	CMD_NONE,
 	CMD_DUMP,
+	CMD_DIFF,
 	CMD_LIST,
-	CMD_VERIFY
+	CMD_VERIFY,
+	CMD_ACCESS
 };
 enum Field
 {
@@ -59,6 +61,7 @@ enum Field
 	FIELD_MAX_ROTATION,
 	FIELD_ROTATION,
 	FIELD_OFFSET,
+	FIELD_EVENT_NUM,
 	FIELD_GLOBAL_POSITION,
 	FIELD_GLOBAL_RECORD_NUM,
 	FIELD_INODE,
@@ -68,12 +71,12 @@ enum Field
 };
 enum DataType
 {
-	TYPE_STRING,
-	TYPE_INT,
-	TYPE_FSIZE,
-	TYPE_INODE,
-	TYPE_TIME,
-	TYPE_NONE,
+	DTYPE_STRING,
+	DTYPE_INT,
+	DTYPE_FSIZE,
+	DTYPE_INODE,
+	DTYPE_TIME,
+	DTYPE_NONE,
 };
 
 struct FieldData
@@ -81,27 +84,28 @@ struct FieldData
 	Field		 m_field;
 	DataType	 m_type;
 	int			 m_max_values;
-	char		*m_name;
+	const char	*m_name;
 };
 static const FieldData fieldList[] =
 {
-	{ FIELD_SIGNATURE,			TYPE_STRING,	1,  "signature" },
-	{ FIELD_VERSION,			TYPE_INT,		2,  "version" },
-	{ FIELD_UPDATE_TIME,		TYPE_TIME,		2,  "update-time" },
-	{ FIELD_BASE_PATH,			TYPE_STRING,	1,  "base-path" },
-	{ FIELD_CUR_PATH,			TYPE_STRING,	1,  "path" },
-	{ FIELD_UNIQ_ID,			TYPE_STRING,	1,  "uniq" },
-	{ FIELD_SEQUENCE,			TYPE_INT,		2,  "sequence" },
-	{ FIELD_MAX_ROTATION,		TYPE_INT,		2,  "max-rotation" },
-	{ FIELD_ROTATION,			TYPE_INT,		2,  "rotation" },
-	{ FIELD_OFFSET,				TYPE_FSIZE,		2,  "offset" },
-	{ FIELD_GLOBAL_POSITION,	TYPE_FSIZE,		2,  "global-position" },
-	{ FIELD_GLOBAL_RECORD_NUM,	TYPE_FSIZE,		2,  "global-record" },
-	{ FIELD_INODE,				TYPE_INODE,		1,  "inode" },
-	{ FIELD_CTIME,				TYPE_TIME,		2,  "ctime" },
-	{ FIELD_SIZE,				TYPE_FSIZE,		2,  "size" },
-	{ FIELD_ALL,				TYPE_NONE,		0,  "all" },
-	{ FIELD_NONE,				TYPE_NONE,		-1, NULL, },
+	{ FIELD_SIGNATURE,			DTYPE_STRING,	1,  "signature" },
+	{ FIELD_VERSION,			DTYPE_INT,		2,  "version" },
+	{ FIELD_UPDATE_TIME,		DTYPE_TIME,		2,  "update-time" },
+	{ FIELD_BASE_PATH,			DTYPE_STRING,	1,  "base-path" },
+	{ FIELD_CUR_PATH,			DTYPE_STRING,	1,  "path" },
+	{ FIELD_UNIQ_ID,			DTYPE_STRING,	1,  "uniq" },
+	{ FIELD_SEQUENCE,			DTYPE_INT,		2,  "sequence" },
+	{ FIELD_MAX_ROTATION,		DTYPE_INT,		2,  "max-rotation" },
+	{ FIELD_ROTATION,			DTYPE_INT,		2,  "rotation" },
+	{ FIELD_OFFSET,				DTYPE_FSIZE,	2,  "offset" },
+	{ FIELD_EVENT_NUM,			DTYPE_FSIZE,	2,  "event-num" },
+	{ FIELD_GLOBAL_POSITION,	DTYPE_FSIZE,	2,  "global-position" },
+	{ FIELD_GLOBAL_RECORD_NUM,	DTYPE_FSIZE,	2,  "global-record" },
+	{ FIELD_INODE,				DTYPE_INODE,	1,  "inode" },
+	{ FIELD_CTIME,				DTYPE_TIME,		2,  "ctime" },
+	{ FIELD_SIZE,				DTYPE_FSIZE,	2,  "size" },
+	{ FIELD_ALL,				DTYPE_NONE,		0,  "all" },
+	{ FIELD_NONE,				DTYPE_NONE,		-1, NULL, },
 };
 
 union IntVal { filesize_t asFsize; int asInt; time_t asTime; };
@@ -124,6 +128,7 @@ public:
 	int handleFixed( SimpleArg &arg, int & );
 
 	const char *getFile( void ) const { return m_file; };
+	const char *getFile2( void ) const { return m_file2; };
 	Command getCommand( void ) const { return m_command; };
 	const FieldData *getField( void ) const { return m_field; };
 	Value getValue( void ) const { return m_value; };
@@ -135,10 +140,16 @@ public:
 	const FieldData *lookupField( Field field ) const;
 	bool isValueOk( void ) const { return m_num_values >= 1; };
 	bool needStateFile( void ) const { return m_command != CMD_LIST; };
+	bool needStateFile2( void ) const { return m_command == CMD_DIFF; };
 
 private:
-	enum { ST_CMD, ST_FILE, ST_FIELD, ST_VALUES, ST_NONE } m_state;
+	enum { ST_CMD,
+		   ST_FILE,
+		   ST_FIELD, ST_FILE2=ST_FIELD,
+		   ST_VALUES,
+		   ST_NONE } m_state;
 	const char		*m_file;
+	const char		*m_file2;
 	Command			 m_command;
 	const FieldData	*m_field;
 	Value			 m_value;
@@ -155,14 +166,26 @@ private:
 };
 
 int
-CheckArgs(int argc, const char **argv, Options &opts);
+CheckArgs(int argc,
+		  const char **argv,
+		  Options &opts);
 int
-ReadState(const Options &opts, ReadUserLog::FileState &state );
+ReadState(const Options &opts,
+		  ReadUserLog::FileState &state );
 int
-DumpState(const Options &opts, const ReadUserLog::FileState &state,
+DumpState(const Options &opts,
+		  const ReadUserLog::FileState &state,
 		  const FieldData *wdata = NULL );
 int
-VerifyState(const Options &opts, const ReadUserLog::FileState &state );
+DiffState(const Options &opts,
+		  const ReadUserLog::FileState &state,
+		  const ReadUserLog::FileState &state2 );
+int
+VerifyState(const Options &opts,
+			const ReadUserLog::FileState &state );
+int
+CheckStateAccess(const Options &opts,
+				 const ReadUserLog::FileState &state );
 
 const char *timestr( struct tm &tm, char *buf = NULL, int bufsize = 0 );
 const char *timestr( time_t t, char *buf = NULL, int bufsize = 0 );
@@ -200,6 +223,11 @@ main(int argc, const char **argv)
 		fprintf( stderr, "ReadState() failed\n" );
 		exit( 1 );
 	}
+	ReadUserLog::FileState	state2;
+	if ( opts.needStateFile2() && ( ReadState( opts, state2 ) < 0 )  ) {
+		fprintf( stderr, "ReadState() failed\n" );
+		exit( 1 );
+	}
 
 	int	status = 0;
 	switch( opts.getCommand() )
@@ -212,6 +240,12 @@ main(int argc, const char **argv)
 		break;
 	case CMD_DUMP:
 		status = DumpState( opts, state );
+		break;
+	case CMD_DIFF:
+		status = DiffState( opts, state, state2 );
+		break;
+	case CMD_ACCESS:
+		status = CheckStateAccess( opts, state );
 		break;
 	case CMD_VERIFY:
 		status = VerifyState( opts, state );
@@ -258,6 +292,12 @@ CheckArgs(int argc, const char **argv, Options &opts)
 				 "  use -h for help\n" );
 		status = -1;
 	}
+	else if ( ( opts.needStateFile2() ) && ( NULL == opts.getFile2() ) ) {
+		fprintf( stderr,
+				 "2nd State file not specified\n"
+				 "  use -h for help\n" );
+		status = -1;
+	}
 	else if ( CMD_NONE == opts.getCommand() ) {
 		fprintf( stderr,
 				 "No command specified\n"
@@ -284,12 +324,14 @@ CheckArgs(int argc, const char **argv, Options &opts)
 }
 
 int
-ReadState(const Options &opts, ReadUserLog::FileState &state )
+ReadState(const Options				&opts,
+		  ReadUserLog::FileState	&state )
 {
 
 	// Create & initialize the state
 	ReadUserLog::InitFileState( state );
 
+	printf( "Reading state %s\n", opts.getFile() );
 	int	fd = safe_open_wrapper( opts.getFile(), O_RDONLY, 0 );
 	if ( fd < 0 ) {
 		fprintf( stderr, "Failed to read state file %s\n", opts.getFile() );
@@ -313,8 +355,8 @@ DumpState( const Options &opts,
 		   const FieldData *wdata )
 {
 	ReadUserLogState	rstate( state, 60 );
-	const ReadUserLogState::FileState	*istate =
-		ReadUserLogState::GetFileStateConst( state );
+	const ReadUserLogState::FileState	*istate;
+	ReadUserLogState::convertState( state, istate );
 
 	if ( NULL == wdata ) {
 		wdata = opts.getField( );
@@ -373,6 +415,11 @@ DumpState( const Options &opts,
 				wdata->m_name, istate->m_offset.asint );
 		break;
 
+	case FIELD_EVENT_NUM:
+		printf( "  %s: " FILESIZE_T_FORMAT "\n",
+				wdata->m_name, istate->m_event_num.asint );
+		break;
+
 	case FIELD_GLOBAL_POSITION:
 		printf( "  %s: " FILESIZE_T_FORMAT "\n",
 				wdata->m_name, istate->m_log_position.asint );
@@ -414,6 +461,7 @@ DumpState( const Options &opts,
 		DumpState( opts, state, opts.lookupField(FIELD_MAX_ROTATION) );
 		DumpState( opts, state, opts.lookupField(FIELD_ROTATION) );
 		DumpState( opts, state, opts.lookupField(FIELD_OFFSET) );
+		DumpState( opts, state, opts.lookupField(FIELD_EVENT_NUM) );
 		DumpState( opts, state, opts.lookupField(FIELD_GLOBAL_POSITION) );
 		DumpState( opts, state, opts.lookupField(FIELD_GLOBAL_RECORD_NUM) );
 		DumpState( opts, state, opts.lookupField(FIELD_INODE) );
@@ -425,6 +473,77 @@ DumpState( const Options &opts,
 		return -1;
 	}
 	return 0;
+}
+
+int
+CheckStateAccess( const Options & /*opts*/,
+				  const ReadUserLog::FileState &state )
+{
+	ReadUserLogStateAccess	saccess(state);
+	unsigned long			foff = 0;
+	unsigned long			fnum = 0;
+	unsigned long			lpos = 0;
+	unsigned long			lnum = 0;
+	int						seq = 0;
+	char					uniq_id[256] = "\0";
+	int						errors = 0;
+
+	if (!saccess.getFileOffset(foff) ) {
+		fprintf( stderr, "Error getting file offset\n" );
+		errors++;
+	}
+	if (!saccess.getFileEventNum(fnum) ) {
+		fprintf( stderr, "Error getting file event number\n" );
+		errors++;
+	}
+	if (!saccess.getLogPosition(lpos) ) {
+		fprintf( stderr, "Error getting log position\n" );
+		errors++;
+	}
+	if (!saccess.getEventNumber(lnum) ) {
+		fprintf( stderr, "Error getting event number\n" );
+		errors++;
+	}
+	if (!saccess.getUniqId(uniq_id, sizeof(uniq_id)) ) {
+		fprintf( stderr, "Error getting uniq ID\n" );
+		errors++;
+	}
+	if (!saccess.getSequenceNumber(seq) ) {
+		fprintf( stderr, "Error getting sequence number\n" );
+		errors++;
+	}
+
+	printf( "State:\n"
+			"  Initialized: %s\n"
+			"  Valid: %s\n"
+			"  File offset: %lu\n"
+			"  File event #: %lu\n"
+			"  Log position: %lu\n"
+			"  Log event #: %lu\n"
+			"  UniqID: %s\n"
+			"  Sequence #: %d\n",
+			saccess.isInitialized() ? "True" : "False",
+			saccess.isValid() ? "True" : "False",
+			foff,
+			fnum,
+			lpos,
+			lnum,
+			uniq_id,
+			seq );
+
+	return errors ? -1 : 0;
+}
+
+int
+DiffState( const Options &opts,
+		   const ReadUserLog::FileState &state1,
+		   const ReadUserLog::FileState &state2 )
+{
+	ReadUserLogStateAccess	access1(state1);
+	ReadUserLogStateAccess	access2(state2);
+	int						errors = 0;
+	
+	return errors ? -1 : 0;
 }
 
 bool
@@ -572,8 +691,8 @@ int
 VerifyState(const Options &opts, const ReadUserLog::FileState &state )
 {
 	ReadUserLogState	rstate( state, 60 );
-	const ReadUserLogState::FileState	*istate =
-		ReadUserLogState::GetFileStateConst( state );
+	const ReadUserLogState::FileState	*istate;
+	ReadUserLogState::convertState( state, istate );
 
 	const FieldData	*wdata = opts.getField( );
 	if ( wdata == NULL ) {
@@ -622,6 +741,10 @@ VerifyState(const Options &opts, const ReadUserLog::FileState &state )
 
 	case FIELD_OFFSET:
 		ok = CompareFsize( opts, istate->m_offset.asint );
+		break;
+
+	case FIELD_EVENT_NUM:
+		ok = CompareFsize( opts, istate->m_event_num.asint );
 		break;
 
 	case FIELD_GLOBAL_POSITION:
@@ -692,6 +815,7 @@ Options::Options( void )
 {
 	m_state = ST_CMD;
 	m_file = NULL;
+	m_file2 = NULL;
 	m_command = CMD_NONE;
 	m_field = NULL;
 	memset( &m_value, 0, sizeof(m_value) );
@@ -702,10 +826,12 @@ Options::Options( void )
 	m_usage =
 		"Usage: test_log_reader_state "
 		"[options] <command> [filename [field-name [value/min [max-value]]]]\n"
-		"  commands: dump verify list\n"
+		"  commands: dump diff verify check list\n"
 		"    dump/any: dump [what]\n"
+		"    diff: diff two state files [file2]\n"
 		"    verify/numeric: what min max\n"
 		"    verify/string:  what [value]\n"
+		"    access: simple access API checks\n"
 		"    list (list names of things)\n"
 		"  --numeric|-n: dump times as numeric\n"
 		"  --usage|--help|-h: print this message and exit\n"
@@ -825,8 +951,16 @@ Options::lookupCommand( const SimpleArg &arg )
 		m_command = CMD_DUMP;
 		return true;
 	}
+	else if ( 0 == strcasecmp( s, "diff" ) ) {
+		m_command = CMD_DIFF;
+		return true;
+	}
 	else if ( 'v' == c  ||  (0 == strcasecmp( s, "verify" )) ) {
 		m_command = CMD_VERIFY;
+		return true;
+	}
+	else if ( 'a' == c  ||  (0 == strcasecmp( s, "access" )) ) {
+		m_command = CMD_ACCESS;
 		return true;
 	}
 	else if ( 'l' == c  ||  (0 == strcasecmp( s, "list" )) ) {
@@ -879,11 +1013,11 @@ bool
 Options::parseValue( const SimpleArg &arg )
 {
 	const char *s = arg.Arg( );
-	if ( TYPE_STRING == m_field->m_type ) {
+	if ( DTYPE_STRING == m_field->m_type ) {
 		m_value.asStr = s;
 		return true;
 	}
-	if ( ( TYPE_INT == m_field->m_type ) && ( isdigit(*s) ) ) {
+	if ( ( DTYPE_INT == m_field->m_type ) && ( isdigit(*s) ) ) {
 		int		i = atoi(s);
 		if ( 0 == m_num_values ) {
 			m_value.asInt.asInt = i;
@@ -896,7 +1030,7 @@ Options::parseValue( const SimpleArg &arg )
 		}
 		return true;
 	}
-	if ( ( TYPE_FSIZE == m_field->m_type ) && ( isdigit(*s) ) ) {
+	if ( ( DTYPE_FSIZE == m_field->m_type ) && ( isdigit(*s) ) ) {
 		filesize_t		i = (filesize_t) atol(s);
 		if ( 0 == m_num_values ) {
 			m_value.asInt.asFsize = i;
@@ -909,7 +1043,7 @@ Options::parseValue( const SimpleArg &arg )
 		}
 		return true;
 	}
-	if ( ( TYPE_TIME == m_field->m_type ) && ( isdigit(*s) ) ) {
+	if ( ( DTYPE_TIME == m_field->m_type ) && ( isdigit(*s) ) ) {
 		time_t		i = (time_t) atol(s);
 		if ( 0 == m_num_values ) {
 			m_value.asInt.asTime = i;
@@ -922,9 +1056,16 @@ Options::parseValue( const SimpleArg &arg )
 		}
 		return true;
 	}
-	if ( ( TYPE_INODE == m_field->m_type ) && ( isdigit(*s) ) ) {
+	if ( ( DTYPE_INODE == m_field->m_type ) && ( isdigit(*s) ) ) {
 		m_value.asInode = (StatStructInode) atol(s);
 		return true;
 	}
 	return false;
 }
+
+/*
+### Local Variables: ***
+### mode:c++ ***
+### tab-width:4 ***
+### End: ***
+*/

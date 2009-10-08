@@ -143,6 +143,9 @@ SubsystemInfoTable::SubsystemInfoTable( void )
 	addEntry( SUBSYSTEM_TYPE_GAHP,
 			  SUBSYSTEM_CLASS_DAEMON,
 			  "GAHP" );
+	addEntry( SUBSYSTEM_TYPE_DAGMAN,
+			  SUBSYSTEM_CLASS_DAEMON,
+			  "DAGMAN" );
 	addEntry( SUBSYSTEM_TYPE_TOOL,
 			  SUBSYSTEM_CLASS_CLIENT,
 			  "TOOL" );

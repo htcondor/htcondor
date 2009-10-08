@@ -153,7 +153,7 @@ $ENV{PGDATA} = "$prefix/postgres-data";
 while (( $dbup ne "yes") && ($trylimit <= 10) ) {
 	$pmaster_start = system("$pgsql_dir/bin/pg_ctl -D $prefix/postgres-data -l $prefix/postgres-data/logfile start");
 	CondorTest::debug("starting postmaster result<<<<<$pmaster_start>>>>>\n",1);
-	system("date");
+	print scalar localtime() . "\n";
 	sleep(10);
 	if(!(-f "$prefix/postgres-data/postmaster.pid")) {
 		$trylimit = $trylimit + 1;
@@ -221,7 +221,7 @@ if($trylimit > 10) {
 }
 
 
-system("date");
+print scalar localtime() . "\n";
 CondorTest::debug("Configuring Postgres for Quil\n",1);
 
 # add quillreader and quillwriter
@@ -275,14 +275,14 @@ open(PG,">$pgpass") || die "Could not open file<$pgpass> for .pgpass data!:$!\n"
 print PG "$currenthost:$startpostmasterport:test:quillwriter:condor4me#\n";
 close(PG);
 
-system("date");
+print scalar localtime() . "\n";
 CondorTest::debug("Create DB for Quil\n",1);
 
 $docreatedb = system("$pgsql_dir/bin/createdb --port $startpostmasterport test");
 if($docreatedb != 0) {
 	die "Failed to create test db\n";
 }
-system("date");
+print scalar localtime() . "\n";
 
 $docreatelang = system("$pgsql_dir/bin/createlang plpgsql test --port $startpostmasterport");
 #$docreatelang = system("$pgsql_dir/bin/createlang plpgsql test");
@@ -293,7 +293,7 @@ if($docreatelang != 0) {
 	print "$pgsql_dir/bin/createlang plpgsql Worked!!\n";
 }
 
-system("date");
+print scalar localtime() . "\n";
 
 
 CondorTest::debug("Run psql program\n",1);
@@ -318,7 +318,7 @@ print $command "\quit\n";
 $command->soft_close();
 
 CondorTest::debug("Postgress built and set up: ",1);
-system("date");
+print scalar localtime() . "\n";
 
 
 exit(0);

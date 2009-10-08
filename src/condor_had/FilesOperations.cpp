@@ -17,6 +17,7 @@
  *
  ***************************************************************/
 
+#include "condor_common.h"
 #include "FilesOperations.h"
 #include "Utils.h"
 // for 'param' function

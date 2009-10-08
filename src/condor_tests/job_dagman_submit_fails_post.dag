@@ -1,0 +1,6 @@
+# Tests gittrac #435 (DAGMan core dumps if node has POST script and
+# all submit attempts fail).
+CONFIG job_dagman_submit_fails_post.config
+
+JOB A job_dagman_submit_fails_post-nodeA.cmd
+SCRIPT POST A job_dagman_submit_fails_post-nodeA-post.pl

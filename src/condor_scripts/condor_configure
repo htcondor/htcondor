@@ -454,6 +454,9 @@ elsif ($opt_type) {
 		} elsif ($type eq "manager") {
 			$daemon_list{COLLECTOR} = 1;
 			$daemon_list{NEGOTIATOR} = 1;
+			if( !$cm ) {
+				$cm=set_central_manager($fullhost);
+			}
 		} else {
 			die "Illegal -type argument: $opt_type!\n";
 		}
@@ -1444,7 +1447,7 @@ sub set_config_values ($$$) {
 
     &debug ("\nWriting settings to file: $file");
 
-    open (TEMP, ">/tmp/set_config_values.temp") || die "Unable to open file in /tmp directory!\n";
+    open (TEMP, ">/tmp/set_config_values.temp.$$") || die "Unable to open /tmp/set_config_values.temp.$$ $!\n";
 
     open (SOURCE, "<$file") || die "Unable to open file $file\n";
 
@@ -1508,8 +1511,8 @@ sub set_config_values ($$$) {
     
     close TEMP;
     close SOURCE;
-    system("mv /tmp/set_config_values.temp $file") &&
-		die "Unable to move /tmp/set_config_values.temp to $file!\n";
+    system("mv /tmp/set_config_values.temp.$$ $file") &&
+		die "Unable to move /tmp/set_config_values.temp.$$ to $file!\n";
 }
 
 # Search for default locations for java, and then test to see if it is a

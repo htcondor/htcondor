@@ -25,6 +25,8 @@
 #include "dagman_main.h"
 #include "read_multiple_logs.h"
 #include "throttle_by_category.h"
+#include "dag.h"
+#include <set>
 
 //---------------------------------------------------------------------------
 JobID_t Job::_jobID_counter = 0;  // Initialize the static data memeber
@@ -74,18 +76,18 @@ Job::~Job() {
 	delete _scriptPost;
 }
 
-Job::
-Job( const job_type_t jobType, const char* jobName, const char *directory,
-			const char* cmdFile, bool prohibitMultiJobs ) :
+//---------------------------------------------------------------------------
+Job::Job( const job_type_t jobType, const char* jobName,
+			const char *directory, const char* cmdFile,
+			bool prohibitMultiJobs ) :
 	_jobType( jobType )
 {
 	Init( jobName, directory, cmdFile, prohibitMultiJobs );
 }
 
-
-void Job::
-Init( const char* jobName, const char* directory, const char* cmdFile,
-			bool prohibitMultiJobs )
+//---------------------------------------------------------------------------
+void Job::Init( const char* jobName, const char* directory,
+			const char* cmdFile, bool prohibitMultiJobs )
 {
 	ASSERT( jobName != NULL );
 	ASSERT( cmdFile != NULL );
@@ -105,6 +107,8 @@ Init( const char* jobName, const char* directory, const char* cmdFile,
     _cmdFile = strnewp (cmdFile);
 	_dagFile = NULL;
 	_throttleInfo = NULL;
+	_logIsMonitored = false;
+	_useDefaultLog = false;
 
 	if ( (_jobType == TYPE_CONDOR) && prohibitMultiJobs ) {
 		MyString	errorMsg;
@@ -147,15 +151,7 @@ Init( const char* jobName, const char* directory, const char* cmdFile,
 	_hasNodePriority = false;
 	_nodePriority = 0;
 
-		// Note: we use "" for the directory here because when this method
-		// is called we should *already* be in the directory from which
-		// this job is to be run.
-    MyString logFile = MultiLogFiles::loadLogFileNameFromSubFile(_cmdFile, "");
-		// Note: _logFile is needed only for POST script events (as of
-		// 2005-06-23).
-		// This will go away once the lazy log file code is fully
-		// implemented.  wenger 2008-12-19.
-    _logFile = strnewp (logFile.Value());
+    _logFile = NULL;
 
 	varNamesFromDag = new List<MyString>;
 	varValsFromDag = new List<MyString>;
@@ -192,16 +188,13 @@ Job::PrefixDirectory(MyString &prefix)
 }
 
 //---------------------------------------------------------------------------
-bool Job::Remove (const queue_t queue, const JobID_t jobID) {
-    _queues[queue].Rewind();
-    JobID_t currentJobID;
-    while(_queues[queue].Next(currentJobID)) {
-        if (currentJobID == jobID) {
-            _queues[queue].DeleteCurrent();
-            return true;
-        }
-    }
-    return false;   // Element Not Found
+bool Job::Remove (const queue_t queue, const JobID_t jobID)
+{
+	if (_queues[queue].erase(jobID) == 0) {
+		return false; // element not found
+	}
+
+	return true;
 }  
 
 //---------------------------------------------------------------------------
@@ -215,7 +208,7 @@ Job::CheckForLogFile() const
 }
 
 //---------------------------------------------------------------------------
-void Job::Dump () const {
+void Job::Dump ( const Dag *dag ) const {
     dprintf( D_ALWAYS, "---------------------- Job ----------------------\n");
     dprintf( D_ALWAYS, "      Node Name: %s\n", _jobName );
     dprintf( D_ALWAYS, "         NodeID: %d\n", _jobID );
@@ -245,10 +238,11 @@ void Job::Dump () const {
   
     for (int i = 0 ; i < 3 ; i++) {
         dprintf( D_ALWAYS, "%15s: ", queue_t_names[i] );
-        SimpleListIterator<JobID_t> iList (_queues[i]);
-        JobID_t jobID;
-        while( iList.Next( jobID ) ) {
-			dprintf( D_ALWAYS | D_NOHEADER, "%d, ", jobID );
+
+		set<JobID_t>::const_iterator qit;
+		for (qit = _queues[i].begin(); qit != _queues[i].end(); qit++) {
+			Job *node = dag->Dag::FindNodeByNodeID( *qit );
+			dprintf( D_ALWAYS | D_NOHEADER, "%s, ", node->GetJobName() );
 		}
         dprintf( D_ALWAYS | D_NOHEADER, "<END>\n" );
     }
@@ -474,13 +468,18 @@ Job::TerminateFailure()
 bool
 Job::Add( const queue_t queue, const JobID_t jobID )
 {
-	if( _queues[queue].IsMember( jobID ) ) {
+	pair<set<JobID_t>::iterator, bool> ret;
+
+	ret = _queues[queue].insert(jobID);
+
+	if (ret.second == false) {
 		dprintf( D_ALWAYS,
 				 "ERROR: can't add Job ID %d to DAG: already present!",
 				 jobID );
 		return false;
 	}
-	return _queues[queue].Append(jobID);
+
+	return true;
 }
 
 bool
@@ -546,18 +545,40 @@ Job::GetStatusName() const
 
 bool
 Job::HasChild( Job* child ) {
+	JobID_t cid;
+	set<JobID_t>::iterator it;
+
 	if( !child ) {
 		return false;
 	}
-	return _queues[Q_CHILDREN].IsMember( child->GetJobID() );
+
+	cid = child->GetJobID();
+	it = _queues[Q_CHILDREN].find(cid);
+
+	if (it == _queues[Q_CHILDREN].end()) {
+		return false;
+	}
+
+	return true;
 }
 
 bool
 Job::HasParent( Job* parent ) {
+	JobID_t pid;
+	set<JobID_t>::iterator it;
+
 	if( !parent ) {
 		return false;
 	}
-	return _queues[Q_PARENTS].IsMember( parent->GetJobID() );
+
+	pid = parent->GetJobID();
+	it = _queues[Q_PARENTS].find(pid);
+
+	if (it == _queues[Q_PARENTS].end()) {
+		return false;
+	}
+
+	return true;
 }
 
 
@@ -608,21 +629,14 @@ Job::RemoveDependency( queue_t queue, JobID_t job )
 bool
 Job::RemoveDependency( queue_t queue, JobID_t job, MyString &whynot )
 {
-	JobID_t candidate;
-    _queues[queue].Rewind();
-    while( _queues[queue].Next( candidate ) ) {
-        if( candidate == job ) {
-            _queues[queue].DeleteCurrent();
-			if ( _queues[queue].IsMember( job ) ) {
-				EXCEPT( "Job %d still in queue %d after deletion!!",
-							job, queue );
-			}
-			whynot = "n/a";
-			return true;
-        }
-    }
-	whynot = "no such dependency";
-	return false;
+	if (_queues[queue].erase(job) == 0)
+	{
+		whynot = "no such dependency";
+		return false;
+	}
+
+	whynot = "n/a";
+	return true;
 }
 
 
@@ -651,15 +665,13 @@ const char* Job::JobIdString() const
 int
 Job::NumParents() const
 {
-	int n = _queues[Q_PARENTS].Number();
-	return n;
+	return _queues[Q_PARENTS].size();
 }
 
 int
 Job::NumChildren() const
 {
-	int n = _queues[Q_CHILDREN].Number();
-	return n;
+	return _queues[Q_CHILDREN].size();
 }
 
 void
@@ -720,52 +732,141 @@ Job::SetDagFile(const char *dagFile)
 	_dagFile = strnewp( dagFile );
 }
 
-#if LAZY_LOG_FILES
 //---------------------------------------------------------------------------
 bool
-Job::MonitorLogFile( ReadMultipleUserLogs &logReader, bool recovery )
+Job::MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
+			ReadMultipleUserLogs &storkLogReader, bool nfsIsError,
+			bool recovery, const char *defaultNodeLog )
 {
-	bool result = false;
-
-    MyString logFileStr = MultiLogFiles::loadLogFileNameFromSubFile(
-				_cmdFile, _directory );
-	if ( logFileStr == "" ) {
-		debug_printf( DEBUG_QUIET, "ERROR: Unable to get log file from "
-					"submit file %s (node %s)\n", _cmdFile, GetJobName() );
-		result = false;
-	} else {
-		delete [] _logFile; // temporary
-		_logFile = strnewp( logFileStr.Value() );
-		CondorError errstack;
-		result = logReader.monitorLogFile( _logFile, !recovery, errstack );
-		if ( !result ) {
-			errstack.pushf( "DAGMan::Job", 0/*TEMP*/, "ERROR: Unable to "
-						"monitor log file for node %s", GetJobName() );
-			debug_printf( DEBUG_QUIET, "%s\n", errstack.getFullText() );
-		}
+	if ( _logIsMonitored ) {
+		debug_printf( DEBUG_DEBUG_1, "Warning: log file for node "
+					"%s is already monitored\n", GetJobName() );
+		return true;
 	}
 
-	return result;
+	ReadMultipleUserLogs &logReader = (_jobType == TYPE_CONDOR) ?
+				condorLogReader : storkLogReader;
+
+    MyString logFileStr;
+	if ( _jobType == TYPE_CONDOR ) {
+    	logFileStr = MultiLogFiles::loadLogFileNameFromSubFile( _cmdFile,
+					_directory );
+	} else {
+#ifdef HAVE_EXT_CLASSADS
+		StringList logFiles;
+		MyString tmpResult = MultiLogFiles::loadLogFileNamesFromStorkSubFile(
+					_cmdFile, _directory, logFiles );
+		if ( tmpResult != "" ) {
+			debug_printf( DEBUG_QUIET, "Error getting Stork log file: %s\n",
+						tmpResult.Value() );
+			LogMonitorFailed();
+			return false;
+		} else if ( logFiles.number() != 1 ) {
+			debug_printf( DEBUG_QUIET, "Error: %d Stork log files found "
+						"in submit file %s; we want 1\n",
+						logFiles.number(), _cmdFile );
+			LogMonitorFailed();
+			return false;
+		} else {
+			logFiles.rewind();
+			logFileStr = logFiles.next();
+		}
+#else
+			// XXX
+		debug_printf( DEBUG_NORMAL,
+					  "Error: Stork log files not supported. "
+					  "Condor was built without new classad support\n" );
+		return false;
+#endif
+	}
+
+	if ( logFileStr == "" ) {
+		logFileStr = defaultNodeLog;
+		_useDefaultLog = true;
+		debug_printf( DEBUG_NORMAL, "Unable to get log file from "
+					"submit file %s (node %s); using default (%s)\n",
+					_cmdFile, GetJobName(), logFileStr.Value() );
+	}
+
+	if ( MultiLogFiles::logFileOnNFS( logFileStr.Value(),
+				nfsIsError ) ) {
+		debug_printf( DEBUG_QUIET, "Error: log file %s on NFS\n",
+					logFileStr.Value() );
+		LogMonitorFailed();
+		return false;
+	}
+
+	delete [] _logFile;
+		// Saving log file here in case submit file gets changed.
+	_logFile = strnewp( logFileStr.Value() );
+	debug_printf( DEBUG_DEBUG_1, "Monitoring log file <%s> for node %s\n",
+				_logFile, GetJobName() );
+	CondorError errstack;
+	if ( !logReader.monitorLogFile( _logFile, !recovery, errstack ) ) {
+		errstack.pushf( "DAGMan::Job", DAGMAN_ERR_LOG_FILE,
+					"ERROR: Unable to monitor log file for node %s",
+					GetJobName() );
+		debug_printf( DEBUG_QUIET, "%s\n", errstack.getFullText() );
+		LogMonitorFailed();
+		return false;
+	}
+
+	_logIsMonitored = true;
+
+	return true;
 }
 
 //---------------------------------------------------------------------------
 bool
-Job::UnmonitorLogFile( ReadMultipleUserLogs &logReader )
+Job::UnmonitorLogFile( ReadMultipleUserLogs &condorLogReader,
+			ReadMultipleUserLogs &storkLogReader )
 {
+	debug_printf( DEBUG_DEBUG_1, "Unmonitoring log file <%s> for node %s\n",
+				_logFile, GetJobName() );
+
+	if ( !_logIsMonitored ) {
+		debug_printf( DEBUG_DEBUG_1, "Warning: log file for node "
+					"%s is already unmonitored\n", GetJobName() );
+		return true;
+	}
+
+	ReadMultipleUserLogs &logReader = (_jobType == TYPE_CONDOR) ?
+				condorLogReader : storkLogReader;
+
+	debug_printf( DEBUG_DEBUG_1, "Unmonitoring log file <%s> for node %s\n",
+				_logFile, GetJobName() );
+
 	CondorError errstack;
 	bool result = logReader.unmonitorLogFile( _logFile, errstack );
 	if ( !result ) {
-		errstack.pushf( "DAGMan::Job", 0/*TEMP*/, "ERROR: Unable to "
-					"unmonitor log " "file for node %s", GetJobName() );
+		errstack.pushf( "DAGMan::Job", DAGMAN_ERR_LOG_FILE,
+					"ERROR: Unable to unmonitor log " "file for node %s",
+					GetJobName() );
 		debug_printf( DEBUG_QUIET, "%s\n", errstack.getFullText() );
 	}
 
-#if 0 // uncomment once lazy log file code is fully implemented
 	delete [] _logFile;
 	_logFile = NULL;
-#endif
+
+	if ( result ) {
+		_logIsMonitored = false;
+	}
 
 	return result;
 }
 
-#endif // LAZY_LOG_FILES
+//---------------------------------------------------------------------------
+void
+Job::LogMonitorFailed()
+{
+	if ( _Status != Job::STATUS_ERROR ) {
+		_Status = Job::STATUS_ERROR;
+		snprintf( error_text, JOB_ERROR_TEXT_MAXLEN,
+					"Unable to monitor node job log file" );
+		retval = Dag::DAG_ERROR_LOG_MONITOR_ERROR;
+		if ( _scriptPost != NULL) {
+				// let the script know the job's exit status
+			_scriptPost->_retValJob = retval;
+		}
+	}
+}

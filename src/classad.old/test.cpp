@@ -36,7 +36,7 @@ int main (void)
 	config();
 	while( strcmp( gets( buffer ) , "done" ) != 0 ) {
 		buf[0] = '\0';
-		if (Parse (buffer, t)) {
+		if (ParseClassAdRvalExpr (buffer, t)) {
 			cerr << "Parse error" << endl;
 			exit( 1 );
 		}

@@ -36,6 +36,7 @@
 #include "condor_qmgr.h"
 #include "classad_helpers.h"
 #include "condor_getcwd.h"
+#include "structproc.h"
 
 #if !defined( WCOREDUMP )
 #define  WCOREDUMP(stat)      ((stat)&WCOREFLG)

@@ -9,5 +9,5 @@
 #
 #BIND_ALL_INTERFACES = true
 ALL_DEBUG =  D_FULLDEBUG
-HOSTALLOW_NEGOTIATOR_SCHEDD = nmi-s006.batlab.cs.wisc.edu nmi-s006.cs.wisc.edu
-HOSTALLOW_NEGOTIATOR = nmi-s006.batlab.cs.wisc.edu nmi-s006.cs.wisc.edu
+ALLOW_NEGOTIATOR_SCHEDD = nmi-s006.batlab.cs.wisc.edu nmi-s006.cs.wisc.edu
+ALLOW_NEGOTIATOR = nmi-s006.batlab.cs.wisc.edu nmi-s006.cs.wisc.edu

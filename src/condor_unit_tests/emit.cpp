@@ -53,7 +53,7 @@ void Emitter::init() {
 /* Formats and prints a parameter and its value as a sub-point of input,
  * output_expected, or output_actual.  format can use printf formatting.
  */
-void Emitter::emit_param(char* pname, char* format, ...) {
+void Emitter::emit_param(const char* pname, const char* format, ...) {
 	va_list args;
 	MyString tmp;
 	va_start(args, format);
@@ -63,7 +63,7 @@ void Emitter::emit_param(char* pname, char* format, ...) {
 }
 
 /* A version of emit_param() for return values. */
-void Emitter::emit_retval(char* format, ...) {
+void Emitter::emit_retval(const char* format, ...) {
 	va_list args;
 	MyString tmp;
 	va_start(args, format);
@@ -74,13 +74,13 @@ void Emitter::emit_retval(char* format, ...) {
 
 /* Emits a heading and the function string.
  */
-void Emitter::emit_function(char* function) {
+void Emitter::emit_function(const char* function) {
 	dprintf(D_ALWAYS, "FUNCTION:  %s\n", function);
 }
 
 /* Emits a heading and the object string.
  */
-void Emitter::emit_object(char* object) {
+void Emitter::emit_object(const char* object) {
 	dprintf(D_ALWAYS, "OBJECT:  %s\n", object);
 	object_tests++;
 }
@@ -88,19 +88,19 @@ void Emitter::emit_object(char* object) {
 
 /* Prints a comment indicating what the function does.
  */
-void Emitter::emit_comment(char* comment) {
+void Emitter::emit_comment(const char* comment) {
 	dprintf(D_ALWAYS, "COMMENT:  %s\n", comment);
 }
 
 /* Prints a known problem of the function.
  */
-void Emitter::emit_problem(char* problem) {
+void Emitter::emit_problem(const char* problem) {
 	dprintf(D_ALWAYS, "KNOWN PROBLEM:  %s\n", problem);
 }
 
 /* Shows exactly what is going to be tested.
  */
-void Emitter::emit_test(char* test) {
+void Emitter::emit_test(const char* test) {
 	function_tests++;
 	dprintf(D_ALWAYS, "TEST:  %s\n", test);
 }
@@ -154,7 +154,7 @@ void Emitter::emit_result_abort(int line) {
 /* Prints out a message saying that the test was skipped, for whatever reason.
  * Usually the testing function should return true after calling this.
  */
-void Emitter::emit_skipped(char* skipped) {
+void Emitter::emit_skipped(const char* skipped) {
 	dprintf(D_ALWAYS, "SKIPPED:  %s", skipped);
 	skipped_tests++;
 	emit_test_break();
@@ -164,7 +164,7 @@ void Emitter::emit_skipped(char* skipped) {
  * aborted or just a warning that something happened but the test will continue
  * anyway.
  */
-void Emitter::emit_alert(char* alert) {
+void Emitter::emit_alert(const char* alert) {
 	dprintf(D_ALWAYS, "ALERT:  %s\n", alert);
 }
 

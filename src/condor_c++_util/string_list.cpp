@@ -396,63 +396,145 @@ StringList::contains_withwildcard(const char *string, bool anycase, StringList *
 	return NULL;
 }
 
+bool
+StringList::find( const char *str, bool anycase ) const
+{
+	char	*x;
+
+    ListIterator<char> iter ( strings );
+    iter.ToBeforeFirst ();
+	while ( iter.Next(x) ) {
+		if( (anycase) && (strcasecmp( str, x ) == MATCH) ) {
+			return true;
+		}
+		else if( (!anycase) && (strcmp(str, x) == MATCH) ) {
+			return true;
+		}
+	}
+	return false;
+}
+
+bool
+StringList::identical( const StringList &other, bool anycase ) const
+{
+	char *x;
+	ListIterator<char> iter;
+
+	// First, if they're different sizes, quit
+	if ( other.number() != this->number() ) {
+		return false;
+	}
+
+	// Walk through the other list, verify that everything is in my list
+	iter.Initialize ( other.getList() );
+	iter.ToBeforeFirst ();
+	while ( iter.Next(x) ) {
+		if ( !find( x, anycase ) ) {
+			return false;
+		}
+	}
+
+	// Walk through my list, verify that everything is in the other list
+	iter.Initialize ( strings );
+	iter.ToBeforeFirst ();
+	while ( iter.Next(x) ) {
+		if ( !other.find( x, anycase ) ) {
+			return false;
+		}
+	}
+
+	return true;
+}
+
+bool
+StringList::similar( const StringList &other, bool anycase ) const
+{
+	char *this_str, *other_str;
+	bool ret_val;
+	ListIterator<char> this_iter;
+	ListIterator<char> other_iter;
+
+	// First, if they're different sizes, quit
+	if ( other.number() != this->number() ) {
+		return false;
+	}
+
+	// Walk through the other list, verify that everything is in my list
+	this_iter.Initialize ( strings );
+	this_iter.ToBeforeFirst ();
+	other_iter.Initialize ( other.getList() );
+	other_iter.ToBeforeFirst ();
+	while ( this_iter.Next(this_str) ) {
+		if ( !other_iter.Next(other_str) ) {
+			return false;
+		}
+		if ( anycase ) {
+			ret_val = ( strcasecmp( this_str, other_str ) != 0 );
+		} else {
+			ret_val = ( strcmp( this_str, other_str ) != 0 );
+		}
+		if( ret_val == false ) {
+			return false;
+		}
+	}
+
+	return true;
+}
+
 /* returns a malloc'ed string that contains a comma delimited list of
 the internals of the string list. */
 char*
-StringList::print_to_string(void)
+StringList::print_to_string(void) const
 {
 	return print_to_delimed_string(",");
 }
 
 char *
-StringList::print_to_delimed_string(const char *delim) {
+StringList::print_to_delimed_string(const char *delim) const
+{
 
-	char *tmp;
-	int num, i;
-	int sum = 0;
+    ListIterator<char>	 iter;
+	char				*tmp;
 
 	if ( delim == NULL ) {
 		delim = delimiters;
 	}
 
-	strings.Rewind();
-	num = strings.Number();
-
 	/* no string at all if there isn't anything in it */
-	if(num == 0)
-	{
+	int num = strings.Number();
+	if(num == 0) {
 		return NULL;
 	}
 
-	for (i = 0; i < num; i++)
-	{
-		sum += strlen(strings.Next());
+    iter.Initialize( strings );
+    iter.ToBeforeFirst ();
+	int		len = 1;
+	while ( iter.Next(tmp) ) {
+		len += ( strlen(tmp) + strlen(delim) );
 	}
 
-	/* get memory for all of the strings, plus the delimiter characters between them
-		and one more for the \0 */
-	tmp = (char*)calloc(sum + strlen(delim) * (num - 1) + 1, 1);
-	if (tmp == NULL)
-	{
+	/* get memory for all of the strings, plus the delimiter characters
+	   between them and one more for the \0 */
+	char *buf = (char*)calloc( len, 1);
+	if (buf == NULL) {
 		EXCEPT("Out of memory in StringList::print_to_string");
 	}
-	tmp[0] = '\0';
+	*buf = '\0';
 
-	strings.Rewind();
-	for (i = 0; i < num; i++)
-	{
-		strcat(tmp, strings.Next());
-		
+    iter.Initialize( strings );
+    iter.ToBeforeFirst ();
+	int		n = 0;
+	while ( iter.Next(tmp) ) {
+		strcat( buf, tmp );
+
 		/* add delimiters until the last attr entry in the list */
-		if (i < (num - 1))
-		{
-			strcat(tmp, delim);
+		if ( ++n < num ) {
+			strcat(buf, delim);
 		}
 	}
 
-	return tmp;
+	return buf;
 }
-
 
 void
 StringList::deleteCurrent() {

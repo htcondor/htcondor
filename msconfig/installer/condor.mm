@@ -52,7 +52,6 @@
 <$Property "HOSTALLOWREAD" VALUE="*">
 <$Property "HOSTALLOWWRITE" VALUE="your.domain.com, *.cs.wisc.edu">
 <$Property "HOSTALLOWADMINISTRATOR" VALUE="$(FULL_HOSTNAME)">
-<$Property "STARTSERVICE" VALUE="Y">
 <$Property "AA" VALUE="N">
 <$Property "AB" VALUE="N">
 <$Property "AC" VALUE="N">
@@ -61,6 +60,9 @@
 <$Property "VMMEMORY" VALUE="256">
 <$Property "VMMAXNUMBER" VALUE="$(NUM_CPUS)">
 <$Property "VMNETWORKING" VALUE="N">
+<$Property "USEHDFS" VALUE="N">
+<$Property "HDFSPORT" VALUE="9000">
+<$Property "HDFSWEBPORT" VALUE="8000">
 
 ;---------------------------------------------------------------------------
 ;--- Persistent values -----------------------------------------------------
@@ -235,15 +237,39 @@
 	<$Row Dialog_="VMUniverseSettings" Control_="Entry.6" Action="Disable" Condition=^USEVMUNIVERSE = "N"^>
 <$/Table>
 
-
-<$Dialog "Condor Service" Description="Choose whether to start Condor after installation." Dialog="StartService" INSERT="VMUniverseSettings">
-   	<$DialogEntry Property="AA" LabelWidth="250" Label="Start the Condor service after installation?" Control="Text">
-   	#data 'RadioButton_STARTSERVICE'
-	         'Y'	'Yes'	''	''
-	         'N'	'No'	''	''
+<$Dialog "HDFS Settings" Description="Enable HDFS support?" Dialog="HDFSSETTINGS" INSERT="VMUniverseSettings">
+	#data 'RadioButton_USEHDFS'	         
+	         'N' 'N&o' '' ''
+		 'Y' '&Yes (Requires Java)' '' ''
 	#data
-	<$DialogEntry Property="STARTSERVICE" Label="" Control="RB">
+	#(
+	<$DialogEntry Property="USEHDFS" Label="Enable HDFS support:" 
+		Control="RB">
+	#)
+	#data 'RadioButton_HDFSMODE'	         
+	         'N' 'N&ame Node' '' ''
+		 'D' '&Data Node (Requires Cygwin)' '' ''
+	#data
+	#(
+	<$DialogEntry Property="HDFSMODE" Label="Select HDFS mode:" 
+		Control="RB">
+	#)
+
+	<$DialogEntry Property="NAMENODE" Label="Primary Name Node:" ToolTip="Hostname or IP Address of primary name node." Width=100 Blank="Y">
+	<$DialogEntry Property="HDFSPORT" Label="Name Node Port:" ToolTip="Port of primary name node." Width=100 Blank="N">
+	<$DialogEntry Property="HDFSWEBPORT" Label="Name Node Web Port:" ToolTip="Port of primary name node web interface." Width=100 Blank="N">
 <$/Dialog>
+
+<$Table "ControlCondition">
+	<$Row Dialog_="HDFSSETTINGS" Control_="Entry.2" Action="Enable" Condition=^USEHDFS = "Y"^>	
+	<$Row Dialog_="HDFSSETTINGS" Control_="Entry.2" Action="Disable" Condition=^USEHDFS = "N"^>
+	<$Row Dialog_="HDFSSETTINGS" Control_="Entry.3" Action="Enable" Condition=^USEHDFS = "Y"^>	
+	<$Row Dialog_="HDFSSETTINGS" Control_="Entry.3" Action="Disable" Condition=^USEHDFS = "N"^>
+	<$Row Dialog_="HDFSSETTINGS" Control_="Entry.4" Action="Enable" Condition=^USEHDFS = "Y"^>	
+	<$Row Dialog_="HDFSSETTINGS" Control_="Entry.4" Action="Disable" Condition=^USEHDFS = "N"^>
+	<$Row Dialog_="HDFSSETTINGS" Control_="Entry.5" Action="Enable" Condition=^USEHDFS = "Y"^>	
+	<$Row Dialog_="HDFSSETTINGS" Control_="Entry.5" Action="Disable" Condition=^USEHDFS = "N"^>
+<$/Table>
 
 ;--- Create INSTALLDIR ------------------------------------------------------
 <$DirectoryTree Key="INSTALLDIR" Dir="c:\condor" CHANGE="\" PrimaryFolder="Y">
@@ -260,6 +286,14 @@
 	<$DirectoryTree Key="LOGDIR" Dir="[INSTALLDIR]\log" MAKE="Y">
 <$/Component>
 
+;--- Create directories for HDFS if needed ----------------------------------
+<$Component "CreateHDFSNameFolder" Create="Y" Directory_="HDFSNAMEDIR" Condition=^USEHDFS = "Y"^>
+	<$DirectoryTree Key="HDFSNAMEDIR" Dir="[INSTALLDIR]\hdfs\hadoop_name" MAKE="Y">
+<$/Component>
+<$Component "CreateHDFSDataFolder" Create="Y" Directory_="HDFSDATADIR" Condition=^USEHDFS = "Y"^>
+	<$DirectoryTree Key="HDFSDATADIR" Dir="[INSTALLDIR]\hdfs\hadoop_data" MAKE="Y">
+<$/Component>
+
 
 ;--- Add the files (components generated) -----------------------------------
 <$Files '<$ImageRootDirectory>\*.*' SubDir='TREE' DestDir='INSTALLDIR'>
@@ -269,8 +303,10 @@
 	<$Files '<$ImageRootDirectory>\etc\condor_vmware_local_settings' KeyFile="*">
 <$/Component>
 
+
 ;--- Copy cygwin1.dll if we find one (to avoid version conflicts) -----------
 ;<$Files '[CYGWINDLL]' DestDir='[INSTALLDIR]bin'>
+
 
 ;--- Install the Visual Studio runtime --------------------------------------
 #(
@@ -310,6 +346,7 @@
 <$/VbsCa>
 <$VbsCaSetup Binary="RemoveSlashFromINSTALLDIR.vbs" Entry="RemoveTrailingSlash" Seq=1401 CONDITION=^<$CONDITION_INSTALL_ONLY>^ Deferred="N">
 
+
 ;--- set CONDOR_CONFIG registry key ----------------------------------------
 #(
 <$Registry 
@@ -320,37 +357,6 @@
 	Name="CONDOR_CONFIG">
 #)
 
-;--- Install the Condor Service ----------------------------------------
-<$Component "Condor" Create="Y" Directory_="[INSTALLDIR]bin" Condition=^STARTSERVICE = "Y"^>
-   ;--- The service EXE MUST be the keypath of the component ----------------
-   <$Files "<$ImageRootDirectory>\bin\condor_master.exe" KeyFile="*">
-
-#(
-   <$ServiceInstall
-                  Name="Condor"
-           DisplayName="Condor"
-           Description="Condor Master Daemon"
-               Process="OWN"
-			     Start="AUTO"
-   >
-#)
-   <$ServiceControl Name="Condor" AtInstall="stop start" AtUninstall="stop delete">
-<$/Component>
-<$Component "CondorUnstarted" Create="Y" Directory_="[INSTALLDIR]bin" Condition=^STARTSERVICE <> "Y"^>
-   ;--- The service EXE MUST be the keypath of the component ----------------
-   <$Files "<$ImageRootDirectory>\bin\condor_master.exe" KeyFile="*">
-
-#(
-   <$ServiceInstall
-                  Name="Condor"
-           DisplayName="Condor"
-           Description="Condor Master Daemon"
-               Process="OWN"
-			     Start="AUTO"
-   >
-#)
-   <$ServiceControl Name="Condor" AtInstall="" AtUninstall="stop delete">
-<$/Component>
 
 ;--- Set Config file parameters ---------------------------------------------
 ;----------------------------------------------------------------------------
@@ -367,7 +373,8 @@ Args=^
 -c "[CONDOREMAIL]"
 -e "[HOSTALLOWREAD]"
 -t "[HOSTALLOWWRITE]"
--i "[HOSTALLOWADMINISTRATOR]"^ 
+-i "[HOSTALLOWADMINISTRATOR]"
+-q "[USEHDFS]"^
 WorkDir=^INSTALLDIR^   
 Condition="<$CONDITION_EXCEPT_UNINSTALL>" 
 Seq="InstallServices-"
@@ -412,8 +419,24 @@ Type="System" ;; run as the System account
 >
 #)
 
+;--- HDFS configuration, only run if HDFS option is elected -
+#(
+<$ExeCa EXE=^[INSTALLDIR]condor_setup.exe^
+Args=^
+-f "[NAMENODE]"
+-k "[HDFSMODE]"
+-g "[HDFSPORT]"
+-b "[HDFSWEBPORT]"
+^
+WorkDir=^INSTALLDIR^   
+Condition=^(<$CONDITION_EXCEPT_UNINSTALL>) AND (USEHDFS = "Y")^ 
+Seq="InstallServices-"
+Rc0="N"       ;; On Vista this app will not return any useful results
+Type="System" ;; run as the System account	
+>
+#)
+
 ;--- Set directory Permissions ----------------------------------------------
-;-------- Set INSTALLDIR perms first ---
 #(
 <$ExeCa EXE=^[INSTALLDIR]condor_set_acls.exe^ Args=^"[INSTALLDIR_NTS]"^ 
 WorkDir="INSTALLDIR" Condition="<$CONDITION_EXCEPT_UNINSTALL>" 
@@ -424,3 +447,21 @@ Type="System" ;; run as the System account
 #)
 
 
+;--- Install the Condor Service ----------------------------------------
+<$Component "Condor" Create="Y" Directory_="[INSTALLDIR]bin">
+	;--- The service EXE MUST be the keypath of the component ----------------
+	<$Files "<$ImageRootDirectory>\bin\condor_master.exe" KeyFile="*">
+#(
+		<$ServiceInstall
+			Name="Condor"
+			DisplayName="Condor"
+			Description="Condor Master Daemon"
+			Process="OWN"
+			Start="AUTO">
+#)
+	<$ServiceControl Name="Condor" AtInstall="" AtUninstall="stop delete">
+<$/Component>
+
+
+;--- Force a system reboot  -------------------------------------------------
+<$Property "REBOOT" VALUE="F">

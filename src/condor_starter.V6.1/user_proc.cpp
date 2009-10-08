@@ -30,6 +30,7 @@
 
 extern CStarter *Starter;
 
+const char* JOB_WRAPPER_FAILURE_FILE = ".job_wrapper_failure";
 
 /* UserProc class implementation */
 
@@ -49,6 +50,11 @@ UserProc::initialize( void )
 	requested_exit = false;
 	m_proc_exited = false;
 	job_universe = 0;  // we'll fill in a real value if we can...
+	int i;
+	for(i=0;i<3;i++) {
+		m_pre_defined_std_fds[i] = -1;
+		m_pre_defined_std_fnames[i] = NULL;
+	}
 	if( JobAd ) {
 		initKillSigs();
 		if( JobAd->LookupInteger( ATTR_JOB_UNIVERSE, job_universe ) < 1 ) {
@@ -104,6 +110,34 @@ UserProc::initKillSigs( void )
 bool
 UserProc::JobReaper(int pid, int status)
 {
+	MyString line;
+	MyString error_txt;
+	MyString filename;
+	const char* dir = Starter->GetWorkingDir();
+	FILE* fp;
+
+	filename.sprintf("%s%c%s", dir, DIR_DELIM_CHAR, JOB_WRAPPER_FAILURE_FILE);
+	if (0 == access(filename.Value(), F_OK)) {
+		// The job wrapper failed, so read the contents of the file
+		// and EXCEPT, just as is done when an executable is unable
+		// to be run.  Ideally, both failure cases would propagate
+		// into the job ad
+		fp = safe_fopen_wrapper(filename.Value(), "r");
+		if (!fp) {
+			dprintf(D_ALWAYS, "Unable to open \"%s\" for reading: "
+					"%s (errno %d)\n", filename.Value(),
+					strerror(errno), errno);
+		} else {
+			while (line.readLine(fp))
+			{
+				error_txt += line;
+			}
+			fclose(fp);
+		}
+		error_txt.trim();
+		EXCEPT("The job wrapper failed to execute the job: %s", error_txt.Value());
+	}
+
 	if (JobPid == pid) {
 		m_proc_exited = true;
 		exit_status = status;
@@ -254,7 +288,23 @@ UserProc::getStdFile( std_file_type type,
 		// Figure out what we're trying to open, if anything
 		///////////////////////////////////////////////////////
 
-	if( attr ) {
+	if( m_pre_defined_std_fds[type] != -1 ||
+		m_pre_defined_std_fnames[type] != NULL )
+	{
+		filename = m_pre_defined_std_fnames[type];
+		*out_fd = m_pre_defined_std_fds[type];
+		if( *out_fd != -1 ) {
+				// we must dup() the file descriptor because our caller
+				// will take ownership of it (i.e. they should close it)
+			*out_fd = dup(*out_fd);
+			if( *out_fd == -1 ) {
+				dprintf(D_ALWAYS,"Failed to dup fd %d for %s\n",
+						m_pre_defined_std_fds[type],phrase);
+				return false;
+			}
+		}
+		wants_stream = false;
+	} else if( attr ) {
 		filename = Starter->jic->getJobStdFile( attr );
 		wants_stream = Starter->jic->streamStdFile( attr );
 	} else {
@@ -274,7 +324,7 @@ UserProc::getStdFile( std_file_type type,
 		}
 	}
 
-	if( ! filename ) {
+	if( ! filename && *out_fd == -1) {
 			// If there's nothing specified, we always want to open
 			// the system-appropriate NULL file (/dev/null or NUL).
 			// Otherwise, we can mostly treat this as if the job
@@ -409,3 +459,26 @@ UserProc::openStdFile( std_file_type type,
 	return fd;
 }
 
+void
+UserProc::SetStdFiles(int std_fds[], char const *std_fnames[])
+{
+		// store the pre-defined std files for use by getStdFile()
+	int i;
+	for(i=0;i<3;i++) {
+		m_pre_defined_std_fds[i] = std_fds[i];
+		m_pre_defined_std_fname_buf[i] = std_fnames[i];
+		m_pre_defined_std_fnames[i] = std_fnames[i] ? m_pre_defined_std_fname_buf[i].Value() : NULL;
+	}
+}
+
+bool
+UserProc::ThisProcRunsAlongsideMainProc()
+{
+	return false;
+}
+
+char const *
+UserProc::getArgv0()
+{
+	return CONDOR_EXEC;
+}

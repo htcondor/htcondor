@@ -591,7 +591,7 @@ GenerateABVList( List<AnnotatedBoolVector> &result )
 		return false;
 	}
 
-	AnnotatedBoolVector abv;
+	AnnotatedBoolVector *abv = new AnnotatedBoolVector();
 
 	int frequency = 0;
 	ExtArray<bool> seen ( numCols );
@@ -612,12 +612,12 @@ GenerateABVList( List<AnnotatedBoolVector> &result )
 					}
 				}
 			}
-			abv.Init( numRows, numCols, frequency );
+			abv->Init( numRows, numCols, frequency );
 			for( int row = 0; row < numRows; row++ ) {
-				abv.SetValue( row, table[i][row] );
+				abv->SetValue( row, table[i][row] );
 			}
 			for( int col = 0; col < numCols; col++ ) {
-				abv.SetContext( col, tempContexts[col] );
+				abv->SetContext( col, tempContexts[col] );
 				tempContexts[col] = false;
 			}	
 			result.Append( abv );

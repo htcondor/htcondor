@@ -1,0 +1,14 @@
+config job_dagman_recovery_event_check.config
+
+Job A job_dagman_recovery_event_check-nodeA.cmd
+
+Job B1 job_dagman_recovery_event_check-nodeB.cmd
+Parent A Child B1
+
+Job B2 job_dagman_recovery_event_check-nodeB.cmd
+Script Pre B2 job_dagman_recovery_event_check-nodeB-pre.pl
+Script Post B2 job_dagman_recovery_event_check-nodeB-post.pl $RETURN
+Parent A Child B2
+
+Job C job_dagman_recovery_event_check-nodeC.cmd
+Parent B1 B2 Child C

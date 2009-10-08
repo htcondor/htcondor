@@ -29,13 +29,12 @@
 #include "string_list.h"
 #include "read_multiple_logs.h"
 
-static const char * VERSION = "0.9.2";
+static const char * VERSION = "0.9.3";
 
 MULTI_LOG_HASH_INSTANCE; // For the multi-log-file code...
 
 enum Status { STATUS_OK, STATUS_CANCEL, STATUS_ERROR };
 
-static ReadMultipleUserLogs	reader;
 static int		verbosity = 0;
 
 Status CheckArgs(int argc, char **argv);
@@ -43,7 +42,11 @@ bool CompareStringLists(StringList &reference, StringList &test);
 bool GetGoodLogFiles(StringList &logFiles);
 bool GetBadLogFiles();
 bool ReadEvents(StringList &logFiles);
-bool ReadAndTestEvent(ULogEvent *expectedEvent);
+bool ReadEventsLazy();
+bool monitorLogFile( ReadMultipleUserLogs &reader, const char *logfile,
+			bool truncateIfFirst );
+bool unmonitorLogFile( ReadMultipleUserLogs &reader, const char *logfile );
+bool ReadAndTestEvent(ReadMultipleUserLogs &reader, ULogEvent *expectedEvent);
 void PrintEvent(ULogEvent *event);
 
 int main(int argc, char **argv)
@@ -65,26 +68,9 @@ int main(int argc, char **argv)
 	printf("Testing multi-log reading code\n");
 	fflush(stdout);
 
-	if ( !GetBadLogFiles() ) {
+	if ( !ReadEventsLazy() ) {
 		result = 1;
 	}
-
-	StringList		logFiles;
-
-	if ( !GetGoodLogFiles(logFiles) ) {
-		result = 1;
-	}
-
-	if ( !ReadEvents(logFiles) ) {
-		result = 1;
-	}
-
-#if LAZY_LOG_FILES
-	ReadMultipleUserLogs readLogs;
-	CondorError errstack;
-	readLogs.registerLogFile("foo", true, errstack);
-	readLogs.unregisterLogFile("foo", errstack);
-#endif
 
 	if ( result == 0 ) {
 		printf("\nTest succeeded\n");
@@ -146,176 +132,64 @@ CheckArgs(int argc, char **argv)
 	return status;
 }
 
-// true == okay; false == error
-bool
-GetGoodLogFiles(StringList &logFiles)
-{
-	bool		isOkay = true;
-
-	printf("\nGetting log files...\n");
-	fflush(stdout);
-	MyString		errorMsg;
-	MultiLogFiles	mlf;
-	errorMsg = mlf.getJobLogsFromSubmitFiles(
-			"test_multi_log1.dag", "job", "dir", logFiles);
-	if ( errorMsg != "" ) {
-		printf("...error getting log files: %s", errorMsg.Value());
-		printf(" (at %s: %d)\n", __FILE__, __LINE__);
-		fflush(stdout);
-		isOkay = false;
-	} else {
-		printf("...succeeded\n");
-		fflush(stdout);
-	}
-
-	printf("\nGetting log files...\n");
-	fflush(stdout);
-	errorMsg = mlf.getJobLogsFromSubmitFiles(
-			"test_multi_log1.dag", "data", "dir", logFiles);
-	if ( errorMsg != "" ) {
-		printf("...error getting log files: %s", errorMsg.Value());
-		printf(" (at %s: %d)\n", __FILE__, __LINE__);
-		fflush(stdout);
-		isOkay = false;
-	} else {
-		printf("...succeeded\n");
-		fflush(stdout);
-	}
-
-	if ( verbosity >= 1 ) {
-		printf("\nLog files:\n");
-		logFiles.print();
-		fflush(stdout);
-	}
-
-	char currentDir[PATH_MAX];
-	if ( !getcwd(currentDir, PATH_MAX) ) {
-		fprintf(stderr, "Buffer is too short for getcwd()");
-		fprintf(stderr, " (at %s: %d)\n", __FILE__, __LINE__);
-		isOkay = false;
-	}
-	MyString	logPath;
-	StringList	reference;
-	logPath = MyString(currentDir) + "/test_multi_log.log1";
-	reference.append(logPath.Value());
-	logPath = MyString(currentDir) + "/../condor_c++_util/test_multi_log.log2";
-	reference.append(logPath.Value());
-	logPath = MyString(currentDir) + "/test_multi_log.log3";
-	reference.append(logPath.Value());
-	logPath = MyString(currentDir) + "/../condor_c++_util/test_multi_log.log3";
-	reference.append(logPath.Value());
-	logPath = MyString(currentDir) + "/test_multi_log.log4";
-	reference.append(logPath.Value());
-
-	if ( !CompareStringLists(reference, logFiles) ) {
-		isOkay = false;
-	}
-
-	return isOkay;
-}
-
+// Note: we should add something here to test a set of log files that
+// has files on more than one file system.  wenger 2009-07-16.
 
 // true == okay; false == error
 bool
-GetBadLogFiles()
-{
-	bool		isOkay = true;
-
-	StringList	logFiles;
-
-	printf("\nGetting log files...\n");
-	fflush(stdout);
-	MyString		errorMsg;
-	MultiLogFiles	mlf;
-	errorMsg = mlf.getJobLogsFromSubmitFiles(
-			"test_multi_log2.dag", "job", "dir", logFiles);
-	if ( errorMsg != "" ) {
-		printf("...got expected error (%s)\n", errorMsg.Value());
-	} else {
-		printf("...should have gotten an error (test failed)");
-		printf(" (at %s: %d)\n", __FILE__, __LINE__);
-		fflush(stdout);
-		isOkay = false;
-	}
-
-	if ( verbosity >= 1 ) {
-		printf("\nLog files:\n");
-		logFiles.print();
-		fflush(stdout);
-	}
-
-	printf("\nGetting log files...\n");
-	fflush(stdout);
-	errorMsg = mlf.getJobLogsFromSubmitFiles(
-			"test_multi_log3.dag", "job", "dir", logFiles);
-	if ( errorMsg != "" ) {
-		printf("...got expected error (%s)\n", errorMsg.Value());
-		fflush(stdout);
-	} else {
-		printf("...should have gotten an error (test failed)");
-		printf(" (at %s: %d)\n", __FILE__, __LINE__);
-		fflush(stdout);
-		isOkay = false;
-	}
-
-	if ( verbosity >= 1 ) {
-		printf("\nLog files:\n");
-		logFiles.print();
-		fflush(stdout);
-	}
-
-	return isOkay;
-}
-
-// true == okay; false == error
-bool
-CompareStringLists(StringList &reference, StringList &test)
+ReadEventsLazy()
 {
 	bool	isOkay = true;
 
-	if ( reference.number() != test.number() ) {
-		printf("ERROR: expected %d strings, got %d", reference.number(),
-				test.number());
-		printf(" (at %s: %d)\n", __FILE__, __LINE__);
-		fflush(stdout);
+	printf("\nReading events with lazy log file evaluation\n");
+	fflush(stdout);
+
+	const char *file1 = "test_multi_log.log1";
+	unlink( file1 );
+	const char *file2 = "test_multi_log.log2";
+	unlink( file2 );
+	const char *file3 = "test_multi_log.log3";
+	unlink( file3 );
+	const char *file4 = file3;
+	unlink( file4 );
+	const char *file5 = "test_multi_log.log5";
+	unlink( file5 );
+		// Different path to same file -- make sure we deal with that
+		// correctly.
+	const char *file5a = "./test_multi_log.log5";
+	unlink( file5a );
+		// This will be a sym link.
+	const char *file5b = "test_multi_log.log5b";
+	unlink( file5b );
+		// This will be a sym link.
+	const char *file5c = "test_multi_log.log5c";
+	unlink( file5c );
+		// These will be a hard link.
+	const char *file5d = "test_multi_log.log5d";
+	unlink( file5d );
+
+	ReadMultipleUserLogs lazyReader;
+	int totalLogCount;
+	if ( (totalLogCount = lazyReader.totalLogFileCount()) != 0 ) {
+		fprintf( stderr, "lazyReader.totalLogFileCount() was %d; should "
+					"have been 0\n", totalLogCount );
 		isOkay = false;
 	}
 
-	reference.rewind();
-	char	*str;
-	while ( (str = reference.next()) != NULL ) {
-		if ( !test.contains(str) ) {
-			printf("ERROR: test list should contain <%s> but does not", str);
-			printf(" (at %s: %d)\n", __FILE__, __LINE__);
-			fflush(stdout);
-			isOkay = false;
-		}
+	if ( !monitorLogFile( lazyReader, file1, true ) ) {
+		isOkay = false;
+	}
+	if ( (totalLogCount = lazyReader.totalLogFileCount()) != 1 ) {
+		fprintf( stderr, "lazyReader.totalLogFileCount() was %d; should "
+					"have been 1\n", totalLogCount );
+		isOkay = false;
 	}
 
-	return isOkay;
-}
-
-// true == okay; false == error
-bool
-ReadEvents(StringList &logFiles)
-{
-	bool	isOkay = true;
-
-	printf("\nReading events\n");
-	fflush(stdout);
-
-	MultiLogFiles::TruncateLogs(logFiles);
-
-	// Note: return value of false is okay here because log files are
-	// empty.
-	if ( !reader.initialize(logFiles) ) {
-		if ( verbosity >= 1 ) printf("reader.initialize() returns false\n");
-	} else {
-		if ( verbosity >= 1 ) printf("reader.initialize() returns true\n");
-	}
-
+		// --------------------------------------------------------------
+		// Make sure we don't see log growth or events on empty log files.
+		//
 	printf("Testing detectLogGrowth() on empty files...\n");
-	if ( !reader.detectLogGrowth() ) {
+	if ( !lazyReader.detectLogGrowth() ) {
 		printf("...succeeded\n");
 		fflush(stdout);
 	} else {
@@ -327,7 +201,7 @@ ReadEvents(StringList &logFiles)
 
 	ULogEvent	*event;
 	printf("Testing readEvent() on empty files...\n");
-	if ( reader.readEvent(event) != ULOG_NO_EVENT ) {
+	if ( lazyReader.readEvent(event) != ULOG_NO_EVENT ) {
 		printf("...failed");
 		printf(" (at %s: %d)\n", __FILE__, __LINE__);
 		fflush(stdout);
@@ -340,11 +214,10 @@ ReadEvents(StringList &logFiles)
 	printf("Testing writing and reading events...\n");
 	fflush(stdout);
 
-	UserLog		log1("test", "test_multi_log.log1", 1, 0, 0, false);
-	UserLog		log2("test", "test_multi_log.log2", 2, 0, 0, true);
-	UserLog		log3("test", "test_multi_log.log3", 3, 0, 0, false);
-	UserLog		log4("test", "test_multi_log.log3", 4, 0, 0, false);
-	UserLog		log5("test", "test_multi_log.log4", 5, -1, -1, false);
+	UserLog		log1("test", file1, 1, 0, 0, false);
+	UserLog		log2("test", file2, 2, 0, 0, true);
+	UserLog		log3("test", file3, 3, 0, 0, false);
+	UserLog		log4("test", file4, 4, 0, 0, false);
 
 	SubmitEvent	subE;
 	strcpy(subE.submitHost, "<128.105.165.12:32779>");
@@ -355,7 +228,7 @@ ReadEvents(StringList &logFiles)
 		isOkay = false;
 	}
 
-	if ( !reader.detectLogGrowth() ) {
+	if ( !lazyReader.detectLogGrowth() ) {
 		printf("Error: should have gotten log growth");
 		printf(" (at %s: %d)\n", __FILE__, __LINE__);
 		fflush(stdout);
@@ -363,11 +236,11 @@ ReadEvents(StringList &logFiles)
 	}
 
 	subE.cluster = 1;
-	if ( !ReadAndTestEvent(&subE) ) {
+	if ( !ReadAndTestEvent(lazyReader, &subE) ) {
 		isOkay = false;
 	}
 
-	if ( reader.detectLogGrowth() ) {
+	if ( lazyReader.detectLogGrowth() ) {
 		printf("Error: should NOT have gotten log growth");
 		printf(" (at %s: %d)\n", __FILE__, __LINE__);
 		fflush(stdout);
@@ -385,9 +258,58 @@ ReadEvents(StringList &logFiles)
 	}
 
 	termE.cluster = 1;
-	if ( !ReadAndTestEvent(&termE) ) {
+	if ( !ReadAndTestEvent(lazyReader, &termE) ) {
 		isOkay = false;
 	}
+
+		//
+		// Make sure truncating works.
+		//
+	if ( !log2.writeEvent(&subE) ) {
+		printf("Error: writeEvent() failed");
+		printf(" (at %s: %d)\n", __FILE__, __LINE__);
+		fflush(stdout);
+		isOkay = false;
+	}
+
+	if (!monitorLogFile( lazyReader, file2, true ) ) {
+		isOkay = false;
+	}
+
+	if ( !ReadAndTestEvent( lazyReader, NULL ) ) {
+		isOkay = false;
+	}
+
+		//
+		// Unmonitoring a file we haven't monitored yet should fail.
+		//
+	if ( unmonitorLogFile( lazyReader, file3 ) ) {
+		fprintf( stderr, "Unmonitoring file3 should have failed\n" );
+		isOkay = false;
+	}
+
+		//
+		// Make sure monitoring the same file several times works okay.
+		//
+	if (!monitorLogFile( lazyReader, file3, true ) ) {
+		isOkay = false;
+	}
+	if (!monitorLogFile( lazyReader, file3, true ) ) {
+		isOkay = false;
+	}
+	if (!monitorLogFile( lazyReader, file3, true ) ) {
+		isOkay = false;
+	}
+	if (!monitorLogFile( lazyReader, file3, true ) ) {
+		isOkay = false;
+	}
+	if ( (totalLogCount = lazyReader.totalLogFileCount()) != 3 ) {
+		fprintf( stderr, "lazyReader.totalLogFileCount() was %d; should "
+					"have been 3\n", totalLogCount );
+		isOkay = false;
+	}
+
+	lazyReader.printAllLogMonitors( stdout );
 
 	if ( !log2.writeEvent(&subE) ) {
 		printf("Error: writeEvent() failed");
@@ -404,7 +326,7 @@ ReadEvents(StringList &logFiles)
 		isOkay = false;
 	}
 
-	if ( !reader.detectLogGrowth() ) {
+	if ( !lazyReader.detectLogGrowth() ) {
 		printf("Error: should have gotten log growth");
 		printf(" (at %s: %d)\n", __FILE__, __LINE__);
 		fflush(stdout);
@@ -412,16 +334,16 @@ ReadEvents(StringList &logFiles)
 	}
 
 	subE.cluster = 2;
-	if ( !ReadAndTestEvent(&subE) ) {
+	if ( !ReadAndTestEvent(lazyReader, &subE) ) {
 		isOkay = false;
 	}
 
 	subE.cluster = 3;
-	if ( !ReadAndTestEvent(&subE) ) {
+	if ( !ReadAndTestEvent(lazyReader, &subE) ) {
 		isOkay = false;
 	}
 
-	if ( !ReadAndTestEvent(NULL) ) {
+	if ( !ReadAndTestEvent(lazyReader, NULL) ) {
 		isOkay = false;
 	}
 
@@ -441,19 +363,42 @@ ReadEvents(StringList &logFiles)
 	}
 
 	termE.cluster = 2;
-	if ( !ReadAndTestEvent(&termE) ) {
+	if ( !ReadAndTestEvent(lazyReader, &termE) ) {
 		isOkay = false;
 	}
 
 	termE.cluster = 3;
-	if ( !ReadAndTestEvent(&termE) ) {
+	if ( !ReadAndTestEvent(lazyReader, &termE) ) {
 		isOkay = false;
 	}
 
-	if ( !ReadAndTestEvent(NULL) ) {
+	if ( !ReadAndTestEvent(lazyReader, NULL) ) {
 		isOkay = false;
 	}
 
+	if (!unmonitorLogFile( lazyReader, file3 ) ) {
+		isOkay = false;
+	}
+	if (!unmonitorLogFile( lazyReader, file3 ) ) {
+		isOkay = false;
+	}
+	if (!unmonitorLogFile( lazyReader, file3 ) ) {
+		isOkay = false;
+	}
+	if (!unmonitorLogFile( lazyReader, file3 ) ) {
+		isOkay = false;
+	}
+	if ( (totalLogCount = lazyReader.totalLogFileCount()) != 3 ) {
+		fprintf( stderr, "lazyReader.totalLogFileCount() was %d; should "
+					"have been 3\n", totalLogCount );
+		isOkay = false;
+	}
+
+	lazyReader.printActiveLogMonitors( stdout );
+
+	if (!monitorLogFile( lazyReader, file4, true ) ) {
+		isOkay = false;
+	}
 	if ( !log4.writeEvent(&subE) ) {
 		printf("Error: writeEvent() failed");
 		printf(" (at %s: %d)\n", __FILE__, __LINE__);
@@ -462,11 +407,11 @@ ReadEvents(StringList &logFiles)
 	}
 
 	subE.cluster = 4;
-	if ( !ReadAndTestEvent(&subE) ) {
+	if ( !ReadAndTestEvent(lazyReader, &subE) ) {
 		isOkay = false;
 	}
 
-	if ( !ReadAndTestEvent(NULL) ) {
+	if ( !ReadAndTestEvent(lazyReader, NULL) ) {
 		isOkay = false;
 	}
 
@@ -478,17 +423,27 @@ ReadEvents(StringList &logFiles)
 	}
 
 	termE.cluster = 4;
-	if ( !ReadAndTestEvent(&termE) ) {
+	if ( !ReadAndTestEvent(lazyReader, &termE) ) {
 		isOkay = false;
 	}
 
-	if ( !ReadAndTestEvent(NULL) ) {
+	if ( !ReadAndTestEvent(lazyReader, NULL) ) {
 		isOkay = false;
 	}
 
-	subE.cluster = 5;
-	subE.proc = -1;
-	subE.subproc = -1;
+		//
+		// Make sure things work with truncateIfFirst == false; also
+		// monitoring the same file with two different paths.
+		//
+	unlink( file5 );
+	UserLog		log5("test", file5, 5, -1, -1, false);
+	if (!monitorLogFile( lazyReader, file5, false ) ) {
+		isOkay = false;
+	}
+	if (!monitorLogFile( lazyReader, file5a, false ) ) {
+		isOkay = false;
+	}
+
 	if ( !log5.writeEvent(&subE) ) {
 		printf("Error: writeEvent() failed");
 		printf(" (at %s: %d)\n", __FILE__, __LINE__);
@@ -505,10 +460,13 @@ ReadEvents(StringList &logFiles)
 		isOkay = false;
 	}
 
-	if ( !ReadAndTestEvent(&subE) ) {
+	if ( !ReadAndTestEvent(lazyReader, &subE) ) {
 		isOkay = false;
 	}
-	if ( !ReadAndTestEvent(&execE) ) {
+	if ( !ReadAndTestEvent(lazyReader, &execE) ) {
+		isOkay = false;
+	}
+	if ( !ReadAndTestEvent(lazyReader, NULL) ) {
 		isOkay = false;
 	}
 
@@ -520,7 +478,7 @@ ReadEvents(StringList &logFiles)
 		fflush(stdout);
 		isOkay = false;
 	}
-	if ( !ReadAndTestEvent(&genE) ) {
+	if ( !ReadAndTestEvent(lazyReader, &genE) ) {
 		isOkay = false;
 	}
 
@@ -531,7 +489,7 @@ ReadEvents(StringList &logFiles)
 		fflush(stdout);
 		isOkay = false;
 	}
-	if ( !ReadAndTestEvent(&genE) ) {
+	if ( !ReadAndTestEvent(lazyReader, &genE) ) {
 		isOkay = false;
 	}
 
@@ -542,7 +500,7 @@ ReadEvents(StringList &logFiles)
 		fflush(stdout);
 		isOkay = false;
 	}
-	if ( !ReadAndTestEvent(&genE) ) {
+	if ( !ReadAndTestEvent(lazyReader, &genE) ) {
 		isOkay = false;
 	}
 
@@ -552,9 +510,111 @@ ReadEvents(StringList &logFiles)
 		fflush(stdout);
 		isOkay = false;
 	}
-	if ( !ReadAndTestEvent(&termE) ) {
+	if ( !ReadAndTestEvent(lazyReader, &termE) ) {
 		isOkay = false;
 	}
+
+		// --------------------------------------------------------------
+		// Make sure we *don't* see events on an unmonitored file, but that
+		// we *do* see them after we monitor the file again.
+		//
+	if (!unmonitorLogFile( lazyReader, file5 ) ) {
+		isOkay = false;
+	}
+		//TEMP -- what if we *don't* unmonitor and remonitor file5a here?  that's even a harder case...
+	if (!unmonitorLogFile( lazyReader, file5a ) ) {
+		isOkay = false;
+	}
+
+	if ( !log5.initialize( 6, 0, 0, NULL )) {
+		fprintf( stderr, "Error re-initializing log5\n" );
+		isOkay = false;
+	}
+
+	if ( !log5.writeEvent(&subE) ) {
+		printf("Error: writeEvent() failed");
+		printf(" (at %s: %d)\n", __FILE__, __LINE__);
+		fflush(stdout);
+		isOkay = false;
+	}
+
+	strcpy(execE.executeHost, "<128.105.777.99:12345>");
+	if ( !log5.writeEvent(&execE) ) {
+		printf("Error: writeEvent() failed");
+		printf(" (at %s: %d)\n", __FILE__, __LINE__);
+		fflush(stdout);
+		isOkay = false;
+	}
+
+	if ( !log5.writeEvent(&termE) ) {
+		printf("Error: writeEvent() failed");
+		printf(" (at %s: %d)\n", __FILE__, __LINE__);
+		fflush(stdout);
+		isOkay = false;
+	}
+
+	if ( !ReadAndTestEvent( lazyReader, NULL ) ) {
+		isOkay = false;
+	}
+
+		// Note: monitoring the "secondary" path to this log.
+	if (!monitorLogFile( lazyReader, file5a, true ) ) {
+		isOkay = false;
+	}
+
+	if ( !ReadAndTestEvent( lazyReader, &subE ) ) {
+		isOkay = false;
+	}
+
+		// Test links to log files.
+	symlink( file5, file5b );
+		// Note: monitoring the sym link to this log.
+	if (!monitorLogFile( lazyReader, file5b, true ) ) {
+		isOkay = false;
+	}
+
+	symlink( file5, file5c );
+		// Note: monitoring the sym link to this log.
+	if (!monitorLogFile( lazyReader, file5c, true ) ) {
+		isOkay = false;
+	}
+
+	link( file5, file5d );
+		// Note: monitoring the hard link to this log.
+	if (!monitorLogFile( lazyReader, file5d, true ) ) {
+		isOkay = false;
+	}
+
+	if ( (totalLogCount = lazyReader.totalLogFileCount()) != 4 ) {
+		fprintf( stderr, "lazyReader.totalLogFileCount() was %d; should "
+					"have been 4\n", totalLogCount );
+		isOkay = false;
+	}
+
+	if ( !ReadAndTestEvent( lazyReader, &execE ) ) {
+		isOkay = false;
+	}
+	if ( !ReadAndTestEvent(lazyReader, &termE) ) {
+		isOkay = false;
+	}
+	if ( !ReadAndTestEvent(lazyReader, NULL) ) {
+		isOkay = false;
+	}
+
+		//
+		// Make sure monitoring and then immediately unmonitoring a file
+		// doesn't mess things up.
+		//
+	const char *file6 = "test_multi_log.log6";
+	unlink( file6 );
+
+	if (!monitorLogFile( lazyReader, file6, true ) ) {
+		isOkay = false;
+	}
+	if (!unmonitorLogFile( lazyReader, file6 ) ) {
+		isOkay = false;
+	}
+
 
 	if ( isOkay ) {
 		printf("...succeeded\n");
@@ -564,15 +624,48 @@ ReadEvents(StringList &logFiles)
 		fflush(stdout);
 	}
 
+	printf("\nNote: we should get a warning here about log files still "
+				"being monitored...\n");
+
 	return isOkay;
 }
 
+// true == okay; false == error
 bool
-ReadAndTestEvent(ULogEvent *expectedEvent)
+monitorLogFile( ReadMultipleUserLogs &reader, const char *logfile,
+			bool truncateIfFirst )
+{
+	CondorError errstack;
+	if ( !reader.monitorLogFile( logfile, truncateIfFirst, errstack ) ) {
+		fprintf( stderr, "Error monitoring log file %s: %s\n", logfile,
+					errstack.getFullText() );
+		return false;
+	}
+
+	return true;
+}
+
+// true == okay; false == error
+bool
+unmonitorLogFile( ReadMultipleUserLogs &reader, const char *logfile )
+{
+	CondorError errstack;
+	if ( !reader.unmonitorLogFile( logfile, errstack ) ) {
+		fprintf( stderr, "Error unmonitoring log file %s: %s\n", logfile,
+					errstack.getFullText() );
+		return false;
+	}
+
+	return true;
+}
+
+// true == okay; false == error
+bool
+ReadAndTestEvent(ReadMultipleUserLogs &reader, ULogEvent *expectedEvent)
 {
 	bool	isOkay = true;
 
-	ULogEvent	*event;
+	ULogEvent	*event = NULL;
 	if ( reader.readEvent(event) != ULOG_OK ) {
 		if ( expectedEvent ) {
 			printf("Error reading event");
@@ -608,8 +701,13 @@ ReadAndTestEvent(ULogEvent *expectedEvent)
 	if ( !isOkay ) {
 		printf("  Expecting ");
 		PrintEvent(expectedEvent);
+		printf("; got ");
+		PrintEvent(event);
+		printf("\n");
 		fflush(stdout);
 	}
+
+	delete event;
 
 	return isOkay;
 }
@@ -618,7 +716,7 @@ void
 PrintEvent(ULogEvent *event)
 {
 	if ( event ) {
-		printf("Event: %d.%d.%d: %s\n", event->cluster, event->proc,
+		printf("Event: %d.%d.%d: %s", event->cluster, event->proc,
 				event->subproc,ULogEventNumberNames[event->eventNumber]);
 		fflush(stdout);
 	} else {

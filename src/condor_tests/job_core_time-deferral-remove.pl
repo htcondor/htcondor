@@ -31,7 +31,15 @@ use POSIX;
 ##
 ## Universe
 ## 
-my $universe = ($ARGV[0] ? $ARGV[0] : "vanilla");
+my $universe = $ARGV[0];
+my $longuniverse = "";
+
+if($universe eq "van") {
+	$longuniverse = "vanilla";
+} else {
+	$longuniverse = $universe;
+}
+
 
 ##
 ## The timer callback method doesn't provide us with this
@@ -56,7 +64,7 @@ my $REMOVE = "";
 ## Testing Information
 ##
 $testdesc =  "Job Deferral Testing REMOVE - $universe";
-$testname = "job_core_time-deferral-remove";
+$testname = "job_core_time-deferral-remove" . "_$universe";
 $base_name = 'job_core_time-deferral-remove';
 $base_cmd = $base_name.".cmd";
 
@@ -70,6 +78,10 @@ $submitted = sub {
 	$job = $info{"job"};
 	
 	CondorTest::debug("Good - Job $cluster.$job was submitted!\n",1);
+	##
+	## This callback is to put our job on hold
+	##
+	CondorTest::RegisterTimed($testname, $timed, 10);
 };	
 
 ##
@@ -191,7 +203,7 @@ open( WRITE_FILE, ">$cmd" ) || die( "Can't open '$cmd' for writing!\n" );
 print WRITE_FILE "Executable   = ./x_time.pl\n";
 print WRITE_FILE "Notification = NEVER\n";
 print WRITE_FILE "DeferralPrep = 20\n";
-print WRITE_FILE "Universe	   = $universe\n";
+print WRITE_FILE "Universe	   = $longuniverse\n";
 print WRITE_FILE "Log		   = $base_name"."_$universe.log\n";
 print WRITE_FILE "Output	   = $base_name"."_$universe.out\n";
 print WRITE_FILE "Error		   = $base_name"."_$universe.err\n";
@@ -211,10 +223,6 @@ system("rm -f $mylogfortest");
 CondorTest::RegisterSubmit( $testname, $submitted );
 CondorTest::RegisterExecute( $testname, $executed );
 CondorTest::RegisterAbort( $testname, $aborted );
-##
-## This callback is to put our job on hold
-##
-CondorTest::RegisterTimed($testname, $timed, 30);
 	
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
 	CondorTest::debug("$testname: SUCCESS\n",1);

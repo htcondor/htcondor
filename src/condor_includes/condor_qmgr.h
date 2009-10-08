@@ -138,14 +138,14 @@ int SetAttributeInt(int cluster, int proc, const char *attr, int value, SetAttri
 	quotes)
 	@return -1 on failure; 0 on success
 */
-int SetAttributeFloat(int cluster, int proc, const char *attr, float value);
+int SetAttributeFloat(int cluster, int proc, const char *attr, float value, SetAttributeFlags_t flags = 0);
 /** Set attr = value for job with specified cluster and proc.  The value
 	should be a valid ClassAd value (strings should be surrounded by
 	quotes)
 	@return -1 on failure; 0 on success
 */
 int SetAttributeString(int cluster, int proc, const char *attr,
-					   const char *value);
+					   const char *value, SetAttributeFlags_t flags = 0);
 
 /** Set LastJobLeaseRenewalReceived = <xact start time> and
     JobLeaseDurationReceived = dur for the specified cluster/proc.
@@ -282,12 +282,6 @@ void unsetQSock();
 
 int rusage_to_float(struct rusage, float *, float *);
 int float_to_rusage(float, float, struct rusage *);
-
-/* These are here for compatibility with old code which uses the PROC
-   structure to ease porting.  Use of these functions is discouraged! */
-#if defined(NEW_PROC)
-int GetProc(int, int, PROC *);
-#endif
 
 bool Reschedule();
 

@@ -962,8 +962,8 @@ sub Monitor
 	{
 	    $info{'cluster'} = $1;
 	    $info{'job'} = $2;
-	    $info{'host'} = $3;
-	    $info{'sinful'} = "<$3:$4>";
+	    #$info{'host'} = $3;
+	    #$info{'sinful'} = "<$3:$4>";
 	    
 	    # read next line to see how job was held
 	    $line = <SUBMIT_LOG>;
@@ -994,8 +994,8 @@ sub Monitor
 	{
 	    $info{'cluster'} = $1;
 	    $info{'job'} = $2;
-	    $info{'host'} = $3;
-	    $info{'sinful'} = "<$3:$4>";
+	    #$info{'host'} = $3;
+	    #$info{'sinful'} = "<$3:$4>";
 	    
 	    debug( "Saw job released\n" ,5);
 

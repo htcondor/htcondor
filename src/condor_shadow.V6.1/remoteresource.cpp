@@ -564,13 +564,6 @@ RemoteResource::setStartdInfo( ClassAd* ad )
 		EXCEPT( "ad does not include %s!", ATTR_CLAIM_ID );
 	}
 
-		// Delete the claim id from the shadow's copy of the job ad,
-		// now that we have extracted it.  When we send this ad over
-		// the wire to the starter, there is no need for the claimid
-		// to be in the job ad, so better to remove it than to have
-		// to worry about encrypting that transmission.
-	ad->Delete( ATTR_CLAIM_ID );
-
 	char* addr = NULL;
 	ad->LookupString( ATTR_STARTD_IP_ADDR, &addr );
 	if( ! addr ) {

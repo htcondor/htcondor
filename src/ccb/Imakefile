@@ -1,7 +1,7 @@
 
-CFLAGS = $(STD_C_FLAGS) 
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
-LIB = $(STD_LIBS)
+CFLAGS = $(STD_C_FLAGS) $(CONFIGURE_PCRE_CFLAGS)
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(CONFIGURE_PCRE_CFLAGS)
+LIB = $(STD_LIBS) $(CONFIGURE_PCRE_LDFLAGS)
 
 OBJ = ccb_server.o ccb_client.o ccb_listener.o
 
@@ -11,3 +11,5 @@ release:: all
 stripped:: all
 static:: all
 testbin:: all
+clean::
+	rm -f *.o

@@ -7,11 +7,11 @@ BENCHMARK_CLASS = scimark2lib.jar
 
 all_target($(NAME) $(RSH_NAME) condor_gridshell)
 
-CFLAGS = $(STD_C_FLAGS) -I../condor_schedd.V6
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -I../condor_schedd.V6
+CFLAGS = $(STD_C_FLAGS) -I../condor_schedd.V6 $(CONFIGURE_PCRE_CFLAGS)
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -I../condor_schedd.V6 $(CONFIGURE_PCRE_CFLAGS)
 
-LIB = $(DAEMONCORE_LIB) $(STD_LIBS) $(CONFIGURE_GSOAP_LDFLAGS)
-RSH_LIB = $(STD_LIBS) $(CLASSAD_LIB)
+LIB = $(DAEMONCORE_LIB) $(STD_LIBS) $(CONFIGURE_GSOAP_LDFLAGS) $(CONFIGURE_PCRE_LDFLAGS)
+RSH_LIB = $(STD_LIBS) $(CLASSAD_LIB) $(CONFIGURE_PCRE_LDFLAGS)
 
 #if HAVE_JOB_HOOKS
 JOB_HOOKS_OBJS = StarterHookMgr.o
@@ -26,7 +26,7 @@ soapobjs(starter)
 # this can (and will have to) be made better, but
 # it will suffice for now:
 OBJ = starter_v61_main.o baseStarter.o NTsenders.o user_proc.o \
-	os_proc.o vanilla_proc.o mpi_master_proc.o mpi_comrade_proc.o \
+	os_proc.o vanilla_proc.o sshd_proc.o mpi_master_proc.o mpi_comrade_proc.o \
 	script_proc.o parallel_proc.o \
 	io_proxy.o io_proxy_handler.o \
 	java_proc.o java_detect.o tool_daemon_proc.o local_user_log.o \
@@ -52,8 +52,16 @@ public_copy_target(condor_glexec_setup,libexec,condor_glexec_setup,EXECUTABLE_MO
 public_copy_target(condor_glexec_run,libexec,condor_glexec_run,EXECUTABLE_MODE)
 public_copy_target(condor_glexec_cleanup,libexec,condor_glexec_cleanup,EXECUTABLE_MODE)
 public_copy_target(condor_glexec_kill,libexec,condor_glexec_kill,EXECUTABLE_MODE)
+public_copy_target(condor_glexec_update_proxy,libexec,condor_glexec_update_proxy,EXECUTABLE_MODE)
 public_c_plus_nowrap_target(condor_glexec_job_wrapper,libexec,glexec_job_wrapper.o,$(STD_LIBS))
 #endif
+
+#if HAVE_SSH_TO_JOB
+public_copy_target(condor_ssh_to_job_sshd_setup,libexec,condor_ssh_to_job_sshd_setup,EXECUTABLE_MODE)
+public_copy_target(condor_ssh_to_job_shell_setup,libexec,condor_ssh_to_job_shell_setup,EXECUTABLE_MODE)
+public_copy_target(condor_ssh_to_job_sshd_config_template,lib,condor_ssh_to_job_sshd_config_template,OBJECT_MODE)
+#endif
+
 
 testbin:: all
 

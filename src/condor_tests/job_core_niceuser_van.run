@@ -19,58 +19,79 @@
 ##**************************************************************
 
 use CondorTest;
-
-$cmd = 'job_core_niceuser_van.cmd';
-my $datafile = 'job_core_niceuser_van.data';
-$testdesc =  'condor_submit output works - vanilla U';
-$testname = "job_core_niceuser_van";
-
-my @sdata =
-(
-"1",
-"8",
-"3",
-"10",
-"5",
-"2"
-);
-
-my @vdata =
-(
-"1",
-"2",
-);
-
-my @skiplines = ();
+use strict;
+use warnings;
 
 
-my $doonlyonce = "";
-my $count = 6;
+my $testdesc =  'job_core_niceuser_van - niceuser test';
+my $testname = "job_core_niceuser_van";
+my $corename = "job_core_niceuser_van";
+my $debuglevel = 2;
 
+# where am I running
+my $currenthost = CondorTest::getFqdnHost();
+chomp($currenthost);
+my $primarycollector = $currenthost;
 
-$ExitSuccess = sub 
-{
-	my %info = @_;
+CondorTest::fullchomp($currenthost);
 
-	$count = $count - 1;
+print scalar localtime() . "\n";
 
-	if( $count != 0 )
-	{
-		return(0);
-	}
+my $mypid = $$;
+my $mysaveme = $corename . ".saveme";
 
-	CondorTest::CompareText( $datafile, \@vdata, @skiplines );
-};
-
-system("rm -rf job_core_niceuser_van.data");
-system("touch job_core_niceuser_van.data");
-
-CondorTest::RegisterExitedSuccess( $testname, $ExitSuccess );
-
-if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	CondorTest::debug("$testname: SUCCESS\n",1);
-	exit(0);
-} else {
-	die "$testname: CondorTest::RunTest() failed\n";
+if($mypid == 0) {
+	die "Saveme setup for test failed\n";
 }
 
+my $mysubmitnm = $corename . $mypid . ".cmd";
+#my $mysubmitnmout = $corename . $mypid . ".cmd.out";
+my $mysubmitnmlog = $corename . $mypid . ".log";
+my $mysubmitnmout = $corename . $mypid . ".out";
+my $mycorenm = $corename . ".cmd";
+my $mycorenmout = $corename . ".cmd.out";
+my $mycorenmlog = $corename . ".log";
+
+CondorTest::debug("Master PID is $mypid\n",$debuglevel);
+CondorTest::debug("Master PID submit file is $mysubmitnm\n",$debuglevel);
+
+my $version = $mypid . "local";
+# get a local scheduler running (side a)
+my $configloc = CondorTest::StartPersonal( "job_core_niceuser_van", "x_param.niceuser" ,$version);
+my @local = split /\+/, $configloc;
+my $locconfig = shift @local;
+my $locport = shift @local;
+
+CondorTest::debug("---local config is $locconfig and local port is $locport---\n",$debuglevel);
+
+my $outcome = system("./job_core_niceuser_van.pl");
+
+system("cp *job_core_niceuser_van* $mysaveme");
+
+if( -e "$mysubmitnm" )
+{
+	system("cp $mysubmitnm $mycorenm");
+}
+
+if( -e "$mysubmitnmout" )
+{
+	system("cp $mysubmitnmout $mycorenmout");
+}
+
+if( -e "$mysubmitnmlog" )
+{
+	system("cp $mysubmitnmlog $mycorenmlog");
+}
+
+CondorTest::KillPersonal($locconfig);
+print scalar localtime() . "\n";
+
+if( $outcome != 0 )
+{
+	print "job_core_niceuser_van.pl returnes<$outcome>\n";
+	# actual test failed but we allowed cleanup
+	exit(1);
+}
+
+CondorTest::debug("job_core_niceuser_van SUCCESS\n",$debuglevel);
+exit(0);

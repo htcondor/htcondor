@@ -58,6 +58,7 @@ VMType::VMType(const char* prog_for_script, const char* scriptname, const char* 
 	m_status = VM_STOPPED;
 	m_cpu_time = 0;
 	m_delete_working_files = false;
+	m_vcpus = 1;
 
 	vmprintf(D_FULLDEBUG, "Constructed VM_Type.\n");
 
@@ -116,10 +117,8 @@ VMType::parseCommonParamFromClassAd(bool is_root /*false*/)
 	if( m_classAd.LookupInteger( ATTR_JOB_VM_VCPUS, m_vcpus) != 1) {
 	  vmprintf(D_FULLDEBUG, "No VCPUS defined or VCPUS definition is bad.\n");
 	}
-	else {
-	  if(m_vcpus < 1) m_vcpus = 1;
-	  vmprintf(D_FULLDEBUG, "Setting up %d CPUS\n", m_vcpus);
-	}
+	if(m_vcpus < 1) m_vcpus = 1;
+	vmprintf(D_FULLDEBUG, "Setting up %d CPUS\n", m_vcpus);
 
 	// Read parameter for networking
 	m_vm_networking = false;
@@ -141,7 +140,7 @@ VMType::parseCommonParamFromClassAd(bool is_root /*false*/)
 
 			// change string to lowercase
 			m_vm_networking_type.trim();
-			m_vm_networking_type.strlwr();
+			m_vm_networking_type.lower_case();
 			if( vmgahp->m_gahp_config->m_vm_networking_types.contains(m_vm_networking_type.Value()) == false ) {
 				vmprintf(D_ALWAYS, "Networking type(%s) is not supported by "
 						"this gahp server\n", m_vm_networking_type.Value());
@@ -156,7 +155,10 @@ VMType::parseCommonParamFromClassAd(bool is_root /*false*/)
 				m_vm_networking_type = "nat";
 			}
 		}
-		m_classAd.LookupString( ATTR_JOB_VM_MACADDR, m_vm_job_mac);
+		if(m_classAd.LookupString( ATTR_JOB_VM_MACADDR, m_vm_job_mac) != 1)
+		  {
+		    vmprintf(D_FULLDEBUG, "MAC address was not defined.\n");
+		  }
 	}
 
 	// Read parameter for checkpoint

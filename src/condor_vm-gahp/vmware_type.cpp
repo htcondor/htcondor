@@ -355,7 +355,7 @@ static void change_snapshot_vmsd_file(const char *file, StringList *parent_filen
 		}
 
 		MyString tmp_name = name;
-		tmp_name.strlwr();
+		tmp_name.lower_case();
 		if( tmp_name.find( ".filename", 0 ) > 0 ) {
 			if( parent_filenames->contains(condor_basename(value.Value()))) {
 				if( use_fullpath ) {
@@ -416,6 +416,9 @@ VMwareType::VMwareType(const char* prog_for_script, const char* scriptname,
 	VMType(prog_for_script, scriptname, workingpath, ad)
 {
 	m_vmtype = CONDOR_VM_UNIVERSE_VMWARE;
+
+	//m_cputime_before_suspend = 0;
+
 	m_need_snapshot = false;
 	m_restart_with_ckpt = false;
 	m_vmware_transfer = false;
@@ -491,7 +494,7 @@ VMwareType::adjustConfigDiskPath()
 		if( !strncasecmp(name.Value(), "scsi", strlen("scsi")) ||
 				!strncasecmp(name.Value(), "ide", strlen("ide"))) {
 			MyString tmp_name = name;
-			tmp_name.strlwr();
+			tmp_name.lower_case();
 			if( tmp_name.find( ".filename", 0 ) > 0 ) {
 				if( has_suffix(value.Value(), ".vmdk") && 
 						(fullpath(value.Value()) == false) ) {
@@ -642,7 +645,7 @@ VMwareType::adjustCkptConfig(const char* vmconfig)
 				MyString tmp_string2;
 
 				tmp_string2 = m_vm_networking_type;
-				tmp_string2.strupr();
+				tmp_string2.upper_case();
 
 				tmp_string.sprintf("VMWARE_%s_NETWORKING_TYPE", tmp_string2.Value());
 
@@ -761,7 +764,7 @@ VMwareType::readVMXfile(const char *filename, const char *dirpath)
 		}
 
 		MyString tmp_name = name;
-		tmp_name.strlwr();
+		tmp_name.lower_case();
 		if( tmp_name.find( ".devicetype", 0 ) > 0 ) {
 			// find cdrom device
 #define CDROM_TYPE1		"atapi-cdrom"
@@ -813,7 +816,7 @@ VMwareType::readVMXfile(const char *filename, const char *dirpath)
 		}else if( !strncasecmp(line, "scsi", strlen("scsi")) ||
 				!strncasecmp(line, "ide", strlen("ide"))) {
 			MyString tmp_name = name;
-			tmp_name.strlwr();
+			tmp_name.lower_case();
 			if( tmp_name.find( ".filename", 0 ) > 0 ) {
 
 				// Adjust filename
@@ -877,7 +880,7 @@ VMwareType::readVMXfile(const char *filename, const char *dirpath)
 				continue;
 			}else if( (tmp_name.find(".mode", 0 ) > 0) && (value.Length() > 0)) {
 				MyString tmp_value = value;
-				tmp_value.strlwr();
+				tmp_value.lower_case();
 				if( tmp_value.find( "independent", 0 ) >= 0 ) {
 					if( !m_vmware_transfer ) {
 						// In VMware, independent disks are not affected 
@@ -1123,6 +1126,7 @@ VMwareType::Start()
 
 	setVMStatus(VM_RUNNING);
 	m_start_time.getTime();
+    //m_cpu_time = 0;
 	return true;
 }
 
@@ -1381,6 +1385,8 @@ VMwareType::Suspend()
 	// Suspend succeeds. So there is no process for VM.
 	m_vm_pid = 0;
 	setVMStatus(VM_SUSPENDED);
+	//m_cputime_before_suspend += m_cpu_time;
+	//m_cpu_time = 0;
 	return true;
 }
 
@@ -1506,6 +1512,7 @@ VMwareType::Status()
 
 	MyString vm_status;
 	int vm_pid = 0;
+	float cputime = 0;
 	cmd_out.rewind();
 	while( (next_line = cmd_out.next()) != NULL ) {
 		one_line = next_line;
@@ -1522,6 +1529,14 @@ VMwareType::Status()
 
 		parse_param_string(one_line.Value(), name, value, true);
 		if( !name.Length() || !value.Length() ) {
+			continue;
+		}
+		
+		if( !strcasecmp(name.Value(), VMGAHP_STATUS_COMMAND_CPUTIME)) {
+			cputime = (float)strtod(value.Value(), (char **)NULL);
+			if( cputime <= 0 ) {
+				cputime = 0;
+			}
 			continue;
 		}
 
@@ -1597,6 +1612,17 @@ VMwareType::Status()
 		m_result_msg += VMGAHP_STATUS_COMMAND_PID;
 		m_result_msg += "=";
 		m_result_msg += m_vm_pid;
+		if( cputime > 0 ) {
+			// Update vm running time
+			m_cpu_time = cputime;
+
+			m_result_msg += " ";
+			m_result_msg += VMGAHP_STATUS_COMMAND_CPUTIME;
+			m_result_msg += "=";
+			m_result_msg += m_cpu_time;
+			//m_result_msg += (double)(m_cpu_time + m_cputime_before_suspend);
+		}
+
 		return true;
 
 	}else if( strcasecmp(vm_status.Value(), "Suspended") == 0 ) {
@@ -1813,7 +1839,7 @@ VMwareType::CreateConfigFile()
 		MyString tmp_string2;
 
 		tmp_string2 = m_vm_networking_type;
-		tmp_string2.strupr();
+		tmp_string2.upper_case();
 
 		tmp_string.sprintf("VMWARE_%s_NETWORKING_TYPE", tmp_string2.Value());
 

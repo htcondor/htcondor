@@ -97,6 +97,7 @@ GLExecPrivSepHelper::initialize(const char* proxy, const char* sandbox)
 	m_setup_script.sprintf("%s/condor_glexec_setup", libexec);
 	m_run_script.sprintf("%s/condor_glexec_run", libexec);
 	m_wrapper_script.sprintf("%s/condor_glexec_job_wrapper", libexec);
+	m_proxy_update_script.sprintf("%s/condor_glexec_update_proxy", libexec);
 	m_cleanup_script.sprintf("%s/condor_glexec_cleanup", libexec);
 	free(libexec);
 
@@ -155,6 +156,26 @@ GLExecPrivSepHelper::chown_sandbox_to_condor()
 	}
 
 	m_sandbox_owned_by_user = false;
+}
+
+bool
+GLExecPrivSepHelper::update_proxy(const char* new_proxy)
+{
+	ASSERT(m_initialized);
+
+	MyString glexec_arg = m_glexec;
+	if (!m_sandbox_owned_by_user) {
+		glexec_arg = "-";
+	}
+
+	ArgList args;
+	args.AppendArg(m_proxy_update_script);
+	args.AppendArg(glexec_arg);
+	args.AppendArg(new_proxy);
+	args.AppendArg(m_proxy);
+	args.AppendArg(m_sandbox);
+
+	return (run_script(args) == 0);
 }
 
 int

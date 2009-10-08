@@ -37,50 +37,57 @@ SimpleList<HOOK_RUN_INFO*> JobRouterHookMgr::m_job_hook_list;
 // // // // // // // // // // // //
 
 JobRouterHookMgr::JobRouterHookMgr()
-	: HookClientMgr()
+	: HookClientMgr(),
+	  NUM_HOOKS(4),
+	  UNDEFINED((char*)"UNDEFINED"),
+	  m_hook_paths(MyStringHash)
 {
-	m_hook_translate = NULL;
-	m_hook_update_job_info = NULL;
-	m_hook_job_exit = NULL;
-	m_hook_cleanup = NULL;
+	m_hook_maps[HOOK_TRANSLATE_JOB] = 1;
+	m_hook_maps[HOOK_UPDATE_JOB_INFO] = 2;
+	m_hook_maps[HOOK_JOB_EXIT] = 3;
+	m_hook_maps[HOOK_JOB_CLEANUP] = 4;
+	m_default_hook_keyword = NULL;
 
-	dprintf( D_FULLDEBUG, "Instantiating a JobRouterHookMgr\n" );
+	dprintf(D_FULLDEBUG, "Instantiating a JobRouterHookMgr\n");
 }
 
 
 JobRouterHookMgr::~JobRouterHookMgr()
 {
-	dprintf( D_FULLDEBUG, "Deleting the JobRouterHookMgr\n" );
+	dprintf(D_FULLDEBUG, "Deleting the JobRouterHookMgr\n");
 
 	// Delete our copies of the paths for each hook.
 	clearHookPaths();
 
 	JobRouterHookMgr::removeAllKnownHooks();
+
+	if (NULL != m_default_hook_keyword)
+	{
+		free(m_default_hook_keyword);
+	}
 }
 
 
 void
 JobRouterHookMgr::clearHookPaths()
 {
-	if (m_hook_translate != NULL)
+	MyString key;
+	char** paths;
+	if (0 < m_hook_paths.getNumElements())
 	{
-		free(m_hook_translate);
-		m_hook_translate = NULL;
-	}
-	if (m_hook_update_job_info != NULL)
-	{
-		free(m_hook_update_job_info);
-		m_hook_update_job_info = NULL;
-	}
-	if (m_hook_job_exit != NULL)
-	{
-		free(m_hook_job_exit);
-		m_hook_job_exit = NULL;
-	}
-	if (m_hook_cleanup != NULL)
-	{
-		free(m_hook_cleanup);
-		m_hook_cleanup = NULL;
+		m_hook_paths.startIterations();
+		while (m_hook_paths.iterate(key, paths))
+		{
+			for (int i = 0; i < NUM_HOOKS; i++)
+			{
+				if (NULL != paths[i] && UNDEFINED != paths[i])
+				{
+					free(paths[i]);
+				}
+			}
+			delete[] paths;
+		}
+		m_hook_paths.clear();
 	}
 }
 
@@ -96,25 +103,79 @@ JobRouterHookMgr::initialize()
 bool
 JobRouterHookMgr::reconfig()
 {
-	// Clear out our old copies of each hook's path.
+	// Clear out old copies of each hook's path.
 	clearHookPaths();
 
-	m_hook_translate = getHookPath(HOOK_TRANSLATE_JOB);
-	m_hook_update_job_info = getHookPath(HOOK_UPDATE_JOB_INFO);
-	m_hook_job_exit = getHookPath(HOOK_JOB_EXIT);
-	m_hook_cleanup = getHookPath(HOOK_JOB_CLEANUP);
-
+	// Get the default hook keyword if it's defined
+	if (NULL != m_default_hook_keyword)
+	{
+		free(m_default_hook_keyword);
+	}
+	m_default_hook_keyword = param("JOB_ROUTER_HOOK_KEYWORD");
 	return true;
 }
 
 
 char*
-JobRouterHookMgr::getHookPath(HookType hook_type)
+JobRouterHookMgr::getHookPath(HookType hook_type, classad::ClassAd ad)
 {
-	MyString _param;
-	_param.sprintf("JOB_ROUTER_HOOK_%s", getHookTypeString(hook_type));
+	std::string keyword;
+	char** paths;
+	char* hook_path;
 
-	return validateHookPath(_param.Value());
+	if (0 == m_hook_maps[hook_type])
+	{
+		dprintf(D_ALWAYS, "JobRouterHookMgr failure: Unable to get hook path for unknown hook type '%s'\n", getHookTypeString(hook_type));
+		return NULL;
+	}
+
+	keyword = getHookKeyword(ad);
+	if (0 == keyword.length())
+	{
+		return NULL;
+	}
+
+	MyString key(keyword.c_str());
+	if (0 > m_hook_paths.lookup(key, paths))
+	{
+		// Initialize the hook paths for this keyword
+		paths = new char*[NUM_HOOKS];
+		for (int i = 0; i < NUM_HOOKS; i++)
+		{
+			paths[i] = NULL;
+		}
+		m_hook_paths.insert(key, paths);
+	}
+
+	hook_path = paths[m_hook_maps[hook_type]-1];
+	if (NULL == hook_path)
+	{
+		MyString _param;
+		_param.sprintf("%s_HOOK_%s", keyword.c_str(), getHookTypeString(hook_type));
+		hook_path = validateHookPath(_param.Value());
+		dprintf(D_FULLDEBUG, "Hook %s: %s\n", _param.Value(),
+			hook_path ? hook_path : "UNDEFINED");
+	}
+	else if (UNDEFINED == hook_path)
+	{
+		hook_path = NULL;
+	}
+	return hook_path;
+}
+
+
+std::string
+JobRouterHookMgr::getHookKeyword(classad::ClassAd ad)
+{
+	std::string hook_keyword;
+
+	if (false == ad.EvaluateAttrString(ATTR_HOOK_KEYWORD, hook_keyword))
+	{
+		if ( m_default_hook_keyword ) {
+			hook_keyword = m_default_hook_keyword;
+		}
+	}
+	return hook_keyword;
 }
 
 
@@ -122,14 +183,15 @@ int
 JobRouterHookMgr::hookTranslateJob(RoutedJob* r_job, std::string &route_info)
 {
 	ClassAd temp_ad;
+	char* hook_translate = getHookPath(HOOK_TRANSLATE_JOB, r_job->src_ad);
 
-	if (NULL == m_hook_translate)
+	if (NULL == hook_translate)
 	{
 		// hook not defined, which is ok
 		dprintf(D_FULLDEBUG, "HOOK_TRANSLATE_JOB not configured.\n");
 		return 0;
 	}
-	
+
 	// Verify the translate hook hasn't already been spawned and that
 	// we're not waiting for it to return.
 	std::string key = r_job->src_key;
@@ -154,7 +216,7 @@ JobRouterHookMgr::hookTranslateJob(RoutedJob* r_job, std::string &route_info)
 	hook_stdin += "\n------\n";
 	temp_ad.sPrint(hook_stdin);
 
-	TranslateClient* translate_client = new TranslateClient(m_hook_translate, r_job);
+	TranslateClient* translate_client = new TranslateClient(hook_translate, r_job);
 	if (NULL == translate_client)
 	{
 		dprintf(D_ALWAYS|D_FAILURE, 
@@ -168,9 +230,8 @@ JobRouterHookMgr::hookTranslateJob(RoutedJob* r_job, std::string &route_info)
 	{
 		dprintf(D_ALWAYS|D_FAILURE,
 				"ERROR in JobRouterHookMgr::hookTranslateJob: "
-				"failed to spawn HOOK_TRANSLATE_JOB (%s)\n", m_hook_translate);
+				"failed to spawn HOOK_TRANSLATE_JOB (%s)\n", hook_translate);
 		return -1;
-
 	}
 	uninit_user_ids();
 	
@@ -183,7 +244,7 @@ JobRouterHookMgr::hookTranslateJob(RoutedJob* r_job, std::string &route_info)
 	}
 
 	dprintf(D_FULLDEBUG, "HOOK_TRANSLATE_JOB (%s) invoked.\n",
-			m_hook_translate);
+			hook_translate);
 	return 1;
 }
 
@@ -192,7 +253,9 @@ int
 JobRouterHookMgr::hookUpdateJobInfo(RoutedJob* r_job)
 {
 	ClassAd temp_ad;
-	if (NULL == m_hook_update_job_info)
+	char* hook_update_job_info = getHookPath(HOOK_UPDATE_JOB_INFO, r_job->src_ad);
+
+	if (NULL == hook_update_job_info)
 	{
 		// hook not defined
 		dprintf(D_FULLDEBUG, "HOOK_UPDATE_JOB_INFO not configured.\n");
@@ -222,7 +285,7 @@ JobRouterHookMgr::hookUpdateJobInfo(RoutedJob* r_job)
 	MyString hook_stdin;
 	temp_ad.sPrint(hook_stdin);
 
-	StatusClient* status_client = new StatusClient(m_hook_update_job_info, r_job);
+	StatusClient* status_client = new StatusClient(hook_update_job_info, r_job);
 	if (NULL == status_client)
 	{
 		dprintf(D_ALWAYS|D_FAILURE, 
@@ -236,7 +299,7 @@ JobRouterHookMgr::hookUpdateJobInfo(RoutedJob* r_job)
 	{
 		dprintf(D_ALWAYS|D_FAILURE,
 				"ERROR in JobRouterHookMgr::hookUpdateJobInfo: "
-				"failed to spawn HOOK_UPDATE_JOB_INFO (%s)\n", m_hook_update_job_info);
+				"failed to spawn HOOK_UPDATE_JOB_INFO (%s)\n", hook_update_job_info);
 		return -1;
 
 	}
@@ -251,7 +314,7 @@ JobRouterHookMgr::hookUpdateJobInfo(RoutedJob* r_job)
 	}
 
 	dprintf(D_FULLDEBUG, "HOOK_UPDATE_JOB_INFO (%s) invoked.\n",
-			m_hook_update_job_info);
+			hook_update_job_info);
 	return 1;
 }
 
@@ -260,7 +323,9 @@ int
 JobRouterHookMgr::hookJobExit(RoutedJob* r_job)
 {
 	ClassAd temp_ad;
-	if (NULL == m_hook_job_exit)
+	char* hook_job_exit = getHookPath(HOOK_JOB_EXIT, r_job->src_ad);
+
+	if (NULL == hook_job_exit)
 	{
 		// hook not defined
 		dprintf(D_FULLDEBUG, "HOOK_JOB_EXIT not configured.\n");
@@ -299,7 +364,7 @@ JobRouterHookMgr::hookJobExit(RoutedJob* r_job)
 	}
 	temp_ad.sPrint(hook_stdin);
 
-	ExitClient *exit_client = new ExitClient(m_hook_job_exit, r_job);
+	ExitClient *exit_client = new ExitClient(hook_job_exit, r_job);
 	if (NULL == exit_client)
 	{
 		dprintf(D_ALWAYS|D_FAILURE, 
@@ -313,7 +378,7 @@ JobRouterHookMgr::hookJobExit(RoutedJob* r_job)
 	{
 		dprintf(D_ALWAYS|D_FAILURE,
 				"ERROR in JobRouterHookMgr::hookJobExit: "
-				"failed to spawn HOOK_JOB_EXIT (%s)\n", m_hook_job_exit);
+				"failed to spawn HOOK_JOB_EXIT (%s)\n", hook_job_exit);
 		return -1;
 
 	}
@@ -327,7 +392,7 @@ JobRouterHookMgr::hookJobExit(RoutedJob* r_job)
 				"hooks running for job key %s\n", key.c_str());
 	}
 
-	dprintf(D_FULLDEBUG, "HOOK_JOB_EXIT (%s) invoked.\n", m_hook_job_exit);
+	dprintf(D_FULLDEBUG, "HOOK_JOB_EXIT (%s) invoked.\n", hook_job_exit);
 	return 1;
 }
 
@@ -336,7 +401,9 @@ int
 JobRouterHookMgr::hookJobCleanup(RoutedJob* r_job)
 {
 	ClassAd temp_ad;
-	if (NULL == m_hook_cleanup)
+	char* hook_cleanup = getHookPath(HOOK_JOB_CLEANUP, r_job->src_ad);
+
+	if (NULL == hook_cleanup)
 	{
 		// hook not defined
 		dprintf(D_FULLDEBUG, "HOOK_JOB_CLEANUP not configured.\n");
@@ -371,7 +438,7 @@ JobRouterHookMgr::hookJobCleanup(RoutedJob* r_job)
 	MyString hook_stdin;
 	temp_ad.sPrint(hook_stdin);
 
-	CleanupClient* cleanup_client = new CleanupClient(m_hook_cleanup, r_job);
+	CleanupClient* cleanup_client = new CleanupClient(hook_cleanup, r_job);
 	if (NULL == cleanup_client)
 	{
 		dprintf(D_ALWAYS|D_FAILURE, 
@@ -385,7 +452,7 @@ JobRouterHookMgr::hookJobCleanup(RoutedJob* r_job)
 	{
 		dprintf(D_ALWAYS|D_FAILURE,
 				"ERROR in JobRouterHookMgr::JobCleanup: "
-				"failed to spawn HOOK_JOB_CLEANUP (%s)\n", m_hook_cleanup);
+				"failed to spawn HOOK_JOB_CLEANUP (%s)\n", hook_cleanup);
 		return -1;
 
 	}
@@ -400,7 +467,7 @@ JobRouterHookMgr::hookJobCleanup(RoutedJob* r_job)
 	}
 
 	dprintf(D_FULLDEBUG, "HOOK_JOB_CLEANUP (%s) invoked.\n",
-			m_hook_cleanup);
+			hook_cleanup);
 	return 1;
 }
 

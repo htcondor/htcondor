@@ -27,7 +27,6 @@
 #include "gt4job.h"
 #include "gridmanager.h"
 
-#define DEFAULT_MAX_PENDING_SUBMITS_PER_RESOURCE	5
 #define DEFAULT_MAX_SUBMITTED_JOBS_PER_RESOURCE		100
 #define DEFAULT_MAX_WS_DESTROYS_PER_RESOURCE		5
 
@@ -96,8 +95,6 @@ GT4Resource::GT4Resource( const char *resource_name,
 	delegationServiceUri = NULL;
 	gahp = NULL;
 	deleg_gahp = NULL;
-	submitLimit = DEFAULT_MAX_PENDING_SUBMITS_PER_RESOURCE;
-	jobLimit = DEFAULT_MAX_SUBMITTED_JOBS_PER_RESOURCE;
 	m_isGram42 = false;
 
 	const char service_name[] = "/wsrf/services/DelegationFactoryService";
@@ -127,8 +124,7 @@ dprintf(D_FULLDEBUG,"*** ~GT4Resource\n");
 dprintf(D_FULLDEBUG,"    deleting %s\n",next_deleg->deleg_uri);
 		delegatedProxies.DeleteCurrent();
 		free( next_deleg->deleg_uri );
-			// unacquire proxy?
-		ReleaseProxy( next_deleg->proxy );
+		ReleaseProxy( next_deleg->proxy, delegationTimerId );
 		delete next_deleg;
 	}
 	if ( delegationServiceUri != NULL ) {
@@ -268,8 +264,6 @@ void GT4Resource::UnregisterJob( GT4Job *job )
 		}
 		if ( delete_deleg ) {
 dprintf(D_FULLDEBUG,"*** deleting delegation %s\n",job->delegatedCredentialURI);
-			bool reacquire_proxy = false;
-			Proxy *proxy_to_reacquire = job->jobProxy;
 			GT4ProxyDelegation *next_deleg;
 			delegatedProxies.Rewind();
 			while ( (next_deleg = delegatedProxies.Next()) != NULL ) {
@@ -281,15 +275,9 @@ dprintf(D_FULLDEBUG,"*** deleting delegation %s\n",job->delegatedCredentialURI);
 						activeDelegationCmd = NULL;
 					}
 					free( next_deleg->deleg_uri );
-						// unacquire proxy?
 					ReleaseProxy( next_deleg->proxy );
 					delete next_deleg;
-				} else if ( next_deleg->proxy == proxy_to_reacquire ) {
-					reacquire_proxy = true;
 				}
-			}
-			if ( reacquire_proxy ) {
-				AcquireProxy( proxy_to_reacquire, delegationTimerId );
 			}
 		}
 	}
@@ -321,7 +309,6 @@ dprintf(D_FULLDEBUG,"    creating new GT4ProxyDelegation\n");
 	next_deleg->last_lifetime_extend = 0;
 	next_deleg->last_proxy_refresh = 0;
 	next_deleg->proxy = job_proxy;
-		// acquire proxy?
 	AcquireProxy( job_proxy, delegationTimerId );
 	delegatedProxies.Append( next_deleg );
 
@@ -353,7 +340,6 @@ dprintf(D_FULLDEBUG,"    creating new GT4ProxyDelegation\n");
 	next_deleg->last_lifetime_extend = 0;
 	next_deleg->last_proxy_refresh = 0;
 	next_deleg->proxy = job_proxy;
-		// acquire proxy?
 	AcquireProxy( job_proxy, delegationTimerId );
 	delegatedProxies.Append( next_deleg );
 

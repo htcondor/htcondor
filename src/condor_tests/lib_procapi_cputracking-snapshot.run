@@ -34,7 +34,7 @@ $mycmdfile = "lib_procapi_cputracking-snapshot.cmd";
 $currenthost = CondorTest::getFqdnHost();
 CondorTest::fullchomp($currenthost);
 
-system("date");
+print scalar localtime() . "\n";
 
 $mypid = $$;
 $mysaveme = $corename . ".saveme";
@@ -91,7 +91,7 @@ if($mypid == 0) {
 	}
 
 CondorTest::KillPersonal($parallelconfig);
-system("date");
+print scalar localtime() . "\n";
 
 if($result != 0)
 {

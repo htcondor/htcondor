@@ -29,7 +29,7 @@ bool condor_getcwd(MyString &path) {
 		// so we do it the hard way...
 
 	while(1) {
-		buflen += 20;
+		buflen += 256;
 		buf = (char *)malloc(buflen);
 		if( !buf ) {
 			return false;

@@ -63,15 +63,20 @@ if not exist %1\examples\NUL mkdir %1\examples
 if not exist %1\examples\cpusoak\NUL mkdir %1\examples\cpusoak
 if not exist %1\examples\printname\NUL mkdir %1\examples\printname
 if not exist %1\examples\rc5\NUL mkdir %1\examples\rc5
+if not exist %1\hdfs\NUL mkdir %1\hdfs
 
 echo. & echo Copying root Condor files...
 copy ..\Release\*.exe %1\bin
 copy ..\Release\*.dll %1\bin
 copy msvcrt.dll %1\bin
 copy msvcirt.dll %1\bin
+copy Microsoft.VC90.CRT.manifest %1\bin
+copy msvcm90.dll %1\bin
+copy msvcp90.dll %1\bin
+copy msvcr90.dll %1\bin
+copy mkisofs.bat %1\bin
+copy cdmake.exe %1\bin
 copy ..\src\condor_vm-gahp\condor_vm_vmware.pl %1\bin
-copy ..\src\condor_vm-gahp\*.dll %1\bin
-copy ..\src\condor_vm-gahp\mkisofs.exe %1\bin
 
 echo. & echo Copying Chirp files...
 copy ..\src\condor_starter.V6.1\*.class %1\lib
@@ -110,11 +115,15 @@ for %%f in (master startd quill dbmsd had credd schedd collector negotiator shad
     copy ..\Release\condor_%%f.pdb %1\bin
 )
 
+echo. & echo Copying hadoop files...
+xcopy ..\externals\install\hdfs %1\hdfs /E
+
 echo. & echo Making some aliases...
 pushd %1\bin
 copy condor_rm.exe condor_hold.exe
 copy condor_rm.exe condor_release.exe
 copy condor_rm.exe condor_vacate_job.exe
+move condor_tool.exe condor.exe
 copy condor.exe condor_on.exe
 copy condor.exe condor_off.exe
 copy condor.exe condor_restart.exe
@@ -122,6 +131,7 @@ copy condor.exe condor_reconfig.exe
 copy condor.exe condor_reschedule.exe
 copy condor.exe condor_vacate.exe
 copy condor.exe condor_set_shutdown.exe
+copy condor.exe condor_squawk.exe
 copy condor_cod.exe condor_cod_request.exe
 popd
 

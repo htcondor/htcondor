@@ -46,6 +46,7 @@ unless ($pid)
 
 
 CondorTest::debug("current directory is $newsocketname\n",1);
+CondorTest::LoadExemption("job_dagman_maxprescripts,no,DC_AUTHENTICATE unable to receive auth_info!");
 
 # information for creating logging client from template.
 my $checkintemplate = "job_dagman_maxprescripts-checkin.template";

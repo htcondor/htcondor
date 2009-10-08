@@ -56,6 +56,8 @@ sub compare_3arrays_byrows
 	$href = shift;
 	$delayedfail = 0;
 
+	Condor::DebugOn();
+	Condor::DebugLevel(1);
 	CondorTest::debug("Make sure they all have the same number of entries\n",1);
 
 	my $count1, $count2, $count3;
@@ -95,12 +97,13 @@ sub compare_3arrays_byrows
 				#print "Good match:${$harray1}[$location] at entry $location\n";
 			} else {
 				CondorTest::debug("Match FAIL position <<$location>>: 1: ${$harray1}[$location] 2: ${$harray2}[$location] 3: ${$harray3}[$location]\n",1);
+				#print "Match FAIL position <<$location>>: 1: ${$harray1}[$location] 2: ${$harray2}[$location] 3: ${$harray3}[$location]\n";
 				return(1);
 			}
 		}
 
 		$location = $location + 1;
-		#print "Location now <<$location>>\n";
+		print "Location now <<$location>>\n";
 	}
 
 	return(0);
@@ -176,6 +179,7 @@ sub compare_2arrays_byrows
 
 	if($delayedfail == 1) {
 		CondorTest::debug("delayfail set so really failing\n",1);
+		print "delayfail set so really failing\n";
 		return(1);
 	}
 	return(0);
@@ -220,13 +224,13 @@ $submitted = sub
 	sleep(60); # database settling time
 
 		CondorTest::debug("75 submitted: <<<",1);
-		system("date");
+		print scalar localtime() . "\n";
 		CondorTest::debug(">>>\n",1);
 		CondorTest::debug("Collecting queue details from schedd\n",1);
 		my @adarray;
 		my $adstatus = 1;
 		my $adcmd = "condor_q -long  -direct schedd $cluster";
-		$adstatus = CondorTest::runCondorTool($adcmd,\@adarray,2);
+		$adstatus = CondorTest::runCondorTool($adcmd,\@adarray,2,{emit_output=>\&FALSE});
 		if(!$adstatus)
 		{
 			CondorTest::debug("Test failure due to Condor Tool Failure<$adcmd>\n",1);
@@ -241,7 +245,7 @@ $submitted = sub
 		my @bdarray;
 		my $bdstatus = 1;
 		my $bdcmd = "condor_q -long  -direct rdbms $cluster";
-		$bdstatus = CondorTest::runCondorTool($bdcmd,\@bdarray,2);
+		$bdstatus = CondorTest::runCondorTool($bdcmd,\@bdarray,2,{emit_output=>\&FALSE});
 		if(!$bdstatus)
 		{
 			CondorTest::debug("Test failure due to Condor Tool Failure<$bdcmd>\n",1);
@@ -258,7 +262,7 @@ $submitted = sub
 		%skip = ("Submitter", 1, "LocalSysCpu", 1, "LocalUserCpu", 1,
 					"Rank", 1, "RemoteSysCpu", 1, "RemoteWallClockTime", 1,
 					"ServerTime", 1, "RemoteUserCpu", 1, "Environment", 1);
-		system("date");
+		print scalar localtime() . "\n";
 		@scheddads = sort(@adarray);
 		@rdbmsads = sort(@bdarray);
 		$scheddout = "job_quill_basic.schedd_ads";
@@ -276,11 +280,11 @@ $submitted = sub
 		print RDBS "*******************\n";
 		close(SCHEDD);
 		close(RDBS);
-		system("date");
+		print scalar localtime() . "\n";
 		$result = compare_2arrays_byrows(\@scheddads, \@rdbmsads, \%skip);
 		# save the time and leave the jobs behind before stopping condor
 		if( $result != 0 ) {
-			die "Ads from all three sources were not the same!!!\n";
+			die "Ads from both sources were not the same!!!\n";
 		}
 		CondorTest::debug("$testname: SUCCESS\n",1);
 		exit(0);

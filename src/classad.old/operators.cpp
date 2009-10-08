@@ -34,7 +34,7 @@ static void compareIntegers (OpKind, Value&, Value&, Value&);
 static ValueType coerceToNumber(Value&, Value&);
 
 
-char *opString[] = 
+const char *opString[] = 
 {
 	"",		// no-op
 

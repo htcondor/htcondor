@@ -27,6 +27,7 @@
 #include "gahp_common.h"
 #include "vmgahp.h"
 #include "vm_type.h"
+#include <libvirt/libvirt.h>
 
 class XenDisk {
 	public:
@@ -35,16 +36,15 @@ class XenDisk {
 		MyString permission;
 };
 
-class XenType : public VMType
+class VirshType : public VMType
 {
 public:
-	static bool checkXenParams(VMGahpConfig* config);
 	static bool testXen(VMGahpConfig* config);
 	static bool killVMFast(const char* script, const char* vmname);
 
-	XenType(const char* scriptname, const char* workingpath, ClassAd* ad);
+	VirshType(const char* scriptname, const char* workingpath, ClassAd* ad);
 
-	virtual ~XenType();
+	virtual ~VirshType();
 
 	virtual bool Start();
 
@@ -63,8 +63,7 @@ public:
 	virtual bool CreateConfigFile();
 
 	virtual bool killVM();
-
-private:
+protected:
 	MyString makeVirshDiskString(void);
 	bool createISO();
 
@@ -78,7 +77,10 @@ private:
 	bool checkCkptSuspendFile(const char* file);
 	bool ResumeFromSoftSuspend(void);
 	bool CreateXenVMConfigFile(const char* filename);
-	bool CreateVirshConfigFile(const char* filename);
+
+	// For the base class, this just prints out the classad
+	// attributes and the type for each attribute.
+	virtual bool CreateVirshConfigFile(const char* filename);
 
 	SimpleList<XenDisk*> m_disk_list;
 
@@ -97,5 +99,27 @@ private:
 	bool m_allow_hw_vt_suspend;
 	bool m_restart_with_ckpt;
 	bool m_has_transferred_disk_file;
+
+	MyString m_xml;
+	virConnectPtr m_libvirt_connection;
 };
+
+class XenType : public VirshType
+{
+ public:
+  XenType(const char* scriptname, const char* workingpath, ClassAd* ad);
+  static bool checkXenParams(VMGahpConfig* config);
+ protected:
+  virtual bool CreateVirshConfigFile(const char * filename);
+};
+
+class KVMType : public VirshType
+{
+ public:
+  KVMType(const char* scriptname, const char* workingpath, ClassAd* ad);
+  static bool checkXenParams(VMGahpConfig* config);
+ protected:
+  virtual bool CreateVirshConfigFile(const char * filename);
+};
+
 #endif

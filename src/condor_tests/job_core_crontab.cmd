@@ -11,7 +11,7 @@ Arguments		= 20
 ## The job will run every 3 minutes
 ##
 CronHour		= *
-CronMinute		= */3
+CronMinute		= */2
 CronDayOfMonth	= *
 CronMonth		= *
 CronDayOfWeek	= *
@@ -19,7 +19,7 @@ CronDayOfWeek	= *
 ## 
 ## Preparation Time
 ##
-CronPrepTime	= 90
+CronPrepTime	= 20
 
 
 #

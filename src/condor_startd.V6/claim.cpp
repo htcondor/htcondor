@@ -84,6 +84,8 @@ Claim::Claim( Resource* res_ip, ClaimType claim_type, int lease_duration )
 	c_retire_peacefully = false;
 	c_preempt_was_true = false;
 	c_schedd_closed_claim = false;
+
+	c_last_state = CLAIM_UNCLAIMED;
 }
 
 
@@ -459,7 +461,7 @@ Claim::publishStateTimes( ClassAd* cad )
 
 
 void
-Claim::dprintf( int flags, char* fmt, ... )
+Claim::dprintf( int flags, const char* fmt, ... )
 {
 	va_list args;
 	va_start( args, fmt );
@@ -889,7 +891,7 @@ Claim::sendAlive()
 
 	int connect_timeout = MAX(20, ((c_lease_duration / 3)-3) );
 
-	if (!(sock = matched_schedd.reliSock( connect_timeout, NULL, true ))) {
+	if (!(sock = matched_schedd.reliSock( connect_timeout, 0, NULL, true ))) {
 		dprintf( D_FAILURE|D_ALWAYS, 
 				"Alive failed - couldn't initiate connection to %s\n",
 		         c_addr );
@@ -929,7 +931,7 @@ Claim::sendAlive()
 int
 Claim::sendAliveConnectHandler(Stream *s)
 {
-	char* c_addr = "(unknown)";
+	const char* c_addr = "(unknown)";
 	if ( c_client ) {
 		c_addr = c_client->addr();
 	}
@@ -1010,7 +1012,7 @@ int
 Claim::sendAliveResponseHandler( Stream *sock )
 {
 	int reply;
-	char* c_addr = "(unknown)";
+	const char* c_addr = "(unknown)";
 
 	if ( c_client ) {
 		c_addr = c_client->addr();
@@ -1062,7 +1064,9 @@ Claim::leaseExpired()
 		if( removeClaim(false) ) {
 				// There is no starter, so remove immediately.
 				// Otherwise, we will be removed when starter exits.
-			getCODMgr()->removeClaim(this);
+			CODMgr* pCODMgr = getCODMgr();
+			if (pCODMgr)
+				pCODMgr->removeClaim(this);
 		}
 		return TRUE;
 	}
@@ -1324,7 +1328,7 @@ Claim::setStarter( Starter* s )
 
 
 void
-Claim::starterExited( void )
+Claim::starterExited( int status )
 {
 		// Now that the starter is gone, we need to change our state
 	changeState( CLAIM_IDLE );
@@ -1332,7 +1336,7 @@ Claim::starterExited( void )
 		// Notify our starter object that its starter exited, so it
 		// can cancel timers any pending timers, cleanup the starter's
 		// execute directory, and do any other cleanup. 
-	c_starter->exited();
+	c_starter->exited(status);
 	
 		// Now, clear out this claim with all the starter-specific
 		// info, including the starter object itself.
@@ -1921,6 +1925,18 @@ Claim::writeJobAd( int pipe_end )
 	return true;
 }
 
+bool
+Claim::writeMachAd( Stream* stream )
+{
+	dprintf(D_FULLDEBUG | D_JOB, "Sending Machine Ad to Starter\n");
+	c_rip->r_classad->dPrint(D_JOB);
+	if (!c_rip->r_classad->put(*stream) || !stream->end_of_message()) {
+		dprintf(D_ALWAYS, "writeMachAd: Failed to write machine ClassAd to stream\n");
+		return false;
+	}
+	return true;
+}
+
 ///////////////////////////////////////////////////////////////////////////
 // Client
 ///////////////////////////////////////////////////////////////////////////
@@ -2111,11 +2127,8 @@ newIdString( char** id_str_ptr )
 		// keylen is 20 in order to avoid generating claim ids that
 		// overflow the 80 byte buffer in pre-7.1.3 negotiators
 	const size_t keylen = 20;
-	unsigned char *keybuf = Condor_Crypt_Base::randomKey(keylen);
-	int i;
-	for(i=0;i<keylen;i++) {
-		id.sprintf_cat("%02x",keybuf[i]);
-	}
+	char *keybuf = Condor_Crypt_Base::randomHexKey(keylen);
+	id += keybuf;
 	free( keybuf );
 
 	*id_str_ptr = strdup( id.Value() );

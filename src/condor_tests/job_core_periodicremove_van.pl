@@ -26,7 +26,6 @@ $cmd = $ARGV[0];
 
 CondorTest::debug("Submit file for this test is $cmd\n",1);
 CondorTest::debug("looking at env for condor config\n",1);
-system("printenv | grep CONDOR_CONFIG");
 
 $condor_config = $ENV{CONDOR_CONFIG};
 CondorTest::debug("CONDOR_CONFIG = $condor_config\n",1);

@@ -301,6 +301,11 @@ ParallelShadow::getResources( void )
 				gen_ckpt_name(0, job_cluster, 0, 0));
 			tmp_ad->Insert(buffer);
 
+				// Put the correct claim id into this ad's ClaimId attribute.
+				// Otherwise, it is the claim id of the master proc.
+				// This is how the starter finds out about the claim id.
+			tmp_ad->Assign(ATTR_CLAIM_ID,claim_id);
+
 			rr->setJobAd( tmp_ad );
 			nodenum++;
 
@@ -513,7 +518,7 @@ ParallelShadow::shutDown( int exitReason )
 			// If the policy is wait for all nodes to exit
 			// see if any are still running.  If so,
 			// just return, and wait for them all to go
-			if (r->getResourceState() == RR_EXECUTING) {
+			if (r->getResourceState() != RR_FINISHED) {
 				return;
 			}
 		}
@@ -521,7 +526,7 @@ ParallelShadow::shutDown( int exitReason )
 	}
 		// If node0 is still running, don't really shut down
 	RemoteResource *r =  ResourceList[0];
-	if (r->getResourceState() == RR_EXECUTING) {
+	if (r->getResourceState() != RR_FINISHED) {
 		return;
 	}
 	handleJobRemoval(0);

@@ -1,0 +1,16 @@
+config job_dagman_retry_recovery.config
+
+Job A job_dagman_retry_recovery-nodeA.cmd
+
+Job B job_dagman_retry_recovery-nodeB.cmd
+Retry B 1
+Parent A Child B
+
+Job B2 job_dagman_retry_recovery-nodeB2.cmd
+Script Pre B2 job_dagman_retry_recovery-nodeB2-pre.pl
+Script Post B2 job_dagman_retry_recovery-nodeB2-post.pl $RETURN
+Retry B2 1
+Parent A Child B2
+
+Job C job_dagman_retry_recovery-nodeC.cmd
+Parent B B2 Child C

@@ -135,21 +135,21 @@ COLLECTOR_NAME 		= My Pool
 ##  machine(s) where whoever is the hawkeye administrator(s) works
 ##  (assuming you trust all the users who log into that/those
 ##  machine(s), since this is machine-wide access you're granting).
-HOSTALLOW_ADMINISTRATOR = $(HAWKEYE_HOST), $(FULL_HOSTNAME)
+ALLOW_ADMINISTRATOR = $(HAWKEYE_HOST), $(FULL_HOSTNAME)
 
 ##  If there are no machines that should have administrative access 
 ##  to your pool (for example, there's no machine where only trusted
 ##  users have accounts), you can uncomment this setting.
 ##  Unfortunately, this will mean that administering your pool will 
 ##  be more difficult.
-#HOSTDENY_ADMINISTRATOR = *
+#DENY_ADMINISTRATOR = *
 
 ##  What machines should have "owner" access to your machines, meaning
 ##  they can issue commands that a machine owner should be able to
 ##  issue to their own machine (like hawkeye_vacate).  This defaults to
 ##  machines with administrator access, and the local machine.  This
 ##  is probably what you want.
-HOSTALLOW_OWNER = $(FULL_HOSTNAME), $(HOSTALLOW_ADMINISTRATOR)
+ALLOW_OWNER = $(FULL_HOSTNAME), $(ALLOW_ADMINISTRATOR)
 
 ##  Read access.  Machines listed as allow (and/or not listed as deny)
 ##  can view the status of your pool, but cannot join your pool 
@@ -161,39 +161,39 @@ HOSTALLOW_OWNER = $(FULL_HOSTNAME), $(HOSTALLOW_ADMINISTRATOR)
 ##  will be able to view the status of your pool and more easily help
 ##  you install, configure or debug your Hawkeye installation.
 ##  It is important to have this defined.
-HOSTALLOW_READ = * 
-#HOSTALLOW_READ = *.your.domain, *.cs.wisc.edu
-#HOSTDENY_READ = *.bad.subnet, bad-machine.your.domain, 144.77.88.*
+ALLOW_READ = * 
+#ALLOW_READ = *.your.domain, *.cs.wisc.edu
+#DENY_READ = *.bad.subnet, bad-machine.your.domain, 144.77.88.*
 
 ##  Write access.  Machines listed here can join your pool, submit
 ##  jobs, etc.  Note: Any machine which has WRITE access must
 ##  also be granted READ access.  Granting WRITE access below does
 ##  not also automatically grant READ access; you must change
-##  HOSTALLOW_READ above as well.
+##  ALLOW_READ above as well.
 ##
 ##  You must set this to something else before Hawkeye will run.
 ##  This most simple option is:
-##    HOSTALLOW_WRITE = *
+##    ALLOW_WRITE = *
 ##  but note that this will allow anyone to submit jobs or add
 ##  machines to your pool and is serious security risk.
-HOSTALLOW_WRITE = YOU_MUST_CHANGE_THIS_INVALID_HAWKEYE_CONFIGURATION_VALUE
-#HOSTALLOW_WRITE = *.your.domain, your-friend's-machine.other.domain
-#HOSTDENY_WRITE = bad-machine.your.domain
+ALLOW_WRITE = YOU_MUST_CHANGE_THIS_INVALID_HAWKEYE_CONFIGURATION_VALUE
+#ALLOW_WRITE = *.your.domain, your-friend's-machine.other.domain
+#DENY_WRITE = bad-machine.your.domain
 
 ##  Config access.  Machines listed here can use the hawkeye_config_val
 ##  tool to modify all daemon configurations except those specified in
 ##  the hawkeye_config.root file.  This level of host-wide access
 ##  should only be granted with extreme caution.  By default, config
 ##  access is denied from all hosts.
-#HOSTALLOW_CONFIG = trusted-host.your.domain
+#ALLOW_CONFIG = trusted-host.your.domain
 
 ##  Flocking Configs.  These are the real things that Hawkeye looks at,
 ##  but we set them from the FLOCK_FROM/TO macros above.  It is safe
 ##  to leave these unchanged.
-HOSTALLOW_WRITE_COLLECTOR = $(HOSTALLOW_WRITE)
-HOSTALLOW_WRITE_STARTD    = $(HOSTALLOW_WRITE)
-HOSTALLOW_READ_COLLECTOR  = $(HOSTALLOW_READ)
-HOSTALLOW_READ_STARTD     = $(HOSTALLOW_READ)
+ALLOW_WRITE_COLLECTOR = $(ALLOW_WRITE)
+ALLOW_WRITE_STARTD    = $(ALLOW_WRITE)
+ALLOW_READ_COLLECTOR  = $(ALLOW_READ)
+ALLOW_READ_STARTD     = $(ALLOW_READ)
 
 
 ##--------------------------------------------------------------------
@@ -227,7 +227,7 @@ HOSTALLOW_READ_STARTD     = $(HOSTALLOW_READ)
 #PERSISTENT_CONFIG_DIR = /full/path/to/root-only/local/directory
 
 ##  Attributes that can be set by hosts with "CONFIG" permission (as
-##  defined with HOSTALLOW_CONFIG and HOSTDENY_CONFIG above).
+##  defined with ALLOW_CONFIG and DENY_CONFIG above).
 ##  The commented-out value here was the default behavior of Hawkeye
 ##  prior to version 6.3.3.  If you don't need this behavior, you
 ##  should leave this commented out.
@@ -344,7 +344,6 @@ MAX_STARTD_LOG		= 1000000
 STARTD_DEBUG		= D_COMMAND D_JOB
 
 MAX_STARTER_LOG		= 1000000
-STARTER_DEBUG		= D_NODATE
 
 MAX_MASTER_LOG		= 1000000
 MASTER_DEBUG		= D_COMMAND

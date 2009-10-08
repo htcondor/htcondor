@@ -24,7 +24,7 @@ $testdesc =  'lib_classad - runs prebuilt classad tests from testbin_dir';
 $testname = "lib_classads";
 $test = "../testbin_dir/test_classads";
 
-system("date");
+print scalar localtime() . "\n";
 
 open(ELOG,"$test 2>&1 |") || die "Could not run test<<$test>>: $!\n";
 while(<ELOG>) {

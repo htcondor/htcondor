@@ -23,6 +23,7 @@
 
 #include "condor_common.h"
 #include "condor_classad_util.h"
+#include "proc.h"
 
 //------------------------------------------------------------------------
 

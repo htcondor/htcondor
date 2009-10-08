@@ -107,6 +107,49 @@ fi
 # Figure out what platform we're being run on
 ############################################################
 
+AC_ARG_WITH(arch,
+  [AS_HELP_STRING([--with-arch],
+     [Specify the architecture string that Condor will be built with])],
+  [ARCH=$withval],
+  [ARCH=""])
+
+AC_ARG_WITH(os,
+  [AS_HELP_STRING([--with-os],
+     [Specify the operating system string that Condor will be built with])],
+  [OS=$withval],
+  [OS=""])
+
+AC_ARG_WITH(kernel,
+  [AS_HELP_STRING([--with-kernel],
+     [Specify the kernel version string that Condor will be built with])],
+  [KERNEL=$withval],
+  [KERNEL=""])
+
+AC_ARG_WITH(os-version,
+  [AS_HELP_STRING([--with-os-version],
+     [Specify the O/S version string that Condor will be built with])],
+  [OSVER=$withval],
+  [OSVER=""])
+
+AC_ARG_WITH(sysname,
+  [AS_HELP_STRING([--with-sysname],
+     [Specify the system name string that Condor will be built with])],
+  [SYSNAME=$withval],
+  [SYSNAME=""])
+
+AC_ARG_WITH(libc,
+  [AS_HELP_STRING([--with-libc],
+     [Specify the libc name & version that Condor will be built with])],
+  [LIBC=$withval],
+  [LIBC=""])
+
+AC_ARG_WITH(platform,
+  [AS_HELP_STRING([--with-platform],
+     [Specify the platform name that Condor will be built with])],
+  [_cv_platform=$withval],
+  [_cv_platform=""])
+
+
 # on Darwin on intel, uname will *always* report i386 when in reality it may
 # be an x86_64 machine. Here we determine if sysctl is available, and then
 # later we'll use it to figure out the actual platform.
@@ -127,7 +170,7 @@ osversion=`uname -v`
 # this is what ends up as "Architecture" in the Imakefiles, and is
 # used in a number of the IS_* #define's too.  luckily, we can use the
 # same thing in both places without confusion...
-_cv_arch=""
+_cv_arch="UNKNOWN_ARCH"
 
 # this is the opsys-specific string in the IS_* #define's
 _cv_opsys=""
@@ -154,7 +197,11 @@ _cv_kernel_rev="XXX"
 
 os=`uname -s`
 
-if test "$os" = "HP-UX"; then
+if test "$ARCH" != "" && test "$SYSNAME" != "" && test "$LIBC" != ""  &&
+   test "$OS"   != "" && test "$KERNEL"  != "" && test "$OSVER" != "" ; then
+  AC_MSG_NOTICE([Skipping system information checks])
+
+elif test "$os" = "HP-UX"; then
   _cv_op_sys="HPUX"
   _cv_opsys="HPUX"
   if test "$osrelease" = "B.10.20" ; then
@@ -262,7 +309,7 @@ elif test $os = "Linux" ; then
 	;;
      # Handle post-FC releases more robustly
      * )
-        _cv_linux_distro=`$RPMQUERY -q --queryformat "F%{VERSION}" fedora-release`
+        _cv_linux_distro=F`cat /etc/fedora-release|$PERL -ne '/.* (.*) \((.*)\)/;print $1;'`
 	;;
     esac
   elif test -f "/etc/redhat-release" ; then
@@ -297,7 +344,7 @@ elif test $os = "Linux" ; then
           esac
        elif (grep -q "Red Hat Enterprise Linux" /etc/redhat-release) ; then
          # RHEL
-	 _cv_linux_distro=RHEL`$RPMQUERY -q --queryformat "%{VERSION}" redhat-release | tr -d \[[A-Za-z]] `
+	 _cv_linux_distro=RHEL`cat /etc/redhat-release|$PERL -ne '/.* (.*) \(.*\)/;print $1;' | $AWK -F. '{printf "%s", $1}'`
        else
           $_rh_release=`cat /etc/redhat-release`
           AC_MSG_WARN([You may have trouble building and/or packaging Condor on $_rh_release])
@@ -325,7 +372,7 @@ elif test $os = "Linux" ; then
      "4.0" )
        _cv_linux_distro="DEBIAN40"
        ;;
-     "5.0" )
+     5.0* )
        _cv_linux_distro="DEBIAN50"
        ;;
      * )
@@ -501,6 +548,44 @@ else
   AC_MSG_ERROR([Condor has not been ported to this platform])
 fi
 
+if test "$ARCH" != "" ; then
+  AC_MSG_NOTICE([Using architecture \"$ARCH\" from command line])
+  _cv_arch="$ARCH"
+fi
+
+if test "$OS" != "" ; then
+  AC_MSG_NOTICE([Using operating system \"$OS\" from command line])
+  _cv_with_os="YES"
+  _cv_op_sys="$OS"
+  _cv_opsys="$OS"
+fi
+
+if test "$OSVER" != "" ; then
+  AC_MSG_NOTICE([Using operating system version \"$OSVER\" from command line])
+  _cv_opsys_vers="$OSVER"
+fi
+
+if test "$SYSNAME" != "" ; then
+  AC_MSG_NOTICE([Using system name \"$SYSNAME\" from command line])
+  _cv_sysname="$SYSNAME"
+fi
+
+if test "$KERNEL"  != "" ; then
+  AC_MSG_NOTICE([Using kernel version \"$OSVER\" from command line])
+  _cv_kernel_rev="$KERNEL"
+fi
+
+if test "$LIBC" != "" ; then
+  AC_MSG_NOTICE([Using libc \"$LIBC\" from command line])
+  _cv_libc_kind=`echo $LIBC | $CUT -f1 -d-`
+  _cv_libc_major=`echo $LIBC | cut -f2 -d- | $CUT -f1 -d.`
+  _cv_libc_minor=`echo $LIBC | cut -f2 -d- | $CUT -f2 -d.`
+  _cv_libc_patch=`echo $LIBC | cut -f2 -d- | $CUT -f3 -d.`
+  _cv_libc_full=`echo $_cv_libc_kind $_cv_libc_major $_cv_libc_minor $_cv_libc_patch|$PERL -ane 'print "#define IS_".join('_',@F)." YES";'`
+  _cv_libc_majmin="#define IS_$_cv_libc_kind$_cv_libc_major$_cv_libc_minor YES"
+  _cv_libc_is_kind="#define IS_$_cv_libc_kind YES"
+fi
+
 AC_MSG_CHECKING([architecture])
 AC_MSG_RESULT([$_cv_arch])
 AC_SUBST(_cv_arch,$_cv_arch)
@@ -521,6 +606,10 @@ AC_SUBST(_cv_sysname,$_cv_sysname)
 AC_MSG_CHECKING([kernel revision])
 AC_MSG_RESULT([$_cv_kernel_rev])
 AC_SUBST(_cv_kernel_rev,$_cv_kernel_rev)
+
+AC_MSG_CHECKING([platform name])
+AC_MSG_RESULT([$_platform])
+AC_SUBST(_cv_platform,$_cv_platform)
 
 # check out the libc
 if test "$_cv_opsys" = "LINUX" ; then
@@ -595,6 +684,20 @@ AC_ARG_ENABLE(bgd-support,
      [Enable support for HTC mode on the BlueGene machine.])],
   [],
   [enable_bgd_support=no])
+
+# disabled by default for now, until I'm sure NMI has the required tools
+AC_ARG_ENABLE(checksum-md5,
+  [AS_HELP_STRING([--enable-checksum-md5],
+     [Enable production and validation of MD5 checksums for released packages.])],
+  [],
+  [enable_checksum_md5=no])
+
+# disabled by default for now, until I'm sure NMI has the required tools
+AC_ARG_ENABLE(checksum-sha1,
+  [AS_HELP_STRING([--enable-checksum-sha1],
+     [Enable production and validation of SHA1 checksums for released packages.])],
+  [],
+  [enable_checksum_sha1=no])
 
 AC_ARG_ENABLE(proper,
   [AS_HELP_STRING([--enable-proper],
@@ -1333,7 +1436,6 @@ case "$_cv_opsys-$_cv_opsys_vers-$_cv_arch-$_cv_linux_distro-$_cv_libc_major-$_c
   *-HPUX11-* | \
   LINUX-*-ALPHA-* | \
   LINUX-*-*-DEBIAN40-* | \
-  LINUX-*-*-DEBIAN50-* | \
   LINUX-*-IA64-* | \
   SOLARIS-* | \
   LINUX-*-CONDOR_PPC-* ) _cv_clipped_default=yes ;;
@@ -2111,6 +2213,7 @@ else
 fi
 AC_SUBST(JAR,$ac_jar)
 
+# Test for md5sum
 AC_PATH_PROG(ac_md5sum,md5sum,no,[$PATH])
 if test $ac_md5sum = "no"; then
   AC_MSG_WARN( [md5sum not found] )
@@ -2119,13 +2222,32 @@ else
 fi
 AC_SUBST(MD5SUM,$ac_md5sum)
 
+# Test for sha1sum
 AC_PATH_PROG(ac_sha1sum,sha1sum,no,[$PATH])
 if test $ac_sha1sum = "no"; then
   AC_MSG_WARN( [sha1sum not found] )
 else
   AC_DEFINE([HAVE_SHA1SUM],[1],[Define if sha1sum is available])
 fi
-AC_SUBST(MD5SUM,$ac_sha1sum)
+AC_SUBST(SHA1SUM,$ac_sha1sum)
+
+# By default, we check to see if we can produce md5 integrity checks on the
+# released tarballs, rpms, and whatever else.
+if test "x$enable_checksum_md5" = "xyes"; then
+   # If this is defined to 1, then the checksums are *required* and produced.
+   # If it is undefined, then the checksum may or may not be produced
+   # depending upon what was available on the machine.
+   AC_DEFINE([ENABLE_CHECKSUM_MD5], [1], [Define if md5 checksums are required for released packages])
+fi
+
+# By default, we check to see if we can produce sha1 integrity checks on the
+# released tarballs, rpms, and whatever else.
+if test "x$enable_checksum_sha1" = "xyes"; then
+   # If this is defined to on, then the checksums are *required* and produced.
+   # If it is undefined, then the checksum may or may not be produced
+   # depending upon what was available on the machine.
+   AC_DEFINE([ENABLE_CHECKSUM_SHA1], [1], [Define if sha1 checksums are required for released packages])
+fi
 
 AC_ARG_ENABLE([rpm],
   AC_HELP_STRING([--enable-rpm],
@@ -2169,14 +2291,6 @@ AC_ARG_ENABLE([malloc-debug],
 
 AS_IF([test "x$enable_malloc_debug" = xyes],
   [CPPFLAGS="$CPPFLAGS -DMALLOC_DEBUG"])
-
-AC_ARG_ENABLE([netman],
-  AC_HELP_STRING([--enable-netman],
-    [enable NETMAN functionality (default: no)]),
-  [],
-  [enable_netman=no])
-AS_IF([test "x$enable_netman" = xyes],
-  [AC_DEFINE([ENABLE_NETMAN], [1], [Define if enabling NETMAM])])
 
 AC_ARG_ENABLE([nest],
   AC_HELP_STRING([--enable-nest],
@@ -2222,6 +2336,13 @@ AS_IF([test "x$enable_kbdd" = xyes],
    AC_SUBST(X11_LIBS,"")
    AC_SUBST(X11_LDFLAGS, "")])
 
+AC_ARG_ENABLE([hdfs],
+  AC_HELP_STRING([--enable-hdfs],
+    [enable hadoop filesystem functionality (default: yes)]),
+  [],
+  [enable_hdfs=yes])
+AS_IF([test "x$enable_hdfs" = xyes],
+  [AC_DEFINE([WANT_HDFS], [1], [Define if enabling HDFS])])
 
 # Here we figure out whether or not the circumstances are correct for us
 # to be able to separate the debugging symbols from the executables and
@@ -2243,15 +2364,20 @@ fi
 # checks for libraries
 ############################################################
 
-# The DRMAA C library needs to be compiled with pthreads in mind if
-# pthreads are available. This machinery ends up defining HAS_PTHREADS
-# In the build system which is then used to add the correct threading
-# flags to the compile line for drmaa code.
-AC_CHECK_LIB([pthread], [pthread_create],
-  [ac_pthreads=yes
-   AC_DEFINE([HAS_PTHREADS],[1],[Define if pthreads are available])],
-  [ac_pthreads=no])
-
+# Currently in Condor, threading in daemon core on Unix requires
+# both pthreads.
+# HACK: for now the code uses Linux-specific code to implement
+# recursive mutexes, so instead of using threads wheverever we have
+# pthreads, we limit testing for pthreads to just Linux.
+if test $os = "Linux"; then
+	AC_CHECK_LIB([pthread], [pthread_create],
+  		[ac_pthreads=yes
+   		AC_DEFINE([HAVE_PTHREADS],[1],[Define if pthreads are available])
+		AC_DEFINE([HAS_PTHREADS],[1],[Define if pthreads are available for DRMAA])
+		AC_CHECK_LIB([pthread],[pthread_sigmask],AC_DEFINE([HAVE_PTHREAD_SIGMASK],[1],[Define to 1 of you have the pthread_sigmask function]))
+		],
+  		[ac_pthreads=no])
+fi
 
 ############################################################
 # checks for header files
@@ -2264,10 +2390,10 @@ AC_CHECK_HEADERS([sys/param.h])
 AC_CHECK_HEADERS([stdint.h])
 AC_CHECK_HEADERS([inttypes.h])
 AC_CHECK_HEADERS([os_types.h])
+AC_CHECK_HEADERS([sys/syscall.h])
 AC_CHECK_HEADERS([sys/personality.h])
 AC_CHECK_HEADERS([linux/personality.h])
 AC_CHECK_HEADERS([linux/magic.h])
-AC_CHECK_HEADERS([linux/nfsd/const.h])
 AC_CHECK_HEADERS([linux/sockios.h])
 AC_CHECK_HEADERS([linux/types.h])
 AC_CHECK_HEADERS([linux/ethtool.h],[],[],[
@@ -2289,11 +2415,61 @@ AC_CHECK_HEADERS([sys/mount.h],[],[],[
 #endif])
 AC_CHECK_HEADERS([ustat.h])
 AC_CHECK_HEADERS([dlfcn.h])
-AC_CHECK_HEADERS([valgrind.h])
 AC_CHECK_HEADERS([resolv.h],[],[],[
-#include<sys/types.h>
+#if HAVE_SYS_TYPES_H
+# include<sys/types.h>
+#endif
 #include<netinet/in.h>
 #include<arpa/nameser.h>])
+AC_CHECK_HEADERS([pthread.h])
+AC_CHECK_HEADERS([lber.h])
+AC_CHECK_HEADERS([ldap.h],[],[],[
+#if HAVE_LBER_H
+# include <lber.h>
+#endif])
+
+AC_MSG_CHECKING([Checking if linux/nfs_fs.h is present and usable])
+AC_COMPILE_IFELSE([
+AC_LANG_SOURCE([
+#include <unistd.h>
+#ifdef HAVE_SYS_TYPES_H
+# include <sys/types.h>
+#endif
+#ifdef HAVE_SYS_PARAM_H
+# include <sys/param.h>
+#endif
+#if HAVE_LINUX_TYPES_H
+# include <linux/types.h>
+#endif
+#include <linux/nfs_fs.h>
+])],
+[AC_MSG_RESULT([yes])
+ AC_DEFINE(HAVE_LINUX_NFS_FS_H,[1],[Define to 1 if <linux/nfs_fs.h> is present and usable])],
+[AC_MSG_RESULT([no])])
+
+AC_MSG_CHECKING([Checking if linux/nfsd/const.h is present and usable])
+AC_COMPILE_IFELSE([
+AC_LANG_SOURCE([
+#include <unistd.h>
+#ifdef HAVE_SYS_TYPES_H
+# include <sys/types.h>
+#endif
+#ifdef HAVE_SYS_PARAM_H
+# include <sys/param.h>
+#endif
+#if HAVE_LINUX_TYPES_H
+# include <linux/types.h>
+#endif
+#include <linux/nfsd/const.h>
+])],
+[AC_MSG_RESULT([yes])
+ AC_DEFINE(HAVE_LINUX_NFSD_CONST_H,[1],[Define to 1 if <linux/nfsd/const.h> is present and usable])],
+[AC_MSG_RESULT([no])])
+
+AC_CHECK_LIB([sasl], [sasl_client_init],
+  AC_DEFINE([HAVE_LIBSASL], [1], [check for usable libsasl]))
+AC_CHECK_LIB([sasl2], [sasl_client_init],
+  AC_DEFINE([HAVE_LIBSASL2], [1], [check for usable libsasl2]))
 
 
 ############################################################
@@ -2500,6 +2676,22 @@ AC_CHECK_DECLS([SIOCETHTOOL,SIOCGIFCONF],,, [[#include <linux/sockios.h>]])
 
 # Does net/if.h define struct ifreq ?
 AC_CHECK_TYPES([struct ifreq,struct ifconf],[],[],[#include <net/if.h>])
+
+dnl
+dnl if sigwait() takes 1 or 2 arguments
+dnl
+AC_MSG_CHECKING([number of arguments to sigwait()])
+AC_TRY_COMPILE([#include <signal.h>
+#include <unistd.h>], [sigset_t set;
+sigwait(&set);],[
+  AC_MSG_RESULT([1])
+  AC_DEFINE(SIGWAIT_ARGS, 1, [Number of arguments to sigwait()])],[
+  AC_TRY_COMPILE([#include <signal.h>
+#include <unistd.h>], [sigset_t set; int sig; sigwait(&set, &sig);],[
+    AC_MSG_RESULT([2])
+    AC_DEFINE(SIGWAIT_ARGS, 2, [Number of arguments to sigwait()])],[
+    AC_MSG_RESULT(unknown)
+    AC_MSG_ERROR([unable to determine number of arguments to sigwait()])])])
 
 # we don't actually want to add -lgen to our link line, but we do want
 # HAVE_LIBGEN defined correctly for our test suite builds...
@@ -2741,8 +2933,14 @@ if test "x$_cv_libc_kind" = "xGLIBC" -a \( "x$_cv_arch" = "xI386" -o "x$_cv_arch
   "2.6." ) # F7 uses glibc 2.6-4
     including_glibc_ext=NO
     ;;
-  "2.7." ) # F8 uses glibc 2.7-2
-    including_glibc_ext=NO
+  "2.7." )
+ 	 # F8 uses glibc 2.7-2
+	 # debian uses glibc 2.7-18
+    if test "x$_cv_arch" = "xI386" ; then
+      CHECK_EXTERNAL([glibc],[2.7-18], [soft])
+    else # x86_64
+      CHECK_EXTERNAL([glibc],[2.7-18-x86_64], [soft])
+    fi
     ;;
   * )
     if test "x$enable_glibc_version_check" = "xyes"; then
@@ -2789,8 +2987,8 @@ CHECK_EXTERNAL([krb5], [1.4.3-p0], [soft],
                [use krb5 (provides Kerberos support)],
                MF_LIB_CHECK([krb5], [[krb5 krb5_free_principal]]))
 
-# CHECK_EXTERNAL([openssl],[0.9.8h],[soft])
-CHECK_EXTERNAL([openssl], [0.9.8h], [soft],
+# CHECK_EXTERNAL([openssl],[0.9.8h-p1],[soft])
+CHECK_EXTERNAL([openssl], [0.9.8h-p1], [soft],
                [use OpenSSL (provides authentication and encryption support)],
                MF_LIB_CHECK([openssl],
                             [[ssl SSL_connect], [crypto BF_encrypt]]))
@@ -2800,8 +2998,8 @@ if test "x$_cv_ext_openssl_version" != x; then
   # have ssl.h) to make gsoap happy
   AC_DEFINE(HAVE_OPENSSL_SSL_H,1,[do we have openssl])
 
-  # Globus 4.2.0 is dependent on an external version of openssl
-  CHECK_EXTERNAL([globus],[4.2.0], [soft])
+  # Globus 4.2.1 is dependent on an external version of openssl
+  CHECK_EXTERNAL([globus],[4.2.1-p3], [soft])
 fi
 
 if test -z "$_cv_ext_globus_version"; then
@@ -2827,19 +3025,43 @@ CHECK_EXTERNAL([classads], [1.0.2], [soft],
 	       # This REALLY should test for headers, like most checks...
                MF_LIB_CHECK([classads], [[classad cclassad_create]]))	       
 
-CHECK_EXTERNAL([srb], [3.2.1-p1], [soft])
+CHECK_EXTERNAL([srb], [3.2.1-p2], [soft])
+
+AC_MSG_CHECKING([if VOMS should be compiled (linux only)])
+if test "$_cv_opsys" = "LINUX" ; then
+	_cv_including_voms=yes
+	AC_MSG_RESULT([$_cv_including_voms])
+	CHECK_EXTERNAL([expat], [2.0.1], [soft])
+	CHECK_EXTERNAL([voms], [1.8.9-p1], [soft])
+else
+	_cv_including_voms=no
+	AC_MSG_RESULT([$_cv_including_voms])
+fi
+
+if test "x$_cv_linux_distro" = "xRHEL5" -o "x$_cv_linux_distro" = "xRHEL3" -a "x$_cv_arch" = "xI386" ; then
+  CHECK_EXTERNAL([cream],[1.10.1], [soft])
+fi
 
 CHECK_EXTERNAL([pcre], [7.6], [hard],
                [use PCRE (provides regular expression support)],
-               MF_LIB_CHECK([pcre], [[pcre pcre_compile]]))
+               MF_LIB_CHECK([pcre], [[pcre pcre_compile]], [PCRE]))
 AS_IF([test "x$cv_ext_pcre" = xyes],
-  [AC_CHECK_HEADERS([pcre.h pcre/pcre.h])])
+  [CPPFLAGS_save="$CPPFLAGS"
+   CPPFLAGS="$CPPFLAGS $PCRE_CFLAGS"
+   AC_CHECK_HEADERS([pcre.h pcre/pcre.h])
+   CPPFLAGS="$CPPFLAGS_save"])
+AC_SUBST(PCRE_LDFLAGS, $PCRE_LDFLAGS)
+AC_SUBST(PCRE_CFLAGS, $PCRE_CFLAGS)
 
-AS_IF([test "x$os-$_cv_arch" = xLinux-I386 -a "x$_cv_linux_distro" != "xDEBIAN50" -a "x$_cv_has_globus" = xyes -a -n "$_cv_ext_classads_version"],
+# The auto-tools aren't working correctly on AIX
+# Solaris doesn't have the auto-tools on NMI
+# FreeBSD has different types for network structs
+# Mac OS X doesn't have strndup()
+AS_IF([test "x$_cv_opsys" != xDARWIN -a "x$_cv_opsys" != xAIX -a "x$_cv_opsys" != "xSOLARIS" -a "x$_cv_opsys" != "xCONDOR_FREEBSD" -a "x$_cv_has_globus" = xyes -a -n "$_cv_ext_classads_version"],
   [_cv_has_blahp=yes],
   [_cv_has_blahp=no])
 AC_MSG_RESULT([$_cv_has_blahp])
-CHECK_EXTERNAL([blahp], [1.7.0-p2], [soft])
+CHECK_EXTERNAL([blahp], [1.12.2-p5], [soft])
 
 # When --with-proper the detection of the man pages is a little
 # ugly. The value added to the end of $_dir must be what
@@ -2899,8 +3121,46 @@ if test "x$cv_ext_globus" = xyes; then
   elif test "$_cv_opsys" = "AIX" ; then
     _cv_globus_flavor=vendorcc32dbg
   fi
+  _cv_globus_thr_flavor=${_cv_globus_flavor}pthr
   AC_MSG_RESULT([$_cv_globus_flavor])
   AC_SUBST(globus_flavor,$_cv_globus_flavor)
+  AC_SUBST(globus_thr_flavor,$_cv_globus_thr_flavor)
+fi
+
+AC_ARG_ENABLE(ssh-to-job,
+  [AS_HELP_STRING([--enable-ssh-to-job],
+     [Support for condor_ssh_to_job])],
+  [SSH_TO_JOB=$enableval],
+  [if test "x$cv_ext_openssl" = xyes; then SSH_TO_JOB=yes; else SSH_TO_JOB=no; fi])
+if test $SSH_TO_JOB != no; then
+  if test "x$cv_ext_openssl" != xyes; then
+    AC_MSG_ERROR( [condor_ssh_to_job requires openssl (for base64)] )
+  fi
+  AC_DEFINE([HAVE_SSH_TO_JOB], [1], [Define to 1 to support condor_ssh_to_job])
+fi
+
+# Look for the curl external library, used by the file transfer object
+CHECK_EXTERNAL([curl],[7.19.6-p1],[soft])
+
+#Look for hadoop jars, required by HDFS daemon as well by hdfs file plugin
+# Only build hadoop external if hdfs is enabled
+AS_IF([test "x$enable_hdfs" = xyes], 
+  [CHECK_EXTERNAL([hadoop],[0.20.0-p2],[soft])])
+
+if test "x$_cv_opsys" = "xLINUX" ; then
+  CHECK_EXTERNAL([libxml2],[2.7.3],[soft],
+                 [libxml2 for libvirt],
+                 [MF_LIB_CHECK([libxml2],
+                               [[xml2 xmlInitGlobals]], [libxml2])])
+fi
+
+if test "x$_cv_opsys" = "xLINUX" ; then
+  AC_CHECK_HEADER([libvirt/libvirt.h], [have_libvirt_h=yes])
+  CHECK_EXTERNAL([libvirt],[0.6.2],[soft],
+                 [libvirt for Xen/KVM/etc support on Linux],
+                 [AS_IF([test "x$have_libvirt_h" =  xyes],
+                   [MF_LIB_CHECK([libvirt], [[virt virGetVersion]], [libvirt])],
+                   [cv_ext_libvirt=no])])
 fi
 
 # The test for gsoap needs to happen after the openssl check, so

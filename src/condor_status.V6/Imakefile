@@ -1,9 +1,9 @@
 NAME = condor_status
 all_target($(NAME))
 
-CFLAGS = $(STD_C_FLAGS)
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
-LIB = $(STD_LIBS)
+CFLAGS = $(STD_C_FLAGS) $(CONFIGURE_PCRE_CFLAGS)
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(CONFIGURE_PCRE_CFLAGS)
+LIB = $(STD_LIBS) $(CONFIGURE_PCRE_LDFLAGS)
 
 OBJ = setflags.o status.o totals.o prettyPrint.o
 

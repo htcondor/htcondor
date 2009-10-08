@@ -24,7 +24,7 @@ $testdesc =  'lib_unit_tests - runs prebuilt unit tests from testbin_dir';
 $testname = "lib_unit_tests";
 $test = "../testbin_dir/condor_unit_tests";
 
-system("date");
+print scalar localtime() . "\n";
 
 open(ELOG,"$test 2>&1 |") || die "Could not run test<<$test>>: $!\n";
 while(<ELOG>) {

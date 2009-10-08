@@ -68,6 +68,29 @@ else
 fi
 ])dnl
 
+dnl Check to see if perl supports a specific module
+dnl first argument is module name
+dnl second argument is the symbol you would like defined if true.
+AC_DEFUN([AC_CHECK_PERL_MODULE],[dnl
+# Make sure we have perl
+if test -z "$PERL"; then
+  AC_PATH_PROG(PERL,perl,no,[$PATH])
+fi
+# Check if version of Perl is sufficient
+ac_perl_module="$1"
+if test "$PERL" != "no"; then
+  AC_MSG_CHECKING(for perl module $ac_perl_module)
+  $PERL -e "use $ac_perl_module; exit 0;" > /dev/null 2>&1
+  if test $? -ne 0; then
+    AC_MSG_RESULT(no);
+  else
+    AC_MSG_RESULT(ok);
+	AC_DEFINE([$2], [1], [Do we have the perl module $1?])
+  fi
+else
+  AC_MSG_WARN(could not find perl)
+fi
+])dnl
 
 
 #
@@ -910,7 +933,6 @@ if (envh) OCIHandleFree(envh, OCI_HTYPE_ENV);
     AC_MSG_RESULT([$HAVE_ORACLE_OCI])
 ])
 
-
 ##### http://autoconf-archive.cryp.to/ac_func_snprintf.html
 #
 # SYNOPSIS
@@ -998,3 +1020,40 @@ if test x$ac_cv_have_working_snprintf$ac_cv_have_working_vsnprintf != "xyesyes";
  else
   AC_DEFINE(HAVE_WORKING_SNPRINTF, 1, "use system (v)snprintf instead of our replacement")
 fi])
+
+##################################
+# Test for Thread Local Storage.
+# If found, define HAVE_TLS and also set TLS to be the storage class keyword.
+# Currently this function tries keywords __thread (GNU) and MS VC++ keywords.
+#################################
+AC_DEFUN([AX_TLS], [
+  AC_MSG_CHECKING(for thread local storage (TLS) class)
+  AC_CACHE_VAL(ac_cv_tls, [
+    ax_tls_keywords="__thread __declspec(thread) none"
+    for ax_tls_keyword in $ax_tls_keywords; do
+       case $ax_tls_keyword in
+          none) ac_cv_tls=none ; break ;;
+          *)
+             AC_TRY_COMPILE(
+                [#include <stdlib.h>
+                 static void
+                 foo(void) {
+                 static ] $ax_tls_keyword [ int bar;
+                 exit(1);
+                 }],
+                 [],
+                 [ac_cv_tls=$ax_tls_keyword ; break],
+                 ac_cv_tls=none
+             )
+          esac
+    done
+])
+
+  if test "$ac_cv_tls" != "none"; then
+    dnl AC_DEFINE([TLS], [], [If the compiler supports a TLS storage class define it to that here])
+    AC_DEFINE_UNQUOTED([TLS], $ac_cv_tls, [If the compiler supports a TLS storage class define it to that here])
+    AC_DEFINE([HAVE_TLS],[1],[Do we have support for Thread Local Storage?])
+  fi
+  AC_MSG_RESULT($ac_cv_tls)
+])
+

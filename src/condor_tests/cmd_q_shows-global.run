@@ -19,39 +19,44 @@
 ##**************************************************************
 
 use CondorTest;
+use strict;
+use warnings;
 
 
-$cmd_template = "cmd_q_multi.template";
-$testdesc =  'cmd_q_shows-global - condor_q -global test';
-$testname = "cmd_q_shows-global";
-$corename = "cmd_q_shows-global";
+my $cmd_template = "cmd_q_multi.template";
+my $testdesc =  'cmd_q_shows-global - condor_q -global test';
+my $testname = "cmd_q_shows-global";
+my $corename = "cmd_q_shows-global";
+my $debuglevel = 2;
 
 # where am I running
-$currenthost = CondorTest::getFqdnHost();
+my $currenthost = CondorTest::getFqdnHost();
 chomp($currenthost);
-$primarycollector = $currenthost;
+my $primarycollector = $currenthost;
 
 CondorTest::fullchomp($currenthost);
 
-system("date");
+print scalar localtime() . "\n";
 
-$mypid = $$;
-$mysaveme = $corename . ".saveme";
+my $mypid = $$;
+print "my PID = $mypid\n";
+
+my $mysaveme = $corename . ".saveme";
 
 if($mypid == 0) {
 	die "Saveme setup for test failed\n";
 }
 
-$mysubmitnm = $corename . $mypid . ".cmd";
-$mysubmitnmout = $corename . $mypid . ".cmd.out";
-$mysubmitnmlog = $corename . $mypid . ".log";
-$mysubmitnmout = $corename . $mypid . ".out";
-$mycorenm = $corename . ".cmd";
-$mycorenmout = $corename . ".cmd.out";
-$mycorenmlog = $corename . ".log";
+my $mysubmitnm = $corename . $mypid . ".cmd";
+#my $mysubmitnmout = $corename . $mypid . ".cmd.out";
+my $mysubmitnmlog = $corename . $mypid . ".log";
+my $mysubmitnmout = $corename . $mypid . ".out";
+my $mycorenm = $corename . ".cmd";
+my $mycorenmout = $corename . ".cmd.out";
+my $mycorenmlog = $corename . ".log";
 
-CondorTest::debug("Master PID is $mypid\n",1);
-CondorTest::debug("Master PID submit file is $mysubmitnm\n",1);
+CondorTest::debug("Master PID is $mypid\n",$debuglevel);
+CondorTest::debug("Master PID submit file is $mysubmitnm\n",$debuglevel);
 
 my $version = $mypid . "local";
 # get a local scheduler running (side a)
@@ -60,13 +65,13 @@ my @local = split /\+/, $configloc;
 my $locconfig = shift @local;
 my $locport = shift @local;
 
-CondorTest::debug("---local config is $locconfig and local port is $locport---\n",1);
+CondorTest::debug("---local config is $locconfig and local port is $locport---\n",$debuglevel);
 
 $primarycollector = $primarycollector . ":" . $locport;
 
-CondorTest::debug("Primary collector for other nodes <<$primarycollector>>\n",1);
+CondorTest::debug("Primary collector for other nodes <<$primarycollector>>\n",$debuglevel);
 
-$saveconfig = $ENV{CONDOR_CONFIG};
+my $saveconfig = $ENV{CONDOR_CONFIG};
 $ENV{CONDOR_CONFIG} = $locconfig;
 system("condor_config_val COLLECTOR_HOST");
 $ENV{CONDOR_CONFIG} = $saveconfig;
@@ -95,29 +100,35 @@ my @scheddone = split /\+/, $configscheddone;
 my $scheddoneconfig = shift @scheddone;
 my $scheddoneport = shift @scheddone;
 
-CondorTest::debug("---scheddone config is $scheddoneconfig and scheddone port is $scheddoneport---\n",1);
+CondorTest::debug("---scheddone config is $scheddoneconfig and scheddone port is $scheddoneport---\n",$debuglevel);
 
 my $bail = 0;
 
 # submit into scheddone
 $ENV{CONDOR_CONFIG} = $scheddoneconfig;
 
-my $forever = CondorTest::verbose_system("./x_cmdrunforever.pl");
+print "Start a job that runs forever in remote schedd - ";
+my $forever = CondorTest::verbose_system("./x_cmdrunforever.pl $mypid");
 if($forever != 0) {
-	CondorTest::debug("Bailing because running job failed to submit\n",1);
+	print "bad\n";
+	CondorTest::debug("Bailing because running job failed to submit\n",$debuglevel);
 	$bail = 1;
 }
+print "ok\n";
 
 # submit into collector node schedd
 $ENV{CONDOR_CONFIG} = $locconfig;
 
 my $holdone;
 if($bail != 1) {
-	my $holdone = CondorTest::verbose_system("./x_cmdstartonhold.pl");
+	print "Start a job on hold in the local schedd - ";
+	my $holdone = CondorTest::verbose_system("./x_cmdstartonhold.pl $mypid");
 	if($holdone != 0) {
-		CondorTest::debug("Bailing because running job failed to submit\n",1);
+		print "bad\n";
+		CondorTest::debug("Bailing because running job failed to submit\n",$debuglevel);
 		$bail = 1;
 	}
+	print "ok\n";
 }
 
 my $cmdstatus;
@@ -125,7 +136,7 @@ my @adarray;
 my $sched1 = "master_" . $mypid . "local";
 my $sched2 = "master_" . $mypid . "scheddone";
 
-CondorTest::debug("Looking for sched1($sched1) and sched2($sched2)\n",1);
+CondorTest::debug("Looking for sched1($sched1) and sched2($sched2)\n",$debuglevel);
 
 # allow time for all the nodes to update the collector
 # by allowing N attempts
@@ -136,6 +147,7 @@ my $found1 = 0;
 my $found2 = 0;
 
 if($bail != 1) {
+	print "Looking for $sched1 and $sched2\n"; 
 	while($count < $nattempts) {
 		$found1 = 0;
 		$found2 = 0;
@@ -143,29 +155,31 @@ if($bail != 1) {
 		$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
     	if(!$cmdstatus)
     	{
-        	CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
+        	CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",$debuglevel);
         	exit(1)
     	}
 
-CondorTest::debug("Looking for sched1($sched1) and sched2($sched2)\n",1);
+CondorTest::debug("Looking for sched1($sched1) and sched2($sched2)\n",$debuglevel);
 
-		foreach $line (@adarray) {
+		foreach my $line (@adarray) {
 			if($line =~ /^.*($sched1).*$/) {
-				CondorTest::debug("found $sched1: $line\n",1);
+				CondorTest::debug("found $sched1: $line\n",$debuglevel);
+				print "$sched1 - ok\n";
 				$found1 = 1;
 			} elsif($line =~ /^.*($sched2).*$/) {
-				CondorTest::debug("found $sched2: $line\n",1);
+				CondorTest::debug("found $sched2: $line\n",$debuglevel);
+				print "$sched2 - ok\n";
 				$found2 = 1;
 			} else {
 				#print "skip: $line\n";
 			}
 		}
 		if(($found1 == 1) && ($found2 == 1)){
-			CondorTest::debug("Happy and quitting\n",1);
+			CondorTest::debug("Happy and quitting\n",$debuglevel);
 			$done = 1;
 			last;
 		} else {
-			CondorTest::debug("Unhappy: <$found1> && <$found2>\n",1);
+			CondorTest::debug("Unhappy: <$found1> && <$found2>\n",$debuglevel);
 		}
 
 		$count = $count + 1;
@@ -192,13 +206,14 @@ if( -e "$mysubmitnmlog" )
 
 CondorTest::KillPersonal($locconfig);
 CondorTest::KillPersonal($scheddoneconfig);
-system("date");
+print scalar localtime() . "\n";
 
 if( $done == 0 )
 {
+	print "Could not find one or more schedds\n";
 	# actual test failed but we allowed cleanup
 	exit(1);
 }
 
-CondorTest::debug("cmd_q_shows-global SUCCESS\n",1);
+CondorTest::debug("cmd_q_shows-global SUCCESS\n",$debuglevel);
 exit(0);

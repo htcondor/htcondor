@@ -55,8 +55,8 @@ $success = sub
 	if(!-f "$outf"){ print "$outf failed to arrive\n"; exit(1)};
 	if(!-f "$outg"){ print "$outg failed to arrive\n"; exit(1)};
 	if(!-f "$outh"){ print "$outh failed to arrive\n"; exit(1)};
-	if(!-f "$outi"){ print "$outh failed to arrive\n"; exit(1)};
-	if(!-f "$outj"){ print "$outi failed to arrive\n"; exit(1)};
+	if(!-f "$outi"){ print "$outi failed to arrive\n"; exit(1)};
+	if(!-f "$outj"){ print "$outj failed to arrive\n"; exit(1)};
 };
 
 $abort = sub {

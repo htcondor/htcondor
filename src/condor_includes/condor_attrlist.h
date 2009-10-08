@@ -29,11 +29,10 @@
 
 #include "condor_exprtype.h"
 #include "condor_astbase.h"
-#include "condor_debug.h"
-#include "MyString.h"
 
-#include "stream.h"
-//#include "list.h"
+// Forward definition of things
+class Stream;
+class MyString;
 
 #define		ATTRLIST_MAX_EXPRESSION		10240
 
@@ -261,7 +260,7 @@ class AttrList : public AttrListAbstract
 		// output functions
 		int			fPrintExpr(FILE*, char*);	// print an expression
 		char*		sPrintExpr(char*, unsigned int, const char*); // print expression to buffer
-        virtual int	fPrint(FILE*);				// print the AttrList to a file
+        virtual int	fPrint(FILE*,StringList *attr_white_list=NULL);				// print the AttrList to a file
 		int         sPrint(MyString &output);   // put the AttrList in a string. 
 		void		dPrint( int );				// dprintf to given dprintf level
 
@@ -314,9 +313,6 @@ class AttrList : public AttrListAbstract
 		// update an aggregate expression if the AttrList list associated with
 		// this AttrList is changed
       	int				UpdateAgg(ExprTree*, int);
-		// convert a (key, value) pair to an assignment tree. used by the
-		// constructor that builds an AttrList from a proc structure.
-		ExprTree*		ProcToTree(char*, LexemeType, int, float, char*);
         AttrListElem*	exprList;		// my collection of expressions
 		AttrListList*	associatedList;	// the AttrList list I'm associated with
 		AttrListElem*	tail;			// used by Insert
@@ -347,7 +343,7 @@ class AttrListList
       	void 	  	Insert(AttrList*);	// insert at the tail of the list
       	int			Delete(AttrList*); 	// delete a AttrList
 
-      	void  	  	fPrintAttrListList(FILE *, bool use_xml = false);// print out the list
+      	void  	  	fPrintAttrListList(FILE *, bool use_xml = false, StringList *attr_white_list=NULL );// print out the list
       	int 	  	MyLength() { return length; } 	// length of this list
       	ExprTree* 	BuildAgg(char*, LexemeType);	// build aggregate expr
 

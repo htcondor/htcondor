@@ -38,7 +38,6 @@ operator=(const VMGahpConfig& old)
 	oldp = const_cast<VMGahpConfig *>(&old);
 
 	m_vm_type = old.m_vm_type;
-	m_vm_version = old.m_vm_version;
 	m_vm_max_memory = old.m_vm_max_memory;
 	m_vm_networking = old.m_vm_networking;
 	m_vm_networking_types.clearAll();
@@ -69,18 +68,7 @@ VMGahpConfig::init(const char* vmtype)
 
 	// Handle VM_TYPE
 	m_vm_type = vmtype;
-	m_vm_type.strlwr();
-
-	// Read VM_VERSION
-	config_value = param("VM_VERSION");
-	if( !config_value ) {
-		vmprintf( D_ALWAYS,
-		          "\nERROR: 'VM_VERSION' is not defined "
-		              "in configuration\n");
-		return false;
-	}
-	m_vm_version = delete_quotation_marks(config_value);
-	free(config_value);
+	m_vm_type.lower_case();
 
 	// Read VM_MEMORY
 	int tmp_config_value = param_integer("VM_MEMORY", 0);
@@ -108,7 +96,7 @@ VMGahpConfig::init(const char* vmtype)
 			MyString networking_type = delete_quotation_marks(config_value);
 			networking_type.trim();
 			// change string to lowercase
-			networking_type.strlwr();
+			networking_type.lower_case();
 			free(config_value);
 
 			StringList networking_types(networking_type.Value(), ", ");

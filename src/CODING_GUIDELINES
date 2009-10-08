@@ -89,39 +89,6 @@ Class Members:
 
 
 
-for() loops:
-
-- Never declare variables inside the initializer of a for() loop.
-  So "int i; for(i = 0; i < 10; i++) {}" is okay, but "for(int i
-  = 0; i < 10; i++)" is not.  Doing it the wrong way will create
-  portability problems between Windows and Unix.
-
-  (The rest of this explains why.  Feel free to ignore it.)
-
-  Microsoft's compiler defaults to a broken implementation of
-  for().  Specifically, any variables defined inside the for()
-  itself are visible in the containing scope from that point
-  forward.  Thus:
-
-    for(int i = 0; i < 10; i++) { }
-    // gcc correctly believes i is undefined
-    // Visual C++ erroneously believes i is 10
-
-  Similarlly, gcc will compile the following code. Visual C++
-  will fail with "error C2374: 'i' : redefinition; multiple
-  initialization"
-
-    for(int i = 0; i < 10; i++) { }
-    for(int i = 0; i < 10; i++) { }
-
-  Given this, you can workaround the problem and get portable
-  behavior by wraping the entire for loop in redundant
-  parenthesis:
-
-    {for(int i = 0; i < 10; i++) { }}
-    {for(int i = 0; i < 10; i++) { }}
-
-
 Pre-Processor Usage:
 
 - When checking a given preprocessor define, use "#if FOO", not

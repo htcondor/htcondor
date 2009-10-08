@@ -13,3 +13,4 @@ stripped:: all
 static:: all
 html:
 testbin:: all
+clean::

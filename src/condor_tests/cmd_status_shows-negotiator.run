@@ -19,254 +19,89 @@
 ##**************************************************************
 
 use CondorTest;
-
+use CondorCmdStatusWorker;
+use strict;
+use warnings;
 
 # truly const variables in perl
 sub IDLE{1};
 sub HELD{5};
 sub RUNNING{2};
 
-$testdesc =  'cmd_status_shows-negotiator';
-$testname = "cmd_status_shows-negotiator";
-$corename = "cmd_status_shows-negotiator";
+my $testdesc =  'cmd_status_shows-negotiator';
+my $testname = "cmd_status_shows-negotiator";
+my $corename = "cmd_status_shows-negotiator";
+my $debuglevel = 2;
 
-# where am I running
-$currenthost = CondorTest::getFqdnHost();
-chomp($currenthost);
-$primarycollector = $currenthost;
-my @adarray;
+print scalar localtime() . "\n";
 
-CondorTest::fullchomp($currenthost);
-
-system("date");
-
-$mypid = $$;
-$mysaveme = $corename . ".saveme";
+my $mypid = $$;
+my $mysaveme = $corename . ".saveme";
 
 if($mypid == 0) {
 	die "Saveme setup for test failed\n";
 }
 
-$mysubmitnm = $corename . $mypid . ".cmd";
-$mysubmitnmout = $corename . $mypid . ".cmd.out";
-$mysubmitnmlog = $corename . $mypid . ".log";
-$mysubmitnmout = $corename . $mypid . ".out";
-$mycorenm = $corename . ".cmd";
-$mycorenmout = $corename . ".cmd.out";
-$mycorenmlog = $corename . ".log";
+my $mysubmitnm = $corename . $mypid . ".cmd";
+my $mysubmitnmlog = $corename . $mypid . ".log";
+my $mysubmitnmout = $corename . $mypid . ".out";
+my $mycorenm = $corename . ".cmd";
+my $mycorenmout = $corename . ".cmd.out";
+my $mycorenmlog = $corename . ".log";
 
-CondorTest::debug("Master PID is $mypid\n",1);
-CondorTest::debug("Master PID submit file is $mysubmitnm\n",1);
+CondorTest::debug("Master PID is $mypid\n",$debuglevel);
+CondorTest::debug("Master PID submit file is $mysubmitnm\n",$debuglevel);
 
-my $version = "local";
-# get a local scheduler running (side a)
-my $configloc = CondorTest::StartPersonal( "cmd_status_shows-negotiator", "x_param.cmdstatus-multi" ,$version);
-my @local = split /\+/, $configloc;
-my $locconfig = shift @local;
-my $locport = shift @local;
+my $outsource = CondorCmdStatusWorker::SetUp("cmd_status_shows-negotiator");
+CondorTest::fullchomp($outsource);
 
-CondorTest::debug("---local config is $locconfig and local port is $locport---\n",1);
-
-$primarycollector = $primarycollector . ":" . $locport;
-
-CondorTest::debug("Primary collector for other nodes <<$primarycollector>>\n",1);
-
-
-$saveconfig = $ENV{CONDOR_CONFIG};
-$ENV{CONDOR_CONFIG} = $locconfig;
-CondorTest::debug("New collector is this:\n",1);
-system("condor_config_val COLLECTOR_HOST");
-$ENV{CONDOR_CONFIG} = $saveconfig;
-
-my $line;
-open(SCHEDDSRC,"<x_param.cmdstatus-multi.template") || die "Could not open x_param.cmdstatus-multi.template: $!\n";
-open(SCHEDDONE,">x_param.cmd_status_shows-negotiator") || die "Could not open x_param.cmd_status_shows-negotiator: $!\n";
-while(<SCHEDDSRC>) {
-	$line = $_;
-	chomp($line);
-	if($line =~ /^\s*collector\s*=.*$/) {
-		print SCHEDDONE "collector  = $primarycollector\n";
-	} else {
-		print SCHEDDONE "$line\n";
-	}
-}
-close(SCHEDDSRC);
-close(SCHEDDONE);
-
-$version = "scheddone";
-# get another node running
-my $configscheddone = CondorTest::StartPersonal( "cmd_status_shows-negotiator", "x_param.cmd_status_shows-negotiator" ,$version);
-my @scheddone = split /\+/, $configscheddone;
-my $scheddoneconfig = shift @scheddone;
-my $scheddoneport = shift @scheddone;
-
-CondorTest::debug("---scheddone config is $scheddoneconfig and scheddone port is $scheddoneport---\n",1);
-
-my $bail = 0;
-
-# submit into scheddone
-$ENV{CONDOR_CONFIG} = $scheddoneconfig;
-
-# start two jobs which run till killed
-my $cmd = "condor_submit ./x_cmdrunforever.cmd2";
-$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
-if(!$cmdstatus)
-{
-	CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
-	exit(1)
+if($outsource eq "") {
+    # assume all cleanup of personals which did start occurred in worker
+    print "OOOOPPPPSSSSSSSSSSSSyyyyy\n";
+    exit(1);
 }
 
-my $qstat = CondorTest::getJobStatus(1.1);
-CondorTest::debug("remote cluster 1.1 status is $qstat\n",1);
-while($qstat != RUNNING)
-{
-	CondorTest::debug(".",1);
-	sleep 4;
-	$qstat = CondorTest::getJobStatus(1.1);
-}
-CondorTest::debug(" ok\n",1);
+( my $locconfig, my $scheddoneconfig) = split('&',$outsource);
+CondorTest::debug("Two pools are $locconfig and $scheddoneconfig\n",$debuglevel);
 
-$qstat = CondorTest::getJobStatus(1.0);
-CondorTest::debug("remote cluster 1.0 status is $qstat\n",1);
-while($qstat != RUNNING)
-{
-	CondorTest::debug(".",1);
-	sleep 4;
-	$qstat = CondorTest::getJobStatus(1.0);
-}
-CondorTest::debug(" ok\n",1);
-
-# submit into collector node schedd
-$ENV{CONDOR_CONFIG} = $locconfig;
-
-#print "Lets look at status from first pool....\n";
-#system("condor_status");
-
-# start two jobs which run till killed
-my $cmd = "condor_submit ./x_cmdrunforever.cmd2";
-$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
-if(!$cmdstatus)
-{
-	CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
-	exit(1)
-}
-
-my $qstat = CondorTest::getJobStatus(1.1);
-CondorTest::debug("local cluster 1.1 status is $qstat\n",1);
-while($qstat != RUNNING)
-{
-	CondorTest::debug(".",1);
-	sleep 4;
-	$qstat = CondorTest::getJobStatus(1.1);
-}
-CondorTest::debug(" ok\n",1);
-
-$qstat = CondorTest::getJobStatus(1.0);
-CondorTest::debug("local cluster 1.0 status is $qstat\n",1);
-while($qstat != RUNNING)
-{
-	CondorTest::debug(".",1);
-	sleep 4;
-	$qstat = CondorTest::getJobStatus(1.0);
-}
-CondorTest::debug(" ok\n",1);
-
-my $cmdstatus;
-my $sched1 = "master_" . $mypid . "local" . "@" . $currenthost;;
-my $sched2 = "master_" . $mypid . "scheddone" . "@" . $currenthost;;
-
-# We check our basic setup of two nodes of which one is the collector
-# running the negotiator. We look for the negotiator while configured to
-# the node which has only a startd and a schedd(submit and execute node).
-$ENV{CONDOR_CONFIG} = $scheddoneconfig;
-
-#print "Lets look at status from second pool....\n";
-#system("condor_status");
-
-# allow time for all the nodes to update the collector
-# by allowing N attempts
-my $nattempts = 8;
-my $count = 0;
 my $done = 0;
-my $found1 = 0;
+my $stable = CondorCmdStatusWorker::IsSystemStable();
+my @adarray;
+
+my $numnegotiators = 0;
 my $cmd = "";
 
-
-if($bail != 1) {
-	CondorTest::debug("Looking at new pool<condor_status>\n",1);
-	while($count < $nattempts) {
-	my $masterlocal = 0;
-	my $mastersched = 0;
-		$found1 = 0;
-		$cmd = "condor_status -startd";
-		$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
-    	if(!$cmdstatus)
-    	{
-        	CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
-        	exit(1)
-    	}
-
-		CondorTest::debug("Looking at condor_status \n",1);
-
-		foreach $line (@adarray) {
-			if($line =~ /^.*master_loc.*$/) {
-				#print "found masterLocal: $line\n";
-				$masterlocal = $masterlocal + 1;;
-			} elsif($line =~ /^.*master_sch.*$/) {
-				#print "found master_schedd: $line\n";
-				$mastersched = $mastersched + 1;;
-			} else {
-				#print "$line\n";
-			}
-		}
-
-		if(($masterlocal == 2) && ($mastersched == 4)) {
-			$bail = 1;
-			CondorTest::debug("Found expected number of startds(6)\n",1);
-			CondorTest::debug("Found 2 on local collector and 4 on alternate node in pool\n",1);
-			last;
-		} else {
-			#print "Keep going masterlocal is $masterlocal and mastersched is $mastersched\n";
-		}
-
-		$count = $count + 1;
-		sleep($count * 5);
-	}
-}
- 
-
-
-my $numnegotiator = 0;
-my $cmd = "";
-
-if($bail == 1) {
+if($stable == 1) {
 	# allow time for all the nodes to update the collector
 	# by allowing N attempts
 	# with 4 run forever jobs we are not stable until -negotiator finds exactly 4
-	$nattempts = 8;
-	$count = 0;
-	$done = 0;
-
+	my $nattempts = 8;
+	my $count = 0;
+	
+	print "Looking for 2 negotiators with condor_status -negotiator -l - ";
 	while($count < $nattempts) {
 		$cmd = "condor_status -negotiator -l";
-		$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
+		my $cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
     	if(!$cmdstatus)
     	{
-        	CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
+        	CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",$debuglevel);
+			CondorTest::KillPersonal($locconfig);
+			CondorTest::KillPersonal($scheddoneconfig);
         	exit(1)
     	}
 	
-		$numnegotators = 0;
-		foreach $line (@adarray) {
+		$numnegotiators = 0;
+		foreach my $line (@adarray) {
 			if($line =~ /^\s*MyType\s*=\s*"Negotiator".*$/) {
-				CondorTest::debug("found negotiator: $line\n",1);
-				$numnegotators = $numnegotators + 1;;
+				CondorTest::debug("found negotiator: $line\n",$debuglevel);
+				$numnegotiators = $numnegotiators + 1;;
 			} else {
 				#print "skip: $line\n";
 			}
 		}
 
-		if($numnegotators == 1) {
+		if($numnegotiators == 1) {
+			print "ok\n";
 			$done = 1;
 			last;
 		}
@@ -277,15 +112,16 @@ if($bail == 1) {
 }
 
 if($done == 0) {
-	CondorTest::debug("Test failed because we never saw a negotiator.....\n",1);
-	CondorTest::debug("Last run of \"$cmd\" was...\n",1);
+	print "bad\n";
+	CondorTest::debug("Test failed because we never saw a negotiator.....\n",$debuglevel);
+	CondorTest::debug("Last run of \"$cmd\" was...\n",$debuglevel);
 
-	foreach $lineitem (@adarray) {
-		CondorTest::debug("cmdres: $lineitem\n",1);
+	foreach my $lineitem (@adarray) {
+		CondorTest::debug("cmdres: $lineitem\n",$debuglevel);
 	}
 }
 
-CondorTest::debug("Saving things and cleaning up....\n",1);
+CondorTest::debug("Saving things and cleaning up....\n",$debuglevel);
 
 system("cp *cmd_status_shows-negotiator* $mysaveme");
 
@@ -306,7 +142,7 @@ if( -e "$mysubmitnmlog" )
 
 CondorTest::KillPersonal($locconfig);
 CondorTest::KillPersonal($scheddoneconfig);
-system("date");
+print scalar localtime() . "\n";
 
 if( $done == 0 )
 {
@@ -314,5 +150,5 @@ if( $done == 0 )
 	exit(1);
 }
 
-CondorTest::debug("cmd_status_shows-negotiator SUCCESS\n",1);
+CondorTest::debug("cmd_status_shows-negotiator SUCCESS\n",$debuglevel);
 exit(0);

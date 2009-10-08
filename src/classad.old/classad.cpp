@@ -32,6 +32,7 @@
 # include "condor_classad.h"
 # include "condor_adtypes.h"
 # include "MyString.h"
+# include "stream.h"
 # include "condor_xml_classads.h"
 
 static Registration regi;                   // this is the registration for 
@@ -159,7 +160,7 @@ ClassAd::updateBoundVariables() {
     }
 
 	// Make a parse tree that contains the variable MyType
-    Parse("MyType", tree);
+    ParseClassAdRvalExpr("MyType", tree);
 	// Evaluate this variable within the classad, to see if it
 	// is defined.
     tree->EvalTree(this, val);
@@ -198,7 +199,7 @@ ClassAd::updateBoundVariables() {
 	val = new EvalResult;
 
 	// Make a parse tree that contains the variable TargetType
-    Parse("TargetType", tree);
+    ParseClassAdRvalExpr("TargetType", tree);
 	// Evaluate this variable within the classad, to see if it
 	// is defined.
     tree->EvalTree(this, val);
@@ -338,10 +339,7 @@ void ClassAd::SetMyTypeName(const char *tempName)
         EXCEPT("Warning : you ran out of memory -- quitting !");
     }
 		// Also set the corresponding attribute in the attrlist.
-		// Note that we call GetMyTypeName() instead of passing
-		// tempName directly, because of extra hackery that happens
-		// in that function.
-	Assign("MyType",GetMyTypeName());
+	Assign("MyType",tempName);
 	SetInvisible("MyType");
 }
 
@@ -356,25 +354,6 @@ const char *ClassAd::GetMyTypeName()
     }
     else
     {
-		// We should just return myType->name here.  Instead, we have
-		// a dreadful hack:  If the ad claims to be a SCHEDD_ADTYPE,
-		// we see if it has a ATTR_NUM_USERS attribute.  If it does not,
-		// then it is really a SUBMITTER_ADTYPE and that is what we 
-		// return.  We massage the name here because in Condor v6.3.x
-		// it is important to distinguish between the two types of
-		// ads (because the negotiator now fetches all ads with the
-		// ANY_AD query).  However, we do not *really* set Submittor
-		// ads to SUBMITTER_ADTYPE.... this should have been done
-		// right from the start in v6.0, but it was not.  And if we
-		// do it now, then there will be lots of backwards compatibility
-		// and flocking problems between v6.3 and older versions.
-		// Sigh.  Yet another hack in order to preserve backwards
-		// compatibility.  The sins of the father... <tannenba 9/14/01>
-		if ( strcmp(SCHEDD_ADTYPE,myType->name) == 0 ) {
-			if ( !Lookup(ATTR_NUM_USERS) ) {
-				return SUBMITTER_ADTYPE;
-			}
-		}
         return myType->name;
     }
 }
@@ -490,7 +469,7 @@ int ClassAd::IsAMatch(ClassAd* temp)
         EXCEPT("Warning : you ran out of memory -- quitting !");
     }
 
-    if (reqsTree == 0) Parse("MY.Requirements", reqsTree);       // convention.
+    if (reqsTree == 0) ParseClassAdRvalExpr("MY.Requirements", reqsTree);       // convention.
 
     reqsTree->EvalTree(this, temp, val);         // match in one direction.
     if(!val || val->type != LX_INTEGER)
@@ -553,7 +532,7 @@ bool operator>= (ClassAd &lhs, ClassAd &rhs)
 		EXCEPT("Out of memory -- quitting");
 	}
 
-	if (reqsTree == 0) Parse ("MY.Requirements", reqsTree);
+	if (reqsTree == 0) ParseClassAdRvalExpr ("MY.Requirements", reqsTree);
 	reqsTree -> EvalTree (&rhs, &lhs, val);
 	if (!val || val->type != LX_INTEGER)
 	{
@@ -614,12 +593,12 @@ int ClassAd::fPrint(FILE* f)
 	return AttrList::fPrint(f);
 }
 
-int ClassAd::sPrintAsXML(MyString &output)
+int ClassAd::sPrintAsXML(MyString &output,StringList *attr_white_list)
 {
 	ClassAdXMLUnparser  unparser;
 	MyString            xml;
 	unparser.SetUseCompactSpacing(false);
-	unparser.Unparse(this, xml);
+	unparser.Unparse(this, xml, attr_white_list);
 	output += xml;
 	return TRUE;
 }

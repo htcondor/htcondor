@@ -1,0 +1,31 @@
+#!/bin/sh
+
+# I need to be aware of which distribution I'm using
+. $EXTERNALS_CONFIG
+
+CC=gcc
+export CC
+
+cd $PACKAGE_BUILD_DIR/$PACKAGE_NAME
+
+./configure --prefix=$PACKAGE_INSTALL_DIR --with-expat-prefix=$(EXPAT_DIR) 
+if [ $? -ne 0 ]
+then
+  echo "configure failed"
+  exit 1
+fi
+
+make
+if [ $? -ne 0 ]
+then
+  echo "make failed"
+  exit 1
+fi
+
+make install
+if [ $? -ne 0 ]
+then
+  echo "install failed"
+  exit 1
+fi
+

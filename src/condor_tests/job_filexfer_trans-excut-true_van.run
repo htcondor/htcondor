@@ -23,7 +23,9 @@ use CondorTest;
 $testdesc =  'Jobs complaining cause No FT on when tansfer_executables = true - vanilla U';
 $testname = "job_filexfer_trans-excut-true_van";
 
-my $sanestatus = CondorTest::verbose_system("./x_sanitysubmit.pl");
+my $pid = $$;
+print "Calling ./x_sanitysubmit.p with PID = <$pid>\n";
+my $sanestatus = CondorTest::verbose_system("./x_sanitysubmit.pl $pid");
 my $teststatus = CondorTest::verbose_system("./job_filexfer_trans-excut-true_van.pl");
 
 if($sanestatus != 0)

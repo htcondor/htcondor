@@ -27,14 +27,6 @@
 template <class Key, class Value> class HashTable;
 class YourSensitiveString;
 
-enum StringSpaceAdoptionMethod
-{
-	SS_INVALID,				// useful for initialization
-	SS_DUP,					// internally allocate storage for the string
-	SS_ADOPT_C_STRING,		// already allocated, just adopt the malloc()d str
-	SS_ADOPT_CPLUS_STRING	// already allocated, just adopt the new[]'s str
-};
-
 // forward decl
 class SSString;
 
@@ -73,16 +65,8 @@ class SSString;
  * <p>
  * <b>Memory management convention in the StringSpace:</b>
  * <br>
- * The default behavior for the StringSpace is that it initially
- * allocates storage for an inserted string.  This default is
- * reflected in the default argument SS_DUP of the getCanonical
- * method.  However, it may be that the client of the interface has
- * already allocated storage for the string, and merely wants to hand
- * it off the string space who will then assume full responsibility
- * for its storage management.  This can be accomplished by passing
- * SS_ADOPT_C_STRING or SS_ADOPT_C_PLUS_STRING to the getCanonical
- * method depending on whether the string was created with malloc( )
- * or with new[ ].
+ * The behavior of the StringSpace is that it allocates storage for an
+ * inserted string.
  * <p>
  * <b>WARNING:</b> The dispose() method of the SSString is meant to be used
  * in unusual situations only.  Note that the destructor takes care of
@@ -107,15 +91,13 @@ class StringSpace
      * count of the string. In any case, we return the index of the
      * string, and a reference to the string with an SSString. Using the 
      * SSString is preferred over using the index. */
-	int	getCanonical(char* &str, SSString& cannonical, 
-					 StringSpaceAdoptionMethod adopt=SS_DUP);
+	int	getCanonical(const char* &str, SSString& cannonical);
     /** Add a string to the StringSpace. If the string is already in
      * the StringSpace, it isn't added, but we increase the reference
      * count of the string. In any case, we return the index of the
      * string, and a reference to the string with an SSString. Using the 
      * SSString is preferred over using the index. */
-	int	getCanonical(char* &str, SSString*& cannonical,
-					 StringSpaceAdoptionMethod adopt=SS_DUP);
+	int	getCanonical(const char* &str, SSString*& cannonical);
 
     /** Add a string to the StringSpace. If the string is already in
      * the StringSpace, it isn't added, but we increase the reference
@@ -124,8 +106,7 @@ class StringSpace
      * [] operator. Using this index is preferred less than using
 	 * an SSString, which you could have gotten from one of the other 
 	 * getCanonical() methods. */
-    int getCanonical(char* &str, 
-					 StringSpaceAdoptionMethod adopt=SS_DUP);
+    int getCanonical(const char* &str);
 
 	/** Check if a string is in the string space. If it is, we return
      * the index of the string, otherwise we return -1.  
@@ -147,6 +128,11 @@ class StringSpace
 	 *  don't have an SSString */
 	void disposeByIndex(int index);
 
+	/** Dispose of strings that look like the provided. This is useful
+	 *  when we don't have an SSString and you don't want to keep an
+	 *  index around. */
+	void dispose(const char *str);
+
 	/** Print the contents of the StringSpace to stdout */
 	void  dump ();			
 
@@ -165,7 +151,6 @@ class StringSpace
 		bool        inUse;
 		int         refCount; 
 		char  *string; 
-		int         adoptMode; 
 	};
 
 	class HashTable<YourSensitiveString,int>  *stringSpace;
@@ -212,7 +197,7 @@ class SSString
 	/** Get the string itself. Be careful--this is not a copy, this is 
 	 * the original. Don't be mucking with it or deleting it. 
 	 */
-	inline 	const char *getCharString (void);
+	inline 	const char *getCharString (void) const;
 
 	/** Get the index for an SSString. Probably not useful, but you could
 	 *  use the indexes to compare to strings. Of course, you could just 
@@ -263,7 +248,7 @@ StringSpace::getNumStrings (void)			// number of strings in the space
 
 
 inline const char *
-SSString::getCharString (void)		// get the ASCII string itself	
+SSString::getCharString (void) const		// get the ASCII string itself	
 {
 	const char *the_string;
 	if (context != NULL) {

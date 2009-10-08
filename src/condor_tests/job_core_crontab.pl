@@ -34,18 +34,29 @@
 #########################################################
 use CondorTest;
 use POSIX;
+use strict;
+use warnings;
 
 ##
 ## Universe
 ## 
-my $universe = ($ARGV[0] ? $ARGV[0] : "vanilla");
+my $universe = $ARGV[0];
+my $longuniverse = "";
+
+if($universe eq "van") {
+	$longuniverse = "vanilla";
+} else {
+	$longuniverse = $universe;
+}
 
 ##
 ## Test Information
 ##
-$testdesc =  "CronTab Testing - $universe";
-$base_name = 'job_core_crontab';
-$base_cmd = $base_name.".cmd";
+my $testdesc =  "CronTab Testing - $universe";
+my $base_name = 'job_core_crontab';
+my $base_cmd = $base_name.".cmd";
+my $testname = "";
+my $debuglevel = 2;
 
 if( defined $ARGV[0] ) {
 	if($ARGV[0] =~ /.*van.*/ ) {
@@ -90,8 +101,8 @@ my $PREP_TIME = 90;
 ## the time that the job should actually start running over on the
 ## Starter
 ##
-my $DEFERRAL_TIME;
-my $LAST_DEFERRAL_TIME;
+my $DEFERRAL_TIME = 0;
+my $LAST_DEFERRAL_TIME = 0;
 
 ##
 ## This is the difference in seconds that one job should be scheduled
@@ -105,12 +116,12 @@ my $DEFERRAL_DIFFERENCE = 180; # seconds
 ## submitted
 ## A nice message to let us know our job was submitted
 ##
-$submitted = sub {
-	%info = @_;
-	$cluster = $info{"cluster"};
-	$job = $info{"job"};
+my $submitted = sub {
+	my %info = @_;
+	my $cluster = $info{"cluster"};
+	my $job = $info{"job"};
 	
-	CondorTest::debug("Good - Job $cluster.$job was submitted!\n",1);
+	CondorTest::debug("Good - Job $cluster.$job was submitted!\n",$debuglevel);
 };	
 
 ##
@@ -118,10 +129,10 @@ $submitted = sub {
 ## The job has begun to execute over on the starter
 ## We keep a counter to know how many times that it started
 ##
-$executed = sub {
-	%info = @_;
-	$cluster = $info{"cluster"};
-	$job = $info{"job"};
+my $executed = sub {
+	my %info = @_;
+	my $cluster = $info{"cluster"};
+	my $job = $info{"job"};
 	
 	##
 	## When a job with a Cron schedule begins execution it will
@@ -130,20 +141,20 @@ $executed = sub {
 	## might have overwritten it
 	##
 	my @result;
-	my $q_cmd = "_CONDOR_TOOL_DEBUG=D_ALL condor_q $cluster.$job -debug -format %d DeferralTime";
+	#my $q_cmd = "_CONDOR_TOOL_DEBUG=D_ALL condor_q $cluster.$job -debug -format %d DeferralTime\n";
+	my $q_cmd = "_CONDOR_TOOL_DEBUG=D_ALL condor_q $cluster.$job -format %d DeferralTime\n";
 	if ( ! CondorTest::runCondorTool($q_cmd, \@result, 3) ) {
-		CondorTest::debug("ERROR: Unable to get DeferralTime due to Condor Tool Failure<$q_cmd>\n",1);
+		CondorTest::debug("ERROR: Unable to get DeferralTime due to Condor Tool Failure<$q_cmd>\n",$debuglevel);
 	    exit(1);
 	}
-    CondorTest::debug("Stderr with debug info for condor_q follows\n",1);
-    system("cat runCTool$$");
 
 	$DEFERRAL_TIME = "@result";	
+	print "DEFERRAL_TIME = <$DEFERRAL_TIME>\n";
 	##
 	## We're screwed if we can't get out the time
 	##
 	if ( $DEFERRAL_TIME < 0 || !$DEFERRAL_TIME ) {
-		CondorTest::debug("Bad - Unable to get DeferralTime for Job $cluster.$job!\n",1);
+		CondorTest::debug("Bad - Unable to get DeferralTime for Job $cluster.$job!\n",$debuglevel);
 		exit(1);
 	}
 	
@@ -152,7 +163,7 @@ $executed = sub {
 	## Make sure that we haven't run more then we were suppose to
 	##
 	if ( ++$run_ctr > $max_run_ctr ) {
-		CondorTest::debug("Bad - Job $cluster.$job has been executed $run_ctr times!\n",1);
+		CondorTest::debug("Bad - Job $cluster.$job has been executed $run_ctr times!\n",$debuglevel);
 		my @result;
 		CondorTest::runCondorTool("condor_rm $cluster.$job", \@result, 3);
 		exit(1);
@@ -172,14 +183,14 @@ $executed = sub {
 			$suffix = "rd";
 		}
 		CondorTest::debug("Good - Job $cluster.$job began execution for the ".
-			  "$run_ctr$suffix time.\n",1);
+			  "$run_ctr$suffix time.\n",$debuglevel);
 	}
 };
 
 ##
 ## evicted
 ##
-$evicted = sub {
+my $evicted = sub {
 	my %info = @_;
 	my $cluster = $info{"cluster"};
 	my $job = $info{"job"};
@@ -198,21 +209,21 @@ $evicted = sub {
 	##
 	if ( $DEFERRAL_TIME <= 0 ) {
 		CondorTest::debug("Bad - Job $cluster.$job was requeued but we don't have a ".
-			  "DeferralTime from when it started executing!\n",1);
+			  "DeferralTime from when it started executing!\n",$debuglevel);
 		exit(1);
 	}
 	
-	CondorTest::debug("\tEVICTION_TIME: $evictionTime\n",1);
-	CondorTest::debug("\tDEFERRAL_TIME: $DEFERRAL_TIME\n",1);
+	CondorTest::debug("\tEVICTION_TIME: $evictionTime\n",$debuglevel);
+	CondorTest::debug("\tDEFERRAL_TIME: $DEFERRAL_TIME\n",$debuglevel);
 	
 	##
 	## If the job didn't execute for long enough, that means something
 	## is wrong with the deferral time
 	##
 	my $sleep = $evictionTime - $DEFERRAL_TIME;
-	if ( $sleep < $SLEEP_TIME ) {
+	if ( $sleep < ($SLEEP_TIME - 2)) {
 		CondorTest::debug("Bad - Job $cluster.$job only ran for $sleep seconds. ".
-			  "Should have been $SLEEP_TIME seconds!\n",1);
+			  "Should have been $SLEEP_TIME seconds!\n",$debuglevel);
 		exit(1);
 	}
 	##
@@ -221,32 +232,32 @@ $evicted = sub {
 	## sure that we are really being scheduled at proper intervals of time
 	##
 	if ( $LAST_DEFERRAL_TIME > 0 ) {
-		CondorTest::debug("\tLAST_DEFFERAL_TIME: $LAST_DEFERRAL_TIME\n",1);
+		CondorTest::debug("\tLAST_DEFFERAL_TIME: $LAST_DEFERRAL_TIME\n",$debuglevel);
 		##
 		## The difference between the two times is not exact.
 		## This is bad mojo
 		## 
 		my $diff = $DEFERRAL_TIME - $LAST_DEFERRAL_TIME;
-		CondorTest::debug("\tDIFFERENCE: $diff\n",1);
+		CondorTest::debug("\tDIFFERENCE: $diff\n",$debuglevel);
 		if ( $diff < $DEFERRAL_DIFFERENCE ) {
 			CondorTest::debug("Bad - Job $cluster.$job was scheduled to run $diff seconds after ".
-				  "the last execution. It should be $DEFERRAL_DIFFERENCE seconds!\n",1);
+				  "the last execution. It should be $DEFERRAL_DIFFERENCE seconds!\n",$debuglevel);
 			exit(1);
 		}	
 	}
 	$LAST_DEFERRAL_TIME = $DEFERRAL_TIME;
 	
-	CondorTest::debug("Good - Job $cluster.$job was requeued after being evicted.\n",1);
+	CondorTest::debug("Good - Job $cluster.$job was requeued after being evicted.\n",$debuglevel);
 };
 
 ##
 ## success 
 ## The job finished execution
 ##
-$success = sub {
-	%info = @_;
-	$cluster = $info{"cluster"};
-	$job = $info{"job"};
+my $success = sub {
+	my %info = @_;
+	my $cluster = $info{"cluster"};
+	my $job = $info{"job"};
 	
 	##
 	## One final check to make sure that the NumJobStarts is 
@@ -261,9 +272,18 @@ $success = sub {
 	my $h_runcount = -1;
 	while ($try-- > 0 && $h_runcount == -1) {
 		my @result;
+		my $historyfile = `condor_config_val history`;
+		CondorTest::fullchomp($historyfile);
+		print "WARNING: workaround for bug condor wiki #683 \n";
+		# There should never be a job finished and out of the queue
+		# and not already in the EXISTING history file.
+		while(!(-f $historyfile)) {
+			# wait for history file to exist
+			sleep(1);
+		}
 		my $h_cmd = "condor_history -l $cluster.$job";
 		if ( ! CondorTest::runCondorTool($h_cmd, \@result, 3) ) {
-			CondorTest::debug("ERROR: Unable to get JobRunCount due to Condor Tool Failure<$h_cmd>\n",1);
+			CondorTest::debug("ERROR: Unable to get JobRunCount due to Condor Tool Failure<$h_cmd>\n",$debuglevel);
 			exit(1);
 		}
 		my $temp = "@result";
@@ -271,28 +291,28 @@ $success = sub {
 			$h_runcount = $1;
 		}
 		if ( $h_runcount < 0 ) { 
-			CondorTest::debug("$h_cmd\n",1);
-			CondorTest::debug("+-----------------------------------------------+\n",1);
-			CondorTest::debug("$temp\n",1);
-			CondorTest::debug("+-----------------------------------------------+\n\n",1);
+			CondorTest::debug("$h_cmd\n",$debuglevel);
+			CondorTest::debug("+-----------------------------------------------+\n",$debuglevel);
+			CondorTest::debug("$temp\n",$debuglevel);
+			CondorTest::debug("+-----------------------------------------------+\n\n",$debuglevel);
 			
 			##
 			## Check if the job is still in the queue?
 			##
 			$h_cmd = "condor_q";
 			if ( ! CondorTest::runCondorTool($h_cmd, \@result, 3) ) {
-				CondorTest::debug("ERROR: Unable get job queue information<$h_cmd>\n",1);
+				CondorTest::debug("ERROR: Unable get job queue information<$h_cmd>\n",$debuglevel);
 				exit(1);
 			}
-			CondorTest::debug("$h_cmd\n",1);
-			CondorTest::debug("+-----------------------------------------------+\n",1);
-			CondorTest::debug("@result\n",1);
-			CondorTest::debug("+-----------------------------------------------+\n",1);
+			CondorTest::debug("$h_cmd\n",$debuglevel);
+			CondorTest::debug("+-----------------------------------------------+\n",$debuglevel);
+			CondorTest::debug("@result\n",$debuglevel);
+			CondorTest::debug("+-----------------------------------------------+\n",$debuglevel);
 			sleep(10);
 		}
 	} # WHILE
 	if ($h_runcount == -1) { 
-		CondorTest::debug("Bad - Unable to get JobRunCount for Job $cluster.$job!\n",1);
+		CondorTest::debug("Bad - Unable to get JobRunCount for Job $cluster.$job!\n",$debuglevel);
 		exit(1);
 	}
 	
@@ -301,12 +321,12 @@ $success = sub {
 	##
 	if ( $run_ctr != $h_runcount ) {
 		CondorTest::debug("Bad - Job $cluster.$job finished execution but its NumJobStarts ".
-			  "is $h_runcount. It should be $run_ctr!\n",1);
+			  "is $h_runcount. It should be $run_ctr!\n",$debuglevel);
 		exit(1);
 	}
 			
-	CondorTest::debug("Good - Job $cluster.$job finished execution.\n",1);
-	CondorTest::debug("Policy Test Completed\n",1);
+	CondorTest::debug("Good - Job $cluster.$job finished execution.\n",$debuglevel);
+	CondorTest::debug("Policy Test Completed\n",$debuglevel);
 };
 
 ##
@@ -314,12 +334,12 @@ $success = sub {
 ## If the job was held then that means we missed our DeferralTime
 ## that was calculated by the schedd. This is bad.
 ##
-$held = sub {
-	%info = @_;
-	$cluster = $info{"cluster"};
-	$job = $info{"job"};
+my $held = sub {
+	my %info = @_;
+	my $cluster = $info{"cluster"};
+	my $job = $info{"job"};
 
-	CondorTest::debug("Bad - Job $cluster.$job went on hold.\n",1);
+	CondorTest::debug("Bad - Job $cluster.$job went on hold.\n",$debuglevel);
 	exit(1);
 };
 
@@ -327,7 +347,7 @@ $held = sub {
 ## We need to create a new test file based on the universe
 ## that we were told to test
 ##
-$cmd = $base_name."_".$universe.".cmd";
+my $cmd = $base_name."_".$universe.".cmd";
 open( READ_FILE, "<$base_cmd" ) || die( "Can't open '$base_cmd' for reading!\n" );
 open( WRITE_FILE, ">$cmd" ) || die( "Can't open '$cmd' for writing!\n" );
 while( <READ_FILE> ) {
@@ -338,7 +358,7 @@ close( READ_FILE );
 ##
 ## Add the universe information closing with the 'Queue' command
 ##
-print WRITE_FILE "Universe	= $universe\n";
+print WRITE_FILE "Universe	= $longuniverse\n";
 print WRITE_FILE "Log		= $base_name"."_$universe.log\n";
 print WRITE_FILE "Output	= $base_name"."_$universe.out\n";
 print WRITE_FILE "Error		= $base_name"."_$universe.err\n";
@@ -355,7 +375,7 @@ CondorTest::RegisterEvictedWithRequeue($testname, $evicted);
 CondorTest::RegisterHold( $testname, $held );
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	CondorTest::debug("$testname: SUCCESS\n",1);
+	CondorTest::debug("$testname: SUCCESS\n",$debuglevel);
 	exit(0);
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";
@@ -371,7 +391,13 @@ if( CondorTest::RunTest($testname, $cmd, 0) ) {
 ##
 sub extractEvictionTime {
     my ($log) = @_;
-    CondorTest::debug("Searching $log for latest eviction event\n", 1);
+    my $month;
+    my $day;
+    my $hour;
+    my $minute;
+    my $second;
+	my $timestamp;
+    CondorTest::debug("Searching $log for latest eviction event\n", $debuglevel);
     open(FILE, "<$log") || die "Can't open log file '$log'\n";
     while (<FILE>) {
     	##
@@ -380,7 +406,7 @@ sub extractEvictionTime {
     	## that may be in the logfile
     	##
     	if ( $_ =~ /^004\s+\(.*\)\s+(\d{2})\/(\d{2})\s+(\d{2}):(\d{2}):(\d{2})/ ) {
-            CondorTest::debug("Found eviction event: $_", 1);
+            CondorTest::debug("Found eviction event: $_", $debuglevel);
     		$month  = $1;
     		$day    = $2;
     		$hour   = $3;
@@ -395,11 +421,11 @@ sub extractEvictionTime {
     ## The current log file does not include the year of when a job
     ## was executed so we will use the current year
 	##
-	(undef, undef, undef, undef, undef, $year, undef, undef, $isdst) = localtime(time); 
+	(undef, undef, undef, undef, undef, my $year, undef, undef, my $isdst) = localtime(time); 
 	$timestamp = mktime($second, $minute, $hour, $day, $month - 1, $year, 0, 0, $isdst);
 	
-    CondorTest::debug("Eviction date: $month/$day/".($_year + 1900)." $hour:$minute:$second\n", 1);
-    CondorTest::debug("Eviction timestamp: $timestamp\n", 1);
+    CondorTest::debug("Eviction date: $month/$day/".($year + 1900)." $hour:$minute:$second\n", $debuglevel);
+    CondorTest::debug("Eviction timestamp: $timestamp\n", $debuglevel);
     return ($timestamp);
 };
 

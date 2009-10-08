@@ -53,6 +53,7 @@ class ClassAdLogPlugin
 
 	virtual ~ClassAdLogPlugin();
 
+	virtual void earlyInitialize() = 0;
 	virtual void initialize() = 0;
 	virtual void shutdown() = 0;
 
@@ -69,6 +70,7 @@ class ClassAdLogPlugin
 class ClassAdLogPluginManager : public PluginManager<ClassAdLogPlugin>
 {
   public:
+	static void EarlyInitialize();
 	static void Initialize();
 	static void Shutdown();
 	static void NewClassAd(const char *key);

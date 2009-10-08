@@ -33,7 +33,7 @@ $topdir = getcwd();
 $currenthost = CondorTest::getFqdnHost();
 CondorTest::fullchomp($currenthost);
 
-system("date");
+print scalar localtime() . "\n";
 
 $mypid = $$;
 $mysaveme = $corename . ".saveme";
@@ -97,7 +97,7 @@ CondorTest::debug("NEW Path is now <<$newpath>>\n",1);
 chdir("$topdir");
 
 CondorTest::debug("About to install Perl Modules: <<<",1);
-system("date");
+print scalar localtime() . "\n";
 CondorTest::debug(">>>\n",1);
 
 $perlinstall = system("./x_quill_buildperlmods.pl");
@@ -107,7 +107,7 @@ CondorTest::debug("Current SysV IPC state\n",1);
 system("ipcs -a");
 
 CondorTest::debug("About to install Postgres: <<<",1);
-system("date");
+print scalar localtime() . "\n";
 CondorTest::debug(">>>\n",1);
 
 chdir("$topdir");
@@ -120,10 +120,10 @@ if( -d $myquillname ) {
 		CondorTest::debug("Could not start POSTGRESS\n",1);
 	}
 	CondorTest::debug("cp -r $myfullpgsqlinstalllog $mysaveme start......\n",1);
-	system("date");
+	print scalar localtime() . "\n";
 	system("cp -r $myfullpgsqlinstalllog $mysaveme");
 	CondorTest::debug("cp -r $myfullpgsqlinstalllog $mysaveme end......\n",1);
-	system("date");
+	print scalar localtime() . "\n";
 } else {
 	$pgresult = 7;
 	CondorTest::debug("Could not create Quill postgress db install location\n",1);
@@ -139,7 +139,7 @@ if($pgresult != 0) {
 chdir("$topdir");
 
 CondorTest::debug("About to set up Condor Personal : <<<",1);
-system("date");
+print scalar localtime() . "\n";
 CondorTest::debug(">>>\n",1);
 
 $mysubmitnm = $corename . $mypid . ".cmd";
@@ -169,7 +169,7 @@ my $quillport = shift @quill;
 
 CondorTest::debug("---Quill config is $quillconfig and remote port is $quillport---\n",1);
 CondorTest::debug("About to start jobs and test : <<<",1);
-system("date");
+print scalar localtime() . "\n";
 CondorTest::debug(">>>\n",1);
 
 $ENV{CONDOR_CONFIG} = $quillconfig;
@@ -194,7 +194,7 @@ my $pcresult = 0;
 my $result = 0;
 
 CondorTest::debug("Everything ready to test the running condor\n",1);
-system("date");
+print scalar localtime() . "\n";
 if($pgresult == 0) {
 	$pcresult = system("./job_quill_basic.pl $mysubmitnm");
 	CondorTest::debug("Result of job_quill_basic job is  $pcresult\n",1);
@@ -220,7 +220,7 @@ if( -e "$mysubmitnmlog" )
 }
 
 CondorTest::KillPersonal($quillconfig);
-system("date");
+print scalar localtime() . "\n";
 
 if($pcresult == 0) {
 	CondorTest::debug("Setup allowed test which then WORKED!!!......\n",1);

@@ -180,7 +180,7 @@ HistorySnapshot::printResults(SQLQuery *queryhor,
 	ExprTree *tree = NULL;
 
 	if (constraint) {
-		 Parse(constraint, tree);
+		 ParseClassAdRvalExpr(constraint, tree);
 	}
 
   while(1) {

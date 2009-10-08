@@ -46,10 +46,10 @@ public class DelegateCredentialHandler implements CommandHandler {
 
         try {
 
-                // cmd[0] = GT42_DELEGATE_PROXY[_2]
+                // cmd[0] = GT4_DELEGATE_PROXY[_2]
                 reqId = new Integer(cmd[1]);
                 contactString = cmd[2];
-                if ( cmd[0].equals( "GT42_DELEGATE_CREDENTIAL_2" ) ) {
+                if ( cmd[0].equals( "GT4_DELEGATE_CREDENTIAL_2" ) ) {
                     long term_time = Long.parseLong( cmd[3] );
                     if ( term_time > 0 ) {
                         credTermTime = new Date( term_time * 1000 );

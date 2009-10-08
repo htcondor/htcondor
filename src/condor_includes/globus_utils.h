@@ -235,9 +235,9 @@ int check_x509_proxy( const char *proxy_file );
 
 time_t x509_proxy_expiration_time( const char *proxy_file );
 
-char* x509_proxy_subject_name( const char *proxy_file );
+char* x509_proxy_subject_name( const char *proxy_file, int include_voms_attributes);
 
-char* x509_proxy_identity_name( const char *proxy_file );
+char* x509_proxy_identity_name( const char *proxy_file, int include_voms_attributes);
 
 int x509_proxy_seconds_until_expire( const char *proxy_file );
 
@@ -266,10 +266,6 @@ void parse_resource_manager_string( const char *string, char **host,
 /* Returns true (non-0) if path looks like an URL that Globus
    (specifically, globus-url-copy) can handle */
 int is_globus_friendly_url(const char * path);
-
-#if 0
-int check_globus_rm_contacts( char* resource );
-#endif
 
 END_C_DECLS
 

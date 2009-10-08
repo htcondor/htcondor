@@ -35,7 +35,7 @@ $execute = sub
 
 $timed = sub
 {
-        system("date");
+        print scalar localtime() . "\n";
         CondorTest::debug("lib_procapi_cpuutracking-snapshot HUNG !!!!!!!!!!!!!!!!!!\n",1);
         exit(1);
 };

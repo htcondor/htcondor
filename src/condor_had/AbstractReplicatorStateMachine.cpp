@@ -17,6 +17,7 @@
  *
  ***************************************************************/
 
+#include "condor_common.h"
 #include "condor_daemon_core.h"
 // for 'param' function
 #include "condor_config.h"
@@ -59,7 +60,7 @@ AbstractReplicatorStateMachine::finalize()
    	m_connectionTimeout = DEFAULT_SEND_COMMAND_TIMEOUT;
 
     utilClearList( m_replicationDaemonsList );
-    m_releaseDirectoryPath = "";
+    m_transfererPath = "";
 
     //utilCancelReaper(m_downloadReaperId);
     //utilCancelReaper(m_uploadReaperId);
@@ -147,16 +148,24 @@ AbstractReplicatorStateMachine::reinitialize()
         utilCrucialError( utilNoParameterError("HAD_CONNECTION_TIMEOUT",
 										       "HAD").Value( ) );
     }
-    buffer = param( "BIN" );
 
-    if( buffer ) {
-        m_releaseDirectoryPath.sprintf( "%s", buffer );
+	buffer = param( "TRANSFERER" );
+	if ( NULL != buffer ) {
+		m_transfererPath = buffer;
+		free( buffer );
+	}
+	else {
+		buffer = param( "SBIN" );
+		if( !buffer ) {
+			utilCrucialError(
+				utilConfigurationError("SBIN","REPLICATION").Value());
+		}
+		else {
+			m_transfererPath.sprintf( "%s/condor_transferer", buffer );
+			free( buffer );
+		}
+	}
 
-        free( buffer );
-    } else {
-        utilCrucialError( utilConfigurationError("RELEASE_DIR", 
-											     "REPLICATION").Value( ) );
-    }
 	char* spoolDirectory = param( "SPOOL" );
     
     if( spoolDirectory ) {
@@ -316,12 +325,8 @@ AbstractReplicatorStateMachine::uploadReplicaTransfererReaper(
 bool
 AbstractReplicatorStateMachine::download( const char* daemonSinfulString )
 {
-    MyString executable;
-
-    executable.sprintf( "%s/condor_transferer",
-                                m_releaseDirectoryPath.Value( ) );
 	ArgList  processArguments;
-	processArguments.AppendArg( executable.Value() );
+	processArguments.AppendArg( m_transfererPath.Value() );
 	processArguments.AppendArg( "-f" );
 	processArguments.AppendArg( "down" );
 	processArguments.AppendArg( daemonSinfulString );
@@ -335,18 +340,13 @@ AbstractReplicatorStateMachine::download( const char* daemonSinfulString )
 			 "AbstractReplicatorStateMachine::download creating "
 			 "downloading condor_transferer process: \n \"%s\"\n",
 			 s.Value( ) );
-    // PRIV_USER_FINAL privilege is necessary here to create a user process,
-    // after setting it to PRIV_UNKNOWN, the transferer process failed to
-    // create when the pool was started with real uid of 'root'
-	priv_state privilege;
 
-	if( ! getProcessPrivilege(privilege) ) {
-		dprintf( D_ALWAYS, "AbstractReplicatorStateMachine::download unable to "
-						   "grant to the transferer the necessary privilege\n");
-		return false;
-	}
+	// PRIV_ROOT privilege is necessary here to create the process
+	// so we can read GSI certs <sigh>
+	priv_state privilege = PRIV_ROOT;
+
 	int transfererPid = daemonCore->Create_Process(
-        executable.Value( ),        // name
+        m_transfererPath.Value( ),    // name
         processArguments,             // args
         privilege,                    // priv
         m_downloadReaperId,           // reaper id
@@ -383,13 +383,8 @@ AbstractReplicatorStateMachine::download( const char* daemonSinfulString )
 bool
 AbstractReplicatorStateMachine::upload( const char* daemonSinfulString )
 {
-    MyString executable;
-
-    executable.sprintf( "%s/condor_transferer",
-                                m_releaseDirectoryPath.Value( ) );
-
 	ArgList  processArguments;
-	processArguments.AppendArg( executable.Value() );
+	processArguments.AppendArg( m_transfererPath.Value() );
 	processArguments.AppendArg( "-f" );
 	processArguments.AppendArg( "up" );
 	processArguments.AppendArg( daemonSinfulString );
@@ -405,19 +400,12 @@ AbstractReplicatorStateMachine::upload( const char* daemonSinfulString )
 			 "uploading condor_transferer process: \n \"%s\"\n",
 			 s.Value( ) );
 
-	// PRIV_USER_FINAL privilege is necessary here to create a user process,
-	// after setting it to PRIV_UNKNOWN, the transferer process failed to
-	// create when the pool was started with real uid of 'root'
-	priv_state privilege;
-
-	if( ! getProcessPrivilege(privilege) ) {
-        dprintf( D_ALWAYS, "AbstractReplicatorStateMachine::upload unable to "
-                           "grant to the transferer the necessary privilege\n");
-        return false;
-    }
+	// PRIV_ROOT privilege is necessary here to create the process
+	// so we can read GSI certs <sigh>
+	priv_state privilege = PRIV_ROOT;
 
     int transfererPid = daemonCore->Create_Process(
-        executable.Value( ),        // name
+        m_transfererPath.Value( ),    // name
         processArguments,             // args
         privilege,                    // priv
         m_uploadReaperId,             // reaper id
@@ -503,7 +491,7 @@ AbstractReplicatorStateMachine::updateVersionsList( Version& newVersion )
     dprintf( D_FULLDEBUG,
         "AbstractReplicatorStateMachine::updateVersionsList appending %s\n",
          newVersion.toString( ).Value( ) );
-    m_versionsList.Append( newVersion );
+    m_versionsList.Append( &newVersion );
     m_versionsList.Rewind( );
 // End of TODO: Atomic operation
 }
@@ -696,39 +684,4 @@ AbstractReplicatorStateMachine::killTransferers()
 		}
     }
 	m_uploadTransfererMetadataList.Rewind( );
-}
-
-bool 
-AbstractReplicatorStateMachine::getProcessPrivilege(priv_state& privilege)
-{
-	// Create the priv state for the process
-	//priv_state priv;
-# ifdef WIN32
-	// WINDOWS
-	privilege = PRIV_CONDOR;
-# else
-	// UNIX
-	privilege = PRIV_USER_FINAL;
-	uid_t uid = get_condor_uid( );
-	
-	if ( uid == (uid_t) -1 )
-	{
-		dprintf( D_ALWAYS, "Cron: Invalid UID -1\n" );
-		
-		return false;
-	}
-	gid_t gid = get_condor_gid( );
-	
-	if ( gid == (uid_t) -1 )
-	{
-		dprintf( D_ALWAYS, "Cron: Invalid GID -1\n" );
-		
-		return false;
-	}
-	// tells DaemonCore what uid/gid to use for PRIV_USER_FINAL
-	set_user_ids( uid, gid );
-# endif
-
-	return true;
-	//return priv;
 }

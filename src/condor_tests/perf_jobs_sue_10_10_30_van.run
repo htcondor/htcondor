@@ -57,7 +57,7 @@ while( $currenttestcount <= $maxjobs)
 }
 
 CondorPersonal::KillDaemonPids($secconfig);
-system("date");
+print scalar localtime() . "\n";
 
 if($nostatus != 0)
 {

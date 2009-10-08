@@ -39,6 +39,7 @@ extern CStarter *Starter;
 JobInfoCommunicator::JobInfoCommunicator()
 {
 	job_ad = NULL;
+	mach_ad = NULL;
 	job_universe = CONDOR_UNIVERSE_VANILLA;
 	job_cluster = -1;
 	job_proc = -1;
@@ -63,6 +64,7 @@ JobInfoCommunicator::JobInfoCommunicator()
 #endif
 	m_periodic_job_update_tid = -1;
 	m_allJobsDone_finished = false;
+	m_enforce_limits = false;
 }
 
 
@@ -70,6 +72,9 @@ JobInfoCommunicator::~JobInfoCommunicator()
 {
 	if( job_ad ) {
 		delete job_ad;
+	}
+	if( mach_ad ) {
+		delete mach_ad;
 	}
 	if( u_log ) {
 		delete u_log;
@@ -212,6 +217,13 @@ ClassAd*
 JobInfoCommunicator::jobClassAd( void )
 {
 	return job_ad;
+}
+
+
+ClassAd*
+JobInfoCommunicator::machClassAd( void )
+{
+	return mach_ad;
 }
 
 
@@ -471,8 +483,8 @@ JobInfoCommunicator::allowRunAsOwner( bool default_allow, bool default_request )
 		// Eval as an expression so a policy such as this can be specified:
 		// TARGET.RunAsOwner =?= True
 
-	bool run_as_owner = param_boolean_expr( "STARTER_ALLOW_RUNAS_OWNER",
-	                                        default_allow, NULL, job_ad );
+	bool run_as_owner = param_boolean( "STARTER_ALLOW_RUNAS_OWNER",
+                                       default_allow, true, NULL, job_ad );
 
 		// Next check if the job has requested runas_owner
 	if( run_as_owner ) {

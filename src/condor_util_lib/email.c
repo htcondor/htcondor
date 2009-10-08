@@ -57,6 +57,7 @@ email_open( const char *email_addr, const char *subject )
 {
 	char *Mailer;
 	char *SmtpServer = NULL;
+	char *FromAddress = NULL;
 	char *FinalSubject;
 	char *FinalAddr;
 	char *temp;
@@ -76,7 +77,7 @@ email_open( const char *email_addr, const char *subject )
 	if ( subject ) {
 		size_t prolog_length = strlen(EMAIL_SUBJECT_PROLOG);
 		size_t subject_length = strlen(subject);
-		FinalSubject = malloc(prolog_length + subject_length + 1);
+		FinalSubject = (char *)malloc(prolog_length + subject_length + 1);
 		memcpy(FinalSubject, EMAIL_SUBJECT_PROLOG, prolog_length);
 		memcpy(&FinalSubject[prolog_length], subject, subject_length);
 		FinalSubject[prolog_length + subject_length] = '\0';
@@ -85,6 +86,10 @@ email_open( const char *email_addr, const char *subject )
 		FinalSubject = strdup(EMAIL_SUBJECT_PROLOG);
 	}
 
+	/** The following will not cause a fatal error, it just means
+		that on Windows we may construct an invalid "from" address. */
+	FromAddress = param("MAIL_FROM");
+	
 #ifdef WIN32
 	/* On WinNT, we need to be given an SMTP server, and we must pass
 	 * this servername to the Mailer with a -relay option.
@@ -94,6 +99,7 @@ email_open( const char *email_addr, const char *subject )
 			"Trying to email, but SMTP_SERVER not specified in config file\n");
 		free(Mailer);
 		free(FinalSubject);
+		if (FromAddress) free(FromAddress);
 		return NULL;
 	}
 #endif 	
@@ -111,6 +117,7 @@ email_open( const char *email_addr, const char *subject )
 				"Trying to email, but CONDOR_ADMIN not specified in config file\n");
 			free(Mailer);
 			free(FinalSubject);
+			if (FromAddress) free(FromAddress);
 			if (SmtpServer) free(SmtpServer);
 			return NULL;
 		}
@@ -136,13 +143,14 @@ email_open( const char *email_addr, const char *subject )
 		dprintf(D_FULLDEBUG, "Trying to email, but address list is empty\n");
 		free(Mailer);
 		free(FinalSubject);
+		if (FromAddress) free(FromAddress);
 		if (SmtpServer) free(SmtpServer);
 		free(FinalAddr);
 		return NULL;
 	}
 
 	/* construct the argument vector for the mailer */
-	final_args = malloc((6 + num_addresses) * sizeof(char*));
+	final_args = (char **)malloc((8 + num_addresses) * sizeof(char*));
 	if (final_args == NULL) {
 		EXCEPT("Out of memory");
 	}
@@ -150,6 +158,10 @@ email_open( const char *email_addr, const char *subject )
 	final_args[arg_index++] = Mailer;
 	final_args[arg_index++] = "-s";
 	final_args[arg_index++] = FinalSubject;
+	if (FromAddress) {
+		final_args[arg_index++] = "-f";
+		final_args[arg_index++] = FromAddress;
+	}
 	if (SmtpServer) {
 		final_args[arg_index++] = "-relay";
 		final_args[arg_index++] = SmtpServer;
@@ -180,8 +192,8 @@ email_open( const char *email_addr, const char *subject )
 	/* free up everything we strdup-ed and param-ed, and return result */
 	free(Mailer);
 	free(FinalSubject);
-	if (SmtpServer)
-		free(SmtpServer);
+	if (FromAddress) free(FromAddress);
+	if (SmtpServer) free(SmtpServer);
 	free(FinalAddr);
 	free(final_args);
 
@@ -411,6 +423,7 @@ email_close(FILE *mailer)
 	char *temp;
 	mode_t prev_umask;
 	priv_state priv;
+	char *customSig;
 
 	if ( mailer == NULL ) {
 		return;
@@ -419,22 +432,31 @@ email_close(FILE *mailer)
 	/* Want the letter to come from "condor" if possible */
 	priv = set_condor_priv();
 
-	/* Put a signature on the bottom of the email */
-	fprintf( mailer, "\n\n-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=\n" );
-	fprintf( mailer, "Questions about this message or Condor in general?\n" );
+	customSig = NULL;
+	if (customSig = param("EMAIL_SIGNATURE")) {
+		fprintf( mailer, "\n\n");
+		fprintf( mailer, customSig);
+		fprintf( mailer, "\n");
+		free(customSig);
+	} else {
+		
+		/* Put a signature on the bottom of the email */
+		fprintf( mailer, "\n\n-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=\n" );
+		fprintf( mailer, "Questions about this message or Condor in general?\n" );
 
-		/* See if there's an address users should use for help */
-	temp = param( "CONDOR_SUPPORT_EMAIL" );
-	if( ! temp ) {
-		temp = param( "CONDOR_ADMIN" );
+			/* See if there's an address users should use for help */
+		temp = param( "CONDOR_SUPPORT_EMAIL" );
+		if( ! temp ) {
+			temp = param( "CONDOR_ADMIN" );
+		}
+		if( temp ) {
+			fprintf( mailer, "Email address of the local Condor administrator: "
+					 "%s\n", temp );
+			free( temp );
+		}
+		fprintf( mailer, "The Official Condor Homepage is "
+				 "http://www.cs.wisc.edu/condor\n" );
 	}
-	if( temp ) {
-		fprintf( mailer, "Email address of the local Condor administrator: "
-				 "%s\n", temp );
-		free( temp );
-	}
-	fprintf( mailer, "The Official Condor Homepage is "
-			 "http://www.cs.wisc.edu/condor\n" );
 
 	fflush(mailer);
 	/* there are some oddities with how pclose can close a file. In some

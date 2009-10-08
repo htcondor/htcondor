@@ -33,7 +33,7 @@
 // If the grid_monitor appears hosed, how long do we
 // disable grid_monitoring that site for?
 // (We actually just set the timer for that site to this)
-#define GM_DISABLE_LENGTH (60*60)
+int GlobusResource::monitorDisableLength = DEFAULT_GM_DISABLE_LENGTH;
 
 int GlobusResource::gahpCallTimeout = 300;	// default value
 bool GlobusResource::enableGridMonitor = false;
@@ -47,7 +47,8 @@ HashTable <HashKey, GlobusResource *>
 static unsigned int g_MonitorUID = 0;
 
 GlobusResource *GlobusResource::FindOrCreateResource( const char *resource_name,
-													  const char *proxy_subject )
+													  const char *proxy_subject,
+													  bool is_gt5 )
 {
 	int rc;
 	GlobusResource *resource = NULL;
@@ -60,7 +61,7 @@ GlobusResource *GlobusResource::FindOrCreateResource( const char *resource_name,
 
 	rc = ResourcesByName.lookup( HashKey( hash_name ), resource );
 	if ( rc != 0 ) {
-		resource = new GlobusResource( canonical_name, proxy_subject );
+		resource = new GlobusResource( canonical_name, proxy_subject, is_gt5 );
 		ASSERT(resource);
 		if ( resource->Init() == false ) {
 			delete resource;
@@ -76,11 +77,13 @@ GlobusResource *GlobusResource::FindOrCreateResource( const char *resource_name,
 }
 
 GlobusResource::GlobusResource( const char *resource_name,
-								const char *proxy_subject )
+								const char *proxy_subject, bool is_gt5 )
 	: BaseResource( resource_name )
 {
 	initialized = false;
 	proxySubject = strdup( proxy_subject );
+
+	m_isGt5 = is_gt5;
 
 	submitJMLimit = DEFAULT_MAX_JOBMANAGERS_PER_RESOURCE / 2;
 	restartJMLimit = DEFAULT_MAX_JOBMANAGERS_PER_RESOURCE - submitJMLimit;
@@ -95,12 +98,15 @@ GlobusResource::GlobusResource( const char *resource_name,
 	monitorDirectory = NULL;
 	monitorJobStatusFile = NULL;
 	monitorLogFile = NULL;
-	logFileTimeoutLastReadTime = 0;
+	logFileLastReadTime = 0;
 	jobStatusFileLastUpdate = 0;
 	monitorGramJobId = NULL;
 	gahp = NULL;
 	monitorGahp = NULL;
 	monitorRetryTime = 0;
+	monitorFirstStartup = true;
+	monitorGramJobStatus = GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNKNOWN;
+	monitorGramErrorCode = 0;
 }
 
 GlobusResource::~GlobusResource()
@@ -253,6 +259,10 @@ bool GlobusResource::RequestJM( GlobusJob *job, bool is_submit )
 {
 	GlobusJob *jobptr;
 
+	if ( m_isGt5 ) {
+		return true;
+	}
+
 	if ( is_submit ) {
 		submitJMsWanted.Rewind();
 		while ( submitJMsWanted.Next( jobptr ) ) {
@@ -304,6 +314,10 @@ bool GlobusResource::RequestJM( GlobusJob *job, bool is_submit )
 
 void GlobusResource::JMComplete( GlobusJob *job )
 {
+	if ( m_isGt5 ) {
+		return;
+	}
+
 	// If the job was in one of the Allowed queues, check whether we
 	// should promote a job from the Wanted queues to take its place.
 	// Also perform the check if NULL is passed.
@@ -348,7 +362,9 @@ void GlobusResource::JMComplete( GlobusJob *job )
 
 void GlobusResource::JMAlreadyRunning( GlobusJob *job )
 {
-	restartJMsAllowed.Append( job );
+	if ( !m_isGt5 ) {
+		restartJMsAllowed.Append( job );
+	}
 }
 
 void GlobusResource::DoPing( time_t& ping_delay, bool& ping_complete,
@@ -397,6 +413,12 @@ GlobusResource::CheckMonitor()
 	daemonCore->Reset_Timer( checkMonitorTid, TIMER_NEVER );
 	dprintf(D_FULLDEBUG, "grid_monitor for %s entering CheckMonitor\n",
 		resourceName);
+
+	if ( m_isGt5 ) {
+		dprintf( D_FULLDEBUG, "Disabling grid_monitor for GRAM5 server %s\n",
+				 resourceName );
+		return TRUE;
+	}
 
 	if ( monitorGahp->isInitialized() == false ) {
 		dprintf( D_ALWAYS, "GAHP server not initialized yet, not submitting "
@@ -530,6 +552,7 @@ GlobusResource::CheckMonitor()
 					dprintf(D_ALWAYS, "Successfully started grid_monitor "
 							"for %s\n", resourceName);
 					monitorStarting = false;
+					monitorFirstStartup = false;
 					monitorActive = true;
 					registeredJobs.Rewind();
 					while ( registeredJobs.Next( (BaseJob*&)job ) ) {
@@ -537,7 +560,6 @@ GlobusResource::CheckMonitor()
 					}
 				}
 				logFileLastReadTime = time(NULL);
-				logFileTimeoutLastReadTime = time(NULL);
 				daemonCore->Reset_Timer( checkMonitorTid, 30 );
 				break;
 
@@ -570,16 +592,22 @@ GlobusResource::CheckMonitor()
 
 			}
 
-		} else if ( time(NULL) > logFileLastReadTime + log_file_timeout ) {
+		} else if ( time(NULL) > logFileLastReadTime + log_file_timeout &&
+					!monitorStarting ) {
+			dprintf( D_ALWAYS, "Haven't heard from running grid_monitor "
+					 "at %s for %d seconds, trying new job submission\n",
+					 resourceName, log_file_timeout );
 			if( ! SubmitMonitorJob() ) {
 				dprintf(D_ALWAYS, "Failed to restart grid_monitor.  Giving up on grid_monitor for site %s\n", resourceName);
 				AbandonMonitor();
 			}
 			daemonCore->Reset_Timer( checkMonitorTid, 30);
 
-		} else if ( time(NULL) > logFileTimeoutLastReadTime + monitor_retry_duration) {
-			dprintf(D_ALWAYS, "grid_monitor log file for %s is too old.\n",
-				resourceName);
+		} else if ( monitorStarting &&
+					time(NULL) > logFileLastReadTime + monitor_retry_duration) {
+			dprintf( D_ALWAYS, "Haven't heard from new grid_monitor "
+					 "at %s for %d seconds, giving up\n",
+					 resourceName, monitor_retry_duration );
 			AbandonMonitor();
 
 		} else {
@@ -595,10 +623,10 @@ GlobusResource::AbandonMonitor()
 {
 	dprintf(D_ALWAYS, "Giving up on grid_monitor for site %s.  "
 		"Will retry in %d seconds (%d minutes)\n",
-		resourceName, GM_DISABLE_LENGTH, GM_DISABLE_LENGTH / 60);
+		resourceName, monitorDisableLength, monitorDisableLength / 60);
 	StopMonitor();
-	monitorRetryTime = time(NULL) + GM_DISABLE_LENGTH;
-	daemonCore->Reset_Timer( checkMonitorTid, GM_DISABLE_LENGTH);
+	monitorRetryTime = time(NULL) + monitorDisableLength;
+	daemonCore->Reset_Timer( checkMonitorTid, monitorDisableLength );
 }
 
 void
@@ -608,10 +636,11 @@ GlobusResource::StopMonitor()
 
 	dprintf(D_ALWAYS, "Stopping grid_monitor for resource %s\n", resourceName);
 
-	monitorStarting = false;
+		// Do we want to notify jobs when the grid monitor fails?
 	monitorActive = false;
-	if ( monitorActive ) {
-		monitorActive = false;
+	monitorFirstStartup = false;
+	monitorStarting = false;
+	if ( monitorActive || monitorFirstStartup ) {
 		registeredJobs.Rewind();
 		while ( registeredJobs.Next( (BaseJob*&)job ) ) {
 			job->SetEvaluateState();
@@ -639,6 +668,8 @@ GlobusResource::CleanupMonitorJob()
 
 		free( monitorGramJobId );
 		monitorGramJobId = NULL;
+		monitorGramJobStatus = GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNKNOWN;
+		monitorGramErrorCode = 0;
 	}
 	if ( monitorDirectory ) {
 		MyString tmp_dir;
@@ -727,14 +758,6 @@ GlobusResource::SubmitMonitorJob()
 	jobStatusFileLastReadTime = now;
 	logFileLastReadTime = now;
 
-	if( monitorStarting ) {
-		// Anything special to do on a cold start?
-		// (It's possible for this to get called after startup
-		// if someone wants to force a cold restart (say, after
-		// AbandonMonitor())
-		logFileTimeoutLastReadTime = now;
-	}
-
 	monitor_executable = param( "GRID_MONITOR" );
 	if ( monitor_executable == NULL ) {
 		dprintf( D_ALWAYS, "Failed to submit grid_monitor to %s: "
@@ -754,7 +777,8 @@ GlobusResource::SubmitMonitorJob()
 	contact.sprintf( "%s/jobmanager-fork", resourceName );
 
 	rc = monitorGahp->globus_gram_client_job_request( contact.Value(),
-													  RSL.Value(), 0, NULL,
+													  RSL.Value(), 0, 
+													  monitorGahp->getGt2CallbackContact(),
 													  NULL );
 
 	if ( rc != GAHPCLIENT_COMMAND_PENDING ) {
@@ -914,3 +938,13 @@ GlobusResource::ReadMonitorLogFile()
 	return retval;
 }
 
+void
+GlobusResource::gridMonitorCallback( int state, int errorcode )
+{
+	if ( state != monitorGramJobStatus ) {
+		dprintf( D_FULLDEBUG, "grid_monitor for %s: gram callback "
+				 "status=%d errorcode=%d\n", resourceName, state, errorcode );
+		monitorGramJobStatus = state;
+		monitorGramErrorCode = errorcode;
+	}
+}

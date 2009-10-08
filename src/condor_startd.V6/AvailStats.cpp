@@ -83,11 +83,12 @@ AvailStats::update( State new_state, Activity new_act )
 				// if the set is at our maximum configured size, then
 				// collapse it by removing every other record
 			as_avail_periods.Rewind();
-			while( as_avail_periods.Next() ) {
+			int item;
+			while( as_avail_periods.Next(item) ) {
 				as_avail_periods.DeleteCurrent();
 				as_num_avail_periods--;
 				if( as_avail_periods.AtEnd() ) break;
-				as_avail_periods.Next();
+				as_avail_periods.Next(item);
 			}
 		}
 			// initialize our avail estimate immediately
@@ -261,8 +262,14 @@ AvailStats::checkpoint()
 			if( (int)fwrite(state.Value(), sizeof(char), state.Length(),
 							fp) == state.Length() ) {
 				fclose(fp);
-				rotate_file(tmp_ckpt_filename.Value(),
-							ckpt_filename.Value());
+				if ( rotate_file(tmp_ckpt_filename.Value(),
+								 ckpt_filename.Value()) < 0 ) {
+					dprintf( D_ALWAYS,
+							 "AvailStats::checkpoint() failed to rotate "
+							 "%s to %s\n",
+							 tmp_ckpt_filename.Value(),
+							 ckpt_filename.Value() );
+				}
 			} else {
 				fclose(fp);
 			}

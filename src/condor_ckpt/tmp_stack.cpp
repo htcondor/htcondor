@@ -71,6 +71,7 @@ void ExecuteOnTmpStk( void (*func)() )
 {
 	jmp_buf	env;
 	SaveFunc = func;
+	unsigned long addr;
 
 	/*
 	condor_malloc gives us memory that is not saved across
@@ -96,12 +97,14 @@ void ExecuteOnTmpStk( void (*func)() )
 				various platforms.  -pete 01/19/00 
 				Yup. still have to explore the ramifications. 
 				-psilord 02/18/08 */
-			JMP_BUF_SP(env) = (long)(TmpStack + TmpStackSize - 2);
-
+			addr = (long)(TmpStack + TmpStackSize - 2);
 		} else {
-
-			JMP_BUF_SP(env) = (long)TmpStack;
+			addr = (long)TmpStack;
 		}
+		/* glibc26+ requires encrypting this pointer */
+		PTR_ENCRYPT(addr);
+		JMP_BUF_SP(env) = addr;
+
 		dprintf(D_CKPT, "About to execute on tmpstack.\n");
 		LONGJMP( env, 1 );
 		dprintf(D_CKPT, "How did I get here after LONGJMP()!?!\n");

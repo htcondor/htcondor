@@ -21,6 +21,7 @@
 #define _SET_USER_FROM_AD_H_
 
 #include "condor_common.h"
+#include "condor_debug.h"
 #include "condor_attributes.h"
 #include "condor_classad.h"
 #include "classad_newold.h"

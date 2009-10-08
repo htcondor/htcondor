@@ -26,6 +26,7 @@
 #include "condor_debug.h"
 #include "internet.h"
 #include "selector.h"
+#include "condor_threads.h"
 
 /*
  * Returns true if the given error number indicates
@@ -49,13 +50,21 @@ static int errno_is_temporary( int e )
 #endif
 }
 
+static char const *not_null_peer_description(char const *peer_description,SOCKET fd,char *sinbuf)
+{
+    if( peer_description ) {
+        return peer_description;
+    }
+    return sock_peer_to_string(fd,sinbuf,SINFUL_STRING_BUF_SIZE,"disconnected socket");
+}
+
 /* Generic read/write wrappers for condor.  These function emulate the 
  * read/write system calls under unix except that they are portable, use
  * a timeout, and make sure that all data is read or written.
  * Returns < 0 on failure.  -1 = general error, -2 = peer closed socket.
  */
 int
-condor_read( SOCKET fd, char *buf, int sz, int timeout, int flags )
+condor_read( char const *peer_description, SOCKET fd, char *buf, int sz, int timeout, int flags )
 {
 	Selector selector;
 	int nr = 0, nro;
@@ -66,7 +75,7 @@ condor_read( SOCKET fd, char *buf, int sz, int timeout, int flags )
 		dprintf(D_NETWORK,
 				"condor_read(fd=%d %s,,size=%d,timeout=%d,flags=%d)\n",
 				fd,
-				sock_peer_to_string(fd,sinbuf,sizeof(sinbuf),"unknown source"),
+				not_null_peer_description(peer_description,fd,sinbuf),
 				sz,
 				timeout,
 				flags);
@@ -99,7 +108,7 @@ condor_read( SOCKET fd, char *buf, int sz, int timeout, int flags )
 				dprintf( D_ALWAYS, 
 						 "condor_read(): timeout reading %d bytes from %s.\n",
 						 sz,
-						 sock_peer_to_string(fd, sinbuf, sizeof(sinbuf), "unknown source") );
+						 not_null_peer_description(peer_description,fd,sinbuf) );
 				return -1;
 			}
 			
@@ -118,29 +127,36 @@ condor_read( SOCKET fd, char *buf, int sz, int timeout, int flags )
 				dprintf( D_ALWAYS, 
 						 "condor_read(): timeout reading %d bytes from %s.\n",
 						 sz,
-						 sock_peer_to_string(fd, sinbuf, sizeof(sinbuf), "unknown source") );
+						 not_null_peer_description(peer_description,fd,sinbuf) );
 				return -1;
 
 			} else if ( selector.signalled() ) {
 				continue;
 			} else if ( !selector.has_ready() ) {
 				int the_error;
+                char const *the_errorstr;
 #ifdef WIN32
 				the_error = WSAGetLastError();
+                the_errorstr = "";
 #else
 				the_error = errno;
+                the_errorstr = strerror(the_error);
 #endif
-				dprintf( D_ALWAYS, "condor_read(): select() "
-						 "returns %d, assuming failure reading %d bytes from %s (errno=%d).\n",
+
+				dprintf( D_ALWAYS, "condor_read() failed: select() "
+						 "returns %d, reading %d bytes from %s (errno=%d %s).\n",
 						 selector.select_retval(),
 						 sz,
-						 sock_peer_to_string(fd, sinbuf, sizeof(sinbuf), "unknown source"),
-						 the_error );
+						 not_null_peer_description(peer_description,fd,sinbuf),
+						 the_error, the_errorstr );
 				return -1;
 			}
 		}
-
+		
+		start_thread_safe("recv");
 		nro = recv(fd, &buf[nr], sz - nr, flags);
+		stop_thread_safe("recv");
+
 		if( nro <= 0 ) {
 
 				// If timeout > 0, and we made it here, then
@@ -156,29 +172,32 @@ condor_read( SOCKET fd, char *buf, int sz, int timeout, int flags )
 				dprintf( D_FULLDEBUG, "condor_read(): "
 						 "Socket closed when trying to read %d bytes from %s\n",
 						 sz,
-						 sock_peer_to_string(fd, sinbuf, sizeof(sinbuf), "unknown source") );
+						 not_null_peer_description(peer_description,fd,sinbuf) );
 				return -2;
-	}
+			}
 
 			int the_error;
+            char const *the_errorstr;
 #ifdef WIN32
 			the_error = WSAGetLastError();
+            the_errorstr = "";
 #else
 			the_error = errno;
+            the_errorstr = strerror(the_error);
 #endif
 			if ( errno_is_temporary(the_error) ) {
 				dprintf( D_FULLDEBUG, "condor_read(): "
-				         "recv() returned temporary error %d,"
+				         "recv() returned temporary error %d %s,"
 				         "still trying to read from %s\n",
-				         the_error,
-				         sock_peer_to_string(fd, sinbuf, sizeof(sinbuf), "unknown source") );
+				         the_error,the_errorstr,
+				         not_null_peer_description(peer_description,fd,sinbuf) );
 				continue;
 			}
 
-			dprintf( D_ALWAYS, "condor_read(): recv() returned %d, "
-					 "errno = %d, assuming failure reading %d bytes from %s.\n",
-					 nro, the_error, sz,
-					 sock_peer_to_string(fd, sinbuf, sizeof(sinbuf), "unknown source") );
+			dprintf( D_ALWAYS, "condor_read() failed: recv() returned %d, "
+					 "errno = %d %s, reading %d bytes from %s.\n",
+					 nro, the_error, the_errorstr, sz,
+					 not_null_peer_description(peer_description,fd,sinbuf) );
 			return -1;
 		}
 		nr += nro;
@@ -191,7 +210,7 @@ condor_read( SOCKET fd, char *buf, int sz, int timeout, int flags )
 
 
 int
-condor_write( SOCKET fd, char *buf, int sz, int timeout, int flags )
+condor_write( char const *peer_description, SOCKET fd, char *buf, int sz, int timeout, int flags )
 {
 	Selector selector;
 	int nw = 0, nwo = 0;
@@ -206,7 +225,7 @@ condor_write( SOCKET fd, char *buf, int sz, int timeout, int flags )
 		dprintf(D_NETWORK,
 				"condor_write(fd=%d %s,,size=%d,timeout=%d,flags=%d)\n",
 				fd,
-				sock_peer_to_string(fd,sinbuf,sizeof(sinbuf),"unknown source"),
+				not_null_peer_description(peer_description,fd,sinbuf),
 				sz,
 				timeout,
 				flags);
@@ -242,7 +261,7 @@ condor_write( SOCKET fd, char *buf, int sz, int timeout, int flags )
 					dprintf( D_ALWAYS, "condor_write(): "
 							 "timed out writing %d bytes to %s\n",
 							 sz,
-							 sock_peer_to_string(fd, sinbuf, sizeof(sinbuf), "unknown source") );
+							 not_null_peer_description(peer_description,fd,sinbuf) );
 					return -1;
 				}
 			
@@ -269,7 +288,7 @@ condor_write( SOCKET fd, char *buf, int sz, int timeout, int flags )
 					dprintf( D_ALWAYS, "condor_write(): "
 							 "timed out writing %d bytes to %s\n",
 							 sz,
-							 sock_peer_to_string(fd, sinbuf, sizeof(sinbuf), "unknown source") );
+							 not_null_peer_description(peer_description,fd,sinbuf) );
 					return -1;
 				
 				} else if ( selector.signalled() ) {
@@ -282,10 +301,13 @@ condor_write( SOCKET fd, char *buf, int sz, int timeout, int flags )
 						nro = recv(fd, tmpbuf, 1, MSG_PEEK);
 						if( nro == -1 ) {
 							int the_error;
+                            char const *the_errorstr;
 #ifdef WIN32
 							the_error = WSAGetLastError();
+                            the_errorstr = "";
 #else
 							the_error = errno;
+                            the_errorstr = strerror(the_error);
 #endif
 							if(errno_is_temporary( the_error )) {
 								continue;
@@ -294,10 +316,10 @@ condor_write( SOCKET fd, char *buf, int sz, int timeout, int flags )
 							dprintf( D_ALWAYS, "condor_write(): "
 									 "Socket closed when trying "
 									 "to write %d bytes to %s, fd is %d, "
-									 "errno=%d\n",
+									 "errno=%d %s\n",
 									 sz,
-									 sock_peer_to_string(fd, sinbuf, sizeof(sinbuf), "unknown source"),
-									 fd, the_error );
+									 not_null_peer_description(peer_description,fd,sinbuf),
+									 fd, the_error, the_errorstr );
 							return -1;
 						}
 
@@ -306,7 +328,7 @@ condor_write( SOCKET fd, char *buf, int sz, int timeout, int flags )
 									 "Socket closed when trying "
 									 "to write %d bytes to %s, fd is %d\n",
 									 sz,
-									 sock_peer_to_string(fd, sinbuf, sizeof(sinbuf), "unknown source"),
+									 not_null_peer_description(peer_description,fd,sinbuf),
 									 fd );
 							return -1;
 						}
@@ -322,54 +344,46 @@ condor_write( SOCKET fd, char *buf, int sz, int timeout, int flags )
 						select_for_read = false;
 					}
 				} else {
-					dprintf( D_ALWAYS, "condor_write(): select() "
-							 "returns %d, assuming failure "
+					dprintf( D_ALWAYS, "condor_write() failed: select() "
+							 "returns %d, "
 							 "writing %d bytes to %s.\n",
 							 selector.select_retval(),
 							 sz,
-							 sock_peer_to_string(fd, sinbuf, sizeof(sinbuf), "unknown source") );
+							 not_null_peer_description(peer_description,fd,sinbuf) );
 					return -1;
 				}
 			}
 		}
-		
+		start_thread_safe("send");
 		nwo = send(fd, &buf[nw], sz - nw, flags);
+		stop_thread_safe("send");		
 
 		if( nwo <= 0 ) {
 			int the_error;
+            char const *the_errorstr;
 #ifdef WIN32
 			the_error = WSAGetLastError();
+            the_errorstr = "";
 #else
 			the_error = errno;
+            the_errorstr = strerror(the_error);
 #endif
 			if ( errno_is_temporary(the_error) ) {
 				dprintf( D_FULLDEBUG, "condor_write(): "
-				         "send() returned temporary error %d,"
+				         "send() returned temporary error %d %s,"
 						 "still trying to write %d bytes to %s\n", the_error,
-						 sz,
-						 sock_peer_to_string(fd, sinbuf, sizeof(sinbuf), "unknown source") );
+						 the_errorstr, sz,
+						 not_null_peer_description(peer_description,fd,sinbuf) );
 				continue;
 			}
 
-#ifdef WIN32
-				// alas, apparently there's no version of strerror()
-				// that works on the codes you get back from
-				// WSAGetLastError(), so we need a seperate dprintf()
-				// that doesn't include a %s for error string.
-			dprintf( D_ALWAYS, "condor_write(): send() %d bytes to %s "
+			dprintf( D_ALWAYS, "condor_write() failed: send() %d bytes to %s "
 					 "returned %d, "
-					 "timeout=%d, errno=%d.  Assuming failure.\n",
+					 "timeout=%d, errno=%d %s.\n",
 					 sz,
-					 sock_peer_to_string(fd, sinbuf, sizeof(sinbuf), "unknown source" ),
-					 nwo, timeout, the_error );
-#else
-			dprintf( D_ALWAYS, "condor_write(): send() %d bytes to %s "
-					 "returned %d, "
-					 "timeout=%d, errno=%d (%s).  Assuming failure.\n",
-					 sz,
-					 sock_peer_to_string(fd, sinbuf, sizeof(sinbuf), "unknown source"),
-					 nwo, timeout, the_error, strerror(the_error) );
-#endif
+					 not_null_peer_description(peer_description,fd,sinbuf),
+					 nwo, timeout, the_error, the_errorstr );
+
 			return -1;
 		}
 		

@@ -8,8 +8,10 @@ my $skip = 0;
 my $execute = 1;
 my $verbose = 0;
 my $link = 0;
+my $loops = 1;
 my $usage =
-    "usage: $0 [--link] [--start <name>] [-n] [/<pattern>/] [run opts]";
+    "usage: $0 [--loops=<n>] [--link] [--start <name>] ".
+    "[-n] [/<pattern>/] [run opts]";
 foreach my $n ( 0 .. $#ARGV )
 {
     my $arg = $ARGV[$n];
@@ -29,11 +31,25 @@ foreach my $n ( 0 .. $#ARGV )
     elsif ( $arg eq "--link" ) {
 	$link = 1;
     }
+    elsif ( $arg =~ /^--loops=(\d+)/ ) {
+	$loops = $1;
+    }
     elsif ( $arg eq "-n" or $arg eq "--no-exec" ) {
 	$execute = 0;
     }
     elsif ( $arg eq "-v" or $arg eq "--verbose" ) {
+	push( @ARGS, $arg );
 	$verbose++;
+	push( @ARGS, "-v" )
+    }
+    elsif ( $arg eq "-h" or $arg eq "--help" ) {
+	print "$usage\n";
+	exit( 0 );
+    }
+    elsif ( $arg eq "-h" or $arg eq "--help" ) {
+	print "$usage\n";
+	print "\nusage for base test script:\n";
+	exec( "./lib_eventlog_rotation.pl -h" );
     }
     elsif ( $arg =~ /^\/(.*)\/$/ ) {
 	$params{pat} = $1;
@@ -59,6 +75,8 @@ qw (
     w_20_rotations_2_loops
     w_20_rotations_20_loops
 
+    close_log
+
     reader_simple
     reader_old_rotations
     reader_old_rotations_2_loops
@@ -67,6 +85,9 @@ qw (
     reader_20_rotations
     reader_20_rotations_2_loops
     reader_20_rotations_20_loops
+
+    reader_missed_1
+    reader_missed_2
 );
 
 my $format = "lib_eventlog_rotation-%s.run";
@@ -84,31 +105,34 @@ if ( $link )
     exit 0;
 }
 
-foreach my $name ( @names ) {
-    my $test = sprintf( $format, $name ) . " " . join(" ", @ARGS);
-    if ( $params{start} ) {
-	if ( $name =~ /$params{start}/ ) {
-	    delete $params{start};
+foreach my $loop ( 1 .. $loops ) {
+    print "\n\n*** Starting testing loop $loop of $loops ***\n";
+    foreach my $name ( @names ) {
+	my $test = sprintf( $format, $name ) . " " . join(" ", @ARGS);
+	if ( $params{start} ) {
+	    if ( $name =~ /$params{start}/ ) {
+		delete $params{start};
+	    }
+	    else {
+		next;
+	    }
 	}
-	else {
-	    next;
+	elsif ( $params{pat} ) {
+	    if ( ! ($name =~ /$params{pat}/) ) {
+		next;
+	    }
 	}
-    }
-    elsif ( $params{pat} ) {
-	if ( ! ($name =~ /$params{pat}/) ) {
-	    next;
+	print "\n\n*** Running test '$name' ***\n";
+	if ( $verbose ) {
+	    print "Running: '$test'\n";
 	}
-    }
-    print "\n\n*** Running test '$name' ***\n";
-    if ( $verbose ) {
-	print "Running: '$test'\n";
-    }
-    if ( $execute ) {
-	system( "./$test" );
-	if ( $? != 0 ) {
-	    print "*** Failed on test '$name' ***\n";
-	    print "$test\n";
-	    exit( $?>>8 );
+	if ( $execute ) {
+	    system( "./$test" );
+	    if ( $? != 0 ) {
+		print "*** Failed on test '$name' ***\n";
+		print "$test\n";
+		exit( $?>>8 );
+	    }
 	}
     }
 }

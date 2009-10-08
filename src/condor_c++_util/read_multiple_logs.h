@@ -34,25 +34,13 @@
 #include "HashTable.h"
 #include "condor_id.h"
 #include "CondorError.h"
+#include "stat_struct.h"
 #include <iosfwd>
 #include <string>
-
-// This allows us to gradually commit the code before it's fully
-// working without making a branch.  Only commit with this false
-// until the lazy log file code is fully working.  wenger 2008-12-19.
-#define LAZY_LOG_FILES 0
 
 class MultiLogFiles
 {
 public:
-	    /** Gets the userlog files used by a dag
-		    on success, the return value will be ""
-		    on failure, it will be an appropriate error message
-	    */
-    static MyString getJobLogsFromSubmitFiles(const MyString &strDagFileName,
-			const MyString &jobKeyword, const MyString &dirKeyword,
-			StringList &listLogFilenames);
-
 		/** Gets values from a file, where the file contains lines of
 			the form
 				<keyword> <value>
@@ -104,31 +92,15 @@ public:
 	static int getQueueCountFromSubmitFile(const MyString &strSubFilename,
 	            const MyString &directory, MyString &errorMsg);
 
-	    /** Truncates the given log files to zero length (as opposed to
-			deleting them, which breaks things if the log file is a link).
-		 */
-	static void TruncateLogs(StringList &logFileNames);
-
-#if LAZY_LOG_FILES
-		/** Creates the given file if it doesn't exist, truncates
-			it if it does.
+		/** Initializes the given file -- creates it if it doesn't exist,
+			possibly truncates it if it does.
 			@param the name of the file to create or truncate
+			@param whether to truncate the file
 			@param a CondorError object to hold any error information
 			@return true if successful, false if failed
 		 */
-	static bool CreateOrTruncateFile(const char *filename,
+	static bool InitializeFile(const char *filename, bool truncate,
 				CondorError &errstack);
-#endif // LAZY_LOG_FILES
-
-		/** Determines whether the given set of log files have any
-			members that are on NFS.
-			@param The list of log files
-			@param Whether having a log file on NFS is a fatal error (as
-				opposed to a warning)
-			@return true iff at least one log file is on NFS and nfsIsError
-				is true
-		*/
-	static bool logFilesOnNFS(StringList&, bool nfsIsError);
 
 		/** Determines whether the given log file is on NFS.
 			@param The log file name
@@ -207,14 +179,8 @@ class ReadMultipleUserLogs
 {
 public:
 	ReadMultipleUserLogs();
-	explicit ReadMultipleUserLogs(StringList &listLogFileNames);
 
 	~ReadMultipleUserLogs();
-
-	    /** Sets the list of log files to monitor; throws away any
-		    previous list of files to monitor.
-		 */
-    bool initialize(StringList &listLogFileNames);
 
     	/** Returns the "next" event from any log file.  The event pointer 
         	is set to point to a newly instatiated ULogEvent object.
@@ -226,12 +192,11 @@ public:
 		 */
 	bool detectLogGrowth();
 
-		/** Returns the number of user logs that have been successfully
-		 	initialized.
+		/** Returns the total number of user logs this object "knows
+			about".
 		 */
-	int getInitializedLogCount() const;
+	int totalLogFileCount() const;
 
-#if LAZY_LOG_FILES
 		/** Monitor the given log file
 			@param the log file to monitor
 			@param whether to truncate the log file if this is the
@@ -239,7 +204,7 @@ public:
 			@param a CondorError object to hold any error information
 			@return true if successful, false if failed
 		*/
-	bool monitorLogFile(const char *logfile, bool truncateIfFirst,
+	bool monitorLogFile(MyString logfile, bool truncateIfFirst,
 				CondorError &errstack);
 
 		/** Unmonitor the given log file
@@ -247,8 +212,22 @@ public:
 			@param a CondorError object to hold any error information
 			@return true if successful, false if failed
 		*/
-	bool unmonitorLogFile (const char *logfile, CondorError &errstack);
-#endif // LAZY_LOG_FILES
+	bool unmonitorLogFile(MyString logfile, CondorError &errstack);
+
+		/** Returns the number of log files we're actively monitoring
+			at the present time.
+		 */
+	int activeLogFileCount() const { return activeLogFiles.getNumElements(); }
+
+		/** Print information about all LogMonitor objects.
+			@param the stream to print to.
+		*/
+	void printAllLogMonitors( FILE *stream ) const;
+
+		/** Print information about active LogMonitor objects.
+			@param the stream to print to.
+		*/
+	void printActiveLogMonitors( FILE *stream ) const;
 
 protected:
 	friend class CheckEvents;
@@ -258,84 +237,84 @@ protected:
 private:
 	void cleanup();
 
-	struct LogFileEntry
-	{
-		bool		isInitialized;
-		bool		isValid;
-		bool		haveReadEvent;
-		MyString	strFilename;
-		ReadUserLog	readUserLog;
-		ULogEvent *	pLastLogEvent;
-		off_t		logSize;
-	};
-
-	int				iLogFileCount;
-	LogFileEntry *	pLogFileEntries;
-
-		// Note: this table has one entry per log file, not one per
-		// Condor ID.
-	HashTable<CondorID, LogFileEntry *>	logHash;
-
-#if LAZY_LOG_FILES
 	struct LogFileMonitor {
-		LogFileMonitor() : refCount(0), readUserLog(NULL), lastOffset(0) {}
+		LogFileMonitor( const MyString &file ) : logFile(file), refCount(0),
+					readUserLog(NULL), state(NULL), stateError(false),
+					lastLogEvent(NULL) {}
+
+		~LogFileMonitor() {
+			delete readUserLog;
+			readUserLog = NULL;
+
+			if ( state ) {
+				ReadUserLog::UninitFileState( *state );
+			}
+			delete state;
+			state = NULL;
+
+			delete lastLogEvent;
+			lastLogEvent = NULL;
+		}
+
+			// The file name corresponding to this object; if the same
+			// actual log file is registered via multiple paths, this
+			// is the first path used to register it.
+		MyString	logFile;
+
+			// Reference count -- how many net calls to monitor this log?
 		int			refCount;
+
+			// The actual log reader object -- may be null
 		ReadUserLog	*readUserLog;
-		long		lastOffset;
-		// more stuff here?
+
+			// Log reader state -- used to pick up where we left off if
+			// we close and re-open the same log file.
+		ReadUserLog::FileState	*state;
+
+			// True iff we got an error when trying to save log file
+			// state -- subsequent attempts to monitor this file should
+			// fail in that case.
+		bool stateError;
+
+			// The last event we read from this log.
+		ULogEvent	*lastLogEvent;
 	};
 
-	HashTable<MyString, LogFileMonitor *>	allLogFiles;
+		// allLogFiles contains pointers to all of the LogFileMonitors
+		// we know about; activeLogFiles contains just the active ones
+		// (to make it easier to read events).  Note that active log files
+		// are in *both* hash tables.
+		// Note: these should be changed to STL maps, and should
+		// also index on a combination of st_ino and st_dev (see gittrac
+		// #328). wenger 2009-07-16.
+	HashTable<StatStructInode, LogFileMonitor *>	allLogFiles;
 
-	HashTable<MyString, LogFileMonitor *>	activeLogFiles;
-#endif // LAZY_LOG_FILES
+	HashTable<StatStructInode, LogFileMonitor *>	activeLogFiles;
 
 	// For instantiation in programs that use this class.
 #define MULTI_LOG_HASH_INSTANCE template class \
-		HashTable<CondorID, \
-		ReadMultipleUserLogs::LogFileEntry *>
-
-
-	    /** Goes through the list of logs and tries to initialize (open
-		    the file of) any that aren't initialized yet.
-			Returns true iff it successfully initialized *any* previously-
-			uninitialized log.
-		 */
-	bool initializeUninitializedLogs();
+		HashTable<StatStructInode, ReadMultipleUserLogs::LogFileMonitor *>
 
 		/** Returns true iff the given log grew since the last time
 		    we called this method on it.
+		    @param The LogFileMonitor object to test.
+			@param The filename this corresponds to (for error messages
+				only).
+		    @return True iff the log grew.
+
 		 */
-	static bool LogGrew(LogFileEntry &log);
+	static bool LogGrew( LogFileMonitor *monitor );
 
 		/**
-		 * Read an event from a log, including checking whether this log
-		 * is actually a duplicate of another log.  Note that if this *is*
-		 * a duplicate log, the method will return ULOG_NO_EVENT, even
-		 * though an event was read.
-		 * @param The log to read from.
+		 * Read an event from a log monitor.
+		 * @param The log monitor to read from.
 		 * @return The outcome of trying to read an event.
 		 */
-	ULogEventOutcome readEventFromLog(LogFileEntry &log);
+	ULogEventOutcome readEventFromLog( LogFileMonitor *monitor );
 
-		/**
-		 * Determine whether a log object exists that is a logical duplicate
-		 * of the one given (in other words, points to the same log file).
-		 * We're checking this in case we have submit files that point to
-		 * the same log file with different paths -- if submit files have
-		 * the same path to the log file, we already recognize that it's
-		 * a single log.
-		 * @param The event we just read.
-		 * @param The log object from which we read that event.
-		 * @return True iff a duplicate log exists.
-		 */
-	bool DuplicateLogExists(ULogEvent *event, LogFileEntry *log);
+	void printLogMonitors(FILE *stream,
+				HashTable<StatStructInode, LogFileMonitor *> logTable) const;
 
 };
-
-	/** Returns true when any of the log files are
-	  determined to be on an NFS volume or it is indeterminable,
-	  and USER_LOGS_ON_NFS_IS_ERROR is true.
-	 */
 
 #endif

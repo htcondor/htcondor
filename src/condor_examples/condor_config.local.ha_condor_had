@@ -34,7 +34,6 @@ HAD_ARGS = -p $(HAD_PORT)
 REPLICATION_PORT = 41450
 REPLICATION_ARGS = -p $(REPLICATION_PORT)
 
-
 ## The following list must contain the same addresses
 ## as HAD_LIST. In addition, for each hostname, it should specify 
 ## the port number of condor_replication daemon running on that host.
@@ -42,7 +41,6 @@ REPLICATION_ARGS = -p $(REPLICATION_PORT)
 REPLICATION_LIST = \
 	$(CENTRAL_MANAGER1):$(REPLICATION_PORT), \
 	$(CENTRAL_MANAGER2):$(REPLICATION_PORT)
-
 
 ## The following list must contain the same addresses in the same order 
 ## as COLLECTOR_HOST. In addition, for each hostname, it should specify 
@@ -53,6 +51,11 @@ HAD_LIST = \
 	$(CENTRAL_MANAGER1):$(HAD_PORT), \
 	$(CENTRAL_MANAGER2):$(HAD_PORT)
 
+## The following is the name of the daemon that the HAD controls.
+## This must match the name of a daemon in the master's DAEMON_LIST.
+## The default is NEGOTIATOR, but can be any daemon that the master
+## controls.
+HAD_CONTROLLEE		= NEGOTIATOR
 
 ## HAD connection time.
 ## Recommended value is 2 if the central managers are on the same subnet.
@@ -73,12 +76,13 @@ HAD_USE_PRIMARY = true
 ##  machine(s) where whoever is the condor administrator(s) works
 ##  (assuming you trust all the users who log into that/those
 ##  machine(s), since this is machine-wide access you're granting).
-HOSTALLOW_ADMINISTRATOR = $(COLLECTOR_HOST) 
+ALLOW_ADMINISTRATOR = $(COLLECTOR_HOST) 
 
 
 ##  Negotiator access.  Machines listed here are trusted central
 ##  managers.  You should normally not have to change this.
-HOSTALLOW_NEGOTIATOR = $(COLLECTOR_HOST)
+ALLOW_NEGOTIATOR = $(COLLECTOR_HOST)
+
 
 ###################################################################
 ## THE PARAMETERS BELOW ARE ALLOWED TO BE DIFFERENT ON EACH       #
@@ -89,10 +93,11 @@ HOSTALLOW_NEGOTIATOR = $(COLLECTOR_HOST)
 ## The location of executable files
 HAD         = $(SBIN)/condor_had
 REPLICATION = $(SBIN)/condor_replication
+TRANSFERER  = $(SBIN)/condor_transferer
 
 
 ## the master should start at least these four daemons
-DAEMON_LIST = MASTER, COLLECTOR, NEGOTIATOR, HAD
+DAEMON_LIST = MASTER, COLLECTOR, NEGOTIATOR, HAD, REPLICATION
 
 # The default for DC_DAEMON_LIST is usually correct.
 DC_DAEMON_LIST = + HAD, REPLICATION

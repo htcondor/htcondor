@@ -17,13 +17,12 @@
  *
  ***************************************************************/
 
-#include <stdafx.h>
-#include <winbase.h>
+#include "stdafx.h"
+#include "WindowsMessageReceiver.h"
+#include <windows.h>
 
 #pragma warning(disable:4786)
-
-#include "WindowsMessageReceiver.h"
-#include <string>
+#include "birdwatcher.h"
 using namespace std;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -38,6 +37,8 @@ map<HWND, WindowsMessageReceiver *> &mapWindowsMessageReceivers()
 
 LRESULT CALLBACK WMR_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
+	//OutputDebugString(L"WinProc\n");
+	//exit(0);
 	WindowsMessageReceiver *pCurrentWMR = mapWindowsMessageReceivers()[hwnd];
 
 	if (!pCurrentWMR)
@@ -68,11 +69,11 @@ void WindowsMessageReceiver::createHwnd()
 {
 	static WNDCLASS	wc;
 	static bool bFirstTime = true;
-	static char pszClassNameBuf[256];
+	static WCHAR pszClassNameBuf[] = L"WindowsMessageReceiver";
 
-	srand((unsigned) (time(NULL)));
+	srand(GetTickCount());
 
-	HINSTANCE hinst = NULL;
+	HINSTANCE hinst = hInst;
 
 	if (bFirstTime)
 	{
@@ -82,24 +83,24 @@ void WindowsMessageReceiver::createHwnd()
 		wc.lpfnWndProc				= WMR_WindowProc;
 		wc.cbClsExtra				= 0x0;
 		wc.cbWndExtra				= sizeof(DWORD);
-		wc.hInstance				= hinst;// NULL
+		wc.hInstance				= hInst;// NULL
 		wc.hIcon					= NULL;
 		wc.hCursor					= NULL;
 		wc.hbrBackground			= (HBRUSH)GetStockObject(BLACK_BRUSH);
 		wc.lpszMenuName				= NULL;
 		wc.lpszClassName			= pszClassNameBuf;
 
-		strcpy(pszClassNameBuf, "WindowsMessageReceiver");
+		//WCHAR wmreceiver[] = ;
+		//wcscpy_s(pszClassNameBuf, wcslen(wmreceiver), wmreceiver);
 		
 		int iTries = 0;
 		while (!RegisterClass(&wc)) 
 		{
 			int iRand = rand()%10000;
-			char sRand[32];
-			itoa(iRand, sRand, 10);
-			string strTemp = string("WindowsMessageReceiver") + sRand;
-			
-			strcpy(pszClassNameBuf, strTemp.c_str());
+			WCHAR sRand[32];
+			_itow_s(iRand, sRand, wcslen(sRand), 10);
+			//wcscpy_s(pszClassNameBuf, wcslen(wmreceiver), wmreceiver);
+			//wcscat_s(pszClassNameBuf, wcslen(sRand), sRand);
 			
 			iTries++;
 			if (iTries > 10)
@@ -108,11 +109,15 @@ void WindowsMessageReceiver::createHwnd()
 			}
 		}
 	}
-	
-	m_hWnd = CreateWindow(pszClassNameBuf, "", 0, CW_USEDEFAULT, CW_USEDEFAULT, 1, 1, NULL,	NULL, hinst, NULL);
+	m_hWnd = CreateWindow(pszClassNameBuf, TEXT(""), 0, CW_USEDEFAULT, CW_USEDEFAULT, 1, 1, NULL,	NULL, hinst, NULL);
+	if(!m_hWnd)
+	{
+		DWORD temp = GetLastError();
+		WCHAR buffer[256];
+		_ltow(temp, buffer, 10);
+		OutputDebugString(buffer);
+	}
 	mapWindowsMessageReceivers()[m_hWnd] = this;
-
-	return;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

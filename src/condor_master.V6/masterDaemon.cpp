@@ -401,6 +401,8 @@ daemon::DoConfig( bool init )
 		}
 	}
 
+	// XXX These defaults look to be very wrong, compare with 
+	// MASTER_BACKOFF_*.
 	sprintf(buf, "MASTER_%s_BACKOFF_CONSTANT", name_in_config_file );
 	m_backoff_constant = param_integer( buf, master_backoff_constant, 1 );
 
@@ -508,6 +510,19 @@ int daemon::RealStart( )
 	if( pid ) {
 			// Already running
 		return TRUE;
+	}
+		// Check for a controller. If one exists, e.g. HAD, it is
+		// likely this daemon has stop_state = FAST, but we want to
+		// let it start anyway. The stop_state != NONE check is to
+		// avoid letting the master start HA daemons it is
+		// maintaining. A controller indicates something else is
+		// maintaining the daemon.
+	if( !controller && stop_state != NONE ) {
+			// Currently trying to shutdown, this might happen for an
+			// HA daemon who acquires a lock just before shutdown.
+		dprintf( D_FULLDEBUG, "::RealStart; %s stop_state=%d, ignoring\n",
+				 name_in_config_file, stop_state );
+		return FALSE;
 	}
 
 	shortname = condor_basename( process_name );
@@ -723,14 +738,25 @@ int daemon::RealStart( )
 		dprintf(D_FULLDEBUG, "start recover timer (%d)\n", recover_tid);
 	}
 
-	if (command_port) {
+	const char	*proc_type = command_port ? "DaemonCore " : "";
+	if ( DebugFlags & D_FULLDEBUG ) {
+		MyString	 args_string, tmp;
+		args.GetArgsStringForDisplay( &tmp, 1 );
+		if( tmp.Length() ) {
+			args_string  = " ";
+			args_string += tmp;
+		}
+		else {
+			args_string = tmp;
+		}
 		dprintf( D_FAILURE|D_ALWAYS,
-				 "Started DaemonCore process \"%s\", pid and pgroup = %d\n",
-				 process_name, pid );
-	} else {
-		dprintf( D_ALWAYS,
-				 "Started process \"%s\", pid and pgroup = %d\n",
-				 process_name, pid );
+				 "Started %sprocess \"%s%s\", pid and pgroup = %d\n",
+				 proc_type, process_name, args_string.Value(), pid );
+	}
+	else {
+		dprintf( D_FAILURE|D_ALWAYS,
+				 "Started %sprocess \"%s\", pid and pgroup = %d\n",
+				 proc_type, process_name, pid );
 	}
 	
 		// Make sure we've got the current timestamp for updates, etc.
@@ -741,6 +767,10 @@ int daemon::RealStart( )
 
 		// Since we just started it, we know it's not a new executable. 
 	newExec = FALSE;
+
+		// Be sure to reset the stop_state, if the daemon is HAD
+		// managed it will have been set to FAST on startup
+	stop_state = NONE;
 
 		// If starting the collector, give it a few seconds to get
 		// going before starting other daemons or talking to ti
@@ -786,15 +816,17 @@ daemon::Stop( bool never_forward )
 		daemonCore->Cancel_Timer( start_tid );
 		start_tid = -1;
 	}
-	if( !pid ) {
-			// We're not running, just return.
-		return;
-	}
 	if( stop_state == GRACEFUL ) {
 			// We've already been here, just return.
 		return;
 	}
 	stop_state = GRACEFUL;
+		// Test for pid after setting state so HA daemons that aren't
+		// running get notified that they are shutting down
+	if( !pid ) {
+			// We're not running, just return.
+		return;
+	}
 
 	Kill( SIGTERM );
 
@@ -822,15 +854,17 @@ daemon::StopPeaceful()
 		daemonCore->Cancel_Timer( start_tid );
 		start_tid = -1;
 	}
-	if( !pid ) {
-			// We're not running, just return.
-		return;
-	}
 	if( stop_state == PEACEFUL ) {
 			// We've already been here, just return.
 		return;
 	}
 	stop_state = PEACEFUL;
+		// Test for pid after setting state so HA daemons that aren't
+		// running get notified that they are shutting down
+	if( !pid ) {
+			// We're not running, just return.
+		return;
+	}
 
 	// Ideally, we would somehow tell the daemon to die peacefully
 	// (only currently applies to startd).  However, we only have
@@ -875,15 +909,17 @@ daemon::StopFast( bool never_forward )
 		daemonCore->Cancel_Timer( start_tid );
 		start_tid = -1;
 	}
-	if( !pid ) {
-			// We're not running, just return.
-		return;
-	}
 	if( stop_state == FAST ) {
 			// We've already been here, just return.
 		return;
 	}
 	stop_state = FAST;
+		// Test for pid after setting state so HA daemons that aren't
+		// running get notified that they are shutting down
+	if( !pid ) {
+			// We're not running, just return.
+		return;
+	}
 
 	if( stop_fast_tid != -1 ) {
 		dprintf( D_ALWAYS, 
@@ -907,15 +943,17 @@ daemon::HardKill()
 			// Never want to stop master.
 		return;
 	}
-	if( !pid ) {
-			// We're not running, just return.
-		return;
-	}
 	if( stop_state == KILL ) {
 			// We've already been here, just return.
 		return;
 	}
 	stop_state = KILL;
+		// Test for pid after setting state so HA daemons that aren't
+		// running get notified that they are shutting down
+	if( !pid ) {
+			// We're not running, just return.
+		return;
+	}
 
 	if( hard_kill_tid != -1 ) {
 		dprintf( D_ALWAYS, 
@@ -1654,7 +1692,10 @@ Daemons::StopAllDaemons()
 	daemons.SetAllReaper();
 	int running = 0;
 	for( int i=0; i < no_daemons; i++ ) {
-		if( daemon_ptr[i]->pid && daemon_ptr[i]->runs_here ) {
+			// Need to stop HA daemons from trying to start during
+			// shutdown
+		if( ( daemon_ptr[i]->pid || daemon_ptr[i]->IsHA() ) &&
+			daemon_ptr[i]->runs_here ) {
 			daemon_ptr[i]->Stop();
 			running++;
 		}
@@ -1671,7 +1712,10 @@ Daemons::StopFastAllDaemons()
 	daemons.SetAllReaper();
 	int running = 0;
 	for( int i=0; i < no_daemons; i++ ) {
-		if( daemon_ptr[i]->pid && daemon_ptr[i]->runs_here ) {
+			// Need to stop HA daemons from trying to start during
+			// shutdown
+		if( ( daemon_ptr[i]->pid || daemon_ptr[i]->IsHA() ) &&
+			daemon_ptr[i]->runs_here ) {
 			daemon_ptr[i]->StopFast();
 			running++;
 		}
@@ -1687,7 +1731,10 @@ Daemons::StopPeacefulAllDaemons()
 	daemons.SetAllReaper();
 	int running = 0;
 	for( int i=0; i < no_daemons; i++ ) {
-		if( daemon_ptr[i]->pid && daemon_ptr[i]->runs_here ) {
+			// Need to stop HA daemons from trying to start during
+			// shutdown
+		if( ( daemon_ptr[i]->pid || daemon_ptr[i]->IsHA() ) &&
+			daemon_ptr[i]->runs_here ) {
 			daemon_ptr[i]->StopPeaceful();
 			running++;
 		}
@@ -1704,7 +1751,10 @@ Daemons::HardKillAllDaemons()
 	daemons.SetAllReaper();
 	int running = 0;
 	for( int i=0; i < no_daemons; i++ ) {
-		if( daemon_ptr[i]->pid && daemon_ptr[i]->runs_here ) {
+			// Need to stop HA daemons from trying to start during
+			// shutdown
+		if( ( daemon_ptr[i]->pid || daemon_ptr[i]->IsHA() ) &&
+			daemon_ptr[i]->runs_here ) {
 			daemon_ptr[i]->HardKill();
 			running++;
 		}
@@ -1806,12 +1856,17 @@ Daemons::CleanupBeforeRestart()
 	}
 	(void)close( MasterLockFD );
 
-		// Now close all sockets and fds so our new invocation of
+		// Now set close-on-exec on all fds so our new invocation of
 		// condor_master does not inherit them.
 		// Note: Not needed (or wanted) on Win32, as CEDAR creates 
 		//		Winsock sockets as non-inheritable by default.
-	for (int i=0; i < max_fds; i++) {
-		close(i);
+		// Also not wanted for stderr, since we might be logging
+		// to that.  No real need for stdin or stdout either.
+	for (int i=3; i < max_fds; i++) {
+		int flag = fcntl(i,F_GETFD,0);
+		if( flag != -1 ) {
+			fcntl(i,F_SETFD,flag | 1);
+		}
 	}
 #endif
 
@@ -1868,6 +1923,8 @@ Daemons::ExecMaster()
 	argv[i++] = NULL;
 
 	(void)execv(daemon_ptr[master]->process_name, argv);
+
+	free(argv);
 }
 
 // Function that actually does the restart of the master.
@@ -1988,7 +2045,6 @@ Daemons::AllReaper(int pid, int status)
 			return TRUE;
 		}
 	}
-	dprintf( D_ALWAYS, "Child %d died, but not a daemon -- Ignored\n", pid);
 	return TRUE;
 }
 
@@ -2006,7 +2062,6 @@ Daemons::DefaultReaper(int pid, int status)
 			return TRUE;
 		}
 	}
-	dprintf( D_ALWAYS, "Child %d died, but not a daemon -- Ignored\n", pid);
 	return TRUE;
 }
 

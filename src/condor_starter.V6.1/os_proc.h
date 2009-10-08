@@ -101,6 +101,8 @@ public:
 
 	int *makeCpuAffinityMask(int slotId);
 
+	bool WriteAdsToExeDir();
+
 protected:
 
 	bool is_suspended;

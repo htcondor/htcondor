@@ -18,7 +18,7 @@
  ***************************************************************/
 
 #pragma once
-
+#include <windows.h>
 VOID MinimizeWndToTray(HWND hWnd);
 VOID RestoreWndFromTray(HWND hWnd);
 

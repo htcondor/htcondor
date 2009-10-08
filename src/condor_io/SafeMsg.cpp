@@ -1023,8 +1023,8 @@ bool _condorInMsg :: verifyMD(Condor_MD_MAC * mdChecker)
             while (start != NULL) {
                 currentPacket = 0;
                 while(currentPacket != SAFE_MSG_NO_OF_DIR_ENTRY) {
-                    mdChecker->addMD((unsigned char *)curDir->dEntry[currentPacket].dGram, 
-                                     curDir->dEntry[currentPacket].dLen);
+                    mdChecker->addMD((unsigned char *)start->dEntry[currentPacket].dGram, 
+                                     start->dEntry[currentPacket].dLen);
                     if(++currentPacket == SAFE_MSG_NO_OF_DIR_ENTRY) {
                         // was the last of the current dir
                         start = start->nextDir;

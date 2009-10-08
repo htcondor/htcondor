@@ -3,7 +3,7 @@ all_target($(NAME))
 
 CFLAGS = $(STD_C_FLAGS)
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
-LIB = $(DAEMONCORE_LIB) $(NETMAN_LIB) $(STD_LIBS)
+LIB = $(DAEMONCORE_LIB) $(STD_LIBS)
 
 OBJ = eventd.o main.o scheduled_event.o 
 

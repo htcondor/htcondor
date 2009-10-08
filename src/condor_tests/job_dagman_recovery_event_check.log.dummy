@@ -1,0 +1,36 @@
+000 (3457.000.000) 09/03 13:42:53 Job submitted from host: <128.105.121.53:43671>
+    DAG Node: B1
+...
+001 (3457.000.000) 09/03 13:42:53 Job executing on host: <128.105.121.53:43671>
+...
+000 (3458.000.000) 09/03 13:42:53 Job submitted from host: <128.105.121.53:43671>
+    DAG Node: B2
+...
+005 (3457.000.000) 09/03 13:42:53 Job terminated.
+	(1) Normal termination (return value 0)
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+	0  -  Total Bytes Sent By Job
+	0  -  Total Bytes Received By Job
+...
+001 (3458.000.000) 09/03 13:42:58 Job executing on host: <128.105.121.53:43671>
+...
+005 (3458.000.000) 09/03 13:42:58 Job terminated.
+	(1) Normal termination (return value 0)
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+	0  -  Total Bytes Sent By Job
+	0  -  Total Bytes Received By Job
+...
+016 (3458.000.000) 09/03 13:43:03 POST Script terminated.
+	(1) Normal termination (return value 0)
+    DAG Node: B2
+...

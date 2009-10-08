@@ -30,8 +30,12 @@
 #include "throttle_by_category.h"
 #include "read_multiple_logs.h"
 #include "CondorError.h"
+#include <set>
+
+using namespace std;
 
 class ThrottleByCategory;
+class Dag;
 
 //
 // Local DAGMan includes
@@ -180,7 +184,7 @@ class Job {
     Script * _scriptPost;
 
     ///
-    inline SimpleList<JobID_t> & GetQueueRef (const queue_t queue) {
+    inline set<JobID_t> & GetQueueRef (const queue_t queue) {
         return _queues[queue];
     }
 
@@ -192,8 +196,8 @@ class Job {
     */
     bool Add( const queue_t queue, const JobID_t jobID );
 
-    /** Returns true if this job is ready for submittion.
-        @return true if job is submitable, false if not
+    /** Returns true if this job is ready for submission.
+        @return true if job is submittable, false if not
     */
     inline bool CanSubmit () const {
         return (IsEmpty(Job::Q_WAITING) && _Status == STATUS_READY);
@@ -218,7 +222,7 @@ class Job {
         @return true: queue is empty, false: otherwise
     */
     inline bool IsEmpty (const queue_t queue) const {
-        return _queues[queue].IsEmpty();
+        return _queues[queue].empty();
     }
 
     /** Returns the node's current status
@@ -264,9 +268,9 @@ class Job {
 	bool RemoveDependency( queue_t queue, JobID_t job, MyString &whynot );
  
     /** Dump the contents of this Job to stdout for debugging purposes.
-        @param level Only do the dump if the current debug level is >= level
-    */
-    void Dump () const;
+		@param the current DAG (used to translate node ID to node object)
+	*/
+    void Dump ( const Dag *dag ) const;
   
     /** Print the identification info for this Job to stdout.
         @param condorID If true, also print the job's CondorID
@@ -333,15 +337,18 @@ class Job {
 		return _dagFile;
 	}
 
-#if LAZY_LOG_FILES
 	/** Monitor this node's Condor or Stork log file with the
 		multiple log reader.  (Must be called before this node's
 		job is submitted.)
 		@param logReader: the multiple log reader
 		@param recovery: whether we're in recovery mode
+		@param defaultNodeLog: the default log file to be used if the
+			node's submit file doesn't define a log file
 		@return true if successful, false if failed
 	*/
-	bool MonitorLogFile( ReadMultipleUserLogs &logReader, bool recovery );
+	bool MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
+				ReadMultipleUserLogs &storkLogReader, bool nfsIsError,
+				bool recovery, const char *defaultNodeLog );
 
 	/** Unmonitor this node's Condor or Stork log file with the
 		multiple log reader.  (Must be called after everything is done
@@ -349,8 +356,8 @@ class Job {
 		@param logReader: the multiple log reader
 		@return true if successful, false if failed
 	*/
-	bool UnmonitorLogFile( ReadMultipleUserLogs &logReader );
-#endif // LAZY_LOG_FILES
+	bool UnmonitorLogFile( ReadMultipleUserLogs &logReader,
+				ReadMultipleUserLogs &storkLogReader );
 
     /** */ CondorID _CondorID;
     /** */ status_t _Status;
@@ -421,6 +428,9 @@ class Job {
 		// Node priority.  Higher number is better priority (submit first).
 	int _nodePriority;
 
+		// Whether this node is using the default node log file.
+	bool UsingDefaultLog() { return _useDefaultLog; }
+
 private:
 
 		// Note: Init moved to private section because calling int more than
@@ -428,6 +438,10 @@ private:
 	void Init( const char* jobName, const char *directory,
 				const char* cmdFile, bool prohibitMultiJobs );
   
+		// Mark this node as failed because of an error in monitoring
+		// the log file.
+  	void LogMonitorFailed();
+
         // strings for job_type_t (e.g., "Condor, "Stork", etc.)
     static const char* _job_type_names[];
 
@@ -450,17 +464,28 @@ private:
   
     /*  Job queues
 	    NOTE: indexed by queue_t
-      
-        parents -> dependencies coming into the Job
-        children -> dependencies going out of the Job
-        waiting -> Jobs on which the current Job is waiting for output 
-    */
-    SimpleList<JobID_t> _queues[3];
-  
-    /*  The ID of this job.  This serves as a primary key for Jobs, where each
-        Job's ID is unique from all the rest
-    */
-    JobID_t _jobID;
+
+		WARNING: The execution order of ready nodes is, and
+		should always be, undefined. This is so noone starts
+		building dag structures that rely on some order of
+		execution. In practice, there is an ordering due to the
+		data structures that hold the information, but we should
+		never rely on that behavior cause the representational
+		structures may change. This comment was written because the
+		data structures *DID* change, and we had to consider the
+		ramifications of it.
+
+		parents -> dependencies coming into the Job 
+		children -> dependencies going out of the Job
+		waiting -> Jobs on which the current Job is waiting for output
+    */ 
+	
+	set<JobID_t> _queues[3];
+
+    /*	The ID of this job.  This serves as a primary key for Jobs, where each
+		Job's ID is unique from all the rest 
+	*/ 
+	JobID_t _jobID;
 
     /*  Ensures that all jobID's are unique.  Starts at zero and increments
         by one for every Job object that is constructed
@@ -477,6 +502,12 @@ private:
 		// This node's category; points to an object "owned" by the
 		// ThrottleByCategory object.
 	ThrottleByCategory::ThrottleInfo *_throttleInfo;
+
+		// Whether this node's log file is currently being monitored.
+	bool _logIsMonitored;
+
+		// Whether this node uses the default user log file.
+	bool _useDefaultLog;
 };
 
 /** A wrapper function for Job::Print which allows a NULL job pointer.

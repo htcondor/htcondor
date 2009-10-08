@@ -99,10 +99,16 @@ static const char NiceUserName[] = "nice-user";
 /* This is a compiler-specific type-modifer to request
  * a variable be stored as thread-local-storage.
  */
-#ifdef WIN32
-#define THREAD_LOCAL_STORAGE __declspec( thread ) 
+#if defined(WIN32)
+	/* We know Windows has TLS and it works well */
+	#define THREAD_LOCAL_STORAGE __declspec( thread ) 
 #else
-#define THREAD_LOCAL_STORAGE /* Not supported on Unix */
+	/* On Unix-like platforms, we have had very bad luck w/ TLS.
+	 * For example, when using TLS, we could not build binaries
+	 * on 32bit RHEL3 that would not crash on 64bit RHEL4. See
+	 * gittrac #482.  So for now, THREAD_LOCAL_STORAGE is non-Win32
+	 * platforms is a no-op. */
+	#define THREAD_LOCAL_STORAGE /* Blank */
 #endif
 
 /* Max space needed to hold an IP string, as

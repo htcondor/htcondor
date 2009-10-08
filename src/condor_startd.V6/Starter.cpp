@@ -34,6 +34,7 @@
 #include "my_popen.h"
 #include "basename.h"
 #include "dc_starter.h"
+#include "classadHistory.h"
 
 #if defined(LINUX)
 #include "glexec_starter.h"
@@ -97,6 +98,14 @@ Starter::initRunData( void )
 	s_job_update_sock = NULL;
 
 	m_hold_job_cb = NULL;
+
+		// XXX: ProcFamilyUsage needs a constructor
+	s_usage.max_image_size = 0;
+	s_usage.num_procs = 0;
+	s_usage.percent_cpu = 0.0;
+	s_usage.sys_cpu_time = 0;
+	s_usage.total_image_size = 0;
+	s_usage.user_cpu_time = 0;
 }
 
 
@@ -472,7 +481,9 @@ Starter::reallykill( int signo, int type )
 		if( sig != SIGSTOP && sig != SIGCONT && sig != SIGKILL ) {
 			if( type == 1 ) { 
 				ret = ::kill( -(s_pid), SIGCONT );
-			} else if( type == 0 ) {
+			} else if( type == 0 && 
+						!daemonCore->ProcessExitedButNotReaped(s_pid)) 
+			{
 				ret = ::kill( (s_pid), SIGCONT );
 			}
 		}
@@ -494,7 +505,9 @@ Starter::reallykill( int signo, int type )
 		} 
 #ifndef WIN32
 		else {
-			ret = ::kill( (s_pid), sig );
+			if (!daemonCore->ProcessExitedButNotReaped(s_pid)) {
+				ret = ::kill( (s_pid), sig );
+			}
 			break;
 		}
 #endif /* ! WIN32 */
@@ -593,8 +606,50 @@ Starter::spawn( time_t now, Stream* s )
 }
 
 void
-Starter::exited()
+Starter::exited(int status)
 {
+	ClassAd *jobAd = NULL;
+	bool jobAdNeedsFree = true;
+
+	if (s_claim && s_claim->ad()) {
+		// real jobs in the startd have claims and job ads, boinc and perhaps others won't
+		jobAd = s_claim->ad();
+		jobAdNeedsFree = false;
+	} else {
+		// Dummy up an ad
+		int now = (int) time(0);
+		jobAd = new ClassAd();
+		jobAd->SetMyTypeName("Job");
+		jobAd->SetTargetTypeName("Machine");
+		jobAd->Assign(ATTR_CLUSTER_ID, now);
+		jobAd->Assign(ATTR_PROC_ID, 1);
+		jobAd->Assign(ATTR_OWNER, "boinc");
+		jobAd->Assign(ATTR_Q_DATE, (int)s_birthdate);
+		jobAd->Assign(ATTR_JOB_PRIO, 0);
+		jobAd->Assign(ATTR_IMAGE_SIZE, 0);
+		jobAd->Assign(ATTR_JOB_CMD, "boinc");
+		MyString gjid;
+		gjid.sprintf("%s#%d#%d#%d", my_hostname(), now, 1, now);
+		jobAd->Assign(ATTR_GLOBAL_JOB_ID, gjid);
+	}
+
+	// First, patch up the ad a little bit 
+	jobAd->Assign(ATTR_COMPLETION_DATE, (int)time(0));
+	int runtime = time(0) - s_birthdate;
+	
+	jobAd->Assign(ATTR_JOB_REMOTE_WALL_CLOCK, runtime);
+	int jobStatus = COMPLETED;
+	if (WIFSIGNALED(status)) {
+		jobStatus = REMOVED;
+	}
+	jobAd->Assign(ATTR_JOB_STATUS, jobStatus);
+	AppendHistory(jobAd);
+	WritePerJobHistoryFile(jobAd, true /* use gjid for filename*/);
+
+	if (jobAdNeedsFree) {
+		delete jobAd;
+	}
+
 		// Make sure our time isn't going to go off.
 	cancelKillTimer();
 
@@ -814,6 +869,10 @@ Starter::execDCStarter( ArgList const &args, Env const *env,
 		return s_pid;
 	}
 	inherit_list[0] = &child_job_update_sock;
+
+	// Pass the machine ad to the starter
+	if (s_claim) 
+		s_claim->writeMachAd( s_job_update_sock );
 
 	if( daemonCore->Register_Socket(
 			s_job_update_sock,
@@ -1051,7 +1110,7 @@ Starter::active()
 	
 
 void
-Starter::dprintf( int flags, char* fmt, ... )
+Starter::dprintf( int flags, const char* fmt, ... )
 {
 	va_list args;
 	va_start( args, fmt );

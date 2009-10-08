@@ -46,8 +46,8 @@ public:
 			@proc Proc ID number (if any)
 			@subproc Subproc ID number (if any)
 		*/
-	JICLocalFile( const char* classad_filename, const char* keyword,
-				  int cluster, int proc, int subproc );
+	JICLocalFile( const char* classad_filename,
+				  const char* keyword, int cluster, int proc, int subproc );
 
 		/// Constructor without a keyword on the command-line
 	JICLocalFile( const char* classad_filename,
@@ -69,7 +69,7 @@ public:
 		*/
 	bool getLocalJobAd( void );
 
-	char* fileName( void );
+	char* jobAdFileName( void );
 
 protected:
 
@@ -79,20 +79,23 @@ protected:
 	virtual bool getUniverse( void );
 
 		/** Private helper to actually read the file and try to insert
-			it into our job ClassAd.
+			it into the passed ClassAd.
 		*/
-	bool readClassAdFromFile( void );
+	bool readClassAdFromFile( char* filename, ClassAd* ad );
 
-		/** Private helper to initialize our filename data member.
-			we use this since we have two constructors, both of which
-			need to do the same thing with this info.
+
+		/** Private helper to initialize our job_filename
+			data member.  We use this since we have two
+			constructors, both of which need to do the same thing
+			with this info.
 		*/
-	void initFilename( const char* path );
+	void initFilenames( const char* jobad_path );
 
 		/** The full path to the file we get our ClassAd from (or "-"
 			if we're reading it from STDIN).
 		*/
-	char* filename;
+	char* job_filename;
+
 };
 
 

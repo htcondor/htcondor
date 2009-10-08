@@ -85,6 +85,7 @@ echo Cleaning the dynamically generated files.
 REM Remove all the generated files
 rm -f ..\src\h\syscall_numbers.h
 rm -f ..\src\condor_includes\config.h
+rm -f ..\src\condor_c++_util\param_info_init.c
 
 REM Return to caller
 goto :EOF

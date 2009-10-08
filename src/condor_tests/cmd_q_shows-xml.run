@@ -19,24 +19,32 @@
 ##**************************************************************
 
 use CondorTest;
+use strict;
+use warnings;
 
-$cmd = 'cmd_q_shows-xml.cmd';
-$cmdout = $cmd . ".out";
-$testdesc =  'cmd_q_shows-xml  ';
-$testname = "cmd_q_shows-xml";
+my $cmd = 'cmd_q_shows-xml.cmd';
+my $cmdout = $cmd . ".out";
+my $testdesc =  'cmd_q_shows-xml  ';
+my $testname = "cmd_q_shows-xml";
+my $debuglevel = 2;
+my $worked = 0;
 
-@adarray;
+my @adarray;
 
-$submit = sub {
+my $submit = sub {
 	my %info = @_;
 	my $cmd = "condor_q -xml ";
 
-	$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
+	print "ok\n";
+	print "Get XML output via $cmd - ";
+	my $cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
 	if(!$cmdstatus)
 	{
-		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
+		print "bad\n";
+		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",$debuglevel);
 		exit(1)
 	}
+	print "ok\n";
 
 	my $submitline = "";
 	my $cluster = "";
@@ -47,42 +55,50 @@ $submit = sub {
 		$submitline = $_;
 		if($submitline =~ /^.*cluster\s+(\d+).*$/) {
 			$cluster = $1;
-			CondorTest::debug("Found my cluster which is $cluster!\n",1);
+			CondorTest::debug("Found my cluster which is $cluster!\n",$debuglevel);
 		}
-		CondorTest::debug("$_\n",1);
+		CondorTest::debug("$_\n",$debuglevel);
 	}
 
 	$cmd = "condor_rm $cluster";
 
-	foreach $line (@adarray) {
+	print "Check for valid XML output - ";
+	foreach my $line (@adarray) {
 		chomp($line);
 		if($line =~ /^\s*$/) {
 				#print "Blank Line\n";
 		} elsif($line =~ /^\s*<.*$/) {
-				CondorTest::debug("XML<<	$line	>>\n",1);
+				CondorTest::debug("XML<<	$line	>>\n",$debuglevel);
+				$worked += 1;
 		} elsif($line =~ /^.*Submitter:.*$/) {
 				#print "Submit line\n";
 		} else {
-			CondorTest::debug("Lines must be blank or start with <\n",1);
-			CondorTest::debug("<<<$line>>>\n",1);
+			print "bad\n";
+			CondorTest::debug("Lines must be blank or start with <\n",$debuglevel);
+			CondorTest::debug("<<<$line>>>\n",$debuglevel);
 			$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,8);
 			exit(1)
 		}
+	}
+	if($worked > 0) {
+		print "ok\n";
+	} else {
+		print "bad\n";
 	}
 
 	$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,8);
 	return(0);
 };
 
-$aborted = sub {
-	CondorTest::debug("If all is good we abort our own job.......\n",1);
+my $aborted = sub {
+	CondorTest::debug("If all is good we abort our own job.......\n",$debuglevel);
 };
 
-$ExitSuccess = sub {
+my $ExitSuccess = sub {
 	my %info = @_;
 };
 
-$timed = sub
+my $timed = sub
 {
     die "Job should have ended by now. condor_q -xml broken!\n";
 };
@@ -91,8 +107,10 @@ CondorTest::RegisterAbort($testname, $aborted);
 CondorTest::RegisterSubmit($testname, $submit);
 CondorTest::RegisterExitedSuccess( $testname, $ExitSuccess );
 
+print "Submit a long running job on hold - ";
+
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	CondorTest::debug("$testname: SUCCESS\n",1);
+	CondorTest::debug("$testname: SUCCESS\n",$debuglevel);
 	exit(0);
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";

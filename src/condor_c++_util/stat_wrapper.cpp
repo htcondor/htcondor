@@ -141,7 +141,7 @@ StatWrapper::StatWrapper( const MyString &path, StatOpType which )
 	init( );
 
 	if ( which != STATOP_NONE ) {
-		Stat( path, which, true );
+		(void) Stat( path, which, true );
 	}
 }
 
@@ -152,7 +152,7 @@ StatWrapper::StatWrapper( const char *path, StatOpType which )
 	m_lstat->SetPath( path );
 
 	if ( which != STATOP_NONE ) {
-		Stat( path, which, true );
+		(void) Stat( path, which, true );
 	}
 }
 
@@ -162,7 +162,7 @@ StatWrapper::StatWrapper( int fd, StatOpType which )
 	m_fstat->SetFD( fd );
 
 	if ( which != STATOP_NONE ) {
-		Stat( fd, true );
+		(void) Stat( fd, true );
 	}
 }
 

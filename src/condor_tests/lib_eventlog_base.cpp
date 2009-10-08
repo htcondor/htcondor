@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2008, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2009, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -48,6 +48,14 @@ WriteStateFile( const ReadUserLog::FileState &state, const char *state_file )
 	return errors;
 }
 
+
+char *dupstr( const char *s )
+{
+	char	*p = new char[strlen(s)+1];
+	strcpy( p, s );
+	return p;
+};
+
 int
 ReadEventLog( const char *event_log, int num_events, const char *state_file )
 {
@@ -78,11 +86,15 @@ ReadEventLog( const char *event_log, int num_events, const char *state_file )
 		ULogEvent			*event = NULL;
 		ULogEventOutcome	 outcome = reader.readEvent(event);
 		if ( outcome != ULOG_OK ) {
-			fprintf( stderr, "ERROR: Failed to read eventlog event %d\n", i );
+			fprintf( stderr, "ERROR: Failed to read eventlog event %d: %d\n",
+					 i+1, (int) outcome );
 			errors++;
 		}
 		else {
 			num_read++;
+		}
+		if ( event ) {
+			delete event;
 		}
 
 		printf( "Writing to state file %s\n", state_file );
@@ -93,21 +105,27 @@ ReadEventLog( const char *event_log, int num_events, const char *state_file )
 		printf( "Read %d events from %s\n", num_read, event_log );
 	}
 
+	ReadUserLog::UninitFileState( state );
+
 	return errors;
 }
 
 int
 WriteEventLog( const char *event_log, int &num_events )
 {
-	int		errors = 0;
-	UserLog	writer("owner", event_log, 1, 1, 1, false );
+	int			errors = 0;
+	UserLog		writer;
+	if (!writer.initialize("owner", NULL, event_log, 1, 1, 1, NULL)) {
+		fprintf( stderr, "Failed to initailize writer (#1)\n" );
+		errors++;
+	}
 
 	num_events = 0;
 
 	SubmitEvent submit;
 	strcpy(submit.submitHost, "<127.0.0.1:1234>");
-	submit.submitEventLogNotes = strdup("Log info");
-	submit.submitEventUserNotes = strdup("User info");
+	submit.submitEventLogNotes = dupstr("Log info");
+	submit.submitEventUserNotes = dupstr("User info");
 	if ( !writer.writeEvent(&submit) ) {
 		fprintf( stderr, "Failed to write submit event\n");
 		errors++;
@@ -116,6 +134,11 @@ WriteEventLog( const char *event_log, int &num_events )
 		num_events++;
 	}
 
+	// Generate an execute event
+	if (!writer.initialize("owner", NULL, event_log, 1, 1, 1, NULL)) {
+		fprintf( stderr, "Failed to initailize writer (#2)\n" );
+		errors++;
+	}
 	ExecuteEvent execute;
 	strcpy(execute.executeHost, "<127.0.0.1:2345>");
 	if ( !writer.writeEvent(&execute) ) {
@@ -126,7 +149,13 @@ WriteEventLog( const char *event_log, int &num_events )
 		num_events++;
 	}
 
+	// Generate a terminate event
+	if (!writer.Configure( true ) ) {
+		fprintf( stderr, "Failed to re-configure writer\n" );
+		errors++;
+	}
 	struct rusage ru;
+	memset( &ru, 0, sizeof(ru) );
 	JobTerminatedEvent jobterminated;
 	jobterminated.normal = false;
 	jobterminated.signalNumber = 9;

@@ -23,7 +23,6 @@
 #include "job.h"
 #include "script.h"
 #include "MyString.h"
-#include "read_multiple_logs.h"
 #include "prioritysimplelist.h"
 #include "binary_search.h"
 #include "extArray.h"

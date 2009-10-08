@@ -48,7 +48,7 @@ AttrListPrintMask::
 
 
 void AttrListPrintMask::
-registerFormat (char *fmt, const char *attr, char *alternate)
+registerFormat (const char *fmt, const char *attr, const char *alternate)
 {
 	Formatter *newFmt = new Formatter;
 
@@ -57,11 +57,11 @@ registerFormat (char *fmt, const char *attr, char *alternate)
 	formats.Append (newFmt);
 
 	attributes.Append(new_strdup (attr));
-	alternates.Append(new_strdup(collapse_escapes(alternate)));
+	alternates.Append(collapse_escapes(new_strdup(alternate)));
 }
 
 void AttrListPrintMask::
-registerFormat (IntCustomFmt fmt, const char *attr, char *alternate)
+registerFormat (IntCustomFmt fmt, const char *attr, const char *alternate)
 {
 	Formatter *newFmt = new Formatter;
 
@@ -71,11 +71,11 @@ registerFormat (IntCustomFmt fmt, const char *attr, char *alternate)
 	formats.Append (newFmt);
 
 	attributes.Append(new_strdup (attr));
-	alternates.Append(new_strdup(collapse_escapes(alternate)));
+	alternates.Append(collapse_escapes(new_strdup(alternate)));
 }
 
 void AttrListPrintMask::
-registerFormat (FloatCustomFmt fmt, const char *attr, char *alternate)
+registerFormat (FloatCustomFmt fmt, const char *attr, const char *alternate)
 {
 	Formatter *newFmt = new Formatter;
 
@@ -85,11 +85,11 @@ registerFormat (FloatCustomFmt fmt, const char *attr, char *alternate)
 	formats.Append (newFmt);
 
 	attributes.Append(new_strdup (attr));
-	alternates.Append(new_strdup(collapse_escapes(alternate)));
+	alternates.Append(collapse_escapes(new_strdup(alternate)));
 }
 
 void AttrListPrintMask::
-registerFormat (StringCustomFmt fmt, const char *attr, char *alternate)
+registerFormat (StringCustomFmt fmt, const char *attr, const char *alternate)
 {
 	Formatter *newFmt = new Formatter;
 
@@ -99,7 +99,7 @@ registerFormat (StringCustomFmt fmt, const char *attr, char *alternate)
 	formats.Append (newFmt);
 
 	attributes.Append(new_strdup (attr));
-	alternates.Append(new_strdup(collapse_escapes(alternate)));
+	alternates.Append(collapse_escapes(new_strdup(alternate)));
 }
 
 void AttrListPrintMask::
@@ -194,7 +194,7 @@ display (AttrList *al, AttrList *target /* = NULL */)
 						// drat, we couldn't find it. Maybe it's an
 						// expression?
 					tree = NULL;
-					if( Parse(attr, tree) != 0 ) {
+					if( ParseClassAdRvalExpr(attr, tree) != 0 ) {
 						delete tree;
 
 							// drat, still no luck.  if there's an
@@ -215,10 +215,9 @@ display (AttrList *al, AttrList *target /* = NULL */)
 				switch( fmt_type ) {
 				case PFT_STRING:
 					if( attr_is_expr ) {
-						if( tree->EvalTree (al, target, &result) ) {
-							if( result.type == LX_STRING && result.s ) {
-								retval.sprintf_cat(fmt->printfFmt, result.s);
-							}
+						if( tree->EvalTree (al, target, &result) &&
+							result.type == LX_STRING && result.s ) {
+							retval.sprintf_cat(fmt->printfFmt, result.s);
 						} else {
 							// couldn't eval
 							if( alt ) {

@@ -60,11 +60,24 @@ public:
 		*/
 	virtual void StarterExit( int code );
 
+		/** Do any potential cleanup before exiting. Used both in 
+		    successful exits (StarterExit()) and EXCEPT()ions.
+			Do not call this function lightly!
+
+			It is conceivable that this function will be called
+			several times if, say, an EXCEPT()ion happens while
+			shutting down, so be careful in the implementation.
+		*/
+	virtual void FinalCleanup();
+
 		/** Params for "EXECUTE" and other useful stuff 
 		 */
 	virtual void Config();
 
 	virtual int SpawnJob( void );
+
+	virtual void WriteRecoveryFile( ClassAd *recovery_ad );
+	virtual void RemoveRecoveryFile();
 
 		/*************************************************************
 		 * Starter Commands
@@ -207,6 +220,11 @@ public:
 			@param proc_env The environment to publish to
 		*/
 	void PublishToEnv( Env* proc_env );
+
+		/** Set up the complete environment for the job.  This includes
+			STARTER_JOB_ENVIRONMENT, the job ClassAd, and PublishToEnv()
+		*/
+	bool GetJobEnv( ClassAd *jobad, Env *job_env, MyString *env_errors );
 	
 		/** Pointer to our JobInfoCommuniator object, which abstracts
 			away any details about our communications with whatever
@@ -236,6 +254,13 @@ public:
 	int classadCommand( int, Stream* );
 
 	int updateX509Proxy( int cmd, Stream* );
+
+	int createJobOwnerSecSession( int cmd, Stream* s );
+
+	int startSSHD( int /*cmd*/, Stream* s );
+	int SSHDFailed(Stream *s,char const *fmt,...) CHECK_PRINTF_FORMAT(3,4);
+	int SSHDRetry(Stream *s,char const *fmt,...) CHECK_PRINTF_FORMAT(3,4);
+	int vSSHDFailed(Stream *s,bool retry,char const *fmt,va_list args);
 
 		/** This will return NULL if we're not using either
 		    PrivSep or GLExec */
@@ -288,6 +313,18 @@ private:
 		*/
 	bool publishJobInfoAd(List<UserProc>* proc_list, ClassAd* ad);
 
+		/*
+		  @param result Buffer in which to store fully-qualified user name of the job owner
+		  If no job owner can be found, substitute a suitable dummy user name.
+		 */
+	void getJobOwnerFQUOrDummy(MyString &result);
+
+		/*
+		  @param result Buffer in which to store claim id string from job.
+		  Returns false if no claim id could be found.
+		 */
+	bool getJobClaimId(MyString &result);
+
 
 		// // // // // // // //
 		// Private Data Members
@@ -298,6 +335,7 @@ private:
 	char *Execute;
 	MyString WorkingDir; // The iwd given to the job
 	char *orig_cwd;
+	MyString m_recoveryFile;
 	bool is_gridshell;
 	int ShuttingDown;
 	int starter_stdin_fd;

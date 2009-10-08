@@ -1,0 +1,11 @@
+#! /bin/sh
+
+set x
+. $EXTERNALS_CONFIG
+
+mkdir -p $EXTERNALS_INSTALL_DIR/$PACKAGE_NAME/hdfs
+mkdir -p $EXTERNALS_INSTALL_DIR/$PACKAGE_NAME/hdfs/conf
+
+cp -r $PACKAGE_SRC_NAME/lib $EXTERNALS_INSTALL_DIR/$PACKAGE_NAME/hdfs
+cp $PACKAGE_SRC_NAME/hadoop-0.20.0-p1-core.jar $EXTERNALS_INSTALL_DIR/$PACKAGE_NAME/hdfs/lib/
+cp $PACKAGE_SRC_NAME/src/hdfs/hdfs-default.xml $EXTERNALS_INSTALL_DIR/$PACKAGE_NAME/hdfs/conf/

@@ -29,7 +29,7 @@ x_vm_utils::initialize($corename);
 
 $started = sub
 {
-	print "Job is running\n";
+	CondorTest::debug("Job is running\n",1);
 	my $ip;
 	until ($ip =~ m/\d+\.\d+\.\d+\.\d+/) {
 		sleep(1);
@@ -44,7 +44,7 @@ $started = sub
 };
 $completed = sub
 {
-	print "Job has completed\n";
+	CondorTest::debug("Job has completed\n",1);
 	unless (x_vm_utils::check_output("IT WORKED")) {
 		die "output check failed\n";
 	}
@@ -56,14 +56,15 @@ x_vm_utils::add_submit_command("vmware_should_transfer_files = yes");
 x_vm_utils::add_submit_command("vmware_snapshot_disk = false");
 x_vm_utils::add_submit_command("vm_networking = true");
 x_vm_utils::add_submit_command("vm_networking_type = nat");
+x_vm_utils::add_submit_command("periodic_remove = (CurrentTime - QDate) > 600");
 $success = x_vm_utils::run_test($testname);
 
 x_vm_utils::cleanup();
 
 if( not $success )
 {
-	print "$corename FAILED\n";
+	CondorTest::debug("$corename FAILED\n",1);
 	exit(1);
 }
-print "$corename SUCCESS\n";
+CondorTest::debug("$corename SUCCESS\n",1);
 exit(0);

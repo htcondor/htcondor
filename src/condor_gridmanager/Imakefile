@@ -5,19 +5,13 @@ UNICOREGAHP_WRAPPER_NAME = unicore_gahp
 GRIDFTP_WRAPPER_NAME = gridftp_wrapper.sh
 all_target($(NAME) grid_monitor.sh $(GT4GAHP_WRAPPER_NAME) $(GT42GAHP_WRAPPER_NAME) $(UNICOREGAHP_WRAPPER_NAME) $(GRIDFTP_WRAPPER_NAME))
 
-#if WANT_ORACLE_UNIVERSE
-ORACLE_JOB_FLAGS = -DORACLE_UNIVERSE -I/p/condor/workspaces/jfrey/oracle/OraHome1/rdbms/demo -I/p/condor/workspaces/jfrey/oracle/OraHome1/rdbms/public
-ORACLE_JOB_OBJ = oraclejob.o oracleresource.o
-ORACLE_JOB_LIB = /p/condor/workspaces/jfrey/oracle/OraHome1/lib/libclient9.a /p/condor/workspaces/jfrey/oracle/OraHome1/lib/libclntst9.a -lpthread
-#endif
-
-CFLAGS = $(STD_C_FLAGS)
-C_PLUS_FLAGS = $(ORACLE_JOB_FLAGS) $(STD_C_PLUS_FLAGS)
-LIB = $(ORACLE_JOB_LIB) $(DAEMONCORE_LIB) $(STD_LIBS) $(CONFIGURE_GSOAP_LDFLAGS)
+CFLAGS = $(STD_C_FLAGS) $(CONFIGURE_PCRE_CFLAGS)
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(CONFIGURE_PCRE_CFLAGS)
+LIB = $(DAEMONCORE_LIB) $(STD_LIBS) $(CONFIGURE_GSOAP_LDFLAGS) $(CONFIGURE_PCRE_LDFLAGS)
 
 soapobjs(gridmanager)
 
-OBJ = gridmanager_main.o gridmanager.o globusjob.o globusresource.o gt4job.o gt4resource.o infnbatchjob.o condorjob.o condorresource.o unicorejob.o nordugridjob.o nordugridresource.o creamjob.o creamresource.o amazonjob.o amazonresource.o proxymanager.o gahp-client.o $(ORACLE_JOB_OBJ) basejob.o baseresource.o gridftpmanager.o  $(SOAP_OBJS)
+OBJ = gridmanager_main.o gridmanager.o globusjob.o globusresource.o gt4job.o gt4resource.o infnbatchjob.o condorjob.o condorresource.o unicorejob.o nordugridjob.o nordugridresource.o creamjob.o creamresource.o amazonjob.o amazonresource.o proxymanager.o gahp-client.o basejob.o baseresource.o gridftpmanager.o  $(SOAP_OBJS)
 
 public_c_plus_target($(NAME),sbin,$(OBJ),$(LIB))
 
@@ -25,11 +19,11 @@ GT4GAHP_WRAPPER_OBJ = gt4_gahp_wrapper.o
 GT42GAHP_WRAPPER_OBJ = gt42_gahp_wrapper.o
 UNICOREGAHP_WRAPPER_OBJ = unicore_gahp_wrapper.o
 
-public_c_plus_target($(UNICOREGAHP_WRAPPER_NAME),sbin,$(UNICOREGAHP_WRAPPER_OBJ),$(STD_LIBS))
+public_c_plus_target($(UNICOREGAHP_WRAPPER_NAME),sbin,$(UNICOREGAHP_WRAPPER_OBJ),$(STD_LIBS) $(CONFIGURE_PCRE_LDFLAGS))
 
-public_c_plus_target($(GT4GAHP_WRAPPER_NAME),sbin,$(GT4GAHP_WRAPPER_OBJ),$(STD_LIBS))
+public_c_plus_target($(GT4GAHP_WRAPPER_NAME),sbin,$(GT4GAHP_WRAPPER_OBJ),$(STD_LIBS) $(CONFIGURE_PCRE_LDFLAGS))
 
-public_c_plus_target($(GT42GAHP_WRAPPER_NAME),sbin,$(GT42GAHP_WRAPPER_OBJ),$(STD_LIBS))
+public_c_plus_target($(GT42GAHP_WRAPPER_NAME),sbin,$(GT42GAHP_WRAPPER_OBJ),$(STD_LIBS) $(CONFIGURE_PCRE_LDFLAGS))
 
 #if HAVE_EXT_GLOBUS
 release_copy_target($(GLOBUS_DIR)/sbin/globus-gridftp-server.dynamic,libexec,globus-gridftp-server,EXECUTABLE_MODE)

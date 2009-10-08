@@ -99,7 +99,7 @@ main(int argc, const char **argv)
 	if ( !tmp || !strlen(tmp) ) tmp = "<NONE>";
 	printf( "hardware address: %s\n", tmp );
 
-	tmp = net->subnet();
+	tmp = net->subnetMask();
 	if ( !tmp || !strlen(tmp) ) tmp = "<NONE>";
 	printf( "subnet: %s\n", tmp );
 

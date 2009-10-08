@@ -36,7 +36,6 @@ StringSpace (int initial_size)
 	// initiliaze the string table
 	filler.inUse     = false;
 	filler.string    = NULL;
-	filler.adoptMode = SS_INVALID;
 	filler.refCount  = 0;
 	strTable.fill (filler);
 
@@ -67,36 +66,11 @@ purge ()
 	{
 		if (strTable[i].inUse && strTable[i].string)
 		{
-			bool did_delete = false;
-			switch (strTable[i].adoptMode)
-			{
-				case SS_DUP:
-				case SS_ADOPT_C_STRING:
-					free (strTable[i].string);
-					did_delete = true;
-					break;
-
-				case SS_ADOPT_CPLUS_STRING:
-					delete [] (strTable[i].string);
-					did_delete = true;
-					break;
-
-				case SS_INVALID:
-					break;
-
-				default:
-					// some problem --- may cause a leak
-					break;
-			}
-			if (did_delete)
-			{
-				strTable[i].string = NULL;
-				strTable[i].inUse = false;
-				strTable[i].refCount = 0;
-				strTable[i].adoptMode = SS_INVALID;
-			}
+			free (strTable[i].string);
+			strTable[i].string = NULL;
+			strTable[i].inUse = false;
+			strTable[i].refCount = 0;
 		}
-		strTable[i].adoptMode = SS_INVALID;
 	}
 
 	first_free_slot = 0;
@@ -109,7 +83,7 @@ purge ()
 }
 
 int StringSpace::
-getCanonical (char* &str, StringSpaceAdoptionMethod adopt)
+getCanonical (const char* &str)
 {
 	// sanity check
 	if (!str) return -1;
@@ -120,20 +94,6 @@ getCanonical (char* &str, StringSpaceAdoptionMethod adopt)
 	// case 1:  already exists in space
 	if (stringSpace->lookup (yourStr, index) == 0) 
 	{
-		switch (adopt)
-        {
-            case SS_ADOPT_C_STRING: 
-				free(str);  
-				str = NULL;
-				break;
-            case SS_ADOPT_CPLUS_STRING: 
-				delete [] (str);  
-				str = NULL;
-				break;
-            case SS_DUP:
-            default:
-                break;
-		}
 		// increment reference count
 		strTable[index].refCount++;
 		return index;
@@ -141,15 +101,9 @@ getCanonical (char* &str, StringSpaceAdoptionMethod adopt)
 
 	// case 2:  new string --- add to space
     index = first_free_slot;
-	if (adopt == SS_DUP) {
-		strTable[index].string  = strdup(str);
-	} else {
-		strTable[index].string  = str;
-		str = NULL;
-	}
+	strTable[index].string  = strdup(str);
 	strTable[index].inUse       = true;
     strTable[index].refCount    = 1;
-    strTable[index].adoptMode   = adopt;
 	number_of_slots_filled++;
 
     // update first_free_slot to reflect the next available slot
@@ -176,21 +130,19 @@ getCanonical (char* &str, StringSpaceAdoptionMethod adopt)
 
 
 int StringSpace::
-getCanonical (char* &str, SSString &canonical, 
-			  StringSpaceAdoptionMethod adopt)
+getCanonical (const char* &str, SSString &canonical)
 {
-	canonical.context = ((canonical.index=getCanonical(str,adopt)) != -1) ?
+	canonical.context = ((canonical.index=getCanonical(str)) != -1) ?
 							this : 0;
 	return canonical.index;
 }
 
 
 int StringSpace::
-getCanonical (char* &str, SSString *&canonical, 
-			  StringSpaceAdoptionMethod adopt)
+getCanonical (const char* &str, SSString *&canonical)
 {
 	if (!(canonical = new SSString)) return -1;
-	return getCanonical (str, *canonical, adopt);
+	return getCanonical (str, *canonical);
 }
 
 
@@ -207,6 +159,15 @@ disposeByIndex(int index)
 	str->index = index;
 	delete str;
 	return;
+}
+
+
+void StringSpace::
+dispose(const char *str)
+{
+	int i = getCanonical(str);
+	disposeByIndex(i);
+	disposeByIndex(i);
 }
 
 
@@ -295,26 +256,9 @@ SSString::dispose ()
 		YourSensitiveString str( context->strTable[index].string );
 		context->stringSpace->remove( str );
 
-        switch (context->strTable[index].adoptMode)
-        {
-            case SS_DUP: 
-            case SS_ADOPT_C_STRING:
-                free (context->strTable[index].string);
-				context->strTable[index].string = NULL;
-				context->strTable[index].inUse = false;
-				context->strTable[index].adoptMode = SS_INVALID;
-                break;
-
-            case SS_ADOPT_CPLUS_STRING:
-                delete [] (context->strTable[index].string);
-				context->strTable[index].string = NULL;
-				context->strTable[index].inUse = false;
-				context->strTable[index].adoptMode = SS_INVALID;
-                break;
-
-            default:
-                break;
-        }
+		free (context->strTable[index].string);
+		context->strTable[index].string = NULL;
+		context->strTable[index].inUse = false;
 
 		// Adjust the variables that track our strTable usage. 
 		context->number_of_slots_filled--;

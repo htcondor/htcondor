@@ -88,16 +88,16 @@ ClaimStartdMsg::ClaimStartdMsg( char const *the_claim_id, ClassAd const *job_ad,
 }
 
 void
-ClaimStartdMsg::cancelMessage() {
-	dprintf(D_ALWAYS,"Canceling request for claim %s\n", description());
-	DCMsg::cancelMessage();
+ClaimStartdMsg::cancelMessage(char const *reason) {
+	dprintf(D_ALWAYS,"Canceling request for claim %s %s\n", description(),reason ? reason : "");
+	DCMsg::cancelMessage(reason);
 }
 
 bool
 ClaimStartdMsg::writeMsg( DCMessenger * /*messenger*/, Sock *sock ) {
 		// save startd fqu for hole punching
 	m_startd_fqu = sock->getFullyQualifiedUser();
-	m_startd_ip_addr = sock->endpoint_ip_str();
+	m_startd_ip_addr = sock->peer_ip_str();
 
 	if( !sock->put_secret( m_claim_id.Value() ) ||
 	    !m_job_ad.put( *sock ) ||
@@ -107,6 +107,7 @@ ClaimStartdMsg::writeMsg( DCMessenger * /*messenger*/, Sock *sock ) {
 		dprintf(failureDebugLevel(),
 				"Couldn't encode request claim to startd %s\n",
 				description() );
+		sockFailed( sock );
 		return false;
 	}
 		// eom() is done by caller
@@ -133,6 +134,7 @@ ClaimStartdMsg::readMsg( DCMessenger * /*messenger*/, Sock *sock ) {
 		dprintf( failureDebugLevel(),
 				 "Response problem from startd when requesting claim %s.\n",
 				 description() );	
+		sockFailed( sock );
 		return false;
 	}
 
@@ -150,7 +152,7 @@ ClaimStartdMsg::readMsg( DCMessenger * /*messenger*/, Sock *sock ) {
 
 
 void
-DCStartd::asyncRequestOpportunisticClaim( ClassAd const *req_ad, char const *description, char const *scheduler_addr, int alive_interval, int timeout, classy_counted_ptr<DCMsgCallback> cb )
+DCStartd::asyncRequestOpportunisticClaim( ClassAd const *req_ad, char const *description, char const *scheduler_addr, int alive_interval, int timeout, int deadline_timeout, classy_counted_ptr<DCMsgCallback> cb )
 {
 	dprintf(D_FULLDEBUG|D_PROTOCOL,"Requesting claim %s\n",description);
 
@@ -170,6 +172,7 @@ DCStartd::asyncRequestOpportunisticClaim( ClassAd const *req_ad, char const *des
 	msg->setSecSessionId(cid.secSessionId());
 
 	msg->setTimeout(timeout);
+	msg->setDeadlineTimeout(deadline_timeout);
 	sendMsg(msg.get());
 }
 

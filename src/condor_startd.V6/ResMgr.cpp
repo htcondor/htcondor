@@ -1,14 +1,14 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2009, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,6 +20,7 @@
 
 #include "condor_common.h"
 #include "startd.h"
+#include "startd_hibernator.h"
 #include "condor_classad_namedlist.h"
 #include "classad_merge.h"
 #include "vm_common.h"
@@ -48,7 +49,8 @@ ResMgr::ResMgr()
 #if HAVE_HIBERNATION
 	m_netif = NetworkAdapterBase::createNetworkAdapter(
 		daemonCore->InfoCommandSinfulString (), false );
-	m_hibernation_manager = new HibernationManager( );
+	StartdHibernator	*hibernator = new StartdHibernator;
+	m_hibernation_manager = new HibernationManager( hibernator );
 	if ( m_netif ) {
 		m_hibernation_manager->addInterface( *m_netif );
 	}
@@ -62,6 +64,12 @@ ResMgr::ResMgr()
 		dprintf( D_FULLDEBUG, "Using network interface %s for hibernation\n",
 				 primary->interfaceName() );
 	}
+	m_hibernation_manager->initialize( );
+	MyString	states;
+	m_hibernation_manager->getSupportedStates(states);
+	dprintf( D_FULLDEBUG,
+			 "Detected hibernation states: %s\n", states.Value() );
+
 	m_hibernating = FALSE;
 #endif
 
@@ -73,6 +81,11 @@ ResMgr::ResMgr()
 	new_type_nums = NULL;
 	is_shutting_down = false;
 	cur_time = last_in_use = time( NULL );
+
+	max_types = 0;
+	num_updates = 0;
+	startTime = 0;
+	type_strings = NULL;
 }
 
 
@@ -115,7 +128,7 @@ ResMgr::~ResMgr()
 	delete [] type_nums;
 	if( new_type_nums ) {
 		delete [] new_type_nums;
-	}		
+	}
 }
 
 
@@ -161,20 +174,29 @@ ResMgr::init_config_classad( void )
 #endif /* HAVE_JOB_HOOKS */
 #if HAVE_HIBERNATION
 	configInsert( config_classad, "HIBERNATE", false );
+	if( !configInsert( config_classad, ATTR_UNHIBERNATE, false ) ) {
+		MyString default_expr;
+		default_expr.sprintf("MY.%s =!= UNDEFINED",ATTR_MACHINE_LAST_MATCH_TIME);
+		config_classad->AssignExpr( ATTR_UNHIBERNATE, default_expr.Value() );
+	}
 #endif /* HAVE_HIBERNATION */
 
+	if( !configInsert( config_classad, ATTR_SLOT_WEIGHT, false ) ) {
+		config_classad->AssignExpr( ATTR_SLOT_WEIGHT, ATTR_CPUS );
+	}
+
 		// Next, try the IS_OWNER expression.  If it's not there, give
-		// them a resonable default, instead of leaving it undefined. 
+		// them a resonable default, instead of leaving it undefined.
 	if( ! configInsert(config_classad, ATTR_IS_OWNER, false) ) {
 		config_classad->AssignExpr( ATTR_IS_OWNER, "(START =?= False)" );
 	}
 		// Next, try the CpuBusy expression.  If it's not there, try
-		// what's defined in cpu_busy (for backwards compatibility).  
+		// what's defined in cpu_busy (for backwards compatibility).
 		// If that's not there, give them a default of "False",
 		// instead of leaving it undefined.
 	if( ! configInsert(config_classad, ATTR_CPU_BUSY, false) ) {
 		if( ! configInsert(config_classad, "cpu_busy", ATTR_CPU_BUSY,
-						   false) ) { 
+						   false) ) {
 			config_classad->Assign( ATTR_CPU_BUSY, false );
 		}
 	}
@@ -240,17 +262,17 @@ ResMgr::backfillConfig()
 
 	if( ! param_boolean("ENABLE_BACKFILL", false) ) {
 		if( m_backfill_mgr ) {
-			dprintf( D_ALWAYS, 
+			dprintf( D_ALWAYS,
 					 "ENABLE_BACKFILL is false, destroying BackfillMgr\n" );
 			if( m_backfill_mgr->destroy() ) {
-					// nothing else to cleanup now, we can delete it 
+					// nothing else to cleanup now, we can delete it
 					// immediately...
 				delete m_backfill_mgr;
 				m_backfill_mgr = NULL;
 			} else {
 					// backfill_mgr told us we have to wait, so just
 					// return for now and we'll finish deleting this
-					// in ResMgr::backfillMgrDone(). 
+					// in ResMgr::backfillMgrDone().
 				dprintf( D_ALWAYS, "BackfillMgr still has cleanup to "
 						 "perform, postponing delete\n" );
 				m_backfill_shutdown_pending = true;
@@ -261,7 +283,7 @@ ResMgr::backfillConfig()
 
 	char* new_system = param( "BACKFILL_SYSTEM" );
 	if( ! new_system ) {
-		dprintf( D_ALWAYS, "ERROR: ENABLE_BACKFILL is TRUE, but "	
+		dprintf( D_ALWAYS, "ERROR: ENABLE_BACKFILL is TRUE, but "
 				 "BACKFILL_SYSTEM is undefined!\n" );
 		return false;
 	}
@@ -272,7 +294,7 @@ ResMgr::backfillConfig()
 		free( new_system );
 		return false;
 	}
-		
+
 	if( m_backfill_mgr ) {
 		if( ! stricmp(new_system, m_backfill_mgr->backfillSystemName()) ) {
 				// same as before
@@ -280,25 +302,26 @@ ResMgr::backfillConfig()
 				// since it's already here and we're keeping it, tell
 				// it to reconfig (if that matters)
 			m_backfill_mgr->reconfig();
-				// we're done 
+				// we're done
 			return true;
-		} else { 
+		} else {
 				// different!
 			dprintf( D_ALWAYS, "BACKFILL_SYSTEM has changed "
 					 "(old: '%s', new: '%s'), re-initializing\n",
 					 m_backfill_mgr->backfillSystemName(), new_system );
 			if( m_backfill_mgr->destroy() ) {
-					// nothing else to cleanup now, we can delete it 
+					// nothing else to cleanup now, we can delete it
 					// immediately...
 				delete m_backfill_mgr;
 				m_backfill_mgr = NULL;
 			} else {
 					// backfill_mgr told us we have to wait, so just
 					// return for now and we'll finish deleting this
-					// in ResMgr::backfillMgrDone(). 
+					// in ResMgr::backfillMgrDone().
 				dprintf( D_ALWAYS, "BackfillMgr still has cleanup to "
 						 "perform, postponing delete\n" );
 				m_backfill_shutdown_pending = true;
+				free( new_system );
 				return true;
 			}
 		}
@@ -326,7 +349,7 @@ ResMgr::backfillConfig()
 				new_system );
 	}
 
-	dprintf( D_ALWAYS, "Created a %s Backfill Manager\n", 
+	dprintf( D_ALWAYS, "Created a %s Backfill Manager\n",
 			 m_backfill_mgr->backfillSystemName() );
 
 	free( new_system );
@@ -358,7 +381,7 @@ ResMgr::init_resources( void )
 	max_types += 1;
 
 		// The reason this isn't on the stack is b/c of the variable
-		// nature of max_types. *sigh*  
+		// nature of max_types. *sigh*
 	type_strings = new StringList*[max_types];
 	memset( type_strings, 0, (sizeof(StringList*) * max_types) );
 
@@ -387,12 +410,12 @@ ResMgr::init_resources( void )
 	}
 
 		// Now, we can finally allocate our resources array, and
-		// populate it.  
+		// populate it.
 	for( i=0; i<num_res; i++ ) {
 		addResource( new Resource( new_cpu_attrs[i], i+1 ) );
 	}
 
-		// We can now seed our IdDispenser with the right slot id. 
+		// We can now seed our IdDispenser with the right slot id.
 	id_disp = new IdDispenser( num_cpus(), i+1 );
 
 		// Finally, we can free up the space of the new_cpu_attrs
@@ -432,7 +455,7 @@ ResMgr::reconfig_resources( void )
 
 #if HAVE_HIBERNATION
 	updateHibernateConfiguration();
-#endif /* HAVE_HIBERNATION */
+#endif /* HAVE_HIBERNATE */
 
 		// Tell each resource to reconfig itself.
 	walk(&Resource::reconfig);
@@ -453,7 +476,7 @@ ResMgr::reconfig_resources( void )
 	}
 
 		// See if the config file allows for a valid set of
-		// CpuAttributes objects.  
+		// CpuAttributes objects.
 	new_cpu_attrs = buildCpuAttrs( num, new_type_nums, false );
 	if( ! new_cpu_attrs ) {
 			// There was an error, abort.  We still return true to
@@ -472,7 +495,7 @@ ResMgr::reconfig_resources( void )
 	sorted_resources = new Resource** [max_types];
 	for( i=0; i<max_types; i++ ) {
 		sorted_resources[i] = new Resource* [max_num];
-		memset( sorted_resources[i], 0, (max_num*sizeof(Resource*)) ); 
+		memset( sorted_resources[i], 0, (max_num*sizeof(Resource*)) );
 	}
 
 	cur_type_index = new int [max_types];
@@ -484,11 +507,11 @@ ResMgr::reconfig_resources( void )
 		(sorted_resources[t])[cur_type_index[t]] = resources[i];
 		cur_type_index[t]++;
 	}
-	
+
 		// Now, for each type, sort our resources by state.
 	for( t=0; t<max_types; t++ ) {
 		ASSERT( cur_type_index[t] == type_nums[t] );
-		qsort( sorted_resources[t], type_nums[t], 
+		qsort( sorted_resources[t], type_nums[t],
 			   sizeof(Resource*), &claimedRankCmp );
 	}
 
@@ -530,17 +553,17 @@ ResMgr::reconfig_resources( void )
 
 		// Everything we care about in new_cpu_attrs is saved
 		// elsewhere, and the rest has already been deleted, so we
-		// should now delete the array itself. 
+		// should now delete the array itself.
 	delete [] new_cpu_attrs;
 
 		// Cleanup our memory.
-	for( i=0; i<max_types; i++ ) {	
+	for( i=0; i<max_types; i++ ) {
 		delete [] sorted_resources[i];
 	}
 	delete [] sorted_resources;
 	delete [] cur_type_index;
 
-		// See if there's anything to destroy, and if so, do it. 
+		// See if there's anything to destroy, and if so, do it.
 	destroy_list.Rewind();
 	while( destroy_list.Next(rip) ) {
 		rip->dprintf( D_ALWAYS,
@@ -549,12 +572,12 @@ ResMgr::reconfig_resources( void )
 	}
 
 		// Finally, call our helper, so that if all the slots we need to
-		// get rid of are gone by now, we'll allocate the new ones. 
+		// get rid of are gone by now, we'll allocate the new ones.
 	return processAllocList();
 }
 
 
-CpuAttributes** 
+CpuAttributes**
 ResMgr::buildCpuAttrs( int total, int* type_num_array, bool except )
 {
 	int i, j, num;
@@ -563,7 +586,7 @@ ResMgr::buildCpuAttrs( int total, int* type_num_array, bool except )
 
 		// Available system resources.
 	AvailAttributes avail( m_attr );
-	
+
 	cap_array = new CpuAttributes* [total];
 	if( ! cap_array ) {
 		EXCEPT( "Out of memory!" );
@@ -578,8 +601,8 @@ ResMgr::buildCpuAttrs( int total, int* type_num_array, bool except )
 					cap_array[num] = cap;
 					num++;
 				} else {
-						// We ran out of system resources.  
-					dprintf( D_ALWAYS, 
+						// We ran out of system resources.
+					dprintf( D_ALWAYS,
 							 "ERROR: Can't allocate %s slot of type %d\n",
 							 num_string(j+1), i );
 					dprintf( D_ALWAYS | D_NOHEADER, "\tRequesting: " );
@@ -597,7 +620,7 @@ ResMgr::buildCpuAttrs( int total, int* type_num_array, bool except )
 						delete [] cap_array;
 						return NULL;
 					}
-				}					
+				}
 			}
 		}
 	}
@@ -607,8 +630,8 @@ ResMgr::buildCpuAttrs( int total, int* type_num_array, bool except )
 		cap = cap_array[i];
 		if( !avail.computeAutoShares(cap) ) {
 
-				// We ran out of system resources.  
-			dprintf( D_ALWAYS, 
+				// We ran out of system resources.
+			dprintf( D_ALWAYS,
 					 "ERROR: Can't allocate slot id %d during auto "
 					 "allocation of resources\n", i+1 );
 			dprintf( D_ALWAYS | D_NOHEADER, "\tRequesting: " );
@@ -626,12 +649,12 @@ ResMgr::buildCpuAttrs( int total, int* type_num_array, bool except )
 				delete [] cap_array;
 				return NULL;
 			}
-		}					
+		}
 	}
 
 	return cap_array;
 }
-	
+
 static void
 _checkInvalidParam( const char* name, bool except ) {
 	char* tmp;
@@ -639,9 +662,9 @@ _checkInvalidParam( const char* name, bool except ) {
 		if (except) {
 			EXCEPT( "Can't define %s in the config file", name );
 		} else {
-			dprintf( D_ALWAYS, 
+			dprintf( D_ALWAYS,
 					 "Can't define %s in the config file, ignoring\n",
-					 name ); 
+					 name );
 		}
 		free(tmp);
 	}
@@ -659,10 +682,10 @@ ResMgr::initTypes( bool except )
 	_checkInvalidParam("VIRTUAL_MACHINE_TYPE_0", except);
 
 	if (! type_strings[0]) {
-			// Type 0 is the special type for evenly divided slots. 
+			// Type 0 is the special type for evenly divided slots.
 		type_strings[0] = new StringList();
 		type_strings[0]->initializeFromString("auto");
-	}	
+	}
 
 	for( i=1; i < max_types; i++ ) {
 		if( type_strings[i] ) {
@@ -750,7 +773,7 @@ ResMgr::typeNumCmp( int* a, int* b )
 			return false;
 		}
 	}
-	return true; 
+	return true;
 }
 
 
@@ -767,12 +790,12 @@ ResMgr::buildSlot( int slot_id, StringList* list, int type, bool except )
 
 	if ( list == NULL) {
 	  // give everything the default share and return
-	  
+
 	  cpus = compute_cpus( default_share );
 	  ram = compute_phys_mem( default_share );
 	  swap = default_share;
 	  disk = default_share;
-	  
+
 	  return new CpuAttributes( m_attr, type, cpus, ram, swap, disk, execute_dir, partition_id );
 	}
 		// For this parsing code, deal with the following example
@@ -785,7 +808,7 @@ ResMgr::buildSlot( int slot_id, StringList* list, int type, bool except )
 	list->rewind();
 	while( (attr = list->next()) ) {
 		if( ! (val = strchr(attr, '=')) ) {
-				// There's no = in this description, it must be one 
+				// There's no = in this description, it must be one
 				// percentage or fraction for all attributes.
 				// For example "1/4" or "25%".  So, we can just parse
 				// it as a percentage and use that for everything.
@@ -794,16 +817,16 @@ ResMgr::buildSlot( int slot_id, StringList* list, int type, bool except )
 				dprintf( D_ALWAYS, "ERROR: Bad description of slot type %d: ",
 						 type );
 				dprintf( D_ALWAYS | D_NOHEADER,  "\"%s\" is invalid.\n", attr );
-				dprintf( D_ALWAYS | D_NOHEADER, 
+				dprintf( D_ALWAYS | D_NOHEADER,
 						 "\tYou must specify a percentage (like \"25%%\"), " );
 				dprintf( D_ALWAYS | D_NOHEADER, "a fraction (like \"1/4\"),\n" );
-				dprintf( D_ALWAYS | D_NOHEADER, 
+				dprintf( D_ALWAYS | D_NOHEADER,
 						 "\tor list all attributes (like \"c=1, r=25%%, s=25%%, d=25%%\").\n" );
-				dprintf( D_ALWAYS | D_NOHEADER, 
+				dprintf( D_ALWAYS | D_NOHEADER,
 						 "\tSee the manual for details.\n" );
 				if( except ) {
 					DC_Exit( 4 );
-				} else {	
+				} else {
 					return NULL;
 				}
 			}
@@ -812,17 +835,17 @@ ResMgr::buildSlot( int slot_id, StringList* list, int type, bool except )
 
 			// If we're still here, this is part of a string that
 			// lists out seperate attributes and the share for each one.
-		
+
 			// Get the value for this attribute.  It'll either be a
 			// percentage, or it'll be a distinct value (in which
 			// case, parse_value() will return negative.
 		if( ! val[1] ) {
-			dprintf( D_ALWAYS, 
+			dprintf( D_ALWAYS,
 					 "Can't parse attribute \"%s\" in description of slot type %d\n",
 					 attr, type );
 			if( except ) {
 				DC_Exit( 4 );
-			} else {	
+			} else {
 				return NULL;
 			}
 		}
@@ -846,11 +869,11 @@ ResMgr::buildSlot( int slot_id, StringList* list, int type, bool except )
 				swap = share;
 			} else {
 				dprintf( D_ALWAYS,
-						 "You must specify a percent or fraction for swap in slot type %d\n", 
-						 type ); 
+						 "You must specify a percent or fraction for swap in slot type %d\n",
+						 type );
 				if( except ) {
 					DC_Exit( 4 );
-				} else {	
+				} else {
 					return NULL;
 				}
 			}
@@ -859,22 +882,22 @@ ResMgr::buildSlot( int slot_id, StringList* list, int type, bool except )
 			if( share > 0 || IS_AUTO_SHARE(share) ) {
 				disk = share;
 			} else {
-				dprintf( D_ALWAYS, 
-						 "You must specify a percent or fraction for disk in slot type %d\n", 
-						type ); 
+				dprintf( D_ALWAYS,
+						 "You must specify a percent or fraction for disk in slot type %d\n",
+						type );
 				if( except ) {
 					DC_Exit( 4 );
-				} else {	
+				} else {
 					return NULL;
 				}
 			}
 			break;
 		default:
-			dprintf( D_ALWAYS, "Unknown attribute \"%s\" in slot type %d\n", 
+			dprintf( D_ALWAYS, "Unknown attribute \"%s\" in slot type %d\n",
 					 attr, type );
 			if( except ) {
 				DC_Exit( 4 );
-			} else {	
+			} else {
 				return NULL;
 			}
 			break;
@@ -940,7 +963,7 @@ ResMgr::GetConfigExecuteDir( int slot_id, MyString *execute_dir, MyString *parti
 	free(partition_value);
 }
 
-/* 
+/*
    Parse a string in one of a few formats, and return a float that
    represents the value.  Either it's "auto", or it's a fraction, like
    "1/4", or it's a percent, like "25%" (in both cases we'd return
@@ -971,7 +994,7 @@ ResMgr::parse_value( const char* str, int type, bool except )
 					 foo, type );
 			if( except ) {
 				DC_Exit( 4 );
-			} else {	
+			} else {
 				free( foo );
 				return 0;
 			}
@@ -987,8 +1010,8 @@ ResMgr::parse_value( const char* str, int type, bool except )
 		return val;
 	}
 }
- 
- 
+
+
 /*
   Generally speaking, we want to round down for fractional amounts of
   a CPU.  However, we never want to advertise less than 1.  Plus, if
@@ -1043,46 +1066,31 @@ ResMgr::compute_phys_mem( float share )
 
 
 void
-ResMgr::walk( int(*func)(Resource*) )
-{
-	if( ! resources ) {
-		return;
-	}
-	int i;
-	for( i = 0; i < nresources; i++ ) {
-		func(resources[i]);
-	}
-}
-
-
-void
-ResMgr::walk( ResourceMember memberfunc )
-{
-	if( ! resources ) {
-		return;
-	}
-	int i;
-	for( i = 0; i < nresources; i++ ) {
-		(resources[i]->*(memberfunc))();
-	}
-}
-
-
-void
 ResMgr::walk( VoidResourceMember memberfunc )
 {
 	if( ! resources ) {
 		return;
 	}
-	int i;
-	for( i = 0; i < nresources; i++ ) {
-		(resources[i]->*(memberfunc))();
+
+		// Because the memberfunc might be an eval function, it can
+		// result in resources being deleted. This means a straight
+		// for loop on nresources will miss one resource for every one
+		// deleted. To combat that, we copy the array and nresources
+		// and iterate over it instead.
+	int ncache = nresources;
+	Resource **cache = new Resource*[ncache];
+	memcpy((void*)cache, (void*)resources, (sizeof(Resource*)*ncache));
+
+	for( int i = 0; i < ncache; i++ ) {
+		(cache[i]->*(memberfunc))();
 	}
+
+	delete [] cache;
 }
 
 
 void
-ResMgr::walk( ResourceMaskMember memberfunc, amask_t mask ) 
+ResMgr::walk( ResourceMaskMember memberfunc, amask_t mask )
 {
 	if( ! resources ) {
 		return;
@@ -1091,20 +1099,6 @@ ResMgr::walk( ResourceMaskMember memberfunc, amask_t mask )
 	for( i = 0; i < nresources; i++ ) {
 		(resources[i]->*(memberfunc))(mask);
 	}
-}
-
-
-int
-ResMgr::sum( ResourceMember memberfunc )
-{
-	if( ! resources ) {
-		return 0;
-	}
-	int i, tot = 0;
-	for( i = 0; i < nresources; i++ ) {
-		tot += (resources[i]->*(memberfunc))();
-	}
-	return tot;
 }
 
 
@@ -1123,29 +1117,6 @@ ResMgr::sum( ResourceFloatMember memberfunc )
 }
 
 
-Resource*
-ResMgr::res_max( ResourceMember memberfunc, int* val )
-{
-	if( ! resources ) {
-		return NULL;
-	}
-	Resource* rip = NULL;
-	int i, tmp, max = INT_MIN;
-
-	for( i = 0; i < nresources; i++ ) {
-		tmp = (resources[i]->*(memberfunc))();
-		if( tmp > max ) {
-			max = tmp;
-			rip = resources[i];
-		}
-	}
-	if( val ) {
-		*val = max;
-	}
-	return rip;
-}
-
-
 void
 ResMgr::resource_sort( ComparisonFunc compar )
 {
@@ -1154,7 +1125,7 @@ ResMgr::resource_sort( ComparisonFunc compar )
 	}
 	if( nresources > 1 ) {
 		qsort( resources, nresources, sizeof(Resource*), compar );
-	} 
+	}
 }
 
 
@@ -1290,7 +1261,7 @@ ResMgr::getClaimByGlobalJobIdAndId( const char *job_id,
 	for( i = 0; i < nresources; i++ ) {
 		if( (foo = resources[i]->findClaimByGlobalJobId(job_id)) ) {
 			if( foo == resources[i]->findClaimById(claimId) ) {
-				return foo;	
+				return foo;
 			}
 		}
 	}
@@ -1311,7 +1282,7 @@ ResMgr::findRipForNewCOD( ClassAd* ad )
 		/*
           We always ensure that the request's Requirements, if any,
 		  are met.  Other than that, we give out COD claims to
-		  Resources in the following order:  
+		  Resources in the following order:
 
 		  1) the Resource with the least # of existing COD claims (to
   		     ensure round-robin across resources
@@ -1324,13 +1295,13 @@ ResMgr::findRipForNewCOD( ClassAd* ad )
 		// sort resources based on the above order
 	resource_sort( newCODClaimCmp );
 
-		// find the first one that matches our requirements 
+		// find the first one that matches our requirements
 	for( i = 0; i < nresources; i++ ) {
 		if( ad->EvalBool( ATTR_REQUIREMENTS, resources[i]->r_classad,
 						  requirements ) == 0 ) {
 			requirements = 0;
 		}
-		if( requirements ) { 
+		if( requirements ) {
 			return resources[i];
 		}
 	}
@@ -1479,11 +1450,33 @@ ResMgr::send_update( int cmd, ClassAd* public_ad, ClassAd* private_ad,
 	return daemonCore->sendUpdates(cmd, public_ad, private_ad, nonblock);
 }
 
+
 void
 ResMgr::update_all( void )
 {
 	num_updates = 0;
-	walk( &Resource::eval_and_update );
+
+		// NOTE: We do *NOT* eval_state and update in the same walk
+		// over the resources. The reason we do not is the eval_state
+		// may result in the deletion of a resource, e.g. if it ends
+		// up in the delete_state. In such a case we'll be calling
+		// eval_state on a resource we delete and then call update on
+		// the same resource. As a result, you might be lucky enough
+		// to get a SEGV immediately, but if you aren't you'll get a
+		// SEGV later on when the timer Resource::update registers
+		// fires. That delay will make it rather difficult to find the
+		// root cause of the SEGV, believe me. Generally, nothing
+		// should mess with a resource immediately after eval_state is
+		// called on it. To avoid this problem, the eval and update
+		// process is split here. The Resource::update will only be
+		// called on resources that are still alive. - matt 1 Oct 09
+
+		// Evaluate the state of this resource.
+	walk( &Resource::eval_state );
+		// If we didn't update b/c of the eval_state, we need to
+		// actually do the update now.
+	walk( &Resource::update );
+
 	report_updates();
 	check_polling();
 	check_use();
@@ -1493,23 +1486,31 @@ ResMgr::update_all( void )
 void
 ResMgr::eval_and_update_all( void )
 {
+#if HAVE_HIBERNATION
 	if ( !hibernating () ) {
+#endif
 		compute( A_TIMEOUT | A_UPDATE );
 		update_all();
+#if HAVE_HIBERNATION
 	}
+#endif
 }
 
 
 void
 ResMgr::eval_all( void )
 {
+#if HAVE_HIBERNATION
 	if ( !hibernating () ) {
+#endif
 		num_updates = 0;
 		compute( A_TIMEOUT );
 		walk( &Resource::eval_state );
 		report_updates();
 		check_polling();
+#if HAVE_HIBERNATION
 	}
+#endif
 }
 
 
@@ -1530,9 +1531,9 @@ ResMgr::report_updates( void )
 			list += " ";
 		}
 		dprintf( D_FULLDEBUG,
-				 "Sent %d update(s) to the collector (%s)\n", 
+				 "Sent %d update(s) to the collector (%s)\n",
 				 num_updates, list.Value());
-	}  
+	}
 }
 
 void
@@ -1554,7 +1555,7 @@ ResMgr::compute( amask_t how_much )
 
 		// Since lots of things want to know this, just get it from
 		// the kernel once and share the value...
-	cur_time = time( 0 ); 
+	cur_time = time( 0 );
 
 	m_attr->compute( (how_much & ~(A_SUMMED)) | A_SHARED );
 	walk( &Resource::compute, (how_much & ~(A_SHARED)) );
@@ -1564,7 +1565,7 @@ ResMgr::compute( amask_t how_much )
 		// Sort the resources so when we're assigning owner load
 		// average and keyboard activity, we get to them in the
 		// following state order: Owner, Unclaimed, Matched, Claimed
-		// Preempting 
+		// Preempting
 	resource_sort( ownerStateCmp );
 
 	assign_load();
@@ -1585,24 +1586,24 @@ ResMgr::compute( amask_t how_much )
 	}
 
 		// Now that everything has actually been computed, we can
-		// refresh our interval classad with all the current values of
+		// refresh our internal classad with all the current values of
 		// everything so that when we evaluate our state or any other
 		// expressions, we've got accurate data to evaluate.
 	walk( &Resource::refresh_classad, how_much );
 
-		// Now that we have an updated interval classad for each
-		// resource, we can "compute" anything where we need to 
+		// Now that we have an updated internal classad for each
+		// resource, we can "compute" anything where we need to
 		// evaluate classad expressions to get the answer.
 	walk( &Resource::compute, A_EVALUATED );
 
-		// Next, we can publish any results from that to our interval
+		// Next, we can publish any results from that to our internal
 		// classads to make sure those are still up-to-date
 	walk( &Resource::refresh_classad, A_EVALUATED );
 
-		// Finally, now that all the interval classads are up to date
+		// Finally, now that all the internal classads are up to date
 		// with all the attributes they could possibly have, we can
 		// publish the cross-slot attributes desired from
-		// STARTD_SLOT_ATTRS into each slots's interval ClassAd.
+		// STARTD_SLOT_ATTRS into each slots's internal ClassAd.
 	walk( &Resource::refresh_classad, A_SHARED_SLOT );
 
 		// Now that we're done, we can display all the values.
@@ -1615,7 +1616,7 @@ ResMgr::publish( ClassAd* cp, amask_t how_much )
 {
 	if( IS_UPDATE(how_much) && IS_PUBLIC(how_much) ) {
 		cp->Assign(ATTR_TOTAL_SLOTS, numSlots());
-		if (param_boolean("ALLOW_VM_CRUFT", true)) { 
+		if (param_boolean("ALLOW_VM_CRUFT", true)) {
 			cp->Assign(ATTR_TOTAL_VIRTUAL_MACHINES, numSlots());
 		}
 	}
@@ -1658,8 +1659,8 @@ ResMgr::assign_load( void )
 	if( is_smp() ) {
 			// Print out the totals we already know.
 		if( DebugFlags & D_LOAD ) {
-			dprintf( D_FULLDEBUG, 
-					 "%s %.3f\t%s %.3f\t%s %.3f\n",  
+			dprintf( D_FULLDEBUG,
+					 "%s %.3f\t%s %.3f\t%s %.3f\n",
 					 "SystemLoad:", m_attr->load(),
 					 "TotalCondorLoad:", m_attr->condor_load(),
 					 "TotalOwnerLoad:", total_owner_load );
@@ -1679,7 +1680,7 @@ ResMgr::assign_load( void )
 		// the rest to the next CPU.  So, for non-SMP machines, we
 		// never hit this code, and always assign all owner load to
 		// cpu1 (since i will be initialized to 0 but we'll never
-		// enter the for loop).  
+		// enter the for loop).
 	for( i = 0; i < (nresources - 1) && total_owner_load > 1; i++ ) {
 		resources[i]->set_owner_load( 1.0 );
 		total_owner_load -= 1.0;
@@ -1711,14 +1712,14 @@ ResMgr::assign_keyboard( void )
 
 		// Now, assign console activity to all CPUs that care.
 		// Notice, we should also assign keyboard here, since if
-		// there's console activity, there's (by definition) keyboard 
+		// there's console activity, there's (by definition) keyboard
 		// activity as well.
 	for( i = 0; i < console_slots  && i < nresources; i++ ) {
 		resources[i]->r_attr->set_console( console );
 		resources[i]->r_attr->set_keyboard( console );
 	}
 
-		// Finally, assign keyboard activity to all CPUS that care. 
+		// Finally, assign keyboard activity to all CPUS that care.
 	for( i = 0; i < keyboard_slots && i < nresources; i++ ) {
 		resources[i]->r_attr->set_keyboard( keyboard );
 	}
@@ -1773,9 +1774,9 @@ ResMgr::start_poll_timer( void )
 			// Timer already started.
 		return TRUE;
 	}
-	poll_tid = 
+	poll_tid =
 		daemonCore->Register_Timer( polling_interval,
-							polling_interval, 
+							polling_interval,
 							(TimerHandlercpp)&ResMgr::eval_all,
 							"poll_resources", this );
 	if( poll_tid < 0 ) {
@@ -1823,7 +1824,7 @@ ResMgr::reset_timers( void )
 
 #if HAVE_HIBERNATION
 	resetHibernateTimer();
-#endif /* HAVE_HIBERNATION */
+#endif /* HAVE_HIBERNATE */
 
 }
 
@@ -1845,7 +1846,7 @@ ResMgr::addResource( Resource *rip )
 		// Copy over the old Resource pointers.  If nresources is 0
 		// (b/c we used to be configured to have no slots), this won't
 		// copy anything (and won't seg fault).
-	memcpy( (void*)new_resources, (void*)resources, 
+	memcpy( (void*)new_resources, (void*)resources,
 			(sizeof(Resource*)*nresources) );
 
 	new_resources[nresources] = rip;
@@ -1870,7 +1871,7 @@ ResMgr::removeResource( Resource* rip )
 	if( nresources > 1 ) {
 			// There are still more resources after this one is
 			// deleted, so we'll need to make a new resources array
-			// without this resource. 
+			// without this resource.
 		new_resources = new Resource* [ nresources - 1 ];
 		j = 0;
 		for( i = 0; i < nresources; i++ ) {
@@ -1884,7 +1885,7 @@ ResMgr::removeResource( Resource* rip )
 			delete [] new_resources;
 			return false;
 		}
-	} 
+	}
 
 		// Remove this rip from our destroy_list.
 	destroy_list.Rewind();
@@ -1901,7 +1902,7 @@ ResMgr::removeResource( Resource* rip )
 	delete [] resources;
 	resources = new_resources;
 	nresources--;
-	
+
 		// Return this Resource's ID to the dispenser.
 		// If it is a dynamic slot it's reusing its partitionable
 		// parent's id, so we don't want to free the id.
@@ -1928,14 +1929,14 @@ ResMgr::deleteResource( Resource* rip )
 	if( ! removeResource( rip ) ) {
 			// Didn't find it.  This is where we'll hit if resources
 			// is NULL.  We should never get here, anyway (we'll never
-			// call deleteResource() if we don't have any resources. 
+			// call deleteResource() if we don't have any resources.
 		EXCEPT( "ResMgr::deleteResource() failed: couldn't find resource" );
 	}
 
 		// Now that a Resource is gone, see if we're done deleting
-		// Resources and see if we should allocate any. 
+		// Resources and see if we should allocate any.
 	if( processAllocList() ) {
-			// We're done allocating, so we can finish our reconfig. 
+			// We're done allocating, so we can finish our reconfig.
 		finish_main_config();
 	}
 }
@@ -1953,10 +1954,10 @@ ResMgr::makeAdList( ClassAdList *list )
 		// We want to insert ATTR_LAST_HEARD_FROM into each ad.  The
 		// collector normally does this, so if we're servicing a
 		// QUERY_STARTD_ADS commannd, we need to do this ourselves or
-		// some timing stuff won't work. 
+		// some timing stuff won't work.
 	for( i=0; i<nresources; i++ ) {
 		ad = new ClassAd;
-		resources[i]->publish( ad, A_ALL_PUB ); 
+		resources[i]->publish( ad, A_ALL_PUB );
 		ad->Assign( ATTR_LAST_HEARD_FROM, (int)cur_time );
 		list->Insert( ad );
 	}
@@ -1975,7 +1976,7 @@ ResMgr::processAllocList( void )
 		return true;  // Since there's nothing to allocate...
 	}
 
-		// We're done destroying, and there's something to allocate.  
+		// We're done destroying, and there's something to allocate.
 
 		// Create the new Resource objects.
 	CpuAttributes* cap;
@@ -1983,7 +1984,7 @@ ResMgr::processAllocList( void )
 	while( alloc_list.Next(cap) ) {
 		addResource( new Resource( cap, nextId() ) );
 		alloc_list.DeleteCurrent();
-	}	
+	}
 
 	delete [] type_nums;
 	type_nums = new_type_nums;
@@ -2024,19 +2025,18 @@ ResMgr::allHibernating( MyString &target ) const
 		dprintf( D_FULLDEBUG, "allHibernating: doesn't want hibernate\n" );
 		return 0;
 	}
-
 		// The following may evaluate to true even if there
 		// is a claim on one or more of the resources, so we
-		// don't bother checking for claims first. 
-		// 
-		// We take largest value as the representative 
+		// don't bother checking for claims first.
+		//
+		// We take largest value as the representative
 		// hibernation level for this machine
 	target = "";
 	MyString str;
 	int level = 0;
 	bool activity = false;
 	for( int i = 0; i < nresources; i++ ) {
-		
+
 		str = "";
 		if ( !resources[i]->evaluateHibernate ( str ) ) {
 			return 0;
@@ -2044,11 +2044,11 @@ ResMgr::allHibernating( MyString &target ) const
 
 		int tmp = m_hibernation_manager->stringToSleepState (
 			str.Value () );
-		
-		dprintf ( D_FULLDEBUG, 
+
+		dprintf ( D_FULLDEBUG,
 			"allHibernating: resource #%d: '%s' (0x%x)\n",
 			i + 1, str.Value (), tmp );
-		
+
 		if ( 0 == tmp ) {
 			activity = true;
 		}
@@ -2062,7 +2062,7 @@ ResMgr::allHibernating( MyString &target ) const
 }
 
 
-void 
+void
 ResMgr::checkHibernate( void )
 {
 
@@ -2072,7 +2072,7 @@ ResMgr::checkHibernate( void )
 		return;
 	}
 
-		// If all resources have gone unused for some time	
+		// If all resources have gone unused for some time
 		// then put the machine to sleep
 	MyString	target;
 	int level = allHibernating( target );
@@ -2088,21 +2088,30 @@ ResMgr::checkHibernate( void )
         if( !m_hibernation_manager->canWake() ) {
 			NetworkAdapterBase	*netif =
 				m_hibernation_manager->getNetworkAdapter();
-            dprintf ( D_ALWAYS, "ResMgr: ERROR: Ignoring "
-					  "HIBERNATE: Machine cannot be woken by its "
-					  "public network adapter (%s).\n",
-					  netif->interfaceName() );
-            return;
-		}        
+			if ( param_boolean( "HIBERNATION_OVERRIDE_WOL", false ) ) {
+				dprintf ( D_ALWAYS,
+						  "ResMgr: "
+						  "HIBERNATE: Machine cannot be woken by its "
+						  "public network adapter (%s); hibernating anyway\n",
+						  netif->interfaceName() );
+			}
+			else {
+				dprintf ( D_ALWAYS, "ResMgr: ERROR: Ignoring "
+						  "HIBERNATE: Machine cannot be woken by its "
+						  "public network adapter (%s).\n",
+						  netif->interfaceName() );
+				return;
+			}
+		}
 
 		dprintf ( D_ALWAYS, "ResMgr: This machine is about to "
         		"enter hibernation\n" );
 
         //
-		// Set the hibernation state, shutdown the machine's slot 
+		// Set the hibernation state, shutdown the machine's slot
 	    // and hibernate the machine. We turn off the local slots
-	    // so the StartD will remove any jobs that are currently 
-	    // running as well as stop accepting new ones, since--on 
+	    // so the StartD will remove any jobs that are currently
+	    // running as well as stop accepting new ones, since--on
 	    // Windows anyway--there is the possibility that a job
 	    // may be matched to this machine between the time it
 	    // is told hibernate and the time it actually does.
@@ -2122,7 +2131,7 @@ ResMgr::checkHibernate( void )
             resources[i]->update();
 			m_hibernating = false;
 	    }
-		
+
 #     endif
     }
 }
@@ -2132,7 +2141,7 @@ int
 ResMgr::startHibernateTimer( void )
 {
 	int interval = m_hibernation_manager->getCheckInterval();
-	m_hibernate_tid = daemonCore->Register_Timer( 
+	m_hibernate_tid = daemonCore->Register_Timer(
 		interval, interval,
 		(TimerHandlercpp)&ResMgr::checkHibernate,
 		"ResMgr::startHibernateTimer()", this );
@@ -2150,8 +2159,8 @@ ResMgr::resetHibernateTimer( void )
 	if ( m_hibernation_manager->wantsHibernate() ) {
 		if( m_hibernate_tid != -1 ) {
 			int interval = m_hibernation_manager->getCheckInterval();
-			daemonCore->Reset_Timer( 
-				m_hibernate_tid, 
+			daemonCore->Reset_Timer(
+				m_hibernate_tid,
 				interval, interval );
 		}
 	}
@@ -2180,7 +2189,7 @@ int
 ResMgr::disableResources( const MyString &state_str )
 {
 
-	dprintf ( 
+	dprintf (
 		D_FULLDEBUG,
 		"In ResMgr::disableResources ()\n" );
 
@@ -2190,20 +2199,15 @@ ResMgr::disableResources( const MyString &state_str )
 	fact that we are sleeping */
 	m_hibernation_manager->setTargetState ( state_str.Value() );
 
-	/* disable all resource on this machine */
-	for ( i = 0; i < nresources; ++i ) {
-		resources[i]->disable();
-	}
-
 	/* update the CM */
 	bool ok = true;
 	for ( i = 0; i < nresources && ok; ++i ) {
 		ok = resources[i]->update_with_ack();
 	}
 
-	dprintf ( 
+	dprintf (
 		D_FULLDEBUG,
-		"All resources disabled: %s.\n", 
+		"All resources disabled: %s.\n",
 		ok ? "yes" : "no" );
 
 	/* if any of the updates failed, then re-enable all the
@@ -2212,11 +2216,23 @@ ResMgr::disableResources( const MyString &state_str )
 	if ( !ok ) {
 		m_hibernation_manager->setTargetState (
 			HibernatorBase::NONE );
+	}
+	else {
+		/* Boot off any running jobs and disable all resource on this
+		   machine so we don't allow new jobs to start while we are in
+		   the middle of hibernating.  We disable _after_ sending our
+		   update_with_ack(), because we want our machine to still be
+		   matchable while offline.  The negotiator knows to treat this
+		   state specially. */
 		for ( i = 0; i < nresources; ++i ) {
-			resources[i]->enable();
-			resources[i]->update();
+			resources[i]->disable();
 		}
 	}
+
+	dprintf ( 
+		D_FULLDEBUG,
+		"All resources disabled: %s.\n", 
+		ok ? "yes" : "no" );
 
 	/* record if we we are hibernating or not */
 	m_hibernating = ok;
@@ -2233,7 +2249,7 @@ bool ResMgr::hibernating () const {
 
 
 void
-ResMgr::check_use( void ) 
+ResMgr::check_use( void )
 {
 	int current_time = time(NULL);
 	if( hasAnyClaim() ) {
@@ -2245,9 +2261,9 @@ ResMgr::check_use( void )
 	}
 	if( current_time - last_in_use > startd_noclaim_shutdown ) {
 			// We've been unused for too long, send a SIGTERM to our
-			// parent, the condor_master. 
-		dprintf( D_ALWAYS, 
-				 "No resources have been claimed for %d seconds\n", 
+			// parent, the condor_master.
+		dprintf( D_ALWAYS,
+				 "No resources have been claimed for %d seconds\n",
 				 startd_noclaim_shutdown );
 		dprintf( D_ALWAYS, "Shutting down Condor on this machine.\n" );
 		daemonCore->Send_Signal( daemonCore->getppid(), SIGTERM );
@@ -2282,7 +2298,7 @@ ownerStateCmp( const void* a, const void* b )
 		fval2 = rip2->r_cur->rank();
 		diff = (int)(fval1 - fval2);
 		return diff;
-	} 
+	}
 	return 0;
 }
 
@@ -2314,14 +2330,14 @@ claimedRankCmp( const void* a, const void* b )
 		fval2 = rip2->r_cur->rank();
 		diff = (int)(fval2 - fval1);
 		return diff;
-	} 
+	}
 	return 0;
 }
 
 
 /*
   Sort resource so their in the right order to give out a new COD
-  Claim.  We give out COD claims in the following order:  
+  Claim.  We give out COD claims in the following order:
   1) the Resource with the least # of existing COD claims (to ensure
      round-robin across resources
   2) in case of a tie, the Resource in the best state (owner or
@@ -2371,7 +2387,7 @@ newCODClaimCmp( const void* a, const void* b )
 		fval2 = rip2->r_cur->rank();
 		diff = (int)(fval1 - fval2);
 		return diff;
-	} 
+	}
 	return 0;
 }
 

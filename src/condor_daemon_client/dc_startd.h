@@ -82,7 +82,7 @@ public:
 			in the DCStartdMsg object, which may be obtained from the callback
 			object at callback time.
 		*/
-	void asyncRequestOpportunisticClaim( ClassAd const *req_ad, char const *description, char const *scheduler_addr, int alive_interval, int timeout, classy_counted_ptr<DCMsgCallback> cb );
+	void asyncRequestOpportunisticClaim( ClassAd const *req_ad, char const *description, char const *scheduler_addr, int alive_interval, int timeout, int deadline_timeout, classy_counted_ptr<DCMsgCallback> cb );
 
 		/** Send the command to this startd to deactivate the claim 
 			@param graceful Should we be graceful or forcful?
@@ -173,7 +173,7 @@ public:
 	bool writeMsg( DCMessenger *messenger, Sock *sock );
 	bool readMsg( DCMessenger *messenger, Sock *sock );
 	MessageClosureEnum messageSent(DCMessenger *messenger, Sock *sock );
-	void cancelMessage();
+	void cancelMessage(char const *reason=NULL);
 
 	char const *description() {return m_description.Value();}
 	char const *claim_id() {return m_claim_id.Value();}

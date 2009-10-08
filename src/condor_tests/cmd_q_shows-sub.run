@@ -20,18 +20,19 @@
 
 use CondorTest;
 
-$cmd = 'cmd_q_shows-sub.cmd';
-$cmdout = $cmd . ".out";
-$testdesc =  'cmd_q_shows-sub  ';
-$testname = "cmd_q_shows-sub";
+my $cmd = 'cmd_q_shows-sub.cmd';
+my $cmdout = $cmd . ".out";
+my $testdesc =  'cmd_q_shows-sub  ';
+my $testname = "cmd_q_shows-sub";
 
-$whoami = "";
+my $whoami = "";
+my $debuglevel = 2;
 
 @adarray;
 
 $submit = sub {
 	my %info = @_;
-	CondorTest::debug("Looking for submitter $whoami\n",1);
+	CondorTest::debug("Looking for submitter $whoami\n",$debuglevel);
 	my $search = 0;
 
 	my $cmd = "condor_q -format \"%s\" Owner -format \" ClusterId = %d\n\" ClusterId";
@@ -39,33 +40,36 @@ $submit = sub {
 	$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
 	if(!$cmdstatus)
 	{
-		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
+		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",$debuglevel);
 		exit(1)
 	}
 
 	my $submitline = "";
 	my $cluster = "";
-
+	
+	print "Looking for my cluster - ";
 	open(CMD, "<$cmdout") || die "Can not find submit output:$!\n";;
 	while(<CMD>) {
 		chomp($_);
 		$submitline = $_;
 		if($submitline =~ /^.*cluster\s+(\d+).*$/) {
 			$cluster = $1;
-			CondorTest::debug("Found my cluster which is $cluster!\n",1);
+			CondorTest::debug("Found my cluster which is $cluster!\n",$debuglevel);
 		}
-		CondorTest::debug("$_\n",1);
+		CondorTest::debug("$_\n",$debuglevel);
 	}
+	print "$cluster\n";
 
 
+	print "Looking for who I am -";
 	foreach $line (@adarray) {
         chomp($line);
-        CondorTest::debug("$line\n",1);
-        if($line =~ /^\s*([\w\-]+)\s+ClusterId\s+=\s+$clusters.*$/) {
-                CondorTest::debug("Bingo: found <$line> shows I am $1\n",1);
+        CondorTest::debug("$line\n",$debuglevel);
+        if($line =~ /^\s*([\w\-]+)\s+ClusterId\s+=\s+$cluster.*$/) {
+                CondorTest::debug("Bingo: found <$line> shows I am $1\n",$debuglevel);
 				$whoami = $1;
         } else {
-            CondorTest::debug("<<<$line>>>\n",1);
+            CondorTest::debug("<<<$line>>>\n",$debuglevel);
         }
     }
 
@@ -73,39 +77,43 @@ $submit = sub {
 		die "Can not find out who I am to use in condor_q -sub <$whoami>\n";
 		# other wise we can never finish and might hang.....
 	}
+	print "$whoami\n";
 	
 	$cmd = "condor_q -sub $whoami -format \"%d.\" ClusterId -format \"%d \" ProcId -format \" %s\" Owner -format \" %s\n\" Cmd";
 
 	$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
 	if(!$cmdstatus)
 	{
-		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
+		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",$debuglevel);
 		system("condor_rm $cluster"); # bail but pull job which never dies...
 		exit(1)
 	}
 
+	print "Looking for condor_q with submitter $whoami matches $cluster - ";
 	foreach $line (@adarray) {
-	    CondorTest::debug("output: $line\n",1);
+	    CondorTest::debug("output: $line\n",$debuglevel);
 		chomp($line);
 
 		if($line =~ /^\s*(\d+).\d+\s+([\w\-]+).*$/) {
 			if(($cluster eq $1) && ($whoami eq $2)){
-				CondorTest::debug("condor_q -sub $whoami found my job matching $cluster\n",1);
+				CondorTest::debug("condor_q -sub $whoami found my job matching $cluster\n",$debuglevel);
 				$cmd = "condor_rm $cluster";
 				$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,8);
 				$search = 1;
+				print "ok\n";
 				return(0);
 			}
 		}
 	}
 
+	print "bad\n";
 	$cmd = "condor_rm $cluster";
 	$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,8);
 	die "We never found ourselves with <condor_q -sub $whoami>\n"
 };
 
 $aborted = sub {
-	CondorTest::debug("Cleaning held job.......\n",1);
+	CondorTest::debug("Cleaning held job.......\n",$debuglevel);
 };
 
 $ExitSuccess = sub {
@@ -117,7 +125,7 @@ CondorTest::RegisterSubmit($testname, $submit);
 CondorTest::RegisterExitedSuccess( $testname, $ExitSuccess );
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	CondorTest::debug("$testname: SUCCESS\n",1);
+	CondorTest::debug("$testname: SUCCESS\n",$debuglevel);
 	exit(0);
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";

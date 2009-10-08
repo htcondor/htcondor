@@ -49,6 +49,7 @@
 #define GATEWAY_ADTYPE			"Gateway"
 #define CLUSTER_ADTYPE	 		"Cluster"
 #define GRID_ADTYPE			"Grid"
+#define BOGUS_ADTYPE		"Bogus"
 
 // Enumerated list of ad types (for the query object)
 enum AdTypes

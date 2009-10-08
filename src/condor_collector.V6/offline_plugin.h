@@ -78,6 +78,8 @@ private:
     /** Storage destination for persistent ads */
     char                *_persistent_store;
 
+	/** overwrite attributes of ad in collection from given ad */
+	void mergeClassAd ( ClassAd &ad, char const *key );
 };
 
 #endif // _GREEN_COMPUTING_PLUGIN_H_

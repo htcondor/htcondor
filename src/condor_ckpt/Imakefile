@@ -34,7 +34,7 @@ SIG_EXTRACT = SIGSUSPEND.o SIGACTION.o
 
 #endif  /* ======= of if DOES_SAVE_SIGSTATE ==========*/
 
-#if !IS_GLIBC25
+#if !IS_GLIBC25 && !IS_GLIBC27
 NEED_SYSDEP = SYSDEP.o
 #else
 NEED_SYSDEP =
@@ -211,7 +211,7 @@ uppercase_target($(SIMPLE_LIBC),syscall.o,SYSCALL_TMP.o,syscall,SYSCALL)
 SYSCALL.o: SYSCALL_TMP.o ToUpper
 	./ToUpper SYSCALL_TMP.o SYSCALL.o __SYSCALL_error __syscall_error
 
-/* Under RHEL5 (GLIBC25), this dependency is not used */
+/* Under RHEL5 (GLIBC25,27), this dependency is not used */
 SYSDEP.o: SYSDEP_TMP.o ToUpper
 	./ToUpper SYSDEP_TMP.o SYSDEP_TMP2.o errno ERRNO
 	./ToUpper SYSDEP_TMP2.o SYSDEP.o _ERRNO_location _errno_location
@@ -285,7 +285,7 @@ condor_rt0.o: $(CRT_BEGIN) ToUpper
 	./ToUpper $(CRT_BEGIN) condor_rt0.o main  MAIN
 clean::
 	rm -f condor_rt0.o
-#elif IS_GLIBC22 || IS_GLIBC23 || IS_GLIBC24 || IS_GLIBC25
+#elif IS_GLIBC22 || IS_GLIBC23 || IS_GLIBC24 || IS_GLIBC25 || IS_GLIBC27
 condor_rt0.o: $(CRT_BEGIN) ToUpper
 	./ToUpper $(CRT_BEGIN) tmp1 main  MAIN
 	./ToUpper tmp1 condor_rt0.o __libc_start_MAIN __libc_start_main

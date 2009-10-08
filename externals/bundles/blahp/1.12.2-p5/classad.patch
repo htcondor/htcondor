@@ -1,0 +1,67 @@
+diff -u -r org.glite.ce.blahp/src/classad_binary_op_unwind.C org.glite.ce.blahp.patched/src/classad_binary_op_unwind.C
+--- org.glite.ce.blahp/src/classad_binary_op_unwind.C	2006-03-13 04:23:36.000000000 -0600
++++ org.glite.ce.blahp.patched/src/classad_binary_op_unwind.C	2009-01-20 18:06:28.000000000 -0600
+@@ -21,10 +21,10 @@
+ 
+ #include <strings.h> // strcasecmp
+ 
+-#include "classad_distribution.h"
++#include "classad/classad_distribution.h"
+ #include "classad_binary_op_unwind.h"
+ 
+-#ifdef WANT_NAMESPACES
++#ifdef WANT_CLASSAD_NAMESPACE
+ namespace classad {
+ #endif
+ 
+@@ -178,6 +178,6 @@
+   return;
+ }
+ 
+-#ifdef WANT_NAMESPACES
++#ifdef WANT_CLASSAD_NAMESPACE
+ } // end of classad namespace
+ #endif
+diff -u -r org.glite.ce.blahp/src/classad_binary_op_unwind.h org.glite.ce.blahp.patched/src/classad_binary_op_unwind.h
+--- org.glite.ce.blahp/src/classad_binary_op_unwind.h	2006-03-13 04:23:36.000000000 -0600
++++ org.glite.ce.blahp.patched/src/classad_binary_op_unwind.h	2009-01-20 18:07:09.000000000 -0600
+@@ -16,12 +16,12 @@
+ //   All rights reserved.
+ //   See http://grid.infn.it/grid/license.html for license details.
+ 
+-#include "classad_distribution.h"
++#include "classad/classad_distribution.h"
+ 
+ #ifndef __CLASSAD_BINARY_OP_UNWIND_H__
+ #define __CLASSAD_BINARY_OP_UNWIND_H__
+ 
+-#ifdef WANT_NAMESPACES
++#ifdef WANT_CLASSAD_NAMESPACE
+ using namespace classad;
+ 
+ namespace classad {
+@@ -43,7 +43,7 @@
+         std::vector<std::string> m_unwind_output;
+ };
+ 
+-#ifdef WANT_NAMESPACES
++#ifdef WANT_CLASSAD_NAMESPACE
+ } // end of classad namespace
+ #endif
+ 
+diff -u -r org.glite.ce.blahp/src/classad_c_helper.C org.glite.ce.blahp.patched/src/classad_c_helper.C
+--- org.glite.ce.blahp/src/classad_c_helper.C	2007-11-30 09:38:34.000000000 -0600
++++ org.glite.ce.blahp.patched/src/classad_c_helper.C	2009-01-20 18:07:52.000000000 -0600
+@@ -23,10 +23,10 @@
+ //
+ 
+ #include <string.h>
+-#include "classad_distribution.h"
++#include "classad/classad_distribution.h"
+ #include "classad_binary_op_unwind.h"
+ 
+-#ifdef WANT_NAMESPACES
++#ifdef WANT_CLASSAD_NAMESPACE
+ using namespace classad;
+ #endif
+ 

@@ -39,14 +39,14 @@ public:
 	~Starter();
 
 
-	void	dprintf( int, char* ... );
+	void	dprintf( int, const char* ... );
 
 	char*	path() {return s_path;};
 	time_t	birthdate( void ) {return s_birthdate;};
 	bool	kill(int);
 	bool	killpg(int);
 	void	killkids(int);
-	void	exited();
+	void	exited(int status);
 	pid_t	pid() {return s_pid;};
 	bool	is_dc() {return s_is_dc;};
 	ClaimType	claimType(); 

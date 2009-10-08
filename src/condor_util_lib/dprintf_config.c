@@ -89,7 +89,7 @@ void
 dprintf_config( const char *subsys )
 {
 	char pname[ BUFSIZ ];
-	char *pval, *param();
+	char *pval;
 	static int first_time = 1;
 	int want_truncate;
 	int debug_level;
@@ -146,7 +146,11 @@ dprintf_config( const char *subsys )
 			// *after* the param -- param can dprintf() in some cases
 			{
 				char	*tmp = DebugFile[debug_level];
-				DebugFile[debug_level] = param(pname);
+				// This is looking up configuration options that I can't
+				// find documentation for, so intead of coding in an incorrect
+				// default value, I'm gonna use param_without_default.
+				// tristan 5/29/09
+				DebugFile[debug_level] = param_without_default(pname);
 				if ( tmp ) {
 					free( tmp );
 				}

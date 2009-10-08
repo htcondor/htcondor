@@ -173,7 +173,7 @@ CredDaemon::get_passwd_handler(int i, Stream *s)
 	if ( s->type() != Stream::reli_sock ) {
 		dprintf(D_ALWAYS,
 			"WARNING - password fetch attempt via UDP from %s\n",
-			sin_to_string(((Sock*)s)->endpoint()));
+			sin_to_string(((Sock*)s)->peer_addr()));
 		return;
 	}
 
@@ -182,14 +182,14 @@ CredDaemon::get_passwd_handler(int i, Stream *s)
 	if ( !sock->triedAuthentication() ) {
 		dprintf(D_ALWAYS,
 			"WARNING - password fetch attempt without authentication from %s\n",
-			sin_to_string(sock->endpoint()));
+			sin_to_string(sock->peer_addr()));
 		goto bail_out;
 	}
 
 	if ( !sock->get_encryption() ) {
 		dprintf(D_ALWAYS,
 			"WARNING - password fetch attempt without encryption from %s\n",
-			sin_to_string(sock->endpoint()));
+			sin_to_string(sock->peer_addr()));
 		goto bail_out;
 	}
 
@@ -217,14 +217,15 @@ CredDaemon::get_passwd_handler(int i, Stream *s)
 
 	client_user = strdup(sock->getOwner());
 	client_domain = strdup(sock->getDomain());
-	client_ipaddr = strdup(sin_to_string(sock->endpoint()));
+	client_ipaddr = strdup(sin_to_string(sock->peer_addr()));
 
 		// Now fetch the password from the secure store -- 
 		// If not LocalSystem, this step will fail.
 	password = getStoredCredential(user,domain);
 	if (!password) {
 		dprintf(D_ALWAYS,
-			"Failed to fetch password for %s@%s for %s@%s at %s\n",
+			"Failed to fetch password for %s@%s requested by %s@%s at %s\n",
+			user,domain,
 			client_user,client_domain,client_ipaddr);
 		goto bail_out;
 	}
@@ -248,7 +249,7 @@ CredDaemon::get_passwd_handler(int i, Stream *s)
 	SecureZeroMemory(password,strlen(password));
 
 	dprintf(D_ALWAYS,
-			"Fetched user %s@%s password for %s@%s at %s\n",
+			"Fetched user %s@%s password requested by %s@%s at %s\n",
 			user,domain,client_user,client_domain,client_ipaddr);
 
 bail_out:

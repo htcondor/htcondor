@@ -71,6 +71,8 @@ class HashTable {
   */
   int lookup(const Index &index, Value &value) const;
   int lookup(const Index &index, Value* &value) const;
+	  // returns 0 if exists, -1 otherwise
+  int exists(const Index &index) const;
   int getNext(Index &index, void *current, Value &value,
 	      void *&next) const;
   int remove(const Index &index);  
@@ -366,6 +368,37 @@ int HashTable<Index,Value>::lookup(const Index &index, Value* &value ) const
 #endif
     if (bucket->index == index) {
       value = (Value *) &(bucket->value);
+      return 0;
+    }
+    bucket = bucket->next;
+  }
+
+#ifdef DEBUGHASH
+  dump();
+#endif
+
+  return -1;
+}
+
+
+// Check if Index is currently in the hash table. If so, return
+// OK status (0). Otherwise return -1.
+template <class Index, class Value>
+int HashTable<Index,Value>::exists(const Index &index) const
+{
+  if ( numElems == 0 ) {
+	return -1;
+  }
+
+  int idx = (int)(hashfcn(index) % tableSize);
+
+  HashBucket<Index, Value> *bucket = ht[idx];
+  while(bucket) {
+#ifdef DEBUGHASH
+    cerr << "%%  Comparing " << *(long *)&bucket->index
+         << " vs. " << *(long *)index << endl;
+#endif
+    if (bucket->index == index) {
       return 0;
     }
     bucket = bucket->next;

@@ -34,7 +34,7 @@ $mycmdfile = "lib_auth_allowdeny-ctb.cmd";
 $currenthost = CondorTest::getFqdnHost();
 CondorTest::fullchomp($currenthost);
 
-system("date");
+print scalar localtime() . "\n";
 $myvariation = 1;
 
 $mypid = $$;
@@ -112,7 +112,7 @@ if( -e "$mysubmitnmlog" )
 }
 
 CondorTest::KillPersonal($secconfig);
-system("date");
+print scalar localtime() . "\n";
 
 if($result != 0)
 {

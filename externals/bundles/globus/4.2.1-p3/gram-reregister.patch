@@ -1,0 +1,53 @@
+Index: globus_gram_protocol_io.c
+===================================================================
+RCS file: /home/globdev/CVS/globus-packages/gram/protocol/source/globus_gram_protocol_io.c,v
+retrieving revision 1.18.2.3
+diff -u -r1.18.2.3 globus_gram_protocol_io.c
+--- globus_gram_protocol_io.c	4 Nov 2008 21:39:36 -0000	1.18.2.3
++++ globus_gram_protocol_io.c	16 Jun 2009 18:19:07 -0000
+@@ -749,7 +749,7 @@
+     }
+     if(result != GLOBUS_SUCCESS)
+     {
+-        goto error_exit;
++        goto no_connection;
+     }
+     connection = globus_libc_calloc(
+ 		    1,
+@@ -757,7 +757,7 @@
+ 
+     if(connection == GLOBUS_NULL)
+     {
+-        goto error_exit;
++        goto no_connection;
+     }
+     connection->read_type = GLOBUS_GRAM_PROTOCOL_REQUEST;
+     connection->callback = listener->callback;
+@@ -823,6 +823,11 @@
+   free_connection_exit:
+     globus_libc_free(connection);
+ 
++  no_connection:
++    globus_io_tcp_register_listen(handle,
++                                  globus_l_gram_protocol_listen_callback,
++				  listener);
++
+   error_exit:
+     globus_mutex_unlock(&globus_i_gram_protocol_mutex);
+ }
+Index: pkgdata/pkg_data_src.gpt.in
+===================================================================
+RCS file: /home/globdev/CVS/globus-packages/gram/protocol/source/pkgdata/pkg_data_src.gpt.in,v
+retrieving revision 1.20.2.3
+diff -u -r1.20.2.3 pkg_data_src.gpt.in
+--- pkgdata/pkg_data_src.gpt.in	4 Nov 2008 21:39:36 -0000	1.20.2.3
++++ pkgdata/pkg_data_src.gpt.in	16 Jun 2009 18:19:07 -0000
+@@ -3,7 +3,7 @@
+ 
+ <gpt_package_metadata Format_Version="0.02" Name="globus_gram_protocol" >
+ 
+-  <Aging_Version Age="4" Major="7" Minor="4" />
++  <Aging_Version Age="4" Major="7" Minor="6" />
+   <Description >GRAM Protocol Library</Description>
+   <Functional_Group >ResourceManagement</Functional_Group>
+   <Version_Stability Release="Experimental" Dirt="@DIRT_TIMESTAMP@-@DIRT_BRANCH_ID@" />

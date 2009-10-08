@@ -27,6 +27,13 @@
 #include "hibernation_manager.h"
 #include "MyString.h"
 #include "simple_arg.h"
+
+#if defined ( WIN32 )
+#  include "hibernator.WINDOWS.h"
+#elif defined ( LINUX )
+#  include "hibernator.linux.h"
+#endif
+
 #include <stdio.h>
 
 static const char *	VERSION = "0.1";
@@ -38,6 +45,7 @@ struct Options
 	const char						*m_if_name;
 	const char						*m_address;
 
+	const char						*m_method;
 	HibernatorBase::SLEEP_STATE		 m_state;
 };
 
@@ -105,7 +113,7 @@ main(int argc, const char **argv)
 	if ( !tmp || !strlen(tmp) ) tmp = "<NONE>";
 	printf( "hardware address: %s\n", tmp );
 
-	tmp = net->subnet();
+	tmp = net->subnetMask();
 	if ( !tmp || !strlen(tmp) ) tmp = "<NONE>";
 	printf( "subnet: %s\n", tmp );
 
@@ -118,18 +126,26 @@ main(int argc, const char **argv)
 	net->wakeEnabledString( tmpstr );
 	printf( "wake enable flags: %s\n", tmpstr.Value() );
 
-	ClassAd	ad;
-	net->publish( ad );
-	ad.fPrint( stdout );
-
-	HibernationManager	hman;
+	HibernatorBase	*hibernator = new RealHibernator( );
+	if ( opts.m_method ) {
+		printf( "Setting method to %s\n", opts.m_method );
+		hibernator->setMethod( opts.m_method );
+	}
+	HibernationManager	hman( hibernator );
+	if ( !hman.initialize( ) ) {
+		fprintf( stderr, "Initialization of hibernation manager failed\n" );
+		status = 1;
+	}
 	hman.addInterface( *net );
 
-	printf( "Hibernation method used: %s\n", hman.getHibernationMethod() );
+	ClassAd	ad;
+	hman.publish( ad );
+	ad.fPrint( stdout );
 
-	hman.canHibernate( );
+	const char	*method = hman.getHibernationMethod();
+	printf( "Hibernation method used: %s\n", method );
+
 	printf( "Can hibernate: %s\n", BoolString(hman.canHibernate()) );
-	hman.canWake( );
 	printf( "Can wake: %s\n", BoolString(hman.canWake()) );
 
 	if ( hman.canHibernate() && opts.m_state != HibernatorBase::NONE ) {
@@ -153,9 +169,9 @@ CheckArgs(int argc, const char **argv, Options &opts)
 {
 	const char *	usage =
 		"Usage: test_hibernation [options] <IP address|IF name> [state]\n"
-		"  -d <level>: debug level (e.g., D_FULLDEBUG)\n"
-		"  --debug <level>: debug level (e.g., D_FULLDEBUG)\n"
+		"  -d|--debug <level>: debug level (e.g., D_FULLDEBUG)\n"
 		"  --usage|--help|-h: print this message and exit\n"
+		"  -m|--method: specify Linux hibernation method to use\n"
 		"  -v: Increase verbosity level by 1\n"
 		"  --verbosity <number>: set verbosity level (default is 1)\n"
 		"  --version: print the version number and compile date\n";
@@ -163,11 +179,13 @@ CheckArgs(int argc, const char **argv, Options &opts)
 	opts.m_if_name = NULL;
 	opts.m_address = "127.0.0.1";
 
+	opts.m_method = NULL;
+
 	opts.m_state = HibernatorBase::NONE;
 	opts.m_verbosity = 1;
 
 	int		fixed = 0;
-	for ( int index = 1; index < argc; ++index ) {
+	for ( int index = 1; index < argc; ) {
 		SimpleArg	arg( argv, argc, index );
 
 		if ( arg.Error() ) {
@@ -178,42 +196,48 @@ CheckArgs(int argc, const char **argv, Options &opts)
 		if ( arg.Match( 'd', "debug") ) {
 			if ( arg.hasOpt() ) {
 				set_debug_flags( arg.getOpt() );
-				index = arg.ConsumeOpt( );
 			} else {
 				fprintf(stderr, "Value needed for %s\n", arg.Arg() );
 				printf("%s", usage);
 				return true;
 			}
-
-		} else if ( ( arg.Match("usage") )		||
-					( arg.Match('h') )			||
-					( arg.Match("help") )  )	{
+		}
+		else if ( ( arg.Match("usage") )	||
+				  ( arg.Match('h') )		||
+				  ( arg.Match("help") ) )	{
 			printf("%s", usage);
 			return true;
-
-		} else if ( arg.Match('v') ) {
+		}
+		else if ( arg.Match('v') ) {
 			opts.m_verbosity++;
-
-		} else if ( arg.Match("verbosity") ) {
+		}
+		else if ( arg.Match("verbosity") ) {
 			if ( ! arg.getOpt(opts.m_verbosity) ) {
 				fprintf(stderr, "Value needed for %s\n", arg.Arg() );
 				printf("%s", usage);
 				return true;
 			}
-
-		} else if ( arg.Match("version") ) {
-			printf("test_log_reader: %s, %s\n", VERSION, __DATE__);
+		}
+		else if ( arg.Match("version") ) {
+			printf("test_hibernation: %s, %s\n", VERSION, __DATE__);
 			return true;
-
-		} else if ( !arg.ArgIsOpt()  &&  (fixed == 0)  &&  arg.isOptInt() ) {
+		}
+		else if ( arg.Match('m', "method") ) {
+			if ( !arg.getOpt(opts.m_method) ) {
+				fprintf(stderr, "Value needed for %s\n", arg.Arg() );
+				printf("%s", usage);
+				return true;
+			}
+		}
+		else if ( !arg.ArgIsOpt()  &&  (fixed == 0)  &&  arg.isOptInt() ) {
 			fixed++;
 			opts.m_address = arg.getOpt();
-
-		} else if ( !arg.ArgIsOpt()  &&  (fixed == 0) ) {
+		}
+		else if ( !arg.ArgIsOpt()  &&  (fixed == 0) ) {
 			opts.m_if_name = arg.getOpt();
 			fixed++;
-
-		} else if ( !arg.ArgIsOpt() && (fixed == 1) ) {
+		}
+		else if ( !arg.ArgIsOpt() && (fixed == 1) ) {
 			fixed++;
 			const char *s = arg.getOpt();
 			opts.m_state = HibernatorBase::stringToSleepState( s );
@@ -221,12 +245,13 @@ CheckArgs(int argc, const char **argv, Options &opts)
 				fprintf( stderr, "Unknown state '%s'\n", s );
 				return true;
 			}
-
-		} else {
+		}
+		else {
 			fprintf(stderr, "Unrecognized argument: <%s>\n", arg.Arg() );
 			printf("%s", usage);
 			return true;
 		}
+		index = arg.Index();
 	}
 
 	return false;

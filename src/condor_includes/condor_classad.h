@@ -33,8 +33,8 @@
 
 #define		CLASSAD_MAX_ADTYPE			50
 
-//for the shipping functions -- added by Lei Cao
-#include "stream.h"
+// Forward definition of stream
+class Stream;
 
 struct AdType                   // type of a ClassAd.
 {
@@ -107,7 +107,7 @@ class ClassAd : public AttrList
         virtual int	fPrint(FILE*);				// print the AttrList to a file
         int	fPrintAsXML(FILE* F);
 		int         sPrint(MyString &output);   
-		int         sPrintAsXML(MyString &output);
+		int         sPrintAsXML(MyString &output,StringList *attr_white_list=NULL);
 		void		dPrint( int );				// dprintf to given dprintf level
 
 		void		Clear( void );				// clear out all attributes

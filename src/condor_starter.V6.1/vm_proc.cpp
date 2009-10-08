@@ -289,7 +289,7 @@ VMProc::StartJob()
 				CONDOR_HOLD_CODE_FailedToCreateProcess, 0);
 		return false;
 	}
-	vm_type_name.strlwr();
+	vm_type_name.lower_case();
 	m_vm_type = vm_type_name;
 
 	// get vm checkpoint flag from ClassAd
@@ -308,6 +308,17 @@ VMProc::StartJob()
 		m_vm_ip = string_value;
 	}
 	*/
+
+	ClassAd recovery_ad = *JobAd;
+	MyString vm_name;
+	if ( strcasecmp( m_vm_type.Value(), CONDOR_VM_UNIVERSE_KVM ) == MATCH ||
+		 strcasecmp( m_vm_type.Value(), CONDOR_VM_UNIVERSE_XEN ) == MATCH ) {
+		ASSERT( create_name_for_VM( JobAd, vm_name ) );
+	} else {
+		vm_name = Starter->GetWorkingDir();
+	}
+	recovery_ad.Assign( "JobVMId", vm_name.Value() );
+	Starter->WriteRecoveryFile( &recovery_ad );
 
 	// //
 	// Now everything is ready to start a vmgahp server 
@@ -1040,7 +1051,7 @@ VMProc::Ckpt()
 		return false;
 	}
 
-	if( strcasecmp(m_vm_type.Value(), CONDOR_VM_UNIVERSE_XEN) == MATCH ) {
+	if( (strcasecmp(m_vm_type.Value(), CONDOR_VM_UNIVERSE_XEN) == MATCH) || (strcasecmp(m_vm_type.Value(), CONDOR_VM_UNIVERSE_KVM) == MATCH) ) {
 		if( !m_is_vacate_ckpt ) {
 			// Xen doesn't support periodic checkpoint
 			return false;
@@ -1183,7 +1194,7 @@ VMProc::PublishUpdateAd( ClassAd* ad )
 	dprintf( D_FULLDEBUG, "Inside VMProc::PublishUpdateAd()\n" );
 
 	MyString buf;
-	if( strcasecmp(m_vm_type.Value(), CONDOR_VM_UNIVERSE_XEN) == MATCH ) {
+	if( (strcasecmp(m_vm_type.Value(), CONDOR_VM_UNIVERSE_XEN) == MATCH) || (strcasecmp(m_vm_type.Value(), CONDOR_VM_UNIVERSE_KVM) == MATCH) ) {
 		float sys_time = m_vm_cputime;
 		float user_time = 0.0;
 
@@ -1198,6 +1209,11 @@ VMProc::PublishUpdateAd( ClassAd* ad )
 		unsigned long max_image = 0;
 
 		getUsageOfVM(sys_time, user_time, max_image);
+		
+		// Added to update CPU Usage of VM in ESX
+		if ( (long)m_vm_cputime > user_time ) {
+			user_time = m_vm_cputime;
+		}
 
 		// Publish it into the ad.
 		ad->Assign(ATTR_JOB_REMOTE_SYS_CPU, (float)sys_time );

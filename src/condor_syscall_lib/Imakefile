@@ -48,7 +48,7 @@ C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(STUB_CLUMPS_FLAG) $(DL_EXTRACT) \
 #ifdef DOES_CHECKPOINTING  /* ========= DOES CHECKPOINTING ============ */
 
 #if IS_LINUX
-#if IS_GLIBC22 || IS_GLIBC23 || IS_GLIBC24 || IS_GLIBC25
+#if IS_GLIBC22 || IS_GLIBC23 || IS_GLIBC24 || IS_GLIBC25 || IS_GLIBC27
 FORK_OBJ = FORK.o
 #endif /* libc */
 #endif /* LINUX */
@@ -56,7 +56,7 @@ FORK_OBJ = FORK.o
 #	if IS_HPUX
 EXTRACT = FORK.o GETEUID.o GETPPID.o GETEGID.o SYSCALL.o __SYSCALL.o \
 		  MMAP.o PIPE.o GETCWD.o GETLOGIN.o
-#	elif IS_LINUX && (IS_GLIBC22 || IS_GLIBC23 || IS_GLIBC24 || IS_GLIBC25)
+#	elif IS_LINUX && (IS_GLIBC22 || IS_GLIBC23 || IS_GLIBC24 || IS_GLIBC25 || IS_GLIBC27)
 EXTRACT = GETCWD.o MMAP.o SYSCALL.o GETEUID.o GETEGID.o GETPPID.o \
 		$(FORK_OBJ) PIPE.o GETLOGIN.o SYSDEP.o SIGSUSPEND.o \
 		TRUNCATE.o SIGACTION.o GETDIRENTRIES.o 
@@ -174,7 +174,8 @@ SYSCALL_SUPPORT_OBJ=senders.o receivers.o syscall_mode.o syscall_connect.o remot
 
 UTIL_OBJ =  $(FLOCK_OBJ) dprintf_common.o except.o update_rusage.o \
 	internet.o $(PLATFORM_UTIL_OBJ) mkargv.o filename_tools.o \
-	strupr.o string_funcs.o
+	strupr.o string_funcs.o \
+	mark_thread.o
 
 CPP_UTIL_OBJ = \
 	condor_version.o condor_ver_info.o \
@@ -182,7 +183,7 @@ CPP_UTIL_OBJ = \
 	condor_open.o selector.o \
 	MyString.o subsystem_info.o
 
-CONDOR_TYPE_OBJ = sig_num.o proc.o open_flags.o fcntl_cmd.o errno_num.o
+CONDOR_TYPE_OBJ = sig_num.o open_flags.o fcntl_cmd.o errno_num.o
 
 IO_OBJ = stream.o sock.o safe_sock.o reli_sock.o buffers.o $(CONDOR_TYPE_OBJ) condor_rw.o SafeMsg.o
 
@@ -349,7 +350,7 @@ uppercase_target($(SIMPLE_LIBC),getcwd.o,GETCWD.o,getcwd,GETCWD)
 
 uppercase_target($(SIMPLE_LIBC),getrusage.o,GETRUSAGE.o,getrusage,GETRUSAGE)
 
-#if IS_GLIBC25
+#if IS_GLIBC25 || IS_GLIBC27
 uppercase_target($(SIMPLE_LIBC),fork.o,FORK_TMP.o,fork,FORK)
 
 FORK.o: FORK_TMP.o
@@ -391,7 +392,7 @@ SYSCALL.o: SYSCALL_TMP.o ToUpper
 	./ToUpper SYSCALL_TMP.o SYSCALL.o __SYSCALL_error __syscall_error
 
 
-#if IS_GLIBC25
+#if IS_GLIBC25 || IS_GLIBC27
 SYSDEP.o: SYSDEP_TMP.o
 	cp SYSDEP_TMP.o SYSDEP.o
 #else

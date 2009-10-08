@@ -82,31 +82,47 @@ $sql = "SELECT description,
 $results = mysql_query($sql) or die ("Query {$sql} failed : " . mysql_error());
 
 $platforms = Array();
+$platform_labels = Array();
+$plaformlabel;
+$component_version; // native or binaries being tested
 
 while ($runidrow = mysql_fetch_array($results)) {
   	$runid      = $runidrow["runid"];
 	// for each runid find all platforms but only insert
 	// them into the platforms array if not there yet
+	// we include cross test platforms by finding all
+	// test run runids which used the build result as
+	// input.
 
    //
    // Platforms
    //
    // Save original platforms we actually built on
-   $sql_pls = "SELECT DISTINCT(platform) AS platform ".
-          "  FROM Run, Task ".
-          " WHERE Task.runid = $runid ".
-          "   AND Task.runid = Run.runid ".
-          "   AND Run.user = '$user' ".
+   $sql_pls = "SELECT DISTINCT(platform) AS platform, component_version ".
+          //"  FROM Run, Task ".
+          //" WHERE Task.runid = $runid ".
+          //"   AND Task.runid = Run.runid ".
+          "  FROM Method_nmi , Task, Run ".
+          " WHERE Method_nmi.input_runid = $runid".
+          "   AND Task.runid =  Method_nmi.runid ".
+          "   AND Task.runid =  Run.runid ".
+          //"   AND Run.user = '$user' ".
           "   AND Task.platform != 'local' ".
           " ORDER BY (IF (platform='local', 'zzz', platform))";
    $platform_results = mysql_query($sql_pls) or die ("Query $sql_pls failed : " . mysql_error());
 	while ($row = mysql_fetch_array($platform_results)) {
+		$component_version = $row["component_version"];
 		if( array_key_exists($row["platform"],$platforms)) {
       	//$tmpp = $row["platform"];
 			//echo "<H4>skip $tmpp</H4>";
 		} else {
-		//if( isset($platforms[$row["platform"]] == false)) {
-      	$tmpp = $platforms[$row["platform"]] = $row["platform"];
+      		$tmpp = $platforms[$row["platform"]] = $row["platform"];
+			if($component_version == 'native') {
+      			$platform_labels[$row["platform"]] = "\nNative\n";
+			} else {
+      			$platform_labels[$row["platform"]] = "Cross of\n".
+				"$component_version"; 
+			}
 			//echo "<H4>adding $tmpp</H4>";
 		}
    }
@@ -116,7 +132,23 @@ while ($runidrow = mysql_fetch_array($results)) {
 mysql_free_result($results);
 
 // This time through the runids show results
-$results = mysql_query($sql) or die ("Query {$sql} failed : " . mysql_error());
+$sql4 = "SELECT description,
+               convert_tz(start, 'GMT', 'US/Central') as start,
+               run_type, 
+               runid,
+                    archived,
+                    archive_results_until,
+               result
+          FROM Run 
+         WHERE component='condor' AND 
+               project='condor' AND
+               run_type='build' AND
+               description LIKE '".$branch."%'".
+       (!empty($user) ? " AND user = '$user'" : "").
+       " ORDER BY runid DESC ".
+       " LIMIT $rows";
+
+$results = mysql_query($sql4) or die ("Query {$sql4} failed : " . mysql_error());
 
 // Ideally start table now
 // reproduce platform row every 10-15 rows
@@ -159,7 +191,7 @@ while ($runidrow = mysql_fetch_array($results)) {
    // Test
    //
    if ($type == 'test') {
-      $sql = "SELECT DISTINCT(Task.name) AS name ".
+      $sql2 = "SELECT DISTINCT(Task.name) AS name ".
              "  FROM Task, Method_nmi ".
              " WHERE Task.runid = Method_nmi.runid ".
 			 //"   AND Task.name = '$test' ".
@@ -174,7 +206,7 @@ while ($runidrow = mysql_fetch_array($results)) {
                    "  FROM Method_nmi, Run ".
                    " WHERE Method_nmi.input_runid = $runid ".
                    "   AND Run.runid = Method_nmi.runid ".
-		   		   "  AND (component_version = project_version or ( component_version = 'native'))".
+		   		   // "  AND (component_version = project_version or ( component_version = 'native'))".
                    "   AND Run.user = '$user' ";
       $result = mysql_query($runid_sql) or die ("Query $runid_sql failed : " . mysql_error());
       while ($row = mysql_fetch_array($result)) {
@@ -182,6 +214,7 @@ while ($runidrow = mysql_fetch_array($results)) {
 		 	//echo "<H3>$tmp</H3>";
 		 	//echo "<H3>$tmp, $row["component_version"], $row["platform"]</H3>\n";
       }
+	  //echo "<H3>done</H3>";
       mysql_free_result($result);
       
    //
@@ -191,18 +224,18 @@ while ($runidrow = mysql_fetch_array($results)) {
       die("Unsupported parameter type=$type");
    }
    
-   $result = mysql_query($sql) or die ("Query $sql failed : " . mysql_error());
+   $result = mysql_query($sql2) or die ("Query $sql2 failed : " . mysql_error());
    while ($row = mysql_fetch_array($result)) {
       $task_name = $row["name"];
    
       //
       // Now for each task, get the status from the platforms
       //
-      $sql = "SELECT platform, result, runid ".
+      $sql3 = "SELECT platform, result, runid ".
              "  FROM Task ".
              " WHERE Task.runid IN (".implode(",", $testrunids).") ".
              "   AND Task.name = '$task_name'";
-      $task_result = mysql_query($sql) or die ("Query $sql failed : " . mysql_error());
+      $task_result = mysql_query($sql3) or die ("Query $sql3 failed : " . mysql_error());
 
 
       while ($task_row = mysql_fetch_array($task_result)) {
@@ -245,15 +278,26 @@ while ($runidrow = mysql_fetch_array($results)) {
 				//echo "<table border=\"0\" cellspacing=\"0\" >\n";
 				echo "<tr>\n";
 				echo "<td>&nbsp</td>\n";
-   			foreach ($platforms AS $platform) {
+   				foreach ($platforms AS $platform) {
       				$display = $platform;
       				$idx = strpos($display, "_");
       				$display[$idx] = " ";
 						$filepath = "";
-  		 
       				echo "<td>$display</td>\n";
-   			} // FOREACH 
-      		echo "</tr>\n";
+   				} // FOREACH 
+      			echo "</tr>\n";
+				// Cross or Native labels
+				//echo "<table border=\"0\" cellspacing=\"0\" >\n";
+				echo "<tr>\n";
+				echo "<td>&nbsp</td>\n";
+   				foreach ($platform_labels AS $label) {
+      				$display = $label;
+      				$idx = strpos($display, "_");
+      				$display[$idx] = " ";
+						$filepath = "";
+      				echo "<td>$display</td>\n";
+   				} // FOREACH 
+      			echo "</tr>\n";
 			}
 		$gotests = "<a href=\"http://$host/results/Run-condor-details.php?runid=$runid&type=test&user=cndrauto\">";
       	echo "<tr>\n".

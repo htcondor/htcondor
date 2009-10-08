@@ -78,6 +78,7 @@ Buf::dealloc_buf()
 
 
 int Buf::write(
+	char const *peer_description,
 	SOCKET	sockd,
 	int		sz,
 	int		timeout
@@ -89,7 +90,7 @@ int Buf::write(
         sz = num_untouched();
     }
 
-    nw = condor_write(sockd, &_dta[num_touched()], sz , timeout);
+    nw = condor_write(peer_description,sockd, &_dta[num_touched()], sz , timeout);
 	if (nw < 0){
 		dprintf( D_ALWAYS, "Buf::write(): condor_write() failed\n" );
 		return -1;
@@ -101,6 +102,7 @@ int Buf::write(
 
 
 int Buf::flush(
+	char const *peer_description,
 	SOCKET	sockd,
 	void	*hdr,
 	int		sz,
@@ -134,7 +136,7 @@ int Buf::flush(
 */
 
 
-	sz = write(sockd, -1, timeout);
+	sz = write(peer_description,sockd, -1, timeout);
 	reset();
 
 	return sz;
@@ -142,6 +144,7 @@ int Buf::flush(
 
 
 int Buf::read(
+	char const *peer_description,
 	SOCKET	sockd,
 	int		sz,
 	int		timeout
@@ -157,7 +160,7 @@ int Buf::read(
 		/* sz = num_free(); */
 	}
 
-    nr = condor_read(sockd,&_dta[num_used()],sz,timeout);	
+    nr = condor_read(peer_description,sockd,&_dta[num_used()],sz,timeout);	
 	if (nr < 0) {
 		dprintf( D_ALWAYS, "Buf::read(): condor_read() failed\n" );
 		return -1;

@@ -26,6 +26,8 @@
 
 static MyString amazon_proxy_host;
 static int amazon_proxy_port;
+static MyString amazon_proxy_user;
+static MyString amazon_proxy_passwd;
 
 static MyString amazon_ec2_url(DEFAULT_AMAZON_EC2_URL);
 
@@ -103,7 +105,25 @@ void set_amazon_proxy_server(const char* url)
 		amazon_proxy_port = 80;
 	}
 
-	int pos = -1; 
+	int pos = -1;
+	
+	/* sateesh added code to even handle proxy username and password */
+	/* This code cannot handle passwords containing @ ? */
+	/* Exact format of AMAZON_HTTP_PROXY is -- http://userid:password@host:port */
+	if( -1 != (pos = amazon_proxy_host.FindChar('@')) ) {
+	  amazon_proxy_user = amazon_proxy_host.Substr(0, pos - 1);
+	  
+	  amazon_proxy_host = amazon_proxy_host.Substr(pos + 1,
+		  amazon_proxy_host.Length());
+
+	  pos = -1;
+	  if( -1 != (pos = amazon_proxy_user.FindChar(':')) ) {
+		amazon_proxy_passwd = amazon_proxy_user.Substr(pos + 1,
+			amazon_proxy_user.Length());
+		amazon_proxy_user = amazon_proxy_user.Substr(0, pos - 1);
+	  }
+	}
+
 	if( -1 != (pos = amazon_proxy_host.FindChar(':')) ) {
 		int port =
 			atoi(amazon_proxy_host.Substr(pos + 1,
@@ -116,15 +136,18 @@ void set_amazon_proxy_server(const char* url)
 		amazon_proxy_host = amazon_proxy_host.Substr(0, pos - 1);
 	}
          
-	dprintf(D_ALWAYS, "Using proxy server, host=%s, port=%d\n", 
-			amazon_proxy_host.Value(), amazon_proxy_port);
+	dprintf(D_ALWAYS, "Using proxy server, host=%s, port=%d user=%s\n", 
+		amazon_proxy_host.Value(), amazon_proxy_port, 
+		amazon_proxy_user.Value());
 }
 
-bool get_amazon_proxy_server(const char* &host_name, int& port )
+bool get_amazon_proxy_server(const char* &host_name, int& port, const char* &user_name, const char* &passwd )
 {
 	if( amazon_proxy_host.IsEmpty() == false ) {
 		host_name = amazon_proxy_host.Value();
 		port = amazon_proxy_port;
+		user_name = amazon_proxy_user.Value();
+		passwd = amazon_proxy_passwd.Value();
 		return true;
 	}
 

@@ -44,6 +44,7 @@
 #include "condor_adtypes.h"
 #include "condor_universe.h"
 #include "my_hostname.h"
+#include "condor_threads.h"
 
 #include "collector.h"
 
@@ -87,7 +88,8 @@ int CollectorDaemon::machinesOwner;
 ForkWork CollectorDaemon::forkQuery;
 
 ClassAd* CollectorDaemon::ad;
-DCCollector* CollectorDaemon::updateCollector;
+CollectorList* CollectorDaemon::updateCollectors;
+DCCollector* CollectorDaemon::updateRemoteCollector;
 int CollectorDaemon::UpdateTimerId;
 
 ClassAd *CollectorDaemon::query_any_result;
@@ -111,6 +113,8 @@ extern "C"
 
 //----------------------------------------------------------------
 
+void computeProjection(ClassAd *shortAd, ClassAd *curr_ad, SimpleList<MyString> *projectionList);
+
 void CollectorDaemon::Init()
 {
 	dprintf(D_ALWAYS, "In CollectorDaemon::Init()\n");
@@ -122,7 +126,8 @@ void CollectorDaemon::Init()
 	view_sock=NULL;
 	UpdateTimerId=-1;
 	sock_cache = NULL;
-	updateCollector = NULL;
+	updateCollectors = NULL;
+	updateRemoteCollector = NULL;
 	Config();
 
     // setup routine to report to condor developers
@@ -167,6 +172,8 @@ void CollectorDaemon::Init()
 	daemonCore->Register_Command(QUERY_ANY_ADS,"QUERY_ANY_ADS",
 		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
     daemonCore->Register_Command(QUERY_GRID_ADS,"QUERY_GRID_ADS",
+		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
+	daemonCore->Register_Command(QUERY_GENERIC_ADS,"QUERY_GENERIC_ADS",
 		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
 	
 		// // // // // // // // // // // // // // // // // // // // //
@@ -237,6 +244,8 @@ void CollectorDaemon::Init()
 
 	daemonCore->Register_Command(UPDATE_STARTD_AD,"UPDATE_STARTD_AD",
 		(CommandHandler)receive_update,"receive_update",NULL,ADVERTISE_STARTD_PERM);
+	daemonCore->Register_Command(MERGE_STARTD_AD,"MERGE_STARTD_AD",
+		(CommandHandler)receive_update,"receive_update",NULL,NEGOTIATOR);
 	daemonCore->Register_Command(UPDATE_SCHEDD_AD,"UPDATE_SCHEDD_AD",
 		(CommandHandler)receive_update,"receive_update",NULL,ADVERTISE_SCHEDD_PERM);
 	daemonCore->Register_Command(UPDATE_SUBMITTOR_AD,"UPDATE_SUBMITTOR_AD",
@@ -285,6 +294,7 @@ void CollectorDaemon::Init()
     ClassAd *ad;
     offline_plugin_.rewind ();
     while ( offline_plugin_.iterate ( ad ) ) {
+		ad = new ClassAd(*ad);
 	    if ( !collector.collect ( UPDATE_STARTD_AD, ad, NULL, insert ) ) {
 		    
             if ( -3 == insert ) {
@@ -299,14 +309,11 @@ void CollectorDaemon::Init()
 				    "Received malformed ad. Ignoring.\n" );
 
 	        }
-
+			delete ad;
 	    }
 
     }
 #endif
-
-	// ClassAd evaluations use this function to resolve names
-	// ClassAdLookupRegister( process_global_query, this );
 
 	forkQuery.Initialize( );
 }
@@ -319,7 +326,10 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 
 	sock->decode();
 	sock->timeout(ClientTimeout);
-    if( !cad.initFromStream(*sock) || !sock->eom() )
+	bool ep = CondorThreads::enable_parallel(true);
+	bool res = !cad.initFromStream(*sock) || !sock->eom();
+	CondorThreads::enable_parallel(ep);
+    if( res )
     {
         dprintf(D_ALWAYS,"Failed to receive query on TCP: aborting\n");
         return FALSE;
@@ -330,6 +340,15 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 
 	// Initial query handler
 	AdTypes whichAds = receive_query_public( command );
+
+	// CRUFT: Before 7.3.2, submitter ads had a MyType of
+	//   "Scheduler". The only way to tell the difference
+	//   was that submitter ads didn't have ATTR_NUM_USERS.
+	//   The correosponding query ads had a TargetType of
+	//   "Scheduler", which we now coerce to "Submitter".
+	if ( whichAds == SUBMITTOR_AD ) {
+		cad.SetTargetTypeName( SUBMITTER_ADTYPE );
+	}
 
 	// Perform the query
 	List<ClassAd> results;
@@ -351,9 +370,27 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 	ClassAd *curr_ad = NULL;
 	int more = 1;
 	
+		// See if query ad asks for server-side projection
+	char *projection = NULL;
+	cad.LookupString("projection", &projection);
+	SimpleList<MyString> projectionList;
+	::split_args(projection, &projectionList);
+
 	while ( (curr_ad=results.Next()) )
     {
-        if (!sock->code(more) || !curr_ad->put(*sock))
+		ClassAd *ad_to_send = NULL;
+		ClassAd shortAd;
+
+		if (projectionList.Number() > 0) {
+			// compute projection, send thin ad
+			computeProjection(&shortAd, curr_ad, &projectionList);
+			ad_to_send = &shortAd;
+		} else {
+			// if no projection, send the full ad
+			ad_to_send = curr_ad;
+		}
+		
+        if (!sock->code(more) || !ad_to_send->put(*sock))
         {
             dprintf (D_ALWAYS,
                     "Error sending query result to client -- aborting\n");
@@ -464,13 +501,10 @@ CollectorDaemon::receive_query_public( int command )
 		whichAds = LEASE_MANAGER_AD;
 		break;
 
-#   if 0
-		// This is disabled because QUERY_GENERIC_ADS == QUERY_ANY_ADS
 	  case QUERY_GENERIC_ADS:
 		dprintf (D_FULLDEBUG,"Got QUERY_GENERIC_ADS\n");
-		whichAds = LEASE_MANAGER_AD;
+		whichAds = GENERIC_AD;
 		break;
-#   endif
 
 	  case QUERY_ANY_ADS:
 		dprintf (D_FULLDEBUG,"Got QUERY_ANY_ADS\n");
@@ -496,11 +530,8 @@ int CollectorDaemon::receive_invalidation(Service* /*s*/,
 										  int command,
 										  Stream* sock)
 {
-    struct sockaddr_in *from;
 	AdTypes whichAds;
 	ClassAd cad;
-
-	from = ((Sock*)sock)->endpoint();
 
 	sock->decode();
 	sock->timeout(ClientTimeout);
@@ -654,7 +685,7 @@ int CollectorDaemon::receive_update(Service* /*s*/, int command, Stream* sock)
 	}
 
 	// get endpoint
-	from = ((Sock*)sock)->endpoint();
+	from = ((Sock*)sock)->peer_addr();
 
     // process the given command
 	if (!(cad = collector.collect (command,(Sock*)sock,from,insert)))
@@ -677,6 +708,9 @@ int CollectorDaemon::receive_update(Service* /*s*/, int command, Stream* sock)
 				"Received malformed ad from command (%d). Ignoring.\n",
 				command);
 		}
+
+		return FALSE;
+
 	}
 
 #if ( HAVE_HIBERNATION )
@@ -735,7 +769,7 @@ int CollectorDaemon::receive_update_expect_ack( Service* /*s*/,
     int insert = -3;
     
     /* get peer's IP/port */
-    sockaddr_in *from = socket->endpoint ();
+    sockaddr_in *from = socket->peer_addr();
 
     /* "collect" the ad */
     ClassAd *cad = collector.collect ( 
@@ -785,7 +819,7 @@ int CollectorDaemon::receive_update_expect_ack( Service* /*s*/,
                 "receive_update_expect_ack: "
                 "Failed to send acknowledgement to host %s, "
                 "aborting\n",
-                socket->sender_ip_str () );
+                socket->peer_ip_str () );
         
             /* it's ok if we fail here, since we won't drop the ad,
             it's only on the client side that any error should be
@@ -799,7 +833,7 @@ int CollectorDaemon::receive_update_expect_ack( Service* /*s*/,
                 D_FULLDEBUG, 
                 "receive_update_expect_ack: "
                 "Failed to send update EOM to host %s.\n", 
-                socket->sender_ip_str () );
+                socket->peer_ip_str () );
             
 	    }   
         
@@ -828,7 +862,7 @@ CollectorDaemon::stashSocket( Stream* sock )
 {
 		
 	ReliSock* rsock;
-	char* addr = sin_to_string( ((Sock*)sock)->endpoint() );
+	char* addr = sin_to_string( ((Sock*)sock)->peer_addr() );
 	rsock = sock_cache->findReliSock( addr );
 	if( ! rsock ) {
 			// don't have it in the socket already, see if the cache
@@ -865,7 +899,7 @@ int
 CollectorDaemon::sockCacheHandler( Service*, Stream* sock )
 {
 	int cmd;
-	char* addr = sin_to_string( ((Sock*)sock)->endpoint() );
+	char* addr = sin_to_string( ((Sock*)sock)->peer_addr() );
 	sock->decode();
 	dprintf( D_FULLDEBUG, "Activity on stashed TCP socket from %s\n",
 			 addr );
@@ -924,6 +958,7 @@ CollectorDaemon::sockCacheHandler( Service*, Stream* sock )
 	case INVALIDATE_LICENSE_ADS:
 	case INVALIDATE_STORAGE_ADS:
     case INVALIDATE_GRID_ADS:
+	case INVALIDATE_ADS_GENERIC:
 		return receive_invalidation( NULL, cmd, sock );
 		break;
 
@@ -944,9 +979,9 @@ int CollectorDaemon::query_scanFunc (ClassAd *cad)
 {
     if ((*cad) >= (*__query__))
     {
-		// Found a match --- append to our results list
-		__ClassAdResultList__->Append(cad);
+		// Found a match 
         __numAds__++;
+		__ClassAdResultList__->Append(cad);
     }
 
     return 1;
@@ -966,31 +1001,6 @@ int CollectorDaemon::select_by_match( ClassAd *cad )
 	}
 	return 1;
 }
-
-/*
-This function is called by the global reference mechanism.
-It convert the constraint string into a query ad, and runs
-a global query, returning a duplicate of the ad matched.
-On failure, it returns 0.
-*/
-
-#if 0
-ClassAd * CollectorDaemon::process_global_query( const char *constraint, void *arg )
-{
-	CondorQuery query(ANY_AD);
-
-       	query.addANDConstraint(constraint);
-	query.getQueryAd(query_any_request);
-	query_any_request.SetTargetTypeName (ANY_ADTYPE);
-	query_any_result = 0;
-
-	if(!collector.walkHashTable(ANY_AD,select_by_match)) {
-		return new ClassAd(*query_any_result);
-	} else {
-		return 0;
-	}
-}
-#endif
 
 void CollectorDaemon::process_query_public (AdTypes whichAds,
 											ClassAd *query,
@@ -1035,8 +1045,7 @@ void CollectorDaemon::process_invalidation (AdTypes whichAds, ClassAd &query, St
 	__numAds__ = 0;
 
 	// first set all the "LastHeardFrom" attributes to low values ...
-	AdTypes queryAds = (whichAds == GENERIC_AD) ? ANY_AD : whichAds;
-	collector.walkHashTable (queryAds, invalidation_scanFunc);
+	collector.walkHashTable (whichAds, invalidation_scanFunc);
 
 	// ... then invoke the housekeeper
 	collector.invokeHousekeeper (whichAds);
@@ -1183,49 +1192,47 @@ void CollectorDaemon::Config()
     if (CollectorName) free (CollectorName);
     CollectorName = param("COLLECTOR_NAME");
 
-    // handle params for Collector updates
-    if ( UpdateTimerId >= 0 ) {
-            daemonCore->Cancel_Timer(UpdateTimerId);
-            UpdateTimerId = -1;
-    }
+	// handle params for Collector updates
+	if ( UpdateTimerId >= 0 ) {
+		daemonCore->Cancel_Timer(UpdateTimerId);
+		UpdateTimerId = -1;
+	}
 
-    tmp = param ("CONDOR_DEVELOPERS_COLLECTOR");
-    if (tmp == NULL) {
-            tmp = strdup("condor.cs.wisc.edu");
-    }
-    if (stricmp(tmp,"NONE") == 0 ) {
-            free(tmp);
-            tmp = NULL;
-    }
-	int i = param_integer("COLLECTOR_UPDATE_INTERVAL",900); // default 15 min
+	if( updateCollectors ) {
+		delete updateCollectors;
+		updateCollectors = NULL;
+	}
+	updateCollectors = CollectorList::create( NULL );
 
-    if ( tmp && i ) {
-		if( updateCollector ) {
-				// we should just delete it.  since we never use TCP
-				// for these updates, we don't really loose anything
-				// by destroying the object and recreating it...
-			delete updateCollector;
-			updateCollector = NULL;
-        }
-		updateCollector = new DCCollector( tmp, DCCollector::UDP );
-		if( UpdateTimerId < 0 ) {
-			UpdateTimerId = daemonCore->
-				Register_Timer( 1, i, (TimerHandler)sendCollectorAd,
-								"sendCollectorAd" );
-		}
-    } else {
-		if( updateCollector ) {
-			delete updateCollector;
-			updateCollector = NULL;
-		}
-		if( UpdateTimerId > 0 ) {
-			daemonCore->Cancel_Timer( UpdateTimerId );
-			UpdateTimerId = -1;
-		}
+	tmp = param ("CONDOR_DEVELOPERS_COLLECTOR");
+	if (tmp == NULL) {
+		tmp = strdup("condor.cs.wisc.edu");
+	}
+	if (stricmp(tmp,"NONE") == 0 ) {
+		free(tmp);
+		tmp = NULL;
+	}
+
+	if( updateRemoteCollector ) {
+		// we should just delete it.  since we never use TCP
+		// for these updates, we don't really loose anything
+		// by destroying the object and recreating it...
+		delete updateRemoteCollector;
+		updateRemoteCollector = NULL;
+	}
+	if ( tmp ) {
+		updateRemoteCollector = new DCCollector( tmp, DCCollector::UDP );
 	}
 
 	free( tmp );
 	
+	int i = param_integer("COLLECTOR_UPDATE_INTERVAL",900); // default 15 min
+	if( UpdateTimerId < 0 ) {
+		UpdateTimerId = daemonCore->
+			Register_Timer( 1, i, (TimerHandler)sendCollectorAd,
+							"sendCollectorAd" );
+	}
+
 	tmp = param(COLLECTOR_REQUIREMENTS);
 	MyString collector_req_err;
 	if( !collector.setCollectorRequirements( tmp, collector_req_err ) ) {
@@ -1341,11 +1348,37 @@ void CollectorDaemon::Config()
 
 void CollectorDaemon::Exit()
 {
+	// Clean up any workers that have exited but haven't been reaped yet.
+	// This can occur if the collector receives a query followed
+	// immediately by a shutdown command.  The worker will exit but
+	// not be reaped because the SIGTERM from the shutdown command will
+	// be processed before the SIGCHLD from the worker process exit.
+	// Allowing the stack to clean up worker processes is problematic
+	// because the collector will be shutdown and the daemonCore
+	// object deleted by the time the worker cleanup is attempted.
+	forkQuery.DeleteAll( );
+	if ( UpdateTimerId >= 0 ) {
+		daemonCore->Cancel_Timer(UpdateTimerId);
+		UpdateTimerId = -1;
+	}
 	return;
 }
 
 void CollectorDaemon::Shutdown()
 {
+	// Clean up any workers that have exited but haven't been reaped yet.
+	// This can occur if the collector receives a query followed
+	// immediately by a shutdown command.  The worker will exit but
+	// not be reaped because the SIGTERM from the shutdown command will
+	// be processed before the SIGCHLD from the worker process exit.
+	// Allowing the stack to clean up worker processes is problematic
+	// because the collector will be shutdown and the daemonCore
+	// object deleted by the time the worker cleanup is attempted.
+	forkQuery.DeleteAll( );
+	if ( UpdateTimerId >= 0 ) {
+		daemonCore->Cancel_Timer(UpdateTimerId);
+		UpdateTimerId = -1;
+	}
 	return;
 }
 
@@ -1398,16 +1431,23 @@ int CollectorDaemon::sendCollectorAd()
 	// Collector engine stats, too
 	collectorStats.publishGlobal( ad );
 
-    // Send the ad
-	char *update_addr = updateCollector->addr();
-	if (!update_addr) update_addr = "(null)";
-	if( ! updateCollector->sendUpdate(UPDATE_COLLECTOR_AD, ad, NULL, false) ) {
-		dprintf( D_ALWAYS, "Can't send UPDATE_COLLECTOR_AD to collector "
-				 "(%s): %s\n", update_addr,
-				 updateCollector->error() );
-		return 0;
-    }
-    return 1;
+	// Send the ad
+	int num_updated = updateCollectors->sendUpdates(UPDATE_COLLECTOR_AD, ad, NULL, false);
+	if ( num_updated != updateCollectors->number() ) {
+		dprintf( D_ALWAYS, "Unable to send UPDATE_COLLECTOR_AD to all configured collectors\n");
+	}
+
+	if ( updateRemoteCollector ) {
+		char *update_addr = updateRemoteCollector->addr();
+		if (!update_addr) update_addr = "(null)";
+		if( ! updateRemoteCollector->sendUpdate(UPDATE_COLLECTOR_AD, ad, NULL, false) ) {
+			dprintf( D_ALWAYS, "Can't send UPDATE_COLLECTOR_AD to collector "
+					 "(%s): %s\n", update_addr,
+					 updateRemoteCollector->error() );
+			return 0;
+		}
+	}
+	return 1;
 }
 
 void CollectorDaemon::init_classad(int interval)
@@ -1593,4 +1633,49 @@ CollectorUniverseStats::publish( const char *label, ClassAd *ad )
 	ad->Insert(line);
 
 	return 0;
+}
+
+	// Given a full ad, and a StringList of expressions, Project out of
+	// the full ad into the short ad all the attributes those expressions
+	// depend on.
+
+	// So, if the projection is passed in "foo", and foo is an expression
+	// that expands to bar, we return bar
+	
+void
+computeProjection(ClassAd *shortAd, ClassAd *full_ad, SimpleList<MyString> *projectionList) {
+    projectionList->Rewind();
+
+	// CRUFT: Before 7.3.2, submitter ads had a MyType of
+	//   "Scheduler". The only way to tell the difference
+	//   was that submitter ads didn't have ATTR_NUM_USERS.
+	//   If we don't include ATTR_NUM_USERS in our projection,
+	//   older clients will morph scheduler ads into
+	//   submitter ads, regardless of MyType.
+	if (strcmp("Scheduler", full_ad->GetMyTypeName()) == 0) {
+		projectionList->Append(MyString(ATTR_NUM_USERS));
+	}
+
+		// For each expression in the list...
+	MyString attr;
+	while (projectionList->Next(attr)) {
+		StringList internals;
+		StringList externals; // shouldn't have any
+
+			// Get the indirect attributes
+		if( !full_ad->GetExprReferences(attr.Value(), internals, externals) ) {
+			dprintf(D_FULLDEBUG,
+				"computeProjection failed to parse "
+				"requested ClassAd expression: %s\n",attr.Value());
+		}
+		internals.rewind();
+
+		while (char *indirect_attr = internals.next()) {
+			ExprTree *tree = full_ad->Lookup(indirect_attr);
+			if (tree) shortAd->Insert(tree->DeepCopy());
+		}
+	}
+	shortAd->SetMyTypeName(full_ad->GetMyTypeName());
+	shortAd->SetTargetTypeName(full_ad->GetTargetTypeName());
+
 }

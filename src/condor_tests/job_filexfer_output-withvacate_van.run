@@ -29,8 +29,26 @@ sub IDLE{1};
 sub HELD{5};
 sub RUNNING{2};
 
-my $alreadydone=0;
+my $job = $$;
+CondorTest::debug("Process Id for this script is  $job\n",1);
+system("rm -f submit_filetrans_input*");
+system("rm -f submit_filetrans_output*");
+my $basefile = "submit_filetrans_input" . "$job";
+my $in = "$basefile".".txt";
+my $ina = "$basefile"."a.txt";
+my $inb = "$basefile"."b.txt";
+my $inc = "$basefile"."c.txt";
 
+my $basefile = "submit_filetrans_output" . "$job";
+my $oute = "$basefile"."e.txt";
+my $outf = "$basefile"."f.txt";
+my $outg = "$basefile"."g.txt";
+
+my $inputdir = "job_"."$job"."_dir";
+
+my $line = "";
+my $args = "--job=$job --forever ";
+my $alreadydone=0;
 
 my $spool = "";
 CondorTest::fullchomp($spool);
@@ -69,10 +87,12 @@ $execute = sub {
 	$outi = "$baseoutfile"."i.txt";
 	$outj = "$baseoutfile"."j.txt";
 
+	system("rm -f $baseoutfile*");
+
 	CondorTest::debug("Looking for $oute, $outf, $outg ...\n",1);
 
+	sleep 20; # let output files get created
 	CondorTest::debug("Vacate $cluster Now\n",1);
-	sleep 2; # let output files get created
 	my @adarray;
 	my $status = 1;
 	my $cmd = "condor_vacate_job $cluster";
@@ -96,53 +116,54 @@ $evicted = sub {
 	my %args = @_;
 	my $cluster = $args{"cluster"};
 
+	print "Job was evicted\n";
 	if($haveseenevict == 0) {
 		$haveseenevict = 1;
 	} else {
 		return(0);
 	}
+	print "++++++++++++++++++++++++++++++++++++\n";
+	print "++++++++++++++++++++++++++++++++++++\n";
+	system("ls $baseoutfile*");
+	print "++++++++++++++++++++++++++++++++++++\n";
 	sleep(15);
+	system("ls $baseoutfile*");
+	print "++++++++++++++++++++++++++++++++++++\n";
 
-	if(!-f "$oute")
-	{ 
-		die "$oute failed to arrive\n"; 
+	if(!(-f "$oute")) { 
+		print "$oute failed to arrive\n"; 
 		CondorTest::debug("removing $cluster\n",1);
 		my @adarray;
 		my $status = 1;
 		my $cmd = "condor_rm $cluster";
 		$status = CondorTest::runCondorTool($cmd,\@adarray,2);
-		if(!$status)
-		{
+		if(!$status) {
 			CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 			exit(1)
 		}
 		exit(1)
 	};
-	if(!-f "$outf")
-	{ 
-		die "$outf failed to arrive\n"; 
+	if(!(-f "$outf")) { 
+		print "$outf failed to arrive\n"; 
 		CondorTest::debug("removing $cluster\n",1);
 		my @adarray;
 		my $status = 1;
 		my $cmd = "condor_rm $cluster";
 		$status = CondorTest::runCondorTool($cmd,\@adarray,2);
-		if(!$status)
-		{
+		if(!$status) {
 			CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 			exit(1)
 		}
 		exit(1)
 	};
-	if(!-f "$outg")
-	{ 
-		die "$outg failed to arrive\n"; 
+	if(!(-f "$outg")) { 
+		print "$outg failed to arrive\n"; 
 		CondorTest::debug("removing $cluster\n",1);
 		my @adarray;
 		my $status = 1;
 		my $cmd = "condor_rm $cluster";
 		$status = CondorTest::runCondorTool($cmd,\@adarray,2);
-		if(!$status)
-		{
+		if(!$status) {
 			CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 			exit(1)
 		}
@@ -155,8 +176,7 @@ $evicted = sub {
 	my $status = 1;
 	my $cmd = "condor_rm $cluster";
 	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
-	if(!$status)
-	{
+	if(!$status) {
 		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 		exit(1)
 	}
@@ -165,9 +185,10 @@ $evicted = sub {
 $success = sub
 {
 	CondorTest::debug("Base file transfer job!\n",1);
-	if(!-f "$oute"){ die "$oute failed to arrive\n"; exit(1)};
-	if(!-f "$outf"){ die "$outf failed to arrive\n"; exit(1)};
-	if(!-f "$outg"){ die "$outg failed to arrive\n"; exit(1)};
+	if(!(-f "$oute")){ die "$oute failed to arrive\n"; exit(1)};
+	if(!(-f "$outf")){ die "$outf failed to arrive\n"; exit(1)};
+	if(!(-f "$outg")){ die "$outg failed to arrive\n"; exit(1)};
+	CondorTest::debug("All files arrived as expected.....\n",1);
 };
 
 $hold = sub
@@ -203,23 +224,6 @@ $shadow = sub
 # make some needed files. All 0 sized and xxxxxx.txt for
 # easy cleanup
 
-my $job = $$;
-CondorTest::debug("Process Id for this script is  $job\n",1);
-my $basefile = "submit_filetrans_input" . "$job";
-my $in = "$basefile".".txt";
-my $ina = "$basefile"."a.txt";
-my $inb = "$basefile"."b.txt";
-my $inc = "$basefile"."c.txt";
-
-my $basefile = "submit_filetrans_output" . "$job";
-my $oute = "$basefile"."e.txt";
-my $outf = "$basefile"."f.txt";
-my $outg = "$basefile"."g.txt";
-
-my $inputdir = "job_"."$job"."_dir";
-
-my $line = "";
-my $args = "--job=$job --long ";
 
 # pass pid for output file production
 # open submitfile and fix

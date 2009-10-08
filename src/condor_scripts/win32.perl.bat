@@ -1,1 +1,1 @@
-@C:\Perl\bin\perl.exe %*
+@perl.exe %*

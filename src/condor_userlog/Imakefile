@@ -1,8 +1,8 @@
 all_target(condor_userlog condor_check_userlogs condor_userlog_job_counter)
 
-CFLAGS = $(STD_C_FLAGS)
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
-LIB = $(STD_LIBS)
+CFLAGS = $(STD_C_FLAGS) $(CONFIGURE_PCRE_CFLAGS)
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(CONFIGURE_PCRE_CFLAGS)
+LIB = $(STD_LIBS) $(CONFIGURE_PCRE_LDFLAGS)
 
 OBJ = userlog.o
 

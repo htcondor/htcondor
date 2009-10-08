@@ -18,7 +18,7 @@
  ***************************************************************/
 
 
-
+#include "condor_common.h"
 #include "SchedDCommands.h"
 #include "condor_attributes.h"
 

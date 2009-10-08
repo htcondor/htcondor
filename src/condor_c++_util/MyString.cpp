@@ -558,17 +558,6 @@ MyString::lower_case(void)
 	return;
 }
 
-
-void
-MyString::strlwr(void)
-{
-	if (Data != NULL) {
-		::strlwr(Data);
-	}
-	return;
-}
-
-
 void
 MyString::upper_case(void)
 {
@@ -577,17 +566,6 @@ MyString::upper_case(void)
 	}
 	return;
 }
-
-
-void
-MyString::strupr(void)
-{
-	if (Data != NULL) {
-		::strupr(Data);
-	}
-	return;
-}
-
 
 bool
 MyString::chomp( void )
@@ -618,10 +596,10 @@ MyString::trim( void )
 		return;
 	}
 	int		begin = 0;
-	while ( isspace(Data[begin]) ) { ++begin; }
+	while ( begin < Len && isspace(Data[begin]) ) { ++begin; }
 
 	int		end = Length() - 1;
-	while ( isspace(Data[end]) ) { --end; }
+	while ( end >= 0 && isspace(Data[end]) ) { --end; }
 
 	if ( begin != 0 || end != Length() - 1 ) {
 		*this = Substr(begin, end);

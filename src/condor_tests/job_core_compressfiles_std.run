@@ -19,23 +19,26 @@
 ##**************************************************************
 
 use CondorTest;
+use strict;
+use warnings;
 
-$cmd = "job_core_compressfiles_std.cmd";
-$input = "job_core_compressfiles_std.data";
-$gzinput = "job_core_compressfiles_std.datain";
-$gzinputgz = "job_core_compressfiles_std.datain.gz";
-$gzoutput = "job_core_compressfiles_std.dataout.gz";
-$output = "job_core_compressfiles_std.dataout";
+my $cmd = "job_core_compressfiles_std.cmd";
+my $input = "job_core_compressfiles_std.data";
+my $gzinput = "job_core_compressfiles_std.datain";
+my $gzinputgz = "job_core_compressfiles_std.datain.gz";
+my $gzoutput = "job_core_compressfiles_std.dataout.gz";
+my $output = "job_core_compressfiles_std.dataout";
 
-$testdesc =  'condor_submit compressfiles works - standard U';
-$testname = "job_core_compressfiles_std";
+my $testdesc =  'condor_submit compressfiles works - standard U';
+my $testname = "job_core_compressfiles_std";
+my $debuglevel = 2;
 
 system("rm -f $gzinput $gzinputgz $gzoutput $output");
 system("cp $input $gzinput");
 system("gzip $gzinput");
 
 
-$ExitSuccess = sub {
+my $ExitSuccess = sub {
 	my %info = @_;
 	my @input;
 
@@ -65,7 +68,7 @@ $ExitSuccess = sub {
 CondorTest::RegisterExitedSuccess( $testname, $ExitSuccess );
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	CondorTest::debug("$testname: SUCCESS\n",1);
+	CondorTest::debug("$testname: SUCCESS\n",$debuglevel);
 	exit(0);
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";

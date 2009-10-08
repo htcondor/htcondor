@@ -86,7 +86,7 @@ VMGahpServer::VMGahpServer(const char *vmgahpserver,
 	m_include_gahp_log = false;
 #endif
 
-	m_send_all_classad = param_boolean("VM_GAHP_SEND_ALL_CLASSAD", false);
+	m_send_all_classad = param_boolean("VM_GAHP_SEND_ALL_CLASSAD", true);
 
 	if( m_send_all_classad ) {
 		dprintf( D_FULLDEBUG, "Will send the entire job ClassAd to vmgahp\n");
@@ -1458,7 +1458,7 @@ VMGahpServer::killVM(void)
 	}
 
 	MyString matchstring;
-	if( strcasecmp(m_vm_type.Value(), CONDOR_VM_UNIVERSE_XEN ) == MATCH ) {
+	if( (strcasecmp(m_vm_type.Value(), CONDOR_VM_UNIVERSE_XEN ) == MATCH) || (strcasecmp(m_vm_type.Value(), CONDOR_VM_UNIVERSE_KVM ) == MATCH) ) {
 		if( create_name_for_VM(m_job_ad, matchstring) == false ) {
 			dprintf(D_ALWAYS, "VMGahpServer::killVM() : "
 					"cannot make the name of VM\n");
@@ -1505,7 +1505,7 @@ VMGahpServer::killVM(void)
 #endif
 
 	priv_state oldpriv; 
-	if( strcasecmp(m_vm_type.Value(), CONDOR_VM_UNIVERSE_XEN ) == MATCH ) {
+	if( (strcasecmp(m_vm_type.Value(), CONDOR_VM_UNIVERSE_XEN ) == MATCH) || (strcasecmp(m_vm_type.Value(), CONDOR_VM_UNIVERSE_KVM ) == MATCH) ) {
 		oldpriv = set_root_priv();
 	}else {
 		oldpriv = set_user_priv();

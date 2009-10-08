@@ -19,115 +19,73 @@
 ##**************************************************************
 
 use CondorTest;
-
+use strict;
+use warnings;
 
 # truly const variables in perl
 sub IDLE{1};
 sub HELD{5};
 sub RUNNING{2};
 
-$testdesc =  'cmd_status_shows-help';
-$testname = "cmd_status_shows-help";
-$corename = "cmd_status_shows-help";
+my $testdesc =  'cmd_status_shows-help';
+my $testname = "cmd_status_shows-help";
+my $corename = "cmd_status_shows-help";
+my $debuglevel = 2;
 
-# where am I running
-$currenthost = CondorTest::getFqdnHost();
-chomp($currenthost);
-$primarycollector = $currenthost;
-my @adarray;
+print scalar localtime() . "\n";
 
-CondorTest::fullchomp($currenthost);
-
-system("date");
-
-$mypid = $$;
-$mysaveme = $corename . ".saveme";
+my $mypid = $$;
+my $mysaveme = $corename . ".saveme";
+system("mkdir -p $mysaveme");
 
 if($mypid == 0) {
 	die "Saveme setup for test failed\n";
 }
 
-$mysubmitnm = $corename . $mypid . ".cmd";
-$mysubmitnmout = $corename . $mypid . ".cmd.out";
-$mysubmitnmlog = $corename . $mypid . ".log";
-$mysubmitnmout = $corename . $mypid . ".out";
-$mycorenm = $corename . ".cmd";
-$mycorenmout = $corename . ".cmd.out";
-$mycorenmlog = $corename . ".log";
-
-CondorTest::debug("Master PID is $mypid\n",1);
-CondorTest::debug("Master PID submit file is $mysubmitnm\n",1);
-
-my $version = "local";
-# get a local scheduler running (side a)
-my $configloc = CondorTest::StartPersonal( "cmd_status_shows-help", "x_param.cmdstatus-multi" ,$version);
-my @local = split /\+/, $configloc;
-my $locconfig = shift @local;
-my $locport = shift @local;
-
-CondorTest::debug("---local config is $locconfig and local port is $locport---\n",1);
-
-$primarycollector = $primarycollector . ":" . $locport;
-
-CondorTest::debug("Primary collector for other nodes <<$primarycollector>>\n",1);
-
-CondorTest::debug("Looking at new pool<condor_status>\n",1);
-
 my $count = 0;
+my $done = 0;
 my $nattempts = 1;
+my @adarray;
 
+print "Looking for Usage lines from condor_status -help - ";
 while($count < $nattempts) {
 	my $masterlocal = 0;
 	my $mastersched = 0;
-	$found1 = 0;
-	$cmd = "condor_status -help";
+	my $found1 = 0;
+	my $cmd = "condor_status -help";
 	# forth arg places stderr into passed array
-	$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2,"usage");
+	my $cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
     if(!$cmdstatus)
     {
-        CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
+        CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",$debuglevel);
         exit(1)
     }
 
-	CondorTest::debug("Looking at condor_status -help \n",1);
+	CondorTest::debug("Looking at condor_status -help \n",$debuglevel);
 
 	# looking for.....  <Usage: condor_status>
-	foreach $line (@adarray) {
+	foreach my $line (@adarray) {
 		if($line =~ /^\s*Usage:\s+condor_status.*$/) {
-			CondorTest::debug("found usage: $line\n",1);
+			CondorTest::debug("found usage: $line\n",$debuglevel);
 			$done = 1;
+			print "ok\n";
 		} else {
-			CondorTest::debug("usage: $line\n",1);
+			CondorTest::debug("usage: $line\n",$debuglevel);
 		}
 	}
 
 	$count = $count + 1;
 	sleep($count * 5);
 }
+if($done == 0) {
+	print "bad\n";
+}
 
-
-
-CondorTest::debug("Saving things and cleaning up....\n",1);
+CondorTest::debug("Saving things and cleaning up....\n",$debuglevel);
 
 system("cp *cmd_status_shows-help* $mysaveme");
 
-if( -e "$mysubmitnm" )
-{
-	system("cp $mysubmitnm $mycorenm");
-}
-
-if( -e "$mysubmitnmout" )
-{
-	system("cp $mysubmitnmout $mycorenmout");
-}
-
-if( -e "$mysubmitnmlog" )
-{
-	system("cp $mysubmitnmlog $mycorenmlog");
-}
-
-CondorTest::KillPersonal($locconfig);
-system("date");
+print scalar localtime() . "\n";
 
 if( $done == 0 )
 {
@@ -135,5 +93,5 @@ if( $done == 0 )
 	exit(1);
 }
 
-CondorTest::debug("cmd_status_shows-help SUCCESS\n",1);
+CondorTest::debug("cmd_status_shows-help SUCCESS\n",$debuglevel);
 exit(0);

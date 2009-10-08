@@ -27,11 +27,16 @@
 #include "condor_debug.h"
 #include "condor_syscalls.h"
 #define __KERNEL__
+
+#if defined(GLIBC27)
+#include <sys/user.h>
+#else
 #include <asm/page.h>
+#endif
 
 /* This is supposed to be defined in the above headerfile, but on x86_64 on 
 rhel5 the file in question leads to an empty headerfile with no definition
-for PAGE_SIZE and friends. So nor now, I'll best guess one. */
+for PAGE_SIZE and friends. So for now, I'll best guess one. */
 #if defined(LINUX) && defined(GLIBC25) && defined(X86_64) && !defined(PAGE_SIZE)
 #define PAGE_SHIFT      12
 #define PAGE_SIZE       (1UL << PAGE_SHIFT)
@@ -120,10 +125,14 @@ long
 stack_start_addr()
 {
 	jmp_buf env;
+	unsigned long addr;
 
 	(void)SETJMP(env);
 
-	return (long)JMP_BUF_SP(env) & PAGE_MASK;
+	addr = (long)JMP_BUF_SP(env);
+	PTR_DECRYPT(addr);
+
+	return addr & PAGE_MASK;
 }
 
 /*

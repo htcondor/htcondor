@@ -57,7 +57,7 @@ CondorTest::debug("Currently in $loc\n",1);
 $timed = sub
 {
 	my $left = $submitcount - $donecount;
-	system("date");
+	print scalar localtime() . "\n";
 	CondorTest::debug("Expected break-out!!!!!\n",1);
 	exit(1);
 };

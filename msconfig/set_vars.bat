@@ -27,24 +27,28 @@ REM exceeding 255 chars, so be careful when editing this file! It's
 REM totally lame but there's nothing we can do about it.
 REM ======================================================================
 
-REM We assume all software is installed on the main system drive, but 
-REM in the case that it is not, change the variable bellow.
-set ROOT_DRIVE=%SystemDrive%
+REM 64-bit environments have a slightly different directory layout here
+REM we take this in to account so that we can prefix paths later with the
+REM the correct program files path. (Note, this assumes a clean install.
+REM I'll harden it further if there is a requirement for it.)
+set PROGRAMS_DIR=%ProgramFiles%
+if not "A%ProgramFiles(x86)%"=="A" set PROGRAMS_DIR=%SystemDrive%\PROGRA~2
 
 REM Set paths to Visual C++, the Platform SDKs, and Perl
-set VS_DIR=%ROOT_DRIVE%\Program Files\Microsoft Visual Studio 9.0
+set VS_DIR=%PROGRAMS_DIR%\Microsoft Visual Studio 9.0
 set VC_DIR=%VS_DIR%\VC
 set VC_BIN=%VC_DIR%\bin
-set PERL_DIR=%ROOT_DRIVE%\Perl\bin
+set PERL_DIR=%SystemDrive%\Perl\bin;%SystemDrive%\Perl64\bin;%SystemDrive%\prereq\ActivePerl-5.10.1\bin
 set SDK_DIR=%ProgramFiles%\Microsoft Platform SDK
-set DBG_DIR=%ProgramFiles%\Debugging Tools for Windows (x86)
-set DOTNET_DIR=%ROOT_DRIVE%\Windows\Microsoft.NET\Framework\v3.5
+set DBG_DIR=%ProgramFiles%\Debugging Tools for Windows (x86);%ProgramFiles%\Debugging Tools for Windows (x64)
+set DOTNET_DIR=%SystemRoot%\Microsoft.NET\Framework\v3.5;%SystemRoot%\Microsoft.NET\Framework\v2.0.50727
+set JDK_DIR="E:\Program Files\Java\jdk1.6.0_16"
 
 REM For some reason this is not defined whilst in some environments
 if "A%VS90COMNTOOLS%"=="A" set VS90COMNTOOLS=%VS_DIR%\Common7\Tools\
 
 REM Specify symbol image path for debugging
-if "A%_NT_SYMBOL_PATH%"=="A" set _NT_SYMBOL_PATH=SRV*%ROOT_DRIVE%\Symbols*http://msdl.microsoft.com/download/symbols
+if "A%_NT_SYMBOL_PATH%"=="A" set _NT_SYMBOL_PATH=SRV*%SystemDrive%\Symbols*http://msdl.microsoft.com/download/symbols
 
 REM For externals: it just tells them we would like to have manifest 
 REM files embeded in the rem DLLs (In the future, when we do not have 
@@ -61,18 +65,20 @@ REM Specify which versions of the externals we're using. To add a
 REM new external, just add its version here, and add that to the 
 REM EXTERNALS_NEEDED variable defined below.
 set EXT_GSOAP_VERSION=gsoap-2.7.10-p3
-set EXT_OPENSSL_VERSION=openssl-0.9.8h
+set EXT_OPENSSL_VERSION=openssl-0.9.8h-p1
 set EXT_POSTGRESQL_VERSION=postgresql-8.0.2
 set EXT_KERBEROS_VERSION=krb5-1.4.3-p0
 set EXT_PCRE_VERSION=pcre-7.6
 set EXT_DRMAA_VERSION=drmaa-1.6
+set EXT_CURL_VERSION=curl-7.19.6-p1
+set EXT_HADOOP_VERSION=hadoop-0.20.0-p2
 
 REM Now tell the build system what externals we need built.
-set EXTERNALS_NEEDED=%EXT_GSOAP_VERSION% %EXT_OPENSSL_VERSION% %EXT_KERBEROS_VERSION% %EXT_PCRE_VERSION% %EXT_POSTGRESQL_VERSION% %EXT_DRMAA_VERSION%
+set EXTERNALS_NEEDED=%EXT_GSOAP_VERSION% %EXT_OPENSSL_VERSION% %EXT_KERBEROS_VERSION% %EXT_PCRE_VERSION% %EXT_POSTGRESQL_VERSION% %EXT_DRMAA_VERSION% %EXT_CURL_VERSION% %EXT_HADOOP_VERSION%
 
 REM Put msconfig in the PATH, since it's got lots of stuff we need
 REM like awk, gunzip, tar, bison, yacc...
-set PATH=%cd%;%SystemRoot%;%SystemRoot%\system32;%PERL_DIR%;%VS_DIR%;%VC_DIR%;%VC_BIN%;%SDK_DIR%;%DOTNET_DIR%;%DBG_DIR%
+set PATH=%cd%;%SystemRoot%;%SystemRoot%\system32;%PERL_DIR%;%VS_DIR%;%VC_DIR%;%VC_BIN%;%SDK_DIR%;%DOTNET_DIR%;%DBG_DIR%;%JDK_LIB%
 
 REM ======================================================================
 REM ====== THIS SHOULD BE REMOVED WHEN Win2K IS NO LONGER SUPPORTED ======
@@ -87,7 +93,7 @@ REM ====== THIS SHOULD BE REMOVED WHEN Win2K IS NO LONGER SUPPORTED ======
 REM ======================================================================
 
 REM Configure Visual C++
-call vcvarsall.bat x86
+call "%VC_DIR%\vcvarsall.bat" x86
 if not defined INCLUDE ( echo. && echo *** Failed to run vcvarsall.bat! Is Microsoft Visual Studio installed? && exit /B 1 )
 
 REM ======================================================================
@@ -99,14 +105,14 @@ REM ====== THIS SHOULD BE REMOVED WHEN Win2K IS NO LONGER SUPPORTED ======
 REM ======================================================================
 
 REM Configure the Platform SDK environment
-call setenv /2000 /RETAIL
+call "%SDK_DIR%\SetEnv.Cmd" /2000 /RETAIL
 if not defined MSSDK ( echo. && echo *** Failed to run setenv.cmd! Are the Microsoft Platform SDK installed? && exit /B 1 )
 
 REM ======================================================================
 REM ====== THIS SHOULD BE REMOVED WHEN Win2K IS NO LONGER SUPPORTED ======
-set INCLUDE=%ROOT_DRIVE%\Program Files\Microsoft Platform SDK\Include;%ROOT_DRIVE%\Program Files\Microsoft Visual Studio 9.0\VC\ATLMFC\INCLUDE;%ROOT_DRIVE%\Program Files\Microsoft Visual Studio 9.0\VC\INCLUDE;%ROOT_DRIVE%\Program Files\Microsoft Visual Studio 9.0\VC\ATLMFC\INCLUDE;%ROOT_DRIVE%\Program Files\Microsoft Visual Studio 9.0\VC\INCLUDE;
-set LIB=%ROOT_DRIVE%\Program Files\Microsoft Platform SDK\Lib;%ROOT_DRIVE%\Program Files\Microsoft Visual Studio 9.0\VC\ATLMFC\LIB;%ROOT_DRIVE%\Program Files\Microsoft Visual Studio 9.0\VC\LIB;
-set LIBPATH=%ROOT_DRIVE%\WINDOWS\Microsoft.NET\Framework\v3.5;c:\WINDOWS\Microsoft.NET\Framework\v2.0.50727;%ROOT_DRIVE%\Program Files\Microsoft Visual Studio 9.0\VC\ATLMFC\LIB;%ROOT_DRIVE%\Program Files\Microsoft Visual Studio 9.0\VC\LIB;
+set INCLUDE=%SDK_DIR%\Include;%VC_DIR%\ATLMFC\INCLUDE;%VC_DIR%\INCLUDE;
+set LIB=%SDK_DIR%\Lib;%VC_DIR%\ATLMFC\LIB;%VC_DIR%\LIB;
+set LIBPATH=%DOTNET_DIR%;%VC_DIR%\ATLMFC\LIB;%VC_DIR%\LIB;
 REM ====== THIS SHOULD BE REMOVED WHEN Win2K IS NO LONGER SUPPORTED ======
 REM ======================================================================
 
@@ -129,9 +135,14 @@ if exist BUILD-ID. (
 echo Using build-id: %BID% & echo.
 popd
 
+REM Determine the number of processor we can run concurrent jobs on.  We base
+REM this number on the count of cores or CPUs kept by the OS:
+if "A%NUMBER_OF_PROCESSORS%"=="A" set PROCESSORS=1
+set PROCESSORS=%NUMBER_OF_PROCESSORS%
+
 set CONDOR_NOWARN=/D_CRT_SECURE_NO_DEPRECATE /D_CRT_SECURE_NO_WARNINGS /D_CRT_NONSTDC_NO_WARNINGS /D_CRT_NON_CONFORMING_SWPRINTFS
 REM /D_CONST_RETURN
-set CONDOR_CPPARGS=/GR /MP4
+set CONDOR_CPPARGS=/GR /MP%PROCESSORS%
 set CONDOR_DEFINE=/DHAVE_CONFIG_H /DBUILDID=%BID% %CONDOR_CPPARGS% %CONDOR_NOWARN%
 set CONDOR_INCLUDE=/I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /I "..\src\condor_daemon_client" /I "..\src\condor_daemon_core.V6" /I "..\src\condor_schedd.V6" /I "..\src\condor_classad.V6" /I "..\src\ccb"
 set CONDOR_LIB=crypt32.lib mpr.lib psapi.lib mswsock.lib netapi32.lib imagehlp.lib ws2_32.lib powrprof.lib iphlpapi.lib userenv.lib
@@ -167,6 +178,11 @@ REM ** PCRE
 set CONDOR_PCRE_INCLUDE=/I %EXT_INSTALL%\%EXT_PCRE_VERSION%\include
 set CONDOR_PCRE_LIB=libpcre.lib
 set CONDOR_PCRE_LIBPATH=/LIBPATH:%EXT_INSTALL%\%EXT_PCRE_VERSION%\lib
+
+REM ** JDK
+set CONDOR_JDK_INCLUDE=/I %JDK_DIR%\include /I %JDK_DIR%\include\win32
+set CONDOR_JDK_LIB=jvm.lib
+set CONDOR_JDK_LIBPATH=/LIBPATH:%JDK_DIR%\lib
 
 REM Dump the Windows build environment at this point
 REM echo ----------------------- WIN ENV DUMP ----------------------

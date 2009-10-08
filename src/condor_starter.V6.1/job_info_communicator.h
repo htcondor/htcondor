@@ -143,6 +143,9 @@ public:
 		/// Return a pointer to the ClassAd for our job.
 	virtual ClassAd* jobClassAd( void );
 
+		/// Return a pointer to the ClassAd for the machine.
+	virtual ClassAd* machClassAd( void );
+
 		/// Return the job's universe integer.
 	int jobUniverse( void );
 
@@ -347,7 +350,6 @@ public:
 		/* Update Job ClassAd with checkpoint info and log it */
 	virtual void updateCkptInfo(void) {};
 
-
 protected:
 
 		// // // // // // // // // // // //
@@ -461,6 +463,9 @@ protected:
 		/// The ClassAd for our job.  We control the memory for this.
 	ClassAd* job_ad;
 
+		// The Machine ClassAd running the job.
+	ClassAd* mach_ad;
+
 		/// The universe of the job.
 	int job_universe;
 
@@ -486,6 +491,8 @@ protected:
 #if HAVE_JOB_HOOKS
 	StarterHookMgr* m_hook_mgr;
 #endif /* HAVE_JOB_HOOKS */
+
+	bool m_enforce_limits;
 
 private:
 		/// Start a timer for the periodic job updates

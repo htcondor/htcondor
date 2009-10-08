@@ -40,6 +40,7 @@ JICLocalConfig::JICLocalConfig( const char* keyword, int cluster,
 	job_proc = proc;
 	job_subproc = subproc;
 	job_ad = new ClassAd();
+	mach_ad = new ClassAd();
 }
 
 
@@ -53,6 +54,7 @@ JICLocalConfig::JICLocalConfig( int cluster, int proc, int subproc )
 	job_proc = proc;
 	job_subproc = subproc;
 	job_ad = new ClassAd();
+	mach_ad = new ClassAd();
 }
 
 
@@ -98,8 +100,8 @@ JICLocalConfig::getLocalJobAd( void )
 			// On Windows we need to set RunAsOwner for it to 
 			// respect the owner attribute (but only when the 
 			// starter allows it).
-		bool run_as_owner = param_boolean_expr( 
-			"STARTER_ALLOW_RUNAS_OWNER", false, NULL, job_ad );
+		bool run_as_owner = param_boolean( 
+			"STARTER_ALLOW_RUNAS_OWNER", false, true, NULL, job_ad );
 		if ( run_as_owner ) {
 				// Add the RunAsOwner attribute:
 			buffer.sprintf( "%s = True", ATTR_JOB_RUNAS_OWNER );

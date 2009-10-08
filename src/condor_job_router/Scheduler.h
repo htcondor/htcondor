@@ -21,43 +21,24 @@
 #define _SCHEDULER_H_
 
 #include "condor_common.h"
-#include "condor_daemon_core.h"
 
-#define WANT_CLASSAD_NAMESPACE
-#undef open
-#include "classad/classad_distribution.h"
+#include "JobLogMirror.h"
+#include "NewClassAdJobLogConsumer.h"
 
-#include "JobLogReader.h"
-
-class Scheduler: public Service {
+class Scheduler: virtual public JobLogMirror {
 public:
-	Scheduler();
-	virtual ~Scheduler();
-	void init();
-	void config();
-	void stop();
+	Scheduler(NewClassAdJobLogConsumer *_consumer):
+		JobLogMirror(_consumer),
+		m_consumer(_consumer)
+	{ }
 
-	classad::ClassAdCollection *GetClassAds() {return &ad_collection;}
-	char const *Name() const {return m_name.c_str();}
+	classad::ClassAdCollection *GetClassAds()
+	{
+		return m_consumer->GetClassAds();
+	}
 
 private:
-	std::string m_name;
-
-	ClassAd m_public_ad;
-	int m_public_ad_update_interval;
-	int m_public_ad_update_timer;
-
-	classad::ClassAdCollection ad_collection;
-	JobLogReader job_log_reader;
-
-	int log_reader_polling_timer;
-	int log_reader_polling_period;
-
-	void InitPublicAd();
-	void TimerHandler_UpdateCollector();
-	void InvalidatePublicAd();
-
-	void TimerHandler_JobLogPolling();
+	NewClassAdJobLogConsumer *m_consumer;
 };
 
 #endif

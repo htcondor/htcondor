@@ -97,7 +97,7 @@ check_result_wrapper(ResultWrapper& rw)
 void free_args( char ** );
 
 struct Request {
-	Request() { input_line = NULL; }
+	Request() { input_line = NULL; handler = NULL; }
 	~Request() { if ( input_line ) free_args( input_line ); }
 
 	char **input_line;
@@ -185,6 +185,7 @@ int gahp_printf(const char *format, ...)
   
 	va_start(ap, format);
 	vsprintf(buf, format, ap);
+	va_end(ap);
   
 	pthread_mutex_lock( &outputLock );
 

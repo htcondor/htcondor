@@ -172,21 +172,21 @@ FLOCK_COLLECTOR_HOSTS = $(FLOCK_TO)
 ##  machine(s) where whoever is the condor administrator(s) works
 ##  (assuming you trust all the users who log into that/those
 ##  machine(s), since this is machine-wide access you're granting).
-HOSTALLOW_ADMINISTRATOR = $(CONDOR_HOST)
+ALLOW_ADMINISTRATOR = $(CONDOR_HOST)
 
 ##  If there are no machines that should have administrative access 
 ##  to your pool (for example, there's no machine where only trusted
 ##  users have accounts), you can uncomment this setting.
 ##  Unfortunately, this will mean that administering your pool will 
 ##  be more difficult.
-#HOSTDENY_ADMINISTRATOR = *
+#DENY_ADMINISTRATOR = *
 
 ##  What machines should have "owner" access to your machines, meaning
 ##  they can issue commands that a machine owner should be able to
 ##  issue to their own machine (like condor_vacate).  This defaults to
 ##  machines with administrator access, and the local machine.  This
 ##  is probably what you want.
-HOSTALLOW_OWNER = $(FULL_HOSTNAME), $(HOSTALLOW_ADMINISTRATOR)
+ALLOW_OWNER = $(FULL_HOSTNAME), $(ALLOW_ADMINISTRATOR)
 
 ##  Read access.  Machines listed as allow (and/or not listed as deny)
 ##  can view the status of your pool, but cannot join your pool 
@@ -198,46 +198,58 @@ HOSTALLOW_OWNER = $(FULL_HOSTNAME), $(HOSTALLOW_ADMINISTRATOR)
 ##  will be able to view the status of your pool and more easily help
 ##  you install, configure or debug your Condor installation.
 ##  It is important to have this defined.
-HOSTALLOW_READ = * 
-#HOSTALLOW_READ = *.your.domain, *.cs.wisc.edu
-#HOSTDENY_READ = *.bad.subnet, bad-machine.your.domain, 144.77.88.*
+ALLOW_READ = * 
+#ALLOW_READ = *.your.domain, *.cs.wisc.edu
+#DENY_READ = *.bad.subnet, bad-machine.your.domain, 144.77.88.*
 
 ##  Write access.  Machines listed here can join your pool, submit
 ##  jobs, etc.  Note: Any machine which has WRITE access must
 ##  also be granted READ access.  Granting WRITE access below does
 ##  not also automatically grant READ access; you must change
-##  HOSTALLOW_READ above as well.
+##  ALLOW_READ above as well.
 ##
 ##  You must set this to something else before Condor will run.
 ##  This most simple option is:
-##    HOSTALLOW_WRITE = *
+##    ALLOW_WRITE = *
 ##  but note that this will allow anyone to submit jobs or add
-##  machines to your pool and is serious security risk.
-HOSTALLOW_WRITE = YOU_MUST_CHANGE_THIS_INVALID_CONDOR_CONFIGURATION_VALUE
-#HOSTALLOW_WRITE = *.your.domain, your-friend's-machine.other.domain
-#HOSTDENY_WRITE = bad-machine.your.domain
+##  machines to your pool and is a serious security risk.
+
+ALLOW_WRITE = YOU_MUST_CHANGE_THIS_INVALID_CONDOR_CONFIGURATION_VALUE
+#ALLOW_WRITE = *.your.domain, your-friend's-machine.other.domain
+#DENY_WRITE = bad-machine.your.domain
+
+##  Are you upgrading to a new version of Condor and confused about
+##  why the above ALLOW_WRITE setting is causing Condor to refuse to
+##  start up?  If you are upgrading from a configuration that uses
+##  HOSTALLOW/HOSTDENY instead of ALLOW/DENY we recommend that you
+##  convert all uses of the former to the latter.  The syntax of the
+##  authorization settings is identical.  They both support
+##  unauthenticated IP-based authorization as well as authenticated
+##  user-based authorization.  To avoid confusion, the use of
+##  HOSTALLOW/HOSTDENY is discouraged.  Support for it may be removed
+##  in the future.
 
 ##  Negotiator access.  Machines listed here are trusted central
 ##  managers.  You should normally not have to change this.
-HOSTALLOW_NEGOTIATOR = $(CONDOR_HOST)
+ALLOW_NEGOTIATOR = $(CONDOR_HOST)
 ##  Now, with flocking we need to let the SCHEDD trust the other 
 ##  negotiators we are flocking with as well.  You should normally 
 ##  not have to change this either.
-HOSTALLOW_NEGOTIATOR_SCHEDD = $(CONDOR_HOST), $(FLOCK_NEGOTIATOR_HOSTS)
+ALLOW_NEGOTIATOR_SCHEDD = $(CONDOR_HOST), $(FLOCK_NEGOTIATOR_HOSTS)
 
 ##  Config access.  Machines listed here can use the condor_config_val
 ##  tool to modify all daemon configurations.  This level of host-wide
 ##  access should only be granted with extreme caution.  By default,
 ##  config access is denied from all hosts.
-#HOSTALLOW_CONFIG = trusted-host.your.domain
+#ALLOW_CONFIG = trusted-host.your.domain
 
 ##  Flocking Configs.  These are the real things that Condor looks at,
 ##  but we set them from the FLOCK_FROM/TO macros above.  It is safe
 ##  to leave these unchanged.
-HOSTALLOW_WRITE_COLLECTOR = $(HOSTALLOW_WRITE), $(FLOCK_FROM)
-HOSTALLOW_WRITE_STARTD    = $(HOSTALLOW_WRITE), $(FLOCK_FROM)
-HOSTALLOW_READ_COLLECTOR  = $(HOSTALLOW_READ), $(FLOCK_FROM)
-HOSTALLOW_READ_STARTD     = $(HOSTALLOW_READ), $(FLOCK_FROM)
+ALLOW_WRITE_COLLECTOR = $(ALLOW_WRITE), $(FLOCK_FROM)
+ALLOW_WRITE_STARTD    = $(ALLOW_WRITE), $(FLOCK_FROM)
+ALLOW_READ_COLLECTOR  = $(ALLOW_READ), $(FLOCK_FROM)
+ALLOW_READ_STARTD     = $(ALLOW_READ), $(FLOCK_FROM)
 
 
 ##--------------------------------------------------------------------
@@ -271,7 +283,7 @@ HOSTALLOW_READ_STARTD     = $(HOSTALLOW_READ), $(FLOCK_FROM)
 #PERSISTENT_CONFIG_DIR = /full/path/to/root-only/local/directory
 
 ##  Attributes that can be set by hosts with "CONFIG" permission (as
-##  defined with HOSTALLOW_CONFIG and HOSTDENY_CONFIG above).
+##  defined with ALLOW_CONFIG and DENY_CONFIG above).
 ##  The commented-out value here was the default behavior of Condor
 ##  prior to version 6.3.3.  If you don't need this behavior, you
 ##  should leave this commented out.
@@ -413,8 +425,8 @@ GLIDEIN_SERVER_URLS = \
 ## List the sites you want to GlideIn to on the GLIDEIN_SITES. For example, 
 ## if you'd like to GlideIn to some Alliance GiB resources, 
 ## uncomment the line below.
-## Make sure that $(GLIDEIN_SITES) is included in HOSTALLOW_READ and
-## HOSTALLW_WRITE, or else your GlideIns won't be able to join your pool.
+## Make sure that $(GLIDEIN_SITES) is included in ALLOW_READ and
+## ALLOW_WRITE, or else your GlideIns won't be able to join your pool.
 ## This is _NOT_ done for you by default, because it is an even better
 ## idea to use a strong security method (such as GSI) rather than
 ## host-based security for authorizing glideins.
@@ -478,6 +490,11 @@ GLIDEIN_SERVER_URLS = \
 ## By default, Condor will delegate rather than copy.
 #DELEGATE_JOB_GSI_CREDENTIALS = True
 
+## This setting controls whether Condor delegates a full or limited
+## X509 credential for jobs. Currently, this only affects grid-type
+## gt2 grid universe jobs. The default is False.
+#DELEGATE_FULL_JOB_GSI_CREDENTIALS = False
+
 ## This setting controls the default behaviour for the spooling of files
 ## into, or out of, the Condor system by such tools as condor_submit
 ## and condor_transfer_data. Here is the list of valid settings for this
@@ -524,7 +541,6 @@ MAX_STARTD_LOG		= 1000000
 STARTD_DEBUG		= 
 
 MAX_STARTER_LOG		= 1000000
-STARTER_DEBUG		= D_NODATE
 
 MAX_MASTER_LOG		= 1000000
 MASTER_DEBUG		= 
@@ -533,6 +549,12 @@ MASTER_DEBUG		=
 
 MAX_JOB_ROUTER_LOG      = 1000000
 JOB_ROUTER_DEBUG        =
+
+MAX_ROOSTER_LOG         = 1000000
+ROOSTER_DEBUG           =
+
+MAX_HDFS_LOG            = 1000000
+HDFS_DEBUG              =
 
 # High Availability Logs
 MAX_HAD_LOG		= 1000000
@@ -790,19 +812,20 @@ UWCS_NEGOTIATOR_PRE_JOB_RANK = RemoteOwner =?= UNDEFINED
 ##  resources that are equally preferred by the job.
 ##  The following example expression steers jobs toward
 ##  faster machines and tends to fill a cluster of multi-processors
-##  breadth-first instead of depth-first.  In this example,
+##  breadth-first instead of depth-first.  It also prefers online
+##  machines over offline (hibernating) ones.  In this example,
 ##  the expression is chosen to have no effect when preemption
 ##  would take place, allowing control to pass on to
 ##  PREEMPTION_RANK.
-#UWCS_NEGOTIATOR_POST_JOB_RANK = \
-# (RemoteOwner =?= UNDEFINED) * (KFlops - SlotID)
+UWCS_NEGOTIATOR_POST_JOB_RANK = \
+ (RemoteOwner =?= UNDEFINED) * (KFlops - SlotID - 1.0e10*(Offline=?=True))
 
 ##  The negotiator will not preempt a job running on a given machine
 ##  unless the PREEMPTION_REQUIREMENTS expression evaluates to true
 ##  and the owner of the idle job has a better priority than the owner
 ##  of the running job.  This expression defaults to true.
 UWCS_PREEMPTION_REQUIREMENTS = ( $(StateTimer) > (1 * $(HOUR)) && \
-	RemoteUserPrio > SubmittorPrio * 1.2 ) || (MY.NiceUser == True)
+	RemoteUserPrio > SubmitterUserPrio * 1.2 ) || (MY.NiceUser == True)
 
 ##  The PREEMPTION_RANK expression is used in a case where preemption
 ##  is the only option and all other negotiation ranks are equal.  For
@@ -885,10 +908,12 @@ SHADOW_LOG	= $(LOG)/ShadowLog
 STARTD_LOG	= $(LOG)/StartLog
 STARTER_LOG	= $(LOG)/StarterLog
 JOB_ROUTER_LOG  = $(LOG)/JobRouterLog
+ROOSTER_LOG     = $(LOG)/RoosterLog
 # High Availability Logs
 HAD_LOG		= $(LOG)/HADLog
 REPLICATION_LOG	= $(LOG)/ReplicationLog
 TRANSFERER_LOG	= $(LOG)/TransfererLog
+HDFS_LOG	= $(LOG)/HDFSLog
 
 ##  Lock files
 SHADOW_LOCK	= $(LOCK)/ShadowLock
@@ -1009,7 +1034,7 @@ DAEMON_LIST			= MASTER, STARTD, SCHEDD
 #DC_DAEMON_LIST = \
 #MASTER, STARTD, SCHEDD, KBDD, COLLECTOR, NEGOTIATOR, EVENTD, \
 #VIEW_SERVER, CONDOR_VIEW, VIEW_COLLECTOR, HAWKEYE, CREDD, HAD, \
-#DBMSD, QUILL, JOB_ROUTER, LEASEMANAGER
+#DBMSD, QUILL, JOB_ROUTER, ROOSTER, LEASEMANAGER, HDFS
 
 
 ##  Where are the binaries for these daemons?
@@ -1021,6 +1046,8 @@ NEGOTIATOR			= $(SBIN)/condor_negotiator
 COLLECTOR			= $(SBIN)/condor_collector
 STARTER_LOCAL			= $(SBIN)/condor_starter
 JOB_ROUTER                      = $(LIBEXEC)/condor_job_router
+ROOSTER                         = $(LIBEXEC)/condor_rooster
+HDFS				= $(LIBEXEC)/condor_hdfs
 
 ##  When the master starts up, it can place it's address (IP and port)
 ##  into a file.  This way, tools running on the local machine don't
@@ -1377,14 +1404,14 @@ SHADOW_STANDARD		= $(SBIN)/condor_shadow.std
 ##  into a file.  This way, tools running on the local machine don't
 ##  need to query the central manager to find the schedd.  This
 ##  feature can be turned off by commenting out this setting.
-SCHEDD_ADDRESS_FILE	= $(LOG)/.schedd_address
+SCHEDD_ADDRESS_FILE	= $(SPOOL)/.schedd_address
 
 ##  Additionally, a daemon may store its ClassAd on the local filesystem
 ##  as well as sending it to the collector. This way, tools that need
 ##  information about a daemon do not have to contact the central manager
 ##  to get information about a daemon on the same machine.
 ##  This feature is necessary for Quill to work.
-SCHEDD_DAEMON_AD_FILE = $(LOG)/.schedd_classad
+SCHEDD_DAEMON_AD_FILE = $(SPOOL)/.schedd_classad
 
 ##  How often should the schedd send an update to the central manager?
 #SCHEDD_INTERVAL	= 300 
@@ -1620,7 +1647,8 @@ WINDOWS_SOFTKILL = $(SBIN)/condor_softkill
 VALID_SPOOL_FILES	= job_queue.log, job_queue.log.tmp, history, \
                           Accountant.log, Accountantnew.log, \
                           local_univ_execute, .quillwritepassword, \
-						  .pgpass
+						  .pgpass, \
+			  .schedd_address, .schedd_classad
 
 ##  What files should condor_preen remove from the log directory?
 INVALID_LOG_FILES	= core
@@ -1750,6 +1778,12 @@ CRED_MIN_TIME_LEFT		= 120
 ENABLE_GRID_MONITOR = TRUE
 
 ##
+## When an error occurs with the GridMonitor, how long should the
+## gridmanager wait before trying to submit a new GridMonitor job?
+## The default is 1 hour (3600 seconds).
+#GRID_MONITOR_DISABLE_TIME = 3600
+
+##
 ## The location of the wrapper for invoking
 ## Condor GAHP server
 ##
@@ -1822,6 +1856,9 @@ UNICORE_GAHP = $(SBIN)/unicore_gahp
 ## The location of the wrapper for invoking the NorduGrid GAHP server
 ##
 NORDUGRID_GAHP = $(SBIN)/nordugrid_gahp
+
+## The location of the CREAM GAHP server
+CREAM_GAHP = $(SBIN)/cream_gahp
 
 ## Condor-G and CredD can use MyProxy to refresh GSI proxies which are
 ## about to expire.
@@ -2116,10 +2153,6 @@ MAX_VM_GAHP_LOG	= 1000000
 ## The two options are vmware and xen.  (Required)
 #VM_TYPE = vmware
 
-## Which version of the above virtual machine program is installed? (Required)
-## This is advertised in the machine ad.
-#VM_VERSION = server1.0
-
 ## How much memory can be used for the VM universe? (Required)
 ## This value is the maximum amount of memory that can be used by the 
 ## virtual machine program.
@@ -2280,6 +2313,19 @@ XEN_SCRIPT = $(SBIN)/condor_vm_xen.sh
 ## description that Condor writes.
 #XEN_LOCAL_SETTINGS_FILE = /path/to/file
 
+## This is the path to the XML helper command; the libvirt_simple_script.awk
+## script just reproduces what Condor already does for the kvm/xen VM
+## universe
+LIBVIRT_XML_SCRIPT = $(LIBEXEC)/libvirt_simple_script.awk
+
+## This is the optional debugging output file for the xml helper
+## script.  Scripts that need to output debugging messages should
+## write them to the file specified by this argument, which will be
+## passed as the second command line argument when the script is
+## executed
+
+#LIBVRT_XML_SCRIPT_ARGS = /dev/stderr
+
 
 ##
 ##--------------------------------------------------------------------
@@ -2312,3 +2358,129 @@ LeaseManager.CLASSAD_LOG	= $(SPOOL)/LeaseManagerState
 #LeaseManager.QUERY_ADTYPE	= Any
 #LeaseManager.QUERY_CONSTRAINTS	= target.MyType == "SomeType"
 #LeaseManager.QUERY_CONSTRAINTS	= target.TargetType == "SomeType"
+
+##
+##--------------------------------------------------------------------
+##  condor_ssh_to_job
+##--------------------------------------------------------------------
+# NOTE: condor_ssh_to_job is not supported under Windows.
+
+# Tell the starter (execute side) whether to allow the job owner or
+# queue super user on the schedd from which the job was submitted to
+# use condor_ssh_to_job to access the job interactively (e.g. for
+# debugging).  TARGET is the job; MY is the machine.
+#ENABLE_SSH_TO_JOB = true
+
+# Tell the schedd (submit side) whether to allow the job owner or
+# queue super user to use condor_ssh_to_job to access the job
+# interactively (e.g. for debugging).  MY is the job; TARGET is not
+# defined.
+#SCHEDD_ENABLE_SSH_TO_JOB = true
+
+# Command condor_ssh_to_job should use to invoke the ssh client.
+# %h --> remote host
+# %i --> ssh key file
+# %k --> known hosts file
+# %u --> remote user
+# %x --> proxy command
+# %% --> %
+#SSH_TO_JOB_SSH_CMD = ssh -oUser=%u -oIdentityFile=%i -oStrictHostKeyChecking=yes -oUserKnownHostsFile=%k -oGlobalKnownHostsFile=%k -oProxyCommand=%x %h
+
+# Additional ssh clients may be configured.  They all have the same
+# default as ssh, except for scp, which omits the %h:
+#SSH_TO_JOB_SCP_CMD = scp -oUser=%u -oIdentityFile=%i -oStrictHostKeyChecking=yes -oUserKnownHostsFile=%k -oGlobalKnownHostsFile=%k -oProxyCommand=%x
+
+# Path to sshd
+#SSH_TO_JOB_SSHD = /usr/sbin/sshd
+
+# Arguments the starter should use to invoke sshd in inetd mode.
+# %f --> sshd config file
+# %% --> %
+#SSH_TO_JOB_SSHD_ARGS = "-i -e -f %f"
+
+# sshd configuration template used by condor_ssh_to_job_sshd_setup.
+#SSH_TO_JOB_SSHD_CONFIG_TEMPLATE = $(LIB)/condor_ssh_to_job_sshd_config_template
+
+# Path to ssh-keygen
+#SSH_TO_JOB_SSH_KEYGEN = /usr/bin/ssh-keygen
+
+# Arguments to ssh-keygen
+# %f --> key file to generate
+# %% --> %
+#SSH_TO_JOB_SSH_KEYGEN_ARGS = "-N '' -C '' -q -f %f -t rsa"
+
+######################################################################
+##
+##  Condor HDFS
+##
+##  This is the default local configuration file for configuring Condor
+##  daemon responsible for running services related to hadoop 
+##  distributed storage system.You should copy this file to the
+##  appropriate location and customize it for your needs.  
+##
+##  Unless otherwise specified, settings that are commented out show
+##  the defaults that are used if you don't define a value.  Settings
+##  that are defined here MUST BE DEFINED since they have no default
+##  value.
+##
+######################################################################
+
+######################################################################
+## FOLLOWING MUST BE CHANGED
+######################################################################
+
+## The location for hadoop installation directory. The default location
+## is under 'libexec' directory. The directory pointed by HDFS_HOME 
+## should contain a lib folder that contains all the required Jars necessary
+## to run HDFS name and data nodes. 
+#HDFS_HOME = $(RELEASE_DIR)/libexec/hdfs
+
+## The host and port for hadoop's name node. If this machine is the
+## name node (see HDFS_SERVICES) then the specified port will be used
+## to run name node. 
+HDFS_NAMENODE = example.com:9000
+HDFS_NAMENODE_WEB = example.com:8000
+
+## You need to pick one machine as name node by setting this parameter
+## to HDFS_NAMENODE. The remaining machines in a storage cluster will
+## act as data nodes (HDFS_DATANODE).
+HDFS_SERVICES = HDFS_DATANODE
+
+## The two set of directories that are required by HDFS are for name 
+## node (HDFS_NAMENODE_DIR) and data node (HDFS_DATANODE_DIR). The 
+## directory for name node is only required for a machine running 
+## name node service and  is used to store critical meta data for 
+## files. The data node needs its directory to store file blocks and 
+## their replicas.
+HDFS_NAMENODE_DIR = /tmp/hadoop_name
+HDFS_DATANODE_DIR = /scratch/tmp/hadoop_data
+
+## Unlike name node address settings (HDFS_NAMENODE), that needs to be 
+## well known across the storage cluster, data node can run on any 
+## arbitrary port of given host.
+#HDFS_DATANODE_ADDRESS = 0.0.0.0:0
+
+####################################################################
+## OPTIONAL
+#####################################################################
+
+## Sets the log4j debug level. All the emitted debug output from HDFS
+## will go in 'hdfs.log' under $(LOG) directory.
+#HDFS_LOG4J=DEBUG
+
+## The access to HDFS services both name node and data node can be 
+## restricted by specifying IP/host based filters. By default settings
+## from ALLOW_READ/ALLOW_WRITE and DENY_READ/DENY_WRITE
+## are used to specify allow and deny list. The below two parameters can
+## be used to override these settings. Read the Condor manual for 
+## specification of these filters.
+## WARN: HDFS doesn't make any distinction between read or write based connection.
+#HDFS_ALLOW=*
+#HDFS_DENY=*
+
+#Fully qualified name for Name node and Datanode class.
+#HDFS_NAMENODE_CLASS=org.apache.hadoop.hdfs.server.namenode.NameNode
+#HDFS_DATANODE_CLASS=org.apache.hadoop.hdfs.server.datanode.DataNode
+
+## In case an old name for hdfs configuration files is required.
+#HDFS_SITE_FILE = hadoop-site.xml

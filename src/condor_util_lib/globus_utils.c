@@ -34,6 +34,11 @@
 #     include "globus_gsi_proxy.h"
 #endif
 
+#if defined(HAVE_EXT_VOMS)
+#include "glite/security/voms/voms_apic.h"
+#endif
+
+
 #define DEFAULT_MIN_TIME_LEFT 8*60*60;
 
 
@@ -162,6 +167,107 @@ get_x509_proxy_filename( void )
 	return proxy_file;
 }
 
+#if defined(HAVE_EXT_GLOBUS)
+char* extract_VOMS_attrs( globus_gsi_cred_handle_t handle, int *error) {
+
+#if !defined(HAVE_EXT_VOMS)
+	*error = 1;
+	return strdup("VOMS support not compiled into this build");
+#else
+
+   int ret;
+   struct vomsdata *voms_data = NULL;
+   struct voms **voms_cert  = NULL;
+   char **fqan = NULL;
+   int voms_err;
+   char *retfqan = 0;
+   int num_attrs = 0;
+   int fqan_len = 0;
+
+    STACK_OF(X509) *chain = NULL;
+	X509 *cert = NULL;
+
+	ret = globus_gsi_cred_get_cert_chain(handle, &chain);
+	if(ret != GLOBUS_SUCCESS) {
+		retfqan = strdup("Failed to get cert chain from credential");
+		*error = 1;
+		goto end;
+	}
+
+	ret = globus_gsi_cred_get_cert(handle, &cert);
+	if(ret != GLOBUS_SUCCESS) {
+		retfqan = strdup("Failed to get cert from credential");
+		*error = 1;
+		goto end;
+	}
+
+   voms_data = VOMS_Init(NULL, NULL);
+   if (voms_data == NULL) {
+		retfqan = strdup("Failed to read VOMS attributes, VOMS_Init() failed");
+	   *error = 1;
+		goto end;
+   }
+
+   ret = VOMS_SetVerificationType( VERIFY_NONE, voms_data, &voms_err );
+   if (ret == 0) {
+      retfqan = VOMS_ErrorMessage(voms_data, voms_err, NULL, 0);
+      *error = 1;
+      goto end;
+   }
+
+   ret = VOMS_Retrieve(cert, chain, RECURSE_CHAIN,
+                          voms_data, &voms_err);
+   if (ret == 0) {
+      if (voms_err == VERR_NOEXT) {
+         /* No VOMS extensions present, return silently */
+         *error = 0;
+         goto end;
+      } else {
+         retfqan = VOMS_ErrorMessage(voms_data, voms_err, NULL, 0);
+     	*error = 1;
+        goto end;
+      }
+   }
+
+
+   // skim through once to find the length
+   for (voms_cert = voms_data->data; voms_cert && *voms_cert; voms_cert++) {
+      for (fqan = (*voms_cert)->fqan; fqan && *fqan; fqan++) {
+          num_attrs++;
+          fqan_len += strlen(*fqan);
+      }
+   }
+
+   // enough room for the attrs, ':' separator and NULL terminator.
+   retfqan = (char*) malloc (fqan_len + num_attrs);
+   *retfqan = 0;
+
+   // now fill it all in
+   for (voms_cert = voms_data->data; voms_cert && *voms_cert; voms_cert++) {
+      for (fqan = (*voms_cert)->fqan; fqan && *fqan; fqan++) {
+          if (*retfqan) {
+              strcat (retfqan, ":");
+          }
+          strcat(retfqan, *fqan);
+      }
+   }
+
+   *error = 0;
+
+end:
+   if (voms_data)
+      VOMS_Destroy(voms_data);
+	if (cert)
+		X509_free(cert);
+	if(chain)
+		sk_X509_free(chain);
+
+   return retfqan;
+#endif /* HAVE_EXT_VOMS */
+
+}
+#endif /* HAVE_EXT_GLOBUS */
+
 /* Return the subject name of a given proxy cert. 
   On error, return NULL.
   On success, return a pointer to a null-terminated string.
@@ -169,7 +275,7 @@ get_x509_proxy_filename( void )
   WITH free().
  */
 char *
-x509_proxy_subject_name( const char *proxy_file )
+x509_proxy_subject_name( const char *proxy_file, int include_voms_fqan )
 {
 #if !defined(HAVE_EXT_GLOBUS)
 	set_error_string( "This version of Condor doesn't support X509 credentials!" );
@@ -180,6 +286,15 @@ x509_proxy_subject_name( const char *proxy_file )
 	globus_gsi_cred_handle_attrs_t   handle_attrs = NULL;
 	char *subject_name = NULL;
 	char *my_proxy_file = NULL;
+	char *fqan = NULL;
+	char *combined_dn_and_fqan = NULL;
+	int error = 0;
+
+#if !defined(HAVE_EXT_VOMS)
+	// If we don't have VOMS, pretend the proxy doesn't have any VOMS
+	// extensions.
+	include_voms_fqan = 0;
+#endif
 
 	if ( activate_globus_gsi() != 0 ) {
 		return NULL;
@@ -215,6 +330,31 @@ x509_proxy_subject_name( const char *proxy_file )
 		goto cleanup;
 	}
 
+	if (include_voms_fqan) {
+		fqan = extract_VOMS_attrs(handle, &error);
+		if (error) {
+			set_error_string(fqan);
+			free(fqan);
+			goto cleanup;
+		}
+
+		// if there are attributes, append them
+		if (fqan) {
+			combined_dn_and_fqan = (char*)malloc(strlen(subject_name) + strlen(fqan) + 2);
+			strcpy (combined_dn_and_fqan, subject_name);
+			strcat (combined_dn_and_fqan, ":");
+			strcat (combined_dn_and_fqan, fqan);
+			free(subject_name);
+			free(fqan);
+		} else {
+			// this is returned at the end.  caller of function must free it.
+			combined_dn_and_fqan = subject_name;
+		}
+	} else {
+		// this is returned at the end.  caller of function must free it.
+		combined_dn_and_fqan = subject_name;
+	}
+
  cleanup:
 	if (my_proxy_file) {
 		free(my_proxy_file);
@@ -228,7 +368,7 @@ x509_proxy_subject_name( const char *proxy_file )
 		globus_gsi_cred_handle_destroy(handle);
 	}
 
-	return subject_name;
+	return combined_dn_and_fqan;
 
 #endif /* !defined(GSS_AUTHENTICATION) */
 }
@@ -245,7 +385,7 @@ x509_proxy_subject_name( const char *proxy_file )
   WITH free().
  */
 char *
-x509_proxy_identity_name( const char *proxy_file )
+x509_proxy_identity_name( const char *proxy_file, int include_voms_fqan )
 {
 #if !defined(HAVE_EXT_GLOBUS)
 	set_error_string( "This version of Condor doesn't support X509 credentials!" );
@@ -256,6 +396,15 @@ x509_proxy_identity_name( const char *proxy_file )
 	globus_gsi_cred_handle_attrs_t   handle_attrs = NULL;
 	char *subject_name = NULL;
 	char *my_proxy_file = NULL;
+	char *fqan = NULL;
+	char *combined_dn_and_fqan = NULL;
+	int error = 0;
+
+#if !defined(HAVE_EXT_VOMS)
+	// If we don't have VOMS, pretend the proxy doesn't have any VOMS
+	// extensions.
+	include_voms_fqan = 0;
+#endif
 
 	if ( activate_globus_gsi() != 0 ) {
 		return NULL;
@@ -291,6 +440,31 @@ x509_proxy_identity_name( const char *proxy_file )
 		goto cleanup;
 	}
 
+	if (include_voms_fqan) {
+		fqan = extract_VOMS_attrs(handle, &error);
+		if (error) {
+			set_error_string(fqan);
+			free(fqan);
+			goto cleanup;
+		}
+
+		// if there are attributes, append them
+		if (fqan) {
+			combined_dn_and_fqan = (char*)malloc(strlen(subject_name) + strlen(fqan) + 2);
+			strcpy (combined_dn_and_fqan, subject_name);
+			strcat (combined_dn_and_fqan, ":");
+			strcat (combined_dn_and_fqan, fqan);
+			free(subject_name);
+			free(fqan);
+		} else {
+			// this is returned at the end.  caller of function must free it.
+			combined_dn_and_fqan = subject_name;
+		}
+	} else {
+		// this is returned at the end.  caller of function must free it.
+		combined_dn_and_fqan = subject_name;
+	}
+
  cleanup:
 	if (my_proxy_file) {
 		free(my_proxy_file);
@@ -304,7 +478,7 @@ x509_proxy_identity_name( const char *proxy_file )
 		globus_gsi_cred_handle_destroy(handle);
 	}
 
-	return subject_name;
+	return combined_dn_and_fqan;
 
 #endif /* !defined(GSS_AUTHENTICATION) */
 }
@@ -628,7 +802,7 @@ x509_send_delegation( const char *source_file,
 		goto cleanup;
 	}
 
-	if ( recv_data_func( recv_data_ptr, &buffer, &buffer_len ) != 0 ) {
+	if ( recv_data_func( recv_data_ptr, (void **)&buffer, (size_t *)&buffer_len ) != 0 ) {
 		rc = -1;
 		error_line = __LINE__;
 		goto cleanup;
@@ -845,7 +1019,7 @@ x509_receive_delegation( const char *destination_file,
 	free( buffer );
 	buffer = NULL;
 
-	if ( recv_data_func( recv_data_ptr, &buffer, &buffer_len ) != 0 ) {
+	if ( recv_data_func( recv_data_ptr, (void **)&buffer, (size_t*)&buffer_len ) != 0 ) {
 		rc = -1;
 		error_line = __LINE__;
 		goto cleanup;
@@ -990,260 +1164,4 @@ is_globus_friendly_url(const char * path)
 		strstr(path, "gsiftp://") == path ||
 		0;
 }
-
-#if 0 /* We're not currently using these functions */
-
-/*
- * Function: simple_query_ldap()
- *
- * Connect to the ldap server, and return all the value of the
- * fields "attribute" contained in the entries maching a search string.
- *
- * Parameters:
- *     attribute -     field for which we want the list of value returned.
- *     maximum -       maximum number of strings returned in the list.
- *     search_string - Search string to use to select the entry for which
- *                     we will return the values of the field attribute.
- * 
- * Returns:
- *     a list of strings containing the result.
- *     
- */ 
-#if defined(GLOBUS_SUPPORT) && defined(HAS_LDAP)
-static
-int
-retrieve_attr_values(
-    LDAP *            ldap_server,
-    LDAPMessage *     reply,
-    char *            attribute,
-    int               maximum,
-    char *            search_string,
-    globus_list_t **  value_list)
-{
-	LDAPMessage *entry;
-	int cnt = 0;
-    
-	for ( entry = ldap_first_entry(ldap_server, reply);
-		  (entry) && (maximum);
-		  entry = ldap_next_entry(ldap_server, entry) ) {
-		char *attr_value;
-		char *a;
-		BerElement *ber;
-		int numValues;
-		char **values;
-		int i;
-
-		for (a = ldap_first_attribute(ldap_server,entry,&ber);
-			 a; a = ldap_next_attribute(ldap_server,entry,ber) ) {
-			if (strcmp(a, attribute) == 0) {
-				/* got our match, so copy and return it*/
-				cnt++;
-				values = ldap_get_values(ldap_server,entry,a);
-				numValues = ldap_count_values(values);
-				for (i=0; i<numValues; i++) {
-					attr_value = strdup(values[i]);
-					globus_list_insert(value_list,attr_value);
-					if (--maximum==0)
-						break;
-				}
-				ldap_value_free(values);
-		
-				/* we never have 2 time the same attibute for the same entry,
-				   steveF said this is not always the case XXX */
-				break;
-			}
-		}
-	}
-	return cnt;
-
-} /* retrieve_attr_values */
-#endif /* defined(GLOBUS_SUPPORT) */
-
-#if defined(GLOBUS_SUPPORT) && defined(HAS_LDAP)
-/*
-static
-void
-set_ld_timeout(LDAP  *ld, int timeout_val, char *env_string)
-{
-	if(timeout_val > 0) {
-		ld->ld_timeout=timeout_val;
-        } else { 
-		char *tmp=getenv(env_string);
-		int tmp_int=0;
-		if(tmp) tmp_int=atoi(tmp);
-		if(tmp_int>0) ld->ld_timeout=tmp_int;
-	}
-}
-*/
-#endif /* defined(GLOBUS_SUPPORT) */
-
-#if defined(GLOBUS_SUPPORT) && defined(HAS_LDAP)
-static
-int
-simple_query_ldap(
-    char *            attribute,
-    int               maximum,
-    char *            search_string,
-    globus_list_t **  value_list,
-	char *            server,
-	int               port,
-	char *            base_dn)
-{
-	LDAP *ldap_server;
-	LDAPMessage *reply;
-	LDAPMessage *entry;
-	char *attrs[3];
-	int rc;
-	int match, msgidp;
-    struct timeval timeout;
-
-	*value_list = GLOBUS_NULL;
-	match=0;
-    
-	/* connect to the ldap server */
-	if((ldap_server = ldap_open(server, port)) == GLOBUS_NULL) {
-		ldap_perror(ldap_server, "rsl_assist:ldap_open");
-		free(server);
-		free(base_dn);
-		return -1;
-	}
-	free(server);
-
-    // OpenLDAP 2 changed API
-	//set_ld_timeout(ldap_server, 0, "GRID_INFO_TIMEOUT");
-
-	/* bind anonymously (we can only read public records now */
-	if(ldap_simple_bind_s(ldap_server, "", "") != LDAP_SUCCESS) {
-		ldap_perror(ldap_server, "rsl_assist:ldap_simple_bind_s");
-		ldap_unbind(ldap_server);
-		free(base_dn);
-		return -1;
-	}
-    
-	/* I should verify the attribute is a valid string...     */
-	/* the function allows only one attribute to be returned  */
-	attrs[0] = attribute;
-	attrs[1] = GLOBUS_NULL;
-    
-	/* do a search of the entire ldap tree,
-	 * and return the desired attribute
-	 */
-    // OpenLDAP 2 changed the API. ldap_search is deprecated
-
-    timeout.tv_sec  = 0;
-    timeout.tv_usec = 0;
-    if ( rc = ldap_search_ext( ldap_server, base_dn, LDAP_SCOPE_SUBTREE,
-                                  search_string, attrs, 0, NULL, 
-                                  NULL, &timeout, -1, &msgidp ) == -1 ) {
-		ldap_perror( ldap_server, "rsl_assist:ldap_search" );
-		return( msgidp );
-	}
-
-//	if ( ldap_search( ldap_server, base_dn, LDAP_SCOPE_SUBTREE,
-//					  search_string, attrs, 0 ) == -1 ) {
-//		ldap_perror( ldap_server, "rsl_assist:ldap_search" );
-//		return( ldap_server->ld_errno );
-//	}
-
-	while ( (rc = ldap_result( ldap_server, LDAP_RES_ANY, 0, NULL, &reply ))
-			== LDAP_RES_SEARCH_ENTRY || (rc==-1)) {
-		if(rc==-1) {       // This is timeout
-			continue;
-		}
-		match += retrieve_attr_values(ldap_server,reply, attrs[0],
-									  maximum, search_string, value_list);
-	}
-
-	if( rc == -1 ) {
-		ldap_perror(ldap_server, "rsl_assist:ldap_search");
-	}
-	/* to avoid a leak in ldap code */
-	ldap_msgfree(reply);
-
-	/* disconnect from the server */
-	ldap_unbind(ldap_server);
-	free(base_dn);
-
-	if(match)
-		return GLOBUS_SUCCESS;
-	else
-		return rc;
-
-} /* simple_query_ldap() */
-#endif /* defined(GLOBUS_SUPPORT) */
-
-
-int
-check_globus_rm_contacts(char* resource)
-{
-#if !defined(GLOBUS_SUPPORT) || !defined(HAS_LDAP)
-	fprintf( stderr, "This is not a Globus-enabled version of Condor!\n" );
-	exit( 1 );
-	return 0;
-#else
-
-	int rc;
-	int len;
-	char *host;
-	char *ptr;
-	char *ptr2;
-	char *service;
-	char *search_string;
-	char *format = "(&(objectclass=GlobusService)(hn=%s*)(service=%s))";
-	globus_list_t *rm_contact_list = GLOBUS_NULL;
-
-	// Pick out the hostname of the resource
-	// It's at the beginning of the resource string
-	len = strcspn( resource, ":/" );
-	host = (char *)malloc( (len + 1) * sizeof(char) );
-	strncpy( host, resource, len );
-	host[len] = '\0';
-
-	// Pick out the servicename of the resource, if it's there
-	// It'll be after the first '/' character in the string unless two
-	// colons precede it (confusing, eh?)
-	ptr = strchr( resource, '/' );
-	ptr2 = strchr( resource, ':' );
-	if ( ptr2 != NULL )
-		ptr2 = strchr( ptr2 + 1, ':' );
-	if ( ptr != NULL && ( ptr2 == NULL || ptr2 > ptr ) ) {
-		ptr++;
-		len = strcspn( ptr, ":" );
-		service = (char *)malloc( (len + 1) * sizeof(char) );
-		strncpy( service, ptr, len );
-		service[len] = '\0';
-	} else {
-		service = strdup( "*" );
-	}
-
-	search_string = (char *)malloc( strlen(format) + 
-									strlen(host)   +
-									strlen(service) + 1 );
-	if ( !search_string ) {
-		free( service );
-		free( host );
-		return 1;
-	}
-
-	sprintf( search_string, format, host, service );
-
-	rc = simple_query_ldap( "contact", 1, search_string, &rm_contact_list,
-							host, 2135, "o=Grid" );
-
-	free( search_string );
-	free( service );
-	free( host );
-
-	if ( rc == GLOBUS_SUCCESS && rm_contact_list ) {
-		globus_list_remove( &rm_contact_list, rm_contact_list );
-		return 0;
-	} else {
-		return 1;
-	}
-
-#endif /* !defined(GLOBUS_SUPPORT) */
-
-} /* check_globus_rm_contact() */
-
-#endif /* 0 */
 

@@ -2,10 +2,10 @@
 
 C_PLUS_FLAGS = -Wall $(STD_C_PLUS_FLAGS)
 CFLAGS = -Wall $(STD_C_FLAGS) -I$(NEW_CLASSADS_INC)
-INST_C_PLUS_FLAGS = $(STD_C_FLAGS) $(GPP_VERS_FLAGS)
+INST_C_PLUS_FLAGS = $(STD_C_FLAGS)
 
 ANA_OBJ = analysis.o boolExpr.o condition.o multiProfile.o profile.o \
-	resourceGroup.o  boolValue.o explain.o interval.o \
+	resourceGroup.o  boolValue.o explain.o interval.o result.o \
 
 CONV_OBJ = conversion.o
 

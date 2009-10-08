@@ -255,7 +255,7 @@ protected:
 	public:
 		RcvMsg();
                 ~RcvMsg();
-		int rcv_packet(SOCKET, int);
+		int rcv_packet(char const *peer_description, SOCKET, int);
 		void init_parent(ReliSock *tmp){ p_sock = tmp; } 
 
 		ChainBuf	buf;
@@ -271,7 +271,7 @@ protected:
 		SndMsg();
                 ~SndMsg();
 		Buf			buf;
-		int snd_packet(int, int, int);
+		int snd_packet(char const *peer_description, int, int, int);
 
 		//function to support the use of condor_read /write
 		

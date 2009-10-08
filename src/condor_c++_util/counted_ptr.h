@@ -25,6 +25,7 @@
  * int and pointer for every counted object.
  * Should be safe to use in STL containers, or in most Condor templates
  * like HashTable.
+ * Also, it should be thread safe.  KEEP IT THAT WAY.  :)
  *
  * *** PITHY USAGE: ***
  *
@@ -126,19 +127,24 @@ public:
 	bool is_null()	const throw()
 		{return (((!itsCounter) || (itsCounter->count == 0)) ? true : false);}
 
-	int operator== (const counted_ptr& r)
+	bool operator== (const counted_ptr& r) const
 	{
 		if ( itsCounter == r.itsCounter ) {
-			return 1;
+			return true;
 		}
 		if ( itsCounter && itsCounter->ptr &&
 			 r.itsCounter && r.itsCounter->ptr ) 
 		{
 			if ( *(itsCounter->ptr) == *(r.itsCounter->ptr) ) {
-				return 1;
+				return true;
 			}
 		}
-		return 0;
+		return false;
+	}
+
+	bool operator!=(const counted_ptr& other) const 
+	{
+		return !(*this == other);
 	}
 
 	int operator< (const counted_ptr& r)

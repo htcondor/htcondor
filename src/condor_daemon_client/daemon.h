@@ -273,32 +273,36 @@ public:
 		  Callers can optionally specify a timeout to use for the
 		  connect().  If there was a failure in connect(), we delete
 		  the object and return NULL.
-		  @param sec Number of seconds for the timeout on connect().
+		  @param timeout Number of seconds for the timeout on connect().
+		  @param deadline Time at which to give up (0 if never).
 		  @return A new ReliSock object connected to the daemon.  
 		  */
-	ReliSock* reliSock( int sec = 0, CondorError* errstack = 0,
-	                    bool non_blocking = false,
+	ReliSock* reliSock( int timeout = 0, time_t deadline = 0,
+						CondorError* errstack = 0, bool non_blocking = false,
 						bool ignore_timeout_multiplier = false );
 
 		/**	Create a new SafeSock object, connected to the daemon.
 		  Callers can optionally specify a timeout to use for the
 		  connect().  If there was a failure in connect(), we delete 
 		  the object and return NULL.
-		  @param sec Number of seconds for the timeout on connect().
+		  @param timeout Number of seconds for the timeout on connect().
+		  @param deadline Time at which to give up (0 if never).
 		  @return A new SafeSock object connected to the daemon.  
 		  */
-	SafeSock* safeSock( int sec = 0, CondorError* errstack = 0,
-	                    bool non_blocking = false );
+	SafeSock* safeSock( int timeout = 0, time_t deadline = 0,
+						CondorError* errstack = 0, bool non_blocking = false );
 
 		/**	Create a new Sock object connected to the daemon.
 		  Callers can optionally specify a timeout to use for the
 		  connect().  If there was a failure in connect(), we delete 
 		  the object and return NULL.
-		  @param sec Number of seconds for the timeout on connect().
+		  @param timeout Number of seconds for the timeout on connect().
+		  @param deadline Time at which to give up (0 if never).
 		  @return A new Sock object connected to the daemon.  
 		  */
 	Sock *makeConnectedSocket( Stream::stream_type st = Stream::reli_sock,
-							   int timeout = 0, CondorError* errstack = NULL,
+							   int timeout = 0, time_t deadline = 0,
+							   CondorError* errstack = NULL,
 							   bool non_blocking = false );
 
 		/**	Connects a socket to the daemon.
@@ -504,6 +508,13 @@ public:
 		 **/
 	bool getTimeOffsetRange( long &min_range, long &max_range );
 
+		/**
+		 * Set the name of the subsystem
+		 *
+		 * @param subsys - The subsystem string for this daemon
+		 **/
+	bool setSubsystem( const char* subsys );
+
 protected:
 	// Data members
 
@@ -549,11 +560,10 @@ protected:
 		  This does all the real work of finding the right address,
 		  port, ip_addr, etc.  We check for address files, and query
 		  the appropriate collector if that doesn't work.
-		  @param subsys The subsystem string for this daemon
 		  @param adtype The type of ClassAd we'll query.
 		  @parma query_collector Whether to query collector if all else fails
 		  */
-	bool getDaemonInfo( const char* subsys, AdTypes adtype, bool query_collector = true );
+	bool getDaemonInfo( AdTypes adtype, bool query_collector = true );
 
 		/** Helper for central manager daemons (collector and
 		  negotiator).  These are a special case since they have

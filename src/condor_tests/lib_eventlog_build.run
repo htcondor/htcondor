@@ -39,6 +39,7 @@ my %settings =
 (
  verbose	=> 0,
  debug		=> 0,
+ valgrind	=> 0,
  execute	=> 1,
  stop		=> 0,
  force		=> 0,
@@ -68,6 +69,9 @@ foreach my $arg ( @ARGV ) {
     }
     elsif ( $arg eq "-d"  or  $arg eq "--debug" ) {
 	$settings{debug} = 1;
+    }
+    elsif ( $arg eq "--vg" or $arg eq "--valgrind" ) {
+	$settings{valgrind} = 1;
     }
     elsif ( $arg eq "-q"  or  $arg eq "--quiet" ) {
 	$settings{verbose} = 0;
@@ -117,13 +121,13 @@ sub run( @ );
 if ( $settings{build_mode} )
 {
     my @args = ( "make", $exe );
-    my $r = run( @args );
+    my $r = run( 0, @args );
     exit( $r ) if ( $r );
 }
 
 # Test it
 my @args = ( $exe, "$dir/EventLog", "$dir/reader.state" );
-my $r = run( @args );
+my $r = run( $settings{valgrind}, @args );
 exit( $r ) if ( $r );
 
 exit(0);
@@ -131,6 +135,15 @@ exit(0);
 # Run program
 sub run( @ )
 {
+    my $vg = shift( @_ );
+    if ( $vg )
+    {
+	my @valgrind = ( "valgrind", "--tool=memcheck", "--num-callers=24",
+			 "-v", "-v", "--leak-check=full", "--track-fds=yes",
+			 "--log-file=$dir/valgrind.out" );
+	unshift( @_, @valgrind );
+    }
+
     print "Running: " . join(" ", @_) . "\n";
 
     if ( $settings{execute} )

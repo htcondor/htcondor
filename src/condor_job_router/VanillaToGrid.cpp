@@ -18,6 +18,9 @@
  ***************************************************************/
 
 #include "condor_common.h"
+#include "condor_debug.h"
+#include "MyString.h"
+#include "proc.h"
 #include "condor_new_classads.h"
 #include "condor_classad.h"
 #include "condor_attributes.h"

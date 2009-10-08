@@ -67,7 +67,7 @@ public:
 	virtual void cancel_reverse_connect();
 
 	/// my IP address, string version (e.g. "128.105.101.17")
-	virtual const char* sender_ip_str();
+	virtual const char* my_ip_str();
 
 	//
 	inline int connect(char const *h, char *s) { return connect(h,getportbyserv(s));}

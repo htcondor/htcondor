@@ -98,10 +98,10 @@ void file_transfer_db(file_transfer_record *rp, ClassAd *ad)
 		// src_host
 	src_host[0] = '\0';
 	if (rp->sockp && 
-		(tmpp = sin_to_hostname(rp->sockp->endpoint(), NULL))) {
+		(tmpp = sin_to_hostname(rp->sockp->peer_addr(), NULL))) {
 		snprintf(src_host, MAXMACHNAME, "%s", tmpp);
 		dst_port = rp->sockp->get_port(); /* get_port retrieves the local port */
-		src_port = rp->sockp->endpoint_port();
+		src_port = rp->sockp->peer_port();
 		isEncrypted = (!rp->sockp->get_encryption())?"FALSE":"TRUE";
 	}
 

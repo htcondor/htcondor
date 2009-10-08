@@ -33,9 +33,11 @@ $primarycollector = $currenthost;
 
 CondorTest::fullchomp($currenthost);
 
-system("date");
+print scalar localtime() . "\n";
 
 $mypid = $$;
+print "my PID = $pid\n";
+
 $mysaveme = $corename . ".saveme";
 
 if($mypid == 0) {
@@ -102,7 +104,7 @@ my $bail = 0;
 # submit into scheddone
 $ENV{CONDOR_CONFIG} = $scheddoneconfig;
 
-my $forever = CondorTest::verbose_system("./x_cmdrunforever.pl");
+my $forever = CondorTest::verbose_system("./x_cmdrunforever.pl $pid");
 if($forever != 0) {
 	CondorTest::debug("Bailing because running job failed to submit\n",1);
 	$bail = 1;
@@ -113,7 +115,7 @@ $ENV{CONDOR_CONFIG} = $locconfig;
 
 my $holdone;
 if($bail != 1) {
-	my $holdone = CondorTest::verbose_system("./x_cmdstartonhold.pl");
+	my $holdone = CondorTest::verbose_system("./x_cmdstartonhold.pl $pid");
 	if($holdone != 0) {
 		CondorTest::debug("Bailing because running job failed to submit\n",1);
 		$bail = 1;
@@ -192,7 +194,7 @@ if( -e "$mysubmitnmlog" )
 
 CondorTest::KillPersonal($locconfig);
 CondorTest::KillPersonal($scheddoneconfig);
-system("date");
+print scalar localtime() . "\n";
 
 if( $done == 0 )
 {

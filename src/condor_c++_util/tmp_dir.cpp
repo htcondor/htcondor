@@ -63,33 +63,36 @@ TmpDir::Cd2TmpDir(const char *directory, MyString &errMsg)
 	dprintf( D_FULLDEBUG, "TmpDir(%d)::Cd2TmpDir(%s)\n",
 				m_objectNum, directory );
 
-	bool	result = true;
-
 	errMsg = "";
 
-	if ( !hasMainDir ) {
-		if ( condor_getcwd( mainDir ) ) {
-		 	hasMainDir = true;
-		} else {
-			errMsg += MyString( "Unable to get cwd: " ) +
-				strerror( errno ) + " (errno " + errno + ")";
-			dprintf( D_ALWAYS, "ERROR: %s\n", errMsg.Value() );
-			result = false;
-		}
-	}
+		// Don't do anything if the directory path is "" or "."
+		// (in DAGMan we get a directory of "" if no directory is
+		// specified for a node, and -usedagdir is not set).
+	if ( strcmp( directory, "" ) != MATCH &&
+			strcmp( directory, "." ) != MATCH ) {
+		if ( !hasMainDir ) {
+			if ( !condor_getcwd( mainDir ) ) {
+				errMsg += MyString( "Unable to get cwd: " ) +
+						strerror( errno ) + " (errno " + errno + ")";
+				dprintf( D_ALWAYS, "ERROR: %s\n", errMsg.Value() );
+				EXCEPT( "Unable to get current directory!" );
+				return false; // never get here
+			}
 
-	if ( result && strcmp( directory, "" ) ) {
+		 	hasMainDir = true;
+		}
+
 		if ( chdir( directory ) != 0 ) {
 			errMsg += MyString( "Unable to chdir to " ) +
 					directory + ": " + strerror( errno );
 			dprintf( D_FULLDEBUG, "ERROR: %s\n", errMsg.Value() );
-			result = false;
-		} else {
-			m_inMainDir = false;
+			return false;
 		}
+
+		m_inMainDir = false;
 	}
 
-	return result;
+	return true;
 }
 
 //-------------------------------------------------------------------------
@@ -114,19 +117,27 @@ TmpDir::Cd2MainDir(MyString &errMsg)
 {
 	dprintf( D_FULLDEBUG, "TmpDir(%d)::Cd2MainDir()\n", m_objectNum );
 
-	bool	result = true;
 	errMsg = "";
 
-	if ( hasMainDir ) {
+		// If we didn't really change directories, we don't have to
+		// do anything.
+	if ( ! m_inMainDir ) {
+		if ( !hasMainDir ) {
+			EXCEPT( "Illegal condition -- m_inMainDir and hasMainDir "
+					"both false!" );
+			return false; // never get here
+		}
+
 		if ( chdir( mainDir.Value() ) != 0 ) {
 			errMsg += MyString( "Unable to chdir to " ) + mainDir +
 					": " + strerror( errno );
 			dprintf( D_FULLDEBUG, "ERROR: %s\n", errMsg.Value() );
-			result = false;
+			EXCEPT( "Unable to chdir() to original directory!" );
+			return false; // never get here
 		}
+
+		m_inMainDir = true;
 	}
 
-	if ( result ) m_inMainDir = true;
-
-	return result;
+	return true;
 }

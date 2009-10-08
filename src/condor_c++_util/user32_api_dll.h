@@ -22,7 +22,7 @@
 #ifndef _USER32_API_H_
 #define _USER32_API_H_
 
-#include "load_dll.h"
+#include "load_dll.WINDOWS.h"
 
 class User32API {
     

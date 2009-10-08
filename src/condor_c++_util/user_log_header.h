@@ -17,14 +17,13 @@
  *
  ***************************************************************/
 
-
 #ifndef _USER_LOG_HEADER_H
 #define _USER_LOG_HEADER_H
 
-#include "condor_common.h"
 #include <time.h>
 #include "MyString.h"
 #include "read_user_log_state.h"
+#include "write_user_log.h"
 
 // User log header info
 
@@ -83,6 +82,20 @@ public:
 		{ return m_event_offset = event_offset; };
 	int64_t addEventOffset( int64_t num_events )
 		{ return m_event_offset += num_events; };
+
+	int getMaxRotation( void ) const
+		{ return m_max_rotation; };
+	int setMaxRotation( int max_rotation )
+		{ return m_max_rotation = max_rotation; };
+
+	void getCreatorName( MyString &name ) const
+		{ name = m_creator_name; };
+	const MyString & getCreatorName( void ) const
+		{ return m_creator_name; };
+	void setCreatorName( const MyString &name )
+		{ m_creator_name = name; };
+	void setCreatorName( const char *name )
+		{ m_creator_name = name; };
 	
 	// Extract data from an event
 	int ExtractEvent( const ULogEvent *);
@@ -95,11 +108,13 @@ public:
 protected:
 	MyString	m_id;
 	int			m_sequence;
-	time_t		m_ctime;
+	time_t		m_ctime;			// Creation time
 	filesize_t	m_size;				// Size of this file
 	int64_t		m_num_events;		// # events in this file
 	filesize_t	m_file_offset;		// Offset in the "big file"
 	int64_t		m_event_offset;		// Event offset in the "big file"
+	int			m_max_rotation;		// Max rotation
+	MyString	m_creator_name;		// Name of the file's creator
 
 	bool		m_valid;
 };
@@ -134,7 +149,7 @@ public:
 		{ };
 
 	// Read the header from a file
-	int Write( UserLog &writer, FILE *fp = NULL );
+	int Write( WriteUserLog &writer, FILE *fp = NULL );
 	bool GenerateEvent( GenericEvent &event );
 
 private:

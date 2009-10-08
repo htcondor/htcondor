@@ -21,7 +21,7 @@
 
 
 $SH_EXE = "C:\\cygwin\\bin\\sh.exe";
-$PERL_EXE = "C:\\perl\\bin\\perl.exe";
+$PERL_EXE = "perl.exe";
 
 %mappings = (
     "\\s*/bin/sh.*"                                => $SH_EXE,

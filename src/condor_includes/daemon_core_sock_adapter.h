@@ -40,6 +40,7 @@ class DaemonCoreSockAdapterClass {
     typedef int (DaemonCore::*Register_DataPtr_fnptr)( void *data );
     typedef void *(DaemonCore::*GetDataPtr_fnptr)();
 	typedef int (DaemonCore::*Register_Timer_fnptr)(unsigned deltawhen,Eventcpp event,const char * event_descrip,Service* s);
+	typedef int (DaemonCore::*Cancel_Timer_fnptr)(int id);
 	typedef bool (DaemonCore::*TooManyRegisteredSockets_fnptr)(int fd,MyString *msg,int num_fds);
 	typedef void (DaemonCore::*incrementPendingSockets_fnptr)();
 	typedef void (DaemonCore::*decrementPendingSockets_fnptr)();
@@ -65,6 +66,7 @@ class DaemonCoreSockAdapterClass {
 		Register_DataPtr_fnptr Register_DataPtr_fptr,
 		GetDataPtr_fnptr GetDataPtrFun_fptr,
 		Register_Timer_fnptr Register_Timer_fptr,
+		Cancel_Timer_fnptr Cancel_Timer_fptr,
 		TooManyRegisteredSockets_fnptr TooManyRegisteredSockets_fptr,
 		incrementPendingSockets_fnptr incrementPendingSockets_fptr,
 		decrementPendingSockets_fnptr decrementPendingSockets_fptr,
@@ -79,6 +81,7 @@ class DaemonCoreSockAdapterClass {
 		m_Register_DataPtr_fnptr = Register_DataPtr_fptr;
 		m_GetDataPtr_fnptr = GetDataPtrFun_fptr;
 		m_Register_Timer_fnptr = Register_Timer_fptr;
+		m_Cancel_Timer_fnptr = Cancel_Timer_fptr;
 		m_TooManyRegisteredSockets_fnptr = TooManyRegisteredSockets_fptr;
 		m_incrementPendingSockets_fnptr = incrementPendingSockets_fptr;
 		m_decrementPendingSockets_fnptr = decrementPendingSockets_fptr;
@@ -97,6 +100,7 @@ class DaemonCoreSockAdapterClass {
 	Register_DataPtr_fnptr m_Register_DataPtr_fnptr;
 	GetDataPtr_fnptr m_GetDataPtr_fnptr;
 	Register_Timer_fnptr m_Register_Timer_fnptr;
+	Cancel_Timer_fnptr m_Cancel_Timer_fnptr;
 	TooManyRegisteredSockets_fnptr m_TooManyRegisteredSockets_fnptr;
 	incrementPendingSockets_fnptr m_incrementPendingSockets_fnptr;
 	decrementPendingSockets_fnptr m_decrementPendingSockets_fnptr;
@@ -153,6 +157,11 @@ class DaemonCoreSockAdapterClass {
 			event,
 			event_descrip,
 			s);
+	}
+    int Cancel_Timer (int id)
+	{
+		ASSERT(m_daemonCore);
+		return (m_daemonCore->*m_Cancel_Timer_fnptr)( id );
 	}
 	bool TooManyRegisteredSockets(int fd=-1,MyString *msg=NULL,int num_fds=1)
 	{

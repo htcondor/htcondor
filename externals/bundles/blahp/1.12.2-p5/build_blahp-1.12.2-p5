@@ -1,0 +1,107 @@
+#!/bin/sh
+
+set -e
+
+. $EXTERNALS_CONFIG
+
+# The source tarball was checked out on January 20, 2009 with the
+# following command:
+#   cvs -d :pserver:anonymous@jra1mw.cvs.cern.ch:/cvs/jra1mw co -r \
+#      glite-ce-blahp_R_1_12_2_0 org.glite.ce.blahp
+
+popt_install=/usr
+if [ ! -r /usr/lib/libpopt.a ]
+then
+  echo Building our own popt
+  popt_install=${PACKAGE_BUILD_DIR}/popt
+  rm -rf popt
+  mkdir popt
+  tar zxvf popt-1.14.tar.gz
+  cd popt-1.14
+  ./configure --prefix=$popt_install
+  make
+  make install
+  cd ..
+fi
+
+# Adjust for new layout in classad distribution.
+patch -i classad.patch -p0
+
+# mtrace() isn't available on all platforms
+patch -i mtrace.patch -p0
+
+# Fix a double-free bug
+patch -i env_free.patch -p0
+
+# Fix a bad free of regbuf
+patch -i regbuf.patch -p0
+
+# Disable job registry, which requires extra configuration
+patch -i registry.patch -p0
+
+# Check that we have libtool installed.
+libtool_path=`which libtool`
+if [ x$libtool_path = x ] ; then
+  echo "Can't find libtool"
+  exit 1
+elif [ "$libtool_path" != /usr/bin/libtool -a "$libtool_path" != /usr/local/bin/libtool ] ; then
+  # If libtool isn't in the system default locations, we need to copy its
+  # .m4 file into the local build tree so that the auto-tools can find it.
+  m4_path=`echo $libtool_path | sed -e 's|/bin/libtool|/share/aclocal/libtool.m4|'`
+  cp $m4_path org.glite.ce.blahp/project
+fi
+
+# This patch adds testing for dlopen to configure. This is necessary since
+# we're going to be listing the globus libraries explicitly on the command
+# line rather than using -l. The original code used -l and the shared
+# libraries picked up libdl.so automatically.
+patch -i dl.patch -p0
+
+# These .m4 files come from a different part of the glite repository. These
+# are slightly-modified versions. They let us statically link with Globus
+# 4.2 and separate OpenSSL libraries (instead of dynamically linking with
+# Globus 2.4 with included OpenSSL), remove the check for threaded Globus
+# libraries (which aren't used) and use the correct name for the
+# namespace-enabled ClassAds library (libclassad_ns instead of libclassad).
+cp classads.m4 org.glite.ce.blahp/project
+cp globus.m4 org.glite.ce.blahp/project
+cp glite.m4 org.glite.ce.blahp/project
+
+# This patch renames the blahpd[_daemon] to batch_gahp[_daemon] and
+# blah.config to batch_gahp.config.
+patch -i name-change.patch -p0
+mv org.glite.ce.blahp/config/blah.config.template org.glite.ce.blahp/config/batch_gahp.config.template
+
+# This is a slightly messy way of making the code link against our popt
+# external, but nothing nicer seems to work
+sed -e 's|^\(C[X]*FLAGS="\)|\1-I'${popt_install}'/include |' org.glite.ce.blahp/configure.ac >configure.tmp
+mv configure.tmp org.glite.ce.blahp/configure.ac
+
+sed -e 's|-lpopt|'${popt_install}'/lib/libpopt.a|' org.glite.ce.blahp/src/Makefile.am >Makefile.tmp
+mv Makefile.tmp org.glite.ce.blahp/src/Makefile.am
+
+cd org.glite.ce.blahp
+
+echo running bootstrap
+./bootstrap
+
+echo running configure
+./configure --with-classads-prefix=$EXTERNALS_INSTALL_DIR/$EXT_CLASSADS_VERSION --with-openssl-prefix=$EXTERNALS_INSTALL_DIR/$EXT_OPENSSL_VERSION --with-globus-prefix=$EXTERNALS_INSTALL_DIR/$EXT_GLOBUS_VERSION --with-globus-nothr-flavor=$GLOBUS_FLAVOR --prefix=$PACKAGE_INSTALL_DIR/dynamic
+
+make
+make install
+
+# Now, we need to build static executables
+# This configure has no flag to enable static linking, so we hack it by
+# adding the flag to the Makefile directly.
+if [ "$HAS_STATIC" == "YES" ]
+then
+  make distclean
+  ./configure --with-classads-prefix=$EXTERNALS_INSTALL_DIR/$EXT_CLASSADS_VERSION --with-openssl-prefix=$EXTERNALS_INSTALL_DIR/$EXT_OPENSSL_VERSION --with-globus-prefix=$EXTERNALS_INSTALL_DIR/$EXT_GLOBUS_VERSION --with-globus-nothr-flavor=$GLOBUS_FLAVOR --prefix=$PACKAGE_INSTALL_DIR/static
+  sed 's/^LDFLAGS = $/LDFLAGS = -all-static/' src/Makefile >src/Makefile.new
+  mv src/Makefile.new src/Makefile
+  make
+  make install
+fi
+
+exit 0

@@ -43,7 +43,6 @@
 extern char *ScheddAddr;
 extern char *ScheddName;
 extern DCSchedd *ScheddObj;
-extern DCCollector *CollectorObj;
 extern char *ScheddJobConstraint;
 extern char *GridmanagerScratchDir;
 extern char *myUserName;

@@ -13,12 +13,12 @@ FIX_BROKEN_GCC =
 #endif
 
 #if HAVE_EXT_GSOAP
-GSOAP_OBJS = soap_core.o httpget.o
+GSOAP_OBJS = mimetypes.o soap_core.o 
 #endif
 
-CFLAGS = $(STD_C_FLAGS)
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(FIX_BROKEN_GCC) $(PURIFY_FLAG) $(GSOAP_FLAGS)
-LIB = $(STD_LIBS) $(CONFIGURE_GSOAP_LDFLAGS)
+CFLAGS = $(STD_C_FLAGS) $(CONFIGURE_PCRE_CFLAGS)
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(FIX_BROKEN_GCC) $(PURIFY_FLAG) $(GSOAP_FLAGS)  $(CONFIGURE_PCRE_CFLAGS)
+LIB = $(STD_LIBS) $(CONFIGURE_GSOAP_LDFLAGS) $(CONFIGURE_PCRE_LDFLAGS)
 
 OBJ = $(GSOAP_OBJS) timer_manager.o daemon_core.o daemon_core_main.o \
   condor_perms.o \
@@ -27,7 +27,7 @@ OBJ = $(GSOAP_OBJS) timer_manager.o daemon_core.o daemon_core_main.o \
   HookClient.o HookClientMgr.o ccb_listener.o
 
 library_target(daemon_core.a,$(OBJ))
-c_plus_target(testit,test_daemon_core.o daemon_core.a,$(LIB))
+
 html_target( documentation )
 
 release:: all

@@ -27,7 +27,6 @@
 #include "creamjob.h"
 #include "gridmanager.h"
 
-#define DEFAULT_MAX_PENDING_SUBMITS_PER_RESOURCE	5
 #define DEFAULT_MAX_SUBMITTED_JOBS_PER_RESOURCE		100
 
 
@@ -109,8 +108,6 @@ CreamResource::CreamResource( const char *resource_name,
 	delegationServiceUri = NULL;
 	gahp = NULL;
 	deleg_gahp = NULL;
-	submitLimit = DEFAULT_MAX_PENDING_SUBMITS_PER_RESOURCE;
-	jobLimit = DEFAULT_MAX_SUBMITTED_JOBS_PER_RESOURCE;
 
 	const char delegservice_name[] = "/ce-cream/services/gridsite-delegation";
 	const char *name_ptr;
@@ -150,8 +147,7 @@ dprintf(D_FULLDEBUG,"*** ~CreamResource\n");
 dprintf(D_FULLDEBUG,"    deleting %s\n",next_deleg->deleg_uri);
 		delegatedProxies.DeleteCurrent();
 		free( next_deleg->deleg_uri );
-			// unacquire proxy?
-		ReleaseProxy( next_deleg->proxy );
+		ReleaseProxy( next_deleg->proxy, delegationTimerId );
 		delete next_deleg;
 	}
 	if ( delegationServiceUri != NULL ) {
@@ -262,8 +258,6 @@ void CreamResource::UnregisterJob( CreamJob *job )
 		}
 		if ( delete_deleg ) {
 dprintf(D_FULLDEBUG,"*** deleting delegation %s\n",job->delegatedCredentialURI);
-			bool reacquire_proxy = false;
-			Proxy *proxy_to_reacquire = job->jobProxy;
 			CreamProxyDelegation *next_deleg;
 			delegatedProxies.Rewind();
 			while ( (next_deleg = delegatedProxies.Next()) != NULL ) {
@@ -275,21 +269,14 @@ dprintf(D_FULLDEBUG,"*** deleting delegation %s\n",job->delegatedCredentialURI);
 						activeDelegationCmd = NULL;
 					}
 					free( next_deleg->deleg_uri );
-						// unacquire proxy?
-					ReleaseProxy( next_deleg->proxy );
+					ReleaseProxy( next_deleg->proxy, delegationTimerId );
 					delete next_deleg;
-				} else if ( next_deleg->proxy == proxy_to_reacquire ) {
-					reacquire_proxy = true;
 				}
-			}
-			if ( reacquire_proxy ) {
-				AcquireProxy( proxy_to_reacquire, delegationTimerId );
 			}
 		}
 	}
 
 	BaseResource::UnregisterJob( job );
-		// This object may be deleted now. Don't do anything below here!
 }
 
 const char *CreamResource::GetHashName()
@@ -327,7 +314,6 @@ dprintf(D_FULLDEBUG,"    creating new CreamProxyDelegation\n");
 	next_deleg->last_lifetime_extend = 0;
 	next_deleg->last_proxy_refresh = 0;
 	next_deleg->proxy = job_proxy;
-		// acquire proxy?
 	AcquireProxy( job_proxy, delegationTimerId );
 	delegatedProxies.Append( next_deleg );
 
@@ -359,7 +345,6 @@ dprintf(D_FULLDEBUG,"    creating new CreamProxyDelegation\n");
 	next_deleg->last_lifetime_extend = 0;
 	next_deleg->last_proxy_refresh = 0;
 	next_deleg->proxy = job_proxy;
-		// acquire proxy?
 	AcquireProxy( job_proxy, delegationTimerId );
 	delegatedProxies.Append( next_deleg );
 

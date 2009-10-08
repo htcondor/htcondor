@@ -250,7 +250,7 @@ int Authentication::authenticate_inner( char *hostAddr, const char* auth_methods
 
 			// check to see if the auth IP is the same as the socket IP
 		if( auth_rc ) {
-			char const *sockip = mySock->endpoint_ip_str();
+			char const *sockip = mySock->peer_ip_str();
 			char const *authip = auth->getRemoteHost() ;
 
 			auth_rc = !sockip || !authip || !strcmp(sockip,authip);
@@ -377,6 +377,12 @@ int Authentication::authenticate_inner( char *hostAddr, const char* auth_methods
 #endif /* SKIP_AUTHENTICATION */
 }
 
+void Authentication::reconfigMapFile()
+{
+	global_map_file_load_attempted = false;
+}
+
+
 #if !defined(SKIP_AUTHENTICATION)
 // takes the type (as defined in handshake bitmask, CAUTH_*) and result of authentication,
 // and maps it to the cannonical condor name.
@@ -412,12 +418,45 @@ void Authentication::map_authentication_name_to_canonical_name(int authenticatio
 		dprintf (D_SECURITY, "ZKM: map file already loaded.\n");
 	}
 
+
 	dprintf (D_SECURITY, "ZKM: attempting to map '%s'\n", authentication_name);
+
+	// this will hold what we pass to the mapping function
+	MyString auth_name_to_map = authentication_name;
+
+	bool included_voms = false;
+
+#if defined(HAVE_EXT_GLOBUS)
+	// for GSI, we message the name and append the FQAN if it exists
+	if (authentication_type == CAUTH_GSI) {
+		MyString fqan = ((Condor_Auth_X509*)authenticator_)->getFQAN();
+		if (fqan != "") {
+			dprintf (D_ALWAYS, "ZKM: GSI was used, and FQAN is present.\n");
+			auth_name_to_map = authentication_name;
+			auth_name_to_map += ":";
+			auth_name_to_map += fqan;
+			included_voms = true;
+		}
+	}
+#endif
 
 	if (global_map_file) {
 		MyString canonical_user;
-		if (!global_map_file->GetCanonicalization(method_string, authentication_name, canonical_user)) {
+
+		dprintf (D_ALWAYS, "ZKM: 1: attempting to map '%s'\n", auth_name_to_map.Value());
+		bool mapret = global_map_file->GetCanonicalization(method_string, auth_name_to_map.Value(), canonical_user);
+		dprintf (D_ALWAYS, "ZKM: 2: mapret: %i included_voms: %i canonical_user: %s\n", mapret, included_voms, canonical_user.Value());
+
+		// if it did not find a user, and we included voms attrs, try again without voms
+		if (mapret && included_voms) {
+			dprintf (D_ALWAYS, "ZKM: now attempting to map '%s'\n", authentication_name);
+			mapret = global_map_file->GetCanonicalization(method_string, authentication_name, canonical_user);
+			dprintf (D_ALWAYS, "ZKM: now 2: mapret: %i included_voms: %i canonical_user: %s\n", mapret, included_voms, canonical_user.Value());
+		}
+
+		if (!mapret) {
 			// returns true on failure?
+			dprintf (D_ALWAYS, "ZKM: successful mapping to %s\n", canonical_user.Value());
 
 			// there is a switch for GSI to use the default globus function for this, in
 			// case there is some custom globus mapping add-on, or the admin just wants
@@ -438,6 +477,7 @@ void Authentication::map_authentication_name_to_canonical_name(int authenticatio
 				// this api should actually just return the canonical user,
 				// and we should split it into user and domain in this function,
 				// and not invoke setRemoteFoo() directly in nameGssToLocal().
+				dprintf (D_ALWAYS, "ZKM: GRIDMAPPED!\n");
 #else
 				dprintf(D_ALWAYS, "ZKM: GSI not compiled, but was used?!!");
 #endif
@@ -461,6 +501,8 @@ void Authentication::map_authentication_name_to_canonical_name(int authenticatio
 		} else {
 			dprintf (D_ALWAYS, "ZKM: did not find user %s.\n", canonical_user.Value());
 		}
+	} else {
+		dprintf (D_ALWAYS, "ZKM: global_map_file not present!\n");
 	}
 
 }

@@ -48,6 +48,16 @@
 #endif
 */
 
+typedef struct _BASIC_THREAD_INFORMATION {
+	DWORD u1;
+	DWORD u2;
+	DWORD u3;
+	DWORD ThreadId;
+	DWORD u5;
+	DWORD u6;
+	DWORD u7;
+} BASIC_THREAD_INFORMATION;
+
 //////////////////////////////////////////////////////////////////////////////////////
 //
 // SystemInfoUtils
@@ -360,56 +370,6 @@ BOOL SystemProcessInformation::Refresh()
 			pSysProcess = NULL;
 
 	} while ( pSysProcess != NULL );
-
-	return TRUE;
-}
-
-//////////////////////////////////////////////////////////////////////////////////////
-//
-// SystemThreadInformation
-//
-//////////////////////////////////////////////////////////////////////////////////////
-
-SystemThreadInformation::SystemThreadInformation( DWORD pID, BOOL bRefresh )
-{
-	m_processId = pID;
-
-	if ( bRefresh )
-		Refresh();
-}
-
-BOOL SystemThreadInformation::Refresh()
-{
-	// Get the Thread objects ( set the filter to "Thread" )
-	SystemHandleInformation hi( m_processId );
-	BOOL rc = hi.SetFilter( "Thread", TRUE );
-
-	//m_ThreadInfos.RemoveAll();
-	while ( !m_ThreadInfos.IsEmpty () ) {
-		m_ThreadInfos.DeleteCurrent ();
-	}
-
-	if ( !rc )
-		return FALSE;
-
-	THREAD_INFORMATION ti;
-
-	// Iterating through the found Thread objects
-	/* for ( POSITION pos = hi.m_HandleInfos.GetHeadPosition(); pos != NULL; ) */
-	SystemHandleInformation::SYSTEM_HANDLE h;
-	ListIterator<SystemHandleInformation::SYSTEM_HANDLE> it ( hi.m_HandleInfos );
-	it.ToBeforeFirst ();
-	while ( it.Next ( h ) )
-	{
-		//SystemHandleInformation::SYSTEM_HANDLE& h = hi.m_HandleInfos.GetNext(pos);
-		
-		ti.ProcessId = h.ProcessID;
-		ti.ThreadHandle = (HANDLE)h.HandleNumber;
-		
-		// This is one of the threads we are lokking for
-		if ( SystemHandleInformation::GetThreadId( ti.ThreadHandle, ti.ThreadId, ti.ProcessId ) )
-			m_ThreadInfos.Append ( ti );
-	}
 
 	return TRUE;
 }
@@ -766,7 +726,7 @@ cleanup:
 //Thread related functions
 BOOL SystemHandleInformation::GetThreadId( HANDLE h, DWORD& threadID, DWORD processId )
 {
-	SystemThreadInformation::BASIC_THREAD_INFORMATION ti;
+	BASIC_THREAD_INFORMATION ti;
 	HANDLE handle;
 	HANDLE hRemoteProcess = NULL;
 	BOOL remote = processId != GetCurrentProcessId();
@@ -944,189 +904,3 @@ cleanup:
 		
 	return ret;
 }
-
-//////////////////////////////////////////////////////////////////////////////////////
-//
-// SystemModuleInformation
-//
-//////////////////////////////////////////////////////////////////////////////////////
-
-SystemModuleInformation::SystemModuleInformation( DWORD pID, BOOL bRefresh )
-{
-	m_processId = pID;
-
-	if ( bRefresh )
-		Refresh();
-}
-
-void SystemModuleInformation::GetModuleListForProcess( DWORD processID )
-{
-	DWORD i = 0;
-	DWORD cbNeeded = 0;
-	HMODULE* hModules = NULL;
-	MODULE_INFO moduleInfo;
-
-	// Open process to read to query the module list
-	HANDLE hProcess = OpenProcess( PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, processID );
-
-	if ( hProcess == NULL )
-		goto cleanup;
-
-	//Get the number of modules
-	if ( !(*m_EnumProcessModules)( hProcess, NULL, 0, &cbNeeded ) )
-		goto cleanup;
-
-	hModules = new HMODULE[ cbNeeded / sizeof( HMODULE ) ];
-
-	//Get module handles
-    if ( !(*m_EnumProcessModules)( hProcess, hModules, cbNeeded, &cbNeeded ) )
-		goto cleanup;
-	
-	for ( i = 0; i < cbNeeded / sizeof( HMODULE ); i++ )
-	{
-		moduleInfo.ProcessId = processID;
-		moduleInfo.Handle = hModules[i];
-		
-		//Get module full paths
-		if ( (*m_GetModuleFileNameEx)( hProcess, hModules[i], moduleInfo.FullPath, _MAX_PATH ) )
-			m_ModuleInfos.Append( moduleInfo );
-	}
-
-cleanup:
-	if ( hModules != NULL )
-		delete [] hModules;
-
-	if ( hProcess != NULL )
-		CloseHandle( hProcess );
-}
-
-BOOL SystemModuleInformation::Refresh()
-{
-	BOOL rc = FALSE;
-	m_EnumProcessModules = NULL;
-	m_GetModuleFileNameEx = NULL;
-
-	// m_ModuleInfos.RemoveAll();
-	while ( !m_ModuleInfos.IsEmpty () )	{
-		m_ModuleInfos.DeleteCurrent ();
-	}
-	
-	//Load Psapi.dll
-	HINSTANCE hDll = LoadLibrary( "PSAPI.DLL" );
- 
-	if ( hDll == NULL )
-	{
-		rc = FALSE;
-		goto cleanup;
-	}
-
-	//Get Psapi.dll functions
-	m_EnumProcessModules = (PEnumProcessModules)GetProcAddress( hDll, "EnumProcessModules" );
-
-	m_GetModuleFileNameEx = (PGetModuleFileNameEx)GetProcAddress( hDll, 
-#ifdef UNICODE
-								"GetModuleFileNameExW" );
-#else
-								"GetModuleFileNameExA" );
-#endif
-
-	if ( m_GetModuleFileNameEx == NULL || m_EnumProcessModules == NULL )
-	{
-		rc = FALSE;
-		goto cleanup;
-	}
-	
-	// Everey process or just a particular one
-	if ( m_processId != -1 )
-		// For a particular one
-		GetModuleListForProcess( m_processId );
-	else
-	{
-		// Get teh process list
-		DWORD pID;
-		SystemProcessInformation::SYSTEM_PROCESS_INFORMATION* p = NULL;
-		SystemProcessInformation pi( TRUE );
-		
-		/*
-		if ( pi.m_ProcessInfos.IsEmpty() )
-		{
-			rc = FALSE;
-			goto cleanup;
-		}
-		*/
-
-		// Iterating through the processes and get the module list
-		/* for ( POSITION pos = pi.m_ProcessInfos.GetStartPosition(); pos != NULL; ) */
-		rc = FALSE; /* assume it is empty */
-		pi.m_ProcessInfos.startIterations ();
-		while ( pi.m_ProcessInfos.iterate ( pID, p ) )
-		{
-			rc = TRUE; /* not empty */
-			// pi.m_ProcessInfos.GetNextAssoc( pos, pID, p ); 
-			GetModuleListForProcess( pID );			
-		}
-
-		if ( !rc ) {
-			/* it was empty */
-			goto cleanup;
-		}
-	}
-	
-	rc = TRUE;
-
-cleanup:
-
-	//Free psapi.dll
-	if ( hDll != NULL )
-		FreeLibrary( hDll );
-
-	return rc;
-}
-
-//////////////////////////////////////////////////////////////////////////////////////
-//
-// SystemWindowInformation
-//
-//////////////////////////////////////////////////////////////////////////////////////
-
-SystemWindowInformation::SystemWindowInformation( DWORD pID, BOOL bRefresh )
-{
-	m_processId = pID;
-
-	if ( bRefresh )
-		Refresh();
-}
-
-BOOL SystemWindowInformation::Refresh()
-{
-	// m_WindowInfos.RemoveAll();
-	while ( !m_WindowInfos.IsEmpty () ) {
-		m_WindowInfos.DeleteCurrent ();
-	}
-
-	// Enumerating the windows
-	EnumWindows( EnumerateWindows, (LPARAM)this );
-	
-	return TRUE;
-}
-
-BOOL CALLBACK SystemWindowInformation::EnumerateWindows( HWND hwnd, LPARAM lParam )
-{
-	SystemWindowInformation* _this = (SystemWindowInformation*)lParam;
-	WINDOW_INFO wi;
-
-	wi.hWnd = hwnd;
-	GetWindowThreadProcessId(hwnd, &wi.ProcessId ) ;
-
-	// Filtering by process ID
-	if ( _this->m_processId == -1 || _this->m_processId == wi.ProcessId )
-	{
-		GetWindowText( hwnd, wi.Caption, MaxCaptionSize );
-
-		// That is we are looking for
-		if ( GetLastError() == 0 )
-			_this->m_WindowInfos.Append( wi );
-	}
-
-	return TRUE;
-};

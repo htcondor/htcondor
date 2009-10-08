@@ -40,6 +40,8 @@ extern SysapiProcCpuinfo	_SysapiProcCpuinfo;
 /* How to get the physical memory on a machine, answer in Megs */
 int sysapi_phys_memory_raw(void);
 int sysapi_phys_memory(void);
+/* get raw phys memory without making any calls to config system */
+int sysapi_phys_memory_raw_no_param(void);
 
 /* How to get the free disk blocks from a full pathname, answer in KB */
 int sysapi_disk_space_raw(const char *filename);
@@ -48,6 +50,8 @@ int sysapi_disk_space(const char *filename);
 /* return the number of cpus there on a machine */
 int sysapi_ncpus_raw(void);
 int sysapi_ncpus(void);
+/* get raw ncpus without making any calls to config system */
+void sysapi_ncpus_raw_no_param(int *num_cpus,int *num_hyperthread_cpus);
 
 /* calculate the number of mips the machine is. Even though this is a user
 	thing and on platforms like NT it is done by hand, it goes in the sysapi.
@@ -97,8 +101,11 @@ void sysapi_test_dump_internal_vars(void);
 void sysapi_test_dump_functions(void);
 
 /* tranlate between uname-type or LDAP entry values and Condor values */
-char * sysapi_translate_arch( char *machine, char *sysname );
-char *sysapi_translate_opsys( char *sysname, char *release, char *version );
+const char *sysapi_translate_arch( const char *machine,
+								   const char *sysname );
+const char *sysapi_translate_opsys( const char *sysname,
+									const char *release,
+									const char *version );
 
 /* set appropriate resource limits on each platform */
 void sysapi_set_resource_limits( void );

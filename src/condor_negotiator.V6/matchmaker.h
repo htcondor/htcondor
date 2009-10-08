@@ -30,9 +30,6 @@
 
 /* FILESQL include */
 #include "file_sql.h"
-#ifdef WANT_NETMAN
-#include "../condor_netman/netman.h"
-#endif
 
 typedef struct MapEntry {
 	char *remoteHost;
@@ -70,9 +67,6 @@ class Matchmaker : public Service
 		int SET_LASTTIME_commandHandler(int, Stream*);
 		int GET_PRIORITY_commandHandler(int, Stream*);
 		int GET_RESLIST_commandHandler(int, Stream*);
-#ifdef WANT_NETMAN
-		int REQUEST_NETWORK_commandHandler(int, Stream*);
-#endif
 
 		// timeout handler (for periodic negotiations)
 		int negotiationTime ();
@@ -90,6 +84,7 @@ class Matchmaker : public Service
     protected:
 		char * NegotiatorName;
 		int update_interval;
+		
 
 	private:
 		ClassAd * publicAd;
@@ -107,11 +102,11 @@ class Matchmaker : public Service
 			@param scheddAddr Sinful string of schedd for this submitter.
 			@param priority Priority of this user from the accountant.
 			@param share Priority w/o up-down (just relative prio factor).
-			@param scheddLimit Give away this many matches max
+			@param submitterLimit Give away this many matches max
 			@param startdAds
 			@param claimIds
 			@param scheddVersion
-			@param ignore_schedd_limit After hit scheddLimit, keep 
+			@param ignore_schedd_limit After hit submitterLimit, keep 
 					negotiating but only consider startd rank.
 			@param numMatched on return this is set to number of machines
 			        matched to this submitter.
@@ -122,19 +117,22 @@ class Matchmaker : public Service
 		**/
 		int negotiate( char const *scheddName, const ClassAd *scheddAd, 
 		   double priority, double share,
-		   int scheddLimit,
+		   double submitterLimit,
 		   ClassAdList &startdAds, ClaimIdHash &claimIds, 
 		   const CondorVersionInfo & scheddVersion,
-		   bool ignore_schedd_limit, time_t startTime, int &numMatched);
+		   bool ignore_schedd_limit, time_t startTime, 
+		   int &numMatched, double &limitUsed, double &pieLeft);
 
 		int negotiateWithGroup ( int untrimmed_num_startds,
+								 double untrimmedSlotWeightTotal,
+								 double minSlotWeight,
 			ClassAdList& startdAds, 
 			ClaimIdHash& claimIds, ClassAdList& scheddAds, 
-			int groupQuota=INT_MAX, const char* groupAccountingName=NULL);
+			float groupQuota=INT_MAX, const char* groupAccountingName=NULL);
 
 		
 		ClassAd *matchmakingAlgorithm(const char*,const char*,ClassAd&,ClassAdList&,
-									  double=-1.0, double=1.0, bool=false);
+									  double=-1.0, double=1.0, double=0.0, double=0.0, double=0.0, bool=false);
 		int matchmakingProtocol(ClassAd &request, ClassAd *offer, 
 						ClaimIdHash &claimIds, Sock *sock,
 						const char* scheddName, const char* scheddAddr);
@@ -146,62 +144,56 @@ class Matchmaker : public Service
 			@param scheddName Name attribute from the submitter ad.
 			@param groupAccountingName Group name from the submitter ad.
 			@param groupQuota Usage limit for this group.
-			@param numStartdAds Size of the pie in this spin.
 			@param maxPrioValue Largest prio value of any submitter.
 			@param maxAbsPrioValue Largest prio factor of any submitter
 			@param normalFactor Normalization for prio values
 			@param normalAbsFactor Normalization for prio factors
+			@param slotWeightTotal Size of the pie in this spin.
 
-			@param scheddLimit Resulting submitter share of this pie
-			@param scheddUsage Set to number of slots claimed by this submitter
-			@param scheddShare Resulting fractional share by prio and factor
-			@param scheddAbsShare Resulting fractional share by prio factor
-			@param scheddPrio User priority
-			@param scheddPrioFactor Result is this submitter's prio factor
-			@param scheddLimitRoundoff Difference between ideal share of pie
-			                           and rounded integer share.
+			@param submitterLimit Resulting submitter share of this pie
+			@param submitterUsage Set to number of slots claimed by this submitter
+			@param submitterShare Resulting fractional share by prio and factor
+			@param submitterAbsShare Resulting fractional share by prio factor
+			@param submitterPrio User priority
+			@param submitterPrioFactor Result is this submitter's prio factor
 		**/
-		void calculateScheddLimit(char const *scheddName,
+		void calculateSubmitterLimit(char const *scheddName,
 		                          char const *groupAccountingName,
-		                          int groupQuota,
-		                          int numStartdAds,
+		                          float groupQuota,
 		                          double maxPrioValue,
 		                          double maxAbsPrioValue,
 		                          double normalFactor,
 		                          double normalAbsFactor,
+								  double slotWeightTotal,
 		                            /* result parameters: */
-		                          int &scheddLimit,
-		                          int &scheddUsage,
-		                          double scheddShare,
-		                          double &scheddAbsShare,
-		                          double &scheddPrio,
-		                          double &scheddPrioFactor,
-		                          double &scheddLimitRoundoff );
+								  double &submitterLimit,
+								  double &submitterUsage,
+		                          double &submitterShare,
+		                          double &submitterAbsShare,
+		                          double &submitterPrio,
+		                          double &submitterPrioFactor);
 
-		/** Calculate a submitter's share of the pie.
+		/** Calculate how much pie might be dished out in this round.
 			@param quiet Do not emitt debug information about the calculation
 			@param scheddAds List of submitters
 			@param groupAccountingName Group name for all of these submitters
 			@param groupQuota Usage limit for this group.
-			@param numStartdAds Size of the pie in this spin.
 			@param maxPrioValue Largest prio value of any submitter.
 			@param maxAbsPrioValue Largest prio factor of any submitter
 			@param normalFactor Normalization for prio values
 			@param normalAbsFactor Normalization for prio factors
-			@param userprioCrumbs Resulting number of batch slots in this
-			                      pie which are left over after handing out
-			                      rounded integer shares.
+			@param pieLeft Sum of submitterLimits
 		**/
-		void calculateUserPrioCrumbs( ClassAdList &scheddAds,
-		                              char const *groupAccountingName,
-		                              int groupQuota,
-		                              int numStartdAds,
-		                              double maxPrioValue,
-		                              double maxAbsPrioValue,
-		                              double normalFactor,
-		                              double normalAbsFactor,
-		                                   /* result parameters: */
-		                              int &userprioCrumbs );
+		void calculatePieLeft( ClassAdList &scheddAds,
+		                       char const *groupAccountingName,
+		                       float groupQuota,
+		                       double maxPrioValue,
+		                       double maxAbsPrioValue,
+		                       double normalFactor,
+		                       double normalAbsFactor,
+		                       double slotWeightTotal,
+		                            /* result parameters: */
+		                       double &pieLeft);
 
 		void MakeClaimIdHash(ClassAdList &startdPvtAdList, ClaimIdHash &claimIds);
 		char const *getClaimId (const char *, const char *, ClaimIdHash &, MyString &);
@@ -218,10 +210,16 @@ class Matchmaker : public Service
 			// trim out startd ads that are not in the Unclaimed state.
 		int trimStartdAds(ClassAdList &startdAds);
 
+		bool SubmitterLimitPermits(ClassAd *candidate, double used, double allowed, double pieLeft);
+		double sumSlotWeights(ClassAdList &startdAds,double *minSlotWeight);
+
 		/* ODBC insert functions */
 		void insert_into_rejects(char const *userName, ClassAd& job);
 		void insert_into_matches(char const *userName, ClassAd& request, ClassAd& offer);
 		
+
+		void RegisterAttemptedOfflineMatch( ClassAd *job_ad, ClassAd *startd_ad );
+
 		// configuration information
 		char *AccountantHost;		// who (if at all) is the accountant?
 		int  NegotiatorInterval;	// interval between negotiation cycles
@@ -234,6 +232,7 @@ class Matchmaker : public Service
 		bool preemption_rank_unstable;
 		ExprTree *NegotiatorPreJobRank;  // rank applied before job rank
 		ExprTree *NegotiatorPostJobRank; // rank applied after job rank
+		bool useSlotWeights; // Should slot weights be used or do all machines count 1.
 		bool want_matchlist_caching;	// should we cache matches per autocluster?
 		bool ConsiderPreemption; // if false, negotiation is faster (default=true)
 		/// Should the negotiator inform startds of matches?
@@ -252,17 +251,12 @@ class Matchmaker : public Service
 		typedef HashTable<MyString, MapEntry*> AdHash;
 		AdHash *stashedAds;			
 
-		typedef HashTable<MyString, int> groupQuotasHashType;
+		typedef HashTable<MyString, float> groupQuotasHashType;
 		groupQuotasHashType *groupQuotasHash;
 
-		bool getGroupInfoFromUserId( const char *user, int & groupQuota, 
-			 int & groupUsage );
+		bool getGroupInfoFromUserId( const char *user, float & groupQuota, 
+			 float & groupUsage );
 		
-#ifdef WANT_NETMAN
-		// allocate network capacity
-		NetworkManager netman;
-		bool allocNetworkShares;
-#endif
 
 
 		// rank condition on matches
@@ -294,6 +288,7 @@ class Matchmaker : public Service
 		int rejPreemptForPrio;	//   - insufficient prio to preempt?
 		int rejPreemptForPolicy; //   - PREEMPTION_REQUIREMENTS == False?
 		int rejPreemptForRank;	//   - startd RANKs new job lower?
+		int rejForSubmitterLimit;   //   - not enough group quota?
 
 
 		// Class used to store each individual entry in the
@@ -317,6 +312,8 @@ class Matchmaker : public Service
 			ClassAd *ad;
 		};
 
+		void DeleteMatchList();
+
 		// List of matches.
 		// This list is essentially a list of sorted matching
 		// machine ads for a job ad of a given autocluster from
@@ -331,7 +328,7 @@ class Matchmaker : public Service
 		class MatchListType
 		{
 		public:
-			
+
 			ClassAd* pop_candidate();
 			bool cache_still_valid(ClassAd &request,ExprTree *preemption_req,
 				ExprTree *preemption_rank,bool preemption_req_unstable, bool preemption_rank_unstable);
@@ -340,13 +337,15 @@ class Matchmaker : public Service
 					int & rejForConcurrencyLimit,
 					int & rejPreemptForPrio,
 					int & rejPreemptForPolicy,
-					int & rejPreemptForRank);
+					int & rejPreemptForRank,
+					int & rejForSubmitterLimit);
 			void set_diagnostics(int rejForNetwork,
 					int rejForNetworkShare,
 					int rejForConcurrencyLimit,
 					int rejPreemptForPrio,
 					int rejPreemptForPolicy,
-					int rejPreemptForRank);
+					int rejPreemptForRank,
+					int rejForSubmitterLimit);
 			void add_candidate(ClassAd* candidate,
 					double candidateRankValue,
 					double candidatePreJobRankValue,
@@ -358,7 +357,9 @@ class Matchmaker : public Service
 
 			MatchListType(int maxlen);
 			~MatchListType();
-			
+
+			void increment_rejForSubmitterLimit() { m_rejForSubmitterLimit++; }
+
 		private:
 
 			// AdListEntry* peek_candidate();
@@ -374,7 +375,10 @@ class Matchmaker : public Service
 			int m_rejForConcurrencyLimit;	//   - limited concurrency?
 			int m_rejPreemptForPrio;	//   - insufficient prio to preempt?
 			int m_rejPreemptForPolicy; //   - PREEMPTION_REQUIREMENTS == False?
-			int m_rejPreemptForRank;	//   - startd RANKs new job lower?
+			int m_rejPreemptForRank;    //   - startd RANKs new job lower?
+			int m_rejForSubmitterLimit;     //  - not enough group quota?
+			float m_submitterLimit;
+			
 			
 		};
 		MatchListType* MatchList;
@@ -392,8 +396,8 @@ class Matchmaker : public Service
 			~SimpleGroupEntry();
 			char *groupName;
 			float prio;
-			int maxAllowed;
-			int usage;
+			float maxAllowed;
+			float usage;
 			ClassAdList submitterAds;			
 		};
 		static int groupSortCompare(const void*, const void*);

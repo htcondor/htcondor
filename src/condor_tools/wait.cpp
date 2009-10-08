@@ -110,7 +110,9 @@ int main( int argc, char *argv[] )
 			version();
 			EXIT_FAILURE;
 		} else if(!strcmp(argv[i],"-debug")) {
-			set_debug_flags("D_FULLDEBUG");
+			// dprintf to console
+			Termlog = 1;
+			dprintf_config ("TOOL" );
 		} else if(!strcmp(argv[i],"-wait")) {
 			i++;
 			if(i>=argc) {

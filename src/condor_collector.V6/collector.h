@@ -126,7 +126,8 @@ protected:
 	static CollectorUniverseStats ustatsMonthly;
 
 	static ClassAd *ad;
-	static DCCollector* updateCollector;
+	static CollectorList* updateCollectors;
+	static DCCollector* updateRemoteCollector;
 	static int UpdateTimerId;
 
 	static ForkWork forkQuery;

@@ -81,6 +81,7 @@
 #include "condor_random_num.h"
 #include "extArray.h"
 #include "subsystem_info.h"
+#include "param_info.h"
 
 #if HAVE_EXT_GCB
 #include "GCB.h"
@@ -1257,6 +1258,26 @@ fill_attributes()
 
 	insert( "subsystem", get_mySubSystem()->getName(), ConfigTab, TABLESIZE );
 	extra_info->AddInternalParam("subsystem");
+
+	MyString val;
+	val.sprintf("%d",sysapi_phys_memory_raw_no_param());
+	insert( "detected_memory", val.Value(), ConfigTab, TABLESIZE );
+	extra_info->AddInternalParam("detected_memory");
+
+		// Currently, num_hyperthread_cores is defined as everything
+		// in num_cores plus other junk, which on some systems may
+		// include non-hyperthreaded cores and on other systems may include
+		// hyperthreaded cores.  Since num_hyperthread_cpus is a super-set
+		// of num_cpus, we use it for NUM_CORES in the config.  Some day,
+		// we may want to break things out into NUM_HYPERTHREAD_CORES,
+		// NUM_PHYSICAL_CORES, and what-have-you.
+	int num_cpus=0;
+	int num_hyperthread_cpus=0;
+	sysapi_ncpus_raw_no_param(&num_cpus,&num_hyperthread_cpus);
+
+	val.sprintf("%d",num_hyperthread_cpus);
+	insert( "detected_cores", val.Value(), ConfigTab, TABLESIZE );
+	extra_info->AddInternalParam("detected_cores");
 }
 
 
@@ -1300,6 +1321,9 @@ init_config(bool wantExtraInfo  /* = true */)
 		extra_info = new DummyExtraParamTable();
 	}
 
+	// Initialize the default table.
+	param_info_init();
+
 	return;
 }
 
@@ -1338,7 +1362,7 @@ clear_config()
 ** if the given parameter is not defined.
 */
 char *
-param( const char *name )
+param_without_default( const char *name )
 {
 	char		*val = NULL;
 	char param_name[MAX_PARAM_LEN];
@@ -1416,6 +1440,129 @@ param( const char *name )
 	}
 }
 
+char*
+param(const char* name) 
+{
+	CondorVersionInfo cvi;
+
+	if (cvi.built_since_version(7,5,0) == true) {
+		/* This uses the new default table for the 7.5 series and beyond. */
+		/* The zero means return NULL on not found instead of EXCEPT */
+		return param_with_default_abort(name, 0);
+	}
+
+	/* This is the original behavior of param, for the 7.4 series. */
+	return param_without_default(name);
+}
+
+char *
+param_with_default_abort(const char *name, int abort) {
+	//look for subsys.param in config table first
+	MyString subsysparamname = get_mySubSystem()->getName();
+	subsysparamname += ".";
+	subsysparamname += name;
+	const char* subsysname = subsysparamname.Value();
+	char *val = lookup_macro( subsysname, ConfigTab, TABLESIZE );
+
+	if( val == NULL ) {
+
+/*		dprintf(D_ALWAYS, "'%s' not found in config table, looking in param info table\n", subsysname);*/
+		//couldn't find subsys.param in config table
+		//look for subsys.param in param info table
+
+		val = param_default_string(subsysname);
+		if (val != NULL) {
+
+			//add value to config table
+			insert(subsysname, val, ConfigTab, TABLESIZE);
+
+			if (val[0] != '\0') {
+
+/*				dprintf(D_ALWAYS, "'%s' found in param info table, adding to config table, value: '%s'\n", subsysname, val);*/
+				//found subsys.param in param info table
+
+			} else {
+
+				// the subsytem-specific setting was set to the empty string, so we
+				// return NULL without checking for the actual name since presumably
+				// it was set to empty specifically to clear this parameter for this
+				// specific subsystem.
+
+				dprintf(D_ALWAYS, "'%s' found in param info table, but it was empty, adding to config table\n", subsysname);
+
+				return NULL;
+			}
+
+		} else {
+
+/*			dprintf(D_ALWAYS, "'%s' not found in param info table, looking for '%s' in config table\n", subsysname, name);*/
+			//couldn't find subsys.param in param info table
+			//look for param in config table
+
+			val = lookup_macro( name, ConfigTab, TABLESIZE );
+			if (val != NULL) {
+
+/*				dprintf(D_ALWAYS, "'%s' found in config table\n", name);*/
+				//found param in config table
+
+			} else {
+
+/*				dprintf(D_ALWAYS, "'%s' not found in config table, looking in param info table\n", name);*/
+				//couldn't find param in config table
+				//look for param in param info table
+
+				val = param_default_string(name);
+				if (val != NULL) {
+
+/*					dprintf(D_ALWAYS, "'%s' found in param info table, adding to config table, value: '%s'\n", name, val);*/
+					//found param in param info table
+
+					//add value to config table
+					insert(name, val, ConfigTab, TABLESIZE);
+					
+					// also add it to the lame extra-info table
+					if (extra_info != NULL) {
+						extra_info->AddInternalParam(name);
+					}
+
+				} else {
+
+					//couldn't find subsys.param or param anywhere
+					if (abort) {
+						EXCEPT("'%s' or '%s' not found anywhere, add one of them to the table\n", subsysname, name);
+					} else {
+						return NULL;
+					}
+				}
+			}
+		}
+	} else if (val[0] == '\0' ) {
+		// the subsytem-specific setting was set to the empty string, so we
+		// return NULL without checking for the actual name since presumably
+		// it was set to empty specifically to clear this parameter for this
+		// specific subsystem.
+
+/*		dprintf(D_ALWAYS, "'%s' found in config table, but it was empty\n", subsysname);*/
+
+		return NULL;
+	} else {
+/*		dprintf(D_ALWAYS, "'%s' found in config table\n", subsysname);*/
+	}
+
+	// Ok, now expand it out...
+	val = expand_macro( val, ConfigTab, TABLESIZE );
+
+	// If it returned an empty string, free it before returning NULL
+	if( val == NULL ) {
+		return NULL;
+	} else if ( val[0] == '\0' ) {
+		free( val );
+		return NULL;
+	} else {
+		return val;
+	}
+}
+
 /*
 ** Return the integer value associated with the named paramter.
 ** This version returns true if a the parameter was found, or false
@@ -1429,8 +1576,32 @@ param( const char *name )
 bool
 param_integer( const char *name, int &value,
 			   bool use_default, int default_value,
-			   bool check_ranges, int min_value, int max_value )
+			   bool check_ranges, int min_value, int max_value,
+			   ClassAd *me, ClassAd *target,
+			   bool use_param_table )
 {
+	CondorVersionInfo cvi;
+
+	if(use_param_table && cvi.built_since_version(7,5,0)) {
+		int tbl_default_valid;
+		int tbl_default_value = 
+			param_default_integer( name, &tbl_default_valid );
+		bool tbl_check_ranges = 
+			(param_range_integer(name, &min_value, &max_value)==-1) 
+				? false : true;
+
+		// if found in the default table, then we overwrite the arguments
+		// to this function with the defaults from the table. This effectively
+		// nullifies the hard coded defaults in the higher level layers.
+		if (tbl_default_valid) {
+			use_default = true;
+			default_value = tbl_default_value;
+		}
+		if (tbl_check_ranges) {
+			check_ranges = true;
+		}
+	}
+	
 	int result;
 	long long_result;
 	char *string;
@@ -1459,12 +1630,32 @@ param_integer( const char *name, int &value,
 	bool valid = (endptr != string && *endptr == '\0');
 
 	if( !valid ) {
-		EXCEPT( "%s in the condor configuration is not an integer (%s)."
-		        "  Please set it to an integer in the range %d to %d"
-		        " (default %d).",
-		        name, string, min_value, max_value, default_value );
+		// For efficiency, we first tried to read the value as a
+		// simple literal.  Since that didn't work, now try parsing it
+		// as an expression.
+		ClassAd rhs;
+		if( me ) {
+			rhs = *me;
+		}
+		if( !rhs.AssignExpr( name, string ) ) {
+			EXCEPT("Invalid expression for %s (%s) "
+				   "in condor configuration.  Please set it to "
+				   "an integer expression in the range %d to %d "
+				   "(default %d).",
+				   name,string,min_value,max_value,default_value);
+		}
+
+		if( !rhs.EvalInteger(name,target,result) ) {
+			EXCEPT("Invalid result (not an integer) for %s (%s) "
+				   "in condor configuration.  Please set it to "
+				   "an integer expression in the range %d to %d "
+				   "(default %d).",
+				   name,string,min_value,max_value,default_value);
+		}
+		long_result = result;
 	}
-	else if( (long)result != long_result ) {
+
+	if( (long)result != long_result ) {
 		EXCEPT( "%s in the condor configuration is out of bounds for"
 				" an integer (%s)."
 				"  Please set it to an integer in the range %d to %d"
@@ -1499,19 +1690,19 @@ param_integer( const char *name, int &value,
 
 int
 param_integer( const char *name, int default_value,
-			   int min_value, int max_value )
+			   int min_value, int max_value, bool use_param_table )
 {
 	int result;
 
 	param_integer( name, result, true, default_value,
-				   true, min_value, max_value );
+				   true, min_value, max_value, NULL, NULL, use_param_table );
 	return result;
 }
 
 int param_integer_c( const char *name, int default_value,
-					   int min_value, int max_value)
+					   int min_value, int max_value, bool use_param_table )
 {
-	return param_integer( name, default_value, min_value, max_value );
+	return param_integer( name, default_value, min_value, max_value, use_param_table );
 }
 
 // require that the attribute I'm looking for is defined in the config file.
@@ -1537,14 +1728,35 @@ char* param_or_except(const char *attr)
 
 double
 param_double( const char *name, double default_value,
-			   double min_value, double max_value )
+			  double min_value, double max_value,
+			  ClassAd *me, ClassAd *target,
+			  bool use_param_table )
 {
+	CondorVersionInfo cvi;
+
+	if(use_param_table && cvi.built_since_version(7,5,0)) {
+		int tbl_default_valid;
+		double tbl_default_value = 
+			param_default_double( name, &tbl_default_valid );
+
+		// if the min_value & max_value are changed, we use it.
+		param_range_double(name, &min_value, &max_value);
+
+		// if found in the default table, then we overwrite the arguments
+		// to this function with the defaults from the table. This effectively
+		// nullifies the hard coded defaults in the higher level layers.
+		if (tbl_default_valid) {
+			default_value = tbl_default_value;
+		}
+	}
+	
 	double result;
 	char *string;
 	char *endptr = NULL;
 
 	ASSERT( name );
 	string = param( name );
+	
 	if( ! string ) {
 		dprintf( D_CONFIG, "%s is undefined, using default value of %f\n",
 				 name, default_value );
@@ -1560,24 +1772,44 @@ param_double( const char *name, double default_value,
 		}
 	}
 	bool valid = (endptr != string && *endptr == '\0');
-
 	if( !valid ) {
-		EXCEPT( "%s in the condor configuration is not a valid floating point number (%s)."
-		        "  Please set it to a number in the range %lg to %lg"
-		        " (default %lg).",
-		        name, string, min_value, max_value, default_value );
+		// For efficiency, we first tried to read the value as a
+		// simple literal.  Since that didn't work, now try parsing it
+		// as an expression.
+		ClassAd rhs;
+		float float_result;
+		if( me ) {
+			rhs = *me;
+		}
+		if( !rhs.AssignExpr( name, string ) ) {
+			EXCEPT("Invalid expression for %s (%s) "
+				   "in condor configuration.  Please set it to "
+				   "a numeric expression in the range %lg to %lg "
+				   "(default %lg).",
+				   name,string,min_value,max_value,default_value);
+		}
+
+		if( !rhs.EvalFloat(name,target,float_result) ) {
+			EXCEPT("Invalid result (not a number) for %s (%s) "
+				   "in condor configuration.  Please set it to "
+				   "a numeric expression in the range %lg to %lg "
+				   "(default %lg).",
+				   name,string,min_value,max_value,default_value);
+		}
+		result = float_result;
 	}
-	else if( result < min_value ) {
+
+	if( result < min_value ) {
 		EXCEPT( "%s in the condor configuration is too low (%s)."
-		        "  Please set it to a number in the range %lg to %lg"
-		        " (default %lg).",
-		        name, string, min_value, max_value, default_value );
+				"  Please set it to a number in the range %lg to %lg"
+				" (default %lg).",
+				name, string, min_value, max_value, default_value );
 	}
 	else if( result > max_value ) {
 		EXCEPT( "%s in the condor configuration is too high (%s)."
-		        "  Please set it to a number in the range %lg to %lg"
-		        " (default %lg).",
-		        name, string, min_value, max_value, default_value );
+				"  Please set it to a number in the range %lg to %lg"
+				" (default %lg).",
+				name, string, min_value, max_value, default_value );
 	}
 	free( string );
 	return result;
@@ -1592,8 +1824,25 @@ param_double( const char *name, double default_value,
 */
 
 bool
-param_boolean( const char *name, const bool default_value, bool do_log )
+param_boolean( const char *name, bool default_value, bool do_log,
+			   ClassAd *me, ClassAd *target,
+			   bool use_param_table )
 {
+	CondorVersionInfo cvi;
+
+	if(use_param_table && cvi.built_since_version(7,5,0)) {
+		int tbl_default_valid;
+		bool tbl_default_value = 
+			param_default_boolean( name, &tbl_default_valid );
+
+		// if found in the default table, then we overwrite the arguments
+		// to this function with the defaults from the table. This effectively
+		// nullifies the hard coded defaults in the higher level layers.
+		if (tbl_default_valid) {
+			default_value = tbl_default_value;
+		}
+	}
+
 	bool result;
 	char *string;
 	char *endptr;
@@ -1601,6 +1850,7 @@ param_boolean( const char *name, const bool default_value, bool do_log )
 
 	ASSERT( name );
 	string = param( name );
+	
 	if (!string) {
 		if (do_log) {
 			dprintf( D_CONFIG, "%s is undefined, using default value of %s\n",
@@ -1638,52 +1888,32 @@ param_boolean( const char *name, const bool default_value, bool do_log )
 	}
 
 	if( !valid ) {
-		EXCEPT( "%s in the condor configuration  is not a valid boolean (\"%s\")."
-		        "  Please set it to True or False (default is %s)",
-		        name, string, default_value ? "True" : "False" );
-	}
-
-	free( string );
-	
-	return result;
-}
-
-bool
-param_boolean_expr( const char *name, bool default_value, ClassAd const *me, ClassAd const *target )
-{
-	char *expr;
-	bool value = default_value;
-
-	ASSERT( name );
-	expr = param( name );
-	if( ! expr ) {
-		dprintf( D_CONFIG, "%s is undefined, using default value of %s\n",
-				 name, default_value ? "True" : "False" );
-		return default_value;
-	}
-
-	if( *expr ) {
+		// For efficiency, we first tried to read the value as a
+		// simple literal.  Since that didn't work, now try parsing it
+		// as an expression.
+		int int_value = default_value;
 		ClassAd rhs;
 		if( me ) {
 			rhs = *me;
 		}
 
-		if( !rhs.AssignExpr( name, expr ) ) {
-			EXCEPT("Invalid expression for %s (%s) in config file.",
-			       name, expr);
+		if( rhs.AssignExpr( name, string ) &&
+			rhs.EvalBool(name,target,int_value) )
+		{
+			result = (int_value != 0);
+			valid = true;
 		}
-
-		int int_value = value;
-		if( !rhs.EvalBool(name,target,int_value) ) {
-			EXCEPT("Invalid result (not a boolean) for %s (%s) "
-			       "in condor configuration.",
-			       name, expr );
-		}
-		value = (int_value != 0);
 	}
-	free( expr );
 
-	return value;
+	if( !valid ) {
+		EXCEPT( "%s in the condor configuration  is not a valid boolean (\"%s\")."
+				"  Please set it to True or False (default is %s)",
+				name, string, default_value ? "True" : "False" );
+	}
+
+	free( string );
+	
+	return result;
 }
 
 char *
@@ -1700,10 +1930,8 @@ macro_expand( const char *str )
 ** return the default_value argument.
 */
 extern "C" int
-param_boolean_int( const char *name, int default_value )
-{
+param_boolean_int( const char *name, int default_value ) {
     bool default_bool;
-
     default_bool = default_value == 0 ? false : true;
     return param_boolean(name, default_bool) ? 1 : 0;
 }
@@ -2287,6 +2515,56 @@ process_dynamic_configs()
 	return 0;
 }
 
+int
+write_config_file(const char* pathname) {
+	int config_fd = creat(pathname, O_WRONLY);
+	if(config_fd == -1) {
+		dprintf(D_ALWAYS, "Failed to create configuration file.\n");
+		return -1;
+	}
+	iterate_params(&write_config_variable, &config_fd);
+	if(close(config_fd) == -1) {
+		dprintf(D_ALWAYS, "Error closing new configuration file.\n");
+		return -1;
+	}
+	return 0;
+}
+
+int
+write_config_variable(param_info_t* value, void* file_desc) {
+	int config_fd = *((int*) file_desc);
+	char* actual_value = param(value->name);
+	if(strcmp(actual_value, value->str_val) != 0) {
+		char output[512];
+		snprintf(output, 512, "# %s:  Default value = (%s)\n", value->name, value->str_val);
+		if(write(config_fd, &output, 512*sizeof(char)) == -1) {
+			dprintf(D_ALWAYS, "Failed to write to configuration file.\n");
+			return -1;
+		}
+		snprintf(output, 512, "%s = %s", value->name, actual_value);
+		if(write(config_fd, &output, 512*sizeof(char)) == -1) {
+			dprintf(D_ALWAYS, "Failed to write to configuration file.\n");
+			return -1;
+		}
+	}
+	return 0;
+}
+
 } // end of extern "C"
 
 /* End code for runtime support for modifying a daemon's config source. */
+
+bool param(MyString &buf,char const *param_name,char const *default_value)
+{
+	bool found = false;
+	char *param_value = param(param_name);
+	if( param_value ) {
+		buf = param_value;
+		found = true;
+	}
+	else if( default_value ) {
+		buf = default_value;
+	}
+	free( param_value );
+	return found;
+}

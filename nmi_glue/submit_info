@@ -19,9 +19,10 @@
 # x86_rhas_3
 # x86_deb_4.0
 # x86_deb_5.0
+# x86_64_deb_5.0
 # x86_winnt_5.1
+# x86_winnt_6.0
 # x86_macos_10.4
-# x86_freebsd_6
 # x86_64_rhas_3
 # ia64_rhas_3
 # hppa_hpux_11
@@ -33,6 +34,7 @@
 # x86_64_rhap_5
 
 # These platforms are not done being ported
+# x86_64_winnt_5.1
 
 # These platforms are in maintenance build only
 # x86_64_macos_10.5
@@ -54,7 +56,7 @@ testargs = quick
 platforms = \
 	  hppa_hpux_11, ppc_aix_5.2-pl5, \
 	  sun4u_sol_5.9, \
-	  x86_rhas_3, x86_deb_4.0, x86_deb_5.0
+	  x86_rhas_3, x86_deb_4.0
 
 # shared prereqs
 prereqs = tar-1.14, patch-2.5.4, m4-1.4.1, flex-2.5.4a, \
@@ -62,13 +64,15 @@ prereqs = tar-1.14, patch-2.5.4, m4-1.4.1, flex-2.5.4a, \
 
 # per-platform prereqs 
 prereqs_hppa_hpux_11     = binutils-2.16, coreutils-5.2.1, gcc-3.4.3, gzip-1.2.4, wget-1.9.1
-prereqs_ppc_aix_5.2-pl5      = vac-6, vacpp-6, perl-5.8.5, gzip-1.3.3
-prereqs_sun4u_sol_5.9    = gcc-4.1.2, binutils-2.16, perl-5.8.5, gzip-1.3.3, wget-1.9.1
+prereqs_ppc_aix_5.2-pl5      = vac-6, vacpp-6, perl-5.8.5, gzip-1.3.3, coreutils-5.2.1
+prereqs_sun4u_sol_5.9    = gcc-4.1.2, binutils-2.16, perl-5.8.5, gzip-1.3.3, wget-1.9.1, coreutils-5.2.1
 prereqs_x86_rhas_3       = binutils-2.15, perl-5.8.5, gzip-1.3.3, autoconf-2.59, \
 							VMware-server-1.0.7
+
+# I've removed x86_64_rhas_3 for now, as per git trac #482
 x_test_platforms_x86_rhas_3 =  x86_rhas_4, \
-						x86_suse_10.0, x86_sles_9, x86_deb_3.1, x86_ubuntu_5.10, \
-						x86_64_rhas_3, x86_64_rhas_4
+						x86_suse_10.0, x86_sles_9, x86_ubuntu_5.10, \
+						x86_64_rhas_4
 #x_test_platforms_x86_rhas_3 = , x86_slc_4, \
 						#x86_fc_5,  \
 						#x86_64_rhas_3, x86_64_rhas_4, x86_64_fc_4, \
@@ -82,17 +86,34 @@ x_test_platforms_x86_rhas_3 =  x86_rhas_4, \
 # FreeBSD
 # We don't need patch or byacc
 ########################################
+#[
+#platforms = x86_freebsd_6
+#prereqs   = tar-1.14, m4-1.4.1, flex-2.5.4a, make-3.80, bison-1.25, perl-5.8.5, wget-1.9.1, coreutils-5.2.1
+#]
+
+########################################
+# x86-64 Debian 5.0
+# We need libtool for the blahp
+########################################
 [
-platforms = x86_freebsd_6
-prereqs   = tar-1.14, m4-1.4.1, flex-2.5.4a, make-3.80, bison-1.25, perl-5.8.5, wget-1.9.1
+platforms = x86_64_deb_5.0
+prereqs   = libtool-1.5.26
+]
+
+########################################
+# x86 Debian 5.0
+# We need libtool for the blahp
+########################################
+[
+platforms = x86_deb_5.0
+prereqs   = libtool-1.5.26
 ]
 
 ########################################
 # Platforms with no prereqs at all
 ########################################
 [
-platforms = \
-            x86_winnt_5.1, ppc64_sles_9, ps3_ydl_5.0
+platforms = x86_winnt_5.1, ppc64_sles_9, ps3_ydl_5.0
 ]
 
 
@@ -101,14 +122,30 @@ platforms = \
 ########################################
 [
 platforms =   \
-	ia64_rhas_3, x86_64_rhas_3, \
+	ia64_rhas_3, x86_64_rhas_3
+test_append_prereqs = java-1.4.2_05, perl-5.8.5
+prereqs_x86_64_rhas_3       = VMware-server-1.0.7
+x_test_platforms_ia64_rhas_3 = ia64_rhas_4
+x_test_platforms_x86_64_rhas_3 = x86_64_rhas_4
+testonly_append_prereqs = perl-5.8.5
+#x_test_platforms_x86_64_rhas_3 = x86_64_fc_5
+]
+
+[
+platforms =   \
 	ppc_aix_5.2-pl5, \
 	sun4u_sol_5.9, \
 	x86_rhas_3
-test_append_prereqs = java-1.4.2_05
-prereqs_x86_64_rhas_3       = VMware-server-1.0.7
-x_test_platforms_ia64_rhas_3 = ia64_rhas_4
-x_test_platforms_x86_64_rhas_3 = x86_64_rhas_4, x86_64_fc_4
+test_append_prereqs = java-1.4.2_05, perl-5.8.5
+#x_test_platforms_x86_64_rhas_3 = x86_64_fc_5
+]
+
+[
+platforms =   \
+	ppc_aix_5.2-pl5, \
+	sun4u_sol_5.9, \
+	x86_rhas_3
+test_append_prereqs = java-1.4.2_05, perl-5.8.5
 #x_test_platforms_x86_64_rhas_3 = x86_64_fc_5
 x_test_platforms_ppc_aix_5.2-pl5 =  ppc_aix_5.3
 ]
@@ -120,7 +157,8 @@ test_append_prereqs = java-1.5.0_03
 
 [
 platforms = x86_macos_10.4
-test_append_prereqs = java-1.4.2_09
+prereqs   = coreutils-5.2.1
+test_append_prereqs = java-1.4.2_09, coreutils-5.2.1
 x_test_platforms_x86_macos_10.4 = x86_64_macos_10.5
 ]
 
@@ -131,6 +169,7 @@ x_test_platforms_x86_macos_10.4 = x86_64_macos_10.5
 
 [
 platforms = x86_winnt_5.1
+#x_test_platforms_x86_winnt_5.1 = x86_64_winnt_5.1
 ]
 
 [
@@ -138,10 +177,10 @@ platforms = ppc64_sles_9
 test_append_prereqs = java-1.4.2
 ]
 
-[
-platforms = x86_freebsd_6
-test_append_prereqs = java-1.4.2
-]
+#[
+#platforms = x86_freebsd_6
+#test_append_prereqs = java-1.4.2
+#]
 
 [
 platforms = x86_deb_4.0
@@ -161,22 +200,21 @@ test_append_prereqs = java-1.4.2_05
 [
 platforms = x86_rhap_5
 test_append_prereqs = java-1.4.2_05
-x_test_platforms_x86_rhap_5 = unmanaged-x86_rhap_5.1, x86_64_fc_5, x86_fc_5, \
-		x86_64_fc_8, x86_64_fc_9
+x_test_platforms_x86_rhap_5 = unmanaged-x86_rhap_5, x86_64_fc_5, x86_fc_5, \
+		x86_64_fedora_8, x86_64_fedora_9
 ]
 
 [
 platforms = x86_64_rhap_5
 test_append_prereqs = java-1.4.2_05
-x_test_platforms_x86_64_rhap_5 = x86_64_fc_8, x86_64_fc_9
+x_test_platforms_x86_64_rhap_5 = x86_64_fedora_8, x86_64_fedora_9
 ]
 
 [
 testplatforms = x86_rhas_4, x86_slc_3, x86_suse_10.0, \
-				x86_sles_9, x86_ubuntu_5.10, sun4u_sol_5.10, \
-				x86_deb_3.1
+				x86_sles_9, x86_ubuntu_5.10, sun4u_sol_5.10
 testprereqs = tar-1.14, make-3.80
-testonly_append_prereqs = java-1.4.2_05
+testonly_append_prereqs = java-1.4.2_05, perl-5.8.5
 ]
 
 [
@@ -193,22 +231,28 @@ testonly_append_prereqs = java-1.4.2_05
 ]
 
 [
-testplatforms = unmanaged-x86_rhap_5.1
+testplatforms = unmanaged-x86_rhap_5
 ]
 
 [
 testplatforms = x86_fc_5, x86_rhap_5.1, x86_64_fc_5, \
-		x86_64_fc_8, x86_64_fc_9
+		x86_64_fedora_8
 testprereqs = tar-1.14, make-3.80
-testonly_append_prereqs = java-1.5.0_08
+testonly_append_prereqs = java-1.5.0_08, perl-5.8.5
+]
+
+[
+testplatforms = x86_64_fedora_9
+testprereqs = tar-1.14, make-3.80
+testonly_append_prereqs = java-1.5.0_08, perl-5.8.9
 ]
 
 [
 testplatforms = ia64_rhas_4, x86_64_rhas_4, x86_64_fc_4
-testprereqs = tar-1.14, make-3.80
+testprereqs = tar-1.14, make-3.80, perl-5.8.5
 testonly_append_prereqs = java-1.4.2_05
 ]
 
 [
-testplatforms =  unmanaged-x86_rhap_5.1
+testplatforms =  unmanaged-x86_rhap_5
 ]

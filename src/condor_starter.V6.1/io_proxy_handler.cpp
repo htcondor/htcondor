@@ -77,7 +77,7 @@ int IOProxyHandler::handle_request( Stream *s )
 		}
 		return KEEP_STREAM;
 	} else {
-		dprintf(D_ALWAYS,"IOProxyHandler: closing connection to %s\n",r->endpoint_ip_str());
+		dprintf(D_ALWAYS,"IOProxyHandler: closing connection to %s\n",r->peer_ip_str());
 		delete this;
 		return ~KEEP_STREAM;
 	}

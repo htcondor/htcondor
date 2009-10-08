@@ -28,6 +28,8 @@
 #include "daemon.h"
 #include "dc_starter.h"
 #include "internet.h"
+#include "condor_claimid_parser.h"
+#include "condor_base64.h"
 
 
 DCStarter::DCStarter( const char* sName ) : Daemon( DT_STARTER, sName, NULL )
@@ -241,4 +243,200 @@ StarterHoldJobMsg::readMsg( DCMessenger * /*messenger*/, Sock *sock )
 	sock->get(success);
 
 	return success!=0;
+}
+
+bool
+DCStarter::createJobOwnerSecSession(int timeout,char const *job_claim_id,char const *starter_sec_session,char const *session_info,MyString &owner_claim_id,MyString &error_msg,MyString &starter_version,MyString &starter_addr)
+{
+	ReliSock sock;
+
+	if( !connectSock(&sock, timeout, NULL) ) {
+		error_msg = "Failed to connect to starter";
+		return false;
+	}
+
+	if( !startCommand(CREATE_JOB_OWNER_SEC_SESSION, &sock,timeout,NULL,NULL,false,starter_sec_session) ) {
+		error_msg = "Failed to send CREATE_JOB_OWNER_SEC_SESSION to starter";
+		return false;
+	}
+
+	ClassAd input;
+	input.Assign(ATTR_CLAIM_ID,job_claim_id);
+	input.Assign(ATTR_SESSION_INFO,session_info);
+
+	sock.encode();
+	if( !input.put(sock) || !sock.eom() ) {
+		error_msg = "Failed to compose CREATE_JOB_OWNER_SEC_SESSION to starter";
+		return false;
+	}
+
+	sock.decode();
+
+	ClassAd reply;
+	if( !reply.initFromStream(sock) || !sock.eom() ) {
+		error_msg = "Failed to get response to CREATE_JOB_OWNER_SEC_SESSION from starter";
+		return false;
+	}
+
+	bool success = false;
+	reply.LookupBool(ATTR_RESULT,success);
+	if( !success ) {
+		reply.LookupString(ATTR_ERROR_STRING,error_msg);
+		return false;
+	}
+
+	reply.LookupString(ATTR_CLAIM_ID,owner_claim_id);
+	reply.LookupString(ATTR_VERSION,starter_version);
+		// get the full starter address from the starter in case it contains
+		// extra CCB info that we don't already know about
+	reply.LookupString(ATTR_STARTER_IP_ADDR,starter_addr);
+	return true;
+}
+
+bool DCStarter::startSSHD(char const *known_hosts_file,char const *private_client_key_file,char const *preferred_shells,char const *slot_name,char const *ssh_keygen_args,ReliSock &sock,int timeout,char const *sec_session_id,MyString &remote_user,MyString &error_msg,bool &retry_is_sensible)
+{
+
+	retry_is_sensible = false;
+
+#ifndef HAVE_SSH_TO_JOB
+	error_msg = "This version of Condor does not support ssh key exchange.";
+	return false;
+#else
+	if( !connectSock(&sock, timeout, NULL) ) {
+		error_msg = "Failed to connect to starter";
+		return false;
+	}
+
+	if( !startCommand(START_SSHD, &sock,timeout,NULL,NULL,false,sec_session_id) ) {
+		error_msg = "Failed to send START_SSHD to starter";
+		return false;
+	}
+
+	ClassAd input;
+
+	if( preferred_shells && *preferred_shells ) {
+		input.Assign(ATTR_SHELL,preferred_shells);
+	}
+
+	if( slot_name && *slot_name ) {
+			// This is a little silly.
+			// We are telling the remote side the name of the slot so
+			// that it can put it in the welcome message.
+		input.Assign(ATTR_NAME,slot_name);
+	}
+
+	if( ssh_keygen_args && *ssh_keygen_args ) {
+		input.Assign(ATTR_SSH_KEYGEN_ARGS,ssh_keygen_args);
+	}
+
+	sock.encode();
+	if( !input.put(sock) || !sock.eom() ) {
+		error_msg = "Failed to send START_SSHD request to starter";
+		return false;
+	}
+
+	ClassAd result;
+	sock.decode();
+	if( !result.initFromStream(sock) || !sock.eom() ) {
+		error_msg = "Failed to read response to START_SSHD from starter";
+		return false;
+	}
+
+	bool success = false;
+	result.LookupBool(ATTR_RESULT,success);
+	if( !success ) {
+		MyString remote_error_msg;
+		result.LookupString(ATTR_ERROR_STRING,remote_error_msg);
+		error_msg.sprintf("%s: %s",slot_name,remote_error_msg.Value());
+		retry_is_sensible = false;
+		result.LookupBool(ATTR_RETRY,retry_is_sensible);
+		return false;
+	}
+
+	result.LookupString(ATTR_REMOTE_USER,remote_user);
+
+	MyString public_server_key;
+	if( !result.LookupString(ATTR_SSH_PUBLIC_SERVER_KEY,public_server_key) ) {
+		error_msg = "No public ssh server key received in reply to START_SSHD";
+		return false;
+	}
+	MyString private_client_key;
+	if( !result.LookupString(ATTR_SSH_PRIVATE_CLIENT_KEY,private_client_key) ) {
+		error_msg = "No ssh client key received in reply to START_SSHD";
+		return false;
+	}
+
+
+		// store the private client key
+	unsigned char *decode_buf = NULL;
+	int length = -1;
+	condor_base64_decode(private_client_key.Value(),&decode_buf,&length);
+	if( !decode_buf ) {
+		error_msg = "Error decoding ssh client key.";
+		return false;
+	}
+	FILE *fp = safe_fcreate_fail_if_exists(private_client_key_file,"a",0400);
+	if( !fp ) {
+		error_msg.sprintf("Failed to create %s: %s",
+						  private_client_key_file,strerror(errno));
+		free( decode_buf );
+		return false;
+	}
+	if( fwrite(decode_buf,length,1,fp)!=1 ) {
+		error_msg.sprintf("Failed to write to %s: %s",
+						  private_client_key_file,strerror(errno));
+		fclose( fp );
+		free( decode_buf );
+		return false;
+	}
+	if( fclose(fp)!=0 ) {
+		error_msg.sprintf("Failed to close %s: %s",
+						  private_client_key_file,strerror(errno));
+		free( decode_buf );
+		return false;
+	}
+	fp = NULL;
+	free( decode_buf );
+	decode_buf = NULL;
+
+
+		// store the public server key in the known_hosts file
+	length = -1;
+	condor_base64_decode(public_server_key.Value(),&decode_buf,&length);
+	if( !decode_buf ) {
+		error_msg = "Error decoding ssh server key.";
+		return false;
+	}
+	fp = safe_fcreate_fail_if_exists(known_hosts_file,"a",0600);
+	if( !fp ) {
+		error_msg.sprintf("Failed to create %s: %s",
+						  known_hosts_file,strerror(errno));
+		free( decode_buf );
+		return false;
+	}
+
+		// prepend a host name pattern (*) to the public key to make a valid
+		// record in the known_hosts file
+	fprintf(fp,"* ");
+
+	if( fwrite(decode_buf,length,1,fp)!=1 ) {
+		error_msg.sprintf("Failed to write to %s: %s",
+						  known_hosts_file,strerror(errno));
+		fclose( fp );
+		free( decode_buf );
+		return false;
+	}
+
+	if( fclose(fp)!=0 ) {
+		error_msg.sprintf("Failed to close %s: %s",
+						  known_hosts_file,strerror(errno));
+		free( decode_buf );
+		return false;
+	}
+	fp = NULL;
+	free( decode_buf );
+	decode_buf = NULL;
+
+	return true;
+#endif
 }

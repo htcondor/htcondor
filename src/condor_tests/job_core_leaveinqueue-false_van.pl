@@ -20,11 +20,12 @@
 
 use CondorTest;
 
-$cmd = 'job_core_leaveinqueue-false_van.cmd';
-$testdesc =  'Condor submit with policy set to not trigger for leave_in_queue - vanilla U';
-$testname = "job_core_leaveinqueue_van";
+my $cmd = 'job_core_leaveinqueue-false_van.cmd';
+my $testdesc =  'Condor submit with policy set to not trigger for leave_in_queue - vanilla U';
+my $testname = "job_core_leaveinqueue_van";
 
 my $killedchosen = 0;
+my $debuglevel = 2;
 
 # truly const variables in perl
 sub IDLE{1};
@@ -41,7 +42,7 @@ $executed = sub
 	%info = @_;
 	$cluster = $info{"cluster"};
 
-	CondorTest::debug("Good. for leave_in_queue cluster $cluster must run first\n",1);
+	CondorTest::debug("Good. for leave_in_queue cluster $cluster must run first\n",$debuglevel);
 };
 
 $success = sub
@@ -49,7 +50,7 @@ $success = sub
 	my %info = @_;
 	my $cluster = $info{"cluster"};
 
-	CondorTest::debug("Good, job should be done but NOT left in the queue!!!\n",1);
+	CondorTest::debug("Good, job should be done but NOT left in the queue!!!\n",$debuglevel);
 	my $status = 1;
 	my $delay = 1;
 	my $backoffmax = 17; #(1 + 2 + 4 + 8 + 16 = 31 seconds max)
@@ -61,15 +62,15 @@ $success = sub
 		$status = CondorTest::runCondorTool($cmd,\@adarray,2);
 		if(!$status)
 		{
-			CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
+			CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",$debuglevel);
 			exit(1)
 		}
 		foreach my $line (@adarray)
 		{
-			CondorTest::debug("$line\n",1);
+			CondorTest::debug("$line\n",$debuglevel);
 			if($line =~ /^\s*$cluster\..*$/) {
-				CondorTest::debug("$line\n",1);
-				CondorTest::debug("job should be done but NOT left in the queue!!\n",1);
+				CondorTest::debug("$line\n",$debuglevel);
+				CondorTest::debug("job should be done but NOT left in the queue!!\n",$debuglevel);
 				$foundit = 1;
 			}
 		}
@@ -78,13 +79,15 @@ $success = sub
 			$delay = 2 * $delay;
 			next;
 		} else {
-			CondorTest::debug("Job not in queue as expected\n",1);
+			CondorTest::debug("Job not in queue as expected\n",$debuglevel);
 			last;
 		}
 	}
 	if($foundit == 1) {
+		print "bad\n";
 		die "Job still in the queue after multiple looks\n";
 	}
+	print "ok\n";
 };
 
 $submitted = sub
@@ -93,9 +96,9 @@ $submitted = sub
 	my $cluster = $info{"cluster"};
 	my $job = $info{"job"};
 
-	CondorTest::debug("submitted: \n",1);
+	CondorTest::debug("submitted: \n",$debuglevel);
 	{
-		CondorTest::debug("good job $job expected submitted.\n",1);
+		CondorTest::debug("good job $job expected submitted.\n",$debuglevel);
 	}
 };
 
@@ -103,8 +106,10 @@ CondorTest::RegisterExecute($testname, $executed);
 CondorTest::RegisterExitedSuccess( $testname, $success );
 CondorTest::RegisterSubmit( $testname, $submitted );
 
+print "Leave in queue False - job should not still be in the queue - ";
+
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	CondorTest::debug("$testname: SUCCESS\n",1);
+	CondorTest::debug("$testname: SUCCESS\n",$debuglevel);
 	exit(0);
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";

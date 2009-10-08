@@ -396,3 +396,8 @@ bool JavaProc::PublishUpdateAd( ClassAd* ad )
 	return VanillaProc::PublishUpdateAd(ad);
 }
 
+char const *
+JavaProc::getArgv0()
+{
+	return NULL; // java does not like argv0 to be a lie, so don't lie
+}

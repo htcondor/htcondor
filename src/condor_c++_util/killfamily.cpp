@@ -487,8 +487,15 @@ KillFamily::currentfamily( pid_t* & ptr  )
 	int i;
 
 	if( family_size <= 0 ) {
+		/* This used to be an ERROR, but we can't figure out why since the
+			above layers of code can end up calling this in the situation
+			when a pid is exited, reaped by waitpid, but not yet by the
+			daemoncore reaper. So, I've moved it to WARNING instead so
+			we can still think about it when it happens in the codebase
+			instead of forgetting about it. See ticket #706.
+		*/
 		dprintf( D_ALWAYS,
-				 "KillFamily::currentfamily: ERROR: family_size is 0\n" );
+				 "KillFamily::currentfamily: WARNING: family_size is non-positive (%d)\n", family_size);
 		ptr = NULL;
 		return 0;
 	}

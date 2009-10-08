@@ -20,8 +20,9 @@
 
 use CondorTest;
 
-$testdesc =  'Condor LEAVE_IN_QUEUE policy test - scheduler U';
-$testname = "job_core_leaveinqueue_sched";
+my $debuglevel = 2;
+my $testdesc =  'Condor LEAVE_IN_QUEUE policy test - scheduler U';
+my $testname = "job_core_leaveinqueue_sched";
 
 my $nostatus = CondorTest::verbose_system("./job_core_leaveinqueue-false_sched.pl");
 my $willstatus = CondorTest::verbose_system("./job_core_leaveinqueue-true_sched.pl");
@@ -34,12 +35,12 @@ CondorTest::MergeOutputFiles(\%listoftests);
 
 if($nostatus != 0)
 {
-	CondorTest::debug("LEAVE_IN_QUEUE: failed no trigger test\n",1);
+	CondorTest::debug("LEAVE_IN_QUEUE: failed no trigger test\n",$debuglevel);
 }
 
 if($willstatus != 0)
 {
-	CondorTest::debug("LEAVE_IN_QUEUE: failed trigger test\n",1);
+	CondorTest::debug("LEAVE_IN_QUEUE: failed trigger test\n",$debuglevel);
 }
 
 if(($willstatus != 0) || ($nostatus != 0))

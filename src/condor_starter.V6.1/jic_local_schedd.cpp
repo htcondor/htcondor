@@ -36,7 +36,7 @@
 extern CStarter *Starter;
 
 
-JICLocalSchedd::JICLocalSchedd( const char* classad_filename, 
+JICLocalSchedd::JICLocalSchedd( const char* classad_filename,
 								const char* schedd_address, 
 								int cluster, int proc, int subproc )
 	: JICLocalFile( classad_filename, cluster, proc, subproc )
@@ -492,8 +492,17 @@ JICLocalSchedd::getUniverse( void )
 bool
 JICLocalSchedd::initLocalUserLog( void )
 {
-	return u_log->initFromJobAd( job_ad, ATTR_ULOG_FILE,
+	bool ret = u_log->initFromJobAd( job_ad, ATTR_ULOG_FILE,
 								 ATTR_ULOG_USE_XML );
+	if( ! ret ) {
+		job_ad->Assign( ATTR_HOLD_REASON, "Failed to initialize user log");
+		job_ad->Assign( ATTR_HOLD_REASON_CODE, CONDOR_HOLD_CODE_UnableToInitUserLog );
+		job_ad->Assign( ATTR_HOLD_REASON_SUBCODE, 0 );
+		job_updater->updateJob(U_HOLD);
+		Starter->FinalCleanup();
+		DC_Exit(JOB_SHOULD_HOLD);
+	}
+	return true;
 }
 
 

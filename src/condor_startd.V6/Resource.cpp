@@ -159,12 +159,20 @@ Resource::~Resource()
 		m_next_fetch_work_tid = -1;
 	}
 	if (m_hook_keyword) {
-		free(m_hook_keyword);
+		free(m_hook_keyword); m_hook_keyword = NULL;
 	}
 #endif /* HAVE_JOB_HOOKS */
 
+		// Note on "&& !m_currently_fetching": A DYNAMIC slot will
+		// defer its destruction while it is waiting on a fetch work
+		// hook. The only time when a slot with a parent will be
+		// destroyed while waiting on a hook is during
+		// shutdown. During shutdown there is no need to give
+		// resources back to the parent slot, and doing so may
+		// actually be dangerous if our parent was deleted first.
+
 		// If we have a parent, return our resources to it
-	if( m_parent ) {
+	if( m_parent && !m_currently_fetching ) {
 		*(m_parent->r_attr) += *(r_attr);
 		m_parent->m_id_dispenser->insert( r_sub_id );
 		m_parent->update();
@@ -176,21 +184,21 @@ Resource::~Resource()
 		m_id_dispenser = NULL;
 	}
 
-	delete r_state;
-	delete r_classad;
-	delete r_cur;
+	delete r_state; r_state = NULL;
+	delete r_classad; r_classad = NULL;
+	delete r_cur; r_cur = NULL;
 	if( r_pre ) {
-		delete r_pre;
+		delete r_pre; r_pre = NULL;
 	}
 	if( r_pre_pre ) {
-		delete r_pre_pre;
+		delete r_pre_pre; r_pre_pre = NULL;
 	}
-	delete r_cod_mgr;
-	delete r_reqexp;
-	delete r_attr;
-	delete r_load_queue;
-	free( r_name );
-	free( r_id_str );
+	delete r_cod_mgr; r_cod_mgr = NULL;
+	delete r_reqexp; r_reqexp = NULL;
+	delete r_attr; r_attr = NULL;
+	delete r_load_queue; r_load_queue = NULL;
+	free( r_name ); r_name = NULL;
+	free( r_id_str ); r_id_str = NULL;
 }
 
 
@@ -225,15 +233,17 @@ Resource::retire_claim( void )
 				r_cur->setRetirePeacefully(true);
 			}
 		}
-		return change_state( retiring_act );
+		change_state( retiring_act );
+		break;
 	case matched_state:
-		return change_state( owner_state );
+		change_state( owner_state );
+		break;
 #if HAVE_BACKFILL
 	case backfill_state:
 			// we don't want retirement to mean anything special for
 			// backfill jobs... they should be killed immediately
 		set_destination_state( owner_state );
-		return TRUE;
+		break;
 #endif /* HAVE_BACKFILL */
 	default:
 			// For good measure, try directly killing the starter if
@@ -251,18 +261,20 @@ Resource::release_claim( void )
 {
 	switch( state() ) {
 	case claimed_state:
-		return change_state( preempting_state, vacating_act );
+		change_state( preempting_state, vacating_act );
+		break;
 	case preempting_state:
 		if( activity() != killing_act ) {
-			return change_state( preempting_state, vacating_act );
+			change_state( preempting_state, vacating_act );
 		}
 		break;
 	case matched_state:
-		return change_state( owner_state );
+		change_state( owner_state );
+		break;
 #if HAVE_BACKFILL
 	case backfill_state:
 		set_destination_state( owner_state );
-		return TRUE;
+		break;
 #endif /* HAVE_BACKFILL */
 	default:
 		return (int)r_cur->starterKillHard();
@@ -280,13 +292,15 @@ Resource::kill_claim( void )
 			// We might be in preempting/vacating, in which case we'd
 			// still want to do the activity change into killing...
 			// Added 4/26/00 by Derek Wright <wright@cs.wisc.edu>
-		return change_state( preempting_state, killing_act );
+		change_state( preempting_state, killing_act );
+		break;
 	case matched_state:
-		return change_state( owner_state );
+		change_state( owner_state );
+		break;
 #if HAVE_BACKFILL
 	case backfill_state:
 		set_destination_state( owner_state );
-		return TRUE;
+		break;
 #endif /* HAVE_BACKFILL */
 	default:
 			// In other states, try direct kill.  See above.
@@ -394,38 +408,36 @@ Resource::removeClaim( Claim* c )
 }
 
 
-int
+void
 Resource::releaseAllClaims( void )
 {
-	return shutdownAllClaims( true );
+	shutdownAllClaims( true );
 }
 
 
-int
+void
 Resource::killAllClaims( void )
 {
-	return shutdownAllClaims( false );
+	shutdownAllClaims( false );
 }
 
 
-int
+void
 Resource::shutdownAllClaims( bool graceful )
 {
 		// shutdown the COD claims
 	r_cod_mgr->shutdownAllClaims( graceful );
 
 	if( graceful ) {
-		retire_claim();
+		void_retire_claim();
 	} else {
-		kill_claim();
+		void_kill_claim();
 	}
 
 		// Tell the negotiator not to match any new jobs to this slot,
 		// since they would just be rejected by the startd anyway.
 	r_reqexp->unavail();
 	update();
-
-	return TRUE;
 }
 
 bool
@@ -494,7 +506,8 @@ Resource::suspendForCOD( void )
     case CLAIM_RUNNING:
 		dprintf( D_ALWAYS, "State change: Suspending because a COD "
 				 "job is now running\n" );
-		did_update = change_state( suspended_act );
+		change_state( suspended_act );
+		did_update = TRUE;
 		break;
 
     case CLAIM_VACATING:
@@ -557,7 +570,8 @@ Resource::resumeForCOD( void )
     case CLAIM_SUSPENDED:
 		dprintf( D_ALWAYS, "State Change: No running COD job, "
 				 "resuming opportunistic claim\n" );
-		did_update = change_state( busy_act );
+		change_state( busy_act );
+		did_update = TRUE;
 		break;
 
     case CLAIM_IDLE:
@@ -838,7 +852,7 @@ Resource::leave_preempting_state( void )
 }
 
 
-int
+void
 Resource::init_classad( void )
 {
 	ASSERT( resmgr->config_classad );
@@ -851,8 +865,6 @@ Resource::init_classad( void )
 		// init_classad is being called, we don't necessarily have
 		// classads for the other slots, yet we'll publish the SHARED_SLOT
 		// attrs after this...
-
-	return TRUE;
 }
 
 
@@ -877,7 +889,7 @@ Resource::force_benchmark( void )
 }
 
 
-int
+void
 Resource::reconfig( void )
 {
 #if HAVE_JOB_HOOKS
@@ -887,16 +899,13 @@ Resource::reconfig( void )
 	}
 	m_hook_keyword_initialized = false;
 #endif /* HAVE_JOB_HOOKS */
-	// This bogus return makes the prototype happy for ResMgr::walk().
-	return TRUE;
 }
 
 
-int
+void
 Resource::update( void )
 {
 	int timeout = 3;
-	int ret_value = TRUE;
 
 	if ( update_tid == -1 ) {
 			// Send no more than 16 ClassAds per second to help
@@ -919,10 +928,7 @@ Resource::update( void )
 	if ( update_tid < 0 ) {
 		// Somehow, the timer could not be set.  Ick!
 		update_tid = -1;
-		ret_value = FALSE;
 	}
-
-	return ret_value;
 }
 
 int
@@ -1106,20 +1112,6 @@ Resource::update_with_ack( void )
 
     return success;
 
-}
-
-
-int
-Resource::eval_and_update( void )
-{
-		// Evaluate the state of this resource.
-	eval_state();
-
-		// If we didn't update b/c of the eval_state, we need to
-		// actually do the update now.
-	update();
-
-	return TRUE;
 }
 
 void
@@ -1636,10 +1628,26 @@ Resource::publish( ClassAd* cap, amask_t mask )
 					"should be added by ResMgr!", ATTR_CPU_BUSY );
 		}
 
+		caInsert(cap, r_classad, ATTR_SLOT_WEIGHT);
+
+#if HAVE_HIBERNATION
+		caInsert(cap, r_classad, ATTR_UNHIBERNATE);
+#endif
+
 			// Include everything from STARTD_EXPRS.
 			// And then include everything from SLOTx_STARTD_EXPRS
 		daemonCore->publish(cap);
-		config_fill_ad( cap, r_id_str );
+
+		// config_fill_ad can not take strings with "." in it's prefix
+		// e.g. slot1.1, instead needs to be slot1
+		MyString szTmp(r_id_str);
+		int iPeriodPos = szTmp.find(".");
+
+		if ( iPeriodPos >=0 ) {
+			szTmp.setChar ( iPeriodPos,  '\0' );
+		}
+		
+		config_fill_ad( cap, szTmp.Value() );
 
 			// Also, include a slot ID attribute, since it's handy for
 			// defining expressions, and other things.
@@ -1904,7 +1912,7 @@ Resource::compute( amask_t mask )
 
 
 void
-Resource::dprintf_va( int flags, char* fmt, va_list args )
+Resource::dprintf_va( int flags, const char* fmt, va_list args )
 {
 	if( resmgr->is_smp() ) {
 		MyString fmt_str( r_id_str );
@@ -1918,7 +1926,7 @@ Resource::dprintf_va( int flags, char* fmt, va_list args )
 
 
 void
-Resource::dprintf( int flags, char* fmt, ... )
+Resource::dprintf( int flags, const char* fmt, ... )
 {
 	va_list args;
 	va_start( args, fmt );
@@ -2328,6 +2336,17 @@ Resource::fetchCompleted(void)
 		// Now that a fetch hook returned, (re)set our timer to try
 		// fetching again based on the delay expression.
 	resetFetchWorkTimer();
+
+		// If we are a dynamically created slot, it is possible that
+		// we became unclaimed while waiting for the fetch to
+		// complete. Now that it has we can reevaluate our state and
+		// potentially delete ourself.
+	if ( get_feature() == DYNAMIC_SLOT ) {
+		// WARNING: This must be the last thing done in response to a
+		// hook exiting, if it isn't then there is a chance we will be
+		// referenced after we are deleted.
+		eval_state();
+	}
 }
 
 
@@ -2461,7 +2480,7 @@ void Resource::disable()
 {
 
     /* kill the claim */
-	kill_claim ();
+	void_kill_claim ();
 
 	/* let the negotiator know not to match any new jobs to
     this slot */

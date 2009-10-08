@@ -165,27 +165,37 @@ class UserIdentity {
 			// The default constructor is not recommended as it
 			// has no real identity.  It only exists so
 			// we can put UserIdentities in various templates.
-		UserIdentity() : m_username(""), m_domain("") { }
-		UserIdentity(const char * user, const char * domainname)
-			: m_username(user), m_domain(domainname) { }
-		UserIdentity(const UserIdentity & src)
-			: m_username(src.m_username), m_domain(src.m_domain) { }
+		UserIdentity() : m_username(""), m_domain(""), m_auxid("") { }
+		UserIdentity(const char * user, const char * domainname, const char * auxid)
+			: m_username(user), m_domain(domainname), m_auxid(auxid) { }		
+		UserIdentity(const UserIdentity & src) {
+			m_username = src.m_username;
+			m_domain = src.m_domain;
+			m_auxid = src.m_auxid;			
+		}
+		UserIdentity(const char * user, const char * domainname, const ClassAd * ad);
 		const UserIdentity & operator=(const UserIdentity & src) {
 			m_username = src.m_username;
 			m_domain = src.m_domain;
+			m_auxid = src.m_auxid;
 			return *this;
 		}
 		bool operator==(const UserIdentity & rhs) {
-			return m_username == rhs.m_username && m_domain == rhs.m_domain;
+			return m_username == rhs.m_username && 
+				m_domain == rhs.m_domain && 
+				m_auxid == rhs.m_auxid;
 		}
 		MyString username() const { return m_username; }
 		MyString domain() const { return m_domain; }
+		MyString auxid() const { return m_auxid; }
 
 			// For use in HashTables
 		static unsigned int HashFcn(const UserIdentity & index);
+	
 	private:
 		MyString m_username;
 		MyString m_domain;
+		MyString m_auxid;
 };
 
 
@@ -279,6 +289,8 @@ class Scheduler : public Service
 	friend	int		updateSchedDInterval( ClassAd* );
 	void			display_shadow_recs();
 	int				actOnJobs(int, Stream *);
+	void            enqueueActOnJobMyself( PROC_ID job_id, JobAction action, bool notify );
+	int             actOnJobMyselfHandler( ServiceData* data );
 	int				updateGSICred(int, Stream* s);
 	void            setNextJobDelay( ClassAd const *job_ad, ClassAd const *machine_ad );
 	int				spoolJobFiles(int, Stream *);
@@ -325,7 +337,7 @@ class Scheduler : public Service
 	bool			availableTransferd( int cluster, int proc, 
 						TransferDaemon *&td_ref ); 
 	bool			startTransferd( int cluster, int proc ); 
-	UserLog*		InitializeUserLog( PROC_ID job_id );
+	WriteUserLog*	InitializeUserLog( PROC_ID job_id );
 	bool			WriteAbortToUserLog( PROC_ID job_id );
 	bool			WriteHoldToUserLog( PROC_ID job_id );
 	bool			WriteReleaseToUserLog( PROC_ID job_id );
@@ -334,9 +346,6 @@ class Scheduler : public Service
 	bool			WriteTerminateToUserLog( PROC_ID job_id, int status );
 	bool			WriteRequeueToUserLog( PROC_ID job_id, int status, const char * reason );
 	int				receive_startd_alive(int cmd, Stream *s);
-#ifdef WANT_NETMAN
-	void			RequestBandwidth(int cluster, int proc, match_rec *rec);
-#endif
 
 		// Public startd socket management functions
 	void            checkContactQueue();
@@ -391,6 +400,13 @@ class Scheduler : public Service
 	char*			uidDomain( void ) { return UidDomain; };
 	int				getJobsTotalAds() { return JobsTotalAds; };
 	int				getMaxJobsSubmitted() { return MaxJobsSubmitted; };
+
+		// Used by the UserIdentity class and some others
+	const ExprTree*	getGridParsedSelectionExpr() const 
+					{ return m_parsed_gridman_selection_expr; };
+	const char*		getGridUnparsedSelectionExpr() const
+					{ return m_unparsed_gridman_selection_expr; };
+
 
 		// Used by the DedicatedScheduler class
 	void 			swap_space_exhausted();
@@ -474,6 +490,8 @@ private:
 	int             RequestClaimTimeout;
 	int				JobStartDelay;
 	int				JobStartCount;
+	int				JobStopDelay;
+	int				JobStopCount;
 	int             MaxNextJobDelay;
 	int				JobsThisBurst;
 	int				MaxJobsRunning;
@@ -527,6 +545,12 @@ private:
 	SimpleList<PROC_ID> jobsToReconnect;
 	int				checkReconnectQueue_tid;
 
+		// queue for sending hold/remove signals to shadows
+	SelfDrainingQueue stop_job_queue;
+		// queue for doing other "act_on_job_myself" calls
+		// such as releasing jobs
+	SelfDrainingQueue act_on_job_myself_queue;
+
 	SelfDrainingQueue job_is_finished_queue;
 	int jobIsFinishedHandler( ServiceData* job_id );
 
@@ -535,6 +559,10 @@ private:
 		// You can read or write the values, but don't go
 		// deleting the pointer!
 	GridJobCounts * GetGridJobCounts(UserIdentity user_identity);
+
+		// (un)parsed expressions from condor_config GRIDMANAGER_SELECTION_EXPR
+	ExprTree* m_parsed_gridman_selection_expr;
+	char* m_unparsed_gridman_selection_expr;
 
 	// The object which manages the various transferds.
 	TDMan m_tdman;
@@ -625,7 +653,6 @@ private:
 										Env const *env, 
 										const char* name, bool is_dc,
 										bool wants_pipe );
-	void			Relinquish(match_rec*);
 	void			check_zombie(int, PROC_ID*);
 	void			kill_zombie(int, PROC_ID*);
 	int				is_alive(shadow_rec* srec);
@@ -655,10 +682,14 @@ private:
 	int				leaseAliveInterval;  
 	int				aliveid;	// timer id for sending keepalives to startd
 	int				MaxExceptions;	 // Max shadow excep. before we relinquish
-	bool			ManageBandwidth;
 
 		// put state into ClassAd return it.  Used for condor_squawk
 	int	dumpState(int, Stream *);
+
+		// get connection info for creating sec session to a running job
+		// (e.g. condor_ssh_to_job)
+	int get_job_connect_info_handler(int, Stream* s);
+	int get_job_connect_info_handler_implementation(int, Stream* s);
 
 		// A bit that says wether or not we've sent email to the admin
 		// about a shadow not starting.

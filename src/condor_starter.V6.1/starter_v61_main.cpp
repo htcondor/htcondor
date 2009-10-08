@@ -119,6 +119,12 @@ printClassAd( void )
 			str = 0;
 			gotone++;
 		}
+		if(ad->LookupString("JavaSpecificationVersion",&str)) {
+			printf("JavaSpecificationVersion = \"%s\"\n",str);
+			free(str);
+			str = 0;
+			gotone++;
+		}
 		if(ad->LookupFloat(ATTR_JAVA_MFLOPS,mflops)) {
 			printf("%s = %f\n", ATTR_JAVA_MFLOPS,mflops);
 			gotone++;
@@ -715,6 +721,7 @@ int exception_cleanup(int,int,char*errmsg)
 	_EXCEPT_Cleanup = NULL;
 	Starter->jic->notifyStarterError(errmsg,true,0,0);
 	Starter->RemoteShutdownFast(0);
+	Starter->FinalCleanup();
 	return 0;
 }
 

@@ -211,25 +211,38 @@ orphanCallbackHandler()
 
 	// Find the right job object
 	rc = JobsByContact.lookup( HashKey( globusJobId(orphan->job_contact) ), this_job );
-	if ( rc != 0 || this_job == NULL ) {
-		dprintf( D_ALWAYS, 
-			"orphanCallbackHandler: Can't find record for globus job with "
-			"contact %s on globus state %d, errorcode %d, ignoring\n",
-			orphan->job_contact, orphan->state, orphan->errorcode );
+	if ( rc == 0 && this_job != NULL ) {
+		dprintf( D_ALWAYS, "(%d.%d) gram callback: state %d, errorcode %d\n",
+				 this_job->procID.cluster, this_job->procID.proc,
+				 orphan->state, orphan->errorcode );
+
+		this_job->GramCallback( orphan->state, orphan->errorcode );
+
 		free( orphan->job_contact );
 		delete orphan;
 		return TRUE;
 	}
 
-	dprintf( D_ALWAYS, "(%d.%d) gram callback: state %d, errorcode %d\n",
-			 this_job->procID.cluster, this_job->procID.proc, orphan->state,
-			 orphan->errorcode );
+	GlobusResource *next_resource;
+	GlobusResource::ResourcesByName.startIterations();
 
-	this_job->GramCallback( orphan->state, orphan->errorcode );
+	while ( GlobusResource::ResourcesByName.iterate( next_resource ) != 0 ) {
+		if ( next_resource->monitorGramJobId && !strcmp( orphan->job_contact, next_resource->monitorGramJobId ) ) {
+			next_resource->gridMonitorCallback( orphan->state,
+												orphan->errorcode );
 
+			free( orphan->job_contact );
+			delete orphan;
+			return TRUE;
+		}
+	}
+
+	dprintf( D_ALWAYS, 
+			 "orphanCallbackHandler: Can't find record for globus job with "
+			 "contact %s on globus state %d, errorcode %d, ignoring\n",
+			 orphan->job_contact, orphan->state, orphan->errorcode );
 	free( orphan->job_contact );
 	delete orphan;
-
 	return TRUE;
 }
 
@@ -242,26 +255,36 @@ gramCallbackHandler( void * /* user_arg */, char *job_contact, int state,
 
 	// Find the right job object
 	rc = JobsByContact.lookup( HashKey( globusJobId(job_contact) ), this_job );
-	if ( rc != 0 || this_job == NULL ) {
-		dprintf( D_ALWAYS, 
-			"gramCallbackHandler: Can't find record for globus job with "
-			"contact %s on globus state %d, errorcode %d, delaying\n",
-			job_contact, state, errorcode );
-		OrphanCallback_t *new_orphan = new OrphanCallback_t;
-		new_orphan->job_contact = strdup( job_contact );
-		new_orphan->state = state;
-		new_orphan->errorcode = errorcode;
-		OrphanCallbackList.Append( new_orphan );
-		daemonCore->Register_Timer( 1, (TimerHandler)&orphanCallbackHandler,
-									"orphanCallbackHandler", NULL );
+	if ( rc == 0 && this_job != NULL ) {
+		dprintf( D_ALWAYS, "(%d.%d) gram callback: state %d, errorcode %d\n",
+				 this_job->procID.cluster, this_job->procID.proc, state,
+				 errorcode );
+
+		this_job->GramCallback( state, errorcode );
 		return;
 	}
 
-	dprintf( D_ALWAYS, "(%d.%d) gram callback: state %d, errorcode %d\n",
-			 this_job->procID.cluster, this_job->procID.proc, state,
-			 errorcode );
+	GlobusResource *next_resource;
+	GlobusResource::ResourcesByName.startIterations();
 
-	this_job->GramCallback( state, errorcode );
+	while ( GlobusResource::ResourcesByName.iterate( next_resource ) != 0 ) {
+		if ( next_resource->monitorGramJobId && !strcmp( job_contact, next_resource->monitorGramJobId ) ) {
+			next_resource->gridMonitorCallback( state, errorcode );
+			return;
+		}
+	}
+
+	dprintf( D_ALWAYS, 
+			 "gramCallbackHandler: Can't find record for globus job with "
+			 "contact %s on globus state %d, errorcode %d, delaying\n",
+			 job_contact, state, errorcode );
+	OrphanCallback_t *new_orphan = new OrphanCallback_t;
+	new_orphan->job_contact = strdup( job_contact );
+	new_orphan->state = state;
+	new_orphan->errorcode = errorcode;
+	OrphanCallbackList.Append( new_orphan );
+	daemonCore->Register_Timer( 1, (TimerHandler)&orphanCallbackHandler,
+								"orphanCallbackHandler", NULL );
 }
 
 /////////////////////////interface functions to gridmanager.C
@@ -284,8 +307,12 @@ void GlobusJobReconfig()
 	tmp_int = param_integer("GRIDMANAGER_CONNECT_FAILURE_RETRY_COUNT",3);
 	GlobusJob::setConnectFailureRetry( tmp_int );
 
-	tmp_bool = param_boolean("ENABLE_GRID_MONITOR",false);
+	tmp_bool = param_boolean("ENABLE_GRID_MONITOR",true);
 	GlobusResource::setEnableGridMonitor( tmp_bool );
+
+	tmp_int = param_integer("GRID_MONITOR_DISABLE_TIME",
+							DEFAULT_GM_DISABLE_LENGTH);
+	GlobusResource::setGridMonitorDisableLength( tmp_int );
 
 	// Tell all the resource objects to deal with their new config values
 	GlobusResource *next_resource;
@@ -303,7 +330,8 @@ bool GlobusJobAdMatch( const ClassAd *job_ad ) {
 	if ( job_ad->LookupInteger( ATTR_JOB_UNIVERSE, universe ) &&
 		 universe == CONDOR_UNIVERSE_GRID &&
 		 job_ad->LookupString( ATTR_GRID_RESOURCE, resource ) &&
-		 strncasecmp( resource.Value(), "gt2 ", 4 ) == 0 ) {
+		 ( strncasecmp( resource.Value(), "gt2 ", 4 ) == 0 ||
+		   strncasecmp( resource.Value(), "gt5 ", 4 ) == 0  ) ) {
 
 		return true;
 	}
@@ -591,6 +619,7 @@ GlobusJob::GlobusJob( ClassAd *classad )
 	: BaseJob( classad )
 {
 	int bool_value;
+	int int_value;
 	MyString iwd;
 	MyString job_output;
 	MyString job_error;
@@ -601,6 +630,7 @@ GlobusJob::GlobusJob( ClassAd *classad )
 	MyString error_string = "";
 	char *gahp_path = NULL;
 	ArgList gahp_args;
+	bool is_gt5 = false;
 
 	RSL = NULL;
 	callbackRegistered = false;
@@ -708,9 +738,13 @@ GlobusJob::GlobusJob( ClassAd *classad )
 		grid_resource.Tokenize();
 
 		token = grid_resource.GetNextToken( " ", false );
-		if ( !token || stricmp( token, "gt2" ) ) {
-			error_string.sprintf( "%s not of type gt2", ATTR_GRID_RESOURCE );
+		if ( !token || ( stricmp( token, "gt2" ) && stricmp( token, "gt5" ) ) ) {
+			error_string.sprintf( "%s not of type gt2 or gt5",
+								  ATTR_GRID_RESOURCE );
 			goto error_exit;
+		}
+		if ( !stricmp( token, "gt5" ) ) {
+			is_gt5 = true;
 		}
 
 		token = grid_resource.GetNextToken( " ", false );
@@ -735,9 +769,13 @@ GlobusJob::GlobusJob( ClassAd *classad )
 		grid_job_id.Tokenize();
 
 		token = grid_job_id.GetNextToken( " ", false );
-		if ( !token || stricmp( token, "gt2" ) ) {
-			error_string.sprintf( "%s not of type gt2", ATTR_GRID_JOB_ID );
+		if ( !token || ( stricmp( token, "gt2" ) && stricmp( token, "gt5" ) ) ) {
+			error_string.sprintf( "%s not of type gt2 or gt5",
+								  ATTR_GRID_JOB_ID );
 			goto error_exit;
+		}
+		if ( !stricmp( token, "gt5" ) ) {
+			is_gt5 = true;
 		}
 
 		token = grid_job_id.GetNextToken( " ", false );
@@ -747,13 +785,14 @@ GlobusJob::GlobusJob( ClassAd *classad )
 								  ATTR_GRID_JOB_ID );
 			goto error_exit;
 		}
-		SetRemoteJobId( token );
+		SetRemoteJobId( token, is_gt5 );
 		job_already_submitted = true;
 	}
 
 	// Find/create an appropriate GlobusResource for this job
 	myResource = GlobusResource::FindOrCreateResource( resourceManagerString,
-													   jobProxy->subject->subject_name);
+													   jobProxy->subject->subject_name,
+													   is_gt5 );
 	if ( myResource == NULL ) {
 		error_string = "Failed to initialized GlobusResource object";
 		goto error_exit;
@@ -770,6 +809,10 @@ GlobusJob::GlobusJob( ClassAd *classad )
 	jobAd->LookupInteger( ATTR_GLOBUS_STATUS, globusState );
 
 	globusError = GLOBUS_SUCCESS;
+
+	if ( jobAd->LookupInteger( ATTR_DELEGATED_PROXY_EXPIRATION, int_value ) ) {
+		jmProxyExpireTime = (time_t)int_value;
+	}
 
 	if ( jobAd->LookupString(ATTR_JOB_IWD, iwd) && iwd.Length() ) {
 		int len = iwd.Length();
@@ -1055,8 +1098,7 @@ int GlobusJob::doEvaluateState()
 			}
 			// Test for authorization error here because someone else's
 			// jobmanager could now be running on our old port.
-			if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ||
-				 rc == GLOBUS_GRAM_PROTOCOL_ERROR_AUTHORIZATION ||
+			if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_AUTHORIZATION ||
 				 rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
 				globusError = GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER;
 				gmState = GM_RESTART;
@@ -1075,6 +1117,11 @@ int GlobusJob::doEvaluateState()
 				myResource->JMAlreadyRunning( this );
 				probeNow = true;
 				gmState = GM_SUBMITTED;
+				break;
+			}
+			if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ) {
+				// The jobmanager appears to not be running.
+				gmState = GM_JOBMANAGER_ASLEEP;
 				break;
 			}
 			if ( rc != GLOBUS_SUCCESS ) {
@@ -1175,11 +1222,11 @@ int GlobusJob::doEvaluateState()
 			if ( now >= lastSubmitAttempt + submitInterval ) {
 				CHECK_PROXY;
 				// Once RequestSubmit() is called at least once, you must
-				// SubmitComplete() or CancelSubmit() once you're done with
-				// the request call
-				// Also, if you call SubmitComplete() but don't have a
-				// running jobmanager (due to a failure), you must call
-				// JMComplete() as well.
+				// call CancelSubmit() when there's no job left on the
+				// remote host and you don't plan to submit one.
+				// Once RequestJM() is called, you must call JMComplete()
+				// when the jobmanager is no longer running and you don't
+				// plan to start one.
 				if ( myResource->RequestSubmit(this) == false ||
 					 myResource->RequestJM(this, true) == false ) {
 					break;
@@ -1194,13 +1241,13 @@ int GlobusJob::doEvaluateState()
 				rc = gahp->globus_gram_client_job_request( 
 										resourceManagerString,
 										RSL->Value(),
-										GLOBUS_GRAM_PROTOCOL_JOB_STATE_ALL,
+										param_boolean( "DELEGATE_FULL_JOB_GSI_CREDENTIALS",
+													   false ) ? 0 : 1,
 										gramCallbackContact, &job_contact );
 				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
 				}
-				myResource->SubmitComplete(this);
 				jmShouldBeStoppingTime = 0;
 				lastSubmitAttempt = time(NULL);
 				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONNECTION_FAILED ||
@@ -1217,6 +1264,8 @@ int GlobusJob::doEvaluateState()
 				}
 				numSubmitAttempts++;
 				jmProxyExpireTime = jobProxy->expiration_time;
+				jobAd->Assign( ATTR_DELEGATED_PROXY_EXPIRATION,
+							   (int)jmProxyExpireTime );
 				if ( rc == GLOBUS_SUCCESS ) {
 					// Previously this supported GRAM 1.0
 					dprintf(D_ALWAYS, "(%d.%d) Unexpected remote response.  GRAM 1.6 is now required.\n", procID.cluster, procID.proc);
@@ -1357,7 +1406,9 @@ int GlobusJob::doEvaluateState()
 				GOTO_RESTART_IF_JM_DOWN;
 				CHECK_PROXY;
 				rc = gahp->globus_gram_client_job_refresh_credentials(
-																jobContact );
+										jobContact,
+										param_boolean( "DELEGATE_FULL_JOB_GSI_CREDENTIALS",
+													   false ) ? 0 : 1 );
 				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
@@ -1399,6 +1450,8 @@ int GlobusJob::doEvaluateState()
 					break;
 				}
 				jmProxyExpireTime = jobProxy->expiration_time;
+				jobAd->Assign( ATTR_DELEGATED_PROXY_EXPIRATION,
+							   (int)jmProxyExpireTime );
 				gmState = GM_SUBMITTED;
 			}
 			} break;
@@ -1692,11 +1745,11 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 
 				CHECK_PROXY;
 				// Once RequestSubmit() is called at least once, you must
-				// call SubmitComplete() or CancelSubmit() once you're done
-				// with the request call
-				// Also, if you call SubmitComplete() but don't have a
-				// running jobmanager (due to a failure), you must call
-				// JMComplete() as well.
+				// call CancelSubmit() when there's no job left on the
+				// remote host and you don't plan to submit one.
+				// Once RequestJM() is called, you must call JMComplete()
+				// when the jobmanager is no longer running and you don't
+				// plan to start one.
 				if ( myResource->RequestSubmit(this) == false ||
 					 myResource->RequestJM(this, false) == false ) {
 					break;
@@ -1713,7 +1766,6 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
 				}
-				myResource->SubmitComplete(this);
 				lastRestartAttempt = time(NULL);
 				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONNECTION_FAILED ||
 					 //rc == GLOBUS_GRAM_PROTOCOL_ERROR_AUTHORIZATION ||
@@ -1789,7 +1841,10 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 					myResource->JMComplete( this );
 					gmState = GM_CLEAR_REQUEST;
 				} else if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_WAITING_FOR_COMMIT ) {
+					callbackRegistered = true;
 					jmProxyExpireTime = jobProxy->expiration_time;
+					jobAd->Assign( ATTR_DELEGATED_PROXY_EXPIRATION,
+								   (int)jmProxyExpireTime );
 					jmDown = false;
 					SetRemoteJobId( job_contact );
 					gahp->globus_gram_client_job_contact_free( job_contact );
@@ -2098,6 +2153,10 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 			errorString = "";
 			ClearCallbacks();
 			useGridJobMonitor = true;
+			if ( jmProxyExpireTime != 0 ) {
+				jmProxyExpireTime = 0;
+				jobAd->AssignExpr( ATTR_DELEGATED_PROXY_EXPIRATION, "Undefined" );
+			}
 			// HACK!
 			retryStdioSize = true;
 			myResource->CancelSubmit( this );
@@ -2315,8 +2374,8 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 
 				CHECK_PROXY;
 				// Once RequestSubmit() is called at least once, you must
-				// call SubmitComplete() or CancelSubmit() once you're done
-				// with the request call
+				// call CancelSubmit() when the job is gone from the
+				// remote host.
 				if ( myResource->RequestSubmit(this) == false ||
 					 myResource->RequestJM(this, false) == false ) {
 					break;
@@ -2333,7 +2392,6 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
 				}
-				myResource->SubmitComplete(this);
 				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_USER_PROXY_EXPIRED ) {
 					myResource->JMComplete( this );
 					gmState = GM_PROXY_EXPIRED;
@@ -2355,7 +2413,10 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 					gmState = GM_CLEANUP_CANCEL;
 					break;
 				} else if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_WAITING_FOR_COMMIT ) {
+					callbackRegistered = true;
 					jmProxyExpireTime = jobProxy->expiration_time;
+					jobAd->Assign( ATTR_DELEGATED_PROXY_EXPIRATION,
+								   (int)jmProxyExpireTime );
 					jmDown = false;
 					SetRemoteJobId( job_contact );
 					gahp->globus_gram_client_job_contact_free( job_contact );
@@ -2754,7 +2815,7 @@ BaseResource *GlobusJob::GetResource()
 	return (BaseResource *)myResource;
 }
 
-void GlobusJob::SetRemoteJobId( const char *job_id )
+void GlobusJob::SetRemoteJobId( const char *job_id, bool is_gt5 )
 {
 		// We need to maintain a hashtable based on job contact strings with
 		// the port number stripped. This is because the port number in the
@@ -2777,9 +2838,13 @@ void GlobusJob::SetRemoteJobId( const char *job_id )
 		jobContact = NULL;
 	}
 
+	if ( myResource ) {
+		is_gt5 = myResource->IsGt5();
+	}
 	MyString full_job_id;
 	if ( job_id ) {
-		full_job_id.sprintf( "gt2 %s %s", resourceManagerString, job_id );
+		full_job_id.sprintf( "%s %s %s", is_gt5 ? "gt5" : "gt2",
+							 resourceManagerString, job_id );
 	}
 	BaseJob::SetRemoteJobId( full_job_id.Value() );
 }
@@ -3468,6 +3533,9 @@ GlobusJob::JmShouldSleep()
 	if ( condorState != IDLE && condorState != RUNNING ) {
 		return false;
 	}
+	if ( myResource->IsGt5() ) {
+		return false;
+	}
 	if ( GlobusResource::GridMonitorEnabled() == false ) {
 		return false;
 	}
@@ -3475,13 +3543,23 @@ GlobusJob::JmShouldSleep()
 		return false;
 	}
 
-	int limit = param_integer( "GRID_MONITOR_NO_STATUS_TIMEOUT", 15*60 );
-	if ( myResource->LastGridJobMonitorUpdate() >
-		 lastRemoteStatusUpdate + limit ) {
-		return false;
-	}
-	if ( myResource->GridJobMonitorActive() == false ) {
-		return false;
+	// If our resource object is making its first attempt to start the
+	// grid monitor and our jobmanager is asleep, wait for the grid
+	// monitor to succeed or fail before considering restarting the
+	// jobmanager.
+	// This is meant to avoid unnecessary jobmanager restarts when the
+	// gridmanager starts up after a failure.
+	if ( !myResource->GridMonitorFirstStartup() ||
+		 gmState != GM_JOBMANAGER_ASLEEP ) {
+
+		int limit = param_integer( "GRID_MONITOR_NO_STATUS_TIMEOUT", 15*60 );
+		if ( myResource->LastGridJobMonitorUpdate() >
+			 lastRemoteStatusUpdate + limit ) {
+			return false;
+		}
+		if ( myResource->GridJobMonitorActive() == false ) {
+			return false;
+		}
 	}
 
 	switch ( globusState ) {

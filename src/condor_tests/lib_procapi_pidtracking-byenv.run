@@ -49,7 +49,7 @@ $execute = sub
 
 $timed = sub
 {
-        system("date");
+        print scalar localtime() . "\n";
         CondorTest::debug("lib_procapi_pidtracking-byenv HUNG !!!!!!!!!!!!!!!!!!\n",1);
         exit(1);
 };

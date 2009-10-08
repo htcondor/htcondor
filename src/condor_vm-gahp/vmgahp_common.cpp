@@ -34,6 +34,11 @@
 #include "vmgahp_error_codes.h"
 #include "condor_vm_universe_types.h"
 #include "../condor_privsep/condor_privsep.h"
+#include "sig_install.h"
+#include "../condor_privsep/privsep_fork_exec.h"
+
+// FreeBSD 6, OS X 10.4, Solaris 5.9 don't automatically give you environ to work with
+extern DLL_IMPORT_MAGIC char **environ;
 
 MyString caller_name;
 MyString job_user_name;
@@ -46,6 +51,7 @@ uid_t job_user_gid = ROOT_UID;
 const char *support_vms_list[] = {
 #if defined(LINUX)
 CONDOR_VM_UNIVERSE_XEN,
+CONDOR_VM_UNIVERSE_KVM,
 #endif
 #if defined(LINUX) || defined(WIN32)
 CONDOR_VM_UNIVERSE_VMWARE,
@@ -509,30 +515,196 @@ bool canSwitchUid(void)
 	return can_switch_ids();
 }
 
-int systemCommand( ArgList &args, bool is_root, StringList *cmd_out,
-				   int want_stderr )
+/**
+ * merge_stderr_with_stdout is intended for clients of this function
+ * that wish to have the old behavior, where stderr and stdout were
+ * both added to the same StringList.
+ */
+int systemCommand( ArgList &args, bool is_root, StringList *cmd_out, StringList * cmd_in,
+		   StringList *cmd_err, bool merge_stderr_with_stdout)
 {
 	int result = 0;
 	FILE *fp = NULL;
+	FILE * fp_for_stdin = NULL;
+	FILE * childerr = NULL;
 	MyString line;
 	char buff[1024];
 	StringList *my_cmd_out = cmd_out;
 
 	priv_state prev = PRIV_UNKNOWN;
+
+	int stdout_pipes[2];
+	int stdin_pipes[2];
+	int pid;
 	if( is_root ) {
 		prev = set_root_priv();
 	}else {
 		prev = set_user_priv();
 	}
-#if !defined(WIN32)
-	if ( privsep_enabled() && (job_user_uid != get_condor_uid())) {
-		fp = privsep_popen(args, "r", want_stderr, job_user_uid);
-	}
-	else {
-		fp = my_popen( args, "r", want_stderr );
-	}
+#if defined(WIN32)
+	if((cmd_in != NULL) || (cmd_err != NULL))
+	  {
+	    vmprintf(D_ALWAYS, "Invalid use of systemCommand() in Windows.\n");
+	    return -1;
+	  }
+	//if ( privsep_enabled() && (job_user_uid != get_condor_uid())) {
+	//	fp = privsep_popen(args, "r", want_stderr, job_user_uid);
+	//}
+	//else {
+	fp = my_popen( args, "r", merge_stderr_with_stdout );
+	//}
 #else
-	fp = my_popen( args, "r", want_stderr );
+	// The old way of doing things (and the Win32 way of doing
+	//	things)
+	// fp = my_popen( args, "r", want_stderr );
+	if((cmd_err != NULL) && merge_stderr_with_stdout)
+	  {
+	    vmprintf(D_ALWAYS, "Invalid use of systemCommand().\n");
+	    return -1;
+	  }
+
+	PrivSepForkExec psforkexec;
+	char ** args_array = args.GetStringArray();
+	int error_pipe[2];
+		// AIX 5.2, Solaris 5.9, HPUX 11 don't have AF_LOCAL
+
+	if(pipe(stdin_pipes) < 0)
+	  {
+	    vmprintf(D_ALWAYS, "Error creating pipe: %s\n", strerror(errno));
+		deleteStringArray( args_array );
+	    return -1;
+	  }
+	if(pipe(stdout_pipes) < 0)
+	  {
+	    vmprintf(D_ALWAYS, "Error creating pipe: %s\n", strerror(errno));
+	    close(stdin_pipes[0]);
+	    close(stdin_pipes[1]);
+		deleteStringArray( args_array );
+	    return -1;
+	  }
+
+	if ( privsep_enabled() && (job_user_uid != get_condor_uid())) {
+	  if(!psforkexec.init())
+	    {
+	      vmprintf(D_ALWAYS,
+		       "my_popenv failure on %s\n",
+		       args_array[0]);
+	      close(stdin_pipes[0]);
+	      close(stdin_pipes[1]);
+	      close(stdout_pipes[0]);
+	      close(stdout_pipes[1]);
+		  deleteStringArray( args_array );
+	      return -1;
+	    }
+	}
+
+	if(cmd_err != NULL)
+	  {
+	    if(pipe(error_pipe) < 0)
+	      {
+		vmprintf(D_ALWAYS, "Could not open pipe for error output: %s\n", strerror(errno));
+		close(stdin_pipes[0]);
+		close(stdin_pipes[1]);
+		close(stdout_pipes[0]);
+		close(stdout_pipes[1]);
+		deleteStringArray( args_array );
+		return -1;
+	      }
+	  }
+	// Now fork and do what my_popen used to do
+	pid = fork();
+	if(pid < 0)
+	  {
+	    vmprintf(D_ALWAYS, "Error forking: %s\n", strerror(errno));
+		deleteStringArray( args_array );
+	    return -1;
+	  }
+	if(pid == 0)
+	  {
+	    close(stdout_pipes[0]);
+	    close(stdin_pipes[1]);
+	    dup2(stdout_pipes[1], STDOUT_FILENO);
+	    dup2(stdin_pipes[0], STDIN_FILENO);
+
+	    if(merge_stderr_with_stdout) dup2(stdout_pipes[1], STDERR_FILENO);
+	    else if(cmd_err != NULL) 
+	      {
+		close(error_pipe[0]);
+		dup2(error_pipe[1], STDERR_FILENO);
+	      }
+
+
+	    uid_t euid = geteuid();
+	    gid_t egid = getegid();
+	    seteuid( 0 );
+	    setgroups( 1, &egid );
+	    setgid( egid );
+	    setuid( euid );
+	    
+	    install_sig_handler(SIGPIPE, SIG_DFL);
+	    sigset_t sigs;
+	    sigfillset(&sigs);
+	    sigprocmask(SIG_UNBLOCK, &sigs, NULL);
+
+
+	    MyString cmd = args_array[0];
+
+	    if ( privsep_enabled() && (job_user_uid != get_condor_uid())) {
+	    
+	      ArgList al;
+	      psforkexec.in_child(cmd, al);
+	      args_array = al.GetStringArray();
+	    }
+
+
+	    execvp(args_array[0], args_array);
+	    vmprintf(D_ALWAYS, "Could not execute %s: %s\n", args_array[0], strerror(errno));
+	    exit(-1);
+	  }
+	close(stdin_pipes[0]);
+	close(stdout_pipes[1]);
+	fp_for_stdin = fdopen(stdin_pipes[1], "w");
+	fp = fdopen(stdout_pipes[0], "r");
+	if(cmd_err != NULL)
+	  {
+	    close(error_pipe[1]);
+	    childerr = fdopen(error_pipe[0],"r");
+	    if(childerr == 0)
+	      {
+		vmprintf(D_ALWAYS, "Could not open pipe for reading child error output: %s\n", strerror(errno));
+		close(error_pipe[0]);
+		close(stdin_pipes[1]);
+		close(stdout_pipes[0]);
+		deleteStringArray( args_array );
+		return -1;
+	      }
+	  }
+
+	if ( privsep_enabled() && (job_user_uid != get_condor_uid())) {
+	  FILE* _fp = psforkexec.parent_begin();
+	  privsep_exec_set_uid(_fp, job_user_uid);
+	  privsep_exec_set_path(_fp, args_array[0]);
+	  privsep_exec_set_args(_fp, args);
+	  Env env;
+	  env.MergeFrom(environ);
+	  privsep_exec_set_env(_fp, env);
+	  privsep_exec_set_iwd(_fp, ".");
+
+	  privsep_exec_set_inherit_fd(_fp, 1);
+	  privsep_exec_set_inherit_fd(_fp, 2);
+	  privsep_exec_set_inherit_fd(_fp, 0);
+	
+	  if (!psforkexec.parent_end()) {
+	    vmprintf(D_ALWAYS,
+		     "my_popenv failure on %s\n",
+		     args_array[0]);
+	    fclose(fp);
+		deleteStringArray( args_array );
+	    return -1;
+	  }
+	}
+
+	deleteStringArray( args_array );
 #endif
 	set_priv( prev );
 	if ( fp == NULL ) {
@@ -541,6 +713,19 @@ int systemCommand( ArgList &args, bool is_root, StringList *cmd_out,
 		vmprintf( D_ALWAYS, "Failed to execute command: %s\n",
 				  args_string.Value() );
 		return -1;
+	}
+
+	if(cmd_in != NULL) {
+	  cmd_in->rewind();
+	  char * tmp;
+	  while((tmp = cmd_in->next()) != NULL)
+	    {
+	      fprintf(fp_for_stdin, "%s\n", tmp);
+	      fflush(fp_for_stdin);
+	    }
+	  // So that we will not be waiting for output while the
+	  // script waits for stdin to be closed.
+	  fclose(fp_for_stdin);
 	}
 
 	if ( my_cmd_out == NULL ) {
@@ -555,8 +740,33 @@ int systemCommand( ArgList &args, bool is_root, StringList *cmd_out,
 		}
 	}
 
+	if(cmd_err != NULL)
+	  {
+	    while(fgets(buff, sizeof(buff), childerr) != NULL)
+	      {
+		line += buff;
+		if(line.chomp())
+		  {
+		    cmd_err->append(line.Value());
+		    line = "";
+		  }
+	      }
+	    fclose(childerr);
+	  }
+#if defined(WIN32)
 	result = my_pclose( fp );
-
+#else
+	// Why close first?  Just in case the child process is waiting
+	// on a read, and we have nothing more to send it.  It will
+	// now receive a SIGPIPE.
+	fclose(fp);
+	if(waitpid(pid, &result, 0) < 0)
+	  {
+	    vmprintf(D_ALWAYS, "Unable to wait: %s\n", strerror(errno));
+	   
+	    return -1;
+	  }
+#endif
 	if( result != 0 ) {
 		MyString args_string;
 		args.GetArgsStringForDisplay(&args_string,0);

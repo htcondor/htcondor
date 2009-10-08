@@ -18,6 +18,7 @@
 ***************************************************************/
 
 #include "condor_common.h"
+#include "condor_debug.h"
 #include "internet.h"
 #include "network_adapter.unix.h"
 
@@ -214,7 +215,7 @@ UnixNetworkAdapter::setHwAddr( const struct ifreq &ifr )
 	char *str = m_hw_addr_str;
 	for( int i = 0;  i < 6;  i++ ) {
 		char	tmp[3];
-		snprintf( tmp, sizeof(tmp), "%02x", m_hw_addr[i] );
+		snprintf( tmp, sizeof(tmp), "%02x", (m_hw_addr[i] & 0xff) );
 		if ( i < 5 ) {
 			strcat( tmp, ":" );
 		}

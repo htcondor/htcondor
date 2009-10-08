@@ -31,7 +31,7 @@ $corename = "cmd_chirp_get-set_par";
 $currenthost = CondorTest::getFqdnHost();
 CondorTest::fullchomp($currenthost);
 
-system("date");
+print scalar localtime() . "\n";
 
 $mypid = $$;
 $mysaveme = $corename . ".saveme";
@@ -148,7 +148,7 @@ if( -e "$mysubmitnmlog" )
 }
 
 CondorTest::KillPersonal($parallelconfig);
-system("date");
+print scalar localtime() . "\n";
 
 if( $result != 0 )
 {

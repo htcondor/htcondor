@@ -49,6 +49,10 @@ REM Make gsoap stubs, etc.
 call :MAKE_GSOAP
 if %ERRORLEVEL% NEQ 0 goto :GSOAP_FAIL
 
+REM Make param stubs, etc.
+call :MAKE_PARAM
+if %ERRORLEVEL% NEQ 0 goto :PARAM_FAIL
+
 REM ======================================================================
 REM NOTE: make_win32_externals.bat implicitly calls set_vars.bat, so just 
 REM run dev studio as long as the extenals build ok.
@@ -82,6 +86,9 @@ echo *** Failed to make config.h ***
 exit /b 1
 :GSOAP_FAIL
 echo *** gsoap stub generator failed ***
+exit /b 1
+:PARAM_FAIL
+echo *** param stub generator failed ***
 exit /b 1
 :IDE_FAIL
 echo *** Visual Studio IDE launch failed ***
@@ -137,6 +144,19 @@ if exist ..\Release\BuildLogs\gsoap.build.log (
 )
 echo Building gsoap stubs (see gsoap.build.log for details)
 nmake /NOLOGO /f gsoap.mak >..\Release\BuildLogs\gsoap.build.log 2>&1
+if %ERRORLEVEL% NEQ 0 exit /b 1 
+exit /b 0
+
+:MAKE_PARAM
+REM ======================================================================
+REM Make param stubs, etc.
+REM ======================================================================
+if exist ..\Release\BuildLogs\param.build.log (
+    echo Removing old param build log
+    rm -f ..\Release\BuildLogs\param.build.log
+)
+echo Building param stubs (see param.build.log for details)
+nmake /NOLOGO /f param.mak >..\Release\BuildLogs\param.build.log 2>&1
 if %ERRORLEVEL% NEQ 0 exit /b 1 
 exit /b 0
 

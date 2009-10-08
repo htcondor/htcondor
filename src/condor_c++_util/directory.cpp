@@ -976,10 +976,10 @@ GetIds( const char *path, uid_t *owner, gid_t *group )
 
 /*
   Concatenates a given directory path and filename into a single
-  string, stored in space allocated with new().  This function makes
+  string, stored in space allocated with new[].  This function makes
   sure that if the given directory path doesn't end with the
   appropriate directory delimiter for this platform, that the new
-  string includes that.
+  string includes that.  Delete return string with delete[].
 */
 char*
 dircat( const char *dirpath, const char *filename )
@@ -1036,17 +1036,18 @@ temp_dir_path()
 }
 
 /*
-  Atomically creates a unique file in the temporary directory 
+  Atomically creates a unique file or subdirectory in the temporary directory 
   (as returned by temp_dir_path())
-  Returns the name of the new file
+  Returns the name of the new file or subdirectory.
   The pointer returned must be de-allocated by the caller w/ free().
 */
 
 char * 
-create_temp_file() {
+create_temp_file(bool create_as_subdirectory) {
 	char * temp_dir = temp_dir_path();
 	char * filename = (char*)(malloc (500));
 	int mypid;
+	static unsigned int counter = 0;
 
 #ifdef WIN32
 	mypid = GetCurrentProcessId();
@@ -1061,9 +1062,11 @@ create_temp_file() {
 	int retry_count = 10;
 
 	do {
-		snprintf (filename, 500, "%s/tmp.%d.%d", temp_dir, mypid, timestamp++);
+		snprintf (filename, 500, "%s/tmp.%d.%d.%d", temp_dir, mypid, timestamp++, counter++);
 	} while ((--retry_count > 0) && 
-			 ((fd=safe_open_wrapper(filename, O_EXCL | O_CREAT, S_IREAD | S_IWRITE)) == -1));
+			 ( (!create_as_subdirectory && (fd=safe_open_wrapper(filename, O_EXCL | O_CREAT, S_IREAD | S_IWRITE)) == -1) ||
+			   (create_as_subdirectory && (fd=mkdir(filename, 0700)) == -1) )
+			 );
 
 	if (fd == -1) {
 		free(temp_dir);
@@ -1071,7 +1074,9 @@ create_temp_file() {
 		return NULL;
 	}
 
-	close (fd);
+	if ( !create_as_subdirectory ) {
+		close (fd);
+	}
 
 	free (temp_dir);
 

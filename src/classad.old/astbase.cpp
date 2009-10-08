@@ -33,21 +33,9 @@
 
 #define AdvancePtr(ptr)  while(*ptr != '\0') ptr++;
 
-#ifdef USE_STRING_SPACE_IN_CLASSADS
 #include "stringSpace.h"
 StringSpace *ExprTree::string_space = NULL;
 int ExprTree::string_space_references = 0;
-#endif
-
-#ifndef USE_STRING_SPACE_IN_CLASSADS
-static	char*	StrCpy(const char* str)
-{
-	char*	tmpStr = new char[strlen(str)+1];
-
-	strcpy(tmpStr, str);
-	return tmpStr;
-}
-#endif
 
 ////////////////////////////////////////////////////////////////////////////////
 // Tree node constructors.                                                    //
@@ -55,15 +43,11 @@ static	char*	StrCpy(const char* str)
 
 VariableBase::VariableBase(char* varName)
 {
-#ifdef USE_STRING_SPACE_IN_CLASSADS
-	this->stringSpaceIndex = string_space->getCanonical(varName, SS_DUP);
+	this->stringSpaceIndex = string_space->getCanonical((const char *&)varName);
 	// I apologize for casting away the const-ness of the char * here
 	// I'm trying to make minimal changes in the code to add string space,
 	// and it is safe. 
 	this->name = (char *) (*string_space)[stringSpaceIndex];
-#else
-    this->name = StrCpy(varName);
-#endif
     this->type = LX_VARIABLE;
 }
 
@@ -87,29 +71,21 @@ BooleanBase::BooleanBase(int v)
 
 StringBase::StringBase(char* str)
 {
-#ifdef USE_STRING_SPACE_IN_CLASSADS
-	stringSpaceIndex = string_space->getCanonical(str, SS_DUP);
+	stringSpaceIndex = string_space->getCanonical((const char *&)str);
 	// I apologize for casting away the const-ness of the char * here
 	// I'm trying to make minimal changes in the code to add string space,
 	// and it is safe. 
 	value = (char *) (*string_space)[stringSpaceIndex];
-#else
-    value = StrCpy(str);
-#endif
     this->type  = LX_STRING;
 }
 
 ISOTimeBase::ISOTimeBase(char* str)
 {
-#ifdef USE_STRING_SPACE_IN_CLASSADS
-	stringSpaceIndex = string_space->getCanonical(str, SS_DUP);
+	stringSpaceIndex = string_space->getCanonical((const char *&)str);
 	// I apologize for casting away the const-ness of the char * here
 	// I'm trying to make minimal changes in the code to add string space,
 	// and it is safe. 
 	time = (char *) (*string_space)[stringSpaceIndex];
-#else
-    time = StrCpy(str);
-#endif
     this->type  = LX_TIME;
 }
 
@@ -233,29 +209,17 @@ AssignOpBase::AssignOpBase(ExprTree* l, ExprTree* r)
 ////////////////////////////////////////////////////////////////////////////////
 VariableBase::~VariableBase()
 {
-#ifdef USE_STRING_SPACE_IN_CLASSADS
 	string_space->disposeByIndex(stringSpaceIndex);
-#else
-	delete [] name;
-#endif
 }
 
 StringBase::~StringBase()
 {
-#ifdef USE_STRING_SPACE_IN_CLASSADS
 	string_space->disposeByIndex(stringSpaceIndex);
-#else
-	delete [] value;
-#endif
 }
 
 ISOTimeBase::~ISOTimeBase()
 {
-#ifdef USE_STRING_SPACE_IN_CLASSADS
 	string_space->disposeByIndex(stringSpaceIndex);
-#else
-	delete [] time;
-#endif
 }
 
 BinaryOpBase::~BinaryOpBase()
@@ -1138,15 +1102,11 @@ int BooleanBase::Value()
 
 FunctionBase::FunctionBase(char *tName)
 {
-#ifdef USE_STRING_SPACE_IN_CLASSADS
-	this->stringSpaceIndex = string_space->getCanonical(tName, SS_DUP);
+	this->stringSpaceIndex = string_space->getCanonical((const char *&)tName);
 	// I apologize for casting away the const-ness of the char * here
 	// I'm trying to make minimal changes in the code to add string space,
 	// and it is safe. 
 	this->name = (char *) (*string_space)[stringSpaceIndex];
-#else
-    this->name = StrCpy(tName);
-#endif
     this->type = LX_FUNCTION;
 	arguments = new List<ExprTree>();
 	return;
@@ -1165,11 +1125,7 @@ FunctionBase::~FunctionBase()
 	}
 	delete arguments;
 
-#ifdef USE_STRING_SPACE_IN_CLASSADS
 	string_space->disposeByIndex(stringSpaceIndex);
-#else
-	delete [] name;
-#endif
 
 	return;
 }
@@ -1248,25 +1204,21 @@ FunctionBase::EvaluateArgument(
 // it, Todd.-Alain 26-Sep-2001
 ExprTree::ExprTree() : unit('\0'), evalFlag(FALSE)
 {
-#ifdef USE_STRING_SPACE_IN_CLASSADS
 	if (string_space_references == 0) {
 		string_space = new StringSpace;
 	}
 	string_space_references++;
-#endif
 	invisible = false;
 	return;
 }
 
 ExprTree::~ExprTree()
 {
-#ifdef USE_STRING_SPACE_IN_CLASSADS
 	string_space_references--;
 	if (string_space_references == 0) {
 		delete string_space;
 		string_space = NULL;
 	}
-#endif
 	return;
 }
 

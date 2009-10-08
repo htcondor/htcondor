@@ -34,7 +34,7 @@ $mycmdfile = "lib_auth_protocol-krb.cmd";
 $currenthost = CondorTest::getFqdnHost();
 CondorTest::fullchomp($currenthost);
 
-system("date");
+print scalar localtime() . "\n";
 
 $myvariation = 1;
 
@@ -114,7 +114,7 @@ if($mypid == 0) {
 	}
 
 CondorTest::KillPersonal($secconfig);
-system("date");
+print scalar localtime() . "\n";
 
 if($result != 0)
 {

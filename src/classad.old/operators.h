@@ -76,7 +76,7 @@ enum OpKind
 
 
 // table of string representations of operators; indexed by OpKind
-extern char *opString[];
+extern const char *opString[];
 
 // public access to operation function
 void operate (OpKind, Value &, Value &);

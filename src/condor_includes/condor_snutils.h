@@ -41,7 +41,11 @@ BEGIN_C_DECLS
 
 #ifdef WIN32
 int snprintf(char *str, size_t size, const char *format, ...);
+/**	Disable the warning about the number of formal parameters 
+	differing from a previous declaration */
+#pragma warning ( disable : 4028 )
 int vsnprintf(char *str, size_t size, const char *format, va_list args);
+#pragma warning ( default : 4028 )
 #endif
 
 int printf_length(const char *format, ...);

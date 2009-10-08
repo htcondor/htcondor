@@ -20,7 +20,7 @@
 #pragma once
 
 #include <map>
-
+#include <windows.h>
 class WindowsMessageReceiver;
 
 class WindowsMessageReceiverOwner

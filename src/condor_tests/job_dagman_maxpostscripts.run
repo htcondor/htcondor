@@ -48,6 +48,8 @@ unless ($pid)
 }
 #main process continues here
 
+CondorTest::LoadExemption("job_dagman_maxpostscripts,no,DC_AUTHENTICATE unable to receive auth_info!");
+
 # information for creating logging client from template.
 my $checkintemplate = "job_dagman_maxpostscripts-checkin.template";
 my $checkin = "job_dagman_maxpostscripts-checkin.pl";

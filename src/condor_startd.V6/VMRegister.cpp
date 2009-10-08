@@ -77,8 +77,23 @@ _requestVMRegister(char *addr)
 
 	// Send <IP address:port> of virtual machine
 	buffer = strdup(daemonCore->InfoCommandSinfulString());
-	ssock.code(buffer);
-	ssock.eom();
+	ASSERT(buffer);
+
+	if ( !ssock.code(buffer) ) {
+		dprintf( D_FULLDEBUG,
+				 "Failed to send VM_REGISTER command's arguments to "
+				 "host startd %s: %s\n",
+				 addr, buffer );
+		free(buffer);
+		return FALSE;
+	}
+
+	if( !ssock.eom() ) {
+		dprintf( D_FULLDEBUG, "Failed to send EOM to host startd %s\n", addr );
+		free(buffer);
+		return FALSE;
+	}
+
 	free(buffer);
 
 	//Now, read permission information

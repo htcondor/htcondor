@@ -18,6 +18,7 @@
  ***************************************************************/
 
 
+#include "condor_common.h"
 #include "stream_handler.h"
 #include "NTsenders.h"
 

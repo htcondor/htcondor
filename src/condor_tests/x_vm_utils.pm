@@ -68,7 +68,8 @@ sub initialize
 		if ( $^O eq "darwin" ) {
 			$fetch_prog = "curl -O";
 		} else {
-			$fetch_prog = "wget";
+			# Retry up to 60 times, waiting 22 seconds between tries
+			$fetch_prog = "wget --tries=60 --timeout=22";
 		}
 		CondorTest::debug("Fetching $fetch_url\n",1);
 		my $rc = system( "$fetch_prog $fetch_url 2>&1" );
@@ -85,6 +86,12 @@ sub initialize
 	my $oldpath = $ENV{PATH};
 	my $newpath = "/prereq/VMware-server-1.0.7/bin:" . $oldpath;
 	$ENV{PATH} = $newpath;
+
+	unless ( system("vmrun list") == 0 && system("vmware-cmd -l") == 0 &&
+			 system("mkisofs -version") == 0 ) {
+		CondorTest::debug("VMWare tools exited with non-zero status\n",1);
+		die "VMWare tools failed\n";
+	}
 
 	# do the saveme thing so we know the name of the
 	# directory that will house our personal Condor
@@ -179,8 +186,8 @@ sub check_output
 	my $output = get_data();
 	my $ret = $output_check eq $output;
 	unless ($ret) {
-		print "expected: $output_check\n";
-		print "actual: $output\n"
+		CondorTest::debug("expected: $output_check\n",1);
+		CondorTest::debug("actual: $output\n",1);
 	}
 	return $ret;
 }
