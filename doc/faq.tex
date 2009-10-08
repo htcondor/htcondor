@@ -660,104 +660,14 @@ If supplied it with an empty file, the \Condor{master} works fine.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{job!not running, why?}
 \subsection*{Why aren't any or all of my jobs running?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\index{job!not running, why?}
-\underline{Problems like the following} are often reported to us:
+Please see 
+Section~\ref{sec:job-not-running}, on page~\pageref{sec:job-not-running}
+for information on why a job might not be running.
 
-\footnotesize
-\begin{verbatim}
-I have submitted 100 jobs to my pool, and only 18 appear to be
-running, but there are plenty of machines available.  What should I
-do to investigate the reason why this happens?
-\end{verbatim}
-\normalsize
-
-Start by following these steps to understand the problem:
-
-\begin{enumerate}
-
-\item Run \Condor{q} -analyze and see what it says.
-
-\item Look at the User Log file (whatever you specified as "log = XXX"
-in the submit file).
-
-See if the jobs are starting to run but then exiting right away, or if
-they never even start.
-
-\item Look at the SchedLog on the submit machine after it negotiates
-for this user.
-If a user doesn't have enough priority to get more machines the
-SchedLog will contain a message like "lost priority, no more jobs".
-
-\item If jobs are successfully being matched with machines, they
-still might be dying when they try to execute due to file permission
-problems or the like.
-Check the ShadowLog on the submit machine for warnings or errors.
-
-\item Look at the NegotiatorLog during the negotiation for the user.
-Look for messages about priority, "no more machines", or similar.
-
-\end{enumerate}
-
-\underline{Another problem} shows itself
-with statements within the log file produced by the \Condor{schedd}
-daemon (given by \MacroU{SCHEDD\_LOG})
-that say the following:
-
-\footnotesize
-\begin{verbatim}
-2/3 17:46:53 Swap space estimate reached! No more jobs can be run!
-12/3 17:46:53     Solution: get more swap space, or set RESERVED_SWAP = 0
-12/3 17:46:53     0 jobs matched, 1 jobs idle
-\end{verbatim}
-\normalsize
-
-Condor computes the total swap space on your submit machine.
-It then tries to limit the total number of jobs it
-will spawn based on an estimate of the size of the \Condor{shadow}
-daemon's memory footprint and a configurable amount of swap space
-that should be reserved.
-This is done to avoid the
-situation within a very large pool
-in which all the jobs are submitted from a single host.
-The huge number of \Condor{shadow} processes would
-overwhelm the submit machine,
-it would run out of swap space, and thrash.
-
-Things can go wrong if a machine has a lot of physical memory and
-little or no swap space.
-Condor does not consider the physical memory size,
-so the situation occurs where Condor thinks
-it has no swap space to work with,
-and it will not run the submitted jobs.
-
-To see how much swap space Condor thinks a given machine has, use
-the output of a \Condor{status} command of the following form:
-
-\footnotesize
-\begin{verbatim}
-condor_status -schedd [hostname] -long | grep VirtualMemory
-\end{verbatim}
-\normalsize
-
-If the value listed is 0, then this is what is confusing Condor.
-There are two ways to fix the problem:
-
-\begin{enumerate}
-\item Configure your machine with some real swap space.
-
-\item Disable this check within Condor.
-Define the amount of reserved swap space for the submit machine to 0.
-Set \Macro{RESERVED\_SWAP} to 0 in the configuration file:
-
-\begin{verbatim}
-RESERVED_SWAP = 0
-\end{verbatim}
-
-and then send a \Condor{restart} to the submit machine.
-\end{enumerate}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{I'm at the University of Wisconsin-Madison Computer Science Dept., and I am having problems!}
