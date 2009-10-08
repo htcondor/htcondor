@@ -2752,10 +2752,6 @@ for details on installing and running a checkpoint server.
   The default is 120 seconds.
   A setting of 0 disables this check.
 
-% This should be gotten rid of, that functionality is DEAD.
-%\label{param:CkptServerReplicationLevel}
-%\item[\Macro{CKPT\_SERVER\_REPLICATION\_LEVEL}]
-
 \label{param:CkptServerInterval}
 \item[\Macro{CKPT\_SERVER\_INTERVAL}]
   The maximum number of seconds the checkpoint server
@@ -2812,18 +2808,6 @@ for details on installing and running a checkpoint server.
   The number of seconds after which if a checkpoint file has not
   been accessed, it is considered stale.
   The default value is 5184000 seconds, which is sixty days.
-
-% This is currently not used in the codebase, it is part of the NETMAN feature.
-%\label{param:ManageBandwidth}
-%\item[\Macro{MANAGE\_BANDWIDTH}]
-
-% This is currently not used in the codebase, it is part of the NETMAN feature.
-%\label{param:NetworkHorizon}
-%\item[\Macro{NETWORK\_HORIZON}]
-
-% This may be part of the REPLICATION feature, which is DEAD in the ckpt server.
-%\label{param:CkptServerHosts}
-%\item[\Macro{CKPT\_SERVER\_HOSTS}]
 
 \end{description}
 
@@ -4569,15 +4553,15 @@ See section~\ref{sec:job-hooks} on page~\pageref{sec:job-hooks} on
 \begin{description}
 
 \label{param:SlotNJobHookKeyword}
-\item[\Macro{SLOTN\_JOB\_HOOK\_KEYWORD}]
+\item[\Macro{SLOT<N>\_JOB\_HOOK\_KEYWORD}]
   The keyword used to define which set of hooks a particular
   compute slot should invoke.
-  Note that the ``N'' in ``SLOTN'' should be replaced with the slot
-  identification number, for example, on slot1, this setting would be
+  The value of \verb@<N>@ is replaced by the slot
+  identification number. For example, on slot 1, th variable name will be
   called \MacroNI{[SLOT1\_JOB\_HOOK\_KEYWORD}.
   There is no default keyword.
   Sites that wish to use these job hooks must explicitly define the
-  keyword (and the corresponding hook paths).
+  keyword and the corresponding hook paths.
 
 \label{param:StartdJobHookKeyword}
 \item[\Macro{STARTD\_JOB\_HOOK\_KEYWORD}]
@@ -5822,12 +5806,12 @@ These settings affect the \Condor{starter}.
   When \Expr{True}, Condor jobs and their descendants maintain their
   affinity to a CPU.
   When \Expr{True}, more fine grained affinities may be specified with
-  \MacroNI{SLOT<X>\_CPU\_AFFINITY}.
+  \MacroNI{SLOT<N>\_CPU\_AFFINITY}.
 
-\label{param:SlotXCpuAffinity} 
-\item[\Macro{SLOT<X>\_CPU\_AFFINITY}]
+\label{param:SlotNCpuAffinity} 
+\item[\Macro{SLOT<N>\_CPU\_AFFINITY}]
   A comma separated list of cores to which a Condor job running on
-  a specific slot given by the value of \MacroNI{<X>} show affinity.
+  a specific slot given by the value of \MacroNI{<N>} show affinity.
   Note that slots are numbered beginning with the value 1,
   while CPU cores are numbered beginning with the value 0.
   This affinity list only takes effect if

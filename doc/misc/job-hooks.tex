@@ -402,13 +402,11 @@ This way, a given machine can have multiple sets of hooks, each set
 identified by a specific keyword.
 
 Each slot on the machine can define a separate keyword for the set
-of hooks that should be used (\Macro{SLOTN\_JOB\_HOOK\_KEYWORD}).
-Note that the \Expr{N} in \Expr{SLOTN} should be replaced with the slot
-identification number. 
-For example, on slot1, the setting would be
+of hooks that should be used with \Macro{SLOT<N>\_JOB\_HOOK\_KEYWORD}.
+For example, on slot 1, the variable name will be
 called \MacroNI{SLOT1\_JOB\_HOOK\_KEYWORD}.
 If the slot-specific keyword is not defined, the \Condor{startd} will
-use a global keyword (\Macro{STARTD\_JOB\_HOOK\_KEYWORD}).
+use a global keyword as defined by \Macro{STARTD\_JOB\_HOOK\_KEYWORD}.
 
 Once a job is fetched via \Macro{HOOK\_FETCH\_WORK}, the
 \Condor{startd} will insert the keyword used to fetch that job into
