@@ -2065,9 +2065,31 @@ jobIsSandboxed( ClassAd * ad )
 {
 	ASSERT(ad);
 	int stage_in_start = 0;
+	int never_create_sandbox_expr = 0;
+	// In the past, we created sandboxes (or not) based on the
+	// universe in which a job is executing.  Now, we create a
+	// sandbox only if we are in a universe that ordinarily
+	// requires a sandbox AND if create_sandbox is true; note that
+	// create_sandbox may be set to false by other attributes in
+	// the job ad (see below).
+	bool create_sandbox = true;
+	
 	ad->LookupInteger( ATTR_STAGE_IN_START, stage_in_start );
 	if( stage_in_start > 0 ) {
 		return true;
+	}
+
+	// 
+	if( ad->EvalBool( ATTR_NEVER_CREATE_JOB_SANDBOX, NULL, never_create_sandbox_expr ) &&
+	    never_create_sandbox_expr == TRUE ) {
+	  // As this function stands now, we could return false here.
+	  // But if the sandbox logic becomes more complicated in the
+	  // future --- notably, if there might be a case in which
+	  // we'd want to always create a sandbox even if
+	  // ATTR_NEVER_CREATE_JOB_SANDBOX were set --- then we'd want
+	  // to be sure to ensure that we weren't in such a case.
+
+	  create_sandbox = false;
 	}
 
 	int univ = CONDOR_UNIVERSE_VANILLA;
@@ -2086,7 +2108,9 @@ jobIsSandboxed( ClassAd * ad )
 	case CONDOR_UNIVERSE_MPI:
 	case CONDOR_UNIVERSE_PARALLEL:
 	case CONDOR_UNIVERSE_VM:
-		return true;
+	  // True by default for jobs in these universes, but false if
+	  // ATTR_NEVER_CREATE_JOB_SANDBOX is set in the job ad.
+		return create_sandbox;
 		break;
 
 	default:
