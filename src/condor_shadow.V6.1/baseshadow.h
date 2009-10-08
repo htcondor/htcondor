@@ -412,10 +412,6 @@ class BaseShadow : public Service
 	char *spool;
 	char *fsDomain;
 	char *uidDomain;
-	char *ckptServerHost;
-	bool useAFS;
-	bool useNFS;
-	bool useCkptServer;
 	int reconnect_ceiling;
 	double reconnect_e_factor;
 
