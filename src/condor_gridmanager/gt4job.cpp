@@ -303,7 +303,8 @@ GT4Job::GT4Job( ClassAd *classad )
 		jobAd->AssignExpr( ATTR_HOLD_REASON, "Undefined" );
 	}
 
-	jobProxy = AcquireProxy( jobAd, error_string, evaluateStateTid );
+	jobProxy = AcquireProxy( jobAd, error_string,
+							 (Eventcpp)&GT4Job::ProxyCallback, this );
 	if ( jobProxy == NULL ) {
 		if ( error_string == "" ) {
 			error_string.sprintf( "%s is not set in the job ad",
@@ -504,7 +505,7 @@ GT4Job::~GT4Job()
 		free( localError );
 	}
 	if ( jobProxy ) {
-		ReleaseProxy( jobProxy, evaluateStateTid );
+		ReleaseProxy( jobProxy, (Eventcpp)&GT4Job::ProxyCallback, this );
 	}
 	if ( gramCallbackContact ) {
 		free( gramCallbackContact );
@@ -527,6 +528,14 @@ void GT4Job::Reconfig()
 	gahp->setTimeout( gahpCallTimeout );
 }
 
+int GT4Job::ProxyCallback()
+{
+	if ( gmState == GM_PROXY_EXPIRED ) {
+		SetEvaluateState();
+	}
+	return 0;
+}
+
 int GT4Job::doEvaluateState()
 {
 	int old_gm_state;
@@ -534,7 +543,8 @@ int GT4Job::doEvaluateState()
 	bool reevaluate_state = true;
 	time_t now = time(NULL);
 
-	bool done;
+	bool attr_exists;
+	bool attr_dirty;
 	int rc;
 
 	daemonCore->Reset_Timer( evaluateStateTid, TIMER_NEVER );
@@ -793,8 +803,9 @@ int GT4Job::doEvaluateState()
 			if ( condorState == REMOVED || condorState == HELD ) {
 				gmState = GM_CANCEL;
 			} else {
-				done = requestScheddUpdate( this );
-				if ( !done ) {
+				jobAd->GetDirtyFlag( ATTR_GRID_JOB_ID, &attr_exists, &attr_dirty );
+				if ( attr_exists && attr_dirty ) {
+					requestScheddUpdate( this, true );
 					break;
 				}
 				gmState = GM_SUBMIT;
@@ -881,8 +892,9 @@ int GT4Job::doEvaluateState()
 			if ( condorState == REMOVED || condorState == HELD ) {
 				gmState = GM_CANCEL;
 			} else {
-				done = requestScheddUpdate( this );
-				if ( !done ) {
+				jobAd->GetDirtyFlag( ATTR_GRID_JOB_ID, &attr_exists, &attr_dirty );
+				if ( attr_exists && attr_dirty ) {
+					requestScheddUpdate( this, true );
 					break;
 				}
 				gmState = GM_SUBMITTED;
@@ -1013,8 +1025,9 @@ int GT4Job::doEvaluateState()
 			// Report job completion to the schedd.
 			JobTerminated();
 			if ( condorState == COMPLETED ) {
-				done = requestScheddUpdate( this );
-				if ( !done ) {
+				jobAd->GetDirtyFlag( ATTR_JOB_STATUS, &attr_exists, &attr_dirty );
+				if ( attr_exists && attr_dirty ) {
+					requestScheddUpdate( this, true );
 					break;
 				}
 			}
@@ -1051,7 +1064,7 @@ int GT4Job::doEvaluateState()
 					globusState = "";
 					jobAd->Assign( ATTR_GLOBUS_STATUS, 32 );
 					SetRemoteJobStatus( NULL );
-					requestScheddUpdate( this );
+					requestScheddUpdate( this, false );
 				}
 				gmState = GM_CLEAR_REQUEST;
 			}
@@ -1118,7 +1131,7 @@ int GT4Job::doEvaluateState()
 			globusState = "";
 			jobAd->Assign( ATTR_GLOBUS_STATUS, 32 );
 			SetRemoteJobStatus( NULL );
-			requestScheddUpdate( this );
+			requestScheddUpdate( this, false );
 
 			if ( condorState == REMOVED ) {
 				gmState = GM_DELETE;
@@ -1233,8 +1246,9 @@ int GT4Job::doEvaluateState()
 			// through. However, since we registered update events the
 			// first time, requestScheddUpdate won't return done until
 			// they've been committed to the schedd.
-			done = requestScheddUpdate( this );
-			if ( !done ) {
+			jobAd->ResetExpr();
+			if ( jobAd->NextDirtyExpr() ) {
+				requestScheddUpdate( this, true );
 				break;
 			}
 			DeleteOutput();
@@ -1434,7 +1448,7 @@ void GT4Job::UpdateGlobusState( const MyString &new_state,
 		globusStateFaultString = new_fault;
 		enteredCurrentGlobusState = time(NULL);
 
-		requestScheddUpdate( this );
+		requestScheddUpdate( this, false );
 
 		SetEvaluateState();
 	}

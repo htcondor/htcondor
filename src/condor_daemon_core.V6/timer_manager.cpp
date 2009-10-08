@@ -49,6 +49,7 @@ TimerManager::TimerManager()
 		EXCEPT("TimerManager object exists!");
 	}
 	timer_list = NULL;
+	list_tail = NULL;
 	timer_ids = 0;
 	in_timeout = FALSE;
 	_t = this; 
@@ -61,37 +62,37 @@ TimerManager::~TimerManager()
 }
 
 int TimerManager::NewTimer(Service* s, unsigned deltawhen, Event event, const char* event_descrip,
-						   unsigned period, int id)
+						   unsigned period)
 {
-	return( NewTimer(s,deltawhen,event,(Eventcpp)NULL,(Release)NULL,(Releasecpp)NULL,event_descrip,period,NULL,id,0) );
+	return( NewTimer(s,deltawhen,event,(Eventcpp)NULL,(Release)NULL,(Releasecpp)NULL,event_descrip,period,NULL,-1) );
 }
 
 int TimerManager::NewTimer(Service* s, unsigned deltawhen, Event event, 
 						   Release release, const char* event_descrip,
-						   unsigned period, int id)
+						   unsigned period)
 {
-	return( NewTimer(s,deltawhen,event,(Eventcpp)NULL,release,(Releasecpp)NULL,event_descrip,period,NULL,id,0) );
+	return( NewTimer(s,deltawhen,event,(Eventcpp)NULL,release,(Releasecpp)NULL,event_descrip,period,NULL,-1) );
 }
 
 int TimerManager::NewTimer(unsigned deltawhen, Event event, const char* event_descrip,
-						   unsigned period, int id)
+						   unsigned period)
 {
-	return( NewTimer((Service *)NULL,deltawhen,event,(Eventcpp)NULL,(Release)NULL,(Releasecpp)NULL,event_descrip,period,NULL,id,0) );
+	return( NewTimer((Service *)NULL,deltawhen,event,(Eventcpp)NULL,(Release)NULL,(Releasecpp)NULL,event_descrip,period,NULL,-1) );
 }
 
 int TimerManager::NewTimer(Service* s, unsigned deltawhen, Eventcpp event, const char* event_descrip,
-						   unsigned period, int id)
+						   unsigned period)
 {
 	if ( !s ) {
 		dprintf( D_DAEMONCORE,"DaemonCore NewTimer() called with c++ pointer & NULL Service*\n");
 		return -1;
 	}
-	return( NewTimer(s,deltawhen,(Event)NULL,event,(Release)NULL,(Releasecpp)NULL,event_descrip,period,NULL,id,1) );
+	return( NewTimer(s,deltawhen,(Event)NULL,event,(Release)NULL,(Releasecpp)NULL,event_descrip,period,NULL,-1) );
 }
 
-int TimerManager::NewTimer (Service* s,Timeslice timeslice,Eventcpp event,const char * event_descrip,int id)
+int TimerManager::NewTimer (Service* s,const Timeslice &timeslice,Eventcpp event,const char * event_descrip)
 {
-	return NewTimer(s,0,(Event)NULL,event,(Release)NULL,(Releasecpp)NULL,event_descrip,0,&timeslice,id,1);
+	return NewTimer(s,0,(Event)NULL,event,(Release)NULL,(Releasecpp)NULL,event_descrip,0,&timeslice,-1);
 }
 
 
@@ -99,7 +100,7 @@ int TimerManager::NewTimer (Service* s,Timeslice timeslice,Eventcpp event,const 
 // event instead of periodical
 int TimerManager::NewTimer(Service* s, unsigned deltawhen, Event event, Eventcpp eventcpp,
 		Release release, Releasecpp releasecpp, const char *event_descrip, unsigned period, 
-		Timeslice *timeslice,int id, int is_cpp)
+		const Timeslice *timeslice,int id)
 {
 	Timer*		new_timer;
 	Timer*		timer_ptr;
@@ -117,15 +118,13 @@ int TimerManager::NewTimer(Service* s, unsigned deltawhen, Event event, Eventcpp
 	new_timer->releasecpp = releasecpp;
 	new_timer->period = period;
 	new_timer->service = s; 
-	new_timer->is_cpp = is_cpp;
 
 	if( timeslice ) {
-		new_timer->timeslice = *timeslice;
-		new_timer->has_timeslice = true;
-		deltawhen = new_timer->timeslice.getTimeToNextRun();
+		new_timer->timeslice = new Timeslice( *timeslice );
+		deltawhen = new_timer->timeslice->getTimeToNextRun();
 	}
 	else {
-		new_timer->has_timeslice = false;
+		new_timer->timeslice = NULL;
 	}
 
 	if ( TIMER_NEVER == deltawhen ) {
@@ -144,6 +143,7 @@ int TimerManager::NewTimer(Service* s, unsigned deltawhen, Event event, Eventcpp
 		if ( CancelTimer(id, false /* don't delete data_ptr */ ) == -1 ) {
 			dprintf( D_DAEMONCORE, "cannot find timer id %d\n",id);
 			daemonCore->free_descrip( new_timer->event_descrip);
+			delete new_timer->timeslice;
 			delete new_timer;
 			return -1;
 		}
@@ -157,6 +157,7 @@ int TimerManager::NewTimer(Service* s, unsigned deltawhen, Event event, Eventcpp
 	if ( timer_list == NULL ) {
 		// list is empty, place ours in front
 		timer_list = new_timer;
+		list_tail = new_timer;
 		new_timer->next = NULL;
 			// since we have a new first timer, we must wake up select
 		daemonCore->Wake_up_select();
@@ -172,6 +173,11 @@ int TimerManager::NewTimer(Service* s, unsigned deltawhen, Event event, Eventcpp
 			timer_list = new_timer;
 			// since we have a new first timer, we must wake up select
 			daemonCore->Wake_up_select();
+		} else if ( new_timer->when == TIME_T_NEVER ) {
+			// Our new timer goes to the very back of the list.
+			new_timer->next = NULL;
+			list_tail->next = new_timer;
+			list_tail = new_timer;
 		} else {
 			Timer* trail_ptr = NULL;
 			for (timer_ptr = timer_list; timer_ptr != NULL; 
@@ -185,6 +191,9 @@ int TimerManager::NewTimer(Service* s, unsigned deltawhen, Event event, Eventcpp
 			ASSERT( trail_ptr );
 			new_timer->next = timer_ptr;
 			trail_ptr->next = new_timer;
+			if ( trail_ptr == list_tail ) {
+				list_tail = new_timer;
+			}
 		}
 	}
 
@@ -206,7 +215,6 @@ int TimerManager::ResetTimer(int id, unsigned when, unsigned period)
 	Release			release;
 	Releasecpp		releasecpp;
 	Service*		s; 
-	int				is_cpp;
 	char*			event_descrip;
 	void*			data_ptr;
 	int				reset_dataptr = FALSE;
@@ -237,7 +245,6 @@ int TimerManager::ResetTimer(int id, unsigned when, unsigned period)
 	release = timer_ptr->release;
 	releasecpp = timer_ptr->releasecpp;
 	s = timer_ptr->service; 
-	is_cpp = timer_ptr->is_cpp;
 	event_descrip = timer_ptr->event_descrip;
 	data_ptr = timer_ptr->data_ptr;
 	if ( curr_dataptr == &(timer_ptr->data_ptr) )
@@ -246,7 +253,7 @@ int TimerManager::ResetTimer(int id, unsigned when, unsigned period)
 	// note that this call to NewTimer() will first call CancelTimer on the tid, 
 	// then create a new timer with the same tid.
 	if ( NewTimer(s, when, handler, handlercpp, release, releasecpp, 
-			event_descrip, period, NULL, id, is_cpp) != -1 ) {
+			event_descrip, period, NULL, id) != -1 ) {
 		// and dont forget to renew the users data_ptr
 		daemonCore->Register_DataPtr(data_ptr);
 		// and if a handler was resetting _its own_ tid entry, reset curr_dataptr to new value
@@ -289,6 +296,7 @@ int TimerManager::CancelTimer(int id, bool release_data_ptr /* = true */ )
 			// timer to remove is first and is the only one on the list
 			timer_ptr = timer_list;
 			timer_list = NULL;			
+			list_tail = NULL;
 		} else {
 			// timer to remove is first but not the only one
 			timer_ptr = timer_list;
@@ -308,6 +316,9 @@ int TimerManager::CancelTimer(int id, bool release_data_ptr /* = true */ )
 
 		// remove from the linked list
 		trail_ptr->next = timer_ptr->next;
+		if ( timer_ptr == list_tail ) {
+			list_tail = trail_ptr;
+		}
 	}
 
 	// free event_descrip
@@ -321,14 +332,10 @@ int TimerManager::CancelTimer(int id, bool release_data_ptr /* = true */ )
 	release		= timer_ptr->release;
 	releasecpp	= timer_ptr->releasecpp;
 	if ( release_data_ptr ) {
-		if ( timer_ptr->is_cpp ) {
-			if ( releasecpp ) {
-				(service->*releasecpp)(timer_ptr->data_ptr);
-			}
-		} else {
-			if ( release ) {
-				(*release)(timer_ptr->data_ptr);
-			}
+		if ( releasecpp ) {
+			(service->*releasecpp)(timer_ptr->data_ptr);
+		} else if ( release ) {
+			(*release)(timer_ptr->data_ptr);
 		}
 	}
 
@@ -338,6 +345,7 @@ int TimerManager::CancelTimer(int id, bool release_data_ptr /* = true */ )
 	if ( curr_regdataptr == &(timer_ptr->data_ptr) )
 		curr_regdataptr = NULL;
 
+	delete timer_ptr->timeslice;
 
 	delete timer_ptr;
 	
@@ -362,19 +370,17 @@ void TimerManager::CancelAllTimers()
 		service = timer_ptr->service; 
 		release = timer_ptr->release;
 		releasecpp = timer_ptr->releasecpp;
-		if ( timer_ptr->is_cpp ) {
-			if ( releasecpp ) {
-				(service->*releasecpp)(timer_ptr->data_ptr);
-			}
-		} else {
-			if ( release ) {
-				(*release)(timer_ptr->data_ptr);
-			}
+		if ( releasecpp ) {
+			(service->*releasecpp)(timer_ptr->data_ptr);
+		} else if ( release ) {
+			(*release)(timer_ptr->data_ptr);
 		}
 		daemonCore->free_descrip(timer_ptr->event_descrip);
+		delete timer_ptr->timeslice;
 		delete timer_ptr;
 	}
 	timer_list = NULL;
+	list_tail = NULL;
 }
 
 // Timeout() is called when a select() time out.  Returns number of seconds
@@ -393,7 +399,6 @@ TimerManager::Timeout()
 	Service*		s; 
 	int				result, timer_check_cntr;
 	time_t			now, time_sample;
-	int				is_cpp;
 	char*			event_descrip;
 	void*			data_ptr;
 	int				num_fires = 0;	// num of handlers called in this timeout
@@ -468,11 +473,13 @@ TimerManager::Timeout()
 		release = timer_list->release;
 		releasecpp = timer_list->releasecpp;
 		s = timer_list->service; 
-		is_cpp = timer_list->is_cpp;
 		event_descrip = strdup(timer_list->event_descrip);
 		data_ptr = timer_list->data_ptr;
-		Timeslice timeslice = timer_list->timeslice;
-		bool has_timeslice = timer_list->has_timeslice;
+		Timeslice timeslice;
+		if ( timer_list->timeslice ) {
+			timeslice = *timer_list->timeslice;
+		}
+		bool has_timeslice = timer_list->timeslice != NULL;
 
 		// Update curr_dataptr for GetDataPtr()
 		curr_dataptr = &(timer_list->data_ptr);
@@ -495,7 +502,7 @@ TimerManager::Timeout()
 		// is a c++ method, we call the handler from the c++ object referenced 
 		// by service*.  If we were told the handler is a c function, we call
 		// it and pass the service* as a parameter.
-		if ( timer_list->is_cpp ) {
+		if ( handlercpp ) {
 			(s->*handlercpp)();			// typedef int (*Eventcpp)(int)
 		} else {
 			(*handler)(s);				// typedef int (*Event)(Service*,int)
@@ -533,7 +540,7 @@ TimerManager::Timeout()
 				// will first call CancelTimer on the expired timer, then renew it.
 				if ( NewTimer(s, period, handler, handlercpp, release, releasecpp,
 						event_descrip, period, has_timeslice ? &timeslice : NULL, 
-						current_id, is_cpp) != -1 ) {
+						current_id) != -1 ) {
 					// and dont forget to renew the users data_ptr
 					daemonCore->Register_DataPtr(data_ptr);
 					// now clear curr_dataptr; the above NewTimer should appear "transparent"
@@ -596,27 +603,27 @@ void TimerManager::DumpTimerList(int flag, const char* indent)
 			ptmp = "NULL";
 
 		MyString slice_desc;
-		if( !timer_ptr->has_timeslice ) {
+		if( !timer_ptr->timeslice ) {
 			slice_desc.sprintf("period = %d, ", timer_ptr->period);
 		}
 		else {
 			slice_desc.sprintf_cat("timeslice = %.3g, ",
-								   timer_ptr->timeslice.getTimeslice());
-			if( timer_ptr->timeslice.getDefaultInterval() ) {
+								   timer_ptr->timeslice->getTimeslice());
+			if( timer_ptr->timeslice->getDefaultInterval() ) {
 				slice_desc.sprintf_cat("period = %.1f, ",
-								   timer_ptr->timeslice.getDefaultInterval());
+								   timer_ptr->timeslice->getDefaultInterval());
 			}
-			if( timer_ptr->timeslice.getInitialInterval() ) {
+			if( timer_ptr->timeslice->getInitialInterval() ) {
 				slice_desc.sprintf_cat("initial period = %.1f, ",
-								   timer_ptr->timeslice.getInitialInterval());
+								   timer_ptr->timeslice->getInitialInterval());
 			}
-			if( timer_ptr->timeslice.getMinInterval() ) {
+			if( timer_ptr->timeslice->getMinInterval() ) {
 				slice_desc.sprintf_cat("min period = %.1f, ",
-								   timer_ptr->timeslice.getMinInterval());
+								   timer_ptr->timeslice->getMinInterval());
 			}
-			if( timer_ptr->timeslice.getMaxInterval() ) {
+			if( timer_ptr->timeslice->getMaxInterval() ) {
 				slice_desc.sprintf_cat("max period = %.1f, ",
-								   timer_ptr->timeslice.getMaxInterval());
+								   timer_ptr->timeslice->getMaxInterval());
 			}
 		}
 		dprintf(flag, 

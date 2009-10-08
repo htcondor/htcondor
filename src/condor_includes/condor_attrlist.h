@@ -135,8 +135,6 @@ class AttrList : public AttrListAbstract
 		AttrList();							// No associated AttrList list
         AttrList(AttrListList*);			// Associated with AttrList list
         AttrList(FILE*,char*,int&,int&,int&);// Constructor, read from file.
-//		AttrList(class ProcObj*);			// create from a proc object
-//		AttrList(CONTEXT*);					// create from a CONTEXT
         AttrList(const char *, char);		// Constructor, from string.
         AttrList(AttrList&);				// copy constructor
         virtual ~AttrList();				// destructor
@@ -220,11 +218,6 @@ class AttrList : public AttrListAbstract
 		void        SetDirtyFlag(const char *name, bool dirty);
 		void        GetDirtyFlag(const char *name, bool *exists, bool *dirty);
 		void		ClearAllDirtyFlags();
-#if 0
-		// to update expression trees
-		int			UpdateExpr(char*, ExprTree*);	// update an expression
-		int			UpdateExpr(ExprTree*);
-#endif
 
 		// for iteration through expressions
 		void		ResetExpr() { this->ptrExpr = exprList; this->ptrExprInChain = false; }
@@ -270,9 +263,6 @@ class AttrList : public AttrListAbstract
 		int         sPrint(MyString &output);   // put the AttrList in a string. 
 		void		dPrint( int );				// dprintf to given dprintf level
 
-		// conversion function
-//		int         MakeContext (CONTEXT *);    // create a context
-
         // shipping functions
         int put(Stream& s);
 		int initFromStream(Stream& s);
@@ -301,11 +291,6 @@ class AttrList : public AttrListAbstract
 							   StringList &external_references) const;
 		bool IsExternalReference(const char *name, char **simplified_name) const;
 
-#if defined(USE_XDR)
-		int put (XDR *);
-		int get (XDR *);
-#endif
-
 		friend	class	AttrListRep;			// access "next" 
 		friend	class	AttrListList;			// access "UpdateAgg()"
 		friend	class	ClassAd;
@@ -326,7 +311,6 @@ class AttrList : public AttrListAbstract
 		bool			ptrExprInChain;		// used by NextExpr and NextDirtyExpr
 		AttrListElem*	ptrName;		// used by NextName and NextDirtyName
 		bool			ptrNameInChain;		// used by NextName and NextDirtyName
-		int				seq;			// sequence number
 
 		HashTable<YourString, AttrListElem *> *hash;
 		HashTable<YourString, AttrListElem *> *chained_hash;

@@ -43,7 +43,6 @@ char 	*actionReason = NULL;
 JobAction mode;
 bool All = false;
 bool had_error = false;
-bool old_messages = false;
 
 DCSchedd* schedd = NULL;
 
@@ -56,7 +55,6 @@ void usage();
 void handleAll();
 void handleConstraints( void );
 ClassAd* doWorkByList( StringList* ids, CondorError * errstack );
-void printOldMessages( ClassAd* result_ad, StringList* ids );
 void printNewMessages( ClassAd* result_ad, StringList* ids );
 bool mayUserForceRm( );
 
@@ -346,15 +344,6 @@ main( int argc, char *argv[] )
 		usage();
 	}
 
-	old_messages = false;
-	char* tmp = param( "TOOLS_PROVIDE_OLD_MESSAGES" );
-	if( tmp ) {
-		if( tmp[0] == 'T' || tmp[0] == 't' ) {
-			old_messages = true;
-		}
-		free( tmp );
-	}
-
 		// Pick the default reason if the user didn't specify one
 	if( actionReason == NULL ) {
 		switch( mode ) {
@@ -440,12 +429,7 @@ main( int argc, char *argv[] )
 		if (had_error) {
 			fprintf( stderr, "%s\n", errstack.getFullText(true) );
 		}
-		if( old_messages ) {
-			printOldMessages( result_ad, job_ids );
-		} else {
-				// happy day, we can use the new messages! :)
-			printNewMessages( result_ad, job_ids );
-		}
+		printNewMessages( result_ad, job_ids );
 		delete( result_ad );
 	}
 
@@ -572,7 +556,7 @@ procArg(const char* arg)
 			CondorError errstack;
 			constraint.sprintf( "%s == %d", ATTR_CLUSTER_ID, c );
 			if( doWorkByConstraint(constraint.Value(), &errstack) ) {
-				fprintf( old_messages ? stderr : stdout, 
+				fprintf( stdout, 
 						 "Cluster %d %s.\n", c,
 						 (mode == JA_REMOVE_JOBS) ?
 						 "has been marked for removal" :
@@ -725,88 +709,6 @@ handleConstraints( void )
 		fprintf( stderr, 
 				 "Couldn't find/%s all jobs matching constraint %s\n",
 				 actionWord(mode,false), tmp );
-	}
-}
-
-
-void
-printOldFailure( PROC_ID job_id )
-{
-	fprintf( stderr, "Couldn't find/%s job %d.%d.\n",
-			 actionWord(mode,false), job_id.cluster, job_id.proc );
-}
-
-
-void
-printOldMessage( PROC_ID job_id, action_result_t result )
-{
-	switch( result ) {
-	case AR_SUCCESS:
-		fprintf( stdout, "Job %d.%d %s.\n", 
-				 job_id.cluster, job_id.proc, 
-				 (mode == JA_REMOVE_JOBS) ?
-				 "marked for removal" :
-				 (mode == JA_REMOVE_X_JOBS) ?
-				 "removed locally (remote state unknown)" :
-				 actionWord(mode,true) );
-		break;
-
-	case AR_NOT_FOUND:
-		if( mode==JA_RELEASE_JOBS ) {
-			fprintf( stderr, "Couldn't access job queue for %d.%d\n", 
-					 job_id.cluster, job_id.proc );
-			break;
-		} 
-		printOldFailure( job_id );
-		break;
-
-	case AR_PERMISSION_DENIED: 
-		printOldFailure( job_id );
-		break;
-
-	case AR_BAD_STATUS:
-		if( mode == JA_RELEASE_JOBS ) {
-			fprintf( stderr, "Job %d.%d not held to be released\n", 
-					 job_id.cluster, job_id.proc );
-			break;
-		} 
-		printOldFailure( job_id );
-		break;
-
-	case AR_ALREADY_DONE:
-			// The old tool allowed you to repeatedly hold or remove
-			// the same job over and over again...
-		fprintf( stdout, "Job %d.%d %s.\n", 
-				 job_id.cluster, job_id.proc, 
-				 (mode == JA_REMOVE_JOBS) ?
-				 "marked for removal" :
-				 (mode == JA_REMOVE_X_JOBS) ?
-				 "removed locally (remote state unknown)" :
-				 actionWord(mode,true) );
-		break;
-
-	case AR_ERROR:
-		printOldFailure( job_id );
-		break;
-	}
-}
-
-
-void
-printOldMessages( ClassAd* result_ad, StringList* ids )
-{
-	char* tmp;
-	PROC_ID job_id;
-	action_result_t result;
-
-	JobActionResults results;
-	results.readResults( result_ad );
-
-	ids->rewind();
-	while( (tmp = ids->next()) ) {
-		job_id = getProcByString( tmp );
-		result = results.getResult( job_id );
-		printOldMessage( job_id, result );
 	}
 }
 

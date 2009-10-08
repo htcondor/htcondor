@@ -1934,7 +1934,7 @@ show_queue_buffered( const char* v1, const char* v2, const char* v3, const char*
 
 	output_buffer = new ExtArray<clusterProcString*>;
 
-	char *lastUpdate;
+	char *lastUpdate=NULL;
 
 		/* intepret the parameters accordingly based on whether we are querying database */
 	if (useDB) {
@@ -2054,6 +2054,9 @@ show_queue_buffered( const char* v1, const char* v2, const char* v3, const char*
 			if(dbconn) {
 				free(dbconn);
 			}
+			if(lastUpdate) {
+				free(lastUpdate);
+			}
 			return false;
 		}
 #endif /* WANT_QUILL */
@@ -2153,6 +2156,9 @@ show_queue_buffered( const char* v1, const char* v2, const char* v3, const char*
 
 	if(dbconn) {
 		free(dbconn);
+	}
+	if(lastUpdate) {
+		free(lastUpdate);
 	}
 	return true;
 }
@@ -2280,7 +2286,7 @@ show_queue( const char* v1, const char* v2, const char* v3, const char* v4, bool
 	scheddMachine = v3;		
 	scheddVersion = v4;
 
-	char *lastUpdate;
+	char *lastUpdate=NULL;
 
     if (jobads_file != NULL) {
 		/* get the "q" from the job ads file */
@@ -2316,6 +2322,12 @@ show_queue( const char* v1, const char* v2, const char* v3, const char* v4, bool
 				fprintf( stderr,
 						"\n-- Failed to fetch ads from: %s : %s\n%s\n",
 						db_ipAddr, db_name, errstack.getFullText(true) );
+				if(dbconn) {
+					free(dbconn);
+				}
+				if(lastUpdate) {
+					free(lastUpdate);
+				}
 				return false;
 			}
 
@@ -2358,6 +2370,12 @@ show_queue( const char* v1, const char* v2, const char* v3, const char* v4, bool
 		}
 		jobs.Close();
 
+		if(dbconn) {
+			free(dbconn);
+		}
+		if(lastUpdate) {
+			free(lastUpdate);
+		}
 		return true;
 	}
 
@@ -2493,6 +2511,9 @@ show_queue( const char* v1, const char* v2, const char* v3, const char* v4, bool
 
 	if(dbconn) {
 		free(dbconn);
+	}
+	if(lastUpdate) {
+		free(lastUpdate);
 	}
 	return true;
 }

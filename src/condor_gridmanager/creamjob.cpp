@@ -229,7 +229,8 @@ CreamJob::CreamJob( ClassAd *classad )
 		jobAd->AssignExpr( ATTR_HOLD_REASON, "Undefined" );
 	}
 	
-	jobProxy = AcquireProxy( jobAd, error_string, evaluateStateTid );
+	jobProxy = AcquireProxy( jobAd, error_string,
+							 (Eventcpp)&BaseJob::SetEvaluateState, this );
 	if ( jobProxy == NULL ) {
 		if ( error_string == "" ) {
 			error_string.sprintf( "%s is not set in the job ad",
@@ -451,7 +452,7 @@ CreamJob::~CreamJob()
 		free( localError );
 	}
 	if ( jobProxy ) {
-		ReleaseProxy( jobProxy, evaluateStateTid );
+		ReleaseProxy( jobProxy, (Eventcpp)&BaseJob::SetEvaluateState, this );
 	}
 	if ( gahp != NULL ) {
 		delete gahp;
@@ -478,7 +479,8 @@ int CreamJob::doEvaluateState()
 	bool reevaluate_state = true;
 	time_t now = time(NULL);
 
-	bool done;
+	bool attr_exists;
+	bool attr_dirty;
 	int rc;
 
 	daemonCore->Reset_Timer( evaluateStateTid, TIMER_NEVER );
@@ -756,8 +758,9 @@ int CreamJob::doEvaluateState()
 			if ( condorState == REMOVED || condorState == HELD ) {
 				gmState = GM_CANCEL;
 			} else {
-				done = requestScheddUpdate( this );
-				if ( !done ) {
+				jobAd->GetDirtyFlag( ATTR_GRID_JOB_ID, &attr_exists, &attr_dirty );
+				if ( attr_exists && attr_dirty ) {
+					requestScheddUpdate( this, true );
 					break;
 				}
 				gmState = GM_SUBMIT_COMMIT;
@@ -927,8 +930,9 @@ int CreamJob::doEvaluateState()
 			// Report job completion to the schedd.
 			JobTerminated();
 			if ( condorState == COMPLETED ) {
-				done = requestScheddUpdate( this );
-				if ( !done ) {
+				jobAd->GetDirtyFlag( ATTR_JOB_STATUS, &attr_exists, &attr_dirty );
+				if ( attr_exists && attr_dirty ) {
+					requestScheddUpdate( this, true );
 					break;
 				}
 			}
@@ -961,7 +965,7 @@ int CreamJob::doEvaluateState()
 					SetRemoteJobId( NULL );
 					remoteState = CREAM_JOB_STATE_UNSET;
 					SetRemoteJobStatus( NULL );
-					requestScheddUpdate( this );
+					requestScheddUpdate( this, false );
 				}
 				gmState = GM_CLEAR_REQUEST;
 			}
@@ -1017,7 +1021,7 @@ int CreamJob::doEvaluateState()
 			myResource->CancelSubmit( this );
 			remoteState = CREAM_JOB_STATE_UNSET;
 			SetRemoteJobStatus( NULL );
-			requestScheddUpdate( this );
+			requestScheddUpdate( this, false );
 
 			if ( condorState == REMOVED ) {
 				gmState = GM_DELETE;
@@ -1047,7 +1051,7 @@ int CreamJob::doEvaluateState()
 			myResource->CancelSubmit( this );
 			remoteState = CREAM_JOB_STATE_UNSET;
 			SetRemoteJobStatus( NULL );
-			requestScheddUpdate( this );
+			requestScheddUpdate( this, false );
 
 			if ( condorState == REMOVED ) {
 				gmState = GM_DELETE;
@@ -1154,8 +1158,9 @@ int CreamJob::doEvaluateState()
 			// through. However, since we registered update events the
 			// first time, requestScheddUpdate won't return done until
 			// they've been committed to the schedd.
-			done = requestScheddUpdate( this );
-			if ( !done ) {
+			jobAd->ResetExpr();
+			if ( jobAd->NextDirtyExpr() ) {
+				requestScheddUpdate( this, true );
 				break;
 			}
 			submitLogged = false;
@@ -1328,7 +1333,7 @@ void CreamJob::NewCreamState( const char *new_state, int exit_code,
 			jobAd->Assign( ATTR_ON_EXIT_CODE, exit_code );
 		}
 
-		requestScheddUpdate( this );
+		requestScheddUpdate( this, false );
 
 		SetEvaluateState();
 	}

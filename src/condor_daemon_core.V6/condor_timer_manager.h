@@ -89,11 +89,9 @@ struct tagTimer {
     /** Not_Yet_Documented */ Eventcpp          handlercpp;
     /** Not_Yet_Documented */ class Service*    service; 
     /** Not_Yet_Documented */ struct tagTimer*  next;
-    /** Not_Yet_Documented */ int               is_cpp;
     /** Not_Yet_Documented */ char*             event_descrip;
     /** Not_Yet_Documented */ void*             data_ptr;
-    /** Not_Yet_Documented */ Timeslice         timeslice;
-    /** Not_Yet_Documented */ bool              has_timeslice;
+    /** Not_Yet_Documented */ Timeslice *       timeslice;
 	/** Not_Yet_Documented */ Release           release;
 	/** Not_Yet_Documented */ Releasecpp        releasecpp;
 };
@@ -124,8 +122,7 @@ class TimerManager
                  unsigned     deltawhen,
                  Event        event,
                  const char * event_descrip,
-                 unsigned     period          =  0,
-                 int          id              = -1);
+                 unsigned     period          =  0);
 
     /** Not_Yet_Documented.
         @param deltawhen      Not_Yet_Documented.
@@ -141,8 +138,7 @@ class TimerManager
                  Event        event,
                  Release      release,
                  const char * event_descrip, 
-                 unsigned     period          =  0,
-                 int          id              = -1);
+                 unsigned     period          =  0);
 
 	/** Not_Yet_Documented.
         @param deltawhen      Not_Yet_Documented.
@@ -155,8 +151,7 @@ class TimerManager
     int NewTimer(unsigned     deltawhen,
                  Event        event,
                  const char * event_descrip, 
-                 unsigned     period          =  0,
-                 int          id              = -1);
+                 unsigned     period          =  0);
 
     /** Not_Yet_Documented.
         @param s              Not_Yet_Documented.
@@ -169,8 +164,7 @@ class TimerManager
                   unsigned     deltawhen,
                   Eventcpp     event,
                   const char * event_descrip,
-                  unsigned     period          =  0,
-                  int          id              = -1);
+                  unsigned     period          =  0);
 
     /** Create a timer using a timeslice object to control interval.
         @param s              Service object of which function is a member.
@@ -180,10 +174,9 @@ class TimerManager
         @return The ID of the new timer, or -1 on failure
     */
     int NewTimer (Service*     s,
-                  Timeslice    timeslice,
+                  const Timeslice &timeslice,
                   Eventcpp     event,
-                  const char * event_descrip,
-                  int          id              = -1);
+                  const char * event_descrip);
 
     /** Not_Yet_Documented.
         @param id The ID of the timer
@@ -224,11 +217,11 @@ class TimerManager
 				  Releasecpp releasecpp,
                   const char *event_descrip,
                   unsigned   period          =  0,
-				  Timeslice  *timeslice      = NULL,
-                  int        id              = -1, 
-                  int        is_cpp          =  0);
+				  const Timeslice *timeslice = NULL,
+                  int        id              = -1);
 
     Timer*  timer_list;
+	Timer*  list_tail;
     int     timer_ids;
     int     in_timeout;
     int     did_reset;

@@ -101,6 +101,7 @@ class GahpServer : public Service {
 	void AddGahpClient();
 	void RemoveGahpClient();
 
+	int ProxyCallback();
 	int doProxyCheck();
 	GahpProxyInfo *RegisterProxy( Proxy *proxy );
 	void UnregisterProxy( Proxy *proxy );

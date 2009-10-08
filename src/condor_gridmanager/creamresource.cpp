@@ -147,7 +147,8 @@ dprintf(D_FULLDEBUG,"*** ~CreamResource\n");
 dprintf(D_FULLDEBUG,"    deleting %s\n",next_deleg->deleg_uri);
 		delegatedProxies.DeleteCurrent();
 		free( next_deleg->deleg_uri );
-		ReleaseProxy( next_deleg->proxy, delegationTimerId );
+		ReleaseProxy( next_deleg->proxy,
+					  (Eventcpp)&CreamResource::ProxyCallback, this );
 		delete next_deleg;
 	}
 	if ( delegationServiceUri != NULL ) {
@@ -269,7 +270,9 @@ dprintf(D_FULLDEBUG,"*** deleting delegation %s\n",job->delegatedCredentialURI);
 						activeDelegationCmd = NULL;
 					}
 					free( next_deleg->deleg_uri );
-					ReleaseProxy( next_deleg->proxy, delegationTimerId );
+					ReleaseProxy( next_deleg->proxy,
+								  (Eventcpp)&CreamResource::ProxyCallback,
+								  this );
 					delete next_deleg;
 				}
 			}
@@ -314,7 +317,7 @@ dprintf(D_FULLDEBUG,"    creating new CreamProxyDelegation\n");
 	next_deleg->last_lifetime_extend = 0;
 	next_deleg->last_proxy_refresh = 0;
 	next_deleg->proxy = job_proxy;
-	AcquireProxy( job_proxy, delegationTimerId );
+	AcquireProxy( job_proxy, (Eventcpp)&CreamResource::ProxyCallback, this );
 	delegatedProxies.Append( next_deleg );
 
 		// TODO add smarter timer that delays a few seconds
@@ -345,7 +348,7 @@ dprintf(D_FULLDEBUG,"    creating new CreamProxyDelegation\n");
 	next_deleg->last_lifetime_extend = 0;
 	next_deleg->last_proxy_refresh = 0;
 	next_deleg->proxy = job_proxy;
-	AcquireProxy( job_proxy, delegationTimerId );
+	AcquireProxy( job_proxy, (Eventcpp)&CreamResource::ProxyCallback, this );
 	delegatedProxies.Append( next_deleg );
 
 		// TODO add smarter timer that delays a few seconds
@@ -373,6 +376,12 @@ const char *CreamResource::getDelegationError( Proxy *job_proxy )
 	dprintf( D_FULLDEBUG, "getDelegationError(): failed to find "
 			 "CreamProxyDelegation for proxy %s\n", job_proxy->proxy_filename );
 	return NULL;
+}
+
+int CreamResource::ProxyCallback()
+{
+	daemonCore->Reset_Timer( delegationTimerId, 0 );
+	return 0;
 }
 
 int CreamResource::checkDelegation()
