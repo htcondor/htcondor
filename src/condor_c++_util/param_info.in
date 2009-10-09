@@ -8825,7 +8825,7 @@ id=514
 
 [START_LOCAL_UNIVERSE]
 aliases=
-default=True
+default=TotalLocalJobsRunning < 200
 version=0.0.0
 range=.*
 state=default
@@ -8841,7 +8841,7 @@ id=515
 
 [START_SCHEDULER_UNIVERSE]
 aliases=
-default=True
+default=TotalSchedulerJobsRunning < 200
 version=0.0.0
 range=.*
 state=default

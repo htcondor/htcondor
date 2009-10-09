@@ -10223,7 +10223,7 @@ Scheduler::Init()
 			//
 			// Default Expression: TRUE
 			//
-		this->StartLocalUniverse = strdup( "TRUE" );
+		this->StartLocalUniverse = strdup( "TotalLocalJobsRunning < 200" );
 	} else {
 			//
 			// Use what they had in the config file
@@ -10246,7 +10246,7 @@ Scheduler::Init()
 			//
 			// Default Expression: TRUE
 			//
-		this->StartSchedulerUniverse = strdup( "TRUE" );
+		this->StartSchedulerUniverse = strdup( "TotalSchedulerJobsRunning < 200" );
 	} else {
 			//
 			// Use what they had in the config file
