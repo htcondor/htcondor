@@ -29,6 +29,12 @@
 struct Callback {
 	Eventcpp m_func_ptr;
 	Service *m_data;
+	bool operator==(const Callback &rhs) const {
+		if ( this->m_func_ptr == rhs.m_func_ptr && this->m_data == rhs.m_data ) {
+			return true;
+		}
+		return false;
+	}
 };
 
 struct ProxySubject;

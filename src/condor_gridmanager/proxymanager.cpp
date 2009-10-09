@@ -62,14 +62,6 @@ int myproxyGetDelegationReaperId = 0;
 
 static int next_proxy_id = 1;
 
-int operator==(const Callback& cb1, const Callback& cb2)
-{
-	if ( cb1.m_func_ptr == cb2.m_func_ptr && cb1.m_data == cb2.m_data ) {
-		return 1;
-	}
-	return 0;
-}
-
 int CheckProxies();
 
 static bool
