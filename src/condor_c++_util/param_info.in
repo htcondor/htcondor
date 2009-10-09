@@ -2581,7 +2581,7 @@ id=121
 
 [RESERVED_SWAP]
 aliases=
-default=5
+default=0
 version=0.0.0
 range=.*
 state=default
@@ -4390,7 +4390,7 @@ id=236
 
 [ENABLE_GRID_MONITOR]
 aliases=
-default=false
+default=true
 version=0.0.0
 range=.*
 state=default
@@ -4502,11 +4502,11 @@ id=243
 
 [GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE]
 aliases=
-default=
+default=1000
 version=0.0.0
 range=.*
 state=default
-type=string
+type=int
 is_macro=false
 reconfig=true
 customization=seldom
@@ -7641,7 +7641,7 @@ id=439
 
 [NEGOTIATOR_INTERVAL]
 aliases=
-default=300
+default=60
 version=0.0.0
 range=.*
 state=default
@@ -8825,7 +8825,7 @@ id=513
 
 [MAX_JOBS_RUNNING]
 aliases=
-default=200
+default=ceiling(ifThenElse( regexp("WIN.*","$(OPSYS)"), 200, ifThenElse( $(DETECTED_MEMORY)*0.8*1024/800 < 10000, $(DETECTED_MEMORY)*0.8*1024/800, 10000 )))
 version=0.0.0
 range=.*
 state=default
@@ -8841,7 +8841,7 @@ id=514
 
 [START_LOCAL_UNIVERSE]
 aliases=
-default=True
+default=TotalLocalJobsRunning < 200
 version=0.0.0
 range=.*
 state=default
@@ -8857,7 +8857,7 @@ id=515
 
 [START_SCHEDULER_UNIVERSE]
 aliases=
-default=True
+default=TotalSchedulerJobsRunning < 200
 version=0.0.0
 range=.*
 state=default

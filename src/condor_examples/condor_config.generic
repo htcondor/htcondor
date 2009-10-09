@@ -345,11 +345,39 @@ ALLOW_READ_STARTD     = $(ALLOW_READ), $(FLOCK_FROM)
 ##--------------------------------------------------------------------
 ##  Try to save this much swap space by not starting new shadows.  
 ##  Specified in megabytes.
-#RESERVED_SWAP		= 5
+#RESERVED_SWAP		= 0
 
 ##  What's the maximum number of jobs you want a single submit machine
-##  to spawn shadows for?
-#MAX_JOBS_RUNNING	= 200
+##  to spawn shadows for?  The default is a function of $(DETECTED_MEMORY)
+##  and a guess at the number of ephemeral ports available.
+
+## Example 1:
+#MAX_JOBS_RUNNING	= 10000
+
+## Example 2:
+## This is more complicated, but it produces the same limit as the default.
+## First define some expressions to use in our calculation.
+## Assume we can use up to 80% of memory and estimate shadow private data
+## size of 800k.
+#MAX_SHADOWS_MEM	= ceiling($(DETECTED_MEMORY)*0.8*1024/800)
+## Assume we can use ~21,000 ephemeral ports (avg ~2.1 per shadow).
+## Under Linux, the range is set in /proc/sys/net/ipv4/ip_local_port_range.
+#MAX_SHADOWS_PORTS	= 10000
+## Under windows, things are much less scalable, currently.
+## Note that this can probably be safely increased a bit under 64-bit windows.
+#MAX_SHADOWS_OPSYS	= ifThenElse(regexp("WIN.*","$(OPSYS)"),200,100000)
+## Now build up the expression for MAX_JOBS_RUNNING.  This is complicated
+## due to lack of a min() function.
+#MAX_JOBS_RUNNING	= $(MAX_SHADOWS_MEM)
+#MAX_JOBS_RUNNING	= \
+#  ifThenElse( $(MAX_SHADOWS_PORTS) < $(MAX_JOBS_RUNNING), \
+#              $(MAX_SHADOWS_PORTS), \
+#              $(MAX_JOBS_RUNNING) )
+#MAX_JOBS_RUNNING	= \
+#  ifThenElse( $(MAX_SHADOWS_OPSYS) < $(MAX_JOBS_RUNNING), \
+#              $(MAX_SHADOWS_OPSYS), \
+#              $(MAX_JOBS_RUNNING) )
+
 
 ##  Maximum number of simultaneous downloads of output files from
 ##  execute machines to the submit machine (limit applied per schedd).
@@ -663,16 +691,10 @@ WANT_VACATE		= $(UWCS_WANT_VACATE)
 START			= $(UWCS_START)
 
 ##  When should a local universe job be allowed to start?
-START_LOCAL_UNIVERSE	= True
-# Only start a local universe jobs if there are less
-# than 100 local jobs currently running
-#START_LOCAL_UNIVERSE	= TotalLocalJobsRunning < 100
+#START_LOCAL_UNIVERSE	= TotalLocalJobsRunning < 200
 
 ##  When should a scheduler universe job be allowed to start?
-START_SCHEDULER_UNIVERSE	= True
-# Only start a scheduler universe jobs if there are less
-# than 100 scheduler jobs currently running
-#START_SCHEDULER_UNIVERSE	= TotalSchedulerJobsRunning < 100
+#START_SCHEDULER_UNIVERSE	= TotalSchedulerJobsRunning < 200
 
 ##  When to suspend a job?
 SUSPEND			= $(UWCS_SUSPEND)
@@ -1435,7 +1457,7 @@ SCHEDD_DAEMON_AD_FILE = $(SPOOL)/.schedd_classad
 
 ##  Estimated virtual memory size of each condor_shadow process. 
 ##  Specified in kilobytes.
-SHADOW_SIZE_ESTIMATE	= 1800
+# SHADOW_SIZE_ESTIMATE	= 800
 
 ##  The condor_schedd can renice the condor_shadow processes on your
 ##  submit machines.  How "nice" do you want the shadows? (1-19).
@@ -1775,7 +1797,7 @@ CRED_MIN_TIME_LEFT		= 120
 ## 
 ## The GridMonitor allows you to submit many more jobs to a GT2 GRAM server
 ## than is normally possible.
-ENABLE_GRID_MONITOR = TRUE
+#ENABLE_GRID_MONITOR = TRUE
 
 ##
 ## When an error occurs with the GridMonitor, how long should the

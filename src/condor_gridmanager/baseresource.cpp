@@ -26,7 +26,7 @@
 #include "basejob.h"
 #include "gridmanager.h"
 
-#define DEFAULT_MAX_SUBMITTED_JOBS_PER_RESOURCE		100
+#define DEFAULT_MAX_SUBMITTED_JOBS_PER_RESOURCE		1000
 
 int BaseResource::probeInterval = 300;	// default value
 int BaseResource::probeDelay = 15;		// default value
