@@ -7625,7 +7625,7 @@ id=439
 
 [NEGOTIATOR_INTERVAL]
 aliases=
-default=300
+default=60
 version=0.0.0
 range=.*
 state=default
