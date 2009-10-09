@@ -29,7 +29,7 @@ The details of each version are described below.
   same change throughout your other configuration files.  That way,
   if your policy depends on the default policy, it should continue to
   work as it did before.  The behavior of these configuration settings
-  remains unchanged.  The \MacroNI{ALLOW}/\Macro{DENY} lists are
+  remains unchanged.  The \MacroNI{ALLOW}/\MacroNI{DENY} lists are
   added to the \MacroNI{HOSTALLOW}/\MacroNI{HOSTDENY} lists to form the
   authorization policy.  Both styles support the same syntax.  We would
   like to phase out \MacroNI{HOSTALLOW}/\MacroNI{HOSTDENY} to simplify
@@ -57,6 +57,14 @@ Previously, there was no upper limit.  Typically, other activity in
 the job queue, such as jobs being submitted or completed would cause
 buffered data to be flushed to disk, so the effective upper bound was
 a function of how busy the job queue was.
+
+\item Added \Attr{TotalLocalRunningJobs}, \Attr{TotalLocalIdleJobs},
+\Attr{TotalSchedulerRunningJobs}, and \Attr{TotalSchedulerIdleJobs}
+to the published ad for the \Condor{schedd}.  This means that
+\Condor{q} \Opt{-analyze} can still give helpful information about
+why local or scheduler universe jobs are idle when
+\MacroNI{START\_LOCAL\_UNIVERSE} or
+\MacroNI{START\_SCHEDULER\_UNIVERSE} refer to these attributes.
 
 \end{itemize}
 
