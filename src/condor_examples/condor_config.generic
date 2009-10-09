@@ -1775,7 +1775,7 @@ CRED_MIN_TIME_LEFT		= 120
 ## 
 ## The GridMonitor allows you to submit many more jobs to a GT2 GRAM server
 ## than is normally possible.
-ENABLE_GRID_MONITOR = TRUE
+#ENABLE_GRID_MONITOR = TRUE
 
 ##
 ## When an error occurs with the GridMonitor, how long should the

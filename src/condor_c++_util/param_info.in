@@ -4374,7 +4374,7 @@ id=236
 
 [ENABLE_GRID_MONITOR]
 aliases=
-default=false
+default=true
 version=0.0.0
 range=.*
 state=default
