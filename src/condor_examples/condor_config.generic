@@ -345,7 +345,7 @@ ALLOW_READ_STARTD     = $(ALLOW_READ), $(FLOCK_FROM)
 ##--------------------------------------------------------------------
 ##  Try to save this much swap space by not starting new shadows.  
 ##  Specified in megabytes.
-#RESERVED_SWAP		= 5
+#RESERVED_SWAP		= 0
 
 ##  What's the maximum number of jobs you want a single submit machine
 ##  to spawn shadows for?  The default is a function of $(DETECTED_MEMORY)
@@ -1463,7 +1463,7 @@ SCHEDD_DAEMON_AD_FILE = $(SPOOL)/.schedd_classad
 
 ##  Estimated virtual memory size of each condor_shadow process. 
 ##  Specified in kilobytes.
-SHADOW_SIZE_ESTIMATE	= 1800
+# SHADOW_SIZE_ESTIMATE	= 800
 
 ##  The condor_schedd can renice the condor_shadow processes on your
 ##  submit machines.  How "nice" do you want the shadows? (1-19).

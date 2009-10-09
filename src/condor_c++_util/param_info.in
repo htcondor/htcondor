@@ -2581,7 +2581,7 @@ id=121
 
 [RESERVED_SWAP]
 aliases=
-default=5
+default=0
 version=0.0.0
 range=.*
 state=default

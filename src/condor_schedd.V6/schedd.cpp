@@ -94,7 +94,7 @@
 #include "ClassAdLogPlugin.h"
 #endif
 
-#define DEFAULT_SHADOW_SIZE 125
+#define DEFAULT_SHADOW_SIZE 800
 #define DEFAULT_JOB_START_COUNT 1
 
 #define SUCCESS 1
@@ -10345,7 +10345,7 @@ Scheduler::Init()
 	if (flock_negotiator_hosts) free(flock_negotiator_hosts);
 
 	/* default 5 megabytes */
-	ReservedSwap = param_integer( "RESERVED_SWAP", 5 );
+	ReservedSwap = param_integer( "RESERVED_SWAP", 0 );
 	ReservedSwap *= 1024;
 
 	/* Value specified in kilobytes */
