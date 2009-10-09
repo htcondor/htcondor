@@ -4486,11 +4486,11 @@ id=243
 
 [GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE]
 aliases=
-default=
+default=1000
 version=0.0.0
 range=.*
 state=default
-type=string
+type=int
 is_macro=false
 reconfig=true
 customization=seldom
