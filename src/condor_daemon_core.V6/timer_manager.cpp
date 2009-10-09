@@ -51,9 +51,10 @@ TimerManager::TimerManager()
 	timer_list = NULL;
 	list_tail = NULL;
 	timer_ids = 0;
-	in_timeout = FALSE;
+	in_timeout = NULL;
 	_t = this; 
-	did_reset = -1;
+	did_reset = false;
+	did_cancel = false;
 }
 
 TimerManager::~TimerManager()
@@ -64,20 +65,20 @@ TimerManager::~TimerManager()
 int TimerManager::NewTimer(Service* s, unsigned deltawhen, Event event, const char* event_descrip,
 						   unsigned period)
 {
-	return( NewTimer(s,deltawhen,event,(Eventcpp)NULL,(Release)NULL,(Releasecpp)NULL,event_descrip,period,NULL,-1) );
+	return( NewTimer(s,deltawhen,event,(Eventcpp)NULL,(Release)NULL,(Releasecpp)NULL,event_descrip,period,NULL) );
 }
 
 int TimerManager::NewTimer(Service* s, unsigned deltawhen, Event event, 
 						   Release release, const char* event_descrip,
 						   unsigned period)
 {
-	return( NewTimer(s,deltawhen,event,(Eventcpp)NULL,release,(Releasecpp)NULL,event_descrip,period,NULL,-1) );
+	return( NewTimer(s,deltawhen,event,(Eventcpp)NULL,release,(Releasecpp)NULL,event_descrip,period,NULL) );
 }
 
 int TimerManager::NewTimer(unsigned deltawhen, Event event, const char* event_descrip,
 						   unsigned period)
 {
-	return( NewTimer((Service *)NULL,deltawhen,event,(Eventcpp)NULL,(Release)NULL,(Releasecpp)NULL,event_descrip,period,NULL,-1) );
+	return( NewTimer((Service *)NULL,deltawhen,event,(Eventcpp)NULL,(Release)NULL,(Releasecpp)NULL,event_descrip,period,NULL) );
 }
 
 int TimerManager::NewTimer(Service* s, unsigned deltawhen, Eventcpp event, const char* event_descrip,
@@ -87,12 +88,12 @@ int TimerManager::NewTimer(Service* s, unsigned deltawhen, Eventcpp event, const
 		dprintf( D_DAEMONCORE,"DaemonCore NewTimer() called with c++ pointer & NULL Service*\n");
 		return -1;
 	}
-	return( NewTimer(s,deltawhen,(Event)NULL,event,(Release)NULL,(Releasecpp)NULL,event_descrip,period,NULL,-1) );
+	return( NewTimer(s,deltawhen,(Event)NULL,event,(Release)NULL,(Releasecpp)NULL,event_descrip,period,NULL) );
 }
 
 int TimerManager::NewTimer (Service* s,const Timeslice &timeslice,Eventcpp event,const char * event_descrip)
 {
-	return NewTimer(s,0,(Event)NULL,event,(Release)NULL,(Releasecpp)NULL,event_descrip,0,&timeslice,-1);
+	return NewTimer(s,0,(Event)NULL,event,(Release)NULL,(Releasecpp)NULL,event_descrip,0,&timeslice);
 }
 
 
@@ -100,10 +101,9 @@ int TimerManager::NewTimer (Service* s,const Timeslice &timeslice,Eventcpp event
 // event instead of periodical
 int TimerManager::NewTimer(Service* s, unsigned deltawhen, Event event, Eventcpp eventcpp,
 		Release release, Releasecpp releasecpp, const char *event_descrip, unsigned period, 
-		const Timeslice *timeslice,int id)
+		const Timeslice *timeslice)
 {
 	Timer*		new_timer;
-	Timer*		timer_ptr;
 
 	dprintf( D_DAEMONCORE, "in DaemonCore NewTimer()\n" );
 	new_timer = new Timer;
@@ -139,63 +139,10 @@ int TimerManager::NewTimer(Service* s, unsigned deltawhen, Event event, Eventcpp
 		new_timer->event_descrip = EMPTY_DESCRIP;
 
 
-	if(id >= 0)	{
-		if ( CancelTimer(id, false /* don't delete data_ptr */ ) == -1 ) {
-			dprintf( D_DAEMONCORE, "cannot find timer id %d\n",id);
-			daemonCore->free_descrip( new_timer->event_descrip);
-			delete new_timer->timeslice;
-			delete new_timer;
-			return -1;
-		}
-		new_timer->id = id;
-		dprintf(D_DAEMONCORE,"Renewing timer id %d for %d secs\n",id,deltawhen);
-	} else {
-		new_timer->id = timer_ids++;		
-	}
+	new_timer->id = timer_ids++;		
 
 
-	if ( timer_list == NULL ) {
-		// list is empty, place ours in front
-		timer_list = new_timer;
-		list_tail = new_timer;
-		new_timer->next = NULL;
-			// since we have a new first timer, we must wake up select
-		daemonCore->Wake_up_select();
-	} else {
-		// list is not empty, so keep timer_list ordered from soonest to
-		// farthest (i.e. sorted on "when").
-		// Note: when doing the comparisons, we always use "<" instead
-		// of "<=" -- this makes certain we "round-robin" across 
-		// timers that constantly reset themselves to zero.
-		if ( new_timer->when < timer_list->when ) {
-			// make the this new timer first in line
-			new_timer->next = timer_list;
-			timer_list = new_timer;
-			// since we have a new first timer, we must wake up select
-			daemonCore->Wake_up_select();
-		} else if ( new_timer->when == TIME_T_NEVER ) {
-			// Our new timer goes to the very back of the list.
-			new_timer->next = NULL;
-			list_tail->next = new_timer;
-			list_tail = new_timer;
-		} else {
-			Timer* trail_ptr = NULL;
-			for (timer_ptr = timer_list; timer_ptr != NULL; 
-				 timer_ptr = timer_ptr->next ) 
-			{
-				if (new_timer->when < timer_ptr->when) {
-					break;
-				}
-				trail_ptr = timer_ptr;
-			}
-			ASSERT( trail_ptr );
-			new_timer->next = timer_ptr;
-			trail_ptr->next = new_timer;
-			if ( trail_ptr == list_tail ) {
-				list_tail = new_timer;
-			}
-		}
-	}
+	InsertTimer( new_timer );
 
 	DumpTimerList(D_DAEMONCORE | D_FULLDEBUG);
 
@@ -210,14 +157,7 @@ int TimerManager::NewTimer(Service* s, unsigned deltawhen, Event event, Eventcpp
 int TimerManager::ResetTimer(int id, unsigned when, unsigned period)
 {
 	Timer*			timer_ptr;
-	Event			handler;
-	Eventcpp		handlercpp;
-	Release			release;
-	Releasecpp		releasecpp;
-	Service*		s; 
-	char*			event_descrip;
-	void*			data_ptr;
-	int				reset_dataptr = FALSE;
+	Timer*			trail_ptr;
 
 	dprintf( D_DAEMONCORE, "In reset_timer(), id=%d, time=%d, period=%d\n",id,when,period);
 	if (timer_list == NULL) {
@@ -225,63 +165,46 @@ int TimerManager::ResetTimer(int id, unsigned when, unsigned period)
 		return -1;
 	}
 
-	// now find the correct timer entry and set timer_ptr to point to it
-	if (timer_list->id == id) {
-		// timer to remove is the first on the list
-		timer_ptr = timer_list;
-	} else {
-		// timer to remove is not first on the list, so find it
-		for (timer_ptr = timer_list; timer_ptr != NULL && timer_ptr->id != id; 
-			 timer_ptr = timer_ptr->next) ;
-
-		if ( timer_ptr == NULL ) {
-			dprintf( D_DAEMONCORE, "Timer %d not found\n",id );
-			return -1;
-		}
+	timer_ptr = timer_list;
+	trail_ptr = NULL;
+	while ( timer_ptr && timer_ptr->id != id ) {
+		trail_ptr = timer_ptr;
+		timer_ptr = timer_ptr->next;
 	}
 
-	handler = timer_ptr->handler;
-	handlercpp = timer_ptr->handlercpp;
-	release = timer_ptr->release;
-	releasecpp = timer_ptr->releasecpp;
-	s = timer_ptr->service; 
-	event_descrip = timer_ptr->event_descrip;
-	data_ptr = timer_ptr->data_ptr;
-	if ( curr_dataptr == &(timer_ptr->data_ptr) )
-		reset_dataptr = TRUE;
-
-	// note that this call to NewTimer() will first call CancelTimer on the tid, 
-	// then create a new timer with the same tid.
-	if ( NewTimer(s, when, handler, handlercpp, release, releasecpp, 
-			event_descrip, period, NULL, id) != -1 ) {
-		// and dont forget to renew the users data_ptr
-		daemonCore->Register_DataPtr(data_ptr);
-		// and if a handler was resetting _its own_ tid entry, reset curr_dataptr to new value
-		if ( reset_dataptr == TRUE )
-			curr_dataptr = curr_regdataptr;
-		// now clear curr_regdataptr; the above NewTimer should appear "transparent"
-		// as far as the user code/API is concerned
-		curr_regdataptr = NULL;
-		// set flag letting Timeout() know if a timer handler reset itself.  note
-		// this is probably redundant since our call to NewTimer above called
-		// CancelTimer, and CancelTimer already set the did_reset flag.  But
-		// what the hell.
-		if ( did_reset == id )
-			did_reset = -1;
-		// DumpTimerList(D_DAEMONCORE | D_FULLDEBUG);
-		return 0;
-	} else {
+	if ( timer_ptr == NULL ) {
+		dprintf( D_ALWAYS, "Timer %d not found\n",id );
 		return -1;
 	}
+	if ( timer_ptr->timeslice ) {
+		dprintf( D_DAEMONCORE, "Timer %d with timeslice can't be reset\n",
+				 id );
+		return 0;
+	} else {
+		if ( when == TIMER_NEVER ) {
+			timer_ptr->when = TIME_T_NEVER;
+		} else {
+			timer_ptr->when = when + time(NULL);
+		}
+		timer_ptr->period = period;
+	}
+
+	RemoveTimer( timer_ptr, trail_ptr );
+	InsertTimer( timer_ptr );
+
+	if ( in_timeout == timer_ptr ) {
+		// We're inside the handler for this timer. Let Timeout() know
+		// the timer has already been reset for its next call.
+		did_reset = true;
+	}
+
+	return 0;
 }
 
-int TimerManager::CancelTimer(int id, bool release_data_ptr /* = true */ )
+int TimerManager::CancelTimer(int id)
 {
 	Timer*		timer_ptr;
 	Timer*		trail_ptr;
-	Service		*service;
-	Release		release;
-	Releasecpp	releasecpp;
 
 	dprintf( D_DAEMONCORE, "In cancel_timer(), id=%d\n",id);
 	if (timer_list == NULL) {
@@ -289,69 +212,27 @@ int TimerManager::CancelTimer(int id, bool release_data_ptr /* = true */ )
 		return -1;
 	}
 
-	// now find the correct timer entry and set timer_ptr to point to it
-	if (timer_list->id == id) {
-		// timer to remove is the first on the list
-		if (timer_list->next == NULL) {
-			// timer to remove is first and is the only one on the list
-			timer_ptr = timer_list;
-			timer_list = NULL;			
-			list_tail = NULL;
-		} else {
-			// timer to remove is first but not the only one
-			timer_ptr = timer_list;
-			timer_list = timer_list->next;
-		}
+	timer_ptr = timer_list;
+	trail_ptr = NULL;
+	while ( timer_ptr && timer_ptr->id != id ) {
+		trail_ptr = timer_ptr;
+		timer_ptr = timer_ptr->next;
+	}
+
+	if ( timer_ptr == NULL ) {
+		dprintf( D_ALWAYS, "Timer %d not found\n",id );
+		return -1;
+	}
+
+	RemoveTimer( timer_ptr, trail_ptr );
+
+	if ( in_timeout == timer_ptr ) {
+		// We're inside the handler for this timer. Don't delete it,
+		// since Timeout() still needs it. Timeout() will delete it once
+		// it's done with it.
+		did_cancel = true;
 	} else {
-		// timer to remove is not first on the list, so find it
-		for (timer_ptr = timer_list; timer_ptr != NULL && timer_ptr->id != id; 
-			 timer_ptr = timer_ptr->next) {
-			trail_ptr = timer_ptr;
-		}
-
-		if ( timer_ptr == NULL ) {
-			dprintf( D_ALWAYS, "Timer %d not found\n",id );
-			return -1;
-		}
-
-		// remove from the linked list
-		trail_ptr->next = timer_ptr->next;
-		if ( timer_ptr == list_tail ) {
-			list_tail = trail_ptr;
-		}
-	}
-
-	// free event_descrip
-	if ( timer_ptr->event_descrip ) {
-		daemonCore->free_descrip( timer_ptr->event_descrip);
-		timer_ptr->event_descrip = 0;
-	}
-
-	// free the data_ptr
-	service		= timer_ptr->service; 
-	release		= timer_ptr->release;
-	releasecpp	= timer_ptr->releasecpp;
-	if ( release_data_ptr ) {
-		if ( releasecpp ) {
-			(service->*releasecpp)(timer_ptr->data_ptr);
-		} else if ( release ) {
-			(*release)(timer_ptr->data_ptr);
-		}
-	}
-
-	// set curr_dataptr to NULL if a handler is removing itself. 
-	if ( curr_dataptr == &(timer_ptr->data_ptr) )
-		curr_dataptr = NULL;
-	if ( curr_regdataptr == &(timer_ptr->data_ptr) )
-		curr_regdataptr = NULL;
-
-	delete timer_ptr->timeslice;
-
-	delete timer_ptr;
-	
-	// set flag letting Timeout() know if a timer handler reset itself
-	if ( did_reset == id ) {
-		did_reset = -1;
+		DeleteTimer( timer_ptr );
 	}
 
 	return 0;
@@ -364,6 +245,7 @@ void TimerManager::CancelAllTimers()
 	Release		release;
 	Releasecpp	releasecpp;
 
+	ASSERT( !in_timeout );
 	while( timer_list != NULL ) {
 		timer_ptr = timer_list;
 		timer_list = timer_list->next;
@@ -390,21 +272,12 @@ void TimerManager::CancelAllTimers()
 int
 TimerManager::Timeout()
 {
-	int				current_id;
-	unsigned		period;						// for periodic events
-	Event			handler;
-	Eventcpp		handlercpp;
-	Release			release;
-	Releasecpp		releasecpp;
-	Service*		s; 
 	int				result, timer_check_cntr;
 	time_t			now, time_sample;
-	char*			event_descrip;
-	void*			data_ptr;
 	int				num_fires = 0;	// num of handlers called in this timeout
 
-	if ( in_timeout == TRUE ) {
-		dprintf(D_DAEMONCORE,"DaemonCore Timeout() called and in_timeout is TRUE\n");
+	if ( in_timeout != NULL ) {
+		dprintf(D_DAEMONCORE,"DaemonCore Timeout() called and in_timeout is non-NULL\n");
 		if ( timer_list == NULL ) {
 			result = 0;
 		} else {
@@ -415,7 +288,6 @@ TimerManager::Timeout()
 		}
 		return(result);
 	}
-	in_timeout = TRUE;
 		
 	dprintf( D_DAEMONCORE, "In DaemonCore Timeout()\n");
 
@@ -440,6 +312,8 @@ TimerManager::Timeout()
 		   (num_fires++ < MAX_FIRES_PER_TIMEOUT)) 
 	{
 		// DumpTimerList(D_DAEMONCORE | D_FULLDEBUG);
+
+		in_timeout = timer_list;
 
 		// In some cases, resuming from a suspend can cause the system
 		// clock to become temporarily skewed, causing crazy things to 
@@ -466,60 +340,49 @@ TimerManager::Timeout()
 			}
 		}
 
-		current_id = timer_list->id;
-		period = timer_list->period;
-		handler = timer_list->handler;
-		handlercpp = timer_list->handlercpp;
-		release = timer_list->release;
-		releasecpp = timer_list->releasecpp;
-		s = timer_list->service; 
-		event_descrip = strdup(timer_list->event_descrip);
-		data_ptr = timer_list->data_ptr;
-		Timeslice timeslice;
-		if ( timer_list->timeslice ) {
-			timeslice = *timer_list->timeslice;
-		}
-		bool has_timeslice = timer_list->timeslice != NULL;
-
 		// Update curr_dataptr for GetDataPtr()
-		curr_dataptr = &(timer_list->data_ptr);
+		curr_dataptr = &(in_timeout->data_ptr);
 
 		// Initialize our flag so we know if ResetTimer was called.
-		did_reset = current_id;
+		did_reset = false;
+		did_cancel = false;
 
 		// Log a message before calling handler, but only if
 		// D_FULLDEBUG is also enabled.
 		if (DebugFlags & D_FULLDEBUG) {
 			dprintf(D_COMMAND, "Calling Timer handler %d (%s)\n",
-					current_id, event_descrip);
+					in_timeout->id, in_timeout->event_descrip);
 		}
 
-		if( has_timeslice ) {
-			timeslice.setStartTimeNow();
+		if( in_timeout->timeslice ) {
+			in_timeout->timeslice->setStartTimeNow();
 		}
 
 		// Now we call the registered handler.  If we were told that the handler
 		// is a c++ method, we call the handler from the c++ object referenced 
 		// by service*.  If we were told the handler is a c function, we call
 		// it and pass the service* as a parameter.
-		if ( handlercpp ) {
-			(s->*handlercpp)();			// typedef int (*Eventcpp)(int)
+		if ( in_timeout->handlercpp ) {
+			// typedef int (*Eventcpp)()
+			((in_timeout->service)->*(in_timeout->handlercpp))();
 		} else {
-			(*handler)(s);				// typedef int (*Event)(Service*,int)
+			// typedef int (*Event)(Service*)
+			(*(in_timeout->handler))(in_timeout->service);
 		}
 
-		if( has_timeslice ) {
-			timeslice.setFinishTimeNow();
+		if( in_timeout->timeslice ) {
+			in_timeout->timeslice->setFinishTimeNow();
 		}
 
 		if (DebugFlags & D_FULLDEBUG) {
-			if( has_timeslice ) {
+			if( in_timeout->timeslice ) {
 				dprintf(D_COMMAND, "Return from Timer handler %d (%s) - took %.3fs\n",
-						current_id, event_descrip, timeslice.getLastDuration() );
+						in_timeout->id, in_timeout->event_descrip,
+						in_timeout->timeslice->getLastDuration() );
 			}
 			else {
 				dprintf(D_COMMAND, "Return from Timer handler %d (%s)\n",
-						current_id, event_descrip);
+						in_timeout->id, in_timeout->event_descrip);
 			}
 		}
 
@@ -529,31 +392,27 @@ TimerManager::Timeout()
 		// Clear curr_dataptr
 		curr_dataptr = NULL;
 
-		/* Watch out for cancel_timer() called in the users handler with only 
-		 * one item in list which makes timer_list go to NULL */
-		if (timer_list != NULL  && did_reset == current_id) {
+		if ( did_cancel ) {
+			// Timer was canceled inside its handler. All we need to do
+			// is delete it.
+			DeleteTimer( in_timeout );
+		} else if ( !did_reset ) {
 			// here we remove the timer we just serviced, or renew it if it is 
-			// periodic.  note calls to CancelTimer are safe even if the user's
-			// handler called CancelTimer as well...
-			if ( period > 0 || has_timeslice ) {
-				// timer is periodic, renew it.  note that this call to NewTimer() 
-				// will first call CancelTimer on the expired timer, then renew it.
-				if ( NewTimer(s, period, handler, handlercpp, release, releasecpp,
-						event_descrip, period, has_timeslice ? &timeslice : NULL, 
-						current_id) != -1 ) {
-					// and dont forget to renew the users data_ptr
-					daemonCore->Register_DataPtr(data_ptr);
-					// now clear curr_dataptr; the above NewTimer should appear "transparent"
-					// as far as the user code/API is concerned
-					curr_dataptr = NULL;
+			// periodic.
+			RemoveTimer( in_timeout, NULL );
+			if ( in_timeout->period > 0 || in_timeout->timeslice ) {
+				if ( in_timeout->timeslice ) {
+					in_timeout->when = in_timeout->timeslice->getTimeToNextRun();
+				} else {
+					in_timeout->when = in_timeout->period + time(NULL);
 				}
+				InsertTimer( in_timeout );
 			} else {
 				// timer is not perodic; it is just a one-time event.  we just called
-				// the handler, so now remove the timer from out list.  
-				CancelTimer(current_id);
+				// the handler, so now just delete it. 
+				DeleteTimer( in_timeout );
 			}
 		}
-		free( event_descrip );
 	}  // end of while loop
 
 
@@ -571,7 +430,7 @@ TimerManager::Timeout()
 	}
 
 	dprintf( D_DAEMONCORE, "DaemonCore Timeout() Complete, returning %d \n",result);
-	in_timeout = FALSE;
+	in_timeout = NULL;
 	return(result);
 }
 
@@ -662,4 +521,91 @@ void TimerManager::Start()
 			rv = select(0,0,0,0, &timer);
 		}		
 	}
+}
+
+void TimerManager::RemoveTimer( Timer *timer, Timer *prev )
+{
+	if ( timer == NULL || ( prev && prev->next != timer ) ||
+		 ( !prev && timer != timer_list ) ) {
+		EXCEPT( "Bad call to TimerManager::RemoveTimer()!\n" );
+	}
+
+	if ( timer == timer_list ) {
+		timer_list = timer_list->next;
+	}
+	if ( timer == list_tail ) {
+		list_tail = prev;
+	}
+	if ( prev ) {
+		prev->next = timer->next;
+	}
+}
+
+void TimerManager::InsertTimer( Timer *new_timer )
+{
+	if ( timer_list == NULL ) {
+		// list is empty, place ours in front
+		timer_list = new_timer;
+		list_tail = new_timer;
+		new_timer->next = NULL;
+			// since we have a new first timer, we must wake up select
+		daemonCore->Wake_up_select();
+	} else {
+		// list is not empty, so keep timer_list ordered from soonest to
+		// farthest (i.e. sorted on "when").
+		// Note: when doing the comparisons, we always use "<" instead
+		// of "<=" -- this makes certain we "round-robin" across 
+		// timers that constantly reset themselves to zero.
+		if ( new_timer->when < timer_list->when ) {
+			// make the this new timer first in line
+			new_timer->next = timer_list;
+			timer_list = new_timer;
+			// since we have a new first timer, we must wake up select
+			daemonCore->Wake_up_select();
+		} else if ( new_timer->when == TIME_T_NEVER ) {
+			// Our new timer goes to the very back of the list.
+			new_timer->next = NULL;
+			list_tail->next = new_timer;
+			list_tail = new_timer;
+		} else {
+			Timer* timer_ptr;
+			Timer* trail_ptr = NULL;
+			for (timer_ptr = timer_list; timer_ptr != NULL; 
+				 timer_ptr = timer_ptr->next ) 
+			{
+				if (new_timer->when < timer_ptr->when) {
+					break;
+				}
+				trail_ptr = timer_ptr;
+			}
+			ASSERT( trail_ptr );
+			new_timer->next = timer_ptr;
+			trail_ptr->next = new_timer;
+			if ( trail_ptr == list_tail ) {
+				list_tail = new_timer;
+			}
+		}
+	}
+}
+
+void TimerManager::DeleteTimer( Timer *timer )
+{
+	// free the data_ptr
+	if ( timer->releasecpp ) {
+		((timer->service)->*(timer->releasecpp))(timer->data_ptr);
+	} else if ( timer->release ) {
+		(*(timer->release))(timer->data_ptr);
+	}
+
+	// free event_descrip
+	daemonCore->free_descrip( timer->event_descrip );
+
+	// set curr_dataptr to NULL if a handler is removing itself. 
+	if ( curr_dataptr == &(timer->data_ptr) )
+		curr_dataptr = NULL;
+	if ( curr_regdataptr == &(timer->data_ptr) )
+		curr_regdataptr = NULL;
+
+	delete timer->timeslice;
+	delete timer;
 }
