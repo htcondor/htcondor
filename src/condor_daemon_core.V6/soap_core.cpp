@@ -68,6 +68,10 @@ dc_soap_free(struct soap *soap)
 void
 dc_soap_init(struct soap *soap)
 {
+	if (NULL == soap) {
+		soap = soap_new();
+	}
+
 	MyString subsys = MyString(get_mySubSystem()->getName() );
 
 		// KEEP-ALIVE should be turned OFF, not ON.
