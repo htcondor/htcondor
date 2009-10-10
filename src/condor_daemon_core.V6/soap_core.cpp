@@ -52,6 +52,14 @@ int handle_soap_ssl_socket(Service *, Stream *stream);
 int get_handler(struct soap *soap);
 
 void
+dc_soap_free(struct soap *soap)
+{
+	soap_destroy(soap); // clean up class instances
+	soap_end(soap); // clean up everything and close socket
+	soap_free(soap);
+}
+
+void
 dc_soap_init(struct soap *soap)
 {
 	MyString subsys = MyString(get_mySubSystem()->getName() );
