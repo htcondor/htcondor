@@ -4173,7 +4173,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 
 
 		ASSERT( soap );
-		cursoap = soap_copy(soap);
+		cursoap = dc_soap_copy(soap);
 		ASSERT(cursoap);
 
 			// Mimic a gsoap soap_accept as follows:
