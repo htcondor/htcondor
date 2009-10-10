@@ -245,21 +245,16 @@ void TimerManager::CancelAllTimers()
 	Release		release;
 	Releasecpp	releasecpp;
 
-	ASSERT( !in_timeout );
 	while( timer_list != NULL ) {
 		timer_ptr = timer_list;
 		timer_list = timer_list->next;
-		service = timer_ptr->service; 
-		release = timer_ptr->release;
-		releasecpp = timer_ptr->releasecpp;
-		if ( releasecpp ) {
-			(service->*releasecpp)(timer_ptr->data_ptr);
-		} else if ( release ) {
-			(*release)(timer_ptr->data_ptr);
+		if( in_timeout == timer_ptr ) {
+				// We get here if somebody calls exit from inside a timer.
+			did_cancel = true;
 		}
-		daemonCore->free_descrip(timer_ptr->event_descrip);
-		delete timer_ptr->timeslice;
-		delete timer_ptr;
+		else {
+			DeleteTimer( timer_ptr );
+		}
 	}
 	timer_list = NULL;
 	list_tail = NULL;
