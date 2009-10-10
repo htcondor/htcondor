@@ -51,6 +51,12 @@ int handle_soap_ssl_socket(Service *, Stream *stream);
 
 int get_handler(struct soap *soap);
 
+int
+dc_soap_serve(struct soap *soap)
+{
+	return soap_serve(soap);
+}
+
 void
 dc_soap_free(struct soap *soap)
 {
