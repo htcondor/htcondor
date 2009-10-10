@@ -20,7 +20,7 @@
 #include "condor_timer_manager.h"
 #include "condor_io.h"
 
-#include "stdsoap2.h"
+struct soap;
 
 void dc_soap_init(struct soap *soap);
 void dc_soap_free(struct soap *soap);

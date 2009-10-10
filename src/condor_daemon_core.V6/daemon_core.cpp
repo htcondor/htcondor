@@ -26,7 +26,6 @@
 
 #include "condor_common.h"
 #ifdef HAVE_EXT_GSOAP
-#include "stdsoap2.h"
 #include "soap_core.h"
 #endif
 
