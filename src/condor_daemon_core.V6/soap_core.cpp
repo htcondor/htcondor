@@ -53,12 +53,6 @@ int handle_soap_ssl_socket(Service *, Stream *stream);
 int get_handler(struct soap *soap);
 
 struct soap *
-dc_soap_copy(struct soap *soap)
-{
-	return soap_copy(soap);
-}
-
-struct soap *
 dc_soap_accept(Sock *socket, const struct soap *soap)
 {
 	struct soap *cursoap = soap_copy(soap);

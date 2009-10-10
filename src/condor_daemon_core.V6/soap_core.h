@@ -25,5 +25,4 @@ struct soap;
 void dc_soap_init(struct soap *soap);
 void dc_soap_free(struct soap *soap);
 int dc_soap_serve(struct soap *soap);
-struct soap *dc_soap_copy(const struct soap *soap);
 struct soap *dc_soap_accept(Sock *socket, const struct soap *soap);
