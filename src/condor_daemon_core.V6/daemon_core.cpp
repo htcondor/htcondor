@@ -2614,7 +2614,7 @@ DaemonCore::reconfig(void) {
 		}
 
 		soap = soap_new(); 
-		init_soap(soap);
+		dc_soap_init(soap);
 		
 	}
 	else {
