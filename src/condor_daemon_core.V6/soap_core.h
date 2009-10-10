@@ -23,7 +23,3 @@
 #include "stdsoap2.h"
 
 void init_soap(struct soap *soap);
-
-int handle_soap_ssl_socket(Service *, Stream *stream);
-
-int get_handler(struct soap *soap);
