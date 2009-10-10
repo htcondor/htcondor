@@ -17,7 +17,6 @@
  *
  ***************************************************************/
 
-#include "condor_timer_manager.h"
 #include "condor_io.h"
 
 struct soap;
