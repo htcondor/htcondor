@@ -227,9 +227,6 @@ static int _condor_exit_with_exec = 0;
 void **curr_dataptr;
 void **curr_regdataptr;
 
-#ifdef HAVE_EXT_GSOAP
-extern int soap_serve(struct soap*);
-#endif
 extern void drop_addr_file( void );
 
 TimerManager DaemonCore::t;
@@ -4199,7 +4196,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 
 			// Now, process the Soap RPC request and dispatch it
 		dprintf(D_ALWAYS,"About to serve HTTP request...\n");
-		soap_serve(cursoap);
+		dc_soap_serve(cursoap);
 		dc_soap_free(cursoap);
 		dprintf(D_ALWAYS, "Completed servicing HTTP request\n");
 
