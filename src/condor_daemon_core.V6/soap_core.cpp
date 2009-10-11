@@ -19,10 +19,13 @@
 
 #include "condor_common.h"
 #include "internet.h"
+#include "condor_timer_manager.h"
 #include "condor_daemon_core.h"
 #include "condor_config.h"
+#include "reli_sock.h"
 #include "condor_io.h"
 #include "condor_debug.h"
+#include "condor_socket_types.h"
 #include "subsystem_info.h"
 #include "directory.h"
 #include "stdsoap2.h"
