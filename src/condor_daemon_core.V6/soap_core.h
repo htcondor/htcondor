@@ -17,11 +17,13 @@
  *
  ***************************************************************/
 
+#include "condor_timer_manager.h"
 #include "condor_io.h"
 
-struct soap;
+#include "stdsoap2.h"
 
-void dc_soap_init(struct soap *soap);
-void dc_soap_free(struct soap *soap);
-int dc_soap_serve(struct soap *soap);
-struct soap *dc_soap_accept(Sock *socket, const struct soap *soap);
+void init_soap(struct soap *soap);
+
+int handle_soap_ssl_socket(Service *, Stream *stream);
+
+int get_handler(struct soap *soap);
