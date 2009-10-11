@@ -587,7 +587,9 @@ DaemonCore::~DaemonCore()
 
 #ifdef HAVE_EXT_GSOAP
 	if( soap ) {
-		dc_soap_free(soap);
+		soap_destroy(soap);
+		soap_end(soap);
+		soap_free(soap);
 		soap = NULL;
 	}
 #endif
@@ -2579,7 +2581,9 @@ DaemonCore::reconfig(void) {
 	{
 		// tstclair: reconfigure the soap object
 		if( soap ) {
-			dc_soap_free(soap);
+			soap_destroy(soap);
+			soap_end(soap);
+			soap_free(soap);
 		}
 
 		soap = soap_new(); 
@@ -4119,7 +4123,9 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 			// Now, process the Soap RPC request and dispatch it
 		dprintf(D_ALWAYS,"About to serve HTTP request...\n");
 		soap_serve(cursoap);
-		dc_soap_free(cursoap);
+		soap_destroy(cursoap); // clean up class instances
+		soap_end(cursoap); // clean up everything and close socket
+		soap_free(cursoap);
 		dprintf(D_ALWAYS, "Completed servicing HTTP request\n");
 
 			// gsoap already closed the socket.  so set the socket in
