@@ -482,7 +482,7 @@ main(int argc, char *argv[])
 	PreemptionReq = NULL;
 	tmp = param("PREEMPTION_REQUIREMENTS");
 	if( tmp ) {
-		if( Parse(tmp, PreemptionReq) ) {
+		if( ParseClassAdRvalExpr(tmp, PreemptionReq) ) {
 			fprintf(stderr, 
 				"\nERROR: Failed to parse PREEMPTION_REQUIREMENTS.\n");
 			exit(1);
@@ -493,7 +493,7 @@ main(int argc, char *argv[])
 	PreemptionRank = NULL;
 	tmp = param("PREEMPTION_RANK");
 	if( tmp ) {
-		if( Parse(tmp, PreemptionRank) ) {
+		if( ParseClassAdRvalExpr(tmp, PreemptionRank) ) {
 			fprintf(stderr, 
 				"\nERROR: Failed to parse PREEMPTION_RANK.\n");
 			exit(1);
