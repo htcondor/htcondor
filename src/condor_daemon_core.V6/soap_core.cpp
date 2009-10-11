@@ -52,7 +52,7 @@ int handle_soap_ssl_socket(Service *, Stream *stream);
 int get_handler(struct soap *soap);
 
 void
-dc_soap_init(struct soap *soap)
+init_soap(struct soap *soap)
 {
 	MyString subsys = MyString(get_mySubSystem()->getName() );
 

@@ -22,4 +22,4 @@
 
 #include "stdsoap2.h"
 
-void dc_soap_init(struct soap *soap);
+void init_soap(struct soap *soap);
