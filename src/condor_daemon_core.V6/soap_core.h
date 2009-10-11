@@ -24,5 +24,3 @@
 
 void dc_soap_init(struct soap *soap);
 void dc_soap_free(struct soap *soap);
-int dc_soap_serve(struct soap *soap);
-
