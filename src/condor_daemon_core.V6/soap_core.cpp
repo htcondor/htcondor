@@ -57,32 +57,6 @@ dc_soap_copy(struct soap *soap)
 	return soap_copy(soap);
 }
 
-struct soap *
-dc_soap_accept(Sock *socket, const struct soap *soap)
-{
-	struct soap *cursoap = soap_copy(soap);
-	ASSERT(cursoap);
-
-		// Mimic a gsoap soap_accept as follows:
-		//   1. stash the socket descriptor in the soap object
-		//   2. make socket non-blocking by setting a CEDAR timeout.
-		//   3. increase size of send and receive buffers
-		//   4. set SO_KEEPALIVE [done automatically by CEDAR accept()]
-	cursoap->socket = socket->get_file_desc();
-	cursoap->peer = *socket->peer_addr();
-	cursoap->recvfd = soap->socket;
-	cursoap->sendfd = soap->socket;
-	if ( cursoap->recv_timeout > 0 ) {
-		socket->timeout(soap->recv_timeout);
-	} else {
-		socket->timeout(20);
-	}
-	socket->set_os_buffers(SOAP_BUFLEN,false);	// set read buf size
-	socket->set_os_buffers(SOAP_BUFLEN,true);	// set write buf size
-
-	return cursoap;
-}
-
 int
 dc_soap_serve(struct soap *soap)
 {
