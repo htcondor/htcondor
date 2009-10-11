@@ -47,10 +47,6 @@ struct soap *ssl_soap;
 
 extern SOAP_NMAC struct Namespace namespaces[];
 
-int handle_soap_ssl_socket(Service *, Stream *stream);
-
-int get_handler(struct soap *soap);
-
 void
 init_soap(struct soap *soap)
 {
