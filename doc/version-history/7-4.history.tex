@@ -72,7 +72,50 @@ why local or scheduler universe jobs are idle when
 
 \begin{itemize}
 
-\item None.
+\item The default configuration file now uses
+  \MacroNI{ALLOW}/\MacroNI{DENY} in place of
+  \MacroNI{HOSTALLOW}/\MacroNI{HOSTDENY}.  See the release notes above
+  for more information.
+
+\item The default value for \MacroNI{MAX\_JOBS\_RUNNING} has changed.
+  Previously, it was 200.  Now it is an expression that depends on the
+  total amount of memory and the operating system.  The default
+  expression requires 1MB of RAM on the submit machine per running
+  job.  In some environments and configurations, this is overly
+  generous and can be cut by as much as 50\%.  Under Windows, the
+  number of running jobs is still capped at 200.  If you wish to set
+  it higher, it is recommended to use a 64-bit version of Windows.
+  Under unix, the maximum default is now 10,000.  To scale higher, it
+  is recommended to examine the system ephemeral port range and extend
+  it so that there are at least 2.1 ports per running job.
+
+\item The default value of \MacroNI{RESERVED\_SWAP} is now 0, which
+  disables the \Condor{schedd}'s check for sufficient swap space
+  before starting more jobs.  The new expression for
+  \MacroNI{MAX\_JOBS\_RUNNING} has a more appropriate memory check, so
+  we are phasing out \MacroNI{RESERVED\_SWAP}.  In case
+  \MacroNI{RESERVED\_SWAP} is enabled, we have changed the default value
+  of \MacroNI{SHADOW\_SIZE\_ESTIMATE} to 800 (kilobytes).  Previously,
+  it was 200 if not set but it was set to 1800 in the example configuration
+  file.
+
+\item The default values of \MacroNI{START\_LOCAL\_UNIVERSE} and
+  \MacroNI{START\_SCHEDULER\_UNIVERSE} have changed.  Previously,
+  these were simply set to \Expr{True}.  Now, they are configured to allow
+  up to 200 local universe and 200 scheduler universe jobs to run.
+
+\item The default value of
+  \MacroNI{GRIDMANAGER\_MAX\_SUBMITTED\_JOBS\_PER\_RESOURCE} has
+  changed from 100 to 1000.
+
+\item The default \MacroNI{NEGOTIATOR\_INTERVAL} has changed from 300 to 60.
+
+\item The default value of \MacroNI{ENABLE\_GRID\_MONITOR} has been
+  changed from \Expr{False} to \Expr{True}.  Previously, this variable
+  was assigned to \Expr{True} in the example configuration file, so
+  many installations would have been using the grid monitor even
+  though the default when the variable is not defined in the
+  configuration file was not to use the grid monitor.
 
 \end{itemize}
 
