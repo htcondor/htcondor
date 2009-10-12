@@ -44,33 +44,6 @@ bool classad_debug_function_run = 0;
 
 #define EatSpace(ptr)  while(*ptr != '\0') ptr++;
 
-const char *ExprTreeAssignmentName( ExprTree *expr )
-{
-	if ( expr == NULL || expr->MyType() != LX_ASSIGN ) {
-		return NULL;
-	}
-	ExprTree *lhs = expr->LArg();
-	if ( lhs == NULL || lhs->MyType() != LX_VARIABLE ) {
-		return NULL;
-	}
-	return ((Variable *)lhs)->Name();
-}
-
-const char *ExprTreeAssignmentValue( ExprTree *expr )
-{
-	static MyString value;
-	if ( expr == NULL || expr->MyType() != LX_ASSIGN ) {
-		return NULL;
-	}
-	ExprTree *rhs = expr->RArg();
-	if ( rhs == NULL ) {
-		return NULL;
-	}
-	rhs->PrintToStr( value );
-	return value.Value();
-}
-
-
 const char *ExprTreeToString( ExprTree *expr ) {
 	static MyString value;
 	if ( expr == NULL ) {
