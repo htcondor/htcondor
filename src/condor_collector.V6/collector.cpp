@@ -1672,7 +1672,7 @@ computeProjection(ClassAd *shortAd, ClassAd *full_ad, SimpleList<MyString> *proj
 
 		while (char *indirect_attr = internals.next()) {
 			ExprTree *tree = full_ad->Lookup(indirect_attr);
-			if (tree) shortAd->Insert(tree->DeepCopy());
+			if (tree) shortAd->Insert(tree->Copy());
 		}
 	}
 	shortAd->SetMyTypeName(full_ad->GetMyTypeName());

@@ -320,7 +320,7 @@ VMUniverseMgr::publish( ClassAd* ad, amask_t mask )
 		}else if( stricmp(attr_name, ATTR_VM_NETWORKING) == MATCH ) {
 			ad->Assign(ATTR_VM_NETWORKING, m_vm_networking); 
 		}else {
-			ad->Insert(attr_name, expr->DeepCopy());
+			ad->Insert(attr_name, expr->Copy());
 		}
 	}
 

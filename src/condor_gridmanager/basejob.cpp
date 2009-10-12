@@ -674,7 +674,7 @@ void BaseJob::JobAdUpdateFromSchedd( const ClassAd *new_ad )
 
 			if ( (expr = new_ad->LookupExpr( held_removed_update_attrs[i] )) != NULL ) {
 				jobAd->Insert( held_removed_update_attrs[i],
-							   expr->DeepCopy() );
+							   expr->Copy() );
 			} else {
 				jobAd->Delete( held_removed_update_attrs[i] );
 			}

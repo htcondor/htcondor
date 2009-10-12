@@ -757,7 +757,7 @@ void INFNBatchJob::ProcessRemoteAd( ClassAd *remote_ad )
 		new_expr = remote_ad->LookupExpr( attrs_to_copy[index] );
 
 		if ( new_expr != NULL && ( old_expr == NULL || !(*old_expr == *new_expr) ) ) {
-			jobAd->Insert( attrs_to_copy[index], new_expr->DeepCopy() );
+			jobAd->Insert( attrs_to_copy[index], new_expr->Copy() );
 		}
 	}
 
@@ -823,7 +823,7 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 	index = -1;
 	while ( attrs_to_copy[++index] != NULL ) {
 		if ( ( next_expr = jobAd->LookupExpr( attrs_to_copy[index] ) ) != NULL ) {
-			submit_ad->Insert( attrs_to_copy[index], next_expr->DeepCopy() );
+			submit_ad->Insert( attrs_to_copy[index], next_expr->Copy() );
 		}
 	}
 
@@ -947,7 +947,7 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 				}
 			}
 
-			submit_ad->Insert( attr_name, next_expr->DeepCopy() );
+			submit_ad->Insert( attr_name, next_expr->Copy() );
 		}
 	}
 

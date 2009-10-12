@@ -93,6 +93,7 @@ class ExprTree
 		virtual ExprTree*   LArg()   { return NULL; }
 		virtual ExprTree*   RArg()   { return NULL; }
 		virtual ExprTree*   DeepCopy(void) const = 0;
+		ExprTree*           Copy() const { return DeepCopy(); }
         virtual void        Display();    // display the expression
 		virtual int         CalcPrintToStr(void) {return 0;}
 		virtual void        PrintToNewStr(char **str);
