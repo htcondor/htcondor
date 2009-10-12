@@ -3450,14 +3450,14 @@ DedicatedScheduler::makeGenericAdFromJobAd(ClassAd *job)
 
 	req->Assign( ATTR_CURRENT_HOSTS, 0 );
 
-    ExprTree* expr = job->Lookup( ATTR_REQUIREMENTS );
+    ExprTree* expr = job->LookupExpr( ATTR_REQUIREMENTS );
 
 		// ATTR_REQUIREMENTS better be there!
 	ASSERT( expr );
 
 		// We just want the right side of the assignment, which is
 		// just the value (without the "Requirements = " part)
-	const char *rhs = ExprTreeAssignmentValue( expr );
+	const char *rhs = ExprTreeToString( expr );
 
 		// We had better have a string for the expression!
 	ASSERT( rhs );
@@ -4381,11 +4381,9 @@ void
 displayRequest( ClassAd* ad, char* str, int debug_level )
 {
 	ExprTree* expr;
-	expr = ad->Lookup( ATTR_REQUIREMENTS );
-	char req[1024];
-	req[0] = '\0';
-	expr->PrintToStr( req );
-	dprintf( debug_level, "%s%s\n", str, req );
+	expr = ad->LookupExpr( ATTR_REQUIREMENTS );
+	dprintf( debug_level, "%s%s = %s\n", str, ATTR_REQUIREMENTS,
+			 ExprTreeToString( expr ) );
 }
 
 

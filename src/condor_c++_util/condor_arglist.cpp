@@ -552,8 +552,8 @@ ArgList::CondorVersionRequiresV1(CondorVersionInfo const &condor_version)
 bool
 ArgList::InsertArgsIntoClassAd(ClassAd *ad,CondorVersionInfo *condor_version,MyString *error_msg)
 {
-	bool has_args1 = ad->Lookup(ATTR_JOB_ARGUMENTS1) != NULL;
-	bool has_args2 = ad->Lookup(ATTR_JOB_ARGUMENTS2) != NULL;
+	bool has_args1 = ad->LookupExpr(ATTR_JOB_ARGUMENTS1) != NULL;
+	bool has_args2 = ad->LookupExpr(ATTR_JOB_ARGUMENTS2) != NULL;
 
 	bool requires_v1 = false;
 	bool condor_version_requires_v1 = false;

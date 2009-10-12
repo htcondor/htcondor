@@ -395,24 +395,15 @@ DCTransferD::download_job_files(ClassAd *work_ad, CondorError * errstack)
 				// saved SUBMIT_ attributes so the download goes into the
 				// correct place.
 				jad.ResetExpr();
-				while( (tree = jad.NextExpr()) ) {
-					lhstr = ExprTreeAssignmentName( tree );
+				while( jad.NextExpr(lhstr, tree) ) {
 					if ( lhstr && strncasecmp("SUBMIT_",lhstr,7)==0 ) {
 							// this attr name starts with SUBMIT_
 							// compute new lhs (strip off the SUBMIT_)
 						char *new_attr_name = strchr(lhstr,'_');
 						ASSERT(new_attr_name);
 						new_attr_name++;
-							// compute new rhs (just use the same)
-						rhstr = ExprTreeAssignmentValue(tree);
 							// insert attribute
-						if(rhstr) {
-							MyString newattr;
-							newattr += new_attr_name;
-							newattr += "=";
-							newattr += rhstr;
-							jad.Insert(newattr.Value());
-						}
+						jad.Insert(new_attr_name, tree->DeepCopy());
 					}
 				}	// while next expr
 		

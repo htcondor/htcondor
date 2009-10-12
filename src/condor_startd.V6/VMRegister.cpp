@@ -245,16 +245,17 @@ VMRegister::requestHostClassAds(void)
 
 	// Get each Attribute from the classAd
 	// added "HOST_" in front of each Attribute name
+	const char *name;
 	ExprTree *expr;
 
 	ad->ResetExpr();
-	while( ( expr = ad->NextExpr() ) != NULL ) {
+	while( ad->NextExpr(name, expr) ) {
 		MyString attr;
 		attr += "HOST_";
-		attr += ExprTreeAssignmentName(expr);
+		attr += name;
 
 		// Insert or Update an attribute to host_classAd in a VMRegister object
-		host_classad->AssignExpr(attr.Value(), ExprTreeAssignmentValue(expr));
+		host_classad->Insert(attr.Value(), expr->DeepCopy());
 	}
 }
 

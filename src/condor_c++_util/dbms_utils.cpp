@@ -473,6 +473,7 @@ QuillErrCode insertHistoryJobCommon(AttrList *ad, JobQueueDatabase* DBObj, dbtyp
   MyString sql_stmt;
   MyString sql_stmt2;
   ExprTree *expr;
+  const char *attr_name;
   MyString value = "";
   MyString name = "";
   MyString newvalue;
@@ -560,11 +561,11 @@ QuillErrCode insertHistoryJobCommon(AttrList *ad, JobQueueDatabase* DBObj, dbtyp
   }
 
   ad->ResetExpr(); // for iteration initialization
-  while((expr=ad->NextExpr()) != NULL) {
-	  name = ExprTreeAssignmentName( expr );
+  while(ad->NextExpr(attr_name, expr)) {
+	  name = attr_name;
 	  if ( name.IsEmpty() ) break;
 
-	  value = ExprTreeAssignmentValue( expr );
+	  value = ExprTreeToString( expr );
 	  if ( value.IsEmpty() ) break;
 
 		  /* the following are to avoid overwriting the attr values. The hack 

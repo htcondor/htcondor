@@ -1521,13 +1521,11 @@ ClassAd *CondorJob::buildSubmitAd()
 	}
 
 	jobAd->ResetExpr();
-	while ( (next_expr = jobAd->NextExpr()) != NULL ) {
-		if ( strncasecmp( ExprTreeAssignmentName( next_expr ),
-						  "REMOTE_", 7 ) == 0 &&
-			 strlen( ExprTreeAssignmentName( next_expr ) ) > 7 ) {
+	while ( jobAd->NextExpr(next_name, next_expr) ) {
+		if ( strncasecmp( next_name, "REMOTE_", 7 ) == 0 &&
+			 strlen( next_name ) > 7 ) {
 
-			char const *attr_name = &ExprTreeAssignmentName( next_expr )[7];
-			MyString buf;
+			char const *attr_name = &(next_name[7]);
 
 			if(strcasecmp(attr_name,ATTR_JOB_ENVIRONMENT1) == 0 ||
 			   strcasecmp(attr_name,ATTR_JOB_ENVIRONMENT1_DELIM) == 0 ||
@@ -1559,9 +1557,7 @@ ClassAd *CondorJob::buildSubmitAd()
 				}
 			}
 
-			buf.sprintf( "%s = %s", attr_name,
-						 ExprTreeAssignmentValue( next_expr ) );
-			submit_ad->Insert( buf.Value() );
+			submit_ad->Insert( attr_name, next_expr->DeepCopy() );
 		}
 	}
 

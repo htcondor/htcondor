@@ -382,24 +382,15 @@ DCSchedd::receiveJobSandbox(const char* constraint, CondorError * errstack, int 
 			// translate the job ad by replacing the 
 			// saved SUBMIT_ attributes
 		job.ResetExpr();
-		while( (tree = job.NextExpr()) ) {
-			lhstr = ExprTreeAssignmentName( tree );
+		while( job.NextExpr(lhstr, tree) ) {
 			if ( lhstr && strncasecmp("SUBMIT_",lhstr,7)==0 ) {
 					// this attr name starts with SUBMIT_
 					// compute new lhs (strip off the SUBMIT_)
 				char *new_attr_name = strchr(lhstr,'_');
 				ASSERT(new_attr_name);
 				new_attr_name++;
-					// compute new rhs (just use the same)
-				rhstr = ExprTreeAssignmentValue( tree );
 					// insert attribute
-				if(rhstr) {
-					MyString newattr;
-					newattr += new_attr_name;
-					newattr += "=";
-					newattr += rhstr;
-					job.Insert(newattr.Value());
-				}
+				job.Insert(new_attr_name, tree->DeepCopy());
 			}
 		}	// while next expr
 

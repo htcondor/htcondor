@@ -190,7 +190,7 @@ display (AttrList *al, AttrList *target /* = NULL */)
 					// if we got here, there's some % conversion
 					// string, so we'll need to get the expression
 					// tree of the attribute they asked for...
-				if( !(tree = al->Lookup (attr)) ) {
+				if( !(tree = al->LookupExpr (attr)) ) {
 						// drat, we couldn't find it. Maybe it's an
 						// expression?
 					tree = NULL;
@@ -231,7 +231,7 @@ display (AttrList *al, AttrList *target /* = NULL */)
 						free( value_from_classad );
 						value_from_classad = NULL;
 					} else {
-						bool_str = ExprTreeAssignmentValue( tree );
+						bool_str = ExprTreeToString( tree );
 						if( bool_str ) {
 							stringValue.sprintf(fmt->printfFmt, bool_str);
 							retval += stringValue;

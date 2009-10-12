@@ -287,11 +287,10 @@ QmgrJobUpdater::updateJob( update_t type )
 	}
 
 	job_ad->ResetExpr();
-	while( (tree = job_ad->NextDirtyExpr()) ) {
+	while( job_ad->NextDirtyExpr(name, tree) ) {
 		if( tree->invisible ) {
 			continue;
 		}
-		name = ExprTreeAssignmentName(tree);
 
 			// If we have the lists of attributes we care about and
 			// this attribute is in one of the lists, actually do the
@@ -309,7 +308,7 @@ QmgrJobUpdater::updateJob( update_t type )
 				}
 				is_connected = true;
 			}
-			if( ! updateExprTree(tree) ) {
+			if( ! updateExprTree(name, tree) ) {
 				had_error = true;
 			}
 		}
@@ -333,19 +332,18 @@ QmgrJobUpdater::periodicUpdateQ( void )
 
 
 bool
-QmgrJobUpdater::updateExprTree( ExprTree* tree )
+QmgrJobUpdater::updateExprTree( const char *name, ExprTree* tree )
 {
 	if( ! tree ) {
 		dprintf( D_ALWAYS, "QmgrJobUpdater::updateExprTree: tree is NULL!\n" );
 		return false;
 	}
-	const char* name = ExprTreeAssignmentName( tree );
 	if( ! name ) {
 		dprintf( D_ALWAYS,
 				 "QmgrJobUpdater::updateExprTree: can't find name!\n" );
 		return false;
 	}		
-	const char* value = ExprTreeAssignmentValue( tree );
+	const char* value = ExprTreeToString( tree );
 	if( ! value ) {
 		dprintf( D_ALWAYS,
 				 "QmgrJobUpdater::updateExprTree: can't find value!\n" );

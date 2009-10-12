@@ -2272,10 +2272,10 @@ Claim::receiveJobClassAdUpdate( ClassAd &update_ad )
 	ASSERT( c_ad );
 
 	update_ad.ResetExpr();
+	const char *name;
 	ExprTree *expr;
-	while( (expr=update_ad.NextExpr()) != NULL ) {
+	while( update_ad.NextExpr(name, expr) ) {
 
-		char const *name = ExprTreeAssignmentName( expr );
 		ASSERT( name );
 		if( !strcmp(name,ATTR_MY_TYPE) ||
 			!strcmp(name,ATTR_TARGET_TYPE) )
@@ -2287,7 +2287,7 @@ Claim::receiveJobClassAdUpdate( ClassAd &update_ad )
 			// replace expression in current ad with expression from update ad
 		ExprTree *new_expr = expr->DeepCopy();
 		ASSERT( new_expr );
-		if( !c_ad->Insert( new_expr ) ) {
+		if( !c_ad->Insert( name, new_expr ) ) {
 			delete new_expr;
 		}
 	}

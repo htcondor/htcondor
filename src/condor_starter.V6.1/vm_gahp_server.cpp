@@ -1376,29 +1376,29 @@ VMGahpServer::publishVMClassAd(const char *workingdir)
 	bool can_send_it = false;
 	int total_len = 0;
 
+	const char *name;
 	ExprTree *expr = NULL;
 	m_job_ad->ResetExpr();
-	while( (expr = m_job_ad->NextExpr()) != NULL ) {
+	while( m_job_ad->NextExpr(name, expr) ) {
 		can_send_it = false;
 
-		expr->PrintToStr(vmAttr);
 		if( !m_send_all_classad ) {
 			// Instead of sending entire job ClassAd to vmgahp, 
 			// we will send some part of job ClassAd necessary to vmgahp. 
-			if( !strncasecmp( vmAttr.Value(), "JobVM", strlen("JobVM") ) ||
-				!strncasecmp( vmAttr.Value(), "VMPARAM", strlen("VMPARAM") ) ||
-				!strncasecmp( vmAttr.Value(), ATTR_CLUSTER_ID, strlen(ATTR_CLUSTER_ID)) ||
-				!strncasecmp( vmAttr.Value(), ATTR_PROC_ID, strlen(ATTR_PROC_ID)) ||
-				!strncasecmp( vmAttr.Value(), ATTR_USER, strlen(ATTR_USER)) ||
-				!strncasecmp( vmAttr.Value(), ATTR_ORIG_JOB_IWD, 
+			if( !strncasecmp( name, "JobVM", strlen("JobVM") ) ||
+				!strncasecmp( name, "VMPARAM", strlen("VMPARAM") ) ||
+				!strncasecmp( name, ATTR_CLUSTER_ID, strlen(ATTR_CLUSTER_ID)) ||
+				!strncasecmp( name, ATTR_PROC_ID, strlen(ATTR_PROC_ID)) ||
+				!strncasecmp( name, ATTR_USER, strlen(ATTR_USER)) ||
+				!strncasecmp( name, ATTR_ORIG_JOB_IWD, 
 					strlen(ATTR_ORIG_JOB_IWD)) ||
-				!strncasecmp( vmAttr.Value(), ATTR_JOB_ARGUMENTS1, 
+				!strncasecmp( name, ATTR_JOB_ARGUMENTS1, 
 					strlen(ATTR_JOB_ARGUMENTS1)) ||
-				!strncasecmp( vmAttr.Value(), ATTR_JOB_ARGUMENTS2, 
+				!strncasecmp( name, ATTR_JOB_ARGUMENTS2, 
 					strlen(ATTR_JOB_ARGUMENTS2)) ||
-				!strncasecmp( vmAttr.Value(), ATTR_TRANSFER_INTERMEDIATE_FILES, 
+				!strncasecmp( name, ATTR_TRANSFER_INTERMEDIATE_FILES, 
 					strlen(ATTR_TRANSFER_INTERMEDIATE_FILES)) ||
-				!strncasecmp( vmAttr.Value(), ATTR_TRANSFER_INPUT_FILES, 
+				!strncasecmp( name, ATTR_TRANSFER_INPUT_FILES, 
 					strlen(ATTR_TRANSFER_INPUT_FILES)) ) {
 				can_send_it = true;
 			}
@@ -1410,6 +1410,8 @@ VMGahpServer::publishVMClassAd(const char *workingdir)
 		if( !can_send_it ) {
 			continue;
 		}
+
+		vmAttr.sprintf( "%s = %s", name, ExprTreeToString( expr ) );
 
 		if ( write_line( vmAttr.Value() ) == false ) {
 			return false;

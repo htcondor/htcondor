@@ -1608,29 +1608,26 @@ obtainAdsFromCollector (
 			negReqTree = reqTree = NULL;
 			int length;
 			// TODO: Does this leak memory?
-			negReqTree = ad->Lookup(ATTR_NEGOTIATOR_REQUIREMENTS);
-			if ( negReqTree != NULL && negReqTree->RArg() != NULL ) {
+			negReqTree = ad->LookupExpr(ATTR_NEGOTIATOR_REQUIREMENTS);
+			if ( negReqTree != NULL ) {
 
 				// Save the old requirements expression
-				reqTree = ad->Lookup(ATTR_REQUIREMENTS);
-				if(reqTree != NULL && reqTree->RArg() != NULL) {
+				reqTree = ad->LookupExpr(ATTR_REQUIREMENTS);
+				if( reqTree != NULL ) {
 				// Now, put the old requirements back into the ad
-				subReqs = ExprTreeAssignmentValue(reqTree);
+				subReqs = ExprTreeToString(reqTree);
 				length = strlen(subReqs) + strlen(ATTR_REQUIREMENTS) + 7;
 				newReqs = (char *)malloc(length+16);
 				snprintf(newReqs, length+15, "Saved%s = %s", 
 							ATTR_REQUIREMENTS, subReqs); 
 				ad->InsertOrUpdate(newReqs);
 				free(newReqs);
-				} else {
-					char *tmpstr;
-					reqTree->PrintToNewStr(&tmpstr);
 				}
 		
 				// Get the requirements expression we're going to 
 				// subsititute in, and convert it to a string... 
 				// Sadly, this might be the best interface :(
-				subReqs = ExprTreeAssignmentValue(negReqTree);
+				subReqs = ExprTreeToString(negReqTree);
 				length = strlen(subReqs) + strlen(ATTR_REQUIREMENTS);
 				newReqs = (char *)malloc(length+16);
 
@@ -1734,7 +1731,7 @@ obtainAdsFromCollector (
 			startdAds.Insert(ad);
 		} else if( !strcmp(ad->GetMyTypeName(),SUBMITTER_ADTYPE) ||
 				   ( !strcmp(ad->GetMyTypeName(),SCHEDD_ADTYPE) &&
-					 !ad->Lookup(ATTR_NUM_USERS) ) ) {
+					 !ad->LookupExpr(ATTR_NUM_USERS) ) ) {
 				// CRUFT: Before 7.3.2, submitter ads had a MyType of
 				//   "Scheduler". The only way to tell the difference
 				//   was that submitter ads didn't have ATTR_NUM_USERS.
@@ -2846,10 +2843,10 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	length = strlen("Saved") + strlen(ATTR_REQUIREMENTS) + 2;
 	tmp = (char *)malloc(length);
 	snprintf(tmp, length, "Saved%s", ATTR_REQUIREMENTS);
-	savedRequirements = offer->Lookup(tmp);
+	savedRequirements = offer->LookupExpr(tmp);
 	free(tmp);
-	if(savedRequirements != NULL && savedRequirements->RArg() != NULL) {
-		const char *savedReqStr = ExprTreeAssignmentValue(savedRequirements);
+	if(savedRequirements != NULL) {
+		const char *savedReqStr = ExprTreeToString(savedRequirements);
 		offer->AssignExpr( ATTR_REQUIREMENTS, savedReqStr );
 		dprintf( D_ALWAYS, "Inserting %s = %s into the ad\n",
 				 ATTR_REQUIREMENTS, savedReqStr );

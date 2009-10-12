@@ -698,12 +698,10 @@ bool GridftpServer::SubmitServerJob()
 	job_ad->Assign( ATTR_PROC_ID, proc_id );
 
 	// Set all the classad attribute on the remote classad
+	const char *lhstr, *rhstr;
 	job_ad->ResetExpr();
-	while( (tree = job_ad->NextExpr()) ) {
-		const char *lhstr, *rhstr;
-
-		lhstr = ExprTreeAssignmentName( tree );
-		rhstr = ExprTreeAssignmentValue( tree );
+	while( job_ad->NextExpr(lhstr, tree) ) {
+		rhstr = ExprTreeToString( tree );
 
 		if( !lhstr || !rhstr) {
 			dprintf( D_ALWAYS, "GridftpServer::SubmitServerJob: Failed to "

@@ -753,11 +753,11 @@ void INFNBatchJob::ProcessRemoteAd( ClassAd *remote_ad )
 
 	index = -1;
 	while ( attrs_to_copy[++index] != NULL ) {
-		old_expr = jobAd->Lookup( attrs_to_copy[index] );
-		new_expr = remote_ad->Lookup( attrs_to_copy[index] );
+		old_expr = jobAd->LookupExpr( attrs_to_copy[index] );
+		new_expr = remote_ad->LookupExpr( attrs_to_copy[index] );
 
 		if ( new_expr != NULL && ( old_expr == NULL || !(*old_expr == *new_expr) ) ) {
-			jobAd->Insert( new_expr->DeepCopy() );
+			jobAd->Insert( attrs_to_copy[index], new_expr->DeepCopy() );
 		}
 	}
 
@@ -822,8 +822,8 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 
 	index = -1;
 	while ( attrs_to_copy[++index] != NULL ) {
-		if ( ( next_expr = jobAd->Lookup( attrs_to_copy[index] ) ) != NULL ) {
-			submit_ad->Insert( next_expr->DeepCopy() );
+		if ( ( next_expr = jobAd->LookupExpr( attrs_to_copy[index] ) ) != NULL ) {
+			submit_ad->Insert( attrs_to_copy[index], next_expr->DeepCopy() );
 		}
 	}
 
@@ -911,12 +911,11 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 	}
 
 	jobAd->ResetExpr();
-	while ( (next_expr = jobAd->NextExpr()) != NULL ) {
-		if ( strncasecmp( ExprTreeAssignmentName(next_expr),
-						  "REMOTE_", 7 ) == 0 &&
-			 strlen( ExprTreeAssignmentName(next_expr) ) > 7 ) {
+	while ( jobAd->NextExpr(next_name, next_expr) ) {
+		if ( strncasecmp( next_name, "REMOTE_", 7 ) == 0 &&
+			 strlen( next_name ) > 7 ) {
 
-			char const *attr_name = &(ExprTreeAssignmentName(next_expr)[7]);
+			char const *attr_name = &(next_name[7]);
 
 			if(strcasecmp(attr_name,ATTR_JOB_ENVIRONMENT1) == 0 ||
 			   strcasecmp(attr_name,ATTR_JOB_ENVIRONMENT1_DELIM) == 0 ||
@@ -948,8 +947,7 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 				}
 			}
 
-			submit_ad->AssignExpr( attr_name,
-								   ExprTreeAssignmentValue(next_expr) );
+			submit_ad->Insert( attr_name, next_expr->DeepCopy() );
 		}
 	}
 

@@ -2668,6 +2668,7 @@ GetAttributeExpr(int cluster_id, int proc_id, const char *attr_name, char *val)
 	char		key[PROC_ID_STR_BUFLEN];
 	ExprTree	*tree;
 	char		*attr_val;
+	const char *tmp_val;
 
 	IdToStr(cluster_id,proc_id,key);
 
@@ -2681,13 +2682,13 @@ GetAttributeExpr(int cluster_id, int proc_id, const char *attr_name, char *val)
 		return -1;
 	}
 
-	tree = ad->Lookup(attr_name);
+	tree = ad->LookupExpr(attr_name);
 	if (!tree) {
 		return -1;
 	}
 
-	val[0] = '\0';
-	tree->PrintToStr(val);
+	tmp_val = ExprTreeToString(tree);
+	strcpy(val, tmp_val);
 
 	return 1;
 }
@@ -2805,10 +2806,10 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 			if( !startd_ad ) {
 					// No startd ad, so try to find cached value from back
 					// when we did have a startd ad.
-				ExprTree *cached_value = ad->Lookup(cachedAttrName.Value());
+				ExprTree *cached_value = ad->LookupExpr(cachedAttrName.Value());
 				if( cached_value ) {
 					const char *cached_value_buf =
-						ExprTreeAssignmentValue(cached_value);
+						ExprTreeToString(cached_value);
 					ASSERT(cached_value_buf);
 					expanded_ad->AssignExpr(curr_attr_to_expand,cached_value_buf);
 					continue;
@@ -2833,9 +2834,9 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 			// them later into the expanded ClassAd.
 			// Note: deallocate attribute_value with free(), despite
 			// the mis-leading name PrintTo**NEW**Str.  
-			ExprTree *tree = ad->Lookup(curr_attr_to_expand);
+			ExprTree *tree = ad->LookupExpr(curr_attr_to_expand);
 			if ( tree ) {
-				const char *new_value = ExprTreeAssignmentValue( tree );
+				const char *new_value = ExprTreeToString( tree );
 				if ( new_value ) {
 					attribute_value = strdup( new_value );
 				}
@@ -3077,14 +3078,12 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 			size_t len = strlen(ATTR_NEGOTIATOR_MATCH_EXPR);
 			while( (c_name=startd_ad->NextNameOriginal()) ) {
 				if( !strncmp(c_name,ATTR_NEGOTIATOR_MATCH_EXPR,len) ) {
-					ExprTree *expr = startd_ad->Lookup(c_name);
-					ASSERT(expr);
-					expr = expr->RArg();
+					ExprTree *expr = startd_ad->LookupExpr(c_name);
 					if( !expr ) {
 						continue;
 					}
 					const char *new_value = NULL;
-					new_value = ExprTreeAssignmentValue(expr);
+					new_value = ExprTreeToString(expr);
 					ASSERT(new_value);
 					expanded_ad->AssignExpr(c_name,new_value);
 

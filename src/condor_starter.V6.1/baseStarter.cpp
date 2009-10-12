@@ -1583,7 +1583,7 @@ CStarter::jobWaitUntilExecuteTime( void )
 	int deferralOffset = 0;
 	int deltaT = 0;
 	int deferralWindow = 0;
-	if ( jobAd->Lookup( ATTR_DEFERRAL_TIME ) != NULL ) {
+	if ( jobAd->LookupExpr( ATTR_DEFERRAL_TIME ) != NULL ) {
 			//
 		 	// Make sure that the expression evaluated and we 
 		 	// got a positive integer. Otherwise we'll have to kick out
@@ -1633,7 +1633,7 @@ CStarter::jobWaitUntilExecuteTime( void )
 				// So if the deferralTime is less than the currenTime,
 				// but within this window, we'll still run the job
 				//
-			if ( jobAd->Lookup( ATTR_DEFERRAL_WINDOW ) != NULL &&
+			if ( jobAd->LookupExpr( ATTR_DEFERRAL_WINDOW ) != NULL &&
 				 jobAd->EvalInteger( ATTR_DEFERRAL_WINDOW, NULL, deferralWindow ) ) {
 				dprintf( D_FULLDEBUG, "Job %d.%d has a deferral window of "
 				                      "%d seconds\n", 

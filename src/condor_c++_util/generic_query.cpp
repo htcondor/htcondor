@@ -247,13 +247,11 @@ makeQuery (ClassAd &ad)
 	int		i, value;
 	char	*item;
 	float   fvalue;
-	MyString req;
+	MyString req = "";
 	ExprTree *tree;
 
 	// construct query requirement expression
 	bool firstCategory = true;
-	req = ATTR_REQUIREMENTS;
-	req += " = ";
 
 	// add string constraints
 	for (i = 0; i < stringThreshold; i++)
@@ -349,8 +347,8 @@ makeQuery (ClassAd &ad)
 	if (firstCategory) { req += "TRUE"; }
 
 	// parse constraints and insert into query ad
-	if (Parse (req.Value(), tree) > 0) return Q_PARSE_ERROR;
-	ad.Insert (tree);
+	if (ParseClassAdRvalExpr (req.Value(), tree) > 0) return Q_PARSE_ERROR;
+	ad.Insert (ATTR_REQUIREMENTS, tree);
 
 	return Q_OK;
 }

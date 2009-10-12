@@ -336,13 +336,13 @@ fetchQueueFromDB (ClassAdList &list, char *&lastUpdate, char *dbconn, CondorErro
 	filterAd.SetTargetTypeName ("Job");
 
 	ExprTree *tree;
-	tree = filterAd.Lookup(ATTR_REQUIREMENTS);
+	tree = filterAd.LookupExpr(ATTR_REQUIREMENTS);
 	if (!tree) {
 		delete jqSnapshot;
 	  return Q_INVALID_QUERY;
 	}
 
-	constraint = ExprTreeAssignmentValue(tree);
+	constraint = ExprTreeToString(tree);
 
 	ad = getDBNextJobByConstraint(constraint, jqSnapshot);
 
@@ -434,13 +434,13 @@ fetchQueueFromDBAndProcess ( char *dbconn, char *&lastUpdate, process_function p
 	filterAd.SetTargetTypeName ("Job");
 
 	ExprTree *tree;
-	tree = filterAd.Lookup(ATTR_REQUIREMENTS);
+	tree = filterAd.LookupExpr(ATTR_REQUIREMENTS);
 	if (!tree) {
 		delete jqSnapshot;
 	  return Q_INVALID_QUERY;
 	}
 
-	constraint = ExprTreeAssignmentValue(tree);
+	constraint = ExprTreeToString(tree);
 
 	ad = getDBNextJobByConstraint(constraint, jqSnapshot);
 	
@@ -550,12 +550,12 @@ getFilterAndProcessAds( ClassAd &queryad, StringList &attrs, process_function pr
 	ExprTree	*tree;
 	ClassAd		*ad;
 
-	tree = queryad.Lookup(ATTR_REQUIREMENTS);
+	tree = queryad.LookupExpr(ATTR_REQUIREMENTS);
 	if (!tree) {
 		return Q_INVALID_QUERY;
 	}
 
-	constraint = ExprTreeAssignmentValue(tree);
+	constraint = ExprTreeToString(tree);
 
 	if (useAll) {
 	// The fast case with the new protocol
@@ -605,11 +605,11 @@ getAndFilterAds (ClassAd &queryad, StringList &attrs, ClassAdList &list, bool us
 	const char	*constraint;
 	ExprTree	*tree;
 
-	tree = queryad.Lookup(ATTR_REQUIREMENTS);
+	tree = queryad.LookupExpr(ATTR_REQUIREMENTS);
 	if (!tree) {
 		return Q_INVALID_QUERY;
 	}
-	constraint = ExprTreeAssignmentValue(tree);
+	constraint = ExprTreeToString(tree);
 
 	if (useAllJobs) {
 	char *attrs_str = attrs.print_to_delimed_string();

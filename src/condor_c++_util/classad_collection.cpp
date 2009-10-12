@@ -82,11 +82,11 @@ bool ClassAdCollection::NewClassAd(const char* key, ClassAd* ad)
 {
   LogRecord* log=new LogNewClassAd(key,ad->GetMyTypeName(),ad->GetTargetTypeName());
   ClassAdLog::AppendLog(log);
+  const char *name;
   ExprTree* expr;
   ad->ResetExpr();
-  while ((expr=ad->NextExpr())!=NULL) {
-    LogRecord* l=new LogSetAttribute(key,ExprTreeAssignmentName(expr),
-									 ExprTreeAssignmentValue(expr));
+  while (ad->NextExpr(name, expr)) {
+    LogRecord* l=new LogSetAttribute(key,name,ExprTreeToString(expr));
     ClassAdLog::AppendLog(l);
   }
   // return AddClassAd(0,key);
@@ -322,9 +322,9 @@ bool ClassAdCollection::CheckClassAd(BaseCollection* Coll,const MyString& OID, C
     ParentColl->Attributes.StartIterations();
 // printf("Checking OID %s\n",OID.Value());
     while (ParentColl->Attributes.Iterate(AttrName)) {
-      ExprTree* expr=Ad->Lookup(AttrName.Value());
+      ExprTree* expr=Ad->LookupExpr(AttrName.Value());
       if (expr) {
-		  AttrValue = ExprTreeAssignmentValue( expr );
+		  AttrValue = ExprTreeToString( expr );
       } else {
 		  AttrValue = "";
 	  }

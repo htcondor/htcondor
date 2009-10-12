@@ -37,7 +37,8 @@ convert_ad_to_adStruct(struct soap *s,
   float tmpfloat;
   bool tmpbool;
   char *tmpstr;
-  ExprTree *tree, *rhs, *lhs;
+  ExprTree *tree;
+  const char *name;
 
   if ( !ad_struct ) {
     return false;
@@ -53,10 +54,8 @@ convert_ad_to_adStruct(struct soap *s,
   // first pass: count attrs
   num_attrs = 0;
   curr_ad->ResetExpr();
-  while( (tree = curr_ad->NextExpr()) ) {
-    lhs = tree->LArg();
-    rhs = tree->RArg();
-    if( lhs && rhs ) {
+  while( curr_ad->NextExpr(name, tree) ) {
+    if( name && tree ) {
       num_attrs++;
     }
   }
@@ -112,8 +111,7 @@ convert_ad_to_adStruct(struct soap *s,
   attr_index++;
 
   curr_ad->ResetExpr();
-  while( (tree = curr_ad->NextExpr()) ) {
-    rhs = tree->RArg();
+  while( curr_ad->NextExpr(name, tree) ) {
     // ad_struct->__ptr[attr_index].valueInt = NULL;
     // ad_struct->__ptr[attr_index].valueFloat = NULL;
     // ad_struct->__ptr[attr_index].valueBool = NULL;
@@ -123,36 +121,36 @@ convert_ad_to_adStruct(struct soap *s,
 	// ad. What we really really want is to not have to add any special
 	// attribute at all, but that will not happen until we are using
 	// new ClassAds.
-	if (0 == strcmp(((Variable*)tree->LArg())->Name(), ATTR_MY_TYPE) ||
-		0 == strcmp(((Variable*)tree->LArg())->Name(), ATTR_TARGET_TYPE) ||
-		0 == strcmp(((Variable*)tree->LArg())->Name(), ATTR_SERVER_TIME)) 
+	if (0 == strcmp(name, ATTR_MY_TYPE) ||
+		0 == strcmp(name, ATTR_TARGET_TYPE) ||
+		0 == strcmp(name, ATTR_SERVER_TIME)) 
 	{
 		continue;
 	}
 
 	// Ignore any attributes that are considered private - we don't wanna 
 	// be handing out private attributes to soap clients.
-	if ( ClassAd::ClassAdAttributeIsPrivate(((Variable*)tree->LArg())->Name()) )
+	if ( ClassAd::ClassAdAttributeIsPrivate(name) )
 	{
 		continue;
 	}
 
     skip_attr = false;
-    switch ( rhs->MyType() ) {
+    switch ( tree->MyType() ) {
     case LX_STRING:
 		if (isDeepCopy) {
 			ad_struct->__ptr[attr_index].value =
-				(char *) soap_malloc(s, strlen(((String *) rhs)->Value()) + 1);
+				(char *) soap_malloc(s, strlen(((String *) tree)->Value()) + 1);
 			strcpy(ad_struct->__ptr[attr_index].value,
-				   ((String *) rhs)->Value());
+				   ((String *) tree)->Value());
 		} else {
-			ad_struct->__ptr[attr_index].value = (char*)((String*)rhs)->Value();
+			ad_struct->__ptr[attr_index].value = (char*)((String*)tree)->Value();
 		}
       //dprintf(D_ALWAYS,"STRINGSPACE|%s|%p\n",ad_struct->__ptr[attr_index].value,ad_struct->__ptr[attr_index].value);
       ad_struct->__ptr[attr_index].type = STRING_ATTR;
       break;
     case LX_INTEGER:
-      tmpint = ((Integer*)rhs)->Value();
+      tmpint = ((Integer*)tree)->Value();
       ad_struct->__ptr[attr_index].value = (char*)soap_malloc(s,20);
       snprintf(ad_struct->__ptr[attr_index].value,20,"%d",tmpint);
       // ad_struct->__ptr[attr_index].valueInt = (int*)soap_malloc(s,sizeof(int));
@@ -160,7 +158,7 @@ convert_ad_to_adStruct(struct soap *s,
       ad_struct->__ptr[attr_index].type = INTEGER_ATTR;
       break;
     case LX_FLOAT:
-      tmpfloat = ((Float*)rhs)->Value();
+      tmpfloat = ((Float*)tree)->Value();
       ad_struct->__ptr[attr_index].value = (char*)soap_malloc(s,20);
       snprintf(ad_struct->__ptr[attr_index].value,20,"%f",tmpfloat);
       // ad_struct->__ptr[attr_index].valueFloat = (float*)soap_malloc(s,sizeof(float));
@@ -168,7 +166,7 @@ convert_ad_to_adStruct(struct soap *s,
       ad_struct->__ptr[attr_index].type = FLOAT_ATTR;
       break;
     case LX_BOOL:
-      tmpbool = ((ClassadBoolean*)rhs)->Value() ? true : false;
+      tmpbool = ((ClassadBoolean*)tree)->Value() ? true : false;
       if ( tmpbool ) {
         ad_struct->__ptr[attr_index].value = "TRUE";
       } else {
@@ -187,11 +185,11 @@ convert_ad_to_adStruct(struct soap *s,
     default:
       // assume everything else is some sort of expression
       tmpstr = NULL;
-      int buflen = rhs->CalcPrintToStr();
+      int buflen = tree->CalcPrintToStr();
       tmpstr = (char*)soap_malloc(s,buflen + 1); // +1 for termination
       ASSERT(tmpstr);
       tmpstr[0] = '\0'; // necceary because PrintToStr begins at end of string
-      rhs->PrintToStr( tmpstr );
+      tree->PrintToStr( tmpstr );
       if ( !(tmpstr[0]) ) {
         skip_attr = true;
       } else {
@@ -210,11 +208,10 @@ convert_ad_to_adStruct(struct soap *s,
 	if (isDeepCopy) {
 		ad_struct->__ptr[attr_index].name =
 			(char *)
-			soap_malloc(s, strlen(((Variable*)tree->LArg())->Name()) + 1);
-		strcpy(ad_struct->__ptr[attr_index].name,
-			   ((Variable*)tree->LArg())->Name());
+			soap_malloc(s, strlen(name) + 1);
+		strcpy(ad_struct->__ptr[attr_index].name, name);
 	} else {
-		ad_struct->__ptr[attr_index].name = ((Variable*)tree->LArg())->Name();
+		ad_struct->__ptr[attr_index].name = (char *)name;
 	}
     attr_index++;
     ad_struct->__size = attr_index;

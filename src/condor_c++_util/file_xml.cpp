@@ -72,8 +72,8 @@ QuillErrCode FILEXML::file_newEvent(const char * /*eventType*/, AttrList *info) 
             temp += "\t<";
             temp += tag;
             temp += ">";
-            ExprTree *value = info->Lookup(tag);
-			val_temp = ExprTreeAssignmentValue(value);
+            ExprTree *value = info->LookupExpr(tag);
+			val_temp = ExprTreeToString(value);
 			if (val_temp)
 				temp += val_temp;
 			else 

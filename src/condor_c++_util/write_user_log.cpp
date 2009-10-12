@@ -1236,24 +1236,21 @@ WriteUserLog::writeEvent ( ULogEvent *event,
 		attrs.rewind();
 		while ( eventAd && param_jobad && (curr=attrs.next()) )
 		{
-			if ( (tree=param_jobad->Lookup(curr)) ) {
+			if ( (tree=param_jobad->LookupExpr(curr)) ) {
 				// found the attribute.  now evaluate it before
 				// we put it into the eventAd.
-				if ( tree->RArg()->EvalTree(param_jobad,&result) ) {
+				if ( tree->EvalTree(param_jobad,&result) ) {
 					// now inserted evaluated expr
 					switch (result.type) {
 					case LX_BOOL:
 					case LX_INTEGER:
-						eventAd->Assign( ExprTreeAssignmentName(tree),
-										 result.i);
+						eventAd->Assign( curr, result.i);
 						break;
 					case LX_FLOAT:
-						eventAd->Assign( ExprTreeAssignmentName(tree),
-										 result.f);
+						eventAd->Assign( curr, result.f);
 						break;
 					case LX_STRING:
-						eventAd->Assign( ExprTreeAssignmentName(tree),
-										 result.s);
+						eventAd->Assign( curr, result.s);
 						break;
 					default:
 						break;

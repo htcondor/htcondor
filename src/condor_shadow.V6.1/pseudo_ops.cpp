@@ -662,9 +662,9 @@ pseudo_get_job_attr( const char *name, char *expr )
 		remote = parallelMasterResource;
 	}
 	ClassAd *ad = remote->getJobAd();
-	ExprTree *e = ad->Lookup(name);
+	ExprTree *e = ad->LookupExpr(name);
 	if(e) {
-		const char *value = ExprTreeAssignmentValue(e);
+		const char *value = ExprTreeToString(e);
 		if ( value ) {
 			strcpy( expr, value );
 		} else {
@@ -689,9 +689,9 @@ pseudo_get_job_attr( const char *name, MyString &expr )
 	}
 	ClassAd *ad = remote->getJobAd();
 
-	ExprTree *e = ad->Lookup(name);
+	ExprTree *e = ad->LookupExpr(name);
 	if(e) {
-		expr = ExprTreeAssignmentValue(e);
+		expr = ExprTreeToString(e);
 		dprintf(D_SYSCALLS,"pseudo_get_job_attr(%s) = %s\n",name,expr.Value());
 		return 0;
 	} else {

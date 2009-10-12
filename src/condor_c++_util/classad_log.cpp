@@ -620,10 +620,10 @@ ClassAdLog::LogState(FILE *fp)
 		ad->ResetName();
 		attr_name = ad->NextNameOriginal();
 		while (attr_name) {
-			expr = ad->Lookup(attr_name);
+			expr = ad->LookupExpr(attr_name);
 			if (expr && !expr->invisible) {
 				log = new LogSetAttribute(key.Value(), attr_name,
-										  ExprTreeAssignmentValue(expr));
+										  ExprTreeToString(expr));
 				if (log->Write(fp) < 0) {
 					EXCEPT("write to %s failed, errno = %d", logFilename(),
 						   errno);

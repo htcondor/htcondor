@@ -323,19 +323,18 @@ OfflineCollectorPlugin::mergeClassAd (
 
 	ad.ResetExpr();
 	ExprTree *expr;
-	while ((expr=ad.NextExpr())!=NULL) {
+	const char *attr_name;
+	while (ad.NextExpr(attr_name, expr)) {
 		MyString new_val;
 		MyString old_val;
-		MyString attr_name;
 
-		ASSERT( expr->LArg() && expr->RArg() );
+		ASSERT( attr_name && expr );
 
-		expr->LArg()->PrintToStr( attr_name );
-		expr->RArg()->PrintToStr( new_val );
+		new_val = ExprTreeToString( expr );
 
-		expr = old_ad->Lookup( attr_name.Value() );
-		if( expr && expr->RArg() ) {
-			expr->RArg()->PrintToStr( old_val );
+		expr = old_ad->LookupExpr( attr_name );
+		if( expr ) {
+			old_val = ExprTreeToString( expr );
 			if( new_val == old_val ) {
 				continue;
 			}
@@ -348,7 +347,7 @@ OfflineCollectorPlugin::mergeClassAd (
 			continue;
 		}
 
-		_ads->SetAttribute(key, attr_name.Value(), new_val.Value());
+		_ads->SetAttribute(key, attr_name, new_val.Value());
 	}
 
 	_ads->CommitTransaction ();

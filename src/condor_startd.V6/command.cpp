@@ -1854,7 +1854,7 @@ caRequestCODClaim( Stream *s, char* cmd_str, ClassAd* req_ad )
 			 owner );
 
 		// Make sure the ad's got a requirements expression at all.
-	tree = req_ad->Lookup( ATTR_REQUIREMENTS );
+	tree = req_ad->LookupExpr( ATTR_REQUIREMENTS );
 	if( ! tree ) {
 		dprintf( D_FULLDEBUG, 
 				 "Request did not contain %s, assuming TRUE\n",
@@ -1862,7 +1862,7 @@ caRequestCODClaim( Stream *s, char* cmd_str, ClassAd* req_ad )
 		requirements_str = "TRUE";
 		req_ad->Insert( "Requirements = TRUE" );
 	} else {
-		requirements_str = ExprTreeAssignmentValue( tree );
+		requirements_str = ExprTreeToString( tree );
 	}
 
 		// Find the right resource for this claim

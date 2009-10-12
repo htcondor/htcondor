@@ -310,12 +310,9 @@ VMUniverseMgr::publish( ClassAd* ad, amask_t mask )
 	// we will publish all information provided by vmgahp server
 	m_vmgahp_info.ResetExpr();
 
-	MyString line;
 	ExprTree* expr = NULL;
 	const char *attr_name = NULL;
-	while((expr = m_vmgahp_info.NextExpr()) != NULL) {
-		attr_name = ExprTreeAssignmentName( expr );
-
+	while(m_vmgahp_info.NextExpr(attr_name, expr)) {
 		// we need to adjust available vm memory
 		if( stricmp(attr_name, ATTR_VM_MEMORY) == MATCH ) {
 			int freemem = getFreeVMMemSize();
@@ -323,8 +320,7 @@ VMUniverseMgr::publish( ClassAd* ad, amask_t mask )
 		}else if( stricmp(attr_name, ATTR_VM_NETWORKING) == MATCH ) {
 			ad->Assign(ATTR_VM_NETWORKING, m_vm_networking); 
 		}else {
-			expr->PrintToStr(line);
-			ad->Insert(line.Value());
+			ad->Insert(attr_name, expr->DeepCopy());
 		}
 	}
 

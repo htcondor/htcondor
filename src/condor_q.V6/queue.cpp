@@ -1671,7 +1671,7 @@ format_owner (char *owner, AttrList *ad)
 	// pre-v6.3 schedd)
 
 	if ( dag ) {
-		if ( ad->Lookup( ATTR_DAGMAN_JOB_ID ) ) {
+		if ( ad->LookupExpr( ATTR_DAGMAN_JOB_ID ) ) {
 
 				// We have a DAGMan job ID, this means we have a DAG node
 				// -- don't worry about what type the DAGMan job ID is.

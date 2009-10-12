@@ -592,11 +592,10 @@ doContactSchedd()
 
 		current_command->classad->ResetExpr();
 		ExprTree *tree;
-		while( (tree = current_command->classad->NextExpr()) ) {
-			const char *lhstr = NULL, *rhstr = NULL;
+		const char *lhstr, *rhstr;
+		while( current_command->classad->NextExpr(lhstr, tree) ) {
 
-			lhstr = ExprTreeAssignmentName( tree );
-			rhstr = ExprTreeAssignmentValue( tree );
+			rhstr = ExprTreeToString( tree );
 			if( !lhstr || !rhstr) {
 				error_msg.sprintf( "ERROR: ClassAd problem in Updating by constraint %s",
 												 current_command->constraint );
@@ -898,11 +897,10 @@ update_report_result:
 			// Set all the classad attribute on the remote classad
 			current_command->classad->ResetExpr();
 			ExprTree *tree;
-			while( (tree = current_command->classad->NextExpr()) ) {
-				const char *lhstr, *rhstr;
+			const char *lhstr, *rhstr;
+			while( current_command->classad->NextExpr(lhstr, tree) ) {
 
-				lhstr = ExprTreeAssignmentName( tree );
-				rhstr = ExprTreeAssignmentValue( tree );
+				rhstr = ExprTreeToString( tree );
 				if( !lhstr || !rhstr) {
 					error_msg.sprintf( "ERROR: ClassAd problem in Updating by constraint %s",
 												 current_command->constraint );

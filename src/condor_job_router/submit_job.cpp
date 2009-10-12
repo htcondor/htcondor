@@ -444,12 +444,11 @@ static bool submit_job_with_current_priv( ClassAd & src, const char * schedd_nam
 	src.AssignExpr(ATTR_JOB_LEAVE_IN_QUEUE, leaveinqueue.Value());
 
 	ExprTree * tree;
+	const char *lhstr = 0;
+	const char *rhstr = 0;
 	src.ResetExpr();
-	while( (tree = src.NextExpr()) ) {
-		const char *lhstr = 0;
-		const char *rhstr = 0;
-		lhstr = ExprTreeAssignmentName( tree );
-		rhstr = ExprTreeAssignmentValue( tree );
+	while( src.NextExpr(lhstr, tree) ) {
+		rhstr = ExprTreeToString( tree );
 		if( !lhstr || !rhstr) { 
 			failobj.fail("Problem processing classad\n");
 			return false;
@@ -512,12 +511,11 @@ bool submit_job( classad::ClassAd & src, const char * schedd_name, const char * 
 bool push_dirty_attributes(int cluster, int proc, ClassAd & src)
 {
 	src.ResetExpr();
+	const char *lhstr = 0;
+	const char *rhstr = 0;
 	ExprTree * tree;
-	while( (tree = src.NextDirtyExpr()) ) {
-		const char *lhstr = 0;
-		const char *rhstr = 0;
-		lhstr = ExprTreeAssignmentName( tree );
-		rhstr = ExprTreeAssignmentValue( tree );
+	while( src.NextDirtyExpr(lhstr, tree) ) {
+		rhstr = ExprTreeToString( tree );
 		if( !lhstr || !rhstr) { 
 			dprintf(D_ALWAYS,"(%d.%d) push_dirty_attributes: Problem processing classad\n", cluster, proc);
 			return false;

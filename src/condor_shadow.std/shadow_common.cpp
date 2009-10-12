@@ -1055,33 +1055,15 @@ MakeProc(ClassAd *ad, PROC *p)
 	ad->LookupString(ATTR_JOB_IWD, buf);
 	p->iwd = strdup(buf);
 
-	e = ad->Lookup(ATTR_REQUIREMENTS);
+	e = ad->LookupExpr(ATTR_REQUIREMENTS);
 	if (e) {
-		buf[0] = '\0';
-		e->PrintToStr(buf);
-		s = strchr(buf, '=');
-		if (s) {
-			s++;
-			p->requirements = strdup(s);
-		} 
-		else {
-			p->requirements = strdup(buf);
-		}
+		p->requirements = strdup(ExprTreeToString(e));
 	} else {
 	   p->requirements = NULL;
 	}
-	e = ad->Lookup(ATTR_RANK);
+	e = ad->LookupExpr(ATTR_RANK);
 	if (e) {
-		buf[0] = '\0';
-		e->PrintToStr(buf);
-		s = strchr(buf, '=');
-		if (s) {
-			s++;
-			p->preferences = strdup(s);
-		} 
-		else {
-			p->preferences = strdup(buf);
-		}
+		p->preferences = strdup(ExprTreeToString(e));
 	} else {
 		p->preferences = NULL;
 	}

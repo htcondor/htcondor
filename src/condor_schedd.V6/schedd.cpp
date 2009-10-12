@@ -3112,10 +3112,10 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 		SetAttributeString(cluster,proc,ATTR_JOB_IWD,SpoolSpace);
 
 			// Backup the original TRANSFER_OUTPUT_REMAPS at submit time
-		expr = job_ad->Lookup(ATTR_TRANSFER_OUTPUT_REMAPS);
+		expr = job_ad->LookupExpr(ATTR_TRANSFER_OUTPUT_REMAPS);
 		snprintf(new_attr_value,500,"SUBMIT_%s",ATTR_TRANSFER_OUTPUT_REMAPS);
 		if ( expr ) {
-			const char *remap_buf = ExprTreeAssignmentValue(expr);
+			const char *remap_buf = ExprTreeToString(expr);
 			ASSERT(remap_buf);
 			SetAttribute(cluster,proc,new_attr_value,remap_buf);
 		}
@@ -4016,9 +4016,9 @@ Scheduler::actOnJobs(int, Stream* s)
 		// NOTE: ATTR_ACTION_CONSTRAINT needs to be treated as a bool,
 		// not as a string...
 	ExprTree *tree, *rhs;
-	tree = command_ad.Lookup(ATTR_ACTION_CONSTRAINT);
+	tree = command_ad.LookupExpr(ATTR_ACTION_CONSTRAINT);
 	if( tree ) {
-		const char *value = ExprTreeAssignmentValue( tree );
+		const char *value = ExprTreeToString( tree );
 		if( ! value ) {
 				// TODO: deal with this kind of error
 			free(reason);
@@ -5928,7 +5928,7 @@ updateSchedDInterval( ClassAd *job )
 		// Check if the job has the ScheddInterval attribute set
 		// If so, then we need to update it
 		//
-	if ( job->Lookup( ATTR_SCHEDD_INTERVAL ) ) {
+	if ( job->LookupExpr( ATTR_SCHEDD_INTERVAL ) ) {
 			//
 			// This probably isn't a too serious problem if we
 			// are unable to update the job ad
@@ -6005,7 +6005,7 @@ find_idle_local_jobs( ClassAd *job )
 			//
 		bool requirementsMet = true;
 		int requirements = 1;
-		if ( scheddAd.Lookup( universeExp ) != NULL ) {
+		if ( scheddAd.LookupExpr( universeExp ) != NULL ) {
 				//
 				// We have this inner block here because the job
 				// should not be allowed to start if the schedd's 
@@ -6038,7 +6038,7 @@ find_idle_local_jobs( ClassAd *job )
 			//
 			// Job Requirements Evaluation
 			//
-		if ( job->Lookup( ATTR_REQUIREMENTS ) != NULL ) {
+		if ( job->LookupExpr( ATTR_REQUIREMENTS ) != NULL ) {
 				// Treat undefined/error as FALSE for job requirements, too.
 			if ( job->EvalBool(ATTR_REQUIREMENTS, &scheddAd, requirements) ) {
 				requirementsMet = (bool)requirements;
@@ -13066,7 +13066,7 @@ Scheduler::calculateCronTabSchedule( ClassAd *jobAd, bool calculate )
 		// If it's in the past, we'll set the calculate flag to true
 		// so that we will always calculate a new time
 		//
-	if ( ! calculate && jobAd->Lookup( ATTR_DEFERRAL_TIME ) != NULL ) {
+	if ( ! calculate && jobAd->LookupExpr( ATTR_DEFERRAL_TIME ) != NULL ) {
 			//
 			// First get the DeferralTime
 			//
@@ -13076,7 +13076,7 @@ Scheduler::calculateCronTabSchedule( ClassAd *jobAd, bool calculate )
 			// Now look to see if they also have a DeferralWindow
 			//
 		int deferralWindow = 0;
-		if ( jobAd->Lookup( ATTR_DEFERRAL_WINDOW ) != NULL ) {
+		if ( jobAd->LookupExpr( ATTR_DEFERRAL_WINDOW ) != NULL ) {
 			jobAd->EvalInteger( ATTR_DEFERRAL_WINDOW, NULL, deferralWindow );
 		}
 			//
