@@ -89,11 +89,12 @@ dc_soap_free(struct soap *soap)
 }
 
 void
-dc_soap_init(struct soap *soap)
+dc_soap_init(struct soap *&soap)
 {
 	if (NULL == soap) {
 		soap = soap_new();
 	}
+	ASSERT(soap);
 
 		// KEEP-ALIVE should be turned OFF, not ON.
 	//soap_init(soap);

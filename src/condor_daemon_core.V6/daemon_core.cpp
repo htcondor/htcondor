@@ -2603,6 +2603,7 @@ DaemonCore::reconfig(void) {
 		// tstclair: reconfigure the soap object
 		if( soap ) {
 			dc_soap_free(soap);
+			soap = NULL;
 		}
 
 		dc_soap_init(soap);
