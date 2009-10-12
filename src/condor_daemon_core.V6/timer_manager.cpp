@@ -396,10 +396,11 @@ TimerManager::Timeout()
 			// periodic.
 			RemoveTimer( in_timeout, NULL );
 			if ( in_timeout->period > 0 || in_timeout->timeslice ) {
+				in_timeout->when = time(NULL);
 				if ( in_timeout->timeslice ) {
-					in_timeout->when = in_timeout->timeslice->getTimeToNextRun();
+					in_timeout->when += in_timeout->timeslice->getTimeToNextRun();
 				} else {
-					in_timeout->when = in_timeout->period + time(NULL);
+					in_timeout->when += in_timeout->period;
 				}
 				InsertTimer( in_timeout );
 			} else {
