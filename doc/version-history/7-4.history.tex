@@ -58,6 +58,11 @@ the job queue, such as jobs being submitted or completed would cause
 buffered data to be flushed to disk, so the effective upper bound was
 a function of how busy the job queue was.
 
+\item \Condor{q} \Arg{-analyze} and \Arg{-better-analyze} now provide
+  analysis for scheduler and local universe jobs.  Specifically, the
+  \MacroNI{START\_SCHEDULER\_UNIVERSE} and
+  \MacroNI{START\_LOCAL\_UNIVERSE} expressions are checked.
+
 \item Added \Attr{TotalLocalRunningJobs}, \Attr{TotalLocalIdleJobs},
 \Attr{TotalSchedulerRunningJobs}, and \Attr{TotalSchedulerIdleJobs}
 to the published ad for the \Condor{schedd}.  This means that
