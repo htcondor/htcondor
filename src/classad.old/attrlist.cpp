@@ -685,6 +685,23 @@ int AttrList::Insert(const char* str, bool check_for_dups)
 	return result;
 }
 
+int AttrList::Insert(const char *str, ExprTree *expr, bool check_for_dups)
+{
+	ExprTree *lhs;
+	ExprTree *assign;
+	if ( str == NULL || expr == NULL || expr->MyType() == LX_ASSIGN ||
+		 !IsValidAttrName( str ) ) {
+		return FALSE;
+	}
+	if ( ParseClassAdRvalExpr( str, lhs ) != 0 || lhs == NULL ) {
+		delete lhs;
+		return FALSE;
+	}
+	assign = new AssignOp( lhs, expr );
+	ASSERT( Insert( assign, check_for_dups ) );
+	return TRUE;
+}
+
 int AttrList::Insert(ExprTree* expr, bool check_for_dups)
 {
     if(expr == NULL || expr->MyType() != LX_ASSIGN ||
@@ -963,6 +980,17 @@ ExprTree* AttrList::NextExpr()
     }
 }
 
+bool AttrList::NextExpr( const char *&name, ExprTree *&value ) {
+	ExprTree *assign = NextExpr();
+	if ( assign ) {
+		name = ((Variable *)assign->LArg())->Name();
+		value = assign->RArg();
+		return true;
+	} else {
+		return false;
+	}
+}
+
 ExprTree* AttrList::NextDirtyExpr()
 {
 	ExprTree *expr;
@@ -982,6 +1010,17 @@ ExprTree* AttrList::NextDirtyExpr()
 		ptrExpr = ptrExpr->next;
 	}
 	return expr;
+}
+
+bool AttrList::NextDirtyExpr( const char *&name, ExprTree *&value ) {
+	ExprTree *assign = NextDirtyExpr();
+	if ( assign ) {
+		name = ((Variable *)assign->LArg())->Name();
+		value = assign->RArg();
+		return true;
+	} else {
+		return false;
+	}
 }
 
 char* AttrList::NextName()
@@ -1049,6 +1088,16 @@ char *AttrList::NextDirtyName()
 ExprTree* AttrList::Lookup(char* name) const
 {
 	return Lookup ((const char *) name);
+}
+
+ExprTree* AttrList::LookupExpr(const char* name) const
+{
+	ExprTree *expr = Lookup(name);
+	if ( expr ) {
+		return expr->RArg();
+	} else {
+		return NULL;
+	}
 }
 
 ExprTree* AttrList::Lookup(const char* name) const
@@ -2716,6 +2765,7 @@ bool AttrList::SetInvisible(char const *name,bool invisible)
 	if( tree ) {
 		bool old_state = tree->invisible;
 		tree->invisible = invisible;
+		tree->RArg()->invisible = invisible;
 		return old_state;
 	}
 	return invisible;

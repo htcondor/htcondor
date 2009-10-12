@@ -713,3 +713,43 @@ Parse(const char* s, ExprTree*& tree, int *pos)
 	}
     return rc;
 }
+
+int Parse(const char* s, MyString& name, ExprTree*& tree, int *pos)
+{
+	int count = 0;
+    int rc = 1;
+
+	tree = NULL;
+
+	count = 0;
+    alreadyRead = TRUE;
+
+    Token*	t;
+    ExprTree* 	lArg = NULL;
+    ExprTree* 	rArg = NULL;
+
+    if(ParseExpr(s, lArg, count) && lArg->MyType() == LX_VARIABLE) {
+		t = LookToken(s);
+		if(t->type == LX_ASSIGN) {
+			Match(LX_ASSIGN, s, count);
+			if(ParseExpr(s, rArg, count)) {
+				t = LookToken(s);
+				if(t->type == LX_EOF) {
+					name = ((Variable *)lArg)->Name();
+					tree = rArg;
+					rArg = NULL;
+					rc = 0;
+					count = 0;
+				}
+			}
+		}
+    }
+	delete lArg;
+	delete rArg;
+
+	nextToken().reset();
+	if ( pos ) {
+		*pos = count;
+	}
+    return rc;
+}

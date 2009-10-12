@@ -38,6 +38,8 @@
 // the error occurred.
 int Parse(const char*s, ExprTree*&tree, int *pos = NULL);
 
+int Parse(const char*s, MyString&name, ExprTree*&tree, int *pos = NULL);
+
 // parse an rval (i.e. anything that could appear on the rhs of an assignment)
 // On success, 0 is returned and tree is set to the resulting ExprTree.
 // On failure, non-0 is returned, tree is set to NULL, and if pos is
