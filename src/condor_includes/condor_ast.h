@@ -76,6 +76,14 @@
 const char *ExprTreeAssignmentName( ExprTree *expr );
 const char *ExprTreeAssignmentValue( ExprTree *expr );
 
+/* This helper function unparses the given ExprTree and returns a
+ * pointer to the resulting string. The string is valid until the next
+ * call of this function.
+ * This function is meant to ease the transition to new ClassAds,
+ * whose ExprTree doesn't have PrintToStr() or PrintToNewStr().
+ */
+const char *ExprTreeToString( ExprTree *expr );
+
 ////////////////////////////////////////////////////////////////////////////////
 // Class EvalResult is passed to ExprTree::EvalTree() to buffer the result of
 // the evaluation. The result can be integer, floating point, string, boolean,

@@ -70,6 +70,16 @@ const char *ExprTreeAssignmentValue( ExprTree *expr )
 	return value.Value();
 }
 
+
+const char *ExprTreeToString( ExprTree *expr ) {
+	static MyString value;
+	if ( expr == NULL ) {
+		return NULL;
+	}
+	expr->PrintToStr( value );
+	return value.Value();
+}
+
 // EvalResult ctor
 EvalResult::EvalResult()
 {
