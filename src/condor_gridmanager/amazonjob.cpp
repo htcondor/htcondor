@@ -316,7 +316,7 @@ dprintf( D_ALWAYS, "================================>  AmazonJob::AmazonJob 1 \n
 
 	// JEF: Increment a GMSession attribute for use in letting the job
 	// ad crash the gridmanager on request
-	if ( jobAd->Lookup( "CrashGM" ) != NULL ) {
+	if ( jobAd->LookupExpr( "CrashGM" ) != NULL ) {
 		int session = 0;
 		jobAd->LookupInteger( "GMSession", session );
 		session++;

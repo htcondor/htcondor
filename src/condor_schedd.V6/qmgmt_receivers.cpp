@@ -870,8 +870,8 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 						internals.rewind();
 
 						while (char *indirect_attr = internals.next()) {
-							ExprTree *tree = ad->Lookup(indirect_attr);
-							if (tree) shortAd.Insert(tree->Copy());
+							ExprTree *tree = ad->LookupExpr(indirect_attr);
+							if (tree) shortAd.Insert(indirect_attr, tree->Copy());
 						}
 					}
 

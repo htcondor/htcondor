@@ -82,7 +82,7 @@ TransferRequest::check_schema(void)
 	/* ALL info packets MUST have a protocol version number */
 
 	/* Check to make sure it exists */
-	if (m_ip->Lookup(ATTR_IP_PROTOCOL_VERSION) == NULL) {
+	if (m_ip->LookupExpr(ATTR_IP_PROTOCOL_VERSION) == NULL) {
 		EXCEPT("TransferRequest::check_schema() Failed due to missing %s attribute",
 			ATTR_IP_PROTOCOL_VERSION);
 	}
@@ -96,17 +96,17 @@ TransferRequest::check_schema(void)
 	}
 
 	/* for now, just check existance of attribute, but not type */
-	if (m_ip->Lookup(ATTR_IP_NUM_TRANSFERS) == NULL) {
+	if (m_ip->LookupExpr(ATTR_IP_NUM_TRANSFERS) == NULL) {
 		EXCEPT("TransferRequest::check_schema() Failed due to missing %s "
 			"attribute", ATTR_IP_NUM_TRANSFERS);
 	}
 
-	if (m_ip->Lookup(ATTR_IP_TRANSFER_SERVICE) == NULL) {
+	if (m_ip->LookupExpr(ATTR_IP_TRANSFER_SERVICE) == NULL) {
 		EXCEPT("TransferRequest::check_schema() Failed due to missing %s "
 			"attribute", ATTR_IP_TRANSFER_SERVICE);
 	}
 
-	if (m_ip->Lookup(ATTR_IP_PEER_VERSION) == NULL) {
+	if (m_ip->LookupExpr(ATTR_IP_PEER_VERSION) == NULL) {
 		EXCEPT("TransferRequest::check_schema() Failed due to missing %s "
 			"attribute", ATTR_IP_PEER_VERSION);
 	}

@@ -2858,17 +2858,15 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 		strcat( return_buff, "\nWARNING:  Be advised:\n");
 		strcat( return_buff, "   No resources matched request's constraints\n");
         if (!better_analyze) {
-            char reqs[2048];
             ExprTree *reqExp;
             sprintf( return_buff, "%s   Check the %s expression below:\n\n" , 
                      return_buff, ATTR_REQUIREMENTS );
-            if( !(reqExp = request->Lookup( ATTR_REQUIREMENTS) ) ) {
+            if( !(reqExp = request->LookupExpr( ATTR_REQUIREMENTS) ) ) {
                 sprintf( return_buff, "%s   ERROR:  No %s expression found" ,
                          return_buff, ATTR_REQUIREMENTS );
             } else {
-                reqs[0] = '\0';
-                reqExp->PrintToStr( reqs );
-                sprintf( return_buff, "%s%s\n\n", return_buff, reqs );
+				sprintf( return_buff, "%s%s = %s\n\n", return_buff,
+						 ATTR_REQUIREMENTS, ExprTreeToString( reqExp ) );
             }
         }
 	}
@@ -3234,9 +3232,9 @@ void warnScheddLimits(Daemon *schedd,ClassAd *job,MyString &result_buf) {
 
 			if( schedd_requirements_attr ) {
 				MyString schedd_requirements_expr;
-				ExprTree *expr = ad->Lookup(schedd_requirements_attr);
+				ExprTree *expr = ad->LookupExpr(schedd_requirements_attr);
 				if( expr ) {
-					expr->PrintToStr(schedd_requirements_expr);
+					schedd_requirements_expr = ExprTreeToString(expr);
 				}
 				else {
 					schedd_requirements_expr = "UNDEFINED";

@@ -60,7 +60,7 @@ classad_reevaluate(ClassAd *ad, const ClassAd *context)
 				"classad_reevaluate: Attempting reevaluate %s with %s\n",
 				atmp, stmp.Value());
 
-		etmp = ad->Lookup(atmp);
+		etmp = ad->LookupExpr(atmp);
 		if (!etmp) {
 			dprintf(D_ALWAYS,
 					"classad_reevaluate: %s does not exist in ad, returning\n",
@@ -69,7 +69,7 @@ classad_reevaluate(ClassAd *ad, const ClassAd *context)
 			goto FAIL;
 		}
 
-		switch (etmp->RArg()->MyType()) {
+		switch (etmp->MyType()) {
 		case LX_STRING:
 			if (!ad->EvalString(stmp.Value(), context, &ntmp)) {
 				dprintf(D_ALWAYS,

@@ -38,7 +38,7 @@ void MergeClassAds(ClassAd *merge_into, ClassAd *merge_from,
 
 	while ( merge_from->NextExpr(name, expression) ) {
 
-		if (merge_conflicts || !merge_into->Lookup(name)) {
+		if (merge_conflicts || !merge_into->LookupExpr(name)) {
 			ExprTree  *copy_expression;
 
 			copy_expression = expression->Copy();

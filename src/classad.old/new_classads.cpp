@@ -465,8 +465,8 @@ NewClassAdUnparser::OldValueToNewValue(char const *old_value,MyString &new_value
 bool 
 NewClassAdUnparser::Unparse(ClassAd *classad, MyString &buffer)
 {
+	const char *name;
 	ExprTree *expr;
-	char *expr_str = NULL;
 
 	if ( classad == NULL ) {
 		return false;
@@ -494,23 +494,19 @@ NewClassAdUnparser::Unparse(ClassAd *classad, MyString &buffer)
 	}
 
 	classad->ResetExpr();
-	while( ( expr = classad->NextExpr() ) != NULL ) {
+	while( classad->NextExpr(name, expr) ) {
 
-		buffer += ((Variable*)expr->LArg())->Name();
+		buffer += name;
 
 		buffer += " = ";
 
-		expr->RArg()->PrintToNewStr( &expr_str );
-
-		if( !OldValueToNewValue(expr_str,buffer,NULL) ) {
+		if( !OldValueToNewValue(ExprTreeToString(expr),buffer,NULL) ) {
 			return false;
 		}
 
 			// TODO We should add a new-line here and possibly indent the
 			//   next line if _use_compact_spacing is false.
 		buffer += "; ";
-
-		free( expr_str );
 	}
 
 	buffer += "]";

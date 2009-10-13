@@ -3119,7 +3119,7 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 			ASSERT(remap_buf);
 			SetAttribute(cluster,proc,new_attr_value,remap_buf);
 		}
-		else if(job_ad->Lookup(new_attr_value)) {
+		else if(job_ad->LookupExpr(new_attr_value)) {
 				// SUBMIT_TransferOutputRemaps is defined, but
 				// TransferOutputRemaps is not; disable the former,
 				// so that when somebody fetches the sandbox, nothing

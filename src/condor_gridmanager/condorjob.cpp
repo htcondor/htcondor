@@ -1332,11 +1332,11 @@ void CondorJob::ProcessRemoteAd( ClassAd *remote_ad )
 
 	index = -1;
 	while ( attrs_to_copy[++index] != NULL ) {
-		old_expr = jobAd->Lookup( attrs_to_copy[index] );
-		new_expr = remote_ad->Lookup( attrs_to_copy[index] );
+		old_expr = jobAd->LookupExpr( attrs_to_copy[index] );
+		new_expr = remote_ad->LookupExpr( attrs_to_copy[index] );
 
 		if ( new_expr != NULL && ( old_expr == NULL || !(*old_expr == *new_expr) ) ) {
-			jobAd->Insert( new_expr->Copy() );
+			jobAd->Insert( attrs_to_copy[index], new_expr->Copy() );
 		}
 	}
 
