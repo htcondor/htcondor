@@ -12754,9 +12754,9 @@ Scheduler::claimLocalStartd()
 	}
 
 		// Check when we last had a negotiation cycle; if recent, return.
-	int negotiator_interval = param_integer("NEGOTIATOR_INTERVAL",300);
+	int negotiator_interval = param_integer("NEGOTIATOR_INTERVAL",60);
 	int claimlocal_interval = param_integer("SCHEDD_ASSUME_NEGOTIATOR_GONE",
-				negotiator_interval * 4);
+				negotiator_interval * 20);
 				//,	// default (20 min usually)
 				//10 * 60,	// minimum = 10 minutes
 				//120 * 60);	// maximum = 120 minutes
