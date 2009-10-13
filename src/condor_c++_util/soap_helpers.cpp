@@ -185,11 +185,11 @@ convert_ad_to_adStruct(struct soap *s,
     default:
       // assume everything else is some sort of expression
       tmpstr = NULL;
-      int buflen = tree->CalcPrintToStr();
+      int buflen = ExprTreeToString( tree );
       tmpstr = (char*)soap_malloc(s,buflen + 1); // +1 for termination
       ASSERT(tmpstr);
-      tmpstr[0] = '\0'; // necceary because PrintToStr begins at end of string
-      tree->PrintToStr( tmpstr );
+      tmpstr[0] = '\0';
+	  strcpy( tmpstr, ExprTreeToString( tree );
       if ( !(tmpstr[0]) ) {
         skip_attr = true;
       } else {

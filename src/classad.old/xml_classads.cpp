@@ -711,7 +711,7 @@ ClassAdXMLUnparser::Unparse(const char *name, ExprTree *expression, MyString &bu
 		break;
 	default:
 		add_tag(buffer, tag_Expr, true);
-		expression->PrintToNewStr(&expr_string);
+		expr_string = strdup( ExprTreeToString( expression ) );
 		fix_characters(expr_string, fixed_string);
 		free(expr_string);
 		buffer += fixed_string;

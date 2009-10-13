@@ -2688,14 +2688,12 @@ DedicatedScheduler::computeSchedule( void )
 														  &result );
 						if( !rval || result.type != LX_FLOAT) {
 								// The result better be a float
-							char *s = NULL;
+							const char *s = ExprTreeToString( preemption_rank );
 							char *m = NULL;
-							preemption_rank->PrintToNewStr( &s );
 							machine->LookupString( ATTR_NAME, &m );
 							dprintf( D_ALWAYS, "SCHEDD_PREEMPTION_RANK (%s) "
 									 "did not evaluate to float on job %d "
 									 "for machine %s\n", s, cluster, m );
-							free(s);
 							free(m);
 							continue;
 						}
