@@ -292,7 +292,7 @@ class CompatClassAd : public classad::ClassAd
     /** Gets the next dirty expression tree
      * @return The ExprTree associated with the next dirty attribute, or null if one does not exist.
      */
-    classad::ClassAd::ExprTree* NextDirtyExpr();
+    bool NextDirtyExpr(const char *&name, classad::ExprTree *&expr);
 
 
     /** Basically just calls an Unparser so we can escape strings

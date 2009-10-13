@@ -595,6 +595,8 @@ bool test_EvalStringMyString(CompatClassAd *c1, CompatClassAd *c2, int verbose)
 //{{{NextDirtyExpr
 bool test_NextDirtyExpr(CompatClassAd *c1, int verbose)
 {
+	const char *name;
+	classad::ExprTree *expr;
     /* this depends on there only being 2 attrs per classad!
      */
     bool passed = false;
@@ -605,7 +607,7 @@ bool test_NextDirtyExpr(CompatClassAd *c1, int verbose)
 
     for(int i = 0; i < 4; i++) passedTest[i] = false;
 
-    if(c1->NextDirtyExpr())
+    if(c1->NextDirtyExpr(name, expr))
     {
         passedTest[0] = true;
     }
@@ -613,7 +615,7 @@ bool test_NextDirtyExpr(CompatClassAd *c1, int verbose)
     if(verbose)
         printf("First NextDirtyExpr %s.\n", passedTest[0] ? "passed" : "failed");
 
-    if(c1->NextDirtyExpr())
+    if(c1->NextDirtyExpr(name, expr))
     {
         passedTest[1] = true;
     }
@@ -622,10 +624,10 @@ bool test_NextDirtyExpr(CompatClassAd *c1, int verbose)
         printf("Second NextDirtyExpr %s.\n", passedTest[1] ? "passed" : "failed");
 
     //skip over the FooType attrs
-    c1->NextDirtyExpr();
-    c1->NextDirtyExpr();
+    c1->NextDirtyExpr(name, expr);
+    c1->NextDirtyExpr(name, expr);
 
-    if(!c1->NextDirtyExpr())
+    if(!c1->NextDirtyExpr(name, expr))
     {
         passedTest[2] = true;
         if(verbose == 2)
@@ -636,7 +638,7 @@ bool test_NextDirtyExpr(CompatClassAd *c1, int verbose)
         printf("Third NextDirtyExpr %s.\n", passedTest[2] ? "passed" : "failed");
 
     c1->ResetExpr();
-    if(c1->NextDirtyExpr())
+    if(c1->NextDirtyExpr(name, expr))
     {
         passedTest[3] = true;
         if(verbose == 2)

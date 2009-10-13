@@ -1083,8 +1083,8 @@ IsValidAttrValue(const char *value)
 
 //provides a way to get the next dirty expression in the set of 
 //  dirty attributes.
-classad::ClassAd::ExprTree* CompatClassAd::
-NextDirtyExpr()
+bool CompatClassAd::
+NextDirtyExpr(const char *&name, classad::ExprTree *&expr)
 {
     //this'll reset whenever ResetDirtyItr is called
     if(!m_dirtyItrInit)
@@ -1093,20 +1093,21 @@ NextDirtyExpr()
         m_dirtyItrInit = true;
     }
 
-    classad::ExprTree* expr;
+	name = NULL;
     expr = NULL;
     
     //get the next dirty attribute if we aren't past the end.
     if( m_dirtyItr == dirtyEnd() )
     {
-        return NULL;
+        return false;
     }
     
     //figure out what exprtree it is related to
+	name = m_dirtyItr->c_str();
     expr = classad::ClassAd::Lookup(*m_dirtyItr);
     m_dirtyItr++;
 
-    return expr;
+    return true;
 
 }
 
