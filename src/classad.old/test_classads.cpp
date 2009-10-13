@@ -4459,14 +4459,15 @@ void test_random(
 void test_equality(TestResults *results)
 {
     ExprTree *e1, *e2, *e3;
+	MyString n1, n2, n3;
     const char *s1 = "Foo = 3";
     const char *s3 = "Bar = 5";
 
-    Parse(s1, e1);
-    Parse(s1, e2);
-    Parse(s3, e3);
+    Parse(s1, n1, e1);
+    Parse(s1, n2, e2);
+    Parse(s3, n3, e3);
 
-    if ((*e1) == (*e2)) {
+    if ((*e1) == (*e2) && n1 == n2) {
         printf("Passed: operator== detects equality in line %d\n", __LINE__);
         results->AddResult(true);
     } else {
@@ -4474,7 +4475,7 @@ void test_equality(TestResults *results)
         results->AddResult(false);
     }
 
-    if ((*e1) == (*e3)) {
+    if ((*e1) == (*e3) || n1 == n3) {
         printf("Failed: operator== does not detect inequality in line %d\n", __LINE__);
         results->AddResult(false);
     } else {
