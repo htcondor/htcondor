@@ -1090,7 +1090,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		} else {
 				// some memory size must be available else we cannot
 				// match, plus a job ad without ATTR_MEMORY is sketchy
-			rip->dprintf( D_FULLDEBUG,
+			rip->dprintf( D_ALWAYS,
 						  "No memory request in incoming ad, aborting...\n" );
 			ABORT;
 		}
