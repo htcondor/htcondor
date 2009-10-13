@@ -271,7 +271,7 @@ class CompatClassAd : public classad::ClassAd
      */
     int sPrintAsXML(MyString &output);
 
-    void ResetDirtyItr();
+    void ResetExpr();
 
 	void ResetName();
 	const char *NextNameOriginal();

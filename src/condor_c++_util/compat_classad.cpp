@@ -37,7 +37,7 @@ CompatClassAd::CompatClassAd()
 	AssignExpr( ATTR_CURRENT_TIME, "time()" );
 
 	ResetName();
-    ResetDirtyItr();
+    ResetExpr();
 }
 
 CompatClassAd::CompatClassAd( const CompatClassAd &ad )
@@ -45,7 +45,7 @@ CompatClassAd::CompatClassAd( const CompatClassAd &ad )
 	CopyFrom( ad );
 
 	ResetName();
-    ResetDirtyItr();
+    ResetExpr();
 }
 
 CompatClassAd::~CompatClassAd()
@@ -107,7 +107,7 @@ CompatClassAd( FILE *file, char *delimitor, int &isEOF, int&error, int &empty )
 	}
 
 	ResetName();
-    ResetDirtyItr();
+    ResetExpr();
 }
 
 bool CompatClassAd::
@@ -771,7 +771,7 @@ GetTargetTypeName( )
 }
 
 void CompatClassAd::
-ResetDirtyItr()
+ResetExpr()
 {
     //this'll originally be null
     m_dirtyItrInit = false;

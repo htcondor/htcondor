@@ -635,7 +635,7 @@ bool test_NextDirtyExpr(CompatClassAd *c1, int verbose)
     if(verbose)
         printf("Third NextDirtyExpr %s.\n", passedTest[2] ? "passed" : "failed");
 
-    c1->ResetDirtyItr();
+    c1->ResetExpr();
     if(c1->NextDirtyExpr())
     {
         passedTest[3] = true;
