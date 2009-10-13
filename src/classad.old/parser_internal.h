@@ -26,24 +26,18 @@
 //
 //******************************************************************************
 
-#ifndef _PARSER_H
-#define _PARSER_H
+#ifndef _PARSER_INTERNAL_H
+#define _PARSER_INTERVAL_H
 
 #include "condor_ast.h"
 
-// Parse an assignment expression, i.e. variable = expression
-// On success, 0 is returned, name is set to the attribute name and tree
-// is set to the ExprTree of the attribute value.
-// On failure, non-0 is returned, tree is set to NULL, and if pos is
-// non-NULL, the location it points to is set to the position at which
-// the error occurred.
-int Parse(const char*s, MyString&name, ExprTree*&tree, int *pos = NULL);
+// This is an internal-only parsing function.
 
-// parse an rval (i.e. anything that could appear on the rhs of an assignment)
+// Parse an assignment expression, i.e. variable = expression
 // On success, 0 is returned and tree is set to the resulting ExprTree.
 // On failure, non-0 is returned, tree is set to NULL, and if pos is
 // non-NULL, the location it points to is set to the position at which
 // the error occurred.
-int ParseClassAdRvalExpr(const char*s, ExprTree*&tree, int *pos = NULL);
+int Parse(const char*s, ExprTree*&tree, int *pos = NULL);
 
 #endif

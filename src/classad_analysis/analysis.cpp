@@ -55,7 +55,7 @@ ClassAdAnalyzer( bool ras ) :
     // No PREEMPTION_REQUIREMENTS; defaulting to FALSE
     ParseClassAdRvalExpr( "FALSE", preemption_req );
   } else {
-    if( Parse( preq , preemption_req ) ) {
+    if( ParseClassAdRvalExpr( preq , preemption_req ) ) {
       // Failed to parse PREEMPTION_REQUIREMENTS; defaulting to FALSE
       ParseClassAdRvalExpr( "FALSE", preemption_req );
     }

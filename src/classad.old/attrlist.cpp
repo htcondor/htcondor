@@ -25,6 +25,7 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_ast.h"
+#include "parser_internal.h"
 #include "condor_attrlist.h"
 #include "condor_attributes.h"
 #include "iso_dates.h"
