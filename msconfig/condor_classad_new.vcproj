@@ -97,215 +97,215 @@
 	</References>
 	<Files>
 		<File
-			RelativePath="..\src\condor_classad.V6\attrrefs.cpp"
+			RelativePath="..\src\classad\attrrefs.cpp"
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_classad.V6\classad\attrrefs.h"
+			RelativePath="..\src\classad\classad\attrrefs.h"
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_classad.V6\classad\classad.h"
+			RelativePath="..\src\classad\classad\classad.h"
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_classad.V6\classad\classad_distribution.h"
+			RelativePath="..\src\classad\classad\classad_distribution.h"
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_classad.V6\classad\classad_stl.h"
+			RelativePath="..\src\classad\classad\classad_stl.h"
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_classad.V6\classad\classadErrno.h"
+			RelativePath="..\src\classad\classad\classadErrno.h"
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_classad.V6\classad\classadItor.h"
+			RelativePath="..\src\classad\classad\classadItor.h"
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_classad.V6\collection.cpp"
+			RelativePath="..\src\classad\collection.cpp"
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_classad.V6\classad\collection.h"
+			RelativePath="..\src\classad\classad\collection.h"
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_classad.V6\collectionBase.cpp"
+			RelativePath="..\src\classad\collectionBase.cpp"
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_classad.V6\classad\collectionBase.h"
+			RelativePath="..\src\classad\classad\collectionBase.h"
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_classad.V6\classad\common.h"
+			RelativePath="..\src\classad\classad\common.h"
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_classad.V6\classad\debug.h"
+			RelativePath="..\src\classad\classad\debug.h"
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_classad.V6\exprList.cpp"
+			RelativePath="..\src\classad\exprList.cpp"
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_classad.V6\classad\exprList.h"
+			RelativePath="..\src\classad\classad\exprList.h"
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_classad.V6\exprTree.cpp"
+			RelativePath="..\src\classad\exprTree.cpp"
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_classad.V6\classad\exprTree.h"
+			RelativePath="..\src\classad\classad\exprTree.h"
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_classad.V6\fnCall.cpp"
+			RelativePath="..\src\classad\fnCall.cpp"
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_classad.V6\classad\fnCall.h"
+			RelativePath="..\src\classad\classad\fnCall.h"
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_classad.V6\indexfile.cpp"
+			RelativePath="..\src\classad\indexfile.cpp"
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_classad.V6\classad\indexfile.h"
+			RelativePath="..\src\classad\classad\indexfile.h"
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_classad.V6\lexer.cpp"
+			RelativePath="..\src\classad\lexer.cpp"
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_classad.V6\classad\lexer.h"
+			RelativePath="..\src\classad\classad\lexer.h"
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_classad.V6\lexerSource.cpp"
+			RelativePath="..\src\classad\lexerSource.cpp"
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_classad.V6\classad\lexerSource.h"
+			RelativePath="..\src\classad\classad\lexerSource.h"
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_classad.V6\literals.cpp"
+			RelativePath="..\src\classad\literals.cpp"
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_classad.V6\classad\literals.h"
+			RelativePath="..\src\classad\classad\literals.h"
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_classad.V6\matchClassad.cpp"
+			RelativePath="..\src\classad\matchClassad.cpp"
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_classad.V6\classad\matchClassad.h"
+			RelativePath="..\src\classad\classad\matchClassad.h"
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_classad.V6\new_classad.cpp"
+			RelativePath="..\src\classad\new_classad.cpp"
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_classad.V6\new_classad_debug.cpp"
+			RelativePath="..\src\classad\new_classad_debug.cpp"
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_classad.V6\new_classad_operators.cpp"
+			RelativePath="..\src\classad\new_classad_operators.cpp"
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_classad.V6\new_classad_util.cpp"
+			RelativePath="..\src\classad\new_classad_util.cpp"
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_classad.V6\new_classad_value.cpp"
+			RelativePath="..\src\classad\new_classad_value.cpp"
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_classad.V6\classad\operators.h"
+			RelativePath="..\src\classad\classad\operators.h"
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_classad.V6\query.cpp"
+			RelativePath="..\src\classad\query.cpp"
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_classad.V6\classad\query.h"
+			RelativePath="..\src\classad\classad\query.h"
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_classad.V6\sink.cpp"
+			RelativePath="..\src\classad\sink.cpp"
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_classad.V6\classad\sink.h"
+			RelativePath="..\src\classad\classad\sink.h"
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_classad.V6\source.cpp"
+			RelativePath="..\src\classad\source.cpp"
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_classad.V6\classad\source.h"
+			RelativePath="..\src\classad\classad\source.h"
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_classad.V6\transaction.cpp"
+			RelativePath="..\src\classad\transaction.cpp"
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_classad.V6\classad\transaction.h"
+			RelativePath="..\src\classad\classad\transaction.h"
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_classad.V6\classad\util.h"
+			RelativePath="..\src\classad\classad\util.h"
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_classad.V6\classad\value.h"
+			RelativePath="..\src\classad\classad\value.h"
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_classad.V6\view.cpp"
+			RelativePath="..\src\classad\view.cpp"
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_classad.V6\classad\view.h"
+			RelativePath="..\src\classad\classad\view.h"
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_classad.V6\xmlLexer.cpp"
+			RelativePath="..\src\classad\xmlLexer.cpp"
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_classad.V6\classad\xmlLexer.h"
+			RelativePath="..\src\classad\classad\xmlLexer.h"
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_classad.V6\xmlSink.cpp"
+			RelativePath="..\src\classad\xmlSink.cpp"
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_classad.V6\classad\xmlSink.h"
+			RelativePath="..\src\classad\classad\xmlSink.h"
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_classad.V6\xmlSource.cpp"
+			RelativePath="..\src\classad\xmlSource.cpp"
 			>
 		</File>
 		<File
-			RelativePath="..\src\condor_classad.V6\classad\xmlSource.h"
+			RelativePath="..\src\classad\classad\xmlSource.h"
 			>
 		</File>
 	</Files>

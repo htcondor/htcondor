@@ -386,7 +386,7 @@ DCSchedd::receiveJobSandbox(const char* constraint, CondorError * errstack, int 
 			if ( lhstr && strncasecmp("SUBMIT_",lhstr,7)==0 ) {
 					// this attr name starts with SUBMIT_
 					// compute new lhs (strip off the SUBMIT_)
-				char *new_attr_name = strchr(lhstr,'_');
+				const char *new_attr_name = strchr(lhstr,'_');
 				ASSERT(new_attr_name);
 				new_attr_name++;
 					// insert attribute
