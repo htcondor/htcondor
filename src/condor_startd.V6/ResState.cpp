@@ -514,7 +514,7 @@ act_to_load( Activity act )
 
 int
 ResState::leave_action( State cur_s, Activity cur_a, State new_s,
-						Activity, bool statechange )
+						Activity new_a, bool statechange )
 {
 	switch( cur_s ) {
 	case preempting_state:
@@ -568,7 +568,9 @@ ResState::leave_action( State cur_s, Activity cur_a, State new_s,
 				}
 			}
 		}
-		if( statechange ) {
+
+		//TODO: tstclair evaluate whether we should even be doing this in ResState
+		if( statechange && new_a != vacating_act ) {
 			rip->r_cur->cancelLeaseTimer();	
 		}
 		break;
