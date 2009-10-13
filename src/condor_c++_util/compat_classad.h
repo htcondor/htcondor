@@ -49,6 +49,8 @@ class CompatClassAd : public classad::ClassAd
 		 */
 	bool Insert( const std::string &attrName, classad::ExprTree *expr );
 
+	int Insert(const char *name, classad::ExprTree *expr );
+
 		/** Insert an attribute/value into the ClassAd 
 		 *  @param str A string of the form "Attribute = Value"
 		 */
@@ -98,8 +100,8 @@ class CompatClassAd : public classad::ClassAd
 //		classad::ExprTree*	NextExpr();
 
 		// lookup values in classads  (for simple assignments)
-//		classad::ExprTree*   Lookup(char *) const;  		// for convenience
-//      classad::ExprTree*	Lookup(const char*) const;	// look up an expression
+      classad::ExprTree* LookupExpr(const char* name) const
+	  { return Lookup( name ); }
 
 		/** Lookup (don't evaluate) an attribute that is a string.
 		 *  @param name The attribute

@@ -139,6 +139,13 @@ Insert( const std::string &attrName, classad::ExprTree *expr )
 }
 
 int CompatClassAd::
+Insert( const char *name, classad::ExprTree *expr )
+{
+	string str = name;
+	return Insert( str, expr ) ? TRUE : FALSE;
+}
+
+int CompatClassAd::
 Insert( const char *str )
 {
 	classad::ClassAdParser parser;
