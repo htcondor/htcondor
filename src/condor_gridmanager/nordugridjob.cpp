@@ -796,8 +796,10 @@ int NordugridJob::doEvaluateState()
 			// through. However, since we registered update events the
 			// first time, requestScheddUpdate won't return done until
 			// they've been committed to the schedd.
+			const char *name;
+			ExprTree *expr;
 			jobAd->ResetExpr();
-			if ( jobAd->NextDirtyExpr() ) {
+			if ( jobAd->NextDirtyExpr(name, expr) ) {
 				requestScheddUpdate( this, true );
 				break;
 			}
