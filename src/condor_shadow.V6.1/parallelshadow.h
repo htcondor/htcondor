@@ -69,6 +69,7 @@ class ParallelShadow : public BaseShadow
 
 	bool supportsReconnect( void );
 
+	virtual bool shouldAttemptReconnect(RemoteResource *r);
 
 	void shutDown( int exitReason );
 
