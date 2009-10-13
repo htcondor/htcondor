@@ -27,6 +27,9 @@ Request::Request (const char *cmd)
 {   
 	m_worker = NULL;
 	m_raw_cmd = cmd;
-	parse_gahp_command(cmd, &m_args);
-	m_reqid = (int)strtol(m_args.argv[1], (char **)NULL, 10);
+
+	if ( parse_gahp_command(cmd, &m_args) )
+		m_reqid = (int)strtol(m_args.argv[1], (char **)NULL, 10);
+	else
+		m_reqid = -1;
 }
