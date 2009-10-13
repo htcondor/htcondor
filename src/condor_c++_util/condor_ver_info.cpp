@@ -86,10 +86,12 @@ CondorVersionInfo::compare_versions(const char* VersionString1) const
 	ver1.Scalar = 0;
 	string_to_VersionData(VersionString1,ver1);
 
-	if ( ver1.Scalar < myversion.Scalar )
+	if ( ver1.Scalar < myversion.Scalar ) {
 		return -1;
-	if ( ver1.Scalar > myversion.Scalar )
+	}
+	if ( ver1.Scalar > myversion.Scalar ) {
 		return 1;
+	}
 
 	return 0;
 }
