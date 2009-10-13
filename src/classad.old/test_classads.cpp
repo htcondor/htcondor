@@ -929,7 +929,7 @@ test_eval_error(
 	ExprTree *tree;
 	EvalResult val;
 
-	tree = classad->Lookup(attribute_name);
+	tree = classad->LookupExpr(attribute_name);
 	if(!tree) {
         is_error = false;
     } else if (tree->EvalTree(classad, NULL, &val) && val.type == LX_ERROR) {
@@ -1210,13 +1210,13 @@ test_printed_version(
 	int         line_number,      // IN: The line number to print
     TestResults *results)         // OUT: Modified to reflect result of test
 {
-	char      *printed_version;
+	MyString printed_version;
 	ExprTree  *tree;
 
-	tree = classad->Lookup(attribute_name);
-	tree->PrintToNewStr(&printed_version);
+	tree = classad->LookupExpr(attribute_name);
+	printed_version.sprintf( "%s = %s", attribute_name, ExprTreeToString( tree ) );
 
-	if (!strcmp(expected_string, printed_version)) {
+	if (!strcmp(expected_string, printed_version.Value())) {
 		printf("Passed: ");
 		print_truncated_string(attribute_name, 40);
 		printf(" prints correctly in line %d.\n", line_number);
@@ -1225,11 +1225,10 @@ test_printed_version(
 		printf("Failed: ");
 		print_truncated_string(attribute_name, 40);
 		printf(" does not print correctly in line %d.\n", line_number);
-		printf("Printed as: %s\n", printed_version);
+		printf("Printed as: %s\n", printed_version.Value());
 		printf("Expected  : %s\n", expected_string);
 		results->AddResult(false);
 	}
-	free(printed_version);
 	return;
 }
 

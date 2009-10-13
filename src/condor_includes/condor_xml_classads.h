@@ -138,7 +138,7 @@ class ClassAdXMLUnparser
 	void Unparse(ClassAd *classad, MyString &buffer, StringList *attr_white_list=NULL);
 
  private:
-	void Unparse(ExprTree *expression, MyString &buffer);
+	void Unparse(const char *name, ExprTree *expression, MyString &buffer);
 	void add_tag(MyString &buffer, TagName which_tag, bool start_tag);
 	void add_attribute_start_tag(MyString &buffer, const char *name);
 	void add_bool_start_tag(MyString &buffer, BooleanBase *bool_expr);

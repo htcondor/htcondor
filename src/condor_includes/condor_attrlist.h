@@ -145,9 +145,11 @@ class AttrList : public AttrListAbstract
 						   ExprTree*, 
 							bool check_for_dups=true);	// insert at the tail
 
+ private:
         int        	Insert(ExprTree*, 
 							bool check_for_dups=true);	// insert at the tail
 
+ public:
 		int			InsertOrUpdate(const char *expr) { return Insert(expr); }
 
 		// The Assign() functions are equivalent to Insert("variable = value"),
@@ -226,8 +228,10 @@ class AttrList : public AttrListAbstract
 
 		// for iteration through expressions
 		void		ResetExpr() { this->ptrExpr = exprList; this->ptrExprInChain = false; }
+ private:
 		ExprTree*	NextExpr();					// next unvisited expression
 		ExprTree*   NextDirtyExpr();
+ public:
 		bool NextExpr( const char *&name, ExprTree *&value );
 		bool NextDirtyExpr( const char *&name, ExprTree *&value );
 
@@ -238,13 +242,17 @@ class AttrList : public AttrListAbstract
 		char*       NextDirtyName();
 
 		// lookup values in classads  (for simple assignments)
+ private:
 		ExprTree*   Lookup(char *) const;  		// for convenience
         ExprTree*	Lookup(const char*) const;	// look up an expression
 		ExprTree*	Lookup(const ExprTree*) const;
+ public:
 		// This next method returns the value of the attribute
 		// (i.e. the right-hand side of the assignment)
 		ExprTree*	LookupExpr(const char*) const;
+ private:
 		AttrListElem *LookupElem(const char *name) const;
+ public:
 		int         LookupString(const char *, char *) const; 
 		int         LookupString(const char *, char *, int) const; //uses strncpy
 		int         LookupString (const char *name, char **value) const;

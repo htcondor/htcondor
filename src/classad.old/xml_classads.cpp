@@ -588,6 +588,7 @@ void ClassAdXMLUnparser::AddXMLFileFooter(MyString &buffer)
 void 
 ClassAdXMLUnparser::Unparse(ClassAd *classad, MyString &buffer, StringList *attr_white_list)
 {
+	const char *name;
 	ExprTree *expression;
 
 	add_tag(buffer, tag_ClassAd, true);
@@ -601,13 +602,13 @@ ClassAdXMLUnparser::Unparse(ClassAd *classad, MyString &buffer, StringList *attr
 	if (_output_type && (!attr_white_list || attr_white_list->contains_anycase("MyType")) ) {
 		mytype = classad->GetMyTypeName();
 		if (*mytype != 0) {
-			MyString  type_expr_string("MyType = \"");
+			MyString  type_expr_string("\"");
 			ExprTree  *type_expr;
 			
 			type_expr_string += mytype;
 			type_expr_string += '\"';
-			Parse(type_expr_string.Value(), type_expr);
-			Unparse(type_expr, buffer);
+			ParseClassAdRvalExpr(type_expr_string.Value(), type_expr);
+			Unparse("MyType", type_expr, buffer);
 			delete type_expr;
 		}
 	}
@@ -615,29 +616,29 @@ ClassAdXMLUnparser::Unparse(ClassAd *classad, MyString &buffer, StringList *attr
 	if (_output_target_type && (!attr_white_list || attr_white_list->contains_anycase("TargetType"))) {
 		mytarget = classad->GetTargetTypeName();
 		if (*mytarget != 0) {
-			MyString  target_expr_string("TargetType = \"");
+			MyString  target_expr_string("\"");
 			ExprTree  *target_expr;
 			
 			target_expr_string += mytarget;
 			target_expr_string += '\"';
-			Parse(target_expr_string.Value(), target_expr);
-			Unparse(target_expr, buffer);
+			ParseClassAdRvalExpr(target_expr_string.Value(), target_expr);
+			Unparse("TargetType", target_expr, buffer);
 			delete target_expr;
 		}
 	}
 
 	// Then loop through all the other expressions in the ClassAd
 	classad->ResetExpr();
-	for (expression = classad->NextExpr(); 
+	for (classad->NextExpr(name, expression); 
 		 expression != NULL; 
-		 expression = classad->NextExpr()) {
+		 classad->NextExpr(name, expression)) {
 		if( expression->invisible ) {
 			continue;
 		}
-		if( attr_white_list && !attr_white_list->contains_anycase(((VariableBase*)expression->LArg())->Name()) ) {
+		if( attr_white_list && !attr_white_list->contains_anycase(name) ) {
 			continue; // not in white list
 		}
-		Unparse(expression, buffer);
+		Unparse(name, expression, buffer);
 	}
 	add_tag(buffer, tag_ClassAd, false);
 	buffer += '\n';
@@ -652,90 +653,75 @@ ClassAdXMLUnparser::Unparse(ClassAd *classad, MyString &buffer, StringList *attr
  *
  **************************************************************************/
 void 
-ClassAdXMLUnparser::Unparse(ExprTree *expression, MyString &buffer)
+ClassAdXMLUnparser::Unparse(const char *name, ExprTree *expression, MyString &buffer)
 {
-	// If it isn't an assignment, it's a malformed ClassAd
-	if (expression->MyType() == LX_ASSIGN) {
-		ExprTree *name_expr;
-		ExprTree *value_expr;
-		
-		name_expr  = expression->LArg();
-		value_expr = expression->RArg();
-		
-		// If the left-hand side of the assignment isn't a variable,
-		// it's malformed.
-		if (name_expr->MyType() == LX_VARIABLE) {
-			const char *name = ((VariableBase *)name_expr)->Name();
+	add_attribute_start_tag(buffer, name);
 			
-			add_attribute_start_tag(buffer, name);
-			
-			MyString  number_string;
-			char      *expr_string;
-			int       int_number;
-            double    double_number;
-			MyString  fixed_string;
-			
-			switch (value_expr->MyType()) {
-			case LX_INTEGER:
-				int_number = ((IntegerBase *)value_expr)->Value();
-				if (value_expr->unit == 'k') {
-					int_number *= 1024;
-				}
-				number_string.sprintf("%d", int_number);
-				add_tag(buffer, tag_Integer, true);
-				buffer += number_string;
-				add_tag(buffer, tag_Integer, false);
-				break;
-			case LX_FLOAT:
-				double_number = ((FloatBase *)value_expr)->Value();
-				if (value_expr->unit == 'k') {
-					double_number *= 1024;
-				}
-                number_string.sprintf("%1.15E", double_number);
-				add_tag(buffer, tag_Real, true);
-				buffer += number_string;
-				add_tag(buffer, tag_Real, false);
-				break;
-			case LX_STRING:
-				add_tag(buffer, tag_String, true);
-				fix_characters(((StringBase *)value_expr)->Value(), 
-							   fixed_string);
-				buffer += fixed_string;
-				fixed_string = "";
-				add_tag(buffer, tag_String, false);
-				break;
-			case LX_TIME:
-				add_tag(buffer, tag_Time, true);
-				fix_characters(((ISOTimeBase *)value_expr)->Value(), 
-							   fixed_string);
-				buffer += fixed_string;
-				fixed_string = "";
-				add_tag(buffer, tag_Time, false);
-				break;
-			case LX_BOOL:
-				add_bool_start_tag(buffer, (BooleanBase *)value_expr);
-				break;
-			case LX_UNDEFINED:
-				add_empty_tag(buffer, tag_Undefined);
-				break;
-			case LX_ERROR:
-				add_empty_tag(buffer, tag_Error);
-				break;
-			default:
-				add_tag(buffer, tag_Expr, true);
-				value_expr->PrintToNewStr(&expr_string);
-				fix_characters(expr_string, fixed_string);
-				free(expr_string);
-				buffer += fixed_string;
-				fixed_string = "";
-				add_tag(buffer, tag_Expr, false);
-				break;
-			}
-			add_tag(buffer, tag_Attribute, false);
-			if (!_use_compact_spacing) {
-				buffer += "\n";
-			}
+	MyString  number_string;
+	char      *expr_string;
+	int       int_number;
+	double    double_number;
+	MyString  fixed_string;
+
+	switch (expression->MyType()) {
+	case LX_INTEGER:
+		int_number = ((IntegerBase *)expression)->Value();
+		if (expression->unit == 'k') {
+			int_number *= 1024;
 		}
+		number_string.sprintf("%d", int_number);
+		add_tag(buffer, tag_Integer, true);
+		buffer += number_string;
+		add_tag(buffer, tag_Integer, false);
+		break;
+	case LX_FLOAT:
+		double_number = ((FloatBase *)expression)->Value();
+		if (expression->unit == 'k') {
+			double_number *= 1024;
+		}
+		number_string.sprintf("%1.15E", double_number);
+		add_tag(buffer, tag_Real, true);
+		buffer += number_string;
+		add_tag(buffer, tag_Real, false);
+		break;
+	case LX_STRING:
+		add_tag(buffer, tag_String, true);
+		fix_characters(((StringBase *)expression)->Value(), 
+					   fixed_string);
+		buffer += fixed_string;
+		fixed_string = "";
+		add_tag(buffer, tag_String, false);
+		break;
+	case LX_TIME:
+		add_tag(buffer, tag_Time, true);
+		fix_characters(((ISOTimeBase *)expression)->Value(), 
+					   fixed_string);
+		buffer += fixed_string;
+		fixed_string = "";
+		add_tag(buffer, tag_Time, false);
+		break;
+	case LX_BOOL:
+		add_bool_start_tag(buffer, (BooleanBase *)expression);
+		break;
+	case LX_UNDEFINED:
+		add_empty_tag(buffer, tag_Undefined);
+		break;
+	case LX_ERROR:
+		add_empty_tag(buffer, tag_Error);
+		break;
+	default:
+		add_tag(buffer, tag_Expr, true);
+		expression->PrintToNewStr(&expr_string);
+		fix_characters(expr_string, fixed_string);
+		free(expr_string);
+		buffer += fixed_string;
+		fixed_string = "";
+		add_tag(buffer, tag_Expr, false);
+		break;
+	}
+	add_tag(buffer, tag_Attribute, false);
+	if (!_use_compact_spacing) {
+		buffer += "\n";
 	}
 	return;
 }
