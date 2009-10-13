@@ -191,7 +191,8 @@ NordugridJob::NordugridJob( ClassAd *classad )
 		jobAd->AssignExpr( ATTR_HOLD_REASON, "Undefined" );
 	}
 
-	jobProxy = AcquireProxy( jobAd, error_string, evaluateStateTid );
+	jobProxy = AcquireProxy( jobAd, error_string,
+							 (Eventcpp)&BaseJob::SetEvaluateState, this );
 	if ( jobProxy == NULL ) {
 		if ( error_string == "" ) {
 			error_string.sprintf( "%s is not set in the job ad",
@@ -273,7 +274,7 @@ NordugridJob::NordugridJob( ClassAd *classad )
 NordugridJob::~NordugridJob()
 {
 	if ( jobProxy != NULL ) {
-		ReleaseProxy( jobProxy, evaluateStateTid );
+		ReleaseProxy( jobProxy, (Eventcpp)&BaseJob::SetEvaluateState, this );
 	}
 	if ( myResource ) {
 		myResource->UnregisterJob( this );
@@ -307,7 +308,8 @@ int NordugridJob::doEvaluateState()
 	bool reevaluate_state = true;
 	time_t now = time(NULL);
 
-	bool done;
+	bool attr_exists;
+	bool attr_dirty;
 	int rc;
 
 	daemonCore->Reset_Timer( evaluateStateTid, TIMER_NEVER );
@@ -474,8 +476,9 @@ int NordugridJob::doEvaluateState()
 			if ( condorState == REMOVED || condorState == HELD ) {
 				gmState = GM_CANCEL;
 			} else {
-				done = requestScheddUpdate( this );
-				if ( !done ) {
+				jobAd->GetDirtyFlag( ATTR_GRID_JOB_ID, &attr_exists, &attr_dirty );
+				if ( attr_exists && attr_dirty ) {
+					requestScheddUpdate( this, true );
 					break;
 				}
 				gmState = GM_STAGE_IN;
@@ -649,8 +652,9 @@ int NordugridJob::doEvaluateState()
 			if ( condorState != HELD && condorState != REMOVED ) {
 				JobTerminated();
 				if ( condorState == COMPLETED ) {
-					done = requestScheddUpdate( this );
-					if ( !done ) {
+					jobAd->GetDirtyFlag( ATTR_JOB_STATUS, &attr_exists, &attr_dirty );
+					if ( attr_exists && attr_dirty ) {
+						requestScheddUpdate( this, true );
 						break;
 					}
 				}
@@ -792,8 +796,9 @@ int NordugridJob::doEvaluateState()
 			// through. However, since we registered update events the
 			// first time, requestScheddUpdate won't return done until
 			// they've been committed to the schedd.
-			done = requestScheddUpdate( this );
-			if ( !done ) {
+			jobAd->ResetExpr();
+			if ( jobAd->NextDirtyExpr() ) {
+				requestScheddUpdate( this, true );
 				break;
 			}
 			if ( remoteJobState != "" ) {

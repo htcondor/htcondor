@@ -64,26 +64,18 @@ init_soap(struct soap *soap)
 
 #ifdef COMPILE_SOAP_SSL
 	bool enable_soap_ssl = param_boolean("ENABLE_SOAP_SSL", false);
-	bool subsys_enable_soap_ssl =
-		param_boolean((subsys + "_ENABLE_SOAP_SSL").Value(), false);
-	if (subsys_enable_soap_ssl ||
-		(enable_soap_ssl &&
-		 (!(NULL != param((subsys + "_ENABLE_SOAP_SSL").Value())) ||
-		  subsys_enable_soap_ssl))) {
-		int ssl_port =
-			param_integer((subsys + "_SOAP_SSL_PORT").Value(), 0);
+	if (enable_soap_ssl) {
+		int ssl_port = param_integer("SOAP_SSL_PORT", 0);
 
  		if (ssl_port >= 0) {
 			dprintf(D_FULLDEBUG,
 					"Setting up SOAP SSL socket on port (0 = dynamic): %d\n",
 					ssl_port);
 
-			char *server_keyfile;
-			if (!(server_keyfile =
-				  param((subsys + "_SOAP_SSL_SERVER_KEYFILE").Value())) &&
-				!(server_keyfile = param("SOAP_SSL_SERVER_KEYFILE"))) {
-				EXCEPT("DaemonCore: Must define [SUBSYS_]SOAP_SSL_SERVER_KEYFILE "
-					   "with [SUBSYS_]ENABLE_SOAP_SSL");
+			char *server_keyfile = param("SOAP_SSL_SERVER_KEYFILE");
+			if (!server_keyfile) {
+				EXCEPT("DaemonCore: Must define SOAP_SSL_SERVER_KEYFILE "
+					   "with ENABLE_SOAP_SSL");
 			}
 
 				/* gSOAP doesn't use the server_keyfile if no password
@@ -93,38 +85,21 @@ init_soap(struct soap *soap)
 				   figure this bug out? The symptom/error I was
 				   getting, was "no shared cipher" from SSL. -Matt 3/3/5
 				 */
-			bool freePassword = true;
-			char *server_keyfile_password;
-			if (!(server_keyfile_password =
-				  param((subsys + "_SOAP_SSL_SERVER_KEYFILE_PASSWORD").Value())) &&
-				!(server_keyfile_password =
-				  param("SOAP_SSL_SERVER_KEYFILE_PASSWORD")))
-			if (NULL == server_keyfile_password) {
-				server_keyfile_password = "96hoursofmattslife";
-				freePassword = false;
+			char *server_keyfile_password =
+				param("SOAP_SSL_SERVER_KEYFILE_PASSWORD");
+			if (!server_keyfile_password) {
+				server_keyfile_password = strdup("96hoursofmattslife");
 			}
 
-			char *ca_file;
-			if (!(ca_file = param((subsys + "_SOAP_SSL_CA_FILE").Value()))) {
-				ca_file = param("SOAP_SSL_CA_FILE");
+			char *ca_file = param("SOAP_SSL_CA_FILE");
+			char *ca_path = param("SOAP_SSL_CA_DIR");
+
+			if (NULL == ca_file && NULL == ca_path) {
+				EXCEPT("DaemonCore: Must specify SOAP_SSL_CA_FILE "
+					   "or SOAP_SSL_CA_DIR with ENABLE_SOAP_SSL");
 			}
 
-			char *ca_path;
-			if (!(ca_path = param((subsys + "_SOAP_SSL_CA_DIR").Value()))) {
-				ca_path = param("SOAP_SSL_CA_DIR");
-			}
-
-			if (NULL == ca_file &&
-				NULL == ca_path) {
-				EXCEPT("DaemonCore: Must specify [SUBSYS_]SOAP_SSL_CA_FILE "
-					   "or [SUBSYS_]SOAP_SSL_CA_DIR with "
-					   "[SUBSYS_]ENABLE_SOAP_SSL");
-			}
-
-			char *dh_file;
-			if (!(dh_file = param((subsys + "_SOAP_SSL_DH_FILE").Value()))) {
-				dh_file = param("SOAP_SSL_DH_FILE");
-			}
+			char *dh_file = param("SOAP_SSL_DH_FILE");
 
 			dprintf(D_FULLDEBUG,
 					"SOAP SSL CONFIG: PORT %d; "
@@ -246,7 +221,7 @@ init_soap(struct soap *soap)
 				free(server_keyfile);
 				server_keyfile = NULL;
 			}
-			if (server_keyfile_password && freePassword) {
+			if (server_keyfile_password) {
 				free(server_keyfile_password);
 				server_keyfile_password = NULL;
 			}
@@ -264,8 +239,8 @@ init_soap(struct soap *soap)
 			}
 		} else {
 			dprintf(D_ALWAYS,
-					"DaemonCore: [SUBSYS_]ENABLE_SOAP_SSL set, "
-					"but no valid <SUBSYS>_SOAP_SSL_PORT.\n");
+					"DaemonCore: ENABLE_SOAP_SSL set, "
+					"but no valid SOAP_SSL_PORT.\n");
 
 		}
 	}

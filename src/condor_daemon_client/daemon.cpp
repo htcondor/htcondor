@@ -1482,6 +1482,14 @@ Daemon::initHostname( void )
 		locate();
 	}
 
+		// check again if we already have the info
+	if( _full_hostname ) {
+		if( !_hostname ) {
+			return initHostnameFromFull();
+		}
+		return true;
+	}
+
 	if( ! _addr ) {
 			// this is bad...
 		return false;

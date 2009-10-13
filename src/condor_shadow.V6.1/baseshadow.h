@@ -113,6 +113,8 @@ class BaseShadow : public Service
 		*/
 	void reconnectFailed( const char* reason ); 
 
+	virtual bool shouldAttemptReconnect(RemoteResource *) { return true;};
+
 		/** Here, we param for lots of stuff in the config file.  Things
 			param'ed for are: SPOOL, FILESYSTEM_DOMAIN, UID_DOMAIN, 
 			USE_AFS, USE_NFS, and CKPT_SERVER_HOST.
@@ -412,10 +414,6 @@ class BaseShadow : public Service
 	char *spool;
 	char *fsDomain;
 	char *uidDomain;
-	char *ckptServerHost;
-	bool useAFS;
-	bool useNFS;
-	bool useCkptServer;
 	int reconnect_ceiling;
 	double reconnect_e_factor;
 

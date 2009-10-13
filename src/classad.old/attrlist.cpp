@@ -740,32 +740,6 @@ int AttrList::Insert(ExprTree* expr, bool check_for_dups)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// If the attribute is already in the list, replace it with the new one.
-// Otherwise just insert it.
-////////////////////////////////////////////////////////////////////////////////
-// No more InsertOrUpdate implementation -- we just call Insert()
-#if 0
-int AttrList::InsertOrUpdate(char* attr)
-{
-	ExprTree	tree;
-
-	if(Parse(attr, tree) != 0)
-	{
-		return FALSE;
-	}
-	if(tree->MyType() != LX_ASSIGN)
-	{
-		return FALSE;
-	}
-	if((Insert(tree) == FALSE) && (UpdateExpr(tree) == FALSE))
-	{
-		return FALSE;
-	}
-	return TRUE;
-}
-#endif
-
-////////////////////////////////////////////////////////////////////////////////
 // Delete an expression with the name "name" from this AttrList. Return TRUE if
 // successful; FALSE if the expression can not be found.
 ////////////////////////////////////////////////////////////////////////////////
@@ -889,45 +863,6 @@ void AttrList::ClearAllDirtyFlags()
     }
 	return;
 }
-
-////////////////////////////////////////////////////////////////////////////////
-// Find an attibute and replace its value with a new value.
-////////////////////////////////////////////////////////////////////////////////
-#if 0
-int AttrList::UpdateExpr(char* name, ExprTree* tree)
-{
-    ExprTree*	tmpTree;	// the expression to be updated
-
-    if(tree->MyType() == LX_ASSIGN)
-    {
-		return FALSE;
-    }
-
-	inside_insert = true;
-
-    if(!(tmpTree = Lookup(name)))
-    {
-		return FALSE;
-    }
-
-    tree->Copy();
-	delete tmpTree->RArg();
-	((BinaryOp*)tmpTree)->rArg = tree;
-
-	inside_insert = false;
-
-    return TRUE;
-}
-
-int AttrList::UpdateExpr(ExprTree* attr)
-{
-	if(attr->MyType() != LX_ASSIGN)
-	{
-		return FALSE;
-	}
-	return UpdateExpr(((Variable*)attr->LArg())->Name(), attr->RArg());
-}
-#endif
 
 void
 AttrList::ChainCollapse()
@@ -1763,35 +1698,6 @@ AttrList::dPrint( int level )
 }
 
 
-#if 0 // don't use CONTEXTs anymore
-//////////////////////////////////////////////////////////////////////////////
-// Create a CONTEXT from an AttrList
-//////////////////////////////////////////////////////////////////////////////
-/*
-int
-AttrList::MakeContext (CONTEXT *c)
-{
-	char *line = new char [256];
-	AttrListElem *elem;
-	EXPR *expr;
-
-	for (elem = exprList; elem; elem = elem -> next)
-	{
-		line [0] = '\0';
-		elem->tree->PrintToStr (line);
-		expr = scan (line);
-		if (expr == NULL)
-			return FALSE;
-		store_stmt (expr, c);
-	}
-
-	delete [] line;
-	return TRUE;
-}
-*/
-#endif
-
-
 AttrListList::AttrListList()
 {
     head = NULL;
@@ -2466,89 +2372,6 @@ AttrList::initFromString(char const *str,MyString *err_msg)
 }
 
 
-#if defined(USE_XDR)
-// xdr shipping code
-int AttrList::put(XDR *xdrs)
-{
-    AttrListElem*   elem;
-    char*           line;
-    int             numExprs = 0;
-
-	xdrs->x_op = XDR_ENCODE;
-
-    //get the number of expressions
-    for(elem = exprList; elem; elem = elem->next)
-        numExprs++;
-
-	// ship number of expressions
-    if(!xdr_int (xdrs, &numExprs))
-        return 0;
-
-	// ship expressions themselves
-    line = new char[ATTRLIST_MAX_EXPRESSION];
-    for(elem = exprList; elem; elem = elem->next) {
-        strcpy(line, "");
-        elem->tree->PrintToStr(line);
-        if(!xdr_mywrapstring (xdrs, &line)) {
-            delete [] line;
-            return 0;
-        }
-    }
-    delete [] line;
-
-    return 1;
-}
-
-int AttrList::get(XDR *xdrs)
-{
-    ExprTree*       tree;
-    char*           line;
-    int             numExprs;
-	int             errorFlag = 0;
-
-	xdrs->x_op = XDR_DECODE;
-
-    if(!xdr_int (xdrs, &numExprs))
-        return 0;
-    
-    line = new char[ATTRLIST_MAX_EXPRESSION];
-	if (!line)
-	{
-		return 0;
-	}
-
-	// if we encounter a parse error, we still read the remaining strings from
-	// the xdr stream --- we just don't parse these.  Also, we return a FALSE
-	// indicating failure
-    for(int i = 0; i < numExprs; i++) 
-	{ 
-		strcpy(line, "");
-		if(!xdr_mywrapstring (xdrs, &line)) {
-            delete [] line;
-            return 0;
-        }
-        
-		// parse iff no errorFlag
-		if (!errorFlag)
-		{
-			int result = Parse (line, tree);
-			if(result == 0 && tree->MyType() != LX_ERROR) 
-			{
-				Insert (tree);
-			}
-			else 
-			{
-				errorFlag = 1;
-			}
-		}
-	}
-
-    delete [] line;
-
-	return (!errorFlag);
-}
-#endif
-
 void AttrList::ChainToAd(AttrList *ad)
 {
 	if (!ad) {
@@ -2883,11 +2706,7 @@ AttrList::CopyAttribute(char const *target_attr, char const *source_attr, AttrLi
 
 	ExprTree *e = source_ad->Lookup(source_attr);
 	if (e && e->MyType() == LX_ASSIGN && e->RArg()) {
-#ifdef USE_STRING_SPACE_IN_CLASSADS
 		ExprTree *lhs = new Variable((char *)target_attr);
-#else
-		ExprTree *lhs = new Variable(strnewp(target_attr));
-#endif
 		ExprTree *rhs = e->RArg()->DeepCopy();
 		ASSERT( lhs && rhs );
 		ExprTree *assign = new AssignOp(lhs,rhs);

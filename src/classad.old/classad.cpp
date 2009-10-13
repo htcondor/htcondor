@@ -44,10 +44,6 @@ static	SortFunctionType SortSmallerThan;
 static	void* SortInfo;
 static  const char *empty_string = "";
 
-#if defined(USE_XDR)
-extern "C" int xdr_mywrapstring (XDR *, char **);
-#endif
-
 // useful when debugging (std* are macros)
 FILE *__stdin__  = stdin;
 FILE *__stdout__ = stdout;
@@ -99,36 +95,7 @@ ClassAd::ClassAd() : AttrList()
 {
 	myType = NULL;
 	targetType = NULL;
-	// SetRankExpr ("Rank = 0");
-	// SetRequirements ("Requirements = TRUE");
 }
-
-#if 0 /* don't want to link with ProcObj class; we shouldn't need this */
-ClassAd::ClassAd(class ProcObj* procObj) : AttrList(procObj)
-{
-	myType = NULL;
-	targetType = NULL;
-	// SetRankExpr ("Rank = 0");
-	// SetRequirements ("Requirements = TRUE");
-}
-#endif
-
-#if 0 // dont use CONTEXTs anymore
-ClassAd::ClassAd(const CONTEXT* context) : AttrList((CONTEXT *) context)
-{
-	myType = NULL;
-	targetType = NULL;
-	if (!Lookup ("Requirements"))
-	{
-		SetRequirements ("Requirements = TRUE");
-	}
-
-	if (!Lookup ("Rank"))
-	{
-    	SetRankExpr ("Rank = 0");
-	}
-}
-#endif
 
 ClassAd::
 ClassAd(FILE* f, char* d, int& i, int &err, int &empty) 
@@ -753,68 +720,6 @@ ClassAd::initFromStream(Stream& s)
     return 1; 
 }
 
-
-#if defined(USE_XDR)
-int ClassAd::put (XDR *xdrs)
-{
-	char*	tmp = NULL;
-
-	xdrs->x_op = XDR_ENCODE;
-
-	if (!AttrList::put (xdrs))
-		return 0;
-
-	if(myType)
-	{
-		if (!xdr_mywrapstring (xdrs, &myType->name))
-			return 0;
-	}
-	else
-	{
-		if (!xdr_mywrapstring (xdrs, &tmp))
-			return 0;
-	}
-
-	if(targetType)
-	{
-		if (!xdr_mywrapstring (xdrs, &targetType->name))
-			return 0;
-	}
-	else
-	{
-		if (!xdr_mywrapstring (xdrs, &tmp))
-			return 0;
-	}
-
-	return 1;
-}
-
-
-int ClassAd::get (XDR *xdrs)
-{
-	char buf[100];
-	char *line = buf;
-
-	if (!line) return 0;
-
-	xdrs->x_op = XDR_DECODE;
-
-	if (!AttrList::get (xdrs)) 
-		return 0;
-
-	if (!xdr_mywrapstring (xdrs, &line)) 
-		return 0;
-
-	SetMyTypeName (line);
-
-	if (!xdr_mywrapstring (xdrs, &line)) 
-		return 0;
-
-	SetTargetTypeName (line);
-
-	return 1;
-}
-#endif
 
 ClassAd* ClassAdList::Lookup(const char* name)
 {

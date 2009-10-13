@@ -51,8 +51,6 @@ class ClassAd : public AttrList
     public :
 
 		ClassAd();								// No associated AttrList list
-//		ClassAd(ProcObj*);						// create from a proc object
-//		ClassAd(const CONTEXT*);				// create from a CONTEXT
         ClassAd(FILE*,char*,int&,int&,int&);	// Constructor, read from file.
         ClassAd(char *, char);					// Constructor, from string.
 		ClassAd(const ClassAd&);				// copy constructor
@@ -84,12 +82,6 @@ class ClassAd : public AttrList
 		 * @return true on success
 		 */
 		bool initFromString(char const *str,MyString *err_msg=NULL);
-
-#if defined(USE_XDR)
-		// xdr shipping
-		int put (XDR *);
-		int get (XDR *);
-#endif
 
 		// misc
 		class ClassAd*	FindNext();

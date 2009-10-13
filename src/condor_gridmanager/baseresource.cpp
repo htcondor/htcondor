@@ -26,7 +26,7 @@
 #include "basejob.h"
 #include "gridmanager.h"
 
-#define DEFAULT_MAX_SUBMITTED_JOBS_PER_RESOURCE		100
+#define DEFAULT_MAX_SUBMITTED_JOBS_PER_RESOURCE		1000
 
 int BaseResource::probeInterval = 300;	// default value
 int BaseResource::probeDelay = 15;		// default value
@@ -547,7 +547,7 @@ dprintf(D_FULLDEBUG,"    UpdateLeases: calc'ing new leases\n");
 			}
 			if ( dirty ) {
 				still_dirty = true;
-				requestScheddUpdate( curr_job );
+				requestScheddUpdate( curr_job, false );
 			}
 		}
 		if ( still_dirty ) {
@@ -604,7 +604,7 @@ dprintf(D_FULLDEBUG,"    %d.%d is not in succeeded list\n",curr_job->procID.clus
 		if ( curr_renewal_failed != last_renewal_failed ) {
 			curr_job->jobAd->Assign( ATTR_LAST_JOB_LEASE_RENEWAL_FAILED,
 									 curr_renewal_failed );
-			requestScheddUpdate( curr_job );
+			requestScheddUpdate( curr_job, false );
 		}
 		leaseUpdates.DeleteCurrent();
 	}

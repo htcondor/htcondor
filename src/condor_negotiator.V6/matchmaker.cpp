@@ -237,7 +237,7 @@ reinitialize ()
 
 	// get timeout values
 
- 	NegotiatorInterval = param_integer("NEGOTIATOR_INTERVAL",300);
+ 	NegotiatorInterval = param_integer("NEGOTIATOR_INTERVAL",60);
 
 	NegotiatorTimeout = param_integer("NEGOTIATOR_TIMEOUT",30);
 

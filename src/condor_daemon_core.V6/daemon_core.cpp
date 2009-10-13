@@ -816,36 +816,36 @@ int	DaemonCore::Reset_Reaper(int rid, const char* reap_descrip,
 int	DaemonCore::Register_Timer(unsigned deltawhen, Event event,
 				const char *event_descrip, Service* s)
 {
-	return( t.NewTimer(s, deltawhen, event, event_descrip, 0, -1) );
+	return( t.NewTimer(s, deltawhen, event, event_descrip, 0) );
 }
 
 int	DaemonCore::Register_Timer(unsigned deltawhen, Event event,
 							   Release release, const char *event_descrip, Service* s)
 {
-	return( t.NewTimer(s, deltawhen, event, release, event_descrip, 0, -1) );
+	return( t.NewTimer(s, deltawhen, event, release, event_descrip, 0) );
 }
 
 int	DaemonCore::Register_Timer(unsigned deltawhen, unsigned period,
 				Event event, const char *event_descrip, Service* s)
 {
-	return( t.NewTimer(s, deltawhen, event, event_descrip, period, -1) );
+	return( t.NewTimer(s, deltawhen, event, event_descrip, period) );
 }
 
 int	DaemonCore::Register_Timer(unsigned deltawhen, Eventcpp eventcpp,
 				const char *event_descrip, Service* s)
 {
-	return( t.NewTimer(s, deltawhen, eventcpp, event_descrip, 0, -1) );
+	return( t.NewTimer(s, deltawhen, eventcpp, event_descrip, 0) );
 }
 
 int	DaemonCore::Register_Timer(unsigned deltawhen, unsigned period,
 				Eventcpp event, const char *event_descrip, Service* s )
 {
-	return( t.NewTimer(s, deltawhen, event, event_descrip, period, -1) );
+	return( t.NewTimer(s, deltawhen, event, event_descrip, period) );
 }
 
-int DaemonCore::Register_Timer (Timeslice timeslice,Eventcpp event,const char * event_descrip,Service* s)
+int DaemonCore::Register_Timer (const Timeslice &timeslice,Eventcpp event,const char * event_descrip,Service* s)
 {
-	return t.NewTimer(s, timeslice, event, event_descrip, -1 );
+	return t.NewTimer(s, timeslice, event, event_descrip );
 }
 
 int	DaemonCore::Cancel_Timer( int id )
@@ -2600,13 +2600,8 @@ DaemonCore::reconfig(void) {
 #ifdef COMPILE_SOAP_SSL
 	MyString subsys = MyString(get_mySubSystem()->getName());
 	bool enable_soap_ssl = param_boolean("ENABLE_SOAP_SSL", false);
-	bool subsys_enable_soap_ssl =
-		param_boolean((subsys + "_ENABLE_SOAP_SSL").Value(), false);
 
-	if (subsys_enable_soap_ssl ||
-		(enable_soap_ssl &&
-		 (!(NULL != param((subsys + "_ENABLE_SOAP_SSL").Value())) ||
-		  subsys_enable_soap_ssl))) {
+	if (enable_soap_ssl) {
 		if (mapfile) {
 			delete mapfile; mapfile = NULL;
 		}

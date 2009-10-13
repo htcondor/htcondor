@@ -64,6 +64,8 @@ class GT4Job : public BaseJob
 
 	bool SwitchToGram42();
 
+	int ProxyCallback();
+
 	static int probeInterval;
 	static int submitInterval;
 	static int gahpCallTimeout;
