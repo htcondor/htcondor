@@ -5,12 +5,12 @@ Edit Imakefile and set the version number.  Example:
 
 DIST_VERSION = 1.0rc4
 
-Edit classad.C and change the version number:
+Edit new_classad.cpp and change the version number:
 
     version_string = "1.0-rc4";
 
-The other version of ClassAdLibraryVersion(major,minor,patch) in classad.C
-should also be updated.
+The other version of ClassAdLibraryVersion(major,minor,patch) in
+new_classad.cpp should also be updated.
 
 Edit README to update the version number and release date at the top
 of the file.

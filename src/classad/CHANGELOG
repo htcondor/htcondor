@@ -1,3 +1,13 @@
+Changes for version 1.0.4 (Release 2009-10-05)
+* Added eval() function to be consistent with "old" classad library used
+  by Condor.
+* Fixed problem with calculating timezone offsets.  This problem caused
+  the library checks to fail in the British timezone.
+* Made code changes to ease transition from "old" to "new" classad library
+  in Condor.
+* Fixed problems in absTime() and relTime() that could cause undefined
+  behavior on malformed input strings.
+
 Changes for version 1.0.3 (Released 2009-03-10)
 * Fixed name of ClassAd function strcmp() to be case-insensitive, like all
   other function names. The function's behavior was and continues to be

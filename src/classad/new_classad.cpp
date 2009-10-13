@@ -39,13 +39,13 @@ void ClassAdLibraryVersion(int &major, int &minor, int &patch)
 {
     major = 1;
     minor = 0;
-    patch = 1;
+    patch = 4;
     return;
 }
 
 void ClassAdLibraryVersion(string &version_string)
 {
-    version_string = "1.0.3";
+    version_string = "1.0.4";
     return;
 }
 
