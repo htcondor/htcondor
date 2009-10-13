@@ -1845,6 +1845,13 @@ TESTCLASS(job_dagman_recovery_event_check,quick)
 TESTCLASS(job_dagman_recovery_event_check,full)
 TESTCLASS(job_dagman_recovery_event_check,quicknolink)
 
+DESC(job_dagman_vars,"Test DAG VARS feature")
+RUN(job_dagman_vars)
+TESTCLASS(job_dagman_vars,dagman)
+TESTCLASS(job_dagman_vars,quick)
+TESTCLASS(job_dagman_vars,full)
+TESTCLASS(job_dagman_vars,quicknolink)
+
 
 /* Sample performance tests */
 

@@ -1,0 +1,22 @@
+Job NodeA job_dagman_vars-node.cmd
+Vars NodeA nodename="$(JOB)"
+Vars NodeA first="Alberto_Condator" second="Andy_Schleck"
+Vars NodeA third="Lance_Armstrong"
+
+Job NodeB job_dagman_vars-node.cmd
+Vars NodeB nodename="$(JOB)"
+Vars NodeB third="Pedro_Delgado" first="Greg_LeMond" second="Laurent_Fignon"
+
+Job NodeC job_dagman_vars-node.cmd
+Vars NodeC nodename="$(JOB)"
+Vars NodeC second="Andreas_Kloden"
+Vars NodeC third="Carlos_Sastre"
+
+Job NodeD job_dagman_vars-node.cmd
+Vars NodeD nodename="$(JOB)"
+Vars NodeD first="Lance_Armstrong"
+Vars NodeD second="Andreas_Kloden"
+Vars NodeD third="Ivan_Basso"
+
+Parent NodeA Child NodeB NodeC
+Parent NodeB NodeC Child NodeD
