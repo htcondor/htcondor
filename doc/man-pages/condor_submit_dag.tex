@@ -109,11 +109,27 @@ description.
      of detected errors in the user log specification.
      As of version 7.3.2, this argument has an effect only on
      DAGs containing Stork job nodes.}
-  \OptItem{\OptArg{-r}{schedd\_name}}{Submit to a remote schedd. The jobs
-    will be submitted to the schedd on the specified remote host. On Unix
-    systems, the Condor administrator for you site must override the default
-    AUTHENTICATION\_METHODS configuration setting to enable remote file system
-    (FS\_REMOTE) authentication.}
+  \OptItem{\OptArg{-r}{schedd\_name}}{
+     Submit \Condor{dagman} to a remote machine, specifically the
+     \Condor{schedd} daemon on that machine.
+     The \Condor{dagman} job will not run on the local \Condor{schedd}
+     (the submit machine), but on the specified one.
+     This is implemented using the \Opt{-remote} option to \Condor{submit}.
+     Note that this option does not currently specify input files
+     for \Condor{dagman}, nor the individual nodes to be taken along!
+     It is assumed that any necessary files will be present on 
+     the remote computer,
+     possibly via a shared file system between the local computer and 
+     the remote computer. 
+     It is also necessary that the user has appropriate permissions 
+     to submit a job to the remote machine;
+     the permissions are the same as those required to use \Condor{submit}'s
+     \Opt{-remote} option.
+     If other options are desired,
+     including transfer of other input files,
+     consider using the \Opt{-no\_submit} option,
+     modifying the resulting submit file for specific needs,
+     and then using \Condor{submit} on that.  }
   \OptItem{\OptArg{-debug}{level}}{
      Passes the the \Arg{level} of debugging output desired to
      \Condor{dagman}.  \Arg{level} is an integer, with values of
