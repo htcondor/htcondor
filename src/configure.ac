@@ -49,7 +49,7 @@ AC_MSG_NOTICE([verifying build environment ])
 # release of an RPM-based system
 AC_PATH_PROG(ac_rpmquery,rpm,no,[$PATH])
 
-if test "x$ac_rpmquery" == "xno" ; then
+if test "x$ac_rpmquery" = "xno" ; then
    RPMQUERY=/bin/false
 else
    RPMQUERY=$ac_rpmquery
@@ -69,7 +69,7 @@ _which_bad_dir=""
 _found_s_std_bin=no
 _found_p_build_bin=no
 _p_build_bin="/p/condor/workspaces/build/bin"
-if test $my_domain = "cs.wisc.edu" && test -d "/s/std/bin" ; then
+if test "x$my_domain" = "xcs.wisc.edu" && test -d "/s/std/bin" ; then
   AC_MSG_CHECKING([if PATH on CSL-supported machine is ok])
   as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
   for as_dir in $PATH
@@ -77,7 +77,7 @@ if test $my_domain = "cs.wisc.edu" && test -d "/s/std/bin" ; then
     IFS=$as_save_IFS
     for test_dir in $_bad_path_dirs
     do
-      if test $as_dir = $test_dir ; then
+      if test "x$as_dir" = "x$test_dir" ; then
         _found_bad_dir=yes
 	if test "x$_which_bad_dir" = "x" ; then
           _which_bad_dir="$test_dir"
@@ -86,8 +86,8 @@ if test $my_domain = "cs.wisc.edu" && test -d "/s/std/bin" ; then
 	fi
       fi
     done
-    if test $as_dir = $_p_build_bin ; then
-      if test $_found_bad_dir = "yes" ; then
+    if test "x$as_dir" = "x$_p_build_bin" ; then
+      if test "x$_found_bad_dir" = "xyes" ; then
         AC_MSG_RESULT([no])
         AC_MSG_ERROR([You are compiling on a UW-Madison CSL-supported machine and $_p_build_bin is *NOT* near the front of your PATH.  This configure script will not be able to find the right versions of the programs it needs to build Condor.  Please fix your PATH by putting $_p_build_bin *BEFORE* any of these directories in your PATH: $_which_bad_dir])
       fi
@@ -95,7 +95,7 @@ if test $my_domain = "cs.wisc.edu" && test -d "/s/std/bin" ; then
       break
     fi
   done
-  if test $_found_p_build_bin = "no" ; then
+  if test "x$_found_p_build_bin" = "xno" ; then
     AC_MSG_RESULT([no])
     AC_MSG_ERROR([You are compiling on a UW-Madison CSL-supported machine and $_p_build_bin is *NOT* in your PATH.  This configure script will not be able to find the right versions of programs it needs to build Condor.  Please fix your PATH by adding $_p_build_bin (it must be before any of these directories: $_bad_path_dirs) and re-run configure])
   fi
@@ -154,7 +154,7 @@ AC_ARG_WITH(platform,
 # be an x86_64 machine. Here we determine if sysctl is available, and then
 # later we'll use it to figure out the actual platform.
 AC_PATH_PROG(ac_sysctl,sysctl,no,[$PATH])
-if test "x$ac_sysctl" == "xno" ; then
+if test "x$ac_sysctl" = "xno" ; then
    SYSCTL=/bin/false
 else
    STSCTL=$ac_sysctl
@@ -708,7 +708,7 @@ AC_ARG_ENABLE(proper,
 AC_ARG_ENABLE(full-port,
   [AS_HELP_STRING([--enable-full-port],
     [Perform a full build, i.e. Standard Universe included (default: enabled)])],
-  [CLIPPED=$(test $enableval == yes && echo no || echo yes)],
+  [CLIPPED=$(test "x$enableval" == "xyes" && echo no || echo yes)],
   [CLIPPED=default])
 
 AC_ARG_ENABLE(gcc-version-check,
