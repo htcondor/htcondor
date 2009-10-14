@@ -71,6 +71,17 @@ why local or scheduler universe jobs are idle when
 \MacroNI{START\_LOCAL\_UNIVERSE} or
 \MacroNI{START\_SCHEDULER\_UNIVERSE} refer to these attributes.
 
+% #130
+\item Add support for KVM in the vm universe.
+
+% #688
+\item The \Condor{vm-gahp} now links with libvirt, rather than calling
+virsh command-line tools.
+
+% #760
+\item Greatly improved \Condor{gridmanager}'s scalability when handling
+many grid-type gt2 grid universe jobs.
+
 \end{itemize}
 
 \noindent Configuration Variable Additions and Changes:
@@ -122,6 +133,11 @@ why local or scheduler universe jobs are idle when
   though the default when the variable is not defined in the
   configuration file was not to use the grid monitor.
 
+% #631
+\item \MacroNI{VM\_VERSION} has been removed, as has the machine ad
+attribute of the same name. \MacroNI{START\_ATTRS} can be used to
+add virtual machine version information to the machine ad.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -162,6 +178,35 @@ such as \Attr{LastRejMatchTime}.  Therefore, when evaluating policy
 expressions that referred to these attributes, they were effectively
 treated as though undefined.  Quill was also not able to see these
 attributes.
+
+% #822
+\item Fixed a bug introduced in 7.3.2 that could cause the
+\Condor{gridmanager} to crash repeatedly on startup if the job queue
+contained grid-type gt2 jobs that had been previously submitted.
+
+% #724, #774
+\item Fixed two bugs related to VOMS introduced in 7.3.2. The first
+prevented jobs with X509 proxies from being submitted on platforms
+on which Condor doesn't support VOMS. The second prevented submission
+of jobs with VOMS proxies if the authenticity of the VOMS extensions
+couldn't be verified.
+
+\item Fixed a bad default in \Attr{batch\_gahp.config} that prevented
+Condor from observing job state changes for grid-type pbs and lsf grid
+universe jobs.
+
+% #748
+\item Fixed a bug that caused Condor-C jobs to fail if
+\Attr{transfer\_executable} was set to \Opt{False}.
+
+% #784
+\item Fix a bug that caused Condor-C jobs to fail if the executable
+or stdin/out/err filenames contained a comma.
+
+% #460
+\item File transfer for grid-type gt4 jobs requires an empty directory
+in \Attr{/tmp}, which the \Condor{gridmanager} creates. If this directory
+is deleted, the \Condor{gridmanager} will now recreate it.
 
 \end{itemize}
 
