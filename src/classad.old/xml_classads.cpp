@@ -629,9 +629,7 @@ ClassAdXMLUnparser::Unparse(ClassAd *classad, MyString &buffer, StringList *attr
 
 	// Then loop through all the other expressions in the ClassAd
 	classad->ResetExpr();
-	for (classad->NextExpr(name, expression); 
-		 expression != NULL; 
-		 classad->NextExpr(name, expression)) {
+	while (classad->NextExpr(name, expression)) {
 		if( expression->invisible ) {
 			continue;
 		}
