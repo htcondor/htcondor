@@ -2027,7 +2027,9 @@ int main( int argc, char** argv )
 		// right now: a) we are running as a service, and services are 
 		// born without a console, or b) the user did not specify "-f" 
 		// or "-t", and thus we called FreeConsole() above.
-	AllocConsole();
+	BOOL is_kdbb = (0 == strcmp(get_mySubSystem()->getName(), "KBDD"));
+	if(!is_kdbb)
+		AllocConsole();
 #endif
 
 		// Avoid possibility of stale info sticking around from previous run.

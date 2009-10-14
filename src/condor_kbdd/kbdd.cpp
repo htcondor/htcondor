@@ -18,6 +18,7 @@
  ***************************************************************/
 
 #include "condor_common.h"
+#define KBDD
 #ifdef WIN32
 #include "condor_daemon_core.h"
 #include "condor_debug.h"
@@ -187,3 +188,18 @@ main_pre_command_sock_init( )
 {
 }
 
+int WINAPI WinMain( __in HINSTANCE hInstance, __in_opt HINSTANCE hPrevInstance, __in_opt LPSTR lpCmdLine, __in int nShowCmd )
+{
+	OutputDebugString("In WinMain\n");
+	char **parameters = (char**)malloc(sizeof(char*)*2);
+	parameters[0] = "condor_kbdd";
+	parameters[1] = NULL;
+	dc_main(1, parameters);
+
+	while(1)
+	{
+
+	}
+
+	return 0;
+}
