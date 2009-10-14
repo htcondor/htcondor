@@ -64,11 +64,13 @@
 # endif
 # ifdef HAVE_LINUX_MAGIC_H
 #  include <linux/magic.h>
+# elif defined(HAVE_LINUX_NFS_FS_H)
+#  include <linux/nfs_fs.h>
 # elif defined(HAVE_LINUX_NFSD_CONST_H)
 #  include <linux/nfsd/const.h>
 # endif
 # ifndef NFS_SUPER_MAGIC
-#  undef USE_STATFS
+#  define NFS_SUPER_MAGIC 0x6969	// From the man pages of statfs()
 # endif
 #endif
 

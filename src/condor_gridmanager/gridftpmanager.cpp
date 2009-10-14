@@ -92,14 +92,14 @@ GridftpServer::GridftpServer( Proxy *proxy )
 	m_checkServerTid = daemonCore->Register_Timer( 0,
 								(TimerHandlercpp)&GridftpServer::CheckServer,
 								"GridftpServer::CheckServer", (Service*)this );
-	AcquireProxy( m_proxy, m_checkServerTid );
+	AcquireProxy( m_proxy, (Eventcpp)&GridftpServer::CheckServerSoon, this );
 
 }
 
 GridftpServer::~GridftpServer()
 {
 	m_serversByProxy.remove( HashKey( m_proxy->subject->subject_name ) );
-	ReleaseProxy( m_proxy );
+	ReleaseProxy( m_proxy, (Eventcpp)&GridftpServer::CheckServerSoon, this );
 	if ( m_urlBase ) {
 		free( m_urlBase );
 	}

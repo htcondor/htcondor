@@ -700,7 +700,6 @@ extern const char * const ATTR_TREQ_EXIT_CODE;
 extern const char * const  ATTR_NEGOTIATOR_MATCH_EXPR;
 
 extern const char * const ATTR_VM_TYPE;
-extern const char * const ATTR_VM_VERSION;
 extern const char * const ATTR_VM_MEMORY;
 extern const char * const ATTR_VM_NETWORKING;
 extern const char * const ATTR_VM_NETWORKING_TYPES;

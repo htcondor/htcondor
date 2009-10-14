@@ -28,6 +28,7 @@
 */
 
 SYSNAME = @_cv_sysname@
+MFT_PLATFORM = @_cv_platform@
 #define OperatingSystem @_cv_op_sys@
 #define Architecture @_cv_arch@
 #define Platform @_cv_arch@-@_cv_opsys_vers@

@@ -172,21 +172,21 @@ FLOCK_COLLECTOR_HOSTS = $(FLOCK_TO)
 ##  machine(s) where whoever is the condor administrator(s) works
 ##  (assuming you trust all the users who log into that/those
 ##  machine(s), since this is machine-wide access you're granting).
-HOSTALLOW_ADMINISTRATOR = $(CONDOR_HOST)
+ALLOW_ADMINISTRATOR = $(CONDOR_HOST)
 
 ##  If there are no machines that should have administrative access 
 ##  to your pool (for example, there's no machine where only trusted
 ##  users have accounts), you can uncomment this setting.
 ##  Unfortunately, this will mean that administering your pool will 
 ##  be more difficult.
-#HOSTDENY_ADMINISTRATOR = *
+#DENY_ADMINISTRATOR = *
 
 ##  What machines should have "owner" access to your machines, meaning
 ##  they can issue commands that a machine owner should be able to
 ##  issue to their own machine (like condor_vacate).  This defaults to
 ##  machines with administrator access, and the local machine.  This
 ##  is probably what you want.
-HOSTALLOW_OWNER = $(FULL_HOSTNAME), $(HOSTALLOW_ADMINISTRATOR)
+ALLOW_OWNER = $(FULL_HOSTNAME), $(ALLOW_ADMINISTRATOR)
 
 ##  Read access.  Machines listed as allow (and/or not listed as deny)
 ##  can view the status of your pool, but cannot join your pool 
@@ -198,46 +198,58 @@ HOSTALLOW_OWNER = $(FULL_HOSTNAME), $(HOSTALLOW_ADMINISTRATOR)
 ##  will be able to view the status of your pool and more easily help
 ##  you install, configure or debug your Condor installation.
 ##  It is important to have this defined.
-HOSTALLOW_READ = * 
-#HOSTALLOW_READ = *.your.domain, *.cs.wisc.edu
-#HOSTDENY_READ = *.bad.subnet, bad-machine.your.domain, 144.77.88.*
+ALLOW_READ = * 
+#ALLOW_READ = *.your.domain, *.cs.wisc.edu
+#DENY_READ = *.bad.subnet, bad-machine.your.domain, 144.77.88.*
 
 ##  Write access.  Machines listed here can join your pool, submit
 ##  jobs, etc.  Note: Any machine which has WRITE access must
 ##  also be granted READ access.  Granting WRITE access below does
 ##  not also automatically grant READ access; you must change
-##  HOSTALLOW_READ above as well.
+##  ALLOW_READ above as well.
 ##
 ##  You must set this to something else before Condor will run.
 ##  This most simple option is:
-##    HOSTALLOW_WRITE = *
+##    ALLOW_WRITE = *
 ##  but note that this will allow anyone to submit jobs or add
-##  machines to your pool and is serious security risk.
-HOSTALLOW_WRITE = YOU_MUST_CHANGE_THIS_INVALID_CONDOR_CONFIGURATION_VALUE
-#HOSTALLOW_WRITE = *.your.domain, your-friend's-machine.other.domain
-#HOSTDENY_WRITE = bad-machine.your.domain
+##  machines to your pool and is a serious security risk.
+
+ALLOW_WRITE = YOU_MUST_CHANGE_THIS_INVALID_CONDOR_CONFIGURATION_VALUE
+#ALLOW_WRITE = *.your.domain, your-friend's-machine.other.domain
+#DENY_WRITE = bad-machine.your.domain
+
+##  Are you upgrading to a new version of Condor and confused about
+##  why the above ALLOW_WRITE setting is causing Condor to refuse to
+##  start up?  If you are upgrading from a configuration that uses
+##  HOSTALLOW/HOSTDENY instead of ALLOW/DENY we recommend that you
+##  convert all uses of the former to the latter.  The syntax of the
+##  authorization settings is identical.  They both support
+##  unauthenticated IP-based authorization as well as authenticated
+##  user-based authorization.  To avoid confusion, the use of
+##  HOSTALLOW/HOSTDENY is discouraged.  Support for it may be removed
+##  in the future.
 
 ##  Negotiator access.  Machines listed here are trusted central
 ##  managers.  You should normally not have to change this.
-HOSTALLOW_NEGOTIATOR = $(CONDOR_HOST)
+ALLOW_NEGOTIATOR = $(CONDOR_HOST)
 ##  Now, with flocking we need to let the SCHEDD trust the other 
 ##  negotiators we are flocking with as well.  You should normally 
 ##  not have to change this either.
-HOSTALLOW_NEGOTIATOR_SCHEDD = $(CONDOR_HOST), $(FLOCK_NEGOTIATOR_HOSTS)
+ALLOW_NEGOTIATOR_SCHEDD = $(CONDOR_HOST), $(FLOCK_NEGOTIATOR_HOSTS)
 
 ##  Config access.  Machines listed here can use the condor_config_val
 ##  tool to modify all daemon configurations.  This level of host-wide
 ##  access should only be granted with extreme caution.  By default,
 ##  config access is denied from all hosts.
-#HOSTALLOW_CONFIG = trusted-host.your.domain
+#ALLOW_CONFIG = trusted-host.your.domain
 
 ##  Flocking Configs.  These are the real things that Condor looks at,
 ##  but we set them from the FLOCK_FROM/TO macros above.  It is safe
 ##  to leave these unchanged.
-HOSTALLOW_WRITE_COLLECTOR = $(HOSTALLOW_WRITE), $(FLOCK_FROM)
-HOSTALLOW_WRITE_STARTD    = $(HOSTALLOW_WRITE), $(FLOCK_FROM)
-HOSTALLOW_READ_COLLECTOR  = $(HOSTALLOW_READ), $(FLOCK_FROM)
-HOSTALLOW_READ_STARTD     = $(HOSTALLOW_READ), $(FLOCK_FROM)
+ALLOW_WRITE_COLLECTOR = $(ALLOW_WRITE), $(FLOCK_FROM)
+ALLOW_WRITE_STARTD    = $(ALLOW_WRITE), $(FLOCK_FROM)
+ALLOW_READ_COLLECTOR  = $(ALLOW_READ), $(FLOCK_FROM)
+ALLOW_READ_STARTD     = $(ALLOW_READ), $(FLOCK_FROM)
 
 
 ##--------------------------------------------------------------------
@@ -271,7 +283,7 @@ HOSTALLOW_READ_STARTD     = $(HOSTALLOW_READ), $(FLOCK_FROM)
 #PERSISTENT_CONFIG_DIR = /full/path/to/root-only/local/directory
 
 ##  Attributes that can be set by hosts with "CONFIG" permission (as
-##  defined with HOSTALLOW_CONFIG and HOSTDENY_CONFIG above).
+##  defined with ALLOW_CONFIG and DENY_CONFIG above).
 ##  The commented-out value here was the default behavior of Condor
 ##  prior to version 6.3.3.  If you don't need this behavior, you
 ##  should leave this commented out.
@@ -333,11 +345,39 @@ HOSTALLOW_READ_STARTD     = $(HOSTALLOW_READ), $(FLOCK_FROM)
 ##--------------------------------------------------------------------
 ##  Try to save this much swap space by not starting new shadows.  
 ##  Specified in megabytes.
-#RESERVED_SWAP		= 5
+#RESERVED_SWAP		= 0
 
 ##  What's the maximum number of jobs you want a single submit machine
-##  to spawn shadows for?
-#MAX_JOBS_RUNNING	= 200
+##  to spawn shadows for?  The default is a function of $(DETECTED_MEMORY)
+##  and a guess at the number of ephemeral ports available.
+
+## Example 1:
+#MAX_JOBS_RUNNING	= 10000
+
+## Example 2:
+## This is more complicated, but it produces the same limit as the default.
+## First define some expressions to use in our calculation.
+## Assume we can use up to 80% of memory and estimate shadow private data
+## size of 800k.
+#MAX_SHADOWS_MEM	= ceiling($(DETECTED_MEMORY)*0.8*1024/800)
+## Assume we can use ~21,000 ephemeral ports (avg ~2.1 per shadow).
+## Under Linux, the range is set in /proc/sys/net/ipv4/ip_local_port_range.
+#MAX_SHADOWS_PORTS	= 10000
+## Under windows, things are much less scalable, currently.
+## Note that this can probably be safely increased a bit under 64-bit windows.
+#MAX_SHADOWS_OPSYS	= ifThenElse(regexp("WIN.*","$(OPSYS)"),200,100000)
+## Now build up the expression for MAX_JOBS_RUNNING.  This is complicated
+## due to lack of a min() function.
+#MAX_JOBS_RUNNING	= $(MAX_SHADOWS_MEM)
+#MAX_JOBS_RUNNING	= \
+#  ifThenElse( $(MAX_SHADOWS_PORTS) < $(MAX_JOBS_RUNNING), \
+#              $(MAX_SHADOWS_PORTS), \
+#              $(MAX_JOBS_RUNNING) )
+#MAX_JOBS_RUNNING	= \
+#  ifThenElse( $(MAX_SHADOWS_OPSYS) < $(MAX_JOBS_RUNNING), \
+#              $(MAX_SHADOWS_OPSYS), \
+#              $(MAX_JOBS_RUNNING) )
+
 
 ##  Maximum number of simultaneous downloads of output files from
 ##  execute machines to the submit machine (limit applied per schedd).
@@ -413,8 +453,8 @@ GLIDEIN_SERVER_URLS = \
 ## List the sites you want to GlideIn to on the GLIDEIN_SITES. For example, 
 ## if you'd like to GlideIn to some Alliance GiB resources, 
 ## uncomment the line below.
-## Make sure that $(GLIDEIN_SITES) is included in HOSTALLOW_READ and
-## HOSTALLW_WRITE, or else your GlideIns won't be able to join your pool.
+## Make sure that $(GLIDEIN_SITES) is included in ALLOW_READ and
+## ALLOW_WRITE, or else your GlideIns won't be able to join your pool.
 ## This is _NOT_ done for you by default, because it is an even better
 ## idea to use a strong security method (such as GSI) rather than
 ## host-based security for authorizing glideins.
@@ -651,16 +691,10 @@ WANT_VACATE		= $(UWCS_WANT_VACATE)
 START			= $(UWCS_START)
 
 ##  When should a local universe job be allowed to start?
-START_LOCAL_UNIVERSE	= True
-# Only start a local universe jobs if there are less
-# than 100 local jobs currently running
-#START_LOCAL_UNIVERSE	= TotalLocalJobsRunning < 100
+#START_LOCAL_UNIVERSE	= TotalLocalJobsRunning < 200
 
 ##  When should a scheduler universe job be allowed to start?
-START_SCHEDULER_UNIVERSE	= True
-# Only start a scheduler universe jobs if there are less
-# than 100 scheduler jobs currently running
-#START_SCHEDULER_UNIVERSE	= TotalSchedulerJobsRunning < 100
+#START_SCHEDULER_UNIVERSE	= TotalSchedulerJobsRunning < 200
 
 ##  When to suspend a job?
 SUSPEND			= $(UWCS_SUSPEND)
@@ -1423,7 +1457,7 @@ SCHEDD_DAEMON_AD_FILE = $(SPOOL)/.schedd_classad
 
 ##  Estimated virtual memory size of each condor_shadow process. 
 ##  Specified in kilobytes.
-SHADOW_SIZE_ESTIMATE	= 1800
+# SHADOW_SIZE_ESTIMATE	= 800
 
 ##  The condor_schedd can renice the condor_shadow processes on your
 ##  submit machines.  How "nice" do you want the shadows? (1-19).
@@ -1763,7 +1797,7 @@ CRED_MIN_TIME_LEFT		= 120
 ## 
 ## The GridMonitor allows you to submit many more jobs to a GT2 GRAM server
 ## than is normally possible.
-ENABLE_GRID_MONITOR = TRUE
+#ENABLE_GRID_MONITOR = TRUE
 
 ##
 ## When an error occurs with the GridMonitor, how long should the
@@ -2141,10 +2175,6 @@ MAX_VM_GAHP_LOG	= 1000000
 ## The two options are vmware and xen.  (Required)
 #VM_TYPE = vmware
 
-## Which version of the above virtual machine program is installed? (Required)
-## This is advertised in the machine ad.
-#VM_VERSION = server1.0
-
 ## How much memory can be used for the VM universe? (Required)
 ## This value is the maximum amount of memory that can be used by the 
 ## virtual machine program.
@@ -2462,7 +2492,7 @@ HDFS_DATANODE_DIR = /scratch/tmp/hadoop_data
 
 ## The access to HDFS services both name node and data node can be 
 ## restricted by specifying IP/host based filters. By default settings
-## from HOSTALLOW_READ/HOSTALLOW_WRITE and HOSTDENY_READ/HOSTDENY_WRITE
+## from ALLOW_READ/ALLOW_WRITE and DENY_READ/DENY_WRITE
 ## are used to specify allow and deny list. The below two parameters can
 ## be used to override these settings. Read the Condor manual for 
 ## specification of these filters.

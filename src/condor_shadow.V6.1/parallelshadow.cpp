@@ -125,6 +125,19 @@ ParallelShadow::init( ClassAd* job_ad, const char* schedd_addr, const char *xfer
 }
 
 
+bool
+ParallelShadow::shouldAttemptReconnect(RemoteResource *r) {
+	if (shutdownPolicy == WAIT_FOR_ALL) {
+		return true;
+	}
+
+	if ((shutdownPolicy == WAIT_FOR_NODE0) && (r != ResourceList[0])) {
+		return false;
+	}
+
+	return true;
+}
+
 void
 ParallelShadow::reconnect( void )
 {
@@ -942,11 +955,11 @@ ParallelShadow::logDisconnectedEvent( const char* reason )
 	}
 	event.setStartdAddr( dc_startd->addr() );
 	event.setStartdName( dc_startd->name() );
-*/
 
 	if( !uLog.writeEvent(&event,jobAd) ) {
 		dprintf( D_ALWAYS, "Unable to log ULOG_JOB_DISCONNECTED event\n" );
 	}
+*/
 }
 
 

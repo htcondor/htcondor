@@ -1343,6 +1343,7 @@ Daemon::getCmInfo( const char* subsys )
 			free( host_name );
 		}
 		free( hostnames );
+		delete [] local_name;
 	}
 
 	if( ! host || !host[0]) {
@@ -1479,6 +1480,14 @@ Daemon::initHostname( void )
 		// we get everything else we need, while we're at it...
 	if( ! _tried_locate ) {
 		locate();
+	}
+
+		// check again if we already have the info
+	if( _full_hostname ) {
+		if( !_hostname ) {
+			return initHostnameFromFull();
+		}
+		return true;
 	}
 
 	if( ! _addr ) {

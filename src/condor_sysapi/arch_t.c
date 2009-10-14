@@ -71,6 +71,8 @@ int arch_test(int trials)
 	dprintf(D_ALWAYS, "SysAPI: sysapi_condor_arch -> %s\n", foo);
 	bar = sysapi_uname_arch();
 	dprintf(D_ALWAYS, "SysAPI: sysapi_uname_arch -> %s\n", bar);
+	foo = sysapi_opsys();
+	dprintf(D_ALWAYS, "SysAPI: sysapi_opsys -> %s\n", foo);
 
 	return return_val;
 }

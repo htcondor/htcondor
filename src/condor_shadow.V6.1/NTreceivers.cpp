@@ -110,6 +110,9 @@ do_REMOTE_syscall()
 				"closed unexpectedly";
 			Shadow->logDisconnectedEvent( txt ); 
 
+			if (!Shadow->shouldAttemptReconnect(thisRemoteResource)) {
+					return 0;
+			}
 				// tell the shadow to start trying to reconnect
 			Shadow->reconnect();
 				// we need to return 0 so that our caller doesn't

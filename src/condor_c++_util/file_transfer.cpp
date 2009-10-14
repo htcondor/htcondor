@@ -1516,7 +1516,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 {
 	int rc;
 	int reply = 0;
-	filesize_t bytes;
+	filesize_t bytes=0;
 	MyString filename;;
 	MyString fullname;
 	char *tmp_buf = NULL;
@@ -3201,6 +3201,7 @@ int FileTransfer::InitializePlugins(CondorError &e) {
 		}
 	}
 
+	free(plugin_list_string);
 	return 0;
 }
 

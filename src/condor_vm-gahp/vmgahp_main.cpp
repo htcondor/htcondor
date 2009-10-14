@@ -467,8 +467,6 @@ int main_init(int argc, char *argv[])
 		write_to_daemoncore_pipe("VM_GAHP_VERSION = \"%s\"\n", CONDOR_VMGAHP_VERSION); 
 		write_to_daemoncore_pipe("%s = \"%s\"\n", ATTR_VM_TYPE, 
 				gahpconfig->m_vm_type.Value());
-		write_to_daemoncore_pipe("%s = \"%s\"\n", ATTR_VM_VERSION, 
-				gahpconfig->m_vm_version.Value());
 		write_to_daemoncore_pipe("%s = %d\n", ATTR_VM_MEMORY, 
 				gahpconfig->m_vm_max_memory);
 		write_to_daemoncore_pipe("%s = %s\n", ATTR_VM_NETWORKING, 

@@ -126,7 +126,7 @@ platforms =   \
 test_append_prereqs = java-1.4.2_05, perl-5.8.5
 prereqs_x86_64_rhas_3       = VMware-server-1.0.7
 x_test_platforms_ia64_rhas_3 = ia64_rhas_4
-x_test_platforms_x86_64_rhas_3 = x86_64_rhas_4, x86_64_fc_4
+x_test_platforms_x86_64_rhas_3 = x86_64_rhas_4
 testonly_append_prereqs = perl-5.8.5
 #x_test_platforms_x86_64_rhas_3 = x86_64_fc_5
 ]

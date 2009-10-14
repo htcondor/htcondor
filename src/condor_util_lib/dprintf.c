@@ -38,6 +38,7 @@
 
 #define _FILE_OFFSET_BITS 64
 #include "condor_common.h"
+#include "condor_sys_types.h"
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "subsystem_info.h"
@@ -103,7 +104,8 @@ int		DebugUseTimestamps = 0;
 ** debug file for each level plus an additional catch-all debug file
 ** at index 0.
 */
-int		MaxLog[D_NUMLEVELS+1] = { 0 };
+
+uint64_t	MaxLog[D_NUMLEVELS+1] = { 0 };
 char	*DebugFile[D_NUMLEVELS+1] = { NULL };
 char	*DebugLock = NULL;
 

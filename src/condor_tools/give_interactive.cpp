@@ -474,15 +474,15 @@ main(int argc, char *argv[])
 
 	// initialize some global expressions
 	sprintf (buffer, "MY.%s > MY.%s", ATTR_RANK, ATTR_CURRENT_RANK);
-	Parse (buffer, rankCondStd);
+	ParseClassAdRvalExpr (buffer, rankCondStd);
 	sprintf (buffer, "MY.%s >= MY.%s", ATTR_RANK, ATTR_CURRENT_RANK);
-	Parse (buffer, rankCondPrioPreempt);
+	ParseClassAdRvalExpr (buffer, rankCondPrioPreempt);
 
 	// get PreemptionReq expression from config file
 	PreemptionReq = NULL;
 	tmp = param("PREEMPTION_REQUIREMENTS");
 	if( tmp ) {
-		if( Parse(tmp, PreemptionReq) ) {
+		if( ParseClassAdRvalExpr(tmp, PreemptionReq) ) {
 			fprintf(stderr, 
 				"\nERROR: Failed to parse PREEMPTION_REQUIREMENTS.\n");
 			exit(1);
@@ -493,7 +493,7 @@ main(int argc, char *argv[])
 	PreemptionRank = NULL;
 	tmp = param("PREEMPTION_RANK");
 	if( tmp ) {
-		if( Parse(tmp, PreemptionRank) ) {
+		if( ParseClassAdRvalExpr(tmp, PreemptionRank) ) {
 			fprintf(stderr, 
 				"\nERROR: Failed to parse PREEMPTION_RANK.\n");
 			exit(1);

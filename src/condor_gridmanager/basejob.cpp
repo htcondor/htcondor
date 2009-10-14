@@ -194,7 +194,7 @@ void BaseJob::JobRunning()
 			executeLogged = true;
 		}
 
-		requestScheddUpdate( this );
+		requestScheddUpdate( this, false );
 	}
 }
 
@@ -216,7 +216,7 @@ void BaseJob::JobIdle()
 			executeLogged = false;
 		}
 
-		requestScheddUpdate( this );
+		requestScheddUpdate( this, false );
 	}
 }
 
@@ -255,7 +255,7 @@ void BaseJob::JobCompleted()
 
 		UpdateRuntimeStats();
 
-		requestScheddUpdate( this );
+		requestScheddUpdate( this, false );
 	}
 }
 
@@ -312,7 +312,7 @@ void BaseJob::DoneWithJob()
 		break;
 	}
 
-	requestScheddUpdate( this );
+	requestScheddUpdate( this, false );
 }
 
 void BaseJob::JobHeld( const char *hold_reason, int hold_code,
@@ -360,7 +360,7 @@ void BaseJob::JobHeld( const char *hold_reason, int hold_code,
 			holdLogged = true;
 		}
 
-		requestScheddUpdate( this );
+		requestScheddUpdate( this, false );
 	}
 }
 
@@ -375,7 +375,7 @@ void BaseJob::JobRemoved( const char *remove_reason )
 
 		UpdateRuntimeStats();
 
-		requestScheddUpdate( this );
+		requestScheddUpdate( this, false );
 	}
 }
 
@@ -399,7 +399,7 @@ void BaseJob::UpdateRuntimeStats()
 		num_job_starts++;
 		jobAd->Assign( ATTR_NUM_JOB_STARTS, num_job_starts );
 
-		requestScheddUpdate( this );
+		requestScheddUpdate( this, false );
 
 	} else if ( condorState != RUNNING && shadowBirthdate != 0 ) {
 
@@ -412,7 +412,7 @@ void BaseJob::UpdateRuntimeStats()
 		jobAd->Assign( ATTR_JOB_WALL_CLOCK_CKPT,(char *)NULL );
 		jobAd->Assign( ATTR_SHADOW_BIRTHDATE, 0 );
 
-		requestScheddUpdate( this );
+		requestScheddUpdate( this, false );
 
 	}
 }
@@ -446,7 +446,7 @@ void BaseJob::SetRemoteJobId( const char *job_id )
 		m_currentStatusUnknown = false;
 		jobAd->Assign( ATTR_CURRENT_STATUS_UNKNOWN, false );
 	}
-	requestScheddUpdate( this );
+	requestScheddUpdate( this, false );
 }
 
 bool BaseJob::SetRemoteJobStatus( const char *job_status )
@@ -457,7 +457,7 @@ bool BaseJob::SetRemoteJobStatus( const char *job_status )
 	if ( job_status ) {
 		m_lastRemoteStatusUpdate = time(NULL);
 		jobAd->Assign( ATTR_LAST_REMOTE_STATUS_UPDATE, m_lastRemoteStatusUpdate );
-		requestScheddUpdate( this );
+		requestScheddUpdate( this, false );
 		if ( m_currentStatusUnknown == true ) {
 			m_currentStatusUnknown = false;
 			jobAd->Assign( ATTR_CURRENT_STATUS_UNKNOWN, false );
@@ -478,7 +478,7 @@ bool BaseJob::SetRemoteJobStatus( const char *job_status )
 	if ( !new_job_status.IsEmpty() ) {
 		jobAd->Assign( ATTR_GRID_JOB_STATUS, new_job_status.Value() );
 	}
-	requestScheddUpdate( this );
+	requestScheddUpdate( this, false );
 	return true;
 }
 
@@ -557,7 +557,7 @@ dprintf(D_FULLDEBUG,"(%d.%d) UpdateJobLeaseSent(%d)\n",procID.cluster,procID.pro
 						   new_expiration_time );
 		}
 
-		requestScheddUpdate( this );
+		requestScheddUpdate( this, false );
 
 		SetJobLeaseTimers();
 	}
@@ -623,7 +623,7 @@ dprintf(D_FULLDEBUG,"(%d.%d) BaseJob::JobLeaseReceivedExpired()\n",procID.cluste
 
 	UpdateRuntimeStats();
 
-	requestScheddUpdate( this );
+	requestScheddUpdate( this, false );
 
 	SetEvaluateState();
 	return 0;
@@ -871,7 +871,7 @@ void BaseJob::CheckRemoteStatus()
 	if ( time(NULL) > m_lastRemoteStatusUpdate + stale_limit ) {
 		m_currentStatusUnknown = true;
 		jobAd->Assign( ATTR_CURRENT_STATUS_UNKNOWN, true );
-		requestScheddUpdate( this );
+		requestScheddUpdate( this, false );
 		WriteJobStatusUnknownEventToUserLog( jobAd );
 		SetEvaluateState();
 	}
@@ -934,7 +934,7 @@ void BaseJob::NotifyResourceDown()
 		WriteGlobusResourceDownEventToUserLog( jobAd );
 		WriteGridResourceDownEventToUserLog( jobAd );
 		jobAd->Assign( ATTR_GRID_RESOURCE_UNAVAILABLE_TIME, (int)time(NULL) );
-		requestScheddUpdate( this );
+		requestScheddUpdate( this, false );
 	}
 	resourceDown = true;
 	if ( resourcePingPending ) {
@@ -952,7 +952,7 @@ void BaseJob::NotifyResourceUp()
 		WriteGlobusResourceUpEventToUserLog( jobAd );
 		WriteGridResourceUpEventToUserLog( jobAd );
 		jobAd->AssignExpr( ATTR_GRID_RESOURCE_UNAVAILABLE_TIME, "Undefined" );
-		requestScheddUpdate( this );
+		requestScheddUpdate( this, false );
 	}
 	resourceDown = false;
 	if ( resourcePingPending ) {

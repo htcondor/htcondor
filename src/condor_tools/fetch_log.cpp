@@ -241,4 +241,5 @@ int handleHistoryDir(ReliSock *sock) {
 			sock->code(result);
 			free(filename);
 	}
+	return 0;
 }

@@ -78,7 +78,7 @@ MyString create_success_result( int req_id, StringList *result_list);
 bool set_gahp_log_file(const char* logfile);
 
 void set_amazon_proxy_server(const char* url);
-bool get_amazon_proxy_server(const char* &host_name, int& port );
+bool get_amazon_proxy_server(const char* &host_name, int& port, const char* &user_name, const char* &passwd );
 
 const char* get_ec2_url(void);
 void set_ec2_url(const char* url);

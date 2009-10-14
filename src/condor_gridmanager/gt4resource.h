@@ -67,6 +67,8 @@ class GT4Resource : public BaseResource
 	static void setGahpCallTimeout( int new_timeout )
 		{ gahpCallTimeout = new_timeout; }
 
+	int ProxyCallback();
+
 	// This should be private, but GT4Job references it directly for now
 	static HashTable <HashKey, GT4Resource *> ResourcesByName;
 

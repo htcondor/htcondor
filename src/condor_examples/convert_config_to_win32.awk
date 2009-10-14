@@ -124,11 +124,6 @@ BEGIN {
 	print "VM_TYPE ="
 	next
 }
-/^#VM_VERSION/ {
-	print "#VM_VERSION = server1.0"
-	print "VM_VERSION ="
-	next
-}
 /^#VM_MAX_NUMBER/ {
 	print "VM_MAX_NUMBER = $(NUM_CPUS)"
 	next

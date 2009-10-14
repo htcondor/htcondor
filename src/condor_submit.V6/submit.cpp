@@ -346,8 +346,8 @@ const char	*CronDayOfWeek	= "cron_day_of_week";
 const char	*CronWindow		= "cron_window";
 const char	*CronPrepTime	= "cron_prep_time";
 
-#if defined(WIN32)
 const char	*RunAsOwner = "run_as_owner";
+#if defined(WIN32)
 const char	*LoadProfile = "load_profile";
 #endif
 
@@ -422,8 +422,8 @@ bool 	SetNewTransferFiles( void );
 void 	SetOldTransferFiles( bool, bool );
 void	InsertFileTransAttrs( FileTransferOutput_t when_output );
 void 	SetTDP();
-#if defined(WIN32)
 void	SetRunAsOwner();
+#if defined(WIN32)
 void    SetLoadProfile();
 #endif
 void	SetRank();
@@ -4339,7 +4339,6 @@ SetTDP( void )
 	free(allow_arguments_v1);
 }
 
-#if defined(WIN32)
 void
 SetRunAsOwner()
 {
@@ -4347,16 +4346,13 @@ SetRunAsOwner()
 	if (run_as_owner == NULL) {
 		return;
 	}
-	if (!isTrue(run_as_owner)) {
-		free(run_as_owner);
-		return;
-	}
-			
-	free(run_as_owner);
-	MyString buffer;
-	buffer.sprintf(  "%s = True", ATTR_JOB_RUNAS_OWNER );
-	InsertJobExpr (buffer);
 
+	MyString buffer;
+	buffer.sprintf(  "%s = %s", ATTR_JOB_RUNAS_OWNER, isTrue(run_as_owner) ? "True" : "False" );
+	InsertJobExpr (buffer);
+	free(run_as_owner);
+
+#if defined(WIN32)
 	// make sure we have a CredD
 	// (RunAsOwner is global for use in SetRequirements(),
 	//  the memory is freed() there)
@@ -4367,8 +4363,10 @@ SetRunAsOwner()
 		DoCleanup(0,0,NULL);
 		exit(1);
 	}
+#endif
 }
 
+#if defined(WIN32)
 void 
 SetLoadProfile()
 {
@@ -5785,6 +5783,7 @@ set_condor_param( const char *name, const char *value )
 	char *tval = strdup( value );
 
 	insert( name, tval, ProcVars, PROCVARSIZE );
+	free(tval);
 }
 
 void
@@ -5972,8 +5971,8 @@ queue(int num)
 		SetLocalFiles();
 		SetTDP();			// before SetTransferFile() and SetRequirements()
 		SetTransferFiles();	 // must be called _before_ SetImageSize() 
-#if defined(WIN32)
 		SetRunAsOwner();
+#if defined(WIN32)
         SetLoadProfile();
 #endif
 		SetPerFileEncryption();  // must be called _before_ SetRequirements()
@@ -6986,12 +6985,13 @@ InsertJobExpr (const char *expr, bool clustercheck)
 		}
 	}
 
-	int retval = Parse (expr, tree);
+	int pos = 0;
+	int retval = Parse (expr, tree, &pos);
 
 	if (retval)
 	{
 		fprintf (stderr, "\nERROR: Parse error in expression: \n\t%s\n\t", expr);
-		while (retval--) {
+		while (pos--) {
 			fputc( ' ', stderr );
 		}
 		fprintf (stderr, "^^^\n");

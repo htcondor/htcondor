@@ -46,18 +46,18 @@ ClassAdAnalyzer( bool ras ) :
   preempt_rank << "MY." << ATTR_RANK << " >= MY." << ATTR_CURRENT_RANK;
   preempt_prio << "MY." << ATTR_REMOTE_USER_PRIO << " > TARGET." << ATTR_SUBMITTOR_PRIO << " + " << PriorityDelta;
 
-  Parse(std_rank.str().c_str(), std_rank_condition);
-  Parse(preempt_rank.str().c_str(), preempt_rank_condition);
-  Parse(preempt_prio.str().c_str(), preempt_prio_condition);
+  ParseClassAdRvalExpr(std_rank.str().c_str(), std_rank_condition);
+  ParseClassAdRvalExpr(preempt_rank.str().c_str(), preempt_rank_condition);
+  ParseClassAdRvalExpr(preempt_prio.str().c_str(), preempt_prio_condition);
   
   char *preq;
   if( NULL == ( preq = param( "PREEMPTION_REQUIREMENTS" ) ) ) {
     // No PREEMPTION_REQUIREMENTS; defaulting to FALSE
-    Parse( "FALSE", preemption_req );
+    ParseClassAdRvalExpr( "FALSE", preemption_req );
   } else {
-    if( Parse( preq , preemption_req ) ) {
+    if( ParseClassAdRvalExpr( preq , preemption_req ) ) {
       // Failed to parse PREEMPTION_REQUIREMENTS; defaulting to FALSE
-      Parse( "FALSE", preemption_req );
+      ParseClassAdRvalExpr( "FALSE", preemption_req );
     }
     free( preq );
   }

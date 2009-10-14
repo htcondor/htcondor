@@ -692,6 +692,8 @@ DedicatedScheduler::initialize( void )
 	dummy_job.Assign( ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_MPI );
 	dummy_job.Assign( ATTR_JOB_STATUS, IDLE );
 	dummy_job.Assign( ATTR_IMAGE_SIZE, 10 ); // WANT_SUSPEND often needs this
+	dummy_job.Assign( ATTR_REQUEST_MEMORY, 10 ); // Dynamic slots needs this
+	dummy_job.Assign( ATTR_REQUEST_DISK, 10 ); //     and this
 	config_fill_ad( &dummy_job );
 
 		// Next, register our special MPI shadow reaper
@@ -2619,8 +2621,8 @@ DedicatedScheduler::computeSchedule( void )
 			// running jobs
 
 		if( (param1 != NULL) && (param2 != NULL)) {
-			Parse(param1, preemption_req);
-			Parse(param2, preemption_rank);
+			ParseClassAdRvalExpr(param1, preemption_req);
+			ParseClassAdRvalExpr(param2, preemption_rank);
 		}
 		if( param1 ) {
 			free(param1);

@@ -361,7 +361,8 @@ int AmazonJob::doEvaluateState()
 	bool reevaluate_state = true;
 	time_t now = time(NULL);
 
-	bool done;
+	bool attr_exists;
+	bool attr_dirty;
 	int rc;
 
 	daemonCore->Reset_Timer( evaluateStateTid, TIMER_NEVER );
@@ -402,7 +403,9 @@ int AmazonJob::doEvaluateState()
 				// constructor is called while we're connected to the schedd).
 
 				// JEF: Save GMSession to the schedd if needed
-				if ( requestScheddUpdate( this ) == false ) {
+				jobAd->GetDirtyFlag( "GMSession", &attr_exists, &attr_dirty );
+				if ( attr_exists && attr_dirty ) {
+					requestScheddUpdate( this, true );
 					break;
 				}
 
@@ -466,9 +469,11 @@ int AmazonJob::doEvaluateState()
 				if ( m_key_pair == "" ) {
 					SetKeypairId( build_keypair().Value() );
 				}
-				if ( requestScheddUpdate( this ) == false ) {
+				jobAd->GetDirtyFlag( ATTR_GRID_JOB_ID, &attr_exists, &attr_dirty );
+				if ( attr_exists && attr_dirty ) {
 						// The keypair name still needs to be saved to
 						//the schedd
+					requestScheddUpdate( this, true );
 					break;
 				}
 				gmState = GM_CREATE_KEYPAIR;
@@ -640,9 +645,10 @@ int AmazonJob::doEvaluateState()
 			
 			case GM_SAVE_INSTANCE_ID:
 
-				done = requestScheddUpdate( this );
-				if ( !done ) {
+				jobAd->GetDirtyFlag( ATTR_GRID_JOB_ID, &attr_exists, &attr_dirty );
+				if ( attr_exists && attr_dirty ) {
 					// Wait for the instance id to be saved to the schedd
+					requestScheddUpdate( this, true );
 					break;
 				}					
 				gmState = GM_SUBMITTED;
@@ -692,8 +698,9 @@ int AmazonJob::doEvaluateState()
 				if ( condorState != HELD && condorState != REMOVED ) {
 					JobTerminated();
 					if ( condorState == COMPLETED ) {
-						done = requestScheddUpdate( this );
-						if ( !done ) {
+						jobAd->GetDirtyFlag( ATTR_JOB_STATUS, &attr_exists, &attr_dirty );
+						if ( attr_exists && attr_dirty ) {
+							requestScheddUpdate( this, true );
 							break;
 						}
 					}
@@ -798,9 +805,9 @@ int AmazonJob::doEvaluateState()
 				// through. However, since we registered update events the
 				// first time, requestScheddUpdate won't return done until
 				// they've been committed to the schedd.
-				done = requestScheddUpdate( this );
-				if ( !done ) {
-
+				jobAd->ResetExpr();
+				if ( jobAd->NextDirtyExpr() ) {
+					requestScheddUpdate( this, true );
 					break;
 				}
 
@@ -1138,7 +1145,7 @@ void AmazonJob::SetRemoteVMName(const char * name)
 		jobAd->AssignExpr( ATTR_AMAZON_REMOTE_VM_NAME, "Undefined" );
 	}
 	
-	requestScheddUpdate( this );
+	requestScheddUpdate( this, false );
 }
 
 

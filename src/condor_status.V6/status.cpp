@@ -669,13 +669,13 @@ firstPass (int argc, char *argv[])
 			ExprTree	*sortExpr;
 			exprString[0] = '\0';
 			sprintf( exprString, "MY.%s < TARGET.%s", argv[i], argv[i] );
-			if( Parse( exprString, sortExpr ) ) {
+			if( ParseClassAdRvalExpr( exprString, sortExpr ) ) {
 				fprintf( stderr, "Error:  Parse error of: %s\n", exprString );
 				exit( 1 );
 			}
 			sortLessThanExprs[sortLessThanExprs.getlast()+1] = sortExpr;
 			sprintf( exprString, "MY.%s == TARGET.%s", argv[i], argv[i] );
-			if( Parse( exprString, sortExpr ) ) {
+			if( ParseClassAdRvalExpr( exprString, sortExpr ) ) {
 				fprintf( stderr, "Error:  Parse error of: %s\n", exprString );
 				exit( 1 );
 			}

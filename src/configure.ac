@@ -49,7 +49,7 @@ AC_MSG_NOTICE([verifying build environment ])
 # release of an RPM-based system
 AC_PATH_PROG(ac_rpmquery,rpm,no,[$PATH])
 
-if test "x$ac_rpmquery" == "xno" ; then
+if test "x$ac_rpmquery" = "xno" ; then
    RPMQUERY=/bin/false
 else
    RPMQUERY=$ac_rpmquery
@@ -69,7 +69,7 @@ _which_bad_dir=""
 _found_s_std_bin=no
 _found_p_build_bin=no
 _p_build_bin="/p/condor/workspaces/build/bin"
-if test $my_domain = "cs.wisc.edu" && test -d "/s/std/bin" ; then
+if test "x$my_domain" = "xcs.wisc.edu" && test -d "/s/std/bin" ; then
   AC_MSG_CHECKING([if PATH on CSL-supported machine is ok])
   as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
   for as_dir in $PATH
@@ -77,7 +77,7 @@ if test $my_domain = "cs.wisc.edu" && test -d "/s/std/bin" ; then
     IFS=$as_save_IFS
     for test_dir in $_bad_path_dirs
     do
-      if test $as_dir = $test_dir ; then
+      if test "x$as_dir" = "x$test_dir" ; then
         _found_bad_dir=yes
 	if test "x$_which_bad_dir" = "x" ; then
           _which_bad_dir="$test_dir"
@@ -86,8 +86,8 @@ if test $my_domain = "cs.wisc.edu" && test -d "/s/std/bin" ; then
 	fi
       fi
     done
-    if test $as_dir = $_p_build_bin ; then
-      if test $_found_bad_dir = "yes" ; then
+    if test "x$as_dir" = "x$_p_build_bin" ; then
+      if test "x$_found_bad_dir" = "xyes" ; then
         AC_MSG_RESULT([no])
         AC_MSG_ERROR([You are compiling on a UW-Madison CSL-supported machine and $_p_build_bin is *NOT* near the front of your PATH.  This configure script will not be able to find the right versions of the programs it needs to build Condor.  Please fix your PATH by putting $_p_build_bin *BEFORE* any of these directories in your PATH: $_which_bad_dir])
       fi
@@ -95,7 +95,7 @@ if test $my_domain = "cs.wisc.edu" && test -d "/s/std/bin" ; then
       break
     fi
   done
-  if test $_found_p_build_bin = "no" ; then
+  if test "x$_found_p_build_bin" = "xno" ; then
     AC_MSG_RESULT([no])
     AC_MSG_ERROR([You are compiling on a UW-Madison CSL-supported machine and $_p_build_bin is *NOT* in your PATH.  This configure script will not be able to find the right versions of programs it needs to build Condor.  Please fix your PATH by adding $_p_build_bin (it must be before any of these directories: $_bad_path_dirs) and re-run configure])
   fi
@@ -107,11 +107,54 @@ fi
 # Figure out what platform we're being run on
 ############################################################
 
+AC_ARG_WITH(arch,
+  [AS_HELP_STRING([--with-arch],
+     [Specify the architecture string that Condor will be built with])],
+  [ARCH=$withval],
+  [ARCH=""])
+
+AC_ARG_WITH(os,
+  [AS_HELP_STRING([--with-os],
+     [Specify the operating system string that Condor will be built with])],
+  [OS=$withval],
+  [OS=""])
+
+AC_ARG_WITH(kernel,
+  [AS_HELP_STRING([--with-kernel],
+     [Specify the kernel version string that Condor will be built with])],
+  [KERNEL=$withval],
+  [KERNEL=""])
+
+AC_ARG_WITH(os-version,
+  [AS_HELP_STRING([--with-os-version],
+     [Specify the O/S version string that Condor will be built with])],
+  [OSVER=$withval],
+  [OSVER=""])
+
+AC_ARG_WITH(sysname,
+  [AS_HELP_STRING([--with-sysname],
+     [Specify the system name string that Condor will be built with])],
+  [SYSNAME=$withval],
+  [SYSNAME=""])
+
+AC_ARG_WITH(libc,
+  [AS_HELP_STRING([--with-libc],
+     [Specify the libc name & version that Condor will be built with])],
+  [LIBC=$withval],
+  [LIBC=""])
+
+AC_ARG_WITH(platform,
+  [AS_HELP_STRING([--with-platform],
+     [Specify the platform name that Condor will be built with])],
+  [_cv_platform=$withval],
+  [_cv_platform=""])
+
+
 # on Darwin on intel, uname will *always* report i386 when in reality it may
 # be an x86_64 machine. Here we determine if sysctl is available, and then
 # later we'll use it to figure out the actual platform.
 AC_PATH_PROG(ac_sysctl,sysctl,no,[$PATH])
-if test "x$ac_sysctl" == "xno" ; then
+if test "x$ac_sysctl" = "xno" ; then
    SYSCTL=/bin/false
 else
    STSCTL=$ac_sysctl
@@ -154,7 +197,11 @@ _cv_kernel_rev="XXX"
 
 os=`uname -s`
 
-if test "$os" = "HP-UX"; then
+if test "$ARCH" != "" && test "$SYSNAME" != "" && test "$LIBC" != ""  &&
+   test "$OS"   != "" && test "$KERNEL"  != "" && test "$OSVER" != "" ; then
+  AC_MSG_NOTICE([Skipping system information checks])
+
+elif test "$os" = "HP-UX"; then
   _cv_op_sys="HPUX"
   _cv_opsys="HPUX"
   if test "$osrelease" = "B.10.20" ; then
@@ -501,6 +548,44 @@ else
   AC_MSG_ERROR([Condor has not been ported to this platform])
 fi
 
+if test "$ARCH" != "" ; then
+  AC_MSG_NOTICE([Using architecture \"$ARCH\" from command line])
+  _cv_arch="$ARCH"
+fi
+
+if test "$OS" != "" ; then
+  AC_MSG_NOTICE([Using operating system \"$OS\" from command line])
+  _cv_with_os="YES"
+  _cv_op_sys="$OS"
+  _cv_opsys="$OS"
+fi
+
+if test "$OSVER" != "" ; then
+  AC_MSG_NOTICE([Using operating system version \"$OSVER\" from command line])
+  _cv_opsys_vers="$OSVER"
+fi
+
+if test "$SYSNAME" != "" ; then
+  AC_MSG_NOTICE([Using system name \"$SYSNAME\" from command line])
+  _cv_sysname="$SYSNAME"
+fi
+
+if test "$KERNEL"  != "" ; then
+  AC_MSG_NOTICE([Using kernel version \"$OSVER\" from command line])
+  _cv_kernel_rev="$KERNEL"
+fi
+
+if test "$LIBC" != "" ; then
+  AC_MSG_NOTICE([Using libc \"$LIBC\" from command line])
+  _cv_libc_kind=`echo $LIBC | $CUT -f1 -d-`
+  _cv_libc_major=`echo $LIBC | cut -f2 -d- | $CUT -f1 -d.`
+  _cv_libc_minor=`echo $LIBC | cut -f2 -d- | $CUT -f2 -d.`
+  _cv_libc_patch=`echo $LIBC | cut -f2 -d- | $CUT -f3 -d.`
+  _cv_libc_full=`echo $_cv_libc_kind $_cv_libc_major $_cv_libc_minor $_cv_libc_patch|$PERL -ane 'print "#define IS_".join('_',@F)." YES";'`
+  _cv_libc_majmin="#define IS_$_cv_libc_kind$_cv_libc_major$_cv_libc_minor YES"
+  _cv_libc_is_kind="#define IS_$_cv_libc_kind YES"
+fi
+
 AC_MSG_CHECKING([architecture])
 AC_MSG_RESULT([$_cv_arch])
 AC_SUBST(_cv_arch,$_cv_arch)
@@ -521,6 +606,10 @@ AC_SUBST(_cv_sysname,$_cv_sysname)
 AC_MSG_CHECKING([kernel revision])
 AC_MSG_RESULT([$_cv_kernel_rev])
 AC_SUBST(_cv_kernel_rev,$_cv_kernel_rev)
+
+AC_MSG_CHECKING([platform name])
+AC_MSG_RESULT([$_platform])
+AC_SUBST(_cv_platform,$_cv_platform)
 
 # check out the libc
 if test "$_cv_opsys" = "LINUX" ; then
@@ -619,7 +708,7 @@ AC_ARG_ENABLE(proper,
 AC_ARG_ENABLE(full-port,
   [AS_HELP_STRING([--enable-full-port],
     [Perform a full build, i.e. Standard Universe included (default: enabled)])],
-  [CLIPPED=$(test $enableval == yes && echo no || echo yes)],
+  [CLIPPED=$(test "x$enableval" == "xyes" && echo no || echo yes)],
   [CLIPPED=default])
 
 AC_ARG_ENABLE(gcc-version-check,
@@ -2301,10 +2390,10 @@ AC_CHECK_HEADERS([sys/param.h])
 AC_CHECK_HEADERS([stdint.h])
 AC_CHECK_HEADERS([inttypes.h])
 AC_CHECK_HEADERS([os_types.h])
+AC_CHECK_HEADERS([sys/syscall.h])
 AC_CHECK_HEADERS([sys/personality.h])
 AC_CHECK_HEADERS([linux/personality.h])
 AC_CHECK_HEADERS([linux/magic.h])
-AC_CHECK_HEADERS([linux/nfsd/const.h])
 AC_CHECK_HEADERS([linux/sockios.h])
 AC_CHECK_HEADERS([linux/types.h])
 AC_CHECK_HEADERS([linux/ethtool.h],[],[],[
@@ -2327,11 +2416,55 @@ AC_CHECK_HEADERS([sys/mount.h],[],[],[
 AC_CHECK_HEADERS([ustat.h])
 AC_CHECK_HEADERS([dlfcn.h])
 AC_CHECK_HEADERS([resolv.h],[],[],[
-#include<sys/types.h>
+#if HAVE_SYS_TYPES_H
+# include<sys/types.h>
+#endif
 #include<netinet/in.h>
 #include<arpa/nameser.h>])
 AC_CHECK_HEADERS([pthread.h])
-AC_CHECK_HEADERS([ldap.h])
+AC_CHECK_HEADERS([lber.h])
+AC_CHECK_HEADERS([ldap.h],[],[],[
+#if HAVE_LBER_H
+# include <lber.h>
+#endif])
+
+AC_MSG_CHECKING([Checking if linux/nfs_fs.h is present and usable])
+AC_COMPILE_IFELSE([
+AC_LANG_SOURCE([
+#include <unistd.h>
+#ifdef HAVE_SYS_TYPES_H
+# include <sys/types.h>
+#endif
+#ifdef HAVE_SYS_PARAM_H
+# include <sys/param.h>
+#endif
+#if HAVE_LINUX_TYPES_H
+# include <linux/types.h>
+#endif
+#include <linux/nfs_fs.h>
+])],
+[AC_MSG_RESULT([yes])
+ AC_DEFINE(HAVE_LINUX_NFS_FS_H,[1],[Define to 1 if <linux/nfs_fs.h> is present and usable])],
+[AC_MSG_RESULT([no])])
+
+AC_MSG_CHECKING([Checking if linux/nfsd/const.h is present and usable])
+AC_COMPILE_IFELSE([
+AC_LANG_SOURCE([
+#include <unistd.h>
+#ifdef HAVE_SYS_TYPES_H
+# include <sys/types.h>
+#endif
+#ifdef HAVE_SYS_PARAM_H
+# include <sys/param.h>
+#endif
+#if HAVE_LINUX_TYPES_H
+# include <linux/types.h>
+#endif
+#include <linux/nfsd/const.h>
+])],
+[AC_MSG_RESULT([yes])
+ AC_DEFINE(HAVE_LINUX_NFSD_CONST_H,[1],[Define to 1 if <linux/nfsd/const.h> is present and usable])],
+[AC_MSG_RESULT([no])])
 
 AC_CHECK_LIB([sasl], [sasl_client_init],
   AC_DEFINE([HAVE_LIBSASL], [1], [check for usable libsasl]))
@@ -2532,11 +2665,28 @@ if test "$ac_cv_func_statfs" = yes ; then
       AC_MSG_ERROR([unable to determine number of arguments to statfs()])])])
 fi dnl test "$ac_cv_func_statfs" = yes
 
+
 # Do we have the "ethtool" and similar declarations?
 AC_CHECK_DECLS([SIOCETHTOOL,SIOCGIFCONF],,, [[#include <linux/sockios.h>]])
 
 # Does net/if.h define struct ifreq ?
 AC_CHECK_TYPES([struct ifreq,struct ifconf],[],[],[#include <net/if.h>])
+
+dnl
+dnl if sigwait() takes 1 or 2 arguments
+dnl
+AC_MSG_CHECKING([number of arguments to sigwait()])
+AC_TRY_COMPILE([#include <signal.h>
+#include <unistd.h>], [sigset_t set;
+sigwait(&set);],[
+  AC_MSG_RESULT([1])
+  AC_DEFINE(SIGWAIT_ARGS, 1, [Number of arguments to sigwait()])],[
+  AC_TRY_COMPILE([#include <signal.h>
+#include <unistd.h>], [sigset_t set; int sig; sigwait(&set, &sig);],[
+    AC_MSG_RESULT([2])
+    AC_DEFINE(SIGWAIT_ARGS, 2, [Number of arguments to sigwait()])],[
+    AC_MSG_RESULT(unknown)
+    AC_MSG_ERROR([unable to determine number of arguments to sigwait()])])])
 
 # we don't actually want to add -lgen to our link line, but we do want
 # HAVE_LIBGEN defined correctly for our test suite builds...
@@ -2865,7 +3015,7 @@ CHECK_EXTERNAL([zlib], [1.2.3], [$_cv_zlib_requirement],
                [use zlib (provides compression support)],
                MF_LIB_CHECK([zlib], [[z deflate]]))
 
-CHECK_EXTERNAL([classads], [1.0.2], [soft],
+CHECK_EXTERNAL([classads], [1.0.4], [soft],
                [use new ClassAds (provides -better-analyze and more)],
 	       # This REALLY should test for headers, like most checks...
                MF_LIB_CHECK([classads], [[classad cclassad_create]]))	       

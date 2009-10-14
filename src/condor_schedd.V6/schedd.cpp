@@ -94,7 +94,7 @@
 #include "ClassAdLogPlugin.h"
 #endif
 
-#define DEFAULT_SHADOW_SIZE 125
+#define DEFAULT_SHADOW_SIZE 800
 #define DEFAULT_JOB_START_COUNT 1
 
 #define SUCCESS 1
@@ -865,6 +865,12 @@ Scheduler::count_jobs()
 	sprintf(tmp, "%s = %d", ATTR_TOTAL_REMOVED_JOBS, JobsRemoved);
 	m_ad->Insert (tmp);
 
+	m_ad->Assign(ATTR_TOTAL_LOCAL_IDLE_JOBS, LocalUniverseJobsIdle);
+	m_ad->Assign(ATTR_TOTAL_LOCAL_RUNNING_JOBS, LocalUniverseJobsRunning);
+	
+	m_ad->Assign(ATTR_TOTAL_SCHEDULER_IDLE_JOBS, SchedUniverseJobsIdle);
+	m_ad->Assign(ATTR_TOTAL_SCHEDULER_RUNNING_JOBS, SchedUniverseJobsRunning);
+
 	m_ad->Assign(ATTR_SCHEDD_SWAP_EXHAUSTED, (bool)SwapSpaceExhausted);
 
     daemonCore->publish(m_ad);
@@ -929,6 +935,11 @@ Scheduler::count_jobs()
 	m_ad->Delete (ATTR_TOTAL_HELD_JOBS);
 	m_ad->Delete (ATTR_TOTAL_FLOCKED_JOBS);
 	m_ad->Delete (ATTR_TOTAL_REMOVED_JOBS);
+	m_ad->Delete (ATTR_TOTAL_LOCAL_IDLE_JOBS);
+	m_ad->Delete (ATTR_TOTAL_LOCAL_RUNNING_JOBS);
+	m_ad->Delete (ATTR_TOTAL_SCHEDULER_IDLE_JOBS);
+	m_ad->Delete (ATTR_TOTAL_SCHEDULER_RUNNING_JOBS);
+
 	sprintf(tmp, "%s = \"%s\"", ATTR_SCHEDD_NAME, Name);
 	m_ad->InsertOrUpdate(tmp);
 
@@ -9205,6 +9216,7 @@ Scheduler::child_exit(int pid, int status)
 	bool            srec_keep_claim_attributes;
 
 	srec = FindSrecByPid(pid);
+	ASSERT(srec);
 	job_id.cluster = srec->job_id.cluster;
 	job_id.proc = srec->job_id.proc;
 
@@ -10176,7 +10188,32 @@ Scheduler::Init()
 
 	JobsThisBurst = -1;
 
-	MaxJobsRunning = param_integer( "MAX_JOBS_RUNNING", 200 );
+		// Estimate that we can afford to use 80% of memory for shadows
+		// and each running shadow requires 800k of private memory.
+		// We don't use SHADOW_SIZE_ESTIMATE here, because until 7.4,
+		// that was explicitly set to 1800k in the default config file.
+	int default_max_jobs_running = sysapi_phys_memory_raw_no_param()*0.8*1024/800;
+
+		// Under Linux (not sure about other OSes), the default TCP
+		// ephemeral port range is 32768-61000.  Each shadow needs 2
+		// ports, sometimes 3, and depending on how fast shadows are
+		// finishing, there will be some ports in CLOSE_WAIT, so the
+		// following is a conservative upper bound on how many shadows
+		// we can run.  Would be nice to check the ephemeral port
+		// range directly.
+	if( default_max_jobs_running > 10000) {
+		default_max_jobs_running = 10000;
+	}
+#ifdef WIN32
+		// Apparently under Windows things don't scale as well.
+		// Under 64-bit, we should be able to scale higher, but
+		// we currently don't have a way to detect that.
+	if( default_max_jobs_running > 200) {
+		default_max_jobs_running = 200;
+	}
+#endif
+
+	MaxJobsRunning = param_integer("MAX_JOBS_RUNNING",default_max_jobs_running);
 
 		// Limit number of simultaenous connection attempts to startds.
 		// This avoids the schedd getting so busy authenticating with
@@ -10197,7 +10234,7 @@ Scheduler::Init()
 			//
 			// Default Expression: TRUE
 			//
-		this->StartLocalUniverse = strdup( "TRUE" );
+		this->StartLocalUniverse = strdup( "TotalLocalJobsRunning < 200" );
 	} else {
 			//
 			// Use what they had in the config file
@@ -10220,7 +10257,7 @@ Scheduler::Init()
 			//
 			// Default Expression: TRUE
 			//
-		this->StartSchedulerUniverse = strdup( "TRUE" );
+		this->StartSchedulerUniverse = strdup( "TotalSchedulerJobsRunning < 200" );
 	} else {
 			//
 			// Use what they had in the config file
@@ -10319,7 +10356,7 @@ Scheduler::Init()
 	if (flock_negotiator_hosts) free(flock_negotiator_hosts);
 
 	/* default 5 megabytes */
-	ReservedSwap = param_integer( "RESERVED_SWAP", 5 );
+	ReservedSwap = param_integer( "RESERVED_SWAP", 0 );
 	ReservedSwap *= 1024;
 
 	/* Value specified in kilobytes */
@@ -10571,7 +10608,7 @@ Scheduler::Init()
 		temp.sprintf("string(%s)",expr);
 		free(expr);
 		expr = temp.StrDup();
-		Parse(temp.Value(),m_parsed_gridman_selection_expr);	
+		ParseClassAdRvalExpr(temp.Value(),m_parsed_gridman_selection_expr);	
 			// if the expression in the config file is not valid, 
 			// the m_parsed_gridman_selection_expr will still be NULL.  in this case,
 			// pretend like it isn't set at all in the config file.
@@ -10859,8 +10896,10 @@ void Scheduler::reconfig() {
 
 	timeout();
 
-		// The SetMaxHistoricalLogs is initialized in main_init(), we just need to check here
-		// for changes.  
+		// The following use of param() is ok, despite the warning at the
+		// top of this function that this function is not called at init time.
+		// SetMaxHistoricalLogs is initialized in main_init(), we just need
+		// to check here for changes.  
 	int max_saved_rotations = param_integer( "MAX_JOB_QUEUE_LOG_ROTATIONS", DEFAULT_MAX_JOB_QUEUE_LOG_ROTATIONS );
 	SetMaxHistoricalLogs(max_saved_rotations);
 }
@@ -12728,9 +12767,9 @@ Scheduler::claimLocalStartd()
 	}
 
 		// Check when we last had a negotiation cycle; if recent, return.
-	int negotiator_interval = param_integer("NEGOTIATOR_INTERVAL",300);
+	int negotiator_interval = param_integer("NEGOTIATOR_INTERVAL",60);
 	int claimlocal_interval = param_integer("SCHEDD_ASSUME_NEGOTIATOR_GONE",
-				negotiator_interval * 4);
+				negotiator_interval * 20);
 				//,	// default (20 min usually)
 				//10 * 60,	// minimum = 10 minutes
 				//120 * 60);	// maximum = 120 minutes

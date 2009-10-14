@@ -69,7 +69,6 @@ extern "C" {
 	int	prio_compar(prio_rec*, prio_rec*);
 }
 
-extern	int		Parse(const char*, ExprTree*&);
 extern  void    cleanup_ckpt_files(int, int, const char*);
 extern	bool	service_this_universe(int, ClassAd *);
 static QmgmtPeer *Q_SOCK = NULL;

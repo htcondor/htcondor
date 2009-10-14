@@ -42,7 +42,7 @@ all_symlink_target(../condor_scripts/batch_test.pl,batch_test.pl)
 
 BUILD_DEP($(CC),x_return-n,c,x_waste_second.o)
 BUILD($(CC),x_dumpcore,c)
-BUILD($(CC),x_trapsig,c)
+BUILD($(CPlusPlus),x_trapsig,c)
 BUILD($(CC),x_tightloop,c)
 BUILD($(CC),x_killppid,c)
 

@@ -1934,7 +1934,7 @@ show_queue_buffered( const char* v1, const char* v2, const char* v3, const char*
 
 	output_buffer = new ExtArray<clusterProcString*>;
 
-	char *lastUpdate;
+	char *lastUpdate=NULL;
 
 		/* intepret the parameters accordingly based on whether we are querying database */
 	if (useDB) {
@@ -2054,6 +2054,9 @@ show_queue_buffered( const char* v1, const char* v2, const char* v3, const char*
 			if(dbconn) {
 				free(dbconn);
 			}
+			if(lastUpdate) {
+				free(lastUpdate);
+			}
 			return false;
 		}
 #endif /* WANT_QUILL */
@@ -2153,6 +2156,9 @@ show_queue_buffered( const char* v1, const char* v2, const char* v3, const char*
 
 	if(dbconn) {
 		free(dbconn);
+	}
+	if(lastUpdate) {
+		free(lastUpdate);
 	}
 	return true;
 }
@@ -2280,7 +2286,7 @@ show_queue( const char* v1, const char* v2, const char* v3, const char* v4, bool
 	scheddMachine = v3;		
 	scheddVersion = v4;
 
-	char *lastUpdate;
+	char *lastUpdate=NULL;
 
     if (jobads_file != NULL) {
 		/* get the "q" from the job ads file */
@@ -2316,6 +2322,12 @@ show_queue( const char* v1, const char* v2, const char* v3, const char* v4, bool
 				fprintf( stderr,
 						"\n-- Failed to fetch ads from: %s : %s\n%s\n",
 						db_ipAddr, db_name, errstack.getFullText(true) );
+				if(dbconn) {
+					free(dbconn);
+				}
+				if(lastUpdate) {
+					free(lastUpdate);
+				}
 				return false;
 			}
 
@@ -2358,6 +2370,12 @@ show_queue( const char* v1, const char* v2, const char* v3, const char* v4, bool
 		}
 		jobs.Close();
 
+		if(dbconn) {
+			free(dbconn);
+		}
+		if(lastUpdate) {
+			free(lastUpdate);
+		}
 		return true;
 	}
 
@@ -2494,6 +2512,9 @@ show_queue( const char* v1, const char* v2, const char* v3, const char* v4, bool
 	if(dbconn) {
 		free(dbconn);
 	}
+	if(lastUpdate) {
+		free(lastUpdate);
+	}
 	return true;
 }
 
@@ -2541,22 +2562,22 @@ setupAnalysis()
 
 	// setup condition expressions
     sprintf( buffer, "MY.%s > MY.%s", ATTR_RANK, ATTR_CURRENT_RANK );
-    Parse( buffer, stdRankCondition );
+    ParseClassAdRvalExpr( buffer, stdRankCondition );
 
     sprintf( buffer, "MY.%s >= MY.%s", ATTR_RANK, ATTR_CURRENT_RANK );
-    Parse( buffer, preemptRankCondition );
+    ParseClassAdRvalExpr( buffer, preemptRankCondition );
 
 	sprintf( buffer, "MY.%s > TARGET.%s + %f", ATTR_REMOTE_USER_PRIO, 
 			ATTR_SUBMITTOR_PRIO, PriorityDelta );
-	Parse( buffer, preemptPrioCondition ) ;
+	ParseClassAdRvalExpr( buffer, preemptPrioCondition ) ;
 
 	// setup preemption requirements expression
 	if( !( preq = param( "PREEMPTION_REQUIREMENTS" ) ) ) {
 		fprintf( stderr, "\nWarning:  No PREEMPTION_REQUIREMENTS expression in"
 					" config file --- assuming FALSE\n\n" );
-		Parse( "FALSE", preemptionReq );
+		ParseClassAdRvalExpr( "FALSE", preemptionReq );
 	} else {
-		if( Parse( preq , preemptionReq ) ) {
+		if( ParseClassAdRvalExpr( preq , preemptionReq ) ) {
 			fprintf( stderr, "\nError:  Failed parse of "
 				"PREEMPTION_REQUIREMENTS expression: \n\t%s\n", preq );
 			exit( 1 );

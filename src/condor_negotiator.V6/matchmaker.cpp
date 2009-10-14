@@ -100,10 +100,10 @@ Matchmaker ()
 	sockCache = NULL;
 
 	sprintf (buf, "MY.%s > MY.%s", ATTR_RANK, ATTR_CURRENT_RANK);
-	Parse (buf, rankCondStd);
+	ParseClassAdRvalExpr (buf, rankCondStd);
 
 	sprintf (buf, "MY.%s >= MY.%s", ATTR_RANK, ATTR_CURRENT_RANK);
-	Parse (buf, rankCondPrioPreempt);
+	ParseClassAdRvalExpr (buf, rankCondPrioPreempt);
 
 	negotiation_timerID = -1;
 	GotRescheduleCmd=false;
@@ -237,7 +237,7 @@ reinitialize ()
 
 	// get timeout values
 
- 	NegotiatorInterval = param_integer("NEGOTIATOR_INTERVAL",300);
+ 	NegotiatorInterval = param_integer("NEGOTIATOR_INTERVAL",60);
 
 	NegotiatorTimeout = param_integer("NEGOTIATOR_TIMEOUT",30);
 
@@ -272,7 +272,7 @@ reinitialize ()
 	PreemptionReq = NULL;
 	tmp = param("PREEMPTION_REQUIREMENTS");
 	if( tmp ) {
-		if( Parse(tmp, PreemptionReq) ) {
+		if( ParseClassAdRvalExpr(tmp, PreemptionReq) ) {
 			EXCEPT ("Error parsing PREEMPTION_REQUIREMENTS expression: %s",
 					tmp);
 		}
@@ -332,7 +332,7 @@ reinitialize ()
 	PreemptionRank = NULL;
 	tmp = param("PREEMPTION_RANK");
 	if( tmp ) {
-		if( Parse(tmp, PreemptionRank) ) {
+		if( ParseClassAdRvalExpr(tmp, PreemptionRank) ) {
 			EXCEPT ("Error parsing PREEMPTION_RANK expression: %s", tmp);
 		}
 	}
@@ -345,7 +345,7 @@ reinitialize ()
 	NegotiatorPreJobRank = NULL;
 	tmp = param("NEGOTIATOR_PRE_JOB_RANK");
 	if( tmp ) {
-		if( Parse(tmp, NegotiatorPreJobRank) ) {
+		if( ParseClassAdRvalExpr(tmp, NegotiatorPreJobRank) ) {
 			EXCEPT ("Error parsing NEGOTIATOR_PRE_JOB_RANK expression: %s", tmp);
 		}
 	}
@@ -358,7 +358,7 @@ reinitialize ()
 	NegotiatorPostJobRank = NULL;
 	tmp = param("NEGOTIATOR_POST_JOB_RANK");
 	if( tmp ) {
-		if( Parse(tmp, NegotiatorPostJobRank) ) {
+		if( ParseClassAdRvalExpr(tmp, NegotiatorPostJobRank) ) {
 			EXCEPT ("Error parsing NEGOTIATOR_POST_JOB_RANK expression: %s", tmp);
 		}
 	}
@@ -397,7 +397,7 @@ reinitialize ()
 	if( tmp ) {
         dprintf(D_FULLDEBUG, "%s = %s\n", "GROUP_DYNAMIC_MACH_CONSTRAINT",
                 tmp);
-		if( Parse(tmp, DynQuotaMachConstraint) ) {
+		if( ParseClassAdRvalExpr(tmp, DynQuotaMachConstraint) ) {
 			dprintf(
                 D_ALWAYS, 
                 "Error parsing GROUP_DYNAMIC_MACH_CONSTRAINT expression: %s",
@@ -1665,7 +1665,7 @@ obtainAdsFromCollector (
 				}
 
 				ExprTree *expr = NULL;
-				::Parse(exprStr, expr); // expr will be null on error
+				::ParseClassAdRvalExpr(exprStr, expr); // expr will be null on error
 
 				int replace = true;
 				if (expr == NULL) {
