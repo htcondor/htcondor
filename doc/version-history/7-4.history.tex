@@ -23,21 +23,23 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item The default configuration file now uses
+\item The default configuration file within the release now uses
   \MacroNI{ALLOW}/\MacroNI{DENY} in place of
-  \MacroNI{HOSTALLOW}/\MacroNI{HOSTDENY}.  We recommend making this
-  same change throughout your other configuration files.  That way,
-  if your policy depends on the default policy, it should continue to
-  work as it did before.  The behavior of these configuration settings
+  \MacroNI{HOSTALLOW}/\MacroNI{HOSTDENY} for security related settings.
+  We recommend making this
+  same change throughout all configuration files.  That way,
+  a policy that depends on the default policy should continue to
+  work as it did before.  The behavior of these configuration variables
   remains unchanged.  The \MacroNI{ALLOW}/\MacroNI{DENY} lists are
   added to the \MacroNI{HOSTALLOW}/\MacroNI{HOSTDENY} lists to form the
-  authorization policy.  Both styles support the same syntax.  We would
-  like to phase out \MacroNI{HOSTALLOW}/\MacroNI{HOSTDENY} to simplify
-  the configuration.
+  authorization policy.  Both styles support the same syntax.  
+  This change permits an anticipated
+  phasing out of the \MacroNI{HOSTALLOW}/\MacroNI{HOSTDENY}  configuration
+  variables, in order to simplify configuration.
 
-\item As of 7.3.2, \Condor{q} \Opt{-xml} output no longer begins with
-non-XML consisting of two blank lines followed by a line such as the
-following:
+\item As of Condor version 7.3.2, \Condor{q} \Opt{-xml} output no longer 
+  begins with the non-XML consisting of two blank lines followed by a line
+  of the following form:
 
 \begin{verbatim}
 -- Submitter: schedd-name : <IP> : hostname
@@ -104,7 +106,7 @@ has been improved.
   generous and can be cut by as much as 50\%.  Under Windows, the
   number of running jobs is still capped at 200.  If you wish to set
   it higher, it is recommended to use a 64-bit version of Windows.
-  Under unix, the maximum default is now 10,000.  To scale higher, it
+  Under Unix, the maximum default is now 10,000.  To scale higher, it
   is recommended to examine the system ephemeral port range and extend
   it so that there are at least 2.1 ports per running job.
 
@@ -204,7 +206,7 @@ universe jobs.
 
 % #784
 \item Fix a bug that caused Condor-C jobs to fail if the executable
-or stdin/out/err filenames contained a comma.
+or stdin/out/err file names contained a comma.
 
 % #460
 \item File transfer for grid-type gt4 jobs requires an empty directory
