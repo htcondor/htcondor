@@ -826,6 +826,11 @@ void writeSubmitFile(/* const */ SubmitDagOptions &opts)
     fprintf(pSubFile, "copy_to_spool\t= %s\n", opts.copyToSpool ?
 				"True" : "False" );
 
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	// Be sure to change MIN_SUBMIT_FILE_VERSION in dagman_main.cpp
+	// if the arguments passed to condor_dagman change in an
+	// incompatible way!!
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	ArgList args;
 
 	if ( opts.runValgrind ) {
@@ -908,6 +913,11 @@ void writeSubmitFile(/* const */ SubmitDagOptions &opts)
 	}
     fprintf(pSubFile, "arguments\t= %s\n", arg_str.Value());
 
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	// Be sure to change MIN_SUBMIT_FILE_VERSION in dagman_main.cpp
+	// if the environment passed to condor_dagman changes in an
+	// incompatible way!!
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	EnvFilter env;
 	if ( opts.importEnv ) {
 		env.Import( );
