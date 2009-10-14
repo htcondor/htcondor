@@ -5717,7 +5717,8 @@ These settings affect the \Condor{starter}.
   Startd Policy Configuration for more details on setting up a
   policy for starting and stopping jobs on a given machine.
 
-  The integer value is
+  The ClassAd expression is evaluated in the context of the job ad
+  to an integer value, which is
   set by the \Condor{starter} daemon for each job just before the
   job runs.
   The range of allowable values are integers in the range of 0 to 19
