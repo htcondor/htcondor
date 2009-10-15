@@ -187,7 +187,8 @@ Dag::~Dag() {
 }
 
 //-------------------------------------------------------------------------
-bool Dag::Bootstrap (bool recovery) {
+bool Dag::Bootstrap (bool recovery)
+{
     Job* job;
     ListIterator<Job> jobs (_jobs);
 
@@ -196,7 +197,7 @@ bool Dag::Bootstrap (bool recovery) {
     jobs.ToBeforeFirst();
     while( jobs.Next( job ) ) {
 		if( job->GetStatus() == Job::STATUS_DONE ) {
-			TerminateJob( job, true );
+			TerminateJob( job, false, true );
 		}
     }
     debug_printf( DEBUG_VERBOSE, "Number of pre-completed nodes: %d\n",
@@ -272,6 +273,7 @@ bool Dag::Bootstrap (bool recovery) {
 		PrintReadyQ( DEBUG_DEBUG_2 );
     }	
     
+		// Note: we're bypassing the ready queue here...
     jobs.ToBeforeFirst();
     while( jobs.Next( job ) ) {
 		if( job->GetStatus() == Job::STATUS_READY &&
@@ -1855,13 +1857,23 @@ void Dag::WriteRescue (const char * rescue_file, const char * datafile)
 
 //-------------------------------------------------------------------------
 void
-Dag::TerminateJob( Job* job, bool recovery )
+Dag::TerminateJob( Job* job, bool recovery, bool bootstrap )
 {
+	ASSERT( !(recovery && bootstrap) );
     ASSERT( job != NULL );
 
-	job->TerminateSuccess();
+	job->TerminateSuccess(); // marks job as STATUS_DONE
 	if ( job->GetStatus() != Job::STATUS_DONE ) {
 		EXCEPT( "Node %s is not in DONE state", job->GetJobName() );
+	}
+
+		// this is a little ugly, but since this function can be
+		// called multiple times for the same job, we need to be
+		// careful not to double-count...
+	if( job->countedAsDone == false ) {
+		_numNodesDone++;
+		job->countedAsDone = true;
+		ASSERT( _numNodesDone <= _jobs.Number() );
 	}
 
     //
@@ -1875,25 +1887,24 @@ Dag::TerminateJob( Job* job, bool recovery )
         Job * child = FindNodeByNodeID( *qit );
         ASSERT( child != NULL );
         child->Remove(Job::Q_WAITING, job->GetJobID());
-		// if child has no more parents in its waiting queue, submit it
 		if ( child->GetStatus() == Job::STATUS_READY &&
 			child->IsEmpty( Job::Q_WAITING ) ) {
-			if ( recovery ) {
-				(void)child->MonitorLogFile( _condorLogRdr, _storkLogRdr,
-							_nfsLogIsError, recovery, _defaultNodeLog );
-			} else {
-				StartNode( child, false );
+
+				// If we're bootstrapping, we don't want to do anything
+				// here.
+			if ( !bootstrap ) {
+				if ( recovery ) {
+						// We need to monitor the log file for the node that's
+						// newly ready.
+					(void)child->MonitorLogFile( _condorLogRdr, _storkLogRdr,
+								_nfsLogIsError, recovery, _defaultNodeLog );
+				} else {
+						// If child has no more parents in its waiting queue,
+						// submit it.
+					StartNode( child, false );
+				}
 			}
 		}
-	}
-
-		// this is a little ugly, but since this function can be
-		// called multiple times for the same job, we need to be
-		// careful not to double-count...
-	if( job->countedAsDone == false ) {
-		_numNodesDone++;
-		job->countedAsDone = true;
-		ASSERT( _numNodesDone <= _jobs.Number() );
 	}
 }
 

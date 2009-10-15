@@ -624,9 +624,16 @@ class Dag {
 	*/
 	void UpdateJobCounts( Job *node, int change );
 
-    // add job to termination queue and report termination to all
-    // child jobs by removing job ID from each child's waiting queue
-    void TerminateJob( Job* job, bool bootstrap = false );
+	/** Add job to termination queue and report termination to all
+		child jobs by removing job ID from each child's waiting queue.
+		Note that this method should be called only in the case of
+		*successful* termination.
+		@param The job (node) just terminated
+		@param Whether we're in recovery mode (re-reading log events)
+		@param Whether we're in bootstrap mode (dealing with jobs marked
+			DONE in a rescue DAG)
+	*/
+    void TerminateJob( Job* job, bool recovery, bool bootstrap = false );
   
 	void PrintEvent( debug_level_t level, const ULogEvent* event,
 					 Job* node );

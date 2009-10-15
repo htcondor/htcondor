@@ -61,6 +61,7 @@
 <$Property "VMMAXNUMBER" VALUE="$(NUM_CPUS)">
 <$Property "VMNETWORKING" VALUE="N">
 <$Property "USEHDFS" VALUE="N">
+<$Property "HDFSMODE" VALUE="HDFS_NAMENODE">
 <$Property "HDFSPORT" VALUE="9000">
 <$Property "HDFSWEBPORT" VALUE="8000">
 
@@ -247,8 +248,8 @@
 		Control="RB">
 	#)
 	#data 'RadioButton_HDFSMODE'	         
-	         'N' 'N&ame Node' '' ''
-		 'D' '&Data Node (Requires Cygwin)' '' ''
+	         'HDFS_NAMENODE' 'N&ame Node' '' ''
+		 'HDFS_DATANODE' '&Data Node (Requires Cygwin)' '' ''
 	#data
 	#(
 	<$DialogEntry Property="HDFSMODE" Label="Select HDFS mode:" 
