@@ -52,14 +52,6 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Added \MacroNI{SCHEDD\_JOB\_QUEUE\_LOG\_FLUSH\_DELAY} to set an
-upper bound in seconds on how long it takes for changes to the job
-ad to be visible to JobRouter and Quill.  The default is 5.
-Previously, there was no upper limit.  Typically, other activity in
-the job queue, such as jobs being submitted or completed would cause
-buffered data to be flushed to disk, so the effective upper bound was
-a function of how busy the job queue was.
-
 \item \Condor{q} \Arg{-analyze} and \Arg{-better-analyze} now provide
   analysis for scheduler and local universe jobs.  Specifically, the
   \MacroNI{START\_SCHEDULER\_UNIVERSE} and
@@ -92,6 +84,16 @@ has been improved.
 \noindent Configuration Variable Additions and Changes:
 
 \begin{itemize}
+
+\item The new configuration variable 
+  \Macro{SCHEDD\_JOB\_QUEUE\_LOG\_FLUSH\_DELAY} sets an
+  upper bound in seconds on how long it takes for changes to the job
+  ClassAd to be visible to the Condor Job Router and to Quill.
+  The default value is 5 seconds.
+  Previously, there was no upper limit.  Typically, other activity in
+  the job queue, such as jobs being submitted or completed would cause
+  buffered data to be flushed to disk, such that the effective upper bound was
+  a function of how busy the job queue was.
 
 \item The default configuration file now uses
   \MacroNI{ALLOW}/\MacroNI{DENY} in place of
