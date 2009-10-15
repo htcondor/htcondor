@@ -549,21 +549,21 @@ ResState::leave_action( State cur_s, Activity cur_a, State new_s,
 				rip->r_cur->starterKillPg( SIGKILL );
 				dprintf( D_ALWAYS,
 						 "State change: Error sending signals to starter\n" );
-				if( new_s != owner_state ) {
+				if( new_s != preempting_state ) {
+					change( preempting_state );
+					return TRUE; // XXX: change TRUE
+				} else {
 						/*
 						  if we're already trying to get into the
-						  owner state (because of an error like this,
+						  preempting state (because of an error like this,
 						  either suspending or resuming), we do NOT
 						  want to officially call ResState::change()
 						  again, or we just get into an infinite loop.
 						  instead, just return FALSE (that we didn't
 						  already change the state), and allow the
-						  previous attempt to change into owner_state
+						  previous attempt to change into preempting_state
 						  to continue...
 						*/
-					change( owner_state );
-					return TRUE; // XXX: change TRUE
-				} else {
 					return FALSE;
 				}
 			}
@@ -634,7 +634,7 @@ ResState::enter_action( State s, Activity a,
 				rip->r_cur->starterKillPg( SIGKILL );
 				dprintf( D_ALWAYS,
 						 "State change: Error sending signals to starter\n" );
-				change( owner_state );
+				change( preempting_state );
 				return TRUE; // XXX: change TRUE
 			}
 		}
@@ -743,7 +743,7 @@ ResState::enter_action( State s, Activity a,
 						// to the starter's process group.
 					dprintf( D_ALWAYS,
 							 "State change: Error sending signals to starter\n" );
-					change( owner_state );
+					rip->leave_preempting_state();
 					return TRUE; // XXX: change TRUE
 				}
 			} else {
