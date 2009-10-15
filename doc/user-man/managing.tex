@@ -112,12 +112,12 @@ remotely executing jobs can access the environment from which it was
 submitted, such as input and output files.  
 
 It is normal for a machine which has submitted hundreds of jobs to have 
-hundreds of shadows running on the machine.  Since the text segments of 
-all these processes is the same, the load on the submit machine is usually 
-not significant.  If, however, you notice degraded performance, you can limit 
-the number of jobs that can run simultaneously through the 
-\Macro{MAX\_JOBS\_RUNNING} configuration parameter.  Please talk to your 
-system administrator for the necessary configuration change.
+hundreds of \Condor{shadow} processes running on the machine.
+Since the text segments of all these processes is the same,
+the load on the submit machine is usually not significant.
+If there is degraded performance, limit 
+the number of jobs that can run simultaneously by reducing the 
+\Macro{MAX\_JOBS\_RUNNING} configuration variable.
 
 You can also find all the machines that are running your job through the
 \Condor{status} command.

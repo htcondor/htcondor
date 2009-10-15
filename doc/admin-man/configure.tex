@@ -4874,29 +4874,33 @@ These macros control the \Condor{schedd}.
   
 \label{param:MaxJobsRunning}
 \item[\Macro{MAX\_JOBS\_RUNNING}]
-  An integer representing a limit on the number of processes
+  An integer value representing a limit on the number of processes
   spawned by a given \Condor{schedd} daemon,
   for all job universes except the grid universe. 
-  This includes, but is not limited to \Condor{shadow} processes,
+  This includes, but is not limited to \Condor{shadow} processes
   and scheduler universe processes, including \Condor{dagman}.
-  However, limiting the number of running scheduler and local universe
+  Limiting the number of running scheduler and local universe
   jobs below the upper limit set by \MacroNI{MAX\_JOBS\_RUNNING} is best
   done using \MacroNI{START\_LOCAL\_UNIVERSE} and
   \MacroNI{START\_SCHEDULER\_UNIVERSE}.
-  The actual number of \Condor{shadow} daemons may be fewer,
+  The actual number of \Condor{shadow} daemons may be reduced,
   if the amount of memory defined by \MacroNI{RESERVED\_SWAP} limits the
   number of \Condor{shadow} daemons.
-  This default value is an expression that depends on the total amount
+  The default value is an expression that depends on the total amount
   of memory and the operating system. The default
-  expression requires 1MB of RAM on the submit machine per running
-  job.  In some environments and configurations, this is overly
-  generous and can be cut by as much as 50\%.  Under Windows, the
-  number of running jobs is still capped at 200.  If you wish to set
-  it higher, it is recommended to use a 64-bit version of Windows.
-  Under unix, the maximum default is now 10,000.  To scale higher, it
-  is recommended to examine the system ephemeral port range and extend
-  it so that there are at least 2.1 ports per running job.
+  expression requires 1MByte of RAM per running job on the submit machine.
+  In some environments and configurations, this is overly
+  generous and can be cut by as much as 50\%.
+  On Windows platforms, the number of running jobs is still capped at 200.
+  A 64-bit version of Windows  is recommended in order to raise the value
+  above the default.
+  Under Unix, the maximum default is now 10,000.  To scale higher, we
+  recommend that the system ephemeral port range is extended
+  such that there are at least 2.1 ports per running job.
 
+  Here are example configurations:
+
+\footnotesize
 \begin{verbatim}
 ## Example 1:
 MAX_JOBS_RUNNING	= 10000
@@ -4925,6 +4929,7 @@ MAX_JOBS_RUNNING	= \
               $(MAX_SHADOWS_OPSYS), \
               $(MAX_JOBS_RUNNING) )
 \end{verbatim}
+\normalsize
 
 \label{param:MaxJobsSubmitted}
 \item[\Macro{MAX\_JOBS\_SUBMITTED}]
