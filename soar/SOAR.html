@@ -3,7 +3,7 @@
 <title>SOAR</title>
 </head>
 <body>
-<h1>SOAR - System of Automated Runs</h1>
+<h1>SOAR - System of Automatic Runs</h1>
 
 <h2>Overview</h2>
 <!--
@@ -56,7 +56,7 @@ can be looked at as soon as each job completes.
 <h3>Hey, I know how to submit clusters with one submit file, why do I want to use SOAR</h3>
 <p>
 There are some distinct advantages to using SOAR. And it very similar to
-having a folder with data(each in a distinct location) and a single submit
+having a folder with data(each in a distinct loaction) and a single submit
 file. The following are provided by SOAR only:
 </p>
 <ul>
@@ -64,7 +64,7 @@ file. The following are provided by SOAR only:
 Since SOAR uses DAGs and condor_dagman, a SOAR run can be adjusted 
 to have a minimal impact on your network and submit machine while
 making runs easier. An example is that you can submit 1000s, but throttle
-it back to a reasonable number and make the submit node's performance
+it back to a reasonable number and make the submit node's performane
 be good for all.
 <li>
 There is a process which every 5 minutes produces a profile of the current 
@@ -183,7 +183,7 @@ idea if their code CAN be adapted, and what will be required
 of their code
 -->
 <p>
-To effectively do multiple data sets in any system
+To effectively do multiple datasets in any system
 you want your application to either 
 accept command line arguments and read parameters from one or more files.
 Anything hard coded into the program you are running can not be easily varied.
@@ -229,7 +229,7 @@ Additionally, each project can have its data location specified in this file in 
 
 <p>
 Soar is told where to 
-find data sets for your jobs. These will be folders with unique names with the 
+find datasets for your jobs. These will be folders with unique names with the 
 variable data for your jobs or folders named datasetXXXXXXX which  will contain the 
 unique job folders. The code and jobs folders under sources contain the unchanging 
 parts for the first and the glue scripts in the second.
@@ -292,7 +292,7 @@ There are a number of scripts that run before or after which can or should be cu
 <li>
 <tt>Postreport.pl</tt>:  save additional information into results and perhaps zip all the results up for easy web download
 <li>
-<tt>Pushdata.pl</tt>:  job submitted to push data which can be used to deliver the data remotely
+<tt>Pushdata.pl</tt>:  job submitted to pushdata which can be used to deliver the data remotely
 </ul>
 
 <p>
@@ -350,8 +350,8 @@ condor manages the frequency of.  There are two included(per_runs and per_plotsa
 per_plotsandreports fires off the commands in checkprogress.com every 5 minutes. 
 Setting this up is as easy as placing what you want done similar to the sample files 
 and submitting them with condor_submit(condor_submit per_runs). The first usually 
-contains usage of the control.pl script and --kind=new so tracking of data sets already done 
-has only new data sets run. The second usually contains the usage of the status.pl script 
+contains usage of the control.pl script and --kind=new so tracking of datasets already done 
+has only new datasets run. The second usually contains the usage of the status.pl script 
 with --last as it then looks up the most recent run of the project and updates the profile 
 and the report.
 
@@ -367,31 +367,45 @@ Control.pl
 
 <ul>
 <li>
--b/--bail - Debug hook to stop just before submitting the dag which was built for the run
+	-b/--bail - Debug hook to stop just before submitting the dag which was built for the run
 <li>
---code - used when one wants to change the contents of the code directory for a new version which uses the glue scripts from a previous version. 
+	--clean=s - A(ALL), D(DATA), C(CACHE), R(RESULTS), L(LOGS and misc in rundir) Be very careful with this as its intent is to save space after your results have been saved. Onlt safe options are
 <li>
---clean - A(ALL), D(DATA), C(CACHE), R(RESULTS), L(LOGS and misc in rundir) Be very careful with this as its intent is to save space after your results have been saved. Only safe options are
+	--code=s - used when one wants to change the contents of the code directory for a new version which uses the glue scripts from a previous version. 
 <li>
--h/--help - See this
+	-d/--datasets=s - run all the jobs in a particular dataset folder
 <li>
--l/--limit=N - start this number of nodes in a Dag(acts like run)
+	-f/--first - Create the ENVVARS project file for a new project
 <li>
---project=s - Run which project?
+	-h/--help - See this
 <li>
--n/--newproject=s - New project derived from existing
+	-k/--kind=s - install, nightly, new else a label for web
 <li>
--v/--version=s - Run which version(name this version for install)?
+	-l/--limit=N - start this number of nodes in a Dag(acts like run)
 <li>
---preversion=s - Based on this earlier version
+	--maxpre=N - Throttle the prescripts to minimize submit node IO(default 10)
 <li>
--k/--kind=s - install, nightly, new else a label for web
+	--maxsubmits=N - By default dagman submits 5 nodes per scan interval which
+	defaults to 5 seconds. We don't have a knob for the scan interval but you can rev
+	up how many it will process each time through a cycle.
 <li>
--s/--softversion - print software version
+	--project=s - Run which project?
 <li>
--t/--type=s - One type of install is a new param.dat from the imagedir for the project to it's code location
+	-n/--newproject=s - New project derived from existing
 <li>
--u/--update - Update the project ENVVARS file to the last run.
+	--preversion=s - Based on this earlier version
+<li>
+	-s/--softversion - print software version
+<li>
+	--type=s - One type of install is a new param.dat from the imagedir for the project to it's code location
+<li>
+	--throttle=s - Add throttling to particular portion of dag.
+<li>
+	-u/--update - Update the project ENVVARS file to the last run.
+<li>
+	-v/--version=s - Run which version(name this version for install)?
+<li>
+	-w/--white=s - File to use for a whitelist based project run
 </ul>
 
 <h3>
@@ -493,23 +507,26 @@ The framework usually runs this script at end of a job run.
 Its command line options are
 <ul>
 <li>
-<tt>-h</tt> or <tt>--help</tt>
-<br>summarize the options and quit
-<li>
-<tt>-k</tt> or <tt>--kind</tt>
-<br>summary(report), profile(plot), imagesz
+<tt>-d</tt> or <tt>--display</tt>
+<br>display report file in REPORT....
 <li>
 <tt>-e</tt> or <tt>--env</tt>
 <br>run this environment file to find run
 <li>
+<tt>-h</tt> or <tt>--help</tt>
+<br>summarize the options and quit
+<li>
+<tt>-k</tt> or <tt>--kind</tt>
+<br>summary(report), profile(plot), whitelist, imagesz
+<li>
 <tt>-l</tt> or <tt>--last</tt>
-<br>find most recent environment file to find run
+<br>find mosr recent environment file to find run
+<li>
+<tt>-m</tt> or <tt>--match</tt>
+<br>use this patttern to extract the whitelist
 <li>
 <tt>-p</tt> or <tt>--period</tt>
 <br>sample interval
-<li>
-<tt>-d</tt> or <tt>--display</tt>
-<br>display report file in REPORT....
 </ul>
 
             
@@ -540,6 +557,10 @@ of jobs for this project.
 ./status.pl --kind=summary --project=gravitropism --env=run6823_8_26_200
 </pre>
 Create a report for a particular run.
+<pre>
+./status.pl --kind=whitelist --project=med_mc2 --env=run12700_10_10_2009 --match="fail \[No result files\]"
+</pre>
+Create a white list from the section of the report labeled "fail [No result files]"
 </ul>
 <h2>How do I ......</h2>
 <p>
@@ -579,7 +600,7 @@ go to "sources/positioning" and enter this command: <b>cp -r v1 surfaces</b>.
 Now simply place new binaries in "sources/positioning/surfaces/code".
 </p>
 <p>
-<i>NOTE if you change the behavior and files needed or created you'll likely need
+<i>NOTE if you change the behaiour and files needed or created you'll likely need
 need to change the scripts "prejob.pl, postjob.pl and pushdata.pl".</i>
 </p>
 
@@ -604,7 +625,43 @@ These two files make it possible to have links created from the file
 <b>RUNS</b> in the top of the projects run directory which allow the links and access
 described above.
 </p>
+<h2>Release Notes</h2>
+<h3>Version 0.7.5</h3>
+<ul>
+<li> 
+	Status.pl will now create whitelists from selected sections of the results.
+	See usage of status.pl for details.
+<li> 
+	Control.pl will ensure an entry in "checkprogress.cron" so the report
+	and progress plot will exist even if multiple data sets are running at the same time
+	for a single project. Previously only the most recent run got plots and reports.
+<li>
+	As reports are generated a constantly updated file in the project run contains a list
+	of all the currently running jobs. Thus we can now do runs for --kind=new and we won't
+	add any jobs which are still running. This means "continuous.cron" can be run frequently
+	and look for new data to start avoiding the need to have someone start runs manually
+	after all of the last run completed.
+<li>
+	A new tool, soar_rm.pl removes a project run, removes the request for reports
+	and plots for this run and removes the file which says these jobs are still
+	running so the next --kind=new will restart them.
+</ul>
 
-
+<h2>Wanted Features</h2>
+<ul>
+<li>
+	Allow a project specific timeout after which time the still remaining
+	jobs could be restarted with a --kind=new. Most have storage location
+	and may wish to change extraction of date from RUNS file as the Day/Month/Year
+	is encoded in the runID while the time of day is a field by itself.
+<li>
+	Remove unused analysis node. This node can be included in the per
+	job portion of the dag if needed. This removes a file descriptor 
+	for each job.
+<li>
+	Use dag splicing to put the dag together thus allowing a simpler script to
+	make a jobs portion of the dag and remove the pre and post nodes used to tie it
+	together. Freeing up 2 more file descriptors per job.
+</ul>
 </body>
 </html>
