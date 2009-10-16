@@ -225,6 +225,11 @@ or stdin/out/err file names contained a comma.
 in \Attr{/tmp}, which the \Condor{gridmanager} creates. If this directory
 is deleted, the \Condor{gridmanager} will now recreate it.
 
+% gittrac #851
+\item Fixed a bug (introduced with the new "lazy log file" code in
+version 7.3.2) that caused \Condor{dagman} to sometimes fail when
+running rescue DAGs.
+
 \end{itemize}
 
 \noindent Known Bugs:
