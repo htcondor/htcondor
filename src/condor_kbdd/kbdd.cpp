@@ -190,15 +190,12 @@ main_pre_command_sock_init( )
 
 int WINAPI WinMain( __in HINSTANCE hInstance, __in_opt HINSTANCE hPrevInstance, __in_opt LPSTR lpCmdLine, __in int nShowCmd )
 {
+	// cons up a "standard" argv for dc_main.
 	char **parameters = (char**)malloc(sizeof(char*)*2);
 	parameters[0] = "condor_kbdd";
 	parameters[1] = NULL;
 	dc_main(1, parameters);
 
-	while(1)
-	{
-
-	}
-
+	// dc_main should exit() so we probably never get here.
 	return 0;
 }
