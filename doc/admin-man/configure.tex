@@ -938,11 +938,14 @@ File System Configuration File Entries''.
 
 \label{param:ReservedSwap}
 \item[\Macro{RESERVED\_SWAP}]
-  Determines how much swap space you want to reserve for your own machine.
+  The amount of swap space in Mbytes to reserve for this machine.
   Condor will not start up more \Condor{shadow} processes if the
-  amount of free swap space on your machine falls below this level.
-  \MacroNI{RESERVED\_SWAP} is specified in megabytes.  The default value
-  of \MacroNI{RESERVED\_SWAP} is 0, which disables this check.
+  amount of free swap space on this machine falls below this level.
+  The default value is 0, which disables this check.
+  It is anticipated that this configuration variable will no longer
+  be used in the near future.
+  If \MacroNI{RESERVED\_SWAP} is \emph{not} set to 0,
+  the value of \Macro{SHADOW\_SIZE\_ESTIMATE} is used.
 
 \label{param:ReservedDisk}
 \item[\Macro{RESERVED\_DISK}]
@@ -5148,10 +5151,10 @@ MAX_JOBS_RUNNING	= \
 
 \label{param:ShadowSizeEstimate}
 \item[\Macro{SHADOW\_SIZE\_ESTIMATE}]
-  This macro sets the estimated private virtual memory size of each
-  \Condor{shadow} process.  It is specified in kilobytes.
+  The estimated private virtual memory size of each
+  \Condor{shadow} process in Kbytes.
   This value is only used if \MacroNI{RESERVED\_SWAP} is non-zero.
-  The default is 800.
+  The default value is 800.
 
 \label{param:ShadowReniceIncrement}
 \item[\Macro{SHADOW\_RENICE\_INCREMENT}]

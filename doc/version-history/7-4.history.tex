@@ -113,15 +113,18 @@ has been improved.
   recommend that the system ephemeral port range is extended
   such that there are at least 2.1 ports per running job.
 
-\item The default value of \MacroNI{RESERVED\_SWAP} is now 0, which
-  disables the \Condor{schedd}'s check for sufficient swap space
-  before starting more jobs.  The new expression for
+\item The default value of \MacroNI{RESERVED\_SWAP} has changed to
+  the value 0, which
+  disables the \Condor{schedd} daemon's check for sufficient swap space
+  before starting more jobs.  The new expression defined with 
   \MacroNI{MAX\_JOBS\_RUNNING} has a more appropriate memory check, so
-  we are phasing out \MacroNI{RESERVED\_SWAP}.  In case
-  \MacroNI{RESERVED\_SWAP} is enabled, we have changed the default value
-  of \MacroNI{SHADOW\_SIZE\_ESTIMATE} to 800 (kilobytes).  Previously,
-  it was 200 if not set but it was set to 1800 in the example configuration
-  file.
+  the configuration variable \MacroNI{RESERVED\_SWAP} will no longer
+  be used in the near future.
+  For cases where 
+  \MacroNI{RESERVED\_SWAP} is not set to 0, the default value
+  of \MacroNI{SHADOW\_SIZE\_ESTIMATE} has changed to 800 Kbytes.
+  Previously, it was 200 if not set,
+  but it was set to 1800 in the example configuration file.
 
 \item The default values of \MacroNI{START\_LOCAL\_UNIVERSE} and
   \MacroNI{START\_SCHEDULER\_UNIVERSE} have changed.  Previously,
