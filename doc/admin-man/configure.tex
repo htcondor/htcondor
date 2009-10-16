@@ -938,11 +938,14 @@ File System Configuration File Entries''.
 
 \label{param:ReservedSwap}
 \item[\Macro{RESERVED\_SWAP}]
-  Determines how much swap space you want to reserve for your own machine.
+  The amount of swap space in Mbytes to reserve for this machine.
   Condor will not start up more \Condor{shadow} processes if the
-  amount of free swap space on your machine falls below this level.
-  \MacroNI{RESERVED\_SWAP} is specified in megabytes.  The default value
-  of \MacroNI{RESERVED\_SWAP} is 0, which disables this check.
+  amount of free swap space on this machine falls below this level.
+  The default value is 0, which disables this check.
+  It is anticipated that this configuration variable will no longer
+  be used in the near future.
+  If \MacroNI{RESERVED\_SWAP} is \emph{not} set to 0,
+  the value of \Macro{SHADOW\_SIZE\_ESTIMATE} is used.
 
 \label{param:ReservedDisk}
 \item[\Macro{RESERVED\_DISK}]
@@ -4874,29 +4877,33 @@ These macros control the \Condor{schedd}.
   
 \label{param:MaxJobsRunning}
 \item[\Macro{MAX\_JOBS\_RUNNING}]
-  An integer representing a limit on the number of processes
+  An integer value representing a limit on the number of processes
   spawned by a given \Condor{schedd} daemon,
   for all job universes except the grid universe. 
-  This includes, but is not limited to \Condor{shadow} processes,
+  This includes, but is not limited to \Condor{shadow} processes
   and scheduler universe processes, including \Condor{dagman}.
-  However, limiting the number of running scheduler and local universe
+  Limiting the number of running scheduler and local universe
   jobs below the upper limit set by \MacroNI{MAX\_JOBS\_RUNNING} is best
   done using \MacroNI{START\_LOCAL\_UNIVERSE} and
   \MacroNI{START\_SCHEDULER\_UNIVERSE}.
-  The actual number of \Condor{shadow} daemons may be fewer,
+  The actual number of \Condor{shadow} daemons may be reduced,
   if the amount of memory defined by \MacroNI{RESERVED\_SWAP} limits the
   number of \Condor{shadow} daemons.
-  This default value is an expression that depends on the total amount
+  The default value is an expression that depends on the total amount
   of memory and the operating system. The default
-  expression requires 1MB of RAM on the submit machine per running
-  job.  In some environments and configurations, this is overly
-  generous and can be cut by as much as 50\%.  Under Windows, the
-  number of running jobs is still capped at 200.  If you wish to set
-  it higher, it is recommended to use a 64-bit version of Windows.
-  Under unix, the maximum default is now 10,000.  To scale higher, it
-  is recommended to examine the system ephemeral port range and extend
-  it so that there are at least 2.1 ports per running job.
+  expression requires 1MByte of RAM per running job on the submit machine.
+  In some environments and configurations, this is overly
+  generous and can be cut by as much as 50\%.
+  On Windows platforms, the number of running jobs is still capped at 200.
+  A 64-bit version of Windows  is recommended in order to raise the value
+  above the default.
+  Under Unix, the maximum default is now 10,000.  To scale higher, we
+  recommend that the system ephemeral port range is extended
+  such that there are at least 2.1 ports per running job.
 
+  Here are example configurations:
+
+\footnotesize
 \begin{verbatim}
 ## Example 1:
 MAX_JOBS_RUNNING	= 10000
@@ -4925,6 +4932,7 @@ MAX_JOBS_RUNNING	= \
               $(MAX_SHADOWS_OPSYS), \
               $(MAX_JOBS_RUNNING) )
 \end{verbatim}
+\normalsize
 
 \label{param:MaxJobsSubmitted}
 \item[\Macro{MAX\_JOBS\_SUBMITTED}]
@@ -5143,10 +5151,10 @@ MAX_JOBS_RUNNING	= \
 
 \label{param:ShadowSizeEstimate}
 \item[\Macro{SHADOW\_SIZE\_ESTIMATE}]
-  This macro sets the estimated private virtual memory size of each
-  \Condor{shadow} process.  It is specified in kilobytes.
+  The estimated private virtual memory size of each
+  \Condor{shadow} process in Kbytes.
   This value is only used if \MacroNI{RESERVED\_SWAP} is non-zero.
-  The default is 800.
+  The default value is 800.
 
 \label{param:ShadowReniceIncrement}
 \item[\Macro{SHADOW\_RENICE\_INCREMENT}]
@@ -5570,8 +5578,8 @@ SYSTEM_PERIODIC_REMOVE = \
 \label{param:ScheddJobQueueLogFlushDelay}
 \item[\Macro{SCHEDD\_JOB\_QUEUE\_LOG\_FLUSH\_DELAY}]
   An integer which specifies an upper bound in seconds on how long it
-  takes for changes to the job ad to be visible to JobRouter and Quill.
-  The default is 5.
+  takes for changes to the job ClassAd to be visible to the Condor Job Router
+  and to Quill.  The default is 5 seconds.
 
 \end{description}
 
@@ -5717,7 +5725,8 @@ These settings affect the \Condor{starter}.
   Startd Policy Configuration for more details on setting up a
   policy for starting and stopping jobs on a given machine.
 
-  The integer value is
+  The ClassAd expression is evaluated in the context of the job ad
+  to an integer value, which is
   set by the \Condor{starter} daemon for each job just before the
   job runs.
   The range of allowable values are integers in the range of 0 to 19
@@ -6391,8 +6400,8 @@ These macros affect the \Condor{negotiator}.
   
 \label{param:NegotiatorInterval}
 \item[\Macro{NEGOTIATOR\_INTERVAL}]
-  Sets how often the negotiator starts a negotiation cycle.  It is defined
-  in seconds and defaults to 60 (1 minute).
+  Sets how often the \Condor{negotiator} starts a negotiation cycle.
+  It is defined in seconds and defaults to 60 (1 minute).
   
 \label{param:NegotiatorCycleDelay}
 \item[\Macro{NEGOTIATOR\_CYCLE\_DELAY}]
@@ -7033,12 +7042,12 @@ These macros affect the \Condor{gridmanager}.
 
 \label{param:GridmanagerMaxSubmittedJobsPerResource}
 \item[\Macro{GRIDMANAGER\_MAX\_SUBMITTED\_JOBS\_PER\_RESOURCE}]
-  Limits the number of jobs
+  An integer value that limits the number of jobs
   that a \Condor{gridmanager} daemon will submit to a resource.
   It is useful for controlling the number of \Prog{jobmanager}
   processes running on the front-end node of a cluster.
-  This number may be exceeded if it is reduced through the use
-  of \Condor{reconfig} while the \Condor{gridmanager} is running
+  This number may be exceeded, if it is reduced through the use
+  of \Condor{reconfig} while the \Condor{gridmanager} is running,
   or if the \Condor{gridmanager} receives new
   jobs from the \Condor{schedd} that were already submitted
   (that is, their \MacroNI{GridJobId} is not undefined).
@@ -7493,10 +7502,7 @@ These macros affect the Grid Monitor.
   the load on Globus gatekeepers.
   This parameter only affects grid jobs of type \SubmitCmd{gt2}.
   This parameter is not referenced unless
-  \MacroNI{ENABLE\_GRID\_MONITOR} is set to \Expr{True}. 
-  See section~\ref{sec:Condor-G-GridMonitor} on
-  page~\pageref{sec:Condor-G-GridMonitor}
-  for more information.
+  \MacroNI{ENABLE\_GRID\_MONITOR} is set to \Expr{True} (the default value). 
 
 \label{param:GridMonitorHeartbeatTimeout}
 \item[\Macro{GRID\_MONITOR\_HEARTBEAT\_TIMEOUT}]

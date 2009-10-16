@@ -23,21 +23,23 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item The default configuration file now uses
+\item The default configuration file within the release now uses
   \MacroNI{ALLOW}/\MacroNI{DENY} in place of
-  \MacroNI{HOSTALLOW}/\MacroNI{HOSTDENY}.  We recommend making this
-  same change throughout your other configuration files.  That way,
-  if your policy depends on the default policy, it should continue to
-  work as it did before.  The behavior of these configuration settings
+  \MacroNI{HOSTALLOW}/\MacroNI{HOSTDENY} for security related settings.
+  We recommend making this
+  same change throughout all configuration files.  That way,
+  a policy that depends on the default policy should continue to
+  work as it did before.  The behavior of these configuration variables
   remains unchanged.  The \MacroNI{ALLOW}/\MacroNI{DENY} lists are
   added to the \MacroNI{HOSTALLOW}/\MacroNI{HOSTDENY} lists to form the
-  authorization policy.  Both styles support the same syntax.  We would
-  like to phase out \MacroNI{HOSTALLOW}/\MacroNI{HOSTDENY} to simplify
-  the configuration.
+  authorization policy.  Both styles support the same syntax.  
+  This change permits an anticipated
+  phasing out of the \MacroNI{HOSTALLOW}/\MacroNI{HOSTDENY}  configuration
+  variables, in order to simplify configuration.
 
-\item As of 7.3.2, \Condor{q} \Opt{-xml} output no longer begins with
-non-XML consisting of two blank lines followed by a line such as the
-following:
+\item As of Condor version 7.3.2, \Condor{q} \Opt{-xml} output no longer 
+  begins with the non-XML consisting of two blank lines followed by a line
+  of the following form:
 
 \begin{verbatim}
 -- Submitter: schedd-name : <IP> : hostname
@@ -49,14 +51,6 @@ following:
 \noindent New Features:
 
 \begin{itemize}
-
-\item Added \MacroNI{SCHEDD\_JOB\_QUEUE\_LOG\_FLUSH\_DELAY} to set an
-upper bound in seconds on how long it takes for changes to the job
-ad to be visible to JobRouter and Quill.  The default is 5.
-Previously, there was no upper limit.  Typically, other activity in
-the job queue, such as jobs being submitted or completed would cause
-buffered data to be flushed to disk, so the effective upper bound was
-a function of how busy the job queue was.
 
 \item \Condor{q} \Arg{-analyze} and \Arg{-better-analyze} now provide
   analysis for scheduler and local universe jobs.  Specifically, the
@@ -71,56 +65,89 @@ why local or scheduler universe jobs are idle when
 \MacroNI{START\_LOCAL\_UNIVERSE} or
 \MacroNI{START\_SCHEDULER\_UNIVERSE} refer to these attributes.
 
+% #130
+\item Add support for KVM in the vm universe.
+
+% #688
+\item The \Condor{vm-gahp} now links with libvirt, rather than calling
+virsh command-line tools.
+
+% #760
+\item Greatly improved the \Condor{gridmanager}'s scalability when handling
+many grid type gt2 grid universe jobs.
+
+\item Latency in the submission and cleaning up of Condor-C jobs
+has been improved.
+
 \end{itemize}
 
 \noindent Configuration Variable Additions and Changes:
 
 \begin{itemize}
 
+\item The new configuration variable 
+  \Macro{SCHEDD\_JOB\_QUEUE\_LOG\_FLUSH\_DELAY} sets an
+  upper bound in seconds on how long it takes for changes to the job
+  ClassAd to be visible to the Condor Job Router and to Quill.
+  The default value is 5 seconds.
+  Previously, there was no upper limit.  Typically, other activity in
+  the job queue, such as jobs being submitted or completed would cause
+  buffered data to be flushed to disk, such that the effective upper bound was
+  a function of how busy the job queue was.
+
 \item The default configuration file now uses
   \MacroNI{ALLOW}/\MacroNI{DENY} in place of
   \MacroNI{HOSTALLOW}/\MacroNI{HOSTDENY}.  See the release notes above
   for more information.
 
-\item The default value for \MacroNI{MAX\_JOBS\_RUNNING} has changed.
-  Previously, it was 200.  Now it is an expression that depends on the
-  total amount of memory and the operating system.  The default
-  expression requires 1MB of RAM on the submit machine per running
-  job.  In some environments and configurations, this is overly
+\item The default value for \Macro{MAX\_JOBS\_RUNNING} has changed.
+  Previously, it was 200.  Now it is defined by an expression that depends 
+  on the total amount of memory and the operating system.  The default
+  expression requires 1MByte of RAM per running job, on the submit machine.
+  In some environments and configurations, this is overly
   generous and can be cut by as much as 50\%.  Under Windows, the
-  number of running jobs is still capped at 200.  If you wish to set
-  it higher, it is recommended to use a 64-bit version of Windows.
-  Under unix, the maximum default is now 10,000.  To scale higher, it
-  is recommended to examine the system ephemeral port range and extend
-  it so that there are at least 2.1 ports per running job.
+  number of running jobs is still capped at 200.
+  A 64-bit version of Windows  is recommended in order to raise the value
+  above the default.
+  Under Unix, the maximum default is now 10,000.  To scale higher, we
+  recommend that the system ephemeral port range is extended
+  such that there are at least 2.1 ports per running job.
 
-\item The default value of \MacroNI{RESERVED\_SWAP} is now 0, which
-  disables the \Condor{schedd}'s check for sufficient swap space
-  before starting more jobs.  The new expression for
+\item The default value of \MacroNI{RESERVED\_SWAP} has changed to
+  the value 0, which
+  disables the \Condor{schedd} daemon's check for sufficient swap space
+  before starting more jobs.  The new expression defined with 
   \MacroNI{MAX\_JOBS\_RUNNING} has a more appropriate memory check, so
-  we are phasing out \MacroNI{RESERVED\_SWAP}.  In case
-  \MacroNI{RESERVED\_SWAP} is enabled, we have changed the default value
-  of \MacroNI{SHADOW\_SIZE\_ESTIMATE} to 800 (kilobytes).  Previously,
-  it was 200 if not set but it was set to 1800 in the example configuration
-  file.
+  the configuration variable \MacroNI{RESERVED\_SWAP} will no longer
+  be used in the near future.
+  For cases where 
+  \MacroNI{RESERVED\_SWAP} is not set to 0, the default value
+  of \MacroNI{SHADOW\_SIZE\_ESTIMATE} has changed to 800 Kbytes.
+  Previously, it was 200 if not set,
+  but it was set to 1800 in the example configuration file.
 
-\item The default values of \MacroNI{START\_LOCAL\_UNIVERSE} and
-  \MacroNI{START\_SCHEDULER\_UNIVERSE} have changed.  Previously,
-  these were simply set to \Expr{True}.  Now, they are configured to allow
+\item The default values of \Macro{START\_LOCAL\_UNIVERSE} and
+  \Macro{START\_SCHEDULER\_UNIVERSE} have changed.  Previously,
+  these were set to \Expr{True}.  Now, they are set using an expression
+  that allows
   up to 200 local universe and 200 scheduler universe jobs to run.
 
 \item The default value of
-  \MacroNI{GRIDMANAGER\_MAX\_SUBMITTED\_JOBS\_PER\_RESOURCE} has
+  \Macro{GRIDMANAGER\_MAX\_SUBMITTED\_JOBS\_PER\_RESOURCE} has
   changed from 100 to 1000.
 
-\item The default \MacroNI{NEGOTIATOR\_INTERVAL} has changed from 300 to 60.
+\item The default \Macro{NEGOTIATOR\_INTERVAL} has changed from 300 to 60.
 
-\item The default value of \MacroNI{ENABLE\_GRID\_MONITOR} has been
-  changed from \Expr{False} to \Expr{True}.  Previously, this variable
+\item The default value of \Macro{ENABLE\_GRID\_MONITOR} has been
+  changed from \Expr{False} to \Expr{True}.  This variable
   was assigned to \Expr{True} in the example configuration file, so
-  many installations would have been using the grid monitor even
-  though the default when the variable is not defined in the
-  configuration file was not to use the grid monitor.
+  the change in default value now matches the value set in the example
+  configuration.
+
+% #631
+\item \MacroNI{VM\_VERSION} has been removed, as has the machine ad
+attribute of the same name. \MacroNI{START\_ATTRS} can be used to
+add virtual machine version information to the machine ad.
 
 \end{itemize}
 
@@ -168,6 +195,35 @@ attributes.
 file and the \Condor{dagman} binary (which is done at DAG startup) is
 now much more permissive.  Currently, \File{.condor.sub} files with
 versions of 7.1.2 and later are accepted by \Condor{dagman}.
+
+% #822
+\item Fixed a bug introduced in 7.3.2 that could cause the
+\Condor{gridmanager} to crash repeatedly on startup if the job queue
+contained grid-type gt2 jobs that had been previously submitted.
+
+% #724, #774
+\item Fixed two bugs related to VOMS introduced in 7.3.2. The first
+prevented jobs with X509 proxies from being submitted on platforms
+on which Condor doesn't support VOMS. The second prevented submission
+of jobs with VOMS proxies if the authenticity of the VOMS extensions
+couldn't be verified.
+
+\item Fixed a bad default in \Attr{batch\_gahp.config} that prevented
+Condor from observing job state changes for grid-type pbs and lsf grid
+universe jobs.
+
+% #748
+\item Fixed a bug that caused Condor-C jobs to fail if
+\Attr{transfer\_executable} was set to \Opt{False}.
+
+% #784
+\item Fix a bug that caused Condor-C jobs to fail if the executable
+or stdin/out/err file names contained a comma.
+
+% #460
+\item File transfer for grid-type gt4 jobs requires an empty directory
+in \Attr{/tmp}, which the \Condor{gridmanager} creates. If this directory
+is deleted, the \Condor{gridmanager} will now recreate it.
 
 \end{itemize}
 
