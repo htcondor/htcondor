@@ -51,6 +51,7 @@ See the
 for a further definition of a cluster.
 A limitation exists such that
 all jobs within the single cluster must use the same log file.
+Separate nodes within a DAG may use different log files.
 
 As DAGMan schedules and submits jobs within nodes to Condor,
 these jobs are defined to succeed or fail based on their
@@ -481,6 +482,14 @@ The file used as the default node log is controlled by the
 A complete description is at section~\ref{param:DAGManDefaultNodeLog}.
 Nodes specifying a log file and other nodes using the default log
 file can be mixed in a single DAG.
+
+An additional restriction applies to the submit description file
+command \SubmitCmd{Log} specific to a Condor job within
+a DAG node.
+This command may not be defined in such a way that it uses macros.
+Using a macro would violate the restriction that there be exactly
+one log file specified for the potentially multiple jobs 
+within a single cluster.
 
 Here is a modified version of the DAG input file
 for the diamond-shaped DAG. 

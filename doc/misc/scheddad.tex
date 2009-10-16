@@ -14,8 +14,8 @@
   host name.
 
 \index{ClassAd Scheduler attribute!MaxJobsRunning}
-\item[\AdAttr{MaxJobsRunning}:] The same integer value as set in the
-  configuration variable \Macro{MAX\_JOBS\_RUNNING}.
+\item[\AdAttr{MaxJobsRunning}:] The same integer value as set by the
+  evaluation of the configuration variable \Macro{MAX\_JOBS\_RUNNING}.
   See the definition at section~\ref{param:MaxJobsRunning} on
   page~\pageref{param:MaxJobsRunning}.
 
@@ -86,12 +86,32 @@
 \item[\AdAttr{TotalJobAds}:] The total number of all jobs (in all 
   states) from this \Condor{schedd} daemon.
 
+\index{ClassAd Scheduler attribute!TotalLocalIdleJobs}
+\item[\AdAttr{TotalLocalIdleJobs}:] The total number of 
+  \SubmitCmd{local} \SubmitCmd{ universe} jobs from this
+  \Condor{schedd} daemon that are currently idle.
+
+\index{ClassAd Scheduler attribute!TotalLocalRunningJobs}
+\item[\AdAttr{TotalLocalRunningJobs}:] The total number of 
+  \SubmitCmd{local} \SubmitCmd{ universe} jobs from this
+  \Condor{schedd} daemon that are currently running.
+
 \index{ClassAd Scheduler attribute!TotalRemovedJobs}
 \item[\AdAttr{TotalRemovedJobs}:] The current number of all running jobs
   from this \Condor{schedd} daemon that have remove requests.
 
 \index{ClassAd Scheduler attribute!TotalRunningJobs}
 \item[\AdAttr{TotalRunningJobs}:] The total number of jobs from this
+  \Condor{schedd} daemon that are currently running.
+
+\index{ClassAd Scheduler attribute!TotalSchedulerIdleJobs}
+\item[\AdAttr{TotalSchedulerIdleJobs}:] The total number of 
+  \SubmitCmd{scheduler} \SubmitCmd{ universe} jobs from this
+  \Condor{schedd} daemon that are currently idle.
+
+\index{ClassAd Scheduler attribute!TotalSchedulerRunningJobs}
+\item[\AdAttr{TotalSchedulerRunningJobs}:] The total number of 
+  \SubmitCmd{scheduler} \SubmitCmd{ universe} jobs from this
   \Condor{schedd} daemon that are currently running.
 
 \index{ClassAd Scheduler attribute!UpdateSequenceNumber}
