@@ -163,6 +163,12 @@ expressions that referred to these attributes, they were effectively
 treated as though undefined.  Quill was also not able to see these
 attributes.
 
+% gittrac #825
+\item The version compatibility checking between a \File{.condor.sub}
+file and the \Condor{dagman} binary (which is done at DAG startup) is
+now much more permissive.  Currently, \File{.condor.sub} files with
+versions of 7.1.2 and later are accepted by \Condor{dagman}.
+
 \end{itemize}
 
 \noindent Known Bugs:
