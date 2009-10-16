@@ -50,7 +50,7 @@ ORDER BY
 
 
 
-  $db = mysql_connect(DB_HOST, DB_READER_USER, DB_READER_PASS) 
+  $db = mysql_connect(WEB_DB_HOST, DB_READER_USER, DB_READER_PASS) 
      or die ("Could not connect : " . mysql_error());
   mysql_select_db(DB_NAME) or die("Could not select database");
 

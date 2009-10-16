@@ -25,7 +25,7 @@
   $runids = array("0" => "");
   $basedir = "rundir";  
  
-  $db = mysql_connect("nmi-db.cs.wisc.edu", "$dbUsername", "$dbPassword") or die ("Could not connect : " . mysql_error());
+  $db = mysql_connect("mysql.batlab.org", "$dbUsername", "$dbPassword") or die ("Could not connect : " . mysql_error());
   mysql_select_db("$dbName") or die("Could not select database");
   $result1 = mysql_query($query1) or die ("Query failed : " . mysql_error());
 

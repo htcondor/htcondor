@@ -76,7 +76,7 @@ class Task {
 
       if ( strstr($this->taskname, "platform_job") ){
         $this->filepath = "";
-      } else if ( strstr($this->hostname, "nmi-s005") || strstr($this->hostname, "nmi-s003") ) {  
+      } else if ( strstr($this->hostname, "nmi-s005") || strstr($this->hostname, "nmi-s006") ) {  
         if ( strstr($this->platform, "local") ) {
           #$this->filepath = "$this->gid/$this->taskname";
           $this->filepath = "$this->strtpath/$this->gid/$this->taskname";

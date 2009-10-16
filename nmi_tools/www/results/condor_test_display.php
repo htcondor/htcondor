@@ -14,7 +14,7 @@
 
   # find the last given number of builds,  ordered by the newest builds first 
   $query0 = "SELECT * FROM Run where user='cndrauto' and run_type='build' ORDER BY runid DESC LIMIT $limit"; 
-  $db = mysql_connect("nmi-db.cs.wisc.edu", "$dbUsername", "$dbPassword") or die ("Could not connect : " . mysql_error());
+  $db = mysql_connect("mysql.batlab.org", "$dbUsername", "$dbPassword") or die ("Could not connect : " . mysql_error());
   mysql_select_db("$dbName") or die("Could not select database");
   $result0 = mysql_query($query0) or die ("Query failed : " . mysql_error());
   while( $myrow = mysql_fetch_array($result0) ) {

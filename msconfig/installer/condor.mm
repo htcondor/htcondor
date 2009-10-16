@@ -359,6 +359,17 @@
 #)
 
 
+;--- set CONDOR_KBDD registry key ----------------------------------------
+#(
+<$Registry 
+	HKEY="LOCAL_MACHINE" 
+	KEY="software\Microsoft\Windows\CurrentVersion\Run" 
+	VALUE="[INSTALLDIR_NTS]\bin\condor_kbdd.exe" 
+	MsiFormatted="VALUE" 
+	Name="CONDOR_KBDD">
+#)
+
+
 ;--- Set Config file parameters ---------------------------------------------
 ;----------------------------------------------------------------------------
 ;--- we split into several calls because the arglist can only be 255 
