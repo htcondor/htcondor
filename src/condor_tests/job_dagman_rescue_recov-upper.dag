@@ -1,0 +1,13 @@
+# Note: using a nested DAG structure here so that the lower-level DAG
+# will get run twice -- the first time through, it will generate a
+# rescue DAG; the second time through, it will succeed (if everything
+# goes right).
+
+# This node makes sure things are set up correctly.
+Job nodeA job_dagman_rescue_recov-node_setup.cmd
+Vars nodeA nodename="$(JOB)"
+
+Subdag External nodeB job_dagman_rescue_recov-lower.dag
+Retry nodeB 3
+
+Parent nodeA Child nodeB
