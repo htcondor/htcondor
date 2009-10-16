@@ -188,6 +188,7 @@ main_pre_command_sock_init( )
 {
 }
 
+#ifdef WIN32
 int WINAPI WinMain( __in HINSTANCE hInstance, __in_opt HINSTANCE hPrevInstance, __in_opt LPSTR lpCmdLine, __in int nShowCmd )
 {
 	// cons up a "standard" argv for dc_main.
@@ -199,3 +200,5 @@ int WINAPI WinMain( __in HINSTANCE hInstance, __in_opt HINSTANCE hPrevInstance, 
 	// dc_main should exit() so we probably never get here.
 	return 0;
 }
+#endif
+
