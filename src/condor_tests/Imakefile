@@ -1859,6 +1859,13 @@ TESTCLASS(job_dagman_multi_dag,quick)
 TESTCLASS(job_dagman_multi_dag,full)
 TESTCLASS(job_dagman_multi_dag,quicknolink)
 
+DESC(job_dagman_rescue-A,"Test DAGMan with rescue DAG")
+RUN(job_dagman_rescue-A)
+TESTCLASS(job_dagman_rescue-A,dagman)
+TESTCLASS(job_dagman_rescue-A,quick)
+TESTCLASS(job_dagman_rescue-A,full)
+TESTCLASS(job_dagman_rescue-A,quicknolink)
+
 /* Sample performance tests */
 
 /*
