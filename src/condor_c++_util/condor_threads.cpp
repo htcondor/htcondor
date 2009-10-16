@@ -26,7 +26,7 @@
 #include "HashTable.h"
 #include "condor_string.h"	// for strnewp()
 #include "dc_service.h"		// for class Service
-
+#include "subsystem_info.h"
 
 /**********************************************************************/
 /**********************************************************************/
@@ -837,7 +837,12 @@ ThreadImplementation::pool_init()
 {
 	int i;
 	
-	num_threads_ = param_integer("THREAD_WORKER_POOL_SIZE",0,0);
+		// For now, only allow the COLLECTOR to have a thread pool.
+	if ( strcmp(get_mySubSystem()->getName(),"COLLECTOR")==0 ) {
+		num_threads_ = param_integer("THREAD_WORKER_POOL_SIZE",0,0);
+	} else {
+		num_threads_ = 0;
+	}
 
 	if ( num_threads_ == 0 ) {
 		// dont waste time w/ locks if user doesn't want threads.
