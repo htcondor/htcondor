@@ -126,23 +126,23 @@ has been improved.
   Previously, it was 200 if not set,
   but it was set to 1800 in the example configuration file.
 
-\item The default values of \MacroNI{START\_LOCAL\_UNIVERSE} and
-  \MacroNI{START\_SCHEDULER\_UNIVERSE} have changed.  Previously,
-  these were simply set to \Expr{True}.  Now, they are configured to allow
+\item The default values of \Macro{START\_LOCAL\_UNIVERSE} and
+  \Macro{START\_SCHEDULER\_UNIVERSE} have changed.  Previously,
+  these were set to \Expr{True}.  Now, they are set using an expression
+  that allows
   up to 200 local universe and 200 scheduler universe jobs to run.
 
 \item The default value of
-  \MacroNI{GRIDMANAGER\_MAX\_SUBMITTED\_JOBS\_PER\_RESOURCE} has
+  \Macro{GRIDMANAGER\_MAX\_SUBMITTED\_JOBS\_PER\_RESOURCE} has
   changed from 100 to 1000.
 
-\item The default \MacroNI{NEGOTIATOR\_INTERVAL} has changed from 300 to 60.
+\item The default \Macro{NEGOTIATOR\_INTERVAL} has changed from 300 to 60.
 
-\item The default value of \MacroNI{ENABLE\_GRID\_MONITOR} has been
-  changed from \Expr{False} to \Expr{True}.  Previously, this variable
+\item The default value of \Macro{ENABLE\_GRID\_MONITOR} has been
+  changed from \Expr{False} to \Expr{True}.  This variable
   was assigned to \Expr{True} in the example configuration file, so
-  many installations would have been using the grid monitor even
-  though the default when the variable is not defined in the
-  configuration file was not to use the grid monitor.
+  the change in default value now matches the value set in the example
+  configuration.
 
 % #631
 \item \MacroNI{VM\_VERSION} has been removed, as has the machine ad
