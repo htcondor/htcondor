@@ -728,7 +728,9 @@ int Condor_Auth_X509::authenticate_client_gss(CondorError* errstack)
         }
 
 		// extract and store VOMS attributes
-		setFQAN(get_VOMS_string(credential_handle));
+		if (param_boolean("USE_VOMS_ATTRIBUTES", true)) {
+			setFQAN(get_VOMS_string(credential_handle));
+		}
 
         StringList * daemonNames = getDaemonList(mySock_);
 
@@ -805,7 +807,9 @@ int Condor_Auth_X509::authenticate_server_gss(CondorError* errstack)
     else {
 		// store the raw subject name for later mapping
 		setAuthenticatedName(GSSClientname);
-		setFQAN(get_VOMS_string(credential_handle));
+		if (param_boolean("USE_VOMS_ATTRIBUTES", true)) {
+			setFQAN(get_VOMS_string(credential_handle));
+		}
 
         // Try to map DN to local name (in the format of name@domain)
         if ( (status = nameGssToLocal(GSSClientname) ) == 0) {
@@ -864,6 +868,10 @@ MyString Condor_Auth_X509::get_VOMS_string(gss_cred_id_t cred_handle) {
 #if !defined(HAVE_EXT_VOMS)
 	return "";
 #else
+
+	if (!param_boolean("USE_VOMS_ATTRIBUTES", true)) {
+		return "";
+	}
 
 	int ret;
 	struct vomsdata *voms_data = NULL;

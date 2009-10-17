@@ -223,6 +223,7 @@ DCCollector::reconfig( void )
 		// Set an upper bound of one hour for the collector to be blacklisted.
 	int avoid_time = param_integer("DEAD_COLLECTOR_MAX_AVOIDANCE_TIME",3600);
 	blacklisted.setMaxInterval(avoid_time);
+	blacklisted.setInitialInterval(0);
 
 	parseTCPInfo();
 	initDestinationStrings();

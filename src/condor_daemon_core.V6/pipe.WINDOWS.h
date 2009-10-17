@@ -92,6 +92,10 @@ protected:
 	HANDLE m_event;
 	OVERLAPPED m_overlapped_struct;
 
+	// Our own implementation of WaitForSingleObject, which simply realeases and grabs
+	// the mutex that protects our handle watching thread in daemon core.
+	DWORD WaitForSingleObject(HANDLE handle, DWORD millisecs);
+
 };
 
 class ReadPipeEnd : public PipeEnd {

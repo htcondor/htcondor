@@ -187,6 +187,11 @@ char* extract_VOMS_attrs( globus_gsi_cred_handle_t handle, int *error) {
     STACK_OF(X509) *chain = NULL;
 	X509 *cert = NULL;
 
+	if (!param_boolean_int("USE_VOMS_ATTRIBUTES", 1)) {
+		*error = 1;
+		return strdup("VOMS support was disabled by config parameter USE_VOMS_ATTRIBUTES.");
+	}
+
 	ret = globus_gsi_cred_get_cert_chain(handle, &chain);
 	if(ret != GLOBUS_SUCCESS) {
 		retfqan = strdup("Failed to get cert chain from credential");
@@ -330,7 +335,7 @@ x509_proxy_subject_name( const char *proxy_file, int include_voms_fqan )
 		goto cleanup;
 	}
 
-	if (include_voms_fqan) {
+	if (include_voms_fqan && param_boolean_int("USE_VOMS_ATTRIBUTES", 1)) {
 		fqan = extract_VOMS_attrs(handle, &error);
 		if (error) {
 			set_error_string(fqan);
@@ -440,7 +445,7 @@ x509_proxy_identity_name( const char *proxy_file, int include_voms_fqan )
 		goto cleanup;
 	}
 
-	if (include_voms_fqan) {
+	if (include_voms_fqan && param_boolean_int("USE_VOMS_ATTRIBUTES", 1)) {
 		fqan = extract_VOMS_attrs(handle, &error);
 		if (error) {
 			set_error_string(fqan);
