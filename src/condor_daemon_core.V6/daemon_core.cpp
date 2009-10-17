@@ -2193,6 +2193,9 @@ int DaemonCore::Register_Reaper(int rid, const char* reap_descrip,
 	if ( rid == -1 ) {
 		// a brand new entry in the table
 		if(nReap >= maxReap) {
+			dprintf(D_ALWAYS, 
+				"Unable to register reaper with description: %s\n",
+				reap_descrip==NULL?"[Not specified]":reap_descrip);
 			EXCEPT("# of reaper handlers exceeded specified maximum");
 		}
 		// scan thru table to find a new entry. scan in such a way
@@ -2203,6 +2206,9 @@ int DaemonCore::Register_Reaper(int rid, const char* reap_descrip,
 				break;
 			} else {
 				if ( reapTable[i].num != i + 1 ) {
+					dprintf(D_ALWAYS, 
+						"Unable to register reaper with description: %s\n",
+						reap_descrip==NULL?"[Not specified]":reap_descrip);
 					EXCEPT("reaper table messed up");
 				}
 			}
