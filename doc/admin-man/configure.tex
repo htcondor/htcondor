@@ -1848,14 +1848,14 @@ which use DaemonCore).
   file. Currently, this setting only works for the \Condor{schedd}
   (that is \Macro{SCHEDD\_DAEMON\_AD\_FILE}) and is required for Quill.
 
+\index{SUBSYS\_ATTRS macro@\texttt{<SUBSYS>\_ATTRS} macro}
+\index{SUBSYS\_EXPRS macro@\texttt{<SUBSYS>\_EXPRS} macro}
+\MacroIndex{STARTD\_ATTRS}
+\MacroIndex{STARTD\_EXPRS}
 \label{param:SubsysExprs}
 \item[\MacroB{<SUBSYS>\_ATTRS} or
 \label{param:SubsysAttrs}
 \MacroB{<SUBSYS>\_EXPRS}]
-  \index{SUBSYS\_ATTRS macro@\texttt{<SUBSYS>\_ATTRS} macro}
-  \index{SUBSYS\_EXPRS macro@\texttt{<SUBSYS>\_EXPRS} macro}
-  \MacroIndex{STARTD\_ATTRS}
-  \MacroIndex{STARTD\_EXPRS}
   Allows any DaemonCore daemon to advertise arbitrary
   expressions from the configuration file in its ClassAd.  Give the
   comma-separated list of entries from the configuration file you want in the
@@ -8392,15 +8392,6 @@ They specify items related to the \Condor{vm-gahp}.
   Specifies the type of supported virtual machine software.
   It will be the value \verb@xen@ or \verb@vmware@.
   There is no default value for this required configuration variable.
-
-\label{param:VMVersion}
-\item[\Macro{VM\_VERSION}]
-  Specifies the version of supported virtual machine software
-  defined by \MacroNI{VM\_TYPE}.  
-  There is no default value for this required configuration variable.
-  This configuration variable does not currently alter the behavior of
-  the \Condor{vm-gahp}; instead, it is used in \Condor{status} when
-  printing VM-capable hosts and slots.
 
 \label{param:VMMaxMemory}
 \item[\Macro{VM\_MEMORY}]
