@@ -2883,6 +2883,10 @@ InsertFileTransAttrs( FileTransferOutput_t when_output )
 	InsertJobExpr( should.Value() );
 	if( should_transfer != STF_NO ) {
 		InsertJobExpr( when.Value() );
+	} else if (!Remote) {
+		MyString never_create_sandbox = ATTR_NEVER_CREATE_JOB_SANDBOX;
+		never_create_sandbox += " = true";
+		InsertJobExpr( never_create_sandbox.Value() );
 	}
 	InsertJobExpr( ft.Value() );
 }
@@ -6838,7 +6842,7 @@ log_submit()
 			// we don't know the gjid here, so pass in NULL as the last 
 			// parameter - epaulson 2/09/2007
 			if ( ! usr_log.initialize(owner, ntdomain, simple_name,
-						0, 0, 0, NULL) ) {
+									  0, 0, 0, NULL) ) {
 				fprintf(stderr, "\nERROR: Failed to log submit event.\n");
 			} else {
 				// Output the information

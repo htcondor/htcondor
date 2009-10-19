@@ -24,7 +24,7 @@ CONDOR_AUTH_OBJ = condor_auth.o condor_auth_claim.o condor_auth_fs.o \
 	          condor_auth_sspi.o condor_auth_anonymous.o         \
 		  $(AUTH_X509_OBJ) $(AUTH_KERB_OBJ) $(AUTH_PASSWD_OBJ) $(AUTH_SSL_OBJ) ../condor_daemon_core.V6/condor_ipverify.o authentication.o
 
-CONDOR_TYPE_OBJ = sig_num.o proc.o open_flags.o fcntl_cmd.o errno_num.o
+CONDOR_TYPE_OBJ = sig_num.o open_flags.o fcntl_cmd.o errno_num.o
 
 OBJ = stream.o sock.o reli_sock.o safe_sock.o buffers.o sockCache.o \
 		$(CONDOR_AUTH_OBJ) $(CONDOR_TYPE_OBJ) condor_rw.o \

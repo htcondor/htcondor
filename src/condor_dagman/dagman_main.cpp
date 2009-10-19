@@ -437,7 +437,6 @@ void ExitSuccess() {
 }
 
 void condor_event_timer();
-void print_status();
 
 /****** FOR TESTING *******
 int main_testing_stub( Service *, int ) {

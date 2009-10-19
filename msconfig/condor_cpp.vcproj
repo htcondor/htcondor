@@ -273,6 +273,14 @@
 			>
 		</File>
 		<File
+			RelativePath="..\src\condor_c++_util\condor_base64.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\condor_base64.h"
+			>
+		</File>
+		<File
 			RelativePath="..\src\condor_c++_util\condor_common.cpp"
 			>
 			<FileConfiguration
@@ -413,6 +421,10 @@
 		</File>
 		<File
 			RelativePath="..\src\condor_c++_util\condor_threads.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\condor_timeslice.cpp"
 			>
 		</File>
 		<File
@@ -1224,7 +1236,23 @@
 			>
 		</File>
 		<File
+			RelativePath="..\src\condor_c++_util\simple_arg.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\simple_arg.h"
+			>
+		</File>
+		<File
 			RelativePath="..\src\condor_c++_util\simplelist.h"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\socket_proxy.cpp"
+			>
+		</File>
+		<File
+			RelativePath="..\src\condor_c++_util\socket_proxy.h"
 			>
 		</File>
 		<File
@@ -1449,30 +1477,6 @@
 		</File>
 		<File
 			RelativePath="..\src\condor_c++_util\write_user_log_state.h"
-			>
-		</File>
-		<File
-			RelativePath="..\src\condor_c++_util\condor_base64.cpp"
-			>
-		</File>
-		<File
-			RelativePath="..\src\condor_c++_util\condor_base64.h"
-			>
-		</File>
-		<File
-			RelativePath="..\src\condor_c++_util\socket_proxy.cpp"
-			>
-		</File>
-		<File
-			RelativePath="..\src\condor_c++_util\socket_proxy.h"
-			>
-		</File>
-		<File
-			RelativePath="..\src\condor_c++_util\simple_arg.h"
-			>
-		</File>
-		<File
-			RelativePath="..\src\condor_c++_util\simple_arg.cpp"
 			>
 		</File>
 	</Files>

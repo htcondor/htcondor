@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2009, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -52,152 +52,44 @@ The following functions can then be used to query the timer:
 
 class Timeslice {
  public:
-	Timeslice() {
-		m_timeslice = 0;
-		m_min_interval = 0;
-		m_max_interval = 0;
-		m_default_interval = 0;
-		m_initial_interval = -1;
-		m_last_duration = 0;
-		m_avg_duration = 0;
-		m_next_start_time = 0;
-		m_never_ran_before = true;
-		m_expedite_next_run = true;
-	}
+	Timeslice();
 
 	double getLastDuration() const { return m_last_duration; }
 
 	double getTimeslice() const { return m_timeslice; }
-	void setTimeslice(double timeslice) {
-		m_timeslice = timeslice;
-		updateNextStartTime();
-	}
+	void setTimeslice(double timeslice);
 
 	double getMinInterval() const { return m_min_interval; }
-	void setMinInterval(double min_interval) {
-		m_min_interval = min_interval;
-		updateNextStartTime();
-	}
+	void setMinInterval(double min_interval);
 
 	double getMaxInterval() const { return m_max_interval; }
-	void setMaxInterval(double max_interval) {
-		m_max_interval = max_interval;
-		updateNextStartTime();
-	}
+	void setMaxInterval(double max_interval);
 
 	double getDefaultInterval() const { return m_default_interval; }
-	void setDefaultInterval(double default_interval) {
-		m_default_interval = default_interval;
-		updateNextStartTime();
-	}
+	void setDefaultInterval(double default_interval);
 
 	double getInitialInterval() const { return m_initial_interval; }
-	void setInitialInterval(double initial_interval) {
-		m_initial_interval = initial_interval;
-		updateNextStartTime();
-	}
+	void setInitialInterval(double initial_interval);
 
 	void setStartTimeNow() { m_start_time.getTime(); }
 	const UtcTime &getStartTime() const { return m_start_time; }
 
-	void setFinishTimeNow() {
-		UtcTime finish_time;
-		finish_time.getTime();
-		m_last_duration = finish_time.difference(&m_start_time);
-		if( m_never_ran_before ) {
-			m_avg_duration = m_last_duration;
-		}
-		else {
-			// Compute the exponential moving average of last_duration.
-			// This is intended to smooth over spikes that may happen.
-			// alpha --> 0 clings to the past; alpha --> 1 ignores the past
-			// Until we have a good reason to make this configurable,
-			// alpha=0.4 is simply hard-coded.  It takes roughly 5 cycles
-			// to get within 10% of a new radically different value.
+	void setFinishTimeNow();
 
-			const double alpha = 0.4;
-			m_avg_duration = alpha*m_last_duration + (1.0-alpha)*m_avg_duration;
-		}
-		m_never_ran_before = false;
-		m_expedite_next_run = false;
-		updateNextStartTime();
-	}
+	void reset();
 
-	void reset() {
-		m_last_duration = 0;
-		m_start_time = UtcTime();
-		m_never_ran_before = true;
-		m_expedite_next_run = false;
-		updateNextStartTime();
-	}
-
-	void updateNextStartTime() {
-		// Keep in mind in reading the following that "delay" is the
-		// time to wait before running again starting from the previous
-		// _start_ time (NOT from the previous end time).
-
-		double delay = m_default_interval;
-		if( m_expedite_next_run ) {
-			// ignore default, run as soon as possible
-			// this may be adjusted below by min interval and max timeslice
-			delay = 0;
-		}
-		if( m_start_time.seconds() == 0 ) {
-				// there is no previous start time (because this is
-				// the first time) so pretend that we just ran, and
-				// ignore timeslice delay
-			setStartTimeNow();
-		}
-		else if( m_timeslice > 0 ) {
-			// Compute the soonest start time from the previous start time that
-			// would result in the desired timeslice fraction, where the
-			// timeslice is the amount of time spent running divided by
-			// the total time between the start of one run to the next run.
-			// A timeslice of 1.0 means we can run right away, because the
-			// delay will just be equal to the run time.  A timeslice less
-			// than 1.0 means we must delay some amount before running again.
-
-			double slice_delay = m_avg_duration/m_timeslice;
-			if( delay < slice_delay ) {
-				delay = slice_delay;
-			}
-		}
-		if( m_max_interval > 0 && delay > m_max_interval ) {
-			delay = m_max_interval;
-		}
-		if( delay < m_min_interval ) {
-			delay = m_min_interval;
-		}
-		if( m_never_ran_before && m_initial_interval >= 0 ) {
-			// we never ran before and an initial interval was explicitly given
-			delay = m_initial_interval;
-		}
-		m_next_start_time = (time_t)floor(
-          delay +
-		  m_start_time.seconds() +
-          m_start_time.microseconds()/1000000.0 +
-          0.5 /*round to nearest integer*/ );
-	}
+	void updateNextStartTime();
 
 	time_t getNextStartTime() const { return m_next_start_time; }
 
-	unsigned int getTimeToNextRun() const {
-		int delta = int(m_next_start_time - time(NULL));
-		if( delta < 0 ) {
-			return 0;
-		}
-		return (unsigned int)delta;
-	}
+	unsigned int getTimeToNextRun() const;
 
 	bool isTimeToRun() const { return getTimeToNextRun() <= 0; }
 
 	// When computing time til next run, ignore the default interval.
 	// The next interval will be as small as is allowed by the
 	// min interval and max timeslice.
-	void expediteNextRun() {
-		m_expedite_next_run = true;
-		updateNextStartTime();
-	}
+	void expediteNextRun();
 
  private:
 	double m_timeslice;        // maximum fraction of time to consume

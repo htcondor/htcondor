@@ -147,6 +147,7 @@ class WriteUserLog
 
 	void setWriteUserLog(bool b){ m_userlog_enable = b; }
 	void setWriteGlobalLog(bool b){ m_global_disable = !b; }
+	void setCreatorName(const char *);
 
 	/** Verify that the event log is initialized
 		@return true on success
@@ -312,6 +313,7 @@ class WriteUserLog
 
 	/** Previously configured?       */  bool       m_configured;
 	/** Initialized?                 */  bool       m_initialized;
+	/** Creator Name (schedd name)   */  char     * m_creator_name;
 };
 
 // For backward compatibility, define UserLog

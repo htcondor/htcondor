@@ -256,7 +256,7 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o selector.o \
 	condor_threads.o \
 	New_classads_newold \
 	historyFileFinder.o \
-	socket_proxy.o
+	socket_proxy.o condor_timeslice.o
 
 library_target(cplus_lib.a,$(OBJ))
 library_target(liburl.a,$(URL_OBJ))

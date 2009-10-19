@@ -138,6 +138,15 @@ platforms =   \
 	x86_rhas_3
 test_append_prereqs = java-1.4.2_05, perl-5.8.5
 #x_test_platforms_x86_64_rhas_3 = x86_64_fc_5
+]
+
+[
+platforms =   \
+	ppc_aix_5.2-pl5, \
+	sun4u_sol_5.9, \
+	x86_rhas_3
+test_append_prereqs = java-1.4.2_05, perl-5.8.5
+#x_test_platforms_x86_64_rhas_3 = x86_64_fc_5
 x_test_platforms_ppc_aix_5.2-pl5 =  ppc_aix_5.3
 ]
 

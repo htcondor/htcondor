@@ -128,6 +128,7 @@ HADStateMachine::freeResources(void)
 */
 HADStateMachine::~HADStateMachine(void)
 {
+
     ClassAd invalidate_ad;
     MyString line;
 

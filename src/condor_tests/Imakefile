@@ -1852,6 +1852,13 @@ TESTCLASS(job_dagman_abnormal_term_recovery_retries,quick)
 TESTCLASS(job_dagman_abnormal_term_recovery_retries,full)
 TESTCLASS(job_dagman_abnormal_term_recovery_retries,quicknolink)
 
+DESC(job_dagman_multi_dag,"Test DAGMan with multiple DAG files on the command line")
+RUN(job_dagman_multi_dag)
+TESTCLASS(job_dagman_multi_dag,dagman)
+TESTCLASS(job_dagman_multi_dag,quick)
+TESTCLASS(job_dagman_multi_dag,full)
+TESTCLASS(job_dagman_multi_dag,quicknolink)
+
 /* Sample performance tests */
 
 /*
