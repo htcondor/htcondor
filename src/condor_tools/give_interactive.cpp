@@ -27,6 +27,7 @@
 #include "condor_api.h"
 #include "my_username.h"
 #include "condor_classad.h"
+#include "condor_classad_util.h"
 #include "condor_adtypes.h"
 #include "condor_string.h"
 #include "condor_uid.h"
@@ -118,7 +119,7 @@ giveBestMachine(ClassAd &request,ClassAdList &startdAds,
 	while ((candidate = startdAds.Next ())) {
 
 		// the candidate offer and request must match
-		if( !( *candidate == request ) ) {
+		if( !IsAMatch( &request, candidate ) ) {
 				// they don't match; continue
 			//printf("DEBUG: MATCH FAILED\n\nCANDIDATE:\n");
 			//candidate->fPrint(stdout);

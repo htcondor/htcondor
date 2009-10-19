@@ -22,6 +22,7 @@
 #include "condor_config.h"
 #include "condor_accountant.h"
 #include "condor_classad.h"
+#include "condor_classad_util.h"
 #include "condor_debug.h"
 #include "condor_query.h"
 #include "condor_q.h"
@@ -2737,7 +2738,7 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 		if( verbose ) sprintf( return_buff, "%-15.15s ", buffer );
 
 		// 1. Request satisfied? 
-		if( !( (*offer) >= (*request) ) ) {
+		if( !IsAHalfMatch( request, offer ) ) {
 			if( verbose ) sprintf( return_buff,
 				"%sFailed request constraint\n", return_buff );
 			fReqConstraint++;
@@ -2745,7 +2746,7 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 		} 
 
 		// 2. Offer satisfied? 
-		if( !( (*offer) <= (*request) ) ) {
+		if ( !IsAHalfMatch( offer, request ) ) {
 			if( verbose ) strcat( return_buff, "Failed offer constraint\n");
 			fOffConstraint++;
 			continue;

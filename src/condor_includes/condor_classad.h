@@ -60,17 +60,11 @@ class ClassAd : public AttrList
 
 		// Type operations
         void		SetMyTypeName(const char *); /// my type name set.
-        const char*	GetMyTypeName();		// my type name returned.
+        const char*	GetMyTypeName() const;		// my type name returned.
         void 		SetTargetTypeName(const char *);// target type name set.
-        const char*	GetTargetTypeName();	// target type name returned.
-        int			GetMyTypeNumber();			// my type number returned.
-        int			GetTargetTypeNumber();		// target type number returned.
-
-		// Matching operations
-        int			IsAMatch(class ClassAd*);			  // tests symmetric match
-		friend bool operator==(class ClassAd&,class ClassAd&);// same as symmetric match
-		friend bool operator>=(class ClassAd&,class ClassAd&);// lhs satisfies rhs
-		friend bool operator<=(class ClassAd&,class ClassAd&);// rhs satisifes lhs
+        const char*	GetTargetTypeName() const;	// target type name returned.
+        int			GetMyTypeNumber() const;			// my type number returned.
+        int			GetTargetTypeNumber() const;		// target type number returned.
 
         // shipping functions
         int put(Stream& s);

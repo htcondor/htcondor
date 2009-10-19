@@ -27,6 +27,7 @@
 #include "condor_parser.h"
 #include "condor_adtypes.h"
 #include "condor_debug.h"
+#include "condor_classad_util.h"
 #include "internet.h"
 #include "daemon.h"
 #include "dc_collector.h"
@@ -631,7 +632,7 @@ filterAds (ClassAdList &in, ClassAdList &out)
 	while( (candidate = (ClassAd *) in.Next()) )
     {
         // if a match occurs
-		if ((*candidate) >= (queryAd)) out.Insert (candidate);
+		if (IsAHalfMatch(&queryAd, candidate)) out.Insert (candidate);
     }
     in.Close ();
     

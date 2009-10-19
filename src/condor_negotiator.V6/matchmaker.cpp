@@ -25,6 +25,7 @@
 #include "condor_config.h"
 #include "condor_attributes.h"
 #include "condor_api.h"
+#include "condor_classad_util.h"
 #include "condor_query.h"
 #include "daemon.h"
 #include "dc_startd.h"
@@ -2446,7 +2447,7 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 		addRemoteUserPrios(candidate);
 
 			// the candidate offer and request must match
-		if( !( *candidate == request ) ) {
+		if( !IsAMatch(&request, candidate) ) {
 				// they don't match; continue
 			continue;
 		}

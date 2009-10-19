@@ -3894,7 +3894,7 @@ void FindRunnableJob(PROC_ID & jobid, const ClassAd* my_match_ad,
 		ad = GetNextJob(1);
 		while (ad != NULL) {
 			if ( Runnable(ad) ) {
-				if ( *ad == ((ClassAd &)(*my_match_ad)) )
+				if ( IsAMatch( my_match_ad, ad ) )
 				{
 					ad->LookupInteger(ATTR_CLUSTER_ID, jobid.cluster);
 					ad->LookupInteger(ATTR_PROC_ID, jobid.proc);
@@ -3951,7 +3951,7 @@ void FindRunnableJob(PROC_ID & jobid, const ClassAd* my_match_ad,
 				continue;
 			}
 
-			if ( ! (*ad == (ClassAd &)(*my_match_ad)) )
+			if ( ! IsAMatch( my_match_ad, ad ) )
 				{
 						// Job and machine do not match.
 					PrioRecAutoClusterRejected->insert( PrioRec[i].auto_cluster_id, 1 );
