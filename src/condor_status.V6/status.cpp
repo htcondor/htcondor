@@ -232,6 +232,12 @@ main (int argc, char *argv[])
 			printf ("Adding constraint [%s]\n", buffer);
 		}
 		query->addANDConstraint (buffer);
+		
+		projList.AppendArg(ATTR_HAS_JAVA);
+		projList.AppendArg(ATTR_JAVA_MFLOPS);
+		projList.AppendArg(ATTR_JAVA_VENDOR);
+		projList.AppendArg(ATTR_JAVA_VERSION);
+
 	}
 
 	if(vmMode) {
@@ -240,6 +246,18 @@ main (int argc, char *argv[])
 			printf ("Adding constraint [%s]\n", buffer);
 		}
 		query->addANDConstraint (buffer);
+
+		projList.AppendArg(ATTR_VM_TYPE);
+		projList.AppendArg(ATTR_VM_MEMORY);
+		projList.AppendArg(ATTR_VM_NETWORKING);
+		projList.AppendArg(ATTR_VM_NETWORKING_TYPES);
+		projList.AppendArg(ATTR_VM_HARDWARE_VT);
+		projList.AppendArg(ATTR_VM_AVAIL_NUM);
+		projList.AppendArg(ATTR_VM_ALL_GUEST_MACS);
+		projList.AppendArg(ATTR_VM_ALL_GUEST_IPS);
+		projList.AppendArg(ATTR_VM_GUEST_MAC);
+		projList.AppendArg(ATTR_VM_GUEST_IP);
+
 	}
 
 	// second pass:  add regular parameters and constraints
