@@ -27,9 +27,6 @@
 bool EvalBool(ClassAd *ad, const char *constraint);
 bool EvalBool(AttrList* ad, ExprTree *tree);
 
-bool IsAMatch( const ClassAd *ad1, const ClassAd *ad2 );
-bool IsAHalfMatch( const ClassAd *ad1, const ClassAd *ad2 );
-
 bool ClassAdsAreSame( ClassAd* ad1, ClassAd* ad2, 
 					  StringList* ignored_attrs=NULL, bool verbose=false );
 

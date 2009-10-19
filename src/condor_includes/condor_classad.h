@@ -141,4 +141,7 @@ class ClassAdList : public AttrListList
 	static int SortCompare(const void*, const void*);
 };
 
+bool IsAMatch( const ClassAd *ad1, const ClassAd *ad2 );
+bool IsAHalfMatch( const ClassAd *ad1, const ClassAd *ad2 );
+
 #endif

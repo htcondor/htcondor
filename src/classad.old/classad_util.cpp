@@ -86,54 +86,6 @@ bool EvalBool(ClassAd *ad, const char *constraint)
 	return false;
 }
 
-//
-// This function tests whether two ClassAds match mutually.
-//
-
-// Parsing a classad from a string is slow.  Really slow.  We match
-// ads frequently, so cache the "MY.Requirements" tree so we only
-// need to parse it once.
-
-ExprTree *reqsTree = 0;
-
-bool IsAMatch(const ClassAd *ad1, const ClassAd *ad2)
-{
-	return IsAHalfMatch(ad1, ad2) && IsAHalfMatch(ad2, ad1);
-}
-
-bool IsAHalfMatch(const ClassAd *my, const ClassAd *target)
-{
-	EvalResult *val;	
-	
-	if( (target->GetMyTypeNumber()!=my->GetTargetTypeNumber()) &&
-	    stricmp(my->GetTargetTypeName(),ANY_ADTYPE) )
-	{
-		return false;
-	}
-
-	if ((val = new EvalResult) == NULL)
-	{
-		EXCEPT("Out of memory -- quitting");
-	}
-
-	if (reqsTree == 0) Parse ("MY.Requirements", reqsTree);
-	reqsTree -> EvalTree (my, target, val);
-	if (!val || val->type != LX_INTEGER)
-	{
-		delete val;
-		return false;
-	}
-	else
-	if (!val->i)
-	{
-		delete val;
-		return false;
-	}
-
-	delete val;
-	return true;
-}
-
 bool
 ClassAdsAreSame( ClassAd* ad1, ClassAd* ad2, StringList* ignored_attrs,
 				 bool verbose )
