@@ -637,7 +637,7 @@ GlobalOptions::parseArgs( int argc, const char **argv )
 			}
 
 		}
-		else if ( arg.Match('n', "num-exec") ) {
+		else if ( arg.Match("num-exec") ) {
 			if ( ! arg.getOpt(opts->m_numExec) ) {
 				fprintf(stderr, "Value needed for '%s'\n", arg.Arg() );
 				printf("%s", usage);
@@ -645,7 +645,7 @@ GlobalOptions::parseArgs( int argc, const char **argv )
 			}
 
 		}
-		else if ( arg.Match("num-procs") ) {
+		else if ( arg.Match('n', "num-procs") ) {
 			if ( ! arg.getOpt(opts->m_numProcs) ) {
 				fprintf(stderr, "Value needed for '%s'\n", arg.Arg() );
 				printf("%s", usage);
