@@ -17,10 +17,11 @@
  *
  ***************************************************************/
 
-
 #include "condor_common.h"
 #include "pipe.WINDOWS.h"
 #include "MyString.h"
+
+extern CRITICAL_SECTION Big_fat_mutex;
 
 PipeEnd::PipeEnd(HANDLE handle, bool overlapped, bool nonblocking, int pipe_size) :
 		m_handle(handle), m_overlapped(overlapped),
@@ -52,6 +53,20 @@ PipeEnd::~PipeEnd()
 	CloseHandle(m_watched_event);
 	CloseHandle(m_event);
 	CloseHandle(m_handle);
+}
+
+// method to wrap WaitForSingleObject so we release our mutex that
+// is shared with the daemoncore pid watcher thread.  if we don't
+// do this, we will deadlock!!!
+DWORD PipeEnd::WaitForSingleObject(HANDLE handle, DWORD millisecs)
+{
+	DWORD result;
+
+	::LeaveCriticalSection(&Big_fat_mutex); // release big fat mutex
+	result = ::WaitForSingleObject(handle,millisecs);
+	::EnterCriticalSection(&Big_fat_mutex); // enter big fat mutex
+
+	return result;
 }
 
 // this will be called from Register_Pipe, before WatchPid

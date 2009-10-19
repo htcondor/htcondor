@@ -66,6 +66,7 @@ public:
 	~SharedOptions( void );
 
 public:
+	const char *getName( void ) const { return m_name; };
 	bool getXml( void ) const { return m_isXml; };
 	bool getStork( void ) const { return m_stork; };
 	double getRandomProb( void ) const { return m_randomProb; };
@@ -73,10 +74,11 @@ public:
 	bool Verbose( Verbosity v ) const { return (m_verbosity >= v); };
 
 public:
-	bool		m_isXml;
-	bool		m_stork;
-	double		m_randomProb;		// Probability of 'random' events
-	Verbosity	m_verbosity;
+	const char	*m_name;
+	bool		 m_isXml;
+	bool		 m_stork;
+	double		 m_randomProb;		// Probability of 'random' events
+	Verbosity	 m_verbosity;
 };
 
 class WorkerOptions
@@ -88,6 +90,7 @@ public:
 
 public:
 	const SharedOptions	&getShared( void ) const { return m_shared; };
+	const char *getName( void ) const { return m_shared.getName(); };
 	bool getXml( void ) const { return m_shared.getXml(); };
 	bool getStork( void ) const { return m_shared.getStork(); };
 	double getRandomProb( void ) const {
@@ -167,6 +170,7 @@ public:
 	int getNumWorkers( void ) const {
 		return m_workerOptions.size();
 	};
+	const char *getName( void ) const { return m_shared.getName(); };
 	bool getXml( void ) const { return m_shared.getXml(); };
 	bool getStork( void ) const { return m_shared.getStork(); };
 	double getRandomProb( void ) const {
@@ -443,6 +447,7 @@ main(int argc, const char **argv)
 // *******************************
 SharedOptions::SharedOptions( void )
 {
+	m_name				= NULL;
 	m_isXml				= false;
 	m_stork				= false;
 	m_randomProb		= 0.0;
@@ -569,6 +574,7 @@ GlobalOptions::parseArgs( int argc, const char **argv )
 		"  -h|--usage: print this message and exit\n"
 		"\n"
 		"  --xml: write the log in XML\n"
+		"  --name <name>: Set creator name\n"
 		"\n"
 		"  <filename>: the log file to write to\n";
 
@@ -816,6 +822,13 @@ GlobalOptions::parseArgs( int argc, const char **argv )
 			printf("test_log_writer: %s, %s\n", VERSION, __DATE__);
 			status = STATUS_CANCEL;
 
+		}
+		else if ( arg.Match("name") ) {
+			if ( !arg.getOpt(m_shared.m_name) ) {
+				fprintf(stderr, "Value needed for '%s'\n", arg.Arg() );
+				printf("%s", usage);
+				status = true;
+			}
 		}
 		else if ( arg.Match("xml") ) {
 			m_shared.m_isXml = true;
@@ -1088,6 +1101,9 @@ TestLogWriter::TestLogWriter( Worker & /*worker*/,
 	  m_options( options ),
 	  m_rotations( 0 )
 {
+	if ( options.getName() ) {
+		setCreatorName( options.getName() );
+	}
 }
 
 bool
@@ -1289,7 +1305,7 @@ TestLogWriter::WriteEvents( int &events, int &sequence )
 		const char			*path = getGlobalPath();
 		ReadUserLogHeader	header_reader;
 		ReadUserLog			log_reader;
-		printf( "Trying to get sequence # from header\n" );
+
 		if ( !log_reader.initialize( path, false, false, true ) ) {
 			fprintf( stderr, "Error reading eventlog header (initialize)\n" );
 			error = true;
@@ -1300,7 +1316,7 @@ TestLogWriter::WriteEvents( int &events, int &sequence )
 		}
 		else {
 			sequence = header_reader.getSequence( );
-			printf( "Got %d from header\n", sequence );
+			printf( "Got sequence #%d from header\n", sequence );
 		}
 	}
 

@@ -291,11 +291,13 @@ CollectorList::query(CondorQuery & cQuery, ClassAdList & adList, CondorError *er
 				// Only try blacklisted collectors on the second pass
 			if( daemon->isBlacklisted() ) {
 				if( pass == 1 ) {
-					dprintf( D_ALWAYS,
-					         "Collector %s %s is still being avoided if "
-					         "an alternative succeeds.\n",
-					         daemon->name() ? daemon->name() : "unknown",
-					         daemon->addr() ? daemon->addr() : "unknown");
+					if( num_collectors > 1 ) {
+						dprintf( D_ALWAYS,
+								 "Collector %s %s is still being avoided if "
+								 "an alternative succeeds.\n",
+								 daemon->name() ? daemon->name() : "unknown",
+								 daemon->addr() ? daemon->addr() : "unknown");
+					}
 					continue;
 				}
 			}

@@ -366,6 +366,7 @@ extern const char * const  ATTR_WINDOWS_BUILD_NUMBER;
 extern const char * const  ATTR_WINDOWS_SERVICE_PACK_MAJOR;
 extern const char * const  ATTR_WINDOWS_SERVICE_PACK_MINOR;
 extern const char * const  ATTR_WINDOWS_PRODUCT_TYPE;
+extern const char * const  ATTR_NEVER_CREATE_JOB_SANDBOX;
 extern const char * const  ATTR_NUM_COD_CLAIMS;
 extern const char * const  ATTR_NUM_CKPTS;
 extern const char * const  ATTR_NUM_CKPTS_RAW;

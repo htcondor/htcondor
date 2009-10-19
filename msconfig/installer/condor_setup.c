@@ -329,13 +329,13 @@ set_daemonlist() {
 void
 set_hostpermissions() {
 	if ( Opt.hostallowread != NULL ) {
-		set_option("HOSTALLOW_READ", Opt.hostallowread);
+		set_option("ALLOW_READ", Opt.hostallowread);
 	}
 	if ( Opt.hostallowwrite != NULL ) {
-		set_option("HOSTALLOW_WRITE", Opt.hostallowwrite);
+		set_option("ALLOW_WRITE", Opt.hostallowwrite);
 	}
 	if ( Opt.hostallowadministrator != NULL ) {
-		set_option("HOSTALLOW_ADMINISTRATOR", Opt.hostallowadministrator);
+		set_option("ALLOW_ADMINISTRATOR", Opt.hostallowadministrator);
 	}
 }
 

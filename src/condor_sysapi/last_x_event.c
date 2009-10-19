@@ -27,6 +27,5 @@ sysapi_last_xevent(void)
 {
 	sysapi_internal_reconfig();
 
-	/* XXX why isn't _sysapi_last_x_event a time_t? */
-	_sysapi_last_x_event = (int)time(NULL);
+	_sysapi_last_x_event = time(NULL);
 }

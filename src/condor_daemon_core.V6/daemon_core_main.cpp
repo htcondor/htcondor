@@ -2027,7 +2027,12 @@ int main( int argc, char** argv )
 		// right now: a) we are running as a service, and services are 
 		// born without a console, or b) the user did not specify "-f" 
 		// or "-t", and thus we called FreeConsole() above.
-	AllocConsole();
+
+		// for now, don't create a console for the kbdd, as that daemon
+		// is now a win32 app and not a console app.
+	BOOL is_kbdd = (0 == strcmp(get_mySubSystem()->getName(), "KBDD"));
+	if(!is_kbdd)
+		AllocConsole();
 #endif
 
 		// Avoid possibility of stale info sticking around from previous run.

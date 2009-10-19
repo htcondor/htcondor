@@ -448,33 +448,6 @@ Stream::code(PROC_ID &id)
 	return TRUE;
 }
 
-#if 0	// hopefully we won't neet to port the PROC structure
-
-/* extern int stream_proc_vers2( Stream *s, V2_PROC *proc ); */
-extern int stream_proc_vers3( Stream *s, PROC *proc );
-
-int 
-Stream::code(PROC &proc)
-{
-	if (!code(proc.version_num))
-		return FALSE;
-	switch( proc.version_num ) {
-/*		case 2:
-			return stream_proc_vers2( this, &proc );
-			break; */
-		case 3:
-			return stream_proc_vers3( this, &proc );
-			break;
-		default:
-			dprintf(D_ALWAYS, "Incorrect PROC version number (%d)\n",
-					proc.version_num );
-			return FALSE;
-	}
-	return TRUE;
-}
-
-#endif
-
 int 
 Stream::code(STARTUP_INFO &start)
 {

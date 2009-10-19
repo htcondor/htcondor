@@ -210,7 +210,6 @@ ParallelShadow::getResources( void )
     int numProcs=0;    // the # of procs to come
     int numInProc=0;   // the # in a particular proc.
 	ClassAd *job_ad = NULL;
-	ClassAd *tmp_ad = NULL;
 	int nodenum = 1;
 	ReliSock* sock;
 
@@ -289,6 +288,7 @@ ParallelShadow::getResources( void )
                 free( claim_id );
                 host = NULL;
                 claim_id = NULL;
+				delete job_ad;
                 continue;
             }
 
@@ -299,27 +299,26 @@ ParallelShadow::getResources( void )
 				// hostname... 
 			rr->setMachineName( host );
 
-			tmp_ad = new ClassAd ( *job_ad );
-			replaceNode ( tmp_ad, nodenum );
+			replaceNode ( job_ad, nodenum );
 			rr->setNode( nodenum );
 			sprintf( buf, "%s = %d", ATTR_NODE, nodenum );
-			tmp_ad->InsertOrUpdate( buf );
+			job_ad->InsertOrUpdate( buf );
 			sprintf( buf, "%s = \"%s\"", ATTR_MY_ADDRESS,
 					 daemonCore->InfoCommandSinfulString() );
-			tmp_ad->InsertOrUpdate( buf );
+			job_ad->InsertOrUpdate( buf );
 
 			char buffer[1024];
 			sprintf (buffer, "%s = \"%s%c%s\"", ATTR_REMOTE_SPOOL_DIR, 
 				param("SPOOL"), DIR_DELIM_CHAR, 
 				gen_ckpt_name(0, job_cluster, 0, 0));
-			tmp_ad->Insert(buffer);
+			job_ad->Insert(buffer);
 
 				// Put the correct claim id into this ad's ClaimId attribute.
 				// Otherwise, it is the claim id of the master proc.
 				// This is how the starter finds out about the claim id.
-			tmp_ad->Assign(ATTR_CLAIM_ID,claim_id);
+			job_ad->Assign(ATTR_CLAIM_ID,claim_id);
 
-			rr->setJobAd( tmp_ad );
+			rr->setJobAd( job_ad );
 			nodenum++;
 
             ResourceList[ResourceList.getlast()+1] = rr;
@@ -331,9 +330,6 @@ ParallelShadow::getResources( void )
             claim_id = NULL;
 
         } // end of for loop for this proc
-        
-		delete job_ad;
-		job_ad = NULL;
 
     } // end of for loop on all procs...
 
