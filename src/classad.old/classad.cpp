@@ -798,7 +798,7 @@ bool IsAHalfMatch(const ClassAd *my, const ClassAd *target)
 		EXCEPT("Out of memory -- quitting");
 	}
 
-	if (reqsTree == 0) Parse ("MY.Requirements", reqsTree);
+	if (reqsTree == 0) ParseClassAdRvalExpr ("MY.Requirements", reqsTree);
 	reqsTree -> EvalTree (my, target, val);
 	if (!val || val->type != LX_INTEGER)
 	{
