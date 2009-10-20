@@ -368,6 +368,10 @@ JobRouter::config() {
 		dprintf(D_FULLDEBUG, "JobRouter: Evaluation of periodic expressions disabled.\n");
 	}
 
+		// NOTE: if you change the default name, then you are breaking
+		// JobRouter's ability to adopt jobs ("orphans") left behind
+		// by the previous version of JobRouter.  At least a warning
+		// in the release notes is warranted.
 	char *name = param("JOB_ROUTER_NAME");
 	if(name) {
 		m_job_router_name = name;
