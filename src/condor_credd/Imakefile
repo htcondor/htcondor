@@ -7,13 +7,13 @@ C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -I$(NEW_CLASSADS_INC)
 LIB = $(STD_LIBS) -L$(NEW_CLASSADS_LIB) -lclassad_ns
 CRED_LIB = classadUtil.o $(SOAP_OBJS)
 
-public_c_plus_target(stork_store_cred,bin,store_cred.o $(CRED_LIB),$(LIB))
+c_plus_target(stork_store_cred,store_cred.o $(CRED_LIB),$(LIB))
 
-public_c_plus_target(stork_rm_cred,bin,rm_cred.o $(CRED_LIB),$(LIB))
+c_plus_target(stork_rm_cred,rm_cred.o $(CRED_LIB),$(LIB))
 
-public_c_plus_target(stork_get_cred,bin,get_cred.o $(CRED_LIB),$(LIB))
+c_plus_target(stork_get_cred,get_cred.o $(CRED_LIB),$(LIB))
 
-public_c_plus_target(stork_list_cred,bin,list_cred.o $(CRED_LIB),$(LIB))
+c_plus_target(stork_list_cred,list_cred.o $(CRED_LIB),$(LIB))
 
 OBJ = credd_main.o credd.o $(CRED_LIB) X509credentialWrapper.o
 
