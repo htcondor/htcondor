@@ -30,12 +30,19 @@
 #include "stat_wrapper.h"
 #include "read_user_log.h"
 #include "user_log_header.h"
+#include "my_username.h"
 #include <stdio.h>
-#include <unistd.h>
+#if defined(UNIX)
+# include <unistd.h>
+# define ENABLE_WORKERS
+#endif
 #include <math.h>
 #include <vector>
 #include <list>
 
+#ifdef WIN32
+# define usleep(_x_) Sleep((_x_)/1000)
+#endif
 using namespace std;
 
 static const char *	VERSION = "1.0.0";
@@ -374,9 +381,11 @@ main(int argc, const char **argv)
 		exit( 1 );
 	}
 
+# if defined(UNIX)
 	signal( SIGTERM, handle_sig );
 	signal( SIGQUIT, handle_sig );
 	signal( SIGINT, handle_sig );
+# endif
 
 	int			 num_events = 0;
 	int			 sequence = 0;
@@ -524,15 +533,19 @@ GlobalOptions::parseArgs( int argc, const char **argv )
 
 	const char *	usage =
 		"Usage: test_log_writer [options] <filename>\n"
+# if defined(ENABLE_WORKERS)
 		"  -w|--worker: Specify options are for next worker"
 		" (default = global)\n"
+# endif
 		"  --cluster <number>: Starting cluster %d (default = getpid())\n"
 		"  --proc <number>: Starting proc %d (default = 0)\n"
 		"  --subproc <number>: Starting subproc %d (default = 0)\n"
 		"  --jobid <c.p.s>: combined -cluster, -proc, -subproc\n"
+# if defined(ENABLE_WORKERS)
 		"  --fork <number>: fork off <number> processes\n"
 		"  --fork-cluster-step <number>: with --fork: step # of cluster #"
 		" (default = 1000)\n"
+# endif
 		"\n"
 		"  --num-exec <number>: number of execute events to write / proc\n"
 		"  -n|--num-procs <num>: Number of procs (default:10) (-1:no limit)\n"
@@ -596,11 +609,13 @@ GlobalOptions::parseArgs( int argc, const char **argv )
 				status = true;
 			}
 		}
+# if defined(ENABLE_WORKERS)
 		else if ( arg.Match('w', "worker") ) {	
 			opts = new WorkerOptions( m_shared, *opts );
 			m_workerOptions.push_back( opts );
 			printf( "Created worker option: %d\n", m_workerOptions.size() );
 		}
+# endif
 		else if ( arg.Match('j', "jobid") ) {
 			if ( arg.hasOpt() ) {
 				const char *opt = arg.getOpt();
@@ -628,7 +643,7 @@ GlobalOptions::parseArgs( int argc, const char **argv )
 			}
 
 		}
-		else if ( arg.Match('n', "num-exec") ) {
+		else if ( arg.Match("num-exec") ) {
 			if ( ! arg.getOpt(opts->m_numExec) ) {
 				fprintf(stderr, "Value needed for '%s'\n", arg.Arg() );
 				printf("%s", usage);
@@ -636,7 +651,7 @@ GlobalOptions::parseArgs( int argc, const char **argv )
 			}
 
 		}
-		else if ( arg.Match("num-procs") ) {
+		else if ( arg.Match('n', "num-procs") ) {
 			if ( ! arg.getOpt(opts->m_numProcs) ) {
 				fprintf(stderr, "Value needed for '%s'\n", arg.Arg() );
 				printf("%s", usage);
@@ -867,6 +882,7 @@ GlobalOptions::parseArgs( int argc, const char **argv )
 void
 handle_sigchild(int /*sig*/ )
 {
+#if defined(UNIX)
 	pid_t	pid;
 	int		status;
 	if ( !global_workers ) {
@@ -881,8 +897,8 @@ handle_sigchild(int /*sig*/ )
 			return;
 		}
 	}
+#endif
 }
-
 
 Worker::Worker( const WorkerOptions &options, int num )
 		: m_options( options ),
@@ -904,9 +920,11 @@ Worker::Kill( int signum ) const
 	if ( !m_alive || (m_pid <= 0) ) {
 		return false;
 	}
+# if defined(UNIX)
 	if ( kill(m_pid, signum) < 0 ) {
 		return false;
 	}
+# endif
 	return true;
 }
 
@@ -920,7 +938,9 @@ Workers::~Workers( void )
 {
 	signalWorkers( SIGKILL );
 	waitForWorkers( 10 );
+# if defined(UNIX)
 	signal( SIGCHLD, SIG_DFL );
+# endif
 	for( unsigned num = 0;  num < m_workers.size();  num++ ) {
 		delete m_workers[num];
 	}
@@ -935,6 +955,7 @@ Workers::createWorkers( void )
 		return worker;
 	}
 
+# if defined(UNIX)
 	signal( SIGCHLD, handle_sigchild );
 	for( int num = 0;  num < m_options.getNumWorkers();  num++ ) {
 		Worker *worker = new Worker( *m_options.getWorkerOpts(num), num );
@@ -962,6 +983,7 @@ Workers::createWorkers( void )
 			return worker;
 		}
 	}
+# endif
 	return NULL;
 }
 
@@ -990,7 +1012,7 @@ Workers::signalWorkers( int signum )
 {
 	bool	error = false;
 	for( unsigned num = 0;  num < m_workers.size();  num++ ) {
-		if ( m_workers[num]->Kill(signum) < 0 ) {
+	  if ( !(m_workers[num]->Kill(signum)) ) {
 			error = true;
 		}
 	}
@@ -1050,16 +1072,34 @@ Workers::waitForWorkers( int max_seconds )
 // **************************
 //  Rotating user log class
 // **************************
+static const char *getUserName( void )
+{
+	static char	buf[128];
+	buf[0] = '\0';
+# if defined(UNIX)
+	struct passwd	*pw = getpwuid( getuid() );
+	if ( NULL == pw ) {
+		return "owner";
+	}
+	strncpy(buf, pw->pw_name, sizeof(buf) );
+# else
+	DWORD		size = sizeof(buf);
+	GetUserName( buf, &size );
+# endif
+	buf[sizeof(buf)-1] = '\0';
+	return buf;
+}
 TestLogWriter::TestLogWriter( Worker & /*worker*/,
 							  const WorkerOptions &options )
-		: WriteUserLog( "owner",
-						options.getLogFile(),
-						options.getCluster(),
-						options.getProc(),
-						options.getSubProc(),
-						options.getXml() ),
-		  m_options( options ),
-		  m_rotations( 0 )
+	: WriteUserLog( getUserName(),
+					my_domainname(),
+					options.getLogFile(),
+					options.getCluster(),
+					options.getProc(),
+					options.getSubProc(),
+					options.getXml() ),
+	  m_options( options ),
+	  m_rotations( 0 )
 {
 	if ( options.getName() ) {
 		setCreatorName( options.getName() );
@@ -1137,6 +1177,15 @@ TestLogWriter::WriteEvents( int &events, int &sequence )
 	int			proc = getGlobalProc();
 	int			subproc = getGlobalSubProc();
 
+	// Sanity check
+	if (  ( ( m_options.getMaxGlobalSize() >= 0 ) ||
+			( m_options.getMaxRotations() >= 0 ) ||
+			( m_options.getMaxSequence() >= 0 ) ) &&
+		  ( false == isGlobalEnabled() )  ) {
+		fprintf( stderr, "Global option specified, but eventlog disabled!\n" );
+		return false;
+	}
+
 	EventInfo	event( m_options, cluster, proc, subproc );
 
 		//
@@ -1205,14 +1254,17 @@ TestLogWriter::WriteEvents( int &events, int &sequence )
 		unsigned long	size;
 		long			max_size;
 		max_size = m_options.getMaxGlobalSize();
-		if ( !getGlobalLogSize(size, true) ) {
-			printf( "Error getting global log size!\n" );
-			error = true;
-		}
-		else if ( (max_size > 0) && (size > (unsigned long)max_size) ) {
-			printf( "Maximum global log size limit hit %ld > %lu\n",
-					size, max_size );
-			global_done = true;
+
+		if ( isGlobalEnabled() ) {
+			if ( !getGlobalLogSize(size, true) ) {
+				printf( "Error getting global log size!\n" );
+				error = true;
+			}
+			else if ( (max_size > 0) && (size > (unsigned long)max_size) ) {
+				printf( "Maximum global log size limit hit %ld > %lu\n",
+						size, max_size );
+				global_done = true;
+			}
 		}
 
 		max_size = m_options.getMaxUserSize();
@@ -1239,11 +1291,17 @@ TestLogWriter::WriteEvents( int &events, int &sequence )
 	else {
 		events++;
 	}
-	sequence = getGlobalSequence( );
+
+	if ( isGlobalEnabled() ) {
+		sequence = getGlobalSequence( );
+	}
+	else {
+		sequence = 0;
+	}
 
 	// If no rotations occurred, the writer did no rotations, and doesn't
 	// know it's rotation #
-	if ( sequence == 0 ) {
+	if ( isGlobalEnabled() && ( sequence == 0 ) ) {
 		const char			*path = getGlobalPath();
 		ReadUserLogHeader	header_reader;
 		ReadUserLog			log_reader;
@@ -1599,3 +1657,9 @@ EventInfo::GetSize( int mult ) const
 		return randint( mult );
 	}
 }
+/*
+### Local Variables: ***
+### mode:c++ ***
+### tab-width:4 ***
+### End: ***
+*/

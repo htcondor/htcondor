@@ -230,6 +230,10 @@ class WriteUserLog
 	const char *getGlobalPath( void ) const { return m_global_path; };
 	bool getGlobalLogSize( unsigned long &, bool use_fp );
 
+	bool isGlobalEnabled( void ) const {
+		return ( ( FALSE == m_global_disable ) && ( NULL != m_global_path ) );
+	};
+
 
   private:
 

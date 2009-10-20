@@ -154,7 +154,13 @@ FileLock::FileLock( int fd, FILE *fp_arg, const char* path )
 	// path could be NULL if fd is -1 and fp is NULL, in which case we don't
 	// insert ourselves into a the m_all_locks list.
 	if (path) {
-		m_path = strdup(path);
+# if defined(WIN32)
+		char	*part;
+		m_path = (char *) malloc( 256 );
+		DWORD status = GetFullPathName( path, 256, m_path, &part );
+# else
+		m_path = strdup( path );
+# endif
 		updateLockTimestamp();
 	}
 }

@@ -846,6 +846,14 @@ int main (int argc, char **argv)
 	exit(retval?EXIT_SUCCESS:EXIT_FAILURE);
 }
 
+// append all variable references made by expression to references list
+static void
+GetAllReferencesFromClassAdExpr(char const *expression,StringList &references)
+{
+	ClassAd ad;
+	ad.GetExprReferences(expression,references,references);
+}
+
 static void 
 processCommandLineArguments (int argc, char *argv[])
 {
@@ -1169,7 +1177,7 @@ processCommandLineArguments (int argc, char *argv[])
 				custom_attributes = true;
 				attrs.clearAll();
 			}
-			attrs.append(argv[i+2]);
+			GetAllReferencesFromClassAdExpr(argv[i+2],attrs);
 				
 			customFormat = true;
 			mask.registerFormat( argv[i+1], argv[i+2] );
