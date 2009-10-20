@@ -32,13 +32,8 @@ OBJ =	lease_manager_main.o		\
 
 c_plus_target($(NAME),$(OBJ),$(LIB))
 
-release_target($(NAME),sbin,EXECUTABLE_MODE)
-strip_target($(NAME),sbin,EXECUTABLE_MODE)
-static_target($(NAME),$(OBJ),$(LIB),$(STATIC_DIR)/sbin)
-
 c_plus_target( condor_lease_manager_test,lease_manager_test.o,$(TEST_LIB) )
 c_plus_target( condor_lease_manager_tester,lease_manager_tester.o,$(TEST_LIB) )
-
 
 html:
 
