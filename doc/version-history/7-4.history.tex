@@ -242,6 +242,23 @@ contained a comma.
 in \Attr{/tmp}, which the \Condor{gridmanager} creates. If this directory
 is deleted, the \Condor{gridmanager} will now recreate it.
 
+%gittrac #790
+\item Fixed a bug that could cause the user job log to become
+  corrupted on Windows.  This bug would manifest itself only if the
+  same log file was specified with different paths.  For example, the
+  following submit file could trigger this:
+
+\begin{verbatim}
+...
+initialdir = /data/job1
+log = ../JobLog
+queue
+
+initialdir = /data/job2
+log = ../JobLog
+queue
+\end{verbatim}
+
 \end{itemize}
 
 \noindent Known Bugs:
