@@ -129,6 +129,14 @@ TESTCLASS(job_ligo_x86-64-chkpttst,full)
 TESTCLASS(job_ligo_x86-64-chkpttst,quicknolink)
 #endif
 
+DESC(job_dagman_splice-scaling,"Dagman Splice Parse Scaling")
+RUN(job_dagman_splice-scaling)
+TESTCLASS(job_dagman_splice-scaling,core)
+TESTCLASS(job_dagman_splice-scaling,dagman)
+TESTCLASS(job_dagman_splice-scaling,quick)
+TESTCLASS(job_dagman_splice-scaling,full)
+TESTCLASS(job_dagman_splice-scaling,quicknolink)
+
 DESC(job_dagman_splice-A,"Simple Dagman Splice A")
 RUN(job_dagman_splice-A)
 TESTCLASS(job_dagman_splice-A,core)
