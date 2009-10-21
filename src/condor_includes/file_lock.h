@@ -159,16 +159,22 @@ class FileLock : public FileLockBase
 
   private:
 
+	//
+	// Private Data Members
+	//
+	
 	unsigned int m_id;		// the ID number for this object
 	int			 m_fd;		// File descriptor to deal with
 	FILE		*m_fp;
-	char		*m_path;		// Path to the file being locked, or NULL
+	char		*m_path;	// Path to the file being locked, must use
+							// method SetPath to set.
 	int			 m_use_kernel_mutex;	// -1=unitialized,0=false,1=true
 
 	//
 	// Private methods
 	//
 	void		Reset( void );
+	void		SetPath(const char *);
 
 	// Windows specific, actually
 	int			lockViaMutex( LOCK_TYPE type );
