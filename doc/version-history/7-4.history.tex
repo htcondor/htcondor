@@ -84,8 +84,12 @@ many grid type gt2 grid universe jobs.
 \item Latency in the submission and cleaning up of Condor-C jobs
 has been improved.
 
-\item The \Expr{eval()} ClassAd function added in 7.3.2 is now also
-understood by \Condor{job\_router} and \Condor{q} \Opt{-better-analyze}.
+\item The \Expr{eval()} ClassAd function added in Condor version 7.3.2
+is now also understood by the \Condor{job\_router} and
+\Condor{q} using the \Opt{-better-analyze} option.
+
+\item The submit command \SubmitCmd{run\_as\_owner} is now supported
+for Unix platforms. Previously, it was only supported on Windows platforms.
 
 \item The submit command \SubmitCmd{run\_as\_owner} is now supported
 in unix too. Previously, it was only supported in Windows.
