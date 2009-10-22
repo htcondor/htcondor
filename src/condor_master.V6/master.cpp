@@ -1286,7 +1286,7 @@ void init_firewall_exceptions() {
 		 *negotiator_image_path, *collector_image_path, *starter_image_path,
 		 *shadow_image_path, *gridmanager_image_path, *gahp_image_path,
 		 *gahp_worker_image_path, *credd_image_path, 
-		 *vmgahp_image_path, *bin_path;
+		 *vmgahp_image_path, *kbdd_image_path, *bin_path;
 	const char* dagman_exe = "condor_dagman.exe";
 
 	WindowsFirewallHelper wfh;
@@ -1334,6 +1334,7 @@ void init_firewall_exceptions() {
 	gahp_image_path = param("CONDOR_GAHP");
 	gahp_worker_image_path = param("CONDOR_GAHP_WORKER");
 	credd_image_path = param("CREDD");
+	kbdd_image_path = param("KBDD");
 	vmgahp_image_path = param("VM_GAHP_SERVER");
 	
 	// We also want to add exceptions for the DAGMan we ship
@@ -1416,6 +1417,11 @@ void init_firewall_exceptions() {
 				"windows firewall exception list.\n",
 				startd_image_path);
 		}
+		if ( !wfh.addTrusted(kbdd_image_path) ) {
+			dprintf(D_FULLDEBUG, "WinFirewall: unable to add %s to the "
+				"windows firewall exception list.\n",
+				kbdd_image_path);
+		}
 	}
 
 	if ( (! (daemons.GetIndex("QUILL") < 0) ) && quill_image_path ) {
@@ -1478,7 +1484,8 @@ void init_firewall_exceptions() {
 	if ( gridmanager_image_path ) { free(gridmanager_image_path); }
 	if ( gahp_image_path ) { free(gahp_image_path); }	
 	if ( credd_image_path ) { free(credd_image_path); }	
-	if ( vmgahp_image_path ) { free(vmgahp_image_path); }		
+	if ( vmgahp_image_path ) { free(vmgahp_image_path); }
+	if ( kbdd_image_path ) { free(kbdd_image_path); }
 #endif
 }
 
