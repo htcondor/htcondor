@@ -48,7 +48,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+% gittrac #870
+\item Fixed a bug that only allowed about 50 splices to be included into
+a dag description file. There is now no limit to the number of splices
+one may include into a dag description file except, of course, for the
+implicit memory allocation limit of the \Condor{dagman} process.
 
 \end{itemize}
 
