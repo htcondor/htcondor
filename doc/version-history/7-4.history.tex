@@ -269,6 +269,9 @@ in 7.3.2.
 \item Fixed a problem introduced in 7.1.4 that resulted in failure to force
 the execute bit to be set on the transferred job executable.
 
+\item Fixed a bug from 7.3.2 that resulted in the \Condor{negotiator} daemon
+refusing to run if \MacroNI{GROUP\_QUOTA} for any group was set to 0.
+
 \begin{verbatim}
 ...
 initialdir = /data/job1
