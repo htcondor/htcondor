@@ -266,6 +266,9 @@ is deleted, the \Condor{gridmanager} will now recreate it.
 \item Fixed a memory leak in the \Condor{collector} daemon that was introduced
 in 7.3.2.
 
+\item Fixed a problem introduced in 7.1.4 that resulted in failure to force
+the execute bit to be set on the transferred job executable.
+
 \begin{verbatim}
 ...
 initialdir = /data/job1
