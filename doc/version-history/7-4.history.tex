@@ -256,6 +256,9 @@ is deleted, the \Condor{gridmanager} will now recreate it.
   same log file was specified with different paths.  For example, the
   following submit file could trigger this:
 
+\item Fixed a memory leak in the \Condor{collector} daemon that was introduced
+in 7.3.2.
+
 \begin{verbatim}
 ...
 initialdir = /data/job1
