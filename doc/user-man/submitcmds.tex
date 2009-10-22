@@ -678,7 +678,9 @@ This command forms an explicit list of output files to be transferred
 back from the temporary working directory on the execute machine to
 the submit machine.
 Most of the time, there is no need to use this command.
-Other than for grid universe jobs,
+For grid universe jobs, other than where the grid type is \SubmitCmd{condor},
+the use of \SubmitCmd{transfer\_output\_files} is useful.
+For Condor-C jobs and all other non-grid universe jobs,
 if \SubmitCmd{transfer\_output\_files} is not specified,
 Condor will automatically transfer back all files in the job's
 temporary working directory which have been
@@ -693,7 +695,7 @@ submit description file unless there is a really good reason -- it is
 best to let Condor figure things out by itself based upon what
 the job produces.
 
-For grid universe jobs,
+For grid universe jobs other than with grid type \SubmitCmd{condor},
 to have files other than standard output and standard error transferred
 from the execute machine back to the submit machine,
 do use \SubmitCmd{transfer\_output\_files}, listing

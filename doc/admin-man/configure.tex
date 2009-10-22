@@ -419,7 +419,7 @@ the library routine which parses the configuration files.
   \item \verb@SUBMIT@
   \item \verb@GRIDMANAGER@
   \item \verb@TOOL@
-  \item \verb@STORK@
+  %\item \verb@STORK@
   \item \verb@HAD@
   \item \verb@REPLICATION@
   \item \verb@TRANSFERER@
@@ -1848,14 +1848,14 @@ which use DaemonCore).
   file. Currently, this setting only works for the \Condor{schedd}
   (that is \Macro{SCHEDD\_DAEMON\_AD\_FILE}) and is required for Quill.
 
+\index{SUBSYS\_ATTRS macro@\texttt{<SUBSYS>\_ATTRS} macro}
+\index{SUBSYS\_EXPRS macro@\texttt{<SUBSYS>\_EXPRS} macro}
+\MacroIndex{STARTD\_ATTRS}
+\MacroIndex{STARTD\_EXPRS}
 \label{param:SubsysExprs}
 \item[\MacroB{<SUBSYS>\_ATTRS} or
 \label{param:SubsysAttrs}
 \MacroB{<SUBSYS>\_EXPRS}]
-  \index{SUBSYS\_ATTRS macro@\texttt{<SUBSYS>\_ATTRS} macro}
-  \index{SUBSYS\_EXPRS macro@\texttt{<SUBSYS>\_EXPRS} macro}
-  \MacroIndex{STARTD\_ATTRS}
-  \MacroIndex{STARTD\_EXPRS}
   Allows any DaemonCore daemon to advertise arbitrary
   expressions from the configuration file in its ClassAd.  Give the
   comma-separated list of entries from the configuration file you want in the
@@ -7354,9 +7354,14 @@ These macros affect the \Condor{job\_router} daemon.
 \label{JobRouterName}
 \item[\Macro{JOB\_ROUTER\_NAME}]
   A unique identifier utilized to name multiple instances of
-  the \Condor{job\_router} daemon within a single Condor pool.
+  the \Condor{job\_router} daemon on the same machine.
   Each instance must have a different name,
   or all but the first to start up will refuse to run.
+
+  Changing this value when routed jobs already exist is not currently
+  gracefully handled.  However, it can be done if one also uses
+  \Condor{qedit} to change the value of \Attr{ManagedManager} and
+  \Attr{RoutedBy} from the old name to the new name.
 
 \label{JobRouterReleaseOnHold}
 \item[\Macro{JOB\_ROUTER\_RELEASE\_ON\_HOLD}]
@@ -7812,7 +7817,7 @@ Setting these is explained in section~\ref{sec:DAG-configuration}.
 \label{param:DAGManStorkSubmitExe}
 \item[\Macro{DAGMAN\_STORK\_SUBMIT\_EXE}]
   The executable that \Condor{dagman} will use to submit Stork jobs.
-  If not defined, \Condor{dagman} looks for \Stork{submit} in the path.
+  If not defined, \Condor{dagman} looks for \Prog{stork\_submit} in the path.
 
 \label{param:DAGManCondorRmExe}
 \item[\Macro{DAGMAN\_CONDOR\_RM\_EXE}]
@@ -7822,7 +7827,7 @@ Setting these is explained in section~\ref{sec:DAG-configuration}.
 \label{param:DAGManStorkRmExe}
 \item[\Macro{DAGMAN\_STORK\_RM\_EXE}]
   The executable that \Condor{dagman} will use to remove Stork jobs.
-  If not defined, \Condor{dagman} looks for \Stork{rm} in the path.
+  If not defined, \Condor{dagman} looks for \Prog{stork\_rm} in the path.
 
 \label{param:DAGManProhibitMultiJobs}
 \item[\Macro{DAGMAN\_PROHIBIT\_MULTI\_JOBS}]
@@ -8392,15 +8397,6 @@ They specify items related to the \Condor{vm-gahp}.
   Specifies the type of supported virtual machine software.
   It will be the value \verb@xen@ or \verb@vmware@.
   There is no default value for this required configuration variable.
-
-\label{param:VMVersion}
-\item[\Macro{VM\_VERSION}]
-  Specifies the version of supported virtual machine software
-  defined by \MacroNI{VM\_TYPE}.  
-  There is no default value for this required configuration variable.
-  This configuration variable does not currently alter the behavior of
-  the \Condor{vm-gahp}; instead, it is used in \Condor{status} when
-  printing VM-capable hosts and slots.
 
 \label{param:VMMaxMemory}
 \item[\Macro{VM\_MEMORY}]
@@ -9423,82 +9419,82 @@ Configuration File Macros Affecting APIs}
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Stork-Config-File-Entries}Stork Configuration
-File Macros}
+%\subsection{\label{sec:Stork-Config-File-Entries}Stork Configuration
+%File Macros}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
- 
-\begin{description}
-
-\label{param:StorkMaxNumJobs}
-\item[\Macro{STORK\_MAX\_NUM\_JOBS}]
-  An integer limit on the number of concurrent data placement jobs
-  handled by Stork.  The default value when not defined is 10.
-
-\label{param:StorkMaxRetry}
-\item[\Macro{STORK\_MAX\_RETRY}]
-  An integer limit on the
-  number of attempts for a single data placement job.  For data transfers,
-  this includes transfer attempts on the primary protocol, all
-  alternate protocols, and all retries.
-  The default value when not defined is 10.
-
-\label{param:StorkMaxDelayInMinutes}
-\item[\Macro{STORK\_MAXDELAY\_INMINUTES}]
-  An integer limit (in minutes) on the run time for a data placement job,
-  after which the job is considered failed.
-  The default value when not defined is 10,
-  and the minimum legal value is 1.
-
-\label{param:StorkTmpCredDir}
-\item[\Macro{STORK\_TMP\_CRED\_DIR}]
-  The full path to the temporary credential storage directory used by Stork.
-  The default value is \File{/tmp} when not defined. 
-
-\label{param:StorkModuleDir}
-\item[\Macro{STORK\_MODULE\_DIR}]
-  The full path to the directory containing Stork modules.
-  The default value when not defined is 
-  as defined by \MacroUNI{LIBEXEC}.  It is a fatal error for
-  both \MacroNI{STORK\_MODULE\_DIR} and \MacroNI{LIBEXEC} to be undefined.
-
-\label{param:CreddSuperUsers}
-\item[\Macro{CRED\_SUPER\_USERS}]
-  Access to a stored credential is
-  restricted to the user who submitted the credential, and any user
-  names specified in this macro.  The format is a space or comma
-  separated list of user names which are valid on the \Stork{credd}
-  host.
-  The default value of this macro is \Expr{root} on Unix systems, and
-  \Expr{Administrator} on Windows systems.
-
-\label{param:CredStoreDir}
-\item[\Macro{CRED\_STORE\_DIR}]
-  Directory for storing credentials.  This
-  directory must exist prior to starting \Stork{credd}.  It is highly
-  recommended to restrict access permissions to \emph{only} the
-  directory owner.
-  The default value is \Expr{\$(SPOOL\_DIR)/cred}.
-
-\label{param:CredIndexFile}
-\item[\Macro{CRED\_INDEX\_FILE}]
-  Index file path of saved credentials.
-  This file will be automatically created if it does not exist.
-  The default value is \Expr{\$(CRED\_STORE\_DIR)/cred-index}.
-
-\label{param:DefaultCredExpireThreshold}
-\item[\Macro{DEFAULT\_CRED\_EXPIRE\_THRESHOLD}]
-  \Stork{credd} will attempt
-  to refresh credentials when their remaining lifespan is less than this
-  value.
-  Units = seconds.  Default value = 3600 seconds (1 hour).
-
-\label{param:CredCheckInterval}
-\item[\Macro{CRED\_CHECK\_INTERVAL}]
-  \Stork{credd} periodically checks
-  remaining lifespan of stored credentials, at this interval.
-  Units = seconds.  Default value = 60 seconds (1 minute).
-
-\end{description}
+%
+%\begin{description}
+%
+%\label{param:StorkMaxNumJobs}
+%\item[\Macro{STORK\_MAX\_NUM\_JOBS}]
+  %An integer limit on the number of concurrent data placement jobs
+  %handled by Stork.  The default value when not defined is 10.
+%
+%\label{param:StorkMaxRetry}
+%\item[\Macro{STORK\_MAX\_RETRY}]
+  %An integer limit on the
+  %number of attempts for a single data placement job.  For data transfers,
+  %this includes transfer attempts on the primary protocol, all
+  %alternate protocols, and all retries.
+  %The default value when not defined is 10.
+%
+%\label{param:StorkMaxDelayInMinutes}
+%\item[\Macro{STORK\_MAXDELAY\_INMINUTES}]
+  %An integer limit (in minutes) on the run time for a data placement job,
+  %after which the job is considered failed.
+  %The default value when not defined is 10,
+  %and the minimum legal value is 1.
+%
+%\label{param:StorkTmpCredDir}
+%\item[\Macro{STORK\_TMP\_CRED\_DIR}]
+  %The full path to the temporary credential storage directory used by Stork.
+  %The default value is \File{/tmp} when not defined. 
+%
+%\label{param:StorkModuleDir}
+%\item[\Macro{STORK\_MODULE\_DIR}]
+  %The full path to the directory containing Stork modules.
+  %The default value when not defined is 
+  %as defined by \MacroUNI{LIBEXEC}.  It is a fatal error for
+  %both \MacroNI{STORK\_MODULE\_DIR} and \MacroNI{LIBEXEC} to be undefined.
+%
+%\label{param:CreddSuperUsers}
+%\item[\Macro{CRED\_SUPER\_USERS}]
+  %Access to a stored credential is
+  %restricted to the user who submitted the credential, and any user
+  %names specified in this macro.  The format is a space or comma
+  %separated list of user names which are valid on the \Stork{credd}
+  %host.
+  %The default value of this macro is \Expr{root} on Unix systems, and
+  %\Expr{Administrator} on Windows systems.
+%
+%\label{param:CredStoreDir}
+%\item[\Macro{CRED\_STORE\_DIR}]
+  %Directory for storing credentials.  This
+  %directory must exist prior to starting \Stork{credd}.  It is highly
+  %recommended to restrict access permissions to \emph{only} the
+  %directory owner.
+  %The default value is \Expr{\$(SPOOL\_DIR)/cred}.
+%
+%\label{param:CredIndexFile}
+%\item[\Macro{CRED\_INDEX\_FILE}]
+  %Index file path of saved credentials.
+  %This file will be automatically created if it does not exist.
+  %The default value is \Expr{\$(CRED\_STORE\_DIR)/cred-index}.
+%
+%\label{param:DefaultCredExpireThreshold}
+%\item[\Macro{DEFAULT\_CRED\_EXPIRE\_THRESHOLD}]
+  %\Stork{credd} will attempt
+  %to refresh credentials when their remaining lifespan is less than this
+  %value.
+  %Units = seconds.  Default value = 3600 seconds (1 hour).
+%
+%\label{param:CredCheckInterval}
+%\item[\Macro{CRED\_CHECK\_INTERVAL}]
+  %\Stork{credd} periodically checks
+  %remaining lifespan of stored credentials, at this interval.
+  %Units = seconds.  Default value = 60 seconds (1 minute).
+%
+%\end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Config-ssh-to-job}Configuration File Entries

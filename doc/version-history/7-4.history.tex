@@ -45,6 +45,14 @@ The details of each version are described below.
 -- Submitter: schedd-name : <IP> : hostname
 \end{verbatim}
 
+\item All \Prog{Stork} data placement is now supported by the Stork
+project at the 
+LSU Center for Computation and Technology
+(\URL{http://www.cct.lsu.edu/www.cct.lsu.edu}).
+Please see the home page of the Stork project at
+\URL{http://www.cct.lsu.edu/~kosar/stork/index.php} for details and
+software.
+
 \end{itemize}
 
 
@@ -64,9 +72,6 @@ to the published ad for the \Condor{schedd}.  This means that
 why local or scheduler universe jobs are idle when
 \MacroNI{START\_LOCAL\_UNIVERSE} or
 \MacroNI{START\_SCHEDULER\_UNIVERSE} refer to these attributes.
-
-% #130
-\item Add support for KVM in the vm universe.
 
 % #688
 \item The \Condor{vm-gahp} now links with libvirt, rather than calling
@@ -145,9 +150,11 @@ has been improved.
   configuration.
 
 % #631
-\item \MacroNI{VM\_VERSION} has been removed, as has the machine ad
-attribute of the same name. \MacroNI{START\_ATTRS} can be used to
-add virtual machine version information to the machine ad.
+\item The configuration variable \MacroNI{VM\_VERSION} has been removed,
+as has the machine ad attribute of the same name.
+When the virtual machine version information is needed in the machine ClassAd,
+the configuration variable \MacroNI{STARTD\_ATTRS} can be used to
+add it.
 
 \end{itemize}
 
@@ -155,69 +162,110 @@ add virtual machine version information to the machine ad.
 
 \begin{itemize}
 
-\item Under windows, if a job ClassAd update from the starter caused the
-job periodic hold or remove policy to become true, there was a 20-second
-deadlock between the shadow, startd, and starter.
+\item A Windows platform bug has been fixed.
+The bug caused a 20-second interval in which
+the \Condor{shadow}, \Condor{startd}, and \Condor{starter} daemons
+appeared as deadlocked. 
+The bug was visible if a job ClassAd update from the \Condor{starter} caused
+the job's periodic hold or remove policy to become \Expr{True}.
 
 %gittrac #622
 \item Fixed a bug that could cause \Condor{dagman} to generate an
-illegal rescue DAG if it read events incorrectly in recovery mode
-(\Condor{dagman} now checks for events that violate DAG semantics
-when reading events in recovery mode, and exits without creating a
-rescue DAG if it reads such an event).
+illegal rescue DAG, if it read events incorrectly in recovery mode.
+\Condor{dagman} now checks for events that violate DAG semantics
+when reading events in recovery mode, and it exits without creating a
+rescue DAG if it reads such an event.
 
 % gittrac #744
 \item Fixed a bug that could cause \Condor{dagman} to abort if it saw
-a combination of a terminated and an aborted event on a node with
+the combination of a terminated and an aborted event on a node with
 retries.
 
 \item Changed some log file warnings in \Condor{dagman} to not be
 printed at the default verbosity setting.
 
-\item Fixed a bug originating in 7.1.4.  When a user submitted a job
-with an executable that did not have execute permission enabled, and
-Condor was running as root, and transfer-files mode was being used,
+% gittrac #825
+\item The version compatibility checking between a \File{.condor.sub}
+file and the \Condor{dagman} binary which is done at DAG startup,
+is now much more permissive.
+Currently, \File{.condor.sub} files with
+Condor versions of 7.1.2 and later accepted by \Condor{dagman}.
+
+% gittrac #851
+\item Fixed a bug introduced with the new \Condor{dagman} lazy log file
+evaluation code in Condor version 7.3.2.
+The bug sometimes caused failure when running rescue DAGs.
+
+\item Fixed a bug originating in Condor version 7.1.4.
+When a user submitted a job
+with an executable that did not have execute permission enabled,
+Condor was running as root, and file transfer was specified in the job,
 Condor failed to automatically turn on execute permission after
 transferring the file.
 
-\item Fixed a bug from 7.3.2.  The configuration variable
+\item Fixed a bug that appeared in Condor version 7.3.2.
+The configuration variable
 \MacroNI{COUNT\_HYPERTHREAD\_CPUS} was ignored and was effectively
-treated as False in all cases.
+treated as \Expr{False} in all cases.
 
-\item JobRouter was not able to see matchmaking diagnostic attributes
-such as \Attr{LastRejMatchTime}.  Therefore, when evaluating policy
+\item Fixed a bug in which the Condor Job Router was not able
+to see matchmaking diagnostic attributes such as \Attr{LastRejMatchTime}.
+Therefore, when evaluating policy
 expressions that referred to these attributes, they were effectively
-treated as though undefined.  Quill was also not able to see these
-attributes.
+treated as though \Expr{Undefined}.
+Quill was also not able to see these attributes.
 
 % #822
-\item Fixed a bug introduced in 7.3.2 that could cause the
-\Condor{gridmanager} to crash repeatedly on startup if the job queue
-contained grid-type gt2 jobs that had been previously submitted.
+\item Fixed a bug introduced in Condor version 7.3.2 that could cause the
+\Condor{gridmanager} to crash repeatedly on startup,
+if the job queue
+contained grid type gt2 jobs that had been previously submitted.
 
 % #724, #774
-\item Fixed two bugs related to VOMS introduced in 7.3.2. The first
-prevented jobs with X509 proxies from being submitted on platforms
-on which Condor doesn't support VOMS. The second prevented submission
-of jobs with VOMS proxies if the authenticity of the VOMS extensions
-couldn't be verified.
+\item Fixed two bugs related to VOMS, introduced in Condor version 7.3.2.
+The first bug
+prevented jobs with X.509 proxies from being submitted on platforms
+on which Condor does not support VOMS.
+The second bug prevented submission
+of jobs with VOMS proxies, if the authenticity of the VOMS extensions
+could not be verified.
 
-\item Fixed a bad default in \Attr{batch\_gahp.config} that prevented
-Condor from observing job state changes for grid-type pbs and lsf grid
+\item Fixed a bad default in the \Attr{batch\_gahp.config} file,
+that prevented
+Condor from observing job state changes for grid type pbs and lsf grid
 universe jobs.
 
 % #748
 \item Fixed a bug that caused Condor-C jobs to fail if
-\Attr{transfer\_executable} was set to \Opt{False}.
+the submit description file command \SubmitCmd{transfer\_executable}
+was set to \Expr{False}.
 
 % #784
-\item Fix a bug that caused Condor-C jobs to fail if the executable
-or stdin/out/err file names contained a comma.
+\item Fixed a bug that caused Condor-C jobs to fail if the executable
+or one of the \File{stdin}, \File{stdout}, or \File{stderr} file names
+contained a comma.
 
 % #460
-\item File transfer for grid-type gt4 jobs requires an empty directory
+\item File transfer for grid type gt4 jobs requires an empty directory
 in \Attr{/tmp}, which the \Condor{gridmanager} creates. If this directory
 is deleted, the \Condor{gridmanager} will now recreate it.
+
+%gittrac #790
+\item Fixed a bug that could cause the user job log to become
+  corrupted on Windows.  This bug would manifest itself only if the
+  same log file was specified with different paths.  For example, the
+  following submit file could trigger this:
+
+\begin{verbatim}
+...
+initialdir = /data/job1
+log = ../JobLog
+queue
+
+initialdir = /data/job2
+log = ../JobLog
+queue
+\end{verbatim}
 
 \end{itemize}
 
