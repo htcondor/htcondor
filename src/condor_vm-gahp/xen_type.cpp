@@ -69,32 +69,6 @@ getScriptErrorString(const char* fname)
 VirshType::VirshType(const char* scriptname, const char* workingpath, 
 		ClassAd* ad) : VMType("", scriptname, workingpath, ad)
 {
-	#if 0
-	MyString vm_type;
-	if( ad->LookupString( ATTR_JOB_VM_TYPE, vm_type) != 1 ) {
-		EXCEPT("%s not found in job ad!", ATTR_JOB_VM_TYPE);
-	}
-
-	if( strcasecmp(vm_type.Value(), CONDOR_VM_UNIVERSE_XEN) == 0 ) {
-		m_vmtype = CONDOR_VM_UNIVERSE_XEN;
-		priv_state priv = set_root_priv();
-		m_libvirt_connection = virConnectOpen("xen:///");
-		set_priv(priv);
-	} else if( strcasecmp(vm_type.Value(), CONDOR_VM_UNIVERSE_KVM) == 0 ) {
-		m_vmtype = CONDOR_VM_UNIVERSE_KVM;
-		priv_state priv = set_root_priv();
-		m_libvirt_connection = virConnectOpen("qemu:///session");
-		set_priv(priv);
-	} else {
-		EXCEPT("Unsupported VM Type '%s'", vm_type.Value());
-	}
-	
-	if( !m_libvirt_connection ) {
-		virErrorPtr err = virGetLastError();
-		EXCEPT("Failed to create libvirt connection: %s", (err ? err->message : "No reason found"));
-	}
-	#endif
-
 	m_cputime_before_suspend = 0;
 	m_xen_hw_vt = false;
 	m_allow_hw_vt_suspend = false;
@@ -906,25 +880,11 @@ XenType::CreateVirshConfigFile(const char* filename)
 		m_xml += "<os><type>linux</type>";
 
 		if( m_xen_kernel_file.IsEmpty() == false ) {
-			MyString tmp_fullname;
 			m_xml += "<kernel>";
-			if( isTransferedFile(m_xen_kernel_file.Value(),
-						tmp_fullname) ) {
-				// this file is transferred
-				// we need a full path
-				m_xen_kernel_file = tmp_fullname;
-			}
-
 			m_xml += m_xen_kernel_file;
 			m_xml += "</kernel>";
 			if( m_xen_initrd_file.IsEmpty() == false ) {
-					m_xml += "<initrd>";
-				if( isTransferedFile(m_xen_initrd_file.Value(),
-							tmp_fullname) ) {
-					// this file is transferred
-					// we need a full path
-					m_xen_initrd_file = tmp_fullname;
-				}
+				m_xml += "<initrd>";
 				m_xml += m_xen_initrd_file;
 				m_xml += "</initrd>";
 			}
@@ -1768,6 +1728,14 @@ bool XenType::CreateConfigFile()
 			m_result_msg = VMGAHP_ERR_JOBCLASSAD_XEN_KERNEL_NOT_FOUND;
 			return false;
 		}
+		MyString tmp_fullname;
+		if( isTransferedFile(m_xen_kernel_submit_param.Value(),
+					tmp_fullname) ) {
+			// this file is transferred
+			// we need a full path
+			m_xen_kernel_submit_param = tmp_fullname;
+		}
+
 		m_xen_kernel_file = m_xen_kernel_submit_param;
 
 		if( m_classAd.LookupString(VMPARAM_XEN_INITRD, m_xen_initrd_file)
@@ -1780,6 +1748,12 @@ bool XenType::CreateConfigFile()
 						m_xen_initrd_file.Value());
 				m_result_msg = VMGAHP_ERR_JOBCLASSAD_XEN_INITRD_NOT_FOUND;
 				return false;
+			}
+			if( isTransferedFile(m_xen_initrd_file.Value(),
+						tmp_fullname) ) {
+				// this file is transferred
+				// we need a full path
+				m_xen_initrd_file = tmp_fullname;
 			}
 		}
 	}
