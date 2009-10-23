@@ -105,7 +105,14 @@ END {
 	}
     }
     print "<disk type='file'>" ;
-    split(attrs["VMPARAM_Xen_Disk"], disk_string, ":");
+	if(index(attrs["JobVMType"],"xen") != 0) 
+    {
+	 split(attrs["VMPARAM_Xen_Disk"], disk_string, ":");
+    }
+    else if(index(attrs["JobVMType"],"kvm") != 0)
+    {
+	split(attrs["VMPARAM_Kvm_Disk"], disk_string, ":");
+    }
     print "<source file='" disk_string[1] "'/>" ;
     print "<target dev='" disk_string[2] "'/>" ;
     print "</disk></devices></domain>" ;
