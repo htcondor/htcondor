@@ -28,6 +28,7 @@ int set_seed(int seed);
 int get_random_int(void);
 unsigned int get_random_uint(void);
 float get_random_float(void);
+double get_random_double( void );
 
 #if defined(__cplusplus)
 }

@@ -74,6 +74,20 @@ float get_random_float( void )
 #endif
 }
 
+double get_random_double( void )
+{
+    if (!initialized) {
+        set_seed(getpid());
+    }
+
+#if defined(WIN32)
+    return (((double)rand())*(((unsigned int)1)<<15) + (double)rand()) /
+	       (((double)RAND_MAX)*(((unsigned int)1)<<15) + (double)RAND_MAX + 1);
+#else
+    return drand48();
+#endif
+}
+
 /* returns a random unsigned integer, trying to use best random number
    generator available on each platform */
 unsigned int get_random_uint( void )
@@ -82,14 +96,10 @@ unsigned int get_random_uint( void )
 		set_seed(getpid());
 	}
 
-	/* since get_random_float returns [0.0, 1.0), add one to UINT_MAX
+	/*  get_random_float() doesn't have enough precision to use here.
+	    Since get_random_double returns [0.0, 1.0), add one to UINT_MAX
 		to ensure the probability fencepost error doesn't
 		happen and I actually can get ALL the numbers from 0 up to and
 		including UINT_MAX */
-	return get_random_float() * (((double)UINT_MAX)+1);
+	return get_random_double() * (((double)UINT_MAX)+1);
 }
-
-
-
-
-
