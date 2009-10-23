@@ -103,30 +103,22 @@ MPIShadow::init( ClassAd* job_ad, const char* schedd_addr, const char *xfer_queu
         // make first remote resource the "master".  Put it first in list.
     MpiResource *rr = new MpiResource( this );
 
-    ClassAd *temp = new ClassAd( *(getJobAd() ) );
-
     sprintf( buf, "%s = %s", ATTR_MPI_IS_MASTER, "TRUE" );
-    if( !temp->Insert(buf) ) {
+    if( !job_ad->Insert(buf) ) {
         dprintf( D_ALWAYS, "Failed to insert %s into jobAd.\n", buf );
         shutDown( JOB_NOT_STARTED );
     }
 
-	replaceNode( temp, 0 );
+	replaceNode( job_ad, 0 );
 	rr->setNode( 0 );
 	sprintf( buf, "%s = 0", ATTR_NODE );
-	temp->InsertOrUpdate( buf );
-    rr->setJobAd( temp );
+	job_ad->InsertOrUpdate( buf );
+    rr->setJobAd( job_ad );
 
-	rr->setStartdInfo( temp );
+	rr->setStartdInfo( job_ad );
 
-	temp->Assign( ATTR_JOB_STATUS, RUNNING );
+	job_ad->Assign( ATTR_JOB_STATUS, RUNNING );
     ResourceList[ResourceList.getlast()+1] = rr;
-
-		// now, we want to re-initialize the shadow_user_policy object
-		// with the ClassAd for our master node, since the one sitting
-		// in the Shadow object itself will never get updated with
-		// exit status, info about the run, etc, etc.
-	shadow_user_policy.init( temp, this );
 
 }
 
