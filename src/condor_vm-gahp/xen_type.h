@@ -60,7 +60,7 @@ public:
 
 	virtual bool Status();
 
-	virtual bool CreateConfigFile();
+	virtual bool CreateConfigFile()=0;
 
 	virtual bool killVM();
 protected:
@@ -109,6 +109,8 @@ class XenType : public VirshType
  public:
   XenType(const char* scriptname, const char* workingpath, ClassAd* ad);
   static bool checkXenParams(VMGahpConfig* config);
+  virtual bool CreateConfigFile();
+
  protected:
   virtual bool CreateVirshConfigFile(const char * filename);
 };
@@ -118,6 +120,7 @@ class KVMType : public VirshType
  public:
   KVMType(const char* scriptname, const char* workingpath, ClassAd* ad);
   static bool checkXenParams(VMGahpConfig* config);
+  virtual bool CreateConfigFile();
  protected:
   virtual bool CreateVirshConfigFile(const char * filename);
 };

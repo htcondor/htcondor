@@ -361,12 +361,14 @@
 
 ;--- set CONDOR_KBDD registry key ----------------------------------------
 #(
-<$Registry 
-	HKEY="LOCAL_MACHINE" 
-	KEY="software\Microsoft\Windows\CurrentVersion\Run" 
-	VALUE="[INSTALLDIR_NTS]\bin\condor_kbdd.exe" 
-	MsiFormatted="VALUE" 
-	Name="CONDOR_KBDD">
+<$Component "CondorKBDD" Create="Y" Directory_="EXECUTEDIR" Condition=^(<$CONDITION_EXCEPT_UNINSTALL>) AND ((RUNJOBS = "A") OR (RUNJOBS = "I") OR (RUNJOBS = "C"))^>
+	<$Registry 
+		HKEY="LOCAL_MACHINE" 
+		KEY="software\Microsoft\Windows\CurrentVersion\Run" 
+		VALUE="[INSTALLDIR_NTS]\bin\condor_kbdd.exe"
+		MsiFormatted="VALUE" 
+		Name="CONDOR_KBDD">
+<$/Component>
 #)
 
 
