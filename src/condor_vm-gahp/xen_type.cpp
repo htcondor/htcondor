@@ -1644,9 +1644,9 @@ XenType::XenType(const char * scriptname, const char * workingpath, ClassAd * ad
   if(m_libvirt_connection == NULL)
     {
       virErrorPtr err = virGetLastError();
-      vmprintf(D_ALWAYS, "Failed to get libvirt connection: %s\n", (err ? err->message : "No reason found"));
-      exit(-1);
+      EXCEPT("Failed to create libvirt connection: %s", (err ? err->message : "No reason found"));
     }
+
   m_vmtype = CONDOR_VM_UNIVERSE_XEN;
 
 }
@@ -1999,7 +1999,7 @@ KVMType::CreateConfigFile()
 			vmprintf(D_ALWAYS, "To use vm checkpint in Virsh, "
 					"all disk and iso files should be "
 					"in a shared file system\n");
-			m_result_msg = VMGAHP_ERR_JOBCLASSAD_XEN_MISMATCHED_CHECKPOINT;
+			m_result_msg = VMGAHP_ERR_JOBCLASSAD_KVM_MISMATCHED_CHECKPOINT;
 			return false;
 		}
 	}
