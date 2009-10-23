@@ -103,3 +103,22 @@ unsigned int get_random_uint( void )
 		including UINT_MAX */
 	return get_random_double() * (((double)UINT_MAX)+1);
 }
+
+/* returns a fuzz factor to be added to a timer period to decrease
+   chance of many daemons being synchronized */
+int timer_fuzz(int period)
+{
+	int fuzz = period/10;
+	if( fuzz <= 0 ) {
+		if( period <= 0 ) {
+			return 0;
+		}
+		fuzz = period - 1;
+	}
+	fuzz = ( get_random_float() * ((float)fuzz+1) ) - fuzz/2;
+
+	if( period + fuzz <= 0 ) { // sanity check
+		fuzz = 0;
+	}
+	return fuzz;
+}
